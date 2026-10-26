@@ -15236,6 +15236,91 @@ async function marquerLeCarnetRestant(job, appAffaireId) {
   }
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// ⑧ TYPES, CHANTIER 2 -- b (le POINT 4) : LA RELECTURE GARDE NOS NUMEROS   26/10/2026
+// ═══════════════════════════════════════════════════════════════════════════
+// LE DEFAUT. Ci-dessous, la relecture « classe B, les personnes » (16/09) ecrit
+// acquereurs_json / mandants_json avec la liste BRUTE de Hektor : `id` seulement.
+// La nuit, elle, pose AUSSI notre numero a cote (`app_contact_id` -- piece 2 du
+// 24/10 pour les acquereurs, C4 du 26/10 pour les vendeurs). Chaque geste du jour
+// effacait donc notre numero jusqu'a la nuit suivante (mesure du 26/10 : 28
+// acquereurs sans lui dans 20 transactions, dont 8 traduisibles).
+//
+// LE REMEDE, dans le meme montage que la nuit :
+//   · `id` RESTE LE NUMERO DE HEKTOR. C'est lui qu'on lui parle : aucun envoi ne
+//     lit `app_contact_id` (les envois passent par cibleHektorContact /
+//     traduireLesPersonnesDeLaTransaction, qui visent hektor_target_id).
+//   · notre numero est AJOUTE a cote : repris de la liste qu'on remplace (meme
+//     `id`), sinon cherche dans l'annuaire (app_contact_current, hektor_target_id
+//     -> hektor_contact_id, qui porte NOTRE numero depuis le 23/09).
+//   · INCONNU = RIEN : on n'invente pas, la nuit comblera.
+//   · BEST-EFFORT : une lecture impossible laisse la liste brute, comme avant --
+//     jamais un travail en echec pour ca.
+// RETOUR ARRIERE : GARDER_NOS_NUMEROS_A_LA_RELECTURE = false, puis redemarrer.
+const GARDER_NOS_NUMEROS_A_LA_RELECTURE = true;
+
+function poserNosNumerosDansLaListe(gens, table) {
+  if (!Array.isArray(gens)) return gens;
+  return gens.map((p) => {
+    if (!p || typeof p !== "object") return p;
+    const ident = String(p.id ?? "").trim();
+    const notre = ident ? table.get(ident) : undefined;
+    if (notre === undefined) return p;
+    return { ...p, app_contact_id: notre };
+  });
+}
+
+async function tableDeNosNumeros(job, appAffaireId, listes) {
+  const table = new Map();
+  const voulus = new Set();
+  for (const gens of listes) {
+    for (const p of Array.isArray(gens) ? gens : []) {
+      const ident = String((p && p.id) ?? "").trim();
+      if (/^\d+$/.test(ident)) voulus.add(ident);
+    }
+  }
+  if (!voulus.size) return table;
+  // 1. ce que le registre portait deja (la nuit l'a pose, ou la creation)
+  try {
+    const lignes = await supabaseRequest(
+      `app_affaire_ledger?app_affaire_id=eq.${Number(appAffaireId)}&select=acquereur_json,acquereurs_json,mandants_json`,
+      { method: "GET" });
+    const ligne = Array.isArray(lignes) && lignes.length ? lignes[0] : null;
+    for (const brut of ligne ? [ligne.acquereur_json, ligne.acquereurs_json, ligne.mandants_json] : []) {
+      let v = brut;
+      if (typeof v === "string") { try { v = JSON.parse(v); } catch (_) { v = null; } }
+      for (const p of Array.isArray(v) ? v : (v && typeof v === "object" ? [v] : [])) {
+        const ident = String((p && p.id) ?? "").trim();
+        const notre = Number(p && p.app_contact_id);
+        if (ident && Number.isFinite(notre) && notre >= PLAGE_NUMEROS_APP) table.set(ident, notre);
+      }
+    }
+  } catch (_) { /* on passe a l'annuaire */ }
+  // 2. les autres, par l'annuaire
+  const restants = [...voulus].filter((x) => !table.has(x));
+  if (restants.length) {
+    try {
+      const fiches = await supabaseRequest(
+        `app_contact_current?select=hektor_contact_id,hektor_target_id`
+        + `&hektor_target_id=in.(${restants.map((x) => encodeURIComponent(x)).join(",")})`,
+        { method: "GET" });
+      for (const f of Array.isArray(fiches) ? fiches : []) {
+        const cible = String((f && f.hektor_target_id) ?? "").trim();
+        const notre = Number(f && f.hektor_contact_id);
+        if (cible && Number.isFinite(notre) && notre >= PLAGE_NUMEROS_APP && !table.has(cible)) table.set(cible, notre);
+      }
+    } catch (erreur) {
+      await logJob(job.id, "app_registre_transaction", "error",
+        "Nos numeros n'ont pas pu etre retrouves pour les personnes relues -- la liste part avec le seul "
+        + "numero de Hektor, la nuit les reposera.", {
+          app_affaire_id: appAffaireId,
+          error: erreur && erreur.message ? erreur.message : String(erreur),
+        });
+    }
+  }
+  return table;
+}
+
 async function reporterAuRegistre(job, appAffaireId, chezHektor) {
   const id = Number(appAffaireId);
   if (!Number.isFinite(id) || id <= 0 || !chezHektor) return;
@@ -15278,7 +15363,16 @@ async function reporterAuRegistre(job, appAffaireId, chezHektor) {
                                  && String(p.id ?? "").trim());
     return gens.length ? gens : null;
   };
-  const acquereurs = partiesRelues("acquereurs");
+  let acquereurs = partiesRelues("acquereurs");
+  let mandants = partiesRelues("mandants");
+  // ⑧ chantier 2 -- b : nos numeros a cote de ceux de Hektor (voir tableDeNosNumeros).
+  if (GARDER_NOS_NUMEROS_A_LA_RELECTURE && (acquereurs || mandants)) {
+    const table = await tableDeNosNumeros(job, id, [acquereurs, mandants]);
+    if (table.size) {
+      acquereurs = poserNosNumerosDansLaListe(acquereurs, table);
+      mandants = poserNosNumerosDansLaListe(mandants, table);
+    }
+  }
   if (acquereurs) {
     corps.acquereurs_json = acquereurs;
     // Le singulier reste le PRINCIPAL : c'est lui que la fiche lit pour le mail
@@ -15286,7 +15380,6 @@ async function reporterAuRegistre(job, appAffaireId, chezHektor) {
     // coordonnees de quelqu'un qui n'est plus sur l'affaire.
     corps.acquereur_json = acquereurs[0];
   }
-  const mandants = partiesRelues("mandants");
   if (mandants) corps.mandants_json = mandants;
 
   if (!Object.keys(corps).length) return;

@@ -526,3 +526,44 @@ la personne sous ses deux numéros), contacts (`hektor_contact_id` = nous + `hek
 
 **Ce que ça ajoute à la proposition du chantier 2** : une pièce **c** possible — poser `app_mandat_id` sur chaque transaction (la nuit le
 retrouve par (bien, numéro de mandat) : 23 336 sur 23 336), pour que la transaction désigne son mandat par NOTRE numéro aussi. **À trancher.**
+
+### 10.5 ⭐ LA PIÈCE c — QUEL NUMÉRO DE MANDAT ? *(Frédéric, 26/10 : « tu parles du numéro de mandat ou de l'id mandat ? […] on a créé
+une clé N° de mandat + réf qui évite les doublons […] l'id mandat de Hektor n'est pas utilisable »)*
+
+Mesure du 26/10 sur `app_mandat` (26 929 mandats) :
+| candidat | utilisable ? | pourquoi |
+|---|---|---|
+| l'id mandat de Hektor (`hektor_mandat_id`) | ❌ | **512** identifiants **recyclés** (portés par plusieurs mandats) — c'est ta remarque, et la mémoire du 10/10 |
+| le numéro de mandat seul | ❌ | **4 458** numéros portés par **plusieurs biens** (le n° 1311 sur 13 biens) |
+| **la clé « bien + numéro de mandat »** (`UNIQUE (hektor_annonce_id, numero_mandat)` d'`app_mandat` ; c'est aussi la clé de ligne du registre affiché, `register_row_id = "<annonce>:<numéro>"`) | ✅ | **0 doublon** ; c'est la clé anti-doublon que tu décris |
+| **notre identifiant `app_mandat_id`** | ✅ | il est **né de cette clé** (une ligne par couple bien + numéro), et c'est NOTRE numéro |
+➡ **La pièce c ne prendrait NI l'id de Hektor NI le numéro seul** : elle **retrouverait le mandat par ta clé** (bien + numéro de la
+transaction) et **poserait notre `app_mandat_id`** sur la transaction. Mesure : les 23 336 transactions qui ont un numéro le retrouvent,
+**et aucune ne tombe sur deux mandats**. Les 7 750 sans numéro (surtout des offres) restent sans.
+⚠ Une limite à dire : la clé utilise le numéro de **bien de Hektor** (`hektor_annonce_id`). Pour un mandat né dans l'app sur une annonce née
+dans l'app, il faudra la clé (`app_dossier_id`, numéro) — la même limite que le registre des liens (écrite le 30/09).
+**C n'est pas codé : il attend ta décision.**
+
+---
+
+## 11. CHANTIER 2 CODÉ — a (les vendeurs la nuit) + b (le worker garde nos numéros) *(26/10, « OK pour a et b »)* — **rien n'est posé**
+
+| pièce | fichier | ce qu'elle fait |
+|---|---|---|
+| **a** | `phase2/sync/affaire_ledger.py` (`vendeurs_deux_numeros_actif`, et la boucle de la nuit) | `poser_nos_numeros()` — le geste de la pièce 2 — appliqué aussi à `mandants_json` ; interrupteur **neuf** `APP_AFFAIRE_VENDEURS_DEUX_NUMEROS` (**éteint**) ; le bilan de la nuit dit « vendeurs avec nos deux numéros : N posés » ou « ÉTEINT » |
+| **b** | `Console/console_job_worker.js` (`tableDeNosNumeros`, `poserNosNumerosDansLaListe`, dans `reporterAuRegistre`) | la relecture du jour garde notre numéro sur les acquéreurs ET les vendeurs : repris de la liste remplacée (même `id`), sinon par l'annuaire (`hektor_target_id`) ; hors de notre plage ou inconnu = rien ; panne = la liste brute comme avant, journalisée ; `GARDER_NOS_NUMEROS_A_LA_RELECTURE = true` (retour : `false` + redémarrage) |
+
+**La règle « vers Hektor, son numéro »** : intacte. `id` reste le numéro de Hektor dans toutes les listes (l'essai le contrôle, et le
+mutant qui le remplace est attrapé) ; aucun envoi ne lit `app_contact_id`.
+
+**Les essais**
+- `Console/test_relecture_garde_nos_numeros.js` : **15 / 15** ; **4 mutants attrapés** (sans la reprise du registre : 5 échecs ; sans la
+  garde de notre plage : 1 ; notre numéro qui remplace celui de Hektor : 1 ; la panne qui remonte : 3) ; témoin vert.
+- `Console/test_controle_carnet_r3.js` et `test_enqueue_rattrapage_carnet.js` (existants) : verts.
+- `phase2/checks/test_vendeurs_deux_numeros_sur_copie.py` sur une copie de `phase2.sqlite` : **8 / 8** — éteint : 0 vendeur avec notre numéro ; allumé : **58 514 sur 58 514** vendeurs des transactions vivantes, **0** numéro hors de notre plage, **0** `id` de Hektor changé, acquéreurs et états **inchangés**, aucune transaction gagnée ni perdue ; éteint de nouveau : **les octets d'avant, exactement** (c'est le témoin inverse). ⚠ **36 vendeurs restent sans notre numéro** : ils sont sur des transactions que Hektor **ne liste plus** (`present_in_hektor = 0` : 30 compromis, 6 ventes) — la nuit ne les revoit pas (delete-never), elle ne réécrit donc pas leur liste. Tous traduisibles. Même limite pour les acquéreurs de ces transactions (pièce 2). ➡ **Un rattrapage à part, à décider.**
+
+**Ce qui reste, à Frédéric, dans cet ordre**
+1. **Pousser.**
+2. **Redémarrer les 4 services du worker**, file vide (0 pending, 0 running) — b est alors actif.
+3. **Allumer** `APP_AFFAIRE_VENDEURS_DEUX_NUMEROS=1` dans `.env` (je peux l'ajouter) — a joue à la nuit suivante.
+4. Le lendemain : le bilan de la nuit (« vendeurs … ~58 514 posés ») et une mesure en base (vendeurs avec notre numéro).

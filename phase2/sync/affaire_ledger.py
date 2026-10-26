@@ -775,6 +775,8 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
     # poser_nos_numeros(). Lu ICI, apres `.env`, pas a l'import (piege du 20/10).
     deux_numeros = personnes_deux_numeros_actif()
     personnes_traduites = 0
+    vendeurs_deux_numeros = vendeurs_deux_numeros_actif()          # ⑧ types, chantier 2 (C4)
+    vendeurs_traduits = 0
     for r in con.execute(LEDGER_SQL):
         annonce = normalize_text(r["hektor_annonce_id"])
         affaire_id = normalize_text(r["affaire_id"])
@@ -824,6 +826,15 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
                 personnes_traduites += n_principal
             acq_tous, n_liste = poser_nos_numeros(acq_tous, contact_app_par_hektor)
             personnes_traduites += n_liste
+        # ⑧ types, chantier 2 -- C4 (26/10/2026) : LES VENDEURS AUSSI. Le 24/10 j'avais laisse les mandants
+        # dehors en citant la decision du 22/10 (« Hektor les deduit du mandat ») : elle dit QUI ECRIT la
+        # liste, pas COMMENT on designe une personne. 58 550 vendeurs ne portaient que le numero de Hektor
+        # (note d'audit du 26/10, §10.4). Meme geste que les acquereurs : `id` reste celui de Hektor -- c'est
+        # lui qu'on lui parle --, le notre est AJOUTE a cote. Son propre interrupteur, son propre retour.
+        mandants_tous = normalize_text(r["mandants"]) or None
+        if vendeurs_deux_numeros:
+            mandants_tous, n_vendeurs = poser_nos_numeros(mandants_tous, contact_app_par_hektor)
+            vendeurs_traduits += n_vendeurs
         con.execute(
             f"""
             INSERT INTO {LEDGER_TABLE}(app_affaire_id, app_dossier_id,
@@ -886,7 +897,7 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
                 normalize_text(r["prix_net_vendeur"]) or None,
                 normalize_text(r["honoraires_entree"]) or None,
                 normalize_text(r["honoraires_sortie"]) or None,
-                normalize_text(r["mandants"]) or None,
+                mandants_tous,                             # C4 : les vendeurs, avec nos deux numeros
                 normalize_text(r["notaires"]) or None,
                 normalize_text(r["propositions"]) or None,
                 normalize_text(r["commission"]) or None,
@@ -903,6 +914,9 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
     print(f"[affaire_ledger] personnes avec nos deux numeros : "
           + (f"{personnes_traduites} numero(s) pose(s)" if deux_numeros
              else "ETEINT (APP_AFFAIRE_PERSONNES_DEUX_NUMEROS)"))
+    print(f"[affaire_ledger] vendeurs avec nos deux numeros : "
+          + (f"{vendeurs_traduits} numero(s) pose(s)" if vendeurs_deux_numeros
+             else "ETEINT (APP_AFFAIRE_VENDEURS_DEUX_NUMEROS)"))
     # ═══════════════════════════════════════════════════════════════════════════
     # LE SILENCE NE GAGNE PAS                                        07/09/2026
     # ═══════════════════════════════════════════════════════════════════════════
@@ -1210,6 +1224,17 @@ def personnes_deux_numeros_actif() -> bool:
     """
     chainage_v2_actif()                      # il charge `.env` une fois pour tous
     return (os.environ.get("APP_AFFAIRE_PERSONNES_DEUX_NUMEROS") or "0").strip() == "1"
+
+
+def vendeurs_deux_numeros_actif() -> bool:
+    """⑧ types, chantier 2 -- C4 (26/10/2026) : les VENDEURS (`mandants_json`) recoivent aussi notre numero.
+
+        APP_AFFAIRE_VENDEURS_DEUX_NUMEROS=1     chaque vendeur porte `app_contact_id` a cote de `id`
+        (absent ou autre chose)                  comportement d'avant, a l'octet pres
+    Separe de l'interrupteur des acquereurs : on eteint l'un sans toucher l'autre.
+    """
+    chainage_v2_actif()
+    return (os.environ.get("APP_AFFAIRE_VENDEURS_DEUX_NUMEROS") or "0").strip() == "1"
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
