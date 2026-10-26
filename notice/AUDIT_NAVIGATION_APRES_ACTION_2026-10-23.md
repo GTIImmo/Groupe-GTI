@@ -788,3 +788,22 @@ Le point 3 regroupe les **lots 1 à 3 du §8.6** (11 correctifs). Revérifié su
 
 **Recommandé : 3a d'abord** (le cœur de la demande initiale, et le numéro est déjà là), puis 3b, puis 3c. Tout est
 **front seul**, derrière un interrupteur par sous-lot, et n'écrit rien chez Hektor.
+
+### 15.1 SOUS-LOT 3a CODÉ (26/10, « code le sous-lot 3a ») — ⚠ NON ÉPROUVÉ À L'ÉCRAN
+
+**Le code** (`App.tsx`) : interrupteur `OUVRIR_CE_QU_ON_CREE = true` ; `numeroCreeDansLeTravail(job, clé)`.
+- **A1** (`handleCreateDraftAnnonce`) : après « Créer », relecture de la liste et `openDossierDetailPage(notre n°)`.
+  Vérifié avant de coder : la création passe par `app_create_annonce_job_optimistic` (création provisoire allumée,
+  `PROVISIONAL_CREATION_ENABLED = true`), qui écrit la ligne dans `app_dossier_current` **dans la transaction du clic** ;
+  la fiche lit `app_dossiers_current`, qui montre bien 10000006 et 10000009 (statut Estimation). La file des photos et
+  du scan suit le **travail** (`rememberHektorActionJob`), pas la fiche : inchangée.
+- **A2** (`surTravailDeLAnnuaire`) : branché **seulement** sur l'annuaire (bureau `ContactsScreen`, téléphone
+  `MobileContactCards`) → `showContactInDirectory(notre n° ≥ 20 M)`. Les deux créations **depuis un RDV**
+  (`GoogleAgendaGlobalEventModal`, `GoogleAgendaAnnonceSection`) ne passent **pas** ici : on reste dans le RDV.
+
+**Contrôles** : `npm run build` vert avec les types. ⚠ **La démonstration ne peut pas créer** (« Supabase is not
+configured ») : le parcours n'est **pas** éprouvé. ⚠ Et la modale « Suivi de l'action » s'affiche toujours à la
+création (son retrait est le point 6) : elle se superposera à la fiche ouverte.
+
+➡ **Seul juge : une création réelle** — elle écrit chez Hektor, donc **avec l'accord de Frédéric** et sur un essai
+qu'il choisit (contact d'essai à supprimer ensuite, par exemple).

@@ -12920,6 +12920,20 @@ const CLES_ADRESSE = ['ecran', 'annonce', 'contact'] as const
 //   effacee a la deconnexion. Audit : notice/AUDIT_NAVIGATION_APRES_ACTION_2026-10-23.md §14.
 //   `false` = l'ancien comportement, en une ligne.
 const MEMOIRE_DES_ECRANS = true
+
+// ⛔ 26/10/2026 -- POINT 3a : OUVRIR CE QU'ON CREE. Apres « Creer », la fenetre se fermait et RIEN
+//   ne s'ouvrait ; l'objet n'apparaissait qu'au retour de Hektor (~1 min). Or il existe chez nous
+//   DES LE CLIC, avec NOTRE numero : l'annonce (payload_json.app_dossier_id, ligne ecrite dans
+//   app_dossier_current par app_create_annonce_job_optimistic, statut Estimation) et le contact
+//   (payload_json.app_identite >= 20 000 000, deja dans app_contact_current). On ouvre donc la
+//   fiche tout de suite, par les portes existantes. Un contact cree PENDANT LA SAISIE D'UN RDV
+//   (agenda) n'ouvre rien : on reste dans le RDV. Audit : AUDIT_NAVIGATION_... §15.
+//   `false` = l'ancien comportement, en une ligne.
+const OUVRIR_CE_QU_ON_CREE = true
+function numeroCreeDansLeTravail(job: ConsoleJob, cle: 'app_dossier_id' | 'app_identite'): string | null {
+  const valeur = String(job.payload_json?.[cle] ?? '').trim()
+  return /^\d+$/.test(valeur) ? valeur : null
+}
 const MEMOIRE_ECRANS_STOCKAGE = 'gti_memoire_ecrans'
 type MemoireEcran = {
   filters: AppFilters
@@ -15425,6 +15439,15 @@ export default function App() {
     setFilters(nextFilters)
   }
 
+  // POINT 3a (26/10/2026) : branche SEULEMENT sur l'annuaire (bureau et telephone). La creation
+  // d'un contact depuis un RDV (agenda) a ses propres rappels et ne passe pas ici.
+  function surTravailDeLAnnuaire(job: ConsoleJob) {
+    rememberHektorActionJob(job)
+    if (!OUVRIR_CE_QU_ON_CREE || job.job_type !== 'create_hektor_contact') return
+    const nouveauContact = numeroCreeDansLeTravail(job, 'app_identite')
+    if (nouveauContact) showContactInDirectory(nouveauContact)
+  }
+
   function openDossierDetailPage(appDossierId: number) {
     const quickMandat = mandats.find((item) => item.app_dossier_id === appDossierId)
     const quickBase = dossiers.find((item) => item.app_dossier_id === appDossierId) ?? (quickMandat ? mandateAsDossier(quickMandat) : null)
@@ -16521,6 +16544,14 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         setDraftAnnonceEstimationScan(null)
       }
       setDraftAnnonceModalOpen(false)
+      // POINT 3a (26/10/2026) : la fiche de l'annonce creee s'ouvre tout de suite, par NOTRE numero,
+      // et la liste se relit (l'annonce y est deja). La file des photos et du scan ne change pas :
+      // elle suit le travail (rememberHektorActionJob ci-dessus), pas la fiche ouverte.
+      const nouvelleAnnonce = OUVRIR_CE_QU_ON_CREE ? numeroCreeDansLeTravail(job, 'app_dossier_id') : null
+      if (nouvelleAnnonce) {
+        setDataReloadKey((value) => value + 1)
+        openDossierDetailPage(Number(nouvelleAnnonce))
+      }
       setNoticeMessage(queuedPhotos.length
         ? `${queuedPhotos.length} photo(s) preparee(s). Elles seront envoyees par le worker photos des que l annonce sera synchronisee dans l app.`
         : null)
@@ -23121,7 +23152,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             hektorNegotiators={hektorNegotiators}
             profileRole={profile?.role ?? null}
             sessionEmail={sessionEmail}
-            onJobCreated={rememberHektorActionJob}
+            onJobCreated={surTravailDeLAnnuaire}
             onContactDeleted={handleOptimisticContactDeleted}
             onContactArchived={handleOptimisticContactArchive}
             onOpenRechercheAcquereur={(search) => { setRechercheAcquereurSearch(search); setRechercheAcquereurOpen(true) }}
@@ -24086,7 +24117,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             hektorNegotiators={hektorNegotiators}
             profileRole={profile?.role ?? null}
             sessionEmail={sessionEmail}
-            onJobCreated={rememberHektorActionJob}
+            onJobCreated={surTravailDeLAnnuaire}
             onContactDeleted={handleOptimisticContactDeleted}
             onContactArchived={handleOptimisticContactArchive}
             onOpenRechercheAcquereur={(search) => { setRechercheAcquereurSearch(search); setRechercheAcquereurOpen(true) }}
