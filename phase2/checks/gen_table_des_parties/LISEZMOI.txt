@@ -1,0 +1,8 @@
+Generateur du patch supabase/patch_table_des_parties_2026-10-26*.sql (26/10/2026).
+
+    python phase2/checks/gen_table_des_parties/gen_parties.py phase2/checks/gen_table_des_parties
+
+parties_calcul.sql : le calcul des parties (corps de app_affaire_partie_calculer) ;
+parties_branche_vue.sql : la branche des acquereurs de app_contact_relations_current ;
+parties_ecarts_v2.sql : la vue de la sentinelle (jointure sur la cle) ;
+parties_essais.sql : les 9 epreuves jouees DANS UNE TRANSACTION ANNULEE (voir la note §17-18).

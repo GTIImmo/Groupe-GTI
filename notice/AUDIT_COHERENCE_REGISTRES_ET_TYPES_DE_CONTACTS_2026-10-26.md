@@ -866,3 +866,42 @@ normal, **C4 les numérote cette nuit** ; fiches sans nom : 22 528 (19 930 vende
 - **Le moment** : cette nuit jouent pour la 1ʳᵉ fois chantier 1, C4 et c. Poser la table **ce soir** ajouterait ~22 s au push de la nuit (les
   vendeurs de C4) et une 4ᵉ nouveauté. ➡ **Je recommande de la poser APRÈS la vérification de demain matin** : une nouveauté à la fois.
 - **Après la pose** : la répétition, le temps réel d'une fiche, et le push de la nuit suivante (son temps, avant / après).
+
+## 18. ✅ LA TABLE DES PARTIES EST POSÉE — 26/10 à 13:21 *(Frédéric : « non, maintenant, il est 13 h ! mais attention, cette table doit aussi se mettre à jour comme le reste de mon mécanisme si mise à jour Hektor »)*
+
+### 18.1 « Elle doit suivre les mises à jour de Hektor » — vérifié dans le code
+Le déclencheur réagit à **toute** écriture du registre des transactions, d'où qu'elle vienne. Recensement des écritures (code, 26/10) :
+la **nuit** (`affaire_ledger.py`, la recopie du miroir de Hektor puis l'envoi de tout le registre), les **notaires** lus à la console
+(`registre_depuis_console.py`), le **worker** après chaque geste (la relecture chez Hektor, `reporterAuRegistre`, et ses autres PATCH :
+numéro Hektor, états), les **gestes de l'app** (création, modification), et les scripts d'identité ponctuels. **Aucun ne range des personnes
+ailleurs** : la table suit donc Hektor **dès que le registre le suit** — dans la journée par le worker, la nuit par la recopie ; une
+transaction que Hektor ne liste plus (`present_in_hektor` à faux) garde ses parties, marquées.
+
+### 18.2 La pose
+- État avant : vue `acf77be8`, table absente, **0 travail en cours**, 31 103 transactions.
+- **Le patch** : 6 contrôles verts — 116 932 parties, **0 écart**, la vue lit la table des parties, 35 008 liens acquéreurs, aucune écriture ouverte.
+- **La répétition : 7 / 7** — 35 005 / 35 005 liens retrouvés, aucune clé en double, colonnes identiques, mandants / propriétaires inchangés ;
+  vendeurs sans notre numéro : 58 550 (C4, cette nuit).
+- **Le temps réel**, après `ANALYZE` de la table neuve : **fiche contact 2,8 ms** d'exécution (3,9 ms avant) ; **par bien 3,2 ms**.
+
+### 18.3 ⚠ Deux corrections faites APRÈS la pose — dites franchement
+1. **La sentinelle était trop lente** : **7,4 s par l'API**, pour une limite de **8 s** (rôle `authenticator`). Cause : la fonction du calcul
+   fixait son `search_path`, ce qui **empêche Postgres de la déplier** — il l'appelait 31 103 fois. Remède : fonction sans `search_path`
+   (tables nommées `public.`), et la sentinelle compare par une **jointure sur la clé** au lieu de deux tris. ➡ **2,7-2,9 s par l'API**.
+   Témoins positifs (transaction annulée) : une partie retirée, une en trop, une faussée — **les trois vues**.
+2. ⛔ **Ce dépliage a cassé le déclencheur** — trouvé par MON essai suivant (transaction annulée, 13:25) : *« invalid input syntax for type
+   bigint: "" »* — une fois dépliée, Postgres convertit le numéro du notaire **avant** d'appliquer le filtre ; une colonne vide plantait.
+   Le garde-fou a tenu (l'écriture passait, l'erreur allait au journal). **En réel : 0 erreur** (personne n'a écrit dans le registre pendant
+   ces minutes — journal lu à 13:27). Remède : **chaque conversion protégée par un `CASE`**. Re-éprouvé (transaction annulée) : un acquéreur
+   retiré, une transaction **sans notaire**, un notaire posé — **0 erreur**.
+- **État final (13:3x)** : sentinelle **0 écart en 2,9 s**, journal **vide**, 116 932 parties.
+
+### 18.4 Le moniteur
+- Sentinelle **`data.affaire_partie_ecart`** (warning) ajoutée à `monitoring/check_gti_health.py` ; contraintes de la table du moniteur
+  **lues avant** (domaine `data_quality`, gravité `warning` : acceptés). Jouée comme le moniteur la joue : **0, en 2,9 s**.
+- ⚠ **Elle est active au prochain passage du moniteur** (il lit le dépôt). À pousser.
+
+### 18.5 Ce qui vient
+- **Cette nuit** : C4 change les vendeurs de ~19 900 transactions → le déclencheur les recalcule (**~22 s** de plus au push, mesuré) ; demain
+  matin : la sentinelle à 0, et « vendeurs sans notre numéro » de 58 550 à ~36.
+- Le générateur du patch est dans `phase2/checks/gen_table_des_parties/`.

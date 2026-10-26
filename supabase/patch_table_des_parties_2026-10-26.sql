@@ -61,7 +61,10 @@ create policy app_affaire_partie_select on public.app_affaire_partie for select 
 create or replace function public.app_affaire_partie_calculer(l public.app_affaire_ledger)
 returns table (app_affaire_id bigint, role text, rang integer, app_contact_id bigint, hektor_contact_id text,
                est_principal boolean, fiche_sans_nom boolean, transaction_presente boolean)
-language sql stable set search_path = public
+language sql stable
+-- ⚠ PAS de « set search_path » ici, et c'est VOULU : avec lui, Postgres ne peut pas DEPLIER la fonction dans la requete
+--   et l'appelle ligne par ligne -- la sentinelle passait de 1,4 s a 4,1 s (7,4 s par l'API, limite 8 s). Les tables
+--   sont donc nommees avec leur schema (public.).
 as $c$
     SELECT l.app_affaire_id,
            'acquereur'::text AS role,
@@ -93,13 +96,13 @@ as $c$
                                      ELSE '[]'::jsonb END) WITH ORDINALITY x(v, ord)
      WHERE jsonb_typeof(x.v) = 'object'
     UNION ALL
-    SELECT l.app_affaire_id, 'notaire_acquereur', 1, l.notaire_acquereur_id::bigint,
-           (SELECT c.hektor_target_id FROM app_contact_current c WHERE c.hektor_contact_id = l.notaire_acquereur_id),
+    SELECT l.app_affaire_id, 'notaire_acquereur', 1, CASE WHEN coalesce(l.notaire_acquereur_id, '') ~ '^[0-9]+$' THEN l.notaire_acquereur_id::bigint END,
+           (SELECT c.hektor_target_id FROM public.app_contact_current c WHERE c.hektor_contact_id = l.notaire_acquereur_id),
            false, false, coalesce(l.present_in_hektor, false)
      WHERE coalesce(l.notaire_acquereur_id, '') ~ '^[0-9]+$'
     UNION ALL
-    SELECT l.app_affaire_id, 'notaire_vendeur', 1, l.notaire_mandant_id::bigint,
-           (SELECT c.hektor_target_id FROM app_contact_current c WHERE c.hektor_contact_id = l.notaire_mandant_id),
+    SELECT l.app_affaire_id, 'notaire_vendeur', 1, CASE WHEN coalesce(l.notaire_mandant_id, '') ~ '^[0-9]+$' THEN l.notaire_mandant_id::bigint END,
+           (SELECT c.hektor_target_id FROM public.app_contact_current c WHERE c.hektor_contact_id = l.notaire_mandant_id),
            false, false, coalesce(l.present_in_hektor, false)
      WHERE coalesce(l.notaire_mandant_id, '') ~ '^[0-9]+$'
 $c$;
@@ -185,11 +188,19 @@ reel as (
            case when p.role like 'notaire%' then null else p.hektor_contact_id end as hektor_contact_id,
            p.est_principal, p.fiche_sans_nom, p.transaction_presente
       from public.app_affaire_partie p where p.origine = 'listes_du_registre')
-select 'manquante'::text as ecart, m.app_affaire_id, m.role, m.rang, m.app_contact_id, null::text as detail
-  from (select * from attendu except select * from reel) m
-union all
-select 'en_trop', t.app_affaire_id, t.role, t.rang, t.app_contact_id, null
-  from (select * from reel except select * from attendu) t
+select case when r.app_affaire_id is null then 'manquante'
+            when a.app_affaire_id is null then 'en_trop'
+            else 'differente' end::text as ecart,
+       coalesce(a.app_affaire_id, r.app_affaire_id) as app_affaire_id,
+       coalesce(a.role, r.role) as role,
+       coalesce(a.rang, r.rang) as rang,
+       coalesce(a.app_contact_id, r.app_contact_id) as app_contact_id,
+       null::text as detail
+  from attendu a full join reel r
+    on r.app_affaire_id = a.app_affaire_id and r.role = a.role and r.rang = a.rang
+ where a.app_affaire_id is null or r.app_affaire_id is null
+    or (a.app_contact_id, a.hektor_contact_id, a.est_principal, a.fiche_sans_nom, a.transaction_presente)
+       is distinct from (r.app_contact_id, r.hektor_contact_id, r.est_principal, r.fiche_sans_nom, r.transaction_presente)
 union all
 select 'erreur_du_declencheur', e.app_affaire_id, null, null, null, e.erreur
   from public.app_affaire_partie_erreur e where e.le > now() - interval '24 hours';

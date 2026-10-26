@@ -781,6 +781,26 @@ DATA_SENTINELS: list[dict[str, Any]] = [
             "limit": 5,
         },
     },
+    {
+        # ⑧ types (26/10/2026) : LA TABLE DES PARTIES (app_affaire_partie) -- une ligne par (transaction, personne, role),
+        # DERIVEE des listes du registre des transactions par un declencheur qui ne fait JAMAIS echouer l'ecriture
+        # (il note sa panne au journal app_affaire_partie_erreur). Cette sonde compare la table a un recalcul complet
+        # (lignes manquantes / en trop) et compte les erreurs du declencheur des 24 dernieres heures. Elle doit valoir 0.
+        # Si elle sonne : regarder l'echantillon ; une reconstruction remet tout d'aplomb (app_affaire_partie_reconstruire()).
+        # Note : notice/AUDIT_COHERENCE_REGISTRES_ET_TYPES_DE_CONTACTS_2026-10-26.md §15-18.
+        "key": "data.affaire_partie_ecart",
+        "severity": "warning",
+        "label": "Table des parties : ecarts avec le registre des transactions, ou declencheur en panne",
+        "table": "app_v_affaire_partie_ecarts",
+        "params": {},
+        "rule": "absolute",
+        "max": 0,
+        "sample": {
+            "select": "ecart,app_affaire_id,role,rang,app_contact_id,detail",
+            "order": "app_affaire_id.desc",
+            "limit": 5,
+        },
+    },
     # C.1' 24/08 -- les memes sentinelles pour les DEUX AUTRES objets. Elles n'existaient
     # que pour les annonces : un contact ou une recherche bloque ne remontait nulle part.
     # (`partial` n'existe pas sur ces deux tables -> pas de sonde equivalente.)
