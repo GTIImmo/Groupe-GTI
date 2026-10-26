@@ -3177,6 +3177,8 @@ function MandantsEnCreation(props: {
   contactsDejaLa: string[]
 }) {
   const [lignes, setLignes] = useState<RelationProvisionalRow[]>([])
+  // 3b (26/10) : relu aussi a chaque relecture de l'app, pas seulement au changement d'annonce.
+  const relecture = useRelectureRubriques()
 
   useEffect(() => {
     let annule = false
@@ -3186,7 +3188,7 @@ function MandantsEnCreation(props: {
       .then((rows) => { if (!annule) setLignes(rows) })
       .catch(() => { if (!annule) setLignes([]) })
     return () => { annule = true }
-  }, [props.hektorAnnonceId])
+  }, [props.hektorAnnonceId, relecture])
 
   const dejaLa = new Set(props.contactsDejaLa.map((id) => String(id).trim()).filter(Boolean))
   const restantes = lignes.filter((ligne) => {
@@ -3343,6 +3345,7 @@ function HektorMandantContactForm(props: {
       setLinkOptions([])
       setLinkSelected(null)
       props.onJobCreated?.(job)
+      signalerGeste() // 3c (26/10) : le bloc des mandants se relit au clic
       setOpen(false)
       setMandantMode('create')
     } catch (rattachementError) {
@@ -3389,6 +3392,7 @@ function HektorMandantContactForm(props: {
       setPostalCode('')
       setCity('')
       props.onJobCreated?.(job)
+      signalerGeste() // 3c (26/10) : le bloc des mandants se relit au clic
       setMessage(null)
       setOpen(false)
     } catch (submitError) {
@@ -3632,6 +3636,7 @@ function RetirerMandantBouton(props: {
         contactId: contactHektor,
       })
       props.onJobCreated?.(job)
+      signalerGeste() // 3c (26/10) : le bloc des mandants se relit au clic
       setFait(true)
     } catch (e) {
       setErreur(e instanceof Error ? e.message : 'Le retrait a échoué.')
@@ -3739,6 +3744,7 @@ function HektorMandantContactEditForm(props: {
         priority: 16,
       })
       props.onJobCreated?.(job)
+      signalerGeste() // 3c (26/10) : le bloc des mandants se relit au clic
       setOpen(false)
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : 'Modification du mandant impossible.')
@@ -11071,6 +11077,12 @@ function MandatSignatureTracker({ dossier, onJobCreated }: { dossier: Dossier; o
       if (watchable) { window.setTimeout(() => void refresh(), 9000); window.setTimeout(() => void refresh(), 18000) }
     })
   }, [dossier.app_dossier_id])
+  // 3b (26/10) : l'etat des signatures se relit a chaque relecture de l'app, sans se vider.
+  const relecture = useRelectureRubriques()
+  useEffect(() => {
+    if (relecture) void refresh()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [relecture])
 
   function openHektorSignature() {
     const base = (import.meta.env.VITE_HEKTOR_BASE_URL ?? 'https://groupe-gti-immobilier.la-boite-immo.com').replace(/\/+$/, '')
@@ -11226,6 +11238,12 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
     setError(null)
     void refreshDocuments().then((rows) => scheduleSignatureRefresh(rows))
   }, [dossier.app_dossier_id])
+  // 3b (26/10) : relu EN SILENCE a chaque relecture de l'app (pas de « chargement », rien ne se vide).
+  const relecture = useRelectureRubriques()
+  useEffect(() => {
+    if (relecture) void refreshDocuments(true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [relecture])
 
   useEffect(() => {
     if (!pendingDocumentIds.size && !deletingDocumentIds.size && !documents.some((item) => item.storage_status === 'pending_upload' || item.storage_status === 'uploading')) return
@@ -12934,6 +12952,67 @@ function numeroCreeDansLeTravail(job: ConsoleJob, cle: 'app_dossier_id' | 'app_i
   const valeur = String(job.payload_json?.[cle] ?? '').trim()
   return /^\d+$/.test(valeur) ? valeur : null
 }
+
+// ⛔ 26/10/2026 -- POINTS 3b + 3c : L'ECRAN SUIT LE CLIC. Depuis le chantier ③ (14/10), presque
+//   chaque geste s'ecrit CHEZ NOUS au clic (RPC *_optimistic) ; l'ecran, lui, attendait encore la
+//   fin du travail Hektor (~1 min), et plusieurs rubriques de la fiche (Affaires, Documents,
+//   signatures, mandants en creation) ne se relisaient qu'au changement de fiche.
+//   3c : apres un geste, on RELIT tout de suite (la donnee est deja chez nous), puis encore une
+//        fois a la fin du travail (le filet existant : si Hektor refuse, le worker remet l'etat).
+//   3b : chaque relecture de l'app (dataReloadKey) est relayee aux rubriques par un signal, et
+//        elles se relisent SANS SE VIDER (on ne remet a zero qu'au changement de fiche).
+//   Les composants enfants signalent leur geste par `signalerGeste()` (pas de props a tirer).
+//   Audit : notice/AUDIT_NAVIGATION_APRES_ACTION_2026-10-23.md §17-§19.
+//   `false` = l'ancien comportement, en une ligne.
+const L_ECRAN_SUIT_LE_CLIC = true
+const EVENEMENT_RELIRE_RUBRIQUES = 'hektor:relire-rubriques'
+const EVENEMENT_GESTE_FAIT = 'hektor:geste-fait'
+function signalerGeste() {
+  if (!L_ECRAN_SUIT_LE_CLIC || typeof window === 'undefined') return
+  try { window.dispatchEvent(new CustomEvent(EVENEMENT_GESTE_FAIT)) } catch { /* noop */ }
+}
+// Un compteur qui monte a chaque relecture de l'app : a mettre dans les dependances de l'effet
+// qui lit la rubrique. Il vaut 0 tant que rien n'a ete relu (premier rendu inchange).
+function useRelectureRubriques(): number {
+  const [compte, setCompte] = useState(0)
+  useEffect(() => {
+    if (!L_ECRAN_SUIT_LE_CLIC) return
+    const relire = () => setCompte((valeur) => valeur + 1)
+    window.addEventListener(EVENEMENT_RELIRE_RUBRIQUES, relire)
+    return () => window.removeEventListener(EVENEMENT_RELIRE_RUBRIQUES, relire)
+  }, [])
+  return compte
+}
+// Supprimer une recherche n'est PAS ecrit chez nous au clic (travail seul) : on ne la retire pas
+// de l'ecran avant Hektor (s'il refuse, elle doit rester). On garde « Suppression en cours… » sur
+// sa ligne TANT QUE le travail vit, au lieu de rendre le bouton au bout d'une seconde.
+function useSuppressionsEnCours() {
+  const [enCours, setEnCours] = useState<Record<string, string>>({})
+  const ajouter = (cle: string, jobId: string | null | undefined) => {
+    if (!L_ECRAN_SUIT_LE_CLIC || !jobId) return
+    setEnCours((avant) => ({ ...avant, [cle]: String(jobId) }))
+  }
+  useEffect(() => {
+    const ids = Object.values(enCours)
+    if (!ids.length || import.meta.env.MODE === 'mock') return
+    let annule = false
+    const verifier = () => {
+      loadConsoleJobsByIds(ids)
+        .then((jobs) => {
+          if (annule) return
+          const finis = new Set(jobs.filter((job) => !isConsoleJobActive(job)).map((job) => String(job.id)))
+          if (!finis.size) return
+          setEnCours((avant) => Object.fromEntries(Object.entries(avant).filter(([, id]) => !finis.has(id))))
+          // La recherche archivee chez Hektor redescend avec la resynchro du contact : on relit.
+          try { window.dispatchEvent(new CustomEvent('hektor:search-updated')) } catch { /* noop */ }
+        })
+        .catch(() => undefined)
+    }
+    const minuteur = window.setInterval(verifier, 5000)
+    return () => { annule = true; window.clearInterval(minuteur) }
+  }, [enCours])
+  return { enCours, ajouter }
+}
 const MEMOIRE_ECRANS_STOCKAGE = 'gti_memoire_ecrans'
 type MemoireEcran = {
   filters: AppFilters
@@ -14186,6 +14265,27 @@ export default function App() {
     return () => window.removeEventListener('hektor:contact-updated', onContactUpdated)
   }, [])
 
+  // POINTS 3b + 3c (26/10/2026) : un geste fait dans un composant enfant (mandants, geste
+  // abandonne, « en attente » tranche) relit l'app, comme les signaux ci-dessus. Et chaque
+  // relecture de l'app est RELAYEE aux rubriques de la fiche (Affaires, Documents, signatures,
+  // mandants en creation), qui ne se relisaient qu'au changement de fiche. Pas au premier rendu.
+  useEffect(() => {
+    if (!L_ECRAN_SUIT_LE_CLIC) return
+    const onGesteFait = () => {
+      setDataReloadKey((value) => value + 1)
+      setVisitRefreshKey((value) => value + 1)
+    }
+    window.addEventListener(EVENEMENT_GESTE_FAIT, onGesteFait)
+    return () => window.removeEventListener(EVENEMENT_GESTE_FAIT, onGesteFait)
+  }, [])
+  useEffect(() => {
+    if (!L_ECRAN_SUIT_LE_CLIC || dataReloadKey === 0) return
+    try { window.dispatchEvent(new CustomEvent(EVENEMENT_RELIRE_RUBRIQUES)) } catch { /* noop */ }
+  }, [dataReloadKey])
+  function relireApresLeGeste() {
+    if (L_ECRAN_SUIT_LE_CLIC) setDataReloadKey((value) => value + 1)
+  }
+
   useEffect(() => {
     if (hasSupabaseEnv && !session) return
     const jobsToResolve = visibleHektorActionPopupJobs
@@ -15232,6 +15332,7 @@ export default function App() {
     try {
       const job = await createRestoreHektorAnnonceJob({ dossier, priority: 8 })
       rememberHektorActionJob(job)
+      relireApresLeGeste() // 3c (26/10) : deja ecrit chez nous (app_restore_annonce_optimistic)
       setNoticeMessage(`Desarchivage demande pour ${dossier.numero_dossier ?? dossier.hektor_annonce_id}.`)
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Impossible de demander le desarchivage')
@@ -16671,6 +16772,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         priority: 8,
       })
       rememberHektorActionJob(job)
+      relireApresLeGeste() // 3c (26/10) : deja ecrit chez nous (app_archive_annonce_optimistic)
       setArchiveAnnonceTarget(null)
       setArchiveOtherText('')
       setArchivePrice('')
@@ -17046,6 +17148,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         priority: 9,
       })
       rememberHektorActionJob(job)
+      relireApresLeGeste() // 3c (26/10) : deja ecrit chez nous (app_assign_negotiator_optimistic)
       setNoticeMessage(`Affectation demandee a ${negotiator.label} sur ${agency.label}. Relance l action apres la synchronisation de la fiche.`)
       setNegotiatorAssignTarget(null)
       setNegotiatorAssignAgencyValue('')
@@ -17892,6 +17995,17 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       }
       setNoticeMessage(`${libelles[geste]} pour ${statusChangeTarget.numero_dossier ?? statusChangeTarget.hektor_annonce_id}.`)
       closeStatusChangeModal()
+      // 3c (26/10) : l'etat est chez nous depuis la RPC -- on relit tout de suite. Et le travail
+      // est enfin SUIVI : a sa fin l'ecran se relit encore (si Hektor refuse, le worker a remis
+      // l'ancien etat, et on le voit). Une lecture ratee du travail ne fait pas echouer le geste.
+      if (L_ECRAN_SUIT_LE_CLIC) {
+        relireApresLeGeste()
+        if (retour.job_id) {
+          void loadConsoleJobsByIds([String(retour.job_id)])
+            .then((jobs) => { if (jobs[0]) rememberHektorActionJob(jobs[0]) })
+            .catch(() => undefined)
+        }
+      }
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Impossible de demander ce geste')
     } finally {
@@ -18172,6 +18286,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       }
 
       setStatusChangeTarget(null)
+      // 3c (26/10) : statut, transaction, commission, conditions et note sont chez nous : on relit
+      // la fiche ET sa rubrique Affaires (3b), sans attendre la fin du travail Hektor.
+      relireApresLeGeste()
       setNoticeMessage(reprendre
         ? `Modification du ${AFFAIRE_GENRE_LABEL[AFFAIRE_PAR_STATUT[statusChangeStatus] ?? ''] ?? 'la transaction'} demandee pour ${statusChangeTarget.numero_dossier ?? statusChangeTarget.hektor_annonce_id}.`
         : `Changement vers ${hektorStatusTargetLabel(statusChangeStatus)} demande pour ${statusChangeTarget.numero_dossier ?? statusChangeTarget.hektor_annonce_id}.`)
@@ -18402,6 +18519,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 })
                 if (!pose.ok) {
                   acceptanceInfoMessage = `${acceptanceInfoMessage} Mais la date n a pas pu etre enregistree chez nous : ${messageRefusCloture(pose.erreur)}`
+                } else {
+                  relireApresLeGeste() // 3c (26/10) : la date du registre se voit tout de suite
                 }
               } catch (erreurCloture) {
                 const message = erreurCloture instanceof Error ? erreurCloture.message : 'erreur inconnue'
@@ -18800,6 +18919,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       setNewUserIsActive(true)
       setNewUserPerimetre('reseau')
       setErrorMessage(`Utilisateur cree : ${result.email}`)
+      // 3c (26/10) : le nouvel utilisateur apparait dans la liste sans rouvrir l'outil.
+      if (L_ECRAN_SUIT_LE_CLIC) void loadAppUsers().then(setAppUsers).catch(() => undefined)
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Erreur de creation utilisateur')
     } finally {
@@ -29079,10 +29200,18 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   const [ckDonneesApp, setCkDonneesApp] = useState<CkDonneesApp>(() => (
     { carnet: new Map(), repartition: new Map(), conditions: new Map(), notes: new Map() }))
   const ckDossierIdPourRegistre = props.selectedDossier?.app_dossier_id ?? null
+  // 3b (26/10) : relue aussi a chaque relecture de l'app. On ne VIDE la rubrique qu'au
+  // changement de fiche : une relecture de la meme fiche garde l'affichage jusqu'a la reponse.
+  const ckRelecture = useRelectureRubriques()
+  const ckRegistreLuPourRef = useRef<number | string | null | undefined>(undefined)
   useEffect(() => {
     let vivant = true
-    setCkRegistreAffaires(null)
-    setCkDonneesApp({ carnet: new Map(), repartition: new Map(), conditions: new Map(), notes: new Map() })
+    const memeFiche = L_ECRAN_SUIT_LE_CLIC && ckRegistreLuPourRef.current === ckDossierIdPourRegistre
+    ckRegistreLuPourRef.current = ckDossierIdPourRegistre
+    if (!memeFiche) {
+      setCkRegistreAffaires(null)
+      setCkDonneesApp({ carnet: new Map(), repartition: new Map(), conditions: new Map(), notes: new Map() })
+    }
     const id = Number(ckDossierIdPourRegistre)
     if (!Number.isFinite(id) || id <= 0) return
     loadAffairesForDossier(id)
@@ -29105,7 +29234,8 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
           loadAffairesNotes(ids).catch(() => new Map<number, string>()),
         ]).then(([carnet, repartition, conditions, notes]) => {
           if (!vivant) return
-          setCkDonneesApp({ carnet, repartition, conditions, notes })
+          // 3b : on garde les noms de notaires deja lus le temps de les relire (meme fiche).
+          setCkDonneesApp((avant) => (memeFiche ? { ...avant, carnet, repartition, conditions, notes } : { carnet, repartition, conditions, notes }))
           // ⑧ (23/10) : les notaires connus par leur seul numero -- leur nom, dans leur fiche contact.
           const numeros: string[] = []
           for (const l of lignes) {
@@ -29118,9 +29248,10 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
             .catch(() => undefined)
         })
       })
-      .catch(() => { if (vivant) setCkRegistreAffaires(null) })
+      // Une relecture ratee de la MEME fiche garde ce qui est affiche (3b).
+      .catch(() => { if (vivant && !memeFiche) setCkRegistreAffaires(null) })
     return () => { vivant = false }
-  }, [ckDossierIdPourRegistre])
+  }, [ckDossierIdPourRegistre, ckRelecture])
 
   // Adresse « live » pour la colonne de gauche : le parent ne re-fetch PAS le détail après un save en
   // place, donc props.address restait figé jusqu'à un refresh manuel. On superpose le diff local
@@ -29234,7 +29365,8 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
       .then((rows) => { if (!cancelled) setCkDocs(rows) })
       .catch(() => { if (!cancelled) setCkDocs([]) })
     return () => { cancelled = true }
-  }, [dossier?.app_dossier_id])
+    // 3b (26/10) : relue aussi a chaque relecture de l'app (le compteur est declare plus haut).
+  }, [dossier?.app_dossier_id, ckRelecture])
   useEffect(() => {
     const id = dossier?.app_dossier_id
     if (!id) { setCkActi([]); return }
@@ -35584,6 +35716,7 @@ function ContactEditStatusBanner({ hektorContactId }: { hektorContactId: string 
     try {
       await resolveContactPending(hektorContactId, mode)
       setStatus(null)
+      signalerGeste() // 3c (26/10) : la fiche contact se relit (valeurs remises ou geste refait)
     } catch (err) {
       setResolveError(err instanceof Error ? err.message : String(err))
       setResolving(false)
@@ -35676,6 +35809,9 @@ function GesteAbandonneBanner({ dossier }: { dossier: Dossier | null }) {
           : bvs("Abandonné. Rien à remettre : votre fiche disait déjà la même chose que Hektor."))
       }
       setGestes((liste) => liste.filter((g) => g.job_id !== jobId))
+      // 3c (26/10) : « Abandonner » a remis des valeurs EN BASE ; la fiche affichait encore
+      // celles abandonnees. On la relit (et « J'ai refait » aussi, c'est sans risque).
+      signalerGeste()
     } catch (err) {
       setResolveError(err instanceof Error ? err.message : String(err))
     } finally {
@@ -35738,6 +35874,7 @@ function AnnonceEditStatusBanner({ dossier }: { dossier: Dossier | null }) {
     try {
       await resolveAnnoncePending(dossierId, mode)
       setStatus(null)
+      signalerGeste() // 3c (26/10) : la fiche se relit (valeurs remises ou geste refait)
     } catch (err) {
       setResolveError(err instanceof Error ? err.message : String(err))
       setResolving(false)
@@ -36980,6 +37117,9 @@ function MobileDossierDetail(props: {
     setEstimEditorOpen(false)
   }, [dossier?.app_dossier_id])
 
+  // 3b (26/10) : avant le retour anticipe, pour ne pas changer le nombre de hooks.
+  const mobRelecture = useRelectureRubriques()
+  const mobRegistreLuPourRef = useRef<number | string | null | undefined>(undefined)
   if (!dossier) return <section className="mobile-detail-empty">Aucun dossier sélectionné.</section>
 
   const primaryImage = props.images[0]?.url ?? dossier.photo_url_listing ?? null
@@ -37043,16 +37183,20 @@ function MobileDossierDetail(props: {
   // Une lecture ratee retombe sur les champs plats : on ne peut pas aggraver.
   const [mobRegistre, setMobRegistre] = useState<AffaireLedgerRow[] | null>(null)
   const mobDossierId = props.selectedDossier?.app_dossier_id ?? null
+  // 3b (26/10) : relu a chaque relecture de l'app ; vide seulement au changement de fiche
+  // (le compteur et la memoire sont declares avant le retour anticipe, plus haut).
   useEffect(() => {
     let vivant = true
-    setMobRegistre(null)
+    const memeFiche = L_ECRAN_SUIT_LE_CLIC && mobRegistreLuPourRef.current === mobDossierId
+    mobRegistreLuPourRef.current = mobDossierId
+    if (!memeFiche) setMobRegistre(null)
     const id = Number(mobDossierId)
     if (!Number.isFinite(id) || id <= 0) return
     loadAffairesForDossier(id)
       .then((lignes) => { if (vivant) setMobRegistre(lignes) })
-      .catch(() => { if (vivant) setMobRegistre(null) })
+      .catch(() => { if (vivant && !memeFiche) setMobRegistre(null) })
     return () => { vivant = false }
-  }, [mobDossierId])
+  }, [mobDossierId, mobRelecture])
   const mobChaines = mobRegistre && mobRegistre.length ? grouperAffairesParChaine(mobRegistre) : null
 
   const compromisFacts = [
@@ -42226,6 +42370,8 @@ function ContactDetailPopupBase(props: {
   const [searchModalOpen, setSearchModalOpen] = useState(false)
   const [editingSearch, setEditingSearch] = useState<AppContactSearch | null>(null)
   const [searchDeletePending, setSearchDeletePending] = useState<string | null>(null)
+  // 3c (26/10) : « Suppression en cours… » tenu tant que le travail Hektor vit.
+  const recherchesEnSuppression = useSuppressionsEnCours()
   const [expandedSearchKeys, setExpandedSearchKeys] = useState<Set<string>>(() => new Set())
   const toggleSearchExpanded = (key: string) => setExpandedSearchKeys((prev) => {
     const next = new Set(prev)
@@ -42243,6 +42389,7 @@ function ContactDetailPopupBase(props: {
     try {
       const job = await createDeleteHektorContactSearchJob({ contactId: props.contact.hektor_contact_id, searchIndex: search.search_index })
       props.onJobCreated?.(job)
+      recherchesEnSuppression.ajouter(search.contact_search_key, job?.id)
     } catch (error) {
       if (typeof window !== 'undefined') window.alert(error instanceof Error ? error.message : 'Suppression de la recherche impossible.')
     } finally {
@@ -42793,9 +42940,9 @@ function ContactDetailPopupBase(props: {
                                           Modifier
                                         </button>
                                         {contactBool(search.is_active) ? (
-                                          <button className="btn ghost sm fcx-search-del" type="button" disabled={searchDeletePending === search.contact_search_key} onClick={() => handleDeleteContactSearch(search)}>
+                                          <button className="btn ghost sm fcx-search-del" type="button" disabled={searchDeletePending === search.contact_search_key || search.contact_search_key in recherchesEnSuppression.enCours} onClick={() => handleDeleteContactSearch(search)}>
                                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} width="13" height="13"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" /></svg>
-                                            {searchDeletePending === search.contact_search_key ? 'Suppression…' : 'Supprimer'}
+                                            {searchDeletePending === search.contact_search_key ? 'Suppression…' : search.contact_search_key in recherchesEnSuppression.enCours ? 'Suppression en cours…' : 'Supprimer'}
                                           </button>
                                         ) : null}
                                       </div>
@@ -43172,6 +43319,8 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
   const [searchModalOpen, setSearchModalOpen] = useState(false)
   const [editingSearch, setEditingSearch] = useState<AppContactSearch | null>(null)
   const [searchDeletePending, setSearchDeletePending] = useState<string | null>(null)
+  // 3c (26/10) : « Suppression en cours… » tenu tant que le travail Hektor vit.
+  const recherchesEnSuppression = useSuppressionsEnCours()
   // Dépliage de la liste complète des communes d'une recherche (repliée par défaut sur le décompte).
   const [expandedSearchKeys, setExpandedSearchKeys] = useState<Set<string>>(() => new Set())
   const toggleSearchExpanded = (key: string) => setExpandedSearchKeys((prev) => {
@@ -43337,6 +43486,7 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
     try {
       const job = await createDeleteHektorContactSearchJob({ contactId: props.contact.hektor_contact_id, searchIndex: search.search_index })
       props.onJobCreated?.(job)
+      recherchesEnSuppression.ajouter(search.contact_search_key, job?.id)
     } catch (error) {
       if (typeof window !== 'undefined') window.alert(error instanceof Error ? error.message : 'Suppression de la recherche impossible.')
     } finally {
@@ -43971,7 +44121,8 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
                             <button className="fa-cx-ic-act" type="button" title="Modifier" onClick={() => setEditingSearch(search)}>
                               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
                             </button>
-                            <button className="fa-cx-ic-act del" type="button" title="Supprimer" disabled={searchDeletePending === search.contact_search_key} onClick={() => handleDeleteContactSearch(search)}>
+                            {search.contact_search_key in recherchesEnSuppression.enCours ? <span style={{ fontSize: 12, color: '#8A6D3B', alignSelf: 'center' }}>Suppression en cours…</span> : null}
+                            <button className="fa-cx-ic-act del" type="button" title={search.contact_search_key in recherchesEnSuppression.enCours ? 'Suppression en cours chez Hektor' : 'Supprimer'} disabled={searchDeletePending === search.contact_search_key || search.contact_search_key in recherchesEnSuppression.enCours} onClick={() => handleDeleteContactSearch(search)}>
                               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round"><path d="M4 7h16" /><path d="M9 7V4h6v3" /><path d="M10 11v6M14 11v6" /><path d="M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13" /></svg>
                             </button>
                           </div>

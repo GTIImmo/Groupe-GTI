@@ -87,6 +87,9 @@ export default function ContactSearchModal(props: ContactSearchModalProps) {
           typeLabels: contactSearchTypeLabels(value.typeIds),
         })
         props.onCreated?.(job)
+        // 3c (26/10) : la ligne provisoire est deja chez nous -- le meme signal que la modification,
+        // pour que la fiche la montre tout de suite (« en creation ») au lieu d'attendre Hektor.
+        try { window.dispatchEvent(new CustomEvent('hektor:search-updated')) } catch { /* noop */ }
         props.onClose()
       }
     } catch (e) {

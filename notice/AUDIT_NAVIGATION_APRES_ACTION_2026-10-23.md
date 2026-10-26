@@ -980,3 +980,56 @@ appelées par aucun écran** (code mort, en bas). Légende : ✅ déjà instanta
 **Bilan** : sur ~45 gestes, **~27 déjà instantanés**, **14 relèvent de 3b+3c** (dont 4 que le §17 ne listait pas :
 conditions / note / commission / répartition, contact « en attente », annonce « en attente », création d'utilisateur),
 **5 attendent vraiment Hektor** (point 6), **1 appartient au chantier ⑧** (écarts R4).
+
+---
+
+## 19. ✅ 3b + 3c CODÉS ET CONTRÔLÉS EN DÉMONSTRATION (26/10, « Ok pour 3b et 3c ») — ⚠ NON ÉPROUVÉS EN RÉEL
+
+Front seul (`App.tsx`, `ContactSearchModal.tsx`), rien en base, rien chez Hektor. Interrupteur **`L_ECRAN_SUIT_LE_CLIC`**
+(`false` = l'ancien comportement, en une ligne).
+
+**La mécanique (3 pièces)**
+- `relireApresLeGeste()` (dans l'app) : relit tout de suite (`dataReloadKey`), puisque la donnée est déjà chez nous. La
+  relecture de **fin de travail** (+600 ms, existante) reste le filet : si Hektor refuse, le worker remet l'ancien état
+  et l'écran le montre.
+- `signalerGeste()` (composants enfants : mandants, geste abandonné, « en attente » tranché) : émet
+  `hektor:geste-fait`, que l'app écoute comme les signaux annonce / contact / recherche. Pas de props à tirer.
+- **3b** : chaque relecture de l'app est relayée aux rubriques par `hektor:relire-rubriques` (hook
+  `useRelectureRubriques`). Les rubriques **ne se vident qu'au changement de fiche** (mémoire de la dernière fiche
+  lue) : une relecture de la même fiche garde l'affichage jusqu'à la réponse, et une relecture ratée garde ce qui
+  est affiché.
+
+**Les rubriques branchées (3b)** : Affaires du cockpit (registre + carnet, répartition, conditions, notes ; les noms de
+notaires déjà lus sont gardés le temps de les relire), Documents du cockpit, Affaires du téléphone, état des
+signatures (`MandatSignatureTracker`), panneau Documents (relu **en silence**, sans « chargement »), mandants en
+création (`MandantsEnCreation` — ⚠ il n'est rendu que dans l'ancienne fiche `DossierDetailLayoutBase` ; dans le
+cockpit de production, les mandants viennent de la fiche elle-même, relue par la même relecture).
+
+**Les gestes (3c)** — les 14 du §18 :
+
+| geste | ce qui est fait |
+|---|---|
+| changer le statut / créer offre-compromis-vente + commission, conditions, note, répartition | relit à la fin de la saisie (tout est écrit), Affaires comprises |
+| refuser / accepter une offre, annuler / supprimer un compromis ou une vente (F1) | relit au clic **et le travail est enfin suivi** (`job_id` de la RPC → `loadConsoleJobsByIds` → suivi) ⚠ la fenêtre « Suivi de l'action » apparaîtra donc aussi pour ces gestes (jusqu'au point 6) |
+| archiver, désarchiver, affecter un négociateur | relit au clic (en plus de la fin du travail) |
+| créer une recherche | émet `hektor:search-updated` comme la modification → la ligne « en création » se voit tout de suite |
+| supprimer une recherche | **pas** de retrait optimiste : « Suppression en cours… » reste sur la ligne **tant que le travail vit** (sondage 5 s du seul travail), puis relecture. Les deux fiches contact (ancienne et V2 ; la V2 n'avait qu'une icône → texte ajouté) |
+| lier, retirer, créer, modifier un mandant | `signalerGeste()` après le travail |
+| « Abandonner ce geste » / « J'ai refait » (bandeau) | `signalerGeste()` : la fiche ne montre plus les valeurs abandonnées. Le message « Remis comme Hektor : … » reste affiché |
+| trancher un contact / une annonce « en attente » | `signalerGeste()` |
+| accepter une demande d'annulation (F6) | relit dès que la date est posée chez nous |
+| créer un utilisateur | la liste des utilisateurs se relit |
+| corriger un champ depuis l'éditeur (estimation / mandat, l. ~5177) | ⛔ **volontairement inchangé** : la valeur est déjà mise à jour sur place (`onSaved`), et relire la fiche ferait lever à l'éditeur ouvert son bandeau « la fiche a changé » (`draftStale`) pour la correction qu'on vient de faire |
+
+**Contrôle hors ligne** : `npm run build` vert. **Démonstration** (mode mock, fiche 32621, cockpit 1440 px puis
+téléphone 375 px), par lecture de l'état React :
+- 1 signal `hektor:geste-fait` → **1** `hektor:relire-rubriques` → le compteur du cockpit passe **0 → 1**, celui des
+  signatures **0 → 1**, celui de la fiche téléphone **0 → 1** ;
+- **aucun clignotement** : longueur du texte de la fiche échantillonnée toutes les 15 ms pendant 2 s (105-107
+  échantillons) — Affaires 1 541 / 1 541, Mandat 2 774 / 2 774, téléphone 3 156 / 3 156 ;
+- aucune erreur JavaScript (les seules erreurs sont les 500 de `/api/...`, absent en démonstration, déjà là avant).
+⚠ **Limite honnête** : la démonstration n'a pas de base — ses Affaires sont vides, donc l'absence de clignotement y
+est prouvée sur une rubrique sans lignes ; et aucun geste réel n'a pu partir (les RPC n'existent pas en démonstration).
+
+**Ce qui reste : l'essai réel** (à faire avec Frédéric, sur une fiche qu'il choisit) — voir la liste donnée en fin de
+session.
