@@ -3323,3 +3323,25 @@ chaîné avec un compromis ou une vente […] mais on a peut-être laissé cela 
   « Modifier » (elle se refuse seulement).
 - **Portée aujourd'hui** : ~140 biens en cours sont engagés (« Envoyer vers Offre » masqué) ; **0** n'a d'offre écartée en cours.
 - ⏰ Après le push : ouvrir la modale d'un bien « Sous compromis » → pas de « Envoyer vers Offre », bandeau à jour.
+
+#### ✅ Point 5 n° 2 — L'ESSAI RÉEL CHEZ HEKTOR, 26/10 18:08-18:27, bien d'essai 62965 *(Frédéric : « oui, fais l'essai réel sur 62965, dans mon Chrome, avec les acquéreurs d'essai, puis le nettoyage ; arrête-toi si Hektor répond autre chose que prévu »)*
+Départ : 62965 « TEST C13 clôture mandat », Actif, diffusable 0, 0 transaction, file vide. Acquéreurs d'essai 20000012 (605967) et 20000015 (605976).
+| # | geste (par l'écran) | réponse de Hektor (relue par l'API, pas seulement le travail) |
+|---|---|---|
+| 1 | offre A 80 000 € (20000012) | **33119** créée, « confirmée par les deux portes » ; bien Sous offre ; diffusable 0 |
+| 2 | offre B 79 000 € (20000015), bien libre | **33120** créée ; « Choisir » nécessaire (deux offres en cours, aucune visée d'office — voulu) |
+| 3 | accepter A | 33119 **accepte** — ⭐ **Hektor NE refuse PAS B tout seul** : 33120 reste « proposition » |
+| — | écran, bien engagé par l'offre acceptée | ✅ « Envoyer vers Offre » **absent** (seul « Annuler ») ; bandeau « Ce bien est déjà engagé » ; « Choisir » **seulement sur B** |
+| 4 | compromis 80 000 € sur A | **50141** créé, rattaché au dossier de A (chaîne 1001408) ; Sous compromis ; diffusable 0 |
+| — | écran, bien sous compromis, B choisie | ✅ boutons : **« Annuler » et « Refuser l'offre » seulement** ; « Envoyer vers Compromis » grisé (2.2c) |
+| 5 | **refuser B avec un compromis ouvert** | ✅ **33120 refus** chez Hektor ; A **accepte** inchangée ; compromis 50141 **actif** (status 1) ; diffusable 0 |
+| — | serrure (transaction annulée, compte de Frédéric) | ✅ refuser / accepter A → `offre_verrouillee … compromis en cours (n° 50141)` ; **0 travail créé** (28 → 28) |
+| 6 | nettoyage : supprimer le compromis | 50141 supprimé ; ⭐ **statut redescendu tout seul à « Sous offre »** ; diffusable 0 |
+| 7 | nettoyage : refuser A (visée d'office, « Accepter » caché, « Envoyer vers Offre » caché) | 33119 **refus** |
+| ⛔ | **ARRÊT** | ⚠ **le bien reste « Sous offre » chez Hektor** alors que les deux offres sont refusées (relecture 18:27). Le remettre « Actif » = « Envoyer vers Actif », qui **remet diffusable = 1** (mémoire du 13/10) → **décision de Frédéric** |
+- **Ce que l'essai établit** : (1) Hektor accepte le refus d'une offre concurrente pendant un compromis, sans toucher au compromis ni à
+  l'offre retenue ; (2) Hektor ne refuse jamais les concurrentes à l'acceptation — le geste « Refuser » de l'offre écartée était donc
+  nécessaire ; (3) refuser la dernière offre ne fait pas redescendre le statut (« Sous offre » reste), alors que supprimer le compromis le fait.
+- ⚠ **Défaut d'affichage vu, non corrigé** : le bandeau du 04/09 (2.2b) dit encore « Ces offre aurait dû être refusée au moment de
+  l'acceptation. **Désigne celle qui fait foi.** » — inexact depuis le 26/10 (seul « Refuser » est possible) et une faute d'accord.
+- Traces laissées sur 62965 : 2 offres refusées (33119, 33120), comme sur les autres biens d'essai ; le compromis a disparu.
