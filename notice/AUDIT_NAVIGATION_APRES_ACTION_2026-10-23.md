@@ -1195,3 +1195,24 @@ n'ouvre rien ; Échap ferme ; la barre de l'Accueil ouvre la fenêtre et retrouv
 Défaut vu et corrigé : une image transitoire montrait les anciens résultats sous l'état vide après « Effacer ».
 ⚠ **Non vérifiable en démonstration** : les comptes « Aussi : … » et l'extension automatique (pas de base), les contacts
 (aucun contact de démonstration). ➡ **À éprouver en réel après la mise en ligne** (lecture seule : chercher n'écrit rien).
+
+### 20.3 L'ADRESSE — où elle est chez nous, ce qui la rend introuvable (mesuré le 26/10)
+
+*Frédéric : « l'adresse des annonces et des contacts, même archivés, est déjà chez nous… rechercher par une adresse est
+important dans notre métier. »*
+
+| objet | adresses chez nous (Supabase) | cherchable aujourd'hui ? |
+|---|---|---|
+| annonces en cours | **10 787** / 13 512 (`app_dossier_current.adresse_detail`, quasi identique à `adresse_privee_listing` : 4 différences) | ❌ pas d'index → 1 515 ms |
+| mandats du registre (toute leur histoire) | **24 347** / 24 576 (`app_mandat_register_current`) | ❌ ni index texte ni index adresse → 196 ms, lecture complète |
+| ↳ dont des biens **archivés** | 17 164 / 35 335 archives | seulement par le registre |
+| ↳ dont des biens **vendus / clos** | 6 420 / 8 955 | seulement par le registre |
+| contacts | **32 685** / 62 325 (`app_contact_current.adresse`) | ❌ l'adresse **n'est pas** dans leur texte de recherche (116 cas par hasard) |
+| archives et vendues **sans mandat** (~20 700) | ❌ pas dans les listes de Supabase (les index légers n'ont pas la colonne) ; ⚠ présentes dans la base locale du serveur (non mesuré) | ❌ |
+
+**Le remède proposé (accord + patch à coller, aucune donnée modifiée, retour arrière = `DROP INDEX`)** : 3 index texte,
+créés sans bloquer (`CONCURRENTLY`) — `app_dossier_current(adresse_detail)`, `app_mandat_register_current` (texte de
+recherche + adresse), `app_contact_current(adresse)` ; puis 3 lignes de code pour chercher l'adresse dans ces trois
+sources et l'**afficher** dans le résultat. Couverture : 10 787 annonces + 24 347 mandats (dont 23 584 biens vendus ou
+archivés) + 32 685 contacts. Les ~20 700 archives / vendues sans mandat demandent d'ajouter l'adresse aux listes
+construites la nuit : chantier à part.
