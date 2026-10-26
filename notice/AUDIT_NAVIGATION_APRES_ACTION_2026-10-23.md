@@ -911,3 +911,72 @@ bloc des mandants** → branchés sur le signal, **sans se vider** pendant la re
 - la suppression de recherche **n'est pas** rendue optimiste : seulement un état « en cours ».
 
 Front seul, rien chez Hektor, interrupteur `L_ECRAN_SUIT_LE_CLIC`.
+
+---
+
+## 18. LE TABLEAU COMPLET — TOUS LES GESTES D'ÉCRITURE DE L'APP (26/10, relevé dans le code)
+
+*Frédéric : « il manque beaucoup de gestes, tu as listé que ceux qui changent ? »* — oui : le §17 ne listait que les
+gestes que 3b + 3c touchent. Règle du 21/09 : **balayer TOUS les objets et TOUS les gestes**.
+
+**Méthode** : relevé automatique de **toutes** les fonctions de `lib/api.ts` qui écrivent (appel `rpc`, `insert / update /
+delete`, ou appel serveur `POST / PATCH / DELETE`) — **99 fonctions**, appelées à **169 endroits** des écrans — puis, pour
+chaque appel, ce que l'écran fait juste après (relecture, mise à jour locale, suivi du travail, signal, rien), et
+**vérification à la main** des « rien » douteux (agenda, rapprochement, fenêtre statut). **10 fonctions ne sont
+appelées par aucun écran** (code mort, en bas). Légende : ✅ déjà instantané · 🔧 **3b+3c** · ⏳ attend vraiment Hektor →
+**point 6** (indicateur dans l'objet) · ⛔ hors navigation.
+
+| objet | geste | écrit chez nous au clic ? | l'écran aujourd'hui | verdict |
+|---|---|---|---|---|
+| **annonce** | créer | ✅ | ✅ **ouvre la fiche (3a, 26/10)** | ✅ |
+| | modifier (formulaire, édition dans la fiche, « Reporter dans la fiche ») | ✅ | signal `hektor:annonce-updated` / mise à jour locale | ✅ |
+| | modifier depuis l'éditeur d'estimation (`save`, l. 5177) | ✅ | ❔ aucun signal relevé | 🔧 à vérifier au codage |
+| | changer le statut, créer offre / compromis / vente | ✅ | liste à la fin du travail, **rubrique Affaires jamais** | 🔧 |
+| | archiver | ✅ | à la fin du travail | 🔧 |
+| | désarchiver | ✅ | rouvre la fiche, liste à la fin | 🔧 |
+| | affecter un négociateur | ✅ | à la fin du travail | 🔧 |
+| | supprimer | — | retrait local immédiat | ✅ |
+| | activer un brouillon | ⛔ non | à la fin du travail | ⏳ inchangé |
+| | préparer la fiche d'une archive / d'un historique / d'un brouillon | — | état « préparation » en ligne | ✅ |
+| | relire depuis Hektor (ouverture d'une fiche) | — | silencieux (point 0) | ✅ |
+| | Diffusable, Validé, passerelles | appel **direct** Hektor | mise à jour à la réponse | ✅ |
+| | numéro de mandat automatique (PROTEXA) | ⛔ vient de Hektor | à la fin du travail | ⏳ point 6 (C1) |
+| | Matterport (en ligne, hors ligne, archiver, réactiver) | ⛔ non | à la fin du travail | ⏳ point 6 (C3) |
+| | date de clôture du mandat | ✅ | relecture immédiate | ✅ |
+| **transaction** | refuser / accepter une offre, annuler / supprimer un compromis ou une vente | ✅ | **rien ne bouge**, travail non suivi | 🔧 |
+| | conditions, note, commission, répartition (écrites avec la fenêtre statut) | ✅ | **Affaires jamais relue** | 🔧 |
+| | trancher un écart du carnet / fermer un écart de personne (R4) | ✅ | aucune relecture relevée | ⛔ **chantier ⑧ de l'autre session** — à coordonner, pas touché |
+| **contact** | créer (annuaire) | ✅ | ✅ **ouvre la fiche (3a, prouvé 26/10)** | ✅ |
+| | créer pendant la saisie d'un RDV | ✅ | reste dans le RDV | ✅ voulu |
+| | modifier, archiver / réactiver, supprimer | ✅ | signal / mise à jour locale | ✅ |
+| | trancher un contact « en attente » (`resolveContactPending`) | ✅ | **aucune relecture** | 🔧 |
+| | envoyer un e-mail (Gmail) | ⛔ Gmail | l'onglet Échanges ne se relit pas | ⏳ point 6 (F7) |
+| **recherche** | créer | ✅ | **invisible jusqu'au retour de Hektor** | 🔧 |
+| | modifier | ✅ | signal + relectures à 25 / 55 / 90 s | ✅ |
+| | supprimer | ⛔ travail seul | disparaît au retour de Hektor | 🔧 état « suppression en cours » |
+| **mandant / relation** | lier, retirer, créer, modifier le contact mandant | ✅ | bloc des mandants relu au changement d'annonce seulement | 🔧 |
+| **documents** | préparer, téléverser, supprimer | — | le panneau suit et relit (8 s) | ✅ |
+| | marquer signé à la main | ✅ | relecture | ✅ |
+| | relancer / annuler une signature | — | travail suivi, **état des signatures non relu** | 🔧 relu (3b) + ⏳ point 6 (F3) |
+| | générer l'avis de valeur PDF | ⛔ worker | aucune relecture des documents | ⏳ point 6 (F4) |
+| | générer le mandat PDF, le plan cadastral | ⛔ worker | l'éditeur sonde / relecture | ✅ (+ 3b relit Documents) |
+| **photos** | ajouter, supprimer, couverture, réordonner, masquer / afficher, synchroniser | ✅ ou travail suivi | le panneau relit (9, 22, 25 s…) | ✅ |
+| **RDV / agenda** | créer, modifier, supprimer (planning, fiche annonce, fiche contact, rapprochement) | Google | relecture du planning | ✅ |
+| **rapprochement** | proposer, écarter, rétablir, relances, e-mail | ✅ | mise à jour locale immédiate | ✅ (⚠ « Rétablir » avale ses erreurs, §8.5) |
+| **demandes** | créer, corriger, refuser ; accepter une diffusion ou une baisse | ✅ | relecture / mise à jour | ✅ |
+| | accepter une **annulation** | ✅ date | registre relu à la fin du travail « Clos » | 🔧 (circuit dormant) |
+| **geste abandonné** | « J'ai refait » / « Abandonner ce geste » | ✅ valeurs remises | message seul, **fiche non relue** | 🔧 |
+| | trancher une annonce « en attente » (`resolveAnnoncePending`) | ✅ | **aucune relecture** | 🔧 |
+| **estimation** | sources (DVF, cadastre, DPE…), brouillon de scan, textes (rédacteur) | ✅ | relecture / mise à jour locale | ✅ |
+| **notifications, alertes** | marquer lu, Résolu / Pris en charge | ✅ | mise à jour locale | ✅ |
+| **utilisateurs** | créer | serveur | **liste non relue** | 🔧 (F9, une ligne) |
+| | modifier, envoyer la réinitialisation du mot de passe | serveur | relecture / rien à montrer | ✅ |
+
+**Code mort — 10 fonctions d'écriture qu'aucun écran n'appelle** : `editAffaireOptimistic`, `setDossierDiffusable`,
+`createAnnonceProvisional`, `seedDefaultDiffusionTargetsOnHektor`, `createSyncConsoleDocumentsJob`,
+`createLinkHektorMandantJob`, `createHektorContactSearchJob`, `createUpdateHektorContactSearchJob`,
+`createUpdateHektorContactJob`, `createUpdateHektorAnnonceFieldsJob` (remplacées par leurs versions « optimistes »).
+
+**Bilan** : sur ~45 gestes, **~27 déjà instantanés**, **14 relèvent de 3b+3c** (dont 4 que le §17 ne listait pas :
+conditions / note / commission / répartition, contact « en attente », annonce « en attente », création d'utilisateur),
+**5 attendent vraiment Hektor** (point 6), **1 appartient au chantier ⑧** (écarts R4).
