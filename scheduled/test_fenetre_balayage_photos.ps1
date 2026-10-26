@@ -1,4 +1,4 @@
-# LA FENETRE DE POSE DU BALAYAGE DES PHOTOS MASQUEES : essai hors ligne.        26/10/2026
+﻿# LA FENETRE DE POSE DU BALAYAGE DES PHOTOS MASQUEES : essai hors ligne.        26/10/2026
 #
 # On eprouve LA VRAIE FONCTION (Test-HorsFenetreDePose, decoupee dans le script par l'arbre syntaxique de
 # PowerShell, sans lancer le script), heure par heure, avec les reglages par defaut du script.
