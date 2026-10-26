@@ -435,3 +435,15 @@ Ma première version jugeait le nom sur `app_mandat.mandants_texte`. **Elle ne t
 4. Le lendemain matin : la répétition (partie B), le bilan de la nuit (`acheteur_nes_de_la_vente`, ~113), et l'annuaire sur JACQUIER.
 - ⚠ **Aucun service à redémarrer** : la nuit lit le code du dépôt ; le worker n'est pas touché.
 - ⚠ **Le code est déjà dans le dossier de travail** et la nuit le lit : interrupteur éteint, il ne change rien (prouvé ci-dessus, état 0 et 5).
+
+### 9.5 ✅ Le patch Supabase est POSÉ — 26/10, par moi, avec l'accord de Frédéric (« applique toi-même »)
+- **Avant** : vue à l'empreinte `6c89ceb7` (celle de l'audit), 55 lignes du filet vivantes, colonnes absentes, 2 retraits existants,
+  **167 822 lignes** dans la vue.
+- **Le patch** : ses 5 contrôles verts.
+- **La répétition, partie A** : lignes 1 à 5 **OK** ; 6 à 9 « en attente de la nuit » (normal : interrupteur éteint). Et deux mesures en plus :
+  la vue rend **toujours 167 822 lignes** (le changement est inerte tant que `origine` est vide) ; l'inverse retrouverait l'empreinte
+  `6c89ceb7` (aller-retour calculé sur la définition réelle). Droits de la vue inchangés (`authenticated` : lecture).
+- ⚠ **La nuit de ce soir** (interrupteur éteint) adopte les 55 retraits depuis la doublure ; le code éteint ne pose rien.
+
+**Il reste à Frédéric** : **pousser** (`git push`), puis **allumer** `APP_RELATION_ACHETEUR_PROPRIETAIRE=1` dans `.env` ; le lendemain matin,
+la répétition partie B (~113 liens, le témoin JACQUIER au 2026-09-25, les 10 vrais mandants intacts) et l'annuaire sur JACQUIER.
