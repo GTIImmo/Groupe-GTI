@@ -361,6 +361,7 @@ interrupteur et run d'après (L10-6, L10-7). ➕ **26/10, décision de Frédéri
  24  La recherche naît chez nous                           4-suite · L10-2b                  3-5 j +   non
  25  Les mandants naissent chez nous                       registre des relations · L10-2c   1-2 j +   non
  26  L'annuaire des négociateurs devient le nôtre          L10-11-c                          3-5 j     non
+     + les AGENCES et les MENUS (filtres, formulaire de création) tirés de nos annuaires -- ajout du 26/10, CH26 étape 5
  27  Le côté public stable                                 11bis-2 · 11bis-1a/1b · L10-8e    3,5-4,5 j oui
                                                            (RDV) · L10-15-b (DPE)
  28  Le registre lit nos tables, mandat complet            A.3-c · A.3-d                     5-8 j     oui

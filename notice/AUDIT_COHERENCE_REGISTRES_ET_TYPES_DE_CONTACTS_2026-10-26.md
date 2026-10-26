@@ -1043,3 +1043,34 @@ transaction que Hektor ne liste plus (`present_in_hektor` à faux) garde ses par
 ### 22.4 Correction de mon point sur ⑧ (journal git)
 R2 **fait et allumé** (25/10 20:40 ; allumé 26/10 06:39), R4 **posé** (26/10 07:01-07:09, 2 sentinelles), R5 **rangé à l'étape 3**
 (décision B, 26/10 07:32). Ma mémoire de reprise était en retard sur le code.
+
+## 23. LE « CHOIX 1 » ÉCRIT ET ÉPROUVÉ — les menus du registre en UNE lecture *(26/10 soir, Frédéric : « ok fais choix 1, et mets le choix 3 dans l'étape 3 »)* — **RIEN N'EST POSÉ NI POUSSÉ**
+
+### 23.1 Les pièces
+- **Base** — `supabase/patch_catalogue_registre_une_lecture_2026-10-26.sql` (+ `_INVERSE`) : la règle du registre enveloppée
+  `(select is_app_manager_or_admin())` (même sens) ; une vue **neuve** `app_filter_catalog_registre` (security_invoker) qui rend les
+  valeurs **brutes et distinctes** (négociateur, agence, statut, validation, diffusion, portails) ; 3 contrôles. ⛔ Aucune donnée touchée.
+- **Écran** — `api.ts` : `CATALOGUE_REGISTRE_EN_UNE_LECTURE = true` et `lireCatalogueDuRegistreEnUneLecture()`, appelée par
+  `loadMandatFilterCatalog` **pour un admin seulement** (sans périmètre). Le nettoyage est le MÊME `uniqSorted` qu'avant. **Repli** : si la
+  vue manque, échoue ou ne rend aucune agence → l'ancienne lecture par pages, avec un avertissement en console. Négociateur : inchangé.
+  `npm run build` vert ; CRLF conservés (+46 lignes).
+- **Répétition** — `phase2/checks/comparer_catalogue_registre.mjs . --vue` (après la pose).
+
+### 23.2 L'épreuve
+- Vue jouée **dans une transaction annulée**, sous le compte de Frédéric : **137 ms, 93 valeurs** ; commercial : 37 ms, 0 valeur (comme aujourd'hui).
+- **Comparaison** ancienne lecture (25 pages, code recopié de `api.ts`) contre nouvelle (valeurs de la vue, même code) :
+  **les 7 listes IDENTIQUES, contenu ET ordre** — négociateurs 44, agences 28, statuts 10, validation 2, diffusion 2, portails 5, erreurs 2.
+- **Témoin inverse** : une agence retirée (« FIRMINY ») → « DIFFERENT », sortie 1.
+- ⚠ Valeurs brutes exprès : les portails arrivent avec des espaces (« etreproprio » et «  etreproprio ») ; c'est le trim JavaScript qui les
+  fusionne, comme avant. Un `btrim` SQL n'aurait pas retiré les mêmes caractères.
+
+### 23.3 L'ordre de la pose (à l'accord de Frédéric)
+- **L'écran peut partir AVANT la base** : sans la vue, la lecture échoue et le repli refait les 25 pages — rien ne change.
+- Ensuite coller le patch (instantané : une règle et une vue), puis `node phase2/checks/comparer_catalogue_registre.mjs . --vue` → 0 écart ;
+  puis, dans l'app, le chargement doit ne montrer **qu'une** lecture `app_filter_catalog_registre` et plus les 25 pages.
+
+### 23.4 Le choix 3 dans l'étape 3
+- Le chapitre **CH26** existait déjà : « L'annuaire des négociateurs et des agences devient le nôtre » (`L10-11-c`) — mais il ne parlait que
+  de créer un collaborateur. **Étape 5 ajoutée** (`notice/CHAPITRES_AUTONOMIE_PROPOSITION_2026-10-07.md`) : les menus Agence et Négociateur
+  tirés de nos annuaires, la correspondance des anciens noms d'agence, la remise à jour des annuaires (agences 29/05, rattachements 07/09).
+  Ligne ajoutée sous le chapitre 26 dans `notice/PLAN_DEV_ACTUALISE_2026-08-20.md`.

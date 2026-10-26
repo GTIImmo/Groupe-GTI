@@ -6110,6 +6110,46 @@ export async function loadFilterCatalog(scope?: DataScope | null): Promise<Filte
   }
 }
 
+// (26/10/2026) LES MENUS DU REGISTRE EN UNE LECTURE -- choix de Frederic (« fais choix 1 »).
+// Avant : pour un admin, loadMandatFilterCatalog relisait les 24 576 lignes du registre par pages de 1 000
+// (25 lectures a ~820 ms, a CHAQUE ouverture) pour en tirer ~90 valeurs. La vue app_filter_catalog_registre
+// rend ces valeurs BRUTES et distinctes en une lecture (84 ms) ; on les nettoie ici avec le MEME uniqSorted.
+// ⚠ Ces listes remplissent aussi le menu « Agence » du formulaire de creation d'annonce : si la vue manque, echoue
+//   ou ne rend AUCUNE agence, on retombe sur l'ancienne lecture -- jamais une liste vide en silence.
+// Negociateur / perimetre agence : chemin d'avant, inchange. Note : notice/AUDIT_COHERENCE_REGISTRES_ET_TYPES_DE_CONTACTS_2026-10-26.md §22-23.
+const CATALOGUE_REGISTRE_EN_UNE_LECTURE = true
+
+async function lireCatalogueDuRegistreEnUneLecture(): Promise<Pick<FilterCatalog, 'commercials' | 'agencies' | 'statuts' | 'validationDiffusions' | 'passerelles' | 'diffusions' | 'erreursDiffusion'> | null> {
+  if (!supabase) return null
+  const { data, error } = await supabase
+    .from('app_filter_catalog_registre')
+    .select('filter_type,filter_value')
+  if (error || !data) {
+    console.warn('[catalogue du registre] lecture en une fois impossible, retour aux pages :', error?.message)
+    return null
+  }
+  const valeurs: Record<string, string[]> = {
+    commercial: [], agence: [], statut: [], validation_diffusion_state: [], diffusable: [], passerelle: [],
+  }
+  for (const row of data as Array<{ filter_type: string; filter_value: string | null }>) {
+    if (valeurs[row.filter_type]) valeurs[row.filter_type].push(row.filter_value ?? '')
+  }
+  const agencies = uniqSorted(valeurs.agence)
+  if (agencies.length === 0) {
+    console.warn('[catalogue du registre] aucune agence rendue, retour aux pages')
+    return null
+  }
+  return {
+    commercials: uniqSorted(valeurs.commercial),
+    agencies,
+    statuts: uniqSorted(valeurs.statut),
+    validationDiffusions: uniqSorted(valeurs.validation_diffusion_state),
+    diffusions: uniqSorted(valeurs.diffusable),
+    passerelles: uniqSorted(valeurs.passerelle),
+    erreursDiffusion: ['avec_erreur', 'sans_erreur'],
+  }
+}
+
 export async function loadMandatFilterCatalog(scope?: DataScope | null): Promise<Pick<FilterCatalog, 'commercials' | 'agencies' | 'statuts' | 'validationDiffusions' | 'passerelles' | 'diffusions' | 'erreursDiffusion'>> {
   if (!hasSupabaseEnv || !supabase) {
     const scopedMandats = withRegisterRowId(filterByNegotiatorEmail(mockMandats, scope))
@@ -6122,6 +6162,12 @@ export async function loadMandatFilterCatalog(scope?: DataScope | null): Promise
       passerelles: uniqSorted(scopedMandats.flatMap((item) => (item.portails_resume ?? '').split(',').map((value) => value.trim()))),
       erreursDiffusion: ['avec_erreur', 'sans_erreur'],
     }
+  }
+
+  const { negotiatorEmail: scopeNegociateur, agencyName: scopeAgence } = normalizeScope(scope)
+  if (CATALOGUE_REGISTRE_EN_UNE_LECTURE && !scopeNegociateur && !scopeAgence) {
+    const enUneFois = await lireCatalogueDuRegistreEnUneLecture().catch(() => null)
+    if (enUneFois) return enUneFois
   }
 
   const batchSize = 1000
