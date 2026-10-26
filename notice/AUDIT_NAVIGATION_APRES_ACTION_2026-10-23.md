@@ -1460,3 +1460,34 @@ Depuis le point 3a, le bouton « Ouvrir le détail » de la fenêtre est **redon
 pas) ; l'admin ne verra plus surgir les gestes des autres (voulu ; Santé reste) ; **sans la fenêtre, un échec se voit
 dans la fiche et dans le compteur** — il faut qu'ils soient bien visibles, c'est le cœur du point. Le rechargement
 surprise des travaux sans auteur (balayage) n'aura plus d'explication à l'écran (déjà le cas, noté au §6).
+
+### 22.1 Inventaire complet — TOUT ce qui affiche l'état d'un travail du worker (26/10, question de Frédéric : « mais toutes les fenêtres de suivi des workers ? »)
+
+Balayage de tout le front (un auditeur, lecture seule ; vérifié sur deux points).
+
+**Un seul suivi central** : le sondage de 5 s (`App.tsx` ~14296) qui nourrit `hektorActionJobs`. **Une seule fenêtre
+générale** : `HektorActionStatusPopup`. Les autres « fenêtres » sont des **étapes d'un geste précis** :
+
+| fenêtre | geste | ce qu'elle suit |
+|---|---|---|
+| « Charger la fiche complète » (`LightweightDetailImportModal`) | ouvrir un bien vendu, clos, archivé, brouillon | sa préparation — ⚠ **jamais « prête » pour un brouillon** (`prepare_brouillon_annonce_detail` absent du filtre `lightweightDetailJob`) |
+| message « avis de valeur en cours de génération » | générer l'avis de valeur | **rien** (texte figé, travail non suivi) |
+| signature après le PDF du mandat | générer le mandat | relit les documents 150 s (pas le travail) |
+| fenêtre de recherche (création / modification) | créer / modifier une recherche | jusqu'à l'envoi seulement |
+
+**États déjà affichés SUR PLACE** (ils restent) : lignes « En création… » des annonces, contacts et recherches ;
+« Suppression en cours… » des recherches (point 3c) ; mandants « En création… » ; panneau Documents (« envoi à Hektor
+en cours / a échoué », relu toutes les 8 s) ; panneau Photos (« gardée chez nous — envoi en cours / échoué ») ;
+boutons « Envoi… / Demande… » (mandants, Matterport, n° de mandat) ; plan cadastral « en génération… » ; les 3
+bandeaux de la fiche (modification d'annonce, de contact, gestes abandonnés — **lus à l'ouverture seulement**).
+
+**Supervision** (reste) : écran Santé (120 s), cloche (120 s, bureau seulement).
+
+**Code mort** : bandeau des travaux de `StockScreen` et ses cartes mobiles — rendus pour l'écran `'annonces'`, que
+`openScreen` redirige vers `'mandats'` (vérifié, `App.tsx` ~24505).
+
+**Trous trouvés** : (1) la fiche légère d'un **brouillon** ne passe jamais à « Ouvrir la fiche complète » ;
+(2) des travaux **hors de la liste suivie** (`hektorActionJobTypes`) : préparation de brouillon, sortie de brouillon,
+plan cadastral, avis de valeur, mandat PDF, visibilité / couverture / réordonner des photos — suivis seulement s'ils ont
+été mémorisés pendant la session, et les photos et deux PDF ne le sont pas du tout ; (3) les 3 bandeaux de la fiche ne
+se relisent pas tout seuls.
