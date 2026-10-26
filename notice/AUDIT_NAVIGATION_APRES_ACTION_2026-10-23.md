@@ -1577,3 +1577,10 @@ débordement ; erreur rejouée → gris. `npm run build` vert ; `node --check` d
 répondent. ⚠ **Non éprouvé** : l'**envoi** d'un e-mail (il partirait vraiment) ; la **fiche contact** (le mock n'a pas de
 contacts) ; le **rouge venu de la base** (le mock n'a pas de base) ; tout le worker tant que **les 4 services n'ont pas
 redémarré** (accord de Frédéric, file vide : 0 pending ET 0 running).
+
+**Mise en ligne (27/10, 00:07)** : Frédéric a poussé et redémarré les 4 services ; le bundle en ligne porte la pastille,
+les 4 processus sont nés à 00:07:07-09 (après le commit 591ec16), journaux sans erreur. ⚠ Le redémarrage est tombé
+**pendant le balayage des photos de minuit** : le travail `56cf6452` (annonce 40673, parti à 00:07:07) est resté
+« running » — il serait passé en erreur à 00:37 et 40673 aurait été écartée **à vie** du balayage. **Remis en attente à
+00:12:31 avec l'accord de Frédéric** (une ligne, gardée par `status='running'`) : repris et **fini à 00:12:43**. Le
+balayage continue (569 en attente, ~9/min), 0 erreur depuis 23:00.
