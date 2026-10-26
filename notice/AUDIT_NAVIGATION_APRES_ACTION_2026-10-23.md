@@ -526,3 +526,34 @@ le chargement complet.
 **Contrôle prévu** : `npm run build` ; essai en démonstration (la fiche s'ouvre, la rubrique RDV se remplit) ;
 puis en production, chronométrer l'ouverture d'une fiche (⚠ ouvrir une fiche lance une relecture chez Hektor —
 c'est le geste normal d'un négociateur).
+
+### 12.1 Quel système de RDV ? Déjà noté ? (26/10, question de Frédéric)
+
+**Le résumé qui bloque la fiche appartient au RDV PUBLIC DE LA VITRINE** (`backend/app/services/appointment_service.py`,
+page `gtiimmo.github.io/vitrine/rdv/index.html?ref=…`, QR codes) — **pas** à Google. Le projet a trois systèmes
+(`notice/AUDIT_VITRINE_ET_RDV_2026-09-25.md`, mémoire `vitrine-et-rdv-publics-liens-hektor`) :
+
+| système | dans la fiche | bloque la fiche ? |
+|---|---|---|
+| 1. la vitrine (catalogue exporté chaque nuit sur GitHub) | — | non |
+| 2. **le RDV public de la vitrine** | rubrique RDV (lien public, demandes, historique) + Reporting + Synthèse | ⛔ **oui : c'est le résumé de 9 s** |
+| 3. l'agenda Google (RDV depuis les rapprochements) | `GoogleAgendaAnnonceSection` | **non** : chargé par sa propre section ; il emprunte seulement l'e-mail du négociateur au résumé, avec repli sur celui du bien |
+
+**Déjà noté ?** Oui pour le système, non pour la lenteur :
+- **Liste, section 11bis** (25/09) : 4 points ouverts, **aucun fait** (① liens au jeton — ⛔ *« ne pas faire tel quel, le
+  jeton n'est pas stable »* (07/10) ; ② le service relit le bien par le n° Hektor ; ③ fiche visite PDF produite par
+  Hektor ; ④ un lien d'agenda vers un contact supprimé). Et déjà le 07/10 : *« 0 demande enregistrée par cette page
+  depuis le 29/04 »*.
+- **La lenteur qui bloque la fiche** n'était notée nulle part avant mon audit du 23/10 (M2).
+
+**Mesuré le 26/10** : `app_appointment_request` = **0 ligne, depuis toujours** ; liens publics **2 284** (54 en
+30 jours, créés surtout par l'étape de nuit `backfill appointment public links`) ; liens d'agenda Google **11**, le
+dernier le 15/06. ➡ **La fiche attend 9 s une liste de demandes qui est TOUJOURS VIDE.** Seule partie utile du
+résumé aujourd'hui : le jeton du lien public (et la rubrique retombe déjà sur le n° de l'annonce s'il manque).
+
+**Conséquence pour 0 bis** : le risque du Reporting est **théorique aujourd'hui** (0 demande), mais la garde reste
+utile le jour où une demande arrive. ⚠ Le résumé peut **créer** un lien public (et donc un nouveau jeton) à
+l'ouverture d'une fiche — lien avec le point ① de 11bis (jetons instables) ; 0 bis ne change **pas** quand il est appelé.
+
+**Noté, hors sujet (ne pas traiter ici)** : 0 demande depuis 6 mois — la page de RDV de la vitrine **fonctionne-t-elle
+encore** ? Non mesuré.
