@@ -686,3 +686,36 @@ Frédéric a joué les **6 essais réels** et les déclare **tous bons** : (1) a
 dans un nouvel onglet ; (3) écran Contacts — ouverture, précédent / suivant, F5 ; (4) contact par-dessus une annonce,
 ses boutons inchangés ; (5) lien ouvert en navigation privée → connexion Google → arrivée **sur la fiche** ; (6) touche
 retour d'Android → la fiche se ferme, l'app reste ouverte. Les réserves du §13.1 (contacts, connexion, Android) sont levées.
+
+---
+
+## 14. POINT 2 — RE-AUDIT DU 26/10 : « chaque écran garde sa mémoire » (rien codé)
+
+**Aujourd'hui** : **un seul** jeu de filtres pour toute l'app (`filters`, l. 12915 ; ~25 critères : recherche, statut,
+archive, négociateur, agence, mandat, diffusion…) et des pages par liste (`dossierPage`, `mandatPage`, `contactPage`,
+`workItemPage`). **Chaque changement d'écran passe par `openScreen`** (l. 15075), qui **remet tout à zéro** : filtres
+par défaut de l'écran (`defaultFiltersForScreen`, l. 6750), pages à 1, élargissement aux archives annulé, raccourcis de
+chiffres effacés. Constat N4 du 23/10 : « Bellevue » sur Annonces → Contacts → Annonces = **recherche perdue**. Et depuis
+le point 1, **« précédent » vers une liste** passe aussi par `openScreen` → la recherche est perdue au retour.
+
+**Les deux sortes d'entrées sur un écran** (c'est ce qui commande la conception) :
+
+| entrée | où | ce qu'on attend |
+|---|---|---|
+| **le menu** (bureau l. 23189-23196, téléphone `onNavigate`) et **précédent / suivant** | `openScreen` | **retrouver** sa recherche |
+| **les raccourcis** : tuiles chiffrées de l'Accueil (l. 24442), « Voir toutes », « Détail », « Ouvrir le suivi Pauline », « Registre des mandats », « Contrôle contacts » (l. 24458-24524) ; chiffres cliquables (`openMandatDrilldown`, `openRegisterDrilldown`) ; recherche d'un contact par son numéro (`showContactInDirectory`) ; lien des e-mails | `openScreen` ou leurs propres réglages | une **vue précise** : la tuile « Portefeuille actif 3 » doit montrer **3**, pas la recherche d'il y a dix minutes |
+
+**Ce que ça pourrait casser** :
+- ⚠ une **tuile de l'Accueil** qui ouvrirait un écran avec une vieille recherche → un chiffre qui ment → les raccourcis
+  doivent **garder la vue par défaut**, comme aujourd'hui ;
+- ⚠ la **recherche d'un contact par son numéro** (retour depuis une annonce, lien d'adresse) pose une recherche
+  technique (`query = numéro`) : il ne faut **pas** la mémoriser comme « la recherche de l'utilisateur » ;
+- ⚠ le **Suivi** a un filtre posé à l'ouverture (`pending_or_in_progress`, l. 15083) et les raccourcis chiffrés ont
+  un **titre** (`mandatDrilldownLabel`…) : mémoriser le filtre **sans** son titre afficherait une liste filtrée sans
+  dire pourquoi → mémoriser les deux ensemble ;
+- une recherche mémorisée **oubliée** fait croire à des données manquantes → elle reste **visible** : les filtres actifs
+  s'affichent déjà en étiquettes (l. 23811) et le bouton « Réinitialiser » existe ;
+- `Estimations` et `Annonces` partagent aujourd'hui le même jeu de filtres → une mémoire **par écran** les sépare.
+
+**Hors point 2** (noté) : la **position dans la page** (le défilement) — à part, après ; les filtres **dans l'adresse**
+(lien d'une recherche) — possible plus tard, pas maintenant.
