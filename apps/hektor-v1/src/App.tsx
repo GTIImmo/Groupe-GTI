@@ -12909,6 +12909,46 @@ const ADRESSE_VERS_ECRAN: Record<string, Screen> = {
 }
 const CLES_ADRESSE = ['ecran', 'annonce', 'contact'] as const
 
+// ⛔ 26/10/2026 -- POINT 2 : CHAQUE ECRAN GARDE SA MEMOIRE (choix « A » de Frederic).
+//   Un seul jeu de filtres pour toute l'app, remis a zero par openScreen a chaque changement
+//   d'ecran : « Bellevue » sur Annonces -> Contacts -> Annonces = recherche perdue (et depuis
+//   le point 1, « precedent » vers une liste aussi). Desormais le MENU et PRECEDENT/SUIVANT
+//   retrouvent la recherche, les filtres, la page et le titre d'un raccourci ; les RACCOURCIS
+//   (tuiles de l'Accueil, « Voir toutes », chiffres cliquables, recherche d'un contact par son
+//   numero, lien des e-mails) gardent leur vue precise, comme avant. La recherche technique
+//   d'un contact par son numero n'est pas memorisee. Gardee pour l'onglet (sessionStorage),
+//   effacee a la deconnexion. Audit : notice/AUDIT_NAVIGATION_APRES_ACTION_2026-10-23.md §14.
+//   `false` = l'ancien comportement, en une ligne.
+const MEMOIRE_DES_ECRANS = true
+const MEMOIRE_ECRANS_STOCKAGE = 'gti_memoire_ecrans'
+type MemoireEcran = {
+  filters: AppFilters
+  annonceSearchScope: AnnonceSearchScope
+  dossierPage: number
+  mandatPage: number
+  workItemPage: number
+  contactPage: number
+  mandatDrilldownLabel: { eyebrow: string; title: string } | null
+  activeMandatKpiAction: HeaderMetricItem['action']
+  suiviDrilldownLabel: { eyebrow: string; title: string } | null
+  suiviRequestFilter: SuiviRequestFilter | null
+}
+function lireMemoireEcrans(): Partial<Record<Screen, MemoireEcran>> {
+  if (!MEMOIRE_DES_ECRANS || typeof window === 'undefined') return {}
+  try {
+    const brut = window.sessionStorage.getItem(MEMOIRE_ECRANS_STOCKAGE)
+    const lu = brut ? JSON.parse(brut) : null
+    return lu && typeof lu === 'object' ? lu : {}
+  } catch { return {} }
+}
+function ecrireMemoireEcrans(memoire: Partial<Record<Screen, MemoireEcran>> | null) {
+  if (typeof window === 'undefined') return
+  try {
+    if (memoire) window.sessionStorage.setItem(MEMOIRE_ECRANS_STOCKAGE, JSON.stringify(memoire))
+    else window.sessionStorage.removeItem(MEMOIRE_ECRANS_STOCKAGE)
+  } catch { /* stockage indisponible : la memoire vit le temps de la page */ }
+}
+
 export default function App() {
   const [screen, setScreen] = useState<Screen>('accueil')
   const [filterCatalog, setFilterCatalog] = useState<FilterCatalog>(emptyFilterCatalog)
@@ -14810,9 +14850,10 @@ export default function App() {
       return true
     }
     if (Number.isFinite(annonce) && annonce > 0) {
-      // setScreen et pas openScreen : openScreen ferme la fiche et remet les filtres a zero.
-      if (screen !== ecran) setScreen(ecran)
-      if (!(detailOpen && selectedDossierId === annonce)) {
+      // openScreen (la liste DERRIERE la fiche retrouve sa memoire, point 2), puis la fiche :
+      // les deux sont groupes dans le meme rendu, la fiche ouverte l'emporte sur le setDetailOpen(false).
+      if (screen !== ecran) openScreen(ecran)
+      if (screen !== ecran || !(detailOpen && selectedDossierId === annonce)) {
         ficheDemandeeParAdresseRef.current = annonce
         openDossierDetailPage(annonce)
       }
@@ -14854,6 +14895,44 @@ export default function App() {
     }
     setAdressePrete(true)
   }, [bootLoading, session, deepLinkHandled, adressePrete])
+
+  // ═══ POINT 2 (26/10/2026) : LA MEMOIRE DE CHAQUE ECRAN ═══ (voir MEMOIRE_DES_ECRANS)
+  // On suit l'etat de l'ecran affiche ; au moment ou l'ecran CHANGE, on range son DERNIER etat
+  // (celui que l'utilisateur voyait), quel que soit le chemin du depart (menu, raccourci, fiche
+  // ouverte depuis un contact, adresse). La recherche technique d'un contact par son numero
+  // (contactDirectLookupId) n'est pas rangee : l'ecran Contacts garde sa memoire d'avant.
+  const memoireEcransRef = useRef<Partial<Record<Screen, MemoireEcran>>>(lireMemoireEcrans())
+  const dernierEtatEcranRef = useRef<{ screen: Screen; etat: MemoireEcran; technique: boolean } | null>(null)
+  useEffect(() => {
+    if (!MEMOIRE_DES_ECRANS) return
+    const precedent = dernierEtatEcranRef.current
+    if (precedent && precedent.screen !== screen && !precedent.technique) {
+      memoireEcransRef.current = { ...memoireEcransRef.current, [precedent.screen]: precedent.etat }
+      ecrireMemoireEcrans(memoireEcransRef.current)
+    }
+    dernierEtatEcranRef.current = {
+      screen,
+      etat: {
+        filters, annonceSearchScope, dossierPage, mandatPage, workItemPage, contactPage,
+        mandatDrilldownLabel, activeMandatKpiAction, suiviDrilldownLabel, suiviRequestFilter,
+      },
+      technique: screen === 'contacts' && Boolean(contactDirectLookupId),
+    }
+  }, [screen, filters, annonceSearchScope, dossierPage, mandatPage, workItemPage, contactPage,
+    mandatDrilldownLabel, activeMandatKpiAction, suiviDrilldownLabel, suiviRequestFilter, contactDirectLookupId])
+  // Deconnexion : la memoire part avec la session (un autre utilisateur peut prendre l'onglet).
+  // ⚠ Seulement au passage CONNECTE -> DECONNECTE : au demarrage (F5) la session est vide
+  //   quelques instants avant d'etre relue, et la memoire doit survivre a F5.
+  const avaitUneSessionRef = useRef(false)
+  useEffect(() => {
+    if (!MEMOIRE_DES_ECRANS || !hasSupabaseEnv) return
+    if (session) { avaitUneSessionRef.current = true; return }
+    if (!avaitUneSessionRef.current) return
+    avaitUneSessionRef.current = false
+    memoireEcransRef.current = {}
+    dernierEtatEcranRef.current = null
+    ecrireMemoireEcrans(null)
+  }, [session])
 
   // Precedent / suivant du navigateur (et la touche retour d'Android).
   useEffect(() => {
@@ -15225,25 +15304,32 @@ export default function App() {
     }
   }
 
-  function openScreen(nextScreen: Screen) {
-    setAnnonceSearchScope('current')
+  // POINT 2 (26/10/2026) : `vueParDefaut` = un RACCOURCI (tuile, « Voir toutes »…) qui doit
+  // montrer exactement ce qu'il annonce ; sans lui (menu, precedent/suivant), l'ecran rend sa
+  // memoire s'il en a une. Tout le reste de la remise a zero est inchange.
+  function openScreen(nextScreen: Screen, options?: { vueParDefaut?: boolean }) {
+    const cible: Screen = nextScreen === 'annonces' ? 'mandats' : nextScreen
+    const memoire = MEMOIRE_DES_ECRANS && !options?.vueParDefaut ? memoireEcransRef.current[cible] : undefined
+    setAnnonceSearchScope(memoire?.annonceSearchScope ?? 'current')
     setContactDirectLookupId(null)
-    setScreen(nextScreen === 'annonces' ? 'mandats' : nextScreen)
+    setScreen(cible)
     setMobileMenuOpen(false)
-    setMandatDrilldownLabel(null)
-    setActiveMandatKpiAction(null)
-    setSuiviDrilldownLabel(null)
-    setSuiviRequestFilter(nextScreen === 'suivi' ? 'pending_or_in_progress' : null)
+    setMandatDrilldownLabel(memoire?.mandatDrilldownLabel ?? null)
+    setActiveMandatKpiAction(memoire?.activeMandatKpiAction ?? null)
+    setSuiviDrilldownLabel(memoire?.suiviDrilldownLabel ?? null)
+    setSuiviRequestFilter(memoire ? memoire.suiviRequestFilter : nextScreen === 'suivi' ? 'pending_or_in_progress' : null)
     setFiltersOpen(false)
     setPriorityPanelOpen(false)
     setCommercialMetricsExpanded(false)
-    setDossierPage(1)
-    setMandatPage(1)
-    setWorkItemPage(1)
+    setDossierPage(memoire?.dossierPage ?? 1)
+    setMandatPage(memoire?.mandatPage ?? 1)
+    setWorkItemPage(memoire?.workItemPage ?? 1)
+    if (memoire) setContactPage(memoire.contactPage)
     setDetailOpen(false)
     setContactCreateOpen(false)
-    setFilters(defaultFiltersForScreen(nextScreen))
+    setFilters(memoire?.filters ?? defaultFiltersForScreen(nextScreen))
   }
+  const ouvrirEcranParDefaut = (nextScreen: Screen) => openScreen(nextScreen, { vueParDefaut: true })
 
   function openMandatDrilldown(action: HeaderMetricItem['action']) {
     if (!action) return
@@ -19073,6 +19159,15 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   const contactTotalPages = totalPages(contactsTotal, contactPageSize)
   const screenMandats = useMemo(() => filterMandatRowsForScreen(mandats, screen, dataFilters), [mandats, screen, dataFilters])
   const activeFilters = useMemo(() => activeFilterEntries(filters), [filters])
+  // POINT 2 (26/10/2026) : un filtre MEMORISE ne doit jamais etre invisible. Les etiquettes ne
+  // s'affichent que panneau OUVERT ; le bouton dit donc combien de filtres reduisent la liste.
+  //   ⚠ On compte ce qui DIFFERE de la vue par defaut de l'ecran : le panneau, lui, compte aussi les
+  //   reglages par defaut (« Archive : Actives », « Statut : Actif / offre / compromis »).
+  const nbFiltresHorsDefaut = useMemo(() => {
+    const defaut = defaultFiltersForScreen(screen)
+    return (Object.keys(filters) as Array<keyof AppFilters>).filter((cle) => String(filters[cle] ?? '') !== String(defaut[cle] ?? '')).length
+  }, [filters, screen])
+  const libelleBoutonFiltres = MEMOIRE_DES_ECRANS && nbFiltresHorsDefaut > 0 ? `Filtres (${nbFiltresHorsDefaut})` : 'Filtres'
   const currentAnnonceListingLabels = useMemo(() => annonceListingLabels(dataFilters), [dataFilters])
   const hasAnnonceSearch = screen === 'mandats' && filters.query.trim().length >= 3
   const isDefaultAnnonceSearchScope = filters.archive === activeArchiveFilterValue && filters.statut === activeListingsFilterValue
@@ -22749,7 +22844,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             {screen === 'contacts'
               ? canManageContacts ? <button className="mobile-draft-button" type="button" onClick={() => setContactCreateOpen(true)}>Nouveau contact</button> : null
               : canCreateHektorDraftAnnonce ? <button className="mobile-draft-button" type="button" onClick={() => setCreateFlow('choice')}>Nouveau</button> : null}
-            <button type="button" onClick={() => setFiltersOpen((open) => !open)}>{filtersOpen ? 'Fermer filtres' : 'Filtres'}</button>
+            <button type="button" onClick={() => setFiltersOpen((open) => !open)}>{filtersOpen ? 'Fermer filtres' : libelleBoutonFiltres}</button>
             <button
               className={`mobile-stats-toggle ${mobileStatsOpen ? 'is-active' : ''}`}
               type="button"
@@ -22942,7 +23037,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             contactStats={contactStats}
             suiviRequestStats={suiviRequestStats}
             commercialRequestStats={commercialRequestStats}
-            onOpenScreen={openScreen}
+            onOpenScreen={ouvrirEcranParDefaut}
             onOpenDetailPage={openDossierDetailPage}
             onOpenRequestModal={openRequestModal}
             onCreateAnnonce={canCreateHektorDraftAnnonce ? openDraftAnnonceModal : undefined}
@@ -23227,7 +23322,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                   {screen === 'contacts'
                     ? canManageContacts ? <button className="ghost-button button-primary draft-annonce-open-button" type="button" onClick={() => setContactCreateOpen(true)}>Nouveau contact</button> : null
                     : canCreateHektorDraftAnnonce ? <button className={`ghost-button button-primary draft-annonce-open-button ${screen === 'estimations' ? 'estim-new-btn' : ''}`.trim()} type="button" onClick={() => setCreateFlow('choice')}>{screen === 'estimations' ? 'Nouvelle estimation' : 'Nouvelle annonce'}</button> : null}
-                  <button className="ghost-button" type="button" onClick={() => setFiltersOpen((open) => !open)}>{filtersOpen ? 'Masquer les filtres' : 'Filtres'}</button>
+                  <button className="ghost-button" type="button" onClick={() => setFiltersOpen((open) => !open)}>{filtersOpen ? 'Masquer les filtres' : libelleBoutonFiltres}</button>
                   <button className="ghost-button" type="button" onClick={resetFilters}>Reinitialiser</button>
                 </div>
               </div>
@@ -23833,7 +23928,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             contactStats={contactStats}
             suiviRequestStats={suiviRequestStats}
             commercialRequestStats={commercialRequestStats}
-            onOpenScreen={openScreen}
+            onOpenScreen={ouvrirEcranParDefaut}
             onOpenDetailPage={openDossierDetailPage}
             onOpenRequestModal={openRequestModal}
             onCreateAnnonce={canCreateHektorDraftAnnonce ? openDraftAnnonceModal : undefined}

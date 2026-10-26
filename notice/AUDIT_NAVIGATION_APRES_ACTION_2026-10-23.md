@@ -719,3 +719,36 @@ le point 1, **« précédent » vers une liste** passe aussi par `openScreen` �
 
 **Hors point 2** (noté) : la **position dans la page** (le défilement) — à part, après ; les filtres **dans l'adresse**
 (lien d'une recherche) — possible plus tard, pas maintenant.
+
+### 14.1 ✅ POINT 2 CODÉ ET CONTRÔLÉ EN DÉMONSTRATION (26/10, choix « A » de Frédéric)
+
+**Le code** (`App.tsx`) : interrupteur `MEMOIRE_DES_ECRANS = true` ; une mémoire **par écran** (recherche et filtres,
+élargissement aux archives, pages, titre et filtre d'un raccourci, filtre du Suivi), rangée **au départ** de l'écran
+quel que soit le chemin, gardée pour l'onglet (`sessionStorage`) et effacée au **vrai** passage connecté → déconnecté
+(pas au démarrage, sinon F5 la perdrait). `openScreen(écran, { vueParDefaut })` : le **menu** et **précédent/suivant**
+rendent la mémoire ; les **deux accueils** (bureau et téléphone) passent `ouvrirEcranParDefaut` (vue précise, comme
+avant). Les autres raccourcis (chiffres cliquables, recherche d'un contact par son numéro, lien des e-mails) posaient
+déjà leur propre vue sans `openScreen` : inchangés. La recherche technique d'un contact par son numéro n'est **pas**
+mémorisée. Au passage (point 1) : l'adresse qui rouvre une fiche passe par `openScreen` → la liste **derrière** la fiche
+retrouve aussi sa mémoire.
+
+⚠ **Trouvé par le contrôle, et corrigé** : les étiquettes de filtres actifs ne s'affichent **que panneau ouvert**
+(l. 23897) — un filtre mémorisé aurait été invisible. Le bouton dit désormais **« Filtres (N) »**, N = ce qui **diffère
+de la vue par défaut** de l'écran (le panneau, lui, compte aussi « Archive : Actives » et « Statut : Actif / offre /
+compromis » — un compteur à 2 en permanence aurait menti).
+
+**Contrôles** (`npm run build` vert avec les types ; démonstration, bureau) :
+
+| essai | résultat |
+|---|---|
+| Annonces : « Bellevue » → menu Contacts → menu Annonces | **« Bellevue » retrouvée**, 1 ligne |
+| précédent ×2, suivant ×2 | « Bellevue » retrouvée à chaque passage sur Annonces |
+| **F5** sur la liste | « Bellevue » retrouvée |
+| raccourci « Détail » de l'Accueil | Annonces en **vue par défaut** (3 lignes, sans recherche) |
+| Annonces « Fauriel », Estimations « Bellevue », allers-retours | chaque écran garde **la sienne** |
+| « Réinitialiser » sur Estimations | vide Estimations seulement ; Annonces garde « Fauriel » |
+| bouton Filtres | « Filtres (1) » avec « Fauriel » ; « Filtres » sur les vues par défaut (Annonces, Estimations, Mandats) |
+| console | aucune erreur |
+
+⚠ **Non éprouvé en démonstration** : l'écran Contacts (aucun contact) ; une vraie déconnexion (pas de connexion en
+démonstration) ; le format téléphone. → essais réels avec Frédéric.
