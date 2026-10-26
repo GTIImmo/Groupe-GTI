@@ -1050,3 +1050,29 @@ En ligne : `index-BFoQ-fUF.js` (contient `hektor:relire-rubriques` et `hektor:ge
 - ✅ le bouton **Précédent** du navigateur a rouvert la fiche 62965 (point 1, encore bon).
 
 **Reste à éprouver en réel** : la rubrique Affaires après une offre (il faut une annonce d'essai **avec mandat**), le refus d'offre suivi, le mandant, « Abandonner ce geste ». ➡ À Frédéric de désigner une annonce d'essai avec mandat et un contact d'essai du bon négociateur — ou de faire ces gestes lui-même sur un vrai dossier.
+
+### 19.2 ⚠ CORRECTION (26/10, question de Frédéric : « ton worker est-il en erreur ? supprimer veut dire archiver »)
+
+**Le worker n'est pas en erreur** : 4 services `Running`, 95 travaux en 24 h dont 1 seul en erreur (relecture du contact
+d'essai 20000016, supprimé ce matin — attendu). Le travail `e43aff82` est `done`, son journal est complet.
+
+**Mon « Hektor ne l'a pas archivée » (§19.1) était PRÉMATURÉ.** C'était déjà écrit : *supprimer = archiver en posant une
+date* (plan, tâche 4bis du 21/08 ; mémoire « feature recherche contact ») — `modifDateArchiveCritere` avec
+`dateArchive` = aujourd'hui. Ce geste **programme** l'archivage ; rien ne dit qu'il bascule `archive` à la seconde.
+Les deux suppressions passées qu'on peut relire ont bien fini archivées (414535 du 12/06 → `archive 1` ; 113412 du
+22/06 → la recherche visée `archive 1`, l'autre `0`). **Quand** la bascule a lieu n'a jamais été mesuré.
+⏰ **Témoin : la recherche Firminy de 20000008 (critère 471880) doit être `archive 1` après la nuit** (run des
+recherches de 03:00). Si elle l'est, le geste marche, avec un délai.
+
+**Ce qui reste vrai, et deux choses nouvelles (NOTÉES, pas traitées) :**
+1. **3c** : « Suppression en cours… » s'efface à la fin du travail (~11 s), mais la recherche reste « Active » à l'écran
+   jusqu'à la bascule chez Hektor. L'écran dit donc moins que la vérité ; à reprendre au point 6 (indicateur).
+2. ⚠⚠ **Risque de VISER LA MAUVAISE RECHERCHE** (`resolveContactSearchTargetCritereId`, worker) : l'onglet Hektor lu
+   (`recherche-changeTab`) n'a listé **qu'1 critère** alors que le contact en a 2 (1 archivée + 1 active) → il semble ne
+   lister que les **actives**, alors que notre `search_index` compte **aussi les archivées**. Et si l'index n'est pas
+   trouvé, le worker prend **la première** (`|| list[0]`). Ici c'est tombé juste par chance (une seule active). Avec
+   [0 archivée, 1 active A, 2 active B] : supprimer A (index 1) viserait B, supprimer B (index 2) viserait A.
+   *(« 9 actives précédées d'une archivée » au 21/08 ; « 163 contacts actifs portent des recherches archivées » au
+   21/10.)* **Probable, pas prouvé** : il faudrait lire l'onglet d'un contact à 2 actives + 1 archivée. **Même
+   mécanisme pour la MODIFICATION** si elle passe par l'index — non vérifié.
+3. La fenêtre de suivi a titré ce travail « Création d'une annonce » — cause non mesurée.
