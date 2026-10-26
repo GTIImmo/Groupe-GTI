@@ -998,3 +998,48 @@ transaction que Hektor ne liste plus (`present_in_hektor` à faux) garde ses par
 - La nouvelle empreinte de la vue est **`d4350c63`** : tout patch futur de cette vue part de là. Le générateur
   `phase2/checks/gen_table_des_parties/` est historique (avertissement dans son LISEZMOI).
 - ⏰ La nuit : la répétition est à rejouer demain matin (contrôle 21 : la colonne des parties reste juste après le recalcul de C4).
+
+## 22. LES 25 LECTURES DU REGISTRE DES MANDATS À L'OUVERTURE — AUDIT *(26/10 fin d'après-midi, hors ⑧, lecture seule, rien codé)*
+
+> Frédéric : « vérifie pourquoi 25 relectures » → « c'est nécessaire ou il y a une autre méthode ? pourquoi que le registre des mandats ? » →
+> « ok vas-y, bonne chose » (audit de la méthode « catalogue complet »).
+
+### 22.1 Ce qui se passe
+- `bootstrapApp` (`App.tsx:13943`) lance en parallèle `loadFilterCatalog` et `loadMandatFilterCatalog` puis **fusionne** (`mergeCatalog`).
+- `loadFilterCatalog` (`api.ts:5992`), pour un admin : **une** lecture du catalogue préparé la nuit (`app_filter_catalog_current`).
+- `loadMandatFilterCatalog` (`api.ts:5937`) : relit **tout** `app_registre_mandats_current` par pages de 1 000, l'une après l'autre —
+  **24 576 lignes = 25 lectures** (~820 ms chacune, dont ~380 ms de règle RLS non enveloppée), pour **~90 valeurs**. Depuis le 07/04 (1er commit).
+- **Pourquoi le registre** : le catalogue de la nuit (`export_app_payload.build_filter_catalog_from_db`, poussé par
+  `push_upgrade_to_supabase.py:1688`, « tout effacer puis tout réinsérer ») ne porte que **7 types** tirés des **biens vivants**. Il n'a
+  **aucune agence (0/28), aucun statut (0/10), aucune validation (0/2)**, et il lui manque **7 anciens négociateurs** (biens vendus/clos).
+  Le registre est le seul endroit qui porte tous les mandats.
+- ⚠ **La liste des agences ne sert pas qu'aux filtres** : c'est aussi la liste « Agence » du **formulaire de création d'annonce**
+  (`App.tsx:20270`, 20408) et la reconnaissance de l'agence d'une fiche scannée (`App.tsx:16148`). Elle ne vient QUE de ces 25 lectures ;
+  si elles échouent, `.catch(() => null)` se tait et la liste est vide.
+- **Négociateurs** : la règle de `app_mandat_register_current` (`is_app_manager_or_admin()`) ne leur montre **aucune** ligne ; leur
+  catalogue vient d'une autre branche (leurs biens et leurs travaux, par pages). Les 25 lectures ne concernent que les **admins**
+  (4 actifs). Aucun utilisateur n'a de périmètre « agence » aujourd'hui (tous `reseau`).
+
+### 22.2 Deux méthodes pour le même résultat
+| | **N — la nuit complète le catalogue** | **D — le catalogue calcule les valeurs du registre à la lecture** |
+|---|---|---|
+| lecture à l'ouverture | ~1 ms | **84 ms** admin, **2 ms** commercial (mesuré, une seule lecture, copie avec règle enveloppée) |
+| fraîcheur | le lendemain | **toujours à jour** |
+| à toucher | la nuit (push du catalogue) + base + écran | **base** (vue du catalogue + règle du registre enveloppée) + écran |
+| risque propre | le catalogue est effacé puis réinséré chaque nuit : un raté = liste des agences vide dans le formulaire de création | la règle du registre change de forme (même sens) |
+| bonus | — | l'écran Registre (ses propres lectures par pages, `loadMandatRegisterStats`) profite aussi de la règle enveloppée |
+- Sans la règle enveloppée, D coûte **2,2 s** (mesuré) : elle en fait partie.
+- Plancher sans règle : 112 ms en un passage (service_role).
+
+### 22.3 Ce que ça pourrait casser (les deux)
+- **L'écran change dans les deux cas** (`api.ts` : lire les types agence / statut / validation du catalogue — `statuts: []` y est écrit en dur —
+  et ne plus appeler `loadMandatFilterCatalog` pour un admin) : c'est le terrain de la **session navigation** → à coordonner ; Vercel se déploie au push.
+- **Mêmes listes exigées** : union d'aujourd'hui = catalogue ∪ registre (trim, tri `fr`) ; à prouver valeur par valeur avant/après,
+  agences du formulaire comprises (avec leurs anciens noms, « Agences supprimée » compris : on ne trie pas, on reproduit).
+- Garder un **repli** : si le catalogue ne rend aucune agence, relire comme aujourd'hui (jamais une liste vide en silence).
+- La vue du catalogue a une bascule store / v1 (`app_delta_run`) : la branche du registre doit vivre en dehors.
+- Les écrivains du registre (nuit, worker, RPC) passent en service_role ou propriétaire : la règle ne les concerne pas.
+
+### 22.4 Correction de mon point sur ⑧ (journal git)
+R2 **fait et allumé** (25/10 20:40 ; allumé 26/10 06:39), R4 **posé** (26/10 07:01-07:09, 2 sentinelles), R5 **rangé à l'étape 3**
+(décision B, 26/10 07:32). Ma mémoire de reprise était en retard sur le code.
