@@ -98,7 +98,10 @@ function ecrireEtat(sortie, etat) {
 }
 
 async function envoyer(client, sortie) {
-  const pdf = await rendrePdf(mandatFictifHtml());
+  // --html=<fichier> : le HTML REEL du gabarit (lot 2, ecrit par scripts/test_reperes_signature.mjs
+  // avec TEST_DUMP_DIR) au lieu du mandat fictif.
+  const fichierHtml = arg("html");
+  const pdf = await rendrePdf(fichierHtml && fichierHtml !== true ? fs.readFileSync(fichierHtml, "utf8") : mandatFictifHtml());
   const fichierPdf = path.join(sortie, "mandat_fictif.pdf");
   fs.writeFileSync(fichierPdf, pdf);
   const enTete = pdf.subarray(0, 8).toString("latin1");
@@ -106,9 +109,12 @@ async function envoyer(client, sortie) {
 
   // --deux-signataires : la case « Mandataire » (ancre s2) est remplie aussi, par la meme boite
   // (Youtrust accepte la meme adresse deux fois, verifie le 26/10), DANS L'ORDRE mandant puis mandataire.
-  const deux = Boolean(arg("deux-signataires"));
+  // --mandants=N : N mandants puis le mandataire (s1..sN, sN+1), toujours la boite de Frederic.
+  const nbMandants = Number(arg("mandants")) || 0;
+  const deux = Boolean(arg("deux-signataires")) || nbMandants > 0;
   const demande = await client.creerDemande({
-    name: deux ? "ESSAI A.2 sandbox - mandat fictif, 2 signataires" : "ESSAI A.2 sandbox - mandat fictif",
+    name: nbMandants ? `ESSAI A.2 sandbox - lot 2, ${nbMandants} mandants + mandataire`
+      : deux ? "ESSAI A.2 sandbox - mandat fictif, 2 signataires" : "ESSAI A.2 sandbox - mandat fictif",
     delivery_mode: "email",
     ordered_signers: deux,
     timezone: "Europe/Paris",
@@ -129,7 +135,9 @@ async function envoyer(client, sortie) {
   console.log(`Document accepte : ${doc.id}, pages ${doc.total_pages}, ancres detectees ${doc.total_anchors}`);
 
   // L'ordre de creation DOIT suivre l'ordre des ancres : 1er cree = s1 (mandant), 2e = s2 (mandataire).
-  const roles = deux ? ["Mandant", "Mandataire"] : ["Mandant"];
+  const roles = nbMandants
+    ? [...Array.from({ length: nbMandants }, (_, i) => `Mandant${i + 1}`), "Mandataire"]
+    : deux ? ["Mandant", "Mandataire"] : ["Mandant"];
   etat.signataires = [];
   for (const role of roles) {
     const signataire = await client.ajouterSignataire(demande.id, {
@@ -147,10 +155,24 @@ async function envoyer(client, sortie) {
   const champs = await client.listerChamps(demande.id, doc.id);
   const liste = Array.isArray(champs) ? champs : (champs && champs.data) || [];
   etat.champs = liste.map((c) => ({ type: c.type, page: c.page, x: c.x, y: c.y,
-    width: c.width, height: c.height, signer_id: c.signer_id }));
+    width: c.width, height: c.height, signer_id: c.signer_id, mention: c.mention }));
   ecrireEtat(sortie, etat);
   console.log(`Activee : statut ${active.status}`);
   console.log(`Champs crees par les ancres : ${JSON.stringify(etat.champs)}`);
+  // Le controle O3 du plan (lot 4) : chaque signataire a sa case de signature.
+  const signesParSignataire = etat.signataires.map((s) =>
+    etat.champs.filter((c) => c.type === "signature" && c.signer_id === s.id).length);
+  etat.controle_o3 = signesParSignataire.every((n) => n === 1);
+  ecrireEtat(sortie, etat);
+  console.log(`Controle O3 (une case de signature par signataire) : ${etat.controle_o3 ? "OK" : "ECHEC"} ${JSON.stringify(signesParSignataire)}`);
+  // --annuler : essai de placement seulement, la demande est annulee aussitot.
+  if (arg("annuler")) {
+    const annulee = await client.annuler(demande.id, "other", "Essai de placement A.2 lot 2");
+    etat.statut_final = annulee.status;
+    ecrireEtat(sortie, etat);
+    console.log(`Demande annulee : statut ${annulee.status}`);
+    return;
+  }
   console.log("-> L'e-mail d'invitation part vers la boite de Frederic.");
 }
 

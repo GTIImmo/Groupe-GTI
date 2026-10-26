@@ -85,6 +85,7 @@ import {
   createUploadDocumentToHektorJob,
   createGenerateEstimationPdfJob,
   createGenerateMandatPdfJob,
+  loadAppSettingActive,
   sendEstimationEmail,
   loadDvfComparables,
   loadCadreDeVie,
@@ -250,6 +251,7 @@ import RedacteurPanel from './RedacteurPanel'
 import ContactSearchFields, { contactSearchValueToInput, defaultContactSearchValue, type ContactSearchFieldsValue } from './ContactSearchFields'
 import './contact-new.css'
 import { bvs, bvt } from './lib/bienvuTexte'
+import { MENTION_AVENANT, MENTION_MANDAT, repereHtml, repereSignature, zoneMentionHtml } from './lib/signatureAnchors'
 
 type DetailContact = {
   id: string
@@ -4882,8 +4884,12 @@ function mandatMandantsHtml(mandants: MandatDocumentMandant[], fallback: string)
   }).join('')
 }
 
-function mandatSignatureBlocksHtml(mandants: MandatDocumentMandant[]) {
+function mandatSignatureBlocksHtml(mandants: MandatDocumentMandant[], options?: { reperes?: boolean }) {
   const rows = mandants.length ? mandants : buildMandatDocumentMandants([], '')
+  // A.2 lot 2 : repères Youtrust (mention + signature) SEULEMENT si demandés ; sans eux, le HTML
+  // est celui d'avant, au caractère près (scripts/test_reperes_signature.mjs). Index : mandants
+  // 1..N, mandataire N+1 = ordre de création des signataires (lib/signatureAnchors.ts).
+  const reperes = options?.reperes === true
   // PAGE DÉDIÉE « Signatures » en fin de mandat : grille fixe, une boîte par signataire
   // (jusqu'à 12 mandants + agence), à positions calculables -> pose du tampon par COORDONNÉES (API ImmoSign).
   const boxes = rows.map((mandant, index) => {
@@ -4892,13 +4898,13 @@ function mandatSignatureBlocksHtml(mandants: MandatDocumentMandant[]) {
     return `<div class="mandat-signature-box" data-sign="${key}" data-sign-index="${index}">
       <div class="mandat-signature-title">Mandant ${index + 1}</div>
       <div class="mandat-signature-name">${escapeHtml(name)}</div>
-      <div class="mandat-signature-area" data-sign-area="${key}"><span>signature</span></div>
+      ${reperes ? zoneMentionHtml(index + 1, MENTION_MANDAT) : ''}<div class="mandat-signature-area" data-sign-area="${key}">${reperes ? repereHtml(repereSignature(index + 1)) : ''}<span>signature</span></div>
     </div>`
   })
   boxes.push(`<div class="mandat-signature-box mandat-signature-agency" data-sign="mandataire" data-sign-index="${rows.length}">
       <div class="mandat-signature-title">Mandataire</div>
       <div class="mandat-signature-name">Groupe GTI</div>
-      <div class="mandat-signature-area" data-sign-area="mandataire"><span>signature</span></div>
+      <div class="mandat-signature-area" data-sign-area="mandataire">${reperes ? repereHtml(repereSignature(rows.length + 1)) : ''}<span>signature</span></div>
     </div>`)
   return `<div class="mandat-signatures-page">
     <div class="mandat-signatures-heading">Signatures</div>
@@ -4906,7 +4912,7 @@ function mandatSignatureBlocksHtml(mandants: MandatDocumentMandant[]) {
   </div>`
 }
 
-function renderMandatTemplate(draft: MandatDocumentDraft, dossier: Dossier) {
+function renderMandatTemplate(draft: MandatDocumentDraft, dossier: Dossier, options?: { reperes?: boolean }) {
   const payload = buildMandatDocumentPayload(draft, dossier)
   const chargeAcquereur = payload.honoraires.charge === 'acquereur'
   const chargeMandant = payload.honoraires.charge === 'mandant'
@@ -4937,8 +4943,13 @@ function renderMandatTemplate(draft: MandatDocumentDraft, dossier: Dossier) {
     )
     .replace(
       /<table cellspacing="0" style="border-collapse:separate;border-spacing:12px 0;margin-top:7px;width:100%">[\s\S]*?<\/table>/,
-      mandatSignatureBlocksHtml(draft.mandants),
+      mandatSignatureBlocksHtml(draft.mandants, options),
     )
+  // A.2 lot 2 : des repères demandés mais absents (gabarit modifié, tableau des signatures
+  // introuvable) ne doivent JAMAIS laisser partir un PDF muet -- Youtrust ne dirait rien.
+  if (options?.reperes === true && !html.includes('|signature|')) {
+    throw new Error('Mandat : zone des signatures introuvable, repères Youtrust non posés.')
+  }
   return html
 }
 
@@ -4957,8 +4968,8 @@ function normalizeMandatPrintContent(html: string) {
     .replace(/<\/section>\s*/g, '</div>')
 }
 
-function mandatPreviewHtml(draft: MandatDocumentDraft, dossier: Dossier, _contacts: DetailContact[]) {
-  const body = renderMandatTemplate(draft, dossier)
+function mandatPreviewHtml(draft: MandatDocumentDraft, dossier: Dossier, _contacts: DetailContact[], options?: { reperes?: boolean }) {
+  const body = renderMandatTemplate(draft, dossier, options)
   const { cover, content } = splitMandatCoverSection(body)
   const normalizedContent = normalizeMandatPrintContent(content)
   return `<!doctype html>
@@ -5044,7 +5055,7 @@ function mandatPreviewHtml(draft: MandatDocumentDraft, dossier: Dossier, _contac
 // AVENANT AU MANDAT : modele HTML fourni par le client, REPRIS A L'IDENTIQUE. Les balises de fusion
 // Hektor (<img src="…fusions_v_2…">) sont remplacees par les vraies donnees de l'app + le nouveau prix saisi.
 // Toujours lie au n° de mandat existant (avenant = modification du mandat initial, sans novation).
-function avenantPreviewHtml(draft: MandatDocumentDraft, dossier: Dossier) {
+function avenantPreviewHtml(draft: MandatDocumentDraft, dossier: Dossier, options?: { reperes?: boolean }) {
   const p = buildMandatDocumentPayload(draft, dossier)
   const numero = escapeHtml(draft.numeroMandat || 'A completer')
   const ag = p.agence
@@ -5063,7 +5074,7 @@ function avenantPreviewHtml(draft: MandatDocumentDraft, dossier: Dossier) {
   }).filter(Boolean).join('<br /><br />')) || escapeHtml(draft.mandantsLibelle || 'A completer')
   const priceBox = (value: string, suffix: string, strong: boolean, border: string, bg: string, color: string, size: string) =>
     `<div style="border:2px solid ${border};border-radius:10px;padding:13px 14px;background:${bg};font-size:${size};color:${color};">${value ? `<span style="font-weight:bold">${value}</span>` : '<span style="border-bottom:2px dotted #6d6d76;display:inline-block;height:18px;vertical-align:middle;width:80%"></span>'} <span style="float:right">${strong ? `<strong>${suffix}</strong>` : suffix}</span></div>`
-  return `<!doctype html>
+  const html = `<!doctype html>
 <html lang="fr"><head><meta charset="utf-8" /><title>Avenant au mandat ${numero}</title>
 <style>@page{size:A4;margin:13mm}*{box-sizing:border-box}html,body{margin:0;background:#fff}</style></head>
 <body>
@@ -5122,6 +5133,40 @@ Par le pr&eacute;sent avenant, les parties conviennent, d&rsquo;un commun accord
 <div style="height:10px;">&nbsp;</div>
 </div>
 </body></html>`
+  return options?.reperes === true ? avenantAvecReperes(html, draft.mandants, ag.nom) : html
+}
+
+// A.2 lot 2 : l'avenant n'a qu'UNE case « Le mandant » pour tous les mandants, et Youtrust exige
+// une case par signataire. Repères demandés -> sa zone de signatures devient une grille : une case
+// par mandant (mention « Bon pour accord » + signature), puis le mandataire. Sans repères : le HTML
+// d'avant, intact. Zone introuvable -> on refuse (jamais un PDF muet).
+const AVENANT_DEBUT_SIGNATURES = /<table style="border-collapse:separate; border-spacing:0; width:100%"><tbody><tr>\r?\n<td style="padding:0 8px 0 0; text-align:center; vertical-align:top; width:48%">/
+
+function avenantSignatureBlocksHtml(mandants: MandatDocumentMandant[], agence: string) {
+  const rows = mandants.length ? mandants : buildMandatDocumentMandants([], '')
+  const zone = (index: number) =>
+    `<div style="position:relative;height:66px;border:1.5px dashed #9aa;border-radius:3px;background:#fafbfc">${repereHtml(repereSignature(index))}</div>`
+  const caseSignataire = (titre: string, nom: string, note: string, corps: string) =>
+    `<div style="border:1px solid #d8d8de;border-radius:6px;padding:8px;break-inside:avoid;page-break-inside:avoid">
+<div style="font-weight:bold;text-transform:uppercase;letter-spacing:0.7px;color:#1f1f23;font-size:12px;text-align:center;border-bottom:2px solid #c2185b;padding-bottom:4px;margin-bottom:6px">${titre}</div>
+<div style="font-weight:bold;font-size:12px;text-align:center;margin-bottom:3px">${nom}</div>
+<div style="color:#666;font-size:10px;text-align:center;margin-bottom:5px">${note}</div>
+${corps}</div>`
+  const cases = rows.map((mandant, index) => caseSignataire(
+    rows.length > 1 ? `Le mandant ${index + 1}` : 'Le mandant',
+    escapeHtml(mandatMandantDisplayName(mandant) || `Mandant ${index + 1}`),
+    'Mention &laquo; Bon pour accord &raquo; appos&eacute;e &agrave; la signature',
+    zoneMentionHtml(index + 1, MENTION_AVENANT) + zone(index + 1),
+  ))
+  cases.push(caseSignataire('Le mandataire', escapeHtml(agence || 'Groupe GTI'), 'Signature et cachet', zone(rows.length + 1)))
+  return `<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px">${cases.join('')}</div>`
+}
+
+function avenantAvecReperes(html: string, mandants: MandatDocumentMandant[], agence: string) {
+  const debut = html.search(AVENANT_DEBUT_SIGNATURES)
+  const fin = debut < 0 ? -1 : html.indexOf('</table>', debut)
+  if (debut < 0 || fin < 0) throw new Error('Avenant : zone des signatures introuvable, repères Youtrust non posés.')
+  return html.slice(0, debut) + avenantSignatureBlocksHtml(mandants, agence) + html.slice(fin + '</table>'.length)
 }
 
 // Pop-up de validation « Faire signer ce document par Yousign ? » — réutilisée par
@@ -5474,9 +5519,12 @@ function MandatDocumentEditor(props: {
       beforeIds = new Set(existing.map((doc) => doc.id))
     } catch { /* on poursuit sans snapshot */ }
     try {
+      // A.2 lot 2 : l'interrupteur est relu AU MOMENT de la génération (absent/erreur = éteint).
+      // Éteint : le HTML envoyé est celui d'avant, identique à l'aperçu. L'aperçu, lui, n'a jamais de repères.
+      const reperes = await loadAppSettingActive('signature_youtrust')
       await createGenerateMandatPdfJob({
         dossier: { app_dossier_id: props.dossier.app_dossier_id, hektor_annonce_id: props.dossier.hektor_annonce_id },
-        html: docMode === 'avenant' ? avenantPreviewHtml(draft, props.dossier) : mandatPreviewHtml(draft, props.dossier, props.contacts),
+        html: docMode === 'avenant' ? avenantPreviewHtml(draft, props.dossier, { reperes }) : mandatPreviewHtml(draft, props.dossier, props.contacts, { reperes }),
         payload,
         numeroMandat: draft.numeroMandat || null,
         // Avenant : nom de document dedie + lie au n° de mandat -> apparait ainsi dans Hektor + ImmoSign.

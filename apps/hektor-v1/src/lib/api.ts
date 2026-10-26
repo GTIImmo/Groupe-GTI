@@ -8501,6 +8501,20 @@ export async function createGenerateEstimationPdfJob(input: {
   return data as ConsoleJob
 }
 
+// Interrupteur de app_setting (lisible par tout utilisateur actif). Absent, illisible ou en
+// erreur = ÉTEINT : une lecture ratée ne peut jamais allumer un circuit.
+// Premier usage : 'signature_youtrust' (tâche A.2, notice/PLAN_DEV_SIGNATURE_YOUTRUST_2026-10-26.md).
+export async function loadAppSettingActive(key: string): Promise<boolean> {
+  if (!hasSupabaseEnv || !supabase) return false
+  try {
+    const { data, error } = await supabase.from('app_setting').select('value').eq('key', key).maybeSingle()
+    if (error || !data) return false
+    return ['on', 'true', '1', 'yes'].includes(String((data as { value?: unknown }).value ?? '').trim().toLowerCase())
+  } catch {
+    return false
+  }
+}
+
 export async function createGenerateMandatPdfJob(input: {
   dossier: Pick<MandatRecord, 'app_dossier_id' | 'hektor_annonce_id'>
   // HTML du mandat deja rendu cote front (mandatPreviewHtml) : le worker le rend en PDF

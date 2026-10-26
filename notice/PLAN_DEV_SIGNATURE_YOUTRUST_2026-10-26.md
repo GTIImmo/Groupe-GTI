@@ -134,6 +134,23 @@ reconnus, mandant puis mandataire signés, chaîne d'empreintes complète. *(Aud
 
 ### LOT 2 — Le PDF signable (O1) · 0,5–1 j
 
+> ✅ **CODÉ ET PROUVÉ LE 26/10, NON DÉPLOYÉ** (D13 : *« vas-y avec mentions »*).
+> `src/lib/signatureAnchors.ts` (neuf), `lib/api.ts` (`loadAppSettingActive`), `App.tsx`
+> (`mandatSignatureBlocksHtml`, `renderMandatTemplate`, `mandatPreviewHtml`, `avenantPreviewHtml`
+> + `avenantSignatureBlocksHtml` / `avenantAvecReperes`, l'appel de `generatePdf`).
+> **Preuves :** `node scripts/test_reperes_signature.mjs` → **42/42 verts** — éteint, HTML du
+> mandat (1, 2, 4 mandants) et de l'avenant (1, 2, 3) **identique au caractère près** au dernier
+> commit ; allumé, s1..sN+1 + N mentions, invisibles, aucune accolade oubliée ; zone absente →
+> génération **refusée**. **Témoin inverse** : une espace glissée exprès → 6 échecs, sortie 1.
+> `npm run build` vert. **Sandbox réel** (gabarit réel, 2 mandants + mandataire) : mandat
+> 5 repères → 3 signatures + 2 « Bon pour mandat », page 5 ; avenant 5 repères → 3 + 2
+> « Bon pour accord » ; contrôle O3 OK ; demandes annulées.
+> ⚠ **Mention = apposée automatiquement** par Youtrust à la signature (le mandant ne la tape
+> pas) — corrigé le 26/10, j'avais dit l'inverse ; un champ tapé reste possible.
+> ⚠ **Avenant à 2 mandants et plus : 2 pages** (le mandataire passe seul en page 2) — à juger.
+> ⚠ `App.tsx` est aussi modifié, non commité, par une autre session (relecture 3b) : le commit
+> ne prendra **que les morceaux du lot 2**.
+
 **Ce qu'il fait.** Quand l'interrupteur est allumé, `mandatSignatureBlocksHtml` écrit dans
 chaque case un repère invisible (`{{s1|signature|150|45}}` … `{{sN|…}}` pour les mandants,
 `{{sN+1|…}}` pour le mandataire — même CSS que l'essai : Arial 10 px, couleur du fond
