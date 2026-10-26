@@ -240,7 +240,21 @@ ne rend jamais deux fois le même, mesuré au lot 1)* ; (b) allumé : envoi sand
 >
 > **✅ « expiré » dans le fil du cockpit : oui** (Frédéric, 26/10).
 >
-> **✅ PATCH ÉCRIT ET ÉPROUVÉ LE 26/10 — NON POSÉ (Frédéric le colle).**
+> ### ✅✅ LOT 3 POSÉ EN PRODUCTION LE 26/10 (~16:43, heure de Paris) — par moi, sur autorisation explicite de Frédéric
+> *(« Je t'ai autorisé pour le faire toi-même »)*. Fichier posé = la version commitée `775ec71`,
+> via le pooler (mémoire `eprouver-un-patch-dans-une-transaction-annulee`), en 4,0 s.
+> **Tableau de fin 7/7** : interrupteur `off` · tables posées · 5/5 dans les trois verrous ·
+> cockpit posé · relance/annulation ImmoSign intactes. **Témoin du cockpit identique**
+> (`b05d7373…`, la même valeur qu'à l'essai). **Répétition en production : 12/12 OK.**
+> **Conseiller de sécurité Supabase** : 0 signalement sur les nouvelles tables (rapport lu en entier).
+> **Distribution éprouvée en transaction annulée** : un `relance_signature` et un
+> `youtrust_sync_signature` posés → **tous deux pris par le worker documents**, aucun par le
+> worker admin ; 0 travail d'essai restant. ⚠ Piège rencontré : `app_console_claim_next_job` ne
+> sert QUE les identifiants de worker en `…:service:v9` / `…:scheduled:v9` — un nom libre ne
+> reçoit rien (ce n'est pas une panne).
+> Rien à redémarrer. Rien ne change pour les utilisateurs (interrupteur éteint).
+>
+> *Historique :* **patch écrit et éprouvé le 26/10 avant la pose :**
 > `supabase/patch_a2_signature_youtrust_lot3_2026-10-26.sql` + `_INVERSE.sql` + `_REPETITION.sql`.
 > **Essai dans UNE transaction annulée** (patch → répétition → inverse → contrôles, erreur finale
 > + ROLLBACK) : **18/18 verts en 6,9 s** — 12 de la répétition (dont négociateur : 5 types sur
