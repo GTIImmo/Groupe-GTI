@@ -3362,3 +3362,47 @@ Départ : 62965 « TEST C13 clôture mandat », Actif, diffusable 0, 0 transacti
 | 5 | libellés : « Envoyer vers Compromis » sur une chaîne vendue ; « Montant / prix public » / « Prix de vente » | ✅ le 1er est **réglé** (§41, §46 : un bien vendu ne propose plus aucune création) ; le 2e : valeurs **justes** (R3 « arrivée »), seuls les mots prêtent à confusion | le choix des mots → Frédéric |
 | 6 | *(vu le 26/10)* le bandeau 2.2b « Ces offre aurait dû être refusée… **Désigne celle qui fait foi** » | ⬜ inexact depuis le n° 2 du point 5 (on ne peut plus que **refuser** l'écartée) + faute d'accord | reformuler — correction simple |
 | 7 | *(vu le 26/10)* la tuile « Diffusion » introuvable sur la fiche d'un bien **sans mandat** (62965) | 🔎 **non diagnostiqué** : aucun bouton « Pilotage » trouvé dans la fiche (mise en page bienvu) ; le 23/10 il existait sur VA6482 (avec mandat) | à diagnostiquer |
+
+#### ✅ Point 6 — n° 1 et n° 6 CODÉS le 26/10 au soir *(Frédéric : « finir 6 7 »)* — commit local `890f046`, **non poussé**
+- **n° 1** : `dateLocaleIso()` (fonction de tête, `App.tsx`, devant 2.2b) remplace `toISOString().slice(0, 10)` aux **trois** endroits :
+  l'échéance d'une condition, la **date de clôture proposée par défaut** (envoyée à Hektor : entre minuit et 1-2 h elle proposait la
+  veille) et « aujourd'hui » des relances. Recherche des jumeaux : les 28 autres `toISOString()` du front sont des **horodatages complets**
+  (justes en UTC) ; plus aucune date du jour tronquée.
+- **n° 6** : le bandeau « une offre acceptée + d'autres » dit « Cette offre n'a pas été refusée au moment de l'acceptation (Hektor ne le
+  fait pas seul). Choisis-la pour la refuser : c'est le seul geste possible tant que l'offre acceptée tient. » (pluriel : « Ces offres… une
+  à une »). Titre et couleur inchangés ; les trois autres messages identiques à l'octet.
+  ⚠ **Jumeau laissé tel quel** : le message « alerte » (deux offres acceptées) dit encore « Désigne celle qui fait foi, puis refuse les
+  autres » ; sur un bien engagé on ne peut plus choisir une offre acceptée. **Mesure : 0 bien concerné aujourd'hui** (et 1 seul bien porte
+  une acceptée + une vivante). À reformuler si Frédéric le veut.
+- **Essai** `apps/hektor-v1/test_petits_defauts_point6.cjs` : **26/26** en heure de Paris (il se relance avec `TZ=Europe/Paris`) ; témoins
+  inverses lus dans `git HEAD` (l'ancienne formule rendait la veille ; l'ancien bandeau avait « Ces offre aurait » et « fait foi ») ; un
+  mutant (date prise en UTC) attrapé. `test_boutons_modale_point5.cjs` et `test_rubrique_affaires_complete.cjs` verts ; `npm run build` vert.
+
+#### 🔎 Point 6 — n° 7 DIAGNOSTIQUÉ le 26/10 : ce n'est pas une panne
+Fiche 62965 rouverte depuis « Annonces » (lecture seule) : le menu **« Plus d'actions » (⋯) propose bien « Pilotage »** (droit
+`allowMarkDiffusable` = écran `suivi`/`mandats` + responsable ou admin ; `App.tsx` l. ~31581). Ce qui manque sur un bien **sans mandat**,
+c'est le bouton visible « Activer / désactiver » : il vit **dans la carte du mandat** (rubrique Mandat), qui n'est pas dessinée quand le bien
+n'a pas de numéro de mandat (`if (!m) return null`, l. ~32410). Le 26/10, je ne l'avais cherché que là.
+➡ Choix de Frédéric : laisser (le ⋯ suffit) **ou** montrer aussi « Activer / désactiver » sur un bien sans mandat (petit changement d'écran).
+
+### Point 7 — LES RESTES DE DONNÉES : audit du 26/10 au soir — lecture seule, rien écrit
+**A. Les 17 lignes du registre que Hektor ne liste plus** (`present_in_hektor = false`, vues pour la dernière fois du 07/09 au 01/10) :
+11 compromis (dont **8 encore « active »** — et non 3 comme noté le 25/10 : les 3 étaient celles qui portent une personne sans notre
+numéro —, 3 annulés), 5 offres (4 acceptées, 1 proposée), 1 vente. **Aucune n'a de ligne au carnet.**
+Ce qui les lit, et ce qu'il en fait :
+| qui | ce qu'il fait d'une ligne absente de Hektor |
+|---|---|
+| l'écran | **morte** : `affaireEstVivante` et `dossiersOuvertsDuBien` l'écartent (règle du 07/09) → elle n'engage pas un bien, ne bloque ni offre ni compromis ; la rubrique l'affiche « · plus dans Hektor » |
+| le moniteur | `data.transaction_disparue` ne sonne que pour une disparition **de la nuit** (< 48 h) → muet, à raison |
+| la fiche d'un contact (point 2) | écartée, comme la nuit |
+➡ **Rien à corriger.** Ce sont des traces d'histoire (Hektor les a retirées). Proposition : **les laisser** et déclarer ce périmètre ici
+(c'est fait). Les effacer ou changer leur état réécrirait l'histoire de Hektor — ⛔ pas sans décision de Frédéric.
+
+**B. Le carnet des saisies** : 20 groupes, 9 transactions. **Sans verdict** : l'offre d'essai **1001339 (24933, depuis le 04/09, 5 champs)**
+et **4 offres de l'essai 5 sur 24113** (1001381 / 84 / 90 / 93 : honoraires, taux, notaires, 18 champs). Les deux biens ne sont **plus dans
+`app_dossier_current`** (vendus) → la relecture de l'écran est refusée (`annonce_not_found`, vu le 25/10) → **R3 ne les rejugera jamais**.
+**Effet aujourd'hui : nul.** R2 (allumé, `APP_AFFAIRE_R2_ATTENTE=1`) ne repose que montant / date / validité / net / honoraires d'entrée :
+pour 1001339, la date et le mandat sont jugés sur le registre (exclus) et la validité (33) est **égale** à celle du registre ; les champs des
+4 offres de 24113 n'ont pas de colonne protégée. Le moniteur R4 ne compte que « conflit » et « échec ».
+➡ Deux possibilités, **décision de Frédéric** : **laisser** (rien ne bouge) **ou** les clore d'un verdict « sans_objet » (écriture en base, sauvegarde datée
+avant) pour qu'aucun « en attente » éternel ne traîne.
