@@ -656,3 +656,17 @@ dans le journal de la descente.
   d'appel tient au code et à l'essai (22d), pas à une trace.
 - **Les notaires de l'essai 5 sont donc prouvés** — la réserve 2 du §15 tombe.
 - ⏰ **À voir demain matin** : la 4ᵉ étape dans `logs/scheduled/descente_2026-10-26_*.log` (attendu : « rien à poser », code 0).
+
+### ⛔ 26/10, 05:40 — CE QUE MA VÉRIFICATION DU 25/10 AVAIT MANQUÉ : le balayage des photos masquées a REFUSÉ de tourner *(Frédéric : « le run a eu une erreur sur les photos ! »)*
+- `GTI Balayage Photos Masquees` est parti à **23:00** (au lieu de 00:00) et a rendu **code 1** : « REFUS : il est 23h, au-delà de la
+  fenêtre de pose (jusqu'à 1h). Rien n'est posé. » La garde de `scheduled/run_balayage_photos_masquees.ps1` (l. 92-93) refuse toute heure
+  **supérieure à 1** — elle supposait un départ à minuit. **Aucun lot posé cette nuit** : le balayage prend une nuit de retard ; rien n'est
+  perdu, rien n'est cassé (l'entretien photos de 20:00 a rendu 0, le verrou des masquées a joué normalement).
+- ⚠ **Mon contrôle du 25/10 disait « toutes ont rendu 0, l'ordre est gardé »** : c'était vrai pour la nuit du 24 au 25 (le balayage était
+  parti à 00:00 juste avant le changement d'heure), et faux pour la suivante. **Je n'ai pas cherché les scripts qui testent l'heure
+  eux-mêmes.** Mesuré ce matin : c'est **le seul** (`(Get-Date).Hour` n'apparaît nulle part ailleurs dans `scheduled/`, `Console/`, `phase2/`,
+  `monitoring/`).
+- **Le run de cette nuit n'a PAS d'erreur** : il est **encore en cours** à 05:40 (code 267009 = « en cours ») — la synchro de Hektor a pris
+  1 h 18 (04:00 → 05:18).
+- ⬜ **À décider par Frédéric** (rien n'est modifié) : A — la garde accepte la soirée (refuser seulement entre 2 h et 19 h : un départ à 23:00
+  ou à 00:00 passe tous les deux, un départ tardif reste refusé) ; B — remettre la tâche à 00:00 (contraire à « laisse comme cela » du 25/10).
