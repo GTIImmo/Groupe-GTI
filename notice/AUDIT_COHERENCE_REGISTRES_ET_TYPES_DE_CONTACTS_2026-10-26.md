@@ -447,3 +447,5 @@ Ma première version jugeait le nom sur `app_mandat.mandants_texte`. **Elle ne t
 
 **Il reste à Frédéric** : **pousser** (`git push`), puis **allumer** `APP_RELATION_ACHETEUR_PROPRIETAIRE=1` dans `.env` ; le lendemain matin,
 la répétition partie B (~113 liens, le témoin JACQUIER au 2026-09-25, les 10 vrais mandants intacts) et l'annuaire sur JACQUIER.
+
+- ✅ **26/10 à 10:17 : poussé par Frédéric (`3831fb4` sur origin/main) et interrupteur ALLUMÉ** (`APP_RELATION_ACHETEUR_PROPRIETAIRE=1` ajouté à `.env`, lu « ALLUMÉ » par le module). ⏰ **Demain 27/10 au matin** : répétition partie B, bilan de la nuit (`acheteur_nes_de_la_vente`), JACQUIER dans l'annuaire.
