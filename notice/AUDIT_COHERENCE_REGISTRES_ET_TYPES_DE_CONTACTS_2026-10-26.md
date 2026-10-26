@@ -693,3 +693,72 @@ chantiers 1 et 2 :
   table de nuit aujourd'hui : **de l'ordre de 10 ms**. ⚠ Ce n'est **pas** une seconde source (décision du 30/09) : elle est **dérivée** du
   registre, jamais écrite par personne d'autre que le déclencheur, et se reconstruit à l'identique. **À décider.**
 - **En attendant** : la vue d'avant se remet en une minute (`…_INVERSE.sql`, à l'octet) → retour à 9,6 ms tout de suite.
+
+---
+
+## 15. AUDIT COMPLET — LES PERSONNES D'UNE TRANSACTION : où elles vivent, qui les écrit, qui les lit, et quel modèle *(26/10 soir, Frédéric : « une vraie analyse, cela touche à tout mon système, sois expert »)* — lecture seule, rien codé
+
+### 15.1 Où vivent les personnes d'une transaction (base, 26/10)
+| où | quoi | numéros |
+|---|---|---|
+| `app_affaire_ledger.app_contact_id` / `hektor_acquereur_id` | l'acquéreur **principal** (colonnes) | nous / Hektor |
+| `app_affaire_ledger.acquereur_json` | le principal, **fiche complète** de Hektor (coordonnées comprises) | Hektor + nous (pièce 2) |
+| `app_affaire_ledger.acquereurs_json` | **tous** les acquéreurs : 11 173 en **objet seul** (offres), le reste en liste — **23 835 personnes**, au plus **8** ; **le 1er de la liste est TOUJOURS le principal (0 exception)** ; 0 doublon ; 2 sans notre numéro ; **2 375 fiches sans nom** (les fiches « couple » de Hektor, « Mr./Mme ») | Hektor + nous |
+| `app_affaire_ledger.mandants_json` | les **vendeurs** (compromis, ventes) — 58 514 | Hektor + nous (C4, ce soir) |
+| `notaire_acquereur_id/_nom`, `notaire_mandant_id/_nom` | les notaires (colonnes) | **nous** (pièce 3) ; brut Hektor dans `notaires_json` (vente) et `app_affaire_console` (compromis) |
+| `app_affaire_console` (18 552) | la lecture de la console Hektor : `acquereurs`, `mandants`, `notaires_*` (numéros) et `parties_json` (rôles, noms, téléphones) | Hektor |
+| `app_affaire_repartition` | les **négociateurs** et leur part de commission, par chaîne | `hektor_user_id` (ce ne sont pas des contacts) |
+| `app_affaire_personne_ecart` | R4 : une personne posée par l'app que Hektor n'a pas gardée (2 lignes) | — |
+| le carnet `app_affaire_champ_app` | `notaire_id`, `notaire_mandant_id/_nom` (saisies en attente) | — |
+
+### 15.2 Qui les ÉCRIT
+1. **La nuit** — `affaire_ledger.py` (depuis le miroir de Hektor : principal, listes, vendeurs ; nos numéros posés par `poser_nos_numeros`) et
+   `registre_depuis_console.py` (les notaires, depuis la console).
+2. **L'app, au clic** — `app_change_annonce_status_optimistic` (création) et `app_modifier_affaire_optimistic` (modification), par
+   `app_acquereurs_json` (nos deux numéros).
+3. **Le worker, en journée** — `reporterAuRegistre` (la relecture chez Hektor ; garde nos numéros depuis 10:57) ; `enregistrerLectureConsole`
+   (`app_affaire_console`).
+4. **Les envois vers Hektor** traduisent TOUJOURS vers son numéro (`cibleHektorContact`, `traduireLesPersonnesDeLaTransaction`, C-9).
+
+### 15.3 Qui les LIT — et comment
+- **Transaction par transaction** (la grande majorité) : la rubrique Affaires et la chaîne (`ckPartiesDuJson`, `affaireAcquereursParties`,
+  `aliasNumerosAcquereur`), la modale (préremplissage), les noms des notaires, le classeur Sheet (`push_suivi_appsheet.py`), le résumé du
+  cockpit et la vue générale (depuis le **miroir**), la vue `app_registre_mandats_current`. ➡ **pour eux, les listes JSON suffisent** : on lit
+  UNE transaction et ses personnes.
+- **Par personne** (« toutes les transactions de M. X ») — **seulement trois** :
+  1. **la fiche d'un contact** (`app_contact_relations_current`, la pièce 5) — c'est là que la liste coûte (38-42 ms) ;
+  2. **les types de l'annuaire** (`build_contacts_layer.py`, la nuit, depuis le miroir) — demain « à la lecture » (chantier 4) ;
+  3. **le périmètre des contacts** (`elargir_perimetre_console.py`, depuis la console).
+- **Par l'acquéreur principal comme CLÉ** : le **chaînage** offre → compromis → vente (`app_chaine_pour`, `app_attribuer_chaines_affaire`) et
+  l'**adoption** d'une transaction née dans l'app (worker l. ~21395) — par `hektor_acquereur_id`. ⚠ À ne pas déranger.
+
+### 15.4 Ce que le projet a DÉJÀ décidé (à ne pas rejouer sans le dire)
+- **23/09** : le registre garde la **trace brute** de Hektor ; on **ajoute** nos numéros à côté.
+- **30/09** : « les acquéreurs **ne se recopient pas** dans le registre des relations ; il les **projettera** depuis le registre des transactions —
+  deux copies finissent toujours par dire deux choses ».
+- **24/10** (étude des numéros, §8) : ma recommandation « **une table des personnes de l'affaire** » a été **RETIRÉE** sur ta question
+  « *on a un registre des contacts et un registre des relations : pourquoi créer encore une liste ?* » → **pas de nouvelle liste** ; nos
+  numéros **dans** les listes (pièces 1-4, en production).
+- **26/10** : C4 (vendeurs), b (le worker garde nos numéros), pièce 5 (la projection).
+
+### 15.5 Ce que font les logiciels du métier, et l'écart avec le nôtre
+Un logiciel de transaction classique a une **table des parties** (une ligne par personne et par transaction, avec son rôle) : c'est la
+liaison « plusieurs à plusieurs » ordinaire. **Notre projet porte la même information, mais en listes** dans la transaction (héritage de
+Hektor), et **le 24/10 tu as choisi de ne pas créer de liste de plus**. ⭐ **L'audit montre que ce choix tient** : tout ce qui lit
+transaction par transaction est servi par les listes, et **il ne manque qu'une seule chose — retrouver UNE personne vite**. Ce n'est pas un
+manque de TABLE, c'est un manque d'INDEX.
+
+### 15.6 Les options, jugées contre ces décisions
+| | quoi | respecte le 24/10 (« pas de liste de plus ») ? | vitesse | ce qui bouge | risque |
+|---|---|---|---|---|---|
+| **A — un index par place** | Postgres indexe « le numéro de la 2ᵉ personne », « de la 3ᵉ »… (la 1ʳᵉ est le principal, déjà indexé). **12 places** : 11 petits index ; la vue cherche à chaque place | ✅ **oui** : aucune table, aucune copie | ~10 ms attendus (**à mesurer**) | 11 index + la vue | une limite de places (8 aujourd'hui, 12 prévues) → une sentinelle à 10 |
+| B — une table d'index tenue par un déclencheur | une ligne par (transaction, personne), calculée par la base à chaque écriture | ⚠ c'est une liste de plus, même dérivée | ~10 ms | table + déclencheur | le déclencheur s'exécute à **chaque** écriture (nuit, worker, app) : une faute le fait échouer |
+| C — la vraie table des parties, maîtresse | les gestes l'écrivent, les listes deviennent la trace de Hektor | ❌ **non** : c'est ce que tu as refusé le 24/10 | ~10 ms | tout : création, nuit, worker, lecteurs | le plus gros chantier ; à reconsidérer seulement pour la coupure (étape 3), si tu le veux |
+| D — remettre la vue d'avant | la table de nuit | — | 9,6 ms | rien | on garde la dépendance à Hektor |
+
+### 15.7 Ma recommandation
+**A**, parce que c'est la seule qui donne la vitesse **sans revenir sur ta décision du 24/10** ; elle ne touche ni la nuit, ni le worker, ni
+l'écran, ni le chaînage ; Postgres tient les index tout seul, quelle que soit l'écriture. **Ce qu'elle pourrait casser** : rien chez les
+écrivains ; la vue s'allonge (le temps de préparation est à mesurer) ; une transaction à plus de 12 personnes perdrait la 13ᵉ — d'où la sentinelle.
+Elle traite les fiches « couple » exactement comme aujourd'hui (elles sont dans les listes de Hektor). **Et en attendant** : remettre la vue
+d'avant (D) tout de suite, puis poser A seulement après l'avoir mesurée (préparation + exécution, par contact et par bien).
