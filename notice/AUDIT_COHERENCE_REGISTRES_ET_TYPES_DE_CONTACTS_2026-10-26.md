@@ -344,3 +344,51 @@ suivante), puis a et c ensemble (un patch, inverse + répétition), d et e n'ont
    montrer le montant des offres sur la fiche, et faire le point 4 (le worker qui retire notre numéro des co-acquéreurs en journée) avant ou après ;
 5. **l'acte et ses effets (C7, C10, C11, D4)** ;
 6. **la rubrique Contact d'un bien sur nos seuls registres (C9)**.
+
+---
+
+## 8. CHANTIER 1 — C3 + D5 a/c : l'acheteur n'est plus « mandant » du bien acheté *(audit du 26/10, lecture seule, rien codé)*
+
+### 8.1 Ce que l'audit a établi
+- **Quand Hektor ajoute l'acheteur** (mesure, transactions depuis le 17/07) : **à la VENTE** — 92 acheteurs sur 92 rangés propriétaires ;
+  au compromis seul 1 sur 72, à l'offre seule 5 sur 119 (des co-propriétaires déjà là). ➡ la règle se déclenche sur **la vente**.
+- **Où naît le « mandant »** : `build_contacts_layer.py` l. 1393-1397 rebaptise tout propriétaire « mandant » si le bien a un numéro de mandat ;
+  la table de nuit et `relation_roles_json` (les types de l'annuaire) en sortent ; `relation_ledger.py` (run l. 1045, **après** le registre des
+  transactions l. 912) recopie le rôle dans `app_relation` ; la vue `app_contact_relations_current` (branche 1) refait le même calcul
+  (« mandant » si le bien a un numéro) ; `export_app_payload.py` (`ROLES_MANDANT = {mandant, proprietaire}`) met **tout propriétaire actuel**
+  parmi les mandants du registre des mandats.
+- ➡ **Il y a donc QUATRE endroits qui décident « mandant » à partir du seul numéro du bien** : la nuit (types), le registre des liens, la vue, le
+  registre des mandats. Renommer le rôle à un seul endroit ne suffirait pas : il faut **un fait stocké** que les quatre lisent.
+- **Le critère sûr** (mesuré chez Hektor, §7.5) : la personne est **acheteur d'une vente** de ce bien **ET** son nom **n'est pas** dans le texte
+  du mandat (`app_mandat.mandants_texte`, figé à la signature, gardé même mandat clos) **ET** sa fiche a un nom. → **113 liens** (92 + 21 biens
+  dont Hektor n'expose plus le mandat) ; **écartés : les 10 vrais mandants et les 2 fiches sans nom**.
+
+### 8.2 Ce que ça pourrait casser ailleurs — vérifié
+| lecteur | effet | verdict |
+|---|---|---|
+| **retirer un mandant** (`app_unlink_mandant_optimistic`, écran l. 3590) | le refus se fonde sur le **numéro de mandat du bien**, pas sur le rôle | ✅ inchangé : l'acheteur reste non retirable sur un bien numéroté |
+| **registre des mandats** (`mandants_json`) | l'acheteur sort des mandants du mandat du vendeur | ✅ voulu (D2), et c'est l'essentiel de C2 |
+| **activité du contact** (`app_contact_activite`) | le bien acheté reste dans son activité, comme propriétaire | ✅ voulu (D2) |
+| **annuaire** (types, filtres « Mandants ») | ~113 contacts passent de **Mandant** à **Acheteur** (priorité Mandant > Acheteur > Propriétaire) | ✅ voulu ; le compteur « Mandants » baisse d'autant |
+| **push des contacts** | ~113 fiches repoussées (leurs rôles changent) | ✅ négligeable |
+| **classeur Sheet, transactions** | lisent `mandants_json` **du registre des transactions**, pas `app_relation` | ✅ non touchés |
+| **invités d'un RDV par bien** | l'acheteur y figure « propriétaire » au lieu de « mandant » | ✅ sans effet sur l'envoi |
+| **Hektor** | **rien n'est écrit chez lui** ; il continue de dire « mandant » | ⚠ divergence **voulue** et écrite : notre fait est dans nos colonnes, la nuit ne le défait pas |
+| **l'acheteur qui revend un jour** | un nouveau mandat le nommera → il redevient « mandant » | ✅ si la règle est **recalculée chaque nuit** (seule la date est figée) |
+| **le push du registre des liens** | il envoie la table locale **entière**, `retire_le` compris | ⚠ le marquage de c **doit être fait côté local** (sinon la nuit l'efface) — à éprouver |
+
+### 8.3 La proposition — en 5 pièces, derrière un interrupteur
+1. **Base (patch additif, inverse + répétition)** : deux colonnes à `app_relation` — `origine` (« vente » ou vide) et `proprietaire_depuis`
+   (date de l'acte) ; la vue : `role_contact = 'proprietaire'` quand `origine = 'vente'`. **Inerte** tant que rien n'écrit `origine`.
+2. **La règle, UNE fois, dans un petit module partagé** (lu par la nuit et par le registre des liens) : acheteur d'une vente du bien (lignes
+   « acquéreur vente » de la table de nuit, **la même nuit**) + absent du texte du mandat + nom connu → propriétaire depuis la date de la vente.
+3. **La nuit** (`build_contacts_layer.py`) : le renommage « mandant » ne s'applique plus à ces liens → les types disent **Acheteur**.
+4. **Le registre des liens** (`relation_ledger.py`) : pose `origine` / `proprietaire_depuis` (la date gardée, la règle recalculée) ; **le
+   rattrapage des 113 se fait tout seul à la première nuit** — pas de script à part. **Et c** : le filet ne recense plus que les rôles du bien,
+   et les 55 lignes nées du filet sont marquées retirées (`retire_par` = « filet_26_10 »), côté local.
+5. **Le registre des mandats** (`export_app_payload.py`) : n'inscrit pas parmi les mandants un lien d'origine « vente ».
+- **Interrupteur** : `APP_RELATION_ACHETEUR_PROPRIETAIRE=1` dans `.env` (pièces 2-5) ; **retour arrière** : l'éteindre (la nuit suivante
+  remet l'ancien calcul) + l'inverse du patch.
+- **Essais avant toute pose** : sur une copie de `phase2.sqlite` — 113 liens marqués, 10 + 2 intacts, la liste des types qui changent, le registre
+  des mandats avant / après sur les biens vendus ; mutants (critère du nom retiré, date retirée, filtre de rôle retiré).
+- **Ce qui attend aussi** : la pièce 5 (chantier 4), qui projette les acquéreurs depuis le registre des transactions — indépendante de celui-ci.
