@@ -1083,3 +1083,11 @@ R2 **fait et allumé** (25/10 20:40 ; allumé 26/10 06:39), R4 **posé** (26/10 
   (≈ 390 ms avant : la règle enveloppée sert aussi l'écran Registre).
 - ⏳ **L'écran n'est pas encore en ligne** : il le sera au push de Frédéric (Vercel). Jusque-là, rien ne lit la vue.
   ⏰ Après le push : ouvrir l'app et vérifier qu'au chargement il n'y a **qu'une** lecture `app_filter_catalog_registre` et plus les 25 pages.
+
+## 25. ✅ PROUVÉ DANS L'APP — 26/10, 16:57 *(Frédéric : « j'ai push » ; Vercel sert `index-CFC0e0A4.js` depuis 16:56:57)*
+- **Avant le déploiement de l'écran** (base seule) : toujours 25 lectures du registre, mais **60 à 170 ms** chacune au lieu de ~820 (la règle enveloppée).
+- **Après** : au chargement, **0 lecture du registre** pour les menus ; la lecture unique `app_filter_catalog_registre` en **502 / 679 ms**
+  (lancée deux fois au démarrage, comme la fiche) ; **aucun repli** (pas d'avertissement en console).
+- **Les menus à l'écran Annonces** (panneau « Filtres ») : Agence **28** · Négociateur **49** (registre 44 ∪ catalogue de nuit, comme avant) ·
+  Statut **11** (10 + « actives ») · Validation **2** · Passerelle **5**.
+- ⚠ La capture d'écran de Chrome a cessé de répondre (fenêtre en arrière-plan) : la lecture des menus s'est faite dans la page, sans capture.
