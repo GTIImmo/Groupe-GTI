@@ -905,3 +905,82 @@ transaction que Hektor ne liste plus (`present_in_hektor` à faux) garde ses par
 - **Cette nuit** : C4 change les vendeurs de ~19 900 transactions → le déclencheur les recalcule (**~22 s** de plus au push, mesuré) ; demain
   matin : la sentinelle à 0, et « vendeurs sans notre numéro » de 58 550 à ~36.
 - Le générateur du patch est dans `phase2/checks/gen_table_des_parties/`.
+
+## 19. LA FICHE CONTACT MET ~4 s — AUDIT DU REMÈDE *(26/10 après-midi, hors ⑧, lecture seule, rien posé)*
+
+> Frédéric : « il faut que tu audites de nouveau afin d'être sûr que ton correctif soit la bonne idée, qu'il soit compatible avec le reste des mécanismes ».
+
+### 19.1 La cause (mesurée sous SON compte, pas en service_role)
+- La fiche lit `app_contact_relations_current?hektor_contact_id=eq.<n°>`. La vue fabrique ce champ par **conversion** (`app_contact_id::text`) dans ses deux branches.
+- Sous RLS, une conversion n'est pas « leakproof » : Postgres applique la règle **avant**, sur **toutes** les lignes → lecture complète.
+- `app_relation` : règle `is_app_user_active()` **non enveloppée** → appelée **132 879 fois** → **2 175 ms**. `app_affaire_partie` : 274-437 ms.
+- ⚠ Mes mesures du matin étaient en service_role (qui ignore la RLS) : 2,8 ms. Mémoire `rls-et-conversion-texte-tuent-l-index`.
+- ⚠ La colonne existante `app_relation.hektor_contact_id` porte le numéro **de Hektor** (132 879 sur 132 879) : inutilisable.
+
+### 19.2 Les trois lectures de la vue par l'écran (`api.ts`)
+| lecture | filtre | aujourd'hui admin / commercial |
+|---|---|---|
+| fiche contact (l. 3607) | `hektor_contact_id` | **2 183-3 342 ms / 2 191-2 481 ms** |
+| personnes d'un bien (l. 9708, 9825) | `app_dossier_id` | 18-164 ms / 132 ms |
+| idem, sans dossier | `hektor_annonce_id` | 100-328 ms / 195-388 ms |
+
+### 19.3 Les remèdes comparés (copies en transaction annulée)
+| remède | liens seuls | fiche entière (admin, à chaud) |
+|---|---|---|
+| aujourd'hui | 2 175 ms | 2 400 ms |
+| D — envelopper la règle `(select is_app_user_active())`, rien d'autre | **38 ms** | — |
+| D + colonne texte calculée sur `app_affaire_partie` (**le remède léger**) | 38 ms | **82 ms** |
+| + colonne texte calculée aussi sur `app_relation` (**complet**) | 0,3 ms | 37 ms |
+- **Mêmes lignes** : vue entière comparée par `EXCEPT ALL` dans les deux sens, **0 perdue, 0 en trop**, admin (167 825) **et** commercial (132 866).
+- Côté bien : inchangé ou mieux (dossier 18 → 1,7 ms admin).
+- Commercial : la règle de `app_affaire_partie` (EXISTS sur le registre, lui-même filtré par `app_mes_biens_portefeuille()`) garde ~130 ms.
+
+### 19.4 Compatibilité — ce que j'ai balayé
+| | créer | modifier | supprimer | lire |
+|---|---|---|---|---|
+| **relation** (`app_relation`) | RPC `app_create_mandant_contact_optimistic`, `app_link_mandant_optimistic` : colonnes **nommées** ; nuit `relation_ledger.py` : `colonnes_poussees()` nommées | worker PATCH champs nommés (l. 16750, 16963, 17005) ; RPC `app_unlink_mandant_optimistic` UPDATE nommé | worker DELETE (l. 20507) ; `delete_local_contact.py` = local | écran (3 lectures) ; `app_contact_activite` (definer) ; doublure `pull_from_supabase --table app_relation` (copie **complète**, pas delta) |
+| **transaction → parties** | déclencheur `app_affaire_partie_suivre` : INSERT **nommé** | idem | idem | vue de la fiche ; `app_v_affaire_partie_ecarts` (colonnes nommées) ; descente (copie complète) |
+| contact, annonce, recherche, mandat, document, RDV | non touchés | | | |
+- Le worker, la nuit et les RPC passent en service_role ou en propriétaire : **la RLS ne les concerne pas**.
+- La règle enveloppée a **le même sens** (même utilisateur pour toute la requête) : personne ne voit plus ni moins.
+- Une colonne calculée ne peut pas être écrite : tous les écrivains nomment leurs colonnes → aucun ne casse. ⚠ Un futur retour arrière `INSERT … SELECT *` depuis une sauvegarde échouerait (bruyamment) : nommer les colonnes.
+- Ajouter la colonne **réécrit** la table : `app_affaire_partie` 20 Mo (< 1 s) ; `app_relation` 94 Mo (verrou de quelques secondes) → raison de ne PAS la faire sur `app_relation`.
+- La vue garde ses colonnes, leurs types et ses lignes : **aucun changement d'écran** (pas de conflit avec la session navigation).
+- À suivre si posé : le générateur `gen_table_des_parties/` (la branche de la vue) et l'empreinte de la vue dans la répétition du 26/10.
+
+### 19.5 La famille (leçon 9) — NOTÉE, pas décidée
+- **~57 règles** du schéma appellent une fonction sans `(select …)`. Les grosses : `app_console_job_log` (372 k lignes), `app_relation`, `app_console_job` (104 k), `app_mandat_register_current` (219 Mo), `app_affaire_console`.
+- ⭐ `app_registre_mandats_current` : **7 ms** en service_role, **387 ms** sous le compte de Frédéric → probablement une bonne part des **25 lectures à ~850 ms** au chargement de l'app.
+- Hors base : l'agenda (1,5 s) et le fait que l'écran relise le registre 25 fois.
+
+## 20. LE REMÈDE « COMPLET » ÉCRIT ET ÉPROUVÉ *(26/10 après-midi, Frédéric : « non, première idée »)* — **RIEN N'EST POSÉ**
+
+### 20.1 Les fichiers
+- `supabase/patch_fiche_contact_vitesse_2026-10-26.sql` : garde (vue à l'empreinte `84ca1b2e`, celle de 13:21) → colonne `app_contact_id_texte`
+  **calculée par la base** + index, sur `app_relation` **et** `app_affaire_partie` → règle des liens enveloppée → la vue lit les deux colonnes
+  (deux ancres, chacune trouvée une seule fois) → 6 contrôles. `lock_timeout 5 s` : si la table est occupée, il s'arrête au lieu de bloquer.
+- `…_INVERSE.sql` : la vue d'abord (reconstituée, **vérifiée à l'octet** `84ca1b2e` avant d'être posée), la règle d'avant, colonnes et index
+  retirés ; il ne retire que sa part (4 contrôles, dont « les index d'origine et la table des parties sont intacts »).
+- `…_REPETITION.sql` : les temps **sous le compte de l'utilisateur** (Frédéric et un commercial), les deux index dans le plan, le côté bien,
+  le témoin inverse, la colonne juste sur chaque ligne, la sentinelle des parties.
+
+### 20.2 L'épreuve — copies temporaires DU MÊME NOM, tout annulé
+- Les copies portent le même nom que les tables : Postgres les cherche en premier, donc **le patch tourne tel quel** sur elles.
+  ⚠ Piège attrapé : la définition de la vue doit être lue **avant** de créer les copies, sinon Postgres l'écrit avec `public.` et la vue de
+  copie lit les VRAIES tables (empreinte `c02fca1c` au lieu de `84ca1b2e` : c'est ce qui l'a montré).
+- **Patch** : 6/6 ; 2,5 s sur une copie de même taille (la vraie table sera bloquée de l'ordre de quelques secondes).
+- **Rejoué deux fois** : la 2e ne refait rien. **Inverse** : 4/4, la vue revient à l'octet. **Patch après l'inverse** : même empreinte `d4350c63`.
+- **Répétition** : fiche **36,7 ms** (admin, contre ~2 400) et **129,3 ms** (commercial, contre ~2 200) ; les deux index servent ; témoin
+  inverse : sans les colonnes, 241,9 et 303,3 ms (la vue d'avant profite aussi de la règle enveloppée) ; côté bien 1,8 à 165 ms.
+- **Mêmes lignes** : vue entière avant/après, `EXCEPT ALL` dans les deux sens, admin 167 825 et commercial 132 866 : **0 perdue, 0 en trop**.
+- **Les écrivains** : création de lien avec la liste de colonnes des RPC, upsert à la façon de la nuit (le numéro change → la colonne suit),
+  retrait façon worker, parties façon déclencheur (101 justes, 0 fausse) ; **écrire dans la colonne est refusé** par Postgres.
+- ⚠ Deux faux rouges de MA répétition, corrigés : `EXECUTE … INTO` ne garde que la 1ʳᵉ ligne d'un plan texte (lu désormais dans le JSON) ; et le
+  témoin attendait « > 500 ms » alors que la règle enveloppée accélère aussi l'ancienne vue.
+
+### 20.3 Pour la pose (accord de Frédéric)
+- En journée, **jamais pendant le run de nuit** ; coller le patch, puis la répétition. En cas de souci : l'inverse.
+- Ensuite : mettre à jour la branche de la vue dans `phase2/checks/gen_table_des_parties/` (sinon un patch régénéré remettrait la conversion),
+  et noter la nouvelle empreinte de la vue (`d4350c63`) pour les gardes des patchs suivants.
+- Les index sur expression d'origine (`idx_app_relation_contact_texte`, `idx_app_affaire_partie_contact_texte`) deviennent inutiles :
+  laissés en place (additif) ; leur retrait se décidera à part.
