@@ -3229,3 +3229,27 @@ la coupure). Elle ne règle **ni L1-mandants** (une « pièce 2 » pour `mandant
 chantier des types).
 
 - ✅ **R4 — le premier passage du moniteur (26/10, 08:49 heure de Paris) a ÉCRIT les deux sentinelles** : `data.affaire_ecart` **ok** (0, seuil 0) et `data.affaire_personne_ecart` **ok** (0), `observed_at` 07:49:10 UTC — une vraie écriture, à la même seconde que les sœurs (`data.contact_modif_ecart` 07:49:09). Ni « illisible », ni lot refusé.
+
+### Point 4 — la relecture de jour du worker : ✅ FAIT par le chantier 2 b des types (26/10)
+`GARDER_NOS_NUMEROS_A_LA_RELECTURE` (worker, `poserNosNumerosDansLaListe`), actif depuis le redémarrage du 26/10 à 10:57 : les listes
+relues chez Hektor gardent nos numéros, sans attendre la nuit (note des types §11). Le point 2 (pièce 5) est fait par **la table des
+parties** (même note §15-18).
+
+### Point 5 — LES BOUTONS DE LA MODALE (§42) : audit REFAIT le 26/10 au soir, sur le code ACTUEL — lecture seule, rien codé
+*(Frédéric : « dans l'ordre du chapitre, suis le plan de dev » ; le §42 date du 24/10, les §43 et §46 l'ont suivi le même jour)*
+
+| # | l'incohérence du §42 | état au 26/10 (code et base relus) |
+|---|---|---|
+| 1 | « Accepter » une offre déjà acceptée, « Refuser » une offre déjà refusée | ⚠ **le §42 se trompait sur le danger** : la base répond `deja_dans_cet_etat` et **n'envoie rien chez Hektor** (« on ne renvoie pas de travail pour rien », depuis le 16/09, `cd0d767`) ; l'écran affiche « Cette transaction est déjà dans cet état — rien n'a été envoyé » (`App.tsx:18095`). Reste : **un bouton inutile** — sans danger |
+| 2 | « Envoyer vers Offre » sur un bien **engagé** (offre acceptée ou compromis en cours) | ⬜ **toujours possible**. L'écran ne garde que compromis et vente (`avisGardeFouSaisie`, `genre === 'offre'` → aucune garde) ; **la base n'a aucune garde** non plus (`app_change_annonce_status_optimistic` ne refuse que : archive, hors parc, Estimation, droits). Contraire à la règle du 08/09 (« plusieurs offres, mais plus quand compromis ouvert ou offre acceptée »), appliquée au seul « Choisir » |
+| 3 | « Modifier » sur une vente | ✅ **tranché le 24/10 (§43) : « on ne touche pas »** — reste |
+| 4 | « Envoyer vers Actif » / « Clos » sur un bien **vendu** | ⬜ **toujours affichés** (§46 ne ferme que Offre / Compromis / Vendu). « Actif » remettrait le bien en vente chez Hektor **et la diffusion à 1** |
+| 5 | le vieux message « Modifier chez Hektor reprend celle-là… » | ⬜ **toujours affiché** dès qu'une transaction est choisie (`App.tsx:22094`), y compris quand « Modifier » est caché (compromis d'une chaîne vendue) |
+| 6 | Pilotage → Diffusion muet sur un bien vendu (§40) | ⬜ **toujours muet** : `handleSetSelectedDossierDiffusable` (`App.tsx:19328`) sort sans un mot quand `selectedDossier` est vide (un bien vendu n'est plus dans `app_dossier_current`) — échec silencieux, famille ④ |
+
+**Ce qui demande une décision de Frédéric** : 2 (bloquer une nouvelle offre sur un bien engagé — à l'écran seulement, ou aussi en base ?
+⚠ dans le métier, une « offre de secours » sur un bien sous compromis existe ; la règle du 08/09 dit non) · 4 (cacher Actif / Clos sur un
+vendu, ou les garder avec un avertissement — « Actif » sur un vendu peut être voulu pour une vente annulée, mais le chemin prévu est
+« supprimer la vente ») · 1 (cacher le bouton inutile, ou le laisser puisqu'il ne fait rien).
+**Ce qui est une simple correction d'affichage** (aucune décision de fond) : 5 (n'afficher le message que si « Modifier » est là) et 6 (dire
+pourquoi le bouton ne fait rien, ou le faire marcher par le numéro Hektor du bien vendu).
