@@ -587,3 +587,22 @@ pour que l'app appelle vraiment le serveur RDV, et réponse du résumé **simul�
 
 ⚠ **Non éprouvé** : l'interrupteur à `false` (c'est l'ancien chemin, inchangé) ; une fiche « légère » d'archive ; le
 **temps réel en production** — à chronométrer après déploiement (référence : résumé 9,3 s en moyenne le 23/10).
+
+### 12.3 ✅ POINT 0 bis EN PRODUCTION (26/10) — mesuré sur les ouvertures de Frédéric
+
+En ligne à **10:05:36** (code publié `index-DBtnx4qq.js`, porte `appointment_resume_etat`). Frédéric a rechargé
+puis ouvert des fiches ; journaux de l'API Supabase (`edge_logs`), heures de Paris :
+
+| fiche | clic (relecture demandée) | fiche complète (détail, Matterport, mandants lus) | résumé RDV terminé (lectures faites par Render) |
+|---|---|---|---|
+| 63304 | 10:05:51,0 | 10:05:51,6 → **0,6 s** | 10:05:53,8 → 2,8 s |
+| 63200 | 10:06:14,8 | 10:06:15,2 → **0,4 s** | 10:06:17,5 → 2,7 s |
+
+➡ La fiche n'attend plus le résumé : elle a ses données en **0,4 à 0,6 s** ; le résumé arrive ~2,2 s plus tard.
+Ce matin le serveur Render était **chaud** (2,7 s au lieu des 9,3 s en moyenne du 23/10) : le gain réel varie donc
+de ~2 s à ~9 s (et plus quand Render se réveille). ⚠ Mesure côté serveur (heure des lectures), pas le temps
+d'affichage à l'écran ; l'affichage suit les lectures.
+
+Vu au passage : un **2e résumé** pour 63200 à 10:06:22-23 — probablement une réouverture de la même fiche (ou le
+renouvellement du jeton de session, dont l'effet dépend) ; sans conséquence (le lien existe déjà, il n'est pas recréé).
+Et les relectures Hektor n'ont été demandées **qu'à l'ouverture** des fiches (10:05:51, 10:06:26) — le point 0 tient.
