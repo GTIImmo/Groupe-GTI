@@ -3428,3 +3428,18 @@ compromis depuis le 10/09 (effet `statusChangeStatus === 'sold'`).
 public dans `montant`. Sans honoraires acquéreur (97 %), les deux sont égaux → l'offre remplit **les deux cases**, comme le fait déjà la
 modification depuis le 18/09 (« le prix de vente suit le montant de l'offre »).
 **Les acquéreurs à la création partent sans drapeau** (`!enReprise` → `acquereurs[]` posé) : ce que la modale montre est envoyé.
+
+#### ✅ Point 6 n° 3 — CODÉ le 27/10 *(Frédéric : « vas-y »)* — commit local `c85e4af`, **non poussé**, écran seulement
+- `offreAccepteeAReprendreAuCompromis` (fonction de tête, à côté de `nouvelleOffreFermeeSurBienEngage`) : **une** offre acceptée,
+  vivante, dans un dossier ouvert (ou clos par une vente morte), **sans compromis vivant** sur sa chaîne — sinon `null`.
+- Effet de la modale (devant celui du notaire du vendeur), **à la création seulement** : le montant (carnet de l'offre d'abord) dans
+  « Montant / prix public » **et** « Prix de vente » ; l'acquéreur de l'offre sous **notre** numéro. Jamais par-dessus une case de prix
+  touchée, une liste remplie ou une liste touchée (retirer l'acquéreur proposé ne le fait pas revenir : les cases touchées ne sont pas une
+  dépendance de l'effet). Aucun drapeau « affirmé » levé ; le worker n'est pas touché (à la création il envoie déjà ce que la modale montre).
+- **Essai** `apps/hektor-v1/test_heritage_compromis_offre.cjs` : **29/29** — 9 situations (engagé par offre avec une écartée listée d'abord,
+  deux acceptées, compromis déjà là, revendu, revendu par vente directe, offre effacée chez Hektor, sans acceptée, vente annulée, refusée +
+  acceptée) ; l'acquereur objet seul lu sous 20000012 ; les 9 gardes de l'effet ; témoin inverse ; **4 mutants attrapés**. Le message du
+  commit dit « 30/30 » : c'est **29**.
+- ⚠ Leçon de l'essai : un témoin qui lit `git HEAD` **casse dès que la correction est committée** (l'essai du point 6 est tombé à 23/26 le
+  27/10). Les deux essais lisent désormais **le parent du commit qui a introduit la correction** (`git log -S`, chemin `:(top)…`).
+- Non éprouvé en réel : la création d'un compromis chez Hektor avec ces valeurs (essai sur 62965 possible, accord de Frédéric).
