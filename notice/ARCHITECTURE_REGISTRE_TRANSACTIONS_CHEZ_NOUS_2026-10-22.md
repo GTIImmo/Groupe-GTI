@@ -2964,3 +2964,56 @@ répétition devra fabriquer son **témoin positif** (des lignes d'essai dans un
 patch base (vue + table + fonction) avec inverse et répétition **à témoin positif** → collé par Frédéric → sentinelle dans le moniteur
 (poussée, active au prochain passage, toutes les 2 h) → l'écran si Frédéric le veut → **essai réel** : une ligne d'essai mise en
 « conflit » doit apparaître sur l'écran Santé, puis se taire après « vu ».
+
+---
+
+## 55. R4 — UNE SAISIE FAITE DANS HEKTOR, ET LA RÉPONSE À UN CONFLIT — audit du 26/10 *(Frédéric : « si l'utilisateur écrit directement dans Hektor, que se passe-t-il ? […] audite encore et propose-moi »)* — lecture seule, **rien codé**
+
+### Une saisie faite directement dans Hektor (code de la nuit, de R2, de R3 et de l'écran)
+Il n'y a **pas** de règle « la date la plus récente gagne » : Hektor ne donne pas de date par champ. Ce qui décide, c'est **le verdict de R3**.
+| cas | ce qui se passe |
+|---|---|
+| transaction **née dans Hektor** (pas de carnet) | la nuit recopie Hektor, l'app suit — **comme avant** ; R2 ne la voit pas |
+| née dans l'app, **modifiée ensuite dans Hektor**, le champ déjà « arrivé » (il a une colonne) | la ligne est **sortie du carnet** par R3 → la nuit reprend Hektor → l'app suit — **comme avant** |
+| idem, mais le champ **attendait encore sa preuve** (quelques minutes après la création, ou jusqu'au matin) | R2 garde notre valeur ; R3 voit autre chose chez Hektor → **« conflit »** → c'est là que R4 doit sonner |
+| champ que Hektor **ne porte pas** (net vendeur d'une vente, taux, notaires d'une offre) | personne ne peut le changer dans Hektor : l'app garde notre valeur, voulu |
+
+⚠ **Trouvé en vérifiant — deux champs « arrivés » restent au carnet et l'écran les lit là** : le **prix de vente du compromis** (ligne
+« Prix public » de la carte, `k.prix_publique`, App.tsx l. ~28391) et le **taux** (`tauxDe`, carnet d'abord). R3 ne rejuge pas une ligne
+« arrivée » : si un négociateur change ensuite le prix dans Hektor, l'en-tête (registre) suit mais **cette ligne garde l'ancienne valeur**.
+Le taux, lui, n'existe pas chez Hektor (il se recalcule des honoraires). **Noté, pas corrigé** — à traiter à part (un rejugement périodique
+des « arrivées » gardées, par le rattrapage du matin).
+
+### Ce qui arrive VRAIMENT comme conflit — mesuré dans le journal de R3 depuis le 23/10
+3 passages en « conflit ou échec », tous le 23/10 : **30712** (l'offre **acceptée** 33094 : la modification du 13/10 a échoué, Hektor refuse
+en silence une offre acceptée — 3 « échec ») et deux transactions **d'essai** de 24113 (les faux conflits F1 / notaire, corrigés le jour
+même). **0 depuis.** ➡ Un vrai conflit est **rare** ; quand il arrive, c'est le plus souvent **Hektor qui a raison** (il a refusé, ou un
+négociateur a corrigé).
+
+### Ce que « garder la nôtre » permet vraiment (§42-43, décisions du 07/09, 13/10, 24/10)
+Renvoyer notre valeur à Hektor = le geste **« Modifier »** existant. Il est **grisé** sur une offre acceptée (Hektor la refuse), **retiré**
+sur un compromis verrouillé par sa vente (V). Il reste sur l'offre en cours / refusée, le compromis ouvert, la vente (« on ne touche pas »).
+➡ « Garder la nôtre » ne peut pas toujours **corriger Hektor** ; il peut toujours **garder l'app** à notre valeur.
+
+### La proposition (à arbitrer par Frédéric)
+**Par défaut, sans geste humain** : un « conflit » reste protégé (décision A) et **l'alerte sonne** (warning, écran Santé, toutes les 2 h).
+**Les gestes** (admin), au même endroit que le verdict dans la rubrique Affaires :
+| verdict | ⓐ « Prendre la valeur de Hektor » | ⓑ « Garder la nôtre » |
+|---|---|---|
+| **conflit** | notre saisie est **rangée** (table des décisions : notre valeur, celle de Hektor, qui, quand) puis **retirée du carnet** → R2 ne protège plus, l'écran retombe sur le registre, la nuit met la valeur de Hektor. « Une saisie ne se perd jamais » : elle reste dans la table des décisions | la décision est rangée, **l'alerte se tait** pour cette saisie ; R2 continue de protéger ; si Hektor doit être corrigé aussi : **« Modifier »** quand il est disponible (il n'est pas automatique) |
+| **échec** (rien n'est parti) | idem ⓐ (le registre porte déjà la valeur de Hektor ; l'écran cesse d'afficher notre valeur pour le taux / le net) | idem ⓑ — et « Modifier » pour la renvoyer |
+| **en attente > 48 h** | idem ⓐ | « attendre encore » : l'alerte se tait pour cette saisie |
+Une saisie **réécrite** après la décision sonne de nouveau (la décision vaut pour l'`ecrit_le` vu).
+
+**Ce que ça remplace dans le §54** : le simple « vu » devient ces deux gestes ; la table du « vu » devient **la table des décisions**
+(`app_affaire_carnet_decision`). Le reste du §54 tient (la vue des écarts, la sentinelle `data.affaire_ecart`, la 2ᵉ sentinelle des
+personnes, warning).
+
+### Ce que ça pourrait casser ailleurs
+- **ⓐ retire une ligne du carnet** : c'est déjà ce que R3 fait pour une « arrivée » (même `DELETE`, même table) ; R2 et l'écran savent déjà
+  vivre sans la ligne (ils retombent sur le registre). ⚠ Pour un champ **sans colonne** (prix de vente du compromis, taux), la ligne de la
+  carte **disparaît** ; la valeur de Hektor reste dans l'en-tête.
+- **La règle du projet « Hektor confirme, il n'écrase pas »** (CLAUDE.md §4) : respectée — sans geste humain, Hektor n'écrase rien ; c'est
+  l'humain qui choisit ⓐ.
+- **Les droits** : les deux fonctions refusent un non-admin (`admin_requis`), comme les sœurs.
+- **Le moniteur** : inchangé par rapport au §54.
