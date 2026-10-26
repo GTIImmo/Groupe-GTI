@@ -23,6 +23,9 @@ import {
   loadDiffusionTargets,
   previewDefaultDiffusionTargets,
   loadDossierDetail,
+  loadAnnonceAppointmentSummary,
+  appointmentSummaryFields,
+  type AppointmentSummaryResponse,
   loadArchivedAnnonceDetailCache,
   loadHistoricalAnnonceDetailCache,
   loadBrouillonAnnonceDetailCache,
@@ -12874,6 +12877,15 @@ function singleContactStats(contact: AppContact | null): ContactStats {
 //   `true` = l'ancien comportement, en une ligne.
 const SELECTION_D_OFFICE = false
 
+// ⛔ 26/10/2026 -- POINT 0 bis : LA FICHE N'ATTEND PLUS LE RESUME DES RDV DE LA VITRINE.
+//   Il mettait 9 s en moyenne (20 s au pire) et sa liste de demandes est VIDE depuis
+//   toujours (0 ligne dans app_appointment_request). La fiche s'affiche des que le bien, son
+//   detail, Matterport et les mandants sont la ; le resume arrive a part et se fusionne dans
+//   `detail` -- seulement pour la MEME annonce. Le Reporting attend son arrivee.
+//   Audit : notice/AUDIT_NAVIGATION_APRES_ACTION_2026-10-23.md §12.
+//   `false` = l'ancien comportement, en une ligne.
+const RESUME_RDV_EN_DIFFERE = true
+
 export default function App() {
   const [screen, setScreen] = useState<Screen>('accueil')
   const [filterCatalog, setFilterCatalog] = useState<FilterCatalog>(emptyFilterCatalog)
@@ -14591,7 +14603,7 @@ export default function App() {
     }
     let cancelled = false
     setDetailLoading(true)
-    loadDossierDetail(selectedDossierId)
+    loadDossierDetail(selectedDossierId, { sansResumeRdv: RESUME_RDV_EN_DIFFERE })
       .then((detail) => {
         if (cancelled) return
         // Ne JAMAIS fermer une fiche ouverte sur un detail null TRANSITOIRE : juste apres le
@@ -14611,6 +14623,27 @@ export default function App() {
       cancelled = true
     }
   }, [selectedDossierId, session, dataReloadKey, dossiers, mandats])
+
+  // POINT 0 bis (26/10/2026) : le resume des RDV de la vitrine, A PART, pour la fiche
+  // OUVERTE seulement (pas une fiche legere d'archive : elle ne l'appelait pas avant, et le
+  // resume peut CREER un lien public). Il ne depend pas de dataReloadKey : la liste des
+  // demandes ne bouge que par une prise de RDV publique (0 depuis toujours) ; rouvrir la
+  // fiche la relit. Fusion dans `detail` plus bas, seulement pour la MEME annonce.
+  const [resumeRdv, setResumeRdv] = useState<{ annonceId: string; etat: 'chargement' | 'pret' | 'echec'; resume: AppointmentSummaryResponse | null } | null>(null)
+  const resumeRdvAnnonceId = RESUME_RDV_EN_DIFFERE && detailOpen && selectedDossier?.hektor_annonce_id != null
+    && !isLightweightAnnonceRecord(selectedDossier)
+    ? String(selectedDossier.hektor_annonce_id)
+    : null
+  useEffect(() => {
+    if (!resumeRdvAnnonceId || (hasSupabaseEnv && !session)) return
+    let cancelled = false
+    setResumeRdv({ annonceId: resumeRdvAnnonceId, etat: 'chargement', resume: null })
+    loadAnnonceAppointmentSummary(resumeRdvAnnonceId)
+      // null = pas de serveur RDV configure : comme avant, rien a attendre ni a fusionner.
+      .then((resume) => { if (!cancelled) setResumeRdv({ annonceId: resumeRdvAnnonceId, etat: 'pret', resume }) })
+      .catch(() => { if (!cancelled) setResumeRdv({ annonceId: resumeRdvAnnonceId, etat: 'echec', resume: null }) })
+    return () => { cancelled = true }
+  }, [resumeRdvAnnonceId, session])
   // ⑦-3a pièce 3 (16/10/2026) : on va chercher NOS dates de clôture au registre,
   // là où elles vivent. Recopie fidèle du chargement du cockpit (l. 27102-27115) —
   // même fonction, même clé (le n° de mandat), même repli (un objet vide), pour
@@ -18866,7 +18899,19 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     }
   }
 
-  const detail = useMemo(() => detailPayload(selectedDossier), [selectedDossier])
+  // POINT 0 bis (26/10/2026) : le resume des RDV arrive a part ; on le pose ICI, a l'unique
+  // endroit d'ou partent les 5 lecteurs (rubrique RDV, visites du cycle, Reporting, Synthese,
+  // agenda), et seulement s'il concerne LA MEME annonce. `appointment_resume_etat` dit au
+  // Reporting s'il doit attendre.
+  const detail = useMemo(() => {
+    const base = detailPayload(selectedDossier)
+    if (!RESUME_RDV_EN_DIFFERE || !resumeRdv || selectedDossier?.hektor_annonce_id == null) return base
+    if (String(selectedDossier.hektor_annonce_id) !== resumeRdv.annonceId) return base
+    if (resumeRdv.etat === 'pret' && resumeRdv.resume) {
+      return { ...base, ...appointmentSummaryFields(base as Record<string, unknown>, resumeRdv.resume), appointment_resume_etat: 'pret' } as DossierDetailPayload
+    }
+    return { ...base, appointment_resume_etat: resumeRdv.etat } as DossierDetailPayload
+  }, [selectedDossier, resumeRdv])
   const canCreateHektorDraftAnnonce = profile?.role === 'admin' || profile?.role === 'manager' || profile?.role === 'commercial'
   const visibleDossiersCount = dossiersTotal || dossiers.length
   const dossierTotalPages = totalPages(dossiersTotal, dossierPageSize)
@@ -31751,23 +31796,33 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                 const ownerEmail = owner?.email || ''
                 const ownerDirId = owner ? detailContactDirectoryId(owner) : null
                 const subject = `Compte-rendu d'activité - ${dossier.titre_bien || dossier.numero_dossier || 'votre bien'}`
+                // POINT 0 bis (26/10/2026) -- C'EST CE REPORTING QUI S'AFFICHE EN PRODUCTION
+                // (APP_COCKPIT_V2_ENABLED = true), pas celui de DossierDetailLayoutBase. Le resume
+                // des RDV arrive apres la fiche : tant qu'il n'est pas la, on n'imprime ni n'envoie.
+                const rdvEnChargement = props.detail.appointment_resume_etat === 'chargement'
+                const rdvEnEchec = props.detail.appointment_resume_etat === 'echec'
+                const attente = rdvEnChargement ? 'Rendez-vous en cours de chargement' : undefined
                 return (
-                  <div className="fa-ck-report-actions">
-                    <button type="button" className="fa-ck-rep-btn" onClick={() => window.print()}>Aperçu / PDF</button>
-                    {ownerDirId && props.onOpenContact ? (
-                      <button type="button" className="fa-ck-rep-btn primary" onClick={() => props.onOpenContact?.(ownerDirId)}>Envoyer au propriétaire</button>
-                    ) : (
-                      <a
-                        className={`fa-ck-rep-btn primary${ownerEmail ? '' : ' is-disabled'}`}
-                        href={ownerEmail ? `mailto:${ownerEmail}?subject=${encodeURIComponent(subject)}` : undefined}
-                      >Envoyer au propriétaire</a>
-                    )}
-                  </div>
+                  <>
+                    <div className="fa-ck-report-actions">
+                      <button type="button" className="fa-ck-rep-btn" disabled={rdvEnChargement} title={attente} onClick={() => window.print()}>Aperçu / PDF</button>
+                      {ownerDirId && props.onOpenContact ? (
+                        <button type="button" className="fa-ck-rep-btn primary" disabled={rdvEnChargement} title={attente} onClick={() => props.onOpenContact?.(ownerDirId)}>Envoyer au propriétaire</button>
+                      ) : (
+                        <a
+                          className={`fa-ck-rep-btn primary${ownerEmail && !rdvEnChargement ? '' : ' is-disabled'}`}
+                          href={ownerEmail && !rdvEnChargement ? `mailto:${ownerEmail}?subject=${encodeURIComponent(subject)}` : undefined}
+                        >Envoyer au propriétaire</a>
+                      )}
+                    </div>
+                    {rdvEnChargement ? <div className="fa-ck-sentline">Rendez-vous en cours de chargement…</div> : null}
+                    {rdvEnEchec ? <div className="fa-ck-sentline">⚠ Les rendez-vous de la vitrine n&apos;ont pas pu être chargés : ce compte-rendu ne les contient pas. Rouvrir la fiche pour réessayer.</div> : null}
+                  </>
                 )
               })()}
               <div className="fa-ck-kpis">
                 <div className="fa-ck-kpi"><div className="kl">Vues 30 j</div><div className="kv br">{Number(detailStr('vues_30j')) || 0}</div><svg className="fa-ck-spark" viewBox="0 0 120 30" preserveAspectRatio="none" aria-hidden="true"><polyline points="0,26 18,22 34,24 52,15 70,18 88,9 104,12 120,6 120,30 0,30" fill="rgba(194,18,95,.08)" stroke="none" /><polyline points="0,26 18,22 34,24 52,15 70,18 88,9 104,12 120,6" fill="none" stroke="#c2125f" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" /></svg></div>
-                <div className="fa-ck-kpi"><div className="kl">Visites / demandes</div><div className="kv">{appts.length}</div><div className="ks">RDV pris</div></div>
+                <div className="fa-ck-kpi"><div className="kl">Visites / demandes</div><div className="kv">{props.detail.appointment_resume_etat === 'chargement' ? '…' : appts.length}</div><div className="ks">RDV pris</div></div>
                 <div className="fa-ck-kpi"><div className="kl">Portails actifs</div><div className="kv">{nbPortails}</div><div className="ks">diffusion</div></div>
                 <div className="fa-ck-kpi"><div className="kl">Contacts liés</div><div className="kv">{props.contacts.length}</div><div className="ks">acquéreurs</div></div>
               </div>
@@ -32502,6 +32557,10 @@ function DossierDetailLayoutBase(props: {
               ) : null}
               {activeDetailTab === 'reporting' ? (() => {
                 const reportAppointments = parseAppointmentRequests(props.detail)
+                // POINT 0 bis (26/10/2026) : le resume des RDV arrive APRES la fiche. Tant qu'il
+                // n'est pas la, on n'imprime ni n'envoie : un compte-rendu sortirait sans ses visites.
+                const rdvEnChargement = props.detail.appointment_resume_etat === 'chargement'
+                const rdvEnEchec = props.detail.appointment_resume_etat === 'echec'
                 const ownerContact = props.contacts.find((contact) => /mandant|propri|owner|vendeur/i.test(contact.role || '')) ?? props.contacts[0] ?? null
                 const ownerEmail = ownerContact?.email || ''
                 const ownerDirId = ownerContact ? detailContactDirectoryId(ownerContact) : null
@@ -32516,23 +32575,28 @@ function DossierDetailLayoutBase(props: {
                   <div className="section-header">
                     <DetailSectionTitle icon="commercial" title="Reporting propriétaire" />
                     <div className="detail-reporting-actions">
-                      <button className="ds-btn-ink" type="button" onClick={() => window.print()}>Aperçu / PDF</button>
+                      <button className="ds-btn-ink" type="button" disabled={rdvEnChargement} title={rdvEnChargement ? 'Rendez-vous en cours de chargement' : undefined} onClick={() => window.print()}>Aperçu / PDF</button>
                       {ownerDirId && props.onOpenContact ? (
-                        <button className="ds-btn-cta" type="button" onClick={() => props.onOpenContact?.(ownerDirId)}>Envoyer au propriétaire</button>
+                        <button className="ds-btn-cta" type="button" disabled={rdvEnChargement} title={rdvEnChargement ? 'Rendez-vous en cours de chargement' : undefined} onClick={() => props.onOpenContact?.(ownerDirId)}>Envoyer au propriétaire</button>
                       ) : (
-                        <a className={`ds-btn-cta ${ownerEmail ? '' : 'is-disabled'}`} href={ownerEmail ? `mailto:${ownerEmail}?subject=${encodeURIComponent(reportSubject)}` : undefined}>Envoyer au propriétaire</a>
+                        <a className={`ds-btn-cta ${ownerEmail && !rdvEnChargement ? '' : 'is-disabled'}`} href={ownerEmail && !rdvEnChargement ? `mailto:${ownerEmail}?subject=${encodeURIComponent(reportSubject)}` : undefined}>Envoyer au propriétaire</a>
                       )}
                     </div>
                   </div>
                   <div className="detail-reporting-kpis info-grid">
-                    <InfoCard label="Visites / demandes" value={reportAppointments.length} />
+                    <InfoCard label="Visites / demandes" value={rdvEnChargement ? '…' : reportAppointments.length} />
                     <InfoCard label="Portails actifs" value={activePortalTotal} />
                     <InfoCard label="Contacts liés" value={props.contacts.length} />
                     <InfoCard label="Prix actuel" value={formatPrice(dossier.prix)} />
                   </div>
                   <article className="detail-card">
                     <span className="detail-label">Visites & retours</span>
-                    {reportAppointments.length > 0 ? (
+                    {rdvEnEchec ? (
+                      <p className="empty-state">⚠ Les rendez-vous de la vitrine n&apos;ont pas pu être chargés : ce compte-rendu ne les contient pas. Rouvrir la fiche pour réessayer.</p>
+                    ) : null}
+                    {rdvEnChargement ? (
+                      <p className="empty-state">Rendez-vous en cours de chargement…</p>
+                    ) : reportAppointments.length > 0 ? (
                       <div className="timeline-list">
                         {reportAppointments.map((item, index) => (
                           <article key={String(item.id ?? index)} className="timeline-card">

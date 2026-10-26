@@ -141,7 +141,7 @@ export type DataScope = {
   agencyName?: string | null
 }
 
-type AppointmentSummaryResponse = {
+export type AppointmentSummaryResponse = {
   ok?: boolean
   context?: {
     token?: string | null
@@ -5303,7 +5303,37 @@ export async function loadWorkItemsPage({
   }
 }
 
-export async function loadDossierDetail(appDossierId: number): Promise<DetailedDossier | null> {
+// ⛔ 26/10/2026 -- POINT 0 bis : le resume des RDV de la VITRINE (serveur Render) mettait
+//   9 s en moyenne (20 s au pire, mesure du 23/10) et la fiche l'attendait pour s'afficher.
+//   Il est sorti dans ces deux fonctions pour que la fiche ouverte puisse le demander A PART.
+//   Le resume n'est pas une simple lecture : s'il manque, il CREE le lien public de RDV du
+//   bien. Audit : notice/AUDIT_NAVIGATION_APRES_ACTION_2026-10-23.md §12.
+export async function loadAnnonceAppointmentSummary(hektorAnnonceId: string | number | null | undefined): Promise<AppointmentSummaryResponse | null> {
+  if (!canUseBackendApi() || hektorAnnonceId == null || String(hektorAnnonceId).trim() === '') return null
+  return invokeBackendApi<AppointmentSummaryResponse>(`/public/appointments/annonce/${encodeURIComponent(String(hektorAnnonceId))}/summary`, {
+    method: 'GET',
+  })
+}
+
+// Meme fusion qu'avant le 26/10 : le contexte du resume passe devant, le payload sert de repli.
+export function appointmentSummaryFields(payload: Record<string, unknown>, appointmentSummary: AppointmentSummaryResponse) {
+  const context = appointmentSummary.context ?? {}
+  return {
+    appointment_public_token: context.token ?? payload.appointment_public_token ?? null,
+    appointment_public_url: context.publicUrl ?? payload.appointment_public_url ?? null,
+    appointment_negociateur_id: context.commercialId ?? payload.appointment_negociateur_id ?? null,
+    appointment_negociateur_email: context.negociateurEmail ?? payload.appointment_negociateur_email ?? null,
+    appointment_requests_json: JSON.stringify(Array.isArray(appointmentSummary.requests) ? appointmentSummary.requests : []),
+    appointment_request_events_json: JSON.stringify(Array.isArray(appointmentSummary.events) ? appointmentSummary.events : []),
+  }
+}
+
+export async function loadDossierDetail(
+  appDossierId: number,
+  // Par defaut RIEN NE CHANGE : le resume RDV est attendu comme avant. Seule la fiche
+  // ouverte (App.tsx) passe `sansResumeRdv` et le demande a part.
+  options?: { sansResumeRdv?: boolean },
+): Promise<DetailedDossier | null> {
   if (!hasSupabaseEnv || !supabase) {
     const dossier = mockDossiers.find((item) => item.app_dossier_id === appDossierId)
     if (!dossier) return null
@@ -5362,18 +5392,10 @@ export async function loadDossierDetail(appDossierId: number): Promise<DetailedD
     }
   }
 
-  if (canUseBackendApi()) {
+  if (canUseBackendApi() && !options?.sansResumeRdv) {
     try {
-      const appointmentSummary = await invokeBackendApi<AppointmentSummaryResponse>(`/public/appointments/annonce/${encodeURIComponent(String(dossierData.hektor_annonce_id))}/summary`, {
-        method: 'GET',
-      })
-      const context = appointmentSummary.context ?? {}
-      detailPayload.appointment_public_token = context.token ?? detailPayload.appointment_public_token ?? null
-      detailPayload.appointment_public_url = context.publicUrl ?? detailPayload.appointment_public_url ?? null
-      detailPayload.appointment_negociateur_id = context.commercialId ?? detailPayload.appointment_negociateur_id ?? null
-      detailPayload.appointment_negociateur_email = context.negociateurEmail ?? detailPayload.appointment_negociateur_email ?? null
-      detailPayload.appointment_requests_json = JSON.stringify(Array.isArray(appointmentSummary.requests) ? appointmentSummary.requests : [])
-      detailPayload.appointment_request_events_json = JSON.stringify(Array.isArray(appointmentSummary.events) ? appointmentSummary.events : [])
+      const appointmentSummary = await loadAnnonceAppointmentSummary(dossierData.hektor_annonce_id)
+      if (appointmentSummary) Object.assign(detailPayload, appointmentSummaryFields(detailPayload, appointmentSummary))
     } catch {
       // Ne bloque pas la fiche annonce si le module RDV n'est pas encore joignable.
     }

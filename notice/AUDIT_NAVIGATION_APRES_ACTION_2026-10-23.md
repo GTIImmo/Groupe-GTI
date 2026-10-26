@@ -557,3 +557,33 @@ l'ouverture d'une fiche — lien avec le point ① de 11bis (jetons instables) ;
 
 **Noté, hors sujet (ne pas traiter ici)** : 0 demande depuis 6 mois — la page de RDV de la vitrine **fonctionne-t-elle
 encore** ? Non mesuré.
+
+### 12.2 ✅ POINT 0 bis CODÉ ET CONTRÔLÉ EN DÉMONSTRATION (26/10)
+
+**Le code** :
+- `lib/api.ts` : le résumé sort dans `loadAnnonceAppointmentSummary` et `appointmentSummaryFields` (même fusion
+  qu'avant) ; `loadDossierDetail(id, { sansResumeRdv })` — **par défaut rien ne change** (avis de valeur, relecture
+  après modification, éditeur d'estimation gardent le chargement complet).
+- `App.tsx` : constante `RESUME_RDV_EN_DIFFERE = true` ; la fiche ouverte charge sans le résumé ; le résumé est
+  demandé à part (fiche **ouverte**, **non légère** seulement) ; fusion dans `detail` **seulement pour la même
+  annonce** ; `appointment_resume_etat` = chargement / prêt / échec.
+- **Reporting protégé aux DEUX endroits** — ⚠ et c'est le contrôle qui l'a trouvé : en production le cockpit est
+  allumé (`APP_COCKPIT_V2_ENABLED = "true"` dans le code publié), donc le Reporting affiché est celui de
+  `CockpitDetail`, **pas** celui de `DossierDetailLayoutBase` que j'avais d'abord protégé seul (mémoire
+  « vérifier QUEL composant s'affiche »). Les deux sont protégés.
+
+**Contrôles** (`npm run build` vert, avec la vérification des types ; démonstration ouverte sous `essai.localhost`
+pour que l'app appelle vraiment le serveur RDV, et réponse du résumé **simulée à 5 s** dans la page) :
+
+| essai | résultat |
+|---|---|
+| ouvrir une fiche | **affichée en entier à 1 s** (capture) pendant que le résumé est « en chargement » |
+| arrivée du résumé (5 s) | état « prêt », jeton et demande fusionnés dans la fiche |
+| Reporting **pendant** le chargement | « Aperçu / PDF » et « Envoyer au propriétaire » **BLOQUÉS**, message « Rendez-vous en cours de chargement… », compteur « … » |
+| Reporting **après** | boutons actifs, compteur « 1 » |
+| résumé **en échec** (500 simulé) | avertissement « les rendez-vous de la vitrine n'ont pas pu être chargés… », boutons actifs |
+| **changer de fiche** pendant le chargement | la fiche affichée porte **son** jeton (`JETON-15` pour l'annonce 15) ; la réponse de la 1re fiche est jetée |
+| console | seules erreurs : les passerelles de diffusion (pas de serveur d'API en démonstration) et la panne simulée |
+
+⚠ **Non éprouvé** : l'interrupteur à `false` (c'est l'ancien chemin, inchangé) ; une fiche « légère » d'archive ; le
+**temps réel en production** — à chronométrer après déploiement (référence : résumé 9,3 s en moyenne le 23/10).

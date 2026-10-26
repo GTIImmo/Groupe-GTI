@@ -19,6 +19,9 @@ export type DossierDetailPayload = {
   appointment_negociateur_email?: string | null
   appointment_requests_json?: string | null
   appointment_request_events_json?: string | null
+  // 26/10/2026 (point 0 bis) : pose par l'ecran, jamais par le serveur -- le resume des RDV
+  // de la vitrine arrive APRES la fiche ; tant qu'il n'est pas la, le Reporting attend.
+  appointment_resume_etat?: 'chargement' | 'pret' | 'echec' | null
   code_postal?: string | null
   surface?: number | string | null
   date_maj?: string | null
