@@ -69,9 +69,21 @@ param(
     [int]$Limite = 1000,
     [int]$MaxErreursRecentes = 10,
     [int]$HeureLimite = 1,
+    [int]$HeureDebutSoir = 20,
     [switch]$DryRun,
     [switch]$IgnorerFenetre
 )
+
+# ⚠ 26/10/2026 -- LA FENETRE VA DU SOIR A $HeureLimite, PAS DE MINUIT A $HeureLimite.
+#   Au passage a l'heure d'hiver (nuit du 24 au 25/10), la tache est partie a 23:00 au lieu de 00:00
+#   (Frederic : « laisse comme cela ») -- et l'ancienne garde (« refus si l'heure depasse 1 ») a REFUSE
+#   le lot : 23 > 1. Une nuit de balayage perdue, code 1. La garde refuse desormais seulement ENTRE
+#   $HeureLimite+1 et $HeureDebutSoir-1 (2 h -> 19 h) : un depart a 23:00 ou a 00:00 passe, un depart
+#   tardif (02:00, sur les recherches et le run) reste refuse. Etude : notice/ETUDE_NUMEROS_..._2026-10-24.md §15.
+function Test-HorsFenetreDePose {
+    param([int]$Heure, [int]$Limite, [int]$DebutSoir)
+    return ($Heure -gt $Limite -and $Heure -lt $DebutSoir)
+}
 
 $ErrorActionPreference = "Continue"
 $root = "C:\Hektor\Projet"
@@ -90,8 +102,8 @@ try {
     #   ferait travailler le worker jusqu'a 05:00 et au-dela, sur les recherches
     #   actives puis le run quotidien.
     $heure = (Get-Date).Hour
-    if (-not $IgnorerFenetre -and -not $DryRun -and $heure -gt $HeureLimite) {
-        Write-Output "=== REFUS : il est ${heure}h, au-dela de la fenetre de pose (jusqu'a ${HeureLimite}h). Rien n'est pose. ==="
+    if (-not $IgnorerFenetre -and -not $DryRun -and (Test-HorsFenetreDePose -Heure $heure -Limite $HeureLimite -DebutSoir $HeureDebutSoir)) {
+        Write-Output "=== REFUS : il est ${heure}h, hors de la fenetre de pose (de ${HeureDebutSoir}h a ${HeureLimite}h). Rien n'est pose. ==="
         Write-Output "    (un lot pose maintenant ferait travailler le worker sur les recherches de 03:00 et le run de 05:00)"
         Stop-Transcript | Out-Null
         exit 1

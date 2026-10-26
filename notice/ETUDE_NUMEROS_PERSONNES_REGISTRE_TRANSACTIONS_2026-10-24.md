@@ -670,3 +670,9 @@ dans le journal de la descente.
   1 h 18 (04:00 → 05:18).
 - ⬜ **À décider par Frédéric** (rien n'est modifié) : A — la garde accepte la soirée (refuser seulement entre 2 h et 19 h : un départ à 23:00
   ou à 00:00 passe tous les deux, un départ tardif reste refusé) ; B — remettre la tâche à 00:00 (contraire à « laisse comme cela » du 25/10).
+- ✅ **26/10 — A CODÉ** *(Frédéric : « A »)*, **non poussé** : `scheduled/run_balayage_photos_masquees.ps1` — nouveau réglage
+  `-HeureDebutSoir 20` et la fonction `Test-HorsFenetreDePose` : refus **seulement de 2 h à 19 h**. Un départ à 23:00 ou à 00:00 passe ;
+  02:00 (les recherches) et 04:00 (le run) restent refusés. Essai **`scheduled/test_fenetre_balayage_photos.ps1` : 9/9** (la vraie fonction
+  découpée par l'arbre syntaxique, les réglages lus dans le bloc `param`, heure par heure ; **témoin inverse** : l'ancienne garde refusait
+  23:00 ; le branchement vérifié) ; **mutant** « ancienne règle » attrapé (2 contrôles rouges). Script : 0 erreur d'analyse, BOM gardé.
+  ➡ **Actif dès qu'il est poussé** (la tâche lit le fichier à chaque départ) : la prochaine nuit à 23:00 doit poser son lot (code 0).
