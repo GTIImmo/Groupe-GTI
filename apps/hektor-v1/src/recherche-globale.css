@@ -376,21 +376,33 @@
   .rg-voir-tout { margin-left: 12px; }
 }
 
-/* --- la loupe de la barre du haut, sur telephone --- */
+/* --- la loupe de la barre du haut, sur telephone ---
+   La barre est une grille a 3 colonnes (logo, titre, avatar) : sans 4e colonne, la loupe prenait
+   la place de l'avatar et le renvoyait A LA LIGNE, par-dessus le menu (vu le 26/10). */
+.mobile-app-header.has-search { grid-template-columns: 38px minmax(0, 1fr) 44px 44px; }
+@media (min-width: 768px) and (max-width: 1180px) {
+  .mobile-app-header.has-search { grid-template-columns: 44px minmax(0, 1fr) 48px 52px; }
+}
 .mobile-search-button {
   display: grid;
   place-items: center;
-  width: 40px;
-  height: 40px;
-  margin-left: auto;
-  margin-right: 8px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.24);
-  background: rgba(255, 255, 255, 0.06);
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: 13px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
   color: #fff;
   cursor: pointer;
+  transition: background var(--bv-fast, 150ms), border-color var(--bv-fast, 150ms);
 }
-.mobile-search-button svg { width: 19px; height: 19px; }
+.mobile-search-button:active,
+.mobile-search-button:focus-visible {
+  background: rgba(197, 0, 95, 0.32);
+  border-color: rgba(197, 0, 95, 0.75);
+  outline: none;
+}
+.mobile-search-button svg { width: 20px; height: 20px; }
 
 /* --- ecrans bas (<= 760 px de haut, ex. 1280x665) : le menu debordait deja de ~7 px AVANT la loupe
    (8 entrees de 50 px + 7 ecarts de 10 px = 470 px pour 463 disponibles, mesure le 26/10).
@@ -399,3 +411,4 @@
   .app-shell.app-shell-modern .side-rail .brand-block.rail-top { margin-bottom: 6px !important; }
   .app-shell.app-shell-modern .side-rail .screen-nav { gap: 8px !important; row-gap: 8px !important; }
 }
+.mobile-bottom-nav::-webkit-scrollbar { display: none; }

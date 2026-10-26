@@ -1300,3 +1300,20 @@ bas (≤ 760 px de haut, ≥ 1 025 px de large), marge sous le logo 14 → 6 px 
 barre de l'Accueil restent).
 **Contrôle en démonstration avec le thème bienvu** (nouvelle config de lancement `hektor-mock-bienvu`, port 5198) à
 1280 × 665 : menu 425 / 425 (plus d'ascenseur), pastille 53 × 28, clic → fenêtre ouverte, replié 471 / 471.
+
+### 20.8 Le haut de l'écran sur téléphone (26/10, signalé par Frédéric : « tu n'as pas pensé à la version mobile ! »)
+
+**Deux défauts, vus en démonstration avec le thème bienvu (390 × 700)** :
+1. **De moi** : la barre du haut est une grille à **3 colonnes** (logo, titre, avatar). La loupe ajoutée au point 4 prenait
+   la 3ᵉ place et **renvoyait l'avatar à la ligne**, par-dessus le menu. → 4ᵉ colonne quand la loupe est là
+   (`has-search`, 44 px, tablette 48 / 52 px), loupe « vitrée » 44 × 44 (fond blanc 8 %, magenta au toucher) à côté de
+   l'avatar magenta.
+2. **Plus ancien** : le menu du haut était une grille « autant de colonnes de 46 px que possible » → **7** colonnes sur
+   355 px ; la **8ᵉ entrée d'un admin (Santé)** passait à la ligne (menu 108 px de haut) et **recouvrait la recherche** de
+   42 px. → une seule ligne (`grid-auto-flow: column`), entrées de 46 px minimum, et au-delà le menu **glisse sur le
+   côté** (barre de défilement masquée ; la 8ᵉ entrée dépasse un peu pour inviter à glisser). Les comptes à 6 entrées ne
+   changent pas.
+
+**Contrôle** (mesures + image de la page) : 390 px → en-tête 68 px, loupe 280-324, avatar 334-378, menu 60 px sur une
+ligne (défile 394 / 368), contenu à 142 px, **aucun chevauchement** ; 360 px → avatar à 348 px, rien ne déborde ;
+tablette 768 px → 4 colonnes, menu en bas inchangé, la loupe ouvre la fenêtre.

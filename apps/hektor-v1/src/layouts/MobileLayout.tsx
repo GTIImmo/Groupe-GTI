@@ -58,7 +58,7 @@ export function MobileLayout({
 
   return (
     <div className="mobile-app-shell">
-      <header className="mobile-app-header">
+      <header className={`mobile-app-header${onOpenSearch ? ' has-search' : ''}`}>
         {/* bienvu (lot 3) : le symbole remplace la forme dessinée en CSS ; « GTI Immobilier » devient le nom du logiciel */}
         {APP_BIENVU_ENABLED
           ? <div className="mobile-brand-mark mobile-brand-mark-bv" aria-hidden="true"><BienvuSymbol /></div>

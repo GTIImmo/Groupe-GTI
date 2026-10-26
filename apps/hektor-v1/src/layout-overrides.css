@@ -5631,7 +5631,15 @@
   .mobile-bottom-nav {
     top: 76px !important;
     bottom: auto !important;
-    grid-template-columns: repeat(auto-fit, minmax(46px, 1fr)) !important;
+    /* 26/10 : UNE SEULE LIGNE, quel que soit le nombre d'entrees. « auto-fit 46 px » donnait 7 colonnes sur
+       355 px : la 8e entree d'un admin (Sante) passait a la ligne et le menu recouvrait la recherche.
+       Au-dela de ce qui tient, le menu glisse sur le cote (entrees de 46 px, comme avant). */
+    grid-template-columns: none !important;
+    grid-auto-flow: column !important;
+    grid-auto-columns: minmax(46px, 1fr) !important;
+    overflow-x: auto !important;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
     gap: 2px !important;
     padding: 6px !important;
     border-radius: 18px !important;
