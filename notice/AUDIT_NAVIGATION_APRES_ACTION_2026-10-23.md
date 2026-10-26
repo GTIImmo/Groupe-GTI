@@ -483,3 +483,46 @@ l'écran `annonces` est **inatteignable** (`openScreen` le redirige vers `mandat
 
   Et `app_console_job` : **0 relecture** de 09:05 à 09:19. ⚠ Les **contacts** n'ont pas été visités dans la fenêtre :
   non prouvé en réel pour eux (même ligne de code).
+
+## 12. POINT 0 bis — RE-AUDIT DU 26/10 : « la fiche attend le résumé des RDV » (rien codé)
+
+**Le mécanisme** (`lib/api.ts`, `loadDossierDetail`, l. 5306-5404) : la fiche attend, **l'une après l'autre**,
+5 lectures avant d'être rendue : le bien (Supabase) → son détail (Supabase) → Matterport → les mandants (registre)
+→ **le résumé des RDV** (serveur Render, `/public/appointments/annonce/<n°>/summary`). Mesure du 23/10 dans la
+session de Frédéric : **9,3 s en moyenne, 20,6 s au pire** pour ce seul résumé ; les autres lectures 55 à 200 ms.
+Aujourd'hui sans jeton, le serveur répond « non autorisé » en 0,2-0,5 s : la lenteur est dans le **calcul** du
+résumé (~6 allers-retours Render ↔ Supabase), pas dans le réseau.
+
+⚠ **Le résumé n'est pas une simple lecture** (`backend/app/services/appointment_service.py`,
+`get_internal_annonce_summary`, l. 707) : s'il manque, il **crée** le lien public de RDV du bien
+(`_ensure_link_for_annonce`, POST) et peut **compléter** ses coordonnées (`_maybe_enrich_link_contacts`, PATCH).
+Le point 0 bis ne change **pas** qu'il soit appelé à l'ouverture d'une fiche — seulement qu'on ne l'attende plus.
+(Le point 0 a déjà supprimé les appels pour les fiches que personne n'ouvrait.)
+
+**Qui lit le résumé** (5 endroits, tous dans la fiche ouverte) :
+
+| endroit | ce qu'il lit | si le résumé arrive 9 s plus tard |
+|---|---|---|
+| rubrique RDV (l. 36397-36401) | lien public, demandes, historique | le lien retombe déjà sur le n° de l'annonce s'il manque (l. 8485-8496) ; la liste se remplit à l'arrivée |
+| filtre des visites du cycle (l. 29415) | demandes | se remplit à l'arrivée |
+| ⚠ **onglet Reporting** (l. 32504) | demandes → **compte-rendu au vendeur** | ⚠ un compte-rendu préparé **avant** l'arrivée sortirait **sans les visites** → il faut le dire à l'écran et bloquer l'envoi tant que le résumé n'est pas là |
+| onglet Synthèse (l. 32565) | demandes | se remplit à l'arrivée |
+| agenda de la fiche (l. 35483) | e-mail / n° du négociateur | repli déjà prévu sur le négociateur du bien |
+
+**Les autres appelants de `loadDossierDetail`** : l'éditeur d'avis de valeur (l. 15263), la relecture après une
+modification (l. 23658, 23849), l'éditeur de la fiche estimation (l. 25319). **On ne les change pas** : ils gardent
+le chargement complet.
+
+**Le correctif proposé** (front seulement) :
+1. `loadDossierDetail` reçoit une option « sans le résumé RDV » ; **par défaut, rien ne change** pour personne.
+2. La fiche ouverte (l. 14594) s'en sert : elle s'affiche dès que le bien, son détail, Matterport et les mandants
+   sont là (~0,5 s estimé, **non mesuré de bout en bout**).
+3. Le résumé est demandé **juste après**, à part ; à son arrivée, il est fusionné dans la fiche — **seulement si
+   c'est toujours la même annonce**, et gardé d'un rechargement à l'autre (pas de clignotement).
+4. **Reporting** : tant que le résumé n'est pas arrivé, un message « rendez-vous en cours de chargement » et
+   l'envoi du compte-rendu attend ; s'il échoue, on le dit (au lieu d'envoyer sans les visites).
+5. Derrière une constante `RESUME_RDV_EN_DIFFERE` (`false` = l'ancien comportement).
+
+**Contrôle prévu** : `npm run build` ; essai en démonstration (la fiche s'ouvre, la rubrique RDV se remplit) ;
+puis en production, chronométrer l'ouverture d'une fiche (⚠ ouvrir une fiche lance une relecture chez Hektor —
+c'est le geste normal d'un négociateur).
