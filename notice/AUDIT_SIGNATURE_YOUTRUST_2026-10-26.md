@@ -468,6 +468,135 @@ passe, et les ancres posées dans nos cases sont reconnues et placent le champ a
 ⚠ **Ce que l'essai n'a PAS couvert :** plusieurs signataires (un seul utilisateur dans
 l'organisation), le code SMS, le webhook, la relance et l'annulation. Ce sont les lots 3 à 5.
 
+## 8 bis-2. LES QUESTIONS DE FRÉDÉRIC DU 26/10 — PLUSIEURS MANDANTS, OPTIONS, ORDRE, NÉGOCIATEUR
+
+**Plusieurs mandants — oui, prévu.** Le gabarit pose déjà **une case par mandant** (jusqu'à 12
++ la case du mandataire, `mandatSignatureBlocksHtml`), et `buildMandatDocumentMandants` éclate
+déjà les couples en deux signataires. Le lot 2 écrira une ancre par case (`s1` … `sN`, puis
+`sN+1` pour le mandataire), le worker créera les signataires **dans le même ordre**. Limites :
+**100 signataires** par demande en production, **5 pendant l'essai**. Le contrôle « nb de
+champs = nb de signataires » (§8 ter) protège contre une case oubliée.
+
+**L'ordre aujourd'hui (ImmoSign, procédure 305, un seul exemple — ne pas généraliser)** :
+envoi 10:07:55 → **négociatrice 10:11:22** → mandant 1 10:13:53 → mandant 2 10:15:13. Huit
+minutes en tout : tout indique une signature **en rendez-vous, sur place**, négo d'abord.
+
+**Ce que Youtrust permet pour l'ordre :**
+
+| Mode | Paramètre | Effet |
+|---|---|---|
+| tous en même temps | défaut | chacun reçoit son lien à l'activation |
+| à la file | `ordered_signers: true` (+ `insert_after_id`) | un par un, dans l'ordre de création — **éprouvé le 26/10** |
+| **par étapes** | `custom_recipient_order: true` + `group_with_id` | une étape = un groupe qui signe **en parallèle** ; l'étape suivante attend que tout le groupe ait fini |
+
+**Les options relues pour améliorer l'outil** (avec l'offre où elles sont disponibles) :
+
+| Option | Ce que ça apporte à GTI | Offre |
+|---|---|---|
+| **Signature dans l'app** (iFrame, SES/AES) | le mandant signe **sur la tablette du négo en rendez-vous**, sans e-mail ; le négo contresigne au même écran | Plus |
+| **Lien remis par nous** (`delivery_mode: none` par signataire) | le négo signe depuis un bouton de l'app au lieu d'un e-mail | Plus |
+| **Observateur** (follower) | le négo (ou l'agence) est prévenu par e-mail à chaque signature, sans signer | toutes (3 pendant l'essai) |
+| **Expéditeur des e-mails** | `organization`, `workspace`, `custom` (« GTI Immobilier – Prénom Nom ») ou `user` (le négo, s'il a un compte Youtrust = une licence) | toutes |
+| **Texte d'invitation / de relance** | message personnalisé par demande **ou par signataire** (texte brut) | toutes |
+| **Relances automatiques** | tous les 1, 2, 7 ou 14 jours, 1 à 10 fois | toutes |
+| **Échec de remise d'e-mail** | avis `signer.notification_delivery_failed` → alerte dans l'app (adresse fausse) | toutes |
+| **Mentions** | « Bon pour mandat », « Lu et approuvé le %date% » posés par ancre | toutes |
+| **Pièces demandées au signataire** | le mandant dépose sa **pièce d'identité / titre de propriété** pendant la signature, rangés dans les preuves | **Pro** |
+| **Logo, couleurs, pages de fin** (Custom Experience) | parcours aux couleurs GTI, retour vers notre page après signature | **Pro** |
+| **Espaces de travail** | un espace par agence, confidentialité entre agences | toutes |
+| **Portail de signature** | un lien unique où un signataire voit tout ce qui l'attend ; le négo peut **contresigner plusieurs mandats d'un coup** | à vérifier |
+| **Expiration** | 6 mois par défaut, 1 an au plus, réactivable | toutes |
+| Signature avancée (pièce d'identité vérifiée) | plus de poids juridique, mais SMS obligatoire et coût en plus | sur activation |
+
+**Le négociateur peut-il recevoir l'e-mail directement ? Oui.** Le signataire « mandataire »
+est créé **avec l'adresse et le portable du négociateur du bien** (annuaire des négociateurs) :
+c'est lui qui reçoit l'invitation, dans sa boîte. Mieux encore, au choix :
+(a) il est **prévenu par e-mail** comme aujourd'hui ; (b) il signe **depuis l'app**
+(`delivery_mode: none` pour lui seul, bouton « Signer maintenant ») ; (c) il est en plus
+**observateur** pour suivre chaque signature des mandants.
+
+**Nouvelles décisions à prendre :**
+
+| # | Question | Ma recommandation |
+|---|---|---|
+| **D7** | L'ordre | **par étapes** : étape 1 = les mandants **en parallèle** ; étape 2 = le négo **contresigne** — le négo ne s'engage pas avant le client, et les deux époux n'attendent pas l'un l'autre. *(À l'inverse d'aujourd'hui : à confirmer par toi)* |
+| **D8** | Comment le négo signe | **(b) depuis l'app**, avec repli e-mail |
+| **D9** | La signature sur place, en rendez-vous, sur tablette (iFrame) | **oui, dans un 2ᵉ temps** (lot 5 bis) : c'est vraisemblablement ton usage réel (8 minutes pour 3 signatures le 04/05) |
+| **D10** | Pièces jointes demandées au mandant, logo GTI | dépend de l'offre **Pro** → à joindre au devis (D5) |
+
+**✅ TRANCHÉ PAR FRÉDÉRIC LE 26/10 :**
+- **D7 — oui** : *« d'abord les mandants, une fois signé le négo »* → `custom_recipient_order:
+  true` ; étape 1 = tous les mandants **en parallèle** (`group_with_id`) ; étape 2 = le négo.
+- **D8 — les deux** : le négo signe **depuis l'app**, **l'e-mail en repli** (il le reçoit
+  quand même dans sa boîte s'il n'a pas l'app sous la main).
+- **D9 — oui** : la signature **sur place, sur tablette** (iFrame) → **lot 5 bis**, après le lot 5.
+- **D10 — oui** : pièces demandées au mandant + logo/couleurs GTI → **offre Pro**, à mettre
+  dans le devis (D5) ; codé seulement si l'offre retenue les porte.
+
+Effet sur le découpage : lot 4 (+ avis `signer.done` étape par étape), lot 5 (bouton
+« Signer maintenant » du négo), **lot 5 bis** nouveau (0,5–1 j : signature intégrée pour
+le rendez-vous). Total restant : **5,5 à 8,5 jours**.
+
+## 8 bis-3. ⭐ LA COLONNE VERTÉBRALE — UNE LANGUE COMMUNE, DEUX ÉCRIVAINS (exigence du 26/10)
+
+Frédéric : *« je souhaite continuer de récupérer les éléments de signature en attente, éditer
+etc. présents dans les documents permettant les mécanismes de mon projet, mais […] notre système
+de signature Youtrust doit lui aussi analyser l'état de signature de nos documents, tout en
+conservant la lecture des documents Hektor et ImmoSign. »*
+
+**Mesuré le 26/10 : tout le projet lit l'état de signature à UN seul endroit**,
+`app_console_document.metadata_json.signature` — badges (`SignatureBadge` `App.tsx:10222`),
+suivi mandat (`:11068`, `:11111`), onglet Documents (`:11512`, `:11577`, `:11686`), Mandat V3
+(`:29560`, `:29765`), fil d'activité du cockpit (`patch_cockpit_activite_sign_date_2026-07-23.sql:84-96`,
+`patch_mandat_echu_activite_link_cloture_2026-07-31.sql:105-115`), signé à la main
+(`patch_console_mark_signed_manual_2026-07-27.sql`).
+
+**Donc :** on garde cette forme comme **langue commune**, on y ajoute **un seul champ,
+`provider`** (`immosign` | `youtrust` | `manuscrite`), et on a **deux écrivains** :
+l'existant (lecture Hektor/ImmoSign, **gardé tel quel**) et le nouveau (avis Youtrust +
+rattrapage de nuit). **Aucun lecteur n'est modifié**, sauf le badge pour le mot neuf « expiré ».
+
+**Les trois règles :**
+1. **Un document = un fournisseur ; un écrivain ne touche que les siens.** ⚠ *Risque réel
+   trouvé :* un mandat envoyé par Youtrust peut AUSSI être déposé chez Hektor ; la lecture
+   Hektor (`extractDocumentEntries` / `reconcileSignatureStates`) relirait sa ligne et
+   **écraserait** l'état Youtrust par « à envoyer ». → garde-fou : jamais de réécriture de
+   `signature` quand `provider = 'youtrust'`, et réciproquement.
+2. **Les boutons s'aiguillent selon le fournisseur.** Aujourd'hui « Relancer » / « Annuler »
+   partent en travail ImmoSign dès qu'un `procedure_id` existe → un document Youtrust ne
+   porte PAS `procedure_id` (son identifiant va dans `provider_request_id`), et le bouton
+   choisit le travail selon `provider`.
+3. **Traduction des états Youtrust dans les mots existants** : `draft` → `to_send`,
+   `ongoing` → `pending` + `progress` « signés/total », `done` → `signed` + `signed_at`,
+   `canceled` → `cancelled` + `cancelled_at`, `expired` → **`expired`** (nouveau, badge à
+   compléter). `sent_at` = activation. Le cockpit filtre sur `procedure_id is not null or
+   status = 'signed'` (`:94-96`) : à élargir à `provider_request_id` pour que « envoyé en
+   signature » Youtrust apparaisse dans le fil — **seule retouche SQL côté lecteurs**.
+
+**Après la coupure :** l'historique Hektor/ImmoSign reste en base, lu comme aujourd'hui ;
+seule la relecture chez Hektor s'arrête.
+
+**⭐ PRÉCISION DE FRÉDÉRIC (26/10) — LE CALENDRIER CHANGE :** *« tous les utilisateurs, et avant
+la coupure ; ImmoSign par Hektor ne servira plus vraiment, uniquement la MAJ des dernières
+signatures en attente, car tout est en data déjà. »*
+- **Un seul interrupteur, pour tous**, allumé **dès que le contrat de production est signé et
+  les lots prouvés** — pas le jour de la coupure.
+- **ImmoSign = extinction naturelle** : plus aucune procédure neuve après l'allumage ; la
+  lecture Hektor ne sert plus qu'aux procédures déjà en attente (55 le 26/10), jusqu'à leur fin.
+  La règle du suivi (« procédure en cours », `sync-documents-empreinte-et-suivi-signature`)
+  le fait déjà : quand la dernière aboutit, il n'y a plus rien à relire.
+- ⚠ **CONTRADICTION À TRANCHER avec D2** (*« le mandat de l'app uniquement à la coupure »*) :
+  Youtrust ne signe que les PDF qu'on lui envoie →
+  **A** le mandat de l'app dès l'allumage (D2 avancée ; ancres automatiques) ;
+  **B** le mandat rédigé dans Hektor, récupéré en PDF et envoyé à Youtrust, cases placées
+  **à la main** par le négo dans la « préparation intégrée » Youtrust, à chaque mandat.
+  → **✅ D11 = A** (Frédéric, 26/10) : le mandat de l'app dès l'allumage.
+- **✅ La lecture Hektor des signatures n'est PAS coupée** (Frédéric, 26/10) : *« elle s'éteint
+  d'elle-même mais on ne la coupe pas »*. Aucun code de lecture ImmoSign n'est retiré ni
+  désactivé, même quand il n'a plus rien à lire.
+
+Plan de dev : **`notice/PLAN_DEV_SIGNATURE_YOUTRUST_2026-10-26.md`**.
+
 ## 8 quater. ⛔ LA GARANTIE DEMANDÉE PAR FRÉDÉRIC (26/10)
 
 *« Tu me confirmes que tout ce chantier n'écrase pas le système actuel tant qu'il ne sera pas
@@ -482,8 +611,11 @@ appelés par personne.
 2. **Rien d'ImmoSign n'est retiré** avant la coupure : bouton vers Hektor, lecture des états,
    relance, annulation, suivi des procédures en cours.
 3. Les **ancres** du gabarit de mandat (lot 2, seul fichier existant touché) ne sont écrites
-   **que si l'interrupteur est allumé** : éteint, le PDF reste identique à l'octet près à celui
-   d'aujourd'hui (à prouver par comparaison au lot 2).
+   **que si l'interrupteur est allumé** : éteint, le **HTML** envoyé au worker reste identique
+   au caractère près à celui d'aujourd'hui (à prouver au lot 2). ⚠ *Corrigé le 26/10 :*
+   j'avais écrit « le PDF identique à l'octet » — c'est impossible à prouver, Chromium ne
+   rend jamais deux fois le même PDF (le même HTML a donné `f0ff4f81…` puis `56e2813a…` aux
+   deux essais). La preuve se fait donc sur le HTML.
 4. Types de travaux et tables **ajoutés**, jamais modifiés ; chaque migration a son inverse.
 5. **Accord explicite** avant : chaque lot de code, tout patch en production, tout redémarrage,
    tout déploiement, l'allumage de l'interrupteur, et l'usage d'une clé de **production**.
