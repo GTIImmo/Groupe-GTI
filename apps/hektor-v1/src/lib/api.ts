@@ -5358,7 +5358,7 @@ export type RechercheGlobaleResultat = {
   echecs: string[]
 }
 export const RECHERCHE_GLOBALE_LIGNES = 6
-export async function rechercherPartout({ terme, filtresDeBase, scope }: { terme: string; filtresDeBase: AppFilters; scope?: DataScope | null }): Promise<RechercheGlobaleResultat> {
+export async function rechercherPartout({ terme, filtresDeBase, scope, surGroupe }: { terme: string; filtresDeBase: AppFilters; scope?: DataScope | null; surGroupe?: (partiel: RechercheGlobaleResultat) => void }): Promise<RechercheGlobaleResultat> {
   const t = normalizeListingSearchTerm(terme)
   const resultat: RechercheGlobaleResultat = { terme: t, annonces: [], horsCatalogue: [], contacts: [], mandats: [], echecs: [] }
   if (!t) return resultat
@@ -5411,32 +5411,42 @@ export async function rechercherPartout({ terme, filtresDeBase, scope }: { terme
   const texteContact = [`search_text.ilike.${telephone ?? ilike}`]
     .concat(nombre ? [`hektor_contact_id.eq.${t}`, `hektor_target_id.eq.${t}`] : [])
     .join(',')
-  const [annonces, venduesCloses, archivees, contacts, mandats] = await Promise.all([
+  // AFFICHAGE AU FIL DE L'EAU (mesure en production le 26/10) : annonces ~0,3 s, archives et contacts
+  // 0,3-0,6 s, registre ~1,1 s. Attendre les cinq faisait tout attendre 1,2 s : chaque source publie
+  // donc ce qu'elle a des qu'elle l'a (surGroupe), et la promesse rend le tout a la fin.
+  let venduesCloses: Dossier[] = []
+  let archivees: Dossier[] = []
+  const publier = () => {
+    resultat.horsCatalogue = [...venduesCloses, ...archivees]
+      .sort((a, b) => dossierUpdatedAtValue(b) - dossierUpdatedAtValue(a))
+      .slice(0, n)
+    surGroupe?.({ ...resultat, echecs: [...resultat.echecs] })
+  }
+  await Promise.all([
     lire<Dossier>('annonces', applyNegotiatorScopeToQuery(client.from(dossiersCurrentView).select('*'), scope)
       .or(texteAnnonce)
       .order('date_enregistrement_annonce', { ascending: false, nullsFirst: false })
-      .limit(n), (rows: Dossier[]) => rows.map(prefererNosAdressesPhoto)),
-    lireLeger('app_historical_annonce_index_current', 'app_historical_id', 'app_historical_annonce_detail_cache', applyHistoricalIndexFiltersToQuery),
-    lireLeger('app_archive_annonce_index_current', 'app_archive_id', 'app_archive_annonce_detail_cache', applyArchiveIndexFiltersToQuery),
+      .limit(n), (rows: Dossier[]) => rows.map(prefererNosAdressesPhoto))
+      .then((v) => { resultat.annonces = v; publier() }),
+    lireLeger('app_historical_annonce_index_current', 'app_historical_id', 'app_historical_annonce_detail_cache', applyHistoricalIndexFiltersToQuery)
+      .then((v) => { venduesCloses = v; publier() }),
+    lireLeger('app_archive_annonce_index_current', 'app_archive_id', 'app_archive_annonce_detail_cache', applyArchiveIndexFiltersToQuery)
+      .then((v) => { archivees = v; publier() }),
     lire<AppContact>('contacts', client.from(contactsCurrentView)
       .select('hektor_contact_id,hektor_target_id,display_name,civilite,nom,prenom,archive,phone_primary,email,ville,code_postal,relation_roles_json,active_search_count,commercial_nom')
       .or(SANS_FICHE_DE_MENAGE)
       .or(texteContact)
       .order('archive', { ascending: true })
       .order('display_name', { ascending: true })
-      .limit(n), (rows: AppContact[]) => rows),
+      .limit(n), (rows: AppContact[]) => rows)
+      .then((v) => { resultat.contacts = v; publier() }),
     lire<MandatRecord>('mandats', applyNegotiatorScopeToQuery(client.from('app_registre_mandats_current')
       .select('register_row_id,app_dossier_id,hektor_annonce_id,numero_dossier,numero_mandat,titre_bien,ville,code_postal,statut_annonce,archive,mandat_type,mandat_date_debut,mandat_date_fin,mandants_texte,commercial_nom,negociateur_email,agence_nom'), scope)
       .or(`search_text.ilike.${ilike},adresse_privee_listing.ilike.${ilike}`)
       .order('mandat_date_debut', { ascending: false, nullsFirst: false })
-      .limit(n), (rows: MandatRecord[]) => rows),
+      .limit(n), (rows: MandatRecord[]) => rows)
+      .then((v) => { resultat.mandats = v; publier() }),
   ])
-  resultat.annonces = annonces
-  resultat.horsCatalogue = [...venduesCloses, ...archivees]
-    .sort((a, b) => dossierUpdatedAtValue(b) - dossierUpdatedAtValue(a))
-    .slice(0, n)
-  resultat.contacts = contacts
-  resultat.mandats = mandats
   return resultat
 }
 

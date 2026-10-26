@@ -1240,3 +1240,26 @@ calculées pour chaque ligne avant le filtre), pas de la table seule.
 **Ordre** : 1) Frédéric colle les 4 lignes, une à une, en journée (pas entre 04:00 et ~06:15) ; 2) il colle la
 répétition → 9 OK ; 3) je remets l'adresse dans la recherche (annonces, registre, contacts) et je l'affiche dans le
 résultat, je mesure par la vue, il pousse ; 4) je mesure la première nuit (durées du push).
+
+### 20.5 ✅ POINT 4 ÉPROUVÉ EN PRODUCTION (26/10, en ligne `index-Czwx9zrT.js`, lecture seule, Chrome de Frédéric)
+
+**0 travail créé** pendant l'essai (vérifié dans `app_console_job`) : aucune fiche ouverte, rien chez Hektor.
+
+| essai | résultat |
+|---|---|
+| « / » ouvre la fenêtre, curseur dans le champ | ✅ |
+| « moreau » (recherche globale) | ✅ 5 groupes ; les **5 lectures partent au même instant** (± 1 ms) |
+| temps par source, recherche « chaude » (dupont / firminy / 42700) | annonces 277-329 ms · vendues 183-286 · archives 346-595 · contacts 330-630 · ⚠ **mandats 1 061-1 251 ms** |
+| Annonces, « moreau » (rien dans les actives) | ✅ **extension automatique** : « Rien dans les actives — 13 résultats dans toutes les annonces hors estimations » |
+| Annonces, « firminy » | ✅ « 45 résultats dans les actives + **Aussi : 1745 vendues ou closes, 6914 archivées, 15 en création — Afficher** » ; comptes 330-393 ms, en parallèle de la liste |
+| clic « Afficher » (recherche étendue) | ✅ 4 sources lancées dans les 12 premières ms, bandeau étendu à **0,8 s** (8 719 résultats) |
+
+**Corrigé dans la foulée (commit suivant)** :
+1. ⚠ la fenêtre attendait la plus lente des 5 lectures (les mandats, ~1,1 s) : **chaque groupe s'affiche maintenant dès
+   qu'il arrive** (`surGroupe`) — les annonces à ~0,3 s, les mandats ensuite ;
+2. l'espace des milliers dans « Aussi : 1 745 … » ;
+3. un caractère cassé **ancien** (`â†©`, commit `df5a585`) sur « Revenir au contexte », dans le bandeau touché ici.
+
+**Vu, pas traité** : sous les règles d'accès, la base ignore l'index texte des contacts (lecture complète, ~190 ms en
+base) ; le registre reste la source lente (~1,1 s par l'API) — l'index du patch §20.4 devrait l'aider, **à mesurer après
+pose**. Le chargement de la liste Annonces lit 2 fois `app_dossiers_current` (déjà avant ce chantier, non mesuré plus avant).

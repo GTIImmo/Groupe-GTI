@@ -19452,11 +19452,12 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   }, [cleAilleurs])
   const ailleurs = cleAilleurs && annoncesAilleurs?.cle === cleAilleurs ? annoncesAilleurs.valeur : null
   const ailleursTotal = ailleurs ? ailleurs.venduesCloses + ailleurs.archivees + ailleurs.enCreation : null
+  const nombreFr = (v: number) => new Intl.NumberFormat('fr-FR').format(v)
   const libelleEtendreAilleurs = ailleurs && ailleursTotal
     ? `Aussi : ${[
-        ailleurs.venduesCloses ? `${ailleurs.venduesCloses} vendue${ailleurs.venduesCloses > 1 ? 's' : ''} ou close${ailleurs.venduesCloses > 1 ? 's' : ''}` : '',
-        ailleurs.archivees ? `${ailleurs.archivees} archivée${ailleurs.archivees > 1 ? 's' : ''}` : '',
-        ailleurs.enCreation ? `${ailleurs.enCreation} en création` : '',
+        ailleurs.venduesCloses ? `${nombreFr(ailleurs.venduesCloses)} vendue${ailleurs.venduesCloses > 1 ? 's' : ''} ou close${ailleurs.venduesCloses > 1 ? 's' : ''}` : '',
+        ailleurs.archivees ? `${nombreFr(ailleurs.archivees)} archivée${ailleurs.archivees > 1 ? 's' : ''}` : '',
+        ailleurs.enCreation ? `${nombreFr(ailleurs.enCreation)} en création` : '',
       ].filter(Boolean).join(', ')} — Afficher`
     : null
   // Rien ailleurs (compte SU et nul) : plus de bouton qui promet quelque chose.
@@ -25602,7 +25603,7 @@ function MandatsScreen(props: {
             </div>
             {props.searchScopeExtended ? (
               <button className="search-scope-action is-secondary" type="button" onClick={props.onResetSearchScope}>
-                <span aria-hidden="true">â†©</span>
+                <span aria-hidden="true">↩</span>
                 <span>Revenir au contexte</span>
               </button>
             ) : props.canExtendSearch && props.onExtendSearch ? (

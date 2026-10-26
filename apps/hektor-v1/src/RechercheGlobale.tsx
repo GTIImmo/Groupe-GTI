@@ -136,7 +136,13 @@ export default function RechercheGlobale(props: {
     let annule = false
     setChargement(true)
     const minuteur = window.setTimeout(() => {
-      rechercherPartout({ terme, filtresDeBase: props.filtresDeBase, scope: props.scope })
+      rechercherPartout({
+        terme,
+        filtresDeBase: props.filtresDeBase,
+        scope: props.scope,
+        // Chaque groupe s'affiche des qu'il arrive (mesure du 26/10 : annonces ~0,3 s, mandats ~1,1 s).
+        surGroupe: (partiel) => { if (!annule) setResultat(partiel) },
+      })
         .then((r) => {
           if (annule) return
           setResultat(r)
