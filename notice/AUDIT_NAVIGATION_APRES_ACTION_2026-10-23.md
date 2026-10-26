@@ -1533,3 +1533,47 @@ d'insertion — remises au propre, 0 restante.
 cliquable, c'est la ligne de la fiche qui prend le relais (voulu). **Aucun essai réel** : il faut un vrai geste
 (ex. un changement de statut) pour voir la ligne vivre sur un vrai travail — c'est une écriture chez Hektor, donc
 avec l'accord de Frédéric. **Retour arrière** : `SUIVI_DANS_LA_FICHE = false` et `FENETRE_SUIVI_ACTION = true`.
+
+### 22.3 POINT 6 bis — « c'est bien trop visible » : une PASTILLE pour le négociateur, les alertes à l'admin (27/10, décision de Frédéric)
+
+**Sa demande** : *« les erreurs des workers uniquement visibles à partir de la vue Santé, que ce soit moi qui sois averti
+en cas d'erreur. Les négociateurs doivent juste avoir une petite indication sur l'annonce ou le contact, discrète, qui
+dit soit en attente, soit vert, soit rouge. Ensuite les admins ont accès au geste pour débloquer. »* Ses trois réponses :
+bandeaux **réservés aux admins** ; alerte **cloche ET e-mail** ; pastille **dans la fiche seulement** (pas les listes).
+C'est la suite de sa règle du 20/09 (bandeau d'annonce) : *« ce n'est pas l'utilisateur qui doit être prévenu […] lui ne
+peut rien y faire »*.
+
+**Audit avant de coder (mesures du 26/10 au soir)** : Santé montre déjà `console.jobs.errors` et `data.geste_abandonne`
+avec « J'ai refait / Abandonner ce geste » ; l'e-mail existe déjà par le moniteur (`data.travaux_en_erreur`, critique,
+toutes les 2 h, **seulement à la bascule** vers le rouge) ; mais l'avis d'échec du worker allait **au négociateur du
+bien** (`resolveJobFailureRecipient`) — 9 avis en 30 jours, dont 6 pour Frédéric lui-même. 8 erreurs sur des gestes
+humains en 30 jours.
+
+**Front (`App.tsx`, `suivi-travaux.css`) — interrupteur `SUIVI_PASTILLE = true`** :
+- `PastilleSuivi` : « Hektor · en attente » (point gris qui pulse) / « Hektor · à jour » (vert) / « Hektor · à vérifier »
+  (rouge). Aucun message, aucun bouton ; le détail est dans la bulle (et « ne fermez pas cet onglet » si des photos de
+  la création attendent). **Rouge** = ce que dit la base : saisie en conflit ou partielle (`app_annonce_edit_status`),
+  geste abandonné non tranché (`app_action_status`, 5 essais ou 3 h), contact en conflit. **Gris** = travail en cours, ou
+  en erreur mais encore rejoué (< 5 essais et < 3 h, même seuil), ou saisie en attente d'envoi. La base est relue à
+  l'ouverture, à chaque relecture de l'app et **à chaque changement d'état d'un travail de l'objet**.
+- Emplacements : cockpit **à droite du fil d'Ariane** (toujours visible) et la puce du pied du cockpit, qui disait
+  « Hektor · à jour » **en dur** et dit maintenant l'état réel ; téléphone dans la rangée des statuts ; fiche contact V2
+  sous le nom ; fiche de base et ancienne fiche contact sur une ligne fine à droite.
+- La ligne d'état et le compteur de mes actions du §22.2 sont **coupés** (code gardé : `SUIVI_PASTILLE = false` les rend).
+- Les 3 bandeaux (`AnnonceEditStatusBanner`, `ContactEditStatusBanner`, `GesteAbandonneBanner`) : **admin seulement**
+  (ils ne lisent même plus la base pour un négociateur).
+
+**Worker (`console_job_worker.js`) — interrupteur `CONSOLE_ALERTES_A_L_ADMIN` (actif par défaut, `0` = ancien
+comportement)** : les 4 avis qui allaient au négociateur (échec d'un geste, création incomplète, conflit contact, conflit
+recherche) passent par `posterAlerte` : **cloche de l'admin** (`GTI_ALERT_EMAIL`, même adresse que le moniteur, par
+défaut Frédéric), le négociateur concerné **nommé** dans le message, et **un e-mail** par la clé de service Workspace
+(jeton RS256 signé par `crypto`, aucune dépendance nouvelle) — seulement si l'avis est **nouveau** (l'index
+`app_notif_unread_uq` écarte le doublon : un geste rejoué 5 fois sonne une fois), **plafond 10 e-mails / heure / service**.
+
+**Contrôle** : démonstration (mock, vue négociateur forcée) — bureau : pastille grise en haut à droite du cockpit, puce
+du pied qui suit, aucune ligne ni compteur ; rouge vérifié à l'œil ; téléphone 390 px : pastille dans les statuts, pas de
+débordement ; erreur rejouée → gris. `npm run build` vert ; `node --check` du worker vert (le worker n'a pas été lancé).
+**Le jeton Gmail s'obtient avec le vrai code** (extrait du worker, exécuté seul) : la clé et le droit `gmail.send`
+répondent. ⚠ **Non éprouvé** : l'**envoi** d'un e-mail (il partirait vraiment) ; la **fiche contact** (le mock n'a pas de
+contacts) ; le **rouge venu de la base** (le mock n'a pas de base) ; tout le worker tant que **les 4 services n'ont pas
+redémarré** (accord de Frédéric, file vide : 0 pending ET 0 running).
