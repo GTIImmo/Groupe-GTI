@@ -211,3 +211,45 @@
   .app-shell.is-sidebar-collapsed .suivi-compteur { height: 22px; padding: 0 6px; gap: 3px; font-size: 11px; border-color: #222323; box-shadow: 0 0 0 2px #222323; }
   .app-shell.is-sidebar-collapsed .suivi-compteur:not(.is-encours):not(.is-echec) { background: #3a3c3d; }
 }
+
+/* ============================================================
+   POINT 6 bis (27/10/2026) -- LA PASTILLE : tout ce que le negociateur voit du suivi.
+   Discrete : la taille d'une etiquette, dans l'en-tete de la fiche ; le detail est dans la bulle.
+   ============================================================ */
+.suivi-pastille {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  height: 22px;
+  padding: 0 9px;
+  border-radius: var(--bv-radius-pill, 999px);
+  border: 1px solid var(--bv-line, #e2e5e6);
+  background: #fff;
+  color: var(--bv-mute, #5c6163);
+  font: 600 11.5px/1 var(--bv-font-ui, 'Hanken Grotesk', system-ui, sans-serif);
+  white-space: nowrap;
+  cursor: help;
+  vertical-align: middle;
+}
+.suivi-pastille-point { flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--bv-ok, #2f8a5b); }
+.suivi-pastille.is-attente .suivi-pastille-point { background: #9aa0a3; animation: suivi-pulse 1.4s ease-in-out infinite; }
+.suivi-pastille.is-rouge { border-color: rgba(185, 74, 72, 0.35); background: var(--bv-danger-soft, #fdeceb); color: var(--bv-danger, #b94a48); }
+.suivi-pastille.is-rouge .suivi-pastille-point { background: var(--bv-danger, #b94a48); }
+@keyframes suivi-pulse { 50% { opacity: 0.3; } }
+
+/* cockpit : a droite du fil d'Ariane, sans le pousser */
+.fa-ck-wbar:has(> .suivi-pastille) { display: flex; align-items: center; gap: 12px; }
+.fa-ck-wbar:has(> .suivi-pastille) > .fa-ck-wb-crumb { flex: 1; min-width: 0; }
+/* la puce du pied du cockpit garde son habillage, la couleur suit l'etat */
+.fa-ck-tb-chip.suivi-pastille { height: auto; cursor: help; }
+.fa-ck-rail-foot .fa-ck-tb-chip.suivi-pastille.is-attente { color: var(--bv-mute, #5c6163); background: var(--bv-brume, #f6f7f8); border-color: var(--bv-line, #e2e5e6); }
+.fa-ck-rail-foot .fa-ck-tb-chip.suivi-pastille.is-rouge { color: var(--bv-danger, #b94a48); background: var(--bv-danger-soft, #fdeceb); border-color: rgba(185, 74, 72, 0.35); }
+.fa-ck-rail-foot .fa-ck-tb-chip.suivi-pastille.is-ok .suivi-pastille-point { background: #2f8a5b; }
+/* fiche de base et ancienne fiche contact : une ligne fine, a droite */
+.suivi-pastille-ligne { display: flex; justify-content: flex-end; margin: 0 0 8px; }
+/* fiche contact : sous le nom */
+.fa-cx-name + .suivi-pastille { margin-top: 6px; }
+@media (prefers-reduced-motion: reduce) {
+  .suivi-pastille.is-attente .suivi-pastille-point { animation: none; }
+}

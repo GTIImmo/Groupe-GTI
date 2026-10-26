@@ -13201,6 +13201,8 @@ type TravauxContexte = {
   marquerVu: (jobId: string) => void
   photosEnAttente: Record<string, number>
   ouvrir: (job: ConsoleJob) => void
+  // POINT 6 bis : les bandeaux detailles et leurs boutons ne s'affichent qu'a l'admin.
+  admin: boolean
 }
 const TravauxContext = createContext<TravauxContexte | null>(null)
 // Un minuteur qui fait relire l'etat toutes les 5 s tant qu'il y a quelque chose de recent a montrer.
@@ -13227,7 +13229,7 @@ function IndicateurTravauxObjet(props: { appDossierId?: number | null; hektorAnn
     .filter((job) => job.job_type === 'create_hektor_draft_annonce')
     .reduce((total, job) => total + (contexte?.photosEnAttente[job.id] ?? 0), 0)
   useBattement(Boolean(enCours.length || finis.length))
-  if (!SUIVI_DANS_LA_FICHE || !contexte || (!enCours.length && !echecs.length && !finis.length && !photos)) return null
+  if (!SUIVI_DANS_LA_FICHE || SUIVI_PASTILLE || !contexte || (!enCours.length && !echecs.length && !finis.length && !photos)) return null
   const parType = new Map<string, number>()
   for (const job of enCours) parType.set(job.job_type, (parType.get(job.job_type) ?? 0) + 1)
   return (
@@ -13258,6 +13260,72 @@ function IndicateurTravauxObjet(props: { appDossierId?: number | null; hektorAnn
         </div>
       ) : null}
     </div>
+  )
+}
+
+// POINT 6 bis (27/10/2026) -- DECISION DE FREDERIC : « c'est bien trop visible pour l'utilisateur ».
+//   Le negociateur ne voit qu'une PASTILLE discrete dans l'en-tete de la fiche : en attente / a jour / a verifier,
+//   sans message ni bouton. Le detail et le geste pour debloquer sont a l'ADMIN (les bandeaux de la fiche, l'ecran
+//   Sante) ; c'est l'admin qui est prevenu d'un echec (cloche + e-mail, par le worker). La ligne d'etat et le
+//   compteur de mes actions restent dans le code : SUIVI_PASTILLE = false les rend.
+const SUIVI_PASTILLE = true
+// Un travail en erreur est rejoue (5 essais, ~25 min) : tant qu'il n'est pas abandonne, c'est « en attente ».
+// Meme seuil que app_action_status (5 essais OU 3 h), qui fait ensuite passer la pastille au rouge.
+const ESSAIS_AVANT_ABANDON = 5
+const DELAI_AVANT_ABANDON_MS = 3 * 3600 * 1000
+type EtatPastille = 'attente' | 'ok' | 'rouge'
+const PASTILLE_TEXTES: Record<EtatPastille, [string, string]> = {
+  attente: ['Hektor · en attente', 'Envoi à Hektor en cours. Votre saisie est déjà enregistrée chez nous.'],
+  ok: ['Hektor · à jour', 'Tout ce qui a été fait ici est arrivé chez Hektor.'],
+  rouge: ['Hektor · à vérifier', 'Hektor n’a pas encore pris un geste. Votre saisie est gardée chez nous ; un administrateur est prévenu et s’en occupe.'],
+}
+function PastilleSuivi(props: { appDossierId?: number | null; hektorAnnonceId?: string | number | null; contactId?: string | null; pied?: boolean }) {
+  const contexte = useContext(TravauxContext)
+  const relecture = useRelectureRubriques()
+  // Ce que la base sait et que l'onglet peut ignorer (un autre onglet, un rechargement) : une saisie en attente ou
+  // en conflit, un geste abandonne. Lu comme les bandeaux, a l'ouverture et a chaque relecture de l'app.
+  const [base, setBase] = useState<{ rouge: boolean; attente: boolean }>({ rouge: false, attente: false })
+  const { appDossierId, contactId } = props
+  const lies = (contexte?.jobs ?? []).filter((job) => !TRAVAUX_SANS_INDICATEUR.has(job.job_type) && job.requested_by && travailSurObjet(job, props))
+  // Chaque changement d'etat d'un travail de CET objet (fini, rejoue, abandonne) fait relire la base : c'est elle qui
+  // dit « abandonne et pas encore tranche » (app_action_status), donc le rouge, et son retour au vert.
+  const signature = lies.map((job) => `${job.id}:${job.status}:${job.attempt_count ?? 0}`).join('|')
+  useEffect(() => {
+    let annule = false
+    const poser = (rouge: boolean, attente: boolean) => { if (!annule) setBase({ rouge, attente }) }
+    if (appDossierId) {
+      void Promise.all([loadAnnonceEditStatus(appDossierId).catch(() => null), loadActionStatus(appDossierId).catch(() => null)])
+        .then(([saisie, gestes]) => poser(
+          Boolean((saisie?.pending && (saisie.conflict || saisie.partial)) || gestes?.gestes?.length),
+          Boolean(saisie?.pending && !saisie.conflict && !saisie.partial),
+        ))
+    } else if (contactId) {
+      void loadContactEditStatus(contactId).catch(() => null)
+        .then((statut) => poser(Boolean(statut?.pending && statut.conflict), Boolean(statut?.pending && !statut.conflict)))
+    } else {
+      poser(false, false)
+    }
+    return () => { annule = true }
+  }, [appDossierId, contactId, relecture, signature])
+  const maintenant = Date.now()
+  const enCours = lies.some((job) => isConsoleJobActive(job))
+  const rejoue = lies.some((job) => job.status === 'error'
+    && Number(job.attempt_count ?? 0) < ESSAIS_AVANT_ABANDON
+    && maintenant - Date.parse(String(job.requested_at ?? '')) < DELAI_AVANT_ABANDON_MS)
+  const photos = lies
+    .filter((job) => job.job_type === 'create_hektor_draft_annonce')
+    .reduce((total, job) => total + (contexte?.photosEnAttente[job.id] ?? 0), 0)
+  useBattement(enCours || rejoue)
+  if (!SUIVI_PASTILLE || !contexte) return null
+  const etat: EtatPastille = base.rouge ? 'rouge' : enCours || rejoue || photos || base.attente ? 'attente' : 'ok'
+  const [libelle, detail] = PASTILLE_TEXTES[etat]
+  // Les photos de la creation partent DEPUIS l'onglet : le seul conseil qu'on garde, dans la bulle.
+  const bulle = photos ? `${detail} ${photos} photo${photos > 1 ? 's' : ''} en attente d’envoi : ne fermez pas cet onglet.` : detail
+  return (
+    <span className={`${props.pied ? 'fa-ck-tb-chip ' : ''}suivi-pastille is-${etat}`} title={bulle} role="status" aria-label={`${libelle}. ${bulle}`}>
+      <span className="suivi-pastille-point" aria-hidden="true" />
+      {libelle}
+    </span>
   )
 }
 
@@ -13331,7 +13399,7 @@ function CompteurMesTravaux() {
     window.addEventListener('keydown', fermer)
     return () => window.removeEventListener('keydown', fermer)
   }, [ouvert])
-  if (!SUIVI_DANS_LA_FICHE || !contexte || !liste.length) return null
+  if (!SUIVI_DANS_LA_FICHE || SUIVI_PASTILLE || !contexte || !liste.length) return null
   return (
     <span className="suivi-compteur-ancre">
       <button
@@ -23557,6 +23625,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     const contact = String(p.hektor_contact_id ?? p.contact_id ?? p.app_identite ?? '').trim()
     if (contact) showContactInDirectory(contact)
   }
+  // Demonstration seulement (le mock est admin) : voir la fiche comme un negociateur.
+  const [demoNegociateur, setDemoNegociateur] = useState(false)
   const contexteTravaux = useMemo<TravauxContexte>(() => ({
     jobs: hektorActionJobs,
     moi: session?.user?.id ?? (import.meta.env.MODE === 'mock' ? 'demo' : null),
@@ -23568,15 +23638,19 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     }),
     photosEnAttente: photosEnAttenteParTravail,
     ouvrir: ouvrirCibleTravail,
+    admin: isAdmin && !demoNegociateur,
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [hektorActionJobs, session, travauxVus, photosEnAttenteParTravail, screen])
+  }), [hektorActionJobs, session, travauxVus, photosEnAttenteParTravail, screen, isAdmin, demoNegociateur])
   const mesTravauxListe = mesTravaux(contexteTravaux)
   const mesTravauxEnCours = mesTravauxListe.filter((job) => isConsoleJobActive(job)).length
   const mesTravauxEchecs = mesTravauxListe.filter((job) => etatTravail(job, contexteTravaux.vus) === 'echec').length
   // Demonstration seulement : permet de poser de faux travaux pour voir l'affichage (le mock n'a pas de base).
   useEffect(() => {
     if (import.meta.env.MODE !== 'mock') return
-    ;(window as unknown as { __travauxDemo?: (jobs: ConsoleJob[]) => void }).__travauxDemo = (jobs) => updateHektorActionJobs(() => jobs)
+    ;(window as unknown as { __travauxDemo?: (jobs: ConsoleJob[], negociateur?: boolean) => void }).__travauxDemo = (jobs, negociateur) => {
+      updateHektorActionJobs(() => jobs)
+      setDemoNegociateur(Boolean(negociateur))
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -23641,7 +23715,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         onOpenUsers={isManagerOrAdmin ? () => void openUserTool() : undefined}
         onSignOut={session ? handleSignOut : undefined}
         onOpenSearch={RECHERCHE_GLOBALE ? () => setRechercheGlobaleOuverte(true) : undefined}
-        activite={SUIVI_DANS_LA_FICHE && mesTravauxListe.length ? { enCours: mesTravauxEnCours, echecs: mesTravauxEchecs, liste: <ListeMesTravaux /> } : undefined}
+        activite={SUIVI_DANS_LA_FICHE && !SUIVI_PASTILLE && mesTravauxListe.length ? { enCours: mesTravauxEnCours, echecs: mesTravauxEchecs, liste: <ListeMesTravaux /> } : undefined}
       >
         {showMobileCommandCard ? (
         <section className="mobile-command-card">
@@ -31729,7 +31803,10 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
               </span>
             ) : null}
           </div>
-          <span className="fa-ck-tb-chip"><span className="fa-ck-tb-chip-dot" />{bvs("Hektor · à jour")}</span>
+          {/* POINT 6 bis : la puce disait « a jour » en dur, quoi qu'il arrive ; elle dit maintenant l'etat reel. */}
+          {SUIVI_PASTILLE
+            ? <PastilleSuivi appDossierId={dossier.app_dossier_id} hektorAnnonceId={dossier.hektor_annonce_id} pied />
+            : <span className="fa-ck-tb-chip"><span className="fa-ck-tb-chip-dot" />{bvs("Hektor · à jour")}</span>}
         </div>
         </div>
 
@@ -31751,8 +31828,9 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                 </span>
               ) : null}
             </nav>
+            {SUIVI_PASTILLE ? <PastilleSuivi appDossierId={dossier.app_dossier_id} hektorAnnonceId={dossier.hektor_annonce_id} /> : null}
           </div>
-          <IndicateurTravauxObjet appDossierId={dossier.app_dossier_id} hektorAnnonceId={dossier.hektor_annonce_id} />
+          {SUIVI_PASTILLE ? null : <IndicateurTravauxObjet appDossierId={dossier.app_dossier_id} hektorAnnonceId={dossier.hektor_annonce_id} />}
           {activeTab === 'synthese' ? (
           <div className="fa-ck-timeline">
             <div className="fa-ck-tl-head">
@@ -33640,7 +33718,7 @@ function DossierDetailLayoutBase(props: {
                 </section>
               ) : null}
 
-              <IndicateurTravauxObjet appDossierId={dossier.app_dossier_id} hektorAnnonceId={dossier.hektor_annonce_id} />
+              {SUIVI_PASTILLE ? <div className="suivi-pastille-ligne"><PastilleSuivi appDossierId={dossier.app_dossier_id} hektorAnnonceId={dossier.hektor_annonce_id} /></div> : <IndicateurTravauxObjet appDossierId={dossier.app_dossier_id} hektorAnnonceId={dossier.hektor_annonce_id} />}
               <AnnonceEditStatusBanner dossier={dossier} />
               <GesteAbandonneBanner dossier={dossier} />
 
@@ -36479,15 +36557,18 @@ function ContactEditStatusBanner({ hektorContactId }: { hektorContactId: string 
   const [resolveError, setResolveError] = useState<string | null>(null)
 
   // POINT 6 (26/10) : relu a chaque relecture de l'app (fin d'un travail, geste), plus seulement a l'ouverture.
+  // POINT 6 bis (27/10) : reserve a l'admin -- le negociateur ne voit que la pastille de la fiche.
+  const bandeauAdmin = useContext(TravauxContext)?.admin ?? false
   const relectureBandeau = useRelectureRubriques()
   useEffect(() => {
+    if (SUIVI_PASTILLE && !bandeauAdmin) { setStatus(null); return }
     if (!hektorContactId) { setStatus(null); return }
     let cancelled = false
     loadContactEditStatus(hektorContactId)
       .then((s) => { if (!cancelled) setStatus(s) })
       .catch(() => { if (!cancelled) setStatus(null) })
     return () => { cancelled = true }
-  }, [hektorContactId, relectureBandeau])
+  }, [hektorContactId, relectureBandeau, bandeauAdmin])
 
   const resoudre = async (mode: 'refait' | 'abandon') => {
     if (!hektorContactId || resolving) return
@@ -36556,15 +36637,18 @@ function GesteAbandonneBanner({ dossier }: { dossier: Dossier | null }) {
   const dossierId = dossier?.app_dossier_id ?? null
 
   // POINT 6 (26/10) : relu a chaque relecture de l'app (fin d'un travail, geste), plus seulement a l'ouverture.
+  // POINT 6 bis (27/10) : reserve a l'admin -- le negociateur ne voit que la pastille de la fiche.
+  const bandeauAdmin = useContext(TravauxContext)?.admin ?? false
   const relectureBandeau = useRelectureRubriques()
   useEffect(() => {
+    if (SUIVI_PASTILLE && !bandeauAdmin) { setGestes([]); return }
     if (!dossierId) { setGestes([]); return }
     let cancelled = false
     loadActionStatus(dossierId)
       .then((s) => { if (!cancelled) setGestes(s?.gestes ?? []) })
       .catch(() => { if (!cancelled) setGestes([]) })
     return () => { cancelled = true }
-  }, [dossierId, relectureBandeau])
+  }, [dossierId, relectureBandeau, bandeauAdmin])
 
   const trancher = async (jobId: string, mode: 'refait' | 'abandon') => {
     if (resolving) return
@@ -36641,15 +36725,18 @@ function AnnonceEditStatusBanner({ dossier }: { dossier: Dossier | null }) {
   const [resolveError, setResolveError] = useState<string | null>(null)
   const dossierId = dossier?.app_dossier_id ?? null
   // POINT 6 (26/10) : relu a chaque relecture de l'app (fin d'un travail, geste), plus seulement a l'ouverture.
+  // POINT 6 bis (27/10) : reserve a l'admin -- le negociateur ne voit que la pastille de la fiche.
+  const bandeauAdmin = useContext(TravauxContext)?.admin ?? false
   const relectureBandeau = useRelectureRubriques()
   useEffect(() => {
+    if (SUIVI_PASTILLE && !bandeauAdmin) { setStatus(null); return }
     if (dossierId == null) { setStatus(null); return }
     let cancelled = false
     loadAnnonceEditStatus(dossierId)
       .then((s) => { if (!cancelled) setStatus(s) })
       .catch(() => { if (!cancelled) setStatus(null) })
     return () => { cancelled = true }
-  }, [dossierId, relectureBandeau])
+  }, [dossierId, relectureBandeau, bandeauAdmin])
 
   const resoudre = async (mode: 'refait' | 'abandon') => {
     if (dossierId == null || resolving) return
@@ -38033,6 +38120,7 @@ function MobileDossierDetail(props: {
             <StatusPill value={dossier.statut_annonce} />
             <StatusPill value={diffusableLabel(dossier.diffusable)} />
             {dossier.validation_diffusion_state ? <StatusPill value={dossier.validation_diffusion_state} /> : null}
+            {SUIVI_PASTILLE ? <PastilleSuivi appDossierId={dossier.app_dossier_id} hektorAnnonceId={dossier.hektor_annonce_id} /> : null}
           </div>
         </div>
       </header>
@@ -38066,7 +38154,7 @@ function MobileDossierDetail(props: {
         </section>
       )}
 
-      <IndicateurTravauxObjet appDossierId={dossier.app_dossier_id} hektorAnnonceId={dossier.hektor_annonce_id} />
+      {SUIVI_PASTILLE ? null : <IndicateurTravauxObjet appDossierId={dossier.app_dossier_id} hektorAnnonceId={dossier.hektor_annonce_id} />}
       {props.detailLoading ? <section className="mobile-detail-loading">Chargement du détail...</section> : null}
 
       <section className="mobile-detail-section">
@@ -43558,7 +43646,7 @@ function ContactDetailPopupBase(props: {
           </header>
 
           <div style={{ padding: '0 16px' }}>
-            <IndicateurTravauxObjet contactId={String(props.contact.hektor_contact_id)} />
+            {SUIVI_PASTILLE ? <div className="suivi-pastille-ligne"><PastilleSuivi contactId={String(props.contact.hektor_contact_id)} /></div> : <IndicateurTravauxObjet contactId={String(props.contact.hektor_contact_id)} />}
             <ContactEditStatusBanner hektorContactId={props.contact.hektor_contact_id} />
           </div>
 
@@ -44698,7 +44786,7 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
         <div className="fa-cx-panel" onClick={(event) => event.stopPropagation()}>
           <BandeauFilNavigation />
           <div style={{ padding: '12px 16px 0' }}>
-            <IndicateurTravauxObjet contactId={String(props.contact.hektor_contact_id)} />
+            {SUIVI_PASTILLE ? null : <IndicateurTravauxObjet contactId={String(props.contact.hektor_contact_id)} />}
             <ContactEditStatusBanner hektorContactId={props.contact.hektor_contact_id} />
           </div>
           <div className="fa-cx-body">
@@ -44719,6 +44807,7 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
                 </div>
                 <div className="fa-cx-hero-tx">
                   <div className="fa-cx-name">{contactFullName}</div>
+                  {SUIVI_PASTILLE ? <PastilleSuivi contactId={String(props.contact.hektor_contact_id)} /> : null}
                   {dirCategories.length > 1 ? (
                     <div className="fa-cx-type-pills">
                       {dirCategories.slice(0, 3).map((cat, index) => (
