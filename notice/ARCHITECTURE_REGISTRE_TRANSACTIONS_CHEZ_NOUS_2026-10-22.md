@@ -2902,3 +2902,65 @@ Le carnet compte **0 ligne « en attente »** (R3 et son rattrapage les ont tout
 3. **le lendemain matin** : dans `logs/scheduled/quotidien_*.log`, « R2 (la nuit respecte l'attente) : 1 valeur(s) reposée(s) » et la ligne
    `1001395.prix_net_vendeur` ; chez Supabase, **le registre de la vente 23358 porte 110 000** ; et le nombre de chaînes inchangé.
 ⛔ **Retour arrière** : retirer la ligne du `.env` — la nuit suivante, la colonne redevient ce que dit Hektor.
+
+---
+
+## 54. R2 ALLUMÉ, et R4 — AUDIT de la sentinelle — 26/10 *(Frédéric : « allume R2 et attaque R4 »)* — R4 en lecture seule, **rien codé**
+
+### R2 allumé — 26/10, 06:35
+`.env` sauvegardé (`.env.avant_r2_attente_20261026`, ignoré par git), puis **`APP_AFFAIRE_R2_ATTENTE=1`** ajouté (74 lignes, 0 `\r\r\n`) ;
+**le script de nuit le lit** (`r2_attente_actif()` → `True`). Premier passage : **le run du 27/10 à 04:00**. ⏰ À contrôler le 27/10 au matin :
+« R2 : 1 valeur(s) reposée(s) » et la ligne `1001395.prix_net_vendeur`, la vente 23358 à 110 000 chez Supabase, les chaînes inchangées.
+
+### Ce que R4 doit faire (§3)
+« `data.affaire_ecart` (comme `data.contact_modif_ecart`) ; à l'écran, un champ en attente ou en conflit se signale. » Avec la décision A
+de R2, c'est devenu **indispensable** : un « conflit » reste à notre valeur au registre — il peut cacher une correction faite ensuite
+dans Hektor par un négociateur. **Il faut qu'il sonne.**
+
+### Ce qui existe déjà (code et base, 26/10)
+- **L'écran** : chaque saisie de la rubrique Affaires porte son verdict (« arrivé », « pas encore parti », « conflit », « échec, non
+  envoyé », « sans objet ») depuis le 16/09 (3.1). ✅ La moitié écran de R4 est faite.
+- **Les trois sœurs** du chantier 8a (`data.annonce_naissance_ecart`, `data.contact_modif_ecart`, `data.annonce_modif_ecart`,
+  `monitoring/check_gti_health.py` l. 680-740) : une **vue** d'écarts, **une ligne par champ** (jamais « N sur M »), une colonne
+  `traite_le` et une fonction admin `*_ecart_traiter` (« vu ») ; la sentinelle compte `traite_le is null`, **warning**, avec un
+  échantillon. Domaine `data_quality`, posé par la boucle elle-même (l. 1798) : **pas le piège du domaine refusé du 25/10**.
+  ⚠ **Mais aucun écran n'appelle leurs fonctions « vu »** (0 appel dans `apps/hektor-v1/src`) : leurs alertes ne se taisent que par SQL.
+- **Un écart des personnes d'une transaction existe déjà** : `app_affaire_personne_ecart` (« personne non gardée par Hektor »), avec
+  un bandeau **et un bouton « fermer »** dans la rubrique (`fermerAffairePersonneEcart`). **Aucune sentinelle ne le compte.**
+- **Le moniteur n'a aucune ligne sur le carnet des transactions** : un « conflit » ou un « échec » trouvé par R3 n'est que dans le journal
+  du travail (`app_carnet_controle`, en `error`).
+
+### La mesure (26/10)
+Carnet (saisies envoyées) : **0 « conflit », 0 « échec », 0 « en attente »** ; 11 « arrivée », 22 « sans objet », 23 sans état (les
+champs d'offre exclus exprès, et l'essai 24933 d'avant R3). Écarts de personnes ouverts : **0**. ➡ R4 serait **vert aujourd'hui** : la
+répétition devra fabriquer son **témoin positif** (des lignes d'essai dans une transaction annulée à la fin).
+
+### Le mécanisme proposé — à arbitrer par Frédéric
+1. **Une vue** `app_v_affaire_carnet_ecarts`, une ligne par transaction **et par champ** : saisie envoyée (`creation_app`,
+   `modification_app`) dont le verdict est **« conflit »** ou **« échec »**, ou **« en attente » / « inconnu » depuis plus de 48 h**
+   (le rattrapage R3 passe chaque matin : au-delà de deux matins, la preuve n'arrivera pas seule — c'est le « non relu » des sœurs). Colonnes :
+   annonce, genre, numéros, champ, notre valeur, celle de Hektor, verdict, dates, négociateur.
+2. **Le « vu » de l'humain** dans une **table à part** `app_affaire_carnet_ecart_vu` (transaction, champ, l'`ecrit_le` vu, qui, quand) —
+   ⭐ **plutôt qu'une colonne dans le carnet** : le carnet est écrit par la création, la modification, R3 et R2 ; une table à part ne touche
+   aucun de ces écrivains. Une saisie **réécrite** après le « vu » sonne de nouveau (on compare l'`ecrit_le`). Fonction admin
+   `app_affaire_carnet_ecart_traiter(app_affaire_id, champ)`.
+3. **La sentinelle** `data.affaire_ecart` dans `DATA_SENTINELS`, **warning** comme ses sœurs (seuls les critical envoient un e-mail), avec
+   l'échantillon (annonce, genre, champ, verdict, nos valeurs).
+4. **Une deuxième ligne, gratuite** : `data.affaire_personne_ecart` sur `app_affaire_personne_ecart` (`ferme_le is null`) — le bouton
+   « fermer » existe déjà à l'écran, donc **cette alerte écoute déjà l'humain**.
+5. **L'écran** : un petit bouton **« vu »** (admin) à côté de « conflit » / « échec » dans la rubrique, qui appelle la fonction du point 2 —
+   sinon l'alerte ne se tait que par SQL, comme les trois sœurs aujourd'hui.
+
+### Ce que ça pourrait casser ailleurs
+- **Le moniteur** : une ligne refusée fait tomber tout le lot (25/10) — la boucle pose `data_quality`, la clé est neuve ; **vérifier une
+  vraie écriture** après la pose (`observed_at` qui avance). La vue doit être lisible par la clé de service (`grant select … to service_role`).
+- **Le carnet** : rien ne change (table à part). R2 et R3 ne lisent pas la nouvelle table.
+- **La descente** : une table neuve chez Supabase n'est descendue que si on la déclare — inutile ici (le serveur ne la lit pas).
+- **Le bruit** : 48 h et le « vu » évitent qu'une ligne d'essai sonne pour toujours. Les champs d'offre exclus de R3 n'ont pas d'état : ils
+  ne sonnent pas.
+- **L'écran (point 5)** : un appel de plus dans la rubrique, réservé à l'admin ; la fonction refuse un non-admin (`admin_requis`).
+
+### Ce qui se pose, dans l'ordre (chaque geste avec l'accord de Frédéric)
+patch base (vue + table + fonction) avec inverse et répétition **à témoin positif** → collé par Frédéric → sentinelle dans le moniteur
+(poussée, active au prochain passage, toutes les 2 h) → l'écran si Frédéric le veut → **essai réel** : une ligne d'essai mise en
+« conflit » doit apparaître sur l'écran Santé, puis se taire après « vu ».
