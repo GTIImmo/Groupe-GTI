@@ -1416,3 +1416,47 @@ gauche), la toucher ramène à A et la fait disparaître. 0 erreur JavaScript.
 ⚠ Non vérifiable en démonstration : la **fiche contact** (pas de données) — son bandeau « Parcours » et le chemin
 « contact → autre bien » depuis sa liste de biens se contrôleront en réel (ouvrir une fiche lance une relecture chez
 Hektor : avec l'accord de Frédéric).
+
+---
+
+## 22. POINT 6 — RE-AUDIT DU 26/10 : « indicateurs dans l'objet, puis retrait de la modale » (rien codé)
+
+*Frédéric : « point 6, je pousse plus tard » (le point 5 n'est pas encore en ligne).*
+
+**La fenêtre aujourd'hui (code relu)** : `HektorActionStatusPopup` (`App.tsx` ~9258), montée deux fois (téléphone
+~23747, bureau ~24749). Elle montre les 8 derniers travaux de `hektorActionJobs` — et ce suivi charge **tous les
+travaux en cours de tout le monde** (`loadActiveHektorActionJobs`, `api.ts` ~11268 : **aucun filtre sur l'auteur**) :
+un admin voit donc surgir la fenêtre pour les gestes des négociateurs. Les 5 mécanismes qui dépendent du suivi (verrou
+anti-double action, ligne en cours de suppression, préparation des fiches légères, photos et scan de la création,
+`beforeunload`) **restent** ; seul l'affichage part. Piège n° 1 toujours là : l'effet `hektorActionLinkedDossiers`
+(~14489) lit la liste **de la fenêtre** (`visibleHektorActionPopupJobs`) — à rebrancher sur `hektorActionJobs`.
+Depuis le point 3a, le bouton « Ouvrir le détail » de la fenêtre est **redondant** (l'annonce créée s'ouvre seule).
+
+**Ce que les gens déclenchent vraiment (base, 30 derniers jours, travaux lancés par un humain)** :
+
+| travail | nombre | durée médiane / 90 % | ce que la fenêtre apporte |
+|---|---|---|---|
+| relecture à l'ouverture d'une fiche | 671 | 29 s / 51 s | rien (exclue de la fenêtre) |
+| relecture d'un contact | 126 | 26 s / 56 s | rien (exclue) |
+| **changer le statut / offre / compromis** | 36 + 13 | **60 s / 128 s** | « c'est parti / fini / refusé » |
+| **envoyer une photo** | 23 | **7 min / 22 min** | la seule trace de l'envoi en cours |
+| créer un contact | 10 | 15 s / 20 s | (3a ouvre déjà la fiche) |
+| supprimer compromis / vente, réordonner, mandant, documents… | 2 à 11 chacun | 6 s à 56 s | « fini » |
+| n° de mandat automatique, Matterport | **0** | — | — |
+
+**Proposition (front seul, comme les points précédents)**
+1. **Un indicateur dans la fiche** : sous l'en-tête de la fiche annonce (cockpit, téléphone) et de la fiche contact,
+   une ligne discrète tant qu'un travail **sur cet objet** est en cours — « ⟳ Changement de statut en cours chez Hektor
+   (≈ 1 min) », « ⟳ 3 photos en cours d'envoi » — qui devient « ✓ À jour chez Hektor » puis s'efface, ou **en rouge si
+   Hektor refuse**, avec le message et ce qu'on peut faire (relire, voir le détail). Les photos choisies à la création
+   gardent leur avertissement « ne fermez pas cet onglet » (et le `beforeunload`), mais **dans la fiche**.
+2. **Un petit compteur d'activité** près de la cloche (bureau et téléphone) : « ⟳ 2 » quand **mes** actions sont en
+   cours, rouge en cas d'échec ; un clic ouvre la liste de **mes** actions récentes (état, durée, échec et message).
+   Pour l'admin : **ses** actions, pas celles des autres (l'écran Santé reste là pour tout voir).
+3. **Retrait de la fenêtre** derrière un interrupteur, **en dernier**, une fois 1 et 2 en place ; le suivi des travaux
+   et ses 5 dépendances ne bougent pas ; l'effet du piège n° 1 rebranché.
+
+**Ce que ça pourrait casser** : les photos de la création (si le suivi était coupé avec l'affichage — il ne l'est
+pas) ; l'admin ne verra plus surgir les gestes des autres (voulu ; Santé reste) ; **sans la fenêtre, un échec se voit
+dans la fiche et dans le compteur** — il faut qu'ils soient bien visibles, c'est le cœur du point. Le rechargement
+surprise des travaux sans auteur (balayage) n'aura plus d'explication à l'écran (déjà le cas, noté au §6).
