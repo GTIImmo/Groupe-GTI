@@ -12,7 +12,7 @@
  *
  * On EXECUTE le code reel : les fonctions sont decoupees dans App.tsx et jouees par esbuild + vm,
  * en heure de PARIS (l'essai se relance lui-meme avec TZ=Europe/Paris).
- * ⚠ TEMOIN INVERSE : l'ancienne formule et l'ancien bandeau (lus dans git HEAD) doivent ECHOUER.
+ * ⚠ TEMOIN INVERSE : l'ancienne formule et l'ancien bandeau (lus dans la version d'avant) doivent ECHOUER.
  *   Un MUTANT (la date prise en UTC) doit etre attrape.
  *
  * NE LANCE NI SERVEUR NI REQUETE.
@@ -66,10 +66,19 @@ function verifier(nom, ok, detail) {
   if (!ok) echecs++;
 }
 
+// La version d'AVANT la correction : le parent du commit qui a introduit `marque` (HEAD tant qu'il n'est pas
+// committe). Lire HEAD tout court casse le temoin des que la correction est committee (vu le 27/10).
+function versionAvant(marque) {
+  const h = execFileSync("git", ["log", "--format=%H", "-S", marque, "--", ":(top)apps/hektor-v1/src/App.tsx"],
+    { cwd: __dirname, encoding: "utf8" }).trim().split(/\s+/).filter(Boolean).pop();
+  return execFileSync("git", ["show", `${h ? h + "^" : "HEAD"}:apps/hektor-v1/src/App.tsx`],
+    { cwd: __dirname, encoding: "utf8", maxBuffer: 64 << 20 });
+}
+
 let src, ancien;
 try {
   src = fs.readFileSync(APP, "utf8");
-  ancien = execFileSync("git", ["show", "HEAD:apps/hektor-v1/src/App.tsx"], { cwd: __dirname, encoding: "utf8", maxBuffer: 64 << 20 });
+  ancien = versionAvant("function dateLocaleIso(");
 } catch (e) {
   console.log("IMPOSSIBLE de lire App.tsx ou git HEAD : " + e.message);
   process.exit(2);
@@ -114,7 +123,7 @@ verifier("n°1 TEMOIN : l'ancienne formule rendait la VEILLE pour l'echeance",
   echeance(ancienneFormule, "2026-10-26", 45) === "2026-12-09", echeance(ancienneFormule, "2026-10-26", 45));
 verifier("n°1 TEMOIN : l'ancienne formule rendait la VEILLE a 00:30",
   ancienneFormule(new Date("2026-10-27T00:30:00")) === "2026-10-26", ancienneFormule(new Date("2026-10-27T00:30:00")));
-verifier("n°1 TEMOIN : l'ancienne formule etait bien dans HEAD (3 fois)",
+verifier("n°1 TEMOIN : l'ancienne formule etait bien dans la version d'avant (3 fois)",
   (ancien.match(/toISOString\(\)\.slice\(0, 10\)/g) || []).length === 3, "compte different");
 // MUTANT : la date prise en UTC est attrapee par au moins un cas
 verifier("n°1 MUTANT (getUTC*) attrape",

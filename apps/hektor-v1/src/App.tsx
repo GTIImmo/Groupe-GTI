@@ -18056,6 +18056,44 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusChangeAffaires, statusChangeStatus, carnetAffaires])
 
+  // ─── ⑧ (26/10/2026) : LE COMPROMIS NEUF REPREND LE MONTANT ET L'ACQUEREUR DE L'OFFRE ACCEPTEE ───
+  //
+  // §58 point 6 n° 3, decision de Frederic : « les acquereurs et le montant de l'offre ». La regle qui
+  // designe l'offre est offreAccepteeAReprendreAuCompromis (une seule, sinon rien).
+  // ⚠ A LA CREATION SEULEMENT : en modification le compromis a les siens (effet plus haut).
+  // ⚠ JAMAIS PAR-DESSUS UN GESTE : un montant ou un prix de vente deja touche reste ; une liste d'acquereurs
+  //   deja remplie, ou que quelqu'un a touchee (retirer celui qu'on proposait), reste. Les cases touchees ne
+  //   sont PAS une dependance : retirer l'acquereur propose ne doit pas le faire revenir.
+  // Le montant va dans les DEUX cases, comme la modification depuis le 18/09 : le worker envoie prixPublique
+  // = montant et prixDeVente = prix de vente, egaux sans honoraires acquereur (97 % du parc). Le carnet de
+  // l'offre prime (une saisie pas encore arrivee chez Hektor), comme partout ici.
+  useEffect(() => {
+    if (statusChangeStatus !== 'compromise') return
+    if (affaireCourantePourStatut()) return
+    const offre = offreAccepteeAReprendreAuCompromis(statusChangeAffaires)
+    if (!offre) return
+    const carnet = carnetAffaires.get(Number(offre.app_affaire_id)) ?? {}
+    const montant = String(carnet.montant ?? '').trim() || String(offre.montant ?? '').trim()
+    if (montant && !statusChangeTouches.includes('amount') && !statusChangeTouches.includes('sale_price')) {
+      setStatusChangeAmount(montant)
+      setStatusChangeSalePrice(montant)
+    }
+    const acquereurs = lireMandantsAffaire(offre.acquereurs_json)
+    if (acquereurs.length && !statusChangeAcquereursAffirmes) {
+      setStatusChangeBuyers((deja) => {
+        if (deja.length) return deja
+        // ⑧ piece 4 (24/10) : NOTRE numero d'abord, celui de Hektor sinon -- comme la modification.
+        setStatusChangeBuyerContactId(acquereurs[0].app || acquereurs[0].id)
+        return acquereurs.map((p) => ({
+          hektor_contact_id: p.app || p.id,
+          display_name: p.nom || null,
+          nom: null, prenom: null, civilite: null,
+        })) as unknown as MandantContactSearchOption[]
+      })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusChangeAffaires, statusChangeStatus, carnetAffaires])
+
   // ─── ⑧ N (23/10/2026) : LE NOTAIRE DU VENDEUR SE REPREND DE L'OFFRE DE LA CHAINE ───
   //
   // Decision « A » de Frederic : saisi sur l'offre, il est garde au CARNET de l'offre (Hektor ne le
@@ -29270,6 +29308,28 @@ function offreEcarteeSurBienEngage(
  *  des annees plus tard est libre, objection du 08/09). Ecran seulement, comme 2.2c. */
 function nouvelleOffreFermeeSurBienEngage(statut: string, lignes: AffaireLedgerRow[]): boolean {
   return statut === 'offer' && bienEngage(lignes)
+}
+
+/** ⑧ (26/10/2026) -- L'OFFRE ACCEPTEE QUE LE COMPROMIS NEUF REPREND (§58 point 6, n° 3).
+ *
+ *  Decision de Frederic : a la CREATION d'un compromis, la modale reprend « les acquereurs et le montant de
+ *  l'offre » acceptee de sa chaine. Elle gardait le prix du MANDAT (85 000 au lieu des 80 000 de l'offre, vu
+ *  en reel sur 62965) et une liste d'acquereurs vide. Mesure : 929 compromis sur 959 (2024+) ont le montant de
+ *  leur offre acceptee, 873 gardent son acquereur.
+ *  ⚠ ON NE DEVINE PAS : UNE seule offre acceptee, vivante, dans un dossier ouvert (ou clos par une vente
+ *    morte, comme l'heritage de la vente), et AUCUN compromis vivant sur sa chaine -- sinon null et la modale
+ *    reste comme avant. C'est la regle du 04/09 : un compromis se rattache a L'UNIQUE offre acceptee. */
+function offreAccepteeAReprendreAuCompromis(lignes: AffaireLedgerRow[]): AffaireLedgerRow | null {
+  const ouverts = new Set(dossiersOuvertsDuBien(lignes)
+    .filter((d) => d.ouvert || d.closeParMorte).map((d) => d.chaine))
+  const cleDe = (a: AffaireLedgerRow) => a.app_chaine_id != null
+    ? String(a.app_chaine_id) : 'seule-' + String(a.app_affaire_id)
+  const offres = lignes.filter((a) => String(a.kind) === 'offre' && affaireEstVivante(a)
+    && AFFAIRE_ETATS_ACCEPTES.has(String(a.state ?? '').trim().toLowerCase()) && ouverts.has(cleDe(a)))
+  if (offres.length !== 1) return null
+  const chaine = cleDe(offres[0])
+  if (lignes.some((a) => String(a.kind) === 'compromis' && affaireEstVivante(a) && cleDe(a) === chaine)) return null
+  return offres[0]
 }
 
 /** ⑧ (26/10/2026) -- « MODIFIER CHEZ HEKTOR » ET LE MESSAGE QUI L'ANNONCE (§58 point 5, n° 5).
