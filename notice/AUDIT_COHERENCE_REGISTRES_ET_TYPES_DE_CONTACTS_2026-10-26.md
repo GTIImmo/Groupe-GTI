@@ -660,3 +660,24 @@ chantiers 1 et 2 :
   vue neuve à la table de nuit et donne les deux mesures de temps (par contact, par bien).
 - **Le temps** ne se mesure qu'avec les index posés : ce sera la première chose après l'application (cible : de l'ordre des 9,6 ms d'aujourd'hui).
 - **Aucun push, aucun redémarrage** : c'est une vue en base.
+
+### 14.1 ✅ 26/10 à 11:45 — LA PIÈCE 5 EST POSÉE (patch appliqué par moi, accord de Frédéric ; montant des offres masqué, « OK »)
+- **Avant** : vue à l'empreinte `acf77be8`, 167 822 lignes dont 35 005 acquéreurs, index absents.
+- **Le patch** : 3 contrôles verts (les deux index, la vue lit le registre des transactions et reste `security_invoker`, **35 008** liens
+  acquéreurs).
+- **La répétition : 5 / 5** — 35 005 / 35 005 liens de la nuit retrouvés ; 0 clé en double ; dossier, état, date, montant, bien actif
+  identiques ; numéro de mandat **20** écarts (connus) ; la branche des mandants / propriétaires **inchangée**. La vue : **167 825** lignes (+3).
+- **Le temps** (`EXPLAIN ANALYZE`, deux contacts, cache chaud) :
+  | lecture | avant | après |
+  |---|---|---|
+  | **une fiche contact** (par contact) | 9,6 ms | **38 à 42 ms** (+ ~7,6 ms de planification) |
+  | **les invités d'un RDV** (par bien) | — | **5,9 ms** |
+  ⚠ **La fiche est ~4 fois plus lente qu'avant** (toujours sous 50 ms, à comparer aux ~2,2 s du résumé des RDV que la fiche attend déjà) : tout
+  le surcoût vient des **co-acquéreurs** — les 3 109 transactions à plusieurs personnes sont relues à chaque fiche (l'index partiel les trouve,
+  mais Postgres ne peut pas chercher DANS la liste par un index). **Si un jour il fallait mieux** : une petite table des co-acquéreurs tenue à
+  jour par un déclencheur sur le registre (une projection matérialisée, toujours dérivée du registre — pas une seconde source). **Non fait, à
+  décider.**
+- **Retour arrière** : `supabase/patch_piece5_acquereurs_depuis_registre_2026-10-26_INVERSE.sql` (la vue d'avant à l'octet, les index
+  retirés). La table de nuit continue d'être refaite : on peut revenir n'importe quand.
+- ⚠ **À voir à l'écran** : la fiche d'un contact acheteur (ex. JACQUIER, 10354701) — ses offres, compromis et vente doivent apparaître comme
+  avant, la source dit désormais « registre_transactions ». Non vu à l'œil.
