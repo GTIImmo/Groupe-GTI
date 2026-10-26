@@ -19,6 +19,8 @@ type MobileLayoutProps = {
   onNavigate: (screen: AppScreen) => void
   onOpenUsers?: () => void
   onSignOut?: () => void
+  // POINT 4 (26/10/2026) : la loupe de la recherche globale, dans la barre du haut.
+  onOpenSearch?: () => void
 }
 
 const mobileNavItems: Array<{ screen: AppScreen; label: string; icon: string; adminOnly?: boolean; adminStrictOnly?: boolean }> = [
@@ -46,6 +48,7 @@ export function MobileLayout({
   onNavigate,
   onOpenUsers,
   onSignOut,
+  onOpenSearch,
 }: MobileLayoutProps) {
   const visibleNav = mobileNavItems.filter((item) => {
     if (item.adminStrictOnly) return Boolean(isAdminStrict)
@@ -64,6 +67,11 @@ export function MobileLayout({
           <span>{APP_BIENVU_ENABLED ? 'bienvu' : 'GTI Immobilier'}</span>
           <h1>{title}</h1>
         </div>
+        {onOpenSearch ? (
+          <button className="mobile-search-button" type="button" onClick={onOpenSearch} aria-label="Rechercher partout">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" /><path d="m20 20-3.5-3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
+          </button>
+        ) : null}
         <button className="mobile-user-button" type="button" onClick={isAdmin ? onOpenUsers : undefined} aria-label={userLabel}>
           {userInitials}
         </button>

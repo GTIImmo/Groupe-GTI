@@ -1154,3 +1154,44 @@ proposent d'étendre ? Il faut que ce soit rapide avec le volume de tous les ind
 **Ordres de grandeur** : côté base, 5 à 7 ms par source indexée, 149 ms pour le registre (mesuré) ; un aller-retour
 navigateur → base ≈ 200 ms (mesuré le 23/10, §10.2). Gain attendu du point 3 : ~4 allers-retours enchaînés → ~1 seul
 temps d'attente (**estimé, à mesurer au codage**).
+
+### 20.2 ✅ POINT 4 CODÉ ET CONTRÔLÉ EN DÉMONSTRATION (26/10, « code le point 4 avec les 4 améliorations ») — ⚠ NON ÉPROUVÉ EN RÉEL
+
+Interrupteurs : `RECHERCHE_GLOBALE` (App.tsx) et `LECTURES_SIMULTANEES` (lib/api.ts) — `false` = l'ancien comportement.
+Fichiers : `RechercheGlobale.tsx` + `recherche-globale.css` (neufs), `App.tsx`, `lib/api.ts`, `layouts/MobileLayout.tsx`.
+
+**Ce qui est fait**
+1. **La recherche globale** (`rechercherPartout`, api.ts) : 5 lectures **en même temps**, 6 lignes chacune (5 montrées, la
+   6e déclenche « Voir tout ») — annonces en cours (texte, mandants ; pour un nombre aussi n° de dossier, de mandat, CP,
+   n° Hektor), vendues / closes et archives (mêmes filtres que la recherche étendue + mandants), contacts (nom,
+   téléphone collé, e-mail ; n° pour un nombre), registre des mandats (texte **et adresse**). Une source en échec
+   n'empêche pas les autres : elle est nommée.
+2. **La fenêtre** : ouverte par la **loupe en tête du menu** (même picto par masque que les autres entrées, touche « / »
+   rappelée), la **touche « / »** (pas pendant une saisie), la **barre de l'Accueil** (enfin active), et sur téléphone une
+   **loupe dans la barre du haut** (fenêtre plein écran). ↑ ↓ Entrée Échap ; la dernière recherche est retrouvée.
+   Ouvertures : annonce → sa fiche (Estimations si estimation) ; vendue / close / archivée → la fenêtre « Charger la fiche
+   complète » existante ; contact → sa fiche ; mandat → écran Mandats filtré sur son numéro, ligne choisie.
+3. **Écran Annonces** : `compterAnnoncesAilleurs` compte en parallèle (comptes seuls) ; le bouton devient « Aussi : 2
+   vendues ou closes, 5 archivées — Afficher », il **disparaît** s'il n'y a rien ailleurs (« rien dans les vendues, closes
+   ou archivées ») ; **0 résultat dans les actives** → extension automatique, une fois par saisie, annoncée « Rien dans les
+   actives — … ».
+4. **Recherche étendue** : ses 4 sources lues **en même temps** (`lireIndexLegerPourFusion`), même fusion.
+
+**Design (demande de Frédéric en cours de route : « élever le niveau design »)** : charte bienvu — en-tête encre +
+filet magenta (comme « Pilotage de l'annonce » et la fiche légère), Plus Jakarta Sans / Hanken Grotesk, vignettes photo
+(grisées pour le passé), initiales des contacts en rose, pastilles d'état ok / warn / rose / neutre, mot tapé surligné en
+magenta, barre de progression fine, touches dessinées, état vide qui présente le périmètre.
+
+**Mesures en base (26/10, pire cas = terme absent ; terme numérique)** : annonces en cours 80 ms / 43 ms · archives
+58 ms · contacts 26 ms · registre (texte + adresse, sans index) 196 ms. ⚠⚠ **L'adresse dans les annonces en cours
+coûtait 1 515 ms** (pas d'index sur `adresse_privee_listing` → toute la table relue) : **retirée**, l'adresse est cherchée
+dans le registre. Un index trigramme sur cette colonne la rendrait cherchable partout (patch à coller, accord).
+
+**Contrôle en démonstration** (mode mock, bureau 1280 px avec le thème bienvu, puis largeur téléphone) : `npm run build`
+vert ; « / » ouvre et met le curseur dans le champ ; « saint » → 2 annonces, 1 vendue, 3 mandats, groupes dans l'ordre ;
+↓ puis Entrée ouvre la 2e annonce (`?ecran=annonces&annonce=5502`) ; **Précédent** revient à la liste ; la vendue ouvre
+« Charger la fiche complète » ; le mandat 17125 ouvre Mandats avec « 17125 » dans la recherche ; « / » pendant une saisie
+n'ouvre rien ; Échap ferme ; la barre de l'Accueil ouvre la fenêtre et retrouve « saint » ; 0 erreur JavaScript.
+Défaut vu et corrigé : une image transitoire montrait les anciens résultats sous l'état vide après « Effacer ».
+⚠ **Non vérifiable en démonstration** : les comptes « Aussi : … » et l'extension automatique (pas de base), les contacts
+(aucun contact de démonstration). ➡ **À éprouver en réel après la mise en ligne** (lecture seule : chercher n'écrit rien).

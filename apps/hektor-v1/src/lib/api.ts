@@ -5175,14 +5175,40 @@ export async function loadDossiersPage({
   const shouldMergeLightweightIndexes = shouldMergeArchiveIndex || shouldMergeHistoricalIndex || shouldMergeBrouillonIndex
   query = query.range(shouldMergeLightweightIndexes ? 0 : from, to)
 
-  const { data, error, count } = await query
-  if (error || !data) throw new Error(error?.message ?? 'Unable to load dossiers')
-  const primaryResult: PageResult<Dossier> = {
-    rows: (data as Dossier[]).map(prefererNosAdressesPhoto),
-    total: count ?? 0,
-    page,
-    pageSize,
+  // POINT 4 (26/10/2026) : la recherche ETENDUE lisait ses 4 sources L'UNE APRES L'AUTRE
+  // (en cours, archives, vendues / closes, brouillons -- et chaque index leger relit encore son
+  // cache de detail). On les lance EN MEME TEMPS : memes requetes, memes resultats (la fusion
+  // trie tout), une seule attente. `LECTURES_SIMULTANEES = false` = l'ancien ordre.
+  const lirePrincipale = async (): Promise<PageResult<Dossier>> => {
+    const { data, error, count } = await query
+    if (error || !data) throw new Error(error?.message ?? 'Unable to load dossiers')
+    return {
+      rows: (data as Dossier[]).map(prefererNosAdressesPhoto),
+      total: count ?? 0,
+      page,
+      pageSize,
+    }
   }
+  if (shouldMergeLightweightIndexes && LECTURES_SIMULTANEES) {
+    const lectures: Array<Promise<PageResult<Dossier>>> = [lirePrincipale()]
+    if (shouldMergeArchiveIndex) {
+      lectures.push(lireIndexLegerPourFusion(
+        applyArchiveIndexFiltersToQuery(supabase.from('app_archive_annonce_index_current').select(archiveIndexSelect, { count: countMode }), filters, scope),
+        'app_archive_annonce_detail_cache', to, page, pageSize, 'Unable to load archived annonces'))
+    }
+    if (shouldMergeHistoricalIndex) {
+      lectures.push(lireIndexLegerPourFusion(
+        applyHistoricalIndexFiltersToQuery(supabase.from('app_historical_annonce_index_current').select(historicalIndexSelect, { count: countMode }), filters, scope),
+        'app_historical_annonce_detail_cache', to, page, pageSize, 'Unable to load historical annonces'))
+    }
+    if (shouldMergeBrouillonIndex) {
+      lectures.push(lireIndexLegerPourFusion(
+        applyBrouillonIndexFiltersToQuery(supabase.from('app_brouillon_annonce_index_current').select(brouillonIndexSelect, { count: countMode }), filters, scope),
+        'app_brouillon_annonce_detail_cache', to, page, pageSize, 'Unable to load brouillon annonces', true))
+    }
+    return mergeDossierPageResults(await Promise.all(lectures), page, pageSize)
+  }
+  const primaryResult = await lirePrincipale()
   if (shouldMergeLightweightIndexes) {
     const mixedRangeTo = to
     const mergedResults: Array<PageResult<Dossier>> = [primaryResult]
@@ -5262,6 +5288,156 @@ export async function loadDossiersPage({
     return mergeDossierPageResults(mergedResults, page, pageSize)
   }
   return primaryResult
+}
+
+// POINT 4 (26/10/2026) : un index leger (archives, vendues / closes, brouillons) lu pour la fusion
+// de la recherche etendue -- exactement les trois blocs en serie de loadDossiersPage, en fonction.
+const LECTURES_SIMULTANEES = true
+async function lireIndexLegerPourFusion(
+  requete: any,
+  cacheTable: Parameters<typeof attachLightweightDetailCacheState>[1],
+  rangeTo: number,
+  page: number,
+  pageSize: number,
+  messageErreur: string,
+  brouillon = false,
+): Promise<PageResult<Dossier>> {
+  const { data, error, count } = await requete
+    .order('date_maj', { ascending: false, nullsFirst: false })
+    .order('hektor_annonce_id', { ascending: false })
+    .range(0, rangeTo)
+  if (error || !data) throw new Error(error?.message ?? messageErreur)
+  const rows = await attachLightweightDetailCacheState(
+    (data as LightweightAnnonceIndexRow[]).map(lightweightIndexRowToDossier),
+    cacheTable,
+  )
+  return {
+    rows: brouillon ? rows.map((row) => ({ ...row, is_brouillon: true })) : rows,
+    total: count ?? 0,
+    page,
+    pageSize,
+  }
+}
+
+// POINT 4 (26/10/2026) : « ET AILLEURS ? » -- l'ecran Annonces cherche d'abord dans les actives et
+// proposait d'etendre A L'AVEUGLE. On COMPTE ce que la recherche etendue montrerait en plus (memes
+// filtres, memes index, comptes seuls : aucune ligne ne voyage). null = pas su compter.
+export type AnnoncesAilleurs = { venduesCloses: number; archivees: number; enCreation: number }
+export async function compterAnnoncesAilleurs({ filters, scope }: { filters: AppFilters; scope?: DataScope | null }): Promise<AnnoncesAilleurs | null> {
+  if (!hasSupabaseEnv || !supabase) return null
+  if (!normalizeListingSearchTerm(filters.query)) return null
+  const etendus: AppFilters = { ...filters, archive: allFilterValue, statut: allFilterValue }
+  if (!canUseLightweightAnnonceIndexesForFilters(etendus)) return null
+  const compter = async (requete: any) => {
+    const { count, error } = await requete
+    if (error) throw new Error(error.message)
+    return count ?? 0
+  }
+  try {
+    const [venduesCloses, archivees, enCreation] = await Promise.all([
+      compter(applyHistoricalIndexFiltersToQuery(supabase.from('app_historical_annonce_index_current').select('hektor_annonce_id', { count: 'exact', head: true }), etendus, scope)),
+      compter(applyArchiveIndexFiltersToQuery(supabase.from('app_archive_annonce_index_current').select('hektor_annonce_id', { count: 'exact', head: true }), etendus, scope)),
+      compter(applyBrouillonIndexFiltersToQuery(supabase.from('app_brouillon_annonce_index_current').select('hektor_annonce_id', { count: 'exact', head: true }), etendus, scope)),
+    ])
+    return { venduesCloses, archivees, enCreation }
+  } catch {
+    return null
+  }
+}
+
+// POINT 4 (26/10/2026) : LA RECHERCHE GLOBALE. Cinq lectures EN MEME TEMPS, 6 lignes chacune (on en
+// montre 5 ; la 6e dit seulement « il y en a d'autres » -- pas de compte exact, qui coute cher sur
+// les contacts sous les regles d'acces). Memes vues et memes regles d'acces que les listes : on ne
+// trouve rien qu'on ne voie deja. Une source en echec n'empeche pas les autres : elle est nommee.
+export type RechercheGlobaleResultat = {
+  terme: string
+  annonces: Dossier[]
+  horsCatalogue: Dossier[]
+  contacts: AppContact[]
+  mandats: MandatRecord[]
+  echecs: string[]
+}
+export const RECHERCHE_GLOBALE_LIGNES = 6
+export async function rechercherPartout({ terme, filtresDeBase, scope }: { terme: string; filtresDeBase: AppFilters; scope?: DataScope | null }): Promise<RechercheGlobaleResultat> {
+  const t = normalizeListingSearchTerm(terme)
+  const resultat: RechercheGlobaleResultat = { terme: t, annonces: [], horsCatalogue: [], contacts: [], mandats: [], echecs: [] }
+  if (!t) return resultat
+  if (!hasSupabaseEnv || !supabase) {
+    // Demonstration (mode mock) : les donnees fictives, comme les autres lectures de ce fichier.
+    const cherche = (v: unknown) => String(v ?? '').toLowerCase().includes(t.toLowerCase())
+    const trouve = (d: Dossier) => [d.titre_bien, d.ville, d.code_postal, d.numero_dossier, d.numero_mandat, d.commercial_nom, (d as { mandants_texte?: string }).mandants_texte, d.hektor_annonce_id].some(cherche)
+    const passe = (d: Dossier) => String(d.archive ?? '') === '1' || historicalListingStatuses.includes(String(d.statut_annonce ?? ''))
+    resultat.annonces = mockDossiers.filter((d) => trouve(d) && !passe(d)).slice(0, RECHERCHE_GLOBALE_LIGNES)
+    resultat.horsCatalogue = mockDossiers.filter((d) => trouve(d) && passe(d)).slice(0, RECHERCHE_GLOBALE_LIGNES)
+    resultat.mandats = mockMandats.filter((m) => [m.numero_mandat, m.titre_bien, m.ville, m.mandants_texte, m.numero_dossier].some(cherche)).slice(0, RECHERCHE_GLOBALE_LIGNES)
+    return resultat
+  }
+  const client = supabase
+  const ilike = `%${t}%`
+  const nombre = /^\d+$/.test(t)
+  // Un telephone tape avec des espaces ou des points : le texte cherche le porte colle.
+  const chiffres = t.replace(/[\s.]/g, '')
+  const telephone = /^\+?[\d\s.]+$/.test(t) && chiffres.replace(/\D/g, '').length >= 6 ? `%${chiffres}%` : null
+  const n = RECHERCHE_GLOBALE_LIGNES
+  const lire = async <T,>(nom: string, requete: any, transformer: (rows: any[]) => Promise<T[]> | T[]): Promise<T[]> => {
+    try {
+      const { data, error } = await requete
+      if (error || !data) throw new Error(error?.message ?? 'lecture vide')
+      return await transformer(data as any[])
+    } catch {
+      resultat.echecs.push(nom)
+      return []
+    }
+  }
+  // Les index legers : memes filtres que la recherche etendue de l'ecran, texte en plus sur les mandants.
+  const etendus: AppFilters = { ...filtresDeBase, query: '', archive: allFilterValue, statut: allFilterValue }
+  const selectLeger = 'hektor_annonce_id,numero_dossier,numero_mandat,titre_bien,ville,code_postal,date_maj,type_bien,prix,commercial_id,commercial_nom,negociateur_email,agence_nom,statut_annonce,archive,diffusable,mandants_texte,photo_url_listing,photo_url_listing_app'
+  const texteLeger = [`search_text.ilike.${ilike}`, `mandants_texte.ilike.${ilike}`]
+    .concat(nombre ? [`numero_dossier.ilike.${ilike}`, `numero_mandat.ilike.${ilike}`, `hektor_annonce_id.eq.${t}`] : [])
+    .join(',')
+  const lireLeger = (table: string, idCol: string, cache: Parameters<typeof attachLightweightDetailCacheState>[1], appliquer: (q: any, f: AppFilters, s?: DataScope | null) => any) => lire<Dossier>(
+    table,
+    appliquer(client.from(table).select(`${idCol},${selectLeger}`), etendus, scope)
+      .or(texteLeger)
+      .order('date_maj', { ascending: false, nullsFirst: false })
+      .limit(n),
+    (rows: LightweightAnnonceIndexRow[]) => attachLightweightDetailCacheState(rows.map(lightweightIndexRowToDossier), cache),
+  )
+  // ⚠ PAS l'adresse ici : sans index sur cette colonne, l'OR relit toute la table -- MESURE le 26/10 :
+  //   1 515 ms avec, 80 ms sans. L'adresse est cherchee dans le registre des mandats (196 ms, en parallele).
+  const texteAnnonce = [`search_text.ilike.${ilike}`, `mandants_texte.ilike.${ilike}`]
+    .concat(nombre ? [`numero_dossier.ilike.${ilike}`, `numero_mandat.ilike.${ilike}`, `code_postal.ilike.${ilike}`, `hektor_annonce_id.eq.${t}`] : [])
+    .join(',')
+  const texteContact = [`search_text.ilike.${telephone ?? ilike}`]
+    .concat(nombre ? [`hektor_contact_id.eq.${t}`, `hektor_target_id.eq.${t}`] : [])
+    .join(',')
+  const [annonces, venduesCloses, archivees, contacts, mandats] = await Promise.all([
+    lire<Dossier>('annonces', applyNegotiatorScopeToQuery(client.from(dossiersCurrentView).select('*'), scope)
+      .or(texteAnnonce)
+      .order('date_enregistrement_annonce', { ascending: false, nullsFirst: false })
+      .limit(n), (rows: Dossier[]) => rows.map(prefererNosAdressesPhoto)),
+    lireLeger('app_historical_annonce_index_current', 'app_historical_id', 'app_historical_annonce_detail_cache', applyHistoricalIndexFiltersToQuery),
+    lireLeger('app_archive_annonce_index_current', 'app_archive_id', 'app_archive_annonce_detail_cache', applyArchiveIndexFiltersToQuery),
+    lire<AppContact>('contacts', client.from(contactsCurrentView)
+      .select('hektor_contact_id,hektor_target_id,display_name,civilite,nom,prenom,archive,phone_primary,email,ville,code_postal,relation_roles_json,active_search_count,commercial_nom')
+      .or(SANS_FICHE_DE_MENAGE)
+      .or(texteContact)
+      .order('archive', { ascending: true })
+      .order('display_name', { ascending: true })
+      .limit(n), (rows: AppContact[]) => rows),
+    lire<MandatRecord>('mandats', applyNegotiatorScopeToQuery(client.from('app_registre_mandats_current')
+      .select('register_row_id,app_dossier_id,hektor_annonce_id,numero_dossier,numero_mandat,titre_bien,ville,code_postal,statut_annonce,archive,mandat_type,mandat_date_debut,mandat_date_fin,mandants_texte,commercial_nom,negociateur_email,agence_nom'), scope)
+      .or(`search_text.ilike.${ilike},adresse_privee_listing.ilike.${ilike}`)
+      .order('mandat_date_debut', { ascending: false, nullsFirst: false })
+      .limit(n), (rows: MandatRecord[]) => rows),
+  ])
+  resultat.annonces = annonces
+  resultat.horsCatalogue = [...venduesCloses, ...archivees]
+    .sort((a, b) => dossierUpdatedAtValue(b) - dossierUpdatedAtValue(a))
+    .slice(0, n)
+  resultat.contacts = contacts
+  resultat.mandats = mandats
+  return resultat
 }
 
 export async function loadWorkItemsPage({

@@ -250,6 +250,8 @@ import { BvIcon } from './BienvuIcons'
 import RedacteurPanel from './RedacteurPanel'
 import ContactSearchFields, { contactSearchValueToInput, defaultContactSearchValue, type ContactSearchFieldsValue } from './ContactSearchFields'
 import './contact-new.css'
+import RechercheGlobale, { type GroupeRecherche } from './RechercheGlobale'
+import { compterAnnoncesAilleurs, type AnnoncesAilleurs } from './lib/api'
 import { bvs, bvt } from './lib/bienvuTexte'
 import { MENTION_AVENANT, MENTION_MANDAT, repereHtml, repereSignature, zoneMentionHtml } from './lib/signatureAnchors'
 
@@ -13013,6 +13015,22 @@ function numeroCreeDansLeTravail(job: ConsoleJob, cle: 'app_dossier_id' | 'app_i
 //   Audit : notice/AUDIT_NAVIGATION_APRES_ACTION_2026-10-23.md §17-§19.
 //   `false` = l'ancien comportement, en une ligne.
 const L_ECRAN_SUIT_LE_CLIC = true
+
+// ⛔ 26/10/2026 -- POINT 4 : LA RECHERCHE GLOBALE ET LES BLOCS DE RECHERCHE DES ECRANS.
+//   - une loupe en tete du menu, la touche « / » et la barre de l'Accueil ouvrent la meme fenetre
+//     (RechercheGlobale.tsx), qui cherche partout ; un clic ouvre la fiche par les portes existantes ;
+//   - l'ecran Annonces ne propose plus d'etendre A L'AVEUGLE : il compte ce qu'il y a ailleurs
+//     (« Aussi : 2 vendues ou closes, 5 archivees »), et etend tout seul quand les actives ne
+//     donnent rien ; la recherche etendue lit ses sources en meme temps (lib/api.ts).
+//   Audit et ergonomie : notice/AUDIT_NAVIGATION_APRES_ACTION_2026-10-23.md §20-§20.1.
+//   `false` = l'ancien comportement, en une ligne (la barre de l'Accueil redevient decorative).
+const RECHERCHE_GLOBALE = true
+function ecritDansUnChamp(cible: EventTarget | null) {
+  const el = cible as HTMLElement | null
+  if (!el) return false
+  const tag = el.tagName
+  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable
+}
 const EVENEMENT_RELIRE_RUBRIQUES = 'hektor:relire-rubriques'
 const EVENEMENT_GESTE_FAIT = 'hektor:geste-fait'
 function signalerGeste() {
@@ -14332,6 +14350,51 @@ export default function App() {
   }, [dataReloadKey])
   function relireApresLeGeste() {
     if (L_ECRAN_SUIT_LE_CLIC) setDataReloadKey((value) => value + 1)
+  }
+
+  // POINT 4 (26/10/2026) : la recherche globale. « / » l'ouvre de partout, sauf pendant une saisie.
+  const [rechercheGlobaleOuverte, setRechercheGlobaleOuverte] = useState(false)
+  useEffect(() => {
+    if (!RECHERCHE_GLOBALE) return
+    const surTouche = (event: KeyboardEvent) => {
+      if (event.key !== '/' || event.ctrlKey || event.metaKey || event.altKey) return
+      if (ecritDansUnChamp(event.target)) return
+      event.preventDefault()
+      setRechercheGlobaleOuverte(true)
+    }
+    window.addEventListener('keydown', surTouche)
+    return () => window.removeEventListener('keydown', surTouche)
+  }, [])
+  function rechercheOuvrirAnnonce(annonce: Dossier) {
+    const ecran: Screen = String(annonce.statut_annonce ?? '') === 'Estimation' ? 'estimations' : 'mandats'
+    setDossierReturnContactId(null)
+    if (screen !== ecran) openScreen(ecran)
+    openDossierDetailPage(annonce.app_dossier_id)
+  }
+  function rechercheOuvrirHorsCatalogue(annonce: Dossier) {
+    setDossierReturnContactId(null)
+    if (screen !== 'mandats') openScreen('mandats')
+    void openLightweightDetailImport(annonce)
+  }
+  function rechercheOuvrirMandat(mandat: MandatRecord) {
+    if (screen !== 'registre') openScreen('registre')
+    setFilters((current) => ({ ...current, query: String(mandat.numero_mandat ?? mandat.numero_dossier ?? '') }))
+    setMandatPage(1)
+    if (mandat.register_row_id) setSelectedRegisterRowId(String(mandat.register_row_id))
+  }
+  function rechercheVoirTout(groupe: GroupeRecherche, terme: string) {
+    const ecran: Screen = groupe === 'contacts' ? 'contacts' : groupe === 'mandats' ? 'registre' : 'mandats'
+    if (screen !== ecran) openScreen(ecran)
+    if (groupe === 'horsCatalogue') {
+      setAnnonceSearchScope('extended')
+      setFilters((current) => ({ ...extendAnnonceSearchFilters(current), query: terme }))
+    } else {
+      if (groupe === 'annonces') setAnnonceSearchScope('current')
+      setFilters((current) => ({ ...current, query: terme }))
+    }
+    setMandatPage(1)
+    setDossierPage(1)
+    setContactPage(1)
   }
 
   useEffect(() => {
@@ -19372,8 +19435,55 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   const hasAnnonceSearch = screen === 'mandats' && filters.query.trim().length >= 3
   const isDefaultAnnonceSearchScope = filters.archive === activeArchiveFilterValue && filters.statut === activeListingsFilterValue
   const canExtendAnnonceSearch = hasAnnonceSearch && annonceSearchScope === 'current' && isDefaultAnnonceSearchScope
-  const annonceSearchScopeSummary = hasAnnonceSearch
+  const annonceSearchScopeSummaryBrut = hasAnnonceSearch
     ? `${new Intl.NumberFormat('fr-FR').format(mandatsTotal)} resultat${mandatsTotal > 1 ? 's' : ''} dans ${annonceSearchScopeText(dataFilters)}`
+    : null
+  // POINT 4 (26/10/2026) : « ET AILLEURS ? » -- compte en parallele de la liste, jamais devant elle.
+  const [annoncesAilleurs, setAnnoncesAilleurs] = useState<{ cle: string; valeur: AnnoncesAilleurs | null } | null>(null)
+  const cleAilleurs = RECHERCHE_GLOBALE && canExtendAnnonceSearch ? JSON.stringify([dataFilters, dataScope]) : ''
+  useEffect(() => {
+    if (!cleAilleurs) return
+    let annule = false
+    compterAnnoncesAilleurs({ filters: dataFilters, scope: dataScope })
+      .then((valeur) => { if (!annule) setAnnoncesAilleurs({ cle: cleAilleurs, valeur }) })
+      .catch(() => { if (!annule) setAnnoncesAilleurs({ cle: cleAilleurs, valeur: null }) })
+    return () => { annule = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cleAilleurs])
+  const ailleurs = cleAilleurs && annoncesAilleurs?.cle === cleAilleurs ? annoncesAilleurs.valeur : null
+  const ailleursTotal = ailleurs ? ailleurs.venduesCloses + ailleurs.archivees + ailleurs.enCreation : null
+  const libelleEtendreAilleurs = ailleurs && ailleursTotal
+    ? `Aussi : ${[
+        ailleurs.venduesCloses ? `${ailleurs.venduesCloses} vendue${ailleurs.venduesCloses > 1 ? 's' : ''} ou close${ailleurs.venduesCloses > 1 ? 's' : ''}` : '',
+        ailleurs.archivees ? `${ailleurs.archivees} archivée${ailleurs.archivees > 1 ? 's' : ''}` : '',
+        ailleurs.enCreation ? `${ailleurs.enCreation} en création` : '',
+      ].filter(Boolean).join(', ')} — Afficher`
+    : null
+  // Rien ailleurs (compte SU et nul) : plus de bouton qui promet quelque chose.
+  const peutEtendreAnnonces = canExtendAnnonceSearch && !(ailleurs && ailleursTotal === 0)
+  // 0 resultat dans les actives et quelque chose ailleurs : on etend tout seul, UNE fois par saisie
+  // (sinon « Revenir » relancerait aussitot l'extension).
+  const etenduAutoPourRef = useRef<string | null>(null)
+  const [etenduAuto, setEtenduAuto] = useState<string | null>(null)
+  useEffect(() => {
+    if (!RECHERCHE_GLOBALE || !canExtendAnnonceSearch || mandatLoading) return
+    if (mandatsTotal !== 0 || !ailleursTotal) return
+    const saisie = filters.query.trim()
+    if (etenduAutoPourRef.current === saisie) return
+    etenduAutoPourRef.current = saisie
+    setEtenduAuto(saisie)
+    setAnnonceSearchScope('extended')
+    setFilters((current) => extendAnnonceSearchFilters(current))
+    setMandatPage(1)
+    setDossierPage(1)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canExtendAnnonceSearch, mandatLoading, mandatsTotal, ailleursTotal])
+  const annonceSearchScopeSummary = annonceSearchScopeSummaryBrut
+    ? annonceSearchScope === 'extended' && etenduAuto && etenduAuto === filters.query.trim()
+      ? `Rien dans les actives — ${annonceSearchScopeSummaryBrut}`
+      : ailleurs && ailleursTotal === 0 && canExtendAnnonceSearch
+        ? `${annonceSearchScopeSummaryBrut} · rien dans les vendues, closes ou archivées`
+        : annonceSearchScopeSummaryBrut
     : null
   const lightweightAnnonceFiltersActive = screen === 'mandats' && usesLightweightAnnonceIndex(filters)
   // ⚠ DEUX variables depuis le 12/10, et c'est VOLONTAIRE.
@@ -22999,6 +23109,20 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     </>
   )
 
+  // POINT 4 : la meme fenetre de recherche pour le bureau et le telephone.
+  const fenetreRechercheGlobale = RECHERCHE_GLOBALE ? (
+    <RechercheGlobale
+      ouverte={rechercheGlobaleOuverte}
+      filtresDeBase={defaultFiltersForScreen('mandats')}
+      scope={dataScope}
+      onFermer={() => setRechercheGlobaleOuverte(false)}
+      onOuvrirAnnonce={rechercheOuvrirAnnonce}
+      onOuvrirHorsCatalogue={rechercheOuvrirHorsCatalogue}
+      onOuvrirContact={(contactId) => showContactInDirectory(contactId)}
+      onOuvrirMandat={rechercheOuvrirMandat}
+      onVoirTout={rechercheVoirTout}
+    />
+  ) : null
   if (!responsiveExperience.isDesktop) {
     const mobileScreenTitle = screenHeader.title
     const mobileUserLabel = resolvedUserNegotiatorContext?.commercial_nom || profile?.display_name || 'Utilisateur'
@@ -23029,6 +23153,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         onNavigate={openScreen}
         onOpenUsers={isManagerOrAdmin ? () => void openUserTool() : undefined}
         onSignOut={session ? handleSignOut : undefined}
+        onOpenSearch={RECHERCHE_GLOBALE ? () => setRechercheGlobaleOuverte(true) : undefined}
       >
         {showMobileCommandCard ? (
         <section className="mobile-command-card">
@@ -23074,7 +23199,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           ) : null}
           {screen === 'mandats' && annonceSearchScopeSummary ? (
             <div className={`mobile-search-scope ${annonceSearchScope === 'extended' ? 'is-extended' : ''}`}>
-              <span>{annonceSearchScope === 'extended' ? 'Recherche étendue' : canExtendAnnonceSearch ? 'Recherche limitée' : 'Recherche filtrée'}</span>
+              <span>{annonceSearchScope === 'extended' ? 'Recherche étendue' : peutEtendreAnnonces ? 'Recherche limitée' : 'Recherche filtrée'}</span>
               <strong>{annonceSearchScopeSummary}</strong>
               {annonceSearchScope === 'extended' ? (
                 <button
@@ -23088,7 +23213,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 >
                   Revenir
                 </button>
-              ) : canExtendAnnonceSearch ? (
+              ) : peutEtendreAnnonces ? (
                 <button
                   type="button"
                   onClick={() => {
@@ -23098,7 +23223,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                     setDossierPage(1)
                   }}
                 >
-                  Étendre
+                  {libelleEtendreAilleurs ?? 'Étendre'}
                 </button>
               ) : null}
             </div>
@@ -23238,6 +23363,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             suiviRequestStats={suiviRequestStats}
             commercialRequestStats={commercialRequestStats}
             onOpenScreen={ouvrirEcranParDefaut}
+            onOuvrirRecherche={RECHERCHE_GLOBALE ? () => setRechercheGlobaleOuverte(true) : undefined}
             onOpenDetailPage={openDossierDetailPage}
             onOpenRequestModal={openRequestModal}
             onCreateAnnonce={canCreateHektorDraftAnnonce ? openDraftAnnonceModal : undefined}
@@ -23432,6 +23558,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           photosEnAttente={photosEnAttenteParTravail}
         />
         {appModals}
+        {fenetreRechercheGlobale}
       </>
     )
   }
@@ -23481,6 +23608,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           </button>
         </div>
         <nav id="main-mobile-navigation" className="screen-nav" aria-label="Navigation principale">
+          {RECHERCHE_GLOBALE ? (
+            <button className="nav-button" type="button" title="Rechercher" aria-keyshortcuts="/" onClick={() => setRechercheGlobaleOuverte(true)}>Rechercher</button>
+          ) : null}
           <button className={`nav-button ${screen === 'accueil' ? 'is-active' : ''}`} type="button" title="Accueil" onClick={() => openScreen('accueil')}>Accueil</button>
           <button className={`nav-button ${screen === 'mandats' ? 'is-active' : ''}`} type="button" title="Annonces" onClick={() => openScreen('mandats')}>Annonces</button>
           <button className={`nav-button ${screen === 'estimations' ? 'is-active' : ''}`} type="button" title="Estimations" onClick={() => openScreen('estimations')}>Estimations</button>
@@ -23508,6 +23638,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         </div>
       </header>
 
+      {fenetreRechercheGlobale}
       <div className="workspace-shell">
         <main className="content">
         {screen !== 'suivi' && screen !== 'accueil' && screen !== 'agenda' ? (
@@ -24129,6 +24260,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             suiviRequestStats={suiviRequestStats}
             commercialRequestStats={commercialRequestStats}
             onOpenScreen={ouvrirEcranParDefaut}
+            onOuvrirRecherche={RECHERCHE_GLOBALE ? () => setRechercheGlobaleOuverte(true) : undefined}
             onOpenDetailPage={openDossierDetailPage}
             onOpenRequestModal={openRequestModal}
             onCreateAnnonce={canCreateHektorDraftAnnonce ? openDraftAnnonceModal : undefined}
@@ -24197,8 +24329,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             totalNoun={currentAnnonceListingLabels.totalNoun}
             searchScopeSummary={annonceSearchScopeSummary}
             searchScopeExtended={annonceSearchScope === 'extended'}
-            canExtendSearch={canExtendAnnonceSearch}
-            extendSearchLabel={annonceSearchExtendLabel(filters)}
+            canExtendSearch={peutEtendreAnnonces}
+            extendSearchLabel={libelleEtendreAilleurs ?? annonceSearchExtendLabel(filters)}
             onExtendSearch={() => {
               setAnnonceSearchScope('extended')
               setFilters((current) => extendAnnonceSearchFilters(current))
@@ -24628,6 +24760,7 @@ function HomeDashboardScreen(props: {
   suiviRequestStats: SuiviRequestStats
   commercialRequestStats: CommercialRequestStats
   onOpenScreen: (screen: Screen) => void
+  onOuvrirRecherche?: () => void
   onOpenDetailPage: (id: number) => void
   onOpenRequestModal: (id: number, role?: 'nego' | 'pauline', requestType?: BusinessRequestType) => void
   onCreateAnnonce?: () => void
@@ -24712,7 +24845,13 @@ function HomeDashboardScreen(props: {
         </div>
         <label className="home-search-box">
           <span>Recherche</span>
-          <input readOnly value="" placeholder="Rechercher un bien, un contact, un mandat..." />
+          <input
+            readOnly
+            value=""
+            placeholder="Rechercher un bien, un contact, un mandat..."
+            onClick={props.onOuvrirRecherche}
+            onKeyDown={(event) => { if (event.key.length === 1 || event.key === 'Enter') props.onOuvrirRecherche?.() }}
+          />
         </label>
         <div className="home-top-actions">
           {props.onCreateAnnonce ? <button className="home-primary-action" type="button" onClick={props.onCreateAnnonce}>+ Nouveau</button> : null}
