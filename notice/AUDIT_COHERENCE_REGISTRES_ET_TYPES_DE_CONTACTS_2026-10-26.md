@@ -2389,3 +2389,45 @@ son numéro) ; noté pour l'étape 3, **pas un préalable**.
 1. **ce correctif de la vue** (patch + inverse + répétition, éprouvés dans une transaction annulée, avec le même témoin de vitesse que
    P2) ;
 2. **puis ⑥** (« à recalculer » marqué par nos registres, recalcul chaque minute, conflits signalés).
+
+## 37. ✅ P3, LE PRÉALABLE CODÉ — LA VUE COMPTE LES TRANSACTIONS « VIVANTES CHEZ NOUS » *(27/10, Frédéric : « oui, et explique-moi »)* — NON POSÉ
+
+**Les fichiers** : `supabase/patch_p3_transactions_vivantes_chez_nous_2026-10-27.sql` (+ `_INVERSE`, `_REPETITION`).
+
+**Le changement, une seule condition** : dans la 2ᵉ branche de `app_contact_relations_current` (les acheteurs), `p.transaction_presente`
+(« présente chez Hektor ») devient la règle « vivante » que le projet applique déjà dans `app_geste_affaire_optimistic` :
+`NOT (btrim(COALESCE(l.hektor_affaire_id, '')) <> '' AND l.present_in_hektor IS FALSE)`.
+- Ancre d'une seule ligne, trouvée une fois ; empreinte de départ = celle de P2 (`0021f0f1…`).
+- Les 20 colonnes, `security_invoker` et les droits sont gardés.
+- L'inverse reprend `create or replace` (mêmes colonnes) et **exige l'empreinte de P2**.
+
+**Éprouvé dans UNE transaction annulée** (pooler, 27/10), patch → répétition → inverse → contrôle de l'inverse :
+
+| contrôle | résultat |
+|---|---|
+| 20 colonnes, `security_invoker`, droits inchangés | OK |
+| la vue lit la règle « vivante », plus « présente chez Hektor » | OK |
+| la vue d'avant (P2) se reconstitue à l'octet | OK |
+| **aujourd'hui, la vue entière rend les mêmes lignes**, dans les deux sens | OK (167 846 lignes) |
+| **une vraie transaction rendue « née chez nous »** (sans numéro Hektor) : l'acheteur **apparaît**, la vue d'avant le cachait | OK (affaire 1001409) |
+| la même rendue « supprimée » (avec numéro, plus chez Hektor) : **hors du compte**, comme avant | OK |
+| l'essai sur la vraie transaction n'a rien laissé (sous-bloc toujours annulé) | OK |
+| fiche de JACQUIER, commercial | 130,2 ms |
+| fiche de JACQUIER, admin | ⚠ 1er passage **305,8 ms** (rouge, seuil 200) ; **relancé deux fois : 31,7 et 31,5 ms** (verts) |
+| l'inverse rend l'empreinte de P2, les 20 colonnes et le commentaire sans P3 | OK |
+
+- Le rouge du 1er passage est le même motif que pour P2 : le premier passage juste après le changement de la vue, quand Postgres refait ses
+  plans. Il ne se reproduit pas.
+- **Avaries volontaires** : une empreinte faussée **arrête** le patch ; une règle volontairement fausse (qui oublie les transactions nées
+  chez nous) est **attrapée** par la répétition (n° 4). La base est intacte après chaque essai : aucune transaction sans numéro ni d'essai.
+
+**Ce que ça change, concrètement** :
+- **aujourd'hui** : rien (0 ligne de différence) ;
+- **dès la pose** : une offre, un compromis ou une vente créés dans l'app font apparaître l'acheteur **au clic** dans la fiche contact (P2),
+  sans attendre Hektor ; et demain dans son type (⑥) ;
+- **après la coupure** : idem, sans numéro Hektor.
+
+⬜ **Reste** :
+1. **poser** (accord de Frédéric), puis la répétition ;
+2. **⑥** : le type marqué « à recalculer » par nos registres, recalculé chaque minute, conflits signalés ;
+3. **à l'étape 3** : le marqueur de suppression à nous, pour une transaction supprimée avant son numéro Hektor (§36.6).
