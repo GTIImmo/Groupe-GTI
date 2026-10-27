@@ -3443,3 +3443,24 @@ modification depuis le 18/09 (« le prix de vente suit le montant de l'offre »)
 - ⚠ Leçon de l'essai : un témoin qui lit `git HEAD` **casse dès que la correction est committée** (l'essai du point 6 est tombé à 23/26 le
   27/10). Les deux essais lisent désormais **le parent du commit qui a introduit la correction** (`git log -S`, chemin `:(top)…`).
 - Non éprouvé en réel : la création d'un compromis chez Hektor avec ces valeurs (essai sur 62965 possible, accord de Frédéric).
+
+### Point 6 n° 5 — LES MOTS DES PRIX DU COMPROMIS : audit du 27/10 — lecture seule, rien codé
+
+**La fenêtre du compromis a TROIS cases de prix**, pas deux : « Montant / prix public » (`prixPublique`, honoraires
+acquéreur compris) · « Prix de vente » (`prixDeVente` = prix public − honoraires acquéreur) · « Prix net vendeur »
+(`prixNetVendeur`). **Mesure, 689 compromis depuis 2025** : 657 à charge vendeur (les deux premiers égaux), 24 à charge
+acquéreur (le prix de vente égale alors le net vendeur ; ex. 50137 : 115 000 / 110 000 / 110 000), 2 les deux, 6 sans
+honoraires ; le net vérifie `montant − entrée − sortie` 665 fois. ⚠ L'API de Hektor ne rend **jamais** `prixDeVente`
+sur un compromis (seulement `prixPublique` et `prixNetVendeur`) : il est déduit (R3, « @prixDeVente »).
+Ailleurs, l'app dit déjà « Prix de vente FAI » / « Net vendeur » (fiche mandat, `App.tsx:5701`) et « Nouveau prix F.A.I »
+(avenant).
+
+**Défaut trouvé au passage** : la clé du carnet `prix_publique` porte le PRIX DE VENTE (`sale_price`, voir F1 du 23/10),
+mais la carte de la rubrique (`['Prix public', champ('prix_publique')]`) et le récapitulatif
+(`ajout(lignesCompromis, 'Prix public', …)`) l'affichent sous le mot « Prix public ». Touché aujourd'hui : **1 compromis**,
+l'essai 1001394 (110 000 affiché comme prix public).
+
+**⛔ DÉCISION DE FRÉDÉRIC (27/10)** : *« Garde les libellés de Hektor en attendant »*. **On ne renomme rien** dans la
+fenêtre. Les mots proposés (« Prix de vente FAI » / « Prix hors honoraires acquéreur » / « Net vendeur ») restent en
+réserve. Le défaut de la carte reste ouvert : le corriger avec le mot de Hektor serait « Prix de vente » au lieu de
+« Prix public » — à son « vas-y ».
