@@ -1862,3 +1862,69 @@ recherche » ne fait rien de visible chez Hektor → à auditer (`handleDeleteHe
   - Le fichier du worker datait de **09:47:27**, avant le démarrage : le code de l'alerte à l'abandon est donc chargé.
   - La file était vide : aucun travail mis à jour depuis 10:10, puis 0 pending / 0 running à 10:24. Aucune erreur dans les 4 journaux depuis.
   - ⚠ **Ce démarrage a aussi chargé le code Youtrust / PDF de mandat NON COMMITÉ de l'autre session.** Il dort : `app_setting.signature_youtrust = off` (vérifié à 10:24), et ses deux branches ne jouent qu'interrupteur allumé.
+
+### 23.4 Point 7a — Échap ferme la fiche : RE-AUDIT DU 27/10 (inventaire, essais en maquette ; rien codé)
+
+**Inventaire du code** (script sur les 15 `.tsx` du front ; `role="dialog"`, `aria-modal`, `createPortal`, classes en
+overlay / backdrop / modal / drawer, et chaque écoute d'Échap) — **~35 fenêtres**, sans balisage commun :
+
+| famille | où | Échap aujourd'hui |
+|---|---|---|
+| 13 fenêtres de demande / action (`modal-overlay` + `modal-panel`) : baisse de prix, annulation, diffusion, statut, activer, import d'archive… | App (rendu de l'app) | ❌ rien |
+| fenêtres d'agenda / e-mail (`createPortal` + `modal-overlay`) | GoogleAgenda*, ContactEmailComposerModal | ❌ rien |
+| aperçu / éditeur PDF (`estim-pdf-overlay`, `estim-editor-modal`), cycle (`fcyc-modal`), tiroir de transaction (`transaction-detail-drawer`) | CockpitDetail, DossierDetailLayoutBase, MobileDossierDetail | ❌ rien |
+| visionneuse photo (`bvv`, dialog) | BienvuViewer | ✅ se ferme (écoute la fenêtre, `preventDefault`) ; en plein écran, c'est le navigateur qui sort |
+| recherche globale, rapprochement (stats), modification de contact | RechercheGlobale, RapprochementStats, ContactEditModalV2 | ✅ se ferment |
+| menus : ☰ téléphone (`mtiroir`), compte (`rn-pop`, menu), cloche (`gti-notif-pop`, dialog), compteur de mes actions | MobileLayout, App, NotificationsBell | ✅ se ferment |
+| édition en ligne d'un champ (cockpit, champs corrigeables) | CkInlineField, CkDescField, CorrigeableAnnonceField | ✅ **annule la saisie** — à ne pas casser |
+| **les fiches** | voir ci-dessous | ❌ **rien (N8)** |
+
+**Les fiches, et leur bouton de sortie** (mesuré en maquette, bureau 1 440 px ET téléphone) :
+
+| fiche | conteneur | bouton qui la ferme aujourd'hui |
+|---|---|---|
+| annonce, bureau (cockpit) | ⚠ un `modal-overlay` plein écran — **la fiche elle-même est bâtie comme une fenêtre** | `fa-ck-rail-brand` : « Retour aux annonces », ou **« Retour au Cockpit »** quand une rubrique est ouverte (un niveau de plus) |
+| annonce, téléphone | `mobile-detail-overlay` | `mobile-detail-close` « Fermer » |
+| contact (sur une annonce, ou écran Contacts) | `fa-cx-overlay` (bienvu) / `fcx-overlay` | `fa-cx-back` / `fcx-back` — ⚠ **non testable en maquette** (0 contact ; le mandant 1001 met `contact=1001` dans l'adresse sans afficher de fiche) |
+| registre (menu Mandats) | `modal-overlay` | `md-btn` « Retour » et « Fermer » (son propre `detailOpen`) |
+
+**Ce que les essais ont trouvé :**
+- ⚠ **Le tiroir ☰ du téléphone est TOUJOURS dans la page**, poussé hors écran (`translateX(-347px)`), avec `role="dialog"`
+  même fermé. Une règle « une fenêtre est ouverte » naïve **désactiverait Échap pour toujours** sur ce rendu → il faut
+  le critère « **visible DANS l'écran** » (rectangle qui coupe la fenêtre). *(Au passage : un `role="dialog"` sur un
+  tiroir fermé est faux pour les lecteurs d'écran — noté, hors chantier.)*
+- ✅ Avec ce critère, **rien n'est vu** sur une liste (Accueil, Annonces, Mandats, Contacts), et **chaque fenêtre ouverte est
+  vue** : demande de baisse de prix, statut, visionneuse photo (téléphone) ; cloche et menu du compte (bureau, `role`
+  + `aria-expanded`).
+- ⚠ Sur le bureau, la fiche cockpit **et** le registre sont des `modal-overlay` : il faut **marquer les conteneurs de
+  fiche** pour ne pas les prendre pour une fenêtre posée dessus.
+
+**Ce que je ferais** — interrupteur `ECHAP_FERME_LA_FICHE` :
+1. **Marquer**, sans rien changer à leur comportement, les ~6 conteneurs de fiche (`data-fiche`) et leur bouton de sortie
+   (`data-fiche-retour`) : cockpit (rail), téléphone, contact ×2, registre.
+2. **Une seule écoute** (dans `App`, **au-dessus des `return` de connexion** — §22.4). À Échap :
+   - rien si la touche a déjà été traitée (`defaultPrevented` : visionneuse, recherche globale), si elle est répétée ou
+     accompagnée d'une autre touche ;
+   - rien si le curseur est dans un **champ** (`input`, `textarea`, `select`, éditable) : l'édition en ligne garde son Échap ;
+   - rien si une **fenêtre visible dans l'écran** est ouverte et n'est pas une fiche (sélecteur large : dialog, menu,
+     aria-modal, overlay, backdrop, drawer, lightbox, `-modal`) — **dans le doute, rien** ;
+   - sinon : prendre la fiche **du dessus** (l'élément au centre de l'écran, `elementFromPoint`, et sa fiche ; à défaut la
+     dernière visible) et **cliquer SON bouton de sortie**.
+3. Conséquence voulue : **un Échap = un niveau**, exactement comme le bouton — rubrique → cockpit → liste ; contact posé
+   sur une annonce → l'annonce ; et l'adresse, le fil (point 5) et le retour vers le contact (point 1) restent ceux du
+   bouton, puisque c'est lui qui agit.
+
+**Ce que ça pourrait casser ailleurs :**
+- **une fenêtre que le sélecteur ne verrait pas** fermerait la fiche **dessous**, avec ce qui y était tapé. Remède : la
+  liste des ~35 est passée en maquette une par une au codage ; celles qu'on ne peut pas ouvrir en maquette (fenêtres
+  contact, agenda) sont couvertes par leur classe (`modal-overlay`) ; et **un menu interne sans rôle** (ex. le menu
+  « actions » de la fiche contact, `contactActionsOpen`) est à **recenser au codage** et à ajouter ;
+- **les fenêtres de demande / agenda ne se ferment PAS à Échap** (aujourd'hui non plus) : pendant qu'elles sont ouvertes,
+  Échap ne fait rien. Les fermer aussi serait **un autre geste** (13 fenêtres, des saisies dedans) — **non proposé ici** ;
+- **téléphone** : pas de touche Échap en pratique ; le bouton « retour » d'Android passe par l'adresse (point 1), inchangé ;
+- la **fiche contact** ne peut pas être éprouvée en maquette : il faudra soit un contact de maquette, soit l'essai en réel.
+
+**Contrôle prévu** : maquette bienvu bureau ET téléphone — chaque fiche se ferme ; rubrique → cockpit → liste ; Échap ne
+fait rien avec une fenêtre de demande, la visionneuse, la cloche, le menu du compte, le ☰ ouvert ; Échap dans un champ du
+cockpit annule la saisie **sans** fermer la fiche ; témoin inverse interrupteur éteint ; `npm run build` ; la vraie app
+ouverte **déconnectée**.
