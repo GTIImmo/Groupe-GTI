@@ -1622,3 +1622,19 @@ Après le déplacement, **aucun hook** ne reste après le `return` de connexion 
   l'e-mail ne part que pour les gestes (`JOB_TYPES_A_NOTIFIER`) : une pastille peut passer au rouge sans e-mail — l'admin
   le voit alors dans Santé. Et pour un négociateur sur un bien qui n'est **pas à lui**, la fonction refuse
   (`forbidden_action_status`) : sa pastille ne montre pas ce rouge-là.
+
+### 19.3 ⛔ LE TÉMOIN DE LA SUPPRESSION DE RECHERCHE EST ROUGE — 27/10 au matin
+
+La recherche Firminy de 20000008 (index 1, critère 471880, « supprimée » le 26/10 à 12:45 par le travail `e43aff82`) est
+**toujours `archive false / is_active true`** après la nuit : relue par le run des recherches à **02:48:21** le 27/10.
+L'autre recherche du contact (index 0, Le Puy-en-Velay, appartement 123 500-136 500) est `archive true` — ⚠ elle l'était
+**très probablement déjà avant** le geste : elle correspond au bien de l'essai 24113 (130 000, Le Puy), dont le compromis
+du 22/10 a posé une relecture de raison `qualification_acquereur_archivee` (travail `12f0610b`). Non prouvé par une photo
+d'avant le 26/10 : je ne peux pas exclure à 100 % que le geste ait visé la mauvaise (risque §19.2).
+
+**Ce que ça dit** : `modifDateArchiveCritere` avec `dateArchive = 26-10-2026` n'a pas fait basculer `archive` en ~14 h.
+Deux lectures restent possibles, et je ne tranche pas sans mesure : (a) Hektor archive **après** la date (le lendemain
+ou plus tard) ; (b) le geste ne marche pas. ⚠ La date d'archivage programmée **ne nous parvient pas** (ni l'API ni notre
+table ne la portent, mesure du 16/10), donc on ne peut constater que la bascule.
+⏰ **Témoin à relire le 28/10 au matin** (après le run des recherches) ; s'il est encore actif, le geste « supprimer une
+recherche » ne fait rien de visible chez Hektor → à auditer (`handleDeleteHektorContactSearch`).

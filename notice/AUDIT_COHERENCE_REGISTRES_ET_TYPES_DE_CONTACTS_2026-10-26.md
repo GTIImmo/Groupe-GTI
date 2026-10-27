@@ -1091,3 +1091,29 @@ R2 **fait et allumé** (25/10 20:40 ; allumé 26/10 06:39), R4 **posé** (26/10 
 - **Les menus à l'écran Annonces** (panneau « Filtres ») : Agence **28** · Négociateur **49** (registre 44 ∪ catalogue de nuit, comme avant) ·
   Statut **11** (10 + « actives ») · Validation **2** · Passerelle **5**.
 - ⚠ La capture d'écran de Chrome a cessé de répondre (fenêtre en arrière-plan) : la lecture des menus s'est faite dans la page, sans capture.
+
+## 26. ✅ LA PREMIÈRE NUIT EST BONNE — contrôle du 27/10 au matin *(Frédéric : « contrôle les résultats des correctifs »)*
+
+Run quotidien du 27/10 : **04:00:01 → 06:12:28, code 0**. Les bilans écrits par la nuit, puis les répétitions rejouées
+par moi en lecture seule.
+
+| chantier | attendu | mesuré | verdict |
+|---|---|---|---|
+| **1** — l'acheteur « propriétaire depuis la vente » | ~113 liens | bilan **116** (`acheteur_nes_de_la_vente`, 116 posés, 0 levé) ; répétition **9/9** (dont JACQUIER 61730 au 2026-09-25, les 10 vrais mandants intacts, la vue ne dit plus « mandant ») ; la vue rend JACQUIER `proprietaire` + `acquereur_offre/compromis/vente` | ✅ |
+| **2 a** — les vendeurs à nos numéros (C4) | ~58 514 posés, ~36 sans | bilan **58 526** ; en base, **58 526 sur 58 562** personnes portent `app_contact_id`, **0** dans la plage Hektor (< 10 M) ; les **36** restantes sont toutes sur **12 transactions absentes de Hektor** (`present_in_hektor = false`) | ✅ — les 36 attendent toujours sa décision |
+| **2 c** — notre numéro de mandat | ~23 336 | bilan **23 342** ; répétition **4/4** (même clé bien + numéro, aucune transaction sans numéro servie) | ✅ |
+| **la table des parties** | sentinelle à 0 | répétition fiche, contrôles **21** (116 965 lignes justes après le recalcul de C4) et **22** (0 écart) | ✅ |
+| **la fiche contact** | < 200 ms admin, < 400 ms commercial | **39,4 ms** / **131,2 ms** (hier 36,4 / 131,1), les deux index servent, témoin inverse 389,7 / 266,7 ms ; répétition **14/14** | ✅ |
+
+⚠ **Un faux rouge, attrapé et expliqué** : au **premier** passage, la fiche admin a mesuré **304 ms** (rouge) et le témoin
+inverse s'est dit « à regarder ». Cinq mesures à la suite donnent **274 → 39 → 38 → 38 → 39 ms** : c'est le **cache froid**
+de la toute première lecture du matin (la répétition garde la 2ᵉ mesure, qui tombait encore dans le froid). Rejouée
+ensuite : 14/14. ➡ La répétition gagnerait à faire **une lecture d'échauffement** avant de mesurer — noté, pas changé.
+
+Durées du push (index adresse posés le 26/10 à 17:00) : **push upgrade 5 min 02** (référence 4 min 05 – 4 min 59, hier
+4 min 45 : +3 s au-dessus de la fourchette, sans alerte) · **push contacts 35 s** (référence 32-40 s) · registre des
+transactions 1 min 56.
+
+Le moniteur de **04:49** affichait « lignes sans numéro : 549 » et « 1 travail en erreur » : il passe **avant** le push de
+05:50 (la vue `app_contacts_sans_numero` vaut **0** après le run) ; l'erreur est la relecture du contact d'essai 20000016,
+supprimé le 26/10 (attendue).
