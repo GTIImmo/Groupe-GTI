@@ -1935,3 +1935,37 @@ n'est pas poussé. Les deux autres lecteurs à l'écran et les deux en base nomm
 3. **rejouer la répétition** le lendemain de la première nuit.
 
 **Retour arrière** : `_INVERSE.sql`, éprouvé le 27/10 dans une transaction annulée.
+
+### 31.7 ✅ P2 VU À L'ÉCRAN — 27/10 *(Frédéric : « j'ai poussé ; regarde l'écran de la fiche contact »)*
+
+Vercel sert `index-DB_j7vD8.js`, qui contient le code de P2 (`fa-cx-lk-roles`, « Propriétaire depuis le », « Vente signée »). Contrôle fait
+dans le Chrome de Frédéric (sa session), dans un onglet à moi, refermé à la fin.
+
+| fiche | ce que montre la ligne du bien | verdict |
+|---|---|---|
+| JACQUIER (10354352, mandat 18563) | **Propriétaire** · **Acheteur** — « Propriétaire depuis le 25/09/2026 · Vente signée le 25/09/2026 » — 210 000 € | ✅ |
+| un acheteur en cours (10001775) | **Acheteur** — « Compromis du 17/09/2026 » — 45 000 € | ✅ |
+| un compromis annulé (10000087) | **Acheteur** en gris (`rgb(138,127,110)`) — « Compromis annulé (du 09/11/2017) » — 189 000 € | ✅ |
+| un mandant devenu acheteur (10016576) | **Mandant** · **Acheteur** — « Vente signée le 03/06/2019 » — 22 000 € ; son 2e bien : **Mandant**, « annonce liée » | ✅ |
+| un mandant seul (10000045) | **Mandant** — « annonce liée », sans montant | ✅ |
+
+- **Bureau** (1280 px, la fenêtre ne descend pas plus bas) : aucun débordement (`scrollWidth = clientWidth`).
+- **Téléphone, vrai rendu mobile** : la même adresse ouverte dans un cadre de 390 px **dans l'onglet de sa session** (même origine, donc
+  même connexion). Les pastilles passent sous le titre, le montant reste à côté, **rien ne déborde**. ⚠ Le sous-titre est **coupé par des
+  points de suspension** : « Propriétaire depuis le 25/09/2026 · Ve… ».
+- **Mode sombre du téléphone : NON VU** (le Chrome de Frédéric est en clair, et je ne peux pas l'imiter dans sa session).
+
+⬜ **Deux petites questions** :
+1. au téléphone, laisser le sous-titre aller **à la ligne** au lieu de le couper (une règle CSS sous 640 px) ?
+2. sur un compromis annulé, on montre encore **son montant** (189 000 €) : le garder, le griser ou le retirer ?
+
+⚠⚠ **TROUVAILLE, NOTÉE, PAS TRAITÉE — OUVRIR UNE FICHE PEUT FAIRE RECULER LE TYPE DU CONTACT.**
+- L'en-tête de JACQUIER dit « **Mandant · Acheteur** » : en ligne, son type est `["acquereur_offre","mandant"]`. Or la nuit lui avait donné
+  propriétaire + acheteur (vente) : 115 des 116 « nés de la vente » l'ont bien en ligne ; **JACQUIER est le seul en retard**.
+- La cause mesurée : **deux relectures à l'ouverture de sa fiche** (`refresh_console_contact_data`, raison `read_through_open`, 27/10 à
+  10:25 et 14:29 UTC). Cette relecture d'**un seul** contact recalcule le type et le pousse — et **pas comme la nuit**.
+- Sur les **12** contacts relus en 24 h : **2** ont perdu la vente dans leur type, 1 le compromis, 1 le propriétaire. Ça dure **jusqu'à la
+  nuit suivante**, et ça recommence à chaque ouverture.
+- La ligne du bien (P2) est **juste**, parce qu'elle lit les registres et non le type : c'est l'**en-tête** et l'**annuaire** qui reculent.
+- **Cause NON cherchée** (le chantier 1 est bien allumé dans `.env`, l. 76 ; `refresh_contact_inproc.py` le charge-t-il, et avec quelles
+  relations ?). C'est exactement le sujet de **P3** (le type suit le geste) : **à auditer en premier dans P3**.
