@@ -3040,3 +3040,40 @@ Ensuite : **les 3 retours arrière du worker** (§43.3, redémarrage des 4 servi
 
 **Retour arrière** : retirer la ligne de `.env` (effet immédiat), puis `patch_type_nuit_2026-10-27_INVERSE.sql`.
 **Ensuite** : les 3 retours arrière du worker (§43.3).
+
+## 47. ÉTAPE 2, LE WORKER — audit des écritures qui changent le type sans passer par une porte *(27/10, Frédéric : « on enchaîne »)* — lecture seule, rien codé
+
+**La question** : les 6 portes de la base recalculent le type au clic. Mais le worker écrit aussi dans nos registres **sans passer par
+elles**. Lesquelles de ces écritures changent ce que la vue `app_contact_relations_current` montre, donc le type ?
+
+**La vue, relue en base le 27/10** :
+- branche des liens : `(present_in_hektor OR (source='app' AND absent_depuis IS NULL)) AND retire_le IS NULL` ;
+- branche des transactions : la partie doit être `acquereur`, et la transaction **vivante chez nous**. L'**état** (refusée, annulée…) ne
+  change pas le rôle (`'acquereur_' || kind`).
+- ⚠ `app_affaire_partie` **suit** `app_affaire_ledger` par 3 déclencheurs (`app_affaire_partie_suivre`, après insert, update et
+  delete) : réécrire la liste des acquéreurs du registre **change les parties**.
+
+**Les écritures du worker, une par une** (`Console/console_job_worker.js`) :
+| où | ce qu'elle fait | change le type ? |
+|---|---|---|
+| `annulerRattachementOptimiste` (l. ~17500) | Hektor refuse un rattachement : `absent_depuis` posé | **OUI**, le lien sort de la vue (le contact perd « mandant ») |
+| `annulerRetraitOptimiste` (l. ~17459) | Hektor refuse un retrait : `retire_le` remis à vide | **OUI**, le lien revient |
+| `restaurerEtatAffaire` (l. ~21775), geste « supprimer » | Hektor refuse une suppression : `present_in_hektor` remis à vrai | **OUI**, la transaction redevient vivante |
+| `restaurerEtatAffaire`, autres gestes | l'ancien état est remis | non (l'état ne compte pas), appel sans effet |
+| `reporterAuRegistre` (l. ~15824) | après une création ou une modification, le registre reçoit **les acquéreurs et les mandants que Hektor a retenus** | **OUI, si Hektor a écarté quelqu'un en silence** : les déclencheurs changent les parties. ⭐ Ce 4e chemin n'était pas dans le §43.3 |
+| marquage « lien établi » (l. ~17250) | `present_in_hektor` false → true, sur un lien de l'app sans `absent_depuis` | non (il était déjà dans la vue) |
+| `retirerAffaireDuRegistre` (l. ~22874) | après la suppression **confirmée** par Hektor, la ligne du registre est effacée | non : le clic l'avait déjà rendue non vivante. Appel à ajouter quand même par prudence (coût ≈ 13 ms) |
+| suppression d'un contact (l. ~21284) | ses liens sont effacés | non pour les autres contacts ; le contact lui-même disparaît |
+
+**Le correctif proposé** : une petite fonction `recalculerTypeDuBien(job, annonceId, contexte)`, sur le modèle de l'appel déjà présent
+au worker (`rpc/app_photos_remplir_adresses_app`, l. ~9841). Elle appelle `rpc/app_recalculer_type_du_bien` (droit service vérifié, et la
+fonction ne fait jamais échouer). Elle **ne jette jamais** et écrit une ligne au journal. Elle est appelée après chacune des **5**
+écritures marquées ci-dessus : 4 qui changent le type, plus la suppression confirmée.
+- **Sans elle** : le type est faux jusqu'à la fin de la nuit suivante, où le calcul pour tous (§46) le remet. C'est donc un gain de
+  délai, pas un défaut de fond.
+- **Essai prévu** : un essai hors ligne qui exige l'appel après chacune des 5 écritures (le **mutant** : on en retire un, il doit rougir),
+  et la fonction jouée sur un faux `supabaseRequest`.
+
+⚠ **Coordination** : le fichier du worker porte **130 lignes non commitées de l'autre session** (signature Youtrust), écrites à 14:33,
+donc **après** le redémarrage de 10:23. **Un redémarrage chargerait aussi ce code-là.** Mon commit ne prendra que mes lignes (contenu
+déposé à part dans git) ; mais le redémarrage, lui, chargera le fichier entier.
