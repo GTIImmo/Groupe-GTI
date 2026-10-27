@@ -82,9 +82,22 @@ function rolesContact(c: AppContact) {
     const v = typeof brut === 'string' ? JSON.parse(brut) : brut
     if (Array.isArray(v)) roles = v.map((x) => String(x))
   } catch { /* liste illisible : rien */ }
+  // ⑧ types, P1 (27/10/2026) : les mots ET l'ordre de l'annuaire du bureau (App.tsx, contactDirectoryCategories) --
+  //   une transaction fait un ACHETEUR ; l'Acquéreur est celui qui a une recherche ACTIVE. `false` = l'ancien affichage.
+  if (TYPE_CONTACT_UNIQUE) {
+    const mots: string[] = []
+    if (roles.includes('mandant')) mots.push('Mandant')
+    if (roles.some((r) => r === 'acquereur' || r.startsWith('acquereur_'))) mots.push('Acheteur')
+    if (roles.includes('proprietaire')) mots.push('Propriétaire')
+    if (Number((c as { active_search_count?: unknown }).active_search_count ?? 0) > 0) mots.push('Acquéreur')
+    return mots.join(' · ')
+  }
   const noms: Record<string, string> = { mandant: 'Mandant', proprietaire: 'Propriétaire', acquereur: 'Acquéreur', acquereur_offre: 'Acquéreur', acquereur_compromis: 'Acquéreur', acquereur_vente: 'Acquéreur' }
   return Array.from(new Set(roles.map((r) => noms[r] ?? '').filter(Boolean))).join(' · ')
 }
+
+// Le même interrupteur que App.tsx (TYPE_CONTACT_UNIQUE) : les deux se basculent ensemble.
+const TYPE_CONTACT_UNIQUE = true
 
 function initiales(nom: string) {
   const mots = nom.replace(/^(M\.|Mme\.?|Mr\.?\/Mme|Mr\.?|Mlle\.?)\s+/i, '').split(/\s+/).filter(Boolean)

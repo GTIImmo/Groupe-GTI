@@ -1621,3 +1621,33 @@ Six pièces, chacune : code → essais (dont témoin inverse) → pose → contr
 ### L'ordre proposé
 **P1** (mots) → **P2** (fiche) → **P3** (type au geste) → **P5 + P6** (une seule règle ; P6 attend la décision) → **P4** (après son audit).
 Rien n'est envoyé chez Hektor par aucune pièce.
+
+### 29.1 ✅ P1 CODÉ — un seul vocabulaire *(27/10, Frédéric : « vas-y pour P1 »)* — écran seulement, NON POUSSÉ, PAS VU À L'ÉCRAN
+- **Interrupteur** `TYPE_CONTACT_UNIQUE` (App.tsx, avant `contactToneFromRoles` ; le même nom dans `RechercheGlobale.tsx`). Allumé :
+  - `contactToneFromRoles` (cartes du téléphone, pastille `ContactTypeMark`) rend le type **dominant** de `contactDirectoryCategories`
+    (Mandant > Acheteur > Propriétaire > Acquéreur = recherche active) ; « Mixte » et « Vendeur » disparaissent ;
+  - `contactToneLabel` / `contactToneBadgeLabel` : **Acheteur · Propriétaire · Mandant · Acquéreur · Contact** (les mots du bureau) ;
+  - `contactDirectoryRoleLabel` (lignes et en-tête des fiches contact) : « Acheteur — offre / compromis / vente », « Propriétaire » ;
+  - les deux menus « Rôle contact » : « Acheteur » (la valeur filtrée ne change pas) ;
+  - la recherche globale : les mots **et l'ordre** du bureau, plus « Acquéreur » si une recherche est active.
+- **Inchangés** : l'annuaire du bureau (la référence) ; les options « Notaire » du menu (en attente de Frédéric) ; les couleurs (mêmes
+  classes `is-<ton>` ; « mixed » n'est plus produit, la carte prend la couleur du type dominant).
+- **Essai** `apps/hektor-v1/test_type_contact_unique.cjs` : **13 / 13** — les 64 combinaisons des 5 rôles réels × recherche active :
+  téléphone, pastille et recherche globale = annuaire du bureau ; JACQUIER « Acheteur » (plus « Mixte ») ; **témoin inverse** : la
+  version d'avant était en désaccord (**182** écarts) ; **mutant** (interrupteur à false) : **122** écarts. `npm run build` vert.
+- ⚠ **Pas vu à l'écran** : la démonstration (`hektor-mock-bienvu`) n'a aucun contact, et la version réelle locale (`hektor-dist-reel`)
+  demande la connexion Google — je ne me connecte pas à la place de Frédéric. À voir après le push : annuaire du bureau (inchangé),
+  téléphone 390 px (cartes et pastille), recherche globale, une fiche contact (JACQUIER).
+- ⚠ Un contact qui n'a **que** des recherches archivées passait « Recherche » ; il passe « Contact » (l'Acquéreur = recherche ACTIVE).
+  Dans l'annuaire : 1 contact.
+
+### 29.2 Les notaires — mesure du 27/10, pour la décision de Frédéric
+- Ils **existent** chez nous : la table des parties porte **23 351** rôles de notaire (16 573 côté vendeur, 6 778 côté acquéreur), soit
+  **1 768** couples personne + rôle ; **1 521** sont dans l'annuaire, et **1 516** portent chez Hektor la typologie « partenaire ».
+  359 ont au moins 10 transactions.
+- Mais **aucun type de contact ne les dit** : le type de nuit (`relation_roles_json`) ne lit que les liens au bien (mandant,
+  propriétaire) et les acheteurs ; les notaires de la table des parties n'y entrent pas. D'où les deux options « Notaire entrée / sortie »
+  du menu, qui ne trouvent **personne**, et la pastille qui les dit « Contact ».
+- **Les choix** : **A** retirer les deux options (le menu ne ment plus) ; **B** les garder telles quelles ; **C** faire vivre le type
+  « Notaire » : le type lit aussi les notaires de la table des parties (base, même patron que P3) → ~1 500 contacts « Notaire » dans
+  l'annuaire, et le filtre marche. ⬜ À trancher.

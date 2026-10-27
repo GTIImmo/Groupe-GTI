@@ -23989,7 +23989,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                       options={[
                         { value: 'mandant', label: 'Mandant' },
                         { value: 'proprietaire', label: 'Proprietaire' },
-                        { value: 'acquereur', label: 'Acquereur' },
+                        { value: 'acquereur', label: TYPE_CONTACT_UNIQUE ? 'Acheteur' : 'Acquereur' },
                         { value: 'notaire_entree', label: 'Notaire entree' },
                         { value: 'notaire_sortie', label: 'Notaire sortie' },
                       ]}
@@ -24728,7 +24728,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                   options={[
                     { value: 'mandant', label: 'Mandant' },
                     { value: 'proprietaire', label: 'Proprietaire' },
-                    { value: 'acquereur', label: 'Acquereur' },
+                    { value: 'acquereur', label: TYPE_CONTACT_UNIQUE ? 'Acheteur' : 'Acquereur' },
                     { value: 'notaire_entree', label: 'Notaire entree' },
                     { value: 'notaire_sortie', label: 'Notaire sortie' },
                   ]}
@@ -39070,7 +39070,25 @@ function isBuyerRole(value: string) {
   return value === 'acquereur' || value.startsWith('acquereur_')
 }
 
+// ⑧ TYPES, ÉTAPE 4 — P1 (27/10/2026) : UN SEUL VOCABULAIRE. L'écran avait TROIS logiques : l'annuaire du bureau
+//   (contactDirectoryCategories : Mandant > Acheteur > Propriétaire > Acquéreur = recherche ACTIVE), le téléphone et la
+//   pastille (ce ton-ci : « Acquereur » = une TRANSACTION, « Vendeur », « Mixte »), et la recherche globale. Le même mot
+//   « Acquéreur » y avait deux sens. Allumé, le ton du téléphone et de la pastille est le type DOMINANT de l'annuaire du
+//   bureau, avec ses mots. Note : notice/AUDIT_COHERENCE_REGISTRES_ET_TYPES_DE_CONTACTS_2026-10-26.md §27.4 et §29 (P1).
+//   ⚠ Les rôles « notaire » n'existent dans AUCUN type de contact aujourd'hui (mesure du 27/10) : le ton « notary » reste
+//   pour le jour où ils y entreront. `false` = l'ancien comportement, en une ligne.
+const TYPE_CONTACT_UNIQUE = true
+
 function contactToneFromRoles(roles: string[], contact?: Pick<AppContact, 'active_search_count' | 'total_search_count'> | null): ContactTone {
+  if (TYPE_CONTACT_UNIQUE) {
+    const dominant = contactDirectoryCategories(roles, Number(contact?.active_search_count ?? 0))[0]
+    if (dominant === 'mandant') return 'mandate'
+    if (dominant === 'acheteur') return 'buyer'
+    if (dominant === 'proprietaire') return 'owner'
+    if (dominant === 'acquereur') return 'search'
+    if (roles.some((role) => role.startsWith('notaire'))) return 'notary'
+    return 'default'
+  }
   const hasBuyer = roles.some(isBuyerRole)
   const hasOwner = roles.includes('proprietaire')
   const hasMandate = roles.includes('mandant')
@@ -39146,7 +39164,14 @@ function contactHasDuplicateRisk(contact: Pick<AppContact, 'duplicate_max_severi
   return severity === 'high' || severity === 'critical' || Number(contact.duplicate_group_count ?? 0) > 0
 }
 
+// P1 (27/10) : allumé, les mots de l'annuaire du bureau (contactDirectoryTypeLabel) — titre et pastille disent la même chose.
+const TON_LIBELLE_UNIQUE: Record<ContactTone, string> = {
+  buyer: 'Acheteur', owner: 'Propriétaire', mandate: 'Mandant', notary: 'Notaire',
+  mixed: 'Contact', search: 'Acquéreur', default: 'Contact',
+}
+
 function contactToneLabel(tone: ContactTone) {
+  if (TYPE_CONTACT_UNIQUE) return TON_LIBELLE_UNIQUE[tone]
   if (tone === 'buyer') return 'Acquereur'
   if (tone === 'owner') return 'Proprietaire'
   if (tone === 'mandate') return 'Mandant'
@@ -39157,6 +39182,7 @@ function contactToneLabel(tone: ContactTone) {
 }
 
 function contactToneBadgeLabel(tone: ContactTone) {
+  if (TYPE_CONTACT_UNIQUE) return TON_LIBELLE_UNIQUE[tone]
   if (tone === 'buyer') return 'Acquereur'
   if (tone === 'owner') return 'Vendeur'
   if (tone === 'mandate') return 'Mandant'
@@ -39227,6 +39253,14 @@ function contactDuplicateTone(value: AppContact['duplicate_max_severity']) {
 
 function contactDirectoryRoleLabel(value: string) {
   const normalized = value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+  // P1 (27/10) : une transaction fait un ACHETEUR (l'Acqu\u00e9reur est celui qui CHERCHE, recherche active).
+  if (TYPE_CONTACT_UNIQUE) {
+    if (normalized === 'proprietaire') return 'Propri\u00e9taire'
+    if (normalized === 'acquereur') return 'Acheteur'
+    if (normalized === 'acquereur_offre') return 'Acheteur \u2014 offre'
+    if (normalized === 'acquereur_compromis') return 'Acheteur \u2014 compromis'
+    if (normalized === 'acquereur_vente') return 'Acheteur \u2014 vente'
+  }
   if (normalized === 'proprietaire') return 'Proprietaire'
   if (normalized === 'mandant') return 'Mandant'
   if (normalized === 'acquereur') return 'Acquereur'
