@@ -2049,3 +2049,56 @@ Plus frais, plus lent, plus de code.
 **Réparer les 5 contacts** : **rien à faire**. La nuit les recalcule ; à vérifier demain matin.
 
 Le vrai P3 (le type suit le **geste**, dans la base, au clic) vient **après** : sans A', chaque ouverture de fiche défairait ce qu'il pose.
+
+## 33. ✅ P3 « B » POSÉ — LA RELECTURE D'UN SEUL CONTACT NE TOUCHE PLUS À CE QUI VIENT DES LIENS *(27/10, Frédéric : « B » ; « nos registres sont autonomes […] il faut B pour ne pas écraser ce que nous avons fait dans l'app » ; « oui, pose B »)*
+
+**Le code** : `phase2/contacts/build_contacts_layer.py`, **72 lignes ajoutées, rien de retiré**, fins de ligne CRLF gardées.
+- **Trois fonctions neuves** : `load_existing_contact_link_fields`, `garder_le_type_de_la_nuit`, `relecture_garde_le_type`.
+- **Deux appels** dans `refresh_contact_slice`.
+- **Ce qui est gardé** de la ligne déjà connue : le type (`relation_roles_json`), le nombre de biens liés (`linked_annonce_count`) et les
+  raisons d'éligibilité, **sauf** `active_search`, qui est relue.
+- **Tout le reste est relu** comme avant. Un contact sans ligne connue est calculé comme avant.
+- **La nuit n'est pas touchée** : elle n'appelle pas `refresh_contact_slice`.
+- **Interrupteur** : `APP_RELECTURE_GARDE_LE_TYPE`, allumé par défaut ; `0` dans `.env` = l'ancien calcul, à l'identique (prouvé).
+- ⚠ Le worker relance Python à chaque travail : **en production depuis l'écriture du fichier (27/10, ~16:20)**, sans redémarrage.
+
+**L'essai, sur deux copies de `phase2.sqlite`** (sauvegarde cohérente de 14 s) : l'ancien code sur l'une, B sur l'autre, **104 contacts**
+tirés parmi tous les types, avec les valeurs de la nuit.
+
+| contacts | l'ancien code fait reculer | B fait reculer |
+|---|---|---|
+| acheteurs avec vente (30) | 30 | **0** |
+| « nés de la vente » (10) | 10 | **0** |
+| compromis sans vente (10) | 10 | **0** |
+| entrés par l'élargissement `console_transaction_party` (20) | 20 (**rendus non éligibles**) | **0** |
+| propriétaires (15) | 0 | 0 |
+| mandants (9) | 2 | **0** |
+| avec une recherche active (10) | 0 | 0 |
+
+- Le reste de la fiche est **identique** entre l'ancien code et B, recherches comprises.
+- Un contact rendu « tout neuf » donne le **même résultat** qu'avant (`["mandant"]`, éligible).
+- Exemple d'un « né de la vente » : nuit `compromis + vente + propriétaire` → ancien code `propriétaire` → **B, celui de la nuit**.
+- **Interrupteur éteint** : B redonne exactement l'ancien code (les mêmes 72 reculs, 0 autre écart).
+- **Mutant** (sans la ligne qui garde les raisons de l'élargissement) : 20 + 4 reculs, **attrapé**. ⚠ Mon premier mutant n'avait pas été
+  posé (une erreur d'échappement dans mon script) : je l'ai vu, refait, et c'est le second qui compte.
+
+⭐ **Une deuxième cause confirmée en passant** : **2 801 contacts** sont dans l'app par la raison `console_transaction_party`, posée par
+l'élargissement de nuit (`elargir_perimetre_console.py`). La relecture ne la connaissait pas, donc une simple ouverture de leur fiche les
+rendait **non éligibles**. B la garde.
+
+**Essais existants, sur le vrai fichier** :
+- `test_c9d_carnet_des_liens.py` **19/19** ✅ ;
+- `test_c9f_numero_bien_dans_cle.py` **15/15** ✅ ;
+- `test_contacts_layer.py` **1/1** ✅ (il demande `PYTHONPATH=.`) ;
+- `test_substitution_identite.py` : **rouge** sur deux points (② « la recherche ne pend pas sous l'identité » et ④ « aucun témoin
+  trouvé »). ⚠ **Le même rouge revient avec l'ancien code** (interrupteur à 0) : il **existait avant B**. L'essai le dit lui-même : « le
+  critère de sélection a vieilli […] ce contrôle ne testait plus rien » ; le fichier n'a pas bougé depuis le 23/09. Noté, pas touché.
+  Il demande aussi `PYTHONIOENCODING=utf-8` pour s'afficher.
+
+⬜ **À vérifier** :
+1. au prochain travail `refresh_console_contact_data`, le journal doit dire « [relecture] ce qui vient des liens est gardé pour 1
+   contact(s) » ;
+2. **demain matin**, les 5 contacts reculés aujourd'hui doivent avoir retrouvé leur type de nuit (B les garde dans l'état d'aujourd'hui
+   jusque-là).
+
+**Retour arrière** : `APP_RELECTURE_GARDE_LE_TYPE=0` dans `.env`, effet au travail suivant ; ou `git revert` du commit.

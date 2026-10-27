@@ -2073,6 +2073,75 @@ def merge_relation_rows(
     return list(by_key.values())
 
 
+# ⑧ TYPES, P3 « B » (27/10/2026) : LA RELECTURE D'UN SEUL CONTACT NE TOUCHE PLUS A CE QUI VIENT DES LIENS.
+#   Decision de Frederic (27/10) : « nos registres sont autonomes, les gestes de la journee fonctionnent deja ;
+#   il faut B pour ne pas ecraser ce que nous avons fait dans l'app ».
+#   En mode « un seul contact », load_relations saute trois sources sur six (fiche d'annonce, compromis, ventes :
+#   `and not contact_filter`, depuis le 01/06) : le type qu'il calculait etait PARTIEL, et il ecrasait celui de la
+#   nuit a chaque ouverture de fiche. Mesure du 27/10 : JACQUIER « offre + mandant » au lieu de proprietaire + offre +
+#   compromis + vente ; CHILLET sans type et NON ELIGIBLE (la raison « console_transaction_party », posee par
+#   l'elargissement de nuit, 2 801 contacts, n'est pas connue ici). Note des types, §32 et §33.
+#   Ce qui vient des LIENS (le type, le nombre de biens lies, les raisons d'eligibilite autres que la recherche)
+#   est donc REPRIS de la ligne deja connue ; tout le reste (identite, coordonnees, archivage, recherches, donc
+#   « active_search ») est relu. Un contact sans ligne connue (tout neuf) est calcule comme avant.
+#   La nuit refait tout : elle confirme.
+#   Interrupteur : APP_RELECTURE_GARDE_LE_TYPE -- allume par defaut ; « 0 » dans .env = l'ancien calcul, a l'identique.
+CHAMPS_DES_LIENS = ("relation_roles_json", "linked_annonce_count")
+RAISON_RECHERCHE = "active_search"
+
+
+def relecture_garde_le_type() -> bool:
+    import os
+    return (os.environ.get("APP_RELECTURE_GARDE_LE_TYPE") or "1").strip() != "0"
+
+
+def load_existing_contact_link_fields(
+    conn: sqlite3.Connection,
+    contact_ids: Iterable[str],
+) -> dict[str, dict[str, Any]]:
+    ids = normalize_contact_ids(contact_ids)
+    if not ids:
+        return {}
+    placeholders = ",".join("?" for _ in ids)
+    rows = conn.execute(
+        f"""
+        SELECT hektor_contact_id, relation_roles_json, linked_annonce_count, eligibility_reasons_json
+        FROM app_contact_current
+        WHERE CAST(hektor_contact_id AS TEXT) IN ({placeholders})
+        """,
+        ids,
+    ).fetchall()
+    return {clean_text(row["hektor_contact_id"]): dict(row) for row in rows}
+
+
+def garder_le_type_de_la_nuit(
+    contact_rows: list[dict[str, Any]],
+    previous: dict[str, dict[str, Any]],
+) -> int:
+    if not relecture_garde_le_type():
+        return 0
+    gardes = 0
+    for row in contact_rows:
+        avant = previous.get(clean_text(row.get("hektor_contact_id")))
+        if not avant:
+            continue  # tout neuf : calcule comme avant
+        for champ in CHAMPS_DES_LIENS:
+            row[champ] = avant[champ]
+        try:
+            raisons_avant = json.loads(avant.get("eligibility_reasons_json") or "[]")
+        except (TypeError, ValueError):
+            raisons_avant = []
+        raisons = [r for r in raisons_avant if isinstance(r, str) and r != RAISON_RECHERCHE]
+        if int(row.get("active_search_count") or 0):
+            raisons.append(RAISON_RECHERCHE)
+        row["eligibility_reasons_json"] = json_array(raisons)
+        row["supabase_sync_eligible"] = int(bool(raisons))
+        row["source_hash"] = stable_hash({key: value for key, value in row.items() if key != "source_hash"})
+        gardes += 1
+    print(f"[relecture] ce qui vient des liens est garde pour {gardes} contact(s) (APP_RELECTURE_GARDE_LE_TYPE)")
+    return gardes
+
+
 def preserve_duplicate_fields(
     contact_rows: list[dict[str, Any]],
     previous_duplicate_fields: dict[str, dict[str, Any]],
@@ -2157,6 +2226,8 @@ def refresh_contact_slice(
         negotiator_map, agency_map = load_directory_maps(hektor_conn)
         previous_duplicate_fields = load_existing_duplicate_fields(phase2_conn, ids_chez_nous)
         previous_relation_rows = load_existing_relation_rows(phase2_conn, ids_chez_nous)
+        # P3 « B » : lu AVANT le DELETE plus bas
+        previous_contact_rows = load_existing_contact_link_fields(phase2_conn, ids_chez_nous)
         contact_rows = build_contact_rows(
             contacts,
             relation_rows,
@@ -2170,6 +2241,7 @@ def refresh_contact_slice(
             contact_detail_state,
         )
         preserve_duplicate_fields(contact_rows, previous_duplicate_fields)
+        garder_le_type_de_la_nuit(contact_rows, previous_contact_rows)
         current_relation_rows = [row for rows in relation_rows.values() for row in rows]
         relation_flat_rows = merge_relation_rows(
             current_relation_rows,
