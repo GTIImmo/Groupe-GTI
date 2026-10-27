@@ -2447,3 +2447,14 @@ deux 401 antérieurs (`app_searches_to_complete`, `app_condition_catalogue`).
 
 **Reste à prouver en réel** : le geste exact de Frédéric dans son Chrome, une fois poussé — Annonces → Mandats → Annonces
 doit donner 26 lignes avec référence, sans V1160063193 ni V400063200 en trop.
+
+**✅ PROUVÉ EN RÉEL (27/10, après le push de Frédéric)** — bundle de production `index-CmD2DX7t.js`, dans son Chrome, en lecture
+seule (aucune fiche ouverte) :
+
+| étape | constat |
+|---|---|
+| Annonces | 26 lignes avec référence, aucun doublon |
+| Mandats (registre) | 50 lignes ; V1160063193 **×2** et V400063200 **×3** (les doublons qui causaient les fantômes) |
+| retour sur Annonces, pendant la relecture | la vue revient de mémoire (7c) : 26 lignes, sous le voile |
+| retour sur Annonces, relecture finie | **26 lignes, aucun doublon, aucune ligne figée** (avant : 29, dont 3 fantômes) |
+| même geste, 2ᵉ fois | identique |
