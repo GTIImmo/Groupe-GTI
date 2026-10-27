@@ -24206,21 +24206,6 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               <span>{screenHeader.title}</span>
             </div>
           )}
-          {/* POINT 4 (26/10) : la loupe vit dans la ligne du logo, au format du bouton « replier » --
-              en tete de la liste, elle ajoutait 60 px et faisait defiler le menu (ecran de 665 px). */}
-          {RECHERCHE_GLOBALE ? (
-            <button
-              className="rail-reduce rail-search"
-              type="button"
-              aria-label="Rechercher partout"
-              aria-keyshortcuts="/"
-              title="Rechercher partout   ( / )"
-              onClick={() => setRechercheGlobaleOuverte(true)}
-            >
-              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="6.5" stroke="currentColor" strokeWidth={2.2} /><path d="m20 20-4-4" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" /></svg>
-              <kbd aria-hidden="true">/</kbd>
-            </button>
-          ) : null}
           <button
             className="rail-reduce"
             type="button"
@@ -24232,6 +24217,22 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           </button>
         </div>
         <nav id="main-mobile-navigation" className="screen-nav" aria-label="Navigation principale">
+          {/* POINT 4 (27/10, Frederic) : la loupe revient en tete du menu, comme avant le 26/10, mais en champ
+              compact de 36 px (et non une entree de 50 px) -- la pastille dans la ligne du logo est retiree. */}
+          {RECHERCHE_GLOBALE ? (
+            <button
+              className="nav-search"
+              type="button"
+              aria-label="Rechercher partout"
+              aria-keyshortcuts="/"
+              title="Rechercher partout   ( / )"
+              onClick={() => setRechercheGlobaleOuverte(true)}
+            >
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="6.5" stroke="currentColor" strokeWidth={2.2} /><path d="m20 20-4-4" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" /></svg>
+              <span>Rechercher</span>
+              <kbd aria-hidden="true">/</kbd>
+            </button>
+          ) : null}
           <button className={`nav-button ${screen === 'accueil' ? 'is-active' : ''}`} type="button" title="Accueil" onClick={() => openScreen('accueil')}>Accueil</button>
           <button className={`nav-button ${screen === 'mandats' ? 'is-active' : ''}`} type="button" title="Annonces" onClick={() => openScreen('mandats')}>Annonces</button>
           <button className={`nav-button ${screen === 'estimations' ? 'is-active' : ''}`} type="button" title="Estimations" onClick={() => openScreen('estimations')}>Estimations</button>

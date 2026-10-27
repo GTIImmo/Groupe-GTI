@@ -1355,6 +1355,22 @@ replié passent de 50 à 46 px et leur écart de 8 à 6 px pour qu'il tienne.
 5 colonnes, barre du bas conservée, Échap ferme, « Contacts » ouvre `?ecran=contacts` et ferme le panneau ; bureau
 1280 × 665 replié → loupe sous le logo, menu 416 / 416, la loupe ouvre la recherche ; déplié → 425 / 425.
 
+### 20.11 La loupe du bureau revient EN TÊTE DU MENU (27/10, Frédéric : « je préférais la mise en page précédente mais optimisée »)
+
+La pastille loupe + « / » dans la ligne du logo (20.9, 20.10) **ne lui plaît pas** : elle est **retirée**. La loupe
+reprend sa place d'avant le 26/10, **en tête du menu**, mais en **champ compact** « 🔍 Rechercher  / » de **36 px** (au
+lieu d'une entrée de 50 px + 6 de marge), gris discret, magenta au survol (`nav-search`, `recherche-globale.css`).
+Menu replié : la loupe seule (50 × 36) dans la colonne des pictos, sans texte ni « / ». Téléphone et tablette inchangés.
+
+**Pas d'ascenseur (exigence de Frédéric)** — deux paliers, rien ne change au-dessus de 760 px de haut :
+- ≤ 760 px : écart logo/menu 24 → 12 px, entrées 46 → 42 px (46 replié), écarts 6 px ;
+- ≤ 680 px : marges de la barre 24 → 14 px, entrées 38 px (déplié et replié), écarts 4 px, champ 34 px.
+
+**Contrôle en démonstration, thème bienvu, 8 entrées (admin)** — débordement du menu, déplié / replié :
+1080 → 0 / 0 · 761 → 0 / 0 · 681 → 0 / 0 · 650 → 0 / 0 · 600 → 0 / 0 · 560 → 0 / 0. ⚠ Avant le palier ≤ 680, 600 px
+débordait de 30 / 40 px et 560 de 70 / 80 (le premier contrôle n'avait mesuré que 665 et 1080). 540 px déborde encore
+de 16 px déplié (pas un écran de PC réel ; le défilement reste en secours). Le champ ouvre la recherche ; build OK.
+
 ---
 
 ## 21. POINT 5 — RE-AUDIT DU 26/10 : « revenir en arrière entre objets » (rien codé)
