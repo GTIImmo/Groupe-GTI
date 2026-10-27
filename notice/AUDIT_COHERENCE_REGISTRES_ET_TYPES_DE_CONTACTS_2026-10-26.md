@@ -1200,3 +1200,38 @@ presque jamais le jour (0 à 1 ligne par jour).
   changent — le même calcul que la vue, donc le même résultat que la nuit (62 337 / 62 339). Base seulement, additif,
   derrière un interrupteur ; la nuit continue de tout refaire. À éprouver dans une transaction annulée avant la pose.
 - **Ou laisser C6** : le type est juste, il a au pire un jour de retard.
+
+### 27.6 « Le registre des relations doit réagir tout de suite chez nous, la nuit confirme » *(Frédéric, 27/10)* — audit des gestes
+
+⛔ **Je me corrige** : au §27.2 j'ai écrit que `app_relation` « n'est écrit que la nuit ». **C'est faux.** Trois portes l'écrivent
+**au clic** depuis le 03/10 (lecture du code en base, 27/10) : `app_link_mandant_optimistic`, `app_create_mandant_contact_optimistic`,
+`app_unlink_mandant_optimistic`. Ma mesure ne voyait rien parce que ces gestes sont rares (**8 en 30 jours**, tous `done`) et que la
+nuit reprend ensuite la ligne à son compte (il ne reste qu'**une** ligne `source = 'app'`).
+
+**Le tableau, objet « relation »** (la règle : chez nous au clic, Hektor confirme) :
+
+| geste | au clic, chez nous | quand Hektor répond | la nuit |
+|---|---|---|---|
+| lier un mandant existant | ✅ ligne posée (`present_in_hektor = false`) + ligne provisoire | ✅ le worker la marque **établie** (`relation_etablie`) ou la **défait** si refus (`annulerRattachementOptimiste`) | confirme |
+| créer un mandant neuf | ✅ idem | ✅ idem | confirme |
+| retirer un mandant | ✅ `retire_le` posé | ✅ **défait** si Hektor refuse (`annulerRetraitOptimiste`) | confirme |
+| supprimer un contact | — | ✅ ses liens effacés des deux côtés (exception assumée au « jamais supprimer ») | — |
+| acheteur d'une offre / d'un compromis / d'une vente | ✅ registre des transactions → table des parties (déclencheur) | ✅ | confirme |
+| ⚠ mandants posés **à la création d'une annonce** / au n° de mandat automatique | ❌ **rien au clic** : la liste part au worker, qui lie chez Hektor ; le lien n'arrive chez nous qu'**à la nuit** | — | pose | 
+| ⚠ l'acheteur devient « **propriétaire depuis la vente** » | ❌ **la nuit seulement** (règle du chantier 1, `regle_acheteur_proprietaire`) | — | pose |
+| ❌ supprimer une vente | ne retire pas l'acheteur-propriétaire (C10) | — | — |
+| ⚠ **le type** (l'étiquette de l'annuaire et ses filtres) | ❌ la nuit, ou à la relecture du contact par le worker | — | recalcule |
+| lire | ✅ la fiche lit nos deux registres (vue) | | |
+
+Usage mesuré (60 jours) : 5 créations d'annonce par l'app (aucune avec mandant), 5 rattachements, 3 retraits, 1 mandant créé.
+
+### 27.7 La proposition révisée — À TRANCHER PAR FRÉDÉRIC
+Compléter « chez nous d'abord » là où il manque, la nuit restant la **confirmation** :
+1. **Le type suit le geste** (C6) : un déclencheur sur `app_relation` et sur la table des parties recalcule l'étiquette du seul contact
+   touché (même calcul que la nuit : 62 337 / 62 339 identiques). Couvre d'un coup les rattachements, retraits, mandants neufs et
+   transactions. ⚠ À mesurer : ce que le recalcul ajoute au push de nuit (des milliers de contacts touchés).
+2. **Les mandants de la création d'annonce au clic** : la création écrit la ligne comme la porte « lier un mandant » (même code, même
+   défaite si Hektor refuse). Rare aujourd'hui (0 en 60 jours), mais c'est la porte principale le jour de la coupure.
+3. **L'acheteur « propriétaire depuis la vente » au geste** de la vente, et retiré quand la vente est supprimée (C10, C11) — la même
+   règle que la nuit, appelée au moment du geste. C'est déjà l'étape 5 du chantier des types (« l'acte et ses effets »).
+4. **C8** (les mots) : inchangé, écran seulement.
