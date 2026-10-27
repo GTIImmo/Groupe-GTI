@@ -1235,3 +1235,36 @@ Compléter « chez nous d'abord » là où il manque, la nuit restant la **confi
 3. **L'acheteur « propriétaire depuis la vente » au geste** de la vente, et retiré quand la vente est supprimée (C10, C11) — la même
    règle que la nuit, appelée au moment du geste. C'est déjà l'étape 5 du chantier des types (« l'acte et ses effets »).
 4. **C8** (les mots) : inchangé, écran seulement.
+
+### 27.8 Les acheteurs « propriétaires depuis la vente » (chantier 1) — ce que la proposition doit garder *(Frédéric, 27/10 : « il ne faut pas casser cela »)*
+
+**Le mécanisme, un seul** (`phase2/contacts/regle_acheteur_proprietaire.py`, interrupteur `APP_RELATION_ACHETEUR_PROPRIETAIRE=1`) :
+un lien de propriété est « né de la vente » quand (1) la personne est acquéreur d'une vente du bien, (2) son nom n'est pas dans le texte
+Hektor d'un mandat du bien, (3) son nom est connu. ⚠ **Il ne CRÉE pas le lien** : il reclasse un lien « propriétaire » **que Hektor a
+lui-même ajouté** (Hektor le fait à chaque vente **depuis le 17/07**). La nuit : `build_contacts_layer.py` (le type) et
+`relation_ledger.py` (pose `origine = 'vente'` + `proprietaire_depuis`).
+
+**Mesure du 27/10** (ventes vivantes, couples personne + bien) :
+
+| ventes | acheteurs | « propriétaire depuis la vente » | autre lien | lien retiré | **aucun lien** |
+|---|---|---|---|---|---|
+| depuis le 17/07 | 95 | **95** ✅ | 0 | 0 | 0 |
+| avant le 17/07 | 10 440 | 21 | 12 (dont les 10 vrais mandants) | 24 (le filet) | **10 383** |
+
+- Les **116** (95 + 21) : **116 / 116** ont `proprietaire` **et** `acquereur_vente` dans le type de nuit (8 sont aussi mandants d'un autre
+  bien), **116 / 116** sont « propriétaire » dans la vue. Annuaire : **Acheteur + Propriétaire** (type dominant Acheteur, D2).
+- ⚠ **Les 10 389 acheteurs des ventes d'avant le 17/07 ne sont PAS propriétaires chez nous** : Hektor ne les avait pas ajoutés, la règle
+  n'a donc rien à reclasser. Ils sont « Acheteur » seulement ; le bien montre toujours son **vendeur** (10 376 biens ont encore leurs
+  propriétaires d'avant — D3, le vendeur reste mandant en historique). 4 seulement ont été revendus depuis par l'agence ; 970 datent de
+  2024 ou après. ➡ **D2 dit « l'acheteur devient propriétaire daté de l'acte », mais n'a été appliqué qu'aux ventes où Hektor l'avait
+  fait.** Ce n'est écrit nulle part comme une décision : **à trancher par Frédéric**.
+
+**Ce que la proposition du §27.7 leur fait :**
+1. **le type suit le geste** : il recalcule depuis la vue, qui dit déjà « propriétaire » pour les 116 → **rien ne change pour eux**.
+   L'essai devra le prouver : les 116 gardent `proprietaire` après recalcul (+ JACQUIER 61730), et un mutant qui ignore `origine`
+   doit être attrapé.
+2. **les mandants de la création d'annonce** : sans rapport.
+3. **l'acheteur propriétaire au geste de la vente** (le seul point qui les touche directement) : la ligne posée au clic doit être
+   **identique** à celle de la nuit (même clé contact + bien, `origine = 'vente'`, `proprietaire_depuis` = date de la vente), pour que la
+   nuit la **reconnaisse** au lieu d'en créer une seconde ; la même règle (jamais un acheteur nommé dans le texte du mandat) ; et
+   « supprimer la vente » ne retire **que** une ligne `origine = 'vente'` — jamais un vrai mandant.
