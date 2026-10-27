@@ -2102,3 +2102,78 @@ rendait **non éligibles**. B la garde.
    jusque-là).
 
 **Retour arrière** : `APP_RELECTURE_GARDE_LE_TYPE=0` dans `.env`, effet au travail suivant ; ou `git revert` du commit.
+
+## 34. LE VRAI P3 — LE TYPE SUIT LE GESTE, DANS LA BASE : audit du 27/10 *(Frédéric : « pourquoi on ne fait pas le type […] suivre le geste dans la base ? » ; « oui »)* — lecture seule, rien codé
+
+> Audit limité au **type** du contact (`relation_roles_json`) : qui l'écrit, qui le lit, d'où il peut se calculer. L'éligibilité et le
+> compte des recherches (« Acquéreur ») ne sont **pas** mesurés ici.
+
+### 34.1 Qui écrit le type, qui le lit
+- **Un seul écrivain** : l'envoi depuis la machine (`push_contacts_to_supabase.py`), la nuit et à chaque relecture d'un seul contact.
+  Aucune fonction de la base ne l'écrit. Il n'y a aucun déclencheur sur `app_relation`, ni sur `app_affaire_partie` (cette dernière est
+  tenue par des déclencheurs sur `app_affaire_ledger`).
+- **Les lecteurs** :
+  - la vue `app_contacts_current`, donc l'annuaire, avec son filtre par type (`contains`, `lib/api.ts` l. 2556) ;
+  - les cartes et l'en-tête de la fiche ;
+  - la recherche globale (l. 5437).
+
+### 34.2 Les registres peuvent-ils donner le type ? Oui
+Le type calculé depuis la vue des liens (`app_contact_relations_current`, nos registres) est **identique pour 62 332 contacts sur
+62 339**. Les 7 écarts :
+- **5 sont les reculs d'aujourd'hui** (§32), que B n'a pas défaits : il garde l'état connu jusqu'à la nuit ;
+- **2 sont des contacts dont le lien a disparu chez Hektor** (10324835 absent depuis le 10/10, 10205503 depuis le 01/10). Les registres
+  disent « plus de lien », mais le type stocké dit encore « Mandant » ou « Propriétaire ». Pour ces deux-là, **le type stocké a tort et les
+  registres ont raison** (la nuit ne renvoie plus ces fiches).
+
+Le temps : un contact se recalcule en **≈ 13 ms** ; le **rapprochement complet** des 62 339 contacts prend **1,8 s**.
+
+### 34.3 Les portes qui écrivent nos registres
+- **App** (fonctions de la base, appelées par l'utilisateur connecté) :
+  - **liens** : `app_link_mandant_optimistic`, `app_create_mandant_contact_optimistic`, `app_unlink_mandant_optimistic` ;
+  - **transactions**, puis la table des parties par ses déclencheurs : `app_geste_affaire_optimistic`, `app_modifier_affaire_optimistic`,
+    `app_edit_affaire_optimistic`, `app_change_annonce_status_optimistic`, `app_affaire_commission_ecrire`, `app_attribuer_chaines_affaire`.
+- **La nuit et le worker** : par l'API, avec la **clé de service**. Le worker écrit `app_relation` (confirmer, défaire) et
+  `app_affaire_ledger` ; la nuit, `relation_ledger.py` et `affaire_ledger.py`.
+
+### 34.4 Le piège du volume
+En 24 h, la nuit a **recalculé 105 690 lignes de la table des parties (39 643 contacts)**, et elle a vu 132 828 liens. ⚠ La table des
+parties est réécrite par **suppression puis réinsertion** (`app_affaire_partie_suivre`). Un déclencheur naïf recalculerait donc ~40 000
+contacts chaque nuit : **≈ 9 minutes de plus**.
+
+### 34.5 La proposition — À TRANCHER PAR FRÉDÉRIC
+**P3-a — au geste** : des déclencheurs sur `app_relation` et `app_affaire_partie` recalculent le type des **seuls** contacts touchés,
+**uniquement quand l'écriture vient d'un utilisateur de l'app** (le jeton de la requête dit `authenticated`). Les écritures de la nuit et
+du worker (clé de service) passent sans recalcul : **zéro coût pour la nuit**. Trois règles :
+- on n'écrit que si le type **change** ;
+- on ne touche pas à `refreshed_at`, que lit le contrôle des modifications (`app_contact_saisie_modif_juge_trg`) ;
+- **jamais** on ne fait échouer le geste d'origine : une erreur est notée, le geste passe.
+
+**P3-b — la nuit confirme sans effacer** : une fonction `app_types_depuis_les_registres()` fait le rapprochement complet (1,8 s) et remet
+le type des registres là où il diffère. Elle est jouée **en fin de nuit**, après l'envoi des contacts, et **chaque heure** (pg_cron).
+Elle couvre ce que P3-a ne voit pas :
+- l'envoi de nuit qui réécrit le type d'après le miroir de Hektor ;
+- un « défaire » du worker quand Hektor refuse ;
+- les deux fiches figées ;
+- les 5 reculs d'aujourd'hui, **dès son premier passage**.
+
+**Ce que ça pourrait casser** :
+- **le temps des gestes** : ≈ 13 ms par contact touché ;
+- **le temps de la nuit** : nul pour P3-a (contrôle du jeton) ; 1,8 s pour P3-b. Les deux sont à mesurer dans une transaction annulée,
+  avec un lot de nuit rejoué sous la clé de service ;
+- **les déclencheurs déjà posés** sur `app_contact_current` (cible, contrôle des modifications) ;
+- **le moniteur** : une tâche pg_cron neuve se déclare et se surveille (leçons : lire les CHECK de la table du moniteur, une lecture
+  ratée n'est jamais un vert) ;
+- **B reste utile** : la relecture ne réécrit plus le type, donc elle ne défait pas P3-a.
+
+**Essais prévus (transaction annulée)** :
+- un mandant rattaché, une offre créée, un mandant retiré, sous le jeton d'un utilisateur : **le type change à l'instant** ;
+- les mêmes écritures sous la clé de service : **aucun recalcul** ;
+- le rapprochement : **7 → 0** écarts, puis **0** au second passage ;
+- un lot de la table des parties rejoué sous la clé de service : temps inchangé ;
+- **témoin inverse** : sans les déclencheurs, le type ne bouge pas ;
+- **mutant** : sans le contrôle du jeton, le temps du lot de nuit explose.
+
+**Questions** :
+(1) **les registres font foi** pour le type : la nuit confirme, et n'efface jamais ce qui est dans nos registres ?
+(2) le rapprochement **chaque heure**, en plus de la fin de nuit ?
+(3) l'ordre : **P3-b d'abord** (il répare tout de suite les 7 écarts et ne touche aucun geste), **puis P3-a** ?
