@@ -2721,3 +2721,78 @@ filtre d'abord, parce que les deux autres ajouts contiennent son texte.
 
 ⬜ **À trancher par Frédéric** : poser la vue **maintenant** (les mots bruts se verraient jusqu'à l'étape 3), ou **avec l'étape 3**
 (l'écran), le même jour ? Je recommande **avec l'étape 3**.
+
+## 42. ÉTAPE 2 (⑥) — LE TYPE TIRÉ DE NOS REGISTRES : audit détaillé et plan de code *(27/10, Frédéric : « vas-y » ; lu comme : la vue des notaires se pose avec l'étape 3, on enchaîne sur l'audit de l'étape 2)* — lecture seule, rien codé
+
+### 42.1 Ce qui existe et que l'on reprend
+- **Le modèle `rapprochement-dirty`**, en production :
+  - la table `app_rapprochement_dirty` (`id`, `entity_type`, `entity_id`, `reason`, `enqueued_at` ; RLS active) ;
+  - `app_enqueue_dirty(type, id, raison)`, appelée par des déclencheurs légers (`trg_dossier_dirty` :
+    `AFTER INSERT OR UPDATE OF prix, statut_annonce, diffusable, type_bien`) ;
+  - deux tâches pg_cron **chaque minute** qui vident par lots.
+- **La sentinelle d'écart**, en production : une **vue des écarts** (`traite_le` vide tant que l'admin ne l'a pas vu), une fonction
+  « marquer vu », une entrée **warning** dans `monitoring/check_gti_health.py` (patron `data.contact_modif_ecart`).
+- **Le calcul** : la vue des liens d'un contact, qui donne déjà le même type que la nuit pour 62 332 contacts sur 62 339 (§34.2).
+  `relation_roles_json` est un **jsonb**.
+
+### 42.2 Ce que la nuit fait au type (mesuré, nuit du 27/10)
+- **L'envoi des contacts** (`push_contacts_to_supabase.py`) renvoie la fiche **entière** de chaque contact qui a changé
+  (`merge-duplicates`), type compris : **4 102 fiches** cette nuit (04:44 → 06:10). ⚠ **Sans garde, il écraserait le type tiré de nos
+  registres.**
+- La table des parties est réécrite pour **39 643 contacts** ; le registre des liens met à jour `last_seen_at` de ~132 800 liens ; **11**
+  liens sont nés.
+- ⚠ **La nuit ne connaît pas les notaires** (§40.2) : son type n'en porte jamais.
+
+### 42.3 Le plan (base seulement, aucun Python touché, aucun redémarrage)
+1. **La file** `app_type_contact_a_recalculer` (`app_contact_id` texte en clé, `raison`, `valeur_nuit`, `marque_le`). Elle est protégée par
+   les règles d'accès, et seule la base y écrit.
+2. **Les déclencheurs qui marquent** (quelques microsecondes : une ligne dans la file, « si elle n'y est pas déjà ») :
+   - `app_relation` : création, suppression, et **modification des seules colonnes qui changent un rôle** (`present_in_hektor`,
+     `retire_le`, `absent_depuis`, `source`, `origine`, `app_contact_id`, `hektor_annonce_id`, `role_hektor`), et seulement **si elles
+     changent vraiment**. La mise à jour nocturne de `last_seen_at` (~132 800 liens) **ne réveille rien** ;
+   - `app_affaire_partie` : création et suppression (elle est réécrite par suppression puis réinsertion) ;
+   - le bien (`app_dossier_current`) : quand son **numéro de mandat** change, ses contacts sont marqués (c'est ce qui sépare « mandant »
+     de « propriétaire »).
+3. **La garde du type** (avant l'écriture, sur `app_contact_current`) : quand un envoi (la nuit, ou une relecture) veut **changer** le type,
+   **on garde le nôtre**, on note dans la file la valeur que l'envoi voulait (`valeur_nuit`), et on marque le contact. Seule la fonction de
+   recalcul passe outre la garde, par un drapeau de session. Un contact **neuf** (création) garde le type de l'envoi, puis il est marqué.
+4. **Le recalcul**, toutes les minutes (pg_cron), par lots de 5 000 (≈ 0,15 s le lot ; 1,8 s pour les 62 339 contacts) : le type depuis la
+   vue ; **on n'écrit que s'il change** ; on vide la file.
+5. **Le conflit, signalé à l'admin** (décision de Frédéric : « on garde notre valeur, on signale juste le conflit ») : si la `valeur_nuit`
+   diffère de nos registres, une ligne d'écart est écrite (contact, valeur de la nuit, notre valeur, date). La vue
+   `app_v_type_contact_ecarts` alimente la sentinelle **warning** `data.type_contact_ecart`, avec un échantillon. Le geste « vu » est le
+   même que pour les sœurs.
+   ⚠ **On ignore une seule différence connue** : les rôles **notaire**, que la nuit ne calcule pas. Sinon, chaque nuit, chaque notaire
+   renvoyé serait un faux conflit.
+6. **Le premier passage** : on marque les 62 339 contacts. Le premier recalcul remet les **7 écarts** d'aujourd'hui (§34.2) et les
+   **signale**.
+
+### 42.4 Ce que ça pourrait casser, et les essais
+- **Les déclencheurs existants** sur `app_contact_current` (`trg_app_contact_current_cible` avant l'écriture,
+  `app_contact_saisie_modif_juge_trg` après, sur `refreshed_at`) : on ne touche ni à `refreshed_at` ni à la cible. Ordre des déclencheurs
+  à vérifier, par leur nom.
+- **Le temps de la nuit** : une ligne de file par contact touché, dans la même écriture. À mesurer dans une transaction annulée, en
+  rejouant un lot de la table des parties et un lot d'envoi de fiches sous la clé de service.
+- **Une boucle** : notre propre écriture repasse par la garde ; le drapeau de session la laisse passer, et elle ne marque rien.
+- **B** (la relecture) reste en place ; sa fiche repasse aussi par la garde, sans effet puisqu'elle ne change plus le type.
+- **Le moniteur** : la ligne neuve respecte les CHECK de sa table (leçon du 25/10). La tâche pg_cron se déclare.
+
+**Essais (transaction annulée)** :
+- un lien posé, retiré ou rétabli : le contact est marqué, et le recalcul donne le bon type ;
+- une partie réinsérée : marquée ;
+- `last_seen_at` seul : **rien** n'est marqué ;
+- un envoi qui change le type : **refusé**, valeur gardée, écart écrit ;
+- un envoi égal à nos registres : pas d'écart ;
+- un rôle notaire seul de différence : pas d'écart ;
+- le premier passage : 7 → 0 écart, et 7 signalements ;
+- le temps d'un lot de nuit rejoué ;
+- **témoin inverse** : garde éteinte, l'envoi écrase ;
+- **mutant** : sans le filtre des colonnes, `last_seen_at` marquerait tout.
+
+**Retour arrière** : désactiver la tâche pg_cron et la garde (un interrupteur), puis l'inverse retire tout. Le type reste celui de la
+dernière écriture.
+
+### 42.5 Questions — À TRANCHER PAR FRÉDÉRIC
+(1) **la cadence** : toutes les minutes, par lots de 5 000 ?
+(2) **les notaires** : ignorer cette différence connue dans les conflits (la nuit ne les calcule pas) ?
+(3) **le premier passage** sur les 62 339 contacts, qui remet les 7 écarts et les signale : d'accord ?
