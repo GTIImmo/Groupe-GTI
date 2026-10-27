@@ -378,6 +378,27 @@ Registre légal Hektor 2026 : le 12/03/2026 (Ambert), même mandante, même bien
 18455 est tenu pour un **numéro abandonné le jour même** : trou connu et assumé au registre de l'app.
 Ne pas relancer. (Le 15/10, il était classé « aucune référence » : la réf existe, c'est la décision qui le tient dehors.)
 
+### 11 septies. Correctifs 1 et 2 — pièces 1 et 2 CODÉES le 27/10 (« oui », pièce 3 non retenue)
+
+**Pièce 1 — le fuseau du script de février** (`manual_mandat_corrections.py`, interrupteur
+`APP_MANDAT_FEVRIER_HEURE_PARIS`, allumé). La date de l'export est lue à Paris. Essai : 77 mandats portés par
+le script, **début +1 jour sur 77, fin inchangée sur 77**. Actif au prochain run (code du serveur).
+
+**Pièce 2 — la table des dates justes** :
+- `phase2/sync/poser_dates_justes_mandats.py` (à blanc par défaut) remplit `app_mandat_date_juste`
+  (annonce, numéro, champ, date Hektor, date juste) depuis l'export Modelo, **seulement quand Hektor dit la
+  veille exacte**. À blanc : **14 394 débuts · 13 379 fins** ; 450 autres écarts NON posés (445 sont des numéros
+  réutilisés rattachés par « numéro seul » à un autre mandat, 5 sont les écarts réels déjà listés).
+- `export_app_payload.py` (interrupteur `APP_REGISTRE_DATES_JUSTES`, allumé) applique la table aux versions
+  du mandat, **seulement si Hektor dit encore la valeur notée**. Sans la table : aucun effet.
+- `registre_depuis_app_mandat.py` suit la même règle.
+- **Essai hors ligne sur une copie** (table posée sur la copie, registre fabriqué éteint/allumé) : 25 104 lignes,
+  mêmes identifiants ; **15 466 lignes changent, uniquement leurs dates (+1 jour : 14 394 débuts, 13 379 fins)**,
+  l'historique et la fiche détaillée qui les répètent ; **0 ligne ne change de groupe de tri**.
+- ⏳ **Pas encore écrit** : la table n'existe pas dans la vraie base (accord nécessaire pour `--ecrire`).
+- Retour arrière : interrupteur à 0, ou `DROP TABLE app_mandat_date_juste`.
+- 2026 (18437, 18911 gardés ; 18536, 18570, 18502, 18928 à corriger dans Hektor) : proposé, non tranché.
+
 ## 11. Fichiers
 
 - **Détail ligne à ligne, toutes années** (19 908 écarts, nominatif, hors git) :

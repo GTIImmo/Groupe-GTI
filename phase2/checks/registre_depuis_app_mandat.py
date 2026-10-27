@@ -65,6 +65,9 @@ from phase2.sync.export_app_payload import (  # noqa: E402
     normalize_register_mandat_type,
     normalize_text,
     REGISTRE_TYPE_APP,
+    appliquer_dates_justes,
+    charger_dates_justes,
+    date_juste,
 )
 
 PHASE2_DB = ROOT / "phase2" / "phase2.sqlite"
@@ -85,7 +88,7 @@ def _texte(valeur) -> str:
 
 
 def depuis_app_mandat(ligne: sqlite3.Row, prix_annonce=None, corps_suspect: bool = False,
-                      nos_mandants: list | None = None) -> dict:
+                      nos_mandants: list | None = None, justes: dict | None = None) -> dict:
     """Les colonnes de mandat du registre, telles que la table les rendrait.
 
     ⚠ MEMES FORMULES QUE LE REGISTRE, IMPORTEES. `normalize_register_mandat_type`
@@ -97,6 +100,9 @@ def depuis_app_mandat(ligne: sqlite3.Row, prix_annonce=None, corps_suspect: bool
         versions = json.loads(ligne["versions_json"] or "[]")
     except Exception:
         versions = []
+    # 27/10 : les dates justes, comme le registre (export_app_payload.REGISTRE_DATES_JUSTES)
+    if isinstance(versions, list):
+        appliquer_dates_justes([v for v in versions if isinstance(v, dict)], justes)
     try:
         avenants = json.loads(ligne["avenants_json"] or "[]")
     except Exception:
@@ -123,8 +129,8 @@ def depuis_app_mandat(ligne: sqlite3.Row, prix_annonce=None, corps_suspect: bool
                               or (normalize_register_mandat_type(ligne["type_app"])
                                   if REGISTRE_TYPE_APP else None)),
         "mandat_type_source": _texte(ligne["type"]),
-        "mandat_date_debut": _texte(ligne["date_debut"]),
-        "mandat_date_fin": _texte(ligne["date_fin"]),
+        "mandat_date_debut": _texte(date_juste(ligne["date_debut"], justes, "debut")),
+        "mandat_date_fin": _texte(date_juste(ligne["date_fin"], justes, "fin")),
         # ⚠ LA MEME REGLE QUE LE REGISTRE (export_app_payload, lot du 05/10) :
         #   NOTRE liste de mandants d'abord, le texte de Hektor en repli. Sans
         #   cela le comparateur annoncait 23 570 ecarts -- 96 % -- en comparant
@@ -185,6 +191,7 @@ def mesurer(con: sqlite3.Connection) -> dict | None:
     exemples = collections.defaultdict(list)
     cloture_ecart = 0
     suspects = charger_corps_suspects(con)
+    justes = charger_dates_justes(con)
     mandants = charger_mandants_du_registre_des_liens(con)
     # ⚠ LE PRIX SE LIT DANS LE MIROIR, PAS DANS LA COLONNE DE LA VUE : la colonne
     #   est stockee en REAL et ressort « 65700.0 », alors que le registre lit
@@ -198,6 +205,7 @@ def mesurer(con: sqlite3.Connection) -> dict | None:
             prix_annonce=prix_miroir.get(cle[0], vue[cle]["prix"]),
             corps_suspect=cle in suspects,
             nos_mandants=mandants.get(cle[0]),
+            justes=justes.get(cle),
         )
         actuel = depuis_la_vue(vue[cle])
         for colonne, valeur in attendu.items():

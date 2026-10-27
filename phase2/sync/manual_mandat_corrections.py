@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import json
+import os
 from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
+from zoneinfo import ZoneInfo
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -22,6 +24,14 @@ def _normalize_text(value: Any) -> str | None:
     return text or None
 
 
+# 27/10/2026 -- correctif 2, piece 1 (notice/ETUDE_CORRESPONDANCES_APP_CLASSEURS_2026-10-27.md).
+# L'export ecrit « 2026-02-23T23:00:00.000Z » pour le 24/02 a Paris : prendre la date
+# de l'instant UTC donnait LA VEILLE (76 mandats de fevrier sur 76). On la lit a Paris.
+# RETOUR ARRIERE : APP_MANDAT_FEVRIER_HEURE_PARIS=0 -> la date UTC, comme avant.
+HEURE_PARIS = os.environ.get("APP_MANDAT_FEVRIER_HEURE_PARIS", "1") == "1"
+PARIS = ZoneInfo("Europe/Paris")
+
+
 def _normalize_date(value: Any) -> str | None:
     text = _normalize_text(value)
     if not text:
@@ -29,7 +39,10 @@ def _normalize_date(value: Any) -> str | None:
     if text.endswith("Z"):
         text = text[:-1] + "+00:00"
     try:
-        return datetime.fromisoformat(text).date().isoformat()
+        instant = datetime.fromisoformat(text)
+        if HEURE_PARIS and instant.tzinfo is not None:
+            instant = instant.astimezone(PARIS)
+        return instant.date().isoformat()
     except ValueError:
         return text[:10]
 

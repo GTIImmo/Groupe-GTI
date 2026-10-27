@@ -879,6 +879,7 @@ def charger_mandats_depuis_app_mandat(
       refabrique ici si elle manque, plutot que de perdre la ligne.
     """
     par_annonce: dict[str, dict[str, list[dict[str, object]]]] = defaultdict(dict)
+    justes = charger_dates_justes(con)        # 27/10 : correctif 1, voir plus haut
     places = ",".join("'%s'" % t for t in TYPES_ADMIS_AU_REGISTRE)
     for ligne in con.execute(
         "SELECT hektor_annonce_id, numero_mandat, versions_json,"
@@ -896,6 +897,7 @@ def charger_mandats_depuis_app_mandat(
         if not isinstance(versions, list):
             versions = []
         versions = [v for v in versions if isinstance(v, dict)]
+        appliquer_dates_justes(versions, justes.get((annonce, numero)))
         if not versions:
             # 27/10 (correctif 7) : un mandat entre par un CLASSEUR (origine
             # modelo, 15/10) n'a aucune version Hektor, mais la ligne porte ses
@@ -933,6 +935,55 @@ def charger_mandats_depuis_app_mandat(
 # RETOUR ARRIERE : APP_REGISTRE_TYPE_APP=0 dans l'environnement du run -> au push
 #   suivant, les 119 redeviennent vides. Rien n'est efface : type_app reste en base.
 REGISTRE_TYPE_APP = os.environ.get("APP_REGISTRE_TYPE_APP", "1") == "1"
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# LES DATES JUSTES, QUAND HEKTOR DONNE LA VEILLE                     27/10/2026
+# ═══════════════════════════════════════════════════════════════════════════════
+# Correctif 1, piece 2 (notice/ETUDE_CORRESPONDANCES_APP_CLASSEURS_2026-10-27.md).
+# L'API de Hektor coupe la date UTC : un mandat du 13/06 a Paris lui est rendu le
+# 12/06. Le run recopie cette valeur chaque nuit, on ne peut donc pas la corriger
+# dans app_mandat. La table `app_mandat_date_juste` (posee par
+# poser_dates_justes_mandats.py, a cote, jamais reconstruite) dit, par mandat et
+# par champ : « Hektor dit X, la date juste est Y ».
+# ⭐ HEKTOR D'ABORD : on ne remplace QUE si Hektor dit encore X. S'il change sa
+#   date un jour, c'est la sienne qui s'affiche -- la correction s'endort seule.
+# ⚠ Le REGISTRE seulement : les listes Annonces et la fiche du bien gardent la date
+#   de Hektor (piece 3, non retenue le 27/10).
+# RETOUR ARRIERE : APP_REGISTRE_DATES_JUSTES=0 -> les dates de Hektor au push suivant.
+REGISTRE_DATES_JUSTES = os.environ.get("APP_REGISTRE_DATES_JUSTES", "1") == "1"
+
+
+def charger_dates_justes(con: sqlite3.Connection) -> dict[tuple[str, str], dict[str, tuple[str, str]]]:
+    """{(annonce, numero): {champ: (date_hektor, date_juste)}} ; {} si la table n'existe pas."""
+    if not REGISTRE_DATES_JUSTES:
+        return {}
+    try:
+        lignes = con.execute(
+            "SELECT hektor_annonce_id, numero_mandat, champ, date_hektor, date_juste"
+            "  FROM app_mandat_date_juste").fetchall()
+    except sqlite3.OperationalError:
+        return {}
+    justes: dict[tuple[str, str], dict[str, tuple[str, str]]] = defaultdict(dict)
+    for annonce, numero, champ, hektor, juste in lignes:
+        justes[(normalize_text(annonce), normalize_text(numero))][champ] = (hektor, juste)
+    return dict(justes)
+
+
+def date_juste(valeur: object, corrections: dict[str, tuple[str, str]] | None, champ: str) -> object:
+    """La date juste si Hektor dit encore la valeur fausse notee ; sinon la valeur telle quelle."""
+    if not corrections or champ not in corrections:
+        return valeur
+    hektor, juste = corrections[champ]
+    return juste if (normalize_text(valeur) or "")[:10] == hektor else valeur
+
+
+def appliquer_dates_justes(versions: list[dict[str, object]],
+                           corrections: dict[str, tuple[str, str]] | None) -> None:
+    for version in versions:
+        for champ in ("debut", "fin"):
+            if champ in version:
+                version[champ] = date_juste(version.get(champ), corrections, champ)
 
 
 def charger_types_app(con: sqlite3.Connection) -> dict[tuple[str, str], str]:
