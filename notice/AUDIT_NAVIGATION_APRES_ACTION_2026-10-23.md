@@ -2144,3 +2144,82 @@ ouverte **déconnectée**.
   l'annonce ; 2ᵉ Échap → la liste ;
 - l'édition en ligne réelle (les champs de la maquette sont en lecture seule) — couverte par la reproduction ci-dessus ;
 - un clavier sur tablette.
+
+### 23.6 Point 7c — « une liste déjà vue s'affiche tout de suite » : RE-AUDIT DU 27/10 (mesuré en maquette ralentie ; rien codé)
+
+**Mise en ligne du 7a vérifiée (27/10, ~14:30).** `b3b0fb8` est dans `origin/main` ; le bundle de production
+(`index-CA0qO0uU.js`) porte `data-fiche-retour` et la règle Échap ; l'app ouverte déconnectée affiche « Bon retour », avec
+seulement les deux 401 connus.
+
+**Audit limité aux listes de l'effet des listes** (`App.tsx` ~15297 : `dossiers`, `mandats`, `workItems` et leurs compteurs),
+qui servent à Accueil, Annonces, Estimations, Mandats (registre), Suivi et Agenda. Seul le geste **lire** est concerné ;
+créer / modifier / supprimer n'interviennent que par les retouches locales après un geste (voir « ce que ça pourrait
+casser »). Les contacts sont traités à part, plus bas.
+
+**Mesuré à l'écran** — maquette ralentie de 1,5 s par liste (délai temporaire marqué `TEMP-7C`, **retiré** ; `api.ts`
+identique à HEAD) :
+
+| passage | bureau (1440 px) | téléphone / tablette (800 px) |
+|---|---|---|
+| Annonces → Estimations | ⚠ « **3 estimations** · 1-3 / 3 » pendant 1,5 s (les lignes des annonces, voilées par « Chargement… »), puis 0 | « Chargement… », puis « Aucune ligne » |
+| Annonces → Mandats | ⚠ « **3 mandats** » (les annonces) pendant 1,4 s, puis 2 | ⚠ « 3 / 3 », puis « 2 / 2 » |
+| Mandats → Annonces | ⚠ « **2 annonces actives** », les 2 lignes du registre en grisé sous « Chargement… » | ⚠ « 2 / 2 » : les cartes du registre **affichées et cliquables, sans aucun signe de chargement**, 1,5 s |
+| Estimations → Annonces | ⚠ « **0 annonces actives** » pendant 1,5 s | « Chargement… » pendant 1,5 s |
+| Suivi → Annonces | juste **par chance** : la maquette a les mêmes 3 lignes des deux côtés | idem |
+
+**Temps réels** (mesurés le 23/10, §2) : 0,5 s pour Annonces et le registre, 0,6 s Accueil, 0,9 s Suivi, 1,4 s
+Estimations, 1,6 s Agenda. En production, la fenêtre fautive dure donc **0,5 à 1,6 s** à chaque changement d'écran.
+
+**Le constat est confirmé.** Sur bureau, les **compteurs mentent** ; sur téléphone, les **lignes d'un autre écran** sont
+montrées et cliquables. La cause : une seule liste `dossiers` / `mandats` / `workItems` (et leurs totaux) pour tous les
+écrans, et l'effet des listes ne la vide pas au changement d'écran.
+
+**Contacts : rien à faire.** Leur liste est à part (`contactsDirectory`, ~15124) et lue seulement par l'écran Contacts.
+Elle garde ses lignes au retour, avec « Mise à jour… » ; avec la mémoire du point 2 (filtres, page), elle s'affiche
+**déjà** tout de suite. Sa lenteur (3,6 s, M4) vient de la base.
+
+**Ce que je ferais** — interrupteur `LISTE_DEJA_VUE`, dans l'effet des listes seulement :
+1. **Au changement d'écran, jamais les lignes d'un autre écran.** Si la vue est en mémoire, on la montre (point 2) ;
+   sinon, les trois listes et leurs compteurs sont **vidés** et l'écran affiche « Chargement… », comme Estimations →
+   Annonces sur téléphone aujourd'hui.
+   **Dans un même écran** (page, filtre, frappe), rien ne change : les lignes restent sous « Mise à jour… », sinon chaque
+   frappe ferait clignoter « Chargement… ».
+2. **Une mémoire des vues.**
+   - La clé : écran + filtres + pages + portée.
+   - 10 vues au plus, en mémoire vive, pour l'onglet seulement, vidée à la déconnexion.
+   - Elle n'est écrite **que par les réponses du serveur**, jamais par les retouches locales.
+   - En revenant sur une vue, ses lignes et ses compteurs s'affichent **tout de suite**, et la relecture part en fond comme
+     aujourd'hui.
+   - **Aucune requête en moins** : le gain est l'attente (0,5 à 1,6 s) à chaque retour sur un écran déjà vu.
+
+**Ce que ça pourrait casser ailleurs** — les lecteurs de ces listes, recensés :
+- **`jobConcernsThisScreen`** (~14671) décide si la fin d'un travail recharge l'écran, en regardant les lignes affichées.
+  - Liste vidée : pendant 0,5 à 1,6 s, la fin du travail d'un **collègue** sur un bien du nouvel écran ne relancerait pas
+    de relecture. Mais celle qui est en cours ramène l'état frais.
+  - Aujourd'hui, pendant cette même fenêtre, il regarde les lignes de l'écran **précédent**.
+  - Effet neutre.
+- **`inferredUserNegotiatorContext`** (~20421) devine le négociateur d'après les lignes. C'est le **3ᵉ repli**, après le
+  profil et l'identité Google.
+  - Liste vidée, il vaut `null` pendant au plus 1,6 s, au moment d'un changement d'écran, quand aucun formulaire n'est
+    en cours.
+- **La fiche** : `openScreen` la ferme au changement d'écran. L'effet qui pose la fiche depuis la ligne (~15375) garde
+  la fiche courante si elle n'est pas dans la liste. Le booléen du 7b relit la liste qui arrive. Neutre.
+- **Les sélections** (`selectedMandatId`, `selectedRegisterRowId`) ne sont posées qu'à la réponse du serveur : pas de
+  changement.
+- **Les retouches après un geste** (`setMandats((current) => …)`, une quinzaine d'endroits) modifient la liste affichée,
+  pas la mémoire.
+  - Une vue rappelée montre donc l'état du serveur à son dernier passage pendant 0,5 à 1,6 s, puis la relecture la
+    corrige.
+  - ⚠ Un bien archivé ou supprimé depuis peut **réapparaître ce temps-là dans une autre vue** en mémoire. Sur bureau,
+    c'est sous « Mise à jour… » ; ⚠ sur téléphone, **sans signe**, car ses listes n'ont pas d'indicateur « Mise à jour… »
+    (seulement « Chargement… » quand elles sont vides). Ajouter cet indicateur n'est **pas** proposé ici : c'est à trancher.
+- **La mémoire vive** : Suivi charge jusqu'à 1 000 mandats, donc 10 vues pèsent au pire quelques Mo.
+
+**Retour arrière** : `LISTE_DEJA_VUE = false`, en une ligne.
+
+**Contrôle prévu** :
+- la même maquette ralentie, avec les 5 passages, sur bureau et téléphone ;
+- un aller-retour dans un même écran (filtre, page) : pas de « Chargement… » ;
+- le témoin inverse, interrupteur éteint ;
+- `npm run build` ;
+- la vraie app déconnectée.
