@@ -2602,3 +2602,41 @@ Les notaires **existent** chez nous : dans la table des parties, `notaire_vendeu
 (3) **les 220 notaires restés sur le serveur** : les faire entrer dans l'annuaire (l'élargissement lirait aussi la table des parties) ?
 (4) **les invités d'un RDV** : le notaire de l'annonce devient invitable, d'accord ?
 (5) **les blocs absents** de la fiche (condition de prêt, séquestre, interlocuteurs, pièces) : masqués pour l'instant, ou à créer ?
+
+### 40.6 ✅ LES DÉCISIONS DE FRÉDÉRIC (27/10) — « 1. Oui 2. Trouve une solution ergonomique pour pouvoir filtrer les en cours, vendus, etc., afin de ne pas surcharger la vue. 3. NON. 4. Oui. 5. Les créer, et noté dans le front « en construction » »
+1. **Rang** : **« Notaire » en premier**, même s'il est aussi mandant, propriétaire ou acheteur (35 cas). Les autres rôles suivent en
+   pastilles.
+2. **La fiche contact d'un notaire** : **pas toutes les lignes à plat**. Un filtre ergonomique (en cours / vendus / tous…) pour ne pas
+   surcharger la vue. Proposition et maquette au §40.7.
+3. **Les 220 notaires du serveur** : **NON**, ils restent sur le serveur. L'élargissement n'est pas touché.
+4. **Les invités d'un RDV** : **oui**, le notaire de l'annonce devient invitable.
+5. **Les blocs sans données** (condition de prêt, séquestre, interlocuteurs de l'étude, liste des pièces) : **à créer**. En attendant,
+   ils sont **montrés dans l'écran, marqués « en construction »**.
+
+### 40.7 La solution ergonomique pour ne pas surcharger la fiche (décision 2) — maquette, rien codé
+**Fichier** : `maquettes/fiche-contact-biens-filtres.html`.
+- Données **fictives** : 410 biens, répartis comme pour le notaire le plus chargé.
+- La **vraie** feuille de la fiche contact.
+- Les **puces de filtre déjà utilisées** par la fiche, dans « Activité & relation » (`fa-cx-aflt`).
+
+**La bande « Biens & mandats liés »**, quand un contact a beaucoup de biens :
+- **filtre par état**, avec les nombres toujours visibles : **En cours · Vendus · Annulés · Biens · Tous** ;
+- **pour un notaire, son côté** : tous les côtés · côté vendeur · côté acquéreur ;
+- **une recherche** (ville, n° de mandat, vendeur, acheteur), qui porte sur **toutes** les lignes et recompte les puces ;
+- **un tri** : les plus récents, l'échéance la plus proche, le prix ;
+- **10 lignes à la fois**, puis « Afficher 10 de plus », et le compte « 10 sur 386 · vendus » ;
+- en pied : « Fiche notaire : en construction » (décision 5).
+
+**Les règles proposées** :
+- le filtre n'apparaît qu'à partir de **7 biens** ; en dessous, rien ne change (P2) ;
+- à l'ouverture, **« En cours »** s'il y en a, sinon « Tous » ;
+- **En cours** = offre ou compromis vivant sans vente ; **Vendus** = vente signée ; **Annulés** = compromis annulé ou offre refusée ;
+  **Biens** = mandant ou propriétaire sans transaction ;
+- le **même filtre pour tout contact** chargé (un mandant de 12 biens en profite aussi).
+
+**Vérifiée** :
+- au bureau (1440 px) : « Vendus » affiche 10 sur 386, puis 20 avec « Afficher 10 de plus » ; la recherche « firminy » recompte les
+  puces (52 au total) ; le côté acquéreur ramène à 11 ; une recherche vide propose « Tout afficher » ;
+- au téléphone (375 px) : aucun débordement. Les puces prennent 4 rangées : au codage, une seule rangée qui défile.
+
+⬜ À valider par Frédéric : la maquette, et les règles (le seuil de 7, « En cours » à l'ouverture, les 4 états).
