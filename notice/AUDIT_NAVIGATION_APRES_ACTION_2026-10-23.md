@@ -1654,3 +1654,112 @@ ou plus tard) ; (b) le geste ne marche pas. ⚠ La date d'archivage programmée 
 table ne la portent, mesure du 16/10), donc on ne peut constater que la bascule.
 ⏰ **Témoin à relire le 28/10 au matin** (après le run des recherches) ; s'il est encore actif, le geste « supprimer une
 recherche » ne fait rien de visible chez Hektor → à auditer (`handleDeleteHektorContactSearch`).
+
+
+---
+
+## 23. 6 bis — LES DEUX DÉCISIONS DU 27/10, ET POINT 7 — RE-AUDIT DU 27/10 (rien codé)
+
+### 23.1 Les décisions de Frédéric sur les réserves du 6 bis (27/10)
+
+> « 6bis 1 oui tu as raison 2. aussi pour la synchro de nuit. ensuite audit 7. 8 pour plus tard »
+
+**D1 — l'e-mail ne part qu'à l'ABANDON du geste, plus au 1er échec.**
+- **Mesuré.** `notifyJobFailureBestEffort` est appelé à **chaque** échec (`processOnce`, `console_job_worker.js`).
+  - Seuls **10 types** sont rejoués, par `app_console_action_enqueue_due_retries`, jusqu'à 5 essais en ~50 min et dans les 24 h : statut, archiver, désarchiver, supprimer annonce/contact, négociateur, offre, compromis ×2, vente.
+  - Tous les autres types sont **définitifs dès le 1er échec**, `update_hektor_annonce_fields` compris.
+  - `job.attempt_count` est déjà le numéro de l'essai en cours : la prise fait +1 et rend `j.*`.
+- **Ce que je ferais.** Prévenir seulement si le travail ne repartira pas :
+  - refus d'état ;
+  - OU type non rejoué ;
+  - OU 5ᵉ essai ;
+  - OU demande vieille de plus de 23 h.
+- **Interrupteur.** `CONSOLE_ALERTE_A_L_ABANDON` : `0` rend l'ancien comportement.
+- **Effet.**
+  - Rien ne change pour les types définitifs : l'e-mail part au 1er échec, qui est le dernier.
+  - Pour les 10 types rejoués, une panne guérie par le rejeu n'envoie plus d'e-mail.
+  - Pour un contact ou une recherche, l'alerte ne peut plus partir 5 fois : une seule au plus.
+- **Ce que ça pourrait casser.** La liste des 10 types existerait en **deux copies**, SQL et worker. C'est le même patron que `REJEU_MAX_TENTATIVES` (13/10).
+  - Si un type **sort** de la liste SQL sans sortir du worker, son abandon n'envoie **pas** d'e-mail. Le moniteur (`geste_abandonne`, 3 h) et la pastille rouge restent.
+  - L'autre sens est bénin : l'alerte part au 1er échec, comme avant.
+- **Pour l'activer.** Redémarrer les 4 services, avec accord, 0 pending ET 0 running.
+
+**D2 — la pastille ne rougit que pour un geste d'utilisateur, pas pour une synchro de nuit.**
+- **Mesuré sur 30 jours** : sur 12 erreurs, 9 sont des synchros, à savoir `refresh_console_contact_data` ×6, `sync_console_documents` ×2 et `sync_hektor_photos` ×1.
+  - La **pastille** rougit sur tout ce que rend `app_action_status`, quel que soit le type.
+  - L'**e-mail**, lui, ne part que pour `JOB_TYPES_A_NOTIFIER`.
+- **Ce que je ferais, dans le front seulement.** La pastille ne garde que les gestes de la liste qui prévient : **rouge ⇔ un e-mail est parti**.
+  - Le **bandeau admin** de la fiche et l'écran **Santé** ne changent pas : l'admin continue de voir les synchros en échec.
+  - **Aucune écriture en base.**
+- **⚠ À trancher.** Les 4 gestes de transaction ne sont **pas** dans la liste qui prévient, et ce depuis leur naissance le 29/08 : offre, annuler le compromis, supprimer le compromis, supprimer la vente.
+  - Leur échec ne prévient donc personne.
+  - Je propose de les ajouter aux deux listes : il y a 0 échec en 90 jours, donc aucun bruit.
+- **Nuance qui reste.** Pour un type **définitif**, l'e-mail part tout de suite, mais la pastille reste « en attente » jusqu'à 3 h avant de rougir.
+  - C'est la règle `@seuil-3h` de `app_action_status`.
+  - La corriger demanderait une écriture en base : c'est un sujet à part, pas proposé ici.
+
+### 23.2 Point 7 — « Finitions » : ce que le code montre
+
+**7a — Échap ne ferme rien (N8).**
+- **Les fiches.**
+  - annonce sur bureau, en grande fiche ou en cockpit ;
+  - annonce sur téléphone (`mobile-detail-overlay`) ;
+  - contact **par-dessus** l'annonce ;
+  - contact seul, dans l'écran Contacts.
+- **Les fenêtres.** Le front en a une quarantaine, sans balisage commun :
+  - 15 `aria-modal` ;
+  - 16 `role="dialog"` ;
+  - 14 `modal-overlay` ;
+  - et une dizaine de classes propres (`edit-overlay`, `estim-pdf-overlay`, `fcx-overlay`, …).
+  - Plusieurs gèrent déjà Échap : le menu ☰, la recherche globale, l'édition en ligne (qui annule la saisie).
+- **Ce que je ferais.**
+  - Une seule écoute. Échap fait **exactement ce que fait le bouton Retour/Fermer de la fiche** : on marque ces boutons et on clique le plus haut. L'adresse, le fil et le retour vers le contact restent donc identiques.
+  - Échap ne fait **rien** si le curseur est dans un champ.
+  - Échap ne fait **rien** si une fenêtre est ouverte par-dessus. Dans le doute, rien.
+  - Un Échap = un niveau : le contact posé sur une annonce se ferme d'abord.
+- **Interrupteur.** `ECHAP_FERME_LA_FICHE`.
+- **Ce que ça pourrait casser.**
+  - Une fenêtre non recensée fermerait **aussi** la fiche. Le remède est l'inventaire complet au codage, composants compris, et la règle « dans le doute, rien ».
+  - Une saisie non enregistrée hors fenêtre serait perdue, mais pas plus qu'avec le bouton Retour.
+
+**7b — le détail rechargé en boucle (M3, N9).**
+- **Mesuré dans le code.** L'effet du détail (`App.tsx` ~15285) dépend de `[selectedDossierId, session, dataReloadKey, dossiers, mandats]`.
+  - Une relecture de l'app arrive après chaque geste, à la fin de chaque travail qui concerne l'écran, et à la fin de la relecture Hektor d'ouverture.
+  - Elle relance le détail **3 fois** : la clé, puis la liste des annonces, puis celle des mandats.
+  - Chaque chargement fait environ 5 requêtes **en série**, dont le détail de ~90 Ko.
+  - ⚠ Et **fiche fermée** : `selectedDossierId` reste posé tant que le bien est dans la page. Chaque page, chaque filtre et chaque frappe dans la recherche de la liste rechargent donc une fiche que personne ne regarde. Ce cas a échappé au point 0, qui a supprimé la sélection d'office mais pas celle qui reste après la fermeture.
+- **Ce que je ferais.**
+  1. Remplacer `dossiers` / `mandats` par ce que l'effet utilise vraiment : « le bien est-il dans la liste » et « est-il léger (archive) ». On passe à **1 chargement par relecture au lieu de 3**.
+  2. Ne charger que **fiche ouverte**, en ajoutant `detailOpen`. C'est cohérent avec le point 0 : « aucun écran ne lit la sélection fiche fermée ». Rouvrir une fiche la relit, ce qui est voulu.
+- **Interrupteur.** `DETAIL_UNE_FOIS`.
+- **Ce que ça pourrait casser.**
+  - Un écran qui lirait le **détail** fiche fermée : je revérifie chaque lecteur de `selectedDossier` avant de coder.
+  - Le lien profond du point 1 (`ficheDemandeeParAdresse`) : il charge à l'arrivée du numéro, sans attendre la liste, donc il ne bouge pas.
+  - Le passage à une fiche légère quand la liste arrive : le booléen change, donc l'effet repart, comme aujourd'hui.
+  - L'effet voisin (~15270), qui pose la fiche depuis la ligne de liste sans requête, reste tel quel.
+
+**7c — une liste déjà vue s'affiche tout de suite.**
+- **Mesuré dans le code.**
+  - Une liste n'est **pas vidée** pendant son rechargement : ses lignes restent, avec « Mise à jour… ».
+  - Mais `dossiers` est **une seule liste partagée** par Accueil, Annonces, Suivi, Estimations et Agenda (`mandats` aussi, entre Annonces et Mandats).
+  - Donc Annonces → Suivi → Annonces pourrait montrer les lignes du **Suivi** sous le titre Annonces pendant 0,5 à 1,6 s. ⚠ **Non vu à l'écran** : le mock répond instantanément. À vérifier avec une latence simulée **avant** de coder.
+- **Ce que je ferais.**
+  - Une petite mémoire, en mémoire vive et pour l'onglet seulement, des dernières vues : écran, filtres, page et portée, 10 au plus.
+  - En revenant sur une vue, ses lignes s'affichent tout de suite, puis la relecture part en fond comme aujourd'hui.
+  - La mémoire est effacée à la déconnexion.
+- **Interrupteur.** `LISTE_DEJA_VUE`.
+- **Ce que ça pourrait casser.**
+  - On montre une liste vieille de quelques minutes pendant ~1 s : un bien vendu entre-temps reste affiché le temps de la relecture, avec « Mise à jour… » visible.
+  - Après un geste, la relecture remet la mémoire à jour.
+
+**Ordre proposé : 7b, puis 7a, puis 7c.**
+- 7b est le gain le plus net et le moins visible.
+- Chacun a son interrupteur et son propre « vas-y ».
+
+**Contrôle prévu.**
+- mock bienvu, bureau ET téléphone ;
+- un compteur provisoire des chargements de détail, retiré avant commit ;
+- `npm run build` ;
+- puis la vraie app ouverte **déconnectée**, pour vérifier que la connexion n'est pas cassée (§22.4).
+
+**Point 8 (découper `App.tsx`) : remis à plus tard par Frédéric le 27/10.**
