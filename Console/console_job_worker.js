@@ -15760,12 +15760,19 @@ async function reporterAuRegistre(job, appAffaireId, chezHektor) {
   if (mandants) corps.mandants_json = mandants;
 
   if (!Object.keys(corps).length) return;
+  // ⑧ types : les parties SUIVENT le registre (declencheurs app_affaire_partie_suivre) -- les gens
+  //   d'AVANT, pour qu'un acquereur ecarte en silence par Hektor perde aussi son role.
+  const personnesTouchees = Boolean(corps.acquereurs_json || corps.mandants_json);
+  const partiesAvant = personnesTouchees ? await contactsDeLAffaire(id) : [];
   try {
     await supabaseRequest(`app_affaire_ledger?app_affaire_id=eq.${id}`, {
       method: "PATCH",
       headers: { Prefer: "return=minimal" },
       body: JSON.stringify(corps),
     });
+    if (personnesTouchees) {
+      await recalculerTypeDesContacts(job, [...partiesAvant, ...(await contactsDeLAffaire(id))], "registre_retenu_par_hektor");
+    }
     await logJob(job.id, "app_registre_transaction", "done",
       `Registre mis a jour avec ce que Hektor a RETENU : `
       // 16/09 : une LISTE ne se met pas dans une phrase avec `${v}` -- le journal
@@ -17322,6 +17329,67 @@ async function unlinkHektorMandantContact(job, annonceId, contactId, step = "hek
   };
 }
 
+// ─── ⑧ TYPES, ETAPE 2 (27/10/2026) : LE TYPE DES CONTACTS, APRES UNE ECRITURE DU WORKER ───
+// Le type (relation_roles_json) se calcule chez nous, depuis NOS registres : les 6 portes de la
+// base le recalculent au clic. Mais le worker ecrit aussi dans ces registres SANS passer par elles
+// -- un rattachement ou un retrait defait, une suppression defaite, la liste des acquereurs que
+// Hektor a retenue. Apres chacune, on redemande le calcul (note des types, §47).
+// ⚠ JAMAIS BLOQUANT : ces deux fonctions ne jettent pas. Sans elles, le calcul de fin de nuit
+//   (app_recalculer_tous_les_types) remet le type le lendemain -- un delai, pas une perte.
+async function journalDuType(job, statut, message, charge) {
+  try { await logJob(job.id, "type_des_contacts", statut, message, charge); } catch (_) { /* le journal ne bloque pas */ }
+}
+
+async function recalculerTypeDuBien(job, annonceId, contexte) {
+  const annonce = String(annonceId == null ? "" : annonceId).trim();
+  if (!/^\d+$/.test(annonce)) return { recalcule: false, raison: "annonce inconnue" };
+  try {
+    const n = await supabaseRequest("rpc/app_recalculer_type_du_bien", {
+      method: "POST", body: JSON.stringify({ p_hektor_annonce_id: annonce, p_app_dossier_id: null }),
+    });
+    await journalDuType(job, Number(n) >= 0 ? "done" : "error",
+      Number(n) >= 0 ? `Type des contacts du bien recalcule depuis nos registres : ${n} contact(s) change(s)`
+                     : "Type des contacts NON recalcule (la base l'a refuse) -- le calcul de fin de nuit le remettra",
+      { hektor_annonce_id: annonce, contacts_changes: n, contexte });
+    return { recalcule: Number(n) >= 0, contacts: n };
+  } catch (erreur) {
+    await journalDuType(job, "error", "Type des contacts NON recalcule -- le calcul de fin de nuit le remettra",
+      { hektor_annonce_id: annonce, contexte, erreur: String(erreur && erreur.message ? erreur.message : erreur).slice(0, 300) });
+    return { recalcule: false };
+  }
+}
+
+// ⚠ PAR LES CONTACTS, pas par le bien, quand l'ecriture RETIRE des gens : un acquereur que Hektor a
+//   ecarte n'est plus dans les parties apres l'ecriture, le calcul du bien ne le trouverait pas.
+//   On lit donc les parties AVANT (contactsDeLAffaire), et on recalcule avant + apres.
+async function contactsDeLAffaire(appAffaireId) {
+  const id = Number(appAffaireId);
+  if (!Number.isFinite(id) || id <= 0) return [];
+  try {
+    const rows = await supabaseRequest(`app_affaire_partie?select=app_contact_id_texte&app_affaire_id=eq.${id}`, { method: "GET" });
+    return (Array.isArray(rows) ? rows : []).map((r) => cleanString(r && r.app_contact_id_texte)).filter(Boolean);
+  } catch (_) {
+    return [];
+  }
+}
+
+async function recalculerTypeDesContacts(job, contacts, contexte) {
+  const liste = [...new Set((contacts || []).map((c) => String(c == null ? "" : c).trim()).filter(Boolean))];
+  if (!liste.length) return { recalcule: false, raison: "aucun contact" };
+  try {
+    const n = await supabaseRequest("rpc/app_recalculer_type_contacts", {
+      method: "POST", body: JSON.stringify({ p_contacts: liste }),
+    });
+    await journalDuType(job, "done", `Type de ${liste.length} contact(s) recalcule depuis nos registres : ${n} change(s)`,
+      { contacts: liste.slice(0, 20), contacts_changes: n, contexte });
+    return { recalcule: true, contacts: n };
+  } catch (erreur) {
+    await journalDuType(job, "error", "Type des contacts NON recalcule -- le calcul de fin de nuit le remettra",
+      { contacts: liste.slice(0, 20), contexte, erreur: String(erreur && erreur.message ? erreur.message : erreur).slice(0, 300) });
+    return { recalcule: false };
+  }
+}
+
 // ⛔ LE CHEMIN DE RETOUR -- LA PIECE LA PLUS DELICATE DU GESTE.
 //
 // La RPC a deja pose retire_le AVANT que le worker ne parle a Hektor : c'est ce qui
@@ -17345,6 +17413,7 @@ async function annulerRetraitOptimiste(job, appContactId, annonceId, cause) {
     await logJob(job.id, "retrait_annule", "done",
       "Hektor a refuse le detachement : le retrait a ete DEFAIT, le mandant reapparait",
       { app_contact_id: String(appContactId), hektor_annonce_id: String(annonceId), cause: String(cause).slice(0, 300) });
+    await recalculerTypeDuBien(job, annonceId, "retrait_annule");   // ⑧ types : il redevient mandant
     return { annule: true };
   } catch (erreur) {
     // ⛔ LE PIRE CAS : Hektor a refuse ET on n'a pas pu defaire. Le mandant est
@@ -17392,6 +17461,7 @@ async function annulerRattachementOptimiste(job, annonceId, hektorContactId, cau
         : "Hektor a refuse le rattachement, mais aucune ligne de l'app n'etait a defaire",
       { hektor_annonce_id: String(annonceId), hektor_contact_id: String(hektorContactId),
         lignes_defaites: nb, cause: String(cause).slice(0, 300) });
+    if (nb > 0) await recalculerTypeDuBien(job, annonceId, "rattachement_annule");   // ⑧ types : il n'est plus mandant
     return { annule: nb > 0 };
   } catch (erreur) {
     // ⛔ LE PIRE CAS, symetrique de celui du retrait : Hektor a refuse ET on n'a pas
@@ -21680,6 +21750,9 @@ async function restaurerEtatAffaire(job, categorie, payload) {
         ? `Hektor a refuse : l'etat precedent (${payload.etat_avant ?? "vide"}) a ete remis dans l'app`
         : "Hektor a refuse et AUCUNE ligne n'a pu etre remise -- l'app affiche un etat faux",
       { app_affaire_id: affaireId, etat_avant: payload.etat_avant ?? null, lignes: touchees });
+    // ⑧ types : une suppression defaite rend la transaction vivante (l'etat seul ne change pas le type,
+    //   l'appel est alors sans effet).
+    if (touchees) await recalculerTypeDuBien(job, majes[0] && majes[0].hektor_annonce_id, "etat_affaire_restaure");
     return { status: touchees ? "done" : "error", lignes: touchees };
   } catch (erreur) {
     await logJob(job.id, categorie, "error",
@@ -22806,12 +22879,16 @@ async function retirerAffaireDuRegistre(job, payload, preuve, genre, hektorAffai
     return { inscrit: false, efface: false, carnet: 0 };
   }
   let efface = false;
+  // ⑧ types : l'effacement emporte les parties (declencheurs) -- on les lit AVANT, par prudence
+  //   (le clic avait deja rendu la transaction non vivante).
+  const partiesAvant = await contactsDeLAffaire(appAffaireId);
   try {
     await supabaseRequest(`app_affaire_ledger?app_affaire_id=eq.${encodeURIComponent(appAffaireId)}`
                           + `&kind=eq.${encodeURIComponent(kind)}`
                           + `&hektor_affaire_id=eq.${encodeURIComponent(hektorId)}`,
                           { method: "DELETE", prefer: "return=minimal" });
     efface = true;
+    await recalculerTypeDesContacts(job, partiesAvant, "suppression_confirmee");
   } catch (erreur) {
     await logJob(job.id, "app_registre_suppression", "error",
       "Ligne du registre NON effacee en ligne, mais INSCRITE au journal : le serveur s'alignera",

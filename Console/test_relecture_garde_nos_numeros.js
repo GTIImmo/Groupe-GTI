@@ -27,6 +27,11 @@ const morceaux = {
   poser: tranche("function poserNosNumerosDansLaListe("),
   table: tranche("async function tableDeNosNumeros("),
   reporter: tranche("async function reporterAuRegistre("),
+  // ⑧ types (27/10) : reporterAuRegistre recalcule le type des parties -- ses aides viennent avec lui
+  journalType: tranche("async function journalDuType("),
+  parties: tranche("async function contactsDeLAffaire("),
+  typeContacts: tranche("async function recalculerTypeDesContacts("),
+  clean: tranche("function cleanString("),
 };
 const manquants = Object.keys(morceaux).filter((k) => !morceaux[k]);
 controle("(0) les pieces sont la", !manquants.length, `manquent : ${manquants.join(", ")}`);
@@ -53,6 +58,7 @@ function monter({ registre = null, annuaire = [], panne = false } = {}) {
   };
   vm.createContext(ctx);
   vm.runInContext([morceaux.interrupteur, morceaux.poser, morceaux.table, morceaux.reporter,
+    morceaux.journalType, morceaux.parties, morceaux.typeContacts, morceaux.clean,
     "this.reporterAuRegistre = reporterAuRegistre; this.poser = poserNosNumerosDansLaListe;"].join("\n"), ctx);
   return { ctx, patches, journal, lectures };
 }
