@@ -400,7 +400,10 @@ le script, **début +1 jour sur 77, fin inchangée sur 77**. Actif au prochain r
   `app_mandat` inchangée (27 452 lignes). Témoin : 16436, le cas de l'audit (« 12/06 pour un 13/06 »), → 13/06.
   ⏰ Après la nuit : le registre en ligne doit montrer 16436 au 13/06/2024.
 - Retour arrière : interrupteur à 0, ou `DROP TABLE app_mandat_date_juste`.
-- 2026 (18437, 18911 gardés ; 18536, 18570, 18502, 18928 à corriger dans Hektor) : proposé, non tranché.
+- **2026 — décision de Frédéric (27/10, « oui »)** : 18437 et 18911 gardés tels que Hektor les donne ;
+  **18536** (début 16/11/2026, registre légal 16/04), **18570** (début 28/01/2026, numéro pris le 30/04),
+  **18502** et **18928** (aucune fiche de mandat) sont **à corriger dans Hektor par l'agence** ; l'app ne les force pas.
+  Ils redescendront seuls au run suivant. ⏰ À revérifier après correction.
 
 ## 11. Fichiers
 
