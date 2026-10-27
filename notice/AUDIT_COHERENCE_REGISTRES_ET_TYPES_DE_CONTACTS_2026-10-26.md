@@ -1448,3 +1448,21 @@ dates sont antérieures au projet.
 - pour la **coupure** : notre registre ne connaît d'un mandat que **l'état final** de sa fiche Hektor ; l'historique (le mandat d'origine
   de 11659) n'existe que dans des exports comme celui-ci. ⬜ Garder cet export comme pièce du registre : à décider ;
 - pour l'**écran** : 61 mandats affichent une période impossible — ⬜ les signaler (« date reprise par Hektor le … ») : à décider.
+
+### 28.10 « Est-ce NOUS qui avons commis cette erreur en intégrant les corrections du classeur ? » — NON, prouvé (27/10)
+⚠ **Correction du §28.9** : `mandats_extraits.xlsx` n'est **pas** un export de Hektor : c'est l'export de **l'ancien logiciel, Modelo**
+(`phase2/sync/reparer_nature_depuis_sources_legales.py` l. 88 : « mandats_extraits.xlsx -> l'ANCIEN LOGICIEL, que Frederic appelle Modelo »).
+1. **Les deux sources disent la même chose** : pour les 61, la fiche Modelo du **même produit** (`NO_DOSSIER` de l'annonce =
+   `linked_product_ref`) et du même numéro porte **la même date de début que Hektor — 61 sur 61** (à un jour près pour le fuseau de Modelo,
+   qui range minuit en UTC). Ni l'un ni l'autre n'a de « bonne » date à opposer à l'autre.
+2. **Les dates sont plus anciennes que nos écritures** : posées entre 2017 et 2021 (séances datées à la seconde), déjà présentes dans
+   l'export Modelo du 27/02/2026 et dans notre première lecture de Hektor du 20/05/2026 ; le dépôt commence le 07/04/2026.
+3. **Notre registre ne les a pas modifiées** : sur les 61, **54** viennent du détail Hektor sans aucune marque de nos scripts ; **7**
+   portent `source_app = 'modelo'`, posé par `reparer_nature_depuis_sources_legales.py` (16/10), qui n'écrit **que** `nature_app`,
+   `type_app`, `source_app` — jamais une date (UPDATE l. 197 et 309).
+4. **Les scripts qui ont lu les classeurs ne pouvaient pas les toucher** : `importer_mandats_vente_absents.py` n'insère que des couples
+   (annonce, numéro) **libres**, avec `present_in_hektor = 0`, et refuse un écart de date de plus d'un an ; `importer_mandats_recherche.py`
+   ne traite que des mandats **sans bien** ; `manual_mandat_corrections.py` (liste de février 2026) ne pose un mandat **que si l'annonce
+   n'en a aucun**.
+5. **Rien n'a été écrit chez Hektor** sur ces 61 annonces : leurs seuls travaux sont 67 **lectures** de documents.
+➡ **Ce n'est pas nous.** Les dates fausses étaient déjà dans les deux logiciels avant le projet.
