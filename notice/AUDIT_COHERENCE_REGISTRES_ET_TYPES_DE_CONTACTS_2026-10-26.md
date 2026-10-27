@@ -1912,3 +1912,26 @@ lignes, **11 290 contacts, 13 861 biens**.
 4. le mode sombre du téléphone (≤ 1180 px) : les pastilles reprennent la règle `.fa-cx-lk-role` d'avant, **non vu**.
 
 **Retour arrière** : l'interrupteur (écran) ; `_INVERSE.sql` (base) ; les deux sont indépendants, l'écran marchant avec ou sans le patch.
+
+### 31.6 ✅ LE PATCH P2 EST POSÉ EN BASE — 27/10 *(Frédéric : « fais-le toi-même, tu as mon accord »)*
+
+**Posé par moi**, par le pooler, avec le fichier tel quel (`BEGIN` … `COMMIT`). L'empreinte de la vue est passée de `d4350c63…` à
+**`0021f0f1…`**, et la vue a maintenant **20 colonnes**.
+
+**Répétition** :
+- **1er passage : 10 verts, 1 rouge.** La fiche de JACQUIER sous le compte admin a pris **457,9 ms** (seuil 200), alors que l'essai annulé
+  donnait 26,4 ms. Le commercial était vert (131,8 ms).
+- **Rejouée 3 fois** (lecture seule) : **0 rouge** à chaque passage. Admin 24,5 / 27,0 / 26,0 ms, commercial 131,5 / 138,1 / 131,8 ms.
+
+➡ Le rouge était le **premier passage juste après le changement de la vue**, quand Postgres refait ses plans. On l'a vu une seule fois, et
+il ne s'est pas reproduit. C'est le même phénomène que le 26/10 (304 ms au premier passage, puis 14 verts).
+
+**L'app en ligne n'est pas gênée** : elle lit la vue par `select *`, donc elle reçoit deux champs de plus et ne les lit pas tant que P2
+n'est pas poussé. Les deux autres lecteurs à l'écran et les deux en base nomment leurs colonnes.
+
+⬜ **Reste** :
+1. **Pousser** (Frédéric) ;
+2. **regarder l'écran** : JACQUIER (61730), un vendeur, un acheteur en cours, au bureau et à 390 px, plus le mode sombre du téléphone ;
+3. **rejouer la répétition** le lendemain de la première nuit.
+
+**Retour arrière** : `_INVERSE.sql`, éprouvé le 27/10 dans une transaction annulée.
