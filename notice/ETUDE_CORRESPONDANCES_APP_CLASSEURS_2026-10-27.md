@@ -339,6 +339,26 @@ la correction repart la nuit suivante. E (ajouts) et F (`search_text` extra) n'o
 - **Prérequis du correctif 5** : tout mandat ajouté depuis un classeur n'a pas de version Hektor.
 - Retour arrière : `APP_REGISTRE_REPLI_DEPUIS_LIGNE=0`.
 
+### 11 sexies. Correctif 5 — CODÉ le 27/10, NON ÉCRIT en base (accord attendu)
+
+Décision de Frédéric (27/10) : **B** — les 518 recherches et les ventes dont le bien est connu entrent ;
+les 99 ventes sans bien connu attendent ; locations et gestions exclues.
+
+- `importer_mandats_recherche.py` lit en plus le registre légal 2014-2024 (`Ancien registre des mandat.csv`) :
+  objet « recherche » seulement, réservés/annulés écartés.
+- **Défaut trouvé et corrigé dans les deux portes** : les dates Modelo (UTC) étaient coupées à 10 caractères →
+  **la veille**. `date_paris()` les ramène à Paris. Les 22 recherches et les 9 ventes posées le 15/10 sont réparées
+  au passage (la porte des ventes peut désormais mettre à jour SES lignes au lieu de les refuser).
+- `importer_mandats_vente_absents.py` retrouve le bien quand Hektor a renommé sa réf en numéro de mandat
+  (18404 → annonce 61607, 18408 → 61615).
+- **Essai complet sur une COPIE de phase2.sqlite** (vraie base intacte) : registre 24 584 → **25 104** lignes,
+  **+520** (518 recherches sans bien + 18404 + 18408), **0 retirée, 0 sans date** ; 31 lignes existantes changent,
+  **uniquement leurs dates (+1 jour)** — 17283 passe au 08/10/2024, comme le registre légal.
+- Contacts des 518 : retrouvés pour 381 sur 556 (dont 227 par « homonymie levée »), 106 ambigus laissés vides,
+  69 introuvables — la ligne existe quand même. 59 numéros refusés (déjà portés par un mandat sur une annonce).
+- Restent hors champ : 18455 (dans le seul registre Hektor 2026, que la porte des ventes ne lit pas), 18500 (avenant),
+  18383 et 10 autres ventes à bien inconnu (décision B).
+
 ## 11. Fichiers
 
 - **Détail ligne à ligne, toutes années** (19 908 écarts, nominatif, hors git) :

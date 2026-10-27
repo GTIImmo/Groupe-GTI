@@ -69,6 +69,7 @@ import sys
 import unicodedata
 from collections import Counter, defaultdict
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -87,6 +88,9 @@ PHASE2 = ROOT / "phase2" / "phase2.sqlite"
 PDF_LEGAL = ROOT / "Certif_Export_RT14405_12586.pdf"
 XLS_LEGAL = ROOT / "Export_RT14405_12598.xls"       # le MEME registre, en colonnes
 XLSX_PROTEXA = ROOT / "liste des mandats de recherche protexa.xlsx"
+# 27/10 : le registre legal de l'ancien logiciel (n° 9001 -> 17441, 15/12/2014 -> 19/12/2024).
+#   518 de ses mandats de recherche manquaient (etude du 27/10) ; Frederic : « oui ».
+CSV_LEGAL_ANCIEN = ROOT / "Ancien registre des mandat.csv"
 # ⚠ Voir reparer_nature_depuis_sources_legales.py : les deux fichiers n'ont pas
 #   la meme origine, l'etiquette doit le dire.
 EXPORTS = (("mandats_extraits.xlsx", "modelo"),
@@ -95,6 +99,27 @@ PLAGE_RESERVEE_APP = 1_000_000          # la meme que mandat_ledger.py
 # Les codes d'exclusivite des exports, deja confirmes par
 # manual_mandat_corrections.py (EXCLUSIVITY_LABELS, ecrit le 05/10).
 EXCLUSIVITE = {"1": "EXCLUSIF", "3": "ACCORD", "5": "SIMPLE"}
+
+# ⚠⚠ LES DATES DES EXPORTS MODELO SONT EN UTC -- 27/10/2026.
+#   « 2024-10-07T22:00:00.000Z » est le 08/10 a Paris. Couper aux 10 premiers
+#   caracteres donnait LA VEILLE : les 22 recherches et les 9 ventes posees le
+#   15/10 l'etaient (17283 : 07/10 au lieu du 08/10, que le registre legal
+#   confirme). Voir notice/ETUDE_CORRESPONDANCES_APP_CLASSEURS_2026-10-27.md.
+PARIS = ZoneInfo("Europe/Paris")
+
+
+def date_paris(valeur):
+    """Une date d'export -> AAAA-MM-JJ a l'heure de Paris ; une date sans heure reste telle quelle."""
+    texte = str(valeur or "").strip()
+    if not texte:
+        return None
+    if "T" in texte and texte.endswith("Z"):
+        try:
+            return (datetime.fromisoformat(texte.replace("Z", "+00:00"))
+                    .astimezone(PARIS).date().isoformat())
+        except ValueError:
+            pass
+    return texte[:10] or None
 
 CIVILITES = {"M", "MR", "MME", "MLLE", "MM", "MONSIEUR", "MADAME", "ET", "DE",
              "DU", "LA", "LE", "SCI", "SARL", "SAS"}
@@ -228,6 +253,49 @@ def lire_registre_legal_pdf() -> dict[str, dict]:
     return out
 
 
+def lire_registre_legal_ancien() -> dict[str, dict]:
+    """Le registre legal 2014-2024 : les mandats de RECHERCHE seulement.     27/10/2026
+
+    Format : UTF-16, tabulations, 6 colonnes -- N° · date (AAAA-MM-JJ, deja locale)
+    · mandant(s) · objet · nature et situation · observations.
+    ⭐ LOCATIONS ET GESTIONS EXCLUES : seul l'objet « recherche » entre (decision du
+      28/09, rappelee par Frederic le 27/10).
+    ⚠ UN NUMERO RESERVE OU ANNULE N'EST PAS UN MANDAT : « Reserve par ... » dans
+      la colonne du mandant, ou « annul » dans les observations -- ecartes.
+    Pas de date de fin, pas de type (SIMPLE/EXCLUSIF) : le registre ne les porte pas.
+    """
+    import csv
+    if not CSV_LEGAL_ANCIEN.exists():
+        return {}
+    out: dict[str, dict] = {}
+    with open(CSV_LEGAL_ANCIEN, encoding="utf-16", newline="") as f:
+        for ligne in csv.reader(f, delimiter="\t"):
+            if len(ligne) < 6:
+                continue
+            numero = re.sub(r"\D", "", ligne[0])
+            nom, objet, situation, obs = (x.strip() for x in ligne[2:6])
+            if not numero or "recherche" not in objet.lower():
+                continue
+            if nom.startswith("R\u00e9serv\u00e9") or re.search(r"annul", obs, re.I):
+                continue
+            date = re.match(r"\d{4}-\d{2}-\d{2}", ligne[1].strip())
+            # « M. Julien THEVENON\r\n   (Pays inconnu) » : le nom, sans la mention du pays
+            noms = [x.strip() for x in nom.splitlines()
+                    if x.strip() and not x.strip().startswith("(")]
+            out.setdefault(numero, {
+                "numero": numero,
+                "debut": date.group(0) if date else None,
+                "type": objet.splitlines()[0].strip(),
+                "libelle": objet.splitlines()[0].strip(),
+                "mandants": " | ".join(noms)[:200],
+                "adresses": "",
+                "situation": " | ".join(x.strip() for x in situation.splitlines() if x.strip())[:200],
+                "agence": "",
+                "source": "registre_legal_2014_2024",
+            })
+    return out
+
+
 def lire_xlsx_protexa() -> dict[str, str]:
     """Le NOM SEUL du mandant, par numero.
 
@@ -286,8 +354,8 @@ def lire_exports() -> dict[str, dict]:
                 continue
             out.setdefault(numero, {
                 "numero": numero,
-                "debut": str(ligne.get("date_start") or ligne.get("date") or "")[:10] or None,
-                "fin": str(ligne.get("date_end") or "")[:10] or None,
+                "debut": date_paris(ligne.get("date_start") or ligne.get("date")),
+                "fin": date_paris(ligne.get("date_end")),
                 # ⚠⚠ LE TYPE EST CELUI DE HEKTOR, PAS UN LIBELLE INVENTE.
                 #   Defaut du 15/10, trouve par une question de Frederic : j'avais
                 #   ecrit « Mandat de recherche » comme type. Or le type est la
@@ -477,11 +545,14 @@ def main() -> int:
                 repris += 1
             elif bloc.get("mandants"):
                 bloc["mandants"] = couper_adresse(bloc["mandants"])
-    print(f"sources : {len(legal)} au registre legal [{via}] · {len(modelo)} dans les exports Modelo")
+    ancien = lire_registre_legal_ancien()
+    print(f"sources : {len(legal)} au registre legal [{via}] · {len(modelo)} dans les exports Modelo"
+          f" · {len(ancien)} au registre legal 2014-2024")
     if repris:
         print(f"          {repris} noms repris du xlsx protexa (repli PDF)")
     # Le registre LEGAL fait foi quand les deux parlent du meme numero.
     sources = dict(modelo)
+    sources.update(ancien)      # 27/10 : les registres legaux font foi sur l'export
     sources.update(legal)
     print(f"          {len(sources)} mandats de recherche distincts\n")
 

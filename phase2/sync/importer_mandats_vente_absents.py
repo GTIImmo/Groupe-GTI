@@ -72,7 +72,7 @@ for flux in (sys.stdout, sys.stderr):
 
 from phase2.sync.mandat_ledger import _famille, PLAGE_RESERVEE_APP  # noqa: E402
 from phase2.sync.importer_mandats_recherche import (  # noqa: E402
-    EXCLUSIVITE, batir_index_fort, retrouver_fort, batir_index, retrouver)
+    EXCLUSIVITE, batir_index_fort, retrouver_fort, batir_index, retrouver, date_paris)
 
 PHASE2 = ROOT / "phase2" / "phase2.sqlite"
 MIROIR = ROOT / "data" / "hektor.sqlite"
@@ -121,10 +121,14 @@ def lire_ventes_absentes(con):
             reference = str((produit or {}).get("product_ref") or "").strip()
             out[numero] = {
                 "numero": numero,
-                "annonce": ref_vers_annonce.get(reference.upper(), ""),
+                # 27/10 : depuis 2026 Hektor renomme la ref du bien en NUMERO de
+                #   mandat (etude du 27/10, §6). La ref de l'export est alors
+                #   inconnue, mais le bien porte CE numero comme ref : 18404 -> 61607.
+                "annonce": (ref_vers_annonce.get(reference.upper(), "")
+                            or ref_vers_annonce.get(numero, "")),
                 "reference": reference,
-                "debut": str(ligne.get("date_start") or ligne.get("date") or "")[:10] or None,
-                "fin": str(ligne.get("date_end") or "")[:10] or None,
+                "debut": date_paris(ligne.get("date_start") or ligne.get("date")),
+                "fin": date_paris(ligne.get("date_end")),
                 "type": EXCLUSIVITE.get(str(ligne.get("exclusivity") or "").strip()),
                 "mandants": str(ligne.get("contact_full_name") or "").strip()[:200],
                 "blob_contact": ligne.get("linked_contact_id"),
@@ -160,10 +164,27 @@ def main() -> int:
         (PLAGE_RESERVEE_APP,)).fetchone()[0] or 0) + 1
     print(f"allocateur : les ids partiront de {prochain} (plage DU RUN)\n")
 
+    # 27/10 : NOS lignes (posees par ce script, jamais vues par Hektor) peuvent
+    #   etre REMISES A JOUR -- c'est ce qui repare leurs dates a la veille.
+    #   Avant, « deja au registre » les refusait : un correctif du script ne
+    #   pouvait pas les atteindre (le meme defaut que la porte des recherches, 15/10).
+    etiquettes = tuple(e for _, e in EXPORTS)
+    nos_lignes = {str(n): str(a) for n, a in con.execute(
+        "SELECT numero_mandat, hektor_annonce_id FROM app_mandat"
+        " WHERE present_in_hektor = 0 AND COALESCE(hektor_annonce_id,'') <> ''"
+        f" AND origine IN ({','.join('?' * len(etiquettes))})", etiquettes)}
     a_poser, refus, lignes = [], Counter(), []
     etats = Counter()
     for numero in sorted(sources, key=lambda x: int(x) if x.isdigit() else 0):
         s = sources[numero]
+        if numero in nos_lignes:
+            s["annonce"] = nos_lignes[numero]
+            cid, par = retrouver_fort(s.get("blob_contact"), forts)
+            if not cid:
+                _, cid, par = retrouver(s["mandants"], index, chercheurs)
+            a_poser.append((numero, s, cid))
+            lignes.append((numero, "A JOUR", s["annonce"], f"{s['mandants'][:28]}  (notre ligne)"))
+            continue
         if numero in deja:
             refus["deja au registre"] += 1
             continue
