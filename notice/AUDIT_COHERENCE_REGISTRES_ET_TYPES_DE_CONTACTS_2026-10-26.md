@@ -1539,3 +1539,16 @@ fiche réécrite comme 11659) ; nommé dans un **autre** mandat du bien : **0** 
   effacer « propriétaire depuis » — c'est la période que demande Frédéric (§28.5) ;
 - les **2 174** ventes jugeables sans notre clé (23 %) gardent le repli par l'annonce, comme aujourd'hui ;
 - la **date** reste celle de la vente, jamais celle du mandat (§28.7-28.11).
+
+### 28.13 « Dans la fiche contact, le même bien apparaîtra-t-il deux fois ? » *(Frédéric, 27/10)* — mesuré dans le code et la base, pas vu à l'écran
+- La vue rend **une ligne par rôle** : pour JACQUIER, 61730 revient 4 fois (`proprietaire`, `acquereur_offre`, `acquereur_compromis`,
+  `acquereur_vente`).
+- Les deux fiches contact (V1 l. ~43814, V2 l. ~44537) **dédoublonnent par bien** (« Annonces liées », « Biens & mandats liés ») : le bien
+  n'apparaît **qu'une fois** — ✅ pas de doublon.
+- ⚠ **Mais elles gardent la PREMIÈRE ligne et jettent les autres rôles**, et l'ordre vient de `loadContactRelations` (api.ts l. ~3603) :
+  `order('last_seen_at', desc)`. Ce matin, **116 / 116** affichent « Propriétaire » — **par hasard d'horaire** : le registre des liens a
+  tourné à 04:52, après le registre des transactions (04:48:59). Si l'ordre des étapes de nuit changeait, la même fiche afficherait
+  « Acquéreur (vente) ». Le rôle d'acheteur du bien n'est montré nulle part dans cette liste.
+- ⬜ **Proposition (écran seulement, à son « vas-y »)** : une ligne par bien qui porte **tous** ses rôles, dans un ordre fixe
+  (« Propriétaire depuis le … · Acheteur — vente du … »), au lieu du premier venu ; avec les deux colonnes `origine` / `proprietaire_depuis`
+  ajoutées à la vue (base).
