@@ -2344,3 +2344,67 @@ coder. »
 - le témoin inverse ;
 - `npm run build` ;
 - la vraie app déconnectée.
+
+### 23.9 ⚠ BUG SIGNALÉ PAR FRÉDÉRIC (27/10, 15:13) : des LIGNES FANTÔMES dans Annonces après un passage par Mandats — diagnostic (rien codé)
+
+**Le geste** : listing Annonces → listing Mandats → retour sur Annonces (bureau). Des lignes grisées en trop apparaissent
+(capture de Frédéric : « Bas en Basset » n°18946 et deux fois « Maison vigneronne », n°18938 et 18937).
+
+**Reproduit dans son Chrome, en lecture seule** (aucune fiche ouverte), sur les **deux** versions :
+
+| version | constat sur Annonces après le retour |
+|---|---|
+| avant le 7c (`index-CA0qO0uU.js`) | **29 lignes au lieu de 26**, dont 3 **figées** en « relecture » (grisées) alors que plus rien ne charge : V1160063193 n°18946, V400063200 n°18938, V400063200 n°18937 ; la vraie V400063200 est plus bas |
+| **avec le 7c** (`index-DB_j7vD8.js`, en ligne à 15:2x) | ⚠ **les mêmes 3 lignes en trop**, et cette fois **pas grisées** : elles ont l'air vraies |
+
+**La cause, prouvée :**
+- Le registre a **une ligne par mandat**. Sa page 1 contient **deux fois** V1160063193 (mandats 18946 et 18911) et **deux
+  fois** V400063200 (18938 et 18937). Ce sont exactement les biens fantômes.
+- Le tableau Annonces du bureau (`MandatsScreen`, ~26576) identifie ses lignes, pour React, par **`app_dossier_id` seul**.
+- Au retour sur Annonces, le tableau est d'abord dessiné **une fois** avec les lignes du registre, par la liste partagée.
+  Le bien en double y donne donc **deux lignes avec la même clé**.
+- React ne sait plus lesquelles retirer quand la vraie liste arrive. Il laisse ces lignes **orphelines** dans la page :
+  plus jamais mises à jour, ni retirées, jusqu'à ce qu'on quitte l'écran ou qu'on recharge.
+- ⚠ **Le 7c ne l'empêche pas** : il vide ou remplace la liste dans un effet, donc **après** ce premier dessin. Il a
+  seulement retiré le gris, ce qui rend les fantômes plus trompeurs.
+
+**Le téléphone n'est pas touché.** Ses cartes ont déjà une clé composée (écran, dossier, mandat, dossier n°, source,
+rang ; ~38974) : quelqu'un avait déjà réglé ce cas là-bas.
+
+**Gravité** : un défaut **d'affichage seul**.
+- Aucune donnée n'est touchée.
+- Un clic sur un fantôme ouvre le bien de ce numéro, donc un vrai bien.
+- Mais la liste ment : lignes en trop, doublons, et l'ordre des premières lignes est faux.
+
+**Ce que je ferais** — interrupteur `CLE_LIGNE_UNIQUE` :
+- La clé de chaque ligne du tableau Annonces devient **celle du registre**, `mandateRegisterRowKey(item)` (~9491).
+  - C'est `register_row_id`, que **toutes** les lignes portent : les vraies du registre, et celles des annonces via
+    `withRegisterRowId` (`api.ts` ~6808 : `<annonce>:<mandat>`).
+  - La ligne en création garde sa clé `prov-…`.
+- Avec des clés **uniques**, React retire proprement les lignes du registre, même dessinées une fois. Plus de fantômes,
+  quelle que soit la liste qui passe.
+- Même traitement pour les deux autres listes du bureau qui lisent la liste partagée avec la même clé seule :
+  - « Biens à suivre » de l'Accueil (~25888) ;
+  - le tableau des anomalies du Suivi (~27883).
+
+**Ce que ça pourrait casser ailleurs :**
+- **La sélection** (bande magenta) et l'ouverture d'une fiche passent par `app_dossier_id`, **pas** par la clé : pas de
+  changement.
+- **Dans une même liste**, la clé est stable d'une relecture à l'autre (même annonce, même mandat), donc pas de
+  re-création des lignes.
+- **Entre deux sources** (registre → annonces), les clés diffèrent : les lignes sont recréées une fois. C'est voulu.
+- **Une annonce sans numéro de mandat** a pour clé `<annonce>:<dossier>` : toujours unique.
+- **Le premier dessin avec les lignes du registre** (un seul affichage, quelques millisecondes) reste. Il n'est plus
+  visible.
+  - Le supprimer demanderait de rendre le 7c **synchrone**, en touchant aux lectures de la liste partagée.
+  - Ce n'est **pas** proposé, sauf si tu le demandes.
+
+**Retour arrière** : `CLE_LIGNE_UNIQUE = false`.
+
+**Contrôle prévu** :
+- en maquette, en ajoutant pour l'essai un bien **en double** dans le registre (temporaire), d'abord pour **reproduire**
+  les fantômes, puis pour les voir disparaître ;
+- le témoin inverse ;
+- `npm run build` ;
+- la vraie app déconnectée ;
+- puis en réel, dans ton Chrome, le geste exact (Annonces → Mandats → Annonces) : 26 lignes, aucun doublon.
