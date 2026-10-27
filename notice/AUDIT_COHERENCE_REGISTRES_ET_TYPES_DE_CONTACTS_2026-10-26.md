@@ -1379,3 +1379,26 @@ Ce n'est donc **pas un nouveau mandat** : c'est le mandat de la vente, dont la *
 ➡ **Zéro re-signature** parmi les 10 389 sur la même annonce : la limite du §28.5 ne mord sur aucun d'eux.
 ⚠ **Et la leçon pour le rattrapage** : les dates des **vieux** mandats ne sont pas fiables ; la date à retenir pour « propriétaire
 depuis » est **la date de la vente**, jamais celle du mandat.
+
+### 28.8 L'explication des mandats « commencés après leur vente » (Frédéric, 27/10 : « retrouve les notes du chantier, sinon il faut la trouver »)
+**Les notes du registre des mandats ne l'expliquent pas.** Elles traitent un défaut voisin : les mandats **PROTEXA de 2026**, dont
+l'identifiant nu collisionne avec un vieux mandat HEKTOR (`AUDIT_REGISTRE_MANDATS_2026-10-05.md` §12, `CHANTIER_EN_ATTENTE_MANDAT_2026-10-06.md`
+partie 2 : « les dates sont PROPRES, ce sont le montant et les mandants qui fuient »). Ici c'est l'inverse : **les mandants sont justes,
+ce sont les DATES qui sont fausses**, et sur des mandats HEKTOR anciens.
+
+**Ce que j'ai trouvé** :
+- c'est **bien l'ancien mandat** : ses mandants sont **les vendeurs de la vente** (10344 : mandat 3364 = les LACHAIZE, vendeurs du
+  02/07/2019 ; 10867 : mandat 1311 = Anne PETIT, vendeuse du 26/04/2016) ;
+- la chaîne de la vente est **cohérente** (10344 : offre refusée 23/01/2019, acceptée 24/04, compromis 06/05, vente 02/07/2019) :
+  ce sont les **dates du mandat** qui sont fausses, pas celles de la vente ;
+- c'est **Hektor** qui les donne ainsi, dans le mandat **et** dans la vente elle-même (`payload_json.mandat`), et notre plus ancienne
+  copie (20/05/2026) les portait déjà : le changement date d'**avant** que nous les lisions — nous ne l'avons pas fabriqué ;
+- **l'ampleur** : sur **6 784** mandats vendus, **61** (0,9 %) « commencent » après leur vente ; **37** d'entre eux portent l'une des deux
+  mêmes dates, **14/05/2020** ou **16/06/2020**, et **40** une fin au 01/01/1970 (date vide). ➡ **Le plus probable** : une opération en
+  masse chez Hektor ou à l'agence sur ces deux journées de 2020, qui a réécrit la date de début de vieux mandats (hypothèse, **non
+  prouvée** : Hektor ne donne aucune date de modification d'un mandat, et nos archives commencent au 20/05/2026). Les 24 autres sont
+  des dates isolées, saisies ou modifiées à la main.
+
+**Ce que ça touche** : l'écran (fil « Vie du mandat », registre) montre un mandat commencé après sa vente pour ces 61 ; la cascade 2.7
+(« la période ») ne s'en sert que sur 53 annonces à plusieurs mandats ; **le rattrapage n'est pas touché** s'il prend la date de la
+vente (§28.7). ⬜ Signaler ces 61 au registre (« dates incohérentes ») : à décider par Frédéric, rien n'est codé.
