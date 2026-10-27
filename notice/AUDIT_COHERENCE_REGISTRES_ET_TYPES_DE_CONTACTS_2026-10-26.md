@@ -2243,3 +2243,20 @@ et on **signale** l'écart au moniteur, une ligne par contact, avec les deux val
 - la comparaison de fin de nuit doit passer de 7 écarts à 0, avec 7 signalements ;
 - **témoin inverse** : sans le déclencheur, le type ne bouge pas ;
 - **mutant** : sans le filtre sur le type de travail, un travail de photos doit être attrapé.
+
+### 35.4 ⛔ ABANDONNÉ PAR FRÉDÉRIC (27/10) — « non, oublie cette idée, on sera dépendant d'Hektor »
+Attendre l'accord de Hektor pour déduire le type, c'est rester **dépendant de Hektor**, l'inverse du but. **Le §35.3 n'est pas à coder.**
+
+**La règle retenue** (Frédéric, 27/10, deux messages plus tôt) : **on calcule nous-mêmes le type au geste**, puis on envoie le geste à
+Hektor. Soit il confirme, soit il ne confirme pas : en cas de **refus**, on suit **la règle du rattachement** (le geste est défait, et le
+type suit) ; **la nuit, on garde notre valeur et on signale le conflit à l'admin**.
+
+**Ce qui reste utile du §35** : tous les gestes qui changent un type passent par un travail d'une **liste déclarée** de 9 types, posé par
+la fonction de l'app, **dans la même transaction que l'écriture du registre**. Ce travail sert donc de **signal du geste**, au clic, sans
+attendre Hektor :
+- **au clic** : quand l'app pose le travail, on recalcule le type des contacts de l'annonce depuis **tous** nos registres (y compris la
+  ligne encore non confirmée). Le déclencheur est **différé à la fin de la transaction**, pour voir le registre déjà écrit ;
+- **à la fin du travail** : quand il passe à « terminé » ou en « erreur », on recalcule de nouveau. Un refus défait le geste (règle du
+  rattachement), donc le type revient ;
+- **la nuit** ne crée aucun de ces travaux : **zéro coût** ;
+- **en fin de nuit** : on compare le type envoyé par la nuit avec celui de nos registres ; on **garde le nôtre** et on **signale** l'écart.
