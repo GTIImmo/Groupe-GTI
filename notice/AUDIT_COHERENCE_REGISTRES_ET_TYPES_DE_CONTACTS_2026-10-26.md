@@ -3103,3 +3103,5 @@ déposé à part dans git) ; mais le redémarrage, lui, chargera le fichier enti
     `youtrust_*` sont au service Documents.
 - **Preuve à faire après le redémarrage** : l'heure de départ des processus doit être après 23:22:32 (dernière écriture du fichier). Le
   premier geste défait, ou la première liste retenue par Hektor, écrit une ligne `type_des_contacts` au journal du travail.
+
+**Décision de Frédéric (27/10, 23:30)** : *« je redémarrerai demain matin, file vide, les 4 services ensemble »*. ⏰ 28/10 au matin : comparer l'heure de départ des 4 processus à 23:22:32.
