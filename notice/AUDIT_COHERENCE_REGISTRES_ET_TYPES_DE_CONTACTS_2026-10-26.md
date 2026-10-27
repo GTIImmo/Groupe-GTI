@@ -1369,3 +1369,13 @@ même annonce** n'existe que pour **79** couples ; dans tout le parc, **53** ann
 ➡ Une revente passe presque toujours par une **nouvelle annonce** : la période est portée par l'annonce elle-même (annonce A : vendeur
 mandant du mandat X, acheteur propriétaire depuis la vente ; annonce B : l'acheteur mandant du mandat Y). La limite « un seul lien par
 personne et par annonce » (§28.5) ne touche que ces **79** cas.
+
+### 28.7 ⛔ Correction du §28.6 — les « 79 re-signatures » n'en sont pas (Frédéric, 27/10 : « même numéro, même annonce ? »)
+Mesure : sur les 79, le mandat « signé après la vente » porte **le MÊME numéro** que le mandat de la vente (**79 / 79**), sur 58 annonces.
+Ce n'est donc **pas un nouveau mandat** : c'est le mandat de la vente, dont la **date de début** est postérieure à la vente — jusqu'à
+9 ans (annonce 11659 : vendue le 04/11/2008, mandat 2751 « débuté » le 05/09/2017). Plusieurs portent la même date de début
+(16/06/2020) et une fin au 01/01/1970 (date vide). Au registre, 95 mandats commencent le 14/05/2020 et 41 le 16/06/2020 :
+**probablement** une ressaisie en masse chez Hektor (hypothèse, non prouvée).
+➡ **Zéro re-signature** parmi les 10 389 sur la même annonce : la limite du §28.5 ne mord sur aucun d'eux.
+⚠ **Et la leçon pour le rattrapage** : les dates des **vieux** mandats ne sont pas fiables ; la date à retenir pour « propriétaire
+depuis » est **la date de la vente**, jamais celle du mandat.
