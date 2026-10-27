@@ -898,6 +898,44 @@ def charger_mandats_depuis_app_mandat(
     return par_annonce
 
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# LE TYPE DU CLASSEUR QUAND HEKTOR SE TAIT                          27/10/2026
+# ═══════════════════════════════════════════════════════════════════════════════
+# Correctif 3 de notice/ETUDE_CORRESPONDANCES_APP_CLASSEURS_2026-10-27.md (§11 ter).
+# `type_app` est pose depuis le 15/10 (reparer_nature_depuis_sources_legales.py)
+# sur 119 mandats SANS type chez Hektor -- mais le fabricant ne lisait que les
+# versions de Hektor : le registre leur montrait un type VIDE (119/119, local ET
+# cloud, mesure du 27/10).
+#
+# ⭐ HEKTOR D'ABORD, comme partout : le type du classeur ne remplit QUE le vide.
+#   `mandat_type_source` reste celui de Hektor (vide) : ce n'est pas lui qui l'a dit.
+# ⚠ Les deux chemins passent par ici : le run de nuit ET le push cible d'une annonce
+#   (build_mandat_register_rows avec dossier_ids).
+# RETOUR ARRIERE : APP_REGISTRE_TYPE_APP=0 dans l'environnement du run -> au push
+#   suivant, les 119 redeviennent vides. Rien n'est efface : type_app reste en base.
+REGISTRE_TYPE_APP = os.environ.get("APP_REGISTRE_TYPE_APP", "1") == "1"
+
+
+def charger_types_app(con: sqlite3.Connection) -> dict[tuple[str, str], str]:
+    """{(annonce, numero): type du classeur}, pour les seuls mandats sans type Hektor."""
+    places = ",".join("'%s'" % t for t in TYPES_ADMIS_AU_REGISTRE)
+    try:
+        lignes = con.execute(
+            "SELECT hektor_annonce_id, numero_mandat, type_app FROM app_mandat"
+            f" WHERE COALESCE(offre_type,'') IN ({places})"
+            "   AND COALESCE(type,'') = '' AND COALESCE(type_app,'') <> ''"
+        ).fetchall()
+    except sqlite3.OperationalError:
+        # colonne absente (base anterieure au 15/10) : comportement d'avant
+        return {}
+    types: dict[tuple[str, str], str] = {}
+    for annonce, numero, type_app in lignes:
+        annonce, numero = normalize_text(annonce), normalize_text(numero)
+        if annonce and numero:
+            types[(annonce, numero)] = normalize_register_mandat_type(type_app)
+    return types
+
+
 SQL_REGISTER_BROADCAST_AGG = """
 SELECT
     s.hektor_annonce_id,
@@ -1793,6 +1831,7 @@ def build_register_detail_payload(
     price_change_summary: dict[str, object] | None = None,
     prix_annonce: object = None,
     corps_suspect: bool = False,
+    type_app: str | None = None,
 ) -> str:
     localite = safe_json_loads(raw_row.get("localite_json"), {})
     textes = safe_json_loads(raw_row.get("textes_json"), [])
@@ -1821,7 +1860,7 @@ def build_register_detail_payload(
         "nb_chambres": active_row.get("nb_chambres") if active_row else (raw_detail.get("ag_interieur", {}).get("props", {}).get("NB_CHAMBRES", {}).get("value") if isinstance(raw_detail, dict) else None),
         "mandat_history_json": json.dumps([normalize_history_version(item, is_current=index == 0, index=index, prix_annonce=prix_annonce, corps_suspect=corps_suspect) for index, item in enumerate(versions)], ensure_ascii=True, separators=(",", ":")),
         "mandat_avenants_json": json.dumps(embedded_avenants, ensure_ascii=True, separators=(",", ":")),
-        "mandat_type": normalize_register_mandat_type(current_version.get("type")),
+        "mandat_type": normalize_register_mandat_type(current_version.get("type")) or type_app,
         "mandat_type_source": normalize_text(current_version.get("type")) or None,
         "mandat_date_debut": normalize_text(current_version.get("debut")) or None,
         "mandat_date_fin": normalize_text(current_version.get("fin")) or None,
@@ -2259,6 +2298,8 @@ def build_mandat_register_rows(
     # perd jamais une ligne -- au lieu du tableau `mandats` du detail, qui
     # disparait avec l'annonce des que son statut sort de la liste.
     mandats_app = charger_mandats_depuis_app_mandat(con) if REGISTRE_DEPUIS_APP_MANDAT else None
+    # 27/10 : le type du classeur quand Hektor se tait (voir REGISTRE_TYPE_APP).
+    types_app = charger_types_app(con) if (mandats_app is not None and REGISTRE_TYPE_APP) else {}
     price_change_by_annonce = build_price_change_by_annonce(
         con,
         [normalize_text(row.get("hektor_annonce_id")) for row in raw_rows if normalize_text(row.get("hektor_annonce_id"))],
@@ -2419,7 +2460,7 @@ def build_mandat_register_rows(
                 "validation_diffusion_state": (source_row.get("validation_diffusion_state") if source_row else None) or derive_register_validation_state(raw.get("valide")),
                 "mandat_source_id": normalize_text(current_version.get("id")) or None,
                 "mandat_numero_reference": numero,
-                "mandat_type": normalize_register_mandat_type(current_version.get("type")),
+                "mandat_type": normalize_register_mandat_type(current_version.get("type")) or types_app.get((annonce_id, numero)),
                 "mandat_type_source": normalize_text(current_version.get("type")) or None,
                 "mandat_date_debut": normalize_text(current_version.get("debut")) or None,
                 "mandat_date_fin": normalize_text(current_version.get("fin")) or None,
@@ -2520,6 +2561,7 @@ def build_mandat_register_rows(
                     price_change_summary=price_change_summary,
                     prix_annonce=prix_ligne,
                     corps_suspect=corps_suspect,
+                    type_app=types_app.get((annonce_id, numero)),
                 ),
             }
             register_rows.append(row)

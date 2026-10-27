@@ -64,6 +64,7 @@ from phase2.sync.export_app_payload import (  # noqa: E402
     normalize_history_version,
     normalize_register_mandat_type,
     normalize_text,
+    REGISTRE_TYPE_APP,
 )
 
 PHASE2_DB = ROOT / "phase2" / "phase2.sqlite"
@@ -116,7 +117,11 @@ def depuis_app_mandat(ligne: sqlite3.Row, prix_annonce=None, corps_suspect: bool
         "numero_mandat": _texte(ligne["numero_mandat"]),
         "mandat_numero_reference": _texte(ligne["numero_mandat"]),
         "mandat_source_id": _texte(ligne["hektor_mandat_id"]),
-        "mandat_type": _texte(normalize_register_mandat_type(ligne["type"])),
+        # 27/10 : la meme regle que le registre -- le type du classeur ne remplit
+        #   que le silence de Hektor (export_app_payload.REGISTRE_TYPE_APP).
+        "mandat_type": _texte(normalize_register_mandat_type(ligne["type"])
+                              or (normalize_register_mandat_type(ligne["type_app"])
+                                  if REGISTRE_TYPE_APP else None)),
         "mandat_type_source": _texte(ligne["type"]),
         "mandat_date_debut": _texte(ligne["date_debut"]),
         "mandat_date_fin": _texte(ligne["date_fin"]),
@@ -161,7 +166,7 @@ def mesurer(con: sqlite3.Connection) -> dict | None:
     for r in con.execute(
         "SELECT hektor_annonce_id, numero_mandat, hektor_mandat_id, type, date_debut,"
         " date_fin, date_cloture, mandants_texte, note, versions_json,"
-        " version_count, avenants_json, avenant_count, offre_type"
+        " version_count, avenants_json, avenant_count, offre_type, type_app"
         " FROM app_mandat"
     ):
         table[(str(r["hektor_annonce_id"]), str(r["numero_mandat"]))] = r
