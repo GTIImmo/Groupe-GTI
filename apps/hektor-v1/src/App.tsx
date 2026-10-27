@@ -39337,6 +39337,131 @@ function contactDirectoryRoleLabel(value: string) {
   return value || 'Contact'
 }
 
+// ⑧ TYPES, P2 (27/10/2026) : DANS LA FICHE CONTACT, UN BIEN = UNE LIGNE AVEC TOUS SES RÔLES.
+//   La vue rend UNE LIGNE PAR RÔLE (61730 revient 4 fois pour JACQUIER : propriétaire, offre, compromis, vente).
+//   Les deux fiches gardaient la PREMIÈRE et jetaient les autres ; et la première était tirée au hasard
+//   (`last_seen_at` est du TEXTE sous deux formes, et les lignes du registre sont à égalité : 11 444 couples
+//   sur 11 582 le 27/10). Mesure : 9 026 acheteurs à vente signée pouvaient lire « compromis », 138 biens
+//   cachaient l'achat. Note : notice/AUDIT_COHERENCE_REGISTRES_ET_TYPES_DE_CONTACTS_2026-10-26.md, §31.
+//   Décisions de Frédéric (27/10) : l'étape d'acheteur = la VENTE si elle existe, sinon la plus récente ;
+//   « Propriétaire depuis le … » affiché ; offre refusée et compromis annulé MONTRÉS, en gris.
+//   ⚠ Le résultat ne dépend PAS de l'ordre des lignes reçues (éprouvé : test_fiche_un_bien_tous_roles.cjs).
+//   ⚠ Ne touche pas `props.relations` (bon de visite, modales) : seulement la liste affichée.
+//   Interrupteur éteint = l'ancien code, à l'identique.
+const FICHE_UN_BIEN_TOUS_ROLES = true
+
+type RoleDuBien = {
+  famille: 'mandant' | 'proprietaire' | 'acheteur' | 'autre'
+  role: string
+  libelle: string
+  detail: string | null
+  gris: boolean
+}
+type BienDuContact = {
+  relation: AppContactRelation   // la ligne qui porte le bien (photo, titre, numéro) : celle du 1er rôle
+  roles: RoleDuBien[]            // dans l'ordre fixe : mandant, propriétaire, acheteur, autres
+  montant: string | null         // le montant de l'étape d'acheteur retenue
+  sousTitre: string | null       // les détails, en français (« Propriétaire depuis le … · Vente signée le … »)
+}
+
+// « 2026-09-25 » ou « 2026-05-26 09:08:58 » -> « 25/09/2026 » ; sans fuseau (une date de vente n'a pas d'heure).
+function dateDuRole(value: string | null | undefined) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(value ?? '').trim())
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : null
+}
+
+// la couleur d'une pastille de rôle : celle de l'annuaire (mandant, propriétaire, acheteur) ; gris = offre refusée, compromis annulé
+function couleurDuRoleDuBien(r: RoleDuBien) {
+  if (r.gris) return '#8a7f6e'
+  return r.famille === 'mandant' ? '#c2125f' : r.famille === 'proprietaire' ? '#c2701a' : r.famille === 'acheteur' ? '#2f8a5b' : '#2f7c86'
+}
+
+function familleDuRole(role: string): RoleDuBien['famille'] {
+  const r = role.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+  if (r === 'mandant') return 'mandant'
+  if (r === 'proprietaire' || r === 'vendeur') return 'proprietaire'
+  if (r.startsWith('acquereur_')) return 'acheteur'
+  return 'autre'
+}
+
+// L'étape d'acheteur retenue : la vente si elle existe, sinon la plus récente ; à égalité de date, la plus
+// avancée (vente > compromis > offre), puis le numéro de transaction (pour ne JAMAIS dépendre de l'ordre reçu).
+function etapeAcheteurRetenue(lignes: AppContactRelation[]) {
+  const rang = (r: AppContactRelation) => (r.role_contact === 'acquereur_vente' ? 3 : r.role_contact === 'acquereur_compromis' ? 2 : 1)
+  const jour = (r: AppContactRelation) => String(r.transaction_date ?? '').slice(0, 10)
+  const ventes = lignes.filter((r) => r.role_contact === 'acquereur_vente')
+  const candidates = ventes.length ? ventes : lignes
+  return [...candidates].sort((a, b) =>
+    jour(b).localeCompare(jour(a)) || rang(b) - rang(a)
+    || String(b.transaction_date ?? '').localeCompare(String(a.transaction_date ?? ''))
+    || String(b.transaction_id ?? '').localeCompare(String(a.transaction_id ?? '')))[0]
+}
+
+function detailEtapeAcheteur(r: AppContactRelation) {
+  const d = dateDuRole(r.transaction_date)
+  const le = d ? ` le ${d}` : ''
+  const etat = String(r.transaction_state ?? '').trim().toLowerCase()
+  if (r.role_contact === 'acquereur_vente') return { detail: `Vente signée${le}`, gris: false }
+  if (r.role_contact === 'acquereur_compromis') {
+    if (etat === 'cancelled') return { detail: `Compromis annulé${d ? ` (du ${d})` : ''}`, gris: true }
+    return { detail: `Compromis${d ? ` du ${d}` : ''}`, gris: false }
+  }
+  if (etat === 'refused') return { detail: `Offre refusée${d ? ` (du ${d})` : ''}`, gris: true }
+  if (etat === 'accepted') return { detail: `Offre acceptée${d ? ` (du ${d})` : ''}`, gris: false }
+  if (etat === 'proposed') return { detail: `Offre en cours${d ? ` (du ${d})` : ''}`, gris: false }
+  return { detail: `Offre${d ? ` du ${d}` : ''}`, gris: false }
+}
+
+function regrouperRelationsParBien(relations: AppContactRelation[]): BienDuContact[] {
+  // même clé que l'ancien dédoublonnage : le dossier, sinon l'annonce
+  const cle = (r: AppContactRelation) => String(r.app_dossier_id ?? '').trim() || String(r.hektor_annonce_id ?? '').trim()
+  // les groupes dans l'ordre de PREMIÈRE APPARITION, sans clé = une ligne à part : exactement la suite de
+  // l'ancien dédoublonnage, donc le i-ème bien ici est le i-ème bien d'avant (les deux fiches s'y fient)
+  const groupes = new Map<string, AppContactRelation[]>()
+  const ordre: AppContactRelation[][] = []
+  for (const r of relations) {
+    const k = cle(r)
+    const g = k ? groupes.get(k) : undefined
+    if (g) { g.push(r); continue }
+    const neuf = [r]
+    if (k) groupes.set(k, neuf)
+    ordre.push(neuf)
+  }
+  const ordreFamille = { mandant: 0, proprietaire: 1, acheteur: 2, autre: 3 } as const
+  // ⚠ L'ordre des BIENS reste celui d'avant (première apparition) ; seul le CONTENU d'une ligne ne dépend plus de l'ordre.
+  const out: BienDuContact[] = []
+  for (const lignes of ordre) {
+    const roles: RoleDuBien[] = []
+    let montant: string | null = null
+    const parFamille = (f: RoleDuBien['famille']) => lignes.filter((r) => familleDuRole(r.role_contact) === f)
+    const mandants = parFamille('mandant')
+    if (mandants.length) roles.push({ famille: 'mandant', role: mandants[0].role_contact, libelle: 'Mandant', detail: null, gris: false })
+    const proprios = parFamille('proprietaire')
+    if (proprios.length) {
+      const nee = proprios.find((r) => r.origine === 'vente' && dateDuRole(r.proprietaire_depuis))
+      roles.push({ famille: 'proprietaire', role: (nee ?? proprios[0]).role_contact, libelle: 'Propriétaire',
+        detail: nee ? `Propriétaire depuis le ${dateDuRole(nee.proprietaire_depuis)}` : null, gris: false })
+    }
+    const achats = parFamille('acheteur')
+    if (achats.length) {
+      const etape = etapeAcheteurRetenue(achats)
+      const { detail, gris } = detailEtapeAcheteur(etape)
+      roles.push({ famille: 'acheteur', role: etape.role_contact, libelle: 'Acheteur', detail, gris })
+      const m = String(etape.transaction_amount ?? '').trim()
+      montant = m || null
+    }
+    const autres = Array.from(new Set(parFamille('autre').map((r) => r.role_contact))).sort()
+    for (const role of autres) roles.push({ famille: 'autre', role, libelle: contactDirectoryRoleLabel(role), detail: null, gris: false })
+    // la ligne qui porte le bien : celle du 1er rôle (stable, quel que soit l'ordre reçu)
+    const porteuse = [...lignes].sort((a, b) =>
+      ordreFamille[familleDuRole(a.role_contact)] - ordreFamille[familleDuRole(b.role_contact)]
+      || String(a.relation_key ?? '').localeCompare(String(b.relation_key ?? '')))[0]
+    const details = roles.map((r) => r.detail).filter(Boolean) as string[]
+    out.push({ relation: porteuse ?? lignes[0], roles, montant, sousTitre: details.length ? details.join(' · ') : null })
+  }
+  return out
+}
+
 function contactBool(value: unknown) {
   return value === true || value === 1 || value === '1'
 }
@@ -43922,6 +44047,8 @@ function ContactDetailPopupBase(props: {
     return out
   })()
   const linkedDistinctCount = linkedRelations.length
+  // P2 : le i-ème bien regroupé EST le i-ème bien de linkedRelations (même clé, même ordre)
+  const biensDuContact = FICHE_UN_BIEN_TOUS_ROLES ? regrouperRelationsParBien(props.relations) : null
   const roleTagClass = (role: string) => {
     const normalized = role.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
     if (normalized === 'mandant') return 'tg brand'
@@ -44064,7 +44191,10 @@ function ContactDetailPopupBase(props: {
                       <div className="duo-col">
                         <div className="mod">
                           <div className="mod-h"><h2>Annonces liées</h2><span className="mod-meta strong">{linkedDistinctCount} bien{linkedDistinctCount > 1 ? 's' : ''}</span></div>
-                          {linkedDistinctCount > 0 ? linkedRelations.map((relation) => {
+                          {linkedDistinctCount > 0 ? linkedRelations.map((ligneVue, indexBien) => {
+                            // P2 : la ligne qui porte le bien, et TOUS ses rôles (interrupteur FICHE_UN_BIEN_TOUS_ROLES)
+                            const bien = biensDuContact ? biensDuContact[indexBien] : null
+                            const relation = bien ? bien.relation : ligneVue
                             const relationAppDossierId = Number(relation.app_dossier_id)
                             const relationRef = relation.numero_mandat ? `Mandat ${relation.numero_mandat}` : relation.numero_dossier || `V${relation.hektor_annonce_id}`
                             const relationPhoto = (relation.photo_url_listing || '').trim()
@@ -44074,8 +44204,10 @@ function ContactDetailPopupBase(props: {
                                 <span className="lk-thumb">{relationHasPhoto ? <img className="lk-thumb-img" src={relationPhoto} alt="" loading="lazy" onError={(e) => { e.currentTarget.style.display = 'none' }} /> : <span className="ref">Photo</span>}<span className="st" /></span>
                                 <div className="lk-bd">
                                   <div className="lk-ref">{relationRef}</div>
-                                  <div className="lk-t">{relation.titre_bien || 'Relation annonce'}</div>
-                                  <div className="lk-tags"><span className={roleTagClass(relation.role_contact)}>{contactDirectoryRoleLabel(relation.role_contact)}</span></div>
+                                  <div className="lk-t">{relation.titre_bien || 'Relation annonce'}{bien?.sousTitre ? ` · ${bien.sousTitre}` : ''}</div>
+                                  <div className="lk-tags">{bien
+                                    ? bien.roles.map((r) => <span key={`lk-role-${r.famille}-${r.role}`} className={roleTagClass(r.role)} style={r.gris ? { opacity: 0.55 } : undefined} title={r.detail ?? undefined}>{r.libelle}</span>)
+                                    : <span className={roleTagClass(relation.role_contact)}>{contactDirectoryRoleLabel(relation.role_contact)}</span>}</div>
                                 </div>
                                 <span className="lk-go"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M13 6l6 6-6 6" /></svg></span>
                               </button>
@@ -44646,6 +44778,8 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
     return out
   })()
   const linkedDistinctCount = linkedRelations.length
+  // P2 : le i-ème bien regroupé EST le i-ème bien de linkedRelations (même clé, même ordre)
+  const biensDuContact = FICHE_UN_BIEN_TOUS_ROLES ? regrouperRelationsParBien(props.relations) : null
   // Couleur de ligne selon la relation (--rc via classe) : mandant #c2125f, vendeur/propriétaire #c2701a,
   // acquéreur* #2f7c86, acheteur #2f8a5b, défaut #c2701a (= r-vendeur). Même normalisation NFD que ...Base.
   const relationRowClass = (role: string) => {
@@ -45371,17 +45505,20 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
                     <div className="fa-cx-skel-lines"><span className="fa-cx-skel fa-cx-skel-line w70" /><span className="fa-cx-skel fa-cx-skel-line w40" /></div>
                   </div>
                 ) : linkedRelations.length > 0 ? (
-                  linkedRelations.map((relation) => {
+                  linkedRelations.map((ligneVue, indexBien) => {
+                    // P2 : la ligne qui porte le bien, et TOUS ses rôles (interrupteur FICHE_UN_BIEN_TOUS_ROLES)
+                    const bien = biensDuContact ? biensDuContact[indexBien] : null
+                    const relation = bien ? bien.relation : ligneVue
                     const relationAppDossierId = Number(relation.app_dossier_id)
                     const canOpen = relation.app_dossier_id != null && Number.isFinite(relationAppDossierId)
                     const relationRef = `${relation.numero_mandat ? `Mandat ${relation.numero_mandat}` : (relation.numero_dossier || `Annonce ${relation.hektor_annonce_id}`)}${relation.titre_bien ? ` · ${relation.titre_bien}` : ''}`
-                    const relationSub = (relation.transaction_state || '').trim() || 'annonce liée'
+                    const relationSub = bien ? (bien.sousTitre || 'annonce liée') : ((relation.transaction_state || '').trim() || 'annonce liée')
                     const relationStatut = (relation.statut_annonce || '').trim()
                     const st = relationStatut.toLowerCase()
                     const statutTone = st.includes('vendu') ? 'done' : (st.includes('compromis') || st.includes('offre')) ? 'warn' : st.includes('actif') ? 'ok' : 'muted'
                     const relationPhoto = (relation.photo_url_listing || '').trim()
                     const relationHasPhoto = !!relationPhoto && !/no[_-]pic/i.test(relationPhoto)
-                    const relationAmount = formatPrice(relation.transaction_amount)
+                    const relationAmount = formatPrice(bien ? bien.montant : relation.transaction_amount)
                     const rowClass = relationRowClass(relation.role_contact)
                     const inner = (
                       <>
@@ -45396,7 +45533,15 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
                           <span className="fa-cx-lk-t">{relationSub}</span>
                         </span>
                         <span className="fa-cx-lk-meta">
-                          <span className="fa-cx-lk-role">{contactDirectoryRoleLabel(relation.role_contact)}</span>
+                          {bien ? (
+                            <span className="fa-cx-lk-roles">
+                              {bien.roles.map((r) => (
+                                <span key={`fa-cx-lk-role-${r.famille}-${r.role}`} className={`fa-cx-lk-role${r.gris ? ' gris' : ''}`} style={{ ['--rc']: couleurDuRoleDuBien(r) } as CSSProperties} title={r.detail ?? undefined}>{r.libelle}</span>
+                              ))}
+                            </span>
+                          ) : (
+                            <span className="fa-cx-lk-role">{contactDirectoryRoleLabel(relation.role_contact)}</span>
+                          )}
                           {relationAmount !== '-' ? <span className="fa-cx-lk-amt">{relationAmount}</span> : null}
                           <span className="fa-cx-lk-go"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6" /></svg></span>
                         </span>

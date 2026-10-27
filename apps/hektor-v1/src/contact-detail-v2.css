@@ -588,3 +588,8 @@
 @media (prefers-reduced-motion:reduce){
   .fa-cx-srch-tag.prov::before{animation:none;}
 }
+
+/* ⑧ P2 (27/10/2026) : un bien = une ligne, avec TOUS ses rôles (interrupteur FICHE_UN_BIEN_TOUS_ROLES, App.tsx).
+   Plusieurs pastilles côte à côte, chacune à sa couleur (--rc posé en ligne) ; gris = offre refusée, compromis annulé. */
+.fa-contact-v2 .fa-cx-lk-roles { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 5px; }
+.fa-contact-v2 .fa-cx-lk-role.gris { opacity: .85; }

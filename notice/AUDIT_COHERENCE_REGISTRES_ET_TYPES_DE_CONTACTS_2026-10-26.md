@@ -1841,3 +1841,74 @@ des lignes.** Le sous-titre en anglais disparaît.
 (1) la règle de l'étape d'acheteur : la vente, sinon la plus récente ?
 (2) afficher « Propriétaire depuis le … » (c'est P2 qui le rend visible) ?
 (3) une offre refusée ou un compromis annulé : on les montre (en gris) ou on les cache ?
+
+### 31.5 ✅ P2 CODÉ — *(27/10, Frédéric : « vas-y pour P2 : (1) la vente, sinon la plus récente ; (2) oui, afficher « Propriétaire depuis le … » ; (3) montrer l'offre refusée et le compromis annulé, en gris »)* — NON POSÉ, NON POUSSÉ, PAS VU À L'ÉCRAN
+
+**Base** — `supabase/patch_p2_fiche_un_bien_tous_roles_2026-10-27.sql` (+ `_INVERSE`, `_REPETITION`) :
+- la vue gagne `origine` et `proprietaire_depuis` **à la fin** ;
+- le patch vérifie l'empreinte (`d4350c63…`), utilise des ancres d'une ligne et exige 20 colonnes ;
+- l'inverse **recrée** la vue (Postgres ne sait pas retirer une colonne) et exige de retrouver l'empreinte d'avant, les droits (comparés
+  **sans ordre**) et le commentaire.
+
+**Éprouvé dans UNE transaction annulée** (pooler, 27/10) : patch → répétition → inverse → contrôle de l'inverse, **11 / 11 verts**.
+
+| contrôle | résultat |
+|---|---|
+| 18 colonnes inchangées + 2 neuves | OK |
+| `security_invoker` et droits gardés | OK |
+| la vue d'avant se reconstitue à l'octet | OK |
+| mêmes lignes que la vue d'avant, dans les deux sens | OK (116 contacts) |
+| fiche de JACQUIER, admin | 26,4 ms |
+| fiche de JACQUIER, commercial | 132,3 ms (les deux index texte servis) |
+| 116 « nés de la vente » portent origine et date | OK |
+| une ligne d'origine « vente » n'est jamais « mandant » | OK |
+| JACQUIER propriétaire de 61730 depuis le 2026-09-25 | OK |
+| l'inverse rend l'empreinte, les 18 colonnes, les droits et le commentaire d'avant | OK |
+
+Après l'annulation, la base est **intacte** : empreinte `d4350c63…`, 18 colonnes.
+
+- ⚠ **Un premier essai a donné un faux rouge** : l'inverse comparait les droits **dans un ordre fixe**, et une vue recréée les liste dans un
+  autre ordre. Corrigé (comparaison triée), puis relancé vert.
+- **Avaries volontaires** : une empreinte faussée **arrête** le patch ; une colonne trafiquée **arrête** l'inverse. La base est intacte
+  après chacune.
+
+**Écran** — `App.tsx`, interrupteur `FICHE_UN_BIEN_TOUS_ROLES = true` :
+- une seule fonction, `regrouperRelationsParBien`, sert les **deux** fiches (V2 en production, et le repli V1) ;
+- elle garde **la même clé et le même ordre de biens** que l'ancien dédoublonnage : le i-ème bien reste le i-ème ;
+- **pastilles** Mandant · Propriétaire · Acheteur, chacune à la couleur de l'annuaire ; gris = offre refusée ou compromis annulé ;
+- **sous-titre** en français : « Propriétaire depuis le 25/09/2026 · Vente signée le 25/09/2026 », « Compromis du … »,
+  « Compromis annulé (du …) », « Offre acceptée / en cours / refusée (du …) » ;
+- **montant** : celui de l'étape d'acheteur retenue ;
+- `props.relations` n'est **pas** touché (bon de visite, modales) ;
+- sans le patch de la vue (`origine` absente), tout marche, mais sans la date de propriété ;
+- `types.ts` : trois champs optionnels (`relation_key`, `origine`, `proprietaire_depuis`) ; `contact-detail-v2.css` : 2 règles ajoutées ;
+- à l'interrupteur éteint, l'ancien code est intact.
+
+**Essai** `apps/hektor-v1/test_fiche_un_bien_tous_roles.cjs` — **21 / 21 verts**. Il exécute le vrai code et contient :
+- les 13 cas (JACQUIER, deux offres, compromis annulé, vente puis offre plus récente, mandant + acheteur, même jour, avant le patch…) ;
+- la même suite de biens que l'ancien code, ligne sans clé comprise ;
+- **témoin inverse** sur 44 ordres : le nouveau ne bouge pas, l'**ancien change de rôle affiché** ;
+- **mutant** (sans « la vente d'abord ») : attrapé ;
+- le branchement des deux fiches et le chemin d'avant gardé.
+
+L'essai de P1 reste vert, et `npm run build` passe.
+
+**Sur les VRAIES lignes** (lecture seule, script hors dépôt) : tous les contacts qui ont plusieurs lignes sur un bien, soit 32 737
+lignes, **11 290 contacts, 13 861 biens**.
+
+| mesure | résultat |
+|---|---|
+| vente signée non affichée | **0** |
+| mot anglais | **0** |
+| achat caché | **0** |
+| résultat qui change selon l'ordre | **0** |
+| lignes en gris | 734 |
+| « Propriétaire depuis le … » | 116 |
+
+⬜ **Reste, dans l'ordre** :
+1. Frédéric **colle** le patch, puis la répétition (11 verts attendus) ;
+2. il **pousse** (P1, P2 et les commits locaux) ;
+3. je **regarde l'écran** avec sa session : JACQUIER (61730), un vendeur, un acheteur en cours, au bureau **et** à 390 px ;
+4. le mode sombre du téléphone (≤ 1180 px) : les pastilles reprennent la règle `.fa-cx-lk-role` d'avant, **non vu**.
+
+**Retour arrière** : l'interrupteur (écran) ; `_INVERSE.sql` (base) ; les deux sont indépendants, l'écran marchant avec ou sans le patch.

@@ -543,6 +543,10 @@ export type AppContactRelation = {
   statut_annonce?: string | null
   last_seen_at?: string | null
   refreshed_at?: string | null
+  // ⑧ P2 (27/10) : la vue les porte (select *) ; origine/proprietaire_depuis arrivent avec le patch P2 -- absents avant, sans dommage
+  relation_key?: string | null
+  origine?: string | null
+  proprietaire_depuis?: string | null
 }
 
 export type AppContactSearch = {
