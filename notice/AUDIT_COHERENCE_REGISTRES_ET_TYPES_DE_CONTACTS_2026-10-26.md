@@ -1402,3 +1402,49 @@ ce sont les DATES qui sont fausses**, et sur des mandats HEKTOR anciens.
 **Ce que ça touche** : l'écran (fil « Vie du mandat », registre) montre un mandat commencé après sa vente pour ces 61 ; la cascade 2.7
 (« la période ») ne s'en sert que sur 53 annonces à plusieurs mandats ; **le rattrapage n'est pas touché** s'il prend la date de la
 vente (§28.7). ⬜ Signaler ces 61 au registre (« dates incohérentes ») : à décider par Frédéric, rien n'est codé.
+
+### 28.9 ✅ L'EXPLICATION TROUVÉE — les mandats « commencés après leur vente » *(Frédéric, 27/10 : « il faut comprendre pourquoi »)*
+
+**La source qui tranche** : `mandats_extraits.xlsx` (racine du dépôt, 27/02/2026, 26 404 lignes) — un **export du registre des mandats
+de Hektor** qui porte, pour chaque fiche, `time_created` (création de la fiche) **et** les dates du mandat **à la seconde**. Notre miroir
+ne garde ni l'un ni l'autre (Hektor ne les rend pas par l'API).
+
+**Constat 1 — un numéro de mandat n'est pas unique** : 3364 existe au moins trois fois (2012 « M03364 », 2019, et la fiche de 10344) ;
+1311 une douzaine de fois (séries de location « LS… », vente « VM… », ancien préfixe « M0… »). La clé (annonce, numéro) du registre le
+savait déjà (§6 de `NOTE_CHAINE_DES_MANDATS_2026-08-25.md`).
+
+**Famille A — 37 mandats : une date posée « à l'instant » sur une fiche ancienne.** Dans l'export, des **séances** remplissent la date
+de début avec **l'heure du moment**, sur des fiches **créées avant**, et **sans date de fin** :
+
+| jour | mandats | heures | fiche créée avant | sans fin |
+|---|---|---|---|---|
+| 14/05/2020 | 88 | 09:08:16 → 10:14:19 | 88 | 88 |
+| 16/06/2020 | 37 | 14:17:14 → 14:29:06 | 37 | 36 |
+| 02/08/2019 | 26 | 09:07:05 → 09:12:25 | 26 | 26 |
+| 24/07/2017 | 21 | 11:38:15 → 11:40:05 | 21 | 21 |
+| 03-04/05/2021, 07/08/2020, 05/09/2019 | 15 | | 15 | 15 |
+
+Ex. : mandat 1311 (annonce 10867, fiche créée le 14/07/2015) → 16/06/2020 **14:22:13** ; 1260 → 14:22:19 ; 1152 → 14:22:41.
+➡ Ce sont des **séances de ménage** : quelqu'un a repris de vieilles fiches une à une (88 en 66 minutes ≈ 45 s chacune — un rythme
+**humain**, pas un script), et **Hektor a rempli la date de début vide avec l'heure de l'enregistrement**. Le mandat d'origine n'avait
+**pas de date** (fiches héritées de l'ancien logiciel : clés `c3_main_…`, notes « Numéro : M0xxxx »). Ce n'est donc pas une date fausse
+saisie par un humain : c'est **l'absence de date**, comblée par Hektor.
+
+**Famille C — 23 mandats : la fiche de l'ancienne annonce porte le mandat SUIVANT.** Prouvé sur **11659** : vendue le 04/11/2008
+(acheteur Henri ROLAND) ; le bien est remis en vente en 2017 sous une **nouvelle** annonce 10483, mandat 2751 du 05/09/2017 (vendue aux
+GAVOT le 28/06/2018). Dans l'export, la fiche de mandat de 11659 a été **créée le 22/05/2008** mais porte **le numéro, les dates et le
+commentaire du mandat de 2017** (« Mr et Mme DAUPHIN… ») : l'ancien mandat a été **réécrit** par le nouveau. C'est le cas « l'acheteur
+re-signe » de Frédéric — mais **sur une autre annonce**, et Hektor a écrasé l'ancienne fiche au lieu de la garder.
+Les 22 autres : même signature (fiche créée avec l'annonce, dates déplacées des années plus tard, souvent début + 2 ans), mais **pas de
+jumeau** dans notre registre — l'annonce de la revente n'est pas chez nous (brouillon, supprimée, ou hors de notre miroir). Non prouvé
+un par un.
+
+⚠ `time_modified` vaut **2025-03-04 12:42:02** sur 23 184 lignes : une opération globale chez Hektor ; elle ne date pas les réécritures.
+⚠ Notre app n'y est pour rien : sur ces 61 annonces, **seuls** 67 travaux de **lecture** de documents (17/08 → 19/10/2026), et toutes les
+dates sont antérieures au projet.
+
+**Ce que ça change** :
+- pour le **rattrapage** : la date « propriétaire depuis » est **la date de la vente**, jamais celle du mandat (confirmé) ;
+- pour la **coupure** : notre registre ne connaît d'un mandat que **l'état final** de sa fiche Hektor ; l'historique (le mandat d'origine
+  de 11659) n'existe que dans des exports comme celui-ci. ⬜ Garder cet export comme pièce du registre : à décider ;
+- pour l'**écran** : 61 mandats affichent une période impossible — ⬜ les signaler (« date reprise par Hektor le … ») : à décider.
