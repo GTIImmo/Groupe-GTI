@@ -2431,3 +2431,55 @@ son numéro) ; noté pour l'étape 3, **pas un préalable**.
 1. **poser** (accord de Frédéric), puis la répétition ;
 2. **⑥** : le type marqué « à recalculer » par nos registres, recalculé chaque minute, conflits signalés ;
 3. **à l'étape 3** : le marqueur de suppression à nous, pour une transaction supprimée avant son numéro Hektor (§36.6).
+
+## 38. LA SUPPRESSION D'UNE TRANSACTION — audit, et la meilleure solution *(27/10, Frédéric : « d'abord audit, et cherche si c'est la seule et meilleure solution »)* — lecture seule, rien codé
+
+### 38.1 Ce que fait le projet aujourd'hui (code lu)
+1. **L'écran** refuse **tout** geste sur une transaction **sans numéro Hektor** : refuser, accepter, annuler et supprimer
+   (`App.tsx` l. ~18686, « Cette transaction n'a pas encore de numéro Hektor : le geste ne peut pas partir »).
+2. **Au clic**, `app_geste_affaire_optimistic` (« supprimer ») :
+   - passe la transaction à `present_in_hektor = false` : elle disparaît de la fiche **tout de suite** ;
+   - fait redescendre le statut de l'annonce, et l'écrit aussi au **carnet de l'annonce** (`app_annonce_champ_app`, « survit à la coupure »).
+   ⚠ La fonction, elle, **n'exige pas** de numéro Hektor : seule la porte de l'écran le fait.
+3. **Le worker** (`handleDeleteHektorCompromis` / `…Vente`) :
+   - exige le numéro Hektor, sinon il s'arrête net ;
+   - vérifie que la transaction existe chez Hektor, la supprime, puis **vérifie qu'elle n'y est plus**. C'est la preuve.
+4. **Avec la preuve** : il inscrit la suppression au **journal `app_affaire_supprimee`** (`origine = geste_app`, preuve, auteur, date ;
+   25 lignes, jamais effacées), **puis efface la ligne** du registre en ligne. La nuit (`appliquer_les_suppressions`, `affaire_ledger.py`)
+   lit ce journal et efface la ligne locale.
+   ➡ C'est la **décision de Frédéric du 07/09** : « si suppression, la ligne doit ENTIÈREMENT DISPARAÎTRE de mon serveur et de mon app ».
+5. **Refus ou preuve manquante** : le worker **remet** la transaction présente (`restaurerEtatAffaire`), sauf si l'envoi doit être rejoué.
+6. **Ce que Hektor supprime dans son coin** : la nuit le découvre et **garde la ligne**, marquée absente (delete-never). On ne sait pas
+   pourquoi elle a disparu.
+
+### 38.2 Le « trou » que je craignais existe-t-il ? Non, pas aujourd'hui
+Avec le correctif « vivante chez nous » (§37), une transaction supprimée ne réapparaîtrait que si elle était **supprimée sans numéro
+Hektor**. Or **l'écran l'interdit**. Toute transaction supprimée a donc son numéro Hektor, et la règle l'écarte bien. **Le correctif du
+§37 est complet tel quel pour aujourd'hui.**
+
+⚠ **Un défaut voisin, qui existe déjà sans mon correctif** (à noter, pas à corriger ici) : si la suppression passait **avant** la
+confirmation de la création, la confirmation (`poserIdTransactionSurAffaire`) remettrait la transaction présente sans condition. Elle
+ressusciterait. L'écran l'empêche aujourd'hui ; la fonction de la base, non.
+
+### 38.3 Les solutions comparées (pour la coupure)
+| solution | conforme au 07/09 (« disparaît entièrement ») | survit à la coupure | ce qu'elle touche | verdict |
+|---|---|---|---|---|
+| ① une colonne neuve « supprimée le » sur la transaction | ✗ (la ligne reste, une 2ᵉ façon de supprimer) | ✓ | registre + fonction + vue | **non recommandée** : elle double le journal et contredit la décision |
+| ② écrire au journal **au clic** | ✗ (le journal veut dire « Hektor a confirmé, preuve à l'appui » ; la nuit effacerait avant l'accord) | ✓ | sens du journal | **non** |
+| ③ **ne rien ajouter aujourd'hui** ; l'écran bloque déjà le cas | ✓ | (voir ④) | rien | **oui, aujourd'hui** |
+| ③ bis : **la même garde dans la fonction de la base** (« pas de geste sans numéro Hektor ») | ✓ | — | une ligne dans `app_geste_affaire_optimistic` | **recommandé** : ferme aussi la porte des autres appelants et la résurrection du §38.2 |
+| ④ **à la coupure** : la suppression se fait **chez nous**. La fonction fait elle-même ce que fait le worker après la preuve : inscrire au journal (`origine = geste_app`, preuve « suppression locale »), puis effacer la ligne | ✓ | ✓ | la fonction, et la garde de l'écran | **oui, à l'étape 3** |
+
+⭐ **Pourquoi ④ et pas une colonne** : le projet a déjà son mécanisme de suppression, décidé par Frédéric et rodé (le journal plus
+l'effacement). À la coupure, il ne manque qu'une chose : que **la preuve ne vienne plus de Hektor**, mais du geste lui-même. On ne crée pas
+une seconde façon de supprimer.
+
+⚠ **Et la coupure demandera plus que la suppression** : la garde de l'écran bloque **tous** les gestes sur une transaction sans numéro
+Hektor. Après la coupure, aucune n'en aura. Refuser, accepter, annuler et supprimer seraient donc **tous** impossibles. C'est un chantier
+de l'étape 3 : **les gestes sur les transactions sans Hektor**.
+
+### 38.4 La recommandation
+1. **Poser le correctif de la vue du §37 tel quel** : il est complet pour aujourd'hui.
+2. **En option, à ton « vas-y »** : la garde « pas de geste sans numéro Hektor » **aussi dans la fonction de la base**, et pas seulement à
+   l'écran. Une ligne, avec son essai.
+3. **Noter pour l'étape 3** : les gestes sur les transactions sans Hektor (④ pour la suppression, et la garde de l'écran à revoir).
