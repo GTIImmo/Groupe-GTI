@@ -1117,3 +1117,19 @@ transactions 1 min 56.
 Le moniteur de **04:49** affichait « lignes sans numéro : 549 » et « 1 travail en erreur » : il passe **avant** le push de
 05:50 (la vue `app_contacts_sans_numero` vaut **0** après le run) ; l'erreur est la relecture du contact d'essai 20000016,
 supprimé le 26/10 (attendue).
+
+**Les autres tâches de la nuit** *(Frédéric : « tu n'as pas vérifié le run de 22 h et de 3 h ? » — avec le changement d'heure,
+elles tournent à 21:00 et 02:00)* :
+- **entretien des documents** 21:00 → 23:21, les 3 lignes passées : vente 685 balayées / 19 changées / **1 lecture ratée**
+  (pas un refus : `arret: null`, l'annonce sera relue au passage suivant) ; estimations 2 000 / 0 ; vendus 2 000 / 0 ;
+  **68 travaux posés, 68 terminés, 0 erreur**. Mêmes ordres de grandeur que les 23-25/10.
+- **recherches actives** 02:00 → 03:48, **4 000 contacts en 6 502 s**, code 0 (les nuits d'avant : 3 973 à 3 999 en
+  6 490-6 625 s). ⚠ **Aucun journal le 25/10** : c'était la nuit du changement d'heure, et le déclencheur est réglé à
+  `02:00+01:00` (= 01:00 UTC, l'instant même du recul de 03:00 à 02:00). Nuit sautée, une fois par an ; noté, pas traité.
+- **entretien des photos** 20:00 : **12 photos marquées absentes** (63280 : 5, connues chez nous depuis le 14/10 ; 63354 : 7, depuis le
+  24/10), 520 masquées épargnées, verrou 8 : 0 sauvée. Aucun geste de l'app sur ces photos (seules deux relectures
+  d'ouverture). ⚠ **Non tranché** : retirées pour de bon, ou masquées directement chez Hektor ? Seule une relecture des
+  photos de ces deux annonces le dirait (lecture chez Hektor, à son accord).
+- **descente** 06:45 → 07:05:54, les 4 pas en code 0 ; 4ᵉ pas (rattrapage du carnet R3) : « rien à poser », 0 ligne en attente.
+- **balayage des photos** 23:00 : 1 000 / 1 000 terminés, 0 refus, **0 masquée dans une boîte publique** ; récolte 544
+  masquées ; reste 6 519 annonces, ~7 nuits ; seul orange : 63073 (connu).
