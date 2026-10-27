@@ -2177,3 +2177,69 @@ Elle couvre ce que P3-a ne voit pas :
 (1) **les registres font foi** pour le type : la nuit confirme, et n'efface jamais ce qui est dans nos registres ?
 (2) le rapprochement **chaque heure**, en plus de la fin de nuit ?
 (3) l'ordre : **P3-b d'abord** (il répare tout de suite les 7 écarts et ne touche aucun geste), **puis P3-a** ?
+
+## 35. P3 — LA RÈGLE DE FRÉDÉRIC : LE TYPE SE DÉDUIT CHEZ NOUS **QUAND HEKTOR A ACCEPTÉ LE GESTE** *(27/10 : « suis la règle de rattachement ; même mieux, on déduit chez nous le type uniquement si le geste a été accepté chez Hektor » ; et avant : « on garde notre valeur, on signale juste le conflit à l'admin »)* — audit, rien codé
+
+**La règle, en clair** :
+1. **Au clic**, le geste est écrit dans nos registres, et la ligne du bien dans la fiche le montre (déjà fait). **Le type ne bouge pas.**
+2. **Hektor accepte** : on déduit le type chez nous **à ce moment-là**.
+3. **Hektor refuse** : le geste est défait, selon la règle du rattachement (déjà faite) ; **le type n'a jamais bougé**.
+4. **La nuit** : si son type diffère de ce que disent nos registres confirmés, **on garde le nôtre** et on **signale le conflit à l'admin**.
+5. **Un geste fait dans Hektor** arrive la nuit dans nos registres, comme aujourd'hui.
+
+Cette règle **remplace** P3-a et P3-b du §34 : plus de déclencheur au clic, plus de rapprochement qui corrige en silence.
+
+### 35.1 Le moment « accepté », geste par geste (lu dans le worker)
+- **Rattacher un mandant** : à l'accord, le worker passe la ligne de `present_in_hektor = false` à `true` (`console_job_worker.js`
+  l. 17256, « relation_etablie »). Un refus la défait (`annulerRattachementOptimiste`).
+- **Retirer un mandant** : le retrait est écrit **au clic** (`retire_le`). L'accord **ne laisse aucune trace** dans `app_relation` ; seul
+  un refus défait (`annulerRetraitOptimiste`).
+- **Les transactions** : le worker écrit le registre des transactions à l'accord (l. 21792, 22109).
+- ➡ **Le seul moment commun à TOUS les gestes, c'est le travail qui passe à « terminé »** (`app_console_job.status = 'done'`).
+
+### 35.2 Les travaux concernés (60 jours, ≈ 235)
+| type de travail | nombre | ce que la charge nomme |
+|---|---|---|
+| `change_hektor_annonce_status` | 152 | affaire, acheteurs, mandants |
+| `change_hektor_offre_status` | 28 | affaire |
+| `delete_hektor_compromis` / `cancel_hektor_compromis` / `delete_hektor_vente` | 44 | affaire |
+| `link_hektor_mandant` / `unlink_hektor_mandant` | 8 | contact |
+| `create_hektor_mandant_contact` / `update_hektor_mandant_contact` | 3 | (le contact, après coup) |
+
+Tous portent leur **annonce**. **La nuit ne crée aucun de ces travaux** : le mécanisme ne lui coûte rien.
+
+### 35.3 La proposition — À TRANCHER PAR FRÉDÉRIC
+**Une fonction** `app_type_confirme(contact)` calcule le type depuis nos registres, **en ne comptant que ce que Hektor a confirmé** :
+- les liens `present_in_hektor = true` ;
+- les transactions présentes chez Hektor (`transaction_presente`).
+
+Elle coûte ≈ 13 ms par contact.
+
+**Un déclencheur** sur `app_console_job` : quand un travail d'une **liste déclarée** (les 9 types ci-dessus) passe à « terminé »,
+il recalcule le type de **chaque contact lié à l'annonce de ce travail** (ses liens et ses parties, quelques contacts) :
+- on n'écrit que si le type change ;
+- on ne touche pas à `refreshed_at` ;
+- une erreur ne fait **jamais** échouer le travail (elle est notée).
+
+Un travail en erreur, ou défait, ne recalcule rien.
+
+**En fin de nuit**, une fonction compare le type envoyé par la nuit avec `app_type_confirme`. **Là où ils diffèrent, on garde le nôtre**
+et on **signale** l'écart au moniteur, une ligne par contact, avec les deux valeurs. Les 7 écarts d'aujourd'hui seraient ainsi
+**remis et signalés** dès le premier passage.
+
+**Ce que ça pourrait casser** :
+- `app_console_job` est la table la plus active (photos, documents…). Le déclencheur filtre d'abord sur le changement de statut **et** le
+  type de travail, et ne fait rien pour tout le reste. Son coût est à mesurer dans une transaction annulée ;
+- le **retrait** : entre le clic et l'accord, la ligne est déjà cachée (`retire_le`). Si un **autre** travail du même bien se termine dans
+  cet intervalle, le type perdrait « Mandant » un peu tôt. C'est un cas rare, que j'écris pour le traiter si tu le veux ;
+- le **moniteur** : une ligne neuve se déclare et respecte les CHECK de sa table (leçon du 25/10) ;
+- **B reste utile** : la relecture ne réécrit plus le type.
+
+**Essais prévus (transaction annulée)** :
+- un travail `link_hektor_mandant` passé à « terminé » doit mettre « Mandant » dans le type ;
+- le même travail en « erreur » ne doit rien changer ;
+- un travail de photos qui se termine ne doit rien déclencher ;
+- un travail de statut « vendu » doit donner à l'acheteur « Acheteur » et « Propriétaire » (avec la règle du chantier 1) ;
+- la comparaison de fin de nuit doit passer de 7 écarts à 0, avec 7 signalements ;
+- **témoin inverse** : sans le déclencheur, le type ne bouge pas ;
+- **mutant** : sans le filtre sur le type de travail, un travail de photos doit être attrapé.
