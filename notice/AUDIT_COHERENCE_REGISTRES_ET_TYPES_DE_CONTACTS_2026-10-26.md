@@ -2878,3 +2878,25 @@ simple.**
 ### 43.6 Questions — À TRANCHER PAR FRÉDÉRIC
 (1) cette version simple **à la place** du §42 ?
 (2) l'ordre : la base (fonctions et 6 portes), puis la nuit, puis le worker (le seul qui demande un redémarrage) ?
+
+## 44. « ET SI HEKTOR NE RÉPOND PLUS ? » — et le rappel de la solution retenue *(27/10, Frédéric)*
+
+### 44.1 Quand Hektor ne répond pas (panne, délai dépassé) — lu dans le worker
+- **Le type** (version simple, §43) ne dépend d'aucune réponse de Hektor : il est calculé depuis nos registres, au clic et en fin de nuit.
+- **La règle de chaque geste**, elle, en dépend :
+  - **rattacher un mandant** : au **premier échec**, quel qu'il soit, le worker **défait** le lien (`annulerRattachementOptimiste`), sans
+    rejouer ;
+  - **retirer un mandant** : au premier échec, il **remet** le lien (`annulerRetraitOptimiste`) ;
+  - **refuser, accepter, annuler, supprimer une transaction** : le **filet** du 29/08 (C.4-bis) **garde l'état et rejoue** pendant
+    **24 h**, 5 essais au plus (`FILET_FRAICHEUR_MS`, `FILET_MAX_TENTATIVES`). Ensuite seulement, il remet l'état d'avant ;
+  - **créer une transaction** : elle reste chez nous, sous notre numéro. L'effet d'un échec du worker n'est **pas mesuré** ici.
+- ⬜ **Décision à prendre** : le rattachement et le retrait d'un mandant doivent-ils avoir **le même filet de 24 h** que les transactions,
+  plutôt que d'être défaits tout de suite ? C'est un changement du worker, qui demande son propre audit.
+
+### 44.2 ⬜ Pour l'étape 3 (la coupure), à ne pas oublier
+1. Les portes de l'app **posent des travaux pour Hektor**. Après la coupure, ces travaux échoueraient, et le worker **défairait chaque
+   geste**. Il faudra que les portes cessent de les poser, ou que le worker les tienne pour réussis.
+2. La garde de l'écran et celle de la base (« pas de geste sans numéro Hektor ») bloqueraient **tous** les gestes sur les transactions
+   (§38.3).
+3. La suppression d'une transaction devra se faire **chez nous** : la fonction inscrit au journal, puis efface (§38.3 ④).
+4. La nuit disparaît : il ne reste que nos registres et le calcul du type au geste. **Rien à changer** pour le type.
