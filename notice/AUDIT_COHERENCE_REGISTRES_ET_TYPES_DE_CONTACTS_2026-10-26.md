@@ -2532,3 +2532,73 @@ Les notaires **existent** chez nous : dans la table des parties, `notaire_vendeu
 - le temps de la fiche et de l'annuaire, avec 23 351 lignes de plus dans la vue.
 
 ⬜ **À trancher par Frédéric** : on ouvre le type Notaire ? (Les quatre maillons, dans cet ordre : la vue, le type, l'écran, puis la fiche.)
+
+## 40. LE TYPE NOTAIRE — AUDIT DES QUATRE MAILLONS *(27/10, Frédéric : « on ouvre le type Notaire ; commence par l'audit des quatre maillons (vue, type, écran, fiche), sans rien coder »)* — lecture seule
+
+### 40.1 Maillon 1 — la vue des liens d'un contact
+- **La source existe** : la table des parties porte `notaire_vendeur` (16 573 lignes) et `notaire_acquereur` (6 778 lignes). Cela fait
+  **23 351 lignes pour 1 330 notaires**, toutes sur des transactions vivantes (11 637 compromis, 11 713 ventes, 1 offre).
+- **La vue ne les prend pas** : sa 2ᵉ branche filtre `p.role = 'acquereur'`.
+- **Le volume par notaire** : médiane **2** lignes, **50 notaires au-delà de 100**, 3 au-delà de 500 ; le plus chargé en a **810** (410
+  biens). Lu sans les règles d'accès : **93 ms** pour ce notaire. ⬜ À mesurer sous le compte d'un commercial (avec la RLS, ×3 à ×4).
+- **Le recouvrement** : 20 notaires sont aussi liés à un bien (mandant ou propriétaire), 15 sont aussi acheteurs, aucun n'a de recherche
+  active.
+- **Ce que la branche toucherait** :
+  - `loadContactRelations` (la fiche, P2) : les lignes « Notaire » apparaîtraient ; le regroupement les range en famille « autre »,
+    il faut leur donner un libellé et une couleur ;
+  - `loadAnnonceContactInvitees` (les invités d'un RDV) : le notaire de l'annonce deviendrait invitable. ⬜ C'est sans doute souhaitable
+    (signature), à confirmer ;
+  - `loadAnnonceMandants`, `app_contact_activite` : intouchés, ils filtrent sur leurs rôles ;
+  - le bon de visite : intouché.
+
+### 40.2 Maillon 2 — le type stocké
+- **0 contact** a un rôle notaire dans son type. Le calcul de nuit (`load_relations`) ne lit aucun notaire, alors que le miroir les
+  connaît (registre local : `notaire_mandant_id`, `notaire_acquereur_id`).
+- **Deux chemins possibles** :
+  - **(a)** apprendre les notaires au calcul de nuit (Python) ;
+  - **(b) ⭐ les tirer de nos registres**, par le mécanisme ⑥ (« à recalculer », §36.4) : la vue ajoutée au maillon 1 suffit, sans Python.
+    ⭐ C'est le même chemin que pour tous les autres types, et il survit à la coupure.
+- **L'annuaire** : 1 110 notaires y sont déjà, par l'élargissement de nuit (`elargir_perimetre_console.py` lit les notaires de la
+  console). **220** restent sur le serveur : l'élargissement lit la console, pas la table des parties.
+
+### 40.3 Maillon 3 — l'écran (tous les endroits relevés)
+| endroit | aujourd'hui | à faire |
+|---|---|---|
+| `ContactDirectoryType` et `contactDirectoryCategories` (l. ~39191) | mandant, propriétaire, acheteur, acquéreur | ajouter **notaire**, à son rang |
+| `contactDirectoryTypeLabel` | 4 mots | « Notaire » |
+| en-tête de la fiche V2 (`typeClass`, `categoryColor`, l. ~44757) | 4 couleurs, 4 symboles | `ty-notaire` (bleu encre, balance), déjà dessiné dans la maquette v2 |
+| cartes de l'annuaire (`ci-av has-sym`, `ci-role`, l. ~46118) | 4 symboles | le symbole et la pastille « Notaire » |
+| ton du téléphone et de la pastille (P1, `contactToneFromRoles`) | le ton `notary` existe déjà, jamais atteint | le relier à la catégorie |
+| filtre par rôle (`applyContactRoleFilter`, `api.ts` l. ~2549) et ses **deux menus** (l. ~24071, ~24810) | `notaire_entree` / `notaire_sortie`, **ne trouvent personne** | « Notaire », qui vise `notaire_vendeur` **et** `notaire_acquereur` |
+| recherche globale (`rolesContact`) | 4 mots | « Notaire » |
+| fiche contact, lignes de biens (P2) | — | libellé « Notaire — côté vendeur / acquéreur », et sa couleur |
+
+### 40.4 Maillon 4 — la fiche notaire (maquette v2) : ce que les données permettent
+| bloc de la maquette | la donnée | état |
+|---|---|---|
+| dossiers en cours, les 4 étapes | compromis vivants sans vente (125 dans toute l'agence aujourd'hui) | ✅ |
+| date d'acte prévue | `date_acte` réelle sur **10 436 / 10 640** compromis | ✅ |
+| fin de rétractation | `date_fin_retractation` réelle sur **340** seulement (champ récent) | ⚠ partiel |
+| condition de prêt (échéance) | **aucune colonne** | ⛔ absent |
+| séquestre | renseigné sur **1** compromis | ⛔ quasi vide |
+| honoraires, net vendeur, prix | `honoraires_entree`, `prix_net_vendeur`, `montant` | ✅ |
+| côté (vendeur / acquéreur) et confrère (le notaire d'en face) | les rôles de la table des parties, sur la même transaction | ✅ |
+| ventes signées et délai compromis → acte | la vente et le compromis de la même chaîne (`app_chaine_id`) | ✅ |
+| avec nous (par agence), confrères fréquents | calculables | ✅ |
+| interlocuteurs de l'étude, liste des pièces | — | ⛔ à créer |
+| échanges (e-mails, RDV) | existants | ✅ |
+
+### 40.5 L'ordre proposé, et les questions — À TRANCHER PAR FRÉDÉRIC
+**Ordre** :
+1. **la vue** : une branche « notaires », même règle « vivante » ; patch, inverse et répétition, avec le temps sous un commercial ;
+2. **⑥** : le type tiré de nos registres, notaires compris ;
+3. **l'écran** : la catégorie, les couleurs et symboles, le filtre et ses menus, la fiche contact ;
+4. **la fiche notaire**, avec les blocs dont les données existent.
+
+**Questions** :
+(1) **le rang** : un notaire qui est aussi mandant ou acheteur (35 cas), « Notaire » en premier ?
+(2) **la fiche contact** d'un notaire (jusqu'à 410 biens) : toutes les lignes, ou un résumé « Notaire sur N dossiers » en attendant la
+    fiche notaire ?
+(3) **les 220 notaires restés sur le serveur** : les faire entrer dans l'annuaire (l'élargissement lirait aussi la table des parties) ?
+(4) **les invités d'un RDV** : le notaire de l'annonce devient invitable, d'accord ?
+(5) **les blocs absents** de la fiche (condition de prêt, séquestre, interlocuteurs, pièces) : masqués pour l'instant, ou à créer ?
