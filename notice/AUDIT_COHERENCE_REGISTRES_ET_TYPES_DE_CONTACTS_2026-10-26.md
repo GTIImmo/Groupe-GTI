@@ -2900,3 +2900,59 @@ simple.**
    (§38.3).
 3. La suppression d'une transaction devra se faire **chez nous** : la fonction inscrit au journal, puis efface (§38.3 ④).
 4. La nuit disparaît : il ne reste que nos registres et le calcul du type au geste. **Rien à changer** pour le type.
+
+## 45. ✅ ÉTAPE 2, LA BASE CODÉE — LE TYPE SE CALCULE CHEZ NOUS AU GESTE *(27/10, Frédéric : « oui » à la solution rappelée)* — NON POSÉE
+
+**Fichiers** : `supabase/patch_type_au_geste_2026-10-27.sql` (+ `_INVERSE`, `_REPETITION`).
+
+**Ce que fait le patch** :
+1. **trois fonctions internes** (ni `anon` ni `authenticated` ; la clé de service et la base seulement) :
+   - `app_type_depuis_nos_registres(contact)` : le type depuis la vue des liens, trié comme la nuit (`COLLATE "C"`, car la base trie en
+     `en_US`) ;
+   - `app_recalculer_type_contacts(contacts[])` : écrit le type **seulement s'il change**, sans toucher à `refreshed_at` ni à la cible ;
+   - `app_recalculer_type_du_bien(annonce, dossier)` : tous les contacts liés au bien (ses liens, même retirés, et les parties de ses
+     transactions). Il ne fait **jamais** échouer l'appelant : une erreur est notée, et il rend -1 ;
+2. **une ligne dans chacune des 6 portes** (§43.2), juste avant leur sortie finale. Ancre d'une ligne, empreinte vérifiée ; droits et
+   `SECURITY DEFINER` gardés. Pour « Supprimer », qui a une sortie précoce, l'ancre vise la sortie finale.
+
+**Éprouvé dans UNE transaction annulée** (pooler) : patch → répétition → inverse → contrôle, **12 / 12 verts**.
+
+| contrôle | résultat |
+|---|---|
+| 3 fonctions internes, `SECURITY DEFINER` | OK |
+| les 6 portes portent la ligne, à sa place | OK |
+| **témoin inverse** : sans la ligne, les 6 portes retrouvent leur empreinte d'avant | OK |
+| le calcul rend le type de la nuit (2 000 contacts) | OK (2 écarts, déjà connus, §34.2) |
+| le bien le plus chargé (annonce 10555) se recalcule | **9 ms** |
+| un second calcul n'écrit rien | OK |
+| **essai réel, RATTACHER** (contact 10000167 sur le bien 63354, sous mandat) | `["acquereur_offre"]` → **`["acquereur_offre", "mandant"]` au clic** |
+| **essai réel, SUPPRIMER une vente** (1000289, acheteur 10099691) | `["acquereur_vente"]` → **`[]` au clic** |
+| une annonce absurde ne fait pas échouer l'appelant | OK |
+| les essais n'ont rien laissé | OK |
+| **la règle des portes de demain** : toute fonction qui écrit un lien ou une transaction appelle le recalcul, sauf 5 déclarées (commission, chaînes, champs, et les deux qui tiennent la table des parties) | OK |
+| l'inverse rend les 6 portes à leur empreinte et retire les 3 fonctions | OK |
+
+Après l'annulation : les 6 portes sont intactes et il ne reste aucune fonction neuve.
+
+- **Avaries volontaires** :
+  - une empreinte faussée **arrête** le patch ;
+  - une porte privée de sa ligne (« Supprimer ») est **attrapée trois fois** : n° 2 (5 sur 6), n° 8 (la vente reste dans le type),
+    n° 11 (**la règle la nomme** : `app_geste_affaire_optimistic`).
+- ⚠ **Deux arrêts en route, tous deux des gardes, la base intacte chaque fois** :
+  1. dans la répétition, une variable de boucle `p` portait le même nom que l'alias `p` de la table des parties, et PL/pgSQL les
+     confondait. Renommée ;
+  2. ⭐ le **retour arrière** a refusé : deux portes (**rattacher** : 116 CR ; **retirer** : 103 CR) ont un **corps en fins de ligne
+     Windows**. Mon patch retirait les CR par réflexe (leçon 30). La fonction marchait, mais elle ne retrouvait plus son empreinte
+     d'avant. Le patch **ne retire plus les CR** des fonctions : les ancres tiennent sur une ligne, la ligne ajoutée ne porte qu'un LF,
+     et l'inverse la retire à l'octet. ➡ **Leçon** : retirer les CR est juste pour une **ancre** ; pour le **corps** d'une fonction
+     qu'on doit rendre à l'identique, c'est faux.
+
+**Ce qui n'est pas dans ce patch** (leurs propres pas, §43.3) :
+- **la nuit** : elle n'écrit plus le type, puis lance le calcul pour tous. Tant qu'elle n'est pas faite, elle réécrit le type la nuit,
+  avec le même résultat pour 62 332 contacts sur 62 339 : sans dommage ;
+- **les 3 retours arrière du worker**.
+
+⬜ **Reste** :
+1. **poser** ce patch (accord de Frédéric), puis la répétition ;
+2. **la nuit** (`push_contacts_to_supabase.py`, derrière un interrupteur) ;
+3. **le worker** (3 lignes ; redémarrage des 4 services, file vide).
