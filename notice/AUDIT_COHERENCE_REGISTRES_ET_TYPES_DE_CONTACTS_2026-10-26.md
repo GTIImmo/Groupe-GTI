@@ -1268,3 +1268,83 @@ lui-même ajouté** (Hektor le fait à chaque vente **depuis le 17/07**). La nui
    **identique** à celle de la nuit (même clé contact + bien, `origine = 'vente'`, `proprietaire_depuis` = date de la vente), pour que la
    nuit la **reconnaisse** au lieu d'en créer une seconde ; la même règle (jamais un acheteur nommé dans le texte du mandat) ; et
    « supprimer la vente » ne retire **que** une ligne `origine = 'vente'` — jamais un vrai mandant.
+
+## 28. TOUS LES CONTACTS, TOUS LES TYPES — et l'audit du rattrapage des acheteurs anciens *(27/10, Frédéric : « audit un rattrapage » ; « liste les mécanismes chez nous par type de contact, pense au non qualifié ; il y a 300 000 contacts sur le serveur, pourquoi tu n'en parles pas ? »)* — lecture seule, rien codé
+
+⛔ **Je me corrige encore** : toutes mes mesures du §27 portaient sur les **62 339 contacts de l'annuaire** (ceux qui montent dans l'app).
+Le serveur en porte **356 674** (`hektor_contact`, dont **184 201 archivés**). Supabase n'a de **fiche** que pour les 62 339
+(`app_contact_current`) ; le registre des relations y porte des liens pour 109 743 contacts.
+
+### 28.1 Qui monte dans l'app — la règle (`build_contacts_layer.py` l. 1780-1785, + l'élargissement console du 11/09)
+Un contact monte s'il est **lié à une annonce ACTIVE** ou s'il a une **recherche ACTIVE** (ou s'il est nommé dans une transaction lue à la
+console). Tous les autres restent **sur le serveur seulement** : leur fiche existe chez nous (le miroir local, sous notre numéro — 100 %
+depuis le 07/10), mais **l'app ne la voit pas**.
+
+### 28.2 Les 356 674 contacts, classés avec la règle de l'annuaire (type dominant ; base locale du 27/10, après la nuit)
+
+| type dominant | dans l'annuaire (actifs + archivés) | serveur seulement (actifs + archivés) | total |
+|---|---|---|---|
+| **Mandant** | 17 720 + 5 140 = 22 860 | 22 199 + 4 160 = **26 359** | 49 219 |
+| **Acheteur** (transaction) | 5 220 + 7 866 = 13 086 | 487 + 834 = 1 321 | 14 407 |
+| **Propriétaire** | 12 338 + 9 147 = 21 485 | 15 786 + 8 845 = **24 631** | 46 116 |
+| **Acquéreur** (recherche active) | 3 631 | 0 | 3 631 |
+| ancien prospect (recherches toutes archivées) | 1 | 48 + 56 084 = **56 132** | 56 133 |
+| **NON QUALIFIÉ** (aucun lien, aucune recherche) | 618 + 495 = 1 113 | 94 426 + 91 629 = **186 055** | **187 168** |
+| **total** | **62 176** | **294 498** | **356 674** |
+
+Les non qualifiés portent tout de même une **typologie de Hektor** : « acquéreur » 92 225, « partenaire » 88 849, « mandant » 8 047
+(mandant chez Hektor, mais aucun bien lié chez nous), « locataire » 3. ⚠ Et les **notaires** : 16 573 + 6 778 rôles « notaire » dans la
+table des parties, mais **aucun type « notaire »** (ni dans la vue, ni dans le type de nuit — d'où les options mortes du menu des filtres).
+
+### 28.3 Les mécanismes chez nous, type par type (la règle : chez nous au clic, Hektor confirme, la nuit vérifie)
+
+| type | où il vit chez nous | au clic | la nuit | ce qui manque |
+|---|---|---|---|---|
+| **Mandant** | registre des relations (`app_relation`) ; le mot se déduit du n° de mandat du bien | ✅ lier, créer, retirer un mandant (3 portes, défaites si Hektor refuse) | recopie + confirme | ❌ mandants posés **à la création d'annonce** / au n° de mandat auto ; ⚠ D1 (« mandant = a signé un mandat ») n'est **pas** la règle du code (« propriétaire d'un bien sous mandat ») ; 26 359 hors de l'app |
+| **Propriétaire** | `app_relation` (bien sans mandat) | ✅ mêmes portes | recopie | 24 631 hors de l'app ; un lien n'a pas de « jusqu'à » (C11) : le vendeur reste propriétaire après l'acte |
+| **Propriétaire depuis la vente** | `app_relation.origine = 'vente'` + `proprietaire_depuis` | ❌ | ✅ la règle du chantier 1 — **seulement si Hektor a ajouté l'acheteur** (depuis le 17/07) | ❌ au geste de la vente ; ❌ retrait si la vente est supprimée (C10) ; ❌ les 10 389 acheteurs d'avant le 17/07 (§28.4) |
+| **Acheteur** | registre des transactions + table des parties | ✅ (R1) | confirme (R2, R3) | — |
+| **Acquéreur** (recherche active) | `app_contact_search_current` | ⚠ créer = **passe par Hektor** (recherche provisoire affichée) ; supprimer = archivage daté chez Hektor (témoin 20000008 rouge le 27/10) | recopie | la recherche n'est pas « chez nous d'abord » ; l'auto-archivage RGPD de Hektor (création + 2 ans) ne nous parvient pas |
+| **Ancien prospect** | `app_contact_search_current` (archivées) | — | recopie | 56 132 hors de l'app |
+| **Notaire** | table des parties (`notaire_vendeur` / `notaire_acquereur`) | ✅ (avec la transaction) | confirme | ❌ **pas de type** : invisible comme tel dans l'annuaire |
+| **Non qualifié** | la fiche seule (miroir du serveur) + la typologie de Hektor (`typologies_json`) | — | recopie | ❌ **aucun mécanisme chez nous** ; 186 055 hors de l'app ; la typologie de Hektor n'est lue par aucun type |
+| **Le type lui-même** (l'étiquette) | `relation_roles_json`, calculé par la nuit | ❌ | ✅ (juste : 62 337 / 62 339) | ne suit pas le geste (C6) ; 3 logiques à l'écran (C8) |
+
+➡ **Le jour de la coupure** : les 294 498 fiches « serveur seulement » sont chez nous (sur le serveur), mais l'app ne les montre pas.
+**Aucune décision écrite** ne dit si elles doivent monter, ni lesquelles. ⬜ **À trancher par Frédéric** (sujet à part, gros : poids de
+l'annuaire, droits, RGPD pour les 184 201 archivés).
+
+### 28.4 L'audit du rattrapage — les acheteurs des ventes d'avant le 17/07
+
+**Qui** (ventes vivantes, acheteurs sous notre numéro, sans aucun lien au bien) : **10 389 couples** — 10 139 personnes, 8 774 biens,
+8 784 ventes. Toutes les fiches sont dans l'annuaire (elles y montent par la transaction). ⚠ **6 218 fiches sont ARCHIVÉES** (60 %) ;
+1 063 fiches sans nom (les fiches « couple » de Hektor) ; 1 606 co-acquéreurs. Par date de vente : avant 2010 **1 413** · 2010-2017
+**4 228** · 2018-2021 **2 531** · 2022-2023 **1 247** · depuis 2024 **970**. Biens revendus depuis par l'agence : **4** ; biens
+revenus au parc : **8**. 10 376 biens ont encore leurs propriétaires d'avant (le vendeur, D3).
+
+**Pourquoi une écriture en base ne suffit pas** (`phase2/sync/relation_ledger.py`) :
+1. la règle de nuit **lève** chaque nuit l'origine « vente » qu'elle ne retrouve pas (`a_lever`) — et elle ne cherche que les liens que
+   Hektor a ajoutés : un rattrapage posé une fois serait **défait à la première nuit** ;
+2. la vue ne montre un lien inconnu de Hektor que s'il vient de l'app (`source = 'app'`, `absent_depuis` vide) ;
+3. le type de nuit (`build_contacts_layer.py`) lit le miroir local, pas `app_relation` : il ne verrait pas le nouveau propriétaire.
+➡ Le rattrapage est **une extension de la règle** — « l'acheteur d'une vente vivante est propriétaire depuis la vente, que Hektor l'ait
+ajouté ou non » — écrite **une fois** dans `regle_acheteur_proprietaire.py` et lue par ses deux lecteurs, plus la vue.
+
+**Ce que ça pourrait casser ailleurs** :
+- **des propriétaires qui ne le sont plus** : un acheteur de 2005 a pu revendre **sans** l'agence ; on n'en sait rien. Plus la vente est
+  ancienne, plus le risque est grand (1 413 avant 2010) ;
+- **deux propriétaires en même temps** : le vendeur garde son lien (pas de « jusqu'à », C11) → le bien montrerait l'ancien et le nouveau.
+  C'est déjà le cas pour les 116 d'aujourd'hui ;
+- **les biens revendus par l'agence** (4) : seul le **dernier** acheteur est propriétaire ; l'acheteur précédent est devenu vendeur ;
+- **l'annuaire** : les comptes « Propriétaires » montent d'environ 10 000 ; les 8 biens revenus au parc rendraient leurs acheteurs « liés à
+  une annonce active » ;
+- **le registre des mandats** : un acheteur « propriétaire depuis la vente » ne doit pas apparaître parmi les mandants du mandat du vendeur
+  (déjà garanti pour les 116 par `origine = 'vente'` — à reprouver) ;
+- **Hektor** : rien n'est envoyé (comme pour les 116).
+
+**Les choix — À TRANCHER PAR FRÉDÉRIC** (rien n'est choisi) :
+- **A** — ne rien rattraper : les acheteurs anciens restent « Acheteur » ;
+- **B** — tout rattraper (10 389), chaque lien daté de sa vente ;
+- **C** — rattraper une fenêtre récente (par exemple depuis 2018 : 4 748 ; depuis 2022 : 2 217), là où l'acheteur est très probablement
+  encore propriétaire ;
+- et dans B ou C : **avant**, poser le « jusqu'à » du vendeur (C11), sinon chaque bien rattrapé montre deux propriétaires.
