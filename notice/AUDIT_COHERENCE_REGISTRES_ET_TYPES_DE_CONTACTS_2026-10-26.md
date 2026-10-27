@@ -2664,3 +2664,14 @@ J'avais appliqué la décision 2 à la **fiche contact générique** (§40.7). F
 - au téléphone (375 px) : aucun débordement, les puces passent sur une rangée qui défile.
 
 Le chiffre « Ventes · 12 mois » du haut est aligné sur l'historique (38).
+
+### 40.9 ✅ DÉCISION DE FRÉDÉRIC (27/10) : « non, je préfère fiche-notaire-v2 »
+**La référence de la fiche notaire est `maquettes/fiche-notaire-v2.html`**, telle quelle. La v3 (§40.8) et la maquette du filtre de la
+fiche contact (§40.7) restent dans le dossier, **pour mémoire seulement : elles ne sont pas à coder**.
+
+Ce que la v2 fait déjà pour ne pas surcharger la page (décision 2) :
+- les **dossiers en cours** en cartes, avec leurs 4 étapes ;
+- les **ventes signées limitées aux 12 derniers mois** ;
+- « À venir » et les chiffres en tête.
+
+La décision 5 (les blocs sans données « en construction ») s'appliquera **au codage**, sur la v2.
