@@ -1852,3 +1852,13 @@ recherche » ne fait rien de visible chez Hektor → à auditer (`handleDeleteHe
 ⚠ **Coordination.**
 - Le worker porte aussi les changements Youtrust / PDF de mandat de l'autre session, non commités. Ils sont restés hors du commit, qui a été indexé à partir de `HEAD` + mes seuls changements.
 - Un redémarrage chargera **aussi** leur code non commité : il faut le dire à l'autre session avant.
+
+**✅ EN LIGNE LE 27/10 (« REDEMARRE ET PUSH »).**
+- **Front.** `1101fb3` et `8ff6e76` sont sur `origin/main`, et la production sert `index-L0oeshOf.js`.
+  - Ce bundle contient la liste de la pastille, avec les 4 gestes de transaction.
+  - Ouverte déconnectée, l'app affiche « Bon retour », sans autre erreur que les deux 401 antérieurs.
+- **Worker.** Les 4 services ont démarré à **10:23:06-08** : c'est la ligne `"worker":` de chaque journal.
+  - Le redémarrage n'a pas été fait par moi : sans élévation, mon `Restart-Service` de 10:24 a été refusé (« Impossible d'ouvrir le service »).
+  - Le fichier du worker datait de **09:47:27**, avant le démarrage : le code de l'alerte à l'abandon est donc chargé.
+  - La file était vide : aucun travail mis à jour depuis 10:10, puis 0 pending / 0 running à 10:24. Aucune erreur dans les 4 journaux depuis.
+  - ⚠ **Ce démarrage a aussi chargé le code Youtrust / PDF de mandat NON COMMITÉ de l'autre session.** Il dort : `app_setting.signature_youtrust = off` (vérifié à 10:24), et ses deux branches ne jouent qu'interrupteur allumé.
