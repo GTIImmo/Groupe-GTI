@@ -1969,3 +1969,83 @@ dans le Chrome de Frédéric (sa session), dans un onglet à moi, refermé à la
 - La ligne du bien (P2) est **juste**, parce qu'elle lit les registres et non le type : c'est l'**en-tête** et l'**annuaire** qui reculent.
 - **Cause NON cherchée** (le chantier 1 est bien allumé dans `.env`, l. 76 ; `refresh_contact_inproc.py` le charge-t-il, et avec quelles
   relations ?). C'est exactement le sujet de **P3** (le type suit le geste) : **à auditer en premier dans P3**.
+
+## 32. P3 — AUDIT : OUVRIR UNE FICHE FAIT RECULER LE TYPE *(27/10, Frédéric : « ouvre P3 par l'audit de la relecture à l'ouverture d'une fiche qui fait reculer le type »)* — lecture seule, rien codé
+
+> Audit limité à la **relecture d'un seul contact** (lire / remonter le type). Les autres objets ne sont pas touchés par ce chemin.
+
+### 32.1 Le chemin
+1. **L'ouverture d'une fiche** appelle `app_console_request_contact_refresh` (base). La fonction pose un travail
+   `refresh_console_contact_data` (raison `read_through_open`), au plus une fois par délai.
+2. **Le worker** (`runContactRefreshPipeline`, `console_job_worker.js` l. 4355) lance `phase2/sync/refresh_contact_inproc.py`, qui enchaîne
+   4 étapes : relire le détail chez Hektor, normaliser, **construire** (`build_contacts_layer.py --contact-id`), **pousser** vers Supabase.
+3. ⚠ **Les gestes sur un contact passent par le même chemin** : création, modification, archivage, ajout ou suppression d'une recherche,
+   relecture de garde (`search_overwrite_guard`). Sur 30 jours : **115 relectures à l'ouverture (41 contacts)** et une trentaine de gestes.
+
+### 32.2 La cause, dans le code
+`load_relations` (`build_contacts_layer.py` l. 1075), **en mode « un seul contact »**, saute trois sources sur six, chacune gardée par
+`and not contact_filter` (depuis le commit `8ef77ba` du **01/06/2026** ; les acheteurs sont dans un JSON qu'une requête ne filtre pas) :
+
+| source | nuit | un seul contact |
+|---|---|---|
+| propriétaires de la fiche d'annonce (`hektor_annonce_detail`) — 72 031 liens | ✅ | ⛔ sautée (l. 1212) |
+| liens annonce ↔ contact (`sync_annonce_contact_link`) | ✅ | ✅ |
+| offres (`hektor_offre`) | ✅ | ✅ |
+| **compromis** (`hektor_compromis`) | ✅ | ⛔ sautée (l. 1289) |
+| **ventes** (`hektor_vente`) | ✅ | ⛔ sautée (l. 1314) |
+| annonces du détail du contact | ✅ | ✅ |
+
+Ensuite, `refresh_contact_slice` (l. 2114) **garde bien les anciennes lignes de liens** (`merge_relation_rows`), mais il calcule le **type**
+et l'**éligibilité** à partir des **seules lignes relues** (`roles_by_contact` de `load_relations`). Trois effets :
+- **compromis et vente disparaissent du type** ;
+- **la règle du chantier 1 ne trouve plus la vente**, donc le propriétaire né de la vente redevient « mandant » (le bien a un numéro de
+  mandat). Le journal du worker le dit pour JACQUIER : « [acheteur proprietaire] **0** lien(s) né(s) d'une vente » ; la règle est bien
+  allumée ;
+- un contact dont tous les liens viennent des sources sautées se retrouve **sans type**, et **non éligible**.
+
+### 32.3 La mesure (27/10, après mes ouvertures de l'après-midi)
+- **5 contacts** ont un type en désaccord avec les registres ; **tous ont été relus aujourd'hui** (le reste de l'annuaire est d'accord :
+  la nuit répare tout) :
+  - JACQUIER (10354352) : `offre + mandant` au lieu de propriétaire + offre + compromis + vente ;
+  - 10191800 : l'offre seule, la vente perdue ;
+  - ⚠ **trois de MES ouvertures du contrôle de P2** : 10016576 (`offre + mandant`, perdu compromis et vente), 10001775 (perdu le
+    compromis), **10000087 (CHILLET) : type VIDE et « non éligible »** (il est encore dans l'annuaire).
+- **Ça dure jusqu'à la nuit suivante**, qui recalcule tout. Et ça recommence à chaque ouverture.
+- **Qui est exposé** : tout contact qui a un compromis ou une vente (≈ 13 000 acheteurs), et tout lien de propriété qui ne vient que de
+  la fiche d'annonce. 45 933 contacts n'ont **que** cette source (beaucoup sont sur le serveur seulement).
+- **Ce qui ne bouge pas** : la ligne du bien dans la fiche (P2 lit la vue des registres, pas le type), le registre des liens
+  (`app_relation`) et la table des parties. Le chemin ne les écrit pas.
+
+### 32.4 Le coût des sources sautées, si on les lisait (mesuré sur JACQUIER)
+- compromis **55 ms**, ventes **50 ms** ;
+- fiche d'annonce **2 563 ms** : 61 417 lignes de JSON à balayer.
+
+### 32.5 La proposition — À TRANCHER PAR FRÉDÉRIC
+**A' (recommandée)** — dans `refresh_contact_slice` seulement, calculer le **type** et l'**éligibilité** à partir des lignes **FUSIONNÉES**
+(celles de la nuit, gardées, plus celles relues), en réappliquant **la même règle** de mandant / propriétaire et du chantier 1. Le bloc
+de la règle sort de `load_relations` en une fonction partagée : **une seule règle, deux appelants**.
+- **Aucune lecture de plus chez Hektor.**
+- Un rôle **neuf** arrive tout de suite. Un rôle **retiré** chez Hektor reste jusqu'à la nuit, qui confirme.
+
+**A** — lire en plus compromis et ventes pour ce contact (≈ 0,1 s), et éventuellement la fiche d'annonce (+2,6 s par ouverture).
+Plus frais, plus lent, plus de code.
+
+**B** — ne plus recalculer le type à la relecture (garder celui de la nuit). Simple, mais un rôle neuf attendrait la nuit.
+
+**Ce que ça pourrait casser** :
+- **le calcul de nuit** (même fichier) : la règle déplacée doit rendre **exactement** les mêmes types. Témoin prévu : un calcul complet sur
+  une **copie** de la base, avant et après, avec des empreintes identiques ;
+- **les essais existants** du mode un seul contact (`test_substitution_identite.py`, `test_c9d_carnet_des_liens.py`,
+  `test_c9f_numero_bien_dans_cle.py`) ;
+- ⚠ **le worker lance Python à chaque travail** : un fichier modifié sur cette machine est **en production dès son écriture**. Aucun
+  redémarrage nécessaire, mais **aucun filet non plus**. Donc : écrire et éprouver sur une copie, ne poser qu'avec ton « vas-y ».
+
+**Essais** :
+- sur une copie de `phase2.sqlite`, la relecture de JACQUIER, des 4 autres et d'un échantillon d'une centaine de contacts de tous
+  types : le type doit égaler celui des registres (la vue) ;
+- **témoin inverse** : le code d'aujourd'hui doit donner les 5 désaccords mesurés ;
+- mutant : sans la fusion, ils doivent revenir.
+
+**Réparer les 5 contacts** : **rien à faire**. La nuit les recalcule ; à vérifier demain matin.
+
+Le vrai P3 (le type suit le **geste**, dans la base, au clic) vient **après** : sans A', chaque ouverture de fiche défairait ce qu'il pose.
