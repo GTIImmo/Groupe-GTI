@@ -395,7 +395,10 @@ le script, **début +1 jour sur 77, fin inchangée sur 77**. Actif au prochain r
 - **Essai hors ligne sur une copie** (table posée sur la copie, registre fabriqué éteint/allumé) : 25 104 lignes,
   mêmes identifiants ; **15 466 lignes changent, uniquement leurs dates (+1 jour : 14 394 débuts, 13 379 fins)**,
   l'historique et la fiche détaillée qui les répètent ; **0 ligne ne change de groupe de tri**.
-- ⏳ **Pas encore écrit** : la table n'existe pas dans la vraie base (accord nécessaire pour `--ecrire`).
+- ✅ **ÉCRIT le 27/10 vers 17:00** (accord de Frédéric) : `app_mandat_date_juste` = **14 394 débuts + 13 379 fins**
+  dans phase2.sqlite. Contrôles : chaque ligne est une veille exacte (0 exception), 0 ligne sans mandat,
+  `app_mandat` inchangée (27 452 lignes). Témoin : 16436, le cas de l'audit (« 12/06 pour un 13/06 »), → 13/06.
+  ⏰ Après la nuit : le registre en ligne doit montrer 16436 au 13/06/2024.
 - Retour arrière : interrupteur à 0, ou `DROP TABLE app_mandat_date_juste`.
 - 2026 (18437, 18911 gardés ; 18536, 18570, 18502, 18928 à corriger dans Hektor) : proposé, non tranché.
 
