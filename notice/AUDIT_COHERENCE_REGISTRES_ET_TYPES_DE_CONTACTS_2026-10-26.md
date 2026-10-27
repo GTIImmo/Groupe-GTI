@@ -1358,3 +1358,14 @@ clos (D3, historique) et l'acheteur devient « Propriétaire depuis la vente ».
 donc **un seul rôle à la fois, sans période**. Quand l'acheteur re-signe, la règle de nuit lève `origine = 'vente'` et **efface la date**
 (`a_lever`) : il redevient « mandant » et perd « propriétaire depuis ». Garder les deux périodes demande que le mandant soit rattaché **au
 mandat** (ses dates), pas au bien — c'est C2 / D1, à faire plus tard. Sans effet sur le rattrapage.
+
+### 28.6 Les périodes de mandat sur l'annonce (Frédéric, 27/10 : « on avait déterminé des périodes sur les annonces en fonction des dates des mandats ? »)
+**Oui, c'est déjà là** : chaque mandat est au registre des mandats (`app_mandat`) avec ses dates (`date_debut`, `date_fin`,
+`date_cloture`) — ce sont les « cycles » de mandat de l'annonce (pastilles, fil « Vie du mandat ») ; la tâche 2.7 (16/09) a rattaché
+chaque transaction à **son** mandat (cascade : Hektor l'a dit / un seul mandat / la période / le mandant), et depuis le 26/10 au soir
+**23 342** transactions portent notre numéro de mandat (`app_mandat_id`, chantier 2 c).
+**Ce que ces périodes disent des 10 389** : **8 104** ventes (78 %) sont rattachées à leur mandat ; un mandat **signé après la vente sur la
+même annonce** n'existe que pour **79** couples ; dans tout le parc, **53** annonces seulement ont plusieurs mandats distincts.
+➡ Une revente passe presque toujours par une **nouvelle annonce** : la période est portée par l'annonce elle-même (annonce A : vendeur
+mandant du mandat X, acheteur propriétaire depuis la vente ; annonce B : l'acheteur mandant du mandat Y). La limite « un seul lien par
+personne et par annonce » (§28.5) ne touche que ces **79** cas.
