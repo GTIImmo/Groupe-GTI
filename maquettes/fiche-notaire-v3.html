@@ -1,0 +1,1126 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fiche notaire v3</title>
+<!-- MAQUETTE v3 — 27/10/2026 (la v2 + l'historique filtrable + les blocs « en construction », décisions de Frédéric du 27/10). Données FICTIVES. Rien n'est codé dans l'app.
+     Le style est celui de la VRAIE fiche contact en production (ContactDetailPopupV2) :
+     la feuille apps/hektor-v1/src/contact-detail-v2.css est recopiée TELLE QUELLE ci-dessous
+     (sans ses blocs « mode sombre du téléphone »), et la page reprend ses classes fa-cx-*.
+     Les blocs propres au notaire (chiffres, dossiers, pièces, avec nous) sont dessinés dans
+     le même langage, dans le bloc « AJOUTS NOTAIRE ». -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+html, body { margin: 0; background: #e9e4dc; }
+*, *::before, *::after { box-sizing: border-box; }
+button { font: inherit; }
+/* ═════ contact-detail-v2.css, recopié ═════ */
+/* ============================================================================
+   Fiche Contact v2 — feuille scopée sous .fa-contact-v2 (importée EN DERNIER dans main.tsx).
+   Règle absolue : AUCUN sélecteur ne doit sortir du scope .fa-contact-v2.
+   Flag VITE_APP_CONTACT_V2_ENABLED OFF => composant jamais monté => feuille inerte.
+   Lot 0 = fondations (tokens de thème par type, overlay, rail, hero, bouton retour animé).
+   ========================================================================== */
+
+.fa-contact-v2 {
+  font-family: 'Hanken Grotesk', system-ui, -apple-system, sans-serif;
+  /* Thème par TYPE de contact (couleur d'ambiance) — défaut = acquéreur (teal). */
+  --ty: #2f7c86; --ty-deep: #1f5560; --ty-mid: #3f97a1; --ty-soft: #e6f1f1; --ty-line: #d7e7e7;
+  --ty-g1: #357f89; --ty-g2: #255f69; --ty-g3: #1b4b54;
+  --annonce-c: #c2701a;
+  --paper: #fbf7f0; --ink: #211a13; --ink-soft: #5c5346; --muted: #8a7f6e; --faint: #a89c88;
+  --line: #eadfce; --line-soft: #f0e8da;
+  color: var(--ink);
+}
+.fa-contact-v2.ty-acheteur { --ty: #2f8a5b; --ty-deep: #155e39; --ty-mid: #41a877; --ty-soft: #e7f3ec; --ty-line: #cfe8da; --ty-g1: #41a877; --ty-g2: #1f7a4a; --ty-g3: #155e39; }
+.fa-contact-v2.ty-vendeur { --ty: #c2701a; --ty-deep: #7c400a; --ty-mid: #d98a3c; --ty-soft: #f7ece0; --ty-line: #eddcc8; --ty-g1: #cb883f; --ty-g2: #9c530d; --ty-g3: #7c400a; }
+.fa-contact-v2.ty-mandant { --ty: #c2125f; --ty-deep: #8a0e45; --ty-mid: #d83a7e; --ty-soft: #fbe6f0; --ty-line: #f3cadd; --ty-g1: #d83a7e; --ty-g2: #c2125f; --ty-g3: #8a0e45; --annonce-c: #c2125f; }
+
+/* Overlay plein écran + panneau centré (reproduit le comportement de l'actuel #fcx-root). */
+.fa-contact-v2 .fa-cx-overlay {
+  /* z-index 50 comme la fiche V1 (#fcx-root .fcx-overlay) : les sous-modales partagées
+     (édition, RDV/agenda, email, suppression, recherche) — dont plusieurs partent en
+     createPortal(document.body) — s'empilent alors au-dessus, exactement comme en V1. */
+  position: fixed; inset: 0; z-index: 50; display: flex; overflow: auto;
+  padding: 24px; background: rgba(30, 22, 16, .42); backdrop-filter: blur(3px);
+}
+.fa-contact-v2 .fa-cx-panel {
+  margin: auto; width: 100%; max-width: 1400px; position: relative;
+  background: var(--paper); border: 1px solid var(--line);
+  border-radius: 24px; overflow: hidden;
+  box-shadow: 0 1px 2px rgba(32, 24, 18, .05), 0 40px 90px -46px rgba(32, 24, 18, .5);
+}
+.fa-contact-v2 .fa-cx-body { display: grid; grid-template-columns: 300px minmax(0, 1fr); }
+
+/* Couche des modales partagées (édition, RDV, email, suppression, recherche) : contexte
+   d'empilement AU-DESSUS de l'overlay de la fiche (z-1000) pour qu'elles restent visibles.
+   position:relative sans transform => les modales position:fixed couvrent toujours le viewport. */
+.fa-contact-v2 .fa-cx-modal-scope { position: relative; z-index: 1500; }
+
+/* ── Rail gauche (fond blanc froid + soupçon de teinte du type) ── */
+.fa-contact-v2 .fa-cx-rail {
+  position: relative; z-index: 2; display: flex; flex-direction: column;
+  border-right: 1px solid var(--line-soft); padding: 16px 16px 18px;
+  background:
+    radial-gradient(120% 30% at 50% 0%, color-mix(in srgb, var(--ty) 9%, transparent), transparent 60%),
+    linear-gradient(180deg, #fcfdfd, #f7fafa);
+}
+
+/* ── Bouton retour (réplique de la page détail annonce : flèche + halo magenta animés) ── */
+.fa-contact-v2 .fa-cx-back {
+  display: flex; align-items: center; gap: 12px; width: 100%; margin: 0 0 15px; padding: 11px 13px;
+  border: 1px solid #e9dcc5; border-radius: 14px; background: linear-gradient(120deg, #fff, #fdf1f6);
+  box-shadow: 0 7px 16px -13px rgba(194, 18, 95, .55); cursor: pointer; text-align: left;
+  transition: background .16s, border-color .16s, box-shadow .16s;
+}
+.fa-contact-v2 .fa-cx-back:hover { border-color: color-mix(in srgb, #c2125f 42%, #e9dcc5); box-shadow: 0 11px 24px -12px rgba(194, 18, 95, .6); }
+.fa-contact-v2 .fa-cx-back-mark {
+  position: relative; width: 40px; height: 40px; flex: none; display: flex; align-items: center; justify-content: center;
+  border-radius: 12px; color: #fff; background: linear-gradient(150deg, #e8437f, #a01050);
+  box-shadow: 0 8px 18px -9px rgba(194, 18, 95, .75);
+  animation: fa-cx-retour 3s ease-in-out infinite, fa-cx-retourhalo 3s ease-in-out infinite;
+}
+.fa-contact-v2 .fa-cx-back:hover .fa-cx-back-mark { animation-play-state: paused; }
+.fa-contact-v2 .fa-cx-back-mark svg { width: 20px; height: 20px; }
+.fa-contact-v2 .fa-cx-back-tx { display: flex; flex-direction: column; min-width: 0; line-height: 1.12; }
+.fa-contact-v2 .fa-cx-back-ey { font-size: 10px; font-weight: 800; letter-spacing: .15em; text-transform: uppercase; color: #c2125f; }
+.fa-contact-v2 .fa-cx-back-t { font-family: 'Fraunces', serif; font-size: 17px; font-weight: 700; letter-spacing: -.01em; color: #1c1815; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@keyframes fa-cx-retour { 0%, 52%, 100% { transform: translateX(0); } 62% { transform: translateX(-4px); } 70% { transform: translateX(0); } 78% { transform: translateX(-3px); } 86% { transform: translateX(0); } }
+@keyframes fa-cx-retourhalo { 0%, 48% { box-shadow: 0 8px 18px -9px rgba(194, 18, 95, .75), 0 0 0 0 rgba(232, 67, 127, .55); } 74% { box-shadow: 0 8px 18px -9px rgba(194, 18, 95, .75), 0 0 0 11px rgba(232, 67, 127, 0); } 100% { box-shadow: 0 8px 18px -9px rgba(194, 18, 95, .75), 0 0 0 0 rgba(232, 67, 127, 0); } }
+
+/* ── Hero identité compact (avatar coloré par type + nom + pastille) ── */
+.fa-contact-v2 .fa-cx-hero { display: flex; align-items: center; gap: 13px; padding: 6px 2px 10px; }
+.fa-contact-v2 .fa-cx-av {
+  width: 50px; height: 50px; flex: none; border-radius: 15px; display: flex; align-items: center; justify-content: center;
+  color: #fff; background: linear-gradient(155deg, var(--ty-mid), var(--ty-deep));
+  box-shadow: 0 12px 22px -10px color-mix(in srgb, var(--ty) 72%, transparent), inset 0 1px 0 rgba(255, 255, 255, .28);
+}
+.fa-contact-v2 .fa-cx-av svg { width: 26px; height: 26px; }
+.fa-contact-v2 .fa-cx-hero-tx { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.fa-contact-v2 .fa-cx-name { font-family: 'Fraunces', serif; font-size: 17px; font-weight: 600; line-height: 1.16; letter-spacing: -.015em; }
+.fa-contact-v2 .fa-cx-type-pill { font-size: 11.5px; font-weight: 800; letter-spacing: .02em; color: var(--ty-deep); background: var(--ty-soft); border: 1px solid var(--ty-line); border-radius: 999px; padding: 3px 11px; }
+
+/* ── Zone de travail (droite) + placeholder d'échafaudage ── */
+.fa-contact-v2 .fa-cx-work {
+  position: relative; z-index: 1; padding: 20px 22px 24px; min-width: 0;
+  background:
+    radial-gradient(95% 36% at 3% -4%, color-mix(in srgb, var(--ty) 12%, transparent), transparent 56%),
+    linear-gradient(158deg, #f4f0ea 0%, #f7f3ed 50%, #f1ece4 100%);
+}
+.fa-contact-v2 .fa-cx-scaffold {
+  border: 1px dashed var(--line); border-radius: 16px; padding: 22px; background: rgba(255, 255, 255, .55);
+  color: var(--muted); font-size: 13px; line-height: 1.5;
+}
+
+/* ============================================================================
+   Lot 1 — Colonne gauche (rail) : pictos par type, cluster d'actions, coordonnées,
+   pied négociateur + chips. Tout est scopé sous .fa-contact-v2 (aucune fuite).
+   Portage de la maquette detail-contact-v30-dashboard.html (rail #fcc-root).
+   ========================================================================== */
+
+/* Jetons magenta + vert locaux (repris de la maquette, scopés). */
+.fa-contact-v2 {
+  --brand: #c2125f; --brand-ink: #a3104f; --brand-soft: #fbe6f0; --brand-line: #f3d7e3;
+  --green: #2f8a5b; --green-ink: #1c7a4a;
+}
+
+/* ── Pictos identité par type dans l'avatar (blancs, un seul visible) ── */
+.fa-contact-v2 .fa-cx-av .fa-cx-ty-ic { display: none; align-items: center; justify-content: center; color: #fff; }
+.fa-contact-v2 .fa-cx-av .fa-cx-ty-ic svg { width: 26px; height: 26px; }
+.fa-contact-v2.ty-acq .fa-cx-av .fa-cx-ty-acq,
+.fa-contact-v2.ty-acheteur .fa-cx-av .fa-cx-ty-acheteur,
+.fa-contact-v2.ty-vendeur .fa-cx-av .fa-cx-ty-vendeur,
+.fa-contact-v2.ty-mandant .fa-cx-av .fa-cx-ty-mandant { display: flex; }
+
+/* ── Cluster d'actions (RDV magenta + Modifier + Plus) avec tooltip au survol ── */
+.fa-contact-v2 .fa-cx-actions { position: relative; margin-top: 15px; padding-top: 15px; display: flex; gap: 8px; }
+.fa-contact-v2 .fa-cx-actions::before { content: ""; position: absolute; top: 0; left: 2px; right: 2px; height: 1px; background: linear-gradient(90deg, transparent, #dbe8e8 22%, #dbe8e8 78%, transparent); }
+.fa-contact-v2 .fa-cx-act-wrap { position: relative; flex: 1; display: flex; }
+.fa-contact-v2 .fa-cx-act { flex: 1; height: 34px; position: relative; display: flex; align-items: center; justify-content: center; border-radius: 11px; cursor: pointer; transition: filter .16s, transform .16s, background .16s, border-color .16s, color .16s; }
+.fa-contact-v2 .fa-cx-act svg { width: 16px; height: 16px; }
+.fa-contact-v2 .fa-cx-act.primary { background: linear-gradient(150deg, #e3407f, #bb1059); border: 1px solid #bb1059; color: #fff; box-shadow: 0 12px 22px -13px rgba(187, 16, 89, .62); }
+.fa-contact-v2 .fa-cx-act.primary:hover { filter: brightness(1.06); transform: translateY(-1px); }
+.fa-contact-v2 .fa-cx-act.ghost { background: #eef5f5; border: 1px solid #dde9e9; color: #5c6b6b; }
+.fa-contact-v2 .fa-cx-act.ghost:hover { background: #fff; border-color: var(--ty); color: var(--ty-deep); transform: translateY(-1px); }
+.fa-contact-v2 .fa-cx-act::after { content: attr(data-tip); position: absolute; bottom: calc(100% + 9px); left: 50%; transform: translateX(-50%) translateY(4px); background: #2a2018; color: #fff; font-size: 11px; font-weight: 700; letter-spacing: .01em; padding: 5px 9px; border-radius: 7px; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity .15s, transform .15s; z-index: 6; box-shadow: 0 6px 16px -6px rgba(0, 0, 0, .4); }
+.fa-contact-v2 .fa-cx-act::before { content: ""; position: absolute; bottom: calc(100% + 4px); left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: #2a2018; opacity: 0; transition: opacity .15s; z-index: 6; }
+.fa-contact-v2 .fa-cx-act:hover::after { opacity: 1; transform: translateX(-50%) translateY(0); }
+.fa-contact-v2 .fa-cx-act:hover::before { opacity: 1; }
+
+/* ── Menu « Plus d'actions » ── */
+.fa-contact-v2 .fa-cx-act-menu { position: absolute; top: calc(100% + 6px); right: 0; z-index: 12; min-width: 190px; padding: 6px; background: #fff; border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 20px 44px -20px rgba(32, 24, 18, .5); display: flex; flex-direction: column; gap: 2px; }
+.fa-contact-v2 .fa-cx-menu-item { display: flex; align-items: center; gap: 9px; width: 100%; padding: 9px 10px; border: 0; border-radius: 9px; background: none; font: inherit; font-size: 13px; font-weight: 600; color: var(--ink); text-align: left; cursor: pointer; transition: background .13s, color .13s; }
+.fa-contact-v2 .fa-cx-menu-item svg { width: 16px; height: 16px; flex: none; }
+.fa-contact-v2 .fa-cx-menu-item .fa-cx-menu-ext { margin-left: auto; width: 14px; height: 14px; color: var(--faint); }
+.fa-contact-v2 .fa-cx-menu-item:hover { background: var(--ty-soft); color: var(--ty-deep); }
+.fa-contact-v2 .fa-cx-menu-item.danger { color: #b3243a; }
+.fa-contact-v2 .fa-cx-menu-item.danger:hover { background: #fbe9ec; color: #8f1a2d; }
+
+/* ── Coordonnées (teintées par --ty, remplissage au survol) ── */
+.fa-contact-v2 .fa-cx-coords { margin-top: 16px; display: flex; flex-direction: column; }
+.fa-contact-v2 .fa-cx-coord { display: flex; align-items: center; gap: 11px; padding: 8px 8px; margin: 0 -8px; width: calc(100% + 16px); border-radius: 11px; text-align: left; font: inherit; color: inherit; text-decoration: none; background: none; border: 0; cursor: pointer; transition: background .14s, box-shadow .14s; }
+.fa-contact-v2 .fa-cx-coord + .fa-cx-coord { margin-top: 2px; }
+.fa-contact-v2 .fa-cx-coord:not(.static):hover { background: color-mix(in srgb, var(--ty) 8%, #fff); box-shadow: 0 8px 20px -14px rgba(32, 24, 18, .5); }
+.fa-contact-v2 .fa-cx-coord.static { cursor: default; }
+.fa-contact-v2 .fa-cx-coord-ic { width: 35px; height: 35px; border-radius: 10px; flex: none; display: flex; align-items: center; justify-content: center; background: var(--ty-soft); border: 1px solid var(--ty-line); color: var(--ty); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .85); transition: background .14s, border-color .14s, color .14s, box-shadow .14s; }
+.fa-contact-v2 .fa-cx-coord-ic svg { width: 16px; height: 16px; }
+.fa-contact-v2 .fa-cx-coord:not(.static):hover .fa-cx-coord-ic { background: linear-gradient(150deg, var(--ty-mid), var(--ty)); border-color: transparent; color: #fff; box-shadow: 0 8px 16px -8px color-mix(in srgb, var(--ty) 60%, transparent); }
+.fa-contact-v2 .fa-cx-coord-bd { flex: 1; min-width: 0; }
+.fa-contact-v2 .fa-cx-coord-k { font-size: 9.5px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-bottom: 1px; }
+.fa-contact-v2 .fa-cx-coord-v { font-size: 13.5px; font-weight: 700; line-height: 1.3; letter-spacing: -.01em; color: #2a2018; word-break: break-word; overflow-wrap: anywhere; }
+
+/* ── Pied de rail : négociateur + chips de statut ── */
+.fa-contact-v2 .fa-cx-foot { margin: 18px -16px 0; padding: 15px 16px 4px; border-top: 1px solid var(--line-soft); display: flex; flex-direction: column; gap: 10px; }
+.fa-contact-v2 .fa-cx-foot-head { display: flex; align-items: center; gap: 8px; font-size: 9.5px; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; color: var(--muted); padding: 0 2px; }
+.fa-contact-v2 .fa-cx-foot-hic { display: inline-flex; }
+.fa-contact-v2 .fa-cx-foot-hic svg { width: 13px; height: 13px; }
+.fa-contact-v2 .fa-cx-neg { display: flex; align-items: center; gap: 11px; width: 100%; padding: 10px 11px; border: 1px solid var(--line); border-radius: 13px; background: #fff; text-align: left; box-shadow: 0 1px 2px rgba(32, 24, 18, .04); }
+.fa-contact-v2 .fa-cx-neg-av { width: 38px; height: 38px; border-radius: 11px; flex: none; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 12px; font-weight: 800; background: linear-gradient(145deg, #d23076, #a30f4e); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .25); }
+.fa-contact-v2 .fa-cx-neg-t { flex: 1; min-width: 0; }
+.fa-contact-v2 .fa-cx-neg-nm { font-size: 13px; font-weight: 700; line-height: 1.15; }
+.fa-contact-v2 .fa-cx-neg-sb { font-size: 10.5px; color: var(--muted); margin-top: 2px; }
+.fa-contact-v2 .fa-cx-status { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-start; margin-top: 2px; padding-top: 11px; border-top: 1px solid var(--line-soft); }
+.fa-contact-v2 .fa-cx-st-chip { font-size: 10.5px; font-weight: 700; color: var(--ink-soft); background: #fff; border: 1px solid var(--line); border-radius: 99px; padding: 4px 10px; display: inline-flex; align-items: center; gap: 6px; }
+.fa-contact-v2 .fa-cx-st-chip .d { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+.fa-contact-v2 .fa-cx-st-chip.archived .d { background: var(--annonce-c); }
+.fa-contact-v2 .fa-cx-st-chip.app { color: var(--brand-ink); background: var(--brand-soft); border-color: var(--brand-line); }
+.fa-contact-v2 .fa-cx-st-chip.app .d { background: var(--brand); }
+
+/* Responsive : rail au-dessus sur petit écran. */
+@media (max-width: 820px) {
+  .fa-contact-v2 .fa-cx-body { grid-template-columns: 1fr; }
+  .fa-contact-v2 .fa-cx-rail { border-right: none; border-bottom: 1px solid var(--line-soft); }
+  .fa-contact-v2 .fa-cx-overlay { padding: 0; }
+  .fa-contact-v2 .fa-cx-panel { border-radius: 0; min-height: 100%; }
+}
+
+/* ============================================================================
+   Lot 2 — Colonne droite : bande « Recherche & rapprochement ». Portage de la
+   maquette detail-contact-v30-dashboard.html (.dash-sec / .mod.full / .srch3).
+   Couleur de rubrique = teal #2f7c86 (via --sc), indépendante du thème ty-*.
+   Tout est scopé sous .fa-contact-v2 (aucune fuite globale).
+   ========================================================================== */
+
+/* En-tête de section (teal --sc + action magenta) */
+.fa-contact-v2 .fa-cx-sec { display: flex; align-items: center; gap: 11px; margin: 2px 2px 13px; font-size: 11px; font-weight: 800; letter-spacing: .15em; text-transform: uppercase; color: var(--ink-soft); }
+.fa-contact-v2 .fa-cx-sec-ic { width: 24px; height: 24px; flex: none; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff; background: linear-gradient(150deg, color-mix(in srgb, var(--sc, var(--brand)) 78%, #fff), var(--sc, var(--brand))); box-shadow: 0 5px 12px -5px var(--sc, var(--brand)), inset 0 1px 0 rgba(255, 255, 255, .35); }
+.fa-contact-v2 .fa-cx-sec-ic svg { width: 14px; height: 14px; }
+.fa-contact-v2 .fa-cx-sec-ln { flex: 1; height: 1px; background: linear-gradient(90deg, var(--line), transparent); }
+.fa-contact-v2 .fa-cx-sec-act { display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 11px; font-weight: 800; letter-spacing: .01em; text-transform: none; color: #fff; background: linear-gradient(150deg, #e3407f, #bb1059); border: none; border-radius: 9px; padding: 7px 13px; cursor: pointer; box-shadow: 0 8px 16px -7px rgba(187, 16, 89, .6), inset 0 1px 0 rgba(255, 255, 255, .28); transition: .15s; }
+.fa-contact-v2 .fa-cx-sec-act svg { width: 13px; height: 13px; }
+.fa-contact-v2 .fa-cx-sec-act:hover { filter: brightness(1.06); transform: translateY(-1px); }
+/* ── Bandeau de section cliquable (déroulant « Qualité de la fiche », plié par défaut) ── */
+.fa-contact-v2 button.fa-cx-sec-toggle { width: 100%; background: none; border: none; padding: 4px 2px; cursor: pointer; text-align: left; -webkit-appearance: none; appearance: none; }
+.fa-contact-v2 .fa-cx-sec-toggle:hover .fa-cx-sec-chev { color: var(--sc, var(--brand)); }
+.fa-contact-v2 .fa-cx-sec-toggle:hover .fa-cx-sec-ic { transform: translateY(-1px); }
+.fa-contact-v2 .fa-cx-sec-chev { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 7px; color: var(--ink-soft); background: color-mix(in srgb, var(--sc, var(--brand)) 9%, #fff); border: 1px solid color-mix(in srgb, var(--sc, var(--brand)) 16%, transparent); transition: transform .2s ease, color .15s; }
+.fa-contact-v2 .fa-cx-sec-chev svg { width: 13px; height: 13px; }
+.fa-contact-v2 .fa-cx-sec-toggle.is-open .fa-cx-sec-chev { transform: rotate(180deg); color: var(--sc, var(--brand)); }
+
+/* Carte pleine largeur */
+.fa-contact-v2 .fa-cx-mod { position: relative; background: #fff; border: 1px solid var(--line); border-radius: 18px; padding: 17px 19px; box-shadow: 0 1px 2px rgba(32, 24, 18, .04), 0 16px 32px -24px rgba(32, 24, 18, .28); overflow: hidden; }
+.fa-contact-v2 .fa-cx-mod.full { width: 100%; }
+
+/* Ligne recherche */
+.fa-contact-v2 .fa-cx-srch { display: flex; align-items: center; gap: 12px; padding: 11px 13px; border: 1px solid var(--line); border-radius: 13px; background: linear-gradient(160deg, #fff, #f5fbfb); box-shadow: 0 1px 2px rgba(32, 24, 18, .04); transition: border-color .15s, box-shadow .16s, transform .12s; }
+.fa-contact-v2 .fa-cx-srch + .fa-cx-srch { margin-top: 9px; }
+.fa-contact-v2 .fa-cx-srch:hover { border-color: #cfe3e6; box-shadow: 0 14px 28px -18px rgba(47, 124, 134, .42); transform: translateY(-1px); }
+.fa-contact-v2 .fa-cx-srch-ic { width: 37px; height: 37px; flex: none; border-radius: 11px; display: flex; align-items: center; justify-content: center; color: #2f7c86; background: #e1eef0; border: 1px solid #cfe3e6; }
+.fa-contact-v2 .fa-cx-srch-ic svg { width: 17px; height: 17px; }
+.fa-contact-v2 .fa-cx-srch-main { flex: 1; min-width: 0; }
+.fa-contact-v2 .fa-cx-srch-head { display: flex; align-items: center; gap: 8px; }
+.fa-contact-v2 .fa-cx-srch-ty { font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fa-contact-v2 .fa-cx-srch-tag { font-size: 10px; font-weight: 800; color: #1f6e44; background: #e9f6ee; border: 1px solid #cfe7d8; border-radius: 99px; padding: 3px 9px; flex: none; }
+.fa-contact-v2 .fa-cx-srch-tag.archived { color: var(--muted); background: #f1eae1; border-color: var(--line); }
+.fa-contact-v2 .fa-cx-srch-crit { font-size: 11.5px; color: var(--muted); margin-top: 3px; line-height: 1.45; font-variant-numeric: tabular-nums; }
+/* A.3 piece 5 (16/10/2026) : la ligne du mandat de recherche.
+   Discrete par choix : la carte parle d'abord de la RECHERCHE ; le mandat
+   est ce qui l'autorise, pas son sujet. Une ligne, qui ne pousse rien. */
+.fa-contact-v2 .fa-cx-srch-mandat { display: flex; align-items: center; gap: 5px; margin-top: 4px; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+/* A.3 (16/10/2026) : le bandeau des mandats de recherche qu'aucune carte ne porte.
+   Il se distingue d'une carte -- c'est une MENTION, pas une recherche : pas d'icone
+   de maison, pas de bouton, un fond neutre. Il dit ce qu'on sait et avoue ce qu'on
+   ignore (« recherche non determinee ») plutot que de deviner. */
+.fa-contact-v2 .fa-cx-srch-mandats-orph { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
+.fa-contact-v2 .fa-cx-srch-morph { display: flex; align-items: center; gap: 6px; padding: 6px 9px; border: 1px dashed color-mix(in srgb, var(--muted) 38%, transparent); border-radius: 8px; font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.fa-contact-v2 .fa-cx-srch-morph svg { width: 13px; height: 13px; flex: 0 0 auto; opacity: .7; }
+.fa-contact-v2 .fa-cx-srch-morph-tx { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fa-contact-v2 .fa-cx-srch-morph-tag { margin-left: auto; flex: 0 0 auto; font-size: 10px; text-transform: uppercase; letter-spacing: .04em; opacity: .75; }
+.fa-contact-v2 .fa-cx-srch-mandat svg { width: 12px; height: 12px; flex: 0 0 auto; opacity: .75; }
+.fa-contact-v2 .fa-cx-srch-mandat span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Dépliage de la liste complète des communes (repliée par défaut sur le décompte) */
+.fa-contact-v2 .fa-cx-srch-cities-wrap { margin-top: 5px; }
+.fa-contact-v2 .fa-cx-srch-cities-tg { display: inline-flex; align-items: center; gap: 5px; font: inherit; font-size: 11px; font-weight: 700; color: var(--sc, var(--brand)); background: color-mix(in srgb, var(--sc, var(--brand)) 9%, #fff); border: 1px solid color-mix(in srgb, var(--sc, var(--brand)) 20%, transparent); border-radius: 8px; padding: 3px 9px; cursor: pointer; transition: background .15s, transform .12s; }
+.fa-contact-v2 .fa-cx-srch-cities-tg svg { width: 12px; height: 12px; }
+.fa-contact-v2 .fa-cx-srch-cities-tg:hover { background: color-mix(in srgb, var(--sc, var(--brand)) 16%, #fff); transform: translateY(-1px); }
+.fa-contact-v2 .fa-cx-srch-cities-chev { transition: transform .2s ease; }
+.fa-contact-v2 .fa-cx-srch-cities-tg[aria-expanded="true"] .fa-cx-srch-cities-chev { transform: rotate(180deg); }
+.fa-contact-v2 .fa-cx-srch-cities { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
+.fa-contact-v2 .fa-cx-srch-city { font-size: 11px; font-weight: 600; color: var(--ink); background: #fff; border: 1px solid var(--line); border-radius: 7px; padding: 2px 8px; }
+
+/* Pilule teal « Rapprocher les biens → » */
+.fa-contact-v2 .fa-cx-srch-match { position: relative; overflow: hidden; flex: none; display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 12px; font-weight: 700; color: #fff; background: linear-gradient(135deg, #4aa7b1, #2c7c87 52%, #1f636d); border: 0; border-radius: 11px; padding: 8px 12px; cursor: pointer; box-shadow: 0 8px 18px -9px rgba(47, 124, 134, .7), inset 0 1px 0 rgba(255, 255, 255, .3); transition: transform .16s, box-shadow .2s, filter .15s; }
+.fa-contact-v2 .fa-cx-srch-match svg { width: 14px; height: 14px; transition: transform .18s; }
+.fa-contact-v2 .fa-cx-srch-match:hover { transform: translateY(-2px); filter: brightness(1.05); box-shadow: 0 16px 28px -10px rgba(47, 124, 134, .8), inset 0 1px 0 rgba(255, 255, 255, .32); }
+.fa-contact-v2 .fa-cx-srch-match:hover svg { transform: translateX(3px); }
+
+/* Icônes d'action (crayon / corbeille) */
+.fa-contact-v2 .fa-cx-srch-acts { display: flex; gap: 6px; flex: none; }
+.fa-contact-v2 .fa-cx-ic-act { width: 33px; height: 33px; flex: none; border-radius: 9px; border: 1px solid var(--line); background: #fff; color: var(--muted); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: .15s; }
+.fa-contact-v2 .fa-cx-ic-act svg { width: 15px; height: 15px; transition: transform .15s; }
+.fa-contact-v2 .fa-cx-ic-act:hover { border-color: var(--brand); color: var(--brand-ink); background: var(--brand-soft); transform: translateY(-1px); }
+.fa-contact-v2 .fa-cx-ic-act:disabled { opacity: .5; cursor: default; transform: none; }
+.fa-contact-v2 .fa-cx-ic-act.del:hover { border-color: #c0392b; color: #c0392b; background: #fdeceb; }
+.fa-contact-v2 .fa-cx-ic-act.del:hover svg { transform: rotate(-8deg); }
+
+/* État vide + note d'échafaudage réduite */
+.fa-contact-v2 .fa-cx-srch-empty { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; padding: 8px 2px; color: var(--muted); font-size: 13px; }
+.fa-contact-v2 .fa-cx-srch-empty p { margin: 0; }
+/* Skeleton de chargement (recherches / biens liés) : évite le flash « Aucune recherche » pendant l'async */
+.fa-contact-v2 .fa-cx-srch-loading { display: flex; align-items: center; gap: 14px; padding: 8px 2px; }
+.fa-contact-v2 .fa-cx-skel { position: relative; overflow: hidden; background: color-mix(in srgb, var(--sc, var(--line)) 12%, #f0e8da); border-radius: 8px; }
+.fa-contact-v2 .fa-cx-skel::after { content: ""; position: absolute; inset: 0; transform: translateX(-100%); background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .75), transparent); animation: fa-cx-shimmer 1.15s ease-in-out infinite; }
+@keyframes fa-cx-shimmer { 100% { transform: translateX(100%); } }
+.fa-contact-v2 .fa-cx-skel-ic { width: 44px; height: 44px; border-radius: 12px; flex: none; }
+.fa-contact-v2 .fa-cx-skel-thumb { width: 58px; height: 44px; border-radius: 10px; flex: none; }
+.fa-contact-v2 .fa-cx-skel-lines { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.fa-contact-v2 .fa-cx-skel-line { height: 11px; border-radius: 6px; }
+.fa-contact-v2 .fa-cx-skel-line.w40 { width: 40%; }
+.fa-contact-v2 .fa-cx-skel-line.w55 { width: 55%; }
+.fa-contact-v2 .fa-cx-skel-line.w70 { width: 70%; }
+.fa-contact-v2 .fa-cx-skel-line.w85 { width: 85%; }
+.fa-contact-v2 .fa-cx-skel-btn { width: 92px; height: 38px; border-radius: 11px; flex: none; }
+@media (prefers-reduced-motion: reduce) { .fa-contact-v2 .fa-cx-skel::after { animation: none; } }
+.fa-contact-v2 .fa-cx-scaffold.sm { margin-top: 16px; padding: 13px 16px; font-size: 11.5px; }
+
+/* ── Lot 3 — Bande « Biens & mandats liés » (portage maquette v30) ── */
+.fa-contact-v2 .fa-cx-sec-meta { font: inherit; font-size: 11px; font-weight: 800; letter-spacing: .01em; text-transform: none; color: var(--sc, var(--brand)); background: color-mix(in srgb, var(--sc, var(--brand)) 13%, #fff); border: 1px solid color-mix(in srgb, var(--sc, var(--brand)) 22%, transparent); border-radius: 8px; padding: 4px 10px; }
+
+/* ligne annonce liée compacte (hauteur ≈ petite vignette) — couleur = relation (--rc) */
+.fa-contact-v2 .fa-cx-mod.full > .fa-cx-lk + .fa-cx-lk { margin-top: 9px; }
+.fa-contact-v2 .fa-cx-lk { --rc: var(--annonce-c); display: flex; align-items: center; gap: 11px; border: 1px solid var(--line); border-radius: 11px; padding: 7px 11px 7px 8px; background: #fff; width: 100%; text-align: left; font: inherit; cursor: pointer; text-decoration: none; color: inherit; transition: border-color .15s, box-shadow .16s, transform .12s; }
+.fa-contact-v2 .fa-cx-lk.static { cursor: default; }
+.fa-contact-v2 button.fa-cx-lk:hover { border-color: color-mix(in srgb, var(--rc) 45%, var(--line)); box-shadow: 0 12px 22px -16px rgba(32, 24, 18, .42); transform: translateY(-1px); }
+.fa-contact-v2 .fa-cx-lk-thumb { position: relative; width: 44px; height: 44px; border-radius: 9px; flex: none; overflow: hidden; border: 1px solid var(--line); background: repeating-linear-gradient(135deg, #efe7dd, #efe7dd 8px, #e7ded2 8px, #e7ded2 16px); }
+.fa-contact-v2 .fa-cx-lk-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.fa-contact-v2 .fa-cx-lk-thumb .rf { position: absolute; left: 3px; bottom: 3px; font-size: 7px; font-weight: 800; color: #fff; background: rgba(20, 14, 10, .6); padding: 1px 4px; border-radius: 4px; }
+.fa-contact-v2 .fa-cx-lk-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.fa-contact-v2 .fa-cx-lk-ref { font-size: 13.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fa-contact-v2 .fa-cx-lk-t { font-size: 11.5px; color: var(--muted); margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fa-contact-v2 .fa-cx-lk-meta { display: flex; align-items: center; gap: 11px; flex: none; }
+.fa-contact-v2 .fa-cx-lk-role { font-size: 9.5px; font-weight: 800; letter-spacing: .03em; text-transform: uppercase; color: var(--rc); background: color-mix(in srgb, var(--rc) 12%, #fff); border: 1px solid color-mix(in srgb, var(--rc) 26%, transparent); border-radius: 99px; padding: 3px 9px; white-space: nowrap; }
+.fa-contact-v2 .fa-cx-lk-amt { font-size: 13px; font-weight: 800; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.fa-contact-v2 .fa-cx-lk-go { flex: none; display: flex; align-items: center; color: var(--rc); transition: transform .15s; }
+.fa-contact-v2 .fa-cx-lk-go svg { width: 18px; height: 18px; }
+.fa-contact-v2 button.fa-cx-lk:hover .fa-cx-lk-go { transform: translateX(3px); }
+.fa-contact-v2 .fa-cx-lk.r-acq { --rc: #2f7c86; }
+.fa-contact-v2 .fa-cx-lk.r-vendeur { --rc: #c2701a; }
+.fa-contact-v2 .fa-cx-lk.r-mandant { --rc: #c2125f; }
+.fa-contact-v2 .fa-cx-lk.r-acheteur { --rc: #2f8a5b; }
+.fa-contact-v2 .fa-cx-lk-empty { padding: 8px 2px; color: var(--muted); font-size: 13px; }
+
+@media (max-width: 640px) {
+  .fa-contact-v2 .fa-cx-srch { flex-wrap: wrap; }
+  .fa-contact-v2 .fa-cx-srch-main { flex-basis: 100%; }
+  .fa-contact-v2 .fa-cx-lk { flex-wrap: wrap; }
+  .fa-contact-v2 .fa-cx-lk-main { flex-basis: 60%; }
+}
+
+/* ============================================================================
+   Lots 4 & 5 — Tableau de bord droite : grille dash-top (Recherche + Biens à
+   gauche, « À faire » à droite), bande « Activité & relation » pleine largeur.
+   Portage de detail-contact-v30-dashboard.html (.dash-top / .aflt / .feed /
+   .ev / .ech-list / .ech). Tout scopé sous .fa-contact-v2 (aucune fuite).
+   ========================================================================== */
+
+/* Jetons de teinte locaux (repris de la maquette #fcc-root, scopés). */
+.fa-contact-v2 {
+  --blue: #2f6fa8; --blue-bg: #e6eff8;
+  --teal: #2f7c86; --teal-bg: #e1eef0;
+  --amber: #a8814a; --amber-bg: #f6efe1;
+  --alert: #c2512a; --alert-bg: #fae7dd; --alert-line: #f0d5c5;
+}
+
+/* Grille haute : colonne principale 2fr + colonne latérale 1fr */
+.fa-contact-v2 .fa-cx-dash-top { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; align-items: start; margin-bottom: 24px; }
+.fa-contact-v2 .fa-cx-dash-main, .fa-contact-v2 .fa-cx-dash-side { min-width: 0; }
+@media (max-width: 1080px) { .fa-contact-v2 .fa-cx-dash-top { grid-template-columns: 1fr; } }
+
+/* Variante « ghost » des boutons d'action de section (RDV / Email de l'Activité) */
+.fa-contact-v2 .fa-cx-sec-act.ghost { color: var(--blue); background: var(--blue-bg); border: 1px solid color-mix(in srgb, var(--blue) 22%, transparent); box-shadow: none; }
+.fa-contact-v2 .fa-cx-sec-act.ghost:hover { filter: none; background: color-mix(in srgb, var(--blue) 18%, #fff); }
+
+/* ── Activité : chips de filtre ── */
+.fa-contact-v2 .fa-cx-aflt { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.fa-contact-v2 .fa-cx-aflt button { font: inherit; font-size: 11.5px; font-weight: 700; border: 1px solid var(--line); background: #faf6f0; color: var(--muted); border-radius: 99px; padding: 5px 12px; cursor: pointer; transition: border-color .14s, color .14s, background .14s; }
+.fa-contact-v2 .fa-cx-aflt button:hover { border-color: var(--blue); color: var(--ink-soft); }
+.fa-contact-v2 .fa-cx-aflt button.on { background: var(--blue-bg); border-color: transparent; color: #1f5b96; box-shadow: 0 1px 2px rgba(0, 0, 0, .05); }
+
+/* ── Activité : fil vertical (timeline) ── */
+.fa-contact-v2 .fa-cx-feed { position: relative; padding-left: 6px; }
+.fa-contact-v2 .fa-cx-feed::before { content: ""; position: absolute; left: 23px; top: 8px; bottom: 8px; width: 2px; background: linear-gradient(var(--line), var(--line) 82%, transparent); }
+.fa-contact-v2 .fa-cx-ev { position: relative; display: flex; gap: 12px; padding: 8px 2px; }
+.fa-contact-v2 .fa-cx-ev-ic { position: relative; z-index: 1; width: 34px; height: 34px; border-radius: 10px; flex: none; display: flex; align-items: center; justify-content: center; color: var(--tone, var(--muted)); background: var(--tone-bg, #f1eae1); box-shadow: 0 0 0 4px #fff; }
+.fa-contact-v2 .fa-cx-ev-ic svg { width: 16px; height: 16px; }
+.fa-contact-v2 .fa-cx-ev.g-rdv { --tone: var(--blue); --tone-bg: var(--blue-bg); }
+.fa-contact-v2 .fa-cx-ev.g-email { --tone: var(--teal); --tone-bg: var(--teal-bg); }
+.fa-contact-v2 .fa-cx-ev.g-rappro { --tone: #2f8a5b; --tone-bg: #e6f2ea; }
+.fa-contact-v2 .fa-cx-ev.g-tr { --tone: #c2125f; --tone-bg: #f9e7ef; }
+.fa-contact-v2 .fa-cx-ev.g-relance { --tone: var(--amber); --tone-bg: var(--amber-bg); }
+.fa-contact-v2 .fa-cx-ev.g-annonce { --tone: #a8814a; --tone-bg: #f7f0e3; } /* activité de l'annonce (mandant/vendeur) : doré */
+.fa-contact-v2 .fa-cx-ev-bd { flex: 1; min-width: 0; }
+.fa-contact-v2 .fa-cx-ev-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.fa-contact-v2 .fa-cx-ev-type { font-size: 9px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--tone, var(--muted)); background: var(--tone-bg, #f1eae1); border-radius: 99px; padding: 2px 8px; flex: none; }
+.fa-contact-v2 .fa-cx-ev-nm { font-size: 13.5px; font-weight: 700; }
+.fa-contact-v2 .fa-cx-ev-when { margin-left: auto; font-size: 10.5px; font-weight: 700; color: var(--faint); white-space: nowrap; }
+.fa-contact-v2 .fa-cx-ev-s { font-size: 12px; color: var(--muted); margin-top: 3px; line-height: 1.4; }
+/* Ligne du fil cliquable (comme la page annonce) : bouton reset + hover teinté + chevron */
+.fa-contact-v2 button.fa-cx-ev { font: inherit; color: inherit; }
+.fa-contact-v2 .fa-cx-ev.is-link { width: 100%; background: none; border: none; text-align: left; cursor: pointer; border-radius: 12px; margin: 0 -6px; padding-right: 8px; transition: background .14s; }
+.fa-contact-v2 .fa-cx-ev.is-link:hover { background: color-mix(in srgb, var(--tone, var(--blue)) 9%, #fff); }
+/* Bouton de lien LIBELLÉ (pilule teintée au ton de l'événement), comme le fil de la page annonce */
+.fa-contact-v2 .fa-cx-ev-go { align-self: center; flex: none; display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; color: var(--tone, var(--blue)); background: var(--tone-bg, #eef3fb); border: 1px solid color-mix(in srgb, var(--tone, var(--blue)) 26%, transparent); border-radius: 9px; padding: 5px 10px; white-space: nowrap; transition: transform .15s, background .14s, color .14s, box-shadow .15s; }
+.fa-contact-v2 .fa-cx-ev-go svg { width: 13px; height: 13px; flex: none; }
+.fa-contact-v2 .fa-cx-ev.is-link:hover .fa-cx-ev-go { background: var(--tone, var(--blue)); color: #fff; box-shadow: 0 4px 10px -4px var(--tone, var(--blue)); transform: translateX(2px); }
+@media (max-width: 640px) { .fa-contact-v2 .fa-cx-ev-go-t { display: none; } }
+.fa-contact-v2 .fa-cx-feed-empty { text-align: center; color: var(--muted); font-size: 12.5px; line-height: 1.5; padding: 20px 14px; border: 1px dashed var(--line); border-radius: 12px; background: #fdfbf8; }
+
+/* ── À faire : liste des relances ── */
+.fa-contact-v2 .fa-cx-ech-list { display: flex; flex-direction: column; gap: 9px; }
+.fa-contact-v2 .fa-cx-ech { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 11px; border: 1px solid var(--line); border-radius: 13px; background: #fff; box-shadow: 0 1px 2px rgba(32, 24, 18, .04); --u: var(--amber); --u-bg: var(--amber-bg); --u-line: #e9dcc5; }
+.fa-contact-v2 .fa-cx-ech.late { background: linear-gradient(100deg, #fdf3ee, #fff 58%); --u: var(--alert); --u-bg: var(--alert-bg); --u-line: var(--alert-line); }
+.fa-contact-v2 .fa-cx-ech-date { width: 46px; flex: none; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 11px; padding: 6px 4px; background: var(--u-bg); border: 1px solid var(--u-line); }
+.fa-contact-v2 .fa-cx-ech-date b { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 600; line-height: 1; color: var(--u); }
+.fa-contact-v2 .fa-cx-ech-date.warn b { font-size: 20px; }
+.fa-contact-v2 .fa-cx-ech-date i { font-size: 8px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--u); font-style: normal; margin-top: 2px; }
+.fa-contact-v2 .fa-cx-ech-bd { flex: 1; min-width: 0; }
+.fa-contact-v2 .fa-cx-ech-t { font-size: 13px; font-weight: 700; line-height: 1.2; }
+.fa-contact-v2 .fa-cx-ech-s { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.fa-contact-v2 .fa-cx-ech-acts { display: flex; gap: 6px; flex: none; }
+.fa-contact-v2 .fa-cx-ech-go { width: 32px; height: 32px; flex: none; border-radius: 9px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--u-line); background: var(--u-bg); color: var(--u); cursor: pointer; transition: background .15s, color .15s, border-color .15s; }
+.fa-contact-v2 .fa-cx-ech-go svg { width: 15px; height: 15px; }
+.fa-contact-v2 .fa-cx-ech-go.done { border-color: #cfe7d8; background: #e9f6ee; color: #1f6e44; }
+.fa-contact-v2 .fa-cx-ech-go.done:hover { background: #1f6e44; color: #fff; border-color: transparent; }
+.fa-contact-v2 .fa-cx-ech-go.snooze:hover { background: var(--u); color: #fff; border-color: transparent; }
+.fa-contact-v2 .fa-cx-ech-empty { padding: 14px 4px; text-align: center; color: var(--muted); font-size: 12.5px; }
+
+/* ── À faire : bouton « Planifier une relance » + formulaire inline ── */
+.fa-contact-v2 .fa-cx-plan-btn { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; margin-top: 12px; padding: 12px; border: 1.5px dashed var(--brand-line); border-radius: 13px; background: rgba(255, 255, 255, .5); color: var(--brand-ink); font: inherit; font-size: 12.5px; font-weight: 800; cursor: pointer; transition: border-color .16s, background .16s; }
+.fa-contact-v2 .fa-cx-plan-btn:hover { border-color: var(--brand); background: var(--brand-soft); }
+.fa-contact-v2 .fa-cx-plan-btn .plus { width: 22px; height: 22px; border-radius: 50%; flex: none; display: flex; align-items: center; justify-content: center; color: #fff; background: linear-gradient(150deg, #e3407f, #bb1059); box-shadow: 0 4px 10px -5px rgba(194, 18, 95, .7); }
+.fa-contact-v2 .fa-cx-plan-btn .plus svg { width: 13px; height: 13px; }
+.fa-contact-v2 .fa-cx-plan-form { display: flex; flex-direction: column; gap: 9px; margin-top: 11px; padding: 13px; border: 1px solid var(--line); border-radius: 13px; background: #fdfbf8; }
+.fa-contact-v2 .fa-cx-plan-form input, .fa-contact-v2 .fa-cx-plan-form select { width: 100%; font: inherit; font-size: 13px; color: var(--ink); background: #fff; border: 1px solid var(--line); border-radius: 9px; padding: 9px 11px; transition: border-color .14s, box-shadow .14s; }
+.fa-contact-v2 .fa-cx-plan-form input:focus, .fa-contact-v2 .fa-cx-plan-form select:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
+.fa-contact-v2 .fa-cx-plan-acts { display: flex; justify-content: flex-end; gap: 8px; margin-top: 2px; }
+.fa-contact-v2 .fa-cx-plan-cancel { font: inherit; font-size: 12px; font-weight: 700; background: #fff; border: 1px solid var(--line); color: var(--ink-soft); border-radius: 9px; padding: 9px 13px; cursor: pointer; transition: border-color .14s, color .14s; }
+.fa-contact-v2 .fa-cx-plan-cancel:hover:not(:disabled) { border-color: var(--brand); color: var(--brand-ink); }
+.fa-contact-v2 .fa-cx-plan-save { font: inherit; font-size: 12px; font-weight: 700; background: linear-gradient(150deg, #e3407f, #bb1059); border: 0; color: #fff; border-radius: 9px; padding: 9px 15px; cursor: pointer; transition: filter .14s; }
+.fa-contact-v2 .fa-cx-plan-save:hover:not(:disabled) { filter: brightness(1.06); }
+.fa-contact-v2 .fa-cx-plan-cancel:disabled, .fa-contact-v2 .fa-cx-plan-save:disabled { opacity: .55; cursor: default; }
+.fa-contact-v2 .fa-cx-plan-hint { margin-top: 12px; padding: 13px 15px; border: 1px dashed var(--line); border-radius: 13px; background: #fdfbf8; color: var(--muted); font-size: 12.5px; line-height: 1.5; }
+
+/* ============================================================================
+   Lot 6 — Polish final : pastilles de rôle hybrides (hero), bande « Qualité de
+   la fiche » (doublons + complétude + fusion), responsive resserré et mode
+   sombre. Portage de detail-contact-v30-dashboard.html (.type-pill / .dq /
+   .comp-bar). Tout scopé sous .fa-contact-v2 (aucune fuite globale).
+   ========================================================================== */
+
+/* ── Hero : pastilles multiples pour contacts hybrides (couleur = rôle via --rc) ── */
+.fa-contact-v2 .fa-cx-type-pills { display: flex; flex-wrap: wrap; gap: 5px; }
+.fa-contact-v2 .fa-cx-type-pill.multi { color: var(--rc); background: color-mix(in srgb, var(--rc) 12%, #fff); border-color: color-mix(in srgb, var(--rc) 28%, transparent); }
+.fa-contact-v2 .fa-cx-type-pill.more { color: var(--muted); background: #f1eae1; border-color: var(--line); }
+
+/* ── Bande « Qualité de la fiche » (or --sc #a8814a) ── */
+.fa-contact-v2 .fa-cx-dq { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.fa-contact-v2 .fa-cx-dq-ic { width: 46px; height: 46px; border-radius: 13px; background: #f6efe1; color: #a8814a; display: flex; align-items: center; justify-content: center; flex: none; border: 1px solid #e9dcc5; }
+.fa-contact-v2 .fa-cx-dq-ic svg { width: 23px; height: 23px; }
+.fa-contact-v2 .fa-cx-dq-bd { flex: 1; min-width: 170px; }
+.fa-contact-v2 .fa-cx-dq-t { font-size: 15px; font-weight: 700; }
+.fa-contact-v2 .fa-cx-dq-s { font-size: 12px; color: var(--muted); margin-top: 3px; }
+.fa-contact-v2 .fa-cx-comp { display: flex; align-items: center; gap: 11px; margin-left: auto; }
+.fa-contact-v2 .fa-cx-comp-k { font-size: 9px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
+.fa-contact-v2 .fa-cx-comp-bar { width: 120px; height: 8px; border-radius: 99px; background: #efe7db; overflow: hidden; }
+.fa-contact-v2 .fa-cx-comp-bar span { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, #e0a93f, #2f8a5b); }
+.fa-contact-v2 .fa-cx-comp-v { font-size: 13px; font-weight: 800; color: #1f6e44; }
+.fa-contact-v2 .fa-cx-dq-merge { margin-left: 8px; font: inherit; font-size: 12px; font-weight: 700; background: #fff; border: 1px solid var(--line); color: var(--ink-soft); border-radius: 9px; padding: 9px 13px; cursor: pointer; transition: border-color .14s, color .14s, background .14s; }
+.fa-contact-v2 .fa-cx-dq-merge:hover { border-color: var(--brand); color: var(--brand-ink); background: var(--brand-soft); }
+
+/* ── Responsive resserré (≤640px : jauge et bouton passent à la ligne, padding réduit) ── */
+@media (max-width: 640px) {
+  .fa-contact-v2 .fa-cx-comp { margin-left: 0; }
+  .fa-contact-v2 .fa-cx-dq-merge { margin-left: 0; }
+  .fa-contact-v2 .fa-cx-work { padding: 16px 14px 20px; }
+  .fa-contact-v2 .fa-cx-rail { padding: 14px 14px 16px; }
+}
+
+/* ============================================================================
+   Mode sombre — même déclencheur que la fiche contact actuelle (.fcx-overlay
+   dans mobile.css) : 
+
+/* ============================================================================
+   Parité fonctionnelle vs ...Base — segmented control « Fil | Rendez-vous | Échanges »,
+   liste RDV Google avec actions par événement (GAP 1), fils Gmail (GAP 2),
+   données Hektor dans la bande Qualité (GAP 3) et chip sévérité doublon (GAP 4).
+   Tout scopé sous .fa-contact-v2 ; aucune règle globale.
+   ========================================================================== */
+
+/* ── Segmented control dans l'en-tête de la bande « Activité & relation » ── */
+.fa-contact-v2 .fa-cx-seg { display: inline-flex; align-items: center; gap: 3px; padding: 3px; background: #fff; border: 1.5px solid color-mix(in srgb, var(--sc, var(--blue)) 45%, var(--line)); border-radius: 99px; margin-right: 8px; box-shadow: 0 2px 7px -4px rgba(32, 24, 18, .3); }
+.fa-contact-v2 .fa-cx-seg button { font: inherit; font-size: 12px; font-weight: 800; letter-spacing: .01em; color: var(--ink-soft); background: transparent; border: none; border-radius: 99px; padding: 6px 15px; cursor: pointer; transition: color .14s, background .14s, box-shadow .14s; }
+.fa-contact-v2 .fa-cx-seg button:hover { color: var(--sc, var(--blue)); background: color-mix(in srgb, var(--sc, var(--blue)) 11%, #fff); }
+.fa-contact-v2 .fa-cx-seg button.on { color: #fff; background: var(--sc, var(--blue)); box-shadow: 0 4px 10px -4px var(--sc, var(--blue)), inset 0 1px 0 rgba(255, 255, 255, .25); }
+
+/* ── En-tête interne des vues RDV / Échanges (méta + sous-titre + action) ── */
+.fa-contact-v2 .fa-cx-view-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 14px; }
+.fa-contact-v2 .fa-cx-view-meta { font-size: 12.5px; font-weight: 800; color: var(--ink); }
+.fa-contact-v2 .fa-cx-view-sub { font-size: 11.5px; font-weight: 600; color: var(--muted); }
+.fa-contact-v2 .fa-cx-view-head .fa-cx-sec-act { margin-left: auto; }
+.fa-contact-v2 .fa-cx-view-err { font-size: 12px; font-weight: 600; color: var(--annonce-c); background: color-mix(in srgb, var(--annonce-c) 8%, #fff); border: 1px solid color-mix(in srgb, var(--annonce-c) 22%, transparent); border-radius: 10px; padding: 8px 11px; margin: 0 0 12px; }
+
+/* ── Liste RDV Google (GAP 1) — cartes + actions par événement ── */
+.fa-contact-v2 .fa-cx-rdv-list { display: flex; flex-direction: column; gap: 9px; }
+.fa-contact-v2 .fa-cx-rdv { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 12px 14px; background: #fdfbf8; border: 1px solid var(--line); border-radius: 14px; }
+.fa-contact-v2 .fa-cx-rdv-main { flex: 1 1 260px; min-width: 0; }
+.fa-contact-v2 .fa-cx-rdv-head { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+.fa-contact-v2 .fa-cx-rdv-head strong { font-size: 13px; font-weight: 800; color: var(--ink); }
+.fa-contact-v2 .fa-cx-rdv-type { font-size: 10px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--blue); background: var(--blue-bg); border-radius: 99px; padding: 3px 9px; }
+.fa-contact-v2 .fa-cx-rdv-facts { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 6px; font-size: 11.5px; color: var(--muted); }
+.fa-contact-v2 .fa-cx-rdv-acts { display: flex; flex-wrap: wrap; gap: 6px; }
+.fa-contact-v2 .fa-cx-rdv-btn { font: inherit; font-size: 11px; font-weight: 700; color: var(--ink-soft); background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 6px 11px; cursor: pointer; text-decoration: none; transition: border-color .14s, background .14s, color .14s; }
+.fa-contact-v2 .fa-cx-rdv-btn:hover { border-color: var(--blue); color: #1f5b96; }
+.fa-contact-v2 .fa-cx-rdv-btn.brand { color: #fff; background: linear-gradient(150deg, #e3407f, #bb1059); border-color: transparent; box-shadow: 0 6px 12px -7px rgba(187, 16, 89, .6); }
+.fa-contact-v2 .fa-cx-rdv-btn.brand:hover { filter: brightness(1.06); }
+.fa-contact-v2 .fa-cx-rdv-btn:disabled { opacity: .55; cursor: default; }
+
+/* ── Fils Gmail (GAP 2) — conteneur scopé, ContactEmailThreadCard apporte son propre markup ── */
+.fa-contact-v2 .fa-cx-mail-list { display: flex; flex-direction: column; gap: 10px; }
+
+/* ── Chip sévérité doublon (GAP 4) ── */
+.fa-contact-v2 .fa-cx-st-chip.sev { color: var(--annonce-c); background: color-mix(in srgb, var(--annonce-c) 10%, #fff); border-color: color-mix(in srgb, var(--annonce-c) 24%, transparent); }
+.fa-contact-v2 .fa-cx-st-chip.sev .d { background: var(--annonce-c); }
+
+/* ── Données Hektor (GAP 3) — grille compacte sous la bande Qualité ── */
+.fa-contact-v2 .fa-cx-dbar { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--line); }
+.fa-contact-v2 .fa-cx-dbar-f { display: flex; flex-direction: column; gap: 2px; }
+.fa-contact-v2 .fa-cx-dbar-f .k { font-size: 10.5px; font-weight: 700; letter-spacing: .01em; color: var(--muted); }
+.fa-contact-v2 .fa-cx-dbar-f .v { font-size: 12.5px; font-weight: 800; color: var(--ink); }
+.fa-contact-v2 .fa-cx-dbar-f .v.ok { color: var(--green-ink); }
+
+/* ── Mode sombre pour les nouveaux éléments (même déclencheur que le bloc principal) ── */
+
+
+/* ── Compteur « N biens » du bouton rapprochement (chiffre en pastille, façon maquette v30) ── */
+.fa-contact-v2 .fa-cx-srch-match b { font-family: 'Fraunces', serif; font-weight: 600; font-size: 13.5px; background: rgba(255, 255, 255, .22); border-radius: 6px; padding: 1px 7px; }
+
+/* ── Statut de l'annonce liée (pastille colorée) dans la ligne « Biens & mandats liés » ── */
+.fa-contact-v2 .fa-cx-lk-refrow { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.fa-contact-v2 .fa-cx-lk-refrow .fa-cx-lk-ref { flex: 1; min-width: 0; }
+.fa-contact-v2 .fa-cx-lk-stat { flex: none; font-size: 9px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; border-radius: 999px; padding: 2px 8px; border: 1px solid transparent; white-space: nowrap; }
+.fa-contact-v2 .fa-cx-lk-stat.ok { color: #1f6e44; background: #e6f4ec; border-color: #cfe7d8; }
+.fa-contact-v2 .fa-cx-lk-stat.warn { color: #9a5b05; background: #fdf4e2; border-color: #f0dcb4; }
+.fa-contact-v2 .fa-cx-lk-stat.done { color: #1f5b96; background: #e9f1fb; border-color: #cfe0f2; }
+.fa-contact-v2 .fa-cx-lk-stat.muted { color: #6f6152; background: #f3ede2; border-color: #e6dccb; }
+
+/* C.9 (31/08) — la recherche née dans l'app, le temps que Hektor réponde.
+   Même langage visuel que le contact provisoire de l'annuaire : pastille ambrée
+   qui pulse tant qu'on attend, rouge quand Hektor a refusé. La ligne reste lisible
+   (pas de grisé) — c'est une saisie valide, pas une donnée dégradée. */
+.fa-cx-srch-tag.prov,
+.fa-cx-srch-tag.prov-err{display:inline-flex;align-items:center;gap:6px;}
+.fa-cx-srch-tag.prov{color:#8a5a00;background:#fff6e2;border-color:#f0d9a8;}
+.fa-cx-srch-tag.prov-err{color:#b0332f;background:#fdeceb;border-color:#f2c4c1;}
+.fa-cx-srch-tag.prov::before,
+.fa-cx-srch-tag.prov-err::before{content:"";width:6px;height:6px;border-radius:50%;flex:none;}
+.fa-cx-srch-tag.prov::before{background:#d08700;animation:fa-cx-prov-pulse 1.4s ease-in-out infinite;}
+.fa-cx-srch-tag.prov-err::before{background:#b0332f;}
+.fa-cx-srch.is-provisional{border-left:3px solid #e2b25a;}
+.fa-cx-srch.is-provisional-error{border-left-color:#c9524d;}
+
+@keyframes fa-cx-prov-pulse{0%,100%{opacity:1;}50%{opacity:.28;}}
+@media (prefers-reduced-motion:reduce){
+  .fa-cx-srch-tag.prov::before{animation:none;}
+}
+
+/* ⑧ P2 (27/10/2026) : un bien = une ligne, avec TOUS ses rôles (interrupteur FICHE_UN_BIEN_TOUS_ROLES, App.tsx).
+   Plusieurs pastilles côte à côte, chacune à sa couleur (--rc posé en ligne) ; gris = offre refusée, compromis annulé. */
+.fa-contact-v2 .fa-cx-lk-roles { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 5px; }
+.fa-contact-v2 .fa-cx-lk-role.gris { opacity: .85; }
+
+
+/* ═════ AJOUTS NOTAIRE — même langage, même portée .fa-contact-v2 ═════ */
+.fa-contact-v2 .fa-cx-act-menu[hidden] { display: none; }
+.fa-contact-v2.ty-notaire { --ty: #3b4a8c; --ty-deep: #25306a; --ty-mid: #5767ad; --ty-soft: #eceefa; --ty-line: #d6dbf1; --ty-g1: #5767ad; --ty-g2: #3b4a8c; --ty-g3: #25306a; }
+.fa-contact-v2.ty-notaire .fa-cx-av .fa-cx-ty-notaire { display: flex; }
+.fa-contact-v2 .fa-cx-hero-sub { font-size: 12px; color: var(--ink-soft); line-height: 1.3; }
+
+/* rail : interlocuteurs de l'étude */
+.fa-contact-v2 .fa-cx-team { margin: 16px -16px 0; padding: 14px 16px 0; border-top: 1px solid var(--line-soft); display: flex; flex-direction: column; gap: 8px; }
+.fa-contact-v2 .fa-cx-team-head { display: flex; align-items: center; gap: 8px; font-size: 10.5px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+.fa-contact-v2 .fa-cx-team-head .add { margin-left: auto; font: inherit; font-size: 11px; letter-spacing: 0; text-transform: none; font-weight: 800; color: var(--ty); background: var(--ty-soft); border: 1px solid var(--ty-line); border-radius: 8px; padding: 3px 9px; cursor: pointer; }
+.fa-contact-v2 .fa-cx-mate { display: flex; align-items: center; gap: 10px; padding: 6px 8px; margin: 0 -8px; border-radius: 11px; }
+.fa-contact-v2 .fa-cx-mate:hover { background: color-mix(in srgb, var(--ty) 6%, #fff); }
+.fa-contact-v2 .fa-cx-mate-av { width: 32px; height: 32px; flex: none; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 11.5px; font-weight: 800; color: var(--ty-deep); background: var(--ty-soft); border: 1px solid var(--ty-line); }
+.fa-contact-v2 .fa-cx-mate-t { min-width: 0; flex: 1; }
+.fa-contact-v2 .fa-cx-mate-nm { font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fa-contact-v2 .fa-cx-mate-rl { font-size: 11.5px; color: var(--muted); }
+.fa-contact-v2 .fa-cx-mate-call { width: 28px; height: 28px; flex: none; border-radius: 9px; display: flex; align-items: center; justify-content: center; color: var(--ty); border: 1px solid var(--ty-line); background: #fff; cursor: pointer; }
+.fa-contact-v2 .fa-cx-mate-call svg { width: 14px; height: 14px; }
+
+/* chiffres clés */
+.fa-contact-v2 .fa-cx-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 22px; }
+.fa-contact-v2 .fa-cx-kpi { position: relative; background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 13px 15px 12px; box-shadow: 0 1px 2px rgba(32, 24, 18, .04), 0 16px 32px -26px rgba(32, 24, 18, .28); overflow: hidden; }
+.fa-contact-v2 .fa-cx-kpi::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--sc, var(--ty)); }
+.fa-contact-v2 .fa-cx-kpi-k { font-size: 10.5px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.fa-contact-v2 .fa-cx-kpi-v { font-family: 'Fraunces', serif; font-size: 27px; font-weight: 600; letter-spacing: -.02em; line-height: 1.1; margin-top: 5px; color: var(--ink); }
+.fa-contact-v2 .fa-cx-kpi-v small { font-family: 'Hanken Grotesk', sans-serif; font-size: 12px; font-weight: 700; color: var(--ink-soft); letter-spacing: 0; margin-left: 4px; }
+.fa-contact-v2 .fa-cx-kpi-s { font-size: 11.5px; color: var(--ink-soft); margin-top: 3px; }
+.fa-contact-v2 .fa-cx-kpi-s b { color: #1f6e44; }
+
+/* étapes des dossiers */
+.fa-contact-v2 .fa-cx-stages { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 14px; }
+.fa-contact-v2 .fa-cx-stage { font: inherit; text-align: left; cursor: pointer; border: 1px solid var(--line); background: #fdfbf8; border-radius: 12px; padding: 8px 10px; display: flex; flex-direction: column; gap: 2px; }
+.fa-contact-v2 .fa-cx-stage b { font-family: 'Fraunces', serif; font-size: 19px; font-weight: 600; color: var(--st, var(--ty)); line-height: 1.1; }
+.fa-contact-v2 .fa-cx-stage span { font-size: 11px; font-weight: 700; color: var(--ink-soft); }
+.fa-contact-v2 .fa-cx-stage.on { background: color-mix(in srgb, var(--st, var(--ty)) 9%, #fff); border-color: color-mix(in srgb, var(--st, var(--ty)) 35%, var(--line)); box-shadow: inset 0 -2px 0 var(--st, var(--ty)); }
+
+/* une carte dossier (même famille que .fa-cx-lk) */
+.fa-contact-v2 .fa-cx-dos { border: 1px solid var(--line); border-radius: 13px; background: #fff; overflow: hidden; transition: border-color .15s, box-shadow .16s; }
+.fa-contact-v2 .fa-cx-dos + .fa-cx-dos { margin-top: 10px; }
+.fa-contact-v2 .fa-cx-dos:hover { border-color: color-mix(in srgb, var(--ty) 30%, var(--line)); box-shadow: 0 10px 22px -18px rgba(32, 24, 18, .45); }
+.fa-contact-v2 .fa-cx-dos-row { display: flex; align-items: center; gap: 11px; padding: 8px 11px 8px 8px; cursor: pointer; }
+.fa-contact-v2 .fa-cx-dos-row .fa-cx-lk-thumb { flex: none; }
+.fa-contact-v2 .fa-cx-dos-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.fa-contact-v2 .fa-cx-dos-ref { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.fa-contact-v2 .fa-cx-dos-ref > b { font-size: 13.5px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fa-contact-v2 .fa-cx-dos-parties { font-size: 12px; color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fa-contact-v2 .fa-cx-dos-parties i { font-style: normal; color: var(--faint); margin: 0 4px; }
+.fa-contact-v2 .fa-cx-dos-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 2px; }
+.fa-contact-v2 .fa-cx-tag { font-size: 10.5px; font-weight: 700; color: var(--ink-soft); background: #f6f1ea; border: 1px solid var(--line-soft); border-radius: 7px; padding: 2px 7px; white-space: nowrap; }
+.fa-contact-v2 .fa-cx-tag.side { color: var(--ty-deep); background: var(--ty-soft); border-color: var(--ty-line); }
+.fa-contact-v2 .fa-cx-tag.face { color: #6f4a12; background: #fbf3e4; border-color: #efdfc0; }
+.fa-contact-v2 .fa-cx-dos-meta { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.fa-contact-v2 .fa-cx-dos-amt { font-family: 'Fraunces', serif; font-size: 15px; font-weight: 600; }
+.fa-contact-v2 .fa-cx-dos-due { font-size: 11px; font-weight: 800; color: var(--alert); background: var(--alert-bg); border: 1px solid var(--alert-line); border-radius: 7px; padding: 2px 7px; white-space: nowrap; }
+.fa-contact-v2 .fa-cx-dos-due.calm { color: #1f5b96; background: #e9f1fb; border-color: #cfe0f2; }
+.fa-contact-v2 .fa-cx-pcs-bar { display: flex; align-items: center; gap: 7px; font-size: 11px; font-weight: 700; color: var(--ink-soft); }
+.fa-contact-v2 .fa-cx-pcs-bar .bar { width: 64px; height: 5px; border-radius: 9px; background: #efe7dc; overflow: hidden; }
+.fa-contact-v2 .fa-cx-pcs-bar .bar span { display: block; height: 100%; border-radius: 9px; background: linear-gradient(90deg, var(--ty-mid), var(--ty)); }
+.fa-contact-v2 .fa-cx-dos-chev { flex: none; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; border-radius: 8px; color: var(--ink-soft); background: #f7f2ec; transition: transform .2s; }
+.fa-contact-v2 .fa-cx-dos-chev svg { width: 14px; height: 14px; }
+.fa-contact-v2 .fa-cx-dos.open .fa-cx-dos-chev { transform: rotate(180deg); color: var(--ty); }
+.fa-contact-v2 .fa-cx-dos-more { display: none; border-top: 1px dashed var(--line); padding: 12px 13px 13px; background: linear-gradient(180deg, #fdfbf8, #fff); }
+.fa-contact-v2 .fa-cx-dos.open .fa-cx-dos-more { display: block; }
+.fa-contact-v2 .fa-cx-facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px 14px; margin-bottom: 12px; }
+.fa-contact-v2 .fa-cx-fact .k { display: block; font-size: 10px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.fa-contact-v2 .fa-cx-fact .v { display: block; font-size: 12.5px; font-weight: 700; margin-top: 2px; }
+.fa-contact-v2 .fa-cx-pcs-t { display: flex; align-items: center; gap: 8px; font-size: 10.5px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-bottom: 7px; }
+.fa-contact-v2 .fa-cx-pcs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px 14px; }
+.fa-contact-v2 .fa-cx-pc { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink); }
+.fa-contact-v2 .fa-cx-pc .ck { width: 17px; height: 17px; flex: none; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #fff; background: var(--green); }
+.fa-contact-v2 .fa-cx-pc .ck svg { width: 11px; height: 11px; }
+.fa-contact-v2 .fa-cx-pc.miss { color: var(--ink-soft); }
+.fa-contact-v2 .fa-cx-pc.miss .ck { background: #fff; border: 1.5px dashed #d4a07f; }
+.fa-contact-v2 .fa-cx-pc .src { margin-left: auto; font-size: 10.5px; color: var(--faint); white-space: nowrap; }
+.fa-contact-v2 .fa-cx-dos-acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 13px; }
+
+/* Avec nous */
+.fa-contact-v2 .fa-cx-duo { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; margin: 0 0 24px; }
+.fa-contact-v2 .fa-cx-bars { display: flex; flex-direction: column; gap: 9px; }
+.fa-contact-v2 .fa-cx-bar-r { display: grid; grid-template-columns: 112px minmax(0, 1fr) 30px; align-items: center; gap: 10px; font-size: 12.5px; }
+.fa-contact-v2 .fa-cx-bar-r .t { height: 8px; border-radius: 9px; background: #f2ebe1; overflow: hidden; }
+.fa-contact-v2 .fa-cx-bar-r .t span { display: block; height: 100%; border-radius: 9px; background: linear-gradient(90deg, var(--ty-mid), var(--ty)); }
+.fa-contact-v2 .fa-cx-bar-r b { text-align: right; }
+.fa-contact-v2 .fa-cx-split { display: flex; height: 10px; border-radius: 9px; overflow: hidden; margin: 4px 0 7px; }
+.fa-contact-v2 .fa-cx-split span { display: block; }
+.fa-contact-v2 .fa-cx-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 11.5px; color: var(--ink-soft); }
+.fa-contact-v2 .fa-cx-legend i { display: inline-block; width: 9px; height: 9px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+.fa-contact-v2 .fa-cx-mini-t { font-size: 10.5px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 0 0 9px; }
+.fa-contact-v2 .fa-cx-mini-t + * { margin-bottom: 14px; }
+.fa-contact-v2 .fa-cx-conf { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-top: 1px solid var(--line-soft); font-size: 12.5px; }
+.fa-contact-v2 .fa-cx-conf:first-of-type { border-top: 0; }
+.fa-contact-v2 .fa-cx-conf .fa-cx-mate-av { width: 28px; height: 28px; border-radius: 9px; font-size: 10.5px; color: #6f4a12; background: #fbf3e4; border-color: #efdfc0; }
+.fa-contact-v2 .fa-cx-conf .nm { flex: 1; min-width: 0; font-weight: 700; }
+.fa-contact-v2 .fa-cx-conf .nm small { display: block; font-weight: 500; color: var(--muted); font-size: 11px; }
+.fa-contact-v2 .fa-cx-conf .n { font-weight: 800; color: var(--ink-soft); }
+
+/* À venir : variantes de l'échéance (reprend .fa-cx-ech) */
+.fa-contact-v2 .fa-cx-ech.sign { --u: var(--ty); --u-bg: var(--ty-soft); --u-line: var(--ty-line); }
+.fa-contact-v2 .fa-cx-ech.cond { --u: var(--blue); --u-bg: var(--blue-bg); --u-line: #cfe0f2; }
+.fa-contact-v2 .fa-cx-ech-k { display: inline-block; font-size: 9.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--u); margin-bottom: 1px; }
+.fa-contact-v2 .fa-cx-ech-go.agenda { color: var(--ty); }
+
+/* « Origine des données » (aide de lecture de la maquette, ne fait pas partie de la fiche) */
+.mq-orig-btn { position: fixed; right: 16px; bottom: 16px; z-index: 3000; font: 800 12px 'Hanken Grotesk', sans-serif; color: #fff; background: #211a13; border: 0; border-radius: 999px; padding: 10px 15px; box-shadow: 0 10px 24px -10px rgba(0, 0, 0, .6); cursor: pointer; }
+.mq-orig-btn[aria-pressed="true"] { background: #c2125f; }
+.mq-note { position: fixed; left: 16px; bottom: 16px; z-index: 3000; max-width: 360px; font: 500 11.5px/1.4 'Hanken Grotesk', sans-serif; color: #5c5346; background: #fffdf8; border: 1px solid #eadfce; border-radius: 12px; padding: 8px 11px; box-shadow: 0 10px 24px -14px rgba(0, 0, 0, .4); }
+body:not(.mq-orig) [data-o]::after { display: none; }
+[data-o] { position: relative; }
+body.mq-orig [data-o]::after { content: attr(data-o-t); position: absolute; top: 6px; right: 6px; z-index: 5; font: 800 9.5px 'Hanken Grotesk', sans-serif; letter-spacing: .04em; text-transform: uppercase; padding: 3px 7px; border-radius: 999px; pointer-events: none; }
+body.mq-orig [data-o="ok"]::after { color: #1f6e44; background: #e6f4ec; border: 1px solid #b9dcc6; }
+body.mq-orig [data-o="new"]::after { color: #9a4a05; background: #fdeedb; border: 1px solid #f0c99a; }
+body.mq-orig [data-o="new"] { outline: 2px dashed #e7a35a; outline-offset: 3px; border-radius: 14px; }
+
+@media (max-width: 1080px) {
+  .fa-contact-v2 .fa-cx-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .fa-contact-v2 .fa-cx-duo { grid-template-columns: 1fr; }
+  /* une colonne : l'échéancier passe AVANT les dossiers (notaire seulement) */
+  .fa-contact-v2.ty-notaire .fa-cx-dash-side { order: -1; }
+}
+@media (max-width: 640px) {
+  .fa-contact-v2 .fa-cx-kpis { gap: 9px; }
+  .fa-contact-v2 .fa-cx-kpi { padding: 11px 12px; }
+  .fa-contact-v2 .fa-cx-kpi-v { font-size: 22px; }
+  .fa-contact-v2 .fa-cx-stages { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .fa-contact-v2 .fa-cx-dos-row { flex-wrap: wrap; }
+  .fa-contact-v2 .fa-cx-dos-main { flex-basis: calc(100% - 72px); }
+  .fa-contact-v2 .fa-cx-dos-meta { flex-direction: row; align-items: center; flex-wrap: wrap; margin-left: 65px; flex: 1; justify-content: flex-start; }
+  .fa-contact-v2 .fa-cx-dos-chev { margin-left: auto; }
+  .fa-contact-v2 .fa-cx-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .fa-contact-v2 .fa-cx-pcs { grid-template-columns: 1fr; }
+  .fa-contact-v2 .fa-cx-sec { flex-wrap: wrap; }
+  .fa-contact-v2 .fa-cx-sec-ln { min-width: 20px; }
+  .fa-contact-v2 .fa-cx-bar-r { grid-template-columns: 92px minmax(0, 1fr) 26px; }
+  .mq-note { display: none; }
+  .fa-contact-v2 .fa-cx-team { margin-left: -14px; margin-right: -14px; padding-left: 14px; padding-right: 14px; }
+}
+
+/* ═════ v3 : l'historique filtrable (décision 2) et « en construction » (décision 5) ═════ */
+.fa-contact-v2 .fa-cx-lk-filtres { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: -2px 0 12px; }
+.fa-contact-v2 .fa-cx-lk-filtres .fa-cx-aflt { margin: 0; }
+.fa-contact-v2 .fa-cx-aflt button b { font-weight: 800; margin-left: 5px; font-variant-numeric: tabular-nums; opacity: .8; }
+.fa-contact-v2 .fa-cx-lk-cherche { flex: 1 1 200px; min-width: 0; display: flex; align-items: center; gap: 7px; border: 1px solid var(--line); border-radius: 10px; background: #fff; padding: 6px 10px; }
+.fa-contact-v2 .fa-cx-lk-cherche svg { width: 15px; height: 15px; color: var(--muted); flex: none; }
+.fa-contact-v2 .fa-cx-lk-cherche input { border: 0; outline: 0; background: none; width: 100%; font-size: 12.5px; color: var(--ink); }
+.fa-contact-v2 .fa-cx-lk-tri { border: 1px solid var(--line); border-radius: 10px; background: #fff; padding: 6px 9px; font-size: 12px; color: var(--ink-soft); }
+.fa-contact-v2 .fa-cx-lk-pied { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 12px; padding-top: 11px; border-top: 1px dashed var(--line); font-size: 12px; color: var(--muted); }
+.fa-contact-v2 .fa-cx-lk-pied .plus { margin-left: auto; }
+.fa-contact-v2 .fa-cx-lk-vide { padding: 18px; text-align: center; font-size: 12.5px; color: var(--muted); border: 1px dashed var(--line); border-radius: 12px; }
+.fa-contact-v2 #mq-histo .fa-cx-lk + .fa-cx-lk { margin-top: 9px; }
+.fa-contact-v2 #mq-histo .fa-cx-lk { --rc: #3b4a8c; }
+.fa-contact-v2 .fa-cx-construction { display: inline-flex; align-items: center; gap: 5px; font-size: 9.5px; font-weight: 800; letter-spacing: .04em; text-transform: none; color: #8a5a12; background: #fdf3df; border: 1px dashed #e6c58a; border-radius: 999px; padding: 2px 8px; white-space: nowrap; vertical-align: middle; }
+.fa-contact-v2 .fa-cx-construction::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: #d9963a; }
+.fa-contact-v2 .fa-cx-fact .v.vide { color: var(--faint); font-weight: 600; }
+@media (max-width: 640px) {
+  .fa-contact-v2 .fa-cx-lk-cherche { flex-basis: 100%; }
+  .fa-contact-v2 .fa-cx-lk-filtres .fa-cx-aflt { flex-wrap: nowrap; overflow-x: auto; max-width: 100%; scrollbar-width: none; }
+}
+</style>
+</head>
+<body>
+
+<div class="fa-contact-v2 ty-notaire" id="fa-cx-root" data-screen-label="Fiche contact V2 — notaire">
+  <div class="fa-cx-overlay" data-fiche="contact">
+    <div class="fa-cx-panel">
+      <div class="fa-cx-body">
+
+        <!-- ════════ RAIL GAUCHE — identique à la fiche contact, avec l'étude ════════ -->
+        <aside class="fa-cx-rail" data-screen-label="Volet identité">
+          <button class="fa-cx-back" type="button">
+            <span class="fa-cx-back-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg></span>
+            <span class="fa-cx-back-tx"><span class="fa-cx-back-ey">Retour</span><span class="fa-cx-back-t">Annuaire</span></span>
+          </button>
+
+          <div class="fa-cx-hero" data-o="ok" data-o-t="existe">
+            <div class="fa-cx-av" aria-hidden="true">
+              <span class="fa-cx-ty-ic fa-cx-ty-notaire"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v17"/><path d="M8 20h8"/><path d="M5 7h14"/><path d="M12 5.2 5 7"/><path d="m12 5.2 7 1.8"/><path d="M5 7 2.5 13a2.6 2.6 0 0 0 5 0Z"/><path d="M19 7l-2.5 6a2.6 2.6 0 0 0 5 0Z"/></svg></span>
+            </div>
+            <div class="fa-cx-hero-tx">
+              <div class="fa-cx-name">Maître Claire Ravel</div>
+              <div class="fa-cx-hero-sub">Étude Ravel &amp; Associés · Saint-Étienne</div>
+              <span class="fa-cx-type-pill">Notaire</span>
+            </div>
+          </div>
+
+          <div class="fa-cx-actions">
+            <button class="fa-cx-act primary" type="button" data-tip="Planifier une signature" aria-label="Planifier une signature">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="16" rx="2.5"/><path d="M16 2.5v4M8 2.5v4M3 9.5h18"/><path d="M12 13.5v4M10 15.5h4"/></svg>
+            </button>
+            <button class="fa-cx-act ghost" type="button" data-tip="Envoyer un dossier" aria-label="Envoyer un dossier">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4Z"/></svg>
+            </button>
+            <button class="fa-cx-act ghost" type="button" data-tip="Modifier la fiche" aria-label="Modifier la fiche">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+            </button>
+            <div class="fa-cx-act-wrap" id="mq-menu-wrap">
+              <button class="fa-cx-act ghost" type="button" data-tip="Plus d'actions" aria-label="Plus d'actions" onclick="mqMenu()">
+                <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
+              </button>
+              <div class="fa-cx-act-menu" id="mq-menu" hidden>
+                <button class="fa-cx-menu-item" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3Z"/><path d="m9 12 2 2 4-4"/></svg>Ouvrir dans Hektor<svg class="fa-cx-menu-ext" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M9 7h8v8"/></svg></button>
+                <button class="fa-cx-menu-item" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 7h18v4H3z"/><path d="M5 11v9h14v-9"/><path d="M10 15h4"/></svg>Archiver</button>
+                <button class="fa-cx-menu-item danger" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13"/></svg>Supprimer</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="fa-cx-coords" data-o="ok" data-o-t="existe">
+            <a class="fa-cx-coord" href="#" title="Appeler l'étude">
+              <span class="fa-cx-coord-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 5a2 2 0 0 1 2-2h2.5l1.5 4-2 1.5a12 12 0 0 0 5 5l1.5-2 4 1.5V18a2 2 0 0 1-2 2A15 15 0 0 1 4 5Z"/></svg></span>
+              <div class="fa-cx-coord-bd"><div class="fa-cx-coord-k">Standard de l'étude</div><div class="fa-cx-coord-v">04 77 00 00 00</div></div>
+            </a>
+            <a class="fa-cx-coord" href="#" title="Appeler (ligne directe)">
+              <span class="fa-cx-coord-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 5a2 2 0 0 1 2-2h2.5l1.5 4-2 1.5a12 12 0 0 0 5 5l1.5-2 4 1.5V18a2 2 0 0 1-2 2A15 15 0 0 1 4 5Z"/></svg></span>
+              <div class="fa-cx-coord-bd"><div class="fa-cx-coord-k">Ligne directe</div><div class="fa-cx-coord-v">04 77 00 00 12</div></div>
+            </a>
+            <button class="fa-cx-coord" type="button" title="Écrire un email">
+              <span class="fa-cx-coord-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></span>
+              <div class="fa-cx-coord-bd"><div class="fa-cx-coord-k">Email</div><div class="fa-cx-coord-v">c.ravel@etude-exemple.notaires.fr</div></div>
+            </button>
+            <div class="fa-cx-coord static">
+              <span class="fa-cx-coord-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg></span>
+              <div class="fa-cx-coord-bd"><div class="fa-cx-coord-k">Adresse de l'étude</div><div class="fa-cx-coord-v">12 place de l'Exemple, 42000 Saint-Étienne</div></div>
+            </div>
+          </div>
+
+          <div class="fa-cx-team" data-o="new" data-o-t="à créer">
+            <div class="fa-cx-team-head">Interlocuteurs <span class="fa-cx-construction">en construction</span> <button class="add" type="button">+ Ajouter</button></div>
+            <div class="fa-cx-mate"><span class="fa-cx-mate-av">JB</span><div class="fa-cx-mate-t"><div class="fa-cx-mate-nm">Julie Besson</div><div class="fa-cx-mate-rl">Clerc · suit nos dossiers</div></div><button class="fa-cx-mate-call" type="button" title="Appeler"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5a2 2 0 0 1 2-2h2.5l1.5 4-2 1.5a12 12 0 0 0 5 5l1.5-2 4 1.5V18a2 2 0 0 1-2 2A15 15 0 0 1 4 5Z"/></svg></button></div>
+            <div class="fa-cx-mate"><span class="fa-cx-mate-av">TM</span><div class="fa-cx-mate-t"><div class="fa-cx-mate-nm">Thomas Marchal</div><div class="fa-cx-mate-rl">Formaliste · pièces et purges</div></div><button class="fa-cx-mate-call" type="button" title="Écrire"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></button></div>
+            <div class="fa-cx-mate"><span class="fa-cx-mate-av">SR</span><div class="fa-cx-mate-t"><div class="fa-cx-mate-nm">Maître Simon Ravel</div><div class="fa-cx-mate-rl">Notaire associé</div></div><button class="fa-cx-mate-call" type="button" title="Ouvrir sa fiche"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 6l6 6-6 6"/></svg></button></div>
+          </div>
+
+          <div class="fa-cx-foot" data-o="ok" data-o-t="existe">
+            <div class="fa-cx-foot-head">
+              <span class="fa-cx-foot-hic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M5 21a7 7 0 0 1 14 0"/></svg></span>Négociateur
+            </div>
+            <div class="fa-cx-neg">
+              <span class="fa-cx-neg-av">PL</span>
+              <div class="fa-cx-neg-t"><div class="fa-cx-neg-nm">Pauline L.</div><div class="fa-cx-neg-sb">Agence de Firminy</div></div>
+            </div>
+            <div class="fa-cx-status">
+              <span class="fa-cx-st-chip"><span class="d"></span>Actif</span>
+              <span class="fa-cx-st-chip app"><span class="d"></span>Partenaire depuis 2016</span>
+            </div>
+          </div>
+        </aside>
+
+        <!-- ════════ ZONE DE TRAVAIL ════════ -->
+        <div class="fa-cx-work">
+
+          <div class="fa-cx-kpis" data-o="ok" data-o-t="registre">
+            <div class="fa-cx-kpi" style="--sc: var(--ty)"><div class="fa-cx-kpi-k">Dossiers en cours</div><div class="fa-cx-kpi-v">9</div><div class="fa-cx-kpi-s">5 côté vendeur · 2 acquéreur · 2 les deux</div></div>
+            <div class="fa-cx-kpi" style="--sc: #c2512a"><div class="fa-cx-kpi-k">Actes ≤ 30 jours</div><div class="fa-cx-kpi-v">3</div><div class="fa-cx-kpi-s">le prochain jeudi 6 nov., 10 h</div></div>
+            <div class="fa-cx-kpi" style="--sc: #1f5b96"><div class="fa-cx-kpi-k">Ventes · 12 mois</div><div class="fa-cx-kpi-v">38<small>· 216 400 €</small></div><div class="fa-cx-kpi-s">d'honoraires encaissés</div></div>
+            <div class="fa-cx-kpi" style="--sc: #2f8a5b"><div class="fa-cx-kpi-k">Compromis → acte</div><div class="fa-cx-kpi-v">78<small>jours</small></div><div class="fa-cx-kpi-s"><b>8 j plus vite</b> que la médiane (86 j)</div></div>
+          </div>
+
+          <div class="fa-cx-dash-top">
+            <div class="fa-cx-dash-main">
+              <div class="fa-cx-sec" style="--sc: var(--ty)">
+                <span class="fa-cx-sec-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h10l6 6v10H4z"/><path d="M14 4v6h6"/></svg></span>
+                Dossiers en cours
+                <span class="fa-cx-sec-ln"></span>
+                <span class="fa-cx-sec-meta">9 dossiers</span>
+              </div>
+              <section class="fa-cx-mod full" data-o="ok" data-o-t="registre des transactions">
+                <div class="fa-cx-stages">
+                  <button class="fa-cx-stage on" type="button" style="--st: #c2512a"><b>2</b><span>Rétractation</span></button>
+                  <button class="fa-cx-stage" type="button" style="--st: #2f6fa8"><b>3</b><span>Conditions</span></button>
+                  <button class="fa-cx-stage" type="button" style="--st: #3b4a8c"><b>3</b><span>Acte fixé</span></button>
+                  <button class="fa-cx-stage" type="button" style="--st: #a8814a"><b>1</b><span>Date à fixer</span></button>
+                </div>
+
+                <div class="fa-cx-dos open">
+                  <div class="fa-cx-dos-row" onclick="this.parentNode.classList.toggle('open')">
+                    <span class="fa-cx-lk-thumb"><span class="rf">Photo</span></span>
+                    <div class="fa-cx-dos-main">
+                      <div class="fa-cx-dos-ref"><b>Mandat 17 482 · Maison 5 p., Firminy</b><span class="fa-cx-lk-stat warn">Compromis</span></div>
+                      <div class="fa-cx-dos-parties">M. et Mme Durand<i>→</i>M. Petit</div>
+                      <div class="fa-cx-dos-tags"><span class="fa-cx-tag side">Côté vendeur</span><span class="fa-cx-tag face">Face : Me Garnier</span><span class="fa-cx-tag">Négo. Pauline L.</span></div>
+                    </div>
+                    <div class="fa-cx-dos-meta">
+                      <span class="fa-cx-dos-amt">245 000 €</span>
+                      <span class="fa-cx-dos-due">Rétractation J-2</span>
+                      <span class="fa-cx-pcs-bar"><span class="bar"><span style="width:64%"></span></span>7/11</span>
+                    </div>
+                    <span class="fa-cx-dos-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></span>
+                  </div>
+                  <div class="fa-cx-dos-more">
+                    <div class="fa-cx-facts">
+                      <div class="fa-cx-fact"><span class="k">Compromis</span><span class="v">17/10/2026</span></div>
+                      <div class="fa-cx-fact"><span class="k">Fin rétractation</span><span class="v">29/10/2026</span></div>
+                      <div class="fa-cx-fact"><span class="k">Condition de prêt</span><span class="v vide">— <span class="fa-cx-construction">en construction</span></span></div>
+                      <div class="fa-cx-fact"><span class="k">Acte prévu</span><span class="v">à fixer</span></div>
+                      <div class="fa-cx-fact"><span class="k">Séquestre</span><span class="v vide">— <span class="fa-cx-construction">en construction</span></span></div>
+                      <div class="fa-cx-fact"><span class="k">Honoraires</span><span class="v">11 000 € TTC</span></div>
+                      <div class="fa-cx-fact"><span class="k">Charge</span><span class="v">vendeur</span></div>
+                      <div class="fa-cx-fact"><span class="k">Prix net vendeur</span><span class="v">234 000 €</span></div>
+                    </div>
+                    <div class="fa-cx-pcs-t" data-o="new" data-o-t="à créer">Pièces du dossier · 7 sur 11 <span class="fa-cx-construction">en construction</span></div>
+                    <div class="fa-cx-pcs">
+                      <div class="fa-cx-pc"><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 12 5 5 9-11"/></svg></span>Titre de propriété<span class="src">coffre</span></div>
+                      <div class="fa-cx-pc"><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 12 5 5 9-11"/></svg></span>Diagnostics (DDT)<span class="src">coffre</span></div>
+                      <div class="fa-cx-pc"><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 12 5 5 9-11"/></svg></span>Compromis signé<span class="src">signature</span></div>
+                      <div class="fa-cx-pc"><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 12 5 5 9-11"/></svg></span>Preuve de notification SRU<span class="src">signature</span></div>
+                      <div class="fa-cx-pc"><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 12 5 5 9-11"/></svg></span>Pièces d'identité<span class="src">coffre</span></div>
+                      <div class="fa-cx-pc"><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 12 5 5 9-11"/></svg></span>Taxe foncière<span class="src">coffre</span></div>
+                      <div class="fa-cx-pc"><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 12 5 5 9-11"/></svg></span>Mandat de vente<span class="src">registre</span></div>
+                      <div class="fa-cx-pc miss"><span class="ck"></span>Attestation de séquestre<span class="src">à demander</span></div>
+                      <div class="fa-cx-pc miss"><span class="ck"></span>Offre de prêt de l'acquéreur<span class="src">à demander</span></div>
+                      <div class="fa-cx-pc miss"><span class="ck"></span>Assainissement (SPANC)<span class="src">à demander</span></div>
+                      <div class="fa-cx-pc miss"><span class="ck"></span>Plan cadastral<span class="src">à demander</span></div>
+                    </div>
+                    <div class="fa-cx-dos-acts">
+                      <button class="fa-cx-sec-act" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4Z"/></svg>Envoyer les 7 pièces à l'étude</button>
+                      <button class="fa-cx-sec-act ghost" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>Demander les manquantes</button>
+                      <button class="fa-cx-sec-act ghost" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>Ouvrir l'annonce</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="fa-cx-dos">
+                  <div class="fa-cx-dos-row" onclick="this.parentNode.classList.toggle('open')">
+                    <span class="fa-cx-lk-thumb"><span class="rf">Photo</span></span>
+                    <div class="fa-cx-dos-main">
+                      <div class="fa-cx-dos-ref"><b>Mandat 17 455 · Appartement T3, Saint-Étienne</b><span class="fa-cx-lk-stat warn">Compromis</span></div>
+                      <div class="fa-cx-dos-parties">Mme Lambert<i>→</i>M. et Mme Rossi</div>
+                      <div class="fa-cx-dos-tags"><span class="fa-cx-tag side">Les deux côtés</span><span class="fa-cx-tag">Négo. Karim B.</span></div>
+                    </div>
+                    <div class="fa-cx-dos-meta">
+                      <span class="fa-cx-dos-amt">158 000 €</span>
+                      <span class="fa-cx-dos-due">Rétractation J-5</span>
+                      <span class="fa-cx-pcs-bar"><span class="bar"><span style="width:45%"></span></span>5/11</span>
+                    </div>
+                    <span class="fa-cx-dos-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></span>
+                  </div>
+                  <div class="fa-cx-dos-more"><div class="fa-cx-facts"><div class="fa-cx-fact"><span class="k">Compromis</span><span class="v">20/10/2026</span></div><div class="fa-cx-fact"><span class="k">Fin rétractation</span><span class="v">01/11/2026</span></div><div class="fa-cx-fact"><span class="k">Copropriété</span><span class="v">état daté demandé</span></div><div class="fa-cx-fact"><span class="k">Honoraires</span><span class="v">8 500 € TTC</span></div></div></div>
+                </div>
+
+                <div class="fa-cx-dos">
+                  <div class="fa-cx-dos-row" onclick="this.parentNode.classList.toggle('open')">
+                    <span class="fa-cx-lk-thumb"><span class="rf">Photo</span></span>
+                    <div class="fa-cx-dos-main">
+                      <div class="fa-cx-dos-ref"><b>Mandat 17 390 · Maison 4 p., Unieux</b><span class="fa-cx-lk-stat ok">Acte fixé</span></div>
+                      <div class="fa-cx-dos-parties">M. Bernard<i>→</i>Mme Faure</div>
+                      <div class="fa-cx-dos-tags"><span class="fa-cx-tag side">Côté acquéreur</span><span class="fa-cx-tag face">Face : Me Collet</span><span class="fa-cx-tag">Négo. Pauline L.</span></div>
+                    </div>
+                    <div class="fa-cx-dos-meta">
+                      <span class="fa-cx-dos-amt">212 000 €</span>
+                      <span class="fa-cx-dos-due calm">Acte jeu. 6 nov.</span>
+                      <span class="fa-cx-pcs-bar"><span class="bar"><span style="width:100%"></span></span>11/11</span>
+                    </div>
+                    <span class="fa-cx-dos-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></span>
+                  </div>
+                  <div class="fa-cx-dos-more"><div class="fa-cx-facts"><div class="fa-cx-fact"><span class="k">Compromis</span><span class="v">12/08/2026</span></div><div class="fa-cx-fact"><span class="k">Acte</span><span class="v">06/11/2026 · 10 h</span></div><div class="fa-cx-fact"><span class="k">Lieu</span><span class="v">étude Collet</span></div><div class="fa-cx-fact"><span class="k">Honoraires</span><span class="v">10 000 € TTC</span></div></div></div>
+                </div>
+              </section>
+            </div>
+
+            <!-- À venir : la colonne « À faire » de la fiche contact, devenue l'échéancier -->
+            <div class="fa-cx-dash-side">
+              <div class="fa-cx-sec" style="--sc: #c2512a">
+                <span class="fa-cx-sec-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 1.5M9 2h6"/></svg></span>
+                À venir
+                <span class="fa-cx-sec-ln"></span>
+                <span class="fa-cx-sec-meta" style="--sc: #c2512a">5</span>
+              </div>
+              <section class="fa-cx-mod full" data-o="ok" data-o-t="registre + relances">
+                <div class="fa-cx-ech-list">
+                  <div class="fa-cx-ech late">
+                    <span class="fa-cx-ech-date warn"><b>29</b><i>oct.</i></span>
+                    <div class="fa-cx-ech-bd"><span class="fa-cx-ech-k">Rétractation</span><div class="fa-cx-ech-t">Fin du délai · Durand → Petit</div><div class="fa-cx-ech-s">Firminy · mandat 17 482</div></div>
+                    <div class="fa-cx-ech-acts">
+                      <button class="fa-cx-ech-go done" type="button" title="Prévenir l'étude"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></button>
+                    </div>
+                  </div>
+                  <div class="fa-cx-ech">
+                    <span class="fa-cx-ech-date"><b>01</b><i>nov.</i></span>
+                    <div class="fa-cx-ech-bd"><span class="fa-cx-ech-k">Rétractation</span><div class="fa-cx-ech-t">Fin du délai · Lambert → Rossi</div><div class="fa-cx-ech-s">Saint-Étienne · mandat 17 455</div></div>
+                    <div class="fa-cx-ech-acts"><button class="fa-cx-ech-go done" type="button" title="Prévenir l'étude"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></button></div>
+                  </div>
+                  <div class="fa-cx-ech sign">
+                    <span class="fa-cx-ech-date"><b>06</b><i>nov.</i></span>
+                    <div class="fa-cx-ech-bd"><span class="fa-cx-ech-k">Signature d'acte · 10 h</span><div class="fa-cx-ech-t">Bernard → Faure</div><div class="fa-cx-ech-s">Unieux · à l'étude Collet</div></div>
+                    <div class="fa-cx-ech-acts"><button class="fa-cx-ech-go agenda" type="button" title="Ajouter à l'agenda"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4.5" width="18" height="16" rx="2.5"/><path d="M16 2.5v4M8 2.5v4M3 9.5h18"/></svg></button></div>
+                  </div>
+                  <div class="fa-cx-ech cond">
+                    <span class="fa-cx-ech-date"><b>14</b><i>nov.</i></span>
+                    <div class="fa-cx-ech-bd"><span class="fa-cx-ech-k">Condition de prêt</span> <span class="fa-cx-construction">en construction</span><div class="fa-cx-ech-t">Échéance · Morel → Vidal</div><div class="fa-cx-ech-s">Le Chambon · offre de prêt non reçue</div></div>
+                    <div class="fa-cx-ech-acts"><button class="fa-cx-ech-go snooze" type="button" title="Relancer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></button></div>
+                  </div>
+                  <div class="fa-cx-ech">
+                    <span class="fa-cx-ech-date"><b>—</b><i>à fixer</i></span>
+                    <div class="fa-cx-ech-bd"><span class="fa-cx-ech-k">Date d'acte</span><div class="fa-cx-ech-t">Girard → Lopez</div><div class="fa-cx-ech-s">Roche-la-Molière · conditions levées</div></div>
+                    <div class="fa-cx-ech-acts"><button class="fa-cx-ech-go snooze" type="button" title="Demander une date"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></button></div>
+                  </div>
+                </div>
+                <button class="fa-cx-plan-btn" type="button">
+                  <span class="plus"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8"><path d="M12 5v14M5 12h14"/></svg></span>
+                  Planifier une signature
+                </button>
+              </section>
+            </div>
+          </div>
+
+          <!-- v3 : l'historique des dossiers, filtrable (décision 2 de Frédéric, 27/10) -->
+          <div class="fa-cx-sec" style="--sc: #1f5b96">
+            <span class="fa-cx-sec-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/></svg></span>
+            Historique des dossiers
+            <span class="fa-cx-sec-ln"></span>
+            <span class="fa-cx-sec-meta" style="--sc: #1f5b96" id="mq-histo-meta"></span>
+            <button class="fa-cx-sec-act ghost" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>Exporter</button>
+          </div>
+          <section class="fa-cx-mod full" style="--sc: #1f5b96; margin-bottom: 24px" data-o="ok" data-o-t="registre des transactions">
+            <div class="fa-cx-lk-filtres">
+              <div class="fa-cx-aflt" id="mq-h-etat" role="tablist" aria-label="Filtrer par état"></div>
+              <div class="fa-cx-aflt" id="mq-h-cote" role="tablist" aria-label="Côté du notaire"></div>
+              <select class="fa-cx-lk-tri" id="mq-h-periode" aria-label="Période">
+                <option value="365">12 derniers mois</option><option value="1095">3 ans</option><option value="99999">Depuis le début</option>
+              </select>
+              <label class="fa-cx-lk-cherche"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                <input id="mq-h-q" type="search" placeholder="Ville, n° de mandat, vendeur, acheteur, confrère…" aria-label="Chercher dans l'historique"></label>
+              <select class="fa-cx-lk-tri" id="mq-h-tri" aria-label="Trier">
+                <option value="recent">Les plus récents</option><option value="prix">Prix décroissant</option><option value="delai">Délai compromis → acte</option>
+              </select>
+            </div>
+            <div id="mq-histo"></div>
+            <div class="fa-cx-lk-pied">
+              <span id="mq-h-compte"></span>
+              <button class="fa-cx-sec-act ghost plus" type="button" id="mq-h-plus">Afficher 10 de plus</button>
+            </div>
+          </section>
+
+          <!-- Avec nous : nouveau, calculé sur le registre -->
+          <div class="fa-cx-duo">
+            <div>
+              <div class="fa-cx-sec" style="--sc: var(--ty)">
+                <span class="fa-cx-sec-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V9l7-5 7 5v12"/><path d="M9 21v-6h6v6"/></svg></span>
+                Avec nous
+                <span class="fa-cx-sec-ln"></span>
+              </div>
+              <section class="fa-cx-mod full" data-o="ok" data-o-t="calcul sur le registre">
+                <div class="fa-cx-mini-t">Dossiers depuis 2016, par agence</div>
+                <div class="fa-cx-bars">
+                  <div class="fa-cx-bar-r"><span>Firminy</span><span class="t"><span style="width:100%"></span></span><b>48</b></div>
+                  <div class="fa-cx-bar-r"><span>Saint-Étienne</span><span class="t"><span style="width:62%"></span></span><b>30</b></div>
+                  <div class="fa-cx-bar-r"><span>Unieux</span><span class="t"><span style="width:35%"></span></span><b>17</b></div>
+                  <div class="fa-cx-bar-r"><span>Le Chambon</span><span class="t"><span style="width:17%"></span></span><b>8</b></div>
+                </div>
+                <div class="fa-cx-mini-t">Son côté dans nos dossiers</div>
+                <div>
+                  <div class="fa-cx-split"><span style="width:58%;background:#3b4a8c"></span><span style="width:24%;background:#8f9ad0"></span><span style="width:18%;background:#d6dbf1"></span></div>
+                  <div class="fa-cx-legend"><span><i style="background:#3b4a8c"></i>vendeur 58 %</span><span><i style="background:#8f9ad0"></i>acquéreur 24 %</span><span><i style="background:#d6dbf1"></i>les deux 18 %</span></div>
+                </div>
+              </section>
+            </div>
+            <div>
+              <div class="fa-cx-sec" style="--sc: #a8814a">
+                <span class="fa-cx-sec-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.4"/><path d="M3 20a6 6 0 0 1 12 0"/><path d="M16 5.2a3.4 3.4 0 0 1 0 5.6M18 14.4a6 6 0 0 1 3 5.6"/></svg></span>
+                Confrères fréquents
+                <span class="fa-cx-sec-ln"></span>
+              </div>
+              <section class="fa-cx-mod full" data-o="ok" data-o-t="calcul sur le registre">
+                <div class="fa-cx-conf"><span class="fa-cx-mate-av">EG</span><span class="nm">Maître Étienne Garnier<small>Étude Garnier · Firminy</small></span><span class="n">14 dossiers</span></div>
+                <div class="fa-cx-conf"><span class="fa-cx-mate-av">NC</span><span class="nm">Maître Nadia Collet<small>Étude Collet · Unieux</small></span><span class="n">9 dossiers</span></div>
+                <div class="fa-cx-conf"><span class="fa-cx-mate-av">PV</span><span class="nm">Maître Paul Vernet<small>Étude Vernet · Saint-Étienne</small></span><span class="n">6 dossiers</span></div>
+                <div class="fa-cx-conf"><span class="fa-cx-mate-av">AL</span><span class="nm">Maître Anne Lefort<small>Étude Lefort · Le Chambon</small></span><span class="n">4 dossiers</span></div>
+              </section>
+            </div>
+          </div>
+
+          <!-- Activité & relation : la bande de la fiche contact, telle quelle -->
+          <div class="fa-cx-sec" style="--sc: #2f6fa8">
+            <span class="fa-cx-sec-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l2 5 4-12 2 7h6"/></svg></span>
+            Activité &amp; relation
+            <span class="fa-cx-sec-ln"></span>
+            <div class="fa-cx-seg" role="tablist" aria-label="Vue de l'activité">
+              <button type="button" class="on">Fil</button><button type="button">Rendez-vous</button><button type="button">Échanges</button>
+            </div>
+            <button class="fa-cx-sec-act ghost" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>RDV</button>
+            <button class="fa-cx-sec-act ghost" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>Email</button>
+          </div>
+          <section class="fa-cx-mod full" style="margin-bottom: 24px" data-o="ok" data-o-t="existe">
+            <div class="fa-cx-aflt">
+              <button type="button" class="on">Tout</button><button type="button">Dossiers</button><button type="button">RDV</button><button type="button">Emails</button><button type="button">Envois de pièces</button><button type="button">Transactions</button>
+            </div>
+            <div class="fa-cx-feed">
+              <div class="fa-cx-ev g-email"><span class="fa-cx-ev-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></span><div class="fa-cx-ev-bd"><div class="fa-cx-ev-top"><span class="fa-cx-ev-type g-email">Email</span><span class="fa-cx-ev-nm">Pièces envoyées · Durand → Petit</span><span class="fa-cx-ev-when">27/10/2026 09:42</span></div><div class="fa-cx-ev-s">7 pièces jointes depuis le coffre, par Pauline L.</div></div></div>
+              <div class="fa-cx-ev g-tr"><span class="fa-cx-ev-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h10l6 6v10H4z"/><path d="M14 4v6h6"/></svg></span><div class="fa-cx-ev-bd"><div class="fa-cx-ev-top"><span class="fa-cx-ev-type g-tr">Transaction</span><span class="fa-cx-ev-nm">Compromis signé · Lambert → Rossi</span><span class="fa-cx-ev-when">20/10/2026 17:05</span></div><div class="fa-cx-ev-s">158 000 € · notaire des deux côtés</div></div></div>
+              <div class="fa-cx-ev g-rdv"><span class="fa-cx-ev-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4.5" width="18" height="16" rx="2.5"/><path d="M16 2.5v4M8 2.5v4M3 9.5h18"/></svg></span><div class="fa-cx-ev-bd"><div class="fa-cx-ev-top"><span class="fa-cx-ev-type g-rdv">RDV</span><span class="fa-cx-ev-nm">Signature d'acte · Firminy</span><span class="fa-cx-ev-when">02/10/2026 10:00</span></div><div class="fa-cx-ev-s">Mandat 17 211 · 289 000 €</div></div></div>
+            </div>
+          </section>
+
+          <!-- Qualité de la fiche : gardée, pliée par défaut -->
+          <button type="button" class="fa-cx-sec fa-cx-sec-toggle" style="--sc: #a8814a">
+            <span class="fa-cx-sec-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3Z"/><path d="m9 12 2 2 4-4"/></svg></span>
+            Qualité de la fiche
+            <span class="fa-cx-sec-ln"></span>
+            <span class="fa-cx-sec-chev" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="mq-note" id="mq-note"><button type="button" onclick="this.parentNode.remove()" aria-label="Fermer" style="float:right;margin:-2px -4px 0 8px;border:0;background:none;font:800 14px sans-serif;color:#8a7f6e;cursor:pointer">×</button>Maquette · données fictives. Style recopié de la fiche contact en production. « Recherche &amp; rapprochement » masqué. v3 : historique filtrable ; les blocs sans données sont marqués « en construction ».</div>
+<button class="mq-orig-btn" type="button" aria-pressed="false" onclick="mqOrig(this)">Origine des données</button>
+
+<script>
+function mqMenu() { var m = document.getElementById('mq-menu'); var w = document.getElementById('mq-menu-wrap'); m.hidden = !m.hidden; w.classList.toggle('open', !m.hidden); }
+function mqOrig(b) { var on = document.body.classList.toggle('mq-orig'); b.setAttribute('aria-pressed', on ? 'true' : 'false'); }
+
+// ── v3 : l'historique filtrable. 396 dossiers fictifs (386 vendus, 10 annulés), répartis comme pour un notaire chargé ──
+(function () {
+  const villes = ['Firminy', 'Saint-Étienne', 'Unieux', 'Le Chambon', 'Roche-la-Molière', 'Fraisses', 'Aurec-sur-Loire', 'Monistrol'];
+  const types = ['Maison 5 p.', 'Appartement T3', 'Maison 4 p.', 'Terrain 900 m²', 'Appartement T2', 'Immeuble de rapport'];
+  const noms = ['Durand', 'Petit', 'Lambert', 'Rossi', 'Bernard', 'Faure', 'Morel', 'Vidal', 'Girard', 'Lopez', 'Martin', 'Garnier'];
+  const confreres = ['Me Garnier', 'Me Collet', 'Me Vernet', 'Me Lefort', '—'];
+  let g = 11; const h = () => (g = (g * 9301 + 49297) % 233280) / 233280;
+  const pad = (n) => String(n).padStart(2, '0');
+  const jour = (j) => { const d = new Date(2026, 9, 27); d.setDate(d.getDate() - j); return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`; };
+  const L = [];
+  for (let i = 0; i < 396; i++) {
+    const etat = i % 40 === 7 ? 'annule' : 'vendu';
+    const age = Math.round(i * 9.5 + h() * 8);
+    L.push({ etat, cote: h() < 0.62 ? 'vendeur' : (h() < 0.7 ? 'acquereur' : 'deux'), age, delai: Math.round(55 + h() * 70),
+      mandat: 18560 - i * 6, type: types[i % types.length], ville: villes[(i * 3) % villes.length],
+      vend: noms[(i * 5) % noms.length], ach: noms[(i * 7 + 3) % noms.length], conf: confreres[i % confreres.length],
+      prix: Math.round(60 + h() * 300) * 1000 });
+  }
+  let etat = 'vendu', cote = 'tous', periode = 365, q = '', tri = 'recent', vus = 10;
+  const lib = { vendu: 'Vendus', annule: 'Annulés', tous: 'Tous' };
+  const ok = (d) => d.age <= periode && (cote === 'tous' || d.cote === cote || d.cote === 'deux')
+    && (!q || [d.ville, d.type, String(d.mandat), d.vend, d.ach, d.conf].join(' ').toLowerCase().includes(q));
+  const n = (e) => L.filter((d) => (e === 'tous' || d.etat === e) && ok(d)).length;
+  function puces(id, liste, actif, f) {
+    const el = document.getElementById(id); el.innerHTML = '';
+    for (const [v, txt, nb] of liste) { const b = document.createElement('button'); b.type = 'button'; b.className = v === actif ? 'on' : '';
+      b.innerHTML = txt + (nb === null ? '' : `<b>${nb}</b>`); b.onclick = () => f(v); el.appendChild(b); }
+  }
+  function dessiner() {
+    puces('mq-h-etat', ['vendu', 'annule', 'tous'].map((e) => [e, lib[e], n(e)]), etat, (v) => { etat = v; vus = 10; dessiner(); });
+    puces('mq-h-cote', [['tous', 'Tous les côtés', null], ['vendeur', 'Vendeur', null], ['acquereur', 'Acquéreur', null]], cote, (v) => { cote = v; vus = 10; dessiner(); });
+    let l = L.filter((d) => (etat === 'tous' || d.etat === etat) && ok(d));
+    l.sort(tri === 'prix' ? (a, b) => b.prix - a.prix : tri === 'delai' ? (a, b) => a.delai - b.delai : (a, b) => a.age - b.age);
+    const el = document.getElementById('mq-histo'); el.innerHTML = '';
+    if (!l.length) el.innerHTML = '<div class="fa-cx-lk-vide">Aucun dossier ne correspond à ces filtres.</div>';
+    for (const d of l.slice(0, vus)) {
+      const vendu = d.etat === 'vendu';
+      const x = document.createElement('div'); x.className = 'fa-cx-lk static';
+      x.innerHTML = `<span class="fa-cx-lk-thumb"><span class="rf">Photo</span></span>
+        <span class="fa-cx-lk-main"><span class="fa-cx-lk-refrow"><span class="fa-cx-lk-ref">Mandat ${d.mandat} · ${d.type}, ${d.ville}</span><span class="fa-cx-lk-stat ${vendu ? 'done' : 'muted'}">${vendu ? 'Vendu' : 'Annulé'}</span></span>
+        <span class="fa-cx-lk-t">${vendu ? 'Acte du ' + jour(d.age) + ' · ' + d.delai + ' j après le compromis' : 'Compromis annulé le ' + jour(d.age)} · ${d.vend} → ${d.ach}${d.conf !== '—' ? ' · face : ' + d.conf : ''}</span></span>
+        <span class="fa-cx-lk-meta"><span class="fa-cx-lk-role">${d.cote === 'deux' ? 'Les deux côtés' : 'Notaire ' + (d.cote === 'vendeur' ? 'vendeur' : 'acquéreur')}</span>
+        <span class="fa-cx-lk-amt">${d.prix.toLocaleString('fr-FR')} €</span>
+        <span class="fa-cx-lk-go"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></span>`;
+      el.appendChild(x);
+    }
+    document.getElementById('mq-h-compte').textContent = `${Math.min(vus, l.length)} sur ${l.length} · ${lib[etat].toLowerCase()}`;
+    document.getElementById('mq-h-plus').style.display = l.length > vus ? '' : 'none';
+    document.getElementById('mq-histo-meta').textContent = `${L.length} dossiers depuis 2016`;
+  }
+  document.getElementById('mq-h-plus').onclick = () => { vus += 10; dessiner(); };
+  document.getElementById('mq-h-q').oninput = (e) => { q = e.target.value.trim().toLowerCase(); vus = 10; dessiner(); };
+  document.getElementById('mq-h-tri').onchange = (e) => { tri = e.target.value; dessiner(); };
+  document.getElementById('mq-h-periode').onchange = (e) => { periode = Number(e.target.value); vus = 10; dessiner(); };
+  dessiner();
+})();
+</script>
+</body>
+</html>

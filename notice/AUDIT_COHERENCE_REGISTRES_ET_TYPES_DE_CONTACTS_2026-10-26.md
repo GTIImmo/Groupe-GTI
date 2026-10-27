@@ -2640,3 +2640,27 @@ Les notaires **existent** chez nous : dans la table des parties, `notaire_vendeu
 - au téléphone (375 px) : aucun débordement. Les puces prennent 4 rangées : au codage, une seule rangée qui défile.
 
 ⬜ À valider par Frédéric : la maquette, et les règles (le seuil de 7, « En cours » à l'ouverture, les 4 états).
+
+### 40.8 ⛔ Correction (27/10, Frédéric : « non, je voulais que la page ressemble plutôt à ta maquette fiche-notaire-v2 ») — maquette v3
+J'avais appliqué la décision 2 à la **fiche contact générique** (§40.7). Frédéric veut la **page notaire de la v2**, avec le filtre dedans.
+`maquettes/fiche-contact-biens-filtres.html` reste pour mémoire ; **la référence est désormais `maquettes/fiche-notaire-v3.html`**
+(données fictives).
+
+**Ce que la v3 ajoute à la v2** (tout le reste est identique) :
+- **décision 2** : la bande « Ventes signées · 12 mois » devient **« Historique des dossiers »**, filtrable :
+  - état : **Vendus · Annulés · Tous**, avec les nombres ;
+  - côté : **tous · vendeur · acquéreur** ;
+  - période : **12 derniers mois · 3 ans · depuis le début** ;
+  - **recherche** (ville, n° de mandat, vendeur, acheteur, **confrère**) ;
+  - tri : récents, prix, délai compromis → acte ;
+  - **10 lignes à la fois**, puis « Afficher 10 de plus », avec le compte « 10 sur 386 · vendus » ;
+  - les **dossiers en cours** restent en haut, en cartes, avec leurs 4 étapes. Seul l'historique, qui fait le volume, est filtré ;
+- **décision 5** : les blocs sans données sont **montrés et marqués « en construction »** : Interlocuteurs ; Pièces du dossier ;
+  Condition de prêt (fait du dossier, et ligne de « À venir ») ; Séquestre. La valeur affichée est « — », plus aucun chiffre inventé.
+
+**Vérifiée** :
+- au bureau : 10 sur 38 vendus en 12 mois ; « depuis le début » 386 vendus et 10 annulés ; 20 lignes avec « Afficher 10 de plus » ;
+  « collet » trouve 79 dossiers ; 5 marques « en construction » ; les pastilles dans le bleu notaire ; aucun débordement ;
+- au téléphone (375 px) : aucun débordement, les puces passent sur une rangée qui défile.
+
+Le chiffre « Ventes · 12 mois » du haut est aligné sur l'historique (38).
