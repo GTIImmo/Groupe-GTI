@@ -2265,3 +2265,67 @@ antérieurs.
 
 **Ce qui n'est PAS éprouvé :** les temps réels en production. La maquette répond en 1,5 s fixes ; la production en
 0,5 à 1,6 s selon l'écran (§2).
+
+### 23.8 Le voile « Chargement… » du bureau : ne le montrer que sur une liste vide — AUDIT DU 27/10 (rien codé)
+
+**Demande de Frédéric (27/10)** : « Audite le voile du bureau : ne le montrer que quand la liste est vide, explique-moi avant de
+coder. »
+
+⚠ **Mise en ligne du 7c : PAS ENCORE.** `origin/main` est à `e453f13`. La branche locale a 2 commits d'avance :
+`299087a` (7c) et `df4b5be` (l'autre session). Le bundle de production est toujours `index-CA0qO0uU.js`.
+
+**Le voile — ce que montre le code :**
+- **Un seul endroit le pose** : `MandatsScreen` (`App.tsx` ~26474-26475), c'est-à-dire le tableau du **bureau** pour
+  Annonces **et** Estimations.
+  - Dès que `props.loading` est vrai, il ajoute la carte `listing-loading-banner` (le symbole animé « Chargement… ») et
+    la classe `is-refreshing` (hauteur mini de 260 px).
+  - Avec bienvu, `bienvu.css:284` en fait un **voile** : `position: absolute; inset: 0`, blanc à 72 %, au-dessus des
+    lignes, qui **ne sont plus cliquables**.
+- **Ce qui existe déjà à côté, et resterait :**
+  - un « Mise a jour... » discret dans l'en-tête de la liste (~26443), à côté du compteur ;
+  - l'état « éteint » des lignes pendant une relecture (`is-refreshing-row`, opacité 0,46 : `styles.css:4996`, depuis mai).
+- **Les autres listes n'ont pas ce voile :**
+  - le registre (Mandats) n'a que « Mise a jour... » ;
+  - les contacts posent le symbole **au-dessus** des lignes, qui restent cliquables (`av-loading`, ~46052) ;
+  - le téléphone n'a « Chargement… » que sur une liste vide.
+
+**⭐ C'est une décision écrite de Frédéric.** Lot 5 bienvu, 19/10 :
+- La première version (`044b8e6`) gardait les lignes « lisibles, un peu éteintes, jamais effacées » avec une barre fine
+  et un squelette.
+- Il l'a refusée : « c'est moche, je pensais un logo qui tourne comme la connexion jusqu'au chargement des résultats ».
+  D'où `b66b58b`, le voile au symbole.
+- La demande d'aujourd'hui la **restreint** :
+  - le symbole reste pour **toute vraie attente** : premier chargement, écran pas encore vu (le 7c vide la liste), filtre
+    qui ne rend rien ;
+  - il disparaît quand des lignes sont déjà là.
+
+**Ce que je ferais** — interrupteur `VOILE_SI_LISTE_VIDE`, une seule condition à ~26474-26475 :
+- le voile et `is-refreshing` ne s'affichent que si la liste **affichée** (`visibleMandats`) est **vide** ;
+- quand des lignes sont là, elles restent **cliquables**, éteintes comme avant le 19/10, sous le « Mise a jour... » de
+  l'en-tête ;
+- **seulement avec bienvu** : sans bienvu (barre fine collante, qui ne cache rien), rien ne change.
+
+**Ce que ça pourrait casser ailleurs :**
+- **La décision du 19/10** : elle est restreinte, pas défaite. Le symbole tourne toujours tant qu'il n'y a **rien** à
+  montrer.
+- **Changer de page** : pendant la relecture (0,5 s), l'en-tête dit déjà « Page 2 » alors que les lignes **éteintes**
+  sont encore celles de la page 1. Aujourd'hui le voile les cache.
+  - Un clic à ce moment ouvre le bien cliqué, par son numéro, donc le bon bien.
+  - C'est déjà le cas du registre et du téléphone.
+- **Frappe dans la recherche** : les lignes de la recherche précédente restent éteintes jusqu'à la réponse, comme au
+  registre.
+- **Un bien rappelé par la mémoire du 7c**, vendu ou archivé depuis, reste visible **éteint** pendant la relecture. C'est
+  l'extinction qui le signale, d'où la proposition de la **garder**.
+- **Le 7a (Échap)** cherche les fenêtres par `[class*="overlay"]`, `[class*="backdrop"]`, etc. `listing-loading-banner`
+  n'en fait pas partie : le voile n'a jamais bloqué Échap. Aucun changement.
+- **Les contacts** (symbole au-dessus des lignes, qui restent cliquables) ne sont **pas** touchés.
+
+**Retour arrière** : `VOILE_SI_LISTE_VIDE = false`, en une ligne.
+
+**Contrôle prévu** — maquette ralentie, sur bureau :
+- retour sur Annonces (lignes en mémoire) : pas de voile, lignes éteintes et **cliquables**, « Mise a jour... » visible ;
+- première visite et Estimations vide : le symbole ;
+- changement de page et frappe ;
+- le témoin inverse ;
+- `npm run build` ;
+- la vraie app déconnectée.
