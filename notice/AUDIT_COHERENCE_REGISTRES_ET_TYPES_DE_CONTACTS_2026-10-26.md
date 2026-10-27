@@ -1721,3 +1721,38 @@ Seul bloc masqué par défaut : **Recherches** (sans objet pour un notaire ; vis
 8. **Pas d'archivage automatique** façon particulier : un notaire est un professionnel (RGPD différent).
 
 ⬜ **Préalables** (§29.3) : le type « Notaire » doit d'abord exister (base + annuaire) ; la page s'ouvre quand le type dominant est Notaire.
+
+### 30.1 Maquette v2 — dans le style de la fiche contact *(27/10, Frédéric : « un design plus ressemblant au graphisme de la page contact, mais avec les blocs que tu m'as proposés »)* — rien codé
+
+**Fichier** : `maquettes/fiche-notaire-v2.html` (données **fictives**). La v1 reste à côté, pour comparer.
+
+**D'où vient le style** : de la **vraie** fiche contact en production, `ContactDetailPopupV2` (vérifié : `fa-cx-root` est dans le
+paquet servi par groupe-gti.vercel.app le 27/10). La feuille `apps/hektor-v1/src/contact-detail-v2.css` est **recopiée telle
+quelle** dans la maquette (assemblage par script, sans ses 2 blocs « mode sombre du téléphone »), et la page reprend ses classes
+`fa-cx-*` : rail gauche (retour animé, avatar coloré par type, boutons, coordonnées, négociateur et pastilles), bandes de section
+avec pastille colorée, cartes blanches arrondies, colonne latérale, fil d'activité, « Qualité de la fiche » repliée.
+
+**La correspondance, bloc par bloc** :
+
+| fiche contact (existe) | fiche notaire (v2) |
+|---|---|
+| thème de couleur par type (`ty-acq`, `ty-acheteur`, `ty-vendeur`, `ty-mandant`) | **`ty-notaire`**, bleu encre #3b4a8c, et un symbole « balance » dans l'avatar |
+| rail : coordonnées | standard de l'étude, ligne directe, e-mail, adresse de l'étude ; **+ Interlocuteurs de l'étude** (à créer) |
+| boutons du rail : RDV · Modifier · ⋯ | **Planifier une signature** · **Envoyer un dossier** · Modifier · ⋯ (Ouvrir dans Hektor, Archiver, Supprimer) |
+| — | 4 chiffres (dossiers en cours, actes ≤ 30 j, ventes 12 mois + honoraires, délai compromis → acte contre 86 j) |
+| Recherche & rapprochement | **masqué** (sans objet ; reviendrait si le notaire en avait une) |
+| Biens & mandats liés | **Dossiers en cours** : 4 étapes cliquables, cartes dépliables (côté, confrère, négociateur, prix, échéance, pièces 7/11, puis compromis, rétractation, prêt, séquestre, honoraires, net vendeur, **liste des pièces** et « Envoyer les pièces à l'étude ») |
+| colonne « À faire » (relances) | **« À venir »**, même dessin de carte datée : rétractation, signature d'acte, condition de prêt, date à fixer, chacun avec son geste ; « Planifier une signature » |
+| — | **Ventes signées · 12 mois** (lignes `fa-cx-lk`, « Vendu », rôle, prix, export) |
+| — | **Avec nous** (dossiers par agence, son côté) et **Confrères fréquents** |
+| Activité & relation (Fil · Rendez-vous · Échanges) | identique, filtres « Dossiers » et « Envois de pièces » en plus |
+| Qualité de la fiche | identique, repliée |
+
+**Vérifié** : bureau 1440 px (aucun débordement, police Fraunces chargée, menu ⋯ fermé par défaut) ; téléphone 375 px (largeur
+375 = page ; en une colonne **« À venir » passe AVANT les dossiers**, réglage propre au notaire). Bouton « Origine des données » :
+10 blocs « existe », 2 « à créer » (interlocuteurs, liste des pièces).
+⚠ **Non couvert** : le mode sombre du téléphone (la vraie fiche en a un, ≤ 1180 px ; les blocs neufs devront l'avoir au codage).
+⚠ Vu en passant, **dans la vraie fiche** : sur téléphone le pied « Négociateur » (`fa-cx-foot`, marge −16 px pour 14 px de bord)
+dépasse d'**1 px** ; invisible (le panneau coupe), noté, pas touché.
+
+⬜ À trancher par Frédéric : valider la v2 comme base, ou ses retouches. Préalable inchangé : le type « Notaire » doit exister (§29.3).
