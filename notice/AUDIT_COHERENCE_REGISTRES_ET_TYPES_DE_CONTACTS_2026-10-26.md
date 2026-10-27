@@ -1651,3 +1651,35 @@ Rien n'est envoyé chez Hektor par aucune pièce.
 - **Les choix** : **A** retirer les deux options (le menu ne ment plus) ; **B** les garder telles quelles ; **C** faire vivre le type
   « Notaire » : le type lit aussi les notaires de la table des parties (base, même patron que P3) → ~1 500 contacts « Notaire » dans
   l'annuaire, et le filtre marche. ⬜ À trancher.
+
+### 29.3 Le type « Notaire » : où il vit, qui il touche — et le type des contacts du serveur *(27/10, Frédéric : « le type notaire est important, mais où ? ce sont des non qualifiés ? et les contacts du serveur seul ? »)* — lecture seule
+**Ce que sont les notaires aujourd'hui** (mesure du 27/10) :
+- **1 330 personnes** sont notaires d'au moins une transaction (table des parties : 23 351 rôles). **1 110** sont dans l'annuaire, et
+  **1 077** d'entre eux n'y ont **aucun type** : ce sont presque exactement les **1 113 « non qualifiés » de l'annuaire** (§28.2). Ils y
+  sont entrés par l'élargissement du 11/09 (`elargir_perimetre_console.py`, raison `console_transaction_party` : 1 083). **220** sont
+  restés **sur le serveur seulement** ; 620 sont archivés chez Hektor.
+- **Hektor ne connaît pas le mot « notaire »** : 1 304 sur 1 330 portent la typologie « partenaire » (la même que les artisans, les
+  diagnostiqueurs…) ; aucun champ métier. **Seul notre registre des transactions sait qu'ils sont notaires**, et il le tient déjà au clic
+  (R1) et la nuit (pièce 3 du 25/10 : les notaires sous notre numéro).
+
+**Où le type doit vivre** :
+- **pas dans le registre des relations** : il porte les liens **au bien** (mandant, propriétaire) ; un notaire n'est lié qu'à une
+  **transaction** — exactement comme l'acheteur ;
+- **la source est le registre des transactions** (la table des parties), déjà chez nous ; **le type se calcule depuis elle**, au même
+  endroit que « Acheteur » : le calcul de nuit (`build_contacts_layer.py`) et, avec P3, le déclencheur au geste ;
+- **l'écran doit s'adapter** (c'est un VRAI nouveau type, contrairement à « propriétaire depuis la vente ») : une catégorie « Notaire » dans
+  `contactDirectoryCategories` (son rang dans la priorité, sa couleur, son symbole), un bouton dans les segments de l'annuaire, et les
+  options du menu « Rôle contact » qui trouvent enfin quelqu'un (aujourd'hui `notaire_entree` / `notaire_sortie`, mots qui ne
+  correspondent à rien : la table des parties dit `notaire_vendeur` / `notaire_acquereur`) ;
+- **les 220 du serveur** : l'élargissement lit la **lecture console** (`app_affaire_console`), pas la table des parties. Lui faire lire la
+  table des parties les ferait monter — et avec eux tous les autres nommés dans une transaction et absents de l'annuaire : **2 906**
+  couples personne + rôle (1 356 acheteurs, 1 303 vendeurs, 247 notaires).
+
+**Le type des contacts restés sur le serveur (294 498)** : il **est calculé**, chaque nuit, par la même fonction, pour les **356 674**
+contacts (la table locale `app_contact_current` porte `relation_roles_json` pour tous — c'est elle qui a servi au tableau du §28.2) ;
+seuls les **éligibles** sont envoyés à l'app. Ils ont donc leur type sur le serveur, mais l'app ne le voit pas ; et comme aucun geste de
+l'app ne peut les toucher, seul la nuit (Hektor) le fait vivre. Le jour où l'un devient éligible (une annonce active, une recherche
+active, une transaction), il monte avec son type.
+
+⬜ **À trancher par Frédéric** : (1) faire vivre le type Notaire (base + écran, ~1 330 contacts) ; (2) faire monter les 220 notaires du
+serveur — et alors aussi les 2 906 parties absentes ? (3) le sort des 294 498 du serveur reste un sujet à part (§28.3).
