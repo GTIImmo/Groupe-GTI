@@ -2675,3 +2675,49 @@ Ce que la v2 fait déjà pour ne pas surcharger la page (décision 2) :
 - « À venir » et les chiffres en tête.
 
 La décision 5 (les blocs sans données « en construction ») s'appliquera **au codage**, sur la v2.
+
+## 41. ✅ NOTAIRE, ÉTAPE 1 CODÉE — LES NOTAIRES DANS LA VUE DES LIENS *(27/10, Frédéric : « vas-y pour l'étape 1, éprouvé dans une transaction annulée avant toute pose »)* — NON POSÉE
+
+**Fichiers** : `supabase/patch_notaire_etape1_vue_2026-10-27.sql` (+ `_INVERSE`, `_REPETITION`).
+
+**Le changement**, dans la 2ᵉ branche de `app_contact_relations_current` : trois remplacements d'une ligne chacun. L'ordre compte : le
+filtre d'abord, parce que les deux autres ajouts contiennent son texte.
+1. le filtre prend `acquereur`, `notaire_vendeur` et `notaire_acquereur` ;
+2. `role_contact` vaut le rôle de la partie pour un notaire, et reste `acquereur_<genre>` pour un acheteur ;
+3. `relation_key` reçoit le suffixe `_<rôle>` **pour les notaires seulement**. La même personne a **deux rôles sur la même transaction 619
+   fois** (le même notaire des deux côtés) : sans ce suffixe, les clés se répéteraient. Les clés des acheteurs restent identiques.
+
+**Éprouvée dans UNE transaction annulée** (pooler), patch → répétition → inverse → contrôle : **12 / 12 verts**.
+
+| contrôle | résultat |
+|---|---|
+| 20 colonnes, `security_invoker`, droits | OK |
+| fiche de JACQUIER : admin / commercial | 32,2 ms / 130,9 ms |
+| fiche du notaire le plus chargé (10166165, 811 lignes) : admin / commercial | **173,4 ms / 157,0 ms** |
+| la vue d'avant se reconstitue à l'octet (seuls les 3 remplacements) | OK |
+| **toutes les lignes d'avant** sont là, à l'identique, clés des acheteurs comprises | OK (167 846) |
+| **les lignes neuves = exactement les notaires** de la table des parties | OK (23 351 : `notaire_acquereur`, `notaire_vendeur`) |
+| aucune clé en double de plus qu'avant | OK (0 et 0) |
+| le notaire 10166165 a ses deux côtés | OK (811 lignes) |
+| l'inverse rend l'empreinte d'avant (`8c4d28d3…`) et le commentaire sans la marque | OK |
+
+- Les temps sont mesurés **avant** la comparaison de la vue entière (leçon du §39.1) : aucun faux rouge « à froid ».
+- **Avaries volontaires** : une empreinte faussée **arrête** le patch ; une règle qui oublie `notaire_acquereur` est **attrapée deux
+  fois** (n° 7 : la vue d'avant ne se reconstitue plus ; n° 11 : 700 lignes au lieu de 811, le côté acquéreur manque). La vue est intacte
+  après chaque essai.
+- ⚠ **Un premier essai s'est arrêté net, et c'est la garde qui l'a fait** : une fois la vue recréée, Postgres **réécrit à sa façon** les
+  deux `CASE`, sur plusieurs lignes. L'inverse ne trouvait donc plus « la forme posée », et il a refusé (tout annulé). L'inverse et la
+  répétition portent maintenant **la forme rendue par Postgres**, construite par `chr(10)` (leçon 30). ⚠ Et en la recopiant, j'avais écrit
+  **3 parenthèses au lieu de 4** en tête de la clé : l'ancre aurait été trouvée, mais le remplacement aurait laissé une parenthèse
+  orpheline. Vu en relisant, corrigé **avant** l'essai.
+
+**Ce que l'écran montrerait dès la pose, sans l'étape 3** (lu dans le code) :
+- **la fiche contact** des 1 110 notaires de l'annuaire listerait leurs dossiers (médiane 2, jusqu'à 811). `contactDirectoryRoleLabel` ne
+  connaît pas ces rôles : il afficherait le **mot brut** `notaire_vendeur`, et `relationRowClass` la couleur par défaut (orange) ;
+- **les invités d'un RDV** sur une annonce incluraient son notaire (décision 4), avec le même mot brut. Ils sont limités à 24 par
+  annonce, et un bien n'a que quelques notaires : personne n'en serait chassé ;
+- **intouchés** : la rubrique « Contact » d'une annonce (`loadAnnonceMandants`, rôles du bien), `app_contact_activite`, le bon de visite,
+  le type stocké.
+
+⬜ **À trancher par Frédéric** : poser la vue **maintenant** (les mots bruts se verraient jusqu'à l'étape 3), ou **avec l'étape 3**
+(l'écran), le même jour ? Je recommande **avec l'étape 3**.
