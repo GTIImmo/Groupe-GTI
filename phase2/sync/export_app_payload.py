@@ -841,6 +841,12 @@ ORDER BY CAST(ann.hektor_annonce_id AS INTEGER), ann.no_mandat
 # RETOUR ARRIERE : APP_REGISTRE_DEPUIS_APP_MANDAT=0 dans l'environnement du run.
 REGISTRE_DEPUIS_APP_MANDAT = os.environ.get("APP_REGISTRE_DEPUIS_APP_MANDAT", "1") == "1"
 
+# 27/10/2026 -- correctif 7 de notice/ETUDE_CORRESPONDANCES_APP_CLASSEURS_2026-10-27.md.
+# Un mandat SANS version Hektor (entre par un classeur) prend ses dates, son type et
+# ses mandants dans les colonnes de sa ligne, au lieu d'une fiche vide.
+# RETOUR ARRIERE : APP_REGISTRE_REPLI_DEPUIS_LIGNE=0 -> fiche vide comme avant.
+REGISTRE_REPLI_DEPUIS_LIGNE = os.environ.get("APP_REGISTRE_REPLI_DEPUIS_LIGNE", "1") == "1"
+
 # Les seuls types d'offre que le registre de l'app admet (decision du 26/08).
 TYPES_ADMIS_AU_REGISTRE = ("0", "10", "6")
 
@@ -875,7 +881,9 @@ def charger_mandats_depuis_app_mandat(
     par_annonce: dict[str, dict[str, list[dict[str, object]]]] = defaultdict(dict)
     places = ",".join("'%s'" % t for t in TYPES_ADMIS_AU_REGISTRE)
     for ligne in con.execute(
-        "SELECT hektor_annonce_id, numero_mandat, versions_json FROM app_mandat"
+        "SELECT hektor_annonce_id, numero_mandat, versions_json,"
+        "       date_debut, date_fin, date_cloture, type, mandants_texte, note"
+        "  FROM app_mandat"
         f" WHERE COALESCE(offre_type,'') IN ({places})"
     ):
         annonce = normalize_text(ligne[0])
@@ -889,10 +897,21 @@ def charger_mandats_depuis_app_mandat(
             versions = []
         versions = [v for v in versions if isinstance(v, dict)]
         if not versions:
+            # 27/10 (correctif 7) : un mandat entre par un CLASSEUR (origine
+            # modelo, 15/10) n'a aucune version Hektor, mais la ligne porte ses
+            # dates. Sans ce repli, le registre le montrait SANS DATE (9 lignes).
+            # Les colonnes sont vides pour un numero emis sans fiche : rien ne change pour eux.
+            repli = REGISTRE_REPLI_DEPUIS_LIGNE
             versions = [{
-                "id": None, "numero": numero, "type": None, "debut": None,
-                "fin": None, "cloture": None, "montant": None, "mandants": None,
-                "note": None, "avenants": [],
+                "id": None, "numero": numero,
+                "type": normalize_text(ligne[6]) or None if repli else None,
+                "debut": normalize_text(ligne[3]) or None if repli else None,
+                "fin": normalize_text(ligne[4]) or None if repli else None,
+                "cloture": normalize_text(ligne[5]) or None if repli else None,
+                "montant": None,
+                "mandants": normalize_text(ligne[7]) or None if repli else None,
+                "note": normalize_text(ligne[8]) or None if repli else None,
+                "avenants": [],
             }]
         par_annonce[annonce][numero] = versions
     return par_annonce

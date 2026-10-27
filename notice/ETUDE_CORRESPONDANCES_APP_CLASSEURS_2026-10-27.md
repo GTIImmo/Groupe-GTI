@@ -326,6 +326,19 @@ la correction repart la nuit suivante. E (ajouts) et F (`search_text` extra) n'o
   dans Supabase les 119 (témoin du 27/10 : 119 vides).
 - Retour arrière : `APP_REGISTRE_TYPE_APP=0` → au push suivant les 119 redeviennent vides.
 
+### 11 quinquies. Correctif 7 — CODÉ le 27/10 (« vas-y » de Frédéric)
+
+- **Cause** : 9 ventes entrées le 15/10 depuis Modelo (`importer_mandats_vente_absents.py`, origine `modelo`)
+  ont leurs dates dans les colonnes de `app_mandat` mais **aucune version Hektor** (`versions_json` vide) ;
+  le fabricant leur faisait une fiche vide → registre sans date ni type.
+- **Correctif** : interrupteur `APP_REGISTRE_REPLI_DEPUIS_LIGNE` (allumé) ; la fiche de repli prend début, fin,
+  clôture, type, mandants et note dans la ligne. Les 5 numéros sans rien (origine `annonce`) ne changent pas.
+- **Essai hors ligne** : 24 584 lignes des deux côtés, mêmes identifiants, **9 lignes changent, aucune autre**
+  (dates, type, note, historique, fiche détaillée ; `search_text` sur 2). ⚠ `mandat_type_source` affiche le type
+  du classeur pour ces 9 (la colonne `type` de leur ligne vient du classeur, pas de Hektor).
+- **Prérequis du correctif 5** : tout mandat ajouté depuis un classeur n'a pas de version Hektor.
+- Retour arrière : `APP_REGISTRE_REPLI_DEPUIS_LIGNE=0`.
+
 ## 11. Fichiers
 
 - **Détail ligne à ligne, toutes années** (19 908 écarts, nominatif, hors git) :
