@@ -1755,4 +1755,4 @@ avec pastille colorée, cartes blanches arrondies, colonne latérale, fil d'acti
 ⚠ Vu en passant, **dans la vraie fiche** : sur téléphone le pied « Négociateur » (`fa-cx-foot`, marge −16 px pour 14 px de bord)
 dépasse d'**1 px** ; invisible (le panneau coupe), noté, pas touché.
 
-⬜ À trancher par Frédéric : valider la v2 comme base, ou ses retouches. Préalable inchangé : le type « Notaire » doit exister (§29.3).
+✅ **DÉCIDÉ par Frédéric le 27/10 : « la v2 est la bonne base pour la fiche notaire »** (la v1 reste pour mémoire). Rien n'est codé. Préalable inchangé : le type « Notaire » doit exister (§29.3, décision C encore à prendre).
