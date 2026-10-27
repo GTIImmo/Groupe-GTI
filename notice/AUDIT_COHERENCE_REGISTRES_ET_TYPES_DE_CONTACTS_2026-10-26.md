@@ -2796,3 +2796,85 @@ dernière écriture.
 (1) **la cadence** : toutes les minutes, par lots de 5 000 ?
 (2) **les notaires** : ignorer cette différence connue dans les conflits (la nuit ne les calcule pas) ?
 (3) **le premier passage** sur les 62 339 contacts, qui remet les 7 écarts et les signale : d'accord ?
+
+## 43. ÉTAPE 2, LA VERSION SIMPLE « AU GESTE » — audit *(27/10, Frédéric : « mais pourquoi est-ce si compliqué par rapport aux autres écritures du projet ? » ; « audite cette idée simple et explique-moi le principe et les changements pour l'app »)* — lecture seule, rien codé
+
+**Pourquoi le §42 était compliqué** : le type n'est pas une saisie, c'est un **résumé calculé** de plusieurs registres ; et la **nuit
+réécrit la même colonne** avec son propre calcul. Le §42 voulait couvrir tous les auteurs automatiquement **sans toucher au programme
+de nuit** : d'où la file, la tâche chaque minute, la garde et le signalement. **On retire la seconde particularité, et tout redevient
+simple.**
+
+### 43.1 Le principe
+1. **Une seule fonction de calcul**, dans la base : le type d'un contact depuis la vue des liens (nos registres). On sait déjà qu'elle
+   donne le même résultat que la nuit pour 62 332 contacts sur 62 339 (§34.2).
+2. **Chaque porte de l'app qui change un rôle l'appelle**, en une ligne, à la fin de son travail : le type change **au clic**, comme les
+   autres écritures.
+3. **Le worker l'appelle** quand il défait un geste refusé par Hektor.
+4. **La nuit n'écrit plus le type** : elle envoie le reste de la fiche, puis appelle une fois le calcul pour tous (1,8 s). C'est ainsi
+   que les changements faits **dans Hektor** arrivent dans le type.
+
+### 43.2 Les portes, mesurées
+| porte (fonction de la base) | change un rôle ? | contacts à recalculer |
+|---|---|---|
+| `app_link_mandant_optimistic` | ✅ crée un lien | le contact |
+| `app_create_mandant_contact_optimistic` | ✅ crée le contact et son lien | le nouveau contact |
+| `app_unlink_mandant_optimistic` | ✅ retire un lien | le contact |
+| `app_change_annonce_status_optimistic` | ✅ crée l'offre, le compromis ou la vente (acheteurs, notaires) | les parties de la transaction créée |
+| `app_geste_affaire_optimistic` | ✅ seulement « Supprimer » (la transaction sort du compte) | les parties de la transaction |
+| `app_modifier_affaire_optimistic` | ✅ peut changer les **notaires** | les parties **avant et après** |
+| `app_edit_affaire_optimistic`, `app_affaire_commission_ecrire`, `app_attribuer_chaines_affaire` | ✗ montants, champs, chaînes | — |
+
+**Le worker** (les retours arrière) :
+| chemin | à recalculer ? |
+|---|---|
+| `annulerRattachementOptimiste` (Hektor refuse un rattachement) | ✅ le contact |
+| `annulerRetraitOptimiste` (Hektor refuse un retrait) | ✅ le contact |
+| `restaurerEtatAffaire` (Hektor refuse une suppression : la transaction revient) | ✅ les parties |
+| confirmation d'un lien, numéro Hektor posé sur une transaction, effacement après preuve | ✗ le type ne change pas : le lien comptait déjà ; la transaction supprimée était déjà hors du compte depuis le clic |
+
+**La nuit** (`push_contacts_to_supabase.py`, le seul écrivain du type aujourd'hui, §34.1) :
+- elle envoie la fiche entière (`merge-duplicates`) de **4 102** contacts la nuit du 27/10 ;
+- ⭐ si la colonne du type **n'est plus dans l'envoi**, un contact existant **garde la sienne** (l'envoi ne réécrit que les colonnes
+  envoyées). Un contact **neuf** reçoit la valeur par défaut `[]`, puis le calcul de fin d'envoi le remplit ;
+- l'**empreinte** de chaque fiche reste calculée avec le type : aucun envoi massif de rattrapage ;
+- les autres écrivains de la fiche (l'outil de rattrapage de la console, les deux fonctions de création de contact) ne touchent pas
+  au type, ou en posent un au départ.
+
+### 43.3 Les changements, un par un
+| où | quoi | qui le pose |
+|---|---|---|
+| **base** | 2 fonctions : `app_type_depuis_nos_registres(contact)` et `app_recalculer_type_contacts(contacts[])` (n'écrit que si le type change) | un patch, avec son inverse et sa répétition |
+| **base** | **une ligne** dans chacune des **6 portes** | le même patch (chaque fonction vérifie son empreinte) |
+| **worker** | **une ligne** dans 3 chemins de retour arrière (un appel de la fonction) | ⚠ **redémarrage des 4 services, file vide** (par Frédéric) |
+| **nuit** | dans l'envoi des contacts : ne plus envoyer la colonne du type, puis appeler le calcul (tous la nuit, le seul contact à la relecture). Derrière un **interrupteur** | ⚠ le run de nuit (accord) |
+| **écran** | **rien** : il lit déjà le type stocké | — |
+
+### 43.4 Ce que l'utilisateur verra
+- **Au clic** : rattacher ou retirer un mandant, saisir une offre, un compromis ou une vente, en supprimer une. Le type de la personne
+  (en-tête de la fiche, pastille de l'annuaire, recherche globale) **change tout de suite**. Aujourd'hui il attend la nuit.
+- **Si Hektor refuse** : le geste est défait (règle du rattachement), et le type revient.
+- **Un geste fait dans Hektor** arrive le lendemain matin, comme aujourd'hui.
+- ⚠ Une liste de l'annuaire **déjà ouverte** garde son affichage jusqu'à son rechargement (point 7c, « liste déjà vue »). La fiche, elle,
+  se relit après le geste.
+- **Les notaires** : quand la vue des notaires sera posée (étape 1), le calcul de nuit leur donnera leur rôle **dès la première nuit**,
+  et la porte « modifier une transaction » le tiendra à jour. Il faudra l'étape 3 pour que l'écran l'affiche.
+
+### 43.5 Ce que ça pourrait casser, et les essais
+- **Une porte future qui oublierait sa ligne** : un essai liste les fonctions qui écrivent un lien ou une transaction, et **exige**
+  qu'elles appellent le calcul (leçon « une règle à part doit être appelée par chaque porte »). Il échoue si une porte neuve l'oublie.
+- **Le temps d'un geste** : ≈ 13 ms par contact (2 à 4 contacts par transaction).
+- **La nuit** : 1,8 s de plus ; l'envoi reste identique, une colonne en moins.
+- **L'ordre de la nuit** : le calcul doit passer **après** l'écriture des liens et des transactions. Le 27/10, l'envoi des contacts a
+  fini à 06:10, après les liens (04:52) et les transactions (04:48). ⬜ À vérifier dans `run_quotidien.ps1` au codage.
+- **Ce qu'on perd** : le signalement automatique « la nuit dit autre chose que nous ». On pourra l'ajouter plus tard, par un contrôle du
+  matin qui compare le type calculé la nuit (base locale) au nôtre.
+- **Essais** :
+  - **base** : dans une transaction annulée, chaque porte appelée sous le compte de Frédéric doit changer le type ;
+  - **worker** : un essai qui joue les 3 chemins ;
+  - **nuit** : un essai hors ligne (la fiche envoyée n'a plus le type, son empreinte ne change pas) et un passage du calcul complet
+    (7 écarts → 0) ;
+  - **témoin inverse** et **mutant** : une porte sans sa ligne doit être attrapée.
+
+### 43.6 Questions — À TRANCHER PAR FRÉDÉRIC
+(1) cette version simple **à la place** du §42 ?
+(2) l'ordre : la base (fonctions et 6 portes), puis la nuit, puis le worker (le seul qui demande un redémarrage) ?
