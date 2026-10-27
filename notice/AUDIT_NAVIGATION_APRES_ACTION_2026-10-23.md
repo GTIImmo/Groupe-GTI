@@ -2223,3 +2223,45 @@ Elle garde ses lignes au retour, avec « Mise à jour… » ; avec la mémoire d
 - le témoin inverse, interrupteur éteint ;
 - `npm run build` ;
 - la vraie app déconnectée.
+
+### 23.7 ✅ POINT 7c CODÉ ET CONTRÔLÉ EN MAQUETTE (27/10, « Vas-y pour le 7c comme proposé (LISTE_DEJA_VUE), sans indicateur sur téléphone »)
+
+**Ce qui est codé** (`App.tsx`, 65 lignes ajoutées, aucune retirée), derrière l'interrupteur `LISTE_DEJA_VUE`, posé entre
+`DETAIL_UNE_FOIS` et `ECHAP_FERME_LA_FICHE` :
+- **La clé d'une vue** : utilisateur, écran, filtres, les 3 pages et la portée. C'est tout ce qui fait partir la lecture,
+  sauf la relecture (`dataReloadKey`). L'utilisateur est dans la clé : deux comptes dans le même onglet ne se mélangent pas.
+- **En tête de l'effet des listes**, quand la clé change :
+  - vue en mémoire → ses 3 listes et leurs 3 totaux sont posés tout de suite ;
+  - sinon, si l'**écran** a changé → listes et totaux vidés ;
+  - sinon (même écran) → rien, comme avant.
+- **Chaque réponse du serveur** est retenue pour sa vue. Une vue n'est rappelée que si ses **trois** morceaux sont arrivés.
+  On garde au plus 10 vues, la plus ancienne sort.
+- **La déconnexion** vide la mémoire.
+- **Pas d'indicateur ajouté sur téléphone**, comme décidé.
+
+**Contrôlé en maquette ralentie** (1,5 s par liste ; délai `TEMP-7C` retiré, `api.ts` identique à HEAD) :
+
+| passage | bureau (1440 px) | téléphone (375 px) |
+|---|---|---|
+| 1ʳᵉ visite d'Annonces, de Mandats, d'Estimations | compteurs à **0** sous « Chargement… », puis les bons | « Chargement… », puis les bonnes lignes |
+| Annonces → Mandats → Annonces (retour) | « **3 annonces actives** » tout de suite (avant : « 2 ») | « **3 / 3** » en 60 ms (avant : les 2 cartes du registre) |
+| Mandats (retour) | « **2 mandats** » tout de suite (avant : « 3 ») | « **2 / 2** » en 160 ms |
+| Annonces → Estimations | « **0 estimations** » (avant : « 3 estimations ») | « Chargement… », puis « Aucune ligne » |
+| frappe « Fauriel » dans la recherche d'Annonces | — | les 3 lignes **restent** jusqu'à la réponse (1 / 1), **pas** de « Chargement… » |
+| **témoin inverse** (interrupteur éteint) | — | le défaut revient : « 3 / 3 » sous Mandats, puis « 2 / 2 » sous Annonces |
+
+`npm run build` vert. **Vraie app construite en local, ouverte DÉCONNECTÉE** : « Bon retour », seulement les deux 401
+antérieurs.
+
+**⚠ Constaté au contrôle, NON corrigé** (hors du périmètre accordé) — sur bureau, Annonces et Estimations ont un **voile**.
+- Il couvre la liste à **chaque relecture** : `listing-loading-banner`, `App.tsx` ~26475. Avec bienvu, il est en
+  `position: absolute; inset: 0`, blanc à 72 %, avec « Chargement… » (`bienvu.css:284`, refonte du 19/10). Sans bienvu,
+  c'était une fine barre collante.
+- Une vue rappelée y arrive donc **juste** (bons compteurs, bonnes lignes), mais **voilée et non cliquable** pendant la
+  relecture (0,5 s en production pour Annonces).
+- Le registre (Mandats) n'a pas ce voile : ses lignes sont utilisables tout de suite.
+- Ne voiler que la liste **vide** rendrait le gain visible sur bureau. C'est une décision de dessin : **à trancher par
+  Frédéric**.
+
+**Ce qui n'est PAS éprouvé :** les temps réels en production. La maquette répond en 1,5 s fixes ; la production en
+0,5 à 1,6 s selon l'écran (§2).

@@ -13030,6 +13030,26 @@ const L_ECRAN_SUIT_LE_CLIC = true
 //   `false` = l'ancien comportement, en une ligne.
 const DETAIL_UNE_FOIS = true
 
+// ⛔ 27/10/2026 -- POINT 7c : UNE LISTE DEJA VUE S'AFFICHE TOUT DE SUITE, ET JAMAIS SOUS UN AUTRE TITRE.
+//   `dossiers` / `mandats` / `workItems` (et leurs totaux) sont UNE liste pour Accueil, Annonces, Estimations,
+//   Mandats, Suivi et Agenda : au changement d'ecran, celle de l'ecran PRECEDENT restait affichee le temps de la
+//   relecture (0,5 a 1,6 s) -- « 3 estimations » qui etaient des annonces, les cartes du registre cliquables sous
+//   « Annonces » au telephone. Desormais : une vue deja vue revient de memoire (puis la relecture part en fond,
+//   comme avant) ; sinon les listes sont VIDEES (« Chargement… »). Dans un meme ecran (page, filtre, frappe) rien
+//   ne change : les lignes restent sous « Mise a jour… ». La memoire n'est ecrite QUE par les reponses du serveur
+//   (jamais par les retouches apres un geste), 10 vues, en memoire vive, videe a la deconnexion.
+//   Audit : notice/AUDIT_NAVIGATION_APRES_ACTION_2026-10-23.md §23.6. `false` = l'ancien comportement, en une ligne.
+const LISTE_DEJA_VUE = true
+const LISTES_VUES_MAX = 10
+type ListesVues = {
+  dossiers?: Dossier[]
+  dossiersTotal?: number
+  mandats?: MandatRecord[]
+  mandatsTotal?: number
+  workItems?: WorkItem[]
+  workItemsTotal?: number
+}
+
 // ⛔ 27/10/2026 -- POINT 7a : ECHAP FERME LA FICHE (N8 : rien ne se fermait). Echap fait EXACTEMENT ce que fait le
 //   bouton de sortie de la fiche du dessus : on le CLIQUE (marque `data-fiche-retour`, dans un conteneur `data-fiche`).
 //   Un Echap = un niveau, comme le bouton : rubrique -> cockpit -> liste ; contact pose sur une annonce -> l'annonce ;
@@ -15292,10 +15312,50 @@ export default function App() {
     setWorkItemPage(1)
   }, [screen])
 
+  // POINT 7c : la memoire des vues deja vues, et la vue que montrent les listes (voir LISTE_DEJA_VUE).
+  const listesVuesRef = useRef(new Map<string, ListesVues>())
+  const vueAfficheeRef = useRef<{ cle: string; ecran: Screen } | null>(null)
+
   useEffect(() => {
     if (hasSupabaseEnv && !session) return
     if (screen === 'contacts') return
     let cancelled = false
+    // POINT 7c : la cle d'une vue = tout ce qui fait partir cette lecture, sauf la relecture (dataReloadKey).
+    const cleVue = JSON.stringify([session?.user?.id ?? null, screen, dataFilters, dossierPage, mandatPage, workItemPage, dataScope ?? null])
+    if (LISTE_DEJA_VUE) {
+      const precedente = vueAfficheeRef.current
+      if (precedente?.cle !== cleVue) {
+        const vue = listesVuesRef.current.get(cleVue)
+        if (vue?.dossiers && vue.mandats && vue.workItems) {
+          setDossiers(vue.dossiers)
+          setDossiersTotal(vue.dossiersTotal ?? 0)
+          setMandats(vue.mandats)
+          setMandatsTotal(vue.mandatsTotal ?? 0)
+          setWorkItems(vue.workItems)
+          setWorkItemsTotal(vue.workItemsTotal ?? 0)
+        } else if (precedente && precedente.ecran !== screen) {
+          setDossiers([])
+          setDossiersTotal(0)
+          setMandats([])
+          setMandatsTotal(0)
+          setWorkItems([])
+          setWorkItemsTotal(0)
+        }
+      }
+      vueAfficheeRef.current = { cle: cleVue, ecran: screen }
+    }
+    const retenir = (morceau: ListesVues) => {
+      if (!LISTE_DEJA_VUE) return
+      const memoire = listesVuesRef.current
+      const vue = { ...memoire.get(cleVue), ...morceau }
+      memoire.delete(cleVue)
+      memoire.set(cleVue, vue)
+      while (memoire.size > LISTES_VUES_MAX) {
+        const plusAncienne = memoire.keys().next().value
+        if (plusAncienne === undefined) break
+        memoire.delete(plusAncienne)
+      }
+    }
     setPageLoading(true)
     setMandatLoading(true)
     const nextMandatPage = screen === 'suivi' ? 1 : mandatPage
@@ -15317,6 +15377,7 @@ export default function App() {
         const scopedRows = filterMandatRowsForScreen(nextMandatsPage.rows, screen, dataFilters)
         setMandats(scopedRows)
         setMandatsTotal(nextMandatsPage.total)
+        retenir({ mandats: scopedRows, mandatsTotal: nextMandatsPage.total })
         setFilterCatalog((current) => mergeCatalog(current, buildPageFilterCatalog([], [], scopedRows)))
         if (screen === 'registre') {
           setSelectedRegisterRowId((current) => {
@@ -15339,6 +15400,7 @@ export default function App() {
         if (cancelled) return
         setDossiers(nextDossiersPage.rows)
         setDossiersTotal(nextDossiersPage.total)
+        retenir({ dossiers: nextDossiersPage.rows, dossiersTotal: nextDossiersPage.total })
         setFilterCatalog((current) => mergeCatalog(current, buildPageFilterCatalog(nextDossiersPage.rows, [], [])))
         setSelectedDossierId((current) => {
           if (current && detailOpen) return current
@@ -15362,6 +15424,7 @@ export default function App() {
         if (cancelled) return
         setWorkItems(nextWorkItemsPage.rows)
         setWorkItemsTotal(nextWorkItemsPage.total)
+        retenir({ workItems: nextWorkItemsPage.rows, workItemsTotal: nextWorkItemsPage.total })
         setFilterCatalog((current) => mergeCatalog(current, buildPageFilterCatalog([], nextWorkItemsPage.rows, [])))
       })
       .catch((error) => {
@@ -15767,6 +15830,8 @@ export default function App() {
       setDiffusionRequests([])
       setDiffusionRequestEvents([])
       setWorkItems([])
+      listesVuesRef.current.clear()
+      vueAfficheeRef.current = null
       setSelectedDossierId(null)
       setSelectedDossier(null)
       setSelectedMandatId(null)
