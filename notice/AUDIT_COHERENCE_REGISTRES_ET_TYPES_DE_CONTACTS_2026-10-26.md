@@ -2322,3 +2322,37 @@ calcul complet des 62 339 contacts prend 1,8 s : un lot de 5 000 coûte donc env
 **Ce que ⑥ ne couvre pas** (non mesuré ici) : « Acquéreur » (recherche active) et l'éligibilité, qui ont leurs propres chemins.
 
 **Retour arrière** : un interrupteur dans la fonction de recalcul (elle ne fait plus rien), ou désactiver la tâche pg_cron.
+
+### 36.5 ⚠⚠ LA DÉPENDANCE CACHÉE : LA VUE COMPTE LES TRANSACTIONS « PRÉSENTES CHEZ HEKTOR » *(27/10, Frédéric : « attention, il ne faut pas qu'à la coupure le changement de type soit dépendant de l'accord de Hektor »)* — mesuré, rien codé
+
+**Le mécanisme ⑥ lui-même ne dépend pas de Hektor** : il recalcule depuis nos registres, dès qu'ils sont écrits. **Mais il ne vaut que ce
+que dit la vue qu'il lit**, et la vue `app_contact_relations_current` a deux règles différentes selon le registre :
+- **les liens** (mandant, propriétaire) : `present_in_hektor OR (source = 'app' AND absent_depuis IS NULL)` et `retire_le IS NULL`. Un lien
+  posé dans l'app **compte tout de suite**, sans Hektor ✅ ;
+- **les transactions** (acheteur d'une offre, d'un compromis ou d'une vente) : `p.transaction_presente`, c'est-à-dire
+  `app_affaire_ledger.present_in_hektor`. ⛔ **Une transaction ne compte que si elle est PRÉSENTE CHEZ HEKTOR.**
+
+**Ce que ça fait aujourd'hui** (lu dans le code) :
+- une offre, un compromis ou une vente **créés dans l'app** entrent au registre avec `present_in_hektor = false` et **sans numéro Hektor**
+  (`app_change_annonce_status_optimistic`, « Hektor ne la connaît pas encore ») ;
+- ils ne passent à `true` que lorsque le **worker** reçoit le numéro de Hektor (`poserIdTransactionSurAffaire`, l. ~22100) ;
+- **entre les deux, l'acheteur n'apparaît ni dans la fiche contact (P2) ni dans son type.**
+- ⛔ **Après la coupure, il n'apparaîtrait JAMAIS** : plus de worker vers Hektor, donc plus de `true`.
+
+**Le même drapeau porte deux sens** : « Hektor l'a », et « supprimée ». Le geste « Supprimer » le passe à `false` au clic, et un refus de
+Hektor le remet à `true` (`restaurerEtatAffaire`). Aujourd'hui : 31 096 transactions à `true`, **17 à `false`** (retirées), aucune sans
+numéro Hektor.
+
+**Ce qu'il faut, pour que le type ne dépende jamais de Hektor** : compter une transaction parce qu'elle est **vivante chez nous**, et non
+parce qu'elle est **présente chez Hektor**, exactement comme les liens. Une transaction est vivante tant qu'elle n'est pas **supprimée** ;
+il faut donc **un marqueur de suppression à nous** (comme `retire_le` pour les liens), au lieu de lire « présente chez Hektor ».
+
+⚠ **Ce qu'il ne faut pas casser** :
+- la règle « le registre porte la valeur de Hektor, le carnet la nôtre » (« le gel », 16/09) : elle porte sur les **champs** d'une
+  transaction. Ici, il s'agit de son **existence** ;
+- **delete-never** ;
+- les 17 transactions retirées chez Hektor (elles doivent rester hors du type) ;
+- le filet qui rejoue un envoi échoué (C.4-bis).
+
+➡ **C'est un préalable au mécanisme ⑥, et il touche le registre des transactions : un audit à part, avant tout code.** Il porte sur les
+gestes créer / supprimer une transaction, la détection d'une suppression par la nuit, et le sens de `present_in_hektor` pour chaque lecteur.
