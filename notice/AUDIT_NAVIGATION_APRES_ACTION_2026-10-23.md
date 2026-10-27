@@ -1790,3 +1790,65 @@ recherche » ne fait rien de visible chez Hektor → à auditer (`handleDeleteHe
 - puis la vraie app ouverte **déconnectée**, pour vérifier que la connexion n'est pas cassée (§22.4).
 
 **Point 8 (découper `App.tsx`) : remis à plus tard par Frédéric le 27/10.**
+
+### 23.3 ✅ 6 bis (D1 + D2) ET 7b CODÉS ET CONTRÔLÉS (27/10, « Vas-y pour le 6 bis … puis le 7b ») — commit `1101fb3`
+
+**La question de Frédéric avant le 7b : « retrouver d'abord la raison pour laquelle on a mis ces refresh ».**
+- L'histoire, retrouvée par `git log -S` :
+  - jusqu'au 21/05, l'effet du détail dépendait de `[selectedDossierId, session, dataReloadKey]` ;
+  - `b0c582f` (21/05, « cache des annonces historiques ») a ajouté `dossiers`, `mandats` ;
+  - `10bd1a2` (22/05) et `d07a540` (09/06, mobile) n'ont touché que la garde « fiche légère » et l'ont sortie des dépendances (par une ref).
+- **La raison n'était pas de rafraîchir la fiche.** La ligne de liste dit si le bien est une **archive légère** (on ne charge pas son détail complet). L'effet devait donc repartir quand la liste arrive APRÈS le clic.
+- Ce besoin est gardé à l'identique : l'effet suit le booléen `ficheLegereDansLaListe` au lieu des deux listes.
+- Le rafraîchissement voulu reste `dataReloadKey`, c'est-à-dire après un geste, la fin d'un travail ou la relecture Hektor d'ouverture (point 3c).
+
+**Ce qui est en place (3 interrupteurs, chacun `false`/`0` = l'ancien comportement) :**
+- `CONSOLE_ALERTE_A_L_ABANDON` (worker) : l'alerte ne part que si `travailAbandonne()` répond oui.
+  - Sinon, une ligne « Alerte retenue : le travail sera rejoué (essai n sur 5) » est écrite au journal du travail.
+  - Les 4 gestes de transaction entrent dans `JOB_TYPES_A_NOTIFIER`, avec un libellé.
+- `PASTILLE_GESTES_SEULEMENT` (front) : le rouge ne compte que les gestes de `GESTES_QUI_PREVIENNENT`.
+  - C'est une **copie** de la liste du worker, donc rouge ⇔ e-mail.
+  - Le bandeau admin et l'écran Santé ne changent pas.
+- `DETAIL_UNE_FOIS` (front) :
+  - les dépendances sont `[selectedDossierId, session, dataReloadKey, detailOpen, ficheLegereDansLaListe]` ;
+  - fiche fermée, rien ne se charge.
+  - J'ai revérifié le 27/10 que `MandatsScreen` (menu Annonces) et `SuiviMandatsScreenV2` reçoivent la fiche mais ne la lisent **jamais**.
+  - Le registre (menu Mandats) a son propre `detailOpen` et son propre chargement (`editorDetailed`) : il n'est pas touché.
+
+**Contrôles :**
+- **L'essai du worker** (`node Console/test_alerte_a_l_abandon.js`) est vert à **14/14**, sur le code réel découpé :
+  - type définitif ⇒ alerte au 1er échec ;
+  - type rejoué ⇒ retenue aux essais 1 à 4, alerte au 5ᵉ ;
+  - refus d'état ⇒ alerte ;
+  - demande de plus de 23 h ⇒ alerte ;
+  - copie identique à la liste lue en base ;
+  - transactions présentes ;
+  - `processOnce` passe par la règle.
+  - ⭐ **Témoin inverse** : sur un worker abîmé (garde du refus d'état retirée et un type ôté de la liste), l'essai sort en **1** avec les 2 bons échecs.
+- **Le 7b, mesuré dans la maquette** par un compteur provisoire (retiré avant le commit, `api.ts` intact). Même scénario, avec et sans l'interrupteur :
+
+| scénario | `DETAIL_UNE_FOIS = true` | `false` (avant) |
+|---|---|---|
+| ouvrir une fiche | 1 | 1 |
+| 3 relectures de l'app, fiche ouverte | **+3** | **+6** |
+| fiche fermée : 3 relectures + 4 frappes dans la recherche | **+0** | **+1** |
+| rouvrir une fiche | +1 (voulu : rouvrir relit) | — |
+
+  - Contrôlé sur **téléphone** (fiche `mobile-detail-overlay`) **et bureau** (cockpit plein écran, 1 440 px). La fiche est complète, et la pastille « Hektor · à jour » est visible.
+  - Les erreurs 500 de la console viennent de `/api/hektor-diffusion/broadcasts`, qui n'a pas de serveur en maquette. Elles sont sans rapport.
+- `npm run build` vert.
+- **La vraie app construite en local, ouverte DÉCONNECTÉE** (`hektor-dist-reel`, leçon du §22.4) affiche « Bon retour », sans erreur JavaScript.
+  - Les deux 401 (`app_searches_to_complete`, `app_condition_catalogue`) existent **à l'identique en production** : ils sont antérieurs au correctif.
+
+**Ce qui n'est PAS éprouvé :**
+- un vrai échec de geste rejoué (e-mail retenu puis envoyé au 5ᵉ) ;
+- une pastille rouge réelle ;
+- le nombre de chargements en production, qui demande une session connectée.
+
+**Pour que ce soit actif :**
+- **Pousser.** Vercel déploie la pastille et le 7b.
+- **Redémarrer les 4 services worker** pour D1, avec l'accord de Frédéric, **0 pending ET 0 running**. Tant qu'ils ne redémarrent pas, l'alerte part encore à chaque échec : c'est l'ancien comportement, sans risque.
+
+⚠ **Coordination.**
+- Le worker porte aussi les changements Youtrust / PDF de mandat de l'autre session, non commités. Ils sont restés hors du commit, qui a été indexé à partir de `HEAD` + mes seuls changements.
+- Un redémarrage chargera **aussi** leur code non commité : il faut le dire à l'autre session avant.
