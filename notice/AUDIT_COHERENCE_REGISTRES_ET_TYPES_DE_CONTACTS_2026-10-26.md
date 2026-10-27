@@ -1683,3 +1683,41 @@ active, une transaction), il monte avec son type.
 
 ⬜ **À trancher par Frédéric** : (1) faire vivre le type Notaire (base + écran, ~1 330 contacts) ; (2) faire monter les 220 notaires du
 serveur — et alors aussi les 2 906 parties absentes ? (3) le sort des 294 498 du serveur reste un sujet à part (§28.3).
+
+## 30. LA FICHE NOTAIRE — maquette v1 *(27/10, Frédéric : « il faut une page contact différente pour ce type ; fais une maquette, sois professionnel ; ce sont des contacts avec qui nous échangeons sur des dossiers en cours ou vendus »)* — rien codé
+
+**Fichier** : `maquettes/fiche-notaire-v1.html` (données **fictives** ; charte bienvu ; serveur de lancement `maquettes`, port 8099).
+Vérifiée : bureau 1440 px (aucun débordement) et téléphone 375 px (largeur 375 = page, aucun élément hors écran). Bouton « Origine des
+données » : 13 pastilles vertes (existe déjà chez nous) et 5 orange (à créer).
+
+**L'idée** : un notaire n'est ni un vendeur ni un acheteur, c'est un **partenaire de dossiers**. La fiche se lit comme un **tableau de bord
+des dossiers communs**, pas comme une fiche client.
+
+| bloc | ce qu'il montre | d'où vient la donnée |
+|---|---|---|
+| en-tête | nom, étude, type « Notaire », depuis quand, nombre de dossiers, côté vendeur / acquéreur ; Appeler · Écrire · Planifier une signature · **Envoyer un dossier** · ⋯ (Modifier, Archiver, Supprimer) | fiche contact + table des parties |
+| 4 chiffres | dossiers en cours · actes dans les 30 jours · ventes signées sur 12 mois (+ honoraires) · délai compromis → acte (contre la médiane agence, **86 j** mesurés) | registre des transactions |
+| **À venir** | l'échéancier : fin de rétractation, échéance de la condition de prêt, signatures d'acte, dates à fixer — chacun avec SON geste (prévenir, relancer, ajouter à l'agenda, demander une date) | `date_fin_retractation`, conditions (échéance, point 6 n° 1), `date_acte` |
+| **Dossiers en cours** | répartis en 4 étapes (rétractation, conditions, acte fixé, date à fixer) ; par dossier : bien, mandat, négociateur, vendeur → acquéreur, prix, prochaine échéance, **côté** (vendeur, acquéreur, les deux), **confrère** (le notaire d'en face), séquestre, honoraires, pièces | registre (`notaire_mandant_*`, `notaire_acquereur_*`, `sequestre`, `honoraires_*`) |
+| **Ventes signées** | 12 mois : date d'acte, bien, côté, prix, honoraires, délai ; export | registre (ventes) |
+| L'étude | standard, e-mail, adresse | fiche contact |
+| **Interlocuteurs** | notaire, clerc qui suit nos dossiers, formaliste | ⚠ **à créer** (Hektor met parfois plusieurs noms dans UNE fiche « SELARL … ») |
+| Avec nous | dossiers par agence ; **confrères fréquents** | calcul sur le registre |
+| **Pièces d'un dossier** | liste de contrôle (titre, DDT, état daté du syndic, PV d'AG, taxe foncière, offre de prêt, compromis + preuve SRU, séquestre…) | ⚠ **à créer** (le coffre des documents existe ; la liste par dossier non) |
+| Échanges | e-mails, RDV, envois ; note interne | Échanges et agenda existants |
+
+**Anti-perte (règle du projet)** : la fiche actuelle garde toutes ses fonctions — Modifier, Supprimer, Archiver (menu ⋯), Appeler,
+Écrire un e-mail, Créer un RDV (« Planifier une signature »), Échanges, Activité, Négociateur, Biens liés (devenus « Dossiers »).
+Seul bloc masqué par défaut : **Recherches** (sans objet pour un notaire ; visible s'il en a une).
+
+**Suggestions « métier »** (à arbitrer, aucune n'est décidée) :
+1. **L'échéancier est le cœur** : un délai SRU ou une condition de prêt manqués coûtent une vente ; c'est ce que l'agence consulte le matin.
+2. **« Envoyer le dossier au notaire » en un geste** : les pièces du coffre de documents, jointes à un e-mail prérempli, tracé dans Échanges.
+3. **Relances** : J-7 avant l'acte, fin de rétractation, condition de prêt — par le mécanisme de relances e-mail déjà en place.
+4. **La signature dans l'agenda**, l'étude invitée, et la date d'acte du registre mise à jour au même geste.
+5. **Le côté et le confrère** : savoir qui appeler (55 % des compromis 2025+ ont le même notaire des deux côtés : 344 sur 628).
+6. **Étude ≠ notaire** : une étude a plusieurs notaires et clercs ; à terme une fiche « Étude » et ses interlocuteurs.
+7. **Classement des études partenaires** (volume, délai) : utile pour recommander un notaire à un client.
+8. **Pas d'archivage automatique** façon particulier : un notaire est un professionnel (RGPD différent).
+
+⬜ **Préalables** (§29.3) : le type « Notaire » doit d'abord exister (base + annuaire) ; la page s'ouvre quand le type dominant est Notaire.

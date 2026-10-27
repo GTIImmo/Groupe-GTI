@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fiche notaire — maquette v1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+/* Maquette 27/10/2026 — chantier ⑧ types, le type « Notaire ». Données FICTIVES (noms, biens, montants).
+   Charte bienvu : src/bienvu.css (--bv-*). Note : notice/AUDIT_COHERENCE_REGISTRES_ET_TYPES_DE_CONTACTS_2026-10-26.md §30. */
+:root {
+  --magenta: #c5005f; --framboise: #8c0044; --rose: #f6b6d5; --rose-soft: #fdf0f6;
+  --ink: #222323; --brume: #f6f7f8; --line: #e2e5e6; --line-strong: #cfd3d4; --mute: #5c6163; --subtle: #7c8082;
+  --surface: #fff; --ok: #2f7d59; --ok-soft: #e8f5ee; --warn: #b66a16; --warn-soft: #fff3df; --danger: #b94a48; --danger-soft: #fdeceb;
+  --notaire: #3b4a8c; --notaire-soft: #eef0fa;   /* la couleur du nouveau type : un bleu encre, distinct des 4 autres */
+  --display: 'Plus Jakarta Sans', system-ui, sans-serif; --ui: 'Hanken Grotesk', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --r-sm: 10px; --r-md: 14px; --r-lg: 22px; --shadow: 0 1px 2px rgba(34,35,35,.06), 0 8px 24px rgba(34,35,35,.06);
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--brume); color: var(--ink); font: 14px/1.45 var(--ui); }
+button { font: inherit; cursor: pointer; }
+.page { max-width: 1320px; margin: 0 auto; padding: 20px 24px 60px; }
+
+/* ── en-tête ── */
+.head { background: var(--ink); color: #fff; border-radius: var(--r-lg); padding: 22px 26px; display: grid; grid-template-columns: auto 1fr auto; gap: 20px; align-items: center; box-shadow: var(--shadow); }
+.mono { width: 64px; height: 64px; border-radius: 18px; background: var(--notaire); display: grid; place-items: center; }
+.mono svg { width: 34px; height: 34px; }
+.who h1 { margin: 0; font: 800 24px/1.15 var(--display); letter-spacing: -.01em; }
+.who .etude { margin-top: 3px; color: #c9cccd; font-weight: 500; }
+.pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+.pill.notaire { background: var(--notaire-soft); color: var(--notaire); }
+.pill.dark { background: rgba(255,255,255,.1); color: #e8eaeb; font-weight: 600; }
+.acts { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.btn { border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); border-radius: 10px; padding: 8px 13px; font-weight: 600; display: inline-flex; gap: 7px; align-items: center; white-space: nowrap; }
+.btn svg { width: 16px; height: 16px; }
+.head .btn { background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.18); color: #fff; }
+.head .btn.primary, .btn.primary { background: var(--magenta); border-color: var(--magenta); color: #fff; }
+.btn.ghost { background: transparent; }
+.btn.sm { padding: 5px 9px; font-size: 12.5px; border-radius: 8px; }
+
+/* ── chiffres ── */
+.kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 16px 0; }
+.kpi { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: 14px 16px; box-shadow: var(--shadow); }
+.kpi .v { font: 800 26px/1 var(--display); }
+.kpi .k { color: var(--mute); font-weight: 600; margin-top: 6px; }
+.kpi .s { color: var(--subtle); font-size: 12.5px; margin-top: 3px; }
+.kpi.alert .v { color: var(--warn); }
+
+/* ── grille ── */
+.grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--shadow); margin-bottom: 16px; }
+.card > .ch { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 16px 10px; }
+.card > .ch h2 { margin: 0; font: 700 15.5px/1.2 var(--display); display: flex; gap: 8px; align-items: center; }
+.card > .ch h2 .n { color: var(--subtle); font-weight: 600; font-family: var(--ui); }
+.card > .cb { padding: 0 16px 14px; }
+.seg { display: inline-flex; background: var(--brume); border: 1px solid var(--line); border-radius: 10px; padding: 2px; }
+.seg button { border: 0; background: transparent; padding: 5px 10px; border-radius: 8px; font-weight: 600; color: var(--mute); font-size: 12.5px; }
+.seg button.on { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+
+/* ── échéancier ── */
+.tl { display: grid; gap: 8px; }
+.ev { display: grid; grid-template-columns: 64px 1fr auto; gap: 12px; align-items: center; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; }
+.ev .d { text-align: center; border-radius: 10px; padding: 6px 0; background: var(--brume); }
+.ev .d b { display: block; font: 800 18px/1 var(--display); }
+.ev .d span { font-size: 11px; color: var(--mute); text-transform: uppercase; font-weight: 700; letter-spacing: .04em; }
+.ev .t { font-weight: 700; }
+.ev .m { color: var(--mute); font-size: 13px; }
+.ev.acte { border-color: #c8cef0; background: linear-gradient(90deg, var(--notaire-soft), #fff 60%); }
+.ev.acte .d { background: var(--notaire); color: #fff; } .ev.acte .d span { color: #dfe3fb; }
+.ev.urgent { border-color: #f3d2a6; background: linear-gradient(90deg, var(--warn-soft), #fff 60%); }
+.ev.urgent .d { background: var(--warn); color: #fff; } .ev.urgent .d span { color: #fde8cb; }
+.tag { display: inline-flex; padding: 2px 8px; border-radius: 999px; font-size: 11.5px; font-weight: 700; background: var(--brume); color: var(--mute); border: 1px solid var(--line); }
+.tag.ok { background: var(--ok-soft); color: var(--ok); border-color: #cbe7d7; }
+.tag.warn { background: var(--warn-soft); color: var(--warn); border-color: #f3d9b4; }
+.tag.no { background: var(--notaire-soft); color: var(--notaire); border-color: #d5daf3; }
+.tag.mg { background: var(--rose-soft); color: var(--framboise); border-color: var(--rose); }
+
+/* ── dossiers ── */
+.stages { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
+.stage { border: 1px solid var(--line); border-radius: 12px; padding: 9px 11px; background: var(--brume); }
+.stage b { font: 800 20px/1 var(--display); } .stage span { display: block; color: var(--mute); font-size: 12px; font-weight: 600; margin-top: 4px; }
+.stage.on { background: var(--notaire-soft); border-color: #cfd5f2; } .stage.on b { color: var(--notaire); }
+.doss { border: 1px solid var(--line); border-radius: 12px; margin-bottom: 8px; overflow: hidden; }
+.dr { display: grid; grid-template-columns: 56px minmax(0, 1.5fr) minmax(0, 1.2fr) minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px 12px; }
+.ph { width: 56px; height: 44px; border-radius: 9px; background: linear-gradient(135deg, #d9dee0, #eef1f2); display: grid; place-items: center; color: var(--subtle); font-size: 10px; font-weight: 700; }
+.dr .ref { font-weight: 700; } .dr .sub { color: var(--mute); font-size: 12.5px; }
+.parties { font-size: 13px; } .parties .arrow { color: var(--subtle); margin: 0 4px; }
+.prog { height: 6px; border-radius: 99px; background: var(--line); overflow: hidden; margin-top: 6px; }
+.prog i { display: block; height: 100%; background: var(--ok); border-radius: 99px; }
+.dfoot { display: flex; flex-wrap: wrap; gap: 6px 14px; padding: 8px 12px 10px 80px; border-top: 1px dashed var(--line); background: #fcfcfd; color: var(--mute); font-size: 12.5px; }
+.dfoot b { color: var(--ink); font-weight: 600; }
+
+/* ── ventes ── */
+table { width: 100%; border-collapse: collapse; }
+th { text-align: left; font-size: 11.5px; letter-spacing: .04em; text-transform: uppercase; color: var(--subtle); font-weight: 700; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+td { padding: 9px 8px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+td.r, th.r { text-align: right; } tr:last-child td { border-bottom: 0; }
+
+/* ── colonne de droite ── */
+.co { display: grid; gap: 10px; }
+.co .l { display: grid; grid-template-columns: 30px 1fr auto; gap: 10px; align-items: center; }
+.ic { width: 30px; height: 30px; border-radius: 9px; background: var(--brume); display: grid; place-items: center; color: var(--mute); }
+.ic svg { width: 16px; height: 16px; }
+.co .k { font-size: 12px; color: var(--subtle); font-weight: 600; } .co .v { font-weight: 600; word-break: break-word; }
+.people { display: grid; gap: 8px; }
+.pe { display: grid; grid-template-columns: 34px 1fr auto; gap: 10px; align-items: center; }
+.av { width: 34px; height: 34px; border-radius: 50%; background: var(--notaire-soft); color: var(--notaire); display: grid; place-items: center; font-weight: 800; font-size: 12px; }
+.av.n { background: var(--rose-soft); color: var(--framboise); }
+.pe .nm { font-weight: 700; } .pe .rl { font-size: 12px; color: var(--mute); }
+.bars { display: grid; gap: 7px; }
+.bar { display: grid; grid-template-columns: 1fr auto; gap: 4px 8px; font-size: 13px; }
+.bar .tr { grid-column: 1 / -1; height: 7px; background: var(--line); border-radius: 99px; overflow: hidden; }
+.bar .tr i { display: block; height: 100%; background: var(--notaire); border-radius: 99px; }
+.check { display: grid; gap: 6px; font-size: 13px; }
+.check label { display: flex; gap: 8px; align-items: flex-start; }
+.check input { accent-color: var(--magenta); margin-top: 2px; }
+.feed { display: grid; gap: 10px; font-size: 13px; }
+.feed .it { display: grid; grid-template-columns: 30px 1fr; gap: 10px; }
+.feed .it .w { color: var(--subtle); font-size: 12px; }
+.note { background: var(--brume); border: 1px dashed var(--line-strong); border-radius: 12px; padding: 10px 12px; color: var(--mute); font-size: 13px; }
+
+/* ── origine des données (bouton en bas à droite) ── */
+.org { display: none; margin-left: 6px; font: 700 10.5px/1 var(--ui); padding: 3px 7px; border-radius: 999px; vertical-align: middle; letter-spacing: .02em; }
+body.show-org .org { display: inline-flex; }
+.org.ex { background: var(--ok-soft); color: var(--ok); border: 1px solid #cbe7d7; }
+.org.nv { background: var(--warn-soft); color: var(--warn); border: 1px solid #f3d9b4; }
+.toggle { position: fixed; right: 18px; bottom: 18px; z-index: 5; background: var(--ink); color: #fff; border: 0; border-radius: 999px; padding: 10px 16px; font-weight: 700; box-shadow: var(--shadow); }
+.legend { display: none; position: fixed; right: 18px; bottom: 64px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; box-shadow: var(--shadow); font-size: 12.5px; max-width: 280px; }
+body.show-org .legend { display: block; }
+
+/* ── téléphone ── */
+@media (max-width: 1020px) {
+  .grid { grid-template-columns: 1fr; }
+  .kpis { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 640px) {
+  .page { padding: 12px 12px 80px; }
+  .card > .ch { flex-wrap: wrap; }
+  .card > .ch .seg { width: 100%; } .card > .ch .seg button { flex: 1; }
+  .head { grid-template-columns: auto 1fr; padding: 16px; gap: 14px; border-radius: 18px; }
+  .head .acts { grid-column: 1 / -1; justify-content: flex-start; }
+  .head .acts .btn .lb { display: none; }
+  .mono { width: 52px; height: 52px; border-radius: 14px; }
+  .who h1 { font-size: 20px; }
+  .kpi .v { font-size: 22px; }
+  .stages { grid-template-columns: repeat(2, 1fr); }
+  .dr { grid-template-columns: 48px minmax(0, 1fr); }
+  .dr .col3, .dr .col4 { grid-column: 2; }
+  .dr .col5 { grid-column: 1 / -1; display: flex; gap: 6px; }
+  .ph { width: 48px; height: 40px; }
+  .dfoot { padding-left: 12px; }
+  .ev { grid-template-columns: 54px 1fr; }
+  .ev > .btn, .ev > .acts-ev { grid-column: 1 / -1; justify-self: start; }
+  table thead { display: none; }
+  table tr { display: grid; grid-template-columns: 1fr auto; padding: 8px 0; border-bottom: 1px solid var(--line); }
+  table td { border: 0; padding: 2px 0; }
+  .hide-m { display: none; }
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ═════ EN-TÊTE ═════ -->
+  <header class="head">
+    <div class="mono" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M5 7h14"/><path d="M5 7l-3 7a3.5 3.5 0 0 0 6 0z"/><path d="M19 7l-3 7a3.5 3.5 0 0 0 6 0z"/><path d="M8 21h8"/></svg>
+    </div>
+    <div class="who">
+      <h1>Maître Hélène VARENNE <span class="org ex">fiche contact</span></h1>
+      <div class="etude">Étude Varenne &amp; Associés — office notarial · Saint-Étienne</div>
+      <div class="pills">
+        <span class="pill notaire">Notaire <span class="org ex">registre des transactions</span></span>
+        <span class="pill dark">Partenaire depuis 2019</span>
+        <span class="pill dark">33 dossiers avec nous</span>
+        <span class="pill dark">Côté vendeur 16 · côté acquéreur 17</span>
+      </div>
+    </div>
+    <div class="acts">
+      <button class="btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg><span class="lb">Appeler l'étude</span></button>
+      <button class="btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg><span class="lb">Écrire</span></button>
+      <button class="btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><span class="lb">Planifier une signature</span></button>
+      <button class="btn primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="m16 6-4-4-4 4"/><path d="M12 2v13"/></svg><span class="lb">Envoyer un dossier</span></button>
+      <button class="btn" title="Modifier · Archiver · Supprimer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button>
+    </div>
+  </header>
+
+  <!-- ═════ CHIFFRES ═════ -->
+  <section class="kpis">
+    <div class="kpi"><div class="v">9</div><div class="k">Dossiers en cours <span class="org ex">registre</span></div><div class="s">compromis signés, acte à venir</div></div>
+    <div class="kpi alert"><div class="v">3</div><div class="k">Actes dans les 30 jours <span class="org ex">date d'acte</span></div><div class="s">prochain : jeudi 5 nov. 10 h</div></div>
+    <div class="kpi"><div class="v">13</div><div class="k">Ventes signées · 12 mois <span class="org ex">registre</span></div><div class="s">74 500 € d'honoraires agence</div></div>
+    <div class="kpi"><div class="v">78 j</div><div class="k">Compromis → acte <span class="org ex">calcul</span></div><div class="s">médiane agence : 86 j</div></div>
+  </section>
+
+  <div class="grid">
+    <main>
+
+      <!-- ═════ ÉCHÉANCIER ═════ -->
+      <section class="card">
+        <div class="ch"><h2>À venir <span class="n">· 30 prochains jours</span> <span class="org ex">dates du registre</span></h2>
+          <div class="seg"><button class="on">30 jours</button><button>90 jours</button><button>Tout</button></div></div>
+        <div class="cb tl">
+          <div class="ev urgent">
+            <div class="d"><b>29</b><span>oct.</span></div>
+            <div><div class="t">Fin du délai de rétractation <span class="tag warn">dans 2 j</span></div>
+              <div class="m">VM48210 · Maison 5 p. · Firminy — acquéreurs M. et Mme LEROY</div></div>
+            <button class="btn sm">Prévenir l'étude</button>
+          </div>
+          <div class="ev">
+            <div class="d"><b>02</b><span>nov.</span></div>
+            <div><div class="t">Échéance condition de prêt</div>
+              <div class="m">VA51877 · Appartement T3 · Saint-Étienne — offre de prêt non reçue <span class="org nv">pièce à suivre</span></div></div>
+            <button class="btn sm">Relancer l'acquéreur</button>
+          </div>
+          <div class="ev acte">
+            <div class="d"><b>05</b><span>nov.</span></div>
+            <div><div class="t">Signature de l'acte authentique · 10 h <span class="tag no">à l'étude</span></div>
+              <div class="m">VM47755 · Maison 4 p. · Roche-la-Molière — 212 000 € · séquestre 10 600 €</div></div>
+            <button class="btn sm">Ajouter à l'agenda</button>
+          </div>
+          <div class="ev acte">
+            <div class="d"><b>18</b><span>nov.</span></div>
+            <div><div class="t">Signature de l'acte authentique · 14 h 30</div>
+              <div class="m">VM46302 · Terrain 820 m² · Unieux — notaire de l'acquéreur : Me DUCROS</div></div>
+            <button class="btn sm">Confirmer la date</button>
+          </div>
+          <div class="ev">
+            <div class="d"><b>24</b><span>nov.</span></div>
+            <div><div class="t">Date d'acte à fixer <span class="tag">compromis du 30/08</span></div>
+              <div class="m">VA52040 · Appartement T2 · Saint-Étienne — conditions levées le 20/10</div></div>
+            <button class="btn sm">Demander une date</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═════ DOSSIERS EN COURS ═════ -->
+      <section class="card">
+        <div class="ch"><h2>Dossiers en cours <span class="n">· 9</span> <span class="org ex">registre des transactions</span></h2>
+          <div class="seg"><button class="on">Tous</button><button>Côté vendeur</button><button>Côté acquéreur</button></div></div>
+        <div class="cb">
+          <div class="stages">
+            <div class="stage"><b>2</b><span>Rétractation en cours</span></div>
+            <div class="stage"><b>3</b><span>Conditions suspensives</span></div>
+            <div class="stage on"><b>2</b><span>Acte fixé</span></div>
+            <div class="stage"><b>2</b><span>Date d'acte à fixer</span></div>
+          </div>
+
+          <div class="doss">
+            <div class="dr">
+              <div class="ph">photo</div>
+              <div><div class="ref">VM47755 · Maison 4 pièces</div><div class="sub">Roche-la-Molière · mandat 17 204 · Sophie R. (négociatrice)</div></div>
+              <div class="parties col3">M. ALBRET <span class="arrow">→</span> M. et Mme PERRIN<div class="sub">compromis du 12/08 · 212 000 €</div></div>
+              <div class="col4"><span class="tag no">Acte le 05/11</span><div class="prog" title="Pièces du dossier : 8 sur 9"><i style="width:89%"></i></div><div class="sub">pièces 8 / 9 <span class="org nv">liste à créer</span></div></div>
+              <div class="col5"><button class="btn sm">Ouvrir</button></div>
+            </div>
+            <div class="dfoot"><span>Côté : <b>vendeur et acquéreur</b> (même étude)</span><span>Séquestre : <b>10 600 €</b></span><span>Honoraires : <b>9 500 €</b> charge vendeur</span><span>Manque : <b>état daté du syndic</b></span></div>
+          </div>
+
+          <div class="doss">
+            <div class="dr">
+              <div class="ph">photo</div>
+              <div><div class="ref">VM48210 · Maison 5 pièces</div><div class="sub">Firminy · mandat 17 311 · Julien M.</div></div>
+              <div class="parties col3">Mme COSTE <span class="arrow">→</span> M. et Mme LEROY<div class="sub">compromis du 19/10 · 185 000 €</div></div>
+              <div class="col4"><span class="tag warn">Rétractation → 29/10</span><div class="prog"><i style="width:44%"></i></div><div class="sub">pièces 4 / 9</div></div>
+              <div class="col5"><button class="btn sm">Ouvrir</button></div>
+            </div>
+            <div class="dfoot"><span>Côté : <b>vendeur</b></span><span>Confrère (acquéreur) : <b>Me DUCROS</b>, Saint-Chamond</span><span>Séquestre : <b>9 250 €</b></span><span>Prêt : <b>échéance 18/12</b></span></div>
+          </div>
+
+          <div class="doss">
+            <div class="dr">
+              <div class="ph">photo</div>
+              <div><div class="ref">VA51877 · Appartement T3</div><div class="sub">Saint-Étienne · mandat 17 188 · Sophie R.</div></div>
+              <div class="parties col3">SCI LES TILLEULS <span class="arrow">→</span> M. NAVARRO<div class="sub">compromis du 05/09 · 118 000 €</div></div>
+              <div class="col4"><span class="tag">Prêt → 02/11</span><div class="prog"><i style="width:67%"></i></div><div class="sub">pièces 6 / 9</div></div>
+              <div class="col5"><button class="btn sm">Ouvrir</button></div>
+            </div>
+            <div class="dfoot"><span>Côté : <b>acquéreur</b></span><span>Confrère (vendeur) : <b>Me BERTHON</b>, Montbrison</span><span>Copropriété : <b>pré-état daté reçu</b></span></div>
+          </div>
+
+          <button class="btn ghost sm" style="margin-top:4px">Voir les 6 autres dossiers</button>
+        </div>
+      </section>
+
+      <!-- ═════ VENTES SIGNÉES ═════ -->
+      <section class="card">
+        <div class="ch"><h2>Ventes signées <span class="n">· 12 derniers mois</span> <span class="org ex">registre</span></h2>
+          <button class="btn sm">Exporter</button></div>
+        <div class="cb">
+          <table>
+            <thead><tr><th>Acte</th><th>Bien</th><th class="hide-m">Côté</th><th class="r">Prix</th><th class="r hide-m">Honoraires</th><th class="r hide-m">Délai</th></tr></thead>
+            <tbody>
+              <tr><td>14/10/2026</td><td>VM45120 · Maison · Firminy</td><td class="hide-m"><span class="tag">vendeur</span></td><td class="r">164 000 €</td><td class="r hide-m">8 200 €</td><td class="r hide-m">71 j</td></tr>
+              <tr><td>30/09/2026</td><td>VA50311 · T2 · Saint-Étienne</td><td class="hide-m"><span class="tag">les deux</span></td><td class="r">89 500 €</td><td class="r hide-m">5 500 €</td><td class="r hide-m">92 j</td></tr>
+              <tr><td>12/09/2026</td><td>VM44987 · Maison · Unieux</td><td class="hide-m"><span class="tag">acquéreur</span></td><td class="r">238 000 €</td><td class="r hide-m">10 900 €</td><td class="r hide-m">84 j</td></tr>
+              <tr><td>28/07/2026</td><td>VT6120 · Terrain · Fraisses</td><td class="hide-m"><span class="tag">vendeur</span></td><td class="r">61 000 €</td><td class="r hide-m">4 000 €</td><td class="r hide-m">66 j</td></tr>
+            </tbody>
+          </table>
+          <button class="btn ghost sm" style="margin-top:8px">Voir les 9 autres ventes</button>
+        </div>
+      </section>
+    </main>
+
+    <!-- ═════ COLONNE DE DROITE ═════ -->
+    <aside>
+      <section class="card">
+        <div class="ch"><h2>L'étude <span class="org ex">fiche contact</span></h2><button class="btn sm ghost">Modifier</button></div>
+        <div class="cb co">
+          <div class="l"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg></span><div><div class="k">Standard</div><div class="v">04 77 00 00 00</div></div><button class="btn sm">Appeler</button></div>
+          <div class="l"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></span><div><div class="k">E-mail de l'étude</div><div class="v">office@etude-exemple.notaires.fr</div></div><button class="btn sm">Écrire</button></div>
+          <div class="l"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/></svg></span><div><div class="k">Adresse</div><div class="v">12 place de l'Hôtel-de-Ville, 42000 Saint-Étienne</div></div><button class="btn sm">Itinéraire</button></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="ch"><h2>Interlocuteurs <span class="org nv">nouveau</span></h2><button class="btn sm ghost">Ajouter</button></div>
+        <div class="cb people">
+          <div class="pe"><span class="av">HV</span><div><div class="nm">Me Hélène VARENNE</div><div class="rl">Notaire associée</div></div><button class="btn sm">Écrire</button></div>
+          <div class="pe"><span class="av">CL</span><div><div class="nm">Camille LAURENT</div><div class="rl">Clerc · suit nos dossiers · ligne directe</div></div><button class="btn sm">Appeler</button></div>
+          <div class="pe"><span class="av">TF</span><div><div class="nm">Thomas FABRE</div><div class="rl">Formaliste · pièces et états datés</div></div><button class="btn sm">Écrire</button></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="ch"><h2>Avec nous <span class="org ex">calcul</span></h2></div>
+        <div class="cb">
+          <div class="bars">
+            <div class="bar"><span>Agence de Saint-Étienne</span><b>21</b><span class="tr"><i style="width:64%"></i></span></div>
+            <div class="bar"><span>Agence de Firminy</span><b>8</b><span class="tr"><i style="width:24%"></i></span></div>
+            <div class="bar"><span>Agence de Montbrison</span><b>4</b><span class="tr"><i style="width:12%"></i></span></div>
+          </div>
+          <div style="margin-top:12px" class="people">
+            <div class="k" style="font-size:12px;color:var(--subtle);font-weight:700;text-transform:uppercase;letter-spacing:.04em">Confrères fréquents</div>
+            <div class="pe"><span class="av n">JD</span><div><div class="nm">Me DUCROS</div><div class="rl">Saint-Chamond · 6 dossiers en face</div></div><span class="tag">notaire</span></div>
+            <div class="pe"><span class="av n">PB</span><div><div class="nm">Me BERTHON</div><div class="rl">Montbrison · 4 dossiers en face</div></div><span class="tag">notaire</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="ch"><h2>Pièces d'un dossier <span class="org nv">liste à créer</span></h2></div>
+        <div class="cb check">
+          <label><input type="checkbox" checked> Titre de propriété</label>
+          <label><input type="checkbox" checked> Dossier de diagnostics (DDT)</label>
+          <label><input type="checkbox" checked> Pièces d'identité / état civil des parties</label>
+          <label><input type="checkbox"> État daté / pré-état daté du syndic <span class="tag warn">copropriété</span></label>
+          <label><input type="checkbox" checked> PV des 3 dernières AG, règlement de copropriété</label>
+          <label><input type="checkbox" checked> Taxe foncière, charges</label>
+          <label><input type="checkbox"> Offre de prêt de l'acquéreur</label>
+          <label><input type="checkbox" checked> Compromis signé + preuve de remise (SRU)</label>
+          <label><input type="checkbox" checked> Attestation du séquestre</label>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="ch"><h2>Échanges <span class="org ex">e-mails, RDV</span></h2><button class="btn sm ghost">Tout voir</button></div>
+        <div class="cb feed">
+          <div class="it"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></span><div><b>Projet d'acte VM47755</b> reçu<div class="w">hier · Camille LAURENT</div></div></div>
+          <div class="it"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span><div>Signature <b>VM45120</b> à l'étude<div class="w">14/10 · Sophie R.</div></div></div>
+          <div class="it"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="m16 6-4-4-4 4"/><path d="M12 2v13"/></svg></span><div>Dossier <b>VM48210</b> envoyé (7 pièces)<div class="w">20/10 · Julien M.</div></div></div>
+          <div class="note">Note interne : préfère recevoir les diagnostics en un seul PDF ; signatures le mardi et le jeudi.</div>
+        </div>
+      </section>
+    </aside>
+  </div>
+</div>
+
+<div class="legend"><b>Origine des données</b><br><span class="org ex" style="display:inline-flex">vert</span> existe déjà chez nous (registre des transactions, fiche contact, agenda, e-mails)<br><span class="org nv" style="display:inline-flex;margin-top:6px">orange</span> nouveau : à créer (interlocuteurs, liste des pièces)</div>
+<button class="toggle" onclick="document.body.classList.toggle('show-org')">Origine des données</button>
+</body>
+</html>
