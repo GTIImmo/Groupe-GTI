@@ -2458,3 +2458,6 @@ seule (aucune fiche ouverte) :
 | retour sur Annonces, pendant la relecture | la vue revient de mémoire (7c) : 26 lignes, sous le voile |
 | retour sur Annonces, relecture finie | **26 lignes, aucun doublon, aucune ligne figée** (avant : 29, dont 3 fantômes) |
 | même geste, 2ᵉ fois | identique |
+
+**Décision de Frédéric (27/10) sur le voile du §23.8** : « On laisse le voile tel quel pour l'instant. »
+`VOILE_SI_LISTE_VIDE` n'est **pas** codé. L'audit reste valable si la question revient.
