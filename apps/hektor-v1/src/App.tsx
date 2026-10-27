@@ -20558,6 +20558,120 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       }
     : null
 
+  // ⛔ 27/10/2026 -- LES HOOKS DES POINTS 5, 6 ET 6 BIS SONT ICI, AVANT LES DEUX « return » DE CONNEXION.
+  //   Places plus bas, ils faisaient « Rendered fewer hooks than expected » (React n° 300) des que la session
+  //   manquait : page BLANCHE a la place de l'ecran de connexion. Tout hook de App se declare AU-DESSUS.
+  // POINT 5 (26/10/2026) : le fil de navigation.
+  const [filNavigation, setFilNavigation] = useState<EntreeFil[]>(lireFilNavigation)
+  const objetFilCourant = useMemo<EntreeFil | null>(() => {
+    if (!FIL_NAVIGATION) return null
+    if (detailOpen && selectedDossierId != null) {
+      if (annonceContactId) {
+        const nom = annonceContact && String(annonceContact.hektor_contact_id) === String(annonceContactId) ? String(annonceContact.display_name ?? '').trim() : ''
+        return { cle: `contact:${annonceContactId}@${selectedDossierId}`, type: 'contact', id: String(annonceContactId), surAnnonce: selectedDossierId, ecran: screen, libelle: nom }
+      }
+      const d = (selectedDossier && selectedDossier.app_dossier_id === selectedDossierId ? selectedDossier : null)
+        ?? dossiers.find((x) => x.app_dossier_id === selectedDossierId)
+        ?? mandats.find((x) => x.app_dossier_id === selectedDossierId)
+        ?? null
+      const ref = d ? String(d.numero_dossier || (d.hektor_annonce_id ? `#${d.hektor_annonce_id}` : '')).trim() : ''
+      return { cle: `annonce:${selectedDossierId}`, type: 'annonce', id: String(selectedDossierId), ecran: screen, libelle: ref, detail: d ? String(d.titre_bien ?? '').trim() : '' }
+    }
+    if (screen === 'contacts' && contactFicheOuverte && selectedContactId) {
+      const nom = selectedContact && String(selectedContact.hektor_contact_id) === String(selectedContactId) ? String(selectedContact.display_name ?? '').trim() : ''
+      return { cle: `contact:${selectedContactId}`, type: 'contact', id: String(selectedContactId), ecran: 'contacts', libelle: nom }
+    }
+    return null
+  }, [detailOpen, selectedDossierId, annonceContactId, annonceContact, selectedDossier, dossiers, mandats, screen, contactFicheOuverte, selectedContactId, selectedContact])
+  // Revenir a une fiche du fil le RACCOURCIT ; une nouvelle fiche s'ajoute (5 au plus). Un libelle qui arrive apres
+  // l'ouverture (fiche encore en chargement) complete l'entree. Aucune fiche ouverte pendant 600 ms : le fil
+  // repart de zero (le delai evite de l'effacer pendant un passage d'une fiche a l'autre).
+  useEffect(() => {
+    if (!FIL_NAVIGATION) return
+    if (!objetFilCourant) {
+      // Pas pendant le demarrage : apres F5, la fiche de l'adresse se rouvre en quelques secondes ; le fil garde
+      // (sessionStorage) ne doit pas etre efface entre-temps.
+      if (bootLoading || !adressePrete) return
+      const minuteur = window.setTimeout(() => setFilNavigation((avant) => (avant.length ? [] : avant)), 600)
+      return () => window.clearTimeout(minuteur)
+    }
+    setFilNavigation((avant) => {
+      const i = avant.findIndex((e) => e.cle === objetFilCourant.cle)
+      if (i < 0) return [...avant, objetFilCourant].slice(-FIL_NAVIGATION_LONGUEUR)
+      const garde = avant.slice(0, i + 1)
+      const ancienne = garde[i]
+      if (objetFilCourant.libelle && (ancienne.libelle !== objetFilCourant.libelle || ancienne.detail !== objetFilCourant.detail)) {
+        garde[i] = { ...ancienne, libelle: objetFilCourant.libelle, detail: objetFilCourant.detail }
+      } else if (garde.length === avant.length) {
+        return avant
+      }
+      return garde
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [objetFilCourant?.cle, objetFilCourant?.libelle, objetFilCourant?.detail, bootLoading, adressePrete])
+  useEffect(() => {
+    if (!FIL_NAVIGATION || typeof window === 'undefined') return
+    try { window.sessionStorage.setItem(FIL_NAVIGATION_STOCKAGE, JSON.stringify(filNavigation)) } catch { /* stockage indisponible */ }
+  }, [filNavigation])
+  function allerAuFil(entree: EntreeFil) {
+    setDossierReturnContactId(null)
+    if (entree.type === 'annonce' || entree.surAnnonce != null) {
+      const annonce = entree.type === 'annonce' ? Number(entree.id) : Number(entree.surAnnonce)
+      const ecran: Screen = entree.ecran === 'contacts' || entree.ecran === 'accueil' ? 'mandats' : entree.ecran
+      if (screen !== ecran) openScreen(ecran)
+      openDossierDetailPage(annonce)
+      setAnnonceContactId(entree.type === 'contact' ? entree.id : null)
+      return
+    }
+    showContactInDirectory(entree.id)
+  }
+  // POINT 6 (26/10/2026) : le suivi des travaux, mis a disposition des fiches et du compteur.
+  const [travauxVus, setTravauxVus] = useState<string[]>(() => (typeof window === 'undefined' ? [] : lireTravauxVus()))
+  function ouvrirCibleTravail(job: ConsoleJob) {
+    const p = (job.payload_json ?? {}) as Record<string, unknown>
+    const dossierId = Number(job.app_dossier_id ?? p.app_dossier_id)
+    if (Number.isFinite(dossierId) && dossierId > 0) {
+      setAnnonceContactId(null)
+      if (screen !== 'mandats' && screen !== 'estimations') openScreen('mandats')
+      openDossierDetailPage(dossierId)
+      return
+    }
+    const contact = String(p.hektor_contact_id ?? p.contact_id ?? p.app_identite ?? '').trim()
+    if (contact) showContactInDirectory(contact)
+  }
+  // Demonstration seulement (le mock est admin) : voir la fiche comme un negociateur.
+  const [demoNegociateur, setDemoNegociateur] = useState(false)
+  const contexteTravaux = useMemo<TravauxContexte>(() => ({
+    jobs: hektorActionJobs,
+    moi: session?.user?.id ?? (import.meta.env.MODE === 'mock' ? 'demo' : null),
+    vus: new Set(travauxVus),
+    marquerVu: (jobId: string) => setTravauxVus((avant) => {
+      const apres = [...avant.filter((id) => id !== jobId), jobId].slice(-200)
+      try { window.sessionStorage.setItem(TRAVAUX_VUS_STOCKAGE, JSON.stringify(apres)) } catch { /* stockage indisponible */ }
+      return apres
+    }),
+    photosEnAttente: photosEnAttenteParTravail,
+    ouvrir: ouvrirCibleTravail,
+    admin: isAdmin && !demoNegociateur,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [hektorActionJobs, session, travauxVus, photosEnAttenteParTravail, screen, isAdmin, demoNegociateur])
+  const mesTravauxListe = mesTravaux(contexteTravaux)
+  const mesTravauxEnCours = mesTravauxListe.filter((job) => isConsoleJobActive(job)).length
+  const mesTravauxEchecs = mesTravauxListe.filter((job) => etatTravail(job, contexteTravaux.vus) === 'echec').length
+  // Demonstration seulement : permet de poser de faux travaux pour voir l'affichage (le mock n'a pas de base).
+  useEffect(() => {
+    if (import.meta.env.MODE !== 'mock') return
+    ;(window as unknown as { __travauxDemo?: (jobs: ConsoleJob[], negociateur?: boolean) => void }).__travauxDemo = (jobs, negociateur) => {
+      updateHektorActionJobs(() => jobs)
+      setDemoNegociateur(Boolean(negociateur))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const contexteFilNavigation = useMemo(() => ({ fil: filNavigation, aller: allerAuFil }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [filNavigation, screen])
+
   if (hasSupabaseEnv && recoveryMode && !bootLoading) {
     if (bienvuLoginProps) return <BienvuLogin mode="recuperation" {...bienvuLoginProps} />
     return (
@@ -23585,116 +23699,6 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     </>
   )
 
-  // POINT 5 (26/10/2026) : le fil de navigation.
-  const [filNavigation, setFilNavigation] = useState<EntreeFil[]>(lireFilNavigation)
-  const objetFilCourant = useMemo<EntreeFil | null>(() => {
-    if (!FIL_NAVIGATION) return null
-    if (detailOpen && selectedDossierId != null) {
-      if (annonceContactId) {
-        const nom = annonceContact && String(annonceContact.hektor_contact_id) === String(annonceContactId) ? String(annonceContact.display_name ?? '').trim() : ''
-        return { cle: `contact:${annonceContactId}@${selectedDossierId}`, type: 'contact', id: String(annonceContactId), surAnnonce: selectedDossierId, ecran: screen, libelle: nom }
-      }
-      const d = (selectedDossier && selectedDossier.app_dossier_id === selectedDossierId ? selectedDossier : null)
-        ?? dossiers.find((x) => x.app_dossier_id === selectedDossierId)
-        ?? mandats.find((x) => x.app_dossier_id === selectedDossierId)
-        ?? null
-      const ref = d ? String(d.numero_dossier || (d.hektor_annonce_id ? `#${d.hektor_annonce_id}` : '')).trim() : ''
-      return { cle: `annonce:${selectedDossierId}`, type: 'annonce', id: String(selectedDossierId), ecran: screen, libelle: ref, detail: d ? String(d.titre_bien ?? '').trim() : '' }
-    }
-    if (screen === 'contacts' && contactFicheOuverte && selectedContactId) {
-      const nom = selectedContact && String(selectedContact.hektor_contact_id) === String(selectedContactId) ? String(selectedContact.display_name ?? '').trim() : ''
-      return { cle: `contact:${selectedContactId}`, type: 'contact', id: String(selectedContactId), ecran: 'contacts', libelle: nom }
-    }
-    return null
-  }, [detailOpen, selectedDossierId, annonceContactId, annonceContact, selectedDossier, dossiers, mandats, screen, contactFicheOuverte, selectedContactId, selectedContact])
-  // Revenir a une fiche du fil le RACCOURCIT ; une nouvelle fiche s'ajoute (5 au plus). Un libelle qui arrive apres
-  // l'ouverture (fiche encore en chargement) complete l'entree. Aucune fiche ouverte pendant 600 ms : le fil
-  // repart de zero (le delai evite de l'effacer pendant un passage d'une fiche a l'autre).
-  useEffect(() => {
-    if (!FIL_NAVIGATION) return
-    if (!objetFilCourant) {
-      // Pas pendant le demarrage : apres F5, la fiche de l'adresse se rouvre en quelques secondes ; le fil garde
-      // (sessionStorage) ne doit pas etre efface entre-temps.
-      if (bootLoading || !adressePrete) return
-      const minuteur = window.setTimeout(() => setFilNavigation((avant) => (avant.length ? [] : avant)), 600)
-      return () => window.clearTimeout(minuteur)
-    }
-    setFilNavigation((avant) => {
-      const i = avant.findIndex((e) => e.cle === objetFilCourant.cle)
-      if (i < 0) return [...avant, objetFilCourant].slice(-FIL_NAVIGATION_LONGUEUR)
-      const garde = avant.slice(0, i + 1)
-      const ancienne = garde[i]
-      if (objetFilCourant.libelle && (ancienne.libelle !== objetFilCourant.libelle || ancienne.detail !== objetFilCourant.detail)) {
-        garde[i] = { ...ancienne, libelle: objetFilCourant.libelle, detail: objetFilCourant.detail }
-      } else if (garde.length === avant.length) {
-        return avant
-      }
-      return garde
-    })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [objetFilCourant?.cle, objetFilCourant?.libelle, objetFilCourant?.detail, bootLoading, adressePrete])
-  useEffect(() => {
-    if (!FIL_NAVIGATION || typeof window === 'undefined') return
-    try { window.sessionStorage.setItem(FIL_NAVIGATION_STOCKAGE, JSON.stringify(filNavigation)) } catch { /* stockage indisponible */ }
-  }, [filNavigation])
-  function allerAuFil(entree: EntreeFil) {
-    setDossierReturnContactId(null)
-    if (entree.type === 'annonce' || entree.surAnnonce != null) {
-      const annonce = entree.type === 'annonce' ? Number(entree.id) : Number(entree.surAnnonce)
-      const ecran: Screen = entree.ecran === 'contacts' || entree.ecran === 'accueil' ? 'mandats' : entree.ecran
-      if (screen !== ecran) openScreen(ecran)
-      openDossierDetailPage(annonce)
-      setAnnonceContactId(entree.type === 'contact' ? entree.id : null)
-      return
-    }
-    showContactInDirectory(entree.id)
-  }
-  // POINT 6 (26/10/2026) : le suivi des travaux, mis a disposition des fiches et du compteur.
-  const [travauxVus, setTravauxVus] = useState<string[]>(() => (typeof window === 'undefined' ? [] : lireTravauxVus()))
-  function ouvrirCibleTravail(job: ConsoleJob) {
-    const p = (job.payload_json ?? {}) as Record<string, unknown>
-    const dossierId = Number(job.app_dossier_id ?? p.app_dossier_id)
-    if (Number.isFinite(dossierId) && dossierId > 0) {
-      setAnnonceContactId(null)
-      if (screen !== 'mandats' && screen !== 'estimations') openScreen('mandats')
-      openDossierDetailPage(dossierId)
-      return
-    }
-    const contact = String(p.hektor_contact_id ?? p.contact_id ?? p.app_identite ?? '').trim()
-    if (contact) showContactInDirectory(contact)
-  }
-  // Demonstration seulement (le mock est admin) : voir la fiche comme un negociateur.
-  const [demoNegociateur, setDemoNegociateur] = useState(false)
-  const contexteTravaux = useMemo<TravauxContexte>(() => ({
-    jobs: hektorActionJobs,
-    moi: session?.user?.id ?? (import.meta.env.MODE === 'mock' ? 'demo' : null),
-    vus: new Set(travauxVus),
-    marquerVu: (jobId: string) => setTravauxVus((avant) => {
-      const apres = [...avant.filter((id) => id !== jobId), jobId].slice(-200)
-      try { window.sessionStorage.setItem(TRAVAUX_VUS_STOCKAGE, JSON.stringify(apres)) } catch { /* stockage indisponible */ }
-      return apres
-    }),
-    photosEnAttente: photosEnAttenteParTravail,
-    ouvrir: ouvrirCibleTravail,
-    admin: isAdmin && !demoNegociateur,
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [hektorActionJobs, session, travauxVus, photosEnAttenteParTravail, screen, isAdmin, demoNegociateur])
-  const mesTravauxListe = mesTravaux(contexteTravaux)
-  const mesTravauxEnCours = mesTravauxListe.filter((job) => isConsoleJobActive(job)).length
-  const mesTravauxEchecs = mesTravauxListe.filter((job) => etatTravail(job, contexteTravaux.vus) === 'echec').length
-  // Demonstration seulement : permet de poser de faux travaux pour voir l'affichage (le mock n'a pas de base).
-  useEffect(() => {
-    if (import.meta.env.MODE !== 'mock') return
-    ;(window as unknown as { __travauxDemo?: (jobs: ConsoleJob[], negociateur?: boolean) => void }).__travauxDemo = (jobs, negociateur) => {
-      updateHektorActionJobs(() => jobs)
-      setDemoNegociateur(Boolean(negociateur))
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  const contexteFilNavigation = useMemo(() => ({ fil: filNavigation, aller: allerAuFil }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [filNavigation, screen])
   const pastilleFilMobile = FIL_NAVIGATION && filNavigation.length >= 2 && objetFilCourant ? (() => {
     const precedente = filNavigation[filNavigation.length - 2]
     return (

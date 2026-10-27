@@ -1584,3 +1584,41 @@ les 4 processus sont nés à 00:07:07-09 (après le commit 591ec16), journaux sa
 « running » — il serait passé en erreur à 00:37 et 40673 aurait été écartée **à vie** du balayage. **Remis en attente à
 00:12:31 avec l'accord de Frédéric** (une ligne, gardée par `status='running'`) : repris et **fini à 00:12:43**. Le
 balayage continue (569 en attente, ~9/min), 0 erreur depuis 23:00.
+
+### 22.4 ⛔ CONTRÔLE DU 27/10 AU MATIN (« vérifie ton travail ») — LA CONNEXION ÉTAIT CASSÉE PAR LES POINTS 5, 6 ET 6 bis
+
+**Le défaut, trouvé en ouvrant la vraie app sans être connecté** : page **blanche**, erreur React n° 300 (« Rendered
+fewer hooks than expected »). Cause : les hooks ajoutés dans `App` par le **point 5** (fil : `filNavigation`,
+`objetFilCourant`, 2 `useEffect`, `contexteFilNavigation` — 974e75d), le **point 6** (`travauxVus`, `contexteTravaux`,
+1 `useEffect` — f6433e9) et le **point 6 bis** (`demoNegociateur` — b3058b0) étaient écrits **APRÈS** les deux `return`
+de l'écran de connexion (`if (hasSupabaseEnv && !session && !bootLoading)`). Au démarrage `bootLoading` vaut vrai : tous
+les hooks tournent ; puis, sans session, le `return` anticipé en saute 9 → React tombe. **Toute personne non connectée
+(nouvel appareil, déconnexion, session expirée) avait une page blanche et ne pouvait plus se connecter.** Une personne
+déjà connectée n'était pas touchée (aucun `return` anticipé). ⚠ Le mock ne pouvait pas le voir (il n'a pas d'écran de
+connexion) : c'est la leçon « contrôler AUSSI la vraie app, déconnecté ».
+
+**Le correctif** : le bloc (111 lignes, inchangé) est **remonté** juste au-dessus des deux `return`, avec une note
+« tout hook de App se déclare AU-DESSUS ». Toutes les variables qu'il lit sont déclarées plus haut (vérifié une à une :
+la plus basse, `isAdmin`, l. 19958) ; `allerAuFil` et `ouvrirCibleTravail` sont des déclarations de fonction (hissées).
+Après le déplacement, **aucun hook** ne reste après le `return` de connexion (balayage jusqu'à la fin de `App`).
+
+**Contrôle** : `npm run build` vert ; la version construite servie en local (`vite preview`, vraie base, bienvu allumé),
+**déconnecté** : l'écran « Bon retour » s'affiche, **0 erreur React** (seulement les 401 attendus sans session).
+**Témoin inverse** : à la même minute, la version en ligne (`index-B1mF2q6p.js`) reste blanche avec l'erreur n° 300.
+
+**Le reste du contrôle du matin** :
+- workers : les 4 services tournent depuis 00:07:07-09, **aucune erreur ni alerte** dans leurs journaux du 27/10 ; file
+  vide, 0 erreur sur 12 h ; le balayage des photos a fini (963 travaux `done` depuis 23:00, dernier à 01:34) ;
+- **aucune alerte n'a encore été posée** depuis le redémarrage (aucun échec) : l'**envoi réel** de l'e-mail reste non
+  éprouvé ;
+- **aucune fiche n'est rouge** en ce moment (un seul travail abandonné sur 30 jours : `refresh_console_contact_data`
+  sans objet) : le rouge venu de la base reste non éprouvé en réel ;
+- ⚠ **réserve sur ma propre note du §22.3** : « un geste rejoué 5 fois sonne une fois » n'est vrai que si le travail
+  porte un `app_dossier_id` — l'index `app_notif_unread_uq` traite les `NULL` comme distincts. Un geste **sur un contact
+  ou une recherche** (sans dossier) qui échoue 5 fois poserait **5 avis et 5 e-mails** (dans la limite de 10/h). Et
+  l'alerte part dès le **1er échec**, même si un rejeu réussit ensuite. Mesure : 9 avis d'échec en 30 jours (5 sans
+  dossier), 1 par travail — le bruit réel est faible. **Non corrigé, à décider.**
+- ⚠ **réserve** : `app_action_status` compte **tous** les types de travail (les synchros de nuit aussi), alors que
+  l'e-mail ne part que pour les gestes (`JOB_TYPES_A_NOTIFIER`) : une pastille peut passer au rouge sans e-mail — l'admin
+  le voit alors dans Santé. Et pour un négociateur sur un bien qui n'est **pas à lui**, la fonction refuse
+  (`forbidden_action_status`) : sa pastille ne montre pas ce rouge-là.
