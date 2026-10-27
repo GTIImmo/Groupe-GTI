@@ -1466,3 +1466,61 @@ dates sont antérieures au projet.
    n'en a aucun**.
 5. **Rien n'a été écrit chez Hektor** sur ces 61 annonces : leurs seuls travaux sont 67 **lectures** de documents.
 ➡ **Ce n'est pas nous.** Les dates fausses étaient déjà dans les deux logiciels avant le projet.
+
+### 28.11 ✅ L'ANCIEN REGISTRE DES MANDATS — les vraies dates (27/10, classeur déposé par Frédéric)
+**Le fichier** : `Ancien registre des mandat.csv` (racine du dépôt, = `Downloads\export.csv`, daté du 20/12/2024 ; UTF-16, tabulations,
+champs sur plusieurs lignes ; ⛔ **données personnelles : jamais dans git**). C'est le **registre légal** : 8 441 mandats, numéros
+**9001 à 17441**, uniques et chronologiques, du **15/12/2014 au 19/12/2024** (1ʳᵉ ligne : « mandat annulé cause essai nouveau logiciel »).
+Colonnes : numéro · date · mandants · type · bien · observations. Lecteur d'essai : `scratchpad/chercher_registre.py` (nom du mandant +
+commune du bien, sans accents).
+
+**Résultat sur les 61** : **37 retrouvés** (16 par le même numéro, 21 par le nom), **24 introuvables** — 8 vendus **avant** le début du
+registre (2007-2014), et des numéros Hektor « courts » d'agences (Brioude 1399-2487, Monistrol 433-2415, Ambert 985-1311…) qui ne sont
+**pas** les numéros du registre légal.
+
+**Famille A (début Hektor = 16/06/2020) : le registre donne la VRAIE date, toujours AVANT la vente** — 12 mandats au même numéro :
+
+| annonce | n° | registre | vente | Hektor |
+|---|---|---|---|---|
+| 26204 | 9026 | **19/12/2014** | 06/05/2015 | 16/06/2020 |
+| 20246 | 9574 | **07/07/2015** | 23/10/2015 | 16/06/2020 |
+| 20219 | 9936 | **03/12/2015** | 04/07/2016 | 16/06/2020 |
+| 46086 | 9959 | **09/12/2015** | 11/03/2016 | 16/06/2020 |
+| 20217 | 10006 | **05/01/2016** | 21/11/2016 | 16/06/2020 |
+| 20216 | 10202 | **24/02/2016** | 11/01/2017 | 16/06/2020 |
+| 20139 | 11080 | **14/02/2017** | 04/07/2017 | 16/06/2020 |
+| 25339 | 11398 | **16/06/2017** | 03/10/2017 | 16/06/2020 |
+| 44870 | 11463 | **11/07/2017** | 07/12/2017 | 16/06/2020 |
+| 52810 | 11480 | **19/07/2017** | 28/02/2018 | 16/06/2020 |
+| 52077 | 11485 | **22/07/2017** | 06/11/2017 | 16/06/2020 |
+| 51421 | 11886 | **23/02/2018** | 13/06/2018 | 16/06/2020 |
+
+➡ **Le registre a raison, Hektor (et Modelo) ont perdu la date d'origine** lors de la séance du 16/06/2020 (§28.9). Les mandants et le
+bien concordent sur les 12 (même nom, même adresse).
+
+**Famille C (date isolée après la vente) : la date de Hektor est celle d'un NOUVEAU mandat inscrit au registre après la vente**, sur le
+même bien et pour les mêmes mandants, sous un **autre** numéro — Hektor a gardé l'**ancien** numéro et pris la **nouvelle** date :
+
+| annonce | n° Hektor | vente | nouveau mandat au registre | Hektor |
+|---|---|---|---|---|
+| 10376 | 3239 | 06/06/2020 | **n° 13767 du 10/08/2021** (Arlanc, LEGUILLIEZ) | 09/08/2021 |
+| 10447 | 2962 | 11/10/2019 | **n° 14446 du 26/03/2022** (Marat, NANINCK) | 26/03/2022 |
+| 10414 | 3110 | 31/03/2020 | n° 14638 du 14/05/2022, puis **n° 15914 du 14/06/2023** (Ambert, FOUGEROUSE) | 13/06/2023 |
+| 45119 | 9711 | 12/02/2016 | **n° 15793 du 02/05/2023** (Saint-Bonnet, MARDUEL) | 01/05/2023 |
+| 9823 | 4208 | 19/10/2021 | **n° 16354 du 20/10/2023** (Beurières, COULOMB) | 19/10/2023 |
+| 9626 | 14087 | 18/07/2022 | n° **14087 du 19/11/2021** (l'original, AVANT la vente) puis **n° 16445 du 21/11/2023** (Églisolles, DELORME) | 21/11/2023 |
+
+(un jour d'écart = le fuseau). ➡ Le bien **est revenu** avec un nouveau mandat ; au lieu d'en créer un, la fiche de l'**ancienne**
+annonce a été **modifiée** (date seulement). C'est le même geste que 11659 (§28.9), vu sous l'autre angle.
+
+**Deux cas à part** : 50047 (n° 9941, registre **03/12/2015** = Hektor ; la « vente » du 17/05/2010 est une vente **antérieure** du même
+bien, sur une annonce **réutilisée** — 2 ventes au registre des transactions) ; 54715 (n° 16884, registre **07/05/2024** = Hektor ; c'est
+la **vente** du 28/01/2024 qui est fausse : antérieure au mandat et à la création de l'annonce).
+
+**Ce que ça change** :
+- le **rattrapage** prend la date de la **vente** : non touché ;
+- ⭐ **notre registre des mandats peut porter les 12 vraies dates** — c'est la question déjà posée le 15/10 pour 6 écarts
+  (`PLAN_REGISTRE_MANDATS_RECHERCHE_2026-10-15.md` l. 613 : A `date_debut_app` / B corriger chez Hektor) ; **décision de Frédéric du
+  15/10 : « Laisse »**, et « si elles gênent un jour, la voie B est la bonne ». ⬜ À lui de dire si ces 12 changent la réponse ;
+- ⬜ le classeur est une **pièce du registre légal** que notre base n'a pas (8 441 mandats datés) : l'importer comme source, ou le garder
+  comme référence — à décider.
