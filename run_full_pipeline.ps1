@@ -1480,6 +1480,15 @@ if ($PushContactsToSupabase) {
     Invoke-OptionalStepWithRetry -Label "phase2 contacts devenus acquereurs" -Arguments @(
         "phase2\sync\sync_active_searches.py", "--carnet-seul"
     ) -WorkerKey "hektor.carnet_acquereurs"
+
+    # (27/10/2026) Etape 2 des types : le type de chaque contact depuis NOS registres (liens, transactions),
+    #   en FIN du bloc des contacts -- apres l'envoi des contacts et la propagation des numeros. Un geste fait
+    #   dans Hektor y arrive ; un contact neuf (envoye sans type) recoit le sien. Le geste de l'app le pose au clic.
+    #   Inerte tant que APP_TYPE_PAR_NOS_REGISTRES n'est pas a 1 dans .env (le script le dit et sort en 0).
+    #   Note des types, paragraphes 43 a 46.
+    Invoke-OptionalStepWithRetry -Label "phase2 type des contacts depuis nos registres" -Arguments @(
+        "phase2\syncecalculer_types_contacts.py"
+    ) -WorkerKey "supabase.type_contacts"
 }
 else {
     Write-RunLog "SKIP phase2 push contacts to supabase"

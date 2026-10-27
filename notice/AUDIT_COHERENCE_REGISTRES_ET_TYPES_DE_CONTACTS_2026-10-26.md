@@ -2974,3 +2974,41 @@ Après l'annulation : les 6 portes sont intactes et il ne reste aucune fonction 
 - ⚠ **Tant que la nuit n'est pas faite** (§43.3), l'envoi de nuit réécrit encore le type. Avec le même résultat (62 332 / 62 339), et
   il l'aligne sur Hektor pour un geste que Hektor n'aurait pas encore reçu : un rattachement du jour pourrait **perdre « Mandant » à la
   nuit**, puis le retrouver au geste suivant sur ce bien. ⬜ C'est la raison de faire la nuit vite.
+
+## 46. ✅ ÉTAPE 2, LA NUIT CODÉE — ELLE N'ÉCRIT PLUS LE TYPE, ET LE CALCUL PASSE EN FIN DE BLOC *(27/10, Frédéric : « vas-y »)* — NON POSÉE, INTERRUPTEUR ÉTEINT
+
+**Les pièces** :
+| où | quoi |
+|---|---|
+| `phase2/sync/push_contacts_to_supabase.py` | `rows_pour_envoi(loaded)` retire `relation_roles_json` **d'une copie** des fiches contact envoyées. L'empreinte est calculée sur la fiche entière, et l'état d'envoi enregistre `loaded`, inchangé : **aucun envoi massif**. À la relecture d'un seul contact (envoi ciblé), l'envoi appelle ensuite `app_recalculer_type_contacts` pour ce contact. Interrupteur `APP_TYPE_PAR_NOS_REGISTRES` (éteint : envoi identique). 39 lignes ajoutées, fins de ligne CRLF gardées. |
+| `phase2/sync/recalculer_types_contacts.py` (neuf) | appelle `app_recalculer_tous_les_types()`. Éteint, il le dit et sort en 0 ; un échec de l'appel sort en 1 (étape facultative). |
+| `run_full_pipeline.ps1` | **une étape facultative** « phase2 type des contacts depuis nos registres » (`-WorkerKey "supabase.type_contacts"`), en **fin du bloc des contacts** : après l'envoi des contacts (l. ~1408), la propagation des numéros et « contacts devenus acquéreurs ». Les registres des transactions (l. ~911) et des liens (l. ~1044) sont écrits avant. BOM et CRLF gardés ; **9 lignes** (vu en ignorant les fins de ligne : git garde ce fichier en LF) ; syntaxe PowerShell vérifiée (0 erreur). |
+| `supabase/patch_type_nuit_2026-10-27.sql` (+ `_INVERSE`, `_REPETITION`) | `app_recalculer_tous_les_types()` (ensembliste, **même règle** qu'au geste, interne) et la **ligne de suivi** `supabase.type_contacts`, **copiée** de sa sœur `hektor.carnet_acquereurs` (leçon du 13/10 : un battement sans ligne part dans le vide). |
+
+**Essais** :
+- **hors ligne**, `phase2/sync/test_type_par_nos_registres.py` : **9 / 9**. Il exécute le vrai code :
+  - éteint, l'envoi est identique ; allumé, les fiches partent sans le type, avec des clés uniformes (PGRST102) ;
+  - les autres colonnes et les autres tables sont intactes ;
+  - **l'empreinte est inchangée**, et `loaded` n'est pas modifié ;
+  - **mutant** (retirer le type de la fiche locale) : attrapé ;
+  - le script de fin de nuit, éteint, sort en 0 ;
+- l'essai existant `phase2/sync/test_dirty_guards.py` reste vert (4/4 ; il demande `PYTHONPATH=.`) ;
+- **la base, dans une transaction annulée** : **7 / 7 verts**.
+  - avant le calcul, **7** contacts diffèrent de nos registres (les écarts connus du §34.2) ;
+  - le calcul pour tous corrige **exactement ces 7**, en **1,6 s** ; une seconde fois, il n'écrit rien ;
+  - **même règle qu'au geste** : 0 écart sur 2 000 contacts répartis dans tout l'annuaire ;
+  - l'inverse retire la fonction et la ligne de suivi.
+- ⚠ Ma répétition appelait d'abord le calcul d'**un** contact sur les 62 339 (plus de 13 min, le pooler coupe à 120 s) : vu en relisant,
+  remplacé par un calcul d'ensemble et un échantillon de 2 000, **avant** l'essai.
+
+⚠ **Le programme d'envoi et le pipeline sont en service dès leur écriture** : la nuit et la relecture d'un contact les utilisent. **Avec
+l'interrupteur éteint, leur effet est nul** : envoi identique, et l'étape neuve dit « éteint » puis sort en 0. Rien ne change cette nuit
+tant que la pose n'est pas faite.
+
+⬜ **La pose, dans cet ordre** (accord de Frédéric) :
+1. **la base** : `patch_type_nuit_2026-10-27.sql`, puis sa répétition. Elle remet les 7 écarts d'après nos registres ;
+2. **l'interrupteur** : `APP_TYPE_PAR_NOS_REGISTRES=1` dans `.env`. Effet à la prochaine relecture d'un contact, et à la prochaine nuit ;
+3. **demain matin** : lire le journal du run (l'étape « phase2 type des contacts depuis nos registres » et son compte) et le battement
+   `supabase.type_contacts` ; vérifier que les fiches envoyées ont gardé leur type.
+
+Ensuite : **les 3 retours arrière du worker** (§43.3, redémarrage des 4 services, file vide).

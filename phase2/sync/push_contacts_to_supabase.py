@@ -487,6 +487,34 @@ sys.path.insert(0, str(ROOT / "phase2" / "identite"))
 from contrat_autorite import CHAMPS_APP_CONTACT as APP_OWNED_CONTACT_FIELDS  # noqa: E402
 
 
+# ⑧ TYPES, ÉTAPE 2 (27/10/2026) : LE TYPE D'UN CONTACT EST CALCULÉ CHEZ NOUS (note des types §43 à §46).
+#   `relation_roles_json` est désormais tenu par la BASE : au geste (app_recalculer_type_du_bien, dans les 6 portes
+#   de l'app) et en fin de nuit (étape « phase2 type des contacts depuis nos registres »). L'envoi de nuit ne
+#   l'écrit donc plus : un contact existant GARDE le sien (upsert merge-duplicates : seules les colonnes envoyées
+#   sont réécrites) ; un contact neuf reçoit `[]`, puis l'étape de fin de nuit le remplit.
+#   ⚠ La colonne reste dans la fiche LOCALE et dans son EMPREINTE (filter_changed_rows, mark_pushed_rows) : on ne
+#     la retire que d'une COPIE envoyée -- sinon les 62 000 fiches sembleraient changées et repartiraient toutes.
+#   ⚠ Toutes les fiches d'un même lot gardent les mêmes clés (PostgREST refuse un lot hétérogène, PGRST102).
+#   Interrupteur : APP_TYPE_PAR_NOS_REGISTRES=1 dans .env. Éteint : l'envoi est IDENTIQUE à avant.
+COLONNE_DU_TYPE = "relation_roles_json"
+
+
+def type_par_nos_registres() -> bool:
+    return (os.environ.get("APP_TYPE_PAR_NOS_REGISTRES") or "0").strip() == "1"
+
+
+def rows_pour_envoi(loaded: list[tuple[str, list[dict[str, Any]]]]) -> list[tuple[str, list[dict[str, Any]]]]:
+    """Les lignes à envoyer : celles de `loaded`, sauf le type des fiches contact quand l'interrupteur est allumé.
+    Ne modifie JAMAIS `loaded` (son empreinte est enregistrée après l'envoi)."""
+    if not type_par_nos_registres():
+        return loaded
+    return [
+        (table, [{k: v for k, v in row.items() if k != COLONNE_DU_TYPE} for row in rows])
+        if table == "app_contact_current" else (table, rows)
+        for table, rows in loaded
+    ]
+
+
 def fetch_app_owned_contact_fields(client: "SupabaseRestClient", contact_ids: list[str] | None) -> dict[str, dict[str, Any]]:
     """Champs 'app-owned' (naissance/lieu/matrimonial) : Hektor ne les renvoie jamais, seule
     l'app les écrit (RPC app_edit_contact_optimistic). Le pipeline local ne les porte pas.
@@ -898,8 +926,18 @@ def main() -> int:
     # Avant, la branche ciblee supprimait en bloc puis reposait : si la repose echouait
     # (cf. PGRST102), les lignes restaient supprimees. Desormais un echec de repose ne
     # detruit plus rien -- au pire Supabase garde l'etat precedent.
-    for table, rows in loaded:
+    for table, rows in rows_pour_envoi(loaded):
         results[table] = client.upsert_rows(table, rows, args.batch_size)
+    # ⑧ étape 2 : à la relecture d'UN contact (envoi ciblé), son type est recalculé tout de suite depuis nos
+    #   registres. La nuit (envoi complet) le fait pour tous, à l'étape de fin du bloc des contacts.
+    if contact_ids and type_par_nos_registres():
+        try:
+            change = client.request(method="POST", path="rpc/app_recalculer_type_contacts",
+                                    payload={"p_contacts": [str(c) for c in contact_ids]})
+            print(f"[type au geste] recalcule pour {len(contact_ids)} contact(s) : {change} change(s)")
+        except Exception as souci:                                   # noqa: BLE001
+            # Ne fait pas échouer l'envoi : la nuit rattrapera. Mais on le DIT.
+            print(f"[type au geste] RECALCUL NON FAIT (la nuit le fera) : {souci!r}")
 
     if contact_ids:
         # app_contact_current = 1 ligne par contact (PK hektor_contact_id), reinseree en
