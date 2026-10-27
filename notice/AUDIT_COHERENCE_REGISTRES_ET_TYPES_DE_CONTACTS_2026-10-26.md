@@ -1348,3 +1348,13 @@ ajouté ou non » — écrite **une fois** dans `regle_acheteur_proprietaire.py`
 - **C** — rattraper une fenêtre récente (par exemple depuis 2018 : 4 748 ; depuis 2022 : 2 217), là où l'acheteur est très probablement
   encore propriétaire ;
 - et dans B ou C : **avant**, poser le « jusqu'à » du vendeur (C11), sinon chaque bien rattrapé montre deux propriétaires.
+
+### 28.5 ⛔ Correction (27/10, question de Frédéric : « pourquoi une date de fin du vendeur ? »)
+**Son modèle** : bien sous mandat → le propriétaire est **mandant** ; bien sans mandat → **propriétaire** ; l'acheteur d'une vente →
+**propriétaire depuis la vente** ; s'il signe un jour un nouveau mandat sur ce bien → il devient **aussi mandant**, sur une autre période.
+C'est exactement D1 + D2 + D3. ➡ **Le « jusqu'à » du vendeur n'est PAS un préalable au rattrapage** : le vendeur reste « Mandant » du mandat
+clos (D3, historique) et l'acheteur devient « Propriétaire depuis la vente ». Je retire cette condition du §28.4.
+**Ce que le code ne sait pas encore faire de ce modèle** : un seul lien par personne et par bien (clé `app_contact_id + hektor_annonce_id`),
+donc **un seul rôle à la fois, sans période**. Quand l'acheteur re-signe, la règle de nuit lève `origine = 'vente'` et **efface la date**
+(`a_lever`) : il redevient « mandant » et perd « propriétaire depuis ». Garder les deux périodes demande que le mandant soit rattaché **au
+mandat** (ses dates), pas au bien — c'est C2 / D1, à faire plus tard. Sans effet sur le rattrapage.
