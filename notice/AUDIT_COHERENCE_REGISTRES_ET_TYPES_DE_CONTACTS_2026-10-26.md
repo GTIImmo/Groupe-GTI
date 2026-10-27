@@ -1524,3 +1524,18 @@ la **vente** du 28/01/2024 qui est fausse : antérieure au mandat et à la créa
   15/10 : « Laisse »**, et « si elles gênent un jour, la voie B est la bonne ». ⬜ À lui de dire si ces 12 changent la réponse ;
 - ⬜ le classeur est une **pièce du registre légal** que notre base n'a pas (8 441 mandats datés) : l'importer comme source, ou le garder
   comme référence — à décider.
+
+### 28.12 Le rattrapage doit-il s'appuyer sur NOTRE clé de mandat (`app_mandat_id`) ? *(Frédéric, 27/10)* — vérifié
+**Aujourd'hui, non** : la règle du chantier 1 (`regle_acheteur_proprietaire.py`, `charger_textes_des_mandats`) cherche le nom de
+l'acheteur dans les textes de **tous** les mandats du bien, retrouvés **par l'annonce** ; elle n'utilise ni le numéro de mandat, ni notre
+clé. Et je ne l'avais **pas** prévu dans la proposition du rattrapage.
+**Mesure sur les 10 389** (9 305 jugeables : nom connu d'au moins 3 lettres) : **7 131** ventes portent notre clé `app_mandat_id`
+(chantier 2 c) ; l'acheteur est nommé dans **le mandat de SA vente** pour **22** d'entre eux (vrais mandants, homonymes de famille, ou
+fiche réécrite comme 11659) ; nommé dans un **autre** mandat du bien : **0** — un seul de ces biens porte un second mandat chez nous
+(Hektor ne donne que le mandat courant d'une annonce).
+➡ **Pour le rattrapage, le résultat est le même** avec ou sans la clé. **Mais la forme doit s'appuyer sur notre clé** :
+- le lien « propriétaire depuis la vente » retient **le mandat sous lequel il a acheté** par `app_mandat_id` (jamais le numéro : 3364
+  existe trois fois, §28.9) ; un mandat **postérieur** (une autre clé) qui le nomme fera de lui le mandant **de ce mandat-là**, sans
+  effacer « propriétaire depuis » — c'est la période que demande Frédéric (§28.5) ;
+- les **2 174** ventes jugeables sans notre clé (23 %) gardent le repli par l'annonce, comme aujourd'hui ;
+- la **date** reste celle de la vente, jamais celle du mandat (§28.7-28.11).
