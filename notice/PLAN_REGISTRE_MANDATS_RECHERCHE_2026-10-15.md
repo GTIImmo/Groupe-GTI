@@ -623,3 +623,18 @@ vraies fautes de Hektor : si elles gênent un jour, la voie **B** est la bonne �
 pas à nous de recouvrir une erreur de saisie par une colonne de compensation.
 
 **Le lot ① est clos. Rien n'a été écrit.**
+
+---
+
+## 13. 27/10/2026 — LES 518 RECHERCHES DU REGISTRE LÉGAL 2014-2024 SONT ENTRÉES
+
+Décision de Frédéric (27/10) : *« oui »* aux recherches 2014-2024, locations et gestions exclues ;
+les ventes sans bien connu restent dehors (**décision du 15/10 confirmée**, choix B).
+
+- `importer_mandats_recherche.py` lit `Ancien registre des mandat.csv` (objet « recherche », réservés et
+  annulés écartés) : **518 posées**, même patron qu'au 15/10 (`hektor_annonce_id = ''`, plage du run,
+  `present_in_hektor = 0`, piège « 8 682 » : 59 numéros refusés). Contact retrouvé 381 / 556.
+- Défaut corrigé dans les deux portes : les dates Modelo (UTC) étaient prises **la veille** → `date_paris()`.
+- Détail, chiffres et retour arrière : `notice/ETUDE_CORRESPONDANCES_APP_CLASSEURS_2026-10-27.md` §11 sexies.
+- ⚠ **L'étape 4 de ce plan reste à faire** : le clic MOBILE sur un mandat sans bien est toujours muet
+  (`App.tsx:24277`, `if (row?.app_dossier_id)`) — il touche maintenant 556 lignes au lieu de 38.

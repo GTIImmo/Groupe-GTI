@@ -359,6 +359,18 @@ les 99 ventes sans bien connu attendent ; locations et gestions exclues.
 - Restent hors champ : 18455 (dans le seul registre Hektor 2026, que la porte des ventes ne lit pas), 18500 (avenant),
   18383 et 10 autres ventes à bien inconnu (décision B).
 
+#### ✅ ÉCRIT dans phase2.sqlite le 27/10 vers 16:00 (accord de Frédéric)
+
+- Sauvegarde datée : table `app_mandat_avant_correctif5_20261027` (26 932 lignes), dans phase2.sqlite.
+- Contrôle contre la sauvegarde : 26 932 → **27 452** lignes, **+520** (518 `registre_legal_2014_2024` RECHERCHE
+  sans bien + 2 VENTE `modelo` 18404/18408), **0 disparue, 0 sans date**, toutes `present_in_hektor = 0`, ids
+  dans la plage du run. **47 lignes existantes modifiées** : 31 dates (+1 jour : 22 recherches et 9 ventes du 15/10,
+  ex. 17283 → 08/10/2024) et 16 recherches du registre 2026 dont seul `last_seen_at` bouge.
+- Retour arrière : `DELETE FROM app_mandat WHERE origine='registre_legal_2014_2024'` + les deux ventes
+  (`origine='modelo' AND numero_mandat IN ('18404','18408')`), puis les 31 dates depuis la sauvegarde.
+  ⚠ Supabase les recevra par le push de nuit (upsert) : un retour arrière après la nuit devra aussi les retirer là-bas.
+- ⏰ Après la nuit : Supabase `app_mandat` = 27 452 lignes ; registre affiché +520.
+
 ## 11. Fichiers
 
 - **Détail ligne à ligne, toutes années** (19 908 écarts, nominatif, hors git) :
