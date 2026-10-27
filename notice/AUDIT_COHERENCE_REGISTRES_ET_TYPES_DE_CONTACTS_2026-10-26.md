@@ -2956,3 +2956,21 @@ Après l'annulation : les 6 portes sont intactes et il ne reste aucune fonction 
 1. **poser** ce patch (accord de Frédéric), puis la répétition ;
 2. **la nuit** (`push_contacts_to_supabase.py`, derrière un interrupteur) ;
 3. **le worker** (3 lignes ; redémarrage des 4 services, file vide).
+
+### 45.1 ✅ POSÉE EN BASE LE 27/10 *(Frédéric : « vas-y »)*
+- **Posé par moi**, par le pooler, avec le fichier tel quel. **Répétition : 11 / 11 verts au premier passage.**
+  - les 6 portes portent la ligne ;
+  - les essais réels de rattachement et de suppression sont verts, puis annulés ;
+  - le calcul rend le type de la nuit ;
+  - le bien le plus chargé se recalcule en 10 ms ;
+  - la règle des portes de demain est verte.
+- ⚠ **Ce que la répétition écrit pour de vrai** : les contrôles 5 et 6 appellent le recalcul du bien le plus chargé (annonce 10555) **hors**
+  d'un sous-bloc annulé. Mesuré aussitôt : **41 contacts** sur ce bien, **aucun** parmi les 7 écarts connus. Ils sont tous égaux à nos
+  registres ⇒ **aucune réécriture réelle**. ⬜ À rejouer, la répétition le refera sans dommage (elle n'écrit que si le type diffère).
+- **Rien n'est resté des essais** : aucun lien d'essai, aucun travail de rattachement ou de suppression récent. Les deux contacts des
+  essais (10000167, 10099691) gardent leur type d'avant.
+- **À partir de maintenant**, un rattachement, un retrait, une création de mandant, un statut (offre, compromis, vente), une suppression
+  ou une modification de transaction **met le type à jour au clic**.
+- ⚠ **Tant que la nuit n'est pas faite** (§43.3), l'envoi de nuit réécrit encore le type. Avec le même résultat (62 332 / 62 339), et
+  il l'aligne sur Hektor pour un geste que Hektor n'aurait pas encore reçu : un rattachement du jour pourrait **perdre « Mandant » à la
+  nuit**, puis le retrouver au geste suivant sur ce bien. ⬜ C'est la raison de faire la nuit vite.
