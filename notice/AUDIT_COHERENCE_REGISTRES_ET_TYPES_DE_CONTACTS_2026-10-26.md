@@ -1552,3 +1552,72 @@ fiche réécrite comme 11659) ; nommé dans un **autre** mandat du bien : **0** 
 - ⬜ **Proposition (écran seulement, à son « vas-y »)** : une ligne par bien qui porte **tous** ses rôles, dans un ordre fixe
   (« Propriétaire depuis le … · Acheteur — vente du … »), au lieu du premier venu ; avec les deux colonnes `origine` / `proprietaire_depuis`
   ajoutées à la vue (base).
+
+## 29. LA PROPOSITION COMPLÈTE — l'étape 4 des types, de bout en bout *(27/10, Frédéric : « ok pour ta proposition mais détaille-la de nouveau entièrement »)* — rien codé
+
+**Le but** (Frédéric) : l'app autonome dans les deux sens — **un geste dans l'app est chez nous à l'instant**, **un geste dans Hektor
+arrive la nuit** et sert de confirmation ; un seul vocabulaire à l'écran ; « propriétaire depuis la vente » visible, sans nouveau type.
+Six pièces, chacune : code → essais (dont témoin inverse) → pose → contrôle ; chacune derrière un interrupteur, avec son retour arrière.
+
+### P1 — Un seul vocabulaire à l'écran (C8) · écran seulement
+- **Quoi** : la logique de l'annuaire du bureau (`contactDirectoryCategories`) devient la seule ; elle remplace `contactToneFromRoles`
+  (cartes du téléphone l. ~45883, pastille `ContactTypeMark` l. ~39029) et `rolesContact` (`RechercheGlobale.tsx` l. 78).
+  Mots : **Mandant · Acheteur** (offre / compromis / vente) **· Propriétaire · Acquéreur** (recherche active). Le menu « Rôle contact »
+  (l. ~23867, ~24557) : « Acquereur » → « **Acheteur** » (la valeur filtrée ne change pas : les trois rôles de transaction).
+- **À trancher** : les options « Notaire entrée / sortie » du menu ne trouvent **aucun** contact → les retirer, ou les garder pour plus tard.
+- **Ce que ça pourrait casser** : les couleurs des cartes du téléphone (classes `is-<ton>`) ; les trois écrans doivent dire la même
+  chose qu'avant pour un contact à un seul rôle.
+- **Essais** : un essai qui joue les trois anciennes fonctions et la nouvelle sur tous les ensembles de rôles réels (5 rôles, leurs
+  combinaisons) ; à l'écran, bureau **et** 390 px. **Retour** : l'interrupteur.
+
+### P2 — La fiche contact : un bien = une ligne avec TOUS ses rôles (§28.13) · base + écran
+- **Base** : ajouter à la vue `app_contact_relations_current` les colonnes `origine` et `proprietaire_depuis` (à la fin, la vue garde
+  ses 18 colonnes dans le même ordre ; `security_invoker` et l'enveloppe de la règle gardées).
+- **Écran** : dans les deux fiches (V1 l. ~43814, V2 l. ~44537), regrouper les lignes d'un même bien au lieu de garder la première ;
+  ordre fixe des rôles : Mandant → Propriétaire (« depuis le … ») → Acheteur (étape la plus avancée, date, montant).
+- **Ce que ça pourrait casser** : la rubrique Contact d'un bien et les e-mails préremplis lisent la même vue (colonnes en plus, rien de
+  retiré) ; le temps de la fiche (39 ms admin / 131 ms commercial ce matin) doit rester dans ses seuils.
+- **Essais** : patch + inverse + répétition (la vue d'avant se reconstitue à l'octet, temps sous les comptes réels) ; à l'écran JACQUIER
+  (61730), un vendeur, un acheteur en cours. **Retour** : l'inverse de la vue ; l'interrupteur à l'écran.
+
+### P3 — Le type suit le geste (C6) · base seulement
+- **Quoi** : un déclencheur sur `app_relation` et sur la table des parties recalcule `relation_roles_json` du **seul** contact touché,
+  avec le même calcul que la vue (62 337 / 62 339 identiques au type de nuit). La nuit continue de tout refaire : elle confirme.
+- **Ce que ça pourrait casser** : **le temps de la nuit** — le push des 31 113 transactions touche des milliers de contacts ; à mesurer
+  dans une transaction annulée avant toute pose (référence : la table des parties a coûté ~22 s). Garde : ne recalculer que si les rôles
+  changent ; ne jamais faire échouer l'écriture d'origine.
+- **Essais** : transaction annulée (un mandant lié, une offre créée → le type change à l'instant ; le push de nuit rejoué, temps mesuré) ;
+  la sentinelle des parties reste à 0. **Retour** : retirer le déclencheur.
+
+### P4 — Les mandants saisis à la création d'une annonce, chez nous au clic · base (+ worker si besoin)
+- **Quoi** : `app_create_annonce_job_optimistic` (api.ts l. ~11514) écrit les liens des mandants comme la porte « lier un mandant »
+  (`app_link_mandant_optimistic`) : ligne `source = 'app'`, `present_in_hektor = false`, confirmée par le worker (`relation_etablie`)
+  ou **défaite** si Hektor refuse.
+- **Particularité** : à la création, l'annonce n'a pas encore son numéro Hektor ; or la clé du registre des liens est (contact, annonce
+  Hektor). ⚠ **À auditer en détail avant tout code** (la limite est écrite dans `relation_ledger.py` : « le jour où l'app créera un lien
+  sur une annonce NÉE DANS L'APP… il faudra basculer la clé »). Usage réel : 0 en 60 jours ; mais c'est la porte principale à la coupure.
+- **Retour** : l'interrupteur.
+
+### P5 — L'acheteur « propriétaire depuis la vente » au geste de la vente · base + règle de nuit
+- **Quoi** : quand une **vente** est créée dans l'app (`app_change_annonce_status_optimistic`), l'acheteur reçoit tout de suite son lien
+  « propriétaire depuis la vente » (origine `vente`, date = **la date de la vente**, et **la clé du mandat de la vente** `app_mandat_id`,
+  §28.12) ; **supprimer la vente** retire ce lien — et **uniquement** un lien d'origine `vente`, jamais un vrai mandant (C10).
+- **La règle de nuit change** (`regle_acheteur_proprietaire.py`, une seule fois, lue par ses deux lecteurs) : aujourd'hui elle ne
+  **reclasse** qu'un lien que Hektor a ajouté, et **lève** chaque nuit ce qu'elle ne retrouve pas (`a_lever`) — elle déferait le lien posé
+  au clic. Elle doit reconnaître « l'acheteur d'une vente vivante de notre registre » comme source. Les garde-fous restent : jamais un
+  acheteur nommé dans le mandat de **sa** vente (22 cas), jamais une fiche sans nom (1 063).
+- **Essais** : transaction annulée puis essai réel sur un bien d'essai (accord). **Retour** : l'interrupteur de la règle.
+
+### P6 — Le rattrapage des acheteurs d'avant le 17/07 · même règle que P5 · ⬜ DÉCISION A / B / C EN ATTENTE
+- **Quoi** : la même règle, appliquée aux ventes passées : **A** rien · **B** les 10 389 · **C** une fenêtre (depuis 2018 : 4 748 ;
+  depuis 2022 : 2 217). Date = la vente (jamais le mandat : §28.7-28.11). Ancre = notre clé de mandat quand la vente la porte (7 131 /
+  9 305), sinon l'annonce.
+- **Ce que ça pourrait casser** : des acheteurs anciens qui ont revendu **sans** l'agence deviendraient de faux propriétaires (le risque
+  croît avec l'ancienneté) ; le compteur « Propriétaires » monte d'autant ; 6 218 de ces fiches sont archivées (le lien s'y pose quand
+  même, la fiche reste archivée) ; le registre des mandats ne doit pas les montrer comme mandants (déjà garanti par `origine`, à reprouver).
+- **Essais** : sur une copie, le nombre exact posé, les 10 vrais mandants intacts, JACQUIER intact ; puis la nuit. **Retour** :
+  l'interrupteur (la nuit suivante remet à vide, comme le chantier 1).
+
+### L'ordre proposé
+**P1** (mots) → **P2** (fiche) → **P3** (type au geste) → **P5 + P6** (une seule règle ; P6 attend la décision) → **P4** (après son audit).
+Rien n'est envoyé chez Hektor par aucune pièce.
