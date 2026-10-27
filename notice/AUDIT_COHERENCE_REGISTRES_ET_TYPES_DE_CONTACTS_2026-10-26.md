@@ -3077,3 +3077,29 @@ fonction ne fait jamais échouer). Elle **ne jette jamais** et écrit une ligne 
 ⚠ **Coordination** : le fichier du worker porte **130 lignes non commitées de l'autre session** (signature Youtrust), écrites à 14:33,
 donc **après** le redémarrage de 10:23. **Un redémarrage chargerait aussi ce code-là.** Mon commit ne prendra que mes lignes (contenu
 déposé à part dans git) ; mais le redémarrage, lui, chargera le fichier entier.
+
+### 47.1 ✅ CODÉ LE 27/10 (commit `a5b1676`) — EN ATTENTE DU REDÉMARRAGE *(Frédéric : « code le correctif, redémarre et informe juste le chat voisin »)*
+
+- **Le code** :
+  - `journalDuType`, `recalculerTypeDuBien`, `contactsDeLAffaire`, `recalculerTypeDesContacts` (avant `annulerRetraitOptimiste`) ;
+  - 5 branchements : retrait défait, rattachement défait (seulement si une ligne est défaite), suppression défaite (le bien de la ligne
+    **relue**), liste retenue par Hektor (parties lues **avant et après** : l'acquéreur écarté perd son rôle), suppression confirmée
+    (parties lues **avant** l'effacement) ;
+  - 77 lignes, aucune retirée. **Jamais bloquant** : ni la base qui refuse, ni le journal qui tombe ne lèvent d'exception.
+- **Essais** : `Console/test_type_apres_ecriture_worker.js` **9 / 9**, sur le code réel découpé dans le worker. Il porte 2 témoins inverses,
+  un refus de la base, une panne du journal, et un **mutant attrapé**.
+  - `test_relecture_garde_nos_numeros.js` rougissait (`contactsDeLAffaire is not defined` : son bac à sable ne connaissait pas les aides).
+    Je lui ai ajouté les 4 morceaux : il est vert, ses 6 contrôles inchangés. `test_controle_carnet_r3.js` est vert.
+  - ⚠ `test_report_retractation.js` rougit **déjà sur la version d'avant** (`GARDER_NOS_NUMEROS_A_LA_RELECTURE is not defined`, ancien
+    défaut de son bac à sable) : noté, pas touché.
+- **Le commit ne porte que mes lignes** : un correctif appliqué à l'index seul. Les 130 lignes Youtrust de l'autre session restent hors
+  commit, dans la copie de travail ; la session voisine est **prévenue** (message du 27/10, 23:27).
+- **Redémarrage** : ⛔ **refusé à mon compte** (« Impossible d'ouvrir le service »), il revient à Frédéric.
+  - **Admin, Actions et SyncLight** : file vide pour eux (0 en attente, 0 en cours, mesuré à 23:25). Ce sont eux qui portent les liens et
+    les transactions.
+  - **Documents** : il traitait le balayage des photos (877 en attente, 1 en cours à 23:24). **Il ne porte aucun des 5 chemins** : on le
+    redémarre plus tard, file vide.
+  - ⚠ Le redémarrage chargera **aussi** le code Youtrust non commité de l'autre session. Il reste derrière son interrupteur ; ses types
+    `youtrust_*` sont au service Documents.
+- **Preuve à faire après le redémarrage** : l'heure de départ des processus doit être après 23:22:32 (dernière écriture du fichier). Le
+  premier geste défait, ou la première liste retenue par Hektor, écrit une ligne `type_des_contacts` au journal du travail.
