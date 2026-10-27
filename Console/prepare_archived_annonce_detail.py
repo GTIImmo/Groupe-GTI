@@ -268,6 +268,14 @@ def build_detail_payload(conn: sqlite3.Connection, annonce_id: str) -> tuple[int
     return app_archive_id, payload
 
 
+def normalize_timestamp(value: Any) -> str | None:
+    # Hektor date « vide » en 0000-00-00 (MySQL) : refuse par timestamptz (22008).
+    text = str(value or "").strip()
+    if not text or text.startswith("0000-00-00"):
+        return None
+    return text
+
+
 def supabase_upsert(row: dict[str, Any]) -> None:
     supabase_url = (os.getenv("SUPABASE_URL") or os.getenv("VITE_SUPABASE_URL") or "").rstrip("/")
     service_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or ""
@@ -326,7 +334,7 @@ def main() -> None:
         "prepared_at": prepared_at.isoformat(timespec="seconds"),
         "expires_at": (prepared_at + timedelta(hours=max(1, args.ttl_hours))).isoformat(timespec="seconds"),
         "source_hash": hashlib.sha256(payload_text.encode("utf-8")).hexdigest(),
-        "source_updated_at": payload["listing"].get("date_maj") or None,
+        "source_updated_at": normalize_timestamp(payload["listing"].get("date_maj")),
     }
     supabase_upsert(row)
     print(json.dumps({
