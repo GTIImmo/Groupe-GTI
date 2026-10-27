@@ -1841,9 +1841,24 @@ c'est 605967.
   **les refus et la relecture exécutés tels qu'extraits du fichier**, avec des listes simulées : 8 cas de ciblage
   (dont le 26/10 rejoué avec l'ancienne liste → **refusé**, « rang 1 demandé, 1 recherche lue ») + 5 cas de relecture
   (date posée, déjà archivée, autre date, numéro disparu, Hektor en panne) → tous conformes.
-- **Pas éprouvé** : en **contexte négociateur** et par un vrai travail. À faire après redémarrage, sur 605946 (accord
-  requis : écriture chez Hektor). Ses deux recherches sont archivées : un « supprimer » de rang 1 doit poser la date sur
-  471894 et dire « déjà archivée ».
+- **Commité 319e1e4**, poussé et worker redémarré par Frédéric (27/10 après-midi).
+- ✅ **ÉPROUVÉ EN RÉEL le 27/10, 14:15-14:17 UTC** (accord : « crée une recherche d'essai sur 20000008 depuis l'app, puis
+  supprime-la pour éprouver le correctif (deux écritures chez Hektor, accord donné) »), depuis l'app dans le Chrome de
+  Frédéric. *(L'essai prévu sur Firminy était devenu impossible : archivée à la main à 13:16, l'app n'avait plus de
+  recherche active à supprimer.)*
+  1. Création d'une recherche d'essai (Maison, Yssingeaux 43200, 120-250 k€) → travail `add_hektor_contact_search`
+     terminé 14:16:09 → chez Hektor **471896 au rang 2** (`AAo`), chez nous `app_search_id` 77256 au rang 2 (`AAo`).
+  2. Corbeille de l'app (confirmation : « Archiver cette recherche dans Hektor ? ») → travail `c34b083d` (contexte
+     **négociateur**, `search_index: 2`), terminé 14:17:12. Journal :
+     `source: data-search-id, count: 3, nos_recherches: 3, requested_index: 2, selected_idCritere: 471896,
+     deja_archivee: false` → date 27-10-2026 posée → relue : « date 27-10-2026 posée, archivage attendu cette nuit »
+     (`rang: 2, date_posee: true`) ; résultat `archivage: "differe"`.
+  3. Relu chez Hektor (lecture seule) : 471880 Le Puy garde **26-10-2026** (l'ancien code l'aurait visée), 471894
+     Firminy 27-10-2026 (mon essai de 13:15), **471896 = 27-10-2026, encore active** — attendu.
+  4. Chez nous, après la relecture du contact (14:17:29) : 77256 **archive = true**. La marque locale a tenu cette fois ;
+     la raison n'est **pas mesurée** (l'API de Hektor compte-t-elle déjà « archivée » une recherche dont la date est
+     aujourd'hui ?). Le chantier « marque locale » reste ouvert tant que ce n'est pas compris.
+  ⏰ **Témoin le 28/10 au matin** : 471896 doit porter l'icône archivée chez Hektor (archivage de nuit).
 
 **D. Ce que ça pourrait casser ailleurs.** La pièce 2 transforme un mauvais geste silencieux en **échec visible** : un
 contact dont la liste ne se lit pas verra son « supprimer » échouer au lieu de viser la 1ʳᵉ recherche. C'est voulu.
