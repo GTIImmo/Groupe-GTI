@@ -1154,3 +1154,49 @@ relecture des deux galeries depuis** — 63306 (54), 59203 (30), 62716 (7), 4792
 ⬜ **À décider par Frédéric** : relire ces 11 annonces ; et le remède de fond (par exemple : l'entretien ne marque plus
 « absente », il pose une relecture des deux galeries de l'annonce — le patron du bouton masquer, qui pose déjà un
 `sync_hektor_photos` quand il découvre). Rien n'est codé.
+
+## 27. ÉTAPE 4 (suite) — LES TYPES À LA LECTURE (C6 + C8) : audit du 27/10 *(Frédéric : « ok »)* — lecture seule, rien codé
+
+⭐ **La pièce 5 est déjà faite** : depuis la pose de la table des parties (§18, 26/10 13:21), la vue des liens d'un contact
+(`app_contact_relations_current`) lit les acheteurs dans **notre** registre des transactions (35 005 / 35 005). Reste : le **type**.
+
+### 27.1 Où le type est calculé — un seul écrivain
+`phase2/contacts/build_contacts_layer.py` (l. 1412-1426, 1771, 1806) : `relation_roles_json` = l'ensemble des `role_contact`
+des liens du contact. Il tourne **la nuit** (push des contacts) **et** à chaque relecture d'un contact par le worker
+(`refresh_contact_inproc.py`, étapes build + push) — mais il lit le **miroir local** de Hektor, pas nos registres.
+Valeurs réelles (62 339 contacts de l'annuaire) : `proprietaire` 25 438 · `mandant` 22 912 · `acquereur_compromis` 11 712 ·
+`acquereur_vente` 10 287 · `acquereur_offre` 9 640. ⚠ **Aucun rôle `notaire`** dans les données.
+
+### 27.2 La mesure qui change tout
+Le type de nuit, comparé au type **recalculé maintenant** depuis la vue (qui lit `app_relation` + `app_affaire_partie`) :
+**62 337 identiques sur 62 339**. Les 2 écarts : un contact archivé (10324835, « mandant » sans lien visible) et 10205503
+(« propriétaire » sans lien visible) — restes, sans effet. ➡ **Le calcul de nuit est juste** ; C6 n'est qu'une question
+de **délai** dans la journée, pas d'exactitude. ⚠ Le délai lui-même n'est **pas mesuré en réel** : `app_relation` n'a eu
+**aucun lien né dans la journée** en 7 jours (il n'est écrit que la nuit), et `app_contact_current.refreshed_at` ne bouge
+presque jamais le jour (0 à 1 ligne par jour).
+
+### 27.3 La vitesse, sous le compte de Frédéric
+| | type de nuit (colonne) | type à la lecture (vue) |
+|---|---|---|
+| une page de 50 contacts | — | **12,5 ms** |
+| le filtre « Mandants » sur tout l'annuaire | **102 ms** | **957 ms** (×9), sans compter la pagination ni le comptage |
+➡ **Tout à la lecture ralentirait les filtres de l'annuaire** (Propriétaires / Mandants / Acheteurs), qui portent sur tout l'annuaire.
+
+### 27.4 C8 — TROIS logiques à l'écran, et un mot à deux sens
+| où | logique | les mots |
+|---|---|---|
+| annuaire du bureau (liste + fiche V2) | `contactDirectoryCategories` (App.tsx ~38932) — cumulables, ordre Mandant > Acheteur > Propriétaire > Acquéreur | **Acheteur** = une transaction ; **Acquéreur** = une **recherche active** |
+| téléphone (cartes de la liste) + pastille `ContactTypeMark` | `contactToneFromRoles` (~38902) — un seul ton, « Multi-role » dès deux | **Acquéreur** = une **transaction** ; « Vendeur » / « Propriétaire » ; « Notaire » (jamais atteint) |
+| recherche globale | `rolesContact` (RechercheGlobale.tsx:78) | **Acquéreur** = une transaction |
+| menu « Rôle contact » des filtres (App.tsx ~23867, ~24557) | valeur `acquereur` = les trois rôles de transaction (api.ts 2551) | « Acquereur » (= transaction) ; « Notaire entree / sortie » : **options mortes** (0 contact) |
+
+### 27.5 Ce que je propose — À TRANCHER PAR FRÉDÉRIC
+- **C8, un seul vocabulaire** : une seule fonction (celle de l'annuaire du bureau, issue de la refonte de l'annuaire) lue par
+  le téléphone, la pastille, la recherche globale et le menu des filtres. Les mots : **Mandant · Acheteur (transaction) ·
+  Propriétaire · Acquéreur (recherche active)**. Écran seulement. Ce que ça touche : les couleurs des cartes du téléphone
+  (classe `is-<ton>`), les libellés du menu, les deux options « Notaire » (à retirer ou garder).
+- **C6, le type tenu à jour au geste** (pas tout à la lecture) : on garde la colonne de nuit pour les listes et les filtres
+  (rapides), et un **déclencheur** recalcule `relation_roles_json` du seul contact touché quand ses liens ou ses parties
+  changent — le même calcul que la vue, donc le même résultat que la nuit (62 337 / 62 339). Base seulement, additif,
+  derrière un interrupteur ; la nuit continue de tout refaire. À éprouver dans une transaction annulée avant la pose.
+- **Ou laisser C6** : le type est juste, il a au pire un jour de retard.
