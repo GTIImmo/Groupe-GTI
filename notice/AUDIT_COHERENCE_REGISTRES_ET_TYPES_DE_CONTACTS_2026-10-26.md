@@ -2260,3 +2260,65 @@ attendre Hektor :
   rattachement), donc le type revient ;
 - **la nuit** ne crée aucun de ces travaux : **zéro coût** ;
 - **en fin de nuit** : on compare le type envoyé par la nuit avec celui de nos registres ; on **garde le nôtre** et on **signale** l'écart.
+
+## 36. P3 — AUDIT DU PROBLÈME, ET LA MEILLEURE SOLUTION AU VU DU PROJET *(27/10, Frédéric : « audite le problème et dis-moi si c'est la meilleure des solutions au vu de mon projet »)* — lecture seule, rien codé
+
+### 36.1 Le problème, en une phrase
+Le **type** d'un contact (Mandant, Propriétaire, Acheteur) est **calculé sur la machine, à partir du miroir de Hektor**, et seulement là :
+la nuit, et à la relecture d'un contact (que B a neutralisée). Nos **registres** (liens, transactions, table des parties), eux, sont à jour
+**au clic**. Le type est donc en retard sur nos registres jusqu'à la nuit, et **il dépend de Hektor**. Le jour de la coupure, il ne
+bougerait plus du tout.
+
+### 36.2 Ce que doit respecter la solution (le projet)
+1. **L'app autonome** : « chez nous d'abord, Hektor complète » (méthode du 07/10, reprise dans ⑧ : « anticiper la coupure »).
+2. **Survivre à la coupure** : plus de miroir de Hektor, plus de travaux vers Hektor.
+3. **Juste quel que soit l'auteur** du changement : un geste de l'app, le worker (confirmer, défaire), la nuit, et demain d'autres portes.
+4. **Ne pas alourdir la nuit** : la table des parties y est réécrite pour ~40 000 contacts (105 690 lignes en 24 h).
+5. **Un mécanisme que le projet connaît déjà**, plutôt qu'une invention.
+6. **Réversible** par un interrupteur.
+
+### 36.3 Les solutions, jugées sur ces critères
+| solution | autonome | survit à la coupure | juste pour tout auteur | coût de nuit | délai | déjà dans le projet |
+|---|---|---|---|---|---|---|
+| ① type à l'accord de Hektor (§35.3) | ✗ | ✗ | ✗ | 0 | à l'accord | non |
+| ② signal par le travail du worker (§35.4) | ✓ | **✗** (plus de travaux après la coupure) | ✗ (seules les portes qui posent un travail) | 0 | 1 s | non |
+| ③ déclencheur au clic, filtré « utilisateur de l'app » (§34 P3-a) | ✓ | ✓ | ✗ (ignore le worker et la nuit, il faut un rapprochement en plus) | 0 | 1 s | non |
+| ④ rapprochement complet chaque heure ou toutes les 5 min | ✓ | ✓ | ✓ | 1,8 s par passage | 5 à 60 min | non |
+| ⑤ type calculé à chaque lecture, sans le stocker | ✓ | ✓ | ✓ | 0 | 0 | non ; le filtre « Mandants » de l'annuaire passe de 0,1 s à ~1 s |
+| **⑥ « à recalculer » marqué par nos registres, recalcul chaque minute** | **✓** | **✓** | **✓** | **faible** (lots en arrière-plan) | **≤ 1 min** | **oui : `rapprochement-dirty`** |
+
+⚠ **Ma proposition ② avait un défaut que je n'avais pas vu** : elle se branchait sur les travaux du worker, c'est-à-dire sur la
+**plomberie vers Hektor**. Après la coupure, plus de travaux, donc plus de recalcul. C'est encore une dépendance à Hektor, cachée.
+
+### 36.4 La recommandation : ⑥, sur le modèle de `rapprochement-dirty`
+Le projet fait **déjà** exactement cela pour les rapprochements : `trg_dossier_dirty` et `trg_search_dirty` marquent ce qui a bougé dans
+`app_rapprochement_dirty`, et deux tâches pg_cron, **chaque minute**, recalculent par lots (`app_process_rapprochement_dirty(200)`,
+`app_bulk_recompute_chunk(80)`).
+
+Pour le type :
+1. **Marquer** : un petit déclencheur sur `app_relation` et un sur `app_affaire_partie`. À **chaque** écriture, quel qu'en soit l'auteur,
+   il ajoute le numéro du contact à une table « types à recalculer » (« s'il n'y est pas déjà » ; quelques microsecondes).
+2. **Recalculer** : une tâche pg_cron, **chaque minute**, prend un lot de contacts marqués. Elle calcule leur type **depuis nos registres**
+   (la même règle que la vue, déjà identique à la nuit pour 62 332 contacts sur 62 339) et **n'écrit que s'il change**.
+3. **La nuit confirme sans effacer** : si l'envoi de nuit pose sur un contact un type différent de nos registres, ce contact est marqué
+   lui aussi (un déclencheur sur `app_contact_current`, quand le type change). Au passage suivant, **notre valeur revient**, et l'écart est
+   **signalé à l'admin**, une ligne par contact avec les deux valeurs. C'est le « conflit » de Frédéric.
+
+**Avec ses deux exemples** :
+- **geste dans l'app** : le registre est écrit au clic, le contact est marqué, **le type change dans la minute**, sans attendre Hektor ;
+- **refus de Hektor** : le worker défait le lien (règle du rattachement), le contact est marqué, le type revient dans la minute ;
+- **geste dans Hektor** : la nuit écrit nos registres, les contacts touchés sont marqués et recalculés par lots en arrière-plan ;
+- **après la coupure** : il n'y a plus que nos registres, et **rien n'est à changer**.
+
+**Le coût de la nuit** : marquer ~40 000 contacts (quelques secondes), puis les recalculer par lots chaque minute, en arrière-plan. Un
+calcul complet des 62 339 contacts prend 1,8 s : un lot de 5 000 coûte donc environ 0,15 s. **À mesurer dans une transaction annulée.**
+
+**Ce que ça pourrait casser** :
+- les déclencheurs existants sur `app_contact_current` (cible, contrôle des modifications) : on n'y touche pas à `refreshed_at` ;
+- une boucle (notre écriture marque de nouveau le contact) : coupée, puisqu'on n'écrit que si le type change ;
+- le moniteur : une tâche pg_cron neuve se déclare, et sa ligne respecte les CHECK de sa table ;
+- B reste utile ; l'envoi de nuit n'est pas modifié (pas de Python touché).
+
+**Ce que ⑥ ne couvre pas** (non mesuré ici) : « Acquéreur » (recherche active) et l'éligibilité, qui ont leurs propres chemins.
+
+**Retour arrière** : un interrupteur dans la fonction de recalcul (elle ne fait plus rien), ou désactiver la tâche pg_cron.
