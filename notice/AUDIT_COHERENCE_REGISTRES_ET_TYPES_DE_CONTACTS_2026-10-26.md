@@ -2483,3 +2483,52 @@ de l'étape 3 : **les gestes sur les transactions sans Hektor**.
 2. **En option, à ton « vas-y »** : la garde « pas de geste sans numéro Hektor » **aussi dans la fonction de la base**, et pas seulement à
    l'écran. Une ligne, avec son essai.
 3. **Noter pour l'étape 3** : les gestes sur les transactions sans Hektor (④ pour la suppression, et la garde de l'écran à revoir).
+
+## 39. ✅ POSÉS EN BASE LE 27/10 (accord de Frédéric : « pose les deux ») — et pourquoi le type Notaire n'est toujours pas visible
+
+### 39.1 Le correctif de la vue « transactions vivantes chez nous » (§37) — POSÉ
+- **Posé par moi**, par le pooler. L'empreinte de la vue passe de `0021f0f1…` à **`8c4d28d3…`**.
+- **Répétition** : les 9 contrôles de fond sont verts. La vue entière rend les mêmes 167 846 lignes ; une transaction rendue « née chez nous »
+  fait apparaître l'acheteur ; une transaction « supprimée » reste hors du compte ; l'essai n'a rien laissé.
+- ⚠ **Le temps de la fiche admin a rougi** dans la répétition (277 ms, puis 430 ms, puis vert au 3ᵉ passage). Mesuré **seul**, 5 fois sur
+  3 contacts : **32 à 48 ms**. Seule la **toute première** lecture d'un contact, à froid, monte à 200-277 ms. Le commercial reste stable
+  à 130 ms.
+  ➡ Ce n'est **pas** une régression : dans la répétition, la mesure admin vient juste après la comparaison de la vue **entière**, qui
+  vide le cache. ⬜ À améliorer dans le banc (mesurer avant la comparaison).
+
+### 39.2 La garde « pas de geste sans numéro Hektor » dans `app_geste_affaire_optimistic` (§38) — POSÉE
+Fichiers : `supabase/patch_p3_garde_geste_sans_numero_hektor_2026-10-27.sql` (+ `_INVERSE`, `_REPETITION`).
+- **Le changement** : 4 lignes, juste avant `etat_avant := a.state;`, après les contrôles existants (droits, genre, verrou de l'offre,
+  « déjà dans cet état »). Elles portent le **même message que l'écran**. Propriétaire, droits et `SECURITY DEFINER` sont gardés.
+- **Éprouvée dans une transaction annulée**, puis **posée**, puis répétée : **6/6 verts**.
+  - sans numéro Hektor : le geste est **refusé** (compromis 1000322, sous le compte de Frédéric) ;
+  - avec son numéro : il **passe comme avant** (travail créé, état posé), le tout annulé ;
+  - **rien n'en reste**, vérifié aussi de façon indépendante : 0 travail d'annulation en 30 min, le compromis 1000322 intact (`active`,
+    50056, présent), 0 transaction sans numéro.
+- **Témoin inverse** : la répétition jouée **sans** la garde donne « PASSE » au contrôle 4. Sans elle, le geste partait bien sur une
+  transaction sans numéro. **Avarie d'empreinte** : le patch s'arrête.
+- ⚠ **Un premier banc était faux**, et je l'ai vu : il avait choisi un compromis suivi d'une vente, que la fonction refusait **avant** la
+  garde, pour une autre raison (« compromis verrouillé par sa vente »). Le témoin a été resserré (aucune vente dans son dossier).
+- **Retour arrière** : `_INVERSE.sql` (il exige de retrouver l'empreinte `a6569229…`).
+
+### 39.3 Pourquoi le type Notaire n'est toujours pas visible *(Frédéric, 27/10)* — mesuré
+**Ce n'est pas une panne : il n'a jamais été construit.** La décision « faire vivre le type Notaire » (C, §29.3) a été posée le 27/10, sans
+réponse. Ensuite, on a fait la maquette de la fiche (v2 validée comme base), puis P2 et P3. Rien n'a été codé pour le type.
+
+Les notaires **existent** chez nous : dans la table des parties, `notaire_vendeur` (16 573 lignes, **886** contacts) et `notaire_acquereur`
+(6 778 lignes, **882** contacts). **1 110** sont dans l'annuaire. Mais **quatre maillons** manquent, tous mesurés :
+
+| maillon | aujourd'hui | ce qu'il faudrait |
+|---|---|---|
+| **la vue des liens d'un contact** | elle ne prend dans la table des parties **que** `role = 'acquereur'` : aucun notaire n'y figure (0 ligne) | une branche de plus : les notaires (`notaire_vendeur`, `notaire_acquereur`), avec la même règle « vivante » |
+| **le type stocké** | **0** contact a un rôle notaire dans son type : ni la nuit ni la relecture ne le calculent | il viendrait de la vue (⑥, « à recalculer »), ou du calcul de nuit |
+| **l'écran** | `contactDirectoryCategories` ne connaît que **Mandant, Acheteur, Propriétaire, Acquéreur** ; pas de catégorie Notaire, pas de bouton dans l'annuaire. Le menu « Rôle contact » propose `notaire_entree` / `notaire_sortie`, des mots qui ne correspondent à rien | une catégorie « Notaire » (rang, couleur bleu encre, symbole balance), un bouton dans l'annuaire, le menu corrigé (`notaire_vendeur` / `notaire_acquereur`) |
+| **la fiche notaire** | maquette v2 validée, rien de codé | à coder après le type |
+
+⚠ **Ce que ça pourrait casser**, et qu'il faudra auditer :
+- dans la fiche contact (P2), un notaire listerait **tous** ses dossiers (des centaines pour certains) : c'est la vocation de la fiche
+  notaire, pas de la fiche contact ;
+- le **rang** du type : un notaire qui est aussi propriétaire, que montre-t-on en premier ?
+- le temps de la fiche et de l'annuaire, avec 23 351 lignes de plus dans la vue.
+
+⬜ **À trancher par Frédéric** : on ouvre le type Notaire ? (Les quatre maillons, dans cet ordre : la vue, le type, l'écran, puis la fiche.)
