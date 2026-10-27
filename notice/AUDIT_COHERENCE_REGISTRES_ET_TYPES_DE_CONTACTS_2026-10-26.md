@@ -1756,3 +1756,88 @@ avec pastille colorée, cartes blanches arrondies, colonne latérale, fil d'acti
 dépasse d'**1 px** ; invisible (le panneau coupe), noté, pas touché.
 
 ✅ **DÉCIDÉ par Frédéric le 27/10 : « la v2 est la bonne base pour la fiche notaire »** (la v1 reste pour mémoire). Rien n'est codé. Préalable inchangé : le type « Notaire » doit exister (§29.3, décision C encore à prendre).
+
+## 31. P2 — LA FICHE CONTACT : UN BIEN = UNE LIGNE AVEC TOUS SES RÔLES — audit du 27/10 *(Frédéric : « on reprend par P2 ; commence par l'audit »)* — lecture seule, rien codé
+
+> Audit limité à l'objet **relation** (lire / remonter) dans la fiche contact. Les gestes créer / modifier / supprimer un lien ne
+> changent pas avec P2 (P2 n'écrit rien) : non mesurés ici, ils l'ont été au §27.6.
+
+### 31.1 Où ça se passe
+- **Une seule fiche affichée** : `ContactDetailPopupV2` (production, vérifié le 27/10 : `fa-cx-root` est dans le paquet servi). La V1
+  (`ContactDetailPopupBase`) est le repli de l'interrupteur `VITE_APP_CONTACT_V2_ENABLED`. Les **3** points d'ouverture (fiche
+  d'annonce, annuaire du bureau, cartes du téléphone) ouvrent la même fiche avec les mêmes `props.relations`.
+- **Le dédoublonnage** : App.tsx l. ~44637 (V2) et l. ~43913 (V1), même code : clé = `app_dossier_id`, sinon `hektor_annonce_id`.
+  **On garde la PREMIÈRE ligne du bien et on jette les autres** : leurs rôles, dates et montants ne sont montrés nulle part.
+- **L'ordre** vient de `loadContactRelations` (`lib/api.ts` l. 3604) : `order('last_seen_at', desc)`.
+  ⛔ **Correction du §28.13** : ce n'est pas « l'horaire de la nuit ». La colonne `last_seen_at` de la vue est du **TEXTE**, sous deux
+  formes : `2026-10-27T04:52:00+00:00` (liens du bien) et `2026-10-27 04:48:59+00` (registre des transactions). Le même jour, le
+  `T` passe devant l'espace : **le lien du bien (mandant, propriétaire) sort toujours premier**, quel que soit l'ordre des étapes de nuit.
+  Et entre les lignes du registre (offre, compromis, vente de la même personne), **les dates sont ÉGALES** : l'ordre est laissé au hasard
+  de Postgres.
+
+### 31.2 La mesure (vue `app_contact_relations_current`, 27/10)
+167 846 lignes · 109 743 contacts · **148 970 couples personne + bien**. **11 582 couples ont plusieurs lignes** (11 290 contacts), dont
+**11 541 avec des rôles différents** et **501** avec un même rôle répété (deux offres, ou un compromis annulé puis un autre).
+**11 444 / 11 582 ont des lignes à égalité en tête** : la ligne affichée est tirée au hasard. Aucun couple n'a de clé de bien ambiguë
+(0 mélange dossier / sans dossier).
+
+| rôles sur le même bien | couples | ligne affichée aujourd'hui |
+|---|---|---|
+| offre + compromis + vente | 6 533 | une ligne du registre (mesuré : le compromis) |
+| offre + compromis | 2 377 | une ligne du registre |
+| compromis + vente | 2 340 | une ligne du registre (mesuré : le compromis) |
+| offre + vente | 153 | une ligne du registre (mesuré : l'offre) |
+| acheteur + **propriétaire** (les « propriétaires depuis la vente ») | 117 | **Propriétaire** — l'achat est caché |
+| acheteur + **mandant** (il a acheté chez nous, puis nous a confié la revente) | 21 | **Mandant** — l'achat est caché |
+| un seul rôle répété | 41 | une des lignes |
+
+➡ **Ce que voit le négociateur aujourd'hui** :
+- **9 026 acheteurs dont la vente est signée** (6 533 + 2 340 + 153) peuvent voir « Acheteur — compromis » ou « — offre » au lieu de
+  « Acheteur — vente », avec la date et le montant de cette étape-là ;
+- le sous-titre de la ligne est **l'état BRUT, en anglais** (`relationSub = transaction_state`) : `active`, `cancelled`, `accepted`,
+  `refused`, `proposed`, `vente` ; et « annonce liée » pour un mandant ou un propriétaire ;
+- 138 biens (117 + 21) cachent le rôle d'acheteur.
+
+### 31.3 Qui lit la vue — ce que deux colonnes de plus pourraient casser
+- **Front** : `loadContactRelations` (`select *`, la fiche) ; `loadAnnonceContactInvitees` et `loadAnnonceMandants` (colonnes NOMMÉES →
+  intouchés). Le tableau `props.relations` sert aussi au **bon de visite** (photo) et aux **modales** (e-mail, RDV) : P2 ne touche **pas**
+  ce tableau, seulement la liste affichée.
+- **Base** : `app_contact_activite` (lit `hektor_contact_id`, `role_contact`, `app_dossier_id` → intouchée) ; `app_unlink_mandant_optimistic`
+  (la cite en commentaire seulement). **Aucune vue dépendante.** Droits : `authenticated` SELECT ; `security_invoker = true`.
+- **Run de nuit** : la vue est dans `VUES_NON_DESCENDUES` (`pull_from_supabase.py` l. 160) → **elle ne descend pas** ; aucun script local
+  ne la lit.
+- Les deux colonnes existent dans `app_relation` : `origine` (texte) et `proprietaire_depuis` (texte), **116** lignes chacune.
+
+### 31.4 La proposition — À TRANCHER PAR FRÉDÉRIC
+**Base** (un patch, son inverse, sa répétition ; à coller avec son accord) : la vue gagne **deux colonnes À LA FIN**, `origine` et
+`proprietaire_depuis` (lues dans `app_relation` ; `NULL` pour les lignes du registre). Les 18 colonnes gardent leur ordre, et la vue garde
+`security_invoker` et ses droits. Le patch vérifie l'empreinte de la définition actuelle et s'arrête si quelqu'un est passé avant.
+
+**Écran** (interrupteur, V2 **et** V1 par une seule fonction) : une ligne par bien qui porte **tous** ses rôles, dans un ordre fixe :
+1. **Mandant** ;
+2. **Propriétaire**, « depuis le 25/09/2026 » quand il vient de la vente ;
+3. **Acheteur**, une seule étape : **la vente si elle existe, sinon la plus récente** (à égalité de date, compromis avant offre). La
+   ligne prend la date et le montant de cette étape, en français : « Vente signée le … », « Compromis du … », « Compromis annulé »,
+   « Offre acceptée », « Offre en cours », « Offre refusée ».
+
+La couleur de la ligne suit le premier rôle. Le compteur « N biens » ne change pas (même clé). **Le résultat ne dépend plus de l'ordre
+des lignes.** Le sous-titre en anglais disparaît.
+
+**Ce que ça pourrait casser** : rien n'est retiré, ni de la vue ni du tableau. À surveiller :
+- le temps de la fiche (39 ms admin / 131 ms commercial ce matin) : deux colonnes sans jointure de plus ;
+- la ligne à 375 px avec trois pastilles (le CSS passe déjà à la ligne sous 640 px) ;
+- le mode sombre du téléphone ;
+- le repli V1.
+
+**Essais** :
+- un essai qui **exécute** la vraie fonction (comme `test_type_contact_unique.cjs`) sur JACQUIER (61730), les 16 combinaisons mesurées
+  et les répétitions ;
+- **témoin inverse** : le même lot mélangé dans un autre ordre doit donner le même résultat, alors que l'ancien code en change ;
+- mutant : l'interrupteur éteint doit redonner l'ancien affichage ;
+- base : le patch éprouvé dans une transaction annulée, puis la répétition (18 colonnes identiques sur échantillon, 116 non vides, temps) ;
+- l'écran, après ton push : bureau et 390 px.
+
+**Questions** :
+(1) la règle de l'étape d'acheteur : la vente, sinon la plus récente ?
+(2) afficher « Propriétaire depuis le … » (c'est P2 qui le rend visible) ?
+(3) une offre refusée ou un compromis annulé : on les montre (en gris) ou on les cache ?
