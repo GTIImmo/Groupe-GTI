@@ -19250,16 +19250,17 @@ async function ensureContactSearchExecution(job, payload) {
   return { contactId, identite, contextPayload, context };
 }
 
-// Liste les recherches (criteres prospect) d'un contact en scrapant l'onglet
-// recherche de la console : seul endroit qui expose l'idCritere Hektor.
-// A appeler APRES ensureContactSearchExecution (contexte negociateur actif).
-async function fetchHektorContactSearchList(contactId) {
+// L'onglet recherche de la console, en HTML. `searchNum` ouvre le DETAIL de la
+// recherche de ce rang (sans lui, Hektor detaille la 1re) -- c'est ce que fait
+// la page elle-meme (changeSearchTabLi).
+async function fetchHektorContactSearchTabHtml(contactId, searchNum = null) {
   const id = String(contactId);
   const body = new URLSearchParams({
     mode: "contacts-contactProfile-recherche-changeTab",
     id,
     idContact: id,
   });
+  if (searchNum !== null) body.set("searchNum", String(searchNum));
   const response = await hektorFetch(XMLRPC_URL, {
     method: "POST",
     body,
@@ -19276,6 +19277,38 @@ async function fetchHektorContactSearchList(contactId) {
   } catch (_) {
     // l'endpoint renvoie soit du HTML brut soit une chaine HTML encodee en JSON
   }
+  return html;
+}
+
+// Liste les recherches (criteres prospect) d'un contact en scrapant l'onglet
+// recherche de la console : seul endroit qui expose l'idCritere Hektor.
+// A appeler APRES ensureContactSearchExecution (contexte negociateur actif).
+//
+// 27/10 (§19.5) : Hektor pose un `data-search-id` par recherche, DANS L'ORDRE,
+// archivees comprises -- c'est notre rang (11 contacts sur 11, essai du 27/10).
+// L'ancienne regex (dropDownMenu_ / rel=...) n'attrape plus que la 1re depuis un
+// changement de la page entre le 18/09 et le 22/10 : le 26/10, « supprimer » la
+// 2e recherche de 20000008 a vise la 1re. On ne la garde qu'en SECOURS, et on
+// dit laquelle a servi -- l'appelant decide s'il peut s'y fier.
+async function lireRecherchesHektor(contactId) {
+  const id = String(contactId);
+  const html = await fetchHektorContactSearchTabHtml(id);
+  const recherches = [];
+  const vus = new Set();
+  const reId = /data-search-id=["']?(\d{3,9})/g;
+  let m;
+  while ((m = reId.exec(html))) {
+    const idCritere = m[1];
+    if (vus.has(idCritere)) continue;
+    vus.add(idCritere);
+    // L'icone d'archive est dans l'en-tete « Recherche N », avant son </td>.
+    const titre = html.indexOf("Recherche", m.index);
+    const fin = titre < 0 ? -1 : html.indexOf("</td>", titre);
+    const entete = html.slice(m.index, fin < 0 ? m.index + 400 : fin);
+    recherches.push({ index: recherches.length, idCritere, archivee: entete.includes("icon-presentation-off") });
+  }
+  if (recherches.length) return { source: "data-search-id", recherches };
+
   const ids = [];
   const seen = new Set();
   const re = /(?:dropDownMenu_|contentDrop_|valueInputAutoarchivage|rel=["'])(\d{3,9})|getWizardCritere\(\s*\d+\s*,\s*(\d{3,9})/g;
@@ -19286,25 +19319,82 @@ async function fetchHektorContactSearchList(contactId) {
     seen.add(critId);
     ids.push(critId);
   }
-  return ids.map((idCritere, index) => ({ index, idCritere }));
+  return { source: "regex", recherches: ids.map((idCritere, index) => ({ index, idCritere, archivee: null })) };
 }
 
-// Resout l'idCritere cible : id explicite du payload, sinon par index de recherche.
-async function resolveContactSearchTargetCritereId(job, contactId, payload) {
+async function fetchHektorContactSearchList(contactId) {
+  return (await lireRecherchesHektor(contactId)).recherches;
+}
+
+// La date d'auto-archivage que Hektor AFFICHE pour une recherche, lue dans son
+// detail (`searchNum` = son rang). null si Hektor n'en montre pas -- une
+// recherche deja archivee n'en affiche plus.
+async function lireDateAutoArchivageHektor(contactId, rang, idCritere) {
+  const html = await fetchHektorContactSearchTabHtml(contactId, rang);
+  const m = html.match(new RegExp(`id=["']recentValueAutoarchivage${idCritere}["'][^>]*?value=["']([^"']*)["']`));
+  return m ? m[1] : null;
+}
+
+// Combien de recherches NOTRE table connait pour ce contact (archivees
+// comprises, comme chez Hektor). null = « je ne sais pas ».
+async function compterNosRecherches(identite) {
+  try {
+    const lignes = await supabaseRequest(
+      `app_contact_search_current?select=search_index&hektor_contact_id=eq.${encodeURIComponent(String(identite))}`,
+      { method: "GET" });
+    return Array.isArray(lignes) ? lignes.length : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+// Resout la recherche cible : id explicite du payload, sinon par index de recherche.
+//
+// 27/10 (§19.5) : ON NE DEVINE PLUS. L'ancien `|| list[0]` retombait en silence
+// sur la 1re recherche quand le rang manquait dans la liste lue -- et le geste
+// partait chez Hektor sur la mauvaise. Desormais, tout doute fait ECHOUER le
+// travail AVANT d'ecrire chez Hektor : rang absent de la liste, rang >= 1 lu
+// par l'ancienne regex, ou nombre de recherches different du notre (le rang
+// n'a de sens que si les deux listes sont les memes).
+async function cibleRechercheHektor(job, contactId, payload) {
   const explicit = cleanString(payload.idCritere || payload.critere_id || payload.hektor_critere_id);
-  if (/^\d+$/.test(explicit)) return explicit;
-  const list = await fetchHektorContactSearchList(contactId);
+  if (/^\d+$/.test(explicit)) return { idCritere: explicit, index: null, archivee: null, source: "payload" };
+  const { source, recherches: list } = await lireRecherchesHektor(contactId);
   if (!list.length) throw new Error(`Aucune recherche Hektor trouvee pour le contact ${contactId}`);
   const rawIndex = cleanString(payload.search_index !== undefined ? payload.search_index : payload.searchIndex);
   const index = /^\d+$/.test(rawIndex) ? Number(rawIndex) : 0;
-  const target = list.find((entry) => entry.index === index) || list[0];
-  await logJob(job.id, "hektor_contact_search_list", "done", "Recherches Hektor listees", {
+  const target = list.find((entry) => entry.index === index) || null;
+  // Meme lecture de NOTRE numero que ensureContactSearchExecution : nos tables
+  // sont rangees sous l'identite, pas sous la cible Hektor.
+  const identite = String(payload.hektor_contact_id || payload.contact_id || "").trim();
+  const nous = await compterNosRecherches(identite);
+  const journal = {
     hektor_contact_id: String(contactId),
+    identite,
+    source,
     count: list.length,
+    nos_recherches: nous,
     requested_index: index,
-    selected_idCritere: target.idCritere,
-  });
-  return target.idCritere;
+    selected_idCritere: target ? target.idCritere : null,
+    deja_archivee: target ? target.archivee : null,
+  };
+  let refus = "";
+  if (!/^\d+$/.test(rawIndex) && list.length > 1) refus = `aucun rang demande, ${list.length} recherches chez Hektor`;
+  else if (!target) refus = `rang ${index} demande, ${list.length} recherche(s) lue(s) chez Hektor`;
+  else if (source !== "data-search-id" && index >= 1) refus = `liste lue par l'ancienne regex : le rang ${index} n'est pas sur`;
+  else if (nous === null) refus = "nombre de nos recherches illisible";
+  else if (nous !== list.length) refus = `${list.length} recherche(s) chez Hektor, ${nous} chez nous`;
+  if (refus) {
+    await logJob(job.id, "hektor_contact_search_list", "error",
+      `Recherche NON visee (${refus}) -- rien n'est ecrit chez Hektor`, journal);
+    throw new Error(`Recherche Hektor non visee pour le contact ${contactId} : ${refus}`);
+  }
+  await logJob(job.id, "hektor_contact_search_list", "done", "Recherches Hektor listees", journal);
+  return { idCritere: target.idCritere, index, archivee: target.archivee, source };
+}
+
+async function resolveContactSearchTargetCritereId(job, contactId, payload) {
+  return (await cibleRechercheHektor(job, contactId, payload)).idCritere;
 }
 
 // --- Correctif n°1 : garde-fou anti-écrasement des recherches contact ---
@@ -20149,7 +20239,10 @@ async function archiveHektorContactSearch(job, contactId, idCritere) {
   } catch (_) {
     parsed = response.text;
   }
-  await logJob(job.id, "hektor_contact_search_archive", "done", "Recherche contact Hektor archivee", {
+  // 27/10 (§19.5) : ce geste POSE une date, il n'archive pas sur le moment --
+  // Hektor archive en differe (la nuit) ; 6 recherches sur 6 ainsi traitees
+  // etaient archivees le 27/10. Le journal ne dit plus « archivee ».
+  await logJob(job.id, "hektor_contact_search_archive", "done", "Date d'auto-archivage posee chez Hektor (archivage en differe)", {
     hektor_contact_id: String(contactId),
     idCritere: String(idCritere),
     result: parsed,
@@ -20160,20 +20253,57 @@ async function archiveHektorContactSearch(job, contactId, idCritere) {
 async function handleDeleteHektorContactSearch(job) {
   const payload = safeJsonParse(job.payload_json);
   const { contactId } = await ensureContactSearchExecution(job, payload);
-  const idCritere = await resolveContactSearchTargetCritereId(job, contactId, payload);
+  const cible = await cibleRechercheHektor(job, contactId, payload);
+  const idCritere = cible.idCritere;
   const archive = await archiveHektorContactSearch(job, contactId, idCritere);
   await sleep(1000);
+  const relu = await relireArchivageRechercheBestEffort(job, contactId, idCritere, archive.dateArchive);
   const syncJob = await enqueueRefreshConsoleContactDataJobBestEffort(job, contactId, {
     reason: "delete_hektor_contact_search",
     priority: 82,
   });
   return {
+    // `status` garde sa valeur (rien ne la lit, mais on ne change pas un contrat
+    // en passant) ; `archivage` dit ce qui est VRAI chez Hektor a cet instant.
     status: "archived",
+    archivage: relu.archivee ? "fait" : relu.date_posee ? "differe" : "non_verifie",
     hektor_contact_id: contactId,
     idCritere,
+    search_index: cible.index,
     archive,
+    relu,
     sync_job: syncJob,
   };
+}
+
+// 27/10 (§19.5) : APRES le geste, on relit Hektor -- le 26/10, le travail a dit
+// « archived » sur un simple 200 alors que la date etait partie sur une autre
+// recherche. On cherche le numero VISE (pas un rang : la liste peut avoir bouge)
+// et on lit la date que Hektor affiche pour lui. Best effort : le geste est
+// fait, une relecture ratee ne le defait pas -- elle se dit au journal.
+async function relireArchivageRechercheBestEffort(job, contactId, idCritere, dateArchive) {
+  const relu = { trouvee: false, rang: null, archivee: null, date: null, date_posee: false };
+  try {
+    const { source, recherches } = await lireRecherchesHektor(contactId);
+    const entree = recherches.find((r) => r.idCritere === String(idCritere)) || null;
+    relu.source = source;
+    if (entree) {
+      relu.trouvee = true;
+      relu.rang = entree.index;
+      relu.archivee = entree.archivee;
+      relu.date = await lireDateAutoArchivageHektor(contactId, entree.index, idCritere);
+      relu.date_posee = relu.date === dateArchive;
+    }
+  } catch (erreur) {
+    relu.erreur = erreur && erreur.message ? erreur.message : String(erreur);
+  }
+  const ok = relu.archivee === true || relu.date_posee;
+  await logJob(job.id, "hektor_contact_search_archive_relue", ok ? "done" : "error",
+    relu.archivee === true ? `Recherche ${idCritere} relue : deja archivee chez Hektor`
+      : relu.date_posee ? `Recherche ${idCritere} relue : date ${dateArchive} posee, archivage attendu cette nuit`
+        : `Recherche ${idCritere} relue : date NON retrouvee chez Hektor -- a verifier`,
+    { hektor_contact_id: String(contactId), idCritere: String(idCritere), dateArchive, ...relu });
+  return relu;
 }
 
 async function createHektorMandantContact(job, annonceId, payload) {

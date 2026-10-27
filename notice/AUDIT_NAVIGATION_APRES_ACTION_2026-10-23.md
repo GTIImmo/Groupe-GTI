@@ -1682,6 +1682,174 @@ table ne la portent, mesure du 16/10), donc on ne peut constater que la bascule.
 ⏰ **Témoin à relire le 28/10 au matin** (après le run des recherches) ; s'il est encore actif, le geste « supprimer une
 recherche » ne fait rien de visible chez Hektor → à auditer (`handleDeleteHektorContactSearch`).
 
+### 19.4 ✅ TRANCHÉ LE 27/10 (fin de matinée) — LE GESTE A VISÉ LA MAUVAISE RECHERCHE. Le témoin du 28/10 est sans objet.
+
+**Mesuré, en lecture seule, chez Hektor** (Chrome de Frédéric, compte admin, onglet Recherches de 605946 lu par
+`contacts-contactProfile-recherche-changeTab`, aucune écriture) :
+
+| chez Hektor | `data-search-id` | ce qu'elle est | auto-archivage |
+|---|---|---|---|
+| « Recherche 1 » | **471880** | **Le Puy-en-Velay**, appartement 123 500-136 500, créée le 22-10-2026, icône `icon-presentation-off` (archivée) | **26-10-2026** ← la date posée par `e43aff82` |
+| « Recherche 2 » | **471894** | **Firminy** (la recherche à supprimer), sans icône | non lue (l'onglet ne détaille que la 1ʳᵉ) |
+
+**Et le journal du travail le disait déjà** (`app_console_job_log`, étape `hektor_contact_search_list`) :
+`count: 1, requested_index: 1, selected_idCritere: 471880` → l'entrée 1 n'existe pas → repli `|| list[0]`.
+
+➡ **C'est le défaut DORMANT écrit le 31/08** (`AUDIT_RECHERCHES_ETAT_REEL_2026-08-31.md`, « La conséquence exacte ») :
+la regex de `fetchHektorContactSearchList` ne rend que **le premier** numéro, alors que le HTML porte **les deux**
+`data-search-id`, dans l'ordre. « Modifier ou supprimer la 2ᵉ recherche d'un contact agit sur la 1ʳᵉ. Sans erreur, sans
+trace. » **Premier geste sur une 2ᵉ recherche, première morsure.**
+➡ ⚠ **L'hypothèse du §19.2 est FAUSSE** : l'onglet ne liste pas « que les actives » — il liste **les deux** (l'archivée
+d'abord). Le « tombé juste par chance » n'a pas eu lieu.
+
+**Les dégâts** : nuls sur Firminy (jamais touchée, toujours active — c'est ce que voit le run). Sur Le Puy, déjà archivée :
+sa date d'auto-archivage a été **écrasée** (création + 2 ans = 22-10-2028 attendu → 26-10-2026). Sans effet visible.
+⭐ Et la réponse `desarchiveCritere: true` sur une recherche **archivée** colle au code de la page Hektor (relevé du 15/10) :
+la page enchaînerait sur la bascule `archiveUnarchiveContactRecherche` — notre worker ne la fait pas, d'où Le Puy restée
+archivée.
+
+**Toujours vrai, et NON tranché par cette mesure** : poser la date du jour sur une recherche **active** l'archive-t-il, et
+quand ? Les 4 gestes depuis juin ne le prouvent pas (le seul relu à 2 recherches, Gladys, portait un `idCritere`
+explicite ; la bascule n'a jamais été datée). Et le worker rend « archived » **sans relire** (`handleDeleteHektorContactSearch`).
+
+**NOTÉ, PAS TRAITÉ** — correctif connu depuis le 31/08 : lire `data-search-id` en premier (ancienne regex en repli,
+journaliser les deux) ; refuser le repli `list[0]` quand l'index demandé n'existe pas ; relire l'état après le geste.
+⚠ **Même chemin pour la MODIFICATION** (`handleUpdateHektorContactSearch` → `resolveContactSearchTargetCritereId`).
+À décider par Frédéric.
+
+**Complément du 27/10, après relecture des notes demandée par Frédéric :**
+- ✅ **La MODIFICATION n'est PAS exposée** : elle est autonome depuis le 19/06 (Supabase-first) et la porte est fermée
+  depuis **C.3 (24/08)** — `app_edit_search_optimistic` ne crée aucun travail (`push_search = null`) et cible par
+  `(contact, search_index)` dans notre table. C'est pour ça que le risque du 31/08 a été **clos sans suite**
+  (`LISTE_TACHES` l. 9246) — ⚠ mais cette clôture ne parlait **que de la modification**.
+- ⛔ **L'ARCHIVAGE (bouton « Supprimer ») est le seul geste qui part encore chez Hektor** (décision du 20/08, confirmée le
+  20/09 : « envoi sans retour ») — et **lui** passe toujours par le ciblage par rang scrapé. C'est lui qui a mordu.
+- **Le registre des recherches existe** : `app_search_registry`, dans `phase2/phase2.sqlite` (77 255 lignes, jamais
+  vidé, ancré sur la paire (contact, rang)) ; son numéro `app_search_id` est recopié dans `app_contact_search_current`
+  chez Supabase. Pour 20000008 : **77235 = rang 0 = Le Puy**, **77251 = rang 1 = Firminy**. **Il ne porte PAS l'`idCritere`
+  de Hektor** (l'API ne le donne pas, étude du 21/08) ; aucun écran ne l'affiche.
+- ⚠ **Le correctif « la marque locale ne doit plus dépendre du succès du travail »** (audit d'autonomie du 21/09, §4,
+  « à faire avec L4 ») **n'est pas fait** : notre `archive=true` local a été écrasé 13 s plus tard par la relecture du
+  contact (`2eeaf07e`). C'est pour ça que l'écran remontre Firminy « Active ».
+- Mesure d'aujourd'hui (compte admin seulement) : l'ordre des `data-search-id` chez Hektor = l'ordre de notre rang
+  (471880 ↔ rang 0, 471894 ↔ rang 1). **Aucune note trouvée** d'un essai de `data-search-id` en contexte négociateur.
+
+**ESSAI 1 — 27/10, lecture seule, 11 contacts (Chrome de Frédéric, compte admin) : notre rang = l'ordre de Hektor.**
+
+| Hektor | nos rangs | Hektor (`data-search-id` dans l'ordre, icône d'archive) | regex du worker | 1ʳᵉ recherche (prix, communes) |
+|---|---|---|---|---|
+| 605946 | `Ao` | `Ao` 471880, 471894 | 471880 seul | ✅ |
+| 36130 | `AAo` | `AAo` 6802, 6804, 470922 | 6802 seul | ✅ |
+| 544653 | `AAoA` | `AAoA` 65490, 65491, 65493, 157849 | 65490 seul | ✅ |
+| 409902 · 46798 · 76150 | `Ao` | `Ao` | le 1ᵉʳ seul | ✅ |
+| 48853 · 604687 | `ooo` | `ooo` | le 1ᵉʳ seul | ✅ |
+| 605131 | `ooooo` | `ooooo` 471571 … 471584 | 471571 seul | ✅ |
+| 80422 · 84784 | `oo` | `oo` | le 1ᵉʳ seul | ✅ |
+
+➡ **11 sur 11** : même nombre, même suite archivée/active, même 1ʳᵉ recherche (prix toujours ; communes quand Hektor en
+affiche — « Non défini » sinon, et contrôlé dans notre liste pour 409902 et 48853). ➡ **La regex du worker ne rend que
+le 1ᵉʳ numéro dans 11 cas sur 11** : tout geste d'archivage sur un rang ≥ 1 vise le rang 0, sans exception.
+⚠ Limites : compte **admin** seulement (le worker agit en contexte **négociateur**) ; seul le détail de la 1ʳᵉ recherche
+est lisible dans l'onglet ; 11 contacts, pas le parc. *(Corrigé par l'essai 2 : le détail de la recherche N se lit
+avec `searchNum=N`, comme le fait `changeSearchTabLi` de la page.)*
+
+**ESSAI 2 — 27/10, 13:15-13:16 UTC, ÉCRITURE chez Hektor avec l'accord de Frédéric (« Oui, tu as mon accord pour l'essai
+d'écriture sur la recherche Firminy 471894 du contact d'essai 605946 »), Chrome de Frédéric, compte admin.**
+
+| moment | geste | réponse de Hektor | relecture (`changeTab`, puis `searchNum=1` pour le détail) |
+|---|---|---|---|
+| avant | — | — | Recherche 1 = 471880 Le Puy, icône archivée ; Recherche 2 = 471894 Firminy, **sans icône (active)** |
+| marche 1 | `modifDateArchiveCritere`, `idCritere=471894`, `dateArchive=27-10-2026` — **le geste exact du worker** | `200` `{"date":"27-10-2026","desarchiveCritere":true}` | date d'auto-archivage de 471894 = **27-10-2026** ✅ ; Firminy **toujours sans icône : ACTIVE** ❌ |
+| marche 2 | `recherche-archiveUnarchiveContactRecherche`, `idCritere=471894`, `idContact=605946` — la bascule du menu ⋮ de la page | `200` « Succès: le contact a été archivé/désarchivé avec succès. » (texte générique) | Recherche 2 Firminy **icône archivée** ✅ ; Recherche 1 inchangée |
+
+➡ **Mesuré : poser la date du jour n'archive pas une recherche active SUR LE MOMENT** ; c'est la bascule qui archive tout
+de suite. ⚠ **CORRIGÉ le même jour (§19.5)** : j'en avais d'abord conclu « la date n'archive pas, le geste est faux ». La
+relecture des 6 recherches qui n'ont JAMAIS reçu que la date (Le Puy 471880 + 5 autres) les montre **toutes archivées** :
+la date archive bien, **en différé** (vraisemblablement la nuit). Le geste est donc juste ; **le seul défaut est le ciblage**.
+⚠ La bascule est une **bascule** : la rejouer sur une recherche déjà archivée la **réactive**. Le correctif doit donc lire
+l'icône avant (et après) le geste, jamais l'envoyer à l'aveugle.
+➡ État chez Hektor après l'essai : 605946 a ses **deux recherches archivées** (Le Puy depuis avant le 26/10, Firminy depuis
+13:16 UTC le 27/10). Le témoin du 28/10 devrait passer au vert à la prochaine relecture du contact.
+➡ Le correctif : voir §19.5.
+
+### 19.5 PLAN DU CORRECTIF DU WORKER — 27/10 après-midi (« OUI VAS Y » au plan ; **pièces 1-3 CODÉES, voir E** ; worker non redémarré)
+
+**A. Mesures qui fondent le plan (journal `app_console_job_log` + relecture Hektor en lecture seule, compte admin).**
+
+| geste du worker | date | contact Hektor | critère visé | état chez Hektor le 27/10 |
+|---|---|---|---|---|
+| supprimer (rang 0) | 12/06 | 414535 | 471249 | archivée |
+| supprimer (rang 0) | 22/06 | 113412 | 17985 | archivée (2ᵉ recherche active, non visée) |
+| supprimer (rang 0) | 18/09 | 605075 | 471682 | le contact n'a plus aucune recherche |
+| qualification acquéreur | 18/09 | 605414 · 605429 | 471691 · 471697 | le contact n'a plus aucune recherche |
+| qualification acquéreur | 22/10 | 605946 | 471880 Le Puy | archivée |
+| qualification acquéreur | 23/10 | 605973 · 605975 · 605976 | 471886 · 471887 · 471888 | archivées toutes trois |
+| qualification acquéreur | 23/10 | 605967 (= 20000012) | **non retrouvé** (« elle ne sera pas archivée ») | ⛔ **471882 Le Puy ACTIVE depuis 4 jours** |
+| supprimer (**rang 1**) | 26/10 | 605946 | **471880 au lieu de 471894** | Firminy restée active → archivée à la main le 27/10 (essai 2) |
+
+➡ **La date archive, en différé** : 6 sur 6 de celles qui l'ont reçue sont archivées, aucune exception mesurée. Et poser la
+date sur une recherche **déjà archivée** ne la réactive pas (Le Puy, 26/10). C'est **plus sûr que la bascule**, qui réactive
+si on la rejoue. ➡ **On garde le geste de la date.**
+➡ **Le défaut est le ciblage, et il est RÉCENT** : la liste rendait 5, 9, 11, 22 numéros en juin-août, 2 le 18/09, **1 seul
+le 26/10**. Hektor a changé son HTML entre le 18/09 et le 22/10 ; la regex n'attrape plus que le 1ᵉʳ. *(En juin, le compte
+mêlait sans doute d'autres numéros que des recherches — `rel=` est très large ; le rang n'était donc déjà pas sûr.)*
+➡ **Trois portes en dépendent**, pas une : `resolveContactSearchTargetCritereId` (supprimer, et modifier — porte fermée
+depuis C.3) et `listerCriteresBestEffort` (qualification d'un acquéreur à la vente : avant / après la création). Avec 1 seul
+numéro lu, un acquéreur qui a déjà une recherche voit sa recherche de qualification **introuvable, donc jamais archivée** —
+c'est 605967.
+
+**B. Le plan (4 pièces, toutes dans `Console/console_job_worker.js`).**
+
+1. **Lire la liste par `data-search-id`** dans `fetchHektorContactSearchList` : un numéro par recherche, dans l'ordre,
+   archivées comprises, avec l'état (`icon-presentation-off`). Rendre `{ index, idCritere, archivee }`. Garder l'ancienne
+   regex **seulement** si `data-search-id` est absent, et le dire au journal (`source: "data-search-id" | "regex"`).
+   *Contrôle : 11 contacts sur 11 de l'essai 1 + 605946 + 605967.*
+2. **Refuser de deviner** dans `resolveContactSearchTargetCritereId` : plus de repli `|| list[0]`. Rang absent de la liste →
+   **erreur** claire (« rang 1 demandé, 1 recherche lue chez Hektor ») : le travail échoue, rien n'est écrit chez Hektor.
+   Même règle si la liste vient de l'ancienne regex et que le rang demandé est ≥ 1.
+   *Contrôle de cohérence en plus : le nombre de recherches lu chez Hektor = celui de notre registre pour ce contact ; sinon
+   erreur aussi.*
+3. **Rendre le vrai état** dans `handleDeleteHektorContactSearch` : relire la liste après le geste et écrire au journal la
+   date posée **sur le bon numéro** (`recentValueAutoarchivage<id>` via `searchNum`). Le travail dit « date posée, archivage
+   attendu cette nuit », pas « archivée ». *Le témoin du lendemain reste la vraie preuve.*
+4. **La qualification hérite seule** des pièces 1-2 (même fonction de liste) : avant/après redevient juste. Rien d'autre.
+
+**C. Ce qui n'est PAS dans ce plan (à décider par Frédéric).**
+- **La marque locale** (`archive=true` écrasé par la relecture du contact, audit du 21/09 §4) : avec l'archivage différé,
+  la relecture faite 1 s après le geste **remet « active »** jusqu'au lendemain. C'est un chantier à part (Supabase + build).
+- **La bascule** (archivage immédiat) : écartée, car elle réactive si on la rejoue.
+- **605967 / 471882** : recherche de qualification encore active chez Hektor. L'archiver = une écriture chez Hektor → accord.
+- **Contexte négociateur** : toutes les lectures sont en compte admin. Le worker lit en négociateur ; la pièce 1 doit donc
+  être éprouvée **en réel** sur un travail d'essai (contact 605946, accord requis), pas seulement relue.
+
+**E. ✅ PIÈCES 1 À 3 CODÉES le 27/10 (« Go : code les pièces 1 à 3 du §19.5 dans le worker, sans redémarrer ni pousser »).
+⚠ NON COMMITÉ, worker NON redémarré : le code tourne encore à l'ancienne.**
+- Pièce 1 : `lireRecherchesHektor` (`{ source, recherches: [{ index, idCritere, archivee }] }`) ; l'appel HTTP est sorti
+  dans `fetchHektorContactSearchTabHtml(contactId, searchNum)` ; `fetchHektorContactSearchList` garde sa forme (la
+  qualification n'a pas bougé) ; `lireDateAutoArchivageHektor` lit la date d'un rang.
+- Pièce 2 : `cibleRechercheHektor` (refus + journal `source`, `nos_recherches`, `deja_archivee`) ; `compterNosRecherches`
+  lit `app_contact_search_current` sous l'**identité** (archivées comprises, comme Hektor) ;
+  `resolveContactSearchTargetCritereId` n'en est plus qu'une enveloppe (la modification en profite aussi).
+  Un refus supplémentaire, non écrit au plan : **aucun rang demandé et plusieurs recherches** → échec (avant : rang 0).
+- Pièce 3 : `relireArchivageRechercheBestEffort` (étape `hektor_contact_search_archive_relue`, `done`/`error`) ; le
+  résultat du travail porte `archivage: fait | differe | non_verifie`, `search_index` et `relu` ; `status: "archived"`
+  est gardé (rien ne le lit, on ne change pas un contrat en passant). Le message de `archiveHektorContactSearch` dit
+  « Date d'auto-archivage posée (archivage en différé) ».
+- **Éprouvé** : `node --check` ✅ ; **les deux fonctions de lecture copiées du fichier, exécutées dans l'onglet Hektor**
+  (lecture seule, compte admin) sur les 11 contacts de l'essai 1 + 605967 : 12 listes justes (`AAo`, `AAoA`, `ooooo`…,
+  605946 désormais `AA`), date lue au bon rang (605967 → 23-10-2027 ; valeur vide = Hektor n'affiche pas de date) ;
+  **les refus et la relecture exécutés tels qu'extraits du fichier**, avec des listes simulées : 8 cas de ciblage
+  (dont le 26/10 rejoué avec l'ancienne liste → **refusé**, « rang 1 demandé, 1 recherche lue ») + 5 cas de relecture
+  (date posée, déjà archivée, autre date, numéro disparu, Hektor en panne) → tous conformes.
+- **Pas éprouvé** : en **contexte négociateur** et par un vrai travail. À faire après redémarrage, sur 605946 (accord
+  requis : écriture chez Hektor). Ses deux recherches sont archivées : un « supprimer » de rang 1 doit poser la date sur
+  471894 et dire « déjà archivée ».
+
+**D. Ce que ça pourrait casser ailleurs.** La pièce 2 transforme un mauvais geste silencieux en **échec visible** : un
+contact dont la liste ne se lit pas verra son « supprimer » échouer au lieu de viser la 1ʳᵉ recherche. C'est voulu.
+La pièce 1 touche la création (`listerCriteresBestEffort`) : si `data-search-id` venait à manquer, l'ancienne regex reprend,
+comme aujourd'hui — pas pire qu'avant.
+
 
 ---
 
