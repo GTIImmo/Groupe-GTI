@@ -1133,3 +1133,24 @@ elles tournent à 21:00 et 02:00)* :
 - **descente** 06:45 → 07:05:54, les 4 pas en code 0 ; 4ᵉ pas (rattrapage du carnet R3) : « rien à poser », 0 ligne en attente.
 - **balayage des photos** 23:00 : 1 000 / 1 000 terminés, 0 refus, **0 masquée dans une boîte publique** ; récolte 544
   masquées ; reste 6 519 annonces, ~7 nuits ; seul orange : 63073 (connu).
+
+**⚠⚠ Les 12 photos « absentes » : relues chez Hektor le 27/10 à 07:08 (accord de Frédéric, « oui relis » ; il avait
+pensé au masque)** — deux travaux `sync_hektor_photos` (af0ff770 / f3f59d34), file vide avant, `done` en 36 s et 6 s :
+- **63354** : Hektor rend 4 visibles + **7 masquées** = nos 7 « absentes », **toutes revenues `présente / masquée`** ;
+- **63280** : 8 visibles + **14 masquées** ; 1 des 5 (487757) est revenue masquée, **4 ont vraiment disparu** (487758-61),
+  et **13 masquées que nous n'avions jamais** ont été ramenées.
+➡ **8 sur 12 étaient MASQUÉES, pas supprimées.**
+
+**La cause** (`Console/accorder_photos_miroir.js` l. 266-292) : l'entretien compare nos photos à la liste de l'API détail,
+**qui ne contient que les VISIBLES**. Les verrous 7 et 8 ne protègent qu'une photo que **notre base sait masquée**. Une
+photo masquée **directement chez Hektor**, que nous croyions visible, ressemble donc trait pour trait à une supprimée → elle
+est marquée absente, sort du panneau de l'app (on ne peut plus la démasquer depuis l'app) et serait perdue à la coupure.
+Pas de risque de publication (absente = hors des boîtes publiques). Le balayage la rattrapera quand il passera sur
+l'annonce, mais rien ne l'y envoie plus tôt.
+
+**L'ampleur, mesurée** : depuis le 18/10, **106 photos sur 11 annonces vivantes** sont marquées absentes **sans aucune
+relecture des deux galeries depuis** — 63306 (54), 59203 (30), 62716 (7), 47929 (5), 63079 (3), 63193 (2), 63028, 62726,
+63234, 63304, 61831 (1 chacune). Combien sont masquées : **non mesuré** (il faut les relire, 2 requêtes par annonce).
+⬜ **À décider par Frédéric** : relire ces 11 annonces ; et le remède de fond (par exemple : l'entretien ne marque plus
+« absente », il pose une relecture des deux galeries de l'annonce — le patron du bouton masquer, qui pose déjà un
+`sync_hektor_photos` quand il découvre). Rien n'est codé.
