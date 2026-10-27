@@ -371,6 +371,13 @@ les 99 ventes sans bien connu attendent ; locations et gestions exclues.
   ⚠ Supabase les recevra par le push de nuit (upsert) : un retour arrière après la nuit devra aussi les retirer là-bas.
 - ⏰ Après la nuit : Supabase `app_mandat` = 27 452 lignes ; registre affiché +520.
 
+#### ⛔ 18455 : NE PAS L'AJOUTER — décision de Frédéric, 27/10 (« b »)
+
+Registre légal Hektor 2026 : le 12/03/2026 (Ambert), même mandante, même bien (réf EM71125 = annonce 58908),
+**18455 « non exclusif »** puis **18456 « exclusif »**. 18456 est chez nous (12/03/2026 → 11/06/2027).
+18455 est tenu pour un **numéro abandonné le jour même** : trou connu et assumé au registre de l'app.
+Ne pas relancer. (Le 15/10, il était classé « aucune référence » : la réf existe, c'est la décision qui le tient dehors.)
+
 ## 11. Fichiers
 
 - **Détail ligne à ligne, toutes années** (19 908 écarts, nominatif, hors git) :
