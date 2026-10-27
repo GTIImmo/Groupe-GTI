@@ -2356,3 +2356,36 @@ il faut donc **un marqueur de suppression à nous** (comme `retire_le` pour les 
 
 ➡ **C'est un préalable au mécanisme ⑥, et il touche le registre des transactions : un audit à part, avant tout code.** Il porte sur les
 gestes créer / supprimer une transaction, la détection d'une suppression par la nuit, et le sens de `present_in_hektor` pour chaque lecteur.
+
+### 36.6 Audit corrigé *(27/10, Frédéric : « nous enregistrons bien la transaction au geste dans notre app, on attend juste la confirmation pour y ajouter l'id de Hektor, mais nos transactions sont portées par leur propre id »)*
+
+**Frédéric a raison, et c'est mesuré.** Nos transactions existent **dès le geste**, sous **notre** numéro (`app_affaire_id` ≥ 1 000 000),
+et le numéro Hektor n'est ajouté qu'à la confirmation. **341** transactions sont nées dans l'app depuis le 25/08 (147 offres,
+124 compromis, 70 ventes) ; toutes sont confirmées aujourd'hui. Leur existence ne dépend donc pas de Hektor.
+
+**La dépendance tient à UNE condition, dans UNE vue** : la vue des liens d'un contact (`app_contact_relations_current`, 2ᵉ branche) ne
+garde que `p.transaction_presente`, c'est-à-dire `present_in_hektor`. C'est le seul lecteur qui **filtre** dessus. Les fonctions de la table
+des parties ne font que tenir la colonne à jour, et la sentinelle `app_v_affaire_partie_ecarts` ne fait que la comparer.
+
+**Le projet a DÉJÀ la bonne règle, indépendante de Hektor**, dans `app_geste_affaire_optimistic` (le verrou d'une offre). Une transaction
+est **vivante**, sauf si elle porte un numéro Hektor **et** qu'elle n'est plus chez Hektor :
+`NOT (btrim(coalesce(l.hektor_affaire_id, '')) <> '' AND l.present_in_hektor IS FALSE)`.
+- née chez nous, pas encore confirmée (sans numéro Hektor) → **vivante** ✅ ;
+- confirmée → **vivante** ✅ ;
+- supprimée (le geste « Supprimer » la passe à `false`) ou retirée chez Hektor, avec son numéro → **hors du compte** ✅ (les 17 d'aujourd'hui).
+
+**Le correctif** : dans la vue, remplacer `p.transaction_presente` par **cette même règle** (la vue joint déjà `l`). C'est un seul
+changement, sur la règle que le projet applique déjà ailleurs.
+- **Aujourd'hui, il ne change aucune ligne** : les 341 sont confirmées, et les 17 retirées ont leur numéro.
+- **Demain**, une transaction créée dans l'app apparaît **au clic** dans la fiche contact (P2) **et** dans le type (⑥).
+- **Après la coupure**, elle n'aura jamais de numéro Hektor, et elle comptera quand même.
+
+⚠ **Le seul cas qui restera à régler, à la coupure (étape 3)** : une transaction **née chez nous et supprimée avant d'avoir un numéro
+Hektor**. Le geste « Supprimer » ne pose aujourd'hui que `present_in_hektor = false` : sans numéro, la règle la croirait vivante. Il lui
+faudra un marqueur de suppression à nous (comme `retire_le` pour les liens). C'est rare aujourd'hui (supprimer passe par Hektor, qui exige
+son numéro) ; noté pour l'étape 3, **pas un préalable**.
+
+**L'ordre, corrigé** :
+1. **ce correctif de la vue** (patch + inverse + répétition, éprouvés dans une transaction annulée, avec le même témoin de vitesse que
+   P2) ;
+2. **puis ⑥** (« à recalculer » marqué par nos registres, recalcul chaque minute, conflits signalés).
