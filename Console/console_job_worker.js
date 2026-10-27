@@ -19426,6 +19426,9 @@ const JOB_TYPES_A_NOTIFIER = new Set([
   "delete_hektor_photo", "reorder_hektor_photos", "set_hektor_photo_visibility",
   "generate_mandat_document", "generate_estimation_pdf", "generate_cadastre_document",
   "relance_signature", "cancel_signature_procedure",
+  // 27/10/2026 (decision de Frederic) : les 4 gestes de transaction, absents depuis leur naissance
+  // (29/08, 07/09). Leur echec ne prevenait personne. 0 echec en 90 jours : aucun bruit a craindre.
+  "change_hektor_offre_status", "cancel_hektor_compromis", "delete_hektor_compromis", "delete_hektor_vente",
 ]);
 
 const JOB_LIBELLES = {
@@ -19449,6 +19452,10 @@ const JOB_LIBELLES = {
   restore_hektor_annonce: "Le desarchivage de l'annonce",
   delete_hektor_annonce: "La suppression de l'annonce",
   assign_hektor_annonce_negotiator: "L'affectation du negociateur",
+  change_hektor_offre_status: "Le geste sur l'offre",
+  cancel_hektor_compromis: "L'annulation du compromis",
+  delete_hektor_compromis: "La suppression du compromis",
+  delete_hektor_vente: "La suppression de la vente",
   create_hektor_mandat_auto_number: "La generation du numero de mandat",
   upload_document_to_hektor: "L'envoi du document",
   delete_document_from_hektor: "La suppression du document",
@@ -19618,6 +19625,34 @@ async function posterAlerte(ligne) {
       `${pourAdmin.body}\n\nLe negociateur ne voit qu'une pastille « a verifier » sur la fiche. `
       + "Le detail et les boutons pour trancher sont dans l'ecran Sante (et dans la fiche, pour un admin).");
   }
+}
+
+// --- 27/10/2026 : L'ALERTE PART A L'ABANDON DU GESTE, PLUS AU 1er ECHEC (decision D1 de Frederic) ---
+// Elle partait a CHAQUE echec : un geste rejoue qui guerit au 2e essai envoyait quand meme un e-mail,
+// et un geste sans dossier (contact, recherche) en envoyait jusqu'a 5 -- l'index unique ecarte le
+// doublon par dossier, et NULL n'y est jamais egal a NULL. On ne previent plus que quand le travail
+// ne repartira pas : refus d'etat, type que la base ne rejoue pas, 5e essai, ou demande trop vieille.
+// Audit : notice/AUDIT_NAVIGATION_APRES_ACTION_2026-10-23.md §23.1. Repli : CONSOLE_ALERTE_A_L_ABANDON=0.
+const ALERTE_A_L_ABANDON = String(process.env.CONSOLE_ALERTE_A_L_ABANDON ?? "1").trim() !== "0";
+// ⚠ COPIE de `types_rejouables` de app_console_action_enqueue_due_retries, LUE EN BASE le 27/10/2026.
+//   Meme patron que REJEU_MAX_TENTATIVES. Si un type ENTRE dans la liste SQL sans entrer ici : l'alerte
+//   part au 1er echec, comme avant (benin). S'il en SORT sans sortir d'ici : son abandon n'envoie pas
+//   d'e-mail -- la pastille rouge et la sentinelle `geste_abandonne` (3 h) le voient quand meme.
+const TYPES_REJOUES_PAR_LA_BASE = new Set([
+  "archive_hektor_annonce", "restore_hektor_annonce", "delete_hektor_annonce", "delete_hektor_contact",
+  "change_hektor_annonce_status", "assign_hektor_annonce_negotiator", "change_hektor_offre_status",
+  "cancel_hektor_compromis", "delete_hektor_vente", "delete_hektor_compromis",
+]);
+// La base ne rejoue que les demandes de moins de 24 h ; le rejeu suivant attend jusqu'a 20 min.
+// Au-dela de 23 h, on considere donc qu'il ne viendra plus.
+const REJEU_DEMANDE_TROP_VIEILLE_MS = 23 * 3600 * 1000;
+function travailAbandonne(job, refusDEtat, maintenant = Date.now()) {
+  if (refusDEtat) return true;
+  if (!TYPES_REJOUES_PAR_LA_BASE.has(job.job_type)) return true;
+  // `attempt_count` est deja le numero de CET essai : la prise fait +1 et rend la ligne.
+  if (Number(job.attempt_count || 0) >= REJEU_MAX_TENTATIVES) return true;
+  const demande = Date.parse(String(job.requested_at || ""));
+  return Number.isFinite(demande) && maintenant - demande > REJEU_DEMANDE_TROP_VIEILLE_MS;
 }
 
 async function notifyJobFailureBestEffort(job, errorMessage) {
@@ -23457,7 +23492,14 @@ async function processOnce() {
         { attempt_count_pose: REJEU_MAX_TENTATIVES, job_type: job.job_type });
     }
     await finishJob(job.id, "error", null, message, { nePlusRejouer: refusDEtat });
-    await notifyJobFailureBestEffort(job, message);
+    if (!ALERTE_A_L_ABANDON || travailAbandonne(job, refusDEtat)) {
+      await notifyJobFailureBestEffort(job, message);
+    } else {
+      // Le journal le DIT : une alerte retenue n'est pas une alerte perdue.
+      await logJob(job.id, "alerte", "done",
+        `Alerte retenue : le travail sera rejoue (essai ${Number(job.attempt_count || 0)} sur ${REJEU_MAX_TENTATIVES}). Elle partira s'il est abandonne.`,
+        null).catch(() => {});
+    }
     await writeWorkerHeartbeat("error", { durationMs: Date.now() - startedAt, error: message });
   }
 

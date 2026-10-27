@@ -13018,6 +13018,18 @@ function numeroCreeDansLeTravail(job: ConsoleJob, cle: 'app_dossier_id' | 'app_i
 //   `false` = l'ancien comportement, en une ligne.
 const L_ECRAN_SUIT_LE_CLIC = true
 
+// ⛔ 27/10/2026 -- POINT 7b : LE DETAIL N'EST CHARGE QU'UNE FOIS PAR RELECTURE, ET SEULEMENT FICHE OUVERTE.
+//   L'effet du detail dependait des LISTES (`dossiers`, `mandats`) : chaque relecture de l'app le relancait
+//   3 fois (la cle, puis la liste des annonces, puis celle des mandats), ~5 requetes en serie chaque fois ; et
+//   une fiche FERMEE se rechargeait a chaque page, filtre ou frappe dans la liste (sa selection reste posee).
+//   ⭐ POURQUOI LES LISTES ETAIENT LA (b0c582f, 21/05, « cache des annonces historiques ») : la ligne de liste
+//     dit si le bien est une ARCHIVE LEGERE, qu'on ne charge pas en entier -- et l'effet devait repartir quand
+//     la liste arrive apres le clic. On garde EXACTEMENT ce besoin : l'effet suit ce booleen, plus les listes.
+//   Fiche fermee : aucun ecran ne lit le detail (verifie le 26/10 au point 0, et le 27/10 pour Annonces et
+//   Suivi) ; rouvrir une fiche la relit. Audit : notice/AUDIT_NAVIGATION_APRES_ACTION_2026-10-23.md §23.2.
+//   `false` = l'ancien comportement, en une ligne.
+const DETAIL_UNE_FOIS = true
+
 // ⛔ 26/10/2026 -- POINT 4 : LA RECHERCHE GLOBALE ET LES BLOCS DE RECHERCHE DES ECRANS.
 //   - une loupe en tete du menu, la touche « / » et la barre de l'Accueil ouvrent la meme fenetre
 //     (RechercheGlobale.tsx), qui cherche partout ; un clic ouvre la fiche par les portes existantes ;
@@ -13281,6 +13293,26 @@ const SUIVI_PASTILLE = true
 // Meme seuil que app_action_status (5 essais OU 3 h), qui fait ensuite passer la pastille au rouge.
 const ESSAIS_AVANT_ABANDON = 5
 const DELAI_AVANT_ABANDON_MS = 3 * 3600 * 1000
+// 27/10/2026 -- DECISION D2 DE FREDERIC : la pastille ne rougit que pour un GESTE D'UTILISATEUR, pas pour une
+//   synchro (de nuit ou d'ouverture : 9 des 12 erreurs des 30 derniers jours). Rouge <=> un e-mail est parti a
+//   l'admin. ⚠ COPIE de JOB_TYPES_A_NOTIFIER (Console/console_job_worker.js), a garder identique. Le bandeau admin
+//   de la fiche et l'ecran Sante, eux, montrent TOUT. Audit : AUDIT_NAVIGATION_APRES_ACTION_2026-10-23.md §23.1.
+//   `false` = l'ancien comportement (tout travail abandonne rougit), en une ligne.
+const PASTILLE_GESTES_SEULEMENT = true
+const GESTES_QUI_PREVIENNENT = new Set([
+  'create_hektor_draft_annonce', 'create_hektor_contact', 'create_hektor_mandant_contact',
+  'update_hektor_mandant_contact', 'link_hektor_mandant', 'delete_hektor_contact',
+  'update_hektor_annonce_fields', 'update_hektor_contact', 'archive_hektor_contact',
+  'add_hektor_contact_search', 'update_hektor_contact_search', 'delete_hektor_contact_search',
+  'change_hektor_annonce_status', 'archive_hektor_annonce', 'restore_hektor_annonce',
+  'delete_hektor_annonce', 'assign_hektor_annonce_negotiator',
+  'create_hektor_mandat_auto_number',
+  'upload_document_to_hektor', 'delete_document_from_hektor', 'upload_hektor_photo',
+  'delete_hektor_photo', 'reorder_hektor_photos', 'set_hektor_photo_visibility',
+  'generate_mandat_document', 'generate_estimation_pdf', 'generate_cadastre_document',
+  'relance_signature', 'cancel_signature_procedure',
+  'change_hektor_offre_status', 'cancel_hektor_compromis', 'delete_hektor_compromis', 'delete_hektor_vente',
+])
 type EtatPastille = 'attente' | 'ok' | 'rouge'
 const PASTILLE_TEXTES: Record<EtatPastille, [string, string]> = {
   attente: ['Hektor · en attente', 'Envoi à Hektor en cours. Votre saisie est déjà enregistrée chez nous.'],
@@ -13304,7 +13336,8 @@ function PastilleSuivi(props: { appDossierId?: number | null; hektorAnnonceId?: 
     if (appDossierId) {
       void Promise.all([loadAnnonceEditStatus(appDossierId).catch(() => null), loadActionStatus(appDossierId).catch(() => null)])
         .then(([saisie, gestes]) => poser(
-          Boolean((saisie?.pending && (saisie.conflict || saisie.partial)) || gestes?.gestes?.length),
+          Boolean((saisie?.pending && (saisie.conflict || saisie.partial))
+            || (gestes?.gestes ?? []).some((geste) => !PASTILLE_GESTES_SEULEMENT || GESTES_QUI_PREVIENNENT.has(String(geste.job_type ?? '')))),
           Boolean(saisie?.pending && !saisie.conflict && !saisie.partial),
         ))
     } else if (contactId) {
@@ -15298,8 +15331,20 @@ export default function App() {
     selectedDossierRef.current = selectedDossier
   }, [selectedDossier])
 
+  // POINT 7b : ce que l'effet du detail lit VRAIMENT dans les listes -- un booleen, stable d'une relecture a l'autre.
+  const ficheLegereDansLaListe = useMemo(() => {
+    if (selectedDossierId == null) return false
+    const base = dossiers.find((item) => item.app_dossier_id === selectedDossierId)
+      ?? mandats.find((item) => item.app_dossier_id === selectedDossierId) ?? null
+    return isLightweightAnnonceRecord(base)
+  }, [selectedDossierId, dossiers, mandats])
+
   useEffect(() => {
     if (selectedDossierId == null || (hasSupabaseEnv && !session)) return
+    if (DETAIL_UNE_FOIS && !detailOpen) {
+      setDetailLoading(false)
+      return
+    }
     const quickMandat = mandats.find((item) => item.app_dossier_id === selectedDossierId)
     const quickBase = dossiers.find((item) => item.app_dossier_id === selectedDossierId) ?? quickMandat ?? null
     const currentSelectedDossier = selectedDossierRef.current
@@ -15341,7 +15386,10 @@ export default function App() {
     return () => {
       cancelled = true
     }
-  }, [selectedDossierId, session, dataReloadKey, dossiers, mandats])
+  }, DETAIL_UNE_FOIS
+    ? [selectedDossierId, session, dataReloadKey, detailOpen, ficheLegereDansLaListe]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    : [selectedDossierId, session, dataReloadKey, dossiers, mandats])
 
   // POINT 0 bis (26/10/2026) : le resume des RDV de la vitrine, A PART, pour la fiche
   // OUVERTE seulement (pas une fiche legere d'archive : elle ne l'appelait pas avant, et le
