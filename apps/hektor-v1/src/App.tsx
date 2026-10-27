@@ -13028,6 +13028,14 @@ const L_ECRAN_SUIT_LE_CLIC = true
 //   `false` = l'ancien comportement, en une ligne (la barre de l'Accueil redevient decorative).
 const RECHERCHE_GLOBALE = true
 
+// ⛔ 27/10/2026 -- LE MENU LATERAL « NET » (bureau). Piste A de la maquette maquettes/menu-lateral-bienvu-v1.html,
+//   choisie par Frederic : entree active = voile magenta leger + fin trait a gauche (plus de degrade, de halo ni du
+//   trait blanc parasite) ; lignes de 36 px ; deux groupes « Travail » / « Pilotage » ; picto propre a « Sante »
+//   (elle avait le ☰) ; pied sur une ligne -- avatar, nom, agence, cloche -- et un clic sur son nom ouvre
+//   « Utilisateurs » / « Se deconnecter ». Replie : 68 px, la cloche reste visible, l'avatar ouvre le meme menu.
+//   Styles : menu-lateral-net.css (charge en dernier). Ne joue qu'avec bienvu allume. `false` = la barre d'avant.
+const MENU_NET = true
+
 // ⛔ 26/10/2026 -- POINT 5 : LE FIL DE NAVIGATION. Annonce -> contact -> autre bien : le contact se fermait et le
 //   nouveau bien REMPLACAIT le premier, sans trace a l'ecran (constat N7 ; Precedent le resout depuis le point 1).
 //   Chaque fiche ouverte (annonce, contact) s'ajoute a un fil court (les 5 dernieres) ; y revenir le raccourcit ;
@@ -13622,6 +13630,14 @@ export default function App() {
     if (typeof window === 'undefined') return false
     return window.localStorage.getItem('gti-sidebar-collapsed') === '1'
   })
+  // MENU_NET : le menu « Utilisateurs / Se deconnecter » ouvert par un clic sur son nom (pied de la barre)
+  const [menuCompteOuvert, setMenuCompteOuvert] = useState(false)
+  useEffect(() => {
+    if (!menuCompteOuvert) return
+    const fermer = (event: KeyboardEvent) => { if (event.key === 'Escape') setMenuCompteOuvert(false) }
+    window.addEventListener('keydown', fermer)
+    return () => window.removeEventListener('keydown', fermer)
+  }, [menuCompteOuvert])
   const [requestComment, setRequestComment] = useState('')
   const [rechercheAcquereurOpen, setRechercheAcquereurOpen] = useState(false)
   const [rechercheAcquereurSearch, setRechercheAcquereurSearch] = useState<AppContactSearch | null>(null)
@@ -24174,7 +24190,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     <FilNavigationContext.Provider value={contexteFilNavigation}>
     <TravauxContext.Provider value={contexteTravaux}>
     <DesktopLayout>
-    <div className={`app-shell app-shell-modern app-screen-${screen} ${sidebarCollapsed ? 'is-sidebar-collapsed' : ''}`}>
+    <div className={`app-shell app-shell-modern app-screen-${screen} ${sidebarCollapsed ? 'is-sidebar-collapsed' : ''}${MENU_NET && APP_BIENVU_ENABLED ? ' menu-net' : ''}`}>
       <header className={`side-rail ${mobileMenuOpen ? 'is-mobile-menu-open' : ''}`}>
         <button
           className="mobile-nav-toggle"
@@ -24233,16 +24249,63 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               <kbd aria-hidden="true">/</kbd>
             </button>
           ) : null}
+          {MENU_NET && APP_BIENVU_ENABLED ? <span className="rn-label">Travail</span> : null}
           <button className={`nav-button ${screen === 'accueil' ? 'is-active' : ''}`} type="button" title="Accueil" onClick={() => openScreen('accueil')}>Accueil</button>
           <button className={`nav-button ${screen === 'mandats' ? 'is-active' : ''}`} type="button" title="Annonces" onClick={() => openScreen('mandats')}>Annonces</button>
           <button className={`nav-button ${screen === 'estimations' ? 'is-active' : ''}`} type="button" title="Estimations" onClick={() => openScreen('estimations')}>Estimations</button>
           <button className={`nav-button ${screen === 'registre' ? 'is-active' : ''}`} type="button" title="Mandats" onClick={() => openScreen('registre')}>Mandats</button>
           <button className={`nav-button nav-button-contacts ${screen === 'contacts' ? 'is-active' : ''}`} type="button" title="Contacts" onClick={() => openScreen('contacts')}>Contacts</button>
           <button className={`nav-button ${screen === 'agenda' ? 'is-active' : ''}`} type="button" title="Agenda" onClick={() => openScreen('agenda')}>Agenda</button>
+          {MENU_NET && APP_BIENVU_ENABLED && isManagerOrAdmin ? <span className="rn-label">Pilotage</span> : null}
           {isManagerOrAdmin ? <button className={`nav-button ${screen === 'suivi' ? 'is-active' : ''}`} type="button" title="Suivi" onClick={() => openScreen('suivi')}>Suivi</button> : null}
           {isAdmin ? <button className={`nav-button ${screen === 'sante' ? 'is-active' : ''}`} type="button" title="Santé système" onClick={() => openScreen('sante')}>Santé</button> : null}
         </nav>
         <div className="header-user-stack">
+          {MENU_NET && APP_BIENVU_ENABLED ? (
+            <div className="rn-foot">
+              <button
+                className="rn-user"
+                type="button"
+                aria-haspopup="menu"
+                aria-expanded={menuCompteOuvert}
+                title={`${resolvedUserNegotiatorContext?.commercial_nom || profile?.display_name || 'Utilisateur'} · ${resolvedUserNegotiatorContext?.agence_nom || 'Agence non détectée'}`}
+                onClick={() => setMenuCompteOuvert((value) => !value)}
+              >
+                <span className="rn-av">{userInitials(profile?.display_name, session?.user.email ?? profile?.email ?? null)}</span>
+                <span className="rn-who">
+                  <strong>{resolvedUserNegotiatorContext?.commercial_nom || profile?.display_name || 'Utilisateur'}</strong>
+                  <span>{resolvedUserNegotiatorContext?.agence_nom || 'Agence non détectée'}</span>
+                </span>
+                {isManagerOrAdmin || session ? (
+                  <svg className="rn-chev" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m8 9 4-4 4 4M8 15l4 4 4-4" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" /></svg>
+                ) : null}
+              </button>
+              <div className="rn-actions">
+                <CompteurMesTravaux />
+                <NotificationsBell negociateurEmail={sessionEmail} />
+              </div>
+              {menuCompteOuvert && (isManagerOrAdmin || session) ? (
+                <>
+                  <span className="rn-pop-fond" aria-hidden="true" onClick={() => setMenuCompteOuvert(false)} />
+                  <div className="rn-pop" role="menu" aria-label="Mon compte">
+                    {isManagerOrAdmin ? (
+                      <button type="button" role="menuitem" onClick={() => { setMenuCompteOuvert(false); void openUserTool() }}>
+                        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="9" cy="8.5" r="3.2" stroke="currentColor" strokeWidth={2} /><path d="M3.5 19a5.5 5.5 0 0 1 11 0M15.5 5.6a3.2 3.2 0 0 1 0 5.8M17.5 14.2a5.5 5.5 0 0 1 3 4.8" stroke="currentColor" strokeWidth={2} strokeLinecap="round" /></svg>
+                        Utilisateurs
+                      </button>
+                    ) : null}
+                    {isManagerOrAdmin && session ? <hr /> : null}
+                    {session ? (
+                      <button type="button" role="menuitem" className="is-danger" onClick={() => { setMenuCompteOuvert(false); void handleSignOut() }}>
+                        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4M10 16l-4-4 4-4M6 12h10" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" /></svg>
+                        Se déconnecter
+                      </button>
+                    ) : null}
+                  </div>
+                </>
+              ) : null}
+            </div>
+          ) : (
           <div className="side-card user-card">
             <div className="user-card-top">
               <div className="user-avatar">{userInitials(profile?.display_name, session?.user.email ?? profile?.email ?? null)}</div>
@@ -24258,6 +24321,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               </div>
             </div>
           </div>
+          )}
         </div>
       </header>
 

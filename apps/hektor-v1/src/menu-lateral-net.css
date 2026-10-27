@@ -1,0 +1,238 @@
+/* ============================================================
+   Menu latéral « Net » (bureau) — 27/10/2026, piste A de la maquette
+   maquettes/menu-lateral-bienvu-v1.html, choisie par Frédéric.
+   Interrupteur MENU_NET (App.tsx) : la classe .menu-net n'est posée sur .app-shell que
+   s'il est allumé ET bienvu allumé ; sans elle, aucune règle de ce fichier ne s'applique.
+   Chargé EN DERNIER (main.tsx), préfixe .app-shell.app-shell-modern.menu-net : passe devant
+   annonces-v2, layout-overrides, nav-icons-v2, bienvu et recherche-globale (toutes en !important).
+   Les pictos sont posés PAR TITRE : l'ancien rangement par nth-child décalait (la loupe puis les
+   libellés de groupe sont des enfants du menu) et « Santé système » n'avait aucun picto (☰).
+   ============================================================ */
+:root {
+  --rn-accueil: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 17.5 9 12l3.5 3.5 8-8'/%3E%3Cpath d='M15 7.5h5.5V13'/%3E%3Cpath d='M3.5 20.5h17'/%3E%3C/svg%3E");
+  /* Santé — cœur + pouls (nouveau) */
+  --rn-sante: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M19.5 12.6 12 20l-7.5-7.4A4.6 4.6 0 0 1 12 6.4a4.6 4.6 0 0 1 7.5 6.2z'/%3E%3Cpath d='M3 12.5h4.2l1.6-2.6 2.4 5 1.7-2.4H21'/%3E%3C/svg%3E");
+}
+
+/* ---------- la barre ---------- */
+.app-shell.app-shell-modern.menu-net > .side-rail {
+  gap: 14px !important;
+  padding: 14px 12px 12px !important;
+  background: #1d1e20 !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.06) !important;
+  overflow: visible !important; /* les fenêtres du pied (cloche, menu du nom) dépassent sur la page ; le menu défile seul */
+}
+/* le trait magenta en dégradé collé au bas de la barre (::after) : retiré, le magenta ne marque que l'entrée active */
+.app-shell.app-shell-modern.menu-net > .side-rail::after { display: none !important; }
+.app-shell.app-shell-modern.menu-net .side-rail .brand-block.rail-top {
+  height: 40px !important;
+  min-height: 40px !important;
+  margin: 0 !important;
+  padding: 0 2px 0 8px !important;
+  border: 0 !important;
+  justify-content: space-between !important;
+}
+.app-shell.app-shell-modern.menu-net .side-rail .brand-block.rail-top::after { display: none !important; }
+.bv .app-shell.app-shell-modern.menu-net .side-rail .rail-mark.rail-mark-bv svg { width: 112px !important; max-height: 28px; }
+.app-shell.app-shell-modern.menu-net .side-rail .rail-reduce {
+  width: 30px; height: 30px; border: 0; background: transparent; color: rgba(255, 255, 255, 0.6);
+}
+.app-shell.app-shell-modern.menu-net .side-rail .rail-reduce:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
+
+/* ---------- la recherche ---------- */
+.app-shell.app-shell-modern.menu-net .side-rail .screen-nav .nav-search {
+  height: 36px; min-height: 36px; margin: 0 0 4px; padding: 0 8px 0 11px; border-radius: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.08); background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.5); font-size: 13.5px; font-weight: 400;
+}
+.app-shell.app-shell-modern.menu-net .side-rail .screen-nav .nav-search:hover,
+.app-shell.app-shell-modern.menu-net .side-rail .screen-nav .nav-search:focus-visible {
+  border-color: rgba(197, 0, 95, 0.6); background: rgba(197, 0, 95, 0.1); color: #fff;
+}
+.app-shell.app-shell-modern.menu-net .side-rail .screen-nav .nav-search kbd { border-color: rgba(255, 255, 255, 0.16); color: rgba(255, 255, 255, 0.55); font-weight: 600; }
+
+/* ---------- le menu ---------- */
+.app-shell.app-shell-modern.menu-net .side-rail .screen-nav {
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: flex-start !important;
+  gap: 2px !important;
+  row-gap: 2px !important;
+  margin: 0 !important;
+}
+.app-shell.app-shell-modern.menu-net .side-rail .screen-nav .rn-label {
+  display: block; flex: 0 0 auto; padding: 12px 10px 6px;
+  font: 700 10.5px/1.2 var(--bv-font-ui, 'Hanken Grotesk', system-ui, sans-serif);
+  letter-spacing: 0.09em; text-transform: uppercase; color: rgba(255, 255, 255, 0.36); white-space: nowrap;
+}
+.app-shell.app-shell-modern.menu-net .side-rail .screen-nav .nav-search + .rn-label { padding-top: 6px; }
+.app-shell.app-shell-modern.menu-net .side-rail .screen-nav .nav-button {
+  flex: 0 0 auto !important;
+  height: 36px !important;
+  min-height: 36px !important;
+  padding: 0 10px 0 40px !important;
+  border: 0 !important;
+  border-radius: 8px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: rgba(255, 255, 255, 0.68) !important;
+  font-size: 13.5px !important;
+  font-weight: 500 !important;
+  transition: background 0.15s, color 0.15s;
+}
+.app-shell.app-shell-modern.menu-net .side-rail .screen-nav .nav-button:hover { background: rgba(255, 255, 255, 0.05) !important; color: #fff !important; }
+/* le picto : un masque, 18 px, couleur du texte */
+.app-shell.app-shell-modern.menu-net .side-rail .screen-nav .nav-button::before {
+  content: '' !important;
+  position: absolute !important;
+  left: 11px !important;
+  top: 50% !important;
+  width: 18px !important;
+  height: 18px !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  opacity: 1 !important;
+  transform: translateY(-50%) !important;
+  background: currentColor !important;
+  color: inherit !important;
+  -webkit-mask: var(--rn-i) center / contain no-repeat !important;
+  mask: var(--rn-i) center / contain no-repeat !important;
+}
+.app-shell.app-shell-modern.menu-net .side-rail .screen-nav .nav-button[title="Accueil"] { --rn-i: var(--rn-accueil); }
+.app-shell.app-shell-modern.menu-net .side-rail .screen-nav .nav-button[title="Annonces"] { --rn-i: var(--nv-annonces); }
+.app-shell.app-shell-modern.menu-net .side-rail .screen-nav .nav-button[title="Estimations"] { --rn-i: var(--nv-estimations); }
+.app-shell.app-shell-modern.menu-net .side-rail .screen-nav .nav-button[title="Mandats"] { --rn-i: var(--nv-mandats); }
+.app-shell.app-shell-modern.menu-net .side-rail .screen-nav .nav-button[title="Contacts"] { --rn-i: var(--nv-contacts); }
+.app-shell.app-shell-modern.menu-net .side-rail .screen-nav .nav-button[title="Agenda"] { --rn-i: var(--nv-agenda); }
+.app-shell.app-shell-modern.menu-net .side-rail .screen-nav .nav-button[title="Suivi"] { --rn-i: var(--nv-suivi); }
+.app-shell.app-shell-modern.menu-net .side-rail .screen-nav .nav-button[title="Santé système"] { --rn-i: var(--rn-sante); }
+/* l'entrée active : voile magenta léger, fin trait magenta à gauche, picto rose (plus de dégradé, de halo
+   ni du trait blanc : c'était le ::after peint en blanc par annonces-v2.css) */
+.app-shell.app-shell-modern.menu-net .side-rail .screen-nav .nav-button::after {
+  content: '' !important;
+  position: absolute !important;
+  inset: 8px auto 8px -12px !important;
+  width: 3px !important;
+  height: auto !important;
+  border-radius: 0 3px 3px 0 !important;
+  background: transparent !important;
+}
+.app-shell.app-shell-modern.menu-net .side-rail .screen-nav .nav-button.is-active {
+  background: linear-gradient(90deg, rgba(197, 0, 95, 0.24), rgba(197, 0, 95, 0.06)) !important;
+  color: #fff !important;
+  font-weight: 600 !important;
+  box-shadow: none !important;
+}
+.app-shell.app-shell-modern.menu-net .side-rail .screen-nav .nav-button.is-active::before { color: #f0468f !important; background: #f0468f !important; }
+.app-shell.app-shell-modern.menu-net .side-rail .screen-nav .nav-button.is-active::after { background: var(--bv-magenta, #c5005f) !important; }
+
+/* ---------- le pied : avatar, nom, agence, cloche ; un clic sur son nom ouvre le menu ---------- */
+.app-shell.app-shell-modern.menu-net .side-rail .header-user-stack { margin: 0 !important; padding: 0 !important; }
+.app-shell.app-shell-modern.menu-net .rn-foot {
+  position: relative;
+  display: flex; align-items: center; justify-content: space-between; gap: 2px;
+  padding: 12px 2px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+.app-shell.app-shell-modern.menu-net .rn-user {
+  display: flex; align-items: center; gap: 10px; flex: 1 1 auto; min-width: 0;
+  margin-left: -4px; padding: 4px 6px 4px 4px; border: 0; border-radius: 10px;
+  background: transparent; color: #fff; text-align: left; cursor: pointer; transition: background 0.15s;
+}
+.app-shell.app-shell-modern.menu-net .rn-user:hover,
+.app-shell.app-shell-modern.menu-net .rn-user[aria-expanded="true"] { background: rgba(255, 255, 255, 0.06); }
+.app-shell.app-shell-modern.menu-net .rn-av {
+  display: grid; place-items: center; flex: 0 0 auto; width: 32px; height: 32px; border-radius: 50%;
+  background: #0f6874; color: #fff; font: 700 12px/1 var(--bv-font-ui, 'Hanken Grotesk', system-ui, sans-serif);
+}
+.app-shell.app-shell-modern.menu-net .rn-who { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+.app-shell.app-shell-modern.menu-net .rn-who strong { font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.app-shell.app-shell-modern.menu-net .rn-who span { font-size: 11.5px; color: rgba(255, 255, 255, 0.5); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.app-shell.app-shell-modern.menu-net .rn-chev { width: 14px; height: 14px; flex: 0 0 auto; margin-left: auto; color: rgba(255, 255, 255, 0.45); }
+.app-shell.app-shell-modern.menu-net .rn-actions { display: flex; align-items: center; gap: 2px; flex: 0 0 auto; }
+.app-shell.app-shell-modern.menu-net .rn-actions .gti-notif-btn {
+  width: 32px; height: 32px; border: 0; border-radius: 8px; background: transparent; color: rgba(255, 255, 255, 0.72);
+}
+.app-shell.app-shell-modern.menu-net .rn-actions .gti-notif-btn:hover { background: rgba(255, 255, 255, 0.07); color: #fff; }
+.app-shell.app-shell-modern.menu-net .rn-actions .gti-notif-btn svg { width: 17px; height: 17px; }
+.app-shell.app-shell-modern.menu-net .rn-actions .gti-notif-badge {
+  top: -2px; right: -3px; min-width: 16px; height: 16px; line-height: 16px; font-size: 10px;
+  background: var(--bv-magenta, #c5005f); box-shadow: 0 0 0 2px #1d1e20;
+}
+/* les fenêtres du pied s'ouvrent VERS LE HAUT (la cloche s'ouvrait vers le bas, hors de l'écran) */
+.app-shell.app-shell-modern.menu-net .rn-actions .gti-notif-pop { top: auto; bottom: calc(100% + 10px); left: -201px; right: auto; }
+.app-shell.app-shell-modern.menu-net .rn-pop-fond { position: fixed; inset: 0; z-index: 1390; }
+.app-shell.app-shell-modern.menu-net .rn-pop {
+  position: absolute; left: 0; bottom: calc(100% + 8px); z-index: 1400; width: 200px; padding: 6px;
+  border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.08); background: #2b2c2f;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+}
+.app-shell.app-shell-modern.menu-net .rn-pop button {
+  display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; border: 0; border-radius: 8px;
+  background: transparent; color: rgba(255, 255, 255, 0.85); font: 500 13px/1.2 var(--bv-font-ui, 'Hanken Grotesk', system-ui, sans-serif);
+  text-align: left; cursor: pointer;
+}
+.app-shell.app-shell-modern.menu-net .rn-pop button:hover,
+.app-shell.app-shell-modern.menu-net .rn-pop button:focus-visible { background: rgba(255, 255, 255, 0.07); color: #fff; outline: none; }
+.app-shell.app-shell-modern.menu-net .rn-pop button svg { width: 16px; height: 16px; flex: 0 0 auto; }
+.app-shell.app-shell-modern.menu-net .rn-pop .is-danger { color: #ff8a8a; }
+.app-shell.app-shell-modern.menu-net .rn-pop hr { margin: 4px 2px; border: 0; border-top: 1px solid rgba(255, 255, 255, 0.08); }
+
+/* ---------- replié : 68 px, carrés de 40 px, la cloche reste, l'avatar ouvre le menu ---------- */
+.app-shell.app-shell-modern.menu-net.is-sidebar-collapsed { grid-template-columns: 68px minmax(0, 1fr) !important; }
+.app-shell.app-shell-modern.menu-net.is-sidebar-collapsed > .side-rail {
+  width: 68px !important; min-width: 68px !important; max-width: 68px !important;
+  padding: 14px 10px 12px !important;
+  overflow: visible !important;
+}
+.app-shell.app-shell-modern.menu-net.is-sidebar-collapsed .side-rail .brand-block.rail-top { justify-content: center !important; padding: 0 !important; }
+.bv .app-shell.app-shell-modern.menu-net.is-sidebar-collapsed .side-rail .rail-mark.rail-mark-bv svg { width: 30px !important; }
+.app-shell.app-shell-modern.menu-net.is-sidebar-collapsed .side-rail .screen-nav { align-items: center !important; gap: 4px !important; row-gap: 4px !important; overflow: visible !important; }
+.app-shell.app-shell-modern.menu-net.is-sidebar-collapsed .side-rail .screen-nav .nav-search { width: 40px; height: 40px; min-height: 40px; margin: 0 0 4px; padding: 0; }
+.app-shell.app-shell-modern.menu-net.is-sidebar-collapsed .side-rail .screen-nav .rn-label {
+  width: 24px; height: 1px; margin: 8px 0; padding: 0; overflow: hidden; color: transparent; background: rgba(255, 255, 255, 0.1);
+}
+.app-shell.app-shell-modern.menu-net.is-sidebar-collapsed .side-rail .screen-nav .nav-search + .rn-label { display: none; }
+.app-shell.app-shell-modern.menu-net.is-sidebar-collapsed .side-rail .screen-nav .nav-button {
+  width: 40px !important; height: 40px !important; min-height: 40px !important; padding: 0 !important;
+  font-size: 0 !important; color: rgba(255, 255, 255, 0.68) !important;
+}
+.app-shell.app-shell-modern.menu-net.is-sidebar-collapsed .side-rail .screen-nav .nav-button::before {
+  left: 50% !important; transform: translate(-50%, -50%) !important; color: inherit !important;
+}
+.app-shell.app-shell-modern.menu-net.is-sidebar-collapsed .side-rail .screen-nav .nav-button.is-active { color: #fff !important; }
+.app-shell.app-shell-modern.menu-net.is-sidebar-collapsed .side-rail .screen-nav .nav-button::after { left: -10px !important; }
+/* infobulles : le nom de l'entrée au survol */
+.app-shell.app-shell-modern.menu-net.is-sidebar-collapsed .side-rail .screen-nav .nav-button { overflow: visible !important; }
+.app-shell.app-shell-modern.menu-net.is-sidebar-collapsed .side-rail .screen-nav .nav-button:hover::after {
+  content: attr(title) !important;
+  inset: 50% auto auto calc(100% + 12px) !important;
+  width: auto !important;
+  padding: 5px 9px !important;
+  border-radius: 7px !important;
+  transform: translateY(-50%) !important;
+  background: #111 !important;
+  color: #fff !important;
+  font: 600 12px/1.2 var(--bv-font-ui, 'Hanken Grotesk', system-ui, sans-serif) !important;
+  white-space: nowrap !important;
+  z-index: 1300 !important;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3) !important;
+  pointer-events: none !important;
+}
+.app-shell.app-shell-modern.menu-net.is-sidebar-collapsed .rn-foot { flex-direction: column-reverse; gap: 8px; padding: 10px 0 0; }
+.app-shell.app-shell-modern.menu-net.is-sidebar-collapsed .rn-user { flex: 0 0 auto; margin: 0; padding: 0; border-radius: 50%; }
+.app-shell.app-shell-modern.menu-net.is-sidebar-collapsed .rn-who,
+.app-shell.app-shell-modern.menu-net.is-sidebar-collapsed .rn-chev { display: none; }
+.app-shell.app-shell-modern.menu-net.is-sidebar-collapsed .rn-pop { left: calc(100% + 10px); bottom: 0; }
+.app-shell.app-shell-modern.menu-net.is-sidebar-collapsed .rn-actions .gti-notif-pop { left: calc(100% + 10px); bottom: 0; }
+
+/* ---------- écrans bas : jamais d'ascenseur (mesuré sur la maquette de 560 à 900 px de haut) ---------- */
+@media (max-height: 680px) {
+  .app-shell.app-shell-modern.menu-net > .side-rail { gap: 10px !important; }
+  .app-shell.app-shell-modern.menu-net .side-rail .screen-nav .rn-label { padding: 8px 10px 4px; }
+  .app-shell.app-shell-modern.menu-net .side-rail .screen-nav .nav-search + .rn-label { padding-top: 2px; }
+  .app-shell.app-shell-modern.menu-net.is-sidebar-collapsed .side-rail .screen-nav { gap: 2px !important; row-gap: 2px !important; }
+  .app-shell.app-shell-modern.menu-net.is-sidebar-collapsed .side-rail .screen-nav .nav-button,
+  .app-shell.app-shell-modern.menu-net.is-sidebar-collapsed .side-rail .screen-nav .nav-search { height: 36px !important; min-height: 36px !important; }
+  .app-shell.app-shell-modern.menu-net.is-sidebar-collapsed .side-rail .screen-nav .rn-label { margin: 5px 0; }
+}

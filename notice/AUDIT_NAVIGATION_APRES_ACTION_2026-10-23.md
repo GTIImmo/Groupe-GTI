@@ -1371,6 +1371,33 @@ Menu replié : la loupe seule (50 × 36) dans la colonne des pictos, sans texte 
 débordait de 30 / 40 px et 560 de 70 / 80 (le premier contrôle n'avait mesuré que 665 et 1080). 540 px déborde encore
 de 16 px déplié (pas un écran de PC réel ; le défilement reste en secours). Le champ ouvre la recherche ; build OK.
 
+### 20.12 Le menu latéral « Net » (27/10, piste A choisie par Frédéric)
+
+Maquette : `maquettes/menu-lateral-bienvu-v1.html` (l'actuel + 3 pistes, déplié / replié, hauteurs 560-900, profils
+admin / négociateur, tableau « rien ne se perd »). Frédéric a pris la **piste A · Net**. Code : interrupteur `MENU_NET`
+(`App.tsx`, ne joue qu'avec bienvu allumé), styles `menu-lateral-net.css` chargé en dernier (`main.tsx`).
+
+**Ce qui change (bureau seulement ; le téléphone et la tablette ont leur propre rendu)**
+- Entrée active : voile magenta léger + fin trait magenta à gauche + picto rose. **Plus de dégradé ni de halo**, et
+  **plus le trait blanc parasite** : c'était le `::after` de l'entrée active peint en blanc par `annonces-v2.css`.
+- Lignes de 36 px ; deux groupes **« Travail »** (Accueil → Agenda) et **« Pilotage »** (Suivi, Santé — manager/admin).
+- **Pictos posés par titre** : l'ancien rangement par `nth-child` décalait depuis que la loupe est un enfant du menu,
+  et « Santé système » n'avait aucun picto (le ☰, pris pour un bouton de menu). Santé = cœur + pouls.
+- Pied sur une ligne : avatar 32 px, nom, agence, cloche ; **un clic sur son nom** ouvre « Utilisateurs » (manager,
+  admin) / « Se déconnecter » (Échap ou clic dehors referme). Le compteur de mes actions garde sa place à côté de
+  la cloche (il reste coupé par `SUIVI_PASTILLE`).
+- La fenêtre de la cloche s'ouvre **vers le haut** (elle s'ouvrait vers le bas, hors de l'écran) ; la barre laisse
+  dépasser les fenêtres du pied (avant, elles étaient coupées au bord de la barre).
+- Le trait magenta en dégradé collé au bas de la barre (`.side-rail::after`, `styles.css`) est retiré.
+- Replié : **68 px** (colonne de la grille aussi, au lieu de 86), carrés de 40 px, séparateur entre les groupes,
+  infobulle au survol, **la cloche reste visible** (elle était masquée), l'avatar ouvre le même menu.
+
+**Contrôle en démonstration, thème bienvu, admin (8 entrées)** — débordement menu / barre, déplié et replié :
+900 → 0 · 720 → 0 · 665 → 0 · 600 → 0 · 560 → 0 ; le pied reste dans l'écran à chaque hauteur. Clic sur « Contacts »
+→ `?ecran=contacts`, entrée active suivie ; menu du nom ouvert / fermé par Échap ; cloche ouverte à 12 px du bord,
+entière ; infobulle « Agenda » en replié. Build OK. ⚠ Non vu avec une vraie session (le mode démonstration n'a pas
+« Se déconnecter ») ni par un négociateur réel.
+
 ---
 
 ## 21. POINT 5 — RE-AUDIT DU 26/10 : « revenir en arrière entre objets » (rien codé)
