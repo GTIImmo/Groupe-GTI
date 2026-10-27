@@ -1928,3 +1928,51 @@ overlay / backdrop / modal / drawer, et chaque écoute d'Échap) — **~35 fenê
 fait rien avec une fenêtre de demande, la visionneuse, la cloche, le menu du compte, le ☰ ouvert ; Échap dans un champ du
 cockpit annule la saisie **sans** fermer la fiche ; témoin inverse interrupteur éteint ; `npm run build` ; la vraie app
 ouverte **déconnectée**.
+
+### 23.5 ✅ POINT 7a CODÉ ET CONTRÔLÉ EN MAQUETTE (27/10, « Vas-y pour le 7a comme proposé ») — ⚠ fiche contact NON éprouvée
+
+**Ce qui est en place** — interrupteur `ECHAP_FERME_LA_FICHE` (`false` = l'ancien comportement) :
+- 6 fiches marquées `data-fiche` (annonce bureau, annonce téléphone, contact ×2, registre) et leur bouton de sortie
+  `data-fiche-retour` (rail du cockpit, « Fermer » du téléphone, retour contact ×2, « Retour » du registre) —
+  **attributs seulement**, aucun comportement changé ;
+- une écoute dans `App`, **au-dessus des `return` de connexion** (l. ~14835 contre ~20786) : Échap clique le bouton de
+  la fiche du dessus, sauf touche déjà traitée, touche combinée, champ, ou fenêtre visible dans l'écran par-dessus.
+
+**Trois choses que les essais ont corrigées EN CODANT (elles n'étaient pas dans la proposition) :**
+1. **`-modal` en fin de classe seulement** : `google-agenda-modal-layout` (mise en page de la rubrique Rendez-vous) passait
+   pour une fenêtre → Échap ne faisait rien dans cette rubrique. Les vraies fenêtres finissent par `-modal`
+   (`estim-editor-modal`, `fcyc-modal`…) ; `fa-cx-modal-scope` (enveloppe toujours présente de la fiche contact) est hors jeu.
+2. **Le bouton de sortie n'a pas à être DANS l'écran** : sur une fiche qu'on a fait défiler, le rail du cockpit sort par le
+   haut (mesuré à −193 px) et Échap ne faisait plus rien. « Affiché » suffit pour le bouton ; « dans l'écran » ne sert
+   qu'aux fenêtres (le tiroir ☰ caché hors écran).
+3. **Un champ qui se retire à Échap** (l'édition en ligne du cockpit) : quand l'événement arrive à la fenêtre, l'élément
+   actif est déjà le corps de la page. La garde regarde donc AUSSI `event.target`, qui reste le champ. Reproduit par un
+   champ retiré par un écouteur posé sur `#root` (là où React écoute) : la fiche **reste ouverte**.
+
+**Contrôles en maquette bienvu :**
+
+| essai | bureau 1 440 px | téléphone 375 px |
+|---|---|---|
+| liste seule + Échap | rien | rien (tiroir ☰ fermé hors écran : ignoré) |
+| fiche + Échap | **fermée**, adresse `?ecran=annonces` | **fermée** |
+| rubrique Le Bien / Publicité / Rendez-vous / Contact + Échap | **retour au cockpit** (×4), puis Échap → liste | — |
+| fiche défilée, rail à −193 px + Échap | **fermée** | — |
+| menu « Plus d'actions » ouvert + Échap | fiche **reste** | — |
+| Rapprochement (fenêtre) + Échap | la fenêtre se ferme (son écoute), la fiche **reste** ; 2ᵉ Échap → liste | — |
+| cloche ouverte + Échap | la cloche se ferme, la fiche **reste** | — |
+| Échap dans un champ (même retiré) | fiche **reste** | — |
+| demande « Baisse prix » ouverte + Échap | — | fiche **et** demande **restent** |
+| visionneuse photo + Échap | — | la visionneuse se ferme, la fiche **reste** |
+| ☰ ouvert sur la fiche + Échap | — | le tiroir se ferme, la fiche **reste** |
+| registre (menu Mandats) + Échap | **fermée** | — |
+| **témoin inverse** : interrupteur éteint, fiche + Échap | — | fiche **reste** (l'ancien comportement) |
+
+`npm run build` vert. **Vraie app construite en local, ouverte DÉCONNECTÉE** : « Bon retour », le bundle porte
+`data-fiche-retour`, seuls les deux 401 antérieurs.
+
+**Ce qui n'est PAS éprouvé :**
+- **la fiche contact** (sur une annonce, et dans l'écran Contacts) : la maquette n'a aucun contact. Le marquage est le même
+  que les autres (conteneur + bouton de retour existant) ; à essayer en réel : contact posé sur une annonce + Échap →
+  l'annonce ; 2ᵉ Échap → la liste ;
+- l'édition en ligne réelle (les champs de la maquette sont en lecture seule) — couverte par la reproduction ci-dessus ;
+- un clavier sur tablette.

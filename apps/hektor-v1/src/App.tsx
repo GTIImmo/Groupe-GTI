@@ -13030,6 +13030,42 @@ const L_ECRAN_SUIT_LE_CLIC = true
 //   `false` = l'ancien comportement, en une ligne.
 const DETAIL_UNE_FOIS = true
 
+// ⛔ 27/10/2026 -- POINT 7a : ECHAP FERME LA FICHE (N8 : rien ne se fermait). Echap fait EXACTEMENT ce que fait le
+//   bouton de sortie de la fiche du dessus : on le CLIQUE (marque `data-fiche-retour`, dans un conteneur `data-fiche`).
+//   Un Echap = un niveau, comme le bouton : rubrique -> cockpit -> liste ; contact pose sur une annonce -> l'annonce ;
+//   l'adresse, le fil et le retour vers le contact restent ceux du bouton. DANS LE DOUTE, RIEN : pas dans un champ
+//   (l'edition en ligne annule par Echap), pas si une touche deja traitee (visionneuse, recherche globale), pas si une
+//   FENETRE est ouverte par-dessus -- ~35 fenetres sans balisage commun, d'ou un selecteur large. ⚠ « visible DANS
+//   l'ecran » : le tiroir ☰ du telephone reste dans la page, pousse hors ecran, avec role="dialog" meme ferme.
+//   Audit : notice/AUDIT_NAVIGATION_APRES_ACTION_2026-10-23.md §23.4. `false` = l'ancien comportement, en une ligne.
+const ECHAP_FERME_LA_FICHE = true
+// « -modal » en FIN de classe seulement (estim-editor-modal, fcyc-modal...) : `google-agenda-modal-layout` est une mise en
+// page de la rubrique RDV, et `fa-cx-modal-scope` l'enveloppe toujours presente des fenetres de la fiche contact.
+const SELECTEUR_FENETRE = '[role="dialog"], [role="menu"], [aria-modal="true"], [class*="overlay"], [class*="backdrop"], '
+  + '[class*="drawer"], [class*="lightbox"], [class$="-modal"], [class*="-modal "], [aria-haspopup][aria-expanded="true"]'
+function affiche(element: Element) {
+  const r = element.getBoundingClientRect()
+  if (r.width <= 0 || r.height <= 0) return false
+  const style = window.getComputedStyle(element)
+  return style.visibility !== 'hidden' && style.display !== 'none' && style.opacity !== '0'
+}
+function visibleDansLEcran(element: Element) {
+  const r = element.getBoundingClientRect()
+  return affiche(element) && r.right > 0 && r.bottom > 0 && r.left < window.innerWidth && r.top < window.innerHeight
+}
+function boutonDeSortieDuDessus(): HTMLElement | null {
+  const fiches = Array.from(document.querySelectorAll<HTMLElement>('[data-fiche]')).filter(visibleDansLEcran)
+  if (!fiches.length) return null
+  const fenetreDessus = Array.from(document.querySelectorAll(SELECTEUR_FENETRE))
+    .some((element) => !element.hasAttribute('data-fiche') && visibleDansLEcran(element))
+  if (fenetreDessus) return null
+  // La fiche du dessus : celle sous le centre de l'ecran (une fiche contact posee sur l'annonce), a defaut la derniere.
+  const auCentre = document.elementFromPoint(window.innerWidth / 2, window.innerHeight / 2)?.closest<HTMLElement>('[data-fiche]')
+  const dessus = auCentre && fiches.includes(auCentre) ? auCentre : fiches[fiches.length - 1]
+  // Le bouton peut etre sorti de l'ecran (fiche longue qu'on a fait defiler) : il suffit qu'il soit AFFICHE.
+  return Array.from(dessus.querySelectorAll<HTMLElement>('[data-fiche-retour]')).find(affiche) ?? null
+}
+
 // ⛔ 26/10/2026 -- POINT 4 : LA RECHERCHE GLOBALE ET LES BLOCS DE RECHERCHE DES ECRANS.
 //   - une loupe en tete du menu, la touche « / » et la barre de l'Accueil ouvrent la meme fenetre
 //     (RechercheGlobale.tsx), qui cherche partout ; un clic ouvre la fiche par les portes existantes ;
@@ -14801,6 +14837,26 @@ export default function App() {
   function relireApresLeGeste() {
     if (L_ECRAN_SUIT_LE_CLIC) setDataReloadKey((value) => value + 1)
   }
+
+  // POINT 7a (27/10/2026) : Echap ferme la fiche du dessus, par son propre bouton (voir ECHAP_FERME_LA_FICHE).
+  useEffect(() => {
+    if (!ECHAP_FERME_LA_FICHE) return
+    const surTouche = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || event.defaultPrevented || event.repeat) return
+      if (event.ctrlKey || event.altKey || event.metaKey || event.shiftKey) return
+      // La cible ET l'element actif : un champ d'edition en ligne se RETIRE a Echap avant que l'evenement arrive ici
+      // (l'element actif est alors le corps de la page), mais `event.target` reste ce champ.
+      const dansUnChamp = (element: EventTarget | Element | null) => element instanceof HTMLElement
+        && (element.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(element.tagName))
+      if (dansUnChamp(event.target) || dansUnChamp(document.activeElement)) return
+      const bouton = boutonDeSortieDuDessus()
+      if (!bouton) return
+      event.preventDefault()
+      bouton.click()
+    }
+    window.addEventListener('keydown', surTouche)
+    return () => window.removeEventListener('keydown', surTouche)
+  }, [])
 
   // POINT 4 (26/10/2026) : la recherche globale. « / » l'ouvre de partout, sauf pendant une saisie.
   const [rechercheGlobaleOuverte, setRechercheGlobaleOuverte] = useState(false)
@@ -24156,7 +24212,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         )}
 
         {detailOpen && selectedDossier ? (
-          <div className="mobile-detail-overlay" onClick={closeDossierDetailPage}>
+          <div className="mobile-detail-overlay" data-fiche="annonce" onClick={closeDossierDetailPage}>
             <section className="mobile-detail-panel" onClick={(event) => event.stopPropagation()}>
               <MobileDossierDetail
                 selectedDossier={selectedDossier}
@@ -25205,7 +25261,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           />
         )}
         {screen !== 'annonces' && detailOpen && selectedDossier ? (
-          <div className="modal-overlay" onClick={closeDossierDetailPage}>
+          <div className="modal-overlay" data-fiche="annonce" onClick={closeDossierDetailPage}>
             <section className="modal-panel modal-panel-detail" onClick={(event) => event.stopPropagation()}>
               <DossierDetailLayout
                 selectedDossier={selectedDossier}
@@ -27038,6 +27094,7 @@ function MandatRegisterScreen(props: {
       {detailOpen && selectedDetail ? (
         <div
           className="modal-overlay"
+          data-fiche="registre"
           onMouseDown={(event) => { overlayPressRef.current = event.target === event.currentTarget }}
           onClick={(event) => { if (event.target === event.currentTarget && overlayPressRef.current) { overlayPressRef.current = false; setDetailOpen(false) } }}
         >
@@ -27052,7 +27109,7 @@ function MandatRegisterScreen(props: {
             <div className="md-panel">
               <header className="md-topbar">
                 <div className="md-tb-left">
-                  <button className="md-btn md-icon" type="button" aria-label="Retour" onClick={() => setDetailOpen(false)}>
+                  <button className="md-btn md-icon" type="button" aria-label="Retour" data-fiche-retour onClick={() => setDetailOpen(false)}>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m15 6-6 6 6 6" /></svg>
                   </button>
                   <span className="md-tb-badge">
@@ -31878,6 +31935,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
           <button
             type="button"
             className={`fa-ck-rail-brand${activeTab !== 'synthese' ? ' is-inrub' : ''}`}
+            data-fiche-retour
             onClick={() => { if (activeTab !== 'synthese') setActiveTab('synthese'); else props.onBack() }}
             title={activeTab !== 'synthese' ? 'Retour au cockpit du dossier' : 'Retour aux annonces'}
             data-tip={activeTab !== 'synthese' ? 'Retour au cockpit' : (props.backSynthLabel ? `Retour · ${props.backSynthLabel}` : 'Retour aux annonces')}
@@ -38283,7 +38341,7 @@ function MobileDossierDetail(props: {
   return (
     <article className="mobile-detail-view">
       <header className="mobile-detail-hero">
-        <button className="mobile-detail-close" type="button" onClick={props.onBack}>{props.backLabel}</button>
+        <button className="mobile-detail-close" type="button" data-fiche-retour onClick={props.onBack}>{props.backLabel}</button>
         {primaryImage ? (
           <button className="mobile-detail-photo" type="button" onClick={() => props.onOpenImage?.(primaryImage)}>
             <img src={primaryImage} alt={dossier.titre_bien} />
@@ -43781,13 +43839,13 @@ function ContactDetailPopupBase(props: {
 
   return (
     <div className="fcx" id="fcx-root" data-screen-label="Fiche contact">
-      <div className="fcx-overlay" onClick={props.onClose}>
+      <div className="fcx-overlay" data-fiche="contact" onClick={props.onClose}>
         <main className="panel" onClick={(event) => event.stopPropagation()}>
           <BandeauFilNavigation />
 
           <header className="topbar" data-screen-label="En-tête fiche contact">
             <div className="tb-left">
-              <button className="btn fcx-back" type="button" aria-label="Retour" onClick={props.onClose}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m15 6-6 6 6 6" /></svg><span>Retour</span></button>
+              <button className="btn fcx-back" type="button" aria-label="Retour" data-fiche-retour onClick={props.onClose}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m15 6-6 6 6 6" /></svg><span>Retour</span></button>
               <span className="tb-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><circle cx="12" cy="8" r="4" /><path d="M5 21a7 7 0 0 1 14 0" /></svg></span>
               <div className="crumb"><span className="ey">Fiche contact</span><span className="ref">{contactFullName}</span></div>
             </div>
@@ -44959,7 +45017,7 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
 
   return (
     <div className={`fa-contact-v2 ${typeClass}`} id="fa-cx-root" data-screen-label="Fiche contact V2">
-      <div className="fa-cx-overlay" onClick={props.onClose}>
+      <div className="fa-cx-overlay" data-fiche="contact" onClick={props.onClose}>
         <div className="fa-cx-panel" onClick={(event) => event.stopPropagation()}>
           <BandeauFilNavigation />
           <div style={{ padding: '12px 16px 0' }}>
@@ -44968,7 +45026,7 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
           </div>
           <div className="fa-cx-body">
             <aside className="fa-cx-rail" data-screen-label="Volet identité">
-              <button className="fa-cx-back" type="button" onClick={props.onClose}>
+              <button className="fa-cx-back" type="button" data-fiche-retour onClick={props.onClose}>
                 <span className="fa-cx-back-mark" aria-hidden="true">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.1} strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5" /><path d="m12 19-7-7 7-7" /></svg>
                 </span>
