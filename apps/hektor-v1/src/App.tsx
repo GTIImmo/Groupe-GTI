@@ -13050,6 +13050,19 @@ type ListesVues = {
   workItemsTotal?: number
 }
 
+// ⛔ 27/10/2026 -- LES LIGNES FANTOMES D'ANNONCES (signalees par Frederic, 15:13) : la cle React d'une ligne etait
+//   `app_dossier_id` SEUL. Le registre a une ligne PAR MANDAT (un bien a 2 mandats = 2 lignes au meme numero) ; au
+//   retour sur Annonces, le tableau est d'abord dessine une fois avec les lignes du registre (liste partagee), et deux
+//   lignes a la meme cle laissent React incapable de les retirer : elles restaient a l'ecran, figees, en trop. Le 7c
+//   ne l'empeche pas (il remplace la liste APRES ce premier dessin). La cle devient celle du registre
+//   (`register_row_id`, que toutes les lignes portent : `withRegisterRowId` dans api.ts), unique par mandat. La
+//   selection et l'ouverture d'une fiche passent toujours par `app_dossier_id`. Le telephone avait deja une cle
+//   composee. Audit : notice/AUDIT_NAVIGATION_APRES_ACTION_2026-10-23.md §23.9. `false` = l'ancienne cle.
+const CLE_LIGNE_UNIQUE = true
+function cleLigneMandat(item: MandatRecord): string | number {
+  return CLE_LIGNE_UNIQUE ? mandateRegisterRowKey(item) : item.app_dossier_id
+}
+
 // ⛔ 27/10/2026 -- POINT 7a : ECHAP FERME LA FICHE (N8 : rien ne se fermait). Echap fait EXACTEMENT ce que fait le
 //   bouton de sortie de la fiche du dessus : on le CLIQUE (marque `data-fiche-retour`, dans un conteneur `data-fiche`).
 //   Un Echap = un niveau, comme le bouton : rubrique -> cockpit -> liste ; contact pose sur une annonce -> l'annonce ;
@@ -25885,7 +25898,7 @@ function HomeDashboardScreen(props: {
             <div className="home-panel-head"><h3>Biens a suivre</h3><button type="button" onClick={() => props.onOpenScreen('mandats')}>Voir tout</button></div>
             <div className="home-property-list">
               {followedMandats.map((item) => (
-                <button key={item.app_dossier_id} type="button" onClick={() => props.onOpenDetailPage(item.app_dossier_id)}>
+                <button key={cleLigneMandat(item)} type="button" onClick={() => props.onOpenDetailPage(item.app_dossier_id)}>
                   <ListingThumbnail url={item.photo_url_listing} imagesPreviewJson={item.images_preview_json} title={item.titre_bien} />
                   <span><strong>{item.numero_dossier || item.titre_bien}</strong><small>{item.ville || '-'}</small></span>
                   <strong>{formatPrice(item.prix)}</strong>
@@ -26573,7 +26586,7 @@ function MandatsScreen(props: {
                 const avShowRappro = Boolean(props.onOpenRapprochement) && !isLightweight
                 const avEligible = item.statut_annonce === 'Actif' && item.diffusable === '1'
                 return (
-                  <Fragment key={item.is_provisional ? `prov-${item.creation_token}` : item.app_dossier_id}>
+                  <Fragment key={item.is_provisional ? `prov-${item.creation_token}` : cleLigneMandat(item)}>
                     <tr
                       className={`${isSelected ? 'is-selected' : ''} ${props.loading ? 'is-refreshing-row' : ''} ${item.is_provisional ? `is-provisional ${item.provisional_status === 'error' ? 'is-provisional-error' : ''}` : ''}`.trim()}
                       onClick={() => {
@@ -28231,7 +28244,7 @@ function SuiviMandatsScreenV2(props: {
                 {visibleAnomalyRows.length > 0 ? visibleAnomalyRows.map((item) => {
                   const anomaly = mandateAnomalyLabels(item)
                   return (
-                    <tr key={item.app_dossier_id} onClick={() => props.onOpenDetailPage(item.app_dossier_id)}>
+                    <tr key={cleLigneMandat(item)} onClick={() => props.onOpenDetailPage(item.app_dossier_id)}>
                       <td><strong>{item.numero_dossier ?? '-'}</strong><span>{item.titre_bien}</span></td>
                       <td><strong>{item.numero_mandat ?? '-'}</strong><span>{item.agence_nom ?? '-'}</span></td>
                       <td>{commercialDisplay(item)}</td>
@@ -28265,7 +28278,7 @@ function SuiviMandatsScreenV2(props: {
               <thead><tr><th>Dossier</th><th>Mandat</th><th>Negociateur</th><th>Statut</th><th>Visibilite</th></tr></thead>
               <tbody>
                 {portfolioRows.length > 0 ? portfolioRows.map((item) => (
-                  <tr key={item.app_dossier_id} onClick={() => props.onOpenDetailPage(item.app_dossier_id)}>
+                  <tr key={cleLigneMandat(item)} onClick={() => props.onOpenDetailPage(item.app_dossier_id)}>
                     <td><strong>{item.numero_dossier ?? '-'}</strong><span>{item.titre_bien}</span></td>
                     <td><strong>{item.numero_mandat ?? '-'}</strong><span>{item.agence_nom ?? '-'}</span></td>
                     <td>{commercialDisplay(item)}</td>

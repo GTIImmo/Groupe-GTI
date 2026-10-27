@@ -2408,3 +2408,42 @@ rang ; ~38974) : quelqu'un avait déjà réglé ce cas là-bas.
 - `npm run build` ;
 - la vraie app déconnectée ;
 - puis en réel, dans ton Chrome, le geste exact (Annonces → Mandats → Annonces) : 26 lignes, aucun doublon.
+
+### 23.10 ✅ CLE_LIGNE_UNIQUE CODÉ ET CONTRÔLÉ EN MAQUETTE (27/10, « Vas-y pour CLE_LIGNE_UNIQUE comme proposé (Annonces, Biens à suivre, anomalies du Suivi), puis contrôle en réel dans mon Chrome »)
+
+**Ce qui est codé** (`App.tsx`, 17 lignes ajoutées, 4 modifiées) :
+- L'interrupteur `CLE_LIGNE_UNIQUE` et la fonction `cleLigneMandat(item)`, qui rend `mandateRegisterRowKey(item)` : la clé du
+  registre, unique par mandat.
+- Elle remplace `app_dossier_id` comme clé React sur 4 listes du bureau :
+  - le tableau Annonces / Estimations (`MandatsScreen`) ;
+  - « Biens à suivre » de l'Accueil ;
+  - les **anomalies** du Suivi ;
+  - le **portefeuille** du Suivi.
+
+⚠ **Écart avec l'audit, dit tel quel.** Le §23.9 citait « anomalies du Suivi ~27883 ». Cette ligne appartient à
+`SuiviMandatsScreenV2Legacy`, qui n'est **plus affiché**. Il ne l'est pas non plus pour `SuiviMandatsScreen`.
+- L'écran Suivi réel est `SuiviMandatsScreenV2` (~28234).
+- Son tableau voisin, le **portefeuille** (~28268), lit la même liste avec la même clé : il a donc le même défaut. Je l'ai
+  mis sous le même interrupteur, ce qui fait **une liste de plus que l'accord**.
+- Le code mort (Legacy) n'est pas touché.
+
+**Contrôlé en maquette, bureau 1440 px.** Pour l'essai, un second mandat (`99999`) a été ajouté sur le bien VA1988 du
+registre (`TEMP-FANTOME`, **retiré** ; `api.ts` identique à HEAD).
+- Avec le doublon sur le **premier** bien, **pas** de fantôme : la première ligne est la même des deux côtés, et React
+  rapproche tout dans l'ordre.
+- En production, la première ligne diffère (Bas-en-Basset contre V300063299). React range alors toutes les anciennes lignes
+  par clé, et l'un des deux doublons s'y perd. D'où le doublon placé sur le **deuxième** bien.
+
+| essai | résultat |
+|---|---|
+| **interrupteur éteint** : Annonces → Mandats → Annonces | ⚠ **4 lignes**, VA1988 **en double** en tête : le défaut de production, **reproduit** |
+| **interrupteur allumé**, même geste, 3 fois de suite | **3 lignes** à chaque retour, aucun doublon |
+| Mandats → Suivi, Mandats → Accueil | rien en trop (la maquette n'y montre pas les numéros : contrôle faible) |
+| clic sur VA1988 après le retour | la **bonne** fiche s'ouvre (`?ecran=annonces&annonce=5502`) |
+| console de développement | aucune alerte « same key » |
+
+`npm run build` vert (`tsc -b`). **Vraie app construite en local, ouverte DÉCONNECTÉE** : « Bon retour », seulement les
+deux 401 antérieurs (`app_searches_to_complete`, `app_condition_catalogue`).
+
+**Reste à prouver en réel** : le geste exact de Frédéric dans son Chrome, une fois poussé — Annonces → Mandats → Annonces
+doit donner 26 lignes avec référence, sans V1160063193 ni V400063200 en trop.
