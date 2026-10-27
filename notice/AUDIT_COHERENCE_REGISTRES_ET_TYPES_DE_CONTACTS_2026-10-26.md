@@ -3012,3 +3012,31 @@ tant que la pose n'est pas faite.
    `supabase.type_contacts` ; vérifier que les fiches envoyées ont gardé leur type.
 
 Ensuite : **les 3 retours arrière du worker** (§43.3, redémarrage des 4 services, file vide).
+
+### 46.1 ✅ POSÉE LE 27/10 À 23:01 — BASE ET INTERRUPTEUR *(Frédéric : « A », les deux)*
+
+- **Essais voisins relancés avant la pose** : `test_seconde_passe_contacts_neufs.py` 7/7 (ordre du pipeline), `test_resolution_mandat.py`
+  vert, `test_type_par_nos_registres.py` 9/9. `test_c4_suppressions.py` : ses 8 contrôles sont verts. ⚠ Ses 2 « PREUVES » rougissent
+  **depuis le 23/09**, car elles comparent à `HEAD`, qui porte le correctif C-4 depuis son commit (`f01217b`). Aucun lien avec ce
+  changement ; noté, pas touché.
+- **La base** : `patch_type_nuit_2026-10-27.sql` passé (COMMIT), répétition **6 / 6 verte du premier coup**. **7** contacts différaient
+  de nos registres : les 7 sont remis, en 1 585 ms. Une seconde fois, il n'écrit rien. Sur 2 000 contacts, la nuit et le geste donnent
+  le même type, **0 écart**.
+- **L'interrupteur** : `APP_TYPE_PAR_NOS_REGISTRES=1` ajouté en fin de `.env` (CRLF, avec un commentaire). Sauvegarde du `.env` d'avant
+  dans le bloc-notes de la session.
+- **Éprouvé allumé, pour de vrai** :
+  - `recalculer_types_contacts.py` répond `0 contact(s) remis d'apres nos registres, en 1.7 s`, sortie 0 (rien à faire juste après la
+    pose : c'est le résultat attendu) ;
+  - l'appel ciblé de la relecture (`rpc/app_recalculer_type_contacts`, clé de service) sur JACQUIER 10354352 répond `0`. Son type est
+    `acquereur_compromis, acquereur_offre, acquereur_vente, proprietaire`.
+- ⚠ **Pas de battement pour ces appels à la main** : seule l'étape du pipeline écrit `supabase.type_contacts`.
+
+⏰ **Demain matin, 28/10** :
+1. dans le journal du run, l'étape « phase2 type des contacts depuis nos registres » et son compte. Il doit être petit : seuls les gestes
+   faits dans Hektor dans la journée, et les contacts neufs ;
+2. le battement `supabase.type_contacts` (`last_status`, `last_duration_ms`) ;
+3. l'envoi des contacts n'est pas reparti en masse (empreinte inchangée) ;
+4. aucun contact n'a perdu un rôle que nos registres portent (refaire le compte du contrôle 3 de la répétition : il doit valoir 0).
+
+**Retour arrière** : retirer la ligne de `.env` (effet immédiat), puis `patch_type_nuit_2026-10-27_INVERSE.sql`.
+**Ensuite** : les 3 retours arrière du worker (§43.3).
