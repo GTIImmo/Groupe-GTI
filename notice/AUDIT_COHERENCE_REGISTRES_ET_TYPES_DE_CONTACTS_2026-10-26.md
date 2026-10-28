@@ -3564,3 +3564,45 @@ Le « jusqu'à » du vendeur (C11) **n'est plus demandé** (§28.5).
   20000012, 20000013 et 20000014 → `acquereur_offre, mandant` ; liens vus : `mandant@24113` + leur offre.
 - ➡ La pièce A du §52.3 ne touche pas au calcul du type : elle dit seulement à la nuit (et au geste « Supprimer la vente ») de ne pas
   laisser ce lien redevenir un lien de mandant.
+
+### 52.5 DÉCISIONS DE FRÉDÉRIC (28/10) et la vérification demandée — rien codé
+> « A, mais à vérifier : le geste doit aussi modifier la relation de propriétaire à acheteur, même sur affaires annulées, tant qu'une
+> transaction est présente ; si la vente est supprimée, il faut aligner le type ensuite ; vérifie si Hektor fait de même ; dans tous les
+> cas on garde notre écriture et on prévient l'admin en cas de conflit, sauf si Hektor le fait systématiquement : alors le conflit peut
+> être mis en silence. ENSUITE B, mais pas automatiquement : une fenêtre Oui / Non « Voulez-vous archiver la recherche de l'acheteur ? ».
+> ENSUITE explique-moi C et D. »
+
+**Ce que fait Hektor — vérifié sur toutes les ventes supprimées connues** (journal `app_affaire_supprimee`, 10 ventes, toutes sur des
+biens d'essai) :
+- **24113** : les 4 acheteurs des ventes supprimées le **23/10** (605963, 605967, 605973, 605975) sont liés au bien, rangés
+  **« mandant »** chez Hektor, liens **vus pour la 1re fois la nuit du 24/10** — donc ajoutés par Hektor à la vente et **jamais retirés**
+  à la suppression ; toujours présents le 28/10. Il leur reste une **offre refusée** chacun.
+- **24933** : 605030 (6 ventes supprimées en septembre) est lié « mandant » ; il lui reste 4 offres (refusées / proposée). ⚠ Ambigu :
+  ce contact était déjà un mandant d'essai, on ne peut pas dire si le lien vient des ventes.
+- ➡ **Hektor ne retire jamais l'acheteur quand la vente est supprimée** : 4 sur 4 sans ambiguïté, 5 sur 5 en comptant 605030.
+
+**La règle, telle que je la comprends (A)** : sur un bien, une personne qui est **acquéreur d'une transaction encore présente** (offre,
+compromis, même refusée ou annulée), **sans vente vivante**, et que Hektor range « mandant » ou « propriétaire », est un **acheteur** :
+le lien est marqué (origine « acheteur »), il ne fait plus d'elle ni un mandant ni un propriétaire, et son type est recalculé (il reste
+`acquereur_offre`, etc.). Notre marque gagne toujours ; un désaccord avec Hektor est un **conflit**.
+
+**⛔ La garde indispensable, trouvée par la mesure** : sans elle, la règle toucherait **4 vrais mandants** (10414 FOUGEROUSE, 39032
+GINOT, 39291 BROCHET, 36244 JOLIVET) — des vendeurs que Hektor porte AUSSI comme « acquéreur » d'une offre ou d'un compromis de leur propre
+bien (erreurs de saisie anciennes, 2009-2020). Ils sont **nommés dans le mandat** ou **vendeurs des transactions** : c'est le même critère que
+la règle du chantier 1 (« jamais un acheteur nommé dans le mandat de sa vente »), il les protège. **Avec la garde : 0 vrai contact touché**,
+seulement les 6 liens d'essai.
+
+**Où la règle vit** : au geste « Supprimer la vente » (si le lien existe déjà) **et** la nuit (cas de 24113 : le lien n'existait pas encore
+au moment de la suppression). Lecteurs à mettre d'accord : la vue `app_contact_relations_current`, le registre des mandats
+(`export_app_payload.py` l. ~2052, qui écarte déjà `origine = 'vente'`), la règle de nuit (`regle_acheteur_proprietaire.py`, partagée),
+`relation_ledger.py` (qui pose la marque). Rien chez Hektor.
+
+**Le conflit** : Hektor le fait **systématiquement** (5 / 5) → proposé : le compter dans Santé **sans prévenir** l'admin, et prévenir
+seulement si un cas sort de la règle (Hektor retire le lien, ou le range autrement).
+
+**B** : une fenêtre Oui / Non « Voulez-vous archiver la recherche de l'acheteur ? », jamais automatique ; Oui lance le geste d'archivage qui
+existe (une recherche après l'autre). Où : après une vente faite dans l'app, et depuis la fiche d'un acheteur qui a une recherche active
+(les ventes se saisissent dans Hektor : 0 vente faite dans l'app en 60 jours).
+
+**⬜ À trancher avant le code** : quand il ne reste **plus aucune** transaction de la personne sur le bien (tout supprimé), le lien laissé par
+Hektor est-il aussi marqué « acheteur » (recommandé : oui — elle n'est ni propriétaire ni mandante), ou laissé à Hektor ?
