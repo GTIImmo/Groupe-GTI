@@ -1864,7 +1864,50 @@ class Monitor:
     # 24 travaux en erreur (moyenne 5,8). 200 laisse donc une marge de huit fois,
     # et si ce plafond saute un jour, c'est que quelque chose de gros se passe --
     # exactement le moment ou il NE FAUT PAS filtrer l'alerte.
-    PLAFOND_LISTE_RESOLUS = 200
+    #
+    # ⚠ 28/10/2026 -- LE PLAFOND DE 200 A SAUTE, ET IL RENDAIT L'ALERTE ETERNELLE.
+    #   Panne Hektor du 27-28/10 : 726 travaux photos en erreur d'un coup, 741 au
+    #   total. Au-dessus de 200 on ne filtrait plus -- et comme un travail en erreur
+    #   RESTE en erreur pour toujours (c'est de l'historique), le compte ne pouvait
+    #   plus jamais redescendre sous 200 : meme apres que Frederic a tranche, le
+    #   rouge restait, et une NOUVELLE erreur s'y serait noyee.
+    #   L'intention du 14/10 reste juste et elle est GARDEE : une grosse vague que
+    #   personne n'a tranchee reste rouge, puisqu'on ne retire que ce qu'un humain a
+    #   tranche, croise par identifiant. Ce qui change : on lit les listes PAR PAGES
+    #   (PostgREST rend 1 000 lignes au plus par reponse, verifie le 22/08), jusqu'a
+    #   5 000. Au-dela, comportement d'avant : on ne filtre pas.
+    #   ⚠ ET UN DEFAUT DORMANT EST CORRIGE AU PASSAGE : les resolutions etaient lues
+    #     avec limit=2000 et la garde testait « >= 2000 » -- or la reponse plafonne
+    #     a 1 000. Au-dela de 1 000 resolutions la liste etait TRONQUEE SANS QUE LA
+    #     GARDE LE VOIE (sans danger ce jour-la : 21 resolutions).
+    PLAFOND_LISTE_RESOLUS = 5000
+    PAGE_LISTE_RESOLUS = 1000
+
+    def _lire_par_pages(self, table: str, params: dict[str, str], cle: str) -> list[Any] | None:
+        """Lit une liste entiere par curseur sur `cle` (unique, dans le select).
+
+        Rend None si la liste depasse PLAFOND_LISTE_RESOLUS : l'appelant ne filtre
+        alors pas. Meme patron que lirePages() de l'empileur du balayage : un
+        curseur, jamais un decalage.
+        """
+        lignes: list[Any] = []
+        curseur: Any = None
+        while True:
+            page = dict(params)
+            page.update({"order": cle + ".asc", "limit": str(self.PAGE_LISTE_RESOLUS)})
+            if curseur is not None:
+                page[cle] = "gt." + str(curseur)
+            rows = self.supabase.get(table, page)
+            if not isinstance(rows, list):
+                raise ValueError("reponse de forme inconnue")
+            lignes.extend(rows)
+            if len(lignes) > self.PLAFOND_LISTE_RESOLUS:
+                return None
+            if len(rows) < self.PAGE_LISTE_RESOLUS:
+                return lignes
+            curseur = (rows[-1] or {}).get(cle)
+            if curseur is None:
+                raise ValueError(cle + " absent du select")
 
     # ⚠ MON DEFAUT DU 13/10, MESURE LE 14 AU MATIN. J'avais ecrit « des que la
     #   Descente a tourne, le releve doit avoir suivi » -- mais
@@ -1907,21 +1950,19 @@ class Monitor:
             return brut, sortie
         try:
             params = dict(sentinel.get("params") or {})
-            params.update({"select": "id,requested_at",
-                           "limit": str(self.PLAFOND_LISTE_RESOLUS)})
-            travaux = self.supabase.get(sentinel["table"], params) or []
-            resolus = self.supabase.get("app_pending_resolution", {
-                "select": "payload_json",
+            params["select"] = "id,requested_at"
+            travaux = self._lire_par_pages(sentinel["table"], params, "id")
+            resolus = self._lire_par_pages("app_pending_resolution", {
+                "select": "id,payload_json",
                 "objet": "eq." + str(reglage.get("objet", "geste")),
-                "limit": "2000",
-            }) or []
+            }, "id")
         except Exception as exc:
             sortie["non_filtre_cause"] = "lecture impossible (" + type(exc).__name__ + ")"
             return brut, sortie
-        if not isinstance(travaux, list) or not isinstance(resolus, list):
-            sortie["non_filtre_cause"] = "reponse de forme inconnue"
+        if travaux is None or resolus is None:
+            sortie["non_filtre_cause"] = "plus de " + str(self.PLAFOND_LISTE_RESOLUS) + " lignes"
             return brut, sortie
-        if len(travaux) < brut or len(resolus) >= 2000:
+        if len(travaux) < brut:
             # liste incomplete d'un cote ou de l'autre -> on ne filtre pas
             sortie["non_filtre_cause"] = "liste tronquee"
             return brut, sortie
