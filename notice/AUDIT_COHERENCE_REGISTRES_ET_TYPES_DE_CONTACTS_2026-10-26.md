@@ -3105,3 +3105,44 @@ déposé à part dans git) ; mais le redémarrage, lui, chargera le fichier enti
   premier geste défait, ou la première liste retenue par Hektor, écrit une ligne `type_des_contacts` au journal du travail.
 
 **Décision de Frédéric (27/10, 23:30)** : *« je redémarrerai demain matin, file vide, les 4 services ensemble »*. ⏰ 28/10 au matin : comparer l'heure de départ des 4 processus à 23:22:32.
+
+## 48. ✅ NOTAIRE, ÉTAPE 3 CODÉE — L'ÉCRAN DES NOTAIRES *(28/10, Frédéric : « oui », pendant la reprise du run)* — NON POUSSÉE, À POSER AVEC L'ÉTAPE 1
+
+**Interrupteur** : `TYPE_NOTAIRE_ECRAN` (App.tsx). Sans rôle notaire dans les données, l'écran ne change pas. Aujourd'hui aucun contact n'en
+porte : ils arriveront avec la vue de l'étape 1, puis le calcul du type depuis nos registres.
+
+**Les changements** (maillon 3 du §40.3, décisions du §40.6) :
+| endroit | ce qui change |
+|---|---|
+| `contactDirectoryCategories` | la catégorie `notaire`, **en premier** (décision 1) : `notaire_vendeur` ou `notaire_acquereur` |
+| `contactDirectoryTypeLabel` · `contactDirectoryTypeSymbol` | « Notaire » · la balance de la maquette v2 |
+| `contactToneFromRoles` | dominant notaire → le ton `notary` (téléphone, pastille), déjà libellé « Notaire » |
+| en-tête de la fiche V2 | `ty-notaire` (le bleu encre `#3b4a8c` de la maquette v2), la balance dans l'avatar, pastilles en bleu |
+| cartes de l'annuaire | avatar, mot et statut (« Notaire · Côté vendeur / acquéreur / côtés vendeur et acquéreur ») |
+| lignes de biens de la fiche (P2) | famille `notaire`, **en premier sur la ligne** ; « Notaire — côté vendeur / acquéreur / côtés vendeur et acquéreur » ; l'étape du dossier dans le sous-titre, même règle que l'acheteur (la vente si elle existe, sinon la plus récente ; compromis annulé ou offre refusée **en gris**) ; ligne bleue `r-notaire` |
+| filtre de l'annuaire (2 menus) + `contactRoleFilterValues` (`lib/api.ts`) | « Notaire entrée / sortie », qui ne trouvaient personne, devient « Notaire », qui vise **les deux côtés** |
+| recherche globale (`RechercheGlobale.tsx`) | « Notaire » en premier |
+| styles (`annuaire-contacts-v2.css`, `contact-detail-v2.css`) | avatar, mot et statut de l'annuaire ; variables `ty-notaire`, balance, `r-notaire` |
+
+Les invités d'un RDV (décision 4) : rien à coder. La vue de l'étape 1 suffit, et le libellé passe par `contactDirectoryRoleLabel`.
+
+**Essais** :
+- `apps/hektor-v1/test_notaire_ecran.cjs` : **22 / 22**. Il exécute le code réel (App.tsx, `lib/api.ts`, `RechercheGlobale.tsx`) et
+  contrôle le rang, le ton, les mots, les lignes de biens (vente retenue, deux côtés, annulé en gris, ordre reçu indifférent), le filtre, la
+  recherche globale, les menus et les styles. **Témoin inverse** : un contact sans notaire donne le même écran, allumé comme éteint.
+  **Mutant** (sans « notaire en premier ») : attrapé.
+- `test_fiche_un_bien_tous_roles.cjs` et `test_type_contact_unique.cjs` rougissaient : leur bac à sable ne connaissait pas les nouvelles
+  aides. Elles leur sont ajoutées ; ils sont verts, leurs contrôles inchangés.
+- `npm run build` : vert.
+- ⬜ **Pas vu à l'écran** : aucune donnée ne porte encore de rôle notaire. À voir au bureau et au téléphone **après la pose de l'étape 1**.
+
+⚠ **Ce qui reste à trancher (décision 2)** : jusqu'à la fiche notaire (étape 4), la fiche contact d'un notaire liste **tous ses biens à
+plat**, jusqu'à 410 pour le plus chargé. La décision 2 dit « pas toutes les lignes à plat ».
+
+⬜ **La pose, dans cet ordre, avec l'accord de Frédéric** :
+1. **rejouer l'essai de l'étape 1 dans une transaction annulée**. La base a changé depuis l'essai du 27/10 : le type au geste et le calcul
+   pour tous lisent cette vue ;
+2. poser la vue (étape 1) et sa répétition. Au prochain calcul du type (la nuit, ou `app_recalculer_tous_les_types`), les 1 110 notaires de
+   l'annuaire reçoivent leur rôle ;
+3. pousser le front (Frédéric) ;
+4. voir l'écran, au bureau et au téléphone.

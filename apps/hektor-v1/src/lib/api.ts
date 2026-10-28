@@ -2548,6 +2548,8 @@ function applyNegotiatorScopeToQuery(baseQuery: any, scope?: DataScope | null) {
 
 function contactRoleFilterValues(role: string) {
   if (role === 'acquereur') return ['acquereur', 'acquereur_offre', 'acquereur_compromis', 'acquereur_vente']
+  // ⑧ notaire, étape 3 (28/10/2026) : le filtre « Notaire » de l'annuaire vise les deux côtés de la table des parties
+  if (role === 'notaire') return ['notaire_vendeur', 'notaire_acquereur']
   return [role]
 }
 

@@ -35,7 +35,9 @@ function tranche(src, debut) {
   return f < 0 ? null : src.slice(i, f + 2);
 }
 
-const MORCEAUX = ["const TYPE_CONTACT_UNIQUE = ", "const FICHE_UN_BIEN_TOUS_ROLES = ", "function contactDirectoryRoleLabel(",
+// ⑧ notaire, étape 3 (28/10) : familleDuRole et regrouperRelationsParBien appellent les aides du notaire
+const MORCEAUX = ["const TYPE_CONTACT_UNIQUE = ", "const FICHE_UN_BIEN_TOUS_ROLES = ", "const TYPE_NOTAIRE_ECRAN = ",
+  "function estRoleNotaire(", "function roleNotaireDuBien(", "function contactDirectoryRoleLabel(",
   "function dateDuRole(", "function couleurDuRoleDuBien(", "function familleDuRole(", "function etapeAcheteurRetenue(",
   "function detailEtapeAcheteur(", "function regrouperRelationsParBien("];
 

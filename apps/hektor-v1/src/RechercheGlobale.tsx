@@ -86,6 +86,8 @@ function rolesContact(c: AppContact) {
   //   une transaction fait un ACHETEUR ; l'Acquéreur est celui qui a une recherche ACTIVE. `false` = l'ancien affichage.
   if (TYPE_CONTACT_UNIQUE) {
     const mots: string[] = []
+    // ⑧ notaire, étape 3 (28/10/2026) : « Notaire » en premier, comme l'annuaire (contactDirectoryCategories)
+    if (roles.some((r) => r === 'notaire_vendeur' || r === 'notaire_acquereur')) mots.push('Notaire')
     if (roles.includes('mandant')) mots.push('Mandant')
     if (roles.some((r) => r === 'acquereur' || r.startsWith('acquereur_'))) mots.push('Acheteur')
     if (roles.includes('proprietaire')) mots.push('Propriétaire')

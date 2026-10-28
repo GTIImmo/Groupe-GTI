@@ -66,7 +66,8 @@ function versionAvant(fichier, marque) {
 
 const APP_MORCEAUX = ["function isBuyerRole(", "const contactDirectoryTypeLabel", "function contactDirectoryCategories(",
   "function contactToneFromRoles(", "function contactToneLabel(", "function contactToneBadgeLabel(", "function contactDirectoryRoleLabel("];
-const APP_NEUFS = ["const TYPE_CONTACT_UNIQUE = ", "const TON_LIBELLE_UNIQUE"];
+// ⑧ notaire, étape 3 (28/10) : contactDirectoryCategories appelle les aides du notaire
+const APP_NEUFS = ["const TYPE_CONTACT_UNIQUE = ", "const TON_LIBELLE_UNIQUE", "const TYPE_NOTAIRE_ECRAN = ", "function estRoleNotaire("];
 const APP_API = ["contactDirectoryCategories", "contactDirectoryTypeLabel", "contactToneFromRoles", "contactToneLabel",
   "contactToneBadgeLabel", "contactDirectoryRoleLabel"];
 

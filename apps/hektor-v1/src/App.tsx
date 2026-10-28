@@ -24068,8 +24068,11 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                         { value: 'mandant', label: 'Mandant' },
                         { value: 'proprietaire', label: 'Proprietaire' },
                         { value: 'acquereur', label: TYPE_CONTACT_UNIQUE ? 'Acheteur' : 'Acquereur' },
-                        { value: 'notaire_entree', label: 'Notaire entree' },
-                        { value: 'notaire_sortie', label: 'Notaire sortie' },
+                        // ⑧ notaire, étape 3 : « entrée / sortie » ne trouvaient personne (aucun contact ne porte ces rôles) ;
+                        //   « Notaire » vise notaire_vendeur ET notaire_acquereur (lib/api.ts, contactRoleFilterValues)
+                        ...(TYPE_NOTAIRE_ECRAN
+                          ? [{ value: 'notaire', label: 'Notaire' }]
+                          : [{ value: 'notaire_entree', label: 'Notaire entree' }, { value: 'notaire_sortie', label: 'Notaire sortie' }]),
                       ]}
                     />
                     <FilterSelect
@@ -24807,8 +24810,11 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                     { value: 'mandant', label: 'Mandant' },
                     { value: 'proprietaire', label: 'Proprietaire' },
                     { value: 'acquereur', label: TYPE_CONTACT_UNIQUE ? 'Acheteur' : 'Acquereur' },
-                    { value: 'notaire_entree', label: 'Notaire entree' },
-                    { value: 'notaire_sortie', label: 'Notaire sortie' },
+                    // ⑧ notaire, étape 3 : « entrée / sortie » ne trouvaient personne (aucun contact ne porte ces rôles) ;
+                    //   « Notaire » vise notaire_vendeur ET notaire_acquereur (lib/api.ts, contactRoleFilterValues)
+                    ...(TYPE_NOTAIRE_ECRAN
+                      ? [{ value: 'notaire', label: 'Notaire' }]
+                      : [{ value: 'notaire_entree', label: 'Notaire entree' }, { value: 'notaire_sortie', label: 'Notaire sortie' }]),
                   ]}
                 />
                 <FilterSelect
@@ -39164,7 +39170,7 @@ function contactToneFromRoles(roles: string[], contact?: Pick<AppContact, 'activ
     if (dominant === 'acheteur') return 'buyer'
     if (dominant === 'proprietaire') return 'owner'
     if (dominant === 'acquereur') return 'search'
-    if (roles.some((role) => role.startsWith('notaire'))) return 'notary'
+    if (dominant === 'notaire' || roles.some((role) => role.startsWith('notaire'))) return 'notary'
     return 'default'
   }
   const hasBuyer = roles.some(isBuyerRole)
@@ -39188,8 +39194,18 @@ function contactToneFromRoles(roles: string[], contact?: Pick<AppContact, 'activ
 //  - Propriétaire : lié à une annonce SANS mandat (role `proprietaire`)
 //  - Acquéreur    : a une RECHERCHE active (prospect), indépendamment des relations aux biens
 // Priorité du TYPE DOMINANT (avatar/thème) : Mandant > Acheteur > Propriétaire > Acquéreur.
-type ContactDirectoryType = 'mandant' | 'proprietaire' | 'acheteur' | 'acquereur' | 'autre'
+//  - Notaire      : partie d'une transaction comme notaire (`notaire_vendeur` / `notaire_acquereur`, table des parties)
+// ⑧ NOTAIRE, ÉTAPE 3 (28/10/2026) : la catégorie « Notaire », EN PREMIER (décision 1 de Frédéric, 27/10 : un notaire
+//   qui est aussi mandant ou acheteur reste d'abord « Notaire », les autres rôles suivent en pastilles). Les rôles
+//   arrivent par la vue des liens (étape 1, posée AVEC cette étape) puis par le calcul du type depuis nos registres.
+//   Sans rôle notaire dans les données, rien ne change. Note des types : §40 et §48. `false` = l'écran d'avant.
+const TYPE_NOTAIRE_ECRAN = true
+function estRoleNotaire(role: string) {
+  return role === 'notaire_vendeur' || role === 'notaire_acquereur'
+}
+type ContactDirectoryType = 'notaire' | 'mandant' | 'proprietaire' | 'acheteur' | 'acquereur' | 'autre'
 const contactDirectoryTypeLabel: Record<ContactDirectoryType, string> = {
+  notaire: 'Notaire',
   mandant: 'Mandant',
   proprietaire: 'Propriétaire',
   acheteur: 'Acheteur',
@@ -39198,6 +39214,7 @@ const contactDirectoryTypeLabel: Record<ContactDirectoryType, string> = {
 }
 function contactDirectoryCategories(roles: string[], activeSearchCount = 0): ContactDirectoryType[] {
   const out: ContactDirectoryType[] = []
+  if (TYPE_NOTAIRE_ECRAN && roles.some(estRoleNotaire)) out.push('notaire') // décision 1 : en premier
   if (roles.includes('mandant')) out.push('mandant')          // avec n° de mandat
   if (roles.some(isBuyerRole)) out.push('acheteur')           // transaction offre/compromis/vente
   if (roles.includes('proprietaire')) out.push('proprietaire') // propriétaire sans mandat
@@ -39215,6 +39232,10 @@ function contactBuyerStageLabel(roles: string[]): string | null {
 // Symbole SVG du type dominant (IDENTIQUE a l'avatar du detail contact V2 fa-cx-ty-*).
 // Utilise dans l'avatar du listing (.ci-av) a la place des initiales.
 function contactDirectoryTypeSymbol(cat: ContactDirectoryType) {
+  if (cat === 'notaire') {
+    // la balance de la maquette fiche-notaire-v2 (fa-cx-ty-notaire)
+    return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v17" /><path d="M8 20h8" /><path d="M5 7h14" /><path d="M12 5.2 5 7" /><path d="m12 5.2 7 1.8" /><path d="M5 7 2.5 13a2.6 2.6 0 0 0 5 0Z" /><path d="M19 7l-2.5 6a2.6 2.6 0 0 0 5 0Z" /></svg>
+  }
   if (cat === 'mandant') {
     return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round"><path d="M6 3h8l4 4v14H6z" /><path d="M14 3v4h4" /><path d="M9 11h6M9 14h4" /><path d="M9 17.5c1-1.4 2.3-1.4 2.8 0s1.5 1.4 2.5 0" /></svg>
   }
@@ -39345,6 +39366,8 @@ function contactDirectoryRoleLabel(value: string) {
   if (normalized === 'acquereur_offre') return 'Acquereur offre'
   if (normalized === 'acquereur_compromis') return 'Acquereur compromis'
   if (normalized === 'acquereur_vente') return 'Acquereur vente'
+  if (TYPE_NOTAIRE_ECRAN && normalized === 'notaire_vendeur') return 'Notaire — côté vendeur'
+  if (TYPE_NOTAIRE_ECRAN && normalized === 'notaire_acquereur') return 'Notaire — côté acquéreur'
   if (normalized === 'notaire_entree') return 'Notaire entree'
   if (normalized === 'notaire_sortie') return 'Notaire sortie'
   return value || 'Contact'
@@ -39364,7 +39387,7 @@ function contactDirectoryRoleLabel(value: string) {
 const FICHE_UN_BIEN_TOUS_ROLES = true
 
 type RoleDuBien = {
-  famille: 'mandant' | 'proprietaire' | 'acheteur' | 'autre'
+  famille: 'notaire' | 'mandant' | 'proprietaire' | 'acheteur' | 'autre'
   role: string
   libelle: string
   detail: string | null
@@ -39386,11 +39409,13 @@ function dateDuRole(value: string | null | undefined) {
 // la couleur d'une pastille de rôle : celle de l'annuaire (mandant, propriétaire, acheteur) ; gris = offre refusée, compromis annulé
 function couleurDuRoleDuBien(r: RoleDuBien) {
   if (r.gris) return '#8a7f6e'
+  if (r.famille === 'notaire') return '#3b4a8c' // le bleu encre de la fiche notaire (maquette v2)
   return r.famille === 'mandant' ? '#c2125f' : r.famille === 'proprietaire' ? '#c2701a' : r.famille === 'acheteur' ? '#2f8a5b' : '#2f7c86'
 }
 
 function familleDuRole(role: string): RoleDuBien['famille'] {
   const r = role.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+  if (TYPE_NOTAIRE_ECRAN && estRoleNotaire(r)) return 'notaire'
   if (r === 'mandant') return 'mandant'
   if (r === 'proprietaire' || r === 'vendeur') return 'proprietaire'
   if (r.startsWith('acquereur_')) return 'acheteur'
@@ -39425,6 +39450,36 @@ function detailEtapeAcheteur(r: AppContactRelation) {
   return { detail: `Offre${d ? ` du ${d}` : ''}`, gris: false }
 }
 
+// ⑧ NOTAIRE, ÉTAPE 3 (28/10/2026) : la pastille du notaire sur un bien -- son CÔTÉ (vendeur, acquéreur, ou les
+//   deux), et l'étape du dossier dans le sous-titre, avec la même règle que l'acheteur : la vente si elle existe,
+//   sinon la plus récente ; un compromis annulé ou une offre refusée en gris. Ne dépend pas de l'ordre reçu.
+function roleNotaireDuBien(lignes: AppContactRelation[]): { libelle: string; detail: string | null; gris: boolean } {
+  const cotes = new Set(lignes.map((r) => r.role_contact))
+  const libelle = cotes.has('notaire_vendeur') && cotes.has('notaire_acquereur')
+    ? 'Notaire — côtés vendeur et acquéreur'
+    : cotes.has('notaire_vendeur') ? 'Notaire — côté vendeur' : 'Notaire — côté acquéreur'
+  const genre = (r: AppContactRelation) => String(r.transaction_type ?? '').trim().toLowerCase()
+  const rang = (r: AppContactRelation) => (genre(r) === 'vente' ? 3 : genre(r) === 'compromis' ? 2 : 1)
+  const jour = (r: AppContactRelation) => String(r.transaction_date ?? '').slice(0, 10)
+  const ventes = lignes.filter((r) => genre(r) === 'vente')
+  const etape = [...(ventes.length ? ventes : lignes)].sort((a, b) =>
+    jour(b).localeCompare(jour(a)) || rang(b) - rang(a)
+    || String(b.transaction_id ?? '').localeCompare(String(a.transaction_id ?? '')))[0]
+  if (!etape) return { libelle, detail: null, gris: false }
+  const d = dateDuRole(etape.transaction_date)
+  const etat = String(etape.transaction_state ?? '').trim().toLowerCase()
+  if (genre(etape) === 'vente') return { libelle, detail: `Vente signée${d ? ` le ${d}` : ''}`, gris: false }
+  if (genre(etape) === 'compromis') {
+    if (etat === 'cancelled') return { libelle, detail: `Compromis annulé${d ? ` (du ${d})` : ''}`, gris: true }
+    return { libelle, detail: `Compromis${d ? ` du ${d}` : ''}`, gris: false }
+  }
+  if (genre(etape) === 'offre') {
+    if (etat === 'refused') return { libelle, detail: `Offre refusée${d ? ` (du ${d})` : ''}`, gris: true }
+    return { libelle, detail: `Offre${d ? ` du ${d}` : ''}`, gris: false }
+  }
+  return { libelle, detail: null, gris: false }
+}
+
 function regrouperRelationsParBien(relations: AppContactRelation[]): BienDuContact[] {
   // même clé que l'ancien dédoublonnage : le dossier, sinon l'annonce
   const cle = (r: AppContactRelation) => String(r.app_dossier_id ?? '').trim() || String(r.hektor_annonce_id ?? '').trim()
@@ -39440,13 +39495,19 @@ function regrouperRelationsParBien(relations: AppContactRelation[]): BienDuConta
     if (k) groupes.set(k, neuf)
     ordre.push(neuf)
   }
-  const ordreFamille = { mandant: 0, proprietaire: 1, acheteur: 2, autre: 3 } as const
+  const ordreFamille = { notaire: 0, mandant: 1, proprietaire: 2, acheteur: 3, autre: 4 } as const
   // ⚠ L'ordre des BIENS reste celui d'avant (première apparition) ; seul le CONTENU d'une ligne ne dépend plus de l'ordre.
   const out: BienDuContact[] = []
   for (const lignes of ordre) {
     const roles: RoleDuBien[] = []
     let montant: string | null = null
     const parFamille = (f: RoleDuBien['famille']) => lignes.filter((r) => familleDuRole(r.role_contact) === f)
+    // ⑧ notaire, étape 3 : en premier (décision 1), avec son côté et l'étape du dossier
+    const notaires = parFamille('notaire')
+    if (notaires.length) {
+      const { libelle, detail, gris } = roleNotaireDuBien(notaires)
+      roles.push({ famille: 'notaire', role: notaires[0].role_contact, libelle, detail, gris })
+    }
     const mandants = parFamille('mandant')
     if (mandants.length) roles.push({ famille: 'mandant', role: mandants[0].role_contact, libelle: 'Mandant', detail: null, gris: false })
     const proprios = parFamille('proprietaire')
@@ -44754,7 +44815,9 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
   //    type soit IDENTIQUE listing ↔ détail. Priorité Mandant > Acheteur > Propriétaire > Acquéreur.
   const dirCategories = contactDirectoryCategories(selectedRoles, Number(props.contact.active_search_count ?? 0))
   const primaryCategory: ContactDirectoryType = dirCategories[0] ?? 'autre'
-  const typeClass = primaryCategory === 'mandant'
+  const typeClass = primaryCategory === 'notaire'
+    ? 'ty-notaire' // ⑧ notaire, étape 3 : bleu encre + balance (maquette fiche-notaire-v2)
+    : primaryCategory === 'mandant'
     ? 'ty-mandant'
     : primaryCategory === 'acheteur'
       ? 'ty-acheteur'
@@ -44762,10 +44825,11 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
         ? 'ty-vendeur' // réutilise la classe orange
         : 'ty-acq' // acquereur (recherche) ou autre -> teal
   const dominantTypeLabel = contactDirectoryTypeLabel[primaryCategory]
-  const categoryColor = (cat: ContactDirectoryType) => cat === 'mandant' ? '#c2125f' : cat === 'proprietaire' ? '#c2701a' : cat === 'acheteur' ? '#2f8a5b' : '#2f7c86'
+  const categoryColor = (cat: ContactDirectoryType) => cat === 'notaire' ? '#3b4a8c' : cat === 'mandant' ? '#c2125f' : cat === 'proprietaire' ? '#c2701a' : cat === 'acheteur' ? '#2f8a5b' : '#2f7c86'
   // Couleur d'une pastille de rôle (contacts hybrides) — même normalisation NFD que relationRowClass.
   const roleColor = (role: string) => {
     const normalized = role.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+    if (TYPE_NOTAIRE_ECRAN && normalized.startsWith('notaire')) return '#3b4a8c'
     if (normalized === 'mandant') return '#c2125f'
     if (normalized === 'vendeur' || normalized === 'proprietaire') return '#c2701a'
     if (normalized.startsWith('acquereur')) return '#2f7c86'
@@ -44797,6 +44861,7 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
   // acquéreur* #2f7c86, acheteur #2f8a5b, défaut #c2701a (= r-vendeur). Même normalisation NFD que ...Base.
   const relationRowClass = (role: string) => {
     const normalized = role.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+    if (TYPE_NOTAIRE_ECRAN && normalized.startsWith('notaire')) return 'r-notaire'
     if (normalized === 'mandant') return 'r-mandant'
     if (normalized === 'vendeur' || normalized === 'proprietaire') return 'r-vendeur'
     if (normalized.startsWith('acquereur')) return 'r-acq'
@@ -45285,6 +45350,7 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
                   <span className="fa-cx-ty-ic fa-cx-ty-acheteur"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><circle cx="7.5" cy="15.5" r="4.2" /><path d="M10.5 12.5 20 3" /><path d="M17 6l2.4 2.4M14 9l1.9 1.9" /></svg></span>
                   <span className="fa-cx-ty-ic fa-cx-ty-vendeur"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l7-6 7 6" /><path d="M5 10v9h9v-9" /><path d="M8.5 19v-4.5h3V19" /><rect x="15.5" y="4" width="6" height="4.2" rx="1" /><path d="M18.5 8.2V12" /></svg></span>
                   <span className="fa-cx-ty-ic fa-cx-ty-mandant"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round"><path d="M6 3h8l4 4v14H6z" /><path d="M14 3v4h4" /><path d="M9 11h6M9 14h4" /><path d="M9 17.5c1-1.4 2.3-1.4 2.8 0s1.5 1.4 2.5 0" /></svg></span>
+                  <span className="fa-cx-ty-ic fa-cx-ty-notaire"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v17" /><path d="M8 20h8" /><path d="M5 7h14" /><path d="M12 5.2 5 7" /><path d="m12 5.2 7 1.8" /><path d="M5 7 2.5 13a2.6 2.6 0 0 0 5 0Z" /><path d="M19 7l-2.5 6a2.6 2.6 0 0 0 5 0Z" /></svg></span>
                 </div>
                 <div className="fa-cx-hero-tx">
                   <div className="fa-cx-name">{contactFullName}</div>
@@ -46004,6 +46070,11 @@ function ContactsScreen(props: {
     arr: <svg viewBox="0 0 24 24" fill="none"><path d="m9 6 6 6-6 6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>,
   }
   const renderStatut = (cat: ContactDirectoryType, linked: number, activeSearch: number, roles: string[]) => {
+    if (cat === 'notaire') {
+      // ⑧ notaire, étape 3 : son côté, lu dans les rôles (le nombre de ses dossiers viendra avec la fiche notaire, étape 4)
+      const v = roles.includes('notaire_vendeur'), a = roles.includes('notaire_acquereur')
+      return (<><span className="st-pill notaire">{AV_ICONS.mandat}Notaire</span><span className="st-detail">{v && a ? 'Côtés vendeur et acquéreur' : v ? 'Côté vendeur' : 'Côté acquéreur'}</span></>)
+    }
     if (cat === 'mandant') return (<><span className="st-pill mandat">{AV_ICONS.mandat}Sous mandat</span><span className="st-detail">{linked} bien{linked > 1 ? 's' : ''} en portefeuille</span></>)
     if (cat === 'proprietaire') return (<><span className="st-pill proprio">{AV_ICONS.mandat}Propriétaire</span><span className="st-detail">{linked} bien{linked > 1 ? 's' : ''} · sans mandat</span></>)
     if (cat === 'acheteur') { const stage = contactBuyerStageLabel(roles); return (<><span className="st-pill achete">{AV_ICONS.check}Acheteur</span><span className="st-detail">{stage ? `Transaction · ${stage}` : 'Transaction en cours'}</span></>) }

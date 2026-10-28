@@ -18,6 +18,8 @@
 .fa-contact-v2.ty-acheteur { --ty: #2f8a5b; --ty-deep: #155e39; --ty-mid: #41a877; --ty-soft: #e7f3ec; --ty-line: #cfe8da; --ty-g1: #41a877; --ty-g2: #1f7a4a; --ty-g3: #155e39; }
 .fa-contact-v2.ty-vendeur { --ty: #c2701a; --ty-deep: #7c400a; --ty-mid: #d98a3c; --ty-soft: #f7ece0; --ty-line: #eddcc8; --ty-g1: #cb883f; --ty-g2: #9c530d; --ty-g3: #7c400a; }
 .fa-contact-v2.ty-mandant { --ty: #c2125f; --ty-deep: #8a0e45; --ty-mid: #d83a7e; --ty-soft: #fbe6f0; --ty-line: #f3cadd; --ty-g1: #d83a7e; --ty-g2: #c2125f; --ty-g3: #8a0e45; --annonce-c: #c2125f; }
+/* ⑧ notaire, étape 3 (28/10/2026) : repris de maquettes/fiche-notaire-v2.html */
+.fa-contact-v2.ty-notaire { --ty: #3b4a8c; --ty-deep: #25306a; --ty-mid: #5767ad; --ty-soft: #eceefa; --ty-line: #d6dbf1; --ty-g1: #5767ad; --ty-g2: #3b4a8c; --ty-g3: #25306a; }
 
 /* Overlay plein écran + panneau centré (reproduit le comportement de l'actuel #fcx-root). */
 .fa-contact-v2 .fa-cx-overlay {
@@ -113,7 +115,8 @@
 .fa-contact-v2.ty-acq .fa-cx-av .fa-cx-ty-acq,
 .fa-contact-v2.ty-acheteur .fa-cx-av .fa-cx-ty-acheteur,
 .fa-contact-v2.ty-vendeur .fa-cx-av .fa-cx-ty-vendeur,
-.fa-contact-v2.ty-mandant .fa-cx-av .fa-cx-ty-mandant { display: flex; }
+.fa-contact-v2.ty-mandant .fa-cx-av .fa-cx-ty-mandant,
+.fa-contact-v2.ty-notaire .fa-cx-av .fa-cx-ty-notaire { display: flex; }
 
 /* ── Cluster d'actions (RDV magenta + Modifier + Plus) avec tooltip au survol ── */
 .fa-contact-v2 .fa-cx-actions { position: relative; margin-top: 15px; padding-top: 15px; display: flex; gap: 8px; }
@@ -299,6 +302,7 @@
 .fa-contact-v2 .fa-cx-lk.r-acq { --rc: #2f7c86; }
 .fa-contact-v2 .fa-cx-lk.r-vendeur { --rc: #c2701a; }
 .fa-contact-v2 .fa-cx-lk.r-mandant { --rc: #c2125f; }
+.fa-contact-v2 .fa-cx-lk.r-notaire { --rc: #3b4a8c; }
 .fa-contact-v2 .fa-cx-lk.r-acheteur { --rc: #2f8a5b; }
 .fa-contact-v2 .fa-cx-lk-empty { padding: 8px 2px; color: var(--muted); font-size: 13px; }
 
