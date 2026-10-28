@@ -16297,6 +16297,10 @@ export default function App() {
   // Priorité aux rôles vendeur/propriétaire/mandant, puis au contact ayant des coordonnées.
   function annonceOwnerRoleRank(role?: string | null) {
     const r = (role ?? '').toLowerCase()
+    // ⑧ notaire (28/10/2026) : depuis la vue des notaires (étape 1), « notaire_vendeur » arrive ici -- et contient « vendeur ».
+    //   Un notaire n'est JAMAIS le propriétaire : sans cette ligne, « appeler le propriétaire » pouvait appeler le notaire
+    //   (8 annonces en estimation portent un notaire, mesure du 28/10). Note des types §49.12.
+    if (r.startsWith('notaire')) return -1
     if (/propri|vendeur|mandant|c[ée]dant/.test(r)) return 3
     if (/acqu|achet|locataire/.test(r)) return 0
     return 1

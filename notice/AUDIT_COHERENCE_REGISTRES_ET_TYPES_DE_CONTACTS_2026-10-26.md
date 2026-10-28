@@ -3373,3 +3373,19 @@ reprises de la maquette v2, plus 4 propres à l'app), importée par `main.tsx`.
   - ⚠ **Défaut qui existait déjà, noté et pas touché** : sous 640 px, les boutons « RDV » et « Email » de l'en-tête « Activité &
     relation » sortent du cadre (440 et 526 px pour 386), **sur toutes les fiches**. Mesuré aussi sur JACQUIER, fiche acheteur. Ce n'est pas
     la fiche notaire.
+
+### 49.12 ⚠ TROUVÉ EN VÉRIFIANT LES INVITÉS D'UN RDV : « le propriétaire » pouvait être le notaire — corrigé *(28/10)*
+- **Les invités d'un RDV (décision 4 du 27/10)** : `loadAnnonceContactInvitees` lit la vue des liens **sans filtrer les rôles**. Le notaire
+  de l'annonce y est donc. Mesuré en base : l'annonce 59132 (mandat 18232) porte `notaire_acquereur` et `notaire_vendeur` parmi ses
+  contacts. ⬜ Pas vu dans la fenêtre de l'agenda : elle demande l'agenda Google chargé et un créneau.
+- ⚠⚠ **Mais la même liste sert aussi à trouver LE PROPRIÉTAIRE d'une annonce** (`resolveAnnonceOwnerContact`, `handleCallAnnonceOwner` :
+  appel, RDV, avis de valeur depuis les estimations). Son tri `annonceOwnerRoleRank` met en tête tout rôle qui contient
+  `propri|vendeur|mandant` : **`notaire_vendeur` contient « vendeur »**. Le notaire pouvait donc passer devant le vrai propriétaire.
+  Mesure : **8 annonces en estimation** portent un notaire (et 88 sous compromis, 1 actif, 1 sous offre). Ma pose de l'étape 1 (10:29)
+  l'a rendu possible. **C'est le « ce que ça pourrait casser ailleurs » que mon audit de l'étape 1 avait manqué** : j'avais vu ce lecteur
+  comme « invitable, souhaitable », pas comme le chercheur de propriétaire.
+- **Corrigé** (App.tsx, une ligne) : `if (r.startsWith('notaire')) return -1`. Un notaire passe après tout le monde, même un contact sans
+  rôle. Essai `test_notaire_ecran.cjs` : **contrôle ajouté**, vert. **Témoin inverse** : sans la ligne, notaire et propriétaire ont le même
+  rang (3), le contrôle aurait rougi. Les 4 essais du front sont verts, le build aussi. ⬜ À pousser.
+- Autres lecteurs de cette liste, relus : la fenêtre de l'agenda (`googleAgendaRelationRoleLabel` → « Notaire vendeur », juste) et la
+  fiche contact. Aucun autre tri sur « vendeur ».

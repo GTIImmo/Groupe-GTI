@@ -193,6 +193,24 @@ const mutantDix = monter(app.replace("return toutAfficher ? tries : tries.slice(
 verifier("MUTANT (sans la limite de 10) : attrapé",
   !mutantDix.erreur && mutantDix.api.indicesBiensAffiches(QUINZE_MELE, nb, true, false).length !== 10);
 
+// 7 bis. (28/10) la liste des contacts d'une annonce sert aussi à trouver LE PROPRIÉTAIRE (appel, RDV, avis de valeur) :
+//   « notaire_vendeur » contient « vendeur » -> il ne doit jamais passer devant le propriétaire
+{
+  // la fonction est INDENTÉE (dans un composant) : sa fin est la première accolade au même retrait
+  const i0 = app.indexOf("  function annonceOwnerRoleRank(");
+  const f = i0 < 0 ? null : app.slice(i0, app.indexOf("\n  }", i0) + 4);
+  let rang = null;
+  if (f) {
+    const ctx = { RegExp, String };
+    vm.createContext(ctx);
+    vm.runInContext(esbuild.transformSync(f + "\nthis.rang = annonceOwnerRoleRank;", { loader: "ts" }).code, ctx);
+    rang = ctx.rang;
+  }
+  verifier("le propriétaire d'une annonce : un notaire passe APRÈS le mandant, le propriétaire et même un contact sans rôle",
+    !!rang && rang("notaire_vendeur") < rang("proprietaire") && rang("notaire_acquereur") < rang("mandant") && rang("notaire_vendeur") < rang("autre")
+    && rang("mandant") === 3 && rang("acquereur_vente") === 0, f ? "" : "annonceOwnerRoleRank introuvable");
+}
+
 // 8. MUTANT : sans « notaire en premier »
 const mutant = monter(app.replace(/\n  if \(TYPE_NOTAIRE_ECRAN && roles\.some\(estRoleNotaire\)\) out\.push\('notaire'\)[^\n]*/, ""), api, rg);
 verifier("MUTANT (sans la ligne « Notaire en premier ») : le rang tombe -> attrapé",
