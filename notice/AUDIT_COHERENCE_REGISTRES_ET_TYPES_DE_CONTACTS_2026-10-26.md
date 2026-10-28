@@ -3284,3 +3284,6 @@ Mesuré **sous l'identité des 2 commerciaux actifs**, dans une transaction annu
   - **(a)** on garde la décision du 12/10 : la fiche notaire d'un commercial ne montre que ses dossiers ;
   - **(b)** une lecture **réduite**, pour toute l'agence : dates, étapes, biens, côtés, confrères, **sans aucun montant ni honoraire**. Les
     montants restent visibles sur ses seuls biens. Elle passerait par une fonction de la base qui ne rend que ces champs.
+
+### 49.6 ✅ DÉCISION 1 (28/10, Frédéric : « A »)
+**On garde la décision du 12/10** : la fiche notaire d'un négociateur ne montre que **ses** dossiers (les transactions de son portefeuille). La fonction de lecture de la fiche notaire sera donc en `security invoker`, sous les règles d'accès actuelles : rien d'ouvert en plus. Les chiffres « avec nous », confrères et médiane seront ceux de ce qu'il voit. Questions 2 à 5 : ouvertes.
