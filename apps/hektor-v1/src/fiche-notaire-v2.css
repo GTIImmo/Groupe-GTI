@@ -109,3 +109,7 @@
 .fa-contact-v2 .fa-cx-stage.wip { opacity: .7; cursor: default; }
 .fa-contact-v2 .fa-cx-averif { margin-top: 10px; display: flex; flex-direction: column; gap: 8px; }
 .fa-contact-v2 .fa-cx-lk-stat.muted { background: #f1efe9; color: #6b6458; }
+/* téléphone (vu le 28/10 dans un cadre de 390 px) : la ligne « vendeurs → acheteurs » coupait les acheteurs ; elle passe à la ligne */
+@media (max-width: 640px) {
+  .fa-contact-v2 .fa-cx-dos-parties { white-space: normal; overflow: visible; text-overflow: clip; }
+}

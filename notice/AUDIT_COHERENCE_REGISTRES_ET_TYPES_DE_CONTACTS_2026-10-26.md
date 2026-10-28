@@ -3355,3 +3355,21 @@ reprises de la maquette v2, plus 4 propres à l'app), importée par `main.tsx`.
 
 ### 49.10 ✅ FONCTION POSÉE LE 28/10 À 13:04 *(Frédéric : « fais-le toi-même, tu as mon accord »)*
 `patch_notaire_etape4_fiche_2026-10-28.sql` passé (COMMIT), répétition **12 / 12 verte du premier coup** (notaire le plus chargé : 260 ms admin, 363 ms commercial ; témoin positif 6 vus sur 301 ; médiane de l'agence 85 j). ⬜ Front à pousser par Frédéric, puis à voir à l'écran (bureau et téléphone).
+
+### 49.11 ✅ LA FICHE NOTAIRE EST EN LIGNE, VUE À L'ÉCRAN *(28/10, déploiement de 13:10:18, Chrome de Frédéric)*
+- **10352963, Me Damien LABIDOIRE** (le notaire qui a le plus de dossiers en cours) :
+  - chiffres : **7** dossiers en cours (0 vendeur · 2 acquéreur · 5 les deux), **4** actes ≤ 30 jours (le prochain le 30/10/2026),
+    **2** ventes en 12 mois pour 24 000 € d'honoraires, **91 j** de compromis à acte, « 6 j plus lent que la médiane (85 j) » ;
+  - étapes : 0 Rétractation · 7 Acte prévu · 0 Date à fixer · Conditions « en construction » ;
+  - les cartes : bien, vendeurs → acheteurs, côté, « Face : » le confrère, négociateur, prix, « Acte le 30/10/2026 ». Le détail déplié
+    montre compromis, fin de rétractation, condition de prêt « en construction », acte prévu, honoraires 9 000 €, net vendeur 120 000 € ;
+  - « À venir » : 5 signatures d'acte, dans l'ordre (30/10, 04/11, 14/11, 21/11, 02/01) ;
+  - « Recherche & rapprochement » masqué ; « Interlocuteurs de l'étude » « en construction ».
+- **10164856** : 0 en cours, 4 ventes en 12 mois · 27 000 €, 76 j (9 j plus vite que la médiane), 14 agences (Firminy 55 en tête),
+  4 confrères, « Partenaire depuis 2007 ». Aucun « indisponible ».
+- **Téléphone** (cadre de 390 px, rendu mobile) : la fiche, ses 4 chiffres et ses 7 cartes ; page à 386 px, sans défilement horizontal.
+  - ⚠ La ligne « vendeurs → acheteurs » d'une carte coupait les acheteurs. **Corrigé** : elle passe à la ligne sous 640 px
+    (`fiche-notaire-v2.css`). Build vert ; ⬜ à pousser, puis à revoir.
+  - ⚠ **Défaut qui existait déjà, noté et pas touché** : sous 640 px, les boutons « RDV » et « Email » de l'en-tête « Activité &
+    relation » sortent du cadre (440 et 526 px pour 386), **sur toutes les fiches**. Mesuré aussi sur JACQUIER, fiche acheteur. Ce n'est pas
+    la fiche notaire.
