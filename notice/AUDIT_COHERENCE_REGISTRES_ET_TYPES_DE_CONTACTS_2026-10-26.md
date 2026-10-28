@@ -3389,3 +3389,53 @@ reprises de la maquette v2, plus 4 propres à l'app), importée par `main.tsx`.
   rang (3), le contrôle aurait rougi. Les 4 essais du front sont verts, le build aussi. ⬜ À pousser.
 - Autres lecteurs de cette liste, relus : la fenêtre de l'agenda (`googleAgendaRelationRoleLabel` → « Notaire vendeur », juste) et la
   fiche contact. Aucun autre tri sur « vendeur ».
+
+## 50. LES 4 BLOCS « EN CONSTRUCTION » DE LA FICHE NOTAIRE — audit *(28/10, Frédéric : « créer les blocs en construction : interlocuteurs de l'étude, pièces du dossier, condition de prêt, export des ventes »)* — lecture seule, rien codé
+
+**Audit limité à ces 4 blocs.** Aucun ne demande d'écrire chez Hektor : ce sont des données ou des gestes de l'app.
+
+### 50.1 La condition de prêt — un registre EXISTE déjà, presque vide
+- Hektor ne la donne pas par l'API : les clés de `payload_json` d'un compromis, relevées sur les 276 compromis de 2026, n'en portent
+  aucune.
+- **Mais le projet la lit déjà dans la console Hektor** (`lireConditionsSuspensives`, worker, l. ~13160 : les conditions « retenues »
+  avec leur nombre de jours). Il la range **chez nous** dans `app_affaire_condition` (libellé, jours, échéance, état, levée le, note),
+  avec un catalogue `app_condition_catalogue` : « Préemption mairie (0 j) », « Obtention Crédit (45 j) ». Une fonction l'écrit,
+  `app_conditions_affaire_ecrire`.
+- **Mesure** : 5 conditions sur **3** compromis, toutes « attente », **aucune échéance**, écrites le 23/10.
+- ➡ La fiche peut lire ce registre. L'échéance vaut la date saisie, sinon la date du compromis + les jours de la condition (45 j pour le
+  crédit). Aujourd'hui, presque toutes les cartes diraient « aucune condition enregistrée ».
+
+### 50.2 Les pièces du dossier — reconnaissables par le NOM des documents
+- Les documents n'ont **pas de type** (`document_type` vaut « document » sur les 192 981) : seul le **nom** les distingue.
+- Sur les **75 annonces** dont le compromis est en cours avec un acte à venir : **1 924 documents**, tous avec au moins un document.
+  Reconnus par leur nom : compromis 75, mandat 74, cadastre 65, pièce d'identité 62, diagnostics 43, titre de propriété 41,
+  taxe foncière 32, offre de prêt 18, assainissement 9, notification SRU 1.
+- ➡ Une liste de pièces **calculée par le nom**, avec « à demander » pour les manquantes. ⚠ C'est une **déduction** : un document mal
+  nommé passe pour absent. Il faudrait pouvoir corriger à la main.
+- « Envoyer les pièces à l'étude » serait un e-mail avec pièces jointes. Un envoi de documents existe déjà côté estimations ; il est à
+  regarder avant de le réutiliser.
+
+### 50.3 Les interlocuteurs de l'étude — à SAISIR, on ne peut pas les deviner
+- Hektor n'a pas de notion d'« étude ». J'ai essayé le domaine de l'e-mail : 613 contacts actifs en `@…notaires.fr` (579 notaires,
+  34 autres), sur 61 domaines. Mais des domaines comme `notaires.fr` sont partagés par des études différentes. Seuls **3** domaines
+  réunissent un notaire et un collègue.
+- ➡ Un petit registre **chez nous** : nom, rôle (clerc, formaliste, associé…), téléphone, e-mail, rattaché au notaire. On le saisit dans
+  la fiche. Rien chez Hektor, rien de deviné.
+
+### 50.4 L'export — simple
+- Un fichier CSV (ouvrable par Excel), fabriqué dans le navigateur à partir des dossiers déjà chargés. Aucune donnée neuve.
+- Il n'exporte **que ce que le compte voit** (décision 1).
+
+### 50.5 Ce que ça pourrait casser ailleurs
+- La condition de prêt : **lecture seule** d'un registre existant. L'écran qui l'écrit (`app_conditions_affaire_ecrire`) n'est pas touché.
+- Les pièces : **lecture seule** des documents.
+- Les interlocuteurs : une **table neuve**, avec sa règle d'accès ; rien d'existant n'est touché.
+- L'export : rien côté base.
+
+### 50.6 Questions — À TRANCHER PAR FRÉDÉRIC
+1. **Condition de prêt** : afficher les conditions du registre existant, l'échéance étant la date saisie ou la date du compromis + les jours
+   du catalogue, en sachant que 3 compromis seulement en ont aujourd'hui ?
+2. **Pièces** : la liste calculée d'après le nom des documents (avec « à demander »), et plus tard une correction à la main ? « Envoyer à
+   l'étude » maintenant ou plus tard ?
+3. **Interlocuteurs** : un petit registre chez nous, saisi dans la fiche : qui peut ajouter et modifier, tout le monde ou les admins ?
+4. **Export** : les ventes des 12 mois seulement, ou tous les dossiers du notaire ?
