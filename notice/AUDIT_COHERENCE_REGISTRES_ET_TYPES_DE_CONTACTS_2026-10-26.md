@@ -3349,3 +3349,6 @@ reprises de la maquette v2, plus 4 propres à l'app), importée par `main.tsx`.
   la fonction rend les trois champs.
 - ⛔ **L'ordre de pose compte** : la fonction **avant** le front. Un front poussé sans elle afficherait « Fiche notaire indisponible » sur
   la fiche des 1 110 notaires. Le reste de la fiche ne bougerait pas.
+
+### 49.9 ✅ DÉCISION 4 RECONFIRMÉE (28/10, Frédéric : « oui, vas-y ») — honoraires = entrée + sortie
+`honorairesDuDossier` = `honoraires_entree` + `honoraires_sortie`. Réel : 10164856 passe de 3 750 € à **27 000 €** sur ses 4 ventes des 12 mois. Essai 25 / 25, build vert. ⛔ **La pose de la fonction a été REFUSÉE à mon outil** (classée « déploiement en production ») : elle est à **coller par Frédéric** dans l'éditeur SQL de Supabase — d'abord `patch_notaire_etape4_fiche_2026-10-28.sql`, puis `_REPETITION.sql` (13 lignes OK attendues). **Ensuite seulement**, pousser le front.

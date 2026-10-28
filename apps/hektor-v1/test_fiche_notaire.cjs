@@ -6,7 +6,7 @@
  * On EXÉCUTE le code réel : la partie « règles » de src/FicheNotaire.tsx (construireVueNotaire et ses aides) est découpée,
  * transformée par esbuild et jouée par vm, À DATE FIXE (2026-10-28). Données SYNTHÉTIQUES pour chaque règle.
  * Décisions de Frédéric (28/10, note des types §49.6-49.7) : « en cours » borné (acte prévu non passé, ou moins de 6 mois sans
- * date d'acte), le reste « À vérifier » ; honoraires = commission_agence ; un dossier = une chaîne.
+ * date d'acte), le reste « À vérifier » ; honoraires = entrée + sortie (reconfirmé) ; un dossier = une chaîne.
  * MUTANT : sans la borne des 6 mois, un compromis de 2024 redevient « en cours » -> attrapé.
  * En option, un passage sur des données RÉELLES lues dans une transaction annulée (argument : un fichier JSON, jamais versionné).
  *
@@ -56,9 +56,9 @@ const AFIXER_VIEUX = d({ date: "2024-10-31" });
 const ACTE_PASSE = d({ date: "2026-01-05", date_acte: "2026-03-31" });
 const VENDU = d({ date: "2026-01-13", date_acte: "2026-04-13", vente_chaine: { date: "2026-04-03", montant: "190000.00" } });
 const ANNULE = d({ date: "2026-09-01", date_acte: "2026-12-01", state: "cancelled" });
-const V1 = d({ kind: "vente", date: "2026-04-03", compromis_chaine: "2026-01-13", commission_agence: "9000.00", montant: "190000.00", app_chaine_id: VENDU.app_chaine_id,
+const V1 = d({ kind: "vente", date: "2026-04-03", compromis_chaine: "2026-01-13", commission_agence: "0.00", honoraires_entree: "8000.00", honoraires_sortie: "1000.00", montant: "190000.00", app_chaine_id: VENDU.app_chaine_id,
   confreres: [{ id: "77", nom: "Maître Garnier", ville: "Firminy" }] });
-const V2 = d({ kind: "vente", date: "2026-02-10", compromis_chaine: "2025-11-01", commission_agence: "6000.00", bien: { agence_nom: "Unieux" },
+const V2 = d({ kind: "vente", date: "2026-02-10", compromis_chaine: "2025-11-01", commission_agence: "6000.00", honoraires_entree: "6000.00", bien: { agence_nom: "Unieux" },
   confreres: [{ id: "77", nom: "Maître Garnier", ville: "Firminy" }, { id: "88", nom: "Maître Collet", ville: "Unieux" }] });
 const V_VIEILLE = d({ kind: "vente", date: "2024-06-01", compromis_chaine: "2024-03-01", commission_agence: "5000.00", date_premier: true });
 const COMPROMIS_DE_V1 = { ...VENDU, confreres: [{ id: "77", nom: "Maître Garnier", ville: "Firminy" }] }; // même chaîne que V1
@@ -88,7 +88,7 @@ verifier("ordre : rétractation d'abord, puis acte, puis date à fixer", v.enCou
 verifier("dossiers en cours par côté : 2 vendeur, 0 acquéreur, 1 les deux",
   v.cotesEnCours.vendeur === 2 && v.cotesEnCours.acquereur === 0 && v.cotesEnCours.deux === 1, JSON.stringify(v.cotesEnCours));
 verifier("actes ≤ 30 jours : 1 (le 12/11)", v.actes30.length === 1 && v.actes30[0].acte === "2026-11-12", JSON.stringify(v.actes30.map((x) => x.acte)));
-verifier("ventes 12 mois : 2, honoraires = commission_agence (9 000 + 6 000)", v.ventes12.length === 2 && v.honoraires12 === 15000, `${v.ventes12.length} / ${v.honoraires12}`);
+verifier("ventes 12 mois : 2, honoraires = entrée + sortie (8 000 + 1 000 + 6 000 ; la commission vide ne compte pas)", v.ventes12.length === 2 && v.honoraires12 === 15000, `${v.ventes12.length} / ${v.honoraires12}`);
 // (la vente de juin 2024 est DANS les 3 ans au 28/10/2026 : 80, 92 et 101 jours -> 92)
 verifier("compromis -> acte : médiane du notaire sur 3 ans (80, 92, 101 j -> 92), médiane de l'agence 85",
   v.delaiNotaire === 92 && v.delaiAgence === 85, `${v.delaiNotaire} / ${v.delaiAgence}`);

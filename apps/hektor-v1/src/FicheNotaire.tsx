@@ -8,7 +8,7 @@
 //   2. « en cours » = compromis vivant sans vente dans sa chaîne, dont l'acte prévu n'est pas passé (ou, sans date d'acte,
 //      de moins de 6 mois) ; les autres dans « À vérifier », replié, jamais caché ;
 //   3. la bande « Biens & mandats liés » reste (elle vit dans App.tsx) ;
-//   4. les honoraires encaissés = commission_agence ;
+//   4. les honoraires encaissés = honoraires_entree + honoraires_sortie (reconfirmé le 28/10) ;
 //   5. « Exporter » : en construction. Et décision 5 du 27/10 : les blocs sans données (interlocuteurs de l'étude, pièces du
 //      dossier, condition de prêt) sont MONTRÉS, marqués « en construction ».
 // Interrupteur : FICHE_NOTAIRE_V2 (false = la fiche d'avant, à l'identique).
@@ -64,9 +64,10 @@ const mediane = (xs: number[]) => {
   const s = [...xs].sort((a, b) => a - b); const m = Math.floor(s.length / 2)
   return s.length % 2 ? s[m] : Math.round((s[m - 1] + s[m]) / 2)
 }
-// ⚠ LES HONORAIRES (décision 4 du 28/10 : commission_agence). Mesure du 28/10 sur les 348 ventes des 12 mois : commission_agence
-//   n'est non nulle que sur 82, honoraires_entree sur 330 -- la décision est à reconfirmer (note des types §49.8). Un seul endroit.
-export const honorairesDuDossier = (d: Pick<DossierNotaire, 'commission_agence'>) => nombre(d.commission_agence)
+// LES HONORAIRES ENCAISSÉS (décision 4, RECONFIRMÉE le 28/10 par Frédéric : « oui, vas-y ») = honoraires_entree + honoraires_sortie.
+//   Mesure du 28/10 sur les 348 ventes des 12 mois : honoraires_entree non nul sur 330, honoraires_sortie sur 19 ; commission_agence,
+//   d'abord retenue, ne l'est que sur 82 (note des types §49.8-49.9). Un seul endroit.
+export const honorairesDuDossier = (d: Pick<DossierNotaire, 'honoraires_entree' | 'honoraires_sortie'>) => nombre(d.honoraires_entree) + nombre(d.honoraires_sortie)
 const cleDossier = (d: DossierNotaire) => (d.app_chaine_id != null ? `c${d.app_chaine_id}` : `a${d.app_affaire_id}`)
 
 export type EtapeNotaire = 'retractation' | 'acte' | 'a_fixer'
