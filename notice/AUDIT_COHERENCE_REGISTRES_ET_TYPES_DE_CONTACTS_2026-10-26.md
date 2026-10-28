@@ -3778,3 +3778,30 @@ que par « lier un mandant ». Annonce, mandat, documents : non mesurés ici, sa
 - ⏰ **À poser à son accord** : 1. le patch, puis la répétition (5 lignes « OK ») ; 2. le worker : **redémarrer les 4 services, file vide**
   (le code est déjà écrit dans le fichier ; sans redémarrage, les liens nés au clic ne reçoivent pas leur numéro de bien — d'où l'ordre :
   redémarrer d'abord, poser ensuite). Usage réel : 0 création avec mandant depuis le 21/10.
+
+### 53.5 P4-b — LE MANDANT NEUF SAISI À LA CRÉATION D'UNE ANNONCE : audit *(28/10, Frédéric : « P4-a puis audit P4-b »)* — lecture seule, rien codé
+**Le patron existe déjà, et il a réglé le doublon** : le geste « créer un mandant » sur une annonce existante
+(`app_create_mandant_contact_optimistic`) :
+1. tire **notre numéro** du contact au clic (`app_contact_identite_seq`) ;
+2. crée la fiche chez nous (`app_contact_current`, « naît complet », 8a) et le lien (`source = 'app'`) ;
+3. passe ce numéro au worker dans la charge (`app_identite`) ;
+4. le worker, après la création chez Hektor (`executerCreationMandantContact`), **pose le numéro de Hektor dans la case cible de NOTRE fiche**
+   (`hektor_target_id`) — c'est ce qui empêche le doublon (« un numéro ne se perd jamais ») ; la nuit relie ensuite les deux.
+
+**Ce que fait la création d'annonce avec un mandant neuf** (`initial_mandant`, 18 fois, dernière le 28/08) : **rien au clic** ; le worker appelle
+la fonction de bas niveau `createHektorMandantContact` **directement** — pas `executerCreationMandantContact` — donc **sans fiche chez nous,
+sans lien, et sans la case cible**. La fiche du mandant n'arrive chez nous qu'avec la descente de nuit, sous un numéro neuf.
+
+**La proposition (P4-b), comme le geste voisin** :
+- **base** (même fonction que P4-a, même bloc) : au clic, si la charge porte un mandant neuf (nom ou e-mail), tirer notre numéro, créer sa fiche
+  chez nous (les mêmes colonnes que le geste voisin, et « naît complet »), poser son lien rangé par notre numéro de dossier (comme P4-a), recalculer
+  son type, et **mettre ce numéro dans la charge** (`initial_mandant.app_identite`) ;
+- **worker** : après `createHektorMandantContact` dans la création d'annonce, **poser la case cible** sur notre fiche — le bloc du geste voisin, à
+  l'identique (il est lui-même copié de la création de contact globale, avec son piège déjà payé : n'envoyer QUE la case cible) ; le lien reçoit
+  son numéro de bien par P4-a et est relié par la nuit, comme pour le geste voisin ; si la création échoue, P4-a retire déjà le lien de l'écran.
+- ⚠ **Ce que ça pourrait casser** : (1) **le doublon** si la case cible n'est pas posée — c'est exactement ce que le bloc copié évite, et
+  l'essai le mesurera (une fiche, deux numéros, aucune seconde fiche) ; (2) une fiche **orpheline** chez nous si Hektor refuse la création — la
+  même limite que le geste voisin aujourd'hui (la fiche reste, son lien quitte l'écran) ; (3) le **redémarrage** des 4 services (file vide),
+  à faire en même temps que P4-a.
+- **Essais prévus** : une vraie création avec mandant neuf par le geste de l'app, en transactions annulées (fiche, lien, type, numéro dans la
+  charge) ; le bloc du worker sur sa fausse base ; témoin inverse.
