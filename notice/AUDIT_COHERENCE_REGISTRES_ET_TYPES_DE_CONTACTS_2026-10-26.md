@@ -3711,3 +3711,45 @@ Hektor est-il aussi marqué « acheteur » (recommandé : oui — elle n'est ni 
   son lien au bien (`source = 'app'`, `origine = 'vente'`, la date) et, la nuit suivante, son adoption (même numéro, `present_in_hektor`
   passé à vrai, `origine = 'vente'` gardée).
 - Retour arrière : `patch_proprietaire_au_clic_vente_2026-10-28_INVERSE.sql`.
+
+## 53. P4 — LES MANDANTS SAISIS À LA CRÉATION D'UNE ANNONCE : audit *(28/10, Frédéric : « audit P4 »)* — lecture seule, rien codé
+
+**Périmètre** : la relation (le lien mandant / propriétaire au bien) et le type du contact, aux gestes qui posent un mandant AUTREMENT
+que par « lier un mandant ». Annonce, mandat, documents : non mesurés ici, sauf ce qui touche ces liens.
+
+### 53.1 Les portes, lues dans le code
+- **« Lier un mandant » et « créer un mandant »** (`app_link_mandant_optimistic`, `app_create_mandant_contact_optimistic`) : ✅ le lien est
+  écrit **au clic** (`source = 'app'`, `present_in_hektor = false`), le type recalculé, le worker le marque **établi** quand Hektor
+  confirme (`relation_etablie`) ou le **défait** s'il refuse (`annulerRattachementOptimiste`). C'est le patron.
+- **Le n° de mandat automatique** (`create_hektor_mandat_auto_number`) : **ne pose aucun lien** — il EXIGE que les mandants soient déjà liés
+  (« crée ou associe un mandant avant de générer le numéro », `console_job_worker.js` ~17861). ➡ **Hors de P4.**
+- **La création d'une annonce** (`app_create_annonce_job_optimistic`) : le formulaire propose **un mandant existant**
+  (`initial_mandant_contact_id`) **ou un mandant neuf** (nom, e-mail, téléphone… `initial_mandant`). Au clic, la fonction pose la fiche du
+  bien chez nous (naissance dans l'app, 8a pièce 2) — **mais rien pour le mandant** : ni lien, ni recalcul du type. Le worker, APRÈS avoir
+  créé l'annonce chez Hektor et posé son numéro sur notre ligne (`poserNumeroHektorSurLigneApp`), lie le mandant existant
+  (`linkHektorMandantContact`) ou crée le mandant neuf (`createHektorMandantContact`) — **sans rien écrire dans notre registre des liens**.
+  Le lien n'arrive chez nous qu'**à la nuit**, en relisant Hektor. ⛔ Et à la coupure, plus jamais.
+
+### 53.2 Les mesures (28/10)
+- **82 créations d'annonce par l'app** depuis le 15/05 ; **19 avec un mandant** : **1 existant** (62965, 28/08, lien en erreur partielle),
+  **18 neufs** (dernier le 28/08). **Aucune depuis le 21/10** (annonce née dans l'app) : la porte n'a jamais tourné avec le nouveau mécanisme.
+- **La particularité** : à la création, l'annonce **n'a pas encore son numéro Hektor** (il arrive ~90 s plus tard) ; or le registre des liens
+  est rangé par (contact, annonce Hektor) — contrainte `app_relation_couple_unique`. La vue sait lire une ligne `source = 'app'`, et la
+  fiche contact range un bien par **notre** numéro de dossier (`app_dossier_id`), qui existe dès le clic.
+
+### 53.3 La proposition — À TRANCHER PAR FRÉDÉRIC
+- **P4-a — le mandant EXISTANT, au clic, comme « lier un mandant »** · base + worker (4 services à redémarrer, file vide)
+  - au clic : la ligne du lien (`source = 'app'`, `present_in_hektor = false`), **rangée par notre numéro de dossier**, le numéro Hektor du
+    bien encore vide ; le type recalculé ;
+  - le worker, au moment même où il pose le numéro Hektor sur la fiche du bien, le pose aussi sur ces liens ; puis, quand Hektor confirme le
+    rattachement, il les marque **établis** (le même code que « lier un mandant ») ; s'il refuse, il les **défait** ;
+  - si la création de l'annonce échoue chez Hektor : le lien est marqué comme la fiche (« Erreur de création »), jamais laissé vivant.
+  - ⚠ ce que ça pourrait casser : la nuit adopte un lien par (contact, annonce Hektor) — une ligne au numéro encore vide est **ignorée** par
+    elle (rien n'est écrasé), puis adoptée normalement une fois le numéro posé ; la contrainte d'unicité laisse passer une annonce vide
+    (`NULL`), donc rien ne bloque ; la vue range le rôle par le n° de mandat du bien (« propriétaire » tant qu'il n'y en a pas).
+- **P4-b — le mandant NEUF** · plus gros : au clic, le contact **n'existe pas encore chez nous** (le worker le crée chez Hektor). Pour l'avoir
+  au clic, il faut d'abord **créer le contact chez nous** (comme la création de contact, 8a pièce 1 : « il naît complet »), puis lui poser le
+  lien comme en P4-a, et que le worker **reconnaisse** ce contact au lieu d'en fabriquer un second (la règle « un numéro ne se perd jamais » :
+  risque de doublon, déjà payé le 21/10).
+- **Recommandé** : **P4-a d'abord** (petit, même patron, aucune donnée réelle touchée aujourd'hui) ; **P4-b ensuite**, avec son propre
+  audit du rapprochement contact app ↔ contact Hektor. Rien n'est envoyé de plus chez Hektor par aucune des deux.
