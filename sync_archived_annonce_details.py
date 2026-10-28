@@ -75,6 +75,11 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Ne pas lancer normalize_source.py apres la recuperation.",
     )
+    parser.add_argument(
+        "--ancienne-regle-seule",
+        action="store_true",
+        help="Choisir les fiches comme avant le 28/10 (hektor_annonce seule), sans la table de suivi.",
+    )
     return parser.parse_args()
 
 
@@ -98,11 +103,24 @@ def count_archived_rows(conn) -> dict[str, int]:
     }
 
 
-def load_archived_detail_candidate_ids(conn, *, force_full: bool, limit: int) -> list[str]:
-    if force_full:
-        where_clause = "a.archive = '1'"
-    else:
-        where_clause = """
+# 28/10/2026 -- LA REGLE DE LA TABLE DE SUIVI, EN PLUS DE L'ANCIENNE.
+#
+# Le run appelle cette etape AVANT normalize_source. Or l'ancienne regle choisit dans
+# `hektor_annonce`, que seul normalize_source remet a jour : une annonce archivee chez
+# Hektor dans la journee y est encore « active, datee de la veille ». Elle n'est donc
+# relue qu'au run SUIVANT, et l'index des archives garde une nuit son vieux statut.
+# Mesure du 28/10 : 24 annonces archivees le 27/10 (statut Clos chez Hektor) affichees
+# « Actif » chez nous ; 12 candidates a 08:48, 35 apres le run.
+#
+# `sync_annonce_state` est ecrite PENDANT la lecture de Hektor (sync_raw) : la variante
+# de liste (archived, archived_pro, ...) et la date de modification y sont deja fraiches
+# quand cette etape tourne. On l'AJOUTE par un OU : tout ce que l'ancienne regle retenait
+# est retenu, la nouvelle ne fait qu'en ajouter. Meme plafond (--limit), aucune requete
+# de plus chez Hektor : les memes fiches, relues une nuit plus tot.
+# Une fois le run fini, les deux tables disent la meme chose (0 ecart sur 37 823
+# archivees, mesure du 28/10) : la nouvelle regle ne sert que le matin d'un archivage.
+# Retour arriere sans toucher au code : --ancienne-regle-seule.
+OLD_RULE_WHERE = """
             a.archive = '1'
             and (
                 d.hektor_annonce_id is null
@@ -112,7 +130,62 @@ def load_archived_detail_candidate_ids(conn, *, force_full: bool, limit: int) ->
                     and datetime(replace(a.date_maj, 'T', ' ')) > datetime(replace(substr(s.last_detail_sync_at, 1, 19), 'T', ' '))
                 )
             )
-        """
+"""
+
+LISTING_STATE_RULE_WHERE = """
+            s.listing_variant like 'archived%'
+            and (
+                d.hektor_annonce_id is null
+                or s.last_detail_sync_at is null
+                or (
+                    nullif(s.date_maj, '') is not null
+                    and datetime(replace(s.date_maj, 'T', ' ')) > datetime(replace(substr(s.last_detail_sync_at, 1, 19), 'T', ' '))
+                )
+            )
+"""
+
+
+def load_archived_detail_candidate_ids(
+    conn, *, force_full: bool, limit: int, with_listing_state: bool = True
+) -> list[str]:
+    if force_full or not with_listing_state:
+        return load_archived_detail_candidate_ids_old_rule(conn, force_full=force_full, limit=limit)
+    sql = f"""
+        with candidates as (
+            select a.hektor_annonce_id as id
+            from hektor_annonce a
+            left join hektor_annonce_detail d on d.hektor_annonce_id = a.hektor_annonce_id
+            left join sync_annonce_state s on s.hektor_annonce_id = a.hektor_annonce_id
+            where {OLD_RULE_WHERE}
+            union
+            select s.hektor_annonce_id as id
+            from sync_annonce_state s
+            left join hektor_annonce_detail d on d.hektor_annonce_id = s.hektor_annonce_id
+            where {LISTING_STATE_RULE_WHERE}
+        )
+        select c.id as hektor_annonce_id
+        from candidates c
+        left join hektor_annonce a on a.hektor_annonce_id = c.id
+        left join hektor_annonce_detail d on d.hektor_annonce_id = c.id
+        left join sync_annonce_state s on s.hektor_annonce_id = c.id
+        order by
+            case when d.hektor_annonce_id is null then 0 else 1 end,
+            max(coalesce(a.date_maj, ''), coalesce(s.date_maj, '')) desc,
+            cast(c.id as integer) asc
+    """
+    params: tuple[Any, ...] = ()
+    if limit and limit > 0:
+        sql += "\nlimit ?"
+        params = (limit,)
+    rows = conn.execute(sql, params).fetchall()
+    return [str(row["hektor_annonce_id"]).strip() for row in rows if str(row["hektor_annonce_id"] or "").strip()]
+
+
+def load_archived_detail_candidate_ids_old_rule(conn, *, force_full: bool, limit: int) -> list[str]:
+    if force_full:
+        where_clause = "a.archive = '1'"
+    else:
+        where_clause = OLD_RULE_WHERE
     sql = f"""
         select a.hektor_annonce_id
         from hektor_annonce a
@@ -177,12 +250,23 @@ def main() -> int:
             )
 
         before = count_archived_rows(conn)
-        detail_ids = load_archived_detail_candidate_ids(conn, force_full=args.force_full, limit=args.limit)
+        with_listing_state = not args.ancienne_regle_seule
+        detail_ids = load_archived_detail_candidate_ids(
+            conn, force_full=args.force_full, limit=args.limit, with_listing_state=with_listing_state
+        )
         print(
             "Archived detail candidates: "
             f"{len(detail_ids)} / total={before['archived_total']} "
             f"with_detail={before['archived_with_detail']} marked_synced={before['archived_marked_synced']}"
         )
+        if with_listing_state and not args.force_full:
+            old_rule_ids = set(load_archived_detail_candidate_ids_old_rule(conn, force_full=False, limit=0))
+            seen_by_listing_only = [i for i in detail_ids if i not in old_rule_ids]
+            print(
+                "  dont vues seulement par la table de suivi (archivees depuis le dernier run) : "
+                f"{len(seen_by_listing_only)}"
+                + (f" -- {', '.join(seen_by_listing_only[:30])}" if seen_by_listing_only else "")
+            )
 
         if args.dry_run:
             finish_sync_run(conn, run_id, "success", notes="dry-run")
