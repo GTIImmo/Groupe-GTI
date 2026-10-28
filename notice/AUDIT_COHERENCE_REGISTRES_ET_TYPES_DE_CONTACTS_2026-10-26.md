@@ -3653,3 +3653,13 @@ Hektor est-il aussi marqué « acheteur » (recommandé : oui — elle n'est ni 
 - ⚠ **Le bandeau se verra sur ~149 fiches** (acheteurs de toutes dates avec une recherche active, dont 53 de 2026) — y compris d'anciens
   acheteurs qui cherchent peut-être un second bien : c'est une proposition, rien ne part sans « Oui ».
 - ⬜ **Non fait** : la même fenêtre juste après une vente faite DANS l'app (0 vente faite dans l'app en 60 jours) — à son choix.
+
+### 52.8 ✅ A POSÉ LE 28/10 VERS 19:55 *(Frédéric : « oui »)*
+- **La vue** : patch posé, répétition **6/6 OK** (ligne 6 : « marque pas encore posée : 4 encore mandants », attendu) ; nouvelle empreinte
+  `ce06623f` ; **191 217 lignes, comme avant**.
+- **L'interrupteur** : `APP_RELATION_ACHETEUR_SANS_VENTE=1` ajouté à `.env` sous `APP_RELATION_ACHETEUR_PROPRIETAIRE=1` (sauvegarde
+  `env_avant_acheteur_sans_vente_20261028` dans le scratchpad) ; relu par le module : les deux règles **allumées**.
+- ⏰ **29/10 matin** : dans le journal du run, la ligne « acquereur sans vente : 4 lien(s) marque(s) « acheteur » (4 neuf(s), 0 leve(s)) ;
+  4 en desaccord avec Hektor » ; puis la répétition, ligne 6 → « OK (marque posée, plus aucun mandant) » ; et le type des 4 testeurs
+  → `acquereur_offre` seul. ⛔ Si la ligne n'apparaît pas ou compte autre chose que 4 : regarder avant tout.
+- **Retour arrière** : `APP_RELATION_ACHETEUR_SANS_VENTE=0` (la nuit remet les marques à vide), puis le patch inverse de la vue.
