@@ -3663,3 +3663,15 @@ Hektor est-il aussi marqué « acheteur » (recommandé : oui — elle n'est ni 
   4 en desaccord avec Hektor » ; puis la répétition, ligne 6 → « OK (marque posée, plus aucun mandant) » ; et le type des 4 testeurs
   → `acquereur_offre` seul. ⛔ Si la ligne n'apparaît pas ou compte autre chose que 4 : regarder avant tout.
 - **Retour arrière** : `APP_RELATION_ACHETEUR_SANS_VENTE=0` (la nuit remet les marques à vide), puis le patch inverse de la vue.
+
+### 52.9 ⛔ Correction (28/10, Frédéric : « C, cela a déjà été fait, on pose propriétaire depuis — refais un audit et mets à jour le plan »)
+- **Oui, c'est fait — la nuit.** Audit du code : `relation_ledger._poser_les_liens_nes_de_la_vente` pose `origine = 'vente'` et
+  `proprietaire_depuis` ; la fiche affiche « Propriétaire depuis le … » (`App.tsx` ~39543) ; mesuré **57 / 57** sur les ventes des 60 jours.
+- **Ce que C désignait, et qui manque seulement** : **aucune fonction de la base ni le worker** ne pose `proprietaire_depuis` (recherche dans
+  toutes les fonctions et dans `console_job_worker.js` : 0). La nuit **reclasse** le lien que Hektor ajoute à la vente
+  (`couples_nes_de_la_vente` exige un lien au bien) : (1) **entre le clic et la nuit**, une vente faite dans l'app ne rend pas l'acheteur
+  propriétaire (24113 : vente du 23/10, lien vu le 24/10 à 04:55) ; (2) **à la coupure**, Hektor n'ajoutera plus de lien → plus personne ne
+  deviendrait propriétaire. ➡ C reste pour **l'étape 3** (0 vente faite dans l'app en 60 jours) ; mon « C » du §52.3 était mal dit.
+- **Les 726 annonces du balayage photos** : traitées le 28/10 par `ecb3241` (poussé) — une erreur de **panne** n'écarte plus une annonce à vie,
+  elles reprennent leur place dans le lot (à constater au balayage du 28/10 à 23:00). Plus rien à décider.
+- **Le plan est à jour** (ligne ⑧ réécrite, journal du 28/10).
