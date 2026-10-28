@@ -228,6 +228,11 @@
    de maison, pas de bouton, un fond neutre. Il dit ce qu'on sait et avoue ce qu'on
    ignore (« recherche non determinee ») plutot que de deviner. */
 .fa-contact-v2 .fa-cx-srch-mandats-orph { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
+/* ⑧ types §52 B (28/10) : l'acheteur qui a encore une recherche active -- on PROPOSE de l'archiver (fenêtre Oui / Non). */
+.fa-contact-v2 .fa-cx-achat-rech { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 10px; padding: 8px 11px; border: 1px solid color-mix(in srgb, #b7791f 40%, transparent); background: color-mix(in srgb, #b7791f 8%, transparent); border-radius: 8px; font-size: 12.5px; }
+.fa-contact-v2 .fa-cx-achat-rech-tx { flex: 1 1 220px; min-width: 0; }
+.fa-cx-achat-rech-liste { margin: 8px 0 12px; padding-left: 18px; font-size: 13px; }
+.fa-cx-achat-rech-liste li { margin: 2px 0; overflow-wrap: anywhere; }
 .fa-contact-v2 .fa-cx-srch-morph { display: flex; align-items: center; gap: 6px; padding: 6px 9px; border: 1px dashed color-mix(in srgb, var(--muted) 38%, transparent); border-radius: 8px; font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .fa-contact-v2 .fa-cx-srch-morph svg { width: 13px; height: 13px; flex: 0 0 auto; opacity: .7; }
 .fa-contact-v2 .fa-cx-srch-morph-tx { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

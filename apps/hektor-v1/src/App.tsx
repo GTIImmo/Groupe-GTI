@@ -39587,6 +39587,23 @@ function indicesBiensAffiches(relations: AppContactRelation[], nbBiens: number, 
   return toutAfficher ? tries : tries.slice(0, NOTAIRE_BIENS_MAX)
 }
 
+// ⑧ types §52 B (28/10/2026) : L'ACHETEUR QUI A ENCORE UNE RECHERCHE ACTIVE.
+//   Décision de Frédéric (D4, 26/10 ; 28/10) : la clôture de sa recherche est PROPOSÉE, jamais automatique — une
+//   fenêtre Oui / Non « Voulez-vous archiver la recherche de l'acheteur ? ». Un acheteur peut chercher un second bien.
+//   Ses achats = ses ventes vivantes (la vue ne rend que celles-là, `acquereur_vente`), la plus récente d'abord.
+function achatsDeLAcheteur(relations: AppContactRelation[]): Array<{ annonce: string; titre: string; date: string }> {
+  const parBien = new Map<string, { annonce: string; titre: string; date: string }>()
+  for (const r of relations) {
+    if (r.role_contact !== 'acquereur_vente') continue
+    const annonce = String(r.hektor_annonce_id ?? '').trim()
+    if (!annonce) continue
+    const date = String(r.transaction_date ?? '').slice(0, 10)
+    const avant = parBien.get(annonce)
+    if (!avant || date > avant.date) parBien.set(annonce, { annonce, titre: String(r.titre_bien ?? '').trim(), date })
+  }
+  return [...parBien.values()].sort((a, b) => b.date.localeCompare(a.date))
+}
+
 function contactBool(value: unknown) {
   return value === true || value === 1 || value === '1'
 }
@@ -44796,6 +44813,10 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
   const [searchDeletePending, setSearchDeletePending] = useState<string | null>(null)
   // 3c (26/10) : « Suppression en cours… » tenu tant que le travail Hektor vit.
   const recherchesEnSuppression = useSuppressionsEnCours()
+  // ⑧ types §52 B : la fenêtre Oui / Non « Voulez-vous archiver la recherche de l'acheteur ? ».
+  const [archiverAcheteurOuvert, setArchiverAcheteurOuvert] = useState(false)
+  const [archiverAcheteurEnvoi, setArchiverAcheteurEnvoi] = useState(false)
+  const [archiverAcheteurErreur, setArchiverAcheteurErreur] = useState<string | null>(null)
   // Dépliage de la liste complète des communes d'une recherche (repliée par défaut sur le décompte).
   const [expandedSearchKeys, setExpandedSearchKeys] = useState<Set<string>>(() => new Set())
   const toggleSearchExpanded = (key: string) => setExpandedSearchKeys((prev) => {
@@ -44832,6 +44853,12 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
   // orphelin). Mais elles n'ont rien à faire dans la liste : on ne montre que les
   // vivantes. Le compteur « Recherches archivées » plus bas dit qu'elles existent.
   const orderedSearches = selectedActiveSearches
+  // ⑧ types §52 B : un acheteur (vente vivante) qui a encore des recherches actives — hors création en cours et hors
+  //   archivage déjà parti chez Hektor.
+  const achatsAcheteur = achatsDeLAcheteur(props.relations)
+  const recherchesAcheteurAArchiver = achatsAcheteur.length
+    ? selectedActiveSearches.filter((s) => !contactSearchProvisional(s).provisoire && !(s.contact_search_key in recherchesEnSuppression.enCours))
+    : []
   // Les mandats de recherche qu'AUCUNE carte visible ne porte. On compare sur le
   // NUMERO, pas sur la cle : c'est l'accrochage de api.ts qui fait foi, et il a
   // deja son propre repli (cle puis search_index).
@@ -44988,6 +45015,26 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
       if (typeof window !== 'undefined') window.alert(error instanceof Error ? error.message : 'Suppression de la recherche impossible.')
     } finally {
       setSearchDeletePending(null)
+    }
+  }
+
+  // ⑧ types §52 B : « Oui » archive les recherches actives de l'acheteur, une par une, par LE MÊME travail que la
+  //   corbeille de chaque carte (archivage daté chez Hektor). Un échec s'arrête et se dit ; ce qui est parti reste parti.
+  async function archiverRecherchesAcheteur() {
+    if (!props.canManageContacts || archiverAcheteurEnvoi) return
+    setArchiverAcheteurEnvoi(true)
+    setArchiverAcheteurErreur(null)
+    try {
+      for (const search of recherchesAcheteurAArchiver) {
+        const job = await createDeleteHektorContactSearchJob({ contactId: props.contact.hektor_contact_id, searchIndex: search.search_index })
+        props.onJobCreated?.(job)
+        recherchesEnSuppression.ajouter(search.contact_search_key, job?.id)
+      }
+      setArchiverAcheteurOuvert(false)
+    } catch (error) {
+      setArchiverAcheteurErreur(error instanceof Error ? error.message : "L'archivage de la recherche n'a pas pu partir.")
+    } finally {
+      setArchiverAcheteurEnvoi(false)
     }
   }
 
@@ -45544,6 +45591,15 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
               </div>
 
               <section className="fa-cx-mod full" style={{ ['--sc']: '#2f7c86' } as CSSProperties}>
+                {/* ⑧ types §52 B : l'acheteur qui a encore une recherche active — on PROPOSE, rien ne se ferme seul. */}
+                {props.canManageContacts && recherchesAcheteurAArchiver.length > 0 ? (
+                  <div className="fa-cx-achat-rech">
+                    <span className="fa-cx-achat-rech-tx">
+                      A acheté{achatsAcheteur[0].date ? ` le ${formatDate(achatsAcheteur[0].date)}` : ''}{achatsAcheteur[0].titre ? ` (${achatsAcheteur[0].titre})` : ''} — {recherchesAcheteurAArchiver.length > 1 ? `ses ${recherchesAcheteurAArchiver.length} recherches sont toujours actives` : 'sa recherche est toujours active'}.
+                    </span>
+                    <button className="fa-cx-sec-act" type="button" onClick={() => { setArchiverAcheteurErreur(null); setArchiverAcheteurOuvert(true) }}>Archiver la recherche…</button>
+                  </div>
+                ) : null}
                 {/* A.3 (16/10/2026) : LES MANDATS DE RECHERCHE QU'AUCUNE CARTE NE PORTE.
                     Mesure du 16/10 : sur 38 mandats de recherche, 20 se rattachent a UNE
                     recherche et s'affichent sur sa carte ; les 18 autres n'etaient visibles
@@ -45987,6 +46043,35 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
           sessionEmail={props.sessionEmail}
           onClose={() => setContactEmailComposerOpen(false)}
         />
+      ) : null}
+
+      {archiverAcheteurOuvert && props.canManageContacts ? (
+        <ContactWorkflowModal
+          title="Archiver la recherche de l'acheteur"
+          eyebrow="Après l'achat"
+          summary="Voulez-vous archiver la recherche de l'acheteur ?"
+          tone="edit"
+          onClose={() => { if (!archiverAcheteurEnvoi) setArchiverAcheteurOuvert(false) }}
+        >
+          <div className="contact-delete-panel contact-delete-panel-modern">
+            <p>
+              {contactFullName || props.contact.display_name} a acheté{achatsAcheteur[0]?.date ? ` le ${formatDate(achatsAcheteur[0].date)}` : ''}{achatsAcheteur[0]?.titre ? ` (${achatsAcheteur[0].titre})` : ''}.
+              {' '}{recherchesAcheteurAArchiver.length > 1 ? `Ses ${recherchesAcheteurAArchiver.length} recherches actives seront archivées` : 'Sa recherche active sera archivée'} dans Hektor : elle{recherchesAcheteurAArchiver.length > 1 ? 's' : ''} ne recevr{recherchesAcheteurAArchiver.length > 1 ? 'ont' : 'a'} plus de rapprochements. La fiche du contact reste active.
+            </p>
+            <ul className="fa-cx-achat-rech-liste">
+              {recherchesAcheteurAArchiver.map((s) => (
+                <li key={`fa-cx-achat-rech-${s.contact_search_key}`}>{[contactSearchTypes(s.types_json).join(' · ') || s.offre, ...contactSearchCriteriaLabels(s), contactJsonList(s.villes_json).slice(0, 3).join(', ')].filter(Boolean).join(' · ') || 'Recherche'}</li>
+              ))}
+            </ul>
+            {archiverAcheteurErreur ? <p className="form-error">{archiverAcheteurErreur}</p> : null}
+            <div className="modal-actions">
+              <button className="ghost-button button-subtle" type="button" onClick={() => setArchiverAcheteurOuvert(false)} disabled={archiverAcheteurEnvoi}>Non</button>
+              <button className="ghost-button" type="button" onClick={() => { void archiverRecherchesAcheteur() }} disabled={archiverAcheteurEnvoi || recherchesAcheteurAArchiver.length === 0}>
+                {archiverAcheteurEnvoi ? 'Envoi…' : 'Oui, archiver'}
+              </button>
+            </div>
+          </div>
+        </ContactWorkflowModal>
       ) : null}
 
       {deleteOpen && props.canDeleteContacts ? (
