@@ -3547,5 +3547,6 @@ réserve. Le défaut de la carte reste ouvert : le corriger avec le mot de Hekto
   30712 dans 1000298 (déduit seul) → les 2 lignes suivent, les 2 déduites sont remplacées, la trace intacte · 1001377 rejoint
   le même dossier → conflit nommé, rien d'écrasé · **témoin inverse** : avec la fonction d'avant, la saisie reste orpheline ·
   l'inverse rend l'empreinte `1e107de3` · base intacte à la fin.
-- ⏰ À poser à son accord, puis la répétition (4 lignes « OK »). Le vrai juge : le compte rendu de la nuit (ligne « purge des
+- ✅ **POSÉ le 28/10 vers 15:40** (accord : « Oui vas y ») ; répétition **4/4 OK** ; nouvelle empreinte `df20fc00` ;
+  26 lignes non-Hektor intactes. Avant la pose : la répétition (4 lignes « OK »). Le vrai juge : le compte rendu de la nuit (ligne « purge des
   orphelines ») porte les nouvelles clés `saisies_ramenees`, `orphelines_en_conflit`, `orphelines_sans_transaction`.
