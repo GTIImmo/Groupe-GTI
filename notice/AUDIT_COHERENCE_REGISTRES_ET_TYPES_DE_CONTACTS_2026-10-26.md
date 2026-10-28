@@ -3685,3 +3685,22 @@ Hektor est-il aussi marqué « acheteur » (recommandé : oui — elle n'est ni 
 - **Ce qui n'est pas posé au clic, et seulement ça** : le **lien au bien** « Propriétaire depuis le … » — `app_change_annonce_status_optimistic`
   n'écrit pas dans `app_relation` (ses écritures : registre des transactions, carnet, dossier, carnet d'annonce, travail). Il arrive la nuit,
   en reclassant le lien de Hektor. C'est le seul objet de « C » (étape 3).
+
+### 52.11 ✅ C CODÉ — « Propriétaire depuis le … » au clic de la vente, comme les autres gestes *(28/10, Frédéric : « oui dès le clic » ; « fais comme les autres gestes »)* — NON POSÉ
+- **Le patron** : `app_link_mandant_optimistic` (lier un mandant) — la ligne est écrite **au clic** dans le registre des liens
+  (`source = 'app'`, `present_in_hektor = false`, clé `app:…`) ; la vue la montre ; la nuit l'adopte en **gardant son numéro**
+  (`app_relation__sb`) quand Hektor la redescend, et la règle de nuit lui repose `origine = 'vente'`. **Ni le worker, ni la nuit ne changent**
+  (aucun redémarrage).
+- **Le patch** `supabase/patch_proprietaire_au_clic_vente_2026-10-28.sql` (+ INVERSE, REPETITION) : un bloc dans
+  `app_change_annonce_status_optimistic`, juste avant le recalcul du type. Pour une **vente** : chaque acquéreur (table des parties) reçoit
+  son lien au bien, `origine = 'vente'`, `proprietaire_depuis` = la date de la vente. Un couple déjà connu **n'est pas réécrit** — sauf une
+  ligne marquée « acheteur » (vente supprimée avant, §52 A), qui redevient « née de la vente ». Best-effort comme `link_mandant`, mais **dit**
+  (WARNING) au lieu de se taire. Ni l'offre ni le compromis (D2).
+- **Éprouvé par une VRAIE vente du geste de l'app** (bien d'essai 62965, acheteur 20000013, transactions annulées) : **11 / 11** — témoin
+  inverse (fonction d'avant : aucun lien, pas propriétaire) ; avec le patch : lien posé au clic, vue « propriétaire », **type recalculé au
+  clic** « propriétaire + acheteur (vente) » ; une marque « acheteur » repasse « vente », datée, rôle de Hektor gardé ; un vrai mandant déjà
+  lié **n'est pas réécrit** ; un compromis ne pose rien ; l'inverse rend l'empreinte `fce35139` ; aucun travail ni transaction restés.
+- ⚠ **Limite connue, déclarée** : si la vente faite dans l'app est supprimée **avant la nuit** et qu'il ne reste **aucune autre transaction** de
+  l'acheteur sur le bien, le lien posé au clic reste « propriétaire » jusqu'à la nuit (la règle A ne touche pas une personne sans transaction).
+- ⏰ **À poser à son accord** (puis la répétition, 4 lignes « OK »). **C n'est plus à l'étape 3** pour le clic ; à la coupure, il restera que la
+  nuit ne pourra plus « reconnaître » ce lien par celui de Hektor (sa règle de reclassement) — à reprendre avec l'étape 3.
