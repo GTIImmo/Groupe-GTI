@@ -3516,3 +3516,36 @@ réserve. Le défaut de la carte reste ouvert : le corriger avec le mot de Hekto
   une offre passée à « refusée » dans une transaction annulée est bien attrapée (1).
 - ➡ **Correctif possible, à décider** : comparer aussi **l'état** (et l'acquéreur) de la transaction, pas seulement son numéro — une
   ligne dans `ckResumeNuitAJour`, écran seulement, rien en base.
+
+### D8 et D9 — CODÉS le 28/10 *(Frédéric : « Corriger les deux »)*
+
+**D9 — écran seulement, commit 01a74bf, à pousser (Vercel se déploie au push).**
+- `ckResumeNuitAJour` (App.tsx) : le résumé de nuit ne fait plus foi sur le seul numéro. Il cède la place au registre si, pour la
+  transaction retenue, **l'état** diffère, si **l'acquéreur** diffère (reconnu par l'un de ses deux numéros, le nôtre ou celui de
+  Hektor), ou si la nuit porte encore une **vente** (ou un compromis **vivant**) que le registre n'a plus. Un champ absent d'un côté
+  ne juge rien.
+- ⚠ **Affiné par la mesure** : la 1re version rejetait 61844 / 18475 — le résumé de nuit mélange les cycles et y garde un compromis
+  **annulé** d'un dossier voisin. D'où « un compromis plus avancé ne compte que s'il est vivant ».
+- **Mesure sur le parc** (code réel rejoué, ancien et nouveau) : 7 834 cycles, **0 changé** — attendu, aucun geste depuis le 26/10.
+- Essai `test_rubrique_affaires_complete.cjs` **42/42** ; témoin inverse : les 3 corrections (compromis annulé, vente supprimée,
+  acquéreur remplacé) **échouent sur HEAD**, les 3 « la nuit fait foi » passent des deux côtés. `npm run build` vert.
+
+**D8 — base seulement, patch NON POSÉ.** `supabase/patch_d8_repartition_suit_son_dossier_2026-10-28.sql` (+ `_INVERSE`, `_REPETITION`).
+- La purge de nuit `app_repartition_purger_orphelines` (déjà appelée par `repartition_commission.py --purger-orphelines`, après le
+  push des chaînes) commence par **ramener chaque saisie orpheline dans le dossier que sa transaction porte maintenant**. Ni le run,
+  ni le worker, ni l'écran ne changent.
+- ⭐ **Le nouveau dossier se trouve sans journal** : le numéro d'un dossier est **toujours** le plus petit numéro de ses transactions
+  (mesuré : 12 187 dossiers, 0 exception). La saisie orpheline du dossier A appartient à la transaction A.
+- Règles : transaction A disparue → gardée orpheline, nommée « sans transaction » (1001347) ; dossier d'arrivée déjà saisi → gardée
+  orpheline, nommée « en conflit », **rien d'écrasé** ; dossier d'arrivée seulement déduit de Hektor → la saisie **remplace** les lignes
+  déduites (comptées). `ecrit_le` / `ecrit_par` ne bougent pas.
+- **Garde** : s'arrête si la fonction en ligne n'a plus l'empreinte d'avant (`1e107de3`). L'inverse est la fonction d'avant
+  **verbatim** (lue en ligne) et vérifie son empreinte ; il ne remet rien orphelin.
+- ⚠ **Correction de la mesure du matin** : les lignes non-Hektor sont **26** (22 « saisie » + 4 « defaut ») sur 9 dossiers, **8 vivants**,
+  1 orphelin (1001347).
+- **Éprouvé dans des transactions annulées — 10/10** : aujourd'hui rien ne bouge (1001347 seule, sans transaction) · la nuit recolle
+  30712 dans 1000298 (déduit seul) → les 2 lignes suivent, les 2 déduites sont remplacées, la trace intacte · 1001377 rejoint
+  le même dossier → conflit nommé, rien d'écrasé · **témoin inverse** : avec la fonction d'avant, la saisie reste orpheline ·
+  l'inverse rend l'empreinte `1e107de3` · base intacte à la fin.
+- ⏰ À poser à son accord, puis la répétition (4 lignes « OK »). Le vrai juge : le compte rendu de la nuit (ligne « purge des
+  orphelines ») porte les nouvelles clés `saisies_ramenees`, `orphelines_en_conflit`, `orphelines_sans_transaction`.
