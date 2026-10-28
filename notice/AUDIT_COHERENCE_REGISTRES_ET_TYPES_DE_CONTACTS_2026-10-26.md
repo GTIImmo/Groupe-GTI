@@ -3157,3 +3157,16 @@ plat**, jusqu'à 410 pour le plus chargé. La décision 2 dit « pas toutes les 
 - Essais : `test_notaire_ecran.cjs` **28 / 28**. 6 contrôles neufs : les 10 bons biens, numéros alignés, lignes mélangées ;
   « Tout afficher » ; les deux témoins ; les deux fiches ; **mutant** sans la limite, attrapé. P2 et le type unique restent verts.
   `npm run build` (vérification des types comprise) vert.
+
+### 46.2 ⚠ LA 1RE NUIT (run relancé le 28/10, reprise de 08:48) — l'étape a échoué sur un chemin, corrigé *(28/10)*
+- **L'envoi des contacts sans le type** : 09:28:12 → 09:28:50, soit **38 s**, contre 35 s la veille. **Pas d'envoi massif** : l'empreinte
+  est inchangée, comme prévu.
+- **L'étape « phase2 type des contacts depuis nos registres »** : `exit 2` à 09:29:16. Python : `can't open file '...phase2\sync<CR>ecalculer_types_contacts.py'`.
+  En insérant la ligne du pipeline par une chaîne Python non brute, le `\r` de `\recalculer` est devenu un **retour chariot**. C'est ma
+  faute, et mon essai ne l'a pas vu : il vérifiait la syntaxe et le diff, sans **exécuter** l'étape. Le même caractère faisait classer le
+  fichier « non texte » par git (§46).
+- **Corrigé** (commit `a9e0d55`) : un octet, plus aucun retour chariot isolé, syntaxe vérifiée. L'étape étant facultative, le run a continué.
+- **Rattrapé à 09:30:57** : `recalculer_types_contacts.py` lancé à la main remet **15 contacts** d'après nos registres, en 16,7 s. Ce sont
+  les gestes faits chez Hektor, que le run venait d'écrire dans nos registres, et les contacts neufs.
+- ⚠ Le battement `supabase.type_contacts` reste en **erreur** (09:29) jusqu'au run de cette nuit.
+- ⏰ **Cette nuit** : l'étape doit sortir en 0, avec un compte de quelques contacts.
