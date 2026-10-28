@@ -3552,3 +3552,15 @@ Le « jusqu'à » du vendeur (C11) **n'est plus demandé** (§28.5).
 - **C — P5, le lien au geste de la vente dans l'app** · base + règle de nuit. Utile à la coupure, **0 usage aujourd'hui**. Recommandé :
   **plus tard**, avec la coupure.
 - **D — P6, les acheteurs d'avant le 17/07** : la décision A / B / C du §28.4 est toujours ouverte.
+
+### 52.4 Précision *(28/10, Frédéric : « l'audit n'est pas à jour, nous avons énormément travaillé sur les types ; un acheteur devient propriétaire, pas mandant, normalement ? »)*
+- **Oui, et c'est mesuré** : le type se calcule désormais **chez nous**, depuis nos registres (`app_type_depuis_nos_registres`, au geste
+  et la nuit, §45-47), et la vue range un lien « né de la vente » en **Propriétaire** (`origine = 'vente'` → `proprietaire`). Les 57
+  acheteurs des 60 derniers jours sont Propriétaires ; sur 24113, 20000015 (vente vivante) est
+  `acquereur_compromis, acquereur_offre, acquereur_vente, proprietaire`.
+- **Le défaut C10 ne vient donc PAS du type**, il vient de **ce qu'on lui donne** : quand la vente est **supprimée**, la ligne quitte le
+  registre (décision du 07/09), la nuit lève `origine = 'vente'` (plus de vente pour la justifier) — mais le lien que Hektor avait
+  ajouté **reste** chez Hektor, rangé « mandant ». Recalculé **aujourd'hui avec le code actuel** (pas une valeur périmée) : 20000011,
+  20000012, 20000013 et 20000014 → `acquereur_offre, mandant` ; liens vus : `mandant@24113` + leur offre.
+- ➡ La pièce A du §52.3 ne touche pas au calcul du type : elle dit seulement à la nuit (et au geste « Supprimer la vente ») de ne pas
+  laisser ce lien redevenir un lien de mandant.
