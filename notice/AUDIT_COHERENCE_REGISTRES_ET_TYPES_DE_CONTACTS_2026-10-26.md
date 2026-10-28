@@ -3352,3 +3352,6 @@ reprises de la maquette v2, plus 4 propres à l'app), importée par `main.tsx`.
 
 ### 49.9 ✅ DÉCISION 4 RECONFIRMÉE (28/10, Frédéric : « oui, vas-y ») — honoraires = entrée + sortie
 `honorairesDuDossier` = `honoraires_entree` + `honoraires_sortie`. Réel : 10164856 passe de 3 750 € à **27 000 €** sur ses 4 ventes des 12 mois. Essai 25 / 25, build vert. ⛔ **La pose de la fonction a été REFUSÉE à mon outil** (classée « déploiement en production ») : elle est à **coller par Frédéric** dans l'éditeur SQL de Supabase — d'abord `patch_notaire_etape4_fiche_2026-10-28.sql`, puis `_REPETITION.sql` (12 lignes, toutes « OK » ; la 13e de mon essai contrôlait le retour arrière, elle n'est pas dans la répétition). **Ensuite seulement**, pousser le front.
+
+### 49.10 ✅ FONCTION POSÉE LE 28/10 À 13:04 *(Frédéric : « fais-le toi-même, tu as mon accord »)*
+`patch_notaire_etape4_fiche_2026-10-28.sql` passé (COMMIT), répétition **12 / 12 verte du premier coup** (notaire le plus chargé : 260 ms admin, 363 ms commercial ; témoin positif 6 vus sur 301 ; médiane de l'agence 85 j). ⬜ Front à pousser par Frédéric, puis à voir à l'écran (bureau et téléphone).
