@@ -151,6 +151,9 @@ verifier("la recherche globale dit « Notaire · Mandant »",
 // 6. les deux menus, la balance, les styles
 const menus = (app.match(/\[\{ value: 'notaire', label: 'Notaire' \}\]/g) || []).length;
 verifier("les DEUX menus du filtre proposent « Notaire »", menus === 2, String(menus));
+// 28/10 : l'annuaire affiché n'utilise pas ces menus mais une rangée de pastilles (vu à l'écran après la pose)
+verifier("la rangée de pastilles de l'annuaire a « Notaires », qui choisit le même filtre",
+  /selectRole\('notaire'\) \}\}><span className="dot" style=\{\{ background: '#3b4a8c' \}\} \/><span>Notaires<\/span>/.test(app));
 verifier("la balance est dans l'avatar de la fiche (fa-cx-ty-notaire) et dans l'annuaire", /fa-cx-ty-ic fa-cx-ty-notaire/.test(app)
   && /cat === 'notaire'\) \{\n\s*\/\/ la balance/.test(app));
 const cssAnn = lire("annuaire-contacts-v2.css"), cssFiche = lire("contact-detail-v2.css");

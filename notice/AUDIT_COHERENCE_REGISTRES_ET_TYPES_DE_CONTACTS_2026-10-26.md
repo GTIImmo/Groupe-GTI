@@ -3183,3 +3183,26 @@ plat**, jusqu'à 410 pour le plus chargé. La décision 2 dit « pas toutes les 
 - **Le front déployé** (groupe-gti.vercel.app, après la poussée de Frédéric) contient l'étape 3 et la décision 2.
 - ⬜ **La pose, avec l'accord de Frédéric** : `patch_notaire_etape1_vue_2026-10-27.sql` et sa répétition, puis le calcul pour tous
   (`recalculer_types_contacts.py`), pour que l'écran les montre tout de suite. Ensuite : la vérification à l'écran, au bureau et au téléphone.
+
+### 48.3 ✅ POSÉE LE 28/10 À 10:29 — la vue des notaires, puis le type ; VU À L'ÉCRAN *(Frédéric : « oui vas-y »)*
+- **La vue** : `patch_notaire_etape1_vue_2026-10-27.sql` passé (COMMIT), répétition **11 / 11 verte du premier coup**. Les temps de lecture
+  restent au plus 159 ms (le notaire le plus chargé, sous un commercial : 156 ms) ; 167 862 lignes d'avant identiques, 23 355 neuves.
+- **Le type** : `recalculer_types_contacts.py` à 10:29:36 remet **1 110 contacts en 2,7 s**, exactement la mesure de l'essai.
+  - Exemple : le notaire le plus chargé, 10166165 « Pierre office notarial Ambert », porte
+    `notaire_acquereur, notaire_vendeur, proprietaire`.
+- **Vu à l'écran**, dans le Chrome de Frédéric (front déployé) :
+  - **l'annuaire** (recherche « office notarial Ambert ») : avatar bleu avec la balance, « Notaire · Propriétaire », statut « Notaire ·
+    Côtés vendeur et acquéreur » ;
+  - **la fiche** : `ty-notaire`, la balance dans l'avatar, les pastilles « Notaire » et « Propriétaire », 411 biens ;
+    - **10 lignes**, du plus récent (« Compromis du 13/01/2026 ») au plus ancien (« Vente signée le 16/12/2024 »), toutes
+      « NOTAIRE — CÔTÉS VENDEUR ET ACQUÉREUR » ou « — CÔTÉ ACQUÉREUR », ligne bleue `#3b4a8c` ;
+    - le bouton « **Tout afficher · 411 biens** » montre les 411 puis disparaît ; le bien sans transaction (propriétaire) arrive en dernier ;
+  - **le téléphone** (cadre de 390 px, rendu mobile) : cartes `is-notary` « Notaire » ; la fiche avec la balance, « Notaire · Propriétaire »
+    et « Tout afficher » ; aucun débordement (386 px).
+- ⚠ **Trouvé à l'écran, et que mon audit n'avait pas** : l'annuaire affiché ne filtre pas par les menus « Rôle contact » (les deux que
+  j'avais modifiés), mais par une **rangée de pastilles** (Tous · Propriétaires · Mandants · Acheteurs · Acquéreurs). Aucune pastille
+  « Notaires » n'existait : c'est encore la leçon « vérifier QUEL composant s'affiche ».
+  - **Ajoutée** : la pastille « Notaires » (point bleu), qui choisit le même filtre `notaire` (les deux côtés).
+  - Essai : `test_notaire_ecran.cjs` **29 / 29** ; P2 et le type unique restent verts ; build vert.
+  - ⬜ À pousser par Frédéric, puis à voir à l'écran.
+- **Retour arrière** : `patch_notaire_etape1_vue_2026-10-27_INVERSE.sql`, puis le calcul pour tous retire les rôles.
