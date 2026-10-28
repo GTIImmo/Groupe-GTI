@@ -3206,3 +3206,8 @@ plat**, jusqu'à 410 pour le plus chargé. La décision 2 dit « pas toutes les 
   - Essai : `test_notaire_ecran.cjs` **29 / 29** ; P2 et le type unique restent verts ; build vert.
   - ⬜ À pousser par Frédéric, puis à voir à l'écran.
 - **Retour arrière** : `patch_notaire_etape1_vue_2026-10-27_INVERSE.sql`, puis le calcul pour tous retire les rôles.
+- ✅ **La pastille « Notaires », vue à l'écran le 28/10 à 10:42** (déploiement Vercel de 10:40:15) : un clic la rend active, l'annuaire
+  compte **602 contacts**, et les 50 cartes de la page sont toutes « Notaire ».
+  - Pourquoi 602 et pas 1 110 : **1 110 = 618 actifs + 492 archivés**. L'annuaire montre les actifs par défaut, comme pour tout contact.
+  - Le petit reste (602 au lieu de 618) suit le même écart que l'annuaire entier : « Tous » affiche 39 496 contacts actifs, alors que la
+    table en compte 39 695. C'est un filtre d'écran qui existait déjà, pour tous les contacts. ⬜ Non mesuré, noté seulement.
