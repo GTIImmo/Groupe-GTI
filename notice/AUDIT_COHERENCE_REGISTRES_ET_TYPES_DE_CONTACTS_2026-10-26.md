@@ -3211,3 +3211,56 @@ plat**, jusqu'à 410 pour le plus chargé. La décision 2 dit « pas toutes les 
   - Pourquoi 602 et pas 1 110 : **1 110 = 618 actifs + 492 archivés**. L'annuaire montre les actifs par défaut, comme pour tout contact.
   - Le petit reste (602 au lieu de 618) suit le même écart que l'annuaire entier : « Tous » affiche 39 496 contacts actifs, alors que la
     table en compte 39 695. C'est un filtre d'écran qui existait déjà, pour tous les contacts. ⬜ Non mesuré, noté seulement.
+
+## 49. NOTAIRE, ÉTAPE 4 — AUDIT DE LA FICHE NOTAIRE (maquette v2) *(28/10, Frédéric : « oui, audit étape 4 »)* — lecture seule, rien codé
+
+**Audit limité à l'objet « contact notaire » et à ses transactions (lire).** La fiche ne crée, ne modifie ni ne supprime rien de neuf :
+ses boutons d'action (modifier, archiver, RDV, ouvrir dans Hektor) existent déjà dans la fiche V2.
+
+### 49.1 Les 8 blocs de la maquette, et leur donnée (mesuré le 28/10, sur toute l'agence et sur 10166165, 411 biens)
+| bloc | donnée | état |
+|---|---|---|
+| volet identité (nom, étude, téléphones, e-mail, adresse, négociateur) | la fiche contact | ✅ existe |
+| « Interlocuteurs de l'étude » | aucune | ⛔ en construction (décision 5) |
+| « Partenaire depuis » | 1re date de dossier (10166165 : 14/09/2006) | ✅ |
+| chiffres : dossiers en cours, actes ≤ 30 j, ventes 12 mois et honoraires, délai compromis → acte | registre des transactions + chaînes | ✅. Médiane de l'agence : **89 jours** (626 couples compromis → vente depuis 2025) |
+| dossiers en cours, en cartes avec leurs 4 étapes | compromis vivants sans vente dans leur chaîne : **123** dans l'agence, **120 notaires** concernés | ⚠ voir 49.2 |
+| — dans la carte : vendeurs → acheteurs, côté, notaire d'en face, négociateur, prix, honoraires, net vendeur | table des parties, registre, parc | ✅ |
+| — fin de rétractation, acte prévu | `date_fin_retractation`, `date_acte` | ✅ (rétractation : champ récent, partiel) |
+| — séquestre | `sequestre` : « 0.00 » presque partout, « 8000.00 » une fois | ⚠ montré seulement s'il est non nul |
+| — condition de prêt | aucune colonne | ⛔ en construction |
+| — pièces du dossier (7 sur 11, envoyer à l'étude) | aucune | ⛔ en construction |
+| « À venir » (rétractation, acte, condition de prêt) | les mêmes dates | ✅ sauf la condition de prêt |
+| ventes signées 12 mois | **348** dans l'agence ; **0** pour 10166165 (sa dernière : 14/10/2025) | ✅ |
+| « Avec nous » : dossiers par agence, côté, confrères fréquents | `agence_nom` (parc et archives), rôles des parties | ✅ calculables |
+| activité & relation, qualité | composants existants de la fiche V2 | ✅ existe |
+
+### 49.2 Ce que les mesures ont trouvé
+1. **Des « en cours » fantômes** : sur les 123 compromis vivants sans vente, **36 ont une date d'acte DÉJÀ PASSÉE**, et 41 ont plus de 6 mois.
+   Exemple : pour 10166165, le seul « en cours » est un compromis du **31/10/2024** (annonce 9303), sans vente ni annulation. C'est un
+   dossier abandonné ou une vente jamais saisie. Sans règle, la fiche l'afficherait comme un dossier vivant.
+2. **Le notaire n'est pas toujours sur la vente** : pour 11729 et 11840, il est sur le compromis (janvier 2026) mais pas sur la vente
+   (avril et mars 2026). Sa fiche contact (étape 3) montre donc « Compromis du 13/01/2026 » sur un bien vendu. La fiche notaire devra
+   lire **la chaîne** : la vente de la chaîne compte comme l'issue du dossier, même si le notaire n'y figure pas.
+3. **Un notaire des deux côtés compte double** si l'on compte les lignes de parties : on compte par transaction.
+4. **Les droits** : `app_affaire_ledger` ne montre à un négociateur que les biens de **son portefeuille** (`app_mes_biens_portefeuille`).
+   Les comptes qui voient toute l'agence voient tout. Sans décision, un négociateur verrait une fiche notaire limitée à ses propres dossiers,
+   et des chiffres partiels (« avec nous », confrères, médiane).
+
+### 49.3 Où la fiche vivrait, et ce que ça pourrait casser ailleurs
+- **Dans la fiche V2 existante**, quand la catégorie dominante est « Notaire » (`ty-notaire`, déjà posé) : la maquette garde le volet
+  identité, l'activité et la qualité, et remplace « Recherche & rapprochement » (sans objet pour un notaire) par les blocs notaire. Un notaire
+  qui a une recherche active la garderait.
+- **Une fonction de lecture neuve** dans la base, en `security invoker` (les règles d'accès s'appliquent) : elle rendrait, pour un notaire,
+  ses dossiers (chaîne, parties, confrère, dates, montants, agence). Le calcul se fait côté base, pas sur les 810 lignes dans l'écran.
+- **Ce que ça ne touche pas** : la vue des liens, le type, le bon de visite, les autres catégories, la fiche V1. Derrière un interrupteur.
+- ⚠ **La bande « Biens & mandats liés »** (10 plus récents + « Tout afficher », §48.1) : la maquette ne l'a pas, mais sans elle l'historique
+  au-delà de 12 mois disparaîtrait de la fiche.
+
+### 49.4 Questions — À TRANCHER PAR FRÉDÉRIC
+1. **Les droits** : un négociateur voit-il tous les dossiers du notaire dans l'agence, ou seulement les siens ? (Aujourd'hui : les siens.)
+2. **« En cours »** : un compromis vivant sans vente, **et** dont l'acte prévu n'est pas passé (ou, sans date d'acte, qui a moins de 6 mois) ?
+   Les autres (36 à date d'acte passée) iraient dans un groupe « À vérifier ».
+3. **L'historique** : garder la bande « Biens & mandats liés » (10 + « Tout afficher ») sous les ventes des 12 mois ?
+4. **Les honoraires encaissés** : quel champ ? (`commission_agence`, `honoraires_entree`, `honoraires_sortie` sont tous remplis sur les ventes.)
+5. **« Exporter »** les ventes : à coder maintenant, ou « en construction » ?
