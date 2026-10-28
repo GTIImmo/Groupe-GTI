@@ -3606,3 +3606,17 @@ existe (une recherche après l'autre). Où : après une vente faite dans l'app, 
 
 **⬜ À trancher avant le code** : quand il ne reste **plus aucune** transaction de la personne sur le bien (tout supprimé), le lien laissé par
 Hektor est-il aussi marqué « acheteur » (recommandé : oui — elle n'est ni propriétaire ni mandante), ou laissé à Hektor ?
+
+### 52.6 ⛔ La règle A ne touche QUE des acquéreurs *(28/10, Frédéric : « pour la règle A on parle des acquéreurs, il ne faut pas retirer mandant ou propriétaire, attention »)*
+- **Rien n'est jamais retiré** : ni le lien, ni le rôle de Hektor (`role_hektor` reste « mandant »). On **ajoute une marque** (origine
+  « acheteur ») qui dit pourquoi ce lien ne fait pas un mandant ; l'interrupteur l'efface.
+- ⚠ **Mesure : le critère « vendeur des transactions » ne protège PAS** — il est pollué par Hektor lui-même : une fois l'acheteur ajouté aux
+  mandants du bien, les transactions suivantes le portent comme vendeur (les 4 testeurs de 24113 sont « vendeurs » de leur offre refusée).
+  Il protégerait trop, et ne distingue rien.
+- ⭐ **La garde qui distingue : NOUS AVONS VU HEKTOR AJOUTER LE LIEN APRÈS LA TRANSACTION** — le lien est né dans notre registre
+  **après sa naissance (30/09)** et **après** la 1re transaction de la personne sur ce bien. Plus la garde du chantier 1 : jamais une personne
+  nommée dans le texte Hektor d'un mandat du bien.
+- **Sur les 10 liens « acquéreur sans vente vivante, rangé mandant / propriétaire »** : **4 visés** — les testeurs de 24113 (liens vus le
+  24/10 à 04:55, transactions vues à 04:52) ; **6 intacts** — les 4 vrais mandants (10414, 39032, 39291, 36244 : liens antérieurs au registre),
+  605030 sur 24933 et 10354490 sur 62774 (mandants d'essai, liens antérieurs). **0 vrai contact touché.**
+- **Une personne qui n'a plus AUCUNE transaction sur le bien** n'est plus un acquéreur : la règle **ne la touche pas** (lien laissé à Hektor).
