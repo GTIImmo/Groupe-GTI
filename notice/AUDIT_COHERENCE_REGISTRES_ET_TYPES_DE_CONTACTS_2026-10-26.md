@@ -3486,3 +3486,21 @@ Le build est vert, `test_notaire_ecran`, P2 et le type unique restent verts.
 
 ### 51.1 ✅ POSÉ LE 28/10 À 13:45 *(Frédéric : « oui, pose »)*
 `patch_notaire_blocs_2026-10-28.sql` passé (COMMIT ; le seul message est l'avis normal « policy … does not exist, skipping » du DROP POLICY IF EXISTS), répétition **8 / 8 verte du premier coup** (800 dossiers gardés, documents seulement sur les compromis sans vente, témoin positif 7 compromis avec documents, conditions de la transaction 1001394, 260 ms admin, 364 ms commercial). ⬜ Front à pousser par Frédéric (6 commits), puis à voir à l'écran.
+
+### 51.2 ✅ EN LIGNE ET VU À L'ÉCRAN *(28/10, déploiement de 13:49:28, Chrome de Frédéric)*
+- **Bureau, 10352963 (Me Damien LABIDOIRE)** :
+  - étapes « 0 Rétractation · 7 Acte prévu · 0 Date à fixer · **0 Conditions** » ;
+  - la carte dépliée (mandat 18593) : « Conditions : aucune enregistrée » et « **Pièces du dossier · 7 sur 11** », chaque pièce avec ✓
+    « documents » ou « à demander » ;
+  - les boutons : « Ouvrir l'annonce » et « Envoyer les pièces à l'étude · en construction » ;
+  - « + Ajouter » ouvre le formulaire (nom, rôle, téléphone, e-mail) ; **refermé sans rien enregistrer** (le premier vrai ajout revient
+    à Frédéric) ; « Exporter » est là.
+- ⬜ **Non vu à l'écran** :
+  - **une condition affichée**. La seule transaction à notaire qui en porte (compromis du 23/10 sur l'annonce 24113) est vendue, donc pas
+    « en cours ». Vérifié par les essais (33 / 33) seulement ;
+  - **le fichier de l'export** : il n'a pas été téléchargé dans le Chrome de Frédéric, ce qui serait un téléchargement sans son accord.
+    Vérifié par les essais seulement.
+- **Téléphone** (cadre de 390 px) : la ligne « vendeurs → acheteurs » **passe à la ligne** (32 px, dans le cadre) ; les 11 pièces sont
+  là ; **aucun débordement** dans les blocs notaire ; page à 386 px.
+- **Les deux corrections sont dans le front déployé** : le tri du propriétaire (`startsWith("notaire")?-1`, §49.12) et la ligne des parties
+  (`fa-cx-dos-parties{white-space:normal`).
