@@ -17475,6 +17475,86 @@ async function annulerRattachementOptimiste(job, annonceId, hektorContactId, cau
   }
 }
 
+// ⑧ types §53 P4-a (28/10/2026) : LE MANDANT EXISTANT CHOISI A LA CREATION D'UNE ANNONCE.
+//   La fonction de creation (app_create_annonce_job_optimistic) pose son lien AU CLIC, comme « lier un
+//   mandant » -- mais l'annonce n'a pas encore son numero Hektor : la ligne est rangee par NOTRE numero
+//   de dossier, numero Hektor vide. Les trois gestes qui suivent la menent au meme etat que les autres :
+//     1. le numero Hektor pose sur la fiche du bien est pose AUSSI sur ses liens nes au clic ;
+//     2. Hektor confirme le rattachement -> le lien est ETABLI (comme relation_etablie) ;
+//     3. la creation echoue -> les liens nes au clic sont retires de l'ecran, la trace reste.
+//   Tous best-effort et DITS au journal : l'annonce existe chez Hektor quoi qu'il arrive ici.
+async function poserNumeroSurLiensDeLaCreation(job, appDossierId, hektorAnnonceId) {
+  if (!appDossierId || !hektorAnnonceId) return { status: "skipped" };
+  try {
+    const majes = await supabaseRequest(
+      `app_relation?app_dossier_id=eq.${encodeURIComponent(String(appDossierId))}`
+      + `&hektor_annonce_id=is.null&source=eq.app`,
+      { method: "PATCH", headers: { Prefer: "return=representation" },
+        body: JSON.stringify({ hektor_annonce_id: String(hektorAnnonceId) }) });
+    const nb = Array.isArray(majes) ? majes.length : 0;
+    if (nb > 0) {
+      await logJob(job.id, "liens_creation_numero", "done",
+        "Le numero Hektor du bien est pose sur ses liens nes au clic", {
+          app_dossier_id: appDossierId, hektor_annonce_id: String(hektorAnnonceId), lignes: nb });
+    }
+    return { status: "done", lignes: nb };
+  } catch (erreur) {
+    await logJob(job.id, "liens_creation_numero", "error",
+      "Annonce creee, mais ses liens nes au clic n'ont pas recu son numero Hektor -- la nuit ne les adoptera pas, a reprendre", {
+        app_dossier_id: appDossierId, hektor_annonce_id: String(hektorAnnonceId),
+        error: erreur && erreur.message ? erreur.message : String(erreur) });
+    return { status: "error" };
+  }
+}
+
+async function marquerLienDeLaCreationEtabli(job, hektorAnnonceId, hektorContactId) {
+  if (!hektorAnnonceId || !hektorContactId) return { status: "skipped" };
+  try {
+    const marquees = await supabaseRequest(
+      `app_relation?hektor_annonce_id=eq.${encodeURIComponent(String(hektorAnnonceId))}`
+      + `&hektor_contact_id=eq.${encodeURIComponent(String(hektorContactId))}`
+      + `&present_in_hektor=is.false&retire_le=is.null`,
+      { method: "PATCH", headers: { Prefer: "return=representation" },
+        body: JSON.stringify({ present_in_hektor: true, absent_depuis: null }) });
+    const nb = Array.isArray(marquees) ? marquees.length : 0;
+    await logJob(job.id, "relation_etablie", "done",
+      nb > 0
+        ? "Le mandant choisi a la creation est ETABLI dans le registre, tout de suite"
+        : "Aucune ligne a marquer (deja etablie, ou posee sous une autre cle)",
+      { hektor_annonce_id: String(hektorAnnonceId), hektor_contact_id: String(hektorContactId), lignes_marquees: nb });
+    return { status: "done", lignes: nb };
+  } catch (erreur) {
+    await logJob(job.id, "relation_etablie", "error",
+      "Mandant lie chez Hektor mais le registre n'a pas pu etre marque -- le run de nuit le fera", {
+        hektor_annonce_id: String(hektorAnnonceId), hektor_contact_id: String(hektorContactId),
+        error: erreur && erreur.message ? erreur.message : String(erreur) });
+    return { status: "error" };
+  }
+}
+
+async function retirerLiensDeLaCreationEchouee(job, appDossierId, cause) {
+  if (!appDossierId) return { status: "skipped" };
+  try {
+    const touchees = await supabaseRequest(
+      `app_relation?app_dossier_id=eq.${encodeURIComponent(String(appDossierId))}`
+      + `&hektor_annonce_id=is.null&source=eq.app&absent_depuis=is.null`,
+      { method: "PATCH", headers: { Prefer: "return=representation" },
+        body: JSON.stringify({ absent_depuis: new Date().toISOString() }) });
+    const nb = Array.isArray(touchees) ? touchees.length : 0;
+    if (nb > 0) {
+      await logJob(job.id, "liens_creation_retires", "done",
+        "La creation a echoue : ses liens nes au clic sont RETIRES de l'ecran, la trace reste", {
+          app_dossier_id: appDossierId, lignes: nb, cause: String(cause || "").slice(0, 300) });
+    }
+    return { status: "done", lignes: nb };
+  } catch (erreur) {
+    await logJob(job.id, "liens_creation_retires", "error",
+      "⛔ La creation a echoue ET ses liens nes au clic n'ont PAS pu etre retires -- a reprendre a la main", {
+        app_dossier_id: appDossierId, error: erreur && erreur.message ? erreur.message : String(erreur) });
+    return { status: "error" };
+  }
+}
+
 async function executerRetraitMandant(job) {
   const payload = safeJsonParse(job.payload_json);
   const dossier = await loadDossier(job);
@@ -23276,6 +23356,8 @@ async function handleCreateHektorDraftAnnonce(job) {
     if (numeroApp.status !== "skipped") {
       await logJob(job.id, "numero_annonce_app", "done",
         "Numero Hektor pose sur la ligne de l'app, AVANT le rafraichissement", numeroApp);
+      // ⑧ types §53 P4-a : ses liens nes au clic recoivent le meme numero, au meme moment.
+      await poserNumeroSurLiensDeLaCreation(job, payload.app_dossier_id, created.id);
     }
   } catch (error) {
     await logJob(job.id, "numero_annonce_app", "error",
@@ -23292,13 +23374,14 @@ async function handleCreateHektorDraftAnnonce(job) {
   if (initialMandantContactIds.length) {
     const links = [];
     for (const contactId of initialMandantContactIds) {
+      let cibleMandant = null;   // ⑧ types §53 P4-a : hors du try, pour defaire le lien si Hektor refuse
       try {
         // L4-b' 22/09 : LA PORTE, contact par contact. Ici on NE refuse PAS le
         // lot : l'annonce est deja creee chez Hektor a ce stade, et un mandant
         // qui n'a pas encore son numero ne doit pas faire retomber le reste.
         // Le `catch` ci-dessous le consigne, comme n'importe quel autre echec
         // de rattachement -- visible, jamais silencieux.
-        const cibleMandant = await cibleHektorContact(contactId, {
+        cibleMandant = await cibleHektorContact(contactId, {
           contexte: "hektor_mandant_link_initial",
         });
         await ensureHektorExecutionContext(job, null, payload, { preferDossierOwner: false, required: true });
@@ -23310,6 +23393,9 @@ async function handleCreateHektorDraftAnnonce(job) {
           status: linkResult.status,
           wait_attempts: linkResult.waitAttempts,
         });
+        // ⑧ types §53 P4-a : Hektor a confirme -> le lien ne au clic est ETABLI, et le type suit.
+        await marquerLienDeLaCreationEtabli(job, String(created.id), cibleMandant);
+        await recalculerTypeDuBien(job, String(created.id), "mandant_creation_etabli");
       } catch (error) {
         const message = error && error.message ? error.message : String(error);
         links.push({
@@ -23323,6 +23409,9 @@ async function handleCreateHektorDraftAnnonce(job) {
           hektor_contact_id: contactId,
           error: message,
         });
+        // ⑧ types §53 P4-a : Hektor n'a pas le lien -> on defait celui pose au clic (le meme geste que
+        //   « lier un mandant » refuse). Sans numero Hektor du contact, il n'y a rien a defaire par cette cle.
+        if (cibleMandant) await annulerRattachementOptimiste(job, String(created.id), cibleMandant, message);
       }
     }
     initialMandantLinks = {
@@ -23472,6 +23561,8 @@ async function handleCreateHektorDraftAnnonceWithProvisional(job) {
     try {
       const payload = safeJsonParse(job.payload_json);
       await markProvisionalCreationError(payload && payload.creation_token, error && error.message ? error.message : String(error));
+      // ⑧ types §53 P4-a : les liens nes au clic sur cette annonce (numero Hektor encore vide) quittent l'ecran.
+      await retirerLiensDeLaCreationEchouee(job, payload && payload.app_dossier_id, error && error.message ? error.message : String(error));
     } catch (_) {
       /* best effort : ne jamais masquer l'erreur d'origine */
     }

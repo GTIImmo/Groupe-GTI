@@ -3753,3 +3753,28 @@ que par « lier un mandant ». Annonce, mandat, documents : non mesurés ici, sa
   risque de doublon, déjà payé le 21/10).
 - **Recommandé** : **P4-a d'abord** (petit, même patron, aucune donnée réelle touchée aujourd'hui) ; **P4-b ensuite**, avec son propre
   audit du rapprochement contact app ↔ contact Hektor. Rien n'est envoyé de plus chez Hektor par aucune des deux.
+
+### 53.4 ✅ P4-a CODÉ *(28/10, Frédéric : « P4-a puis audit P4-b »)* — NON POSÉ, worker NON REDÉMARRÉ
+- **Base** (`supabase/patch_p4a_mandant_creation_annonce_2026-10-28.sql`, + INVERSE, REPETITION) : dans la branche « l'annonce naît dans
+  l'app » de `app_create_annonce_job_optimistic`, chaque mandant **existant** de la charge reçoit son lien **au clic**, comme
+  `app_link_mandant_optimistic` (`source = 'app'`, `present_in_hektor = false`, clé `app:<jeton>:<contact>`), **rangé par notre numéro de
+  dossier**, le numéro Hektor du bien vide ; son type est recalculé. Pas de traduction du contact → pas de ligne. Best-effort, mais dit.
+- ⛔ **Trouvé par l'essai, avant toute pose** : `app_relation.hektor_annonce_id` était **NOT NULL** chez Supabase — le lien était refusé (et dit
+  par le WARNING). Le patch le rend **facultatif**, chez Supabase seulement : la base locale ne reçoit jamais une telle ligne (sa nuit n'adopte un
+  lien du cloud qu'avec un numéro de bien, `cle_sb[1]` ; sa copie `app_relation__sb` accepte déjà le vide). L'inverse ne la rend obligatoire
+  que si aucun lien n'attend son numéro (sinon il le dit et s'arrête).
+- **Worker** (`Console/console_job_worker.js`, +92 lignes, mes seules lignes committées — les lignes Youtrust de l'autre session restent hors
+  commit) : `poserNumeroSurLiensDeLaCreation` (le numéro Hektor posé sur les liens **en même temps** que sur la fiche du bien) ·
+  `marquerLienDeLaCreationEtabli` (Hektor confirme → établi, puis le type) · en cas de refus, **le même** `annulerRattachementOptimiste` que
+  « lier un mandant » · `retirerLiensDeLaCreationEchouee` (la création échoue → les liens nés au clic quittent l'écran, la trace reste).
+- **Essais** : base, **une vraie création d'annonce** par le geste de l'app (transactions annulées) **13/13** — témoin inverse, lien au clic,
+  vue, type, les requêtes du worker trouvent le lien (numéro, établi, refus, échec), sans mandant / mandant neuf / contact inconnu : rien,
+  le mandant donné sous son numéro Hektor reconnu, l'inverse rend `a5e70b57` et la colonne obligatoire, base intacte ;
+  worker `Console/test_p4a_mandant_creation.js` **13/13** (vraies fonctions, fausse base, branchements lus dans le code, témoin inverse) ;
+  `test_type_apres_ecriture_worker.js` **9/9**.
+- ⚠ **Effet de bord de mon premier essai** : un `(fonction()).*` appelait la création **une fois par colonne** — toutes en transaction annulée,
+  donc rien de gardé, mais **~130 numéros de dossier de l'app ont été consommés** (10000029 → 10000161 environ) : la prochaine annonce née
+  dans l'app aura un numéro plus haut. Aucune fiche, aucun numéro **attribué** n'est perdu.
+- ⏰ **À poser à son accord** : 1. le patch, puis la répétition (5 lignes « OK ») ; 2. le worker : **redémarrer les 4 services, file vide**
+  (le code est déjà écrit dans le fichier ; sans redémarrage, les liens nés au clic ne reçoivent pas leur numéro de bien — d'où l'ordre :
+  redémarrer d'abord, poser ensuite). Usage réel : 0 création avec mandant depuis le 21/10.
