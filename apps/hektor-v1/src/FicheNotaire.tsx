@@ -43,8 +43,13 @@ export type DossierNotaire = {
   confreres: Personne[]
   bien: { numero_mandat?: string | null; numero_dossier?: string | null; titre_bien?: string | null; ville?: string | null;
     agence_nom?: string | null; commercial_nom?: string | null; statut_annonce?: string | null; photo?: string | null } | null
+  // ⑧ blocs (28/10) : le registre des conditions suspensives, et le NOM des documents d'un compromis sans vente
+  conditions?: ConditionDossier[]
+  documents?: string[]
 }
-export type FicheNotaireBrute = { contact: string; mediane_agence_jours: number | null; dossiers: DossierNotaire[] }
+export type ConditionDossier = { libelle: string | null; jours: number | null; date_echeance: string | null; etat: string | null; date_levee: string | null }
+export type Interlocuteur = { id: number; nom: string; role: string | null; telephone: string | null; email: string | null }
+export type FicheNotaireBrute = { contact: string; mediane_agence_jours: number | null; dossiers: DossierNotaire[]; interlocuteurs?: Interlocuteur[] }
 
 // ─── les règles, en fonctions pures ───────────────────────────────────────────────────────────────────────
 const jour = (v: string | null | undefined) => {
@@ -70,6 +75,61 @@ const mediane = (xs: number[]) => {
 export const honorairesDuDossier = (d: Pick<DossierNotaire, 'honoraires_entree' | 'honoraires_sortie'>) => nombre(d.honoraires_entree) + nombre(d.honoraires_sortie)
 const cleDossier = (d: DossierNotaire) => (d.app_chaine_id != null ? `c${d.app_chaine_id}` : `a${d.app_affaire_id}`)
 
+// ⑧ BLOCS (28/10, recommandations validées par Frédéric, note des types §50-51) ─────────────────────────────
+// LA CONDITION DE PRÊT : le registre des conditions (app_affaire_condition). L'échéance = la date saisie, sinon la date du
+//   compromis + les jours de la condition (45 j pour « Obtention Crédit » au catalogue). Une condition est levée si son état le
+//   dit ou si une date de levée est posée.
+export function echeanceCondition(c: ConditionDossier, d: Pick<DossierNotaire, 'date'>): string | null {
+  const saisie = jour(c.date_echeance)
+  if (saisie) return saisie
+  const signe = jour(d.date)
+  return signe && c.jours != null && Number.isFinite(Number(c.jours)) ? decaler(signe, Number(c.jours)) : null
+}
+export const conditionLevee = (c: ConditionDossier) => /lev/i.test(String(c.etat ?? '')) || !!jour(c.date_levee)
+export const conditionsEnAttente = (d: Pick<DossierNotaire, 'conditions'>) => (d.conditions ?? []).filter((c) => !conditionLevee(c))
+
+// LES PIÈCES DU DOSSIER : reconnues par le NOM des documents (les documents n'ont pas de type : 192 981 « document »).
+//   ⚠ C'est une DÉDUCTION : un document mal nommé passe pour absent (la correction à la main viendra plus tard, §51).
+const sansAccent = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+export const PIECES_DU_DOSSIER: { cle: string; libelle: string; motif: RegExp }[] = [
+  // (28/10, vu sur les vrais noms du mandat 18593 : « DONATION », « AUDIT ENERGETIQUE », « TF 2025 », « Parcelles » ; et « mail… retard
+  //   prêt » qui passait pour une offre de prêt)
+  { cle: 'titre', libelle: 'Titre de propriété', motif: /titre|attestation de propriete|acte de propriete|donation|succession|acte d.?achat/ },
+  { cle: 'diagnostics', libelle: 'Diagnostics (DDT)', motif: /diag|dpe|ddt|amiante|termite|electri|gaz|plomb|carrez|\berp\b|audit energ/ },
+  { cle: 'compromis', libelle: 'Compromis signé', motif: /compromis|promesse/ },
+  { cle: 'sru', libelle: 'Notification SRU', motif: /\bsru\b|notification/ },
+  { cle: 'identite', libelle: "Pièces d'identité", motif: /identite|\bcni\b|passeport|carte d.?identite/ },
+  { cle: 'taxe', libelle: 'Taxe foncière', motif: /taxe|fonciere|\btf\b/ },
+  { cle: 'mandat', libelle: 'Mandat de vente', motif: /mandat/ },
+  { cle: 'sequestre', libelle: 'Attestation de séquestre', motif: /sequestre/ },
+  { cle: 'pret', libelle: "Offre de prêt de l'acquéreur", motif: /offre de pret|accord de pret|offre de credit|accord bancaire|attestation de financement|pret accorde/ },
+  { cle: 'spanc', libelle: 'Assainissement (SPANC)', motif: /spanc|assainis/ },
+  { cle: 'cadastre', libelle: 'Plan cadastral', motif: /cadastr|parcelle/ },
+]
+export function piecesDuDossier(documents: string[] | null | undefined) {
+  const noms = (documents ?? []).map((n) => sansAccent(String(n ?? '')))
+  const pieces = PIECES_DU_DOSSIER.map((p) => ({ cle: p.cle, libelle: p.libelle, trouve: noms.some((n) => p.motif.test(n)) }))
+  return { pieces, trouvees: pieces.filter((p) => p.trouve).length, total: pieces.length }
+}
+
+// L'EXPORT : tous les dossiers du notaire QUE LE COMPTE VOIT (décision 1), en CSV « ; » avec BOM (Excel en français).
+const csvCellule = (v: unknown) => {
+  const s = String(v ?? '')
+  return /[;"\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+}
+export function exportCsvNotaire(brute: FicheNotaireBrute): string {
+  const tete = ['Date', 'Type', 'État', 'Mandat', 'Bien', 'Ville', 'Agence', 'Négociateur', 'Côté', 'Vendeurs', 'Acheteurs', 'Confrères',
+    'Prix', 'Honoraires', 'Acte prévu', 'Vente de la chaîne']
+  const cote = (d: DossierNotaire) => { const c = coteDuDossier(d); return c === 'deux' ? 'les deux' : c }
+  const noms_ = (ps: Personne[] | null | undefined) => (ps ?? []).map((p) => p.nom).filter(Boolean).join(', ')
+  const lignes = [...(brute.dossiers ?? [])].sort((a, b) => String(jour(b.date) ?? '').localeCompare(String(jour(a.date) ?? '')) || b.app_affaire_id - a.app_affaire_id)
+    .map((d) => [jour(d.date) ?? '', d.kind, d.kind === 'vente' ? 'vendu' : (d.state ?? ''), d.bien?.numero_mandat || d.numero_mandat || '',
+      d.bien?.titre_bien ?? '', d.bien?.ville ?? '', d.bien?.agence_nom ?? '', d.bien?.commercial_nom ?? '', cote(d),
+      noms_(d.vendeurs), noms_(d.acquereurs), noms_(d.confreres), nombre(d.montant) || '', honorairesDuDossier(d) || '',
+      jour(d.date_acte) ?? '', jour(d.vente_chaine?.date) ?? ''].map(csvCellule).join(';'))
+  return '﻿' + [tete.join(';'), ...lignes].join('\r\n')
+}
+
 export type EtapeNotaire = 'retractation' | 'acte' | 'a_fixer'
 export type DossierEnCours = DossierNotaire & { etape: EtapeNotaire; joursRestants: number | null; acte: string | null; retractation: string | null }
 export type VueNotaire = {
@@ -81,7 +141,8 @@ export type VueNotaire = {
   delaiNotaire: number | null
   delaiAgence: number | null
   cotesEnCours: { vendeur: number; acquereur: number; deux: number }
-  aVenir: { date: string | null; genre: 'retractation' | 'acte' | 'a_fixer'; dossier: DossierEnCours }[]
+  aVenir: { date: string | null; genre: 'retractation' | 'acte' | 'a_fixer' | 'condition'; dossier: DossierEnCours; libelle?: string }[]
+  avecCondition: number
   parAgence: { agence: string; n: number }[]
   cotesTous: { vendeur: number; acquereur: number; deux: number }
   confreres: { id: string; nom: string; ville: string; n: number }[]
@@ -133,6 +194,10 @@ export function construireVueNotaire(brute: FicheNotaireBrute, aujourdhui: strin
     if (d.retractation && d.retractation >= aujourdhui) aVenir.push({ date: d.retractation, genre: 'retractation', dossier: d })
     if (d.acte && d.acte >= aujourdhui) aVenir.push({ date: d.acte, genre: 'acte', dossier: d })
     if (!d.acte) aVenir.push({ date: null, genre: 'a_fixer', dossier: d })
+    for (const c of conditionsEnAttente(d)) {
+      const e = echeanceCondition(c, d)
+      if (e && e >= aujourdhui) aVenir.push({ date: e, genre: 'condition', dossier: d, libelle: c.libelle ?? 'Condition' })
+    }
   }
   aVenir.sort((a, b) => (a.date ?? '9999').localeCompare(b.date ?? '9999'))
 
@@ -156,7 +221,7 @@ export function construireVueNotaire(brute: FicheNotaireBrute, aujourdhui: strin
   return {
     enCours, aVerifier, ventes12, honoraires12, actes30,
     delaiNotaire: mediane(delais), delaiAgence: brute.mediane_agence_jours != null ? Math.round(Number(brute.mediane_agence_jours)) : null,
-    cotesEnCours: compte(enCours), aVenir, parAgence, cotesTous: compte(chaines), confreres,
+    cotesEnCours: compte(enCours), aVenir, avecCondition: enCours.filter((d) => conditionsEnAttente(d).length > 0).length, parAgence, cotesTous: compte(chaines), confreres,
     partenaireDepuis: premiers[0] ?? null,
   }
 }
@@ -164,18 +229,20 @@ export function construireVueNotaire(brute: FicheNotaireBrute, aujourdhui: strin
 // ─── le chargement ────────────────────────────────────────────────────────────────────────────────────────
 export function useFicheNotaire(contactId: string, actif: boolean) {
   const [etat, setEtat] = useState<{ fiche: FicheNotaireBrute | null; erreur: string | null; chargement: boolean }>({ fiche: null, erreur: null, chargement: false })
+  // ⑧ blocs (28/10) : relire après un geste (un interlocuteur ajouté, modifié, retiré)
+  const [tour, setTour] = useState(0)
   useEffect(() => {
     if (!FICHE_NOTAIRE_V2 || !actif || !contactId || !hasSupabaseEnv || !supabase) { setEtat({ fiche: null, erreur: null, chargement: false }); return }
     let vivant = true
-    setEtat({ fiche: null, erreur: null, chargement: true })
+    setEtat((avant) => ({ fiche: tour ? avant.fiche : null, erreur: null, chargement: true }))
     supabase.rpc('app_notaire_fiche', { p_contact: contactId }).then(({ data, error }) => {
       if (!vivant) return
       if (error || !data) setEtat({ fiche: null, erreur: error?.message ?? 'fiche notaire indisponible', chargement: false })
       else setEtat({ fiche: data as FicheNotaireBrute, erreur: null, chargement: false })
     })
     return () => { vivant = false }
-  }, [contactId, actif])
-  return etat
+  }, [contactId, actif, tour])
+  return { ...etat, recharger: () => setTour((n) => n + 1) }
 }
 
 // ─── l'affichage ──────────────────────────────────────────────────────────────────────────────────────────
@@ -199,11 +266,57 @@ export function EnConstruction(props: { titre?: string }) {
   return <span className="fa-cx-wip" title="Les données n'existent pas encore : le bloc est montré pour situer la fiche (décision du 27/10)">{props.titre ? `${props.titre} · ` : ''}en construction</span>
 }
 
-export function NotaireInterlocuteurs() {
+export function NotaireInterlocuteurs(props: { notaireId: string; interlocuteurs: Interlocuteur[] | null | undefined; onChange: () => void }) {
+  // ⑧ blocs (28/10) : le carnet de l'étude, SAISI dans l'app (Hektor n'a pas d'étude). Tout compte actif ajoute, modifie, retire ;
+  //   « retirer » ne détruit rien (la base garde la ligne, avec qui et quand). Fonction app_notaire_interlocuteur_ecrire.
+  const vide = { id: null as number | null, nom: '', role: '', telephone: '', email: '' }
+  const [form, setForm] = useState<typeof vide | null>(null)
+  const [aRetirer, setARetirer] = useState<number | null>(null)
+  const [occupe, setOccupe] = useState(false)
+  const [erreur, setErreur] = useState<string | null>(null)
+  const ecrire = async (args: { p_id: number | null; p_nom?: string | null; p_role?: string | null; p_telephone?: string | null; p_email?: string | null; p_retirer?: boolean }) => {
+    if (!supabase) return
+    setOccupe(true); setErreur(null)
+    const { error } = await supabase.rpc('app_notaire_interlocuteur_ecrire', {
+      p_id: args.p_id, p_notaire: props.notaireId, p_nom: args.p_nom ?? null, p_role: args.p_role ?? null,
+      p_telephone: args.p_telephone ?? null, p_email: args.p_email ?? null, p_retirer: !!args.p_retirer })
+    setOccupe(false)
+    if (error) { setErreur(error.message); return }
+    setForm(null); setARetirer(null); props.onChange()
+  }
+  const liste = props.interlocuteurs ?? []
   return (
     <div className="fa-cx-team">
-      <div className="fa-cx-team-head">Interlocuteurs de l'étude <EnConstruction /></div>
-      <div className="fa-cx-ech-empty">Clercs, formalistes et associés de l'étude : à venir.</div>
+      <div className="fa-cx-team-head">Interlocuteurs de l'étude
+        {form ? null : <button className="add" type="button" onClick={() => { setForm({ ...vide }); setErreur(null) }}>+ Ajouter</button>}</div>
+      {liste.map((i) => (
+        <div key={i.id} className="fa-cx-mate">
+          <span className="fa-cx-mate-av">{initiales(i.nom)}</span>
+          <div className="fa-cx-mate-t">
+            <div className="fa-cx-mate-nm">{i.nom}</div>
+            <div className="fa-cx-mate-rl">{[i.role, i.telephone, i.email].filter(Boolean).join(' · ') || '—'}</div>
+          </div>
+          {aRetirer === i.id
+            ? <><button className="fa-cx-mate-call danger" type="button" disabled={occupe} title="Confirmer le retrait" onClick={() => void ecrire({ p_id: i.id, p_retirer: true })}>✓</button>
+                <button className="fa-cx-mate-call" type="button" title="Annuler" onClick={() => setARetirer(null)}>✕</button></>
+            : <><button className="fa-cx-mate-call" type="button" title="Modifier" onClick={() => setForm({ id: i.id, nom: i.nom, role: i.role ?? '', telephone: i.telephone ?? '', email: i.email ?? '' })}>✎</button>
+                <button className="fa-cx-mate-call" type="button" title="Retirer" onClick={() => setARetirer(i.id)}>✕</button></>}
+        </div>
+      ))}
+      {!liste.length && !form ? <div className="fa-cx-ech-empty">Aucun interlocuteur enregistré : clercs, formalistes, associés de l'étude.</div> : null}
+      {form ? (
+        <form className="fa-cx-mate-form" onSubmit={(ev) => { ev.preventDefault(); void ecrire({ p_id: form.id, p_nom: form.nom, p_role: form.role, p_telephone: form.telephone, p_email: form.email }) }}>
+          <input placeholder="Nom (obligatoire)" value={form.nom} maxLength={200} onChange={(ev) => setForm({ ...form, nom: ev.target.value })} required />
+          <input placeholder="Rôle : clerc, formaliste, associé…" value={form.role} maxLength={120} onChange={(ev) => setForm({ ...form, role: ev.target.value })} />
+          <input placeholder="Téléphone" value={form.telephone} maxLength={60} onChange={(ev) => setForm({ ...form, telephone: ev.target.value })} />
+          <input placeholder="E-mail" type="email" value={form.email} maxLength={200} onChange={(ev) => setForm({ ...form, email: ev.target.value })} />
+          <div className="fa-cx-mate-form-acts">
+            <button className="fa-cx-sec-act" type="submit" disabled={occupe || !form.nom.trim()}>{form.id ? 'Enregistrer' : 'Ajouter'}</button>
+            <button className="fa-cx-sec-act ghost" type="button" onClick={() => { setForm(null); setErreur(null) }}>Annuler</button>
+          </div>
+        </form>
+      ) : null}
+      {erreur ? <div className="fa-cx-ech-empty fa-cx-err">{erreur}</div> : null}
     </div>
   )
 }
@@ -262,16 +375,32 @@ function CarteDossier(props: { d: DossierEnCours | DossierNotaire; onOpenDossier
           <div className="fa-cx-facts">
             <div className="fa-cx-fact"><span className="k">Compromis</span><span className="v">{dateFr(d.date)}</span></div>
             <div className="fa-cx-fact"><span className="k">Fin rétractation</span><span className="v">{dateFr(d.date_fin_retractation)}</span></div>
-            <div className="fa-cx-fact"><span className="k">Condition de prêt</span><span className="v"><EnConstruction /></span></div>
+            {(d.conditions ?? []).length ? (d.conditions ?? []).map((c, k) => (
+              <div key={`cond-${k}`} className="fa-cx-fact"><span className="k">{c.libelle || 'Condition'}</span>
+                <span className="v">{conditionLevee(c) ? `levée${jour(c.date_levee) ? ` le ${dateFr(c.date_levee)}` : ''}` : `échéance ${dateFr(echeanceCondition(c, d))}`}</span></div>
+            )) : <div className="fa-cx-fact"><span className="k">Conditions</span><span className="v">aucune enregistrée</span></div>}
             <div className="fa-cx-fact"><span className="k">Acte prévu</span><span className="v">{jour(d.date_acte) ? dateFr(d.date_acte) : 'à fixer'}</span></div>
             {nombre(d.sequestre) > 0 ? <div className="fa-cx-fact"><span className="k">Séquestre</span><span className="v">{euros(d.sequestre)}</span></div> : null}
             <div className="fa-cx-fact"><span className="k">Honoraires</span><span className="v">{euros(honorairesDuDossier(d))}</span></div>
             <div className="fa-cx-fact"><span className="k">Prix net vendeur</span><span className="v">{euros(d.prix_net_vendeur)}</span></div>
           </div>
-          <div className="fa-cx-pcs-t">Pièces du dossier <EnConstruction /></div>
+          {(() => {
+            const p = piecesDuDossier(d.documents)
+            return (
+              <>
+                <div className="fa-cx-pcs-t" title="Reconnues d'après le nom des documents du bien : un document mal nommé passe pour absent">Pièces du dossier · {p.trouvees} sur {p.total}</div>
+                <div className="fa-cx-pcs">
+                  {p.pieces.map((x) => (
+                    <div key={x.cle} className={`fa-cx-pc${x.trouve ? '' : ' miss'}`}><span className="ck">{x.trouve ? '✓' : ''}</span>{x.libelle}<span className="src">{x.trouve ? 'documents' : 'à demander'}</span></div>
+                  ))}
+                </div>
+              </>
+            )
+          })()}
           <div className="fa-cx-dos-acts">
             {d.app_dossier_id != null && props.onOpenDossier
               ? <button className="fa-cx-sec-act ghost" type="button" onClick={() => props.onOpenDossier?.(Number(d.app_dossier_id))}>Ouvrir l'annonce</button> : null}
+            <span className="fa-cx-sec-act ghost"><EnConstruction titre="Envoyer les pièces à l'étude" /></span>
           </div>
         </div>
       ) : null}
@@ -281,10 +410,11 @@ function CarteDossier(props: { d: DossierEnCours | DossierNotaire; onOpenDossier
 
 export function NotaireDossiers(props: { vue: VueNotaire; onOpenDossier?: (id: number) => void }) {
   const v = props.vue
-  const [filtre, setFiltre] = useState<EtapeNotaire | null>(null)
+  const [filtre, setFiltre] = useState<EtapeNotaire | 'conditions' | null>(null)
   const [voirAVerifier, setVoirAVerifier] = useState(false)
   const nb = (e: EtapeNotaire) => v.enCours.filter((d) => d.etape === e).length
-  const liste = filtre ? v.enCours.filter((d) => d.etape === filtre) : v.enCours
+  const liste = filtre === 'conditions' ? v.enCours.filter((d) => conditionsEnAttente(d).length > 0)
+    : filtre ? v.enCours.filter((d) => d.etape === filtre) : v.enCours
   const etapes: { e: EtapeNotaire; t: string; c: string }[] = [
     { e: 'retractation', t: 'Rétractation', c: '#c2512a' }, { e: 'acte', t: 'Acte prévu', c: '#3b4a8c' }, { e: 'a_fixer', t: 'Date à fixer', c: '#a8814a' }]
   return (
@@ -301,7 +431,9 @@ export function NotaireDossiers(props: { vue: VueNotaire; onOpenDossier?: (id: n
             <button key={s.e} className={`fa-cx-stage${filtre === s.e ? ' on' : ''}`} type="button" style={{ ['--st']: s.c } as CSSProperties}
               onClick={() => setFiltre(filtre === s.e ? null : s.e)}><b>{nb(s.e)}</b><span>{s.t}</span></button>
           ))}
-          <span className="fa-cx-stage wip" title="Les conditions suspensives (prêt) ne sont pas encore enregistrées"><b>—</b><span>Conditions <EnConstruction /></span></span>
+          <button className={`fa-cx-stage${filtre === 'conditions' ? ' on' : ''}`} type="button" style={{ ['--st']: '#2f6fa8' } as CSSProperties}
+            title="Dossiers avec une condition suspensive en attente (registre des conditions)" onClick={() => setFiltre(filtre === 'conditions' ? null : 'conditions')}>
+            <b>{v.avecCondition}</b><span>Conditions</span></button>
         </div>
         {liste.length ? liste.map((d) => <CarteDossier key={d.app_affaire_id} d={d} onOpenDossier={props.onOpenDossier} />)
           : <div className="fa-cx-ech-empty">{v.enCours.length ? 'Aucun dossier à cette étape.' : 'Aucun dossier en cours avec ce notaire.'}</div>}
@@ -334,24 +466,23 @@ export function NotaireAVenir(props: { vue: VueNotaire }) {
             const d = it.dossier
             const j = it.date
             return (
-              <div key={`${it.genre}-${d.app_affaire_id}`} className={`fa-cx-ech${it.genre === 'acte' ? ' sign' : ''}`}>
+              <div key={`${it.genre}-${d.app_affaire_id}`} className={`fa-cx-ech${it.genre === 'acte' ? ' sign' : it.genre === 'condition' ? ' cond' : ''}`}>
                 <span className="fa-cx-ech-date"><b>{j ? j.slice(8, 10) : '—'}</b><i>{j ? MOIS[Number(j.slice(5, 7)) - 1] : 'à fixer'}</i></span>
                 <div className="fa-cx-ech-bd">
-                  <span className="fa-cx-ech-k">{it.genre === 'retractation' ? 'Rétractation' : it.genre === 'acte' ? "Signature d'acte" : "Date d'acte"}</span>
-                  <div className="fa-cx-ech-t">{it.genre === 'retractation' ? 'Fin du délai · ' : ''}{noms(d.vendeurs)} → {noms(d.acquereurs)}</div>
+                  <span className="fa-cx-ech-k">{it.genre === 'retractation' ? 'Rétractation' : it.genre === 'acte' ? "Signature d'acte" : it.genre === 'condition' ? (it.libelle || 'Condition') : "Date d'acte"}</span>
+                  <div className="fa-cx-ech-t">{it.genre === 'retractation' ? 'Fin du délai · ' : it.genre === 'condition' ? 'Échéance · ' : ''}{noms(d.vendeurs)} → {noms(d.acquereurs)}</div>
                   <div className="fa-cx-ech-s">{[d.bien?.ville, (d.bien?.numero_mandat || d.numero_mandat) ? `mandat ${d.bien?.numero_mandat || d.numero_mandat}` : null].filter(Boolean).join(' · ')}</div>
                 </div>
               </div>
             )
           }) : <div className="fa-cx-ech-empty">Rien à venir.</div>}
-          <div className="fa-cx-ech-empty">Conditions de prêt : <EnConstruction /></div>
         </div>
       </section>
     </>
   )
 }
 
-export function NotaireVentesEtAvecNous(props: { vue: VueNotaire }) {
+export function NotaireVentesEtAvecNous(props: { vue: VueNotaire; fiche?: FicheNotaireBrute | null }) {
   const v = props.vue
   const max = Math.max(1, ...v.parAgence.map((a) => a.n))
   const tot = Math.max(1, v.cotesTous.vendeur + v.cotesTous.acquereur + v.cotesTous.deux)
@@ -363,7 +494,16 @@ export function NotaireVentesEtAvecNous(props: { vue: VueNotaire }) {
         Ventes signées · 12 mois
         <span className="fa-cx-sec-ln" />
         <span className="fa-cx-sec-meta" style={{ ['--sc']: '#1f5b96' } as CSSProperties}>{v.ventes12.length} vente{v.ventes12.length > 1 ? 's' : ''} · {euros(v.honoraires12)}</span>
-        <span className="fa-cx-sec-act ghost"><EnConstruction titre="Exporter" /></span>
+        {props.fiche ? (
+          <button className="fa-cx-sec-act ghost" type="button" title="Tous les dossiers de ce notaire que vous voyez, en fichier pour Excel"
+            onClick={() => {
+              const fiche = props.fiche!
+              const blob = new Blob([exportCsvNotaire(fiche)], { type: 'text/csv;charset=utf-8' })
+              const a = document.createElement('a')
+              a.href = URL.createObjectURL(blob); a.download = `dossiers-notaire-${fiche.contact}.csv`
+              document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000)
+            }}>Exporter</button>
+        ) : null}
       </div>
       <section className="fa-cx-mod full" style={{ ['--sc']: '#1f5b96', marginBottom: 24 } as CSSProperties}>
         {v.ventes12.length ? v.ventes12.map((d) => {

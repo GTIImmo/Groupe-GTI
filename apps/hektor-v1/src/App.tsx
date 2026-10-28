@@ -45482,7 +45482,7 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
                 </div>
               </div>
 
-              {estFicheNotaire ? <NotaireInterlocuteurs /> : null}
+              {estFicheNotaire ? <NotaireInterlocuteurs notaireId={String(props.contact.hektor_contact_id ?? '')} interlocuteurs={ficheNotaire.fiche?.interlocuteurs} onChange={ficheNotaire.recharger} /> : null}
               <div className="fa-cx-foot">
                 <div className="fa-cx-foot-head">
                   <span className="fa-cx-foot-hic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><circle cx="12" cy="8" r="4" /><path d="M5 21a7 7 0 0 1 14 0" /></svg></span>Négociateur
@@ -45778,7 +45778,7 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
                 </div>
               </div>
 
-              {vueNotaire ? <NotaireVentesEtAvecNous vue={vueNotaire} /> : null}
+              {vueNotaire ? <NotaireVentesEtAvecNous vue={vueNotaire} fiche={ficheNotaire.fiche} /> : null}
 
               {/* ── Lot 4 — Bande « Activité & relation » (pleine largeur, portage maquette v30) ── */}
               <div className="fa-cx-sec" style={{ ['--sc']: '#2f6fa8' } as CSSProperties}>

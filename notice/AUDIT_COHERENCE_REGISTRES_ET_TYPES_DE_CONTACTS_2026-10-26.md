@@ -3439,3 +3439,47 @@ reprises de la maquette v2, plus 4 propres à l'app), importée par `main.tsx`.
    l'étude » maintenant ou plus tard ?
 3. **Interlocuteurs** : un petit registre chez nous, saisi dans la fiche : qui peut ajouter et modifier, tout le monde ou les admins ?
 4. **Export** : les ventes des 12 mois seulement, ou tous les dossiers du notaire ?
+
+## 51. ✅ LES 4 BLOCS CODÉS *(28/10, Frédéric : « je valide toutes tes recommandations »)* — NON POSÉS, NON POUSSÉS
+**Décisions** :
+1. condition de prêt : le registre existant, l'échéance étant la date saisie ou la date du compromis + les jours ;
+2. pièces : calculées d'après le nom des documents, avec « à demander » ; la correction à la main et « Envoyer à l'étude » plus tard ;
+3. interlocuteurs : un carnet chez nous, que tout compte actif peut écrire ;
+4. export : tous les dossiers que le compte voit.
+
+**La base** : `supabase/patch_notaire_blocs_2026-10-28.sql` (+ `_INVERSE`, `_REPETITION`), fabriqué par un script à partir de la fonction de
+l'étape 4, sans recopie à la main.
+- Une table neuve `app_notaire_interlocuteur` : RLS, lecture par les comptes actifs, aucune écriture directe, jamais effacée
+  (`retire_le`).
+- `app_notaire_interlocuteur_ecrire` : ajouter, modifier, retirer ; auteur et heure écrits.
+- `app_notaire_fiche` rend en plus `conditions`, `documents` (noms, compromis sans vente seulement) et `interlocuteurs`.
+- L'inverse **garde la table** : un numéro ne se perd jamais.
+- **Essai dans une transaction annulée : 17 / 17**, rien gardé :
+  - la table est protégée ; les 800 dossiers sont gardés ; des documents seulement sur un compromis sans vente ; **témoin positif** : le
+    notaire aux 7 dossiers en a sur ses 7 compromis ; les conditions arrivent (transaction 1001394) ; 260 ms admin, 365 ms commercial ;
+  - **sous un commercial** : il ajoute (nom nettoyé), modifie (champ vide → NULL) et retire ; une écriture directe dans la table est
+    refusée, un nom vide aussi ; la trace reste (auteur et retrait), anon ne lit pas ;
+  - l'**inverse** redonne la fiche de l'étape 4 **à l'octet** (même empreinte).
+
+**L'écran** (FicheNotaire.tsx, App.tsx, fiche-notaire-v2.css) :
+- **la condition** : dans la carte, chaque condition avec son échéance ou « levée le … » (sinon « aucune enregistrée ») ; l'étape
+  **« Conditions »** compte et filtre les dossiers avec une condition en attente ; « À venir » porte les échéances des conditions ;
+- **les pièces** : « Pièces du dossier · N sur 11 », avec ✓ « documents » ou « à demander ». « Envoyer les pièces à l'étude » reste
+  **en construction** (décision 2) ;
+- **les interlocuteurs** : dans le volet, la liste, « + Ajouter », modifier, retirer (avec confirmation), puis la fiche se relit ;
+- **l'export** : « Exporter » télécharge `dossiers-notaire-<id>.csv`, 16 colonnes, « ; » et BOM pour Excel, le plus récent d'abord.
+
+**Essais** : `test_fiche_notaire.cjs` **33 / 33** :
+- échéance (saisie, puis compromis + jours), levée, l'étape « Conditions », « À venir » ;
+- les pièces : accents et majuscules, et les **vrais noms du mandat 18593** ;
+- l'export : BOM, ordre, guillemets, honoraires ;
+- **mutant** sans retrait des accents : attrapé.
+
+Le build est vert, `test_notaire_ecran`, P2 et le type unique restent verts.
+- Sur données réelles (10352963, lues dans une transaction annulée), les premiers réglages laissaient passer **4 ratés et 1 fausse
+  détection**, vus sur les vrais noms : « AUDIT ENERGETIQUE », « TF 2025 », « DONATION », « Parcelles », et un « mail… retard prêt » pris
+  pour une offre de prêt. **Corrigés** : 18593 passe de 4 à **7 sur 11**. Les autres dossiers : 18489 6, 18683 5.
+- ⚠ Écrire un motif avec `\b` ou `\u` en passant par Python ou par l'outil d'édition peut changer les caractères : `̀-ͯ` est
+  écrit en caractères réels dans le fichier, ce qui marche pareil. Le mutant est découpé par ses bornes, sans motif.
+- ⛔ **L'ordre de pose** : la base **avant** le front. Sinon le carnet proposerait un geste sans fonction derrière, et les pièces et
+  conditions resteraient vides.

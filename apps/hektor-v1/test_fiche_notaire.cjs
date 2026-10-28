@@ -29,7 +29,7 @@ function monter(src) {
   const f = s.indexOf("// ─── le chargement");
   if (i < 0 || f < 0) return { erreur: "la partie « règles » est introuvable dans FicheNotaire.tsx" };
   const partie = s.slice(i, f).replace(/^export (?=(function|const|type) )/gm, "");
-  const js = esbuild.transformSync(partie + "\nthis.api = { construireVueNotaire, coteDuDossier };", { loader: "ts" }).code;
+  const js = esbuild.transformSync(partie + "\nthis.api = { construireVueNotaire, coteDuDossier, echeanceCondition, conditionLevee, piecesDuDossier, exportCsvNotaire };", { loader: "ts" }).code;
   const ctx = { String, Number, Boolean, Array, Set, Map, Object, JSON, RegExp, Date, Math, Intl };
   vm.createContext(ctx);
   vm.runInContext(js, ctx);
@@ -114,6 +114,48 @@ const zero = A.construireVueNotaire({ ...BRUTE, dossiers: [d({ date: "0000-00-00
 verifier("une date « vide » de Hektor (0000-00-00) est traitée comme absente (À vérifier, pas une erreur)", zero.aVerifier.length === 1 && zero.enCours.length === 0);
 verifier("le résultat ne dépend pas de l'ordre reçu",
   JSON.stringify(A.construireVueNotaire({ ...BRUTE, dossiers: [...BRUTE.dossiers].reverse() }, AUJ).enCours.map((x) => x.app_affaire_id)) === JSON.stringify(v.enCours.map((x) => x.app_affaire_id)));
+
+// 6 bis. LES 4 BLOCS (28/10, §50-51)
+// la condition de prêt : l'échéance = la date saisie, sinon le compromis + les jours ; levée par l'état ou la date de levée
+verifier("condition : la date saisie l'emporte ; sinon compromis du 20/10 + 45 j = 04/12 ; sans jours ni date -> pas d'échéance",
+  A.echeanceCondition({ libelle: "Obtention Crédit", jours: 45, date_echeance: "2026-11-30", etat: "attente" }, { date: "2026-10-20" }) === "2026-11-30"
+  && A.echeanceCondition({ libelle: "Obtention Crédit", jours: 45, date_echeance: null, etat: "attente" }, { date: "2026-10-20" }) === "2026-12-04"
+  && A.echeanceCondition({ libelle: "X", jours: null, date_echeance: null, etat: "attente" }, { date: "2026-10-20" }) === null);
+verifier("condition levée : par son état, ou par une date de levée ; « attente » ne l'est pas",
+  A.conditionLevee({ etat: "levee" }) && A.conditionLevee({ etat: "attente", date_levee: "2026-10-01" }) && !A.conditionLevee({ etat: "attente", date_levee: null }));
+const AVEC_COND = { ...RETRACT, conditions: [{ libelle: "Obtention Crédit", jours: 45, date_echeance: null, etat: "attente", date_levee: null },
+  { libelle: "Préemption mairie", jours: 0, date_echeance: null, etat: "levee", date_levee: "2026-10-22" }] };
+const vc = A.construireVueNotaire({ ...BRUTE, dossiers: BRUTE.dossiers.map((x) => (x === RETRACT ? AVEC_COND : x)) }, AUJ);
+verifier("« Conditions » compte les dossiers en cours avec une condition EN ATTENTE (1), et « À venir » porte son échéance (04/12), pas la levée",
+  vc.avecCondition === 1 && vc.aVenir.some((x) => x.genre === "condition" && x.date === "2026-12-04" && x.libelle === "Obtention Crédit")
+  && !vc.aVenir.some((x) => x.libelle === "Préemption mairie"), `${vc.avecCondition} / ${vc.aVenir.map((x) => x.genre + ":" + x.date).join(" ")}`);
+// les pièces : reconnues par le nom, accents et majuscules compris
+const p = A.piecesDuDossier(["Diagnostics DPE 2026.pdf", "COMPROMIS SIGNÉ.pdf", "Titre de propriété.pdf", "CNI M. Dupont.jpg", "Taxe foncière 2025.pdf", "photo salon.jpg"]);
+const trouvees = p.pieces.filter((x) => x.trouve).map((x) => x.cle).join(",");
+verifier("pièces : 5 reconnues sur 11 par le nom (accents, majuscules) ; une photo n'est pas une pièce",
+  p.trouvees === 5 && p.total === 11 && trouvees === "titre,diagnostics,compromis,identite,taxe", `${p.trouvees} : ${trouvees}`);
+verifier("pièces : aucun document -> 0 sur 11, toutes « à demander »", A.piecesDuDossier([]).trouvees === 0 && A.piecesDuDossier(null).total === 11);
+// les vrais noms du mandat 18593 (28/10) : 4 ratés à rattraper, 1 fausse détection à éviter
+const vrai = A.piecesDuDossier(["AUDIT ENERGETIQUE.pdf", "TF 2025 Parrain.pdf", "DONATION PARRAIN.pdf", "Parcelles PARRAIN.pdf", "mail de Mme Rous retard prêt 02.10.2026.pdf"]);
+const vus = vrai.pieces.filter((x) => x.trouve).map((x) => x.cle).join(",");
+verifier("vrais noms : audit énergétique = diagnostics, TF = taxe foncière, donation = titre, parcelles = cadastre ; un mail sur le prêt n'est PAS une offre de prêt",
+  vus === "titre,diagnostics,taxe,cadastre", vus);
+// l'export
+const csv = A.exportCsvNotaire({ ...BRUTE, dossiers: [...BRUTE.dossiers, d({ date: "2026-10-27", bien: { titre_bien: 'Maison "jolie"; jardin', ville: "Firminy" } })] });
+const lignesCsv = csv.replace(/^﻿/, "").split("\r\n");
+verifier("export : BOM pour Excel, une ligne d'en-tête + une par dossier, séparateur « ; »",
+  csv.startsWith("﻿") && lignesCsv.length === BRUTE.dossiers.length + 2 && lignesCsv[0].startsWith("Date;Type;État;Mandat;Bien"), String(lignesCsv.length));
+verifier("export : le plus récent d'abord, et un « ; » ou un guillemet dans un texte est protégé",
+  lignesCsv[1].startsWith("2026-10-27;") && lignesCsv[1].includes('"Maison ""jolie""; jardin"'), lignesCsv[1]);
+verifier("export : les honoraires = entrée + sortie (V1 : 9000)", lignesCsv.some((l) => l.startsWith("2026-04-03;vente;") && l.includes(";9000;")),
+  lignesCsv.find((l) => l.startsWith("2026-04-03;vente;")));
+// (la ligne est découpée par ses bornes, sans motif : sa classe d'accents peut être écrite en caractères ou en codes)
+const srcP = fs.readFileSync(SRC, "utf8");
+const kP = srcP.indexOf("const sansAccent = ");
+const eP = srcP.indexOf("toLowerCase()", kP) + "toLowerCase()".length;
+const mutP = monter(kP < 0 ? "" : srcP.slice(0, kP) + "const sansAccent = (s: string) => s" + srcP.slice(eP));
+verifier("MUTANT (sans retirer les accents ni les majuscules) : « COMPROMIS SIGNÉ » et « Titre de propriété » ne sont plus reconnus -> attrapé",
+  !mutP.erreur && mutP.api.piecesDuDossier(["COMPROMIS SIGNÉ.pdf", "Titre de propriété.pdf"]).trouvees < 2);
 
 // 7. le branchement dans la fiche V2 (App.tsx), derrière les deux interrupteurs
 const app = fs.readFileSync(APP, "utf8").replace(/\r\n/g, "\n");

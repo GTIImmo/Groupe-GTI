@@ -113,3 +113,9 @@
 @media (max-width: 640px) {
   .fa-contact-v2 .fa-cx-dos-parties { white-space: normal; overflow: visible; text-overflow: clip; }
 }
+/* ⑧ blocs (28/10/2026) : le formulaire du carnet des interlocuteurs, et l'erreur d'un geste */
+.fa-contact-v2 .fa-cx-mate-form { display: flex; flex-direction: column; gap: 6px; padding: 8px 0 2px; }
+.fa-contact-v2 .fa-cx-mate-form input { font: inherit; font-size: 12.5px; padding: 7px 9px; border: 1px solid var(--line); border-radius: 9px; background: #fff; color: var(--ink); min-width: 0; }
+.fa-contact-v2 .fa-cx-mate-form-acts { display: flex; gap: 6px; flex-wrap: wrap; }
+.fa-contact-v2 .fa-cx-mate-call.danger { color: #fff; background: var(--alert); border-color: transparent; }
+.fa-contact-v2 .fa-cx-err { color: var(--alert); text-align: left; }
