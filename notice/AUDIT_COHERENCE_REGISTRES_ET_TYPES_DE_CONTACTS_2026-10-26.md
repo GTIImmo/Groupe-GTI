@@ -3170,3 +3170,16 @@ plat**, jusqu'à 410 pour le plus chargé. La décision 2 dit « pas toutes les 
   les gestes faits chez Hektor, que le run venait d'écrire dans nos registres, et les contacts neufs.
 - ⚠ Le battement `supabase.type_contacts` reste en **erreur** (09:29) jusqu'au run de cette nuit.
 - ⏰ **Cette nuit** : l'étape doit sortir en 0, avec un compte de quelques contacts.
+
+### 48.2 ✅ L'ÉTAPE 1 REJOUÉE (28/10, 09:55), APRÈS LE TYPE TIRÉ DE NOS REGISTRES — rien posé
+- **L'essai de l'étape 1, dans une transaction annulée** : **12 / 12**.
+  - Temps de lecture : fiche de JACQUIER 46 ms (admin) et 134 ms (commercial) ; le notaire le plus chargé (810 rôles) 150 ms et 158 ms.
+  - Les 167 862 lignes d'avant sont identiques ; 23 355 lignes neuves, exactement les notaires de la table des parties (23 351 la veille).
+  - L'inverse est propre, et la vue est intacte après l'annulation.
+- **L'effet sur le type, mesuré dans une transaction annulée** :
+  - **1 110 contacts** recevraient leur rôle de notaire : ce sont les notaires de l'annuaire (§40.2). Aucun autre contact ne bouge.
+  - Le calcul pour tous les écrit en **2,6 s**. Au geste, le type du notaire le plus chargé se calcule en **12 ms**.
+  - **0 écart** restant ; rien n'est gardé après l'annulation.
+- **Le front déployé** (groupe-gti.vercel.app, après la poussée de Frédéric) contient l'étape 3 et la décision 2.
+- ⬜ **La pose, avec l'accord de Frédéric** : `patch_notaire_etape1_vue_2026-10-27.sql` et sa répétition, puis le calcul pour tous
+  (`recalculer_types_contacts.py`), pour que l'écran les montre tout de suite. Ensuite : la vérification à l'écran, au bureau et au téléphone.
