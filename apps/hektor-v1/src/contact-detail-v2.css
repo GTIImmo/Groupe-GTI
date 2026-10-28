@@ -303,6 +303,9 @@
 .fa-contact-v2 .fa-cx-lk.r-vendeur { --rc: #c2701a; }
 .fa-contact-v2 .fa-cx-lk.r-mandant { --rc: #c2125f; }
 .fa-contact-v2 .fa-cx-lk.r-notaire { --rc: #3b4a8c; }
+/* ⑧ notaire, décision 2 (28/10/2026) : « Tout afficher » sous les 10 biens les plus récents d'un notaire */
+.fa-contact-v2 .fa-cx-lk-more { display: block; width: 100%; margin-top: 8px; padding: 9px 12px; border: 1px dashed var(--ty-line, #d6dbf1); border-radius: 12px; background: var(--ty-soft, #eceefa); color: var(--ty-deep, #25306a); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.fa-contact-v2 .fa-cx-lk-more:hover { border-style: solid; }
 .fa-contact-v2 .fa-cx-lk.r-acheteur { --rc: #2f8a5b; }
 .fa-contact-v2 .fa-cx-lk-empty { padding: 8px 2px; color: var(--muted); font-size: 13px; }
 

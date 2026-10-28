@@ -38,7 +38,7 @@ const MORCEAUX_APP = ["const TYPE_CONTACT_UNIQUE = ", "const TYPE_NOTAIRE_ECRAN 
   "function isBuyerRole(", "function estRoleNotaire(", "const contactDirectoryTypeLabel:", "function contactDirectoryCategories(",
   "function contactToneFromRoles(", "function contactDirectoryRoleLabel(", "function dateDuRole(", "function couleurDuRoleDuBien(",
   "function familleDuRole(", "function etapeAcheteurRetenue(", "function detailEtapeAcheteur(", "function roleNotaireDuBien(",
-  "function regrouperRelationsParBien("];
+  "function regrouperRelationsParBien(", "const NOTAIRE_BIENS_MAX = ", "function indicesBiensAffiches("];
 
 function monter(app, api, rg) {
   const code = [];
@@ -54,7 +54,7 @@ function monter(app, api, rg) {
   if (!roles) return { erreur: "absent de RechercheGlobale.tsx : rolesContact" };
   code.push(roles.replace("function rolesContact(", "function rolesContactRG("));
   const js = esbuild.transformSync(code.join("\n\n") + "\nthis.api = { contactDirectoryCategories, contactToneFromRoles, "
-    + "contactDirectoryTypeLabel, contactDirectoryRoleLabel, regrouperRelationsParBien, couleurDuRoleDuBien, contactRoleFilterValues, rolesContactRG };",
+    + "contactDirectoryTypeLabel, contactDirectoryRoleLabel, regrouperRelationsParBien, couleurDuRoleDuBien, contactRoleFilterValues, rolesContactRG, indicesBiensAffiches };",
   { loader: "ts" }).code;
   const ctx = { String, Number, Boolean, Array, Set, Map, Object, JSON, RegExp };
   vm.createContext(ctx);
@@ -159,7 +159,38 @@ verifier("les styles : avatar, mot et statut de l'annuaire ; couleur, balance et
   && /\.ty-notaire \{ --ty: #3b4a8c/.test(cssFiche) && /\.ty-notaire \.fa-cx-av \.fa-cx-ty-notaire/.test(cssFiche)
   && /\.fa-cx-lk\.r-notaire \{ --rc: #3b4a8c; \}/.test(cssFiche));
 
-// 7. MUTANT : sans « notaire en premier »
+// 7. DÉCISION 2 (28/10, « A ») : au-delà de 10 biens, les 10 plus récents et « Tout afficher »
+// 15 biens : le k-ième a sa transaction le 2026-01-(k+1) ; deux lignes par bien (compromis + vente), mélangées ; un bien sans date
+const QUINZE = [];
+for (let k = 0; k < 15; k++) {
+  const jour = String(k + 1).padStart(2, "0");
+  QUINZE.push(ligne({ k: `c${k}`, a: String(63000 + k), d: 700 + k, r: "notaire_vendeur", t: "compromis", id: `C${k}`, s: "active", date: `2025-12-${jour}` }));
+  if (k !== 3) QUINZE.push(ligne({ k: `v${k}`, a: String(63000 + k), d: 700 + k, r: "notaire_vendeur", t: "vente", id: `V${k}`, s: "vente", date: `2026-01-${jour}` }));
+}
+const QUINZE_MELE = [...QUINZE.filter((_, i) => i % 2), ...QUINZE.filter((_, i) => !(i % 2))];
+const nb = A.regrouperRelationsParBien(QUINZE_MELE).length;
+const dix = A.indicesBiensAffiches(QUINZE_MELE, nb, true, false);
+const regroupes = A.regrouperRelationsParBien(QUINZE_MELE);
+const annoncesMontrees = dix.map((i) => regroupes[i].relation.hektor_annonce_id);
+const attendues = [14, 13, 12, 11, 10, 9, 8, 7, 6, 5].map((k) => String(63000 + k));
+verifier("un notaire à 15 biens : les 10 plus récents, du plus récent au plus ancien, sur LE BON bien (numéros alignés)",
+  dix.length === 10 && jsonEgal(annoncesMontrees, attendues), JSON.stringify(annoncesMontrees));
+verifier("« Tout afficher » : les 15, toujours du plus récent au plus ancien",
+  A.indicesBiensAffiches(QUINZE_MELE, nb, true, true).length === 15
+  && regroupes[A.indicesBiensAffiches(QUINZE_MELE, nb, true, true)[0]].relation.hektor_annonce_id === "63014");
+verifier("témoin : un contact qui n'est pas notaire, 15 biens -> tous, dans l'ordre d'avant",
+  jsonEgal(A.indicesBiensAffiches(QUINZE_MELE, nb, false, false), [...Array(15).keys()]));
+verifier("témoin : un notaire à 10 biens et moins -> tous, dans l'ordre d'avant",
+  jsonEgal(A.indicesBiensAffiches(QUINZE_MELE.slice(0, 4), 2, true, false), [0, 1]));
+const boucles = (app.match(/indicesBiens\.map\(\(indexBien\) => \{\n\s*const ligneVue = linkedRelations\[indexBien\]/g) || []).length;
+const boutons = (app.match(/onClick=\{\(\) => setTousLesBiens\(true\)\}>Tout afficher/g) || []).length;
+verifier("les DEUX fiches (V1 et V2) parcourent les biens choisis et ont le bouton « Tout afficher »",
+  boucles === 2 && boutons === 2 && /\.fa-cx-lk-more \{/.test(cssFiche), `boucles ${boucles}, boutons ${boutons}`);
+const mutantDix = monter(app.replace("return toutAfficher ? tries : tries.slice(0, NOTAIRE_BIENS_MAX)", "return tries"), api, rg);
+verifier("MUTANT (sans la limite de 10) : attrapé",
+  !mutantDix.erreur && mutantDix.api.indicesBiensAffiches(QUINZE_MELE, nb, true, false).length !== 10);
+
+// 8. MUTANT : sans « notaire en premier »
 const mutant = monter(app.replace(/\n  if \(TYPE_NOTAIRE_ECRAN && roles\.some\(estRoleNotaire\)\) out\.push\('notaire'\)[^\n]*/, ""), api, rg);
 verifier("MUTANT (sans la ligne « Notaire en premier ») : le rang tombe -> attrapé",
   !mutant.erreur && !jsonEgal(mutant.api.contactDirectoryCategories(["mandant", "notaire_acquereur"], 0), ["notaire", "mandant"]));

@@ -39536,6 +39536,31 @@ function regrouperRelationsParBien(relations: AppContactRelation[]): BienDuConta
   return out
 }
 
+// ⑧ NOTAIRE, DÉCISION 2 (28/10/2026, Frédéric : « A : au-delà de 10 biens, montrer les 10 plus récents et un bouton
+//   « Tout afficher » ») : en attendant la fiche notaire (étape 4), la fiche contact d'un notaire ne liste pas ses
+//   biens à plat (jusqu'à 410 pour le plus chargé). Rend les NUMÉROS des biens à afficher, dans l'ordre : les biens
+//   gardent leur numéro (le i-ème de linkedRelations EST le i-ème de regrouperRelationsParBien), on ne fait que
+//   choisir lesquels montrer. « Le plus récent » = la date de transaction la plus récente du bien (un bien sans
+//   transaction passe après). Hors notaire, ou à 10 biens et moins : tous, dans l'ordre d'avant, à l'identique.
+const NOTAIRE_BIENS_MAX = 10
+function indicesBiensAffiches(relations: AppContactRelation[], nbBiens: number, estNotaire: boolean, toutAfficher: boolean): number[] {
+  const tous = Array.from({ length: nbBiens }, (_, i) => i)
+  if (!TYPE_NOTAIRE_ECRAN || !estNotaire || nbBiens <= NOTAIRE_BIENS_MAX) return tous
+  // même clé et même ordre que linkedRelations et regrouperRelationsParBien (première apparition, sans clé = à part)
+  const cle = (r: AppContactRelation) => String(r.app_dossier_id ?? '').trim() || String(r.hektor_annonce_id ?? '').trim()
+  const numero = new Map<string, number>()
+  const recente: string[] = []
+  for (const r of relations) {
+    const k = cle(r)
+    let i = k ? numero.get(k) : undefined
+    if (i === undefined) { i = recente.length; recente.push(''); if (k) numero.set(k, i) }
+    const d = String(r.transaction_date ?? '').slice(0, 10)
+    if (d > recente[i]) recente[i] = d
+  }
+  const tries = tous.slice().sort((a, b) => (recente[b] ?? '').localeCompare(recente[a] ?? '') || a - b)
+  return toutAfficher ? tries : tries.slice(0, NOTAIRE_BIENS_MAX)
+}
+
 function contactBool(value: unknown) {
   return value === true || value === 1 || value === '1'
 }
@@ -44123,6 +44148,11 @@ function ContactDetailPopupBase(props: {
   const linkedDistinctCount = linkedRelations.length
   // P2 : le i-ème bien regroupé EST le i-ème bien de linkedRelations (même clé, même ordre)
   const biensDuContact = FICHE_UN_BIEN_TOUS_ROLES ? regrouperRelationsParBien(props.relations) : null
+  // ⑧ notaire, décision 2 : au-delà de 10 biens, les 10 plus récents et « Tout afficher » (indicesBiensAffiches)
+  const [tousLesBiens, setTousLesBiens] = useState(false)
+  useEffect(() => { setTousLesBiens(false) }, [props.contact.hektor_contact_id])
+  const indicesBiens = indicesBiensAffiches(props.relations, linkedRelations.length,
+    contactDirectoryCategories(selectedRoles, Number(props.contact.active_search_count ?? 0))[0] === 'notaire', tousLesBiens)
   const roleTagClass = (role: string) => {
     const normalized = role.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
     if (normalized === 'mandant') return 'tg brand'
@@ -44265,7 +44295,8 @@ function ContactDetailPopupBase(props: {
                       <div className="duo-col">
                         <div className="mod">
                           <div className="mod-h"><h2>Annonces liées</h2><span className="mod-meta strong">{linkedDistinctCount} bien{linkedDistinctCount > 1 ? 's' : ''}</span></div>
-                          {linkedDistinctCount > 0 ? linkedRelations.map((ligneVue, indexBien) => {
+                          {linkedDistinctCount > 0 ? indicesBiens.map((indexBien) => {
+                    const ligneVue = linkedRelations[indexBien]
                             // P2 : la ligne qui porte le bien, et TOUS ses rôles (interrupteur FICHE_UN_BIEN_TOUS_ROLES)
                             const bien = biensDuContact ? biensDuContact[indexBien] : null
                             const relation = bien ? bien.relation : ligneVue
@@ -44289,6 +44320,9 @@ function ContactDetailPopupBase(props: {
                           }) : (
                             <div className="empty"><span className="ee"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M3 21V8l9-5 9 5v13" /><path d="M9 21v-6h6v6" /></svg></span><span className="et">Aucune annonce liée dans l'index courant.</span></div>
                           )}
+                          {indicesBiens.length < linkedDistinctCount ? (
+                            <button className="linkmini" type="button" onClick={() => setTousLesBiens(true)}>Tout afficher · {linkedDistinctCount} biens</button>
+                          ) : null}
                           {linkedDistinctCount > 0 ? (
                             <div className="lk-foot">
                               <span className="lk-stat">{linkedDistinctCount} annonce{linkedDistinctCount > 1 ? 's' : ''} liée{linkedDistinctCount > 1 ? 's' : ''}</span>
@@ -44857,6 +44891,11 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
   const linkedDistinctCount = linkedRelations.length
   // P2 : le i-ème bien regroupé EST le i-ème bien de linkedRelations (même clé, même ordre)
   const biensDuContact = FICHE_UN_BIEN_TOUS_ROLES ? regrouperRelationsParBien(props.relations) : null
+  // ⑧ notaire, décision 2 : au-delà de 10 biens, les 10 plus récents et « Tout afficher » (indicesBiensAffiches)
+  const [tousLesBiens, setTousLesBiens] = useState(false)
+  useEffect(() => { setTousLesBiens(false) }, [props.contact.hektor_contact_id])
+  const indicesBiens = indicesBiensAffiches(props.relations, linkedRelations.length,
+    contactDirectoryCategories(selectedRoles, Number(props.contact.active_search_count ?? 0))[0] === 'notaire', tousLesBiens)
   // Couleur de ligne selon la relation (--rc via classe) : mandant #c2125f, vendeur/propriétaire #c2701a,
   // acquéreur* #2f7c86, acheteur #2f8a5b, défaut #c2701a (= r-vendeur). Même normalisation NFD que ...Base.
   const relationRowClass = (role: string) => {
@@ -45584,7 +45623,8 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
                     <div className="fa-cx-skel-lines"><span className="fa-cx-skel fa-cx-skel-line w70" /><span className="fa-cx-skel fa-cx-skel-line w40" /></div>
                   </div>
                 ) : linkedRelations.length > 0 ? (
-                  linkedRelations.map((ligneVue, indexBien) => {
+                  indicesBiens.map((indexBien) => {
+                    const ligneVue = linkedRelations[indexBien]
                     // P2 : la ligne qui porte le bien, et TOUS ses rôles (interrupteur FICHE_UN_BIEN_TOUS_ROLES)
                     const bien = biensDuContact ? biensDuContact[indexBien] : null
                     const relation = bien ? bien.relation : ligneVue
@@ -45639,6 +45679,9 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
                 ) : (
                   <div className="fa-cx-lk-empty">Aucune annonce liée à ce contact.</div>
                 )}
+                {indicesBiens.length < linkedRelations.length ? (
+                  <button className="fa-cx-lk-more" type="button" onClick={() => setTousLesBiens(true)}>Tout afficher · {linkedRelations.length} biens</button>
+                ) : null}
               </section>
                 </div>
 

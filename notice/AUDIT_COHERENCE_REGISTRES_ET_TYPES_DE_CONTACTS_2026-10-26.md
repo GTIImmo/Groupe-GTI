@@ -3146,3 +3146,14 @@ plat**, jusqu'à 410 pour le plus chargé. La décision 2 dit « pas toutes les 
    l'annuaire reçoivent leur rôle ;
 3. pousser le front (Frédéric) ;
 4. voir l'écran, au bureau et au téléphone.
+
+### 48.1 ✅ DÉCISION 2, CODÉE *(28/10, Frédéric : « A : au-delà de 10 biens, montrer les 10 plus récents et un bouton « Tout afficher » »)*
+- `indicesBiensAffiches` (App.tsx) : pour un contact **dont la catégorie dominante est « Notaire »** et qui a **plus de 10 biens**, les
+  **10 plus récents** (la date de transaction la plus récente du bien), du plus récent au plus ancien. Un bouton
+  « **Tout afficher · N biens** » montre les autres, dans le même ordre. Il revient replié quand on change de contact.
+- **Hors notaire, ou à 10 biens et moins : rien ne change** (tous, dans l'ordre d'avant).
+- ⚠ Les biens **gardent leur numéro** : la fonction choisit lesquels montrer, elle ne réordonne ni `linkedRelations` ni le
+  regroupement de P2. Les deux fiches (V1 et V2) parcourent les numéros choisis. Le nombre de biens de l'en-tête reste le total.
+- Essais : `test_notaire_ecran.cjs` **28 / 28**. 6 contrôles neufs : les 10 bons biens, numéros alignés, lignes mélangées ;
+  « Tout afficher » ; les deux témoins ; les deux fiches ; **mutant** sans la limite, attrapé. P2 et le type unique restent verts.
+  `npm run build` (vérification des types comprise) vert.
