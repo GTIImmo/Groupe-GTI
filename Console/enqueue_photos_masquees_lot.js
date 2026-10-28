@@ -104,10 +104,60 @@ const HORS_AUTO = {
 // 2 requetes ; en manquer une perd des photos pour toujours.
 const MARGE_FUSEAU_MS = 3 * 3600 * 1000;
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// UNE PORTE FERMEE N'EST PAS UN REFUS                                 28/10/2026
+// ═══════════════════════════════════════════════════════════════════════════════
+// LA NUIT DU 27 AU 28/10 : Hektor injoignable de 23:57 a ~06:24. Le worker a frappe
+// a la porte toutes les 10 s -> 726 travaux en erreur, 726 annonces differentes, et
+// TOUS des pannes : 718 « fetch failed », 7 delais depasses, 1 connexion ratee.
+// Aucun n'est un refus de Hektor.
+// Deux regles, ecrites pour proteger d'un BANNISSEMENT, en ont fait une perte :
+//   · L'EXCLUSION ETAIT A VIE : une seule erreur, a n'importe quelle date, ecartait
+//     l'annonce pour toujours -- meme si un essai plus recent avait reussi. 727
+//     annonces ecartees le 28/10 (dont 63073, ecartee par NOTRE redemarrage du 19/10,
+//     note du 20/10 « l'exclusion pour erreur est a vie »). Leurs photos masquees ne
+//     seraient jamais rapatriees, donc perdues a la coupure.
+//   · LE FREIN COMPTAIT SANS REGARDER : >= 10 erreurs en 24 h -> refus. Le soir du
+//     28/10 il aurait refuse pour une panne finie depuis 06:24.
+// CE QUI CHANGE (en ajout -- retour a l'ancienne regle : --regle-erreurs-historique) :
+//   · une erreur de PANNE (motif ci-dessous) n'ecarte plus l'annonce : elle reprend
+//     sa place dans l'ordre normal du lot, au rythme habituel ;
+//   · une erreur suivie d'une visite REUSSIE n'ecarte plus non plus ;
+//   · toute autre erreur (un vrai refus) ecarte comme avant ;
+//   · le frein leve SEULEMENT si toutes ses erreurs sont des pannes ET que Hektor
+//     repond maintenant (la meme sonde que le moniteur, check_hektor_joignable :
+//     une ouverture du port 443, aucune requete, aucun compte). Sinon il refuse
+//     comme avant. Un refus de Hektor (403, 429...) n'est pas une panne : il bloque.
+// ⚠ CE QUE CA NE REGLE PAS : un worker qui continue de frapper pendant une panne
+//   (reserve 3 du 25/09). C'est un autre sujet.
+const MOTIF_PANNE = /fetch failed|time ?out|timed out|ETIMEDOUT|ECONNRESET|ECONNREFUSED|ENOTFOUND|EAI_AGAIN|socket hang up|connexion_refusee|Job interrompu/i;
+function estUnePanne(message) {
+  return MOTIF_PANNE.test(String(message || ""));
+}
+
+// La sonde du moniteur, a l'identique : les deux adresses vivent sur le meme
+// cluster, il faut que les DEUX repondent.
+const SONDE_HEKTOR = ["groupe-gti-immobilier.la-boite-immo.com", "www.gti-immobilier.fr"];
+function sonderPort(hote, delaiMs = 10000) {
+  const net = require("net");
+  return new Promise((resolve) => {
+    const s = net.connect({ host: hote, port: 443 });
+    const fin = (ok) => { s.destroy(); resolve(ok); };
+    s.setTimeout(delaiMs, () => fin(false));
+    s.once("connect", () => fin(true));
+    s.once("error", () => fin(false));
+  });
+}
+async function hektorRepond() {
+  const resultats = {};
+  for (const hote of SONDE_HEKTOR) resultats[hote] = await sonderPort(hote);
+  return { repond: Object.values(resultats).every(Boolean), resultats };
+}
+
 const argv = process.argv.slice(2);
 function parseArgs() {
   const args = { scope: "vivant", limit: 1000, priority: 200, dryRun: false,
-                 exigerFileVide: false, maxErreursRecentes: 0 };
+                 exigerFileVide: false, maxErreursRecentes: 0, regleErreursHistorique: false };
   for (let i = 0; i < argv.length; i += 1) {
     const a = argv[i];
     const next = argv[i + 1];
@@ -117,6 +167,7 @@ function parseArgs() {
     else if (a === "--dry-run") { args.dryRun = true; }
     else if (a === "--exiger-file-vide") { args.exigerFileVide = true; }
     else if (a === "--max-erreurs-recentes" && next) { args.maxErreursRecentes = Number(next); i += 1; }
+    else if (a === "--regle-erreurs-historique") { args.regleErreursHistorique = true; }
     else throw new Error("Argument inconnu: " + a);
   }
   if (!SOURCES[args.scope]) {
@@ -194,9 +245,23 @@ async function refusEventuel(args, enFile) {
   }
   if (args.maxErreursRecentes > 0) {
     const depuis = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
-    const recentes = await rest("app_console_job?select=hektor_annonce_id&job_type=eq." + JOB_TYPE
+    const recentes = await rest("app_console_job?select=hektor_annonce_id,error_message&job_type=eq." + JOB_TYPE
       + "&status=eq.error&finished_at=gte." + encodeURIComponent(depuis) + "&limit=1000");
     const n = Array.isArray(recentes) ? recentes.length : 0;
+    if (n >= args.maxErreursRecentes && !args.regleErreursHistorique) {
+      const refus = recentes.filter((r) => !estUnePanne(r.error_message)).length;
+      const sonde = refus === 0 ? await hektorRepond() : null;
+      if (refus === 0 && sonde.repond) {
+        console.log(JSON.stringify({ frein: "leve", erreurs_24h: n, dont_pannes: n, dont_refus: 0,
+          sonde_hektor: sonde.resultats,
+          message: "toutes les erreurs des 24 h sont des pannes et Hektor repond maintenant -- le lot part" }, null, 2));
+        return 0;
+      }
+      console.log(JSON.stringify({ refus: "trop_d_erreurs_recentes", erreurs_24h: n, seuil: args.maxErreursRecentes,
+        dont_refus: refus, dont_pannes: n - refus, sonde_hektor: sonde ? sonde.resultats : "non sondee (il y a des refus)",
+        message: "Hektor nous rejette peut-etre -- on arrete, on ne rejoue jamais" }, null, 2));
+      return 4;
+    }
     if (n >= args.maxErreursRecentes) {
       console.log(JSON.stringify({ refus: "trop_d_erreurs_recentes", erreurs_24h: n, seuil: args.maxErreursRecentes,
         message: "Hektor nous rejette peut-etre -- on arrete, on ne rejoue jamais" }, null, 2));
@@ -226,9 +291,21 @@ async function main() {
       if (!derniereVisite.has(a) || t > derniereVisite.get(a)) derniereVisite.set(a, t);
     });
 
+  // ⚠ 28/10 : on lit AUSSI le motif et la date, pour trier panne / refus et voir si
+  //   une visite reussie est venue apres. Voir « UNE PORTE FERMEE N'EST PAS UN REFUS ».
   const erreurs = new Set();
-  await lirePages("app_console_job?select=id,hektor_annonce_id&job_type=eq." + JOB_TYPE
-    + "&status=eq.error", "id", (row) => { if (row.hektor_annonce_id) erreurs.add(String(row.hektor_annonce_id)); });
+  let erreursPanne = 0;
+  let erreursSuiviesDunSucces = 0;
+  await lirePages("app_console_job?select=id,hektor_annonce_id,error_message,finished_at&job_type=eq." + JOB_TYPE
+    + "&status=eq.error", "id", (row) => {
+      if (!row.hektor_annonce_id) return;
+      const a = String(row.hektor_annonce_id);
+      if (args.regleErreursHistorique) { erreurs.add(a); return; }
+      if (estUnePanne(row.error_message)) { erreursPanne += 1; return; }
+      const quand = row.finished_at ? Date.parse(row.finished_at) : 0;
+      if (derniereVisite.has(a) && derniereVisite.get(a) > quand) { erreursSuiviesDunSucces += 1; return; }
+      erreurs.add(a);
+    });
 
   const enFile = new Set();
   await lirePages("app_console_job?select=id,hektor_annonce_id&job_type=eq." + JOB_TYPE
@@ -287,6 +364,10 @@ async function main() {
     //   bloquees par le coffre). On ne les rejoue pas tout seul -- mais on les VOIT.
     ecartees_pour_erreur: ecarteesErreur,
     exemples_ecartees: nomsEcartees,
+    // 28/10 : ce que la regle des erreurs a laisse passer, et pourquoi
+    regle_des_erreurs: args.regleErreursHistorique ? "historique (toute erreur ecarte a vie)" : "panne / refus (28/10)",
+    erreurs_de_panne_non_ecartees: erreursPanne,
+    erreurs_suivies_d_un_succes: erreursSuiviesDunSucces,
     sans_date_au_miroir: sansDateAuMiroir,
     requetes_hektor_attendues: lot.length * 2,
     nuits_restantes_a_ce_rythme: args.limit > 0
