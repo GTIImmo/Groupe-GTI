@@ -3305,3 +3305,47 @@ Mesuré **sous l'identité des 2 commerciaux actifs**, dans une transaction annu
   « Recherche & rapprochement » (gardé si le notaire a une recherche active). Les blocs sans données sont marqués « en construction » ;
 - **les essais** : sur le code réel (règle « en cours », chaîne, double compte, droits) ; puis la vérification à l'écran, au bureau et au
   téléphone.
+
+### 49.8 ✅ ÉTAPE 4 CODÉE *(28/10, Frédéric : « oui, vas-y »)* — NON POSÉE, NON POUSSÉE
+**La base** : `supabase/patch_notaire_etape4_fiche_2026-10-28.sql` (+ `_INVERSE`, `_REPETITION`) crée `app_notaire_fiche(p_contact)`,
+en lecture seule et en `security invoker`. Une ligne par transaction vivante, avec son ou ses côtés, l'issue de la chaîne, le compromis
+de la chaîne, les vendeurs, acheteurs et confrères, le bien (parc, sinon archives, sinon historique), et la médiane de l'agence
+compromis → acte (3 ans, ce que le compte voit).
+- **Essai dans une transaction annulée : 13 / 13**, rien gardé.
+  - Temps sur le notaire le plus chargé : 252 ms (admin), 360 ms (commercial).
+  - 800 transactions, aucune en double.
+  - Le compromis de 11729 porte la vente du 03/04/2026, où il n'est pas.
+  - Il n'est jamais son propre confrère ; 402 ventes sur 407 portent leur compromis ; chaque ligne porte son bien.
+  - JACQUIER : 0 ligne, sans erreur. Médiane de l'agence : 85 j.
+  - ⭐ **Témoin positif des droits** : le premier contrôle sous un commercial passait sur **0** dossier (le notaire le plus chargé n'est pas
+    dans son portefeuille), donc il ne prouvait rien. Ajouté : le notaire le plus présent chez ce commercial (10164856) → **6 vus sur 301**,
+    tous sur ses biens.
+
+**L'écran** : `apps/hektor-v1/src/FicheNotaire.tsx` (neuf), interrupteur `FICHE_NOTAIRE_V2` ; styles `fiche-notaire-v2.css` (99 règles
+reprises de la maquette v2, plus 4 propres à l'app), importée par `main.tsx`.
+- Les règles sont des fonctions pures : `construireVueNotaire(fiche, aujourdhui)`.
+- Dans la fiche V2 (App.tsx), quand la catégorie dominante est « Notaire » :
+  - les chiffres en tête au-dessus du tableau ;
+  - les dossiers en cours (étapes Rétractation · Acte prévu · Date à fixer · Conditions **en construction**), et « À vérifier » replié ;
+  - « À venir » en tête de la colonne de côté, au-dessus de « À faire », qui reste ;
+  - les ventes des 12 mois, puis « Avec nous » et les confrères, avant « Activité & relation » ;
+  - dans le volet, « Interlocuteurs de l'étude » **en construction** et « Partenaire depuis … ».
+- « Recherche & rapprochement » est masqué pour un notaire **sans** recherche active. « Biens & mandats liés » reste (décision 3).
+- Dans une carte : la condition de prêt et les pièces du dossier sont **en construction**, le séquestre n'apparaît que s'il est non nul.
+  « Exporter » est **en construction**.
+- ⚠ **Écart avec la maquette, assumé** : l'étape « Conditions » de la maquette suppose la condition de prêt, qui n'existe pas. Elle est
+  montrée « en construction » au lieu d'un chiffre inventé (décision 5).
+- **Essais** : `apps/hektor-v1/test_fiche_notaire.cjs` **25 / 25**, sur le code réel, à date fixe. Il contrôle « en cours » et
+  « À vérifier », la chaîne, les étapes et leur ordre, les côtés, les actes ≤ 30 j, ventes et honoraires, les médianes, « À venir »,
+  « un dossier = une chaîne », agences, confrères, une fiche vide, la date `0000-00-00`, l'ordre reçu, le branchement dans App.tsx.
+  **Mutant** sans la borne des 6 mois : attrapé.
+  - Sur données **réelles** (lues dans une transaction annulée, jamais versionnées) : 10164856 → 0 en cours, 4 ventes en 12 mois,
+    délai 76 j contre 85 j pour l'agence, 14 agences, 4 confrères, depuis 2007 ; 10166165 → 0 en cours, **1 à vérifier** (le compromis de
+    2024), 0 vente en 12 mois, délai 77 j, depuis 2006. Moins de 5 ms chacun.
+  - `test_notaire_ecran`, P2 et le type unique restent verts ; `npm run build` vert.
+- ⚠⚠ **Décision 4 à reconfirmer — mon conseil était mal mesuré** : sur les 348 ventes des 12 mois, `commission_agence` n'est **non nulle
+  que sur 82** (somme 269 321 €). `honoraires_entree` l'est sur **330**, `honoraires_sortie` sur 19 (somme des deux : 2 614 758 €). J'avais
+  vérifié qu'un champ « existe », pas qu'il porte un montant. Le choix est à un seul endroit (`honorairesDuDossier`, FicheNotaire.tsx), et
+  la fonction rend les trois champs.
+- ⛔ **L'ordre de pose compte** : la fonction **avant** le front. Un front poussé sans elle afficherait « Fiche notaire indisponible » sur
+  la fiche des 1 110 notaires. Le reste de la fiche ne bougerait pas.

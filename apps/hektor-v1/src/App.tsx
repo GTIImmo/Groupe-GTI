@@ -238,6 +238,7 @@ import mandatTemplateHtml from './mandat-template.html?raw'
 import ContactSearchModal from './ContactSearchModal'
 import RechercheAcquereur, { type VisitePlanInput } from './RechercheAcquereur'
 import RapprochementMandat, { type MandatContext } from './RapprochementMandat'
+import { FICHE_NOTAIRE_V2, NotaireAVenir, NotaireDossiers, NotaireInterlocuteurs, NotaireKpis, NotaireVentesEtAvecNous, construireVueNotaire, useFicheNotaire } from './FicheNotaire'
 import NotificationsBell from './NotificationsBell'
 import SanteSystemeScreen from './SanteSystemeScreen'
 import { bvBoot } from './lib/bienvuBoot'
@@ -44849,6 +44850,17 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
   //    type soit IDENTIQUE listing ↔ détail. Priorité Mandant > Acheteur > Propriétaire > Acquéreur.
   const dirCategories = contactDirectoryCategories(selectedRoles, Number(props.contact.active_search_count ?? 0))
   const primaryCategory: ContactDirectoryType = dirCategories[0] ?? 'autre'
+  // ⑧ notaire, étape 4 (28/10/2026) : la fiche notaire (FicheNotaire.tsx, maquette fiche-notaire-v2), quand la catégorie
+  //   dominante est « Notaire ». « Recherche & rapprochement » laisse sa place, sauf si le notaire a une recherche active.
+  const estFicheNotaire = FICHE_NOTAIRE_V2 && TYPE_NOTAIRE_ECRAN && primaryCategory === 'notaire'
+  const ficheNotaire = useFicheNotaire(String(props.contact.hektor_contact_id ?? ''), estFicheNotaire)
+  const vueNotaire = useMemo(() => {
+    if (!ficheNotaire.fiche) return null
+    const now = new Date()
+    const aujourdhui = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10)
+    return construireVueNotaire(ficheNotaire.fiche, aujourdhui)
+  }, [ficheNotaire.fiche])
+  const masquerRecherche = estFicheNotaire && Number(props.contact.active_search_count ?? 0) === 0
   const typeClass = primaryCategory === 'notaire'
     ? 'ty-notaire' // ⑧ notaire, étape 3 : bleu encre + balance (maquette fiche-notaire-v2)
     : primaryCategory === 'mandant'
@@ -45466,6 +45478,7 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
                 </div>
               </div>
 
+              {estFicheNotaire ? <NotaireInterlocuteurs /> : null}
               <div className="fa-cx-foot">
                 <div className="fa-cx-foot-head">
                   <span className="fa-cx-foot-hic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><circle cx="12" cy="8" r="4" /><path d="M5 21a7 7 0 0 1 14 0" /></svg></span>Négociateur
@@ -45480,14 +45493,19 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
                 <div className="fa-cx-status">
                   <span className={`fa-cx-st-chip ${isArchived ? 'archived' : ''}`}><span className="d" />{isArchived ? 'Archivé' : 'Actif'}</span>
                   {isEligibleApp ? <span className="fa-cx-st-chip app"><span className="d" />Éligible app</span> : null}
+                  {vueNotaire?.partenaireDepuis ? <span className="fa-cx-st-chip app"><span className="d" />Partenaire depuis {vueNotaire.partenaireDepuis.slice(0, 4)}</span> : null}
                   {hasSeverity ? <span className="fa-cx-st-chip sev"><span className="d" />{severityLabel}</span> : null}
                 </div>
               </div>
             </aside>
 
             <div className="fa-cx-work">
+              {estFicheNotaire ? (vueNotaire ? <NotaireKpis vue={vueNotaire} />
+                : <div className="fa-cx-ech-empty">{ficheNotaire.erreur ? `Fiche notaire indisponible (${ficheNotaire.erreur})` : 'Chargement des dossiers du notaire…'}</div>) : null}
               <div className="fa-cx-dash-top">
                 <div className="fa-cx-dash-main">
+              {vueNotaire ? <NotaireDossiers vue={vueNotaire} onOpenDossier={(id) => { props.onClose(); props.onOpenDossier(id) }} /> : null}
+              {masquerRecherche ? null : (<>
               {/* ── Lot 2 — Bande « Recherche & rapprochement » (portage maquette v30) ── */}
               <div className="fa-cx-sec" style={{ ['--sc']: '#2f7c86' } as CSSProperties}>
                 <span className="fa-cx-sec-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg></span>
@@ -45606,6 +45624,7 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
                 )}
               </section>
 
+              </>)}
               {/* ── Lot 3 — Bande « Biens & mandats liés » (portage maquette v30) ── */}
               <div className="fa-cx-sec" style={{ ['--sc']: 'var(--annonce-c)' } as CSSProperties}>
                 <span className="fa-cx-sec-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M3 11l9-7 9 7" /><path d="M5 10v9h14v-9" /><path d="M9 19v-6h6v6" /></svg></span>
@@ -45687,6 +45706,7 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
 
                 {/* ── Lot 5 — Colonne latérale « À faire » (relances du contact) ── */}
                 <div className="fa-cx-dash-side">
+                  {vueNotaire ? <NotaireAVenir vue={vueNotaire} /> : null}
                   <div className="fa-cx-sec" style={{ ['--sc']: '#c2512a' } as CSSProperties}>
                     <span className="fa-cx-sec-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M9 6h11M9 12h11M9 18h11" /><path d="M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2" /></svg></span>
                     À faire
@@ -45753,6 +45773,8 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
                   </section>
                 </div>
               </div>
+
+              {vueNotaire ? <NotaireVentesEtAvecNous vue={vueNotaire} /> : null}
 
               {/* ── Lot 4 — Bande « Activité & relation » (pleine largeur, portage maquette v30) ── */}
               <div className="fa-cx-sec" style={{ ['--sc']: '#2f6fa8' } as CSSProperties}>

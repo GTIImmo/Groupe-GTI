@@ -34,6 +34,8 @@ import './annuaire-contacts-v2.css'
 import './fa-cockpit-v2.css'
 import './fa-mandat-v3.css'
 import './contact-detail-v2.css'
+// ⑧ notaire, étape 4 (28/10/2026) : les blocs de la fiche notaire (FicheNotaire.tsx)
+import './fiche-notaire-v2.css'
 import './bienvu.css'
 import './menu-lateral-net.css'
 
