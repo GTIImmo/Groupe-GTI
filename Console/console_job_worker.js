@@ -17545,6 +17545,8 @@ async function retirerLiensDeLaCreationEchouee(job, appDossierId, cause) {
       await logJob(job.id, "liens_creation_retires", "done",
         "La creation a echoue : ses liens nes au clic sont RETIRES de l'ecran, la trace reste", {
           app_dossier_id: appDossierId, lignes: nb, cause: String(cause || "").slice(0, 300) });
+      // le mandant n'est plus lie a ce bien : son type suit (audit du 28/10)
+      await recalculerTypeDesContacts(job, touchees.map((l) => l && l.app_contact_id), "creation_echouee");
     }
     return { status: "done", lignes: nb };
   } catch (erreur) {

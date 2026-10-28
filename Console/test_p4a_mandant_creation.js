@@ -7,7 +7,8 @@
 //   (3) la creation echoue -> les liens nes au clic quittent l'ecran (absent_depuis), la trace reste
 //   (4) la base refuse -> JAMAIS d'exception, et c'est ECRIT au journal
 //   (5) les appels sont branches au bon endroit de la creation (lu dans le code)
-//   (6) TEMOIN INVERSE : sur la version d'avant (HEAD), les trois fonctions n'existent pas
+//   (6) TEMOIN INVERSE : sur la version d'avant P4-a (le parent du commit 412a0bf, FIXE : un temoin qui lit HEAD
+//       casse des que la correction est committee, lecon du 27/10), les trois fonctions n'existent pas
 //
 //     node Console/test_p4a_mandant_creation.js
 //     sortie 0 = tout vert · 1 = un controle en echec · 2 = n'a pas pu mesurer
@@ -40,6 +41,7 @@ function monter(texte, base) {
   vm.runInContext(`
     async function supabaseRequest(chemin, options) { appels.push({ chemin, options }); return base(chemin, options); }
     async function logJob(id, etape, statut, message, details) { journal.push({ etape, statut, message, details }); }
+    async function recalculerTypeDesContacts(job, contacts, contexte) { appels.push({ chemin: 'type', contacts, contexte }); return { recalcule: true }; }
     ${morceaux.join("\n\n")}
     this.api = { poserNumeroSurLiensDeLaCreation, marquerLienDeLaCreationEtabli, retirerLiensDeLaCreationEchouee };`, ctx);
   return ctx;
@@ -48,7 +50,7 @@ function monter(texte, base) {
 (async () => {
   const job = { id: "essai" };
   // (1)
-  let c = monter(src, () => [{ app_relation_id: 1 }]);
+  let c = monter(src, () => [{ app_relation_id: 1, app_contact_id: 20000013 }]);
   if (!c) { console.log("⛔ fonctions introuvables dans le worker"); process.exit(2); }
   let r = await c.api.poserNumeroSurLiensDeLaCreation(job, 10000031, 63400);
   const a1 = c.appels[0];
@@ -68,14 +70,17 @@ function monter(texte, base) {
     a2 && a2.chemin === "app_relation?hektor_annonce_id=eq.63400&hektor_contact_id=eq.605973&present_in_hektor=is.false&retire_le=is.null"
       && JSON.parse(a2.options.body).present_in_hektor === true && r.lignes === 1, JSON.stringify(a2));
   // (3)
-  c = monter(src, () => [{ app_relation_id: 1 }]);
+  c = monter(src, () => [{ app_relation_id: 1, app_contact_id: 20000013 }]);
   r = await c.api.retirerLiensDeLaCreationEchouee(job, 10000031, "Hektor injoignable");
   const a3 = c.appels[0];
   controle("(3) creation echouee -> les liens nes au clic quittent l'ecran (absent_depuis), RIEN n'est efface",
     a3 && a3.chemin === "app_relation?app_dossier_id=eq.10000031&hektor_annonce_id=is.null&source=eq.app&absent_depuis=is.null"
       && a3.options.method === "PATCH" && typeof JSON.parse(a3.options.body).absent_depuis === "string" && r.lignes === 1,
     JSON.stringify(a3));
-  controle("(3) aucun appel DELETE dans les trois fonctions", c.appels.every((a) => a.options.method !== "DELETE")
+  controle("(3) le type du mandant qui perd ce lien est recalcule (audit du 28/10)",
+    c.appels.some((a) => a.chemin === "type" && Array.isArray(a.contacts) && a.contacts[0] === 20000013 && a.contexte === "creation_echouee"),
+    JSON.stringify(c.appels.map((a) => a.chemin)));
+  controle("(3) aucun appel DELETE dans les trois fonctions", c.appels.every((a) => (a.options || {}).method !== "DELETE")
     && !NOMS.map((n) => tranche(src, n)).join("").includes('"DELETE"'));
   // (4)
   c = monter(src, () => { throw new Error("la base refuse"); });
@@ -101,7 +106,7 @@ function monter(texte, base) {
     /await markProvisionalCreationError\([^\n]*\n\s+\/\/[^\n]*\n\s+await retirerLiensDeLaCreationEchouee\(job, payload && payload\.app_dossier_id/.test(enveloppe));
   // (6) temoin inverse
   try {
-    const avant = execFileSync("git", ["show", "HEAD:Console/console_job_worker.js"], { cwd: path.join(__dirname, ".."), encoding: "utf8", maxBuffer: 1 << 27 });
+    const avant = execFileSync("git", ["show", "412a0bf^:Console/console_job_worker.js"], { cwd: path.join(__dirname, ".."), encoding: "utf8", maxBuffer: 1 << 27 });
     controle("(6) TEMOIN INVERSE : la version d'avant n'a pas ces fonctions", monter(avant.replace(/\r\n/g, "\n"), () => []) === null);
   } catch (e) { console.log("⚠ temoin inverse non fait : " + e.message); }
   console.log(echecs.length ? `\n⛔ ${echecs.length} controle(s) en echec.` : "\n✅ Tous les controles sont verts.");

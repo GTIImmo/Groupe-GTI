@@ -13,7 +13,8 @@
 --   encore). Le type du mandant est recalculé aussitôt.
 --   La suite est au worker (§53.4) : il pose le numéro Hektor sur ces liens en même temps que sur la fiche du bien, les marque
 --   établis quand Hektor confirme, les défait s'il refuse, et les retire de l'écran si la création échoue.
---   · Pas de traduction du contact → PAS DE LIGNE (comme `link_mandant` : mieux vaut pas de ligne qu'une ligne fausse).
+--   · Pas de traduction du contact, OU contact pas encore connu de Hektor (sans numéro Hektor, le worker ne peut pas le lier)
+--     → PAS DE LIGNE (comme `link_mandant` : mieux vaut pas de ligne qu'une ligne fausse). Ajouté par l'audit du 28/10.
 --   · BEST-EFFORT, comme `link_mandant`, mais DIT (WARNING) : rien ici ne fait échouer la création.
 --   · L'autre branche (interrupteur `c9_annonce_nait_dans_app` éteint) n'est pas touchée.
 -- ⚠ ① ci-dessous : `app_relation.hektor_annonce_id` était NOT NULL chez Supabase — l'essai du 28/10 l'a trouvé (le lien était
@@ -58,13 +59,14 @@ DECLARE
         || E'        from public.app_contact_current c\n'
         || E'       where c.hektor_contact_id = v_p4_id or c.hektor_target_id = v_p4_id\n'
         || E'       limit 1;\n'
-        || E'      if v_p4_app is not null and v_p4_app >= 10000000 then\n'
+        || E'      -- sans numero Hektor, le worker ne peut pas le lier chez Hektor : pas de ligne (elle mentirait)\n'
+        || E'      if v_p4_app is not null and v_p4_app >= 10000000 and nullif(trim(coalesce(v_p4_hektor, '''')), '''') is not null then\n'
         || E'        insert into public.app_relation\n'
         || E'          (app_relation_id, app_contact_id, app_dossier_id, hektor_annonce_id, hektor_contact_id,\n'
         || E'           fait, role_hektor, source, relation_key, first_seen_at, last_seen_at, present_in_hektor, absent_depuis)\n'
         || E'        values\n'
         || E'          (nextval(''public.app_relation_id_app_seq''), v_p4_app, v_id, null,\n'
-        || E'           coalesce(v_p4_hektor, case when v_p4_id ~ ''^[0-9]+$'' and v_p4_id::bigint < 10000000 then v_p4_id end),\n'
+        || E'           v_p4_hektor,\n'
         || E'           ''proprietaire_du_bien'', null, ''app'', ''app:'' || p_token::text || '':'' || v_p4_app::text,\n'
         || E'           now()::text, now()::text, false, null);\n'
         || E'        v_p4_poses := v_p4_poses || v_p4_app::text;\n'

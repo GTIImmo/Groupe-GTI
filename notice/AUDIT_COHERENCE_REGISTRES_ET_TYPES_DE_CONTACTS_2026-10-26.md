@@ -3805,3 +3805,27 @@ sans lien, et sans la case cible**. La fiche du mandant n'arrive chez nous qu'av
   à faire en même temps que P4-a.
 - **Essais prévus** : une vraie création avec mandant neuf par le geste de l'app, en transactions annulées (fiche, lien, type, numéro dans la
   charge) ; le bloc du worker sur sa fausse base ; témoin inverse.
+
+### 53.6 AUDIT DU CORRECTIF P4-a *(28/10, Frédéric : « audit pour être sûr de ton correctif »)* — deux corrections, essais rejoués
+**Tout ce qui lit ou écrit le registre des liens chez Supabase**, face à un lien sans numéro de bien (mesuré dans la base et le code) :
+- **5 fonctions** : la vente (`app_change_annonce_status_optimistic`, C), « lier / créer / retirer un mandant » (par numéro de bien :
+  une ligne vide n'est ni trouvée ni touchée), `app_recalculer_type_du_bien` (par numéro de bien : elle ne la voit pas — d'où le recalcul
+  **par contact** au clic) ; **1 vue** (`app_contact_relations_current` : la montre, rangée par notre dossier, rôle « propriétaire » faute de
+  n° de mandat) ; **1 règle de lecture** (comptes actifs, sans lien au bien) ; **aucun déclencheur**.
+- **Hors de la base** : le **worker** est le seul à lire le registre par l'API ; l'écran passe par la vue ; la **nuit** copie le cloud
+  dans `app_relation__sb` (le vide y est accepté) **juste avant** l'étape du registre des liens, n'adopte que les lignes qui ont un numéro de
+  bien, et pousse par numéro de ligne ; `push_single_annonce_to_supabase.py` n'écrit pas ce registre.
+- ⚠ **Une fenêtre de quelques minutes, la nuit** : une annonce créée avec un mandant PENDANT la copie du cloud et l'étape du registre (~04-05 h)
+  pourrait faire buter le push des liens sur l'unicité (contact, bien) — il échouerait cette nuit-là et se réparerait la suivante (la copie
+  aurait alors le numéro). Aucune création n'a lieu à cette heure ; noté, non corrigé.
+- ⚠ **Sur la fiche contact**, pendant les ~90 s où le bien n'a pas son numéro Hektor, la ligne du bien n'a **pas de titre** (la vue cherche le
+  titre par ce numéro). Noté, non corrigé.
+
+**Deux défauts trouvés par cet audit, corrigés** :
+1. **Un contact que Hektor ne connaît pas encore** (né dans l'app, sans numéro Hektor) : le worker ne peut pas le lier chez Hektor (la porte
+   refuse un numéro de notre plage), et son retour arrière cherche par numéro Hektor — le lien posé au clic serait resté **affiché à tort**.
+   ➡ La base **ne pose plus de ligne** sans numéro Hektor du contact. Essai ajouté (contact sans numéro → aucune ligne).
+2. **La création échoue** : les liens quittaient l'écran mais **le type du mandant ne suivait pas**. ➡ Le worker recalcule le type des
+   contacts touchés. Essai ajouté.
+- **Le témoin inverse** de l'essai du worker lisait HEAD, qui porte désormais P4-a : il est fixé sur le parent du commit `412a0bf` (leçon du 27/10).
+- **Essais rejoués** : vraie création, transactions annulées **14/14** ; worker **14/14** ; voisin `test_type_apres_ecriture_worker.js` **9/9**.
