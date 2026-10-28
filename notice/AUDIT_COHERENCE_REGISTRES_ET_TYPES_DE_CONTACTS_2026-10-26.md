@@ -3264,3 +3264,23 @@ ses boutons d'action (modifier, archiver, RDV, ouvrir dans Hektor) existent déj
 3. **L'historique** : garder la bande « Biens & mandats liés » (10 + « Tout afficher ») sous les ventes des 12 mois ?
 4. **Les honoraires encaissés** : quel champ ? (`commission_agence`, `honoraires_entree`, `honoraires_sortie` sont tous remplis sur les ventes.)
 5. **« Exporter »** les ventes : à coder maintenant, ou « en construction » ?
+
+### 49.5 Les droits, MESURÉS *(28/10, Frédéric : « je ne suis pas sûr, normalement les négociateurs voient tous les biens et tous les contacts »)*
+Mesuré **sous l'identité des 2 commerciaux actifs**, dans une transaction annulée (`droits_commercial.js` : la clé de l'utilisateur dans
+`request.jwt.claims`, rôle `authenticated`). Les 4 autres comptes actifs sont admin et voient tout.
+- **Les biens : tout.** 13 490 dossiers sur 13 490.
+- **Les contacts : tout.** 62 346 sur 62 346.
+- **Les transactions : seulement leur portefeuille.** 43 et 479 sur 31 117 (portefeuilles de 138 et 1 048 biens).
+- **Les liens du notaire 10166165 : 1 sur 811** (le lien de propriétaire). Ses 810 lignes de notaire viennent des transactions.
+- **C'est une décision écrite**, pas un oubli : le chantier ② (`notice/CHANTIER_2_DROITS_NEGOCIATEUR_2026-10-09.md`, L4.5, 12/10) a
+  rangé « affaires + **commissions** » dans **« ses biens »**, et « annonces, contacts, liens, archives, vendus, photos » dans **« tout le
+  réseau »**. Frédéric a raison pour les biens et les contacts ; ma phrase était juste pour les transactions.
+- ⚠ **La conséquence, déjà vraie aujourd'hui** :
+  - le **type** est calculé avec tous les droits et stocké dans la fiche contact, que tout le monde lit : l'annuaire dit « Notaire »
+    ou « Acheteur » à un commercial ;
+  - mais la **fiche** (lignes de biens de P2) ne lui montre que les transactions de ses biens. Le notaire le plus chargé y a 1 ligne
+    au lieu de 411, et un acheteur hors de son portefeuille n'y a aucune ligne d'achat.
+- **Question 1 reformulée** :
+  - **(a)** on garde la décision du 12/10 : la fiche notaire d'un commercial ne montre que ses dossiers ;
+  - **(b)** une lecture **réduite**, pour toute l'agence : dates, étapes, biens, côtés, confrères, **sans aucun montant ni honoraire**. Les
+    montants restent visibles sur ses seuls biens. Elle passerait par une fonction de la base qui ne rend que ces champs.
