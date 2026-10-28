@@ -3704,3 +3704,10 @@ Hektor est-il aussi marqué « acheteur » (recommandé : oui — elle n'est ni 
   l'acheteur sur le bien, le lien posé au clic reste « propriétaire » jusqu'à la nuit (la règle A ne touche pas une personne sans transaction).
 - ⏰ **À poser à son accord** (puis la répétition, 4 lignes « OK »). **C n'est plus à l'étape 3** pour le clic ; à la coupure, il restera que la
   nuit ne pourra plus « reconnaître » ce lien par celui de Hektor (sa règle de reclassement) — à reprendre avec l'étape 3.
+
+### 52.12 ✅ C POSÉ LE 28/10 VERS 22:00 *(Frédéric : « vas-y »)*
+- Patch posé, répétition **4/4 OK** ; nouvelle empreinte de `app_change_annonce_status_optimistic` : `446df246`.
+- Actif tout de suite pour la prochaine vente faite dans l'app (aucun redémarrage). ⏰ La première vraie vente faite dans l'app : vérifier
+  son lien au bien (`source = 'app'`, `origine = 'vente'`, la date) et, la nuit suivante, son adoption (même numéro, `present_in_hektor`
+  passé à vrai, `origine = 'vente'` gardée).
+- Retour arrière : `patch_proprietaire_au_clic_vente_2026-10-28_INVERSE.sql`.
