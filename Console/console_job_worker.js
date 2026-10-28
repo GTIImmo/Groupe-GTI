@@ -17557,6 +17557,57 @@ async function retirerLiensDeLaCreationEchouee(job, appDossierId, cause) {
   }
 }
 
+// ⑧ types §53.5 P4-b (28/10/2026) : LE MANDANT NEUF SAISI A LA CREATION D'UNE ANNONCE.
+//   La fonction de creation lui a donne NOTRE numero au clic, sa fiche et son lien (comme
+//   app_create_mandant_contact_optimistic), et nous le passe dans la charge (initial_mandant.app_identite).
+//   Ici, les trois gestes du geste voisin « creer un mandant » (executerCreationMandantContact) :
+//     1. LA CASE CIBLE : des que Hektor a cree la personne, son numero va dans la case cible de NOTRE fiche --
+//        c'est ce qui empeche la seconde fiche (bloc copie du geste voisin, avec son piege deja paye :
+//        n'envoyer QUE la case cible) ;
+//     2. Hektor confirme le rattachement -> le lien est ETABLI ;
+//     3. le rattachement ou la creation echoue -> le lien quitte l'ecran, la fiche reste (comme le geste voisin).
+async function poserCaseCibleDuMandantNeuf(job, identiteApp, hektorContactId, hektorAnnonceId) {
+  const identite = cleanString(identiteApp || "");
+  if (!identite || !hektorContactId) return { status: "skipped" };
+  try {
+    await supabaseRequest(
+      `app_contact_current?hektor_contact_id=eq.${encodeURIComponent(identite)}`,
+      { method: "PATCH", prefer: "return=minimal",
+        body: JSON.stringify({ hektor_target_id: String(hektorContactId) }) });
+    await logJob(job.id, "contact_cible_hektor", "done",
+      "Le mandant neuf saisi a la creation a recu son numero Hektor dans la case cible", {
+        app_identite: identite, hektor_target_id: String(hektorContactId), hektor_annonce_id: String(hektorAnnonceId || "") });
+    return { status: "done" };
+  } catch (err) {
+    await logJob(job.id, "contact_cible_hektor", "error",
+      `Case cible non posee : ${err && err.message ? err.message : err}`,
+      { app_identite: identite, hektor_annonce_id: String(hektorAnnonceId || "") });
+    return { status: "error" };
+  }
+}
+
+async function suivreLienDuMandantNeuf(job, identiteApp, appDossierId, champs, etape, message) {
+  const identite = cleanString(identiteApp || "");
+  if (!identite || !appDossierId) return { status: "skipped" };
+  try {
+    const touchees = await supabaseRequest(
+      `app_relation?app_contact_id=eq.${encodeURIComponent(identite)}`
+      + `&app_dossier_id=eq.${encodeURIComponent(String(appDossierId))}&source=eq.app&retire_le=is.null`,
+      { method: "PATCH", headers: { Prefer: "return=representation" }, body: JSON.stringify(champs) });
+    const nb = Array.isArray(touchees) ? touchees.length : 0;
+    await logJob(job.id, etape, "done", nb > 0 ? message : "Aucun lien ne au clic a suivre pour ce mandant neuf",
+      { app_identite: identite, app_dossier_id: appDossierId, lignes: nb });
+    if (nb > 0) await recalculerTypeDesContacts(job, [identite], etape);
+    return { status: "done", lignes: nb };
+  } catch (erreur) {
+    await logJob(job.id, etape, "error",
+      "Le lien du mandant neuf n'a pas pu etre suivi -- le run de nuit le reprendra", {
+        app_identite: identite, app_dossier_id: appDossierId,
+        error: erreur && erreur.message ? erreur.message : String(erreur) });
+    return { status: "error" };
+  }
+}
+
 async function executerRetraitMandant(job) {
   const payload = safeJsonParse(job.payload_json);
   const dossier = await loadDossier(job);
@@ -23431,6 +23482,9 @@ async function handleCreateHektorDraftAnnonce(job) {
         ...initialMandantPayload,
         hektor_user_email: payload.hektor_user_email || null,
       });
+      // ⑧ types §53.5 P4-b : la personne existe chez Hektor -> son numero dans la case cible de NOTRE fiche,
+      //   TOUT DE SUITE, avant meme de savoir si le rattachement tient (c'est ce qui evite la seconde fiche).
+      await poserCaseCibleDuMandantNeuf(job, initialMandantPayload.app_identite, createdContact.contactId, created.id);
       await sleep(1800);
       // Meme correction que les cinq autres verifications du lien mandant : la
       // console est filtree par l'agence du compte, l'API ne l'est pas.
@@ -23469,6 +23523,14 @@ async function handleCreateHektorDraftAnnonce(job) {
         hektor_annonce_id: String(created.id),
         hektor_contact_id: createdContact.contactId,
       });
+      // ⑧ types §53.5 P4-b : Hektor a confirme -> le lien ne au clic est ETABLI, sous le numero Hektor de la personne.
+      await suivreLienDuMandantNeuf(job, initialMandantPayload.app_identite, payload.app_dossier_id,
+        { hektor_contact_id: String(createdContact.contactId), present_in_hektor: true, absent_depuis: null },
+        "relation_etablie", "Le mandant neuf saisi a la creation est ETABLI dans le registre, tout de suite");
+      await enqueueRefreshConsoleContactDataJobBestEffort(job, createdContact.contactId, {
+        reason: "create_hektor_mandant_contact",
+        priority: 82,
+      });
     } catch (error) {
       initialMandantCreate = {
         status: "error",
@@ -23478,6 +23540,10 @@ async function handleCreateHektorDraftAnnonce(job) {
         hektor_annonce_id: String(created.id),
         error: initialMandantCreate.error,
       });
+      // ⑧ types §53.5 P4-b : pas de mandant chez Hektor -> le lien ne au clic quitte l'ecran (la fiche reste, comme le geste voisin).
+      await suivreLienDuMandantNeuf(job, initialMandantPayload.app_identite, payload.app_dossier_id,
+        { absent_depuis: new Date().toISOString() },
+        "rattachement_annule", "Hektor n'a pas le mandant neuf : son lien a ete RETIRE de l'ecran, la trace reste");
     }
   }
 

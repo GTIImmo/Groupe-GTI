@@ -3829,3 +3829,23 @@ sans lien, et sans la case cible**. La fiche du mandant n'arrive chez nous qu'av
    contacts touchés. Essai ajouté.
 - **Le témoin inverse** de l'essai du worker lisait HEAD, qui porte désormais P4-a : il est fixé sur le parent du commit `412a0bf` (leçon du 27/10).
 - **Essais rejoués** : vraie création, transactions annulées **14/14** ; worker **14/14** ; voisin `test_type_apres_ecriture_worker.js` **9/9**.
+
+### 53.7 ✅ P4-b CODÉ *(28-29/10, Frédéric : « oui P4-b, ensuite les deux »)* — NON POSÉ, worker NON REDÉMARRÉ
+- **Base** (même patch que P4-a, bloc à part `@P4b`) : au clic, un mandant **neuf** de la création (nom ou e-mail) reçoit, comme
+  `app_create_mandant_contact_optimistic`, **notre numéro** (`app_contact_identite_seq`), **sa fiche** (les mêmes colonnes, puis « naît
+  complet » par `app_contact_champs_naissance`), **son lien** (rangé par notre dossier, comme P4-a), **son type** ; et, **en dernier**, son
+  numéro part dans la charge (`initial_mandant.app_identite`). Un échec de P4-b ne défait pas P4-a et ne fait jamais échouer la création.
+- **Worker** (+66 lignes, mes seules lignes committées) : `poserCaseCibleDuMandantNeuf` — **dès que Hektor a créé la personne**, son numéro va
+  dans la **case cible** de NOTRE fiche (bloc du geste voisin, avec son piège payé : rien d'autre dans le PATCH) — c'est ce qui empêche la
+  seconde fiche ; `suivreLienDuMandantNeuf` — rattachement confirmé → lien **établi** sous le numéro Hektor de la personne, type recalculé,
+  et **relecture du contact** demandée (comme le geste voisin) ; échec → le lien quitte l'écran, la fiche reste (limite du geste voisin).
+- **Essais** : base, vraie création en transactions annulées **19/19** (dont 2 témoins inverses : la fonction d'avant ne donne ni lien ni
+  numéro ni fiche) — fiche complète (nom, prénom, e-mail, téléphone, civilité, ville, CP, adresse), lien, type, numéro dans la charge ;
+  existant + neuf = deux liens ; sans nom ni e-mail = rien ; base intacte, aucune fiche d'essai restée ; répétition **6/6** dans une transaction
+  annulée ; worker **22/22** (dont les branchements lus dans le code, témoin inverse sur `412a0bf^`) ; voisin **9/9**.
+- ⚠ Les essais consomment des numéros (transactions annulées) : contacts à partir de **20000017**, dossiers de l'app — aucune fiche attribuée
+  n'est perdue ; la prochaine fiche aura simplement un numéro plus haut.
+- ⏰ **L'ordre de pose, et pourquoi** : **1. redémarrer les 4 services, file vide** (par Frédéric) — sans le nouveau worker, un mandant neuf aurait
+  sa fiche chez nous MAIS sa case cible ne serait jamais posée → la nuit fabriquerait une **seconde fiche** ; **2. poser le patch** (P4-a + P4-b),
+  puis la répétition (6 lignes « OK »). ⚠ Le redémarrage charge aussi les lignes Youtrust non committées de l'autre session (déjà chargées depuis
+  le 27/10, interrupteur éteint).

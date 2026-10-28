@@ -1,5 +1,5 @@
 -- ═══════════════════════════════════════════════════════════════════════════
--- RÉPÉTITION — ⑧ types §53 P4-a : le mandant existant choisi à la création, chez nous au clic          28/10/2026
+-- RÉPÉTITION — ⑧ types §53 P4-a et P4-b : les mandants saisis à la création, chez nous au clic          28/10/2026
 -- LECTURE SEULE. À coller APRÈS le patch : chaque ligne doit dire « OK ».
 -- La preuve par le geste (une vraie création dans des transactions annulées) est l'essai du 28/10 (13/13).
 -- ═══════════════════════════════════════════════════════════════════════════
@@ -13,6 +13,11 @@ SELECT n, controle, verdict FROM (
   SELECT 2, 'le bloc est dans la branche « l''annonce naît dans l''app », avant la création du travail',
          CASE WHEN position('-- @P4a-fin' IN d) > position('-- === fin 8a piece 2 ===' IN d)
                    AND position('-- @P4a-fin' IN d) < position('created_job := public.app_console_create_draft_annonce_job(' IN substr(d, position('-- === fin 8a piece 2 ===' IN d))) + position('-- === fin 8a piece 2 ===' IN d)
+              THEN 'OK' ELSE 'ROUGE' END FROM f
+  UNION ALL
+  SELECT 6, 'P4-b : le bloc du mandant neuf suit celui du mandant existant (@P4b), et pose le numéro dans la charge en dernier',
+         CASE WHEN position('-- @P4b-debut' IN d) > position('-- @P4a-fin' IN d) AND position('-- @P4b-fin' IN d) > 0
+                   AND position('{initial_mandant,app_identite}' IN d) > position('app_recalculer_type_contacts(array[v_p4b_ident])' IN d)
               THEN 'OK' ELSE 'ROUGE' END FROM f
   UNION ALL
   SELECT 3, 'le lien peut attendre son numéro de bien (colonne facultative)',
