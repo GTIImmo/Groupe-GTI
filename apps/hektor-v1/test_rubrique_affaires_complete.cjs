@@ -224,6 +224,27 @@ function essai(api) {
   ok("C1 un autre mandat (cycle passe) ne prend pas les lignes du mandat courant",
     api.ckDetailDepuisRegistre && api.ckDetailDepuisRegistre(LIGNES, "17000", "18787") === null);
 
+  // ⑧ D9 (28/10) : le meme numero ne suffit plus -- etat, acquereur, et une vente supprimee dans la journee
+  {
+    const juge = api.ckResumeNuitAJour;
+    const cpReg = (state, acq) => ({ compromis: { id: "50132", state, acquereur: acq } });
+    ok("D9 compromis ANNULE dans la journee : la nuit (encore « active ») cede la place au registre",
+      juge && juge({ compromis: { id: "50132", state: "active" } }, cpReg("cancelled")) === false);
+    ok("D9 VENTE supprimee dans la journee : la nuit qui la porte encore cede la place",
+      juge && juge({ vente: { id: "23355" }, compromis: { id: "50132", state: "active" } }, cpReg("active")) === false);
+    ok("D9 ACQUEREUR remplace dans la journee : la nuit cede la place",
+      juge && juge({ compromis: { id: "50132", state: "active", acquereur: { id: "605967" } } },
+        cpReg("active", { id: "605999" })) === false);
+    ok("D9 le meme acquereur sous NOTRE numero et celui de Hektor : la nuit fait foi",
+      juge && juge({ compromis: { id: "50132", state: "active", acquereur: { id: "605967" } } },
+        cpReg("active", { id: "20000012", app_contact_id: "605967" })) === true);
+    ok("D9 un compromis ANNULE d'un dossier voisin dans la nuit n'invalide pas l'offre vivante (61844)",
+      juge && juge({ offre: { id: "33075", state: "accepted", acquereur: { id: "605419" } }, compromis: { id: "49999", state: "cancelled" } },
+        { offre: { id: "33075", state: "accepted", acquereur: { id: "605419", app_contact_id: 10356097 } } }) === true);
+    ok("D9 un champ absent d'un cote ne juge rien : la nuit fait foi",
+      juge && juge({ compromis: { id: "50132" } }, cpReg("cancelled", { id: "605999" })) === true);
+  }
+
   // V (23/10) : le compromis verrouille par sa vente
   const verrou = api.compromisVerrouilleParSaVente;
   ok("V : le compromis d'une chaine vendue est verrouille, par la vente 23355",

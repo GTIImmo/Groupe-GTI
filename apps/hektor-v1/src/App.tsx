@@ -30293,11 +30293,32 @@ function ckDetailDepuisRegistre(
 }
 
 /** Le resume de nuit a-t-il deja vu la transaction la plus avancee du registre ? On compare le
- *  NUMERO de Hektor, genre par genre. Une transaction sans numero (pas encore revenue) : non. */
+ *  NUMERO de Hektor, genre par genre. Une transaction sans numero (pas encore revenue) : non.
+ *  ⑧ D9 (28/10/2026) : le meme numero ne suffit plus. Dans la journee, CETTE transaction peut
+ *  changer sans changer de numero (offre refusee, compromis annule, acquereur remplace), ou une
+ *  transaction plus avancee peut etre supprimee : la nuit montrait alors l'ancienne version
+ *  jusqu'au lendemain. On compare donc aussi l'ETAT et l'ACQUEREUR de la transaction retenue, et
+ *  la nuit ne doit pas porter un genre plus avance que le registre. Un champ absent d'un cote ne
+ *  juge rien ; un acquereur se reconnait par l'un de ses deux numeros (le notre, celui de Hektor). */
 function ckResumeNuitAJour(nuit: CkAffaireDetail, registre: CkAffaireDetail): boolean {
   const genre = registre.vente ? 'vente' : registre.compromis ? 'compromis' : 'offre'
   const id = String(registre[genre]?.id ?? '').trim()
-  return Boolean(id) && String(nuit[genre]?.id ?? '').trim() === id
+  if (!id || String(nuit[genre]?.id ?? '').trim() !== id) return false
+  const etat = (x: { state?: string | null } | null | undefined) => String(x?.state ?? '').trim().toLowerCase()
+  // Un genre plus avance n'invalide la nuit que s'il est VIVANT : le resume melange les cycles, et
+  // garde un compromis annule d'un dossier voisin (61844 / 18475, mesure du 28/10).
+  if (genre !== 'vente' && String(nuit.vente?.id ?? '').trim()) return false
+  if (genre === 'offre' && String(nuit.compromis?.id ?? '').trim()
+      && !AFFAIRE_ETAT_MORT.has(etat(nuit.compromis))) return false
+  if (genre !== 'vente') {
+    const n = etat(nuit[genre]), r = etat(registre[genre])
+    if (n && r && n !== r) return false
+  }
+  const numeros = (p?: CkAffaireParty | null) =>
+    [p?.id, p?.app_contact_id].map((x) => String(x ?? '').trim()).filter(Boolean)
+  const an = numeros(nuit[genre]?.acquereur), ar = numeros(registre[genre]?.acquereur)
+  if (an.length && ar.length && !an.some((x) => ar.includes(x))) return false
+  return true
 }
 
 /** LE DETAIL DE LA CHAINE -- ce que le bloc de maquette ne peut pas montrer.
