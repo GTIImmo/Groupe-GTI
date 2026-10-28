@@ -1487,7 +1487,7 @@ if ($PushContactsToSupabase) {
     #   Inerte tant que APP_TYPE_PAR_NOS_REGISTRES n'est pas a 1 dans .env (le script le dit et sort en 0).
     #   Note des types, paragraphes 43 a 46.
     Invoke-OptionalStepWithRetry -Label "phase2 type des contacts depuis nos registres" -Arguments @(
-        "phase2\syncecalculer_types_contacts.py"
+        "phase2\sync\recalculer_types_contacts.py"
     ) -WorkerKey "supabase.type_contacts"
 }
 else {
