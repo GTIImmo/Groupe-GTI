@@ -3620,3 +3620,36 @@ Hektor est-il aussi marqué « acheteur » (recommandé : oui — elle n'est ni 
   24/10 à 04:55, transactions vues à 04:52) ; **6 intacts** — les 4 vrais mandants (10414, 39032, 39291, 36244 : liens antérieurs au registre),
   605030 sur 24933 et 10354490 sur 62774 (mandants d'essai, liens antérieurs). **0 vrai contact touché.**
 - **Une personne qui n'a plus AUCUNE transaction sur le bien** n'est plus un acquéreur : la règle **ne la touche pas** (lien laissé à Hektor).
+
+### 52.7 ✅ A ET B CODÉS *(28/10, Frédéric : « ok »)* — A NON POSÉ (interrupteur éteint, vue non posée), B NON POUSSÉ
+**A — l'acquéreur sans vente** (commit `a2e3fe3`)
+- **Nuit** : `relation_ledger._acheteurs_sans_vente` + `regle_acheteur_proprietaire.couples_acheteurs_sans_vente` (une seule règle,
+  ses gardes écrites dans le module). Interrupteur **`APP_RELATION_ACHETEUR_SANS_VENTE`**, qui n'agit que si
+  `APP_RELATION_ACHETEUR_PROPRIETAIRE` est allumé ; **éteint**, la nuit remet à vide ses marques. Le bilan de nuit compte les désaccords
+  avec Hektor (`acheteur_sans_vente_conflits_hektor`) **sans alerte** (Hektor le fait systématiquement, décision de Frédéric).
+- **Registre des mandats** (`export_app_payload.py`) : écarte `origine IN ('vente', 'acheteur')`.
+- **Vue des liens** (`supabase/patch_acheteur_sans_vente_vue_2026-10-28.sql`, + INVERSE, REPETITION) : cache la ligne « lien au bien »
+  marquée `acheteur`, et dès le clic celle d'un lien « né de la vente » dont la vente a disparu alors qu'une transaction reste (fonction
+  `app_lien_vente_devenu_acheteur`, SECURITY DEFINER). Rien n'est effacé.
+- **Essais** : règle **22/22** (dont JOLIVET, que seule la garde de naissance protège) ; **mutant** sans la garde de naissance → 2 contrôles
+  tombent ; **copie réduite de phase2.sqlite, vraie fonction de nuit : 10/10** — sur tout le registre, **exactement les 4 testeurs de 24113**
+  sont marqués, les 119 « propriétaires depuis la vente » inchangés, les 4 vrais mandants et les 2 mandants d'essai intacts, le registre
+  des mandats de 24113 passe de 9 à 5 mandants (les 4 testeurs), une 2e nuit ne change rien, l'interrupteur éteint rend l'état d'avant ;
+  **vue, transactions annulées : 14/14**, témoin inverse compris, l'inverse rend l'empreinte `647c3285`.
+- ⛔ **Deux défauts trouvés par les essais, corrigés avant tout** : (1) `NOT (origine = 'vente' AND …)` sur un lien SANS marque rend
+  « inconnu » et la vue **cachait 10 lignes, dont les 4 vrais mandants** → `COALESCE(origine, '')` ; (2) la règle écrite dans la vue, jugée
+  sous RLS, faisait passer la fiche d'un commercial de **155 à 430 ms** → rangée dans une fonction SECURITY DEFINER appelée seulement pour
+  un lien « né de la vente » : **155 → 155 ms**, et la même réponse pour tous les comptes.
+- ⏰ **À poser, dans cet ordre, à son accord** : 1. la vue (patch, puis la répétition, 6 lignes « OK ») ; 2. `APP_RELATION_ACHETEUR_SANS_VENTE=1`
+  dans `.env` ; 3. la nuit suivante marque les 4 testeurs, pousse, et l'étape des types les recalcule (ligne 6 de la répétition).
+  Le code Python est déjà là, **éteint** : la nuit de ce soir ne change rien.
+
+**B — proposer d'archiver la recherche de l'acheteur** (commit `6c25c59`, écran seulement)
+- Fiche contact V2 (celle en ligne) : un bandeau « A acheté le … — sa recherche est toujours active » + **« Archiver la recherche… »** →
+  la fenêtre **« Voulez-vous archiver la recherche de l'acheteur ? »** avec la liste des recherches, **Non** (rien ne part) / **Oui, archiver**
+  (le même travail que la corbeille de chaque carte, une recherche après l'autre). Réservé à qui peut gérer les contacts.
+- « Acheteur » = une **vente vivante** (`acquereur_vente`) ; une recherche en création ou déjà en archivage n'est pas reproposée.
+- Essai `apps/hektor-v1/test_archiver_recherche_acheteur.cjs` **12/12**, témoin inverse ; `npm run build` vert. ⚠ **Pas vu à l'écran.**
+- ⚠ **Le bandeau se verra sur ~149 fiches** (acheteurs de toutes dates avec une recherche active, dont 53 de 2026) — y compris d'anciens
+  acheteurs qui cherchent peut-être un second bien : c'est une proposition, rien ne part sans « Oui ».
+- ⬜ **Non fait** : la même fenêtre juste après une vente faite DANS l'app (0 vente faite dans l'app en 60 jours) — à son choix.
