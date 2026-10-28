@@ -3675,3 +3675,13 @@ Hektor est-il aussi marqué « acheteur » (recommandé : oui — elle n'est ni 
 - **Les 726 annonces du balayage photos** : traitées le 28/10 par `ecb3241` (poussé) — une erreur de **panne** n'écarte plus une annonce à vie,
   elles reprennent leur place dans le lot (à constater au balayage du 28/10 à 23:00). Plus rien à décider.
 - **Le plan est à jour** (ligne ⑧ réécrite, journal du 28/10).
+
+### 52.10 Audit refait (28/10, Frédéric : « avec le chantier des types, les types sont posés d'abord par mon app selon les gestes — audite de nouveau »)
+- **Oui : le TYPE est posé par l'app, au clic.** Les 6 portes (§45 : créer / modifier une transaction, ses gestes, lier / créer / retirer un
+  mandant) appellent `app_recalculer_type_du_bien` ; `app_change_annonce_status_optimistic` (créer l'offre, le compromis, la vente) le fait
+  (vérifié dans son code ce soir). Essai réel du 27/10 : rattacher → « mandant » au clic ; supprimer une vente → l'acheteur perd la vente au clic.
+- **Rejoué ce soir pour une vente faite dans l'app** (transaction annulée : 20000015 sans le lien que Hektor ajoute la nuit) : le type juste
+  après le clic est `acquereur_compromis, acquereur_offre, acquereur_vente` → **« Acheteur — Vente »** à l'écran (`contactDirectoryCategories`).
+- **Ce qui n'est pas posé au clic, et seulement ça** : le **lien au bien** « Propriétaire depuis le … » — `app_change_annonce_status_optimistic`
+  n'écrit pas dans `app_relation` (ses écritures : registre des transactions, carnet, dossier, carnet d'annonce, travail). Il arrive la nuit,
+  en reclassant le lien de Hektor. C'est le seul objet de « C » (étape 3).
