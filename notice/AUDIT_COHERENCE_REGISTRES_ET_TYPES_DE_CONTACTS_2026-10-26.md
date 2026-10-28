@@ -3504,3 +3504,51 @@ Le build est vert, `test_notaire_ecran`, P2 et le type unique restent verts.
   là ; **aucun débordement** dans les blocs notaire ; page à 386 px.
 - **Les deux corrections sont dans le front déployé** : le tri du propriétaire (`startsWith("notaire")?-1`, §49.12) et la ligne des parties
   (`fa-cx-dos-parties{white-space:normal`).
+
+## 52. L'ACTE ET SES EFFETS — audit *(28/10, Frédéric : « ok » à « commencer par les effets de l'acte »)* — lecture seule, rien codé
+
+**Périmètre** : la vente (créée, supprimée) et ce qu'elle doit changer sur le **contact** (type), la **recherche** de l'acheteur, la
+**relation** au bien (propriétaire / mandant). ⚠ Annonce, mandat (sa clôture à la vente est ⑦-3a, déjà en production), documents,
+RDV : **non mesurés ici**. Ce qui reste du plan des types (§29) : **P5** (le « propriétaire depuis la vente » au geste), **P6** (les
+acheteurs d'avant le 17/07, décision A / B / C en attente), **C10** (la vente supprimée), **D4** (proposer de clore la recherche).
+Le « jusqu'à » du vendeur (C11) **n'est plus demandé** (§28.5).
+
+### 52.1 Les gestes, objet par objet
+- **Créer une vente dans l'app** : registre des transactions au clic (R1), table des parties, type de l'acheteur (worker, §47.1).
+  ❌ le lien « propriétaire depuis la vente » n'arrive qu'**à la nuit** (la règle reclasse le lien que Hektor ajoute après la vente).
+- **Créer une vente dans Hektor** (le cas réel) : tout arrive **la nuit**, et la nuit le fait **juste**.
+- **Supprimer une vente** (app ou Hektor) : la ligne quitte le registre, le type est recalculé. ❌ le lien de l'acheteur au bien
+  **reste chez Hektor** (Hektor ne le retire pas) ; la nuit **lève** « né de la vente » (`a_lever`, `relation_ledger.py` ~774) et le
+  lien redevient un lien ordinaire : sur un bien sous mandat, **l'acheteur devient « Mandant »** (C10).
+- **La recherche de l'acheteur** : rien ne la touche à la vente (D4 : la clôture doit être **proposée**, pas automatique). Le geste
+  existe déjà : « Archiver cette recherche dans Hektor » (fiche contact, `handleDeleteContactSearch`, ciblage corrigé le 27/10).
+
+### 52.2 Les mesures (28/10)
+- **Les ventes réelles des 60 derniers jours** (hors biens d'essai) : **55 ventes, 57 acheteurs — 57 « propriétaire depuis la
+  vente »**, 0 lien sans origine, 0 sans lien. ⭐ La règle de nuit fait son travail.
+- **Ventes créées dans l'app** sur ces 60 jours, hors essais : **0**. Toutes les ventes sont saisies **dans Hektor**. ➡ un geste
+  « au moment de la vente dans l'app » (P5, ou une proposition D4 dans la modale) ne servirait aujourd'hui **à personne** ; il servira
+  à la coupure.
+- **C10, prouvé sur le bien d'essai 24113** : les 4 acheteurs des ventes supprimées le 23/10 (20000011, 20000012, 20000013,
+  20000014) sont aujourd'hui **« Mandant »** dans l'annuaire (lien `role_hektor = mandant`, `origine` vide) ; le 5e, dont la vente
+  vit (20000015), est bien « Propriétaire depuis le 23/10 ». Hors essais : **aucune vente réelle supprimée** connue (1 vente « plus
+  dans Hektor » au registre).
+- **D4** : **53 acheteurs de 2026** ont encore une recherche active (**12** sur les 60 derniers jours), aucun n'a sa fiche archivée ;
+  **149** toutes dates confondues. ⚠ On ne sait pas si la recherche a été créée **après** l'achat (un second projet) : la table des
+  recherches ne porte pas sa date de création.
+
+### 52.3 La proposition — À TRANCHER PAR FRÉDÉRIC
+- **A — C10, la vente supprimée ne fait plus de l'acheteur un « Mandant »** · base + règle de nuit. Quand la nuit lève « né de la
+  vente » **parce que la vente a disparu** (et non parce que la personne est nommée dans un nouveau mandat), elle marque le lien
+  « vente annulée » au lieu de le rendre ordinaire ; la vue, le registre des mandats et le type l'ignorent (ni mandant ni propriétaire).
+  Le geste « Supprimer la vente » de l'app fait la même marque **au clic**. Rien chez Hektor (D5). ⚠ Ce que ça pourrait casser :
+  4 lecteurs à mettre d'accord (vue `app_contact_relations_current`, registre des mandats, type de nuit `build_contacts_layer.py`, type
+  SQL) ; un acheteur qui **re-signe** ensuite un mandat sur ce bien doit redevenir mandant (le critère « nommé dans le mandat » le dit).
+  Aujourd'hui : 4 contacts d'essai seulement.
+- **B — D4, proposer de clore la recherche** · écran seulement. Puisque les ventes se saisissent dans Hektor, la proposition vit sur
+  **la fiche contact** : « A acheté le … — sa recherche est toujours active » + le bouton d'archivage qui existe déjà, recherche par
+  recherche ; rien ne se ferme seul. Optionnel : la même liste pour les négociateurs (les 53). ⚠ Ce que ça pourrait casser : rien en base ;
+  l'archivage passe par Hektor (en différé, la nuit) ; une recherche d'un second projet reste au choix de l'humain.
+- **C — P5, le lien au geste de la vente dans l'app** · base + règle de nuit. Utile à la coupure, **0 usage aujourd'hui**. Recommandé :
+  **plus tard**, avec la coupure.
+- **D — P6, les acheteurs d'avant le 17/07** : la décision A / B / C du §28.4 est toujours ouverte.
