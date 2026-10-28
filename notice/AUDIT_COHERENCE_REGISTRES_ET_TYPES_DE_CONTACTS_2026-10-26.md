@@ -3287,3 +3287,21 @@ Mesuré **sous l'identité des 2 commerciaux actifs**, dans une transaction annu
 
 ### 49.6 ✅ DÉCISION 1 (28/10, Frédéric : « A »)
 **On garde la décision du 12/10** : la fiche notaire d'un négociateur ne montre que **ses** dossiers (les transactions de son portefeuille). La fonction de lecture de la fiche notaire sera donc en `security invoker`, sous les règles d'accès actuelles : rien d'ouvert en plus. Les chiffres « avec nous », confrères et médiane seront ceux de ce qu'il voit. Questions 2 à 5 : ouvertes.
+
+### 49.7 ✅ DÉCISIONS 2 À 5 (28/10, Frédéric : « oui, les quatre » — mes recommandations)
+2. **« En cours »** : un compromis vivant sans vente dans sa chaîne, **dont l'acte prévu n'est pas passé**, ou, sans date d'acte, **de moins
+   de 6 mois**. Les autres vont dans un groupe **« À vérifier »**, replié, visible, jamais caché (36 à date d'acte passée le 28/10).
+3. **L'historique** : la bande « Biens & mandats liés » (10 plus récents + « Tout afficher », §48.1) **reste**, sous les ventes des
+   12 mois.
+4. **Les honoraires encaissés** : `commission_agence`.
+5. **« Exporter »** les ventes : **en construction**.
+
+**Le plan de code** (à faire sur un « vas-y ») :
+- **la base** : une fonction de lecture `app_notaire_fiche(p_contact text)` en `security invoker` (décision 1). Elle rend les dossiers du
+  notaire, comptés par transaction et non par ligne de partie, avec leur chaîne (la vente de la chaîne compte comme l'issue, même sans le
+  notaire), les parties, le confrère d'en face, les dates, les montants, l'agence et le négociateur. Patch, inverse et répétition, avec les
+  temps sous un commercial, essayés dans une transaction annulée ;
+- **l'écran** : les blocs notaire dans la fiche V2 quand la catégorie dominante est « Notaire », derrière un interrupteur, à la place de
+  « Recherche & rapprochement » (gardé si le notaire a une recherche active). Les blocs sans données sont marqués « en construction » ;
+- **les essais** : sur le code réel (règle « en cours », chaîne, double compte, droits) ; puis la vérification à l'écran, au bureau et au
+  téléphone.
