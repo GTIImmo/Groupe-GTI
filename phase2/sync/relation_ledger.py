@@ -757,8 +757,8 @@ def _poser_les_liens_nes_de_la_vente(con: sqlite3.Connection) -> None:
         lignes = [dict(r) for r in con.execute(
             "SELECT hektor_contact_id, hektor_annonce_id, role_contact, transaction_date"
             "  FROM app_contact_relation_current"
-            " WHERE role_contact IN ('mandant', 'proprietaire', ?)",
-            (regle_acheteur_proprietaire.ROLE_ACQUEREUR_VENTE,))]
+            " WHERE role_contact IN ('mandant', 'proprietaire', ?, ?, ?)",
+            regle_acheteur_proprietaire.ROLES_ACQUEREUR)]
         nes = regle_acheteur_proprietaire.couples_nes_de_la_vente(con, lignes)
     except Exception as souci:                                       # noqa: BLE001
         # ON NE DEVINE PAS : sans la regle, on laisse le registre tel qu'il etait
@@ -770,8 +770,12 @@ def _poser_les_liens_nes_de_la_vente(con: sqlite3.Connection) -> None:
     deja = {(int(r[0]), str(r[1])): r[2] for r in con.execute(
         "SELECT app_contact_id, hektor_annonce_id, proprietaire_depuis FROM app_relation"
         " WHERE origine = 'vente'")}
+    # ⑧ types §52 (28/10) : l'ACQUEREUR SANS VENTE (la vente supprimee, le lien laisse
+    # par Hektor) est marque 'acheteur' -- jamais retire. La regle est dans
+    # regle_acheteur_proprietaire.couples_acheteurs_sans_vente ; ses gardes y sont ecrites.
+    acheteurs, bilan_sans_vente = _acheteurs_sans_vente(con, lignes, deja, voulus)
     a_poser = [(d or None, c, a) for (c, a), d in voulus.items() if (c, a) not in deja]
-    a_lever = [(c, a) for (c, a) in deja if (c, a) not in voulus]
+    a_lever = [(c, a) for (c, a) in deja if (c, a) not in voulus and (c, a) not in acheteurs]
     if a_poser:
         # la date ne s'ECRASE pas : COALESCE garde celle d'une pose precedente
         con.executemany(
@@ -786,8 +790,61 @@ def _poser_les_liens_nes_de_la_vente(con: sqlite3.Connection) -> None:
     _BILAN_ACHETEUR = {"acheteur_regle": "allumee", "acheteur_nes_de_la_vente": len(voulus),
                        "acheteur_poses": len(a_poser), "acheteur_leves": len(a_lever),
                        "acheteur_au_registre": total}
+    _BILAN_ACHETEUR.update(bilan_sans_vente)
     print(f"   acheteur proprietaire : {len(voulus)} lien(s) ne(s) d'une vente"
           f" ({len(a_poser)} pose(s), {len(a_lever)} leve(s)) -- {total} au registre")
+
+
+def _acheteurs_sans_vente(con: sqlite3.Connection, lignes: list[dict], deja: dict,
+                          voulus: dict) -> tuple[set, dict]:
+    """⑧ types §52 (28/10/2026) -- marque 'acheteur' les liens d'un acquereur sans vente.
+
+    Rend (les couples marques ce soir, le bilan). ⛔ Rien n'est retire : on pose ou on
+    leve la seule marque `origine`. ⚠ CONFLIT AVEC HEKTOR, VOULU ET SILENCIEUX : chaque
+    lien marque est un lien que Hektor range « mandant » ou « proprietaire » ; Hektor le
+    fait SYSTEMATIQUEMENT (5 cas sur 5, 28/10), donc on le COMPTE (bilan) sans prevenir
+    (decision de Frederic : « sauf si Hektor le fait systematiquement »)."""
+    deja_acheteur = {(int(r[0]), str(r[1])) for r in con.execute(
+        "SELECT app_contact_id, hektor_annonce_id FROM app_relation WHERE origine = ?",
+        (regle_acheteur_proprietaire.ORIGINE_ACHETEUR,))}
+    if not regle_acheteur_proprietaire.sans_vente_actif():
+        if deja_acheteur:
+            # le retour arriere : l'interrupteur eteint remet a vide CE QU'IL A POSE
+            con.execute("UPDATE app_relation SET origine = NULL WHERE origine = ?",
+                        (regle_acheteur_proprietaire.ORIGINE_ACHETEUR,))
+        return set(), {"acheteur_sans_vente": "eteinte", "acheteur_sans_vente_remis_a_vide": len(deja_acheteur)}
+    try:
+        nes_le = {(str(r[0]), str(r[1])): r[2] for r in con.execute(
+            "SELECT app_contact_id, hektor_annonce_id, first_seen_at FROM app_relation")}
+        etaient = {(str(c), str(a)) for (c, a) in deja}
+        retenus = regle_acheteur_proprietaire.couples_acheteurs_sans_vente(con, lignes, nes_le, etaient)
+    except Exception as souci:                                       # noqa: BLE001
+        # ON NE DEVINE PAS : les marques d'hier restent, et on le DIT.
+        print(f"   !! acquereur sans vente : regle NON appliquee, marques laissees telles quelles ({souci!r})")
+        return set(deja_acheteur), {"acheteur_sans_vente": "erreur", "acheteur_sans_vente_erreur": str(souci)[:200]}
+    acheteurs = {(int(c), a) for (c, a) in retenus if c.isdigit()} - set(voulus)
+    a_marquer = sorted(acheteurs - deja_acheteur)
+    a_demarquer = sorted(deja_acheteur - acheteurs - set(voulus))
+    if a_marquer:
+        con.executemany(
+            "UPDATE app_relation SET origine = ?, proprietaire_depuis = NULL"
+            " WHERE app_contact_id = ? AND hektor_annonce_id = ?",
+            [(regle_acheteur_proprietaire.ORIGINE_ACHETEUR, c, a) for (c, a) in a_marquer])
+    if a_demarquer:
+        con.executemany(
+            "UPDATE app_relation SET origine = NULL WHERE app_contact_id = ? AND hektor_annonce_id = ?"
+            " AND origine = ?",
+            [(c, a, regle_acheteur_proprietaire.ORIGINE_ACHETEUR) for (c, a) in a_demarquer])
+    conflits = con.execute(
+        "SELECT COUNT(*) FROM app_relation WHERE origine = ? AND present_in_hektor = 1",
+        (regle_acheteur_proprietaire.ORIGINE_ACHETEUR,)).fetchone()[0]
+    print(f"   acquereur sans vente : {len(acheteurs)} lien(s) marque(s) « acheteur »"
+          f" ({len(a_marquer)} neuf(s), {len(a_demarquer)} leve(s)) ;"
+          f" {conflits} en desaccord avec Hektor (attendu, compte sans alerte)")
+    return acheteurs, {"acheteur_sans_vente": "allumee", "acheteur_sans_vente_marques": len(acheteurs),
+                       "acheteur_sans_vente_neufs": len(a_marquer),
+                       "acheteur_sans_vente_leves": len(a_demarquer),
+                       "acheteur_sans_vente_conflits_hektor": conflits}
 
 
 def _bilan_relations(lus, neufs, revus, ecartes, adoptes_au_depart, adoptes,

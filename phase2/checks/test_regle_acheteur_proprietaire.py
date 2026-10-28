@@ -114,6 +114,57 @@ def main() -> int:
     if ancien is not None:
         os.environ[R.INTERRUPTEUR] = ancien
 
+    print("9. types 52 (28/10) : l'ACQUEREUR SANS VENTE -- le lien que Hektor laisse quand la vente est supprimee")
+    c = base([("24113", None, json.dumps({"mandants": "M. Louis PHILIBERT"}), "[]"),
+              ("10414", None, json.dumps({"mandants": "M. Yves FOUGEROUSE"}), "[]")],
+             [("20000011", "ESSAI 8 R3"), ("10059470", "FOUGEROUSE"), ("10000009", "NOUVEAU"), ("20000015", "CINQ")])
+    liens = [lien("20000011", "24113", "mandant"), lien("20000011", "24113", "acquereur_offre", "2026-10-23 13:37:33")]
+    res = R.couples_acheteurs_sans_vente(c, liens, {("20000011", "24113"): "2026-10-24T04:55:00+00:00"}, set())
+    ok(res == {("20000011", "24113")}, "24113 : le lien vu NAITRE apres sa transaction est marque « acheteur »")
+    res = R.couples_acheteurs_sans_vente(c, liens, {}, set())
+    ok(res == {("20000011", "24113")}, "un lien ne CETTE NUIT (pas encore au registre) compte comme vu naitre")
+    vieux = [lien("10059470", "10414", "mandant"), lien("10059470", "10414", "acquereur_compromis", "2020-01-24")]
+    res = R.couples_acheteurs_sans_vente(c, vieux, {("10059470", "10414"): "2026-09-30T10:02:21+00:00"}, set())
+    ok(res == set(), "10414 FOUGEROUSE : vrai mandant, lien du jour de naissance du registre -> intact")
+    res = R.couples_acheteurs_sans_vente(c, vieux, {("10059470", "10414"): "2026-10-20T04:00:00+00:00"},
+                                         {("10059470", "10414")})
+    ok(res == set(), "nomme dans le texte Hektor du mandat : intact, meme marque « vente » hier")
+    jolivet = [lien("10330240", "36244", "proprietaire"), lien("10330240", "36244", "acquereur_compromis", "2009-06-30")]
+    res = R.couples_acheteurs_sans_vente(base([], [("10330240", "JOLIVET")]), jolivet,
+                                         {("10330240", "36244"): "2026-09-30T10:02:21+00:00"}, set())
+    ok(res == set(), "36244 JOLIVET : SANS texte de mandat, seule la garde de naissance le protege -> intact")
+    avant = [lien("10000009", "24113", "mandant"), lien("10000009", "24113", "acquereur_offre", "2026-10-25")]
+    res = R.couples_acheteurs_sans_vente(c, avant, {("10000009", "24113"): "2026-10-24T04:55:00+00:00"}, set())
+    ok(res == set(), "un lien plus ANCIEN que sa transaction (deja la avant) -> intact")
+    res = R.couples_acheteurs_sans_vente(c, avant, {("10000009", "24113"): "2026-09-30T10:02:21+00:00"},
+                                         {("10000009", "24113")})
+    ok(res == {("10000009", "24113")}, "ne d'une vente (marque hier), vente partie : marque « acheteur »")
+    res = R.couples_acheteurs_sans_vente(c, [lien("20000011", "24113", "mandant")],
+                                         {("20000011", "24113"): "2026-10-24"}, set())
+    ok(res == set(), "plus AUCUNE transaction sur le bien : la regle ne touche pas")
+    res = R.couples_acheteurs_sans_vente(c, [lien("20000015", "24113", "proprietaire"),
+                                             lien("20000015", "24113", "acquereur_offre", "2026-10-23"),
+                                             lien("20000015", "24113", "acquereur_vente", "2026-10-23")],
+                                         {("20000015", "24113"): "2026-10-24"}, set())
+    ok(res == set(), "une vente VIVANTE : c'est la regle de la vente (propriétaire), pas celle-ci")
+    res = R.couples_acheteurs_sans_vente(c, [lien("20000011", "24113", "acquereur_offre", "2026-10-23")],
+                                         {}, set())
+    ok(res == set(), "un acquereur SANS lien au bien : rien a marquer")
+
+    print("10. l'interrupteur de l'acquereur sans vente : eteint par defaut, et jamais sans la regle de la vente")
+    a1 = os.environ.pop(R.INTERRUPTEUR, None); a2 = os.environ.pop(R.INTERRUPTEUR_SANS_VENTE, None)
+    os.environ[R.INTERRUPTEUR_SANS_VENTE] = "1"
+    ok(R.sans_vente_actif() is False, "seul, il ne s'allume pas (la regle de la vente est eteinte)")
+    os.environ[R.INTERRUPTEUR] = "1"
+    ok(R.sans_vente_actif() is True, "les deux a 1 : allume")
+    os.environ.pop(R.INTERRUPTEUR_SANS_VENTE)
+    ok(R.sans_vente_actif() is False, "sans sa variable : eteint")
+    os.environ.pop(R.INTERRUPTEUR, None)
+    if a1 is not None:
+        os.environ[R.INTERRUPTEUR] = a1
+    if a2 is not None:
+        os.environ[R.INTERRUPTEUR_SANS_VENTE] = a2
+
     print()
     print("ECHECS :", len(ECHECS) if ECHECS else 0)
     return 1 if ECHECS else 0

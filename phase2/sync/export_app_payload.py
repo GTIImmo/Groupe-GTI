@@ -2049,7 +2049,10 @@ def charger_mandants_du_registre_des_liens(
         colonnes_rel = {c[1] for c in con.execute("PRAGMA table_info(app_relation)")}
     except sqlite3.OperationalError:
         colonnes_rel = set()
-    sans_les_acheteurs = (" AND COALESCE(r.origine, '') <> 'vente'"
+    # ⑧ types §52 (28/10) : et pas davantage l'ACQUEREUR SANS VENTE (origine
+    #   'acheteur', relation_ledger._acheteurs_sans_vente) -- le lien que Hektor laisse
+    #   quand une vente est supprimee n'a jamais fait de lui un mandant.
+    sans_les_acheteurs = (" AND COALESCE(r.origine, '') NOT IN ('vente', 'acheteur')"
                           if "origine" in colonnes_rel else "")
     try:
         lignes = con.execute(

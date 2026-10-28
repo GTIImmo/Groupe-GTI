@@ -53,6 +53,7 @@ from __future__ import annotations
 
 import json
 import os
+from datetime import date
 import sqlite3
 import sys
 import unicodedata
@@ -195,4 +196,91 @@ def couples_nes_de_la_vente(conn: sqlite3.Connection,
     textes = charger_textes_des_mandats(conn, {a for _, a in candidats})
     noms = charger_noms(conn, {c for c, _ in candidats})
     return {cle: ventes[cle] for cle in sorted(candidats)
+            if ne_de_la_vente(noms.get(cle[0], ""), textes.get(cle[1], []))}
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ⑧ types §52 (28/10/2026) -- L'ACQUEREUR SANS VENTE N'EST NI MANDANT NI PROPRIETAIRE
+# ══════════════════════════════════════════════════════════════════════════════
+# Note : notice/AUDIT_COHERENCE_REGISTRES_ET_TYPES_DE_CONTACTS_2026-10-26.md, §52.
+#
+# LE DEFAUT. A la vente, Hektor ajoute l'acheteur aux personnes du bien (rangé
+# « mandant »), et il ne l'en retire JAMAIS quand la vente est supprimee (verifie le
+# 28/10 : 5 cas sur 5). La vente partie, plus rien ne justifie « ne de la vente » :
+# le lien redevient ordinaire et l'acheteur devient MANDANT d'un bien qu'il n'a pas
+# vendu (24113 : 20000011 a 20000014).
+#
+# LA DECISION DE FREDERIC (28/10) : tant qu'une transaction de la personne est
+# presente sur le bien (meme refusee ou annulee), elle est ACHETEUR de ce bien ; notre
+# ecriture gagne ; « il ne faut pas retirer mandant ou proprietaire, attention ».
+# ⛔ Donc RIEN N'EST RETIRE : ni le lien, ni le role de Hektor. On MARQUE le lien
+#   (origine = 'acheteur') ; la vue et le registre des mandats ne le comptent plus.
+#
+# LES GARDES -- toutes, sinon on ne touche pas :
+#   1. la personne est acquereur d'une transaction PRESENTE de ce bien, sans vente ;
+#   2. le lien est NE D'UNE VENTE (marque 'vente' de la veille), OU nous avons VU
+#      Hektor l'ajouter : ne dans notre registre APRES sa naissance (30/09) et pas
+#      avant la 1re transaction de la personne sur ce bien. ⭐ C'est la garde qui
+#      distingue : les 4 vrais mandants que Hektor porte aussi comme acquereur
+#      (10414, 39032, 39291, 36244 -- erreurs de saisie 2009-2020) ont un lien plus
+#      ancien que le registre. ⚠ « vendeur des transactions » NE distingue PAS : une
+#      fois l'acheteur ajoute par Hektor, ses transactions suivantes le portent vendeur ;
+#   3. son nom n'est pas dans le texte Hektor d'un mandat du bien (meme garde que la
+#      regle de la vente) ; une fiche sans nom ne se juge pas.
+# Une personne qui n'a plus AUCUNE transaction sur le bien n'est plus un acquereur :
+# la regle ne la touche pas.
+#
+# L'INTERRUPTEUR : APP_RELATION_ACHETEUR_SANS_VENTE=1, et seulement si la regle de la
+# vente est allumee. Eteint, la nuit remet a vide les marques 'acheteur'.
+INTERRUPTEUR_SANS_VENTE = "APP_RELATION_ACHETEUR_SANS_VENTE"
+ORIGINE_ACHETEUR = "acheteur"
+ROLES_ACQUEREUR = ("acquereur_offre", "acquereur_compromis", ROLE_ACQUEREUR_VENTE)
+# Le jour ou le registre des liens est ne (tous ses liens d'alors portent cette date) :
+# un lien de ce jour-la peut etre bien plus ancien chez Hektor, on ne l'a pas vu naitre.
+NAISSANCE_DU_REGISTRE = "2026-09-30"
+
+
+def sans_vente_actif() -> bool:
+    return actif() and (os.environ.get(INTERRUPTEUR_SANS_VENTE) or "0").strip() == "1"
+
+
+def couples_acheteurs_sans_vente(conn: sqlite3.Connection,
+                                 liens: Iterable[dict],
+                                 nes_le: dict[tuple[str, str], str],
+                                 etaient_de_la_vente: set[tuple[str, str]]) -> set[tuple[str, str]]:
+    """Pour des lignes au format de la table de nuit (hektor_contact_id = NOTRE numero),
+    rend les couples (contact, annonce) dont le lien au bien est celui d'un ACQUEREUR
+    sans vente. `nes_le` : la date de naissance de chaque lien dans notre registre
+    (absent = ne cette nuit) ; `etaient_de_la_vente` : les liens marques 'vente' hier."""
+    premiere_tx: dict[tuple[str, str], str] = {}
+    ventes: set[tuple[str, str]] = set()
+    du_bien: set[tuple[str, str]] = set()
+    for l in liens:
+        cle = (str(l.get("hektor_contact_id") or "").strip(),
+               str(l.get("hektor_annonce_id") or "").strip())
+        if not cle[0] or not cle[1]:
+            continue
+        role = l.get("role_contact")
+        if role in ROLES_ACQUEREUR:
+            if role == ROLE_ACQUEREUR_VENTE:
+                ventes.add(cle)
+            jour = str(l.get("transaction_date") or "").strip()[:10]
+            if cle not in premiere_tx or (jour and (not premiere_tx[cle] or jour < premiere_tx[cle])):
+                premiere_tx[cle] = jour
+        elif role in ROLES_DU_BIEN:
+            du_bien.add(cle)
+    aujourdhui = date.today().isoformat()
+    candidats = set()
+    for cle in (du_bien & set(premiere_tx)) - ventes:
+        if cle in etaient_de_la_vente:
+            candidats.add(cle)
+            continue
+        ne = str(nes_le.get(cle) or aujourdhui)[:10]
+        if ne > NAISSANCE_DU_REGISTRE and (not premiere_tx[cle] or ne >= premiere_tx[cle]):
+            candidats.add(cle)
+    if not candidats:
+        return set()
+    textes = charger_textes_des_mandats(conn, {a for _, a in candidats})
+    noms = charger_noms(conn, {c for c, _ in candidats})
+    return {cle for cle in candidats
             if ne_de_la_vente(noms.get(cle[0], ""), textes.get(cle[1], []))}
