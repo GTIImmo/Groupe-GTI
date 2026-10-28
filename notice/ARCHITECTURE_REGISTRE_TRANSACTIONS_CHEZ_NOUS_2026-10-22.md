@@ -3472,7 +3472,9 @@ réserve. Le défaut de la carte reste ouvert : le corriger avec le mot de Hekto
   23 lignes sans état sur 1001339 / 1001381 / 1001384 / 1001390 / 1001393 **et** 23 dans tout le carnet. **Sauvegarde datée**
   `app_affaire_champ_app_avant_point7_20261028` d'abord.
 - Éprouvé dans une transaction annulée : avant « sans_objet 26, vide 23 » → après « sans_objet 49, vide 0 » → inverse « vide 23 ».
-- ⏰ À poser à son accord.
+- ✅ **POSÉ le 28/10** (accord : « Ok vas y »). Comptes après la pose : carnet entier **0 vide**, 49 « sans_objet » sur 60 ;
+  les 5 offres : 31 lignes, toutes « sans_objet » (23 closes ce jour + 8 qui l'étaient déjà) ; sauvegarde : 31 lignes dont 23 vides ;
+  **aucune autre ligne du carnet touchée**. Retour arrière : `patch_point7_carnet_sans_objet_2026-10-28_INVERSE.sql`.
 
 ### D8 et D9 — AUDIT REFAIT le 28/10 *(Frédéric : « audit de nouveau D8 et D9 et explique-moi »)* — lecture seule, rien écrit
 
