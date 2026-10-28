@@ -3483,3 +3483,6 @@ Le build est vert, `test_notaire_ecran`, P2 et le type unique restent verts.
   écrit en caractères réels dans le fichier, ce qui marche pareil. Le mutant est découpé par ses bornes, sans motif.
 - ⛔ **L'ordre de pose** : la base **avant** le front. Sinon le carnet proposerait un geste sans fonction derrière, et les pièces et
   conditions resteraient vides.
+
+### 51.1 ✅ POSÉ LE 28/10 À 13:45 *(Frédéric : « oui, pose »)*
+`patch_notaire_blocs_2026-10-28.sql` passé (COMMIT ; le seul message est l'avis normal « policy … does not exist, skipping » du DROP POLICY IF EXISTS), répétition **8 / 8 verte du premier coup** (800 dossiers gardés, documents seulement sur les compromis sans vente, témoin positif 7 compromis avec documents, conditions de la transaction 1001394, 260 ms admin, 364 ms commercial). ⬜ Front à pousser par Frédéric (6 commits), puis à voir à l'écran.
