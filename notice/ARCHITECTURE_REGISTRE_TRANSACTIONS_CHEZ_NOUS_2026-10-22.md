@@ -3464,3 +3464,53 @@ l'essai 1001394 (110 000 affiché comme prix public).
 fenêtre. Les mots proposés (« Prix de vente FAI » / « Prix hors honoraires acquéreur » / « Net vendeur ») restent en
 réserve. Le défaut de la carte reste ouvert : le corriger avec le mot de Hektor serait « Prix de vente » au lieu de
 « Prix public » — à son « vas-y ».
+
+### Point 7 B — LA CLÔTURE DES 5 OFFRES D'ESSAI : préparée et éprouvée le 28/10, **non posée** *(Frédéric : « on les clos ou supprime »)*
+- **Recommandé : CLORE**, pas supprimer. La ligne garde ce qui a été saisi, quand et par qui ; seul l'état passe de vide à
+  « sans_objet » (l'état que le carnet porte déjà sur 26 lignes). Supprimer effacerait la trace des essais pour rien.
+- Patch `supabase/patch_point7_carnet_sans_objet_2026-10-28.sql` + `_INVERSE.sql`. **Garde** : s'arrête s'il n'y a pas exactement
+  23 lignes sans état sur 1001339 / 1001381 / 1001384 / 1001390 / 1001393 **et** 23 dans tout le carnet. **Sauvegarde datée**
+  `app_affaire_champ_app_avant_point7_20261028` d'abord.
+- Éprouvé dans une transaction annulée : avant « sans_objet 26, vide 23 » → après « sans_objet 49, vide 0 » → inverse « vide 23 ».
+- ⏰ À poser à son accord.
+
+### D8 et D9 — AUDIT REFAIT le 28/10 *(Frédéric : « audit de nouveau D8 et D9 et explique-moi »)* — lecture seule, rien écrit
+
+**D8 — deux règles pour ranger une transaction dans son dossier (la « chaîne »).**
+- Au clic, `app_chaine_pour` (SQL) décide tout de suite. La nuit, `recalculer_les_chaines` (Python) refait **toutes** les chaînes et
+  **gagne** ; elle a la v2 (`APP_CHAINAGE_V2=1` et `APP_CHAINAGE_SANS_DATE=1`, allumées le 20/10, chantier clos). La règle du clic,
+  elle, n'a **pas** les replis v2 (§2.2, 2.3, 3.0, 3.2, 3.3, sans-date §2.6).
+- Conséquence possible : entre le clic et la nuit, une transaction peut rester **seule dans son dossier** ; la nuit la recolle.
+  Le numéro du dossier suit la même convention des deux côtés (le plus petit numéro de ses transactions, ou le sien).
+- **Ce qui est rangé PAR DOSSIER, donc exposé à un changement de nuit** — mesuré :
+  - les **conditions** (`app_affaire_condition`, 5 lignes) et les **notes** (`app_affaire_note`, 9 lignes) gardent une copie du n° de
+    dossier, mais l'écran les lit **par transaction** (`api.ts:1713`, `api.ts:1766`) → **à l'abri** ;
+  - la **répartition de commission** (`app_affaire_repartition`) est lue **par dossier** (`api.ts:6487`, `6541`) → **seule exposée**.
+    Si la nuit recolle la transaction ailleurs, la répartition saisie reste sous l'ancien numéro : **gardée** (la purge ne retire que
+    les lignes « hektor », `app_repartition_purger_orphelines`) mais **invisible** ;
+  - aucun déclencheur ne déplace ces lignes quand le dossier change (seuls ceux des parties, sur le registre).
+- **Mesure** : 22 répartitions **saisies** sur 6 dossiers, tous nés dans l'app. **5 vivants, 1 orphelin** : le dossier 1001347
+  (2 lignes du 14/09, Frédéric, dossier 1352132), dont la transaction **n'existe plus** (essai supprimé) — pas une victime de la nuit.
+  ➡ **Aucune saisie perdue aujourd'hui.**
+- ⚠ **Non mesurable** : combien de fois le clic et la nuit ont donné des numéros différents — le numéro donné au clic n'est écrit
+  nulle part (ni dans le travail, ni dans un journal). Rejouer aujourd'hui la règle du clic sur les 341 transactions nées dans l'app
+  donne 220 identiques / 121 différentes, **mais ce rejeu lit l'état d'aujourd'hui, pas celui du moment** (une vente arrivée depuis
+  ferme le dossier) : ⛔ ce chiffre ne mesure pas l'écart réel, il ne doit pas être cité comme tel.
+- Le reste dépend du dossier **tel qu'il est maintenant** et se recalcule à chaque lecture : fiche notaire (`vente_chaine`,
+  `compromis_chaine`), « dossiers ouverts du bien », héritage compromis ← offre acceptée.
+- ➡ **Correctif possible, à décider** : soit donner au clic la règle v2 (recopier les replis en SQL : gros, et une 4e copie de la
+  règle à tenir), soit **faire suivre la répartition** quand la nuit change le dossier d'une transaction (petit, ciblé : c'est la seule
+  donnée exposée), soit **laisser** (0 victime mesurée).
+
+**D9 — le bloc « Parties à l'affaire » lit un résumé fabriqué la nuit.**
+- Le résumé (`app_registre_mandats_current.affaires_detail_json`) n'est refait que la nuit.
+- ✅ **Déjà traité le 23/10 (C1, §25, vu à l'écran §26)** : si le résumé n'a pas la transaction la plus avancée du registre (ou n'a pas
+  de ligne), l'écran le **refabrique tout de suite** depuis le registre (`ckDetailDepuisRegistre`, App.tsx ~30251).
+- ⚠ **Ce qui reste, lu dans le code** (`ckResumeNuitAJour`, App.tsx ~30297) : l'écran juge le résumé « à jour » dès qu'il porte **le
+  même numéro** de transaction la plus avancée. Si, dans la journée, **cette même transaction change** (offre refusée, compromis annulé,
+  acquéreur modifié) ou si une transaction **plus avancée est supprimée**, le bloc montre la version de la nuit jusqu'au lendemain.
+- **Mesure** : 14 345 blocs du résumé (7 370 compromis, 6 729 ventes, 246 offres), **tous retrouvés au registre, 0 état différent**.
+  ⚠ Le zéro s'explique : **aucun geste sur une transaction depuis le 26/10** (dernier travail 26/10 18:44). **Témoin positif** :
+  une offre passée à « refusée » dans une transaction annulée est bien attrapée (1).
+- ➡ **Correctif possible, à décider** : comparer aussi **l'état** (et l'acquéreur) de la transaction, pas seulement son numéro — une
+  ligne dans `ckResumeNuitAJour`, écran seulement, rien en base.
