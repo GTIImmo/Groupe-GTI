@@ -26960,15 +26960,25 @@ function MandatRegisterScreen(props: {
     [editorRowKey], // eslint-disable-line react-hooks/exhaustive-deps
   )
   // Données complètes chargées -> préremplissage identique à la fiche annonce
-  // (mêmes derivations : contacts depuis proprietaires_json, adresse depuis le detail).
+  // (mêmes derivations : contacts depuis notre registre puis proprietaires_json, adresse depuis le detail).
   const editorFullDetail = useMemo(
     () => (editorDetailed ? detailPayload(editorDetailed) : null),
     [editorDetailed],
   )
-  const editorFullContacts = useMemo(
-    () => (editorFullDetail ? buildDetailContactsFromProprietaires(editorFullDetail.proprietaires_json, 'detail-contact') : []),
-    [editorFullDetail],
-  )
+  // ⑧ C9 (29/10/2026) : NOTRE REGISTRE D'ABORD, comme la fiche annonce (③c, 02/10).
+  //   Cet editeur etait le dernier endroit de la rubrique a ne lire QUE la copie de
+  //   Hektor : le meme mandat se pre-remplissait autrement ouvert par l'annonce ou
+  //   par le registre. `mandants_registre_json` est pose par loadDossierDetail (meme
+  //   interrupteur VITE_RUBRIQUE_CONTACT_REGISTRE) ; son ABSENCE est le signal du
+  //   repli, une liste VIDE est une reponse et se respecte.
+  const editorFullContacts = useMemo(() => {
+    if (!editorFullDetail) return []
+    const duRegistre = editorFullDetail.mandants_registre_json
+    if (duRegistre !== null && duRegistre !== undefined) {
+      return buildDetailContactsFromRegistre(duRegistre, 'detail-contact')
+    }
+    return buildDetailContactsFromProprietaires(editorFullDetail.proprietaires_json, 'detail-contact')
+  }, [editorFullDetail])
   const editorFullAddress = useMemo(
     () => (editorFullDetail
       ? [editorFullDetail.adresse_privee_listing || editorFullDetail.adresse_detail, editorFullDetail.code_postal_public_listing || editorFullDetail.code_postal_prive_detail || editorFullDetail.code_postal, editorFullDetail.ville_publique_listing || editorFullDetail.ville_privee_detail || selectedDetail?.ville].filter(Boolean).join(', ')
@@ -26980,10 +26990,14 @@ function MandatRegisterScreen(props: {
     () => ((selectedDetail ? parseRegisterDetailPayload(selectedDetail) : {}) as unknown as DossierDetailPayload),
     [editorRowKey], // eslint-disable-line react-hooks/exhaustive-deps
   )
-  const editorPartialContacts = useMemo(
-    () => buildDetailContactsFromProprietaires(String((editorPartialDetail as unknown as Record<string, unknown>).proprietaires_json ?? '[]'), 'register-contact'),
-    [editorPartialDetail],
-  )
+  // ⑧ C9 (29/10/2026) : le blob de Hektor est ABSENT des 24 560 lignes du registre
+  //   (mesure du 29/10) -- ce repli ne pre-remplissait donc JAMAIS un mandant. On garde
+  //   le blob s'il venait un jour, et sinon NOTRE liste du registre (les noms seuls).
+  const editorPartialContacts = useMemo(() => {
+    const depuisHektor = buildDetailContactsFromProprietaires(String((editorPartialDetail as unknown as Record<string, unknown>).proprietaires_json ?? '[]'), 'register-contact')
+    if (depuisHektor.length > 0) return depuisHektor
+    return buildDetailContactsFromMandantsJson(selectedDetail?.mandants_json as string | null | undefined)
+  }, [editorPartialDetail]) // eslint-disable-line react-hooks/exhaustive-deps
   const mdPriceEvents = selectedDetail
     ? readPriceChangeEvents((selectedDetailPayload.price_change_events_json ? selectedDetailPayload : selectedDetail) as Record<string, unknown>)
         .slice()

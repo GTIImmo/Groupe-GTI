@@ -3895,3 +3895,13 @@ sans lien, et sans la case cible**. La fiche du mandant n'arrive chez nous qu'av
   du blob — les mêmes que la fiche annonce montre depuis le 02/10 (0 ligne perdue sur 2 265 biens, +341 personnes) ; `mandants_json` ne porte
   que les noms ; le piège des numéros du 05/10 (dans `mandants_json`, `hektor_contact_id` est celui de Hektor) ne mord pas ici, l'éditeur ne
   détache personne.
+
+### 54.4 ✅ C9 CODÉ *(29/10, Frédéric : « oui, code-le »)* — écran seul, à pousser
+- **`App.tsx`, deux `useMemo` de l'éditeur ouvert depuis le registre** : complet → `mandants_registre_json` d'abord (une liste vide est
+  respectée), `proprietaires_json` en repli ; partiel → le blob s'il existait, sinon `mandants_json` (nos noms). Le reste du fichier est
+  intact. `npm run build` ✅.
+- **Essai** `apps/hektor-v1/test_c9_editeur_registre.cjs` : **11/11** — les deux vrais choix de source exécutés (esbuild + bâtisseurs
+  factices), la fiche annonce sur la même règle, **témoin inverse** sur `46a28ed` (l'ancien éditeur lisait le blob même registre lu),
+  **mutant** attrapé.
+- ⚠ **Pas vu à l'écran** : il faut une session connectée. À regarder après le push : Registre des mandats → un mandat d'un bien vivant →
+  l'éditeur du mandat, ses mandants pré-remplis doivent être ceux de la fiche annonce du même bien.
