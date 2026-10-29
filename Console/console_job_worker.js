@@ -19586,15 +19586,6 @@ async function fetchHektorContactSearchList(contactId) {
   return (await lireRecherchesHektor(contactId)).recherches;
 }
 
-// La date d'auto-archivage que Hektor AFFICHE pour une recherche, lue dans son
-// detail (`searchNum` = son rang). null si Hektor n'en montre pas -- une
-// recherche deja archivee n'en affiche plus.
-async function lireDateAutoArchivageHektor(contactId, rang, idCritere) {
-  const html = await fetchHektorContactSearchTabHtml(contactId, rang);
-  const m = html.match(new RegExp(`id=["']recentValueAutoarchivage${idCritere}["'][^>]*?value=["']([^"']*)["']`));
-  return m ? m[1] : null;
-}
-
 // Combien de recherches NOTRE table connait pour ce contact (archivees
 // comprises, comme chez Hektor). null = « je ne sais pas ».
 async function compterNosRecherches(identite) {
@@ -20470,15 +20461,50 @@ async function handleUpdateHektorContactSearch(job) {
   };
 }
 
-// Archive (= suppression cote app) une recherche via modifDateArchiveCritere.
+// Le cadenas d'UNE recherche, lu dans l'onglet de Hektor (le cadenas EST le
+// marqueur de l'archivage : tranche le 16/10, CHANTIER_7). null = « je ne sais
+// pas » -- liste lue par l'ancienne regex (pas d'icone) ou recherche absente.
+async function lireCadenasRechercheHektor(contactId, idCritere) {
+  const { source, recherches } = await lireRecherchesHektor(contactId);
+  const etats = recherches.map((r) => (r.archivee === true ? "A" : r.archivee === false ? "o" : "?")).join("");
+  const entree = recherches.find((r) => r.idCritere === String(idCritere)) || null;
+  if (source !== "data-search-id") return { cadenas: null, motif: "liste lue par l'ancienne regex", source, etats };
+  if (!entree) return { cadenas: null, motif: "recherche absente de la liste", source, etats };
+  return { cadenas: entree.archivee, rang: entree.index, source, etats };
+}
+
+// Archive (= suppression cote app) une recherche chez Hektor, COMME LA PAGE DE
+// HEKTOR LE FAIT.
+//
+// 29/10 (§19.6 F) : la page archive en DEUX temps (capture du 12/06,
+// Console/exports/probe_recherche_tab.txt l. 210-221) : `modifDateArchiveCritere`
+// pose la date d'AUTO-archivage, puis, si le serveur repond `desarchiveCritere`,
+// elle enchaine `archiveUnarchiveContactRecherche` -- la BASCULE, celle qui pose
+// le CADENAS. Depuis le 12/06 on ne faisait que le 1er temps : la date etait
+// posee, la recherche restait ACTIVE chez Hektor (mails de resume, relances)
+// alors que l'app la montrait archivee (471896 : supprimee le 27/10, toujours
+// sans cadenas le 29/10).
+//
+// La bascule ne sait que BASCULER : envoyee sur une recherche deja sous cadenas,
+// elle la REACTIVE. On lit donc le cadenas AVANT (sans cadenas -> bascule ; deja
+// sous cadenas -> la date seule), et on le RELIT APRES : pas de cadenas a la fin
+// = une erreur, jamais un « archived » sur un simple 200.
 async function archiveHektorContactSearch(job, contactId, idCritere) {
   const now = new Date();
   const dateArchive = `${String(now.getDate()).padStart(2, "0")}-${String(now.getMonth() + 1).padStart(2, "0")}-${now.getFullYear()}`;
+  const avant = await lireCadenasRechercheHektor(contactId, idCritere);
   await logJob(job.id, "hektor_contact_search_archive", "running", "Archivage recherche contact Hektor", {
     hektor_contact_id: String(contactId),
     idCritere: String(idCritere),
     dateArchive,
+    avant,
   });
+  if (avant.cadenas === null) {
+    await logJob(job.id, "hektor_contact_search_archive", "error",
+      `Recherche ${idCritere} NON archivee : cadenas illisible chez Hektor (${avant.motif}) -- rien n'est ecrit`,
+      { hektor_contact_id: String(contactId), idCritere: String(idCritere), avant });
+    throw new Error(`Recherche Hektor ${idCritere} : cadenas illisible (${avant.motif}), rien n'est ecrit`);
+  }
   const body = new URLSearchParams({
     mode: "contacts-contactProfile-modifDateArchiveCritere",
     idCritere: String(idCritere),
@@ -20499,15 +20525,37 @@ async function archiveHektorContactSearch(job, contactId, idCritere) {
   } catch (_) {
     parsed = response.text;
   }
-  // 27/10 (§19.5) : ce geste POSE une date, il n'archive pas sur le moment --
-  // Hektor archive en differe (la nuit) ; 6 recherches sur 6 ainsi traitees
-  // etaient archivees le 27/10. Le journal ne dit plus « archivee ».
-  await logJob(job.id, "hektor_contact_search_archive", "done", "Date d'auto-archivage posee chez Hektor (archivage en differe)", {
-    hektor_contact_id: String(contactId),
-    idCritere: String(idCritere),
-    result: parsed,
-  });
-  return { dateArchive, result: parsed };
+  // 2e temps, la bascule -- seulement sur une recherche SANS cadenas, et
+  // seulement si Hektor la demande (la page fait exactement ce test).
+  let bascule = null;
+  if (avant.cadenas === false && parsed && parsed.desarchiveCritere) {
+    const reponse = await hektorFetch(XMLRPC_URL, {
+      method: "POST",
+      body: new URLSearchParams({
+        mode: "contacts-contactProfile-recherche-archiveUnarchiveContactRecherche",
+        idCritere: String(idCritere),
+        idContact: String(contactId),
+      }),
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+        Referer: `${ADMIN_URL}?page=/mes-contacts/mon-contact&id=${encodeURIComponent(String(contactId))}`,
+        "X-Requested-With": "XMLHttpRequest",
+      },
+    });
+    bascule = { status: reponse.status, texte: String(reponse.text || "").slice(0, 200) };
+    await sleep(1000);
+  }
+  const apres = await lireCadenasRechercheHektor(contactId, idCritere);
+  const journal = { hektor_contact_id: String(contactId), idCritere: String(idCritere), result: parsed, avant, bascule, apres };
+  if (apres.cadenas !== true) {
+    await logJob(job.id, "hektor_contact_search_archive", "error",
+      `Recherche ${idCritere} toujours SANS cadenas chez Hektor apres le geste (date ${dateArchive} posee) -- a verifier`, journal);
+    throw new Error(`Recherche Hektor ${idCritere} toujours active apres l'archivage (date ${dateArchive} posee, pas de cadenas)`);
+  }
+  await logJob(job.id, "hektor_contact_search_archive", "done",
+    avant.cadenas ? `Recherche ${idCritere} deja sous cadenas chez Hektor (date ${dateArchive} posee, rien d'autre)`
+      : `Recherche ${idCritere} archivee chez Hektor : cadenas relu`, journal);
+  return { dateArchive, result: parsed, avant, bascule, apres };
 }
 
 async function handleDeleteHektorContactSearch(job) {
@@ -20515,55 +20563,22 @@ async function handleDeleteHektorContactSearch(job) {
   const { contactId } = await ensureContactSearchExecution(job, payload);
   const cible = await cibleRechercheHektor(job, contactId, payload);
   const idCritere = cible.idCritere;
+  // 29/10 (§19.6 F) : archiveHektorContactSearch relit le cadenas elle-meme et
+  // ECHOUE s'il n'est pas la -- arriver ici veut dire « sous cadenas chez Hektor ».
   const archive = await archiveHektorContactSearch(job, contactId, idCritere);
-  await sleep(1000);
-  const relu = await relireArchivageRechercheBestEffort(job, contactId, idCritere, archive.dateArchive);
   const syncJob = await enqueueRefreshConsoleContactDataJobBestEffort(job, contactId, {
     reason: "delete_hektor_contact_search",
     priority: 82,
   });
   return {
-    // `status` garde sa valeur (rien ne la lit, mais on ne change pas un contrat
-    // en passant) ; `archivage` dit ce qui est VRAI chez Hektor a cet instant.
     status: "archived",
-    archivage: relu.archivee ? "fait" : relu.date_posee ? "differe" : "non_verifie",
+    archivage: archive.bascule ? "fait" : "deja_archivee",
     hektor_contact_id: contactId,
     idCritere,
     search_index: cible.index,
     archive,
-    relu,
     sync_job: syncJob,
   };
-}
-
-// 27/10 (§19.5) : APRES le geste, on relit Hektor -- le 26/10, le travail a dit
-// « archived » sur un simple 200 alors que la date etait partie sur une autre
-// recherche. On cherche le numero VISE (pas un rang : la liste peut avoir bouge)
-// et on lit la date que Hektor affiche pour lui. Best effort : le geste est
-// fait, une relecture ratee ne le defait pas -- elle se dit au journal.
-async function relireArchivageRechercheBestEffort(job, contactId, idCritere, dateArchive) {
-  const relu = { trouvee: false, rang: null, archivee: null, date: null, date_posee: false };
-  try {
-    const { source, recherches } = await lireRecherchesHektor(contactId);
-    const entree = recherches.find((r) => r.idCritere === String(idCritere)) || null;
-    relu.source = source;
-    if (entree) {
-      relu.trouvee = true;
-      relu.rang = entree.index;
-      relu.archivee = entree.archivee;
-      relu.date = await lireDateAutoArchivageHektor(contactId, entree.index, idCritere);
-      relu.date_posee = relu.date === dateArchive;
-    }
-  } catch (erreur) {
-    relu.erreur = erreur && erreur.message ? erreur.message : String(erreur);
-  }
-  const ok = relu.archivee === true || relu.date_posee;
-  await logJob(job.id, "hektor_contact_search_archive_relue", ok ? "done" : "error",
-    relu.archivee === true ? `Recherche ${idCritere} relue : deja archivee chez Hektor`
-      : relu.date_posee ? `Recherche ${idCritere} relue : date ${dateArchive} posee, archivage attendu cette nuit`
-        : `Recherche ${idCritere} relue : date NON retrouvee chez Hektor -- a verifier`,
-    { hektor_contact_id: String(contactId), idCritere: String(idCritere), dateArchive, ...relu });
-  return relu;
 }
 
 async function createHektorMandantContact(job, annonceId, payload) {

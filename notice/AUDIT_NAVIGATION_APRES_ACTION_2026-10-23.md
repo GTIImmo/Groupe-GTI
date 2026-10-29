@@ -1860,6 +1860,156 @@ c'est 605967.
      aujourd'hui ?). Le chantier « marque locale » reste ouvert tant que ce n'est pas compris.
   ⏰ **Témoin le 28/10 au matin** : 471896 doit porter l'icône archivée chez Hektor (archivage de nuit).
 
+**F. ⛔ TÉMOIN ROUGE LE 29/10 (relu après le run et la descente, Chrome de Frédéric, lecture seule) — LA DATE N'ARCHIVE PAS.
+MA CONCLUSION DU 27/10 « HEKTOR ARCHIVE EN DIFFÉRÉ » ÉTAIT FAUSSE.**
+- Chez Hektor, 605946 = `AAo` : **471896 toujours ACTIVE**, date affichée **27-10-2026**, deux nuits plus tard. 605967 / 471882
+  toujours active aussi.
+- **Les 6 « preuves » du §19.5 A étaient CONFONDUES** — je les avais prises pour « la date a archivé » sans chercher une autre
+  cause :
+  - **5 sur 6** sont les acquéreurs d'essai de la vente **VA6482** (605946, 605973, 605975, 605976 ; leurs contacts portent
+    `date_maj` **23/10 19:38 locale = 17:38 UTC**, la seconde de la vente `change_hektor_annonce_status` de 24113) : c'est la
+    **vente chez Hektor** qui a pu archiver leurs recherches, pas notre date ;
+  - **113412 (Gladys DURIEUX)** : contact **archivé le 16/10** (⑦-1) — et archiver un contact archive ses recherches ;
+  - 414535 : non expliqué, mais seul il ne prouve rien.
+  ➡ **La seule mesure propre est celle-ci : une date posée sur une recherche active, sans autre geste, ne l'a pas archivée en
+  deux nuits.** C'est ce que disait l'essai 2 (marche 1) **avant** que je le « corrige ».
+- **Notre base ment dans l'autre sens** : `app_contact_search_current` dit 77256 (= 471896) **archivée**, alors que la
+  dernière réponse de l'API pour 605946 (`raw_api_response` 1778601, 27/10 14:17:20) disait `archive: "0"` et qu'aucune
+  relecture n'a eu lieu depuis (le run de nuit ne relit pas ce contact). C'est **notre marque locale** qui tient — l'app
+  montre la recherche supprimée, Hektor la garde active (et ses rapprochements avec).
+- **Ce qui reste vrai** : le **ciblage** (pièces 1-3, `319e1e4`) est juste et prouvé en réel. **Ce qui tombe** : « on garde la
+  date ». Le défaut est bien **DOUBLE** — ciblage *(corrigé)* **et geste** *(la date n'archive pas)*.
+- ➡ **À décider par Frédéric (rien codé)** : remplacer la date par la **bascule** `archiveUnarchiveContactRecherche`
+  **gardée par la lecture de l'icône** (déjà lue par la pièce 1 : `archivee`) — active → bascule → relire : doit être
+  archivée, sinon erreur ; déjà archivée → ne rien envoyer (la bascule la réactiverait). Même chose pour la qualification
+  acquéreur. Puis archiver à la main **471896** (essai) et **471882** (605967) : écritures chez Hektor, accord requis.
+- ⚠ **NUANCÉ le même jour par le §19.6** : « la date n'archive pas » est trop fort. Elle n'archive pas **en deux nuits** ;
+  un cas propre (414535) montre qu'elle archive **plus tard** (≤ 71 jours).
+
+### 19.6 AUDIT COMPLET : ARCHIVER UNE RECHERCHE CHEZ HEKTOR — 29/10 (« AUDITE ENTIÈREMENT MON PROJET À CE SUJET »)
+
+*Audit limité à l'objet **recherche** ; les autres objets ne sont pas mesurés ici. Sources : code (`console_job_worker.js`,
+`App.tsx`, patchs Supabase), notes (`CHANTIER_7` §⑦-1/⑦-2 du 16/10, `AUDIT_RECHERCHES_ETAT_REEL_2026-08-31`,
+`AUDIT_COHERENCE_REGISTRES…_2026-10-26` §7.2/D4/§52, ce fichier §19.1-19.5, `patch_recherches_archivees_conservees_2026-08-21`),
+commits jusqu'au 28/10 (`6c25c59`), base (journal des travaux, `raw_api_response`, sauvegardes `phase2` des 22-23/09),
+Hektor (Chrome de Frédéric, lecture seule).*
+
+**A. Ce que le projet avait compris — et c'était JUSTE.**
+- 21/08 : « supprimer » = **archiver en posant une date** (`modifDateArchiveCritere`, date du jour) — Hektor n'efface pas.
+- 16/10 (`CHANTIER_7`) : cette date est **la date d'auto-archivage de Hektor**, son mécanisme de conservation (RGPD :
+  « création + 2 ans », mesuré deux fois). Poser « aujourd'hui », c'est **programmer** l'archivage.
+- 16/10 : la **bascule** `archiveUnarchiveContactRecherche` existe (menu ⋮ « Archiver / Désarchiver ») ; un geste
+  « désarchiver » dans l'app a été **refusé** (décision B). Changer la date d'une archivée ne la réactive pas (vu).
+- 26/10 (§19.2) : « ce geste **programme** l'archivage ; **quand** la bascule a lieu n'a jamais été mesuré ».
+➡ **Le seul trou de compréhension était le DÉLAI.** Et le §19.5/F du 27-29/10 (« archive la nuit », puis « n'archive pas »)
+s'est trompé deux fois en sens contraires.
+
+**B. Le délai, mesuré — un seul cas propre.**
+
+| geste | recherche | autre cause possible ? | archivée quand ? |
+|---|---|---|---|
+| 12/06 supprimer | 414535 / 471249 (« Test Test ») | **aucune** : contact jamais modifié (`date_maj` 2025-10-05), ni vente ni archivage | ✅ au **22/08** (`raw_api_response`) → **≤ 71 jours** |
+| 22/06 supprimer | 113412 / 17985 (Gladys) | **contact archivé** (« toujours archivée » le 15/10, travail `…test_contact_inactif` du 22/06) | archivée au 22/09 — **confondu** |
+| 18/09 supprimer | 605075 / 471682 | **acheteur de la vente d'essai 23307** (17/09) | archivée au 22/09 — **confondu** |
+| 18/09 et 22-23/10 qualification | 605414, 605429, 605946, 605973, 605975, 605976 | **acheteurs de ventes d'essai** (VA6482…) — la date est posée DANS le travail de vente | archivées — **confondu** |
+| 27/10 supprimer | 605946 / **471896** (essai) | aucune | ❌ **active le 29/10** (date 27-10-2026 affichée) → **> 2 nuits** |
+| 23/10 qualification | 605967 / 471882 | — (jamais datée : numéro non retrouvé) | ❌ active |
+
+➡ **La date archive, en différé : plus de 2 nuits, au plus 71 jours** (1 cas propre, 1 témoin négatif). La cadence du
+passage d'auto-archivage de Hektor **n'est pas mesurée** (hebdomadaire ? mensuelle ?). *(Mesurable sans écrire : comparer
+les sauvegardes hebdomadaires `phase2` des 04, 11, 18 et 25/10 — recherches passées archivées entre deux semaines sans
+contact archivé ni vente. Non fait : ~4 Go par fichier à décompresser.)*
+
+**C. Le tableau des gestes « recherche ».**
+
+| geste | porte | chez nous | chez Hektor | état |
+|---|---|---|---|---|
+| **créer** | fiche contact → `add_hektor_contact_search` | à la descente | créée (worker) | ✅ prouvé 27/10 (471896) |
+| **modifier** | `app_edit_search_optimistic` | ✅ tout de suite (Supabase seul depuis 19/06) | ⛔ **rien** : `push_search = null` depuis C.3 (24/08) | décision ; Hektor garde l'ancienne version |
+| **supprimer = archiver** (corbeille) | `app_console_create_delete_contact_search_job` → `delete_hektor_contact_search` | ✅ `archive=true` **dans la même transaction** | **date posée** → archivée **plus tard** (> 2 nuits) | ciblage corrigé `319e1e4` (prouvé) ; ⚠ délai |
+| **archiver à la vente** (qualification) | `archiverRecherchesDeQualification` | à la descente | date posée → plus tard | hérite de `319e1e4` ; 471882 jamais datée |
+| **archiver la recherche de l'acheteur** (§52 B, `6c25c59`, 28/10) | fenêtre Oui/Non → **le même travail que la corbeille** | idem corbeille | idem : date → plus tard | même délai |
+| **archiver le contact** (⑦-1) | `archive_hektor_contact` | ✅ recherches archivées chez nous d'abord (patch A, 16/10) | **toutes ses recherches archivées** (0 active sur 6 157) — délai non mesuré | ✅ |
+| **désarchiver** | — | — | — | ❌ refusé (décision B, 16/10) |
+| **lire / remonter** | run 03:00, relecture du contact | `archive` de l'API | — | ⚠ la **date** d'auto-archivage n'est que dans le HTML (décision C : « autre dev ») |
+
+**D. Ce que ça fait dans la vraie vie.**
+- Entre le clic et le passage de Hektor (jours ou semaines), **l'app dit « archivée »** (marque locale) **et Hektor la garde
+  active** : ses **rapprochements et alertes côté Hektor** continuent pendant ce temps. Côté app, le moteur ignore les
+  archivées (patch du 21/08) : **l'app, elle, a déjà arrêté**.
+- ⚠ **La marque locale tient — mesuré le 29/10** : la base locale (`phase2`, relue chez Hektor à 08:46) dit 471896 **active**,
+  Supabase dit **archivée** ; la relecture ne l'a pas écrasée. *(Le mécanisme exact n'est pas lu ; l'audit du 21/09 §4 disait
+  le contraire — à revérifier avant d'y toucher.)*
+- Rien n'est **perdu** : la recherche finit archivée chez Hektor, comme l'app l'a dit.
+
+**E. Ce qui reste à décider par Frédéric (rien codé).**
+1. **Le délai convient-il ?** Si oui : rien à faire sur le geste, le correctif du ciblage suffit. Il faut seulement que le
+   journal ne dise pas « attendu cette nuit » (pièce 3) mais « programmé, Hektor archivera à son passage ».
+2. **Sinon : archiver tout de suite** en ajoutant **la bascule** après la date, **gardée par l'icône** (lue par la pièce 1 :
+   active → bascule → relire ; déjà archivée → ne rien envoyer). Elle vaudrait pour les trois portes (corbeille,
+   qualification, recherche de l'acheteur).
+3. **471882 (605967)** : jamais datée → elle ne s'archivera **jamais** seule. La dater (ou la basculer) = écriture chez Hektor.
+4. **471896** (essai) : datée, elle s'archivera seule — témoin du délai réel ; ⏰ à relire chaque semaine.
+
+**F. ⭐⭐ LA PIÈCE MANQUANTE, RETROUVÉE LE 29/10 (question de Frédéric : « l'analyse de la console Hektor et des boutons
+d'archivage ») — LA PAGE HEKTOR ARCHIVE EN DEUX TEMPS, ET NOTRE WORKER N'EN FAIT QU'UN.**
+La page capturée le **12/06** (`Console/exports/probe_recherche_tab.txt`, l. 210-221 — la même session que le commit
+`4cfc581` « recherche acquéreur — ajouter / modifier / supprimer », 12/06 16:30) :
+
+```
+function updateDateAutoArchiveCritere(idCritere) {
+    POST mode=contacts-contactProfile-modifDateArchiveCritere & idCritere & dateArchive   <- 1) poser la date
+    success: if (data['desarchiveCritere'])                                               <- Hektor répond true
+                 archiveUnarchiveContactRecherche(idCritere, currentContactId);            <- 2) LA BASCULE
+}
+```
+*(La même fonction est dans `labs_contactsRefonte.js` relevé le 01/06 et le 15/10 : rien n'a changé chez Hektor.)*
+
+- Quand on change la date **dans Hektor**, la page **enchaîne d'elle-même** la bascule si le serveur répond
+  `desarchiveCritere: true` → la recherche est archivée **sur-le-champ**. **Notre worker s'arrête après le 1) et ignore la
+  réponse** — or Hektor la lui donne **à chaque fois** (`{"date":…,"desarchiveCritere":true}` : **11 gestes sur 11** au journal, mesuré le 29/10).
+- **C'est exactement ce que l'essai 2 du 27/10 a reproduit** : marche 1 (date) → active ; marche 2 (bascule) → archivée
+  tout de suite. Les deux marches réunies = le geste de la page.
+- **L'histoire de l'erreur** : 12/06, le geste est écrit **en lisant le JS de la page** — les captures réseau du 12/06
+  n'enregistrent que la **création** (`contact-ajoutCritereProspect`), **jamais un clic d'archivage** — et seule la 1ʳᵉ
+  moitié est gardée. 16/10 (`dfba4df`) : la note lit bien `desarchiveCritere → bascule` mais le comprend comme
+  « **réactiver** » (le mot « désarchive »). 26/10 (`04760f9`) : l'essai voit la recherche **non archivée**, puis le §19.2
+  l'attribue à un « délai ». 27-29/10 : moi, deux conclusions contraires sur ce délai.
+- ⚠ **Le sens de `desarchiveCritere`** : vu `true` sur une recherche **déjà archivée** (Le Puy, 26/10) comme sur une
+  **active** (Firminy et 471896, 27/10). La page, elle, bascule **à l'aveugle** → refaire la bascule sur une archivée la
+  **réactiverait**. *(Le 16/10, la date de Gladys passée en 2029 n'a rien réactivé : la réponse de ce jour-là n'a pas été
+  lue, sans doute `false` pour une date future.)* ➡ **Notre version doit être GARDÉE par l'icône** (pièce 1 : `archivee`).
+- ➡ **Le correctif est donc « faire comme la page, en plus prudent »** : date → si `desarchiveCritere` **ET** recherche
+  active à l'icône → bascule → relire l'icône (doit être archivée, sinon erreur). Une archivée : date seule, rien d'autre.
+  Pour les trois portes (corbeille, qualification, recherche de l'acheteur `6c25c59`). **Rien codé — « vas-y » requis.**
+- ⭐ **LE CADENAS, DÉJÀ TRANCHÉ LE 16/10** (`e5b7314`, `CHANTIER_7` l. 500-529) : **le cadenas EST le marqueur de
+  l'archivage** (confirmé par l'API `archive = "1"` et par le menu ⋮ qui propose alors « Désarchiver ») ; et **Frédéric a
+  montré que la date ne fait pas l'état** : la date d'une recherche archivée passée en 2029 → le cadenas reste. Le 29/10
+  montre le **cas miroir** : date passée (27-10-2026) et **pas de cadenas** (471896), avec le « Mail résumé de recherche
+  Yssingeaux » envoyé par Hektor le 27/10 à 18:16, après notre « suppression ». ➡ **Date et cadenas sont indépendants ;
+  seul le cadenas dit « archivée »** — c'est lui que lit la pièce 1 (`icon-presentation-off` = le cadenas).
+- ✅ **CODÉ LE 29/10** (« VAS Y » de Frédéric) — **NON commité, worker NON redémarré** :
+  - `lireCadenasRechercheHektor` (neuf) : le cadenas d'UNE recherche (`null` = illisible : liste lue par l'ancienne regex,
+    ou recherche absente) ;
+  - `archiveHektorContactSearch` : lit le cadenas **avant** (illisible → **erreur, rien n'est écrit**) → pose la date (comme
+    avant) → **bascule seulement si sans cadenas ET `desarchiveCritere`** (le test de la page) → **relit** : pas de cadenas
+    = **erreur** (« toujours SANS cadenas… à vérifier »), jamais un « archived » sur un 200 ;
+  - `handleDeleteHektorContactSearch` : `archivage: "fait" | "deja_archivee"` ; `relireArchivageRechercheBestEffort` et
+    `lireDateAutoArchivageHektor` (du 27/10) **retirées** (plus d'appelant) ;
+  - les **trois portes** passent par la même fonction : corbeille, « archiver la recherche de l'acheteur » (`6c25c59`,
+    même travail), qualification à la vente (son `try/catch` écrit déjà « NON archivée — à archiver à la main »).
+  - **Éprouvé** : `node --check` ✅ ; **le code extrait du fichier, 6 cas simulés, 6 conformes** — active → date + bascule
+    → cadenas ; ⭐ **témoin inverse : déjà sous cadenas → la date seule, AUCUNE bascule** ; bascule sans effet → erreur ;
+    liste par regex → 0 envoi ; recherche absente → 0 envoi ; `desarchiveCritere: false` → pas de bascule → erreur.
+  - `test_porte_contacts.js` : **2 échecs DÉJÀ présents sur la version commitée** (mandants d'une création d'annonce,
+    filtre de numéro d'app) — sans rapport, NOTÉS, pas traités.
+  - **Vérification du passé** : les 11 archivages envoyés depuis juin portent **tous sur des contacts d'essai** ; aucun vrai
+    client ; 0 suppression depuis le 27/10. Restent actives à tort : **471896** et **471882**.
+  - ⏳ **Pas éprouvé en réel** (contexte négociateur, cadenas lu par le worker) : après redémarrage, sur 605946 — et le
+    journal porte désormais `avant.etats` / `apres.etats` (ex. `AAo` → `AAA`) pour le prouver.
+- ➡ Et le « délai » du §19.6 B n'est plus le sujet : 414535 a pu être archivée plus tard par le passage d'auto-archivage
+  de Hektor, ou à la main ; **avec la bascule, il n'y a plus de délai à attendre**.
+
 **D. Ce que ça pourrait casser ailleurs.** La pièce 2 transforme un mauvais geste silencieux en **échec visible** : un
 contact dont la liste ne se lit pas verra son « supprimer » échouer au lieu de viser la 1ʳᵉ recherche. C'est voulu.
 La pièce 1 touche la création (`listerCriteresBestEffort`) : si `data-search-id` venait à manquer, l'ancienne regex reprend,
