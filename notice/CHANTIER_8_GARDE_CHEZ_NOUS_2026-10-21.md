@@ -2015,3 +2015,25 @@ saisis — type, sous-type, date de début, durée, tacite reconduction, mandant
 | **C2** | transaction : le contrôle au retour de la création | appeler le verdict après la création, comme après une modification | le verdict compare au registre : il faut d'abord y reporter ce que Hektor a retenu (`reporterAuRegistre`), sinon il jugerait contre une valeur vide · touche le worker → 4 services à redémarrer |
 | **C3** | mandat : garder la saisie au geste | une ligne « en attente de numéro » avec les 6 champs, complétée à la réponse de Hektor | ⛔ **le registre des mandats est un document LÉGAL** : une ligne sans numéro ne doit JAMAIS y apparaître · le numéro reste à Hektor jusqu'à l'étape 3 |
 | **C4** | mandat : écrire les 6 champs après Hektor | compléter `enregistrerMandatAuRegistreApp` (date de fin, tacite, sous-type, mandants) | le run complète déjà ces colonnes depuis le miroir — deux écrivains pour une même colonne, à arbitrer |
+
+---
+
+## 8c → 8g — PREMIÈRE MESURE *(29/10, Frédéric : « 8c à 8g »)* — lecture seule, rien codé, 0 appel à Hektor
+
+- **8c — le corps des annonces archivées** : **61 441** fiches détaillées (`hektor_annonce_detail`) ne vivent que dans `data/hektor.sqlite`
+  (4,2 Go, sur le serveur). Le cloud n'a que les index (**35 368** archivées, **8 959** historiques) et un cache de 24 h préparé à la demande
+  (`Console/prepare_archived_annonce_detail.py` lit la base locale). La sauvegarde quotidienne ne prend de `hektor.sqlite` que 7 petites
+  tables ; l'instantané du dimanche ne prend que `phase2.sqlite`. Reste Veeam, **jamais restauré**.
+- **8d — la sauvegarde quotidienne** (`phase2/sync/backup_critical.py`, `CRITICAL_TABLES`) : **18 tables** (11 de `phase2`, 7 de
+  `hektor`), ~35 Mo par jour, 83 archives gardées. **Absents** alors qu'ils accumulent : le registre des liens (`app_relation` 132 903,
+  `app_relation_registry` 174 338), le registre des mandats (`app_mandat` 27 456), la table des parties (116 983, dérivée), les répartitions
+  saisies (24), les affaires supprimées (25), les copies locales des carnets. Ils ne sont que dans l'instantané hebdomadaire (dernier : 25/10)
+  → **jusqu'à 7 jours de perte** côté serveur. La sauvegarde de Supabase elle-même : **non mesurée**. `C:\Hektor\Backups\documents` vide
+  depuis le 15/09 (les documents vont chez Veeam).
+- **8e — le bon de visite fait dans l'app** (`visitVoucherHtml`) : archivé nulle part, ni PDF ni ligne (audit du 08/10, **non remesuré**).
+  ⚠ À ne pas confondre avec les **1 721 bons déposés chez Hektor**, déjà rapatriés par la synchro des documents (sujet à part, 15/10).
+- **8f — un document retiré chez Hektor** : **toujours vrai**, la fiche est **effacée** (`DELETE` dans `pruneDeletedDocuments`), le journal ne
+  garde que le **nombre** (« Docs supprimés dans Hektor retirés de l'app », `removed: N`), ni le nom ni le numéro. Depuis les garde-fous du
+  20/10 : **6 fiches sur 6 annonces en 9 jours** (des retraits normaux) ; avant : 5 227 (le bug du domaine). Non mesuré : si le fichier reste
+  sur le serveur.
+- **8g — les couples** : la mesure exige un geste humain chez Hektor, tant qu'il vit.
