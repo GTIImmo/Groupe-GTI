@@ -2037,3 +2037,30 @@ saisis — type, sous-type, date de début, durée, tacite reconduction, mandant
   20/10 : **6 fiches sur 6 annonces en 9 jours** (des retraits normaux) ; avant : 5 227 (le bug du domaine). Non mesuré : si le fichier reste
   sur le serveur.
 - **8g — les couples** : la mesure exige un geste humain chez Hektor, tant qu'il vit.
+
+## 8d — AUDIT DE LA SAUVEGARDE *(29/10, Frédéric : « 8d sauvegarde »)* — lecture seule, rien codé
+
+**Ce qui existe, relevé et non lu dans une note** :
+- **Niveau 1, chaque jour** (`GTI Sauvegarde`, a tourné à **08:00:01** le 29/10 — la mémoire disait 09:00) : 18 tables, 10 s, **35 Mo**
+  compressés, 83 archives gardées (90 jours), dans `C:\Hektor\Backups\critical`.
+- **Niveau 2, le dimanche** : instantané complet de `phase2.sqlite` (~770 Mo compressés, dernier le 25/10, 28 jours).
+- **Le schéma de Supabase, chaque matin** : `Console/sauvegarde_plan_supabase.js` (structure seule, ~1 Mo, 60 jours).
+- **Supabase lui-même** : plan **Pro** — une sauvegarde physique par jour, 7 jours, **non téléchargeable**, qui disparaît avec le projet.
+  Le `pg_dump` hebdomadaire proposé le 18/08 (`notice/NOTE_PLAN_SAUVEGARDE_2026-08-18.md` §1.7) **n'a jamais été fait** : `pg_dump` est
+  toujours absent du serveur. Le PITR (≈ 100 $/mois) avait été écarté « jusqu'au jour où Supabase deviendra la source de vérité ».
+- **Hors site** : Veeam / OVH sauvegarde tout le disque C: (immuable 14 jours) — **jamais restauré**.
+
+**Ce qui manque** :
+- ⚠ **Le critère du niveau 1 est « ce qui accumule et ne se recalcule pas »**. Depuis ⑧, l'app écrit **au clic dans le cloud** (liens,
+  mandats, carnets, saisies, répartitions, types) : ces registres sont devenus irremplaçables, mais ils n'arrivent sur le serveur que par la
+  **descente** du matin, et le niveau 1 n'en prend **aucun** (déjà noté le 12/10 : « option C », en attente de Frédéric). Ils ne sont donc
+  sauvés que **le dimanche** → jusqu'à **7 jours** de perte si le cloud et le serveur tombaient ensemble.
+- **Le poids mesuré** (données brutes dans `phase2.sqlite`, sans index ni compression) : registre des liens `app_relation_registry` 44,9 Mo,
+  registre des mandats `app_mandat` 30,0 Mo, liens `app_relation` 20,8 Mo, `app_contact_identite_app` 2,0 Mo, `app_mandat_date_juste` 1,7 Mo,
+  répartitions 1,6 Mo, plus les carnets, saisies, résolutions, notifications, affaires supprimées (< 1 Mo chacun) → **~102 Mo en tout**.
+- **Deux tables du cloud n'ont AUCUNE copie sur le serveur** (sur 119, comparées une à une) : `app_classeur_lien` (12 404) et
+  `app_classeur_ligne_id` (4 773) — l'appariement avec le classeur, chantier de l'autre session. La descente ne les ramène pas.
+- **Les identifiants des photos et des documents** (`app_console_photo` 442 679, `app_console_document` 193 000 en local) : leurs numéros
+  sont irréversibles (adresses publiques des dérivés, G.10bis) ; trop lourds pour le quotidien en entier, mesure à faire d'un extrait
+  « numéros seulement ».
+- **Aucune restauration du niveau 1 depuis août** ; celle du niveau 2 n'est pas mesurée.
