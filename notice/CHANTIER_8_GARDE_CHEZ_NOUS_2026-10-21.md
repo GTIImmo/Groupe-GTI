@@ -2190,3 +2190,32 @@ saisis — type, sous-type, date de début, durée, tacite reconduction, mandant
 ### 8e — ➡ RANGÉ À L'ÉTAPE 3 *(29/10, Frédéric : « C : à l'étape 3 »)*
 Le bon de visite de l'app sera gardé (ligne, page, numéro en série, et sans doute le bon signé) **avec la prise de rendez-vous dans l'app**,
 au chantier de la coupure. Rien n'est codé. ⛔ Ne pas le relancer dans ⑧.
+
+## 8g — AUDIT : LES COUPLES (C.9-couple) *(29/10, Frédéric : « oui, 8g »)* — lecture seule, rien codé, 0 appel à Hektor
+
+- **Comment Hektor range un ménage** (miroir `data/hektor.sqlite`, colonne `hektor_couple_contact_id` posée depuis `refCouple`) :
+  356 716 contacts, **264 418** avec un numéro de ménage ; **139 890** se désignent eux-mêmes (la fiche « porteuse ») ; ménages à 1 fiche
+  **47 399**, à 2 **105 567**, à 3 **1 947**, à 4 **11** ; **14 069** ménages dont la porteuse a disparu. La seconde fiche est **vide**
+  (sans nom ni prénom) dans l'immense majorité (mesure du 11/09 : 133 343 fiches muettes). Chez nous : `app_contact_current` porte
+  `hektor_couple_contact_id`, `app_couple_contact_id` (le lien traduit dans nos numéros) et `couple_role`.
+- **Le chemin de l'app aujourd'hui** : l'écran de création a un type « couple » (`isCouplePerson`, App.tsx ~40713) avec un bloc conjoint
+  (nom exigé, prénom, e-mail, téléphone, adresse) ; `api.ts` l'envoie en `spouse_*` ; le worker le traduit en `nom_m2`, `prenom_m2`,
+  `email_m2[]`, `telephone_m2[]`, `adresse_m2`, `villeprivee` (console_job_worker.js ~18502, seulement si `contactStatus === "2"`).
+  C'est **Hektor** qui fabrique la seconde fiche et pose le lien.
+- ⭐ **MESURE CLÉ : CE CHEMIN N'A JAMAIS SERVI.** Sur les **26** créations de contact depuis l'app (29/05 → 26/10), **toutes** sont
+  `personne_seule` ; les 23 charges qui portent des clés `spouse_*` les ont **vides**. Aucune modification non plus. ⇒ personne n'a jamais
+  créé de couple depuis l'app, et **on ne sait pas** si l'envoi du bloc conjoint par le worker donne une fiche ou deux, ni dans quel sens.
+- ⚠ **Le trou pour la coupure** : la naissance complète du contact (8a, `patch_8a_contact_nait_complet_2026-10-21.sql`) ne garde **rien** du
+  conjoint chez nous. Le conjoint saisi dans l'app n'existerait que dans la charge du travail (`app_console_job.payload_json`), jusqu'à ce
+  que Hektor crée la seconde fiche et que la nuit la ramène. Après la coupure, **personne ne la crée**.
+- **Ce qui est prêt** : la sonde `phase2/checks/sonde_paire_de_menage.py` (033e946, `ContactById` seul, lecture), et `Console/sonde_conjoint.js`
+  pour le bloc conjoint du formulaire (absent de l'API). Le geste « supprimer un contact » existe dans l'app pour nettoyer l'essai.
+- **Les options** (à trancher) :
+  **A — la mesure d'une heure, tant que Hektor vit** : créer UN couple d'essai depuis l'app (noms fictifs, son accord, son choix de cible),
+  lancer les deux sondes (2 à 4 lectures), noter combien de fiches, quel sens, quels champs ; puis supprimer l'essai (et vérifier que la
+  seconde fiche part aussi). ⇒ donne la spécification de notre future paire.
+  **B — garder le conjoint chez nous dès la création** (additif, comme 8a) : sans attendre A, mais la forme de la paire resterait à deviner.
+  **C — ranger à l'étape 3** : aucun couple n'est créé depuis l'app aujourd'hui ; mais la comparaison avec Hektor ne se fait **que tant
+  qu'il vit** (date de péremption écrite au plan le 25/09).
+- **Ce que ça pourrait casser ailleurs** : A écrit chez Hektor (2 fiches d'essai, puis leur suppression) ; le run de nuit les verrait si elles
+  restaient. B toucherait la naissance du contact (8a) et la traduction des ménages de la nuit (`app_couple_contact_id`). C ne touche rien.
