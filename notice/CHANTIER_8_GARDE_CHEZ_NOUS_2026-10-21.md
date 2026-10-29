@@ -2099,3 +2099,15 @@ saisis — type, sous-type, date de début, durée, tacite reconduction, mandant
 - **Le correctif proposé** : (1) la purge **marque** au lieu d'effacer (mêmes deux garde-fous), et écrit au journal le **nom** et le
   **numéro** de chaque document ; (2) un document revu chez Hektor redevient présent ; (3) un interrupteur rend l'effacement d'avant. Worker
   seul, redémarrage des 4 services file vide.
+
+### 8f — ✅ CODÉ *(29/10, Frédéric : « oui, code-le »)* — worker, pas encore chargé
+- **`pruneDeletedDocuments`** : après ses deux garde-fous de sélection, elle **marque** (`present_in_hektor = false`, `absent_depuis`) au
+  lieu d'effacer, sans re-dater une fiche déjà marquée, et écrit au journal « Documents supprimés chez Hektor : GARDÉS chez nous » avec le
+  **nom** et le **numéro** de chaque document. Le refus « en bloc » ne garde que l'effacement (marquer se défait). Interrupteur
+  `CONSOLE_DOCUMENTS_RETIRES_EFFACES=1` = l'effacement d'avant, mot pour mot.
+- **`upsertConsoleDocuments`** : chaque document que Hektor montre porte `present_in_hektor: true, absent_depuis: null` → un document qui
+  revient redevient présent (patron des photos).
+- **Essai** `Console/test_document_retire_garde.js` : **15/15** (marqué jamais effacé, journal nommé, pas de re-datation, signé intouché,
+  pas de refus en bloc, interrupteur, upsert), **témoin inverse** sur `329b9d9` (l'ancienne purge effaçait), **mutant** attrapé.
+- ⏰ **À faire par Frédéric** : pousser, puis redémarrer les 4 services **file vide**. Ensuite, la première trace au journal sera le message
+  « GARDÉS chez nous » au lieu de « retirés de l'app ».

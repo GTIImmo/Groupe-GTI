@@ -5112,6 +5112,11 @@ async function upsertConsoleDocuments(dossier, entries, job = null) {
         })(),
       },
       updated_at: now,
+      // ⑧ 8f (29/10/2026) : un document que Hektor MONTRE est present -- y compris s'il
+      //   avait ete marque « supprime chez Hektor » et qu'il REVIENT. Sans ces deux
+      //   lignes, sa mention restait pour toujours (les photos le font depuis G.10bis).
+      present_in_hektor: true,
+      absent_depuis: null,
     };
   });
   const preservedIds = new Set(rows.map((row) => row.id).filter(Boolean));
@@ -5970,6 +5975,10 @@ async function reconcileSignatureStates(job, dossier, logCat = "hektor", gateMod
 // GARDE-FOUS stricts : ne purge QUE des docs indexes Hektor, absents A LA FOIS des entrees (force_transfert)
 // ET des empreintes (chargeannonce). Ne touche JAMAIS : lignes synthetiques signees, archives signees
 // (signed_document). Ne purge rien si la lecture est vide (anti-suppression massive sur erreur Hektor).
+// ⑧ 8f (29/10/2026) : un document retire chez Hektor est GARDE (marque), plus efface.
+//   CONSOLE_DOCUMENTS_RETIRES_EFFACES=1 rend l'effacement d'avant.
+const DOCUMENTS_RETIRES_EFFACES = String(process.env.CONSOLE_DOCUMENTS_RETIRES_EFFACES || "").trim() === "1";
+
 async function pruneDeletedDocuments(job, dossier, entries) {
   if (!Array.isArray(entries) || entries.length === 0) return 0;
   let chargeHtml;
@@ -6028,6 +6037,52 @@ async function pruneDeletedDocuments(job, dossier, entries) {
       });
   }
   if (!toDelete.length) return 0;
+
+  // ═══ ⑧ 8f (29/10/2026) -- ON GARDE, ON N'EFFACE PLUS ═══
+  //
+  // LA DECISION DE FREDERIC DU 13/10 (③ 3e) : « Si il est supprime dans Hektor donc
+  // supprime du run, alors on garde dans l'app avec mention "supprime chez Hektor",
+  // une purge sera possible. » upsertConsoleDocuments marque deja ces fiches
+  // (present_in_hektor = false) -- et cette fonction, qui passe APRES, les EFFACAIT
+  // juste derriere : la decision ne survivait que pour les fiches epargnees ici.
+  // Mesure du 29/10 : 6 fiches effacees sur 6 annonces depuis le 20/10, avec pour
+  // seule trace leur NOMBRE au journal.
+  //
+  // Desormais on MARQUE (si ce n'est deja fait, sans re-dater une fiche deja marquee)
+  // et on ECRIT au journal le nom et le numero de chaque document qui vient de
+  // disparaitre. Le seuil « en bloc » ne garde que l'effacement : marquer se defait au
+  // prochain passage ou le document reapparait (present_in_hektor redevient vrai a
+  // l'upsert).
+  // CONSOLE_DOCUMENTS_RETIRES_EFFACES=1 rend l'effacement d'avant, mot pour mot.
+  if (!DOCUMENTS_RETIRES_EFFACES) {
+    const maintenant = new Date();
+    const lignes = toDelete.map((id) => parId.get(id)).filter(Boolean);
+    const aMarquer = lignes.filter((r) => r.present_in_hektor !== false);
+    // « vient de disparaitre » = pas encore marquee, ou marquee par CE passage
+    //   (l'upsert juste au-dessus l'a fait il y a quelques secondes).
+    const nouvelles = lignes.filter((r) => r.present_in_hektor !== false
+      || (r.absent_depuis && maintenant.getTime() - Date.parse(r.absent_depuis) < 15 * 60 * 1000));
+    if (aMarquer.length) {
+      const idsMarquer = aMarquer.map((r) => encodeURIComponent(r.id)).join(",");
+      const iso = maintenant.toISOString();
+      await supabaseRequest(`app_console_document?id=in.(${idsMarquer})`, {
+        method: "PATCH", prefer: "return=minimal",
+        body: JSON.stringify({ present_in_hektor: false, absent_depuis: iso, updated_at: iso }),
+      });
+    }
+    if (nouvelles.length) {
+      await logJob(job.id, "hektor", "running",
+        "Documents supprimes chez Hektor : GARDES chez nous, marques « supprime chez Hektor »", {
+          hektor_annonce_id: String(dossier.hektor_annonce_id),
+          gardes: nouvelles.length,
+          documents: nouvelles.slice(0, 50).map((r) => ({
+            id: r.id, hektor_document_id: r.hektor_document_id || null,
+            document_name: r.document_name || null, source: r.source || null,
+          })),
+        });
+    }
+    return nouvelles.length;
+  }
 
   // ⚠ NIVEAU 2, CHIFFRE : le filet pour l'inconnu. Une synchro qui emporte la MOITIE ou
   //   plus des documents deposes d'une annonce est suspecte -- on refuse et on le DIT,
