@@ -2079,6 +2079,28 @@ saisis — type, sous-type, date de début, durée, tacite reconduction, mandant
 - **Restent à décider** : les 2 tables du classeur sans copie (avec l'autre session) ; le `pg_dump` de Supabase ; l'extrait des numéros des
   photos et des documents.
 
+### 8d — LES TROIS DÉCISIONS QUI RESTENT, MESURÉES *(29/10, Frédéric : « décisions sauvegarde »)* — lecture seule, rien codé
+- **1. Les 2 tables du classeur** (`app_classeur_lien` 12 404 lignes, `app_classeur_ligne_id` 4 773 ; **6 Mo** en tout dans le cloud) :
+  ⭐ **ce n'est PAS un oubli de la descente, c'est l'heure.** La descente copie tout ce que le cloud montre (`schema()` de
+  `pull_from_supabase.py`, pas de liste). Celle de 10:16 lisait **181** tables/vues ; à 16:30 le cloud en montre **185** — exactement les 4
+  objets du classeur (les 2 tables, la sauvegarde datée `app_classeur_lien_avant_regel_20261029`, la vue `app_v_classeur_lien_casse`).
+  Elles sont donc nées après la descente du jour, et **celle de demain matin les ramènera d'elle-même** (droit de lecture vérifié). Reste un
+  choix : les ajouter aussi à la sauvegarde **de chaque jour** (`CRITICAL_TABLES`, ~1 Mo compressé) ou les laisser à la copie du dimanche.
+  Le gel est rejouable par `apparier_classeur.py`, mais le gel lui-même (le résultat figé, avec ses `preuves`) est ce qui rend le chantier
+  du classeur mesurable : il ne se recalcule pas à l'identique (§ du regel : `preuves` recalculé baisse sur 3 001 lignes).
+- **2. La copie complète de Supabase (`pg_dump`)** : la base pèse **4,26 Go** (Postgres **17.6**). Ce qu'on garde déjà sans elle : les
+  **données** de toutes les tables `public` (la descente, chaque matin) et les **formules** (le plan, chaque matin). Ce qu'elle ajouterait :
+  (a) une copie **cohérente d'un seul instant** — la descente copie table par table pendant ~30 min ; (b) les **9 comptes** de connexion
+  (`auth.users`, leurs numéros sont référencés par les profils) ; (c) l'index du coffre (`storage.objects`, 218 917 lignes — les fichiers
+  eux-mêmes n'y sont pas) ; (d) une restauration en **une commande**. ⚠ `pg_dump` / `psql` **absents du serveur** : il faut **installer** les
+  outils clients de PostgreSQL 17 (téléchargement + installation, son accord). Le PITR reste écarté (≈ 100 $/mois).
+- **3. L'extrait des numéros des photos et des documents**, mesuré sur `phase2/phase2.sqlite` (lecture seule, en mémoire, rien écrit) :
+  numéros seuls (photo : id, dossier, annonce, n° Hektor, nom, chemin, empreinte, visibilité, ordre, présence) **442 679 lignes, 39 Mo
+  compressés, 10 s** ; avec les dérivés (`derives_json`, les adresses publiques) **42 Mo, 7 s** ; documents (id, dossier, annonce, n° Hektor,
+  nom, type, source, chemin, empreinte, présence) **193 000 lignes, 21 Mo, 4 s**. Pour comparaison, les tables entières : photos 79 Mo
+  (24 s), documents 43 Mo (13 s). ⇒ **~63 Mo par jour** pour les numéros avec dérivés, **~120 Mo** pour les tables entières ; à 90 jours,
+  ~5,7 Go ou ~11 Go (290 Go libres). Aujourd'hui ces tables ne sont sauvées que le dimanche (dans la copie de `phase2.sqlite`).
+
 ## 8f — AUDIT : LE DOCUMENT RETIRÉ CHEZ HEKTOR *(29/10, Frédéric : « 8f document retiré »)* — lecture seule, rien codé
 
 - ⭐ **LA DÉCISION EXISTE DÉJÀ, du 13/10 (③ 3e)** : *« Si il est supprimé dans Hektor donc supprimé du run, alors on garde dans l'app avec
