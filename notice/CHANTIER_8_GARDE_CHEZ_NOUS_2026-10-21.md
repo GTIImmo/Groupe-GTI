@@ -2078,3 +2078,24 @@ saisis — type, sous-type, date de début, durée, tacite reconduction, mandant
   jour doit lister les 19 nouvelles tables et finir en code 0.
 - **Restent à décider** : les 2 tables du classeur sans copie (avec l'autre session) ; le `pg_dump` de Supabase ; l'extrait des numéros des
   photos et des documents.
+
+## 8f — AUDIT : LE DOCUMENT RETIRÉ CHEZ HEKTOR *(29/10, Frédéric : « 8f document retiré »)* — lecture seule, rien codé
+
+- ⭐ **LA DÉCISION EXISTE DÉJÀ, du 13/10 (③ 3e)** : *« Si il est supprimé dans Hektor donc supprimé du run, alors on garde dans l'app avec
+  mention "supprimé chez Hektor", une purge sera possible. »* Elle a été posée en trois morceaux : les colonnes `present_in_hektor` /
+  `absent_depuis` (patch du 13/10) ; le **marquage** dans `upsertConsoleDocuments` (patron des photos, garde de la liste vide) ; la
+  **mention à l'écran** (`App.tsx` : « Supprimé chez Hektor le … — conservé chez nous »).
+- ⛔ **MAIS UNE ÉTAPE PLUS LOIN LA DÉFAIT** : dans `handleSyncConsoleDocuments`, `pruneDeletedDocuments` passe APRÈS le marquage et **efface**
+  (`DELETE`) les mêmes fiches (documents déposés `hektor_console*`, absents de la liste lue, hors signés / modèles / empreintes). Le
+  marquage de 3e ne survit donc que pour les fiches que la purge épargne. **Personne ne l'avait vu le 13/10** (la note du chantier ③ ne cite
+  pas la purge). Mesure : depuis les garde-fous du 20/10, **6 fiches effacées sur 6 annonces** ; le journal ne garde que leur nombre.
+  Les 18 fiches marquées absentes aujourd'hui sont des gestes à la main (59578 le 20/10, 24113 le 15/10).
+- **Second trou, plus petit** : un document qui **revient** chez Hektor ne redevient pas présent — `upsertConsoleDocuments` n'écrit pas
+  `present_in_hektor: true` (les photos, si, depuis G.10bis).
+- **Les lecteurs** : l'écran montre déjà la mention ; aucun autre lecteur (`menage_coffre_documents.js`, `controle_domaine_documents.py`,
+  `controle_entretien_documents.py`, `enqueue_console_sync_jobs.js`, `reprendre_envois_hektor.js`, `rattrapage_mandat_signe.js`, le backend
+  `find_estimation_pdf`) ne filtre sur la présence : garder ces fiches ne les gêne pas (quelques fiches de plus par mois). Le ménage du coffre
+  gardera leurs fichiers, c'est voulu (« conservé chez nous »).
+- **Le correctif proposé** : (1) la purge **marque** au lieu d'effacer (mêmes deux garde-fous), et écrit au journal le **nom** et le
+  **numéro** de chaque document ; (2) un document revu chez Hektor redevient présent ; (3) un interrupteur rend l'effacement d'avant. Worker
+  seul, redémarrage des 4 services file vide.
