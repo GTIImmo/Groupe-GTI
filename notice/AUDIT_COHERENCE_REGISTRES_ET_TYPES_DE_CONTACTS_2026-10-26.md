@@ -3849,3 +3849,14 @@ sans lien, et sans la case cible**. La fiche du mandant n'arrive chez nous qu'av
   sa fiche chez nous MAIS sa case cible ne serait jamais posée → la nuit fabriquerait une **seconde fiche** ; **2. poser le patch** (P4-a + P4-b),
   puis la répétition (6 lignes « OK »). ⚠ Le redémarrage charge aussi les lignes Youtrust non committées de l'autre session (déjà chargées depuis
   le 27/10, interrupteur éteint).
+
+### 53.8 ✅ P4-a + P4-b POSÉS le 29/10 *(Frédéric : « fais »)*
+
+- **L'ordre a été tenu** : les 4 services tournent depuis le **29/10 à 07:17:56-57** (heure des processus `node`), APRÈS le commit P4-b
+  `15ea354` (29/10 00:10:36) → le worker qui tourne connaît déjà `poserCaseCibleDuMandantNeuf` / `suivreLienDuMandantNeuf`.
+- **Rejeu dans une transaction annulée** juste avant : 6/6. **Pose** (`patch_p4a_mandant_creation_annonce_2026-10-28.sql`, son propre
+  BEGIN/COMMIT) : empreinte de `app_create_annonce_job_optimistic` **a5e70b57 → 5e43b9b7**. **Répétition** : **6/6 OK**, 0 lien en attente
+  de son numéro de bien.
+- ⏰ **À prouver à la première création d'annonce AVEC un mandant** dans l'app : le lien naît au clic (numéro de bien vide), reçoit son numéro
+  quand Hektor crée l'annonce, puis est ÉTABLI ; pour un mandant neuf, sa case cible reçoit le numéro Hektor (pas de seconde fiche la nuit).
+- Retour arrière : `..._INVERSE.sql` (il retire @P4a-debut → @P4b-fin, puis remet NOT NULL seulement s'il ne reste aucun lien sans numéro).
