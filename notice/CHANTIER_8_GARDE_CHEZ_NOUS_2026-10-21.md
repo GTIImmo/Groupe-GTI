@@ -11,10 +11,10 @@
 |---|---|---|
 | 8a | contact : champs écrits chez nous à la **création** et à la **modification** | 🔎 **audit REFAIT le 21/10 à la demande de Frédéric (« on l'a déjà fait ») — verdict corrigé : FAUX pour l'étape 2**, il avait raison ; attend sa décision de clore |
 | 8b | périmètre du cloud : 62 139 éligibles sur 356 597 | ✅ **CLOS le 22/10 par décision** — un choix, pas un défaut ; le détail des 356 597 est sur le serveur et dans l'instantané du dimanche |
-| 8c | corps complet des archives d'annonces seulement dans le miroir `data/hektor.sqlite` | ⬜ |
-| 8d | sauvegarde quotidienne : `app_relation`, `app_relation_registry`, `app_mandat`, carnets ; stockage Supabase ; Veeam jamais restauré | ⬜ |
-| 8e | bon de visite archivé nulle part | ⬜ |
-| 8f | document retiré dans Hektor : ligne supprimée sans trace | ⬜ *(⚠ le prune a changé le 20/10 : deux garde-fous — à remesurer)* |
+| 8c | corps complet des archives d'annonces seulement dans le miroir `data/hektor.sqlite` | ✅ 29/10 — copie complète de `hektor.sqlite` chaque dimanche (2a68830), 1re le 01/11 |
+| 8d | sauvegarde quotidienne : `app_relation`, `app_relation_registry`, `app_mandat`, carnets ; stockage Supabase ; Veeam jamais restauré | 🔧 29/10 — les registres dans la sauvegarde quotidienne (0d249cf) ; restent à décider : 2 tables du classeur sans copie, `pg_dump` de Supabase, numéros photos/documents |
+| 8e | bon de visite archivé nulle part | ➡ 29/10 — RANGÉ À L'ÉTAPE 3 par Frédéric (« C ») : avec la prise de rendez-vous dans l'app ; 8 rendez-vous d'essai en juin, les vraies visites passent par Hektor |
+| 8f | document retiré dans Hektor : ligne supprimée sans trace | ✅ 29/10 — gardé avec la mention « supprimé chez Hektor » (6b0efc7, services redémarrés 15:27) |
 | 8g | ⏳ C.9-couple : la mesure exige un geste humain, **tant que Hektor vit** | ⬜ |
 
 ---
@@ -2157,3 +2157,7 @@ saisis — type, sous-type, date de début, durée, tacite reconduction, mandant
 - **Les options** (à trancher) : **A** garder chaque bon imprimé (une ligne : numéro, rendez-vous, acquéreur, bien, négociateur, date, et la
   page elle-même), avec un **numéro en série** ; **B** en plus, permettre de **déposer le bon signé** sur le bien (scan) ; **C** le ranger
   avec la prise de rendez-vous dans l'app, à l'étape 3, puisque personne ne s'en sert encore.
+
+### 8e — ➡ RANGÉ À L'ÉTAPE 3 *(29/10, Frédéric : « C : à l'étape 3 »)*
+Le bon de visite de l'app sera gardé (ligne, page, numéro en série, et sans doute le bon signé) **avec la prise de rendez-vous dans l'app**,
+au chantier de la coupure. Rien n'est codé. ⛔ Ne pas le relancer dans ⑧.
