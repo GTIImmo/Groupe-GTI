@@ -26804,6 +26804,8 @@ function MandatsScreen(props: {
 //   mandat », et recoit la barre de periode, la ligne « modif prix » et « Détails ».
 // `false` = l'ancien registre, a l'identique (bureau ET telephone).
 // ✅ ALLUME le 29/10/2026 sur le « Oui, allume-le » de Frederic (code pose eteint au commit 9963118).
+// ➕ 29/10 (2e demande) : le clic sur la LIGNE la deplie au lieu d'ouvrir la fiche ; la fleche magenta est retiree ;
+//   la fiche s'ouvre par « Ouvrir le détail du mandat », en bas de la ligne depliee (meme geste que l'ancienne fleche).
 const REGISTRE_V3 = true
 
 type RegistreV3IcoNom = 'tag' | 'tag-plein' | 'bouclier-ok' | 'bouclier-ko' | 'antenne' | 'antenne-off'
@@ -26889,7 +26891,8 @@ function RegistreV3Periode({ item }: { item: MandatRecord }) {
 
 // La ligne depliee : les blocs de la fiche mandat (MandatRegisterScreen, modale), avec LEURS mots et LEURS
 // fonctions de lecture. Elle ne lit que la ligne deja chargee, et seulement quand on la deplie.
-function RegistreV3Deplie({ item }: { item: MandatRecord }) {
+// `onOuvrirFiche` : le bouton du bas (bureau). Le telephone ne le passe pas -- ses cartes ont deja « Voir le mandat ».
+function RegistreV3Deplie({ item, onOuvrirFiche }: { item: MandatRecord; onOuvrirFiche?: () => void }) {
   const payload = parseRegisterDetailPayload(item)
   const estRecherche = estMandatDeRecherche(item)
   // Meme ordre que la fiche : le blob de Hektor s'il existe, sinon NOTRE liste des mandants. La fiche muette
@@ -26996,6 +26999,20 @@ function RegistreV3Deplie({ item }: { item: MandatRecord }) {
           </div>
         ))}
       </section>
+
+      {onOuvrirFiche ? (
+        <div className="reg3-pied">
+          <span className="reg3-pied-info">
+            Mandat <b>{item.numero_mandat ?? '-'}</b>
+            {mandateRegisterTypeInlineLabel(item) ? ` · ${mandateRegisterTypeInlineLabel(item)}` : ''}
+            {item.numero_dossier ? ` · ${item.numero_dossier}` : ''}
+          </span>
+          <button className="reg3-ouvrir-fiche" type="button" onClick={onOuvrirFiche}>
+            Ouvrir le détail du mandat
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+          </button>
+        </div>
+      ) : null}
     </div>
   )
 }
@@ -27298,7 +27315,14 @@ function MandatRegisterScreen(props: {
                       <Fragment key={rowKey}>
                       <tr
                         className={`${mandateLifecycleRowClass(item)} ${isSelected ? 'is-selected' : ''} ${estOuvert ? 'reg3-ouvert' : ''}`.replace(/\s+/g, ' ').trim()}
+                        title={REGISTRE_V3 ? (estOuvert ? 'Cliquer pour replier' : 'Cliquer pour déplier') : undefined}
                         onClick={() => {
+                          // REGISTRE V3 (29/10, demande de Frederic) : le clic sur la ligne la DEPLIE (ou la replie) au
+                          // lieu d'ouvrir la fiche ; la fiche s'ouvre par « Ouvrir le détail du mandat » en bas.
+                          if (REGISTRE_V3) {
+                            setRegistreOuverts((courant) => ({ ...courant, [rowKey]: !courant[rowKey] }))
+                            return
+                          }
                           props.onSelectMandat(rowKey)
                           setDetailOpen(true)
                         }}
@@ -27423,6 +27447,9 @@ function MandatRegisterScreen(props: {
                                 <RegistreV3Ico nom="chevron" />
                               </button>
                             ) : null}
+                            {/* REGISTRE V3 (29/10, « La retirer » de Frederic) : la fleche magenta disparait --
+                                la fiche s'ouvre par le bouton en bas de la ligne depliee. */}
+                            {REGISTRE_V3 ? null : (
                             <button
                               className="reg-act reg-act-cta"
                               type="button"
@@ -27434,12 +27461,22 @@ function MandatRegisterScreen(props: {
                             >
                               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round"><path d="m9 6 6 6-6 6" /></svg>
                             </button>
+                            )}
                           </div>
                         </td>
                       </tr>
                       {estOuvert ? (
                         <tr className="reg3-ligne-depliee">
-                          <td colSpan={8}><RegistreV3Deplie item={item} /></td>
+                          <td colSpan={8}>
+                            <RegistreV3Deplie
+                              item={item}
+                              onOuvrirFiche={() => {
+                                // Exactement le geste de l'ancienne fleche : selectionner la ligne, ouvrir la fiche.
+                                props.onSelectMandat(rowKey)
+                                setDetailOpen(true)
+                              }}
+                            />
+                          </td>
                         </tr>
                       ) : null}
                       </Fragment>
