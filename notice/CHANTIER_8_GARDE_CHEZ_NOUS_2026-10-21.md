@@ -12,7 +12,7 @@
 | 8a | contact : champs écrits chez nous à la **création** et à la **modification** | 🔎 **audit REFAIT le 21/10 à la demande de Frédéric (« on l'a déjà fait ») — verdict corrigé : FAUX pour l'étape 2**, il avait raison ; attend sa décision de clore |
 | 8b | périmètre du cloud : 62 139 éligibles sur 356 597 | ✅ **CLOS le 22/10 par décision** — un choix, pas un défaut ; le détail des 356 597 est sur le serveur et dans l'instantané du dimanche |
 | 8c | corps complet des archives d'annonces seulement dans le miroir `data/hektor.sqlite` | ✅ 29/10 — copie complète de `hektor.sqlite` chaque dimanche (2a68830), 1re le 01/11 |
-| 8d | sauvegarde quotidienne : `app_relation`, `app_relation_registry`, `app_mandat`, carnets ; stockage Supabase ; Veeam jamais restauré | 🔧 29/10 — les registres dans la sauvegarde quotidienne (0d249cf) ; restent à décider : 2 tables du classeur sans copie, `pg_dump` de Supabase, numéros photos/documents |
+| 8d | sauvegarde quotidienne : `app_relation`, `app_relation_registry`, `app_mandat`, carnets ; stockage Supabase ; Veeam jamais restauré | ✅ 29/10 — les registres dans la sauvegarde quotidienne (0d249cf) ; le reste : « rien de plus », la copie du dimanche suffit |
 | 8e | bon de visite archivé nulle part | ➡ 29/10 — RANGÉ À L'ÉTAPE 3 par Frédéric (« C ») : avec la prise de rendez-vous dans l'app ; 8 rendez-vous d'essai en juin, les vraies visites passent par Hektor |
 | 8f | document retiré dans Hektor : ligne supprimée sans trace | ✅ 29/10 — gardé avec la mention « supprimé chez Hektor » (6b0efc7, services redémarrés 15:27) |
 | 8g | ⏳ C.9-couple : la mesure exige un geste humain, **tant que Hektor vit** | ⬜ |
@@ -2100,6 +2100,13 @@ saisis — type, sous-type, date de début, durée, tacite reconduction, mandant
   nom, type, source, chemin, empreinte, présence) **193 000 lignes, 21 Mo, 4 s**. Pour comparaison, les tables entières : photos 79 Mo
   (24 s), documents 43 Mo (13 s). ⇒ **~63 Mo par jour** pour les numéros avec dérivés, **~120 Mo** pour les tables entières ; à 90 jours,
   ~5,7 Go ou ~11 Go (290 Go libres). Aujourd'hui ces tables ne sont sauvées que le dimanche (dans la copie de `phase2.sqlite`).
+
+### 8d — ✅ DÉCISION : RIEN DE PLUS *(29/10, Frédéric : « rien de plus car nous avons déjà fait la sauvegarde le dimanche »)*
+- Le classeur (dès la descente du 30/10) et les numéros des photos et des documents sont dans `phase2.sqlite`, donc dans la **copie complète
+  du dimanche** (niveau 2) ; `hektor.sqlite` y entre aussi depuis 8c (niveau 4). Pas d'ajout à la sauvegarde quotidienne, pas de `pg_dump`.
+- **Ce qu'on accepte, en connaissance** : jusqu'à 7 jours de perte sur ces tables si le cloud ET le serveur tombaient ensemble ; les 9 comptes
+  de connexion ne sont pas copiés (ils se recréent à la main) ; Veeam (hors site) reste jamais restauré.
+- ⏰ Lundi 02/11 : le journal du dimanche porte « Instantané phase2 » et « Instantané hektor », code 0. **8d est clos.**
 
 ## 8f — AUDIT : LE DOCUMENT RETIRÉ CHEZ HEKTOR *(29/10, Frédéric : « 8f document retiré »)* — lecture seule, rien codé
 
