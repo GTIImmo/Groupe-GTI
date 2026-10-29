@@ -3860,3 +3860,38 @@ sans lien, et sans la case cible**. La fiche du mandant n'arrive chez nous qu'av
 - ⏰ **À prouver à la première création d'annonce AVEC un mandant** dans l'app : le lien naît au clic (numéro de bien vide), reçoit son numéro
   quand Hektor crée l'annonce, puis est ÉTABLI ; pour un mandant neuf, sa case cible reçoit le numéro Hektor (pas de seconde fiche la nuit).
 - Retour arrière : `..._INVERSE.sql` (il retire @P4a-debut → @P4b-fin, puis remet NOT NULL seulement s'il ne reste aucun lien sans numéro).
+
+---
+
+## 54. C9 — LA RUBRIQUE CONTACT D'UN BIEN SUR NOS SEULS REGISTRES : audit *(29/10, Frédéric : « C9 : rubrique Contact »)* — lecture seule, rien codé
+
+### 54.1 Ce que fait l'écran aujourd'hui — quatre endroits, trois déjà sur nos registres
+- **La fiche annonce** (bureau et téléphone : `MobileDossierDetail` reçoit la même liste) : **NOTRE registre d'abord** depuis le **02/10
+  (③c)** — `loadDossierDetail` attache `mandants_registre_json` (vue `app_contact_relations_current`, rôles mandant + propriétaire,
+  interrupteur `VITE_RUBRIQUE_CONTACT_REGISTRE`, allumé par défaut) ; le blob de Hektor `proprietaires_json` n'est qu'un **repli si la
+  lecture échoue**. Une liste vide est respectée. ✅
+- **La fiche mandat du registre** (`selectedContactItems`) : « Hektor d'abord s'il a fourni le blob » — **mesuré le 29/10 : 0 ligne sur
+  24 560** porte ce blob ; c'est donc **toujours** `mandants_json` (NOTRE liste, 24 485 lignes) qui sert. ✅ dans les faits.
+- **L'éditeur du mandat dans la fiche annonce** reçoit la liste de la fiche (registre d'abord). ✅
+- ⛔ **L'éditeur du mandat ouvert depuis le REGISTRE DES MANDATS** (`editorFullContacts` / `editorPartialContacts`) : lit **le seul blob de
+  Hektor**. Chargé complet : `proprietaires_json` du détail (non vide sur 12 693 des 13 500 biens vivants) — la copie de Hektor, qui ne voit
+  ni un mandant saisi dans l'app avant la redescente, ni nos retraits, et qui se fige à la coupure. Chargement partiel (bien sans dossier, ou
+  chargement raté) : le blob du registre, **absent des 24 560 lignes → aucun mandant pré-rempli, jamais**.
+  ➡ **C'est le seul endroit où la rubrique a encore deux vérités** : le même mandat ne se pré-remplit pas pareil selon qu'on l'ouvre par
+  l'annonce ou par le registre.
+
+### 54.2 Ce que la mesure a écarté (et qui n'est PAS C9)
+- La fiche annonce montre plus de personnes que la liste du registre des mandats sur 138 biens vivants (236 personnes) et 9 483 biens sortis —
+  **même source** (notre registre des liens), **autre regroupement** : la fiche fusionne par **ménage** (`hektor_couple_contact_id`), la nuit
+  dédoublonne par **personne** (ex. 63342 : trois fiches de la même personne — la fiche simple, la fiche de couple « Mr./Mme », une seconde
+  fiche sans ménage). C'est un sujet de **doublons de contacts**, pas de source. Et le registre exclut **exprès** l'origine `vente` /
+  `acheteur` (D2, A).
+
+### 54.3 Le correctif proposé (à valider)
+- **Un seul endroit, l'éditeur ouvert depuis le registre**, aligné sur la fiche annonce : complet → `mandants_registre_json` d'abord (déjà
+  attaché par `loadDossierDetail`, même interrupteur), `proprietaires_json` en repli ; partiel → `mandants_json` (nos noms, sans adresse) au
+  lieu du blob vide. Additif, front seul, aucune écriture en base, aucun nouveau chemin vers Hektor.
+- **Ce que ça pourrait casser ailleurs** : les champs que l'éditeur pré-remplit (nom, adresse, téléphone) viennent alors de nos fiches au lieu
+  du blob — les mêmes que la fiche annonce montre depuis le 02/10 (0 ligne perdue sur 2 265 biens, +341 personnes) ; `mandants_json` ne porte
+  que les noms ; le piège des numéros du 05/10 (dans `mandants_json`, `hektor_contact_id` est celui de Hektor) ne mord pas ici, l'éditeur ne
+  détache personne.
