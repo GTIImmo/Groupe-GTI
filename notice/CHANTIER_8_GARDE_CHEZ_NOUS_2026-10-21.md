@@ -2129,3 +2129,14 @@ saisis — type, sous-type, date de début, durée, tacite reconduction, mandant
   `scheduled/run_backup.ps1`) ; **B** le même, une fois par mois (la proposition du 18/08) ; **C** la seule table des fiches chaque semaine
   (plus petit, mais laisse `raw_api_response`). Poids et durée d'un instantané complet : **non mesurés**, à mesurer par un essai vers un
   dossier à part avant de poser.
+
+### 8c — ✅ LA COPIE COMPLÈTE DE `hektor.sqlite` CHAQUE DIMANCHE *(29/10, Frédéric : « A »)*
+- **Essai** (le vrai `snapshot_database`, vers un dossier d'essai, source en lecture seule) : **416 Mo compressés en 61 s** (base de 3,9 Go).
+  **Restauration** dans un fichier à part : vérification rapide **ok**, **37 tables, 0 écart** avec la source (61 441 fiches,
+  478 217 réponses de Hektor, 61 512 annonces, 356 716 contacts), une fiche témoin identique octet pour octet en longueur. Fichiers d'essai
+  effacés ensuite.
+- **`scheduled/run_backup.ps1`** : le dimanche, `--full` s'ajoute à `--weekly` (le niveau 4 existait, jamais lancé). Texte ASCII, fins de
+  ligne gardées, lecture PowerShell sans erreur ; à blanc, le plan du dimanche liste bien « Instantané hektor ». Rétention existante :
+  **60 jours** (~9 copies, ~3,7 Go ; 290 Go libres).
+- ⏰ **Première copie : dimanche 01/11 à 08:00**. À lire le lundi : le journal `backup_*.log` du dimanche doit porter « Instantané hektor »
+  et finir en code 0, et `C:\Hektor\Backups\hektor` doit exister.

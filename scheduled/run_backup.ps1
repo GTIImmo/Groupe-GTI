@@ -41,7 +41,15 @@ try {
     $args = @("$root\phase2\sync\backup_critical.py")
     if ((Get-Date).DayOfWeek -eq 'Sunday') {
         $args += "--weekly"
-        Write-Output "Dimanche -> niveaux 2 et 3 inclus"
+        # 29/10/2026 (chantier 8, point 8c, choix A de Frederic) : le niveau 4 aussi --
+        # l'instantane COMPLET de data\hektor.sqlite. Il porte les ~44 000 fiches
+        # d'annonces non vivantes (archivees, historiques, brouillons) que le cloud n'a
+        # pas, et l'archive des reponses de Hektor : irremplacables apres la coupure.
+        # Le code existait (backup_critical.py --full), il n'avait jamais ete lance.
+        # Essai du 29/10 vers un dossier a part : 416 Mo compresses en 61 s ; restauration
+        # 37 tables, 0 ecart. Retention 60 jours (~9 copies, ~3,7 Go).
+        $args += "--full"
+        Write-Output "Dimanche -> niveaux 2, 3 et 4 inclus"
     }
     & "$root\.venv\Scripts\python.exe" @args
     $code = $LASTEXITCODE
