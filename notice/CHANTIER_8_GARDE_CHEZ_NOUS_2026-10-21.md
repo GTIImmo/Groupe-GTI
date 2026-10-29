@@ -2111,3 +2111,21 @@ saisis — type, sous-type, date de début, durée, tacite reconduction, mandant
   pas de refus en bloc, interrupteur, upsert), **témoin inverse** sur `329b9d9` (l'ancienne purge effaçait), **mutant** attrapé.
 - ⏰ **À faire par Frédéric** : pousser, puis redémarrer les 4 services **file vide**. Ensuite, la première trace au journal sera le message
   « GARDÉS chez nous » au lieu de « retirés de l'app ».
+
+## 8c — AUDIT : LE CORPS DES ANNONCES ARCHIVÉES *(29/10, Frédéric : « 8c »)* — lecture seule, rien codé
+
+- **Ce qui ne vit que sur le serveur** : `data/hektor.sqlite` (4,2 Go, 38 tables) porte **61 441** fiches détaillées
+  (`hektor_annonce_detail`, **1 190 Mo bruts**, surtout `raw_json`). Le cloud a celles des **13 500** biens vivants
+  (`app_dossier_detail_current`) ; pour les **~44 000** autres (35 368 archivées, 8 959 historiques, 543 brouillons), il n'a qu'un **index**
+  et un cache de 24 h préparé à la demande par le worker, qui relit la base locale (`prepare_archived_/historical_/brouillon_…`).
+  La même base garde aussi `raw_api_response`, l'archive de tout ce que l'API de Hektor a répondu.
+- **Tant que Hektor vit**, ces fiches se re-tirent. **Après la coupure**, elles deviennent **irremplaçables**.
+- **Leur sauvegarde** : la sauvegarde de chaque jour ne prend de `hektor.sqlite` que 7 petites tables ; l'instantané du dimanche ne prend que
+  `phase2.sqlite`. Le **niveau 4** (`backup_critical.py --full`, instantané complet par `VACUUM INTO`) est **écrit et jamais lancé** : aucun
+  dossier `C:\Hektor\Backups\hektor` n'existe. La note du 18/08 (§ « ce que j'écarte », point 2) proposait **un instantané mensuel**, 2 copies,
+  « police d'assurance » contre la disparition de Hektor — jamais planifié. Reste Veeam (tout le disque, hors site), **jamais restauré**.
+- ⚠ Une suppression ciblée existe : `phase2/sync/delete_local_annonce.py` retire la fiche d'une annonce du miroir.
+- **Les options** (à trancher) : **A** l'instantané complet de `hektor.sqlite` chaque dimanche (le niveau 4 déjà écrit, une ligne dans
+  `scheduled/run_backup.ps1`) ; **B** le même, une fois par mois (la proposition du 18/08) ; **C** la seule table des fiches chaque semaine
+  (plus petit, mais laisse `raw_api_response`). Poids et durée d'un instantané complet : **non mesurés**, à mesurer par un essai vers un
+  dossier à part avant de poser.
