@@ -2140,3 +2140,20 @@ saisis — type, sous-type, date de début, durée, tacite reconduction, mandant
   **60 jours** (~9 copies, ~3,7 Go ; 290 Go libres).
 - ⏰ **Première copie : dimanche 01/11 à 08:00**. À lire le lundi : le journal `backup_*.log` du dimanche doit porter « Instantané hektor »
   et finir en code 0, et `C:\Hektor\Backups\hektor` doit exister.
+
+## 8e — AUDIT : LE BON DE VISITE FAIT DANS L'APP *(29/10, Frédéric : « ok 8e »)* — lecture seule, rien codé
+
+- **Comment il naît** (`App.tsx`, `visitVoucherHtml` / `openVisitVoucherPrint`) : à partir d'un **rendez-vous de visite pris dans l'app**
+  (Google Agenda, table `app_google_calendar_event_link`), l'app fabrique une **page HTML** (acquéreur, bien, dossier, mandat, date, photo,
+  cadre de signature « Bon pour visite ») et l'ouvre dans une fenêtre pour l'**imprimer**. Six portes l'ouvrent (fiche contact, rapprochement,
+  agenda…). La signature se fait **sur papier**.
+- **Ce qui est gardé : rien.** Aucune ligne, aucun fichier, aucune trace d'impression. Le numéro `BDV-` + les 8 premiers signes du numéro du
+  rendez-vous est **unique par rendez-vous** mais **ne forme pas une série** (pas de BDV-2026-00001, 00002…). Le bon signé ne revient pas dans
+  l'app.
+- **L'usage réel** : **8 rendez-vous de visite actifs** en tout (+ 2 supprimés), **du 02/06 au 15/06**, par **2 personnes** — des essais ;
+  aucun depuis le 15/06. Les visites réelles (~115 bons par mois, audit du 08/10) se font dans **l'agenda de Hektor**, et leurs bons scannés
+  sont **déposés chez Hektor** : **1 721** sont déjà rapatriés sur notre serveur par la synchro des documents (sujet du 15/10, à part).
+- ➡ **Le trou ne mord pas aujourd'hui** ; il mordra **le jour où les visites se prendront dans l'app** (étape 3, la coupure).
+- **Les options** (à trancher) : **A** garder chaque bon imprimé (une ligne : numéro, rendez-vous, acquéreur, bien, négociateur, date, et la
+  page elle-même), avec un **numéro en série** ; **B** en plus, permettre de **déposer le bon signé** sur le bien (scan) ; **C** le ranger
+  avec la prise de rendez-vous dans l'app, à l'étape 3, puisque personne ne s'en sert encore.
