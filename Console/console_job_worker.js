@@ -6642,26 +6642,79 @@ async function handleSyncConsoleDocuments(job) {
   };
 }
 
+// ⑧ LES PHOTOS SE LISENT EN ADMIN (29/10/2026) -- comme les documents (handleSyncConsoleDocuments).
+//   Jusqu'ici CHAQUE lecture se faisait passer pour le negociateur du bien, ou pour son agence
+//   (forceRemoteSwitch, 29478ba du 03/06, raison jamais ecrite) : retour admin + bascule, soit 5 a 9
+//   requetes de connexion pour 2 lectures utiles -- 1 000 fois par nuit pendant le balayage, et trois
+//   blocages de notre IP par Hektor en 36 h (27-29/10).
+//   Le compte admin voit LES MEMES photos, masquees comprises (essais du 29/10 : 12 annonces, listes
+//   identiques photo par photo) ; le fichier, lui, vient du CDN public sans session (fetchPublicBinary).
+//   On ne bascule donc plus que dans deux cas :
+//     - Hektor refuse la lecture (403) ;
+//     - une photo que nous tenons pour presente manque a la lecture admin : on la RELIT dans le contexte
+//       du negociateur avant de la marquer absente (la garde 3e du 13/10 n'attrape que la liste VIDE,
+//       pas une liste incomplete -- une masquee invisible a l'admin serait sinon perdue en silence).
+//   CONSOLE_PHOTOS_LECTURE_ADMIN=false rend exactement le chemin d'avant.
+const PHOTOS_LECTURE_ADMIN = String(process.env.CONSOLE_PHOTOS_LECTURE_ADMIN || "true").toLowerCase() !== "false";
+
+async function photosAbsentesDeLaLecture(hektorAnnonceId, entries) {
+  const lues = new Set((Array.isArray(entries) ? entries : []).map((entry) => String(entry.hektor_photo_id || "")));
+  const presentes = await supabaseRequest(
+    `app_console_photo?hektor_annonce_id=eq.${encodeURIComponent(String(hektorAnnonceId))}&present_in_hektor=eq.true&select=hektor_photo_id`,
+    { method: "GET" });
+  return (Array.isArray(presentes) ? presentes : [])
+    .map((row) => String(row.hektor_photo_id || ""))
+    .filter((id) => id && !lues.has(id));
+}
+
 async function handleSyncHektorPhotos(job) {
   const payload = safeJsonParse(job.payload_json);
   const dossier = await loadDossier(job);
   const photoContextOptions = { preferRequester: true, preferDossierOwner: true, required: true, forceRemoteSwitch: true };
-  await ensureHektorExecutionContext(job, dossier, payload, photoContextOptions);
+  let lectureAdmin = PHOTOS_LECTURE_ADMIN;
+  if (lectureAdmin) {
+    // Retour admin SEULEMENT si un travail precedent a laisse un autre compte : aucune requete sinon.
+    await ensureAdminHektorSession(job, "photos_lecture_admin");
+  } else {
+    await ensureHektorExecutionContext(job, dossier, payload, photoContextOptions);
+  }
   await logJob(job.id, "hektor_photos", "running", "Lecture photos Console", {
     hektor_annonce_id: dossier.hektor_annonce_id,
+    lecture: lectureAdmin ? "admin" : "negociateur",
   });
   let entries;
   try {
     entries = await fetchConsolePhotoEntries(dossier.hektor_annonce_id);
   } catch (error) {
     if (!isHektorForbiddenError(error)) throw error;
-    await logJob(job.id, "hektor_photos", "running", "Lecture photos refusee par Hektor, relance session puis retry", {
+    await logJob(job.id, "hektor_photos", "running", lectureAdmin
+      ? "Lecture photos refusee (403) en admin, bascule contexte negociateur puis retry"
+      : "Lecture photos refusee par Hektor, relance session puis retry", {
       hektor_annonce_id: dossier.hektor_annonce_id,
       error: error.message || String(error),
     });
-    await refreshHektorSession("photo_403_retry");
+    // En admin, comme les documents : on bascule sans nouvelle connexion complete.
+    if (!lectureAdmin) await refreshHektorSession("photo_403_retry");
     await ensureHektorExecutionContext(job, dossier, payload, photoContextOptions);
+    lectureAdmin = false;
     entries = await fetchConsolePhotoEntries(dossier.hektor_annonce_id);
+  }
+  let relueEnNegociateur = null;
+  if (lectureAdmin) {
+    const manquantes = await photosAbsentesDeLaLecture(dossier.hektor_annonce_id, entries);
+    if (manquantes.length) {
+      await logJob(job.id, "hektor_photos", "running",
+        "Photo(s) absente(s) de la lecture admin : relecture dans le contexte du negociateur avant de les marquer", {
+          hektor_annonce_id: dossier.hektor_annonce_id,
+          nombre: manquantes.length,
+          photos: manquantes.slice(0, 50),
+        });
+      await ensureHektorExecutionContext(job, dossier, payload, photoContextOptions);
+      lectureAdmin = false;
+      entries = await fetchConsolePhotoEntries(dossier.hektor_annonce_id);
+      relueEnNegociateur = { manquantes_en_admin: manquantes.length,
+        retrouvees: manquantes.filter((id) => entries.some((entry) => String(entry.hektor_photo_id) === id)).length };
+    }
   }
   const rows = await upsertConsolePhotos(dossier, entries);
   const visibleCount = rows.filter((row) => row.visible).length;
@@ -6680,6 +6733,8 @@ async function handleSyncHektorPhotos(job) {
     inchangees: stored.unchanged,
     echecs: stored.failed,
     octets: stored.bytes,
+    lecture: lectureAdmin ? "admin" : "negociateur",
+    relue_en_negociateur: relueEnNegociateur,
   });
   return {
     status: "photos_synced",
@@ -6691,6 +6746,8 @@ async function handleSyncHektorPhotos(job) {
     photos_unchanged: stored.unchanged,
     photos_failed: stored.failed,
     photos_bytes: stored.bytes,
+    lecture: lectureAdmin ? "admin" : "negociateur",
+    relue_en_negociateur: relueEnNegociateur,
   };
 }
 
