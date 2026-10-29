@@ -26803,7 +26803,8 @@ function MandatsScreen(props: {
 // ⚠ Le telephone a son PROPRE ecran (MobileRegisterCards) : il garde sa photo, « Mandat N » et « Voir le
 //   mandat », et recoit la barre de periode, la ligne « modif prix » et « Détails ».
 // `false` = l'ancien registre, a l'identique (bureau ET telephone).
-const REGISTRE_V3 = false
+// ✅ ALLUME le 29/10/2026 sur le « Oui, allume-le » de Frederic (code pose eteint au commit 9963118).
+const REGISTRE_V3 = true
 
 type RegistreV3IcoNom = 'tag' | 'tag-plein' | 'bouclier-ok' | 'bouclier-ko' | 'antenne' | 'antenne-off'
   | 'maison' | 'appartement' | 'terrain' | 'recherche' | 'autre' | 'chevron'
