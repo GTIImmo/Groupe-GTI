@@ -2005,8 +2005,22 @@ function updateDateAutoArchiveCritere(idCritere) {
     filtre de numéro d'app) — sans rapport, NOTÉS, pas traités.
   - **Vérification du passé** : les 11 archivages envoyés depuis juin portent **tous sur des contacts d'essai** ; aucun vrai
     client ; 0 suppression depuis le 27/10. Restent actives à tort : **471896** et **471882**.
-  - ⏳ **Pas éprouvé en réel** (contexte négociateur, cadenas lu par le worker) : après redémarrage, sur 605946 — et le
-    journal porte désormais `avant.etats` / `apres.etats` (ex. `AAo` → `AAA`) pour le prouver.
+  - ✅ **Commit `3768495`, poussé, 4 services redémarrés par Frédéric** (processus nés 29/10 12:00:59-12:01:01, après le
+    commit de 12:00:00 ; file vide).
+  - ✅ **ÉPROUVÉ EN RÉEL le 29/10, 11:01:59-11:02:28 UTC** (accord : « C'est fait, essaie » — corbeille sur 471882 du
+    contact d'essai 20000012 / 605967), depuis l'app dans le Chrome de Frédéric, **contexte négociateur** :
+    avant chez Hektor `o` (sans cadenas, auto-archivage 23-10-2027) → travail `b16a7d4b` : liste `data-search-id`, 1 = 1,
+    rang 0 → 471882 ; **`avant: cadenas false, etats "o"`** → date 29-10-2026, `desarchiveCritere: true` → **bascule**
+    (« Succès… ») → **`apres: cadenas true, etats "A"`** → `archivage: "fait"`. **Relu par moi chez Hektor à 11:02:44 :
+    `A`, date 29-10-2026** ; notre base `archive = true`. ➡ **Le worker lit le cadenas en contexte négociateur** (la réserve
+    du 31/08 tombe pour ce cas) **et le pose.** 471882 est réparée par l'essai même.
+  - ⚠ Petit défaut vu : `bascule.status` absent du journal (la réponse de `hektorFetch` ne porte pas `status`) — sans effet,
+    le cadenas relu fait foi.
+  - ✅ **471896 (605946) : DÉJÀ SOUS CADENAS à 11:06 UTC** — accord de Frédéric (« Oui, vas-y ») pour la basculer à la main ;
+    la garde (lire avant) a lu `AAA` → **rien envoyé**. Elle était `o` à 10:21 ; aucun travail de l'app entre-temps ; date
+    inchangée (27-10-2026). ➡ Archivée **hors de l'app** entre 10:21 et 11:06 : à la main dans Hektor, ou par le passage
+    d'auto-archivage de Hektor (date échue depuis 2 jours) — **non tranché**. Les deux recherches restées actives à tort
+    (471882, 471896) sont maintenant sous cadenas.
 - ➡ Et le « délai » du §19.6 B n'est plus le sujet : 414535 a pu être archivée plus tard par le passage d'auto-archivage
   de Hektor, ou à la main ; **avec la bascule, il n'y a plus de délai à attendre**.
 
