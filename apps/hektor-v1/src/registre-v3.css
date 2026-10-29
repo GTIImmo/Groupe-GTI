@@ -56,8 +56,6 @@
 .app-shell.app-screen-registre .registre-nb.registre-v3 .register-table tbody td:first-child{padding-left:18px !important;}
 .app-shell.app-screen-registre .registre-nb.registre-v3 .register-table tbody tr:hover{background:rgba(197,0,95,.035) !important;}
 .app-shell.app-screen-registre .registre-nb.registre-v3 .register-table tbody tr.is-selected{background:rgba(197,0,95,.07) !important;}
-.app-shell.app-screen-registre .registre-nb.registre-v3 .register-table tbody tr.reg3-ouvert{background:var(--r3-brand-50) !important;}
-.app-shell.app-screen-registre .registre-nb.registre-v3 .register-table tbody tr.reg3-ouvert td{border-bottom-color:transparent !important;}
 
 /* Largeurs : « Période » remplace les deux colonnes de dates (2 × 96 px) ;
    la dernière colonne loge le chevron ET la flèche. Total des colonnes fixes :
@@ -111,9 +109,39 @@
 .app-shell.app-screen-registre .registre-nb.registre-v3 .reg-act.reg3-deplier.is-open svg{transform:rotate(180deg);}
 
 /* ── La ligne dépliée : les blocs de la fiche mandat ── */
+/* ── 29/10 : la ligne ouverte devient une CARTE posée sur la liste (variante « claire » choisie par Frédéric) ──
+   Une barre magenta à gauche, une ombre douce, la ligne et son bloc d'un seul tenant ; le reste de la liste
+   s'estompe (net au survol). Uniquement du style.
+   ⚠ `:has()` et pas une classe posée en React : un état gardé d'une autre page estomperait la liste alors
+     qu'aucune ligne n'est ouverte à l'écran. */
+.app-shell.app-screen-registre .registre-nb.registre-v3 .register-table{border-collapse:separate !important;border-spacing:0 !important;}
+.app-shell.app-screen-registre .registre-nb.registre-v3 .register-table:has(tr.reg3-ouvert) tbody tr:not(.reg3-ouvert):not(.reg3-ligne-depliee){opacity:.38;transition:opacity .2s;}
+.app-shell.app-screen-registre .registre-nb.registre-v3 .register-table:has(tr.reg3-ouvert) tbody tr:not(.reg3-ouvert):not(.reg3-ligne-depliee):hover{opacity:1;}
+.app-shell.app-screen-registre .registre-nb.registre-v3 .register-table:has(tr.reg3-ouvert) tbody tr:not(.reg3-ouvert):not(.reg3-ligne-depliee) td{background:#f6f7f8 !important;}
+.app-shell.app-screen-registre .registre-nb.registre-v3 .register-table tbody tr.reg3-ouvert td{
+  background:#fff !important;border-top:14px solid #f6f7f8 !important;border-bottom:1px solid var(--r3-soft) !important;
+  padding-top:20px !important;padding-bottom:20px !important;box-shadow:0 -12px 22px -16px rgba(34,35,35,.30) !important;
+}
+/* ⚠ !important : la ligne ouverte est souvent aussi « sélectionnée », et layout-overrides.css peint les lignes
+   sélectionnées (tr.is-selected td) avec des ombres en !important qui écrasaient la barre et l'ombre. */
+.app-shell.app-screen-registre .registre-nb.registre-v3 .register-table tbody tr.reg3-ouvert td:first-child{
+  border-left-color:transparent !important;box-shadow:inset 4px 0 0 var(--r3-brand),0 -12px 22px -16px rgba(34,35,35,.30) !important;
+}
 .app-shell.app-screen-registre .registre-nb.registre-v3 .register-table tbody tr.reg3-ligne-depliee,
-.app-shell.app-screen-registre .registre-nb.registre-v3 .register-table tbody tr.reg3-ligne-depliee:hover{background:var(--r3-brand-50) !important;cursor:default;}
-.app-shell.app-screen-registre .registre-nb.registre-v3 .register-table tbody tr.reg3-ligne-depliee td{padding:2px 18px 18px !important;white-space:normal;border-left:0 !important;}
+.app-shell.app-screen-registre .registre-nb.registre-v3 .register-table tbody tr.reg3-ligne-depliee:hover{background:transparent !important;cursor:default;}
+.app-shell.app-screen-registre .registre-nb.registre-v3 .register-table tbody tr.reg3-ligne-depliee td{
+  padding:0 !important;white-space:normal;background:#fff !important;border-left:0 !important;border-bottom:14px solid #f6f7f8 !important;
+  box-shadow:inset 4px 0 0 var(--r3-brand),0 22px 30px -20px rgba(34,35,35,.32) !important;
+}
+/* Dans la carte : trois colonnes séparées d'un trait fin, titres en petites capitales, pied en bas. */
+.app-shell.app-screen-registre .registre-nb.registre-v3 .reg3-deplie{gap:0;}
+.app-shell.app-screen-registre .registre-nb.registre-v3 .reg3-deplie .reg3-bloc{border:0;border-radius:0;background:transparent;padding:22px 24px;gap:12px;}
+.app-shell.app-screen-registre .registre-nb.registre-v3 .reg3-deplie .reg3-bloc + .reg3-bloc{border-left:1px solid var(--r3-soft);}
+.app-shell.app-screen-registre .registre-nb.registre-v3 .reg3-deplie .reg3-bloc-h{font:700 11px 'Hanken Grotesk',system-ui,sans-serif;letter-spacing:.09em;text-transform:uppercase;color:#7c8082;}
+.app-shell.app-screen-registre .registre-nb.registre-v3 .reg3-deplie .reg3-pied{border:0;border-radius:0;border-top:1px solid var(--r3-soft);background:var(--r3-ground);padding:14px 24px;}
+.app-shell.app-screen-registre .registre-nb.registre-v3 .reg3-deplie .reg3-ouvrir-fiche{background:var(--r3-ink);box-shadow:none;border-radius:12px;padding:0 18px;min-height:42px;}
+.app-shell.app-screen-registre .registre-nb.registre-v3 .reg3-deplie .reg3-ouvrir-fiche:hover{background:#000;}
+.app-shell.app-screen-registre .registre-nb.registre-v3 .reg3-deplie .reg3-ouvrir-fiche svg{color:#ff4fa0;}
 .registre-v3 .reg3-deplie,.mobile-registre-v3 .reg3-deplie{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.3fr) minmax(0,1fr);gap:14px;}
 .mobile-registre-v3 .reg3-deplie{grid-template-columns:minmax(0,1fr);gap:8px;}
 .reg3-deplie .reg3-bloc{background:#fff;border:1px solid #eef0f1;border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px;min-width:0;}
