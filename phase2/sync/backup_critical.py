@@ -138,6 +138,35 @@ CRITICAL_TABLES: dict[str, list[str]] = {
                                            # elle se remplira quand la creation partira de
                                            # l'app (C.9). ACCUMULE et NE SE RECALCULE PAS :
                                            # c'est exactement le critere de cette liste.
+        # ⑧ 8d (29/10/2026) -- LES REGISTRES QUE L'APP ECRIT AU CLIC.
+        # Depuis le chantier ⑧, l'app ecrit DANS LE CLOUD des le geste : liens, mandats,
+        # carnets, saisies, repartitions. Ils ne recalculent rien et accumulent -- le
+        # critere meme de cette liste -- mais n'arrivent ici que par la DESCENTE du
+        # matin (copies `__sb` quand le nom local est deja pris), et aucun n'etait
+        # dans le niveau 1 : ils n'etaient sauves que le DIMANCHE (niveau 2), donc
+        # jusqu'a 7 jours de perte si le cloud et ce serveur tombaient ensemble.
+        # (« option C » notee le 12/10.) Poids mesure le 29/10 : ~102 Mo bruts.
+        # Une table absente un jour est IGNOREE et ecrite au journal (table_exists).
+        "app_relation",                    # le registre des liens, tenu par la nuit (132 903)
+        "app_relation__sb",                # sa copie du cloud : porte aussi les liens nes au
+                                           # clic, dont ceux qui attendent leur n° de bien (P4)
+        "app_relation_registry",           # le carnet des liens en doublure, depuis le 24/09
+        "app_relation_app_seule",          # les liens que seule l'app connait
+        "app_mandat",                      # le registre des mandats (27 456)
+        "app_mandat_date_juste",           # les dates justes, tirees de l'export Modelo (27/10)
+        "app_mandat_champ_app",            # le carnet des mandats (clotures saisies)
+        "app_mandat_champ_app__sb",
+        "app_affaire_champ_app",           # le carnet des transactions
+        "app_affaire_champ_app__sb",
+        "app_annonce_champ_app__sb",       # la copie du cloud du carnet des annonces
+        "app_affaire_repartition",         # les repartitions de commission, dont les SAISIES
+        "app_affaire_supprimee",           # la trace des transactions supprimees
+        "app_annonce_saisie_naissance",    # 8a : la saisie de creation gardee
+        "app_annonce_saisie_modif",        # 8a : la saisie de modification, pour le controle
+        "app_contact_saisie_modif",
+        "app_pending_resolution",          # les reponses des humains aux alertes
+        "app_contact_identite_app",        # la correspondance des contacts redescendue du cloud
+        "app_notification",
     ],
     "hektor": [
         "sync_meta",                       # 4 curseurs delta : sans eux, re-pull complet

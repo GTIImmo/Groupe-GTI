@@ -2064,3 +2064,17 @@ saisis — type, sous-type, date de début, durée, tacite reconduction, mandant
   sont irréversibles (adresses publiques des dérivés, G.10bis) ; trop lourds pour le quotidien en entier, mesure à faire d'un extrait
   « numéros seulement ».
 - **Aucune restauration du niveau 1 depuis août** ; celle du niveau 2 n'est pas mesurée.
+
+### 8d — ✅ LES REGISTRES ÉCRITS AU CLIC ENTRENT DANS LA SAUVEGARDE DE CHAQUE JOUR *(29/10, Frédéric : « oui, code-le »)*
+- **`phase2/sync/backup_critical.py`, `CRITICAL_TABLES["phase2"]`** : **+19 tables** (liens et leur copie du cloud, carnet des liens,
+  liens app seule, mandats, dates justes, carnets des mandats / transactions / annonces, répartitions, affaires supprimées, saisies,
+  résolutions, correspondance des contacts, notifications). Additif ; une table absente un jour est ignorée et dite au journal (comme avant).
+- **Essai à blanc** : les 30 tables de `phase2` + 7 de `hektor` listées. **Vraie sauvegarde vers un dossier d'essai** (`GTI_BACKUP_ROOT`
+  détourné, sources en lecture seule) : **37 tables, 1 232 058 lignes, 17 s, 59,8 Mo compressés** (contre 35 Mo avant).
+- **Essai de restauration** (archive décompressée dans un fichier à part) : intégrité **ok**, **37 tables, 0 écart** entre le manifeste, la
+  copie et la source ; témoins présents (le lien né au clic, les 24 répartitions saisies, 27 456 mandats, 61 514 identités de dossier).
+- ⚠ **Le coût** : +25 Mo par jour → **~5,4 Go** en régime stable sur 90 jours (2,3 Go aujourd'hui) ; disque C: **290 Go libres**.
+- ⏰ **Actif dès demain 08:00** : la tâche `GTI Sauvegarde` relit le fichier à chaque passage, aucun redémarrage. À lire demain : le journal du
+  jour doit lister les 19 nouvelles tables et finir en code 0.
+- **Restent à décider** : les 2 tables du classeur sans copie (avec l'autre session) ; le `pg_dump` de Supabase ; l'extrait des numéros des
+  photos et des documents.
