@@ -3905,3 +3905,7 @@ sans lien, et sans la case cible**. La fiche du mandant n'arrive chez nous qu'av
   **mutant** attrapé.
 - ⚠ **Pas vu à l'écran** : il faut une session connectée. À regarder après le push : Registre des mandats → un mandat d'un bien vivant →
   l'éditeur du mandat, ses mandants pré-remplis doivent être ceux de la fiche annonce du même bien.
+- ✅ **VU EN LIGNE le 29/10** (déploiement Vercel de `8609250` prêt, Chrome de Frédéric, compte admin, lecture seule — l'éditeur ouvert,
+  rien généré ni enregistré) : registre des mandats → mandat **18878** (bien 63086, choisi parce que la liste de Hektor y est **vide** et que
+  notre registre y connaît 4 fiches) → « Préparer avenant » → **MANDANT(S) : 4 personnes ✓**, celles de notre registre. ⭐ **Témoin** : avec
+  l'ancien code, ce bien n'avait que la liste vide de Hektor → aucun mandant pré-rempli.
