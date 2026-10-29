@@ -26785,6 +26785,220 @@ function MandatsScreen(props: {
   )
 }
 
+// ═══ 29/10/2026 -- REGISTRE V3 : LA MAQUETTE VALIDEE PAR FREDERIC LE 28/10 ══════════════════════════════
+// Sa consigne : « uniquement du visuel et quelques ajouts » -- memes colonnes, memes mots, memes donnees.
+// Ce qui change quand l'interrupteur est vrai :
+//   · la carte blanche bienvu remplace le cahier a spirale (registre-v3.css, scope .registre-v3) ;
+//   · « Période » remplace « Date de début » + « Date de fin » : les deux dates, une barre, « reste N j »
+//     (le calcul est celui du cockpit, computeMandatTiming), et la cloture en dessous comme avant ;
+//   · l'Etat garde ses trois lignes et ses mots, avec un picto par FAIT (etiquette = statut de l'annonce,
+//     bouclier = validation, antenne = diffusion) ;
+//   · une icone de type devant « Nature et situation » ;
+//   · une ligne qui se deplie (chevron) : les blocs ET les mots de la fiche mandat (mandants, historique des
+//     prix + un graphique, versions, avenants), lus par les MEMES fonctions sur la ligne deja chargee --
+//     aucune requete en plus ;
+//   · le « + » des mandants disparait : la ligne depliee les liste. La recherche n'en depend pas (search_text
+//     porte 115 472 mots des mandants sur 115 472, et « Nom mandant » lit mandants_texte -- mesure du 28/10).
+// ⚠ NON TOUCHES : la zone du haut et le tiroir des filtres (code commun a tous les ecrans), la fiche mandat.
+// ⚠ Le telephone a son PROPRE ecran (MobileRegisterCards) : il garde sa photo, « Mandat N » et « Voir le
+//   mandat », et recoit la barre de periode, la ligne « modif prix » et « Détails ».
+// `false` = l'ancien registre, a l'identique (bureau ET telephone).
+const REGISTRE_V3 = false
+
+type RegistreV3IcoNom = 'tag' | 'tag-plein' | 'bouclier-ok' | 'bouclier-ko' | 'antenne' | 'antenne-off'
+  | 'maison' | 'appartement' | 'terrain' | 'recherche' | 'autre' | 'chevron'
+
+function RegistreV3Ico({ nom }: { nom: RegistreV3IcoNom }) {
+  const trait = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.9, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const }
+  const etiquette = 'M3.5 12.5V4.5a1 1 0 0 1 1-1h8l8 8a1.4 1.4 0 0 1 0 2l-7 7a1.4 1.4 0 0 1-2 0l-8-8Z'
+  const bouclier = 'M12 3 5 6v5c0 4.5 3 8 7 10 4-2 7-5.5 7-10V6l-7-3Z'
+  switch (nom) {
+    case 'tag-plein':
+      return <svg className="reg3-ic" viewBox="0 0 24 24" aria-hidden="true"><path d={etiquette} fill="currentColor" stroke="currentColor" strokeWidth={1.6} strokeLinejoin="round" /><circle cx="8" cy="8" r="1.4" fill="#fff" /></svg>
+    case 'tag':
+      return <svg className="reg3-ic" viewBox="0 0 24 24" aria-hidden="true" {...trait}><path d={etiquette} /><circle cx="8" cy="8" r="1.4" /></svg>
+    case 'bouclier-ok':
+      return <svg className="reg3-ic" viewBox="0 0 24 24" aria-hidden="true" {...trait}><path d={bouclier} /><path d="m9 12 2 2 4-4" /></svg>
+    case 'bouclier-ko':
+      return <svg className="reg3-ic" viewBox="0 0 24 24" aria-hidden="true" {...trait}><path d={bouclier} /><path d="m9.5 9.5 5 5M14.5 9.5l-5 5" /></svg>
+    case 'antenne':
+      return <svg className="reg3-ic" viewBox="0 0 24 24" aria-hidden="true" {...trait}><circle cx="12" cy="12" r="1.8" /><path d="M8.6 15.4a4.8 4.8 0 0 1 0-6.8M15.4 8.6a4.8 4.8 0 0 1 0 6.8M5.6 18.4a9 9 0 0 1 0-12.8M18.4 5.6a9 9 0 0 1 0 12.8" /></svg>
+    case 'antenne-off':
+      return <svg className="reg3-ic" viewBox="0 0 24 24" aria-hidden="true" {...trait}><circle cx="12" cy="12" r="1.8" /><path d="M8.6 15.4a4.8 4.8 0 0 1 0-6.8M15.4 8.6a4.8 4.8 0 0 1 0 6.8M4 4l16 16" /></svg>
+    case 'maison':
+      return <svg className="reg3-ic" viewBox="0 0 24 24" aria-hidden="true" {...trait}><path d="M4 11.5 12 5l8 6.5" /><path d="M6 10v9h12v-9" /><path d="M10 19v-5h4v5" /></svg>
+    case 'appartement':
+      return <svg className="reg3-ic" viewBox="0 0 24 24" aria-hidden="true" {...trait}><rect x="6" y="3.5" width="12" height="17" rx="1.5" /><path d="M9.5 7.5h1M13.5 7.5h1M9.5 11h1M13.5 11h1M9.5 14.5h1M13.5 14.5h1" /></svg>
+    case 'terrain':
+      return <svg className="reg3-ic" viewBox="0 0 24 24" aria-hidden="true" {...trait}><path d="M3 18h18" /><path d="m5 18 4-7 3 4 2-3 5 6" /></svg>
+    case 'recherche':
+      return <svg className="reg3-ic" viewBox="0 0 24 24" aria-hidden="true" {...trait}><circle cx="11" cy="11" r="6" /><path d="m20 20-4.5-4.5" /></svg>
+    case 'chevron':
+      return <svg viewBox="0 0 24 24" aria-hidden="true" {...trait} strokeWidth={2.2}><path d="m6 9 6 6 6-6" /></svg>
+    default:
+      return <svg className="reg3-ic" viewBox="0 0 24 24" aria-hidden="true" {...trait}><path d="M4 20h16M6 20V8l6-4 6 4v12" /><path d="M10 20v-4h4v4" /></svg>
+  }
+}
+
+// L'icone se deduit du LIBELLE deja affiche (libelleTypeBien) : aucune regle nouvelle sur les types.
+function registreV3TypeBien(item: MandatRecord): RegistreV3IcoNom {
+  if (estMandatDeRecherche(item)) return 'recherche'
+  const type = normalizeMandateLifecycleStatus(mandateRegisterNatureParts(item).type)
+  if (/(appartement|studio|loft|duplex|triplex)/.test(type)) return 'appartement'
+  if (/terrain/.test(type)) return 'terrain'
+  if (/(maison|villa|ferme|bastide|mas|propriete|chateau|chalet|longere)/.test(type)) return 'maison'
+  return 'autre'
+}
+
+// La colonne « Période ». Le statut est celui de la pastille (mandatStatutForRegister) et la duree celle du
+// cockpit (computeMandatTiming) : deux regles qui existent deja, aucune n'est recopiee.
+// ⚠ Des dates absentes ou « 0000-00-00 » (34 lignes au 28/10) : computeMandatTiming les rend invalides --
+//   on garde alors les dates telles que formatDate les ecrit, sans barre ni « reste ».
+function RegistreV3Periode({ item }: { item: MandatRecord }) {
+  const statut = mandatStatutForRegister(item)
+  const timing = computeMandatTiming(item.mandat_date_debut, item.mandat_date_fin)
+  const cloture = (item.mandat_date_cloture ?? '').trim()
+  let ton = 'en-cours'
+  let pct = timing.pct
+  if (statut === 'Vendu') { ton = 'vendu'; pct = 100 }
+  else if (statut === 'Échu') { ton = 'termine'; pct = 100 }
+  else if (statut === 'Clos') ton = 'termine'
+  else if (timing.joursRestants != null && timing.joursRestants <= 15) ton = 'bientot'
+  if (cloture && timing.valid) {
+    const debut = new Date(String(item.mandat_date_debut)).getTime()
+    const fin = new Date(String(item.mandat_date_fin)).getTime()
+    const clos = new Date(cloture).getTime()
+    if (!Number.isNaN(clos)) pct = Math.max(0, Math.min(100, Math.round(((clos - debut) / (fin - debut)) * 100)))
+  }
+  // La cloture garde SON libelle d'avant (« Clos 14/10/2027 »), a la meme place : sous l'echeance.
+  const sousLigne = cloture
+    ? `Clos ${formatDate(cloture)}`
+    : statut === 'Actif' && timing.valid && timing.joursRestants != null ? `reste ${timing.joursRestants} j` : ''
+  return (
+    <div className={`reg3-periode reg3-ton-${ton}`}>
+      {/* Aucune des deux dates : un seul « - », comme une case vide de l'ancien registre (pas « - → - »). */}
+      <span className="reg3-dates">{item.mandat_date_debut || item.mandat_date_fin
+        ? <>{formatDate(item.mandat_date_debut)}<i>→</i>{formatDate(item.mandat_date_fin)}</>
+        : '-'}</span>
+      {timing.valid ? <span className="reg3-barre" aria-hidden="true"><b style={{ width: `${pct}%` }} /></span> : null}
+      {sousLigne ? <span className={`reg3-sous ${cloture ? 'is-clos' : ''}`.trim()}>{sousLigne}</span> : null}
+    </div>
+  )
+}
+
+// La ligne depliee : les blocs de la fiche mandat (MandatRegisterScreen, modale), avec LEURS mots et LEURS
+// fonctions de lecture. Elle ne lit que la ligne deja chargee, et seulement quand on la deplie.
+function RegistreV3Deplie({ item }: { item: MandatRecord }) {
+  const payload = parseRegisterDetailPayload(item)
+  const estRecherche = estMandatDeRecherche(item)
+  // Meme ordre que la fiche : le blob de Hektor s'il existe, sinon NOTRE liste des mandants. La fiche muette
+  // reste muette (buildDetailContactsFromMandantsJson l'ecarte) ; sans liste du tout, le texte du registre.
+  const depuisHektor = buildDetailContactsFromProprietaires(String(payload.proprietaires_json ?? '[]'), 'reg3-contact')
+  const contacts = depuisHektor.length > 0
+    ? depuisHektor
+    : buildDetailContactsFromMandantsJson(item.mandants_json as string | null | undefined, 'reg3-mandant')
+  const mandantsTexte = mandateRegisterMandantsLabel(item)
+  const evenements = readPriceChangeEvents((payload.price_change_events_json ? payload : item) as Record<string, unknown>)
+    .slice()
+    .sort((a, b) => new Date(priceChangeAnchorDate(a) ?? 0).getTime() - new Date(priceChangeAnchorDate(b) ?? 0).getTime())
+  const versions = parseRegisterHistory(item)
+  const avenants = parseRegisterAvenants(item)
+  // Le graphique en escalier : le premier ancien prix, puis chaque nouveau prix. Un montant illisible
+  // n'entre pas dans le dessin (il reste dans la liste, ecrit par formatPrice comme dans la fiche).
+  const valeurs = evenements.length > 0
+    ? [Number(evenements[0].old_value), ...evenements.map((entry) => Number(entry.new_value))].filter((value) => Number.isFinite(value))
+    : []
+  let trace = ''
+  let aire = ''
+  let ecartTotal = ''
+  if (valeurs.length >= 2) {
+    const haut = Math.max(...valeurs)
+    const bas = Math.min(...valeurs)
+    const y = (value: number) => (haut === bas ? 35 : 8 + ((haut - value) / (haut - bas)) * 54)
+    const pas = 300 / valeurs.length
+    trace = valeurs.flatMap((value, index) => [`${index * pas},${y(value)}`, `${(index + 1) * pas},${y(value)}`]).join(' ')
+    aire = `0,70 ${trace} 300,70`
+    const ecart = valeurs[valeurs.length - 1] - valeurs[0]
+    const part = (ecart / valeurs[0]) * 100
+    ecartTotal = `${ecart < 0 ? '−' : '+'}${new Intl.NumberFormat('fr-FR').format(Math.abs(ecart))} € (${part < 0 ? '−' : '+'}${Math.abs(part).toFixed(1).replace('.', ',')} %)`
+  }
+  return (
+    <div className="reg3-deplie">
+      <section className="reg3-bloc" aria-label="Mandants">
+        <div className="reg3-bloc-h">{contacts.length > 1 ? `Mandants · ${contacts.length}` : 'Mandant · 1'}</div>
+        {contacts.length > 0 ? contacts.map((contact) => (
+          <div className="reg3-personne" key={contact.id}>
+            <span className="reg3-avatar" aria-hidden="true">{userInitials(contact.name, contact.email)}</span>
+            <div style={{ minWidth: 0 }}>
+              <div className="reg3-nom">{contact.name}</div>
+              {estRecherche ? null : <div className="reg3-role">{contact.role || 'Propriétaire vendeur'}</div>}
+            </div>
+          </div>
+        )) : <div className="reg3-nom" style={{ whiteSpace: 'normal' }}>{mandantsTexte || '-'}</div>}
+        <div className="reg3-ligne"><span className="reg3-aide">Commercial : <b>{item.commercial_nom || '-'}</b> · Agence : <b>{item.agence_nom || '-'}</b></span></div>
+      </section>
+
+      <section className="reg3-bloc" aria-label="Historique des prix">
+        <div className="reg3-bloc-h">Historique des prix{ecartTotal ? <span className="reg3-pastille">{ecartTotal}</span> : null}</div>
+        {evenements.length > 0 ? (
+          <>
+            {trace ? (
+              <>
+                <svg className="reg3-courbe" viewBox="0 0 300 70" preserveAspectRatio="none" role="img" aria-label={`Prix passé de ${formatPrice(valeurs[0])} à ${formatPrice(valeurs[valeurs.length - 1])}`}>
+                  <polygon points={aire} fill="#fdf0f6" />
+                  <polyline points={trace} fill="none" stroke="#c5005f" strokeWidth={2} strokeLinejoin="round" />
+                </svg>
+                <div className="reg3-courbe-bornes"><span>{formatPrice(valeurs[0])}</span><span>{formatPrice(valeurs[valeurs.length - 1])}</span></div>
+              </>
+            ) : null}
+            {evenements.slice().reverse().map((entry, index) => {
+              const ancien = Number(entry.old_value)
+              const nouveau = Number(entry.new_value)
+              const ecart = Number.isFinite(ancien) && Number.isFinite(nouveau) ? nouveau - ancien : null
+              return (
+                <div className="reg3-ligne" key={`reg3-prix-${index}-${String(entry.detected_at ?? 'na')}`}>
+                  <div className="reg3-prix-ligne">
+                    <span className="reg3-meta">{formatPrice(entry.old_value)} → <b>{formatPrice(entry.new_value)}</b></span>
+                    {ecart != null && ecart !== 0 ? <span className={`reg3-ecart ${ecart > 0 ? 'is-hausse' : ''}`.trim()}>{ecart < 0 ? '−' : '+'}{new Intl.NumberFormat('fr-FR').format(Math.abs(ecart))} €</span> : null}
+                  </div>
+                  <span className="reg3-aide">Maj Hektor : {formatDate(priceChangeAnchorDate(entry))}{entry.numero_mandat ? ` · Mandat ${entry.numero_mandat}` : ''}</span>
+                </div>
+              )
+            })}
+          </>
+        ) : (
+          <div className="reg3-vide"><b>Aucun changement de prix</b>Aucune baisse n'a été historisée pour ce mandat.</div>
+        )}
+      </section>
+
+      <section className="reg3-bloc" aria-label="Historique des versions">
+        <div className="reg3-bloc-h">Historique des versions<span className="reg3-pastille">{(versions.length || 1)} version{(versions.length || 1) > 1 ? 's' : ''}</span></div>
+        {versions.length > 0 ? versions.map((entry, index) => (
+          <div className="reg3-ligne" key={String(entry.history_id ?? index)}>
+            <span className="reg3-titre">{String(entry.label ?? `Version ${index + 1}`)}</span>
+            <span className="reg3-meta">{String(entry.type ?? entry.type_source ?? '-')} · {formatDate(String(entry.date_debut ?? ''))} → {formatDate(String(entry.date_fin ?? ''))} · <b>{formatPrice(String(entry.montant ?? ''))}</b></span>
+            <span className="reg3-aide">Mandant : {String(entry.mandants_texte ?? item.mandants_texte ?? '-')}</span>
+          </div>
+        )) : (
+          <div className="reg3-ligne">
+            <span className="reg3-titre">Version courante</span>
+            <span className="reg3-meta">{mandateRegisterObjectLabel(item)} · {formatDate(item.mandat_date_debut)} → {formatDate(item.mandat_date_fin)} · <b>{formatPrice(item.prix)}</b></span>
+            <span className="reg3-aide">Mandant : {mandantsTexte || '-'}</span>
+          </div>
+        )}
+        <div className="reg3-bloc-h" style={{ marginTop: 6 }}>Avenants &amp; modifications<span className={`reg3-pastille ${avenants.length > 0 ? '' : 'is-neutre'}`.trim()}>{avenants.length > 0 ? `${avenants.length} avenant${avenants.length > 1 ? 's' : ''}` : 'Aucun avenant'}</span></div>
+        {avenants.map((entry, index) => (
+          <div className="reg3-ligne" key={String(entry.avenant_id ?? index)}>
+            <span className="reg3-titre">{String(entry.numero ?? 'Avenant')}</span>
+            <span className="reg3-meta">{formatDate(String(entry.date ?? ''))}</span>
+            <span className="reg3-aide">{String(entry.detail ?? 'Sans détail')}</span>
+          </div>
+        ))}
+      </section>
+    </div>
+  )
+}
+
 function MandatRegisterScreen(props: {
   mandats: MandatRecord[]
   mandatsTotal: number
@@ -26809,6 +27023,9 @@ function MandatRegisterScreen(props: {
   loading: boolean
 }) {
   const [expandedMandants, setExpandedMandants] = useState<Record<string, boolean>>({})
+  // REGISTRE V3 : les lignes depliees, par cle de ligne du registre (jamais app_dossier_id : un bien a
+  // deux mandats = deux lignes -- la lecon des lignes fantomes du 27/10).
+  const [registreOuverts, setRegistreOuverts] = useState<Record<string, boolean>>({})
   const [detailOpen, setDetailOpen] = useState(false)
   // ─── ⑦-3a pièce 4 : l'état de la saisie de la date de clôture ───
   // `clotureLocale` est une SUPERPOSITION par ligne de registre : la valeur qu'on
@@ -27006,7 +27223,7 @@ function MandatRegisterScreen(props: {
 
   return (
     <section className="panel-grid">
-      <section className="panel panel-wide registre-nb">
+      <section className={`panel panel-wide registre-nb${REGISTRE_V3 ? ' registre-v3' : ''}`}>
         <div className="nb-wrap">
           <div className="nb-spine" aria-hidden="true"><span className="nb-rings" /></div>
           <div className="notebook">
@@ -27033,7 +27250,8 @@ function MandatRegisterScreen(props: {
                     <th className="register-col-mandat">N° de mandat</th>
                     <th className="register-col-mstatut">Statut du mandat</th>
                     <th className="register-col-etat">État</th>
-                    <th className="register-col-date">Date de début</th>
+                    {REGISTRE_V3 ? <th className="register-col-periode">Période</th> : null}
+                    {REGISTRE_V3 ? null : <th className="register-col-date">Date de début</th>}
                     {/* ⑦-3a (16/10/2026) : LA CLÔTURE EST DANS CETTE COLONNE, EN 2ᵉ LIGNE.
                         Elle a d'abord eu SA colonne (décision de Frédéric à midi), puis on
                         l'a retirée l'après-midi — mesure à l'écran : le tableau passait à
@@ -27043,7 +27261,7 @@ function MandatRegisterScreen(props: {
                         lignes, 215 ont une clôture (0,88 %), 0 sur les 50 affichées par
                         défaut. Une colonne vide 99 % du temps coûtait 96 px à tout le monde.
                         ➡ Option C, choisie par Frédéric : zéro pixel ajouté. */}
-                    <th className="register-col-date">Date de fin</th>
+                    {REGISTRE_V3 ? null : <th className="register-col-date">Date de fin</th>}
                     <th className="register-col-amount">Montant</th>
                     <th className="register-col-mandants">Mandant(s)</th>
                     <th className="register-col-nature">Nature et situation</th>
@@ -27068,10 +27286,17 @@ function MandatRegisterScreen(props: {
                       : (item.statut_annonce ?? '').trim().toLowerCase() === 'actif'
                     const isValide = isValidationApproved(item.validation_diffusion_state)
                     const isDiffusable = isDiffusableValue(item.diffusable)
+                    const estOuvert = REGISTRE_V3 && Boolean(registreOuverts[rowKey])
+                    const natureTexte = (
+                      <>
+                        <span className="register-nat-type" title={natureParts.type || undefined}>{natureParts.type || '—'}</span>
+                        {natureParts.address ? <span className="register-nat-addr" title={natureParts.address}>{natureParts.address}</span> : null}
+                      </>
+                    )
                     return (
+                      <Fragment key={rowKey}>
                       <tr
-                        key={rowKey}
-                        className={`${mandateLifecycleRowClass(item)} ${isSelected ? 'is-selected' : ''}`.trim()}
+                        className={`${mandateLifecycleRowClass(item)} ${isSelected ? 'is-selected' : ''} ${estOuvert ? 'reg3-ouvert' : ''}`.replace(/\s+/g, ' ').trim()}
                         onClick={() => {
                           props.onSelectMandat(rowKey)
                           setDetailOpen(true)
@@ -27093,7 +27318,7 @@ function MandatRegisterScreen(props: {
                         <td className="register-col-etat">
                           <div className="reg-etat">
                             <div className={`reg-etat-row ${statutActif ? 'ok' : 'neutral'}`}>
-                              {statutActif
+                              {REGISTRE_V3 ? <RegistreV3Ico nom={statutActif ? 'tag-plein' : 'tag'} /> : statutActif
                                 ? <svg className="reg-ic" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="5" /></svg>
                                 : <svg className="reg-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><circle cx="12" cy="12" r="5" /></svg>}
                               <span>{item.statut_annonce || 'Actif'}</span>
@@ -27104,7 +27329,7 @@ function MandatRegisterScreen(props: {
                                 registre legal -- une fausse alarme permanente. */}
                             {estRecherche ? null : (
                             <div className={`reg-etat-row ${isValide ? 'ok' : 'ko'}`}>
-                              {isValide
+                              {REGISTRE_V3 ? <RegistreV3Ico nom={isValide ? 'bouclier-ok' : 'bouclier-ko'} /> : isValide
                                 ? <svg className="reg-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5 10 17 19 7" /></svg>
                                 : <svg className="reg-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>}
                               <span>{isValide ? 'Validé' : 'Non validé'}</span>
@@ -27112,7 +27337,7 @@ function MandatRegisterScreen(props: {
                             )}
                             {estRecherche ? null : (
                             <div className={`reg-etat-row ${isDiffusable ? 'ok' : 'ko'}`}>
-                              {isDiffusable
+                              {REGISTRE_V3 ? <RegistreV3Ico nom={isDiffusable ? 'antenne' : 'antenne-off'} /> : isDiffusable
                                 ? <svg className="reg-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5 10 17 19 7" /></svg>
                                 : <svg className="reg-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>}
                               <span>{isDiffusable ? 'Diffusable' : 'Non diffusable'}</span>
@@ -27120,7 +27345,8 @@ function MandatRegisterScreen(props: {
                             )}
                           </div>
                         </td>
-                        <td className="register-col-date"><strong className="register-date">{formatDate(item.mandat_date_debut)}</strong></td>
+                        {REGISTRE_V3 ? <td className="register-col-periode"><RegistreV3Periode item={item} /></td> : null}
+                        {REGISTRE_V3 ? null : <td className="register-col-date"><strong className="register-date">{formatDate(item.mandat_date_debut)}</strong></td>}
                         {/* ⑦-3a (16/10/2026) : l'échéance, et SOUS ELLE la clôture quand il
                             y en a une. Zéro pixel ajouté au tableau (option C).
                             ⭐ Le patron n'est pas inventé : c'est exactement celui de la
@@ -27131,19 +27357,25 @@ function MandatRegisterScreen(props: {
                               manquante », pas « mandat vivant ».
                             ⚠ C'est la RÉSULTANTE que la vue sert : NOTRE date d'abord,
                               celle de Hektor ensuite (COALESCE dans la vue). */}
+                        {REGISTRE_V3 ? null : (
                         <td className="register-col-date">
                           <strong className="register-date">{formatDate(item.mandat_date_fin)}</strong>
                           {(item.mandat_date_cloture ?? '').trim()
                             ? <span className="register-cloture">Clos {formatDate(item.mandat_date_cloture)}</span>
                             : null}
                         </td>
+                        )}
                         <td className="register-col-amount">
                           <strong className="register-amount">{formatPrice(item.prix)}</strong>
                           {priceChangeSummaryLine(item) ? <span className="register-price-history">{priceChangeSummaryLine(item)}</span> : null}
                         </td>
                         <td className="register-col-mandants">
+                          {/* REGISTRE V3 : plus de « + » -- deux lignes au plus, le texte entier au survol, et la
+                              liste complete dans la ligne depliee. */}
+                          {REGISTRE_V3 ? <strong className="register-primary register-mandants-text reg3-mandants" title={mandantsLabel}>{mandantsLabel}</strong> : (
                           <strong className={`register-primary register-mandants-text ${canExpandMandants && !isMandantsExpanded ? 'is-clamped' : ''}`}>{mandantsLabel}</strong>
-                          {canExpandMandants ? (
+                          )}
+                          {!REGISTRE_V3 && canExpandMandants ? (
                             <button
                               className="register-more-button"
                               type="button"
@@ -27167,11 +27399,29 @@ function MandatRegisterScreen(props: {
                                 l'allure de 18 208 lignes d'un ecran deja valide --
                                 une decision de design, pas un correctif. `title`
                                 rend le texte entier lisible sans deplacer un pixel. */}
-                          <span className="register-nat-type" title={natureParts.type || undefined}>{natureParts.type || '—'}</span>
-                          {natureParts.address ? <span className="register-nat-addr" title={natureParts.address}>{natureParts.address}</span> : null}
+                          {REGISTRE_V3 ? (
+                            <div className="reg3-nature">
+                              <span className="reg3-nature-ico"><RegistreV3Ico nom={registreV3TypeBien(item)} /></span>
+                              <div className="reg3-nature-txt">{natureTexte}</div>
+                            </div>
+                          ) : natureTexte}
                         </td>
                         <td className="register-col-acts">
                           <div className="reg-acts" onClick={(event) => event.stopPropagation()}>
+                            {/* REGISTRE V3 : le chevron vit DANS ce conteneur, qui arrete deja le clic de la
+                                ligne -- deplier n'ouvre donc jamais la fiche. */}
+                            {REGISTRE_V3 ? (
+                              <button
+                                className={`reg-act reg3-deplier ${estOuvert ? 'is-open' : ''}`.trim()}
+                                type="button"
+                                aria-expanded={estOuvert}
+                                aria-label={estOuvert ? 'Replier' : 'Déplier : mandants, prix, versions'}
+                                title={estOuvert ? 'Replier' : 'Déplier : mandants, prix, versions'}
+                                onClick={() => setRegistreOuverts((courant) => ({ ...courant, [rowKey]: !courant[rowKey] }))}
+                              >
+                                <RegistreV3Ico nom="chevron" />
+                              </button>
+                            ) : null}
                             <button
                               className="reg-act reg-act-cta"
                               type="button"
@@ -27186,6 +27436,12 @@ function MandatRegisterScreen(props: {
                           </div>
                         </td>
                       </tr>
+                      {estOuvert ? (
+                        <tr className="reg3-ligne-depliee">
+                          <td colSpan={8}><RegistreV3Deplie item={item} /></td>
+                        </tr>
+                      ) : null}
+                      </Fragment>
                     )
                   })}
                 </tbody>
@@ -39078,11 +39334,14 @@ function MobileRegisterCards(props: {
   loading: boolean
   onSelectMandat: (registerRowId: string) => void
 }) {
+  // REGISTRE V3 : les cartes depliees. ⚠ AVANT le return de la liste vide -- un hook ne se declare
+  // jamais apres un return conditionnel (lecon de la page blanche du 27/10).
+  const [registreOuverts, setRegistreOuverts] = useState<Record<string, boolean>>({})
   if (props.mandats.length === 0) {
     return <section className="mobile-empty-card">{props.loading ? 'Chargement...' : 'Aucun mandat disponible.'}</section>
   }
   return (
-    <section className="mobile-card-list" aria-label="Registre des mandats">
+    <section className={`mobile-card-list${REGISTRE_V3 ? ' mobile-registre-v3' : ''}`} aria-label="Registre des mandats">
       <div className="mobile-list-head">
         <div>
           <span className="mobile-section-kicker">Registre</span>
@@ -39090,8 +39349,12 @@ function MobileRegisterCards(props: {
         </div>
         <span>{props.mandats.length} / {props.total}</span>
       </div>
-      {props.mandats.map((item) => (
-        <article key={mandateRegisterRowKey(item)} className="mobile-list-card">
+      {props.mandats.map((item) => {
+        const rowKey = mandateRegisterRowKey(item)
+        const estOuvert = REGISTRE_V3 && Boolean(registreOuverts[rowKey])
+        const resumePrix = REGISTRE_V3 ? priceChangeSummaryLine(item) : ''
+        return (
+        <article key={rowKey} className={`mobile-list-card${estOuvert ? ' reg3-ouvert' : ''}`}>
           <div className="mobile-card-top">
             <ListingThumbnail url={item.photo_url_listing} imagesPreviewJson={item.images_preview_json} title={item.titre_bien || `Mandat ${item.numero_mandat ?? '-'}`} />
             <div className="mobile-list-card-main">
@@ -39101,20 +39364,38 @@ function MobileRegisterCards(props: {
             </div>
           </div>
           <div className="mobile-card-grid">
-            <div><span className="mobile-mini-label">Montant</span><strong>{formatPrice(item.prix)}</strong></div>
+            <div><span className="mobile-mini-label">Montant</span><strong>{formatPrice(item.prix)}</strong>{resumePrix ? <span className="reg3-m-prix">{resumePrix}</span> : null}</div>
             <div><span className="mobile-mini-label">Fin</span><strong>{formatDate(item.mandat_date_fin)}</strong></div>
           </div>
+          {REGISTRE_V3 ? <RegistreV3Periode item={item} /> : null}
           <div className="mobile-status-row">
             <span className={`reg-mstatut ${mandatStatutToneClass(mandatStatutForRegister(item))}`}>{mandatStatutForRegister(item)}</span>
             <StatusPill value={item.statut_annonce} />
-            <StatusPill value={mandateRegisterDiffusableLabel(item.diffusable)} />
+            {/* REGISTRE V3 : « Oui »/« Non » seul ne disait pas de quoi -- ce sont les mots du bureau. Et rien pour
+                un mandat de recherche : il ne se diffuse pas (meme regle que la colonne Etat du bureau). */}
+            {REGISTRE_V3
+              ? (estMandatDeRecherche(item) ? null : <StatusPill value={diffusableLabel(item.diffusable)} />)
+              : <StatusPill value={mandateRegisterDiffusableLabel(item.diffusable)} />}
           </div>
           <span className="mobile-card-subline">{mandateRegisterNatureLabel(item)}</span>
           <div className="mobile-card-actions">
-            <button className="mobile-primary-button" type="button" onClick={() => props.onSelectMandat(mandateRegisterRowKey(item))}>Voir le mandat</button>
+            <button className="mobile-primary-button" type="button" onClick={() => props.onSelectMandat(rowKey)}>Voir le mandat</button>
+            {REGISTRE_V3 ? (
+              <button
+                className={`reg3-m-details ${estOuvert ? 'is-open' : ''}`.trim()}
+                type="button"
+                aria-expanded={estOuvert}
+                onClick={() => setRegistreOuverts((courant) => ({ ...courant, [rowKey]: !courant[rowKey] }))}
+              >
+                {estOuvert ? 'Replier' : 'Détails'}
+                <RegistreV3Ico nom="chevron" />
+              </button>
+            ) : null}
           </div>
+          {estOuvert ? <RegistreV3Deplie item={item} /> : null}
         </article>
-      ))}
+        )
+      })}
     </section>
   )
 }

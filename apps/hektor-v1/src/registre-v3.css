@@ -1,0 +1,163 @@
+/* ============================================================
+   Registre des mandats — V3 (maquette validée par Frédéric le 28/10/2026)
+   « Uniquement du visuel et quelques ajouts » : la carte blanche bienvu remplace
+   le cahier à spirale ; colonne « Période », pictos de l'État, icône de type,
+   ligne qui se déplie. Les mots, les colonnes et les données restent ceux de V2.
+
+   ⚠ TOUT est scopé sous .registre-v3 (bureau) et .mobile-registre-v3 (téléphone) :
+   ces classes ne sont posées QUE si l'interrupteur REGISTRE_V3 (App.tsx) est vrai.
+   Éteint, ce fichier ne s'applique à rien.
+   ⚠ La zone du haut (recherche, Filtres, Stats, Priorites) et le tiroir des filtres
+   sont du code commun à tous les écrans : ce fichier n'y touche pas.
+   Les sélecteurs commencent par `.app-shell.app-screen-registre` pour passer devant
+   registre-v2.css et layout-overrides.css (qui posent des !important).
+   ============================================================ */
+
+.app-shell.app-screen-registre .registre-nb.registre-v3{
+  --r3-ink:#222323;--r3-mute:#5c6163;--r3-line:#e2e5e6;--r3-soft:#eef0f1;--r3-ground:#fbfbfc;
+  --r3-brand:#c5005f;--r3-brand-700:#8c0044;--r3-brand-50:#fdf0f6;--r3-brand-100:#f6b6d5;
+  --r3-warn:#94550f;--r3-warn-bar:#c27317;
+  --r3-display:var(--bv-font-display, 'Plus Jakarta Sans', system-ui, sans-serif);
+}
+
+/* ── Fini le cahier : la page devient une carte blanche ── */
+.app-shell.app-screen-registre .registre-nb.registre-v3 .nb-wrap{
+  margin-left:0;border-radius:20px;box-shadow:0 1px 2px rgba(34,35,35,.05),0 10px 30px rgba(34,35,35,.05);
+  border:1px solid var(--r3-line);overflow:hidden;background:#fff;
+}
+.app-shell.app-screen-registre .registre-nb.registre-v3 .nb-spine{display:none;}
+.app-shell.app-screen-registre .registre-nb.registre-v3 .notebook{background:#fff;border-radius:20px;box-shadow:none;}
+.app-shell.app-screen-registre .registre-nb.registre-v3 .notebook::before{display:none;}
+
+/* En-tête de la carte : titre, compteur, pagination (mêmes éléments, autre habit) */
+.app-shell.app-screen-registre .registre-nb.registre-v3 .nb-head{
+  padding:16px 20px !important;background:#fff;border-bottom:1px solid var(--r3-line) !important;
+}
+.app-shell.app-screen-registre .registre-nb.registre-v3 .nb-left{align-items:center;gap:12px;}
+.app-shell.app-screen-registre .registre-nb.registre-v3 .nb-title{font-family:var(--r3-display);font-size:22px;font-weight:800;letter-spacing:-.02em;}
+.app-shell.app-screen-registre .registre-nb.registre-v3 .nb-badge{border:0;background:var(--r3-brand-50);color:var(--r3-brand-700);font-size:12.5px;padding:4px 10px;}
+.app-shell.app-screen-registre .registre-nb.registre-v3 .pager .pg-info{color:var(--r3-mute);font-size:13px;font-variant-numeric:tabular-nums;}
+.app-shell.app-screen-registre .registre-nb.registre-v3 .pager .loading-inline{color:var(--r3-brand-700);font-weight:600;}
+.app-shell.app-screen-registre .registre-nb.registre-v3 .pager .pg-btn,
+.app-shell.app-screen-registre .registre-nb.registre-v3 .pager .page-jump input{
+  background:#fff;border:1px solid var(--r3-line);border-radius:10px;font-weight:600;
+}
+.app-shell.app-screen-registre .registre-nb.registre-v3 .pager .page-jump{color:var(--r3-mute);}
+
+/* ── Le tableau ── */
+.app-shell.app-screen-registre .registre-nb.registre-v3 .register-table th{
+  font-size:11.5px !important;font-weight:600 !important;letter-spacing:.05em;color:var(--r3-mute) !important;
+  background:var(--r3-ground) !important;border-bottom:1px solid var(--r3-line) !important;padding:12px !important;
+}
+.app-shell.app-screen-registre .registre-nb.registre-v3 .register-table th:first-child{padding-left:18px !important;}
+.app-shell.app-screen-registre .registre-nb.registre-v3 .register-table tbody td{
+  padding:14px 12px !important;border-bottom:1px solid var(--r3-soft) !important;
+}
+.app-shell.app-screen-registre .registre-nb.registre-v3 .register-table tbody td:first-child{padding-left:18px !important;}
+.app-shell.app-screen-registre .registre-nb.registre-v3 .register-table tbody tr:hover{background:rgba(197,0,95,.035) !important;}
+.app-shell.app-screen-registre .registre-nb.registre-v3 .register-table tbody tr.is-selected{background:rgba(197,0,95,.07) !important;}
+.app-shell.app-screen-registre .registre-nb.registre-v3 .register-table tbody tr.reg3-ouvert{background:var(--r3-brand-50) !important;}
+.app-shell.app-screen-registre .registre-nb.registre-v3 .register-table tbody tr.reg3-ouvert td{border-bottom-color:transparent !important;}
+
+/* Largeurs : « Période » remplace les deux colonnes de dates (2 × 96 px) ;
+   la dernière colonne loge le chevron ET la flèche. Total des colonnes fixes :
+   950 px (V2 : 936) — l'espace du dos du cahier, retiré, le compense. */
+.app-shell.app-screen-registre .registre-nb.registre-v3 .register-col-periode{width:176px;}
+.app-shell.app-screen-registre .registre-nb.registre-v3 .register-col-acts{width:88px;}
+
+/* N° de mandat */
+.app-shell.app-screen-registre .registre-nb.registre-v3 .register-col-mandat .register-primary{font-family:var(--r3-display);font-size:17px;}
+.app-shell.app-screen-registre .registre-nb.registre-v3 .register-col-mandat .register-type-inline{color:var(--r3-brand-700);font-size:12px;font-weight:600;text-transform:lowercase;}
+.app-shell.app-screen-registre .registre-nb.registre-v3 .register-col-mandat .register-secondary{color:var(--r3-mute);font-size:11.5px;font-weight:600;letter-spacing:0;}
+.app-shell.app-screen-registre .registre-nb.registre-v3 .register-tag-row .status-pill{background:#f1f2f3;color:#4f5456;border:0;font-size:10.5px;border-radius:6px;}
+
+/* État : trois faits, trois pictos (statut de l'annonce, validation, diffusion) */
+.app-shell.app-screen-registre .registre-nb.registre-v3 .reg-etat-row{font-size:12.5px;gap:7px;}
+.app-shell.app-screen-registre .registre-nb.registre-v3 .reg-etat-row .reg3-ic{width:15px;height:15px;flex:none;}
+
+/* Période */
+.registre-v3 .reg3-periode,.mobile-registre-v3 .reg3-periode{display:flex;flex-direction:column;gap:6px;min-width:0;}
+.registre-v3 .reg3-dates,.mobile-registre-v3 .reg3-dates{font-size:13px;font-weight:600;color:#222323;font-variant-numeric:tabular-nums;white-space:nowrap;}
+.registre-v3 .reg3-dates i,.mobile-registre-v3 .reg3-dates i{font-style:normal;color:#7c8082;margin:0 3px;}
+.registre-v3 .reg3-barre,.mobile-registre-v3 .reg3-barre{display:block;height:5px;border-radius:5px;background:#eef0f1;overflow:hidden;}
+.registre-v3 .reg3-barre b,.mobile-registre-v3 .reg3-barre b{display:block;height:100%;border-radius:5px;background:#c5005f;}
+.registre-v3 .reg3-ton-bientot .reg3-barre b,.mobile-registre-v3 .reg3-ton-bientot .reg3-barre b{background:#c27317;}
+.registre-v3 .reg3-ton-vendu .reg3-barre b,.mobile-registre-v3 .reg3-ton-vendu .reg3-barre b{background:#222323;}
+.registre-v3 .reg3-ton-termine .reg3-barre b,.mobile-registre-v3 .reg3-ton-termine .reg3-barre b{background:#cfd3d4;}
+.registre-v3 .reg3-sous,.mobile-registre-v3 .reg3-sous{font-size:12px;color:#5c6163;white-space:nowrap;font-variant-numeric:tabular-nums;}
+.registre-v3 .reg3-ton-bientot .reg3-sous,.mobile-registre-v3 .reg3-ton-bientot .reg3-sous{color:#94550f;font-weight:600;}
+.registre-v3 .reg3-sous.is-clos,.mobile-registre-v3 .reg3-sous.is-clos{color:#b5182f;font-weight:700;}
+
+/* Montant : la ligne « modif prix » reste, en plus lisible */
+.app-shell.app-screen-registre .registre-nb.registre-v3 .register-price-history{color:var(--r3-mute);font-size:11.5px;white-space:normal;line-height:1.3;}
+
+/* Mandant(s) : deux lignes au plus, le texte entier au survol (le « + » est retiré) */
+.app-shell.app-screen-registre .registre-nb.registre-v3 .reg3-mandants{
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;white-space:normal;font-size:13.5px;font-weight:600;
+}
+
+/* Nature et situation : une icône de type devant */
+.registre-v3 .reg3-nature{display:flex;align-items:center;gap:10px;min-width:0;}
+.registre-v3 .reg3-nature-ico{width:34px;height:34px;border-radius:10px;background:#f6f7f8;border:1px solid #eef0f1;color:#222323;display:grid;place-items:center;flex:none;}
+.registre-v3 .reg3-nature-ico .reg3-ic{width:17px;height:17px;}
+.registre-v3 .reg3-nature-txt{min-width:0;flex:1;}
+
+/* Actions : le chevron (déplier) à côté de la flèche (ouvrir) */
+.app-shell.app-screen-registre .registre-nb.registre-v3 .reg-act{width:34px;height:34px;border-radius:10px;}
+.app-shell.app-screen-registre .registre-nb.registre-v3 .reg-act.reg3-deplier{background:#fff;}
+.app-shell.app-screen-registre .registre-nb.registre-v3 .reg-act.reg3-deplier svg{transition:transform .2s;}
+.app-shell.app-screen-registre .registre-nb.registre-v3 .reg-act.reg3-deplier.is-open{border-color:var(--r3-brand-100);color:var(--r3-brand);background:var(--r3-brand-50);}
+.app-shell.app-screen-registre .registre-nb.registre-v3 .reg-act.reg3-deplier.is-open svg{transform:rotate(180deg);}
+
+/* ── La ligne dépliée : les blocs de la fiche mandat ── */
+.app-shell.app-screen-registre .registre-nb.registre-v3 .register-table tbody tr.reg3-ligne-depliee,
+.app-shell.app-screen-registre .registre-nb.registre-v3 .register-table tbody tr.reg3-ligne-depliee:hover{background:var(--r3-brand-50) !important;cursor:default;}
+.app-shell.app-screen-registre .registre-nb.registre-v3 .register-table tbody tr.reg3-ligne-depliee td{padding:2px 18px 18px !important;white-space:normal;border-left:0 !important;}
+.registre-v3 .reg3-deplie,.mobile-registre-v3 .reg3-deplie{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.3fr) minmax(0,1fr);gap:14px;}
+.mobile-registre-v3 .reg3-deplie{grid-template-columns:minmax(0,1fr);gap:8px;}
+.reg3-deplie .reg3-bloc{background:#fff;border:1px solid #eef0f1;border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px;min-width:0;}
+.reg3-deplie .reg3-bloc-h{display:flex;align-items:center;justify-content:space-between;gap:8px;font:700 13.5px var(--bv-font-display, 'Plus Jakarta Sans', system-ui, sans-serif);color:#222323;}
+.reg3-deplie .reg3-pastille{display:inline-flex;align-items:center;height:22px;padding:0 9px;border-radius:999px;font-size:11.5px;font-weight:600;background:#fdf0f6;color:#8c0044;white-space:nowrap;}
+.reg3-deplie .reg3-pastille.is-neutre{background:#f1f2f3;color:#4f5456;}
+.reg3-deplie .reg3-personne{display:flex;align-items:center;gap:10px;min-width:0;}
+.reg3-deplie .reg3-avatar{width:32px;height:32px;border-radius:50%;background:#222323;color:#fff;font-size:11.5px;font-weight:700;display:grid;place-items:center;flex:none;}
+.reg3-deplie .reg3-nom{font-size:13.5px;font-weight:600;color:#222323;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.reg3-deplie .reg3-role{font-size:12.5px;color:#5c6163;}
+.reg3-deplie .reg3-ligne{padding-top:9px;border-top:1px solid #f1f2f3;display:flex;flex-direction:column;gap:3px;font-size:13px;color:#222323;min-width:0;}
+.reg3-deplie .reg3-ligne .reg3-titre{font-weight:700;}
+.reg3-deplie .reg3-ligne .reg3-meta{font-variant-numeric:tabular-nums;}
+.reg3-deplie .reg3-ligne .reg3-aide{color:#5c6163;font-size:12.5px;}
+.reg3-deplie .reg3-ecart{font-weight:700;color:#8c0044;font-variant-numeric:tabular-nums;white-space:nowrap;}
+.reg3-deplie .reg3-ecart.is-hausse{color:#1a7a4a;}
+.reg3-deplie .reg3-prix-ligne{display:flex;justify-content:space-between;gap:10px;}
+.reg3-deplie .reg3-courbe{display:block;width:100%;height:70px;}
+.reg3-deplie .reg3-courbe-bornes{display:flex;justify-content:space-between;gap:8px;font-size:11.5px;color:#5c6163;font-variant-numeric:tabular-nums;margin-top:-4px;}
+.reg3-deplie .reg3-vide{font-size:13px;color:#5c6163;}
+.reg3-deplie .reg3-vide b{display:block;color:#222323;}
+
+/* ============================================================
+   TÉLÉPHONE (MobileRegisterCards) — même contenu qu'aujourd'hui, mêmes boutons,
+   plus la barre de période, la ligne « modif prix » et « Détails ».
+   ============================================================ */
+.mobile-card-list.mobile-registre-v3 .mobile-list-card{border-radius:18px;border:1px solid #e2e5e6;}
+.mobile-card-list.mobile-registre-v3 .mobile-list-card.reg3-ouvert{border-color:#f6b6d5;}
+.mobile-card-list.mobile-registre-v3 .mobile-card-meta{color:#8c0044;font-weight:600;}
+.mobile-card-list.mobile-registre-v3 .reg3-m-prix{display:block;margin-top:2px;font-size:12px;font-weight:600;color:#8c0044;}
+.mobile-card-list.mobile-registre-v3 .reg3-periode{margin:2px 0;}
+.mobile-card-list.mobile-registre-v3 .mobile-card-actions{display:flex;gap:8px;}
+.mobile-card-list.mobile-registre-v3 .mobile-card-actions .mobile-primary-button{flex:1;}
+.mobile-card-list.mobile-registre-v3 .reg3-m-details{
+  flex:none;min-height:44px;padding:0 14px;border-radius:12px;border:1px solid #e2e5e6;background:#fff;color:#222323;
+  font:inherit;font-size:13.5px;font-weight:600;display:inline-flex;align-items:center;gap:6px;cursor:pointer;
+}
+.mobile-card-list.mobile-registre-v3 .reg3-m-details svg{width:16px;height:16px;transition:transform .2s;}
+.mobile-card-list.mobile-registre-v3 .reg3-m-details.is-open{border-color:#f6b6d5;color:#c5005f;background:#fdf0f6;}
+.mobile-card-list.mobile-registre-v3 .reg3-m-details.is-open svg{transform:rotate(180deg);}
+.mobile-card-list.mobile-registre-v3 .reg3-deplie .reg3-bloc{background:#fbfbfc;padding:12px;}
+/* La pastille du statut du mandat : celle du bureau (registre-v2.css ne la peint que sous .registre-nb,
+   le téléphone l'affichait donc en texte brut). Mêmes couleurs, mêmes mots. */
+.mobile-card-list.mobile-registre-v3 .reg-mstatut{display:inline-flex;align-items:center;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:700;line-height:1.25;white-space:nowrap;border:1px solid transparent;}
+.mobile-card-list.mobile-registre-v3 .reg-mstatut-actif{color:#1a7a4a;background:rgba(31,150,90,.10);border-color:rgba(31,150,90,.28);}
+.mobile-card-list.mobile-registre-v3 .reg-mstatut-vendu{color:#7a4bb0;background:rgba(168,106,240,.13);border-color:rgba(168,106,240,.32);}
+.mobile-card-list.mobile-registre-v3 .reg-mstatut-clos{color:#b5182f;background:rgba(200,60,60,.10);border-color:rgba(200,60,60,.26);}
+.mobile-card-list.mobile-registre-v3 .reg-mstatut-echu{color:#9a6a12;background:rgba(176,125,28,.12);border-color:rgba(176,125,28,.30);}
