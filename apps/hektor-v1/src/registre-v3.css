@@ -76,7 +76,8 @@
 
 /* Période */
 .registre-v3 .reg3-periode,.mobile-registre-v3 .reg3-periode{display:flex;flex-direction:column;gap:6px;min-width:0;}
-.registre-v3 .reg3-dates,.mobile-registre-v3 .reg3-dates{font-size:13px;font-weight:600;color:#222323;font-variant-numeric:tabular-nums;white-space:nowrap;}
+/* 29/10 : 13 px gras → 12 px demi-gras (Frédéric : « un peu grosses »). */
+.registre-v3 .reg3-dates,.mobile-registre-v3 .reg3-dates{font-size:12px;font-weight:500;color:#222323;font-variant-numeric:tabular-nums;white-space:nowrap;}
 .registre-v3 .reg3-dates i,.mobile-registre-v3 .reg3-dates i{font-style:normal;color:#7c8082;margin:0 3px;}
 .registre-v3 .reg3-barre,.mobile-registre-v3 .reg3-barre{display:block;height:5px;border-radius:5px;background:#eef0f1;overflow:hidden;}
 .registre-v3 .reg3-barre b,.mobile-registre-v3 .reg3-barre b{display:block;height:100%;border-radius:5px;background:#c5005f;}
