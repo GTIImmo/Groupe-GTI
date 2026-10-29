@@ -20,7 +20,9 @@ SELECT n, controle, verdict FROM (
                    AND NOT has_function_privilege('authenticated', 'public.app_repartition_purger_orphelines()', 'EXECUTE')
               THEN 'OK' ELSE 'ROUGE' END
   UNION ALL
-  SELECT 4, 'aucune saisie n''a été effacée par la pose (non-hektor : 26 lignes le 28/10, 1 orpheline 1001347)',
-         CASE WHEN (SELECT count(*) FROM public.app_affaire_repartition WHERE coalesce(origine,'') NOT LIKE 'hektor%') >= 26
+  -- 29/10 : l'autre session a retire les 2 saisies d'essai orphelines de 1001347 (patch_repartition_essai_24933_2026-10-29.sql,
+  --   sauvegarde gardee) -> 24 attendues, plus 26. Le seuil suit la base, pas l'inverse.
+  SELECT 4, 'aucune saisie n''a été effacée par la pose (non-hektor : 26 lignes le 28/10, 24 depuis le retrait des 2 orphelines de 1001347 le 29/10)',
+         CASE WHEN (SELECT count(*) FROM public.app_affaire_repartition WHERE coalesce(origine,'') NOT LIKE 'hektor%') >= 24
               THEN 'OK' ELSE 'ROUGE : des saisies manquent' END
 ) t ORDER BY n;
