@@ -209,3 +209,54 @@ porteuse à civilité de personne seule (vide 21 183, « M. » 12 459, « Mme. �
 3. **« Compléter le conjoint » n'est pas trivial** pour 33 660 foyers : il faut passer la porteuse en civilité couple et remplir le bloc
    membre 2. Hektor remplit-il alors **la place vide existante**, ou en crée-t-il **une nouvelle** (la vide restant orpheline) ? ⇒ à
    ajouter aux essais : **E6 — sur le couple d'essai, créer une personne seule, puis la passer en couple** et lire les fiches.
+
+## 10. E1 → E6 — FAITS LE 30/10 09:05-09:30 (accord de Frédéric « tu as mon accord pour les tests sur couple »)
+
+Cible : contacts **fictifs** sous « FRANCK GERPHAGNON — Compte formation » (négociateur 2), e-mails `@example.com` (domaine réservé,
+jamais livré), aucun téléphone. ~25 lectures, 0 refus. Gestes chez Hektor : 2 créations par l'app, 2 modifications à l'écran, 1
+archivage + 1 désarchivage (ordre `archiveContact` du worker), 1 suppression à l'écran, 1 « Transformer en couple ».
+
+- **E1 — créer le couple DEPUIS L'APP** (Propriétaire, structure Couple, civilité laissée vide) : le travail `create_hektor_contact` passe
+  en **10 s** ; Hektor fabrique **DEUX fiches consécutives** — 606071 (Un, bloc membre 2 = Deux) et **606072** (Deux, sans bloc). Civilité
+  **`M_Mme` sur les deux** (posée par Hektor : notre vide n'a rien écrasé — ⚠ un « M. » choisi à l'écran n'a PAS été essayé). Les e-mails
+  sont à leur place. Fil d'Ariane Hektor : « ESSAI COUPLE Un / Deux ».
+  ⚠ Chez nous après le rafraîchissement ciblé : **une seule ligne** (20000021 ↔ 606071), lien de couple = elle-même (porteuse) ; **606072 et
+  « Deux » ne sont NULLE PART chez nous** (le rafraîchissement ne lit que la première) ; notre civilité vide, puis « M_Mme » brut dans
+  `display_name` (« M_Mme Un ESSAI COUPLE ») — **le code s'affiche tel quel dans l'annuaire, aussi sur de vraies fiches**.
+  ⚠ La charge porte `send_rgpd_email: true` : Hektor envoie l'e-mail d'activation RGPD au contact (et, côté écran Hektor, l'interrupteur
+  « Envoyer l'email d'activation… » est sur OUI par défaut).
+- **E2 — modifier le conjoint dans le formulaire de la première** (Madame « Deux » → « DeuxE2 ») : **la seconde fiche suit à l'instant**.
+- **E3 — « modifier la seconde fiche »** : à l'écran, Hektor **ne le permet pas** — ouvrir 606072 montre le formulaire du **FOYER ENTIER**
+  (Monsieur Un / Madame). Modifier Madame depuis là (« DeuxE3 ») met à jour les deux. ⇒ **chez Hektor, le foyer s'édite d'un bloc ; la
+  première fiche fait foi, la seconde est son reflet.** ⚠ Reste NON essayé : modifier 606072 **par notre worker** (il posterait le formulaire
+  de 606072 seul, sans bloc membre 2) — **E3-bis**, possible seulement quand 606072 sera chez nous (après un run) : sur un nouveau couple d'essai.
+- **E4 — archiver la première** (`archiveContact archive=true`, réponse « Modification archivage ok ») : **la seconde est archivée aussi**
+  (recherche Hektor : « aucun résultat parmi les actifs » ; dans les archives, le foyer et ses DEUX membres « archivé »). **Désarchiver la
+  première remet les deux en actif.** ⚠ Le geste « Archiver ce contact » de l'APP ouvre un `window.confirm` natif ; je l'ai contourné par
+  l'ordre du worker — le chemin de l'app (`app_console_archiver_contact_optimistic`) n'est donc PAS éprouvé ici.
+- **E5 — supprimer la première** (menu ⋮ → « Supprimer ce contact » → Oui) : **la seconde part aussi** — plus rien, archives comprises ; les
+  formulaires de 606071 et 606072 reviennent vides.
+- **E6 — une personne SEULE créée par l'app** (« ESSAI SEUL Un », 606073) : **AUCUNE place vide n'est réservée** (606074 n'existe pas) ; sa
+  liste de civilités n'offre que M. / Mme. / Mlle. Son menu ⋮ offre **« Transformer en couple »** → fenêtre « Vous souhaitez transformer ce
+  contact seul en couple ? » avec la question **« Le contact est-il déjà existant dans Hektor ? » (Oui / Non)** ⇒ **Hektor sait rattacher une
+  fiche EXISTANTE comme conjoint** (piste pour les 33 660 places vides). Avec « Non » : formulaire « Ajouter un nouveau contact » en Couple
+  dont **la colonne Madame est PRÉ-REMPLIE d'une copie de Monsieur** (nom, prénom, e-mail identiques — piège de saisie) et une date
+  d'**auto-archivage** posée à un an (30-10-2027). Après « Passer à l'étape suivante » : **page blanche**, et **606073 a DISPARU** (ni actif
+  ni archivé, aucune fiche 606074-606078). ⛔ **Imprévu : arrêt des essais ici.** Soit le parcours supprime la fiche seule et ne crée le couple
+  qu'au bout d'une étape que la page blanche a empêchée, soit autre chose — **à ne JAMAIS confier au worker sans l'avoir compris**.
+- Avant sa suppression, le couple d'essai se montrait, côté Hektor, sous la forme « M./MME ESSAI COUPLE » ; dans la liste de recherche, la première est
+  « M. ESSAI COUPLE Un » et la seconde « ESSAI COUPLE » sans prénom. Le menu ⋮ d'un couple propose **« Dissocier le couple »** (= notre
+  « Séparer ») — non essayé.
+
+**Ce que ça décide pour notre mécanisme (§4) :**
+1. **Créer** : notre chemin marche ; il faut **apprendre le numéro de la seconde fiche** au retour (aujourd'hui personne ne le lit : la nuit
+   seule la ramènera, et notre carnet ne doit pas l'attendre) — piste : premier+1, **à confirmer par une lecture** (consécutif sur 370/394
+   ménages, pas sur tous).
+2. **Modifier le conjoint** : écrire **dans le bloc membre 2 de la PREMIÈRE** (E2) — jamais la seconde seule, tant qu'E3-bis n'a pas parlé.
+3. **Archiver / supprimer** : un seul ordre sur la première suffit, **le foyer suit** — conforme à ta décision « le foyer entier par défaut ».
+   Archiver ou supprimer **un seul** membre n'existe pas chez Hektor : il faudra « Dissocier » d'abord (à essayer).
+4. **« Compléter le conjoint »** sur les 33 660 : passe par « Transformer en couple » → « déjà existant : Oui » → la place vide ? **NON essayé,
+   et E6 montre que ce parcours peut faire disparaître une fiche** ⇒ essai dédié, sur fiches d'essai, avant toute décision.
+
+**Restes de l'essai, à nettoyer (accord requis — écriture dans notre base) :** nos lignes **20000021** et **20000022** visent des fiches
+supprimées chez Hektor (606071, 606073). Chez Hektor : rien ne reste (vérifié par la recherche, archives comprises).
