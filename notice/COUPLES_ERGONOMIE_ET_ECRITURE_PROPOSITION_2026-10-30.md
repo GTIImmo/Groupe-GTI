@@ -311,3 +311,21 @@ renumérotation du 23/09 ; 1 275 seulement sont justes. Aucun code ne le lit auj
 
 **Le numéro de la seconde fiche n'est PAS toujours « +1 »** : depuis février 2026, 377 paires sur 392 (miroir). Le worker devra le
 **lire et le vérifier** (`refCouple` de la seconde = la première), jamais le supposer.
+
+## 13. « FAIRE COMME HEKTOR » — QUESTIONS DE FRÉDÉRIC DU 30/10 ET RÉPONSE PROPOSÉE *(rien codé)*
+
+Ses questions : « ce ne sont pas forcément des mandants mariés, plutôt des couples » ; « comment verra-t-on qu'il y a une deuxième fiche
+si on les réunit » ; « à la création d'un document, on choisira la fiche couple et on aura deux fiches séparées : comment ce sera utilisé » ;
+« il faudrait faire comme Hektor ».
+
+- **Le libellé** : « mandants maries » est écrit en dur par la fusion de la fiche d'un bien (`App.tsx:7272`) → à remplacer par
+  **« Couple »** (pas forcément mariés, pas forcément mandants). Petit correctif, avec la traduction de `M_Mme`.
+- **Comme Hektor** : un foyer = **une page** « M. et Mme NOM », **deux membres dedans**, chaque membre est **une vraie fiche** (la seconde
+  est le miroir du membre 2, §10.1 de l'audit). Recherches, biens, RDV, notes = au foyer ; téléphone, e-mail, naissance, consentement,
+  signature = à la personne.
+- **Voir la seconde fiche** : sur la page du foyer, deux onglets (un par personne, avec son numéro et « ouvrir sa fiche ») ; dans
+  l'annuaire, une ligne par foyer avec les deux prénoms ; une seconde fiche vide se dit « Conjoint non renseigné » + « Compléter ».
+- **Les documents** : on choisit **le foyer** une fois ; le document met **une ligne par personne** (chacun signe, art. 215 C. civ. pour
+  le logement de la famille), chacune décochable. **Déjà en partie dans le code** : `buildMandatDocumentMandants` (`App.tsx:4413`) déplie
+  les membres d'un couple — mais une fiche vide y devient un mandant (défaut n° 1 de l'audit, non corrigé). La signature a besoin de
+  l'e-mail / téléphone **de chaque personne** : c'est pour ça qu'il faut deux vraies fiches.
