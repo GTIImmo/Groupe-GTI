@@ -2219,3 +2219,21 @@ au chantier de la coupure. Rien n'est codé. ⛔ Ne pas le relancer dans ⑧.
   qu'il vit** (date de péremption écrite au plan le 25/09).
 - **Ce que ça pourrait casser ailleurs** : A écrit chez Hektor (2 fiches d'essai, puis leur suppression) ; le run de nuit les verrait si elles
   restaient. B toucherait la naissance du contact (8a) et la traduction des ménages de la nuit (`app_couple_contact_id`). C ne touche rien.
+
+## CONTRÔLES DU 30/10 MATIN — les correctifs de la veille, en vrai
+
+- **8d (sauvegarde)** ✅ — `backup_2026-10-30_08-00-01.log` : les **19 tables** ajoutées par 0d249cf y sont toutes, 37 tables, 1 232 502
+  lignes, 59,8 Mo, exit 0 ; plan Supabase exit 0.
+- **Photos en admin (dc6d70e)** ✅ — balayage de 23:00 : 1 000 travaux `sync_hektor_photos`, **1 000 `lecture: admin`**, 0 négociateur, 0
+  refus, 0 échec, `relue_en_negociateur` nul partout (aucune photo manquante à la lecture admin ⇒ **aucune marquée absente**) ; 12 annonces
+  avaient des masquées (rapatriées). Plus aucun « Changement de contexte » dans le journal des travaux. Durée 23:00 → 00:00.
+- **8f (document retiré GARDÉ)** ✅ — un cas réel le 29/10 à 21:40 (annonce 63291, un certificat Carrez) : journal « GARDES chez nous », la
+  fiche existe toujours, `present_in_hektor = false`, `absent_depuis` posé, fichier toujours au cloud. ⚠ Détail de nom : le résultat du
+  travail compte encore ce cas sous la clé `pruned: 1` (il n'a rien purgé).
+- **Run de nuit** ✅ exit 0 (06:15) ; acquéreur sans vente « 4 lien(s) marqué(s) » ; type des contacts « 13 remis » (9 la veille) ; 5 refus
+  403 sur les négociateurs orphelins connus ; aucun blocage d'adresse.
+- **Descente** ⚠ exit 1 — UNE table : `app_classeur_lien_avant_regel_20261029` (copie de sauvegarde du patch de règle du classeur, 29/10,
+  pas de ce chantier) : « 12 394 lues, 12 404 attendues ». La table n'a **pas de clé primaire** (clés uniques pourtant : 12 404 / 12 404) ⇒
+  le parcours de la descente perd 10 lignes. Les tables classeur vivantes sont descendues (app_classeur_lien 12 404). Se répétera chaque nuit
+  tant que la copie existe sans clé — à décider par Frédéric (lui donner une clé, l'écarter de la descente, ou la supprimer une fois le patch
+  jugé). Rien touché.
