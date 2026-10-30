@@ -342,3 +342,11 @@ Artifact privé : https://claude.ai/artifact/LPHthrJJeW6gaNz8RXufmR — 3 planch
    dans un document : le foyer choisi une fois, une case par personne avec son téléphone de signature ;
 3. **le téléphone** : la même chose en cartes ; rechercher un prénom retrouve le foyer.
 À valider à l'œil par Frédéric avant tout code.
+
+**Reprise du 30/10 au soir (remarques de Frédéric)** : pas de filtres « Couples » / « Conjoint à compléter » ; « Notaires » existe
+dans les segments ; et **le design actuel doit être gardé**. La maquette est REFAITE sur le vrai écran : la feuille de style
+publiée de l'app (bienvu) et le balisage réel de `ContactsScreen` / `ContactDetailPopupV2`, noms fictifs. Seuls ajouts : une tuile
+décalée derrière l'avatar, l'étiquette « Couple · prénoms » (orange « conjoint à compléter » si la seconde fiche est vide), un
+téléphone par personne avec son initiale ; sur la fiche, l'étiquette « Couple · mariés », deux onglets (une personne chacun, son
+numéro de fiche) qui pilotent les coordonnées, et les rôles par personne dans « Biens & mandats liés ». La planche téléphone est
+retirée (elle ne suivait pas le vrai rendu mobile, `MobileLayout`).
