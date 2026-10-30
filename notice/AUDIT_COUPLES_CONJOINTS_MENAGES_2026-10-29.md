@@ -210,3 +210,69 @@ accompagne presque toujours sa porteuse ou un co-propriétaire nommé.
 **Ma recommandation, dans l'ordre** : (1) la mesure d'une heure — rien d'autre ne peut se décider proprement sans elle, et elle périme ;
 (2) le défaut n° 1 du document de mandat, qui ne dépend pas de la mesure ; (3) le choix A / B / C du conjoint, à la lumière de la mesure ;
 (4) le reste de la section 5, en un chantier « ménage » à part, avec sa propre grille de gestes.
+
+---
+
+## 10. POURQUOI HEKTOR FAIT COMME ÇA — VU DANS SON ÉCRAN *(30/10, Frédéric : « il faut bien comprendre avant de corriger »)*
+
+**Lecture seule**, dans le Chrome de Frédéric (sa session), ~15 lectures espacées de 1,5 s : la page d'un contact, le formulaire
+d'édition (`contacts-ihmChargeGroupe`, `consultMode=editer`, le même que lit le worker) et le formulaire **vierge** de création d'un
+couple (`addManuelContactFromOtherObject`, `statut=contact_couple` — il AFFICHE le formulaire, il ne crée rien ; seul `insertManuel…`
+crée). **Rien n'a été enregistré.** Les valeurs ont été comparées dans le navigateur sans être affichées : aucun nom n'est sorti.
+
+### 10.1 Le modèle de Hektor : UN FOYER, DEUX MEMBRES, DEUX FICHES
+- **Le formulaire d'un couple a deux blocs** : le membre 1 (`nom`, `prenom`, téléphones, e-mails, adresse, naissance) et le **membre 2**
+  (`nom_m2`, `prenom_m2`, `telephone_m2[]`, `email_m2[]`, `dateenr_m2`, `adresse_m2`, `villeprivee` + **`idVilleprivee`** + `codeprivee` +
+  **`idCodeprivee`**, `pays_m2`, `dateNaissance_m2`, `lieuNaissance_m2`, `lang_m2`, `commentaires_m2` — 25 champs).
+  ⇒ **`villeprivee` EST bien la ville du conjoint** (réserve du §5 n° 4 levée), et elle a son **identifiant de commune**.
+- **La civilité d'un couple dit sa composition** : la liste ne propose que `M_Mme` (« M./Mme », **choisie par défaut** dans le formulaire
+  vierge), `M_M` (« M./M. »), `Mme_Mme` (« Mme./Mme. »), `Mme_M` (« Mme./M. »), et « Non défini ». **« Mr./Mme » n'est plus dans la
+  liste** : c'est l'ancien libellé, resté dans les données (la fiche 1078 montre « Non défini » ET `M_Mme` marqués à la fois).
+- ⭐⭐ **LA SECONDE FICHE EST LE MIROIR EXACT DU BLOC « MEMBRE 2 » DE LA PREMIÈRE.** Comparé champ par champ sur trois ménages — deux
+  récents (603324 → 603325, 603330 → 603331, créés dans Hektor en mai 2026) et un ancien (1078 → 1079, 2023) : `nom_m2` = `nom` de la
+  seconde, `prenom_m2` = `prenom`, `telephone_m2` = téléphone, `email_m2` = e-mail, `adresse_m2` = adresse, `dateNaissance_m2` =
+  naissance — **ÉGAL partout où c'est rempli**, « vide des deux côtés » ailleurs. La seconde fiche n'a pas elle-même de bloc membre 2.
+- ⭐⭐ **D'OÙ VIENNENT LES 133 343 FICHES « MUETTES »** : ce sont les secondes fiches de ménages dont **personne n'a jamais rempli le
+  membre 2**. Sur 1078 / 1079, seul le nom du conjoint avait été saisi → la seconde fiche a un nom et **pas de prénom**, exactement.
+  Ce n'est ni un doublon ni un défaut : c'est **la place du conjoint, vide parce qu'on ne l'a jamais saisi**.
+- **La page du contact** affiche le foyer comme UN contact : « M./MME NOM » en titre, « M./Mme NOM Prénom1 / Prénom2 » dans le fil
+  d'Ariane.
+- Une fiche « personne seule » (141053) **n'a pas** de bloc membre 2 dans son formulaire.
+
+### 10.2 Le changement de février 2026 *(mesuré dans le miroir, par mois de création)*
+- **Jusqu'en janvier 2026** : les couples naissent en « Mr./Mme » (215 à 394 par mois), la seconde fiche presque toujours vide.
+- **Depuis février 2026** : **0** « Mr./Mme » ; les couples naissent en `M_Mme` / `Mme_M` / `Mme_Mme` / `M_M` (33 à 145 par mois).
+  Sur **394** ménages de ce type à deux fiches, **369 ont les deux fiches nommées** (prénom + nom) et **370 ont des numéros
+  consécutifs** (603324 / 603325…). ⇒ Hektor (ou l'agence, en saisissant enfin le conjoint) a changé de pratique : **le second membre
+  est maintenant rempli et devient une vraie fiche**.
+- Hypothèse, NON prouvée (il faudrait la documentation de Hektor) : la seconde fiche a été **rétro-créée en masse** pour tout le parc
+  ancien (mesure du 11/09 : identifiants 400 000 à 599 999, date recopiée de la porteuse), puis le formulaire « deux membres » est devenu
+  la norme à la création.
+
+### 10.3 Ce que ça change pour notre code *(constaté, rien corrigé)*
+- **Notre chemin de création envoie DÉJÀ la bonne forme** (statut 2 → formulaire `contact_couple`, bloc `nom_m2`…), c'est-à-dire ce que
+  fait l'écran de Hektor. Il est donc **probable** que Hektor fabrique les deux fiches comme pour 603324 / 603325 — **non prouvé** tant que
+  l'essai n'est pas fait.
+- ⚠ **Mais trois écarts avec le formulaire de Hektor** (nouveaux défauts, à ajouter au §5) :
+  - **La civilité** : le worker pose `civilite` = la valeur de notre écran (« M. », « Mme. » ou vide, `console_job_worker.js:18487`),
+    toujours présente dans la charge → elle **écrase** le `M_Mme` par défaut du formulaire avec une valeur **absente de la liste**
+    d'un couple. Effet chez Hektor : non mesuré (« Non défini » probable).
+  - **La ville du conjoint** part sans `idVilleprivee` / `idCodeprivee` → très probablement ignorée (§5 n° 4 confirmé sur la forme).
+  - **Le bloc membre 2 a 25 champs**, notre écran en envoie 7 (pas de naissance, lieu, pays, langue, commentaires du conjoint).
+- ⚠ **Notre lecture des couples récents est fausse en un point** : la règle « fiche de ménage = sans nom ni prénom » ne voit pas les
+  couples modernes (deux fiches nommées) — c'est voulu (« une personne, une ligne » ne masque que la fiche vide), mais ces deux personnes
+  ne sont **reliées nulle part à l'écran** hors de la fiche d'un bien (pas de rôle « porteuse », `app_couple_contact_id` lu par aucun code).
+- **Non mesuré** (il faudrait écrire chez Hektor) : modifier la seconde fiche met-elle à jour le membre 2 de la première ? Laquelle fait
+  foi ? Supprimer la première supprime-t-elle la seconde ?
+
+### 10.4 Pourquoi un CRM immobilier range un couple ainsi *(connaissance générale, pas une mesure)*
+- **L'unité commerciale est le FOYER** : un couple cherche, visite, achète ou vend ensemble ; une recherche, un rapprochement, un mandat
+  appartiennent au foyer. D'où **une page « M./Mme NOM »** et un seul interlocuteur dans les listes.
+- **L'unité juridique et de communication est la PERSONNE** : chacun a son téléphone, son e-mail, sa date de naissance, ses consentements
+  (RGPD), et **chacun signe**. Pour un mandat de vente du **logement de la famille**, le Code civil (art. 215, al. 3) exige l'accord des
+  deux époux même si un seul est propriétaire ; un bien commun ou en indivision se signe par tous. ⇒ il faut **une identité complète par
+  signataire** : c'est exactement la décision D22 du 26/10 (« ajouter par défaut le conjoint »).
+- **Deux façons de faire existent dans les CRM** : (a) une seule fiche avec un bloc « conjoint » (simple, mais le conjoint n'est pas
+  un vrai contact : pas d'e-mail propre, pas de signature propre) ; (b) deux fiches liées par un numéro de foyer (chaque personne est un
+  vrai contact). **Hektor fait les deux à la fois** : le bloc membre 2 dans le formulaire du foyer, et la seconde fiche qui en est le
+  miroir. C'est ce qui rend le sujet compliqué : **deux endroits pour une même personne**.
