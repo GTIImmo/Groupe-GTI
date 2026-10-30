@@ -285,3 +285,29 @@ par le geste de l'app (`runDeletedContactLocalCleanup` + `cleanupSupabaseContact
 - **Créer** : marche déjà ; il manque d'apprendre le numéro de la seconde fiche au retour (via `_m2` / `refCouple` de la première,
   ne pas supposer « +1 ») et de la ranger chez nous avec le lien.
 - **Afficher** : traduire `M_Mme` (et `Mme_M`, `M_M`, `Mme_Mme`) partout où l'app compose un nom.
+
+## 12. CE QUE J'AVAIS RATÉ — LE PROJET AVAIT PRÉVU LA PAIRE *(30/10, question de Frédéric)*
+
+**Le plan existait** : `C.9-couple` (liste, ajoutée le 11/09) et **`C.9-couple-b`** (chapitre CH17 de
+`CHAPITRES_AUTONOMIE_PROPOSITION_2026-10-07.md`) : « l'app fabrique la paire du ménage (deux fiches, deux numéros, le lien), derrière
+un réglage » — réserver 2 numéros, écrire les 2 fiches et le lien dans la même transaction, ne jamais créer de 3e fiche chez Hektor ;
+critère de fin : « 2 lignes aux `app_couple_contact_id` croisés dès le geste, toujours 2 fiches (pas 3) après le retour de Hektor ».
+Prérequis : la mesure d'une heure (`C.9-couple-a`, « une fiche ou deux ? ») — **c'est E1, faite le 30/10 : deux fiches**.
+Décision restée ouverte : pendant la cohabitation, envoyer le bloc conjoint (Hektor crée la 2e fiche) ou deux fiches déjà liées.
+**Aucun code de la paire n'a été écrit** (liste, 07/10).
+
+**Ce que j'ai mal dit au §10/§11** : « la seconde fiche n'arrive pas chez nous, le conjoint n'est rangé nulle part ». Vrai **à
+l'instant** seulement. **La nuit l'amène** : le push envoie les contacts « actifs ou éligibles », le lien `refCouple` est porté, la fiche
+d'un bien fusionne le ménage (« mandants mariés »). Mesure : **1 609 secondes fiches nommées** dans l'app, **1 380** reliées à leur
+porteuse. ⚠ Pas prouvé pour un couple **né dans l'app** : les fiches d'essai ont été retirées avant une nuit.
+
+**La modification** : le worker sait déjà écrire le conjoint par la fiche 1 (`nom_m2`, `prenom_m2`… l. 18502-18514), mais l'écran
+« Modifier » traite tout contact en « personne seule » (`contactIdentityInputFromContact`, conjoint vide) : rien n'est effacé chez Hektor
+(un champ vide n'est pas envoyé), mais on ne peut pas modifier le conjoint depuis l'app.
+
+**Trouvaille : `app_couple_contact_id` est PÉRIMÉ** — 36 183 liens sur 37 458 portent l'ANCIENNE série (< 10 000 000), d'avant la
+renumérotation du 23/09 ; 1 275 seulement sont justes. Aucun code ne le lit aujourd'hui (audit du 29/10) : pas de dégât visible, mais
+**rien ne doit s'appuyer dessus avant réparation**.
+
+**Le numéro de la seconde fiche n'est PAS toujours « +1 »** : depuis février 2026, 377 paires sur 392 (miroir). Le worker devra le
+**lire et le vérifier** (`refCouple` de la seconde = la première), jamais le supposer.
