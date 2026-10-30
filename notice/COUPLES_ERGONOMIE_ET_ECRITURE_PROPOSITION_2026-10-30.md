@@ -329,3 +329,16 @@ si on les réunit » ; « à la création d'un document, on choisira la fiche co
   le logement de la famille), chacune décochable. **Déjà en partie dans le code** : `buildMandatDocumentMandants` (`App.tsx:4413`) déplie
   les membres d'un couple — mais une fiche vide y devient un mandant (défaut n° 1 de l'audit, non corrigé). La signature a besoin de
   l'e-mail / téléphone **de chaque personne** : c'est pour ça qu'il faut deux vraies fiches.
+
+## 14. MAQUETTE — ANNUAIRE ET PAGE DU FOYER *(30/10, demande de Frédéric, rien codé)*
+
+Artifact privé : https://claude.ai/artifact/LPHthrJJeW6gaNz8RXufmR — 3 planches, noms fictifs :
+1. **l'annuaire** : un couple = une ligne, deux pastilles d'initiales qui se chevauchent, « M. et Mme NOM » + les deux prénoms,
+   l'étiquette « Couple · 2 fiches » ; une coordonnée par personne (initiale devant) ; un ancien couple au conjoint jamais saisi =
+   pastille pointillée « ? », « Couple · conjoint à compléter », bouton « + Compléter le conjoint » ; filtres « Couples » et
+   « Conjoint à compléter » ; une personne seule garde une seule pastille ;
+2. **la page du foyer** : nom du foyer, deux onglets (une personne chacun, avec son numéro de fiche et « ouvrir sa fiche seule »),
+   bloc « Foyer » (situation, adresse, interlocuteur principal), biens / recherches / activité marqués « commun au foyer », et le choix
+   dans un document : le foyer choisi une fois, une case par personne avec son téléphone de signature ;
+3. **le téléphone** : la même chose en cartes ; rechercher un prénom retrouve le foyer.
+À valider à l'œil par Frédéric avant tout code.
