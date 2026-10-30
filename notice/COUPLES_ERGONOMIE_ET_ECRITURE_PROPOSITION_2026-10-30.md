@@ -164,3 +164,48 @@ retouchée sans garde d'empreinte, essai dans une transaction annulée puis un v
 3. « Compléter le conjoint » sur les anciennes fiches vides, en écrivant sur la seconde fiche (§4).
 4. Archiver / supprimer : le foyer entier par défaut ?
 5. Le feu vert pour E0, puis pour E1 → E5.
+
+---
+
+## 7. ✅ DÉCISIONS DE FRÉDÉRIC — 30/10 matin
+
+1. **Deux vraies fiches liées** : OUI.
+2. **L'annuaire** : **une ligne par foyer**.
+3. « Compléter le conjoint » : **en attente** — il a demandé l'explication de la règle du 11/09 (ci-dessous, §8).
+4. **Archiver / supprimer le foyer entier par défaut** : OUI.
+5. **E0 par son Chrome, en lecture seule** : OUI (fait, §9). E1 → E5 : pas encore.
+
+## 8. LA RÈGLE DU 11/09, ET POURQUOI « COMPLÉTER LE CONJOINT » N'EST PAS LE MÊME GESTE
+
+La règle (audit §7) a deux morceaux :
+- « **une personne, une ligne** » : la fiche vide est masquée quand sa porteuse est connue ;
+- **ne jamais écrire `nom` / `prenom` sur la fiche vide CHEZ NOUS SEULEMENT** : la nuit relit Hektor, y trouve la fiche vide, et
+  verrait un écart (ou l'effacerait). L'idée rejetée était de **recopier le nom de la porteuse** sur la fiche vide (un champ menteur).
+
+« Compléter le conjoint » est un autre geste : on écrit le **vrai** conjoint, **et on l'envoie à Hektor**. La nuit relit alors chez Hektor
+ce que nous y avons écrit : pas d'écart. Le danger que la règle visait (une écriture locale que Hektor ignore) disparaît, à une condition :
+que l'envoi à Hektor remplisse **bien la fiche existante** — ce que seuls les essais diront (§9, constat 3).
+
+## 9. E0 — FAIT LE 30/10 08:45-08:50, LECTURE SEULE (31 requêtes, une toutes les 4 s, 0 refus)
+
+Échantillon tiré au hasard dans le miroir (graine 20261030), couples vivants : 15 récents (≥ 02/2026, deux fiches nommées), 10 anciens
+(deux fiches nommées), 5 à seconde fiche vide. Comparaison par empreintes (aucun nom n'a quitté la page). Champs : nom, prénom, premier
+e-mail, premier téléphone du bloc membre 2 de la première fiche ↔ la seconde fiche du miroir.
+
+- **Récents : 15 sur 15 identiques**, champ par champ (les vides sont vides des deux côtés). Le formulaire porte `M_Mme`.
+- **Anciens : 10 sur 10 identiques** — le nom seul est rempli, des deux côtés. ⚠ Le miroir dit « Mr./Mme », le formulaire dit `M_Mme` :
+  **« Mr./Mme » est l'ÉTIQUETTE que l'API rend pour la valeur `M_Mme`**, pas une autre valeur. Le défaut n° 5 de l'audit (« Mr./Mme
+  inconnu de l'écran ») est donc une simple correspondance d'étiquette.
+- **Seconde fiche vide : 5 sur 5, la première fiche n'a PAS de bloc membre 2** (civilité vide ou « M. »). Pour Hektor, la porteuse est
+  **une personne seule** ; la fiche vide est une place réservée qui ne pend à aucun formulaire.
+
+Mesuré ensuite dans le miroir (porteuse nommée, deux fiches vivantes) : sur **35 914** paires à seconde fiche vide, **33 660** ont une
+porteuse à civilité de personne seule (vide 21 183, « M. » 12 459, « Mme. » 18) ; **2 245** ont la civilité couple sans conjoint saisi.
+
+**Ce qu'E0 établit :**
+1. La copie bloc membre 2 → seconde fiche est **tenue sans écart** sur les deux époques : la seconde fiche est bien le conjoint.
+2. Notre lecture peut donc se passer du formulaire : **la seconde fiche suffit** pour voir le conjoint (elle est dans le miroir) — pour les quatre
+   champs mesurés ; adresse, naissance et commentaire n'ont pas été comparés.
+3. **« Compléter le conjoint » n'est pas trivial** pour 33 660 foyers : il faut passer la porteuse en civilité couple et remplir le bloc
+   membre 2. Hektor remplit-il alors **la place vide existante**, ou en crée-t-il **une nouvelle** (la vide restant orpheline) ? ⇒ à
+   ajouter aux essais : **E6 — sur le couple d'essai, créer une personne seule, puis la passer en couple** et lire les fiches.
