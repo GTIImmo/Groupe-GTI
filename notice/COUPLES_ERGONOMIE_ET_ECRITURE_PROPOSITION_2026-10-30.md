@@ -260,3 +260,28 @@ archivage + 1 désarchivage (ordre `archiveContact` du worker), 1 suppression à
 
 **Restes de l'essai, à nettoyer (accord requis — écriture dans notre base) :** nos lignes **20000021** et **20000022** visent des fiches
 supprimées chez Hektor (606071, 606073). Chez Hektor : rien ne reste (vérifié par la recherche, archives comprises).
+
+## 11. NETTOYAGE DES FICHES D'ESSAI, ET CE QUE LES ESSAIS CHANGENT À L'ÉCRAN *(30/10, accord « Retire les »)*
+
+**Nettoyage fait** (même chemin que le geste « Supprimer » de l'app) :
+- Supabase : les 2 lignes `app_contact_current` 20000021 / 20000022 retirées (sauvegarde dans le dossier de travail de la session,
+  `sauvegarde_essais_couple_20000021_22_20261030.json`). Les 2 traces `app_contact_saisie_modif` (contrôle de création, 0 écart) sont
+  **gardées**, comme le geste de l'app les garde.
+- Local : `delete_local_contact.py --contact-id 2000002x --cible-hektor 60607x` → miroir (fiche, état, réponse brute) et couche locale.
+- Contrôle : 0 reste des deux côtés ; témoins positifs (9 contacts nés dans l'app chez Supabase et en local, 71 fiches voisines au miroir).
+
+**Trou trouvé en passant (non mesuré en ampleur)** : un contact supprimé **directement chez Hektor** (pas par l'app) ne disparaît pas
+chez nous. La nuit ne relit que les fiches de la liste de Hektor, donc elle ne reçoit jamais le « introuvable » qui marquerait l'absence ;
+et un contact né dans l'app (≥ 10 000 000) est protégé de toute suppression par le push (`est_ne_dans_l_app`). Le nettoyage n'a lieu que
+par le geste de l'app (`runDeletedContactLocalCleanup` + `cleanupSupabaseContactRows`).
+
+**Ce que E1 → E6 changent au §3 et au §4** :
+- **Modifier** : Hektor modifie le foyer d'un bloc par la **première** fiche → dans l'app, modifier la personne 2 = un travail sur la
+  fiche 1 avec le bloc `_m2`. (À éprouver : E3-bis, par notre worker.)
+- **Archiver / supprimer** : la cascade est faite par Hektor → le défaut « foyer entier » (décision 4) est gratuit. « Archiver M. seul »
+  n'existe pas chez Hektor sans « Dissocier » d'abord (non essayé) → **option à retirer du §3.4, sauf décision contraire**.
+- **Ajouter un conjoint à une personne seule** : ⛔ ne PAS passer par « Transformer en couple » réponse « Non » (fiche disparue, E6).
+  Deux chemins restent à essayer : réponse « Oui », ou écrire le bloc `_m2` dans le formulaire de la fiche seule.
+- **Créer** : marche déjà ; il manque d'apprendre le numéro de la seconde fiche au retour (via `_m2` / `refCouple` de la première,
+  ne pas supposer « +1 ») et de la ranger chez nous avec le lien.
+- **Afficher** : traduire `M_Mme` (et `Mme_M`, `M_M`, `Mme_Mme`) partout où l'app compose un nom.
