@@ -350,3 +350,22 @@ décalée derrière l'avatar, l'étiquette « Couple · prénoms » (orange « c
 téléphone par personne avec son initiale ; sur la fiche, l'étiquette « Couple · mariés », deux onglets (une personne chacun, son
 numéro de fiche) qui pilotent les coordonnées, et les rôles par personne dans « Biens & mandats liés ». La planche téléphone est
 retirée (elle ne suivait pas le vrai rendu mobile, `MobileLayout`).
+
+**✅ VALIDÉE par Frédéric le 30/10 au soir** (« Oui cela me convient ») : la tuile décalée, l'étiquette « Couple · prénoms »
+(orange si le conjoint est à compléter), un téléphone par personne, et sur la fiche l'étiquette « Couple · mariés », les deux onglets
+et les rôles par personne.
+
+## 15. LE POINT 2 — CRÉER LA PAIRE : CE QUE L'AUDIT DU 30/10 AU SOIR AJOUTE *(lecture seule, rien codé)*
+
+- **La première fiche ne connaît PAS la seconde.** Chez Hektor, la première porte `refCouple` = elle-même, la seconde porte
+  `refCouple` = la première (mesuré sur les paires 606065 → 606070 du miroir). Ni le détail de la première, ni la réponse de
+  création (`parseHektorCreatedContactId`) ne donnent le numéro de la seconde. ⇒ le worker doit le **chercher** : lire le détail de
+  « première + 1 » et ne l'accepter **que si** son `refCouple` vaut la première (consécutif 377 fois sur 392), sinon les quelques
+  suivants, une lecture par seconde.
+- **Pourquoi c'est vital** : l'adoption de la nuit (`adopter_les_nes_dans_l_app`) rattache une fiche de Hektor à notre numéro
+  **par la case cible** (`hektor_target_id`). Si la ligne de la personne 2 n'a pas sa cible avant la nuit, le registre donne à la
+  seconde fiche de Hektor un **nouveau numéro** (série 10 M) : la personne 2 existerait **deux fois** chez nous. ⇒ il faut un
+  **second filet** dans la nuit : rattacher une fiche dont le `refCouple` vise une première née dans l'app et dont la personne 2
+  attend sa cible.
+- **Ce que le worker envoie déjà** pour le conjoint (l. 18502-18516) : nom, prénom, e-mail, portable, adresse, ville, code
+  postal. La charge porte `send_rgpd_email: true` (e-mail d'activation de Hektor).
