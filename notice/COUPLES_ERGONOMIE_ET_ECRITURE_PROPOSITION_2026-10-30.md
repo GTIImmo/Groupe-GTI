@@ -495,3 +495,48 @@ faire) ; puis une passe `--a-blanc` sur le vrai miroir (attendu : 0 personne 2 �
   3. après le push, toujours **2 lignes** pour les e-mails `essai.paire.*31102026@example.com`, et 20000029 garde
      `hektor_couple_contact_id = 20000028`.
 - **Fiches d'essai à retirer après ce jugement** (accord requis), comme celles du 30/10.
+
+## 21. AUDIT DE L'ÉCRAN (annuaire, fiche, téléphone, libellé) *(31/10 après-midi, « Ok vas y on enchaine », lecture seule, rien codé)*
+
+**Audit limité à l'AFFICHAGE des couples.** Les gestes (modifier, archiver, dissocier, compléter) et le document ne sont pas mesurés ici.
+
+**Ce qui s'affiche (vérifié dans le code)** :
+- annuaire ordinateur : `ContactsScreen` (`App.tsx:46478`), une ligne par fiche, `display_name` brut, un seul téléphone ;
+- annuaire téléphone : `MobileContactCards` (`App.tsx:46782`), même chose en cartes ;
+- fiche : `ContactDetailPopupV2` (`App.tsx:45117`, choisie par `ContactDetailPopup`) — **aucune notion de couple** ; le titre colle la
+  civilité brute (`contactFullName`, l. 45204) ;
+- la liste vient de `loadContactsPage` (`api.ts:3503`), **paginée côté serveur** : on ne peut pas regrouper un couple en mémoire, la
+  seconde fiche peut être sur une autre page. Le seul masquage existant est `SANS_FICHE_DE_MENAGE` (fiche VIDE à porteuse connue),
+  utilisé aussi par le choix d'un mandant (`api.ts:10175`) et la recherche générale (`api.ts:5440`).
+
+**Ce que la base dit (cloud, contacts actifs)** : 14 820 premières fiches (couples) ; 1 524 secondes fiches NOMMÉES affichées comme des
+lignes à part (dont 209 dont la première n'est pas dans le cloud) ; 7 549 couples à seconde fiche vide (masquée) ; 6 111 premières
+sans seconde dans le cloud. ⭐ **La base locale complète le tableau** (14 779 couples affichables) : seconde vide 10 756, aucune
+seconde 2 122, seconde nommée envoyée 1 119, seconde nommée **non envoyée au cloud 621** (pas de lien propre → pas éligible), 2 secondes
+ou plus 161. ⇒ **seule la nuit connaît le conjoint de chaque couple** ; l'écran ne peut pas le deviner.
+
+**Le libellé** : 332 noms affichés commencent par `M_Mme`, 8 `Mme_M`, 5 `Mme_Mme`, 2 `M_M`, 17 611 « Mr./Mme ». Ils sont composés **la
+nuit** (`build_contacts_layer.py`, `display_name` = civilité + prénom + nom) et lus aussi par le worker, l'espace client et l'import des
+mandats de recherche. Ce dernier compare des empreintes de noms qui ignorent M, MR, MME, ET : « M. et Mme », « Mme et M. », « M. et M. »,
+« Mme et Mme » sont sans danger ; « Mmes » ou « MM. » ne le seraient PAS. `situation` (marital_status) n'est connue que pour 17 couples
+sur 14 820 → l'étiquette sera presque toujours « Couple » seul.
+
+**Les deux fiches d'essai** : 20000029 n'a pas de texte de recherche (la fonction de la paire ne le pose pas) — la nuit le posera.
+
+**Proposition en trois pièces, dans cet ordre** :
+- **P1 — le libellé (nuit + écran)** : la nuit traduit les 5 codes dans `display_name` ; l'écran traduit la civilité brute du titre de
+  la fiche ; « mandants maries » → « Couple » (`App.tsx:7272`). ~13 000 noms changent une fois (une nuit de push plus chargée).
+- **P2 — le conjoint connu de la première fiche (nuit + base)** : une colonne `couple_json` sur la première (numéro, prénom, nom,
+  téléphone, e-mail, état : nommé / vide / aucun / plusieurs) ; `couple_role` = « conjoint » pour une seconde NOMMÉE dont la première est
+  envoyée et active ; les 621 secondes nommées deviennent envoyées ; le texte de recherche de la première porte le nom, le téléphone et
+  l'e-mail du conjoint. La fonction de la paire (`app_contact_creer_conjoint`) pose la même chose tout de suite. Colonne ajoutée AVANT
+  la nuit (sinon le push échoue).
+- **P3 — l'écran (derrière un interrupteur)** : l'annuaire seul masque les lignes « conjoint » (le choix d'un mandant et la recherche
+  générale les gardent) ; tuile décalée, « Couple · prénoms » (orange si vide), un téléphone par personne, ordinateur ET téléphone ;
+  fiche : étiquette, deux onglets qui pilotent les coordonnées, ouvrir un conjoint ouvre le foyer sur son onglet ; rôles par personne
+  dans « Biens & mandats liés » en P3-b (il faut charger les liens de la personne 2).
+
+**Questions à Frédéric** : (1) les 2 122 couples SANS seconde fiche : « Couple » orange comme les vides, ou affichés comme une personne
+seule ? (2) 10 756 couples sur 14 779 (73 %) seraient en orange « conjoint à compléter » : on garde l'orange dans l'annuaire, ou seulement
+sur la fiche ? (3) les 161 à deux secondes : on montre la première nommée et on le signale ? « Compléter le conjoint » (décision 3)
+reste hors de ces pièces.
