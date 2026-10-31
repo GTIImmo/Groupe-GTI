@@ -456,3 +456,6 @@ faire) ; puis une passe `--a-blanc` sur le vrai miroir (attendu : 0 personne 2 �
   ⚠ **Elle tournera dès cette nuit** (le run lit ce fichier sur le disque) : dormante, elle dira « rien à faire ».
 - ⚠ **La clé de battement n'existe pas encore** : `supabase/patch_couple_piece_c_battement_2026-10-31.sql` (une ligne de
   configuration, `medium`, comme ses voisines) — **à coller par Frédéric**, sinon un « DOUTE » partirait dans le vide.
+- ✅ **Clé de battement POSÉE le 31/10** (accord de Frédéric « Colle ») : la ligne `phase2.secondes_fiches_couple` existe dans
+  `app_worker_registry` (medium, optional_pipeline_step, active), relue après l'écriture. ⏰ **01/11 au matin** : le journal du run
+  doit porter « phase2 secondes fiches des couples » → « rien a faire », code 0, et la clé un battement daté de la nuit.
