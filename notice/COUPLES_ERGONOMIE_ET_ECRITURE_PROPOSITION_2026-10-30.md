@@ -621,3 +621,9 @@ anciens sont donc très probablement des **personnes seules** dont Hektor a cré
 11/09). Afficher « Couple » sur les 10 757 « vide » et les 2 122 « aucun » (réponse 1 du 31/10) marquerait comme couple beaucoup de
 personnes seules. Les données de P2 restent justes (elles disent l'état, pas le libellé) ; c'est la règle d'affichage de P3 qui est
 à revoir avec Frédéric (par exemple : « Couple » seulement si le conjoint est nommé ou si la civilité est un code de couple).
+
+**⛔⛔ CONSIGNE DE FRÉDÉRIC (31/10) : « Il faudra traiter cela avant P3, c'est très important !!! »** — la règle d'affichage des
+couples anciens se tranche AVANT d'écrire une ligne de P3. Indices déjà au dossier : la mémoire du 11/09 a mesuré que Hektor a
+RÉTRO-CRÉÉ la seconde fiche pour tout le parc d'un coup (identifiants 400 000 – 599 999 : 71 à 97 % de fiches muettes, dates
+recopiées de la porteuse) ; E0 (30/10) : 33 660 des 35 914 secondes fiches vides pendent à une porteuse SANS bloc conjoint ;
+E6 (30/10) : une personne seule créée aujourd'hui n'a PAS de place vide.
