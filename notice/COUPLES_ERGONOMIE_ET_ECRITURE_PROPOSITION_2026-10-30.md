@@ -540,3 +540,14 @@ sur 14 820 → l'étiquette sera presque toujours « Couple » seul.
 seule ? (2) 10 756 couples sur 14 779 (73 %) seraient en orange « conjoint à compléter » : on garde l'orange dans l'annuaire, ou seulement
 sur la fiche ? (3) les 161 à deux secondes : on montre la première nommée et on le signale ? « Compléter le conjoint » (décision 3)
 reste hors de ces pièces.
+
+**✅ Réponses de Frédéric (31/10)** : (1) les 2 122 couples sans seconde fiche s'affichent en **couple vide**, comme ceux à seconde
+vide ; (2) l'orange « conjoint à compléter » **seulement sur la fiche**, pas dans l'annuaire (l'annuaire montre « Couple » sans couleur
+d'alerte) ; (3) **oui** : on montre la première seconde nommée et on signale qu'il y en a d'autres. ⏳ Le « go » pour P1 → P2 → P3
+reste à donner.
+
+**Sa question : « les secondes fiches auront un id Hektor et un id app ? »** — **elles en ont DÉJÀ deux, toutes**, mesuré au registre
+local le 31/10 : 13 655 secondes nommées, 13 998 « ménage orphelin », 96 880 « ménage résolu » (vides) → **100 % ont un numéro app**
+(plage 10 000 037 – 10 650 928 ; 20 000 029 pour la seconde née dans l'app). Le registre donne un numéro à chaque fiche Hektor, couple ou
+pas. Rien de neuf à créer : P2 met simplement **le numéro app du conjoint** dans `couple_json` de la première fiche, pour que l'écran
+ouvre le foyer sur le bon onglet.
