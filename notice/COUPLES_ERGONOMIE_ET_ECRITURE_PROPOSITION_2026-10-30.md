@@ -477,3 +477,21 @@ faire) ; puis une passe `--a-blanc` sur le vrai miroir (attendu : 0 personne 2 �
   ⚠ Le service **Documents** a chargé AUSSI les lignes non commitées de l'autre session (Youtrust, document de mandat) : elles sont
   désormais en service.
 - **Prochaine marche** : allumer `couple_nait_complet` + un couple d'essai fictif (accord requis), puis juger la nuit.
+
+## 20. ✅ ESSAI RÉEL DU 31/10 09:44-09:48 — LA PAIRE NAÎT ENSEMBLE *(Frédéric : « Oui fais le »)*
+
+- **Interrupteur `couple_nait_complet` ALLUMÉ le 31/10 à 09:44:19** (heure de Paris). Il RESTE allumé.
+- Couple fictif créé **par l'écran** (Nouveau contact → Compte formation, Propriétaire, Couple ; noms « ESSAI PAIRE Un / Deux »,
+  e-mails `@example.com`, aucun téléphone, aucune annonce reliée).
+- **A, à la même seconde (09:46:56)** : **20000028** (Un) et **20000029** (Deux), reliées comme la nuit les relie (Un → elle-même,
+  Deux → 20000028, `couple_role` vide), agence et négociateur justes ; le travail emporte `app_identite_m2 = 20000029`.
+- **B, en 13 s** : Hektor crée **606094** et **606095** ; le worker lit la suivante, la reconnaît (`refCouple`) et pose la case cible
+  de 20000029 → `couple_seconde_fiche: linked, lignes 1`. La relecture de la première (09:47:40) **garde le lien**. Résultat :
+  **2 lignes, 2 numéros Hektor, chacun porté une seule fois** ; contrôle de retour : **aucun écart**.
+- ⚠ À l'écran, l'annuaire montre encore **deux lignes** (l'affichage de la maquette n'est pas codé) ; la civilité est vide.
+- ⏰ **À JUGER LE 01/11 AU MATIN** (la nuit) :
+  1. l'étape « phase2 secondes fiches des couples » dit « rien a faire » (code 0) ;
+  2. le registre adopte **20000029 ↔ 606095** (et 20000028 ↔ 606094) — **aucun numéro neuf** de la série 10 M pour 606095 ;
+  3. après le push, toujours **2 lignes** pour les e-mails `essai.paire.*31102026@example.com`, et 20000029 garde
+     `hektor_couple_contact_id = 20000028`.
+- **Fiches d'essai à retirer après ce jugement** (accord requis), comme celles du 30/10.
