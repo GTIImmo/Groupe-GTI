@@ -369,3 +369,39 @@ et les rôles par personne.
   attend sa cible.
 - **Ce que le worker envoie déjà** pour le conjoint (l. 18502-18516) : nom, prénom, e-mail, portable, adresse, ville, code
   postal. La charge porte `send_rgpd_email: true` (e-mail d'activation de Hektor).
+
+## 16. POINT 2 — PIÈCES A ET B ÉCRITES ET ÉPROUVÉES *(31/10 matin, « go » de Frédéric « Oui vas y »)* — ⛔ RIEN N'EST POSÉ
+
+**A — la base** : `supabase/patch_couple_paire_a_la_creation_2026-10-31.sql` (+ `_INVERSE`, + `_REPETITION`).
+- Interrupteur **`couple_nait_complet`, posé ÉTEINT**.
+- Fonction neuve `app_contact_creer_conjoint` : couple + nom du conjoint saisi (l'écran l'exige) → un 2e numéro de notre plage, la
+  ligne de la personne 2 (nom, prénom, e-mail, portable, adresse, CP, ville du conjoint ; négociateur et agence de la personne 1), et
+  le lien **comme la nuit le pose** : personne 1 → elle-même, personne 2 → la personne 1, `couple_role` vide.
+- Dans `app_create_contact_optimistic` : un bloc à part après 8a (un échec ne fait jamais tomber la création) et la charge du travail
+  emporte `app_identite_m2` seulement s'il y a une personne 2. Gardes : empreinte `95fde328…`, marque, 3 ancres d'une ligne.
+- **Non touchée, exprès** : la porte « créer un mandant » (elle envoie toujours une personne seule, l. 20778).
+- **Répétition jouée le 31/10, tout annulé : 26 mesures vertes, 0 erreur** — éteint = comme avant (pas de personne 2, pas de lien) ;
+  allumé + couple = 2 lignes reliées, nom/mail/téléphone/agence/négociateur justes, case cible vide ; allumé + personne seule = rien ;
+  allumé + couple sans nom de conjoint = rien ; mandant intact ; l'inverse redonne l'empreinte d'avant. Contrôle après : 0 reste.
+  ⚠ 5 numéros consommés (20000023-27) : un trou dans la série, rien de plus.
+
+**B — le worker** : `rangerSecondeFicheDuCouple` (`Console/console_job_worker.js`, appelée dans `executerCreationContactHektor`
+seulement si la charge porte `app_identite_m2`) + `phase2/sync/contact_seconde_fiche_from_api.py`.
+- Lit au plus les **3 fiches suivantes** (mesure : 379 secondes fiches sur 393 sont la suivante, 1 deux plus loin), n'accepte que
+  celle dont `refCouple` = la première, **arrêt net** au premier refus ou si Hektor ne répond pas ; un 404 passe à la suivante.
+- Pose la case cible de la personne 2 **seulement si elle est vide et que personne d'autre ne porte ce numéro** ; sinon rien, et
+  c'est écrit au journal (`couple_seconde_fiche`). Jamais d'exception : le travail ne tombe pas.
+- **Pas de relecture de la personne 2** dans le travail : trop tôt, elle écrirait le lien avec le numéro de Hektor de la première ;
+  la nuit la fait quand le registre connaît les deux paires.
+- **Essais** : `phase2/sync/test_contact_seconde_fiche.py` **13/13** (faux Hektor : +1, +2, fiche d'un autre couple, personnes
+  seules, 404, refus 429, panne) · `Console/test_couple_seconde_fiche.js` **14/14** (code réel découpé : écriture ciblée, conflit,
+  case déjà pourvue, script en panne, garde de l'appel). **Une lecture réelle** (606069 → **606070**, `refCouple` présent dans
+  ContactById) : la forme de l'API est prouvée.
+
+**Reste, dans l'ordre** :
+1. **Pièce C** (le filet de la nuit, si B rate) — touche le run de nuit : à présenter avant de coder.
+2. Frédéric : coller le patch A (après la répétition), pousser, redémarrer le service worker qui porte `create_hektor_contact`
+   **file vide** — interrupteur toujours éteint.
+3. Allumer + **un couple d'essai réel** (fictif, comme E1, accord requis) → contrôler les 2 lignes, la case cible de la personne 2,
+   puis **la nuit** : toujours 2 fiches, aucune 3e, aucun numéro de plus.
+⚠ **Non mesuré** : si Hektor envoie l'e-mail d'activation RGPD au conjoint aussi (`send_rgpd_email: true`).

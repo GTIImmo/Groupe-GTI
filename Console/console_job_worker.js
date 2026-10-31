@@ -19135,6 +19135,68 @@ async function handleCreateHektorContact(job) {
   }
 }
 
+// ── COUPLES · PIECE B (31/10/2026) : LA SECONDE FICHE DU COUPLE ─────────────
+// Creer un couple fabrique DEUX fiches chez Hektor (essai E1 du 30/10). La reponse
+// de creation ne donne que la premiere, et la premiere ne nomme pas la seconde :
+// c'est la SECONDE qui designe la premiere (`refCouple`). La base a deja ecrit la
+// personne 2 sous NOTRE numero (piece A : `app_identite_m2`) ; il lui manque sa
+// case cible. Sans elle, l'adoption de la nuit (adopter_les_nes_dans_l_app) ne la
+// reconnait pas et donne a la seconde fiche un numero DE PLUS : la personne 2
+// existerait deux fois chez nous.
+// On lit les fiches qui suivent (au plus 3, arret net au premier refus) et on
+// n'accepte que celle qui designe la premiere -- jamais « +1 » suppose.
+// La case n'est posee que si elle est VIDE et que personne d'autre ne porte ce
+// numero (meme regle que l'adoption : deux fiches pour un numero, ca se signale).
+// Pas de relecture de la personne 2 ici : la nuit la fait, quand le registre
+// connait les DEUX paires (une relecture trop tot ecrirait le lien de menage avec
+// le numero de Hektor de la premiere, pas le notre).
+// BEST EFFORT, comme la case cible de la premiere : rien ici ne fait tomber le travail.
+async function rangerSecondeFicheDuCouple(job, identiteM2, premiereHektor) {
+  const base = { app_identite_m2: identiteM2, premiere_hektor: String(premiereHektor) };
+  try {
+    const out = await runProjectPythonScript(
+      ["phase2/sync/contact_seconde_fiche_from_api.py", "--premiere", String(premiereHektor)],
+      { timeoutMs: 90000, previewSize: 2000 });
+    const derniere = String(out.stdout || "").trim().split(/\r?\n/).filter(Boolean).pop() || "{}";
+    const lu = safeJsonParse(derniere) || {};
+    const seconde = cleanString(lu.seconde || "");
+    if (!/^\d+$/.test(seconde)) {
+      await logJob(job.id, "couple_seconde_fiche", "error",
+        "Seconde fiche du couple NON trouvee chez Hektor -- la personne 2 attend sa case cible", {
+          ...base, lus: lu.lus || [], arret: lu.arret || null });
+      return { status: "not_found", ...base, lus: lu.lus || [], arret: lu.arret || null };
+    }
+    const porteurs = await supabaseRequest(
+      `app_contact_current?select=hektor_contact_id&hektor_target_id=eq.${encodeURIComponent(seconde)}`,
+      { method: "GET" });
+    const autres = (Array.isArray(porteurs) ? porteurs : [])
+      .map((ligne) => String(ligne && ligne.hektor_contact_id || ""))
+      .filter((numero) => numero && numero !== identiteM2);
+    if (autres.length) {
+      await logJob(job.id, "couple_seconde_fiche", "error",
+        "Seconde fiche trouvee, mais son numero Hektor est DEJA porte par un autre contact -- rien n'est ecrit", {
+          ...base, seconde, deja_porte_par: autres });
+      return { status: "conflict", ...base, seconde, deja_porte_par: autres };
+    }
+    const lignes = await supabaseRequest(
+      `app_contact_current?hektor_contact_id=eq.${encodeURIComponent(identiteM2)}&hektor_target_id=is.null`,
+      { method: "PATCH", prefer: "return=representation",
+        body: JSON.stringify({ hektor_target_id: seconde }) });
+    const ecrites = Array.isArray(lignes) ? lignes.length : 0;
+    await logJob(job.id, "couple_seconde_fiche", ecrites === 1 ? "done" : "error",
+      ecrites === 1
+        ? "La seconde fiche du couple est rangee dans la case cible de la personne 2"
+        : "Seconde fiche trouvee, mais la ligne de la personne 2 est absente ou deja pourvue -- rien n'est ecrit", {
+        ...base, seconde, lignes: ecrites, lus: lu.lus || [] });
+    return { status: ecrites === 1 ? "linked" : "not_written", ...base, seconde, lignes: ecrites };
+  } catch (err) {
+    const message = err && err.message ? err.message : String(err);
+    await logJob(job.id, "couple_seconde_fiche", "error",
+      `Seconde fiche du couple non rangee : ${message}`, base);
+    return { status: "error", ...base, error: message };
+  }
+}
+
 async function executerCreationContactHektor(job, payload) {
   // Le jeton de la ligne provisoire, glisse par app_create_contact_optimistic.
   // Absent quand le travail vient de l'ancien chemin : on ne reconcilie alors
@@ -19179,6 +19241,13 @@ async function executerCreationContactHektor(job, payload) {
     }
   }
 
+  // COUPLES · PIECE B (31/10) : la personne 2 n'existe dans la charge que si la
+  // base l'a ecrite (interrupteur `couple_nait_complet`). Sinon : rien ne change.
+  const identiteM2 = cleanString(payload.app_identite_m2 || "");
+  const secondeFiche = identiteM2 && created && created.contactId
+    ? await rangerSecondeFicheDuCouple(job, identiteM2, created.contactId)
+    : null;
+
   // ── (3) tranché le 23/09 : LA LIGNE PROVISOIRE PORTE L'IDENTITE ──────────
   // Cette ligne existe pour que L'ECRAN retrouve le contact une fois Hektor
   // passe. L'ecran, lui, ne connait que nos numeros : la relier au numero de
@@ -19222,6 +19291,7 @@ async function executerCreationContactHektor(job, payload) {
     crm_settings: crmSettings,
     post_create_step: postCreateStep,
     sync_job: syncJob,
+    couple_seconde_fiche: secondeFiche,
   };
 }
 
