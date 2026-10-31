@@ -405,3 +405,36 @@ seulement si la charge porte `app_identite_m2`) + `phase2/sync/contact_seconde_f
 3. Allumer + **un couple d'essai réel** (fictif, comme E1, accord requis) → contrôler les 2 lignes, la case cible de la personne 2,
    puis **la nuit** : toujours 2 fiches, aucune 3e, aucun numéro de plus.
 ⚠ **Non mesuré** : si Hektor envoie l'e-mail d'activation RGPD au conjoint aussi (`send_rgpd_email: true`).
+
+## 17. PIÈCE C — LE FILET DE LA NUIT : PROPOSITION *(31/10, rien codé, attend le « go »)*
+
+**Le trou qu'elle ferme** : si le worker n'a pas trouvé la seconde fiche (Hektor lent, refus, fiche plus loin que 3), la personne 2
+reste sans case cible. La même nuit, le registre (`registre_contacts.py`) voit arriver la seconde fiche de Hektor, ne la reconnaît
+pas, et lui donne un numéro de la série 10 M : la personne 2 existe deux fois.
+
+**Ce que fait la nuit aujourd'hui, dans l'ordre** (`run_full_pipeline.ps1`) : `normalize_source` (le miroir) → descente de la
+correspondance (`descendre_correspondance_contacts.py`, 62 368 paires, lit la vue `app_v_correspondance_identite_cible`) → build
+de la couche → registre (adoption des nés dans l'app **par la case cible**, puis numéros neufs) → seconde passe → push.
+
+**La pièce C** : un script neuf, `phase2/identite/rattacher_secondes_fiches.py`, une étape **non bloquante** placée **juste avant
+la descente de la correspondance**. Il ne lit **que le miroir et Supabase — aucune requête chez Hektor**.
+1. Il demande à Supabase les personnes 2 nées dans l'app **sans case cible** (≥ 20 000 000, liées à une personne 1 qui, elle, a sa cible).
+2. Dans le miroir, il cherche la fiche dont le `refCouple` vaut la cible de la personne 1.
+3. Il n'écrit la case cible de la personne 2 **que si** : une seule candidate, aucun autre contact ne porte déjà ce numéro, et
+   **le nom de famille concorde** (un témoin en plus de Hektor). Même écriture que B, et seulement si la case est vide.
+4. Sinon il n'écrit rien, il le **dit** au journal du run et sort en code 1 (l'étape apparaît en échec, le run continue).
+La descente ramène alors la paire, le build range la seconde fiche sous **notre** numéro, et le registre l'adopte : plus de 3e fiche.
+
+**Mesure du 31/10** : 9 contacts nés dans l'app, **aucun couple** → la pièce C n'aurait rien à faire ce soir (dormante jusqu'au
+premier couple créé interrupteur allumé). Idempotente : si B a réussi, elle ne trouve rien.
+
+**Ce que ça pourrait casser ailleurs** :
+- c'est une **modification du run de nuit** (une étape en plus) → accord requis, comme tout geste sur le run ;
+- une mauvaise association rattacherait la personne 2 à la fiche d'un autre → trois gardes (lien de Hektor exact, candidate unique,
+  nom concordant) ; dans le doute, rien n'est écrit ;
+- si elle échoue ou ne tranche pas, la nuit fait **ce qu'elle fait aujourd'hui** (numéro de plus pour la seconde fiche) : la pièce
+  C n'aggrave rien, elle ne fait que réparer quand elle est sûre ;
+- elle écrit dans Supabase pendant la nuit (le run le fait déjà, avec la même clé) ; en cas de doute, une option `--a-blanc` dit ce
+  qu'elle ferait sans rien écrire.
+**Essais prévus** : hors ligne (miroir et Supabase factices : cas trouvé, deux candidates, nom différent, déjà pourvu, rien à
+faire) ; puis une passe `--a-blanc` sur le vrai miroir (attendu : 0 personne 2 à rattacher).
