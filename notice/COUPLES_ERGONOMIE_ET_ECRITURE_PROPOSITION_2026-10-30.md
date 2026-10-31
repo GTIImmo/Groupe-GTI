@@ -459,3 +459,16 @@ faire) ; puis une passe `--a-blanc` sur le vrai miroir (attendu : 0 personne 2 �
 - ✅ **Clé de battement POSÉE le 31/10** (accord de Frédéric « Colle ») : la ligne `phase2.secondes_fiches_couple` existe dans
   `app_worker_registry` (medium, optional_pipeline_step, active), relue après l'écriture. ⏰ **01/11 au matin** : le journal du run
   doit porter « phase2 secondes fiches des couples » → « rien a faire », code 0, et la clé un battement daté de la nuit.
+
+## 19. POSE DU 31/10 *(Frédéric : « Mais fais le »)*
+
+- ✅ **Patch A POSÉ en base** (`patch_couple_paire_a_la_creation_2026-10-31.sql`), **7 contrôles verts** : interrupteur
+  `couple_nait_complet` **ÉTEINT**, bloc présent une fois, fonction neuve muette éteinte et fermée à anon / authenticated, droits de
+  la porte inchangés, porte mandant intacte, empreinte après pose = celle de la répétition (`278d5570…`).
+- ⛔ **Redémarrage de `HektorConsoleWorkerActions` REFUSÉ par Windows** (« Impossible d'ouvrir le service » : il faut une console
+  administrateur). File vérifiée vide juste avant (0 en attente, 0 en cours). Le service tourne toujours sur le code du 29/10 15:27:51,
+  **sans la pièce B** — sans conséquence tant que l'interrupteur est éteint (la charge ne porte pas `app_identite_m2`).
+  Vérifié aussi : les lignes non commitées de l'autre session (Youtrust, document de mandat) sont des travaux du service
+  **Documents**, pas Actions — redémarrer Actions ne les met pas en service.
+- **Reste à Frédéric** : redémarrer Actions dans une console administrateur, file vide ; pousser les commits.
+- **Ensuite seulement** : allumer l'interrupteur et créer un couple d'essai fictif (accord requis).
