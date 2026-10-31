@@ -275,7 +275,7 @@ type DetailContact = {
   sourceIds?: string[]
   // ⚠⚠ LE ROLE BRUT DU LIEN, A COTE DU LIBELLE -- ET CE N'EST PAS UN DOUBLON.
   //   `role` ci-dessus est passe dans contactRoleLabel() : c'est un texte D'AFFICHAGE,
-  //   qui vaut meme « mandants maries » pour un couple (mergeDetailContacts).
+  //   qui vaut meme « Couple » pour un couple (mergeDetailContacts).
   //   Batir la protection du retrait sur ce texte la ferait sauter au premier
   //   changement de libelle. On garde donc la valeur telle que le registre la donne.
   //   MESURE DU 02/10, sur les 132 651 liens vivants : `role_contact` est un
@@ -7196,6 +7196,22 @@ function detailContactDirectoryId(contact: DetailContact) {
   return candidates.map((value) => String(value ?? '').trim()).find((value) => /^\d+$/.test(value)) ?? null
 }
 
+// COUPLES · P1 (31/10) : les codes de couple de Hektor (« M_Mme »...) traduits pour
+// l'affichage. Meme table que la nuit (build_contacts_layer.py, CIVILITES_DE_COUPLE).
+// ⛔ « Mr./Mme » n'y est PAS : c'est le « Monsieur ou Madame » de Hektor, porte aussi
+//   par des personnes seules.
+const CIVILITES_DE_COUPLE: Record<string, string> = {
+  M_Mme: 'M. et Mme',
+  Mme_M: 'Mme et M.',
+  Mme_Mme: 'Mme et Mme',
+  M_M: 'M. et M.',
+}
+
+function civiliteAffichee(civilite: string | null | undefined) {
+  const texte = String(civilite ?? '').trim()
+  return CIVILITES_DE_COUPLE[texte] ?? texte
+}
+
 function contactCivilityToken(contact: DetailContact) {
   const normalized = normalizeContactText(contact.civility)
   if (['m', 'mr', 'monsieur'].includes(normalized)) return 'M.'
@@ -7269,7 +7285,9 @@ function mergeDetailContacts(current: DetailContact, incoming: DetailContact): D
     ...primary,
     id: primary.id || secondary.id,
     name: mergeContactNames(primary, secondary),
-    role: refCouple && sourceIds.length > 1 ? 'mandants maries' : primary.role || secondary.role,
+    // COUPLES · P1 (31/10) : « Couple », pas « mandants maries » -- ni forcement
+    // maries, ni forcement mandants (Frederic, 30/10).
+    role: refCouple && sourceIds.length > 1 ? 'Couple' : primary.role || secondary.role,
     phone: firstNonEmpty(primary.phone, secondary.phone),
     email: firstNonEmpty(primary.email, secondary.email),
     address: firstNonEmpty(primary.address, secondary.address),
@@ -44213,7 +44231,7 @@ function ContactDetailPopupBase(props: {
     .sort((left, right) => new Date(left.starts_at).getTime() - new Date(right.starts_at).getTime())[0] ?? null
   const duplicateCount = props.contact.duplicate_group_count ?? 0
   const expectedDeleteConfirm = `SUPPRIMER CONTACT ${props.contact.hektor_contact_id}`
-  const contactFullName = `${props.contact.civilite ? `${props.contact.civilite} ` : ''}${[props.contact.prenom, props.contact.nom].filter(Boolean).join(' ') || props.contact.display_name}`.trim()
+  const contactFullName = `${props.contact.civilite ? `${civiliteAffichee(props.contact.civilite)} ` : ''}${[props.contact.prenom, props.contact.nom].filter(Boolean).join(' ') || props.contact.display_name}`.trim()
   const contactLocation = [props.contact.code_postal, props.contact.ville].filter(Boolean).join(' ') || '-'
   const contactTabs = [
     { key: 'summary', label: 'Synthese' },
@@ -45201,7 +45219,7 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
     (m) => !numerosPortes.has(m.numero_mandat))
   const roleLabels = selectedRoles.map((role) => contactDirectoryRoleLabel(role))
   const expectedDeleteConfirm = `SUPPRIMER CONTACT ${props.contact.hektor_contact_id}`
-  const contactFullName = `${props.contact.civilite ? `${props.contact.civilite} ` : ''}${[props.contact.prenom, props.contact.nom].filter(Boolean).join(' ') || props.contact.display_name}`.trim()
+  const contactFullName = `${props.contact.civilite ? `${civiliteAffichee(props.contact.civilite)} ` : ''}${[props.contact.prenom, props.contact.nom].filter(Boolean).join(' ') || props.contact.display_name}`.trim()
   const contactLocation = [props.contact.code_postal, props.contact.ville].filter(Boolean).join(' ') || '-'
   const contactEmail = (props.contact.email ?? '').trim()
   const contactPhone = (props.contact.phone_primary ?? '').trim()

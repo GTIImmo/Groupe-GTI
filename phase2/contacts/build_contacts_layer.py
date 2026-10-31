@@ -41,6 +41,30 @@ GENERIC_CONTACT_NAMES = {
     "mr et mme",
 }
 
+# ── COUPLES · P1 (31/10/2026) — LES CODES DE COUPLE DE HEKTOR NE SE LISENT PAS.
+#
+# Hektor range la civilite d'un couple sous un CODE (« M_Mme »...), et le nom
+# affiche le recopiait tel quel : « M_Mme DUPONT ». On le traduit pour le NOM
+# AFFICHE seulement ; la colonne `civilite` garde le code brut.
+# ⛔ « Mr./Mme » N'EST PAS DANS LA LISTE : c'est le « Monsieur ou Madame » de
+#   Hektor, porte aussi par 23 977 personnes SEULES (mesure du 31/10). Le
+#   traduire en « M. et Mme » marierait des celibataires.
+# ⚠ Les quatre traductions sont sans danger pour l'import des mandats de
+#   recherche : son empreinte ignore M, MME et ET. « MM. » ou « Mmes » ne le
+#   seraient PAS. Meme table dans l'ecran (App.tsx, CIVILITES_DE_COUPLE).
+CIVILITES_DE_COUPLE = {
+    "M_Mme": "M. et Mme",
+    "Mme_M": "Mme et M.",
+    "Mme_Mme": "Mme et Mme",
+    "M_M": "M. et M.",
+}
+
+
+def civilite_affichee(civilite: Any) -> str:
+    texte = str(civilite or "").strip()
+    return CIVILITES_DE_COUPLE.get(texte, texte)
+
+
 SEVERITY_RANK = {"low": 1, "medium": 2, "high": 3, "critical": 4}
 
 
@@ -144,7 +168,7 @@ class ContactRow:
         #   « M. et Mme ABDENOURI MONSIEUR ET MADAME ».
         if self.est_fiche_de_menage:
             if clean_text(self.couple_identite_porteuse):
-                return " ".join(part for part in [self.civilite, self.couple_identite_porteuse]
+                return " ".join(part for part in [civilite_affichee(self.civilite), self.couple_identite_porteuse]
                                 if clean_text(part))
             # Porteuse disparue de Hektor : 14 080 liens sur 124 455, verifie par
             # appel API (404). « Mr./Mme » tout court rendrait ces fiches
@@ -162,7 +186,7 @@ class ContactRow:
         #   distinguer l'une de l'autre.
         if not clean_text(self.nom) and not clean_text(self.prenom):
             return f"Contact {self.hektor_contact_id}"
-        return " ".join(part for part in [self.civilite, self.prenom, self.nom] if clean_text(part)) or f"Contact {self.hektor_contact_id}"
+        return " ".join(part for part in [civilite_affichee(self.civilite), self.prenom, self.nom] if clean_text(part)) or f"Contact {self.hektor_contact_id}"
 
     @property
     def email_normalized(self) -> str:

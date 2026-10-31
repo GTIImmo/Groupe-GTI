@@ -551,3 +551,34 @@ local le 31/10 : 13 655 secondes nommées, 13 998 « ménage orphelin », 96 880
 (plage 10 000 037 – 10 650 928 ; 20 000 029 pour la seconde née dans l'app). Le registre donne un numéro à chaque fiche Hektor, couple ou
 pas. Rien de neuf à créer : P2 met simplement **le numéro app du conjoint** dans `couple_json` de la première fiche, pour que l'écran
 ouvre le foyer sur le bon onglet.
+
+## 22. P1 — LE LIBELLÉ : ÉCRIT ET ÉPROUVÉ *(31/10, « Vas y » de Frédéric)* — ⛔ RIEN N'EST POSÉ (commit local, pas poussé)
+
+**⚠ Écart avec la proposition du §21, trouvé par la mesure avant de coder** : « Mr./Mme » N'EST PAS un code de couple. Au registre
+local, il est porté par 23 977 personnes SEULES (sans aucun lien de couple), 23 737 premières fiches et 13 244 secondes. Le traduire en
+« M. et Mme » aurait marié des célibataires. ⇒ **On ne traduit que les quatre codes à tiret bas** : `M_Mme` (798 fiches), `Mme_M` (16),
+`Mme_Mme` (8), `M_M` (2), soit **824 noms qui changent une fois** (et non ~13 000) ; « Mr./Mme » reste tel quel. ⏳ À trancher plus tard
+si on veut un autre rendu de « Mr./Mme » (par exemple « M. ou Mme ») : rien n'est fait.
+
+**Ce qui est écrit** :
+- **nuit** — `phase2/contacts/build_contacts_layer.py` : table `CIVILITES_DE_COUPLE` + `civilite_affichee()`, appliquée aux deux
+  compositions de `display_name` (la fiche normale et la fiche de ménage qui emprunte sa porteuse). La colonne `civilite` garde le code
+  brut. Le push repère les lignes changées par leur empreinte (`stable_payload_hash`) : ces noms partiront à la nuit suivant le push.
+- **écran** — `App.tsx` : même table + `civiliteAffichee()` dans le titre des DEUX fiches contact (V1 l. ~44234 et V2 l. ~45222) ;
+  « mandants maries » → **« Couple »** (`mergeDetailContacts`).
+
+**Ce que ça pourrait casser ailleurs (vérifié)** : l'import des mandats de recherche compare des empreintes de noms qui ignorent M, MME,
+ET → identiques avant/après (éprouvé pour les 4 codes) ; les doublons se calculent sur prénom/nom, pas sur `display_name` ; le worker ne
+lit `display_name` que pour afficher (bandeau des personnes d'une transaction, l. 16329) ; `role` « Couple » n'est comparé nulle part
+(seul `roleLien`, le rôle brut, sert à la protection du retrait). Le texte de recherche du contact contient `display_name` : chercher
+« M_Mme » ne trouvera plus ces fiches (sans usage connu).
+
+**Pas touché, à dire** : les autres endroits de l'écran qui collent la civilité brute (blocs mandant des documents `App.tsx` ~4455,
+~5073, ~5675, transactions ~29213, propositions ~37174, choix de contacts ~40256 / ~40353 / ~41869) — un document de mandat peut donc
+encore écrire « M_Mme ». ⏳ À décider avec Frédéric (le document est un chantier à part, défaut n° 1).
+
+**Contrôle** : `.venv/Scripts/python.exe -m unittest phase2.contacts.test_civilite_couple phase2.contacts.test_contacts_layer` → 5/5
+(4 neufs dont un témoin inverse : « Mr./Mme », « M. », « Mme. », vide inchangés) ; `npm run build` vert.
+
+**Pour poser** : pousser (Vercel déploie l'écran) ; la nuit suivante recompose les noms et les pousse. Retour arrière : `git revert`
+du commit, la nuit suivante remet les codes. Rien en base, rien chez Hektor, aucun service à redémarrer.
