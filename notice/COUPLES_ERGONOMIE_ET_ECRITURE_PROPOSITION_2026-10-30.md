@@ -438,3 +438,21 @@ premier couple créé interrupteur allumé). Idempotente : si B a réussi, elle 
   qu'elle ferait sans rien écrire.
 **Essais prévus** : hors ligne (miroir et Supabase factices : cas trouvé, deux candidates, nom différent, déjà pourvu, rien à
 faire) ; puis une passe `--a-blanc` sur le vrai miroir (attendu : 0 personne 2 à rattacher).
+
+## 18. PIÈCE C — ÉCRITE, ÉPROUVÉE, BRANCHÉE AU RUN *(31/10, « go » de Frédéric « Oui »)*
+
+- **Script** : `phase2/identite/rattacher_secondes_fiches.py` (option `--a-blanc`). Lit Supabase (personnes 2 nées dans l'app sans
+  cible, et la cible de leur personne 1) et le miroir ; aucune requête chez Hektor. N'écrit (case cible vide seulement) que si : une
+  seule fiche du miroir désigne la personne 1, nom de famille concordant (accents, tirets, casse neutralisés), numéro porté par
+  personne d'autre **ni dans Supabase ni dans le registre local**. « Attendre » (sortie 0, sans alarme) si la personne 1 n'a pas
+  encore sa cible ou si la fiche n'est pas encore au miroir ; « DOUTE » (rien d'écrit, sortie 1) sinon ; sortie 2 si lecture impossible.
+- **Essai hors ligne** `phase2/identite/test_rattacher_secondes_fiches.py` : **13/13**.
+- **Passe à blanc sur les vraies données** : « rien à faire » (attendu : 0 personne 2 en attente, mesuré aussi en SQL).
+- **Témoin positif sur deux vrais couples récents** (lecture seule, aucun nom affiché) : pour 606069 il trouve **606070**, pour
+  606067 il trouve **606068**, nom concordant — et il **refuse** d'écrire parce que le registre local leur donne déjà une identité
+  (10650913, 10650911) : c'est juste, ce sont des couples nés chez Hektor. Avec un nom faux : refus aussi.
+- **Branchée** dans `run_full_pipeline.ps1`, étape « phase2 secondes fiches des couples », **après normalize_source, juste avant la
+  descente de la correspondance**, non bloquante, 1 essai, clé `phase2.secondes_fiches_couple`. Syntaxe du run vérifiée (0 erreur).
+  ⚠ **Elle tournera dès cette nuit** (le run lit ce fichier sur le disque) : dormante, elle dira « rien à faire ».
+- ⚠ **La clé de battement n'existe pas encore** : `supabase/patch_couple_piece_c_battement_2026-10-31.sql` (une ligne de
+  configuration, `medium`, comme ses voisines) — **à coller par Frédéric**, sinon un « DOUTE » partirait dans le vide.

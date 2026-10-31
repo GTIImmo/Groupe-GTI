@@ -666,6 +666,21 @@ Invoke-Step -Label "phase2 annonces connues de l app seule" -Arguments @(
 # -- et la sonde data.contacts_double_identite le dira.
 # AUJOURD'HUI : 1 ligne (le contact d'essai). Pour les 356 000 autres,
 # identite = numero Hektor, il n'y a rien a traduire.
+# COUPLES · PIECE C (31/10/2026) -- LE FILET DE LA SECONDE FICHE D'UN COUPLE.
+# Un couple cree dans l'app a ses DEUX personnes chez nous (piece A) ; le worker range
+# le numero Hektor de la seconde fiche dans la case cible de la personne 2 (piece B).
+# S'il l'a rate, la seconde fiche arrive ce soir dans le miroir et le registre lui
+# donnerait un numero DE PLUS (il n'adopte que par la case cible).
+# ICI, et pas ailleurs : APRES normalize_source (la seconde fiche doit etre au miroir),
+# AVANT la descente juste en dessous (c'est elle qui ramene la paire au build).
+# N'ecrit que si elle est sure (une seule fiche designe la personne 1, nom concordant,
+# numero porte par personne d'autre) ; sinon elle le DIT et sort en 1. NON BLOQUANTE :
+# si elle tombe, la nuit fait ce qu'elle faisait avant. Aucune requete chez Hektor.
+# Dormante tant qu'aucun couple ne nait dans l'app (mesure du 31/10 : 0).
+Invoke-OptionalStepWithRetry -Label "phase2 secondes fiches des couples" -Arguments @(
+    "phase2\identite\rattacher_secondes_fiches.py"
+) -MaxAttempts 1 -RetryDelaySeconds 0 -WorkerKey "phase2.secondes_fiches_couple"
+
 Invoke-OptionalStepWithRetry -Label "phase2 correspondance identite app" -Arguments @(
     "phase2\identite\descendre_correspondance_contacts.py"
 ) -WorkerKey "phase2.correspondance_identite"
