@@ -21,6 +21,27 @@ DEFAULT_ENV_FILES = (ROOT / ".env", ROOT / "apps" / "hektor-v1" / ".env")
 PUSH_STATE_TABLE = "app_contact_supabase_push_state"
 VOLATILE_HASH_FIELDS = {"refreshed_at"}
 CONTACT_STATS_TABLE = "app_contact_stats_current"
+# ── COUPLES · P2 (31/10/2026) — LE RESUME DU CONJOINT, `couple_json` ──────────
+# Pose par phase2/contacts/conjoints_des_couples.py, juste avant ce push.
+# ⛔ INTERRUPTEUR APP_COUPLE_CONJOINT (.env) : eteint, la colonne n'est PAS envoyee
+#   -- elle n'existe chez Supabase qu'apres patch_couple_p2_conjoint_connu_2026-10-31.sql,
+#   et une colonne inconnue ferait echouer tout le push.
+# ⚠ UNE VALEUR VIDE NE COMPTE PAS DANS L'EMPREINTE : sinon la colonne neuve
+#   changerait l'empreinte de TOUS les contacts et la premiere nuit renverrait le
+#   parc entier. Seuls les contacts qui portent un resume partent en plus.
+CHAMPS_SANS_EMPREINTE_SI_VIDES = {"couple_json"}
+_COUPLE_CONJOINT_ALLUME: bool | None = None
+
+
+def couple_conjoint_allume() -> bool:
+    global _COUPLE_CONJOINT_ALLUME
+    if _COUPLE_CONJOINT_ALLUME is None:
+        # Les lignes sont lues AVANT que main() charge le .env : on le lit ici.
+        for env_file in DEFAULT_ENV_FILES:
+            load_env_file(env_file)
+        _COUPLE_CONJOINT_ALLUME = (os.environ.get("APP_COUPLE_CONJOINT") or "").strip().lower() in {
+            "1", "on", "true", "oui"}
+    return _COUPLE_CONJOINT_ALLUME
 
 
 def load_env_file(path: Path) -> None:
@@ -99,6 +120,14 @@ def build_search_text(row: dict[str, Any]) -> str | None:
         row.get("agence_nom"),
         " ".join(parse_json(row.get("relation_roles_json"), [])),
     ]
+    # COUPLES · P2 : chercher le prenom, le telephone ou l'e-mail du conjoint
+    # retrouve le foyer (sa premiere fiche).
+    couple = row.get("couple_json")
+    if isinstance(couple, str):
+        couple = parse_json(couple, None)
+    if isinstance(couple, dict) and couple.get("etat") == "nomme" and couple_conjoint_allume():
+        conjoint = couple.get("conjoint") or {}
+        parts += [conjoint.get(champ) for champ in ("prenom", "nom", "telephone", "email")]
     text = " ".join(str(part).strip() for part in parts if str(part or "").strip())
     return " ".join(text.split()) or None
 
@@ -112,6 +141,11 @@ def normalize_contact_row(row: sqlite3.Row) -> dict[str, Any]:
     payload["relation_roles_json"] = parse_json(payload.get("relation_roles_json"), [])
     payload["eligibility_reasons_json"] = parse_json(payload.get("eligibility_reasons_json"), [])
     payload["search_text"] = build_search_text(dict(row))
+    if "couple_json" in payload:
+        if couple_conjoint_allume():
+            payload["couple_json"] = parse_json(payload.get("couple_json"), None)
+        else:
+            payload.pop("couple_json")
     return payload
 
 
@@ -145,7 +179,9 @@ def normalize_duplicate_member_row(row: sqlite3.Row) -> dict[str, Any]:
 
 
 def stable_payload_hash(row: dict[str, Any]) -> str:
-    stable_row = {key: value for key, value in row.items() if key not in VOLATILE_HASH_FIELDS}
+    stable_row = {key: value for key, value in row.items()
+                  if key not in VOLATILE_HASH_FIELDS
+                  and not (key in CHAMPS_SANS_EMPREINTE_SI_VIDES and value is None)}
     payload = json.dumps(stable_row, sort_keys=True, ensure_ascii=True, separators=(",", ":"))
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 

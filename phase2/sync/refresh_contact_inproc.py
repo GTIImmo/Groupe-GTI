@@ -290,6 +290,13 @@ def _steps(contact_id: str):
         ("build", "phase2/contacts/build_contacts_layer.py", [
             "--contact-id", identite, "--no-reports",
         ]),
+        # COUPLES · P2 (31/10/2026) : le build vient de reecrire la fiche SANS son
+        # resume de conjoint ; on recalcule SON couple avant le push, sinon ouvrir
+        # une fiche effacerait le conjoint chez Supabase jusqu'a la nuit.
+        # Interrupteur APP_COUPLE_CONJOINT ; cette etape ne leve jamais (sortie 0).
+        ("conjoint", "phase2/contacts/conjoints_des_couples.py", [
+            "--contact-id", identite,
+        ]),
         # --include-archived-searches (21/08/2026) : meme raison que dans le run de 03:00.
         # Sans elle, ouvrir une fiche contact suffirait a resupprimer ses recherches
         # archivees de Supabase, et a reorpheliner ce qui pointait dessus.

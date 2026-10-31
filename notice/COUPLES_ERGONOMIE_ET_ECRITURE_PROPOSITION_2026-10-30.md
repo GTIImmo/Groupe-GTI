@@ -582,3 +582,42 @@ encore écrire « M_Mme ». ⏳ À décider avec Frédéric (le document est un 
 
 **Pour poser** : pousser (Vercel déploie l'écran) ; la nuit suivante recompose les noms et les pousse. Retour arrière : `git revert`
 du commit, la nuit suivante remet les codes. Rien en base, rien chez Hektor, aucun service à redémarrer.
+
+## 23. P2 — LA PREMIÈRE FICHE CONNAÎT SON CONJOINT : ÉCRIT ET ÉPROUVÉ HORS LIGNE *(31/10, « Vas y »)* — ⛔ RIEN N'EST POSÉ
+
+**Ce qui est écrit (commit local, pas poussé)** :
+- **l'étape de nuit** `phase2/contacts/conjoints_des_couples.py`, label « phase2 conjoints des couples », clé de battement
+  `phase2.conjoints_couples`, placée dans `run_full_pipeline.ps1` APRÈS tout ce qui décide l'éligibilité (build, seconde passe,
+  périmètre console) et AVANT le push des contacts, NON bloquante. Sur la couche locale seulement :
+  - `couple_json` sur chaque première fiche : `{"etat": "nomme"|"vide"|"aucun", "autres": n, "conjoint": {id (numéro app),
+    hektor_id, civilite, prenom, nom, telephone, email, archive, envoye}}` ; « nomme » montre la PREMIÈRE seconde nommée (plus
+    petit numéro), `autres` compte les autres secondes (décision 3 du 31/10) ;
+  - `couple_role = 'conjoint'` + éligible (raison `conjoint_d_un_contact_envoye`) pour la seconde nommée montrée, quand sa
+    première part vers l'app et n'est pas archivée ; les fiches vides gardent `menage_resolu` / `menage_orphelin` ;
+  - idempotente (remet d'abord à zéro un ancien « conjoint » qui ne l'est plus) ;
+- **le push** (`push_contacts_to_supabase.py`) : n'envoie `couple_json` que si l'interrupteur est allumé ; une valeur vide ne
+  compte pas dans l'empreinte (sinon tout le parc repartirait) ; le texte de recherche de la première porte le prénom, le nom, le
+  téléphone et l'e-mail du conjoint nommé ;
+- **la relecture d'une fiche** (`refresh_contact_inproc.py`) : une étape « conjoint » entre le build et le push recalcule le couple
+  de la fiche rouverte (sinon l'ouvrir effacerait le conjoint chez Supabase jusqu'à la nuit) ; elle ne lève jamais ;
+- **le patch Supabase** `supabase/patch_couple_p2_conjoint_connu_2026-10-31.sql` (+ `_REPETITION`, `_INVERSE`) : la colonne
+  `couple_json` (jsonb), la clé de battement, et `app_contact_creer_conjoint` qui pose le résumé TOUT DE SUITE quand un couple
+  naît dans l'app (garde : empreinte 2523f1f0… relevée le 31/10, ancre `return v_m2;` présente une fois). La vue
+  `app_contacts_current` n'est PAS touchée (P3).
+
+**⛔ Interrupteur** `APP_COUPLE_CONJOINT` (`.env`), ÉTEINT par défaut : l'étape ne fait rien, le push n'envoie pas la colonne.
+**Ordre** : coller le patch → allumer → la nuit suivante pose et envoie. Allumer AVANT le patch ferait échouer le push.
+
+**Contrôle hors ligne** : `test_conjoints_des_couples` 10/10 + `test_civilite_couple` 4/4 + `test_contacts_layer` 1/1. ⭐ L'essai
+d'idempotence a trouvé un vrai défaut, corrigé : un ancien conjoint était compté « envoyé » à cause de sa propre marque de la veille.
+**Mesure sur une copie de la table locale** (rien écrit dans le vrai registre) : 139 897 premières (aucun 32 379, nommé 13 561,
+vide 93 957) ; parmi celles qui partent vers l'app et sont actives : **aucun 2 122, vide 10 757, nommé 1 900 dont 160 avec
+d'autres secondes** (conforme à l'audit) ; **1 900 conjoints marqués, dont 741 qui n'étaient pas envoyés** ; éligibles
+62 171 → 62 912 ; **~8 s** ; 2e passage identique. ⇒ la première nuit allumée envoie ~26 000 lignes une fois (≈ 87 lots de 300).
+
+**⚠ TROUVÉ EN CHEMIN, À TRANCHER AVANT P3 (l'affichage)** : le marqueur « couple » de Hektor (`refCouple`) est posé sur ~85 % des
+fiches créées de 2005 à 2010, contre 11 % en 2026 (registre local, par année d'enregistrement). Les « couples à seconde fiche vide »
+anciens sont donc très probablement des **personnes seules** dont Hektor a créé la place du second membre (comme le notait déjà le
+11/09). Afficher « Couple » sur les 10 757 « vide » et les 2 122 « aucun » (réponse 1 du 31/10) marquerait comme couple beaucoup de
+personnes seules. Les données de P2 restent justes (elles disent l'état, pas le libellé) ; c'est la règle d'affichage de P3 qui est
+à revoir avec Frédéric (par exemple : « Couple » seulement si le conjoint est nommé ou si la civilité est un code de couple).
