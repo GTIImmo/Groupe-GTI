@@ -9670,6 +9670,10 @@ export async function editSearchOptimistic(input: {
   return (data as { ok: boolean }) ?? { ok: true }
 }
 
+// La plage des numéros que l'app donne à ses contacts (même seuil que le worker
+// et que App.tsx) : au-delà, Hektor ne connaît pas ce numéro.
+const PLAGE_NUMEROS_APP_CONTACT = 10_000_000
+
 // Read-through : à l'ouverture d'une fiche contact, demande un refresh Hektor->Supabase
 // (pour voir les éditions faites directement dans Hektor). TTL + dédup côté RPC.
 // Best-effort : ne lève jamais, renvoie le job (neuf, ou en cours / récent réutilisé) ou null.
@@ -9680,6 +9684,22 @@ export async function requestContactRefresh(contactId: string, ttlSeconds = 1800
   if (!/^\d+$/.test(cleanContactId)) return null
   try {
     await requireSupabaseUserId()
+    // 31/10 : un contact NÉ DANS L'APP n'a pas de numéro Hektor pendant ~15 s après
+    // sa création. Depuis le 26/10 sa fiche s'ouvre tout de suite (point 3a) : la
+    // relecture partait alors sur notre numéro, le worker la refusait (« pas encore
+    // créé chez Hektor ») et l'alerte des travaux en erreur sonnait pour rien.
+    // Même règle que le worker : sans case cible, rien à relire. La relecture qui
+    // suit la création remplit la fiche dès que Hektor a rendu son numéro.
+    if (Number(cleanContactId) >= PLAGE_NUMEROS_APP_CONTACT) {
+      const { data: ligne, error: lectureKo } = await supabase
+        .from('app_contact_current')
+        .select('hektor_target_id')
+        .eq('hektor_contact_id', cleanContactId)
+        .limit(1)
+        .maybeSingle()
+      // Lecture ratée : on ne décide rien, on garde la demande d'avant.
+      if (!lectureKo && !String((ligne as { hektor_target_id?: string | null } | null)?.hektor_target_id ?? '').trim()) return null
+    }
     const { data, error } = await supabase.rpc('app_console_request_contact_refresh', {
       target_contact_id: cleanContactId,
       ttl_seconds: ttlSeconds,
