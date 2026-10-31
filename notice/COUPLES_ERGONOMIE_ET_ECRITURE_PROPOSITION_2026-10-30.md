@@ -472,3 +472,8 @@ faire) ; puis une passe `--a-blanc` sur le vrai miroir (attendu : 0 personne 2 �
   **Documents**, pas Actions — redémarrer Actions ne les met pas en service.
 - **Reste à Frédéric** : redémarrer Actions dans une console administrateur, file vide ; pousser les commits.
 - **Ensuite seulement** : allumer l'interrupteur et créer un couple d'essai fictif (accord requis).
+- ✅ **Les 4 services redémarrés par Frédéric le 31/10 à 09:35:14-16** (heure des processus, mesurée) : le fichier lu contient la
+  pièce B (`rangerSecondeFicheDuCouple` présent). Battements des 4 à 09:36, sans erreur ; file vide (0 en attente, 0 en cours).
+  ⚠ Le service **Documents** a chargé AUSSI les lignes non commitées de l'autre session (Youtrust, document de mandat) : elles sont
+  désormais en service.
+- **Prochaine marche** : allumer `couple_nait_complet` + un couple d'essai fictif (accord requis), puis juger la nuit.
