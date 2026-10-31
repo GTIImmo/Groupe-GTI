@@ -627,3 +627,11 @@ couples anciens se tranche AVANT d'écrire une ligne de P3. Indices déjà au do
 RÉTRO-CRÉÉ la seconde fiche pour tout le parc d'un coup (identifiants 400 000 – 599 999 : 71 à 97 % de fiches muettes, dates
 recopiées de la porteuse) ; E0 (30/10) : 33 660 des 35 914 secondes fiches vides pendent à une porteuse SANS bloc conjoint ;
 E6 (30/10) : une personne seule créée aujourd'hui n'a PAS de place vide.
+
+**✅ RÉPÉTITION DU PATCH P2 JOUÉE LE 31/10 (accord de Frédéric « P2 ») — 13 VERTES SUR 13, TOUT ANNULÉ** :
+`ESSAI ANNULE -- 01 colonne=1 | 02 battement=1 | 03 personne2=20000030 | 04 etat=nomme | 05 conjoint_id=ok | 06 prenom=Conjointe |
+07 telephone=0600000000 | 08 email=essai.p2@exemple.test | 09 role_p2=conjoint | 10 lien_p1=ok | 11 lien_p2=ok | 12 droits=ok |
+13 autres_resumes=0`. **Mesuré après coup** : colonne absente, clé de battement absente, empreinte de la fonction revenue à
+2523f1f0…, 0 ligne d'essai, 0 « conjoint ». Seul effet qui survit : la séquence est passée de 20000029 à **20000030** (un trou).
+⏳ **Reste, avec accord** : coller `supabase/patch_couple_p2_conjoint_connu_2026-10-31.sql` → `APP_COUPLE_CONJOINT=1` dans `.env`
+→ pousser → juger la nuit suivante (étape « phase2 conjoints des couples » en code 0, ~1 900 conjoints, ~26 000 lignes envoyées).
