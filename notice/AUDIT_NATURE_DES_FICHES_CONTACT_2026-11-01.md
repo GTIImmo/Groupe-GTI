@@ -54,6 +54,36 @@ Total : 356 762 · 172 559 · **62 174 dans l'app** (règle d'envoi actuelle : b
 - Une création en masse chez Hektor coûterait aussi le quota (~1 req/s, plafond de la nuit), sans valeur tant que le conjoint
   n'est pas nommé.
 
+## 2 bis. LES CAS d ET e, FICHE PAR FICHE *(question de Frédéric : « les id pointent sur rien ? »)*
+
+**Rappel du mécanisme** : chaque fiche Hektor a une case `refCouple`. Sur la fiche principale d'un foyer, elle contient **son propre
+numéro** (« je suis le chef du foyer ») ; sur la deuxième fiche, **le numéro de la principale** (« je suis son conjoint »). Rien
+d'autre ne relie les deux.
+
+**Cas d — 1 142 couples (409 actifs) : la principale dit « je suis chef de foyer », mais personne ne dit « je suis son conjoint ».**
+Vérifié dans la fiche brute de Hektor : `refCouple` = son propre numéro pour les 1 142. Le numéro ne pointe donc pas « sur rien »,
+il pointe **sur elle-même** ; c'est la deuxième fiche qui a disparu ou perdu son lien. Une fiche vide détachée créée **à la même
+seconde** existe pour 100 d'entre eux (probablement leur case perdue), plusieurs candidates pour 445, aucune pour 597. Toutes
+créées avant mars 2026 (une seule après). Civilité : « Mr./Mme » 722, vide 303, « M. » 112 ; deux prénoms écrits : 706.
+
+**Cas e — 2 475 couples : aucun lien du tout (`refCouple` vide chez Hektor).** Seul ce qu'un agent a écrit dit « couple » :
+« Mr./Mme » 1 569, deux prénoms 978.
+- **602 n'existent plus chez Hektor** : ce sont des fiches supprimées dont nous gardons le nom parce qu'une annonce ou une offre les
+  cite (agence vide, réponse 404). Rien à compléter chez Hektor.
+- **1 873 sont de vraies fiches sans lien** (1 218 actives), surtout à Issoire, Courpière, Tence, Craponne-sur-Arzon : les agences
+  importées avec le réglage « foyer pour les couples seulement », qui a manqué une partie des couples.
+
+**Ce qu'on fait** :
+- **À l'écran, aucune différence** : les 3 617 s'affichent « Couple · conjoint à compléter », comme les couples à case vide, avec le
+  prénom proposé quand il est écrit (706 + 978).
+- **On ne crée rien d'avance**, et on ne raccroche pas les 100 cases probables : elles sont vides, les relier n'apporterait rien.
+- **La différence n'existe que pour le geste « compléter le conjoint »** (plus tard) :
+  - d : créer une deuxième fiche dont `refCouple` = le numéro de la principale — c'est exactement le modèle de Hektor, la
+    principale est déjà prête ;
+  - e : il faut EN PLUS poser `refCouple` sur la principale existante — **non éprouvé**, à essayer d'abord sur une fiche d'essai
+    (« Transformer en couple » a fait disparaître une fiche le 30/10) ;
+  - les 602 supprimées chez Hektor : affichage seulement, pas de geste.
+
 ## 3. CE QUI EXISTE DÉJÀ (code lu)
 
 - **La nuit** (`phase2/contacts/build_contacts_layer.py`) :
