@@ -24,9 +24,17 @@ commentaire dit *« QUATRE EMPLACEMENTS, deux par cote »*. Rien a developper.
 16 106 lignes. Le reste est la conversion automatique.
 
 ⛔ **Ce qui reste impossible, c'est TROIS personnes du MEME cote** — ce que demandent
-les 13 lignes du classeur. Trois verrous, a lever ensemble : le
-`CHECK rang = ANY (ARRAY[1,2])`, la cle primaire `(app_chaine_id, cote, rang)`, et le
-RPC `app_repartition_commission_set` (`rang in ('1','2')`). **Non tranche.**
+les 13 lignes du classeur. **DEUX verrous, et AUCUN ne touche les donnees** :
+le `CHECK app_affaire_repartition_rang_chk` (`rang = ANY (ARRAY[1, 2])`) et une ligne du
+RPC `app_repartition_commission_set` (`if ... rang not in ('1','2') then raise
+'rang_invalide'`). Cote front : le type `rang: 1 | 2`, la boucle `([1, 2] as const).map`,
+et la regle `50 / n` qui passerait a 16,667 %. **Non tranche.**
+
+> ⛔⛔ **CORRECTION DU 02/11 — j'avais annonce TROIS verrous, dont la cle primaire.**
+> C'est faux, et ca grossissait le risque : la cle est `PRIMARY KEY (app_chaine_id,
+> cote, rang)`, elle **contient deja le rang**, donc `rang = 3` y entre **sans aucune
+> modification**. Elle garantit « un seul nom par emplacement », ce qu'on veut garder.
+> ➡ Il n'y a **rien a faire sur la cle primaire**, et aucune ligne existante a reecrire.
 
 ## 2. LA REPARTITION NE PART PAS CHEZ HEKTOR — confirme, trois preuves
 
