@@ -259,6 +259,7 @@ import './suivi-travaux.css'
 import { compterAnnoncesAilleurs, type AnnoncesAilleurs } from './lib/api'
 import { bvs, bvt } from './lib/bienvuTexte'
 import { MENTION_AVENANT, MENTION_MANDAT, repereHtml, repereSignature, zoneMentionHtml } from './lib/signatureAnchors'
+import { sansCasesVides } from './lib/mandantsDocument'
 
 type DetailContact = {
   id: string
@@ -4413,11 +4414,16 @@ function splitMandantFallbackName(value: string) {
 }
 
 function buildMandatDocumentMandants(contacts: DetailContact[], fallbackLabel: string): MandatDocumentMandant[] {
-  const activeContacts = contacts.filter((contact) => mandateContactName(contact) || contact.email || contact.phone || contact.address)
+  // COUPLES · défaut n° 1 (02/11/2026) : la case vide d'un couple n'est plus un mandant
+  // sans nom -- ni comme ligne à part, ni comme membre d'un couple (lib/mandantsDocument.ts).
+  const activeContacts = sansCasesVides(
+    contacts.filter((contact) => mandateContactName(contact) || contact.email || contact.phone || contact.address),
+  )
   if (activeContacts.length) {
     return activeContacts.flatMap((contact, index) => {
-      if (isCoupleContact(contact) && contact.members?.length) {
-        return contact.members.map((member, memberIndex) => ({
+      const membres = sansCasesVides(contact.members ?? [])
+      if (isCoupleContact(contact) && membres.length > 1) {
+        return membres.map((member, memberIndex) => ({
           id: `${contact.id || contact.sourceId || `mandant-${index + 1}`}-member-${member.sourceId || memberIndex + 1}`,
           civilite: member.civility,
           nom: member.lastName || member.name,
@@ -4427,6 +4433,21 @@ function buildMandatDocumentMandants(contacts: DetailContact[], fallbackLabel: s
           telephone: member.phone || contact.phone,
           email: member.email || contact.email,
         }))
+      }
+      // Un « couple » dont il ne reste qu'UNE personne réelle (l'autre était la case
+      // vide) : c'est elle, et elle seule, qui est mandante -- avec SON nom.
+      if (isCoupleContact(contact) && membres.length === 1 && (contact.members?.length ?? 0) > 1) {
+        const seul = membres[0]
+        return [{
+          id: `${contact.id || contact.sourceId || `mandant-${index + 1}`}-member-${seul.sourceId || 1}`,
+          civilite: seul.civility,
+          nom: seul.lastName || seul.name,
+          prenom: seul.firstName,
+          qualite: 'Mandant',
+          adresse: [seul.address || contact.address, seul.postalCode || contact.postalCode, seul.city || contact.city].filter(Boolean).join(', '),
+          telephone: seul.phone || contact.phone,
+          email: seul.email || contact.email,
+        }]
       }
       return [{
       id: contact.id || contact.sourceId || `mandant-${index + 1}`,

@@ -328,3 +328,27 @@ Autres cas : mis de côté avec leur raison. **Interrupteur `APP_CONTACT_RATTACH
 90 → 91 lignes). Table recalculée sans option (le `.env` est bien lu) : 7 290 rattachées, 3 007 dans l'app ; push à blanc
 62 174 à envoyer, 1 seul jeu de clés, `rattachee_a` NON envoyé, couples 7 875 et orphelines 770 dans les lignes envoyées.
 ⏰ 02/11 au matin : même ligne « rattachement : 7290 … » au journal du run.
+
+---
+
+## 13. PHASE 3-A — LE DÉFAUT N° 1 DU DOCUMENT DE MANDAT, CORRIGÉ *(02/11, « A » de Frédéric)* — commit local, PAS EN LIGNE
+
+**Le défaut** (`buildMandatDocumentMandants`, `App.tsx` ~l. 4415) : la case vide d'un couple devenait un **mandant sans nom** avec sa
+case de signature — comme membre d'un couple (les `members` étaient recopiés tels quels) ET comme ligne à part (les 3 777
+« orphelines » du §11, à côté de leur personne sur le même bien). Dans le registre, une case vide s'appelle « Mr./Mme » (civilité
+seule) ou « Contact <numéro> ».
+
+**Le correctif** (`apps/hektor-v1/src/lib/mandantsDocument.ts`, fonctions pures) :
+- `estCaseVideDeMenage` : écartée seulement si elle n'a **rien à elle** (ni prénom, ni nom, ni téléphone, ni e-mail, ni adresse) ET que
+  son nom n'est qu'une civilité ou « Contact <numéro> » — un mandant venu du blob avec son seul nom (« DUPONT Paul ») est **gardé** ;
+- `sansCasesVides` : si TOUS sont vides, on les garde tous (jamais un document sans mandant, règle du registre) ;
+- appliqué aux lignes ET aux membres d'un couple ; un « couple » dont il ne reste qu'**une** personne réelle donne **elle seule**,
+  avec son nom (plus « M. et Mme … » sur une seule ligne).
+
+**Éprouvé** : `npm run build` vert ; 12/12 cas de forme (`Mr./Mme`, `Contact 123`, `M. et Mme`, `M_Mme`, vide → écartés ; « DUPONT
+Paul », « Mme DUPONT », case avec un téléphone, vraie personne, « Metz » → gardés ; personne + case → la personne ; que des cases →
+tout gardé). ⚠ **Pas vu à l'écran** : la génération d'un mandat demande une session connectée ; il sera en ligne **après le push**
+(Vercel) — à regarder alors sur un bien à case vide, ordinateur et téléphone.
+
+**Ce que ça pourrait casser** : les 30 « orphelines » qui ont une coordonnée restent des mandants (voulu, critère étroit) ; le
+libellé du document (`mandatMandantsLabel`) et les destinataires de signature suivent la même liste, donc perdent aussi la case.
