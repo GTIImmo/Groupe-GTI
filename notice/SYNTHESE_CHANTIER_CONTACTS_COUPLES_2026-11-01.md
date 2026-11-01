@@ -273,3 +273,28 @@ Contrôle : **colonnes 6, battement 1, remplies 0, contacts 62 387, vue de l'éc
 - battement `phase2.nature_contacts` au vert ;
 - chez Supabase : ~62 174 fiches avec une nature, ~14 112 « Mme. ».
 **Retour arrière** : retirer `APP_CONTACT_NATURE=1` du `.env` D'ABORD, puis `_INVERSE.sql`.
+
+---
+
+## 11. LES 3 777 CASES VIDES « ORPHELINES » DE L'APP — CE QU'ELLES SONT *(01/11, ~23:45, question de Frédéric, lecture seule)*
+
+Sa question : « 3 777 fiches vides avec relations mais sans notion de couple ??? ». **Mesuré sur la base locale :**
+- **ce sont bien des cases de couple** : 3 765 sur 3 777 portent « Mr./Mme » ; 3 747 n'ont **aucune** coordonnée ; toutes s'affichent
+  « Contact <numéro> » ;
+- elles sont dans l'app **parce qu'un bien les cite** : 3 608 par une annonce active, 169 par une transaction ; rôles mandant 2 133,
+  propriétaire 1 862, acquéreur 146 ;
+- ⭐ **TOUTES les 3 777 ont, sur le même bien, une fiche NOMMÉE à côté d'elles** — créée **le même jour** dans 2 935 cas. Ce voisin est
+  presque toujours rangé « personne seule » (3 682) ;
+- **deux formes** :
+  - **2 393 ont un lien de couple chez Hektor**, mais il pointe vers une fiche **qui n'existe plus** (absente de tout le registre ;
+    `refCouple` brut = ce numéro, 2 393 sur 2 393). Leur voisin nommé n'a **aucun foyer** dans 2 204 cas : le couple a été **coupé
+    en deux** — la case garde un lien vers une principale disparue, la vraie personne vit sur une autre fiche ;
+  - **1 384 n'ont aucun lien de couple** ; leur voisin nommé est un « foyer sur lui-même » dans 1 295 cas (sans seconde fiche).
+- **Conséquence directe** : ces cases sont **mandants d'un bien** → c'est exactement le cas du **défaut n° 1** (un mandant sans nom
+  dans le document de mandat et une case de signature vide).
+- **Cause du lien coupé** : non établie (suppression ou fusion de la principale chez Hektor ?). Les numéros visés sont ≤ 606 098 (le plus
+  grand connu) mais absents.
+
+**Proposition (rien codé)** : ne pas les **cacher** à l'aveugle, mais les **rattacher chez nous** à leur voisin nommé du même bien
+(même jour de création = sûr ; autre jour = à part) : le voisin devient un couple « conjoint à compléter », la case est masquée comme
+les 12 111 cases normales. Rien chez Hektor.
