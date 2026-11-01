@@ -19,8 +19,13 @@
 - **La seconde fiche vide est une place créée par la machine**, jamais remplie : sur les 10 758 secondes vides des contacts
   vivants, **0 téléphone, 0 e-mail**, **10 757 nées le même jour que leur première**, **10 076 numérotées en 400 000 – 599 999**
   (la vague de rétro-création mesurée le 11/09).
+- ⭐ **SUR TOUT LE SERVEUR (section 4 bis, demandée par Frédéric) : 139 897 foyers**, dont **26 067 (18,6 %) portent un signe
+  écrit par une personne** et **101 492 (72,5 %) n'en portent AUCUN**. Seuls **14 779** sont aujourd'hui dans l'app.
+- ⭐⭐ **Le « conjoint nommé » est presque toujours un NOM RECOPIÉ** : sur 13 562 secondes fiches nommées du serveur, **13 129 portent
+  le même nom que la première, sans prénom, sans téléphone ni e-mail, nées le même jour**. **Seuls 421 foyers sur 139 897 ont un
+  conjoint avec un prénom** (371 avec un téléphone ou un e-mail). Le couple y est écrit (civilité « Mr./Mme »), le conjoint non.
 - **Les signes écrits par une PERSONNE existent, et ils sont fiables** : un conjoint nommé, une civilité de couple, deux prénoms
-  dans la fiche. Ils couvrent **2 991 couples vivants sur 14 779 (20 %)**.
+  dans la fiche. Dans l'app, ils couvrent **2 991 couples vivants sur 14 779 (20 %)**.
 - **9 278 « couples » vivants (63 %) n'ont AUCUN signe de couple** : ni conjoint, ni civilité de couple, ni deux prénoms, ni
   conjoint possible ailleurs dans le fichier. Les afficher « Couple » serait faux pour une grande partie d'entre eux.
 - ⭐ **Même les « conjoints nommés » sont minces** : sur 1 900, **1 598 n'ont qu'un NOM, sans prénom** (souvent le même nom que la
@@ -91,12 +96,46 @@ aucun avant ou après. Ce n'est pas un signe de plus ou de moins de couple.
 
 ---
 
+## 4 bis. TOUT LE SERVEUR : LES 356 762 FICHES ET LES 139 897 FOYERS *(question de Frédéric, 01/11)*
+
+**L'inventaire des 356 762 fiches du registre du serveur :**
+- 139 891 premières de foyer nommées (+ 6 vides) ;
+- 96 889 secondes vides, et 13 989 autres secondes vides dont la première n'est plus sur le serveur ;
+- 13 565 secondes nommées (+ 91 dont la première n'est plus sur le serveur) ;
+- 69 872 fiches nommées sans foyer (11 362 dans l'app, 16 224 actives hors app, 42 286 archivées) ;
+- 22 459 fiches vides sans foyer.
+
+**Les 139 897 foyers, classés comme à la section 4** *(total · dans l'app · actifs hors app · archivés)* :
+- **1. SÛR — conjoint nommé** : **13 562** (9,7 %) · 1 900 · 3 520 · 8 142 — ⚠ dont **13 141 sans prénom** (voir plus bas) ;
+- **2. SÛR — code de couple** : **16** · 9 · 3 · 4 ;
+- **3. PROBABLE — deux personnes écrites** : **6 793** (4,9 %) · 695 · 1 820 · 4 278 ;
+- **4. PROBABLE — « Mr./Mme » seule** : **5 696** (4,1 %) · 387 · 1 164 · 4 145 ;
+- **5. INDICE — conjoint possible ailleurs** : **10 899** (7,8 %) · 2 098 · 3 378 · 5 423 ;
+- **6. COLLECTIF** : **1 439** (1,0 %) · 412 · 650 · 377 ;
+- **7. RIEN — aucun signe** : **101 492 (72,5 %)** · 9 278 · 27 027 · 65 187.
+- **Total** : 139 897 · 14 779 dans l'app · 37 562 actifs hors app · 87 556 archivés.
+
+⇒ **Sur tout le serveur, 26 067 foyers (18,6 %) portent un signe de couple écrit ; 101 492 (72,5 %) n'en portent aucun.** La
+proportion est la même dans l'app (20 % / 63 %) : l'app n'est pas un cas à part, c'est un échantillon du serveur.
+
+**⭐⭐ Le « conjoint nommé » est presque toujours un NOM RECOPIÉ.** Sur les 13 562 secondes fiches nommées :
+- **13 129** portent **le même nom que la première, sans prénom** ; les 13 141 sans prénom sont **toutes nées le même jour** que leur
+  première, et **17** seulement ont un téléphone ou un e-mail ;
+- **421** seulement ont un prénom (371 d'entre elles avec un téléphone ou un e-mail) : **ce sont les seuls vrais conjoints connus
+  du serveur** (dans l'app : 302).
+- La première porte « Mr./Mme » dans 97 % des cas : **le couple a bien été choisi par l'agent** (formulaire couple), mais **le
+  conjoint, lui, n'a jamais été saisi** — Hektor a recopié le nom de famille dans la place du second membre (comme sur 1078 / 1079,
+  audit du 29/10, §10.1).
+- **Conséquence pour l'écran** : un « Couple · prénoms » n'aura un second prénom que pour **421 foyers sur tout le serveur**.
+  Partout ailleurs, l'orange « conjoint à compléter » est juste.
+
 ## 5. LES RÈGLES POSSIBLES, ET CE QU'ELLES AFFICHENT
 
 **Règle A — « Couple » seulement si une personne l'a écrit** *(CONSEILLÉE)*
 - « Couple » : catégories 1 à 4, **2 991 fiches**.
 - Orange « conjoint à compléter » **sur la fiche seulement** (réponse 2 du 31/10, gardée) : quand le conjoint n'a pas de prénom ou
-  n'existe pas, soit environ **2 690** des 2 991.
+  n'existe pas, soit environ **2 690** des 2 991 (sur tout le serveur : ~25 630 des 26 067).
+- **Sur tout le serveur** : « Couple » sur **26 067** foyers, personne seule sur **113 830**.
 - Tout le reste (**11 788**, catégories 5, 6 et 7) : affiché comme **une personne seule**, comme aujourd'hui ; la seconde fiche vide
   reste masquée, comme aujourd'hui.
 - Ce qu'elle rate : un vrai couple dont personne n'a rien écrit. Il le reste aujourd'hui de toute façon : l'écran n'aurait rien
@@ -108,7 +147,8 @@ aucun avant ou après. Ce n'est pas un signe de plus ou de moins de couple.
   ne voudrait plus rien dire pour les agents.
 
 **Règle C — « Couple » seulement si le conjoint est nommé**
-- « Couple » sur **1 909** (1 + 2).
+- « Couple » sur **1 909** (1 + 2) dans l'app, **13 578** sur le serveur — mais 13 141 de ces « nommés » n'ont qu'un nom recopié :
+  la règle C ne vaut donc guère mieux que « civilité Mr./Mme ».
 - Ce qu'elle rate : **1 082 couples écrits en clair** (« A. et T. », « Mr./Mme ») qui s'afficheraient en personne seule.
 
 ---
@@ -146,5 +186,6 @@ inverse : aucune fiche sans foyer ne prend de `signe`.
   33 660 des 35 914 secondes vides pendaient à une première SANS bloc membre 2. La seconde fiche en est le miroir (audit du 29/10,
   §10.1), donc elle suffit.
 - La **qualité des 2 098 indices** : un échantillon regardé par une personne dirait combien sont des conjoints.
-- Les **archivés et les fiches hors de l'app** : les chiffres de la section 4 ne portent que sur les 14 779 couples vivants. Sur
-  tout le registre, les proportions vont dans le même sens (section 2).
+- ✅ *(levé le 01/11)* Les archivés et les fiches hors de l'app : mesurés à la section 4 bis, tout le serveur.
+- Les 22 459 fiches vides sans foyer et les 14 080 secondes dont la première n'est plus sur le serveur : leur nom est perdu chez
+  nous (audit du 29/10, §4) ; elles ne s'affichent pas comme couple, cet audit ne les traite pas.

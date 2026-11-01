@@ -659,4 +659,6 @@ Rapport complet : `notice/AUDIT_COUPLES_ANCIENS_AFFICHAGE_2026-11-01.md`. En bre
 10 758) ; sur les 14 779 couples vivants, **2 991 (20 %) ont un signe écrit par une personne** (conjoint nommé 1 900, code 9,
 deux prénoms 695, « Mr./Mme » 387) et **9 278 (63 %) n'en ont aucun**. **Conseil : règle A** — « Couple » seulement sur les
 2 991, tout le reste en personne seule ; le signe calculé la nuit dans `couple_json` (attend un « vas-y ») ; rien supprimé.
+**Sur tout le serveur** (question de Frédéric, §4 bis du rapport) : 139 897 foyers, 26 067 (18,6 %) avec un signe écrit,
+101 492 (72,5 %) sans ; et 13 129 des 13 562 « conjoints nommés » ne sont qu'un nom recopié (421 vrais conjoints à prénom).
 ⏳ **À trancher par Frédéric** : règle A, B ou C.
