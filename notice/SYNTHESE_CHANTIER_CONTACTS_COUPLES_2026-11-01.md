@@ -133,7 +133,7 @@ Rien n'est supprimé, rien n'est écrit chez Hektor. Chaque tri est une **étiqu
   ✅ **FAITE le 01/11 au soir (« vas-y » de Frédéric)** — voir §8.
 - **Étape 3 — N2 : la colonne chez Supabase + l'envoi**, derrière un interrupteur `.env`. Écriture en production → **accord requis**.
   ⚠ La première nuit renvoie les 62 174 fiches de l'app une fois.
-  🟡 **PRÉPARÉE le 01/11 au soir, NON POSÉE** — voir §9 : 2 gestes de Frédéric.
+  ✅ **POSÉE le 01/11 vers 23:15 (par moi, à la demande de Frédéric)** — voir §9 et §10.
 - **Étape 4 — N3 : l'écran**, derrière un interrupteur, ordinateur ET téléphone : la règle A (P3), les libellés des cases (T5),
   « Madame », les archivées de fait (T3), les supprimées chez Hektor (T4).
 - **Étape 5 — les doublons** (T6), chantier à part avec sa grille de gestes.
@@ -244,3 +244,32 @@ refusée coulerait tout le push).
 ⚠ **Ce que ça ne fait pas** : un contact né dans l'app dans la journée n'a pas de nature avant la nuit (colonnes vides) ;
 la relecture d'une fiche dans la journée renvoie la nature de la nuit précédente. L'écran (phase 3) devra lire « vide » comme
 « pas encore calculé ».
+
+---
+
+## 10. PHASE 2 POSÉE — 01/11/2026, ~23:15 *(Frédéric : « fais-le toi-même, mais avant contrôle ton travail »)*
+
+**Contrôles AVANT la pose** :
+- chez Supabase : 2 déclencheurs et 11 fonctions lisent la table en `%rowtype` ou `to_jsonb()` — tous lisent des champs NOMMÉS
+  (`col_map`, verdict de la saisie) : des colonnes en plus ne les touchent pas (`couple_json` a été ajoutée ainsi le 31/10) ;
+  13 vues en dépendent, aucune ne nomme les colonnes neuves ;
+- dans le code : la descente EXCLUT `app_contact_current` (`pull_from_supabase.py`) ; les autres lecteurs nomment leurs colonnes ;
+  l'envoi fait un upsert qui ne réécrit que les colonnes envoyées.
+
+**La pose** : le patch joué tel quel, avec `lock_timeout = 5s` (refus propre plutôt que bloquer l'app si la table est occupée).
+Contrôle : **colonnes 6, battement 1, remplies 0, contacts 62 387, vue de l'écran 62 387**.
+**Puis** `APP_CONTACT_NATURE=1` ajouté au `.env` (ligne sous `APP_COUPLE_CONJOINT`, 89 → 90 lignes, fin de ligne LF conservée).
+
+**Après la pose** :
+- push à blanc avec le vrai `.env` : **62 174 à envoyer** (l'interrupteur est bien lu) ;
+- ⭐ **ENVOI RÉEL D'UN SEUL CONTACT, 10000045** (le chemin de la relecture d'une fiche) : code 0, 1 contact + 1 relation ;
+  chez Supabase `civilite` **reste vide** (celle de Hektor), `civilite_app = Mme.`, `civilite_source = ancien_logiciel`,
+  `nature_fiche = personne_seule`, `source_hash` **inchangé**, relation gardée, visible dans la vue de l'écran.
+  → la nuit ne découvrira pas à 05:00 que Supabase refuse les colonnes : c'est prouvé ce soir.
+
+⏰ **À VOIR LE 02/11 AU MATIN** :
+- journal : `DONE  phase2 nature des fiches contact`, puis l'envoi des contacts en code 0 — ⚠ **cet envoi est BLOQUANT** dans le run ;
+- sa **durée** (~62 174 lignes, ~207 lots) ;
+- battement `phase2.nature_contacts` au vert ;
+- chez Supabase : ~62 174 fiches avec une nature, ~14 112 « Mme. ».
+**Retour arrière** : retirer `APP_CONTACT_NATURE=1` du `.env` D'ABORD, puis `_INVERSE.sql`.
