@@ -130,6 +130,7 @@ Rien n'est supprimé, rien n'est écrit chez Hektor. Chaque tri est une **étiqu
 - **Étape 1 — le défaut n° 1 du document de mandat** : indépendant de tout le reste, il touche un acte signé. Petit correctif d'écran.
 - **Étape 2 — N1 : la nuit calcule `nature_fiche` et `civilite_app`, au serveur seulement** (T1, T2, T3, T4). Essai à blanc :
   les chiffres du §2.5 doivent ressortir. Modification du run de nuit → **« vas-y » requis**.
+  ✅ **FAITE le 01/11 au soir (« vas-y » de Frédéric)** — voir §8.
 - **Étape 3 — N2 : la colonne chez Supabase + l'envoi**, derrière un interrupteur `.env`. Écriture en production → **accord requis**.
   ⚠ La première nuit renvoie les 62 174 fiches de l'app une fois.
 - **Étape 4 — N3 : l'écran**, derrière un interrupteur, ordinateur ET téléphone : la règle A (P3), les libellés des cases (T5),
@@ -168,3 +169,42 @@ Rien n'est supprimé, rien n'est écrit chez Hektor. Chaque tri est une **étiqu
 - `AUDIT_COUPLES_ANCIENS_AFFICHAGE_2026-11-01.md` — les couples anciens, la règle A, les doublons (§8), la migration (§9-10).
 - `AUDIT_MIGRATION_C3_COUPLES_DOUBLONS_2026-11-01.md` — les deux classeurs (§1-2) ; sa §3 est corrigée par la note précédente.
 - `AUDIT_NATURE_DES_FICHES_CONTACT_2026-11-01.md` — les 7 natures, ce qu'on fait de chaque famille, les cas d et e.
+
+---
+
+## 8. PHASE 1 POSÉE — 01/11/2026, 22:30 *(serveur seulement)*
+
+**Ce qui existe maintenant**, dans `phase2/phase2.sqlite` (local, ignoré par git) — rien chez Hektor, rien chez Supabase :
+- **`ancien_logiciel_contact`** (202 218 lignes) : numéro de l'ancien logiciel, `gender`, numéro **Hektor** apparié, méthode.
+  **Aucun nom ni coordonnée.** Remplie UNE fois par `phase2/contacts/charger_ancien_logiciel.py` (le classeur ne bouge plus) :
+  194 170 appariées, 8 048 non trouvées — **les chiffres de l'audit à l'unité**.
+- **`contact_nature_current`** (356 762 lignes, une par fiche de la couche) : `nature_fiche`, `couple_deuxieme`, `civilite_app`,
+  `civilite_source`, `suit_principale_archivee`, `supprimee_chez_hektor`. Recalculée **chaque nuit** par
+  `phase2/contacts/nature_des_fiches.py` (~8 s), étape **« phase2 nature des fiches contact »** de `run_full_pipeline.ps1`,
+  juste après « conjoints des couples », **non bloquante**.
+
+**Pourquoi une table à part** et pas des colonnes de `app_contact_current` : le push lit cette couche en `SELECT *`, une colonne
+de plus partirait chez Supabase où elle n'existe pas et ferait échouer tout l'envoi. La couche est **inchangée** (38 colonnes).
+
+**Mesures sur les vraies données (serveur · actives · app)** — toutes celles du §2.5 ressortent à l'identique :
+personne seule 181 290 · 68 623 · 39 891 ; couple 28 473 · 11 302 · 4 788 ; conjoint 506 · 451 · 67 ; conjoint sans prénom
+13 150 · 12 033 · 1 540 ; case conjoint vide 96 889 · 53 287 · 12 111 ; case vide orpheline 36 454 · 26 863 · 3 777.
+Couples : a 422, b 13 135, c 11 298, d 1 142, e 2 476 *(compte de la couche ; 2 475 dans la fiche brute de Hektor)*.
+**T3** 17 346 actives (992 dans l'app) · **T4** 611 (0 dans l'app).
+**T2 « Mme. » rendue : 51 540 fiches, 19 245 actives, 14 112 dans l'app.** L'écart avec 51 672 est mesuré, fiche par fiche :
+les 51 672 anciennes fiches visent 51 624 fiches Hektor (48 visées deux fois) ; **83 écartées exprès** (une autre ancienne
+fiche appariée à la même dit autre chose) ; 1 sans nom. ⭐ 0 « Mme. » posée là où Hektor a déjà une civilité.
+
+**Essais** : `phase2/contacts/test_nature_des_fiches.py`, 17/17 (natures, cas a-e, T3 avec témoin inverse, T4, Madame seulement
+si Hektor n'a rien, contradiction, idempotence, appariement).
+
+**Ce qui reste volontairement absent** :
+- **pas de battement** : sa clé s'enregistre chez Supabase (`app_worker_registry`) → avec la phase 2, accord requis. D'ici là,
+  un échec ne se voit qu'au journal du run (`WARN  phase2 nature des fiches contact`) ;
+- les doublons (famille 3) ne sont pas dans la table : chantier à part (étape 5) ;
+- Mademoiselle et les couples de deux hommes / deux femmes perdus (178) : non rendus, non décidés.
+
+**Pour revenir en arrière** : retirer le bloc de `run_full_pipeline.ps1`, puis `DROP TABLE contact_nature_current` et
+`DROP TABLE ancien_logiciel_contact`. Personne ne les lit.
+
+⏰ **À voir au journal de la nuit du 02/11** : `DONE  phase2 nature des fiches contact`, et la même ligne de comptes.

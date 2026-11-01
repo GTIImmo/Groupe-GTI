@@ -1381,6 +1381,19 @@ Invoke-OptionalStepWithRetry -Label "phase2 conjoints des couples" -Arguments @(
     "phase2\contacts\conjoints_des_couples.py"
 ) -MaxAttempts 1 -RetryDelaySeconds 0 -WorkerKey "phase2.conjoints_couples"
 
+# COUPLES · PHASE 1 (01/11/2026) -- LA NATURE DE CHAQUE FICHE, ET « MADAME » RENDUE.
+# Remplit la table locale contact_nature_current (une ligne par fiche de la couche) :
+# nature, deuxieme fiche des couples, civilite_app (« Mme. » perdue a la migration,
+# d'apres ancien_logiciel_contact), cases archivees de fait, supprimees chez Hektor.
+# Note SYNTHESE_CHANTIER_CONTACTS_COUPLES_2026-11-01.md §4 etape 2.
+# PERSONNE NE LA LIT ENCORE : ni le push, ni l'ecran. Rien chez Hektor ni Supabase.
+# SA PLACE : apres la construction de la couche ; avant le push pour la phase 2.
+# NON BLOQUANTE : ratee, la table garde la nuit precedente. ~8 s.
+# ⚠ Pas encore de battement : sa cle s'enregistre chez Supabase (phase 2, accord).
+Invoke-OptionalStepWithRetry -Label "phase2 nature des fiches contact" -Arguments @(
+    "phase2\contacts\nature_des_fiches.py"
+) -MaxAttempts 1 -RetryDelaySeconds 0
+
 if ($PushContactsToSupabase) {
     $contactsScope = if ($ContactsEligibleOnly) { "eligible" } else { "active_or_eligible" }
     # ═══ LE LOT EST RAMENE A 300 -- LA PROTECTION AVANT LA CHARGE ═══  02/10/2026
