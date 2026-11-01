@@ -226,3 +226,57 @@ nouveaux doublons. Et un futur chantier « fusion de doublons » touchera les m�
 
 **Non mesuré** : la part de faux positifs dans « même personne » (homonymes au même lieu) ; un échantillon lu par une personne le
 dirait. Scripts : `audit_doublons_couples*.py` (lecture seule, aucun nom affiché).
+
+---
+
+## 9. COMMENT HEKTOR A INTÉGRÉ LES CONTACTS — LES CLASSEURS D'AVANT LA MIGRATION *(Frédéric, 01/11)*
+
+**Sources** : `contacts_extraits.xlsx` (202 218 fiches) et `affairs_contacts_relations.xlsx` (50 202 liens fiche ↔ affaire),
+exportés de l'ancien logiciel le 27/02/2026, deux jours avant la migration (~01/03/2026). Ils sont à la racine du dépôt et
+**ignorés par git** (données personnelles). Description des classeurs : `notice/AUDIT_MIGRATION_C3_COUPLES_DOUBLONS_2026-11-01.md`
+§1-2 (faite dans une autre conversation ; sa §3, mesurée sur l'app seule, est corrigée ici).
+
+**L'ancien logiciel** : le couple n'était qu'une **civilité** (`gender` 4 « M. et Mme » 21 653, 5 deux hommes 175, 6 deux femmes
+90) avec les deux prénoms tapés dans le même champ ; **aucun lien entre deux fiches** (les relations ne lient une fiche qu'à une
+affaire : vendeur, acquéreur, notaires, apporteurs).
+
+**L'appariement** (aucune clé commune ; scripts `c3_*.py`, lecture seule) : **194 170 fiches sur 202 218 retrouvées (96 %)**, dont
+**153 705 par le nom et la date de création au jour près** → Hektor a **recopié la date de création**. 8 048 non retrouvées.
+
+**Ce que Hektor a fait, mesuré sur le serveur :**
+
+1. **Il a recopié chaque fiche une pour une**, avec un nouveau numéro (0 à 399 999), même nom, même prénom, même date.
+2. **Il a traduit la civilité, et en a perdu une partie** :
+   - Monsieur → « M. » 74 %, vide 26 % ;
+   - **Madame → vide 99,7 %** (51 672 sur 51 810) — d'où l'absence de « Mme. » avant 2026 ;
+   - Mademoiselle et non renseigné → vide ;
+   - **M. et Mme → « Mr./Mme » 98 %** (18 441 sur 18 760) ;
+   - deux hommes / deux femmes → vide aux deux tiers (178 couples ont perdu leur civilité de couple).
+3. **Il a créé un « foyer » sur les deux tiers des fiches, sans rapport avec le couple** :
+   - **64 % des personnes SEULES** de l'ancien logiciel sont en foyer ; 83 % pour celles créées en 2005-2010, 27 % pour 2024-2026 ;
+     la part ne dépend ni d'une affaire (59 / 65 %), ni de l'archivage (63 / 66 %), ni des coordonnées (57 / 64 %) ;
+   - à chaque foyer, une **place de conjoint vide** « Mr./Mme », numérotée 400 000 – 599 999, datée comme la première
+     (110 877 places vides, plus 22 442 fiches vides détachées de leur foyer) ;
+   - pour les couples « M. et Mme » : 97 % en foyer ; la place reçoit **le nom de famille recopié** dans 11 200 cas, reste vide
+     dans 6 861 ; **10 seulement** ont un conjoint avec prénom.
+4. **Il n'a PAS séparé les deux personnes** : 9 071 des 9 104 fiches « Marcel et Pierrette » retrouvées **gardent les deux
+   prénoms** sur la première fiche.
+5. **Il n'a PAS dédoublonné** : sur les ~26 800 groupes « même personne » du détecteur, ~25 850 ne contiennent que des fiches
+   d'avant la migration (doublons **hérités**) ; ~1 650 seulement mêlent une fiche **recréée dans Hektor depuis mars**.
+6. **Les vrais conjoints sont nés APRÈS la migration** : sur ~510 conjoints avec prénom, **352** ont été saisis dans Hektor
+   depuis mars 2026 (numéros 600 000 et plus).
+
+**Le serveur se lit donc ainsi** : ~194 000 fiches recopiées de l'ancien logiciel · ~133 300 fiches vides fabriquées par
+l'import · ~13 300 places de conjoint où le nom a été recopié · ~3 900 fiches créées dans Hektor depuis mars · ~12 600 fiches
+d'avant mars non appariées (doublons et noms modifiés depuis, surtout).
+
+**Ce que ça apporte à la décision** :
+- ⭐⭐ **Le foyer de Hektor ne prouve rien** pour une fiche venue de l'ancien logiciel : c'est un artefact d'import.
+- ⭐ **« Mr./Mme » sur la première fiche, c'est le « M. et Mme » de l'ancien logiciel** : un vrai choix d'un agent. La règle A
+  repose donc sur le bon signe.
+- Le classeur permettrait d'aller plus loin, **sans rien écrire chez Hektor** : rendre « Mme » aux 51 672 fiches qui l'ont
+  perdue, et reconnaître les 178 couples de deux hommes / deux femmes devenus vides. **Non décidé.**
+
+**Non mesuré** : la règle exacte qui a choisi les fiches mises en foyer (ni la civilité, ni l'affaire, ni les coordonnées ; elle
+suit l'âge de la fiche et le champ `origin` de l'ancien logiciel, dont les codes ne sont pas connus) ; les 8 048 fiches
+anciennes non retrouvées.
