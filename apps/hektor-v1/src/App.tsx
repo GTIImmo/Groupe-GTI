@@ -14103,6 +14103,12 @@ export default function App() {
   // indexe lui aussi par personne et par sens.
   const [repartitionPersonnes, setRepartitionPersonnes] = useState<RepartitionPersonne[]>([])
   const [repartitionLignes, setRepartitionLignes] = useState<RepartitionLigne[]>([])
+  /** ⭐ LES CASES OUVERTES A LA MAIN par le bouton « + ».     02/11/2026
+   *  Cet etat ne porte QUE les ouvertures manuelles : le nombre de cases
+   *  affichees se DEDUIT (voir `repartitionCases`), ce qui evite un effet qui
+   *  recopierait les lignes chargees -- et donc toute boucle de rendu. */
+  const [repartitionCasesOuvertes, setRepartitionCasesOuvertes] =
+    useState<{ entree: number; sortie: number }>({ entree: 1, sortie: 1 })
   // ⚠ PAS UN BOOLEEN, MAIS LE DOSSIER POUR LEQUEL ON A CHARGE -- 14/09/2026.
   //   Avec un booleen, le premier passage avait lieu AVANT que les affaires du
   //   bien soient arrivees : aucun dossier a interroger, « charge » quand meme,
@@ -17829,6 +17835,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     //   rouvre sur une autre annonce avec le meme etat React : on remet a zero,
     //   et le prochain chargement refera ses defauts.
     setRepartitionLignes([])
+    setRepartitionCasesOuvertes({ entree: 1, sortie: 1 })
     setRepartitionChargeePour(null)
   }
 
@@ -18434,20 +18441,61 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   }, [statusChangeAffaires, statusChangeStatus, statusChangeAffaireChoisie, statusChangeTarget])
 
   const repartitionLigne = useCallback(
-    (cote: 'entree' | 'sortie', rang: 1 | 2): RepartitionLigne | null =>
+    (cote: 'entree' | 'sortie', rang: 1 | 2 | 3): RepartitionLigne | null =>
       repartitionLignes.find((l) => l.cote === cote && l.rang === rang) ?? null,
     [repartitionLignes])
+
+  /** ⭐ COMBIEN DE CASES ON MONTRE PAR COTE -- une au depart, trois au plus.
+   *  Frederic, 02/11 : « mettre un champ entree un sortie et ajouter un + pour
+   *  ajouter des intervenants jusqu'a 3 par cote ».
+   *  ⭐ C'est un CALCUL, pas un etat : le maximum entre les emplacements DEJA
+   *    occupes (un dossier ancien a deux noms : il s'ouvre a deux tout seul) et
+   *    ce que l'utilisateur a ouvert avec le « + ». Jamais moins de 1. */
+  const repartitionCases = useMemo(() => {
+    const pour = (cote: 'entree' | 'sortie') => {
+      const occupe = repartitionLignes
+        .filter((l) => l.cote === cote && l.hektorUserId.trim())
+        .reduce((m, l) => Math.max(m, Number(l.rang) || 1), 0)
+      return Math.min(3, Math.max(1, occupe, repartitionCasesOuvertes[cote]))
+    }
+    return { entree: pour('entree'), sortie: pour('sortie') }
+  }, [repartitionLignes, repartitionCasesOuvertes])
+
+  const repartitionRangs = useCallback(
+    (cote: 'entree' | 'sortie'): Array<1 | 2 | 3> =>
+      (Array.from({ length: repartitionCases[cote] }, (_, i) => i + 1) as Array<1 | 2 | 3>),
+    [repartitionCases])
+
+  /** Ouvrir une case de plus, ou refermer la DERNIERE si elle est restee vide.
+   *  ⚠ Refermer ne retire JAMAIS une part : le bouton ne s'affiche que si la
+   *    derniere case est vide (voir le JSX), et une case vide ne part pas en
+   *    base -- `saveRepartition` filtre deja les lignes sans identifiant. */
+  const repartitionAjouterCase = useCallback((cote: 'entree' | 'sortie') => {
+    setRepartitionCasesOuvertes((avant) => ({
+      ...avant, [cote]: Math.min(3, Math.max(avant[cote], repartitionCases[cote]) + 1),
+    }))
+  }, [repartitionCases])
+
+  const repartitionRetirerCase = useCallback((cote: 'entree' | 'sortie') => {
+    const dernier = repartitionCases[cote]
+    if (dernier <= 1) return
+    setRepartitionLignes((avant) => avant.filter((l) => !(l.cote === cote && l.rang === dernier)))
+    setRepartitionCasesOuvertes((avant) => ({ ...avant, [cote]: dernier - 1 }))
+  }, [repartitionCases])
 
   const repartitionTotal = useMemo(
     () => repartitionLignes.filter((l) => l.hektorUserId.trim())
       .reduce((t, l) => t + (Number.isFinite(l.pourcentage) ? l.pourcentage : 0), 0),
     [repartitionLignes])
 
+  /** La cle d'un emplacement : cote + rang. 02/11/2026 */
+  const cleRepartition = (cote: 'entree' | 'sortie', rang: number) => cote + '-' + String(rang)
+
   /** Poser ou retirer quelqu'un sur un emplacement.
    *  ⚠ LE POURCENTAGE SUIT LE NOMBRE DE PERSONNES, mais seulement tant que
    *    personne ne l'a touche : un chiffre saisi a la main ne se fait pas
    *    recalculer sous les doigts. */
-  const repartitionPoser = useCallback((cote: 'entree' | 'sortie', rang: 1 | 2, idUser: string) => {
+  const repartitionPoser = useCallback((cote: 'entree' | 'sortie', rang: 1 | 2 | 3, idUser: string) => {
     setRepartitionLignes((avant) => {
       const autres = avant.filter((l) => !(l.cote === cote && l.rang === rang))
       const personne = repartitionPersonnes.find((p) => p.idUser === idUser)
@@ -18457,11 +18505,35 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         : autres
       // On repartit a parts egales SUR CHAQUE COTE : deux personnes a l'entree
       // font 25 + 25, une seule fait 50. C'est la regle de Frederic.
-      const surLeCote = (c: 'entree' | 'sortie') => suite.filter((l) => l.cote === c)
-      return suite.map((l) => {
-        const n = surLeCote(l.cote).length
-        return { ...l, pourcentage: n > 0 ? Number((50 / n).toFixed(3)) : 0 }
-      })
+      //
+      // ⭐⭐ ET LA SOMME D'UN COTE DOIT FAIRE EXACTEMENT 50.        02/11/2026
+      //   A trois, 50 / 3 arrondi a 16,667 donnait 50,001 par cote, donc 100,002
+      //   au total -- et le RPC REFUSE des que le total depasse 100
+      //   ('total_superieur_a_cent', STRICT, aucune tolerance : mesure du 02/11).
+      //   Le troisieme rang aurait donc ete REFUSE a l'enregistrement des le
+      //   premier usage symetrique. On arrondit a DEUX decimales et LE DERNIER
+      //   RECOIT LE RESTE : 16,67 + 16,67 + 16,66 = 50,00.
+      //   ⚠ Trie par rang, pour que « le dernier » soit toujours le meme.
+      const partsDuCote = (c: 'entree' | 'sortie') => {
+        const lignes = suite.filter((l) => l.cote === c).sort((a, b) => a.rang - b.rang)
+        const n = lignes.length
+        const parts = new Map<string, number>()
+        if (!n) return parts
+        const base = Math.round((50 / n) * 100) / 100
+        lignes.forEach((l, i) => {
+          parts.set(cleRepartition(l.cote, l.rang), i === n - 1
+            ? Number((50 - base * (n - 1)).toFixed(2))
+            : base)
+        })
+        return parts
+      }
+      const parEntree = partsDuCote('entree')
+      const parSortie = partsDuCote('sortie')
+      return suite.map((l) => ({
+        ...l,
+        pourcentage: (l.cote === 'entree' ? parEntree : parSortie)
+          .get(cleRepartition(l.cote, l.rang)) ?? 0,
+      }))
     })
   }, [repartitionPersonnes])
 
@@ -18481,7 +18553,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
    *  ⚠ ON NE TOUCHE PAS AUX LIGNES VOISINES : seule celle qu'on modifie change
    *    d'origine. Marquer tout le dossier ferait passer pour decide un nom que
    *    personne n'a regarde. */
-  const repartitionPourcentage = useCallback((cote: 'entree' | 'sortie', rang: 1 | 2, valeur: string) => {
+  const repartitionPourcentage = useCallback((cote: 'entree' | 'sortie', rang: 1 | 2 | 3, valeur: string) => {
     const n = Number(String(valeur).replace(',', '.'))
     setRepartitionLignes((avant) => avant.map((l) =>
       l.cote === cote && l.rang === rang
@@ -22255,9 +22327,11 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                           compromis ont l'acquereur suivi par une autre agence.
                           Ici la liste est celle des 30 actifs, SANS contrainte
                           d'agence -- c'est tout l'interet.
-                          ⚠ QUATRE EMPLACEMENTS, deux par cote. Le second reste
-                            vide tant qu'on n'y met personne ; y poser quelqu'un
-                            partage le cote a parts egales (50 -> 25 + 25). */}
+                          ⭐ UNE CASE PAR COTE AU DEPART, JUSQU'A TROIS (02/11/2026).
+                            Le « + » ouvre un intervenant de plus ; un dossier qui en
+                            porte deja deux s'ouvre a deux tout seul. Chaque cote se
+                            partage a parts egales : 50 seul, 25 + 25 a deux,
+                            16,667 a trois. Un emplacement vide ne part pas en base. */}
                       <section className="status-change-repartition">
                         <p className="status-change-note">
                           <strong>Repartition de la commission</strong> {bvs("— elle reste dans l'app et n'est pas transmise a Hektor.")}
@@ -22265,12 +22339,13 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                         <div className="filter-grid">
                           {(['entree', 'sortie'] as const).map((cote) => (
                             <Fragment key={cote}>
-                              {([1, 2] as const).map((rang) => {
+                              {repartitionRangs(cote).map((rang) => {
                                 const ligne = repartitionLigne(cote, rang)
                                 return (
                                   <label className="filter-field" key={`${cote}-${rang}`}>
                                     <span>
-                                      {cote === 'entree' ? 'Entree' : 'Sortie'} {rang}
+                                      {cote === 'entree' ? 'Entree' : 'Sortie'}
+                                      {repartitionCases[cote] > 1 ? ` ${rang}` : ''}
                                       {rang === 1 && ligne?.origine === 'defaut' ? ' · propose' : ''}
                                     </span>
                                     <select
@@ -22311,6 +22386,27 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                                   </label>
                                 )
                               })}
+                              {/* ⭐ LE « + » -- il n'apparait plus a trois cases ouvertes.
+                                  Le « − » ne s'affiche QUE si la derniere case est vide :
+                                  on ne retire jamais une part d'un clic. */}
+                              {repartitionCases[cote] < 3 || repartitionCases[cote] > 1 ? (
+                                <div className="status-change-repartition-ajout">
+                                  {repartitionCases[cote] < 3 ? (
+                                    <button type="button" className="ghost-button button-subtle"
+                                            onClick={() => repartitionAjouterCase(cote)}
+                                            disabled={statusChangePending}>
+                                      + un intervenant {cote === 'entree' ? "a l'entree" : 'en sortie'}
+                                    </button>
+                                  ) : null}
+                                  {repartitionCases[cote] > 1 && !repartitionLigne(cote, repartitionCases[cote] as 1 | 2 | 3) ? (
+                                    <button type="button" className="ghost-button button-subtle"
+                                            onClick={() => repartitionRetirerCase(cote)}
+                                            disabled={statusChangePending}>
+                                      − retirer la case vide
+                                    </button>
+                                  ) : null}
+                                </div>
+                              ) : null}
                             </Fragment>
                           ))}
                         </div>

@@ -3139,6 +3139,15 @@ body {
   background: #fff; color: inherit; box-sizing: border-box; }
 .status-change-repartition textarea:focus { outline: none; border-color: #0f766e;
   box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12); }
+/* ⭐ LES BOUTONS « + » ET « − » DE LA REPARTITION        02/11/2026
+   Un champ par cote au depart, jusqu'a trois (Frederic, 02/11). Les boutons
+   occupent la cellule SUIVANTE de la grille a deux colonnes : avec une seule
+   case, le « + » se range donc juste a cote du champ, sans ligne en plus. */
+.status-change-repartition-ajout { display: flex; gap: 8px; flex-wrap: wrap;
+  align-items: flex-end; padding-bottom: 2px; }
+.status-change-repartition-ajout .ghost-button { font-size: 12px; padding: 5px 10px;
+  white-space: nowrap; }
+
 /* 3.1 (16/09/2026) : le verdict sur une saisie du carnet. Le vert disait
    « elle vient de vous » ; il ne disait pas si elle etait ARRIVEE. */
 .status-change-affaires .sca-etat { margin-left: 6px; font-size: 10px; font-style: normal;

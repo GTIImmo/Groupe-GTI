@@ -6444,9 +6444,18 @@ export type RepartitionPersonne = {
   agenceNom: string | null
 }
 
+/** LE RANG D'UN EMPLACEMENT : 1, 2 ou 3 -- le troisieme ouvert le 02/11/2026
+ *  a la demande de Frederic (13 lignes du classeur portent TROIS negociateurs).
+ *  ⚠ Tout ce qui n'est pas 2 ou 3 retombe sur 1 : une valeur inattendue ne doit
+ *    pas faire DISPARAITRE une part de l'ecran (c'est de l'argent). */
+export function rangRepartition(valeur: unknown): 1 | 2 | 3 {
+  const n = Number(valeur)
+  return n === 3 ? 3 : n === 2 ? 2 : 1
+}
+
 export type RepartitionLigne = {
   cote: 'entree' | 'sortie'
-  rang: 1 | 2
+  rang: 1 | 2 | 3
   hektorUserId: string
   nomAuMoment: string | null
   pourcentage: number
@@ -6490,7 +6499,7 @@ export async function loadRepartition(chaineId: number | string): Promise<Repart
   if (error) throw new Error(error.message)
   return ((data ?? []) as Array<Record<string, unknown>>).map((row) => ({
     cote: String(row.cote) === 'sortie' ? 'sortie' : 'entree',
-    rang: Number(row.rang) === 2 ? 2 : 1,
+    rang: rangRepartition(row.rang),
     hektorUserId: String(row.hektor_user_id ?? '').trim(),
     nomAuMoment: (row.nom_au_moment as string | null) ?? null,
     pourcentage: Number(row.pourcentage ?? 0),
@@ -6548,7 +6557,7 @@ export async function loadRepartitionsDesChaines(
     const liste = out.get(cle) ?? []
     liste.push({
       cote: String(row.cote) === 'sortie' ? 'sortie' : 'entree',
-      rang: Number(row.rang) === 2 ? 2 : 1,
+      rang: rangRepartition(row.rang),
       hektorUserId: String(row.hektor_user_id ?? '').trim(),
       nomAuMoment: (row.nom_au_moment as string | null) ?? null,
       pourcentage: Number(row.pourcentage ?? 0),
