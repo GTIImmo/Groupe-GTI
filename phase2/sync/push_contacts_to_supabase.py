@@ -44,6 +44,53 @@ def couple_conjoint_allume() -> bool:
     return _COUPLE_CONJOINT_ALLUME
 
 
+# ── COUPLES · PHASE 2 (01/11/2026) — LA NATURE DE CHAQUE FICHE PART VERS L'APP ──
+# Calculee la nuit dans la table LOCALE contact_nature_current (nature_des_fiches.py),
+# elle est jointe ici aux lignes de app_contact_current, par le meme numero.
+# ⛔ INTERRUPTEUR APP_CONTACT_NATURE (.env) : eteint, RIEN n'est ajoute -- les
+#   colonnes n'existent chez Supabase qu'apres patch_couple_phase2_nature_2026-11-01.sql,
+#   et une colonne inconnue ferait echouer tout le push.
+# ⚠ ALLUME, LA PREMIERE NUIT RENVOIE TOUT LE PARC UNE FOIS (~62 000 lignes) : la
+#   nature n'est jamais vide, donc l'empreinte de chaque contact change. Accepte
+#   (synthese §4 etape 3).
+# ⚠ Table locale absente : on n'ajoute RIEN plutot que d'effacer chez Supabase.
+CHAMPS_NATURE = ("nature_fiche", "couple_deuxieme", "civilite_app", "civilite_source",
+                 "suit_principale_archivee", "supprimee_chez_hektor")
+CHAMPS_NATURE_BOOLEENS = {"suit_principale_archivee", "supprimee_chez_hektor"}
+_CONTACT_NATURE_ALLUME: bool | None = None
+
+
+def contact_nature_allume() -> bool:
+    global _CONTACT_NATURE_ALLUME
+    if _CONTACT_NATURE_ALLUME is None:
+        for env_file in DEFAULT_ENV_FILES:
+            load_env_file(env_file)
+        _CONTACT_NATURE_ALLUME = (os.environ.get("APP_CONTACT_NATURE") or "").strip().lower() in {
+            "1", "on", "true", "oui"}
+    return _CONTACT_NATURE_ALLUME
+
+
+def ajouter_nature(db_path: Path, rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Ajoute les 6 champs de nature a CHAQUE ligne (meme jeu de cles partout : PGRST102)."""
+    conn = _connect(db_path)
+    try:
+        if not conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='contact_nature_current'").fetchone():
+            print("[push contacts] contact_nature_current absente : la nature n'est PAS envoyee cette fois")
+            return rows
+        natures = {
+            str(r[0]): dict(zip(CHAMPS_NATURE, r[1:]))
+            for r in conn.execute(f"SELECT hektor_contact_id, {', '.join(CHAMPS_NATURE)} FROM contact_nature_current")
+        }
+    finally:
+        conn.close()
+    for row in rows:
+        nature = natures.get(str(row.get("hektor_contact_id")), {})
+        for champ in CHAMPS_NATURE:
+            valeur = nature.get(champ)
+            row[champ] = bool(valeur) if champ in CHAMPS_NATURE_BOOLEENS and valeur is not None else valeur
+    return rows
+
+
 def load_env_file(path: Path) -> None:
     if not path.exists():
         return
@@ -793,6 +840,9 @@ def main() -> int:
     loaded: list[tuple[str, list[dict[str, Any]]]] = []
     for table, normalizer, where in table_specs:
         rows = load_rows(args.phase2_db, table, normalizer, where)
+        # COUPLES · PHASE 2 : AVANT l'empreinte et le calcul des disparues (voir C-4 plus bas).
+        if table == "app_contact_current" and contact_nature_allume():
+            rows = ajouter_nature(args.phase2_db, rows)
         loaded.append((table, rows))
     loaded_counts = {table: len(rows) for table, rows in loaded}
     contact_stats = None if args.skip_stats else build_contact_stats_row(args.phase2_db, args.contacts_scope, stats_contact_where)

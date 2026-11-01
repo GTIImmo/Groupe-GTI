@@ -1389,10 +1389,12 @@ Invoke-OptionalStepWithRetry -Label "phase2 conjoints des couples" -Arguments @(
 # PERSONNE NE LA LIT ENCORE : ni le push, ni l'ecran. Rien chez Hektor ni Supabase.
 # SA PLACE : apres la construction de la couche ; avant le push pour la phase 2.
 # NON BLOQUANTE : ratee, la table garde la nuit precedente. ~8 s.
-# ⚠ Pas encore de battement : sa cle s'enregistre chez Supabase (phase 2, accord).
+# Battement phase2.nature_contacts : sa cle nait avec patch_couple_phase2_nature_
+# 2026-11-01.sql ; avant le patch, le battement ne touche aucune ligne (sans erreur).
+# PHASE 2 : le push qui suit envoie la table si APP_CONTACT_NATURE=1 (.env).
 Invoke-OptionalStepWithRetry -Label "phase2 nature des fiches contact" -Arguments @(
     "phase2\contacts\nature_des_fiches.py"
-) -MaxAttempts 1 -RetryDelaySeconds 0
+) -MaxAttempts 1 -RetryDelaySeconds 0 -WorkerKey "phase2.nature_contacts"
 
 if ($PushContactsToSupabase) {
     $contactsScope = if ($ContactsEligibleOnly) { "eligible" } else { "active_or_eligible" }

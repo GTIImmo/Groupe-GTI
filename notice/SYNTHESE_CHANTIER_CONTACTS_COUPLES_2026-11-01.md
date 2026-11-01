@@ -133,6 +133,7 @@ Rien n'est supprimé, rien n'est écrit chez Hektor. Chaque tri est une **étiqu
   ✅ **FAITE le 01/11 au soir (« vas-y » de Frédéric)** — voir §8.
 - **Étape 3 — N2 : la colonne chez Supabase + l'envoi**, derrière un interrupteur `.env`. Écriture en production → **accord requis**.
   ⚠ La première nuit renvoie les 62 174 fiches de l'app une fois.
+  🟡 **PRÉPARÉE le 01/11 au soir, NON POSÉE** — voir §9 : 2 gestes de Frédéric.
 - **Étape 4 — N3 : l'écran**, derrière un interrupteur, ordinateur ET téléphone : la règle A (P3), les libellés des cases (T5),
   « Madame », les archivées de fait (T3), les supprimées chez Hektor (T4).
 - **Étape 5 — les doublons** (T6), chantier à part avec sa grille de gestes.
@@ -208,3 +209,38 @@ si Hektor n'a rien, contradiction, idempotence, appariement).
 `DROP TABLE ancien_logiciel_contact`. Personne ne les lit.
 
 ⏰ **À voir au journal de la nuit du 02/11** : `DONE  phase2 nature des fiches contact`, et la même ligne de comptes.
+
+---
+
+## 9. PHASE 2 PRÉPARÉE — 01/11/2026, 23:00 *(rien n'est posé chez Supabase)*
+
+**Le code, dormant** (commité en local) :
+- `phase2/sync/push_contacts_to_supabase.py` : `ajouter_nature()` joint `contact_nature_current` aux lignes de
+  `app_contact_current` **avant** l'empreinte et le calcul des disparues ; mêmes 6 clés sur chaque ligne (PGRST102) ;
+  table locale absente → rien n'est ajouté (on n'efface pas chez Supabase). **Interrupteur `APP_CONTACT_NATURE`** (.env),
+  **absent = éteint**.
+- `run_full_pipeline.ps1` : l'étape porte le battement `phase2.nature_contacts`. Avant le patch, le battement fait un PATCH
+  sur une clé qui n'existe pas → 0 ligne, sans erreur (`monitoring/heartbeat.py`).
+
+**Le patch** : `supabase/patch_couple_phase2_nature_2026-11-01.sql` (+ `_REPETITION`, `_INVERSE`) — 6 colonnes neuves vides
+(`nature_fiche`, `couple_deuxieme`, `civilite_app`, `civilite_source`, `suit_principale_archivee`, `supprimee_chez_hektor`) et la clé
+de battement. Aucune vue touchée (les 13 vues qui lisent la table ne nomment pas ces colonnes), pas de CHECK (une valeur
+refusée coulerait tout le push).
+
+**Éprouvé** :
+- **répétition jouée par moi dans une transaction annulée** : 7 cases vertes (colonnes 6, battement 1, nature, civilité, booléens,
+  vue de l'écran, 0 autre ligne remplie) ; **contrôle d'après : rien n'est resté** (colonnes 0, battement 0, essai 0) ;
+- **push à blanc, éteint : 0 contact à envoyer** — le code est inerte ; **allumé : 62 174 sur 62 174** (le renvoi unique prévu) ;
+- lignes allumées : 1 seul jeu de clés, 0 nature vide, booléens en vrai/faux, 14 112 « Mme. », ~1 577 octets par ligne
+  (max 11 574) → un lot de 300 ≈ 462 ko, sous le 1 Mio ;
+- essais : `test_dirty_guards` 4/4, `test_nature_des_fiches` 17/17, `test_conjoints_des_couples` 10/10, `test_contact_seconde_fiche` vert.
+
+**⛔ LES GESTES DE FRÉDÉRIC, DANS CET ORDRE** :
+1. coller `supabase/patch_couple_phase2_nature_2026-11-01.sql` (contrôle final : colonnes 6, battement 1, remplies 0) ;
+2. **SEULEMENT APRÈS** : ajouter `APP_CONTACT_NATURE=1` dans `C:\Hektor\Projet\.env` ;
+3. la nuit suivante : ~62 000 contacts repartent une fois (~207 lots), puis seulement ce qui change.
+**Retour arrière** : retirer `APP_CONTACT_NATURE` du `.env` D'ABORD, puis coller `_INVERSE.sql`.
+
+⚠ **Ce que ça ne fait pas** : un contact né dans l'app dans la journée n'a pas de nature avant la nuit (colonnes vides) ;
+la relecture d'une fiche dans la journée renvoie la nature de la nuit précédente. L'écran (phase 3) devra lire « vide » comme
+« pas encore calculé ».
