@@ -30,6 +30,16 @@ worker. Elle n'ecrit ni chez Hektor, ni chez Supabase.
    passe par le chemin normal (saisie -> Hektor) et rend civilite_app inutile : on ne la
    pose que si Hektor n'a RIEN.
 
+RATTACHEMENT (01/11, accord de Frederic « Oui rattacher », synthese §11) : les cases
+vides « orphelines » qu'un bien cite sont des couples COUPES EN DEUX -- la vraie
+personne est une fiche nommee sur le meme bien. Quand UNE SEULE fiche nommee du meme
+bien a ete creee LE MEME JOUR, la case lui est rattachee CHEZ NOUS : elle devient sa
+« case_conjoint_vide » (couple_deuxieme = case_vide) et la personne devient un couple.
+Les autres sont mises de cote (colonne `rattachement` = la raison). Rien chez Hektor,
+rien dans `hektor_couple_contact_id` : seule cette table le sait (`rattachee_a`).
+⛔ INTERRUPTEUR APP_CONTACT_RATTACHEMENT (.env) : eteint, la case reste « orpheline »
+   et rien ne change ; `--rattacher` l'allume pour un essai a blanc.
+
 ⚠ PLACE DANS LE RUN : apres la construction de la couche (elle est videe et remplie
   chaque nuit). Etape NON BLOQUANTE : ratee, la table garde la nuit precedente --
   sans lecteur, rien ne change pour personne.
@@ -44,6 +54,7 @@ Sortie : 0 = fait · 1 = echec.
 from __future__ import annotations
 
 import argparse
+import os
 import re
 import sqlite3
 import sys
@@ -140,11 +151,61 @@ def madames_de_l_ancien_logiciel(conn: sqlite3.Connection) -> set[str] | None:
     return {hid for hid, g in genres.items() if g == {MADAME_ANCIEN}}
 
 
-def calculer(fiches: dict[str, dict[str, Any]], madames: set[str] | None) -> list[dict[str, Any]]:
+def _jour(fiche: dict[str, Any]) -> str:
+    return _texte(fiche.get("date_enregistrement"))[:10]
+
+
+def rattachements(fiches: dict[str, dict[str, Any]], biens_par_contact: dict[str, set[str]],
+                  contacts_par_bien: dict[str, set[str]]) -> tuple[dict[str, str], dict[str, str]]:
+    """({case: personne}, {case: raison de la mise de cote}). Fonction PURE.
+
+    Une case « orpheline » (vide, principale absente ou aucun lien) est rattachee a la
+    SEULE fiche nommee, premiere de foyer ou sans foyer, qu'un de ses biens cite et qui
+    est nee le meme jour qu'elle.
+    """
+    secondes = secondes_par_principale(fiches)
+    faits: dict[str, str] = {}
+    cote: dict[str, str] = {}
+    for numero, f in fiches.items():
+        if nature(f, fiches, secondes) != "case_vide_orpheline":
+            continue
+        biens = biens_par_contact.get(numero, set())
+        if not biens:
+            continue                                    # aucun bien : pas de voisin a chercher
+        voisins = {v for b in biens for v in contacts_par_bien.get(b, set()) if v != numero and v in fiches}
+        nommes = {v for v in voisins if nommee(fiches[v])
+                  and _texte(fiches[v].get("hektor_couple_contact_id")) in ("", v)}
+        if not nommes:
+            cote[numero] = "aucune_personne_sur_le_bien"
+            continue
+        meme_jour = {v for v in nommes if _jour(fiches[v]) and _jour(fiches[v]) == _jour(f)}
+        if len(meme_jour) == 1:
+            faits[numero] = meme_jour.pop()
+        elif meme_jour:
+            cote[numero] = "plusieurs_personnes_le_meme_jour"
+        else:
+            cote[numero] = "personne_nee_un_autre_jour"
+    return faits, cote
+
+
+def calculer(fiches: dict[str, dict[str, Any]], madames: set[str] | None,
+             rattache: dict[str, str] | None = None, cote: dict[str, str] | None = None) -> list[dict[str, Any]]:
+    rattache = rattache or {}
+    cote = cote or {}
+    if rattache:
+        # le lien n'existe que dans CE calcul : la couche et Hektor ne sont pas touches
+        fiches = dict(fiches)
+        for case, personne in rattache.items():
+            fiches[case] = {**fiches[case], "hektor_couple_contact_id": personne}
+            if not _texte(fiches[personne].get("hektor_couple_contact_id")):
+                fiches[personne] = {**fiches[personne], "hektor_couple_contact_id": personne}
+    personnes_rattachees = set(rattache.values())
     secondes = secondes_par_principale(fiches)
     lignes = []
     for numero, f in fiches.items():
         nat = nature(f, fiches, secondes)
+        if numero in personnes_rattachees and nat == "personne_seule":
+            nat = "couple"                              # sa case est sur le meme bien, nee le meme jour
         lien = _texte(f.get("hektor_couple_contact_id"))
         principale = fiches.get(lien) if lien and lien != numero else None
         civilite_app = None
@@ -160,12 +221,42 @@ def calculer(fiches: dict[str, dict[str, Any]], madames: set[str] | None) -> lis
             "suit_principale_archivee": int(nat == "case_conjoint_vide" and not archivee(f)
                                             and principale is not None and archivee(principale)),
             "supprimee_chez_hektor": int(not _texte(f.get("hektor_agence_id"))),
+            "rattachee_a": rattache.get(numero),
+            "rattachement": ("meme_bien_meme_jour" if numero in rattache or numero in personnes_rattachees
+                             else cote.get(numero)),
         })
     return lignes
 
 
 COLONNES = ("hektor_contact_id, hektor_target_id, hektor_couple_contact_id, hektor_agence_id, "
-            "civilite, nom, prenom, archive, supabase_sync_eligible")
+            "civilite, nom, prenom, archive, supabase_sync_eligible, date_enregistrement")
+
+
+def lire_biens(conn: sqlite3.Connection) -> tuple[dict[str, set[str]], dict[str, set[str]]]:
+    """Les biens (annonces) de chaque contact, et les contacts de chaque bien."""
+    biens_par_contact: dict[str, set[str]] = defaultdict(set)
+    contacts_par_bien: dict[str, set[str]] = defaultdict(set)
+    for contact, bien in conn.execute("SELECT hektor_contact_id, hektor_annonce_id FROM app_contact_relation_current "
+                                      "WHERE NULLIF(TRIM(hektor_annonce_id), '') IS NOT NULL"):
+        contact, bien = _texte(contact), _texte(bien)
+        biens_par_contact[contact].add(bien)
+        contacts_par_bien[bien].add(contact)
+    return biens_par_contact, contacts_par_bien
+
+
+def charger_env() -> None:
+    """Le meme .env que le push (meme fonction) : un seul endroit pour l'interrupteur."""
+    sys.path.insert(0, str(ROOT / "phase2" / "sync"))
+    try:
+        from push_contacts_to_supabase import DEFAULT_ENV_FILES, load_env_file  # noqa: E402,PLC0415
+        for chemin in DEFAULT_ENV_FILES:
+            load_env_file(chemin)
+    except Exception:  # noqa: BLE001 -- sans .env, l'interrupteur reste eteint
+        pass
+
+
+def rattachement_allume() -> bool:
+    return (os.environ.get("APP_CONTACT_RATTACHEMENT") or "").strip().lower() in {"1", "on", "true", "oui"}
 
 
 def lire(conn: sqlite3.Connection) -> dict[str, dict[str, Any]]:
@@ -189,11 +280,13 @@ def ecrire(conn: sqlite3.Connection, lignes: list[dict[str, Any]]) -> None:
                 civilite_source TEXT,
                 suit_principale_archivee INTEGER NOT NULL,
                 supprimee_chez_hektor INTEGER NOT NULL,
+                rattachee_a TEXT,
+                rattachement TEXT,
                 calcule_le TEXT NOT NULL
             )""")
         conn.executemany(
             f"INSERT INTO {TABLE} VALUES (:hektor_contact_id, :nature_fiche, :couple_deuxieme, :civilite_app, "
-            ":civilite_source, :suit_principale_archivee, :supprimee_chez_hektor, :calcule_le)",
+            ":civilite_source, :suit_principale_archivee, :supprimee_chez_hektor, :rattachee_a, :rattachement, :calcule_le)",
             [{**l, "calcule_le": calcule_le} for l in lignes])
 
 
@@ -211,6 +304,12 @@ def bilan(fiches: dict[str, dict[str, Any]], lignes: list[dict[str, Any]]) -> li
             cles.append("T3 case active, principale archivee")
         if l["supprimee_chez_hektor"]:
             cles.append("T4 supprimee chez Hektor")
+        if l["rattachee_a"]:
+            cles.append("R case rattachee a une personne du bien")
+        elif l["rattachement"] == "meme_bien_meme_jour":
+            cles.append("R personne recevant une case")
+        elif l["rattachement"]:
+            cles.append("R mise de cote : " + l["rattachement"])
         for cle in cles:
             tot[cle] += 1
             if not archivee(f):
@@ -220,12 +319,20 @@ def bilan(fiches: dict[str, dict[str, Any]], lignes: list[dict[str, Any]]) -> li
     return [f"  {cle:40} serveur {tot[cle]:7}  actives {act[cle]:7}  app {app[cle]:6}" for cle in sorted(tot)]
 
 
-def executer(conn: sqlite3.Connection, a_blanc: bool = False) -> int:
+def executer(conn: sqlite3.Connection, a_blanc: bool = False, rattacher: bool = False) -> int:
     fiches = lire(conn)
     madames = madames_de_l_ancien_logiciel(conn)
     if madames is None:
         print(f"[nature] table {TABLE_ANCIEN} absente : aucune civilite rendue (charger_ancien_logiciel.py)")
-    lignes = calculer(fiches, madames)
+    faits: dict[str, str] = {}
+    cote: dict[str, str] = {}
+    if rattacher:
+        faits, cote = rattachements(fiches, *lire_biens(conn))
+        print(f"[nature] rattachement : {len(faits)} case(s) rattachee(s) a {len(set(faits.values()))} personne(s), "
+              f"{len(cote)} mise(s) de cote")
+    else:
+        print("[nature] rattachement eteint (APP_CONTACT_RATTACHEMENT)")
+    lignes = calculer(fiches, madames, faits, cote)
     print(f"[nature] {len(lignes)} fiche(s) :")
     for ligne in bilan(fiches, lignes):
         print(ligne)
@@ -241,11 +348,13 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--phase2-db", type=Path, default=DEFAULT_PHASE2_DB)
     ap.add_argument("--a-blanc", action="store_true")
+    ap.add_argument("--rattacher", action="store_true", help="allume le rattachement pour CET appel")
     args = ap.parse_args()
+    charger_env()
     conn = sqlite3.connect(args.phase2_db, timeout=30)
     conn.execute("PRAGMA busy_timeout=30000")
     try:
-        return executer(conn, args.a_blanc)
+        return executer(conn, args.a_blanc, args.rattacher or rattachement_allume())
     except Exception as erreur:  # noqa: BLE001
         print(f"[nature] ECHEC : {erreur}", file=sys.stderr)
         return 1

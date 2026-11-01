@@ -101,6 +101,43 @@ class Civilite(unittest.TestCase):
         self.assertIsNone(m.madames_de_l_ancien_logiciel(sqlite3.connect(":memory:")))
 
 
+class Rattachement(unittest.TestCase):
+    def index(self, *fiches):
+        return {f["hektor_contact_id"]: f for f in fiches}
+
+    def test_case_rattachee_a_la_seule_personne_nee_le_meme_jour(self):
+        F = self.index(fiche(1, lien=99, civilite="Mr./Mme"), fiche(2, nom="DUPONT", prenom="Paul"),
+                       fiche(3, nom="ACHETEUR"))
+        for k, d in (("1", "2015-03-04"), ("2", "2015-03-04 10:00"), ("3", "2019-01-01")):
+            F[k]["date_enregistrement"] = d
+        faits, cote = m.rattachements(F, {"1": {"A"}, "2": {"A"}, "3": {"A"}}, {"A": {"1", "2", "3"}})
+        self.assertEqual((faits, cote), ({"1": "2"}, {}))
+        r = {l["hektor_contact_id"]: l for l in m.calculer(F, None, faits, cote)}
+        self.assertEqual(r["1"]["nature_fiche"], "case_conjoint_vide")
+        self.assertEqual(r["1"]["rattachee_a"], "2")
+        self.assertEqual((r["2"]["nature_fiche"], r["2"]["couple_deuxieme"]), ("couple", "case_vide"))
+        self.assertEqual(r["2"]["rattachement"], "meme_bien_meme_jour")
+        self.assertEqual(r["3"]["nature_fiche"], "personne_seule")      # temoin : l'autre personne du bien
+        self.assertEqual(F["1"]["hektor_couple_contact_id"], "99")      # la couche n'est pas touchee
+
+    def test_mises_de_cote(self):
+        F = self.index(fiche(1), fiche(2, nom="A"), fiche(3, nom="B"), fiche(4), fiche(5, nom="C"))
+        for k in "1234":
+            F[k]["date_enregistrement"] = "2015-03-04"
+        F["5"]["date_enregistrement"] = "2016-01-01"
+        biens = {"1": {"A"}, "2": {"A"}, "3": {"A"}, "4": {"B"}, "5": {"B"}}
+        faits, cote = m.rattachements(F, biens, {"A": {"1", "2", "3"}, "B": {"4", "5"}})
+        self.assertEqual(faits, {})
+        self.assertEqual(cote, {"1": "plusieurs_personnes_le_meme_jour", "4": "personne_nee_un_autre_jour"})
+
+    def test_jamais_vers_une_seconde_fiche_ni_sans_bien(self):
+        F = self.index(fiche(1), fiche(2, nom="A", lien=7), fiche(7, nom="P", lien=7), fiche(8))
+        for f in F.values():
+            f["date_enregistrement"] = "2015-03-04"
+        faits, cote = m.rattachements(F, {"1": {"A"}, "2": {"A"}}, {"A": {"1", "2"}})
+        self.assertEqual((faits, cote), ({}, {"1": "aucune_personne_sur_le_bien"}))   # 8 : aucun bien, ignoree
+
+
 class Ecriture(unittest.TestCase):
     def test_idempotente(self):
         conn = sqlite3.connect(":memory:")

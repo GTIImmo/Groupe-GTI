@@ -298,3 +298,28 @@ Sa question : « 3 777 fiches vides avec relations mais sans notion de couple ??
 **Proposition (rien codé)** : ne pas les **cacher** à l'aveugle, mais les **rattacher chez nous** à leur voisin nommé du même bien
 (même jour de création = sûr ; autre jour = à part) : le voisin devient un couple « conjoint à compléter », la case est masquée comme
 les 12 111 cases normales. Rien chez Hektor.
+
+---
+
+## 12. LE RATTACHEMENT DES CASES ORPHELINES — ÉCRIT, ÉPROUVÉ À BLANC, ÉTEINT *(01/11, ~00:15, « Oui rattacher »)*
+
+**La règle** (`phase2/contacts/nature_des_fiches.py`, fonction `rattachements`) : une case « orpheline » qu'un bien cite est
+rattachée à la **SEULE** fiche nommée du même bien (première de foyer ou sans foyer — jamais une seconde fiche) **née le même jour**.
+La case devient sa `case_conjoint_vide`, la personne devient un `couple` (`couple_deuxieme` = `case_vide`). Le lien n'existe que
+dans la table `contact_nature_current` (`rattachee_a`, `rattachement`) : **ni la couche, ni `hektor_couple_contact_id`, ni Hektor**.
+Autres cas : mis de côté avec leur raison. **Interrupteur `APP_CONTACT_RATTACHEMENT` (.env), ÉTEINT** ; `--rattacher` pour un essai.
+
+**À blanc sur les vraies données (serveur · actives · app)** :
+- **7 290 cases rattachées** (6 594 actives, **3 007 dans l'app** sur les 3 777) à 7 290 personnes (3 141 dans l'app) ;
+- ⭐ **contrôle de qualité : 7 286 sur 7 290 ont LE MÊME RÔLE sur le bien** que leur personne (mandant avec mandant…) ;
+- mises de côté : **1 211 « plusieurs personnes nées le même jour »** (760 dans l'app — sans doute des couples dont les deux
+  membres ont déjà chacun leur fiche, la case est alors en trop), 13 « personne née un autre jour », 1 « aucune personne » ;
+- effets : cases orphelines dans l'app **3 777 → 770** ; couples dans l'app **4 788 → 7 875** ; cases suivant une principale
+  archivée dans l'app 992 → 2 121 ;
+- éteint : chiffres **identiques** à la phase 1 (rien ne change cette nuit) ; essais 20/20 (dont 3 du rattachement, témoin inverse,
+  et « la couche n'est pas touchée »).
+
+**Ce que ça pourrait casser** : rien tant qu'aucun écran ne lit la nature. Allumé : les 3 141 personnes concernées passeront
+« Couple · conjoint à compléter » à l'écran (phase 3), et leurs cases seront masquées comme les autres. Le push n'envoie pas
+`rattachee_a` (colonnes nommées) ; ~6 000 contacts de l'app repartiront une fois (nature ou deuxième fiche changées).
+**Pour allumer** : `APP_CONTACT_RATTACHEMENT=1` dans le `.env` (geste à l'accord de Frédéric).
