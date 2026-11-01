@@ -352,3 +352,24 @@ tout gardé). ⚠ **Pas vu à l'écran** : la génération d'un mandat demande u
 
 **Ce que ça pourrait casser** : les 30 « orphelines » qui ont une coordonnée restent des mandants (voulu, critère étroit) ; le
 libellé du document (`mandatMandantsLabel`) et les destinataires de signature suivent la même liste, donc perdent aussi la case.
+
+---
+
+## 14. PHASE 3-B — LA VUE DE L'ÉCRAN : PRÉPARÉE, ÉPROUVÉE, NON POSÉE *(02/11, « Oui prépare »)*
+
+**Mesuré avant** : `app_contacts_current` (la vue que lit l'annuaire) — 43 colonnes, `security_invoker=true`, propriétaire
+`postgres`, lecture pour `authenticated` seulement (pas `anon`), **aucune vue n'en dépend**, empreinte `8004d105…`.
+
+**Le patch** `supabase/patch_couple_phase3b_vue_contacts_2026-11-02.sql` : garde sur l'empreinte, puis `create or replace` avec
+les 43 colonnes inchangées **+ 7 à la fin** (`couple_json`, `nature_fiche`, `couple_deuxieme`, `civilite_app`, `civilite_source`,
+`suit_principale_archivee`, `supprimee_chez_hektor`) ; `security_invoker` redit ; droits redits. **Rien ne change à l'écran**
+tant que C et D ne sont pas en ligne (le front ne demande pas ces colonnes).
+**L'inverse** `_INVERSE.sql` : une vue ne perd pas de colonne par `create or replace` → `drop` + `create` à l'identique (43
+colonnes), droits redits, et **il vérifie lui-même l'empreinte d'origine** (sinon tout est annulé).
+**La répétition** `_REPETITION.sql` : fabriquée à partir des deux fichiers ; joue le patch PUIS l'inverse dans une transaction
+annulée. **Jouée par moi : 7/7** — colonnes 50, invoker gardé, droits ok, lignes = table, témoin 10000045 (`personne_seule`,
+`Mme.`) lu par la vue, retour 43, empreinte d'origine retrouvée. **Contrôle d'après : 43 colonnes, empreinte intacte, invoker.**
+*(jouée avec la liste des colonnes sur une ligne : même vue, autre mise en page.)*
+
+⛔ **ORDRE** : ce patch **AVANT** tout front qui demande ces colonnes ; l'inverse **APRÈS** avoir retiré ce front.
+⏳ **À poser avec l'accord de Frédéric.** Sans risque pour l'écran actuel (colonnes ajoutées à la fin, non demandées).
