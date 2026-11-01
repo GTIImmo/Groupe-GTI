@@ -280,3 +280,51 @@ d'avant mars non appariées (doublons et noms modifiés depuis, surtout).
 **Non mesuré** : la règle exacte qui a choisi les fiches mises en foyer (ni la civilité, ni l'affaire, ni les coordonnées ; elle
 suit l'âge de la fiche et le champ `origin` de l'ancien logiciel, dont les codes ne sont pas connus) ; les 8 048 fiches
 anciennes non retrouvées.
+
+---
+
+## 10. LES DEUX POINTS LAISSÉS OUVERTS AU §9 *(Frédéric, 01/11 : « on a besoin de savoir »)*
+
+### 10.1 La règle du foyer : C'EST LE COMPTE D'AGENCE DANS LEQUEL HEKTOR A RANGÉ LA FICHE
+
+Aucune colonne de l'ancien logiciel ne l'explique (créateur, origine, type, adresse, affaire, archivage : 64 à 73 % de
+pureté). **L'agence Hektor l'explique à 98,4 %.** Part en foyer des fiches nommées (premières + seules), créées avant mars 2026 :
+
+- **civilité de couple** (« Mr./Mme », codes 2026) : **~100 % dans toutes les agences** (70 % dans les agences 2, 15, 16) ;
+- **civilité de personne seule** :
+  - **98-99 % dans quatre comptes** : **12 « Compte formation » (112 287 fiches)**, 3 Saint-Just-Saint-Rambert, 5 Yssingeaux,
+    16 Saint-Étienne (~4 000 à eux trois) ;
+  - **0 à 7 % dans les quinze autres** (26 % dans l'agence 14) ;
+- **fiches créées dans Hektor depuis mars 2026** : 0 %, sauf civilité de couple.
+
+**La règle de Hektor est donc** : un foyer pour chaque couple, partout ; et, pour quatre comptes seulement, **un foyer pour
+chaque fiche importée**, couple ou non.
+
+⭐ **Le « Compte formation » porte 246 130 fiches, 69 % du serveur.** Ses numéros forment **un seul bloc continu de ~65 000 à
+~310 000** (plus un bloc 500 000 – 550 000) : l'import s'est fait **compte par compte, par lots**, et chaque lot a reçu son réglage.
+C'est ce qui donnait l'illusion d'une règle « selon l'âge » : les vieilles fiches sont surtout dans ce compte.
+
+⬜ **Toujours non établi** : POURQUOI ces fiches sont dans le « Compte formation » et pas dans leur agence. Ce n'est ni le
+créateur seul, ni l'archivage, ni le négociateur (14 négociateurs ont des fiches des deux côtés, 169 567 fiches). Seuls Hektor
+ou le prestataire de la migration peuvent le dire. ⚠ Cela concerne aussi les droits : une fiche de ce compte n'est rattachée
+à aucune agence réelle.
+
+### 10.2 Les 8 048 fiches anciennes non retrouvées : 7 242 SONT LÀ, 633 sont perdues, 173 étaient supprimées
+
+- **173** étaient **supprimées** dans l'ancien logiciel (sans nom ni date) : jamais migrées, c'est normal.
+- **3 170** ont une fiche Hektor de même nom et même date, mais **deux candidates** (le plus souvent la première d'un couple et
+  sa place de conjoint au nom recopié) : l'appariement strict les avait écartées. **Présentes.**
+- **3 106** ont leur e-mail (1 800) ou leur téléphone (1 306) sur une fiche Hektor dont le nom ou la date a changé depuis.
+  **Présentes.**
+- **943** se retrouvent par le prénom + la date, ou le premier mot du nom + la date : **nom modifié depuis. Présentes.**
+- **23** pointent une fiche déjà prise par leur jumelle : **probablement fusionnées** avec leur doublon.
+- **633 sans aucune trace** (ni nom, ni e-mail, ni téléphone, ni minute de création) :
+  - **305 créées en janvier-février 2026** : **environ la moitié des fiches créées en février** dans l'ancien logiciel n'ont
+    jamais atteint Hektor → **la photo prise pour la migration était antérieure au 27/02**, et ce qui a été saisi après est resté
+    dans l'ancien logiciel ;
+  - **171 de 2013-2014**, toutes d'un même lot d'import (clé « sphere », origine 0) ;
+  - ~157 éparpillées.
+  374 des 633 avaient un e-mail : c'est une vraie perte, pas un doublon. **La liste est dans le classeur** (non recopiée ici :
+  données personnelles) ; elle peut être ressortie pour une ressaisie.
+
+Scripts : `c3_perdues*.py`, `c3_regle_foyer.py`, `c3_compte_formation.py` (lecture seule, aucun nom affiché).
