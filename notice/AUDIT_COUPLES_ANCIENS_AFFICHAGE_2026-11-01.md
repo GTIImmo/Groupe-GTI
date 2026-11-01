@@ -189,3 +189,40 @@ inverse : aucune fiche sans foyer ne prend de `signe`.
 - ✅ *(levé le 01/11)* Les archivés et les fiches hors de l'app : mesurés à la section 4 bis, tout le serveur.
 - Les 22 459 fiches vides sans foyer et les 14 080 secondes dont la première n'est plus sur le serveur : leur nom est perdu chez
   nous (audit du 29/10, §4) ; elles ne s'affichent pas comme couple, cet audit ne les traite pas.
+
+---
+
+## 8. LES DOUBLONS DE CONTACTS ET LES COUPLES *(question de Frédéric, 01/11 : « peut-être que c'est lié ou pas »)*
+
+**D'où ils viennent.** Le détecteur est né avec le registre des contacts (commit `915f6cd`, 27/05/2026 ;
+`RAPPORT_EXPLICATIF_CONTACTS_HEKTOR_2026-05-25.md` §5 : 36 427 groupes sur 354 293 fiches, « revue métier, aucune suppression
+automatique »). Il tourne chaque nuit (`build_contacts_layer.py`, `duplicate_key_groups`, l. 1645) avec 4 règles : même e-mail ·
+même e-mail + tél + nom · même tél + nom · même nom + prénom + lieu. **Aucune fusion n'a jamais été faite** (L5 / E.0-bis, reportée).
+
+**Aujourd'hui (calcul du 01/11 04:44)** : 37 715 groupes, 48 333 fiches. Lus nom par nom, ils sont de quatre sortes :
+
+- **27 500 groupes = la même personne** → **12 950 personnes en 27 810 fiches, 14 860 fiches en trop**. 5 877 personnes toutes
+  archivées, 4 949 actives + archivées (le soupçon « archivage par erreur » de mai), 2 124 toutes actives. Dans l'app : 2 868
+  personnes touchées, **444 avec deux fiches vivantes ou plus** (ce qu'un agent voit en double).
+- **4 132 groupes = même nom, prénoms différents** (3 696 par le même e-mail) → très probablement des **conjoints ou une famille,
+  chacun sur sa fiche**. Ce ne sont PAS des doublons.
+- **3 888 groupes = noms et prénoms différents, même e-mail** → adresse partagée (couple non marié, famille, société, notaire).
+- **2 195 groupes = même prénom, noms différents** → nom de jeune fille ou nom mal saisi, non tranché.
+
+**Le lien avec les couples, mesuré :**
+
+1. **Les doublons ont multiplié les foyers automatiques.** Chaque fois que la même personne a été recréée, Hektor lui a refait un
+   foyer : **9 232 premières de foyer en trop, qui portent 6 727 places de conjoint vides en trop**.
+2. **La même personne existe une fois « en foyer » et une fois seule** dans 8 334 groupes. La civilité de la fiche en foyer :
+   vide 4 801, M. 3 770, Mr./Mme 1 632, M_Mme 114 — encore le foyer automatique dans la majorité.
+3. **Le vrai conjoint existe souvent déjà, sur une fiche à part** (les ~3 700 « même nom, même e-mail, prénom différent ») : c'est
+   une bonne part de la catégorie 5 « conjoint possible ailleurs » (10 899 foyers).
+4. **Le détecteur ne voit pas les fiches de couple** : 3 places de conjoint vides et 368 secondes nommées seulement dans ses
+   groupes (il exige un prénom, ou un e-mail, ou un téléphone — les places vides et les noms recopiés n'en ont pas).
+
+**Ce que ça change.** La règle d'affichage (A, B ou C) n'écrit rien : les doublons ne la changent pas. ⚠ Mais **« compléter le
+conjoint » (décision 3) doit d'abord CHERCHER une fiche existante** (même e-mail, même nom) et la RELIER, sinon il fabriquera de
+nouveaux doublons. Et un futur chantier « fusion de doublons » touchera les mêmes fiches que les couples : à ordonner avec Frédéric.
+
+**Non mesuré** : la part de faux positifs dans « même personne » (homonymes au même lieu) ; un échantillon lu par une personne le
+dirait. Scripts : `audit_doublons_couples*.py` (lecture seule, aucun nom affiché).
