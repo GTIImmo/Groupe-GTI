@@ -155,7 +155,7 @@ texte litteral. Elle a repondu « 0 occurrence » sur un bundle qui contenait la
 
 ## 8. CE QUI RESTE
 
-- ⬜ **le 3e rang** (13 lignes du classeur) : les trois verrous du §1, a trancher ;
+- ✅ **le 3e rang EST POSE ET EN LIGNE le 02/11** — voir §9 ;
 - ⬜ **le texte des 605 dossiers** : « Cet utilisateur a ete supprime » s'affiche tel
   quel. Un seul mot a changer s'il prefere autre chose ;
 - ⬜ **les 14 anciens** : rien a faire aujourd'hui (aucune ligne). Leur nom n'existera
@@ -163,3 +163,59 @@ texte litteral. Elle a repondu « 0 occurrence » sur un bundle qui contenait la
   ⛔ **Sans toucher l'annuaire** ;
 - ⬜ **le controle a l'oeil** : la modale est derriere la connexion. A voir dans son
   Chrome, sur un dossier de Jean VALLA, comme le 21/10.
+
+## 9. LE TROISIEME RANG — POSE ET EN LIGNE LE 02/11/2026
+
+Frederic, 02/11 : *« dans la modale mettre un champ entree un sortie et ajouter un +
+pour ajouter des intervenants jusqu'a 3 par cote »*, puis *« fais le toi meme tu as
+mon accord »*.
+
+**En base** (migration `repartition_troisieme_rang_2026_11_02`, fichiers
+`supabase/patch_repartition_troisieme_rang_2026-11-02*.sql`). Etat releve AVANT la
+pose, puis APRES :
+
+```
+                      AVANT                              APRES
+garde-fou du rang     CHECK (rang = ANY (ARRAY[1, 2]))   CHECK (rang = ANY (ARRAY[1, 2, 3]))
+cle primaire          PRIMARY KEY (chaine, cote, rang)   INCHANGEE
+RPC (empreinte)       42cc94fb6fd9d2805ce40fce4faa50a3   accepte ('1','2','3')
+SECURITY DEFINER      oui                                oui
+droits                authenticated, postgres, service_role        inchanges
+lignes                16 106                             16 106
+lignes de rang 3      0                                  0
+```
+
+**Les six controles, temoins compris** : un rang 3 a ete VRAIMENT insere (accepte),
+un rang 4 VRAIMENT tente (refuse) — les deux annules par un savepoint, et l'absence
+de trace verifiee apres coup (`essais_restants = 0`).
+
+**A l'ecran** (`1dabf6d`) : une case par cote au depart, un « + un intervenant »
+jusqu'a trois, le numero affiche seulement a partir de deux cases, et un
+« − retirer la case vide » qui n'apparait QUE si la derniere case est vide. Le
+nombre de cases est un CALCUL (`repartitionCases`) : maximum entre les emplacements
+deja occupes et ce que le « + » a ouvert — donc un dossier ancien a deux noms
+s'ouvre a deux tout seul, sans effet ni boucle de rendu.
+
+### ⭐⭐ UN DEFAUT TROUVE PAR LE CALCUL, AVANT QU'IL NE MORDE
+
+La regle historique est `50 / n` par cote. A trois, elle donnait `16,667` — soit
+**50,001 par cote et 100,002 au total**. Or le RPC leve `total_superieur_a_cent`
+**des que le total depasse 100, sans aucune tolerance** (mesure du 02/11). Le
+troisieme rang aurait donc ete **refuse a l'enregistrement des le premier dossier a
+trois contre trois**.
+➡ Corrige : deux decimales, et **le dernier recoit le reste** —
+`16,67 + 16,67 + 16,66 = 50,00`. Eprouve hors ligne (node) sur les **9 combinaisons
+de cotes : 12 controles verts**, avec temoin inverse montrant l'ancienne formule a
+100,002.
+⚠ Deux consequences a connaitre : a trois, les parts sont inegales d'un centime
+(c'est le prix d'un total a 100 pile) ; et pour les lignes du classeur en
+75/12,5/12,5 ou 30/30/40, le partage automatique ne propose que l'egalite — la
+saisie a la main passe par-dessus et bascule l'`origine` a `saisie`.
+
+**En ligne, prouve** : bundle servi `index-DWdBrk9-.js` (2 499 164 octets), il porte
+« un intervenant » (2) et « retirer la case vide » (1), temoin positif
+« Repartition de la commission » present.
+
+⚠ **Ce qui n'est PAS encore fait** : personne n'a vu les boutons a l'oeil, et
+aucun dossier reel ne porte encore trois personnes d'un meme cote. Le controle se
+fera dans le Chrome de Frederic.
