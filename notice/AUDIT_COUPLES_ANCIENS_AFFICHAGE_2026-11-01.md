@@ -285,29 +285,32 @@ anciennes non retrouvées.
 
 ## 10. LES DEUX POINTS LAISSÉS OUVERTS AU §9 *(Frédéric, 01/11 : « on a besoin de savoir »)*
 
-### 10.1 La règle du foyer : C'EST LE COMPTE D'AGENCE DANS LEQUEL HEKTOR A RANGÉ LA FICHE
+### 10.1 La règle du foyer : C'EST L'AGENCE DANS LAQUELLE HEKTOR A RANGÉ LA FICHE
+
+> ⛔ **CORRIGÉ LE 01/11 (même jour)** : la première version disait « Compte formation ». **C'était faux** : j'avais pris le nom
+> d'agence dans `app_contact_current.agence_nom`, qui porte l'agence **du négociateur** (`build_contacts_layer.py` l. 1812) et non
+> celle de la fiche. **La table de Hektor (`hektor_agence`) fait foi : l'agence 12 est « Groupe GTI Firminy ».** Le « Compte
+> formation » (agence 1) n'a que 77 fiches nommées. Frédéric a trouvé l'anomalie (« c'est bizarre »).
 
 Aucune colonne de l'ancien logiciel ne l'explique (créateur, origine, type, adresse, affaire, archivage : 64 à 73 % de
-pureté). **L'agence Hektor l'explique à 98,4 %.** Part en foyer des fiches nommées (premières + seules), créées avant mars 2026 :
+pureté). **L'agence Hektor de la fiche l'explique à 98,4 %.** Personnes seules importées avant mars 2026, part en foyer :
 
-- **civilité de couple** (« Mr./Mme », codes 2026) : **~100 % dans toutes les agences** (70 % dans les agences 2, 15, 16) ;
-- **civilité de personne seule** :
-  - **98-99 % dans quatre comptes** : **12 « Compte formation » (112 287 fiches)**, 3 Saint-Just-Saint-Rambert, 5 Yssingeaux,
-    16 Saint-Étienne (~4 000 à eux trois) ;
-  - **0 à 7 % dans les quinze autres** (26 % dans l'agence 14) ;
-- **fiches créées dans Hektor depuis mars 2026** : 0 %, sauf civilité de couple.
+- **96 à 99 % dans quatre agences** : **Firminy (112 287 fiches)**, Ambert, Saint-Just-Saint-Rambert, Saint-Didier-en-Velay
+  (~4 000 à elles trois) ;
+- **0 à 7 % dans les autres** (26 % à Monistrol-sur-Loire) ;
+- et partout : **~100 % pour une civilité de couple** ; **0 %** pour une fiche créée dans Hektor depuis mars (sauf couple).
 
-**La règle de Hektor est donc** : un foyer pour chaque couple, partout ; et, pour quatre comptes seulement, **un foyer pour
-chaque fiche importée**, couple ou non.
+**La règle de Hektor est donc** : un foyer pour chaque couple, partout ; et, pour quatre agences, **un foyer pour chaque fiche
+importée**, couple ou non. L'import s'est fait **agence par agence, par lots** (numéros en blocs continus : Firminy occupe ~65 000
+à ~310 000 et 500 000 – 550 000), et chaque lot a reçu son réglage. C'est ce qui donnait l'illusion d'une règle « selon l'âge ».
 
-⭐ **Le « Compte formation » porte 246 130 fiches, 69 % du serveur.** Ses numéros forment **un seul bloc continu de ~65 000 à
-~310 000** (plus un bloc 500 000 – 550 000) : l'import s'est fait **compte par compte, par lots**, et chaque lot a reçu son réglage.
-C'est ce qui donnait l'illusion d'une règle « selon l'âge » : les vieilles fiches sont surtout dans ce compte.
+⭐ **Firminy porte 137 152 fiches nommées, 65 % des personnes du serveur** (et ~109 000 places vides), dont **121 241 sur le
+compte « accueil »**, un compte rattaché à l'agence de Saint-Étienne. Dans l'app, elles s'affichent donc sous **« Saint-Étienne »**
+(l'agence du compte), pas sous Firminy. 21 887 sont dans l'app aujourd'hui (vivantes).
 
-⬜ **Toujours non établi** : POURQUOI ces fiches sont dans le « Compte formation » et pas dans leur agence. Ce n'est ni le
-créateur seul, ni l'archivage, ni le négociateur (14 négociateurs ont des fiches des deux côtés, 169 567 fiches). Seuls Hektor
-ou le prestataire de la migration peuvent le dire. ⚠ Cela concerne aussi les droits : une fiche de ce compte n'est rattachée
-à aucune agence réelle.
+⬜ **Non établi** : pourquoi l'import a tout versé à Firminy / « accueil » (très probablement : la base de l'ancien logiciel
+n'était pas répartie par agence, et elle a été posée sur un compte par défaut — **à confirmer par Frédéric ou Hektor**), et
+pourquoi ces quatre agences ont reçu le réglage « foyer pour tous ».
 
 ### 10.2 Les 8 048 fiches anciennes non retrouvées : 7 242 SONT LÀ, 633 sont perdues, 173 étaient supprimées
 
