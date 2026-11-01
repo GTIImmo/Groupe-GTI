@@ -650,3 +650,13 @@ E6 (30/10) : une personne seule créée aujourd'hui n'a PAS de place vide.
   envoyées ; aucun écran ne le lit encore (P3).
 - ⛔ **P3 ne s'écrit pas avant que Frédéric ait tranché la règle d'affichage des couples anciens.**
 - Retour arrière : éteindre `APP_COUPLE_CONJOINT` D'ABORD, puis `..._INVERSE.sql`.
+
+
+## 24. LES COUPLES ANCIENS — AUDIT DU 01/11 POUR TRANCHER L'AFFICHAGE AVANT P3 *(lecture seule, rien codé)*
+
+Rapport complet : `notice/AUDIT_COUPLES_ANCIENS_AFFICHAGE_2026-11-01.md`. En bref : le foyer de Hektor suit l'âge du logiciel
+(96 % des « M. » mis en foyer en 2005-2010, 2 % en 2026) ; la seconde vide est une place machine (0 téléphone, 0 e-mail sur
+10 758) ; sur les 14 779 couples vivants, **2 991 (20 %) ont un signe écrit par une personne** (conjoint nommé 1 900, code 9,
+deux prénoms 695, « Mr./Mme » 387) et **9 278 (63 %) n'en ont aucun**. **Conseil : règle A** — « Couple » seulement sur les
+2 991, tout le reste en personne seule ; le signe calculé la nuit dans `couple_json` (attend un « vas-y ») ; rien supprimé.
+⏳ **À trancher par Frédéric** : règle A, B ou C.
