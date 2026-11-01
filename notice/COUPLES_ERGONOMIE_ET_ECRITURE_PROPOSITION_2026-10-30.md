@@ -635,3 +635,18 @@ E6 (30/10) : une personne seule créée aujourd'hui n'a PAS de place vide.
 2523f1f0…, 0 ligne d'essai, 0 « conjoint ». Seul effet qui survit : la séquence est passée de 20000029 à **20000030** (un trou).
 ⏳ **Reste, avec accord** : coller `supabase/patch_couple_p2_conjoint_connu_2026-10-31.sql` → `APP_COUPLE_CONJOINT=1` dans `.env`
 → pousser → juger la nuit suivante (étape « phase2 conjoints des couples » en code 0, ~1 900 conjoints, ~26 000 lignes envoyées).
+
+
+**✅ P2 POSÉ LE 01/11/2026 (Frédéric : « Fais-le toi-même et pousse ton travail », puis « Tu as mon accord »)** :
+- **10:30 — patch collé sur Supabase** (`supabase/patch_couple_p2_conjoint_connu_2026-10-31.sql`, par l'outil SQL). Avant : empreinte
+  de la fonction 2523f1f0… (celle attendue), colonne 0, battement 0. Après : `colonne=1 | battement=1 | bloc_pose=true |
+  resumes_avant_la_nuit=0` ; colonne `jsonb` ; bloc présent UNE fois ; droits fermés (anon false, authenticated false,
+  service_role true) ; 0 « conjoint » ; **nouvelle empreinte de la fonction 9fa17fe52de34cdd8094af952332a857** (pour un futur patch).
+- **10:31 — `APP_COUPLE_CONJOINT=1` ajouté à `C:\Hektor\Projet\.env`** (copie d'avant dans le bloc-notes de la session) ; le
+  push le lit (`couple_conjoint_allume() = True`).
+- **Commits poussés** vers `origin/main` (Render et Vercel se redéploient ; le front P1 part avec).
+- ⏰ **À JUGER APRÈS LA NUIT DU 01→02/11** : étape « phase2 conjoints des couples » en code 0 ; ~1 900 secondes fiches marquées
+  « conjoint » ; ~26 000 lignes envoyées UNE fois par le push des contacts (mesurer sa durée) ; `couple_json` posé sur les premières
+  envoyées ; aucun écran ne le lit encore (P3).
+- ⛔ **P3 ne s'écrit pas avant que Frédéric ait tranché la règle d'affichage des couples anciens.**
+- Retour arrière : éteindre `APP_COUPLE_CONJOINT` D'ABORD, puis `..._INVERSE.sql`.
