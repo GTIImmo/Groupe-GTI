@@ -308,6 +308,8 @@ importée**, couple ou non. L'import s'est fait **agence par agence, par lots** 
 compte « accueil »**, un compte rattaché à l'agence de Saint-Étienne. Dans l'app, elles s'affichent donc sous **« Saint-Étienne »**
 (l'agence du compte), pas sous Firminy. 21 887 sont dans l'app aujourd'hui (vivantes).
 
+⭐ **La preuve du « par lots »** : les places de conjoint vides des personnes seules ont, agence par agence, des numéros en **blocs serrés** — Saint-Just-Saint-Rambert 532 524 → 533 596 (1 274 places), Saint-Didier-en-Velay 423 939 → 424 942 (1 233), Firminy 434 004 → 502 276 (81 540). Chaque agence a reçu ses places **en une seule passe**, juste après son import. Les dates de modification (2021-2025) sont recopiées, pas celles de l'import.
+
 ⬜ **Non établi** : pourquoi l'import a tout versé à Firminy / « accueil » (très probablement : la base de l'ancien logiciel
 n'était pas répartie par agence, et elle a été posée sur un compte par défaut — **à confirmer par Frédéric ou Hektor**), et
 pourquoi ces quatre agences ont reçu le réglage « foyer pour tous ».
