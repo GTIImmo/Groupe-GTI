@@ -1,5 +1,5 @@
 import { FunctionsFetchError, FunctionsHttpError, FunctionsRelayError } from '@supabase/supabase-js'
-import { mockDetailPayloads, mockDiffusionRequestEvents, mockDiffusionRequests, mockDiffusionTargets, mockDossiers, mockMandatBroadcasts, mockMandats, mockRapprochementsForDossier, mockSummary, mockUserProfile, mockWorkItems } from './mockData'
+import { mockRegistreDossiers, mockDetailPayloads, mockDiffusionRequestEvents, mockDiffusionRequests, mockDiffusionTargets, mockDossiers, mockMandatBroadcasts, mockMandats, mockRapprochementsForDossier, mockSummary, mockUserProfile, mockWorkItems } from './mockData'
 import { hasSupabaseEnv, supabase, supabaseUrl } from './supabase'
 import type { AppContact, AppContactMandatRecherche, AppContactRelation, AppContactSearch, ConsoleDocument, ConsoleDocumentVisibility, ConsoleJob, ConsoleJobType, ConsolePhoto, ContactStats, DashboardSummary, DetailedDossier, DiffusionRequest, DiffusionRequestEvent, DiffusionTarget, Dossier, DossierDetail, GoogleWorkspaceIdentity, HektorAgencyOption, HektorNegotiatorOption, MandatBroadcast, MandatRecord, MatterportGroup, MatterportModelLink, UserNegotiatorContext, UserPerimetre, UserProfile, WorkItem } from '../types'
 import { bvs, bvt } from './bienvuTexte'
@@ -8748,6 +8748,90 @@ export async function loadAppSettingActive(key: string): Promise<boolean> {
   } catch {
     return false
   }
+}
+
+// La VALEUR brute d'un interrupteur, en minuscules (null = absent, illisible ou en erreur).
+// Sert quand un interrupteur a plus de deux crans -- premier usage : 'registre_transactions_ecran'
+// ('admin' = les admins seuls, 'on' = tout le monde, le reste = caché).
+export async function loadAppSettingValeur(key: string): Promise<string | null> {
+  // Mode maquette (dev local, sans base) : l'ecran du registre s'y montre, pour le voir sans se connecter.
+  if (!hasSupabaseEnv || !supabase) return key === 'registre_transactions_ecran' ? 'on' : null
+  try {
+    const { data, error } = await supabase.from('app_setting').select('value').eq('key', key).maybeSingle()
+    if (error || !data) return null
+    return String((data as { value?: unknown }).value ?? '').trim().toLowerCase() || null
+  } catch {
+    return null
+  }
+}
+
+// Registre des transactions (31/10/2026) : UNE LIGNE PAR DOSSIER (chaîne offre -> compromis -> vente),
+// lue par app_registre_dossiers (patch_registre_dossiers_droits_2026-10-31.sql). La fonction applique
+// la MÊME règle que la fiche : un admin voit tout, un négociateur ses biens + les dossiers où il est
+// nommé dans la répartition. Montants en EUROS (jamais en centimes).
+export type RegistreEtape = 'vendu' | 'compromis' | 'compromis_annule' | 'offre_acceptee' | 'offre_proposee' | 'offre_refusee'
+
+export type RegistreDossierRow = {
+  app_chaine_id: number
+  app_dossier_id: number | null
+  hektor_annonce_id: number | null
+  etape: RegistreEtape
+  date_offre: string | null
+  date_compromis: string | null
+  date_acte_prevue: string | null
+  date_vente: string | null
+  date_dernier_evenement: string | null
+  montant: number | null
+  honoraires_entree: number | null
+  honoraires_sortie: number | null
+  honoraires: number | null
+  hektor_acquereur_id: string | null
+  acquereur_nom: string | null
+  numero_mandat: string | null
+  ville: string | null
+  code_postal: string | null
+  type_bien: string | null
+  photo_url_listing: string | null
+  agence_nom: string | null
+  negociateur_email: string | null
+  statut_annonce: string | null
+  nb_transactions: number
+  je_suis_nomme: boolean
+}
+
+// Par paquets de 1 000 (plafond de lignes de l'API), triés par numéro de dossier pour que les
+// paquets ne se chevauchent pas : la fonction n'a pas d'ORDER BY. Une année tient en un paquet ;
+// « toutes les années » (~12 000 dossiers pour un admin) en demande une douzaine, 4 à la fois.
+export async function loadRegistreDossiers(annee: number | null): Promise<RegistreDossierRow[]> {
+  if (!hasSupabaseEnv || !supabase) return mockRegistreDossiers.filter((ligne) => annee == null || String(ligne.date_dernier_evenement ?? '').startsWith(String(annee)))
+  const client = supabase
+  const PAQUET = 1000
+  const lirePaquet = async (index: number) => {
+    const { data, error } = await client
+      .rpc('app_registre_dossiers', { p_annee: annee })
+      .order('app_chaine_id', { ascending: false })
+      .range(index * PAQUET, index * PAQUET + PAQUET - 1)
+    if (error) throw new Error(error.message)
+    return (data ?? []) as RegistreDossierRow[]
+  }
+  const lignes: RegistreDossierRow[] = []
+  let index = 0
+  for (;;) {
+    const vague = annee == null ? [index, index + 1, index + 2, index + 3] : [index]
+    const paquets = await Promise.all(vague.map(lirePaquet))
+    for (const paquet of paquets) lignes.push(...paquet)
+    if (paquets.some((paquet) => paquet.length < PAQUET)) break
+    index += vague.length
+  }
+  return lignes.map((ligne) => ({
+    ...ligne,
+    montant: ligne.montant == null ? null : Number(ligne.montant),
+    honoraires_entree: ligne.honoraires_entree == null ? null : Number(ligne.honoraires_entree),
+    honoraires_sortie: ligne.honoraires_sortie == null ? null : Number(ligne.honoraires_sortie),
+    honoraires: ligne.honoraires == null ? null : Number(ligne.honoraires),
+    nb_transactions: Number(ligne.nb_transactions ?? 0),
+    je_suis_nomme: Boolean(ligne.je_suis_nomme),
+  }))
 }
 
 export async function createGenerateMandatPdfJob(input: {

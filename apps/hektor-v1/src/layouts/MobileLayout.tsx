@@ -3,7 +3,7 @@ import { BienvuLogo, BienvuSymbol } from '../BienvuLogo'
 import { APP_BIENVU_ENABLED } from '../lib/bienvuFlag'
 import '../menu-tiroir.css'
 
-export type AppScreen = 'accueil' | 'annonces' | 'mandats' | 'estimations' | 'registre' | 'contacts' | 'agenda' | 'suivi' | 'sante'
+export type AppScreen = 'accueil' | 'annonces' | 'mandats' | 'estimations' | 'registre' | 'contacts' | 'agenda' | 'suivi' | 'sante' | 'transactions'
 
 // ⛔ 26/10/2026 -- LE MENU « TROIS TRAITS » (demande de Frederic).
 //   Sur telephone, la barre d'icones sous l'en-tete ne tenait plus (8 entrees pour un admin : libelles coupes,
@@ -31,6 +31,8 @@ type MobileLayoutProps = {
   onOpenSearch?: () => void
   // POINT 6 (26/10/2026) : mes actions envoyees a Hektor -- un compteur sur le ☰, la liste dans le panneau.
   activite?: { enCours: number; echecs: number; liste: ReactNode }
+  // Registre des transactions (01/11/2026) : les vues dont l'interrupteur est eteint pour cet utilisateur.
+  masquer?: AppScreen[]
 }
 
 const mobileNavItems: Array<{ screen: AppScreen; label: string; icon: string; detail: string; adminOnly?: boolean; adminStrictOnly?: boolean }> = [
@@ -38,6 +40,7 @@ const mobileNavItems: Array<{ screen: AppScreen; label: string; icon: string; de
   { screen: 'mandats', label: 'Annonces', icon: 'home', detail: 'Le portefeuille de biens' },
   { screen: 'estimations', label: 'Estimations', icon: 'trend', detail: 'Avis de valeur en cours' },
   { screen: 'registre', label: 'Mandats', icon: 'doc', detail: 'Le registre des mandats' },
+  { screen: 'transactions', label: 'Transactions', icon: 'transactions', detail: 'Offres, compromis et ventes' },
   { screen: 'contacts', label: 'Contacts', icon: 'contact', detail: 'Annuaire et recherches' },
   { screen: 'agenda', label: 'Agenda', icon: 'calendar', detail: 'Rendez-vous et visites' },
   { screen: 'suivi', label: 'Suivi', icon: 'target', detail: 'Demandes et validations', adminOnly: true },
@@ -56,6 +59,7 @@ const PICTOS: Partial<Record<AppScreen, ReactNode>> = {
   agenda: <><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M8 3v4M16 3v4M3 10h18M9 15l2 2 4-4" /></>,
   suivi: <><rect x="5" y="4" width="14" height="17" rx="2" /><path d="M9 4V3h6v1M9 11l2 2 4-4M9 17h6" /></>,
   sante: <path d="M3 12h4l2-6 4 12 2-6h6" />,
+  transactions: <path d="M4 17l5-5 4 4 7-8M15 8h5v5M3.5 21h17" />,
 }
 
 function Picto({ screen }: { screen: AppScreen }) {
@@ -80,8 +84,10 @@ export function MobileLayout({
   onSignOut,
   onOpenSearch,
   activite,
+  masquer,
 }: MobileLayoutProps) {
   const visibleNav = mobileNavItems.filter((item) => {
+    if (masquer?.includes(item.screen)) return false
     if (item.adminStrictOnly) return Boolean(isAdminStrict)
     if (item.adminOnly) return isAdmin
     return true
