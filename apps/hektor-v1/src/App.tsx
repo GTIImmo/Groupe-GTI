@@ -22278,6 +22278,22 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                                       onChange={(event) => repartitionPoser(cote, rang, event.target.value)}
                                       disabled={statusChangePending}>
                                       <option value="">—</option>
+                                      {/* ⭐ LE NOM RESTE LISIBLE QUAND LA PERSONNE N'EST PLUS PROPOSEE   01/11/2026
+                                          La liste ne propose que les 30 ACTIFS, et c'est voulu. Mais 10 407 lignes
+                                          sur 16 106 portent quelqu'un qui n'y est plus (113 negociateurs inactifs,
+                                          2 comptes vides par Hektor, 3 comptes d'agence) : sans option a leur
+                                          valeur, le menu retombait sur « — » alors que la part s'affichait a cote,
+                                          et on pouvait ECRASER un ancien en croyant la case vide.
+                                          ⭐ Le nom vient de `nom_au_moment` : rempli sur 16 106 lignes / 16 106.
+                                          ⚠ `disabled` : on le MONTRE sans le rendre choisissable -- Frederic,
+                                            01/11 : « le but n'est pas de pouvoir choisir ces negociateurs mais
+                                            juste faire apparaitre leurs noms ». */}
+                                      {ligne && ligne.hektorUserId.trim()
+                                        && !repartitionPersonnes.some((p) => p.idUser === ligne.hektorUserId) ? (
+                                        <option value={ligne.hektorUserId} disabled>
+                                          {(ligne.nomAuMoment ?? '').trim() || `Utilisateur ${ligne.hektorUserId}`} · ancien
+                                        </option>
+                                      ) : null}
                                       {repartitionPersonnes.map((p) => (
                                         <option key={p.idUser} value={p.idUser}>
                                           {p.nom}{p.agenceNom ? ` · ${p.agenceNom}` : ''}
