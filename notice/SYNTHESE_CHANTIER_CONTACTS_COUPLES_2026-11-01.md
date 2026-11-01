@@ -323,3 +323,8 @@ Autres cas : mis de côté avec leur raison. **Interrupteur `APP_CONTACT_RATTACH
 « Couple · conjoint à compléter » à l'écran (phase 3), et leurs cases seront masquées comme les autres. Le push n'envoie pas
 `rattachee_a` (colonnes nommées) ; ~6 000 contacts de l'app repartiront une fois (nature ou deuxième fiche changées).
 **Pour allumer** : `APP_CONTACT_RATTACHEMENT=1` dans le `.env` (geste à l'accord de Frédéric).
+
+**✅ ALLUMÉ le 02/11 vers 00:25 (Frédéric : « Allume »)** : `APP_CONTACT_RATTACHEMENT=1` ajouté au `.env` (sous `APP_CONTACT_NATURE`,
+90 → 91 lignes). Table recalculée sans option (le `.env` est bien lu) : 7 290 rattachées, 3 007 dans l'app ; push à blanc
+62 174 à envoyer, 1 seul jeu de clés, `rattachee_a` NON envoyé, couples 7 875 et orphelines 770 dans les lignes envoyées.
+⏰ 02/11 au matin : même ligne « rattachement : 7290 … » au journal du run.
