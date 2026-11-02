@@ -495,6 +495,7 @@ faire) ; puis une passe `--a-blanc` sur le vrai miroir (attendu : 0 personne 2 �
   3. après le push, toujours **2 lignes** pour les e-mails `essai.paire.*31102026@example.com`, et 20000029 garde
      `hektor_couple_contact_id = 20000028`.
 - **Fiches d'essai à retirer après ce jugement** (accord requis), comme celles du 30/10.
+- ✅ **JUGÉ VERT ET RETIRÉ LE 02/11 au matin** (accord de Frédéric, bouton « Supprimer » de l'app sur 20000028 puis 20000029) : 606094 supprimée et relue absente ; **606095 avait déjà disparu avec elle (cascade du foyer confirmée en réel)** ; 0 reste chez nous. Détail : `SYNTHESE_CHANTIER_CONTACTS_COUPLES_2026-11-01.md` §15.
 
 ## 21. AUDIT DE L'ÉCRAN (annuaire, fiche, téléphone, libellé) *(31/10 après-midi, « Ok vas y on enchaine », lecture seule, rien codé)*
 

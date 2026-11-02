@@ -373,3 +373,24 @@ annulée. **Jouée par moi : 7/7** — colonnes 50, invoker gardé, droits ok, l
 
 ⛔ **ORDRE** : ce patch **AVANT** tout front qui demande ces colonnes ; l'inverse **APRÈS** avoir retiré ce front.
 ⏳ **À poser avec l'accord de Frédéric.** Sans risque pour l'écran actuel (colonnes ajoutées à la fin, non demandées).
+
+## 15. LA PREMIÈRE NUIT JUGÉE, ET L'ESSAI DU 31/10 RETIRÉ *(02/11 matin, « Le run a tourné, vérifie »)*
+
+**La nuit du 01 au 02/11 est verte** (journal `logs/scheduled/quotidien_2026-11-02_04-00-01.log`, fin 06:18:49, code 0) :
+- « phase2 nature des fiches contact » : DONE en 10 s ; ligne « rattachement : 7290 case(s) rattachee(s) a 7290 personne(s), 1225 mise(s) de cote ».
+- « phase2 push contacts to supabase » : DONE en **1 min 28** (06:05:20 → 06:06:48), 62 915 fiches, 35 052 relations. ⭐ La crainte d'une étape longue et bloquante est levée.
+- « phase2 conjoints des couples » : DONE, 1 900 conjoints ; « secondes fiches des couples » : « rien a faire ».
+- Battements `phase2.nature_contacts` et `phase2.conjoints_couples` : `success` à 06:05, sans erreur.
+- Supabase, chiffres EXACTS : 7 875 couples · 14 112 `civilite_app = 'Mme.'` · 770 orphelines · **0 « Mme. » posée sur une fiche qui avait déjà une civilité Hektor** (la garde tient) · témoin 10000045 vert.
+- ⚠ 213 lignes de `app_contact_current` (Supabase) sans nature : de VIEILLES lignes (rafraîchies le 23/09, 03/10, 13/10, 15/10…) que le push ne réécrit plus. Antérieures au chantier ; notées, pas touchées.
+- Copie du dimanche (8c) : `hektor_20261101_080001.sqlite.gz`, 3,9 Go → 416 Mo, code 0, `gzip -t` intègre.
+
+**L'essai du 31/10 (§20 de la note COUPLES_ERGONOMIE) est jugé vert** : le registre a adopté 20000028 ↔ 606094 et 20000029 ↔ 606095, aucun numéro neuf, 2 lignes, lien gardé ; la nuit les classe « couple » / « conjoint ».
+
+**Retrait (accord « Oui, par l'app », après la fin de la descente 07:08)** — par le bouton « Supprimer » de la fiche, dans le Chrome de Frédéric :
+- 08:46:53 (heure de Paris), **20000028** : travail `a0ab8dfe…` `done` — Hektor relu, suppression envoyée, **relue absente** ; Supabase + local + miroir nettoyés ; registre des liens : rien à effacer.
+- 08:48:35, **20000029** : travail `426ab1c2…` `done` — ⭐ **606095 n'existait déjà plus chez Hektor** (`before_found: false`, suppression NON envoyée) : **la cascade du foyer est confirmée en réel**, comme les essais du 30/10 le disaient. Le ménage local et Supabase s'est fait quand même.
+- ⚠ Le geste ne nettoie que la fiche visée : sans le second clic, 20000029 serait restée chez nous POUR TOUJOURS (la nuit ne relit que la liste de Hektor, et une fiche née dans l'app est protégée de la purge). **À retenir pour l'écran de suppression d'un couple.**
+- Contrôle : 0 reste (Supabase, couche locale, miroir) ; témoins positifs : 9 contacts nés dans l'app ≥ 20 000 000 des deux côtés, 16 fiches voisines au miroir (606080-606110), file 0.
+- Sauvegardes : dossier de travail de la session, `sauvegarde_essais_couple_20000028_29_20261102_{supabase,locale}.json`.
+- Les 20000021/22 de la liste du matin étaient déjà retirées depuis le 30/10 (ligne périmée).
