@@ -806,3 +806,24 @@ est « couple » et son résumé « nommé » (la nuit du 02→03/11 : aujourd'h
   couple chez Hektor (54 champs lus le 02/11) ne contient PAS `_email_rgpd` : probablement ignoré en modification — à vérifier un jour.
 - ⏭ Premier « Compléter le conjoint » réel : à SURVEILLER (la seconde se remplit, aucune fiche ne naît).
 
+## 36. ESSAI « TRANSFORMER EN COUPLE » — LE GESTE PROPRE EST TROUVÉ *(02/11 ~14:10, « Transformer en couple » ; fiches fictives seulement)*
+
+- **Fiches fictives créées par la fonction de l'app** : ESSAI TRANSFO Un (20000033 ↔ 606117), Deux (20000034 ↔ 606118), Trois (20000035 ↔ 606119),
+  personnes seules, compte formation, `@example.com`, sans bien, sans e-mail RGPD. Frédéric connecté à Hektor ; requêtes relevées dans la page.
+- **Essai « Oui » (rattacher une fiche existante)** sur Un, choix de Deux : la recherche est `mode=contacts-actions-searchContactToCouple`
+  (lecture, `valeur`, `idProspect`) ; « Confirmer » envoie **UNE requête GET `mode=contacts-create-transformeContactToConjunct`, `conjoint=606118`,
+  `refCouple=606117` → `{"success":"ok"}`** ; puis Hektor OUVRE un formulaire « Ajouter un nouveau contact » (`contacts-create-creationContact`,
+  idContact=606117) en Couple, pré-rempli — **NON ENREGISTRÉ**. Relecture : **Un est un COUPLE (formulaire contactCoupleAll), place 2 = Deux**
+  (nom, prénom, e-mail) ; **Deux est devenue sa seconde fiche** ; Trois intacte (témoin). ⭐ **La transformation est FAITE par la seule requête GET** ;
+  le formulaire qui suit est facultatif — c'est très probablement son enregistrement qui a fait disparaître une fiche le 30/10 (E6).
+- **Essai « Non »** sur Trois : aucune écriture ; Hektor ouvre `contacts-create-creationContact` (idContact=606119, step=1, statut=2) en Couple avec
+  **une COPIE de Trois en place 2** (le piège d'E6). **Non enregistré** ; Trois relue intacte (personne seule).
+- **Nettoyage par la fonction de suppression de l'app** : Un → `done` ; **Deux → « n'existe déjà plus chez Hektor »** (la cascade emporte la seconde :
+  3e confirmation, et preuve que le lien posé par la transformation est réel) ; Trois → `done`. 0 reste (Supabase, local, miroir). Onglets Hektor fermés.
+- ⭐ **CE QUE ÇA OUVRE** : « ajouter un conjoint à une personne seule » = deux gestes PROUVÉS : (1) créer le conjoint comme un nouveau contact
+  (création de l'app) ; (2) le rattacher par `transformeContactToConjunct` (conjoint = le nouveau, refCouple = la personne). Le chemin « Non » de
+  Hektor n'est jamais utilisé. Vaut pour les **123** « couples sans lien » (personnes seules chez Hektor) et pour toute personne seule.
+- **Cas 5 (coquilles, 1 529)** : rattacher la coquille (fiche de couple VIDE) comme conjoint par la même requête n'est PAS prouvé (impossible de
+  fabriquer une coquille fictive : Hektor recopie le nom). Choix à faire par Frédéric : laisser la coquille masquée et utiliser « Ajouter un
+  conjoint » sur la personne (puis supprimer la coquille ?), ou essayer le rattachement de la coquille sur un premier vrai cas, surveillé.
+
