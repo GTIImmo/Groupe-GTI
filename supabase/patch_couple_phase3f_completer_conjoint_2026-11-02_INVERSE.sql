@@ -2,7 +2,7 @@
 -- COUPLES · PIÈCE F — RETOUR ARRIÈRE                                   02/11/2026
 -- ═══════════════════════════════════════════════════════════════════════════
 -- Remet app_edit_conjoint_optimistic dans sa définition de la pièce E (« nommé » seulement), si la version en
--- place est bien celle de la pièce F (empreinte 43faf014…), puis vérifie l'empreinte d'origine (77bcfa92…).
+-- place est bien celle de la pièce F (empreinte POSÉE e5ac0baa… ; la répétition donnait 43faf014… -- même logique, lignes vides en plus), puis vérifie l'empreinte d'origine (77bcfa92…).
 -- ⛔ Avant : retirer du front le bouton « Compléter le conjoint » (sinon il recevrait « pas_de_conjoint_nomme »).
 -- ═══════════════════════════════════════════════════════════════════════════
 
@@ -10,7 +10,7 @@ BEGIN;
 
 DO $garde$
 BEGIN
-  IF md5(pg_get_functiondef('public.app_edit_conjoint_optimistic(text,jsonb)'::regprocedure)) <> '43faf0146165f3a23635523e7e7e0ff2' THEN
+  IF md5(pg_get_functiondef('public.app_edit_conjoint_optimistic(text,jsonb)'::regprocedure)) <> 'e5ac0baa5169265f5a49a73024fc12c2' THEN
     RAISE EXCEPTION 'ARRET : la fonction n''est pas celle de la piece F. Rien n''est ecrit.';
   END IF;
 END

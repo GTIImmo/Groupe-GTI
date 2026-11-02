@@ -772,4 +772,8 @@ est « couple » et son résumé « nommé » (la nuit du 02→03/11 : aujourd'h
 - **Premier usage réel À SURVEILLER** : remplir la place 2 d'une VRAIE case vide n'a jamais été prouvé sur ce cas exact (Hektor recopie le
   nom quand on vide, on ne peut pas fabriquer une vraie case vide) — vérifier ensuite que la seconde fiche se remplit et qu'AUCUNE fiche ne naît.
 - ⏭ Push du front ; pose de la fonction (accord) ; premier usage surveillé.
+- ✅ **FONCTION POSÉE le 02/11 ~12:55** (migration `couple_phase3f_completer_conjoint_2026_11_02`, garde 77bcfa92… passée) : authenticated
+  l'exécute, anon non. ⚠ Empreinte posée **e5ac0baa…** (la répétition donnait 43faf014… : même logique, lignes vides en plus dans le texte
+  posé) → le retour arrière a été corrigé pour vérifier **e5ac0baa…**. ⏰ Push du front (21732cc) pas encore arrivé à 12:55 ; la fonction
+  élargie est compatible avec l'écran en ligne (elle ne fait qu'accepter un état de plus).
 
