@@ -728,3 +728,19 @@ est « couple » et son résumé « nommé » (la nuit du 02→03/11 : aujourd'h
   `app_edit_conjoint_optimistic` à élargir à l'état « vide » ; **premier usage réel surveillé** (contrôle au retour : la seconde doit se remplir,
   aucune fiche ne doit naître). Les 1 528 cases rattachées par notre nuit et les 183 couples sans seconde / sans lien : PAS de bouton.
 
+## 32. COMPLÉTER POUR TOUS — CE QUE HEKTOR A VRAIMENT *(02/11 ~12:05, « Oui, audite », lecture seule de 12 formulaires, oui/non seulement)*
+
+- **Cas 3, couple sans seconde fiche (60)** — 3 lus : formulaire de COUPLE ; **1 sur 3 a DÉJÀ la place 2 remplie chez Hektor** (nom ET prénom
+  du conjoint) alors que notre app dit « à compléter » : nous ne lisons pas la place 2 du formulaire, seulement les secondes fiches. Les 2 autres :
+  place 2 vide → la remplir par le bloc `_m2` (même geste que la pièce E ; création éventuelle de la seconde par Hektor à vérifier au 1er usage).
+- **Cas 4, couple sans lien (123)** — 3 lus : **ce sont des PERSONNES SEULES chez Hektor** (formulaire `contacts_full_accueil`, pas de place 2) ;
+  notre nuit les dit « couple » par un SIGNE (civilité « Mr./Mme », « et » dans le prénom…) : un couple tenu sur UNE fiche. Pour leur donner
+  un conjoint chez Hektor, il faut le geste « Transformer en couple ».
+- **Cas 5, cases rattachées par notre nuit (1 528)** — 3 lus : **la case est une COQUILLE DE COUPLE entièrement vide** (formulaire de couple,
+  places 1 ET 2 vides) ; **la personne du bien est une PERSONNE SEULE** chez Hektor. Deux fiches séparées, aucun lien.
+- ⇒ **Les cas 4 et 5 passent tous deux par « Transformer en couple »** (personne seule → couple) : avec « contact déjà existant : Oui » pour
+  rattacher une fiche existante, ou « Non » pour saisir le conjoint. C'est le parcours de l'essai E6 (30/10) qui, avec « Non », a fini sur une
+  page blanche et une fiche DISPARUE. ⏭ À ÉPROUVER sur fiches FICTIVES, pas à pas, en relevant chaque requête, AVANT toute décision.
+- Cas 5, choix à faire par Frédéric ensuite : (a) remplir la coquille vide avec le conjoint (simple, deux fiches restent séparées chez Hektor),
+  (b) transformer la personne en couple et retirer la coquille (propre, dépend de l'essai).
+
