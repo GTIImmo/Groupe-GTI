@@ -13,6 +13,14 @@ classeur. Aucun appel à l'API Hektor, aucun login Google.
 
 ---
 
+> ⛔⛔ **CORRIGÉ LE 03/11 PAR .**
+> Cet audit a cherché la charge sur **trois** objets (mandat, compromis, vente) et a
+> conclu à son absence. **Elle est sur le QUATRIÈME : l’annonce**, dans
+> , clé  — 14 302 annonces, en clair,
+> descendue chaque nuit. Le § 1 et la conclusion ④ (« le classeur est la seule
+> source ») sont donc à lire avec A9. ⭐ En revanche A9 **confirme** la cause racine
+> de cet audit, et lui donne raison sur .
+
 ## § 0. LA RÉPONSE, EN HAUT DE PAGE
 
 ```
