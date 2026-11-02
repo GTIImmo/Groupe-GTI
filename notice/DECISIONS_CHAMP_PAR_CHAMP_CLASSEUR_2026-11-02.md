@@ -155,6 +155,94 @@ valeurs**, toutes des essais. Il n'y a rien à écraser.
 
 ---
 
+## § 3 octies. ⛔⛔ LA CHARGE NE SE DÉDUIT PAS DES HONORAIRES VENDEUR / ACQUÉREUR
+
+**02/11, le soir.** Frédéric : *« le registre des transactions n'a pas la colonne
+charge mais on la déduit, il y a une colonne honoraires vendeur et honoraires
+acquéreur, donc pas la peine d'ajouter une colonne non ? »*
+
+**Son vocabulaire est juste. Sa déduction, non.** Et la colonne existe déjà.
+
+### Ce qui est exact
+
+```
+app_affaire_ledger PORTE DEJA :
+   honoraires_entree / honoraires_entree_app   = « Honoraires vendeur (agence) »
+   honoraires_sortie / honoraires_sortie_app   = « Honoraires acquereur »
+   charge_commission_app                        <- LA COLONNE EXISTE DEJA
+App.tsx:30778 « Honoraires acquereur »   <- honoraires_sortie_app / honoraires_sortie
+App.tsx:30780 « Honoraires vendeur (agence) » <- honoraires_entree_app
+App.tsx:19306 honoraires_sortie_app <- statusChangeBuyerFees  (buyer = acquereur)
+```
+
+`charge_commission_app` est **remplie 8 fois sur 31 124** : c'est une saisie
+humaine, pas une déduction.
+
+### ⛔ POURQUOI LA DÉDUCTION NE PEUT PAS MARCHER — DEUX MESURES
+
+**1. Par dénombrement, et c'est imparable.**
+
+```
+app_affaire_ledger, 31 124 lignes :
+   honoraires_entree  (vendeur)   renseigne 19 860
+   honoraires_sortie  (acquereur) renseigne     79        <- SOIXANTE-DIX-NEUF
+   les deux ensemble                              3
+   aucun des deux                            11 188
+
+   par nature :      lignes   entree   sortie
+      offre          11 206        0       33
+      compromis      10 642   10 605       26
+      vente           9 276    9 255       20
+```
+
+Or **Hektor dit « acquéreur » pour 3 258 annonces**. Si la colonne portait
+l'information, il y manquerait **plus de 3 000 valeurs**. Elle ne peut donc pas
+la porter, quel que soit le raisonnement qu'on lui applique.
+
+**2. Par croisement avec la vérité connue — et le résultat est l'inverse.**
+
+Échantillon de 150 annonces « acquéreur » et 150 « vendeur » (dit par Hektor),
+croisé avec leurs compromis et ventes :
+
+```
+charge ACQUEREUR (dit par Hektor)  :  13 affaires
+   « honoraires vendeur » rempli   :  12   (92 %)   <- REMPLI QUAND MEME
+   « honoraires acquereur » rempli :   1   ( 8 %)
+
+charge VENDEUR (dit par Hektor)    : 112 affaires
+   « honoraires vendeur » rempli   : 112  (100 %)
+   « honoraires acquereur » rempli :   0
+```
+
+⭐⭐ **`honoraires_entree` est rempli dans 92 % des cas où c'est l'ACQUÉREUR qui
+paie.** La colonne ne dit pas **qui** paie : elle dit **combien** l'agence prend.
+Déduire « honoraires vendeur rempli → charge vendeur » donnerait donc le
+**contraire de la vérité** sur 12 cas sur 13.
+
+⚠ **Réserve, nommée** : les 150 annonces « acquéreur » n'ont donné que **13
+affaires** compromis/vente — l'échantillon du **sens** est petit. Le **dénombrement**
+(mesure 1), lui, porte sur la table entière et ne dépend d'aucun échantillon.
+
+C'est [[absence-d-un-champ-n-est-pas-un-filtre]] : un champ vide ne veut pas dire
+« l'autre paie », il veut dire « on n'a pas saisi ».
+
+### ✅ CONCLUSION, ET CE QU'IL FAUT FAIRE À LA PLACE
+
+```
+⛔ NE PAS deduire la charge des deux colonnes de montants.
+✅ NE PAS ajouter de colonne au registre des TRANSACTIONS : charge_commission_app
+   y est deja (et le § 3 ter l'alimente par la saisie, palier 2).
+✅ AJOUTER AU REGISTRE DES MANDATS une colonne qui porte LA VALEUR DE HEKTOR,
+   distincte de la saisie humaine :
+     mandat_charge_honoraires_app     saisie humaine (existe, vide)   <- le carnet
+     mandat_charge_honoraires_hektor  valeur lue dans honoraires_json <- la vitrine
+   La precedence a l'ecran : la saisie d'abord, Hektor en repli.
+⛔ ET D'ABORD trancher la reserve 2 du § 3 septies : QUELLE ANNONCE FAIT FOI pour
+   un mandat. Sans ca, on ecrirait la charge d'une annonce voisine.
+```
+
+---
+
 ## § 3 septies. ⭐ LA CHARGE N'EST PAS AU REGISTRE, ET L'API NE L'A PAS POUR 116 MANDATS
 
 **02/11, le soir.** Deux questions de Frédéric, deux réponses mesurées.
