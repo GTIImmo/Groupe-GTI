@@ -190,6 +190,15 @@ BEGIN
 END $fn$;
 
 revoke all on function public.app_reposer_charge_mandat_app(text, int) from public;
+-- ⛔⛔ LE REVOKE NOMME EST OBLIGATOIRE, mesure a l'epreuve du 02/11 :
+--   un DROIT PAR DEFAUT du schema public (pg_default_acl, pose par postgres)
+--   donne authenticated=X a TOUTE fonction neuve, et `from public` NE L'ENLEVE
+--   PAS (le pseudo-role public n'est pas le role authenticated). Sans cette
+--   ligne, n'importe quel utilisateur connecte pourrait lancer une re-pose
+--   GLOBALE. Sa jumelle app_reposer_cloture_mandat_app est bien fermee : c'est
+--   la comparaison avec elle qui a fait sortir le rouge.
+revoke execute on function public.app_reposer_charge_mandat_app(text, int)
+  from anon, authenticated;
 grant execute on function public.app_reposer_charge_mandat_app(text, int)
   to service_role;
 
@@ -338,6 +347,7 @@ DECLARE
   v_f1   int;
   v_f2   int;
   v_perd int;
+  v_dr   int;
 BEGIN
   SELECT count(*) INTO v_col FROM information_schema.columns
    WHERE table_schema = 'public' AND table_name = 'app_mandat_register_current'
@@ -367,7 +377,26 @@ BEGIN
    WHERE n.nspname = 'public' AND p.proname = 'app_set_mandat_charge_optimistic';
   IF v_f2 <> 1 THEN RAISE EXCEPTION 'CONTROLE E : la saisie manque'; END IF;
 
-  RAISE NOTICE 'LES 5 CONTROLES SONT VERTS. colonne OK · vue OK · cloture intacte (3/3) · re-pose OK · saisie OK';
+  -- ⭐ CONTROLE DES DROITS -- ajoute le 02/11 APRES que l'epreuve a sorti un
+  --   rouge ici. Une seule des deux fonctions doit etre ouverte a
+  --   authenticated : LA SAISIE. La re-pose est un geste de service.
+  SELECT count(*) INTO v_dr FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+   WHERE n.nspname = 'public'
+     AND p.proname in ('app_reposer_charge_mandat_app', 'app_set_mandat_charge_optimistic')
+     AND has_function_privilege('authenticated', p.oid, 'execute');
+  IF v_dr <> 1 THEN
+    RAISE EXCEPTION 'CONTROLE DROITS : % fonction(s) ouverte(s) a authenticated, il en faut 1 (la saisie seule)', v_dr;
+  END IF;
+
+  SELECT count(*) INTO v_dr FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+   WHERE n.nspname = 'public'
+     AND p.proname in ('app_reposer_charge_mandat_app', 'app_set_mandat_charge_optimistic')
+     AND has_function_privilege('anon', p.oid, 'execute');
+  IF v_dr <> 0 THEN
+    RAISE EXCEPTION 'CONTROLE DROITS : anon peut executer % fonction(s), il en faut 0', v_dr;
+  END IF;
+
+  RAISE NOTICE 'LES 7 CONTROLES SONT VERTS. colonne OK · vue OK · cloture intacte (3/3) · re-pose OK · saisie OK · droits authenticated 1/1 · anon 0';
 END $do$;
 
 COMMIT;

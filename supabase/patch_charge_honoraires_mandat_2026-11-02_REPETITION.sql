@@ -36,7 +36,12 @@ select 'D+E. les fonctions' as controle,
  where n.nspname='public'
    and p.proname in ('app_reposer_charge_mandat_app','app_set_mandat_charge_optimistic');
 
-select 'les droits : anon ne doit PAS pouvoir' as controle,
+-- 4 bis. ⭐ LES DROITS, CHIFFRES -- ce controle a sorti un ROUGE le 02/11 :
+--   un droit par defaut du schema public donne authenticated a toute fonction
+--   neuve, et `revoke all from public` ne l'enleve pas. La SAISIE doit etre
+--   ouverte a authenticated (c'est le front qui l'appelle, pour garder
+--   l'auteur) ; LA RE-POSE NON (geste de service).
+select 'les droits, par fonction' as controle,
        p.proname,
        has_function_privilege('anon', p.oid, 'execute') as anon_peut,
        has_function_privilege('authenticated', p.oid, 'execute') as authenticated_peut,
@@ -44,6 +49,34 @@ select 'les droits : anon ne doit PAS pouvoir' as controle,
   from pg_proc p join pg_namespace n on n.oid = p.pronamespace
  where n.nspname='public'
    and p.proname in ('app_reposer_charge_mandat_app','app_set_mandat_charge_optimistic')
+ order by p.proname;
+
+select 'les droits : authenticated sur LA SAISIE SEULE' as controle,
+       count(*) as trouvee, 1 as attendu,
+       case when count(*) = 1 then 'VERT' else 'ROUGE' end as verdict
+  from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+ where n.nspname='public'
+   and p.proname in ('app_reposer_charge_mandat_app','app_set_mandat_charge_optimistic')
+   and has_function_privilege('authenticated', p.oid, 'execute');
+
+select 'les droits : anon sur AUCUNE' as controle,
+       count(*) as trouvee, 0 as attendu,
+       case when count(*) = 0 then 'VERT' else 'ROUGE' end as verdict
+  from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+ where n.nspname='public'
+   and p.proname in ('app_reposer_charge_mandat_app','app_set_mandat_charge_optimistic')
+   and has_function_privilege('anon', p.oid, 'execute');
+
+-- 4 ter. ⭐⭐ TEMOIN DE COMPARAISON : les JUMELLES de la cloture. C'est en les
+--   regardant qu'on a vu le rouge -- la re-pose de la cloture est fermee, la
+--   mienne ne l'etait pas.
+select 'temoin : les jumelles de la cloture' as controle,
+       p.proname,
+       has_function_privilege('anon', p.oid, 'execute') as anon_peut,
+       has_function_privilege('authenticated', p.oid, 'execute') as authenticated_peut
+  from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+ where n.nspname='public'
+   and p.proname in ('app_reposer_cloture_mandat_app','app_set_mandat_cloture_optimistic')
  order by p.proname;
 
 -- 5. LA RE-POSE TOURNE A BLANC (elle ne touche rien si tout est deja juste)
