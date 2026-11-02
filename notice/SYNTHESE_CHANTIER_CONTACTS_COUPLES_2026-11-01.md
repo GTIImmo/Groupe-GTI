@@ -617,3 +617,24 @@ au lieu de `sociale`. Combien de sociétés ont été modifiées par l'app, et c
 (prouvé à la création, E1). Un **essai réel est donc possible SANS CODE** : un travail `update_hektor_contact` sur la première d'un couple
 fictif, avec `person_type = couple` et un prénom de conjoint, puis relire les deux fiches chez Hektor.
 
+## 26. ESSAI RÉEL « MODIFIER LE CONJOINT » — IL A TROUVÉ UN DÉFAUT DORMANT *(02/11 ~10:45-10:50, « Oui, essai d'abord »)*
+
+- **Couple fictif créé PAR L'ÉCRAN** (compte formation, Propriétaire, Couple, « ESSAI MODIF Un / Deux », e-mails `@example.com`, sans
+  téléphone, sans bien, e-mail RGPD DÉCOCHÉ) : travail `create_hektor_contact` `done`, **paire née d'un coup** — **20000031 ↔ 606104** (Un),
+  **20000032 ↔ 606105** (Deux, `couple_role = conjoint`).
+  ⚠ Trouvé en passant : le `couple_json` posé sur la première À LA CRÉATION dit `etat: aucun, conjoint: null` alors que la seconde existe
+  et est marquée « conjoint » (la nuit le corrige ; à revoir dans la fonction de la paire).
+- **Modification envoyée** par la fonction de l'app (`app_console_create_update_contact_job`, session de Frédéric) sur 20000031 avec
+  `person_type = couple` et `spouse_first_name = DeuxModifie` → travail `9b94606f…` **en ERREUR, AVANT tout envoi** :
+  « **Formulaire edition contact Hektor introuvable pour 606104** ». Rien n'a été écrit chez Hektor ni chez nous.
+- **La cause** : `updateHektorContactIdentity` relit le formulaire et exige le champ `nom` dans le groupe `mefContacts/contacts_full_accueil`.
+  Pour une fiche de COUPLE, ce champ n'y est pas sous ce nom (ou le groupe diffère). ⇒ **TOUTE modification d'une fiche de couple depuis
+  l'app échouerait** — par le bouton « Modifier la fiche » (envoi différé) comme par un travail direct ; et le même contrôle existe pour la
+  modification d'un MANDANT (`update_hektor_mandant_contact`, l. ~21086).
+- **Pourquoi personne ne l'a vu** : en tout, 26 modifications de contact depuis juin (25 réussies) — **aucune sur une fiche de couple**.
+  Le défaut dort ; il mordra au premier couple modifié dans l'app (14 779 couples affichables).
+- (La suppression, elle, marche sur un couple : son contrôle d'existence accepte aussi `idContact` dans la page.)
+- ⏭ **Pour corriger, il faut VOIR le formulaire d'un couple chez Hektor** (noms des champs du membre 1 et du membre 2) : une lecture, sur
+  606104. Le Chrome de Frédéric n'est pas connecté à Hektor ; je ne me connecte pas à sa place. Le couple fictif est GARDÉ pour ça, à
+  supprimer ensuite (par l'app : la cascade de Hektor emporte 606105, puis le nettoyage de 20000032).
+
