@@ -26,7 +26,18 @@ LES 3 FICHIERS    supabase/patch_charge_honoraires_mandat_2026-11-02.sql
                   ..._INVERSE.sql  (non joue -- c'est le retour arriere)
                   ..._REPETITION.sql
 LE FRONT          commit 0c52a37, npm run build vert
-                  ⛔ NON POUSSE, NON DEPLOYE, PAS EPROUVE EN REEL
+✅ POUSSE          02/11 au soir, son « vas y » -- e4d2ab2 -> 16a0f17 (27 commits,
+                  dont ceux de l'autre session sur le pilotage : un push emporte
+                  TOUTE la branche, on ne pousse pas « ses » commits seuls)
+✅ DEPLOYE         PROUVE, pas suppose : le bundle servi par Vercel
+                  (/assets/index-Xb9B9QLq.js) CONTIENT
+                  « app_set_mandat_charge_optimistic », un nom qui n'existe que
+                  dans cette version.
+                  ⚠ Render n'est pas concerne (le backend Python n'est pas
+                  touche) -- et son /health rend encore le commit c41f14b du
+                  12/10, ce qui est un AUTRE sujet, non traite ici.
+⛔ PAS EPROUVE     A L'ECRAN. Generer un vrai mandat cree un document chez
+EN REEL           Hektor : ce geste demande son accord, il n'est pas donne.
 COMMITS           f432dd5 (les patchs) · 0c52a37 (le front) · 19577f7 (le correctif
                   de droits, voir ci-dessous)
 ```
@@ -78,14 +89,48 @@ lisent `app_mandat_register_current` ne font **aucune `select *`**, n'utilisent
 **aucun `%rowtype`** et rendent toutes un type fixe — ajouter une colonne ne
 peut en casser aucune.
 
+### ✅ L'ÉPREUVE DE LA BASE EST VERTE — 7 TÉMOINS, ET AUCUNE TRACE LAISSÉE
+
+⭐ **Méthode : la transaction qui s'annule elle-même** (le patron du projet).
+Le bloc finit par une exception qui porte le compte rendu : on obtient les
+mesures, et **rien n'est écrit**. Mesuré ensuite : 0 ligne au carnet, 0 à la
+vitrine, et la ligne du mandat intacte.
+
+```
+cible      annonce 4 / mandat 17125 -- ⚠ 62774 (le bien d'essai de la cloture)
+           N'EST PLUS AU REGISTRE : son mandat a ete clos le 21/10. Aucune
+           annonce d'essai (>= 10000000) n'y figure. Comme l'epreuve s'annule,
+           une ligne reelle ne risque rien -- mais il n'y a PAS de bac a sable.
+
+1  « mandant » -> « vendeur »      rendu vendeur · carnet vendeur · vitrine vendeur
+   ET L'AUTEUR EST GARDE           ecrit_par = frederic.gerphagnon@...
+                                   (c'est le defaut du 21/10 qu'on ne refait pas)
+2  ⭐ LA RE-POSE                   vitrine videe a la main (on simule le worker),
+                                   puis posees:1 -> la vitrine REDIT « vendeur »
+3  « Acquéreur » avec l'accent     -> acquereur des deux cotes
+4  retour arriere (vider)          carnet efface ET vitrine effacee
+5  valeur hors vocabulaire         refusee : charge_invalide
+6  mandat inexistant               refuse : mandat_introuvable
+7  ⭐ TEMOIN INVERSE               0 autre ligne du registre touchee
+```
+
+⛔⛔ **ET LES DEUX VALEURS Y SONT**, c'est le point qui compte : le défaut de la
+transaction a dormi 17 jours parce qu'on n'avait que des « acquéreur » et aucun
+« vendeur ». Un seul côté ne prouve **rien**.
+
+⚠ **Ce que cette épreuve ne prouve PAS** : que l'écran appelle bien la fonction
+au bon moment. Elle prouve la **base**. L'écran reste à éprouver.
+
+---
+
 ### ⏰ CE QUI RESTE, DANS L'ORDRE
 
 ```
-1. POUSSER ET DEPLOYER le front (3 commits attendent), puis EPROUVER EN REEL
-   sur le bien d'essai -- jamais sur une vraie affaire. Son accord necessaire.
-   ⛔ LE TEMOIN QUI COMPTE : LES DEUX VALEURS. « vendeur » ET « acquereur ».
-     Le defaut de la transaction a dormi 17 jours parce qu'on n'avait que des
-     « acquereur » et aucun « vendeur ». Un seul cote ne prouve RIEN.
+1. ✅ POUSSE ET DEPLOYE (02/11 au soir). ✅ LA BASE EST EPROUVEE (7 temoins,
+   voir ci-dessus). ⛔ RESTE L'EPREUVE A L'ECRAN : generer un mandat sur une
+   cible qu'IL choisit, dans LES DEUX SENS (« Mandant » puis « Acquereur »).
+   ⚠ Ce geste cree un document chez Hektor -> SON ACCORD, et pas de bac a
+     sable disponible (62774 est sorti du registre).
 2. PALIER 2 (piece G) : la modale offre/compromis pre-remplit la charge depuis
    le registre des mandats. Precedence proposee : le choix de l'utilisateur >
    la charge de l'offre de la chaine > LA CHARGE DU MANDAT > « vendeur ».
