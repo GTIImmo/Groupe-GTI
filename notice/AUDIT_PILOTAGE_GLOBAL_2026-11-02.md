@@ -396,3 +396,25 @@ un expert ». Réponse :
   cours en colonnes** (12 proposées, 43 acceptées dont 18 > 30 j, 6 en rétractation, 71 actes datés, 14 dépassés) ;
   offres acceptées et compromis par mois avec repère 2025 ; actes à venir mois par mois ; agences avec taux de refus.
 - Mandats, Stock, Acquéreurs : v2, barre d'onglets mise à jour.
+
+## 20. Les deux compromis inversés — correction tentée le 02/11 au soir (accord de Frédéric)
+
+Frédéric, 02/11 : « c'est une erreur humaine, inversion honoraires et prix ». Montants qu'il a donnés :
+- **mandat 18645** (Saint-Bonnet-le-Bourg, compromis 50039, acte 14/11/2026) : prix 100 000, net vendeur **93 000**,
+  honoraires vendeur **7 000** (au lieu de 7 000 / 93 000) ;
+- **mandat 18406** (Ponsas, compromis 50030, acte 15/06/2027) : prix **193 000 FAI TTC**, honoraires **10 000 TTC**,
+  donc net vendeur **183 000** (au lieu de 9 300 / 183 700). Ma déduction « 119 300 » était FAUSSE.
+
+**Essai 18645 par l'écran (fiche du registre → Ouvrir le compromis → Modifier la transaction), 23:10 Paris** :
+travail `f28be6b5…`, charge propre (`champs_touches` = seller_fees + net_seller_price, rien d'autre).
+⛔ **REFUSÉ PAR HEKTOR, RIEN ENREGISTRÉ CHEZ LUI** : l'assistant passe 0 → 2, puis **bloque à l'étape 2 → 3**
+(module `commissionsCompromis`) ; le worker renvoie l'intervenant 33 (Alice RONDEAU, active) que la page a rendu.
+Les deux seules modifications de commission réussies avant (24933 le 18/09, 24113 le 23/10) étaient des biens
+d'essai SANS intervenant à cette étape. Cause probable, NON PROUVÉE : les montants d'intervenant renvoyés tels que
+rendus ne collent plus avec la nouvelle commission. Le message du worker (« aucun acquéreur envoyé ») est une
+fausse piste à cette étape — le code le dit lui-même (l. ~14425).
+⚠ **L'écran a écrit en optimiste** : le registre local porte déjà 7 000 / 93 000 (« sous compromis » 877 → 791 k€),
+Hektor garde 93 000 / 7 000 — la relecture de nuit remettra le registre sur la valeur de Hektor.
+⚠ Le travail est en « error », essai 1 sur 5 : le rejeu automatique le relancera et il échouera de la même façon
+(il s'arrête avant d'enregistrer).
+**18406 NON TENTÉ** : même chemin, même répartition 50/50 (C. REYNAUD) → même blocage attendu.
