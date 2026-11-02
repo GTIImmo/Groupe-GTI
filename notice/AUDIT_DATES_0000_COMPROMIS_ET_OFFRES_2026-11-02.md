@@ -285,6 +285,88 @@ que sa liste ne donne pas.
 
 ---
 
+### ✅ 3 quater. L'API A RÉPONDU — ET ELLE A TROUVÉ UN AUTRE DÉFAUT
+
+Frédéric, 02/11, 13:29 : *« vas y »*. **11 requêtes en 4 minutes, 3 logins**, bien en
+dessous du seuil qui nous avait fait bloquer le 17/09 *(16 logins en 22 s)*. Le client
+est **réutilisé** dans chaque lot, comme le code l'exige.
+
+**a) LA QUESTION DES 54 EST TRANCHÉE : HEKTOR N'EN SAIT PAS PLUS QUE SA LISTE.**
+
+```
+TEMOIN POSITIF  offre 10095 : montant 59 000, date 2021-11-09, etat accepte
+TEMOIN POSITIF  offre  9469 : montant 22 700, date 2019-04-03, etat accepte
+coquille        offre  6261 (VA30156/VALLAT) : trouve=true, propositions 0, rien
+coquille        offre  6265 (VA30176/RELAVE) : trouve=true, propositions 0, rien
+coquille        offre  6258 (VA30138/KADI)   : trouve=true, propositions 0, rien
+```
+
+⭐ **Les témoins positifs prouvent que la route répond**, donc les trois retours vides
+sont de vraies absences. **Elles existent chez Hektor** (`trouve: true`) mais il n'a
+**aucune** proposition à leur sujet. ➡ **Il n'y a rien à récupérer : le point 3 du § 4
+peut se décider maintenant, sans attendre d'autre mesure.**
+
+**b) ET LA DATE DES 14 N'EXISTE PAS CHEZ HEKTOR NON PLUS** — l'offre 1142 rend
+`dateProposition: "0000-00-00"` **dans son détail**, pas seulement dans la liste.
+Confirmé par une source indépendante.
+
+### ⛔⛔ 3 quinquies. LE DÉFAUT TROUVÉ EN PASSANT : UN ÉTAT DÉDUIT D'UN ORDRE SANS CLÉ
+
+En comparant le détail à la liste sur 1142, les deux routes de Hektor rendent le
+**même** historique dans un ordre **inversé** :
+
+```
+LA LISTE  (le run de nuit) : [13562 proposition, 13561 accepte]  -> etat « accepte »
+LE DETAIL (l'API)          : [13561 accepte, 13562 proposition]  -> etat « proposition »
+```
+
+Notre code déduit l'état de la **dernière ligne** de l'historique *(règle du 18/09 :
+« l'historique est TOUJOURS chronologique, 0 exception sur 11 098 offres »)*. ⚠ **Cette
+règle suppose une date pour trier. Quand toutes les dates sont égales, l'ordre n'a plus
+de clé — et l'état devient arbitraire.** Deux lectures de la même offre peuvent donner
+deux états. C'est **exactement la même famille** que la date qui glissait.
+
+⚠ **L'inversion n'est pas systématique**, je l'ai éprouvée : 1142 et 9856 divergent,
+8601 concorde, et le témoin à dates réelles (10095) concorde. C'est bien le signe d'un
+ordre **non garanti**, pas d'une règle inverse.
+
+**L'AMPLEUR, mesurée sur les 11 199 offres :**
+
+```
+1 seule proposition (l'ordre est sans objet)            :    73
+l'ordre est departage par les dates (cas sain)          : 11 109
+*** toutes les dates EGALES avec des types differents   :    17 ***
+      dont la date vaut 0000-00-00                      :    14   (nos 14)
+      dont une VRAIE date identique a la seconde        :     3   (9183, 8657, 7)
+```
+
+⭐⭐ **LES 3 DERNIÈRES SONT DES OFFRES NORMALES** — le défaut **n'est donc pas limité
+aux `0000`**. Deux lignes horodatées à la même seconde suffisent, et ça arrive quand
+Hektor enregistre la proposition et son acceptation d'un même geste.
+
+**15 des 17 portent un `accepte` dans leur historique, et nous n'en affichons que 7
+comme acceptées.** ⚠ Je n'en conclus pas qu'elles sont acceptées : une offre acceptée
+puisrenégociée revient légitimement à « proposition ». **Leur état est
+INDÉTERMINABLE, pas faux** — la nuance compte.
+
+**UNE PISTE, ET SES LIMITES.** La doctrine du projet dit : *jamais une position,
+toujours un identifiant.* L'id de ligne pourrait départager. Mesuré :
+
+```
+« l'id le plus PETIT est le plus RECENT » : tient sur 10 776 offres, fausse sur 333
+                                            -> 97,00 % de concordance
+```
+
+⛔ **97 % n'est pas une clé, et je ne l'applique pas.** Elle changerait l'état de
+**8 des 17** : 32266, 32173, 31611, 20588, 9183, 8601 et 3960 passeraient de
+« proposée » à **acceptée**, et 1308 de « proposée » à **refusée**.
+
+➡ **CE N'EST PAS LE MÊME CHANTIER** : toucher à la règle de l'état remanierait
+`derive_offre_state_and_event_date` et `affaire_ledger.py`, qui décident de l'état
+affiché de **11 199 offres**. ⬜ **À décider par Frédéric, et rien n'est codé.**
+
+---
+
 ## 4. CE QUI RESTE À TRANCHER PAR FRÉDÉRIC
 
 ```
@@ -297,11 +379,16 @@ que sa liste ne donne pas.
    il est code et mesure, il n'est PAS allume (cran 2). On l'allume ?
 
 3. LES 54 COQUILLES D'OFFRE : les montrer, les etiqueter, ou les masquer ?
-   ⭐ AVANT de choisir : interroger /Api/Offre/OffreById/ sur 2 ou 3 d'entre
-   elles (6251, 6252, 6261) pour savoir si le DETAIL en dit plus que la liste.
-   3 requetes, 3 secondes. Tant qu'on ne l'a pas fait, on ne sait pas si on
-   masque du vide ou si on masque une donnee qu'on n'a pas su lire.
-   ⚠ Accord requis : toucher l'API Hektor (blocage IP du 29/10).
+   ✅ L'API A REPONDU LE 02/11 A 13:29 (son « vas y ») : Hektor n'en sait PAS
+     plus que sa liste -- trouve=true, 0 proposition, aucun montant, aucune
+     date, et deux temoins positifs prouvent que la route repond.
+     ➡ IL N'Y A RIEN A RECUPERER : la question peut se trancher MAINTENANT.
+   ⚠ Et masquer n'est pas masquer du vide : 52 noms d'acquereurs sur 49 biens.
+
+5. ⛔⛔ NOUVEAU (02/11) : L'ETAT DE 17 OFFRES EST DEDUIT D'UN ORDRE SANS CLE DE
+   TRI -- 14 a 0000 et 3 a vraie date identique a la seconde. Voir § 3 quinquies.
+   La piste « l'id le plus petit est le plus recent » tient a 97 %, PAS 100 % :
+   rien n'est code, et ca toucherait l'etat affiche des 11 199 offres.
 
 4. LES 7 COMPROMIS A 1990-01-01 : jamais regardes de pres, 7 lignes.
 ```
