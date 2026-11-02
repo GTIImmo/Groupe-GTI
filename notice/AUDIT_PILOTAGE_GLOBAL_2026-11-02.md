@@ -545,3 +545,29 @@ c'est exactement ce que Frédéric a vu à la main.
 poster l'étape 0 avec une autre commission, relever la page des commissions, NE PAS enregistrer (le garde-fou
 d'étape le permet) — accord requis, bien à choisir ; 2) essais hors ligne sur la capture ; 3) essai réel complet sur
 le même bien, puis retour à la valeur d'origine ; redémarrage du service Admin file vide.
+
+### 20 quinquies. Décision A' et contre-audit de B (03/11, ~00:30) — rien codé
+
+**DÉCISION DE FRÉDÉRIC (03/11)** : « les supprimer sur Hektor, pas sur l'app bien sûr ». ⇒ A' : en modification, si la
+commission est touchée, le worker NE REPOSTE PAS les lignes d'intervenant à l'étape des commissions ; la répartition
+de l'app (`app_affaire_repartition`, des POURCENTAGES) ne bouge pas. Cohérent avec 06bd38b (14/09).
+⚠ NON MESURÉ : Hektor EFFACE-t-il les lignes enregistrées quand le post les omet, ou les garde-t-il (le panier passe
+de 1 483 à 1 639 car. à l'étape 2 → 3 : l'état peut vivre dans le panier) ? Ce soir, l'essai 3 est passé SANS lignes
+parce que Frédéric les avait déjà retirées : ça ne prouve pas l'effacement. ⇒ l'essai réel sur un compromis d'essai
+À RÉPARTITION est la seule preuve.
+
+**CONTRE-AUDIT DE B (« es-tu sûr ? »)**
+- Les 10 saisies que le worker lit par `affirme` (amount, sale_price, seller_fees, buyer_fees, buyer_fees_rate,
+  net_seller_price, retraction_days, sequestration, signature_date, transaction_date) : CHAQUE case de l'écran appelle
+  `toucherStatusChange` avec la MÊME clé (App.tsx l. 22250-22549). Les calculs automatiques qui changent une valeur
+  la marquent aussi (net déduit, l. 14144). Les pré-remplissages (l. 18326-18488, 18877-18908) ne la marquent pas —
+  c'est voulu : ce sont des reprises, pas des saisies.
+- Ce que B change vraiment : en modification, un champ non touché garde la valeur que Hektor rend.
+  ⚠ Effet de bord : le pré-remplissage lit le CARNET avant le registre (l. ~18310) ; une saisie restée au carnet sans
+  être arrivée chez Hektor n'est donc plus renvoyée par une modification qui ne la touche pas. Mesuré : 61 lignes au
+  carnet, 1 seule sans verdict (28978, 7 000 = la valeur de Hektor). Le renvoi d'une saisie perdue reste le travail
+  du verdict de nuit, pas d'une modification voisine.
+- Les écrans sans `champs_touches` (version en cache) : comportement inchangé.
+- ⛔ B SEUL N'AURAIT RIEN SAUVÉ CE SOIR pour le net et les honoraires (TOUCHÉS), ni le 13/09 sur 24933 (prix TOUCHÉ).
+  Il n'aurait sauvé que le prix de ce soir. LA VRAIE PROTECTION EST B2 (Hektor a changé depuis le clic → arrêt).
+- Conclusion : B est sûr dans son périmètre (petit) ; B2 est indispensable ; les deux se prouvent sur le même essai.
