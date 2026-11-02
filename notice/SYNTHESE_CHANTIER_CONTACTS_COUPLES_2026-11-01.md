@@ -430,3 +430,34 @@ annulée. **Jouée par moi : 7/7** — colonnes 50, invoker gardé, droits ok, l
 Interrupteur à crans existant : `app_setting` + `loadAppSettingValeur` (patron de `registre_transactions_ecran` : admin / on / caché).
 Recherche : les 302 couples à conjoint prénommé portent déjà son prénom dans `search_text` (P2) ; les 1 596 « nom recopié » n'ont pas de prénom.
 
+## 18. PIÈCE C — L'ANNUAIRE : ÉCRITE, ÉPROUVÉE, COMMITÉE (72900a1), NON POUSSÉE, INTERRUPTEUR NON POSÉ *(02/11, « Vas-y, masque aussi »)*
+
+**Ce que fait le code** (front seul, derrière `contacts_couples_ecran` dans `app_setting`, crans admin / on / absent) :
+- `lib/coupleAffichage.ts` (neuf) : `coupleAffiche(contact)` = null si `nature_fiche ≠ 'couple'` (règle du 02/11) ; sinon
+  l'étiquette « Couple · Prénom1 & Prénom2 » (« Couple » seul sans prénom du conjoint, jamais d'orange dans l'annuaire) et un
+  téléphone par personne avec son initiale quand le conjoint a un numéro DIFFÉRENT.
+- `lib/api.ts` : `loadContactsPage({ couples })` — allumé, lit 4 colonnes de plus (`couple_json, nature_fiche, couple_deuxieme,
+  civilite_app`) et masque `couple_role = 'conjoint'` + `nature_fiche = 'case_conjoint_vide'`. Éteint : la requête d'avant, à l'octet.
+  La recherche générale et le choix d'un mandant NE sont PAS touchés (ils gardent chaque personne).
+- `App.tsx` : lecture du cran (même patron que le registre des transactions ; `profile` et non `isAdmin`, déclaré plus bas) ;
+  la liste attend le cran ; ligne ordinateur (`is-couple`, pastille, deux téléphones) et carte téléphone (pastille, téléphones).
+- Styles : `annuaire-contacts-v2.css` (règles de la maquette validée, portée `.annuaire-v2`) et `mobile.css` (`.mobile-card-couple`).
+
+**Contrôles** :
+- Build vert sur une COPIE PROPRE (mes seuls morceaux), puis sur le commit exact ; l'autre session (registre 4C) modifiait en même
+  temps `App.tsx` et `api.ts` : ses morceaux sont restés HORS du commit (trié morceau par morceau, 0 ligne « couple » restée dehors).
+- 14/14 essais de `coupleAffiche` (esbuild + node), dont le TÉMOIN de la règle : « personne seule » avec `couple_json` vide → rien.
+- Requête réelle PostgREST (lecture seule) : actifs 31 905 → **27 422, soit 4 483 masquées = 1 899 conjoints + 2 584 cases vides,
+  au compte près** ; 0 conjoint et 0 case vide restants ; personnes seules 21 533/21 533, couples 4 608/4 608, sans nature 201/201
+  gardés ; colonnes lues et conjoint présent. Vitesse : 4,4 ms contre 4,1 ms (même index).
+- ⚠ NON VU À L'ÉCRAN : il faut le push (Vercel) puis le cran « admin ».
+
+**⚠ À savoir avant d'allumer** :
+- 1 126 des 2 584 cases vides masquées ont leur personne ARCHIVÉE : en vue « actifs », le foyer entier disparaît (la case était la
+  seule trace active, sans nom ni coordonnée). Le bien, lui, garde ses mandants.
+- Le total en haut de l'annuaire vient de l'instantané de la nuit : il compte encore les lignes masquées (un peu plus haut que la liste).
+- Ouvrir un contact par son numéro (`loadContactById`) ne lit pas encore les colonnes du couple : c'est la pièce D (la fiche).
+
+**Pour allumer** : 1) Frédéric pousse ; 2) avec son accord, coller/poser `supabase/patch_couple_phase3c_interrupteur_annuaire_2026-11-02.sql`
+(cran « admin ») ; 3) regarder l'annuaire ordinateur ET téléphone ; 4) passer à « on ». Retour arrière : supprimer la clé.
+
