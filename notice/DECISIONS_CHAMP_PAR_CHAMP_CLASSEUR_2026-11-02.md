@@ -155,6 +155,92 @@ valeurs**, toutes des essais. Il n'y a rien à écraser.
 
 ---
 
+## § 3 septies. ⭐ LA CHARGE N'EST PAS AU REGISTRE, ET L'API NE L'A PAS POUR 116 MANDATS
+
+**02/11, le soir.** Deux questions de Frédéric, deux réponses mesurées.
+
+### 1. Non, la charge n'est pas remontée au registre
+
+```
+app_mandat_register_current : 70 colonnes
+  liees aux honoraires ou a la charge : AUCUNE
+  (il y a mandat_montant, mais MESURE : il porte LE PRIX, pas les honoraires
+   -- mandat 18569 : prix 70 000 et mandat_montant 70 000, identiques)
+```
+
+La valeur arrive chaque nuit dans `hektor_annonce_detail.honoraires_json` et
+**s'arrête là**. Personne ne la remonte. La colonne
+`mandat_charge_honoraires_app`, posée le 02/11 en Supabase, est **vide**, et elle
+attend une saisie humaine — pas la valeur de Hektor.
+
+### 2. Les 116 mandats de 2026 sans charge : L'API NE L'A PAS
+
+**Mesuré en trois temps, du moins cher au plus cher.**
+
+```
+a) DANS LE MIROIR, sur les 116 :
+     honoraires_json = 'null'            75
+     honoraires_json RENSEIGNE           25   <- defaut de MON appariement, voir reserve
+     aucune ligne de detail              16
+
+b) DANS LA REPONSE BRUTE CONSERVEE (raw_api_response), sur les 75 :
+     cle « honoraires » presente dans 100 % des 61 462 reponses
+     valeur = null sur les 75, chemin /data/honoraires
+
+c) EN DEMANDANT A HEKTOR, EN DIRECT le 02/11 au soir (12 appels, lecture seule) :
+     11 mandats de 2026     -> honoraires = null
+     TEMOIN POSITIF 61398   -> [{"id":"84962","taux":"12000","charge":"vendeur"}]
+```
+
+⭐ **Le témoin positif est décisif** : le même appel, la même seconde, rend la
+donnée pour un bien qui l'a. Donc **ce n'est ni notre lecture, ni la fraîcheur du
+miroir** (des cibles lues le 31/10 sont null, et l'appel en direct le confirme).
+**Hektor n'a pas la valeur pour ces biens : elle n'y a pas été saisie.**
+
+```
+ET CE N'EST PAS QUE DES ESTIMATIONS -- les 11 cibles, par statut :
+   Actif 3 (dont 18353, EXCLUSIF, 192 400 €)  ·  Sous compromis 2
+   Vendu 1  ·  Clos 3  ·  Estimation 2
+   91 des 116 portent un montant de mandat, donc le bien est bien commercialise.
+```
+
+⚠ **C'est donc une anomalie de SAISIE à l'agence, pas un défaut technique** — et
+elle touche des biens **actifs et vendus** de 2026. Rien à corriger dans le code :
+à signaler à ceux qui saisissent.
+
+### ⛔ MES DEUX RÉSERVES, NOMMÉES
+
+**Réserve 1 — mon « clé absente » était FAUX.** Ma première fonction de recherche
+s'arrêtait à 4 niveaux de profondeur et ne lisait que les 4 premiers éléments
+d'une liste : elle a rendu « clé absente » 75 fois sur 75, alors que la clé est
+présente dans **100 %** des réponses. Un `LIKE` sur le texte brut l'a démenti.
+C'est [[lecture-ratee-n-est-jamais-un-vert]], en faux négatif : **une mesure qui
+ne trouve rien doit d'abord être soupçonnée, elle.**
+
+**Réserve 2 — DEUX APPARIEMENTS annonce → mandat donnent deux résultats, et je ne
+tranche pas.**
+
+```
+par hektor_annonce.no_mandat        10 188 mandats   8 421 vendeur  1 767 acquereur
+par le lien du registre             8 571 mandats    8 467 vendeur    104 acquereur
+                                                                     ^^^^^^^^^^^^^
+                                                     L'ECART EST ENORME
+les deux liens sont COHERENTS la ou ils coexistent : 93,4 % identiques,
+6,6 % se recoupent, ZERO cas disjoint sur 18 167 mandats
+```
+
+Donc l'écart ne vient pas d'un conflit mais du **périmètre** : `no_mandat` ramasse
+des annonces que le registre ne pointe pas, et ce sont elles qui portent presque
+tout l'« acquéreur ». ⛔ **Avant tout rattrapage, il faut trancher quelle annonce
+fait foi pour un mandat** — sinon on écrirait la charge d'une annonce voisine.
+Les chiffres du § 3 sexies sont ceux de `no_mandat` : **ils sont donc à revoir à
+la lumière de cette réserve.**
+
+⛔ **Rien n'a été écrit** : miroir ouvert en `mode=ro`, et les 12 appels à Hektor
+n'ont posé ni `sync_run` ni `upsert`. Arrêt prévu au premier refus, aucun refus.
+
+---
+
 ## § 3 sexies. ⭐⭐⭐ LA CHARGE ÉTAIT DÉJÀ CHEZ NOUS — HEKTOR NOUS LA LIVRE CHAQUE NUIT
 
 **02/11, le soir.** Frédéric : *« oublie ce classeur, cette information doit bien
