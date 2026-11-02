@@ -261,3 +261,39 @@ Proposé pour le pilotage : le statut de Hektor d'abord (Sous compromis, Sous of
 Total 699 — 4 684 983 / 3 904 153. Mandats échus parmi eux : 57.
 ⚠ Deux sources pour les biens engagés : honoraires de l'ANNONCE (compromis à venir 521 580 €) et du REGISTRE des
 transactions (actes datés 808 003 €, onglet Ventes) — à aligner au code. RIEN CODÉ, attend son avis.
+
+## 15. Analyse : un raisonnement PROPRE à chaque onglet (02/11 nuit, demande de Frédéric)
+
+Frédéric : « je ne voulais pas imposer ce raisonnement ; il y a encore Mandats et Acquéreurs, donc le Stock doit avoir
+un raisonnement propre ». Principe proposé : **chaque onglet répond à UNE question, avec SON périmètre et SON unité de
+temps**, et les onglets s'enchaînent comme le métier : la demande (acquéreurs) et l'offre qui entre (mandats) → ce
+qu'on a à vendre (stock) → ce qui sort (ventes).
+
+**Mesures nouvelles (lecture seule, droits de Frédéric)** :
+- **Devenir des mandats, par cohorte** (mandats débutés en 2024 / en 2025, état au 02/11/2026) :
+  exclusif 2024 : 357 → **59 % vendus**, 36 % sortis sans vente, médiane mandat → vente 203 j (→ compromis 107 j) ;
+  simple 2024 : 419 → **28 % vendus**, 69 % sortis sans vente, 235 j (→ compromis 127 j) ;
+  semi-exclusif 2024 : 121 → 40 % vendus, 56 % sortis. Cohorte 2025 : exclusif 48 %, simple 30 %, semi 28 % (encore
+  ouverte : 4-6 % engagés, 5-6 % en vente). Prix obtenu ≈ 93 à 97 % du prix du mandat (médiane).
+  ⚠ « sorti sans vente » mêle les biens retirés, vendus par un confrère (mandat simple) et les cas où la vente n'est pas
+  reliée au mandat (identifiants recyclés de 2026) : à éprouver avant de l'afficher comme un taux.
+- **Aboutissement d'un compromis** (dossiers 2022-2025) : 1 691 vendus, 249 annulés, 10 encore en cours → **≈ 87 %**.
+- **Rythme de vente** : 347 ventes sur les 12 derniers mois (≈ 29 / mois). **Stock sous mandat : 537 biens**
+  (413 disponibles, 43 sous offre, 81 sous compromis), **4 219 647 € TTC** d'honoraires ; 387 disponibles à mandat en
+  cours → **≈ 13 mois de stock** au rythme actuel.
+
+**Proposition (NON décidée)** :
+- **Stock** = « qu'avons-nous à vendre AUJOURD'HUI, combien ça vaut, est-ce que ça s'écoule ? » — périmètre = les biens
+  SOUS MANDAT (537), disponibles / engagés. Cinq questions : ce qu'on a ; ce que ça vaut (C.A potentiel ET C.A attendu
+  pondéré par les taux mesurés) ; est-ce que ça s'écoule (mois de stock, âge face au délai médian de vente, vraies
+  baisses) ; est-ce exposé (diffusé / pas en ligne / mandat à valider) ; est-ce en règle (mandat échu, honoraires non
+  saisis). Les 157 annonces actives sans mandat SORTENT du stock et vont dans Mandats (« à régulariser »).
+- **Mandats** = « rentre-t-on assez de BONS mandats, et que deviennent-ils ? » — flux de la période (rentrés,
+  exclusivité, prix) + cohortes (vendus / engagés / en vente / sortis, délais) + la production (annonces sans mandat,
+  mandats à signer, à valider, échéances).
+- **Ventes** = le résultat (inchangé), + l'aboutissement des compromis.
+- **Acquéreurs** = « a-t-on les acheteurs de notre stock ? » — recherches actives et fraîches, budgets, rapprochements,
+  visites prises dans l'app (choix du 02/11), demande face au stock par agence.
+- **Vue d'ensemble** = l'équation : entrées (mandats) → stock → sorties (ventes, retraits), + le C.A attendu total
+  (actes datés + stock pondéré).
+Prérequis signalé : la photo quotidienne (évolution du stock, sorties sans vente datées). RIEN CODÉ.
