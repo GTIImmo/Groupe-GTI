@@ -315,3 +315,67 @@ accepte en modification d'une vente sur un bien vendu. ➡ seul l'essai réel le
 - **À poser, avec accord** : coller le patch (puis la répétition n'est plus nécessaire, elle est jouée) ; pousser ;
   redémarrer les 4 services file vide — ⚠ le fichier du worker porte aussi le travail NON COMMITÉ de la session
   Youtrust (signature) : un redémarrage le mettrait en service ; essai réel sur une vente choisie par Frédéric.
+
+- ✅ **(a) POSÉ le 02/11 à 09:33 (heure de Paris), par moi avec l'accord de Frédéric** (« colle-le toi-même ») :
+  empreinte vérifiée 97b1b9d2 avant, **176ee0df** après ; SECURITY DEFINER, `search_path=public`, droits inchangés
+  (authenticated oui, anon non). Contrôle en transaction annulée, ses droits : vente 25595 → VM66432 / titre /
+  durand@ ; compromis 30666 identique. Aucun travail resté. Retour arrière : `_INVERSE.sql`.
+
+### 11 ter. Essai réel 4C (02/11/2026, 09:43, dans le Chrome de Frédéric, avec son accord)
+
+Cible : vente d'essai **23358**, dossier **1001393**, annonce **24113** (bien vendu, historique), 115 000 → 115 001 €.
+Services du worker redémarrés à 09:42:00-02 (après le code de 08:59:22, vérifié par l'heure des processus).
+- ✅ **Fiche et fenêtre en ligne** : registre 551 dossiers 2026 ; fiche complète (11 parties, 2 notaires nommés) ;
+  la fenêtre vise « Vente n° 23358 — dossier n° 1001393 » ; Annuler → la fiche reste.
+- ✅ **(a)** la charge du travail `c06b8660` porte VA6482, le titre, gonzalez@ (avant le patch : vides).
+- ✅ **(c)** journal : « Cloture du mandat non rejouee : la correction ne touche pas la date de vente » ; la date de
+  clôture du mandat 18787 reste écrite le 23/10 à 17:41:55 (témoin inchangé).
+- ✅ négociateur propriétaire inactif → écriture par le contexte AGENCE (repli) : le point « non mesuré » est levé.
+- ✅ **Hektor porte 115 001** ; travail `done` à 09:44:46.
+- ⚠⚠ **DÉFAUT TROUVÉ (antérieur à 4C, toute correction de vente)** : pour une vente, la fenêtre préremplit
+  `sale_price` avec le montant de la vente mais laisse `amount` au **prix de l'annonce** (App.tsx ~18263, branche
+  `sold`) ; la base fait `montant = coalesce(amount, sale_price)` → **registre et carnet à 128 787** (prix du mandat)
+  au lieu de 115 001, et la preuve du worker compare à `amount` → faux « Hektor N'A PAS PRIS » (le travail finit
+  `done`). Hektor, lui, reçoit `sale_price` (worker ~14041) : il est juste. Mesure : **1 seule vente touchée, l'essai**.
+  Aussi : « honorairesSortie : Hektor porte undefined » dans la même preuve (Hektor ne relit pas ce champ sur une vente).
+- ⏳ **Retour à 115 000 non fait** : avec le défaut, il réécrirait 128 787 au registre. Remède proposé : préremplir
+  aussi `amount` avec le montant de la vente (une ligne) ; le retour par l'écran remettra alors registre et carnet à
+  115 000 d'eux-mêmes.
+
+### 11 quater. Audit : modifier le PRIX d'une vente (02/11/2026, demandé par Frédéric)
+
+Audit limité à la correction du prix d'une VENTE (créer : seulement la base, mesurée ; autres objets non mesurés).
+- **Le worker le permet, et depuis le 08/09** (`console_job_worker.js` ~14020, branche `sold && enReprise`) :
+  `prixDeVente` = `sale_price`, sinon `amount` ; aussi la date et les honoraires, seulement ce que la charge porte.
+  Prouvé chez Hektor : 08/09 sur 24933 (176 500, relu), 18/09 (180 000, relu), 02/11 sur 24113 (115 001, relu).
+- **La fenêtre** : pour une vente, la case « Montant / prix public » est CACHÉE exprès (14/09 : « deux cases pour
+  une seule valeur ») ; seule « Prix de vente » se voit. Mais `amount` part QUAND MÊME dans la charge
+  (App.tsx ~19070), avec le prix de l'ANNONCE posé à l'ouverture (~17904) ; le préremplissage par la vente ne
+  remplit que `sale_price` (~18263).
+- **La base** (création ET modification) : `montant = coalesce(amount, sale_price)` → c'est le prix de l'annonce qui
+  entre au registre et au carnet dès que les deux diffèrent.
+- **La preuve du worker** (`CHAMPS_PROUVABLES.vente`, ~15624) garde `amount` avant `sale_price` (ordre de la table),
+  alors que l'envoi prend `sale_price` d'abord → faux « Hektor N'A PAS PRIS », et la saisie RESTE au carnet.
+- **Pourquoi personne ne l'a vu** : 3 modifications de vente avant aujourd'hui, toutes sur le bac à sable 24933, où
+  `amount` était absent (08/09) ou ÉGAL au prix de vente (18/09 : 180 000 = 180 000). Créations : 22 ventes depuis
+  l'app, 3 avec `amount` ≠ prix de vente, toutes sur 24933 et supprimées depuis ; la création de vente depuis un
+  compromis préremplit les deux cases à l'identique (~18815). Carnet : seule la vente d'essai 1001395 porte un
+  montant faux (128 787).
+- **Remède proposé (une ligne, front)** : pour une vente, envoyer `amount` = le prix de vente (~19070). La base, la
+  preuve et le carnet deviennent justes sans les toucher ; Hektor ne change pas (il reçoit déjà `sale_price`).
+  En option : la base préfère `sale_price` pour une vente (protège un écran resté en cache), et la preuve aussi.
+- **Non mesuré** : « honorairesSortie : Hektor porte undefined » sur 23358 (relu 1 500 le 18/09 sur 24933).
+
+### 11 quinquies. 4C-prix ÉCRIT (02/11/2026, « Go, ligne + base »), NON POSÉ, NON COMMITÉ
+
+- **Écran** (App.tsx, envoi de la fenêtre) : pour une vente, `amount` = le prix de vente (repli : l'ancien montant).
+- **Base** — `supabase/patch_vente_prix_de_vente_dabord_2026-11-02.sql` (+ `_INVERSE`, `_REPETITION`) : dans
+  `app_change_annonce_status_optimistic` (création) et `app_modifier_affaire_optimistic` (correction), pour une VENTE
+  le montant = `sale_price` d'abord, `amount` en repli ; offre et compromis inchangés (le `case` vaut NULL).
+  Empreintes 446df246 / 176ee0df → **11616ec6 / a52966fa**. **Répétition jouée** (transaction annulée, droits de
+  Frédéric, chaque appel dans une sous-transaction annulée) : création de vente 128 000 → 101 000 → retour 128 000 ;
+  correction 1001395 128 787 → 115 000 → 128 787 ; compromis 30666 témoin 104 000 partout. Rien de resté.
+- **Worker** (`CHAMPS_PROUVABLES.vente`) : `sale_price` jugé avant `amount`, comme l'envoi. `node --check` vert.
+- `npm run build` vert.
+- **À poser, avec accord** : coller le patch ; pousser ; redémarrer les 4 services (pour la preuve) ; puis remettre la
+  vente d'essai 23358 à 115 000 par l'écran → registre et carnet doivent revenir à 115 000 et la preuve être conforme.
