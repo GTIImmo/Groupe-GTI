@@ -155,6 +155,107 @@ valeurs**, toutes des essais. Il n'y a rien à écraser.
 
 ---
 
+## § 3 sexies. ⭐⭐⭐ LA CHARGE ÉTAIT DÉJÀ CHEZ NOUS — HEKTOR NOUS LA LIVRE CHAQUE NUIT
+
+**02/11, le soir.** Frédéric : *« oublie ce classeur, cette information doit bien
+être visible quelque part dans mon projet, vérifie les données récupérées par un
+appel id annonce dans le détail bloc mandat »*. **Il avait raison.** Je n'ai pas eu
+besoin d'ouvrir Hektor : c'est dans notre miroir.
+
+```
+data/hektor.sqlite -> table hektor_annonce_detail -> colonne honoraires_json
+
+  [{"id": "31", "taux": "5000", "charge": "vendeur"}, ...]
+                                 ^^^^^^^^^^^^^^^^^^
+                      LE CHAMP EST EXPLICITE, en clair, pas un code
+```
+
+```
+MESURE : 61 459 lignes de detail, 14 302 portent un bloc honoraires
+  valeurs rencontrees : « vendeur » 62 571 lignes · « acheteur » 19 352
+  (Hektor dit « acheteur », notre vocabulaire dit « acquereur »)
+  AUCUNE valeur vide, les 3 cles sont toujours la (id, taux, charge)
+  par annonce : 11 030 vendeur · 3 258 acheteur · 14 se contredisent
+  -> 10 188 MANDATS avec un verdict net (8 421 vendeur, 1 767 acquereur)
+```
+
+⚠ Le code de l'app lit déjà un bloc voisin, `mandat_infofi`, avec les clés
+`HONORAIRES`, `HONORAIRES_ACQUEREUR`, `PRIXNETVENDEUR` et `CHARGES`
+(`App.tsx` l. 3983 et suivantes). **Mais le champ qui tranche est `charge` dans
+`honoraires_json`** — celui-là n'est lu par personne aujourd'hui.
+
+### ⭐⭐ LE TÉMOIN CROISÉ : LES DEUX SOURCES SE VALIDENT
+
+```
+8 314 mandats presents dans LES DEUX sources :
+   hektor=vendeur    modelo=vendeur     6 819
+   hektor=acquereur  modelo=acquereur     958
+   hektor=acquereur  modelo=vendeur       414   <- desaccords
+   hektor=vendeur    modelo=acquereur     123   <-
+   ACCORD : 7 777 / 8 314 = 93,5 %
+```
+
+C'est une mesure dans les deux sens, pas une confirmation de confort : chacune
+des deux sources a été établie sans l'autre. ⚠ Les **537 désaccords (6,5 %)**
+restent à trancher ; Hektor est la source vivante, donc **Hektor gagne**, mais
+cela doit être écrit, pas supposé.
+
+### ⭐⭐⭐ ET SURTOUT : HEKTOR COUVRE LE RÉCENT, QUE LE FICHIER NE COUVRAIT PAS
+
+```
+LES DEUX SOURCES REUNIES -- Hektor d'abord, Modelo en secours
+annee   registre   Hektor   Modelo   AUCUNE   couvert
+2012       1 417      421       23      973    31,3 %
+2013       2 158       63        9    2 086     3,3 %   <- LE TROU
+2014       2 136       15       37    2 084     2,4 %   <- LE TROU
+2015       1 154      424      718       12    99,0 %
+2016       1 065       65      981       19    98,2 %
+2017       1 018      515      488       15    98,5 %
+2018         899      836       60        3    99,7 %
+2019         831      818        9        4    99,5 %
+2020         716      641       66        9    98,7 %
+2021         888      776      104        8    99,1 %
+2022       1 021      942       71        8    99,2 %
+2023       1 052      990       54        8    99,2 %
+2024         901      855       38        8    99,1 %
+2025         789      717        0       72    90,9 %   <- Hektor SEUL
+2026         682      566        0      116    83,0 %   <- Hektor SEUL
+TOTAL     18 260    9 653    3 051    5 556    69,6 %
+```
+
+**Les deux sources sont complémentaires, pas concurrentes** :
+Hektor tient 2018→2026 à 90-99 %, Modelo bouche 2015→2017 où Hektor est muet.
+De 2015 à 2024 la couverture réunie est de **98 à 99,7 %**.
+
+```
+REPARTITION FINALE sur les 12 704 mandats couverts :
+   vendeur    8 440
+   acquereur  4 264
+```
+
+### Ce que cela change pour le chantier
+
+```
+✅ LE RATTRAPAGE N'A PLUS BESOIN DU CLASSEUR NI DE DEDUCTION sur 2015->2026 :
+   la valeur est CONSTATEE, et pour 2018->2026 elle vient de Hektor lui-meme.
+✅ LES MANDATS A VENIR SE REMPLISSENT TOUT SEULS : le bloc descend chaque nuit.
+   La piece H (porte de saisie) n'est plus la seule voie -- elle devient le
+   RATTRAPAGE A LA MAIN des cas que Hektor ne porte pas.
+⬜ LE TROU RESTANT : 2012-2014, 5 143 mandats, ni l'un ni l'autre. Non explique.
+   Piste a mesurer : leurs annonces n'ont peut-etre jamais eu de detail descendu.
+⬜ 2025-2026 : 188 mandats manquants. Piste : le run ne relit le detail QUE si
+   la datemaj change ([[run-de-nuit-relit-le-detail-seulement-si-datemaj-change]]).
+⚠ 2 258 annonces portent un verdict mais AUCUN no_mandat -> perdues pour le
+   registre en l'etat.
+⬜ LES 30 MANDATS dont les annonces se contredisent, et les 537 desaccords
+   Hektor/Modelo : a trancher un par un, jamais en masse.
+```
+
+⛔ **Rien n'a été écrit.** Lecture seule, sur le miroir ouvert en `mode=ro`
+pour ne poser aucun verrou ([[phase2-sqlite-verrou-ecriture-long]]).
+
+---
+
 ## § 3 quinquies. ⭐⭐⭐ LE CODE EST DÉCODÉ — ET IL NE FAUT PAS S'EN SERVIR
 
 **02/11, le soir.** La passe propre, **un mandat par ligne**, est faite. Elle a
