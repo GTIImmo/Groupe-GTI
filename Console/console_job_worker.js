@@ -19073,20 +19073,42 @@ async function applyHektorContactPostCreateStep(job, created, payload) {
   return { status: "skipped", reason: "no_post_create_step" };
 }
 
+// ⭐ COUPLES (02/11/2026) -- LE FORMULAIRE D'UN COUPLE EST UN AUTRE GROUPE.
+//   Mesure sur la fiche d'essai 606104 (synthèse couples §26-27) : pour un COUPLE, tous les champs portent
+//   group="mefContacts/contactCoupleAll" -- les MÊMES noms (nom, prenom, email[]…) plus ceux du conjoint
+//   (nom_m2, prenom_m2, email_m2[], telephone_m2[]…). On ne filtrait que « contacts_full_accueil » : toute
+//   modification d'un couple s'arrêtait sur « Formulaire edition contact Hektor introuvable » (défaut dormant :
+//   0 couple modifié sur 26 modifications depuis juin). Le POST avec CE groupe est prouvé à la main le 02/11 :
+//   200, et la seconde fiche suit.
+//   Une personne seule garde EXACTEMENT le chemin d'avant (même groupe, même extraction).
+const HEKTOR_GROUPE_CONTACT_SEUL = "mefContacts/contacts_full_accueil";
+const HEKTOR_GROUPE_CONTACT_COUPLE = "mefContacts/contactCoupleAll";
+
+function hektorContactFormGroup(html) {
+  const source = String(html || "");
+  return new RegExp(`\\bgroup=["']${HEKTOR_GROUPE_CONTACT_COUPLE}["']`).test(source)
+    ? { group: HEKTOR_GROUPE_CONTACT_COUPLE, couple: true }
+    : { group: HEKTOR_GROUPE_CONTACT_SEUL, couple: false };
+}
+
 async function updateHektorContactIdentity(job, contactId, payload) {
   const contact = normalizeHektorContactPayload({ ...payload, hektor_contact_id: contactId }, { requireContactId: true, requireName: true });
   const formHtml = await fetchHektorContactEditForm(contactId);
-  const values = extractHektorFormValues(formHtml, "mefContacts/contacts_full_accueil");
+  const formulaire = hektorContactFormGroup(formHtml);
+  const values = extractHektorFormValues(formHtml, formulaire.group);
   if (!values.has("nom")) {
     throw new Error(`Formulaire edition contact Hektor introuvable pour ${contactId}`);
   }
+  // Le formulaire RELU fait foi : un couple chez Hektor est édité comme un couple (bloc _m2), quoi que dise
+  // l'envoi (l'écran envoie « personne_seule » en modification). Rien ne change pour une personne seule.
+  if (formulaire.couple) contact.contactStatus = "2";
   applyHektorContactIdentityValues(values, contact);
 
   await applyContactLocalityIds(values, contact, job, contactId);
 
   const body = new URLSearchParams();
   body.set("mode", "contacts-saveDataEditContact");
-  body.set("group", "mefContacts/contacts_full_accueil");
+  body.set("group", formulaire.group);
   body.set("idContact", String(contactId));
   for (const [key, value] of values.entries()) body.append(key, value);
 
@@ -19116,6 +19138,8 @@ async function updateHektorContactIdentity(job, contactId, payload) {
   }
   return {
     hektor_contact_id: String(contactId),
+    // COUPLES (02/11/2026) : le formulaire relu était celui d'un couple (le handler fait relire la seconde fiche).
+    couple: formulaire.couple,
     contact: {
       civilite: contact.civility,
       nom: contact.lastName,
@@ -19379,12 +19403,33 @@ async function handleUpdateHektorContact(job) {
     reason: "update_hektor_contact",
     priority: 82,
   });
+  // COUPLES (02/11/2026) : quand le conjoint a été modifié (bloc _m2 de la PREMIÈRE fiche), Hektor met la
+  // SECONDE à jour d'elle-même (prouvé le 02/11 sur 606104/606105) ; on la fait relire aussi, sinon elle
+  // attendrait la nuit. Best-effort : un échec ici ne défait pas la modification, il est seulement journalisé.
+  let syncConjoint = null;
+  const conjointModifie = ["spouse_last_name", "spouse_first_name", "spouse_email", "spouse_phone",
+    "spouse_address", "spouse_postal_code", "spouse_city"].some((cle) => payload[cle] !== null && payload[cle] !== undefined);
+  if (updated && updated.couple && conjointModifie) {
+    try {
+      const params = new URLSearchParams({ select: "hektor_contact_id", hektor_couple_contact_id: `eq.${identite}`, couple_role: "eq.conjoint", limit: "1" });
+      const lignes = await supabaseRequest(`app_contact_current?${params.toString()}`, { method: "GET" });
+      const conjointId = Array.isArray(lignes) && lignes[0] ? String(lignes[0].hektor_contact_id || "").trim() : "";
+      if (conjointId && conjointId !== identite) {
+        syncConjoint = await enqueueRefreshConsoleContactDataJobBestEffort(job, conjointId, { reason: "update_hektor_contact_conjoint", priority: 82 });
+      }
+    } catch (error) {
+      await logJob(job.id, "couple_conjoint_relecture", "error", "Relecture de la seconde fiche non posee", {
+        hektor_contact_id: identite, error: error && error.message ? error.message : String(error),
+      });
+    }
+  }
 
   return {
     status: "updated",
     ...updated,
     crm_settings: crmSettings,
     sync_job: syncJob,
+    sync_job_conjoint: syncConjoint,
   };
 }
 
@@ -20960,7 +21005,10 @@ async function updateHektorMandantContact(job, annonceId, contactId, payload) {
   if (!email) throw new Error("Email mandant requis");
 
   const formHtml = await fetchHektorContactEditForm(contactId);
-  const values = extractHektorFormValues(formHtml, "mefContacts/contacts_full_accueil");
+  // COUPLES (02/11/2026) : un mandant en COUPLE a le formulaire du groupe contactCoupleAll (voir
+  // hektorContactFormGroup) ; on le relit et on le renvoie avec SON groupe. Le conjoint n'est pas touché ici.
+  const formulaire = hektorContactFormGroup(formHtml);
+  const values = extractHektorFormValues(formHtml, formulaire.group);
   if (!values.has("nom")) {
     throw new Error(`Formulaire edition contact Hektor introuvable pour ${contactId}`);
   }
@@ -20986,7 +21034,7 @@ async function updateHektorMandantContact(job, annonceId, contactId, payload) {
 
   const body = new URLSearchParams();
   body.set("mode", "contacts-saveDataEditContact");
-  body.set("group", "mefContacts/contacts_full_accueil");
+  body.set("group", formulaire.group);
   body.set("idContact", String(contactId));
   for (const [key, value] of values.entries()) body.append(key, value);
 
