@@ -456,3 +456,36 @@ lignes de répartition chez Hektor), RELU conforme : prixPublique 95 000, prixNe
 registre local idem. ⚠ `taux_honoraire_entree` reste 7,000 au registre (vrai : 7,368) — la relecture de nuit le reprendra.
 Répartition de l'app : 50/50 RONDEAU (3 500 + 3 500) et 50/50 REYNAUD (5 000 + 5 000), justes — l'app garde des
 POURCENTAGES et recalcule les montants ; elle n'envoie pas la répartition à Hektor (décision de septembre).
+
+### 20 ter. Les alarmes, et l'audit du correctif (02/11, 23:45) — rien codé
+
+**ALARMES** : aucune à éteindre, mesuré. 0 notification depuis 22:00 UTC (la dernière `job_echec` est de 09:45, une
+modification de contact d'une autre session) ; 0 `app_monitor_event`, 0 `app_alert_state` touché ; 0 travail en
+« error » depuis 20:00 UTC. Les 3 échecs du travail f28be6b5 ont tous « retenu » leur alerte (elle ne part qu'à
+l'abandon) et le travail a fini `done` à l'essai 3 → aucune n'est partie.
+
+**LA FORMULE DES PARTS, MESURÉE sur 9 lignes d'`app_affaire_console`** : part d'un côté = commission totale HT
+(TTC / 1,2) × unites% du côté ; part d'une personne = part du côté × percent% (ca_montant idem × ca_percent%).
+23364 : 9 000 / 1,2 × 50 % = 3 750 ✓ · 23365 : 8 000 → 3 333,33 + 3 333,34 (l'arrondi va au 2e côté) ✓ ·
+50039 avant : 93 000 / 1,2 × 50 % = 38 750 ✓. (Mon « 100 % » du § 20 bis était faux : c'est 50 % par côté.)
+⚠ Après la correction de Frédéric, 50039 n'a PLUS AUCUNE ligne chez Hektor (`intervenants_json` null à 22:39) —
+Hektor affiche « Part Réseau 100 % » ; l'app garde RONDEAU 50/50.
+
+**DÉFAUT A — les parts restent sur l'ancienne commission.** En modification, la page des commissions rend les parts
+ENREGISTRÉES (calculées sur l'ancienne commission) et le worker les reposte (l. ~13993). Correctif proposé : à l'étape
+`commissions*` (compromis ET vente), SEULEMENT en reprise ET si seller_fees ou buyer_fees est touché, et s'il y a des
+lignes : multiplier chaque montant et ca_montant par (nouvelle commission totale / ancienne), l'ancienne lue sur le
+formulaire rendu à l'étape 0 ; l'arrondi au dernier pour que la somme tombe juste. Proportionnel = pas d'hypothèse
+de TVA. Création, et modification sans commission touchée : RIEN ne change.
+
+**DÉFAUT B — un champ NON touché part quand même.** En reprise, `amount` pose prixDeVente et prixPublique sans regarder
+`champs_touches` (l. ~14114). Sans effet au clic (même valeur), mais le REJEU 18 min plus tard a remis 100 000 sur le
+95 000 que Frédéric venait de saisir. Correctif proposé : en reprise, si `champs_touches` existe et ne contient ni
+amount ni sale_price, ne pas poser le prix (Hektor garde le sien) — même patron que la date, l. ~16991. Les écrans
+sans `champs_touches` gardent l'ancien comportement.
+B2 (à décider) : au rejeu, comparer la valeur rendue par Hektor à `valeur_hektor_au_moment` du carnet pour les champs
+TOUCHÉS, et refuser (refus d'état, sans rejeu) si quelqu'un a changé la fiche entre-temps.
+
+**ÉPREUVE** : essais hors ligne sur formulaires capturés (montants, arrondis, aucune ligne, ligne AGENCE à
+ca_percent 0), puis essai réel sur un compromis D'ESSAI à répartition — à choisir par Frédéric — qui exige un
+redémarrage du service Admin, file vide.
