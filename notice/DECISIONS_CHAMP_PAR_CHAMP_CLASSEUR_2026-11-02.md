@@ -13,8 +13,7 @@ colonne est marquée ⬜, **rien ne s'écrit pour elle**.
 ## § 1. L'ÉTAT DE LA REVUE
 
 ```
-TRANCHEES          6 colonnes   I J K L M N
-EN ATTENTE DE LUI  1 colonne    Q  (audit fait, question reposee)
+TRANCHEES          7 colonnes   I J K L M N  +  Q (02/11)
 RESTE A VOIR      31 colonnes
                  -------------
                   38 colonnes
@@ -107,7 +106,7 @@ suffit à fausser une paie.
 
 ---
 
-## § 3. ⬜ EN ATTENTE — Q, Charge Commission
+## § 3. ✅ TRANCHÉ — Q, Charge Commission
 
 **AUDIT FAIT le 02/11, à sa demande** (« il va falloir auditer avant car il y a
 la charge de la commission ou similaire déjà dans mon projet »). Il avait
@@ -140,7 +139,97 @@ raison, et voici ce qui existe :
 
 ---
 
-## § 4. ⬜ LES 31 COLONNES QUI RESTENT À TRANCHER
+### ✅ SA DÉCISION DU 02/11
+
+```
+decision      LE CLASSEUR FAIT FOI
+prise le      02/11/2026, par Frederic
+pour le passe « quand on va reprendre la colonne on completera les lignes
+              possibles » -- donc au RATTRAPAGE, et seulement les lignes
+              qu'on peut relier (955 renseignees sur 4 780)
+pour l'avenir la saisie se fait dans l'app, et elle est REPAREE (voir ci-dessous)
+```
+
+⭐ **Risque nul sur l'existant** : `charge_commission_app` ne porte que **8
+valeurs**, toutes des essais. Il n'y a rien à écraser.
+
+---
+
+## § 3 bis. ✅ LE CORRECTIF DE LA SAISIE EST POSÉ — commit `2a82417`
+
+Sans lui, remplir le passé n'aurait servi à rien : chaque nouvelle transaction
+aurait recommencé à vide.
+
+```
+LE DEFAUT      le select ouvre sur « Vendeur » (juste dans 93,6 % des cas), et la
+               RPC n'etait appelee que si on TOUCHAIT le champ. Personne n'avait
+               de raison d'y toucher -> rien n'etait ecrit.
+LA PREUVE      8 charges en base : 8 « acquereur », ZERO « vendeur ».
+               « Acquereur » est le seul choix qui oblige a toucher le select.
+LE CORRECTIF   `if (statusChangeCommissionTouchee || !reprendre)` -- la charge
+               s'ecrit TOUJOURS a la creation ; les honoraires restent sous le
+               drapeau (une clef vide effacerait une valeur reprise).
+CE QUI NE      modification sans drapeau : rien ne part, INCHANGE. La regle de
+CHANGE PAS     P5 (22/10) etait juste POUR LA MODIFICATION, elle est gardee.
+ETAT           npm run build vert · ⛔ NON POUSSE, NON DEPLOYE, PAS EPROUVE EN REEL
+```
+
+---
+
+## § 3 ter. ⬜ LES DEUX SUITES QU'IL A DEMANDÉES — possibles, et le patron existe
+
+### ② La modale offre/compromis doit PRÉ-REMPLIR la charge depuis le registre des mandats
+
+**OUI, c'est possible**, et sa mémoire était juste : la modale lit **déjà** le
+registre des mandats (`statusChangeTarget`, un `Dossier` issu de
+`app_registre_mandats_current`). Elle en affiche même déjà le numéro de mandat
+(App.tsx:22152) et *« Prix du mandat »* comme repère (App.tsx:22207).
+
+⛔ **Mais elle ne peut pas pré-remplir ce que le mandat ne porte pas.** ② attend
+donc ③. Les deux ne sont pas deux chantiers : c'est **un seul**, pris par les
+deux bouts.
+
+⭐⭐ **Et le patron existe déjà, éprouvé** : `mandat_date_cloture` fait
+**exactement ce chemin** depuis le 13/10, et la vue expose
+`mandat_date_cloture_app`. On recopie un chemin qui marche.
+
+### ③ Le choix fait à l'édition du mandat pour signature doit être MÉMORISÉ
+
+**OUI, possible**, et c'est le maîllon manquant qu'il décrit. Aujourd'hui la
+charge est choisie, imprimée sur le PDF (App.tsx:4803) et **jetée**.
+
+```
+LE CHEMIN COMPLET, quatre gestes dans cet ordre :
+  a. a la generation du document, ecrire la charge dans app_mandat_champ_app
+     (champ = 'charge_commission') -- AUCUNE migration : la table n'a pas de
+     contrainte sur le nom du champ
+  b. ⛔⛔ AJOUTER LE CHAMP AUX DEUX LISTES BLANCHES, sans quoi il est JETE EN
+     SILENCE :  magasin_mandat_app.py:64 (CHAMPS_SUIVIS)
+                contrat_autorite.py:92  (CHAMPS_APP_MANDAT)
+  c. exposer la colonne dans app_registre_mandats_current, comme
+     mandat_date_cloture_app
+  d. le front : le type Dossier porte le champ, et la modale pre-remplit
+     statusChangeChargeCommission depuis lui -- LE SELECT RESTE MODIFIABLE,
+     il l'est deja, et toucher le select leve le drapeau donc la modification
+     part normalement
+```
+
+⭐ **Le critère du projet justifie déjà ③** : `magasin_mandat_app.py:58` dit
+qu'on ne confie à l'app que les champs *« où Hektor n'a rien à dire »*. La date
+de clôture a franchi ce critère à 0,4 % ; la charge, Hektor en porte **zéro**.
+
+⚠ **Et un piège de vocabulaire à trancher en écrivant b** : le document de mandat
+dit **`mandant`**, la transaction et le classeur disent **`vendeur`**. La
+contrainte de la transaction n'accepte que `vendeur` / `acquereur`. Il faut donc
+traduire à l'écriture, et ⚠ notre « Mandant » est pollué depuis le 17/07.
+
+⚠ **Et le défaut du document est à corriger au passage** : il écrit
+« acquereur » dès qu'il y a des honoraires (App.tsx:4560), ce qui est **faux
+9 fois sur 10**.
+
+---
+
+## § 4. ⬜ LES 30 COLONNES QUI RESTENT À TRANCHER
 
 ```
 LOT 2  LE FINANCIER        P Commission TTC · AF Prix · AA Numero de facture
