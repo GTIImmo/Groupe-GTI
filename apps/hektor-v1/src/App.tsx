@@ -249,6 +249,7 @@ import { FICHE_NOTAIRE_V2, NotaireAVenir, NotaireDossiers, NotaireInterlocuteurs
 import NotificationsBell from './NotificationsBell'
 import SanteSystemeScreen from './SanteSystemeScreen'
 import RegistreTransactionsScreen, { type GesteDuRegistre } from './RegistreTransactionsScreen'
+import PilotageScreen from './PilotageScreen'
 import { bvBoot } from './lib/bienvuBoot'
 import { APP_BIENVU_ENABLED } from './lib/bienvuFlag'
 import { BienvuLogin } from './BienvuLogin'
@@ -343,7 +344,7 @@ const heavyListingFilterKeys = new Set<keyof AppFilters>([
   'offreStatus',
   'compromisStatus',
 ])
-type Screen = 'accueil' | 'annonces' | 'mandats' | 'estimations' | 'registre' | 'contacts' | 'agenda' | 'suivi' | 'sante' | 'transactions'
+type Screen = 'accueil' | 'annonces' | 'mandats' | 'estimations' | 'registre' | 'contacts' | 'agenda' | 'suivi' | 'sante' | 'transactions' | 'pilotage'
 type BusinessRequestType = 'demande_diffusion' | 'demande_baisse_prix' | 'demande_annulation_mandat'
 type SuiviRequestFilter = 'pending_or_in_progress' | 'accepted_history' | 'refused' | 'waiting_correction' | 'anomalies' | 'price_alert' | 'portfolio'
 type LightweightDetailTarget = Dossier | MandatRecord
@@ -13020,11 +13021,11 @@ const ADRESSE_DANS_LA_BARRE = true
 const ADRESSE_MEMO_CONNEXION = 'gti_adresse_avant_connexion'
 const ECRAN_VERS_ADRESSE: Record<Screen, string> = {
   accueil: 'accueil', annonces: 'annonces', mandats: 'annonces', estimations: 'estimations',
-  registre: 'mandats', contacts: 'contacts', agenda: 'agenda', suivi: 'suivi', sante: 'sante', transactions: 'transactions',
+  registre: 'mandats', contacts: 'contacts', agenda: 'agenda', suivi: 'suivi', sante: 'sante', transactions: 'transactions', pilotage: 'pilotage',
 }
 const ADRESSE_VERS_ECRAN: Record<string, Screen> = {
   accueil: 'accueil', annonces: 'mandats', estimations: 'estimations', mandats: 'registre',
-  contacts: 'contacts', agenda: 'agenda', suivi: 'suivi', sante: 'sante', transactions: 'transactions',
+  contacts: 'contacts', agenda: 'agenda', suivi: 'suivi', sante: 'sante', transactions: 'transactions', pilotage: 'pilotage',
 }
 const CLES_ADRESSE = ['ecran', 'annonce', 'contact'] as const
 
@@ -20447,6 +20448,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     if (screen === 'transactions') {
       return { title: 'Registre des transactions', copy: '' }
     }
+    if (screen === 'pilotage') {
+      return { title: 'Pilotage', copy: '' }
+    }
     if (screen === 'contacts') {
       return { title: bvs('Contacts Hektor'), copy: '' }
     }
@@ -20821,6 +20825,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   useEffect(() => {
     if (screen === 'suivi' && !isManagerOrAdmin) setScreen('mandats')
     if (screen === 'sante' && !isAdmin) setScreen('mandats')
+    // Pilotage (02/11/2026) : admins seuls (décision de Frédéric), comme Santé.
+    if (screen === 'pilotage' && profile && !isAdmin) setScreen('mandats')
     if (screen === 'transactions' && profile && registreTransactionsCran !== undefined && !registreTransactionsVisible) setScreen('mandats')
   }, [screen, isAdmin, isManagerOrAdmin, profile, registreTransactionsCran, registreTransactionsVisible])
   const images = useMemo(() => {
@@ -24288,7 +24294,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         date: event.event_at,
         message: parseJson<{ message?: string | null }>(event.payload_json, {}).message || '',
       }))
-    const showMobileCommandCard = screen !== 'accueil' && screen !== 'agenda' && screen !== 'transactions'
+    const showMobileCommandCard = screen !== 'accueil' && screen !== 'agenda' && screen !== 'transactions' && screen !== 'pilotage'
 
     return (
       <FilNavigationContext.Provider value={contexteFilNavigation}>
@@ -24621,6 +24627,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           />
         ) : screen === 'sante' ? (
           <SanteSystemeScreen isAdmin={isAdmin} onOpenDossier={openDossierDetailPage} />
+        ) : screen === 'pilotage' && isAdmin ? (
+          <PilotageScreen />
         ) : screen === 'transactions' ? (
           <RegistreTransactionsScreen isAdmin={isAdmin} libelleTypeBien={propertyTypeLabel} onOuvrirBien={(ligne) => void ouvrirBienDuRegistre(ligne)} onGeste={isManagerOrAdmin ? (ligne, geste) => void ouvrirGesteDuRegistre(ligne, geste) : undefined} fenetreOuverte={statusChangeTarget != null} onOuvrirContact={openContactDirectory} />
         ) : screen === 'registre' ? (
@@ -24797,6 +24805,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           <button className={`nav-button nav-button-contacts ${screen === 'contacts' ? 'is-active' : ''}`} type="button" title="Contacts" onClick={() => openScreen('contacts')}>Contacts</button>
           <button className={`nav-button ${screen === 'agenda' ? 'is-active' : ''}`} type="button" title="Agenda" onClick={() => openScreen('agenda')}>Agenda</button>
           {MENU_NET && APP_BIENVU_ENABLED && isManagerOrAdmin ? <span className="rn-label">Pilotage</span> : null}
+          {isAdmin ? <button className={`nav-button ${screen === 'pilotage' ? 'is-active' : ''}`} type="button" title="Pilotage" onClick={() => openScreen('pilotage')}>Pilotage</button> : null}
           {isManagerOrAdmin ? <button className={`nav-button ${screen === 'suivi' ? 'is-active' : ''}`} type="button" title="Suivi" onClick={() => openScreen('suivi')}>Suivi</button> : null}
           {isAdmin ? <button className={`nav-button ${screen === 'sante' ? 'is-active' : ''}`} type="button" title="Santé système" onClick={() => openScreen('sante')}>Santé</button> : null}
         </nav>
@@ -24868,7 +24877,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       {fenetreRechercheGlobale}
       <div className="workspace-shell">
         <main className="content">
-        {screen !== 'suivi' && screen !== 'accueil' && screen !== 'agenda' && screen !== 'transactions' ? (
+        {screen !== 'suivi' && screen !== 'accueil' && screen !== 'agenda' && screen !== 'transactions' && screen !== 'pilotage' ? (
         <section className={`hero ${screen === 'estimations' ? 'estim-toolbar' : ''}`.trim()}>
           <div className="hero-stack">
               <div className="hero-top-row">
@@ -25676,6 +25685,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           />
         ) : screen === 'sante' ? (
           <SanteSystemeScreen isAdmin={isAdmin} onOpenDossier={openDossierDetailPage} />
+        ) : screen === 'pilotage' && isAdmin ? (
+          <PilotageScreen />
         ) : screen === 'transactions' ? (
           <RegistreTransactionsScreen isAdmin={isAdmin} libelleTypeBien={propertyTypeLabel} onOuvrirBien={(ligne) => void ouvrirBienDuRegistre(ligne)} onGeste={isManagerOrAdmin ? (ligne, geste) => void ouvrirGesteDuRegistre(ligne, geste) : undefined} fenetreOuverte={statusChangeTarget != null} onOuvrirContact={openContactDirectory} />
         ) : (

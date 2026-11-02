@@ -3,7 +3,7 @@ import { BienvuLogo, BienvuSymbol } from '../BienvuLogo'
 import { APP_BIENVU_ENABLED } from '../lib/bienvuFlag'
 import '../menu-tiroir.css'
 
-export type AppScreen = 'accueil' | 'annonces' | 'mandats' | 'estimations' | 'registre' | 'contacts' | 'agenda' | 'suivi' | 'sante' | 'transactions'
+export type AppScreen = 'accueil' | 'annonces' | 'mandats' | 'estimations' | 'registre' | 'contacts' | 'agenda' | 'suivi' | 'sante' | 'transactions' | 'pilotage'
 
 // ⛔ 26/10/2026 -- LE MENU « TROIS TRAITS » (demande de Frederic).
 //   Sur telephone, la barre d'icones sous l'en-tete ne tenait plus (8 entrees pour un admin : libelles coupes,
@@ -43,6 +43,8 @@ const mobileNavItems: Array<{ screen: AppScreen; label: string; icon: string; de
   { screen: 'transactions', label: 'Transactions', icon: 'transactions', detail: 'Offres, compromis et ventes' },
   { screen: 'contacts', label: 'Contacts', icon: 'contact', detail: 'Annuaire et recherches' },
   { screen: 'agenda', label: 'Agenda', icon: 'calendar', detail: 'Rendez-vous et visites' },
+  // Pilotage (02/11/2026) : ADMIN SEUL, comme Santé (décision de Frédéric).
+  { screen: 'pilotage', label: 'Pilotage', icon: 'trend', detail: 'Ventes, mandats et stock du réseau', adminStrictOnly: true },
   { screen: 'suivi', label: 'Suivi', icon: 'target', detail: 'Demandes et validations', adminOnly: true },
   // ⚠ L'ecran Sante reste ADMIN SEUL -- exception voulue par Frederic le 12/10,
   //   alors que Suivi et l'outil Utilisateurs s'ouvrent au manager.
@@ -60,6 +62,7 @@ const PICTOS: Partial<Record<AppScreen, ReactNode>> = {
   suivi: <><rect x="5" y="4" width="14" height="17" rx="2" /><path d="M9 4V3h6v1M9 11l2 2 4-4M9 17h6" /></>,
   sante: <path d="M3 12h4l2-6 4 12 2-6h6" />,
   transactions: <path d="M4 17l5-5 4 4 7-8M15 8h5v5M3.5 21h17" />,
+  pilotage: <path d="M4 20V11M10 20V5M16 20v-7M22 20H2" />,
 }
 
 function Picto({ screen }: { screen: AppScreen }) {
