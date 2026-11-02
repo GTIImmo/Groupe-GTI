@@ -531,3 +531,18 @@ actifs lus sur 1 000 retrouvent une principale « couple »** (la lecture plafon
 **Pour allumer** : Frédéric pousse ; avec son accord, poser `supabase/patch_couple_phase3d_interrupteur_fiche_2026-11-02.sql` (cran
 « admin ») ; regarder une fiche couple nommé, une case vide, un conjoint ouvert depuis la recherche, ordinateur ET téléphone ; puis « on ».
 
+## 22. PIÈCE D EN LIGNE, CRAN « ADMIN » POSÉ, VUE À L'ÉCRAN *(02/11 ~09:56, « Je pousse, puis pose »)*
+
+- Frédéric a poussé (b857001 sur origin) ; Vercel sert `index-z0J1oqHw.js`, qui contient `contacts_couples_fiche`.
+- **Interrupteur posé par moi** : `app_setting.contacts_couples_fiche = 'admin'` (08:56:37 UTC). Les négociateurs ont la fiche d'avant.
+- **Vu dans le Chrome de Frédéric (admin)**, 0 erreur console :
+  - **couple nommé** (10355551) : liseré, pastille « Couple », onglets « prénom · fiche N · principal » / « prénom · fiche N » ; le clic sur le
+    second onglet remplace mobile, e-mail et adresse par ceux du conjoint ;
+  - **case vide** (10077849) : pastille ORANGE « Couple · conjoint à compléter », second onglet orange « Conjoint · à compléter » ;
+  - **conjoint ouvert directement** (10355552) : la fiche principale s'affiche, **sur l'onglet du conjoint**, avec ses coordonnées ;
+  - menu : « Archiver ce contact (tout le foyer) », « Supprimer (tout le foyer) » (menu ouvert puis refermé, rien cliqué dedans).
+- **Téléphone** (cadre de 390 px, même session) : pastille et deux onglets sur 341 px, aucun débordement horizontal. Cadre retiré.
+- ⚠ **Trouvé en regardant** : la case vide prise au hasard est une **étude de notaires** (SCP) classée « couple » par la nuit — sa fiche Hektor
+  est de type ménage. Ce n'est pas un défaut de l'écran : c'est la donnée de Hektor. Combien de non-personnes sont ainsi « couple » ? NON MESURÉ.
+- ⏭ RESTE : passer le cran à « on » (accord de Frédéric).
+
