@@ -108,13 +108,13 @@ sur VA30156 (*« surement annulé car pas de date et annonce clos »*) :
 | | les 54 offres | les 211 compromis |
 |---|---|---|
 | statut chez Hektor | **aucun** | 196 annulés, 15 actifs |
-| montant | **aucun** | **tous** en ont un |
+| montant | **aucun** *(⚠ voir le correctif ci-dessous : la colonne `raw_montant` est vide sur les 11 131 aussi — ce n'est pas un signe)* | **tous** en ont un |
 | séquestre | — | **tous** en ont un |
 | propositions / historique | **liste vide** | — |
 | témoin de contraste | **0 des 11 131 autres offres** est dans ce cas | 14 % des annulés |
 
-**Les offres sont des coquilles : Hektor ne porte rien du tout, juste un lien entre
-un bien et un acquéreur. Les compromis sont de vrais compromis complets à qui il
+**Les offres sont des coquilles : Hektor ne porte aucune PROPOSITION, juste un lien
+entre un bien et un acquéreur nommé *(⚠ « rien du tout » était faux, voir § 3 bis)*. Les compromis sont de vrais compromis complets à qui il
 manque la seule date — et c'est normal, ils n'ont pas été signés.**
 
 ⚠ Et « annulée » n'est **pas** prouvé pour les offres : Hektor ne dit pas
@@ -151,6 +151,65 @@ Exemple : l'offre 1142 (bien 53984) = proposition 97 000 € puis **accepté**
 ➡ **Conséquence pour le point 3 du § 4** : la question « montrer, étiqueter ou
 masquer » ne se pose que pour les **54**. Les 14 doivent rester visibles — il n'y
 manque qu'une date.
+
+### ⛔⛔ 3 bis. « LES 54, AUCUNE INFO ??? » — NON, ET J'AVAIS TORT DEUX FOIS
+
+Frédéric, 02/11 : *« LES 54 NON AUCUNES INFO ??? »*. Il a eu raison de me reprendre.
+Mesuré en ouvrant la charge **brute** de Hektor (`hektor_offre.raw_json`, colonne que
+je n'avais pas regardée), sur les 54 et sur les 11 131 pour comparer.
+
+**MES DEUX ERREURS, et elles viennent du même défaut de méthode :**
+
+⛔ **J'ai pris pour des signes des colonnes qui sont vides PARTOUT.** `raw_status` :
+vide sur les 54 **et sur les 11 131**. `raw_montant` : idem, **0 %** des deux côtés.
+`nom`, `prenom`, `civ`, `id_mandat` : vides sur les 54, mais vides aussi sur 76 % à
+97 % des normales. ⚠ **Un champ vide ne devient un symptôme que si on a mesuré qu'il
+est rempli ailleurs.** Je ne l'avais pas fait.
+
+⛔ **J'ai dit « Hektor ne porte rien du tout ».** C'est faux. Ce que les 54 portent :
+
+```
+numero d'offre Hektor                      54 / 54
+le bien, complet (dossier VA…, prix, titre) 54 / 54
+l'acquereur, identifie                      54 / 54
+  dont son NOM                              52 / 54
+  dont sa VILLE                             48 / 54
+  dont sa date d'enregistrement             54 / 54
+  dont 17 acquereurs ARCHIVES depuis
+```
+
+⭐ **IL N'Y A QU'UN SEUL CHAMP VRAIMENT ABSENT, ET C'EST LA CAUSE DE TOUT LE RESTE :**
+la liste `propositions` est **vide sur les 54, pleine sur 11 131 / 11 131 (100 %)**.
+C'est le seul contraste net du jeu. Et chez Hektor **le montant, le statut et la date
+d'une offre vivent DANS les propositions**, jamais dans l'offre — une proposition
+ressemble à ceci :
+
+```
+{"id":"31360","type":"proposition","montant":"59000","date":"2021-11-09 22:59:59", …}
+{"id":"31358","type":"accepte",    "montant":"59000","date":"2021-11-09 23:00:00", …}
+```
+
+➡ **Donc « sans date », « sans montant » et « sans statut » ne sont pas trois défauts :
+c'est UN SEUL FAIT dit trois fois.** La bonne définition d'une coquille est :
+**une offre dont la liste des propositions est vide.**
+
+**LA COHORTE EST FRAPPANTE** : **53 des 54** ont un acquéreur enregistré entre **2007
+et 2010** (32 en 2008), une seule en 2020. Les numéros d'offre sont contigus
+(6197 → 6265, plus la 3316 isolée). Ça ressemble à du vieux fonds dont les
+propositions n'ont pas suivi — ⚠ mais **ce n'est pas prouvé**, je n'ai pas la trace
+de l'import.
+
+⛔ **ET UNE PISTE EST MORTE, je le dis plutôt que de la laisser croire** : j'ai testé
+si le **numéro d'offre** permettait de retrouver la date par encadrement entre voisins.
+**Non** : sur les 11 131 offres datées triées par numéro, **53,9 % des voisins sont en
+désordre** — le numéro n'est pas chronologique. Résultat : **0 des 54** est encadrée au
+même mois. **On ne peut pas deviner leur date.**
+
+➡ **CE QUE ÇA CHANGE POUR LA DÉCISION DU § 4 POINT 3** : masquer les 54, ce n'est pas
+masquer du vide — c'est retirer **52 noms d'acquéreurs rattachés à 49 biens**, avec
+leur ville et leur ancienneté. ⭐ **Et ça rend l'appel à `/Api/Offre/OffreById/` plus
+utile, pas moins** : s'il existe un détail, c'est là que les propositions manquantes
+pourraient se trouver — c'est le seul champ qui manque.
 
 ---
 
