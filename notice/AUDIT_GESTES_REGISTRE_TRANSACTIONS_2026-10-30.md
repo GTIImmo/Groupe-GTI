@@ -171,3 +171,83 @@ Retour arrière : `update public.app_setting set value = 'off' where key = 'regi
 calculent sur la période choisie, comparaison avec l'année précédente non faite (c'est le pilotage, étape à
 part, admins seuls) ; pas d'export ; pas de filtre agence / négociateur ; « à traiter » non fait (étape à part).
 
+
+## 10. Étape 4 — la fiche du dossier : audit et plan (02/11/2026, RIEN CODÉ)
+
+Audit limité à l'objet **transaction** (offre, compromis, vente) et à ses dépendances (répartition, conditions,
+note, parties) ; les autres objets ne sont pas mesurés.
+
+**Grille des gestes (transaction), ce qui existe aujourd'hui dans la fiche annonce :**
+- **lire** : `loadAffairesForDossier` (ledger par bien), `loadAffairesConsole`, `loadAffaireChampsApp` (carnet),
+  `loadRepartitionsDesChaines`, `loadAffairesConditions`, `loadAffairesNotes` — tous par id, aucun ne demande un
+  `Dossier`. Regroupement par chaîne : `grouperAffairesParChaine` (App.tsx ~30310), rendu `CkAffaires` (pur).
+- **créer / modifier** : la modale de statut `openStatusChangeModal(dossier: Dossier)` (App.tsx ~17763) — elle
+  exige un **Dossier complet** et `isManagerOrAdmin` ; modifier = `app_modifier_affaire_optimistic` ; l'affaire
+  visée se choisit par `statusChangeAffaireChoisie`. Commission, répartition, conditions et note **n'existent
+  que dans cette modale** (pas de fenêtre de répartition à part) et s'écrivent après le travail.
+- **refuser / accepter / annuler / supprimer** : `gesteAffaireOptimistic(app_affaire_id, geste)` — un id suffit,
+  mais son seul appelant est dans la modale.
+- **droits** : écran = manager ou admin pour tout geste ; les RPC de statut exigent admin (commentaire
+  api.ts ~11244) ; **aucun contrôle « négociateur du bien »** dans l'écran.
+
+**Base (02/11)** : 12 178 dossiers, au plus 4 lignes par dossier, 0 dossier à deux compromis ou deux ventes,
+13 à plusieurs offres ; parties dans `app_affaire_partie` (vendeur 58 577, acquéreur 35 064, notaire vendeur
+16 580, notaire acquéreur 6 785) — table **non lue par le front** ; 5 conditions et 9 notes en tout.
+
+⚠⚠ **DÉFAUT DE L'ÉTAPE 3, lu dans le code, non vu à l'écran** : un clic dans le registre sur un dossier dont le
+bien est vendu / clos (absent de `app_dossier_current` ET des listes en mémoire) appelle
+`openDossierDetailPage` → `selectedDossier = null`, `loadDossierDetail` rend `null`, et comme la fiche n'est
+pas « demandée par l'adresse », elle reste ouverte **vide** (App.tsx ~15501-15558). En mode maquette le bien
+était en mémoire, d'où le vert. Or les ventes sont le gros du registre (287/287 ventes 2026 hors parc vivant).
+Le chemin qui marche existe : `loadHistoricalAnnonceDetailCache(hektor_annonce_id)` puis la fiche légère.
+
+⚠ **Réserve** : `app_affaire_condition` et `app_affaire_note` sont lisibles par tout compte connecté
+(`qual true`), comme l'était la répartition avant le 31/10.
+
+**Plan proposé (à valider) :**
+- **4A — la fiche en lecture** (additif, dans `RegistreTransactionsScreen` : le clic ouvre la fiche du DOSSIER,
+  plus la fiche du bien) : en-tête (étape, bien, mandat, agence, négociateur), 4 chiffres (prix, net vendeur,
+  honoraires entrée + sortie, acte prévu ou date de vente), parcours daté, répartition, parties (table des
+  parties), conditions, note, historique des lignes de la chaîne. Lu par `app_chaine_id` (la règle du ledger
+  laisse voir la chaîne à qui voit le dossier). Bouton « Ouvrir la fiche du bien » qui passe par la fiche
+  vivante, **sinon par le cache historique** — ce qui corrige le défaut ci-dessus. Aucune écriture.
+- **4B — les gestes sur un dossier dont le bien est vivant** : les boutons de la fiche ouvrent la modale
+  EXISTANTE, chargée sur le bien (`loadDossierDetail`), sur la bonne affaire et le bon onglet ; la fiche se
+  relit après le geste. Retouche d'App.tsx (un rappel passé à l'écran), la modale n'est pas modifiée. Manager
+  ou admin, comme aujourd'hui.
+- **4C — l'option B (bien vendu hors parc)** : à part, avec les 3 défauts lus le 30/10 et un essai réel sur une
+  cible choisie par Frédéric.
+
+### 10 bis. 4A + 4B ÉCRITS (02/11/2026, « Ensemble »), NON COMMITÉS, NON DÉPLOYÉS
+
+- `RegistreTransactionsScreen.tsx` : un clic sur une ligne ouvre la **fiche du dossier** (composant
+  `FicheDossier`, même fichier) : retour au registre, en-tête (étape, « Bien vendu / clos » si le bien
+  n'est plus en annonce, type · ville, mandat · agence · négociateur), 4 chiffres (prix, net vendeur,
+  honoraires entrée + sortie et % du prix, acte prévu avec « dans N jours / dépassé » ou date de vente),
+  parcours (une ligne par transaction de la chaîne, avec validité, fin de rétractation, acte prévu,
+  séquestre, acquéreurs ; « supprimée » si elle n'existe plus), répartition avec les montants
+  (pourcentage du TOTAL : 8 036 chaînes sur 8 049 somment 100), parties (vendeurs, acquéreurs, notaires,
+  personnes de la transaction la plus récente, clic = fiche contact), conditions, notes. Lecture seule.
+- `lib/api.ts` : `loadDossierDeLaChaine(chaineId)` (ledger par `app_chaine_id` + `app_affaire_partie` +
+  noms + conditions + notes + répartition ; maquette déduite du dossier fictif) et
+  `bienEstDansLesAnnonces(appDossierId)` (`app_dossier_current`).
+- **4B** — `App.tsx` : `ouvrirGesteDuRegistre` charge le bien (`loadDossierDetail`), ouvre la fenêtre de
+  statut EXISTANTE (`openStatusChangeModal`), pose l'onglet et la transaction choisie
+  (`setStatusChangeAffaireChoisie`, comme le bouton « Choisir »). Boutons : le geste suivant de l'étape en
+  tête (« Accepter ou refuser l'offre », « Passer au compromis », « Enregistrer la vente »), « Ouvrir » sur
+  chaque transaction, « Modifier » sur la répartition. Proposés seulement si manager ou admin ET bien
+  encore en annonce ; sinon la fiche dit « ce dossier se consulte ici ». La fenêtre n'est pas modifiée ;
+  à sa fermeture, la fiche et la liste se relisent.
+- **Défaut de l'étape 3 corrigé** — `ouvrirBienDuRegistre` : bien en annonce → fiche vivante ; bien
+  Vendu / Clos → `openLightweightDetailImport` (détail gardé, sinon la fenêtre « Charger la fiche
+  complète », la même que la liste « Étendre aux archives »). Mesure du 02/11 sur 2026 : le statut
+  Vendu / Clos du registre ⇔ bien hors annonces, exactement (0 vivant sur 395, 155 vivants sur 156 pour
+  les autres statuts) ; le seul cas restant (statut Actif hors annonces) reçoit un message.
+- **Contrôles** : `npm run build` vert ; maquette à 1280 px (deux colonnes, pas de débordement) et
+  375 px (une colonne, pas de débordement) ; « Enregistrer la vente » → fenêtre ouverte sur « Vendu » ;
+  « Ouvrir » sur l'offre → onglet « Offre » ; fermer → la fiche reste ouverte ; dossier vendu → pas de
+  geste + remarque ; « Ouvrir la fiche du bien » sur un vendu → fenêtre « Charger la fiche complète »
+  (fermée sans rien demander). ⚠ Le choix de la transaction dans la fenêtre n'a pas pu être vu en
+  maquette (la fenêtre n'y lit pas les transactions) ; **rien n'est vu sur les vraies données**.
+- Piège payé : la grille de la fiche héritait à l'écran du retrait du bloc « Chargement… » (même nœud
+  réutilisé par React) → une clé par état.
