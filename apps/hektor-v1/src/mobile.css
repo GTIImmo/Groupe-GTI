@@ -610,6 +610,23 @@
   line-height: 1.35;
 }
 
+/* COUPLES, piece C (02/11/2026) : la pastille « Couple · prenoms » sur la carte d'un couple. */
+.mobile-card-couple {
+  justify-self: start;
+  max-width: 100%;
+  overflow: hidden;
+  padding: 2px 8px;
+  border: 1px solid #f3cadd;
+  border-radius: 99px;
+  background: #fdf0f6;
+  color: #8c0044;
+  font-size: 11.5px;
+  font-weight: 700;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .mobile-card-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

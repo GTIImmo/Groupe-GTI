@@ -521,6 +521,14 @@ export type AppContact = {
   search_text?: string | null
   source_hash?: string | null
   refreshed_at?: string | null
+  hektor_couple_contact_id?: string | null
+  couple_role?: string | null
+  /** COUPLES (02/11/2026) : lus seulement quand l'interrupteur `contacts_couples_ecran` est allumé
+   *  (vue app_contacts_current, patch 3-B). « Couple » = `nature_fiche === 'couple'` (règle du 02/11). */
+  couple_json?: import('./lib/coupleAffichage').CoupleJson | string | null
+  nature_fiche?: string | null
+  couple_deuxieme?: string | null
+  civilite_app?: string | null
 }
 
 export type AppContactRelation = {

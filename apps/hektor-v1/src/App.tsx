@@ -262,6 +262,7 @@ import { compterAnnoncesAilleurs, type AnnoncesAilleurs } from './lib/api'
 import { bvs, bvt } from './lib/bienvuTexte'
 import { MENTION_AVENANT, MENTION_MANDAT, repereHtml, repereSignature, zoneMentionHtml } from './lib/signatureAnchors'
 import { sansCasesVides } from './lib/mandantsDocument'
+import { coupleAffiche } from './lib/coupleAffichage'
 
 type DetailContact = {
   id: string
@@ -15204,9 +15205,33 @@ export default function App() {
     return () => { cancelled = true }
   }, [dataScope, draftAnnonceQueuedEstimation, hektorActionJobs, hektorActionLinkedDossiers, session])
 
+  // COUPLES, pièce C (02/11/2026) : l'annuaire montre un couple sur UNE ligne derrière l'interrupteur
+  // `contacts_couples_ecran` (app_setting), à trois crans comme le registre des transactions --
+  // 'admin' = les admins seuls (pour l'éprouver), 'on' = tout le monde, absent ou autre = comme avant.
+  // `undefined` = pas encore lu : la liste attend cette lecture pour ne pas se charger deux fois.
+  // (On lit `profile` et non `isAdmin`, déclaré plus bas dans App : le tableau des dépendances est
+  //  évalué au rendu, une constante pas encore déclarée y planterait.)
+  const [contactsCouplesCran, setContactsCouplesCran] = useState<string | null | undefined>(undefined)
+  useEffect(() => {
+    if (hasSupabaseEnv && !session) {
+      setContactsCouplesCran(undefined)
+      return
+    }
+    let annule = false
+    void loadAppSettingValeur('contacts_couples_ecran').then((valeur) => {
+      if (!annule) setContactsCouplesCran(valeur)
+    })
+    return () => {
+      annule = true
+    }
+  }, [session])
+  const contactsCouplesVisible =
+    contactsCouplesCran === 'admin' ? profile?.role === 'admin' : ['on', 'true', '1', 'yes'].includes(contactsCouplesCran ?? '')
+
   useEffect(() => {
     if (hasSupabaseEnv && !session) return
     if (screen !== 'contacts') return
+    if (contactsCouplesCran === undefined) return
     let cancelled = false
     setContactsLoading(true)
     const directContactId = String(contactDirectLookupId ?? '').trim()
@@ -15218,7 +15243,7 @@ export default function App() {
           page: 1,
           pageSize: contactPageSize,
         }))
-      : loadContactsPage({ filters: dataFilters, page: contactPage, pageSize: contactPageSize, scope: dataScope })
+      : loadContactsPage({ filters: dataFilters, page: contactPage, pageSize: contactPageSize, scope: dataScope, couples: contactsCouplesVisible })
     contactsPromise
       .then((contactsPage) => {
         if (cancelled) return
@@ -15253,7 +15278,7 @@ export default function App() {
     return () => {
       cancelled = true
     }
-  }, [session, dataFilters, dataScope, screen, contactPage, contactDirectLookupId, dataReloadKey])
+  }, [session, dataFilters, dataScope, screen, contactPage, contactDirectLookupId, dataReloadKey, contactsCouplesCran, contactsCouplesVisible])
 
   // Chargement autonome de la fiche contact affichée en pop-up par-dessus une annonce.
   // Dépend de dataReloadKey (comme la source « listing », effet selectedContact) pour que
@@ -46820,6 +46845,8 @@ function ContactsScreen(props: {
     rappro: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round"><path d="M3 9.7 12 3l9 6.7V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.7Z" /><path d="M12 17.4c-1.7-1.2-3-2.3-3-3.85a1.55 1.55 0 0 1 3-.55 1.55 1.55 0 0 1 3 .55c0 1.55-1.3 2.65-3 3.85Z" fill="currentColor" stroke="none" /></svg>,
     arr: <svg viewBox="0 0 24 24" fill="none"><path d="m9 6 6 6-6 6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>,
   }
+  // COUPLES, pièce C (02/11/2026) : la pastille « Couple · prénoms » (maquette validée le 30/10).
+  const AV_ICONS_COUPLE = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="8.5" cy="8" r="3.2" /><circle cx="16" cy="9" r="2.8" /><path d="M2.8 19c.6-3.1 3-4.9 5.7-4.9s5.1 1.8 5.7 4.9" /><path d="M14 14.5c.6-.3 1.3-.4 2-.4 2.3 0 4.3 1.6 4.9 4.5" /></svg>
   const renderStatut = (cat: ContactDirectoryType, linked: number, activeSearch: number, roles: string[]) => {
     if (cat === 'notaire') {
       // ⑧ notaire, étape 3 : son côté, lu dans les rôles (le nombre de ses dossiers viendra avec la fiche notaire, étape 4)
@@ -46929,10 +46956,13 @@ function ContactsScreen(props: {
                   }
                   const estProvisoire = prov.is_provisional === true
                   const provEnErreur = estProvisoire && prov.provisional_status === 'error'
+                  // COUPLES, pièce C (02/11/2026) : null tant que l'interrupteur `contacts_couples_ecran`
+                  // est éteint (la liste ne lit alors pas `nature_fiche`) -- la ligne reste celle d'avant.
+                  const couple = coupleAffiche(contact)
                   return (
                     <div
                       key={estProvisoire ? `prov-${prov.creation_token}` : contact.hektor_contact_id}
-                      className={`contact-row${isSelected ? ' is-selected' : ''}${estProvisoire ? ' is-provisional' : ''}${provEnErreur ? ' is-provisional-error' : ''}`}
+                      className={`contact-row${isSelected ? ' is-selected' : ''}${estProvisoire ? ' is-provisional' : ''}${provEnErreur ? ' is-provisional-error' : ''}${couple ? ' is-couple' : ''}`}
                       title={provEnErreur ? (prov.provisional_error || bvs('La creation a echoue chez Hektor')) : undefined}
                       onClick={() => { if (estProvisoire) return; openContactDetail(contact.hektor_contact_id) }}
                       role="button"
@@ -46947,6 +46977,7 @@ function ContactsScreen(props: {
                               ? <span className={`ci-role ${provEnErreur ? 'prov-err' : 'prov'}`}>{provEnErreur ? 'Erreur de création' : 'En création…'}</span>
                               : shownCategories.map((cat, index) => <span key={`role-${cat}-${index}`} className={`ci-role ${cat}`}>{contactDirectoryTypeLabel[cat]}</span>)}
                           </div>
+                          {couple ? <div className="ci-couple" title={couple.etiquette}>{AV_ICONS_COUPLE}{couple.etiquette}</div> : null}
                           <div className="ci-id">
                             {estProvisoire
                               ? (provEnErreur ? bvs('Non créé chez Hektor') : bvs('Envoi à Hektor en cours'))
@@ -46956,7 +46987,11 @@ function ContactsScreen(props: {
                       </div>
                       <div className="statut-col">{shownCategories.map((cat, index) => <div className="st-block" key={`st-${cat}-${index}`}>{renderStatut(cat, linked, activeSearch, roles)}</div>)}</div>
                       <div className="coord-col">
-                        <div className="coord-tel">{AV_ICONS.tel}{phone || '—'}</div>
+                        {couple && couple.telephones.length
+                          ? couple.telephones.map((tel, index) => (
+                              <div key={`tel-${index}`} className={`coord-tel${index ? ' second' : ''}`}>{AV_ICONS.tel}{tel.qui ? <span className="who">{tel.qui}</span> : null}{tel.numero}</div>
+                            ))
+                          : <div className="coord-tel">{AV_ICONS.tel}{phone || '—'}</div>}
                         <div className="coord-mail">{AV_ICONS.mail}{email || '—'}</div>
                         <div className="coord-ville">{AV_ICONS.pin}{ville || '—'}</div>
                       </div>
@@ -47133,6 +47168,8 @@ function MobileContactCards(props: {
       ) : null}
       {props.contacts.map((contact) => {
         const tone = contactToneFromRoles(contactJsonList(contact.relation_roles_json), contact)
+        // COUPLES, pièce C (02/11/2026) : même règle que l'annuaire ordinateur (null interrupteur éteint).
+        const couple = coupleAffiche(contact)
         return (
           <article key={`mobile-contact-row-${contact.hektor_contact_id}`} className={`mobile-list-card is-${tone} ${detailOpen && contact.hektor_contact_id === props.selectedContact?.hektor_contact_id ? 'is-selected' : ''}`} onClick={() => openContactDetail(contact.hektor_contact_id)} role="button" tabIndex={0} onKeyDown={(event) => {
             if (event.key === 'Enter' || event.key === ' ') {
@@ -47145,7 +47182,11 @@ function MobileContactCards(props: {
               <div className="mobile-list-card-main">
                 <span className="mobile-card-meta">ID {contact.hektor_contact_id}</span>
                 <strong>{contact.display_name}</strong>
+                {couple ? <span className="mobile-card-couple">{couple.etiquette}</span> : null}
                 <span className="mobile-card-subline">{contact.email || contact.phone_primary || [contact.code_postal, contact.ville].filter(Boolean).join(' ') || '-'}</span>
+                {couple && couple.telephones.length
+                  ? <span className="mobile-card-subline">{couple.telephones.map((tel) => `${tel.qui ? `${tel.qui} ` : ''}${tel.numero}`).join(' · ')}</span>
+                  : null}
               </div>
             </div>
             <div className="mobile-status-row">

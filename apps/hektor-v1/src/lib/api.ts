@@ -249,6 +249,20 @@ const contactsListingSelect = [
   'commentaires',
   'refreshed_at',
 ].join(',')
+
+// COUPLES, pièce C (02/11/2026) -- derrière l'interrupteur `contacts_couples_ecran` (app_setting).
+// Ces colonnes n'existent dans la vue que depuis le patch 3-B (posé le 02/11) : ⛔ avant tout retour
+// arrière de ce patch, éteindre l'interrupteur, sinon l'annuaire tombe (« column does not exist »).
+const contactsCouplesSelect = `${contactsListingSelect},couple_json,nature_fiche,couple_deuxieme,civilite_app`
+// L'ANNUAIRE SEUL masque en plus, interrupteur allumé :
+//   · la ligne « conjoint » -- la seconde personne NOMMÉE d'un couple, déjà nommée sur la première
+//     (P2 ne pose ce rôle que si la première est envoyée et active : 1 898 sur 1 900) ;
+//   · la case VIDE d'un couple (`case_conjoint_vide`) -- 2 583 des 2 584 actives sont rattachées à la
+//     personne de leur bien (§12), la dernière a sa première envoyée.
+// La recherche générale et le choix d'un mandant gardent SANS_FICHE_DE_MENAGE seul : ils doivent
+// pouvoir trouver chaque personne. `is.null` explicite, pour la même raison que plus haut.
+const SANS_DOUBLE_DE_COUPLE_ROLE = 'couple_role.is.null,couple_role.not.in.(menage_resolu,conjoint)'
+const SANS_CASE_VIDE_DE_COUPLE = 'nature_fiche.is.null,nature_fiche.neq.case_conjoint_vide'
 const activeContactSearchFilterValue = '__active_search__'
 const withContactSearchFilterValue = '__with_search__'
 const withoutContactSearchFilterValue = '__without_search__'
@@ -3504,11 +3518,14 @@ export async function loadContactsPage({
   filters,
   page,
   pageSize,
+  couples = false,
 }: {
   filters: AppFilters
   page: number
   pageSize: number
   scope?: DataScope | null
+  /** Interrupteur `contacts_couples_ecran` allumé pour cet utilisateur (pièce C, 02/11/2026). */
+  couples?: boolean
 }): Promise<PageResult<AppContact>> {
   if (!hasSupabaseEnv || !supabase) return { rows: [], total: 0, page, pageSize }
 
@@ -3517,11 +3534,16 @@ export async function loadContactsPage({
   // Contacts is a high-volume listing; exact counts can hit Supabase statement timeout under RLS.
   const countMode: 'planned' = 'planned'
   const statsSnapshot = canUseContactStatsSnapshot(filters) ? await loadContactStatsSnapshot() : null
+  const base = supabase.from(contactsCurrentView)
   const { data, error, count } = await applyContactFiltersToQuery(
-    supabase
-      .from(contactsCurrentView)
-      .select(contactsListingSelect, { count: countMode })
-      .or(SANS_FICHE_DE_MENAGE),          // une personne, une ligne
+    couples
+      ? base
+          .select(contactsCouplesSelect, { count: countMode })
+          .or(SANS_DOUBLE_DE_COUPLE_ROLE)     // une personne, une ligne -- et un couple, une ligne
+          .or(SANS_CASE_VIDE_DE_COUPLE)
+      : base
+          .select(contactsListingSelect, { count: countMode })
+          .or(SANS_FICHE_DE_MENAGE),          // une personne, une ligne
     filters,
   )
     .order('duplicate_group_count', { ascending: false, nullsFirst: false })
