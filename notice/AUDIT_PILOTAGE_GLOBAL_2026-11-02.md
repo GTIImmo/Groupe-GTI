@@ -422,3 +422,30 @@ Hektor garde 93 000 / 7 000 — la relecture de nuit remettra le registre sur la
 **02/11 ~23:20 — Frédéric a corrigé le 18645 DIRECTEMENT DANS HEKTOR.** Le registre local (déjà à 7 000 / 93 000 par
 l'écriture optimiste) et Hektor disent désormais la même chose ; la relecture de nuit doit le confirmer (⏰ 03/11 :
 compromis 50039 → honoraires_entree 7 000, prix_net_vendeur 93 000). Le 18406 reste à corriger.
+
+### 20 bis. La cause, le rejeu, et la correction de l'app (02/11, 23:15-23:30)
+
+**LA CAUSE, trouvée par Frédéric dans Hektor et MESURÉE en base** : la page des commissions garde le montant de chaque
+intervenant calculé sur l'ANCIENNE commission. `app_affaire_console.intervenants_json` : RONDEAU 38 750 = 93 000 / 1,2
+(HT, 100 %) ; REYNAUD 76 541,67 = 183 700 / 1,2. Le worker REPOSTE ce que la page rend (« on reposte ce que Hektor a
+rendu », l. ~13993) → 38 750 HT pour une commission de 5 833 HT → Hektor refuse d'avancer. Frédéric a corrigé en
+SUPPRIMANT les anciennes lignes de répartition.
+
+**LE REJEU A RÉUSSI APRÈS SA CORRECTION — ET A RÉÉCRIT LE PRIX.** Essai 3 (23:28) : l'étape 2 → 3 passe (plus aucun
+intervenant renvoyé), enregistrement, relecture conforme : prixPublique 100 000, net 93 000, honoraires 7 000.
+⚠⚠ MAIS le formulaire rendu par Hektor portait alors **prix de vente 95 000 / prix public 95 000** (journal :
+`prix_vente_rendu 95000`) et le worker a posé **100 000** — le `amount` de la charge, figé au clic de 23:10 et NON
+touché (`champs_touches` = seller_fees + net_seller_price). ⇒ Un rejeu rejoue une PHOTO de la modale ; si un humain
+corrige chez Hektor entre-temps, le rejeu l'écrase. ⏰ À trancher avec Frédéric : 95 000 était-il voulu ?
+Le carnet de 28978 a été vidé par le worker (« le registre reprend ce que Hektor dit »).
+
+**CORRECTION DE L'APP (accord de Frédéric : « corrige apps pour les deux dossiers »)**, 23:2x, une transaction :
+sauvegarde `app_affaire_ledger_avant_inversion_honoraires_20261102` (2 lignes, RLS, fermée à anon/authenticated) ;
+28944 (50030) honoraires_entree 183 700 → 10 000, prix_net_vendeur 9 300 → 183 000, taux 95,181 → 5,181 ;
+28978 (50039) taux 93,000 → 7,000 (le reste déjà juste). Vu à l'écran : Ponsas 193 000 / 10 000 ; « sous compromis »
+877 → 617 k€ d'honoraires attendus. Retour arrière : recopier les colonnes depuis la sauvegarde.
+
+**LE CORRECTIF À FAIRE (pas codé, attend le « vas-y »)** : à l'étape des commissions, quand la charge AFFIRME
+seller_fees (resp. buyer_fees), recalculer chaque intervenant Entrée (resp. Sortie) : montant = nouvelle commission HT
+× percent / 100, ca_montant = idem × ca_percent / 100, l'arrondi au dernier pour que la somme tombe juste — OU retirer
+les lignes (ce que Frédéric a fait à la main ; Hektor affiche alors « Part Réseau 100 % »). Plus le défaut du rejeu.
