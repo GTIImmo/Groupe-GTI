@@ -193,3 +193,24 @@ Au rythme 2026 (2,17 M€ TTC en 10 mois), le stock vaut ≈ 17 mois d'honoraire
 chiffre (HT par défaut) ; la 6e carte de la Vue d'ensemble devient « C.A potentiel du stock ».
 ⚠ À vérifier au code : que ces honoraires d'annonce sont bien TTC ; les écarts avec les honoraires du registre
 pour les biens engagés (deux sources pour un même compromis).
+
+## 12. CODÉ (02/11 soir, « go code ») — commit 12dcff1, NON POUSSÉ, patch base NON POSÉ
+
+- **Écran** `PilotageScreen.tsx` + `pilotage.css` (préfixe `pl-`), **lectures et calculs** `lib/pilotage.ts`, entrée de
+  menu « Pilotage » (bureau et téléphone) **pour les admins seuls** (`isAdmin`, garde qui renvoie vers Annonces),
+  adresse `?ecran=pilotage`. Quatre onglets (vue d'ensemble, ventes, mandats, stock) + « Estimations bientôt ».
+  Filtres : période (2007 → année en cours « à date »), agence (clé unique `cleAgence`, 3 écritures en base),
+  comparer à N-1 « à la même date », HT (défaut) / TTC. Onglet et HT/TTC gardés dans le navigateur.
+- **Sources** : `app_registre_dossiers` N et N-1 + `app_affaire_repartition` (par paquets de 150 dossiers) ;
+  `app_mandat_register_current` depuis le 1er janvier N-1 (hors origine `recherche`) ; `app_console_document`
+  (signatures signées / en attente) ; `app_mandat_broadcast_current` (portails) ; **`app_pilotage_stock()`** (nouvelle).
+  Une source qui ne se lit pas n'éteint que son bloc (« n'a pas pu être lu » + Réessayer, détail en console).
+- **Base** : `supabase/patch_pilotage_stock_2026-11-02.sql` (+ `_INVERSE`, `_REPETITION`) — fonction en LECTURE seule,
+  admins seuls (0 ligne sinon), clé publique refusée. Éprouvée en transaction annulée : 699 biens, 521 avec
+  honoraires, Actif 3 768 418 €, 0 honoraire > 20 % du prix, **0,4 s**. ⏳ **À POSER avec l'accord de Frédéric** ;
+  tant qu'elle n'est pas posée, l'onglet Stock et les cartes qui en dépendent affichent « n'a pas pu être lu ».
+- **Contrôles** : `npm run build` vert ; maquette locale (données inventées, sans base) à 1 440 px et 375 px :
+  4 onglets rendus, 0 erreur console, 0 débordement mesuré ; onglet actif ramené en vue sur téléphone.
+  ⚠ **Non vu sur les vraies données** (il faut le push, puis le patch).
+- **Pas dans cette version** (dit à Frédéric) : filtre négociateur ; clic d'un chiffre vers la liste filtrée d'un autre
+  écran (le clic change d'onglet ou filtre l'agence) ; export ; visites ; objectifs (décision : pas maintenant).
