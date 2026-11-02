@@ -1356,7 +1356,16 @@ def load_relations(
                     transaction_id=clean_text(row["hektor_compromis_id"]),
                     transaction_state=clean_text(row["compromis_state"]),
                     # ⛔ 02/11 : `synced_at` RETIRE (0 ligne concernee -- meme defaut).
-                    transaction_date=premiere_date_exploitable(row["date_start"], row["date_signature_acte"], row["date_end"]),
+                    # ⚠⚠ MAIS PAS `premiere_date_exploitable` ICI, ET C'EST DELIBERE.
+                    #   Mon premier jet l'avait mise, par symetrie -- elle aurait vide
+                    #   252 dates de compromis a « 0000-00-00 » des la nuit suivante.
+                    #   Frederic, 02/11 : « avant de retirer les dates corrige sur les
+                    #   compromis, audit pour savoir la raison et comment on a fait avec
+                    #   les compromis pour les date 0000 ».
+                    #   Le defaut `synced_at` et le sort des « 0000 » sont DEUX
+                    #   changements : les fusionner aurait fait passer le second sans
+                    #   decision. Un seul geste par decision.
+                    transaction_date=first_non_empty(row["date_start"], row["date_signature_acte"], row["date_end"]),
                     transaction_amount=first_non_empty(row["prix_publique"], row["prix_net_vendeur"]),
                     last_seen_at=clean_text(row["synced_at"]) or None,
                 )
@@ -1381,7 +1390,10 @@ def load_relations(
                     transaction_id=clean_text(row["hektor_vente_id"]),
                     transaction_state="vente",
                     # ⛔ 02/11 : `synced_at` RETIRE (0 ligne concernee -- meme defaut).
-                    transaction_date=premiere_date_exploitable(row["date_vente"]),
+                    # ⚠ Comme le compromis ci-dessus : on ne juge PAS les « 0000 » ici
+                    #   tant que l'audit n'est pas fait. 0 vente concernee aujourd'hui,
+                    #   mais la regle doit etre la meme des deux cotes.
+                    transaction_date=first_non_empty(row["date_vente"]),
                     transaction_amount=clean_text(row["prix"]),
                     last_seen_at=clean_text(row["synced_at"]) or None,
                 )
