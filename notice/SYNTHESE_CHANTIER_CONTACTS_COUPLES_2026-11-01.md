@@ -776,4 +776,12 @@ est « couple » et son résumé « nommé » (la nuit du 02→03/11 : aujourd'h
   l'exécute, anon non. ⚠ Empreinte posée **e5ac0baa…** (la répétition donnait 43faf014… : même logique, lignes vides en plus dans le texte
   posé) → le retour arrière a été corrigé pour vérifier **e5ac0baa…**. ⏰ Push du front (21732cc) pas encore arrivé à 12:55 ; la fonction
   élargie est compatible avec l'écran en ligne (elle ne fait qu'accepter un état de plus).
+- ✅ **FRONT EN LIGNE ~13:05** (push de Frédéric ; `index-D4l9iPnf.js`). **Vu dans son Chrome (admin)** sur un vrai couple à case vide connue
+  (10213513) : pastille orange « Couple · conjoint à compléter », onglet orange désactivé, bouton **« + Compléter le conjoint »** ; au clic, la
+  fenêtre « Compléter le conjoint », partie « Conjoint à compléter · fiche 10213512 » (la case vide), 4 champs vides, placée sur la partie ;
+  **fermée SANS enregistrer** (0 travail créé, 0 en attente).
+- ⭐ **Vu sur ce vrai cas** : le prénom de la place 1 est « X et Y » — les DEUX personnes sont écrites sur la place 1, la place 2 est vide.
+  Bien compléter = corriger AUSSI le prénom de la place 1 (même fenêtre, partie Identité) : à dire aux utilisateurs.
+- ⏭ RESTE : premier usage réel surveillé (la seconde se remplit, aucune fiche ne naît) ; cran « on » de `contacts_couples_modif` (accord) ;
+  essai par l'écran de « Modifier le conjoint » sur le couple fictif (03/11, après la nuit) puis suppression du couple fictif.
 
