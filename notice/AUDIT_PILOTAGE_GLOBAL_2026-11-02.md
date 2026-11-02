@@ -175,3 +175,21 @@ exclusif 148 (26 %), accord 36, autre / vide 160 ; vraies baisses 87 (médiane �
 **02/11 soir — Frédéric : le type « ACCORD » = SEMI-EXCLUSIF.** Maquette renommée. Exclusifs + semi-exclusifs :
 2026 (253 + 54) / 682 = **45 %** contre 2025 (314 + 76) / 685 = **57 %** (−12 points). L'indicateur principal reste
 l'exclusif seul (37 % contre 46 %) ; le cumul s'affiche en second.
+
+## 11. Stock : le C.A POTENTIEL mis en avant (02/11 soir, demande de Frédéric)
+
+Frédéric : « il faut surtout mettre en avant le montant de C.A potentiel, donc les honoraires et non le prix de vente ».
+**Source** : `app_dossier_detail_current.detail_payload_json` → clé `honoraires_json` (texte JSON : liste de
+`{id, taux, charge}`, où `taux` est un MONTANT en euros — 919 entrées, toutes > 100, de 500 à 125 000 € ; `charge`
+= `vendeur` 886 ou `Acheteur` 33). ⚠ Hektor y garde des COPIES : 426 biens ont 1 entrée, d'autres 2, 3, 5 ou 6
+entrées identiques → règle : par bien et par charge, l'entrée au plus grand `id`, puis somme des charges.
+**Mesuré (TTC supposé, comme le registre)** : biens en vente **3 768 418 €** sur 406 / 570 biens (taux médian 6,51 %
+du prix, honoraires médians 8 000 €) ; sous compromis 624 855 € (76 / 86), sous offre 291 710 € (39 / 43) ;
+164 biens sans honoraires saisis (prix non couvert 14 204 409 € → ≈ 924 707 € estimés au taux médian), **dont 122
+parmi les 159 biens sans date de mandat** ; Issoire : 51 sur 81 sans honoraires. Par ancienneté : < 3 mois 944 512,
+3-6 mois 1 046 657, 6-12 mois 1 029 233, > 1 an 274 680, sans date 473 336. Par type : simple 1 703 952, exclusif
+1 235 670, semi-exclusif 349 460, non renseigné 479 336. **Biens non diffusables : 943 735 €** d'honoraires.
+Au rythme 2026 (2,17 M€ TTC en 10 mois), le stock vaut ≈ 17 mois d'honoraires. Maquette Stock refaite autour de ce
+chiffre (HT par défaut) ; la 6e carte de la Vue d'ensemble devient « C.A potentiel du stock ».
+⚠ À vérifier au code : que ces honoraires d'annonce sont bien TTC ; les écarts avec les honoraires du registre
+pour les biens engagés (deux sources pour un même compromis).
