@@ -474,4 +474,7 @@ Recherche : les 302 couples à conjoint prénommé portent déjà son prénom da
 - ⚠ Petit défaut d'aspect : sur ordinateur, la pastille est coupée par « … » quand les deux prénoms sont longs (colonne étroite) ;
   le texte entier est dans l'info-bulle. Sur téléphone, elle tient.
 - ⏭ RESTE : passer le cran à « on » (accord de Frédéric) ; puis la pièce D (la fiche : étiquette, deux onglets, rôles par personne).
+- ✅ **OUVERT À TOUT LE MONDE le 02/11 à 09:38** (« Oui, ouvre ») : `contacts_couples_ecran = 'on'`. Contrôle : `authenticated` a le
+  droit SELECT sur les 4 colonnes neuves, dans la table ET dans la vue (pas de droit par colonne qui manquerait). Les lignes visibles
+  par un négociateur restent celles de sa règle (même vue, `security_invoker`). Retour : remettre « admin », ou supprimer la clé.
 
