@@ -1,8 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
-  bienEstDansLesAnnonces, loadBienHistoriquePourStatut, loadDossierDeLaChaine, loadRegistreDossiers, loadRepartitionsDesChaines,
-  type AffaireLedgerRow, type AffairePartieRow, type DossierDeLaChaine, type RegistreDossierRow, type RegistreEtape, type RepartitionLigne,
+  bienEstDansLesAnnonces, createConsoleDocumentSignedUrl, createPrepareConsoleDocumentJob, loadBienHistoriquePourStatut, loadConsoleDocuments,
+  loadDossierDeLaChaine, loadHistoriqueDuDossier, loadNomsNegociateurs, loadRegistreDossiers, loadRepartitionsDesChaines,
+  type AffaireLedgerRow, type AffairePartieRow, type DossierDeLaChaine, type HistoriqueDossierLigne, type RegistreDossierRow, type RegistreEtape, type RepartitionLigne,
 } from './lib/api'
+import type { ConsoleDocument } from './types'
 import './registre-transactions.css'
 
 // Registre des transactions -- étape « écran liste » (01/11/2026), derrière l'interrupteur
@@ -38,12 +40,145 @@ const ETAPES: Array<{ cle: RegistreEtape; libelle: string }> = [
 ]
 const LIBELLE_ETAPE = Object.fromEntries(ETAPES.map((etape) => [etape.cle, etape.libelle])) as Record<RegistreEtape, string>
 const EN_COURS: RegistreEtape[] = ['offre_proposee', 'offre_acceptee', 'compromis']
+const OFFRES: RegistreEtape[] = ['offre_proposee', 'offre_acceptee']
 
 const PAR_PAGE = 50
 const ANNEE_COURANTE = new Date().getFullYear()
 const ANNEES = Array.from({ length: ANNEE_COURANTE - 2006 + 1 }, (_, index) => ANNEE_COURANTE - index)
+const MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre']
 
 type Tri = 'recent' | 'prix' | 'honoraires'
+type Sens = 'desc' | 'asc'
+// « offres » (v3.1) = offre proposée + offre acceptée : le filtre de la carte « Offres en cours ».
+type FiltreEtape = RegistreEtape | 'en_cours' | 'offres' | null
+
+// ─── Icônes au trait (maquette v3.1, mêmes tracés) : constantes, jamais de donnée ───
+const TRACES = {
+  search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
+  left: '<path d="m15 6-6 6 6 6"/>', right: '<path d="m9 6 6 6-6 6"/>', down: '<path d="m6 9 6 6 6-6"/>',
+  horloge: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
+  coche: '<path d="m5 12.5 4.5 4.5L19 7.5"/>',
+  stylo: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13 7 4 4"/>',
+  cle: '<circle cx="8" cy="15" r="4"/><path d="m11 12 8.5-8.5M16 7l2.5 2.5M13.5 9.5l2 2"/>',
+  croix: '<path d="M7 7l10 10M17 7 7 17"/>',
+  barre: '<circle cx="12" cy="12" r="8.5"/><path d="m6 6 12 12"/>',
+  alerte: '<path d="M10.3 4.2 2.6 18a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0z"/><path d="M12 9.5V14M12 17.5h.01"/>',
+  info: '<circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 8h.01"/>',
+  maison: '<path d="M3.5 11 12 4l8.5 7"/><path d="M6 9.5V20h12V9.5"/><path d="M10 20v-5h4v5"/>',
+  immeuble: '<rect x="5" y="3.5" width="14" height="17" rx="1.5"/><path d="M9 7.5h2M13 7.5h2M9 11h2M13 11h2M9 14.5h2M13 14.5h2M10.5 20.5v-3h3v3"/>',
+  terrain: '<path d="M3 19h18"/><path d="m5 19 4.5-7 3 4 2-2.5L19 19"/><path d="M15 4v6M15 4h4.5L18 5.75 19.5 7.5H15"/>',
+  ouvrir: '<path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>',
+  crayon: '<path d="M4 20h4L19 9l-4-4L4 16z"/>',
+  calendrier: '<rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M8 3v4M16 3v4M3.5 10h17"/>',
+  personnes: '<circle cx="9" cy="8.5" r="3.2"/><path d="M3 19.5c.7-3.3 3.1-5 6-5s5.3 1.7 6 5"/><path d="M15.5 5.5a3.2 3.2 0 0 1 0 6M17.5 14.6c1.6.7 2.8 2.3 3.3 4.9"/>',
+  corbeille: '<path d="M4.5 7h15M10 7V4.5h4V7M6.5 7l1 13h9l1-13"/>',
+  note: '<path d="M5 4h10l4 4v12H5z"/><path d="M15 4v4h4M9 12.5h6M9 16h4"/>',
+  doc: '<path d="M6 3.5h8.5L18 7v13.5H6z"/><path d="M9 11h6M9 14.5h6M9 18h3.5"/>',
+  agence: '<path d="M4 9.5 5.5 4h13L20 9.5"/><path d="M4 9.5a2.7 2.7 0 0 0 5.3 0 2.7 2.7 0 0 0 5.4 0 2.7 2.7 0 0 0 5.3 0"/><path d="M5.5 11.5v9h13v-9M10 20.5v-5h4v5"/>',
+  trier: '<path d="M7 4v16M3.5 7.5 7 4l3.5 3.5M17 20V4M13.5 16.5 17 20l3.5-3.5"/>',
+  rafraichir: '<path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4.5V11h-6.5"/>',
+  filtre: '<path d="M4 5h16l-6 7.5V19l-4 1.5v-8z"/>',
+  flHaut: '<path d="M12 19V5M6 11l6-6 6 6"/>', flBas: '<path d="M12 5v14M6 13l6 6 6-6"/>', flDeux: '<path d="M8 9l4-4 4 4M8 15l4 4 4-4"/>',
+} as const
+type NomIcone = keyof typeof TRACES
+
+function Ic({ n, className }: { n: NomIcone; className?: string }) {
+  return (
+    <svg
+      className={`ic${className ? ` ${className}` : ''}`}
+      viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"
+      aria-hidden="true" focusable="false"
+      dangerouslySetInnerHTML={{ __html: TRACES[n] }}
+    />
+  )
+}
+
+// Le symbole bienvu (toit + coche) : fixe pour l'état vide, animé pour le chargement.
+function Logo({ anime = false }: { anime?: boolean }) {
+  return (
+    <svg className={anime ? 'ld' : 'logo'} viewBox="0 0 28 28" aria-hidden="true" focusable="false">
+      <path className={anime ? 'ld-toit' : undefined} d="M3 13 L14 4 L25 13" fill="none" stroke="currentColor" strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round" />
+      <path className={anime ? 'ld-coche' : undefined} d="M8 16 L12.5 20.5 L21 11" fill="none" stroke="#c5005f" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" pathLength={100} />
+    </svg>
+  )
+}
+
+function Chargement({ texte, lignes }: { texte: string; lignes: number[] }) {
+  return (
+    <>
+      <span className="v3-loader"><Logo anime /><span>{texte}</span></span>
+      <span className="v3-sk" aria-hidden="true">
+        {lignes.map((largeur, index) => <span key={index} className="sk" style={{ width: `${largeur}%` }} />)}
+      </span>
+    </>
+  )
+}
+
+const ICONE_ETAPE: Record<RegistreEtape, NomIcone> = {
+  offre_proposee: 'horloge', offre_acceptee: 'coche', compromis: 'stylo', vendu: 'cle', compromis_annule: 'barre', offre_refusee: 'croix',
+}
+
+function Pastille({ etape }: { etape: RegistreEtape }) {
+  return <span className={`rt-pastille is-${etape}`}><Ic n={ICONE_ETAPE[etape]} />{LIBELLE_ETAPE[etape]}</span>
+}
+
+// Un sélecteur dessiné : icône à gauche, chevron à droite (le menu reste le menu natif).
+function Selecteur({ icone, children }: { icone: NomIcone; children: ReactNode }) {
+  return <span className="v3-sel"><Ic n={icone} className="ic-g" />{children}<Ic n="down" className="ic-d" /></span>
+}
+
+/** Le pictogramme du type de bien, pour la vignette « sans photo ». */
+function iconeDuType(libelle: string | null | undefined): NomIcone {
+  const texte = String(libelle ?? '')
+  return /appart|immeuble|studio|loft|duplex/i.test(texte) ? 'immeuble' : /terrain/i.test(texte) ? 'terrain' : 'maison'
+}
+
+const MOTS_SANS_INITIALE = new Set(['m.', 'm', 'mme', 'mlle', 'me', 'mr', 'mrs', 'm_mme', 'mm.', 'et', '&', 'indivision', 'monsieur', 'madame', 'maître', 'maitre'])
+
+/** Les initiales d'un nom (« Léa Brunon » -> « LB », « Me Lionel SANIAL » -> « LS »). */
+function initiales(nom: string | null | undefined) {
+  const mots = String(nom ?? '').split(/[\s,]+/).filter((mot) => mot && !MOTS_SANS_INITIALE.has(mot.toLowerCase()))
+  const lettre = (mot: string) => (mot.match(/\p{L}/u)?.[0] ?? '')
+  if (!mots.length) return '?'
+  const premiere = lettre(mots[0])
+  const seconde = mots.length > 1 ? lettre(mots[mots.length - 1]) : (mots[0].match(/\p{L}/gu)?.[1] ?? '')
+  return (premiere + seconde).toUpperCase() || '?'
+}
+
+// ─── Mémoire de l'écran (v3.1) : gardée dans le navigateur, l'écran marche sans ───
+const CLE_MEMOIRE = 'bienvu-registre-transactions'
+type Memoire = { annee: number | null; mois: string; etape: FiltreEtape; tri: Tri; sens: Sens; nomme: boolean; agence: string; nego: string }
+const MEMOIRE_DEFAUT: Memoire = { annee: ANNEE_COURANTE, mois: '', etape: null, tri: 'recent', sens: 'desc', nomme: false, agence: '', nego: '' }
+const FILTRES_VALIDES = new Set<string>(['en_cours', 'offres', ...ETAPES.map((etape) => etape.cle)])
+
+function lireMemoire(): Memoire {
+  try {
+    const brut = JSON.parse(window.localStorage.getItem(CLE_MEMOIRE) ?? 'null') as Partial<Record<keyof Memoire, unknown>> | null
+    if (!brut || typeof brut !== 'object') return MEMOIRE_DEFAUT
+    const annee = brut.annee === null ? null : Number(brut.annee)
+    const mois = String(brut.mois ?? '')
+    return {
+      annee: annee === null ? null : ANNEES.includes(annee) ? annee : MEMOIRE_DEFAUT.annee,
+      mois: /^(?:[1-9]|1[0-2])$/.test(mois) ? mois : '',
+      etape: typeof brut.etape === 'string' && FILTRES_VALIDES.has(brut.etape) ? (brut.etape as FiltreEtape) : null,
+      tri: brut.tri === 'prix' || brut.tri === 'honoraires' ? brut.tri : 'recent',
+      sens: brut.sens === 'asc' ? 'asc' : 'desc',
+      nomme: brut.nomme === true,
+      agence: typeof brut.agence === 'string' ? brut.agence : '',
+      nego: typeof brut.nego === 'string' ? brut.nego : '',
+    }
+  } catch {
+    return MEMOIRE_DEFAUT
+  }
+}
+
+function ecrireMemoire(memoire: Memoire) {
+  try {
+    window.localStorage.setItem(CLE_MEMOIRE, JSON.stringify(memoire))
+  } catch {
+    /* stockage indisponible : l'écran marche sans */
+  }
+}
 
 const euros = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })
 const entier = new Intl.NumberFormat('fr-FR')
@@ -91,7 +226,7 @@ function nomPart(ligne: RepartitionLigne) {
 
 function Repartition({ lignes }: { lignes: RepartitionLigne[] | undefined }) {
   if (lignes === undefined) return <span className="rt-mute">…</span>
-  if (!lignes.length) return <span className="rt-mute">—</span>
+  if (!lignes.length) return <span className="v3-non">Non saisie</span>
   const cotes: Array<{ cle: 'entree' | 'sortie'; libelle: string }> = [
     { cle: 'entree', libelle: 'Entrée' },
     { cle: 'sortie', libelle: 'Sortie' },
@@ -102,11 +237,19 @@ function Repartition({ lignes }: { lignes: RepartitionLigne[] | undefined }) {
         const parts = lignes.filter((ligne) => ligne.cote === cle).sort((a, b) => a.rang - b.rang)
         if (!parts.length) return null
         return (
-          <div key={cle} className="rt-repartition-cote">
+          <div key={cle} className={`rt-repartition-cote${parts.length > 1 ? ' is-plusieurs' : ''}`}>
             <span className="rt-repartition-libelle">{libelle}</span>
-            {parts.map((part) => (
-              <span key={`${cle}-${part.rang}-${part.hektorUserId}`} className="rt-part">
-                {nomPart(part)} <b>{entier.format(part.pourcentage)} %</b>
+            {parts.length === 1 ? (
+              // Un seul intervenant : son nom, terminé par « … » s'il est trop long.
+              <span className="rt-part v3-solo" title={`${nomPart(parts[0])} ${entier.format(parts[0].pourcentage)} %`}>
+                <span className="v3-nom">{nomPart(parts[0])}</span><b>{entier.format(parts[0].pourcentage)} %</b>
+              </span>
+            ) : parts.map((part) => (
+              // Plusieurs : leurs initiales ; le nom complet au survol et pour les lecteurs d'écran.
+              <span key={`${cle}-${part.rang}-${part.hektorUserId}`} className="rt-part" title={`${nomPart(part)} ${entier.format(part.pourcentage)} %`}>
+                <span className="v3-av" aria-hidden="true">{initiales(nomPart(part))}</span>
+                <span className="rt-cache">{nomPart(part)}</span>
+                <b>{entier.format(part.pourcentage)} %</b>
               </span>
             ))}
           </div>
@@ -115,6 +258,9 @@ function Repartition({ lignes }: { lignes: RepartitionLigne[] | undefined }) {
     </div>
   )
 }
+
+// « 05/01/2026 » -> « 05/01/26 » : le parcours de la liste tient ainsi dans sa colonne.
+const dateCourte = (date: string | null) => (date && date.length === 10 ? `${date.slice(0, 6)}${date.slice(8)}` : date)
 
 function Parcours({ ligne }: { ligne: RegistreDossierRow }) {
   const offre = dateEnClair(ligne.date_offre)
@@ -129,15 +275,20 @@ function Parcours({ ligne }: { ligne: RegistreDossierRow }) {
   ]
   return (
     <ol className={`rt-parcours${tombe ? ' is-tombe' : ''}`} aria-label="Parcours du dossier">
-      {marches.map((marche) => (
-        <li key={marche.cle} className={`rt-marche is-${marche.etat}`} title={`${marche.libelle}${marche.date ? ` : ${marche.date}` : ''}`}>
-          <span className="rt-point" aria-hidden="true" />
-          <span className="rt-marche-texte">
-            <span className="rt-marche-libelle">{marche.libelle}</span>
-            <span className="rt-marche-date">{marche.date ?? '—'}</span>
-          </span>
-        </li>
-      ))}
+      {marches.map((marche, index) => {
+        // Le trait vers la marche suivante est plein quand elle est atteinte ; la vente close en vert.
+        const suivante = marches[index + 1]
+        const classes = [`rt-marche is-${marche.etat}`, suivante && suivante.etat !== 'vide' ? 'seg-plein' : '', index === 2 && ligne.etape === 'vendu' ? 'is-fin' : '']
+        return (
+          <li key={marche.cle} className={classes.filter(Boolean).join(' ')} title={`${marche.libelle}${marche.date ? ` : ${marche.date}` : ''}`}>
+            <span className="rt-point" aria-hidden="true" />
+            <span className="rt-marche-texte">
+              <span className="rt-marche-libelle">{marche.libelle}</span>
+              <span className="rt-marche-date">{dateCourte(marche.date) ?? '—'}</span>
+            </span>
+          </li>
+        )
+      })}
     </ol>
   )
 }
@@ -184,6 +335,291 @@ const ROLES: Array<{ cle: string; libelle: string; pluriel: string }> = [
 ]
 
 const ETAT_CONDITION: Record<string, string> = { attente: 'en attente', levee: 'levée', non_levee: 'non levée', sans_objet: 'sans objet' }
+const ICONE_CONDITION: Record<string, NomIcone> = { attente: 'horloge', levee: 'coche', non_levee: 'croix', sans_objet: 'info' }
+
+// ─── v3.1 : l'ordre du parcours, et le délai entre deux étapes ───
+
+const RANG_DU_GENRE: Record<string, number> = { offre: 0, compromis: 1, vente: 2 }
+const jourIso = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Paris', year: 'numeric', month: '2-digit', day: '2-digit' })
+
+/** Le JOUR d'une date du registre, « AAAA-MM-JJ » : les 10 premiers caractères, sauf pour une date
+ *  écrite avec une heure en UTC (« 2019-12-30 23:00:00 » = minuit à Paris), ramenée au jour de Paris
+ *  -- le même jour que celui qu'affiche dateEnClair, pour que le délai et l'ordre collent à l'écran. */
+function jourDe(valeur: string | null | undefined) {
+  const texte = String(valeur ?? '').trim()
+  if (!/^\d{4}-\d{2}-\d{2}/.test(texte) || texte.startsWith('0000')) return ''
+  if (texte.length <= 10) return texte.slice(0, 10)
+  const iso = texte.replace(' ', 'T')
+  const date = new Date(/[zZ]|[+-]\d\d:?\d\d$/.test(iso) ? iso : `${iso}Z`)
+  return Number.isNaN(date.getTime()) ? texte.slice(0, 10) : jourIso.format(date)
+}
+
+/** L'ordre du parcours : le JOUR (pas l'heure), puis offre < compromis < vente, puis le numéro.
+ *  Corrige l'ordre de lecture par date complète : une offre porte une heure, une vente non, et une
+ *  offre et une vente du même jour s'affichaient à l'envers. */
+function ordreDuParcours(lignes: AffaireLedgerRow[]) {
+  return [...lignes].sort((a, b) => jourDe(a.date).localeCompare(jourDe(b.date))
+    || (RANG_DU_GENRE[String(a.kind)] ?? 3) - (RANG_DU_GENRE[String(b.kind)] ?? 3)
+    || Number(a.app_affaire_id) - Number(b.app_affaire_id))
+}
+
+function apresQuoi(ligne: AffaireLedgerRow) {
+  if (ligne.kind === 'offre') return String(ligne.state ?? '').toLowerCase() === 'accepted' ? 'l’offre acceptée' : 'l’offre'
+  return ligne.kind === 'compromis' ? 'le compromis' : ligne.kind === 'vente' ? 'la vente' : 'la transaction précédente'
+}
+
+const pluriel = (nombre: number, mot: string) => `${entier.format(nombre)} ${mot}${Math.abs(nombre) > 1 ? 's' : ''}`
+
+/** « 5 jours après l'offre » (depuis la transaction précédente non supprimée) et, pour un compromis
+ *  signé d'un dossier encore sous compromis, « acte dans N jours » / « acte dépassé de N jours ». */
+function delaiDeLEtape(lignes: AffaireLedgerRow[], index: number, etapeDuDossier: RegistreEtape): { texte: string; alerte: boolean } | null {
+  const ligne = lignes[index]
+  if (ligne.present_in_hektor === false) return null
+  const morceaux: string[] = []
+  let alerte = false
+  const precedente = lignes.slice(0, index).reverse().find((item) => item.present_in_hektor !== false)
+  const jour = jourDe(ligne.date)
+  const jourAvant = precedente ? jourDe(precedente.date) : ''
+  if (precedente && jour && jourAvant) {
+    const ecart = Math.round((Date.parse(`${jour}T12:00:00Z`) - Date.parse(`${jourAvant}T12:00:00Z`)) / 86_400_000)
+    morceaux.push(ecart === 0 ? `le même jour que ${apresQuoi(precedente)}` : `${pluriel(ecart, 'jour')} après ${apresQuoi(precedente)}`)
+  }
+  if (classeLigne(ligne) === 'compromis' && etapeDuDossier === 'compromis') {
+    const jours = joursJusqua(ligne.date_acte)
+    if (jours != null) {
+      alerte = jours < 0
+      morceaux.push(jours > 0 ? `acte dans ${pluriel(jours, 'jour')}` : jours === 0 ? 'acte aujourd’hui' : `acte dépassé de ${pluriel(-jours, 'jour')}`)
+    }
+  }
+  return morceaux.length ? { texte: morceaux.join(' · '), alerte } : null
+}
+
+// ─── v3.1 : le bloc « Documents » de la fiche ───
+
+// Les documents d'une TRANSACTION se reconnaissent au nom (libre) : mesure du 02/11, note § 13.
+const DOCUMENT_DE_TRANSACTION = /compromis|promesse|offre|acte|authentique/i
+const DOCUMENTS_VISIBLES = 8
+
+function tailleEnClair(octets: number | null | undefined) {
+  if (!octets || octets <= 0) return null
+  if (octets >= 1_000_000) return `${(octets / 1_000_000).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} Mo`
+  return `${Math.max(1, Math.round(octets / 1000)).toLocaleString('fr-FR')} Ko`
+}
+
+function extensionDe(nom: string) {
+  const extension = nom.match(/\.([a-z0-9]{1,5})$/i)?.[1]
+  return extension ? extension.toUpperCase().slice(0, 4) : 'DOC'
+}
+
+const attendre = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms))
+
+function BlocDocuments({ appDossierId, relecture }: { appDossierId: number | null; relecture: number }) {
+  const [documents, setDocuments] = useState<ConsoleDocument[] | null>(null)
+  const [erreur, setErreur] = useState(false)
+  const [toutVoir, setToutVoir] = useState(false)
+  const [enCours, setEnCours] = useState<Record<string, 'ouverture' | 'preparation'>>({})
+  const [messages, setMessages] = useState<Record<string, string>>({})
+  const monte = useRef(true)
+
+  useEffect(() => {
+    monte.current = true
+    return () => {
+      monte.current = false
+    }
+  }, [])
+
+  useEffect(() => {
+    let annule = false
+    setDocuments(null)
+    setErreur(false)
+    setToutVoir(false)
+    if (appDossierId == null) {
+      setDocuments([])
+      return
+    }
+    loadConsoleDocuments(appDossierId)
+      .then((lus) => {
+        if (!annule) setDocuments(lus)
+      })
+      .catch((cause: unknown) => {
+        console.error('[registre des transactions] documents illisibles', cause)
+        if (!annule) setErreur(true)
+      })
+    return () => {
+      annule = true
+    }
+  }, [appDossierId, relecture])
+
+  // Les documents de la transaction d'abord (compromis, offre, acte…), puis les autres ; les plus récents en tête.
+  const tries = useMemo(() => {
+    const date = (document: ConsoleDocument) => String(document.created_at_hektor ?? document.created_at ?? '')
+    return [...(documents ?? [])].sort((a, b) => Number(DOCUMENT_DE_TRANSACTION.test(b.document_name)) - Number(DOCUMENT_DE_TRANSACTION.test(a.document_name))
+      || date(b).localeCompare(date(a)) || a.document_name.localeCompare(b.document_name, 'fr'))
+  }, [documents])
+
+  const poser = (id: string, etat: 'ouverture' | 'preparation' | null, message?: string) => {
+    if (!monte.current) return
+    setEnCours((avant) => {
+      const suite = { ...avant }
+      if (etat) suite[id] = etat
+      else delete suite[id]
+      return suite
+    })
+    setMessages((avant) => {
+      const suite = { ...avant }
+      if (message) suite[id] = message
+      else delete suite[id]
+      return suite
+    })
+  }
+
+  const ouvrirLAdresse = async (document: ConsoleDocument) => {
+    const adresse = await createConsoleDocumentSignedUrl(document)
+    const fenetre = window.open(adresse, '_blank')
+    if (fenetre) fenetre.opener = null
+    return Boolean(fenetre)
+  }
+
+  const ouvrir = async (document: ConsoleDocument) => {
+    poser(document.id, 'ouverture')
+    try {
+      if (document.storage_status === 'cloud_available' && document.storage_path) {
+        await ouvrirLAdresse(document)
+        poser(document.id, null)
+        return
+      }
+      // Gardé sur notre serveur seulement (la règle pour un bien vendu) : on le fait remonter, puis on l'ouvre.
+      poser(document.id, 'preparation')
+      await createPrepareConsoleDocumentJob({ document, priority: 30 })
+      for (let essai = 0; essai < 20; essai += 1) {
+        await attendre(2000)
+        if (!monte.current || appDossierId == null) return
+        const relu = (await loadConsoleDocuments(appDossierId)).find((item) => item.id === document.id)
+        if (relu?.storage_status === 'cloud_available' && relu.storage_path) {
+          setDocuments((avant) => (avant ? avant.map((item) => (item.id === relu.id ? relu : item)) : avant))
+          const ouverte = await ouvrirLAdresse(relu)
+          poser(document.id, null, ouverte ? undefined : 'Le document est prêt : cliquez à nouveau sur « Ouvrir ».')
+          return
+        }
+        if (relu && (relu.storage_status === 'missing' || relu.storage_status === 'error')) break
+      }
+      poser(document.id, null, 'Ce document n’a pas pu être préparé. Réessayez dans un instant.')
+    } catch (cause) {
+      console.error('[registre des transactions] ouverture du document impossible', cause)
+      poser(document.id, null, 'Ce document n’a pas pu être ouvert. Réessayez dans un instant.')
+    }
+  }
+
+  const visibles = toutVoir ? tries : tries.slice(0, DOCUMENTS_VISIBLES)
+  return (
+    <section className="rt-carte rt-bloc" aria-labelledby="rt-bloc-docs">
+      <div className="rt-bloc-tete">
+        <h3 id="rt-bloc-docs" className="rt-bloc-titre">Documents</h3>
+        {tries.length ? <span className="rt-compte">{entier.format(tries.length)}</span> : null}
+      </div>
+      {erreur ? <p className="rt-mute">Les documents n’ont pas pu être chargés.</p>
+        : documents === null ? <p className="rt-mute" role="status">Chargement des documents…</p>
+          : !tries.length ? <p className="rt-mute">Aucun document lié à ce dossier.</p> : (
+            <>
+              <ul className="v31-docs">
+                {visibles.map((document) => {
+                  const etat = enCours[document.id]
+                  const introuvable = document.storage_status === 'missing' || document.storage_status === 'error'
+                  const details = [dateEnClair(document.created_at_hektor ?? document.created_at), tailleEnClair(document.file_size)].filter(Boolean).join(' · ')
+                  return (
+                    <li key={document.id} className="v31-doc">
+                      <span className="v31-pdf" aria-hidden="true">{extensionDe(document.document_name)}</span>
+                      <span className="v31-doc-txt">
+                        <b title={document.document_name}>{document.document_name}</b>
+                        {details ? <span className="rt-mute">{details}</span> : null}
+                        {messages[document.id] ? <span className="v31-doc-erreur" role="status">{messages[document.id]}</span> : null}
+                      </span>
+                      <button
+                        type="button"
+                        className="rt-bouton rt-bouton-petit"
+                        disabled={Boolean(etat) || introuvable}
+                        title={introuvable ? 'Fichier introuvable' : undefined}
+                        onClick={() => void ouvrir(document)}
+                      >
+                        {etat === 'preparation' ? 'Préparation…' : etat === 'ouverture' ? 'Ouverture…' : 'Ouvrir'}
+                      </button>
+                    </li>
+                  )
+                })}
+              </ul>
+              {tries.length > DOCUMENTS_VISIBLES ? (
+                <button type="button" className="v31-lien" aria-expanded={toutVoir} onClick={() => setToutVoir((valeur) => !valeur)}>
+                  {toutVoir ? 'Voir moins' : `Voir tout (${entier.format(tries.length)})`}
+                </button>
+              ) : null}
+            </>
+          )}
+    </section>
+  )
+}
+
+// ─── v3.1 : le bloc « Historique » de la fiche ───
+
+const HISTORIQUE_VISIBLE = 5
+const heureParis = new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Paris', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+
+function quandEnClair(ligne: HistoriqueDossierLigne) {
+  if (!ligne.heure) return dateEnClair(ligne.quand) ?? ligne.quand
+  const date = new Date(ligne.quand)
+  return Number.isNaN(date.getTime()) ? ligne.quand : heureParis.format(date).replace(',', '')
+}
+
+function BlocHistorique(props: { chaineId: number; hektorAnnonceId: number | null; lignes: AffaireLedgerRow[]; relecture: number }) {
+  const { chaineId, hektorAnnonceId, lignes, relecture } = props
+  const [historique, setHistorique] = useState<HistoriqueDossierLigne[] | null>(null)
+  const [toutVoir, setToutVoir] = useState(false)
+
+  useEffect(() => {
+    let annule = false
+    setHistorique(null)
+    // La fonction ne rejette pas (chaque source a son try/catch) ; par prudence, une panne rend la liste vide.
+    loadHistoriqueDuDossier({ chaineId, hektorAnnonceId, lignes })
+      .then((lu) => {
+        if (!annule) setHistorique(lu)
+      })
+      .catch((cause: unknown) => {
+        console.error('[registre des transactions] historique illisible', cause)
+        if (!annule) setHistorique([])
+      })
+    return () => {
+      annule = true
+    }
+  }, [chaineId, hektorAnnonceId, lignes, relecture])
+
+  const liste = historique ?? []
+  const visibles = toutVoir ? liste : liste.slice(0, HISTORIQUE_VISIBLE)
+  return (
+    <section className="rt-carte rt-bloc" aria-labelledby="rt-bloc-hist">
+      <h3 id="rt-bloc-hist" className="rt-bloc-titre">Historique</h3>
+      {historique === null ? <p className="rt-mute" role="status">Chargement de l’historique…</p>
+        : !liste.length ? <p className="rt-mute">Aucun changement enregistré.</p> : (
+          <>
+            <ol className="v31-hist">
+              {visibles.map((ligne) => (
+                <li key={ligne.cle}>
+                  <time className="rt-num" dateTime={ligne.quand}>{quandEnClair(ligne)}</time>
+                  <span>{ligne.auteur ? <><b>{ligne.auteur}</b> · </> : null}{ligne.texte}</span>
+                </li>
+              ))}
+            </ol>
+            {liste.length > HISTORIQUE_VISIBLE ? (
+              <button type="button" className="v31-lien" aria-expanded={toutVoir} onClick={() => setToutVoir((valeur) => !valeur)}>
+                {toutVoir ? 'Voir moins' : `Voir tout (${entier.format(liste.length)})`}
+              </button>
+            ) : null}
+          </>
+        )}
+    </section>
+  )
+}
+
+/** Précédent / suivant dans la liste (v3.1). */
+type NavigationDossier = { position: number; total: number; precedent: (() => void) | null; suivant: (() => void) | null }
 
 function FicheDossier(props: {
   ligne: RegistreDossierRow
@@ -193,8 +629,12 @@ function FicheDossier(props: {
   onOuvrirBien?: (ligne: RegistreDossierRow) => void
   onGeste?: (ligne: RegistreDossierRow, geste: GesteDuRegistre) => void
   onOuvrirContact?: (contactId: string) => void
+  /** v3.1 : le nom du négociateur (l'e-mail reste au survol) ; null = on garde l'e-mail. */
+  nomNegociateur?: string | null
+  /** v3.1 : dossier précédent / suivant, dans l'ordre de la liste. */
+  navigation?: NavigationDossier | null
 }) {
-  const { ligne, type, relecture, onRetour, onOuvrirBien, onGeste, onOuvrirContact } = props
+  const { ligne, type, relecture, onRetour, onOuvrirBien, onGeste, onOuvrirContact, nomNegociateur, navigation } = props
   const [dossier, setDossier] = useState<DossierDeLaChaine | null>(null)
   const [vivant, setVivant] = useState<boolean | null>(null)
   // 4C : un bien hors annonces est dans l'historique (vendu ou clos) ou archivé (lecture seule).
@@ -203,9 +643,17 @@ function FicheDossier(props: {
   const [essai, setEssai] = useState(0)
   const retourRef = useRef<HTMLButtonElement>(null)
 
+  // Un AUTRE dossier (précédent / suivant) : on n'affiche pas l'ancien pendant la lecture.
+  useEffect(() => {
+    setDossier(null)
+    setVivant(null)
+    setHistorique(null)
+  }, [ligne.app_chaine_id])
+
+  // Le focus va au retour à l'OUVERTURE ; il reste sur « précédent / suivant » quand on navigue.
   useEffect(() => {
     retourRef.current?.focus()
-  }, [ligne.app_chaine_id])
+  }, [])
 
   useEffect(() => {
     let annule = false
@@ -232,7 +680,7 @@ function FicheDossier(props: {
     }
   }, [ligne.app_chaine_id, ligne.app_dossier_id, relecture, essai])
 
-  const lignes = dossier?.lignes ?? []
+  const lignes = useMemo(() => ordreDuParcours(dossier?.lignes ?? []), [dossier])
   const derniereDuGenre = (kind: string) => [...lignes].reverse().find((item) => item.kind === kind) ?? null
   const offre = derniereDuGenre('offre')
   const compromis = derniereDuGenre('compromis')
@@ -300,6 +748,11 @@ function FicheDossier(props: {
     .filter((note) => note.texte)
 
   const titre = [type, ligne.ville || 'Ville inconnue'].filter(Boolean).join(' · ')
+  const statutBien = String(ligne.statut_annonce ?? '').toLowerCase()
+  const parcoursOuvrable = (item: AffaireLedgerRow) => ({ onglet: (item.kind === 'offre' ? 'offre' : item.kind === 'compromis' ? 'compromis' : 'vente') as GesteDuRegistre['onglet'], appAffaireId: Number(item.app_affaire_id), hektorAffaireId: item.hektor_affaire_id == null ? null : String(item.hektor_affaire_id) })
+  const repartitionTriee = [...(dossier?.repartition ?? [])].sort((a, b) => (a.cote === b.cote ? a.rang - b.rang : a.cote === 'entree' ? -1 : 1))
+  const entree = ligne.honoraires_entree ?? 0
+  const sortie = ligne.honoraires_sortie ?? 0
 
   return (
     <section className="rt-ecran rt-fiche" aria-labelledby="rt-fiche-titre">
@@ -308,7 +761,18 @@ function FicheDossier(props: {
           <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M15 6l-6 6 6 6" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" /></svg>
           Registre des transactions
         </button>
-        <span className="rt-mute">Dossier N° {ligne.app_chaine_id}</span>
+        <span className="rt-mute">Dossier <b className="rt-num">N° {ligne.app_chaine_id}</b></span>
+        {navigation && navigation.total > 0 ? (
+          <span className="v31-nav">
+            <span className="rt-mute rt-num">{entier.format(navigation.position)} sur {entier.format(navigation.total)}</span>
+            <button type="button" className="v31-ic" aria-label="Dossier précédent" title="Dossier précédent" disabled={!navigation.precedent} onClick={() => navigation.precedent?.()}>
+              <Ic n="left" />
+            </button>
+            <button type="button" className="v31-ic" aria-label="Dossier suivant" title="Dossier suivant" disabled={!navigation.suivant} onClick={() => navigation.suivant?.()}>
+              <Ic n="right" />
+            </button>
+          </span>
+        ) : null}
       </nav>
 
       <header className="rt-fiche-entete">
@@ -316,28 +780,45 @@ function FicheDossier(props: {
           {ligne.photo_url_listing ? (
             <img className="rt-fiche-photo" src={ligne.photo_url_listing} alt="" />
           ) : (
-            <span className="rt-fiche-photo rt-vignette-vide" aria-hidden="true" />
+            <span className="rt-fiche-photo v3-vide" title="Pas de photo"><Ic n={iconeDuType(type)} /><span>Pas de photo</span></span>
           )}
           <div className="rt-fiche-titres">
             <span className="rt-fiche-pastilles">
-              <span className={`rt-pastille is-${ligne.etape}`}>{LIBELLE_ETAPE[ligne.etape]}</span>
-              {vivant === false && ligne.app_dossier_id != null ? <span className="rt-pastille is-neutre">Bien {String(ligne.statut_annonce ?? '').toLowerCase() || 'hors annonces'}</span> : null}
+              <Pastille etape={ligne.etape} />
+              {vivant === false && ligne.app_dossier_id != null ? (
+                <span className="rt-pastille is-neutre"><Ic n={/vendu/.test(statutBien) ? 'cle' : 'info'} />Bien {statutBien || 'hors annonces'}</span>
+              ) : null}
             </span>
             <h2 id="rt-fiche-titre" className="rt-fiche-titre">{titre}{ligne.code_postal ? <span className="rt-mute"> {ligne.code_postal}</span> : null}</h2>
-            <span className="rt-mute">
-              {[ligne.numero_mandat ? `Mandat ${ligne.numero_mandat}` : null, ligne.agence_nom, ligne.negociateur_email ? `suivi par ${ligne.negociateur_email}` : null].filter(Boolean).join(' · ') || '—'}
-            </span>
+            {ligne.numero_mandat || ligne.agence_nom || ligne.negociateur_email ? (
+              <span className="v3-meta">
+                {ligne.numero_mandat ? <span><Ic n="doc" />Mandat <b className="rt-num">{ligne.numero_mandat}</b></span> : null}
+                {ligne.agence_nom ? <span><Ic n="agence" />{ligne.agence_nom}</span> : null}
+                {ligne.negociateur_email ? (
+                  nomNegociateur ? (
+                    <span title={ligne.negociateur_email}>
+                      <span className="v3-av" aria-hidden="true">{initiales(nomNegociateur)}</span>
+                      suivi par <b>{nomNegociateur}</b><span className="rt-cache"> ({ligne.negociateur_email})</span>
+                    </span>
+                  ) : (
+                    <span><Ic n="personnes" />suivi par <span className="v3-mail">{ligne.negociateur_email}</span></span>
+                  )
+                ) : null}
+              </span>
+            ) : <span className="rt-mute">—</span>}
           </div>
         </div>
         <div className="rt-fiche-actions-tete">
           {onOuvrirBien && ligne.app_dossier_id != null ? (
-            <button type="button" className="rt-bouton" onClick={() => onOuvrirBien(ligne)}>Ouvrir la fiche du bien</button>
+            <button type="button" className="rt-bouton" onClick={() => onOuvrirBien(ligne)}><Ic n="ouvrir" />Ouvrir la fiche du bien</button>
           ) : null}
           {suivant ? (
-            <button type="button" className="rt-bouton rt-bouton-principal" onClick={() => agir(suivant.geste)}>{suivant.libelle}</button>
+            <button type="button" className="rt-bouton rt-bouton-principal" onClick={() => agir(suivant.geste)}>
+              <Ic n={ligne.etape === 'offre_proposee' ? 'coche' : ligne.etape === 'offre_acceptee' ? 'stylo' : 'cle'} />{suivant.libelle}
+            </button>
           ) : null}
           {venteACorriger ? (
-            <button type="button" className="rt-bouton rt-bouton-principal" onClick={() => corrigerLaVente(venteACorriger)}>Modifier la vente</button>
+            <button type="button" className="rt-bouton rt-bouton-principal" onClick={() => corrigerLaVente(venteACorriger)}><Ic n="crayon" />Modifier la vente</button>
           ) : null}
         </div>
       </header>
@@ -357,25 +838,37 @@ function FicheDossier(props: {
           <span className="rt-indicateur-libelle">Honoraires</span>
           <strong className="rt-indicateur-valeur rt-num">{ligne.honoraires ? formatEuros(ligne.honoraires) : '—'}</strong>
           <span className="rt-indicateur-detail">
-            {ligne.honoraires
-              ? [`entrée ${formatEuros(ligne.honoraires_entree ?? 0)}`, `sortie ${formatEuros(ligne.honoraires_sortie ?? 0)}`, tauxHonoraires ? `${tauxHonoraires.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} % du prix` : null].filter(Boolean).join(' · ')
-              : 'non renseignés'}
+            {ligne.honoraires ? (
+              // Une mini-barre entrée (plein) / sortie (hachuré), mêmes montants et même % que la ligne de texte d'avant.
+              <span className="v3-es">
+                <span className="v3-es-bar" aria-hidden="true">
+                  {entree > 0 ? <i className="v3-e" style={{ flex: `${entree} 1 0` }} /> : null}
+                  {sortie > 0 ? <i className="v3-s" style={{ flex: `${sortie} 1 0` }} /> : null}
+                </span>
+                <span className="v3-es-leg">
+                  <span><i className="v3-sw v3-e" />entrée {formatEuros(entree)}</span>
+                  <span><i className="v3-sw v3-s" />sortie {formatEuros(sortie)}</span>
+                  {tauxHonoraires ? <span>{tauxHonoraires.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} % du prix</span> : null}
+                </span>
+              </span>
+            ) : 'non renseignés'}
           </span>
         </div>
         <div className={`rt-carte rt-indicateur${'alerte' in quatrieme && quatrieme.alerte ? ' is-alerte' : ''}`}>
           <span className="rt-indicateur-libelle">{quatrieme.libelle}</span>
           <strong className="rt-indicateur-valeur rt-num">{quatrieme.valeur ?? '—'}</strong>
-          <span className="rt-indicateur-detail">{quatrieme.detail}</span>
+          <span className="rt-indicateur-detail">{'alerte' in quatrieme && quatrieme.alerte ? <Ic n="alerte" /> : null}{quatrieme.detail}</span>
         </div>
       </div>
 
       {erreur ? (
         <div key="erreur" className="rt-carte rt-etat rt-etat-erreur" role="alert">
+          <span className="v3-etat-ic err"><Ic n="alerte" /></span>
           <p>{erreur}</p>
-          <button type="button" className="rt-bouton" onClick={() => setEssai((valeur) => valeur + 1)}>Réessayer</button>
+          <button type="button" className="rt-bouton" onClick={() => setEssai((valeur) => valeur + 1)}><Ic n="rafraichir" />Réessayer</button>
         </div>
       ) : !dossier ? (
-        <div key="chargement" className="rt-carte rt-etat" role="status">Chargement du dossier…</div>
+        <div key="chargement" className="rt-carte rt-etat" role="status"><Chargement texte="Chargement du dossier…" lignes={[90, 74, 84]} /></div>
       ) : (
         <div key="dossier" className="rt-fiche-grille">
           <div className="rt-fiche-colonne">
@@ -383,7 +876,7 @@ function FicheDossier(props: {
               <h3 id="rt-bloc-parcours" className="rt-bloc-titre">Parcours du dossier</h3>
               {!lignes.length ? <p className="rt-mute">Aucune transaction lisible pour ce dossier.</p> : (
                 <ol className="rt-etapes">
-                  {lignes.map((item) => {
+                  {lignes.map((item, index) => {
                     const montant = montantNombre(item.montant)
                     const acquereurs = acquereursDe(Number(item.app_affaire_id))
                     const details = item.kind === 'offre'
@@ -397,10 +890,11 @@ function FicheDossier(props: {
                           ]
                         : [acquereurs || null]
                     const retiree = item.present_in_hektor === false
-                    const onglet: GesteDuRegistre['onglet'] = item.kind === 'offre' ? 'offre' : item.kind === 'compromis' ? 'compromis' : 'vente'
+                    const classe = classeLigne(item)
+                    const delai = delaiDeLEtape(lignes, index, ligne.etape)
                     return (
-                      <li key={item.app_affaire_id} className={`rt-etape is-${classeLigne(item)}${retiree ? ' is-retiree' : ''}`}>
-                        <span className="rt-etape-point" aria-hidden="true" />
+                      <li key={item.app_affaire_id} className={`rt-etape is-${classe}${retiree ? ' is-retiree' : ''}`}>
+                        <span className="rt-etape-point" aria-hidden="true"><Ic n={retiree ? 'corbeille' : ICONE_ETAPE[classe]} /></span>
                         <div className="rt-etape-corps">
                           <div className="rt-etape-haut">
                             <b>{libelleLigne(item)}</b>
@@ -409,14 +903,17 @@ function FicheDossier(props: {
                             <span className="rt-etape-montant rt-num">{formatEuros(montant)}</span>
                           </div>
                           {details.some(Boolean) ? <span className="rt-mute">{details.filter(Boolean).join(' · ')}</span> : null}
+                          {delai ? (
+                            <span className={`v31-delai${delai.alerte ? ' is-alerte' : ''}`}><Ic n={delai.alerte ? 'alerte' : 'horloge'} />{delai.texte}</span>
+                          ) : null}
                         </div>
                         {peutAgir && !retiree ? (
-                          <button type="button" className="rt-bouton rt-bouton-petit" onClick={() => agir({ onglet, appAffaireId: Number(item.app_affaire_id), hektorAffaireId: item.hektor_affaire_id == null ? null : String(item.hektor_affaire_id) })}>
-                            Ouvrir
+                          <button type="button" className="rt-bouton rt-bouton-petit" onClick={() => agir(parcoursOuvrable(item))}>
+                            Ouvrir<Ic n="right" />
                           </button>
                         ) : venteACorriger && item.app_affaire_id === venteACorriger.app_affaire_id ? (
                           <button type="button" className="rt-bouton rt-bouton-petit" onClick={() => corrigerLaVente(venteACorriger)}>
-                            Modifier
+                            <Ic n="crayon" />Modifier
                           </button>
                         ) : null}
                       </li>
@@ -426,11 +923,14 @@ function FicheDossier(props: {
               )}
               {onGeste && vivant === false && historique !== null && ligne.app_dossier_id != null ? (
                 <p className="rt-fiche-remarque">
-                  {venteACorriger
-                    ? 'Ce bien n’est plus en annonce : la vente se corrige ici, mais aucune nouvelle transaction ne peut être créée.'
-                    : historique
-                      ? 'Ce bien n’est plus en annonce : ce dossier se consulte ici. Seule une vente se corrige depuis le registre.'
-                      : 'Ce bien est archivé : ce dossier se consulte ici, il ne se modifie pas.'}
+                  <Ic n="info" />
+                  <span>
+                    {venteACorriger
+                      ? 'Ce bien n’est plus en annonce : la vente se corrige ici, mais aucune nouvelle transaction ne peut être créée.'
+                      : historique
+                        ? 'Ce bien n’est plus en annonce : ce dossier se consulte ici. Seule une vente se corrige depuis le registre.'
+                        : 'Ce bien est archivé : ce dossier se consulte ici, il ne se modifie pas.'}
+                  </span>
                 </p>
               ) : null}
             </section>
@@ -445,24 +945,35 @@ function FicheDossier(props: {
                     onClick={() => {
                       if (venteACorriger) return corrigerLaVente(venteACorriger)
                       const cible = vente ?? compromis ?? offre
-                      if (cible) agir({ onglet: cible.kind === 'offre' ? 'offre' : cible.kind === 'compromis' ? 'compromis' : 'vente', appAffaireId: Number(cible.app_affaire_id), hektorAffaireId: cible.hektor_affaire_id == null ? null : String(cible.hektor_affaire_id) })
+                      if (cible) agir(parcoursOuvrable(cible))
                     }}
                   >
-                    Modifier
+                    <Ic n="crayon" />Modifier
                   </button>
                 ) : null}
               </div>
-              {!dossier.repartition.length ? <p className="rt-mute">Aucune répartition saisie.</p> : (
-                <ul className="rt-parts">
-                  {[...dossier.repartition].sort((a, b) => (a.cote === b.cote ? a.rang - b.rang : a.cote === 'entree' ? -1 : 1)).map((part) => (
-                    <li key={`${part.cote}-${part.rang}-${part.hektorUserId}`} className="rt-part-ligne">
-                      <span className={`rt-part-cote is-${part.cote}`}>{part.cote === 'entree' ? 'Entrée' : 'Sortie'}</span>
-                      <span className="rt-part-nom">{nomPart(part)}</span>
-                      <span className="rt-mute rt-num">{entier.format(part.pourcentage)} %</span>
-                      <b className="rt-num">{ligne.honoraires ? formatEuros((ligne.honoraires * part.pourcentage) / 100) : '—'}</b>
-                    </li>
-                  ))}
-                </ul>
+              {!repartitionTriee.length ? <p className="rt-mute">Aucune répartition saisie.</p> : (
+                <>
+                  <div
+                    className="v3-rp-bar"
+                    role="img"
+                    aria-label={repartitionTriee.map((part) => `${part.cote === 'entree' ? 'entrée' : 'sortie'} ${nomPart(part)} ${entier.format(part.pourcentage)} %`).join(', ')}
+                  >
+                    {repartitionTriee.map((part) => (
+                      <i key={`${part.cote}-${part.rang}-${part.hektorUserId}`} className={part.cote === 'entree' ? 'v3-e' : 'v3-s'} style={{ flex: `${Math.max(part.pourcentage, 0)} 1 0` }} />
+                    ))}
+                  </div>
+                  <ul className="rt-parts">
+                    {repartitionTriee.map((part) => (
+                      <li key={`${part.cote}-${part.rang}-${part.hektorUserId}`} className="rt-part-ligne">
+                        <span className={`rt-part-cote is-${part.cote}`}>{part.cote === 'entree' ? 'Entrée' : 'Sortie'}</span>
+                        <span className="rt-part-nom"><span className="v3-av" aria-hidden="true">{initiales(nomPart(part))}</span><span>{nomPart(part)}</span></span>
+                        <span className="rt-mute rt-num">{entier.format(part.pourcentage)} %</span>
+                        <b className="rt-num">{ligne.honoraires ? formatEuros((ligne.honoraires * part.pourcentage) / 100) : '—'}</b>
+                      </li>
+                    ))}
+                  </ul>
+                </>
               )}
             </section>
           </div>
@@ -480,10 +991,11 @@ function FicheDossier(props: {
                         {personnes.map((personne) => {
                           const id = String(personne.hektor_contact_id ?? personne.app_contact_id ?? '').trim()
                           const nom = personne.nom || (personne.fiche_sans_nom ? 'Fiche sans nom' : id ? `Contact n° ${id}` : 'Contact inconnu')
+                          const contenu = <><span className="v3-av" aria-hidden="true">{initiales(nom)}</span><span>{nom}</span></>
                           return onOuvrirContact && id ? (
-                            <button key={`${personne.app_affaire_id}-${personne.rang}-${id}`} type="button" className="rt-lien" onClick={() => onOuvrirContact(id)}>{nom}</button>
+                            <button key={`${personne.app_affaire_id}-${personne.rang}-${id}`} type="button" className="rt-lien v3-pers" title={nom} onClick={() => onOuvrirContact(id)}>{contenu}</button>
                           ) : (
-                            <b key={`${personne.app_affaire_id}-${personne.rang}-${id}`}>{nom}</b>
+                            <b key={`${personne.app_affaire_id}-${personne.rang}-${id}`} className="v3-pers" title={nom}>{contenu}</b>
                           )
                         })}
                       </div>
@@ -497,14 +1009,23 @@ function FicheDossier(props: {
               <h3 id="rt-bloc-conditions" className="rt-bloc-titre">Conditions suspensives</h3>
               {!conditions.length ? <p className="rt-mute">Aucune condition saisie.</p> : (
                 <ul className="rt-conditions">
-                  {conditions.map((condition, index) => (
-                    <li key={`${condition.kind}-${condition.rang ?? index}`} className="rt-condition">
-                      <b>{condition.libelle}</b>
-                      <span className="rt-mute">
-                        {[dateEnClair(condition.date_echeance) ? `échéance ${dateEnClair(condition.date_echeance)}` : null, ETAT_CONDITION[String(condition.etat ?? '')] ?? condition.etat].filter(Boolean).join(' · ')}
-                      </span>
-                    </li>
-                  ))}
+                  {conditions.map((condition, index) => {
+                    const etat = String(condition.etat ?? '')
+                    const echeance = dateEnClair(condition.date_echeance)
+                    return (
+                      <li key={`${condition.kind}-${condition.rang ?? index}`} className="rt-condition">
+                        <b>{condition.libelle}</b>
+                        {ETAT_CONDITION[etat] ? (
+                          <>
+                            {echeance ? <span className="rt-mute">échéance {echeance}</span> : null}
+                            <span className={`v3-etat-c v3-c-${etat}`}><Ic n={ICONE_CONDITION[etat]} />{ETAT_CONDITION[etat]}</span>
+                          </>
+                        ) : (
+                          <span className="rt-mute">{[echeance ? `échéance ${echeance}` : null, condition.etat].filter(Boolean).join(' · ')}</span>
+                        )}
+                      </li>
+                    )
+                  })}
                 </ul>
               )}
             </section>
@@ -515,13 +1036,16 @@ function FicheDossier(props: {
                 <ul className="rt-notes">
                   {notes.map((note, index) => (
                     <li key={`${note.kind}-${index}`}>
-                      <span className="rt-indicateur-libelle">{note.libelle}</span>
+                      <span className="rt-indicateur-libelle"><Ic n="note" />{note.libelle}</span>
                       <p>{note.texte}</p>
                     </li>
                   ))}
                 </ul>
               )}
             </section>
+
+            <BlocDocuments appDossierId={ligne.app_dossier_id} relecture={relecture} />
+            <BlocHistorique chaineId={ligne.app_chaine_id} hektorAnnonceId={ligne.hektor_annonce_id} lignes={lignes} relecture={relecture} />
           </div>
         </div>
       )}
@@ -530,20 +1054,38 @@ function FicheDossier(props: {
 }
 
 export default function RegistreTransactionsScreen({ isAdmin, libelleTypeBien, onOuvrirBien, onGeste, fenetreOuverte, onOuvrirContact }: RegistreTransactionsScreenProps) {
-  const [annee, setAnnee] = useState<number | null>(ANNEE_COURANTE)
+  // v3.1 : période, mois, filtre d'étape, tri et sens, « Où je suis nommé », agence et négociateur
+  // sont gardés dans le navigateur (lecture une seule fois, à l'ouverture). La recherche ne l'est pas.
+  const [depart] = useState(lireMemoire)
+  const [annee, setAnnee] = useState<number | null>(depart.annee)
+  const [mois, setMois] = useState(depart.mois)
   const [lignes, setLignes] = useState<RegistreDossierRow[]>([])
   const [chargement, setChargement] = useState(true)
   const [erreur, setErreur] = useState<string | null>(null)
   const [relecture, setRelecture] = useState(0)
-  const [etape, setEtape] = useState<RegistreEtape | 'en_cours' | null>(null)
+  const [etape, setEtape] = useState<FiltreEtape>(depart.etape)
   const [recherche, setRecherche] = useState('')
-  const [seulementNomme, setSeulementNomme] = useState(false)
-  const [tri, setTri] = useState<Tri>('recent')
+  const [seulementNomme, setSeulementNomme] = useState(depart.nomme)
+  const [tri, setTri] = useState<Tri>(depart.tri)
+  const [sens, setSens] = useState<Sens>(depart.sens)
+  const [agence, setAgence] = useState(depart.agence)
+  const [nego, setNego] = useState(depart.nego)
+  const [noms, setNoms] = useState<Map<string, string>>(new Map())
   const [page, setPage] = useState(1)
   const [repartitions, setRepartitions] = useState<Map<string, RepartitionLigne[]>>(new Map())
   const [ouverte, setOuverte] = useState<RegistreDossierRow | null>(null)
   const [relectureFiche, setRelectureFiche] = useState(0)
   const fenetreEtaitOuverte = useRef(false)
+
+  // Agence et négociateur : des filtres d'ADMIN. Gardés en mémoire, mais sans effet pour un négociateur.
+  const agenceActive = isAdmin ? agence : ''
+  const negoActif = isAdmin ? nego : ''
+  // Le mois n'a de sens que dans une année.
+  const moisActif = annee == null ? '' : mois
+
+  useEffect(() => {
+    ecrireMemoire({ annee, mois, etape, tri, sens, nomme: seulementNomme, agence, nego })
+  }, [annee, mois, etape, tri, sens, seulementNomme, agence, nego])
 
   // À la fermeture de la fenêtre de statut ouverte depuis la fiche : on relit la fiche et la liste.
   useEffect(() => {
@@ -586,17 +1128,51 @@ export default function RegistreTransactionsScreen({ isAdmin, libelleTypeBien, o
     }
   }, [annee, relecture])
 
-  useEffect(() => setPage(1), [annee, etape, recherche, seulementNomme, tri])
+  // v3.1 : le NOM des négociateurs, en une lecture pour les e-mails de la liste (fiche et menu admin).
+  useEffect(() => {
+    const manquants = Array.from(new Set(lignes.map((ligne) => String(ligne.negociateur_email ?? '').trim().toLowerCase()).filter((email) => email && !noms.has(email))))
+    if (!manquants.length) return
+    let annule = false
+    loadNomsNegociateurs(manquants).then((lus) => {
+      if (annule || !lus.size) return
+      setNoms((avant) => {
+        const suite = new Map(avant)
+        for (const [cle, nom] of lus) suite.set(cle, nom)
+        return suite
+      })
+    })
+    return () => {
+      annule = true
+    }
+  }, [lignes, noms])
 
+  useEffect(() => setPage(1), [annee, moisActif, etape, recherche, seulementNomme, tri, sens, agenceActive, negoActif])
+
+  const nomDuNegociateur = (email: string | null | undefined) => noms.get(String(email ?? '').trim().toLowerCase()) ?? null
   const aDesNommes = useMemo(() => lignes.some((ligne) => ligne.je_suis_nomme), [lignes])
+  // Sans dossier « nommé », la case est cachée : un réglage gardé ne doit pas vider la liste en silence.
+  const nommeActif = seulementNomme && aDesNommes
+
+  // La BASE de l'écran : l'année (lue en base), puis le mois, l'agence et le négociateur. Indicateurs,
+  // compteurs, sous-titre et liste la suivent. ⚠ L'année d'un dossier = left(date_dernier_evenement, 4)
+  // (règle de la base) : le mois se filtre donc ici, sur les caractères 6-7 de la même date.
+  const lignesBase = useMemo(() => lignes.filter((ligne) => {
+    if (moisActif) {
+      const date = String(ligne.date_dernier_evenement ?? '').trim()
+      if (!date || date.startsWith('0000') || Number(date.slice(5, 7)) !== Number(moisActif)) return false
+    }
+    if (agenceActive && (ligne.agence_nom ?? '') !== agenceActive) return false
+    if (negoActif && String(ligne.negociateur_email ?? '').trim().toLowerCase() !== negoActif) return false
+    return true
+  }), [lignes, moisActif, agenceActive, negoActif])
 
   const chiffres = useMemo(() => {
-    const ventes = lignes.filter((ligne) => ligne.etape === 'vendu' && (annee == null || anneeDe(ligne.date_vente) === annee))
-    const compromis = lignes.filter((ligne) => ligne.etape === 'compromis')
-    const offres = lignes.filter((ligne) => ligne.etape === 'offre_acceptee' || ligne.etape === 'offre_proposee')
+    const ventes = lignesBase.filter((ligne) => ligne.etape === 'vendu' && (annee == null || anneeDe(ligne.date_vente) === annee))
+    const compromis = lignesBase.filter((ligne) => ligne.etape === 'compromis')
+    const offres = lignesBase.filter((ligne) => OFFRES.includes(ligne.etape))
     const somme = (liste: RegistreDossierRow[], cle: 'montant' | 'honoraires') => liste.reduce((total, ligne) => total + (ligne[cle] ?? 0), 0)
     const parEtape = new Map<RegistreEtape, number>()
-    for (const ligne of lignes) parEtape.set(ligne.etape, (parEtape.get(ligne.etape) ?? 0) + 1)
+    for (const ligne of lignesBase) parEtape.set(ligne.etape, (parEtape.get(ligne.etape) ?? 0) + 1)
     return {
       ventes: ventes.length,
       volume: somme(ventes, 'montant'),
@@ -606,29 +1182,42 @@ export default function RegistreTransactionsScreen({ isAdmin, libelleTypeBien, o
       offres: offres.length,
       parEtape,
     }
-  }, [lignes, annee])
+  }, [lignesBase, annee])
+
+  // Le tri, dans les deux sens ; un dossier sans prix ou sans honoraires reste en bas.
+  const comparer = useMemo(() => {
+    const facteur = sens === 'asc' ? -1 : 1
+    const date = (ligne: RegistreDossierRow) => String(ligne.date_dernier_evenement ?? '').replace(/^0000.*/, '')
+    return (a: RegistreDossierRow, b: RegistreDossierRow) => {
+      if (tri === 'prix' || tri === 'honoraires') {
+        const cle = tri === 'prix' ? 'montant' : 'honoraires'
+        const va = a[cle]
+        const vb = b[cle]
+        if (va == null || vb == null) return va == null && vb == null ? b.app_chaine_id - a.app_chaine_id : va == null ? 1 : -1
+        return facteur * (vb - va) || b.app_chaine_id - a.app_chaine_id
+      }
+      return facteur * (date(b).localeCompare(date(a)) || b.app_chaine_id - a.app_chaine_id)
+    }
+  }, [tri, sens])
 
   const filtrees = useMemo(() => {
     const mots = sansAccents(recherche.trim()).split(/\s+/).filter(Boolean)
-    const resultat = lignes.filter((ligne) => {
+    const resultat = lignesBase.filter((ligne) => {
       if (etape === 'en_cours' && !EN_COURS.includes(ligne.etape)) return false
-      if (etape && etape !== 'en_cours' && ligne.etape !== etape) return false
-      if (seulementNomme && !ligne.je_suis_nomme) return false
+      if (etape === 'offres' && !OFFRES.includes(ligne.etape)) return false
+      if (etape && etape !== 'en_cours' && etape !== 'offres' && ligne.etape !== etape) return false
+      if (nommeActif && !ligne.je_suis_nomme) return false
       if (!mots.length) return true
       const texte = sansAccents(
-        [ligne.ville, ligne.code_postal, ligne.acquereur_nom, ligne.numero_mandat, ligne.app_chaine_id, ligne.hektor_annonce_id, ligne.agence_nom, ligne.negociateur_email]
+        [ligne.ville, ligne.code_postal, ligne.acquereur_nom, ligne.numero_mandat, ligne.app_chaine_id, ligne.hektor_annonce_id, ligne.agence_nom, ligne.negociateur_email, nomDuNegociateur(ligne.negociateur_email)]
           .filter((valeur) => valeur != null && valeur !== '')
           .join(' '),
       )
       return mots.every((mot) => texte.includes(mot))
     })
-    const cle = (ligne: RegistreDossierRow) => String(ligne.date_dernier_evenement ?? '').replace(/^0000.*/, '')
-    return resultat.sort((a, b) => {
-      if (tri === 'prix') return (b.montant ?? -1) - (a.montant ?? -1)
-      if (tri === 'honoraires') return (b.honoraires ?? -1) - (a.honoraires ?? -1)
-      return cle(b).localeCompare(cle(a)) || b.app_chaine_id - a.app_chaine_id
-    })
-  }, [lignes, etape, recherche, seulementNomme, tri])
+    return resultat.sort(comparer)
+    // `noms` : la recherche trouve aussi le nom du négociateur.
+  }, [lignesBase, etape, recherche, nommeActif, comparer, noms])
 
   const pages = Math.max(1, Math.ceil(filtrees.length / PAR_PAGE))
   const pageCourante = Math.min(page, pages)
@@ -652,6 +1241,14 @@ export default function RegistreTransactionsScreen({ isAdmin, libelleTypeBien, o
     }
   }, [visibles, repartitions])
 
+  // v3.1 : précédent / suivant, dans l'ordre de la liste filtrée et triée ; si le dossier ouvert n'y
+  // est plus (filtre changé), on repart de la liste complète de la période.
+  const ordreNavigation = useMemo(() => {
+    if (!ouverte) return [] as RegistreDossierRow[]
+    if (filtrees.some((ligne) => ligne.app_chaine_id === ouverte.app_chaine_id)) return filtrees
+    return [...lignes].sort(comparer)
+  }, [ouverte, filtrees, lignes, comparer])
+
   const typeEnClair = (code: string | null) => {
     if (!code) return null
     const libelle = libelleTypeBien ? libelleTypeBien(code) : code
@@ -661,6 +1258,9 @@ export default function RegistreTransactionsScreen({ isAdmin, libelleTypeBien, o
   const ouvrir = (ligne: RegistreDossierRow) => setOuverte(ligne)
 
   if (ouverte) {
+    const index = ordreNavigation.findIndex((ligne) => ligne.app_chaine_id === ouverte.app_chaine_id)
+    const precedente = index > 0 ? ordreNavigation[index - 1] : null
+    const suivante = index >= 0 && index < ordreNavigation.length - 1 ? ordreNavigation[index + 1] : null
     return (
       <FicheDossier
         ligne={ouverte}
@@ -670,16 +1270,74 @@ export default function RegistreTransactionsScreen({ isAdmin, libelleTypeBien, o
         onOuvrirBien={onOuvrirBien}
         onGeste={onGeste}
         onOuvrirContact={onOuvrirContact}
+        nomNegociateur={nomDuNegociateur(ouverte.negociateur_email)}
+        navigation={index < 0 ? null : {
+          position: index + 1,
+          total: ordreNavigation.length,
+          precedent: precedente ? () => setOuverte(precedente) : null,
+          suivant: suivante ? () => setOuverte(suivante) : null,
+        }}
       />
     )
   }
 
-  const periode = annee == null ? 'toutes années' : String(annee)
-  const filtres: Array<{ cle: RegistreEtape | 'en_cours' | null; libelle: string; nombre: number }> = [
-    { cle: null, libelle: 'Tous', nombre: lignes.length },
+  const periode = annee == null ? 'toutes années' : moisActif ? `${MOIS[Number(moisActif) - 1]} ${annee}` : String(annee)
+  const nombreDossiers = lignesBase.length
+  const filtres: Array<{ cle: FiltreEtape; libelle: string; nombre: number }> = [
+    { cle: null, libelle: 'Tous', nombre: lignesBase.length },
     { cle: 'en_cours', libelle: 'En cours', nombre: EN_COURS.reduce((total, cle) => total + (chiffres.parEtape.get(cle) ?? 0), 0) },
     ...ETAPES.map((item) => ({ cle: item.cle, libelle: item.libelle, nombre: chiffres.parEtape.get(item.cle) ?? 0 })),
   ]
+  const indicateurs: Array<{ libelle: string; valeur: string; detail: string; filtre: Exclude<FiltreEtape, null> }> = [
+    { libelle: `Honoraires actés · ${periode}`, valeur: formatMillions(chiffres.honoraires), detail: 'entrée + sortie, sur les ventes', filtre: 'vendu' },
+    { libelle: 'Ventes actées', valeur: entier.format(chiffres.ventes), detail: chargement ? '' : `${formatMillions(chiffres.volume)} de volume`, filtre: 'vendu' },
+    { libelle: 'Sous compromis', valeur: entier.format(chiffres.compromis), detail: chargement ? '' : `${formatMillions(chiffres.honorairesAttendus)} d’honoraires attendus`, filtre: 'compromis' },
+    { libelle: 'Offres en cours', valeur: entier.format(chiffres.offres), detail: 'proposées ou acceptées', filtre: 'offres' },
+  ]
+
+  // Les menus d'admin : options tirées des lignes chargées pour la période.
+  const agences = Array.from(new Set(lignes.map((ligne) => (ligne.agence_nom ?? '').trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'fr'))
+  if (agence && !agences.includes(agence)) agences.push(agence)
+  const negociateurs = Array.from(new Set(lignes.map((ligne) => String(ligne.negociateur_email ?? '').trim().toLowerCase()).filter(Boolean)))
+    .map((email) => ({ email, nom: noms.get(email) ?? email }))
+    .sort((a, b) => a.nom.localeCompare(b.nom, 'fr'))
+  if (nego && !negociateurs.some((item) => item.email === nego)) negociateurs.push({ email: nego, nom: noms.get(nego) ?? nego })
+
+  const horsDefaut = annee !== MEMOIRE_DEFAUT.annee || moisActif !== '' || etape !== null || tri !== 'recent' || sens !== 'desc' || nommeActif
+    || Boolean(agenceActive) || Boolean(negoActif)
+  const reinitialiser = () => {
+    setAnnee(MEMOIRE_DEFAUT.annee)
+    setMois('')
+    setEtape(null)
+    setTri('recent')
+    setSens('desc')
+    setSeulementNomme(false)
+    setAgence('')
+    setNego('')
+  }
+
+  // L'en-tête triable : 1er clic = du plus haut au plus bas (comme le menu), 2e clic = l'inverse.
+  const enTeteTriable = (libelle: string, cle: Tri, quoi: string, droite = false) => {
+    const actif = tri === cle
+    return (
+      <th scope="col" className={droite ? 'rt-droite' : undefined} aria-sort={actif ? (sens === 'asc' ? 'ascending' : 'descending') : undefined}>
+        <button
+          type="button"
+          className={`v31-th${actif ? ' is-on' : ''}`}
+          title={`Trier par ${quoi}`}
+          onClick={() => {
+            if (actif) setSens((avant) => (avant === 'asc' ? 'desc' : 'asc'))
+            else {
+              setTri(cle)
+              setSens('desc')
+            }
+          }}
+        >
+          {libelle}<Ic n={actif ? (sens === 'asc' ? 'flHaut' : 'flBas') : 'flDeux'} />
+        </button>
+      </th>
+    )
+  }
 
   return (
     <section className="rt-ecran" aria-labelledby="rt-titre">
@@ -688,42 +1346,60 @@ export default function RegistreTransactionsScreen({ isAdmin, libelleTypeBien, o
           <span className="rt-surtitre">Ventes</span>
           <h1 id="rt-titre" className="rt-titre">Registre des transactions</h1>
           <p className="rt-sous-titre">
-            {chargement ? 'Chargement des dossiers…' : `${entier.format(lignes.length)} dossier${lignes.length > 1 ? 's' : ''} · ${periode} · une ligne par dossier, de l’offre à l’acte`}
+            {chargement ? 'Chargement des dossiers…' : <><b className="rt-num">{entier.format(nombreDossiers)}</b>{` dossier${nombreDossiers > 1 ? 's' : ''} · ${periode} · une ligne par dossier, de l’offre à l’acte`}</>}
             {!isAdmin ? ' · vos biens et les dossiers où vous êtes nommé' : ''}
           </p>
         </div>
-        <label className="rt-periode">
-          <span>Période</span>
-          <select value={annee == null ? 'tout' : String(annee)} onChange={(event) => setAnnee(event.target.value === 'tout' ? null : Number(event.target.value))}>
-            {ANNEES.map((valeur) => (
-              <option key={valeur} value={valeur}>{valeur}</option>
-            ))}
-            <option value="tout">Toutes les années</option>
-          </select>
-        </label>
+        <div className="rt-periode v31-periode">
+          <label className="v31-lab">
+            <span>Période</span>
+            <Selecteur icone="calendrier">
+              <select value={annee == null ? 'tout' : String(annee)} onChange={(event) => setAnnee(event.target.value === 'tout' ? null : Number(event.target.value))}>
+                {ANNEES.map((valeur) => (
+                  <option key={valeur} value={valeur}>{valeur}</option>
+                ))}
+                <option value="tout">Toutes les années</option>
+              </select>
+            </Selecteur>
+          </label>
+          <label className="v31-lab">
+            <span className="rt-cache">Mois</span>
+            <Selecteur icone="calendrier">
+              <select
+                value={moisActif}
+                disabled={annee == null}
+                title={annee == null ? 'Choisissez une année pour filtrer par mois' : undefined}
+                onChange={(event) => setMois(event.target.value)}
+              >
+                <option value="">Toute l’année</option>
+                {MOIS.map((nom, index) => (
+                  <option key={nom} value={String(index + 1)}>{nom.charAt(0).toUpperCase() + nom.slice(1)}</option>
+                ))}
+              </select>
+            </Selecteur>
+          </label>
+        </div>
       </header>
 
       <div className="rt-indicateurs" aria-label="Indicateurs">
-        <div className="rt-carte rt-indicateur">
-          <span className="rt-indicateur-libelle">Honoraires actés · {periode}</span>
-          <strong className="rt-indicateur-valeur">{chargement ? '…' : formatMillions(chiffres.honoraires)}</strong>
-          <span className="rt-indicateur-detail">entrée + sortie, sur les ventes</span>
-        </div>
-        <div className="rt-carte rt-indicateur">
-          <span className="rt-indicateur-libelle">Ventes actées</span>
-          <strong className="rt-indicateur-valeur">{chargement ? '…' : entier.format(chiffres.ventes)}</strong>
-          <span className="rt-indicateur-detail">{chargement ? '' : `${formatMillions(chiffres.volume)} de volume`}</span>
-        </div>
-        <div className="rt-carte rt-indicateur">
-          <span className="rt-indicateur-libelle">Sous compromis</span>
-          <strong className="rt-indicateur-valeur">{chargement ? '…' : entier.format(chiffres.compromis)}</strong>
-          <span className="rt-indicateur-detail">{chargement ? '' : `${formatMillions(chiffres.honorairesAttendus)} d’honoraires attendus`}</span>
-        </div>
-        <div className="rt-carte rt-indicateur">
-          <span className="rt-indicateur-libelle">Offres en cours</span>
-          <strong className="rt-indicateur-valeur">{chargement ? '…' : entier.format(chiffres.offres)}</strong>
-          <span className="rt-indicateur-detail">proposées ou acceptées</span>
-        </div>
+        {indicateurs.map((indicateur) => {
+          const actif = etape === indicateur.filtre
+          return (
+            <button
+              key={indicateur.libelle}
+              type="button"
+              className={`rt-carte rt-indicateur v31-kpi${actif ? ' is-actif' : ''}`}
+              aria-pressed={actif}
+              title={actif ? 'Retirer ce filtre' : 'Filtrer la liste sur ces dossiers'}
+              onClick={() => setEtape(actif ? null : indicateur.filtre)}
+            >
+              <span className="rt-indicateur-libelle">{indicateur.libelle}</span>
+              <strong className="rt-indicateur-valeur">{chargement ? <span className="sk v3-sk-kpi" /> : indicateur.valeur}</strong>
+              <span className="rt-indicateur-detail">{indicateur.detail}</span>
+              <span className="v31-kpi-ic" aria-hidden="true"><Ic n={actif ? 'croix' : 'filtre'} /></span>
+            </button>
+          )
+        })}
       </div>
 
       <div className="rt-carte rt-liste">
@@ -740,17 +1416,53 @@ export default function RegistreTransactionsScreen({ isAdmin, libelleTypeBien, o
           </label>
           <label className="rt-tri">
             <span className="rt-cache">Trier</span>
-            <select value={tri} onChange={(event) => setTri(event.target.value as Tri)}>
-              <option value="recent">Plus récents</option>
-              <option value="prix">Prix le plus haut</option>
-              <option value="honoraires">Honoraires les plus hauts</option>
-            </select>
+            <Selecteur icone="trier">
+              <select
+                value={tri}
+                onChange={(event) => {
+                  // Le menu trie toujours du plus haut au plus bas ; l'ordre inverse passe par l'en-tête.
+                  setTri(event.target.value as Tri)
+                  setSens('desc')
+                }}
+              >
+                <option value="recent">Plus récents</option>
+                <option value="prix">Prix le plus haut</option>
+                <option value="honoraires">Honoraires les plus hauts</option>
+              </select>
+            </Selecteur>
           </label>
+          {isAdmin ? (
+            <>
+              <label className="rt-tri v31-f">
+                <span className="rt-cache">Agence</span>
+                <Selecteur icone="agence">
+                  <select value={agence} onChange={(event) => setAgence(event.target.value)}>
+                    <option value="">Toutes les agences</option>
+                    {agences.map((nom) => <option key={nom} value={nom}>{nom}</option>)}
+                  </select>
+                </Selecteur>
+              </label>
+              <label className="rt-tri v31-f">
+                <span className="rt-cache">Négociateur</span>
+                <Selecteur icone="personnes">
+                  <select value={nego} onChange={(event) => setNego(event.target.value)}>
+                    <option value="">Tous les négociateurs</option>
+                    {negociateurs.map((item) => <option key={item.email} value={item.email}>{item.nom}</option>)}
+                  </select>
+                </Selecteur>
+              </label>
+            </>
+          ) : null}
           {aDesNommes ? (
             <label className="rt-case">
               <input type="checkbox" checked={seulementNomme} onChange={(event) => setSeulementNomme(event.target.checked)} />
               <span>Où je suis nommé</span>
             </label>
+          ) : null}
+          {horsDefaut ? (
+            <span className="v31-garde">
+              <Ic n="coche" />Filtres gardés · <button type="button" className="v31-lien" onClick={reinitialiser}>Réinitialiser</button>
+            </span>
           ) : null}
         </div>
         <div className="rt-filtres" role="group" aria-label="Étape du dossier">
@@ -762,7 +1474,7 @@ export default function RegistreTransactionsScreen({ isAdmin, libelleTypeBien, o
               aria-pressed={etape === filtre.cle}
               onClick={() => setEtape(filtre.cle)}
             >
-              {filtre.cle && filtre.cle !== 'en_cours' ? <span className={`rt-pastille-point is-${filtre.cle}`} aria-hidden="true" /> : null}
+              {filtre.cle && filtre.cle !== 'en_cours' && filtre.cle !== 'offres' ? <Ic n={ICONE_ETAPE[filtre.cle]} className={`v3-fi is-${filtre.cle}`} /> : null}
               {filtre.libelle}
               <span className="rt-compte">{chargement ? '…' : entier.format(filtre.nombre)}</span>
             </button>
@@ -771,38 +1483,54 @@ export default function RegistreTransactionsScreen({ isAdmin, libelleTypeBien, o
 
         {erreur ? (
           <div className="rt-etat rt-etat-erreur" role="alert">
+            <span className="v3-etat-ic err"><Ic n="alerte" /></span>
             <p>{erreur}</p>
-            <button type="button" className="rt-bouton" onClick={() => setRelecture((valeur) => valeur + 1)}>Réessayer</button>
+            <button type="button" className="rt-bouton" onClick={() => setRelecture((valeur) => valeur + 1)}><Ic n="rafraichir" />Réessayer</button>
           </div>
         ) : chargement ? (
-          <div className="rt-etat" role="status">Chargement des dossiers…</div>
+          <div className="rt-etat" role="status"><Chargement texte="Chargement des dossiers…" lignes={[92, 78, 86, 70, 82]} /></div>
         ) : !filtrees.length ? (
-          <div className="rt-etat">{lignes.length ? 'Aucun dossier ne correspond à ces critères.' : `Aucun dossier pour ${periode}.`}</div>
+          lignesBase.length || agenceActive || negoActif ? (
+            <div className="rt-etat"><span className="v3-etat-ic"><Ic n="search" /></span>Aucun dossier ne correspond à ces critères.</div>
+          ) : (
+            <div className="rt-etat"><span className="v3-etat-ic"><Logo /></span>{`Aucun dossier pour ${periode}.`}</div>
+          )
         ) : (
           <>
             <div className="rt-table-boite">
               <table className="rt-table">
+                <colgroup>
+                  {/* Largeurs fixes (maquette v3.1), resserrées : à 1 280 px la zone de l'app est plus
+                      étroite que celle de la maquette (≈ 950 px contre 1 060). Le bien prend le reste. */}
+                  <col style={{ width: 150 }} />
+                  <col />
+                  <col style={{ width: '9%' }} />
+                  <col style={{ width: 186 }} />
+                  <col style={{ width: 82 }} />
+                  <col style={{ width: 104 }} />
+                  <col style={{ width: 148 }} />
+                </colgroup>
                 <thead>
                   <tr>
-                    <th scope="col">Dossier</th>
+                    {enTeteTriable('Dossier', 'recent', 'date du dernier événement')}
                     <th scope="col">Bien</th>
                     <th scope="col">Acquéreur</th>
                     <th scope="col">Parcours</th>
-                    <th scope="col" className="rt-droite">Prix</th>
-                    <th scope="col" className="rt-droite">Honoraires</th>
+                    {enTeteTriable('Prix', 'prix', 'prix', true)}
+                    {enTeteTriable('Honoraires', 'honoraires', 'honoraires', true)}
                     <th scope="col">Répartition</th>
                   </tr>
                 </thead>
                 <tbody>
                   {visibles.map((ligne) => {
                     const type = typeEnClair(ligne.type_bien)
+                    const sousTitre = [type, ligne.numero_mandat ? `mandat ${ligne.numero_mandat}` : null].filter(Boolean).join(' · ') || '—'
                     return (
                       <tr key={ligne.app_chaine_id} className="is-ouvrable" onClick={() => ouvrir(ligne)}>
                         <td>
                           <div className="rt-dossier">
-                            <span className={`rt-pastille is-${ligne.etape}`}>{LIBELLE_ETAPE[ligne.etape]}</span>
-                            <span className="rt-mute rt-num">N° {ligne.app_chaine_id}</span>
-                            {ligne.je_suis_nomme ? <span className="rt-nomme">nommé</span> : null}
+                            <Pastille etape={ligne.etape} />
+                            <span className="rt-mute rt-num">N° {ligne.app_chaine_id}{ligne.je_suis_nomme ? <> · <span className="rt-nomme">nommé</span></> : null}</span>
                           </div>
                         </td>
                         <td>
@@ -810,19 +1538,17 @@ export default function RegistreTransactionsScreen({ isAdmin, libelleTypeBien, o
                             {ligne.photo_url_listing ? (
                               <img className="rt-vignette" src={ligne.photo_url_listing} alt="" loading="lazy" />
                             ) : (
-                              <span className="rt-vignette rt-vignette-vide" aria-hidden="true" />
+                              <span className="rt-vignette v3-vide" title="Pas de photo"><Ic n={iconeDuType(type)} /></span>
                             )}
                             <div className="rt-bien-texte">
-                              <button type="button" className="rt-lien" onClick={(event) => { event.stopPropagation(); ouvrir(ligne) }}>
+                              <button type="button" className="rt-lien" title={ligne.ville || undefined} onClick={(event) => { event.stopPropagation(); ouvrir(ligne) }}>
                                 {ligne.ville || 'Ville inconnue'}
                               </button>
-                              <span className="rt-mute">
-                                {[type, ligne.numero_mandat ? `mandat ${ligne.numero_mandat}` : null].filter(Boolean).join(' · ') || '—'}
-                              </span>
+                              <span className="rt-mute" title={sousTitre}>{sousTitre}</span>
                             </div>
                           </div>
                         </td>
-                        <td>{ligne.acquereur_nom || <span className="rt-mute">—</span>}</td>
+                        <td>{ligne.acquereur_nom ? <span className="v3-clamp" title={ligne.acquereur_nom}>{ligne.acquereur_nom}</span> : <span className="rt-mute">—</span>}</td>
                         <td><Parcours ligne={ligne} /></td>
                         <td className="rt-droite rt-num">{formatEuros(ligne.montant)}</td>
                         <td className="rt-droite rt-num">{ligne.honoraires ? formatEuros(ligne.honoraires) : <span className="rt-mute">—</span>}</td>
@@ -841,7 +1567,7 @@ export default function RegistreTransactionsScreen({ isAdmin, libelleTypeBien, o
                 const contenu = (
                   <>
                     <span className="rt-carte-haut">
-                      <span className={`rt-pastille is-${ligne.etape}`}>{LIBELLE_ETAPE[ligne.etape]}</span>
+                      <Pastille etape={ligne.etape} />
                       <span className="rt-mute rt-num">N° {ligne.app_chaine_id}{derniere ? ` · ${derniere}` : ''}</span>
                     </span>
                     <span className="rt-carte-milieu">
@@ -866,12 +1592,12 @@ export default function RegistreTransactionsScreen({ isAdmin, libelleTypeBien, o
 
             <nav className="rt-pages" aria-label="Pages">
               <span className="rt-mute">
-                {entier.format((pageCourante - 1) * PAR_PAGE + 1)}–{entier.format(Math.min(pageCourante * PAR_PAGE, filtrees.length))} sur {entier.format(filtrees.length)}
+                <b className="rt-num">{entier.format((pageCourante - 1) * PAR_PAGE + 1)}–{entier.format(Math.min(pageCourante * PAR_PAGE, filtrees.length))}</b> sur <b className="rt-num">{entier.format(filtrees.length)}</b>
               </span>
               <span className="rt-pages-boutons">
-                <button type="button" className="rt-bouton" disabled={pageCourante <= 1} onClick={() => setPage(pageCourante - 1)}>Précédent</button>
+                <button type="button" className="rt-bouton" disabled={pageCourante <= 1} onClick={() => setPage(pageCourante - 1)}><Ic n="left" />Précédent</button>
                 <span className="rt-num">{pageCourante} / {pages}</span>
-                <button type="button" className="rt-bouton" disabled={pageCourante >= pages} onClick={() => setPage(pageCourante + 1)}>Suivant</button>
+                <button type="button" className="rt-bouton" disabled={pageCourante >= pages} onClick={() => setPage(pageCourante + 1)}>Suivant<Ic n="right" /></button>
               </span>
             </nav>
           </>

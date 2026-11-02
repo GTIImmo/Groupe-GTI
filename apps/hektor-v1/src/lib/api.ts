@@ -8398,7 +8398,7 @@ async function requireSupabaseUserId() {
 }
 
 export async function loadConsoleDocuments(appDossierId: number): Promise<ConsoleDocument[]> {
-  if (!hasSupabaseEnv || !supabase) return []
+  if (!hasSupabaseEnv || !supabase) return mockDocumentsDuRegistre(appDossierId)
   const { data, error } = await supabase
     .from('app_console_document')
     // ⚠ 3e (13/10/2026) : `present_in_hektor` et `absent_depuis` AJOUTÉS ICI.
@@ -9005,6 +9005,269 @@ export async function bienEstDansLesAnnonces(appDossierId: number): Promise<bool
     .limit(1)
   if (error) throw new Error(error.message)
   return Boolean(data && data.length)
+}
+
+// ─── Registre des transactions, maquette v3.1 (02/11/2026) : nom du négociateur, historique ───
+// LECTURES SEULEMENT. Note : notice/AUDIT_GESTES_REGISTRE_TRANSACTIONS_2026-10-30.md § 13.
+
+/** Le NOM des négociateurs, rangé par e-mail EN MINUSCULES. L'annuaire
+ *  app_hektor_negotiator_agency_directory (219 lignes, lisible par tout compte actif) est lu en
+ *  entier, en une fois : la comparaison se fait en minuscules de notre côté. Mesure du 02/11 :
+ *  100 % des e-mails du registre y ont un nom. Une lecture ratée rend une carte vide, et l'écran
+ *  garde l'e-mail. */
+export async function loadNomsNegociateurs(emails: Array<string | null | undefined>): Promise<Map<string, string>> {
+  const out = new Map<string, string>()
+  const cles = new Set(emails.map((email) => String(email ?? '').trim().toLowerCase()).filter((email) => email.includes('@')))
+  if (!cles.size) return out
+  if (!hasSupabaseEnv || !supabase) {
+    // Mode maquette : le nom se déduit de l'e-mail fictif (« melanie.legrand@… » -> « Melanie Legrand »).
+    for (const cle of cles) {
+      const nom = cle.split('@')[0].split(/[._-]+/).filter(Boolean).map((mot) => mot.charAt(0).toUpperCase() + mot.slice(1)).join(' ')
+      if (nom) out.set(cle, nom)
+    }
+    return out
+  }
+  try {
+    const { data, error } = await supabase
+      .from('app_hektor_negotiator_agency_directory')
+      .select('email,display_name,prenom,nom')
+      .limit(2000)
+    if (error || !data) return out
+    for (const row of data as Array<{ email?: string | null; display_name?: string | null; prenom?: string | null; nom?: string | null }>) {
+      const cle = String(row.email ?? '').trim().toLowerCase()
+      if (!cle || !cles.has(cle) || out.has(cle)) continue
+      const nom = String(row.display_name ?? '').trim() || [row.prenom, row.nom].map((v) => String(v ?? '').trim()).filter(Boolean).join(' ')
+      if (nom) out.set(cle, nom)
+    }
+  } catch {
+    /* carte vide : l'écran garde l'e-mail */
+  }
+  return out
+}
+
+/** Une ligne de l'historique d'un dossier. `heure` = faux pour une étape du registre, qui ne
+ *  porte qu'un jour ; `auteur` = null quand la source n'en a pas (les étapes du registre). */
+export type HistoriqueDossierLigne = {
+  cle: string
+  quand: string
+  heure: boolean
+  auteur: string | null
+  texte: string
+}
+
+const HISTORIQUE_TYPES_DE_TRAVAIL = ['change_hektor_annonce_status', 'change_hektor_offre_status', 'cancel_hektor_compromis', 'delete_hektor_compromis', 'delete_hektor_vente']
+
+// Le libellé de chaque champ du carnet, avec son accord (« Prix corrigé », « Date de l'acte corrigée »).
+const HISTORIQUE_CHAMPS: Record<string, { libelle: string; accord: string; genre: 'euros' | 'date' | 'texte' }> = {
+  montant: { libelle: 'Prix', accord: 'corrigé', genre: 'euros' },
+  prix_publique: { libelle: 'Prix public', accord: 'corrigé', genre: 'euros' },
+  prix_net_vendeur: { libelle: 'Prix net vendeur', accord: 'corrigé', genre: 'euros' },
+  honoraires: { libelle: 'Honoraires', accord: 'corrigés', genre: 'euros' },
+  taux_honoraires: { libelle: 'Taux d’honoraires', accord: 'corrigé', genre: 'texte' },
+  date: { libelle: 'Date', accord: 'corrigée', genre: 'date' },
+  date_acte: { libelle: 'Date de l’acte', accord: 'corrigée', genre: 'date' },
+  jours_validite: { libelle: 'Durée de validité', accord: 'corrigée', genre: 'texte' },
+  jours_retractation: { libelle: 'Délai de rétractation', accord: 'corrigé', genre: 'texte' },
+  numero_mandat: { libelle: 'N° de mandat', accord: 'corrigé', genre: 'texte' },
+  notaire_id: { libelle: 'Notaire', accord: 'changé', genre: 'texte' },
+  notaire_mandant_id: { libelle: 'Notaire du vendeur', accord: 'changé', genre: 'texte' },
+  notaire_mandant_nom: { libelle: 'Notaire du vendeur', accord: 'changé', genre: 'texte' },
+}
+
+function historiqueValeur(valeur: string, genre: 'euros' | 'date' | 'texte') {
+  const texte = valeur.trim()
+  if (genre === 'euros') {
+    const nombre = Number(texte.replace(',', '.'))
+    return Number.isFinite(nombre) && texte ? new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 }).format(nombre) : texte
+  }
+  if (genre === 'date' && /^\d{4}-\d{2}-\d{2}/.test(texte)) return `${texte.slice(8, 10)}/${texte.slice(5, 7)}/${texte.slice(0, 4)}`
+  return texte
+}
+
+/** L'HISTORIQUE d'un dossier : ce qui est daté et, quand on le sait, signé. Trois sources :
+ *  (a) les étapes du registre (offre, compromis, vente), datées, SANS auteur -- les transactions
+ *      vivent encore chez l'éditeur, qui ne livre que l'état ;
+ *  (b) les corrections faites dans l'app : le carnet app_affaire_champ_app (valeur d'avant =
+ *      valeur_hektor_au_moment, seules les vraies corrections sont gardées, pas la saisie de
+ *      création) et la répartition (app_affaire_repartition, hors lignes de « conversion ») ;
+ *  (c) les gestes envoyés par l'app (app_console_job), avec leur demandeur.
+ *  Les AUTEURS sont des identifiants : app_user_profile n'est lisible que par un admin (sa propre
+ *  ligne sinon) -> le nom si lisible, sinon « un utilisateur ».
+ *  ⚠ Chaque source est lue à part, dans son try/catch : une lecture ratée retire ses lignes, elle
+ *    ne fait jamais échouer la fiche. Tri du plus récent au plus ancien. */
+export async function loadHistoriqueDuDossier(input: {
+  chaineId: number
+  hektorAnnonceId: number | string | null
+  lignes: AffaireLedgerRow[]
+}): Promise<HistoriqueDossierLigne[]> {
+  const sortie: Array<HistoriqueDossierLigne & { auteurId?: string | null; tri: number }> = []
+  const euros = (valeur: unknown) => {
+    const nombre = Number(String(valeur ?? '').trim().replace(',', '.'))
+    return String(valeur ?? '').trim() && Number.isFinite(nombre) ? `${new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(nombre)} €` : null
+  }
+  // Le jour, à Paris : une date écrite avec une heure en UTC (« … 23:00:00 ») est le lendemain.
+  const jourDe = (valeur: unknown) => {
+    const texte = String(valeur ?? '').trim()
+    if (!/^\d{4}-\d{2}-\d{2}/.test(texte) || texte.startsWith('0000')) return null
+    if (texte.length <= 10) return texte.slice(0, 10)
+    const iso = texte.replace(' ', 'T')
+    const date = new Date(/[zZ]|[+-]\d\d:?\d\d$/.test(iso) ? iso : `${iso}Z`)
+    return Number.isNaN(date.getTime()) ? texte.slice(0, 10)
+      : new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Paris', year: 'numeric', month: '2-digit', day: '2-digit' }).format(date)
+  }
+  const instant = (valeur: unknown) => {
+    const date = new Date(String(valeur ?? ''))
+    return Number.isNaN(date.getTime()) ? null : date
+  }
+  const kindDe = new Map<number, string>()
+  for (const ligne of input.lignes) kindDe.set(Number(ligne.app_affaire_id), String(ligne.kind ?? ''))
+  const surQuoi = (appAffaireId: number) => {
+    const kind = kindDe.get(appAffaireId)
+    return kind === 'offre' ? 'l’offre' : kind === 'compromis' ? 'le compromis' : kind === 'vente' ? 'la vente' : 'la transaction'
+  }
+
+  // (a) Les étapes du registre : un jour, pas d'heure, pas d'auteur.
+  for (const ligne of input.lignes) {
+    const jour = jourDe(ligne.date)
+    if (!jour) continue
+    const etat = String(ligne.state ?? '').toLowerCase()
+    const montant = euros(ligne.montant)
+    const supprimee = ligne.present_in_hektor === false ? ' · supprimée depuis' : ''
+    const texte = ligne.kind === 'offre'
+      ? `Offre enregistrée${montant ? ` (${montant})` : ''}${etat === 'accepted' ? ' · acceptée' : etat === 'refused' ? ' · refusée' : ''}${supprimee}`
+      : ligne.kind === 'compromis'
+        ? `Compromis enregistré${etat === 'cancelled' ? ' · annulé depuis' : ''}${supprimee}`
+        : ligne.kind === 'vente' ? `Vente enregistrée${montant ? ` (${montant})` : ''}${supprimee}` : null
+    if (!texte) continue
+    sortie.push({ cle: `registre-${ligne.app_affaire_id}`, quand: jour, heure: false, auteur: null, texte, tri: Date.parse(`${jour}T00:00:00Z`) })
+  }
+
+  if (!hasSupabaseEnv || !supabase) return finirHistorique(sortie, new Map())
+  const client = supabase
+  const ids = input.lignes.map((ligne) => Number(ligne.app_affaire_id)).filter((id) => Number.isFinite(id))
+
+  // (b1) Les corrections du carnet : seulement quand une valeur d'AVANT existe et diffère.
+  if (ids.length) {
+    try {
+      const { data } = await client
+        .from('app_affaire_champ_app')
+        .select('app_affaire_id,champ,valeur_app,valeur_hektor_au_moment,ecrit_par,ecrit_le')
+        .in('app_affaire_id', ids)
+      for (const row of (data ?? []) as Array<Record<string, unknown>>) {
+        const avant = String(row.valeur_hektor_au_moment ?? '').trim()
+        const apres = String(row.valeur_app ?? '').trim()
+        const quand = instant(row.ecrit_le)
+        if (!avant || avant === apres || !quand) continue
+        const champ = String(row.champ ?? '')
+        const def = HISTORIQUE_CHAMPS[champ] ?? { libelle: 'Saisie', accord: 'corrigée', genre: 'texte' as const }
+        const suffixe = def.genre === 'euros' ? ' €' : ''
+        sortie.push({
+          cle: `carnet-${row.app_affaire_id}-${champ}`,
+          quand: quand.toISOString(), heure: true, auteur: null, auteurId: String(row.ecrit_par ?? '') || null,
+          texte: `${def.libelle} ${def.accord} sur ${surQuoi(Number(row.app_affaire_id))} : ${historiqueValeur(avant, def.genre)} → ${historiqueValeur(apres, def.genre)}${suffixe}`,
+          tri: quand.getTime(),
+        })
+      }
+    } catch {
+      /* source illisible : la fiche s'affiche sans elle */
+    }
+  }
+
+  // (b2) La répartition : une ligne par écriture (auteur + seconde). Les lignes de « conversion »
+  //      (reprises de l'éditeur, 16 082) ne sont pas un changement fait par quelqu'un.
+  try {
+    const { data } = await client
+      .from('app_affaire_repartition')
+      .select('ecrit_par,ecrit_le')
+      .eq('app_chaine_id', input.chaineId)
+    const vus = new Set<string>()
+    for (const row of (data ?? []) as Array<Record<string, unknown>>) {
+      const auteurId = String(row.ecrit_par ?? '').trim()
+      const quand = instant(row.ecrit_le)
+      if (!quand || !/^[0-9a-f-]{36}$/i.test(auteurId)) continue
+      const cle = `${auteurId}-${Math.floor(quand.getTime() / 1000)}`
+      if (vus.has(cle)) continue
+      vus.add(cle)
+      sortie.push({ cle: `repartition-${cle}`, quand: quand.toISOString(), heure: true, auteur: null, auteurId, texte: 'Répartition modifiée', tri: quand.getTime() })
+    }
+  } catch {
+    /* source illisible : la fiche s'affiche sans elle */
+  }
+
+  // (c) Les gestes envoyés par l'app, sur ce bien ET sur une transaction de la chaîne.
+  if (input.hektorAnnonceId != null && String(input.hektorAnnonceId).trim() && ids.length) {
+    try {
+      const { data } = await client
+        .from('app_console_job')
+        .select('id,job_type,payload_json,requested_by,created_at,status')
+        .eq('hektor_annonce_id', String(input.hektorAnnonceId).trim())
+        .in('job_type', HISTORIQUE_TYPES_DE_TRAVAIL)
+        .order('created_at', { ascending: false })
+        .limit(300)
+      const dansLaChaine = new Set(ids)
+      for (const row of (data ?? []) as Array<Record<string, unknown>>) {
+        const charge = (row.payload_json ?? {}) as Record<string, unknown>
+        const appAffaireId = Number(charge.app_affaire_id)
+        const quand = instant(row.created_at)
+        if (!quand || !dansLaChaine.has(appAffaireId)) continue
+        const type = String(row.job_type ?? '')
+        const modifie = Array.isArray(charge.champs_touches) ? charge.champs_touches.length > 0 : Boolean(charge.champs_touches)
+        const cible = String(charge.target_status ?? '')
+        const geste = String(charge.geste ?? charge.type ?? '')
+        const texte = type === 'change_hektor_annonce_status'
+          ? cible === 'offer' ? (modifie ? 'Offre modifiée' : 'Offre saisie')
+            : cible === 'compromise' ? (modifie ? 'Compromis modifié' : 'Compromis saisi')
+              : cible === 'sold' ? (modifie ? 'Vente modifiée' : 'Vente saisie') : 'Statut du bien changé'
+          : type === 'change_hektor_offre_status' ? (geste.startsWith('accept') ? 'Offre acceptée' : geste.startsWith('refus') ? 'Offre refusée' : 'État de l’offre changé')
+            : type === 'cancel_hektor_compromis' ? 'Compromis annulé'
+              : type === 'delete_hektor_compromis' ? 'Compromis supprimé'
+                : type === 'delete_hektor_vente' ? 'Vente supprimée' : 'Geste enregistré'
+        const statut = String(row.status ?? '')
+        const suite = statut === 'error' ? ' — échec' : statut && statut !== 'done' ? ' — en cours' : ''
+        sortie.push({ cle: `geste-${row.id}`, quand: quand.toISOString(), heure: true, auteur: null, auteurId: String(row.requested_by ?? '') || null, texte: `${texte}${suite}`, tri: quand.getTime() })
+      }
+    } catch {
+      /* source illisible : la fiche s'affiche sans elle */
+    }
+  }
+
+  // Les AUTEURS : un admin lit tous les profils, un négociateur seulement le sien.
+  const noms = new Map<string, string>()
+  const auteurs = Array.from(new Set(sortie.map((ligne) => ligne.auteurId).filter((id): id is string => Boolean(id && /^[0-9a-f-]{36}$/i.test(id)))))
+  if (auteurs.length) {
+    try {
+      const { data } = await client.from('app_user_profile').select('id,display_name,email').in('id', auteurs)
+      for (const row of (data ?? []) as Array<{ id: string; display_name?: string | null; email?: string | null }>) {
+        const nom = String(row.display_name ?? '').trim() || String(row.email ?? '').trim()
+        if (nom) noms.set(String(row.id), nom)
+      }
+    } catch {
+      /* « un utilisateur » */
+    }
+  }
+  return finirHistorique(sortie, noms)
+}
+
+function finirHistorique(lignes: Array<HistoriqueDossierLigne & { auteurId?: string | null; tri: number }>, noms: Map<string, string>): HistoriqueDossierLigne[] {
+  return lignes
+    .sort((a, b) => b.tri - a.tri || a.cle.localeCompare(b.cle))
+    .map(({ auteurId, tri: _tri, ...ligne }) => ({ ...ligne, auteur: auteurId === undefined ? ligne.auteur : (auteurId ? noms.get(auteurId) ?? 'un utilisateur' : 'un utilisateur') }))
+}
+
+// Mode maquette : trois documents FICTIFS pour le dossier vendu fictif (39999), pour voir le bloc
+// « Documents » du registre. Ils ne s'ouvrent pas (aucun coffre en maquette) : l'écran le dit.
+function mockDocumentsDuRegistre(appDossierId: number): ConsoleDocument[] {
+  if (appDossierId !== 39999) return []
+  const base = {
+    app_dossier_id: 39999, hektor_annonce_id: '39999', hektor_document_id: null, document_type: 'document', source: 'hektor',
+    visibility: 'private' as const, storage_bucket: null, sha256: null, mime_type: 'application/pdf', synced_at: null,
+    last_accessed_at: null, archive_policy: null, metadata_json: null, updated_at: null,
+  }
+  return [
+    { ...base, id: 'maquette-doc-1', document_name: 'Diagnostics techniques (DPE, amiante, électricité).pdf', storage_path: 'maquette/diag.pdf', storage_status: 'cloud_available', file_size: 5_100_000, created_at_hektor: '2026-02-20', created_at: '2026-02-20T09:00:00Z' },
+    { ...base, id: 'maquette-doc-2', document_name: 'Acte authentique de vente.pdf', storage_path: null, storage_status: 'local_only', file_size: 3_800_000, created_at_hektor: '2026-07-10', created_at: '2026-07-10T09:00:00Z' },
+    { ...base, id: 'maquette-doc-3', document_name: 'Compromis de vente signé.pdf', storage_path: 'maquette/compromis.pdf', storage_status: 'cloud_available', file_size: 2_200_000, created_at_hektor: '2026-04-11', created_at: '2026-04-11T09:00:00Z' },
+  ]
 }
 
 // Le bien est-il ARCHIVÉ chez Hektor ? (02/11/2026) Un bien vendu ou clos peut l'être aussi : son
