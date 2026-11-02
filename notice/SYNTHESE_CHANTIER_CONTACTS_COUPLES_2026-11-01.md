@@ -874,3 +874,21 @@ est « couple » et son résumé « nommé » (la nuit du 02→03/11 : aujourd'h
   `transforme()` envoie toujours **GET** `contacts-create-transformeContactToConjunct` (`conjoint`, `refCouple`).
   ⚠ Leçon : un 503 « maintenance » de Hektor peut répondre à une requête MAL FORMÉE ; relire la méthode du vrai bouton avant
   d'accuser le service. Rien écrit, onglet fermé.
+
+## 39. ⭐ COQUILLE RATTACHÉE PAR HEKTOR : LE GESTE MARCHE SUR UN VRAI CAS *(02/11, 23:47, « Vas-y » ; EA32621)*
+
+- **Photo d'avant (23:46, compte GROUPE GTI IMMOBILIER)** : 467326 = personne seule (civilité « Non défini », 37 champs, nom/prénom/
+  téléphone/e-mail remplis, page liée à EA32621 / bien 59545) ; 467325 = fiche de couple « M./Mme » VIDE (60 champs, `nom_m2` vide).
+- **UNE écriture** : GET `contacts-create-transformeContactToConjunct&conjoint=467325&refCouple=467326` → **200, réponse VIDE**
+  (sur les fictives du §36 : `{"success":"ok"}`). Non renvoyée ; aucun formulaire ouvert, donc rien à « ne pas enregistrer ».
+- **Relecture (formulaire)** : 467326 est devenue un **COUPLE** (« M./Mme », formulaire de couple, 60 champs) ; sa personne en place 1
+  est INTACTE (nom, prénom, téléphone, e-mail) ; place 2 vide — normal, la coquille n'a pas de nom. 467325 inchangée.
+- ⭐ **Preuve du lien par l'API officielle** (`sonde_paire_de_menage.py 467326 467325`, `ContactById`, lecture) : **467326 refCouple
+  = 467326 (porteuse), 467325 refCouple = 467326**. C'est la forme normale d'un ménage Hektor.
+- **Liens au bien** : les pages des DEUX fiches montrent toujours EA32621 (`openPropertyDrawerDetails(59545)`) → les deux propriétaires
+  restent dans le foyer. ⚠ Une page lue trop tôt ne montrait pas le bien (chargement différé) : attendre ~5 s avant de conclure.
+- ⭐ **CE QUE ÇA PROUVE** : rattacher une coquille vide comme conjoint **est accepté** par Hektor, en une requête, sans fiche née, liens
+  gardés. Le chemin vaut pour les **680 cas simples** du §37 — rien n'est décidé pour eux (taille, ordre, écran : à Frédéric).
+  ⚠ La réponse vide ne peut pas servir de confirmation : un futur geste automatique devra RELIRE `refCouple` pour savoir si c'est fait.
+- ⏰ **À vérifier le 03/11 après la nuit** : notre couche doit voir 467326 en COUPLE, conjoint = 467325 (état « vide » → bouton
+  « Compléter le conjoint »), et la coquille ne doit plus apparaître comme une fiche à part dans l'annuaire.
