@@ -489,3 +489,59 @@ TOUCHÉS, et refuser (refus d'état, sans rejeu) si quelqu'un a changé la fiche
 **ÉPREUVE** : essais hors ligne sur formulaires capturés (montants, arrondis, aucune ligne, ligne AGENCE à
 ca_percent 0), puis essai réel sur un compromis D'ESSAI à répartition — à choisir par Frédéric — qui exige un
 redémarrage du service Admin, file vide.
+
+### 20 quater. Audit du projet avant correctif (02/11, ~00:15) — rien codé
+
+**AUDIT LIMITÉ à l'objet TRANSACTION (compromis, vente) × geste MODIFIER, et au rejeu.** Créer : lu, non concerné
+(le worker ne pose aucun intervenant depuis 06bd38b, 14/09 → Hektor n'a pas de ligne). Supprimer : non concerné.
+Transformer un compromis en vente avec une commission changée : NON MESURÉ.
+
+**CE QUE LE PROJET A DÉJÀ TRANCHÉ (à respecter)**
+- 7d7e6b8 (12-13/09) : « le montant est LU dans la page (`header-section-amount-Entree/Sortie`), JAMAIS recalculé :
+  une commission devinée finit sur une paie » ; « un intervenant déjà retenu n'est JAMAIS touché ».
+- 06bd38b (14/09, décision de Frédéric) : la répartition est une donnée de l'APP ; le worker ne pose plus aucun
+  intervenant ; « Part Réseau 100 % = personne d'attribué, ce qui est VRAI ». Hektor refuse un intervenant absent de
+  SA liste (actifs de l'agence du bien), en silence (il reste à l'étape 2).
+- Point E (23/10) : `champs_touches`, la base n'inscrit au carnet QUE ces clés. Les clés de l'écran et celles que lit
+  le worker (`affirme`) sont LES MÊMES (amount, sale_price, seller_fees, buyer_fees, buyer_fees_rate,
+  net_seller_price, retraction_days, sequestration, signature_date, transaction_date…) — vérifié dans les deux codes.
+
+**LA PAGE DES COMMISSIONS (fixtures `Console/fixtures/commissions_*.html`)** : « Honoraires 4 166,67 € HT soit
+5 000 € TTC », un en-tête par côté (`header-section-amount-*` = HT × unites%), puis par personne quatre cases
+(percent, montant, ca_percent, ca_montant) que LEUR page recalcule EN JAVASCRIPT (`recalculAfterCommissionCompromis`)
+seulement quand on retape un pourcentage. ⇒ Hektor lui-même ne recalcule pas les parts quand la commission change :
+c'est exactement ce que Frédéric a vu à la main.
+
+**MESURES**
+- Modifications de transaction par l'app depuis le 07/09 : 47 compromis, 5 ventes, 4 offres. Commission touchée :
+  5 compromis (tous sur des biens d'essai sans ligne, sauf ce soir), 4 ventes (bien d'essai 24113).
+- ⚠⚠ VENTES 2026 : **280 sur 287 portent des lignes de répartition chez Hektor.** Depuis 4C (modifier une vente, en
+  ligne depuis le 02/11), toute modification de la commission d'une vraie vente BLOQUERA de la même façon.
+  Compromis en cours : non mesurable (la page n'a jamais été demandée pour 8 609 compromis) ; 50039 et 50030 en avaient.
+- Défaut B, toutes les modifications depuis septembre : prix envoyé ≠ prix rendu par Hektor dans 24 cas, 22 sur le
+  bien d'essai 24933 (changements voulus). **Deux rejeux ont réécrit une valeur plus récente** : 24933 le 13/09
+  (183 000 reposé 6 min après un 184 000) et 62323 ce soir (100 000 sur 95 000, 18 min après).
+- ⛔ B NE SUFFIT PAS : ce soir le rejeu a AUSSI reposé le net 93 000 et les honoraires 7 000 — deux champs TOUCHÉS —
+  par-dessus la correction de Frédéric. Seul un contrôle « Hektor a-t-il changé depuis le clic ? » l'aurait arrêté.
+  Le carnet porte déjà `valeur_hektor_au_moment` pour chaque champ touché (vu ce soir : 93000.00 / 7000.00).
+
+**LE CORRECTIF RÉVISÉ (à valider)**
+- **A — les parts suivent la nouvelle commission** (compromis ET vente, en modification seulement, seulement si
+  seller_fees ou buyer_fees est touché, seulement s'il y a des lignes) : part = en-tête du côté LU dans la page ×
+  percent / 100 (ca_montant idem × ca_percent), l'arrondi au dernier de chaque côté. Respecte 7d7e6b8 (lu, pas
+  deviné) ⚠ À CONDITION que l'en-tête rendu à l'étape 2 porte la NOUVELLE commission : NON MESURÉ. Repli si l'en-tête
+  porte l'ancienne : proportion nouvelle / ancienne commission (lues toutes deux). Si rien n'est lisible : refus
+  clair, sans rejeu.
+  Variante A' (ce qu'a fait Frédéric) : retirer les lignes → « Part Réseau 100 % ». Plus simple, cohérent avec
+  06bd38b, mais efface chez Hektor un choix humain (contraire à 7d7e6b8). À TRANCHER PAR LUI.
+- **B — un champ non touché ne part pas** : en modification, si `champs_touches` existe, `affirme(clé)` ne rend que
+  les clés touchées (les écrans sans la liste gardent l'ancien comportement).
+- **B2 — Hektor a changé depuis le clic → on s'arrête** : avant d'envoyer, comparer la valeur rendue par Hektor de
+  chaque champ touché à `valeur_hektor_au_moment` du carnet ; différente = refus d'état (pas de rejeu, message clair :
+  « la fiche a été modifiée dans Hektor depuis votre saisie »).
+- **C — le message** : à l'étape 2, ne plus dire « aucun acquéreur envoyé » (fausse piste, le code l'avoue l. ~14425).
+
+**ÉPREUVE PRÉVUE** : 1) une MESURE sans enregistrement : ouvrir l'assistant d'un compromis d'essai À RÉPARTITION,
+poster l'étape 0 avec une autre commission, relever la page des commissions, NE PAS enregistrer (le garde-fou
+d'étape le permet) — accord requis, bien à choisir ; 2) essais hors ligne sur la capture ; 3) essai réel complet sur
+le même bien, puis retour à la valeur d'origine ; redémarrage du service Admin file vide.
