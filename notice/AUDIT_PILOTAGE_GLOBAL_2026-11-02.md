@@ -145,3 +145,13 @@ le bon de visite**. Relu dans le code :
   `app_google_calendar_event_link`), mais il vaut ~0 tant que les agences prennent leurs visites ailleurs (agenda tapé
   à la main, Hektor). Pistes : garder une trace à chaque bon imprimé ; lire les agendas Google des négociateurs
   (note du 31/07) ; ou les bons déposés chez Hektor (2 226, sans date). À décider par Frédéric.
+
+## 9. Réponses de Frédéric (02/11 soir)
+
+- **Où sont pris les RDV de visite aujourd'hui** : dans Google Agenda directement et dans Hektor ; **ensuite
+  uniquement dans l'app**, avec une synchro Google déjà prévue.
+- **Compter les visites** : les **RDV pris dans l'app** (`app_google_calendar_event_link`, type `visite`), plus une
+  trace à chaque bon de visite imprimé (à concevoir). Le chiffre montera avec l'adoption de l'app.
+- **Objectifs** : pas maintenant (le pilotage compare à l'année précédente).
+- **Accès et unité** : **administrateurs seuls**, honoraires **HT par défaut** (TTC d'un clic). La maquette est passée
+  en HT par défaut. ⚠ HT = TTC / 1,2 dans la maquette : à vérifier au code (taux de TVA unique ?).
