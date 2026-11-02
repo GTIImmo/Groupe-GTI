@@ -374,6 +374,10 @@ une poignée d'exceptions : c'est un cas sur seize.
 ③ ⭐ PERSISTER LA CHARGE DU MANDAT dans app_mandat_champ_app
    (champ = 'charge_commission'), puis la reprendre sur la premiere offre de la
    chaine. C'est le maillon manquant qu'il decrit, et la table existe deja.
+   ⛔⛔ CORRECTION DU 02/11 (voir § 14) : j'avais ecrit « une ligne, pas une
+   migration ». C'est VRAI pour la table (aucune contrainte sur le nom du champ)
+   mais FAUX pour le chemin : DEUX LISTES BLANCHES EN DUR, a un seul champ
+   chacune, jetteraient la valeur EN SILENCE.
 
 ④ ⬜ LE RATTRAPAGE DU PASSE : seul le classeur sait (955 lignes). Il n'y a
    aucune autre source -- ni Hektor, ni nous. C'est la decision du lot 2 de la
@@ -401,3 +405,226 @@ les notes      notice/A4bis, A4, A5, A7 · phase2/checks/essai_commission_offre_
 le classeur    cache local du 01/11 18:47 (4 780 lignes, 38 colonnes), sans
                appel reseau
 ```
+
+---
+
+# SUITE DE L'AUDIT — LE REGISTRE DES MANDATS *(sa demande du 02/11)*
+
+> *« CONTINUE TON AUDIT AU NIVEAU DU REGISTRE DES MANDATS, peut-être des notes ou
+> autres, cherche si nous avions déjà abordé le sujet. »*
+
+Toujours en **lecture seule**.
+
+---
+
+## § 12. LE REGISTRE DES MANDATS NE PORTE AUCUNE DONNÉE D'HONORAIRES
+
+```
+app_registre_mandats_current : 73 colonnes
+   qui parlent d'honoraires, de charge ou de commission :  ZERO
+   la seule colonne d'argent : mandat_montant -- et c'est le PRIX DEMANDE
+                               (le `montant` du mandat Hektor), pas un honoraire
+```
+
+⭐ **Donc l'argent n'existe qu'au niveau de la TRANSACTION, jamais du mandat.**
+Ce n'est pas un oubli de la vue : le mandat de Hektor lui-même n'a ni honoraire
+ni taux ni charge (§ 1, 17 clés). La vue ne peut pas montrer ce qui n'existe pas
+en amont.
+
+---
+
+## § 13. ⭐⭐⭐ OUI, LE SUJET A DÉJÀ ÉTÉ ABORDÉ — ET IL PORTE UN NOM DEPUIS LE 22/10
+
+Dans `notice/ARCHITECTURE_REGISTRE_TRANSACTIONS_CHEZ_NOUS_2026-10-22.md`.
+
+### Le constat s'appelle **F5**
+
+```
+ligne 1601  « F5 -- en modification d'offre, la modale ne montre pas la
+            commission _app (8 000) ni la charge (« acquereur ») ;
+            RIEN N'EST PERDU. »
+ligne 1619  | F5 | modale de modification sans la commission _app ni la charge
+            | ANCIEN (lot 1c, 16/10) ; ECRAN NON TOUCHE |
+```
+
+### Et le tableau des champs le marquait de DEUX croix
+
+```
+ligne 1851  | charge de la commission | 3 | registre charge_commission_app
+            |  ❌  (carte de la rubrique)
+            |  ❌ en modification (seulement REPRISE DE L'OFFRE a la creation
+                  du compromis/vente)
+            |  —  (apres la vente) |
+```
+
+### Le correctif était écrit, il s'appelle **P5**
+
+```
+ligne 1880  | P5 | la modale d'une offre reprend honoraires vendeur et charge
+            (honoraires_entree_app, charge_commission_app) -- F5
+            | front (prerenseignement)
+            | LE PRERENSEIGNEMENT NE LEVE PAS LE DRAPEAU « touche » : rien ne
+              part tant qu'on ne tape pas (meme discipline que les acquereurs) |
+```
+
+### ⛔ Et P5 n'a jamais été fait
+
+Le § 23 de la même note, écrit **le lendemain**, le dit :
+
+> « Le § 22.4 (P1-P7) **allait trop loin** : il ajoutait des lignes que l'écran
+> n'a jamais eues. »
+
+Le plan a été ramené à « comme avant, mais tout de suite » à sa demande
+(*« je ne demande pas mieux qu'avant ce chantier au niveau affichage »*). P5 est
+donc resté sur l'étagère, et l'écran n'a pas été touché.
+
+### ⭐⭐ CE QUI N'AVAIT JAMAIS ÉTÉ VU, et que l'audit d'aujourd'hui ajoute
+
+Le non-levage du drapeau était **voulu**, et présenté comme une **garantie** :
+ne pas réécrire ce qu'on n'a pas voulu changer.
+
+```
+EN MODIFICATION  la garantie est juste : la valeur est DEJA en base, ne pas la
+                 renvoyer ne la perd pas. « Rien n'est perdu » est VRAI.
+
+A LA CREATION    ⛔ il n'y a RIEN en base a garder. Ne pas lever le drapeau ne
+                 protege rien : ca JETTE la valeur que l'ecran vient d'afficher.
+                 « Rien n'est perdu » est FAUX.
+```
+
+**Le defaut n'est donc pas le drapeau : c'est d'avoir appliqué à la création une
+règle qui ne valait que pour la modification.** Et comme une chaîne commence
+toujours par une création, elle ne démarre jamais (§ 3).
+
+⭐ **La donnée tranche entre les deux lectures** : 8 « acquereur », **0
+« vendeur »**. Si le problème était seulement l'affichage en modification (F5),
+on trouverait des « vendeur » en base. Il n'y en a aucun.
+
+### ⚠ Et un défaut JUMEAU, lui aussi déjà écrit et jamais corrigé
+
+```
+ligne 1847  | honoraires vendeur | offre | registre honoraires_entree_app
+            | ❌ | ❌ (F5 : LA MODALE LIT honoraires_entree, VIDE SUR UNE OFFRE)
+            | ✅ repris au compromis |
+```
+La modale lit `honoraires_entree` (la colonne **de Hektor**, vide à l'offre à
+100 %) au lieu de `honoraires_entree_app` (**la nôtre**). Même famille, même
+conséquence : `honoraires_entree_app` porte **4 valeurs** sur 31 124.
+
+### ⚠ Et le bloc vide de la fiche était déjà noté lui aussi
+
+```
+ligne 1858  | bloc « Honoraires & rendement » | — | —
+            | ❌ JAMAIS REMPLI PAR LA CHAINE (le constructeur ne pose pas
+              `honoraires`) | — | — |
+```
+C'est exactement la case codée vide que j'ai retrouvée à `App.tsx:33731`
+(§ 8). **Constat du 22/10, toujours vrai le 02/11.**
+
+---
+
+## § 14. ⛔⛔ DEUX LISTES BLANCHES EN DUR — ma recommandation ③ était incomplète
+
+J'avais écrit : *« poser la charge du mandat, c'est une ligne, pas une
+migration »*. C'est vrai pour la **table** :
+
+```
+app_mandat_champ_app : AUCUNE contrainte sur le nom du champ
+   la seule contrainte est PRIMARY KEY (hektor_annonce_id, numero_mandat, champ)
+   -> elle accepterait « charge_commission » sans migration
+```
+
+⛔ **Mais le CHEMIN la jetterait en silence.** Deux listes blanches, **à un seul
+champ chacune** :
+
+```
+phase2/identite/magasin_mandat_app.py:64    CHAMPS_SUIVIS     = ("mandat_date_cloture",)
+phase2/identite/contrat_autorite.py:92      CHAMPS_APP_MANDAT = ("mandat_date_cloture",)
+```
+
+Et la garde est explicite, `magasin_mandat_app.py:277` :
+```
+if not annonce or not numero or champ not in CHAMPS_SUIVIS or not v_app:
+    continue
+```
+
+⚠ **C'est exactement le piège déjà payé** « une nouvelle clé dans la charge peut
+être JETÉE » : la valeur serait écrite, et **ignorée sans aucune erreur**.
+
+Pour mémoire, l'état des cinq listes :
+```
+CHAMPS_APP_CONTACT  = ("birth_date", "birth_place", "marital_status")
+CHAMPS_APP_MANDAT   = ("mandat_date_cloture",)
+CHAMPS_APP_ANNONCE  = ()
+CHAMPS_APP_AFFAIRE  = ()     ⛔ VIDE EXPRES -- NE PAS RALLUMER
+CHAMPS_SUIVIS       = ("mandat_date_cloture",)   (magasin du mandat)
+```
+
+---
+
+## § 15. ⭐⭐⭐ ET LE CRITÈRE DE DÉCISION EXISTE DÉJÀ — il désigne la charge
+
+`magasin_mandat_app.py:58`, écrit bien avant ce chantier :
+
+> « Les champs suivis. UN SEUL pour l'instant, et c'est **délibéré** : sur
+> 24 939 mandats, Hektor ne porte une date de clôture que 94 fois (0,4 %).
+> C'est **le seul champ du mandat où il n'a rien à dire** — donc le seul qu'on
+> puisse confier à l'app sans risquer de la figer sur une valeur périmée. Les
+> autres (date_debut, date_fin, type, montant) sont renseignés à ~100 % chez
+> Hektor ; **ils suivront quand l'éditeur de mandat de l'app sera le seul lieu
+> de saisie.** »
+
+⭐⭐ **La règle est donc déjà posée, et appliquée à la charge elle la désigne
+mieux que tout autre champ :**
+
+```
+                        ce que HEKTOR en porte      candidat a la classe A ?
+mandat_date_cloture     94 / 24 939   = 0,4 %       OUI, et c'est fait
+LA CHARGE               0 / 24 939    = 0,0 %       OUI, et c'est MIEUX
+date_debut, date_fin,
+type, montant           ~100 %                      non, et c'est juste
+```
+
+**La charge est le seul champ du mandat dont Hektor ne sait RIEN DU TOUT — pas
+0,4 %, zéro.** Elle remplit le critère déjà écrit, plus franchement que le seul
+champ qui l'a déjà franchi. ⛔ Ce n'est pas une décision que je prends : c'est
+le critère **du projet**, appliqué à un champ de plus.
+
+---
+
+## § 16. CE QUE CETTE SUITE CHANGE À LA LISTE DU § 10
+
+```
+① REPARER LA PORTE      inchange, et c'est TOUJOURS le plus urgent.
+                        ⭐ Precision neuve : le correctif doit distinguer
+                        CREATION et MODIFICATION. Lever le drapeau partout
+                        reecrirait en modification ce qu'on n'a pas voulu
+                        changer -- le risque que P5 voulait eviter, et il
+                        avait raison POUR LA MODIFICATION.
+
+② UNIFIER LE DEFAUT     inchange.
+
+③ LA CHARGE AU MANDAT   ⛔ CORRIGE : trois gestes, pas un.
+                        a. la ligne dans app_mandat_champ_app (aucune migration)
+                        b. le champ dans CHAMPS_SUIVIS et CHAMPS_APP_MANDAT
+                           -- sans quoi il est JETE EN SILENCE
+                        c. la reprise mandat -> premiere offre de la chaine
+                        ⭐ Et le critere du projet (§ 15) la justifie deja.
+
+④ LE RATTRAPAGE         inchange : le classeur est la seule source (955 lignes).
+
+⑤ notaire_id a 0        inchange.
+
+⑥ LES 4 CASES VIDES     ⭐ ce n'est pas neuf : constat du 22/10, ligne 1858.
+
+⑦ ⬜ NOUVEAU : LE DEFAUT JUMEAU F5 sur les honoraires vendeur -- la modale lit
+   honoraires_entree (Hektor, vide a l'offre) au lieu de honoraires_entree_app
+   (la notre). Ecrit le 22/10, jamais corrige, et honoraires_entree_app porte
+   4 valeurs sur 31 124.
+```
+
+⚠ **Et la leçon de méthode, pour ce chantier comme pour les autres** : F5, P5,
+le bloc vide et la réserve du 16/10 sur `notaire_id` étaient **tous écrits**.
+Aucun n'était faux. Ils ont simplement été classés « à faire plus tard », et
+*« rien n'est perdu »* a été écrit sans distinguer la création de la
+modification. **Une réserve d'audit non traitée devient le bug.**
