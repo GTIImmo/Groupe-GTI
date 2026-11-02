@@ -757,3 +757,19 @@ est « couple » et son résumé « nommé » (la nuit du 02→03/11 : aujourd'h
   coquilles toujours masquées (case_conjoint_vide app 15 117), orphelines 771. **Effet à la nuit du 02→03/11, sans push.**
 - Créer un vrai couple depuis l'app, ou relier la coquille : question pour plus tard (essai « Transformer en couple » sur fiches fictives).
 
+## 34. PIÈCE F — « COMPLÉTER LE CONJOINT » : ÉCRITE (21732cc), FONCTION NON POSÉE *(02/11 ~12:45, « J'AI PUSH CONTINU »)*
+
+- Push de Frédéric vérifié : 6143fe0 en ligne (`index-BS0FFFGr.js`, « Modifier le conjoint » depuis l'onglet).
+- **Écran** : sous les onglets d'un couple dont la seconde fiche est VIDE et CONNUE de Hektor comme place 2 (`couple_json.etat = vide`,
+  **994** couples actifs), un bouton **« + Compléter le conjoint »** (admins, interrupteur `contacts_couples_modif`, droit de gérer les
+  contacts) ouvre la fenêtre de la principale titrée « Compléter le conjoint », partie « Conjoint à compléter » VIDE, **nom obligatoire**.
+  Envoi : comme la modification (place 2, bloc `_m2`, worker 748383f déjà actif). `lib/coupleAffichage.ts` : `conjointVideId` (7/7).
+  **Pas de bouton** pour les cases rattachées par notre nuit (coquilles séparées chez Hektor) ni pour les couples sans seconde fiche.
+- **Base (NON posée)** : `supabase/patch_couple_phase3f_completer_conjoint_2026-11-02.sql` remplace `app_edit_conjoint_optimistic` (garde
+  sur l'empreinte posée 77bcfa92…) : accepte l'état « vide » ; écrit la fiche vide SI elle est chez nous (**469 sur 994** seulement) et
+  TOUJOURS le résumé, qui passe à « nommé » ; « nommé » inchangé. **Répétition 5/5** (case vide avec fiche, sans fiche, témoin « nommé
+  absent » refusé, anon refusé ; nouvelle empreinte 43faf014…) — rien n'est resté. Inverse prêt (remet 77bcfa92…).
+- **Premier usage réel À SURVEILLER** : remplir la place 2 d'une VRAIE case vide n'a jamais été prouvé sur ce cas exact (Hektor recopie le
+  nom quand on vide, on ne peut pas fabriquer une vraie case vide) — vérifier ensuite que la seconde fiche se remplit et qu'AUCUNE fiche ne naît.
+- ⏭ Push du front ; pose de la fonction (accord) ; premier usage surveillé.
+
