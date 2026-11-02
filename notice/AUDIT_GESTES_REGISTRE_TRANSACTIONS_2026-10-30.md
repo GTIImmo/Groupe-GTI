@@ -379,3 +379,67 @@ Audit limité à la correction du prix d'une VENTE (créer : seulement la base, 
 - `npm run build` vert.
 - **À poser, avec accord** : coller le patch ; pousser ; redémarrer les 4 services (pour la preuve) ; puis remettre la
   vente d'essai 23358 à 115 000 par l'écran → registre et carnet doivent revenir à 115 000 et la preuve être conforme.
+- ✅ **Base 4C-prix POSÉE le 02/11 vers 10:25 (heure de Paris), par moi avec l'accord de Frédéric** (« Oui, les deux ») :
+  empreintes 446df246 / 176ee0df vérifiées avant, **11616ec6 / a52966fa** après ; SECURITY DEFINER et droits
+  inchangés. Contrôle annulé, ses droits : correction 1001395 → 115 000 ; compromis 30666 → 104 000 (inchangé).
+  Commits : `d786df7` (écran, base, worker), `a8c645f` (note). Reste : pousser, redémarrer les 4 services FILE VIDE,
+  remettre 23358 à 115 000 par l'écran.
+
+### 11 sexies. Retour de la vente d'essai à 115 000 — 4C-prix éprouvé en réel (02/11/2026, 10:29)
+
+Poussé (`a8c645f` en ligne, Vercel READY), workers relancés à 10:27:06-08 (code du worker de 10:01:38), file vide.
+Par l'écran, dans le Chrome de Frédéric : dossier 1001393 → « Modifier la vente » → 115 000 → « Modifier la transaction ».
+- ✅ **Écran** : la charge du travail `a7580263` porte `amount` = `sale_price` = 115000 (avant : 128787 / 115001).
+- ✅ **Base** : registre 128 787 → **115 000** ; carnet `montant` 128 787 → **115 000**, `prix_publique` 115 000,
+  `prix_net_vendeur` 110 000 — sans écriture à la main.
+- ✅ **Preuve** : le prix n'est plus en écart (Hektor 115 000.00). Clôture du mandat **non rejouée** (2e fois).
+- ✅ Travail `done`. La vente d'essai est revenue à son état de départ chez Hektor et chez nous (115 000).
+- ⚠ **Reste un faux écart, non corrigé** : « honorairesSortie : envoyé 5000.00, Hektor porte undefined ». Hektor PORTE
+  bien 5 000 (`honorairesSortie` = 5000.00 dans la fiche lue par le run) : c'est la relecture de la preuve qui ne rend
+  pas ce champ pour cette vente (elle l'avait rendu le 18/09 sur 24933 : 1 500). Effet : la preuve finit « error »
+  (le travail reste `done`) et la saisie ne quitte pas le carnet — le carnet porte des valeurs ÉGALES à Hektor, donc
+  sans dommage. Cause non cherchée : à traiter à part.
+
+### 11 septies. Le faux écart « honorairesSortie : Hektor porte undefined » — cause (02/11/2026, audit, RIEN CODÉ)
+
+Audit limité à la RELECTURE qui sert de preuve après une correction de transaction (offre, compromis, vente).
+Lectures faites à Hektor : 7 requêtes GET, aucune écriture.
+- La preuve relit par deux scripts Python appelés par le worker : `phase2/sync/transactions_annonce_from_api.py`
+  (listes ListOffres / ListCompromis / ListVentes) et `phase2/sync/transaction_etat_from_api.py` (OffreById /
+  CompromisById / VenteById). **Seul ListOffres passe `version`** ; les autres appels n'en passent pas.
+  Le run de nuit (`sync_raw.py:973`) passe `version` = `v2` partout.
+- **Mesure du 02/11, même transaction, avec et sans `version`** :
+  - vente 23358 (ListVentes) — sans : clé `sales`, `hono_sortie`, `hono_entree`, `hono_hors_taxe`,
+    `commission_agence`, `part_admin` ; avec v2 : clé `data`, `honorairesSortie`, `honorairesEntree`, `honorairesHT`,
+    `commissionAgence`, `partAdmin`. Le reste (id, date, prix, acquéreurs, mandants) est identique.
+  - compromis 50094 (CompromisById) — sans : `res`, `prix_publique`, `prix_net`, `honoraires_sortie`,
+    `honoraires_entree`, `part_admin` ; avec v2 : `data`, `prixPublique`, `prixNetVendeur`, `honorairesSortie`,
+    `honorairesEntree`, `dateStart`, `dateSignatureActe`… — les noms qu'attend la preuve (`CHAMPS_PROUVABLES`).
+  - offre 33114 (OffreById) — mêmes propositions avec ou sans : **non touchée**.
+- **Hektor a changé sa réponse par défaut entre le 23/10 et le 02/11** : le 23/10, sans version, la preuve relisait
+  encore `prixPublique` / `honorairesSortie` sur les compromis 50132 et 50136 (« MODIFIE et RELU »). Aucune correction
+  de compromis ni de vente n'a été faite entre-temps, d'où le silence.
+- **Conséquence aujourd'hui** : toute correction de COMPROMIS finirait en faux « N'A PAS PRIS » (prix public, net,
+  honoraires, séquestre non relus) et de VENTE sur les honoraires ; la saisie resterait au carnet, le registre ne
+  serait pas reporté par la preuve (le run de nuit, lui, relit bien en v2). Les données chez Hektor ne sont pas en cause.
+- **Remède proposé** : passer `version` = `v2` dans les appels ListCompromis, ListVentes, CompromisById (et VenteById par
+  cohérence) et lire la clé `data` (repli sur l'ancienne clé). Le geste lirait alors la MÊME forme que le run.
+  Ces scripts sont relancés à chaque travail : **pas de redémarrage**, effet immédiat. Essai hors ligne possible en
+  lecture (24113 / 23358, 1953 / 50094). Non mesuré : les autres lectures du projet sans `version`.
+
+### 11 octies. Relecture avec `version` : CORRIGÉE ET EN SERVICE (02/11/2026, « go corrige et vérifie ailleurs »)
+
+- **Corrigé** : `transactions_annonce_from_api.py` (ListCompromis, ListVentes) et `transaction_etat_from_api.py`
+  (CompromisById, VenteById) passent `version` = `v2` et lisent `data`, l'ancienne clé en repli. L'offre n'est pas
+  touchée. ⚠ Ces scripts sont lancés à chaque travail par le worker : **en service dès l'enregistrement**, sans redémarrage.
+- **Éprouvé en lecture** : liste des ventes 24113 → `honorairesSortie` 5000.00, `honorairesEntree` 0.00, même prix, date,
+  1 acquéreur, 10 mandants ; compromis 50094 par numéro → `prixNetVendeur`, `dateStart`, `dateSignatureActe` ; vente
+  23358 → trouvée, 9999999 → non trouvée (vérification des suppressions intacte) ; offre 33114 inchangée. La liste
+  ListCompromis v2 rend les mêmes numéros, dans le même ordre, avec les mêmes annonces et `status` que l'ancienne.
+- **Ailleurs, recensé (23 fichiers Python qui appellent l'API, + le worker JS)** : tous passent `version` SAUF
+  `annonce_datemaj_from_api.py`, `annonce_etat_from_api.py`, `annonce_proprietaires_from_api.py` (AnnonceById) et
+  l'annuaire `listNegos` (`push_hektor_directory_to_supabase.py:158`). **Éprouvés le 02/11 sans version : ils rendent
+  toujours les champs qu'ils lisent** (keyData.id / datemaj / archive / NEGOCIATEUR / agence, statut id + nom,
+  proprietaires ; res[].idUser / prenom / nom / email / telephone / portable). Non touchés. Le worker JS
+  (AnnonceById, ~3545) passe déjà la version. Les scripts de `.tmp/`, sondes et copies de travail ne sont pas comptés.
+- **Non éprouvé** : une vraie correction de compromis par l'écran avec la nouvelle relecture (aucune depuis le 23/10).

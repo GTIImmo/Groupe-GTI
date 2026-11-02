@@ -71,9 +71,22 @@ def etat_transaction(kind: str, ident: str,
     if kind not in CHEMINS or not ident.isdigit():
         return {"_error": "genre ou identifiant invalide"}
     chemin, param = CHEMINS[kind]
+    # ⚠ 02/11/2026 : LA VERSION POUR LE COMPROMIS ET LA VENTE. Sans elle, Hektor rend
+    #   depuis fin octobre une ANCIENNE forme (prix_publique, prix_net, honoraires_sortie ;
+    #   la vente sous `sale`) au lieu des noms que la preuve du worker attend (prixPublique,
+    #   prixNetVendeur, honorairesSortie...) : faux « N'A PAS PRIS » sur la vente 23358.
+    #   Le 23/10 la meme lecture sans version rendait encore les bons noms. Avec `version`
+    #   la reponse est sous `data` -- la forme du run de nuit (sync_raw.py). L'offre ne
+    #   change pas (memes propositions avec ou sans, mesure du 02/11) : on n'y touche pas.
+    #   Note : notice/AUDIT_GESTES_REGISTRE_TRANSACTIONS_2026-10-30.md § 11 septies.
+    versionnee = kind in ("compromis", "vente")
     try:
-        client = client or HektorClient(Settings.from_env())
-        payload = client.get_json(chemin, params={param: ident})
+        reglages = Settings.from_env()
+        client = client or HektorClient(reglages)
+        params = {param: ident}
+        if versionnee:
+            params["version"] = reglages.api_version
+        payload = client.get_json(chemin, params=params)
     except Exception as exc:                                        # noqa: BLE001
         texte = str(exc)
         if "404" in texte:
@@ -86,6 +99,9 @@ def etat_transaction(kind: str, ident: str,
     #   pour un verificateur de suppression : il aurait confirme des effacements
     #   a tort. Teste sur trois offres : 9469 et 33050 vivantes, 32790 en 404.
     cle = "offre" if kind == "offre" else "res"
+    # 02/11 : versionnee -> `data` ; l'ancienne cle en repli si Hektor ne la rendait pas.
+    if versionnee and isinstance(payload, dict) and "data" in payload:
+        cle = "data"
     res = payload.get(cle) if isinstance(payload, dict) else None
     if isinstance(res, list):
         res = res[0] if res else None

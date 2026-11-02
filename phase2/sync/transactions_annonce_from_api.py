@@ -20,8 +20,8 @@ REUSSIS : exactement le faux echec qu'il est cense empecher.
 L'API, elle, ne masque rien. Les deux listings portent le lien vers l'annonce :
 
     /Api/Offre/ListOffres/      data[].id_annonce      (page 1, les 20 plus recentes)
-    /Api/Vente/ListCompromis/   liste[].annonce.id     (page 0, tri id desc -- voir le 23/10)
-    /Api/Vente/ListVentes/      sales[].annonce.id     (fenetre de dates)
+    /Api/Vente/ListCompromis/   data[].annonce.id      (page 0, tri id desc -- voir le 23/10 ; version v2 depuis le 02/11)
+    /Api/Vente/ListVentes/      data[].annonce.id      (fenetre de dates ; version v2 depuis le 02/11)
 
 L'OFFRE A ETE AJOUTEE LE 01/09/2026, et voici pourquoi.
 
@@ -138,10 +138,18 @@ def main() -> int:
             # ⚠ `sort=id` DEPUIS LE 23/10 -- voir « BORNES ASSUMEES » en tete :
             # `sort=dateStart` est ignore par Hektor, la page 0 n'etait plus les
             # 20 plus recents. Le numero d'un compromis croit avec sa creation.
+            # ⚠ `version` DEPUIS LE 02/11 : sans elle, Hektor rend depuis fin octobre
+            # une ANCIENNE forme (prix_publique, honoraires_sortie...) au lieu des noms
+            # que la preuve attend (prixPublique, honorairesSortie...). Avec elle, la
+            # liste est sous `data` -- la forme du run (sync_raw.py:973). Mesure du
+            # 02/11 : memes numeros, meme ordre, memes annonces, meme `status`.
+            # Note : notice/AUDIT_GESTES_REGISTRE_TRANSACTIONS_2026-10-30.md § 11 septies.
             payload = client.get_json("/Api/Vente/ListCompromis/",
                                       params={"page": 0, "sort": "id", "way": "desc",
-                                              "withCompromisStatus": "false"})
-            lignes = payload.get("liste")  # PAS de « or [] » -- voir plus bas
+                                              "withCompromisStatus": "false",
+                                              "version": reglages.api_version})
+            # PAS de « or [] » -- voir plus bas ; l'ancienne cle en repli.
+            lignes = payload.get("data") if "data" in payload else payload.get("liste")
         else:
             pivot = args.date or dt.date.today().isoformat()
             try:
@@ -152,8 +160,12 @@ def main() -> int:
                 "page": 0, "sort": "date", "order": "desc",
                 "dateStart": (jour - dt.timedelta(days=3)).isoformat(),
                 "dateEnd": (jour + dt.timedelta(days=3)).isoformat(),
+                # 02/11 : meme raison que ListCompromis -- sans version, hono_sortie au
+                # lieu de honorairesSortie (vente 23358). Memes id, date, prix, personnes.
+                "version": reglages.api_version,
             })
-            lignes = payload.get("sales")  # PAS de « or [] » -- voir plus bas
+            # PAS de « or [] » -- voir plus bas ; l'ancienne cle en repli.
+            lignes = payload.get("data") if "data" in payload else payload.get("sales")
     except Exception as exc:  # noqa: BLE001 -- l'appelant decide quoi en faire
         print(json.dumps({"_error": str(exc)[:200]}, ensure_ascii=False))
         return 0
