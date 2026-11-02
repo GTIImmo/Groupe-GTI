@@ -461,3 +461,17 @@ Recherche : les 302 couples à conjoint prénommé portent déjà son prénom da
 **Pour allumer** : 1) Frédéric pousse ; 2) avec son accord, coller/poser `supabase/patch_couple_phase3c_interrupteur_annuaire_2026-11-02.sql`
 (cran « admin ») ; 3) regarder l'annuaire ordinateur ET téléphone ; 4) passer à « on ». Retour arrière : supprimer la clé.
 
+## 19. PIÈCE C EN LIGNE, CRAN « ADMIN » POSÉ, VUE À L'ÉCRAN *(02/11 ~09:35, « Je pousse, puis pose »)*
+
+- Frédéric a poussé (72900a1 sur origin) ; Vercel sert `index-CDT_p-W9.js`, qui contient `contacts_couples_ecran`.
+- **Interrupteur posé par moi** : `app_setting.contacts_couples_ecran = 'admin'` (08:35:12 UTC), corps de
+  `supabase/patch_couple_phase3c_interrupteur_annuaire_2026-11-02.sql`. Les négociateurs voient l'annuaire d'avant.
+- **Vu dans le Chrome de Frédéric (admin)**, annuaire ordinateur, page 1 : 50 lignes, **7 couples** (pastille « Couple · prénoms »
+  ou « Couple »), **2 à deux téléphones** (initiale devant chaque numéro), liseré décalé derrière l'avatar, **0 ligne vide** ;
+  0 erreur console. Conforme à la maquette du 30/10.
+- **Téléphone** : la fenêtre du Chrome du serveur refuse de rétrécir (reste à 1 280 px) → vue par un cadre de 390 px de la même app
+  (même session) : rendu `MobileContactCards`, 50 cartes, 7 pastilles, 2 lignes « Y. … · S. … ». Cadre retiré, fenêtre remise.
+- ⚠ Petit défaut d'aspect : sur ordinateur, la pastille est coupée par « … » quand les deux prénoms sont longs (colonne étroite) ;
+  le texte entier est dans l'info-bulle. Sur téléphone, elle tient.
+- ⏭ RESTE : passer le cran à « on » (accord de Frédéric) ; puis la pièce D (la fiche : étiquette, deux onglets, rôles par personne).
+
