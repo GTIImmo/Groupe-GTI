@@ -443,3 +443,60 @@ Lectures faites à Hektor : 7 requêtes GET, aucune écriture.
   proprietaires ; res[].idUser / prenom / nom / email / telephone / portable). Non touchés. Le worker JS
   (AnnonceById, ~3545) passe déjà la version. Les scripts de `.tmp/`, sondes et copies de travail ne sont pas comptés.
 - **Non éprouvé** : une vraie correction de compromis par l'écran avec la nouvelle relecture (aucune depuis le 23/10).
+
+## 12. Registre : audit graphique de l'écran EN LIGNE contre la maquette (02/11/2026, RIEN CODÉ)
+
+Vu dans le Chrome de Frédéric, 1 280 px, vraies données 2026 ; maquette https://claude.ai/artifact/3FA3yDqWuDWuqLdZAkvS8x.
+- **Liste** : le tableau (1 113 px) dépasse sa boîte (1 083 px) → la colonne Répartition est COUPÉE. Lignes hautes
+  (acquéreur sur 3-4 lignes), parcours en petits points peu lisibles. Civilité brute « M_Mme » (chantier couples).
+- **Fiche** : écarts avec la maquette — parcours vertical sans les étapes À VENIR (maquette : frise horizontale offre →
+  compromis → fin de rétractation → acte, l'étape du jour en magenta, l'à-venir en pointillé) ; pas d'alerte en tête
+  (« Rétractation : dernier jour », acte dépassé) ; « suivi par » donne l'e-mail, pas le nom ; répartition sans barre
+  ni avatars ; pas de bloc « Actions du dossier » (gestes épars : boutons « Ouvrir ») ; notes en lecture seule ; pas
+  de liste latérale des dossiers ; photo absente → carré gris ; nom de notaire avec virgule finale (« KINTZIG, »).
+- **Données (à part)** : 54 offres sans montant ni état, vues depuis le 31/07, portent la DATE DU RUN (29/10 le 29/10,
+  02/11 aujourd'hui) → elles remontent en tête du registre (« Offre proposée », prix « — »). Non creusé.
+
+## 13. Maquette graphique v3 et ajouts retenus (02/11/2026) — mesures des données, RIEN CODÉ
+
+Maquette v2 (restructuration) REFUSÉE par Frédéric ; v3 = ses écrans, même structure, habillage seul, Avant/Après :
+https://claude.ai/artifact/PSv5yJ3KkyioGLFDKWYv7h. Ajouts retenus : indicateurs cliquables, tri par en-tête, filtre
+agence/négociateur (admin), mémoire des filtres, nom du négociateur, délai entre étapes, documents du dossier,
+historique des changements, dossier précédent/suivant, période MENSUELLE (en plus de l'année). Maquette v3.1 en cours.
+
+Mesures (02/11, droits de Frédéric) :
+- **Nom du négociateur** : quand le registre porte un e-mail, l'annuaire donne le nom dans 100 % des cas
+  (6 332/6 332) ; 2026 : 499/502 (3 sans e-mail). Dossiers anciens : 6 332 e-mails sur 12 117.
+- **Documents** : tous typés « document » ; famille reconnue par le NOM (libre) sur les biens des transactions 2026 :
+  offre 870, compromis/promesse 425, acte 147, mandat 836, diagnostics 569, visite 542, identité 1 109, autres 4 653.
+  Rattachés au BIEN, pas à la transaction. **Stockage (mesuré par `storage_status`, re-vérifié le 02/11 à la
+  demande de Frédéric)** : biens vivants 3 245/3 246 `cloud_available` ; biens VENDUS 1 046 `cloud_available` et
+  6 304 `local_only` (86 %) — TOUS ont leur copie sur le serveur (`local_archive_path`). C'est la RÈGLE (le serveur
+  porte tout, le coffre ne copie que les biens vivants, `shouldKeepCloud`). ⛔ **CORRECTION** : j'avais écrit qu'ouvrir
+  ces documents demandait un « chantier à part » — FAUX. Le geste existe : un document `local_only` s'affiche
+  « À préparer », et `createPrepareConsoleDocumentJob` (api.ts ~8615) pose `prepare_document_cloud`, qui le remonte
+  au coffre (6 travaux, tous `done`, médiane 4 s). Le bloc Documents du registre n'a qu'à le réutiliser.
+- **Historique** : gestes de l'app sur les biens des dossiers 2026 = 5 biens seulement (essais surtout) ; les
+  transactions vivent encore chez Hektor, qui ne livre que l'ÉTAT, sans auteur ni date de modification. Sources
+  datées et signées : app_console_job (requested_by), app_affaire_champ_app (ecrit_par/ecrit_le, valeur avant/après),
+  app_affaire_repartition (ecrit_par/ecrit_le), ledger (dates des étapes, first_seen_at). → un historique honnête =
+  les étapes datées + les corrections faites dans l'app, avec leur auteur.
+
+## 14. Maquette v3.1 CODÉE (02/11/2026, « Oui, code-la »), NON COMMITÉE
+
+Écrit par un agent développeur sur mon cahier des charges, relu par moi : `RegistreTransactionsScreen.tsx`,
+`registre-transactions.css` (ajouts en fin de fichier), `lib/api.ts` (ajouts : `loadNomsNegociateurs`,
+`HistoriqueDossierLigne`, `loadHistoriqueDuDossier` + aides internes ; mode maquette de `loadConsoleDocuments`).
+App.tsx non touché. Lectures seules (annuaire 219 lignes, carnet, répartition, travaux, profils), aucune écriture.
+- **A habillage** (maquette « Après ») + **défaut corrigé** : parcours trié par jour (Paris), puis offre < compromis <
+  vente, puis n° de transaction.
+- **B liste** : indicateurs = filtres (nouveau filtre « Offres en cours »), tri par en-tête (sens), mois (caractères
+  6-7 de `date_dernier_evenement`, même règle que l'année en base), agence et négociateur (admin ; filtrent aussi
+  indicateurs et compteurs), mémoire `localStorage` « bienvu-registre-transactions » + « Filtres gardés · Réinitialiser ».
+- **C fiche** : nom du négociateur (annuaire, repli e-mail), délais entre étapes, précédent/suivant, Documents (de
+  transaction d'abord, 8 + « Voir tout » ; `local_only` → `prepare_document_cloud` puis relecture 2 s × 40 s),
+  Historique (étapes du registre sans auteur + corrections du carnet + répartition hors « conversion » + gestes
+  envoyés ; auteur = profil si lisible — admin seulement —, sinon « un utilisateur »).
+- **Contrôles** : `npm run build` vert ; maquette 1 280 px et téléphone par l'agent puis moi (en maquette locale la
+  zone fait 891 px à cause du grand menu : colonnes Bien/Acquéreur serrées ; en production, menu en icônes, zone
+  ~1 083 px). ⚠ Non vu sur les vraies données : noms, documents réels (dont la préparation), historique réel.
