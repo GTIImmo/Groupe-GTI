@@ -858,3 +858,10 @@ est « couple » et son résumé « nommé » (la nuit du 02→03/11 : aujourd'h
   a répondu **503** → arrêt net, aucune autre requête, onglet Hektor fermé. ⚠ La recherche se fait par TEXTE (nom) : une coquille sans
   nom ne peut sans doute pas y être trouvée, donc « Hektor la propose-t-il ? » ne se vérifie pas par l'écran.
 - **Rien n'a été écrit.** L'unique écriture accordée (`transformeContactToConjunct`, conjoint=467325, refCouple=467326) reste à faire.
+- **Deuxième essai, même soir** (« Le service fonctionne, peux-tu tester ? ») : compte GROUPE GTI IMMOBILIER vérifié ; les deux
+  lectures de contrôle répondent **200** et la photo est INCHANGÉE (467326 seule, nom et prénom remplis ; 467325 « M./Mme », vide).
+  La recherche `searchContactToCouple` répond de nouveau **503** (page « maintenance downtime or capacity problems »), alors que la
+  lecture des fiches marche : c'est CETTE action qui ne répond pas, pas tout Hektor. Arrêt net, onglet fermé, **rien écrit**.
+  Le code déjà chargé par la fiche ne contient pas cette action (elle vient d'un autre script) : on ne peut pas dire si la mise
+  à jour l'a renommée. ⚠ Tant qu'elle répond 503, ne pas lancer `transformeContactToConjunct` : même famille d'actions, risque
+  d'écriture à moitié sans confirmation.
