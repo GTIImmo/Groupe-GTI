@@ -571,3 +571,24 @@ parce que Frédéric les avait déjà retirées : ça ne prouve pas l'effacement
 - ⛔ B SEUL N'AURAIT RIEN SAUVÉ CE SOIR pour le net et les honoraires (TOUCHÉS), ni le 13/09 sur 24933 (prix TOUCHÉ).
   Il n'aurait sauvé que le prix de ce soir. LA VRAIE PROTECTION EST B2 (Hektor a changé depuis le clic → arrêt).
 - Conclusion : B est sûr dans son périmètre (petit) ; B2 est indispensable ; les deux se prouvent sur le même essai.
+
+### 20 sexies. Le correctif est écrit et commité (fa6c234) — PAS ENCORE ACTIF (03/11, ~01:00)
+
+- A', B, B2, C dans `Console/console_job_worker.js` (fonctions `retirerLignesRepartition`, `valeursVouluesReprise`,
+  `memeValeurFormulaire`, `ecartsTemoinReprise`, constante `CHAMPS_TEMOIN_REPRISE` ; journal : étapes
+  `hektor_reprise_temoin` et `hektor_commission`). Essai hors ligne `Console/test_reprise_commission_temoin.js` :
+  19/19, dont LE CAS RÉEL du 02/11 rejoué (le rejeu de 23:28 aurait été ARRÊTÉ sur prix et net) et le cas « un essai
+  précédent a déjà enregistré » (pas d'arrêt). `test_commission_intervenants.js` toujours vert.
+- Commit fait SANS le code Youtrust d'une autre session (130 + / 7 −, dormant derrière `signature_youtrust` = off) :
+  index posé à la main (HEAD + mes seuls blocs). ⚠ Le redémarrage du service Admin chargera AUSSI ce code dormant.
+- ⛔ MA FAUTE (03/11 00:16) : j'ai lancé `Console/test_worker_prix_compromis.js` en le prenant pour un essai hors
+  ligne. Il POSE UN TRAVAIL CHEZ HEKTOR (prix du compromis d'essai 50078, annonce 24933). Hektor a refusé (« un
+  compromis clôturé ne peut pas être modifié »), RIEN écrit. Travail 5486e8ae arrêté (attempt_count 5) et clos comme
+  le bouton « Abandonner ce geste » (`app_pending_resolution`, resolved_by `essai_lance_par_erreur_2026-11-03`) :
+  il ne sonnera ni dans `data.travaux_en_erreur` ni dans `data.geste_abandonne` (vérifié : 0 dans
+  `app_en_attente_humain`). ⇒ Leçon : lire l'en-tête d'un script `test_*` AVANT de le lancer — dans Console/, le
+  préfixe ne garantit pas l'absence d'écriture.
+- Reste pour l'épreuve réelle : 61398 / mandat 18420 n'a AUCUNE transaction (Actif, Firminy). Il faut un compromis
+  qui porte une ligne de répartition CHEZ HEKTOR — le worker n'en pose plus depuis 06bd38b, donc seule une saisie
+  humaine dans Hektor peut la créer. Puis : redémarrer HektorConsoleWorkerAdmin (file Admin vide), modifier la
+  commission par l'écran (A' + B), puis rejouer le même travail après un changement fait dans Hektor (B2).
