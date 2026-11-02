@@ -638,3 +638,22 @@ fictif, avec `person_type = couple` et un prénom de conjoint, puis relire les d
   606104. Le Chrome de Frédéric n'est pas connecté à Hektor ; je ne me connecte pas à sa place. Le couple fictif est GARDÉ pour ça, à
   supprimer ensuite (par l'app : la cascade de Hektor emporte 606105, puis le nettoyage de 20000032).
 
+## 27. LA CAUSE TROUVÉE ET LE GESTE PROUVÉ À LA MAIN *(02/11 ~11:05, Frédéric connecté à Hektor dans son Chrome)*
+
+- **Lecture** du formulaire d'édition de 606104 (la même requête que le worker, `contacts-ihmChargeGroupe … consultMode=editer`) : pour un
+  COUPLE, **tous les champs portent `group="mefContacts/contactCoupleAll"`** — `civilite, nom, prenom, email[], telephone[]…` ET
+  `nom_m2, prenom_m2, email_m2[], telephone_m2[], adresse_m2, dateNaissance_m2, lieuNaissance_m2, commentaires_m2…` (54 champs). Les NOMS sont
+  ceux qu'utilise déjà le worker ; seul le GROUPE diffère. Le worker filtre sur `mefContacts/contacts_full_accueil` → il ne trouve rien
+  (« Formulaire edition contact Hektor introuvable »).
+- **Écriture d'essai, UNE requête, sur la fiche fictive seulement** (dans le cadre de l'essai accepté) : exactement ce que ferait le worker
+  corrigé — relire le groupe `mefContacts/contactCoupleAll`, changer `prenom_m2` (« Deux » → « DeuxModifie »), POST
+  `mode=contacts-saveDataEditContact`, `group=mefContacts/contactCoupleAll`, `idContact=606104`, 57 champs → **HTTP 200**.
+- **Relecture** : 606104 → `prenom_m2 = DeuxModifie`, nom, prénom et e-mails INCHANGÉS ; **606105 (la seconde) → `prenom = DeuxModifie`** :
+  la seconde fiche SUIT, comme E2. ⭐ **Le geste « modifier le conjoint par la première » est prouvé avec notre forme d'envoi.**
+- Onglets Hektor FERMÉS après (piste du blocage d'IP du 29/10).
+- ⏭ **LE CORRECTIF** (worker, à valider) : dans `updateHektorContactIdentity` (et la sœur `update_hektor_mandant_contact`, l. ~21086),
+  reconnaître le groupe du formulaire relu (`contactCoupleAll` si présent, sinon `contacts_full_accueil`), extraire ET renvoyer avec CE
+  groupe ; écrire le bloc `_m2` quand le formulaire relu est celui d'un couple (et non plus selon le `person_type` envoyé). Puis l'écran
+  (champs du conjoint en modification), l'écriture immédiate chez nous et la relecture de la seconde fiche. Couple fictif 20000031/32 ↔
+  606104/05 GARDÉ pour l'essai réel du correctif (sa seconde porte désormais « DeuxModifie » chez Hektor ; chez nous à la relecture).
+
