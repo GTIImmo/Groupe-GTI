@@ -297,3 +297,35 @@ qu'on a à vendre (stock) → ce qui sort (ventes).
 - **Vue d'ensemble** = l'équation : entrées (mandats) → stock → sorties (ventes, retraits), + le C.A attendu total
   (actes datés + stock pondéré).
 Prérequis signalé : la photo quotidienne (évolution du stock, sorties sans vente datées). RIEN CODÉ.
+
+## 16. Re-audit et proposition OPTIMISÉE, + le PRÉVISIONNEL DES ENCAISSEMENTS (02/11 nuit)
+
+**Re-audit** :
+- Cohortes de mandats : les « sortis sans vente » sont à **98 % des annonces passées « Clos »** (simple 275 / 280,
+  exclusif 120 / 126, semi 65 / 65) ; 4 seulement sont des ventes mal reliées, 1 vente antérieure au mandat. La mesure tient.
+- Taux d'aboutissement : compromis → vente ≈ **87 %** ; offre acceptée → vente ≈ **86 %** (1 594 / 1 862, 2022-2025).
+- ⛔ **Deux ERREURS DE SAISIE dans le registre des transactions faussent les « actes déjà datés »** : dossier 1386917
+  (183 700 € d'honoraires pour 193 000 € de prix, acte prévu 15/06/2027) et 1388289 (93 000 € pour 100 000 €, acte
+  14/11/2026). Sans eux, les actes datés valent **531 303 € TTC**, pas 808 003 € (les honoraires d'annonce disent 527 580 €).
+  L'onglet Ventes codé (12dcff1) affiche donc 808 k€ : à corriger (écarter et signaler tout honoraire > 20 % du prix).
+- Stock sous mandat : **537 biens, 3 516 373 € HT** de C.A potentiel, **1 778 600 € HT** attendus une fois pondérés
+  (compromis 87 %, offre 86 %, exclusif 59 %, semi 40 %, simple 28 % — taux des cohortes 2024) ; 150 disponibles sur
+  411 datés dépassent le délai médian de vente (203 j) ; 106 disponibles n'ont AUCUN acquéreur rapproché à 80 ou plus
+  (307 en ont au moins un, médiane 14).
+- **Offre et demande par prix** (disponibles sous mandat / recherches actives) : < 100 k€ 183 / 1 012 (5,5 acheteurs
+  par bien) · 100-150 k€ 63 / 802 (12,7) · 150-200 k€ 56 / 637 (11,4) · 200-300 k€ 63 / 942 (15,0) · ≥ 300 k€ 42 / 645
+  (15,4). 45 % du stock est sous 100 k€, là où la demande par bien est la plus faible.
+
+**Prévisionnel des encaissements** (demande de Frédéric : « il faut quelque part un prévisionnel des futurs
+encaissements »). Les honoraires s'encaissent à l'acte. Trois couches par mois, HT, pondérées :
+1. actes déjà datés (registre, sans les 2 erreurs) × 87 % ; 2. offres en cours : acte estimé à la date de l'offre +
+120 j (médiane mesurée offre → acte), × 86 % ; 3. stock disponible pondéré (1,13 M€ HT), réparti sur les mois +4 à +12
+— INDICATIF. Total 12 mois ≈ **1,80 M€ HT**, à comparer aux **2,19 M€ HT** encaissés sur les 12 derniers mois : l'écart
+(≈ 0,39 M€) viendra des mandats encore à rentrer. ⚠ L'encaissement réel (date « Vente réglée ») n'est que dans le
+classeur Google : tant qu'il n'est pas chez nous, « encaissé » = « acte signé ».
+
+**Proposition optimisée** (onglets, chacun une question) : Vue d'ensemble (prévisionnel, équation du réseau, tableau
+des agences) · Ventes (résultat) · Mandats (entrées et devenir) · Stock (portefeuille sous mandat, potentiel / attendu,
+écoulement, mise en marché, en règle) · Acquéreurs (demande, offre face à la demande par prix, biens sans acheteur).
+Design : une couleur par domaine (validées au contrôle de palette : Stock #1a9a6c, Mandats #2f6fd0, Ventes #c5005f,
+Acquéreurs #6a55d8), dégradés ordonnés validés, pas d'anneau ni de camembert, une seule échelle par graphique.
