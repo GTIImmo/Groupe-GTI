@@ -598,3 +598,15 @@ traiter ». **Maquette sur les vraies données** : https://claude.ai/artifact/CJ
 porte en « Groupe GTI COURPIERE », « Groupe Gti Le Puy en Velay » : forme d'affichage à trancher au code.
 ⚠ Vu en passant, non creusé : 2 compromis avec un acte prévu en juin 2027 portent 187 700 € d'honoraires à eux deux
 (à regarder dans « à traiter »). ⏳ Attend son avis, RIEN CODÉ.
+
+**02/11 soir — Frédéric : « il faudra un pilotage global, peut-être dans un menu dédié ? »** Audit du menu
+(App.tsx ~24770) : deux groupes, « Travail » (Accueil, Annonces, Estimations, Mandats, Transactions, Contacts, Agenda)
+et « Pilotage » (Suivi, Santé ; managers et admins). L'accueil admin porte une case vide « Reporting agence ».
+Bonnes pratiques relevées (sources surtout commerciales, à prendre comme avis) : séparer l'écran de TRAVAIL (on agit,
+on filtre une liste) de l'écran d'ANALYSE (tendances, comparaisons), un mélange étant trop chargé pour l'un et trop
+mince pour l'autre ; peu d'indicateurs, en mêlant indicateurs AVANCÉS (mandats rentrés, exclusivité, stock, demande)
+et de RÉSULTAT (ventes, honoraires) ; vues par rôle.
+**Conseil donné (non décidé)** : un écran « Pilotage » dans le groupe Pilotage du menu, à onglets — Vue d'ensemble ·
+Ventes (= la maquette CJ9v7PnqkNvYHNGsG8R1Qr) · Mandats · Stock · Équipe ; le Registre reste un écran de travail
+(ses indicateurs qui filtrent), sans bascule. Chaque chiffre ouvre la liste filtrée correspondante. Accès : admins
+(un manager limité à son agence = à décider). Ordre : Ventes d'abord, puis Mandats et Stock, puis Équipe/objectifs.
