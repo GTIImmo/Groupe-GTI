@@ -235,3 +235,29 @@ registre des mandats (origine `actif`), les deux concordent à l'unité ; 157 n'
 sous offre 43 / 43 (36 en cours, 7 échus).
 ⚠ Pour le coder juste, `app_pilotage_stock()` doit rendre `numero_mandat` (la date de début manque sur 2 biens qui ont
 un numéro) : changement de la fonction = écriture en base, à faire avec son accord. RIEN CODÉ.
+
+## 14. Stock = les 699 biens, rangés par l'ESCALIER de l'app (02/11 nuit, demande de Frédéric)
+
+**Comment l'app distingue un bien** (code, pas les notes) — `listingProgressLabel` (App.tsx:8214) : Estimation →
+Vendu (`vente_id`) → Compromis en cours (`compromis_id`) → Offre en cours (`offre_id`) → « Annonce créée · mandat
+manquant » (pas de `numero_mandat`) → « Mandat à valider » (`validation_diffusion_state` ≠ validé : c'est la
+validation de Pauline) → « Diffusé » (`diffusable` = 1 ET `nb_portails_actifs` > 0) → « Mandat validé · non diffusé »
+(diffusable mais sur aucun portail) → « Mandat validé · diffusion à ouvrir » (diffusable = 0). En plus : le statut
+Hektor (`statut_annonce` Actif / Sous offre / Sous compromis), l'état des transactions (`offre_state` proposée /
+acceptée / refusée, `compromis_state` en cours / annulé), la date d'acte prévue (registre des transactions), le mandat
+échu (`mandat_date_fin` passée, `isMandateEndDateStillValid`), la signature du mandat (document : à envoyer / envoyé /
+signé, `metadata_json.signature`). Il n'existe ni `statut_global` ni `sous_statut` rempli (0 sur 699).
+⚠ **Défaut de l'escalier, mesuré** : il range par PRÉSENCE de `offre_id` / `compromis_id`, pas par leur état —
+10 biens « Actif » avec une offre REFUSÉE et 3 avec un compromis ANNULÉ y sont classés « offre / compromis en cours ».
+Proposé pour le pilotage : le statut de Hektor d'abord (Sous compromis, Sous offre), l'escalier du mandat ensuite.
+**Mesure (honoraires d'annonce, TTC / HT)** :
+1. annonce active sans mandat 157 — 448 336 / 373 613 (35 seulement ont des honoraires) ;
+2. mandat à valider 69 — 397 425 / 331 188 (8 échus) ;
+3. mandat validé · diffusion à ouvrir 14 — 97 974 / 81 645 ;
+4. diffusable · sur aucun portail 14 — 75 300 / 62 750 ;
+5. **diffusé 316 — 2 749 383 / 2 291 153** (15 échus) ;
+6. offre en cours 43 — 291 710 / 243 092 ;
+7. compromis, acte daté à venir 72 — 521 580 / 434 650 ; compromis, date d'acte dépassée 14 — 103 275 / 86 063.
+Total 699 — 4 684 983 / 3 904 153. Mandats échus parmi eux : 57.
+⚠ Deux sources pour les biens engagés : honoraires de l'ANNONCE (compromis à venir 521 580 €) et du REGISTRE des
+transactions (actes datés 808 003 €, onglet Ventes) — à aligner au code. RIEN CODÉ, attend son avis.
