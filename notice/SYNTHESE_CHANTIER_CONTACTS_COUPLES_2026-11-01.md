@@ -394,3 +394,15 @@ annulée. **Jouée par moi : 7/7** — colonnes 50, invoker gardé, droits ok, l
 - Contrôle : 0 reste (Supabase, couche locale, miroir) ; témoins positifs : 9 contacts nés dans l'app ≥ 20 000 000 des deux côtés, 16 fiches voisines au miroir (606080-606110), file 0.
 - Sauvegardes : dossier de travail de la session, `sauvegarde_essais_couple_20000028_29_20261102_{supabase,locale}.json`.
 - Les 20000021/22 de la liste du matin étaient déjà retirées depuis le 30/10 (ligne périmée).
+
+## 16. PHASE 3-B — LA VUE POSÉE *(02/11 ~08:55, « Oui, pose-la »)*
+
+- Avant : empreinte `8004d105…` identique, 43 colonnes, **0 dépendant**, les 7 colonnes source présentes dans `app_contact_current`.
+- Posée par moi (migration `couple_phase3b_vue_contacts_2026_11_02`, corps de `supabase/patch_couple_phase3b_vue_contacts_2026-11-02.sql`).
+- Contrôle : **50 colonnes** · `security_invoker=true` gardé · anon ne lit pas, authenticated lit · **63 126 lignes vue = table** ·
+  témoin 10000045 : `personne_seule` / `Mme.` / civilité Hektor vide · 7 875 couples visibles par la vue. Nouvelle empreinte `fbaec4cb…`.
+- L'annuaire en ligne s'ouvre comme avant (40 268 contacts, 0 erreur console) : le front actuel ne demande pas les 7 colonnes.
+- Retour arrière : `…_INVERSE.sql` (vérifie l'empreinte d'origine `8004d105…`) — ⛔ d'abord retirer du front ce qui demanderait les 7 colonnes.
+- ➡ SUITE : C (annuaire) puis D (fiche), maquette du 30/10, derrière un interrupteur, ordinateur ET téléphone ;
+  **la règle « Couple » = `nature_fiche` reste à confirmer par Frédéric** avant C.
+
