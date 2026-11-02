@@ -19208,7 +19208,24 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       // ⚠ ON N'ECRIT QUE SI LA MODALE A TOUCHE LE SUJET (saisie OU
       //   prerenseignement). Sans ce test, ouvrir puis envoyer effacerait la
       //   commission d'une transaction dont on n'a rien voulu changer.
-      if (statusChangeCommissionTouchee) {
+      //
+      // ⭐⭐ SAUF LA CHARGE, A LA CREATION -- 02/11/2026 (audit A8).
+      //   LE DEFAUT. Le select de la charge OUVRE sur « Vendeur »
+      //   (useState('vendeur')), et c'est la bonne valeur dans 93,6 % des cas
+      //   (classeur : 894 Vendeur contre 61 Acquereur). Personne n'avait donc
+      //   de raison d'y toucher -- et sans drapeau, RIEN N'ETAIT ECRIT.
+      //   LA PREUVE, mesuree sur les 31 124 lignes du registre : 8 charges en
+      //   base, 8 « acquereur », ZERO « vendeur ». « Acquereur » est le seul
+      //   choix qui OBLIGE a toucher le select ; c'est le seul qu'on trouvait.
+      //   LA CAUSE N'EST PAS LE DRAPEAU, c'est son PERIMETRE. La regle « rien
+      //   ne part tant qu'on ne tape pas » (P5, 22/10) est JUSTE EN
+      //   MODIFICATION : la valeur est deja en base, ne pas la renvoyer ne la
+      //   perd pas. A LA CREATION il n'y a rien a garder, donc elle ne protege
+      //   rien : elle JETTE la valeur que l'ecran vient d'afficher.
+      // ⚠ LES HONORAIRES RESTENT SOUS LE DRAPEAU, eux. Une clef presente et
+      //   vide vaut « vide » pour la RPC (nullif) : les envoyer sans saisie
+      //   ecraserait une valeur reprise de l'offre.
+      if (statusChangeCommissionTouchee || !reprendre) {
         try {
           // ⑧ (23/10/2026) : a la CREATION, la cible est la transaction NEUVE (son numero est dans la
           //   charge du travail) -- jamais « l'affaire courante », qui peut etre une AUTRE transaction
@@ -19223,7 +19240,12 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               // ⚠ A L'OFFRE SEULEMENT pour les honoraires : au compromis et a la
               //   vente ils partent chez Hektor par la charge du geste, et il les
               //   rend a 99-100 %. Les doubler ici creerait deux verites.
-              ...(statusChangeStatus === 'offer' ? {
+              // ⚠ 02/11 : ET SEULEMENT SI LE SUJET A ETE TOUCHE. Sans ce second
+              //   test, une creation sans saisie enverrait deux clefs VIDES --
+              //   et pour la RPC une clef presente et vide vaut « vide »
+              //   (nullif), donc elle effacerait une commission reprise de
+              //   l'offre. La charge, elle, part toujours (voir au-dessus).
+              ...(statusChangeStatus === 'offer' && statusChangeCommissionTouchee ? {
                 honoraires_entree_app: statusChangeHonorairesEntree.trim(),
                 honoraires_sortie_app: statusChangeBuyerFees.trim(),
               } : {}),
