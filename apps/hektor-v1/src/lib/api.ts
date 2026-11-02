@@ -10631,6 +10631,29 @@ export async function editContactOptimistic(input: {
   return (data as { ok: boolean }) ?? { ok: true }
 }
 
+/** COUPLES, pièce E (02/11/2026) : le CONJOINT modifié s'écrit chez NOUS tout de suite -- sa fiche et le résumé
+ *  du couple porté par la principale. L'envoi à Hektor part avec la principale (`editContactOptimistic`, bloc _m2).
+ *  RPC `app_edit_conjoint_optimistic` (patch supabase/patch_couple_phase3e_conjoint_optimiste_2026-11-02.sql). */
+export async function editConjointOptimistic(input: {
+  contactId: string
+  conjoint: { lastName?: string; firstName?: string; email?: string; phone?: string }
+}): Promise<{ ok: boolean }> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
+  await requireSupabaseUserId()
+  const champs: Record<string, string> = {}
+  if (input.conjoint.lastName) champs.spouse_last_name = input.conjoint.lastName
+  if (input.conjoint.firstName) champs.spouse_first_name = input.conjoint.firstName
+  if (input.conjoint.email) champs.spouse_email = input.conjoint.email
+  if (input.conjoint.phone) champs.spouse_phone = input.conjoint.phone
+  if (!Object.keys(champs).length) return { ok: true }
+  const { data, error } = await supabase.rpc('app_edit_conjoint_optimistic', {
+    target_contact_id: input.contactId.trim(),
+    edit_fields: champs,
+  })
+  if (error) throw new Error(error.message)
+  return (data as { ok: boolean }) ?? { ok: true }
+}
+
 export async function createDeleteHektorContactJob(input: {
   contactId: string
   reason?: string

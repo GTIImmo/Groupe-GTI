@@ -88,6 +88,7 @@ import {
   loadAppSettingActive,
   loadAppSettingValeur,
   loadContactCoupleInfo,
+  editConjointOptimistic,
   bienEstDansLesAnnonces,
   loadBienHistoriquePourStatut,
   type RegistreDossierRow,
@@ -43987,6 +43988,9 @@ const contactEditSections = [
 
 function ContactEditModalV2(props: {
   contact: AppContact
+  /** COUPLES (02/11/2026) : le conjoint NOMMÉ à modifier par la fiche principale (bloc _m2 chez Hektor) ;
+   *  absent = la fenêtre d'avant. Posé seulement si l'interrupteur `contacts_couples_modif` est allumé. */
+  conjoint?: AppContact | null
   hektorUserEmail?: string | null
   hektorUserId?: string | null
   hektorNegotiators?: HektorNegotiatorOption[]
@@ -44053,6 +44057,19 @@ function ContactEditModalV2(props: {
   const [crmMandateSummaryEnabled, setCrmMandateSummaryEnabled] = useState(optionalBooleanSelectValue(initial.crmMandateSummaryEnabled))
   const [crmMandateExpirationEnabled, setCrmMandateExpirationEnabled] = useState(optionalBooleanSelectValue(initial.crmMandateExpirationEnabled))
   const [crmBirthdayEnabled, setCrmBirthdayEnabled] = useState(optionalBooleanSelectValue(initial.crmBirthdayEnabled))
+  // COUPLES (02/11/2026) : le conjoint, pré-rempli depuis SA fiche. On n'envoie que ce qui CHANGE : chez Hektor,
+  // écrire un e-mail ou un téléphone remplace TOUTE la liste du conjoint (replaceParam).
+  const conjointAModifier = props.conjoint ?? null
+  const conjointAvant = {
+    lastName: (conjointAModifier?.nom ?? '').trim(),
+    firstName: (conjointAModifier?.prenom ?? '').trim(),
+    email: (conjointAModifier?.email ?? '').trim(),
+    phone: (conjointAModifier?.phone_primary ?? '').trim(),
+  }
+  const [spouseLastName, setSpouseLastName] = useState(conjointAvant.lastName)
+  const [spouseFirstName, setSpouseFirstName] = useState(conjointAvant.firstName)
+  const [spouseEmail, setSpouseEmail] = useState(conjointAvant.email)
+  const [spousePhone, setSpousePhone] = useState(conjointAvant.phone)
   const [selectedHektorUserId, setSelectedHektorUserId] = useState(defaultHektorOption?.idUser ?? props.hektorUserId ?? '')
   const [activeSection, setActiveSection] = useState<string>('sec-identite')
   const [pending, setPending] = useState(false)
@@ -44134,6 +44151,15 @@ function ContactEditModalV2(props: {
     if (!lastName.trim()) { setError('Nom contact requis.'); setActiveSection('sec-identite'); scrollToSection('sec-identite'); return }
     if (availableHektorNegotiators.length > 0 && !selectedHektorUser) { setError(bvs('Choisis le négociateur Hektor qui portera la modification.')); return }
     if (!selectedHektorId && !selectedHektorEmail) { setError(bvs('Choisis le compte Hektor qui portera la modification.')); return }
+    // COUPLES (02/11/2026) : seulement les champs du conjoint qui ONT CHANGÉ (vider un champ n'est pas proposé :
+    // un vide ne part pas, il ne peut donc rien effacer chez Hektor).
+    const conjointChange: { lastName?: string; firstName?: string; email?: string; phone?: string } = {}
+    if (conjointAModifier) {
+      if (spouseLastName.trim() && spouseLastName.trim() !== conjointAvant.lastName) conjointChange.lastName = spouseLastName.trim()
+      if (spouseFirstName.trim() && spouseFirstName.trim() !== conjointAvant.firstName) conjointChange.firstName = spouseFirstName.trim()
+      if (spouseEmail.trim() && spouseEmail.trim() !== conjointAvant.email) conjointChange.email = spouseEmail.trim()
+      if (spousePhone.trim() && spousePhone.trim() !== conjointAvant.phone) conjointChange.phone = spousePhone.trim()
+    }
     setPending(true)
     try {
       const input: HektorContactIdentityInput = {
@@ -44145,10 +44171,10 @@ function ContactEditModalV2(props: {
         siret: '',
         partnerJobId: '',
         website: '',
-        spouseLastName: '',
-        spouseFirstName: '',
-        spouseEmail: '',
-        spousePhone: '',
+        spouseLastName: conjointChange.lastName ?? '',
+        spouseFirstName: conjointChange.firstName ?? '',
+        spouseEmail: conjointChange.email ?? '',
+        spousePhone: conjointChange.phone ?? '',
         spouseAddress: '',
         spousePostalCode: '',
         spouseCity: '',
@@ -44183,6 +44209,16 @@ function ContactEditModalV2(props: {
       // (app_contact_current) + push Hektor débouncé via app_contact_pending. On notifie la
       // fiche pour recharger l'affichage immédiat. Le worker écrit ensuite dans Hektor.
       await editContactOptimistic({ contactId: props.contact.hektor_contact_id, contact: input })
+      // COUPLES (02/11/2026) : le conjoint chez NOUS tout de suite (sa fiche et le résumé du couple). L'envoi à
+      // Hektor, lui, part avec la principale (bloc _m2) ; un échec ici ne perd rien : la relecture le rattrapera.
+      if (conjointAModifier && Object.keys(conjointChange).length) {
+        try {
+          await editConjointOptimistic({ contactId: props.contact.hektor_contact_id, conjoint: conjointChange })
+          window.dispatchEvent(new CustomEvent('hektor:contact-updated', { detail: { hektor_contact_id: conjointAModifier.hektor_contact_id } }))
+        } catch (conjointError) {
+          console.warn('Conjoint : écriture immédiate impossible, la relecture suivra', conjointError)
+        }
+      }
       window.dispatchEvent(new CustomEvent('hektor:contact-updated', { detail: { hektor_contact_id: props.contact.hektor_contact_id } }))
       props.onClose()
     } catch (submitError) {
@@ -44275,6 +44311,21 @@ function ContactEditModalV2(props: {
                 <div className="field col2"><label>Adresse</label><input className="inp" value={address} onChange={(event) => setAddress(event.target.value)} placeholder="N° et libellé de voie" /></div>
               </div>
             </div>
+
+            {conjointAModifier ? (
+              <div className="fsec" id="sec-conjoint">
+                <div className="fsec-h">
+                  <span className="fsec-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><circle cx="8.5" cy="8" r="3.2" /><circle cx="16" cy="9" r="2.8" /><path d="M2.8 19c.6-3.1 3-4.9 5.7-4.9s5.1 1.8 5.7 4.9" /><path d="M14 14.5c.6-.3 1.3-.4 2-.4 2.3 0 4.3 1.6 4.9 4.5" /></svg></span>
+                  <span className="fsec-t">Conjoint · fiche {conjointAModifier.hektor_contact_id}</span>
+                </div>
+                <div className="fgrid3">
+                  <div className="field"><label>Nom du conjoint</label><input className="inp" value={spouseLastName} onChange={(event) => setSpouseLastName(event.target.value)} /></div>
+                  <div className="field"><label>Prénom du conjoint</label><input className="inp" value={spouseFirstName} onChange={(event) => setSpouseFirstName(event.target.value)} /></div>
+                  <div className="field"><label>Portable du conjoint</label><input className="inp" value={spousePhone} onChange={(event) => setSpousePhone(event.target.value)} inputMode="tel" placeholder="—" /></div>
+                  <div className="field col2"><label>Email du conjoint</label><input className="inp" type="email" value={spouseEmail} onChange={(event) => setSpouseEmail(event.target.value)} placeholder="—" /></div>
+                </div>
+              </div>
+            ) : null}
 
             <div className="fsec" id="sec-loc">
               <div className="fsec-h">
@@ -45450,6 +45501,7 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
   // ── COUPLES, pièce D : l'onglet ne pilote QUE les coordonnées affichées ; tout le reste (boutons,
   //    recherches, activité) reste celui de la fiche principale `props.contact` (décision du 02/11). ──
   const foyer = props.foyer ?? null
+  const modifConjointVisible = useCranCouplesVisible('contacts_couples_modif', props.profileRole)
   const [ongletFoyer, setOngletFoyer] = useState<1 | 2>(foyer?.ongletInitial ?? 1)
   useEffect(() => {
     setOngletFoyer(foyer?.ongletInitial ?? 1)
@@ -46725,6 +46777,7 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
       {editing && props.canManageContacts ? (
         <ContactEditModalV2
           contact={props.contact}
+          conjoint={modifConjointVisible && foyer?.conjoint ? foyer.conjoint : null}
           hektorUserEmail={props.hektorUserEmail}
           hektorUserId={props.hektorUserId}
           hektorNegotiators={props.hektorNegotiators}
@@ -46863,16 +46916,24 @@ function ContactDetailPopup(props: Parameters<typeof ContactDetailPopupBase>[0])
 // celui de l'annuaire : 'admin' = les admins seuls, 'on' = tout le monde, absent ou autre = la fiche d'avant.
 // Lu UNE fois par chargement de page (toutes les fiches le partagent) : un changement de cran se voit au
 // rechargement. Une lecture ratée = éteint.
-let cranCouplesFichePromesse: Promise<string | null> | null = null
-function useCouplesFicheVisible(profileRole?: string | null): boolean {
+// Pièce E (02/11/2026, modifier le conjoint) : même patron, clé `contacts_couples_modif`.
+const cransCouplesPromesses = new Map<string, Promise<string | null>>()
+function useCranCouplesVisible(cle: string, profileRole?: string | null): boolean {
   const [cran, setCran] = useState<string | null>(null)
   useEffect(() => {
     let annule = false
-    if (!cranCouplesFichePromesse) cranCouplesFichePromesse = loadAppSettingValeur('contacts_couples_fiche')
-    void cranCouplesFichePromesse.then((valeur) => { if (!annule) setCran(valeur) })
+    let promesse = cransCouplesPromesses.get(cle)
+    if (!promesse) {
+      promesse = loadAppSettingValeur(cle)
+      cransCouplesPromesses.set(cle, promesse)
+    }
+    void promesse.then((valeur) => { if (!annule) setCran(valeur) })
     return () => { annule = true }
-  }, [])
+  }, [cle])
   return cran === 'admin' ? profileRole === 'admin' : ['on', 'true', '1', 'yes'].includes(cran ?? '')
+}
+function useCouplesFicheVisible(profileRole?: string | null): boolean {
+  return useCranCouplesVisible('contacts_couples_fiche', profileRole)
 }
 
 // COUPLES, pièce D (02/11/2026) -- la fiche d'un couple montre LE FOYER, d'où qu'on l'ouvre.
