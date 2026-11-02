@@ -562,3 +562,23 @@ Les 1 021 autres notaires sont « personne seule » (règle des couples anciens)
 dans l'annuaire, sans conséquence). 0 seconde fiche de notaire n'est marquée « conjoint ». 859 notaires portent un `couple_json` (P2) —
 sans effet à l'écran, la nature décide.
 
+## 24. UN NOTAIRE N'EST JAMAIS UN COUPLE — ÉCRIT, ÉPROUVÉ, COMMITÉ (a99f113) *(02/11, « Vas-y »)*
+
+**Écran (les ajouts, et l'immédiat)** — `lib/coupleAffichage.ts` : `estFicheNotaire` (rôle notaire_vendeur / notaire_acquereur, la règle
+`estRoleNotaire` de l'écran) ; `coupleAffiche` (annuaire) et `foyerAffiche` (fiche) rendent null pour un notaire. Le rôle est calculé chez
+Supabase depuis nos registres : un notaire ajouté sur une vente est couvert À LA SECONDE. ⚠ Actif seulement après le PUSH.
+
+**Nuit (l'historique)** — `phase2/contacts/notaires_registre.py` (neuf) lit `app_affaire_ledger.notaires_json` (entrée / sortie, numéros
+Hektor ; table absente = ensemble vide, la nuit continue). `nature_des_fiches.py` : une fiche notaire nommée prend la nature **« notaire »**
+(jamais « couple ») ; la seconde NOMMÉE d'un notaire devient « personne_seule » (pas son conjoint) ; sa case vide reste
+`case_conjoint_vide` ; le rattachement ne donne JAMAIS de case à un notaire (nouvelle raison `seule_personne_est_un_notaire`).
+`conjoints_des_couples.py` (P2) saute la première fiche d'un notaire : son résumé s'efface (l'écriture remet à zéro ce qu'elle lit), sa
+seconde n'est pas marquée « conjoint ». Le run lit les fichiers du disque : **effet dès la nuit du 02 au 03/11, sans push.**
+
+**Contrôles** : essais 44/44 (contacts, dont 9 neufs : notaire en ménage, témoin inverse sans registre, notaire seul, seconde nommée, par
+le numéro Hektor, rattachement refusé + témoin inverse, lecture du registre) ; front 9/9 (dont 2 témoins inverses) + 16/16 + 14/14 ; build
+vert. **À blanc sur les vraies données** : 1 280 notaires → nature « notaire » (1 071 dans l'app) ; **couples de l'app 7 875 → 7 825** (−50) ;
+rattachement 7 290 → 7 289 (la case donnée à un notaire part en « personne née un autre jour ») ; P2 : 995 premières de moins, conjoints 1 900
+inchangés. ⏰ **03/11 matin** : au journal, « [nature] notaires du registre des ventes : 1280 » et « notaire … app 1071 » ; chez Supabase,
+0 fiche au rôle notaire en nature « couple ».
+
