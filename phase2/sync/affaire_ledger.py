@@ -297,7 +297,42 @@ SELECT hektor_annonce_id, hektor_mandat_id, 'offre' AS kind, hektor_offre_id AS 
            WHERE json_extract(p.value, '$.type') = 'proposition'
            ORDER BY CAST(p.key AS INTEGER) DESC LIMIT 1),
          raw_montant) AS montant,
-       COALESCE(offre_event_date, raw_date, synced_at) AS dt,
+       -- ⛔⛔ 02/11/2026 -- ON N'INVENTE PLUS LA DATE D'UNE OFFRE.
+       -- Frederic, en voyant VA30102 (annonce 22902, vendue en 2008) : « pourquoi
+       -- il y a 2 offres en date du 02/11/2026 !!!! »
+       --
+       -- CE QUE FAISAIT LE TROISIEME REPLI. Il valait `synced_at` -- l'instant ou
+       -- NOTRE miroir a lu Hektor. Quand Hektor ne porte aucune date d'offre, la
+       -- date affichee etait donc celle du RUN, et elle GLISSAIT CHAQUE NUIT.
+       -- ⭐ PROUVE, pas deduit : dans la sauvegarde du miroir du 01/11 08:00, les
+       --   deux offres de VA30102 portaient `2026-11-01T04:24:58Z` ; ce matin
+       --   `2026-11-02T04:33:45Z`. Hier elles s'affichaient au 01/11.
+       --
+       -- AMPLEUR MESUREE LE 02/11 (miroir et Supabase, les deux comptes tombent
+       -- pile) : 54 offres sans aucune date, sur 49 annonces -- 44 de ces biens
+       -- sont VENDUS, et tout se situe entre 2007 et 2011. Les offres recentes
+       -- n'ont rien : les 362 de 2026 portent toutes leur date.
+       -- ⚠ ET LE REPLI MORDAIT SUR LE CHAINAGE, PAS SEULEMENT A L'ECRAN. Le
+       --   chainage range les blocs DANS L'ORDRE DES DATES ; datee d'aujourd'hui,
+       --   l'offre tombait APRES la vente, qui avait deja ferme la chaine. Les 54
+       --   formaient 49 chaines ne contenant QUE des offres : l'affaire coupee en
+       --   deux. Voir le § 2.9, qui les recolle.
+       -- ⚠ CE QUE LA RESERVE DU 16/09 N'AVAIT PAS VU (voir `_date_de_tri`) :
+       --   « la chaine d'une offre ne depend plus de la colonne date » n'est vrai
+       --   que pour les offres QUI ONT des propositions. Ces 54 ont une liste de
+       --   propositions VIDE -- donc leur chaine dependait de l'heure du run.
+       --
+       -- ⭐ ET LE MEME CASE TRAITE « 0000-00-00 », le vide de Hektor : 14 offres
+       --   l'affichaient tel quel au registre. La borne est celle de
+       --   `_date_utile` (2000-2030), pour que l'ECRAN et le CHAINAGE s'accordent
+       --   sur ce qu'est une date exploitable -- c'etait deja faux avant, le
+       --   chainage les refusait pendant que l'ecran les montrait.
+       -- ⚠ `raw_date` RESTE dans la cascade bien qu'elle soit vide sur les 11 199
+       --   offres du miroir : la retirer serait un AUTRE changement, non mesure.
+       CASE WHEN SUBSTR(TRIM(COALESCE(offre_event_date, raw_date, '')), 1, 4)
+                 BETWEEN '2000' AND '2030'
+            THEN TRIM(COALESCE(offre_event_date, raw_date))
+       END AS dt,
        NULL AS date_acte, NULL AS sequestre, NULL AS date_fin,
        -- 1.2b (07/09/2026) : LA VALIDITE EST DE CLASSE B, PAS A -- ma faute.
        -- Hektor la garde, dans la PROPOSITION de l'offre. Preuve sans nouvel
@@ -1167,6 +1202,89 @@ def chainage_v2_actif() -> bool:
         _ENV_DEJA_CHARGE = True
     return os.environ.get("APP_CHAINAGE_V2", "0") == "1"
 
+
+def chainage_offre_proposee_actif() -> bool:
+    """§ 2.8 -- LE COMPROMIS REJOINT L'OFFRE « PROPOSEE » DU MEME ACQUEREUR (30/10/2026).
+
+        APP_CHAINAGE_OFFRE_PROPOSEE=1   le repli joue
+        (absent ou 0)                   comportement d'avant, A L'IDENTIQUE
+
+    Frederic, 30/10 : « mon chainage ne relie pas une offre proposee a un compromis
+    si elle n'est pas acceptee, c'est bizarre » -- puis « vas-y fais-le ».
+    La regle du 04/09 n'ouvrait la porte du compromis qu'a une offre ACCEPTEE ; le
+    cas « proposee » n'avait jamais ete decide. Hektor laisse souvent l'offre en
+    « proposee » alors que le compromis et la vente ont suivi avec le MEME acheteur
+    (10 affaires de nov. 2025 a mars 2026). L'affaire partait en DEUX dossiers.
+
+    SIMULATION DU 30/10 (vraie fonction, copie en memoire, temoin 31 122/31 122) :
+        dossiers               12 174 -> 12 162   (-12), 0 eclate, invariants verts
+        les 12 obtenus         TOUS « offre proposee + compromis actif + vente »
+        transactions deplacees 13 -- les 10 offres recentes rejoignent le dossier
+                               de leur compromis, qui GARDE son numero
+    ⛔ LIMITE AUX COMPROMIS VIVANTS, ET CE N'EST PAS UNE PRUDENCE DE PRINCIPE :
+      avec les annules, 5681 et 5687 (deux compromis le meme jour chez Hektor, un
+      annule EN DOUBLON) accrochaient l'offre au doublon annule, et la vraie
+      affaire restait a part. Le resultat dependait de l'ordre des numeros.
+    Detail : notice/ANALYSE_28_OFFRES_CHAINAGE_2026-10-30.md § 5 et § 6.
+    """
+    chainage_v2_actif()                      # il charge `.env` une fois pour tous
+    return os.environ.get("APP_CHAINAGE_OFFRE_PROPOSEE", "0") == "1"
+
+def chainage_offre_sans_date_actif() -> bool:
+    """§ 2.9 -- L'OFFRE SANS DATE REJOINT SON AFFAIRE, PAR LE NOM (02/11/2026).
+
+        APP_CHAINAGE_OFFRE_SANS_DATE=1   le repli joue
+        (absent ou 0)                    comportement d'avant, A L'IDENTIQUE
+
+    Frederic, 02/11, apres avoir vu deux offres de 2008 datees du jour : « il faut
+    surtout reflechir au chainage de ces transactions a mettre a jour ».
+
+    ─── POURQUOI IL EXISTE ───────────────────────────────────────────────────
+    Jusqu'au 02/11, une offre sans date chez Hektor recevait `synced_at` -- l'heure
+    du run. Elle etait donc DATEE, et datee d'aujourd'hui : le chainage la rangeait
+    APRES la vente du bien, laquelle avait deja ferme la chaine. Elle ne pouvait
+    qu'en ouvrir une neuve, seule.
+    MESURE DU 02/11 : les 54 offres concernees formaient 49 chaines ne contenant
+    QUE des offres -- zero compromis, zero vente -- alors que 44 de ces 49 biens
+    SONT VENDUS. L'affaire etait coupee en deux.
+    Le correctif de la colonne `date` (meme jour) leur rend leur absence de date,
+    mais ne les recolle pas : sans date, le defaut les laisse SEULES. D'ou ce repli.
+
+    ⚠⚠ UN INTERRUPTEUR A PART, et pour la raison que Frederic a ecrite au § 2.6 :
+      `APP_CHAINAGE_SANS_DATE` est DEJA allume en production, et un interrupteur
+      qui porte deux changements ne permet plus d'en retirer un seul. Le cran 1 du
+      § 2.6 doit rester EXACTEMENT ce qui tourne, pour que le temoin inverse garde
+      un sens.
+
+    ─── LA REGLE, ET SES GARDES ──────────────────────────────────────────────
+    L'offre rejoint une chaine du MEME BIEN qui porte une VRAIE SUITE (un compromis
+    ou une vente) partageant son NOM -- et SEULEMENT s'il n'y en a qu'UNE.
+    ⭐ LE NOM N'A PAS BESOIN DE DATE : c'est l'argument meme du § 2.6. S'il n'y a
+      qu'une chaine au nom de l'acheteur, il n'y a rien a deviner.
+    ⚠ ON N'EXIGE PAS `not c["compromis"]`, CONTRAIREMENT AU § 2.6 -- et c'est le
+      coeur de la difference. Cette garde existe parce qu'une chaine ne porte qu'UN
+      compromis ; une offre, elle, va precisement rejoindre la chaine QUI EN PORTE
+      un. Reprendre la garde du § 2.6 ici aurait refuse toutes les cibles.
+    ⚠ ON EXIGE UNE SUITE (compromis ou vente), pas n'importe quelle chaine : une
+      chaine faite d'autres offres orphelines n'est pas une affaire, et les coller
+      entre elles ne reparerait rien.
+    ⛔ ON NE TOUCHE PAS AUX ETATS DE LA CIBLE. L'offre n'ouvre rien, ne ferme rien,
+      ne pose ni `offre_acceptee` ni `compromis` : elle est AJOUTEE a une affaire
+      deja constituee, dont la sequence est connue sans elle. Poser `offre_acceptee`
+      ferait croire a une offre acceptee qu'on n'a jamais lue.
+    ⚠ ET LA CHAINE PEUT ETRE FERMEE : c'est le cas normal ici (44 biens vendus sur
+      49). On cherche dans `toutes`, pas dans `ouvertes` -- comme le § 2.6.
+
+    GAIN ATTENDU, mesure le 02/11 AVANT d'ecrire la regle (sur hektor_acquereur_id,
+    la vraie regle lisant `acquereurs_json` -- l'epreuve dira le chiffre exact) :
+        54 offres glissantes   49 ont une suite au MEME nom, 45 a cible UNIQUE
+        14 offres a 0000-00-00  5 ont une suite au meme nom, cible unique
+        laissees dehors         2 (suite a un autre nom) + 3 (aucune suite)
+    """
+    chainage_v2_actif()                      # il charge `.env` une fois pour tous
+    return os.environ.get("APP_CHAINAGE_OFFRE_SANS_DATE", "0") == "1"
+
+
 ETATS_OFFRE_MORTS = {"refused", "refusee"}
 ETATS_OFFRE_ACCEPTEE = {"accepted", "acceptee"}
 ETATS_COMPROMIS_MORTS = {"cancelled", "annule"}
@@ -1616,6 +1734,8 @@ def recalculer_les_chaines(con: sqlite3.Connection) -> dict[str, int]:
     #   premiere decision. Le resoudre a chaque bloc le rendrait illisible, et
     #   une constante d'import ne verrait pas `.env` (voir chainage_v2_actif).
     v2 = chainage_v2_actif()
+    offre_proposee = chainage_offre_proposee_actif()     # § 2.8 (30/10)
+    offre_sans_date = chainage_offre_sans_date_actif()   # § 2.9 (02/11)
     lignes = list(con.execute(f"""
         SELECT app_affaire_id, hektor_annonce_id, kind, state, date, acquereurs_json,
                propositions_json
@@ -1761,6 +1881,32 @@ def recalculer_les_chaines(con: sqlite3.Connection) -> dict[str, int]:
                     elif len(fermees) > 1:
                         # ON NE DEVINE PAS, ET ON LE DIT (4 cas mesures).
                         signale("[V2] plusieurs chaines refusees au meme nom -- abstention")
+                # ─── § 2.8 (30/10) : A DEFAUT, L'OFFRE « PROPOSEE » DU MEME ACQUEREUR ───
+                #
+                # Voir chainage_offre_proposee_actif(). Il ne joue QUE si rien
+                # au-dessus n'a trouve de cible : une offre ACCEPTEE garde la
+                # priorite, toujours.
+                # « ouverte, sans compromis, sans offre acceptee » = une chaine
+                # d'OFFRES dont au moins une est encore vivante (une chaine dont
+                # toutes les offres sont refusees a deja quitte `ouvertes`, § 1.4 ;
+                # une vente ferme la sienne). Le NOM est obligatoire : sans lui,
+                # on rattacherait l'affaire d'un concurrent.
+                # ⚠ COMPROMIS VIVANTS SEULEMENT -- voir la docstring (5681, 5687).
+                # ⚠ AUCUN CONFLIT AVEC LE § 2.2 MESURE : 0 compromis pris par
+                #   l'offre acceptee d'un AUTRE nom alors qu'une offre proposee a
+                #   son nom existait (30/10).
+                if (cible is None and acqs and offre_proposee
+                        and state not in ETATS_COMPROMIS_MORTS):
+                    proposees = [c for c in ouvertes
+                                 if not c["compromis"] and not c["offre_acceptee"]
+                                 and not c["a_une_vente"] and c["offres"]
+                                 and (acqs & c["acquereurs"])]
+                    if len(proposees) == 1:
+                        cible = proposees[0]
+                        signale("[2.8] compromis rattache a l offre proposee du meme acquereur")
+                    elif len(proposees) > 1:
+                        # ON NE DEVINE PAS, ET ON LE DIT (0 cas mesure le 30/10).
+                        signale("[2.8] plusieurs offres proposees au meme nom -- abstention")
                 if cible is None:
                     cible = ouvrir(app_id, acqs)
                 else:
@@ -1869,7 +2015,10 @@ def recalculer_les_chaines(con: sqlite3.Connection) -> dict[str, int]:
         # deviner. Mesure du 20/10 : 120 compromis annules, et ce sont les memes
         # affaires que le § 2.3 recolle quand la date existe.
         niveau_sd = chainage_sans_date_niveau()
-        if sans_date_du_bien and niveau_sd >= 1:
+        # ⚠ LE § 2.9 OUVRE AUSSI CE BLOC, SEUL. Garder `niveau_sd >= 1` comme unique
+        #   porte aurait rendu le § 2.9 muet tant que le § 2.6 est eteint -- et son
+        #   interrupteur aurait eu l'air casse (meme piege que le `.env` avale du 20/10).
+        if sans_date_du_bien and (niveau_sd >= 1 or offre_sans_date):
             if not toutes:
                 # ⚠ ON LE DIT, ET C'EST LA DEUXIEME FOIS LE MEME JOUR. La garde
                 #   `and toutes` sautait le bloc EN SILENCE : 32 transactions sur
@@ -1880,11 +2029,68 @@ def recalculer_les_chaines(con: sqlite3.Connection) -> dict[str, int]:
                 #   oubli.
                 for app_id, *_reste in sans_date_du_bien:
                     signale("[2.6] le bien n a aucune transaction datee -- rien a rejoindre")
+            # § 2.9 : les paquets d'offres sans date de CE bien (voir plus bas).
+            paquets_sans_date: list[dict] = []
             for app_id, kind, state, date, acqs in (sans_date_du_bien if toutes else []):
                 # ⚠ RESTREINT AUX COMPROMIS ANNULES : coherence avec le § 2.3,
                 #   que Frederic a limite aux annules le 20/10. Un compromis
                 #   VIVANT rattache sur un nom rouvrirait une affaire en cours
                 #   sur une devinette.
+                # ─── § 2.9 (02/11) : L'OFFRE SANS DATE REJOINT SON AFFAIRE ───
+                #     Voir chainage_offre_sans_date_actif pour la regle et ses gardes.
+                if kind == "offre" and offre_sans_date:
+                    if not acqs:
+                        # ⚠ SANS NOM, on ne peut ni cibler ni regrouper : elle
+                        #   reste seule, exactement comme avant le § 2.9.
+                        signale("[2.9] offre sans date et SANS NOM -- reste seule")
+                        continue
+                    # ⚠ UNE VRAIE SUITE, pas n'importe quelle chaine : un compromis ou
+                    #   une vente. Coller deux offres orphelines ne reparerait rien.
+                    # ⚠ ET PAS DE GARDE `not c["compromis"]` -- c'est justement la
+                    #   chaine qui en porte un que l'offre doit rejoindre.
+                    cibles = [c for c in toutes
+                              if (acqs & c["acquereurs"])
+                              and (c["compromis"] or c["a_une_vente"])]
+                    # ⛔⛔ ET SI ON S'ABSTIENT, LES OFFRES RESTENT ENSEMBLE.
+                    #   REGRESSION ATTRAPEE A L'EPREUVE DU 02/11, pas raisonnee :
+                    #   le temoin nommant VA30102 montrait ses DEUX offres parties
+                    #   dans les dossiers 10798 ET 10799, alors qu'elles etaient
+                    #   ensemble dans 10798. Datees (du jour), elles passaient par
+                    #   la boucle datee, ou « une chaine par acquereur » les
+                    #   regroupait ; rendues SANS DATE, chacune recevait sa propre
+                    #   chaine. Le correctif aurait COUPE un dossier en deux.
+                    #   ⭐ ON NE FAIT JAMAIS PIRE QU'AVANT : a defaut de cible, les
+                    #     offres sans date du meme bien qui partagent un nom se
+                    #     regroupent entre elles -- la regle de la boucle datee,
+                    #     appliquee sans la date dont elle n'a pas besoin.
+                    #   ⚠ UN PAQUET N'EST JAMAIS UNE CIBLE DU § 2.9 : il ne porte
+                    #     ni compromis ni vente, donc le filtre ci-dessus l'ecarte.
+                    #     Coller deux orphelines a une troisieme ne reparerait rien.
+                    if len(cibles) != 1:
+                        paquet = next((p for p in paquets_sans_date
+                                       if acqs & p["acquereurs"]), None)
+                        if paquet is None:
+                            paquet = {"membres": [], "acquereurs": set(),
+                                      "offre_acceptee": False, "compromis": False,
+                                      "offres": [], "a_une_vente": False}
+                            paquets_sans_date.append(paquet)
+                            toutes.append(paquet)
+                        paquet["membres"].append(app_id)
+                        paquet["acquereurs"] |= acqs
+                    if len(cibles) == 1:
+                        # ⛔ ON N'AJOUTE QUE LE MEMBRE ET LE NOM. Ni `offre_acceptee`
+                        #   ni `compromis` : l'offre entre dans une affaire deja
+                        #   constituee, elle n'en change pas la sequence. Et ne rien
+                        #   poser laisse la SECONDE offre du meme acheteur rejoindre
+                        #   la meme affaire -- c'est le cas de VA30102, qui en a deux.
+                        cibles[0]["membres"].append(app_id)
+                        cibles[0]["acquereurs"] |= acqs
+                        signale("[2.9] offre SANS DATE rattachee a son affaire par le nom")
+                    elif len(cibles) > 1:
+                        signale("[2.9] plusieurs affaires au meme nom -- abstention")
+                    else:
+                        signale("[2.9] aucune affaire a son nom -- reste seule")
+                    continue
                 if kind != "compromis":
                     # ⚠ ON LE DIT. Un `continue` muet ici laissait 49 transactions
                     #   hors du compte : « 220 sans date » mais 171 expliquees, et
@@ -1946,12 +2152,16 @@ def recalculer_les_chaines(con: sqlite3.Connection) -> dict[str, int]:
                 #   saura pas, demain matin, laquelle des deux a produit ces
                 #   numeros -- et c'est la premiere question qu'on se posera.
                 "chainage_v2": v2,
-                "chainage_sans_date": chainage_sans_date_niveau()}
+                "chainage_sans_date": chainage_sans_date_niveau(),
+                "chainage_offre_proposee": offre_proposee,
+                "chainage_offre_sans_date": offre_sans_date}
     resultat.update(anomalies)
     print(f"[ledger] chainage : {resultat['chaines']} chaines "
           f"({'V2 -- replis actifs' if v2 else 'regle d avant, V2 eteinte'}"
           f"{(' + sans-date cran %d' % resultat['chainage_sans_date'])
-             if resultat['chainage_sans_date'] else ''})")
+             if resultat['chainage_sans_date'] else ''}"
+          f"{' + offre proposee (2.8)' if offre_proposee else ''}"
+          f"{' + offre sans date (2.9)' if offre_sans_date else ''})")
     return resultat
 
 

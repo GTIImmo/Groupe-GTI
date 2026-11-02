@@ -354,6 +354,30 @@ def first_non_empty(*values: Any) -> str | None:
     return None
 
 
+def premiere_date_exploitable(*values: Any) -> str | None:
+    """LA PREMIERE VRAIE DATE, ou rien -- JAMAIS l'heure de notre lecture. 02/11/2026
+
+    ⛔ CE QU'ELLE REMPLACE. Les trois relations transactionnelles finissaient leur
+    cascade par `synced_at`, l'instant ou le miroir a lu Hektor. Quand Hektor ne
+    porte pas de date, la relation prenait donc celle du RUN -- et elle GLISSAIT
+    CHAQUE NUIT. Mesure du 02/11 sur `app_contact_relation_current` : 54 relations
+    « acquereur_offre » datees du jour meme, les MEMES 54 que le registre des
+    transactions. Cote compromis et vente : 0 ligne, le repli n'y a jamais mordu --
+    mais le defaut y etait ECRIT PAREIL, et une mine qu'on laisse amorcee finit par
+    sauter (meme famille que le dossier VA30102).
+
+    ⭐ ET ELLE REFUSE AUSSI « 0000-00-00 », le vide de Hektor, qui passait
+    `first_non_empty` parce qu'il n'est pas une chaine vide. Borne 2000-2030 :
+    c'est celle de `_date_utile` dans affaire_ledger.py, pour que les deux couches
+    s'accordent sur ce qu'est une date exploitable.
+    """
+    for value in values:
+        texte = clean_text(value)
+        if len(texte) >= 4 and "2000" <= texte[:4] <= "2030":
+            return texte
+    return None
+
+
 # ═══════════════════════════════════════════════════════════════════════════
 # L4-b (②) — LA SUBSTITUTION D'IDENTITE                          21/09/2026
 # ═══════════════════════════════════════════════════════════════════════════
@@ -1305,7 +1329,8 @@ def load_relations(
                 transaction_type="offre",
                 transaction_id=clean_text(row["hektor_offre_id"]),
                 transaction_state=clean_text(row["offre_state"]),
-                transaction_date=first_non_empty(row["offre_event_date"], row["raw_date"], row["synced_at"]),
+                # ⛔ 02/11 : `synced_at` RETIRE -- voir premiere_date_exploitable.
+                transaction_date=premiere_date_exploitable(row["offre_event_date"], row["raw_date"]),
                 transaction_amount=clean_text(row["raw_montant"]),
                 last_seen_at=clean_text(row["synced_at"]) or None,
             )
@@ -1330,7 +1355,8 @@ def load_relations(
                     transaction_type="compromis",
                     transaction_id=clean_text(row["hektor_compromis_id"]),
                     transaction_state=clean_text(row["compromis_state"]),
-                    transaction_date=first_non_empty(row["date_start"], row["date_signature_acte"], row["date_end"], row["synced_at"]),
+                    # ⛔ 02/11 : `synced_at` RETIRE (0 ligne concernee -- meme defaut).
+                    transaction_date=premiere_date_exploitable(row["date_start"], row["date_signature_acte"], row["date_end"]),
                     transaction_amount=first_non_empty(row["prix_publique"], row["prix_net_vendeur"]),
                     last_seen_at=clean_text(row["synced_at"]) or None,
                 )
@@ -1354,7 +1380,8 @@ def load_relations(
                     transaction_type="vente",
                     transaction_id=clean_text(row["hektor_vente_id"]),
                     transaction_state="vente",
-                    transaction_date=first_non_empty(row["date_vente"], row["synced_at"]),
+                    # ⛔ 02/11 : `synced_at` RETIRE (0 ligne concernee -- meme defaut).
+                    transaction_date=premiere_date_exploitable(row["date_vente"]),
                     transaction_amount=clean_text(row["prix"]),
                     last_seen_at=clean_text(row["synced_at"]) or None,
                 )
