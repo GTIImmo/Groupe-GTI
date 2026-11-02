@@ -242,3 +242,72 @@ button.rt-carte-dossier { cursor: pointer; }
   mask: var(--rt-picto) center / contain no-repeat;
 }
 .mobile-nav-icon-transactions::after { display: none; }
+
+/* ─── La fiche d'un dossier (étape 4, 02/11/2026) ─── */
+.rt-pastille.is-neutre { background: var(--ds-surface-muted, #eceeef); color: var(--ds-text-muted, #3f4446); }
+.rt-bouton-principal { background: var(--ds-brand, #c5005f); border-color: var(--ds-brand, #c5005f); color: #fff; }
+.rt-bouton-principal:hover { filter: brightness(.94); }
+.rt-bouton-petit { min-height: 32px; padding: 0 12px; font-size: 13px; }
+.rt-bouton:focus-visible, .rt-lien:focus-visible { outline: 2px solid var(--ds-brand, #c5005f); outline-offset: 2px; }
+.rt-fiche-fil { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; font-size: 13px; }
+.rt-retour { display: inline-flex; align-items: center; gap: 6px; padding-left: 10px; }
+.rt-retour svg { width: 18px; height: 18px; }
+.rt-fiche-entete { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.rt-fiche-identite { display: flex; align-items: center; gap: 16px; min-width: 0; }
+.rt-fiche-photo { width: 84px; height: 84px; flex: 0 0 auto; border-radius: 14px; object-fit: cover; background: var(--ds-surface-muted, #eceeef); }
+.rt-fiche-titres { display: flex; flex-direction: column; gap: 6px; min-width: 0; font-size: 14px; }
+.rt-fiche-pastilles { display: flex; flex-wrap: wrap; gap: 8px; }
+.rt-fiche-titre { margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -.02em; line-height: 1.15; }
+.rt-fiche-titre .rt-mute { font-size: 16px; font-weight: 600; letter-spacing: 0; }
+.rt-fiche-actions-tete { display: flex; flex-wrap: wrap; gap: 10px; }
+.rt-indicateur.is-alerte .rt-indicateur-detail { color: var(--rt-tombe-texte); font-weight: 600; }
+.rt-fiche-grille { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 18px; align-items: start; }
+.rt-fiche-colonne { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.rt-bloc { display: flex; flex-direction: column; gap: 14px; padding: 18px 20px; }
+.rt-bloc p { margin: 0; font-size: 14px; }
+.rt-bloc-tete { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.rt-bloc-titre { margin: 0; font-size: 16px; font-weight: 700; }
+.rt-fiche-remarque { padding: 10px 12px; border-radius: 10px; background: var(--ds-surface-muted, #f1f3f4); color: var(--ds-text-muted, #3f4446); font-size: 13px !important; }
+
+.rt-etapes { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; }
+.rt-etape { position: relative; display: grid; grid-template-columns: 14px minmax(0, 1fr) auto; gap: 12px; align-items: start; padding: 10px 0 14px; }
+.rt-etape:not(:last-child)::after { content: ""; position: absolute; left: 6px; top: 26px; bottom: -6px; width: 2px; background: var(--ds-border, #e2e5e6); }
+.rt-etape-point { width: 14px; height: 14px; margin-top: 3px; border-radius: 50%; background: var(--rt-offre-texte); box-sizing: border-box; }
+.rt-etape.is-offre_proposee .rt-etape-point { background: var(--ds-surface, #fff); border: 3px solid var(--rt-offre-texte); }
+.rt-etape.is-compromis .rt-etape-point { background: var(--rt-compromis-texte); }
+.rt-etape.is-vendu .rt-etape-point { background: var(--rt-vente-texte); }
+.rt-etape.is-compromis_annule .rt-etape-point, .rt-etape.is-offre_refusee .rt-etape-point { background: var(--rt-tombe-texte); }
+.rt-etape.is-retiree { opacity: .6; }
+.rt-etape-corps { display: flex; flex-direction: column; gap: 4px; min-width: 0; font-size: 13px; }
+.rt-etape-haut { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; font-size: 14px; }
+.rt-etape-montant { margin-left: auto; font-weight: 700; }
+
+.rt-parts { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; }
+.rt-part-ligne { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--ds-border, #eef0f1); font-size: 14px; }
+.rt-part-ligne:last-child { border-bottom: 0; }
+.rt-part-cote { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 999px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+.rt-part-cote.is-entree { background: var(--rt-offre-fond); color: var(--rt-offre-texte); }
+.rt-part-cote.is-sortie { background: var(--rt-compromis-fond); color: var(--rt-compromis-texte); }
+.rt-part-nom { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+
+.rt-parties { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+.rt-partie { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 12px 14px; border: 1px solid var(--ds-border, #eef0f1); border-radius: 12px; font-size: 14px; min-width: 0; }
+.rt-conditions, .rt-notes { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 10px; }
+.rt-condition { display: flex; flex-direction: column; gap: 2px; font-size: 14px; }
+.rt-condition .rt-mute { font-size: 13px; }
+.rt-notes li { display: flex; flex-direction: column; gap: 4px; }
+.rt-notes p { white-space: pre-wrap; }
+
+@media (max-width: 760px) {
+  .rt-fiche-photo { width: 64px; height: 64px; border-radius: 12px; }
+  .rt-fiche-titre { font-size: 20px; }
+  .rt-fiche-actions-tete { width: 100%; }
+  .rt-fiche-actions-tete .rt-bouton { flex: 1 1 auto; }
+  .rt-fiche-grille { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  .rt-fiche-colonne { gap: 14px; }
+  .rt-bloc { padding: 14px; }
+  .rt-etape { grid-template-columns: 14px minmax(0, 1fr); }
+  .rt-etape > .rt-bouton { grid-column: 2; justify-self: start; }
+  .rt-part-ligne { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .rt-part-ligne > .rt-mute { display: none; }
+}

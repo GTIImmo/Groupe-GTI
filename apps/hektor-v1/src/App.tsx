@@ -87,6 +87,8 @@ import {
   createGenerateMandatPdfJob,
   loadAppSettingActive,
   loadAppSettingValeur,
+  bienEstDansLesAnnonces,
+  type RegistreDossierRow,
   sendEstimationEmail,
   loadDvfComparables,
   loadCadreDeVie,
@@ -242,7 +244,7 @@ import RapprochementMandat, { type MandatContext } from './RapprochementMandat'
 import { FICHE_NOTAIRE_V2, NotaireAVenir, NotaireDossiers, NotaireInterlocuteurs, NotaireKpis, NotaireVentesEtAvecNous, construireVueNotaire, useFicheNotaire } from './FicheNotaire'
 import NotificationsBell from './NotificationsBell'
 import SanteSystemeScreen from './SanteSystemeScreen'
-import RegistreTransactionsScreen from './RegistreTransactionsScreen'
+import RegistreTransactionsScreen, { type GesteDuRegistre } from './RegistreTransactionsScreen'
 import { bvBoot } from './lib/bienvuBoot'
 import { APP_BIENVU_ENABLED } from './lib/bienvuFlag'
 import { BienvuLogin } from './BienvuLogin'
@@ -16326,6 +16328,65 @@ export default function App() {
     setDetailOpen(true)
   }
 
+  // Registre des transactions, étape 4 (02/11/2026, note § 10). Un bien vendu ou clos n'est ni dans
+  // app_dossier_current ni dans les listes en mémoire : openDossierDetailPage ouvrait alors une fiche
+  // VIDE. On passe par le détail gardé des biens vendus / clos, comme la liste « Étendre aux archives ».
+  async function ouvrirBienDuRegistre(ligne: RegistreDossierRow) {
+    if (ligne.app_dossier_id == null) return
+    const appDossierId = ligne.app_dossier_id
+    setErrorMessage(null)
+    try {
+      if (await bienEstDansLesAnnonces(appDossierId)) {
+        openDossierDetailPage(appDossierId)
+        return
+      }
+    } catch (error) {
+      console.error('[registre des transactions] fiche du bien', error)
+      setErrorMessage('La fiche du bien n’a pas pu être ouverte. Réessayez dans un instant.')
+      return
+    }
+    if (ligne.hektor_annonce_id == null || !isHistoricalListingStatus(ligne.statut_annonce)) {
+      setErrorMessage('La fiche de ce bien n’est pas disponible depuis le registre.')
+      return
+    }
+    await openLightweightDetailImport({
+      app_dossier_id: appDossierId,
+      hektor_annonce_id: Number(ligne.hektor_annonce_id),
+      numero_dossier: String(ligne.hektor_annonce_id),
+      titre_bien: [propertyTypeLabel(ligne.type_bien), ligne.ville].filter((valeur) => valeur && valeur !== '-').join(' · '),
+      statut_annonce: ligne.statut_annonce,
+      archive: '0',
+      ville: ligne.ville,
+      code_postal: ligne.code_postal,
+      prix: ligne.montant,
+      numero_mandat: ligne.numero_mandat,
+      agence_nom: ligne.agence_nom,
+      negociateur_email: ligne.negociateur_email,
+      photo_url_listing: ligne.photo_url_listing,
+    } as unknown as LightweightDetailTarget)
+  }
+
+  // Les boutons de la fiche du dossier ouvrent la fenêtre de statut EXISTANTE, sur le bien, l'onglet
+  // et la transaction désignés (comme le bouton « Choisir » de la fenêtre). Rien d'autre ne change :
+  // les gardes et les gestes restent ceux de la fenêtre. Bien hors annonces = étape 4C, pas ici.
+  async function ouvrirGesteDuRegistre(ligne: RegistreDossierRow, geste: GesteDuRegistre) {
+    if (ligne.app_dossier_id == null || !isManagerOrAdmin) return
+    setErrorMessage(null)
+    let dossier: DetailedDossier | null = null
+    try {
+      dossier = await loadDossierDetail(ligne.app_dossier_id)
+    } catch (error) {
+      console.error('[registre des transactions] ouverture du geste', error)
+    }
+    if (!dossier) {
+      setErrorMessage('Ce bien n’est plus en annonce : ce dossier ne se modifie pas encore depuis le registre.')
+      return
+    }
+    openStatusChangeModal(dossier)
+    setStatusChangeStatus(geste.onglet === 'offre' ? 'offer' : geste.onglet === 'compromis' ? 'compromise' : 'sold')
+    if (geste.appAffaireId != null) setStatusChangeAffaireChoisie(geste.appAffaireId)
+  }
+
   function closeDossierDetailPage() {
     setDetailImageModalUrl(null)
     setDetailImageAlbum(null)
@@ -24452,7 +24513,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         ) : screen === 'sante' ? (
           <SanteSystemeScreen isAdmin={isAdmin} onOpenDossier={openDossierDetailPage} />
         ) : screen === 'transactions' ? (
-          <RegistreTransactionsScreen isAdmin={isAdmin} onOpenDossier={openDossierDetailPage} libelleTypeBien={propertyTypeLabel} />
+          <RegistreTransactionsScreen isAdmin={isAdmin} libelleTypeBien={propertyTypeLabel} onOuvrirBien={(ligne) => void ouvrirBienDuRegistre(ligne)} onGeste={isManagerOrAdmin ? (ligne, geste) => void ouvrirGesteDuRegistre(ligne, geste) : undefined} fenetreOuverte={statusChangeTarget != null} onOuvrirContact={openContactDirectory} />
         ) : screen === 'registre' ? (
           <MobileRegisterCards
             mandats={screenMandats}
@@ -25507,7 +25568,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         ) : screen === 'sante' ? (
           <SanteSystemeScreen isAdmin={isAdmin} onOpenDossier={openDossierDetailPage} />
         ) : screen === 'transactions' ? (
-          <RegistreTransactionsScreen isAdmin={isAdmin} onOpenDossier={openDossierDetailPage} libelleTypeBien={propertyTypeLabel} />
+          <RegistreTransactionsScreen isAdmin={isAdmin} libelleTypeBien={propertyTypeLabel} onOuvrirBien={(ligne) => void ouvrirBienDuRegistre(ligne)} onGeste={isManagerOrAdmin ? (ligne, geste) => void ouvrirGesteDuRegistre(ligne, geste) : undefined} fenetreOuverte={statusChangeTarget != null} onOuvrirContact={openContactDirectory} />
         ) : (
           <SuiviMandatsScreenV2
             isAdmin={isManagerOrAdmin}

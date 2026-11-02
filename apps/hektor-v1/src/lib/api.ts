@@ -8843,6 +8843,123 @@ export async function loadRegistreDossiers(annee: number | null): Promise<Regist
   }))
 }
 
+// Registre des transactions, étape 4 (02/11/2026) : la fiche d'UN dossier, lue par son numéro de
+// chaîne. La règle du registre laisse lire les lignes d'une chaîne à qui voit le dossier (note § 8).
+// LECTURE SEULE. Les parties viennent de app_affaire_partie (rôles vendeur, acquereur,
+// notaire_vendeur, notaire_acquereur), jusqu'ici lue par aucun écran.
+export type AffairePartieRow = {
+  app_affaire_id: number
+  role: string
+  rang: number
+  app_contact_id: number | null
+  hektor_contact_id: string | null
+  est_principal: boolean | null
+  fiche_sans_nom: boolean | null
+  nom: string | null
+}
+
+export type DossierDeLaChaine = {
+  lignes: AffaireLedgerRow[]
+  parties: AffairePartieRow[]
+  conditions: Map<number, AffaireCondition[]>
+  notes: Map<number, string>
+  repartition: RepartitionLigne[]
+}
+
+// Mode maquette : les lignes se déduisent du dossier fictif (une par étape datée).
+function mockDossierDeLaChaine(chaineId: number): DossierDeLaChaine {
+  const ligne = mockRegistreDossiers.find((item) => item.app_chaine_id === chaineId)
+  const vide: DossierDeLaChaine = { lignes: [], parties: [], conditions: new Map(), notes: new Map(), repartition: [] }
+  if (!ligne) return vide
+  const base = {
+    app_dossier_id: ligne.app_dossier_id, hektor_annonce_id: ligne.hektor_annonce_id, numero_mandat: ligne.numero_mandat,
+    mandat_origine: 'hektor', hektor_acquereur_id: ligne.hektor_acquereur_id, acquereur_json: null, acquereurs_json: null,
+    sequestre: null, present_in_hektor: true, prix_net_vendeur: null, mandants_json: null, notaires_json: null,
+    propositions_json: null, commission_agence: null, notaire_acquereur_id: null, notaire_acquereur_nom: null,
+    notaire_mandant_id: null, notaire_mandant_nom: null, app_chaine_id: chaineId,
+  }
+  const etats: Record<string, [string, string]> = {
+    offre_proposee: ['proposed', ''], offre_acceptee: ['accepted', ''], offre_refusee: ['refused', ''],
+    compromis: ['accepted', 'active'], compromis_annule: ['accepted', 'cancelled'], vendu: ['accepted', 'active'],
+  }
+  const [etatOffre, etatCompromis] = etats[ligne.etape] ?? ['', '']
+  const lignes: AffaireLedgerRow[] = []
+  const ajouter = (kind: string, rang: number, date: string | null, state: string | null, extra: Record<string, unknown> = {}) => {
+    if (!date) return
+    lignes.push({ ...base, app_affaire_id: chaineId + rang, kind, hektor_affaire_id: String(chaineId + rang), state, montant: ligne.montant, date, date_acte: null,
+      honoraires_entree: ligne.honoraires_entree == null ? null : String(ligne.honoraires_entree),
+      honoraires_sortie: ligne.honoraires_sortie == null ? null : String(ligne.honoraires_sortie), ...extra } as unknown as AffaireLedgerRow)
+  }
+  ajouter('offre', 0, ligne.date_offre, etatOffre, { jours_validite: '10' })
+  ajouter('compromis', 1, ligne.date_compromis, etatCompromis || 'active', {
+    date_acte: ligne.date_acte_prevue, sequestre: '10000', date_fin_retractation: ligne.date_compromis ? ligne.date_compromis.slice(0, 8) + '31' : null,
+    prix_net_vendeur: ligne.montant == null ? null : String(ligne.montant - (ligne.honoraires ?? 0)),
+  })
+  ajouter('vente', 2, ligne.date_vente, null)
+  const premiere = lignes[0]?.app_affaire_id ?? chaineId
+  const derniere = lignes[lignes.length - 1]?.app_affaire_id ?? chaineId
+  return {
+    lignes,
+    parties: [
+      { app_affaire_id: derniere, role: 'vendeur', rang: 1, app_contact_id: null, hektor_contact_id: '9001', est_principal: true, fiche_sans_nom: false, nom: 'M. Jean ROUX' },
+      { app_affaire_id: derniere, role: 'vendeur', rang: 2, app_contact_id: null, hektor_contact_id: '9002', est_principal: false, fiche_sans_nom: false, nom: 'Mme Anne ROUX' },
+      ...(ligne.acquereur_nom ? [{ app_affaire_id: derniere, role: 'acquereur', rang: 1, app_contact_id: null, hektor_contact_id: ligne.hektor_acquereur_id, est_principal: true, fiche_sans_nom: false, nom: ligne.acquereur_nom }] : []),
+      ...(ligne.date_compromis ? [{ app_affaire_id: derniere, role: 'notaire_vendeur', rang: 1, app_contact_id: null, hektor_contact_id: '9003', est_principal: true, fiche_sans_nom: false, nom: 'Me Lionel SANIAL' }] : []),
+    ],
+    conditions: ligne.date_compromis ? new Map([[premiere + 1, [{ rang: 1, libelle: 'Obtention du prêt', jours: 45, date_echeance: '2026-12-05', etat: 'attente' }]]]) : new Map(),
+    notes: new Map([[derniere, 'Acquéreurs pressés : remise des clés souhaitée avant février.']]),
+    repartition: ligne.honoraires ? [
+      { cote: 'entree', rang: 1, hektorUserId: '1', nomAuMoment: 'Mélanie LEGRAND', pourcentage: 50, origine: 'app' },
+      { cote: 'sortie', rang: 1, hektorUserId: '2', nomAuMoment: 'Simon TEST', pourcentage: 50, origine: 'app' },
+    ] : [],
+  }
+}
+
+export async function loadDossierDeLaChaine(chaineId: number): Promise<DossierDeLaChaine> {
+  if (!hasSupabaseEnv || !supabase) return mockDossierDeLaChaine(chaineId)
+  const client = supabase
+  const { data, error } = await client
+    .from('app_affaire_ledger')
+    .select(affaireLedgerSelect)
+    .eq('app_chaine_id', chaineId)
+    .order('date', { ascending: true })
+    .order('app_affaire_id', { ascending: true })
+  if (error) throw new Error(error.message)
+  const lignes = (data ?? []) as unknown as AffaireLedgerRow[]
+  const ids = lignes.map((ligne) => Number(ligne.app_affaire_id)).filter((id) => Number.isFinite(id))
+  const lireParties = async (): Promise<AffairePartieRow[]> => {
+    if (!ids.length) return []
+    const { data: partiesLues, error: erreurParties } = await client
+      .from('app_affaire_partie')
+      .select('app_affaire_id,role,rang,app_contact_id,hektor_contact_id,est_principal,fiche_sans_nom')
+      .in('app_affaire_id', ids)
+      .order('rang', { ascending: true })
+    if (erreurParties || !partiesLues) return []
+    const parties = partiesLues as Array<Omit<AffairePartieRow, 'nom'>>
+    const noms = await loadNomsContacts(parties.map((partie) => partie.hektor_contact_id))
+    return parties.map((partie) => ({ ...partie, nom: noms.get(String(partie.hektor_contact_id ?? '').trim()) ?? null }))
+  }
+  const [parties, conditions, notes, repartitions] = await Promise.all([
+    lireParties(),
+    loadAffairesConditions(ids),
+    loadAffairesNotes(ids),
+    loadRepartitionsDesChaines([chaineId]),
+  ])
+  return { lignes, parties, conditions, notes, repartition: repartitions.get(String(chaineId)) ?? [] }
+}
+
+// Le bien est-il encore dans les annonces vivantes ? (un bien vendu ou clos n'y est plus)
+export async function bienEstDansLesAnnonces(appDossierId: number): Promise<boolean> {
+  if (!hasSupabaseEnv || !supabase) return mockDossiers.some((dossier) => dossier.app_dossier_id === appDossierId)
+  const { data, error } = await supabase
+    .from('app_dossier_current')
+    .select('app_dossier_id')
+    .eq('app_dossier_id', appDossierId)
+    .limit(1)
+  if (error) throw new Error(error.message)
+  return Boolean(data && data.length)
+}
+
 export async function createGenerateMandatPdfJob(input: {
   dossier: Pick<MandatRecord, 'app_dossier_id' | 'hektor_annonce_id'>
   // HTML du mandat deja rendu cote front (mandatPreviewHtml) : le worker le rend en PDF

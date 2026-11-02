@@ -1,17 +1,31 @@
-import { useEffect, useMemo, useState } from 'react'
-import { loadRegistreDossiers, loadRepartitionsDesChaines, type RegistreDossierRow, type RegistreEtape, type RepartitionLigne } from './lib/api'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import {
+  bienEstDansLesAnnonces, loadDossierDeLaChaine, loadRegistreDossiers, loadRepartitionsDesChaines,
+  type AffaireLedgerRow, type AffairePartieRow, type DossierDeLaChaine, type RegistreDossierRow, type RegistreEtape, type RepartitionLigne,
+} from './lib/api'
 import './registre-transactions.css'
 
 // Registre des transactions -- étape « écran liste » (01/11/2026), derrière l'interrupteur
 // `registre_transactions_ecran`. Une ligne = un DOSSIER (offre -> compromis -> vente).
-// Lecture seule : la fiche et ses gestes sont l'étape suivante ; un clic ouvre la fiche du bien.
-// Maquette : https://claude.ai/artifact/3FA3yDqWuDWuqLdZAkvS8x · note : notice/AUDIT_GESTES_REGISTRE_TRANSACTIONS_2026-10-30.md § 8.
+// Étape 4 (02/11/2026) : un clic ouvre la FICHE DU DOSSIER (lecture), et ses boutons ouvrent la
+// fenêtre de statut EXISTANTE sur la bonne transaction -- l'écran n'écrit rien lui-même.
+// Les gestes ne sont proposés que si le bien est encore dans les annonces : un dossier vendu se
+// modifie à l'étape 4C (note § 10).
+// Maquette : https://claude.ai/artifact/3FA3yDqWuDWuqLdZAkvS8x · note : notice/AUDIT_GESTES_REGISTRE_TRANSACTIONS_2026-10-30.md § 8-10.
 // ⛔ Aucun mot « Hektor » à l'écran (décision du 30/10) ; une lecture ratée se dit, sans détail technique.
+
+export type GesteDuRegistre = { onglet: 'offre' | 'compromis' | 'vente'; appAffaireId: number | null }
 
 type RegistreTransactionsScreenProps = {
   isAdmin: boolean
-  onOpenDossier?: (appDossierId: number) => void
   libelleTypeBien?: (code: string | null | undefined) => string
+  /** La fiche du bien : vivante, ou par le détail gardé d'un bien vendu ou clos. */
+  onOuvrirBien?: (ligne: RegistreDossierRow) => void
+  /** Ouvre la fenêtre de statut sur ce bien, cet onglet et cette transaction. Absent = pas de geste. */
+  onGeste?: (ligne: RegistreDossierRow, geste: GesteDuRegistre) => void
+  /** Vrai tant que la fenêtre de statut est ouverte : à sa fermeture, la liste et la fiche se relisent. */
+  fenetreOuverte?: boolean
+  onOuvrirContact?: (contactId: string) => void
 }
 
 const ETAPES: Array<{ cle: RegistreEtape; libelle: string }> = [
@@ -128,7 +142,369 @@ function Parcours({ ligne }: { ligne: RegistreDossierRow }) {
   )
 }
 
-export default function RegistreTransactionsScreen({ isAdmin, onOpenDossier, libelleTypeBien }: RegistreTransactionsScreenProps) {
+// ─── La fiche d'un dossier (étape 4, 02/11/2026) ───
+
+const montantNombre = (valeur: unknown) => {
+  const texte = String(valeur ?? '').trim().replace(',', '.')
+  if (!texte) return null
+  const nombre = Number(texte)
+  return Number.isFinite(nombre) ? nombre : null
+}
+
+function libelleLigne(ligne: AffaireLedgerRow) {
+  const etat = String(ligne.state ?? '').toLowerCase()
+  if (ligne.kind === 'offre') return etat === 'accepted' ? 'Offre acceptée' : etat === 'refused' ? 'Offre refusée' : 'Offre proposée'
+  if (ligne.kind === 'compromis') return etat === 'cancelled' ? 'Compromis annulé' : 'Compromis signé'
+  if (ligne.kind === 'vente') return 'Vente actée'
+  return 'Transaction'
+}
+
+function classeLigne(ligne: AffaireLedgerRow): RegistreEtape {
+  const etat = String(ligne.state ?? '').toLowerCase()
+  if (ligne.kind === 'offre') return etat === 'accepted' ? 'offre_acceptee' : etat === 'refused' ? 'offre_refusee' : 'offre_proposee'
+  if (ligne.kind === 'compromis') return etat === 'cancelled' ? 'compromis_annule' : 'compromis'
+  return 'vendu'
+}
+
+function joursJusqua(valeur: string | null | undefined) {
+  const texte = String(valeur ?? '').trim()
+  if (!texte || texte.startsWith('0000')) return null
+  const cible = new Date(`${texte.slice(0, 10)}T12:00:00`)
+  if (Number.isNaN(cible.getTime())) return null
+  const aujourdhui = new Date()
+  aujourdhui.setHours(12, 0, 0, 0)
+  return Math.round((cible.getTime() - aujourdhui.getTime()) / 86_400_000)
+}
+
+const ROLES: Array<{ cle: string; libelle: string; pluriel: string }> = [
+  { cle: 'vendeur', libelle: 'Vendeur', pluriel: 'Vendeurs' },
+  { cle: 'acquereur', libelle: 'Acquéreur', pluriel: 'Acquéreurs' },
+  { cle: 'notaire_vendeur', libelle: 'Notaire du vendeur', pluriel: 'Notaires du vendeur' },
+  { cle: 'notaire_acquereur', libelle: 'Notaire de l’acquéreur', pluriel: 'Notaires de l’acquéreur' },
+]
+
+const ETAT_CONDITION: Record<string, string> = { attente: 'en attente', levee: 'levée', non_levee: 'non levée', sans_objet: 'sans objet' }
+
+function FicheDossier(props: {
+  ligne: RegistreDossierRow
+  type: string | null
+  relecture: number
+  onRetour: () => void
+  onOuvrirBien?: (ligne: RegistreDossierRow) => void
+  onGeste?: (ligne: RegistreDossierRow, geste: GesteDuRegistre) => void
+  onOuvrirContact?: (contactId: string) => void
+}) {
+  const { ligne, type, relecture, onRetour, onOuvrirBien, onGeste, onOuvrirContact } = props
+  const [dossier, setDossier] = useState<DossierDeLaChaine | null>(null)
+  const [vivant, setVivant] = useState<boolean | null>(null)
+  const [erreur, setErreur] = useState<string | null>(null)
+  const [essai, setEssai] = useState(0)
+  const retourRef = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    retourRef.current?.focus()
+  }, [ligne.app_chaine_id])
+
+  useEffect(() => {
+    let annule = false
+    setErreur(null)
+    Promise.all([
+      loadDossierDeLaChaine(ligne.app_chaine_id),
+      ligne.app_dossier_id == null ? Promise.resolve(false) : bienEstDansLesAnnonces(ligne.app_dossier_id),
+    ])
+      .then(([lu, estVivant]) => {
+        if (annule) return
+        setDossier(lu)
+        setVivant(estVivant)
+      })
+      .catch((cause: unknown) => {
+        console.error('[registre des transactions] fiche du dossier illisible', cause)
+        if (!annule) setErreur('Ce dossier n’a pas pu être chargé. Réessayez dans un instant.')
+      })
+    return () => {
+      annule = true
+    }
+  }, [ligne.app_chaine_id, ligne.app_dossier_id, relecture, essai])
+
+  const lignes = dossier?.lignes ?? []
+  const derniereDuGenre = (kind: string) => [...lignes].reverse().find((item) => item.kind === kind) ?? null
+  const offre = derniereDuGenre('offre')
+  const compromis = derniereDuGenre('compromis')
+  const vente = derniereDuGenre('vente')
+  const peutAgir = Boolean(onGeste && vivant && ligne.app_dossier_id != null)
+  const agir = (geste: GesteDuRegistre) => onGeste?.(ligne, geste)
+
+  // Le geste « suivant » de l'étape, en tête de fiche.
+  const suivant: { libelle: string; geste: GesteDuRegistre } | null = !peutAgir ? null
+    : ligne.etape === 'offre_proposee' && offre ? { libelle: 'Accepter ou refuser l’offre', geste: { onglet: 'offre', appAffaireId: offre.app_affaire_id } }
+      : ligne.etape === 'offre_acceptee' ? { libelle: 'Passer au compromis', geste: { onglet: 'compromis', appAffaireId: null } }
+        : ligne.etape === 'compromis' ? { libelle: 'Enregistrer la vente', geste: { onglet: 'vente', appAffaireId: null } }
+          : null
+
+  // Les parties : une personne par rôle, prise sur la transaction la plus récente qui la nomme.
+  const parties = useMemo(() => {
+    const rangDe = new Map(lignes.map((item, index) => [Number(item.app_affaire_id), index]))
+    const triees = [...(dossier?.parties ?? [])].sort((a, b) => (rangDe.get(b.app_affaire_id) ?? 0) - (rangDe.get(a.app_affaire_id) ?? 0) || a.rang - b.rang)
+    const parRole = new Map<string, AffairePartieRow[]>()
+    const vus = new Set<string>()
+    for (const partie of triees) {
+      const qui = partie.hektor_contact_id ?? partie.app_contact_id ?? `${partie.app_affaire_id}-${partie.rang}`
+      const cle = `${partie.role}|${qui}`
+      if (vus.has(cle)) continue
+      // On ne garde que les personnes de la transaction la plus récente pour ce rôle.
+      const deja = parRole.get(partie.role)
+      if (deja?.length && deja[0].app_affaire_id !== partie.app_affaire_id) continue
+      vus.add(cle)
+      parRole.set(partie.role, [...(deja ?? []), partie])
+    }
+    return parRole
+  }, [dossier, lignes])
+
+  const acquereursDe = (appAffaireId: number) => (dossier?.parties ?? [])
+    .filter((partie) => partie.app_affaire_id === appAffaireId && partie.role === 'acquereur')
+    .map((partie) => partie.nom || (partie.fiche_sans_nom ? 'Fiche sans nom' : null))
+    .filter(Boolean)
+    .join(', ')
+
+  const prix = ligne.montant
+  const netVendeur = montantNombre(compromis?.prix_net_vendeur) ?? montantNombre(offre?.prix_net_vendeur)
+  const tauxHonoraires = prix && ligne.honoraires ? (ligne.honoraires / prix) * 100 : null
+  const quatrieme = ligne.etape === 'vendu'
+    ? { libelle: 'Vendu le', valeur: dateEnClair(ligne.date_vente), detail: ligne.date_compromis ? `compromis du ${dateEnClair(ligne.date_compromis)}` : '' }
+    : ligne.etape === 'compromis'
+      ? (() => {
+          const jours = joursJusqua(ligne.date_acte_prevue)
+          return {
+            libelle: 'Acte prévu',
+            valeur: dateEnClair(ligne.date_acte_prevue),
+            detail: jours == null ? 'date non saisie' : jours > 0 ? `dans ${entier.format(jours)} jour${jours > 1 ? 's' : ''}` : jours === 0 ? 'aujourd’hui' : `dépassé de ${entier.format(-jours)} jour${jours < -1 ? 's' : ''}`,
+            alerte: jours != null && jours < 0,
+          }
+        })()
+      : { libelle: ligne.etape === 'compromis_annule' ? 'Compromis du' : 'Offre du', valeur: dateEnClair(ligne.etape === 'compromis_annule' ? ligne.date_compromis : ligne.date_offre), detail: '' }
+
+  const conditions = lignes.flatMap((item) => (dossier?.conditions.get(Number(item.app_affaire_id)) ?? []).map((condition) => ({ ...condition, kind: item.kind })))
+  const notes = lignes
+    .map((item) => ({ kind: item.kind, libelle: libelleLigne(item), texte: (dossier?.notes.get(Number(item.app_affaire_id)) ?? '').trim() }))
+    .filter((note) => note.texte)
+
+  const titre = [type, ligne.ville || 'Ville inconnue'].filter(Boolean).join(' · ')
+
+  return (
+    <section className="rt-ecran rt-fiche" aria-labelledby="rt-fiche-titre">
+      <nav className="rt-fiche-fil" aria-label="Fil d’Ariane">
+        <button ref={retourRef} type="button" className="rt-bouton rt-retour" onClick={onRetour}>
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M15 6l-6 6 6 6" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" /></svg>
+          Registre des transactions
+        </button>
+        <span className="rt-mute">Dossier N° {ligne.app_chaine_id}</span>
+      </nav>
+
+      <header className="rt-fiche-entete">
+        <div className="rt-fiche-identite">
+          {ligne.photo_url_listing ? (
+            <img className="rt-fiche-photo" src={ligne.photo_url_listing} alt="" />
+          ) : (
+            <span className="rt-fiche-photo rt-vignette-vide" aria-hidden="true" />
+          )}
+          <div className="rt-fiche-titres">
+            <span className="rt-fiche-pastilles">
+              <span className={`rt-pastille is-${ligne.etape}`}>{LIBELLE_ETAPE[ligne.etape]}</span>
+              {vivant === false && ligne.app_dossier_id != null ? <span className="rt-pastille is-neutre">Bien {String(ligne.statut_annonce ?? '').toLowerCase() || 'hors annonces'}</span> : null}
+            </span>
+            <h2 id="rt-fiche-titre" className="rt-fiche-titre">{titre}{ligne.code_postal ? <span className="rt-mute"> {ligne.code_postal}</span> : null}</h2>
+            <span className="rt-mute">
+              {[ligne.numero_mandat ? `Mandat ${ligne.numero_mandat}` : null, ligne.agence_nom, ligne.negociateur_email ? `suivi par ${ligne.negociateur_email}` : null].filter(Boolean).join(' · ') || '—'}
+            </span>
+          </div>
+        </div>
+        <div className="rt-fiche-actions-tete">
+          {onOuvrirBien && ligne.app_dossier_id != null ? (
+            <button type="button" className="rt-bouton" onClick={() => onOuvrirBien(ligne)}>Ouvrir la fiche du bien</button>
+          ) : null}
+          {suivant ? (
+            <button type="button" className="rt-bouton rt-bouton-principal" onClick={() => agir(suivant.geste)}>{suivant.libelle}</button>
+          ) : null}
+        </div>
+      </header>
+
+      <div className="rt-indicateurs" aria-label="Chiffres du dossier">
+        <div className="rt-carte rt-indicateur">
+          <span className="rt-indicateur-libelle">{ligne.etape === 'vendu' ? 'Prix de vente' : ligne.etape.startsWith('offre') ? 'Montant de l’offre' : 'Prix'}</span>
+          <strong className="rt-indicateur-valeur rt-num">{formatEuros(prix)}</strong>
+          <span className="rt-indicateur-detail">{ligne.nb_transactions > 1 ? `${ligne.nb_transactions} transactions dans ce dossier` : 'une transaction'}</span>
+        </div>
+        <div className="rt-carte rt-indicateur">
+          <span className="rt-indicateur-libelle">Net vendeur</span>
+          <strong className="rt-indicateur-valeur rt-num">{formatEuros(netVendeur)}</strong>
+          <span className="rt-indicateur-detail">{netVendeur == null ? 'non renseigné' : 'au compromis'}</span>
+        </div>
+        <div className="rt-carte rt-indicateur">
+          <span className="rt-indicateur-libelle">Honoraires</span>
+          <strong className="rt-indicateur-valeur rt-num">{ligne.honoraires ? formatEuros(ligne.honoraires) : '—'}</strong>
+          <span className="rt-indicateur-detail">
+            {ligne.honoraires
+              ? [`entrée ${formatEuros(ligne.honoraires_entree ?? 0)}`, `sortie ${formatEuros(ligne.honoraires_sortie ?? 0)}`, tauxHonoraires ? `${tauxHonoraires.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} % du prix` : null].filter(Boolean).join(' · ')
+              : 'non renseignés'}
+          </span>
+        </div>
+        <div className={`rt-carte rt-indicateur${'alerte' in quatrieme && quatrieme.alerte ? ' is-alerte' : ''}`}>
+          <span className="rt-indicateur-libelle">{quatrieme.libelle}</span>
+          <strong className="rt-indicateur-valeur rt-num">{quatrieme.valeur ?? '—'}</strong>
+          <span className="rt-indicateur-detail">{quatrieme.detail}</span>
+        </div>
+      </div>
+
+      {erreur ? (
+        <div key="erreur" className="rt-carte rt-etat rt-etat-erreur" role="alert">
+          <p>{erreur}</p>
+          <button type="button" className="rt-bouton" onClick={() => setEssai((valeur) => valeur + 1)}>Réessayer</button>
+        </div>
+      ) : !dossier ? (
+        <div key="chargement" className="rt-carte rt-etat" role="status">Chargement du dossier…</div>
+      ) : (
+        <div key="dossier" className="rt-fiche-grille">
+          <div className="rt-fiche-colonne">
+            <section className="rt-carte rt-bloc" aria-labelledby="rt-bloc-parcours">
+              <h3 id="rt-bloc-parcours" className="rt-bloc-titre">Parcours du dossier</h3>
+              {!lignes.length ? <p className="rt-mute">Aucune transaction lisible pour ce dossier.</p> : (
+                <ol className="rt-etapes">
+                  {lignes.map((item) => {
+                    const montant = montantNombre(item.montant)
+                    const acquereurs = acquereursDe(Number(item.app_affaire_id))
+                    const details = item.kind === 'offre'
+                      ? [item.jours_validite ? `validité ${item.jours_validite} jours` : null, acquereurs || null]
+                      : item.kind === 'compromis'
+                        ? [
+                            dateEnClair(item.date_fin_retractation) ? `fin de rétractation ${dateEnClair(item.date_fin_retractation)}` : null,
+                            dateEnClair(item.date_acte) ? `acte prévu ${dateEnClair(item.date_acte)}` : null,
+                            montantNombre(item.sequestre) ? `séquestre ${formatEuros(montantNombre(item.sequestre))}` : null,
+                            acquereurs || null,
+                          ]
+                        : [acquereurs || null]
+                    const retiree = item.present_in_hektor === false
+                    const onglet: GesteDuRegistre['onglet'] = item.kind === 'offre' ? 'offre' : item.kind === 'compromis' ? 'compromis' : 'vente'
+                    return (
+                      <li key={item.app_affaire_id} className={`rt-etape is-${classeLigne(item)}${retiree ? ' is-retiree' : ''}`}>
+                        <span className="rt-etape-point" aria-hidden="true" />
+                        <div className="rt-etape-corps">
+                          <div className="rt-etape-haut">
+                            <b>{libelleLigne(item)}</b>
+                            {retiree ? <span className="rt-pastille is-neutre">supprimée</span> : null}
+                            <span className="rt-mute rt-num">{dateEnClair(item.date) ?? 'date inconnue'}</span>
+                            <span className="rt-etape-montant rt-num">{formatEuros(montant)}</span>
+                          </div>
+                          {details.some(Boolean) ? <span className="rt-mute">{details.filter(Boolean).join(' · ')}</span> : null}
+                        </div>
+                        {peutAgir && !retiree ? (
+                          <button type="button" className="rt-bouton rt-bouton-petit" onClick={() => agir({ onglet, appAffaireId: Number(item.app_affaire_id) })}>
+                            Ouvrir
+                          </button>
+                        ) : null}
+                      </li>
+                    )
+                  })}
+                </ol>
+              )}
+              {onGeste && vivant === false ? (
+                <p className="rt-fiche-remarque">Ce bien n’est plus en annonce : ce dossier se consulte ici, il ne se modifie pas encore depuis le registre.</p>
+              ) : null}
+            </section>
+
+            <section className="rt-carte rt-bloc" aria-labelledby="rt-bloc-repartition">
+              <div className="rt-bloc-tete">
+                <h3 id="rt-bloc-repartition" className="rt-bloc-titre">Répartition des honoraires</h3>
+                {peutAgir && (vente ?? compromis ?? offre) ? (
+                  <button
+                    type="button"
+                    className="rt-bouton rt-bouton-petit"
+                    onClick={() => {
+                      const cible = vente ?? compromis ?? offre
+                      if (cible) agir({ onglet: cible.kind === 'offre' ? 'offre' : cible.kind === 'compromis' ? 'compromis' : 'vente', appAffaireId: Number(cible.app_affaire_id) })
+                    }}
+                  >
+                    Modifier
+                  </button>
+                ) : null}
+              </div>
+              {!dossier.repartition.length ? <p className="rt-mute">Aucune répartition saisie.</p> : (
+                <ul className="rt-parts">
+                  {[...dossier.repartition].sort((a, b) => (a.cote === b.cote ? a.rang - b.rang : a.cote === 'entree' ? -1 : 1)).map((part) => (
+                    <li key={`${part.cote}-${part.rang}-${part.hektorUserId}`} className="rt-part-ligne">
+                      <span className={`rt-part-cote is-${part.cote}`}>{part.cote === 'entree' ? 'Entrée' : 'Sortie'}</span>
+                      <span className="rt-part-nom">{nomPart(part)}</span>
+                      <span className="rt-mute rt-num">{entier.format(part.pourcentage)} %</span>
+                      <b className="rt-num">{ligne.honoraires ? formatEuros((ligne.honoraires * part.pourcentage) / 100) : '—'}</b>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          </div>
+
+          <div className="rt-fiche-colonne">
+            <section className="rt-carte rt-bloc" aria-labelledby="rt-bloc-parties">
+              <h3 id="rt-bloc-parties" className="rt-bloc-titre">Les parties</h3>
+              {!parties.size ? <p className="rt-mute">Aucune partie connue pour ce dossier.</p> : (
+                <div className="rt-parties">
+                  {ROLES.filter((role) => parties.get(role.cle)?.length).map((role) => {
+                    const personnes = parties.get(role.cle) ?? []
+                    return (
+                      <div key={role.cle} className="rt-partie">
+                        <span className="rt-indicateur-libelle">{personnes.length > 1 ? `${role.pluriel} · ${personnes.length}` : role.libelle}</span>
+                        {personnes.map((personne) => {
+                          const id = String(personne.hektor_contact_id ?? personne.app_contact_id ?? '').trim()
+                          const nom = personne.nom || (personne.fiche_sans_nom ? 'Fiche sans nom' : id ? `Contact n° ${id}` : 'Contact inconnu')
+                          return onOuvrirContact && id ? (
+                            <button key={`${personne.app_affaire_id}-${personne.rang}-${id}`} type="button" className="rt-lien" onClick={() => onOuvrirContact(id)}>{nom}</button>
+                          ) : (
+                            <b key={`${personne.app_affaire_id}-${personne.rang}-${id}`}>{nom}</b>
+                          )
+                        })}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </section>
+
+            <section className="rt-carte rt-bloc" aria-labelledby="rt-bloc-conditions">
+              <h3 id="rt-bloc-conditions" className="rt-bloc-titre">Conditions suspensives</h3>
+              {!conditions.length ? <p className="rt-mute">Aucune condition saisie.</p> : (
+                <ul className="rt-conditions">
+                  {conditions.map((condition, index) => (
+                    <li key={`${condition.kind}-${condition.rang ?? index}`} className="rt-condition">
+                      <b>{condition.libelle}</b>
+                      <span className="rt-mute">
+                        {[dateEnClair(condition.date_echeance) ? `échéance ${dateEnClair(condition.date_echeance)}` : null, ETAT_CONDITION[String(condition.etat ?? '')] ?? condition.etat].filter(Boolean).join(' · ')}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+
+            <section className="rt-carte rt-bloc" aria-labelledby="rt-bloc-notes">
+              <h3 id="rt-bloc-notes" className="rt-bloc-titre">Notes</h3>
+              {!notes.length ? <p className="rt-mute">Aucune note sur ce dossier.</p> : (
+                <ul className="rt-notes">
+                  {notes.map((note, index) => (
+                    <li key={`${note.kind}-${index}`}>
+                      <span className="rt-indicateur-libelle">{note.libelle}</span>
+                      <p>{note.texte}</p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          </div>
+        </div>
+      )}
+    </section>
+  )
+}
+
+export default function RegistreTransactionsScreen({ isAdmin, libelleTypeBien, onOuvrirBien, onGeste, fenetreOuverte, onOuvrirContact }: RegistreTransactionsScreenProps) {
   const [annee, setAnnee] = useState<number | null>(ANNEE_COURANTE)
   const [lignes, setLignes] = useState<RegistreDossierRow[]>([])
   const [chargement, setChargement] = useState(true)
@@ -140,6 +516,27 @@ export default function RegistreTransactionsScreen({ isAdmin, onOpenDossier, lib
   const [tri, setTri] = useState<Tri>('recent')
   const [page, setPage] = useState(1)
   const [repartitions, setRepartitions] = useState<Map<string, RepartitionLigne[]>>(new Map())
+  const [ouverte, setOuverte] = useState<RegistreDossierRow | null>(null)
+  const [relectureFiche, setRelectureFiche] = useState(0)
+  const fenetreEtaitOuverte = useRef(false)
+
+  // À la fermeture de la fenêtre de statut ouverte depuis la fiche : on relit la fiche et la liste.
+  useEffect(() => {
+    if (fenetreOuverte) {
+      fenetreEtaitOuverte.current = true
+      return
+    }
+    if (!fenetreEtaitOuverte.current) return
+    fenetreEtaitOuverte.current = false
+    setRelectureFiche((valeur) => valeur + 1)
+    setRepartitions(new Map())
+    setRelecture((valeur) => valeur + 1)
+  }, [fenetreOuverte])
+
+  // La fiche suit la ligne relue (étape, montants) sans se fermer.
+  useEffect(() => {
+    setOuverte((avant) => (avant ? lignes.find((ligne) => ligne.app_chaine_id === avant.app_chaine_id) ?? avant : avant))
+  }, [lignes])
 
   useEffect(() => {
     let annule = false
@@ -236,8 +633,20 @@ export default function RegistreTransactionsScreen({ isAdmin, onOpenDossier, lib
     return libelle && libelle !== '-' ? libelle : null
   }
 
-  const ouvrir = (ligne: RegistreDossierRow) => {
-    if (onOpenDossier && ligne.app_dossier_id != null) onOpenDossier(ligne.app_dossier_id)
+  const ouvrir = (ligne: RegistreDossierRow) => setOuverte(ligne)
+
+  if (ouverte) {
+    return (
+      <FicheDossier
+        ligne={ouverte}
+        type={typeEnClair(ouverte.type_bien)}
+        relecture={relectureFiche}
+        onRetour={() => setOuverte(null)}
+        onOuvrirBien={onOuvrirBien}
+        onGeste={onGeste}
+        onOuvrirContact={onOuvrirContact}
+      />
+    )
   }
 
   const periode = annee == null ? 'toutes années' : String(annee)
@@ -361,10 +770,9 @@ export default function RegistreTransactionsScreen({ isAdmin, onOpenDossier, lib
                 </thead>
                 <tbody>
                   {visibles.map((ligne) => {
-                    const ouvrable = Boolean(onOpenDossier && ligne.app_dossier_id != null)
                     const type = typeEnClair(ligne.type_bien)
                     return (
-                      <tr key={ligne.app_chaine_id} className={ouvrable ? 'is-ouvrable' : undefined} onClick={ouvrable ? () => ouvrir(ligne) : undefined}>
+                      <tr key={ligne.app_chaine_id} className="is-ouvrable" onClick={() => ouvrir(ligne)}>
                         <td>
                           <div className="rt-dossier">
                             <span className={`rt-pastille is-${ligne.etape}`}>{LIBELLE_ETAPE[ligne.etape]}</span>
@@ -380,13 +788,9 @@ export default function RegistreTransactionsScreen({ isAdmin, onOpenDossier, lib
                               <span className="rt-vignette rt-vignette-vide" aria-hidden="true" />
                             )}
                             <div className="rt-bien-texte">
-                              {ouvrable ? (
-                                <button type="button" className="rt-lien" onClick={(event) => { event.stopPropagation(); ouvrir(ligne) }}>
-                                  {ligne.ville || 'Ville inconnue'}
-                                </button>
-                              ) : (
-                                <b>{ligne.ville || 'Ville inconnue'}</b>
-                              )}
+                              <button type="button" className="rt-lien" onClick={(event) => { event.stopPropagation(); ouvrir(ligne) }}>
+                                {ligne.ville || 'Ville inconnue'}
+                              </button>
                               <span className="rt-mute">
                                 {[type, ligne.numero_mandat ? `mandat ${ligne.numero_mandat}` : null].filter(Boolean).join(' · ') || '—'}
                               </span>
@@ -407,7 +811,6 @@ export default function RegistreTransactionsScreen({ isAdmin, onOpenDossier, lib
 
             <ul className="rt-cartes" aria-label="Dossiers">
               {visibles.map((ligne) => {
-                const ouvrable = Boolean(onOpenDossier && ligne.app_dossier_id != null)
                 const type = typeEnClair(ligne.type_bien)
                 const derniere = dateEnClair(ligne.date_dernier_evenement)
                 const contenu = (
@@ -430,11 +833,7 @@ export default function RegistreTransactionsScreen({ isAdmin, onOpenDossier, lib
                 )
                 return (
                   <li key={ligne.app_chaine_id}>
-                    {ouvrable ? (
-                      <button type="button" className="rt-carte-dossier" onClick={() => ouvrir(ligne)}>{contenu}</button>
-                    ) : (
-                      <div className="rt-carte-dossier">{contenu}</div>
-                    )}
+                    <button type="button" className="rt-carte-dossier" onClick={() => ouvrir(ligne)}>{contenu}</button>
                   </li>
                 )
               })}
