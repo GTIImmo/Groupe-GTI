@@ -43991,6 +43991,9 @@ function ContactEditModalV2(props: {
   /** COUPLES (02/11/2026) : le conjoint NOMMÉ à modifier par la fiche principale (bloc _m2 chez Hektor) ;
    *  absent = la fenêtre d'avant. Posé seulement si l'interrupteur `contacts_couples_modif` est allumé. */
   conjoint?: AppContact | null
+  /** COUPLES (02/11/2026) : ouverte depuis l'ONGLET du conjoint -> titre « Modifier le conjoint » et défilement
+   *  direct sur sa partie. La fenêtre reste celle de la fiche principale (Hektor édite le foyer par la première). */
+  focusConjoint?: boolean
   hektorUserEmail?: string | null
   hektorUserId?: string | null
   hektorNegotiators?: HektorNegotiatorOption[]
@@ -44111,6 +44114,15 @@ function ContactEditModalV2(props: {
     body.scrollTo({ top: Math.max(0, target.offsetTop - (first?.offsetTop ?? 0) - 4), behavior: 'smooth' })
     setActiveSection(id)
   }
+
+  // COUPLES (02/11/2026) : ouverte depuis l'onglet du conjoint, la fenêtre se place sur sa partie.
+  const surLeConjointALOuverture = Boolean(props.focusConjoint && conjointAModifier)
+  useEffect(() => {
+    if (!surLeConjointALOuverture) return
+    const minuteur = window.setTimeout(() => scrollToSection('sec-conjoint'), 60)
+    return () => window.clearTimeout(minuteur)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [surLeConjointALOuverture])
 
   const handleBodyScroll = () => {
     const body = editBodyRef.current
@@ -44236,7 +44248,7 @@ function ContactEditModalV2(props: {
             <span className="edit-badge">ID</span>
             <div>
               <div className="edit-eyebrow">{bvs("Mise à jour Hektor")}</div>
-              <h2 className="edit-title" id="contactEditTitle">Modifier le contact</h2>
+              <h2 className="edit-title" id="contactEditTitle">{surLeConjointALOuverture ? 'Modifier le conjoint' : 'Modifier le contact'}</h2>
               <p className="edit-sub">{bvs("Les changements sont envoyés au worker Hektor puis resynchronisés vers le local et Supabase.")}</p>
             </div>
           </div>
@@ -46778,6 +46790,7 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
         <ContactEditModalV2
           contact={props.contact}
           conjoint={modifConjointVisible && foyer?.conjoint ? foyer.conjoint : null}
+          focusConjoint={surLeConjoint}
           hektorUserEmail={props.hektorUserEmail}
           hektorUserId={props.hektorUserId}
           hektorNegotiators={props.hektorNegotiators}
