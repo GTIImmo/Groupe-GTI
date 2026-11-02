@@ -251,3 +251,67 @@ Le chemin qui marche existe : `loadHistoricalAnnonceDetailCache(hektor_annonce_i
   maquette (la fenêtre n'y lit pas les transactions) ; **rien n'est vu sur les vraies données**.
 - Piège payé : la grille de la fiche héritait à l'écran du retrait du bloc « Chargement… » (même nœud
   réutilisé par React) → une clé par état.
+
+## 11. Étape 4C — modifier un dossier dont le bien est vendu : audit (02/11/2026, RIEN CODÉ)
+
+Audit limité à l'objet **transaction** sur un bien **hors annonces** (vendu / clos) ; les autres objets ne
+sont pas mesurés. Relu sur le code et la base du 02/11 (`notice/AUDIT_MODALE_STATUT_REGLES_2026-10-30.md`
+§ 1.4, 3.6, 4, 6, 7 reste juste).
+
+**Base (02/11)** : 287 biens ont une vente 2026 vivante ; **0** en annonce, **257** dans l'index historique,
+**30** dans les archives (refus en base `annonce_archivee_lecture_seule` : ils restent en lecture). 256 des
+257 historiques portent un négociateur présent dans l'annuaire. Aucune modification de vente sur un bien
+historique n'a jamais été faite (0 travail).
+
+**Les trois défauts du 30/10, toujours là :**
+- **(a) base** — `app_modifier_affaire_optimistic` (empreinte `97b1b9d2`) relit `numero_dossier`,
+  `titre_bien`, `negociateur_email` dans `app_dossier_current` et les **écrase dans la charge** : NULL pour un
+  bien vendu. Effet : messages et notifications sans repère (worker ~20254, ~20339), et le repli du
+  contexte négociateur (worker ~2550) perd son e-mail.
+- **(b) worker** — la qualification des acquéreurs lit le bien dans `app_dossier_current` (~16670) →
+  « qualification impossible, la transaction part quand même ». Ne mord en modification **que si les
+  acquéreurs ont été retouchés** (`acquereurs_affirmes`, ~16587).
+- **(c) worker** — sur une vente, la clôture locale du mandat est **rejouée à chaque modification**
+  (`cloturerMandatLocalement`, ~16975) avec la date de la charge : une date de clôture posée à la main est
+  réécrite, et `ecrit_par` prend l'auteur du geste.
+
+**Et deux points de plus :**
+- **(d)** SUPPRIMER la vente d'un bien vendu laisse le bien « Vendu » chez nous et chez Hektor (aucune
+  redescente) — l'écran ne le dit pas.
+- **(e) front** — `ouvrirGesteDuRegistre` charge le bien par `loadDossierDetail` (vivants seulement). Il faut
+  un `Dossier` construit depuis l'index historique (`lightweightIndexRowToDossier`, le chemin du téléphone,
+  App.tsx ~39044) complété par les numéros de transaction du registre (`hektor_affaire_id` par genre), sinon
+  la fenêtre ne trouve la vente que si elle est la seule vivante.
+
+**Non mesuré** : contexte négociateur exigé pour la vente quand le négociateur est inactif ; ce que Hektor
+accepte en modification d'une vente sur un bien vendu. ➡ seul l'essai réel le dira.
+
+### 11 bis. 4C ÉCRIT (02/11/2026, « Go », choix « A » pour la clôture), NON POSÉ, NON COMMITÉ
+
+- **(a) base** — `supabase/patch_modifier_vente_bien_vendu_2026-11-02.sql` (+ `_INVERSE`, `_REPETITION`) :
+  les trois valeurs viennent de `app_dossier_current`, sinon de l'index historique, sinon de la charge.
+  Garde d'empreinte `97b1b9d2` → **`176ee0df`** après pose ; ancres sur une ligne, `chr(13)` retiré.
+  **Répétition jouée (transaction annulée, droits de Frédéric)** : vente 25595 (bien historique) vide → VM66432 /
+  « Ferme en pierres… » / durand@ ; compromis 30666 (bien en annonce) **identique** avant et après (témoin) ;
+  retour arrière → de nouveau vide, empreinte 97b1b9d2 retrouvée. Rien de resté (vérifié).
+- **(b) worker** — qualification : si le bien n'est pas dans `app_dossier_current`, l'index historique
+  (`hektor_annonce_id`) ; mêmes codes `type_bien` des deux côtés (mesuré).
+- **(c) worker** — choix « A » : une correction (`reprendre_transaction`) dont `champs_touches` ne contient pas
+  `transaction_date` ne rejoue plus la clôture locale (journal `cloture_mandat_locale` « non rejouée »,
+  `saute: true`). Sans liste (écran d'avant), comportement d'avant. `node --check` vert ; ⚠ pas d'essai hors
+  ligne du handler (le worker ne se lance pas pour l'inspecter) : l'essai réel le dira.
+- **(e) front** — `loadBienHistoriquePourStatut` (api.ts) ; `ouvrirGesteDuRegistre` y retombe pour l'onglet
+  vente et pose le numéro exact (`vente_id`…) que le registre connaît ; la fiche propose **« Modifier la
+  vente »** (tête), « Modifier » sur la seule ligne de vente et sur la répartition, quand le bien est dans
+  l'historique et la vente vivante. Archivé → « se consulte, ne se modifie pas ». Pas de « Supprimer la
+  vente » proposé par la fiche (d) — ⚠ mais la fenêtre, elle, l'affiche quand une vente est visée (non modifiée).
+- **Contrôles** : `npm run build` vert ; maquette téléphone : fiche vendue → bouton, remarque, fenêtre ouverte
+  sur « Vendu » avec le bien et le mandat, fermer → la fiche reste (le 1er essai l'a perdue : rechargement à
+  chaud d'`App.tsx` par une autre session à 09:03-09:04, prouvé au journal ; 2e essai marqué : écran non recréé).
+  ⚠ Non vu : la fenêtre sur les vraies transactions (« Modifier chez Hektor »), tout le réel.
+- **Trouvé en passant** : `app_modifier_affaire_optimistic` ne refuse pas un bien ARCHIVÉ (la vente 48, bien 128
+  archivé, a produit un travail dans l'essai annulé) ; c'est le worker (`loadDossier`) qui refuse. Le registre ne
+  le propose pas.
+- **À poser, avec accord** : coller le patch (puis la répétition n'est plus nécessaire, elle est jouée) ; pousser ;
+  redémarrer les 4 services file vide — ⚠ le fichier du worker porte aussi le travail NON COMMITÉ de la session
+  Youtrust (signature) : un redémarrage le mettrait en service ; essai réel sur une vente choisie par Frédéric.
