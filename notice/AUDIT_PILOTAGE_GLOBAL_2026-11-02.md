@@ -221,3 +221,17 @@ Répétition avec les droits de Frédéric : **5/5 OK** — 699 / 699 biens, 521
 0 honoraire au-delà de 20 % du prix. **Témoin inverse** : un compte négociateur (pereira) → 0 ligne, `is_app_admin` faux.
 Retour arrière : `supabase/patch_pilotage_stock_2026-11-02_INVERSE.sql`. ⏳ Reste : le push (Frédéric), puis voir
 l'écran sur les vraies données.
+
+## 13. Stock : le périmètre à revoir (02/11 nuit, Frédéric) — « une annonce active ne veut pas dire qu'il y a un mandat »
+
+Mesuré (lecture seule) sur les annonces « Actif » : **413 sur 570 ont un mandat** — numéro de mandat ET ligne au
+registre des mandats (origine `actif`), les deux concordent à l'unité ; 157 n'en ont aucun. L'entonnoir, honoraires TTC :
+- 570 annonces actives — 3 768 418 € ;
+- **413 avec mandat** — 3 320 082 € (157 sans mandat, dont 35 portent pourtant 448 336 € d'honoraires) ;
+- **387 mandat en cours** (date de fin non passée ; 2 sans date de fin) — **3 140 652 €** ; 26 échus ;
+- **315 diffusables** — 2 695 283 € ;
+- **301 en ligne** sur au moins un portail — 2 619 983 €.
+42 biens avec mandat n'ont pas d'honoraires saisis. Engagés : sous compromis 81 / 86 avec mandat (57 en cours, 24 échus),
+sous offre 43 / 43 (36 en cours, 7 échus).
+⚠ Pour le coder juste, `app_pilotage_stock()` doit rendre `numero_mandat` (la date de début manque sur 2 biens qui ont
+un numéro) : changement de la fonction = écriture en base, à faire avec son accord. RIEN CODÉ.
