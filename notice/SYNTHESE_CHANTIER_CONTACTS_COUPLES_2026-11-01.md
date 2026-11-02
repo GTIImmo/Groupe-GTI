@@ -587,3 +587,33 @@ inchangés. ⏰ **03/11 matin** : au journal, « [nature] notaires du registre d
   pastille « Notaire » ; témoin inverse, le couple 10355551 garde « Couple » et ses deux onglets ; annuaire segment Notaires, page 1 :
   50 notaires, **0 pastille « Couple »**.
 
+## 25. MODIFIER LA PERSONNE 2 (LE CONJOINT) — AUDIT *(02/11 ~10:45, « Oui, audite », lecture seule, rien codé)*
+
+**Audit limité à MODIFIER un conjoint NOMMÉ** (1 898 couples actifs). « Compléter » une case vide (2 710) est un autre geste (phase 5).
+
+**Hektor (essais du 30/10, §10 de COUPLES_ERGONOMIE)** : le foyer s'édite d'un bloc depuis la PREMIÈRE fiche (champs `nom_m2`,
+`prenom_m2`, `email_m2[]`, `telephone_m2[]`) ; E2 : modifier le conjoint dans ce formulaire → **la seconde fiche suit à l'instant** ;
+ouvrir la seconde chez Hektor montre le formulaire du foyer entier. E3-bis (modifier la seconde SEULE par notre worker) : jamais essayé,
+et à éviter.
+
+**Le chemin de la modification aujourd'hui (lu)** :
+- écran : `HektorContactIdentityForm` en mode modification — les champs du conjoint existent mais ne s'affichent qu'à la CRÉATION
+  (`isCouplePerson = isCreateMode && …`) ; l'envoi passe par `editContactOptimistic` (`api.ts`) ;
+- ⚠ en modification, `personType` est `undefined` → `hContactPayload` envoie **`person_type = 'personne_seule'` pour TOUTES les fiches** ;
+- base : `app_edit_contact_optimistic` écrit À LA SECONDE les colonnes de la fiche visée (nom, prénom, e-mail, téléphones, adresse…),
+  garde une photo d'avant, et pose `app_contact_pending` (envoi différé, 600 s). Les clés inconnues (dont `spouse_*`) partent telles quelles
+  dans `push_fields` ; RIEN n'est écrit sur la fiche du conjoint ni dans `couple_json` ;
+- worker : `handleUpdateHektorContact` → `updateHektorContactIdentity` relit le formulaire de Hektor, ne remplace QUE les champs fournis,
+  **ne touche pas au statut** (seule / couple / société) ; `applyHektorContactIdentityValues` n'écrit le bloc `_m2` **que si le statut
+  DÉDUIT DE L'ENVOI vaut « 2 »** (`person_type`) — donc jamais en modification aujourd'hui ;
+- après l'envoi, seule la PREMIÈRE fiche est relue (`enqueueRefreshConsoleContactDataJobBestEffort(identite)`) ; la seconde attend la nuit.
+
+**Conséquences** : (1) modifier aujourd'hui la première fiche d'un couple n'efface PAS le conjoint (le formulaire relu le garde) — sans
+danger ; (2) pour modifier le conjoint, il faut que le worker sache qu'il s'agit d'un couple. ⚠ **Réserve trouvée, NON MESURÉE** : le même
+`person_type = 'personne_seule'` vaut pour une **personne morale** (statut 3) modifiée dans l'app → le worker écrit `civilite / nom / prenom`
+au lieu de `sociale`. Combien de sociétés ont été modifiées par l'app, et ce qu'en a fait Hektor : à mesurer à part.
+
+**Ce que le worker sait DÉJÀ faire** : avec `person_type = 'couple'` dans l'envoi, il écrit le bloc `_m2` dans le formulaire de la première
+(prouvé à la création, E1). Un **essai réel est donc possible SANS CODE** : un travail `update_hektor_contact` sur la première d'un couple
+fictif, avec `person_type = couple` et un prénom de conjoint, puis relire les deux fiches chez Hektor.
+
