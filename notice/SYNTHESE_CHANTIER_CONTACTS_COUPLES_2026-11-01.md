@@ -865,3 +865,12 @@ est « couple » et son résumé « nommé » (la nuit du 02→03/11 : aujourd'h
   Le code déjà chargé par la fiche ne contient pas cette action (elle vient d'un autre script) : on ne peut pas dire si la mise
   à jour l'a renommée. ⚠ Tant qu'elle répond 503, ne pas lancer `transformeContactToConjunct` : même famille d'actions, risque
   d'écriture à moitié sans confirmation.
+- ⛔ **CORRECTION, MÊME SOIR : LE 503 ÉTAIT MA FAUTE, PAS HEKTOR** (Frédéric : « ce n'est sûrement pas lié, vérifie »). Le code de la
+  page (`searchContactByTerms`, chargée avec la fenêtre `popins-popinAgTransformationCouple`) envoie la recherche en **POST**
+  (`mode`, `valeur`, `idProspect` dans le corps, 3 caractères minimum) ; je l'envoyais en **GET** → Hektor répond 503 « maintenance »
+  à une requête mal formée. Rejouée en POST : `valeur=ESSAI` → **200, 14 résultats** ; `valeur=467325` → **200, 0 résultat**.
+  ⭐ Confirmé : **la coquille ne peut PAS être proposée par l'écran** (pas de nom, et la recherche ne prend pas le numéro) — le
+  rattachement d'une coquille n'est faisable QUE par la requête directe. L'écriture, elle, n'a pas changé avec la mise à jour :
+  `transforme()` envoie toujours **GET** `contacts-create-transformeContactToConjunct` (`conjoint`, `refCouple`).
+  ⚠ Leçon : un 503 « maintenance » de Hektor peut répondre à une requête MAL FORMÉE ; relire la méthode du vrai bouton avant
+  d'accuser le service. Rien écrit, onglet fermé.
