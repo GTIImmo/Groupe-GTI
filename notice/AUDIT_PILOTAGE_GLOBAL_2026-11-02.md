@@ -449,3 +449,10 @@ sauvegarde `app_affaire_ledger_avant_inversion_honoraires_20261102` (2 lignes, R
 seller_fees (resp. buyer_fees), recalculer chaque intervenant Entrée (resp. Sortie) : montant = nouvelle commission HT
 × percent / 100, ca_montant = idem × ca_percent / 100, l'arrondi au dernier pour que la somme tombe juste — OU retirer
 les lignes (ce que Frédéric a fait à la main ; Hektor affiche alors « Part Réseau 100 % »). Plus le défaut du rejeu.
+
+**02/11 23:38 — 18645 REMIS À 95 000 (Frédéric : « 95000 ttc dont 7000 ttc »).** Par l'écran, travail `bad22f63…`,
+`champs_touches` = amount + sale_price + net_seller_price (honoraires non touchés). Passé du premier coup (plus de
+lignes de répartition chez Hektor), RELU conforme : prixPublique 95 000, prixNetVendeur 88 000, honoraires 7 000 ;
+registre local idem. ⚠ `taux_honoraire_entree` reste 7,000 au registre (vrai : 7,368) — la relecture de nuit le reprendra.
+Répartition de l'app : 50/50 RONDEAU (3 500 + 3 500) et 50/50 REYNAUD (5 000 + 5 000), justes — l'app garde des
+POURCENTAGES et recalcule les montants ; elle n'envoie pas la répartition à Hektor (décision de septembre).
