@@ -16548,6 +16548,17 @@ async function qualifierAcquereursAvantTransaction(job, payload, target, annonce
       + `&hektor_annonce_id=eq.${encodeURIComponent(annonceId)}&limit=1`, { method: "GET" });
     bien = Array.isArray(lignes) && lignes.length ? lignes[0] : null;
   } catch (_) { bien = null; }
+  // 4C (02/11/2026) : un bien VENDU n'est plus dans app_dossier_current (0 vente 2026 sur 287) ; le
+  // corriger depuis le registre des transactions laissait l'acquereur sans qualification. Ses criteres
+  // sont dans l'index historique (notice/AUDIT_GESTES_REGISTRE_TRANSACTIONS_2026-10-30.md § 11, b).
+  if (!bien) {
+    try {
+      const lignes = await supabaseRequest(
+        `app_historical_annonce_index_current?select=type_bien,ville,code_postal,numero_dossier`
+        + `&hektor_annonce_id=eq.${encodeURIComponent(annonceId)}&limit=1`, { method: "GET" });
+      bien = Array.isArray(lignes) && lignes.length ? lignes[0] : null;
+    } catch (_) { bien = null; }
+  }
   const montant = Number(String(payload.amount || payload.sale_price || "").replace(/[^0-9.]/g, ""));
   if (!bien || !bien.type_bien || !bien.ville || !Number.isFinite(montant) || montant <= 0) {
     await logJob(job.id, "hektor_qualification_acquereur", "error",
@@ -16848,7 +16859,20 @@ async function handleChangeHektorAnnonceStatus(job) {
       // Chemin "Vendu" : sur demande explicite du front, on clot aussi le mandat courant
       // (motif vendu). L'annonce reste au statut Vendu pose par la transaction.
       // C.13 (28/08) : la vente est enregistree chez Hektor, on clot le mandat CHEZ NOUS.
-      if (target === "sold") {
+      // 4C (02/11/2026, choix « A » de Frederic) : une CORRECTION de la vente ne rejoue la cloture
+      // que si la date de vente a ete retouchee -- sinon une date de cloture posee a la main etait
+      // reecrite a chaque correction (notice/AUDIT_GESTES_REGISTRE_TRANSACTIONS_2026-10-30.md § 11, c).
+      // Sans la liste `champs_touches` (ecran d'avant), on garde le comportement d'avant.
+      const correctionSansDate = payload.reprendre_transaction === true
+        && Array.isArray(payload.champs_touches)
+        && !payload.champs_touches.includes("transaction_date");
+      if (target === "sold" && correctionSansDate) {
+        mandatClosureResult = { status: "skipped", reason: "correction_sans_date_de_vente" };
+        await logJob(job.id, "cloture_mandat_locale", "done",
+          "Cloture du mandat non rejouee : la correction ne touche pas la date de vente", {
+            hektor_annonce_id: annonceId, saute: true, reason: "correction_sans_date_de_vente",
+          });
+      } else if (target === "sold") {
         mandatClosureResult = await cloturerMandatLocalement(
           job, annonceId, payload,
           payload.transaction_date || payload.sale_date || payload.date_vente);

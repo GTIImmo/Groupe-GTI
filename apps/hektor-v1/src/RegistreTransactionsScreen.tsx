@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
-  bienEstDansLesAnnonces, loadDossierDeLaChaine, loadRegistreDossiers, loadRepartitionsDesChaines,
+  bienEstDansLesAnnonces, loadBienHistoriquePourStatut, loadDossierDeLaChaine, loadRegistreDossiers, loadRepartitionsDesChaines,
   type AffaireLedgerRow, type AffairePartieRow, type DossierDeLaChaine, type RegistreDossierRow, type RegistreEtape, type RepartitionLigne,
 } from './lib/api'
 import './registre-transactions.css'
@@ -14,7 +14,7 @@ import './registre-transactions.css'
 // Maquette : https://claude.ai/artifact/3FA3yDqWuDWuqLdZAkvS8x · note : notice/AUDIT_GESTES_REGISTRE_TRANSACTIONS_2026-10-30.md § 8-10.
 // ⛔ Aucun mot « Hektor » à l'écran (décision du 30/10) ; une lecture ratée se dit, sans détail technique.
 
-export type GesteDuRegistre = { onglet: 'offre' | 'compromis' | 'vente'; appAffaireId: number | null }
+export type GesteDuRegistre = { onglet: 'offre' | 'compromis' | 'vente'; appAffaireId: number | null; hektorAffaireId?: string | null }
 
 type RegistreTransactionsScreenProps = {
   isAdmin: boolean
@@ -197,6 +197,8 @@ function FicheDossier(props: {
   const { ligne, type, relecture, onRetour, onOuvrirBien, onGeste, onOuvrirContact } = props
   const [dossier, setDossier] = useState<DossierDeLaChaine | null>(null)
   const [vivant, setVivant] = useState<boolean | null>(null)
+  // 4C : un bien hors annonces est dans l'historique (vendu ou clos) ou archivé (lecture seule).
+  const [historique, setHistorique] = useState<boolean | null>(null)
   const [erreur, setErreur] = useState<string | null>(null)
   const [essai, setEssai] = useState(0)
   const retourRef = useRef<HTMLButtonElement>(null)
@@ -212,10 +214,14 @@ function FicheDossier(props: {
       loadDossierDeLaChaine(ligne.app_chaine_id),
       ligne.app_dossier_id == null ? Promise.resolve(false) : bienEstDansLesAnnonces(ligne.app_dossier_id),
     ])
-      .then(([lu, estVivant]) => {
+      .then(async ([lu, estVivant]) => {
+        const estHistorique = !estVivant && ligne.app_dossier_id != null
+          ? (await loadBienHistoriquePourStatut(ligne.app_dossier_id)) != null
+          : false
         if (annule) return
         setDossier(lu)
         setVivant(estVivant)
+        setHistorique(estHistorique)
       })
       .catch((cause: unknown) => {
         console.error('[registre des transactions] fiche du dossier illisible', cause)
@@ -232,7 +238,12 @@ function FicheDossier(props: {
   const compromis = derniereDuGenre('compromis')
   const vente = derniereDuGenre('vente')
   const peutAgir = Boolean(onGeste && vivant && ligne.app_dossier_id != null)
+  // 4C (02/11/2026) : bien vendu, dans l'historique -> seule LA VENTE se corrige (la base refuse toute
+  // création hors annonces, et l'offre et le compromis sont verrouillés par la vente).
+  const venteACorriger = onGeste && vivant === false && historique && ligne.app_dossier_id != null
+    && vente && vente.present_in_hektor !== false ? vente : null
   const agir = (geste: GesteDuRegistre) => onGeste?.(ligne, geste)
+  const corrigerLaVente = (cible: AffaireLedgerRow) => agir({ onglet: 'vente', appAffaireId: Number(cible.app_affaire_id), hektorAffaireId: cible.hektor_affaire_id == null ? null : String(cible.hektor_affaire_id) })
 
   // Le geste « suivant » de l'étape, en tête de fiche.
   const suivant: { libelle: string; geste: GesteDuRegistre } | null = !peutAgir ? null
@@ -325,6 +336,9 @@ function FicheDossier(props: {
           {suivant ? (
             <button type="button" className="rt-bouton rt-bouton-principal" onClick={() => agir(suivant.geste)}>{suivant.libelle}</button>
           ) : null}
+          {venteACorriger ? (
+            <button type="button" className="rt-bouton rt-bouton-principal" onClick={() => corrigerLaVente(venteACorriger)}>Modifier la vente</button>
+          ) : null}
         </div>
       </header>
 
@@ -397,8 +411,12 @@ function FicheDossier(props: {
                           {details.some(Boolean) ? <span className="rt-mute">{details.filter(Boolean).join(' · ')}</span> : null}
                         </div>
                         {peutAgir && !retiree ? (
-                          <button type="button" className="rt-bouton rt-bouton-petit" onClick={() => agir({ onglet, appAffaireId: Number(item.app_affaire_id) })}>
+                          <button type="button" className="rt-bouton rt-bouton-petit" onClick={() => agir({ onglet, appAffaireId: Number(item.app_affaire_id), hektorAffaireId: item.hektor_affaire_id == null ? null : String(item.hektor_affaire_id) })}>
                             Ouvrir
+                          </button>
+                        ) : venteACorriger && item.app_affaire_id === venteACorriger.app_affaire_id ? (
+                          <button type="button" className="rt-bouton rt-bouton-petit" onClick={() => corrigerLaVente(venteACorriger)}>
+                            Modifier
                           </button>
                         ) : null}
                       </li>
@@ -406,21 +424,28 @@ function FicheDossier(props: {
                   })}
                 </ol>
               )}
-              {onGeste && vivant === false ? (
-                <p className="rt-fiche-remarque">Ce bien n’est plus en annonce : ce dossier se consulte ici, il ne se modifie pas encore depuis le registre.</p>
+              {onGeste && vivant === false && historique !== null && ligne.app_dossier_id != null ? (
+                <p className="rt-fiche-remarque">
+                  {venteACorriger
+                    ? 'Ce bien n’est plus en annonce : la vente se corrige ici, mais aucune nouvelle transaction ne peut être créée.'
+                    : historique
+                      ? 'Ce bien n’est plus en annonce : ce dossier se consulte ici. Seule une vente se corrige depuis le registre.'
+                      : 'Ce bien est archivé : ce dossier se consulte ici, il ne se modifie pas.'}
+                </p>
               ) : null}
             </section>
 
             <section className="rt-carte rt-bloc" aria-labelledby="rt-bloc-repartition">
               <div className="rt-bloc-tete">
                 <h3 id="rt-bloc-repartition" className="rt-bloc-titre">Répartition des honoraires</h3>
-                {peutAgir && (vente ?? compromis ?? offre) ? (
+                {(peutAgir && (vente ?? compromis ?? offre)) || venteACorriger ? (
                   <button
                     type="button"
                     className="rt-bouton rt-bouton-petit"
                     onClick={() => {
+                      if (venteACorriger) return corrigerLaVente(venteACorriger)
                       const cible = vente ?? compromis ?? offre
-                      if (cible) agir({ onglet: cible.kind === 'offre' ? 'offre' : cible.kind === 'compromis' ? 'compromis' : 'vente', appAffaireId: Number(cible.app_affaire_id) })
+                      if (cible) agir({ onglet: cible.kind === 'offre' ? 'offre' : cible.kind === 'compromis' ? 'compromis' : 'vente', appAffaireId: Number(cible.app_affaire_id), hektorAffaireId: cible.hektor_affaire_id == null ? null : String(cible.hektor_affaire_id) })
                     }}
                   >
                     Modifier

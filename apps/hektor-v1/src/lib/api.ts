@@ -8982,6 +8982,35 @@ export async function bienEstDansLesAnnonces(appDossierId: number): Promise<bool
   return Boolean(data && data.length)
 }
 
+/** 4C (02/11/2026) : le bien d'un dossier VENDU, pour ouvrir la fenêtre de statut depuis le registre.
+ *  Il n'est plus dans app_dossier_current : on le lit dans l'index historique (app_historical_id =
+ *  app_dossier_id du registre, 257/257 mesuré), avec le mappage de la fiche légère du téléphone.
+ *  null = pas dans l'historique (un bien archivé : la base refuse tout geste, il reste en lecture).
+ *  Note : notice/AUDIT_GESTES_REGISTRE_TRANSACTIONS_2026-10-30.md § 11. */
+export async function loadBienHistoriquePourStatut(appDossierId: number): Promise<Dossier | null> {
+  if (!hasSupabaseEnv || !supabase) {
+    const ligne = mockRegistreDossiers.find((item) => item.app_dossier_id === appDossierId && /vendu|clos/i.test(String(item.statut_annonce ?? '')))
+    if (!ligne) return null
+    return lightweightIndexRowToDossier({
+      hektor_annonce_id: Number(ligne.hektor_annonce_id), app_archive_id: null, app_historical_id: appDossierId,
+      numero_dossier: null, numero_mandat: ligne.numero_mandat, titre_bien: [ligne.type_bien, ligne.ville].filter(Boolean).join(' · ') || null,
+      ville: ligne.ville, code_postal: ligne.code_postal, date_maj: null, type_bien: ligne.type_bien, prix: ligne.montant,
+      commercial_id: null, commercial_nom: null, negociateur_email: ligne.negociateur_email, agence_nom: ligne.agence_nom,
+      statut_annonce: ligne.statut_annonce, archive: '0', diffusable: '0', mandat_type: null, mandat_date_debut: null,
+      mandat_date_fin: null, mandat_montant: null, mandants_texte: null, has_local_detail: false, local_detail_updated_at: null,
+      photo_url_listing: ligne.photo_url_listing,
+    })
+  }
+  const { data, error } = await supabase
+    .from('app_historical_annonce_index_current')
+    .select('hektor_annonce_id,app_historical_id,numero_dossier,numero_mandat,titre_bien,ville,code_postal,date_maj,type_bien,prix,commercial_id,commercial_nom,negociateur_email,agence_nom,statut_annonce,archive,diffusable,mandat_type,mandat_date_debut,mandat_date_fin,mandat_montant,mandants_texte,has_local_detail,local_detail_updated_at,photo_url_listing,photo_url_listing_app')
+    .eq('app_historical_id', appDossierId)
+    .limit(1)
+  if (error) throw new Error(error.message)
+  const ligne = (data ?? [])[0] as unknown as LightweightAnnonceIndexRow | undefined
+  return ligne ? lightweightIndexRowToDossier({ ...ligne, app_archive_id: null }) : null
+}
+
 export async function createGenerateMandatPdfJob(input: {
   dossier: Pick<MandatRecord, 'app_dossier_id' | 'hektor_annonce_id'>
   // HTML du mandat deja rendu cote front (mandatPreviewHtml) : le worker le rend en PDF

@@ -88,6 +88,7 @@ import {
   loadAppSettingActive,
   loadAppSettingValeur,
   bienEstDansLesAnnonces,
+  loadBienHistoriquePourStatut,
   type RegistreDossierRow,
   sendEstimationEmail,
   loadDvfComparables,
@@ -16397,16 +16398,24 @@ export default function App() {
   async function ouvrirGesteDuRegistre(ligne: RegistreDossierRow, geste: GesteDuRegistre) {
     if (ligne.app_dossier_id == null || !isManagerOrAdmin) return
     setErrorMessage(null)
-    let dossier: DetailedDossier | null = null
+    let dossier: Dossier | null = null
     try {
       dossier = await loadDossierDetail(ligne.app_dossier_id)
+      // 4C (02/11/2026) : un bien VENDU n'est plus dans les annonces -> le bien de l'index historique,
+      // comme la fiche légère du téléphone. Seule la vente s'y corrige (la fiche du registre ne propose
+      // rien d'autre). Note : notice/AUDIT_GESTES_REGISTRE_TRANSACTIONS_2026-10-30.md § 11.
+      if (!dossier && geste.onglet === 'vente') dossier = await loadBienHistoriquePourStatut(ligne.app_dossier_id)
     } catch (error) {
       console.error('[registre des transactions] ouverture du geste', error)
     }
     if (!dossier) {
-      setErrorMessage('Ce bien n’est plus en annonce : ce dossier ne se modifie pas encore depuis le registre.')
+      setErrorMessage('Ce bien n’est plus en annonce ni dans l’historique : ce dossier ne se modifie pas depuis le registre.')
       return
     }
+    // Le numéro exact de la transaction visée : sans lui, la fenêtre ne la retrouve que si elle est la
+    // seule vivante de son genre (l'index historique n'en porte aucun).
+    const cleNumero = geste.onglet === 'offre' ? 'offre_id' : geste.onglet === 'compromis' ? 'compromis_id' : 'vente_id'
+    if (geste.hektorAffaireId && !dossier[cleNumero]) dossier = { ...dossier, [cleNumero]: geste.hektorAffaireId }
     openStatusChangeModal(dossier)
     setStatusChangeStatus(geste.onglet === 'offre' ? 'offer' : geste.onglet === 'compromis' ? 'compromise' : 'sold')
     if (geste.appAffaireId != null) setStatusChangeAffaireChoisie(geste.appAffaireId)
