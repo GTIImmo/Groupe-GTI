@@ -214,3 +214,10 @@ pour les biens engagés (deux sources pour un même compromis).
   ⚠ **Non vu sur les vraies données** (il faut le push, puis le patch).
 - **Pas dans cette version** (dit à Frédéric) : filtre négociateur ; clic d'un chiffre vers la liste filtrée d'un autre
   écran (le clic change d'onglet ou filtre l'agence) ; export ; visites ; objectifs (décision : pas maintenant).
+
+**02/11 nuit — `app_pilotage_stock()` POSÉE EN PRODUCTION** (accord de Frédéric : « Oui, pose-la »), par migration
+`patch_pilotage_stock_2026_11_02`, bloc de preuve passé (0 ligne sans utilisateur, clé publique refusée).
+Répétition avec les droits de Frédéric : **5/5 OK** — 699 / 699 biens, 521 avec honoraires, Actif 3 768 418 €,
+0 honoraire au-delà de 20 % du prix. **Témoin inverse** : un compte négociateur (pereira) → 0 ligne, `is_app_admin` faux.
+Retour arrière : `supabase/patch_pilotage_stock_2026-11-02_INVERSE.sql`. ⏳ Reste : le push (Frédéric), puis voir
+l'écran sur les vraies données.
