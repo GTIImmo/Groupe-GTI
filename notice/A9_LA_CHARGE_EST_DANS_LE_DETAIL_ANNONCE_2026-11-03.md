@@ -189,13 +189,56 @@ aucune synchro, aucun écran ne la remonte.
 
 ## § 5. ⚠ LES TROUS, NOMMÉS — et ce qui n'est PAS mesuré
 
+✅ **LE VERROU EST TOMBÉ LE 03/11 — et c'est Frédéric qui l'a levé** :
+*« mon projet a une clé dans son registre : numéro de mandat + id annonce = la
+clé »*. **VÉRIFIÉ EN BASE, et il a raison** :
+
 ```
-⛔ QUELLE ANNONCE FAIT FOI POUR UN MANDAT : NON TRANCHE.
-   par hektor_annonce.no_mandat   10 188 mandats  8 421 vendeur · 1 767 acquereur
-   par le lien du registre         8 571 mandats  8 467 vendeur ·   104 acquereur
-   Les liens sont COHERENTS (93,4 % identiques, 6,6 % se recoupent, ZERO cas
-   disjoint sur 18 167) : l'ecart vient du PERIMETRE. Sans cette decision, un
-   rattrapage ecrirait la charge d'une annonce voisine.
+app_mandat_register_current :
+   24 568 lignes
+   24 568 couples (numero_mandat + hektor_annonce_id) distincts  -> CLE UNIQUE
+   18 260 numeros de mandat  ·  24 476 annonces  ·  38 lignes sans id annonce
+   un mandat peut porter jusqu'a 10 lignes (mandat 10249)
+```
+
+⭐⭐ **Ma question « quelle annonce fait foi » n'avait donc pas de sens** : chaque
+ligne porte **son** annonce, donc **sa** charge. Le rattrapage se fait ligne par
+ligne, et l'ambiguïté disparaît par construction — il ne reste que **14 annonces**
+dont les lignes d'honoraires se contredisent entre elles, sur 14 302.
+
+### ⭐ LA COUVERTURE VRAIE, LIGNE PAR LIGNE DU REGISTRE
+
+```
+annee   lignes   Hektor   Modelo   AUCUNE   couvert
+2011     2 548        0    2 270      278    89,1 %
+2012     2 045        0    1 064      981    52,0 %
+2013     2 278        2      185    2 091     8,2 %   <- LE TROU
+2014     2 171        2       84    2 085     4,0 %   <- LE TROU
+2015     1 766       13    1 734       19    98,9 %
+2016     1 786       11    1 755       20    98,9 %
+2017     1 750      730    1 004       16    99,1 %
+2018     1 525    1 339      182        4    99,7 %
+2019     1 434    1 377       53        4    99,7 %
+2020     1 207    1 054      134       19    98,4 %
+2021     1 182    1 051      123        8    99,3 %
+2022     1 108    1 036       63        9    99,2 %
+2023     1 082    1 021       53        8    99,3 %
+2024       907      866       34        7    99,2 %
+2025       789      730        0       59    92,5 %
+2026       683      590        0       93    86,4 %
+TOTAL   24 568    9 836    8 994    5 738    76,6 %
+
+repartition des 18 830 lignes couvertes : 11 853 vendeur · 6 977 acquereur
+```
+
+⛔ **CES CHIFFRES REMPLACENT CEUX DU § 2 ET CEUX DU § 3 sexies DE
+`DECISIONS_CHAMP_PAR_CHAMP_CLASSEUR_2026-11-02.md`**, qui comptaient par numéro
+de mandat au lieu de compter par ligne — donc sur la mauvaise clé.
+
+```
+CE QUI RESTE VRAIMENT A TRANCHER :
+⬜ le trou 2012-2014 : 5 157 lignes sans aucune source. NON EXPLIQUE.
+⬜ les 38 lignes sans id annonce (mandats de recherche sans bien) : par quoi ?
 
 ⬜ 116 MANDATS DE 2026 SANS CHARGE, et l'API ne l'a pas : mesure en trois temps
    (miroir 'null' · reponse brute conservee 'null' · APPEL EN DIRECT le 02/11
@@ -235,7 +278,9 @@ aucune synchro, aucun écran ne la remonte.
    honoraires_sortie, qui ne veut pas dire cela.
 ⑤ LE RATTRAPAGE HISTORIQUE : Hektor pour 2018->2026, l'export Modelo pour
    2015->2017 (voir DECISIONS_CHAMP_PAR_CHAMP_CLASSEUR § 3 sexies), chaque
-   ligne portant SA SOURCE. ⛔ APRES la decision sur l'annonce qui fait foi.
+   ligne portant SA SOURCE. ✅ PLUS DE CONDITION BLOQUANTE : la cle du registre
+   est le couple mandat + annonce (verifiee le 03/11), donc chaque ligne prend
+   la charge de SON annonce. 18 830 lignes sur 24 568 (76,6 %) la recevraient.
 ```
 
 ⛔ **ET LA LEÇON, qui est celle d'A8 retournée contre lui** : *une réserve
