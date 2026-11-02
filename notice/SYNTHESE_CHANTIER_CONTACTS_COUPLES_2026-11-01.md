@@ -744,3 +744,16 @@ est « couple » et son résumé « nommé » (la nuit du 02→03/11 : aujourd'h
 - Cas 5, choix à faire par Frédéric ensuite : (a) remplir la coquille vide avec le conjoint (simple, deux fiches restent séparées chez Hektor),
   (b) transformer la personne en couple et retirer la coquille (propre, dépend de l'essai).
 
+## 33. LE RATTACHEMENT NE FABRIQUE PLUS DE COUPLE *(02/11 ~12:20, « VAS Y sauf les 123 »)*
+
+- **Le constat de Frédéric** (exemple réel : bien EA32621, coquille 10260585 / Hektor 467325 et personne 10260586 / Hektor 467326, nées le
+  22/12/2025, numéros Hektor consécutifs) : la personne est une PERSONNE SEULE chez Hektor ; l'app la montrait « Couple · conjoint à compléter ».
+  Mesure : **1 530 fiches actives de l'app** dans ce cas, **1 529 avec exactement UNE coquille sur le MÊME bien** (1 529/1 529), 1 sans coquille.
+- **Mon erreur du 01/11** : le rattachement faisait DEUX choses — masquer la coquille (utile) ET passer la personne en « couple » (une
+  déduction que Hektor ne confirme pas).
+- **Corrigé (nature_des_fiches.py)** : la personne reste ce que dit Hektor ; le rattachement ne sert plus qu'à masquer la coquille
+  (`case_conjoint_vide`). Les couples écrits dans le nom (« M. et Mme … », « Paul et Anne » — les 123 « sans lien ») restent « couple » (décision).
+  Essais 45/45 (dont un neuf avec témoin inverse). **À blanc** : couples de l'app 7 825 → **4 739** (−3 086, archivés compris ; ~1 530 actifs),
+  coquilles toujours masquées (case_conjoint_vide app 15 117), orphelines 771. **Effet à la nuit du 02→03/11, sans push.**
+- Créer un vrai couple depuis l'app, ou relier la coquille : question pour plus tard (essai « Transformer en couple » sur fiches fictives).
+
