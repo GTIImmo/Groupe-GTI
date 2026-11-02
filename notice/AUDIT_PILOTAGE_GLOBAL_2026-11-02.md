@@ -171,3 +171,7 @@ dont 52 sur 81 à Issoire et 42 sur 60 à Craponne ; 16 diffusables sans aucun p
 exclusif 148 (26 %), accord 36, autre / vide 160 ; vraies baisses 87 (médiane −6,8 %) ; mandats échus encore en vente
 26, dont **10 à Courpière** ; âge médian par agence de 58 j (Saint-Bonnet) à 283 j (Saint-Didier).
 ⏳ Attend son avis, RIEN CODÉ.
+
+**02/11 soir — Frédéric : le type « ACCORD » = SEMI-EXCLUSIF.** Maquette renommée. Exclusifs + semi-exclusifs :
+2026 (253 + 54) / 682 = **45 %** contre 2025 (314 + 76) / 685 = **57 %** (−12 points). L'indicateur principal reste
+l'exclusif seul (37 % contre 46 %) ; le cumul s'affiche en second.
