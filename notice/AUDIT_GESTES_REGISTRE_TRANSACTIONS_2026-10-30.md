@@ -500,3 +500,35 @@ App.tsx non touché. Lectures seules (annuaire 219 lignes, carnet, répartition,
 - **Contrôles** : `npm run build` vert ; maquette 1 280 px et téléphone par l'agent puis moi (en maquette locale la
   zone fait 891 px à cause du grand menu : colonnes Bien/Acquéreur serrées ; en production, menu en icônes, zone
   ~1 083 px). ⚠ Non vu sur les vraies données : noms, documents réels (dont la préparation), historique réel.
+
+## 15. v3.1 vue EN LIGNE, puis liste retouchée, filtre agence corrigé, fiche v4 (02/11/2026)
+
+**Vérifié en ligne (56d00bc, Chrome de Frédéric, 1 280 px)** : 502 dossiers 2026 ; mois Octobre = 96 ; tri Prix
+dans les deux sens ; clic « Ventes actées » = les ventes seules ; filtre négociateur (Alice RONDEAU = 11 dossiers,
+indicateurs suivis) ; mémoire rendue au rechargement (puis remise par défaut) ; fiche 28865 : nom du négociateur,
+délais, 21 documents, historique ; un document du coffre s'ouvre (lien signé). ⚠ Non essayé : un document
+`local_only` (« Préparation… »). À 1 280 px le filtre « Tous les négociateurs » passe sur une 2e ligne (noté).
+
+**Retour de Frédéric** : « la colonne Parcours est trop tassée, le nom des négociateurs pas lisible dans la colonne
+Répartition » ; fiche « manque de design, pas très graphique, hausse le niveau ».
+- **Liste** : largeurs 140 / Bien (reste) / 9 % / 230 / 86 / 94 / 212 (table mesurée 1 083 px). Nom court dans
+  Répartition (`nomCourt` : sans civilité, initiale du prénom, « S. DELAVAUD » ; complet au survol). Mesuré sur la
+  page en ligne en injectant les largeurs : 53/53 noms coupés avant, 0 après ; seules 2 villes longues en « … ».
+- **Filtre agence vide pour Ambert** (signalé par Frédéric) : les 34 dossiers d'Ambert arrivent en
+  « Groupe GTI Ambert␣␣␣ » (3 espaces : `app_dossier_current` 719 biens, index historique 609, archives 1 730 ; le
+  registre des mandats les a retirés, d'où le choix sans espaces). La liste des choix retirait les espaces, la
+  comparaison non → 0. Corrigé : comparaison `.trim()` des deux côtés. Aucune autre agence n'a d'espaces. ⭐ Famille
+  balayée : l'écran Annonces filtre Ambert correctement (Actifs 41 via le registre, Archives 1 293), les autres
+  `.eq('agence_nom')` de `api.ts` ne servent que des écrans qui marchent ou les données de maquette.
+- **Fiche v4** (maquette https://claude.ai/artifact/TmuBn3hQNKpTvT13XLKNr7, validée « oui code la ») : en-tête
+  teinté par l'étape + **frise** (3 jalons, durée entre eux, « de l'offre à l'acte : N jours », acte signé N jours
+  après/avant la date prévue au compromis) ; chiffres à **tuiles d'icône**, écart prix de vente / offre, **anneau**
+  des honoraires (entrée/sortie, taux au centre) ; parcours en cartes avec étiquettes ; **colonnes rééquilibrées**
+  (gauche : parcours + documents ; droite : parties, répartition, conditions/notes, historique) ; parties colorées
+  par rôle ; répartition en anneau + jauges + « N % ne sont attribués à personne » quand la somme < 100 ;
+  conditions et notes vides = une seule petite carte ; documents en **vignettes** cliquables (même geste qu'avant) ;
+  historique à points colorés. Aucune nouvelle lecture, aucune écriture : présentation seule.
+- **Contrôles** : `npm run build` vert ; maquette locale 1 280 px (menu replié) et téléphone 375 px (titre caché par
+  la photo et montants débordants trouvés puis corrigés ; 0 débordement mesuré) ; frise relue sur les 6 dossiers
+  d'essai, une par étape (libellés « Compromis » / « Vente » tant que l'étape n'est pas atteinte).
+  ⚠ Non vu sur les vraies données.
