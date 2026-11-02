@@ -329,3 +329,29 @@ des agences) · Ventes (résultat) · Mandats (entrées et devenir) · Stock (po
 écoulement, mise en marché, en règle) · Acquéreurs (demande, offre face à la demande par prix, biens sans acheteur).
 Design : une couleur par domaine (validées au contrôle de palette : Stock #1a9a6c, Mandats #2f6fd0, Ventes #c5005f,
 Acquéreurs #6a55d8), dégradés ordonnés validés, pas d'anneau ni de camembert, une seule échelle par graphique.
+
+## 17. Maquette v2 (02/11 nuit) — https://claude.ai/artifact/CJ9v7PnqkNvYHNGsG8R1Qr, 5 planches, RIEN CODÉ
+
+- **Vue d'ensemble** : en tête le **prévisionnel des encaissements sur 12 mois** (1,80 M€ HT pondérés ; trois couches :
+  actes datés × 87 %, offres × 86 % à + 4 mois, stock disponible pondéré en texture « tendance » ; trait = encaissé le
+  même mois l'an passé ; « à combler : 0,39 M€ par les mandats à venir ») ; **l'équation du réseau** (682 mandats →
+  537 sous mandat → 287 ventes ; « 4 mandats sur 10 deviennent une vente ») ; 6 cartes ; **tableau des agences**
+  (honoraires et mandats avec écart, exclusivité avec repère réseau, disponibles, mois de stock teinté vite / lent,
+  C.A attendu, biens sans acheteur).
+- **Mandats** : 4 cartes (dont « taux de vente d'un mandat » 42 %) ; **le devenir des mandats 2024 par type** en barres
+  100 % (exclusif 59 % vendus en 203 j, semi 40 %, simple 28 % en 235 j) ; mandats par mois exclusifs / autres avec
+  trait 2025 ; **la production à faire** (157 annonces sans mandat, 69 à valider, 56 signatures, 18 échéances, 26 échus) ;
+  agences et négociateurs.
+- **Stock** (périmètre affiché : SOUS MANDAT) : **C.A potentiel 3,52 M€ HT et C.A attendu 1,78 M€ HT** côte à côte,
+  barre par étape (compromis, offre, exclusif, semi, simple ; plein = attendu) ; disponibles 413, **13,4 mois de stock**,
+  36 % au-delà du délai habituel, 106 sans acheteur ; **mise en marché** 413 → 344 validés → 330 diffusables → 316 en
+  ligne ; âge mesuré (< 3 mois 127 · 3-6 113 · 6-9 91 · 9-12 40 · > 1 an 40) avec le repère 203 j ; « en règle ? » ;
+  agences triées par C.A attendu.
+- **Acquéreurs** (nouveau) : 4 240 recherches actives, 560 récentes, 1 450 nouveaux acquéreurs (+7 %), 106 biens sans
+  acheteur ; **offre face à la demande par prix** en barres opposées avec « acheteurs par bien » (5,5 sous 100 k€ contre
+  15 entre 200 et 300 k€) ; couverture du stock (230 / 77 / 106) ; demande par agence (5 premières) ; visites app = 0.
+- **Ventes** : planche v1 gardée, actes datés corrigés à 531 303 € (2 aberrants écartés).
+Design : palettes passées au validateur (domaines + dégradés ordonnés), barres et barres 100 %, aucune jauge ronde,
+une échelle par graphique, chiffres en tabulaires, couleur jamais seule (signes ▲ ▼, étiquettes).
+⚠ Le code en place (12dcff1, non poussé) suit encore la maquette v1 : à refaire après validation de la v2, et l'onglet
+Ventes y affiche 808 k€ d'actes datés (les 2 aberrants) — à corriger dans la même passe.
