@@ -588,3 +588,13 @@ admin seulement — recommandé), le contenu de la 1re version (la maquette du 2
 avec comparaison et actes datés hachurés, négociateurs, agences), et le bloc « Qualité du registre » (le laisser à
 l'étape « à traiter », qui vient juste après — recommandé). Méthode : maquette sur les vraies données, au look de la
 fiche v4, puis code.
+
+**Choix de Frédéric (02/11)** : bascule « Liste / Pilotage » dans l'écran Registre (admin seulement) ; 1re version =
+4 chiffres clés, honoraires par mois, par négociateur, par agence ; « Qualité du registre » laissée à l'étape « à
+traiter ». **Maquette sur les vraies données** : https://claude.ai/artifact/CJ9v7PnqkNvYHNGsG8R1Qr (2026 au 02/11 et
+2025 complète, comparaison à l'année précédente, actes datés hachurés en novembre (15 / 218 450 €) et décembre
+(25 / 174 603 €)). Chiffres de 2024 lus pour la comparaison : 392 ventes / 2 996 564 €, délais médians 28 j / 84 j.
+⚠ Dans la maquette, les noms d'agence sont nettoyés à la main (« Courpière », « Le Puy-en-Velay ») ; la base les
+porte en « Groupe GTI COURPIERE », « Groupe Gti Le Puy en Velay » : forme d'affichage à trancher au code.
+⚠ Vu en passant, non creusé : 2 compromis avec un acte prévu en juin 2027 portent 187 700 € d'honoraires à eux deux
+(à regarder dans « à traiter »). ⏳ Attend son avis, RIEN CODÉ.
