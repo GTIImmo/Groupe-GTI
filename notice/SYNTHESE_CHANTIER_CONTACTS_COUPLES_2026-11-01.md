@@ -842,3 +842,19 @@ est « couple » et son résumé « nommé » (la nuit du 02→03/11 : aujourd'h
   par « Compléter le conjoint »), nom recopié possible, cascade à la suppression.
 - **Reporté** : Hektor en MAINTENANCE (mise à jour, dit par Frédéric) — les onglets renvoyaient vers `www.la-boite-immo.com`, lectures en 404.
   **Rien lu, rien écrit.** Onglets fermés. À reprendre quand Hektor revient, depuis la photo d'avant.
+
+## 38. REPRISE APRÈS LA MAINTENANCE : PHOTO D'AVANT FAITE, ARRÊT SUR UN 503 *(02/11 soir, « C'est fait »)*
+
+- **Hektor revenu** : depuis le serveur, `/admin/` répond 200 en 0,15 s ; IP non bloquée. La mise à jour a fermé la session de Frédéric ;
+  après reconnexion, l'accueil est une liste « Mon réseau » (19 agences, dont « COMPTE FORMATION », bouton « Accéder à Hektor ») — dans le
+  compte formation, la fiche 467326 répond **403 « Accès interdit »** ; dans « GROUPE GTI IMMOBILIER · Administrateur », elle s'ouvre.
+- ⚠ **Mes fausses pistes** (sans écriture) : 4 lectures parties sur `ma-boite-immo.com` (adresse relative, l'onglet avait changé de site) ;
+  puis des réponses VIDES (200, 0 octet) avec `group=mefContacts/contactCoupleAll` seul — **ce n'est pas Hektor** : la lecture du worker
+  (`console_job_worker.js:18260`) passe `group=contacts,pilotage_accueil_contact,mefContacts/accueilContact`, et avec elle tout répond.
+- **Photo d'avant (lecture)** : 467326 = personne seule (`contacts_full_accueil`), nom, prénom, e-mail, téléphone remplis, civilité vide,
+  propriétaire actuel d'EA32621 (Estimation). 467325 = **fiche de COUPLE vide** (civilité « M./Mme », places 1 et 2 sans nom, prénom,
+  e-mail ni téléphone) — conforme au risque déjà dit au §37.
+- **Arrêt** : la recherche « Transformer en couple » (`contacts-actions-searchContactToCouple`, `valeur=467325`, `idProspect=467326`)
+  a répondu **503** → arrêt net, aucune autre requête, onglet Hektor fermé. ⚠ La recherche se fait par TEXTE (nom) : une coquille sans
+  nom ne peut sans doute pas y être trouvée, donc « Hektor la propose-t-il ? » ne se vérifie pas par l'écran.
+- **Rien n'a été écrit.** L'unique écriture accordée (`transformeContactToConjunct`, conjoint=467325, refCouple=467326) reste à faire.
