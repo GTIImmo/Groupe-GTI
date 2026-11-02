@@ -120,6 +120,38 @@ manque la seule date — et c'est normal, ils n'ont pas été signés.**
 ⚠ Et « annulée » n'est **pas** prouvé pour les offres : Hektor ne dit pas
 « annulée », il ne dit **rien**. Une absence n'est pas un statut.
 
+### ⛔ LES 68 OFFRES SANS DATE NE SONT PAS 68 COQUILLES — 54 + 14
+
+Frédéric, 02/11 : *« les 54 coquilles sont toutes les offres sans date ? ou autres
+choses ? »* — non, et la distinction commande la décision. Croisé sur les 11 199
+offres du miroir, aucune case n'est ambiguë :
+
+- **date absente, rien du tout : 54 — toutes coquilles, 0 avec un état**
+- **date à `0000-00-00` : 14 — 0 coquille, toutes portent un état**
+- date utilisable : 11 131 — 0 coquille
+
+⭐ **Équivalence STRICTE dans les deux sens** : le témoin inverse (« une coquille
+peut-elle avoir une date ? ») donne **0**, et le parc entier ne compte que **54**
+coquilles. Il n'y en a pas une ailleurs.
+
+**Les 14 sont de VRAIES offres**, et les masquer serait une perte :
+
+- chacune porte **2 propositions** typées (`proposition`, `accepte`, `refus`)
+- **14 sur 14 ont un montant** — de **65 000 €** à **328 000 €**
+- états : **6 acceptées**, 7 proposées, 1 refusée
+- seule la **date** manque, et elle vaut `0000-00-00` **jusque dans les
+  propositions** — c'est pourquoi `_date_de_tri` ne peut pas la récupérer là
+
+Exemple : l'offre 1142 (bien 53984) = proposition 97 000 € puis **accepté**
+97 000 €. C'est une offre acceptée dont on ignore la date, pas une coquille.
+
+⭐ **6 des 14 ont rejoint leur affaire** grâce au § 2.9 posé ce matin (1142, 1308,
+3960, 7643, 8601, 9856). Les 8 autres restent seules, faute de cible unique.
+
+➡ **Conséquence pour le point 3 du § 4** : la question « montrer, étiqueter ou
+masquer » ne se pose que pour les **54**. Les 14 doivent rester visibles — il n'y
+manque qu'une date.
+
 ---
 
 ## 4. CE QUI RESTE À TRANCHER PAR FRÉDÉRIC
