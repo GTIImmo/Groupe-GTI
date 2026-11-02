@@ -155,3 +155,19 @@ le bon de visite**. Relu dans le code :
 - **Objectifs** : pas maintenant (le pilotage compare à l'année précédente).
 - **Accès et unité** : **administrateurs seuls**, honoraires **HT par défaut** (TTC d'un clic). La maquette est passée
   en HT par défaut. ⚠ HT = TTC / 1,2 dans la maquette : à vérifier au code (taux de TVA unique ?).
+
+## 10. Onglets Mandats et Stock maquettés (02/11 soir, même lien)
+
+**Mandats** (2026 à date contre 2025 à date, hors origine `recherche`) : par type — Simple **356 contre 277**,
+Exclusif **253 contre 314**, Accord **54 contre 76** (prix médian au mandat 122 000 / 139 000 / 192 000 €) : le réseau
+rentre autant de mandats mais en SIMPLE. Exclusivité par mois 2026 : 42, 43, 38, 43, 35, **28, 53, 31, 27**, 42 %.
+Par négociateur (31 personnes) : BILLIG DURAND 61 (46), RIBBES 38 (25), PEREIRA 37 (27), DELAVAUD 34 (40), POUGET 33
+(5), FORLICO 33 (31), PEYRARD 32, GENTES 32, TEYSSONNIER 31 (42, 4 exclusifs), REYNAUD 28 (1)… Signés
+électroniquement : 456 (févr. → oct.), 56 en attente.
+⚠ « ACCORD » : sens métier non vérifié (à demander à Frédéric).
+**Stock** (photo du jour) : 570 en vente, **80,8 M€ affichés**, prix médian 120 000 € ; âge depuis le mandat : < 3 mois
+127, 3-6 mois 113, 6-12 mois 131, > 1 an 40, sans date 159 (médiane 156 j) ; ⚠⚠ **238 actifs non diffusables (42 %)**,
+dont 52 sur 81 à Issoire et 42 sur 60 à Craponne ; 16 diffusables sans aucun portail ; composition : simple 226,
+exclusif 148 (26 %), accord 36, autre / vide 160 ; vraies baisses 87 (médiane −6,8 %) ; mandats échus encore en vente
+26, dont **10 à Courpière** ; âge médian par agence de 58 j (Saint-Bonnet) à 283 j (Saint-Didier).
+⏳ Attend son avis, RIEN CODÉ.
