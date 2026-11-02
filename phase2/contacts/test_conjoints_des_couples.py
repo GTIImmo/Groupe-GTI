@@ -178,3 +178,26 @@ class Push(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class Notaires(unittest.TestCase):
+    """⛔ 02/11 (règle de Frédéric) : la première fiche d'un notaire n'a ni résumé ni conjoint."""
+
+    def test_premiere_d_un_notaire_ni_resume_ni_conjoint(self):
+        c = base(PARC)
+        c.execute("CREATE TABLE app_affaire_ledger (notaires_json TEXT)")
+        c.execute("INSERT INTO app_affaire_ledger VALUES (?)", ('{"sortie": {"id": "1"}}',))   # cible de 10000001
+        m.executer(c)
+        self.assertIsNone(resume(c, "10000001"))
+        self.assertIsNone(lire(c, "10000002")["couple_role"], "la seconde nommee d'un notaire n'est pas marquee conjoint")
+        self.assertIsNotNone(resume(c, "10000003"), "temoin : les autres couples gardent leur resume")
+
+    def test_un_resume_deja_pose_s_efface(self):
+        c = base(PARC)
+        m.executer(c)
+        self.assertIsNotNone(resume(c, "10000001"))
+        c.execute("CREATE TABLE app_affaire_ledger (notaires_json TEXT)")
+        c.execute("INSERT INTO app_affaire_ledger VALUES (?)", ('{"entree": {"id": "1"}}',))
+        m.executer(c)
+        self.assertIsNone(resume(c, "10000001"))
+        self.assertIsNone(lire(c, "10000002")["couple_role"])

@@ -28,6 +28,20 @@ export type CoupleSource = {
   couple_json?: CoupleJson | string | null
   prenom?: string | null
   phone_primary?: string | null
+  relation_roles_json?: string[] | string | null
+}
+
+// ⛔ RÈGLE DE FRÉDÉRIC (02/11) : UNE FICHE NOTAIRE N'EST JAMAIS UN COUPLE -- dans l'historique comme dans les ajouts.
+//   Hektor range des études (SCP, SELARL…) en fiches « ménage » : 50 notaires étaient « couple » au 02/11.
+//   « Notaire » = la même règle que l'écran (`estRoleNotaire`, App.tsx) : un rôle notaire_vendeur / notaire_acquereur,
+//   calculé chez Supabase depuis nos registres -- un notaire ajouté sur une vente est donc couvert À LA SECONDE,
+//   sans attendre la nuit (qui, elle, pose la nature « notaire » : synthèse §23-24).
+export function estFicheNotaire(contact: { relation_roles_json?: string[] | string | null }): boolean {
+  let roles: unknown = contact.relation_roles_json
+  if (typeof roles === 'string') {
+    try { roles = JSON.parse(roles) } catch { roles = [] }
+  }
+  return Array.isArray(roles) && roles.some((role) => role === 'notaire_vendeur' || role === 'notaire_acquereur')
 }
 
 export type CoupleAffiche = {
@@ -53,7 +67,7 @@ function initiale(prenom: string): string {
 }
 
 export function coupleAffiche(contact: CoupleSource): CoupleAffiche | null {
-  if (contact.nature_fiche !== 'couple') return null
+  if (contact.nature_fiche !== 'couple' || estFicheNotaire(contact)) return null
   const json = lireCoupleJson(contact.couple_json)
   const conjoint = json?.etat === 'nomme' ? json.conjoint ?? null : null
   const prenom1 = (contact.prenom ?? '').trim()
@@ -109,10 +123,10 @@ function nomDeLOnglet(personne: FoyerPersonne): string {
 
 /** `principal` = la première fiche (porteuse du couple) ; `conjoint` = la seconde fiche NOMMÉE, ou null. */
 export function foyerAffiche(
-  principal: FoyerPersonne & { nature_fiche?: string | null; marital_status?: string | null },
+  principal: FoyerPersonne & { nature_fiche?: string | null; marital_status?: string | null; relation_roles_json?: string[] | string | null },
   conjoint: FoyerPersonne | null,
 ): FoyerAffiche | null {
-  if (principal.nature_fiche !== 'couple') return null
+  if (principal.nature_fiche !== 'couple' || estFicheNotaire(principal)) return null
   const situation = SITUATION_DU_COUPLE[(principal.marital_status ?? '').trim()]
   const incomplet = !conjoint
   const etiquette = incomplet ? 'Couple · conjoint à compléter' : situation ? `Couple · ${situation}` : 'Couple'

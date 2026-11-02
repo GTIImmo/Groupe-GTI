@@ -173,3 +173,54 @@ class Appariement(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class Notaires(unittest.TestCase):
+    """⛔ 02/11 (règle de Frédéric) : une fiche NOTAIRE n'est jamais un couple -- historique et ajouts."""
+
+    def calc(self, *fiches, notaires=None, rattache=None):
+        index = {f["hektor_contact_id"]: f for f in fiches}
+        return {l["hektor_contact_id"]: l for l in m.calculer(index, None, rattache, None, notaires)}
+
+    def test_un_notaire_en_menage_n_est_pas_un_couple(self):
+        r = self.calc(fiche(1, lien=1, nom="SCP DURAND et MARTIN", civilite="Mr./Mme"), fiche(2, lien=1),
+                      notaires={"1"})
+        self.assertEqual(r["1"]["nature_fiche"], "notaire")
+        self.assertIsNone(r["1"]["couple_deuxieme"])
+        self.assertEqual(r["2"]["nature_fiche"], "case_conjoint_vide", "sa case vide reste vide, masquee comme avant")
+
+    def test_temoin_inverse_le_meme_menage_sans_registre_reste_couple(self):
+        r = self.calc(fiche(1, lien=1, nom="SCP DURAND et MARTIN", civilite="Mr./Mme"), fiche(2, lien=1))
+        self.assertEqual(r["1"]["nature_fiche"], "couple")
+
+    def test_un_notaire_seul_devient_notaire(self):
+        self.assertEqual(self.calc(fiche(1, nom="MAITRE", prenom="Anne"), notaires={"1"})["1"]["nature_fiche"], "notaire")
+
+    def test_la_seconde_nommee_d_un_notaire_n_est_pas_son_conjoint(self):
+        r = self.calc(fiche(1, lien=1, nom="SCP A"), fiche(2, lien=1, nom="B", prenom="Luc"), notaires={"1"})
+        self.assertEqual(r["2"]["nature_fiche"], "personne_seule")
+
+    def test_le_notaire_est_reconnu_par_son_numero_hektor(self):
+        r = self.calc(fiche(10000001, lien=10000001, nom="SCP A", civilite="Mr./Mme", cible=4242), notaires={"4242"})
+        self.assertEqual(r["10000001"]["nature_fiche"], "notaire")
+
+    def test_un_notaire_ne_recoit_jamais_une_case(self):
+        F = {"1": fiche(1, civilite="Mr./Mme"), "2": fiche(2, nom="SCP NOTAIRE")}
+        F["1"]["nom"] = ""
+        for f in F.values():
+            f["date_enregistrement"] = "2020-01-01"
+        faits, cote = m.rattachements(F, {"1": {"A"}, "2": {"A"}}, {"A": {"1", "2"}}, notaires={"2"})
+        self.assertEqual((faits, cote), ({}, {"1": "seule_personne_est_un_notaire"}))
+        faits, _ = m.rattachements(F, {"1": {"A"}, "2": {"A"}}, {"A": {"1", "2"}})
+        self.assertEqual(faits, {"1": "2"}, "temoin inverse : sans le registre, il la recevait")
+
+    def test_registre_lu_entree_et_sortie_liste_ou_objet(self):
+        from phase2.contacts import notaires_registre as nr
+        self.assertEqual(nr.notaires_du_json('{"entree": {"id": "7"}, "sortie": [{"id": "8"}, {"id": ""}]}'), {"7", "8"})
+        self.assertEqual(nr.notaires_du_json('{"entree": null, "sortie": null}'), set())
+        self.assertEqual(nr.notaires_du_json("pas du json"), set())
+        c = sqlite3.connect(":memory:")
+        self.assertEqual(nr.notaires_hektor(c), set(), "table absente : ensemble vide, la nuit continue")
+        c.execute("CREATE TABLE app_affaire_ledger (notaires_json TEXT)")
+        c.executemany("INSERT INTO app_affaire_ledger VALUES (?)", [('{"entree": {"id": "7"}}',), (None,), ("",)])
+        self.assertEqual(nr.notaires_hektor(c), {"7"})

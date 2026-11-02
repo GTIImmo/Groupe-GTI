@@ -62,6 +62,11 @@ import unicodedata
 from collections import Counter, defaultdict
 from datetime import datetime
 from pathlib import Path
+
+try:  # lancé comme script (run) ou importé comme module (essais)
+    from notaires_registre import notaires_hektor
+except ImportError:  # pragma: no cover
+    from phase2.contacts.notaires_registre import notaires_hektor
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -156,7 +161,8 @@ def _jour(fiche: dict[str, Any]) -> str:
 
 
 def rattachements(fiches: dict[str, dict[str, Any]], biens_par_contact: dict[str, set[str]],
-                  contacts_par_bien: dict[str, set[str]]) -> tuple[dict[str, str], dict[str, str]]:
+                  contacts_par_bien: dict[str, set[str]],
+                  notaires: set[str] | None = None) -> tuple[dict[str, str], dict[str, str]]:
     """({case: personne}, {case: raison de la mise de cote}). Fonction PURE.
 
     Une case « orpheline » (vide, principale absente ou aucun lien) est rattachee a la
@@ -175,9 +181,12 @@ def rattachements(fiches: dict[str, dict[str, Any]], biens_par_contact: dict[str
         voisins = {v for b in biens for v in contacts_par_bien.get(b, set()) if v != numero and v in fiches}
         nommes = {v for v in voisins if nommee(fiches[v])
                   and _texte(fiches[v].get("hektor_couple_contact_id")) in ("", v)}
-        if not nommes:
-            cote[numero] = "aucune_personne_sur_le_bien"
+        # ⛔ 02/11 : un NOTAIRE ne reçoit jamais une case (il n'est pas un couple -- règle de Frédéric).
+        sans_notaire = {v for v in nommes if not est_notaire(fiches[v], notaires)}
+        if not sans_notaire:
+            cote[numero] = "seule_personne_est_un_notaire" if nommes else "aucune_personne_sur_le_bien"
             continue
+        nommes = sans_notaire
         meme_jour = {v for v in nommes if _jour(fiches[v]) and _jour(fiches[v]) == _jour(f)}
         if len(meme_jour) == 1:
             faits[numero] = meme_jour.pop()
@@ -188,8 +197,14 @@ def rattachements(fiches: dict[str, dict[str, Any]], biens_par_contact: dict[str
     return faits, cote
 
 
+def est_notaire(fiche: dict[str, Any], notaires: set[str] | None) -> bool:
+    """Fiche d'un notaire du registre des ventes (par son numéro HEKTOR). Fonction PURE."""
+    return bool(notaires) and _texte(fiche.get("hektor_target_id")) in notaires
+
+
 def calculer(fiches: dict[str, dict[str, Any]], madames: set[str] | None,
-             rattache: dict[str, str] | None = None, cote: dict[str, str] | None = None) -> list[dict[str, Any]]:
+             rattache: dict[str, str] | None = None, cote: dict[str, str] | None = None,
+             notaires: set[str] | None = None) -> list[dict[str, Any]]:
     rattache = rattache or {}
     cote = cote or {}
     if rattache:
@@ -208,6 +223,14 @@ def calculer(fiches: dict[str, dict[str, Any]], madames: set[str] | None,
             nat = "couple"                              # sa case est sur le meme bien, nee le meme jour
         lien = _texte(f.get("hektor_couple_contact_id"))
         principale = fiches.get(lien) if lien and lien != numero else None
+        # ⛔ RÈGLE DE FRÉDÉRIC (02/11) : UNE FICHE NOTAIRE N'EST JAMAIS UN COUPLE (historique et ajouts).
+        #   · la fiche du notaire, nommée, prend la nature « notaire » (jamais « couple ») ;
+        #   · une seconde fiche NOMMÉE d'un notaire n'est pas son « conjoint » : c'est une personne à part ;
+        #   · la case VIDE d'un notaire reste « case_conjoint_vide » (rien à montrer, déjà masquée).
+        if est_notaire(f, notaires) and nommee(f):
+            nat = "notaire"
+        elif nat in ("conjoint", "conjoint_sans_prenom") and principale is not None and est_notaire(principale, notaires):
+            nat = "personne_seule"
         civilite_app = None
         if (madames is not None and not _texte(f.get("civilite")) and nommee(f)
                 and _texte(f.get("hektor_target_id")) in madames):
@@ -324,15 +347,17 @@ def executer(conn: sqlite3.Connection, a_blanc: bool = False, rattacher: bool = 
     madames = madames_de_l_ancien_logiciel(conn)
     if madames is None:
         print(f"[nature] table {TABLE_ANCIEN} absente : aucune civilite rendue (charger_ancien_logiciel.py)")
+    notaires = notaires_hektor(conn)
+    print(f"[nature] notaires du registre des ventes : {len(notaires)} (jamais couple, regle du 02/11)")
     faits: dict[str, str] = {}
     cote: dict[str, str] = {}
     if rattacher:
-        faits, cote = rattachements(fiches, *lire_biens(conn))
+        faits, cote = rattachements(fiches, *lire_biens(conn), notaires=notaires)
         print(f"[nature] rattachement : {len(faits)} case(s) rattachee(s) a {len(set(faits.values()))} personne(s), "
               f"{len(cote)} mise(s) de cote")
     else:
         print("[nature] rattachement eteint (APP_CONTACT_RATTACHEMENT)")
-    lignes = calculer(fiches, madames, faits, cote)
+    lignes = calculer(fiches, madames, faits, cote, notaires)
     print(f"[nature] {len(lignes)} fiche(s) :")
     for ligne in bilan(fiches, lignes):
         print(ligne)

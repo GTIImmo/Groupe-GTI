@@ -52,6 +52,11 @@ import sys
 from pathlib import Path
 from typing import Any, Iterable
 
+try:  # lancé comme script (run, worker) ou importé comme module (essais)
+    from notaires_registre import notaires_hektor
+except ImportError:  # pragma: no cover
+    from phase2.contacts.notaires_registre import notaires_hektor
+
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_PHASE2_DB = ROOT / "phase2" / "phase2.sqlite"
 RAISON = "conjoint_d_un_contact_envoye"
@@ -143,8 +148,13 @@ def _lire(conn: sqlite3.Connection, couples: Iterable[str] | None) -> list[dict[
     return [dict(r) for r in conn.execute(sql, couples)]
 
 
-def calculer(lignes: list[dict[str, Any]]) -> tuple[dict[str, str], set[str]]:
-    """{numero de la premiere: couple_json}, {numeros des conjoints a marquer}."""
+def calculer(lignes: list[dict[str, Any]], notaires: set[str] | None = None) -> tuple[dict[str, str], set[str]]:
+    """{numero de la premiere: couple_json}, {numeros des conjoints a marquer}.
+
+    ⛔ 02/11 (règle de Frédéric) : UNE FICHE NOTAIRE N'EST JAMAIS UN COUPLE. La première fiche d'un notaire
+    du registre des ventes (numéro HEKTOR dans `notaires`) n'a ni résumé ni conjoint marqué ; `ecrire`
+    remet à zéro ce qui est lu, donc un résumé déjà posé s'efface à la nuit suivante.
+    """
     premieres: dict[str, dict[str, Any]] = {}
     secondes: dict[str, list[dict[str, Any]]] = {}
     for ligne in lignes:
@@ -157,6 +167,8 @@ def calculer(lignes: list[dict[str, Any]]) -> tuple[dict[str, str], set[str]]:
     resumes: dict[str, str] = {}
     conjoints: set[str] = set()
     for numero, premiere in premieres.items():
+        if notaires and _texte(premiere.get("hektor_target_id")) in notaires:
+            continue
         resume, montree = resumer(premiere, secondes.get(numero, []))
         resumes[numero] = json.dumps(resume, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
         if montree is not None:
@@ -216,7 +228,8 @@ def executer(conn: sqlite3.Connection, a_blanc: bool = False, contact_id: str | 
             return 0
         couples = [couple]
     lignes = _lire(conn, couples)
-    resumes, conjoints = calculer(lignes)
+    notaires = notaires_hektor(conn)
+    resumes, conjoints = calculer(lignes, notaires)
     etats: dict[str, int] = {}
     for texte in resumes.values():
         etat = json.loads(texte)["etat"]
