@@ -418,3 +418,7 @@ Hektor garde 93 000 / 7 000 — la relecture de nuit remettra le registre sur la
 ⚠ Le travail est en « error », essai 1 sur 5 : le rejeu automatique le relancera et il échouera de la même façon
 (il s'arrête avant d'enregistrer).
 **18406 NON TENTÉ** : même chemin, même répartition 50/50 (C. REYNAUD) → même blocage attendu.
+
+**02/11 ~23:20 — Frédéric a corrigé le 18645 DIRECTEMENT DANS HEKTOR.** Le registre local (déjà à 7 000 / 93 000 par
+l'écriture optimiste) et Hektor disent désormais la même chose ; la relecture de nuit doit le confirmer (⏰ 03/11 :
+compromis 50039 → honoraires_entree 7 000, prix_net_vendeur 93 000). Le 18406 reste à corriger.
