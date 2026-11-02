@@ -6,9 +6,100 @@ mandats »*, et *« à la saisie de la modale offre ou compromis … il faudr
 la charge de la commission se pré-remplisse mais reste modifiable comme les
 autres champs »*.
 
-⛔ **AUCUN CODE N'EST POSÉ** *(« oui mais ne code rien »)*. Ce document est
-l'audit et l'explication. Le « vas-y » reste à donner, pièce par pièce s'il le
-souhaite.
+✅ **ÉTAT AU 02/11 AU SOIR — LE PALIER 1 EST EN BASE.** La phrase ci-dessous
+était vraie quand ce document a été écrit ; elle ne l'est plus. Voir **§ 0 bis**.
+
+> ⛔ ~~**AUCUN CODE N'EST POSÉ** *(« oui mais ne code rien »)*. Ce document est
+> l'audit et l'explication. Le « vas-y » reste à donner, pièce par pièce s'il le
+> souhaite.~~
+
+---
+
+## § 0 bis. ✅ CE QUI EST FAIT, ET CE QUI RESTE — 02/11/2026 au soir
+
+```
+SON ACCORD        « colle le patch tu as mon accord » (02/11, apres explication)
+EN BASE           migration charge_honoraires_mandat_2026_11_02, appliquee par moi
+                  5 controles verts DANS la transaction, temoin inverse compris
+                  (la vue refaite garde ses 3 colonnes de cloture)
+LES 3 FICHIERS    supabase/patch_charge_honoraires_mandat_2026-11-02.sql
+                  ..._INVERSE.sql  (non joue -- c'est le retour arriere)
+                  ..._REPETITION.sql
+LE FRONT          commit 0c52a37, npm run build vert
+                  ⛔ NON POUSSE, NON DEPLOYE, PAS EPROUVE EN REEL
+COMMITS           f432dd5 (les patchs) · 0c52a37 (le front) · 19577f7 (le correctif
+                  de droits, voir ci-dessous)
+```
+
+### ⛔⛔ LA RÉPÉTITION A SORTI UN ROUGE, ET IL ÉTAIT RÉEL
+
+```
+LE ROUGE      `authenticated` pouvait executer app_reposer_charge_mandat_app --
+              la re-pose GLOBALE, qui n'a rien a faire entre les mains d'un
+              utilisateur connecte.
+LA CAUSE      mesuree dans pg_default_acl : un DROIT PAR DEFAUT du schema public
+              (pose par postgres) donne authenticated=X a TOUTE fonction neuve,
+              et `revoke all ... from public` NE L'ENLEVE PAS -- le pseudo-role
+              `public` n'est pas le role `authenticated`.
+CE QUI L'A    LE TEMOIN DE COMPARAISON : sa jumelle app_reposer_cloture_mandat_app
+TROUVE        (meme patron, 13/10) etait fermee, la mienne non. Aucune lecture du
+              code ne l'aurait montre : les deux patchs disent la meme chose.
+CORRIGE       revoke nomme, applique en base. Les 4 fonctions (charge et cloture)
+              ont maintenant EXACTEMENT les memes droits.
+ET LE FICHIER le patch porte desormais le revoke ET DEUX CONTROLES DE DROITS dans
+PORTE MIEUX   la transaction (7 au lieu de 5) : ils auraient annule le patch au
+              lieu de laisser passer. La repetition CHIFFRE les droits au lieu de
+              les afficher a relire a l'oeil, et compare aux jumelles.
+```
+
+⬜ **RÉSERVE OUVERTE, PLUS LARGE QUE CE PATCH** : ce droit par défaut vaut pour
+**toutes** les fonctions du projet. Combien de fonctions de service sont ainsi
+ouvertes à `authenticated` sans qu'on l'ait voulu n'est **pas mesuré**. À
+reprendre s'il le demande.
+
+### ⛔ DEUX CORRECTIONS À CETTE SPEC, MESURÉES APRÈS SA RÉDACTION
+
+```
+1. LA PIECE C EST TOMBEE. Le § 0 ci-dessous annonce « DEUX LISTES BLANCHES EN
+   DUR, sans lesquelles la valeur est JETEE EN SILENCE ». C'EST FAUX pour notre
+   cas : magasin_mandat_app.py dit dans son propre en-tete qu'il « OBSERVE, il
+   ne tranche pas », et contrat_autorite.py arbitre une colonne PARTAGEE avec
+   Hektor -- or la notre est separee. Ni l'ecriture ni l'affichage ne passent
+   par ces deux listes. LE PALIER 1 NE TOUCHE DONC PAS A PYTHON.
+   (Les y ajouter reste possible POUR L'OBSERVATION, ce n'est pas necessaire.)
+2. LE RUN DE NUIT ORDINAIRE NE REFAIT PAS LE REGISTRE : le delete_all_rows est
+   sous `if args.rebuild_register_only` (push_upgrade_to_supabase.py:1300).
+   La re-pose reste necessaire, mais le risque quotidien vient du WORKER
+   (push_single_annonce_to_supabase.py), pas de la nuit.
+```
+
+⭐ **Et le vrai danger a été mesuré, pas supposé** : les **5** fonctions qui
+lisent `app_mandat_register_current` ne font **aucune `select *`**, n'utilisent
+**aucun `%rowtype`** et rendent toutes un type fixe — ajouter une colonne ne
+peut en casser aucune.
+
+### ⏰ CE QUI RESTE, DANS L'ORDRE
+
+```
+1. POUSSER ET DEPLOYER le front (3 commits attendent), puis EPROUVER EN REEL
+   sur le bien d'essai -- jamais sur une vraie affaire. Son accord necessaire.
+   ⛔ LE TEMOIN QUI COMPTE : LES DEUX VALEURS. « vendeur » ET « acquereur ».
+     Le defaut de la transaction a dormi 17 jours parce qu'on n'avait que des
+     « acquereur » et aucun « vendeur ». Un seul cote ne prouve RIEN.
+2. PALIER 2 (piece G) : la modale offre/compromis pre-remplit la charge depuis
+   le registre des mandats. Precedence proposee : le choix de l'utilisateur >
+   la charge de l'offre de la chaine > LA CHARGE DU MANDAT > « vendeur ».
+   ⛔ Sa consigne de perimetre : « deux paliers : le mandat, puis la
+     transaction » -- le palier 2 ne demarre qu'apres la preuve du palier 1.
+3. LE PASSE : « quand on va reprendre la colonne on completera les lignes
+   possibles » -- au rattrapage du classeur, et seulement les lignes reliables.
+```
+
+⚠ **RÉSERVE QUE JE NE CACHE PAS** : la clé du carnet est le couple *annonce +
+numéro de mandat*. Si le document est généré **avant** que Hektor attribue le
+numéro, rien ne peut être écrit — l'écran le dit alors clairement, sans bloquer
+la génération. Mais si ce mandat n'est **jamais régénéré** ensuite, sa charge
+reste perdue. **Non mesuré** : combien de documents sont générés sans numéro.
 
 ---
 
