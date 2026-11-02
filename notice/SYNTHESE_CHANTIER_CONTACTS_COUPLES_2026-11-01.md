@@ -827,3 +827,18 @@ est « couple » et son résumé « nommé » (la nuit du 02→03/11 : aujourd'h
   fabriquer une coquille fictive : Hektor recopie le nom). Choix à faire par Frédéric : laisser la coquille masquée et utiliser « Ajouter un
   conjoint » sur la personne (puis supprimer la coquille ?), ou essayer le rattachement de la coquille sur un premier vrai cas, surveillé.
 
+
+## 37. COQUILLES : « LE PLUS PROPRE », PREMIER CAS RÉEL PRÉPARÉ, ESSAI REPORTÉ *(02/11 après-midi, « Le plus propre », « Oui, sur EA32621 »)*
+
+- **Choix de Frédéric** : rattacher la coquille ELLE-MÊME comme conjoint (`transformeContactToConjunct`), sur un premier vrai cas, surveillé.
+- **Mesure (lecture seule, couche locale)** : 4 419 coquilles rattachées dont les deux fiches sont actives ; **1 453 dans l'app** (les deux
+  éligibles), dont 1 409 avec une personne seule, 461 coquilles portant elles-mêmes un « ménage orphelin ». **680 cas simples** : personne seule,
+  coquille sans seconde à elle, les deux liées au MÊME bien et à aucun autre. ⭐ **La coquille porte elle-même la relation au bien**
+  (propriétaire 897, mandant 3 286…) : la rattacher garde les deux liens dans le foyer.
+- **Premier cas retenu** : EA32621 (bien 59545), coquille 10260585 / Hektor 467325, personne 10260586 / Hektor 467326, toutes deux propriétaires.
+- **Essai prévu** : photo d'avant (deux formulaires, liens du bien) → Hektor propose-t-il la coquille dans « Transformer en couple » (lecture) →
+  « Confirmer » (UNE écriture), formulaire suivant NON enregistré → relecture (couple, place 2 = coquille, liens intacts, aucune fiche née).
+  Risques dits : refus possible (la coquille est une fiche de couple), pas de geste « défaire » connu (pire cas = couple à place 2 vide, déjà géré
+  par « Compléter le conjoint »), nom recopié possible, cascade à la suppression.
+- **Reporté** : Hektor en MAINTENANCE (mise à jour, dit par Frédéric) — les onglets renvoyaient vers `www.la-boite-immo.com`, lectures en 404.
+  **Rien lu, rien écrit.** Onglets fermés. À reprendre quand Hektor revient, depuis la photo d'avant.
