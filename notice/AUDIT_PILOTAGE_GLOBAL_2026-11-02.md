@@ -355,3 +355,25 @@ Design : palettes passées au validateur (domaines + dégradés ordonnés), barr
 une échelle par graphique, chiffres en tabulaires, couleur jamais seule (signes ▲ ▼, étiquettes).
 ⚠ Le code en place (12dcff1, non poussé) suit encore la maquette v1 : à refaire après validation de la v2, et l'onglet
 Ventes y affiche 808 k€ d'actes datés (les 2 aberrants) — à corriger dans la même passe.
+
+## 18. Offres, compromis, délais : mesurés (02/11 nuit) — Frédéric : « rien sur les offres d'achat, les compromis, les délais »
+
+Registre (`app_affaire_ledger`, hors lignes disparues de Hektor) et 287 ventes 2026 :
+- **Offres 2026** : 364 (273 acceptées, 76 refusées, 15 proposées) → acceptation ≈ 78 %. ⚠ Les refus ne sont enregistrés
+  que depuis 2026 (0 refus en 2025) : comparer les offres ACCEPTÉES (273 contre 288 en 2025 à date, −5 %).
+- **Compromis signés 2026 à date : 275 contre 344 en 2025 (−20 %)** — le signal avancé le plus fort du réseau.
+  Annulés : 11 en 2026 (récents), 13 % sur l'historique (1 372 / 10 631).
+- **Cycle d'une vente 2026 (médianes)** : mandat → 1re offre **80 j**, offre → compromis **31 j**, compromis → acte
+  **90 j**, mandat → acte **216 j**. **Actes en retard sur la date prévue : 70 / 281 (25 %), retard médian 24,5 j.**
+- **Négociation** : offre ≈ **95 %** du prix du mandat, vente ≈ **94 %**, marge de négociation moyenne **7,1 %**.
+- Mois 2026 (offres / acceptées / compromis / annulés) : janv. 18/15/23/1 · févr. 8/2/22/0 · mars 57/45/37/3 · avr.
+  39/34/29/3 · mai 38/29/26/0 · juin 46/37/34/1 · juil. 35/25/32/2 · août 26/22/17/1 · sept. 50/32/25/0 · oct. 47/32/30/0.
+  Compromis 2025 : 36, 26, 30, 41, 31, 43, 40, 13, 41, 43, 28, 39.
+- Par agence 2026 : **Firminy 38 offres dont 23 refusées (61 %)** — de loin le taux de refus le plus haut ; Craponne 37
+  compromis, Courpière 33, Le Puy 25.
+- **Pipeline en cours** : 12 offres proposées, 43 biens sous offre (18 sans compromis depuis plus de 30 jours, 92 383 € HT ;
+  4 depuis plus de 90 j), 6 compromis en rétractation (signés depuis moins de 10 j), 71 compromis à acte daté, 14 à date
+  d'acte dépassée.
+**Réorganisation proposée (v3)** : Tableau de bord · Chiffre d'affaires (réalisé + prévisionnel clair) · **Affaires**
+(offres, compromis, délais, négociation, pipeline) · Mandats · Stock · Acquéreurs. Le prévisionnel parle en trois mots :
+SÉCURISÉ (compromis signés), PROBABLE (offres acceptées), POSSIBLE (stock à vendre), + « atterrissage 2026 ».
