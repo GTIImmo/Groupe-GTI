@@ -127,3 +127,21 @@ Deux planches, vraies données : **Vue d'ensemble** (onglets, barre de filtres c
 ce qui se vend » par mois, « À surveiller » cliquable, tableau des 17 agences) et **Ventes** (passée dans l'écran
 Pilotage, la bascule du Registre est abandonnée). Mesure ajoutée : **171 biens actifs ont un mandat d'avant le
 02/05/2026** (plus de 6 mois), 159 actifs sans date de mandat. ⏳ Attend son avis, RIEN CODÉ.
+
+## 8. Correction (02/11 soir, question de Frédéric) — les visites, l'app les GÈRE
+
+Mon § 2 disait « visites : pas de source fiable » sans dire que l'app sait **prendre un RDV de visite** et **générer
+le bon de visite**. Relu dans le code :
+- **Prendre le RDV** : depuis la recherche d'un acquéreur (« Planifier une visite », App.tsx ~24134), la fiche du bien
+  et l'écran Agenda (`GoogleAgendaGlobalScreen`) ; le RDV est créé dans l'agenda Google du négociateur
+  (`createGoogleCalendarEvent`, App.tsx ~38277) et noté chez nous dans `app_google_calendar_event_link` (type
+  `visite`, bien, contact, heure, auteur, `bon_visite_ready`).
+- **Le bon de visite** : fabriqué à la volée depuis ce RDV (`visitVoucherHtml`, `openVisitVoucherPrint`
+  App.tsx:43152), ouvert dans une fenêtre pour impression. ⚠ **Il n'est enregistré nulle part** : aucune trace qu'il
+  a été imprimé, aucun PDF gardé.
+- **Usage mesuré** : 19 RDV créés (5 personnes), tous du 01 au 19/06 ; 11 liens en base (10 visites, 8 actives) ;
+  **aucun depuis le 19/06**. L'agenda, lui, est consulté : 208 demandes de disponibilités, la dernière le 28/10.
+- **Pour le pilotage** : un compteur « visites planifiées dans l'app » est possible tout de suite et juste (source
+  `app_google_calendar_event_link`), mais il vaut ~0 tant que les agences prennent leurs visites ailleurs (agenda tapé
+  à la main, Hektor). Pistes : garder une trace à chaque bon imprimé ; lire les agendas Google des négociateurs
+  (note du 31/07) ; ou les bons déposés chez Hektor (2 226, sans date). À décider par Frédéric.
