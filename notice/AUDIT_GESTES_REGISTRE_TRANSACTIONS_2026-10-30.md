@@ -532,3 +532,13 @@ Répartition » ; fiche « manque de design, pas très graphique, hausse le nive
   la photo et montants débordants trouvés puis corrigés ; 0 débordement mesuré) ; frise relue sur les 6 dossiers
   d'essai, une par étape (libellés « Compromis » / « Vente » tant que l'étape n'est pas atteinte).
   ⚠ Non vu sur les vraies données.
+
+**Vu EN LIGNE après le push (dec5821, bundle `index-CAjgNaCB.js`, Chrome de Frédéric, 1 280 px)** :
+- liste : colonnes 140 / 224 / 97 / 230 / 86 / 94 / 212, **0 nom coupé sur 53** ; filtre « Groupe GTI Ambert » =
+  **34 dossiers** (0 avant) ;
+- fiche 28865 : frise « 64 j / 157 j », « de l'offre à l'acte : 221 jours », « acte prévu le 23/08/2026, signé
+  65 jours plus tard », écart −30 000 € par rapport à l'offre, anneau 8,6 %, « 50 % des honoraires ne sont
+  attribués à personne », historique coloré, colonnes 880 / 939 px ;
+- ⭐ **document `local_only` éprouvé** : bien 61476 (68 documents, tous sur le serveur seulement),
+  « planCadastralNormalise Parcelle ZK 41.pdf » → « Préparation… » puis lien signé ouvert en **7 s** ; travail
+  `prepare_document_cloud` `done` 13:16:56 → 13:17:02, document passé `cloud_available`. Aucune écriture chez Hektor.
