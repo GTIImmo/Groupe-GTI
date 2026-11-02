@@ -13541,6 +13541,77 @@ function normalizeStatusTransactionPayload(payload, config, initHtml) {
 // ET ON SAIT DEJA FAIRE : la creation d'une annonce pilote un assistant Hektor
 // de bout en bout (`annonce-createBien-Ajx_Bien_wizardStepNew`, etapes 2 a 7,
 // 78 travaux). Le motif etait en interne ; il manquait la sequence.
+// B2 (03/11/2026) : les cases du formulaire de Hektor que le temoin de reprise relit
+// (etape 0 du compromis et de la vente). Une case absente du formulaire est ignoree.
+const CHAMPS_TEMOIN_REPRISE = [
+  "prixDeVente", "prixPublique", "prixNetVendeur", "montantHonoraireEntree",
+  "montantHonoraireSortie", "tauxHonoraireSortie", "sequestre", "nbJoursRetractation",
+  "dateCompromis", "dateSignatureActe", "dateVente",
+];
+
+/** Ce que la modification VEUT ecrire, case par case (seulement les champs touches). */
+function valeursVouluesReprise(payload, touche) {
+  const p = payload || {};
+  const v = (cle) => (touche(cle) && p[cle] != null ? String(p[cle]).trim() : "");
+  return {
+    prixDeVente: v("sale_price") || v("amount"),
+    prixPublique: v("amount"),
+    prixNetVendeur: v("net_seller_price"),
+    montantHonoraireEntree: v("seller_fees"),
+    montantHonoraireSortie: v("buyer_fees"),
+    tauxHonoraireSortie: v("buyer_fees_rate"),
+    sequestre: v("sequestration"),
+    nbJoursRetractation: v("retraction_days"),
+    dateCompromis: v("transaction_date"),
+    dateSignatureActe: v("signature_date"),
+    dateVente: v("transaction_date"),
+  };
+}
+
+/** Deux valeurs de formulaire egales ? Les montants au centime, les dates en jour. */
+function memeValeurFormulaire(a, b) {
+  const x = String(a == null ? "" : a).trim();
+  const y = String(b == null ? "" : b).trim();
+  if (x === y) return true;
+  const jour = (s) => {
+    let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+    m = s.match(/^(\d{2})[/-](\d{2})[/-](\d{4})$/);
+    return m ? `${m[3]}-${m[2]}-${m[1]}` : null;
+  };
+  if (jour(x) && jour(y)) return jour(x) === jour(y);
+  const nombre = (s) => {
+    const t = s.replace(/[\s ]/g, "").replace(",", ".");
+    return /^-?\d+(\.\d+)?$/.test(t) ? Number(t) : null;
+  };
+  const nx = nombre(x);
+  const ny = nombre(y);
+  if (nx !== null && ny !== null) return Math.abs(nx - ny) < 0.005;
+  return false;
+}
+
+/** B2 (03/11/2026) : les cases qui ont bouge chez Hektor depuis le premier essai. Une case
+ *  qui vaut deja ce que la modification veut ecrire n'est pas un ecart (un essai precedent
+ *  a pu enregistrer avant d'echouer plus loin). */
+function ecartsTemoinReprise(premier, maintenant, voulu) {
+  const ecarts = [];
+  for (const [nom, avant] of Object.entries(premier || {})) {
+    const actuel = (maintenant && maintenant[nom]) || "";
+    if (memeValeurFormulaire(avant, actuel)) continue;
+    if (voulu && voulu[nom] && memeValeurFormulaire(voulu[nom], actuel)) continue;
+    ecarts.push({ champ: nom, au_premier_essai: avant, maintenant: actuel });
+  }
+  return ecarts;
+}
+
+/** A' (03/11/2026) : retire du corps toutes les cases de repartition (intervenantsEntree[..]
+ *  et intervenantsSortie[..]) et rend leurs noms. Rien d'autre n'est touche. */
+function retirerLignesRepartition(corps) {
+  const retirees = [...new Set([...corps.keys()].filter((k) => /^intervenants(Entree|Sortie)\[/.test(k)))];
+  for (const k of retirees) corps.delete(k);
+  return retirees;
+}
+
 const ASSISTANTS_HEKTOR = {
   compromise: {
     coquille: "annonce-SuiviVente-compromis-createCompromis",
@@ -13747,6 +13818,24 @@ async function submitHektorAssistantTransaction(job, annonceId, target, config, 
   // La reprise est REELLE seulement si l'identifiant est la. Tout ce qui suit
   // s'y accroche : sans identifiant, on cree, et on cree comme avant.
   const enReprise = Boolean(idRepris);
+
+  // ═══ B (03/11/2026) : EN MODIFICATION, SEUL UN CHAMP TOUCHE PART ═══
+  //
+  // CE QUI S'EST PASSE, compromis 50039 (annonce 62323), 02/11 : la charge portait
+  // `amount` = 100 000, PRE-REMPLI et non touche (`champs_touches` = seller_fees +
+  // net_seller_price). Le rejeu de 23:28 l'a pose sur le 95 000 que Frederic venait de
+  // saisir chez Hektor. La liste `champs_touches` existe depuis le Point E (23/10) et
+  // ses cles sont CELLES QUE LIT `affirme` (verifie dans App.tsx l. 22250-22549).
+  // ⚠ Une charge SANS la liste (ecran d'avant) garde le comportement d'avant.
+  // Audit : notice/AUDIT_PILOTAGE_GLOBAL_2026-11-02.md § 20 quater et quinquies.
+  const ALIAS_TOUCHES = { date_signature_acte: "signature_date", date_vente: "transaction_date" };
+  const listeTouches = enReprise && payload && Array.isArray(payload.champs_touches)
+    ? payload.champs_touches.map((c) => String(c)) : null;
+  const touche = (cle) => !listeTouches || listeTouches.includes(ALIAS_TOUCHES[cle] || cle);
+  // A' : la commission a-t-elle ete changee dans cette modification ?
+  const valeurCharge = (cle) => String((payload && payload[cle]) == null ? "" : payload[cle]).trim();
+  const commissionTouchee = enReprise
+    && ["seller_fees", "buyer_fees", "buyer_fees_rate"].some((c) => touche(c) && valeurCharge(c) !== "");
   // Les champs qu'on laisse DELIBEREMENT a Hektor. L'arbitre ne doit pas les
   // compter comme des echecs -- on ne les a pas ecrits.
   const nonVerifiables = [];
@@ -13786,6 +13875,50 @@ async function submitHektorAssistantTransaction(job, annonceId, target, config, 
       acquereurs_a_l_ouverture: lireIdentifiantsTableauCache(etat.contenu, RE_ACQUEREURS),
       mandants_a_l_ouverture: lireIdentifiantsTableauCache(etat.contenu, RE_MANDANTS),
     });
+
+  // ═══ B2 (03/11/2026) : UN REJEU NE REECRIT PAS CE QU'UN HUMAIN A CHANGE ENTRE-TEMPS ═══
+  //
+  // CE QUI S'EST PASSE, compromis 50039, 02/11 : 1er essai a 23:10, bloque. Entre 23:16
+  // et 23:28 Frederic corrige la fiche DANS HEKTOR (prix 95 000). Le rejeu de 23:28
+  // repart avec la PHOTO de 23:10 et repose prix, net et honoraires par-dessus -- net
+  // et honoraires etaient TOUCHES, donc B seul ne l'aurait pas evite. Meme chose le
+  // 13/09 sur le bien d'essai 24933 (183 000 repose 6 min apres un 184 000).
+  // LE TEMOIN : ce que Hektor rend a l'ouverture du PREMIER essai, avant toute
+  // ecriture. Au rejeu, si un champ rendu a change ET ne vaut pas deja ce qu'on veut
+  // envoyer (un essai precedent qui aurait enregistre), quelqu'un est passe : on
+  // s'arrete, sans rejeu. On compare le FORMULAIRE au FORMULAIRE -- jamais au
+  // registre, dont le net differe du formulaire par construction (mesure du 08/09).
+  if (enReprise) {
+    const temoin = {};
+    for (const nom of CHAMPS_TEMOIN_REPRISE) {
+      const v = String(htmlInputValue(etat.contenu, nom) || "").trim();
+      if (v) temoin[nom] = v;
+    }
+    const essai = Number(job.attempt_count || 0);
+    let premier = null;
+    if (essai > 1) {
+      const lignes = await supabaseRequest(
+        `app_console_job_log?job_id=eq.${encodeURIComponent(job.id)}&step=eq.hektor_reprise_temoin`
+        + "&select=payload_preview,created_at&order=created_at.asc&limit=1", { method: "GET" }).catch(() => null);
+      const brut = Array.isArray(lignes) && lignes[0] ? safeJsonParse(lignes[0].payload_preview) : null;
+      premier = brut && brut.valeurs && typeof brut.valeurs === "object" ? brut.valeurs : null;
+    }
+    await logJob(job.id, "hektor_reprise_temoin", "done",
+      `Temoin de reprise : ce que Hektor rend a l'ouverture (essai ${essai || 1})`,
+      { hektor_annonce_id: annonceId, essai: essai || 1, valeurs: temoin,
+        compare_au_premier: essai > 1 ? Boolean(premier) : null });
+    if (premier) {
+      const ecarts = ecartsTemoinReprise(premier, temoin, valeursVouluesReprise(payload, touche));
+      if (ecarts.length) {
+        await logJob(job.id, "hektor_reprise_temoin", "error",
+          "La fiche a change chez Hektor depuis le premier essai : on n'ecrit RIEN", {
+            hektor_annonce_id: annonceId, ecarts });
+        throw new Error(`${MARQUE_REFUS_ETAT} La transaction a ete modifiee dans Hektor depuis votre saisie `
+          + `(${ecarts.map((e) => `${e.champ} ${e.au_premier_essai} -> ${e.maintenant}`).join(", ")}). `
+          + "Rien n'a ete envoye. Verifiez la fiche, puis refaites la modification si elle est toujours voulue.");
+      }
+    }
+  }
 
   // Le formulaire rendu a chaque etape. Il portait deja tout ce qu'on cherche ;
   // on ne le jette plus. Rien n'est envoye a Hektor pour l'obtenir.
@@ -13873,6 +14006,30 @@ async function submitHektorAssistantTransaction(job, annonceId, target, config, 
       corps.append(cle, valeur);
     }
 
+    // ═══ A' (03/11/2026) : COMMISSION CHANGEE -> LES LIGNES DE REPARTITION NE SONT PAS REPOSTEES ═══
+    //
+    // La page des commissions rend les parts ENREGISTREES, en euros HT, calculees sur
+    // l'ANCIENNE commission (50039 : 38 750 = 93 000 / 1,2 x 50 %) ; leur propre page ne
+    // les recalcule qu'en JavaScript, quand on retape un pourcentage. Les reposter telles
+    // quelles avec une commission plus basse depasse le total, et Hektor refuse d'avancer
+    // -- en silence (il reste a l'etape 2). Mesure : 280 ventes 2026 sur 287 en portent.
+    // DECISION DE FREDERIC (03/11) : « les supprimer sur Hektor, pas sur l'app ». C'est la
+    // suite de 06bd38b (14/09) : la repartition est une donnee de l'APP
+    // (app_affaire_repartition, des pourcentages), elle n'est pas touchee ici.
+    // ⚠ Seulement en MODIFICATION, et seulement si la commission est TOUCHEE : une
+    //   modification qui ne change pas la commission repose les lignes comme avant.
+    if (commissionTouchee) {
+      const retirees = retirerLignesRepartition(corps);
+      if (retirees.length) {
+        await logJob(job.id, "hektor_commission", "running",
+          `Commission modifiee : ${retirees.length} champ(s) de repartition NON reposte(s) a l'etape `
+          + `${pas.de} -> ${pas.vers} (la repartition de l'app ne change pas)`, {
+            hektor_annonce_id: annonceId, modules: pas.modules.join("+"),
+            personnes: [...new Set(retirees.map((k) => k.replace(/^(intervenants\w+\[\d+\]).*$/, "$1")))],
+          });
+      }
+    }
+
     // Puis CE QUE L'APP AFFIRME -- et seulement si elle a quelque chose a dire.
     const poser = (cle, valeur) => {
       const v = String(valeur == null ? "" : valeur).trim();
@@ -13885,6 +14042,8 @@ async function submitHektorAssistantTransaction(job, annonceId, target, config, 
       // Hisse ici le 08/09 au soir : la VENTE en avait besoin autant que le
       // compromis, et ne l'avait pas.
       const affirme = (cle) => {
+        // B (03/11) : en modification, un champ non touche n'est pas une intention.
+        if (!touche(cle)) return "";
         const v = payload ? payload[cle] : null;
         return v == null ? "" : String(v).trim();
       };
@@ -14315,7 +14474,10 @@ async function submitHektorAssistantTransaction(job, annonceId, target, config, 
       throw new Error(
         `Assistant ${config.label} : Hektor n'a pas avance de l'etape ${pas.de} a ${pas.vers} `
         + `(il rend encore ${etat.index}). Rien n'a ete enregistre.`
-        + (corps.getAll("acquereurs[]").length ? ""
+        // C (03/11) : la piste « acquereur » ne vaut qu'a l'etape 0 -- la page des
+        //   commissions n'en porte aucun, c'est normal (la piste du journal le savait
+        //   depuis le 13/09, le message non : il a egare la recherche le 02/11).
+        + (pas.de !== "0" || corps.getAll("acquereurs[]").length ? ""
            : " Aucun acquereur n'a ete envoye, et l'assistant de la vente l'exige."));
     }
 
