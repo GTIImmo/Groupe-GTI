@@ -682,3 +682,19 @@ session sur ses lignes) ; (3) poser la fonction ; (4) interrupteur `contacts_cou
 (`supabase/patch_couple_phase3e_interrupteur_modif_2026-11-02.sql`) ; (5) essai réel sur le couple fictif — par l'écran dès que sa nature
 est « couple » et son résumé « nommé » (la nuit du 02→03/11 : aujourd'hui il dit encore « aucun ») ; (6) supprimer le couple fictif.
 
+## 29. PIÈCE E POSÉE, ET LE WORKER CORRIGÉ PROUVÉ EN RÉEL *(02/11 ~11:25, « oui j'ai déjà restart les worker »)*
+
+- **Redémarrage** des 4 services par Frédéric : processus nés à **11:21:54-56**, APRÈS l'écriture du correctif (11:10:24) → actif. (Les lignes
+  Youtrust non commitées de l'autre session étaient déjà chargées depuis le redémarrage de 10:27 et dorment : `signature_youtrust = off`.)
+- **Posé par moi** : la fonction `app_edit_conjoint_optimistic` (migration `couple_phase3e_conjoint_optimiste_2026_11_02`) → existe,
+  authenticated l'exécute, anon non ; l'interrupteur **`contacts_couples_modif = 'admin'`** (10:22:39 UTC). File : 0.
+- **Essai réel du worker corrigé** (même travail que celui qui avait échoué, sur 20000031, `spouse_first_name = DeuxWorker`, SANS
+  `person_type` : le worker doit déduire le couple du formulaire relu) → travail `ae3b3505…` **`done`**, `couple: true`,
+  `conjoint_prenom: DeuxWorker` ; relecture de la première ET de la seconde (`sync_job_conjoint` → 20000032) ; chez nous, **20000032 porte
+  « DeuxWorker »**. ⭐ La chaîne écran → base → worker → Hektor → relecture est prouvée, sauf l'écran lui-même (voir plus bas).
+- Vu au passage : après la relecture, 20000032 n'est plus marqué « conjoint ». Ce n'est pas un défaut : l'étape « conjoint » de la relecture
+  (`refresh_contact_inproc.py`) ne marque une seconde fiche que si la PREMIÈRE est envoyée à l'app ; le couple fictif n'a aucun bien, sa
+  première n'est pas éligible. Pour un vrai couple, la marque est reposée à la seconde.
+- ⏭ **RESTE** : l'essai PAR L'ÉCRAN (« Modifier la fiche » → partie Conjoint) dès que la nuit aura posé `nature = couple` et un résumé
+  « nommé » sur 20000031 (03/11 matin) ; puis cran « on » (accord) ; puis supprimer le couple fictif 20000031/32 ↔ 606104/05.
+
