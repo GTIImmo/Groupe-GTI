@@ -698,3 +698,17 @@ est « couple » et son résumé « nommé » (la nuit du 02→03/11 : aujourd'h
 - ⏭ **RESTE** : l'essai PAR L'ÉCRAN (« Modifier la fiche » → partie Conjoint) dès que la nuit aura posé `nature = couple` et un résumé
   « nommé » sur 20000031 (03/11 matin) ; puis cran « on » (accord) ; puis supprimer le couple fictif 20000031/32 ↔ 606104/05.
 
+## 30. L'ONGLET DU CONJOINT OUVRE « MODIFIER LE CONJOINT » ; ET « COMPLÉTER LE CONJOINT » : LES CAS *(02/11 ~11:45)*
+
+- **Fait (6143fe0, non poussé)** : depuis l'onglet du conjoint, le crayon ouvre la fenêtre de la fiche principale titrée **« Modifier le
+  conjoint »**, placée directement sur la partie « Conjoint ». Build vert.
+- **Compléter le conjoint — les cas (couples actifs de l'app, notaires exclus), lecture seule** :
+  · **nom recopié, sans prénom : 1 596** — la seconde fiche existe et porte le nom : **c'est DÉJÀ une modification** (pièce E) : ajouter le
+    prénom par la partie Conjoint ;
+  · **case vide CONNUE de Hektor comme seconde fiche : 975** (`couple_json.etat = vide`) — le formulaire de la première porte un bloc `_m2`
+    vide : l'écrire DEVRAIT remplir la seconde existante (comme E2) — **NON PROUVÉ** (§8 : « seuls les essais diront ») ;
+  · **case vide rattachée par NOTRE nuit : 1 066 + 462** (`etat = aucun` ou sans résumé) — chez Hektor, cette case n'est PAS la seconde de la
+    première (lien absent ou cassé) : écrire le bloc `_m2` risquerait de CRÉER une nouvelle fiche à côté de la case → **à ne pas faire sans essai** ;
+  · **couple sans seconde fiche : 60**, **couple sans lien chez Hektor : 123** — le second cas n'est probablement pas un couple chez Hektor
+    (« Transformer en couple » a fait disparaître une fiche à l'essai E6) → hors de portée pour l'instant.
+
