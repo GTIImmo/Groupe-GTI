@@ -785,3 +785,24 @@ est « couple » et son résumé « nommé » (la nuit du 02→03/11 : aujourd'h
 - ⏭ RESTE : premier usage réel surveillé (la seconde se remplit, aucune fiche ne naît) ; cran « on » de `contacts_couples_modif` (accord) ;
   essai par l'écran de « Modifier le conjoint » sur le couple fictif (03/11, après la nuit) puis suppression du couple fictif.
 
+## 35. LE RESTE, FAIT *(02/11 ~13:00-13:50, « vas y fais le reste »)*
+
+- **Couple fictif préparé sans attendre la nuit** : `nature_des_fiches.py` (table locale entière, comme la nuit — elle porte déjà les
+  correctifs notaires et rattachement), `conjoints_des_couples.py --contact-id 20000031`, push des 2 contacts → 20000031 « couple », résumé « nommé ».
+- **Essai PAR L'ÉCRAN (Chrome de Frédéric)** : fiche 20000031 → onglet du conjoint → crayon → fenêtre « **Modifier le conjoint** », partie
+  « Conjoint · fiche 20000032 » pré-remplie → prénom « DeuxEcran » → Enregistrer. **À la seconde** : 20000032 et le résumé portent « DeuxEcran »
+  (`app_edit_conjoint_optimistic`) ; `app_contact_pending` posé (envoi différé 10 min, `spouse_first_name` dans les champs).
+  **12:44 UTC** : travail `update_hektor_contact` `done`, `couple: true`, « DeuxEcran » envoyé par la place 2 ; attente vidée. **Relecture chez
+  Hektor de 20000032 (12:46:18) → « DeuxEcran »** : Hektor l'a. ⭐ **La chaîne ENTIÈRE est prouvée par l'écran.**
+  ⚠ La relecture automatique de la SECONDE fiche ne s'est pas déclenchée : le worker la cherche par `couple_role = conjoint`, absent sur ce couple
+  fictif (première non éligible). Pour une case VIDE complétée (rôle `menage_resolu`), même chose : la seconde attendra la nuit (le résumé, lui,
+  est écrit à la seconde). Amélioration possible : chercher par `couple_json.conjoint.id` (worker → redémarrage). Non fait.
+- **Couple fictif SUPPRIMÉ par l'app** : 20000031 « Supprimer (tout le foyer) » → `done`, Hektor supprime ; 20000032 → « n'existe déjà plus chez
+  Hektor » (**cascade confirmée une 2e fois**), ménage fait. **0 reste** Supabase, couche locale, miroir. Sauvegarde : dossier de travail,
+  `sauvegarde_essai_modif_20000031_32_20261102.json`. File : 0.
+- **Ouvert à tout le monde** : `contacts_couples_modif = 'on'` (12:49:57 UTC). Les trois crans des couples sont sur « on » (annuaire, fiche, modif).
+- ⚠ **Réserve, NON MESURÉE, antérieure à ce chantier** : toute modification de contact par l'app envoie `send_rgpd_email: true` →
+  `_email_rgpd=1` ajouté au formulaire (`applyHektorContactIdentityValues`), et `contact_kind: acquereur` par défaut. Le formulaire d'ÉDITION d'un
+  couple chez Hektor (54 champs lus le 02/11) ne contient PAS `_email_rgpd` : probablement ignoré en modification — à vérifier un jour.
+- ⏭ Premier « Compléter le conjoint » réel : à SURVEILLER (la seconde se remplit, aucune fiche ne naît).
+
