@@ -605,3 +605,18 @@
    Plusieurs pastilles côte à côte, chacune à sa couleur (--rc posé en ligne) ; gris = offre refusée, compromis annulé. */
 .fa-contact-v2 .fa-cx-lk-roles { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 5px; }
 .fa-contact-v2 .fa-cx-lk-role.gris { opacity: .85; }
+
+/* COUPLES, piece D (02/11/2026) -- maquette validee le 30/10 : la fiche d'un couple (interrupteur
+   contacts_couples_fiche). Tuile decalee derriere l'avatar, pastille « Couple » (orange « conjoint a
+   completer » : sur la FICHE seulement, decision du 31/10), deux onglets qui pilotent les coordonnees. */
+#fa-cx-root .fa-cx-av.is-couple{box-shadow:8px -8px 0 -1px rgba(197,0,95,.20);}
+#fa-cx-root .fa-cx-couple-pill{display:inline-flex;align-items:center;gap:5px;margin-top:6px;font-size:11.5px;font-weight:700;color:#8c0044;background:#fdf0f6;border:1px solid #f3cadd;padding:3px 9px;border-radius:99px;width:fit-content;max-width:100%;}
+#fa-cx-root .fa-cx-couple-pill svg{width:13px;height:13px;flex:none;}
+#fa-cx-root .fa-cx-couple-pill.incomplet{color:#8a5a00;background:#fdf3e6;border-color:#f0d9b0;}
+#fa-cx-root .fa-cx-foyer{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;margin:4px 0 14px;padding:4px;border-radius:12px;background:rgba(34,35,35,.05);}
+#fa-cx-root .fa-cx-foyer button{font:inherit;text-align:left;border:0;border-radius:9px;padding:8px 10px;background:transparent;color:#3b4143;cursor:pointer;display:flex;flex-direction:column;gap:1px;min-height:44px;min-width:0;}
+#fa-cx-root .fa-cx-foyer button b{font-size:13.5px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+#fa-cx-root .fa-cx-foyer button i{font-style:normal;font-size:11px;font-weight:600;color:#6b7172;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+#fa-cx-root .fa-cx-foyer button.on{background:#fff;color:#8c0044;box-shadow:0 1px 4px rgba(34,35,35,.12);}
+#fa-cx-root .fa-cx-foyer button.vide{cursor:default;}
+#fa-cx-root .fa-cx-foyer button.vide b{color:#8a5a00;}

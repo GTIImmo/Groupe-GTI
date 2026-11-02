@@ -87,6 +87,7 @@ import {
   createGenerateMandatPdfJob,
   loadAppSettingActive,
   loadAppSettingValeur,
+  loadContactCoupleInfo,
   bienEstDansLesAnnonces,
   loadBienHistoriquePourStatut,
   type RegistreDossierRow,
@@ -263,7 +264,7 @@ import { compterAnnoncesAilleurs, type AnnoncesAilleurs } from './lib/api'
 import { bvs, bvt } from './lib/bienvuTexte'
 import { MENTION_AVENANT, MENTION_MANDAT, repereHtml, repereSignature, zoneMentionHtml } from './lib/signatureAnchors'
 import { sansCasesVides } from './lib/mandantsDocument'
-import { coupleAffiche } from './lib/coupleAffichage'
+import { coupleAffiche, conjointNommeId, foyerAffiche, unirLiensDuFoyer, type FoyerAffiche } from './lib/coupleAffichage'
 
 type DetailContact = {
   id: string
@@ -45433,7 +45434,24 @@ function ContactDetailPopupBase(props: {
 // Lot 0 = échafaudage : coquille scopée .fa-contact-v2 (overlay + rail + hero + grille
 // vide). Les rubriques (recherches, annonces liées, activité, à faire…) sont branchées
 // aux lots suivants. Rien ici ne s'affiche tant que VITE_APP_CONTACT_V2_ENABLED est OFF.
-function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0]) {
+// COUPLES, pièce D (02/11/2026) : le foyer que la fiche montre, posé par FicheContactCouple.
+type FoyerDeLaFiche = {
+  affiche: FoyerAffiche
+  /** La seconde fiche NOMMÉE, en lecture seule (null = case vide ou aucune : onglet « à compléter »). */
+  conjoint: AppContact | null
+  ongletInitial: 1 | 2
+}
+
+function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0] & { foyer?: FoyerDeLaFiche | null }) {
+  // ── COUPLES, pièce D : l'onglet ne pilote QUE les coordonnées affichées ; tout le reste (boutons,
+  //    recherches, activité) reste celui de la fiche principale `props.contact` (décision du 02/11). ──
+  const foyer = props.foyer ?? null
+  const [ongletFoyer, setOngletFoyer] = useState<1 | 2>(foyer?.ongletInitial ?? 1)
+  useEffect(() => {
+    setOngletFoyer(foyer?.ongletInitial ?? 1)
+  }, [props.contact.hektor_contact_id, foyer?.ongletInitial, foyer?.conjoint?.hektor_contact_id])
+  const personneAffichee = foyer && ongletFoyer === 2 && foyer.conjoint ? foyer.conjoint : props.contact
+  const surLeConjoint = personneAffichee !== props.contact
   // ── États dupliqués depuis ...Base (sous-ensemble requis par la colonne gauche + modales) ──
   const [editing, setEditing] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -45526,6 +45544,12 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
   const contactPhone = (props.contact.phone_primary ?? '').trim()
   const contactPhoneSecondary = (props.contact.phone_secondary ?? '').trim()
   const contactAddress = (props.contact.adresse ?? '').trim()
+  // COUPLES, pièce D : les coordonnées MONTRÉES suivent l'onglet (personne 1 = les mêmes qu'avant).
+  const coordPhone = (personneAffichee.phone_primary ?? '').trim()
+  const coordPhoneSecondary = (personneAffichee.phone_secondary ?? '').trim()
+  const coordEmail = (personneAffichee.email ?? '').trim()
+  const coordAddress = (personneAffichee.adresse ?? '').trim()
+  const coordLocation = [personneAffichee.code_postal, personneAffichee.ville].filter(Boolean).join(' ') || '-'
   const negotiatorInitials = userInitials(props.contact.commercial_nom) || 'GTI'
   const isArchived = contactArchiveLabel(props.contact) === 'Archive'
   // ⑦-1 : l'interrupteur d'archivage, partage avec la fiche Base (meme code).
@@ -46120,7 +46144,7 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
               </button>
 
               <div className="fa-cx-hero">
-                <div className="fa-cx-av" aria-hidden="true">
+                <div className={`fa-cx-av${foyer ? ' is-couple' : ''}`} aria-hidden="true">
                   <span className="fa-cx-ty-ic fa-cx-ty-acq"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round"><circle cx="10.5" cy="10.5" r="7" /><path d="M20 20l-3.8-3.8" /><path d="M7.7 11.6 10.5 9.2l2.8 2.4" /><path d="M8.7 11.2v3.1h3.6v-3.1" /></svg></span>
                   <span className="fa-cx-ty-ic fa-cx-ty-acheteur"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><circle cx="7.5" cy="15.5" r="4.2" /><path d="M10.5 12.5 20 3" /><path d="M17 6l2.4 2.4M14 9l1.9 1.9" /></svg></span>
                   <span className="fa-cx-ty-ic fa-cx-ty-vendeur"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l7-6 7 6" /><path d="M5 10v9h9v-9" /><path d="M8.5 19v-4.5h3V19" /><rect x="15.5" y="4" width="6" height="4.2" rx="1" /><path d="M18.5 8.2V12" /></svg></span>
@@ -46140,8 +46164,38 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
                   ) : (
                     <span className="fa-cx-type-pill">{dominantTypeLabel}</span>
                   )}
+                  {foyer ? (
+                    <span className={`fa-cx-couple-pill${foyer.affiche.incomplet ? ' incomplet' : ''}`}>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="8.5" cy="8" r="3.2" /><circle cx="16" cy="9" r="2.8" /><path d="M2.8 19c.6-3.1 3-4.9 5.7-4.9s5.1 1.8 5.7 4.9" /><path d="M14 14.5c.6-.3 1.3-.4 2-.4 2.3 0 4.3 1.6 4.9 4.5" /></svg>
+                      {foyer.affiche.etiquette}
+                    </span>
+                  ) : null}
                 </div>
               </div>
+
+              {foyer ? (
+                <div className="fa-cx-foyer" role="tablist" aria-label="Les deux personnes du couple">
+                  {foyer.affiche.onglets.map((onglet, index) => {
+                    const numero = (index + 1) as 1 | 2
+                    const actif = ongletFoyer === numero
+                    return (
+                      <button
+                        key={`foyer-onglet-${numero}`}
+                        type="button"
+                        role="tab"
+                        aria-selected={actif}
+                        aria-disabled={onglet.vide || undefined}
+                        className={`${actif ? 'on' : ''}${onglet.vide ? ' vide' : ''}`}
+                        title={onglet.vide ? 'Conjoint à compléter (pas encore de fiche)' : numero === 2 ? 'Coordonnées du conjoint (lecture seule)' : undefined}
+                        onClick={() => { if (!onglet.vide) setOngletFoyer(numero) }}
+                      >
+                        <b>{onglet.titre}</b>
+                        <i>{onglet.sousTitre}</i>
+                      </button>
+                    )
+                  })}
+                </div>
+              ) : null}
 
               <div className="fa-cx-actions">
                 <button className="fa-cx-act primary" type="button" data-tip="Créer un RDV" aria-label="Créer un RDV" onClick={handleOpenCreateGoogleContactAgenda}>
@@ -46164,12 +46218,12 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
                       </button>
                       {props.canManageContacts ? (
                         <button className="fa-cx-menu-item" type="button" disabled={archivage.pending} onClick={() => { setContactActionsOpen(false); void archivage.basculer() }}>
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7}><path d="M3 7h18v4H3z" /><path d="M5 11v9h14v-9" /><path d="M10 15h4" /></svg>{archivage.pending ? 'Patientez…' : archivage.libelle}
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7}><path d="M3 7h18v4H3z" /><path d="M5 11v9h14v-9" /><path d="M10 15h4" /></svg>{archivage.pending ? 'Patientez…' : archivage.libelle}{foyer && !archivage.pending ? ' (tout le foyer)' : ''}
                         </button>
                       ) : null}
                       {props.canDeleteContacts ? (
                         <button className="fa-cx-menu-item danger" type="button" onClick={() => { setContactActionsOpen(false); setDeleteOpen(true) }}>
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13" /></svg>Supprimer
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13" /></svg>{foyer ? 'Supprimer (tout le foyer)' : 'Supprimer'}
                         </button>
                       ) : null}
                     </div>
@@ -46178,27 +46232,34 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
               </div>
 
               <div className="fa-cx-coords">
-                {contactPhone ? (
-                  <a className="fa-cx-coord" href={`tel:${contactPhone}`} title="Appeler (mobile)">
+                {coordPhone ? (
+                  <a className="fa-cx-coord" href={`tel:${coordPhone}`} title="Appeler (mobile)">
                     <span className="fa-cx-coord-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7}><path d="M4 5a2 2 0 0 1 2-2h2.5l1.5 4-2 1.5a12 12 0 0 0 5 5l1.5-2 4 1.5V18a2 2 0 0 1-2 2A15 15 0 0 1 4 5Z" /></svg></span>
-                    <div className="fa-cx-coord-bd"><div className="fa-cx-coord-k">Mobile</div><div className="fa-cx-coord-v">{contactPhone}</div></div>
+                    <div className="fa-cx-coord-bd"><div className="fa-cx-coord-k">Mobile</div><div className="fa-cx-coord-v">{coordPhone}</div></div>
                   </a>
                 ) : null}
-                {contactPhoneSecondary ? (
-                  <a className="fa-cx-coord" href={`tel:${contactPhoneSecondary}`} title="Appeler (fixe)">
+                {coordPhoneSecondary ? (
+                  <a className="fa-cx-coord" href={`tel:${coordPhoneSecondary}`} title="Appeler (fixe)">
                     <span className="fa-cx-coord-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7}><path d="M4 5a2 2 0 0 1 2-2h2.5l1.5 4-2 1.5a12 12 0 0 0 5 5l1.5-2 4 1.5V18a2 2 0 0 1-2 2A15 15 0 0 1 4 5Z" /></svg></span>
-                    <div className="fa-cx-coord-bd"><div className="fa-cx-coord-k">Fixe</div><div className="fa-cx-coord-v">{contactPhoneSecondary}</div></div>
+                    <div className="fa-cx-coord-bd"><div className="fa-cx-coord-k">Fixe</div><div className="fa-cx-coord-v">{coordPhoneSecondary}</div></div>
                   </a>
                 ) : null}
-                {contactEmail ? (
+                {coordEmail && surLeConjoint ? (
+                  // Le compositeur d'e-mail de la fiche écrit à la personne PRINCIPALE : pour le conjoint,
+                  // un simple lien (lecture seule, décision du 02/11).
+                  <a className="fa-cx-coord" href={`mailto:${coordEmail}`} title="Écrire un email">
+                    <span className="fa-cx-coord-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7}><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" /></svg></span>
+                    <div className="fa-cx-coord-bd"><div className="fa-cx-coord-k">Email</div><div className="fa-cx-coord-v">{coordEmail}</div></div>
+                  </a>
+                ) : coordEmail ? (
                   <button className="fa-cx-coord" type="button" title="Écrire un email" onClick={() => setContactEmailComposerOpen(true)}>
                     <span className="fa-cx-coord-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7}><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" /></svg></span>
-                    <div className="fa-cx-coord-bd"><div className="fa-cx-coord-k">Email</div><div className="fa-cx-coord-v">{contactEmail}</div></div>
+                    <div className="fa-cx-coord-bd"><div className="fa-cx-coord-k">Email</div><div className="fa-cx-coord-v">{coordEmail}</div></div>
                   </button>
                 ) : null}
                 <div className="fa-cx-coord static">
                   <span className="fa-cx-coord-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7}><path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11Z" /><circle cx="12" cy="10" r="2.5" /></svg></span>
-                  <div className="fa-cx-coord-bd"><div className="fa-cx-coord-k">Adresse</div><div className="fa-cx-coord-v">{contactAddress || contactLocation}</div></div>
+                  <div className="fa-cx-coord-bd"><div className="fa-cx-coord-k">Adresse</div><div className="fa-cx-coord-v">{coordAddress || coordLocation}</div></div>
                 </div>
               </div>
 
@@ -46790,8 +46851,95 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
 // (App.tsx contexte annonce, ContactsScreen desktop, MobileContactCards) soient inchangés.
 function ContactDetailPopup(props: Parameters<typeof ContactDetailPopupBase>[0]) {
   return APP_CONTACT_V2_ENABLED
-    ? <ContactDetailPopupV2 {...props} />
+    ? <FicheContactCouple {...props} />
     : <ContactDetailPopupBase {...props} />
+}
+
+// COUPLES, pièce D (02/11/2026) -- l'interrupteur `contacts_couples_fiche` (app_setting), trois crans comme
+// celui de l'annuaire : 'admin' = les admins seuls, 'on' = tout le monde, absent ou autre = la fiche d'avant.
+// Lu UNE fois par chargement de page (toutes les fiches le partagent) : un changement de cran se voit au
+// rechargement. Une lecture ratée = éteint.
+let cranCouplesFichePromesse: Promise<string | null> | null = null
+function useCouplesFicheVisible(profileRole?: string | null): boolean {
+  const [cran, setCran] = useState<string | null>(null)
+  useEffect(() => {
+    let annule = false
+    if (!cranCouplesFichePromesse) cranCouplesFichePromesse = loadAppSettingValeur('contacts_couples_fiche')
+    void cranCouplesFichePromesse.then((valeur) => { if (!annule) setCran(valeur) })
+    return () => { annule = true }
+  }, [])
+  return cran === 'admin' ? profileRole === 'admin' : ['on', 'true', '1', 'yes'].includes(cran ?? '')
+}
+
+// COUPLES, pièce D (02/11/2026) -- la fiche d'un couple montre LE FOYER, d'où qu'on l'ouvre.
+//  · ouverte sur la PREMIÈRE fiche (nature « couple ») : on charge le conjoint nommé (lecture seule) et ses
+//    liens, ajoutés à ceux de la principale sans doublon ;
+//  · ouverte sur la SECONDE fiche nommée (`couple_role = 'conjoint'`, depuis la recherche ou un bien) : on
+//    montre la fiche PRINCIPALE, ses recherches et les liens des deux, sur l'onglet du conjoint. Les boutons
+//    agissent donc sur la principale -- chez Hektor, archiver ou supprimer la première emporte le foyer.
+//  · tout le reste (personne seule, interrupteur éteint, lecture ratée) : la fiche d'avant, à l'identique.
+// ⚠ En attendant la lecture, la fiche d'avant s'affiche : la bascule se fait sans rien perdre.
+type FoyerCharge = {
+  pour: string
+  vue: FoyerDeLaFiche
+  /** Fiche ouverte sur le conjoint : la principale, ses liens et ses recherches. */
+  principal: { contact: AppContact; relations: AppContactRelation[]; searches: AppContactSearch[] } | null
+  /** Fiche ouverte sur la principale : les liens du conjoint. */
+  liensDuConjoint: AppContactRelation[]
+}
+
+function FicheContactCouple(props: Parameters<typeof ContactDetailPopupBase>[0]) {
+  const visible = useCouplesFicheVisible(props.profileRole)
+  const id = String(props.contact.hektor_contact_id ?? '').trim()
+  const [foyer, setFoyer] = useState<FoyerCharge | null>(null)
+  useEffect(() => {
+    setFoyer(null)
+    if (!visible || !id) return
+    let annule = false
+    const charger = async (): Promise<FoyerCharge | null> => {
+      const info = await loadContactCoupleInfo(id)
+      if (!info) return null
+      const principalId = String(info.hektor_couple_contact_id ?? '').trim()
+      if (info.couple_role === 'conjoint' && principalId && principalId !== id) {
+        const [principal, infoPrincipal] = await Promise.all([loadContactById(principalId), loadContactCoupleInfo(principalId)])
+        if (!principal || !infoPrincipal) return null
+        const affiche = foyerAffiche({ ...principal, nature_fiche: infoPrincipal.nature_fiche, marital_status: infoPrincipal.marital_status }, props.contact)
+        if (!affiche) return null
+        const [relations, searches] = await Promise.all([
+          loadContactRelations(principal.hektor_contact_id),
+          loadContactSearches(principal.hektor_contact_id),
+        ])
+        return { pour: id, vue: { affiche, conjoint: props.contact, ongletInitial: 2 }, principal: { contact: principal, relations, searches }, liensDuConjoint: [] }
+      }
+      if (info.nature_fiche !== 'couple') return null
+      const conjointId = conjointNommeId(info.couple_json)
+      const [conjoint, liensDuConjoint] = conjointId
+        ? await Promise.all([loadContactById(conjointId), loadContactRelations(conjointId)])
+        : [null, [] as AppContactRelation[]]
+      const affiche = foyerAffiche({ ...props.contact, nature_fiche: info.nature_fiche, marital_status: info.marital_status }, conjoint)
+      if (!affiche) return null
+      return { pour: id, vue: { affiche, conjoint, ongletInitial: 1 }, principal: null, liensDuConjoint }
+    }
+    charger()
+      .then((resultat) => { if (!annule) setFoyer(resultat) })
+      .catch((error) => { console.warn('Foyer du contact illisible : fiche d\'avant', error) })
+    return () => { annule = true }
+    // Rechargé au changement de fiche seulement (pas à chaque rafraîchissement des liens de l'écran).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible, id])
+  if (!foyer || foyer.pour !== id) return <ContactDetailPopupV2 {...props} />
+  if (foyer.principal) {
+    return (
+      <ContactDetailPopupV2
+        {...props}
+        contact={foyer.principal.contact}
+        relations={unirLiensDuFoyer(foyer.principal.relations, props.relations)}
+        searches={foyer.principal.searches}
+        foyer={foyer.vue}
+      />
+    )
+  }
+  return <ContactDetailPopupV2 {...props} relations={unirLiensDuFoyer(props.relations, foyer.liensDuConjoint)} foyer={foyer.vue} />
 }
 
 function ContactsScreen(props: {

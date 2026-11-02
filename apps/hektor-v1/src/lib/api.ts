@@ -3594,6 +3594,31 @@ export async function loadContactById(contactId: string): Promise<AppContact | n
   return data ? normalizeContactRow(data as unknown as AppContact) : null
 }
 
+/** COUPLES, pièce D (02/11/2026) : ce que la FICHE doit savoir du couple d'un contact déjà chargé
+ *  (lu seulement quand l'interrupteur `contacts_couples_fiche` est allumé ; colonnes du patch 3-B).
+ *  Une ligne, par NOTRE numéro (le contact est déjà chargé : même règle que loadContactRelations). */
+export type ContactCoupleInfo = {
+  hektor_contact_id: string
+  nature_fiche: string | null
+  couple_json: AppContact['couple_json']
+  couple_role: string | null
+  hektor_couple_contact_id: string | null
+  marital_status: string | null
+}
+
+export async function loadContactCoupleInfo(contactId: string): Promise<ContactCoupleInfo | null> {
+  if (!hasSupabaseEnv || !supabase) return null
+  const id = String(contactId ?? '').trim()
+  if (!id) return null
+  const { data, error } = await supabase
+    .from(contactsCurrentView)
+    .select('hektor_contact_id,nature_fiche,couple_json,couple_role,hektor_couple_contact_id,marital_status')
+    .eq('hektor_contact_id', id)
+    .maybeSingle()
+  if (error) throw new Error(error.message)
+  return (data as ContactCoupleInfo | null) ?? null
+}
+
 async function countContacts(filters: AppFilters, patch: Partial<AppFilters> = {}, extra?: (query: any) => any) {
   if (!hasSupabaseEnv || !supabase) return 0
   let query = applyContactFiltersToQuery(
