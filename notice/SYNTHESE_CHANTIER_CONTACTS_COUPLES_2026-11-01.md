@@ -545,4 +545,20 @@ actifs lus sur 1 000 retrouvent une principale « couple »** (la lecture plafon
 - ⚠ **Trouvé en regardant** : la case vide prise au hasard est une **étude de notaires** (SCP) classée « couple » par la nuit — sa fiche Hektor
   est de type ménage. Ce n'est pas un défaut de l'écran : c'est la donnée de Hektor. Combien de non-personnes sont ainsi « couple » ? NON MESURÉ.
 - ⏭ RESTE : passer le cran à « on » (accord de Frédéric).
+- ✅ **FICHE OUVERTE À TOUT LE MONDE le 02/11 à 10:01** (« oui ouvre ») : `contacts_couples_fiche = 'on'`.
+
+## 23. UN NOTAIRE N'EST JAMAIS UN COUPLE — AUDIT *(02/11 ~10:05, demande de Frédéric : « une fiche type notaire ne peut pas être
+considérée comme couple, dans l'historique et dans les ajouts »)* — lecture seule, rien codé
+
+**Ce qu'est « type notaire »** : à l'écran, un rôle `notaire_vendeur` / `notaire_acquereur` dans `relation_roles_json` (`estRoleNotaire`) —
+calculé CHEZ SUPABASE depuis nos registres (`app_affaire_partie_calculer`) : la couche locale n'envoie pas ce rôle
+(`APP_TYPE_PAR_NOS_REGISTRES=1`) et ne le porte pas (0 notaire par rôle en local). La nuit, la source locale est le registre des ventes :
+`app_affaire_ledger.notaires_json` (entrée / sortie, numéros Hektor) — 1 280 notaires, dont 1 071 ont une fiche chez nous.
+
+**Ampleur** : **50 notaires sont « couple »** (24 actifs) — mêmes 50 des deux côtés (Supabase par le rôle, local par le registre). Origine :
+44 ménage Hektor à case vide, 4 aucun lien, 1 sans seconde fiche, **1 par le rattachement du 01/11** (une case orpheline rattachée à un
+notaire). 39 ont un nom d'étude (SCP, SELARL…). 2 ont AUSSI un rôle de client (mandant…) : la règle de Frédéric s'applique quand même.
+Les 1 021 autres notaires sont « personne seule » (règle des couples anciens) ; leurs 854 secondes fiches sont des cases vides (masquées
+dans l'annuaire, sans conséquence). 0 seconde fiche de notaire n'est marquée « conjoint ». 859 notaires portent un `couple_json` (P2) —
+sans effet à l'écran, la nature décide.
 
