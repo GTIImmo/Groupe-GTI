@@ -712,3 +712,19 @@ est « couple » et son résumé « nommé » (la nuit du 02→03/11 : aujourd'h
   · **couple sans seconde fiche : 60**, **couple sans lien chez Hektor : 123** — le second cas n'est probablement pas un couple chez Hektor
     (« Transformer en couple » a fait disparaître une fiche à l'essai E6) → hors de portée pour l'instant.
 
+## 31. ESSAI « COMPLÉTER LE CONJOINT » *(02/11 ~11:55, « Oui, essai », Frédéric connecté à Hektor ; fiches fictives seulement)*
+
+- **Vider** le conjoint de 606104 (POST groupe `contactCoupleAll` : `nom_m2`, `prenom_m2`, `email_m2[]` vides) → 200 ; Hektor vide le prénom et
+  l'e-mail **mais REFUSE un nom vide : il recopie le nom de la première dans `nom_m2`**. La seconde (606105) suit : nom gardé, plus de prénom ni
+  d'e-mail. ⭐ **C'est l'origine des 1 596 « nom recopié, sans prénom »** : Hektor fabrique ce nom quand le conjoint n'en a pas.
+- **Compléter** (`prenom_m2 = DeuxComplete` + e-mail) → 200 ; **la seconde porte « DeuxComplete » et son e-mail.** ⇒ compléter un « nom recopié »
+  = la modification de la pièce E, prouvée.
+- **Vraie case vide** (lecture seule d'un vrai couple, `couple_json.etat = vide`, oui/non seulement) : la première a le formulaire de COUPLE avec
+  `nom_m2` / `prenom_m2` / `email_m2` VIDES, la seconde est entièrement vide. Ce cas ne peut pas être fabriqué sur une fiche fictive (Hektor
+  recopie le nom) : écrire la partie membre 2 DEVRAIT remplir la seconde existante (même mécanisme que ci-dessus), **NON PROUVÉ sur ce cas exact**.
+- Onglets Hektor fermés. Couple fictif : la seconde porte « DeuxComplete » chez Hektor.
+- ⏭ **PROPOSITION** : un bouton « Compléter le conjoint » sur l'onglet orange, **seulement quand Hektor connaît la case comme seconde fiche**
+  (`couple_json.etat = vide`, 975 couples actifs) ; même fenêtre, partie Conjoint vide (nom obligatoire) ; la fonction
+  `app_edit_conjoint_optimistic` à élargir à l'état « vide » ; **premier usage réel surveillé** (contrôle au retour : la seconde doit se remplir,
+  aucune fiche ne doit naître). Les 1 528 cases rattachées par notre nuit et les 183 couples sans seconde / sans lien : PAS de bouton.
+
