@@ -7065,6 +7065,50 @@ export async function setMandatClotureApp(input: {
     : { ok: false, erreur: sortie.erreur || 'refus_inconnu' }
 }
 
+/** ─── LA CHARGE DES HONORAIRES, MÉMORISÉE SUR LE MANDAT ───   02/11/2026
+ *
+ *  Demande de Frédéric : « lorsqu'on édite un mandat pour signature le choix de
+ *  la charge des honoraires doit être mémorisé dans le registre des mandats ».
+ *
+ *  ⛔ LE DÉFAUT QU'ELLE RÉPARE. La charge était choisie dans la modale du mandat
+ *    (App.tsx, « Charge des honoraires »), imprimée sur le contrat -- et JETÉE.
+ *    Aucune colonne de charge n'existait sur un mandat, ni chez nous ni chez
+ *    Hektor (mesure du 02/11 : 0 clé sur les 17 du mandat, 16 du compromis, 19
+ *    de la vente). Le classeur de suivi était la seule source au monde, avec
+ *    955 lignes.
+ *
+ *  ⭐ ELLE GARDE L'AUTEUR, et c'est la raison d'appeler depuis le FRONT plutôt
+ *    que depuis le worker : le 21/10 on a mesuré que le worker écrit ce carnet
+ *    SANS utilisateur et efface ainsi `ecrit_par`. C'est de l'argent : on veut
+ *    savoir qui a choisi.
+ *
+ *  ⚠ LE VOCABULAIRE est traduit EN BASE, pas ici : la modale du mandat dit
+ *    « mandant », la transaction et le classeur disent « vendeur ». La RPC
+ *    convertit, et refuse tout ce qui n'est pas vendeur/acquereur.
+ */
+export async function ecrireMandatCharge(input: {
+  hektorAnnonceId: string | number | null | undefined
+  numeroMandat: string | null | undefined
+  /** 'mandant' | 'acquereur' (le mot de la modale) ; vide = on efface. */
+  charge: string | null | undefined
+}): Promise<{ ok: boolean; erreur?: string; charge?: string | null }> {
+  if (!hasSupabaseEnv || !supabase) return { ok: false, erreur: 'supabase_absent' }
+  const annonce = String(input.hektorAnnonceId ?? '').trim()
+  const numero = String(input.numeroMandat ?? '').trim()
+  if (!annonce || !numero) return { ok: false, erreur: 'parametres_incomplets' }
+  const charge = (input.charge ?? '').trim()
+  const { data, error } = await supabase.rpc('app_set_mandat_charge_optimistic', {
+    target_annonce: annonce,
+    target_numero_mandat: numero,
+    charge: charge || null,
+  })
+  if (error) return { ok: false, erreur: error.message }
+  const sortie = (data ?? {}) as { ok?: boolean; erreur?: string; charge?: string | null }
+  return sortie.ok === true
+    ? { ok: true, charge: sortie.charge ?? null }
+    : { ok: false, erreur: sortie.erreur || 'refus_inconnu' }
+}
+
 export async function loadMandatRegisterStats(filters: AppFilters, scope?: DataScope | null): Promise<MandatStats> {
   if (!hasSupabaseEnv || !supabase) {
     const rows = applyMandatStatutFilter(applyMandateLifecycleFilter(

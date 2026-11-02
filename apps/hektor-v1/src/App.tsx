@@ -171,6 +171,7 @@ import {
   loadConsoleJobsByIds,
   loadContactRelations,
   ecrireAffaireCommission,
+  ecrireMandatCharge,
   loadContactMandatsRecherche,
   loadContactSearches,
   loadContactActivite,
@@ -4558,7 +4559,16 @@ function buildMandatDocumentDraft(
     prixVente: firstNonEmpty(detail.prix_publique, dossier.prix),
     prixNetVendeur: firstNonEmpty(detail.prix_net_vendeur, rawDetailProp(detail, 'mandat_infofi', 'PRIXNETVENDEUR')),
     honorairesTtc: rawHonoraires,
-    honorairesCharge: rawHonoraires ? 'acquereur' : '',
+    // ⭐ 02/11/2026, SA DECISION : « Vendeur » PAR DEFAUT DES DEUX COTES.
+    //   Avant, ce brouillon ecrivait « acquereur » des qu'il y avait des
+    //   honoraires -- personne ne l'avait choisi, le code le decidait. Or le
+    //   classeur de suivi mesure 894 « Vendeur » contre 61 « Acquereur », soit
+    //   93,6 % : ce defaut etait FAUX 9 FOIS SUR 10, et il cochait une case du
+    //   contrat. ⚠ Et il etait l'INVERSE du defaut de la modale de statut
+    //   (useState('vendeur')) : la meme app proposait deux reponses contraires
+    //   a la meme question.
+    //   « mandant » est le mot de CE menu ; la RPC le traduit en « vendeur ».
+    honorairesCharge: 'mandant',
     etatOccupation: '',
     clauseParticuliere: firstNonEmpty(detail.mandat_note),
     executionAnticipee: '',
@@ -5573,6 +5583,51 @@ function MandatDocumentEditor(props: {
       setPdfBusy(false)
       return
     }
+
+    // ─── LA CHARGE DES HONORAIRES, MEMORISEE ───            02/11/2026
+    //
+    // Demande de Frederic : « lorsqu'on edite un mandat pour signature le choix
+    // de la charge des honoraires doit etre memorise dans le registre des
+    // mandats ». Avant, il etait imprime sur le contrat puis JETE : aucune
+    // colonne de charge n'existait sur un mandat, ni chez nous ni chez Hektor.
+    //
+    // ⚠ APRES LE GESTE, ET JAMAIS DANS SA CHARGE -- meme regle que la commission
+    //   de la modale de statut (App.tsx, lot 1c) : si la generation echoue, on
+    //   n'a pas memorise la charge d'un document qui n'existe pas. Et un echec
+    //   ici ne defait pas la generation, qui est DEJA partie.
+    // ⚠ SON CHOIX DU 02/11 : L'AVENANT N'ECRASE PAS, le mandat d'origine fait
+    //   foi. Tenu ici, par la forme : en mode avenant on n'appelle pas. Mais
+    //   REGENERER le meme mandat corrige la valeur -- sinon une faute de frappe
+    //   au premier essai serait definitive.
+    // ⚠ SANS NUMERO DE MANDAT on ne peut rien ecrire (la cle du carnet est le
+    //   couple annonce + numero). On le DIT plutot que de le taire : le numero
+    //   vient de Hektor, et un document peut etre genere avant lui.
+    if (docMode !== 'avenant') {
+      const numeroPourCharge = (draft.numeroMandat || '').trim()
+      if (!numeroPourCharge) {
+        setMessage(bvs('Mandat genere. ⚠ La charge des honoraires n\'a pas pu etre '
+          + 'memorisee : ce mandat n\'a pas encore de numero. Elle le sera a la '
+          + 'prochaine generation, une fois le numero attribue.'))
+      } else {
+        try {
+          const pose = await ecrireMandatCharge({
+            hektorAnnonceId: props.dossier.hektor_annonce_id,
+            numeroMandat: numeroPourCharge,
+            charge: draft.honorairesCharge,
+          })
+          if (!pose.ok) {
+            // On le DIT, on ne le tait pas : c'est de l'argent.
+            setMessage(bvs(`Mandat genere, mais la charge des honoraires n'a pas ete `
+              + `memorisee (${pose.erreur ?? 'erreur inconnue'}). A ressaisir.`))
+          }
+        } catch (erreurCharge) {
+          setMessage(bvs(`Mandat genere, mais la charge des honoraires n'a pas ete `
+            + `memorisee (${erreurCharge instanceof Error ? erreurCharge.message : 'erreur inconnue'}). `
+            + `A ressaisir.`))
+        }
+      }
+    }
+
     setMessage(bvs('Mandat en cours de depot dans Hektor…'))
     // La pop-up de signature n'apparait QUE lorsque Hektor a reellement ajoute le document.
     const deadline = Date.now() + 150000
