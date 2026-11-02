@@ -18607,6 +18607,27 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   /** La cle d'un emplacement : cote + rang. 02/11/2026 */
   const cleRepartition = (cote: 'entree' | 'sortie', rang: number) => cote + '-' + String(rang)
 
+  /** ⭐ LE REFUS DE LA BASE, DIT EN FRANCAIS.                        02/11/2026
+   *
+   *  Jusqu'ici l'ecran RECOPIAIT le mot du serveur : apres une vente deja
+   *  partie chez Hektor, l'utilisateur lisait « total_superieur_a_cent ».
+   *  Mesure du 02/11 : les SEPT refus de app_repartition_commission_set
+   *  n'etaient traduits NULLE PART dans le front (seule autre occurrence du
+   *  mot : un commentaire).
+   *  ⚠ UN MOT INCONNU SE RECOPIE QUAND MEME -- mieux vaut un terme technique
+   *    qu'un silence, et il reste de quoi chercher. */
+  const refusRepartitionEnFrancais = (brut: string): string => {
+    const m = brut.trim()
+    if (m.includes('total_superieur_a_cent')) return 'les parts depassent 100 %'
+    if (m.includes('personne_manquante')) return 'un emplacement porte une part sans personne'
+    if (m.includes('forbidden_repartition')) return "vous n'avez pas le droit de la modifier sur ce bien"
+    if (m.includes('chaine_inconnue')) return "la transaction n'existe pas encore chez nous"
+    if (m.includes('rang_invalide')) return 'un emplacement sort des trois prevus par cote'
+    if (m.includes('cote_invalide')) return "un intervenant n'est ni a l'entree ni a la sortie"
+    if (m.includes('lignes_attendues')) return 'la liste des intervenants est illisible'
+    return m || 'erreur inconnue'
+  }
+
   /** Poser ou retirer quelqu'un sur un emplacement.
    *  ⚠ LE POURCENTAGE SUIT LE NOMBRE DE PERSONNES, mais seulement tant que
    *    personne ne l'a touche : un chiffre saisi a la main ne se fait pas
@@ -19160,7 +19181,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       } catch (erreurRepartition) {
         // On le DIT, on ne le tait pas : c'est de l'argent.
         setNoticeMessage(`Transaction envoyee, mais la repartition de commission n'a pas ete enregistree : ${
-          erreurRepartition instanceof Error ? erreurRepartition.message : 'erreur inconnue'}. A ressaisir.`)
+          refusRepartitionEnFrancais(
+            erreurRepartition instanceof Error ? erreurRepartition.message : '')}. A ressaisir.`)
       }
 
       // ─── LOT 1c : LA COMMISSION ET SA CHARGE, APRES LE GESTE ───  16/10/2026
@@ -22526,13 +22548,33 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                             </Fragment>
                           ))}
                         </div>
-                        {/* ⚠ ON PREVIENT, ON NE BLOQUE PAS. La base refuse plus de
-                            100 ; en dessous, la part restante n'est simplement
-                            attribuee a personne -- c'est ce que Hektor appelle
-                            « Part Reseau », et cela existe. */}
-                        {repartitionTotal > 0 && Math.abs(repartitionTotal - 100) > 0.01 ? (
+                        {/* ⚠ ON PREVIENT, ON NE BLOQUE PAS. En dessous de 100, la part
+                            restante n'est simplement attribuee a personne -- c'est ce que
+                            Hektor appelle « Part Reseau », et cela existe.
+                            ⭐⭐ L'ECRAN SUIT MAINTENANT LE SEUIL DE LA BASE.    02/11/2026
+                              AVANT : on ne prevenait qu'au-dela de 0,01 d'ecart, alors que
+                              la base refusait tout depassement de 100 -- une fenetre de
+                              0,001 ou l'ecran se taisait et la base refusait.
+                              12 DOSSIERS REELS ET VENDUS etaient dedans (annonces 9371,
+                              11840, 11841, 14355, 14464, 32615, 41427, 54768, 55085,
+                              58905, 59183, 61412) : HEKTOR NE TOMBE PAS JUSTE, la
+                              conversion du 16/09 a ramene par exemple 50,030 + 49,971 =
+                              100,001. La vente partait, la repartition etait refusee, et
+                              l'ecran n'avait rien annonce.
+                              ⭐ La base tolere desormais le millieme (la valeur DEJA
+                                tranchee dans app_repartition_absorber) et l'ecran previent
+                                des qu'elle refusera : les deux seuils ne peuvent plus
+                                diverger en silence.
+                              ⚠ Aucun faux positif a craindre : les 8 024 dossiers sains
+                                sont EXACTEMENT a 100,000 (mesure du 02/11), pas un seul a
+                                99,999. */}
+                        {repartitionTotal > 100.001
+                          || (repartitionTotal > 0 && repartitionTotal < 100 - 0.01) ? (
                           <p className="status-change-note is-alerte">
-                            Les parts font {repartitionTotal.toFixed(2)} %.
+                            {/* ⚠ TROIS DECIMALES, SANS LES ZEROS INUTILES : a deux, « 100,001 »
+                                s'affichait « 100.00 » -- le chiffre qui explique le refus
+                                etait justement celui que l'arrondi cachait. */}
+                            Les parts font {repartitionTotal.toFixed(3).replace(/0+$/, '').replace(/\.$/, '')} %.
                             {repartitionTotal < 100
                               ? ` Il reste ${(100 - repartitionTotal).toFixed(2)} % attribue a personne.`
                               : " Au-dessus de 100 %, l'enregistrement sera refuse."}
