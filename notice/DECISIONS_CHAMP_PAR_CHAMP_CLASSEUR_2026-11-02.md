@@ -155,6 +155,85 @@ valeurs**, toutes des essais. Il n'y a rien à écraser.
 
 ---
 
+## § 3 quater. ⭐⭐ LA SOURCE DU RATTRAPAGE N'EST PAS LE CLASSEUR — 02/11, le soir
+
+**Sa question** : *« tu as le fichier des mandats jusqu'au 27 février et même les 90
+ajoutés manuellement au début du projet, sur ces tableaux la charge de la commission
+doit être visible non ?»* — **il avait raison, et c'est beaucoup mieux que le
+classeur.**
+
+```
+CE QUE J'AI MESURE, FICHIER PAR FICHIER :
+
+  mandats_extraits.xlsx          export Modelo, 26 404 lignes, jusqu'au 27/02/2026
+    ⭐ PORTE LA CHARGE, dans le JSON produit :
+         "fees_paid_by_who": 2       le code de qui paie
+         "fees": 11000               le montant des honoraires
+         "fees_paid_by_buyer": 0     ⚠ un MONTANT, pas un oui/non
+       et la mention legale l'ecrit EN CLAIR : « Honoraires a la charge du vendeur »
+    repartition des codes : 3 -> 16 780 · 2 -> 9 153 · 1 -> 177 · 0 -> 76
+
+  liste mandat du 02_02_2026 au 28_02_2026.xlsx   80 mandats, meme format
+    fees_paid_by_who : 2 -> 68 (85 %) · 1 -> 12
+
+  Ancien registre des mandat.csv  registre legal 2014 -> 19/12/2024, 8 441 lignes
+    ⛔ SIX COLONNES SEULEMENT (n°, date, mandants, type, objet, observations)
+    -> AUCUNE charge. Rien a en tirer pour ce champ.
+
+  le classeur Sheet                933 lignes portent la charge, 871 mandats
+    874 « Vendeur » (93,7 %) · 59 « Acquereur » · chez nous : ZERO
+```
+
+### ⛔ CE QUI N'EST PAS TRANCHÉ, ET QUI BLOQUE LE RATTRAPAGE
+
+**Le sens des codes n'est pas établi.** J'ai croisé `fees_paid_by_who` avec la
+mention légale : le **code 2** donne « vendeur » 752 fois (acquéreur 1 fois), mais
+le **code 3** donne lui aussi « vendeur » 57 fois (acquéreur 2). Les deux codes
+pointent au même endroit, donc **le croisement ne tranche pas**.
+
+⚠ **Et ma mesure a une faiblesse que je nomme** : elle lit les chaînes du fichier
+**en vrac**, pas un mandat par ligne — une cellule peut porter plusieurs produits,
+donc les paires (code, mention) peuvent être mal appariées. Les **comptes de codes**
+sont justes ; le **croisement** ne l'est pas.
+
+```
+⬜ A FAIRE AVANT TOUT RATTRAPAGE : une passe propre, UN MANDAT PAR LIGNE, qui
+   etablit ce que valent 0, 1, 2 et 3, avec un temoin dans les DEUX sens.
+   Sans ca, on remplirait 26 000 lignes avec un contresens possible.
+⭐ LA PISTE LA PLUS SOLIDE : `fees_paid_by_buyer` est un MONTANT. Un montant > 0
+   signifie que l'acquereur paie ; 0 signifie qu'il ne paie pas. C'est un fait
+   chiffre, pas un code a interpreter -- a eprouver en priorite.
+```
+
+### ✅ SA RÈGLE PAR DÉFAUT, POSÉE LE 02/11
+
+> *« si un doute, un mandat de vente est 90 % du temps chargé vendeur. Et
+> l'inverse pour les mandats de recherche. »*
+
+```
+MANDAT DE VENTE      -> « vendeur »     par defaut
+MANDAT DE RECHERCHE  -> « acquereur »   par defaut (c'est l'acquereur qui mandate)
+```
+
+⭐ **Deux mesures indépendantes confirment le 90 %** : le classeur dit **93,7 %**
+vendeur (874 / 933), et l'écran de saisie ouvrait déjà sur « Vendeur » dans
+**93,6 %** des cas. Trois sources, le même chiffre.
+
+⛔⛔ **MAIS UNE VALEUR DÉDUITE N'EST PAS UNE VALEUR CONSTATÉE** — condition que je
+pose, et qu'il faut tenir : **chaque ligne remplie doit porter SA SOURCE**
+(`fichier_modelo` / `classeur` / `deduite_par_defaut`). Sans ça, dans six mois
+personne ne saura distinguer ce qui est mesuré de ce qui est supposé, et la règle
+des 90 % deviendra une vérité qu'elle n'est pas. Voir la leçon
+« l'exclusion délibérée doit être déclarée » et « une déduction ne change pas ce
+que l'écran affiche ».
+
+⚠ **Reste à identifier** : *« les 90 ajoutés manuellement au début du projet »*. Les
+80 mandats de février 2026 (18340 → 18419) et les 16 mandats de recherche PROTEXA
+sont les candidats les plus proches, mais **je ne les ai pas formellement
+identifiés comme étant ces 90-là**. À confirmer avec lui.
+
+---
+
 ## § 3 bis. ✅ LE CORRECTIF DE LA SAISIE EST POSÉ — commit `2a82417`
 
 Sans lui, remplir le passé n'aurait servi à rien : chaque nouvelle transaction
