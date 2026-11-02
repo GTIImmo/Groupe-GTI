@@ -150,6 +150,17 @@ export function conjointNommeId(couple_json: CoupleSource['couple_json']): strin
   return id || null
 }
 
+/** COUPLES (02/11/2026) : le numéro de la seconde fiche VIDE que Hektor connaît comme place 2 du couple
+ *  (`etat = vide`, 975 couples actifs au 02/11) -- la seule case qu'on propose de « compléter » : remplir la place 2
+ *  de la première la remplit (essai du 02/11, synthèse §31). null pour tout le reste : nommé, aucune seconde,
+ *  case rattachée par notre nuit (chez Hektor, une coquille séparée : écrire créerait un doublon). */
+export function conjointVideId(couple_json: CoupleSource['couple_json']): string | null {
+  const json = lireCoupleJson(couple_json)
+  if (json?.etat !== 'vide') return null
+  const id = String(json.conjoint?.id ?? '').trim()
+  return id || null
+}
+
 /** Les liens des deux personnes, sans doublon (même bien, même rôle) : la fiche du foyer montre les biens
  *  propres au conjoint (21 au 02/11) et un rôle qui diffère (10), sans répéter les autres. */
 export function unirLiensDuFoyer<T extends { hektor_annonce_id?: string | number | null; role_contact?: string | null }>(

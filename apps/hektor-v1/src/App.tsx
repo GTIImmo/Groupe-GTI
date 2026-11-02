@@ -266,7 +266,7 @@ import { compterAnnoncesAilleurs, type AnnoncesAilleurs } from './lib/api'
 import { bvs, bvt } from './lib/bienvuTexte'
 import { MENTION_AVENANT, MENTION_MANDAT, repereHtml, repereSignature, zoneMentionHtml } from './lib/signatureAnchors'
 import { sansCasesVides } from './lib/mandantsDocument'
-import { coupleAffiche, conjointNommeId, foyerAffiche, unirLiensDuFoyer, type FoyerAffiche } from './lib/coupleAffichage'
+import { coupleAffiche, conjointNommeId, conjointVideId, foyerAffiche, unirLiensDuFoyer, type FoyerAffiche } from './lib/coupleAffichage'
 
 type DetailContact = {
   id: string
@@ -43996,6 +43996,9 @@ function ContactEditModalV2(props: {
   /** COUPLES (02/11/2026) : le conjoint NOMMÉ à modifier par la fiche principale (bloc _m2 chez Hektor) ;
    *  absent = la fenêtre d'avant. Posé seulement si l'interrupteur `contacts_couples_modif` est allumé. */
   conjoint?: AppContact | null
+  /** COUPLES (02/11/2026) : « Compléter le conjoint » -- le numéro de la seconde fiche VIDE (place 2 connue de Hektor).
+   *  La partie Conjoint s'ouvre vide, le nom est obligatoire ; même envoi que la modification (bloc _m2). */
+  completerConjointId?: string | null
   /** COUPLES (02/11/2026) : ouverte depuis l'ONGLET du conjoint -> titre « Modifier le conjoint » et défilement
    *  direct sur sa partie. La fenêtre reste celle de la fiche principale (Hektor édite le foyer par la première). */
   focusConjoint?: boolean
@@ -44067,7 +44070,10 @@ function ContactEditModalV2(props: {
   const [crmBirthdayEnabled, setCrmBirthdayEnabled] = useState(optionalBooleanSelectValue(initial.crmBirthdayEnabled))
   // COUPLES (02/11/2026) : le conjoint, pré-rempli depuis SA fiche. On n'envoie que ce qui CHANGE : chez Hektor,
   // écrire un e-mail ou un téléphone remplace TOUTE la liste du conjoint (replaceParam).
-  const conjointAModifier = props.conjoint ?? null
+  const conjointACompleter = !props.conjoint && props.completerConjointId
+    ? ({ hektor_contact_id: props.completerConjointId, display_name: '', nom: '', prenom: '', email: '', phone_primary: '' } as unknown as AppContact)
+    : null
+  const conjointAModifier = props.conjoint ?? conjointACompleter
   const conjointAvant = {
     lastName: (conjointAModifier?.nom ?? '').trim(),
     firstName: (conjointAModifier?.prenom ?? '').trim(),
@@ -44168,6 +44174,9 @@ function ContactEditModalV2(props: {
     if (!lastName.trim()) { setError('Nom contact requis.'); setActiveSection('sec-identite'); scrollToSection('sec-identite'); return }
     if (availableHektorNegotiators.length > 0 && !selectedHektorUser) { setError(bvs('Choisis le négociateur Hektor qui portera la modification.')); return }
     if (!selectedHektorId && !selectedHektorEmail) { setError(bvs('Choisis le compte Hektor qui portera la modification.')); return }
+    if (conjointACompleter && !spouseLastName.trim()) {
+      setError('Nom du conjoint requis pour le compléter.'); scrollToSection('sec-conjoint'); return
+    }
     // COUPLES (02/11/2026) : seulement les champs du conjoint qui ONT CHANGÉ (vider un champ n'est pas proposé :
     // un vide ne part pas, il ne peut donc rien effacer chez Hektor).
     const conjointChange: { lastName?: string; firstName?: string; email?: string; phone?: string } = {}
@@ -44253,7 +44262,7 @@ function ContactEditModalV2(props: {
             <span className="edit-badge">ID</span>
             <div>
               <div className="edit-eyebrow">{bvs("Mise à jour Hektor")}</div>
-              <h2 className="edit-title" id="contactEditTitle">{surLeConjointALOuverture ? 'Modifier le conjoint' : 'Modifier le contact'}</h2>
+              <h2 className="edit-title" id="contactEditTitle">{conjointACompleter ? 'Compléter le conjoint' : surLeConjointALOuverture ? 'Modifier le conjoint' : 'Modifier le contact'}</h2>
               <p className="edit-sub">{bvs("Les changements sont envoyés au worker Hektor puis resynchronisés vers le local et Supabase.")}</p>
             </div>
           </div>
@@ -44333,7 +44342,7 @@ function ContactEditModalV2(props: {
               <div className="fsec" id="sec-conjoint">
                 <div className="fsec-h">
                   <span className="fsec-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><circle cx="8.5" cy="8" r="3.2" /><circle cx="16" cy="9" r="2.8" /><path d="M2.8 19c.6-3.1 3-4.9 5.7-4.9s5.1 1.8 5.7 4.9" /><path d="M14 14.5c.6-.3 1.3-.4 2-.4 2.3 0 4.3 1.6 4.9 4.5" /></svg></span>
-                  <span className="fsec-t">Conjoint · fiche {conjointAModifier.hektor_contact_id}</span>
+                  <span className="fsec-t">{conjointACompleter ? 'Conjoint à compléter' : 'Conjoint'} · fiche {conjointAModifier.hektor_contact_id}</span>
                 </div>
                 <div className="fgrid3">
                   <div className="field"><label>Nom du conjoint</label><input className="inp" value={spouseLastName} onChange={(event) => setSpouseLastName(event.target.value)} /></div>
@@ -45512,6 +45521,8 @@ type FoyerDeLaFiche = {
   /** La seconde fiche NOMMÉE, en lecture seule (null = case vide ou aucune : onglet « à compléter »). */
   conjoint: AppContact | null
   ongletInitial: 1 | 2
+  /** COUPLES (02/11/2026) : la seconde fiche VIDE que Hektor connaît comme place 2 -- « Compléter le conjoint ». */
+  conjointVideId?: string | null
 }
 
 function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0] & { foyer?: FoyerDeLaFiche | null }) {
@@ -45519,6 +45530,9 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
   //    recherches, activité) reste celui de la fiche principale `props.contact` (décision du 02/11). ──
   const foyer = props.foyer ?? null
   const modifConjointVisible = useCranCouplesVisible('contacts_couples_modif', props.profileRole)
+  // COUPLES (02/11/2026) : « Compléter le conjoint » ouvre la même fenêtre, partie Conjoint VIDE à remplir.
+  const [completerConjoint, setCompleterConjoint] = useState(false)
+  const completerConjointId = modifConjointVisible && props.canManageContacts && foyer?.conjointVideId ? foyer.conjointVideId : null
   const [ongletFoyer, setOngletFoyer] = useState<1 | 2>(foyer?.ongletInitial ?? 1)
   useEffect(() => {
     setOngletFoyer(foyer?.ongletInitial ?? 1)
@@ -46269,6 +46283,11 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
                   })}
                 </div>
               ) : null}
+              {completerConjointId ? (
+                <button className="fa-cx-completer" type="button" onClick={() => { setCompleterConjoint(true); setEditing(true) }}>
+                  + Compléter le conjoint
+                </button>
+              ) : null}
 
               <div className="fa-cx-actions">
                 <button className="fa-cx-act primary" type="button" data-tip="Créer un RDV" aria-label="Créer un RDV" onClick={handleOpenCreateGoogleContactAgenda}>
@@ -46795,13 +46814,14 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
         <ContactEditModalV2
           contact={props.contact}
           conjoint={modifConjointVisible && foyer?.conjoint ? foyer.conjoint : null}
-          focusConjoint={surLeConjoint}
+          completerConjointId={completerConjoint ? completerConjointId : null}
+          focusConjoint={surLeConjoint || (completerConjoint && Boolean(completerConjointId))}
           hektorUserEmail={props.hektorUserEmail}
           hektorUserId={props.hektorUserId}
           hektorNegotiators={props.hektorNegotiators}
           profileRole={props.profileRole}
           sessionEmail={props.sessionEmail}
-          onClose={() => setEditing(false)}
+          onClose={() => { setEditing(false); setCompleterConjoint(false) }}
           onJobCreated={props.onJobCreated}
         />
       ) : null}
@@ -47001,7 +47021,7 @@ function FicheContactCouple(props: Parameters<typeof ContactDetailPopupBase>[0])
         : [null, [] as AppContactRelation[]]
       const affiche = foyerAffiche({ ...props.contact, nature_fiche: info.nature_fiche, marital_status: info.marital_status }, conjoint)
       if (!affiche) return null
-      return { pour: id, vue: { affiche, conjoint, ongletInitial: 1 }, principal: null, liensDuConjoint }
+      return { pour: id, vue: { affiche, conjoint, ongletInitial: 1, conjointVideId: conjoint ? null : conjointVideId(info.couple_json) }, principal: null, liensDuConjoint }
     }
     charger()
       .then((resultat) => { if (!annule) setFoyer(resultat) })
