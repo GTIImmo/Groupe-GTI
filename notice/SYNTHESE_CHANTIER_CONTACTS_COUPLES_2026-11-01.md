@@ -657,3 +657,28 @@ fictif, avec `person_type = couple` et un prénom de conjoint, puis relire les d
   (champs du conjoint en modification), l'écriture immédiate chez nous et la relecture de la seconde fiche. Couple fictif 20000031/32 ↔
   606104/05 GARDÉ pour l'essai réel du correctif (sa seconde porte désormais « DeuxModifie » chez Hektor ; chez nous à la relecture).
 
+## 28. PIÈCE E — MODIFIER LE CONJOINT : ÉCRITE ET ÉPROUVÉE, RIEN N'EST POSÉ *(02/11 ~11:40, « Vas-y »)*
+
+**Worker (748383f)** — `hektorContactFormGroup(html)` reconnaît le formulaire d'un couple (`group="mefContacts/contactCoupleAll"`) ;
+`updateHektorContactIdentity` et `updateHektorMandantContact` lisent ET renvoient CE groupe (une personne seule garde exactement le chemin
+d'avant) ; un couple relu est édité comme un couple (statut 2 → bloc `_m2`), quoi que dise l'envoi ; après une modification du conjoint, la
+SECONDE fiche est relue (`sync_job_conjoint`, best-effort). Essai `Console/test_couple_modification.js` **12/12** (dont la preuve du défaut et
+deux témoins inverses) ; l'essai voisin de la copropriété reste vert. ⚠ Actif seulement après **redémarrage des 4 services, file vide** — et
+le fichier du worker porte ~130 lignes NON COMMITÉES de l'autre session, qu'un redémarrage chargerait aussi : à voir avec elle avant.
+
+**Écran (b27653d)** — `ContactEditModalV2` reçoit `conjoint` (la seconde fiche NOMMÉE du foyer) quand l'interrupteur
+**`contacts_couples_modif`** est allumé : partie « Conjoint · fiche N » (nom, prénom, portable, e-mail), pré-remplie ; **seuls les champs
+CHANGÉS partent** (écrire un e-mail ou un téléphone remplace TOUTE la liste du conjoint chez Hektor) ; vider un champ n'est pas proposé.
+L'envoi part avec la principale (`editContactOptimistic`, bloc `_m2`), puis `editConjointOptimistic` écrit le conjoint chez nous (un échec
+y est seulement signalé en console : la relecture rattrape). Crochet d'interrupteur rendu générique (`useCranCouplesVisible`). Build vert.
+
+**Base (non posée)** — `supabase/patch_couple_phase3e_conjoint_optimiste_2026-11-02.sql` : fonction NEUVE `app_edit_conjoint_optimistic`
+(mêmes droits que la modification d'un contact) : écrit la fiche du conjoint (seconde NOMMÉE dont le lien pointe la principale,
+`couple_json.etat = nomme`) et le résumé `couple_json.conjoint`. **Répétition jouée 6/6** (admin simulé, couple d'essai) : créée, conjoint
+écrit, résumé écrit, principale inchangée, témoin « personne seule » refusé sans rien écrire, anon refusé — rien n'est resté. Inverse prêt.
+
+**Dans l'ordre, chaque geste avec son accord** : (1) push ; (2) redémarrer les 4 services worker, file vide (après accord de l'autre
+session sur ses lignes) ; (3) poser la fonction ; (4) interrupteur `contacts_couples_modif = admin`
+(`supabase/patch_couple_phase3e_interrupteur_modif_2026-11-02.sql`) ; (5) essai réel sur le couple fictif — par l'écran dès que sa nature
+est « couple » et son résumé « nommé » (la nuit du 02→03/11 : aujourd'hui il dit encore « aucun ») ; (6) supprimer le couple fictif.
+
