@@ -478,3 +478,26 @@ Recherche : les 302 couples à conjoint prénommé portent déjà son prénom da
   droit SELECT sur les 4 colonnes neuves, dans la table ET dans la vue (pas de droit par colonne qui manquerait). Les lignes visibles
   par un négociateur restent celles de sa règle (même vue, `security_invoker`). Retour : remettre « admin », ou supprimer la clé.
 
+## 20. AUDIT DE LA PIÈCE D — LA FICHE DU CONTACT *(02/11 ~09:50, « Oui, audite D », lecture seule, rien codé)*
+
+**Audit limité à l'AFFICHAGE de la fiche d'un couple.** Modifier le conjoint (bloc `_m2`), « compléter le conjoint » (phase 5) et
+le ménage des deux fiches à la suppression ne sont pas dans D.
+
+**Le code (lu)** : une seule fiche, `ContactDetailPopupV2` (`App.tsx` ~45436), pour l'annuaire ordinateur, l'annuaire téléphone
+(`MobileContactCards` l'ouvre aussi), la fiche ouverte depuis une annonce (`annonceContact`, chargée par `loadContactById`) et
+l'acquéreur d'une transaction. En-tête l. ~46122 (`fa-cx-hero`, nom `contactFullName`, pastilles de type) ; coordonnées l. ~46175
+(`fa-cx-coords` : mobile, fixe, e-mail, adresse) ; biens liés l. ~46400 (`fa-cx-lk-roles`). Les liens et recherches sont chargés
+pour le SEUL numéro ouvert (`loadContactRelations` / `loadContactSearches`). `loadContactById` ne lit pas encore les colonnes du couple.
+
+**La maquette validée (30/10)** : liseré décalé derrière l'avatar, pastille « Couple · mariés », deux onglets sous l'en-tête
+(« Paul — fiche N · principal » / « Claire — fiche N ») qui pilotent les coordonnées, rôles par personne dans « Biens & mandats liés ».
+
+**Les mesures (couples actifs du cloud)** :
+- 4 608 couples : **1 898 à conjoint nommé** (sa fiche est dans le cloud, 1 898/1 898), **2 710 à case vide ou sans seconde** (→ orange
+  « conjoint à compléter », sur la fiche seulement, décision du 31/10) ; 161 ont plusieurs secondes.
+- Des 1 898 : **302 seulement ont un prénom** (1 596 « nom recopié ») ; **232 ont un téléphone, 268 un e-mail**.
+- **Situation (mariés…) connue pour 16** → l'étiquette sera presque toujours « Couple ».
+- Liens du conjoint : 1 157 en ont, mais **21 seulement ont un bien que la première n'a pas**, et **10 seulement un rôle différent**
+  sur un même bien. **0 conjoint a une recherche** (toutes sont sur la première).
+- On tombe sur une fiche conjoint par la recherche générale ou depuis un bien (1 157 sont liés à un bien).
+
