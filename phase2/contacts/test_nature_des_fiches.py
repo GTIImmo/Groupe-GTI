@@ -115,7 +115,8 @@ class Rattachement(unittest.TestCase):
         r = {l["hektor_contact_id"]: l for l in m.calculer(F, None, faits, cote)}
         self.assertEqual(r["1"]["nature_fiche"], "case_conjoint_vide")
         self.assertEqual(r["1"]["rattachee_a"], "2")
-        self.assertEqual((r["2"]["nature_fiche"], r["2"]["couple_deuxieme"]), ("couple", "case_vide"))
+        # 02/11 (decision de Frederic) : la personne reste ce que dit Hektor -- PERSONNE SEULE --, sa case est masquee
+        self.assertEqual((r["2"]["nature_fiche"], r["2"]["couple_deuxieme"]), ("personne_seule", None))
         self.assertEqual(r["2"]["rattachement"], "meme_bien_meme_jour")
         self.assertEqual(r["3"]["nature_fiche"], "personne_seule")      # temoin : l'autre personne du bien
         self.assertEqual(F["1"]["hektor_couple_contact_id"], "99")      # la couche n'est pas touchee
@@ -224,3 +225,18 @@ class Notaires(unittest.TestCase):
         c.execute("CREATE TABLE app_affaire_ledger (notaires_json TEXT)")
         c.executemany("INSERT INTO app_affaire_ledger VALUES (?)", [('{"entree": {"id": "7"}}',), (None,), ("",)])
         self.assertEqual(nr.notaires_hektor(c), {"7"})
+
+
+class RattachementNeFaitPasUnCouple(unittest.TestCase):
+    """02/11 (decision de Frederic) : le rattachement masque la coquille, il ne fabrique pas de couple."""
+
+    def test_la_personne_reste_seule_mais_un_signe_de_couple_compte_toujours(self):
+        F = {"1": fiche(1, lien=99, civilite="Mr./Mme"), "2": fiche(2, nom="DIAZ", prenom="Paul"),
+             "3": fiche(3, lien=98), "4": fiche(4, nom="DUPONT", prenom="Paul et Anne")}
+        for k in F:
+            F[k]["date_enregistrement"] = "2025-12-22"
+        r = {l["hektor_contact_id"]: l for l in m.calculer(F, None, {"1": "2", "3": "4"}, None)}
+        self.assertEqual(r["2"]["nature_fiche"], "personne_seule")
+        self.assertEqual(r["1"]["nature_fiche"], "case_conjoint_vide", "la coquille reste masquee")
+        self.assertEqual(r["4"]["nature_fiche"], "couple", "temoin : un couple ECRIT dans le nom reste couple (les 123)")
+

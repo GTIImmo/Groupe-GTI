@@ -219,8 +219,11 @@ def calculer(fiches: dict[str, dict[str, Any]], madames: set[str] | None,
     lignes = []
     for numero, f in fiches.items():
         nat = nature(f, fiches, secondes)
-        if numero in personnes_rattachees and nat == "personne_seule":
-            nat = "couple"                              # sa case est sur le meme bien, nee le meme jour
+        # ⛔ DÉCISION DE FRÉDÉRIC (02/11) : la personne qui RECOIT une case reste ce que dit Hektor (le plus
+        #   souvent « personne seule » : chez Hektor elle n'a AUCUN lien de couple). Le rattachement ne sert
+        #   qu'a MASQUER la coquille vide (case_conjoint_vide). Avant, elle passait « couple » (1 530 fiches
+        #   actives de l'app affichees « Couple · conjoint a completer ») : une deduction que Hektor ne confirme
+        #   pas. Creer un vrai couple depuis l'app = une question pour plus tard. Synthese couples §33.
         lien = _texte(f.get("hektor_couple_contact_id"))
         principale = fiches.get(lien) if lien and lien != numero else None
         # ⛔ RÈGLE DE FRÉDÉRIC (02/11) : UNE FICHE NOTAIRE N'EST JAMAIS UN COUPLE (historique et ajouts).
