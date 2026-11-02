@@ -213,6 +213,78 @@ pourraient se trouver — c'est le seul champ qui manque.
 
 ---
 
+### ⛔ 3 ter. LE CLASSEUR NE LES RETROUVE PAS — ET LES DEUX RAISONS SONT MESURÉES
+
+Frédéric, 02/11 : *« CONSULTE PLUTOT LE FICHIER CLASSEUR affairs_contacts_relations
+POUR VOIR SI TU LES RETROUVES »*. Fait, en **lecture seule** — plus ses deux frères du
+même export : `mandats_extraits.xlsx` et `contacts_extraits.xlsx`.
+⚠ **Les trois datent du 27/02/2026** : ce sont des exports figés, pas une source vivante.
+
+**a) `affairs_contacts_relations.xlsx`** — 50 202 relations, 31 187 contacts, types
+`representative` / `applicant` / `…_notary`. **1 seul des 49 acquéreurs des 54 y est**,
+et en `representative` *(vendeur)* sur une autre affaire de 2012 — donc **rien à voir
+avec l'offre**. Témoin de contraste : 7,9 % des acquéreurs d'offres normales y sont.
+
+**b) `mandats_extraits.xlsx`** — 26 404 mandats, et il porte justement ce qui nous
+manque : `date_of_sales_agreement`, `date_of_deed`, `buyer_linked_contact_id`.
+Croisé **par l'acquéreur ET par le dossier** :
+
+```
+par l'acquereur :  0 / 49
+par le dossier  :  1 / 49   (VA29758, mandat 463, sans compromis ni acte ni acheteur)
+```
+
+⭐⭐ **ET LE TÉMOIN PAR ANNÉE DIT POURQUOI — ce n'est PAS une anomalie, c'est l'ÂGE :**
+
+```
+offres de 2007 :   0,4 % de leurs dossiers sont au classeur
+offres de 2008 :   0,7 %
+offres de 2009 :   0,9 %
+offres de 2010 :   5,3 %
+offres de 2011 :  81,2 %   <- le classeur commence VRAIMENT ici
+offres de 2012 :  95,5 %
+LES 54         :   2,0 %   <- exactement le profil d'une offre de 2007-2010
+```
+
+➡ **Deux mesures indépendantes concordent** : la date d'enregistrement de l'acquéreur
+(53 des 54 entre 2007 et 2010) **et** le taux de présence au classeur. Les 54 sont du
+**vieux fonds**, et le classeur ne remonte pas jusqu'à elles. **On ne les retrouvera
+pas là.** Les trois dossiers que Frédéric a cités — **VA30156, VA30176, VA30102** —
+sont **absents** du classeur.
+
+**c) ET LE CLASSEUR NE DONNE PAS NON PLUS LA DATE DES 14** — c'était le vrai espoir,
+puisque **12 de leurs 13 dossiers y sont (92,3 %)**. Résultat : **0 sur 14**.
+Les mandats existent, avec compromis et acte, mais **aucun n'a notre acquéreur comme
+acheteur** — le bien a été vendu à quelqu'un d'autre, souvent des années plus tard :
+
+```
+VM22914  offre 1142 ACCEPTEE 97 000 EUR (acq. 389022)
+         -> mandat 3519, compromis 2019-06-04, acte 2019-08-26, acheteur 134168
+VM65976  offre 9856 ACCEPTEE 328 000 EUR (MEURS)
+         -> mandat 17348, compromis 2024-12-16, acte 2025-03-31, acheteurs 41633 + 385640
+VA2046   offre 8601 proposee 160 000 EUR (THUBERT)
+         -> mandat 16687, compromis 2025-04-10, acte 2025-06-26, acheteur 389331
+```
+
+⚠ **Une offre acceptée n'est donc pas une vente** : 1142 est « accepted » chez Hektor
+et le bien est parti à un autre acheteur. ⛔ Ne pas déduire la date de l'offre de la
+date du compromis du bien : **ce ne sont pas les mêmes personnes**.
+
+⚠ **Trois précisions que ce croisement a trouvées sur les 14**, et qui corrigent le
+§ 3 bis *(il décrivait les 54, pas les 14)* : l'offre **31611** (JUGE, 270 000 €) n'a
+**aucun NO_DOSSIER** ; les offres **32173** et **6400** n'ont **aucun acquéreur**
+(`hektor_acquereur_id` à NULL) ; l'offre **1142** a un numéro d'acquéreur mais pas de nom.
+
+⭐ **À regarder par Frédéric** : l'offre **20588** sur **VI054**, 150 000 €, proposée,
+au nom de **GERPHAGNON** (contact 95776). Il reconnaîtra tout de suite si c'est réel.
+
+➡ **CONCLUSION : la piste du classeur est fermée, pour deux raisons différentes.**
+Les 54 sont trop anciennes pour y figurer ; les 14 y figurent mais leur date n'y est
+pas. **Il ne reste que `/Api/Offre/OffreById/`** pour savoir si Hektor garde un détail
+que sa liste ne donne pas.
+
+---
+
 ## 4. CE QUI RESTE À TRANCHER PAR FRÉDÉRIC
 
 ```
