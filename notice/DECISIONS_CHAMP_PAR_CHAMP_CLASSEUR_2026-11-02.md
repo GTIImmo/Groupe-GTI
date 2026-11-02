@@ -155,6 +155,145 @@ valeurs**, toutes des essais. Il n'y a rien à écraser.
 
 ---
 
+## § 3 quinquies. ⭐⭐⭐ LE CODE EST DÉCODÉ — ET IL NE FAUT PAS S'EN SERVIR
+
+**02/11, le soir.** La passe propre, **un mandat par ligne**, est faite. Elle a
+trouvé mieux qu'un décodage de `fees_paid_by_who` : **un témoin arithmétique**
+interne à chaque ligne, qui ne dépend d'aucune interprétation.
+
+```
+LE TEMOIN, sur le mandat 16699 :
+   price            134 000
+   price_seller_net 124 700
+   fees               9 300     et 134 000 - 124 700 = 9 300  EXACTEMENT
+-> le prix AFFICHE inclut les honoraires, le vendeur touche le net
+-> C'EST LE VENDEUR QUI PAIE
+
+L'AUTRE FORME, sur le mandat 16662 :
+   price             34 000
+   price_seller_net  34 000     le vendeur touche TOUT
+   fees                   0
+   fees_paid_by_buyer 3 500     les honoraires sont LA
+-> C'EST L'ACQUEREUR QUI PAIE
+
+LA REGLE RETENUE, sans jamais lire le code :
+   fees_paid_by_buyer > 0                        -> acquereur
+   sinon fees > 0 et (price - price_seller_net) = fees -> vendeur
+```
+
+⛔ **Pourquoi mon croisement du 02/11 après-midi ne tranchait pas** : je le
+croisais avec `legal_notice`, qui vaut `{"fr":"","en":""}` — **vide**. Je
+comparais à un témoin absent. Voir [[un-zero-ne-se-croit-pas-sans-temoin-positif]].
+
+### Ce que valent les codes, mesuré — et pourquoi on les écarte
+
+```
+code 2 -> VENDEUR     9 150 lignes sur 9 178 ou les 3 temoins disent vendeur
+code 3 -> ACQUEREUR  14 947 lignes sur 16 778
+   ⚠ MAIS 1 729 lignes de code 3 disent VENDEUR : 1 703 sont des LOCATIONS
+     (product_offer_type = 2) et 26 sont de vraies ventes mal etiquetees.
+code 1 -> PARTAGE / incoherent : 80 lignes disent « les deux », 36 acquereur,
+     40 vendeur, sur 177. Aucun sens stable.
+code 0 -> 76 lignes, non renseigne.
+```
+
+**Conclusion : le code n'est pas fiable, l'arithmétique l'est.** On ne se sert
+que d'elle. Voir [[un-commentaire-de-code-n-est-pas-une-mesure]] : ici le code
+*numérique* joue le rôle du commentaire, et le calcul joue celui de la mesure.
+
+### ⛔⛔ LE FICHIER N'EST PAS UNE LISTE DE MANDATS
+
+```
+26 404 lignes, mais :
+  product_ref       26 180 valeurs distinctes  -> c'est UN BIEN par ligne
+  colonne B         18 290 distinctes seulement, une valeur vue jusqu'a 13 fois
+```
+
+**Deux systèmes de numérotation sont superposés dans le fichier** :
+
+```
+mandat « 15033 », ligne   381 : product_ref VT642    custom 15033   cree 2022-09-14 -> vendeur
+mandat « 15033 », ligne 24447 : product_ref VM57314  custom M15033  cree 2011-01-24 -> acquereur
+                                external_key « sphere... »
+```
+
+Les lignes dont `product_ref_custom` commence par **M** et dont l'`external_key`
+commence par **sphere** viennent de **l'ancien logiciel d'avant Hektor** (9 319
+lignes). Leur numéro n'est pas un numéro de mandat Hektor, et **Hektor a
+réattribué ces numéros** à d'autres biens. Les croire ferait écrire la charge
+d'un bien de 2011 sur un mandat de 2022.
+Voir [[hektor-recycle-ses-id-mandat-corps-recopie]] et
+[[ne-jamais-s-accrocher-a-une-position-toujours-a-un-identifiant]].
+
+```
+LE FILTRE QUI DEPARTAGE : la ligne doit porter « Num mandat » dans ses
+observations, ET ce numero doit EGALER la colonne B.
+   -> 14 364 lignes retenues, 11 676 numeros de mandat distincts
+   -> 370 numeros se contredisent encore (a trancher un par un, pas en masse)
+```
+
+### ⭐⭐ LE VERDICT, ET IL CONTREDIT LE 90 %
+
+```
+11 002 mandats de VENTE mesures :
+   vendeur       6 917   62,9 %
+   acquereur     3 960   36,0 %
+   indecidable     125    1,1 %
+```
+
+**Pourquoi l'écart avec le classeur (93,7 %) ?** Parce que la pratique a
+**basculé en 2017**, et le classeur ne couvre que la période récente :
+
+```
+LA CHARGE PAR ANNEE DE CREATION -- mandats de vente
+  annee   total  vendeur  acquereur   % vendeur
+  2015    1 449        7      1 433      0,5 %
+  2016    1 422       12      1 402      0,8 %
+  2017    1 312      570        731     43,8 %   <- LA BASCULE
+  2018    1 138    1 021        114     90,0 %
+  2019    1 039    1 009         29     97,2 %
+  2020      817      788         23     97,2 %
+  2021    1 041      930        105     89,9 %
+  2022    1 108    1 031         63     94,2 %
+  2023      965      901         49     94,8 %
+  2024      735      646         33     95,1 %
+```
+
+⛔⛔ **SA RÈGLE PAR DÉFAUT EST JUSTE — MAIS SEULEMENT À PARTIR DE 2018.**
+Avant 2017, c'était **l'acquéreur** qui payait presque toujours. Appliquer
+« vente → vendeur » à l'historique **inverserait la charge sur environ 3 700
+mandats d'avant 2017**. La règle par défaut doit donc dépendre de l'année :
+
+```
+mandat de vente >= 2018  -> « vendeur »    par defaut
+mandat de vente <= 2016  -> « acquereur »  par defaut
+mandat de vente de 2017  -> ⛔ AUCUN DEFAUT : 43,8 / 56,2, on ne devine pas
+mandat de recherche      -> « acquereur »  par defaut (sa regle, inchangee)
+```
+
+### Ce que le rattrapage couvrirait vraiment
+
+```
+24 568 mandats au registre
+11 533 recevraient une valeur CONSTATEE par le fichier
+   dont 96,8 % existent bien au registre (echantillon declare de 400 numeros,
+   13 absents) -> environ 11 160 mandats, soit ~45 % du registre
+⛔ 2025 : 789 mandats  et  2026 : 683 mandats  -> ZERO couverture.
+   Le fichier s'arrete au numero 17439 ; nos mandats recents sont au-dela.
+⚠ Le registre porte ~1,5 ligne par numero de mandat (593 appariements pour
+   387 numeros) : il faudra decider QUELLE ligne recoit la charge.
+```
+
+⛔ **ET LA CONDITION DU § 3 quater TIENT TOUJOURS** : chaque ligne remplie porte
+**sa source** — `fichier_modelo` (constatée), ou `deduite_par_defaut` avec
+l'année qui a servi. Une valeur déduite n'est pas une valeur constatée.
+
+✅ **Mesures reproductibles** : `decoder_charge_par_ligne.py`,
+`mesurer_cle_mandat.py` et `mandats_charge_retenus.csv` (numéro ; verdict ;
+type d'offre ; nombre de lignes). **Rien n'a été écrit : lecture seule.**
+
+---
+
 ## § 3 quater. ⭐⭐ LA SOURCE DU RATTRAPAGE N'EST PAS LE CLASSEUR — 02/11, le soir
 
 **Sa question** : *« tu as le fichier des mandats jusqu'au 27 février et même les 90
