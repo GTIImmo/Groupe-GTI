@@ -406,3 +406,27 @@ annulée. **Jouée par moi : 7/7** — colonnes 50, invoker gardé, droits ok, l
 - ➡ SUITE : C (annuaire) puis D (fiche), maquette du 30/10, derrière un interrupteur, ordinateur ET téléphone ;
   **la règle « Couple » = `nature_fiche` reste à confirmer par Frédéric** avant C.
 
+## 17. LA RÈGLE « COUPLE » TRANCHÉE, ET L'AUDIT DE LA PIÈCE C (annuaire) *(02/11 ~09:05, lecture seule, rien codé)*
+
+**✅ DÉCISION DE FRÉDÉRIC (02/11, « Oui, cette règle »)** : dans l'écran, une fiche s'affiche « Couple » **si et seulement si
+`nature_fiche = 'couple'`** (la nature calculée la nuit). `couple_json` (P2) ne décide PAS : il fournit seulement le conjoint
+(prénom, téléphone, numéro pour l'onglet).
+
+**Pourquoi la règle compte — les deux calculs de la nuit ne disent pas la même chose** (couche locale, fiches envoyées) :
+- **16 052 « personne seule » portent un `couple_json` à l'état « vide »** (P2 voit un ménage Hektor à case vide ; la nature, elle,
+  applique la règle des couples anciens). Avec la règle : affichées en **personne seule**. 2 236 autres en « aucun », 2 en « nommé ».
+- 2 114 « couple » n'ont **pas** de `couple_json` (aucun lien 245, case vide 1 869) → « Couple » sans prénom du conjoint.
+- Les conjoints nommés (`couple_role = 'conjoint'`) : 1 898 ont une première « couple » ✅, **2 ont une première « personne seule »**.
+- Les 3 007 cases rattachées (§12) sont `case_conjoint_vide` ; la personne qui les reçoit est « couple » mais son `couple_json`
+  ne les connaît pas (`rattachee_a` n'est pas envoyé) → « Couple » sans conjoint, et la case reste une ligne vide à part.
+
+**Ce que l'annuaire montre aujourd'hui (fiches non archivées, hors `menage_resolu` déjà masqué)** : 1 597 + 302 lignes « conjoint »
+(la seconde personne d'un couple, en double de la première), et ~2 584 lignes vides `case_conjoint_vide` (1 139 sans rôle + 1 445
+`menage_orphelin`), dont les cases rattachées.
+
+**Le code (lu)** : liste `loadContactsPage` (`lib/api.ts:3503`, paginée côté serveur, colonnes `contactsListingSelect` l. 202, masque
+`SANS_FICHE_DE_MENAGE` l. 200 aussi utilisé par la recherche générale l. 5440 et le choix d'un mandant l. 10385) ; rendu ordinateur
+`ContactsScreen` (`App.tsx` ~46907-46944 : un téléphone, `display_name`) ; rendu téléphone `MobileContactCards` (~47147).
+Interrupteur à crans existant : `app_setting` + `loadAppSettingValeur` (patron de `registre_transactions_ecran` : admin / on / caché).
+Recherche : les 302 couples à conjoint prénommé portent déjà son prénom dans `search_text` (P2) ; les 1 596 « nom recopié » n'ont pas de prénom.
+
