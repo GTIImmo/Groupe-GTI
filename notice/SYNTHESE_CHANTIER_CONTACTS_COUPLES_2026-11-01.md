@@ -501,3 +501,33 @@ pour le SEUL numéro ouvert (`loadContactRelations` / `loadContactSearches`). `l
   sur un même bien. **0 conjoint a une recherche** (toutes sont sur la première).
 - On tombe sur une fiche conjoint par la recherche générale ou depuis un bien (1 157 sont liés à un bien).
 
+## 21. PIÈCE D — LA FICHE : ÉCRITE, ÉPROUVÉE, COMMITÉE (b857001), NON POUSSÉE, INTERRUPTEUR NON POSÉ *(02/11, « Vas-y, lecture seule »)*
+
+**Décision de Frédéric (02/11)** : le second onglet est en **LECTURE SEULE** (modifier un conjoint passe chez Hektor par la fiche
+principale, bloc `_m2`, geste pas écrit chez nous).
+
+**Le code** (derrière `contacts_couples_fiche`, crans admin / on / absent, lu une fois par chargement de page) :
+- `ContactDetailPopup` aiguille désormais vers `FicheContactCouple` (V2 seulement). Il lit le couple (`loadContactCoupleInfo`, une
+  ligne) puis : **fiche principale** (nature « couple ») → charge le conjoint nommé (`loadContactById`) et ses liens ; **fiche conjoint**
+  (`couple_role = 'conjoint'`) → montre la **principale**, ses recherches et les liens des deux, **sur l'onglet du conjoint** ;
+  sinon, lecture ratée ou interrupteur éteint → la fiche d'avant, à l'identique (elle s'affiche aussi pendant la lecture).
+- `ContactDetailPopupV2` reçoit `foyer` : liseré `is-couple`, pastille « Couple » / « Couple · mariés » / « Couple · pacsés » / orange
+  « Couple · conjoint à compléter », deux onglets (`fa-cx-foyer`) qui ne pilotent QUE les coordonnées (`coordPhone`, `coordEmail`…) ;
+  l'e-mail du conjoint est un simple lien `mailto:` (le compositeur écrit à la principale). Boutons, recherches, activité : la principale.
+  « Archiver » et « Supprimer » disent « (tout le foyer) » (la cascade de Hektor est prouvée le 02/11, §15).
+- `lib/coupleAffichage.ts` : `foyerAffiche` (étiquette, situation married → mariés, civil_union → pacsés, onglets ; sans prénom → « Mme. NOM »,
+  les codes Hektor « Mr./Mme » ne servent pas d'étiquette), `conjointNommeId`, `unirLiensDuFoyer` (même bien + même rôle = un seul).
+- Styles : `contact-detail-v2.css` (règles de la maquette, portée `#fa-cx-root`).
+
+**Contrôles** : build vert ; 16/16 essais du foyer + 14/14 de l'annuaire (esbuild + node), témoins « personne seule » et « nature absente »
+→ rien. Sur de vraies fiches (lecture seule) : la première retrouve son conjoint (tél. compris) et le conjoint sa principale ; **1 000 conjoints
+actifs lus sur 1 000 retrouvent une principale « couple »** (la lecture plafonne à 1 000). ⚠ NON VU À L'ÉCRAN : il faut le push puis le cran.
+
+**Limites, dites** :
+- le prénom n'est PAS écrit à côté d'un rôle qui diffère (les 10) : les deux rôles s'affichent côte à côte ;
+- ouverte sur un conjoint, la fiche ne se rafraîchit pas après une modification de la principale (relire la fiche) ;
+- ⚠ notre « Supprimer » ne nettoie toujours que la fiche visée (§15) : la seconde reste chez nous — changement du worker, À PART.
+
+**Pour allumer** : Frédéric pousse ; avec son accord, poser `supabase/patch_couple_phase3d_interrupteur_fiche_2026-11-02.sql` (cran
+« admin ») ; regarder une fiche couple nommé, une case vide, un conjoint ouvert depuis la recherche, ordinateur ET téléphone ; puis « on ».
+
