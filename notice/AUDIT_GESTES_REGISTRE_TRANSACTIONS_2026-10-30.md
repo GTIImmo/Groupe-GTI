@@ -542,3 +542,49 @@ Répartition » ; fiche « manque de design, pas très graphique, hausse le nive
 - ⭐ **document `local_only` éprouvé** : bien 61476 (68 documents, tous sur le serveur seulement),
   « planCadastralNormalise Parcelle ZK 41.pdf » → « Préparation… » puis lien signé ouvert en **7 s** ; travail
   `prepare_document_cloud` `done` 13:16:56 → 13:17:02, document passé `cloud_available`. Aucune écriture chez Hektor.
+
+## 16. Pilotage (administrateurs) : audit (02/11/2026, RIEN CODÉ)
+
+**Audit limité à l'objet transaction, en LECTURE seule** (vente, compromis, répartition). Le pilotage ne crée,
+ne modifie et ne supprime rien : grille des gestes = « lire » seulement ; les autres objets ne sont pas mesurés.
+
+**Ce qui existe** : la maquette du 29/10 (https://claude.ai/artifact/3FA3yDqWuDWuqLdZAkvS8x, écran « Pilotage ») ;
+décision du 30/10 : administrateurs seuls, années antérieures, comparaison à l'année précédente. Dans l'app, l'accueil
+admin porte une case vide « Reporting agence… quand le module reporting sera disponible » (App.tsx ~26188) ; aucune
+fonction de base ne calcule de chiffres par an, par mois, par agence ou par négociateur.
+
+**Sources, mesurées avec les droits de Frédéric (02/11)** :
+- `app_registre_dossiers(p_annee)` : l'année est celle du **dernier événement** ; pour une vente, c'est **toujours**
+  l'année de l'acte (0 écart sur 12 110 dossiers). Une année = 1 appel de ~1,1 s (2026 : 502 lignes ; 2025 : 403).
+  ⚠ Chaque paquet de 1 000 lignes recalcule toute la fonction (~1,2 s) : « tout » = 13 paquets.
+- Ventes et honoraires TTC (entrée + sortie) : 2026 = **287 / 2 173 198 €** (36,6 M€ de volume) ; 2025 = 353 /
+  2 632 910 € ; à la même date (≤ 02/11) 2025 = **293 / 2 175 330 €** → −2,0 % de ventes, −0,1 % d'honoraires.
+  Historique continu depuis **2006** (85 ventes en 2006, puis 400 à 570 par an).
+- Mois 2026 : janv. 26 / 180 000 · févr. 28 / 189 000 · mars 44 / 302 950 · avr. 21 / 164 400 · mai 26 / 189 040 ·
+  juin 39 / 324 500 · juil. 34 / 265 140 · août 10 / 55 400 · sept. 32 / 272 550 · oct. 27 / 230 218.
+- **Actes déjà datés à venir** : 73 compromis en cours, acte prévu ≥ 02/11, **808 003 €** — 72 dans la liste 2026,
+  **1 dans la liste 2025** (il faut donc lire N et N-1). 36 compromis ont une date d'acte dépassée sans vente.
+- Délais médians 2026 (ventes) : offre → compromis **30 j**, compromis → acte **90 j**.
+- Agences 2026 (champ `agence_nom` de la liste, espaces retirés) : 17 agences ; 1re COURPIÈRE 28 / 236 400 €, puis
+  Craponne 32 / 232 140 €. ⚠ La maquette du 29/10 lisait le registre des mandats (Courpière 24 / 203 900) : le
+  pilotage doit prendre la MÊME agence que la liste, sinon un filtre et un total se contrediraient.
+- **Répartition** : la part d'une personne = **honoraires totaux × pourcentage / 100**, entrée et sortie confondues
+  (230 ventes 2026 en 50/50 ; c'est la règle de la fiche v4, qui additionne toutes les parts). ⚠ Ma 1re requête
+  appliquait le pourcentage à l'entrée OU à la sortie seule et donnait 48 % de répartis : FAUX, corrigé.
+  Couverture (somme des parts / honoraires) : 2022 98,7 % · 2023 98,9 % · 2024 98,8 % · **2025 84,7 %** ·
+  2026 96,5 %. **Ventes sans aucune répartition** : 2022 12 · 2023 10 · 2024 6 · **2025 55** · 2026 5.
+  1er négociateur 2026 : M. BILLIG DURAND 31 dossiers / 221 640 € (= maquette). 33 personnes en 2026.
+- ⚠ « Cet utilisateur a été supprimé » porte l'identifiant **0** pour TOUS les supprimés : on ne peut pas les
+  séparer (2023 : 16 dossiers / 161 144 €, 4e de l'année). Parts concernées : 2022 52 · 2023 62 · 2024 38 · 2025 24
+  · 2026 4.
+
+**Ce que ça pourrait casser ailleurs** : rien si le pilotage reste une VUE de l'écran Registre, en lecture, derrière
+le rôle admin : aucune écriture, aucune fonction de base modifiée, la liste et la fiche ne changent pas. Retour
+arrière = retirer le commit. ⚠ Charge : 2 appels de ~1,1 s (N et N-1) + 1 lecture de répartition (< 1 000 lignes
+par an) ; une vue « 5 ans » coûterait 5 appels.
+
+**Choix à faire par Frédéric** (rien n'est décidé) : l'endroit (bascule « Liste / Pilotage » dans l'écran Registre,
+admin seulement — recommandé), le contenu de la 1re version (la maquette du 29/10 : 4 chiffres, honoraires par mois
+avec comparaison et actes datés hachurés, négociateurs, agences), et le bloc « Qualité du registre » (le laisser à
+l'étape « à traiter », qui vient juste après — recommandé). Méthode : maquette sur les vraies données, au look de la
+fiche v4, puis code.
