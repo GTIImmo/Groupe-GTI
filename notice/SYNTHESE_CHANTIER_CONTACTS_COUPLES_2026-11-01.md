@@ -581,4 +581,9 @@ vert. **À blanc sur les vraies données** : 1 280 notaires → nature « notair
 rattachement 7 290 → 7 289 (la case donnée à un notaire part en « personne née un autre jour ») ; P2 : 995 premières de moins, conjoints 1 900
 inchangés. ⏰ **03/11 matin** : au journal, « [nature] notaires du registre des ventes : 1280 » et « notaire … app 1071 » ; chez Supabase,
 0 fiche au rôle notaire en nature « couple ».
+- ✅ **ÉCRAN EN LIGNE le 02/11 vers 10:30** (push de Frédéric ; bundle `index-DRFjz8RH.js`). ⚠ Le premier bundle neuf (`index-0z14WgY4.js`)
+  venait d'un push INTERMÉDIAIRE de l'autre session, sans a99f113 : le notaire y affichait encore « Couple ». On n'éprouve que le bundle
+  qui porte le commit. Vu dans le Chrome de Frédéric : fiche du notaire 10077849 → **plus de pastille « Couple », plus d'onglets**,
+  pastille « Notaire » ; témoin inverse, le couple 10355551 garde « Couple » et ses deux onglets ; annuaire segment Notaires, page 1 :
+  50 notaires, **0 pastille « Couple »**.
 
