@@ -90,6 +90,7 @@ import {
   loadContactCoupleInfo,
   editConjointOptimistic,
   bienEstDansLesAnnonces,
+  bienEstDansLesArchives,
   loadBienHistoriquePourStatut,
   type RegistreDossierRow,
   sendEstimationEmail,
@@ -16363,11 +16364,15 @@ export default function App() {
     if (ligne.app_dossier_id == null) return
     const appDossierId = ligne.app_dossier_id
     setErrorMessage(null)
+    // 02/11/2026 : un bien vendu / clos peut AUSSI être archivé chez Hektor. Avec `archive: '0'` écrit
+    // en dur, l'écran demandait le travail des vendus / clos, qui refuse toute archive (VA30156).
+    let archive = '0'
     try {
       if (await bienEstDansLesAnnonces(appDossierId)) {
         openDossierDetailPage(appDossierId)
         return
       }
+      if (await bienEstDansLesArchives(appDossierId)) archive = '1'
     } catch (error) {
       console.error('[registre des transactions] fiche du bien', error)
       setErrorMessage('La fiche du bien n’a pas pu être ouverte. Réessayez dans un instant.')
@@ -16383,7 +16388,7 @@ export default function App() {
       numero_dossier: String(ligne.hektor_annonce_id),
       titre_bien: [propertyTypeLabel(ligne.type_bien), ligne.ville].filter((valeur) => valeur && valeur !== '-').join(' · '),
       statut_annonce: ligne.statut_annonce,
-      archive: '0',
+      archive,
       ville: ligne.ville,
       code_postal: ligne.code_postal,
       prix: ligne.montant,

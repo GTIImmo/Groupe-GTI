@@ -9007,6 +9007,20 @@ export async function bienEstDansLesAnnonces(appDossierId: number): Promise<bool
   return Boolean(data && data.length)
 }
 
+// Le bien est-il ARCHIVÉ chez Hektor ? (02/11/2026) Un bien vendu ou clos peut l'être aussi : son
+// détail se prépare alors par le travail des archives, pas par celui des vendus / clos, qui refuse
+// toute archive (VA30156, annonce 22922). app_archive_id = app_dossier_id, comme pour l'historique.
+export async function bienEstDansLesArchives(appDossierId: number): Promise<boolean> {
+  if (!hasSupabaseEnv || !supabase) return false
+  const { data, error } = await supabase
+    .from('app_archive_annonce_index_current')
+    .select('app_archive_id')
+    .eq('app_archive_id', appDossierId)
+    .limit(1)
+  if (error) throw new Error(error.message)
+  return Boolean(data && data.length)
+}
+
 /** 4C (02/11/2026) : le bien d'un dossier VENDU, pour ouvrir la fenêtre de statut depuis le registre.
  *  Il n'est plus dans app_dossier_current : on le lit dans l'index historique (app_historical_id =
  *  app_dossier_id du registre, 257/257 mesuré), avec le mappage de la fiche légère du téléphone.
