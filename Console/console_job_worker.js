@@ -15497,8 +15497,11 @@ const CHAMPS_PROUVABLES = {
     sequestration: "sequestre", transaction_date: "dateStart",
     signature_date: "dateSignatureActe",
   },
+  // 4C-prix (02/11/2026) : sale_price AVANT amount, comme l'envoi (prixDeVente = sale_price, sinon amount).
+  // L'ordre decide lequel des deux jumeaux est juge : amount d'abord comparait Hektor au prix de l'ANNONCE
+  // (case cachee de la fenetre) -> faux « N'A PAS PRIS » sur la vente 23358 (115 001 bien pris chez Hektor).
   vente: {
-    amount: "prix", sale_price: "prix",
+    sale_price: "prix", amount: "prix",
     buyer_fees: "honorairesSortie", transaction_date: "date",
     seller_fees: "honorairesEntree",   // 18/09
   },

@@ -19067,7 +19067,11 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       const job = await createChangeHektorAnnonceStatusJob({
         dossier: statusChangeTarget,
         targetStatus: statusChangeStatus,
-        amount: statusChangeAmount,
+        // 4C-prix (02/11/2026) : sur la vente, la case « Montant » est CACHÉE (14/09) et gardait le prix de
+        // l'ANNONCE posé à l'ouverture ; la base et la preuve du worker le prenaient pour le prix (essai réel
+        // vente 23358 : 128 787 au registre pour 115 001 chez Hektor). Une vente n'a qu'un prix : celui de la case
+        // « Prix de vente ». Note : notice/AUDIT_GESTES_REGISTRE_TRANSACTIONS_2026-10-30.md § 11 quater.
+        amount: statusChangeStatus === 'sold' ? (statusChangeSalePrice || statusChangeAmount) : statusChangeAmount,
         salePrice: statusChangeSalePrice,
         transactionDate: statusChangeDate,
         signatureDate: statusChangeSignatureDate,
