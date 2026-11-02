@@ -377,3 +377,22 @@ Registre (`app_affaire_ledger`, hors lignes disparues de Hektor) et 287 ventes 2
 **Réorganisation proposée (v3)** : Tableau de bord · Chiffre d'affaires (réalisé + prévisionnel clair) · **Affaires**
 (offres, compromis, délais, négociation, pipeline) · Mandats · Stock · Acquéreurs. Le prévisionnel parle en trois mots :
 SÉCURISÉ (compromis signés), PROBABLE (offres acceptées), POSSIBLE (stock à vendre), + « atterrissage 2026 ».
+
+## 19. Maquette v3 (02/11 nuit) — même lien, 6 planches, RIEN CODÉ
+
+Frédéric : « le prévisionnel n'est pas très clair ; rien sur les offres d'achat, les compromis, les délais ; réfléchis comme
+un expert ». Réponse :
+- **Tableau de bord** (ex-vue d'ensemble) : le C.A en QUATRE mots — Réalisé 1,81 M€ HT · Sécurisé 0,53 M€ (85
+  compromis, ≈ 0,46 attendus) · Déjà en main d'ici fin janvier 0,50 M€ · Atterrissage 2026 2,14 M€ (−2,6 %) ;
+  **l'entonnoir commercial** 682 mandats → 273 offres acceptées → 275 compromis → 287 actes, chaque étape avec son écart
+  N-1 et le délai qui la sépare de la suivante (80 j, 31 j, 90 j) ; « les compromis reculent de 20 % » en titre ;
+  **À traiter cette semaine** (14 actes dépassés, 18 offres sans compromis depuis 30 j, 69 mandats à valider, 26 échus,
+  56 signatures, 157 sans mandat) ; portefeuille et demande ; tableau des agences avec compromis et TAUX DE REFUS des offres.
+- **Chiffre d'affaires** (ex-Ventes) : prévisionnel 12 mois en SÉCURISÉ 0,46 / PROBABLE 0,21 / POSSIBLE 1,13 / À TROUVER
+  0,39 M€ HT, une barre de certitude jusqu'aux 2,19 M€ des 12 derniers mois, le détail mois par mois ; réalisé mensuel vs
+  2025 ; honoraires par vente 6 310 € HT ; taux d'honoraires 4,9 % HT ; négociateurs.
+- **Affaires** (nouveau) : offres 364 (78 % acceptées), compromis 275 (−20 %), annulation 13 %, actes en retard 25 % ;
+  **frise du cycle d'une vente** proportionnelle (80 / 31 / 90 j) et la négociation (100 → 95 → 94 %) ; **les affaires en
+  cours en colonnes** (12 proposées, 43 acceptées dont 18 > 30 j, 6 en rétractation, 71 actes datés, 14 dépassés) ;
+  offres acceptées et compromis par mois avec repère 2025 ; actes à venir mois par mois ; agences avec taux de refus.
+- Mandats, Stock, Acquéreurs : v2, barre d'onglets mise à jour.
