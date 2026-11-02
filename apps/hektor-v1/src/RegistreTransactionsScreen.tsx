@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
   bienEstDansLesAnnonces, createConsoleDocumentSignedUrl, createPrepareConsoleDocumentJob, loadBienHistoriquePourStatut, loadConsoleDocuments,
   loadDossierDeLaChaine, loadHistoriqueDuDossier, loadNomsNegociateurs, loadRegistreDossiers, loadRepartitionsDesChaines,
@@ -79,6 +79,12 @@ const TRACES = {
   rafraichir: '<path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4.5V11h-6.5"/>',
   filtre: '<path d="M4 5h16l-6 7.5V19l-4 1.5v-8z"/>',
   flHaut: '<path d="M12 19V5M6 11l6-6 6 6"/>', flBas: '<path d="M12 5v14M6 13l6 6 6-6"/>', flDeux: '<path d="M8 9l4-4 4 4M8 15l4 4 4-4"/>',
+  // v4 (fiche) : prix, net vendeur, honoraires, notaire, conditions
+  euro: '<path d="M18 7a6.5 6.5 0 1 0 0 10M4.5 10.5h9M4.5 13.5h8"/>',
+  porte: '<path d="M20 12V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h7"/><path d="m16 19 2 2 4-4M8 10h8M8 14h5"/>',
+  camembert: '<path d="M20.5 15.5A9 9 0 1 1 8.5 3.7"/><path d="M21 12a9 9 0 0 0-9-9v9z"/>',
+  balance: '<path d="M12 4v16M8 20h8M5 7.5h14M5 7.5 2.5 13a2.6 2.6 0 0 0 5 0zM19 7.5 16.5 13a2.6 2.6 0 0 0 5 0z"/>',
+  liste: '<path d="M9 6.5h11M9 12h11M9 17.5h11M4.5 6.5h.01M4.5 12h.01M4.5 17.5h.01"/>',
 } as const
 type NomIcone = keyof typeof TRACES
 
@@ -224,6 +230,14 @@ function nomPart(ligne: RepartitionLigne) {
   return nom
 }
 
+// « Mme. Sandrine DELAVAUD » -> « S. DELAVAUD » : la colonne Répartition de la liste n'a la place
+// que pour un nom court ; le nom complet reste au survol.
+function nomCourt(nom: string) {
+  const mots = nom.replace(/^(m_mme|mr\.?\/mme\.?|mme\.?|mlle\.?|mr\.?|m\.)\s+/i, '').trim().split(/\s+/)
+  if (mots.length < 2 || nom === 'Sans nom' || nom === 'Compte supprimé') return mots.join(' ')
+  return `${mots[0].charAt(0).toUpperCase()}. ${mots.slice(1).join(' ')}`
+}
+
 function Repartition({ lignes }: { lignes: RepartitionLigne[] | undefined }) {
   if (lignes === undefined) return <span className="rt-mute">…</span>
   if (!lignes.length) return <span className="v3-non">Non saisie</span>
@@ -242,7 +256,7 @@ function Repartition({ lignes }: { lignes: RepartitionLigne[] | undefined }) {
             {parts.length === 1 ? (
               // Un seul intervenant : son nom, terminé par « … » s'il est trop long.
               <span className="rt-part v3-solo" title={`${nomPart(parts[0])} ${entier.format(parts[0].pourcentage)} %`}>
-                <span className="v3-nom">{nomPart(parts[0])}</span><b>{entier.format(parts[0].pourcentage)} %</b>
+                <span className="v3-nom">{nomCourt(nomPart(parts[0]))}</span><b>{entier.format(parts[0].pourcentage)} %</b>
               </span>
             ) : parts.map((part) => (
               // Plusieurs : leurs initiales ; le nom complet au survol et pour les lecteurs d'écran.
@@ -394,6 +408,68 @@ function delaiDeLEtape(lignes: AffaireLedgerRow[], index: number, etapeDuDossier
   return morceaux.length ? { texte: morceaux.join(' · '), alerte } : null
 }
 
+// ─── v4 (02/11/2026) : la frise du parcours en tête de fiche, et l'anneau ───
+
+/** Nombre de jours entre deux jours « AAAA-MM-JJ » (b - a) ; null si l'un manque. */
+function ecartEnJours(a: string, b: string) {
+  if (!a || !b) return null
+  return Math.round((Date.parse(`${b}T12:00:00Z`) - Date.parse(`${a}T12:00:00Z`)) / 86_400_000)
+}
+
+type JalonFrise = { cle: string; libelle: string; jour: string; montant: number | null; etat: 'fait' | 'ici' | 'tombe' | 'prevu' | 'vide'; icone: NomIcone }
+
+/** Les trois jalons du dossier (offre, compromis, vente ou acte prévu), d'après la ligne de la liste
+ *  et, quand il est lu, le dernier élément de chaque genre (pour les montants). */
+function jalonsDuDossier(ligne: RegistreDossierRow, offre: AffaireLedgerRow | null, compromis: AffaireLedgerRow | null, vente: AffaireLedgerRow | null): JalonFrise[] {
+  const etape = ligne.etape
+  const jourOffre = jourDe(ligne.date_offre) || jourDe(offre?.date)
+  const jourCompromis = jourDe(ligne.date_compromis) || jourDe(compromis?.date)
+  const jourVente = jourDe(ligne.date_vente) || jourDe(vente?.date)
+  const jourActe = jourDe(ligne.date_acte_prevue) || jourDe(compromis?.date_acte)
+  return [
+    {
+      cle: 'offre', libelle: etape === 'offre_refusee' ? 'Offre refusée' : etape === 'offre_proposee' ? 'Offre proposée' : 'Offre acceptée',
+      jour: jourOffre, montant: montantNombre(offre?.montant),
+      etat: etape === 'offre_refusee' ? 'tombe' : OFFRES.includes(etape) ? 'ici' : jourOffre ? 'fait' : 'vide',
+      icone: etape === 'offre_refusee' ? 'croix' : etape === 'offre_proposee' ? 'horloge' : 'coche',
+    },
+    {
+      cle: 'compromis', libelle: etape === 'compromis_annule' ? 'Compromis annulé' : jourCompromis || jourVente ? 'Compromis signé' : 'Compromis',
+      jour: jourCompromis, montant: montantNombre(compromis?.montant),
+      etat: etape === 'compromis_annule' ? 'tombe' : etape === 'compromis' ? 'ici' : jourCompromis || jourVente ? 'fait' : 'vide',
+      icone: etape === 'compromis_annule' ? 'barre' : 'stylo',
+    },
+    etape === 'vendu' || jourVente
+      ? { cle: 'vente', libelle: 'Vente actée', jour: jourVente, montant: montantNombre(vente?.montant) ?? (etape === 'vendu' ? ligne.montant : null), etat: etape === 'vendu' ? 'ici' : 'fait', icone: 'cle' }
+      : etape === 'compromis' && jourActe
+        ? { cle: 'vente', libelle: 'Acte prévu', jour: jourActe, montant: null, etat: 'prevu', icone: 'calendrier' }
+        : { cle: 'vente', libelle: 'Vente', jour: '', montant: null, etat: 'vide', icone: 'cle' },
+  ]
+}
+
+const dateDuJour = (jour: string) => (jour ? `${jour.slice(8, 10)}/${jour.slice(5, 7)}/${jour.slice(0, 4)}` : null)
+
+/** Un anneau : des parts (valeur + classe de couleur) sur un total, et un texte au centre. */
+function Anneau(props: { parts: Array<{ valeur: number; classe: string }>; total: number; centre: string; sous?: string; etiquette: string; className?: string }) {
+  const { parts, total, centre, sous, etiquette, className } = props
+  const rayon = 14
+  const tour = 2 * Math.PI * rayon
+  let depart = 0
+  return (
+    <svg className={`v4-anneau${className ? ` ${className}` : ''}`} viewBox="0 0 36 36" role="img" aria-label={etiquette}>
+      <circle className="v4-anneau-fond" cx="18" cy="18" r={rayon} />
+      {total > 0 ? parts.filter((part) => part.valeur > 0).map((part, index) => {
+        const longueur = (Math.min(part.valeur, total) / total) * tour
+        const arc = <circle key={index} className={`v4-anneau-arc ${part.classe}`} cx="18" cy="18" r={rayon} strokeDasharray={`${longueur} ${tour}`} strokeDashoffset={-depart} transform="rotate(-90 18 18)" />
+        depart += longueur
+        return arc
+      }) : null}
+      <text className="v4-anneau-centre" x="18" y={sous ? 18 : 20.5} textAnchor="middle">{centre}</text>
+      {sous ? <text className="v4-anneau-sous" x="18" y="23.5" textAnchor="middle">{sous}</text> : null}
+    </svg>
+  )
+}
+
 // ─── v3.1 : le bloc « Documents » de la fiche ───
 
 // Les documents d'une TRANSACTION se reconnaissent au nom (libre) : mesure du 02/11, note § 13.
@@ -521,27 +597,29 @@ function BlocDocuments({ appDossierId, relecture }: { appDossierId: number | nul
         : documents === null ? <p className="rt-mute" role="status">Chargement des documents…</p>
           : !tries.length ? <p className="rt-mute">Aucun document lié à ce dossier.</p> : (
             <>
-              <ul className="v31-docs">
+              <ul className="v4-docs">
                 {visibles.map((document) => {
                   const etat = enCours[document.id]
                   const introuvable = document.storage_status === 'missing' || document.storage_status === 'error'
                   const details = [dateEnClair(document.created_at_hektor ?? document.created_at), tailleEnClair(document.file_size)].filter(Boolean).join(' · ')
+                  const extension = extensionDe(document.document_name)
+                  const genre = extension === 'PDF' ? 'pdf' : /^(JPG|JPEG|PNG|GIF|WEBP|HEIC|TIF|TIFF|BMP)$/.test(extension) ? 'image' : 'autre'
                   return (
-                    <li key={document.id} className="v31-doc">
-                      <span className="v31-pdf" aria-hidden="true">{extensionDe(document.document_name)}</span>
-                      <span className="v31-doc-txt">
-                        <b title={document.document_name}>{document.document_name}</b>
-                        {details ? <span className="rt-mute">{details}</span> : null}
-                        {messages[document.id] ? <span className="v31-doc-erreur" role="status">{messages[document.id]}</span> : null}
-                      </span>
+                    <li key={document.id}>
+                      {/* v4 : toute la vignette ouvre le document (même geste qu'avant : lien signé, ou préparation). */}
                       <button
                         type="button"
-                        className="rt-bouton rt-bouton-petit"
+                        className="v4-doc"
                         disabled={Boolean(etat) || introuvable}
-                        title={introuvable ? 'Fichier introuvable' : undefined}
+                        title={introuvable ? 'Fichier introuvable' : document.document_name}
                         onClick={() => void ouvrir(document)}
                       >
-                        {etat === 'preparation' ? 'Préparation…' : etat === 'ouverture' ? 'Ouverture…' : 'Ouvrir'}
+                        <span className={`v4-fichier is-${genre}`} aria-hidden="true">{extension}</span>
+                        <span className="v4-doc-txt">
+                          <b>{document.document_name}</b>
+                          <span>{etat === 'preparation' ? 'Préparation…' : etat === 'ouverture' ? 'Ouverture…' : introuvable ? 'Fichier introuvable' : details}</span>
+                          {messages[document.id] ? <span className="v31-doc-erreur" role="status">{messages[document.id]}</span> : null}
+                        </span>
                       </button>
                     </li>
                   )
@@ -549,7 +627,7 @@ function BlocDocuments({ appDossierId, relecture }: { appDossierId: number | nul
               </ul>
               {tries.length > DOCUMENTS_VISIBLES ? (
                 <button type="button" className="v31-lien" aria-expanded={toutVoir} onClick={() => setToutVoir((valeur) => !valeur)}>
-                  {toutVoir ? 'Voir moins' : `Voir tout (${entier.format(tries.length)})`}
+                  {toutVoir ? 'Voir moins' : `Voir les ${entier.format(tries.length)} documents`}<Ic n={toutVoir ? 'flHaut' : 'right'} />
                 </button>
               ) : null}
             </>
@@ -567,6 +645,11 @@ function quandEnClair(ligne: HistoriqueDossierLigne) {
   if (!ligne.heure) return dateEnClair(ligne.quand) ?? ligne.quand
   const date = new Date(ligne.quand)
   return Number.isNaN(date.getTime()) ? ligne.quand : heureParis.format(date).replace(',', '')
+}
+
+// v4 : la couleur du point suit l'événement (vente vert, compromis ambre, offre bleu, annulé brique).
+function genreDHistorique(texte: string) {
+  return /annul|refus|supprim/i.test(texte) ? 'tombe' : /vente/i.test(texte) ? 'vente' : /compromis/i.test(texte) ? 'compromis' : /offre/i.test(texte) ? 'offre' : 'autre'
 }
 
 function BlocHistorique(props: { chaineId: number; hektorAnnonceId: number | null; lignes: AffaireLedgerRow[]; relecture: number }) {
@@ -601,7 +684,7 @@ function BlocHistorique(props: { chaineId: number; hektorAnnonceId: number | nul
           <>
             <ol className="v31-hist">
               {visibles.map((ligne) => (
-                <li key={ligne.cle}>
+                <li key={ligne.cle} className={`is-${genreDHistorique(ligne.texte)}`}>
                   <time className="rt-num" dateTime={ligne.quand}>{quandEnClair(ligne)}</time>
                   <span>{ligne.auteur ? <><b>{ligne.auteur}</b> · </> : null}{ligne.texte}</span>
                 </li>
@@ -754,6 +837,28 @@ function FicheDossier(props: {
   const entree = ligne.honoraires_entree ?? 0
   const sortie = ligne.honoraires_sortie ?? 0
 
+  // v4 : la frise, et sous elle le délai total et l'acte signé par rapport à la date prévue.
+  const jalons = jalonsDuDossier(ligne, offre, compromis, vente)
+  const totalFrise: Array<{ cle: string; texte: string; fort: string; fin?: string }> = []
+  const jourVente = jalons[2].cle === 'vente' && jalons[2].etat !== 'prevu' ? jalons[2].jour : ''
+  const premierJour = jalons[0].jour || jalons[1].jour
+  const total = ecartEnJours(premierJour, jourVente)
+  if (total != null && total >= 0) totalFrise.push({ cle: 'total', texte: jalons[0].jour ? 'De l’offre à l’acte : ' : 'Du compromis à l’acte : ', fort: pluriel(total, 'jour') })
+  const jourActePrevu = jourDe(compromis?.date_acte) || jourDe(ligne.date_acte_prevue)
+  const retardActe = ecartEnJours(jourActePrevu, jourVente)
+  if (retardActe != null) {
+    totalFrise.push({
+      cle: 'acte', texte: `Acte prévu au compromis le ${dateDuJour(jourActePrevu)}, signé `,
+      fort: retardActe === 0 ? 'à la date prévue' : `${pluriel(Math.abs(retardActe), 'jour')} plus ${retardActe > 0 ? 'tard' : 'tôt'}`,
+    })
+  }
+  // Prix de vente comparé à l'offre retenue (le montant de la dernière offre lue).
+  const montantOffre = montantNombre(offre?.montant)
+  const ecartOffre = ligne.etape === 'vendu' && prix != null && montantOffre != null && montantOffre !== prix ? prix - montantOffre : null
+  // Répartition : la part attribuée (toutes lignes confondues, plafond 100 % côté base).
+  const pourcentReparti = repartitionTriee.reduce((somme, part) => somme + Math.max(part.pourcentage, 0), 0)
+  const resteARepartir = repartitionTriee.length ? Math.max(0, Math.round((100 - pourcentReparti) * 100) / 100) : 0
+
   return (
     <section className="rt-ecran rt-fiche" aria-labelledby="rt-fiche-titre">
       <nav className="rt-fiche-fil" aria-label="Fil d’Ariane">
@@ -775,6 +880,7 @@ function FicheDossier(props: {
         ) : null}
       </nav>
 
+      <div className={`v4-heros is-${ligne.etape}`}>
       <header className="rt-fiche-entete">
         <div className="rt-fiche-identite">
           {ligne.photo_url_listing ? (
@@ -823,38 +929,75 @@ function FicheDossier(props: {
         </div>
       </header>
 
+      {/* v4 : le parcours en un coup d'œil -- trois jalons, la durée entre eux, et le total. */}
+      <div className="v4-frise" aria-label="Parcours en un coup d’œil">
+        {jalons.map((jalon, index) => {
+          const precedent = jalons[index - 1]
+          const duree = precedent && jalon.etat !== 'prevu' ? ecartEnJours(precedent.jour, jalon.jour) : null
+          return (
+            <Fragment key={jalon.cle}>
+              {index > 0 ? (
+                <span className={`v4-lien is-${precedent.cle}-${jalon.cle}${jalon.etat === 'vide' || jalon.etat === 'prevu' ? ' is-attente' : ''}`} aria-hidden={duree == null}>
+                  <span className="v4-trait" />
+                  {duree != null ? <span className="v4-duree rt-num"><Ic n="horloge" />{pluriel(duree, 'jour').replace(/ jours?$/, ' j')}</span> : null}
+                </span>
+              ) : null}
+              <div className={`v4-jalon is-${jalon.cle} is-${jalon.etat}`}>
+                <span className="v4-pt" aria-hidden="true"><Ic n={jalon.icone} /></span>
+                <span className="v4-jalon-txt">
+                  <span className="v4-jalon-lib">{jalon.libelle}</span>
+                  <span className="v4-jalon-date rt-num">{dateDuJour(jalon.jour) ?? '—'}</span>
+                  {jalon.montant != null ? <span className="v4-jalon-mt rt-num">{formatEuros(jalon.montant)}</span> : null}
+                </span>
+              </div>
+            </Fragment>
+          )
+        })}
+        {totalFrise.length ? <div className="v4-total">{totalFrise.map((morceau) => <span key={morceau.cle}>{morceau.texte}<b>{morceau.fort}</b>{morceau.fin}</span>)}</div> : null}
+      </div>
+      </div>
+
       <div className="rt-indicateurs" aria-label="Chiffres du dossier">
-        <div className="rt-carte rt-indicateur">
+        <div className="rt-carte rt-indicateur v4-chiffre">
+          <span className="v4-tuile is-prix" aria-hidden="true"><Ic n="euro" /></span>
           <span className="rt-indicateur-libelle">{ligne.etape === 'vendu' ? 'Prix de vente' : ligne.etape.startsWith('offre') ? 'Montant de l’offre' : 'Prix'}</span>
           <strong className="rt-indicateur-valeur rt-num">{formatEuros(prix)}</strong>
-          <span className="rt-indicateur-detail">{ligne.nb_transactions > 1 ? `${ligne.nb_transactions} transactions dans ce dossier` : 'une transaction'}</span>
+          <span className="rt-indicateur-detail">
+            {ecartOffre != null ? (
+              <><span className={`v4-ecart ${ecartOffre < 0 ? 'is-baisse' : 'is-hausse'}`}><Ic n={ecartOffre < 0 ? 'flBas' : 'flHaut'} />{ecartOffre > 0 ? '+' : '−'}{formatEuros(Math.abs(ecartOffre))}</span>par rapport à l’offre</>
+            ) : ligne.nb_transactions > 1 ? `${ligne.nb_transactions} transactions dans ce dossier` : 'une transaction'}
+          </span>
         </div>
-        <div className="rt-carte rt-indicateur">
+        <div className="rt-carte rt-indicateur v4-chiffre">
+          <span className="v4-tuile is-net" aria-hidden="true"><Ic n="porte" /></span>
           <span className="rt-indicateur-libelle">Net vendeur</span>
           <strong className="rt-indicateur-valeur rt-num">{formatEuros(netVendeur)}</strong>
           <span className="rt-indicateur-detail">{netVendeur == null ? 'non renseigné' : 'au compromis'}</span>
         </div>
-        <div className="rt-carte rt-indicateur">
+        <div className="rt-carte rt-indicateur v4-chiffre">
+          <span className="v4-tuile is-hono" aria-hidden="true"><Ic n="camembert" /></span>
           <span className="rt-indicateur-libelle">Honoraires</span>
-          <strong className="rt-indicateur-valeur rt-num">{ligne.honoraires ? formatEuros(ligne.honoraires) : '—'}</strong>
+          <span className="v4-hono">
+            <strong className="rt-indicateur-valeur rt-num">{ligne.honoraires ? formatEuros(ligne.honoraires) : '—'}</strong>
+            {ligne.honoraires ? (
+              // L'anneau : entrée (plein) et sortie (clair), le taux au centre.
+              <Anneau
+                className="is-petit"
+                parts={[{ valeur: entree, classe: 'is-entree' }, { valeur: sortie, classe: 'is-sortie' }]}
+                total={entree + sortie}
+                centre={tauxHonoraires ? `${tauxHonoraires.toLocaleString('fr-FR', { maximumFractionDigits: 1 })}%` : ''}
+                etiquette={`Entrée ${formatEuros(entree)}, sortie ${formatEuros(sortie)}${tauxHonoraires ? `, ${tauxHonoraires.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} % du prix` : ''}`}
+              />
+            ) : null}
+          </span>
           <span className="rt-indicateur-detail">
             {ligne.honoraires ? (
-              // Une mini-barre entrée (plein) / sortie (hachuré), mêmes montants et même % que la ligne de texte d'avant.
-              <span className="v3-es">
-                <span className="v3-es-bar" aria-hidden="true">
-                  {entree > 0 ? <i className="v3-e" style={{ flex: `${entree} 1 0` }} /> : null}
-                  {sortie > 0 ? <i className="v3-s" style={{ flex: `${sortie} 1 0` }} /> : null}
-                </span>
-                <span className="v3-es-leg">
-                  <span><i className="v3-sw v3-e" />entrée {formatEuros(entree)}</span>
-                  <span><i className="v3-sw v3-s" />sortie {formatEuros(sortie)}</span>
-                  {tauxHonoraires ? <span>{tauxHonoraires.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} % du prix</span> : null}
-                </span>
-              </span>
+              <span className="v4-hono-leg"><span><i className="v4-sw is-entree" />entrée {formatEuros(entree)}</span><span><i className="v4-sw is-sortie" />sortie {formatEuros(sortie)}</span></span>
             ) : 'non renseignés'}
           </span>
         </div>
-        <div className={`rt-carte rt-indicateur${'alerte' in quatrieme && quatrieme.alerte ? ' is-alerte' : ''}`}>
+        <div className={`rt-carte rt-indicateur v4-chiffre${'alerte' in quatrieme && quatrieme.alerte ? ' is-alerte' : ''}`}>
+          <span className="v4-tuile is-date" aria-hidden="true"><Ic n="calendrier" /></span>
           <span className="rt-indicateur-libelle">{quatrieme.libelle}</span>
           <strong className="rt-indicateur-valeur rt-num">{quatrieme.valeur ?? '—'}</strong>
           <span className="rt-indicateur-detail">{'alerte' in quatrieme && quatrieme.alerte ? <Ic n="alerte" /> : null}{quatrieme.detail}</span>
@@ -902,7 +1045,9 @@ function FicheDossier(props: {
                             <span className="rt-mute rt-num">{dateEnClair(item.date) ?? 'date inconnue'}</span>
                             <span className="rt-etape-montant rt-num">{formatEuros(montant)}</span>
                           </div>
-                          {details.some(Boolean) ? <span className="rt-mute">{details.filter(Boolean).join(' · ')}</span> : null}
+                          {details.some(Boolean) ? (
+                            <span className="v4-tags">{details.filter(Boolean).map((detail) => <span key={String(detail)} className="v4-tag">{detail}</span>)}</span>
+                          ) : null}
                           {delai ? (
                             <span className={`v31-delai${delai.alerte ? ' is-alerte' : ''}`}><Ic n={delai.alerte ? 'alerte' : 'horloge'} />{delai.texte}</span>
                           ) : null}
@@ -935,6 +1080,36 @@ function FicheDossier(props: {
               ) : null}
             </section>
 
+            <BlocDocuments appDossierId={ligne.app_dossier_id} relecture={relecture} />
+          </div>
+
+          <div className="rt-fiche-colonne">
+            <section className="rt-carte rt-bloc" aria-labelledby="rt-bloc-parties">
+              <h3 id="rt-bloc-parties" className="rt-bloc-titre">Les parties</h3>
+              {!parties.size ? <p className="rt-mute">Aucune partie connue pour ce dossier.</p> : (
+                <div className="rt-parties">
+                  {ROLES.filter((role) => parties.get(role.cle)?.length).map((role) => {
+                    const personnes = parties.get(role.cle) ?? []
+                    return (
+                      <div key={role.cle} className={`rt-partie v4-role-${role.cle.startsWith('notaire') ? 'notaire' : role.cle}`}>
+                        <span className="rt-indicateur-libelle"><Ic n={role.cle === 'vendeur' ? 'maison' : role.cle === 'acquereur' ? 'cle' : 'balance'} />{personnes.length > 1 ? `${role.pluriel} · ${personnes.length}` : role.libelle}</span>
+                        {personnes.map((personne) => {
+                          const id = String(personne.hektor_contact_id ?? personne.app_contact_id ?? '').trim()
+                          const nom = personne.nom || (personne.fiche_sans_nom ? 'Fiche sans nom' : id ? `Contact n° ${id}` : 'Contact inconnu')
+                          const contenu = <><span className="v3-av" aria-hidden="true">{initiales(nom)}</span><span>{nom}</span></>
+                          return onOuvrirContact && id ? (
+                            <button key={`${personne.app_affaire_id}-${personne.rang}-${id}`} type="button" className="rt-lien v3-pers" title={nom} onClick={() => onOuvrirContact(id)}>{contenu}</button>
+                          ) : (
+                            <b key={`${personne.app_affaire_id}-${personne.rang}-${id}`} className="v3-pers" title={nom}>{contenu}</b>
+                          )
+                        })}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </section>
+
             <section className="rt-carte rt-bloc" aria-labelledby="rt-bloc-repartition">
               <div className="rt-bloc-tete">
                 <h3 id="rt-bloc-repartition" className="rt-bloc-titre">Répartition des honoraires</h3>
@@ -954,57 +1129,53 @@ function FicheDossier(props: {
               </div>
               {!repartitionTriee.length ? <p className="rt-mute">Aucune répartition saisie.</p> : (
                 <>
-                  <div
-                    className="v3-rp-bar"
-                    role="img"
-                    aria-label={repartitionTriee.map((part) => `${part.cote === 'entree' ? 'entrée' : 'sortie'} ${nomPart(part)} ${entier.format(part.pourcentage)} %`).join(', ')}
-                  >
-                    {repartitionTriee.map((part) => (
-                      <i key={`${part.cote}-${part.rang}-${part.hektorUserId}`} className={part.cote === 'entree' ? 'v3-e' : 'v3-s'} style={{ flex: `${Math.max(part.pourcentage, 0)} 1 0` }} />
-                    ))}
+                  {/* v4 : l'anneau de ce qui est attribué, une couleur par intervenant, puis le reste. */}
+                  <div className="v4-rp-tete">
+                    <Anneau
+                      className="is-grand"
+                      parts={repartitionTriee.map((part, index) => ({ valeur: Math.max(part.pourcentage, 0), classe: `is-p${index % 4}` }))}
+                      total={100}
+                      centre={`${entier.format(pourcentReparti)} %`}
+                      sous="réparti"
+                      etiquette={repartitionTriee.map((part) => `${part.cote === 'entree' ? 'entrée' : 'sortie'} ${nomPart(part)} ${entier.format(part.pourcentage)} %`).join(', ')}
+                    />
+                    <ul className="v4-rp-leg">
+                      {repartitionTriee.map((part, index) => (
+                        <li key={`${part.cote}-${part.rang}-${part.hektorUserId}`}><i className={`v4-sw is-p${index % 4}`} /><span>{nomPart(part)}</span><b className="rt-num">{ligne.honoraires ? formatEuros((ligne.honoraires * part.pourcentage) / 100) : `${entier.format(part.pourcentage)} %`}</b></li>
+                      ))}
+                      {resteARepartir > 0 ? (
+                        <li><i className="v4-sw is-reste" /><span>Non attribué</span><b className="rt-num">{ligne.honoraires ? formatEuros((ligne.honoraires * resteARepartir) / 100) : `${entier.format(resteARepartir)} %`}</b></li>
+                      ) : null}
+                    </ul>
                   </div>
                   <ul className="rt-parts">
-                    {repartitionTriee.map((part) => (
+                    {repartitionTriee.map((part, index) => (
                       <li key={`${part.cote}-${part.rang}-${part.hektorUserId}`} className="rt-part-ligne">
                         <span className={`rt-part-cote is-${part.cote}`}>{part.cote === 'entree' ? 'Entrée' : 'Sortie'}</span>
-                        <span className="rt-part-nom"><span className="v3-av" aria-hidden="true">{initiales(nomPart(part))}</span><span>{nomPart(part)}</span></span>
+                        <span className="rt-part-nom"><span className={`v3-av is-p${index % 4}`} aria-hidden="true">{initiales(nomPart(part))}</span><span>{nomPart(part)}</span></span>
                         <span className="rt-mute rt-num">{entier.format(part.pourcentage)} %</span>
                         <b className="rt-num">{ligne.honoraires ? formatEuros((ligne.honoraires * part.pourcentage) / 100) : '—'}</b>
+                        <span className="v4-jauge" aria-hidden="true"><i className={`is-p${index % 4}`} style={{ width: `${Math.min(Math.max(part.pourcentage, 0), 100)}%` }} /></span>
                       </li>
                     ))}
                   </ul>
+                  {resteARepartir > 0 ? (
+                    <p className="v4-reste"><Ic n="alerte" />{`${entier.format(resteARepartir)} % des honoraires ne sont attribués à personne.`}</p>
+                  ) : null}
                 </>
               )}
             </section>
-          </div>
-
-          <div className="rt-fiche-colonne">
-            <section className="rt-carte rt-bloc" aria-labelledby="rt-bloc-parties">
-              <h3 id="rt-bloc-parties" className="rt-bloc-titre">Les parties</h3>
-              {!parties.size ? <p className="rt-mute">Aucune partie connue pour ce dossier.</p> : (
-                <div className="rt-parties">
-                  {ROLES.filter((role) => parties.get(role.cle)?.length).map((role) => {
-                    const personnes = parties.get(role.cle) ?? []
-                    return (
-                      <div key={role.cle} className="rt-partie">
-                        <span className="rt-indicateur-libelle">{personnes.length > 1 ? `${role.pluriel} · ${personnes.length}` : role.libelle}</span>
-                        {personnes.map((personne) => {
-                          const id = String(personne.hektor_contact_id ?? personne.app_contact_id ?? '').trim()
-                          const nom = personne.nom || (personne.fiche_sans_nom ? 'Fiche sans nom' : id ? `Contact n° ${id}` : 'Contact inconnu')
-                          const contenu = <><span className="v3-av" aria-hidden="true">{initiales(nom)}</span><span>{nom}</span></>
-                          return onOuvrirContact && id ? (
-                            <button key={`${personne.app_affaire_id}-${personne.rang}-${id}`} type="button" className="rt-lien v3-pers" title={nom} onClick={() => onOuvrirContact(id)}>{contenu}</button>
-                          ) : (
-                            <b key={`${personne.app_affaire_id}-${personne.rang}-${id}`} className="v3-pers" title={nom}>{contenu}</b>
-                          )
-                        })}
-                      </div>
-                    )
-                  })}
+            {!conditions.length && !notes.length ? (
+              // v4 : rien à dire -> une seule petite carte, au lieu de deux blocs vides.
+              <section className="rt-carte rt-bloc" aria-labelledby="rt-bloc-suivi">
+                <h3 id="rt-bloc-suivi" className="rt-bloc-titre">Conditions et notes</h3>
+                <div className="v4-vides">
+                  <p className="v4-vide"><Ic n="liste" /><span><b>Conditions suspensives</b>Aucune saisie</span></p>
+                  <p className="v4-vide"><Ic n="note" /><span><b>Notes</b>Aucune note</span></p>
                 </div>
-              )}
-            </section>
-
+              </section>
+            ) : (
+              <>
             <section className="rt-carte rt-bloc" aria-labelledby="rt-bloc-conditions">
               <h3 id="rt-bloc-conditions" className="rt-bloc-titre">Conditions suspensives</h3>
               {!conditions.length ? <p className="rt-mute">Aucune condition saisie.</p> : (
@@ -1044,7 +1215,8 @@ function FicheDossier(props: {
               )}
             </section>
 
-            <BlocDocuments appDossierId={ligne.app_dossier_id} relecture={relecture} />
+              </>
+            )}
             <BlocHistorique chaineId={ligne.app_chaine_id} hektorAnnonceId={ligne.hektor_annonce_id} lignes={lignes} relecture={relecture} />
           </div>
         </div>
@@ -1161,7 +1333,9 @@ export default function RegistreTransactionsScreen({ isAdmin, libelleTypeBien, o
       const date = String(ligne.date_dernier_evenement ?? '').trim()
       if (!date || date.startsWith('0000') || Number(date.slice(5, 7)) !== Number(moisActif)) return false
     }
-    if (agenceActive && (ligne.agence_nom ?? '') !== agenceActive) return false
+    // Comparé SANS les espaces de bord, comme la liste des choix : les 34 dossiers d'Ambert arrivent
+    // en « Groupe GTI Ambert   » (mesuré le 02/11) et le filtre n'en trouvait aucun.
+    if (agenceActive && (ligne.agence_nom ?? '').trim() !== agenceActive.trim()) return false
     if (negoActif && String(ligne.negociateur_email ?? '').trim().toLowerCase() !== negoActif) return false
     return true
   }), [lignes, moisActif, agenceActive, negoActif])
@@ -1500,15 +1674,16 @@ export default function RegistreTransactionsScreen({ isAdmin, libelleTypeBien, o
             <div className="rt-table-boite">
               <table className="rt-table">
                 <colgroup>
-                  {/* Largeurs fixes (maquette v3.1), resserrées : à 1 280 px la zone de l'app est plus
-                      étroite que celle de la maquette (≈ 950 px contre 1 060). Le bien prend le reste. */}
-                  <col style={{ width: 150 }} />
+                  {/* Largeurs fixes. Mesure en ligne du 02/11 à 1 280 px : la table fait 1 083 px, le
+                      parcours était tassé et les noms de la répartition coupés -> on les élargit, le
+                      bien prend le reste (≈ 220 px). */}
+                  <col style={{ width: 140 }} />
                   <col />
                   <col style={{ width: '9%' }} />
-                  <col style={{ width: 186 }} />
-                  <col style={{ width: 82 }} />
-                  <col style={{ width: 104 }} />
-                  <col style={{ width: 148 }} />
+                  <col style={{ width: 230 }} />
+                  <col style={{ width: 86 }} />
+                  <col style={{ width: 94 }} />
+                  <col style={{ width: 212 }} />
                 </colgroup>
                 <thead>
                   <tr>

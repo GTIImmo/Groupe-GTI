@@ -421,10 +421,10 @@ button.rt-carte-dossier { cursor: pointer; }
 td.rt-num { font-weight: 600; }
 
 /* parcours : petite frise (fait = plein, en cours = magenta, à venir = vide) */
-.rt-parcours { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; }
+.rt-parcours { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 6px; }
 .rt-marche { position: relative; flex-direction: column; align-items: flex-start; gap: 6px; min-width: 0; }
 .rt-point { width: 10px; height: 10px; margin: 0; border: 2px solid var(--dash); background: var(--surface); }
-.rt-marche::after { content: ''; position: absolute; top: 4px; left: 14px; right: 4px; border-top: 2px dashed var(--dash); }
+.rt-marche::after { content: ''; position: absolute; top: 4px; left: 14px; right: -2px; border-top: 2px dashed var(--dash); }
 .rt-marche:last-child::after { display: none; }
 .rt-marche.seg-plein::after { border-top-style: solid; border-top-color: var(--ink); }
 .rt-marche.is-fait .rt-point { background: var(--ink); border-color: var(--ink); }
@@ -440,12 +440,12 @@ td.rt-num { font-weight: 600; }
 
 /* répartition dans la liste */
 .rt-repartition { gap: 6px; }
-.rt-repartition-cote { flex-wrap: nowrap; align-items: center; gap: 6px; min-width: 0; }
-.rt-repartition-libelle { min-width: 40px; flex: none; font-size: 11px; font-weight: 700; letter-spacing: .01em; color: var(--mute); }
+.rt-repartition-cote { flex-wrap: nowrap; align-items: center; gap: 5px; min-width: 0; }
+.rt-repartition-libelle { min-width: 38px; flex: none; font-size: 11px; font-weight: 700; letter-spacing: .01em; color: var(--mute); }
 .rt-part { display: inline-flex; align-items: center; gap: 3px; min-width: 0; font-size: 12.5px; }
 .rt-part b { font-weight: 700; }
 .v3-solo { flex: 1; min-width: 0; }
-.v3-solo .v3-nom { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.v3-solo .v3-nom { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
 .v3-solo b { flex: none; }
 .v3-av { display: inline-grid; place-items: center; flex: none; width: 20px; height: 20px; border-radius: 50%; background: var(--surface-3); color: var(--ink-2); font-size: 9.5px; font-weight: 800; letter-spacing: .02em; }
 .v3-av.moi { background: var(--brand); color: #fff; }
@@ -618,6 +618,188 @@ td.rt-num { font-weight: 600; }
 .v31-hist li:not(:last-child)::after { content: ''; position: absolute; left: 6.5px; top: 16px; bottom: 0; width: 1px; background: var(--line); }
 .v31-hist time { font-size: 11.5px; color: var(--mute); }
 .v31-hist b { font-weight: 600; }
+
+/* ═══════════════════════════════════════════════════════════════════════════════════════════
+   FICHE v4 (02/11/2026) -- maquette « fiche-dossier-v4.html » validée : mêmes blocs, habillage relevé.
+   En-tête teinté par l'étape + frise, chiffres à tuiles d'icône, anneaux (honoraires, répartition),
+   parties colorées par rôle, documents en vignettes, colonnes rééquilibrées.
+   ═══════════════════════════════════════════════════════════════════════════════════════════ */
+.rt-ecran { --notaire-bg: #efecf7; --notaire-fg: #5b4a8b; --p0: #c5005f; --p1: #2f5fa7; --p2: #9a5a10; --p3: #1f6a49; }
+
+/* en-tête : une carte, teintée de la couleur de l'étape, qui porte aussi la frise */
+.v4-heros { --teinte: var(--offre-bg); --accent: var(--offre-fg); border: 1px solid var(--line); border-radius: 22px; background: var(--surface); box-shadow: var(--shadow); overflow: hidden; }
+.v4-heros.is-compromis { --teinte: var(--comp-bg); --accent: var(--comp-fg); }
+.v4-heros.is-vendu { --teinte: var(--vente-bg); --accent: var(--vente-fg); }
+.v4-heros.is-compromis_annule, .v4-heros.is-offre_refusee { --teinte: var(--tombe-bg); --accent: var(--tombe-fg); }
+.v4-heros .rt-fiche-entete { padding: 22px 24px 20px; background: radial-gradient(120% 150% at 100% 0%, var(--teinte) 0%, color-mix(in srgb, var(--teinte) 50%, transparent) 40%, transparent 72%); }
+.v4-heros .rt-fiche-entete { flex-wrap: nowrap; align-items: center; }
+.v4-heros .rt-fiche-identite { flex: 1; min-width: 0; }
+.v4-heros .rt-fiche-actions-tete { flex: none; }
+.v4-heros .rt-fiche-photo { width: 168px; height: 118px; border-radius: 16px; object-fit: cover; box-shadow: 0 6px 16px color-mix(in srgb, var(--accent) 22%, transparent); }
+.v4-heros .rt-fiche-titre { font-size: 30px; font-weight: 800; }
+.v4-heros .v3-meta .v3-av { width: 24px; height: 24px; font-size: 10px; background: var(--brand); color: #fff; }
+.v4-heros .rt-fiche-actions-tete { display: flex; flex-direction: column; align-items: stretch; gap: 8px; }
+.v4-heros .rt-fiche-actions-tete .rt-bouton-principal { order: -1; }
+
+/* la frise : trois jalons, la durée entre eux */
+.v4-frise { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 10px; padding: 16px 24px 18px; border-top: 1px solid var(--line-2); }
+.v4-jalon { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.v4-pt { width: 40px; height: 40px; flex: none; border-radius: 12px; display: grid; place-items: center; background: var(--surface-3); color: var(--mute); }
+.v4-pt .ic { width: 19px; height: 19px; stroke-width: 2.1; }
+.v4-jalon.is-offre .v4-pt { background: var(--offre-bg); color: var(--offre-fg); }
+.v4-jalon.is-compromis .v4-pt { background: var(--comp-bg); color: var(--comp-fg); }
+.v4-jalon.is-vente .v4-pt { background: var(--vente-bg); color: var(--vente-fg); }
+.v4-jalon.is-ici .v4-pt { background: var(--accent, var(--brand)); color: #fff; box-shadow: 0 0 0 4px var(--teinte, var(--halo)); }
+.v4-jalon.is-tombe .v4-pt { background: var(--tombe-fg); color: #fff; box-shadow: 0 0 0 4px var(--tombe-bg); }
+.v4-jalon.is-vide .v4-pt, .v4-jalon.is-prevu .v4-pt { background: var(--surface); color: var(--dash); box-shadow: inset 0 0 0 2px var(--line-strong); }
+.v4-jalon-txt { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.v4-jalon-lib { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.v4-jalon-date { font-family: var(--f-disp); font-weight: 800; font-size: 16px; letter-spacing: -.01em; color: var(--ink); }
+.v4-jalon.is-vide .v4-jalon-date, .v4-jalon.is-prevu .v4-jalon-date { color: var(--mute); font-weight: 700; }
+.v4-jalon-mt { font-size: 12.5px; color: var(--mute); }
+.v4-lien { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 84px; }
+.v4-trait { width: 100%; height: 3px; border-radius: 3px; background: linear-gradient(90deg, var(--offre-fg), var(--comp-fg)); }
+.v4-lien.is-compromis-vente .v4-trait { background: linear-gradient(90deg, var(--comp-fg), var(--vente-fg)); }
+.v4-lien.is-attente .v4-trait { background: none; border-top: 2px dashed var(--dash); height: 0; border-radius: 0; }
+.v4-duree { display: inline-flex; align-items: center; gap: 4px; padding: 2px 9px; border-radius: 999px; background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--line); font-size: 12px; font-weight: 700; color: var(--ink-2); white-space: nowrap; }
+.v4-duree .ic { width: 12px; height: 12px; }
+.v4-total { grid-column: 1 / -1; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 16px; padding-top: 2px; font-size: 12.5px; color: var(--mute); }
+.v4-total b { color: var(--ink); font-weight: 700; }
+
+/* chiffres clés : une tuile d'icône par carte */
+.v4-chiffre { display: grid; grid-template-columns: 40px minmax(0, 1fr); column-gap: 12px; row-gap: 3px; align-content: start; }
+.v4-chiffre > :not(.v4-tuile) { grid-column: 2; }
+.v4-tuile { grid-column: 1; grid-row: 1 / span 3; width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; }
+.v4-tuile .ic { width: 19px; height: 19px; stroke-width: 2; }
+.v4-tuile.is-prix { background: var(--brand-soft); color: var(--brand); }
+.v4-tuile.is-net { background: var(--offre-bg); color: var(--offre-fg); }
+.v4-tuile.is-hono { background: var(--comp-bg); color: var(--comp-fg); }
+.v4-tuile.is-date { background: var(--vente-bg); color: var(--vente-fg); }
+.v4-chiffre.is-alerte .v4-tuile { background: var(--danger-bg); color: var(--danger-fg); }
+.rt-fiche .v4-chiffre .rt-indicateur-valeur { font-size: 23px; }
+.rt-fiche .v4-chiffre .rt-indicateur-detail { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 12.5px; }
+.v4-ecart { display: inline-flex; align-items: center; gap: 3px; padding: 1px 7px; border-radius: 999px; font-size: 11.5px; font-weight: 700; }
+.v4-ecart .ic { width: 12px; height: 12px; stroke-width: 2.5; }
+.v4-ecart.is-baisse { background: var(--tombe-bg); color: var(--tombe-fg); }
+.v4-ecart.is-hausse { background: var(--vente-bg); color: var(--vente-fg); }
+.v4-hono { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.v4-hono-leg { display: flex; flex-wrap: wrap; gap: 2px 10px; }
+.v4-sw { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; flex: none; }
+
+/* l'anneau */
+.v4-anneau { flex: none; overflow: visible; }
+.v4-anneau.is-petit { width: 46px; height: 46px; }
+.v4-anneau.is-grand { width: 96px; height: 96px; }
+.v4-anneau-fond { fill: none; stroke: var(--surface-3); stroke-width: 5.5; }
+.v4-anneau-arc { fill: none; stroke-width: 5.5; }
+.v4-anneau-centre { font-family: var(--f-disp); font-weight: 800; font-size: 8px; fill: var(--ink); }
+.is-grand .v4-anneau-centre { font-size: 6.4px; }
+.v4-anneau-sous { font-family: var(--f-ui); font-weight: 600; font-size: 3.8px; fill: var(--mute); }
+.v4-anneau-arc.is-entree, .v4-sw.is-entree { stroke: var(--comp-fg); background: var(--comp-fg); }
+.v4-anneau-arc.is-sortie, .v4-sw.is-sortie { stroke: #e2b56f; background: #e2b56f; }
+.v4-anneau-arc.is-p0, .v4-sw.is-p0, .v4-jauge .is-p0 { stroke: var(--p0); background: var(--p0); }
+.v4-anneau-arc.is-p1, .v4-sw.is-p1, .v4-jauge .is-p1 { stroke: var(--p1); background: var(--p1); }
+.v4-anneau-arc.is-p2, .v4-sw.is-p2, .v4-jauge .is-p2 { stroke: var(--p2); background: var(--p2); }
+.v4-anneau-arc.is-p3, .v4-sw.is-p3, .v4-jauge .is-p3 { stroke: var(--p3); background: var(--p3); }
+.v4-sw.is-reste { background: var(--surface-3); box-shadow: inset 0 0 0 1px var(--line-strong); }
+
+/* colonnes : la gauche un peu plus large (parcours, documents) */
+.rt-fiche .rt-fiche-grille { grid-template-columns: minmax(0, 1.18fr) minmax(0, 1fr); }
+.rt-fiche .rt-bloc { border-radius: 18px; }
+
+/* parcours détaillé : chaque étape dans sa carte */
+.rt-fiche .rt-etape { grid-template-columns: 34px minmax(0, 1fr) auto; column-gap: 12px; padding: 0 0 14px; align-items: start; }
+.rt-fiche .rt-etape:not(:last-child)::after { left: 16px; top: 40px; bottom: 2px; width: 2px; border-radius: 2px; }
+.rt-fiche .rt-etape-point { width: 34px; height: 34px; border-radius: 11px; }
+.rt-fiche .rt-etape.is-vendu .rt-etape-point { background: var(--vente-fg); color: #fff; }
+.rt-fiche .rt-etape-corps { padding: 11px 13px; border-radius: 14px; background: var(--surface-2); border: 1px solid var(--line-2); gap: 6px; }
+.rt-fiche .rt-etape.is-vendu .rt-etape-corps { background: linear-gradient(180deg, var(--vente-bg), color-mix(in srgb, var(--vente-bg) 35%, transparent)); border-color: color-mix(in srgb, var(--vente-fg) 18%, transparent); }
+.rt-fiche .rt-etape.is-compromis_annule .rt-etape-corps, .rt-fiche .rt-etape.is-offre_refusee .rt-etape-corps { background: color-mix(in srgb, var(--tombe-bg) 60%, transparent); }
+.rt-fiche .rt-etape-haut .rt-etape-montant { margin-left: auto; font-size: 16px; }
+.rt-fiche .rt-etape > .rt-bouton { margin-top: 6px; }
+.v4-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.v4-tag { display: inline-flex; align-items: center; min-height: 24px; padding: 2px 9px; border-radius: 8px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); font-size: 12px; color: var(--ink-2); }
+
+/* parties : une couleur par rôle */
+.rt-fiche .rt-partie { border: 0; }
+.rt-fiche .rt-partie .rt-indicateur-libelle { display: inline-flex; align-items: center; gap: 6px; }
+.rt-fiche .rt-partie .rt-indicateur-libelle .ic { width: 14px; height: 14px; }
+.v4-role-vendeur { background: var(--offre-bg) !important; } .v4-role-vendeur .rt-indicateur-libelle { color: var(--offre-fg); }
+.v4-role-vendeur .v3-av { background: var(--offre-fg) !important; color: #fff; box-shadow: none !important; }
+.v4-role-acquereur { background: var(--vente-bg) !important; } .v4-role-acquereur .rt-indicateur-libelle { color: var(--vente-fg); }
+.v4-role-acquereur .v3-av { background: var(--vente-fg) !important; color: #fff; box-shadow: none !important; }
+.v4-role-notaire { background: var(--notaire-bg) !important; } .v4-role-notaire .rt-indicateur-libelle { color: var(--notaire-fg); }
+.v4-role-notaire .v3-av { background: var(--notaire-fg) !important; color: #fff; box-shadow: none !important; }
+
+/* répartition : anneau, légende, une jauge par intervenant */
+.v4-rp-tete { display: flex; align-items: center; gap: 18px; }
+.v4-rp-leg { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; min-width: 0; flex: 1; font-size: 13px; }
+.v4-rp-leg li { display: flex; align-items: center; gap: 2px; min-width: 0; }
+.v4-rp-leg span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.v4-rp-leg b { margin-left: auto; padding-left: 10px; font-weight: 700; }
+.rt-fiche .rt-part-ligne { row-gap: 7px; }
+.rt-fiche .rt-part-nom .v3-av.is-p0 { background: var(--p0); color: #fff; }
+.rt-fiche .rt-part-nom .v3-av.is-p1 { background: var(--p1); color: #fff; }
+.rt-fiche .rt-part-nom .v3-av.is-p2 { background: var(--p2); color: #fff; }
+.rt-fiche .rt-part-nom .v3-av.is-p3 { background: var(--p3); color: #fff; }
+.v4-jauge { grid-column: 1 / -1; height: 6px; border-radius: 6px; background: var(--surface-3); overflow: hidden; }
+.v4-jauge i { display: block; height: 100%; border-radius: 6px; }
+.v4-reste { display: flex; align-items: center; gap: 8px; margin: 0; padding: 8px 12px; border-radius: 12px; background: var(--comp-bg); color: var(--comp-fg); font-size: 12.5px; font-weight: 600; }
+.v4-reste .ic { width: 15px; height: 15px; }
+
+/* conditions et notes vides : une seule petite carte */
+.v4-vides { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.v4-vide { display: flex; align-items: center; gap: 10px; margin: 0; padding: 12px; border-radius: 14px; border: 1.5px dashed var(--line); color: var(--mute); font-size: 13px; }
+.v4-vide b { display: block; color: var(--ink); font-weight: 600; }
+
+/* documents en vignettes */
+.v4-docs { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.v4-doc { width: 100%; height: 100%; display: grid; grid-template-columns: 38px minmax(0, 1fr); gap: 10px; align-items: center; padding: 10px 12px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); color: inherit; font: inherit; text-align: left; cursor: pointer; transition: border-color .15s, box-shadow .15s, transform .15s; }
+.v4-doc:hover:not(:disabled) { border-color: var(--line-strong); box-shadow: var(--shadow); transform: translateY(-1px); }
+.v4-doc:disabled { cursor: default; opacity: .7; }
+.v4-fichier { position: relative; width: 38px; height: 46px; border-radius: 7px 12px 7px 7px; display: grid; place-items: end center; padding-bottom: 6px; font-size: 9.5px; font-weight: 800; letter-spacing: .05em; background: var(--surface-3); color: var(--ink-2); }
+.v4-fichier::after { content: ''; position: absolute; top: 0; right: 0; width: 12px; height: 12px; border-bottom-left-radius: 5px; background: rgba(255, 255, 255, .55); }
+.v4-fichier.is-pdf { background: #f9e1df; color: #9b2f2b; }
+.v4-fichier.is-image { background: #e6e2f6; color: #4c3d86; }
+.v4-doc-txt { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.v4-doc-txt b { font-size: 13px; font-weight: 600; line-height: 1.3; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow-wrap: anywhere; }
+.v4-doc-txt > span { font-size: 11.5px; color: var(--mute); }
+.rt-fiche .v31-lien { display: inline-flex; align-items: center; gap: 4px; text-decoration: none; }
+.rt-fiche .v31-lien .ic { width: 15px; height: 15px; }
+
+/* historique : point coloré par événement */
+.rt-fiche .v31-hist li::before { width: 10px; height: 10px; left: 2px; top: 4px; box-shadow: none; background: var(--dash); }
+.rt-fiche .v31-hist li.is-vente::before { background: var(--vente-fg); }
+.rt-fiche .v31-hist li.is-compromis::before { background: var(--comp-fg); }
+.rt-fiche .v31-hist li.is-offre::before { background: var(--offre-fg); }
+.rt-fiche .v31-hist li.is-tombe::before { background: var(--tombe-fg); }
+.rt-fiche .v31-hist li:not(:last-child)::after { left: 6.5px; width: 2px; background: var(--line-2); }
+
+@media (max-width: 1100px) {
+  .rt-fiche .rt-fiche-grille { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 760px) {
+  .v4-heros .rt-fiche-entete { padding: 16px; flex-wrap: wrap; }
+  .v4-heros .rt-fiche-identite { flex-direction: column; align-items: stretch; gap: 14px; }
+  .v4-heros .rt-fiche-photo { width: 100%; height: 150px; }
+  .v4-chiffre { grid-template-columns: minmax(0, 1fr); row-gap: 4px; }
+  .v4-chiffre > :not(.v4-tuile) { grid-column: 1; }
+  .v4-tuile { grid-row: auto; width: 30px; height: 30px; border-radius: 9px; margin-bottom: 4px; }
+  .v4-tuile .ic { width: 16px; height: 16px; }
+  .rt-fiche .v4-chiffre .rt-indicateur-valeur { font-size: 19px; }
+  .v4-anneau.is-petit { width: 38px; height: 38px; }
+  .v4-heros .rt-fiche-actions-tete { flex-direction: row; flex-wrap: wrap; width: 100%; }
+  .v4-heros .rt-fiche-titre { font-size: 22px; }
+  .v4-frise { grid-template-columns: minmax(0, 1fr); padding: 14px 16px; gap: 6px; }
+  .v4-lien { flex-direction: row; justify-content: flex-start; min-width: 0; padding-left: 19px; }
+  .v4-trait, .v4-lien.is-attente .v4-trait { width: 0; height: 18px; border: 0; border-left: 2px solid var(--line-strong); background: none; }
+  .v4-docs, .v4-vides { grid-template-columns: minmax(0, 1fr); }
+  .v4-rp-tete { gap: 12px; }
+  .v4-anneau.is-grand { width: 76px; height: 76px; }
+  .rt-fiche .rt-etape { grid-template-columns: 34px minmax(0, 1fr); }
+  .rt-fiche .rt-etape > .rt-bouton { grid-column: 2; justify-self: start; }
+}
+@media (prefers-reduced-motion: reduce) { .v4-doc { transition: none; } .v4-doc:hover:not(:disabled) { transform: none; } }
 
 /* largeurs moyennes : le tableau laisse place aux cartes */
 @media (max-width: 960px) {
