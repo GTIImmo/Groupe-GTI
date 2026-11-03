@@ -995,3 +995,8 @@ est « couple » et son résumé « nommé » (la nuit du 02→03/11 : aujourd'h
   · ⚠ les ~2 000 fiches des actifs ne tiennent pas dans le même créneau : le run de 04:00 les relirait (plafond 1 000/nuit,
     +~28 min) → le run finirait vers 06:46, APRÈS le départ de la descente (06:45). À régler : plafond abaissé (500/nuit,
     4 nuits, +14 min) ou vérifier la garde entre run et descente.
+- **La vitesse d'avant le 07/09 (mesure 03/11, `raw_api_response`, minimum car seule la dernière lecture de chaque fiche est
+  gardée)** : relecture complète des fiches contacts fin mai / début juin = **26 000 à 65 000 fiches par jour** (29/05 : 64 820
+  en 6 h), heures de pointe **4,5 à 5,7 requêtes/s** (29/05 07h : 20 528 en une heure) ; liste du 23/06 : pointes à
+  **11 à 12,7 pages/s**. Aucun bannissement à l'époque — le premier est du 19/08 (1,5 req/s pendant 4 h). ⚠ Le pare-feu a pu
+  se durcir depuis : ces chiffres disent ce qui passait AVANT, pas ce qui passe aujourd'hui.
