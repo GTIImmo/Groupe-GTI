@@ -696,3 +696,25 @@ supprimer la vente ou le compromis fait REDESCENDRE le statut (un bien d'essai c
 mandats, du stock et des signatures ; `OFFRES_ESSAI` (32849, 33109, 33110, 33112, 33114, 33115, 33116 sur VA6482, 20588 sur 41559)
 prête pour l'onglet Affaires. Effet mesuré : stock −2 biens (61398, 62965), mandats 2026 −1 (61398), vente 5537 de 2024 hors du
 C.A, 1 signature d'essai hors compte. Rien n'est écrit en base ni chez Hektor. `npm run build` vert ; non vu à l'écran (après push).
+
+## 22. Acquéreurs, offres et compromis : ce que la base permet d'analyser de plus (03/11, lecture seule) — RIEN CODÉ
+
+⚠ Dans `app_contact_current`, **`hektor_contact_id` est le numéro APP** (10xxxxxx) ; le numéro Hektor est `hektor_target_id`
+(le registre des transactions porte `hektor_acquereur_id` = numéro Hektor). « Acquéreur » = typologie `acquéreur` de la fiche.
+**Le fichier acquéreurs** : 17 075 fiches, 9 465 vivantes ; créées 2026 à date **1 725 contre 1 633** ; **4 026 vivantes avec une
+recherche active** (43 %), dont 3 336 complètes (budget + secteur + type) ; joignables (e-mail ET téléphone) 6 013 ; ni e-mail ni
+téléphone 2 666 ; **touchées depuis 90 jours : 706 seulement** (date_maj, ⚠ à confirmer : la date peut bouger sans geste humain) ;
+684 vivantes SANS négociateur (16 % avec recherche, 35 % joignables).
+**Par négociateur** (fiche rattachée au négo ACTUEL, pas forcément au créateur) : créations 2026 / 2025 à date, % avec recherche,
+% recherche complète, % joignables, touchées 90 j — de RIBBES 267 / 226 (64 %, 82 %, 80 %, 116) à COUDERT 24 / 20 (7 % avec
+recherche) ; REYNAUD 164 / 0 et POUGET 134 / 6 : arrivées ou réaffectations, à vérifier avant d'afficher un écart.
+**Du fichier à l'achat** (fiches créées en 2024 / 2025) : **12,1 % font une offre, 10,9 % achètent** ; 14-16 jours en médiane de la
+fiche à l'offre, **69-77 % des offres dans les 30 jours** : la fiche est souvent créée AU MOMENT de l'affaire — le fichier ne sert
+pas encore de vivier.
+**Compromis** (hors essais) : 2025 = 411 (annulés 47 = 11,4 %, actes en retard sur la date prévue 121 / 362 = 33 %) ; 2026 = 276
+(10 annulés, 34 / 181 en retard) ; 68 compromis 2025 sans offre au registre (12 en 2026) ; prix du compromis = prix de l'offre
+acceptée (médiane 1,000) ; séquestre presque jamais saisi (1) ; notaires connus sur 89-97 %, deux notaires distincts 34 % → 53 %.
+**Par notaire** (id du notaire vendeur, actes depuis 2025, ≥ 10) : délai compromis → acte de 77 à 120 j, actes en retard de 7 %
+à 46 % — un vrai levier de pilotage (noms à résoudre par `hektor_contact_id`).
+Sources métier : délai compromis → acte « 2 à 3 mois » (Square Habitat, Pretto), condition de prêt 45-60 j ; « près d'une vente
+sur quatre n'aboutit pas » (Cafpi, méthode non vérifiée) — notre 11-13 % est en dessous.
