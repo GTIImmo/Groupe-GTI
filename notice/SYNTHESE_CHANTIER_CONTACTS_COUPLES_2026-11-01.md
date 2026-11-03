@@ -1155,3 +1155,67 @@ Audit limité à : **contact × lire / remonter** (la nuit). Les autres objets e
   en UNE nuit la plupart du temps, sinon le reste la nuit suivante (reprise à la page). Ce n'est pas « deux nuits » fixes mais un
   tour continu : chaque contact actif vu toutes les 1 à 2 nuits. Après les ~44 nuits du balayage (≈ ~30 travaux/nuit), la liste
   partira vers ~23:10 et tiendra toujours en une nuit. Le dimanche : archivés (~9 200 pages), même mécanique.
+
+## 45. ANALYSE EN PROFONDEUR — LA LISTE DES CONTACTS LA NUIT *(03/11, « on garde l'idée mais il faut analyser en profondeur… ne rien casser »)*
+
+Audit limité à : **contact × lire / remonter**, ordonnancement, verrous, surveillance. Trois analyses en lecture seule (0 appel
+Hektor/Supabase, 0 écriture), les points lourds REVÉRIFIÉS par moi (marqués ✔).
+
+**A. Ce qui casserait si on réutilisait la mécanique existante (à NE PAS faire)**
+1. ✔ **Le run de 04:00 ne relirait plus les annonces des contacts modifiés** : sa liste courte calcule les contacts « changés »
+   (date différente de `sync_contact_state`) et relit leurs annonces (`sync_raw.py` l. 1755-1759,
+   `find_annonce_ids_by_contact_ids`). Si l'étape de nuit écrit `sync_contact_state` et le curseur `contact_cursor_*`, ce
+   déclencheur se vide. ⇒ l'étape doit avoir **SON PROPRE suivi** (table à elle) et ne toucher ni `sync_contact_state`, ni le
+   curseur, ni les pages `list_contacts_*`.
+2. ✔ **Les pages brutes `list_contacts_*` sont relues CHAQUE NUIT par `normalize_source`** (`CONTACT_ENDPOINTS` l. 52-58, boucle
+   l. 1204-1211) ; écrire sous ces noms écraserait l'instantané du 23/06 et changerait le miroir. ⇒ nom de pages À PART (que
+   `normalize_source` ne lit pas).
+3. **La tâche « GTI Recherches Actives » est coupée par Windows après 2 h** (`ExecutionTimeLimit = PT2H`, ✔ export de la tâche) ;
+   elle dure déjà 1 h 50-1 h 52. ⇒ relever la limite (geste sur la tâche, accord) si la liste y entre.
+4. **Le run de 04:00 n'a AUCUNE garde au départ** (`run_full_pipeline.ps1` l. 387) : un débordement mettrait deux clients
+   Hektor et deux écrivains de `hektor.sqlite` en même temps, et une erreur de `sync_raw` arrête tout le run. ⇒ l'étape s'arrête
+   d'elle-même à 01:55 ; les recherches gardent leur durée (fin ~03:51).
+
+**B. Ce qui est sûr (mesuré)**
+- Tri `id ASC` respecté et total (pages du 23/06 : 0 doublon, 0 inversion, distincts = `total`) ; `metadata` fiable ; au 03/11
+  **8 502 pages actives** (170 040) et **8 955 archivées** (179 083) ; les créations arrivent en fin de liste.
+- Chaque ligne de liste porte `datemaj` (heure de Paris), `refCouple`, `archive`, `typologie` (17 clés, 100 % des lignes).
+  Paris contre UTC ⇒ seulement des relectures en trop. 19 archivés ont `datemaj = 0000-00-00` (jamais retenus par la date).
+- Un seul client = une connexion + un renouvellement du jeton toutes les ~50 min (mesuré) ; aucun code ne supprime ni ne signale
+  un contact « disparu » à partir de la liste. Le « 11 028 » du journal = des GROUPES DE DOUBLONS (`build_contacts_layer.py`
+  l. 1770), rien à voir avec la liste.
+
+**C. Ce qui est risqué et doit être prévu dans le code**
+- **Reprise** : la page N n'est pas stable (mesuré : 44 445 contacts sortis des actifs entre mars et mai ; la page 8430 de mars
+  est devenue la page ~6207). Reprendre « à la page N » SAUTE un contact par départ. ⇒ garder (page, dernier id, total), vérifier
+  le recouvrement (la page relue doit contenir un id ≤ dernier id, sinon reculer — dichotomie ~13 requêtes au pire), comparer
+  distincts et `total` à la fin. Aucune API ne filtre par id.
+- **Erreurs** : `sync_contact_details` règle `max_retries = 1` → un seul 500 / délai / jeton expiré tue la lecture. ⇒ la nouvelle
+  boucle : arrêt net sur tout 4xx (pas de reconnexion sur 403/429), patience bornée sur 5xx, point de reprise écrit à chaque page.
+- **Vitesse** : `HEKTOR_MIN_REQUEST_INTERVAL_MS` est lu À L'IMPORT (`common.py` l. 95), avant le `.env` ⇒ le poser dans
+  l'environnement du processus (lanceur), pour la liste SEULE. Pauses périodiques (pas 57 min d'affilée), montée par paliers.
+- **Volume** : ~8 500 requêtes de plus ⇒ ~17 000-19 000 par 24 h, au niveau de l'estimation (incertaine) du quota.
+- `datemaj` ne bouge pas quand on ARCHIVE un contact (2 778 sur 2 791 passés actif → archivé, même date) : un départ ne se voit
+  que par son ABSENCE entre deux lectures complètes (hors périmètre des couples, noté).
+
+**D. Le dessin corrigé (rien codé)**
+  la tâche « GTI Recherches Actives » garde son nom et sa surveillance ; départ 00:20 ; limite Windows relevée ; son lanceur :
+  0. garde : verrou de la descente absent ; AUCUN travail Hektor en attente/en cours au worker (tous types, avec une sortie si un
+     travail est resté bloqué « en cours ») ;
+  1. NOUVEAU script de liste (API seule, vitesse à lui, pauses, arrêt 4xx, reprise par id avec recouvrement, heure limite 01:55) ;
+     écrit dans SA table (id, datemaj, refCouple, archive, vu le) et ses pages sous un nom à part — rien d'autre ;
+  2. la liste des fiches à relire = datemaj (ramenée en UTC) > `last_detail_sync_at` → `sync_contact_details --contact-id-file`
+     (le chemin « ciblé » déjà utilisé par les recherches et par l'ouverture d'une fiche) avec un plafond ;
+  3. `sync_active_searches.py` INCHANGÉ ;
+  le run de 04:00 inchangé : il reconstruit et envoie les fiches relues.
+
+**E. Trouvé en passant (hors de ce chantier, à trancher à part)**
+- ✔ **Les vieilles pages de mars** (`list_contacts_active` pages 8430-10759) sont toujours relues chaque nuit par la
+  normalisation et, passant APRÈS celles de juin, imposent leur valeur : **32 457 contacts du miroir portent le négociateur de
+  MARS** (surtout vide) quand la liste de juin en donne un (souvent « 2 », 16 735 cas). Le nettoyage des pages périmées
+  (`prune_raw_listing_pages`, `sync_raw.py` l. 615) n'existe que pour les annonces. Quelle valeur est la bonne : non tranché.
+- Le verrou de la descente n'est lu qu'UNE fois par la tâche des recherches (avant la lecture), alors que son commentaire dit
+  « entre deux lots » (`sync_active_searches.py` l. 34-37 contre l. 552).
+- ⛔ **CORRECTION de ma part (§41)** : les tâches ne partent PAS « 1 h plus tôt ». Leurs déclencheurs sont en **+01:00** (✔ export :
+  `2026-06-20T02:00:00+01:00`) : heure écrite en hiver, +1 h en été. Mon affichage convertissait mal. (Un départ à 00:20 sera
+  01:20 en été.) Les commentaires « 03:00 », « 05:30 » des scripts sont périmés.
