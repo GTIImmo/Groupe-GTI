@@ -1476,3 +1476,46 @@ avant d'écrire — il ne doublera donc pas un lien que Hektor aurait posé lui-
 (horloge du serveur = UTC+1, cohérente). L'interrupteur `.env` est en place (ligne 118). ⏰ **Le 04/11 au matin** : le journal
 `logs/scheduled/nuit_contacts_*.log`, le rapport `logs/liste_contacts_nuit/rapport_active_*.json`, la ligne « [liste de nuit] » du run, les
 durées du run et de la descente, EA32621 / 10260586 en couple ; puis décider la purge des pages de mars.
+
+## 53. PIÈCE G — « AJOUTER UN CONJOINT » : ÉCRITE ET ÉPROUVÉE HORS LIGNE, RIEN N'EST POSÉ *(03/11 soir, « Vas-y »)*
+
+**Ce qui est écrit (commits locaux df8dc7e, 80d4006, edbd476), dans l'ordre du geste :**
+- **L'écran** (`App.tsx`, fiche contact V2) : un bouton « + Ajouter un conjoint » sur la fiche d'une **personne seule** (nature lue pour la
+  fiche ouverte, pas notaire, sans conjoint connu, active, connue de Hektor), derrière le cran **`contacts_couples_ajout`** et le droit de gérer
+  les contacts. Fenêtre à deux choix : **un nouveau contact** (nom obligatoire, prénom, portable ou e-mail, e-mail RGPD coché comme à la
+  création) ou **une fiche existante** (recherche dans l'annuaire, la fiche elle-même écartée). Nouveau = la création habituelle (personne
+  seule), PUIS le rattachement avec son numéro. Chaque refus de la base est dit en clair (13 raisons). Suivi de l'action : les 8 habillages,
+  la liste des actions, `ConsoleJobType`, les gestes qui préviennent.
+- **La base** (`supabase/patch_couple_phase3g_ajouter_conjoint_2026-11-03.sql`) : le cran (posé « off ») ; le type `link_hektor_conjoint`
+  aux **trois verrous** (contrainte, droits = règle de la modification d'un contact, distribution au service `actions`) ;
+  `app_ajouter_conjoint_optimistic` (vérifie tout, écrit le couple **chez nous à la seconde** avec la photo d'avant, choisit les biens de la
+  personne — mandant ou propriétaire, bien vivant, ni marque d'acheteur ni de vente, droit vérifié **bien par bien** — et pose le travail) ;
+  `app_conjoint_relier_biens` et `app_conjoint_annuler_optimiste` (pour le worker seulement).
+  **Répétition 10/10** dans une transaction annulée (admin simulé, 3 fiches fictives, bien d'essai 63331) : cran fermé refusé, ajout, couple
+  chez nous, travail, refus d'un second ajout, témoins notaire et même fiche, distribution, biens, retour arrière à l'identique, droits.
+  **Contrôlé après : rien n'est resté.** Retour arrière écrit (`…_INVERSE.sql`, il remet les trois empreintes d'avant).
+- **Le worker** (`handleLinkHektorConjoint`) : (1) **avant** — les deux fiches relues par l'API (`phase2/sync/contact_refcouple_from_api.py`,
+  neuf, lecture seule ; éprouvé en vrai sur EA32621 : `467326 → 467326`, `467325 → 467326`, et sur une personne seule : vide) ET leur
+  formulaire (une porteuse de couple a aussi `refCouple` = elle-même) ; une lecture ratée = refus ; (2) **une seule écriture**
+  `transformeContactToConjunct` (conjoint = la seconde, refCouple = la porteuse) ; (3) **la preuve** — `refCouple` relu trois fois ; sans
+  preuve : PAS de renvoi, nos fiches remises comme avant, message « vérifier chez Hektor » ; (4) après la preuve seulement, en best-effort : les
+  **biens** (rattachements de mandant en file) et la **relecture des deux fiches** (`phase2/contacts/relire_couple_rattache.py` : conjoint,
+  personne, nature, envoi des deux — la séquence d'EA32621). Un conjoint NOUVEAU : on attend son numéro seulement si sa création est en file.
+  **Essai hors ligne 24/24** (`Console/test_ajouter_conjoint.js`, dont un mutant « ménage à l'envers » et le témoin inverse : l'ancien worker
+  n'a pas le geste) ; l'essai voisin des couples reste vert.
+- **Écran** : `npm run build` vert ; essai `apps/hektor-v1/test_ajouter_conjoint_ecran.cjs` **24/24** (dont un mutant « archivée en texte »).
+
+**Ce que ça pourrait casser ailleurs, revu** : la contrainte et la distribution sont élargies d'UN type, rien d'autre ne bouge (gardes
+d'empreinte) ; les droits suivent la règle existante ; la porte de création n'est pas touchée (le conjoint naît « personne seule ») ;
+« Compléter / Modifier le conjoint » ne sont pas touchés ; le bouton est invisible tant que le cran n'existe pas. ⚠ La relecture lance le
+calcul de la nature sur toute la table locale (~8 s) : un geste fait pendant le run de nuit écrirait en même temps que lui dans
+`phase2.sqlite` (rare ; même risque que l'ouverture d'une fiche aujourd'hui). ⚠ Le fichier du worker porte ~137 lignes NON COMMITÉES de
+l'autre session : un redémarrage les chargerait aussi.
+
+**Non éprouvé** : rien n'a été écrit chez Hektor ni posé chez Supabase ; le geste réel, la confirmation par relecture sur une vraie paire
+créée par nous, les biens reliés, et l'écran à l'œil (ordinateur ; le téléphone passe-t-il par la même fiche ? non vérifié).
+
+**Les gestes, dans l'ordre, chacun avec son accord** : (1) pousser (le bouton reste invisible : pas de cran) ; (2) poser le patch (cran
+« off ») ; (3) redémarrer les 4 services worker, file vide (avec l'accord de l'autre session sur ses lignes) ; (4) cran « admin » ;
+(5) essai réel sur deux fiches FICTIVES (créées par l'app, nature calculée et envoyée comme au §35), Frédéric connecté à Hektor pour
+relire ; (6) supprimer les fictives par l'app ; (7) cran « on » quand tu le décides.
