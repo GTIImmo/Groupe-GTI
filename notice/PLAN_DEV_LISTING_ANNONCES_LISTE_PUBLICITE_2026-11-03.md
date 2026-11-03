@@ -332,3 +332,10 @@ numéros de passerelles (0c) et les droits (4).
 - **Hektor relu (API, lecture seule)** : 59109 et 52931 ont `textes[].titre` = `" "` / `""` alors que la description est remplie ; temoin 61713 a son titre. -> le titre n'a JAMAIS ete saisi, notre synchro ne perd rien.
 - **Pistes proposees, rien code** : A titre de secours a l'affichage (« Maison a <ville> », italique) ; B carte « Titre a saisir » (179) pour faire corriger par la fiche ; C titre redige depuis la description, valide par le nego, envoye chez Hektor (ecriture Hektor) ; D casse normale pour les titres TOUT EN MAJUSCULES (formule prototypee : minuscules + majuscule en tete et apres « ! . – », sigles T2/F3/GTI gardes, villes recapitalisees ; limites : accents absents non restituables, lieux hors liste, affichage seul).
 - ⛔ **Frederic, 03/11 : « laisse, c'est un chantier a part ».** Ne pas le reprendre dans ce chantier.
+
+## 03/11 soir -- « version retenue » codee : vignette Bien + colonne Mandat + TELEPHONE (lot 5) (`09495a3`, non pousse)
+
+- Iterations de Frederic : colonne Prix remise « comme avant » (`bc4b686`) ; ecarts > x3 masques (2 cas, erreurs de saisie dans Hektor) ; plusieurs maquettes (pistes A/B, A1-A4, portail/CRM/qualite, ligne entiere A/B) ; decision finale : photo NUE (nombre de photos seul), STATUT a cote du type de bien, TYPE de mandat dans la colonne Mandat, ville en surtitre, negociateur en entier.
+- Bureau : `BienPrixCells` (Liste) reecrite ; colonne Mandat = bouclier + N°, type (Exclusif magenta), periode ; pastille « fiche mandat manquante » (autre session) gardee. Lignes 126 px a 1280 (156-178 avant).
+- Telephone : `AnnonceCarteMobile` (AnnoncesListeV2.tsx), branchee dans `MobileMandatCards` pour l'ecran Annonces seulement (prop `vignetteV2`). Estimations / Suivi inchanges.
+- Reste : vue Publicite AU TELEPHONE (onglets + cases) pas faite ; la cellule Bien de la vue Publicite (bureau) garde son ancien dessin (type · N° · ville) ; essai par un negociateur.
