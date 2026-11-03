@@ -1219,3 +1219,15 @@ Hektor/Supabase, 0 écriture), les points lourds REVÉRIFIÉS par moi (marqués 
 - ⛔ **CORRECTION de ma part (§41)** : les tâches ne partent PAS « 1 h plus tôt ». Leurs déclencheurs sont en **+01:00** (✔ export :
   `2026-06-20T02:00:00+01:00`) : heure écrite en hiver, +1 h en été. Mon affichage convertissait mal. (Un départ à 00:20 sera
   01:20 en été.) Les commentaires « 03:00 », « 05:30 » des scripts sont périmés.
+- ⭐ **DÉCISION DE FRÉDÉRIC (03/11) : « c'est le but de les réparer, ces pages ! »** ⇒ le dessin change sur un point :
+  · les pages fraîches sont écrites **au VRAI endroit** (`list_contacts_active` / `list_contacts_archived`), pour que la
+    normalisation de 04:00 REPARE le miroir ; après un tour COMPLET, les pages au-delà de la dernière (restes de mars) sont
+    **purgées** ;
+  · le **carnet du run** (`sync_contact_state` + curseur) reste INTACT : sinon le run ne relirait plus les annonces des contacts
+    modifiés. La nouvelle étape garde son propre carnet de dates pour choisir les fiches à relire ;
+  · ce que la réparation changera au 1er tour : surtout le **négociateur** (la seule valeur où la liste l'emporte sur la fiche,
+    `normalize_source.py` l. 1152) — ~32 457 contacts portent celui de mars — et les contacts SANS fiche détaillée (repris de
+    la liste). L'état archivé, le nom, etc. viennent de la fiche : inchangés. Aucun contact supprimé (aucun code ne supprime
+    d'après la liste). Effet à surveiller : la sentinelle `data.contacts_sans_nego` et la taille du premier envoi à Supabase ;
+  · prudence proposée : **un premier tour « à blanc »** (pages rangées à part + rapport des écarts champ par champ), regardé par
+    Frédéric, AVANT de les écrire au vrai endroit.
