@@ -1041,3 +1041,10 @@ pour un numéro sont RELUS TOUT DE SUITE, jamais « à la nuit ». Rien n'est co
 - Supabase après : 10260585 `hektor_couple_contact_id = 10260586`, rôle `menage_resolu` ; 10260586 `couple_json.etat = vide`,
   conjoint 10260585 → l'écran doit montrer le bouton « Compléter le conjoint ». ⚠ `nature_fiche` de 10260586 reste
   `personne_seule` jusqu'à l'étape « nature » de la nuit (le miroir local porte maintenant le lien, elle le verra). Non vu à l'écran.
+- ⚠ **Rappel de Frédéric (03/11) : à 23:00 tourne le balayage des photos masquées.** Le créneau « 23:20 – 02:00 » du §41/§42
+  n'est donc PAS libre d'office : à 23:00 le balayage pose ses travaux au worker (1 000 jusqu'ici, 23:00 → 00:18 / 01:01 ; ~30
+  par nuit une fois le parc fini, ~5 min), et l'entretien des documents tourne jusqu'à ~23:17. Deux processus qui lisent Hektor
+  en même temps = deux freins séparés = débit doublé. ⇒ La lecture de la liste des contacts devra **démarrer après**, avec une
+  **garde au départ** : aucune tâche Hektor du worker en attente ou en cours (sinon attendre, puis renoncer pour la nuit si
+  02:00 approche), sur le modèle de la garde « anti-run » du ménage du coffre. Créneau réaliste : ~23:30 → 02:00 une fois le
+  balayage terminé, ~01:05 → 02:00 tant qu'il pose 1 000 travaux.
