@@ -838,3 +838,26 @@ Les mini-courbes sont mesurées le 03/11 et retombent sur les totaux :
 ⚠ Le registre compte **672 mandats 2026 le 03/11 contre 682 le 02/11** (492 actifs + 180 historiques, hors recherche et essais). L'écart de 10 n'est pas expliqué ; la tuile garde 682 tant qu'il n'est pas vérifié.
 
 Le code de la page a été exécuté hors ligne : survol, état initial et final, aucun trou manquant.
+
+## 31. Les six autres onglets au même niveau (03/11, maquette version 30)
+Frédéric a validé la v29 : « Oui, applique partout ». Chiffre d'affaires, Affaires, Mandats, Stock, Acquéreurs et Classements reprennent le socle du Tableau de bord (styles, en-tête, logo, point pulsé, filtres floutés, mouvement rAF, coupure en mouvement réduit). L'organisation et les chiffres sont inchangés, sauf les corrections ci-dessous.
+- **Chiffre d'affaires** :
+  - le réalisé de janvier à octobre passe en courbe qui se trace, avec bulle au survol ;
+  - les barres de la prévision ont une bulle ;
+  - le réalisé est aligné sur les mesures hors essais : 1 804 499 €, 284 actes, 6 354 €, taux 5,0 %, 36,3 M€ ;
+  - **l'atterrissage est recalculé** : 1 804 499 + novembre et décembre prévus (325 565) = **2,13 M€, soit −2,9 %** contre 2025 (2 194 091 €), au lieu de 2,14 et −2,6 % ;
+  - la mention « 5,9 % en TTC », calculée sur l'ancien taux, est retirée.
+- **Affaires** :
+  - le flux par mois passe en courbes (offres acceptées, compromis, 2025 en pointillé) ;
+  - les compromis d'août et d'octobre passent à 16 et 32, mesurés le 03/11 (somme 276).
+- **Mandats** :
+  - les barres empilées mensuelles ont une bulle au survol ;
+  - la série d'origine est gardée (le 682 reste en attente, voir §30) ;
+  - les deux mentions « chez Hektor » sont retirées du texte.
+- **Stock** :
+  - halos, étapes avec bulle, âge du stock avec bulle ;
+  - nouvelle pastille « 51 % du potentiel », qui est le rapport 1,78 / 3,52 M€ des chiffres déjà affichés.
+- **Acquéreurs** : la qualité du fichier passe en 7 anneaux qui se remplissent ; l'offre et la demande par prix ont une bulle au survol.
+- **Classements** : podium à médailles en dégradé, avec un halo derrière le 1er ; l'animation est relancée à chaque tri ou bascule.
+
+Le code de chaque planche a été exécuté hors ligne (verif_*4.js : départ, fin, survols, tris), sans trou manquant. Aucune source externe autre que Google Fonts, et aucun « Hektor » affiché.
