@@ -10,14 +10,17 @@
 // Une source qui ne se lit pas n'éteint que SON bloc (« n'a pas pu être lu ») ; le détail part en console.
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import {
-  aujourdhui, calculerMandats, calculerPortails, calculerSignatures, calculerStock, calculerVentes, cleAgence, loadPilotage, nomAgence,
-  type PilotageSources,
+  aujourdhui, calculerAffaires, calculerClassements, calculerMandats, calculerPortails, calculerSignatures, calculerStock, calculerVentes, cleAgence,
+  loadPilotage, mediane, nomAgence,
+  type LigneClassement, type PilotageSources,
 } from './lib/pilotage'
 import './pilotage.css'
 
-type Onglet = 'ensemble' | 'ventes' | 'mandats' | 'stock'
+type Onglet = 'ensemble' | 'ventes' | 'affaires' | 'mandats' | 'stock' | 'classements'
+type TriClassement = 'ca' | 'evol' | 'actes' | 'moy' | 'mandats' | 'excl' | 'portefeuille' | 'compromis'
 const ONGLETS: Array<{ cle: Onglet; libelle: string }> = [
-  { cle: 'ensemble', libelle: 'Tableau de bord' }, { cle: 'ventes', libelle: 'Ventes' }, { cle: 'mandats', libelle: 'Mandats' }, { cle: 'stock', libelle: 'Stock' },
+  { cle: 'ensemble', libelle: 'Tableau de bord' }, { cle: 'ventes', libelle: 'Ventes' }, { cle: 'affaires', libelle: 'Affaires' },
+  { cle: 'mandats', libelle: 'Mandats' }, { cle: 'stock', libelle: 'Stock' }, { cle: 'classements', libelle: 'Classements' },
 ]
 const ANNEE_COURANTE = Number(aujourdhui().slice(0, 4))
 const ANNEES = Array.from({ length: ANNEE_COURANTE - 2007 + 1 }, (_, i) => ANNEE_COURANTE - i)
@@ -131,7 +134,7 @@ function lisser(points: Array<[number, number]>) {
 
 // Les honoraires mois par mois : la courbe se trace, l'aire se dévoile, l'an passé en pointillé ;
 // au survol d'un mois, un repère et une bulle donnent les deux années.
-function GrandeCourbe({ valeurs, prec, annee, format }: { valeurs: number[]; prec: number[] | null; annee: number; format: (x: number) => string }) {
+function GrandeCourbe({ valeurs, prec, annee, format, libelle = 'Honoraires par mois' }: { valeurs: number[]; prec: number[] | null; annee: number; format: (x: number) => string; libelle?: string }) {
   const [survol, setSurvol] = useState<number | null>(null)
   if (!valeurs.length) return null
   const L = 640
@@ -151,7 +154,7 @@ function GrandeCourbe({ valeurs, prec, annee, format }: { valeurs: number[]; pre
   const gauche = survol != null ? Math.min(78, Math.max(0, (x(survol) / L) * 100 - 9)) : 0
   return (
     <div className="pl-gc" onMouseLeave={() => setSurvol(null)}>
-      <svg viewBox={`0 0 ${L} ${H}`} className="pl-gc-svg" role="img" aria-label={`Honoraires par mois en ${annee}${prec ? `, comparés à ${annee - 1}` : ''}`}>
+      <svg viewBox={`0 0 ${L} ${H}`} className="pl-gc-svg" role="img" aria-label={`${libelle} en ${annee}${prec ? `, comparés à ${annee - 1}` : ''}`}>
         <defs><linearGradient id="pl-gc-aire" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#e0457b" stopOpacity=".28" /><stop offset="1" stopColor="#e0457b" stopOpacity="0" /></linearGradient></defs>
         {lignes.map((v) => <line key={v} x1="0" x2={L} y1={v} y2={v} stroke="#eef0f2" strokeWidth="1" />)}
         <line x1="0" x2={L} y1={bas} y2={bas} stroke="#e3e6e7" strokeWidth="1" />
@@ -223,6 +226,8 @@ export default function PilotageScreen() {
   const [essai, setEssai] = useState(0)
   const [tousNegos, setTousNegos] = useState(false)
   const [deplie, setDeplie] = useState(false)
+  const [classeQui, setClasseQui] = useState<'negos' | 'agences'>('negos')
+  const [classeTri, setClasseTri] = useState<TriClassement>('ca')
 
   useEffect(() => {
     try { window.localStorage.setItem(MEMO, JSON.stringify({ onglet, ttc })) } catch { /* mémoire facultative */ }
@@ -258,6 +263,9 @@ export default function PilotageScreen() {
   const mandats = useMemo(() => (sources && !(sources.mandats instanceof Error) ? calculerMandats(sources.mandats, annee, agence) : null), [sources, annee, agence])
   const stock = useMemo(() => (sources && !(sources.stock instanceof Error) ? calculerStock(sources.stock, agence) : null), [sources, agence])
   const signatures = useMemo(() => (sources && !(sources.signatures instanceof Error) ? calculerSignatures(sources.signatures, annee) : null), [sources, annee])
+  const affaires = useMemo(() => (sources && !(sources.ventes instanceof Error) ? calculerAffaires(sources.ventes, annee, agence) : null), [sources, annee, agence])
+  const classements = useMemo(() => (ventes || mandats || stock
+    ? calculerClassements(ventes, mandats, sources && !(sources.stock instanceof Error) ? sources.stock : null, affaires, agence) : null), [ventes, mandats, stock, sources, affaires, agence])
   const portails = useMemo(() => (sources && !(sources.portails instanceof Error) && !(sources.stock instanceof Error) ? calculerPortails(sources.portails, sources.stock, agence) : null), [sources, agence])
 
   // Les agences proposées au filtre : toutes celles que les sources connaissent, une seule fois chacune.
@@ -289,6 +297,7 @@ export default function PilotageScreen() {
           {ONGLETS.map((o) => (
             <button key={o.cle} type="button" role="tab" aria-selected={onglet === o.cle} className={`pl-onglet${onglet === o.cle ? ' is-actif' : ''}`} onClick={() => setOnglet(o.cle)}>{o.libelle}</button>
           ))}
+          <span className="pl-onglet is-bientot" title="Il faut une lecture des fiches acquéreurs en base (accord de Frédéric à venir)">Acquéreurs <span className="pl-puce">bientôt</span></span>
           <span className="pl-onglet is-bientot" title="Disponible quand la photo quotidienne des statuts aura quelques mois">Estimations <span className="pl-puce">bientôt</span></span>
         </nav>
       </header>
@@ -322,7 +331,7 @@ export default function PilotageScreen() {
       ) : (
         // La clé rejoue l'entrée animée à chaque changement d'onglet, d'année ou d'agence.
         <div key={`${onglet}-${annee}-${agence ?? ''}`} className="pl-contenu">
-          {onglet === 'ensemble' ? Ensemble() : onglet === 'ventes' ? Ventes() : onglet === 'mandats' ? Mandats() : Stock()}
+          {onglet === 'ensemble' ? Ensemble() : onglet === 'ventes' ? Ventes() : onglet === 'affaires' ? Affaires() : onglet === 'mandats' ? Mandats() : onglet === 'stock' ? Stock() : Classements()}
         </div>
       )}
     </section>
@@ -594,6 +603,198 @@ export default function PilotageScreen() {
             </div>
           </section>
         </> : null}
+      </>
+    )
+  }
+
+  // ───────────────────────── AFFAIRES (03/11) ─────────────────────────
+  // Les offres et les compromis de l'année, lus dans le registre des transactions : ce qu'elles deviennent,
+  // à quel rythme, et où elles tombent.
+  function Affaires() {
+    if (!affaires || !ventes) return <Indisponible quoi="Le registre des transactions" onReessayer={reessayer} />
+    const d = affaires.devenir
+    const total = Math.max(1, affaires.offres)
+    const parts = [
+      { cle: 'p', libelle: 'Allées au compromis', sous: 'vendues ou compromis en cours', n: d.poursuivies, ton: '#a3004f' },
+      { cle: 'a', libelle: 'Acceptées, compromis à signer', sous: 'en attente du compromis', n: d.enAttente, ton: '#d4478a' },
+      { cle: 'd', libelle: 'En discussion', sous: 'proposées, pas encore tranchées', n: d.enDiscussion, ton: '#f4b3cd' },
+      { cle: 't', libelle: 'Compromis tombés', sous: 'le compromis a été annulé', n: d.tombees, ton: '#d98a00' },
+      { cle: 'r', libelle: 'Refusées ou retirées', sous: 'souvent acceptées puis tombées avant le compromis', n: d.refusees, ton: '#c9ced3' },
+    ]
+    const dl = affaires.delaiOffreCompromis
+    const totalDelai = Math.max(1, dl.moins30 + dl.de30a60 + dl.plus60)
+    const tauxChute = affaires.compromis ? Math.round((affaires.compromisAnnules / affaires.compromis) * 100) : 0
+    const retard = affaires.actesEnRetard
+    const aVenir = Array.from({ length: 6 }, (_, i) => {
+      const dt = new Date(); dt.setDate(1); dt.setMonth(dt.getMonth() + i)
+      const cle = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}`
+      return { cle, libelle: MOIS[dt.getMonth()], ...(ventes.actesDates.parMois.get(cle) ?? { n: 0, h: 0 }) }
+    })
+    const maxAVenir = Math.max(1, ...aVenir.map((m) => m.h))
+    const agences = [...affaires.agences.entries()].filter(([cle, a]) => cle && a.offres + a.compromis + a.actes > 0).sort((a, b) => b[1].offres - a[1].offres)
+    const maxOffres = Math.max(1, ...agences.map(([, a]) => a.offres))
+    const moisCourbe = enCours ? Math.max(1, moisVisibles - 1) : moisVisibles
+    return (
+      <>
+        <div className="pl-grille-kpi">
+          <Carte libelle="Offres de l’année" genre="affaires" valeur={<Compteur valeur={affaires.offres} format={(x) => entier.format(Math.round(x))} />} ecartValeur={comparer ? ecart(affaires.offres, affaires.offresPrec) : null} detail={comparer ? `contre ${affaires.offresPrec} · une par affaire` : 'une par affaire'} />
+          <Carte libelle="Allées au compromis" genre="affaires" valeur={<Compteur valeur={pourcent(d.poursuivies, affaires.offres)} format={(x) => `${Math.round(x)} %`} />} detail={`${d.poursuivies} affaires sur ${affaires.offres}`} />
+          <Carte libelle="Compromis signés" genre="affaires" valeur={<Compteur valeur={affaires.compromis} format={(x) => entier.format(Math.round(x))} />} ecartValeur={comparer ? ecart(ventes.compromis.n, ventes.compromis.nPrec) : null} detail={`${affaires.compromisAnnules} tombés, soit ${tauxChute} %`} />
+          <Carte libelle="De l’offre au compromis" genre="délai" valeur={dl.mediane != null ? <Compteur valeur={dl.mediane} format={(x) => `${Math.round(x)} j`} /> : '–'} detail={`médiane · compromis → acte ${ventes.delaiCompromisActe ?? '–'} j`} />
+          <Carte libelle="Actes signés en retard" genre="délai" valeur={<Compteur valeur={pourcent(retard.n, retard.sur)} format={(x) => `${Math.round(x)} %`} />} detail={`${retard.n} actes sur ${retard.sur} après la date prévue au compromis`} />
+          <Carte libelle="Actes à date dépassée" genre="à traiter" valeur={<Compteur valeur={ventes.enRoute.actesDepasses.n} format={(x) => entier.format(Math.round(x))} />} detail={`${compact(ventes.enRoute.actesDepasses.h)} ${unite} en attente de l’acte`} />
+        </div>
+
+        <section className="pl-carte pl-bloc pl-tdb-bloc" aria-label="Ce que deviennent les offres">
+          <div className="pl-bloc-tete"><h2>Ce que deviennent les offres de l’année</h2><span className="pl-mute">{affaires.offres} affaires nées d’une offre en {annee}</span></div>
+          <span className="pl-tdb-ruban is-haut" role="img" aria-label="Répartition des offres selon ce qu'elles sont devenues">
+            {parts.map((p, i) => <span key={p.cle} style={{ flex: `${Math.max(p.n, 0.0001)} 1 0`, background: p.ton, animationDelay: `${300 + i * 120}ms` }} title={`${p.libelle} : ${p.n}`} />)}
+          </span>
+          <div className="pl-tdb-route-legende">
+            {parts.map((p) => (
+              <span key={p.cle}><i style={{ background: p.ton }} /><span><b>{p.libelle}</b><span className="pl-mute">{p.sous}</span></span><b className="pl-num">{p.n} · {pourcent(p.n, total)} %</b></span>
+            ))}
+          </div>
+        </section>
+
+        <div className="pl-deux">
+          <section className="pl-carte pl-bloc pl-tdb-bloc" aria-label="Offres par mois">
+            <div className="pl-bloc-tete"><h2>Les offres, mois par mois</h2><span className="pl-legende"><i style={{ background: '#c5005f' }} />{annee}{comparer ? <><i className="is-tirets" />{annee - 1}</> : null}</span></div>
+            <GrandeCourbe valeurs={affaires.offresParMois.slice(0, moisCourbe)} prec={comparer ? affaires.offresParMoisPrec : null} annee={annee} libelle="Offres par mois" format={(x) => `${Math.round(x)} offres`} />
+          </section>
+          <section className="pl-carte pl-bloc pl-tdb-bloc" aria-label="Délai de l'offre au compromis">
+            <div className="pl-bloc-tete"><h2>De l’offre au compromis</h2><span className="pl-mute">{totalDelai} compromis de l’année</span></div>
+            {[{ l: 'Sous 30 jours', n: dl.moins30, ton: '#1a9a6c' }, { l: 'De 31 à 60 jours', n: dl.de30a60, ton: '#d98a00' }, { l: 'Plus de 60 jours', n: dl.plus60, ton: '#e0603a' }].map((x, i) => (
+              <div key={x.l} className="pl-tranche pl-glisse" style={{ animationDelay: `${300 + i * 100}ms` }}>
+                <span><b>{x.l}</b><span className="pl-mute">{x.n} compromis</span></span>
+                <Barre part={(x.n / totalDelai) * 100} ton={x.ton} />
+                <b className="pl-num pl-droite">{pourcent(x.n, totalDelai)} %</b>
+              </div>
+            ))}
+            <span className="pl-note">Médiane : {dl.mediane ?? '–'} jours. Une offre qui dépasse 30 jours sans compromis est à relancer : {ventes.enRoute.offresSansCompromis30.n} aujourd’hui.</span>
+          </section>
+        </div>
+
+        <section className="pl-carte pl-bloc pl-tdb-bloc" aria-label="Actes à venir">
+          <div className="pl-bloc-tete"><h2>Les actes déjà datés, mois par mois</h2><span className="pl-mute">honoraires {unite} des compromis en cours</span></div>
+          <div className="pl-defile">
+            <div className="pl-histo" role="img" aria-label="Honoraires des actes déjà datés pour les six prochains mois">
+              {aVenir.map((m) => (
+                <div key={m.cle} className="pl-histo-col">
+                  <span className="pl-histo-val pl-num">{m.h ? compact(m.h) : ''}</span>
+                  <div className="pl-histo-barres"><span style={{ height: `${(m.h / maxAVenir) * 100}%`, background: 'linear-gradient(180deg, #ff7fb0, #c5005f)' }} title={`${m.n} actes · ${compact(m.h)}`} /></div>
+                  <span className="pl-histo-lib">{m.libelle}<br /><span className="pl-mute">{m.n} acte{m.n > 1 ? 's' : ''}</span></span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <span className="pl-note">Un plancher, pas une promesse : {tauxChute} % des compromis de l’année sont tombés. {ventes.enRoute.actesDepasses.n} compromis ont déjà dépassé leur date d’acte.</span>
+        </section>
+
+        <section className="pl-carte pl-bloc is-table" aria-label="Affaires par agence">
+          <div className="pl-bloc-tete"><h2>Par agence</h2><span className="pl-mute">un clic filtre tout le pilotage sur l’agence</span></div>
+          <div className="pl-defile">
+            <table className="pl-table">
+              <thead><tr><th scope="col">Agence</th><th scope="col">Offres</th><th scope="col">Au compromis</th><th scope="col">Tombées</th><th scope="col">Compromis</th><th scope="col">Actes</th><th scope="col">Offre → compromis</th></tr></thead>
+              <tbody>
+                {agences.map(([cle, a]) => {
+                  const med = mediane(a.delais)
+                  return (
+                    <tr key={cle}>
+                      <td><button type="button" className="pl-lien-nom" onClick={() => setAgence(cle)}>{nomAgence(cle)}</button></td>
+                      <td className="pl-num pl-fort"><span className="pl-cellule-barre"><Barre part={(a.offres / maxOffres) * 100} ton="#d98a00" fine />{a.offres}</span></td>
+                      <td className="pl-num">{a.offres ? `${pourcent(a.poursuivies, a.offres)} %` : '–'}</td>
+                      <td className={`pl-num ${a.offres >= 5 && a.tombees * 4 > a.offres ? 'pl-alerte' : ''}`}>{a.tombees}</td>
+                      <td className="pl-num">{a.compromis}</td>
+                      <td className="pl-num">{a.actes}</td>
+                      <td className="pl-num">{med != null ? `${Math.round(med)} j` : '–'}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+          <span className="pl-note">En rouge : plus d’une offre sur quatre refusée ou tombée (à partir de 5 offres). « Tombées » = offres refusées ou retirées et compromis annulés.</span>
+        </section>
+      </>
+    )
+  }
+
+  // ───────────────────────── CLASSEMENTS (03/11) ─────────────────────────
+  function Classements() {
+    if (!classements) return <Indisponible quoi="Le classement" onReessayer={reessayer} />
+    const lignes = classeQui === 'agences' ? classements.agences : classements.negos
+    const evol = (l: LigneClassement) => (l.caPrec ? ((l.ca - l.caPrec) / l.caPrec) * 100 : null)
+    const tris: Array<{ cle: TriClassement; libelle: string; valeur: (l: LigneClassement) => number | null; texte: (l: LigneClassement) => string }> = [
+      { cle: 'ca', libelle: 'Honoraires', valeur: (l) => l.ca, texte: (l) => compact(l.ca) },
+      { cle: 'evol', libelle: 'Progression', valeur: (l) => (l.caPrec >= 5000 ? evol(l) : null), texte: (l) => { const x = evol(l); return x == null ? 'nouveau' : `${x >= 0 ? '+' : '−'}${Math.abs(Math.round(x))} %` } },
+      { cle: 'actes', libelle: 'Actes', valeur: (l) => l.actes, texte: (l) => entier.format(l.actes) },
+      { cle: 'moy', libelle: 'Par acte', valeur: (l) => (l.actes >= 3 ? l.ca / l.actes : null), texte: (l) => (l.actes ? euros(l.ca / l.actes) : '–') },
+      { cle: 'mandats', libelle: 'Mandats', valeur: (l) => l.mandats, texte: (l) => entier.format(l.mandats) },
+      { cle: 'excl', libelle: 'Exclusivité', valeur: (l) => (l.mandats >= 5 ? l.exclusifs / l.mandats : null), texte: (l) => (l.mandats ? `${pourcent(l.exclusifs, l.mandats)} %` : '–') },
+      { cle: 'portefeuille', libelle: 'Portefeuille', valeur: (l) => l.portefeuille, texte: (l) => `${l.portefeuille} biens` },
+      ...(classeQui === 'agences' ? [{ cle: 'compromis' as TriClassement, libelle: 'Compromis', valeur: (l: LigneClassement) => l.compromis, texte: (l: LigneClassement) => entier.format(l.compromis) }] : []),
+    ]
+    const tri = tris.find((t) => t.cle === classeTri) ?? tris[0]
+    const classes = lignes.filter((l) => tri.valeur(l) != null).sort((a, b) => (tri.valeur(b) ?? 0) - (tri.valeur(a) ?? 0))
+    const max = Math.max(1e-9, ...classes.map((l) => Math.abs(tri.valeur(l) ?? 0)))
+    const podium = classes.slice(0, 3)
+    const medailles = ['or', 'argent', 'bronze']
+    return (
+      <>
+        <div className="pl-cl-barre">
+          <div className="pl-seg" role="group" aria-label="Classer">
+            <button type="button" className={classeQui === 'negos' ? 'is-actif' : ''} aria-pressed={classeQui === 'negos'} onClick={() => setClasseQui('negos')}>Négociateurs · {classements.negos.length}</button>
+            <button type="button" className={classeQui === 'agences' ? 'is-actif' : ''} aria-pressed={classeQui === 'agences'} onClick={() => setClasseQui('agences')}>Agences · {classements.agences.length}</button>
+          </div>
+          <div className="pl-cl-tris" role="group" aria-label="Trier par">
+            {tris.map((t) => <button key={t.cle} type="button" className={`pl-cl-tri${tri.cle === t.cle ? ' is-actif' : ''}`} aria-pressed={tri.cle === t.cle} onClick={() => setClasseTri(t.cle)}>{t.libelle}</button>)}
+          </div>
+        </div>
+
+        <div key={`${classeQui}-${tri.cle}`} className="pl-contenu">
+          {podium.length ? (
+            <section className="pl-cl-podium" aria-label="Les trois premiers">
+              {podium.map((l, i) => (
+                <div key={l.cle} className={`pl-carte pl-cl-marche is-${medailles[i]} pl-pop`} style={{ animationDelay: `${150 + i * 120}ms` }}>
+                  {i === 0 ? <span className="pl-halo is-un" aria-hidden="true" /> : null}
+                  <span className={`pl-cl-medaille is-${medailles[i]}`} aria-hidden="true">{i + 1}</span>
+                  <b className="pl-cl-nom">{l.nom}</b>
+                  <b className={`pl-cl-valeur pl-num${i === 0 ? ' pl-brille' : ''}`}>{tri.texte(l)}</b>
+                  <span className="pl-mute">{tri.cle === 'ca' ? `${l.actes} actes · ${l.mandats} mandats` : `${compact(l.ca)} d’honoraires`}</span>
+                  {comparer && tri.cle === 'ca' && l.caPrec ? <span className={`pl-delta is-${l.ca >= l.caPrec ? 'up' : 'dn'}`}>{ecart(l.ca, l.caPrec)?.texte}</span> : null}
+                </div>
+              ))}
+            </section>
+          ) : null}
+
+          <section className="pl-carte pl-bloc" aria-label="Le classement">
+            <div className="pl-bloc-tete"><h2>{classeQui === 'agences' ? `Les ${classes.length} agences, classées` : `Les ${classes.length} négociateurs, classés`} {tri.libelle === 'Progression' ? 'à la progression' : `par ${tri.libelle.toLowerCase()}`}</h2><span className="pl-mute">{unite} · {enCours ? `${annee} à date` : annee}</span></div>
+            <div className="pl-defile">
+              <div className="pl-cl-lignes">
+                {classes.map((l, i) => {
+                  const v = tri.valeur(l) ?? 0
+                  return (
+                    <div key={l.cle} className="pl-cl-ligne pl-glisse" style={{ animationDelay: `${Math.min(i, 20) * 35 + 200}ms` }}>
+                      <b className={`pl-num pl-cl-rang${i < 3 ? ' is-podium' : ''}`}>{i + 1}</b>
+                      {classeQui === 'agences' ? <button type="button" className="pl-lien-nom" onClick={() => setAgence(l.cle)}>{l.nom}</button> : <b className="pl-cl-ligne-nom">{l.nom}</b>}
+                      <span className="pl-tdb-agence-piste"><span className={v < 0 ? 'is-negatif' : ''} style={{ width: `${(Math.abs(v) / max) * 100}%` }} /></span>
+                      <b className="pl-num pl-droite">{tri.texte(l)}</b>
+                      <span className="pl-mute pl-num pl-droite pl-cl-second">{tri.cle === 'ca' || tri.cle === 'evol' || tri.cle === 'moy' ? `${l.actes} actes` : tri.cle === 'mandats' || tri.cle === 'excl' ? `${pourcent(l.exclusifs, l.mandats)} % excl.` : compact(l.potentiel)}</span>
+                      <span className="pl-droite">{comparer && (tri.cle === 'ca' || tri.cle === 'mandats') ? (() => { const x = tri.cle === 'ca' ? (l.caPrec ? ecart(l.ca, l.caPrec) : null) : (l.mandatsPrec ? ecart(l.mandats, l.mandatsPrec) : null); return x ? <span className={`pl-delta is-${x.bon ? 'up' : 'dn'}`}>{x.texte}</span> : <span className="pl-mute">nouveau</span> })() : null}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+            <span className="pl-note">
+              {classeQui === 'negos'
+                ? 'Honoraires = part de la répartition de chaque vente ; mandats au négociateur de la fiche ; portefeuille = biens en vente aujourd’hui à son nom. Les trois sources sont rapprochées par le nom.'
+                : 'Agence du dossier, comme le registre des transactions ; portefeuille = biens en vente aujourd’hui.'}
+              {' '}La progression demande au moins 5 000 € l’an passé, l’honoraire par acte au moins 3 actes, l’exclusivité au moins 5 mandats.
+            </span>
+          </section>
+        </div>
       </>
     )
   }

@@ -611,3 +611,118 @@ function mockPortails(): PilotagePortail[] {
   for (const s of stock) for (const portail of ['etreproprio', 'superimmo', 'leboncoinDirect', 'bienicidirect']) sortie.push({ dossier: s.app_dossier_id, portail, ok: (s.app_dossier_id + portail.length) % 7 !== 0, erreur: (s.app_dossier_id + portail.length) % 41 === 0 })
   return sortie
 }
+
+// ───────────────────────────── AFFAIRES (03/11) ─────────────────────────────
+// Une « affaire » est une chaîne du registre des transactions (une offre, puis peut-être un compromis, puis l'acte).
+// Elle compte dans l'année de SA date d'offre. Les deux lectures (N et N-1) sont parcourues et dédoublonnées.
+
+export type AffairesCalcul = {
+  offres: number; offresPrec: number
+  devenir: { poursuivies: number; enAttente: number; tombees: number; refusees: number; enDiscussion: number }
+  offresParMois: number[]; offresParMoisPrec: number[]
+  delaiOffreCompromis: { mediane: number | null; moins30: number; de30a60: number; plus60: number }
+  compromis: number; compromisAnnules: number
+  actesEnRetard: { n: number; sur: number }
+  agences: Map<string, { offres: number; poursuivies: number; tombees: number; compromis: number; actes: number; delais: number[] }>
+}
+
+export function calculerAffaires(source: Exclude<PilotageSources['ventes'], Error>, annee: number, agence: string | null): AffairesCalcul {
+  const borne = borneADate(annee)
+  const garde = (ligne: RegistreDossierRow) => !agence || cleAgence(ligne.agence_nom) === agence
+  const toutes = new Map<number, RegistreDossierRow>()
+  for (const ligne of [...source.n, ...source.p]) if (garde(ligne) && !toutes.has(ligne.app_chaine_id)) toutes.set(ligne.app_chaine_id, ligne)
+  const sortie: AffairesCalcul = {
+    offres: 0, offresPrec: 0,
+    devenir: { poursuivies: 0, enAttente: 0, tombees: 0, refusees: 0, enDiscussion: 0 },
+    offresParMois: Array.from({ length: 12 }, () => 0), offresParMoisPrec: Array.from({ length: 12 }, () => 0),
+    delaiOffreCompromis: { mediane: null, moins30: 0, de30a60: 0, plus60: 0 },
+    compromis: 0, compromisAnnules: 0, actesEnRetard: { n: 0, sur: 0 }, agences: new Map(),
+  }
+  const delais: number[] = []
+  const agenceDe = (cle: string) => {
+    const a = sortie.agences.get(cle) ?? { offres: 0, poursuivies: 0, tombees: 0, compromis: 0, actes: 0, delais: [] }
+    sortie.agences.set(cle, a)
+    return a
+  }
+  for (const ligne of toutes.values()) {
+    const offre = String(ligne.date_offre ?? '').slice(0, 10)
+    const cp = String(ligne.date_compromis ?? '').slice(0, 10)
+    const a = agenceDe(cleAgence(ligne.agence_nom))
+    if (estDate(cp) && cp.startsWith(String(annee))) {
+      sortie.compromis += 1; a.compromis += 1
+      if (ligne.etape === 'compromis_annule') sortie.compromisAnnules += 1
+    }
+    if (ligne.etape === 'vendu' && String(ligne.date_vente ?? '').startsWith(String(annee))) {
+      a.actes += 1
+      const prevue = String(ligne.date_acte_prevue ?? '').slice(0, 10)
+      if (estDate(prevue)) { sortie.actesEnRetard.sur += 1; if (String(ligne.date_vente).slice(0, 10) > prevue) sortie.actesEnRetard.n += 1 }
+    }
+    if (!estDate(offre)) continue
+    const m = Number(offre.slice(5, 7)) - 1
+    if (offre.startsWith(String(annee - 1))) {
+      sortie.offresParMoisPrec[m] += 1
+      if (offre.slice(5, 10) <= borne) sortie.offresPrec += 1
+      continue
+    }
+    if (!offre.startsWith(String(annee))) continue
+    sortie.offres += 1; sortie.offresParMois[m] += 1; a.offres += 1
+    if (ligne.etape === 'vendu' || ligne.etape === 'compromis') { sortie.devenir.poursuivies += 1; a.poursuivies += 1 }
+    else if (ligne.etape === 'offre_acceptee') sortie.devenir.enAttente += 1
+    else if (ligne.etape === 'compromis_annule') { sortie.devenir.tombees += 1; a.tombees += 1 }
+    else if (ligne.etape === 'offre_refusee') { sortie.devenir.refusees += 1; a.tombees += 1 }
+    else sortie.devenir.enDiscussion += 1
+    if (estDate(cp)) {
+      const j = jours(offre, cp)
+      if (j >= 0) {
+        delais.push(j); a.delais.push(j)
+        if (j <= 30) sortie.delaiOffreCompromis.moins30 += 1
+        else if (j <= 60) sortie.delaiOffreCompromis.de30a60 += 1
+        else sortie.delaiOffreCompromis.plus60 += 1
+      }
+    }
+  }
+  sortie.delaiOffreCompromis.mediane = mediane(delais)
+  return sortie
+}
+
+// ───────────────────────────── CLASSEMENTS (03/11) ─────────────────────────────
+// Négociateurs : honoraires = part de la répartition (comme l'onglet Ventes) ; mandats au négociateur de la fiche ;
+// portefeuille = biens en vente à son nom aujourd'hui. Les trois sources ne portent pas le nom de la même façon :
+// on les rapproche sur le nom sans civilité, sans accent, en minuscules.
+
+export type LigneClassement = {
+  cle: string; nom: string
+  ca: number; caPrec: number; actes: number
+  mandats: number; mandatsPrec: number; exclusifs: number
+  portefeuille: number; potentiel: number
+  compromis: number
+}
+
+const cleNom = (nom: string) => nomPersonne(nom).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim()
+
+export function calculerClassements(ventes: VentesCalcul | null, mandats: MandatsCalcul | null, stock: PilotageStock[] | null, affaires: AffairesCalcul | null, agence: string | null) {
+  const vide = (cle: string, nom: string): LigneClassement => ({ cle, nom, ca: 0, caPrec: 0, actes: 0, mandats: 0, mandatsPrec: 0, exclusifs: 0, portefeuille: 0, potentiel: 0, compromis: 0 })
+  const negos = new Map<string, LigneClassement>()
+  const nego = (nom: string) => { const cle = cleNom(nom); const e = negos.get(cle) ?? vide(cle, nomPersonne(nom)); negos.set(cle, e); return e }
+  for (const n of ventes?.negos ?? []) { if (n.id === '0') continue; const e = nego(n.nom); e.ca += n.part; e.caPrec += n.partPrec; e.actes += n.dossiers }
+  for (const n of mandats?.negos ?? []) { if (/supprim/i.test(n.nom)) continue; const e = nego(n.nom); e.mandats += n.n; e.mandatsPrec += n.nPrec; e.exclusifs += n.ex }
+  for (const s of stock ?? []) {
+    if (agence && cleAgence(s.agence_nom) !== agence) continue
+    if (!s.commercial_nom || /supprim/i.test(s.commercial_nom)) continue
+    if (s.statut_annonce !== 'Actif') continue
+    const e = nego(s.commercial_nom); e.portefeuille += 1; e.potentiel += s.honoraires ?? 0
+  }
+  const agences = new Map<string, LigneClassement>()
+  const ag = (cle: string) => { const e = agences.get(cle) ?? vide(cle, nomAgence(cle)); agences.set(cle, e); return e }
+  for (const [cle, a] of ventes?.agences ?? []) { if (!cle) continue; const e = ag(cle); e.ca += a.h; e.caPrec += a.hPrec; e.actes += a.ventes }
+  for (const [cle, a] of mandats?.agences ?? []) { if (!cle) continue; const e = ag(cle); e.mandats += a.n; e.mandatsPrec += a.nPrec; e.exclusifs += a.ex }
+  for (const [cle, a] of affaires?.agences ?? []) { if (!cle) continue; ag(cle).compromis += a.compromis }
+  for (const s of stock ?? []) {
+    const cle = cleAgence(s.agence_nom)
+    if (!cle || (agence && cle !== agence)) continue
+    if (s.statut_annonce !== 'Actif') continue
+    const e = ag(cle); e.portefeuille += 1; e.potentiel += s.honoraires ?? 0
+  }
+  const garder = (e: LigneClassement) => e.ca > 0 || e.mandats > 0 || e.portefeuille > 0
+  return { negos: [...negos.values()].filter(garder), agences: [...agences.values()].filter(garder) }
+}

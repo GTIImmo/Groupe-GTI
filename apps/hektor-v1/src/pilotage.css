@@ -381,6 +381,42 @@ button.pl-carte:focus-visible, .pl-ecran button:focus-visible, .pl-ecran select:
   .pl-gc-mois span:nth-child(even) { visibility: hidden; }
 }
 
+/* ── 03/11 soir : onglets Affaires et Classements (maquette version 30) ── */
+.pl-tdb-ruban.is-haut { height: 28px; }
+.pl-onglets { scrollbar-width: none; }
+.pl-onglets::-webkit-scrollbar { display: none; }
+.pl-cl-barre { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px 16px; }
+.pl-cl-tris { display: flex; flex-wrap: wrap; gap: 6px; }
+.pl-cl-tri { height: 34px; padding: 0 13px; border: 1px solid #dfe2e6; border-radius: 999px; background: var(--ds-surface, #fff); font: inherit; font-size: 12.5px; font-weight: 700; color: var(--pl-mute); cursor: pointer; transition: background .2s ease, color .2s ease, border-color .2s ease, transform .2s ease; }
+.pl-cl-tri:hover { color: var(--pl-encre); transform: translateY(-1px); }
+.pl-cl-tri.is-actif { background: linear-gradient(135deg, #c5005f, #ff6ea6); border-color: transparent; color: #fff; box-shadow: 0 8px 18px -10px rgba(197, 0, 95, .7); }
+.pl-cl-podium { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; align-items: end; }
+.pl-cl-marche { position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 20px 22px; border-top: 4px solid; font-size: 12.5px; }
+.pl-cl-marche > :not(.pl-halo) { position: relative; }
+.pl-cl-marche.is-or { min-height: 210px; border-top-color: #e0b33c; }
+.pl-cl-marche.is-argent { min-height: 180px; border-top-color: #aab3bd; }
+.pl-cl-marche.is-bronze { min-height: 168px; border-top-color: #c98a55; }
+.pl-cl-medaille { width: 40px; height: 40px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-family: var(--pl-disp); font-size: 17px; font-weight: 800; color: #fff; box-shadow: 0 8px 18px -8px rgba(20, 23, 26, .45); }
+.pl-cl-medaille.is-or { background: linear-gradient(135deg, #f6d36b, #c99318); }
+.pl-cl-medaille.is-argent { background: linear-gradient(135deg, #dfe4ea, #8e98a3); }
+.pl-cl-medaille.is-bronze { background: linear-gradient(135deg, #e8b48a, #a2632f); }
+.pl-cl-nom { font-size: 15px; line-height: 1.25; }
+.pl-cl-valeur { font-family: var(--pl-disp); font-size: 30px; font-weight: 800; letter-spacing: -.03em; line-height: 1.05; }
+.pl-cl-marche.is-or .pl-cl-valeur { font-size: 38px; }
+.pl-cl-lignes { min-width: 620px; display: flex; flex-direction: column; gap: 2px; }
+.pl-cl-ligne { display: grid; grid-template-columns: 30px 200px minmax(0, 1fr) 96px 84px 84px; gap: 14px; align-items: center; padding: 8px 10px; margin: 0 -10px; border-radius: 12px; font-size: 13.5px; transition: background .2s ease; }
+.pl-cl-ligne:hover { background: #f7f8fa; }
+.pl-cl-ligne-nom, .pl-cl-ligne .pl-lien-nom { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pl-cl-rang { font-family: var(--pl-disp); font-size: 13px; color: var(--pl-mute); }
+.pl-cl-rang.is-podium { color: var(--pl-marque); }
+.pl-cl-second { font-size: 12px; }
+.pl-tdb-agence-piste > span.is-negatif { background: linear-gradient(90deg, #e0603a, #f4a58c); }
+@media (max-width: 760px) {
+  .pl-cl-podium { grid-template-columns: minmax(0, 1fr); }
+  .pl-cl-marche.is-or, .pl-cl-marche.is-argent, .pl-cl-marche.is-bronze { min-height: 0; }
+}
+@media (prefers-reduced-motion: reduce) { .pl-cl-tri, .pl-cl-ligne { transition: none; } }
+
 /* Le picto du menu de gauche (posé par titre, comme les autres : menu-lateral-net.css et registre-transactions.css) */
 :root {
   --pl-picto: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 20V11M10 20V5M16 20v-7M22 20H2'/%3E%3C/svg%3E");

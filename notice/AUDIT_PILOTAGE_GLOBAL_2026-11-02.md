@@ -929,3 +929,24 @@ L'écran a été lu dans le Chrome de Frédéric, en lecture seule. Ses chiffres
 **À l'écran** : la ligne « 55 signatures de mandat en attente » est revenue, et la base en compte 55 (456 signés). Elle passe sous la limite de temps de la base, **mais de peu**. Par un matin à froid, la lecture peut retomber au-dessus et la ligne disparaître de nouveau.
 
 **Le vrai remède, à décider** : une fonction réservée aux admins, sur le modèle de `app_pilotage_stock`. Elle compterait les signatures sans passer par les droits par ligne, et emprunterait donc l'index (2 ms). C'est une nouvelle écriture en base, avec une petite retouche de `lib/pilotage.ts` : **un accord est nécessaire**.
+
+## 35. Onglets Affaires et Classements dans l'app (03/11 soir) — Frédéric : « il manque les onglets Affaires, Acquéreurs et Classement »
+L'écran reste en lecture seule et rien n'est écrit en base. Les deux onglets se calculent à partir des données que l'écran lisait déjà (registre des transactions, mandats, stock).
+
+**Affaires** (`calculerAffaires`). Une affaire est une chaîne du registre, comptée l'année de SA date d'offre ; les lectures N et N-1 sont dédoublonnées.
+- **Six chiffres** : offres de l'année, part allée au compromis, compromis signés et tombés, délai médian de l'offre au compromis, actes signés après la date prévue, actes à date dépassée.
+- **« Ce que deviennent les offres »** en cinq parts : au compromis (vendues ou compromis en cours), acceptées en attente, en discussion, compromis tombés, refusées ou retirées. Ce dernier libellé reprend la mémoire : une offre « refusée » est souvent une offre acceptée puis tombée.
+- **Courbes et répartitions** : les offres mois par mois, en courbe avec l'an passé ; le délai de l'offre au compromis en trois tranches (sous 30 jours, 31 à 60, plus de 60) ; les actes déjà datés des six prochains mois.
+- **Le tableau par agence** : offres, part allée au compromis, tombées (en rouge au-delà d'une sur quatre), compromis, actes, délai médian.
+- **Mesuré sur la liste du registre le 03/11**, pour 2026 : 352 affaires nées d'une offre, dont 149 vendues, 85 en compromis, 44 acceptées en attente, 53 refusées ou retirées, 15 compromis annulés et 6 en discussion.
+- ⚠ **Pas encore dans l'app**, faute de données lues par l'écran : le prix obtenu par rapport au prix du mandat (l'histogramme des remises de la maquette), les notaires, l'exclusif contre le simple et les offres par négociateur.
+
+**Classements** (`calculerClassements`).
+- Bascule Négociateurs / Agences, tri par honoraires, progression, actes, honoraires par acte, mandats, exclusivité, portefeuille, et compromis pour les agences.
+- Podium à médailles or, argent et bronze, avec un halo derrière le 1er. Les lignes ont une barre en dégradé et l'écart à l'an passé. L'animation est rejouée à chaque tri.
+- Les noms des trois sources (répartition, fiche mandat, stock) sont rapprochés sans civilité, sans accent et en minuscules.
+- Seuils pour entrer dans un tri : progression à partir de 5 000 € l'an passé, honoraires par acte à partir de 3 actes, exclusivité à partir de 5 mandats.
+
+**Acquéreurs** : l'onglet est présent mais marqué « bientôt ». Il faut lire les fiches contacts et les recherches, ce que l'écran ne fait pas : c'est l'étape 5, qui demande une fonction en base et donc **un accord**.
+
+**Contrôles** : `npm run build` vert, types compris. Sur le serveur de démonstration : les deux onglets se rendent, les tris et la bascule fonctionnent, pas d'erreur hors l'adresse de diffusion absente. ⏳ À voir sur les vraies données après le push.
