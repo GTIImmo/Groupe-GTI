@@ -1048,3 +1048,15 @@ pour un numéro sont RELUS TOUT DE SUITE, jamais « à la nuit ». Rien n'est co
   **garde au départ** : aucune tâche Hektor du worker en attente ou en cours (sinon attendre, puis renoncer pour la nuit si
   02:00 approche), sur le modèle de la garde « anti-run » du ménage du coffre. Créneau réaliste : ~23:30 → 02:00 une fois le
   balayage terminé, ~01:05 → 02:00 tant qu'il pose 1 000 travaux.
+- ⛔ **Correction de Frédéric (03/11) : le balayage des photos masquées va PASSER AUX ARCHIVÉES** → il gardera 23:00 → ~01:00
+  chaque nuit ; le créneau 23:30 – 02:00 n'existera pas. Autre créneau à trouver.
+- ⭐ **Ce qui libère de la place : la vitesse d'avant.** La tâche des recherches (02:00) se dit elle-même « ~0,3 s/contact,
+  ~20 min » (en-tête de `sync_active_searches.py`) ; elle prend aujourd'hui **1 h 51** (4 018 fiches, 1,66 s) à cause du frein du
+  07/09. Le run : lecture Hektor 30 min avant le 07/09, 1 h 20 depuis. Elle doit rester (éditer une recherche ne bouge PAS la
+  `datemaj` du contact : écrit dans son en-tête).
+- **Deux créneaux possibles, MÊME processus que des lectures de contacts déjà en place (un seul frein, pas de débit doublé)** :
+  A. **dans la tâche de 02:00** : liste des actifs (~57 min à la vitesse d'avant) + les 4 000 recherches (~20-30 min) + les fiches
+     changées → fin vers ~03:30, avant le run de 04:00 ; le run n'est pas touché ;
+  B. **dans le run de 04:00** : remplacer la lecture courte des contacts (3 pages) par la liste entière ; le gain de la vitesse
+     d'avant sur la lecture Hektor (~50 min) paie la liste (~57 min) → fin du run à peu près inchangée (~06:20-06:30).
+  Dans les deux cas : la vitesse d'avant d'abord revérifiée, arrêt au premier refus ; le dimanche, les archivés au même endroit.
