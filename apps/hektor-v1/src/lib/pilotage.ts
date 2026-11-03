@@ -71,7 +71,7 @@ export type PilotageAffairesPlus = {
   offres: Array<{ d: string; state: string | null; agence: string | null; type: string | null; ratio: number | null; jours: number | null; premiere: boolean }>
   actes: Array<{ d: string; agence: string | null; etude_id: string | null; etude: string | null; delai: number | null; retard: boolean | null }>
   // 03/11, 2e pose : les compromis en cours, notaire retrouvé par son numéro (même numéro que sur les ventes)
-  compromis?: Array<{ d: string; prevue: string | null; agence: string | null; etude_id: string | null; etude: string | null }>
+  compromis?: Array<{ app_chaine_id?: number; d: string; prevue: string | null; agence: string | null; etude_id: string | null; etude: string | null }>
 }
 
 // L'agence (clé de cleAgence) filtre les fiches par l'agence de la fiche, celle du négociateur qui la suit.
@@ -774,7 +774,9 @@ export type AffairesPlusCalcul = {
   notaires: Array<{ cle: string; nom: string; actes: number; delai: number | null; retard: number; avecDate: number; enCours: number; depasses: number }>
 }
 
-export function calculerAffairesPlus(source: PilotageAffairesPlus, annee: number, agence: string | null): AffairesPlusCalcul {
+// `enCours` : les chaînes que le registre dit en compromis aujourd'hui. Le registre des transactions garde des
+// compromis « actifs » sans acte rattaché que le registre ne compte plus (124 contre 87 le 03/11) : on s'aligne sur lui.
+export function calculerAffairesPlus(source: PilotageAffairesPlus, annee: number, agence: string | null, enCours: Set<number> | null = null): AffairesPlusCalcul {
   const garde = (a: string | null) => !agence || cleAgence(a) === agence
   const offres = source.offres.filter((o) => o.d.startsWith(String(annee)) && garde(o.agence))
   const comparable = (o: PilotageAffairesPlus['offres'][number]) => o.state === 'accepted' && o.ratio != null && o.ratio >= 0.5 && o.ratio <= 1.2
@@ -806,6 +808,7 @@ export function calculerAffairesPlus(source: PilotageAffairesPlus, annee: number
   const jour = aujourdhui()
   for (const c of source.compromis ?? []) {
     if (!garde(c.agence) || !c.etude) continue
+    if (enCours && (c.app_chaine_id == null || !enCours.has(c.app_chaine_id))) continue
     const cle = c.etude_id ?? c.etude
     const e = etudes.get(cle) ?? { cle, nom: c.etude, delais: [], retard: 0, avecDate: 0, actes: 0, enCours: 0, depasses: 0 }
     e.enCours += 1
@@ -858,7 +861,7 @@ function mockAffairesPlus(annee: number): PilotageAffairesPlus {
   }))
   const compromis = Array.from({ length: 30 }, (_, i) => ({
     d: `${annee}-0${1 + (i % 9)}-10`, prevue: `${annee}-${String(9 + (i % 4)).padStart(2, '0')}-15`, agence: agences[i % agences.length],
-    etude_id: String(i % 4), etude: etudes[i % 4],
+    etude_id: String(i % 4), etude: etudes[i % 4], app_chaine_id: 900000 + i,
   }))
   return { offres, actes, compromis }
 }

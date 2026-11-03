@@ -1002,3 +1002,26 @@ Frédéric : « FAIS LES DEUX MANQUES ». C'est son accord pour les deux lecture
 - `npm run build` est vert.
 - Sur le serveur de démonstration, le filtre agence et les nouvelles colonnes s'affichent.
 - ⏳ À voir sur les vraies données après le push.
+
+## 38. Affaires, Acquéreurs, Classements sur les VRAIES données (03/11 soir, déploiement de 9d80ddb)
+Contrôle fait dans le Chrome de Frédéric, en lecture seule. Le filtre d'agence a été remis sur « Toutes » après l'essai.
+
+**Ce qui retombe sur la base**
+- **Affaires** : 352 offres. Parmi elles, 234 sont allées au compromis, 44 sont acceptées en attente, 6 en discussion, 15 ont vu leur compromis tomber et 53 ont été refusées ou retirées.
+  - 276 compromis signés.
+  - Prix obtenu : 94,9 % en médiane, sur 258 offres acceptées en 2026.
+- **Acquéreurs** :
+  - 9 465 fiches vivantes ; vivier 9 465 → 4 018 → 3 328 → 2 930 → 2 797.
+  - 2 666 injoignables.
+  - Offre et demande : moins de 100 k€, 984 acheteurs pour 216 biens ; de 200 à 300 k€, 908 acheteurs pour 75 biens, soit 12,1 par bien.
+  - **Filtre agence** : Le Puy donne 671 fiches vivantes, comme en base.
+- **Classements** : BILLIG DURAND 185 k€ HT (221 640 € TTC ÷ 1,2), COUDERT 138 k€, GENTES 107 k€.
+
+**Deux défauts trouvés, corrigés aussitôt**
+1. **Notaires** : la liste des « compromis en cours » de la fonction (124) était plus large que celle du registre (87). Le registre des transactions garde des compromis « actifs » sans acte rattaché.
+   - La fonction rend désormais le numéro de chaîne. Pour l'écran, la retouche a été posée en base, sur une seule ligne et vérifiée par une ancre ; le fichier `patch_pilotage_limites` est mis à jour.
+   - L'écran ne garde que les chaînes que le registre dit « en compromis ». Le tableau tombe ainsi sur les 11 dates dépassées du registre.
+   - La colonne s'appelle « Notaire » et non plus « Étude » : la clé est la fiche contact du notaire, et une même étude peut y figurer sous deux fiches.
+2. **Exclusif contre simple** : en 2026, l'exclusif met 110 jours jusqu'à la première offre, le simple 81. Sur 2025 et 2026 ensemble, c'est 86 contre 90.
+   - L'écart vient du fait que l'on compte les premières offres REÇUES dans l'année : un vieux mandat qui reçoit enfin son offre allonge le délai de son type.
+   - La phrase « l'exclusivité n'avance pas la première offre » tirait donc une conclusion fausse. Elle est remplacée par une mise en garde qui donne les deux mesures.

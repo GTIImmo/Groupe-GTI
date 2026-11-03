@@ -14,6 +14,7 @@ import {
   lireAcquereurs, loadPilotage, mediane, nomAgence,
   type LigneClassement, type PilotageAcquereurs, type PilotageSources,
 } from './lib/pilotage'
+import { hasSupabaseEnv } from './lib/supabase'
 import './pilotage.css'
 
 type Onglet = 'ensemble' | 'ventes' | 'affaires' | 'mandats' | 'stock' | 'acquereurs' | 'classements'
@@ -279,7 +280,12 @@ export default function PilotageScreen() {
   const acqLu = agence ? (acqAgence && acqAgence.cle === `${annee}-${agence}` ? acqAgence.lu : undefined) : sources?.acquereurs
   const acquereurs = acqLu && !(acqLu instanceof Error) ? acqLu : null
   const acqEnLecture = acqLu === undefined
-  const affairesPlus = useMemo(() => (sources && !(sources.affairesPlus instanceof Error) ? calculerAffairesPlus(sources.affairesPlus, annee, agence) : null), [sources, annee, agence])
+  const affairesPlus = useMemo(() => {
+    if (!sources || sources.affairesPlus instanceof Error) return null
+    const enCours = sources.ventes instanceof Error || !hasSupabaseEnv ? null
+      : new Set([...sources.ventes.n, ...sources.ventes.p].filter((l) => l.etape === 'compromis').map((l) => l.app_chaine_id))
+    return calculerAffairesPlus(sources.affairesPlus, annee, agence, enCours)
+  }, [sources, annee, agence])
   const classements = useMemo(() => (ventes || mandats || stock
     ? calculerClassements(ventes, mandats, sources && !(sources.stock instanceof Error) ? sources.stock : null, affaires, agence) : null), [ventes, mandats, stock, sources, affaires, agence])
   const portails = useMemo(() => (sources && !(sources.portails instanceof Error) && !(sources.stock instanceof Error) ? calculerPortails(sources.portails, sources.stock, agence) : null), [sources, agence])
@@ -718,21 +724,17 @@ export default function PilotageScreen() {
                   </div>
                 ))}
               </div>
-              <span className="pl-note">{affairesPlus.exclusif.jours != null && affairesPlus.simple.jours != null
-                ? (affairesPlus.exclusif.jours < affairesPlus.simple.jours
-                  ? `Un mandat exclusif reçoit sa première offre ${Math.round(affairesPlus.simple.jours - affairesPlus.exclusif.jours)} jours plus tôt qu’un mandat simple.`
-                  : 'Cette année, l’exclusivité n’avance pas la première offre.')
-                : ''} Mandats dont la première offre est arrivée en {annee}.</span>
+              <span className="pl-note">Délai médian des premières offres reçues en {annee}, selon le type du mandat. À lire avec prudence : un vieux mandat qui reçoit enfin sa première offre allonge le délai de son type (mesure du 03/11 : sur 2025 et 2026 ensemble, 86 jours en exclusif contre 90 en simple, mais 110 contre 81 en 2026 seule).</span>
             </section>
           </div>
         ) : <Indisponible quoi="Le prix obtenu et les notaires" onReessayer={reessayer} />}
 
         {affairesPlus && affairesPlus.notaires.length ? (
           <section className="pl-carte pl-bloc is-table" aria-label="Les notaires">
-            <div className="pl-bloc-tete"><h2>Les notaires</h2><span className="pl-mute">études du vendeur · actes {annee - 1} et {annee} · compromis en cours aujourd’hui</span></div>
+            <div className="pl-bloc-tete"><h2>Les notaires</h2><span className="pl-mute">notaire du vendeur · actes {annee - 1} et {annee} · compromis en cours aujourd’hui</span></div>
             <div className="pl-defile">
               <table className="pl-table">
-                <thead><tr><th scope="col">Étude</th><th scope="col">Compromis en cours</th><th scope="col">Date d’acte dépassée</th><th scope="col">Actes</th><th scope="col">Compromis → acte</th><th scope="col">Actes en retard</th></tr></thead>
+                <thead><tr><th scope="col">Notaire</th><th scope="col">Compromis en cours</th><th scope="col">Date d’acte dépassée</th><th scope="col">Actes</th><th scope="col">Compromis → acte</th><th scope="col">Actes en retard</th></tr></thead>
                 <tbody>
                   {affairesPlus.notaires.map((n) => {
                     const retard = pourcent(n.retard, n.avecDate)

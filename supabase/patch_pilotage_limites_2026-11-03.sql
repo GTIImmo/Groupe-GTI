@@ -175,7 +175,8 @@ begin
     ), en_cours as (
       -- 03/11 : les compromis en cours (pas encore d'acte), et leur notaire retrouvé par son numéro :
       -- le compromis ne porte son nom que 204 fois sur 630, son numéro 593 fois.
-      select substr(l.date, 1, 10) as d, nullif(substr(l.date_acte, 1, 10), '') as prevue, ag.agence_nom as agence,
+      -- app_chaine_id (ajouté le 03/11 soir, après le contrôle réel) : l'écran ne garde que les chaînes que le registre dit en compromis
+      select l.app_chaine_id, substr(l.date, 1, 10) as d, nullif(substr(l.date_acte, 1, 10), '') as prevue, ag.agence_nom as agence,
              nullif(trim(ct.hektor_target_id), '') as etude_id,
              coalesce(nullif(trim(ct.nom), ''), nullif(trim(l.notaire_mandant_nom), '')) as etude
         from public.app_affaire_ledger l
