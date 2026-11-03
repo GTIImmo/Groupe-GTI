@@ -827,7 +827,7 @@ export function calculerAffairesPlus(source: PilotageAffairesPlus, annee: number
       ],
     },
     exclusif: parType('EXCLUSIF'), simple: parType('SIMPLE'),
-    notaires: [...etudes.values()].filter((e) => e.actes >= 5 || e.enCours >= 3)
+    notaires: [...etudes.values()].filter((e) => e.actes >= 5 || e.enCours >= 3 || e.depasses > 0)
       .map((e) => ({ cle: e.cle, nom: e.nom, actes: e.actes, delai: mediane(e.delais), retard: e.retard, avecDate: e.avecDate, enCours: e.enCours, depasses: e.depasses }))
       .sort((a, b) => b.depasses - a.depasses || b.enCours - a.enCours || b.actes - a.actes),
   }

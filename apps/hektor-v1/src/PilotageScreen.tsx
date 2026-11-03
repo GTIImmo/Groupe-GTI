@@ -752,7 +752,7 @@ export default function PilotageScreen() {
                 </tbody>
               </table>
             </div>
-            <span className="pl-note">D’abord les études qui ont des compromis à date d’acte dépassée : ce sont elles à relancer. Une étude paraît à partir de 5 actes ou de 3 compromis en cours ; son notaire est retrouvé par son numéro quand le compromis ne porte pas son nom. Délai médian du compromis à l’acte ; « en retard » = acte signé après la date prévue au compromis. En rouge : plus de 120 jours, ou au moins 40 % d’actes en retard.</span>
+            <span className="pl-note">D’abord les études qui ont des compromis à date d’acte dépassée : ce sont elles à relancer. Un notaire paraît à partir de 5 actes, de 3 compromis en cours, ou dès qu’un de ses compromis a dépassé sa date d’acte ; son notaire est retrouvé par son numéro quand le compromis ne porte pas son nom. Délai médian du compromis à l’acte ; « en retard » = acte signé après la date prévue au compromis. En rouge : plus de 120 jours, ou au moins 40 % d’actes en retard.</span>
           </section>
         ) : null}
 
