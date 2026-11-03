@@ -1136,3 +1136,13 @@ Audit limité à : **contact × lire / remonter** (la nuit). Les autres objets e
   les pauses (40 min) et le délai restent → **~1 h 28, gain ~23 min, pas 36**. Mon « 1 h 15 » oubliait le temps de réponse.
   Total de la tâche à 2 req/s : liste ~1 h 10 + fiches ~1 min + recherches ~1 h 28 ≈ **2 h 40**. Pour gagner davantage, il
   faudrait toucher les pauses ou le délai des recherches = la méthode prudente posée après le bannissement du 22/08 → à lui.
+- ⛔ **DÉCISION DE FRÉDÉRIC (03/11) : la vitesse des RECHERCHES ne change pas (« ne touche à rien ») ; seule la LISTE DES
+  CONTACTS reprend la vitesse d'avant.** Conséquences sur le dessin :
+  · le réglage de vitesse (`HEKTOR_MIN_REQUEST_INTERVAL_MS`) est posé pour le SEUL processus de la liste, et retiré avant les
+    recherches (chaque étape du lanceur est un processus Python séparé) ; `sync_active_searches.py`, ses options et son lanceur
+    actuel ne changent pas ;
+  · durées : liste ~57 min (2,5 req/s) + fiches changées ~1 min + recherches **1 h 51 (inchangé)** ≈ 2 h 50 → ne tient pas de
+    02:00 à 04:00 ;
+  · proposition : la tâche démarre à **~01:05** (après le balayage, garde « worker vide ») ; la liste a une **heure limite
+    (~01:55)** et reprend la nuit suivante à la page atteinte (~7 500 pages par nuit : tous les actifs vus en ~1 nuit et quart) ;
+    les recherches partent donc vers 02:00 comme aujourd'hui et finissent vers 03:51 comme aujourd'hui.
