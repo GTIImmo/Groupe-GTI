@@ -93,7 +93,7 @@ export function AnnonceV2Colgroup() {
       <col style={{ width: '106px' }} />{/* prix */}
       <col style={{ width: '146px' }} />{/* mandat : bouclier + periode */}
       <col style={{ width: '78px' }} />{/* diffusion : un symbole de 34 px (78 : l'en-tete « DIFFUSION » doit tenir) */}
-      <col style={{ width: '264px' }} />{/* actions : sceau 112 + 3 x 34 + 3 x 6 + padding 30 -- meme hauteur 34 px que les boutons Contacts */}
+      <col style={{ width: '268px' }} />{/* actions : sceau 116 + 3 x 34 + 3 x 6 + padding 30 -- meme hauteur 34 px que les boutons Contacts */}
     </colgroup>
   )
 }
@@ -144,7 +144,10 @@ export type AnnonceV2CellsProps = {
   onOpen: () => void
 }
 
-export function AnnonceV2Cells(p: AnnonceV2CellsProps) {
+type BienPrixProps = Pick<AnnonceV2CellsProps, 'item' | 'photoUrl' | 'typeLabel' | 'negoName' | 'transactionLabel'>
+
+// Les cellules Bien et Prix : les MEMES dans la vue Liste et la vue Publicite.
+function BienPrixCells(p: BienPrixProps) {
   const { item } = p
   // Une vignette affichee compte au moins pour une photo (garde : listes sans `images_preview_json_app`).
   const nbPhotos = Math.max(nombrePhotos(item), p.photoUrl ? 1 : 0)
@@ -167,32 +170,7 @@ export function AnnonceV2Cells(p: AnnonceV2CellsProps) {
   })()
   const changeLe = jourLocal(item.price_change_last_detected_at)
   const ilYa = changeLe ? Math.max(0, Math.round((Date.now() - changeLe.getTime()) / 86400000)) : null
-
   const aUnMandat = Boolean(String(item.numero_mandat ?? '').trim())
-  const bouclier = !aUnMandat
-    ? { cls: 'sans', label: 'Sans mandat', marque: 'M9 12h6', titre: 'Pas encore de numéro de mandat' }
-    : p.validated
-      ? { cls: 'ok', label: 'Validé', marque: 'm9 12 2 2 4-4', titre: 'Mandat validé par la Direction' }
-      : { cls: 'attente', label: 'Non validé', marque: 'M12 9v3M12 15h.01', titre: 'Mandat pas encore validé par la Direction' }
-
-  const debut = jourLocal(item.mandat_date_debut)
-  const fin = jourLocal(item.mandat_date_fin)
-  const periode = (() => {
-    if (!debut || !fin || fin <= debut) return null
-    const maintenant = Date.now()
-    const pct = Math.max(0, Math.min(100, Math.round(((maintenant - debut.getTime()) / (fin.getTime() - debut.getTime())) * 100)))
-    const reste = Math.ceil((fin.getTime() - maintenant) / 86400000)
-    const etat = reste < 0 ? 'echu' : reste <= 30 ? 'bientot' : ''
-    const texte = reste < 0 ? `Échu depuis ${-reste} j` : reste <= 30 ? `Reste ${reste} j` : `Reste ${Math.round((fin.getTime() - maintenant) / MOIS_MS)} mois`
-    return { debut: dateCourte(debut), fin: dateCourte(fin), pct, etat, texte }
-  })()
-
-  const portails = Number(item.nb_portails_actifs ?? 0) || 0
-  const diffusable = String(item.diffusable ?? '').trim() === '1'
-  const enErreur = Boolean(item.has_diffusion_error)
-  const antenne = !diffusable ? 'non' : portails > 0 ? 'enligne' : 'zero'
-  const antenneTitre = `${!diffusable ? 'Pas diffusable' : portails > 0 ? `En ligne sur ${portails} portail${portails > 1 ? 's' : ''}` : 'Diffusable, sur aucun portail'}${enErreur ? ' · un portail en erreur' : ''}`
-
   const nego = p.negoName && p.negoName !== '-' ? p.negoName : null
   const agence = String(item.agence_nom ?? '').replace(/^Groupe GTI\s*/i, '').trim() || '—'
 
@@ -233,6 +211,40 @@ export function AnnonceV2Cells(p: AnnonceV2CellsProps) {
           </>
         ) : null}
       </td>
+    </>
+  )
+}
+
+export function AnnonceV2Cells(p: AnnonceV2CellsProps) {
+  const { item } = p
+  const aUnMandat = Boolean(String(item.numero_mandat ?? '').trim())
+  const bouclier = !aUnMandat
+    ? { cls: 'sans', label: 'Sans mandat', marque: 'M9 12h6', titre: 'Pas encore de numéro de mandat' }
+    : p.validated
+      ? { cls: 'ok', label: 'Validé', marque: 'm9 12 2 2 4-4', titre: 'Mandat validé par la Direction' }
+      : { cls: 'attente', label: 'Non validé', marque: 'M12 9v3M12 15h.01', titre: 'Mandat pas encore validé par la Direction' }
+
+  const debut = jourLocal(item.mandat_date_debut)
+  const fin = jourLocal(item.mandat_date_fin)
+  const periode = (() => {
+    if (!debut || !fin || fin <= debut) return null
+    const maintenant = Date.now()
+    const pct = Math.max(0, Math.min(100, Math.round(((maintenant - debut.getTime()) / (fin.getTime() - debut.getTime())) * 100)))
+    const reste = Math.ceil((fin.getTime() - maintenant) / 86400000)
+    const etat = reste < 0 ? 'echu' : reste <= 30 ? 'bientot' : ''
+    const texte = reste < 0 ? `Échu depuis ${-reste} j` : reste <= 30 ? `Reste ${reste} j` : `Reste ${Math.round((fin.getTime() - maintenant) / MOIS_MS)} mois`
+    return { debut: dateCourte(debut), fin: dateCourte(fin), pct, etat, texte }
+  })()
+
+  const portails = Number(item.nb_portails_actifs ?? 0) || 0
+  const diffusable = String(item.diffusable ?? '').trim() === '1'
+  const enErreur = Boolean(item.has_diffusion_error)
+  const antenne = !diffusable ? 'non' : portails > 0 ? 'enligne' : 'zero'
+  const antenneTitre = `${!diffusable ? 'Pas diffusable' : portails > 0 ? `En ligne sur ${portails} portail${portails > 1 ? 's' : ''}` : 'Diffusable, sur aucun portail'}${enErreur ? ' · un portail en erreur' : ''}`
+
+  return (
+    <>
+      <BienPrixCells item={item} photoUrl={p.photoUrl} typeLabel={p.typeLabel} negoName={p.negoName} transactionLabel={p.transactionLabel} />
       <td>
         <div className="av3-mandat">
           <span className={`av3-bouclier ${bouclier.cls}`} title={bouclier.titre}>
@@ -277,6 +289,136 @@ export function AnnonceV2Cells(p: AnnonceV2CellsProps) {
               <Svg d={ICONE.crayon} />
             </button>
           ) : <span className="ra-spacer" aria-hidden="true" />}
+          <button type="button" className="ra cta" title="Ouvrir la fiche" aria-label="Ouvrir la fiche" onClick={(event) => { event.stopPropagation(); p.onOpen() }}>
+            <Svg d={ICONE.fleche} strokeWidth={2.4} />
+          </button>
+        </div>
+      </td>
+    </>
+  )
+}
+
+// ── Vue Publicite (lot 3, 03/11/2026 -- maquette V8 validee) ─────────────────────────────────────
+// Une case par portail, cochable DANS le listing quand l'annonce est diffusable ; sinon une bande
+// « Faire la demande ». Une seule action par ligne : la fleche « Ouvrir » (decision V8 de Frederic).
+// L'etat « en ligne » vient de `portails_resume` (deja dans la ligne) ; l'envoi chez Hektor est fait
+// par l'ecran (MandatsScreen), ce composant ne fait que dessiner.
+export const PORTAILS_PUB = [
+  { key: 'leboncoinDirect', court: 'LB', nom: 'Leboncoin' },
+  { key: 'bienicidirect', court: 'BI', nom: "Bien'ici" },
+  { key: 'paper', court: 'PA', nom: 'Paper' },
+  { key: 'etreproprio', court: 'EP', nom: 'Être propriétaire' },
+  { key: 'superimmo', court: 'SI', nom: 'Superimmo' },
+] as const
+
+// Numeros de passerelle chez Hektor COMMUNS a toutes les agences (mesures le 03/11 dans
+// hektor_broadcast). Bien'ici et Leboncoin dependent de l'agence : app_diffusion_agency_target.
+export const PORTAIL_ID_COMMUN: Record<string, string> = { etreproprio: '19', paper: '20', superimmo: '21' }
+
+export function portailsDeLaLigne(resume: string | null | undefined): string[] {
+  return Array.from(new Set(String(resume ?? '').split(',').map((cle) => cle.trim()).filter(Boolean)))
+}
+
+export type EtatCase = 'enligne' | 'absent' | 'erreur' | 'envoi' | 'retrait' | 'echec'
+
+export function AnnonceOnglets(p: { vue: 'liste' | 'pub'; onChange: (vue: 'liste' | 'pub') => void }) {
+  return (
+    <div className="av3-onglets" role="tablist" aria-label="Vue du listing">
+      <button type="button" role="tab" aria-selected={p.vue === 'liste'} className={p.vue === 'liste' ? 'on' : ''} onClick={() => p.onChange('liste')}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01" /></svg>
+        Liste
+      </button>
+      <button type="button" role="tab" aria-selected={p.vue === 'pub'} className={p.vue === 'pub' ? 'on' : ''} onClick={() => p.onChange('pub')}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" aria-hidden="true"><path d={ICONE.antenne} /></svg>
+        Publicité
+      </button>
+    </div>
+  )
+}
+
+export function AnnoncePubColgroup() {
+  return (
+    <colgroup>
+      <col />{/* bien -- flexible */}
+      <col style={{ width: '106px' }} />{/* prix */}
+      {PORTAILS_PUB.map((portail) => <col key={portail.key} style={{ width: '56px' }} />)}
+      <col style={{ width: '70px' }} />{/* ouvrir */}
+    </colgroup>
+  )
+}
+
+export function AnnoncePubHead() {
+  return (
+    <tr>
+      <th className="av3-l">Bien</th>
+      <th>Prix</th>
+      {PORTAILS_PUB.map((portail) => <th key={portail.key} className="av3-c" title={portail.nom}>{portail.court}</th>)}
+      <th className="av3-r" aria-label="Ouvrir" />
+    </tr>
+  )
+}
+
+export function AnnoncePubReperes() {
+  return (
+    <div className="av3-reperes">
+      <b>Repères</b>
+      {PORTAILS_PUB.map((portail) => <span key={portail.key}><b>{portail.court}</b>{portail.nom}</span>)}
+      <span><i style={{ background: '#2f7d59' }} />En ligne : cliquer retire</span>
+      <span><i style={{ background: '#fff', border: '1.5px solid #cfd3d4' }} />Absente : cliquer publie</span>
+      <span><i style={{ background: '#fff6ea', border: '1.5px solid #dd7a18' }} />Portail en erreur</span>
+    </div>
+  )
+}
+
+export type AnnoncePubCellsProps = BienPrixProps & {
+  /** null = annonce diffusable (les cases) ; sinon le texte de la bande, et son bouton s'il y en a un */
+  bande: null | { texte: string; bouton?: { label: string; onClick: () => void } }
+  cases: Record<string, { etat: EtatCase; titre: string }>
+  onToggle: (portalKey: string) => void
+  onOpen: () => void
+}
+
+export function AnnoncePubCells(p: AnnoncePubCellsProps) {
+  return (
+    <>
+      <BienPrixCells item={p.item} photoUrl={p.photoUrl} typeLabel={p.typeLabel} negoName={p.negoName} transactionLabel={p.transactionLabel} />
+      {p.bande ? (
+        <td colSpan={PORTAILS_PUB.length} className="av3-pub-bande-td">
+          <div className="av3-pub-bande" onClick={(event) => event.stopPropagation()}>
+            <span>{p.bande.texte}</span>
+            {p.bande.bouton ? (
+              <button type="button" className="av3-pub-demande" onClick={(event) => { event.stopPropagation(); p.bande?.bouton?.onClick() }}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 12 20 4l-6 16-3-7z" /></svg>
+                {p.bande.bouton.label}
+              </button>
+            ) : null}
+          </div>
+        </td>
+      ) : PORTAILS_PUB.map((portail) => {
+        const kase = p.cases[portail.key] ?? { etat: 'absent' as EtatCase, titre: portail.nom }
+        const occupe = kase.etat === 'envoi' || kase.etat === 'retrait'
+        return (
+          <td key={portail.key} className="av3-c">
+            <button
+              type="button"
+              role="checkbox"
+              aria-checked={kase.etat === 'enligne' || kase.etat === 'retrait'}
+              aria-label={kase.titre}
+              title={kase.titre}
+              className={`av3-case ${kase.etat}`}
+              disabled={occupe}
+              onClick={(event) => { event.stopPropagation(); if (!occupe) p.onToggle(portail.key) }}
+            >
+              {kase.etat === 'enligne' ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m5 12.5 4.2 4.2L19 7" /></svg> : null}
+              {kase.etat === 'erreur' ? <b aria-hidden="true">!</b> : null}
+              {kase.etat === 'echec' ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17" /></svg> : null}
+              {occupe ? <i className="av3-case-roue" aria-hidden="true" /> : null}
+            </button>
+          </td>
+        )
+      })}
+      <td className="av3-r">
+        <div className="av3-actions av3-pub-ouvrir" onClick={(event) => event.stopPropagation()}>
           <button type="button" className="ra cta" title="Ouvrir la fiche" aria-label="Ouvrir la fiche" onClick={(event) => { event.stopPropagation(); p.onOpen() }}>
             <Svg d={ICONE.fleche} strokeWidth={2.4} />
           </button>

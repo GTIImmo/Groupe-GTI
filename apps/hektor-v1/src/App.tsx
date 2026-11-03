@@ -197,6 +197,7 @@ import {
   type AnnonceEditStatus,
   type ContactEditStatus,
   loadRapprochementCounts,
+  loadPortailsEnErreur,
   type RapprochementCount,
   hasOffreAchatEnCours,
   hasOffreAchatRefusee,
@@ -261,7 +262,8 @@ import type { ViewerItem } from './BienvuViewer'
 import { BvIcon } from './BienvuIcons'
 import RedacteurPanel from './RedacteurPanel'
 // Listing Annonces V2 (lot 1, 03/11/2026) -- derriere VITE_APP_ANNONCES_LISTE_V2, eteint par defaut.
-import { APP_ANNONCES_LISTE_V2, AnnonceV2Cells, AnnonceV2Colgroup, AnnonceV2Head, AnnonceV2Reperes, demanderRubriqueAOuverture, prendreRubriqueDemandee } from './AnnoncesListeV2'
+import { APP_ANNONCES_LISTE_V2, AnnonceOnglets, AnnoncePubCells, AnnoncePubColgroup, AnnoncePubHead, AnnoncePubReperes, AnnonceV2Cells, AnnonceV2Colgroup, AnnonceV2Head, AnnonceV2Reperes, PORTAIL_ID_COMMUN, PORTAILS_PUB, demanderRubriqueAOuverture, portailsDeLaLigne, prendreRubriqueDemandee } from './AnnoncesListeV2'
+import type { EtatCase } from './AnnoncesListeV2'
 import ContactSearchFields, { contactSearchValueToInput, defaultContactSearchValue, type ContactSearchFieldsValue } from './ContactSearchFields'
 import './contact-new.css'
 import RechercheGlobale, { type GroupeRecherche } from './RechercheGlobale'
@@ -20674,7 +20676,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     }
     for (const item of diffusionModalBroadcasts) {
       const portalKey = (item.passerelle_key ?? '').trim() || 'passerelle_inconnue'
-      const hektorBroadcastId = grouped.get(portalKey)?.hektorBroadcastId ?? portalKey
+      // 03/11 : paper / etreproprio / superimmo ont le MEME numero dans toutes les agences ; sans ligne
+      // cible, on prenait le NOM du portail comme numero (« paper ») et Hektor refusait l'ordre.
+      const hektorBroadcastId = grouped.get(portalKey)?.hektorBroadcastId ?? PORTAIL_ID_COMMUN[portalKey] ?? portalKey
       const observedEnabled = item.current_state === 'broadcasted' || item.export_status === 'exported' || item.is_success === true
       const statusDetail = [item.current_state ?? '-', item.export_status ?? '-', item.commercial_nom ?? item.commercial_key ?? '-'].join(' - ')
       const current = grouped.get(portalKey)
@@ -20735,11 +20739,14 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     loadDiffusionTargets(diffusionModalMandatId)
       .then(async (rows) => {
         if (cancelled) return
-        if (rows.length === 0 && diffusionModalMandat && isValidationApproved(diffusionModalMandat.validation_diffusion_state)) {
+        // 03/11 : une case de la vue Publicite enregistre UNE seule cible ; la fenetre complete donc avec
+        // les cibles de l'agence qui MANQUENT (avant : seulement quand il n'y en avait aucune).
+        const clesPresentes = new Set(rows.map((item) => item.portal_key ?? ''))
+        if (diffusionModalMandat && isValidationApproved(diffusionModalMandat.validation_diffusion_state)) {
           const preview = await previewDefaultDiffusionTargets({ appDossierId: diffusionModalMandatId }).catch(() => null)
-          const previewTargets = preview?.targets ?? []
+          const previewTargets = (preview?.targets ?? []).filter((item) => !clesPresentes.has(item.portal_key ?? ''))
           if (previewTargets.length > 0) {
-            rows = previewTargets.map((item) => ({
+            rows = [...rows, ...previewTargets.map((item) => ({
               app_dossier_id: item.app_dossier_id,
               hektor_annonce_id: Number(item.hektor_annonce_id),
               hektor_broadcast_id: item.hektor_broadcast_id,
@@ -20753,7 +20760,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               last_applied_at: null,
               last_apply_status: null,
               last_apply_error: null,
-            }))
+            }))]
           }
         }
         if (!cancelled) setDiffusionTargets(rows)
@@ -25712,6 +25719,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               setDossierPage(1)
             }}
             mode="active"
+            currentUserName={profile?.display_name ?? profile?.email ?? null}
+            currentUserRole={profile?.role ?? null}
           />
         ) : screen === 'estimations' ? (
           <MandatsScreen
@@ -26907,11 +26916,121 @@ function MandatsScreen(props: {
   onExtendSearch?: () => void
   onResetSearchScope?: () => void
   mode?: 'active' | 'estimation'
+  /** vue Publicite : qui coche (trace dans app_diffusion_target) */
+  currentUserName?: string | null
+  currentUserRole?: string | null
 }) {
   const isEstimationMode = props.mode === 'estimation'
   // Listing V2 (lot 1, 03/11/2026) : seulement le mode Annonces. L'ecran Estimations partage ce
   // composant et ne change PAS.
   const listeV2 = APP_ANNONCES_LISTE_V2 && !isEstimationMode
+  // Vue Publicite (lot 3, 03/11/2026) : onglet retenu par navigateur (simple confort).
+  const [vueAnnonces, setVueAnnonces] = useState<'liste' | 'pub'>(() => {
+    try { return window.localStorage.getItem('bienvu.annonces.vue') === 'pub' ? 'pub' : 'liste' } catch { return 'liste' }
+  })
+  const changerVueAnnonces = (vue: 'liste' | 'pub') => {
+    setVueAnnonces(vue)
+    try { window.localStorage.setItem('bienvu.annonces.vue', vue) } catch { /* stockage indisponible : l'onglet ne sera pas retenu */ }
+  }
+  const vuePub = listeV2 && vueAnnonces === 'pub'
+  // Ce qui vient d'etre fait dans cette session, en attendant la relecture de la nuit :
+  //   resumeLocal -- la nouvelle liste des portails (aussi enregistree sur le dossier, persist-state) ;
+  //   casesEnCours -- l'envoi en cours ; echecsCases -- le refus de Hektor, affiche sur la case.
+  const [resumeLocal, setResumeLocal] = useState<Record<number, string>>({})
+  const [casesEnCours, setCasesEnCours] = useState<Record<string, 'envoi' | 'retrait'>>({})
+  const [echecsCases, setEchecsCases] = useState<Record<string, string>>({})
+  const [portailsErreur, setPortailsErreur] = useState<Map<number, Set<string>>>(new Map())
+  const pubIdsKey = vuePub ? props.mandats.filter((m) => m.diffusable === '1').map((m) => m.app_dossier_id).join(',') : ''
+  useEffect(() => {
+    if (!pubIdsKey) { setPortailsErreur(new Map()); return }
+    let cancelled = false
+    loadPortailsEnErreur(pubIdsKey.split(',').map(Number))
+      .then((m) => { if (!cancelled) setPortailsErreur(m) })
+      .catch(() => { if (!cancelled) setPortailsErreur(new Map()) })
+    return () => { cancelled = true }
+  }, [pubIdsKey])
+  const basculerPortail = async (item: MandatRecord, portalKey: string) => {
+    const id = item.app_dossier_id
+    const cle = `${id}:${portalKey}`
+    if (casesEnCours[cle]) return
+    const enLigne = portailsDeLaLigne(resumeLocal[id] ?? item.portails_resume)
+    const enErreur = Boolean(portailsErreur.get(id)?.has(portalKey))
+    // Une case en erreur se REPUBLIE ; sinon le clic inverse l'etat.
+    const publier = enErreur || !enLigne.includes(portalKey)
+    setCasesEnCours((c) => ({ ...c, [cle]: publier ? 'envoi' : 'retrait' }))
+    setEchecsCases((c) => { const n = { ...c }; delete n[cle]; return n })
+    try {
+      let broadcastId: string | undefined = PORTAIL_ID_COMMUN[portalKey]
+      if (!broadcastId) {
+        const apercu = await previewDefaultDiffusionTargets({ appDossierId: id })
+        broadcastId = (apercu.targets ?? []).find((t) => t.portal_key === portalKey)?.hektor_broadcast_id
+      }
+      if (!broadcastId) throw new Error(`Numéro de passerelle introuvable pour l'agence ${item.agence_nom ?? ''}`.trim())
+      // ⚠ UNE SEULE cible : _run_apply agit sur TOUTES les lignes de app_diffusion_target du dossier,
+      //   donc un seul ordre part chez Hektor -- les autres portails ne sont pas touches.
+      await saveDiffusionTargets({
+        mandat: item,
+        targets: [{ hektor_broadcast_id: broadcastId, portal_key: portalKey, target_state: publier ? 'enabled' : 'disabled' }],
+        requestedByName: props.currentUserName ?? null,
+        requestedByRole: props.currentUserRole ?? null,
+      })
+      const result = await applyDiffusionTargetsOnHektor({ appDossierId: id, dryRun: false, ensureDiffusable: false })
+      const refus = (result.failed ?? []).find((f) => f.action === 'add' || f.action === 'remove')
+      if (refus) throw new Error(safeText(refus.error) || 'Hektor a refusé')
+      const suivant = publier ? [...enLigne.filter((k) => k !== portalKey), portalKey] : enLigne.filter((k) => k !== portalKey)
+      const resume = buildPortalsResume(suivant)
+      setResumeLocal((c) => ({ ...c, [id]: resume }))
+      if (enErreur) {
+        setPortailsErreur((m) => { const n = new Map(m); const set = new Set(n.get(id) ?? []); set.delete(portalKey); n.set(id, set); return n })
+      }
+      // Hektor a CONFIRME ; on reporte sur le dossier. Si ce report rate, la relecture de la nuit
+      // remettra l'app d'accord -- on le DIT plutot que de se taire.
+      await setDossierHektorState(id, { portailsResume: resume, nbPortailsActifs: suivant.length })
+        .catch(() => setRapproNotice("Fait chez Hektor. L'app se mettra à jour à la relecture de cette nuit."))
+    } catch (error) {
+      // Une trace complete (couleurs de terminal comprises) peut remonter : on garde sa derniere ligne utile.
+      const lignes = (error instanceof Error ? error.message : '').replace(/\u001b\[[0-9;]*m/g, '').split(/\r?\n/).map((l) => l.trim()).filter(Boolean)
+      const message = (lignes.length > 1 ? lignes[lignes.length - 1] : lignes[0] ?? '') || "Échec de l'envoi à Hektor"
+      setEchecsCases((c) => ({ ...c, [cle]: message.slice(0, 180) }))
+    } finally {
+      setCasesEnCours((c) => { const n = { ...c }; delete n[cle]; return n })
+    }
+  }
+  const casesDeLaLigne = (item: MandatRecord) => {
+    const id = item.app_dossier_id
+    const enLigne = new Set(portailsDeLaLigne(resumeLocal[id] ?? item.portails_resume))
+    const erreurs = portailsErreur.get(id)
+    const cases: Record<string, { etat: EtatCase; titre: string }> = {}
+    for (const portail of PORTAILS_PUB) {
+      const cle = `${id}:${portail.key}`
+      const enCours = casesEnCours[cle]
+      const echec = echecsCases[cle]
+      const etat: EtatCase = enCours ?? (echec ? 'echec' : erreurs?.has(portail.key) ? 'erreur' : enLigne.has(portail.key) ? 'enligne' : 'absent')
+      const titre = etat === 'envoi' ? `${portail.nom} : envoi à Hektor…`
+        : etat === 'retrait' ? `${portail.nom} : retrait en cours…`
+        : etat === 'echec' ? `${portail.nom} : ${echec} — cliquer pour réessayer`
+        : etat === 'erreur' ? `${portail.nom} : en erreur chez Hektor — cliquer pour republier`
+        : etat === 'enligne' ? `${portail.nom} : en ligne — cliquer pour retirer`
+        : `${portail.nom} : absente — cliquer pour publier`
+      cases[portail.key] = { etat, titre }
+    }
+    return cases
+  }
+  const bandePub = (item: MandatRecord, isLightweight: boolean): null | { texte: string; bouton?: { label: string; onClick: () => void } } => {
+    if (item.is_provisional) return { texte: 'En création…' }
+    if (isLightweight) return { texte: 'Fiche importée : ouvrir pour la compléter' }
+    if (!String(item.numero_mandat ?? '').trim()) return { texte: "Sans mandat : rien à diffuser pour l'instant" }
+    if (String(item.diffusable ?? '').trim() === '1') return null
+    const demande = latestActionRequest(props.requests, item.app_dossier_id, 'demande_diffusion')
+    const statut = demande?.request_status ?? null
+    const ouvrir = () => props.onOpenRequestModal(item.app_dossier_id, 'nego', 'demande_diffusion')
+    if (statut === 'pending' || statut === 'in_progress') return { texte: 'Demande envoyée · en attente de la Direction' }
+    if (statut === 'waiting_commercial') return { texte: 'La Direction demande une correction', bouton: { label: 'Corriger', onClick: ouvrir } }
+    return {
+      texte: statut === 'refused' ? 'Demande refusée' : isValidationApproved(item.validation_diffusion_state) ? 'Validée, pas encore diffusable' : 'Pas encore validée ni diffusable',
+      bouton: { label: 'Faire la demande', onClick: ouvrir },
+    }
+  }
   const listingTotalLabel = `${new Intl.NumberFormat('fr-FR').format(props.mandatsTotal)} ${props.totalNoun ?? (isEstimationMode ? 'estimations' : 'annonces actives')}`
   // Badge « acquéreurs correspondants non proposés » — comptage batch pour la page courante.
   const [acqCounts, setAcqCounts] = useState<Map<number, RapprochementCount>>(new Map())
@@ -26958,6 +27077,7 @@ function MandatsScreen(props: {
             <h3>{props.title ?? 'Liste des annonces'}</h3>
             <span className="listing-total-label">{listingTotalLabel}</span>
           </div>
+          {listeV2 ? <AnnonceOnglets vue={vueAnnonces} onChange={changerVueAnnonces} /> : null}
           <div className="page-controls">
             {props.loading ? <span className="loading-inline">Mise a jour...</span> : null}
             <span>{pageLabel(props.mandatsTotal, mandatPageSize, props.mandatPage)}</span>
@@ -26993,7 +27113,7 @@ function MandatsScreen(props: {
         <div className={`table-wrap listing-table-wrap ${isEstimationMode ? 'estim-v2-tablewrap' : 'listing-table-active'} ${props.loading ? 'is-refreshing' : ''}`}>
           {props.loading ? <div className="listing-loading-banner">{APP_BIENVU_ENABLED ? <BienvuLoader label="Chargement…" /> : 'Chargement du listing...'}</div> : null}
           <table>
-            {listeV2 ? <AnnonceV2Colgroup /> : !isEstimationMode ? (
+            {listeV2 ? (vuePub ? <AnnoncePubColgroup /> : <AnnonceV2Colgroup />) : !isEstimationMode ? (
               <colgroup>
                 <col style={{ width: '112px' }} />{/* photo (vignette 100px) */}
                 <col />{/* bien — flexible */}
@@ -27013,7 +27133,7 @@ function MandatsScreen(props: {
               </colgroup>
             )}
             <thead>
-              {listeV2 ? <AnnonceV2Head /> : isEstimationMode ? (
+              {listeV2 ? (vuePub ? <AnnoncePubHead /> : <AnnonceV2Head />) : isEstimationMode ? (
                 <tr><th>Photo</th><th>Bien &amp; propriétaire <span className="si">↕</span></th><th>Valeur estimée <span className="si">↕</span></th><th>Stade <span className="si">↕</span></th><th>Actions</th></tr>
               ) : (
                 <tr><th className="av-pad-l">Photo</th><th>Bien</th><th>Négociateur</th><th>Statut</th><th>Diffusion</th><th className="av-right">Vues 30 j</th><th className="av-pad-r av-right">Actions</th></tr>
@@ -27110,7 +27230,24 @@ function MandatsScreen(props: {
                         else props.onOpenDetailPage(item.app_dossier_id)
                       }}
                     >
-                      {listeV2 ? (
+                      {vuePub ? (
+                        <AnnoncePubCells
+                          item={item}
+                          photoUrl={listingPreviewUrl(item.images_preview_json, item.photo_url_listing)}
+                          typeLabel={libelleTypeBien(item)}
+                          negoName={avNegoName}
+                          transactionLabel={item.is_brouillon ? 'Brouillon' : avStatut.c ? avStatut.l : null}
+                          bande={bandePub(item, isLightweight)}
+                          cases={casesDeLaLigne(item)}
+                          onToggle={(portalKey) => { void basculerPortail(item, portalKey) }}
+                          onOpen={() => {
+                            if (item.is_provisional) return
+                            props.onSelectMandat(item.app_dossier_id)
+                            if (isLightweight) props.onOpenLightweightDetail(item)
+                            else props.onOpenDetailPage(item.app_dossier_id)
+                          }}
+                        />
+                      ) : listeV2 ? (
                         <AnnonceV2Cells
                           item={item}
                           photoUrl={listingPreviewUrl(item.images_preview_json, item.photo_url_listing)}
@@ -27312,7 +27449,7 @@ function MandatsScreen(props: {
               })}
             </tbody>
           </table>
-          {listeV2 ? <AnnonceV2Reperes /> : null}
+          {listeV2 ? (vuePub ? <AnnoncePubReperes /> : <AnnonceV2Reperes />) : null}
         </div>
       </section>
     </section>

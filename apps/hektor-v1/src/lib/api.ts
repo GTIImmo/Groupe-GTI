@@ -7521,6 +7521,33 @@ export async function loadMandatBroadcasts(appDossierId: number): Promise<Mandat
   return data as MandatBroadcast[]
 }
 
+// Vue Publicite (lot 3, 03/11/2026) : les portails EN ERREUR des annonces d'une page, en UNE lecture.
+// L'etat « en ligne » vient de `portails_resume` de la ligne (deja chargee) ; ici, seulement l'erreur,
+// que la ligne ne porte qu'en global (`has_diffusion_error`). Cle : app_dossier_id -> passerelles.
+export async function loadPortailsEnErreur(appDossierIds: number[]): Promise<Map<number, Set<string>>> {
+  const result = new Map<number, Set<string>>()
+  const ids = Array.from(new Set(appDossierIds.filter((id) => Number.isFinite(id))))
+  if (ids.length === 0) return result
+  let rows: Array<Pick<MandatBroadcast, 'app_dossier_id' | 'passerelle_key' | 'is_error'>> = []
+  if (!hasSupabaseEnv || !supabase) {
+    rows = mockMandatBroadcasts.filter((item) => ids.includes(item.app_dossier_id))
+  } else {
+    const { data, error } = await supabase
+      .from('app_mandat_broadcasts_current')
+      .select('app_dossier_id,passerelle_key,is_error')
+      .in('app_dossier_id', ids)
+    if (error || !data) throw new Error(error?.message ?? 'Unable to load portails en erreur')
+    rows = data as typeof rows
+  }
+  for (const row of rows) {
+    if (!row.is_error || !row.passerelle_key) continue
+    const set = result.get(row.app_dossier_id) ?? new Set<string>()
+    set.add(row.passerelle_key)
+    result.set(row.app_dossier_id, set)
+  }
+  return result
+}
+
 export async function loadDiffusionRequests(): Promise<DiffusionRequest[]> {
   if (!hasSupabaseEnv || !supabase) return readLocalDiffusionRequests()
   const { data, error } = await supabase

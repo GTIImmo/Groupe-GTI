@@ -86,7 +86,7 @@
 .av3 .av3-antenne .err { position: absolute; bottom: -3px; right: -3px; width: 11px; height: 11px; border-radius: 9px; background: #b66a16; border: 2px solid #fff; }
 
 /* Actions : mêmes boutons que l'annuaire Contacts */
-.av3 .av3-actions { display: grid; grid-template-columns: 112px repeat(3, 34px); gap: 6px; justify-content: end; align-items: center; }
+.av3 .av3-actions { display: grid; grid-template-columns: 116px repeat(3, 34px); gap: 6px; justify-content: end; align-items: center; }
 .av3 .ra-spacer { width: 34px; height: 34px; flex: none; }
 .av3 .ra { width: 34px; height: 34px; border-radius: 9px; border: 1.5px solid rgba(34, 35, 35, .2); background: #f4f5f6; color: rgba(34, 35, 35, .7); display: grid; place-items: center; cursor: pointer; transition: .13s; flex: none; text-decoration: none; padding: 0; position: relative; }
 .av3 .ra svg { width: 16px; height: 16px; }
@@ -102,18 +102,18 @@
 /* Bouton Action : « le sceau de suivi » (03/11, 2e dessin). Une demande administrative part a la
    Direction et revient tamponnee : l'anneau autour de l'icone est le CHEMIN de la demande, en
    3 crans (envoyee -> en cours -> decision). MEMES tons et MEMES libelles qu'avant (actionPillState) ;
-   le bouton passe de 126 a 112 px (le chevron disparait : tout le bouton ouvre le menu). */
-.av3 .act { position: relative; display: inline-flex; align-items: center; gap: 7px; height: 34px; width: 112px; box-sizing: border-box; padding: 0 9px 0 3px; border-radius: 17px; border: 1px solid; font: inherit; cursor: pointer; text-align: left; transition: border-color .15s, box-shadow .15s, transform .15s; }
+   le bouton passe de 126 a 116 px (le chevron disparait : tout le bouton ouvre le menu). */
+.av3 .act { position: relative; display: inline-flex; align-items: center; gap: 6px; height: 34px; width: 116px; box-sizing: border-box; padding: 0 9px 0 3px; border-radius: 17px; border: 1px solid; font: inherit; cursor: pointer; text-align: left; transition: border-color .15s, box-shadow .15s, transform .15s; }
 .av3 .act:hover { border-color: #c5005f; box-shadow: 0 2px 8px rgba(197, 0, 95, .14); }
 .av3 .act:active { transform: scale(.97); }
 .av3 .act:focus-visible { outline: 2px solid #c5005f; outline-offset: 2px; }
-.av3 .act-seal { position: relative; flex: 0 0 28px; width: 28px; height: 28px; border-radius: 50%; background: #fff; display: grid; place-items: center; box-shadow: 0 1px 2px rgba(34, 35, 35, .1); }
-.av3 .act-ring { position: absolute; inset: 0; width: 28px; height: 28px; overflow: visible; }
+.av3 .act-seal { position: relative; flex: 0 0 26px; width: 26px; height: 26px; border-radius: 50%; background: #fff; display: grid; place-items: center; box-shadow: 0 1px 2px rgba(34, 35, 35, .1); }
+.av3 .act-ring { position: absolute; inset: 0; width: 26px; height: 26px; overflow: visible; }
 .av3 .act-ring circle { fill: none; stroke-width: 2.6; stroke-linecap: butt; }
 .av3 .act-ring .trk { stroke: rgba(34, 35, 35, .12); stroke-dasharray: 22.73 2.4; stroke-dashoffset: -1.2; }
 .av3 .act-ring .arc { stroke: currentColor; stroke-dasharray: 0 75.4; stroke-dashoffset: -1.2; }
 .av3 .act-ring .run { stroke: currentColor; stroke-dasharray: 0 75.4; opacity: 0; }
-.av3 .act-ic { position: relative; width: 14px; height: 14px; }
+.av3 .act-ic { position: relative; width: 13px; height: 13px; }
 .av3 .act-dot { position: absolute; top: -2px; right: -2px; width: 9px; height: 9px; box-sizing: border-box; border-radius: 50%; border: 2px solid #fff; background: #dd7a18; display: none; }
 .av3 .act-txt { display: flex; flex-direction: column; min-width: 0; line-height: 1.12; flex: 1; }
 .av3 .act-type { font-size: 8.5px; font-weight: 800; letter-spacing: .04em; overflow: hidden; text-overflow: ellipsis; text-transform: uppercase; opacity: .72; white-space: nowrap; }
@@ -227,3 +227,66 @@
 /* la 1re cellule d'une ligne selectionnee gardait le gris de l'ancienne liste (td:first-child !important) */
 .app-shell.app-shell-modern .panel-grid.av3 .table-wrap.listing-table-active tbody tr.is-selected td:first-child,
 .app-shell.app-shell-modern .panel-grid.av3 .table-wrap.listing-table-active tbody tr:hover td:first-child { background: #fffbfd !important; }
+
+/* ── Vue Publicite (lot 3, 03/11) ─────────────────────────────────────────────────────────── */
+.av3 .av3-onglets { display: inline-flex; gap: 2px; padding: 3px; border-radius: 11px; background: #f1f2f3; margin-left: 14px; align-self: center; }
+.av3 .av3-onglets button { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border: 0; border-radius: 8px; background: transparent; color: #5c6163; font: inherit; font-size: 12.5px; font-weight: 800; cursor: pointer; transition: background .15s, color .15s, box-shadow .15s; }
+.av3 .av3-onglets button svg { width: 15px; height: 15px; }
+.av3 .av3-onglets button:hover { color: #222323; }
+.av3 .av3-onglets button.on { background: #fff; color: #c5005f; box-shadow: 0 1px 3px rgba(34, 35, 35, .14); }
+.av3 .av3-onglets button:focus-visible { outline: 2px solid #c5005f; outline-offset: 1px; }
+.av3 .av3-titre-ligne { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+
+.av3 .av3-case { position: relative; display: inline-grid; place-items: center; width: 30px; height: 30px; box-sizing: border-box; border-radius: 9px; border: 1.5px solid #cfd3d4; background: #fff; color: #fff; padding: 0; cursor: pointer; transition: border-color .15s, background .15s, transform .12s, box-shadow .15s; }
+.av3 .av3-case svg { width: 16px; height: 16px; }
+.av3 .av3-case:hover { border-color: #c5005f; box-shadow: 0 0 0 3px rgba(197, 0, 95, .1); }
+.av3 .av3-case:active { transform: scale(.92); }
+.av3 .av3-case:focus-visible { outline: 2px solid #c5005f; outline-offset: 2px; }
+.av3 .av3-case.enligne { background: #2f7d59; border-color: #2f7d59; }
+.av3 .av3-case.enligne svg path { stroke-dasharray: 24; stroke-dashoffset: 0; animation: av3Draw .35s ease-out; }
+.av3 .av3-case.enligne:hover { background: #276a4b; border-color: #276a4b; box-shadow: 0 0 0 3px rgba(47, 125, 89, .16); }
+.av3 .av3-case.erreur { background: #fff6ea; border-color: #dd7a18; color: #b65f0c; }
+.av3 .av3-case.erreur b { font-size: 14px; font-weight: 900; line-height: 1; }
+.av3 .av3-case.echec { background: #fff1ef; border-color: #d15347; color: #d15347; animation: av3Shake .45s ease-in-out 1; }
+.av3 .av3-case.envoi, .av3 .av3-case.retrait { cursor: progress; border-color: rgba(79, 143, 181, .5); background: #eef7fa; }
+.av3 .av3-case-roue { width: 14px; height: 14px; box-sizing: border-box; border-radius: 50%; border: 2px solid rgba(63, 127, 166, .25); border-top-color: #3f7fa6; animation: av3Spin .8s linear infinite; }
+.av3 .av3-pub-bande { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 34px; padding: 0 6px 0 12px; border-radius: 10px; background: #f7f8f8; border: 1px dashed #d6d9da; font-size: 12px; color: #5c6163; }
+.av3 .av3-pub-bande span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.av3 .av3-pub-demande { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 11px; border-radius: 8px; border: 1px solid rgba(197, 0, 95, .3); background: #fff; color: #a8004f; font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; transition: background .15s, border-color .15s; }
+.av3 .av3-pub-demande svg { width: 13px; height: 13px; }
+.av3 .av3-pub-demande:hover { background: #fdf0f6; border-color: #c5005f; }
+.av3 .av3-pub-ouvrir { grid-template-columns: 34px; }
+.av3 .av3-reperes span > b { font-size: 10.5px; color: #3b4143; }
+@media (prefers-reduced-motion: reduce) {
+  .av3 .av3-case, .av3 .av3-case *, .av3 .av3-case-roue { animation: none !important; }
+}
+/* l'ancienne liste peint en gris tout texte de cellule (td span) : la bande et les cases gardent leurs couleurs */
+.app-shell.app-shell-modern .panel-grid.av3 .table-wrap.listing-table-active .av3-pub-bande span { color: #5c6163 !important; }
+.app-shell.app-shell-modern .panel-grid.av3 .table-wrap.listing-table-active thead th.av3-c[title] { cursor: help; }
+/* 03/11 soir -- Frederic : « les libelles debordent presque, mauvais alignement ». Cause mesuree :
+   `td span { display: block; margin-top: 4px }` (styles.css l. 5000-5001) et le `-webkit-box` a une
+   ligne de `.listing-table-wrap td span` (l. 16332) s'appliquaient aux 3 morceaux du bouton (le sceau,
+   le type, l'etat) : 4 px de trop au-dessus de CHACUN, texte pousse vers le bas. On les annule ici. */
+.app-shell.app-shell-modern .panel-grid.av3 .table-wrap.listing-table-active .act span,
+.app-shell.app-shell-modern .panel-grid.av3 .table-wrap.listing-table-active .av3-pub-bande span { margin: 0 !important; -webkit-line-clamp: unset !important; }
+.app-shell.app-shell-modern .panel-grid.av3 .table-wrap.listing-table-active .act .act-seal { display: grid !important; }
+.app-shell.app-shell-modern .panel-grid.av3 .table-wrap.listing-table-active .act .act-txt { display: flex !important; flex-direction: column !important; justify-content: center !important; gap: 1px; }
+.app-shell.app-shell-modern .panel-grid.av3 .table-wrap.listing-table-active .act .act-type,
+.app-shell.app-shell-modern .panel-grid.av3 .table-wrap.listing-table-active .act .act-state { display: block !important; line-height: 1.15 !important; max-width: 100% !important; }
+.app-shell.app-shell-modern .panel-grid.av3 .table-wrap.listing-table-active .act .act-type { font-size: 8.5px !important; }
+.app-shell.app-shell-modern .panel-grid.av3 .table-wrap.listing-table-active .act .act-state { font-size: 12px !important; }
+.app-shell.app-shell-modern .panel-grid.av3 .table-wrap.listing-table-active .av3-pub-bande span { display: block !important; }
+/* 03/11 soir -- mesure des libelles a 116 px : place 70 px ; « A corriger » 60, « ANNULATION » 60 (10 px d'air).
+   « Sans mandat » (77 px a 12 px) ne tient pas : 10,5 px pour cette pastille muette seulement. */
+.app-shell.app-shell-modern .panel-grid.av3 .table-wrap.listing-table-active .act.t-none .act-state { font-size: 10.5px !important; }
+/* le sceau est un span : la regle grise de l'ancienne liste (td span ... !important) eteignait sa couleur */
+.app-shell.app-shell-modern .panel-grid.av3 .table-wrap.listing-table-active .t-neutral .act-seal { color: #3b4143 !important; }
+.app-shell.app-shell-modern .panel-grid.av3 .table-wrap.listing-table-active .t-none .act-seal { color: #7c8082 !important; }
+.app-shell.app-shell-modern .panel-grid.av3 .table-wrap.listing-table-active .t-sent .act-seal, .app-shell.app-shell-modern .panel-grid.av3 .table-wrap.listing-table-active .t-progress .act-seal { color: #3f7fa6 !important; }
+.app-shell.app-shell-modern .panel-grid.av3 .table-wrap.listing-table-active .t-fix .act-seal { color: #dd7a18 !important; }
+.app-shell.app-shell-modern .panel-grid.av3 .table-wrap.listing-table-active .t-refused .act-seal { color: #d15347 !important; }
+.app-shell.app-shell-modern .panel-grid.av3 .table-wrap.listing-table-active .t-accepted .act-seal { color: #2f7d59 !important; }
+/* l'en-tete de la carte est une grille a 2 colonnes (titre | pagination) : les onglets y font une 3e colonne */
+.app-shell.app-shell-modern .panel-grid.av3 .panel-active-listing > .panel-head { grid-template-columns: auto auto minmax(0, 1fr) !important; align-items: center !important; column-gap: 14px !important; }
+.app-shell.app-shell-modern .panel-grid.av3 .panel-active-listing > .panel-head > .av3-onglets { margin-left: 0; }
+.app-shell.app-shell-modern .panel-grid.av3 .panel-active-listing > .panel-head > .page-controls { justify-self: end !important; }
