@@ -917,3 +917,15 @@ L'écran a été lu dans le Chrome de Frédéric, en lecture seule. Ses chiffres
 3. **⚠ « Signatures en attente » ne s'affiche pas**, et ce n'est PAS une régression : la lecture des signatures tombe en « statement timeout », déjà à 10:32 avec l'écran d'avant.
    - Cause : le filtre `metadata_json->signature->>status` parcourt les 192 000 documents, et aucun index ne le porte.
    - Remède : un index partiel. C'est une écriture en base, donc **un accord est nécessaire**.
+
+## 34. L'index des signatures — posé avec l'accord de Frédéric (03/11, « OUI VAS Y »), et ce qu'il ne règle PAS
+**Posé** : `idx_app_console_document_signature_statut`, avec le patch `supabase/patch_index_signature_document_2026-11-03.sql` ; le retour arrière est dans `_INVERSE.sql`.
+
+**Mesure** :
+- Sans les droits par ligne, l'index est emprunté : la lecture prend **2 ms** pour 512 lignes.
+- ⚠ Sous le compte de Frédéric, avec les droits par ligne, il n'est **PAS** emprunté : la base parcourt encore les 192 685 documents. La lecture tombe de 15,5 s à **3 s**, mais seulement parce que la table est maintenant en mémoire.
+- Cause : la base applique la règle de visibilité AVANT le filtre, et l'opérateur `->>` n'est pas déclaré sans fuite (« leakproof »). C'est le piège de la mémoire `rls-et-conversion-texte-tuent-l-index`.
+
+**À l'écran** : la ligne « 55 signatures de mandat en attente » est revenue, et la base en compte 55 (456 signés). Elle passe sous la limite de temps de la base, **mais de peu**. Par un matin à froid, la lecture peut retomber au-dessus et la ligne disparaître de nouveau.
+
+**Le vrai remède, à décider** : une fonction réservée aux admins, sur le modèle de `app_pilotage_stock`. Elle compterait les signatures sans passer par les droits par ligne, et emprunterait donc l'index (2 ms). C'est une nouvelle écriture en base, avec une petite retouche de `lib/pilotage.ts` : **un accord est nécessaire**.
