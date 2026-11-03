@@ -18,12 +18,25 @@ Notes qui précèdent celle-ci : `A8_AUDIT_CHARGE_DE_COMMISSION_2026-11-02.md`
 
 ---
 
+> ⭐⭐⭐ **CORRIGÉ LE 03/11 APRÈS-MIDI — et la correction vient d'une question de
+> Frédéric** : *« dans Hektor il y a deux questions sur le mandat : Honoraires
+> charge Acquéreur Oui/Non, Honoraires charge Vendeur Oui »*. **Il avait raison, et
+> ce rapport ne connaissait qu'UNE des deux sources.** Trois chiffres de la
+> première version sont donc faux, et ils sont corrigés sur place :
+>
+> • la couverture n'est pas **76,6 %** mais **98,4 %** ;
+> • le « trou 2012-2014 » **n'existe pas** (99 % couvert) ;
+> • l'export Modelo **ne sert plus** : Hektor couvre tout seul 2009→2026.
+>
+> ⛔ Et une structure que j'avais mal lue : `honoraires_json` est un **HISTORIQUE**
+> (six lignes pour un seul mandat), pas une valeur. Voir § 2 bis.
+
 ## § 1. LA RÉPONSE EN UNE PAGE
 
 ```
 AVONS-NOUS LA CHARGE ?
 
-  SUR LES MANDATS     oui, a 76,6 %  --  mais INVISIBLE a l'ecran
+  SUR LES MANDATS     oui, a 98,4 %  --  mais INVISIBLE a l'ecran
                       La valeur descend chaque nuit dans notre miroir et
                       s'y arrete. Aucune colonne du registre ne la porte,
                       aucun ecran ne la montre, aucun worker ne la remonte.
@@ -56,7 +69,9 @@ data/hektor.sqlite  ->  table hektor_annonce_detail  ->  colonne honoraires_json
 ```
 MESURE :
   61 459 lignes de detail, 14 302 portent un bloc honoraires
-  valeurs rencontrees : « vendeur » 62 571 lignes · « acheteur » 19 352
+  valeurs rencontrees : « vendeur » 62 573 LIGNES · « Acheteur » 19 352
+  ⛔ CE SONT DES LIGNES, PAS DES ANNONCES -- et une annonce en porte SIX.
+     Par annonce, derniere ligne : 11 044 vendeur · 3 260 acquereur.
   AUCUNE valeur vide ; les 3 cles sont toujours la (id, taux, charge)
   par annonce : 11 030 vendeur · 3 258 acheteur · 14 se contredisent
 ```
@@ -86,37 +101,53 @@ sens, et c'est elle qui donnait deux comptes différents selon la façon de
 compter. **Le rattrapage se fait ligne par ligne.**
 
 ```
-LA COUVERTURE VRAIE, LIGNE PAR LIGNE DU REGISTRE
+LA COUVERTURE VRAIE -- LES DEUX SOURCES DE HEKTOR (corrige le 03/11)
 
-annee   lignes   Hektor   Modelo   AUCUNE   couvert
-2009        30        0       23        7    76,7 %
-2010       260        0      233       27    89,6 %
-2011     2 548        0    2 270      278    89,1 %
-2012     2 045        0    1 064      981    52,0 %
-2013     2 278        2      185    2 091     8,2 %   <- LE TROU
-2014     2 171        2       84    2 085     4,0 %   <- LE TROU
-2015     1 766       13    1 734       19    98,9 %
-2016     1 786       11    1 755       20    98,9 %
-2017     1 750      730    1 004       16    99,1 %
-2018     1 525    1 339      182        4    99,7 %
-2019     1 434    1 377       53        4    99,7 %
-2020     1 207    1 054      134       19    98,4 %
-2021     1 182    1 051      123        8    99,3 %
-2022     1 108    1 036       63        9    99,2 %
-2023     1 082    1 021       53        8    99,3 %
-2024       907      866       34        7    99,2 %
-2025       789      730        0       59    92,5 %
-2026       683      590        0       93    86,4 %
-TOTAL   24 568    9 836    8 994    5 738    76,6 %
+Source A  honoraires_json.charge          14 304 annonces
+Source B  « Honoraires vendeur ou bailleur montant »   dans raw_json
+          « Honoraires acquereur ou locataire »        dans raw_json
+                                           31 259 annonces  (+18 570)
+Les deux sources s'accordent a 99,7 % (12 116 accords, 40 desaccords).
 
-repartition des 18 830 lignes couvertes : 11 853 vendeur · 6 977 acquereur
+sur les 27 148 lignes de hektor_mandat, par annee de DEBUT :
+
+annee   lignes  couvert      %     dont source A / source B
+2009        96       90   93,8 %        60   /    30
+2010       371      358   96,5 %        98   /   260
+2011     2 893    2 883   99,7 %       335   / 2 548
+2012     2 480    2 459   99,2 %       415   / 2 044
+2013     2 648    2 623   99,1 %       348   / 2 275
+2014     2 474    2 460   99,4 %       290   / 2 170
+2015     1 992    1 960   98,4 %       231   / 1 729
+2016     1 980    1 962   99,1 %       202   / 1 760
+2017     1 867    1 831   98,1 %       838   /   993
+2018     1 641    1 618   98,6 %     1 444   /   174
+2019     1 499    1 492   99,5 %     1 438   /    54
+2020     1 233    1 215   98,5 %     1 066   /   149
+2021     1 216    1 185   97,5 %     1 054   /   131
+2022     1 131    1 108   98,0 %     1 038   /    70
+2023     1 096    1 080   98,5 %     1 022   /    58
+2024       942      915   97,1 %       880   /    35
+2025       912      879   96,4 %       874   /     5
+2026       674      592   87,8 %       591   /     1
+TOTAL   27 148   26 713   98,4 %
+
+verdict sur les 32 874 annonces couvertes : 29 614 vendeur · 3 260 acquereur
+⭐ ET 533 ANNONCES PORTENT LES DEUX CASES A LA FOIS :
+     VENDEUR seul 28 182 · ACQUEREUR seul 2 544 · LES DEUX 533 · aucun 30 211
+   520 de ces 533 sont rangees « acheteur » par la source A, qui n'a qu'UNE
+   valeur : elle PERD l'information. La colonne devra pouvoir dire « les deux ».
 ```
 
-**Les deux sources sont complémentaires, pas concurrentes** : Hektor tient
-2017→2026, l'export Modelo bouche 2009→2016 où Hektor est muet. De 2015 à 2024,
-la couverture réunie est de **98,4 à 99,7 %**.
+**Les deux sources de HEKTOR sont complémentaires, pas concurrentes** : les deux
+cases du mandat tiennent 2009→2017, le bloc honoraires_json tient 2017→2026.
+Toutes les années sont au-dessus de **93 %**, sauf 2026 à 87,8 % (saisie en cours).
 
-### ⬜ LE TROU 2012-2014 — expliqué le 03/11, avec son témoin inverse
+⛔⛔ **L'EXPORT MODELO NE SERT PLUS** : la première version de ce rapport s'appuyait
+sur lui pour 2009→2016. Hektor couvre ces années à **96-99 %** tout seul. Le
+fichier reste utile comme **témoin de contrôle**, plus comme source.
+
+### ⛔⛔ LE TROU 2012-2014 N'EXISTE PAS — corrigé le 03/11 après-midi
 
 ```
 les 6 494 lignes de 2012-2014 :
@@ -129,8 +160,18 @@ TEMOIN INVERSE, les 1 434 lignes de 2019 :
 ```
 
 ⭐ Donc **ce n'est pas un défaut de notre lecture** : le détail descend bien, et
-**Hektor lui-même n'a pas les honoraires de ces années**. L'export Modelo ne les
-a pas non plus (8,2 % et 4,0 %). **La donnée n'existe nulle part.**
+**Hektor n'a pas les honoraires de ces années DANS CE BLOC-LÀ.**
+
+⛔⛔ **MAIS IL LES A AILLEURS, ET J'AVAIS CONCLU TROP VITE.** La mesure du 03/11
+après-midi, sur la seconde source : **2012 à 99,2 %, 2013 à 99,1 %, 2014 à
+99,4 %**. Ce sont les deux cases du mandat qui portent la donnée — 2 044,
+2 275 et 2 170 lignes contre 415, 348 et 290 pour le premier bloc.
+
+⭐ **La leçon** : mon témoin inverse était juste, et ma conclusion fausse. Le
+témoin prouvait que `honoraires_json` est vide pour ces années ; j'en ai déduit
+que **la donnée** était absente. Un bloc vide ne dit rien des autres blocs.
+C'est [[un-zero-ne-se-croit-pas-sans-temoin-positif]] à l'échelle d'une SOURCE :
+il fallait chercher un témoin positif **ailleurs que dans le champ mesuré**.
 ⬜ **Hypothèse non prouvée** : la migration depuis l'ancien logiciel (les lignes
 `M<numéro>` / `external_key` « sphere… » de l'export Modelo) n'a pas repris les
 honoraires. ⚠ Et **1 264 de ces lignes ne sont pas archivées** : des biens
@@ -338,42 +379,119 @@ les quatre objets, alors que la règle du projet dit qu'un audit balaie les obje
 
 ---
 
-## § 8. CE QUI RESTE À FAIRE — rien n'est codé, aucun « go » demandé
+## § 8. LE DÉROULÉ DU CHANTIER — et quand le registre sera complet
+
+### ⭐⭐⭐ LA RÉPONSE À « QUAND » : À LA PREMIÈRE NUIT. Et voici pourquoi.
+
+**Trois mesures du 03/11, et elles rendent le chantier court :**
 
 ```
-① REMONTER LA VALEUR DE HEKTOR JUSQU'AU REGISTRE DES MANDATS
-     une colonne mandat_charge_honoraires_hektor, alimentee par l'exporteur
-     depuis honoraires_json, A COTE de la saisie humaine
-     (mandat_charge_honoraires_app, posee le 02/11, vide).
-     Precedence a l'ecran : la saisie d'abord, Hektor en repli.
-     ⭐ C'est le patron DEJA EPROUVE de la date de cloture (13/10) : il protege
-       le carnet du push de nuit, qui detruit et refait la ligne du registre.
+1. L EXPORTEUR DU REGISTRE LIT DEJA LE DETAIL
+      phase2/sync/mandat_ledger.py:750
+      "SELECT hektor_annonce_id, mandats_json FROM hektor.hektor_annonce_detail"
+   -> il faut ELARGIR ce SELECT a honoraires_json et raw_json. Rien de neuf.
 
-② L'AFFICHER sur la fiche du mandat et au registre.
+2. LE MECANISME D AJOUT DE COLONNE EXISTE DEJA
+      phase2/sync/mandat_ledger.py:448  _ajouter_colonne_si_absente()
+   -> une ligne de plus, comme pour origine et offre_type.
 
-③ LA REPRENDRE A LA TRANSACTION : l'offre nait avec la charge de SON mandat
-     (meme couple mandat + annonce), modifiable ensuite.
-     ⭐ C'est exactement la phrase de Frederic du 02/11 -- « les transactions
-       recuperent la charge saisie sur le mandat mais qui peut changer » --
-       qui decrit aujourd'hui quelque chose QUI N'EXISTE PAS. Avec la valeur de
-       Hektor, elle devient vraie sans aucune ressaisie.
+3. LE RUN DE NUIT L APPELLE DEJA, CHAQUE NUIT
+      run_full_pipeline.ps1:1113   "phase2\sync\mandat_ledger.py"
+```
 
-④ CORRIGER LES DEFAUTS B, C et D du § 5 (les deux portes qui s'ouvrent sur une
-     constante, la cle du repli, l'etiquette trompeuse).
+⭐⭐ **Donc AUCUN rattrapage n'est nécessaire, et aucun appel à Hektor non plus.**
+Les 61 470 lignes de détail sont **déjà dans notre miroir local**. L'exporteur
+relit **tout** le registre à chaque passage. Donc **la nuit qui suit la pose, les
+26 713 lignes portent leur charge** — historique compris, 2009 inclus.
 
-⑤ LE RATTRAPAGE HISTORIQUE : Hektor pour 2017->2026, Modelo pour 2009->2016,
-     chaque ligne portant SA SOURCE. 18 830 lignes sur 24 568 (76,6 %).
+⚠ **Ce que ça ne couvre pas** : les 435 lignes (1,6 %) dont aucune des deux
+sources ne parle, et les 82 mandats de 2026 à charge non saisie à l'agence.
+Celles-là attendent une **saisie humaine**, pas un rattrapage.
 
-⬜ A SIGNALER, PAS A CODER : 116 mandats de 2026 n'ont pas de charge chez
-   Hektor -- dont 3 Actif (un EXCLUSIF a 192 400 €), 2 sous compromis, 1 Vendu.
-   C'est une anomalie de SAISIE a l'agence.
-   Liste : notice/CHARGE_MANQUANTE_116_MANDATS_2026-11-02.csv
+---
 
-⬜ NON TRANCHE : les 537 desaccords Hektor/Modelo · les 14 annonces dont les
-   lignes d'honoraires se contredisent · les 38 lignes de registre sans id
-   annonce (mandats de recherche) · le trou 2012-2014 (5 157 lignes, la donnee
-   n'existe nulle part) · si honoraires_json existe pour les LOCATIONS et ce
-   que « charge » y signifie.
+### LE DÉROULÉ, ÉTAPE PAR ÉTAPE
+
+```
+ETAPE 1  LIRE LA CHARGE, ET LA POSER AU REGISTRE LOCAL            ~1/2 journee
+  ou   phase2/sync/mandat_ledger.py
+  quoi . elargir le SELECT de la l. 750 : + honoraires_json, + raw_json
+       . une fonction charge_du_mandat(detail) qui rend un mot et SA SOURCE :
+             "vendeur" | "acquereur" | "les_deux" | ""
+             source : "cases_mandat" | "honoraires_json" | ""
+         PRECEDENCE : les deux cases d'abord (98,4 %), honoraires_json en appoint
+       . sur honoraires_json : prendre LA DERNIERE LIGNE (id max), jamais la 1re
+       . deux colonnes neuves via _ajouter_colonne_si_absente :
+             mandat_charge_honoraires_hektor   TEXT
+             mandat_charge_honoraires_source   TEXT
+  risque RIEN n'est ecrase : deux colonnes NEUVES a cote de la saisie humaine
+         mandat_charge_honoraires_app, qui vit dans app_mandat_champ_app et que
+         le push ne touche pas (patron de la date de cloture, 13/10).
+  preuve a blanc d'abord : compter les lignes remplies par annee SANS ecrire,
+         et retrouver 26 713 / 27 148. Temoin positif nomme : le mandat 18836.
+
+ETAPE 2  LA POUSSER AU CLOUD                                      ~1 heure
+  ou   supabase : ALTER TABLE app_mandat_register ADD COLUMN (x2)
+       + patch, _INVERSE et _REPETITION, comme les 8 precedents
+  quoi la colonne descend toute seule : lignes_a_pousser() fait SELECT *
+       (mandat_ledger.py:1123) et _retirer_colonnes_absentes_du_cloud l. 1166
+       ECARTE une colonne que le cloud n'a pas -- donc poser le SQL AVANT.
+  ⛔ ACCORD OBLIGATOIRE : ecriture en base de production.
+
+ETAPE 3  L AFFICHER                                               ~1/2 journee
+  ou   apps/hektor-v1/src/App.tsx (fiche mandat + registre V3)
+  quoi . la valeur, avec SA SOURCE en clair : « saisi par l'agence » /
+         « vu chez Hektor » -- une valeur sans provenance n'est pas crue
+       . precedence : la saisie humaine d'abord, Hektor en repli
+       . traduire : Hektor dit « Acheteur », on affiche « Acquereur »
+       . le cas « les deux » a son propre libelle (533 annonces)
+  preuve npm run build, puis l'ecran EN LIGNE sur un bien nomme a l'avance.
+       ⚠ Et le TELEPHONE : le rendu mobile est un composant separe.
+
+ETAPE 4  LES TROIS DEFAUTS DU § 5                                 ~1/2 journee
+  B  App.tsx:4571  honorairesCharge: 'mandant' EN DUR -> lire la vraie valeur
+     (18 PDF concernes, aucun depuis le 24/07 : impact faible, enjeu fort --
+      c'est le document que le client SIGNE)
+  C  App.tsx:4543  le repli cherche montant_ttc/montant : CODE MORT, les vraies
+     cles sont id/taux/charge
+  D  App.tsx:30778 l'etiquette « Honoraires acquereur » -> la clarifier
+     ⚠ Hektor l'appelle AINSI lui-meme (son formulaire d'offre) : c'est une
+       clarification de NOTRE cote, pas la correction d'une erreur.
+
+ETAPE 5  LA TRANSACTION HERITE DE SON MANDAT                      ~1 journee
+  quoi . l'offre nait avec la charge de SON mandat (meme couple numero+annonce),
+         marquee « reprise du mandat », modifiable au compromis
+       . ET le defaut A : la modale n'enregistre QUE si on touche le menu
+         -> enregistrer la valeur AFFICHEE, touchee ou pas
+  ⛔ LE GARDE-FOU, ecrit juste a cote dans le code (lecon du 08/09) : « en
+     reprise, un champ prerempli n'est PAS une intention » -- sale_price portait
+     LE PRIX DE L'ANNONCE (180 000) que personne n'avait tape. D'ou le marquage
+     de la SOURCE : on doit toujours savoir qui a dit la valeur.
+  ⛔ ACCORD OBLIGATOIRE : ecriture chez Hektor.
+```
+
+### ⭐ L'ORDRE QUE JE RECOMMANDE
+
+**Étapes 1 → 2 → 3 d'abord**, ensemble. C'est le patron déjà éprouvé, rien n'est
+détruit, et ça fait apparaître **98,4 % de l'information d'un coup, en une nuit**.
+L'étape 4 peut suivre immédiatement : trois corrections indépendantes.
+L'étape 5 vient **après** que tu aies vu la donnée à l'écran et jugée juste.
+
+### ⬜ CE QUI RESTE NON TRANCHÉ
+
+```
+⬜ LES 533 « LES DEUX » : beaucoup portent LE MEME montant des deux cotes
+   (3 600/3 600, 7 100/7 100) -> saisie en double plutot que vrai partage ;
+   d'autres diffèrent vraiment (4 000/3 665, 10 000/504). A regarder.
+⬜ OUI/NON ou MONTANT ? Chez nous ce sont des MONTANTS. Une case cochee « Oui »
+   SANS montant serait invisible. NON MESURE -- il faut voir l'ecran du mandat.
+⬜ les 38 lignes de registre sans id annonce (mandats de recherche)
+⬜ si ces champs existent pour les LOCATIONS, et ce que « charge » y signifie
+⬜ A SIGNALER, PAS A CODER : 82 mandats de 2026 sans charge chez Hektor --
+   anomalie de SAISIE a l'agence, pas un defaut technique.
+✅ TOMBES depuis la 1re version : le trou 2012-2014 · les 537 desaccords
+   Hektor/Modelo (Modelo ne sert plus) · les 14 « contradictions » (ce sont des
+   bascules dans le temps, la derniere ligne tranche).
 ```
 
 ---
