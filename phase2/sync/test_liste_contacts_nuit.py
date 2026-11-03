@@ -205,9 +205,12 @@ import sync_raw  # noqa: E402  (le panier du run vit dans sync_raw)
 class FauxHektorComplet(FauxHektor):
     """La liste ET les fiches (ContactById)."""
 
-    def __init__(self, contacts, refus_page=None, refus_fiche=None, introuvables=(), illisibles=()):
+    def __init__(self, contacts, refus_page=None, refus_fiche=None, introuvables=(), illisibles=(),
+                 message_refus="403 Client Error: Forbidden"):
         super().__init__(contacts, refus_page)
         self.refus_fiche = refus_fiche
+        self.message_refus = message_refus
+        self.min_request_interval = 0.0
         self.introuvables = set(introuvables)
         self.illisibles = set(illisibles)
         self.fiches_servies: list[str] = []
@@ -218,7 +221,7 @@ class FauxHektorComplet(FauxHektor):
         cid = str(params["id"])
         self.fiches_servies.append(cid)
         if cid == self.refus_fiche:
-            raise HektorNonRetryableError("403 Client Error: Forbidden")
+            raise HektorNonRetryableError(self.message_refus)
         if cid in self.introuvables:
             raise HektorNonRetryableError("404 Client Error: Not Found")
         if cid in self.illisibles:
@@ -309,14 +312,26 @@ bilan_f: dict = {}
 try:
     m.relire_les_fiches(conn, faux, "v2", ordre, heure_limite=None, dormir=lambda s: None, bilan=bilan_f)
     verifier("le 403 remonte", False)
-except HektorNonRetryableError:
-    verifier("le 403 remonte", True)
+except m.FicheRefusee:
+    verifier("le 403 d'une fiche remonte en FicheRefusee (pas un blocage du compte)", True)
+verifier("la fiche refusee est mise de cote (http_403_forbidden)",
+         conn.execute("SELECT reason FROM sync_contact_detail_skip WHERE hektor_contact_id='3'").fetchone()[0]
+         == "http_403_forbidden")
 verifier("aucune fiche demandee apres le refus", faux.fiches_servies == ["6", "5", "4", "3"], str(faux.fiches_servies))
 verifier("comptes gardes jusqu'a l'arret (1 relue, 1 404, 1 illisible)",
          (bilan_f["relues"], bilan_f["introuvables_404"], bilan_f["illisibles"]) == (1, 1, 1), str(bilan_f))
 reste = m.fiches_a_relire(conn, "active")
-verifier("la nuit suivante : 6 et 5 ecartees, 4 relue, il reste 3, 2, 1", reste == ["3", "2", "1"], str(reste))
-verifier("le rapport compte les 2 ecartees", m.rapport(conn, "active")["fiches_ecartees_404_ou_illisibles"] == 2)
+verifier("la nuit suivante : 6, 5 et 3 ecartees, 4 relue, il reste 2, 1", reste == ["2", "1"], str(reste))
+verifier("le rapport compte les 3 ecartees", m.rapport(conn, "active")["fiches_ecartees_404_ou_illisibles"] == 3)
+faux = FauxHektorComplet(contacts, refus_fiche="2", message_refus="429 Client Error: Too Many Requests")
+try:
+    m.relire_les_fiches(conn, faux, "v2", reste, heure_limite=None, dormir=lambda s: None)
+    verifier("un 429 sur une fiche remonte", False)
+except m.FicheRefusee:
+    verifier("un 429 sur une fiche N'EST PAS un refus isole", False)
+except HektorNonRetryableError:
+    verifier("un 429 sur une fiche = blocage du compte (pas mise de cote)", True)
+reste = m.fiches_a_relire(conn, "active")
 vraie_heure = m.heure_depassee
 appels = {"n": 0}
 
@@ -329,7 +344,7 @@ def limite_au_2e_appel(limite, maintenant=None):
 m.heure_depassee = limite_au_2e_appel
 try:
     faux = FauxHektorComplet(contacts)
-    bilan_f = m.relire_les_fiches(conn, faux, "v2", reste, heure_limite="01:58", dormir=lambda s: None)
+    bilan_f = m.relire_les_fiches(conn, faux, "v2", ordre, heure_limite="01:58", dormir=lambda s: None)
 finally:
     m.heure_depassee = vraie_heure
 verifier("heure limite : 2 fiches puis arret propre", (bilan_f["relues"], bilan_f["fin"]) == (2, "heure_limite"),
@@ -400,6 +415,28 @@ finally:
 from datetime import datetime as _dt, timezone as _tz  # noqa: E402
 ecart = (m.heure_des_declencheurs() - _dt.now(_tz.utc).replace(tzinfo=None)).total_seconds()
 verifier("horloge des declencheurs = UTC+1 fixe", abs(ecart - 3600) < 5, str(ecart))
+
+print("14. le script entier (main) : code 5 pour une fiche refusee, code 3 pour la liste refusee")
+vrai_client, vrais_rapports = m.ClientListe, m.RAPPORTS
+m.RAPPORTS = Path(tempfile.mkdtemp(prefix="rapports_"))
+try:
+    for nom, faux, attendu in (
+        ("fiche 2 refusee -> 5", FauxHektorComplet([contact(i) for i in range(1, 30)], refus_fiche="2"), 5),
+        ("page 2 de la liste refusee -> 3", FauxHektorComplet([contact(i) for i in range(1, 30)], refus_page=2), 3),
+        ("tout va bien -> 0", FauxHektorComplet([contact(i) for i in range(1, 30)]), 0),
+    ):
+        conn = base_neuve()
+        chemin = conn.execute("PRAGMA database_list").fetchone()[2]
+        conn.close()
+        m.ClientListe = lambda settings, f=faux: f
+        code = m.main(["--scope", "active", "--reel", "--intervalle-ms", "400", "--db", chemin])
+        verifier(nom, code == attendu, str(code))
+        if attendu == 5:
+            dernier = max(m.RAPPORTS.glob("rapport_*.json"), key=lambda f: f.stat().st_mtime)
+            fiches = json.loads(dernier.read_text(encoding="utf-8"))["fiches"]
+            verifier("le rapport porte la fin des fiches", (fiches or {}).get("fin") == "fiche_refusee", str(fiches))
+finally:
+    m.ClientListe, m.RAPPORTS = vrai_client, vrais_rapports
 
 print()
 print("TOUT VERT" if not ECHECS else f"{len(ECHECS)} ECHEC(S) : {ECHECS}")

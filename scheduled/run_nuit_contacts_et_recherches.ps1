@@ -23,13 +23,17 @@
 #   glisse d'une heure locale. Les heures de ce script sont lues a la MEME horloge
 #   (UTC+1 fixe), dans PowerShell comme dans le script Python.
 #
-# LES CODES. Sortie 1 si les recherches echouent, ou si la liste s'arrete sur un
-#   refus (3) ou une panne (4) de Hektor -- un refus doit se VOIR au Planificateur et
-#   dans check_gti_health. Une nuit SANS liste parce que le worker n'a pas fini est
-#   ecrite au journal et au rapport, et ne fait pas sortir en 1.
-#   ⚠ APRES UN REFUS DE HEKTOR, LES RECHERCHES NE PARTENT PAS (« un 403 arrete
-#     tout, on ne rejoue jamais ») -- sauf -RecherchesMalgreRefus. A TRANCHER PAR
-#     FREDERIC avant la bascule : aujourd'hui les recherches partent chaque nuit.
+# LES CODES DU SCRIPT DE LA LISTE, ET CE QU'ILS FONT DES RECHERCHES (decision de
+#   Frederic, 03/11, synthese §50) :
+#     0  tout va bien (ou pas de liste : le worker n'a pas fini a temps)  -> recherches
+#     3  Hektor REFUSE la liste, la connexion, ou nous freine (429) : c'est un blocage
+#        de tout le compte -> les recherches NE PARTENT PAS cette nuit (« un refus
+#        arrete tout ») ; elles relisent tout la nuit suivante
+#     4  Hektor ne repond plus (apres patience)                        -> recherches
+#     5  Hektor refuse UNE fiche (403 isole : 5 fiches depuis mai) ; elle est mise de
+#        cote, les fiches s'arretent pour la nuit                      -> recherches
+#   Tout code non nul fait sortir la tache en 1 : un refus doit se VOIR au
+#   Planificateur et dans check_gti_health.
 #
 # RETOUR ARRIERE : remettre l'action de la tache sur run_recherches_actives.ps1 a
 #   02:00 (scheduled/installer_tache_nuit_contacts.ps1 -Retour). Ou, sans toucher a
@@ -42,8 +46,7 @@ param(
     [string]$HeureLimiteFiches = "01:58",
     [string]$HeureRecherches = "02:00",
     [int]$IntervalleMs = 400,
-    [switch]$SansListe,
-    [switch]$RecherchesMalgreRefus
+    [switch]$SansListe
 )
 
 $ErrorActionPreference = "Continue"
@@ -78,9 +81,12 @@ try {
         if ($codeListe -ne 0) { $runFailed = $true }
     }
 
-    if ($codeListe -eq 3 -and -not $RecherchesMalgreRefus) {
-        Write-Output "=== REFUS DE HEKTOR pendant la liste : les recherches NE PARTENT PAS cette nuit ==="
+    if ($codeListe -eq 3) {
+        Write-Output "=== REFUS DE HEKTOR sur la liste (blocage du compte) : les recherches NE PARTENT PAS cette nuit ==="
     } else {
+        if ($codeListe -eq 5) {
+            Write-Output "=== Une fiche refusee par Hektor (cas isole, mise de cote) : les recherches partent ==="
+        }
         # Jamais avant l'heure d'aujourd'hui : « les recherches ne changent pas ».
         $h, $m = $HeureRecherches.Split(":")
         $cible = (Get-HeureDeclencheurs).Date.AddHours([int]$h).AddMinutes([int]$m)

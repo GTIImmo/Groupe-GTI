@@ -57,7 +57,10 @@ Usage :
         --intervalle-ms 400 --heure-limite 01:55 --heure-limite-fiches 01:58      (la tache de nuit)
     python phase2/sync/liste_contacts_nuit.py --scope active --purger-pages-perimees [--confirmer]
 Sortie : 0 = tour termine ou heure limite atteinte proprement · 2 = mauvais usage ou
-         purge refusee · 3 = refus de Hektor (4xx) · 4 = Hektor ne repond pas (apres patience).
+         purge refusee · 3 = refus de Hektor sur la LISTE, la connexion, ou un frein (429) :
+         blocage du compte · 4 = Hektor ne repond pas (apres patience) · 5 = Hektor refuse
+         UNE fiche (403 isole) : elle est mise de cote, les fiches s'arretent pour la nuit.
+         Le lanceur de nuit ne retient les recherches que sur 3 (decision du 03/11, §50).
 """
 from __future__ import annotations
 
@@ -101,6 +104,12 @@ PAUSE_ENTRE_FICHES_S = 0.5
 MAX_404_CONSECUTIFS = 10
 # Une reponse illisible pour UNE fiche est mise de cote ; au-dela, on s'arrete.
 MAX_REPONSES_ILLISIBLES = 3
+
+
+class FicheRefusee(HektorNonRetryableError):
+    """Hektor refuse UNE fiche (403 sur ContactById) : un cas isole connu (5 fiches
+    mises de cote depuis mai, `sync_contact_detail_skip`), pas un blocage du compte.
+    On s'arrete quand meme pour la nuit -- mais sans retenir les recherches."""
 
 
 def endpoint_nuit(scope: str) -> str:
@@ -499,7 +508,9 @@ def relire_les_fiches(conn: sqlite3.Connection, client: Any, version: str, ids: 
     Memes ecritures que sync_contact_details (la porte eprouvee) : la reponse brute
     sous `contact_detail`, puis `last_detail_sync_at`. Plus stricte sur les erreurs :
     tout refus autre qu'un 404 arrete la nuit (« un 403 arrete tout, on ne rejoue
-    jamais »). Leve HektorNonRetryableError (refus) ou RuntimeError (pas de reponse) ;
+    jamais »). Leve FicheRefusee (403 sur une fiche, mise de cote comme le fait
+    sync_contact_details), HektorNonRetryableError (autre refus : 429, 401...) ou
+    RuntimeError (pas de reponse) ;
     `bilan`, fourni par l'appelant, garde alors les comptes jusqu'a l'arret.
     """
     # Import ici : sync_contact_details importe sync_raw, qui est lourd et inutile
@@ -508,6 +519,7 @@ def relire_les_fiches(conn: sqlite3.Connection, client: Any, version: str, ids: 
     from sync_contact_details import (  # noqa: E402
         CONTACT_DETAIL_ENDPOINT_NAME,
         CONTACT_DETAIL_PATH,
+        is_contact_detail_403,
         is_contact_detail_404,
         mark_contact_detail_skip,
         validate_contact_detail_payload,
@@ -525,6 +537,11 @@ def relire_les_fiches(conn: sqlite3.Connection, client: Any, version: str, ids: 
         try:
             payload = client.get_json(CONTACT_DETAIL_PATH, params=params)
         except HektorNonRetryableError as exc:
+            if is_contact_detail_403(exc):
+                mark_contact_detail_skip(conn, contact_id, reason="http_403_forbidden", error_message=str(exc))
+                conn.commit()
+                bilan["refusees_403"] = bilan.get("refusees_403", 0) + 1
+                raise FicheRefusee(f"fiche {contact_id} refusee : {exc}") from exc
             if not is_contact_detail_404(exc):
                 raise
             mark_contact_detail_skip(conn, contact_id, reason="http_404_not_found", error_message=str(exc))
@@ -738,6 +755,11 @@ def main(argv: Optional[list[str]] = None) -> int:
                     relire_les_fiches(conn, client, settings.api_version, ids,
                                       heure_limite=args.heure_limite_fiches or None, bilan=resultat_fiches)
                     print(f"[liste-nuit] fiches : {json.dumps(resultat_fiches, ensure_ascii=False)}")
+            except FicheRefusee as exc:
+                print(f"[liste-nuit] ARRET DES FICHES : Hektor refuse une fiche ({exc}). Elle est mise de cote.")
+                code = 5
+                if resultat_fiches is not None:
+                    resultat_fiches["fin"] = "fiche_refusee"
             except HektorNonRetryableError as exc:
                 print(f"[liste-nuit] ARRET : Hektor REFUSE ({exc}). Rien n'est rejoue ; la reprise est gardee.")
                 code = 3
@@ -749,7 +771,8 @@ def main(argv: Optional[list[str]] = None) -> int:
                 if resultat_fiches is not None:
                     resultat_fiches["fin"] = "arret"
             f_ = resultat_fiches or {}
-            fiches_demandees = f_.get("relues", 0) + f_.get("introuvables_404", 0) + f_.get("illisibles", 0)
+            fiches_demandees = (f_.get("relues", 0) + f_.get("introuvables_404", 0) + f_.get("illisibles", 0)
+                                + f_.get("refusees_403", 0))
             print(f"[liste-nuit] requetes Hektor : {lecteur.requetes} pages + {fiches_demandees} fiches"
                   f" (+ la connexion) en {round(time.time() - debut)} s")
 

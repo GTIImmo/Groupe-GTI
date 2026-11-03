@@ -1374,3 +1374,22 @@ Hektor/Supabase, 0 écriture), les points lourds REVÉRIFIÉS par moi (marqués 
 - **Le jour où un compte passera au périmètre « agence » ou « négociateur »**, ces contacts suivront leur négociateur Hektor :
   c'est le comportement voulu par la règle, plus le défaut des pages de mars.
 - **L'envoi** : la nuit du 03/11 a poussé 8 193 contacts en 48 s ⇒ ~4 400 de plus ≈ moins d'une minute. Pas de risque de durée.
+
+## 50. LES RECHERCHES APRÈS UN REFUS DE HEKTOR : TRANCHÉ *(03/11, « oui » à la recommandation)*
+
+- **La décision** : on tranche selon CE QUE Hektor refuse.
+  - **Refus de la liste, de la connexion, ou frein (429)** = blocage du compte ⇒ la liste s'arrête net et **les recherches
+    ne partent pas cette nuit** (« un refus arrête tout ») ; elles relisent toutes les recherches actives la nuit suivante, et
+    les gestes de l'app partent chez Hektor à l'instant, sans attendre la nuit.
+  - **Refus d'UNE fiche (403 sur `ContactById`)** = cas isolé connu (5 fiches mises de côté depuis mai, contre 7 659
+    introuvables) ⇒ la fiche est mise de côté (`http_403_forbidden`, comme le fait `sync_contact_details`), les fiches
+    s'arrêtent pour la nuit, **les recherches partent**.
+  - (Frédéric avait d'abord répondu « elles partent », puis demandé la meilleure option : c'est celle-ci, acceptée.)
+- **Le code** : `liste_contacts_nuit.py` sort en **5** pour une fiche refusée (`FicheRefusee`), **3** pour un refus de la liste
+  (ou un 429 même sur une fiche), **4** si Hektor ne répond plus. Le lanceur ne retient les recherches **que sur 3**. Tout code
+  non nul fait sortir la tâche en 1 (visible au moniteur).
+- **Éprouvé** : `test_liste_contacts_nuit.py` **68 contrôles verts** (403 d'une fiche → `FicheRefusee` + mise de côté ; 429 →
+  blocage, pas de mise de côté ; le script entier : fiche refusée → 5, page refusée → 3, tout bien → 0). **Le lanceur
+  exécuté** sur une copie (faux script de liste, faux script de recherches) : liste 0 → recherches lancées, tâche 0 ; 3 →
+  **retenues**, tâche 1 ; 4 → lancées, tâche 1 ; 5 → lancées, tâche 1 ; `-SansListe` → la liste n'est pas appelée, recherches
+  lancées, tâche 0.
