@@ -1312,3 +1312,42 @@ Hektor/Supabase, 0 écriture), les points lourds REVÉRIFIÉS par moi (marqués 
 - ⏰ **Reste, chaque étape sur « vas-y »** : le mode réel (pages au vrai endroit, purge de mars, relecture des fiches,
   annonces confiées au run derrière un interrupteur) ; le lanceur (00:20, garde « worker vide », 01:55) ; la limite PT2H ;
   les archivés le dimanche.
+
+## 48. LE MODE RÉEL EST ÉCRIT ET ÉPROUVÉ HORS LIGNE — RIEN N'EST BRANCHÉ *(03/11, « Oui, prépare-le » ; commit d84f717)*
+
+- **Le précédent existait** : `refetch_contacts_listing_parallel.py` (relecture complète du 23/06) a écrit la liste ENTIÈRE
+  sous `list_contacts_active/archived`, `sort=id ASC` : exactement la forme du mode réel. Il n'a pas purgé, d'où les 2 330
+  pages du 30/03 restées au-delà de la page 8429. `sync_raw.prune_raw_listing_pages` fait déjà la même purge pour les annonces.
+- **`liste_contacts_nuit.py --reel`** (à blanc reste le défaut) : pages au vrai endroit (`list_contacts_<scope>`, type
+  `contact_<scope>`, paramètres du 23/06), un tour ne mélange jamais les deux modes ; fiches à relire (Hektor plus récent que
+  `last_detail_sync_at` OU notre `relu_le`), les plus récemment modifiées d'abord, **au frein du projet** (1 s + 0,5 s),
+  jusqu'à `--heure-limite-fiches`, mêmes écritures que `sync_contact_details` ; 404 et réponse illisible mises de côté ;
+  **tout autre refus arrête net** ; chaque fiche relue entre au **panier du run** (`relu_le`, `remis_au_run_le` vide) ; garde
+  « worker vide » (lecture ratée = occupée) ; heures à **l'horloge des déclencheurs (+01:00 fixe)** (en heure locale, l'été,
+  01:55 tomberait avant le départ 00:20+01:00) ; `--purger-pages-perimees` (à blanc par défaut, `--confirmer`) refusée sans
+  tour RÉEL terminé dont chaque page 1..N a été réécrite pendant ce tour.
+  ⛔ Jamais touchés : `sync_contact_state.date_maj / listing_variant / last_seen_at`, le curseur, les pages `_update`.
+- **`sync_raw.py`** (+63 lignes ; seules les miennes sont commitées, les 45 lignes « mandat absent du détail » de l'autre
+  session restent hors commit) : derrière `APP_RELIRE_ANNONCES_CONTACTS_NUIT=1` (**éteint**), le run ajoute les annonces du
+  panier (plafond 600, un filet) et marque « remis » **après** leur relecture seulement.
+- **`scheduled/run_nuit_contacts_et_recherches.ps1`** : liste + fiches, puis `run_recherches_actives.ps1` **inchangé**, lancé
+  comme aujourd'hui, **jamais avant 02:00**. `-SansListe` = ancien comportement. ⚠ **Après un refus de Hektor pendant la
+  liste, les recherches ne partent pas** (sauf `-RecherchesMalgreRefus`) — **à trancher par Frédéric**.
+- **`scheduled/installer_tache_nuit_contacts.ps1`** : à blanc par défaut (montré : départ `02:00+01:00` → `00:20+01:00`,
+  limite `PT2H` → `PT4H`) ; `-Appliquer` en administrateur vérifie chaque réglage ; `-Retour` remet l'ancien.
+- **Essais : 62 contrôles VERTS** (`test_liste_contacts_nuit.py`) ; essais existants du run verts.
+- ⭐ **SIMULATION SUR UNE COPIE DE LA BASE** (vraie base en lecture seule) : normalisation des contacts avant (37 s), pose des
+  8 503 pages fraiches, purge des **2 256 pages** au-delà de 8503, normalisation après (38 s). Sur `hektor_contact` :
+  - **32 472 négociateurs changent** (32 470 contacts actifs) : 16 257 vide → compte agence « 2 » ; 6 696 « 25 » → « 2 »
+    (deux comptes agence) ; ⚠ **9 334 vide → un négociateur nommé** (n° 41 : 1 716, n° 31 : 1 167, n° 9 : 1 161, n° 17 :
+    1 126, n° 7 : 1 066…) ; 162 d'un négociateur à un autre ; 19 deviennent vides ; 4 entre agence et nommé ;
+  - **0 état archivé changé, 0 lien de couple changé**, 10 contacts nouveaux au miroir ;
+  - ⛔ **NON MESURÉ** : ce que l'app fait d'un négociateur rempli (qui voit ces 9 334 contacts) et la taille du premier envoi
+    vers Supabase (~32 000 fiches changées d'un coup). À mesurer avant la bascule.
+- ⚠ **TROUVAILLE HORS CHANTIER** : les pages `list_contacts_*_update` du run gardent aussi des pages périmées (24 du 05/06 et
+  4 du 30/10 côté actifs, 6 côté archivés). Relues en dernier, elles gagnent : **41 contacts** y ont un négociateur différent
+  de Hektor aujourd'hui (ex. 95780 : « 0 » le 05/06, « 2 » aujourd'hui → vide chez nous, même après la simulation). Pages du
+  run : non touchées, à trancher.
+- ⏰ **Reste, chaque geste sur « vas-y »** : (1) mesurer l'effet des 9 334 dans l'app et la taille de l'envoi ; (2) trancher
+  « recherches après un refus » ; (3) basculer la tâche (`-Appliquer`, administrateur) ; (4) allumer l'interrupteur du run ;
+  (5) après la 1re nuit et le rapport, la purge ; (6) les archivés le dimanche suivent seuls (`--scope auto`).
