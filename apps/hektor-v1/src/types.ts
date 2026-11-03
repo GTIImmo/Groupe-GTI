@@ -790,6 +790,8 @@ export type ConsoleJobType =
   // ⑦-1 (16/10/2026) : l'interrupteur de la fiche contact. UN SEUL type pour les deux
   // sens -- la charge porte `archive: true|false` -- comme chez Hektor.
   | 'archive_hektor_contact'
+  // COUPLES (03/11/2026) : « Ajouter un conjoint » -- rattacher une fiche comme conjoint chez Hektor.
+  | 'link_hektor_conjoint'
   | 'add_hektor_contact_search'
   | 'update_hektor_contact_search'
   | 'delete_hektor_contact_search'

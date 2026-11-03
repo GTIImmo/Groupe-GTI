@@ -161,6 +161,40 @@ export function conjointVideId(couple_json: CoupleSource['couple_json']): string
   return id || null
 }
 
+/** COUPLES, pièce G (03/11/2026) : « Ajouter un conjoint » n'est proposé qu'à une PERSONNE SEULE -- nature de la nuit
+ *  `personne_seule`, pas notaire, sans conjoint connu (`couple_json` absent ou « aucun »), active, connue de Hektor
+ *  (`hektor_target_id`). La base refait TOUS ces contrôles (app_ajouter_conjoint_optimistic) : ici, on ne fait que ne
+ *  pas montrer un bouton qui serait refusé. Les « couples écrits dans le nom » (nature `couple`) n'ont pas le bouton :
+ *  leurs deux prénoms sont sur une seule fiche, à séparer d'abord (synthèse couples §52). */
+export function peutRecevoirUnConjoint(contact: CoupleSource & { archive?: boolean | string | number | null; hektor_target_id?: string | null }): boolean {
+  // `archive` arrive en booléen, en nombre ou en texte selon la source : seule une valeur VRAIE écarte la fiche.
+  const archivee = contact.archive === true || contact.archive === 1 || ['1', 'true', 'oui'].includes(String(contact.archive ?? '').trim().toLowerCase())
+  if (contact.nature_fiche !== 'personne_seule' || estFicheNotaire(contact) || archivee) return false
+  if (!String(contact.hektor_target_id ?? '').trim()) return false
+  const etat = lireCoupleJson(contact.couple_json)?.etat
+  return !etat || etat === 'aucun'
+}
+
+/** Ce que l'écran dit d'un refus de la base (`raison` de app_ajouter_conjoint_optimistic). */
+export function raisonAjoutConjoint(raison: string | null | undefined): string {
+  switch (raison) {
+    case 'cran_ferme': return "Ce geste n'est pas encore ouvert."
+    case 'meme_fiche': return "On ne peut pas choisir la même fiche comme conjoint."
+    case 'conjoint_introuvable': return 'La fiche choisie est introuvable.'
+    case 'personne_archivee': return 'Cette fiche est archivée : réactivez-la d’abord.'
+    case 'conjoint_archive': return 'La fiche choisie est archivée.'
+    case 'notaire': return "Une fiche notaire n'est jamais un couple."
+    case 'personne_pas_seule': return "Cette fiche n'est pas une personne seule."
+    case 'conjoint_pas_seul': return "La fiche choisie n'est pas une personne seule (case vide, conjoint d'un autre…)."
+    case 'personne_deja_en_couple': return 'Cette personne a déjà un conjoint.'
+    case 'conjoint_deja_en_couple': return 'La fiche choisie a déjà un conjoint.'
+    case 'personne_sans_numero_hektor': return "Cette fiche n'est pas encore créée chez Hektor : réessayez dans une minute."
+    case 'conjoint_sans_numero_hektor': return "La fiche choisie n'est pas connue de Hektor."
+    case 'deja_en_cours': return 'Un ajout de conjoint est déjà en cours pour ces fiches.'
+    default: return raison ? `Refusé (${raison}).` : 'Refusé.'
+  }
+}
+
 /** Les liens des deux personnes, sans doublon (même bien, même rôle) : la fiche du foyer montre les biens
  *  propres au conjoint (21 au 02/11) et un rôle qui diffère (10), sans répéter les autres. */
 export function unirLiensDuFoyer<T extends { hektor_annonce_id?: string | number | null; role_contact?: string | null }>(

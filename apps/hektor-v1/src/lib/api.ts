@@ -10975,6 +10975,31 @@ export async function editConjointOptimistic(input: {
   return (data as { ok: boolean }) ?? { ok: true }
 }
 
+/** COUPLES, pièce G (03/11/2026) : « Ajouter un conjoint » à une personne seule. La fonction écrit le couple CHEZ NOUS
+ *  à la seconde, choisit les biens à relier (ceux de la personne, droit vérifié bien par bien) et pose le travail
+ *  `link_hektor_conjoint` ; elle REFUSE sans lever (ok=false + raison) ce qui n'est pas permis. Un conjoint NOUVEAU est
+ *  d'abord créé par `createHektorContactJob` : son numéro est celui de la charge (`app_identite`).
+ *  RPC `app_ajouter_conjoint_optimistic` (supabase/patch_couple_phase3g_ajouter_conjoint_2026-11-03.sql). */
+export type AjoutConjointResultat = {
+  ok: boolean
+  raison?: string
+  job_id?: string
+  conjoint?: string
+  biens?: number
+  biens_refuses?: number
+}
+
+export async function ajouterConjointOptimistic(input: { contactId: string; conjointId: string }): Promise<AjoutConjointResultat> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
+  await requireSupabaseUserId()
+  const { data, error } = await supabase.rpc('app_ajouter_conjoint_optimistic', {
+    target_contact_id: input.contactId.trim(),
+    conjoint_contact_id: input.conjointId.trim(),
+  })
+  if (error) throw new Error(error.message)
+  return (data as AjoutConjointResultat) ?? { ok: false, raison: 'reponse_vide' }
+}
+
 export async function createDeleteHektorContactJob(input: {
   contactId: string
   reason?: string
@@ -11893,6 +11918,7 @@ const hektorActionJobTypes: ConsoleJobType[] = [
   'create_hektor_contact',
   'update_hektor_contact',
   'archive_hektor_contact',
+  'link_hektor_conjoint',
   'add_hektor_contact_search',
   'update_hektor_contact_search',
   'delete_hektor_contact_search',

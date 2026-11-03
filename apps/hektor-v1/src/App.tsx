@@ -89,6 +89,7 @@ import {
   loadAppSettingValeur,
   loadContactCoupleInfo,
   editConjointOptimistic,
+  ajouterConjointOptimistic,
   bienEstDansLesAnnonces,
   bienEstDansLesArchives,
   loadBienHistoriquePourStatut,
@@ -270,7 +271,7 @@ import { compterAnnoncesAilleurs, type AnnoncesAilleurs } from './lib/api'
 import { bvs, bvt } from './lib/bienvuTexte'
 import { MENTION_AVENANT, MENTION_MANDAT, repereHtml, repereSignature, zoneMentionHtml } from './lib/signatureAnchors'
 import { sansCasesVides } from './lib/mandantsDocument'
-import { coupleAffiche, conjointNommeId, conjointVideId, foyerAffiche, unirLiensDuFoyer, type FoyerAffiche } from './lib/coupleAffichage'
+import { coupleAffiche, conjointNommeId, conjointVideId, foyerAffiche, peutRecevoirUnConjoint, raisonAjoutConjoint, unirLiensDuFoyer, type FoyerAffiche } from './lib/coupleAffichage'
 
 type DetailContact = {
   id: string
@@ -9180,6 +9181,11 @@ function hektorActionJobTitle(job: ConsoleJob) {
     if (contactName.trim()) return `Contact ${contactName.trim()}`
     return contactId ? `Contact ${contactId}` : bvs('Contact Hektor')
   }
+  // COUPLES (03/11/2026) : « Ajouter un conjoint ».
+  if (job.job_type === 'link_hektor_conjoint') {
+    const qui = typeof payload.contact_label === 'string' && payload.contact_label.trim() ? payload.contact_label.trim() : String(payload.hektor_contact_id ?? '').trim()
+    return qui ? `Conjoint de ${qui}` : 'Ajout du conjoint'
+  }
   if (job.job_type === 'create_hektor_mandant_contact' || job.job_type === 'update_hektor_mandant_contact' || job.job_type === 'link_hektor_mandant') {
     const contact = typeof payload.last_name === 'string' && payload.last_name.trim() ? payload.last_name.trim() : null
     return contact ? `Mandant ${contact}` : bvs('Mandant Hektor')
@@ -9211,6 +9217,7 @@ function hektorActionJobLabel(job: ConsoleJob) {
   if (job.job_type === 'archive_hektor_contact') return job.payload_json?.archive === false ? 'Reactivation contact' : 'Archivage contact'
   if (job.job_type === 'delete_hektor_contact') return 'Suppression contact'
   if (job.job_type === 'refresh_console_contact_data') return 'Sync contact'
+  if (job.job_type === 'link_hektor_conjoint') return 'Ajout du conjoint'
   if (job.job_type === 'create_hektor_mandant_contact' || job.job_type === 'update_hektor_mandant_contact' || job.job_type === 'link_hektor_mandant') return 'Mandant en cours'
   if (job.job_type === 'sync_hektor_photos') return 'Photos en cours'
   return 'Creation en cours'
@@ -9224,7 +9231,7 @@ function hektorActionJobTone(job: ConsoleJob) {
   if (job.job_type === 'delete_hektor_annonce' || job.job_type === 'delete_hektor_contact' || job.job_type === 'delete_document_from_hektor' || job.job_type === 'delete_hektor_photo') return 'delete'
   if (job.job_type === 'update_hektor_annonce_fields') return 'update'
   if (job.job_type === 'create_hektor_mandat_auto_number') return 'contact'
-  if (job.job_type === 'create_hektor_contact' || job.job_type === 'update_hektor_contact' || job.job_type === 'archive_hektor_contact' || job.job_type === 'refresh_console_contact_data') return 'contact'
+  if (job.job_type === 'create_hektor_contact' || job.job_type === 'update_hektor_contact' || job.job_type === 'archive_hektor_contact' || job.job_type === 'link_hektor_conjoint' || job.job_type === 'refresh_console_contact_data') return 'contact'
   if (job.job_type === 'create_hektor_mandant_contact' || job.job_type === 'update_hektor_mandant_contact' || job.job_type === 'link_hektor_mandant') return 'contact'
   if (job.job_type === 'upload_document_to_hektor' || job.job_type === 'upload_hektor_photo' || job.job_type === 'prepare_document_cloud' || job.job_type === 'prepare_archived_annonce_detail' || job.job_type === 'prepare_historical_annonce_detail' || job.job_type === 'sync_hektor_photos') return 'document'
   return 'create'
@@ -9255,6 +9262,7 @@ function hektorActionJobDetail(job: ConsoleJob) {
   if (job.job_type === 'archive_hektor_contact') return 'Changement d archivage puis resynchronisation ciblee'
   if (job.job_type === 'delete_hektor_contact') return bvs('Suppression Hektor puis nettoyage app')
   if (job.job_type === 'refresh_console_contact_data') return 'Lecture detail contact puis push Supabase'
+  if (job.job_type === 'link_hektor_conjoint') return bvs('Rattachement chez Hektor, preuve relue, puis relecture des deux fiches')
   if (job.job_type === 'create_hektor_mandant_contact' || job.job_type === 'link_hektor_mandant') return 'Association puis resynchronisation'
   if (job.job_type === 'update_hektor_mandant_contact') return 'Modification puis resynchronisation'
   if (job.job_type === 'sync_hektor_photos') return 'Index photos Console'
@@ -9309,6 +9317,7 @@ function hektorActionCanFinishWithoutAppDossier(job: ConsoleJob) {
     'create_hektor_contact',
     'update_hektor_contact',
     'archive_hektor_contact',
+    'link_hektor_conjoint',
     'delete_hektor_contact',
     'refresh_console_contact_data',
   ].includes(job.job_type)
@@ -9341,6 +9350,7 @@ function hektorActionProgressLabel(progress: ReturnType<typeof hektorActionProgr
     if (job.job_type === 'archive_hektor_contact') return job.payload_json?.archive === false ? 'Contact reactive' : 'Contact archive'
     if (job.job_type === 'delete_hektor_contact') return 'Contact supprime'
     if (job.job_type === 'refresh_console_contact_data') return 'Contact synchronise'
+    if (job.job_type === 'link_hektor_conjoint') return 'Conjoint ajoute'
     if (job.job_type === 'create_hektor_mandant_contact' || job.job_type === 'link_hektor_mandant') return 'Mandant synchronise'
     if (job.job_type === 'update_hektor_mandant_contact') return 'Mandant modifie'
     if (job.job_type === 'upload_document_to_hektor') return 'Document ajoute'
@@ -9380,6 +9390,7 @@ function hektorActionWaitingLabel(job: ConsoleJob) {
     ? bvs('Hektor a reactive le contact. Synchronisation app en cours...')
     : bvs('Hektor a archive le contact. Synchronisation app en cours...')
   if (job.job_type === 'create_hektor_contact' || job.job_type === 'update_hektor_contact' || job.job_type === 'refresh_console_contact_data') return bvs('Hektor a mis a jour le contact. Synchronisation app en cours...')
+  if (job.job_type === 'link_hektor_conjoint') return bvs('Hektor a rattache le conjoint. Relecture des deux fiches en cours...')
   if (job.job_type === 'update_hektor_mandant_contact') return bvs('Hektor a modifie le mandant. Mise a jour de l app en cours...')
   if (job.job_type === 'update_hektor_annonce_fields') return bvs('Hektor a modifie l annonce. Mise a jour de l app en cours...')
   if (job.job_type === 'archive_hektor_annonce') return bvs('Hektor a archive l annonce. Mise a jour de l app en cours...')
@@ -13540,7 +13551,7 @@ const PASTILLE_GESTES_SEULEMENT = true
 const GESTES_QUI_PREVIENNENT = new Set([
   'create_hektor_draft_annonce', 'create_hektor_contact', 'create_hektor_mandant_contact',
   'update_hektor_mandant_contact', 'link_hektor_mandant', 'delete_hektor_contact',
-  'update_hektor_annonce_fields', 'update_hektor_contact', 'archive_hektor_contact',
+  'update_hektor_annonce_fields', 'update_hektor_contact', 'archive_hektor_contact', 'link_hektor_conjoint',
   'add_hektor_contact_search', 'update_hektor_contact_search', 'delete_hektor_contact_search',
   'change_hektor_annonce_status', 'archive_hektor_annonce', 'restore_hektor_annonce',
   'delete_hektor_annonce', 'assign_hektor_annonce_negotiator',
@@ -42387,6 +42398,164 @@ function ContactWorkflowModal(props: {
   )
 }
 
+// ─── COUPLES, pièce G (03/11/2026) : « Ajouter un conjoint » à une PERSONNE SEULE ───
+// Décisions de Frédéric (03/11, synthèse couples §52) : (a) un NOUVEAU contact OU une FICHE EXISTANTE ; (b) admins et
+// négociateurs, derrière le cran `contacts_couples_ajout` ; (c) le conjoint reçoit les MÊMES BIENS que la personne.
+// Nouveau : la création habituelle (`createHektorContactJob`, personne seule), puis le rattachement avec son numéro.
+// Le rattachement (`ajouterConjointOptimistic`) écrit le couple chez nous à la seconde ; le worker le pose chez Hektor
+// (une requête, prouvée par relecture), relie les biens, puis relit les deux fiches. Un refus de la base est DIT, tel quel.
+function AjouterConjointModal(props: {
+  contact: AppContact
+  hektorUserEmail?: string | null
+  hektorUserId?: string | null
+  onClose: () => void
+  onJobCreated?: (job: ConsoleJob) => void
+}) {
+  const [mode, setMode] = useState<'nouveau' | 'existant'>('nouveau')
+  const [nom, setNom] = useState(props.contact.nom ?? '')
+  const [prenom, setPrenom] = useState('')
+  const [portable, setPortable] = useState('')
+  const [email, setEmail] = useState('')
+  const [rgpd, setRgpd] = useState(true)
+  const [recherche, setRecherche] = useState('')
+  const [resultats, setResultats] = useState<MandantContactSearchOption[]>([])
+  const [choisi, setChoisi] = useState<MandantContactSearchOption | null>(null)
+  const [envoi, setEnvoi] = useState(false)
+  const [erreur, setErreur] = useState<string | null>(null)
+  const [fait, setFait] = useState<string | null>(null)
+  const personne = props.contact.display_name || [props.contact.prenom, props.contact.nom].filter(Boolean).join(' ') || `Contact ${props.contact.hektor_contact_id}`
+
+  useEffect(() => {
+    if (mode !== 'existant') return
+    const terme = recherche.trim()
+    if (terme.length < 3) { setResultats([]); return }
+    let annule = false
+    const minuterie = window.setTimeout(() => {
+      void searchMandantContactOptions({ search: terme, limit: 8 })
+        .then((options) => { if (!annule) setResultats(options.filter((o) => o.hektor_contact_id !== props.contact.hektor_contact_id)) })
+        .catch(() => { if (!annule) setResultats([]) })
+    }, 300)
+    return () => { annule = true; window.clearTimeout(minuterie) }
+  }, [mode, recherche, props.contact.hektor_contact_id])
+
+  async function envoyer() {
+    setErreur(null)
+    if (mode === 'nouveau') {
+      if (!nom.trim()) { setErreur('Le nom du conjoint est obligatoire.'); return }
+      if (!portable.trim() && !email.trim()) { setErreur('Un portable ou un e-mail est obligatoire, comme pour toute création de contact.'); return }
+    } else if (!choisi) { setErreur('Choisissez une fiche dans la liste.'); return }
+    setEnvoi(true)
+    let conjointId = choisi?.hektor_contact_id ?? ''
+    let nouveauCree = false
+    try {
+      if (mode === 'nouveau') {
+        const base = contactIdentityInputFromContact(props.contact, props.hektorUserEmail, props.hektorUserId)
+        const creation = await createHektorContactJob({
+          contact: {
+            ...base, civility: '', lastName: nom.trim(), firstName: prenom.trim() || null,
+            email: email.trim() || null, phone: portable.trim() || null, phoneSecondary: null,
+            address: null, postalCode: null, city: null, birthDate: null, birthPlace: null, maritalStatus: null,
+            comments: null, personType: 'personne_seule', sendRgpdEmail: rgpd,
+          },
+        })
+        nouveauCree = true
+        props.onJobCreated?.(creation)
+        conjointId = String(creation.payload_json?.app_identite ?? '').trim()
+        if (!conjointId) throw new Error("La fiche du conjoint est créée, mais son numéro n'est pas revenu : rattachez-la avec « Une fiche existante ».")
+      }
+      const resultat = await ajouterConjointOptimistic({ contactId: props.contact.hektor_contact_id, conjointId })
+      if (!resultat.ok) {
+        setErreur(nouveauCree
+          ? `La fiche du conjoint (n° ${conjointId}) est créée, mais elle n'a pas été rattachée : ${raisonAjoutConjoint(resultat.raison)}`
+          : raisonAjoutConjoint(resultat.raison))
+        return
+      }
+      if (resultat.job_id) {
+        const travaux = await loadConsoleJobsByIds([resultat.job_id]).catch(() => [] as ConsoleJob[])
+        if (travaux[0]) props.onJobCreated?.(travaux[0])
+      }
+      const biens = resultat.biens ?? 0
+      setFait(`Le couple est enregistré chez nous. Hektor le confirme dans quelques secondes${biens ? `, puis le conjoint est relié à ${biens > 1 ? `ses ${biens} biens` : 'son bien'}` : ''}.`
+        + (resultat.biens_refuses ? ` ${resultat.biens_refuses} bien(s) hors de vos droits ne seront pas reliés.` : ''))
+    } catch (e) {
+      setErreur(e instanceof Error ? e.message : String(e))
+    } finally {
+      setEnvoi(false)
+    }
+  }
+
+  return (
+    <ContactWorkflowModal
+      title="Ajouter un conjoint"
+      eyebrow="Couple"
+      summary={`${personne} devient un couple : choisissez son conjoint.`}
+      tone="create"
+      onClose={() => { if (!envoi) props.onClose() }}
+    >
+      <div className="contact-delete-panel contact-delete-panel-modern">
+        {fait ? (
+          <>
+            <p>{fait}</p>
+            <div className="modal-actions">
+              <button className="ghost-button" type="button" onClick={props.onClose}>Fermer</button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="modal-actions" role="radiogroup" aria-label="Le conjoint">
+              <button className={`ghost-button${mode === 'nouveau' ? '' : ' button-subtle'}`} type="button" aria-pressed={mode === 'nouveau'}
+                onClick={() => { setMode('nouveau'); setErreur(null) }} disabled={envoi}>Un nouveau contact</button>
+              <button className={`ghost-button${mode === 'existant' ? '' : ' button-subtle'}`} type="button" aria-pressed={mode === 'existant'}
+                onClick={() => { setMode('existant'); setErreur(null) }} disabled={envoi}>Une fiche existante</button>
+            </div>
+            {mode === 'nouveau' ? (
+              <>
+                <label className="filter-field"><span>Nom *</span>
+                  <input value={nom} onChange={(event) => setNom(event.target.value)} autoComplete="off" disabled={envoi} /></label>
+                <label className="filter-field"><span>Prénom</span>
+                  <input value={prenom} onChange={(event) => setPrenom(event.target.value)} autoComplete="off" disabled={envoi} /></label>
+                <label className="filter-field"><span>Portable</span>
+                  <input value={portable} onChange={(event) => setPortable(event.target.value)} inputMode="tel" autoComplete="off" disabled={envoi} /></label>
+                <label className="filter-field"><span>E-mail</span>
+                  <input value={email} onChange={(event) => setEmail(event.target.value)} type="email" autoComplete="off" disabled={envoi} /></label>
+                <label className="filter-field"><span>
+                  <input type="checkbox" checked={rgpd} onChange={(event) => setRgpd(event.target.checked)} disabled={envoi} />{' '}
+                  Envoyer l'e-mail RGPD au conjoint</span></label>
+              </>
+            ) : (
+              <>
+                <label className="filter-field"><span>Chercher la fiche (nom, téléphone, e-mail ou numéro)</span>
+                  <input value={recherche} onChange={(event) => { setRecherche(event.target.value); setChoisi(null) }} autoComplete="off" disabled={envoi} placeholder="3 caractères au moins" /></label>
+                {resultats.length ? (
+                  <ul className="fa-cx-achat-rech-liste">
+                    {resultats.map((option) => (
+                      <li key={`ajout-conjoint-${option.hektor_contact_id}`}>
+                        <button className={`ghost-button${choisi?.hektor_contact_id === option.hektor_contact_id ? '' : ' button-subtle'}`} type="button"
+                          onClick={() => setChoisi(option)} disabled={envoi}>
+                          {[option.display_name || [option.prenom, option.nom].filter(Boolean).join(' ') || `Contact ${option.hektor_contact_id}`,
+                            option.ville, option.phone_primary || option.email].filter(Boolean).join(' · ')}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : recherche.trim().length >= 3 ? <p>Aucune fiche trouvée.</p> : null}
+              </>
+            )}
+            <p>Le conjoint recevra les mêmes biens que {personne} (mandant ou propriétaire), sur les biens que vous pouvez gérer.</p>
+            {erreur ? <p className="form-error">{erreur}</p> : null}
+            <div className="modal-actions">
+              <button className="ghost-button button-subtle" type="button" onClick={props.onClose} disabled={envoi}>Annuler</button>
+              <button className="ghost-button" type="button" onClick={() => { void envoyer() }} disabled={envoi}>
+                {envoi ? 'Envoi…' : 'Ajouter le conjoint'}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </ContactWorkflowModal>
+  )
+}
+
 function appContactAgendaEmail(contact: AppContact) {
   return normalizeEmail(contact.email)
 }
@@ -45729,6 +45898,23 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
   // COUPLES (02/11/2026) : « Compléter le conjoint » ouvre la même fenêtre, partie Conjoint VIDE à remplir.
   const [completerConjoint, setCompleterConjoint] = useState(false)
   const completerConjointId = modifConjointVisible && props.canManageContacts && foyer?.conjointVideId ? foyer.conjointVideId : null
+  // COUPLES, pièce G (03/11/2026) : « Ajouter un conjoint » sur une PERSONNE SEULE (cran `contacts_couples_ajout`).
+  const ajoutConjointVisible = useCranCouplesVisible('contacts_couples_ajout', props.profileRole)
+  const [ajoutConjointOuvert, setAjoutConjointOuvert] = useState(false)
+  // La fiche ouverte ne porte pas toujours sa nature (cela dépend de l'écran qui l'ouvre) : on la lit, comme le foyer.
+  const [natureLue, setNatureLue] = useState<{ pour: string; nature_fiche?: string | null; couple_json?: unknown } | null>(null)
+  useEffect(() => {
+    const id = String(props.contact.hektor_contact_id ?? '').trim()
+    if (!ajoutConjointVisible || !props.canManageContacts || foyer || !id) return
+    let annule = false
+    void loadContactCoupleInfo(id)
+      .then((info) => { if (!annule && info) setNatureLue({ pour: id, nature_fiche: info.nature_fiche, couple_json: info.couple_json }) })
+      .catch(() => { /* lecture ratée : pas de bouton */ })
+    return () => { annule = true }
+  }, [ajoutConjointVisible, props.canManageContacts, foyer, props.contact.hektor_contact_id])
+  const peutAjouterConjoint = ajoutConjointVisible && props.canManageContacts && !foyer
+    && natureLue?.pour === String(props.contact.hektor_contact_id ?? '').trim()
+    && peutRecevoirUnConjoint({ ...props.contact, nature_fiche: natureLue.nature_fiche, couple_json: natureLue.couple_json as never })
   const [ongletFoyer, setOngletFoyer] = useState<1 | 2>(foyer?.ongletInitial ?? 1)
   useEffect(() => {
     setOngletFoyer(foyer?.ongletInitial ?? 1)
@@ -46484,6 +46670,11 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
                   + Compléter le conjoint
                 </button>
               ) : null}
+              {peutAjouterConjoint ? (
+                <button className="fa-cx-completer" type="button" onClick={() => setAjoutConjointOuvert(true)}>
+                  + Ajouter un conjoint
+                </button>
+              ) : null}
 
               <div className="fa-cx-actions">
                 <button className="fa-cx-act primary" type="button" data-tip="Créer un RDV" aria-label="Créer un RDV" onClick={handleOpenCreateGoogleContactAgenda}>
@@ -47006,6 +47197,16 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
           on les enveloppe dans #fcx-root pour qu'elles retrouvent leurs styles + z-index
           d'origine (edit-overlay z-1400 etc.), au-dessus de l'overlay de la fiche. */}
       <div id="fcx-root" className="fa-cx-modal-scope">
+      {ajoutConjointOuvert && peutAjouterConjoint ? (
+        <AjouterConjointModal
+          contact={props.contact}
+          hektorUserEmail={props.hektorUserEmail}
+          hektorUserId={props.hektorUserId}
+          onClose={() => setAjoutConjointOuvert(false)}
+          onJobCreated={props.onJobCreated}
+        />
+      ) : null}
+
       {editing && props.canManageContacts ? (
         <ContactEditModalV2
           contact={props.contact}
