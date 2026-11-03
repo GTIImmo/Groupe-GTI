@@ -1070,3 +1070,15 @@ pour un numéro sont RELUS TOUT DE SUITE, jamais « à la nuit ». Rien n'est co
   ⇒ la tâche de 02:00 (`sync_active_searches.py` → `sync_contact_details.py` → `ContactById`, puis étapes locales) n'appelle
     QUE l'API : elle peut être accélérée seule. Le run de 04:00 MÉLANGE l'API et la console (brouillons, immo pro, chauffage,
     champs manquants) : il reste tel quel. ⇒ **Créneau A (tâche de 02:00) seul conforme à la règle.**
+- **Frédéric (03/11) : « ne modifier QUE le nouveau run sur les contacts » — et que faire du run actuel des contacts ?**
+  Ce qui lit les contacts aujourd'hui, la nuit :
+  · la tâche **Recherches actives** (02:00 → 03:51, API seule) : relit ~4 000 fiches d'acquéreurs à recherche active SANS regarder
+    la date (éditer une recherche ne bouge pas la `datemaj`) — ce travail doit continuer ;
+  · le **run de 04:00** (mixte API + console) : lecture courte de la liste (3 pages) + relecture des fiches changées (36 cette nuit,
+    ~1 min).
+  Proposition (non décidée) : une **NOUVELLE tâche « contacts », API seule, à la vitesse d'avant**, qui REMPLACE la tâche des
+  recherches à 02:00 (l'ancienne est désactivée, son code n'est pas modifié) et fait, dans un seul processus : ① la liste entière
+  (actifs du lundi au samedi, archivés le dimanche) ; ② les fiches où Hektor est plus récent ; ③ les ~4 000 fiches à recherche
+  active (même code que l'ancienne tâche). Estimation : ~57 min + quelques minutes + ~30-40 min ≈ **1 h 40**, dans le créneau
+  actuel 02:00 → 03:50 (première nuit : +~20 min pour ~2 200 fiches). Le run de 04:00 ne bouge pas : sa lecture courte reste un
+  filet (contacts créés entre 02:00 et 04:00), elle ne coûte qu'une minute.
