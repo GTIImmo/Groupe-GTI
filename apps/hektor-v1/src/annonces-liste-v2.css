@@ -338,22 +338,11 @@
 @media (min-width: 900px) { .av3 .av3-presence { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
 .av3 .av3-carte-val b { font-size: 22px; }
 .av3 .av3-th-nom { font-size: 10.5px; }
-/* 03/11 soir -- Frederic : « ces deux colonnes se sont tassees quand il y a une baisse de prix ».
-   L'ancien prix et l'ecart etaient sur UNE ligne insecable (« 9 000 € +1333,3 % ») : ils debordaient sur
-   la colonne Mandat. Trois lignes courtes, chacune bornee a sa colonne. */
-.av3 .av3-prix, .av3 .av3-avant { overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
-.av3 .av3-avant { font-size: 11.5px; color: #7c8082; margin-top: 2px; }
-.av3 .av3-ecart { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 6px; margin-top: 4px; max-width: 100%; }
-.av3 .av3-ecart b { display: inline-flex; align-items: center; gap: 2px; height: 20px; padding: 0 7px 0 5px; border-radius: 6px; font-size: 11px; font-weight: 800; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.av3 .av3-ecart b svg { width: 11px; height: 11px; flex: 0 0 11px; }
-.av3 .av3-ecart b.baisse { background: #e8f5ee; color: #2f7d59; }
-.av3 .av3-ecart b.hausse { background: #fff3df; color: #8a4f0f; }
-.av3 .av3-ecart .av3-quand { margin: 0; font-size: 11px; color: #7c8082; white-space: nowrap; }
-.app-shell.app-shell-modern .panel-grid.av3 .table-wrap.listing-table-active .av3-avant,
-.app-shell.app-shell-modern .panel-grid.av3 .table-wrap.listing-table-active .av3-avant s { color: #7c8082 !important; }
-.app-shell.app-shell-modern .panel-grid.av3 .table-wrap.listing-table-active .av3-ecart b.baisse { color: #2f7d59 !important; }
-.app-shell.app-shell-modern .panel-grid.av3 .table-wrap.listing-table-active .av3-ecart b.hausse { color: #8a4f0f !important; }
-.app-shell.app-shell-modern .panel-grid.av3 .table-wrap.listing-table-active .av3-ecart .av3-quand { color: #7c8082 !important; margin: 0 !important; display: inline !important; -webkit-line-clamp: unset !important; }
+/* 03/11 soir -- colonne Prix : le dessin d'avant est garde (Frederic : « c'etait plus joli »). Seul
+   changement : l'ancien prix et l'ecart ne sont plus une ligne INSECABLE (elle debordait sur la colonne
+   Mandat) ; chacun reste entier, l'ecart passe dessous si la place manque. */
+.av3 .av3-avant { white-space: normal; }
+.av3 .av3-avant s, .av3 .av3-avant b { white-space: nowrap; }
 /* les dates du mandat : la regle « td span » leur ajoutait 4 px et la coupe a une ligne */
 .app-shell.app-shell-modern .panel-grid.av3 .table-wrap.listing-table-active .av3-dates span { margin: 0 !important; display: inline !important; }
 /* 03/11 soir -- ligne lieu + negociateur : la ville seule (sans code postal), l'agence en info-bulle.
@@ -365,12 +354,12 @@
 .app-shell.app-shell-modern .panel-grid.av3 .table-wrap.listing-table-active .av3-lieu .av3-ville { color: #3b4143 !important; margin: 0 !important; display: block !important; -webkit-line-clamp: unset !important; }
 .app-shell.app-shell-modern .panel-grid.av3 .table-wrap.listing-table-active .av3-nego-nom,
 .app-shell.app-shell-modern .panel-grid.av3 .table-wrap.listing-table-active .av3-ini { margin: 0 !important; }
-/* mesure a 1280 px : la ligne ne fait que 181 px -- ville + nom complet n'y tiennent pas cote a cote.
-   La ville et le negociateur passent sur DEUX lignes courtes, chacune entiere. */
-.av3 .av3-bien:not(.av3-pub-bien) .av3-ligne { flex-direction: column; align-items: flex-start; gap: 3px; overflow: visible; }
-.av3 .av3-bien:not(.av3-pub-bien) .av3-lieu { max-width: 100%; }
-.av3 .av3-bien:not(.av3-pub-bien) .av3-nego { flex: 0 1 auto; max-width: 100%; }
-.av3 .av3-bien:not(.av3-pub-bien) .av3-nego-nom { overflow: hidden; text-overflow: ellipsis; }
+/* 03/11 soir -- Frederic prefere la ligne UNIQUE d'avant. Mesure a 1280 px : 181 px pour la ligne.
+   Le negociateur (forme courte « Tatiana C. », ~90 px) ne cede JAMAIS ; la ville prend le reste et se coupe. */
+.av3 .av3-bien:not(.av3-pub-bien) .av3-lieu { flex: 0 1 auto; min-width: 36px; max-width: none; }
+.av3 .av3-bien:not(.av3-pub-bien) .av3-nego { flex: 0 0 auto; }
+.av3 .av3-bien:not(.av3-pub-bien) .av3-nego-nom { min-width: 0; overflow: visible; }
+.av3 .av3-bien:not(.av3-pub-bien) .av3-ligne { gap: 10px; }
 /* tri par en-tete (03/11 soir) */
 .av3 .av3-tri { display: inline-flex; align-items: center; gap: 4px; padding: 0; border: 0; background: transparent; font: inherit; color: inherit; letter-spacing: inherit; text-transform: inherit; cursor: pointer; }
 .av3 .av3-tri svg { width: 12px; height: 12px; opacity: .35; transition: opacity .15s; }
@@ -380,3 +369,9 @@
 .av3 .av3-tri.on svg { opacity: 1; }
 .av3 .av3-tri:focus-visible { outline: 2px solid #c5005f; outline-offset: 2px; border-radius: 4px; }
 .app-shell.app-shell-modern .panel-grid.av3 .table-wrap.listing-table-active thead th .av3-tri.on { color: #c5005f !important; }
+/* « Saint-Etienne » (78 px) manquait de 9 px : espaces et pastille resserres sur cette ligne seulement */
+.av3 .av3-bien:not(.av3-pub-bien) .av3-ligne { gap: 7px; }
+.av3 .av3-bien:not(.av3-pub-bien) .av3-lieu { gap: 2px; }
+.av3 .av3-bien:not(.av3-pub-bien) .av3-nego { gap: 4px; }
+.av3 .av3-bien:not(.av3-pub-bien) .av3-ini { width: 18px; height: 18px; font-size: 8.5px; }
+.av3 .av3-bien:not(.av3-pub-bien) .av3-lieu .av3-ville { letter-spacing: -.01em; }

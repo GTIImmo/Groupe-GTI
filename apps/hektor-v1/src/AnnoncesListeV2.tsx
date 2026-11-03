@@ -65,6 +65,17 @@ function initiales(nom: string) {
   return nom.split(/\s+/).filter(Boolean).map((mot) => mot.charAt(0)).join('').slice(0, 2).toUpperCase()
 }
 
+// « Tatiana CROZET » -> « Tatiana C. » (03/11) : le prenom entier, l'initiale du NOM (les mots tout en
+// majuscules). Un nom sans prenom reconnaissable reste entier. Le nom complet reste dans l'info-bulle.
+function nomCourt(nom: string) {
+  const mots = nom.split(/\s+/).filter(Boolean)
+  const estNom = (mot: string) => mot.length > 1 && mot === mot.toUpperCase() && /\p{L}/u.test(mot)
+  const prenom = mots.filter((mot) => !estNom(mot))
+  const noms = mots.filter(estNom)
+  if (!prenom.length || !noms.length) return nom
+  return `${prenom.join(' ')} ${noms[0].charAt(0)}.`
+}
+
 const ICONE = {
   photo: 'M4 8h3l2-3h6l2 3h3v11H4zM12 16.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4z',
   lieu: 'M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21zM12 12a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z',
@@ -201,12 +212,14 @@ function BienPrixCells(p: BienPrixProps) {
     const a = Number(item.price_change_last_old_value)
     const n = Number(item.prix)
     if (!ancien || !Number.isFinite(a) || !Number.isFinite(n) || a === 0 || a === n) return null
+    // 03/11 (Frederic : « 1333 % c'est pas normal ») : un ancien prix plus de 3 fois plus petit ou plus
+    // grand que le prix est une ERREUR DE SAISIE corrigee, pas un changement de prix. Mesure du 03/11 :
+    // 2 cas sur 133 (63326 : 9 000 -> 129 000 ; 63114 : 9 600 -> 137 600, crees dans Hektor, premier
+    // prix = ~7 % du vrai, sans doute les honoraires) ; les 131 autres restent entre -38 % et +50 %.
+    // On MASQUE l'ecart (la donnee n'est pas modifiee).
+    if (n / a > 3 || n / a < 1 / 3) return null
     const pct = ((n - a) / a) * 100
-    // 03/11 : « +1333,3 % » debordait sur la colonne Mandat. Une decimale sous 10 %, aucune au-dela,
-    // separateur de milliers francais (« +1 333 % »).
-    const abs = Math.abs(pct)
-    const chiffre = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: abs < 10 ? 1 : 0 }).format(abs)
-    return { texte: `${pct > 0 ? '+' : '−'}${chiffre} %`, baisse: pct < 0 }
+    return { texte: `${pct > 0 ? '+' : '−'}${Math.abs(pct).toFixed(1).replace('.', ',')} %`, baisse: pct < 0 }
   })()
   const changeLe = jourLocal(item.price_change_last_detected_at)
   const ilYa = changeLe ? Math.max(0, Math.round((Date.now() - changeLe.getTime()) / 86400000)) : null
@@ -232,12 +245,13 @@ function BienPrixCells(p: BienPrixProps) {
               {manques.length ? <span className="av3-tag manque" title={`À compléter : ${manques.join(', ')}`}>À compléter{manques.length === 1 ? ` · ${manques[0]}` : ` · ${manques.length}`}</span> : null}
             </span>
             <span className="av3-ligne">
-              {/* 03/11 (Frederic) : la ville SEULE, et plus l'agence sur la ligne -- le nom du negociateur
-                  etait coupe. Code postal et agence restent dans l'info-bulle. */}
+              {/* 03/11 (Frederic) : UNE ligne comme avant, mais le negociateur n'est plus coupe : la ville
+                  seule (elle cede la place, « … »), le negociateur en forme courte « Tatiana C. » qui tient
+                  toujours. Code postal, nom complet et agence restent dans les info-bulles. */}
               {item.ville ? <span className="av3-lieu" title={`${item.ville}${item.code_postal ? ` ${item.code_postal}` : ''}`}><Svg d={ICONE.lieu} strokeWidth={2.2} /><span className="av3-ville">{item.ville}</span></span> : null}
               <span className="av3-nego" title={nego ? `${nego} · agence ${agence}` : 'Non affecté'}>
                 <span className={`av3-ini${nego ? '' : ' vide'}`} aria-hidden="true">{nego ? initiales(nego) : '—'}</span>
-                <span className={`av3-nego-nom${nego ? '' : ' vide'}`}>{nego ?? 'Non affecté'}</span>
+                <span className={`av3-nego-nom${nego ? '' : ' vide'}`}>{nego ? nomCourt(nego) : 'Non affecté'}</span>
               </span>
             </span>
           </div>
@@ -247,14 +261,10 @@ function BienPrixCells(p: BienPrixProps) {
         <div className={`av3-prix${prix ? '' : ' vide'}`}>{prix ?? 'Prix à saisir'}</div>
         {ancien && variation ? (
           <>
-            <div className="av3-avant" title={`Ancien prix : ${ancien}`}><s>{ancien}</s></div>
-            <div className="av3-ecart">
-              <b className={variation.baisse ? 'baisse' : 'hausse'} title={variation.baisse ? 'Baisse de prix' : 'Hausse de prix'}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={variation.baisse ? 'M12 5v14M6 13l6 6 6-6' : 'M12 19V5M6 11l6-6 6 6'} /></svg>
-                {variation.texte}
-              </b>
-              {ilYa != null ? <span className="av3-quand">{ilYa} j</span> : null}
-            </div>
+            {/* 03/11 : le dessin d'avant (Frederic : « c'etait plus joli »), mais l'ecart peut passer
+                sous l'ancien prix au lieu de deborder sur la colonne Mandat. */}
+            <div className="av3-avant"><s>{ancien}</s> <b className={variation.baisse ? 'baisse' : ''}>{variation.texte}</b></div>
+            {ilYa != null ? <div className="av3-quand">il y a {ilYa} j</div> : null}
           </>
         ) : null}
       </td>
