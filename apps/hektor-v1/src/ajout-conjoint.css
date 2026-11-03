@@ -103,7 +103,7 @@
 .ajc-opt{width:100%;display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:14px;border:1px solid var(--line);
   background:#fff;font:inherit;text-align:left;cursor:pointer;transition:.15s}
 .ajc-opt:hover:not(:disabled){border-color:var(--line-strong);background:var(--card-2)}
-.ajc-opt[aria-checked="true"]{border:2px solid var(--brand);padding:9px 11px;background:var(--brand-soft)}
+.ajc-opt[aria-checked="true"],.ajc-opt[aria-checked="true"]:hover:not(:disabled){border:2px solid var(--brand);padding:9px 11px;background:var(--brand-soft)}
 .ajc-opt-tx{flex:1;display:flex;flex-direction:column;min-width:0}
 .ajc-opt-tx b{font-size:14.5px;font-weight:800;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ajc-opt-tx span{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -197,7 +197,7 @@
 #fa-cx-root .fxf-ajout:focus-visible{outline:2px solid #c2125f;outline-offset:2px}
 #fa-cx-root .fxf-places{position:relative;width:74px;height:44px;flex:none}
 #fa-cx-root .fxf-places .fxf-place{position:absolute;top:0;width:44px;height:44px;font-size:15px;box-shadow:0 0 0 3px #fff}
-#fa-cx-root .fxf-places .fxf-place.p1{left:0}
+#fa-cx-root .fxf-places .fxf-place.p1{left:0;z-index:1}
 #fa-cx-root .fxf-places .fxf-place.ajout{left:30px;transition:transform .15s}
 #fa-cx-root .fxf-ajout:hover .fxf-place.ajout{transform:translateX(3px)}
 #fa-cx-root .fxf-ajout-tx{display:flex;flex-direction:column;gap:3px;min-width:0}
@@ -207,8 +207,10 @@
 /* un couple : chaque personne a sa place dans l'onglet */
 #fa-cx-root .fxf-foyer{margin:4px 0 14px}
 #fa-cx-root .fxf-foyer .fa-cx-foyer{margin:0}
-#fa-cx-root .fa-cx-foyer .fxf-tab{flex-direction:row;align-items:center;gap:10px;min-height:50px}
-#fa-cx-root .fa-cx-foyer .fxf-tab-tx{display:flex;flex-direction:column;gap:1px;min-width:0}
+#fa-cx-root .fa-cx-foyer .fxf-tab{flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:0;padding:10px 6px;text-align:center}
+#fa-cx-root .fa-cx-foyer .fxf-tab-tx{display:flex;flex-direction:column;align-items:center;gap:1px;min-width:0;max-width:100%}
+#fa-cx-root .fa-cx-foyer .fxf-tab-tx b{max-width:100%;white-space:normal;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.2}
+#fa-cx-root .fa-cx-foyer .fxf-tab-tx i{max-width:100%}
 #fa-cx-root .fa-cx-foyer .fxf-tab:not(.on) .fxf-place{opacity:.85}
 #fa-cx-root .fa-cx-foyer .fxf-tab.vide{border:1px dashed #d9bf8f;background:transparent}
 /* conjoint à compléter : le bloc doré, son bouton et sa phrase */
