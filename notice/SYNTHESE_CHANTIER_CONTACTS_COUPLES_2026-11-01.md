@@ -1261,3 +1261,8 @@ Hektor/Supabase, 0 écriture), les points lourds REVÉRIFIÉS par moi (marqués 
   **45 min au plus** (jusqu'à 07:30), puis RENONCE (exit 1, doublures d'hier, alerte). Run +52 min ⇒ fin ~07:10 ⇒ descente
   ~07:10 → ~07:35 : ça passe, avec **~20 min de marge** seulement ; app à jour ~25 min plus tard. La sauvegarde de 08:00 et les
   relances (Supabase seul) ne sont pas touchées. Un retard de plus le même matin ferait sauter la descente ⇒ plafond recommandé.
+- ⭐ **Frédéric (03/11) : « il y a de la marge, et la liste du run des contacts sera elle-même plafonnée »** — exact : les fiches
+  relues par la tâche des contacts sont limitées par le TEMPS qui reste avant les recherches (elles doivent partir vers 02:00
+  pour finir avant 04:00), soit quelques centaines par nuit pendant le rattrapage (~1-1,6 s par fiche). Les annonces confiées au
+  run suivent (~0,7 par contact) : ~200 → **~7 min de plus** pour le run. Le plafond sur les annonces devient un simple
+  filet de sécurité (valeur haute), pas un réglage de rythme.
