@@ -1,6 +1,8 @@
 // Pilotage (02/11/2026) — écran ADMIN, LECTURE SEULE, quatre onglets : vue d'ensemble, ventes, mandats, stock.
 // 03/11 : étape 1 de la refonte (notice/AUDIT_PILOTAGE_GLOBAL_2026-11-02.md § 27) — « L'essentiel » en 12 chiffres
 // qui défilent, entrée animée des blocs, barres et courbes qui se dessinent.
+// 03/11 soir : le tableau de bord v3 validé sur la maquette (§ 29 à 32) — la courbe des honoraires, trois chiffres de
+// tête, trois phrases à retenir, à traiter, en route, les six premières agences ; les 12 chiffres repliés.
 // Maquette validée : https://claude.ai/artifact/CJ9v7PnqkNvYHNGsG8R1Qr ; audit et décisions :
 // notice/AUDIT_PILOTAGE_GLOBAL_2026-11-02.md. Les lectures et les calculs sont dans lib/pilotage.ts.
 // Décisions de Frédéric : admins seuls, honoraires HT par défaut (TTC d'un clic), comparaison à l'année
@@ -15,7 +17,7 @@ import './pilotage.css'
 
 type Onglet = 'ensemble' | 'ventes' | 'mandats' | 'stock'
 const ONGLETS: Array<{ cle: Onglet; libelle: string }> = [
-  { cle: 'ensemble', libelle: 'Vue d’ensemble' }, { cle: 'ventes', libelle: 'Ventes' }, { cle: 'mandats', libelle: 'Mandats' }, { cle: 'stock', libelle: 'Stock' },
+  { cle: 'ensemble', libelle: 'Tableau de bord' }, { cle: 'ventes', libelle: 'Ventes' }, { cle: 'mandats', libelle: 'Mandats' }, { cle: 'stock', libelle: 'Stock' },
 ]
 const ANNEE_COURANTE = Number(aujourdhui().slice(0, 4))
 const ANNEES = Array.from({ length: ANNEE_COURANTE - 2007 + 1 }, (_, i) => ANNEE_COURANTE - i)
@@ -106,6 +108,108 @@ function Barre({ part, ton, fine }: { part: number; ton: string; fine?: boolean 
   return <span className={`pl-piste${fine ? ' is-fine' : ''}`}><span style={{ width: `${Math.max(0, Math.min(100, part))}%`, background: ton }} /></span>
 }
 
+// ─── tableau de bord v3 (03/11) : la grande courbe, les chiffres de tête ───
+
+const ICONES = {
+  tient: 'M3 17l6-6 4 4 8-8M14 7h7v7',
+  recul: 'M3 7l6 6 4-4 8 8M14 17h7v-7',
+  etoile: 'M12 2l3 6.5 7 .9-5.1 4.8 1.3 7L12 17.8 5.8 21.2l1.3-7L2 9.4l7-.9z',
+}
+
+// Une courbe lissée : chaque segment est une courbe de Bézier dont les deux poignées sont à mi-chemin.
+function lisser(points: Array<[number, number]>) {
+  if (!points.length) return ''
+  let d = `M${points[0][0].toFixed(1)} ${points[0][1].toFixed(1)}`
+  for (let i = 1; i < points.length; i += 1) {
+    const [x0, y0] = points[i - 1]
+    const [x1, y1] = points[i]
+    const cx = ((x0 + x1) / 2).toFixed(1)
+    d += ` C${cx} ${y0.toFixed(1)} ${cx} ${y1.toFixed(1)} ${x1.toFixed(1)} ${y1.toFixed(1)}`
+  }
+  return d
+}
+
+// Les honoraires mois par mois : la courbe se trace, l'aire se dévoile, l'an passé en pointillé ;
+// au survol d'un mois, un repère et une bulle donnent les deux années.
+function GrandeCourbe({ valeurs, prec, annee, format }: { valeurs: number[]; prec: number[] | null; annee: number; format: (x: number) => string }) {
+  const [survol, setSurvol] = useState<number | null>(null)
+  if (!valeurs.length) return null
+  const L = 640
+  const H = 170
+  const haut = 12
+  const bas = 158
+  const n = Math.max(valeurs.length, prec ? 12 : 0, 2)
+  const max = Math.max(1, ...valeurs, ...(prec ?? [])) * 1.08
+  const x = (i: number) => 10 + (i / (n - 1)) * (L - 20)
+  const y = (v: number) => bas - (v / max) * (bas - haut)
+  const courbe = lisser(valeurs.map((v, i) => [x(i), y(v)]))
+  const courbePrec = prec ? lisser(prec.slice(0, n).map((v, i) => [x(i), y(v)])) : ''
+  const fin = valeurs.length - 1
+  const aire = `${courbe} L${x(fin).toFixed(1)} ${bas} L${x(0).toFixed(1)} ${bas} Z`
+  const pas = (L - 20) / (n - 1)
+  const lignes = [0.33, 0.66].map((part) => bas - part * (bas - haut))
+  const gauche = survol != null ? Math.min(78, Math.max(0, (x(survol) / L) * 100 - 9)) : 0
+  return (
+    <div className="pl-gc" onMouseLeave={() => setSurvol(null)}>
+      <svg viewBox={`0 0 ${L} ${H}`} className="pl-gc-svg" role="img" aria-label={`Honoraires par mois en ${annee}${prec ? `, comparés à ${annee - 1}` : ''}`}>
+        <defs><linearGradient id="pl-gc-aire" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#e0457b" stopOpacity=".28" /><stop offset="1" stopColor="#e0457b" stopOpacity="0" /></linearGradient></defs>
+        {lignes.map((v) => <line key={v} x1="0" x2={L} y1={v} y2={v} stroke="#eef0f2" strokeWidth="1" />)}
+        <line x1="0" x2={L} y1={bas} y2={bas} stroke="#e3e6e7" strokeWidth="1" />
+        <path className="pl-voile" d={aire} fill="url(#pl-gc-aire)" style={{ animationDelay: '.9s' }} />
+        {courbePrec ? <path className="pl-voile" d={courbePrec} fill="none" stroke="#b9bec4" strokeWidth="2" strokeDasharray="4 5" strokeLinecap="round" style={{ animationDelay: '.5s' }} /> : null}
+        <path className="pl-trace" d={courbe} pathLength={1} fill="none" stroke="#c5005f" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ animationDelay: '.3s' }} />
+        <circle className="pl-onde" cx={x(fin)} cy={y(valeurs[fin])} r="5" fill="#c5005f" />
+        <circle cx={x(fin)} cy={y(valeurs[fin])} r="5" fill="#fff" stroke="#c5005f" strokeWidth="3" />
+        {survol != null ? <>
+          <line x1={x(survol)} x2={x(survol)} y1="6" y2={bas} stroke="#1f2121" strokeOpacity=".18" strokeWidth="1" />
+          {prec && prec[survol] != null ? <circle cx={x(survol)} cy={y(prec[survol])} r="4.5" fill="#fff" stroke="#9aa0a6" strokeWidth="2.5" /> : null}
+          {survol <= fin ? <circle cx={x(survol)} cy={y(valeurs[survol])} r="6" fill="#c5005f" stroke="#fff" strokeWidth="3" /> : null}
+        </> : null}
+        {Array.from({ length: n }, (_, i) => (
+          <rect key={i} x={Math.max(0, x(i) - pas / 2)} y="0" width={pas} height={H} fill="transparent" onMouseEnter={() => setSurvol(i)} />
+        ))}
+      </svg>
+      <div className={`pl-gc-bulle${survol != null ? ' is-vue' : ''}`} style={{ left: `${gauche}%` }} aria-hidden={survol == null}>
+        {survol != null ? <>
+          <b>{MOIS[survol]} {annee}</b>
+          <span className="pl-num is-marque">{survol <= fin ? format(valeurs[survol]) : '–'}</span>
+          {prec ? <span className="pl-num pl-mute">{annee - 1} : {format(prec[survol] ?? 0)}</span> : null}
+        </> : null}
+      </div>
+      <div className="pl-gc-mois">{Array.from({ length: n }, (_, i) => <span key={i} className={i > fin ? 'is-futur' : ''}>{MOIS[i]}</span>)}</div>
+    </div>
+  )
+}
+
+// Un chiffre de tête avec sa mini-courbe des mois de l'année, qui se dessine à l'ouverture.
+function ChiffreTete({ libelle, valeur, prec, serie, couleur, sous, onClick, rang }: {
+  libelle: string; valeur: number; prec: number | null; serie: number[]; couleur: string; sous?: string; onClick: () => void; rang: number
+}) {
+  const x = prec != null ? ecart(valeur, prec) : null
+  const max = Math.max(...serie, 1)
+  const min = Math.min(...serie, 0)
+  const pts = serie.map((v, i) => [(i / Math.max(1, serie.length - 1)) * 106 + 2, 36 - ((v - min) / (max - min || 1)) * 30] as [number, number])
+  const d = pts.map((p, i) => `${i ? 'L' : 'M'}${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(' ')
+  const dernier = pts[pts.length - 1]
+  return (
+    <button type="button" className="pl-carte pl-tdb-chiffre pl-monte" style={{ animationDelay: `${120 + rang * 90}ms` }} onClick={onClick}>
+      <span className="pl-carte-haut"><span className="pl-lib">{libelle}</span>{x ? <span className={`pl-delta is-${x.bon ? 'up' : 'dn'} pl-pop`} style={{ animationDelay: `${1.2 + rang * 0.12}s` }}>{x.texte}</span> : null}</span>
+      <span className="pl-tdb-chiffre-bas">
+        <span className="pl-tdb-chiffre-texte">
+          <b className="pl-tdb-chiffre-valeur pl-num"><Compteur valeur={valeur} format={(v) => entier.format(Math.round(v))} /></b>
+          <span className="pl-mute">{sous ?? (prec != null ? `contre ${entier.format(prec)}` : '')}</span>
+        </span>
+        {serie.length > 1 ? (
+          <svg viewBox="0 0 110 40" className="pl-tdb-spark" aria-hidden="true">
+            <path className="pl-trace" d={d} pathLength={1} fill="none" stroke={couleur} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={{ animationDelay: `${0.5 + rang * 0.15}s` }} />
+            {dernier ? <circle cx={dernier[0]} cy={dernier[1]} r="3.5" fill={couleur} /> : null}
+          </svg>
+        ) : null}
+      </span>
+    </button>
+  )
+}
+
 // ─── l'écran ───
 
 export default function PilotageScreen() {
@@ -118,6 +222,7 @@ export default function PilotageScreen() {
   const [sources, setSources] = useState<PilotageSources | null>(null)
   const [essai, setEssai] = useState(0)
   const [tousNegos, setTousNegos] = useState(false)
+  const [deplie, setDeplie] = useState(false)
 
   useEffect(() => {
     try { window.localStorage.setItem(MEMO, JSON.stringify({ onglet, ttc })) } catch { /* mémoire facultative */ }
@@ -223,7 +328,9 @@ export default function PilotageScreen() {
     </section>
   )
 
-  // ───────────────────────── VUE D'ENSEMBLE ─────────────────────────
+  // ───────────────────────── TABLEAU DE BORD ─────────────────────────
+  // 03/11 : le tableau de bord v3 validé par Frédéric (maquette version 29-30) — le résultat d'abord, trois
+  // phrases à retenir, ce qui est à traiter et ce qui est en route, les six premières agences ; le reste replié.
   function Ensemble() {
     const mois = Array.from({ length: moisVisibles }, (_, i) => i)
     const agences = new Set<string>([...(ventes ? ventes.agences.keys() : []), ...(mandats ? mandats.agences.keys() : []), ...(stock ? stock.agences.keys() : [])])
@@ -233,7 +340,6 @@ export default function PilotageScreen() {
     })).sort((a, b) => (b.v?.h ?? 0) - (a.v?.h ?? 0))
     const maxH = Math.max(1, ...lignes.map((l) => l.v?.h ?? 0))
     const maxFlux = Math.max(1, ...mois.map((i) => Math.max(mandats?.parMois[i].n ?? 0, ventes?.parMois[i].n ?? 0)))
-    // L'essentiel : 12 chiffres simples, chacun ouvre l'onglet qui le détaille (demande de Frédéric, 03/11).
     const parActe = ventes && ventes.ventes ? ventes.honoraires / ventes.ventes : 0
     const parActePrec = ventes && ventes.ventesPrec ? ventes.honorairesPrec / ventes.ventesPrec : 0
     const prixMoyen = ventes && ventes.ventes ? ventes.volume / ventes.ventes : 0
@@ -243,95 +349,248 @@ export default function PilotageScreen() {
     const virgule = (x: number, d = 1) => x.toFixed(d).replace('.', ',')
     const delai = ventes?.delaiOffreActe ?? null
     const delaiPrec = ventes?.delaiOffreActePrec ?? null
+    const tauxEx = mandats ? pourcent(mandats.exclusifs, mandats.n) : 0
+    const tauxExPrec = mandats ? pourcent(mandats.exclusifsPrec, mandats.nPrec) : 0
+    const pct = (a: number, b: number) => (b ? ((a - b) / b) * 100 : null)
+    const sens = (x: number | null, seuil: number): 'up' | 'dn' | 'nt' => (x == null ? 'nt' : x >= seuil ? 'up' : x <= -seuil ? 'dn' : 'nt')
+    const ecartCa = ventes ? pct(ventes.honoraires, ventes.honorairesPrec) : null
+    const ecartCp = ventes ? pct(ventes.compromis.n, ventes.compromis.nPrec) : null
+    const ecartEx = mandats && mandats.nPrec ? tauxEx - tauxExPrec : null
+
+    // Les trois phrases « à retenir » se déduisent des chiffres affichés : aucune n'est écrite à la main.
+    const retenir: Array<{ cle: string; titre: string; sous: string; ton: 'up' | 'dn' | 'nt'; icone: string }> = []
+    if (ventes && comparer && ecartCa != null) {
+      const t = sens(ecartCa, 3)
+      retenir.push({ cle: 'ca', ton: t, icone: t === 'dn' ? ICONES.recul : ICONES.tient,
+        titre: t === 'nt' ? 'Le chiffre d’affaires tient' : `Le chiffre d’affaires ${t === 'up' ? 'progresse' : 'recule'} de ${Math.abs(Math.round(ecartCa))} %`,
+        sous: `${entier.format(ventes.ventes)} actes contre ${entier.format(ventes.ventesPrec)}, à ${euros(parActe)} ${unite} par acte contre ${euros(parActePrec)}.` })
+    }
+    if (ventes && comparer && ecartCp != null) {
+      const t = sens(ecartCp, 3)
+      retenir.push({ cle: 'cp', ton: t, icone: t === 'dn' ? ICONES.recul : ICONES.tient,
+        titre: t === 'nt' ? 'Les compromis se maintiennent' : `Les compromis ${t === 'up' ? 'progressent' : 'reculent'} de ${Math.abs(Math.round(ecartCp))} %`,
+        sous: `${entier.format(ventes.compromis.n)} signés contre ${entier.format(ventes.compromis.nPrec)} : les actes des prochains mois en dépendent.` })
+    }
+    if (mandats && comparer && ecartEx != null) {
+      const t = sens(ecartEx, 2)
+      const pts = Math.abs(Math.round(ecartEx))
+      retenir.push({ cle: 'ex', ton: t, icone: ICONES.etoile,
+        titre: t === 'nt' ? 'L’exclusivité se maintient' : `L’exclusivité ${t === 'up' ? 'gagne' : 'perd'} ${pts} point${pts > 1 ? 's' : ''}`,
+        sous: `${tauxEx} % des mandats rentrés sont exclusifs, contre ${tauxExPrec} % ${enCours ? 'à la même date' : `en ${annee - 1}`}.` })
+    }
+
+    // À traiter : ce qui demande un geste aujourd'hui (seulement pour l'année en cours).
+    type Action = { cle: string; n: number; h: number; titre: string; ton: 'rouge' | 'ambre' | 'bleu'; vers: Onglet }
+    const actions: Action[] = []
+    if (enCours && ventes) {
+      actions.push({ cle: 'actes', n: ventes.enRoute.actesDepasses.n, h: ventes.enRoute.actesDepasses.h, titre: 'Actes à date dépassée', ton: 'rouge', vers: 'ventes' })
+      actions.push({ cle: 'offres', n: ventes.enRoute.offresSansCompromis30.n, h: ventes.enRoute.offresSansCompromis30.h, titre: 'Offres acceptées sans compromis depuis 30 jours', ton: 'ambre', vers: 'ventes' })
+    }
+    if (enCours && stock) actions.push({ cle: 'echus', n: stock.echus, h: 0, titre: 'Mandats échus, bien toujours en vente', ton: 'ambre', vers: 'stock' })
+    if (enCours && signatures) actions.push({ cle: 'sign', n: signatures.enAttente, h: 0, titre: 'Signatures de mandat en attente', ton: 'bleu', vers: 'mandats' })
+    const maxAction = Math.max(1, ...actions.map((a) => a.n))
+
+    const route = ventes && enCours ? [
+      { cle: 'cp', libelle: 'Compromis en cours', n: ventes.enRoute.compromis.n, h: ventes.enRoute.compromis.h, ton: '#a3004f', quoi: 'dossiers' },
+      { cle: 'of', libelle: 'Offres acceptées', n: ventes.enRoute.offresAcceptees.n, h: ventes.enRoute.offresAcceptees.h, ton: '#d4478a', quoi: 'dossiers' },
+      ...(stock ? [{ cle: 'st', libelle: 'Biens en vente', n: stock.actifs, h: stock.potentiel, ton: '#f4b3cd', quoi: 'biens' }] : []),
+    ] : []
+    const engage = ventes ? ventes.enRoute.compromis.h + ventes.enRoute.offresAcceptees.h : 0
+
+    const top = [...(ventes?.agences.entries() ?? [])].filter(([cle]) => cle).sort((a, b) => b[1].h - a[1].h).slice(0, 6)
+    const maxTop = Math.max(1, ...top.map(([, a]) => Math.max(a.h, comparer ? a.hPrec : 0)))
+
     return (
       <>
-        <section className="pl-essentiel" aria-label="L'essentiel">
-          <span className="pl-lib">L’essentiel · {enCours ? `${annee} à date` : annee}{comparer ? ` · comparé à ${libelleComparaison}` : ''}</span>
-          <div className="pl-grille-kpi is-douze">
+        <section className="pl-tdb-heros" aria-label="Le résultat">
+          {ventes ? (
+            <div className="pl-carte pl-tdb-ca">
+              <span className="pl-halo is-un" aria-hidden="true" /><span className="pl-halo is-deux" aria-hidden="true" />
+              <div className="pl-tdb-ca-tete">
+                <span className="pl-lib">Honoraires encaissés · {unite} · {enCours ? `janvier à ${MOIS[moisVisibles - 1]}` : annee}</span>
+                <span className="pl-legende"><i style={{ background: '#c5005f' }} />{annee}{comparer ? <><i className="is-tirets" />{annee - 1}</> : null}</span>
+              </div>
+              <span className="pl-tdb-ca-ligne">
+                <b className="pl-tdb-ca-valeur pl-num pl-brille"><Compteur valeur={ventes.honoraires} format={compact} /></b>
+                {comparer && ecartCa != null ? <span className={`pl-delta is-${sens(ecartCa, 0.05)} pl-pop`}>{ecart(ventes.honoraires, ventes.honorairesPrec)?.texte}</span> : null}
+                {comparer ? <span className="pl-mute">contre {compact(ventes.honorairesPrec)} en {annee - 1}</span> : null}
+              </span>
+              <GrandeCourbe valeurs={ventes.parMois.slice(0, moisVisibles).map((m) => m.h)} prec={comparer ? ventes.parMoisPrec.map((m) => m.h) : null}
+                annee={annee} format={(x) => `${entier.format(Math.round((x * coef) / 1000))} k€`} />
+            </div>
+          ) : <Indisponible quoi="Le registre des ventes" onReessayer={reessayer} />}
+          <div className="pl-tdb-trois">
             {ventes ? <>
-              <Carte libelle={`Honoraires ${unite}`} genre="résultat" valeur={<Compteur valeur={ventes.honoraires} format={compact} />} ecartValeur={comparer ? ecart(ventes.honoraires, ventes.honorairesPrec) : null} detail={comparer ? `contre ${compact(ventes.honorairesPrec)}` : ''} onClick={() => setOnglet('ventes')}
-                courbe={<Courbe valeurs={ventes.parMois.slice(0, moisVisibles).map((m) => m.h)} prec={comparer ? ventes.parMoisPrec.map((m) => m.h) : undefined} couleur="#c5005f" max={Math.max(...ventes.parMois.map((m) => m.h), ...ventes.parMoisPrec.map((m) => m.h))} />} />
-              <Carte libelle="Actes signés" genre="résultat" valeur={<Compteur valeur={ventes.ventes} format={(x) => entier.format(Math.round(x))} />} ecartValeur={comparer ? ecart(ventes.ventes, ventes.ventesPrec) : null} detail={comparer ? `contre ${ventes.ventesPrec}` : ''} onClick={() => setOnglet('ventes')}
-                courbe={<Courbe valeurs={ventes.parMois.slice(0, moisVisibles).map((m) => m.n)} prec={comparer ? ventes.parMoisPrec.map((m) => m.n) : undefined} couleur="#c5005f" max={Math.max(...ventes.parMois.map((m) => m.n), ...ventes.parMoisPrec.map((m) => m.n))} />} />
-              <Carte libelle="Honoraires par acte" genre="résultat" valeur={<Compteur valeur={parActe} format={euros} />} ecartValeur={comparer ? ecart(parActe, parActePrec) : null} detail={comparer ? `contre ${euros(parActePrec)}` : `${unite}, en moyenne`} onClick={() => setOnglet('ventes')} />
-              <Carte libelle="Prix moyen de vente" genre="résultat" valeur={<Compteur valeur={prixMoyen} format={(x) => `${entier.format(Math.round(x))} €`} />} ecartValeur={comparer ? ecart(prixMoyen, prixMoyenPrec) : null} detail={comparer ? `contre ${entier.format(Math.round(prixMoyenPrec))} €` : 'prix de l’acte'} onClick={() => setOnglet('ventes')} />
-              <Carte libelle="Taux d’honoraires" genre="résultat" valeur={<Compteur valeur={taux} format={(x) => `${virgule(x)} %`} />} ecartValeur={comparer && tauxPrec ? { texte: `${taux >= tauxPrec ? '▲ +' : '▼ −'}${virgule(Math.abs(taux - tauxPrec))} pt`, bon: taux >= tauxPrec } : null} detail={`honoraires ${unite} ÷ prix de vente`} onClick={() => setOnglet('ventes')} />
-              <Carte libelle="Volume vendu" genre="résultat" valeur={<Compteur valeur={ventes.volume} format={(x) => `${virgule(x / 1e6)} M€`} />} ecartValeur={comparer ? ecart(ventes.volume, ventes.volumePrec) : null} detail={comparer ? `contre ${virgule(ventes.volumePrec / 1e6)} M€` : 'somme des prix de vente'} onClick={() => setOnglet('ventes')} />
-            </> : <Indisponible quoi="Le registre des ventes" onReessayer={reessayer} />}
-            {mandats ? <>
-              <Carte libelle="Mandats rentrés" genre="avancé" valeur={<Compteur valeur={mandats.n} format={(x) => entier.format(Math.round(x))} />} ecartValeur={comparer ? ecart(mandats.n, mandats.nPrec) : null} detail={comparer ? `contre ${mandats.nPrec}` : ''} onClick={() => setOnglet('mandats')}
-                courbe={<Courbe valeurs={mandats.parMois.slice(0, moisVisibles).map((m) => m.n)} prec={comparer ? mandats.parMoisPrec : undefined} couleur="#2f5fa7" max={Math.max(...mandats.parMois.map((m) => m.n), ...mandats.parMoisPrec)} />} />
-              <Carte libelle="Exclusivité" genre="avancé" valeur={<Compteur valeur={pourcent(mandats.exclusifs, mandats.n)} format={(x) => `${Math.round(x)} %`} />} ecartValeur={comparer ? ecartPoints(pourcent(mandats.exclusifs, mandats.n), pourcent(mandats.exclusifsPrec, mandats.nPrec)) : null} detail={comparer ? `contre ${pourcent(mandats.exclusifsPrec, mandats.nPrec)} %` : `${mandats.exclusifs} exclusifs`} onClick={() => setOnglet('mandats')}
-                courbe={<Courbe valeurs={mandats.parMois.slice(0, moisVisibles).map((m) => (m.n ? (m.ex / m.n) * 100 : 0))} couleur="#2f5fa7" max={80} />} />
-            </> : <Indisponible quoi="Le registre des mandats" onReessayer={reessayer} />}
-            {stock ? <>
-              <Carte libelle="Biens en vente" genre="photo du jour" valeur={<Compteur valeur={stock.actifs} format={(x) => entier.format(Math.round(x))} />} detail={`C.A potentiel ${compact(stock.potentiel)}`} onClick={() => setOnglet('stock')} />
-              <Carte libelle="Biens engagés" genre="photo du jour" valeur={<Compteur valeur={stock.engages} format={(x) => entier.format(Math.round(x))} />} detail={`${stock.sousOffre} sous offre · ${stock.sousCompromis} sous compromis`} onClick={() => setOnglet('stock')} />
-            </> : <Indisponible quoi="Le stock" onReessayer={reessayer} />}
-            {ventes ? <>
-              <Carte libelle="Actes déjà datés" genre="à venir" valeur={<Compteur valeur={ventes.actesDates.h} format={compact} />} detail={`${ventes.actesDates.n} compromis, dont ${ventes.actesDates.dIciTroisMois.n} d’ici trois mois`} onClick={() => setOnglet('ventes')} />
-              <Carte libelle="De l’offre à l’acte" genre="délai" valeur={delai != null ? <Compteur valeur={delai} format={(x) => `${Math.round(x)} j`} /> : '–'} ecartValeur={comparer && delai != null && delaiPrec ? { texte: `${delai <= delaiPrec ? '▼ −' : '▲ +'}${Math.abs(delai - delaiPrec)} j`, bon: delai <= delaiPrec } : null} detail={comparer && delaiPrec ? `contre ${delaiPrec} j · médiane` : 'médiane des ventes'} onClick={() => setOnglet('ventes')} />
+              <ChiffreTete libelle="Actes signés" valeur={ventes.ventes} prec={comparer ? ventes.ventesPrec : null} serie={ventes.parMois.slice(0, moisVisibles).map((m) => m.n)} couleur="#c5005f" onClick={() => setOnglet('ventes')} rang={0} />
+              <ChiffreTete libelle="Compromis signés" valeur={ventes.compromis.n} prec={comparer ? ventes.compromis.nPrec : null} serie={ventes.compromis.parMois.slice(0, moisVisibles)} couleur="#d98a00" onClick={() => setOnglet('ventes')} rang={1} />
             </> : null}
+            {mandats ? <ChiffreTete libelle="Mandats rentrés" valeur={mandats.n} prec={comparer ? mandats.nPrec : null} serie={mandats.parMois.slice(0, moisVisibles).map((m) => m.n)} couleur="#2f6fd0" onClick={() => setOnglet('mandats')} rang={2}
+              sous={`${tauxEx} % d’exclusifs${comparer ? `, contre ${tauxExPrec} %` : ''}`} /> : <Indisponible quoi="Le registre des mandats" onReessayer={reessayer} />}
           </div>
         </section>
 
-        <div className="pl-deux">
-          <section className="pl-carte pl-bloc" aria-label="Entrées et sorties par mois">
-            <div className="pl-bloc-tete">
-              <h2>Ce qui rentre, ce qui se vend</h2>
-              <span className="pl-legende"><i style={{ background: '#2f5fa7' }} />Mandats rentrés<i style={{ background: '#c5005f' }} />Ventes actées</span>
-            </div>
-            <div className="pl-defile">
-              <div className="pl-histo" role="img" aria-label={`Mandats rentrés et ventes actées par mois en ${annee}`}>
-                {mois.map((i) => (
-                  <div key={i} className="pl-histo-col">
-                    <div className="pl-histo-barres">
-                      <span style={{ height: `${((mandats?.parMois[i].n ?? 0) / maxFlux) * 100}%`, background: '#2f5fa7' }} title={`${mandats?.parMois[i].n ?? 0} mandats`} />
-                      <span style={{ height: `${((ventes?.parMois[i].n ?? 0) / maxFlux) * 100}%`, background: '#c5005f' }} title={`${ventes?.parMois[i].n ?? 0} ventes`} />
-                    </div>
-                    <span className="pl-histo-lib">{MOIS[i]}<br /><span className="pl-mute pl-num">{mandats?.parMois[i].n ?? '–'} · {ventes?.parMois[i].n ?? '–'}</span></span>
-                  </div>
+        {retenir.length ? (
+          <section className="pl-tdb-retenir" aria-label="À retenir">
+            {retenir.map((r, i) => (
+              <div key={r.cle} className="pl-carte pl-tdb-phrase pl-monte" style={{ animationDelay: `${160 + i * 90}ms` }}>
+                <span className={`pl-icone is-${r.ton}`} aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d={r.icone} /></svg></span>
+                <span className="pl-tdb-phrase-texte"><b>{r.titre}</b><span className="pl-mute">{r.sous}</span></span>
+              </div>
+            ))}
+          </section>
+        ) : null}
+
+        {enCours && (actions.length || route.length) ? (
+          <div className="pl-tdb-deux">
+            {actions.length ? (
+              <section className="pl-carte pl-bloc pl-tdb-bloc" aria-label="À traiter cette semaine">
+                <div className="pl-bloc-tete"><h2>À traiter cette semaine</h2><span className="pl-mute">photo du jour</span></div>
+                {actions.map((a, i) => (
+                  <button key={a.cle} type="button" className="pl-tdb-action pl-glisse" style={{ animationDelay: `${420 + i * 110}ms` }} onClick={() => setOnglet(a.vers)}>
+                    <span className={`pl-etq is-${a.ton}`}>{entier.format(a.n)}</span>
+                    <span className="pl-tdb-action-texte"><b>{a.titre}</b><span className="pl-piste is-fine"><span className={`is-${a.ton}`} style={{ width: `${(a.n / maxAction) * 100}%`, animationDelay: `${600 + i * 110}ms` }} /></span></span>
+                    <span className="pl-tdb-action-h">{a.h ? <><b className="pl-num">{compact(a.h)}</b><span className="pl-mute">{unite}</span></> : null}</span>
+                  </button>
                 ))}
+              </section>
+            ) : null}
+
+            {route.length ? (
+              <section className="pl-carte pl-bloc pl-tdb-bloc" aria-label="Ce qui est en route">
+                <div className="pl-bloc-tete"><h2>Ce qui est en route</h2><button type="button" className="pl-lien" onClick={() => setOnglet('stock')}>Le stock <span aria-hidden="true">→</span></button></div>
+                <span className="pl-tdb-route-tete">
+                  <span className="pl-mute">Honoraires des compromis et des offres acceptées en cours</span>
+                  <b className="pl-tdb-route-valeur pl-num"><Compteur valeur={engage} format={compact} /> {unite}</b>
+                  <span className="pl-mute">Montants saisis, avant les chances d’aboutir.{stock ? ` Le stock en vente porte ${compact(stock.potentiel)} de plus.` : ''}</span>
+                </span>
+                <span className="pl-tdb-ruban" role="img" aria-label="Compromis, offres acceptées, biens en vente">
+                  {route.map((r, i) => <span key={r.cle} style={{ flex: `${Math.max(r.h, 1)} 1 0`, background: r.ton, animationDelay: `${400 + i * 140}ms` }} />)}
+                </span>
+                <div className="pl-tdb-route-legende">
+                  {route.map((r) => (
+                    <span key={r.cle}><i style={{ background: r.ton }} /><span><b>{r.libelle}</b><span className="pl-mute">{entier.format(r.n)} {r.quoi}</span></span><b className="pl-num">{compact(r.h)}</b></span>
+                  ))}
+                </div>
+              </section>
+            ) : null}
+          </div>
+        ) : null}
+
+        {top.length ? (
+          <section className="pl-carte pl-bloc" aria-label="Les premières agences">
+            <div className="pl-bloc-tete"><h2>Les {top.length} premières agences</h2><button type="button" className="pl-lien" onClick={() => setDeplie(true)}>Toutes les agences <span aria-hidden="true">→</span></button></div>
+            <div className="pl-defile">
+              <div className="pl-tdb-agences">
+                {top.map(([cle, a], i) => {
+                  const x = comparer ? ecart(a.h, a.hPrec) : null
+                  return (
+                    <div key={cle} className="pl-tdb-agence pl-glisse" style={{ animationDelay: `${480 + i * 70}ms` }}>
+                      <b className="pl-num pl-tdb-rang">{i + 1}</b>
+                      <button type="button" className="pl-lien-nom" onClick={() => setAgence(cle)}>{nomAgence(cle)}</button>
+                      <span className="pl-tdb-agence-piste">
+                        <span style={{ width: `${(a.h / maxTop) * 100}%`, animationDelay: `${520 + i * 80}ms` }} />
+                        {comparer && a.hPrec ? <i style={{ left: `${Math.min(100, (a.hPrec / maxTop) * 100)}%` }} title={`${annee - 1} : ${compact(a.hPrec)}`} /> : null}
+                      </span>
+                      <b className="pl-num pl-droite">{compact(a.h)}</b>
+                      <span className="pl-droite">{x ? <span className={`pl-delta is-${x.bon ? 'up' : 'dn'} pl-pop`} style={{ animationDelay: `${1.1 + i * 0.1}s` }}>{x.texte}</span> : null}</span>
+                    </div>
+                  )
+                })}
               </div>
             </div>
-            <span className="pl-note">Un mandat rentré aujourd’hui fait une vente dans quelques mois : la courbe bleue annonce la rose. Sous les mois : mandats · ventes.</span>
+            <span className="pl-note">Honoraires {unite} {enCours ? `${annee} à date` : annee}{comparer ? ` · le trait marque ${libelleComparaison}` : ''} · un clic sur une agence filtre tout le pilotage.</span>
           </section>
+        ) : null}
 
-          <section className="pl-carte pl-bloc" aria-label="À surveiller">
-            <div className="pl-bloc-tete"><h2>À surveiller</h2><span className="pl-mute">photo du jour</span></div>
-            {stock ? <>
-              <Surveiller ton="rouge" titre="Mandats échus, bien toujours en vente" sous="date de fin passée" n={stock.echus} onClick={() => setOnglet('stock')} />
-              <Surveiller ton="ambre" titre="Mandats qui échoient sous 30 jours" sous="à renouveler ou à clôturer" n={stock.echoient30} onClick={() => setOnglet('stock')} />
-              <Surveiller ton="rouge" titre="Biens diffusables sans aucun portail" sous="aucune diffusion réussie" n={stock.sansPortail} onClick={() => setOnglet('stock')} />
-              <Surveiller ton="gris" titre="Biens en vente depuis plus de 6 mois" sous={`${compact(stock.hBloque6Mois)} d’honoraires`} n={stock.plusDe6Mois} onClick={() => setOnglet('stock')} />
-            </> : null}
-            {signatures ? <Surveiller ton="bleu" titre="Signatures de mandat en attente" sous="envoyées, pas encore signées" n={signatures.enAttente} onClick={() => setOnglet('mandats')} /> : null}
-          </section>
+        <div className="pl-tdb-plier">
+          <button type="button" className="pl-plier" aria-expanded={deplie} onClick={() => setDeplie((x) => !x)}>{deplie ? 'Masquer le détail' : 'Afficher les 12 autres chiffres et toutes les agences'}</button>
         </div>
 
-        <section className="pl-carte pl-bloc is-table" aria-label="Les agences">
-          <div className="pl-bloc-tete"><h2>Les agences</h2><span className="pl-mute">{comparer ? `écart avec ${libelleComparaison} · ` : ''}un clic filtre tout le pilotage sur l’agence</span></div>
-          <div className="pl-defile">
-            <table className="pl-table">
-              <thead><tr><th scope="col">Agence</th><th scope="col">Honoraires {unite}</th>{comparer ? <th scope="col">Écart</th> : null}<th scope="col">Ventes</th><th scope="col">Mandats rentrés</th>{comparer ? <th scope="col">Écart</th> : null}<th scope="col">Exclusivité</th><th scope="col">En vente</th><th scope="col">C.A potentiel</th></tr></thead>
-              <tbody>
-                {lignes.map((l) => (
-                  <tr key={l.cle}>
-                    <td><button type="button" className="pl-lien-nom" onClick={() => setAgence(l.cle)}>{nomAgence(l.cle)}</button></td>
-                    <td className="pl-num pl-fort"><span className="pl-cellule-barre"><Barre part={((l.v?.h ?? 0) / maxH) * 100} ton="#c5005f" fine />{euros(l.v?.h ?? 0)}</span></td>
-                    {comparer ? <td className="pl-num"><Ecart valeur={ecart(l.v?.h ?? 0, l.v?.hPrec ?? 0)} /></td> : null}
-                    <td className="pl-num">{l.v?.ventes ?? 0}</td>
-                    <td className="pl-num">{l.m?.n ?? 0}</td>
-                    {comparer ? <td className="pl-num"><Ecart valeur={ecart(l.m?.n ?? 0, l.m?.nPrec ?? 0)} /></td> : null}
-                    <td className="pl-num">{l.m?.n ? `${pourcent(l.m.ex, l.m.n)} %` : '–'}</td>
-                    <td className="pl-num">{l.s?.actifs ?? 0}</td>
-                    <td className="pl-num">{l.s ? compact(l.s.h) : '–'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        {deplie ? <>
+          <section className="pl-essentiel" aria-label="L'essentiel">
+            <span className="pl-lib">L’essentiel · {enCours ? `${annee} à date` : annee}{comparer ? ` · comparé à ${libelleComparaison}` : ''}</span>
+            <div className="pl-grille-kpi is-douze">
+              {ventes ? <>
+                <Carte libelle={`Honoraires ${unite}`} genre="résultat" valeur={<Compteur valeur={ventes.honoraires} format={compact} />} ecartValeur={comparer ? ecart(ventes.honoraires, ventes.honorairesPrec) : null} detail={comparer ? `contre ${compact(ventes.honorairesPrec)}` : ''} onClick={() => setOnglet('ventes')} />
+                <Carte libelle="Actes signés" genre="résultat" valeur={<Compteur valeur={ventes.ventes} format={(x) => entier.format(Math.round(x))} />} ecartValeur={comparer ? ecart(ventes.ventes, ventes.ventesPrec) : null} detail={comparer ? `contre ${ventes.ventesPrec}` : ''} onClick={() => setOnglet('ventes')} />
+                <Carte libelle="Honoraires par acte" genre="résultat" valeur={<Compteur valeur={parActe} format={euros} />} ecartValeur={comparer ? ecart(parActe, parActePrec) : null} detail={comparer ? `contre ${euros(parActePrec)}` : `${unite}, en moyenne`} onClick={() => setOnglet('ventes')} />
+                <Carte libelle="Prix moyen de vente" genre="résultat" valeur={<Compteur valeur={prixMoyen} format={(x) => `${entier.format(Math.round(x))} €`} />} ecartValeur={comparer ? ecart(prixMoyen, prixMoyenPrec) : null} detail={comparer ? `contre ${entier.format(Math.round(prixMoyenPrec))} €` : 'prix de l’acte'} onClick={() => setOnglet('ventes')} />
+                <Carte libelle="Taux d’honoraires" genre="résultat" valeur={<Compteur valeur={taux} format={(x) => `${virgule(x)} %`} />} ecartValeur={comparer && tauxPrec ? { texte: `${taux >= tauxPrec ? '▲ +' : '▼ −'}${virgule(Math.abs(taux - tauxPrec))} pt`, bon: taux >= tauxPrec } : null} detail={`honoraires ${unite} ÷ prix de vente`} onClick={() => setOnglet('ventes')} />
+                <Carte libelle="Volume vendu" genre="résultat" valeur={<Compteur valeur={ventes.volume} format={(x) => `${virgule(x / 1e6)} M€`} />} ecartValeur={comparer ? ecart(ventes.volume, ventes.volumePrec) : null} detail={comparer ? `contre ${virgule(ventes.volumePrec / 1e6)} M€` : 'somme des prix de vente'} onClick={() => setOnglet('ventes')} />
+              </> : null}
+              {mandats ? <>
+                <Carte libelle="Mandats rentrés" genre="avancé" valeur={<Compteur valeur={mandats.n} format={(x) => entier.format(Math.round(x))} />} ecartValeur={comparer ? ecart(mandats.n, mandats.nPrec) : null} detail={comparer ? `contre ${mandats.nPrec}` : ''} onClick={() => setOnglet('mandats')} />
+                <Carte libelle="Exclusivité" genre="avancé" valeur={<Compteur valeur={tauxEx} format={(x) => `${Math.round(x)} %`} />} ecartValeur={comparer ? ecartPoints(tauxEx, tauxExPrec) : null} detail={comparer ? `contre ${tauxExPrec} %` : `${mandats.exclusifs} exclusifs`} onClick={() => setOnglet('mandats')} />
+              </> : null}
+              {stock ? <>
+                <Carte libelle="Biens en vente" genre="photo du jour" valeur={<Compteur valeur={stock.actifs} format={(x) => entier.format(Math.round(x))} />} detail={`C.A potentiel ${compact(stock.potentiel)}`} onClick={() => setOnglet('stock')} />
+                <Carte libelle="Biens engagés" genre="photo du jour" valeur={<Compteur valeur={stock.engages} format={(x) => entier.format(Math.round(x))} />} detail={`${stock.sousOffre} sous offre · ${stock.sousCompromis} sous compromis`} onClick={() => setOnglet('stock')} />
+              </> : null}
+              {ventes ? <>
+                <Carte libelle="Actes déjà datés" genre="à venir" valeur={<Compteur valeur={ventes.actesDates.h} format={compact} />} detail={`${ventes.actesDates.n} compromis, dont ${ventes.actesDates.dIciTroisMois.n} d’ici trois mois`} onClick={() => setOnglet('ventes')} />
+                <Carte libelle="De l’offre à l’acte" genre="délai" valeur={delai != null ? <Compteur valeur={delai} format={(x) => `${Math.round(x)} j`} /> : '–'} ecartValeur={comparer && delai != null && delaiPrec ? { texte: `${delai <= delaiPrec ? '▼ −' : '▲ +'}${Math.abs(delai - delaiPrec)} j`, bon: delai <= delaiPrec } : null} detail={comparer && delaiPrec ? `contre ${delaiPrec} j · médiane` : 'médiane des ventes'} onClick={() => setOnglet('ventes')} />
+              </> : null}
+            </div>
+          </section>
+
+          <div className="pl-deux">
+            <section className="pl-carte pl-bloc" aria-label="Entrées et sorties par mois">
+              <div className="pl-bloc-tete">
+                <h2>Ce qui rentre, ce qui se vend</h2>
+                <span className="pl-legende"><i style={{ background: '#2f5fa7' }} />Mandats rentrés<i style={{ background: '#c5005f' }} />Ventes actées</span>
+              </div>
+              <div className="pl-defile">
+                <div className="pl-histo" role="img" aria-label={`Mandats rentrés et ventes actées par mois en ${annee}`}>
+                  {mois.map((i) => (
+                    <div key={i} className="pl-histo-col">
+                      <div className="pl-histo-barres">
+                        <span style={{ height: `${((mandats?.parMois[i].n ?? 0) / maxFlux) * 100}%`, background: '#2f5fa7' }} title={`${mandats?.parMois[i].n ?? 0} mandats`} />
+                        <span style={{ height: `${((ventes?.parMois[i].n ?? 0) / maxFlux) * 100}%`, background: '#c5005f' }} title={`${ventes?.parMois[i].n ?? 0} ventes`} />
+                      </div>
+                      <span className="pl-histo-lib">{MOIS[i]}<br /><span className="pl-mute pl-num">{mandats?.parMois[i].n ?? '–'} · {ventes?.parMois[i].n ?? '–'}</span></span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <span className="pl-note">Un mandat rentré aujourd’hui fait une vente dans quelques mois : la couleur bleue annonce la rose. Sous les mois : mandats · ventes.</span>
+            </section>
+
+            <section className="pl-carte pl-bloc" aria-label="À surveiller">
+              <div className="pl-bloc-tete"><h2>À surveiller aussi</h2><span className="pl-mute">photo du jour</span></div>
+              {stock ? <>
+                <Surveiller ton="ambre" titre="Mandats qui échoient sous 30 jours" sous="à renouveler ou à clôturer" n={stock.echoient30} onClick={() => setOnglet('stock')} />
+                <Surveiller ton="rouge" titre="Biens diffusables sans aucun portail" sous="aucune diffusion réussie" n={stock.sansPortail} onClick={() => setOnglet('stock')} />
+                <Surveiller ton="gris" titre="Biens en vente depuis plus de 6 mois" sous={`${compact(stock.hBloque6Mois)} d’honoraires`} n={stock.plusDe6Mois} onClick={() => setOnglet('stock')} />
+              </> : null}
+              {!enCours && stock ? <Surveiller ton="rouge" titre="Mandats échus, bien toujours en vente" sous="date de fin passée" n={stock.echus} onClick={() => setOnglet('stock')} /> : null}
+              {!enCours && signatures ? <Surveiller ton="bleu" titre="Signatures de mandat en attente" sous="envoyées, pas encore signées" n={signatures.enAttente} onClick={() => setOnglet('mandats')} /> : null}
+            </section>
           </div>
-        </section>
+
+          <section className="pl-carte pl-bloc is-table" aria-label="Les agences">
+            <div className="pl-bloc-tete"><h2>Les agences</h2><span className="pl-mute">{comparer ? `écart avec ${libelleComparaison} · ` : ''}un clic filtre tout le pilotage sur l’agence</span></div>
+            <div className="pl-defile">
+              <table className="pl-table">
+                <thead><tr><th scope="col">Agence</th><th scope="col">Honoraires {unite}</th>{comparer ? <th scope="col">Écart</th> : null}<th scope="col">Ventes</th><th scope="col">Mandats rentrés</th>{comparer ? <th scope="col">Écart</th> : null}<th scope="col">Exclusivité</th><th scope="col">En vente</th><th scope="col">C.A potentiel</th></tr></thead>
+                <tbody>
+                  {lignes.map((l) => (
+                    <tr key={l.cle}>
+                      <td><button type="button" className="pl-lien-nom" onClick={() => setAgence(l.cle)}>{nomAgence(l.cle)}</button></td>
+                      <td className="pl-num pl-fort"><span className="pl-cellule-barre"><Barre part={((l.v?.h ?? 0) / maxH) * 100} ton="#c5005f" fine />{euros(l.v?.h ?? 0)}</span></td>
+                      {comparer ? <td className="pl-num"><Ecart valeur={ecart(l.v?.h ?? 0, l.v?.hPrec ?? 0)} /></td> : null}
+                      <td className="pl-num">{l.v?.ventes ?? 0}</td>
+                      <td className="pl-num">{l.m?.n ?? 0}</td>
+                      {comparer ? <td className="pl-num"><Ecart valeur={ecart(l.m?.n ?? 0, l.m?.nPrec ?? 0)} /></td> : null}
+                      <td className="pl-num">{l.m?.n ? `${pourcent(l.m.ex, l.m.n)} %` : '–'}</td>
+                      <td className="pl-num">{l.s?.actifs ?? 0}</td>
+                      <td className="pl-num">{l.s ? compact(l.s.h) : '–'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </> : null}
       </>
     )
   }

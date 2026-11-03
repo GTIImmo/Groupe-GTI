@@ -861,3 +861,37 @@ Frédéric a validé la v29 : « Oui, applique partout ». Chiffre d'affaires, A
 - **Classements** : podium à médailles en dégradé, avec un halo derrière le 1er ; l'animation est relancée à chaque tri ou bascule.
 
 Le code de chaque planche a été exécuté hors ligne (verif_*4.js : départ, fin, survols, tris), sans trou manquant. Aucune source externe autre que Google Fonts, et aucun « Hektor » affiché.
+
+## 32. Retour à l'app — le Tableau de bord v3 codé dans le vrai écran (03/11 soir)
+Frédéric : « Oui, passe à l'app ». Lecture seule, rien en base. Le code est dans `PilotageScreen.tsx`, `pilotage.css` et `lib/pilotage.ts`, et repose sur l'étape 1 (fe5e6e9).
+
+**Le calcul** (`calculerVentes`, ajout seul) :
+- **`compromis`** : une chaîne compte dans l'année de SA date de compromis, qu'elle soit allée à l'acte, tombée ou encore en cours. Les deux lectures N et N-1 sont parcourues et dédoublonnées par chaîne ; l'an passé est compté à la même date ; on garde aussi le mois par mois.
+- **`enRoute`**, la photo du jour :
+  - compromis en cours (nombre et honoraires) ;
+  - offres acceptées en cours ;
+  - actes dont la date prévue est dépassée ;
+  - offres acceptées depuis plus de 30 jours sans compromis.
+- ⚠ La lecture ne voit que les chaînes dont le dernier événement tombe en N ou N-1 : une affaire immobile depuis 2024 n'y est pas.
+
+**L'écran**, onglet « Tableau de bord » (l'ancien libellé était « Vue d'ensemble ») :
+- **La grande carte** : les honoraires en grand, avec un reflet et un écart qui apparaît d'un rebond. Dessous, la courbe des mois, qui se trace avec une aire en dégradé et l'an passé en pointillé. Au survol, un repère et une bulle par mois ; une onde sur le dernier mois ; deux halos qui dérivent.
+- **Trois chiffres de tête**, chacun avec sa mini-courbe des mois : actes, compromis, mandats (avec la part d'exclusifs).
+- **Trois phrases « à retenir », CALCULÉES** à partir des chiffres affichés, sans texte écrit à la main :
+  - le C.A. tient, progresse ou recule, avec un seuil de 3 % ;
+  - les compromis, avec le même seuil de 3 % ;
+  - l'exclusivité, avec un seuil de 2 points.
+- **« À traiter cette semaine »** (année en cours seulement) : actes à date dépassée, offres acceptées sans compromis depuis 30 jours, mandats échus encore en vente, signatures en attente.
+- **« Ce qui est en route »** : les honoraires des compromis et des offres acceptées en cours, puis le potentiel du stock.
+  - Ce sont des montants **saisis, sans pondération** : la prévision pondérée reste l'étape 6.
+  - « Mandats à valider » et « acheteurs à rappeler » n'y sont PAS : ils attendent les étapes 4 et 5, qui demandent un accord pour toucher la base.
+- **Les six premières agences** : barre en dégradé, trait de l'an passé, écart.
+- **Replié derrière un bouton** : les 12 chiffres de l'essentiel, « Ce qui rentre, ce qui se vend », les autres points à surveiller et le tableau complet des agences. Rien de l'ancien écran n'est perdu.
+- **Partout** : cartes aux coins de 20 px avec des ombres plus fines, filtres floutés. Tout le mouvement est coupé si l'appareil le demande.
+
+**Contrôles** :
+- `npm run build` est vert.
+- Serveur de démonstration local (données inventées) à 1 440 px : la page se rend, le survol de la courbe donne bien la bulle (« avr. 2026 · 274 k€ · 2025 : 172 k€ »), et le détail replié s'ouvre (12 cartes, 8 agences).
+- À 375 px : aucun débordement, et un mois sur deux affiché sous la courbe.
+- Seules erreurs console : l'adresse `/api/hektor-diffusion/broadcasts`, absente du serveur de démonstration, comme à l'étape 1.
+- ⏳ À voir sur les vraies données après le push. Les autres onglets (Ventes, Mandats, Stock) n'ont que le nouveau style commun : leur portage suit.

@@ -250,6 +250,14 @@ export type VentesCalcul = {
   negos: Array<{ id: string; nom: string; dossiers: number; part: number; partPrec: number }>
   attribue: number
   agences: Map<string, { ventes: number; h: number; hPrec: number; ventesPrec: number }>
+  // 03/11 (tableau de bord v3) : compromis signés dans l'année, mois par mois, et ce qui est en route aujourd'hui.
+  compromis: { n: number; nPrec: number; parMois: number[]; parMoisPrec: number[] }
+  enRoute: {
+    compromis: { n: number; h: number }
+    offresAcceptees: { n: number; h: number }
+    actesDepasses: { n: number; h: number }
+    offresSansCompromis30: { n: number; h: number }
+  }
 }
 
 export function calculerVentes(source: Exclude<PilotageSources['ventes'], Error>, annee: number, agence: string | null): VentesCalcul {
@@ -314,8 +322,37 @@ export function calculerVentes(source: Exclude<PilotageSources['ventes'], Error>
   const agences = new Map<string, { ventes: number; h: number; hPrec: number; ventesPrec: number }>()
   for (const ligne of n) { const a = agences.get(cleAgence(ligne.agence_nom)) ?? { ventes: 0, h: 0, hPrec: 0, ventesPrec: 0 }; a.ventes += 1; a.h += ligne.honoraires ?? 0; agences.set(cleAgence(ligne.agence_nom), a) }
   for (const ligne of p) { const a = agences.get(cleAgence(ligne.agence_nom)) ?? { ventes: 0, h: 0, hPrec: 0, ventesPrec: 0 }; a.ventesPrec += 1; a.hPrec += ligne.honoraires ?? 0; agences.set(cleAgence(ligne.agence_nom), a) }
+  // Compromis signés : une chaîne compte l'année de SA date de compromis, qu'elle soit allée à l'acte,
+  // tombée ou encore en cours. Les deux lectures (N et N-1) sont parcourues : un compromis de décembre
+  // vendu en janvier est rangé sous l'année de la vente par la lecture.
+  const toutes = new Map<number, RegistreDossierRow>()
+  for (const ligne of [...source.n, ...source.p]) if (garde(ligne) && !toutes.has(ligne.app_chaine_id)) toutes.set(ligne.app_chaine_id, ligne)
+  const cp = { n: 0, nPrec: 0, parMois: Array.from({ length: 12 }, () => 0), parMoisPrec: Array.from({ length: 12 }, () => 0) }
+  for (const ligne of toutes.values()) {
+    const date = String(ligne.date_compromis ?? '').slice(0, 10)
+    if (!estDate(date)) continue
+    const m = Number(date.slice(5, 7)) - 1
+    if (date.startsWith(String(annee))) { cp.n += 1; cp.parMois[m] += 1 }
+    else if (date.startsWith(String(annee - 1))) { cp.parMoisPrec[m] += 1; if (date.slice(5, 10) <= borne) cp.nPrec += 1 }
+  }
+  // Ce qui est en route aujourd'hui (seulement les chaînes lues : dernier événement en N ou N-1).
+  const route = { compromis: { n: 0, h: 0 }, offresAcceptees: { n: 0, h: 0 }, actesDepasses: { n: 0, h: 0 }, offresSansCompromis30: { n: 0, h: 0 } }
+  const ilYa30 = (() => { const d = new Date(`${jour}T12:00:00`); d.setDate(d.getDate() - 30); return d.toISOString().slice(0, 10) })()
+  for (const ligne of toutes.values()) {
+    const h = ligne.honoraires ?? 0
+    if (ligne.etape === 'compromis') {
+      route.compromis.n += 1; route.compromis.h += h
+      const prevue = String(ligne.date_acte_prevue ?? '').slice(0, 10)
+      if (estDate(prevue) && prevue < jour) { route.actesDepasses.n += 1; route.actesDepasses.h += h }
+    } else if (ligne.etape === 'offre_acceptee') {
+      route.offresAcceptees.n += 1; route.offresAcceptees.h += h
+      const offre = String(ligne.date_offre ?? '').slice(0, 10)
+      if (estDate(offre) && offre <= ilYa30) { route.offresSansCompromis30.n += 1; route.offresSansCompromis30.h += h }
+    }
+  }
   return {
     annee, enCours, borne,
+    compromis: cp, enRoute: route,
     honoraires: somme(n.map((l) => l.honoraires)), honorairesPrec: somme(p.map((l) => l.honoraires)),
     ventes: n.length, ventesPrec: p.length,
     volume: somme(n.map((l) => l.montant)), volumePrec: somme(p.map((l) => l.montant)),
