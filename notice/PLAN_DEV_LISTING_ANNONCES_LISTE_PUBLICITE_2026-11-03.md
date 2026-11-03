@@ -298,3 +298,12 @@ numéros de passerelles (0c) et les droits (4).
 - Reste en base une ligne cible `20/paper disabled` (trace du geste, sans effet).
 - ⚠ **Pas encore eprouve** : un clic par un NEGOCIATEUR (le lot 4 en ligne le permet) ; Bien'ici / Leboncoin (numero d'agence ; Courpiere = 11) ; la reserve des anciennes passerelles LB 35-44.
 - Onglet de Frederic remis sur « Liste » apres l'essai.
+
+## 03/11 18:15 -- ESSAI REEL LEBONCOIN : VERT, et la reserve des anciens numeros TOMBE
+
+- **61713 (Courpiere), par l'ecran dans le Chrome de Frederic** : Leboncoin coche -> en ligne en **11 s** ; Hektor relu a part : passerelle **46 leboncoinDirect** (compte 496094) + 11 bienicidirect ; base : `bienicidirect, leboncoinDirect`, validation/diffusable intacts. Decoche -> absente en **9 s** ; Hektor : 11 seul ; base : `bienicidirect`. RETOUR EXACT.
+- Le numero vient de `app_diffusion_agency_target` (Courpiere : LB 46, BI 11) -- les deux confirmes par Hektor.
+- ⭐ **Reserve « anciennes passerelles LB 35-44 » : TOMBEE.** `hektor_broadcast` garde 139 lignes sur 35-44, mais ces passerelles n'ont plus ete relues depuis le 07/07 au 06/10 (45-61 : le 26/10). Hektor relu sur 3 annonces de ces vieilles listes (63167, 62985, 61397) : publiees sur **51, 54, 52**, exactement les numeros de la table d'agence (et BI 8, 4, 17 aussi). Les lignes 35-44 sont des RESTES non purges, pas des publications.
+- Note (non traite) : ces restes peuvent encore nourrir `app_mandat_broadcasts_current` ; sans effet sur les cases (elles lisent `portails_resume`). A regarder si un « en erreur » fantome apparait.
+- Reste en base une ligne cible `46/leboncoinDirect disabled` (trace).
+- ⚠ Toujours pas eprouve : un clic par un NEGOCIATEUR.
