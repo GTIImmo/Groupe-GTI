@@ -356,3 +356,18 @@
 .app-shell.app-shell-modern .panel-grid.av3 .table-wrap.listing-table-active .av3-ecart .av3-quand { color: #7c8082 !important; margin: 0 !important; display: inline !important; -webkit-line-clamp: unset !important; }
 /* les dates du mandat : la regle « td span » leur ajoutait 4 px et la coupe a une ligne */
 .app-shell.app-shell-modern .panel-grid.av3 .table-wrap.listing-table-active .av3-dates span { margin: 0 !important; display: inline !important; }
+/* 03/11 soir -- ligne lieu + negociateur : la ville seule (sans code postal), l'agence en info-bulle.
+   Les deux se partagent la ligne : la ville cede jusqu'a 55 %, le nom du negociateur garde le reste. */
+.av3 .av3-lieu { flex: 0 1 auto; min-width: 0; max-width: 55%; }
+.av3 .av3-lieu .av3-ville { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #3b4143; font-weight: 600; }
+.av3 .av3-nego { flex: 1 1 0; }
+.av3 .av3-nego-nom { min-width: 0; }
+.app-shell.app-shell-modern .panel-grid.av3 .table-wrap.listing-table-active .av3-lieu .av3-ville { color: #3b4143 !important; margin: 0 !important; display: block !important; -webkit-line-clamp: unset !important; }
+.app-shell.app-shell-modern .panel-grid.av3 .table-wrap.listing-table-active .av3-nego-nom,
+.app-shell.app-shell-modern .panel-grid.av3 .table-wrap.listing-table-active .av3-ini { margin: 0 !important; }
+/* mesure a 1280 px : la ligne ne fait que 181 px -- ville + nom complet n'y tiennent pas cote a cote.
+   La ville et le negociateur passent sur DEUX lignes courtes, chacune entiere. */
+.av3 .av3-bien:not(.av3-pub-bien) .av3-ligne { flex-direction: column; align-items: flex-start; gap: 3px; overflow: visible; }
+.av3 .av3-bien:not(.av3-pub-bien) .av3-lieu { max-width: 100%; }
+.av3 .av3-bien:not(.av3-pub-bien) .av3-nego { flex: 0 1 auto; max-width: 100%; }
+.av3 .av3-bien:not(.av3-pub-bien) .av3-nego-nom { overflow: hidden; text-overflow: ellipsis; }

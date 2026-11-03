@@ -198,11 +198,12 @@ function BienPrixCells(p: BienPrixProps) {
               {manques.length ? <span className="av3-tag manque" title={`À compléter : ${manques.join(', ')}`}>À compléter{manques.length === 1 ? ` · ${manques[0]}` : ` · ${manques.length}`}</span> : null}
             </span>
             <span className="av3-ligne">
-              {item.ville ? <span className="av3-lieu"><Svg d={ICONE.lieu} strokeWidth={2.2} />{item.ville}{item.code_postal ? <span>{item.code_postal}</span> : null}</span> : null}
-              <span className="av3-nego" title={nego ? `${nego} · ${agence}` : 'Non affecté'}>
+              {/* 03/11 (Frederic) : la ville SEULE, et plus l'agence sur la ligne -- le nom du negociateur
+                  etait coupe. Code postal et agence restent dans l'info-bulle. */}
+              {item.ville ? <span className="av3-lieu" title={`${item.ville}${item.code_postal ? ` ${item.code_postal}` : ''}`}><Svg d={ICONE.lieu} strokeWidth={2.2} /><span className="av3-ville">{item.ville}</span></span> : null}
+              <span className="av3-nego" title={nego ? `${nego} · agence ${agence}` : 'Non affecté'}>
                 <span className={`av3-ini${nego ? '' : ' vide'}`} aria-hidden="true">{nego ? initiales(nego) : '—'}</span>
                 <span className={`av3-nego-nom${nego ? '' : ' vide'}`}>{nego ?? 'Non affecté'}</span>
-                <span className="av3-nego-ag">· {agence}</span>
               </span>
             </span>
           </div>
