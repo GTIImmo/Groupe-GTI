@@ -338,3 +338,21 @@
 @media (min-width: 900px) { .av3 .av3-presence { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
 .av3 .av3-carte-val b { font-size: 22px; }
 .av3 .av3-th-nom { font-size: 10.5px; }
+/* 03/11 soir -- Frederic : « ces deux colonnes se sont tassees quand il y a une baisse de prix ».
+   L'ancien prix et l'ecart etaient sur UNE ligne insecable (« 9 000 € +1333,3 % ») : ils debordaient sur
+   la colonne Mandat. Trois lignes courtes, chacune bornee a sa colonne. */
+.av3 .av3-prix, .av3 .av3-avant { overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.av3 .av3-avant { font-size: 11.5px; color: #7c8082; margin-top: 2px; }
+.av3 .av3-ecart { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 6px; margin-top: 4px; max-width: 100%; }
+.av3 .av3-ecart b { display: inline-flex; align-items: center; gap: 2px; height: 20px; padding: 0 7px 0 5px; border-radius: 6px; font-size: 11px; font-weight: 800; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.av3 .av3-ecart b svg { width: 11px; height: 11px; flex: 0 0 11px; }
+.av3 .av3-ecart b.baisse { background: #e8f5ee; color: #2f7d59; }
+.av3 .av3-ecart b.hausse { background: #fff3df; color: #8a4f0f; }
+.av3 .av3-ecart .av3-quand { margin: 0; font-size: 11px; color: #7c8082; white-space: nowrap; }
+.app-shell.app-shell-modern .panel-grid.av3 .table-wrap.listing-table-active .av3-avant,
+.app-shell.app-shell-modern .panel-grid.av3 .table-wrap.listing-table-active .av3-avant s { color: #7c8082 !important; }
+.app-shell.app-shell-modern .panel-grid.av3 .table-wrap.listing-table-active .av3-ecart b.baisse { color: #2f7d59 !important; }
+.app-shell.app-shell-modern .panel-grid.av3 .table-wrap.listing-table-active .av3-ecart b.hausse { color: #8a4f0f !important; }
+.app-shell.app-shell-modern .panel-grid.av3 .table-wrap.listing-table-active .av3-ecart .av3-quand { color: #7c8082 !important; margin: 0 !important; display: inline !important; -webkit-line-clamp: unset !important; }
+/* les dates du mandat : la regle « td span » leur ajoutait 4 px et la coupe a une ligne */
+.app-shell.app-shell-modern .panel-grid.av3 .table-wrap.listing-table-active .av3-dates span { margin: 0 !important; display: inline !important; }

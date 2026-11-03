@@ -91,8 +91,8 @@ export function AnnonceV2Colgroup() {
     //   comptent le padding des cellules (table-layout: fixed).
     <colgroup>
       <col />{/* bien (photo, titre, etiquettes, lieu, negociateur, numeros) -- flexible */}
-      <col style={{ width: '106px' }} />{/* prix */}
-      <col style={{ width: '146px' }} />{/* mandat : bouclier + periode */}
+      <col style={{ width: '118px' }} />{/* prix : prix, ancien barre, pastille d'ecart (03/11 : 106 debordait) */}
+      <col style={{ width: '134px' }} />{/* mandat : bouclier + periode */}
       <col style={{ width: '78px' }} />{/* diffusion : un symbole de 34 px (78 : l'en-tete « DIFFUSION » doit tenir) */}
       <col style={{ width: '268px' }} />{/* actions : sceau 116 + 3 x 34 + 3 x 6 + padding 30 -- meme hauteur 34 px que les boutons Contacts */}
     </colgroup>
@@ -168,7 +168,11 @@ function BienPrixCells(p: BienPrixProps) {
     const n = Number(item.prix)
     if (!ancien || !Number.isFinite(a) || !Number.isFinite(n) || a === 0 || a === n) return null
     const pct = ((n - a) / a) * 100
-    return { texte: `${pct > 0 ? '+' : '−'}${Math.abs(pct).toFixed(1).replace('.', ',')} %`, baisse: pct < 0 }
+    // 03/11 : « +1333,3 % » debordait sur la colonne Mandat. Une decimale sous 10 %, aucune au-dela,
+    // separateur de milliers francais (« +1 333 % »).
+    const abs = Math.abs(pct)
+    const chiffre = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: abs < 10 ? 1 : 0 }).format(abs)
+    return { texte: `${pct > 0 ? '+' : '−'}${chiffre} %`, baisse: pct < 0 }
   })()
   const changeLe = jourLocal(item.price_change_last_detected_at)
   const ilYa = changeLe ? Math.max(0, Math.round((Date.now() - changeLe.getTime()) / 86400000)) : null
@@ -208,8 +212,14 @@ function BienPrixCells(p: BienPrixProps) {
         <div className={`av3-prix${prix ? '' : ' vide'}`}>{prix ?? 'Prix à saisir'}</div>
         {ancien && variation ? (
           <>
-            <div className="av3-avant"><s>{ancien}</s> <b className={variation.baisse ? 'baisse' : ''}>{variation.texte}</b></div>
-            {ilYa != null ? <div className="av3-quand">il y a {ilYa} j</div> : null}
+            <div className="av3-avant" title={`Ancien prix : ${ancien}`}><s>{ancien}</s></div>
+            <div className="av3-ecart">
+              <b className={variation.baisse ? 'baisse' : 'hausse'} title={variation.baisse ? 'Baisse de prix' : 'Hausse de prix'}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={variation.baisse ? 'M12 5v14M6 13l6 6 6-6' : 'M12 19V5M6 11l6-6 6 6'} /></svg>
+                {variation.texte}
+              </b>
+              {ilYa != null ? <span className="av3-quand">{ilYa} j</span> : null}
+            </div>
           </>
         ) : null}
       </td>
