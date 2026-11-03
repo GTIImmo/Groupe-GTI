@@ -690,3 +690,9 @@ diffusable », base à 0. Registre de 24113 depuis octobre : 6 offres d'essai re
 ⬜ Restent sur VA6482 : les contacts ESSAI / TESTCLAUDE ajoutés à ses MANDANTS ; les 6 offres refusées (à écarter du pilotage).
 ⬜ 62774 (compromis annulé 50048, bien Clos) et 23287 / VA31732 (vente 5537 + compromis 19133, bien « Vendu ») : NON touchés —
 supprimer la vente ou le compromis fait REDESCENDRE le statut (un bien d'essai clos ou vendu redeviendrait « Actif », donc dans le stock).
+
+**03/11 — Frédéric : « écarte-les du pilotage » (62774, 23287, et les offres d'essai qu'on ne supprime pas).** Codé dans
+`apps/hektor-v1/src/lib/pilotage.ts` : `ANNONCES_ESSAI` (23287, 24933, 61398, 62774, 62965) écartées des ventes (N et N-1), des
+mandats, du stock et des signatures ; `OFFRES_ESSAI` (32849, 33109, 33110, 33112, 33114, 33115, 33116 sur VA6482, 20588 sur 41559)
+prête pour l'onglet Affaires. Effet mesuré : stock −2 biens (61398, 62965), mandats 2026 −1 (61398), vente 5537 de 2024 hors du
+C.A, 1 signature d'essai hors compte. Rien n'est écrit en base ni chez Hektor. `npm run build` vert ; non vu à l'écran (après push).

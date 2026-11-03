@@ -12,6 +12,20 @@
 import { hasSupabaseEnv, supabase } from './supabase'
 import { loadRegistreDossiers, loadRepartitionsDesChaines, type RegistreDossierRow, type RepartitionLigne } from './api'
 
+// ───────────────────────────── les ESSAIS, écartés partout ─────────────────────────────
+// Décision de Frédéric (03/11) : les transactions d'essai qu'on ne supprime pas chez Hektor sont ÉCARTÉES du pilotage.
+// Liste mesurée : notice/AUDIT_PILOTAGE_GLOBAL_2026-11-02.md § 21. ⚠ Un bien d'essai se reconnaît à ses MANDANTS
+// (« TEST GTI Delphine », « Test SELL AND SIGNE »…), jamais à un nom approchant : TESTUD est un vrai patronyme.
+//   23287 (VA31732, mandant « test GERPHAGNON ») : compromis 19133 + vente 5537 du 25/11/2024 (300 000 €)
+//   24933 (« Test SELL AND SIGNE ») · 61398 (« TEST GTI Delphine », mandat 18420) · 62774 (bac à sable, clos le 21/10)
+//   62965 (« CLAUDE TESTCLAUDE »)
+// ⛔ VA6482 / 24113 N'EST PAS un bien d'essai (vrais clients) : seules ses OFFRES d'essai sont écartées, une par une.
+const ANNONCES_ESSAI = new Set([23287, 24933, 61398, 62774, 62965])
+/** Offres d'essai posées sur de VRAIS biens (une offre ne se supprime pas) : VA6482 / 24113, et 41559 (acquéreur
+ *  « Test vv GERPHAGNON »). Pour l'onglet Affaires. */
+export const OFFRES_ESSAI = new Set(['32849', '33109', '33110', '33112', '33114', '33115', '33116', '20588'])
+export const estAnnonceEssai = (annonce: number | string | null | undefined) => ANNONCES_ESSAI.has(Number(annonce))
+
 // ───────────────────────────── les lignes lues ─────────────────────────────
 
 export type PilotageMandat = { debut: string; type: string; agence: string | null; nego: string | null; montant: number | null }
@@ -59,7 +73,9 @@ const enErreur = (raison: unknown) => (raison instanceof Error ? raison : new Er
 const nombre = (valeur: unknown) => (valeur == null || valeur === '' ? null : Number.isFinite(Number(valeur)) ? Number(valeur) : null)
 
 async function lireVentes(annee: number) {
-  const [n, p] = await Promise.all([loadRegistreDossiers(annee), loadRegistreDossiers(annee - 1)])
+  const [toutN, toutP] = await Promise.all([loadRegistreDossiers(annee), loadRegistreDossiers(annee - 1)])
+  const n = toutN.filter((ligne) => !estAnnonceEssai(ligne.hektor_annonce_id))
+  const p = toutP.filter((ligne) => !estAnnonceEssai(ligne.hektor_annonce_id))
   const chaines = (lignes: RegistreDossierRow[]) => lignes.filter((ligne) => ligne.etape === 'vendu').map((ligne) => ligne.app_chaine_id)
   const [repN, repP] = await Promise.all([lireRepartitions(chaines(n)), lireRepartitions(chaines(p))])
   return { n, p, repN, repP }
@@ -80,13 +96,13 @@ async function lireMandats(annee: number): Promise<PilotageMandat[]> {
   const client = supabase
   const lignes = await toutLire<Record<string, unknown>>((de, a) => client
     .from('app_mandat_register_current')
-    .select('mandat_date_debut,mandat_type,agence_nom,commercial_nom,mandat_montant,register_source_kind')
+    .select('hektor_annonce_id,mandat_date_debut,mandat_type,agence_nom,commercial_nom,mandat_montant,register_source_kind')
     .gte('mandat_date_debut', `${annee - 1}-01-01`)
     .lte('mandat_date_debut', `${annee}-12-31 23:59:59`)
     .order('register_row_id', { ascending: true })
     .range(de, a))
   return lignes
-    .filter((ligne) => String(ligne.register_source_kind ?? '') !== 'recherche')
+    .filter((ligne) => String(ligne.register_source_kind ?? '') !== 'recherche' && !estAnnonceEssai(ligne.hektor_annonce_id as number | null))
     .map((ligne) => ({
       debut: String(ligne.mandat_date_debut ?? '').slice(0, 10),
       type: String(ligne.mandat_type ?? '').trim().toUpperCase(),
@@ -100,7 +116,7 @@ async function lireStock(): Promise<PilotageStock[]> {
   if (!hasSupabaseEnv || !supabase) return mockStock()
   const { data, error } = await supabase.rpc('app_pilotage_stock')
   if (error) throw new Error(error.message)
-  return ((data ?? []) as Array<Record<string, unknown>>).map((ligne) => ({
+  return ((data ?? []) as Array<Record<string, unknown>>).filter((ligne) => !estAnnonceEssai(ligne.hektor_annonce_id as number | null)).map((ligne) => ({
     app_dossier_id: Number(ligne.app_dossier_id),
     statut_annonce: String(ligne.statut_annonce ?? ''),
     agence_nom: (ligne.agence_nom as string | null) ?? null,
@@ -121,13 +137,14 @@ async function lireStock(): Promise<PilotageStock[]> {
 async function lireSignatures(): Promise<PilotageSignature[]> {
   if (!hasSupabaseEnv || !supabase) return mockSignatures()
   const client = supabase
-  const lignes = await toutLire<{ signature?: { status?: string; signed_at?: string } | null }>((de, a) => client
+  const lignes = await toutLire<{ hektor_annonce_id?: number | null; signature?: { status?: string; signed_at?: string } | null }>((de, a) => client
     .from('app_console_document')
-    .select('id,signature:metadata_json->signature')
+    .select('id,hektor_annonce_id,signature:metadata_json->signature')
     .in('metadata_json->signature->>status', ['signed', 'pending'])
     .order('id', { ascending: true })
     .range(de, a))
   return lignes
+    .filter((ligne) => !estAnnonceEssai(ligne.hektor_annonce_id))
     .map((ligne) => ({ statut: ligne.signature?.status === 'signed' ? 'signed' as const : 'pending' as const, signeLe: dateSignature(ligne.signature?.signed_at) }))
 }
 
