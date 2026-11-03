@@ -1582,3 +1582,10 @@ Documents : à signaler à l'autre session (Youtrust reste derrière son interru
 - Build vert ; essai écran **34/34** ; commit c8e7239 (seules mes lignes de `App.tsx` ; l'autre session y a des modifications en cours,
   laissées dans la copie de travail). **Non poussé, pas vu à l'écran** : à pousser, puis l'ouvrir sur une vraie personne seule SANS enregistrer
   (ordinateur et téléphone). ⚠ La correction de la civilité côté serveur agit à la prochaine nuit (ou à la relecture d'une fiche).
+
+- **Vu en ligne après le push (Chrome de Frédéric, fiche d'une vraie personne seule, RIEN enregistré)** : le bouton et la fenêtre
+  s'ouvrent, mais la fenêtre était **écrasée** — marges et retraits à zéro. Cause : la fiche V2 remet à zéro marges et retraits de TOUT
+  ce qu'elle contient (`#fcx-root *`, `fiche-contact-v2.css` l. 37, un sélecteur d'identifiant qui l'emporte sur nos classes).
+  **Correctif** : la fenêtre est rendue hors de la fiche (`createPortal` sur `<body>`, comme deux autres fenêtres de l'app) ; aperçu
+  vérifié dans la page en sortant le bloc de la fiche : en-tête, sélecteur, champs, case RGPD, encart et boutons à leur place. Essai 35/35,
+  build vert, commit f58e06f. ⏳ À pousser ; non vu au téléphone (je n'ai pas redimensionné ta fenêtre Chrome).
