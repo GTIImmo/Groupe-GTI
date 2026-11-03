@@ -1415,3 +1415,52 @@ Hektor/Supabase, 0 écriture), les points lourds REVÉRIFIÉS par moi (marqués 
   n'a pas encore les colonnes `relu_le` et `remis_au_run_le`, et `load_panier_contacts_nuit` rend alors un panier vide (garde vérifiée
   dans le code). Frédéric : « note le à vérifier ». ⏰ **À reprendre** : lancer l'installeur en administrateur, puis je relis
   la tâche ; le contrôle du matin glisse au lendemain de la première vraie nuit.
+
+## 52. « AJOUTER UN CONJOINT » À UNE PERSONNE SEULE — AUDIT *(03/11 soir, « vas, mais avant audit pour savoir ce qui existe déjà et ce qui a été fait » ; lecture seule, rien codé)*
+
+**Audit limité à l'objet CONTACT et à son lien de couple.** Annonce, recherche, relation au bien, transaction, mandat, document, RDV : non touchés par
+ce geste, sauf la question des liens au bien (plus bas, non mesurée).
+
+**Ce qui existe déjà (code et base, relus)** :
+- **Créer un couple** depuis l'app : la paire naît chez nous à la seconde (`app_contact_creer_conjoint`, interrupteur `couple_nait_complet = on`) ;
+  le worker range la seconde fiche de Hektor (`rangerSecondeFicheDuCouple`, `contact_seconde_fiche_from_api.py`). Prouvé (§26).
+- **Modifier le conjoint** d'un couple nommé (pièce E, §28-29) et **compléter** une place 2 vide connue de Hektor (pièce F, §34) : fenêtre
+  « Modifier / Compléter le conjoint », `app_edit_conjoint_optimistic`, worker 748383f (groupe `contactCoupleAll`, relecture de la seconde).
+  Crans `contacts_couples_fiche` et `contacts_couples_modif` sur « on ».
+- **Rattacher** une fiche existante comme conjoint, chez Hektor : UNE requête GET `contacts-create-transformeContactToConjunct`
+  (`conjoint`, `refCouple`). Prouvée sur 3 fiches fictives (§36, réponse `{"success":"ok"}`) et sur le vrai cas EA32621 (§39, réponse VIDE,
+  lien confirmé par `ContactById`, liens au bien gardés). ⚠ Le formulaire que Hektor ouvre ensuite ne doit JAMAIS être enregistré (E6).
+- **Relire deux fiches tout de suite** : `refresh_contact_inproc.py`, prouvé sur EA32621 (§43). Indispensable : un rattachement change
+  `datemaj` mais pas `dateLastTraitement`, la nuit ne le voit pas (§40).
+
+**Ce qui n'existe PAS** : aucun bouton « Ajouter un conjoint » sur une personne seule ; aucun travail du worker pour `transformeContactToConjunct`
+(la seule trace dans le dépôt est une copie du code de la page Hektor dans `Console/exports/`) ; le rattachement d'EA32621 a été fait à la main.
+
+**Usage réel à ce jour (mesuré)** : depuis le 31/10, 5 créations de contact par l'app, dont 2 couples (les essais) ; 3 modifications de conjoint,
+toutes sur le couple d'essai 20000031. « Compléter le conjoint » n'a jamais servi en vrai.
+
+**Les cas** (contacts actifs de l'app, nature calculée la nuit) : personne seule 22 477 ; couple 3 104 (dont les 123 « couple dans le nom »,
+personnes seules chez Hektor) ; conjoint sans prénom 1 927 ; coquilles masquées 11 147 (dont les 680 cas simples).
+
+**Le chemin proposé (non décidé)** — deux gestes déjà prouvés, enchaînés :
+1. créer le conjoint comme un nouveau contact (création de l'app, il naît complet chez nous à la seconde) ;
+2. un **nouveau travail du worker** « rattacher un conjoint » : `transformeContactToConjunct` (conjoint = le nouveau, refCouple = la personne),
+   **relire `refCouple` des deux fiches** (la réponse vide ne prouve rien), puis relire les deux fiches chez nous ; et à la seconde, chez nous,
+   relier les deux lignes comme la paire de la création.
+⭐ **Le même travail sert aux 680 coquilles** (conjoint = la coquille) : un seul geste neuf pour les deux sujets.
+
+**Ce que ça pourrait casser ailleurs** :
+- la personne passe chez Hektor au formulaire de COUPLE et à la civilité « M./Mme » (vu sur EA32621) : le worker sait déjà éditer ce
+  formulaire (748383f) ; notre nature la verra « couple » à la relecture ;
+- un nouveau type de travail = les trois verrous (contrainte, droits, distribution) + le worker + l'écran : oublier la distribution le laisse
+  « pending » à vie ;
+- un échec entre les deux gestes laisse un conjoint créé mais non rattaché : à afficher, pas à défaire en silence ;
+- le dossier du worker porte des lignes non commitées de l'autre session : un redémarrage les charge aussi.
+
+**Non mesuré** : si Hektor relie le nouveau conjoint aux biens de la personne (sur EA32621 la coquille avait déjà son propre lien) ; si la
+transformation garde les recherches et l'e-mail RGPD de la personne ; ce que deviennent nom et prénom de la place 2 quand le conjoint a un
+e-mail ou un téléphone (vu sur les fictives : recopiés).
+
+**À trancher par Frédéric** : (a) un seul choix « nouveau conjoint », ou aussi « une fiche existante » (recherche par nom, comme Hektor) ;
+(b) qui a le bouton (admins d'abord, comme les autres crans) ; (c) les liens au bien du nouveau conjoint (rien, ou les mêmes que la personne) ;
+(d) l'ordre : ce geste d'abord, les 680 ensuite avec le même travail.
