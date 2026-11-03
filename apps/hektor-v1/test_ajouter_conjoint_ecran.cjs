@@ -30,7 +30,7 @@ function verifier(nom, ok, detail) {
 let api;
 try {
   const src = fs.readFileSync(LIB, "utf8").replace(/^export (?=(function|const|type) )/gm, "");
-  const js = esbuild.transformSync(src + "\nthis.api = { peutRecevoirUnConjoint, raisonAjoutConjoint };", { loader: "ts" }).code;
+  const js = esbuild.transformSync(src + "\nthis.api = { peutRecevoirUnConjoint, raisonAjoutConjoint, initialesDePlace, biensPartageables };", { loader: "ts" }).code;
   const ctx = { String, Number, Boolean, Array, Set, Map, Object, JSON, RegExp };
   vm.createContext(ctx);
   vm.runInContext(js, ctx);
@@ -40,6 +40,15 @@ try {
   process.exit(2);
 }
 
+verifier("(42) initiales : prénom puis nom, deux lettres, « ? » sans rien", api.initialesDePlace("julie", "bertrand") === "JB"
+  && api.initialesDePlace("Jean-Pierre") === "JP" && api.initialesDePlace("", null) === "?" && api.initialesDePlace("Élodie", "Ørsted") === "ÉØ");
+const biens = api.biensPartageables([
+  { hektor_annonce_id: "1", role_contact: "mandant", titre_bien: "Maison Firminy" },
+  { hektor_annonce_id: "1", role_contact: "proprietaire", titre_bien: "Maison Firminy" },
+  { hektor_annonce_id: "2", role_contact: "acquereur", titre_bien: "Appartement" },
+  { hektor_annonce_id: "3", role_contact: "Propriétaire", numero_mandat: "18836" }]);
+verifier("(43) biens partagés : mandant ou propriétaire, un par bien, jamais un achat", biens.length === 2
+  && biens[0].libelle === "Maison Firminy" && biens[1].libelle === "Mandat 18836", JSON.stringify(biens));
 const seule = { nature_fiche: "personne_seule", hektor_target_id: "84", archive: false, couple_json: null, relation_roles_json: ["mandant"] };
 verifier("(1) une personne seule, active, connue de Hektor : le bouton", api.peutRecevoirUnConjoint(seule) === true);
 verifier("(2) couple_json « aucun » : le bouton", api.peutRecevoirUnConjoint({ ...seule, couple_json: { etat: "aucun" } }) === true);
@@ -98,7 +107,22 @@ verifier("(26) le conjoint naît chez le négociateur de LA PERSONNE, repli sur 
   && /hektorNegotiatorId: props\.contact\.hektor_negociateur_id/.test(modale));
 verifier("(27) le choix nouveau / existant dit lequel est actif (aria-checked)",
   (modale.match(/role="radio" aria-checked=\{mode === '(nouveau|existant)'\}/g) || []).length === 2);
-verifier("(28) la case RGPD est une vraie case de formulaire, avec son libellé", /<label className="ajc-check">\s*<input type="checkbox" checked=\{rgpd\}/.test(modale));
+verifier("(28) l'e-mail RGPD est un vrai interrupteur de formulaire, dans son libellé",
+  /<label className="ajc-switch">\s*<input type="checkbox" role="switch" checked=\{rgpd\}/.test(modale));
+// ── La maquette validée le 03/11 (« le foyer, deux places ») ──
+verifier("(36) la place du conjoint se remplit pendant la saisie (initiales de la saisie ou de la fiche choisie)",
+  /initialesDePlace\(conjointPrenom, conjointNom\)/.test(modale) && /ajc-pair-lien\$\{placeRemplie \? ' pret' : ''\}/.test(modale));
+verifier("(37) le bouton dit « Former le couple »", /\{ICONE_LIEN\}\{envoi \? 'Envoi…' : 'Former le couple'\}/.test(modale));
+verifier("(38) la réussite propose « Voir la fiche » par la porte EXISTANTE de l'adresse (popstate)",
+  /ouvrirFicheContactParAdresse\(fait\.conjointId\)/.test(modale) && /window\.dispatchEvent\(new PopStateEvent\('popstate'\)\)/.test(app));
+verifier("(39) la fenêtre liste les biens que la fiche connaît déjà (aucune lecture de plus)",
+  /biens=\{biensPartageables\(props\.relations\)\}/.test(app));
+verifier("(40) sur la fiche : la carte « Ajouter un conjoint » à deux places, et le bloc doré « Compléter »",
+  /<button className="fxf-ajout" type="button" onClick=\{\(\) => setAjoutConjointOuvert\(true\)\}>/.test(app)
+  && /className=\{`fxf-foyer\$\{foyer\.affiche\.incomplet \? ' incomplet' : ''\}`\}/.test(app)
+  && /<button className="fxf-completer" type="button" onClick=\{\(\) => \{ setCompleterConjoint\(true\); setEditing\(true\) \}\}>/.test(app));
+verifier("(41) aucune fonction perdue : l'onglet du conjoint reste cliquable, la place vide ne l'est pas, le numéro de fiche reste affiché",
+  /onClick=\{\(\) => \{ if \(!onglet\.vide\) setOngletFoyer\(numero\) \}\}/.test(app) && /<i>\{onglet\.vide \? 'place vide' : onglet\.sousTitre\}<\/i>/.test(app));
 verifier("(29) la réussite reste à l'écran jusqu'à « Fermer »", /\{fait \? \(\s*<div className="ajc-done" role="status">/.test(modale));
 verifier("(30) Échap ferme la fenêtre (sauf pendant l'envoi)", /event\.key === 'Escape'/.test(modale) && /const fermer = \(\) => \{ if \(!envoi\) props\.onClose\(\) \}/.test(modale));
 verifier("(35) la fenêtre est rendue HORS de la fiche (portail) : `#fcx-root *` y remet marges et retraits à zéro",

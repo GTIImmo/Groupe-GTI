@@ -275,7 +275,7 @@ import { compterAnnoncesAilleurs, type AnnoncesAilleurs } from './lib/api'
 import { bvs, bvt } from './lib/bienvuTexte'
 import { MENTION_AVENANT, MENTION_MANDAT, repereHtml, repereSignature, zoneMentionHtml } from './lib/signatureAnchors'
 import { sansCasesVides } from './lib/mandantsDocument'
-import { coupleAffiche, conjointNommeId, conjointVideId, foyerAffiche, peutRecevoirUnConjoint, raisonAjoutConjoint, unirLiensDuFoyer, type FoyerAffiche } from './lib/coupleAffichage'
+import { biensPartageables, coupleAffiche, conjointNommeId, conjointVideId, foyerAffiche, initialesDePlace, peutRecevoirUnConjoint, raisonAjoutConjoint, unirLiensDuFoyer, type FoyerAffiche } from './lib/coupleAffichage'
 import { MessageFicheMandatDe, PastilleFicheMandat, PastilleFicheMandatDe, useFicheMandat } from './FicheMandatManquante'
 
 type DetailContact = {
@@ -42617,10 +42617,39 @@ function ContactWorkflowModal(props: {
 // Nouveau : la création habituelle (`createHektorContactJob`, personne seule), puis le rattachement avec son numéro.
 // Le rattachement (`ajouterConjointOptimistic`) écrit le couple chez nous à la seconde ; le worker le pose chez Hektor
 // (une requête, prouvée par relecture), relie les biens, puis relit les deux fiches. Un refus de la base est DIT, tel quel.
-// Refaite le 03/11 au soir après l'essai réel (synthèse §54-55) : sélecteur lisible, case RGPD normale, réussite visible
-// (on ne suit plus la création du conjoint, qui ouvrait sa fiche), et le conjoint naît chez le NÉGOCIATEUR DE LA PERSONNE.
+// Dessin validé par Frédéric le 03/11 (maquette « le foyer, deux places », synthèse §56) : la personne et la place du
+// conjoint, reliées ; la place se remplit pendant la saisie ; le lien devient plein et vert quand le couple est formé.
+// Le conjoint naît chez le NÉGOCIATEUR DE LA PERSONNE ; sa création n'est pas suivie (le suivi ouvrait sa fiche).
+// Rendue HORS de la fiche (portail sur <body>) : la fiche remet à zéro marges et retraits de tout ce qu'elle contient.
+const COULEURS_DE_PLACE = ['#5b6b8c', '#a8814a', '#2f8a5b', '#7a4f9a', '#2f7c86']
+
+function couleurDePlace(cle: string) {
+  let somme = 0
+  for (const lettre of cle) somme = (somme + lettre.charCodeAt(0)) % 997
+  return COULEURS_DE_PLACE[somme % COULEURS_DE_PLACE.length]
+}
+
+function ouvrirFicheContactParAdresse(contactId: string) {
+  if (typeof window === 'undefined' || !contactId) return
+  const p = new URLSearchParams(window.location.search)
+  p.set('ecran', 'contacts')
+  p.set('contact', contactId)
+  p.delete('annonce')
+  window.history.pushState(null, document.title, `${window.location.pathname}?${p.toString()}${window.location.hash || ''}`)
+  // La porte EXISTANTE de l'adresse (précédent / suivant) ouvre la fiche : on ne réinvente pas la navigation.
+  window.dispatchEvent(new PopStateEvent('popstate'))
+}
+
+const ICONE_LIEN = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M10 14a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4l-1 1" /><path d="M14 10a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1-1" /></svg>
+)
+const ICONE_MAISON = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7" /><path d="M5 10v10h14V10" /></svg>
+)
+
 function AjouterConjointModal(props: {
   contact: AppContact
+  biens: { id: string; libelle: string }[]
   hektorUserEmail?: string | null
   hektorUserId?: string | null
   onClose: () => void
@@ -42638,10 +42667,23 @@ function AjouterConjointModal(props: {
   const [choisi, setChoisi] = useState<MandantContactSearchOption | null>(null)
   const [envoi, setEnvoi] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
-  const [fait, setFait] = useState<string | null>(null)
+  const [fait, setFait] = useState<{ conjointId: string; nom: string; prenom: string; biens: number; refuses: number } | null>(null)
   const premierChamp = useRef<HTMLInputElement | null>(null)
   const personne = [props.contact.prenom, props.contact.nom].filter(Boolean).join(' ') || props.contact.display_name || `Contact ${props.contact.hektor_contact_id}`
+  const prenomPersonne = String(props.contact.prenom ?? '').trim() || personne
   const fermer = () => { if (!envoi) props.onClose() }
+
+  // La place du conjoint, telle qu'elle se remplit : la saisie (nouveau) ou la fiche choisie (existant).
+  const conjointNom = mode === 'nouveau' ? nom.trim() : String(choisi?.nom ?? '').trim()
+  const conjointPrenom = mode === 'nouveau' ? prenom.trim() : String(choisi?.prenom ?? '').trim()
+  const conjointLibelle = mode === 'nouveau'
+    ? [conjointPrenom, conjointNom].filter(Boolean).join(' ')
+    : (choisi ? choisi.display_name || [choisi.prenom, choisi.nom].filter(Boolean).join(' ') || `Contact ${choisi.hektor_contact_id}` : '')
+  const placeRemplie = mode === 'nouveau' ? Boolean(conjointPrenom || (conjointNom && conjointNom !== String(props.contact.nom ?? '').trim())) : Boolean(choisi)
+  const prenomConjoint = conjointPrenom || conjointLibelle || 'le conjoint'
+  const roleDeLaPersonne = props.biens.length
+    ? `${props.biens.length} bien${props.biens.length > 1 ? 's' : ''}`
+    : 'aucun bien'
 
   useEffect(() => { premierChamp.current?.focus() }, [mode])
   useEffect(() => {
@@ -42664,8 +42706,8 @@ function AjouterConjointModal(props: {
     return () => { annule = true; window.clearTimeout(minuterie) }
   }, [mode, recherche, props.contact.hektor_contact_id])
 
-  // Le conjoint naît chez le négociateur de LA PERSONNE (défaut vu le 03/11 : il prenait le compte de la session).
-  // Un négociateur qui n'a pas le droit de créer chez ce collègue retombe sur son propre compte, comme la création habituelle.
+  // Le conjoint naît chez le négociateur de LA PERSONNE. Un négociateur qui n'a pas le droit de créer chez ce
+  // collègue retombe sur son propre compte, comme la création habituelle.
   async function creerLeConjoint() {
     const base = contactIdentityInputFromContact(props.contact, props.hektorUserEmail, props.hektorUserId)
     const saisie = {
@@ -42719,9 +42761,7 @@ function AjouterConjointModal(props: {
         const travaux = await loadConsoleJobsByIds([resultat.job_id]).catch(() => [] as ConsoleJob[])
         if (travaux[0]) props.onJobCreated?.(travaux[0])
       }
-      const biens = resultat.biens ?? 0
-      setFait(`Le couple est enregistré. Hektor le confirme dans quelques secondes${biens ? `, puis le conjoint est relié à ${biens > 1 ? `ses ${biens} biens` : 'son bien'}` : ''}.`
-        + (resultat.biens_refuses ? ` ${resultat.biens_refuses} bien(s) hors de vos droits ne seront pas reliés.` : ''))
+      setFait({ conjointId, nom: conjointNom, prenom: conjointPrenom || conjointLibelle, biens: resultat.biens ?? 0, refuses: resultat.biens_refuses ?? 0 })
     } catch (e) {
       setErreur(e instanceof Error ? e.message : String(e))
     } finally {
@@ -42731,128 +42771,154 @@ function AjouterConjointModal(props: {
 
   const libelleOption = (option: MandantContactSearchOption) =>
     option.display_name || [option.prenom, option.nom].filter(Boolean).join(' ') || `Contact ${option.hektor_contact_id}`
+  const placePersonne = (
+    <span className="ajc-place p1">{initialesDePlace(props.contact.prenom, props.contact.nom)}</span>
+  )
 
-  // Rendue HORS de la fiche (portail sur <body>) : la fiche V2 remet à zéro marges et retraits de TOUT ce qu'elle
-  // contient (`#fcx-root *`, fiche-contact-v2.css), ce qui écrasait la fenêtre à la mise en ligne du 03/11.
   return createPortal(
     <div className="ajc-overlay" onClick={(event) => { event.stopPropagation(); fermer() }}>
-      <section className="ajc" role="dialog" aria-modal="true" aria-labelledby="ajc-titre" onClick={(event) => event.stopPropagation()}>
-        <header className="ajc-head">
-          <span className="ajc-badge" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx="8.5" cy="8" r="3.2" /><path d="M2.8 19c.6-3.1 3-4.9 5.7-4.9s5.1 1.8 5.7 4.9" /><path d="M18 8v6M15 11h6" /></svg>
-          </span>
-          <div className="ajc-h-main">
-            <div className="ajc-eyebrow">Couple</div>
-            <h3 className="ajc-title" id="ajc-titre">Ajouter un conjoint</h3>
-            <p className="ajc-sub">Le conjoint de <b>{personne}</b> : un nouveau contact, ou une fiche qui existe déjà.</p>
-          </div>
-          <button className="ajc-close" type="button" onClick={fermer} disabled={envoi} aria-label="Fermer">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
-          </button>
-        </header>
-
-        <div className="ajc-body">
-          {fait ? (
-            <div className="ajc-done" role="status">
-              <span className="ajc-done-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></span>
-              <b>Conjoint ajouté</b>
-              <p>{fait}</p>
+      <section className={`ajc${fait ? ' is-done' : ''}`} role="dialog" aria-modal="true" aria-labelledby="ajc-titre" onClick={(event) => event.stopPropagation()}>
+        {fait ? (
+          <div className="ajc-done" role="status">
+            <div className="ajc-done-pair" aria-hidden="true">
+              <span className="ajc-place p1 grand">{initialesDePlace(props.contact.prenom, props.contact.nom)}</span>
+              <span className="ajc-done-lien"><span className="ajc-done-coche"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.8} strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></span></span>
+              <span className="ajc-place p2 grand">{initialesDePlace(fait.prenom, fait.nom)}</span>
             </div>
-          ) : (
-            <>
-              <div className="ajc-seg" role="radiogroup" aria-label="Le conjoint">
-                <button className="ajc-seg-btn" type="button" role="radio" aria-checked={mode === 'nouveau'} disabled={envoi}
+            <h3 className="ajc-done-titre" id="ajc-titre">{prenomPersonne} et {fait.prenom || 'son conjoint'} forment un couple</h3>
+            <p className="ajc-done-sub">C'est enregistré. Hektor le confirme dans quelques secondes ; vous suivez l'action en bas de l'écran.</p>
+            {fait.biens || fait.refuses ? (
+              <div className="ajc-biens ok">
+                <span className="ajc-biens-t">{ICONE_MAISON}{fait.biens ? `${fait.prenom || 'Le conjoint'} est ajouté${fait.biens > 1 ? ` sur ${fait.biens} biens` : ' sur 1 bien'}` : 'Aucun bien ajouté'}</span>
+                {props.biens.length ? <div className="ajc-chips">{props.biens.slice(0, 6).map((b) => <span key={`ajc-fait-${b.id}`} className="ajc-chip">{b.libelle}</span>)}</div> : null}
+                {fait.refuses ? <span className="ajc-biens-note">{fait.refuses} bien{fait.refuses > 1 ? 's' : ''} hors de vos droits {fait.refuses > 1 ? 'ne sont pas reliés' : "n'est pas relié"}.</span> : null}
+              </div>
+            ) : null}
+            <div className="ajc-done-actions">
+              <button className="ajc-btn" type="button" onClick={props.onClose}>Fermer</button>
+              <button className="ajc-btn primary" type="button" onClick={() => { props.onClose(); ouvrirFicheContactParAdresse(fait.conjointId) }}>
+                Voir la fiche de {fait.prenom || 'son conjoint'}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <header className="ajc-head">
+              <button className="ajc-close" type="button" onClick={fermer} disabled={envoi} aria-label="Fermer">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+              </button>
+              <h3 className="ajc-title" id="ajc-titre">Ajouter un conjoint</h3>
+              <p className="ajc-sub">{personne} deviendra un couple avec la personne que vous choisissez.</p>
+              <div className="ajc-pair">
+                <div className="ajc-pair-cote">
+                  {placePersonne}
+                  <b>{personne}</b>
+                  <span>{roleDeLaPersonne}</span>
+                </div>
+                <div className={`ajc-pair-lien${placeRemplie ? ' pret' : ''}`} aria-hidden="true"><span>{ICONE_LIEN}</span></div>
+                <div className="ajc-pair-cote">
+                  <span className={`ajc-place ${placeRemplie ? (mode === 'existant' ? 'choisie' : 'saisie') : 'vide'}`}
+                    style={mode === 'existant' && choisi ? { background: couleurDePlace(choisi.hektor_contact_id) } : undefined}>
+                    {placeRemplie ? initialesDePlace(conjointPrenom, conjointNom) : (
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+                    )}
+                  </span>
+                  <b className={placeRemplie ? 'conjoint' : 'attente'}>{placeRemplie ? conjointLibelle : 'Le conjoint'}</b>
+                  <span>{mode === 'existant' ? (choisi ? `fiche n° ${choisi.hektor_contact_id}` : 'à choisir dans la liste') : 'nouveau contact'}</span>
+                </div>
+              </div>
+            </header>
+
+            <div className="ajc-body">
+              <div className="ajc-choix" role="radiogroup" aria-label="Le conjoint">
+                <button className="ajc-choix-btn" type="button" role="radio" aria-checked={mode === 'nouveau'} disabled={envoi}
                   onClick={() => { setMode('nouveau'); setErreur(null) }}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round"><circle cx="10" cy="8" r="3.4" /><path d="M3.5 19.5c.7-3.4 3.3-5.3 6.5-5.3" /><path d="M18 13v6M15 16h6" /></svg>
-                  <span>Un nouveau contact<small>Saisir le conjoint</small></span>
+                  <span className="ajc-choix-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="10" cy="8" r="3.4" /><path d="M3.5 19.5c.7-3.4 3.3-5.3 6.5-5.3" /><path d="M18 13v6M15 16h6" /></svg></span>
+                  <span className="ajc-choix-tx"><b>Un nouveau contact</b><span>Je saisis le conjoint</span></span>
                 </button>
-                <button className="ajc-seg-btn" type="button" role="radio" aria-checked={mode === 'existant'} disabled={envoi}
+                <button className="ajc-choix-btn" type="button" role="radio" aria-checked={mode === 'existant'} disabled={envoi}
                   onClick={() => { setMode('existant'); setErreur(null) }}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="6.5" /><path d="M20 20l-4.2-4.2" /></svg>
-                  <span>Une fiche existante<small>Chercher dans l'annuaire</small></span>
+                  <span className="ajc-choix-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5" /><path d="M20 20l-4.2-4.2" /></svg></span>
+                  <span className="ajc-choix-tx"><b>Une fiche existante</b><span>Il est déjà dans l'annuaire</span></span>
                 </button>
               </div>
 
               {mode === 'nouveau' ? (
-                <div className="ajc-card">
+                <>
                   <div className="ajc-grid">
-                    <div className="ajc-field">
-                      <label htmlFor="ajc-nom">Nom <i>*</i></label>
-                      <input id="ajc-nom" ref={premierChamp} className="ajc-inp" value={nom} onChange={(event) => setNom(event.target.value)} autoComplete="off" disabled={envoi} />
-                    </div>
-                    <div className="ajc-field">
-                      <label htmlFor="ajc-prenom">Prénom</label>
-                      <input id="ajc-prenom" className="ajc-inp" value={prenom} onChange={(event) => setPrenom(event.target.value)} autoComplete="off" disabled={envoi} />
-                    </div>
-                    <div className="ajc-field">
-                      <label htmlFor="ajc-portable">Portable</label>
-                      <input id="ajc-portable" className="ajc-inp" value={portable} onChange={(event) => setPortable(event.target.value)} inputMode="tel" autoComplete="off" placeholder="06 …" disabled={envoi} />
-                    </div>
-                    <div className="ajc-field">
-                      <label htmlFor="ajc-email">E-mail</label>
-                      <input id="ajc-email" className="ajc-inp" value={email} onChange={(event) => setEmail(event.target.value)} type="email" autoComplete="off" placeholder="adresse@email.fr" disabled={envoi} />
-                    </div>
+                    <label className="ajc-field">Nom
+                      <input ref={premierChamp} className="ajc-inp" value={nom} onChange={(event) => setNom(event.target.value)} autoComplete="off" disabled={envoi} />
+                    </label>
+                    <label className="ajc-field">Prénom
+                      <input className="ajc-inp" value={prenom} onChange={(event) => setPrenom(event.target.value)} autoComplete="off" disabled={envoi} />
+                    </label>
+                    <label className="ajc-field">Portable
+                      <input className="ajc-inp" value={portable} onChange={(event) => setPortable(event.target.value)} inputMode="tel" autoComplete="off" placeholder="06 00 00 00 00" disabled={envoi} />
+                    </label>
+                    <label className="ajc-field">E-mail
+                      <input className="ajc-inp" value={email} onChange={(event) => setEmail(event.target.value)} type="email" autoComplete="off" placeholder="adresse@exemple.fr" disabled={envoi} />
+                    </label>
                   </div>
-                  <p className="ajc-note">Un portable ou un e-mail est obligatoire. Le conjoint est créé chez le négociateur de {personne}.</p>
-                  <label className="ajc-check">
-                    <input type="checkbox" checked={rgpd} onChange={(event) => setRgpd(event.target.checked)} disabled={envoi} />
-                    <span><b>Envoyer l'e-mail RGPD au conjoint</b><span>Il reçoit le lien d'activation de son espace et le consentement RGPD.</span></span>
+                  <p className="ajc-note">Un portable ou un e-mail suffit. {conjointPrenom || 'Le conjoint'} sera créé chez le négociateur de {prenomPersonne}.</p>
+                  <label className="ajc-switch">
+                    <input type="checkbox" role="switch" checked={rgpd} onChange={(event) => setRgpd(event.target.checked)} disabled={envoi} />
+                    <span className="ajc-switch-piste" aria-hidden="true"><span /></span>
+                    <span className="ajc-switch-tx"><b>Envoyer l'e-mail RGPD à {conjointPrenom || 'son conjoint'}</b><span>Lien d'activation de son espace et consentement.</span></span>
                   </label>
-                </div>
+                </>
               ) : (
-                <div className="ajc-card">
-                  <div className="ajc-field">
-                    <label htmlFor="ajc-recherche">Chercher la fiche</label>
-                    <div className="ajc-search">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round"><circle cx="11" cy="11" r="6.5" /><path d="M20 20l-4.2-4.2" /></svg>
-                      <input id="ajc-recherche" ref={premierChamp} className="ajc-inp" value={recherche} disabled={envoi} autoComplete="off"
-                        placeholder="Nom, téléphone, e-mail ou numéro (3 caractères au moins)"
+                <>
+                  <label className="ajc-field">Chercher dans l'annuaire
+                    <span className="ajc-search">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5" /><path d="M20 20l-4.2-4.2" /></svg>
+                      <input ref={premierChamp} className="ajc-inp" value={recherche} disabled={envoi} autoComplete="off"
+                        placeholder="Nom, téléphone, e-mail ou numéro"
                         onChange={(event) => { setRecherche(event.target.value); setChoisi(null) }} />
-                    </div>
-                  </div>
+                    </span>
+                  </label>
                   {resultats.length ? (
-                    <ul className="ajc-list" role="radiogroup" aria-label="Fiches trouvées">
-                      {resultats.map((option) => (
-                        <li key={`ajc-${option.hektor_contact_id}`}>
-                          <button className="ajc-opt" type="button" role="radio" aria-checked={choisi?.hektor_contact_id === option.hektor_contact_id}
+                    <div className="ajc-list" role="radiogroup" aria-label="Fiches trouvées">
+                      {resultats.map((option) => {
+                        const actif = choisi?.hektor_contact_id === option.hektor_contact_id
+                        return (
+                          <button key={`ajc-${option.hektor_contact_id}`} className="ajc-opt" type="button" role="radio" aria-checked={actif}
                             onClick={() => setChoisi(option)} disabled={envoi}>
-                            <span className="ajc-radio" aria-hidden="true" />
+                            <span className="ajc-place petite" style={{ background: couleurDePlace(option.hektor_contact_id) }} aria-hidden="true">{initialesDePlace(option.prenom, option.nom || option.display_name)}</span>
                             <span className="ajc-opt-tx">
                               <b>{libelleOption(option)}</b>
                               <span>{[option.ville, option.phone_primary || option.email, `n° ${option.hektor_contact_id}`].filter(Boolean).join(' · ')}</span>
                             </span>
+                            <span className="ajc-coche" aria-hidden="true">{actif ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg> : null}</span>
                           </button>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : recherche.trim().length >= 3 ? (
-                    <p className="ajc-empty">{rechercheEnCours ? 'Recherche…' : 'Aucune fiche trouvée.'}</p>
-                  ) : null}
-                </div>
+                        )
+                      })}
+                    </div>
+                  ) : (
+                    <p className="ajc-empty">{recherche.trim().length < 3 ? 'Tapez au moins 3 caractères.' : rechercheEnCours ? 'Recherche…' : 'Aucune fiche trouvée.'}</p>
+                  )}
+                </>
               )}
 
-              <div className="ajc-info">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l9-7 9 7" /><path d="M5 10v10h14V10" /></svg>
-                <span>Le conjoint recevra les mêmes biens que {personne} (mandant ou propriétaire), sur les biens que vous pouvez gérer. Hektor confirme le couple dans les secondes qui suivent.</span>
+              <div className="ajc-biens">
+                <span className="ajc-biens-t">{ICONE_MAISON}{props.biens.length
+                  ? `${placeRemplie ? prenomConjoint.charAt(0).toUpperCase() + prenomConjoint.slice(1) : 'Le conjoint'} partagera ${props.biens.length > 1 ? `les ${props.biens.length} biens` : 'le bien'} de ${prenomPersonne}`
+                  : `${prenomPersonne} n'a pas de bien en mandat ou en propriété : rien à partager`}</span>
+                {props.biens.length ? <div className="ajc-chips">{props.biens.slice(0, 6).map((b) => <span key={`ajc-bien-${b.id}`} className="ajc-chip">{b.libelle}</span>)}{props.biens.length > 6 ? <span className="ajc-chip plus">+{props.biens.length - 6}</span> : null}</div> : null}
               </div>
               {erreur ? <div className="ajc-error" role="alert">{erreur}</div> : null}
-            </>
-          )}
-        </div>
+            </div>
 
-        <footer className="ajc-foot">
-          {fait ? (
-            <button className="ajc-btn primary" type="button" onClick={props.onClose}>Fermer</button>
-          ) : (
-            <>
-              <button className="ajc-btn" type="button" onClick={fermer} disabled={envoi}>Annuler</button>
-              <button className="ajc-btn primary" type="button" onClick={() => { void envoyer() }}
-                disabled={envoi || (mode === 'existant' && !choisi)}>
-                {envoi ? 'Envoi…' : 'Ajouter le conjoint'}
-              </button>
-            </>
-          )}
-        </footer>
+            <footer className="ajc-foot">
+              <span className="ajc-foot-note">Hektor confirme en quelques secondes.</span>
+              <span className="ajc-foot-btns">
+                <button className="ajc-btn" type="button" onClick={fermer} disabled={envoi}>Annuler</button>
+                <button className="ajc-btn primary" type="button" onClick={() => { void envoyer() }} disabled={envoi || (mode === 'existant' && !choisi)}>
+                  {ICONE_LIEN}{envoi ? 'Envoi…' : 'Former le couple'}
+                </button>
+              </span>
+            </footer>
+          </>
+        )}
       </section>
     </div>,
     document.body,
@@ -46945,37 +47011,55 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
                 </div>
               </div>
 
+              {/* COUPLES, pièce G (03/11/2026, maquette « le foyer, deux places ») : chaque personne a sa PLACE (ses
+                  initiales) ; la place vide est en pointillés ; un foyer incomplet se lit dans un bloc doré avec son bouton. */}
               {foyer ? (
-                <div className="fa-cx-foyer" role="tablist" aria-label="Les deux personnes du couple">
-                  {foyer.affiche.onglets.map((onglet, index) => {
-                    const numero = (index + 1) as 1 | 2
-                    const actif = ongletFoyer === numero
-                    return (
-                      <button
-                        key={`foyer-onglet-${numero}`}
-                        type="button"
-                        role="tab"
-                        aria-selected={actif}
-                        aria-disabled={onglet.vide || undefined}
-                        className={`${actif ? 'on' : ''}${onglet.vide ? ' vide' : ''}`}
-                        title={onglet.vide ? 'Conjoint à compléter (pas encore de fiche)' : numero === 2 ? 'Coordonnées du conjoint (lecture seule)' : undefined}
-                        onClick={() => { if (!onglet.vide) setOngletFoyer(numero) }}
-                      >
-                        <b>{onglet.titre}</b>
-                        <i>{onglet.sousTitre}</i>
+                <div className={`fxf-foyer${foyer.affiche.incomplet ? ' incomplet' : ''}`}>
+                  <div className="fa-cx-foyer" role="tablist" aria-label="Les deux personnes du couple">
+                    {foyer.affiche.onglets.map((onglet, index) => {
+                      const numero = (index + 1) as 1 | 2
+                      const actif = ongletFoyer === numero
+                      return (
+                        <button
+                          key={`foyer-onglet-${numero}`}
+                          type="button"
+                          role="tab"
+                          aria-selected={actif}
+                          aria-disabled={onglet.vide || undefined}
+                          className={`fxf-tab${actif ? ' on' : ''}${onglet.vide ? ' vide' : ''}`}
+                          title={onglet.vide ? 'Conjoint à compléter (pas encore de fiche)' : numero === 2 ? 'Coordonnées du conjoint (lecture seule)' : undefined}
+                          onClick={() => { if (!onglet.vide) setOngletFoyer(numero) }}
+                        >
+                          <span className={`fxf-place${onglet.vide ? ' vide' : numero === 1 ? ' p1' : ' p2'}`} aria-hidden="true">{onglet.vide ? '?' : initialesDePlace(onglet.titre)}</span>
+                          <span className="fxf-tab-tx">
+                            <b>{onglet.vide ? 'Conjoint' : onglet.titre}</b>
+                            <i>{onglet.vide ? 'place vide' : onglet.sousTitre}</i>
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                  {completerConjointId ? (
+                    <>
+                      <button className="fxf-completer" type="button" onClick={() => { setCompleterConjoint(true); setEditing(true) }}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.1} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
+                        Compléter le conjoint
                       </button>
-                    )
-                  })}
+                      <p className="fxf-note">Hektor connaît la place du conjoint, mais elle est vide : son nom suffit pour la remplir.</p>
+                    </>
+                  ) : null}
                 </div>
               ) : null}
-              {completerConjointId ? (
-                <button className="fa-cx-completer" type="button" onClick={() => { setCompleterConjoint(true); setEditing(true) }}>
-                  + Compléter le conjoint
-                </button>
-              ) : null}
               {peutAjouterConjoint ? (
-                <button className="fa-cx-completer" type="button" onClick={() => setAjoutConjointOuvert(true)}>
-                  + Ajouter un conjoint
+                <button className="fxf-ajout" type="button" onClick={() => setAjoutConjointOuvert(true)}>
+                  <span className="fxf-places" aria-hidden="true">
+                    <span className="fxf-place p1">{initialesDePlace(props.contact.prenom, props.contact.nom)}</span>
+                    <span className="fxf-place ajout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg></span>
+                  </span>
+                  <span className="fxf-ajout-tx">
+                    <b>Ajouter un conjoint</b>
+                    <span>Pas encore de conjoint sur cette fiche. Il partagera les biens de {props.contact.prenom || props.contact.nom || 'ce contact'}.</span>
+                  </span>
                 </button>
               ) : null}
 
@@ -47503,6 +47587,7 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
       {ajoutConjointOuvert && peutAjouterConjoint ? (
         <AjouterConjointModal
           contact={props.contact}
+          biens={biensPartageables(props.relations)}
           hektorUserEmail={props.hektorUserEmail}
           hektorUserId={props.hektorUserId}
           onClose={() => setAjoutConjointOuvert(false)}

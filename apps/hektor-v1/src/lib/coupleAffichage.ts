@@ -175,6 +175,31 @@ export function peutRecevoirUnConjoint(contact: CoupleSource & { archive?: boole
   return !etat || etat === 'aucun'
 }
 
+/** COUPLES, pièce G (03/11/2026, maquette « le foyer, deux places ») : les initiales d'une place -- deux lettres au
+ *  plus, prénom puis nom ; « ? » quand on ne sait rien (la place vide). */
+export function initialesDePlace(...morceaux: (string | null | undefined)[]): string {
+  const mots = morceaux.flatMap((m) => String(m ?? '').trim().split(/[\s-]+/)).filter((m) => /\p{L}/u.test(m))
+  const lettres = mots.slice(0, 2).map((m) => (m.match(/\p{L}/u)?.[0] ?? '').toUpperCase()).join('')
+  return lettres || '?'
+}
+
+/** Les biens que le conjoint partagera, tels que la fiche les connaît déjà (aucune lecture de plus) : ceux où la
+ *  personne est mandant ou propriétaire, un par bien. La base refait le vrai tri au clic (bien vivant, droits). */
+export function biensPartageables(relations: { hektor_annonce_id?: string | number | null; role_contact?: string | null; titre_bien?: string | null; numero_mandat?: string | null; numero_dossier?: string | null }[]): { id: string; libelle: string }[] {
+  const vus = new Set<string>()
+  const biens: { id: string; libelle: string }[] = []
+  for (const lien of relations) {
+    const id = String(lien.hektor_annonce_id ?? '').trim()
+    const role = String(lien.role_contact ?? '').toLowerCase()
+    if (!id || vus.has(id) || !(role.includes('mandant') || role.includes('proprietaire') || role.includes('propriétaire'))) continue
+    vus.add(id)
+    const titre = String(lien.titre_bien ?? '').trim()
+    const numero = String(lien.numero_mandat ?? lien.numero_dossier ?? '').trim()
+    biens.push({ id, libelle: titre || (numero ? `Mandat ${numero}` : `Bien ${id}`) })
+  }
+  return biens
+}
+
 /** Ce que l'écran dit d'un refus de la base (`raison` de app_ajouter_conjoint_optimistic). */
 export function raisonAjoutConjoint(raison: string | null | undefined): string {
   switch (raison) {
