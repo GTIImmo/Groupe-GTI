@@ -12,8 +12,11 @@ import type { ReactNode } from 'react'
 import type { MandatRecord } from './types'
 import './annonces-liste-v2.css'
 
+// 03/11/2026 -- Frederic : « je ne veux pas de variable ». La V2 est donc la liste PAR DEFAUT
+// (variable absente = allumee). L'ancien rendu reste dans MandatsScreen comme SECOURS : poser
+// VITE_APP_ANNONCES_LISTE_V2=false (puis Redeploy) le fait revenir, sans toucher au code.
 export const APP_ANNONCES_LISTE_V2 =
-  ['true', '1', 'on', 'yes'].includes(String(import.meta.env.VITE_APP_ANNONCES_LISTE_V2 ?? '').trim().toLowerCase())
+  !['false', '0', 'off', 'no'].includes(String(import.meta.env.VITE_APP_ANNONCES_LISTE_V2 ?? '').trim().toLowerCase())
 
 // ── « Modifier » ouvre la fiche sur la rubrique « Le bien » (decision du 03/11) ──
 // La fiche (CockpitDetail) se monte a chaque ouverture et choisit sa rubrique dans son useState

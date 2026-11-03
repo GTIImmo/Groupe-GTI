@@ -205,7 +205,12 @@ vu à l'écran) ; animations des autres états ; lignes légères, provisoires e
 - Écarts restants, dus à la place : négociateur dans la cellule Bien (nom parfois tronqué), lignes ~100-158 px selon
   le contenu (Bien ≈ 291 px à 1280 avec le menu latéral déplié).
 
-Pour allumer en production : variable Vercel `VITE_APP_ANNONCES_LISTE_V2=true` + Redeploy (Frédéric).
+⭐ **03/11, décision de Frédéric (« je ne veux pas une variable ») : la V2 est la liste PAR DÉFAUT.**
+`APP_ANNONCES_LISTE_V2` vaut vrai si la variable est ABSENTE ; l'ancien rendu reste dans `MandatsScreen` comme
+**secours** : `VITE_APP_ANNONCES_LISTE_V2=false` sur Vercel + Redeploy le fait revenir sans toucher au code.
+(Tentative de poser la variable par l'outil : 403 « droits supplémentaires requis » — inutile désormais.)
+Vérifié : build vert ; aperçu 5197 SANS variable → nouvelle liste (5 colonnes, 3 pilules, pas de défilement).
+En ligne dès le push de Frédéric.
 Pour voir en local : configuration d'aperçu `hektor-mock-bienvu-liste-v2` (port 5196, `C:\Hektor\.claude\launch.json`).
 
 ## Lot 2 — Le haut de page
