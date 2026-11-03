@@ -1393,3 +1393,19 @@ Hektor/Supabase, 0 écriture), les points lourds REVÉRIFIÉS par moi (marqués 
   exécuté** sur une copie (faux script de liste, faux script de recherches) : liste 0 → recherches lancées, tâche 0 ; 3 →
   **retenues**, tâche 1 ; 4 → lancées, tâche 1 ; 5 → lancées, tâche 1 ; `-SansListe` → la liste n'est pas appelée, recherches
   lancées, tâche 0.
+
+## 51. LA BASCULE POUR LA NUIT DU 03 AU 04/11 *(03/11, « Oui, pour cette nuit »)*
+
+- ✅ **`.env` : `APP_RELIRE_ANNONCES_CONTACTS_NUIT=1` posé** (copie du fichier gardée avant ; vérifié : le run le lit).
+  Sans la liste de nuit, le panier reste vide : l'interrupteur seul ne change rien.
+- ⏳ **La tâche** : `scheduled/installer_tache_nuit_contacts.ps1 -Appliquer`, à lancer par Frédéric dans une PowerShell
+  ADMINISTRATEUR. Vérifié avant : tâche « Ready », ni elle ni le run ni le balayage ne tournaient ; le moniteur la surveille
+  déjà en « critical » sur `LastTaskResult` (même nom de tâche).
+- **Ce qui se passera cette nuit** : 00:20 départ ; attente que le worker ait fini le balayage des photos (au plus 01:55) ;
+  liste des actifs (~1 h 18, ~8 500 requêtes) ; fiches à relire (~240, ~7 min) ; 02:00 les recherches, inchangées ; 04:00 le
+  run relit les annonces du panier (~160, ~5 min) et normalise les pages fraîches. ⚠ **Les pages de mars restent** jusqu'à la
+  purge (après lecture du rapport) : l'effet sur les négociateurs ne sera complet qu'après elle.
+- ⏰ **À vérifier le 04/11 au matin** : le journal `logs/scheduled/nuit_contacts_*.log` et le rapport
+  `logs/liste_contacts_nuit/rapport_active_*.json` (code, pages, fiches relues, panier) ; la ligne « [liste de nuit] » du run ;
+  la durée du run et de la descente ; puis décider la purge.
+- **Retour arrière** : `installer_tache_nuit_contacts.ps1 -Retour` (administrateur) et retirer la ligne du `.env`.
