@@ -42724,7 +42724,9 @@ function AjouterConjointModal(props: {
   const libelleOption = (option: MandantContactSearchOption) =>
     option.display_name || [option.prenom, option.nom].filter(Boolean).join(' ') || `Contact ${option.hektor_contact_id}`
 
-  return (
+  // Rendue HORS de la fiche (portail sur <body>) : la fiche V2 remet à zéro marges et retraits de TOUT ce qu'elle
+  // contient (`#fcx-root *`, fiche-contact-v2.css), ce qui écrasait la fenêtre à la mise en ligne du 03/11.
+  return createPortal(
     <div className="ajc-overlay" onClick={(event) => { event.stopPropagation(); fermer() }}>
       <section className="ajc" role="dialog" aria-modal="true" aria-labelledby="ajc-titre" onClick={(event) => event.stopPropagation()}>
         <header className="ajc-head">
@@ -42844,7 +42846,8 @@ function AjouterConjointModal(props: {
           )}
         </footer>
       </section>
-    </div>
+    </div>,
+    document.body,
   )
 }
 

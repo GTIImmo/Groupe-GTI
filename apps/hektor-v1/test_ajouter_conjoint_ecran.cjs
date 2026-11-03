@@ -101,6 +101,8 @@ verifier("(27) le choix nouveau / existant dit lequel est actif (aria-checked)",
 verifier("(28) la case RGPD est une vraie case de formulaire, avec son libellé", /<label className="ajc-check">\s*<input type="checkbox" checked=\{rgpd\}/.test(modale));
 verifier("(29) la réussite reste à l'écran jusqu'à « Fermer »", /\{fait \? \(\s*<div className="ajc-done" role="status">/.test(modale));
 verifier("(30) Échap ferme la fenêtre (sauf pendant l'envoi)", /event\.key === 'Escape'/.test(modale) && /const fermer = \(\) => \{ if \(!envoi\) props\.onClose\(\) \}/.test(modale));
+verifier("(35) la fenêtre est rendue HORS de la fiche (portail) : `#fcx-root *` y remet marges et retraits à zéro",
+  /return createPortal\(\s*<div className="ajc-overlay"/.test(modale) && /<\/div>,\s*document\.body,\s*\)/.test(modale));
 verifier("(31) le style est chargé", /import '\.\/ajout-conjoint\.css'/.test(app) && fs.existsSync(path.resolve(__dirname, "src", "ajout-conjoint.css")));
 
 // La civilité à place vide (« _ ») : la vraie fonction de l'écran, jouée.
