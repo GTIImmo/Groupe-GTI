@@ -410,6 +410,62 @@ Celles-là attendent une **saisie humaine**, pas un rattrapage.
 
 ---
 
+### ⭐⭐ LE COÛT SUR LE RUN DE NUIT — mesuré le 03/11, question de Frédéric
+
+*« le volume de lignes va pas planter le run de nuit ? »* — la bonne question, et
+`raw_json` est effectivement un gros blob. **Chronométré pour de vrai, pas estimé.**
+
+```
+CE QU IL Y A A LIRE :
+   61 470 lignes de detail
+   raw_json         775,4 Mo   (moyenne 12,6 Ko, max 92,5 Ko)
+   mandats_json      11,75 Mo  <- ce que le run lit DEJA
+   honoraires_json    4,62 Mo
+
+LES TROIS FACONS DE LIRE, CHRONOMETREES :
+   aujourd hui (mandats_json seul)                 0,18 s
+   A  tout raw_json + les 2 regex en Python        5,64 s   (x30)
+   B  filtre SQL en amont (LIKE), 40 484 lignes    3,58 s
+   C  extraction COTE BASE (instr + substr)        2,14 s   <- RECOMMANDEE
+
+CE QUE CA PESE DANS LE RUN REEL (journal du 03/11) :
+   etape « phase2 registre des mandats »   05:56:50 -> 05:58:01   =  71 s
+   le run entier                           04:00:01 -> 06:18:23   = 2 h 18
+   la descente suit a 06:45                -> 27 MINUTES DE MARGE
+
+   option A : +5,64 s  =  +8 % sur l etape,  +0,07 % sur le run
+   option C : +2,14 s  =  +3 % sur l etape,  +0,03 % sur le run
+```
+
+✅ **Verdict : non, ça ne plantera pas.** Cinq secondes sur un run de deux heures
+dix-huit, avec vingt-sept minutes de marge avant la descente.
+
+⭐ **Et le débit mesuré écarte le soupçon du cache chaud** : 775 Mo en 5,64 s font
+**137 Mo/s**, un débit de SSD. Un cache mémoire aurait donné plusieurs Go/s. La
+mesure n'est donc pas flattée par mes lectures précédentes. ⚠ Ce n'est pas une
+preuve absolue — c'est un indice fort.
+
+⛔⛔ **LES DEUX PIÈGES À TENIR, et ils sont dans l'écriture du code :**
+
+```
+1. JAMAIS DE fetchall() SUR raw_json -- ce serait 775 Mo en memoire d un coup.
+   On itere au curseur, ligne par ligne, comme le fait deja mandat_ledger.
+
+2. L OPTION C NE REMONTE QUE ~130 CARACTERES PAR LIGNE au lieu de 12,6 Ko :
+      substr(raw_json, instr(raw_json, 'onoraires vendeur ou bailleur montant'), 60)
+   SQLite fait l extraction, Python ne voit jamais le blob. C est ce qui
+   divise le temps par deux ET supprime le risque memoire.
+   ⚠ Mais elle depend d un LIBELLE. Si Hektor le change, le champ devient
+     muet SANS ERREUR -> il faut une SENTINELLE sur le compte (40 484 lignes
+     aujourd hui) qui crie si le nombre s effondre.
+```
+
+⚠ **Le push ne bouge pas** : deux colonnes TEXT courtes sur 27 464 lignes font
+environ **300 Ko de plus**, sur un push qui dure déjà 5 min 01 (05:59:10 →
+06:04:11). Aucune ligne nouvelle n'est créée, seulement deux champs par ligne.
+
+---
+
 ### LE DÉROULÉ, ÉTAPE PAR ÉTAPE
 
 ```
