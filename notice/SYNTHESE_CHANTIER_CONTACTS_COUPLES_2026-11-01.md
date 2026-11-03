@@ -1087,3 +1087,44 @@ pour un numéro sont RELUS TOUT DE SUITE, jamais « à la nuit ». Rien n'est co
   à la tâche des recherches : la nouvelle tâche contacts tourne SÉPARÉMENT de ~01:05 (après le balayage, garde « worker vide »)
   à 01:58, s'arrête d'elle-même pour laisser partir les recherches à 02:00, et reprend la nuit suivante à la page atteinte
   (~55 min à ~2,5 pages/s ≈ 8 000 pages : presque toute la liste des actifs par nuit).
+
+## 44. AUDIT — « TOUT DANS UNE TÂCHE » : LA NUIT DES CONTACTS *(03/11, « tout dans une tâche, audit de nouveau et explique-moi »)*
+
+Audit limité à : **contact × lire / remonter** (la nuit). Les autres objets et gestes ne sont pas mesurés ici.
+
+**Ce qui existe (code lu le 03/11)**
+- Tâche « GTI Recherches Actives » (02:00, surveillée CRITIQUE par `monitoring/check_gti_health.py` l. 116) →
+  `scheduled/run_recherches_actives.ps1` → `phase2/sync/sync_active_searches.py` : ① le CARNET des contacts devenus acquéreurs
+  (plafond 500) ; ② les ~4 000 contacts à recherche active, relus SANS regarder la date ; UNE session Hektor
+  (`sync_contact_details.py --contact-id-file … --skip-listing-refresh`) ; puis étapes LOCALES par lots de 300 (normalize → couche
+  → push) ; coupe-circuit après 3 lots en échec ; cède au verrou de la descente (`pull_from_supabase.lock`, 30 min max).
+- ⭐ **Pourquoi 1,66 s par fiche** : ce n'est pas seulement le frein du 07/09. La tâche applique la « méthode de référence »
+  (lots de 100, 0,5 s entre fiches, **60 s de pause entre lots**, ~45 % d'occupation) ; avec le plancher d'1 s du client, ça fait
+  ~1 s + 0,6 s par fiche. L'en-tête « 0,3 s / ~20 min » date d'avant ces règles.
+- ⛔ **Cinquième bannissement, à ne pas oublier** (commentaire du code) : le **22/08, 25 800 fiches contacts lues en 1 h 47
+  (~4 req/s) ont fait bannir l'IP**. C'est de là que viennent les lots de 100 et les pauses. Accélérer la lecture des contacts
+  n'est donc PAS sans précédent de risque.
+- Lecture de la liste : `sync_contact_details.py --full-listing-refresh` appelle `sync_contact_listing_variant` de `sync_raw.py`
+  (fonction PARTAGÉE avec le run de 04:00) : ~1 page/s (plancher 1 s + 0,1 s), **aucune pause**, écrit `sync_contact_state`
+  (variante, `date_maj`, vu le) et le curseur `contact_cursor_<scope>` = la plus grande `datemaj` vue — cohérent avec le run.
+- ⚠ Une relecture « ciblée » (recherches) réécrit `sync_contact_state` avec `listing_variant='targeted'` et **`date_maj = NULL`**
+  (`upsert_contact_state`, `sync_raw.py` l. 517) : 44 179 lignes sont dans ce cas. Sans gravité (elles sont relues), mais l'ORDRE
+  compte : la liste d'abord, la sélection des fiches changées ensuite, les recherches en dernier.
+- Les fiches relues par la sélection « changées » n'arrivent chez Supabase QUE par le run de 04:00 (couche reconstruite + push
+  chaque nuit) ; seules les recherches font leurs étapes locales elles-mêmes.
+
+**Le dessin proposé (rien codé)** — la tâche garde son NOM, son heure de 02:00 et sa surveillance ; son lanceur enchaîne :
+  0. garde de départ (verrou de la descente ; aucune tâche Hektor en cours au worker) ;
+  1. **NOUVEAU script de liste** (API seule, sa propre boucle — la fonction partagée du run n'est PAS touchée) : actifs du lundi
+     au samedi, archivés le dimanche ; vitesse réglée pour CE processus seulement (`HEKTOR_MIN_REQUEST_INTERVAL_MS`) ; pause
+     régulière ; arrêt net au premier refus ; compte des requêtes au journal ; **reprise à la page atteinte** si l'heure limite
+     tombe ;
+  2. `sync_contact_details.py` existant : les fiches où Hektor est plus récent (plafond par nuit) ;
+  3. `sync_active_searches.py` **inchangé** (carnet + ~4 000 recherches, mêmes lots et pauses) ;
+  4. **heure limite ~03:50** : on s'arrête proprement pour laisser le run de 04:00.
+- Durées à ~2 req/s : liste ~1 h 10 · fiches changées ~1 min (1re nuit ~40 min) · recherches ~1 h 15 au lieu de 1 h 51 →
+  **~2 h 25, plus que 02:00 → 04:00**. ⇒ soit démarrer plus tôt (~01:05, après le balayage, garde « worker vide »), soit
+  accepter que la liste se termine sur 2 nuits (reprise à la page).
+- Ce qui pourrait casser : le run de 04:00 (si la tâche déborde — d'où l'heure limite) ; un bannissement (22/08 !) → vitesse
+  modérée, pauses, arrêt au 1er refus ; le volume de la nuit (~8 500 requêtes de plus, ~19 000 en tout, au-dessus de
+  l'estimation incertaine du quota) ; la surveillance (même nom de tâche → reste surveillée ; codes de sortie à garder).
