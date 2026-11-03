@@ -1231,3 +1231,20 @@ Hektor/Supabase, 0 écriture), les points lourds REVÉRIFIÉS par moi (marqués 
     d'après la liste). Effet à surveiller : la sentinelle `data.contacts_sans_nego` et la taille du premier envoi à Supabase ;
   · prudence proposée : **un premier tour « à blanc »** (pages rangées à part + rapport des écarts champ par champ), regardé par
     Frédéric, AVANT de les écrire au vrai endroit.
+- ⭐ **AUDIT « relire aussi l'annonce » (03/11, Frédéric : « avec le mécanisme proposé cela ne se fera pas, est-ce grave ? »)** —
+  il a raison : avec un carnet à part, un contact modifié repéré par la NOUVELLE liste n'a pas son annonce relue par le run.
+  · **Ce que l'annonce garde des contacts** : le détail Hektor d'une annonce embarque une COPIE de ses propriétaires
+    (`hektor_annonce_detail.proprietaires_json` : nom, prénom, téléphone, e-mail, `datemaj`, `refCouple`…). Elle sert à
+    `phase2/pipeline/view_generale.py` l. 205-240 (résumé des propriétaires et leurs coordonnées sur la fiche du bien, et le
+    repli de `mandants_texte`) et à `build_contacts_layer.py` l. 1263-1278 (liens « propriétaire » contact ↔ annonce). Si le
+    contact change de nom ou de téléphone chez Hektor, cette copie reste ancienne tant que l'annonce n'est pas relue.
+  · **Pourquoi le run relit l'annonce** : `sync_raw.py` l. 1755-1759 — contacts « changés » de sa liste courte → leurs annonces
+    (`sync_annonce_contact_link`) ajoutées aux annonces à relire. **Volume mesuré cette nuit : 80 contacts vus → 12 annonces
+    au plus.** Ce n'est pas journalisé.
+  · **Est-ce grave ?** Ce n'est PAS pire qu'aujourd'hui (aujourd'hui ni le contact ni l'annonce ne sont relus pour un contact
+    modifié loin dans la liste) ; mais la fiche du BIEN garderait les anciennes coordonnées du propriétaire alors que la fiche du
+    CONTACT serait juste — une incohérence visible. ⇒ il FAUT la parade.
+  · **Parade** : la tâche des contacts dresse aussi la liste des annonces liées aux contacts qu'elle a relus, et la confie au run
+    de 04:00, qui les relit dans sa lecture habituelle. ⭐ Le précédent existe : « [mandat absent du détail] N annonce(s), relue(s)
+    en plus » (`sync_raw.py`, interrupteur `APP_RELIRE_DETAIL_MANDAT_ABSENT`, posé le 02/11). Ajout de quelques lignes au run,
+    derrière un interrupteur, avec un plafond (1er tour : ~2 200 contacts → peut-être ~1 000 annonces, à étaler).
