@@ -1589,3 +1589,22 @@ Documents : à signaler à l'autre session (Youtrust reste derrière son interru
   **Correctif** : la fenêtre est rendue hors de la fiche (`createPortal` sur `<body>`, comme deux autres fenêtres de l'app) ; aperçu
   vérifié dans la page en sortant le bloc de la fiche : en-tête, sélecteur, champs, case RGPD, encart et boutons à leur place. Essai 35/35,
   build vert, commit f58e06f. ⏳ À pousser ; non vu au téléphone (je n'ai pas redimensionné ta fenêtre Chrome).
+
+## 56. « LE FOYER, DEUX PLACES » : LA MAQUETTE VALIDÉE, PUIS CODÉE *(03/11 soir, « hausser le niveau… mettre en forme cette modale et les boutons » ; « Oui, code-la »)*
+
+- **Inventaire de la zone couple de la fiche** (méthode de refonte : aucune fonction perdue) : la pastille « Couple · … », les deux onglets
+  du foyer (le second en lecture seule, la place vide non cliquable, le numéro de fiche sous chaque nom), « + Compléter le conjoint »,
+  « + Ajouter un conjoint », le crayon de l'onglet du conjoint (« Modifier le conjoint »), la fenêtre d'ajout.
+- **Maquette** (artifact privé `E6dUpoN1PWKhxaC3xVpbzW`, 7 planches) : l'idée directrice est la PLACE — chaque personne est une pastille à ses
+  initiales ; la place du conjoint est en pointillés ; elle se remplit pendant la saisie ; le lien devient plein et vert quand le couple est
+  formé. Palette de la fiche (magenta = l'action, doré = « à compléter », vert = « formé »), police Hanken Grotesk. **Validée telle quelle.**
+- **Codé (d4fe8f8)** : sur la fiche, la carte « Ajouter un conjoint » à deux places (remplace la barre beige) ; les onglets du couple avec la
+  place de chacun (numéro de fiche gardé) ; le bloc doré « Compléter le conjoint » avec son explication. La fenêtre : le foyer en tête (la
+  personne, le lien, la place du conjoint qui se remplit), le choix en deux cartes, les champs en grille, l'e-mail RGPD en interrupteur, les
+  biens partagés (ceux que la fiche connaît déjà, aucune lecture de plus), « Former le couple » ; la réussite (« X et Y forment un couple »,
+  le lien vert, les biens) avec « Voir la fiche de Y », qui passe par la porte EXISTANTE de l'adresse (précédent / suivant) ; au téléphone,
+  une feuille qui monte du bas. Mouvement limité à l'ouverture et au lien de la réussite ; respecte « réduire les animations ».
+- **Écart à la maquette, assumé** : l'avatar de l'en-tête de la fiche garde l'icône du type de contact (il porte la couleur du type) ; les
+  initiales du couple sont dans les onglets juste en dessous.
+- Build vert ; essai écran **43/43** (dont les aides neuves jouées : initiales, biens partagés sans achats) ; essais voisins verts.
+  **Non poussé, pas vu en ligne.**
