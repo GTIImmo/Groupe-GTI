@@ -718,3 +718,16 @@ acceptée (médiane 1,000) ; séquestre presque jamais saisi (1) ; notaires conn
 à 46 % — un vrai levier de pilotage (noms à résoudre par `hektor_contact_id`).
 Sources métier : délai compromis → acte « 2 à 3 mois » (Square Habitat, Pretto), condition de prêt 45-60 j ; « près d'une vente
 sur quatre n'aboutit pas » (Cafpi, méthode non vérifiée) — notre 11-13 % est en dessous.
+
+## 23. Maquette v4 (03/11) — même lien https://claude.ai/artifact/CJ9v7PnqkNvYHNGsG8R1Qr, RIEN CODÉ
+
+Demande de Frédéric : mieux exploiter offres, compromis et acquéreurs, « niveau design et animation de ce qui se fait de mieux ».
+Refaites : **Acquéreurs** (bandeau « le vivier qui dort » : 9 465 → 4 026 → 3 334 → 2 831 → 2 351 → **2 224 acheteurs qualifiés à
+rappeler** ; du fichier à l'offre 12,1 % / 10,9 % / 16 j / 69 % sous 30 j ; qualité du fichier par critère — téléphone 68 %, e-mail 67 %,
+recherche 43 %, type 42 %, budget 41 %, secteur 36 %, taille 34 % ; table par négociateur avec « fichier exploitable » ; 56 acheteurs
+déjà prêts) et **Affaires** (« ce que deviennent les 347 offres » : 273 poursuivies, **57 tombées après acceptation**, 14 sans réponse
+— toutes au-delà de leur validité —, 3 refusées ; notaires : 6 études de 77 à 121 j, 7 % à 46 % d'actes en retard ; agences avec
+part tombée et délai de réponse du vendeur ; compromis 276 contre 345). **Tableau de bord** : « Offres tombées » remplace « Offres
+refusées » (l'idée « prix trop haut » est retirée), deux lignes à traiter ajoutées (14 offres sans réponse, 2 224 acheteurs à
+rappeler). Animations à l'ouverture (montée des cartes, barres qui poussent, pouls « données de la nuit »), coupées si l'appareil
+demande moins de mouvement. Chiffre d'affaires, Mandats et Stock : inchangés.
