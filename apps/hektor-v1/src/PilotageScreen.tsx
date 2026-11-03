@@ -380,22 +380,23 @@ export default function PilotageScreen() {
     }
 
     // À traiter : ce qui demande un geste aujourd'hui (seulement pour l'année en cours).
-    type Action = { cle: string; n: number; h: number; titre: string; ton: 'rouge' | 'ambre' | 'bleu'; vers: Onglet }
+    type Action = { cle: string; n: number; h: number; titre: string; ton: 'rouge' | 'ambre' | 'bleu'; vers: Onglet; environ?: boolean }
     const actions: Action[] = []
     if (enCours && ventes) {
       actions.push({ cle: 'actes', n: ventes.enRoute.actesDepasses.n, h: ventes.enRoute.actesDepasses.h, titre: 'Actes à date dépassée', ton: 'rouge', vers: 'ventes' })
-      actions.push({ cle: 'offres', n: ventes.enRoute.offresSansCompromis30.n, h: ventes.enRoute.offresSansCompromis30.h, titre: 'Offres acceptées sans compromis depuis 30 jours', ton: 'ambre', vers: 'ventes' })
+      actions.push({ cle: 'offres', n: ventes.enRoute.offresSansCompromis30.n, h: ventes.enRoute.offresSansCompromis30.h, titre: 'Offres acceptées sans compromis depuis 30 jours', ton: 'ambre', vers: 'ventes', environ: ventes.enRoute.offresSansCompromis30.estimes > 0 })
     }
     if (enCours && stock) actions.push({ cle: 'echus', n: stock.echus, h: 0, titre: 'Mandats échus, bien toujours en vente', ton: 'ambre', vers: 'stock' })
     if (enCours && signatures) actions.push({ cle: 'sign', n: signatures.enAttente, h: 0, titre: 'Signatures de mandat en attente', ton: 'bleu', vers: 'mandats' })
     const maxAction = Math.max(1, ...actions.map((a) => a.n))
 
     const route = ventes && enCours ? [
-      { cle: 'cp', libelle: 'Compromis en cours', n: ventes.enRoute.compromis.n, h: ventes.enRoute.compromis.h, ton: '#a3004f', quoi: 'dossiers' },
-      { cle: 'of', libelle: 'Offres acceptées', n: ventes.enRoute.offresAcceptees.n, h: ventes.enRoute.offresAcceptees.h, ton: '#d4478a', quoi: 'dossiers' },
-      ...(stock ? [{ cle: 'st', libelle: 'Biens en vente', n: stock.actifs, h: stock.potentiel, ton: '#f4b3cd', quoi: 'biens' }] : []),
+      { cle: 'cp', libelle: 'Compromis en cours', n: ventes.enRoute.compromis.n, h: ventes.enRoute.compromis.h, ton: '#a3004f', quoi: 'dossiers', environ: false },
+      { cle: 'of', libelle: 'Offres acceptées', n: ventes.enRoute.offresAcceptees.n, h: ventes.enRoute.offresAcceptees.h, ton: '#d4478a', quoi: 'dossiers', environ: ventes.enRoute.offresAcceptees.estimes > 0 },
+      ...(stock ? [{ cle: 'st', libelle: 'Biens en vente', n: stock.actifs, h: stock.potentiel, ton: '#f4b3cd', quoi: 'biens', environ: false }] : []),
     ] : []
-    const engage = ventes ? ventes.enRoute.compromis.h + ventes.enRoute.offresAcceptees.h : 0
+    const offresEstimees = ventes?.enRoute.offresAcceptees.estimes ?? 0
+    const tauxOffres = `${((ventes?.enRoute.offresAcceptees.taux ?? 0) * 100).toFixed(1).replace('.', ',')} %`
 
     const top = [...(ventes?.agences.entries() ?? [])].filter(([cle]) => cle).sort((a, b) => b[1].h - a[1].h).slice(0, 6)
     const maxTop = Math.max(1, ...top.map(([, a]) => Math.max(a.h, comparer ? a.hPrec : 0)))
@@ -449,7 +450,7 @@ export default function PilotageScreen() {
                   <button key={a.cle} type="button" className="pl-tdb-action pl-glisse" style={{ animationDelay: `${420 + i * 110}ms` }} onClick={() => setOnglet(a.vers)}>
                     <span className={`pl-etq is-${a.ton}`}>{entier.format(a.n)}</span>
                     <span className="pl-tdb-action-texte"><b>{a.titre}</b><span className="pl-piste is-fine"><span className={`is-${a.ton}`} style={{ width: `${(a.n / maxAction) * 100}%`, animationDelay: `${600 + i * 110}ms` }} /></span></span>
-                    <span className="pl-tdb-action-h">{a.h ? <><b className="pl-num">{compact(a.h)}</b><span className="pl-mute">{unite}</span></> : null}</span>
+                    <span className="pl-tdb-action-h">{a.h ? <><b className="pl-num">{a.environ ? '≈ ' : ''}{compact(a.h)}</b><span className="pl-mute">{unite}</span></> : null}</span>
                   </button>
                 ))}
               </section>
@@ -459,16 +460,16 @@ export default function PilotageScreen() {
               <section className="pl-carte pl-bloc pl-tdb-bloc" aria-label="Ce qui est en route">
                 <div className="pl-bloc-tete"><h2>Ce qui est en route</h2><button type="button" className="pl-lien" onClick={() => setOnglet('stock')}>Le stock <span aria-hidden="true">→</span></button></div>
                 <span className="pl-tdb-route-tete">
-                  <span className="pl-mute">Honoraires des compromis et des offres acceptées en cours</span>
-                  <b className="pl-tdb-route-valeur pl-num"><Compteur valeur={engage} format={compact} /> {unite}</b>
-                  <span className="pl-mute">Montants saisis, avant les chances d’aboutir.{stock ? ` Le stock en vente porte ${compact(stock.potentiel)} de plus.` : ''}</span>
+                  <span className="pl-mute">Honoraires des compromis signés, en attente de l’acte</span>
+                  <b className="pl-tdb-route-valeur pl-num"><Compteur valeur={ventes?.enRoute.compromis.h ?? 0} format={compact} /> {unite}</b>
+                  <span className="pl-mute">Montants saisis, avant les chances d’aboutir.{offresEstimees ? ` Les offres acceptées n’ont pas encore leurs honoraires : ${offresEstimees} sont estimées au taux de l’année (${tauxOffres} du prix).` : ''}</span>
                 </span>
                 <span className="pl-tdb-ruban" role="img" aria-label="Compromis, offres acceptées, biens en vente">
                   {route.map((r, i) => <span key={r.cle} style={{ flex: `${Math.max(r.h, 1)} 1 0`, background: r.ton, animationDelay: `${400 + i * 140}ms` }} />)}
                 </span>
                 <div className="pl-tdb-route-legende">
                   {route.map((r) => (
-                    <span key={r.cle}><i style={{ background: r.ton }} /><span><b>{r.libelle}</b><span className="pl-mute">{entier.format(r.n)} {r.quoi}</span></span><b className="pl-num">{compact(r.h)}</b></span>
+                    <span key={r.cle}><i style={{ background: r.ton }} /><span><b>{r.libelle}</b><span className="pl-mute">{entier.format(r.n)} {r.quoi}</span></span><b className="pl-num">{r.environ ? '≈ ' : ''}{compact(r.h)}</b></span>
                   ))}
                 </div>
               </section>

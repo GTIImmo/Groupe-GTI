@@ -254,9 +254,11 @@ export type VentesCalcul = {
   compromis: { n: number; nPrec: number; parMois: number[]; parMoisPrec: number[] }
   enRoute: {
     compromis: { n: number; h: number }
-    offresAcceptees: { n: number; h: number }
+    // Une offre acceptée n'a presque jamais ses honoraires (ils arrivent au compromis : 44 sur 47 à 0 le 03/11) :
+    // ceux qui manquent sont estimés au taux de l'année (honoraires ÷ prix des ventes), comptés dans `estimes`.
+    offresAcceptees: { n: number; h: number; estimes: number; taux: number }
     actesDepasses: { n: number; h: number }
-    offresSansCompromis30: { n: number; h: number }
+    offresSansCompromis30: { n: number; h: number; estimes: number }
   }
 }
 
@@ -336,7 +338,8 @@ export function calculerVentes(source: Exclude<PilotageSources['ventes'], Error>
     else if (date.startsWith(String(annee - 1))) { cp.parMoisPrec[m] += 1; if (date.slice(5, 10) <= borne) cp.nPrec += 1 }
   }
   // Ce qui est en route aujourd'hui (seulement les chaînes lues : dernier événement en N ou N-1).
-  const route = { compromis: { n: 0, h: 0 }, offresAcceptees: { n: 0, h: 0 }, actesDepasses: { n: 0, h: 0 }, offresSansCompromis30: { n: 0, h: 0 } }
+  const tauxAnnee = (() => { const v = somme(n.map((l) => l.montant)); return v ? somme(n.map((l) => l.honoraires)) / v : 0 })()
+  const route = { compromis: { n: 0, h: 0 }, offresAcceptees: { n: 0, h: 0, estimes: 0, taux: tauxAnnee }, actesDepasses: { n: 0, h: 0 }, offresSansCompromis30: { n: 0, h: 0, estimes: 0 } }
   const ilYa30 = (() => { const d = new Date(`${jour}T12:00:00`); d.setDate(d.getDate() - 30); return d.toISOString().slice(0, 10) })()
   for (const ligne of toutes.values()) {
     const h = ligne.honoraires ?? 0
@@ -345,9 +348,11 @@ export function calculerVentes(source: Exclude<PilotageSources['ventes'], Error>
       const prevue = String(ligne.date_acte_prevue ?? '').slice(0, 10)
       if (estDate(prevue) && prevue < jour) { route.actesDepasses.n += 1; route.actesDepasses.h += h }
     } else if (ligne.etape === 'offre_acceptee') {
-      route.offresAcceptees.n += 1; route.offresAcceptees.h += h
+      const estime = h > 0 ? 0 : 1
+      const hOffre = h > 0 ? h : (ligne.montant ?? 0) * tauxAnnee
+      route.offresAcceptees.n += 1; route.offresAcceptees.h += hOffre; route.offresAcceptees.estimes += estime
       const offre = String(ligne.date_offre ?? '').slice(0, 10)
-      if (estDate(offre) && offre <= ilYa30) { route.offresSansCompromis30.n += 1; route.offresSansCompromis30.h += h }
+      if (estDate(offre) && offre <= ilYa30) { route.offresSansCompromis30.n += 1; route.offresSansCompromis30.h += hOffre; route.offresSansCompromis30.estimes += estime }
     }
   }
   return {
