@@ -276,6 +276,7 @@ import { bvs, bvt } from './lib/bienvuTexte'
 import { MENTION_AVENANT, MENTION_MANDAT, repereHtml, repereSignature, zoneMentionHtml } from './lib/signatureAnchors'
 import { sansCasesVides } from './lib/mandantsDocument'
 import { coupleAffiche, conjointNommeId, conjointVideId, foyerAffiche, peutRecevoirUnConjoint, raisonAjoutConjoint, unirLiensDuFoyer, type FoyerAffiche } from './lib/coupleAffichage'
+import { MessageFicheMandatDe, PastilleFicheMandat, PastilleFicheMandatDe, useFicheMandat } from './FicheMandatManquante'
 
 type DetailContact = {
   id: string
@@ -27588,6 +27589,8 @@ function registreV3TypeBien(item: MandatRecord): RegistreV3IcoNom {
 // ⚠ Des dates absentes ou « 0000-00-00 » (34 lignes au 28/10) : computeMandatTiming les rend invalides --
 //   on garde alors les dates telles que formatDate les ecrit, sans barre ni « reste ».
 function RegistreV3Periode({ item }: { item: MandatRecord }) {
+  // Un numero sans fiche chez Hektor (03/11) : la pastille rouge a la place du « - » muet.
+  const ficheMandat = useFicheMandat(item)
   const statut = mandatStatutForRegister(item)
   const timing = computeMandatTiming(item.mandat_date_debut, item.mandat_date_fin)
   const cloture = (item.mandat_date_cloture ?? '').trim()
@@ -27610,9 +27613,11 @@ function RegistreV3Periode({ item }: { item: MandatRecord }) {
   return (
     <div className={`reg3-periode reg3-ton-${ton}`}>
       {/* Aucune des deux dates : un seul « - », comme une case vide de l'ancien registre (pas « - → - »). */}
-      <span className="reg3-dates">{item.mandat_date_debut || item.mandat_date_fin
-        ? <>{formatDate(item.mandat_date_debut)}<i>→</i>{formatDate(item.mandat_date_fin)}</>
-        : '-'}</span>
+      {ficheMandat ? <PastilleFicheMandat etat={ficheMandat} /> : (
+        <span className="reg3-dates">{item.mandat_date_debut || item.mandat_date_fin
+          ? <>{formatDate(item.mandat_date_debut)}<i>→</i>{formatDate(item.mandat_date_fin)}</>
+          : '-'}</span>
+      )}
       {timing.valid ? <span className="reg3-barre" aria-hidden="true"><b style={{ width: `${pct}%` }} /></span> : null}
       {sousLigne ? <span className={`reg3-sous ${cloture ? 'is-clos' : ''}`.trim()}>{sousLigne}</span> : null}
     </div>
@@ -27658,6 +27663,7 @@ function RegistreV3Deplie({ item, onOuvrirFiche }: { item: MandatRecord; onOuvri
   }
   return (
     <div className="reg3-deplie">
+      <MessageFicheMandatDe item={item} />
       <section className="reg3-bloc" aria-label="Mandants">
         <div className="reg3-bloc-h">{contacts.length > 1 ? `Mandants · ${contacts.length}` : 'Mandant · 1'}</div>
         {contacts.length > 0 ? contacts.map((contact) => (
@@ -28289,6 +28295,7 @@ function MandatRegisterScreen(props: {
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11Z" /><circle cx="12" cy="10" r="2.5" /></svg>
                       {String(selectedDetailPayload.adresse_detail ?? selectedDetail.adresse_detail ?? selectedDetail.adresse_privee_listing ?? selectedDetail.ville ?? '-')}
                     </div>
+                    <MessageFicheMandatDe item={selectedDetail} />
                     {(() => {
                       // Type de mandat color-codé (3 valeurs réelles : SIMPLE / EXCLUSIF / ACCORD,
                       // + repli neutre pour les mandats sans type). €/m² calculé comme le cockpit
@@ -33874,6 +33881,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                 return (
                   <>
                     <div className="fa-ck-pub-sec"><span className="fa-ck-pub-ic mag" aria-hidden="true"><CkIcon path={CK_ICON.mandat} /></span><div><div className="fa-ck-pub-t">Mandat de vente</div><div className="fa-ck-pub-s">N° {m.num} · {m.type}</div></div>{pMandatOk ? <span className="fa-ck-badge-ok">Validé</span> : null}</div>
+                    <MessageFicheMandatDe item={dossier} autreDateDebut={detailStr('date_mandat')} />
                     <div className="fa-ck-pub-card"><div className="fa-ck-mandfields">
                       <div className="fa-ck-mf"><div className="mk">N° mandat</div><div className="mv">{m.num}</div></div>
                       <div className="fa-ck-mf"><div className="mk">Type</div><div className="mv">{m.type}</div></div>
@@ -35331,6 +35339,7 @@ function DossierDetailLayoutBase(props: {
                   ) : (
                   <section className="fa-section">
                     <div className="fa-sec-label">Mandat</div>
+                    <MessageFicheMandatDe item={dossier} autreDateDebut={props.detail.mandat_date_debut} />
                     <div className="fa-mandate">
                       <div className="fa-mandate-fields">
                         <div className="fa-mfield"><span className="fa-mk">N° de mandat</span><span className="fa-mv">{safeText(props.detail.mandat_numero_source) || '-'}</span></div>
@@ -40083,6 +40092,7 @@ function MobileMandatCards(props: {
               <StatusPill value={props.mode === 'estimation' ? listingProgressLabel(item) : item.statut_annonce} />
               {props.mode === 'active' && !item.is_brouillon ? <StatusPill value={item.archive === '1' ? 'Archivé' : 'Actif'} /> : null}
               {isLightweight ? <span className={`mobile-detail-chip ${hasExportedDetail ? 'is-ready' : ''}`}>{hasExportedDetail ? 'Détail prêt' : 'Détail à charger'}</span> : null}
+              {props.mode === 'active' ? <PastilleFicheMandatDe item={item} /> : null}
               <span className="mobile-portal-chip">LBC <PortalStatusMark enabled={hasLeboncoin} /></span>
               <span className="mobile-portal-chip">BI <PortalStatusMark enabled={hasBienici} /></span>
               <span className="mobile-portal-chip">GTI <PortalStatusMark enabled={hasSiteGti} /></span>

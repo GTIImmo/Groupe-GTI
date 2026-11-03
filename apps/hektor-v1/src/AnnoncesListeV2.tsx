@@ -10,6 +10,7 @@
 //   que les disposer comme l'annuaire Contacts. Aucune requete : tout est dans la ligne.
 import type { ReactNode } from 'react'
 import type { MandatRecord } from './types'
+import { PastilleFicheMandat, useFicheMandat } from './FicheMandatManquante'
 import './annonces-liste-v2.css'
 
 // 03/11/2026 -- Frederic : « je ne veux pas de variable ». La V2 est donc la liste PAR DEFAUT
@@ -224,6 +225,8 @@ export function AnnonceV2Cells(p: AnnonceV2CellsProps) {
     : p.validated
       ? { cls: 'ok', label: 'Validé', marque: 'm9 12 2 2 4-4', titre: 'Mandat validé par la Direction' }
       : { cls: 'attente', label: 'Non validé', marque: 'M12 9v3M12 15h.01', titre: 'Mandat pas encore validé par la Direction' }
+  // Un numero sans fiche chez Hektor (03/11) : la pastille rouge REMPLACE le bouclier, qui disait « Validé ».
+  const ficheMandat = useFicheMandat(item)
 
   const debut = jourLocal(item.mandat_date_debut)
   const fin = jourLocal(item.mandat_date_fin)
@@ -248,10 +251,12 @@ export function AnnonceV2Cells(p: AnnonceV2CellsProps) {
       <BienPrixCells item={item} photoUrl={p.photoUrl} typeLabel={p.typeLabel} negoName={p.negoName} transactionLabel={p.transactionLabel} />
       <td>
         <div className="av3-mandat">
-          <span className={`av3-bouclier ${bouclier.cls}`} title={bouclier.titre}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={ICONE.bouclier} /><path d={bouclier.marque} /></svg>
-            {bouclier.label}
-          </span>
+          {ficheMandat ? <PastilleFicheMandat etat={ficheMandat} /> : (
+            <span className={`av3-bouclier ${bouclier.cls}`} title={bouclier.titre}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={ICONE.bouclier} /><path d={bouclier.marque} /></svg>
+              {bouclier.label}
+            </span>
+          )}
           {periode ? (
             <>
               <span className="av3-dates"><span>{periode.debut}</span><span>{periode.fin}</span></span>
