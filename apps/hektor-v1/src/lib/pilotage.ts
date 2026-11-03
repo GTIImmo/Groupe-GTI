@@ -475,6 +475,10 @@ export type StockCalcul = {
   echus: number; echoient30: number
   hBloque6Mois: number
   agences: Map<string, { actifs: number; engages: number; h: number; sans: number; ages: number[]; vieux: number; nonDif: number; echus: number }>
+  // 03/11 : le même portefeuille, négociateur par négociateur (le nom de la fiche du bien). Un bien sans nom
+  // n'est rangé chez personne : il est compté à part, pour que la note le dise.
+  negos: Map<string, { nom: string; actifs: number; engages: number; h: number; sans: number; ages: number[]; vieux: number; nonDif: number; echus: number }>
+  sansNego: { actifs: number; engages: number }
 }
 
 const estNonDiffusable = (s: PilotageStock) => s.diffusable === '0' || s.diffusable === 'false'
@@ -507,10 +511,8 @@ export function calculerStock(lignes: PilotageStock[], agence: string | null): S
   ].map((t) => { const biens = actifs.filter(t.filtre); return { libelle: t.libelle, biens: biens.length, h: somme(biens.map((s) => s.honoraires)), ton: t.ton } })
   const baisses = actifs.filter((s) => s.price_change_last_old_value != null && s.price_change_last_new_value != null && (s.price_change_last_new_value as number) < (s.price_change_last_old_value as number))
   const echu = (s: PilotageStock) => estDate(s.mandat_date_fin) && String(s.mandat_date_fin) > '1990' && String(s.mandat_date_fin).slice(0, 10) < jour
-  const agences = new Map<string, { actifs: number; engages: number; h: number; sans: number; ages: number[]; vieux: number; nonDif: number; echus: number }>()
-  for (const s of toutes) {
-    const cle = cleAgence(s.agence_nom)
-    const a = agences.get(cle) ?? { actifs: 0, engages: 0, h: 0, sans: 0, ages: [], vieux: 0, nonDif: 0, echus: 0 }
+  type Portefeuille = { actifs: number; engages: number; h: number; sans: number; ages: number[]; vieux: number; nonDif: number; echus: number }
+  const compter = (a: Portefeuille, s: PilotageStock) => {
     if (s.statut_annonce === 'Actif') {
       a.actifs += 1; a.h += s.honoraires ?? 0
       if (!((s.honoraires ?? 0) > 0)) a.sans += 1
@@ -518,7 +520,24 @@ export function calculerStock(lignes: PilotageStock[], agence: string | null): S
       if (estNonDiffusable(s)) a.nonDif += 1
       if (echu(s)) a.echus += 1
     } else a.engages += 1
+  }
+  const agences = new Map<string, Portefeuille>()
+  const negos = new Map<string, Portefeuille & { nom: string }>()
+  const sansNego = { actifs: 0, engages: 0 }
+  for (const s of toutes) {
+    const cle = cleAgence(s.agence_nom)
+    const a = agences.get(cle) ?? { actifs: 0, engages: 0, h: 0, sans: 0, ages: [], vieux: 0, nonDif: 0, echus: 0 }
+    compter(a, s)
     agences.set(cle, a)
+    if (!String(s.commercial_nom ?? '').trim()) {
+      if (s.statut_annonce === 'Actif') sansNego.actifs += 1
+      else sansNego.engages += 1
+      continue
+    }
+    const cleN = cleNom(s.commercial_nom as string)
+    const n = negos.get(cleN) ?? { nom: nomPersonne(s.commercial_nom), actifs: 0, engages: 0, h: 0, sans: 0, ages: [], vieux: 0, nonDif: 0, echus: 0 }
+    compter(n, s)
+    negos.set(cleN, n)
   }
   const ages = actifs.map(age).filter((x): x is number => x != null)
   return {
@@ -535,7 +554,7 @@ export function calculerStock(lignes: PilotageStock[], agence: string | null): S
     echus: actifs.filter(echu).length,
     echoient30: actifs.filter((s) => estDate(s.mandat_date_fin) && String(s.mandat_date_fin).slice(0, 10) >= jour && String(s.mandat_date_fin).slice(0, 10) <= dans30).length,
     hBloque6Mois: somme(actifs.filter((s) => (age(s) ?? 0) > 183).map((s) => s.honoraires)),
-    agences,
+    agences, negos, sansNego,
   }
 }
 

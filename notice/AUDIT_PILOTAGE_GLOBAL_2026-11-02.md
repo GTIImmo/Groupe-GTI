@@ -1031,3 +1031,12 @@ Contrôle fait dans le Chrome de Frédéric, en lecture seule. Le filtre d'agenc
 - Mais seules **4 des 11** dates dépassées s'affichaient : les 7 autres sont chez des notaires sous le seuil (moins de 5 actes, moins de 3 compromis).
 - Corrigé (786d13c) : un notaire qui a une date dépassée paraît toujours dans le tableau.
 - Vérifié en base : les 11 dates dépassées du registre sont toutes dans la fonction, avec leur notaire. ⏳ L'écran doit donc en montrer 11 après le push.
+
+**Troisième contrôle réel (après le push de 786d13c)** : le tableau des notaires montre bien les **11** dates d'acte dépassées (37 lignes, 38 compromis en cours ; les autres compromis sont chez des notaires sous les trois seuils, comme la note le dit). ✅
+
+## 39. Le stock par négociateur (03/11 soir) — Frédéric : « les stock ne sont pas possible par nego ? », puis « OK vas y »
+
+- **Le constat** : chaque bien du stock arrive déjà dans l'écran avec son négociateur (`commercial_nom`, rendu par `app_pilotage_stock`). L'onglet Stock ne regroupait que par agence : un oubli du portage, pas une limite des données. Aucune écriture en base, aucune fonction nouvelle.
+- **La mesure en base** (`app_dossier_current`, statuts Actif / Sous offre / Sous compromis) : 575 biens actifs, 130 engagés, **8 actifs sans négociateur**, 31 négociateurs. Les plus gros portefeuilles : Claire RIBBES 63 actifs + 8 engagés, Marion BILLIG DURAND 59 + 16, Christine BRAVARD 33 + 4.
+- **Le correctif** : `calculerStock` compte le même portefeuille par négociateur (clé `cleNom`, nom `nomPersonne`) avec la même règle que les agences — C.A potentiel, en vente, sans honoraires, engagés, âge médian, plus de 6 mois, non diffusables, mandat échu. Le filtre d'agence s'applique. Un bien sans nom n'est rangé chez personne : il est compté à part (`sansNego`) et **la note le dit**, il reste dans les totaux et les agences.
+- **Contrôlé** sur le serveur d'essai, écran large et téléphone (le tableau défile dans sa carte, la page ne déborde pas). Build vert. ⏳ Contrôle sur les vraies données après le push : la note doit annoncer 8 biens en vente sans négociateur (moins ceux d'essai), et Claire RIBBES doit avoir 63 biens en vente.

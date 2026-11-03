@@ -1214,7 +1214,9 @@ export default function PilotageScreen() {
     const totalTypes = Math.max(1, stock.types.reduce((s, t) => s + t.h, 0))
     const agences = [...stock.agences.entries()].filter(([cle]) => cle).sort((a, b) => b[1].h - a[1].h)
     const maxAg = Math.max(1, ...agences.map(([, a]) => a.h))
-    const rouge = (n: number, total: number) => (n * 3 > total ? 'pl-alerte' : '')
+    const negos = [...stock.negos.entries()].sort((a, b) => b[1].h - a[1].h || b[1].actifs - a[1].actifs)
+    const maxNego = Math.max(1, ...negos.map(([, n]) => n.h))
+    const rouge =(n: number, total: number) => (n * 3 > total ? 'pl-alerte' : '')
     return (
       <>
         <section className="pl-carte pl-heros" aria-label="C.A potentiel du stock">
@@ -1305,6 +1307,36 @@ export default function PilotageScreen() {
             </table>
           </div>
           <span className="pl-note">C.A potentiel = honoraires saisis sur les biens en vente. Une agence avec beaucoup de biens sans honoraires saisis a un C.A potentiel sous-estimé.</span>
+        </section>
+
+        <section className="pl-carte pl-bloc is-table" aria-label="Le stock de chaque négociateur">
+          <div className="pl-bloc-tete"><h2>Le stock de chaque négociateur</h2><span className="pl-mute">{agence ? `agence ${nomAgence(agence)} · ` : ''}en rouge : plus d’un tiers de ses biens</span></div>
+          <div className="pl-defile">
+            <table className="pl-table">
+              <thead><tr><th scope="col">Négociateur</th><th scope="col">C.A potentiel {unite}</th><th scope="col">En vente</th><th scope="col">Sans honoraires</th><th scope="col">Engagés</th><th scope="col">Âge médian</th><th scope="col">Plus de 6 mois</th><th scope="col">Non diffusables</th><th scope="col">Mandat échu</th></tr></thead>
+              <tbody>
+                {negos.map(([cle, n]) => {
+                  const ageMed = n.ages.length ? Math.round([...n.ages].sort((x, y) => x - y)[Math.floor(n.ages.length / 2)]) : null
+                  return (
+                    <tr key={cle}>
+                      <td><b>{n.nom}</b></td>
+                      <td className="pl-num pl-fort"><span className="pl-cellule-barre"><Barre part={(n.h / maxNego) * 100} ton="#c5005f" fine />{compact(n.h)}</span></td>
+                      <td className="pl-num">{n.actifs}</td>
+                      <td className={`pl-num ${rouge(n.sans, n.actifs)}`}>{n.sans}</td>
+                      <td className="pl-num">{n.engages}</td>
+                      <td className="pl-num">{ageMed != null ? `${ageMed} j` : '–'}</td>
+                      <td className={`pl-num ${rouge(n.vieux, n.actifs)}`}>{n.vieux}</td>
+                      <td className={`pl-num ${rouge(n.nonDif, n.actifs)}`}>{n.nonDif}</td>
+                      <td className={`pl-num ${n.echus >= 5 ? 'pl-alerte' : ''}`}>{n.echus}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+          <span className="pl-note">Le négociateur est celui que la fiche du bien nomme. {stock.sansNego.actifs + stock.sansNego.engages
+            ? `${stock.sansNego.actifs} bien${stock.sansNego.actifs > 1 ? 's' : ''} en vente et ${stock.sansNego.engages} engagé${stock.sansNego.engages > 1 ? 's' : ''} n’ont aucun négociateur : ils comptent dans les totaux et les agences, pas dans ce tableau.`
+            : 'Tous les biens ont un négociateur.'}</span>
         </section>
       </>
     )
