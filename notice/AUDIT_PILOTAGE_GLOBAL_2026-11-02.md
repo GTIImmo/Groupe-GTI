@@ -680,3 +680,13 @@ seconde, montant, validité). Sur les offres 2026 hors essais :
 **03/11 — Frédéric : les mandants de VA6482 sont de VRAIS CLIENTS. « Attends. »** Rien n'est supprimé sur 24113. Le bien d'un
 vrai mandat exclusif (18787) porte donc les essais du 22-23/10 : vente d'essai 23358 (statut « Vendu »), compromis 50137, offres
 d'essai, et des contacts ESSAI ajoutés à ses mandants. ⏳ En attente de sa décision.
+
+**03/11, 09:09-09:18 UTC — VA6482 NETTOYÉ (ordre de Frédéric : « sur le VA6482 supprime aussi »)**, par les gestes de l'app :
+vente d'essai **23358 supprimée** (`b0ea1c1d`, done) · compromis **50137 supprimé** (`fbe5a2dd`, done, statut redescendu « Sous
+offre ») · offre d'essai **33116 refusée** (`7b1877a9`, done ; une offre ne se supprime pas) · statut **« Actif »** (`1efe72bb`, done,
+`statut_hektor_apres 2`) · diffusion remise à **0** comme avant les essais (« Pilotage diffusion : Désactiver ») — ⚠ le 1er clic a été
+écrasé par la relecture qui tournait (09:16:49 relisait encore diffusable 1), le 2e tient : « Diffusion coupée, état actuel : non
+diffusable », base à 0. Registre de 24113 depuis octobre : 6 offres d'essai refusées, plus de compromis ni de vente.
+⬜ Restent sur VA6482 : les contacts ESSAI / TESTCLAUDE ajoutés à ses MANDANTS ; les 6 offres refusées (à écarter du pilotage).
+⬜ 62774 (compromis annulé 50048, bien Clos) et 23287 / VA31732 (vente 5537 + compromis 19133, bien « Vendu ») : NON touchés —
+supprimer la vente ou le compromis fait REDESCENDRE le statut (un bien d'essai clos ou vendu redeviendrait « Actif », donc dans le stock).
