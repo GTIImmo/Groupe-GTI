@@ -1248,3 +1248,12 @@ Hektor/Supabase, 0 écriture), les points lourds REVÉRIFIÉS par moi (marqués 
     de 04:00, qui les relit dans sa lecture habituelle. ⭐ Le précédent existe : « [mandat absent du détail] N annonce(s), relue(s)
     en plus » (`sync_raw.py`, interrupteur `APP_RELIRE_DETAIL_MANDAT_ABSENT`, posé le 02/11). Ajout de quelques lignes au run,
     derrière un interrupteur, avec un plafond (1er tour : ~2 200 contacts → peut-être ~1 000 annonces, à étaler).
+- **Impact en temps sur le run de 04:00 (mesure du 03/11)** : le run relit une annonce en **2 requêtes** (`annonce_detail` +
+  `mandat_by_annonce`, 47 + 47 cette nuit), espacées d'**1 s** (écart médian mesuré) ⇒ **~2 s par annonce** dans sa lecture
+  Hektor ; la normalisation, la couche et l'envoi sont refaits en entier chaque nuit (coût fixe, inchangé).
+  Combien d'annonces par contact modifié : échantillon de 740 contacts anciens modifiés depuis le 03/08 → **526 annonces liées
+  (~0,7 par contact)** ; cette nuit 80 contacts vus → 12 annonces.
+  · **en régime** : 15 à 50 contacts/nuit → ~10 à 35 annonces → **+20 s à +70 s** ;
+  · **1er rattrapage** : ~2 200 contacts → ~1 550 annonces → **~+52 min** s'il passait d'un coup → le run finirait vers ~07:10 ;
+    la descente de 06:45 ATTEND la fin du run (`run_descente.ps1`, garde « Quotidien en cours ») : pas de casse, mais l'app serait
+    à jour ~25 min plus tard. ⇒ **plafond, p. ex. 300 annonces/nuit (+10 min)** : rattrapage en ~5 nuits.
