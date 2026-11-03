@@ -939,3 +939,11 @@ est « couple » et son résumé « nommé » (la nuit du 02→03/11 : aujourd'h
   ~4 000 acquéreurs (variante `targeted`, 4 012 fiches vues le 03/11). Une relecture tournante (B) existe donc déjà pour eux.
   Les propriétaires / mandants n'en font pas partie : 467326 est lié à l'annonce 59545 (active), 131 seulement des 41 847 contacts
   liés à une annonce non archivée ont été relus cette nuit. Taille d'un périmètre « biens en vente » : non mesurée.
+- **Lire toute la liste (mesure 03/11)** : actifs 170 040 contacts (metadata Hektor) = ~8 500 pages ; archivés ~9 200 pages ;
+  ~17 700 pages en tout. Dernière lecture complète le 23/06 : 8 429 + 8 931 pages en ~33 min, EN PARALLÈLE
+  (`refetch_contacts_listing_parallel.py`), avant la mesure du quota (20/08). Aujourd'hui, au rythme de 1 page/s : ~4 h 50
+  sans les pauses ; et 17 700 requêtes dépassent à elles seules le quota (13 000 à 17 000 par période). Pas faisable en une nuit.
+- 💡 **Idée B' (non décidée)** : une relecture tournante de la LISTE plutôt que des fiches — triée par numéro (ordre stable), N pages
+  par nuit. Une page = 20 contacts avec leur `datemaj` ET leur `refCouple` : 20 fois moins cher que `ContactById`. Exemple :
+  1 000 pages/nuit (~17 min, 1 000 requêtes) = 20 000 contacts vérifiés, tous les actifs en ~9 nuits ; seules les fiches dont la
+  `datemaj` a bougé sont ensuite relues en détail.
