@@ -29,8 +29,11 @@ def apply_diffusion(
     bridge: HektorBridgeService = Depends(get_bridge),
 ):
     user = get_authenticated_user(settings, authorization)
-    admin_service.assert_admin(user)
-    return {"ok": True, "payload": bridge.apply(payload.appDossierId, payload.dryRun, payload.ensureDiffusable, user.email or user.id)}
+    # Lot 4 (03/11/2026) : ouvert au negociateur sur SES annonces deja diffusables ; il ne peut
+    # jamais rendre une annonce diffusable (ensureDiffusable force a False pour lui).
+    _profile, privilegie = admin_service.assert_can_apply_portals(user, authorization, payload.appDossierId)
+    ensure_diffusable = payload.ensureDiffusable if privilegie else False
+    return {"ok": True, "payload": bridge.apply(payload.appDossierId, payload.dryRun, ensure_diffusable, user.email or user.id)}
 
 
 @router.post("/diffusable")
@@ -68,13 +71,15 @@ def persist_hektor_state(
     bridge: HektorBridgeService = Depends(get_bridge),
 ):
     user = get_authenticated_user(settings, authorization)
-    admin_service.assert_admin(user)
+    # Lot 4 (03/11/2026) : le negociateur peut reporter l'etat de SES portails (resume, nombre),
+    # jamais la validation ni « diffusable » -- ces deux champs sont ignores pour lui.
+    _profile, privilegie = admin_service.assert_can_apply_portals(user, authorization, payload.appDossierId)
     return {
         "ok": True,
         "payload": bridge.persist_state(
             payload.appDossierId,
-            validation_diffusion_state=payload.validationDiffusionState,
-            diffusable=payload.diffusable,
+            validation_diffusion_state=payload.validationDiffusionState if privilegie else None,
+            diffusable=payload.diffusable if privilegie else None,
             portails_resume=payload.portailsResume,
             nb_portails_actifs=payload.nbPortailsActifs,
         ),

@@ -223,6 +223,53 @@ class SupabaseAdminService:
             raise HTTPException(status_code=403, detail="Acces admin refuse")
         return profile
 
+    def assert_can_apply_portals(self, user: AuthenticatedUser, authorization: str | None, app_dossier_id: int) -> tuple[dict[str, Any], bool]:
+        """Qui peut envoyer les portails d'une annonce chez Hektor (lot 4, 03/11/2026).
+
+        Regle de Frederic : un negociateur coche et decoche ses portails DES QUE l'annonce est
+        diffusable (validee + Diffusable coche par la Direction). Admin et manager : comme avant.
+        Commercial : seulement si
+          · le dossier est `diffusable = '1'` dans app_dossier_current, et
+          · il a acces au dossier, juge par la MEME regle que la base : app_console_can_access_dossier
+            appelee AVEC SON PROPRE JETON (pas la cle de service).
+        Rend (profil, privilegie). Un appel non privilegie ne doit jamais rendre une annonce
+        diffusable ni toucher la validation : l'appelant le garantit.
+        Voir notice/PLAN_DEV_LISTING_ANNONCES_LISTE_PUBLICITE_2026-11-03.md, lot 4.
+        """
+        profile = self.load_profile(user)
+        if not profile or profile.get("is_active") is not True:
+            raise HTTPException(status_code=403, detail="Compte utilisateur inactif ou introuvable")
+        role = str(profile.get("role") or "")
+        if role in {"admin", "manager"}:
+            return profile, True
+        if role != "commercial":
+            raise HTTPException(status_code=403, detail="Acces refuse")
+        rows = self._rest_rows(
+            "app_dossier_current",
+            {"select": "app_dossier_id,hektor_annonce_id,diffusable", "app_dossier_id": f"eq.{int(app_dossier_id)}", "limit": "1"},
+            "Unable to load app_dossier_current",
+        )
+        if not rows:
+            raise HTTPException(status_code=404, detail="Annonce introuvable")
+        if str(rows[0].get("diffusable") or "").strip() != "1":
+            raise HTTPException(status_code=403, detail="Annonce pas encore diffusable : la Direction doit la valider et cocher Diffusable")
+        token = str(authorization or "").split(" ", 1)[1].strip() if " " in str(authorization or "") else ""
+        if not token:
+            raise HTTPException(status_code=401, detail="Authorization bearer manquant")
+        response = requests.post(
+            f"{self.settings.supabase_url}/rest/v1/rpc/app_console_can_access_dossier",
+            headers={
+                "apikey": self.settings.supabase_anon_key,
+                "Authorization": f"Bearer {token}",
+                "Content-Type": "application/json",
+            },
+            json={"target_app_dossier_id": int(app_dossier_id), "target_hektor_annonce_id": str(rows[0].get("hektor_annonce_id") or "")},
+            timeout=30,
+        )
+        if not response.ok or response.json() is not True:
+            raise HTTPException(status_code=403, detail="Annonce hors de ton perimetre")
+        return profile, False
+
     def assert_active_profile(self, user: AuthenticatedUser) -> dict[str, Any]:
         profile = self.load_profile(user)
         if not profile:
