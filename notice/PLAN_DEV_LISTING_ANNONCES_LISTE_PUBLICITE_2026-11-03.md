@@ -318,3 +318,10 @@ numéros de passerelles (0c) et les droits (4).
 - Controle : build vert ; apercu 1280 px : 6 cartes sur UNE ligne, 0 defilement ; carte LB -> barre « Diffusables absentes de Leboncoin · 2 », liste 3 -> 2, « Retirer le filtre » -> 3.
 - ⚠ **Le commit a d'abord embarque 16 morceaux d'une autre session** (FicheMandatManquante, fichier non suivi) -> defait (`reset --soft`), mes seuls morceaux re-indexes, commit `ad4d555` construit SEUL dans une copie a part : vert.
 - ⚠ Non fait : la requete `absentDe` n'a tourne qu'en local (mode sans base) -- a verifier en ligne apres le push (comparer aux chiffres ci-dessus). Bandes admin (« Valider et rendre diffusable ») : non, le geste reste « Faire la demande » pour tous.
+
+## 03/11 soir -- cartes de presence VERIFIEES EN LIGNE (`2345012`, bundle index-DecvJ--t.js)
+
+- Lu dans le Chrome de Frederic (lecture seule, aucun clic de case) : cartes **438 · 270 · 218 · 291 · 291 · 289** = EXACTEMENT le SQL ; 6 sur une ligne a 1280 px ; 0 defilement.
+- Filtre Paper : **147** annonces, aucune de la page sur Paper (requete `absentDe` juste cote serveur), 1 s. Filtre Site GTI : **267**, toutes en bande. « Retirer le filtre » : 705.
+- 2 lignes du filtre Paper en bande « Pas de mandat » : 63419 et 63339, diffusable = 1 SANS numero de mandat (fiches « [Sans titre] », type « 0 ») -- comportement voulu. ⚠ Le libelle « Type 0 » vient de `libelleTypeBien` (aussi dans la Liste) : a regarder a part.
+- Onglet de Frederic remis sur « Liste ».
