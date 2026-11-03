@@ -398,6 +398,8 @@ export default function PilotageScreen() {
     const offresEstimees = ventes?.enRoute.offresAcceptees.estimes ?? 0
     const tauxOffres = `${((ventes?.enRoute.offresAcceptees.taux ?? 0) * 100).toFixed(1).replace('.', ',')} %`
 
+    // Les courbes s'arrêtent au dernier mois TERMINÉ : un mois de 3 jours ferait croire à une chute (vu le 03/11).
+    const moisCourbe = enCours ? Math.max(1, moisVisibles - 1) : moisVisibles
     const top = [...(ventes?.agences.entries() ?? [])].filter(([cle]) => cle).sort((a, b) => b[1].h - a[1].h).slice(0, 6)
     const maxTop = Math.max(1, ...top.map(([, a]) => Math.max(a.h, comparer ? a.hPrec : 0)))
 
@@ -408,7 +410,7 @@ export default function PilotageScreen() {
             <div className="pl-carte pl-tdb-ca">
               <span className="pl-halo is-un" aria-hidden="true" /><span className="pl-halo is-deux" aria-hidden="true" />
               <div className="pl-tdb-ca-tete">
-                <span className="pl-lib">Honoraires encaissés · {unite} · {enCours ? `janvier à ${MOIS[moisVisibles - 1]}` : annee}</span>
+                <span className="pl-lib">Honoraires encaissés · {unite} · {enCours ? `${annee} à date · courbe de janvier à ${MOIS[moisCourbe - 1]}` : annee}</span>
                 <span className="pl-legende"><i style={{ background: '#c5005f' }} />{annee}{comparer ? <><i className="is-tirets" />{annee - 1}</> : null}</span>
               </div>
               <span className="pl-tdb-ca-ligne">
@@ -416,16 +418,16 @@ export default function PilotageScreen() {
                 {comparer && ecartCa != null ? <span className={`pl-delta is-${sens(ecartCa, 0.05)} pl-pop`}>{ecart(ventes.honoraires, ventes.honorairesPrec)?.texte}</span> : null}
                 {comparer ? <span className="pl-mute">contre {compact(ventes.honorairesPrec)} en {annee - 1}</span> : null}
               </span>
-              <GrandeCourbe valeurs={ventes.parMois.slice(0, moisVisibles).map((m) => m.h)} prec={comparer ? ventes.parMoisPrec.map((m) => m.h) : null}
+              <GrandeCourbe valeurs={ventes.parMois.slice(0, moisCourbe).map((m) => m.h)} prec={comparer ? ventes.parMoisPrec.map((m) => m.h) : null}
                 annee={annee} format={(x) => `${entier.format(Math.round((x * coef) / 1000))} k€`} />
             </div>
           ) : <Indisponible quoi="Le registre des ventes" onReessayer={reessayer} />}
           <div className="pl-tdb-trois">
             {ventes ? <>
-              <ChiffreTete libelle="Actes signés" valeur={ventes.ventes} prec={comparer ? ventes.ventesPrec : null} serie={ventes.parMois.slice(0, moisVisibles).map((m) => m.n)} couleur="#c5005f" onClick={() => setOnglet('ventes')} rang={0} />
-              <ChiffreTete libelle="Compromis signés" valeur={ventes.compromis.n} prec={comparer ? ventes.compromis.nPrec : null} serie={ventes.compromis.parMois.slice(0, moisVisibles)} couleur="#d98a00" onClick={() => setOnglet('ventes')} rang={1} />
+              <ChiffreTete libelle="Actes signés" valeur={ventes.ventes} prec={comparer ? ventes.ventesPrec : null} serie={ventes.parMois.slice(0, moisCourbe).map((m) => m.n)} couleur="#c5005f" onClick={() => setOnglet('ventes')} rang={0} />
+              <ChiffreTete libelle="Compromis signés" valeur={ventes.compromis.n} prec={comparer ? ventes.compromis.nPrec : null} serie={ventes.compromis.parMois.slice(0, moisCourbe)} couleur="#d98a00" onClick={() => setOnglet('ventes')} rang={1} />
             </> : null}
-            {mandats ? <ChiffreTete libelle="Mandats rentrés" valeur={mandats.n} prec={comparer ? mandats.nPrec : null} serie={mandats.parMois.slice(0, moisVisibles).map((m) => m.n)} couleur="#2f6fd0" onClick={() => setOnglet('mandats')} rang={2}
+            {mandats ? <ChiffreTete libelle="Mandats rentrés" valeur={mandats.n} prec={comparer ? mandats.nPrec : null} serie={mandats.parMois.slice(0, moisCourbe).map((m) => m.n)} couleur="#2f6fd0" onClick={() => setOnglet('mandats')} rang={2}
               sous={`${tauxEx} % d’exclusifs${comparer ? `, contre ${tauxExPrec} %` : ''}`} /> : <Indisponible quoi="Le registre des mandats" onReessayer={reessayer} />}
           </div>
         </section>

@@ -895,3 +895,25 @@ Frédéric : « Oui, passe à l'app ». Lecture seule, rien en base. Le code est
 - À 375 px : aucun débordement, et un mois sur deux affiché sous la courbe.
 - Seules erreurs console : l'adresse `/api/hektor-diffusion/broadcasts`, absente du serveur de démonstration, comme à l'étape 1.
 - ⏳ À voir sur les vraies données après le push. Les autres onglets (Ventes, Mandats, Stock) n'ont que le nouveau style commun : leur portage suit.
+
+## 33. Le Tableau de bord sur les VRAIES données (03/11 soir, déploiement de c98c062)
+L'écran a été lu dans le Chrome de Frédéric, en lecture seule. Ses chiffres ont été comparés à la base, avec la liste du registre lue sous son compte, dans une transaction annulée :
+- **Honoraires** : 1,81 M€ HT contre 1,83 M€ (−1,0 %).
+- **Actes** : 286 contre 296.
+- **Compromis** : 276 contre 345 (−20 %), comme le registre des transactions.
+- **Mandats** : 671 contre 667, soit 38 % d'exclusifs contre 47 %.
+- **Actes à date dépassée** : 11 en base et 11 à l'écran, pour 89 500 € TTC, soit 75 k€ HT.
+- **Offres acceptées depuis plus de 30 jours** : 23 en base et 23 à l'écran.
+- **Compromis en cours** : 87, pour 668 103 € TTC, soit 557 k€ HT.
+- **Les six premières agences** : celles de la maquette.
+
+**Trois défauts sont trouvés.** Les deux premiers sont corrigés, le troisième attend un accord.
+1. **Les offres acceptées n'ont presque jamais leurs honoraires** : 44 sur 47 sont à 0, parce qu'ils n'arrivent qu'au compromis. L'écran affichait donc 14 k€.
+   - Correction (76c16c1) : une offre sans honoraires est estimée au taux de l'année (honoraires ÷ prix des ventes) et marquée « ≈ ». Le résultat est d'environ 0,24 M€ HT, ce qui retombe sur la maquette.
+   - Le grand chiffre « en route » ne porte plus que les compromis, dont les 87 ont leurs honoraires.
+2. **Les courbes plongeaient en novembre**, un mois de 3 jours qui ressemblait à une chute.
+   - Correction : la grande courbe et les mini-courbes s'arrêtent au dernier mois TERMINÉ.
+   - Le grand chiffre reste « à date ».
+3. **⚠ « Signatures en attente » ne s'affiche pas**, et ce n'est PAS une régression : la lecture des signatures tombe en « statement timeout », déjà à 10:32 avec l'écran d'avant.
+   - Cause : le filtre `metadata_json->signature->>status` parcourt les 192 000 documents, et aucun index ne le porte.
+   - Remède : un index partiel. C'est une écriture en base, donc **un accord est nécessaire**.
