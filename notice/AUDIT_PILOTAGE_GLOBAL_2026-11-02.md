@@ -749,3 +749,19 @@ puis on optimise ». Deux planches neuves, interactives (bouton Play / vue plein
 Série mensuelle mesurée sur `app_affaire_ledger` (ventes, honoraires entrée + sortie, essais et honoraires > 20 % du prix écartés).
 « Ordre de grandeur » = dossiers × 6 354 € HT, dit comme tel à l'écran. ⏳ Attend l'avis de Frédéric avant de passer les 5 autres
 onglets dans cette direction.
+
+## 25. Trois directions claires (03/11) — même lien, ouvre sur la direction A, RIEN CODÉ
+
+Frédéric : « j'aime les animations mais trop sombre ; leviers et ergonomie du tableau de bord pas à mon goût ; offres et compromis pas
+vraiment analysés ». Trois planches, mêmes données, trois ergonomies, toutes claires et animées (chiffres qui défilent, courbe qui se
+trace, barres et colonnes) : **A · Cockpit** (menu à gauche, tuiles), **B · Fil de la vente** (les 4 étapes mandat → offre → compromis
+→ acte servent de menu ; un clic ouvre l'analyse de l'étape, flux animés entre étapes), **C · Rapport** (compte rendu d'analyste en
+4 chapitres : résultat, explication, offres et compromis, gestes de la semaine). Les planches v5 sombres (Résultats, Leviers) restent
+sur le canevas.
+**Mesures nouvelles (offres acceptées 2025-2026, 569 comparables au prix du mandat)** : prix obtenu médian **94,6 %** ; au prix
+(≥ 98 %) **28 %**, 95-98 % 18 %, 90-95 % 29 %, 85-90 % 13 %, < 85 % 12 % ; les remises > 15 % sont à **65 % sous 100 k€** ; offre
+acceptée → compromis **32 j** médiane, 26 % sous 3 semaines, 22 % au-delà de 45 j ; mandat → 1re offre **78 j en exclusif contre
+91 j en simple** (remise identique, 94,8 % contre 94,6 %). Par négociateur (offres 2026 → déjà en compromis) : BILLIG DURAND 36 → 27,
+RIBBES 20 → 10, COUDERT 19 → 14, GENTES 19 → 17, VALLA 19 → 13, LEGRAND 16 → 8, DELAVAUD 16 → 11, RAYNAUD 15 → 12 (les offres récentes
+n'ont pas encore eu le temps d'aboutir). Années : 2023 485 actes / 6 561 € HT par acte · 2024 391 / 6 355 · 2025 353 / 6 216 ·
+2026 284 / 6 354 — la baisse de 31 % de 2023 à 2025 vient du volume.
