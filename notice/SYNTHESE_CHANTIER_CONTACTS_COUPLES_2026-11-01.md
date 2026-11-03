@@ -1283,3 +1283,32 @@ Hektor/Supabase, 0 écriture), les points lourds REVÉRIFIÉS par moi (marqués 
   et pages `list_contacts_*` INTACTS** ; 3 VRAIES pages du 23/06 relues (60 contacts, ordre respecté).
 - ⏰ **Reste : le passage à blanc RÉEL chez Hektor** (~8 500 requêtes) — moment et vitesse à décider par Frédéric. Il crée les
   deux tables dans `data/hektor.sqlite` (additif). Rien d'autre n'est touché.
+
+## 47. LE PASSAGE À BLANC RÉEL : LES ACTIFS LUS EN ENTIER, SANS UN REFUS *(03/11, « FAIS LE TEST A BLANC MAINTENANT A LA VITESSE DE LA NUIT PRÉVUE »)*
+
+- Lancé à 11:15 (heure de Paris), file du worker vide, aucune tâche GTI en cours :
+  `liste_contacts_nuit.py --scope active --intervalle-ms 400 --pause-toutes-pages 500 --pause-secondes 30 --nouveau-tour`.
+  Journal `logs/liste_contacts_nuit/a_blanc_2026-11-03_actifs.log`, rapport `rapport_active_2026-11-03_12-33-23.json`.
+- ⭐ **Sortie 0, tour terminé : 8 503 pages, 170 050 contacts, 0 recul, 0 page hors ordre, aucun refus.**
+  **8 503 requêtes (+ la connexion) en 4 676 s = 1 h 18**, soit **0,55 s par page** (400 ms de frein + le temps de
+  réponse de Hektor ; ~1,8 req/s, sous les ~2,5 d'avant le 07/09) et 17 pauses de 30 s. ⇒ la nuit, un départ à 00:20 finit
+  vers **01:38**, avant l'heure limite prévue de 01:55. Le volume (8 504 requêtes) est celui annoncé.
+- **Ce que la liste a trouvé** (comparaison avec notre miroir, aucun appel en plus) :
+  - **236 fiches à relire** (Hektor plus récent que notre dernière relecture), **dont 75 jamais relues**, dont 10 absentes
+    du miroir ; 0 date `0000` ;
+  - **163 annonces au plus** liées à ces fiches (à confier au run de 04:00 : ~2 s chacune ⇒ ~5-6 min) ;
+  - 17 liens de couple différents, 58 états « archivé » différents ;
+  - ⚠ **32 473 négociateurs différents** — c'est l'ampleur déjà connue des pages de mars (32 457, hors chantier), à
+    trancher par Frédéric ; le plus gros : miroir vide → « 2 » (16 263), « 25 » → « 2 » (6 696).
+- ⭐ **Témoins positifs** : 352, 4307, 23721, 42552 portent une `datemaj` Hektor du 22 au 29/10 et n'ont pas été relus depuis
+  mai — de vraies fiches ratées par la nuit (352 et 23721 sont même encore « archivées » dans notre carnet alors qu'elles sont
+  dans la liste des actifs). ⭐ **Témoin négatif** : 467326 / 467325 (EA32621, `datemaj` 02/11 23:47-23:48, relues ce matin à
+  08:00) ne sont PAS à relire — la règle juge juste.
+- ⭐ **TÉMOINS « RIEN TOUCHÉ »** : `sync_contact_state` (dernière écriture 08:00:43, avant le départ), `contact_cursor_active`
+  et `_archived` (écrits à 03:51 par la nuit), pages `list_contacts_*` (dernière 03:51) — **inchangés**. Seules les deux tables
+  neuves et 8 503 pages `nuit_liste_contacts_active` ont été écrites.
+- 236 au lieu des ~2 000 estimés : l'estimation comptait les fiches modifiées depuis la relecture complète de mai ; la plupart
+  ont été relues depuis par la nuit. Les 236 sont le TROU réel.
+- ⏰ **Reste, chaque étape sur « vas-y »** : le mode réel (pages au vrai endroit, purge de mars, relecture des fiches,
+  annonces confiées au run derrière un interrupteur) ; le lanceur (00:20, garde « worker vide », 01:55) ; la limite PT2H ;
+  les archivés le dimanche.
