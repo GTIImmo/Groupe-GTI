@@ -575,6 +575,58 @@ def find_annonce_ids_by_contact_ids(conn, contact_ids: set[str]) -> set[str]:
     return annonce_ids
 
 
+# 03/11/2026 -- LES ANNONCES DES FICHES RELUES PAR LA LISTE DE NUIT.
+# La liste de nuit (phase2/sync/liste_contacts_nuit.py, tache de 00:20) relit les fiches
+# que ce run ne voit pas changer : son listing est trie par « date de dernier
+# traitement », qu'un rattachement de couple ne bouge pas (EA32621, synthese couples
+# §40-§47). Elle ne touche pas a NOTRE carnet (`sync_contact_state.date_maj`) : notre
+# signal reste intact. A la place, elle laisse un PANIER (`liste_nuit_contact.relu_le`,
+# `remis_au_run_le` vide) ; on relit ici les annonces liees, comme pour un contact
+# que ce run a vu changer, puis on marque le panier « remis ».
+# Interrupteur : APP_RELIRE_ANNONCES_CONTACTS_NUIT=1 (eteint par defaut).
+# Plafond par nuit : APP_RELIRE_ANNONCES_CONTACTS_NUIT_PLAFOND (600 annonces) -- un filet,
+#   pas un reglage de rythme : la tache de nuit est deja bornee par son heure limite
+#   (~200 annonces attendues, ~7 min). Les contacts au-dela attendent la nuit suivante.
+def load_panier_contacts_nuit(conn, deja: set, plafond: int) -> tuple[list[str], list[str]]:
+    """(contacts remis, annonces a relire EN PLUS de `deja`). Les plus anciennement
+    relus d'abord ; un contact n'est remis que si TOUTES ses annonces tiennent."""
+    if conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='liste_nuit_contact'").fetchone() is None:
+        return [], []
+    colonnes = {r[1] for r in conn.execute("PRAGMA table_info(liste_nuit_contact)")}
+    if not {"relu_le", "remis_au_run_le"} <= colonnes:
+        return [], []
+    contacts = [str(r[0]) for r in conn.execute(
+        "SELECT hektor_contact_id FROM liste_nuit_contact"
+        " WHERE relu_le IS NOT NULL AND remis_au_run_le IS NULL ORDER BY relu_le, hektor_contact_id"
+    )]
+    remis: list[str] = []
+    ajoutes: list[str] = []
+    vus = {str(a) for a in deja}
+    for contact_id in contacts:
+        neuves = sorted(find_annonce_ids_by_contact_ids(conn, {contact_id}) - vus, key=lambda a: (len(a), a))
+        if len(ajoutes) + len(neuves) > plafond:
+            break
+        remis.append(contact_id)
+        ajoutes.extend(neuves)
+        vus.update(neuves)
+    return remis, ajoutes
+
+
+def marquer_panier_remis(conn, contact_ids: list[str]) -> None:
+    if not contact_ids:
+        return
+    quand = now_utc_iso()
+    for batch in chunked_values(contact_ids):
+        placeholders = ", ".join("?" for _ in batch)
+        # `remis_au_run_le IS NULL` : une fiche relue de nouveau entre-temps garde sa place.
+        conn.execute(
+            f"UPDATE liste_nuit_contact SET remis_au_run_le = ?"
+            f" WHERE remis_au_run_le IS NULL AND hektor_contact_id IN ({placeholders})",
+            (quand, *batch),
+        )
+    conn.commit()
+
+
 def prune_raw_listing_pages(conn, *, endpoint_name: str, max_page: int) -> None:
     conn.execute(
         """
@@ -1713,6 +1765,15 @@ def main() -> int:
             if "annonces" in args.resources:
                 detail_ids = list(dict.fromkeys(detail_ids + sorted(find_annonce_ids_by_contact_ids(conn, changed_contact_ids))))
 
+        # 03/11/2026 -- le panier de la liste de nuit : voir load_panier_contacts_nuit.
+        panier_remis: list[str] = []
+        if "annonces" in args.resources and (os.environ.get("APP_RELIRE_ANNONCES_CONTACTS_NUIT") or "0").strip() == "1":
+            plafond = int((os.environ.get("APP_RELIRE_ANNONCES_CONTACTS_NUIT_PLAFOND") or "600").strip() or 600)
+            panier_remis, ajoutes = load_panier_contacts_nuit(conn, set(detail_ids), plafond)
+            detail_ids = list(dict.fromkeys(detail_ids + ajoutes))
+            print(f"[liste de nuit] {len(panier_remis)} contact(s) relu(s) la nuit, {len(ajoutes)} annonce(s)"
+                  f" relue(s) en plus (plafond {plafond}) : {', '.join(ajoutes[:20])}")
+
         if "annonces" in args.resources and detail_ids:
             # Saute les brouillons connus (isDraft=1) : AnnonceById renvoie du vide dessus
             # (erreurs de sync + appels API gaspilles). Liste alimentee par le balayage
@@ -1729,6 +1790,8 @@ def main() -> int:
 
         if "annonces" in args.resources and detail_ids:
             sync_annonce_details_with_mandats(conn, run_id, client, settings, detail_ids)
+        # Seulement APRES la relecture : une panne au-dessus laisse le panier pour la nuit suivante.
+        marquer_panier_remis(conn, panier_remis)
 
         generic_configs = configure_generic_resources(args, bootstrap=bootstrap)
         for resource_name in ("agences", "negos", "mandats", "offres", "compromis", "ventes", "broadcasts"):
