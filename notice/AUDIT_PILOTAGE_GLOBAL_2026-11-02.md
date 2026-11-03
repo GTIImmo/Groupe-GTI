@@ -592,3 +592,48 @@ parce que Frédéric les avait déjà retirées : ça ne prouve pas l'effacement
   qui porte une ligne de répartition CHEZ HEKTOR — le worker n'en pose plus depuis 06bd38b, donc seule une saisie
   humaine dans Hektor peut la créer. Puis : redémarrer HektorConsoleWorkerAdmin (file Admin vide), modifier la
   commission par l'écran (A' + B), puis rejouer le même travail après un changement fait dans Hektor (B2).
+
+### 20 septies. Le correctif ÉPROUVÉ EN RÉEL sur 61398 / mandat 18420 (03/11, 08:44-09:00) — A' et B2 VERTS
+
+**Actif** : les 4 services ont redémarré le 03/11 à 08:44:36-38 (Frédéric, PowerShell administrateur),
+fichier du worker écrit à 00:15:39 — donc AVANT. File vide au moment du geste. `signature_youtrust`
+reste `off` (le code dormant de l'autre session s'est chargé, il ne fait rien).
+
+**Le banc** : compromis d'essai **50147** sur 61398 (créé le 02/11, job `5dbcf399`), 180 000 / 10 000 /
+170 000. Ligne de répartition ajoutée À LA MAIN chez Hektor (08:48) : Emmanuelle PEREIRA, entrée,
+CA attribué 100 % = 4 166,67 € HT ; relue à la réouverture de l'assistant.
+⚠ L'écran refusait la modification : **61398 n'avait AUCUN négociateur** (fenêtre « Action bloquée —
+Nego requis », ouverte DERRIÈRE la modale de statut, donc invisible). Affectation de PEREIRA par
+l'app, accord de Frédéric (« à retirer après ») : job `869b6592`, `assigned`, `verifie: true`.
+
+**A' — job `e67036fa`, 07:55:55 UTC, honoraires 10 000 → 8 000, net 170 000 → 172 000** :
+- `champs_touches` = `["seller_fees","net_seller_price"]` (Point E tient) ;
+- journal : *« Commission modifiee : 7 champ(s) de repartition NON reposte(s) a l'etape 2 -> 3 »*,
+  `personnes: ["intervenantsEntree[51]"]` ;
+- étape 2 → 3 : champs envoyés = `unitesEntreePercent, unitesSortiePercent, idAnnonce` seulement ;
+- enregistré, relu : `prixNetVendeur=172000, honorairesEntree=8000` ; job `done` à 07:57:04.
+- ⭐ **LA QUESTION OUVERTE DU § 20 quinquies EST TRANCHÉE PAR LA MESURE** : un poste qui OMET les
+  lignes de répartition les **SUPPRIME** chez Hektor. Réouverture de l'assistant : plus de ligne
+  PEREIRA, commission recalculée sur 8 000 € (6 666,67 € HT, 3 333,33 par côté). C'est exactement le
+  geste manuel de Frédéric du 02/11 (« on supprime les anciennes lignes »). La répartition de l'app,
+  elle, n'a pas bougé (A' ne touche que le corps posté).
+
+**B2 — même job, rejoué** :
+- changement HUMAIN chez Hektor à 07:58 : prix public 180 000 → 181 000 (Hektor en déduit de lui-même
+  1 000 € d'honoraires acquéreur, taux 0,556) ; fiche relue : honoraires agence 7 500 € HT ;
+- rejeu manuel du MÊME travail (status `pending`, comme `app_console_action_enqueue_due_retries`,
+  ligne `retry` au journal), réclamé à 07:59:22, `attempt_count` 2 ;
+- témoin essai 2 comparé au 1er (`compare_au_premier: true`) → **3 écarts** : `prixPublique 180000.00 →
+  181000.00`, `montantHonoraireSortie 0.00 → 1000.00`, `tauxHonoraireSortie 0.000 → 0.556` ;
+- ⭐ `prixNetVendeur` (170 000 → 172 000) et `montantHonoraireEntree` (10 000 → 8 000) ont bougé AUSSI,
+  mais valent ce que le travail veut écrire : **pas comptés** (le cas « essai déjà enregistré ») ;
+- `[REFUS D'ETAT] ... Rien n'a ete envoye` à 07:59:43, **aucun rejeu automatique** (attempt_count posé
+  à 5). Aucune étape d'assistant après l'ouverture : rien n'est parti chez Hektor.
+- Alarme éteinte d'avance : `app_pending_resolution` id **2049**, `resolved_by
+  'essai_b2_temoin_reprise_2026-11-03'` ; 0 ligne de l'essai dans `app_en_attente_humain`.
+
+**Ce qui reste sur le banc (état voulu par l'essai, pas un défaut)** : 50147 porte prix public 181 000 et
+1 000 € d'honoraires acquéreur ; 61398 a PEREIRA pour négociatrice et reste « Sous compromis »
+(diffusable 0). ⬜ À défaire, avec Frédéric : retirer PEREIRA (aucun geste de l'app ne sait « aucun
+négociateur » — le worker n'envoie que `upval NEGOCIATEUR` vers un id ; je n'ai pas trouvé le champ dans
+l'écran de Hektor), puis supprimer ou annuler 50147 et remettre 61398 en « Actif ».
