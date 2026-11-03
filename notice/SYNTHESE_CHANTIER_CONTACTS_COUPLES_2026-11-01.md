@@ -1082,3 +1082,8 @@ pour un numéro sont RELUS TOUT DE SUITE, jamais « à la nuit ». Rien n'est co
   active (même code que l'ancienne tâche). Estimation : ~57 min + quelques minutes + ~30-40 min ≈ **1 h 40**, dans le créneau
   actuel 02:00 → 03:50 (première nuit : +~20 min pour ~2 200 fiches). Le run de 04:00 ne bouge pas : sa lecture courte reste un
   filet (contacts créés entre 02:00 et 04:00), elle ne coûte qu'une minute.
+- ⚠ **Précision (03/11, Frédéric : « pourquoi tu supprimes les recherches ! »)** : la proposition ci-dessus ne supprime AUCUNE
+  recherche ni la relecture des ~4 000 acquéreurs — elle la déplaçait dans la nouvelle tâche. Variante qui ne touche pas du tout
+  à la tâche des recherches : la nouvelle tâche contacts tourne SÉPARÉMENT de ~01:05 (après le balayage, garde « worker vide »)
+  à 01:58, s'arrête d'elle-même pour laisser partir les recherches à 02:00, et reprend la nuit suivante à la page atteinte
+  (~55 min à ~2,5 pages/s ≈ 8 000 pages : presque toute la liste des actifs par nuit).
