@@ -1409,3 +1409,9 @@ Hektor/Supabase, 0 écriture), les points lourds REVÉRIFIÉS par moi (marqués 
   `logs/liste_contacts_nuit/rapport_active_*.json` (code, pages, fiches relues, panier) ; la ligne « [liste de nuit] » du run ;
   la durée du run et de la descente ; puis décider la purge.
 - **Retour arrière** : `installer_tache_nuit_contacts.ps1 -Retour` (administrateur) et retirer la ligne du `.env`.
+- ⚠ **Relu le 03/11 au soir (lecture seule) : LA TÂCHE N'EST PAS BASCULÉE.** Action encore sur `run_recherches_actives.ps1`,
+  départ `02:00:00+01:00`, limite `PT2H`. **Cette nuit se déroule donc comme avant** : pas de liste, pas de fiches relues.
+  L'interrupteur du `.env` est **sans effet** : la table `liste_nuit_contact` de `data/hektor.sqlite` (née au passage à blanc)
+  n'a pas encore les colonnes `relu_le` et `remis_au_run_le`, et `load_panier_contacts_nuit` rend alors un panier vide (garde vérifiée
+  dans le code). Frédéric : « note le à vérifier ». ⏰ **À reprendre** : lancer l'installeur en administrateur, puis je relis
+  la tâche ; le contrôle du matin glisse au lendemain de la première vraie nuit.
