@@ -978,3 +978,9 @@ est « couple » et son résumé « nommé » (la nuit du 02→03/11 : aujourd'h
   · ⇒ liste complète **~2 h 20** (incompressible : Hektor n'a pas de filtre « modifié depuis », la liste est le seul moyen de
     connaître la date de chaque fiche) + **~2 000 fiches × 1,66 s ≈ 55 min** = **~3 h 15, ~10 500 requêtes** ; ou 2 nuits avec
     le plafond actuel de 1 000 fiches. La règle de sélection fait déjà exactement « modifiées depuis la dernière relecture ».
+- **La forme retenue par Frédéric (03/11)** : lire la liste de TOUS les contacts (actifs puis archivés), comparer la date de
+  modification Hektor à notre date de dernière relecture, ne relire QUE les fiches où Hektor est plus récent. ⭐ C'est exactement
+  la règle existante (`date_maj` de la liste > `last_detail_sync_at`). Archivés, mesure sur la liste du 23/06 : 178 618 contacts,
+  **41 modifiés en 4 semaines** ⇒ ~200 depuis mai. Bilan : **~2 200 fiches à relire (~1 h)**, mais la liste fait ~17 700 pages
+  (**~4 h 55**) : c'est la LISTE qui pèse, pas les fiches. Total ≈ 6 h, ~20 000 requêtes → à couper en deux nuits
+  (actifs ≈ 2 h 20 + ~55 min ; archivés ≈ 2 h 35 + ~6 min). Rien de lancé.
