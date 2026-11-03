@@ -307,3 +307,14 @@ numéros de passerelles (0c) et les droits (4).
 - Note (non traite) : ces restes peuvent encore nourrir `app_mandat_broadcasts_current` ; sans effet sur les cases (elles lisent `portails_resume`). A regarder si un « en erreur » fantome apparait.
 - Reste en base une ligne cible `46/leboncoinDirect disabled` (trace).
 - ⚠ Toujours pas eprouve : un clic par un NEGOCIATEUR.
+
+## 03/11 soir -- vue Publicite, 2e passe : cartes de presence cliquables (`ad4d555`, NON pousse)
+
+- Retour de Frederic : « la vue publicite ne correspond pas encore a la maquette, il manque les stats en haut cliquables, affine le design ».
+- **6 cartes « Presence sur les portails »** (site GTI + LB BI PA EP SI) : en ligne / diffusables, barre, « N absentes ». `loadPresencePortails` : memes filtres que la liste (sauf le filtre de carte et `diffusable`), lecture par lots de 1 000 sur `app_dossiers_current`.
+- **Clic = filtre de la liste**, cote serveur : portail -> filtre facultatif NEUF `absentDe` (`diffusable = 1` ET `portails_resume` sans ce portail ; aussi dans le filtre local, « un filtre est pose » et le refus des index legers) ; site GTI -> le filtre Diffusable existant (`non_diffusable`). Barre noire « Retirer le filtre », page remise a 1.
+- **Design de la maquette** : en-tetes de portail en pastilles de couleur, cellule Bien courte (type · N° · ville, photo 96x72), signaux sous le prix (Mandat echu / Encore en ligne · statut / Visible nulle part), cases bord 2 px rayon 8, bande au bouton plein (« Faire la demande », « En attente » grise, « Corriger »), textes de la maquette.
+- **Chiffres attendus en ligne** (SQL du 03/11, liste active 705) : GTI 438 diffusables (267 non) ; LB 270 · BI 218 · PA 291 · EP 291 · SI 289. LB et BI = les Stats existantes.
+- Controle : build vert ; apercu 1280 px : 6 cartes sur UNE ligne, 0 defilement ; carte LB -> barre « Diffusables absentes de Leboncoin · 2 », liste 3 -> 2, « Retirer le filtre » -> 3.
+- ⚠ **Le commit a d'abord embarque 16 morceaux d'une autre session** (FicheMandatManquante, fichier non suivi) -> defait (`reset --soft`), mes seuls morceaux re-indexes, commit `ad4d555` construit SEUL dans une copie a part : vert.
+- ⚠ Non fait : la requete `absentDe` n'a tourne qu'en local (mode sans base) -- a verifier en ligne apres le push (comparer aux chiffres ci-dessus). Bandes admin (« Valider et rendre diffusable ») : non, le geste reste « Faire la demande » pour tous.
