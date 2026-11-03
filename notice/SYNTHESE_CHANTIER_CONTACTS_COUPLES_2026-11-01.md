@@ -963,3 +963,10 @@ est « couple » et son résumé « nommé » (la nuit du 02→03/11 : aujourd'h
     ~950 par nuit sur 9 nuits = **~26 min de fiches + ~17 min de liste ≈ 45 min par nuit** ;
   · ENSUITE (régime) : ~0,9 %/mois × 9 nuits ≈ 450 par tour = **~50 fiches par nuit ≈ 1,5 min + 17 min de liste ≈ 20 min**.
   · Les archivés (~9 200 pages) ne sont pas comptés : à décider s'ils en font partie.
+- **Une lecture complète des ACTIFS en une fois (question du 03/11)** — ⭐ l'option EXISTE déjà, sans code :
+  `phase2/sync/sync_contact_details.py --full-listing-refresh --contact-scope active --listing-max-pages 0` (lecture par numéro,
+  toutes les pages), puis la règle de sélection existante relit chaque fiche dont `date_maj` (liste) > `last_detail_sync_at`.
+  · liste : ~8 500 pages × ~1 s ≈ **2 h 20**, ~8 500 requêtes, une seule connexion ;
+  · fiches : ~8 500 estimées (plafond, voir ci-dessus) × 1,66 s ≈ **3 h 55** si tout d'un coup → **≈ 6 h 15 et ~17 000 requêtes** ;
+  · OU laisser le plafond du run (`ContactDetailLimit=1000`) les absorber : ~1 000 par nuit (~28 min), ~9 nuits, sans rien changer.
+  · ⚠ lancer cette lecture = lancer un run → accord obligatoire ; durée d'exposition continue de 2 h 20 (le 19/08 : 4 h).
