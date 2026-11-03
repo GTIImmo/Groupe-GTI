@@ -1128,3 +1128,11 @@ Audit limité à : **contact × lire / remonter** (la nuit). Les autres objets e
 - Ce qui pourrait casser : le run de 04:00 (si la tâche déborde — d'où l'heure limite) ; un bannissement (22/08 !) → vitesse
   modérée, pauses, arrêt au 1er refus ; le volume de la nuit (~8 500 requêtes de plus, ~19 000 en tout, au-dessus de
   l'estimation incertaine du quota) ; la surveillance (même nom de tâche → reste surveillée ; codes de sortie à garder).
+- ⛔ **CORRECTION du « ~1 h 15 » des recherches (03/11, question de Frédéric « pourquoi on gagne du temps ? »)** — décomposition
+  mesurée de la nuit du 03/11 (6 669 s pour 4 018 fiches ; journal : étapes locales de 1 500/4 018 à 6 489 s jusqu'à la fin à
+  6 669 s) : **lecture ~1 h 07** (4 018 × 1 s, le plancher l'emporte sur le délai de 0,5 s + le temps de réponse) +
+  **pauses ~40 min** (40 lots de 100 × 60 s) + **étapes locales ~4 min**. Seul le PLANCHER change avec la vitesse : à 2 req/s,
+  une fiche = temps de réponse (~0,15 s, déduit des pointes de mai à 5,7 req/s) + délai 0,5 s ≈ 0,65 s → lecture ~44 min ;
+  les pauses (40 min) et le délai restent → **~1 h 28, gain ~23 min, pas 36**. Mon « 1 h 15 » oubliait le temps de réponse.
+  Total de la tâche à 2 req/s : liste ~1 h 10 + fiches ~1 min + recherches ~1 h 28 ≈ **2 h 40**. Pour gagner davantage, il
+  faudrait toucher les pauses ou le délai des recherches = la méthode prudente posée après le bannissement du 22/08 → à lui.
