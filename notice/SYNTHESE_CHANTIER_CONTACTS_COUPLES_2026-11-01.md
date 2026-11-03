@@ -1618,3 +1618,7 @@ Documents : à signaler à l'autre session (Youtrust reste derrière son interru
   les noms étaient coupés : « JOLY … », « Conjo… ») ; les initiales de la personne PASSENT au-dessus de la place « + » (elles étaient
   masquées) ; la fiche choisie reste magenta au survol. ⚠ Noté, non changé : la recherche de l'annuaire trouve aussi par le nom du
   négociateur (« durand » ramène les contacts d'une négociatrice de ce nom) — c'est la recherche commune des choix de contact.
+
+- **✅ Retouches EN LIGNE, vues** (déploiement de 1459489, Chrome de Frédéric, rien enregistré) : onglets du couple en colonne, noms entiers
+  (« JOLY Cindy » / « Conjoint · place vide ») ; les initiales de la personne devant la place « + » sur la carte. ⏳ Restent non vus en vrai :
+  la fenêtre au téléphone, et une vraie réussite (le prochain usage réel la montrera).
