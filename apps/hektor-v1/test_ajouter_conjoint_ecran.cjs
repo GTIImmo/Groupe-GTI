@@ -90,5 +90,35 @@ verifier("(23) le type est suivi (ConsoleJobType, liste des actions, gestes qui 
   && /'archive_hektor_contact', 'link_hektor_conjoint',\n  'add_hektor_contact_search',/.test(app));
 verifier("(24) les 8 habillages du suivi connaissent le type", (app.match(/'link_hektor_conjoint'/g) || []).length >= 8, String((app.match(/'link_hektor_conjoint'/g) || []).length));
 
+// ── Les défauts vus à l'essai réel du 03/11 (synthèse §54), corrigés ──
+verifier("(25) la création du conjoint n'est PLUS suivie (elle ouvrait sa fiche et cachait la réussite)",
+  !/props\.onJobCreated\?\.\(creation\)/.test(modale));
+verifier("(26) le conjoint naît chez le négociateur de LA PERSONNE, repli sur le compte de la session si refusé",
+  /hektorUserEmail: negociateurDeLaPersonne/.test(modale) && /forbidden_create_contact/.test(modale)
+  && /hektorNegotiatorId: props\.contact\.hektor_negociateur_id/.test(modale));
+verifier("(27) le choix nouveau / existant dit lequel est actif (aria-checked)",
+  (modale.match(/role="radio" aria-checked=\{mode === '(nouveau|existant)'\}/g) || []).length === 2);
+verifier("(28) la case RGPD est une vraie case de formulaire, avec son libellé", /<label className="ajc-check">\s*<input type="checkbox" checked=\{rgpd\}/.test(modale));
+verifier("(29) la réussite reste à l'écran jusqu'à « Fermer »", /\{fait \? \(\s*<div className="ajc-done" role="status">/.test(modale));
+verifier("(30) Échap ferme la fenêtre (sauf pendant l'envoi)", /event\.key === 'Escape'/.test(modale) && /const fermer = \(\) => \{ if \(!envoi\) props\.onClose\(\) \}/.test(modale));
+verifier("(31) le style est chargé", /import '\.\/ajout-conjoint\.css'/.test(app) && fs.existsSync(path.resolve(__dirname, "src", "ajout-conjoint.css")));
+
+// La civilité à place vide (« _ ») : la vraie fonction de l'écran, jouée.
+try {
+  const i = app.indexOf("const CIVILITES_DE_COUPLE: Record<string, string> = {");
+  const f = app.indexOf("function contactCivilityToken(");
+  const js = esbuild.transformSync(app.slice(i, f) + "\nthis.civ = civiliteAffichee;", { loader: "ts" }).code;
+  const ctx = { String, Object };
+  vm.createContext(ctx);
+  vm.runInContext(js, ctx);
+  const c = ctx.civ;
+  verifier("(32) « _ » n'est plus affiché (place vide des deux côtés)", c("_") === "");
+  verifier("(33) « _Mr/Mme » -> « Mr/Mme », « M_ » -> « M. »", c("_Mr/Mme") === "Mr/Mme" && c("M_") === "M.");
+  verifier("(34) TÉMOIN : les quatre codes et une civilité simple inchangés",
+    c("M_Mme") === "M. et Mme" && c("Mme_M") === "Mme et M." && c("M.") === "M." && c("m_mme") === "m_mme" && c(null) === "");
+} catch (e) {
+  verifier("(32-34) la civilité de l'écran a pu être jouée", false, e.message);
+}
+
 console.log(echecs ? `\n${echecs} ECHEC(S)` : "\nTOUT VERT");
 process.exit(echecs ? 1 : 0);

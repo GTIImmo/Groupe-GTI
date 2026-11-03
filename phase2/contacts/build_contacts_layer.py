@@ -60,9 +60,21 @@ CIVILITES_DE_COUPLE = {
 }
 
 
+# COUPLES (03/11/2026) : un code de couple a une place VIDE -- « _ » sur deux fiches sans civilite apres
+# « Transformer en couple » (essai du 03/11, synthese couples §54), « _Mr/Mme » (2 fiches) -- s'affichait tel
+# quel : « _ Jean DUPONT ». On ne garde que les places remplies. Un code aux deux places remplies et hors de la
+# table (« m_mme ») reste tel quel, comme avant.
+CIVILITE_DE_PLACE = {"M": "M.", "Mme": "Mme"}
+
+
 def civilite_affichee(civilite: Any) -> str:
     texte = str(civilite or "").strip()
-    return CIVILITES_DE_COUPLE.get(texte, texte)
+    if texte in CIVILITES_DE_COUPLE:
+        return CIVILITES_DE_COUPLE[texte]
+    places = texte.split("_")
+    if len(places) > 1 and any(not place.strip() for place in places):
+        return " et ".join(CIVILITE_DE_PLACE.get(place.strip(), place.strip()) for place in places if place.strip())
+    return texte
 
 
 SEVERITY_RANK = {"low": 1, "medium": 2, "high": 3, "critical": 4}

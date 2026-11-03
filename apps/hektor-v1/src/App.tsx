@@ -266,6 +266,7 @@ import { APP_ANNONCES_LISTE_V2, AnnonceOnglets, AnnoncePubCells, AnnoncePubColgr
 import type { EtatCase } from './AnnoncesListeV2'
 import ContactSearchFields, { contactSearchValueToInput, defaultContactSearchValue, type ContactSearchFieldsValue } from './ContactSearchFields'
 import './contact-new.css'
+import './ajout-conjoint.css'
 import RechercheGlobale, { type GroupeRecherche } from './RechercheGlobale'
 import './fil-navigation.css'
 import './suivi-travaux.css'
@@ -7298,9 +7299,19 @@ const CIVILITES_DE_COUPLE: Record<string, string> = {
   M_M: 'M. et M.',
 }
 
+// COUPLES (03/11/2026) : un code de couple à une place VIDE (« _ » après « Transformer en couple » sur deux fiches
+// sans civilité, « _Mr/Mme ») s'affichait tel quel devant le nom. On ne garde que les places remplies ; un code aux
+// deux places remplies hors de la table reste tel quel. Même règle la nuit (build_contacts_layer.py, civilite_affichee).
+const CIVILITE_DE_PLACE: Record<string, string> = { M: 'M.', Mme: 'Mme' }
+
 function civiliteAffichee(civilite: string | null | undefined) {
   const texte = String(civilite ?? '').trim()
-  return CIVILITES_DE_COUPLE[texte] ?? texte
+  if (CIVILITES_DE_COUPLE[texte]) return CIVILITES_DE_COUPLE[texte]
+  const places = texte.split('_')
+  if (places.length > 1 && places.some((place) => !place.trim())) {
+    return places.map((place) => place.trim()).filter(Boolean).map((place) => CIVILITE_DE_PLACE[place] ?? place).join(' et ')
+  }
+  return texte
 }
 
 function contactCivilityToken(contact: DetailContact) {
@@ -42540,6 +42551,8 @@ function ContactWorkflowModal(props: {
 // Nouveau : la création habituelle (`createHektorContactJob`, personne seule), puis le rattachement avec son numéro.
 // Le rattachement (`ajouterConjointOptimistic`) écrit le couple chez nous à la seconde ; le worker le pose chez Hektor
 // (une requête, prouvée par relecture), relie les biens, puis relit les deux fiches. Un refus de la base est DIT, tel quel.
+// Refaite le 03/11 au soir après l'essai réel (synthèse §54-55) : sélecteur lisible, case RGPD normale, réussite visible
+// (on ne suit plus la création du conjoint, qui ouvrait sa fiche), et le conjoint naît chez le NÉGOCIATEUR DE LA PERSONNE.
 function AjouterConjointModal(props: {
   contact: AppContact
   hektorUserEmail?: string | null
@@ -42555,47 +42568,77 @@ function AjouterConjointModal(props: {
   const [rgpd, setRgpd] = useState(true)
   const [recherche, setRecherche] = useState('')
   const [resultats, setResultats] = useState<MandantContactSearchOption[]>([])
+  const [rechercheEnCours, setRechercheEnCours] = useState(false)
   const [choisi, setChoisi] = useState<MandantContactSearchOption | null>(null)
   const [envoi, setEnvoi] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
   const [fait, setFait] = useState<string | null>(null)
-  const personne = props.contact.display_name || [props.contact.prenom, props.contact.nom].filter(Boolean).join(' ') || `Contact ${props.contact.hektor_contact_id}`
+  const premierChamp = useRef<HTMLInputElement | null>(null)
+  const personne = [props.contact.prenom, props.contact.nom].filter(Boolean).join(' ') || props.contact.display_name || `Contact ${props.contact.hektor_contact_id}`
+  const fermer = () => { if (!envoi) props.onClose() }
 
+  useEffect(() => { premierChamp.current?.focus() }, [mode])
+  useEffect(() => {
+    const touche = (event: KeyboardEvent) => { if (event.key === 'Escape') fermer() }
+    window.addEventListener('keydown', touche)
+    return () => window.removeEventListener('keydown', touche)
+  })
   useEffect(() => {
     if (mode !== 'existant') return
     const terme = recherche.trim()
-    if (terme.length < 3) { setResultats([]); return }
+    if (terme.length < 3) { setResultats([]); setRechercheEnCours(false); return }
     let annule = false
+    setRechercheEnCours(true)
     const minuterie = window.setTimeout(() => {
       void searchMandantContactOptions({ search: terme, limit: 8 })
         .then((options) => { if (!annule) setResultats(options.filter((o) => o.hektor_contact_id !== props.contact.hektor_contact_id)) })
         .catch(() => { if (!annule) setResultats([]) })
+        .finally(() => { if (!annule) setRechercheEnCours(false) })
     }, 300)
     return () => { annule = true; window.clearTimeout(minuterie) }
   }, [mode, recherche, props.contact.hektor_contact_id])
+
+  // Le conjoint naît chez le négociateur de LA PERSONNE (défaut vu le 03/11 : il prenait le compte de la session).
+  // Un négociateur qui n'a pas le droit de créer chez ce collègue retombe sur son propre compte, comme la création habituelle.
+  async function creerLeConjoint() {
+    const base = contactIdentityInputFromContact(props.contact, props.hektorUserEmail, props.hektorUserId)
+    const saisie = {
+      ...base, civility: '', lastName: nom.trim(), firstName: prenom.trim() || null,
+      email: email.trim() || null, phone: portable.trim() || null, phoneSecondary: null,
+      address: null, postalCode: null, city: null, birthDate: null, birthPlace: null, maritalStatus: null,
+      comments: null, personType: 'personne_seule', sendRgpdEmail: rgpd,
+    }
+    const negociateurDeLaPersonne = String(props.contact.negociateur_email ?? '').trim()
+    if (negociateurDeLaPersonne) {
+      try {
+        return await createHektorContactJob({
+          contact: {
+            ...saisie, hektorUserEmail: negociateurDeLaPersonne, hektorUserId: null,
+            hektorNegotiatorId: props.contact.hektor_negociateur_id ?? null,
+            hektorAgencyId: props.contact.hektor_agence_id ?? null,
+            hektorAgencyLabel: props.contact.agence_nom ?? null,
+          },
+        })
+      } catch (e) {
+        if (!/forbidden_create_contact/.test(e instanceof Error ? e.message : String(e))) throw e
+      }
+    }
+    return createHektorContactJob({ contact: saisie })
+  }
 
   async function envoyer() {
     setErreur(null)
     if (mode === 'nouveau') {
       if (!nom.trim()) { setErreur('Le nom du conjoint est obligatoire.'); return }
-      if (!portable.trim() && !email.trim()) { setErreur('Un portable ou un e-mail est obligatoire, comme pour toute création de contact.'); return }
+      if (!portable.trim() && !email.trim()) { setErreur('Indiquez un portable ou un e-mail, comme pour toute création de contact.'); return }
     } else if (!choisi) { setErreur('Choisissez une fiche dans la liste.'); return }
     setEnvoi(true)
     let conjointId = choisi?.hektor_contact_id ?? ''
     let nouveauCree = false
     try {
       if (mode === 'nouveau') {
-        const base = contactIdentityInputFromContact(props.contact, props.hektorUserEmail, props.hektorUserId)
-        const creation = await createHektorContactJob({
-          contact: {
-            ...base, civility: '', lastName: nom.trim(), firstName: prenom.trim() || null,
-            email: email.trim() || null, phone: portable.trim() || null, phoneSecondary: null,
-            address: null, postalCode: null, city: null, birthDate: null, birthPlace: null, maritalStatus: null,
-            comments: null, personType: 'personne_seule', sendRgpdEmail: rgpd,
-          },
-        })
+        const creation = await creerLeConjoint()
         nouveauCree = true
-        props.onJobCreated?.(creation)
         conjointId = String(creation.payload_json?.app_identite ?? '').trim()
         if (!conjointId) throw new Error("La fiche du conjoint est créée, mais son numéro n'est pas revenu : rattachez-la avec « Une fiche existante ».")
       }
@@ -42611,7 +42654,7 @@ function AjouterConjointModal(props: {
         if (travaux[0]) props.onJobCreated?.(travaux[0])
       }
       const biens = resultat.biens ?? 0
-      setFait(`Le couple est enregistré chez nous. Hektor le confirme dans quelques secondes${biens ? `, puis le conjoint est relié à ${biens > 1 ? `ses ${biens} biens` : 'son bien'}` : ''}.`
+      setFait(`Le couple est enregistré. Hektor le confirme dans quelques secondes${biens ? `, puis le conjoint est relié à ${biens > 1 ? `ses ${biens} biens` : 'son bien'}` : ''}.`
         + (resultat.biens_refuses ? ` ${resultat.biens_refuses} bien(s) hors de vos droits ne seront pas reliés.` : ''))
     } catch (e) {
       setErreur(e instanceof Error ? e.message : String(e))
@@ -42620,75 +42663,130 @@ function AjouterConjointModal(props: {
     }
   }
 
+  const libelleOption = (option: MandantContactSearchOption) =>
+    option.display_name || [option.prenom, option.nom].filter(Boolean).join(' ') || `Contact ${option.hektor_contact_id}`
+
   return (
-    <ContactWorkflowModal
-      title="Ajouter un conjoint"
-      eyebrow="Couple"
-      summary={`${personne} devient un couple : choisissez son conjoint.`}
-      tone="create"
-      onClose={() => { if (!envoi) props.onClose() }}
-    >
-      <div className="contact-delete-panel contact-delete-panel-modern">
-        {fait ? (
-          <>
-            <p>{fait}</p>
-            <div className="modal-actions">
-              <button className="ghost-button" type="button" onClick={props.onClose}>Fermer</button>
+    <div className="ajc-overlay" onClick={(event) => { event.stopPropagation(); fermer() }}>
+      <section className="ajc" role="dialog" aria-modal="true" aria-labelledby="ajc-titre" onClick={(event) => event.stopPropagation()}>
+        <header className="ajc-head">
+          <span className="ajc-badge" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx="8.5" cy="8" r="3.2" /><path d="M2.8 19c.6-3.1 3-4.9 5.7-4.9s5.1 1.8 5.7 4.9" /><path d="M18 8v6M15 11h6" /></svg>
+          </span>
+          <div className="ajc-h-main">
+            <div className="ajc-eyebrow">Couple</div>
+            <h3 className="ajc-title" id="ajc-titre">Ajouter un conjoint</h3>
+            <p className="ajc-sub">Le conjoint de <b>{personne}</b> : un nouveau contact, ou une fiche qui existe déjà.</p>
+          </div>
+          <button className="ajc-close" type="button" onClick={fermer} disabled={envoi} aria-label="Fermer">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+          </button>
+        </header>
+
+        <div className="ajc-body">
+          {fait ? (
+            <div className="ajc-done" role="status">
+              <span className="ajc-done-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></span>
+              <b>Conjoint ajouté</b>
+              <p>{fait}</p>
             </div>
-          </>
-        ) : (
-          <>
-            <div className="modal-actions" role="radiogroup" aria-label="Le conjoint">
-              <button className={`ghost-button${mode === 'nouveau' ? '' : ' button-subtle'}`} type="button" aria-pressed={mode === 'nouveau'}
-                onClick={() => { setMode('nouveau'); setErreur(null) }} disabled={envoi}>Un nouveau contact</button>
-              <button className={`ghost-button${mode === 'existant' ? '' : ' button-subtle'}`} type="button" aria-pressed={mode === 'existant'}
-                onClick={() => { setMode('existant'); setErreur(null) }} disabled={envoi}>Une fiche existante</button>
-            </div>
-            {mode === 'nouveau' ? (
-              <>
-                <label className="filter-field"><span>Nom *</span>
-                  <input value={nom} onChange={(event) => setNom(event.target.value)} autoComplete="off" disabled={envoi} /></label>
-                <label className="filter-field"><span>Prénom</span>
-                  <input value={prenom} onChange={(event) => setPrenom(event.target.value)} autoComplete="off" disabled={envoi} /></label>
-                <label className="filter-field"><span>Portable</span>
-                  <input value={portable} onChange={(event) => setPortable(event.target.value)} inputMode="tel" autoComplete="off" disabled={envoi} /></label>
-                <label className="filter-field"><span>E-mail</span>
-                  <input value={email} onChange={(event) => setEmail(event.target.value)} type="email" autoComplete="off" disabled={envoi} /></label>
-                <label className="filter-field"><span>
-                  <input type="checkbox" checked={rgpd} onChange={(event) => setRgpd(event.target.checked)} disabled={envoi} />{' '}
-                  Envoyer l'e-mail RGPD au conjoint</span></label>
-              </>
-            ) : (
-              <>
-                <label className="filter-field"><span>Chercher la fiche (nom, téléphone, e-mail ou numéro)</span>
-                  <input value={recherche} onChange={(event) => { setRecherche(event.target.value); setChoisi(null) }} autoComplete="off" disabled={envoi} placeholder="3 caractères au moins" /></label>
-                {resultats.length ? (
-                  <ul className="fa-cx-achat-rech-liste">
-                    {resultats.map((option) => (
-                      <li key={`ajout-conjoint-${option.hektor_contact_id}`}>
-                        <button className={`ghost-button${choisi?.hektor_contact_id === option.hektor_contact_id ? '' : ' button-subtle'}`} type="button"
-                          onClick={() => setChoisi(option)} disabled={envoi}>
-                          {[option.display_name || [option.prenom, option.nom].filter(Boolean).join(' ') || `Contact ${option.hektor_contact_id}`,
-                            option.ville, option.phone_primary || option.email].filter(Boolean).join(' · ')}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                ) : recherche.trim().length >= 3 ? <p>Aucune fiche trouvée.</p> : null}
-              </>
-            )}
-            <p>Le conjoint recevra les mêmes biens que {personne} (mandant ou propriétaire), sur les biens que vous pouvez gérer.</p>
-            {erreur ? <p className="form-error">{erreur}</p> : null}
-            <div className="modal-actions">
-              <button className="ghost-button button-subtle" type="button" onClick={props.onClose} disabled={envoi}>Annuler</button>
-              <button className="ghost-button" type="button" onClick={() => { void envoyer() }} disabled={envoi}>
+          ) : (
+            <>
+              <div className="ajc-seg" role="radiogroup" aria-label="Le conjoint">
+                <button className="ajc-seg-btn" type="button" role="radio" aria-checked={mode === 'nouveau'} disabled={envoi}
+                  onClick={() => { setMode('nouveau'); setErreur(null) }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round"><circle cx="10" cy="8" r="3.4" /><path d="M3.5 19.5c.7-3.4 3.3-5.3 6.5-5.3" /><path d="M18 13v6M15 16h6" /></svg>
+                  <span>Un nouveau contact<small>Saisir le conjoint</small></span>
+                </button>
+                <button className="ajc-seg-btn" type="button" role="radio" aria-checked={mode === 'existant'} disabled={envoi}
+                  onClick={() => { setMode('existant'); setErreur(null) }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="6.5" /><path d="M20 20l-4.2-4.2" /></svg>
+                  <span>Une fiche existante<small>Chercher dans l'annuaire</small></span>
+                </button>
+              </div>
+
+              {mode === 'nouveau' ? (
+                <div className="ajc-card">
+                  <div className="ajc-grid">
+                    <div className="ajc-field">
+                      <label htmlFor="ajc-nom">Nom <i>*</i></label>
+                      <input id="ajc-nom" ref={premierChamp} className="ajc-inp" value={nom} onChange={(event) => setNom(event.target.value)} autoComplete="off" disabled={envoi} />
+                    </div>
+                    <div className="ajc-field">
+                      <label htmlFor="ajc-prenom">Prénom</label>
+                      <input id="ajc-prenom" className="ajc-inp" value={prenom} onChange={(event) => setPrenom(event.target.value)} autoComplete="off" disabled={envoi} />
+                    </div>
+                    <div className="ajc-field">
+                      <label htmlFor="ajc-portable">Portable</label>
+                      <input id="ajc-portable" className="ajc-inp" value={portable} onChange={(event) => setPortable(event.target.value)} inputMode="tel" autoComplete="off" placeholder="06 …" disabled={envoi} />
+                    </div>
+                    <div className="ajc-field">
+                      <label htmlFor="ajc-email">E-mail</label>
+                      <input id="ajc-email" className="ajc-inp" value={email} onChange={(event) => setEmail(event.target.value)} type="email" autoComplete="off" placeholder="adresse@email.fr" disabled={envoi} />
+                    </div>
+                  </div>
+                  <p className="ajc-note">Un portable ou un e-mail est obligatoire. Le conjoint est créé chez le négociateur de {personne}.</p>
+                  <label className="ajc-check">
+                    <input type="checkbox" checked={rgpd} onChange={(event) => setRgpd(event.target.checked)} disabled={envoi} />
+                    <span><b>Envoyer l'e-mail RGPD au conjoint</b><span>Il reçoit le lien d'activation de son espace et le consentement RGPD.</span></span>
+                  </label>
+                </div>
+              ) : (
+                <div className="ajc-card">
+                  <div className="ajc-field">
+                    <label htmlFor="ajc-recherche">Chercher la fiche</label>
+                    <div className="ajc-search">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round"><circle cx="11" cy="11" r="6.5" /><path d="M20 20l-4.2-4.2" /></svg>
+                      <input id="ajc-recherche" ref={premierChamp} className="ajc-inp" value={recherche} disabled={envoi} autoComplete="off"
+                        placeholder="Nom, téléphone, e-mail ou numéro (3 caractères au moins)"
+                        onChange={(event) => { setRecherche(event.target.value); setChoisi(null) }} />
+                    </div>
+                  </div>
+                  {resultats.length ? (
+                    <ul className="ajc-list" role="radiogroup" aria-label="Fiches trouvées">
+                      {resultats.map((option) => (
+                        <li key={`ajc-${option.hektor_contact_id}`}>
+                          <button className="ajc-opt" type="button" role="radio" aria-checked={choisi?.hektor_contact_id === option.hektor_contact_id}
+                            onClick={() => setChoisi(option)} disabled={envoi}>
+                            <span className="ajc-radio" aria-hidden="true" />
+                            <span className="ajc-opt-tx">
+                              <b>{libelleOption(option)}</b>
+                              <span>{[option.ville, option.phone_primary || option.email, `n° ${option.hektor_contact_id}`].filter(Boolean).join(' · ')}</span>
+                            </span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : recherche.trim().length >= 3 ? (
+                    <p className="ajc-empty">{rechercheEnCours ? 'Recherche…' : 'Aucune fiche trouvée.'}</p>
+                  ) : null}
+                </div>
+              )}
+
+              <div className="ajc-info">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l9-7 9 7" /><path d="M5 10v10h14V10" /></svg>
+                <span>Le conjoint recevra les mêmes biens que {personne} (mandant ou propriétaire), sur les biens que vous pouvez gérer. Hektor confirme le couple dans les secondes qui suivent.</span>
+              </div>
+              {erreur ? <div className="ajc-error" role="alert">{erreur}</div> : null}
+            </>
+          )}
+        </div>
+
+        <footer className="ajc-foot">
+          {fait ? (
+            <button className="ajc-btn primary" type="button" onClick={props.onClose}>Fermer</button>
+          ) : (
+            <>
+              <button className="ajc-btn" type="button" onClick={fermer} disabled={envoi}>Annuler</button>
+              <button className="ajc-btn primary" type="button" onClick={() => { void envoyer() }}
+                disabled={envoi || (mode === 'existant' && !choisi)}>
                 {envoi ? 'Envoi…' : 'Ajouter le conjoint'}
               </button>
-            </div>
-          </>
-        )}
-      </div>
-    </ContactWorkflowModal>
+            </>
+          )}
+        </footer>
+      </section>
+    </div>
   )
 }
 

@@ -37,6 +37,16 @@ class CiviliteCouple(unittest.TestCase):
         self.assertEqual(civilite_affichee(" M_Mme "), "M. et Mme")
         self.assertEqual(civilite_affichee("m_mme"), "m_mme")
 
+    def test_place_vide_03_11(self):
+        # « Transformer en couple » sur deux fiches sans civilite : Hektor pose « _ ».
+        self.assertEqual(fiche("_").display_name, "Jean DUPONT")
+        self.assertEqual(civilite_affichee("_"), "")
+        self.assertEqual(fiche("_Mr/Mme").display_name, "Mr/Mme Jean DUPONT")
+        self.assertEqual(civilite_affichee("M_"), "M.")
+        self.assertEqual(civilite_affichee("_Mme"), "Mme")
+        # temoin : deux places remplies hors table, inchange
+        self.assertEqual(civilite_affichee("m_mme"), "m_mme")
+
     def test_fiche_de_menage_empruntant_sa_porteuse(self):
         vide = fiche("M_Mme", prenom=None, nom=None, couple="600000", porteuse="Jean DUPONT", numero="600002")
         self.assertEqual(vide.display_name, "M. et Mme Jean DUPONT")
