@@ -947,3 +947,9 @@ est « couple » et son résumé « nommé » (la nuit du 02→03/11 : aujourd'h
   par nuit. Une page = 20 contacts avec leur `datemaj` ET leur `refCouple` : 20 fois moins cher que `ContactById`. Exemple :
   1 000 pages/nuit (~17 min, 1 000 requêtes) = 20 000 contacts vérifiés, tous les actifs en ~9 nuits ; seules les fiches dont la
   `datemaj` a bougé sont ensuite relues en détail.
+- ⚠ **Nuance (Frédéric, 03/11 : « on n'est pas sûr pour le nombre de requêtes »)** : le « quota de volume » n'est qu'une
+  ESTIMATION (mémoire du 20/08, 2 blocages à ~13 600 et ~16 700 requêtes, un 3e à 3 450). Les 4 bannissements connus ont eu
+  4 déclencheurs : rattrapage documents (débit 1,5 req/s pendant 4 h + 1 300 refus 403 répétés, 19-20/08), mes sondes à
+  4 req/s (26/08), 17 connexions en 22 s (17/09), relectures d'objets supprimés en rafale (18/09). ⭐ Contre-témoin : la lecture
+  complète du 23/06 (17 360 pages en ~33 min, ~9 req/s) n'a PAS été bannie. Ce qui est sûr : tenir 1 req/s, éviter les longues
+  expositions sans pause, ne jamais rejouer des refus, ne jamais multiplier les connexions.
