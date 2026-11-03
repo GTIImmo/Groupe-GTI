@@ -273,3 +273,17 @@ numéros de passerelles (0c) et les droits (4).
 - **Bouton Action = « sceau de suivi »** (`57e5e4f`, NON pousse) : 112 px au lieu de 126, hauteur 34. L'anneau autour de l'icone = le chemin de la demande en 3 crans (1 = envoyee, 2 = en cours / a corriger, plein = decision). Memes tons, memes libelles (`actionPillState`). Chevron retire. Colonne Actions 264 px. Vu dans l'apercu (7 etats), menu toujours ouvert au clic, 0 defilement a 1280.
 - **Lot 4 serveur** (`dd59dc5`, NON pousse -- Render se deploie au push) : `/apply` et `/persist-state` ouverts au negociateur si l'annonce est diffusable ET dans son perimetre ; `ensureDiffusable`, validation et diffusable ignores pour lui. Epreuve hors ligne 10/10.
 - Reste : lot 3 (onglets Liste / Publicite + cases), essai reel sur 62774 avec accord.
+
+## 03/11 soir (suite) -- lot 3 Vue Publicite CODE (`19baf05`, NON pousse)
+
+- **En ligne avant** : `0d1f608` sert sur Render (`/health`) et Vercel (READY) -> les droits negos (lot 4) sont ACTIFS.
+- **Onglets Liste / Publicite** dans l'en-tete de la carte (grille passee a 3 colonnes). Onglet retenu par navigateur (localStorage, en try/catch).
+- **Cases** LB BI PA EP SI (56 px chacune) : en ligne = `portails_resume` de la ligne ; erreur = `app_mandat_broadcasts_current.is_error` (`loadPortailsEnErreur`, une lecture par page).
+- **Un clic** = `saveDiffusionTargets` avec UNE cible (numero : 19/20/21 communs, sinon `previewDefaultDiffusionTargets` pour BI/LB) puis `/apply` ensureDiffusable=false -> UN ordre chez Hektor. La case ne change qu'apres la reponse ; puis `persist-state` (portails_resume, nb). Refus affiche sur la case.
+- **Non diffusable** : bande « Faire la demande » / « Corriger » / « Demande envoyee » ; sans mandat ou fiche legere : texte.
+- **Fenetre Diffusion existante** retouchee (2 points) : repli 19/20/21 au lieu du NOM du portail comme numero (defaut ancien) ; completee par les cibles d'agence manquantes (avant : seulement si aucune cible).
+- **Bouton Action** : `td span { margin-top: 4px }` (styles.css l. 5001) + gris `!important` decalaient le texte et eteignaient le sceau -> annules. 116 px, sceau 26, 70 px de texte (mesure : « A corriger » 60, « ANNULATION » 60) ; « Sans mandat » en 10,5 px.
+- **Controle** : build vert ; apercu 1280 px sans defilement ; clic -> envoi (bloque) -> echec affiche, fiche NON ouverte ; telephone inchange (cartes a part).
+- ⚠ **L'apercu local ecrit par `hektor_diffusion_writeback.py`** (api locale) : NE PAS cliquer une case en mode local sur un vrai numero de dossier.
+- ⚠ **Reserve Leboncoin** : des annonces sont encore publiees sur les ANCIENNES passerelles LB 35-44 alors que la table d'agence donne 45-61. Decocher LB sur l'une d'elles enverrait le retrait au mauvais numero. A eprouver sur 62774, puis mesurer combien sont concernees.
+- **Reste** : push ; essai reel (cocher puis decocher PA sur 62774) avec accord ; alerte REFUS au moniteur ; telephone (lot 5).
