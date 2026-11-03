@@ -637,3 +637,10 @@ l'app, accord de Frédéric (« à retirer après ») : job `869b6592`, `assigne
 (diffusable 0). ⬜ À défaire, avec Frédéric : retirer PEREIRA (aucun geste de l'app ne sait « aucun
 négociateur » — le worker n'envoie que `upval NEGOCIATEUR` vers un id ; je n'ai pas trouvé le champ dans
 l'écran de Hektor), puis supprimer ou annuler 50147 et remettre 61398 en « Actif ».
+
+**Banc défait (03/11, 08:05 UTC, accord de Frédéric « Supprime 50147, remets Actif »)** : compromis 50147
+SUPPRIMÉ par l'app (job `delete_hektor_compromis` `5eb1bdc9`, `done`, `redescente_statut: done`) ; Hektor a
+redescendu 61398 en « Bien actif » de lui-même, donc le geste « Actif » n'a PAS été joué (il remet
+`diffusable = 1`, voir la mémoire du 23/10). Relecture `refresh_console_data` `e50c0b62` terminée à 08:06:24 :
+`Actif`, `diffusable 0`, plus de compromis sur la fiche Hektor. ⬜ PEREIRA reste négociatrice de 61398 (aucun
+geste « sans négociateur » dans l'app).
