@@ -77,16 +77,16 @@
 
 /* Diffusion : un symbole de taille fixe */
 .av3 .av3-dif { display: flex; justify-content: center; }
-.av3 .av3-antenne { position: relative; width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center; border: 1.5px solid; }
-.av3 .av3-antenne svg { width: 20px; height: 20px; }
+.av3 .av3-antenne { position: relative; width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center; border: 1.5px solid; }
+.av3 .av3-antenne svg { width: 17px; height: 17px; }
 .av3 .av3-antenne.enligne { background: #2f7d59; border-color: #2f7d59; color: #fff; }
 .av3 .av3-antenne.zero { background: #fff8ec; border-color: #e8b05a; border-style: dashed; color: #d98e2b; }
 .av3 .av3-antenne.non { background: #f4f5f6; border-color: #e2e5e6; color: #9da0a0; }
-.av3 .av3-antenne .nb { position: absolute; top: -7px; right: -7px; min-width: 17px; height: 17px; padding: 0 4px; box-sizing: border-box; border-radius: 99px; background: #2f7d59; color: #fff; border: 2px solid #fff; font-size: 9.5px; font-weight: 800; line-height: 13px; text-align: center; }
+.av3 .av3-antenne .nb { position: absolute; top: -6px; right: -6px; min-width: 16px; height: 16px; padding: 0 4px; box-sizing: border-box; border-radius: 99px; background: #2f7d59; color: #fff; border: 2px solid #fff; font-size: 9px; font-weight: 800; line-height: 12px; text-align: center; }
 .av3 .av3-antenne .err { position: absolute; bottom: -3px; right: -3px; width: 11px; height: 11px; border-radius: 9px; background: #b66a16; border: 2px solid #fff; }
 
 /* Actions : mêmes boutons que l'annuaire Contacts */
-.av3 .av3-actions { display: grid; grid-template-columns: 136px repeat(3, 34px); gap: 6px; justify-content: end; align-items: center; }
+.av3 .av3-actions { display: grid; grid-template-columns: 126px repeat(3, 34px); gap: 6px; justify-content: end; align-items: center; }
 .av3 .ra-spacer { width: 34px; height: 34px; flex: none; }
 .av3 .ra { width: 34px; height: 34px; border-radius: 9px; border: 1.5px solid rgba(34, 35, 35, .2); background: #f4f5f6; color: rgba(34, 35, 35, .7); display: grid; place-items: center; cursor: pointer; transition: .13s; flex: none; text-decoration: none; padding: 0; position: relative; }
 .av3 .ra svg { width: 16px; height: 16px; }
@@ -100,13 +100,13 @@
 .panel-grid.av3 .av3-actions > .av3-slot.row-actions { display: contents !important; }
 
 /* Bouton Action anime (meme mecanisme de tons que le bouton « Action » d'avant) */
-.av3 .act { position: relative; display: inline-flex; align-items: center; gap: 6px; height: 40px; width: 136px; box-sizing: border-box; padding: 0 6px 0 5px; border-radius: 12px; border: 1.5px solid; font: inherit; cursor: pointer; text-align: left; transition: transform .15s, box-shadow .15s; }
-.av3 .act:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(34, 35, 35, .12); }
-.av3 .act-ic { position: relative; flex: 0 0 28px; width: 28px; height: 28px; border-radius: 9px; display: grid; place-items: center; color: #fff; }
-.av3 .act-ic svg { width: 15px; height: 15px; position: relative; z-index: 1; }
+.av3 .act { position: relative; display: inline-flex; align-items: center; gap: 6px; height: 34px; width: 126px; box-sizing: border-box; padding: 0 6px 0 4px; border-radius: 9px; border: 1.5px solid; font: inherit; cursor: pointer; text-align: left; transition: transform .15s, box-shadow .15s; }
+.av3 .act:hover { border-color: #c5005f; box-shadow: none; }
+.av3 .act-ic { position: relative; flex: 0 0 24px; width: 24px; height: 24px; border-radius: 7px; display: grid; place-items: center; color: #fff; }
+.av3 .act-ic svg { width: 13px; height: 13px; position: relative; z-index: 1; }
 .av3 .act-txt { display: flex; flex-direction: column; min-width: 0; line-height: 1.1; flex: 1; }
-.av3 .act-type { font-size: 9.5px; font-weight: 800; letter-spacing: .03em; overflow: hidden; text-overflow: ellipsis; text-transform: uppercase; opacity: .75; white-space: nowrap; }
-.av3 .act-state { font-size: 12.5px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.av3 .act-type { font-size: 8.5px; font-weight: 800; letter-spacing: .03em; overflow: hidden; text-overflow: ellipsis; text-transform: uppercase; opacity: .75; white-space: nowrap; }
+.av3 .act-state { font-size: 12px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .av3 .act-chev { width: 12px; height: 12px; flex: 0 0 12px; opacity: .6; }
 .av3 .t-neutral { background: #fff; border-color: rgba(34, 35, 35, .16); color: #222323; }
 .av3 .t-neutral .act-ic { background: #f4f5f6; color: #3b4143; }
@@ -121,9 +121,9 @@
 .av3 .t-refused .act-ic { background: #d15347; }
 .av3 .t-accepted { background: #e8f5ee; border-color: #cde8d9; color: #1f5e41; }
 .av3 .t-accepted .act-ic { background: #2f7d59; }
-.av3 .t-sent .act-ic::after { content: ""; position: absolute; inset: 0; border-radius: 9px; background: #4f8fb5; animation: av3Ping 1.8s ease-out infinite; }
+.av3 .t-sent .act-ic::after { content: ""; position: absolute; inset: 0; border-radius: 7px; background: #4f8fb5; animation: av3Ping 1.8s ease-out infinite; }
 .av3 .t-sent .act-ic svg { animation: av3Fly 1.8s ease-in-out infinite; }
-.av3 .t-progress .act-ic::after { content: ""; position: absolute; inset: -4px; border-radius: 12px; border: 2px solid transparent; border-top-color: #4f8fb5; border-right-color: #4f8fb5; animation: av3Spin 1.1s linear infinite; }
+.av3 .t-progress .act-ic::after { content: ""; position: absolute; inset: -3px; border-radius: 9px; border: 2px solid transparent; border-top-color: #4f8fb5; border-right-color: #4f8fb5; animation: av3Spin 1.1s linear infinite; }
 .av3 .t-fix { animation: av3Glow 2.4s ease-in-out infinite; }
 .av3 .t-fix .act-ic { animation: av3Wiggle 2.4s ease-in-out infinite; }
 .av3 .t-refused .act-ic { animation: av3Shake .5s ease-in-out 1; }
@@ -193,7 +193,7 @@
 .app-shell.app-shell-modern .panel-grid.av3 .table-wrap.listing-table-active .act .act-txt,
 .app-shell.app-shell-modern .panel-grid.av3 .table-wrap.listing-table-active .act .act-type,
 .app-shell.app-shell-modern .panel-grid.av3 .table-wrap.listing-table-active .act .act-state { color: inherit !important; }
-.app-shell.app-shell-modern .panel-grid.av3 .table-wrap.listing-table-active .act { font-size: 12.5px !important; }
+.app-shell.app-shell-modern .panel-grid.av3 .table-wrap.listing-table-active .act { font-size: 12px !important; }
 .app-shell.app-shell-modern .panel-grid.av3 .table-wrap.listing-table-active .act-ic { color: #fff !important; }
 .app-shell.app-shell-modern .panel-grid.av3 .table-wrap.listing-table-active .t-neutral .act-ic { color: #3b4143 !important; }
 .app-shell.app-shell-modern .panel-grid.av3 .table-wrap.listing-table-active .t-none .act-ic { color: #7c8082 !important; }

@@ -92,8 +92,8 @@ export function AnnonceV2Colgroup() {
       <col />{/* bien (photo, titre, etiquettes, lieu, negociateur, numeros) -- flexible */}
       <col style={{ width: '106px' }} />{/* prix */}
       <col style={{ width: '146px' }} />{/* mandat : bouclier + periode */}
-      <col style={{ width: '78px' }} />{/* diffusion : un symbole (78 : l'en-tete « DIFFUSION » doit tenir) */}
-      <col style={{ width: '288px' }} />{/* actions : pilule 136 + 3 x 34 + 3 x 6 + padding 30 (Inter est plus large que la police de la maquette) */}
+      <col style={{ width: '78px' }} />{/* diffusion : un symbole de 34 px (78 : l'en-tete « DIFFUSION » doit tenir) */}
+      <col style={{ width: '278px' }} />{/* actions : pilule 126 + 3 x 34 + 3 x 6 + padding 30 -- meme hauteur 34 px que les boutons Contacts */}
     </colgroup>
   )
 }
