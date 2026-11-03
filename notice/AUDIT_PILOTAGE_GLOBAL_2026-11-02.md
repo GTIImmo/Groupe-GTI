@@ -980,3 +980,25 @@ Frédéric : « FAIS LES DEUX MANQUES ». C'est son accord pour les deux lecture
   - les notaires : études à partir de 5 actes sur deux ans, délai médian et part d'actes en retard, en rouge au-delà de 120 jours ou de 40 %.
 
 **Contrôles** : `npm run build` vert, et aucun bloc en erreur sur le serveur de démonstration (les anneaux s'arrêtent à leur valeur). ⏳ À voir sur les vraies données après le push.
+
+## 37. Les deux limites levées (03/11 soir) — Frédéric : « Pourquoi ces limites ? », puis « Vas y »
+**1. L'agence ne filtrait pas Acquéreurs. Ce n'était PAS une limite des données, mais mon raccourci.**
+- Chaque fiche acquéreur vivante porte son agence : 9 451 sur 9 465, les 14 autres au « Compte formation ».
+- `app_pilotage_acquereurs` prend maintenant `p_agence`, comparée sur la même clé que `cleAgence()` (sans « Groupe GTI », sans accent, en majuscules, tirets). L'ancienne signature `(integer)` est supprimée pour que l'appel reste sans ambiguïté.
+- L'écran relit le fichier à chaque changement d'agence. La puce précise qu'il s'agit de l'agence de la fiche, celle du négociateur qui la suit, et pas forcément celle où l'acheteur achète.
+- Mesuré : Le Puy 671 fiches vivantes ; Saint-Étienne, vivier 2 146 → 580 → 464 → 407 → 387.
+
+**2. Le nom du notaire ne figure que sur la vente. Cela vient bien des données Hektor, mais la limite se contourne.**
+- Le compromis porte le nom 204 fois sur 630, mais le numéro du notaire 593 fois, dont 583 retrouvés dans les fiches contacts.
+- `app_pilotage_affaires_plus` rend maintenant `compromis` : les compromis en cours, c'est-à-dire sans acte, chacun avec l'étude retrouvée par son numéro. Ce numéro (`hektor_target_id`) est le même que celui de la vente (`notaires_json.entree.id`), donc les deux se rejoignent.
+- Mesuré : 124 compromis en cours, 112 avec leur étude, 48 à date d'acte dépassée.
+- Le tableau des notaires gagne deux colonnes, « compromis en cours » et « date d'acte dépassée ». Il est trié d'abord sur les dépassés, pour savoir quelle étude relancer, et une étude y paraît dès 3 compromis en cours.
+- Pour une étude qui a une vente, c'est le nom pris sur la vente qui s'affiche : il nomme l'étude, alors que la fiche contact ne donne souvent que le notaire.
+
+**Posé en base** : `supabase/patch_pilotage_limites_2026-11-03.sql`, retour arrière `_INVERSE.sql`.
+
+**Contrôles** :
+- Un non-admin ne reçoit toujours rien : la garde `is_app_admin` n'a pas changé.
+- `npm run build` est vert.
+- Sur le serveur de démonstration, le filtre agence et les nouvelles colonnes s'affichent.
+- ⏳ À voir sur les vraies données après le push.

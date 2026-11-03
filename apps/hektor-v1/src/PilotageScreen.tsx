@@ -11,8 +11,8 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import {
   aujourdhui, calculerAffaires, calculerAffairesPlus, calculerClassements, calculerMandats, calculerPortails, calculerSignatures, calculerStock, calculerVentes, cleAgence,
-  loadPilotage, mediane, nomAgence,
-  type LigneClassement, type PilotageSources,
+  lireAcquereurs, loadPilotage, mediane, nomAgence,
+  type LigneClassement, type PilotageAcquereurs, type PilotageSources,
 } from './lib/pilotage'
 import './pilotage.css'
 
@@ -252,6 +252,17 @@ export default function PilotageScreen() {
     return () => { annule = true }
   }, [annee, essai])
 
+  // Acquéreurs filtrés par agence : une lecture à part, rejouée quand l'agence change (la lecture « tout le réseau »
+  // arrive avec les autres sources).
+  const [acqAgence, setAcqAgence] = useState<{ cle: string; lu: PilotageAcquereurs | Error } | null>(null)
+  useEffect(() => {
+    if (!agence) return undefined
+    let annule = false
+    const cle = `${annee}-${agence}`
+    lireAcquereurs(annee, agence).then((lu) => { if (!annule) setAcqAgence({ cle, lu }) }, (e) => { if (!annule) setAcqAgence({ cle, lu: e instanceof Error ? e : new Error(String(e)) }) })
+    return () => { annule = true }
+  }, [annee, agence, essai])
+
   const reessayer = () => setEssai((x) => x + 1)
   const enCours = annee === ANNEE_COURANTE
   const coef = ttc ? 1 : 1 / 1.2
@@ -265,7 +276,9 @@ export default function PilotageScreen() {
   const stock = useMemo(() => (sources && !(sources.stock instanceof Error) ? calculerStock(sources.stock, agence) : null), [sources, agence])
   const signatures = useMemo(() => (sources && !(sources.signatures instanceof Error) ? calculerSignatures(sources.signatures, annee) : null), [sources, annee])
   const affaires = useMemo(() => (sources && !(sources.ventes instanceof Error) ? calculerAffaires(sources.ventes, annee, agence) : null), [sources, annee, agence])
-  const acquereurs = sources && !(sources.acquereurs instanceof Error) ? sources.acquereurs : null
+  const acqLu = agence ? (acqAgence && acqAgence.cle === `${annee}-${agence}` ? acqAgence.lu : undefined) : sources?.acquereurs
+  const acquereurs = acqLu && !(acqLu instanceof Error) ? acqLu : null
+  const acqEnLecture = acqLu === undefined
   const affairesPlus = useMemo(() => (sources && !(sources.affairesPlus instanceof Error) ? calculerAffairesPlus(sources.affairesPlus, annee, agence) : null), [sources, annee, agence])
   const classements = useMemo(() => (ventes || mandats || stock
     ? calculerClassements(ventes, mandats, sources && !(sources.stock instanceof Error) ? sources.stock : null, affaires, agence) : null), [ventes, mandats, stock, sources, affaires, agence])
@@ -716,26 +729,28 @@ export default function PilotageScreen() {
 
         {affairesPlus && affairesPlus.notaires.length ? (
           <section className="pl-carte pl-bloc is-table" aria-label="Les notaires">
-            <div className="pl-bloc-tete"><h2>Les notaires</h2><span className="pl-mute">études du vendeur, actes {annee - 1} et {annee}, à partir de 5 actes</span></div>
+            <div className="pl-bloc-tete"><h2>Les notaires</h2><span className="pl-mute">études du vendeur · actes {annee - 1} et {annee} · compromis en cours aujourd’hui</span></div>
             <div className="pl-defile">
               <table className="pl-table">
-                <thead><tr><th scope="col">Étude</th><th scope="col">Actes</th><th scope="col">Compromis → acte</th><th scope="col">Actes en retard</th></tr></thead>
+                <thead><tr><th scope="col">Étude</th><th scope="col">Compromis en cours</th><th scope="col">Date d’acte dépassée</th><th scope="col">Actes</th><th scope="col">Compromis → acte</th><th scope="col">Actes en retard</th></tr></thead>
                 <tbody>
                   {affairesPlus.notaires.map((n) => {
                     const retard = pourcent(n.retard, n.avecDate)
                     return (
                       <tr key={n.cle}>
                         <td><b>{n.nom}</b></td>
-                        <td className="pl-num pl-fort">{n.actes}</td>
+                        <td className="pl-num pl-fort">{n.enCours || '–'}</td>
+                        <td className={`pl-num ${n.depasses ? 'pl-alerte' : ''}`}>{n.depasses || '–'}</td>
+                        <td className="pl-num">{n.actes || '–'}</td>
                         <td className={`pl-num ${n.delai != null && n.delai > 120 ? 'pl-alerte' : ''}`}>{n.delai != null ? `${Math.round(n.delai)} j` : '–'}</td>
-                        <td className={`pl-num ${retard >= 40 ? 'pl-alerte' : ''}`}><span className="pl-cellule-barre"><Barre part={retard} ton={retard >= 40 ? '#e0603a' : '#d98a00'} fine />{retard} %</span></td>
+                        <td className={`pl-num ${retard >= 40 ? 'pl-alerte' : ''}`}>{n.avecDate ? <span className="pl-cellule-barre"><Barre part={retard} ton={retard >= 40 ? '#e0603a' : '#d98a00'} fine />{retard} %</span> : '–'}</td>
                       </tr>
                     )
                   })}
                 </tbody>
               </table>
             </div>
-            <span className="pl-note">Délai médian du compromis à l’acte ; « en retard » = acte signé après la date prévue au compromis. En rouge : plus de 120 jours, ou au moins 40 % d’actes en retard.</span>
+            <span className="pl-note">D’abord les études qui ont des compromis à date d’acte dépassée : ce sont elles à relancer. Une étude paraît à partir de 5 actes ou de 3 compromis en cours ; son notaire est retrouvé par son numéro quand le compromis ne porte pas son nom. Délai médian du compromis à l’acte ; « en retard » = acte signé après la date prévue au compromis. En rouge : plus de 120 jours, ou au moins 40 % d’actes en retard.</span>
           </section>
         ) : null}
 
@@ -787,6 +802,7 @@ export default function PilotageScreen() {
   // ───────────────────────── ACQUÉREURS (03/11) ─────────────────────────
   // Le fichier acquéreurs en chiffres (lecture admin app_pilotage_acquereurs) : aucune fiche nominative ne sort.
   function Acquereurs() {
+    if (acqEnLecture) return <div className="pl-carte pl-indispo" role="status"><span className="pl-mute">Lecture du fichier acquéreurs de {nomAgence(agence ?? '')}…</span></div>
     if (!acquereurs) return <Indisponible quoi="Le fichier acquéreurs" onReessayer={reessayer} />
     const a = acquereurs
     const v = Math.max(1, a.vivantes)
@@ -815,7 +831,7 @@ export default function PilotageScreen() {
     const maxCrees = Math.max(1, ...negos.map((n) => n.crees))
     return (
       <>
-        <span className="pl-puce">Tout le réseau : l’agence choisie ne filtre pas cet onglet</span>
+        <span className="pl-puce">{agence ? `Fiches de l’agence ${nomAgence(agence)} : l’agence de la fiche, celle du négociateur qui la suit` : 'Tout le réseau'}</span>
         <div className="pl-grille-kpi">
           <Carte libelle="Fiches vivantes" genre="fichier" valeur={<Compteur valeur={a.vivantes} format={(x) => entier.format(Math.round(x))} />} detail={`${entier.format(a.total)} fiches acquéreurs en tout`} />
           <Carte libelle={`Créées en ${annee}`} genre="activité" valeur={<Compteur valeur={a.crees} format={(x) => entier.format(Math.round(x))} />} ecartValeur={comparer ? ecart(a.crees, a.crees_prec) : null} detail={comparer ? `contre ${entier.format(a.crees_prec)} · ${libelleComparaison}` : ''} />

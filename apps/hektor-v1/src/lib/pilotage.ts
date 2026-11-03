@@ -70,11 +70,14 @@ export type PilotageAcquereurs = {
 export type PilotageAffairesPlus = {
   offres: Array<{ d: string; state: string | null; agence: string | null; type: string | null; ratio: number | null; jours: number | null; premiere: boolean }>
   actes: Array<{ d: string; agence: string | null; etude_id: string | null; etude: string | null; delai: number | null; retard: boolean | null }>
+  // 03/11, 2e pose : les compromis en cours, notaire retrouvé par son numéro (même numéro que sur les ventes)
+  compromis?: Array<{ d: string; prevue: string | null; agence: string | null; etude_id: string | null; etude: string | null }>
 }
 
-async function lireAcquereurs(annee: number): Promise<PilotageAcquereurs> {
+// L'agence (clé de cleAgence) filtre les fiches par l'agence de la fiche, celle du négociateur qui la suit.
+export async function lireAcquereurs(annee: number, agence: string | null = null): Promise<PilotageAcquereurs> {
   if (!hasSupabaseEnv || !supabase) return mockAcquereurs()
-  const { data, error } = await supabase.rpc('app_pilotage_acquereurs', { p_annee: annee })
+  const { data, error } = await supabase.rpc('app_pilotage_acquereurs', { p_annee: annee, p_agence: agence })
   if (error) throw new Error(error.message)
   if (!data) throw new Error('lecture réservée aux administrateurs')
   return data as PilotageAcquereurs
@@ -768,7 +771,7 @@ export type AffairesPlusCalcul = {
   remises: { n: number; mediane: number | null; tranches: Array<{ libelle: string; n: number; ton: string }> }
   exclusif: { jours: number | null; ratio: number | null; n: number }
   simple: { jours: number | null; ratio: number | null; n: number }
-  notaires: Array<{ cle: string; nom: string; actes: number; delai: number | null; retard: number; avecDate: number }>
+  notaires: Array<{ cle: string; nom: string; actes: number; delai: number | null; retard: number; avecDate: number; enCours: number; depasses: number }>
 }
 
 export function calculerAffairesPlus(source: PilotageAffairesPlus, annee: number, agence: string | null): AffairesPlusCalcul {
@@ -786,15 +789,27 @@ export function calculerAffairesPlus(source: PilotageAffairesPlus, annee: number
     }
   }
   // Les notaires : actes de l'année ET de la précédente (une étude fait peu d'actes par an), à partir de 5.
-  const etudes = new Map<string, { cle: string; nom: string; delais: number[]; retard: number; avecDate: number; actes: number }>()
+  const etudes = new Map<string, { cle: string; nom: string; delais: number[]; retard: number; avecDate: number; actes: number; enCours: number; depasses: number }>()
   for (const a of source.actes) {
     if (!a.d.startsWith(String(annee - 1)) && !a.d.startsWith(String(annee))) continue
     if (!garde(a.agence) || !a.etude) continue
     const cle = a.etude_id ?? a.etude
-    const e = etudes.get(cle) ?? { cle, nom: a.etude, delais: [], retard: 0, avecDate: 0, actes: 0 }
+    const e = etudes.get(cle) ?? { cle, nom: a.etude, delais: [], retard: 0, avecDate: 0, actes: 0, enCours: 0, depasses: 0 }
+    e.nom = a.etude
     e.actes += 1
     if (a.delai != null && a.delai >= 0) e.delais.push(a.delai)
     if (a.retard != null) { e.avecDate += 1; if (a.retard) e.retard += 1 }
+    etudes.set(cle, e)
+  }
+  // Les compromis en cours de chaque étude : le nom de la vente est gardé quand l'étude en a une (il nomme l'étude,
+  // celui de la fiche contact nomme souvent le seul notaire).
+  const jour = aujourdhui()
+  for (const c of source.compromis ?? []) {
+    if (!garde(c.agence) || !c.etude) continue
+    const cle = c.etude_id ?? c.etude
+    const e = etudes.get(cle) ?? { cle, nom: c.etude, delais: [], retard: 0, avecDate: 0, actes: 0, enCours: 0, depasses: 0 }
+    e.enCours += 1
+    if (c.prevue && /^\d{4}-\d{2}-\d{2}$/.test(c.prevue) && c.prevue < jour) e.depasses += 1
     etudes.set(cle, e)
   }
   return {
@@ -809,9 +824,9 @@ export function calculerAffairesPlus(source: PilotageAffairesPlus, annee: number
       ],
     },
     exclusif: parType('EXCLUSIF'), simple: parType('SIMPLE'),
-    notaires: [...etudes.values()].filter((e) => e.actes >= 5)
-      .map((e) => ({ cle: e.cle, nom: e.nom, actes: e.actes, delai: mediane(e.delais), retard: e.retard, avecDate: e.avecDate }))
-      .sort((a, b) => b.actes - a.actes),
+    notaires: [...etudes.values()].filter((e) => e.actes >= 5 || e.enCours >= 3)
+      .map((e) => ({ cle: e.cle, nom: e.nom, actes: e.actes, delai: mediane(e.delais), retard: e.retard, avecDate: e.avecDate, enCours: e.enCours, depasses: e.depasses }))
+      .sort((a, b) => b.depasses - a.depasses || b.enCours - a.enCours || b.actes - a.actes),
   }
 }
 
@@ -841,5 +856,9 @@ function mockAffairesPlus(annee: number): PilotageAffairesPlus {
     d: `${annee}-${String(1 + (i % 10)).padStart(2, '0')}-0${1 + (i % 8)}`, agence: agences[i % agences.length],
     etude_id: String(i % 4), etude: etudes[i % 4], delai: Math.round(70 + r() * 60), retard: r() < 0.3,
   }))
-  return { offres, actes }
+  const compromis = Array.from({ length: 30 }, (_, i) => ({
+    d: `${annee}-0${1 + (i % 9)}-10`, prevue: `${annee}-${String(9 + (i % 4)).padStart(2, '0')}-15`, agence: agences[i % agences.length],
+    etude_id: String(i % 4), etude: etudes[i % 4],
+  }))
+  return { offres, actes, compromis }
 }
