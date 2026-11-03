@@ -267,3 +267,9 @@ deux gros boutons (Acquéreurs, Ouvrir la fiche) + « ⋯ » ; onglet Publicité
 
 **0 → 1 (+2) → 5 → 4 → 3.** La vue Liste ne dépend de rien ; la vue Publicité attend des données fraîches (0a), les
 numéros de passerelles (0c) et les droits (4).
+
+## 03/11 soir -- bouton Action redessine, et lot 4 (serveur) ecrit
+
+- **Bouton Action = « sceau de suivi »** (`57e5e4f`, NON pousse) : 112 px au lieu de 126, hauteur 34. L'anneau autour de l'icone = le chemin de la demande en 3 crans (1 = envoyee, 2 = en cours / a corriger, plein = decision). Memes tons, memes libelles (`actionPillState`). Chevron retire. Colonne Actions 264 px. Vu dans l'apercu (7 etats), menu toujours ouvert au clic, 0 defilement a 1280.
+- **Lot 4 serveur** (`dd59dc5`, NON pousse -- Render se deploie au push) : `/apply` et `/persist-state` ouverts au negociateur si l'annonce est diffusable ET dans son perimetre ; `ensureDiffusable`, validation et diffusable ignores pour lui. Epreuve hors ligne 10/10.
+- Reste : lot 3 (onglets Liste / Publicite + cases), essai reel sur 62774 avec accord.
