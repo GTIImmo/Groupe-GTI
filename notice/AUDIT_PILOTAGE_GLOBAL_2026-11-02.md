@@ -820,3 +820,21 @@ repliés** derrière un bouton. Supprimés de la page (toujours dans leur planch
 le bloc portefeuille. Animations : chiffres qui défilent, colonnes qui se lèvent, barres qui poussent, écarts qui apparaissent d'un rebond,
 lignes d'action qui glissent, reflet sur le grand chiffre, point vert qui pulse, survol des colonnes et des cartes ; coupées si l'appareil
 le demande. Calcul et trous vérifiés hors ligne. Les autres planches suivront le même traitement après son avis.
+
+## 30. Tableau de bord v3 : graphisme relevé (03/11, maquette version 29)
+Même organisation (résultat, à retenir, à traiter, ce qui va rentrer, agences, chiffres repliés), mais avec ces changements :
+- **courbe des honoraires** : elle se trace mois par mois, avec une aire en dégradé ; 2025 en pointillé ; au survol, un repère et une bulle « mois, 2026, 2025 » ; le dernier mois émet une onde.
+- **mini-courbes** sous Actes, Compromis et Mandats, qui se dessinent à l'ouverture.
+- **fond de tête** : deux halos qui dérivent lentement.
+- **icônes** sur « À retenir », barres d'agences en dégradé, ombres et survols plus fins, logo en dégradé.
+
+Toute l'animation est coupée si l'appareil demande moins de mouvement.
+
+Les mini-courbes sont mesurées le 03/11 et retombent sur les totaux :
+- actes : 26, 27, 44, 21, 26, 39, 33, 10, 32, 26 (somme 284) ;
+- compromis présents : 23, 22, 37, 29, 26, 34, 32, 16, 25, 32 (somme 276) ;
+- mandats : 64, 79, 73, 72, 69, 82, 54, 52, 59, 65, plus 3 en novembre.
+
+⚠ Le registre compte **672 mandats 2026 le 03/11 contre 682 le 02/11** (492 actifs + 180 historiques, hors recherche et essais). L'écart de 10 n'est pas expliqué ; la tuile garde 682 tant qu'il n'est pas vérifié.
+
+Le code de la page a été exécuté hors ligne : survol, état initial et final, aucun trou manquant.
