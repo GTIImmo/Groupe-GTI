@@ -1470,3 +1470,9 @@ e-mail ou un téléphone (vu sur les fictives : recopiés).
 à confirmer ; (c) **les mêmes biens** que la personne ; (d) **« tu m'expliques »** — l'ordre est expliqué, pas encore tranché.
 ⭐ Pour (c), le geste existe déjà : `link_hektor_mandant` (`selectnouveauproprio_sup`, l. 17652), qui sait dire « déjà relié » par l'API
 avant d'écrire — il ne doublera donc pas un lien que Hektor aurait posé lui-même au rattachement.
+
+**✅ BASCULE FAITE le 03/11 à ~16:25 par Frédéric (PowerShell administrateur, « TOUT VERT »).** Relue par moi (lecture seule) : action
+`run_nuit_contacts_et_recherches.ps1`, départ `00:20:00+01:00`, limite `PT4H`, compte admin, état Ready, **prochain départ 04/11 à 00:20**
+(horloge du serveur = UTC+1, cohérente). L'interrupteur `.env` est en place (ligne 118). ⏰ **Le 04/11 au matin** : le journal
+`logs/scheduled/nuit_contacts_*.log`, le rapport `logs/liste_contacts_nuit/rapport_active_*.json`, la ligne « [liste de nuit] » du run, les
+durées du run et de la descente, EA32621 / 10260586 en couple ; puis décider la purge des pages de mars.
