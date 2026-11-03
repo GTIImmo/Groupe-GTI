@@ -950,3 +950,33 @@ L'écran reste en lecture seule et rien n'est écrit en base. Les deux onglets s
 **Acquéreurs** : l'onglet est présent mais marqué « bientôt ». Il faut lire les fiches contacts et les recherches, ce que l'écran ne fait pas : c'est l'étape 5, qui demande une fonction en base et donc **un accord**.
 
 **Contrôles** : `npm run build` vert, types compris. Sur le serveur de démonstration : les deux onglets se rendent, les tris et la bascule fonctionnent, pas d'erreur hors l'adresse de diffusion absente. ⏳ À voir sur les vraies données après le push.
+
+## 36. Les deux manques comblés : l'onglet Acquéreurs, et dans Affaires le prix, l'exclusivité, les notaires (03/11 soir)
+Frédéric : « FAIS LES DEUX MANQUES ». C'est son accord pour les deux lectures en base.
+
+**Posé en base** : `supabase/patch_pilotage_acquereurs_affaires_2026-11-03.sql`, retour arrière `_INVERSE.sql`. Deux fonctions réservées aux admins, sur le modèle de `app_pilotage_stock` (SECURITY DEFINER avec garde `is_app_admin()`). Elles sont en LECTURE SEULE et n'écrivent rien.
+- **`app_pilotage_acquereurs(p_annee)`** : le fichier acquéreurs, en chiffres seulement (aucune fiche nominative ne sort).
+  - Fiches, créations, recherches, qualité par critère, vivier en 5 étapes, passage du fichier à l'offre, budgets, tableau par négociateur.
+  - Mesuré sous le compte de Frédéric : 1,3 s ; 9 465 vivantes ; vivier 9 465 → 4 018 → 3 328 → 2 930 → **2 797** ; fiches créées 2024-2025 → offre 479 sur 4 377, achat 406, 20 jours en médiane.
+- **`app_pilotage_affaires_plus(p_annee)`** : une ligne par offre et une par acte, pour l'année et la précédente.
+  - Offre : prix ÷ prix du mandat, type de mandat, jours depuis le début du mandat.
+  - Acte : étude du notaire vendeur, délai compromis → acte, retard.
+  - L'écran agrège et filtre par agence.
+  - Mesuré : 672 offres, 639 actes (628 avec leur délai, 595 avec leur étude), 1,3 s ; prix obtenu médian 94,6 % sur 573 offres comparables.
+- **Contrôles** : un compte non admin reçoit `null` des deux fonctions ; les droits vont à authenticated et service_role (ni public, ni anon).
+- ⚠ **Le nom du notaire n'est que sur la ligne de VENTE** (`notaires_json.entree.nom`), et vide sur le compromis.
+
+**Écran** :
+- **Acquéreurs**, devenu un vrai onglet. L'agence choisie ne le filtre pas : la puce de l'onglet le dit.
+  - Six chiffres : vivantes, créées contre l'an passé, avec une recherche, injoignables, touchées depuis 90 jours, sans négociateur.
+  - Bandeau violet « le vivier qui dort » : 5 étapes, le dernier chiffre en grand.
+  - Du fichier à l'offre.
+  - Qualité du fichier en 7 anneaux qui se remplissent.
+  - Offre et demande par tranche de prix, en barres miroir : budgets des recherches face aux biens en vente.
+  - Tableau par négociateur. Le compte « Groupe GTI » est sorti du tableau et nommé à part : 1 672 fiches vivantes, dont 49 avec une recherche.
+- **Affaires**, trois blocs ajoutés :
+  - le prix obtenu : la médiane et 5 tranches ;
+  - l'exclusif contre le simple : jours jusqu'à la 1re offre et prix obtenu ;
+  - les notaires : études à partir de 5 actes sur deux ans, délai médian et part d'actes en retard, en rouge au-delà de 120 jours ou de 40 %.
+
+**Contrôles** : `npm run build` vert, et aucun bloc en erreur sur le serveur de démonstration (les anneaux s'arrêtent à leur valeur). ⏳ À voir sur les vraies données après le push.

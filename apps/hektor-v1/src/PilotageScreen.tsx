@@ -10,17 +10,18 @@
 // Une source qui ne se lit pas n'éteint que SON bloc (« n'a pas pu être lu ») ; le détail part en console.
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import {
-  aujourdhui, calculerAffaires, calculerClassements, calculerMandats, calculerPortails, calculerSignatures, calculerStock, calculerVentes, cleAgence,
+  aujourdhui, calculerAffaires, calculerAffairesPlus, calculerClassements, calculerMandats, calculerPortails, calculerSignatures, calculerStock, calculerVentes, cleAgence,
   loadPilotage, mediane, nomAgence,
   type LigneClassement, type PilotageSources,
 } from './lib/pilotage'
 import './pilotage.css'
 
-type Onglet = 'ensemble' | 'ventes' | 'affaires' | 'mandats' | 'stock' | 'classements'
+type Onglet = 'ensemble' | 'ventes' | 'affaires' | 'mandats' | 'stock' | 'acquereurs' | 'classements'
 type TriClassement = 'ca' | 'evol' | 'actes' | 'moy' | 'mandats' | 'excl' | 'portefeuille' | 'compromis'
 const ONGLETS: Array<{ cle: Onglet; libelle: string }> = [
   { cle: 'ensemble', libelle: 'Tableau de bord' }, { cle: 'ventes', libelle: 'Ventes' }, { cle: 'affaires', libelle: 'Affaires' },
-  { cle: 'mandats', libelle: 'Mandats' }, { cle: 'stock', libelle: 'Stock' }, { cle: 'classements', libelle: 'Classements' },
+  { cle: 'mandats', libelle: 'Mandats' }, { cle: 'stock', libelle: 'Stock' }, { cle: 'acquereurs', libelle: 'Acquéreurs' },
+  { cle: 'classements', libelle: 'Classements' },
 ]
 const ANNEE_COURANTE = Number(aujourdhui().slice(0, 4))
 const ANNEES = Array.from({ length: ANNEE_COURANTE - 2007 + 1 }, (_, i) => ANNEE_COURANTE - i)
@@ -264,6 +265,8 @@ export default function PilotageScreen() {
   const stock = useMemo(() => (sources && !(sources.stock instanceof Error) ? calculerStock(sources.stock, agence) : null), [sources, agence])
   const signatures = useMemo(() => (sources && !(sources.signatures instanceof Error) ? calculerSignatures(sources.signatures, annee) : null), [sources, annee])
   const affaires = useMemo(() => (sources && !(sources.ventes instanceof Error) ? calculerAffaires(sources.ventes, annee, agence) : null), [sources, annee, agence])
+  const acquereurs = sources && !(sources.acquereurs instanceof Error) ? sources.acquereurs : null
+  const affairesPlus = useMemo(() => (sources && !(sources.affairesPlus instanceof Error) ? calculerAffairesPlus(sources.affairesPlus, annee, agence) : null), [sources, annee, agence])
   const classements = useMemo(() => (ventes || mandats || stock
     ? calculerClassements(ventes, mandats, sources && !(sources.stock instanceof Error) ? sources.stock : null, affaires, agence) : null), [ventes, mandats, stock, sources, affaires, agence])
   const portails = useMemo(() => (sources && !(sources.portails instanceof Error) && !(sources.stock instanceof Error) ? calculerPortails(sources.portails, sources.stock, agence) : null), [sources, agence])
@@ -297,7 +300,6 @@ export default function PilotageScreen() {
           {ONGLETS.map((o) => (
             <button key={o.cle} type="button" role="tab" aria-selected={onglet === o.cle} className={`pl-onglet${onglet === o.cle ? ' is-actif' : ''}`} onClick={() => setOnglet(o.cle)}>{o.libelle}</button>
           ))}
-          <span className="pl-onglet is-bientot" title="Il faut une lecture des fiches acquéreurs en base (accord de Frédéric à venir)">Acquéreurs <span className="pl-puce">bientôt</span></span>
           <span className="pl-onglet is-bientot" title="Disponible quand la photo quotidienne des statuts aura quelques mois">Estimations <span className="pl-puce">bientôt</span></span>
         </nav>
       </header>
@@ -331,7 +333,7 @@ export default function PilotageScreen() {
       ) : (
         // La clé rejoue l'entrée animée à chaque changement d'onglet, d'année ou d'agence.
         <div key={`${onglet}-${annee}-${agence ?? ''}`} className="pl-contenu">
-          {onglet === 'ensemble' ? Ensemble() : onglet === 'ventes' ? Ventes() : onglet === 'affaires' ? Affaires() : onglet === 'mandats' ? Mandats() : onglet === 'stock' ? Stock() : Classements()}
+          {onglet === 'ensemble' ? Ensemble() : onglet === 'ventes' ? Ventes() : onglet === 'affaires' ? Affaires() : onglet === 'mandats' ? Mandats() : onglet === 'stock' ? Stock() : onglet === 'acquereurs' ? Acquereurs() : Classements()}
         </div>
       )}
     </section>
@@ -675,6 +677,68 @@ export default function PilotageScreen() {
           </section>
         </div>
 
+        {affairesPlus ? (
+          <div className="pl-deux">
+            <section className="pl-carte pl-bloc pl-tdb-bloc" aria-label="Le prix obtenu">
+              <div className="pl-bloc-tete"><h2>Le prix obtenu</h2><span className="pl-mute">offre acceptée ÷ prix du mandat · {affairesPlus.remises.n} offres</span></div>
+              <span className="pl-tdb-route-tete">
+                <b className="pl-tdb-route-valeur pl-num">{affairesPlus.remises.mediane != null ? <Compteur valeur={affairesPlus.remises.mediane * 100} format={(x) => `${x.toFixed(1).replace('.', ',')} %`} /> : '–'}</b>
+                <span className="pl-mute">du prix du mandat, en médiane</span>
+              </span>
+              {affairesPlus.remises.tranches.map((t, i) => (
+                <div key={t.libelle} className="pl-tranche pl-glisse" style={{ animationDelay: `${300 + i * 90}ms` }}>
+                  <span><b>{t.libelle}</b><span className="pl-mute">{t.n} offres</span></span>
+                  <Barre part={(t.n / Math.max(1, affairesPlus.remises.n)) * 100} ton={t.ton} />
+                  <b className="pl-num pl-droite">{pourcent(t.n, affairesPlus.remises.n)} %</b>
+                </div>
+              ))}
+            </section>
+            <section className="pl-carte pl-bloc pl-tdb-bloc" aria-label="Exclusif contre simple">
+              <div className="pl-bloc-tete"><h2>Exclusif contre simple</h2><span className="pl-mute">du début du mandat à la 1re offre</span></div>
+              <div className="pl-af-duel">
+                {[{ l: 'Exclusif', x: affairesPlus.exclusif, ton: '#2f6fd0' }, { l: 'Simple', x: affairesPlus.simple, ton: '#a9bfe0' }].map((c, i) => (
+                  <div key={c.l} className="pl-af-duel-carte pl-pop" style={{ animationDelay: `${300 + i * 150}ms`, borderTopColor: c.ton }}>
+                    <span className="pl-lib">{c.l}</span>
+                    <b className="pl-num">{c.x.jours != null ? <Compteur valeur={c.x.jours} format={(x) => `${Math.round(x)} j`} /> : '–'}</b>
+                    <span className="pl-mute">jusqu’à la 1re offre · {c.x.n} mandats</span>
+                    <span className="pl-mute">prix obtenu {c.x.ratio != null ? `${(c.x.ratio * 100).toFixed(1).replace('.', ',')} %` : '–'}</span>
+                  </div>
+                ))}
+              </div>
+              <span className="pl-note">{affairesPlus.exclusif.jours != null && affairesPlus.simple.jours != null
+                ? (affairesPlus.exclusif.jours < affairesPlus.simple.jours
+                  ? `Un mandat exclusif reçoit sa première offre ${Math.round(affairesPlus.simple.jours - affairesPlus.exclusif.jours)} jours plus tôt qu’un mandat simple.`
+                  : 'Cette année, l’exclusivité n’avance pas la première offre.')
+                : ''} Mandats dont la première offre est arrivée en {annee}.</span>
+            </section>
+          </div>
+        ) : <Indisponible quoi="Le prix obtenu et les notaires" onReessayer={reessayer} />}
+
+        {affairesPlus && affairesPlus.notaires.length ? (
+          <section className="pl-carte pl-bloc is-table" aria-label="Les notaires">
+            <div className="pl-bloc-tete"><h2>Les notaires</h2><span className="pl-mute">études du vendeur, actes {annee - 1} et {annee}, à partir de 5 actes</span></div>
+            <div className="pl-defile">
+              <table className="pl-table">
+                <thead><tr><th scope="col">Étude</th><th scope="col">Actes</th><th scope="col">Compromis → acte</th><th scope="col">Actes en retard</th></tr></thead>
+                <tbody>
+                  {affairesPlus.notaires.map((n) => {
+                    const retard = pourcent(n.retard, n.avecDate)
+                    return (
+                      <tr key={n.cle}>
+                        <td><b>{n.nom}</b></td>
+                        <td className="pl-num pl-fort">{n.actes}</td>
+                        <td className={`pl-num ${n.delai != null && n.delai > 120 ? 'pl-alerte' : ''}`}>{n.delai != null ? `${Math.round(n.delai)} j` : '–'}</td>
+                        <td className={`pl-num ${retard >= 40 ? 'pl-alerte' : ''}`}><span className="pl-cellule-barre"><Barre part={retard} ton={retard >= 40 ? '#e0603a' : '#d98a00'} fine />{retard} %</span></td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <span className="pl-note">Délai médian du compromis à l’acte ; « en retard » = acte signé après la date prévue au compromis. En rouge : plus de 120 jours, ou au moins 40 % d’actes en retard.</span>
+          </section>
+        ) : null}
+
         <section className="pl-carte pl-bloc pl-tdb-bloc" aria-label="Actes à venir">
           <div className="pl-bloc-tete"><h2>Les actes déjà datés, mois par mois</h2><span className="pl-mute">honoraires {unite} des compromis en cours</span></div>
           <div className="pl-defile">
@@ -715,6 +779,141 @@ export default function PilotageScreen() {
             </table>
           </div>
           <span className="pl-note">En rouge : plus d’une offre sur quatre refusée ou tombée (à partir de 5 offres). « Tombées » = offres refusées ou retirées et compromis annulés.</span>
+        </section>
+      </>
+    )
+  }
+
+  // ───────────────────────── ACQUÉREURS (03/11) ─────────────────────────
+  // Le fichier acquéreurs en chiffres (lecture admin app_pilotage_acquereurs) : aucune fiche nominative ne sort.
+  function Acquereurs() {
+    if (!acquereurs) return <Indisponible quoi="Le fichier acquéreurs" onReessayer={reessayer} />
+    const a = acquereurs
+    const v = Math.max(1, a.vivantes)
+    const etapes = [
+      { l: 'Fiches acquéreurs vivantes', s: `${entier.format(a.total)} fiches en tout, archivées comprises` },
+      { l: 'Avec une recherche active', s: 'le négociateur sait ce qu’il cherche' },
+      { l: 'Recherche complète', s: 'budget, secteur et type de bien' },
+      { l: 'Joignables', s: 'un e-mail et un téléphone' },
+      { l: 'Sans affaire en cours', s: 'ni offre ni compromis en cours, n’a pas acheté' },
+    ]
+    const qualite = [
+      { l: 'Téléphone', n: a.qualite.tel }, { l: 'E-mail', n: a.qualite.mail }, { l: 'Recherche', n: a.qualite.recherche },
+      { l: 'Type de bien', n: a.qualite.type }, { l: 'Budget', n: a.qualite.budget }, { l: 'Secteur', n: a.qualite.secteur }, { l: 'Taille', n: a.qualite.taille },
+    ]
+    const conv = a.conversion
+    const TRANCHES = ['Moins de 100 k€', '100 à 150 k€', '150 à 200 k€', '200 à 300 k€', '300 k€ et plus']
+    const bornes = [0, 100000, 150000, 200000, 300000, Infinity]
+    const biensEnVente = sources && !(sources.stock instanceof Error) ? sources.stock.filter((s) => s.statut_annonce === 'Actif' && (s.prix ?? 0) > 0) : []
+    const offreDemande = TRANCHES.map((l, i) => ({
+      l, demande: a.budgets.find((b) => b.tranche === i + 1)?.n ?? 0,
+      biens: biensEnVente.filter((s) => (s.prix as number) >= bornes[i] && (s.prix as number) < bornes[i + 1]).length,
+    }))
+    const maxOD = Math.max(1, ...offreDemande.map((x) => Math.max(x.demande, x.biens)))
+    const negos = a.negos.filter((n) => !/^groupe gti$/i.test(n.nom))
+    const compte = a.negos.find((n) => /^groupe gti$/i.test(n.nom))
+    const maxCrees = Math.max(1, ...negos.map((n) => n.crees))
+    return (
+      <>
+        <span className="pl-puce">Tout le réseau : l’agence choisie ne filtre pas cet onglet</span>
+        <div className="pl-grille-kpi">
+          <Carte libelle="Fiches vivantes" genre="fichier" valeur={<Compteur valeur={a.vivantes} format={(x) => entier.format(Math.round(x))} />} detail={`${entier.format(a.total)} fiches acquéreurs en tout`} />
+          <Carte libelle={`Créées en ${annee}`} genre="activité" valeur={<Compteur valeur={a.crees} format={(x) => entier.format(Math.round(x))} />} ecartValeur={comparer ? ecart(a.crees, a.crees_prec) : null} detail={comparer ? `contre ${entier.format(a.crees_prec)} · ${libelleComparaison}` : ''} />
+          <Carte libelle="Avec une recherche active" genre="fichier" valeur={<Compteur valeur={pourcent(a.qualite.recherche, v)} format={(x) => `${Math.round(x)} %`} />} detail={`${entier.format(a.qualite.recherche)} fiches vivantes`} />
+          <Carte libelle="Injoignables" genre="fichier" valeur={<Compteur valeur={a.sans_contact} format={(x) => entier.format(Math.round(x))} />} detail={`sans e-mail ni téléphone, soit ${pourcent(a.sans_contact, v)} % des fiches vivantes`} />
+          <Carte libelle="Touchées depuis 90 jours" genre="activité" valeur={<Compteur valeur={a.touchees90} format={(x) => entier.format(Math.round(x))} />} detail={`soit ${pourcent(a.touchees90, v)} % des fiches vivantes`} />
+          <Carte libelle="Sans négociateur" genre="fichier" valeur={<Compteur valeur={a.sans_nego} format={(x) => entier.format(Math.round(x))} />} detail="fiches vivantes que personne ne suit" />
+        </div>
+
+        <section className="pl-acq-vivier" aria-label="Le vivier qui dort">
+          <span className="pl-halo is-un" aria-hidden="true" /><span className="pl-halo is-deux" aria-hidden="true" />
+          <div className="pl-acq-vivier-tete">
+            <span className="pl-lib">Le vivier qui dort</span>
+            <b className="pl-acq-vivier-valeur pl-num"><Compteur valeur={a.vivier[4]} format={(x) => entier.format(Math.round(x))} /></b>
+            <span>acheteurs qualifiés, joignables, sans affaire en cours : à rappeler quand un bien leur correspond.</span>
+          </div>
+          <div className="pl-acq-etapes">
+            {etapes.map((e, i) => (
+              <div key={e.l} className="pl-acq-etape pl-glisse" style={{ animationDelay: `${250 + i * 110}ms` }}>
+                <span className="pl-acq-etape-texte"><b>{e.l}</b><span>{e.s}</span></span>
+                <span className="pl-acq-piste"><span className={i === 4 ? 'is-fin' : ''} style={{ width: `${(a.vivier[i] / v) * 100}%`, animationDelay: `${400 + i * 120}ms` }} /></span>
+                <b className="pl-num">{entier.format(a.vivier[i])}</b>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <div className="pl-deux">
+          <section className="pl-carte pl-bloc pl-tdb-bloc" aria-label="Du fichier à l'offre">
+            <div className="pl-bloc-tete"><h2>Du fichier à l’offre</h2><span className="pl-mute">fiches créées en {annee - 2} et {annee - 1}</span></div>
+            <div className="pl-acq-conv">
+              <span><b className="pl-num"><Compteur valeur={pourcent(conv.avec_offre, conv.fiches)} format={(x) => `${Math.round(x)} %`} /></b><span className="pl-mute">ont fait une offre</span></span>
+              <span><b className="pl-num"><Compteur valeur={pourcent(conv.acheteurs, conv.fiches)} format={(x) => `${Math.round(x)} %`} /></b><span className="pl-mute">ont acheté</span></span>
+              <span><b className="pl-num">{conv.delai_median != null ? `${Math.round(conv.delai_median)} j` : '–'}</b><span className="pl-mute">de la fiche à l’offre</span></span>
+            </div>
+            <Barre part={pourcent(conv.sous30, conv.avec_offre)} ton="#6a55d8" />
+            <span className="pl-note">{pourcent(conv.sous30, conv.avec_offre)} % des offres arrivent dans les 30 jours qui suivent la création de la fiche ({entier.format(conv.avec_offre)} offres sur {entier.format(conv.fiches)} fiches) : la fiche naît souvent au moment de l’affaire, le fichier sert encore peu de vivier.</span>
+          </section>
+
+          <section className="pl-carte pl-bloc pl-tdb-bloc" aria-label="Qualité du fichier">
+            <div className="pl-bloc-tete"><h2>La qualité du fichier</h2><span className="pl-mute">part des {entier.format(a.vivantes)} fiches vivantes</span></div>
+            <div className="pl-acq-anneaux">
+              {qualite.map((q, i) => {
+                const part = q.n / v
+                return (
+                  <span key={q.l} className="pl-acq-anneau">
+                    <svg viewBox="0 0 64 64" aria-hidden="true">
+                      <circle cx="32" cy="32" r="26" fill="none" stroke="#eeebfb" strokeWidth="7" />
+                      <circle className="pl-anneau" cx="32" cy="32" r="26" fill="none" stroke={part >= 0.6 ? '#1a9a6c' : part >= 0.4 ? '#6a55d8' : '#e0603a'} strokeWidth="7" strokeLinecap="round" pathLength={1}
+                        transform="rotate(-90 32 32)" style={{ ['--fin' as string]: String(1 - part), strokeDashoffset: 1 - part, animationDelay: `${300 + i * 90}ms` }} />
+                    </svg>
+                    <b className="pl-num">{Math.round(part * 100)} %</b>
+                    <span>{q.l}</span>
+                  </span>
+                )
+              })}
+            </div>
+          </section>
+        </div>
+
+        <section className="pl-carte pl-bloc pl-tdb-bloc" aria-label="L'offre et la demande par prix">
+          <div className="pl-bloc-tete"><h2>L’offre et la demande, par prix</h2><span className="pl-legende"><i style={{ background: '#6a55d8' }} />Acheteurs (budget maximum)<i style={{ background: '#1a9a6c' }} />Biens en vente</span></div>
+          <div className="pl-acq-miroir">
+            {offreDemande.map((x, i) => (
+              <div key={x.l} className="pl-acq-miroir-ligne pl-glisse" style={{ animationDelay: `${250 + i * 90}ms` }}>
+                <b className="pl-num pl-droite">{entier.format(x.demande)}</b>
+                <span className="pl-acq-miroir-g"><span style={{ width: `${(x.demande / maxOD) * 100}%` }} /></span>
+                <span className="pl-acq-miroir-lib">{x.l}<span className="pl-mute">{x.biens ? `${(x.demande / x.biens).toFixed(1).replace('.', ',')} par bien` : '–'}</span></span>
+                <span className="pl-acq-miroir-d"><span style={{ width: `${(x.biens / maxOD) * 100}%` }} /></span>
+                <b className="pl-num">{entier.format(x.biens)}</b>
+              </div>
+            ))}
+          </div>
+          <span className="pl-note">Acheteurs : fiches vivantes dont une recherche active porte un budget. Biens : en vente aujourd’hui, au prix affiché. Là où le rapport est fort, chaque bien rentré trouve vite preneur.</span>
+        </section>
+
+        <section className="pl-carte pl-bloc is-table" aria-label="Le fichier par négociateur">
+          <div className="pl-bloc-tete"><h2>Par négociateur</h2><span className="pl-mute">fiche rattachée au négociateur actuel, pas forcément à son créateur</span></div>
+          <div className="pl-defile">
+            <table className="pl-table">
+              <thead><tr><th scope="col">Négociateur</th><th scope="col">Créées {annee}</th>{comparer ? <th scope="col">{annee - 1}</th> : null}<th scope="col">Vivantes</th><th scope="col">Avec recherche</th><th scope="col">Complètes</th><th scope="col">Joignables</th><th scope="col">Touchées 90 j</th></tr></thead>
+              <tbody>
+                {negos.map((n) => (
+                  <tr key={n.nom}>
+                    <td><b>{n.nom}</b></td>
+                    <td className="pl-num pl-fort"><span className="pl-cellule-barre"><Barre part={(n.crees / maxCrees) * 100} ton="#6a55d8" fine />{n.crees}</span></td>
+                    {comparer ? <td className="pl-num">{n.crees_prec}</td> : null}
+                    <td className="pl-num">{n.vivantes}</td>
+                    <td className={`pl-num ${n.vivantes >= 50 && pourcent(n.avec_rech, n.vivantes) < 25 ? 'pl-alerte' : ''}`}>{pourcent(n.avec_rech, n.vivantes)} %</td>
+                    <td className="pl-num">{pourcent(n.completes, n.vivantes)} %</td>
+                    <td className="pl-num">{pourcent(n.joignables, n.vivantes)} %</td>
+                    <td className="pl-num">{n.touchees90}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <span className="pl-note">En rouge : moins d’une fiche sur quatre avec une recherche (à partir de 50 fiches).{compte ? ` Le compte « Groupe GTI » porte à lui seul ${entier.format(compte.vivantes)} fiches vivantes, dont ${compte.avec_rech} avec une recherche : un fichier sans suivi.` : ''} « Touchées » = fiche modifiée depuis 90 jours, à prendre avec prudence : la date peut bouger sans geste humain.</span>
         </section>
       </>
     )

@@ -54,6 +54,38 @@ export type PilotageSources = {
   stock: PilotageStock[] | Error
   signatures: PilotageSignature[] | Error
   portails: PilotagePortail[] | Error
+  // 03/11 : deux lectures réservées aux admins (supabase/patch_pilotage_acquereurs_affaires_2026-11-03.sql)
+  acquereurs: PilotageAcquereurs | Error
+  affairesPlus: PilotageAffairesPlus | Error
+}
+
+export type PilotageAcquereurs = {
+  total: number; vivantes: number; crees: number; crees_prec: number; touchees90: number; sans_nego: number; sans_contact: number
+  qualite: { tel: number; mail: number; recherche: number; type: number; budget: number; secteur: number; taille: number }
+  vivier: [number, number, number, number, number]
+  conversion: { fiches: number; avec_offre: number; acheteurs: number; delai_median: number | null; sous30: number }
+  budgets: Array<{ tranche: number; n: number }>
+  negos: Array<{ nom: string; crees: number; crees_prec: number; vivantes: number; avec_rech: number; completes: number; joignables: number; touchees90: number }>
+}
+export type PilotageAffairesPlus = {
+  offres: Array<{ d: string; state: string | null; agence: string | null; type: string | null; ratio: number | null; jours: number | null; premiere: boolean }>
+  actes: Array<{ d: string; agence: string | null; etude_id: string | null; etude: string | null; delai: number | null; retard: boolean | null }>
+}
+
+async function lireAcquereurs(annee: number): Promise<PilotageAcquereurs> {
+  if (!hasSupabaseEnv || !supabase) return mockAcquereurs()
+  const { data, error } = await supabase.rpc('app_pilotage_acquereurs', { p_annee: annee })
+  if (error) throw new Error(error.message)
+  if (!data) throw new Error('lecture réservée aux administrateurs')
+  return data as PilotageAcquereurs
+}
+
+async function lireAffairesPlus(annee: number): Promise<PilotageAffairesPlus> {
+  if (!hasSupabaseEnv || !supabase) return mockAffairesPlus(annee)
+  const { data, error } = await supabase.rpc('app_pilotage_affaires_plus', { p_annee: annee })
+  if (error) throw new Error(error.message)
+  if (!data) throw new Error('lecture réservée aux administrateurs')
+  return data as PilotageAffairesPlus
 }
 
 const PAQUET = 1000
@@ -169,12 +201,15 @@ async function lirePortails(): Promise<PilotagePortail[]> {
 /** Tout ce que le pilotage lit, pour l'année choisie et la précédente. Une source qui échoue n'empêche
  *  pas les autres : elle revient en Error, et seul son onglet le dit. */
 export async function loadPilotage(annee: number): Promise<PilotageSources> {
-  const [ventes, mandats, stock, signatures, portails] = await Promise.allSettled([
+  const [ventes, mandats, stock, signatures, portails, acquereurs, affairesPlus] = await Promise.allSettled([
     hasSupabaseEnv && supabase ? lireVentes(annee) : Promise.resolve(mockVentes(annee)),
-    lireMandats(annee), lireStock(), lireSignatures(), lirePortails(),
+    lireMandats(annee), lireStock(), lireSignatures(), lirePortails(), lireAcquereurs(annee), lireAffairesPlus(annee),
   ])
   const v = <T,>(r: PromiseSettledResult<T>) => (r.status === 'fulfilled' ? r.value : enErreur(r.reason))
-  return { annee, ventes: v(ventes), mandats: v(mandats), stock: v(stock), signatures: v(signatures), portails: v(portails) }
+  return {
+    annee, ventes: v(ventes), mandats: v(mandats), stock: v(stock), signatures: v(signatures), portails: v(portails),
+    acquereurs: v(acquereurs), affairesPlus: v(affairesPlus),
+  }
 }
 
 // ───────────────────────────── outils communs ─────────────────────────────
@@ -725,4 +760,86 @@ export function calculerClassements(ventes: VentesCalcul | null, mandats: Mandat
   }
   const garder = (e: LigneClassement) => e.ca > 0 || e.mandats > 0 || e.portefeuille > 0
   return { negos: [...negos.values()].filter(garder), agences: [...agences.values()].filter(garder) }
+}
+
+// ───────────────────────────── AFFAIRES, LE PRIX ET LES NOTAIRES (03/11) ─────────────────────────────
+
+export type AffairesPlusCalcul = {
+  remises: { n: number; mediane: number | null; tranches: Array<{ libelle: string; n: number; ton: string }> }
+  exclusif: { jours: number | null; ratio: number | null; n: number }
+  simple: { jours: number | null; ratio: number | null; n: number }
+  notaires: Array<{ cle: string; nom: string; actes: number; delai: number | null; retard: number; avecDate: number }>
+}
+
+export function calculerAffairesPlus(source: PilotageAffairesPlus, annee: number, agence: string | null): AffairesPlusCalcul {
+  const garde = (a: string | null) => !agence || cleAgence(a) === agence
+  const offres = source.offres.filter((o) => o.d.startsWith(String(annee)) && garde(o.agence))
+  const comparable = (o: PilotageAffairesPlus['offres'][number]) => o.state === 'accepted' && o.ratio != null && o.ratio >= 0.5 && o.ratio <= 1.2
+  const acceptees = offres.filter(comparable).map((o) => Number(o.ratio))
+  const tranche = (min: number, max: number) => acceptees.filter((r) => r >= min && r < max).length
+  const parType = (type: string) => {
+    const premieres = offres.filter((o) => o.premiere && o.type === type && o.jours != null && o.jours >= 0)
+    return {
+      jours: mediane(premieres.map((o) => Number(o.jours))),
+      ratio: mediane(offres.filter((o) => o.type === type && comparable(o)).map((o) => Number(o.ratio))),
+      n: premieres.length,
+    }
+  }
+  // Les notaires : actes de l'année ET de la précédente (une étude fait peu d'actes par an), à partir de 5.
+  const etudes = new Map<string, { cle: string; nom: string; delais: number[]; retard: number; avecDate: number; actes: number }>()
+  for (const a of source.actes) {
+    if (!a.d.startsWith(String(annee - 1)) && !a.d.startsWith(String(annee))) continue
+    if (!garde(a.agence) || !a.etude) continue
+    const cle = a.etude_id ?? a.etude
+    const e = etudes.get(cle) ?? { cle, nom: a.etude, delais: [], retard: 0, avecDate: 0, actes: 0 }
+    e.actes += 1
+    if (a.delai != null && a.delai >= 0) e.delais.push(a.delai)
+    if (a.retard != null) { e.avecDate += 1; if (a.retard) e.retard += 1 }
+    etudes.set(cle, e)
+  }
+  return {
+    remises: {
+      n: acceptees.length, mediane: mediane(acceptees),
+      tranches: [
+        { libelle: 'Au prix (98 % et plus)', n: acceptees.filter((r) => r >= 0.98).length, ton: '#1a9a6c' },
+        { libelle: '95 à 98 %', n: tranche(0.95, 0.98), ton: '#7fc4a5' },
+        { libelle: '90 à 95 %', n: tranche(0.9, 0.95), ton: '#d98a00' },
+        { libelle: '85 à 90 %', n: tranche(0.85, 0.9), ton: '#e0603a' },
+        { libelle: 'Moins de 85 %', n: acceptees.filter((r) => r < 0.85).length, ton: '#a02e1f' },
+      ],
+    },
+    exclusif: parType('EXCLUSIF'), simple: parType('SIMPLE'),
+    notaires: [...etudes.values()].filter((e) => e.actes >= 5)
+      .map((e) => ({ cle: e.cle, nom: e.nom, actes: e.actes, delai: mediane(e.delais), retard: e.retard, avecDate: e.avecDate }))
+      .sort((a, b) => b.actes - a.actes),
+  }
+}
+
+function mockAcquereurs(): PilotageAcquereurs {
+  return {
+    total: 4200, vivantes: 2400, crees: 420, crees_prec: 390, touchees90: 210, sans_nego: 120, sans_contact: 300,
+    qualite: { tel: 1650, mail: 1600, recherche: 1050, type: 1040, budget: 1000, secteur: 900, taille: 820 },
+    vivier: [2400, 1050, 860, 740, 700],
+    conversion: { fiches: 1100, avec_offre: 130, acheteurs: 112, delai_median: 18, sous30: 88 },
+    budgets: [{ tranche: 1, n: 260 }, { tranche: 2, n: 210 }, { tranche: 3, n: 160 }, { tranche: 4, n: 230 }, { tranche: 5, n: 140 }],
+    negos: ['Mélanie LEGRAND', 'Nadege PEYRARD', 'Christèle GENTES', 'Sandrine DELAVAUD', 'Claire RIBBES', 'Nicolas COUDERT'].map((nom, i) => ({
+      nom, crees: 90 - i * 12, crees_prec: 80 - i * 9, vivantes: 400 - i * 40, avec_rech: 220 - i * 25, completes: 180 - i * 22, joignables: 300 - i * 30, touchees90: 40 - i * 5,
+    })),
+  }
+}
+
+function mockAffairesPlus(annee: number): PilotageAffairesPlus {
+  const r = hasard(annee * 7)
+  const agences = ['Ambert', 'Le Puy-en-Velay', 'Annonay', 'Craponne-sur-Arzon', 'Yssingeaux', 'Courpière']
+  const offres = Array.from({ length: 260 }, (_, i) => ({
+    d: `${annee - (i % 3 === 0 ? 1 : 0)}-${String(1 + (i % 10)).padStart(2, '0')}-1${i % 9}`,
+    state: r() < 0.8 ? 'accepted' : 'refused', agence: agences[i % agences.length], type: r() < 0.4 ? 'EXCLUSIF' : 'SIMPLE',
+    ratio: Math.round((0.82 + r() * 0.2) * 1000) / 1000, jours: Math.round(20 + r() * 160), premiere: r() < 0.7,
+  }))
+  const etudes = ['Office notarial des Pays de Craponne', 'Office notarial de Dunières', 'Office notarial St-Etienne', 'SCP ROYET et DIDIER']
+  const actes = Array.from({ length: 120 }, (_, i) => ({
+    d: `${annee}-${String(1 + (i % 10)).padStart(2, '0')}-0${1 + (i % 8)}`, agence: agences[i % agences.length],
+    etude_id: String(i % 4), etude: etudes[i % 4], delai: Math.round(70 + r() * 60), retard: r() < 0.3,
+  }))
+  return { offres, actes }
 }
