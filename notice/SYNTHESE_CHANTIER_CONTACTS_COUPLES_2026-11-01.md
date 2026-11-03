@@ -1030,3 +1030,14 @@ pour un numéro sont RELUS TOUT DE SUITE, jamais « à la nuit ». Rien n'est co
 7. Trouvés en passant, à trancher à part : les tâches partent 1 h plus tôt depuis l'heure d'hiver (déclencheurs en +02:00) ;
    Matterport refusé (401) cette nuit ; la comparaison date Hektor (heure de Paris) / date de relecture (UTC) ne fait que des
    relectures en trop, jamais d'oubli.
+
+## 43. EA32621 RELUE ET CORRIGÉE CHEZ NOUS *(03/11 matin, « il faut juste corriger les derniers regroupements… les gestes ont tous été déjà vérifiés »)*
+
+- Frédéric : les gestes de l'app ont DÉJÀ été vérifiés → le point 5 du §42 (audit des gestes) est RETIRÉ. Reste à corriger les
+  regroupements de couples faits chez Hektor que la nuit n'a pas relus. Un seul : EA32621 (les fiches d'essai 606117-606119 du §36
+  ont été supprimées, 0 reste).
+- `refresh_contact_inproc.py --contact-id 10260585` (coquille) PUIS `--contact-id 10260586` (porteuse) : 2 lectures `ContactById`,
+  0 écriture chez Hektor, 13,4 s et 13,7 s, code 0.
+- Supabase après : 10260585 `hektor_couple_contact_id = 10260586`, rôle `menage_resolu` ; 10260586 `couple_json.etat = vide`,
+  conjoint 10260585 → l'écran doit montrer le bouton « Compléter le conjoint ». ⚠ `nature_fiche` de 10260586 reste
+  `personne_seule` jusqu'à l'étape « nature » de la nuit (le miroir local porte maintenant le lien, elle le verra). Non vu à l'écran.
