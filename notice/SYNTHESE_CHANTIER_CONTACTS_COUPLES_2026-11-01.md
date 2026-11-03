@@ -931,3 +931,11 @@ est « couple » et son résumé « nommé » (la nuit du 02→03/11 : aujourd'h
   B. relecture tournante la nuit : N `ContactById` par nuit (les plus anciennement relus d'abord, périmètre à choisir) — coûte
      N requêtes sur le quota (nuit ≈ 4 500, règle des 40 %) et allonge le push ;
   C. chercher dans l'API une autre porte (liste filtrée par date de modification) — non mesuré.
+- **C explorée (03/11)** : la documentation API v2 (`notice/Hektor API v2 - Documentation…md`, « Listing Contacts ») et la collection
+  Postman ne donnent pour `ListContacts` que `agence, archive, page, type, sort, way, version` — **aucun filtre de date**, et le tri
+  par date de modification n'existe pas (essai ci-dessus). Le « datemaj » de la console (`labs_contactsRefonte.js` l. 1632) est le
+  calendrier du formulaire d'ÉDITION, pas un filtre de liste. → **Par l'API, C est une impasse** ; seul Hektor peut l'ouvrir.
+- ⭐ **Ce qui existe déjà** : la tâche des recherches actives (03:00, `sync_active_searches.py`) relit CHAQUE NUIT `ContactById` de
+  ~4 000 acquéreurs (variante `targeted`, 4 012 fiches vues le 03/11). Une relecture tournante (B) existe donc déjà pour eux.
+  Les propriétaires / mandants n'en font pas partie : 467326 est lié à l'annonce 59545 (active), 131 seulement des 41 847 contacts
+  liés à une annonce non archivée ont été relus cette nuit. Taille d'un périmètre « biens en vente » : non mesurée.
