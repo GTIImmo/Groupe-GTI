@@ -809,3 +809,14 @@ Les directions sombres, A / B / C et la v6 sont ABANDONNÉES (elles restent sur 
   simple (78 j contre 91 j jusqu'à la 1re offre), les offres par négociateur et leur passage en compromis.
 Calculs des planches Classements et Affaires exécutés hors ligne : sans erreur. Le code de l'app fe5e6e9 (l'essentiel dans le vrai
 écran) est GARDÉ, non poussé : il servira au codage de la v3.
+
+## 29. Tableau de bord v3 épuré (03/11) — Frédéric : « trop d'indicateurs, on ne sait plus où regarder », « pense aux animations »
+
+Refonte du seul Tableau de bord, style v3 gardé. Règles de design appliquées : **4 chiffres de tête** (honoraires HT en grand avec ses
+10 mois contre 2025, puis actes, compromis, mandats) ; **3 phrases « À retenir »** (le C.A tient · les compromis reculent de 20 % · l'exclusivité
+recule de 9 points) ; **deux blocs d'action** côte à côte (« À traiter cette semaine », 4 lignes avec leur valeur ; « Ce qui va rentrer »,
+sécurisé / probable / possible / à trouver) ; **les 6 premières agences** avec un lien vers le classement complet ; **les 12 autres chiffres
+repliés** derrière un bouton. Supprimés de la page (toujours dans leur planche) : l'entonnoir, la bande de 12, le tableau des 17 agences,
+le bloc portefeuille. Animations : chiffres qui défilent, colonnes qui se lèvent, barres qui poussent, écarts qui apparaissent d'un rebond,
+lignes d'action qui glissent, reflet sur le grand chiffre, point vert qui pulse, survol des colonnes et des cartes ; coupées si l'appareil
+le demande. Calcul et trous vérifiés hors ligne. Les autres planches suivront le même traitement après son avis.
