@@ -1146,3 +1146,12 @@ Audit limité à : **contact × lire / remonter** (la nuit). Les autres objets e
   · proposition : la tâche démarre à **~01:05** (après le balayage, garde « worker vide ») ; la liste a une **heure limite
     (~01:55)** et reprend la nuit suivante à la page atteinte (~7 500 pages par nuit : tous les actifs vus en ~1 nuit et quart) ;
     les recherches partent donc vers 02:00 comme aujourd'hui et finissent vers 03:51 comme aujourd'hui.
+- **Deux nuits pour les actifs ? et le balayage des archivées ?** (03/11) — lu dans `scheduled/run_balayage_photos_masquees.ps1`
+  et `Console/enqueue_photos_masquees_lot.js` : archives 35 329 + historiques 8 948 = **44 277 annonces**, lot de 1 000 par nuit
+  ⇒ **~44 nuits** où le balayage pose 1 000 travaux à 23:00 (fenêtre de pose jusqu'à 01:00, `-HeureLimite 1`) et occupe le worker
+  jusqu'à ~00:20 – 01:00 (mesuré : 00:18 le 02/11, 01:01 le 01/11).
+  ⇒ Proposition : la tâche part à **00:20** et sa garde ATTEND que le worker n'ait plus de travail Hektor ; la liste démarre donc
+  entre ~00:20 et ~01:05 et s'arrête à 01:55 → **50 à 95 min = ~7 500 à ~14 000 pages** : les ~8 500 pages des actifs passent
+  en UNE nuit la plupart du temps, sinon le reste la nuit suivante (reprise à la page). Ce n'est pas « deux nuits » fixes mais un
+  tour continu : chaque contact actif vu toutes les 1 à 2 nuits. Après les ~44 nuits du balayage (≈ ~30 travaux/nuit), la liste
+  partira vers ~23:10 et tiendra toujours en une nuit. Le dimanche : archivés (~9 200 pages), même mécanique.
