@@ -970,3 +970,11 @@ est « couple » et son résumé « nommé » (la nuit du 02→03/11 : aujourd'h
   · fiches : ~8 500 estimées (plafond, voir ci-dessus) × 1,66 s ≈ **3 h 55** si tout d'un coup → **≈ 6 h 15 et ~17 000 requêtes** ;
   · OU laisser le plafond du run (`ContactDetailLimit=1000`) les absorber : ~1 000 par nuit (~28 min), ~9 nuits, sans rien changer.
   · ⚠ lancer cette lecture = lancer un run → accord obligatoire ; durée d'exposition continue de 2 h 20 (le 19/08 : 4 h).
+- ⭐ **CORRECTION DE L'ESTIMATION (03/11, idée de Frédéric : « partir de la dernière mise à jour complète »)** :
+  · la dernière relecture complète des FICHES est de **mai 2026** (125 023 actifs sur 128 493 relus en 2026-05, ~26/05) ;
+  · mesure NON biaisée, sur la liste complète du 23/06 gardée en local (168 575 contacts) : **377 fiches anciennes modifiées
+    en 4 semaines** (0,22 %/mois) + 474 créées ⇒ depuis le 26/05 (~5,3 mois) : **~2 000 fiches anciennes modifiées**. Les
+    créations remontent déjà chaque nuit en tête de liste ; mon « 8 500 » (échantillon d'acquéreurs actifs) était 4 fois trop haut ;
+  · ⇒ liste complète **~2 h 20** (incompressible : Hektor n'a pas de filtre « modifié depuis », la liste est le seul moyen de
+    connaître la date de chaque fiche) + **~2 000 fiches × 1,66 s ≈ 55 min** = **~3 h 15, ~10 500 requêtes** ; ou 2 nuits avec
+    le plafond actuel de 1 000 fiches. La règle de sélection fait déjà exactement « modifiées depuis la dernière relecture ».
