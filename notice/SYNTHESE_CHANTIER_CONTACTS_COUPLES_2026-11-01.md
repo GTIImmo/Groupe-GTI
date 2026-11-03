@@ -1519,3 +1519,12 @@ créée par nous, les biens reliés, et l'écran à l'œil (ordinateur ; le tél
 « off ») ; (3) redémarrer les 4 services worker, file vide (avec l'accord de l'autre session sur ses lignes) ; (4) cran « admin » ;
 (5) essai réel sur deux fiches FICTIVES (créées par l'app, nature calculée et envoyée comme au §35), Frédéric connecté à Hektor pour
 relire ; (6) supprimer les fictives par l'app ; (7) cran « on » quand tu le décides.
+
+**✅ GESTE 1 — POUSSÉ par Frédéric** (86dd65d au sommet de origin/main, vérifié). **✅ GESTE 2 — PATCH POSÉ le 03/11 au soir** (accord :
+« FAIS LE TU AS MON ACCORD » ; migration `couple_phase3g_ajouter_conjoint_2026_11_03`, gardes passées) : **6/6 contrôles OK** (cran « off »,
+contrainte, distribution, droits, porte de l'écran ouverte aux connectés et fermée à l'anonyme, fonctions du worker fermées). Nouvelles
+empreintes : distribution `1d1409b5…`, droits `4e1acaa5…`. File des travaux : 0.
+⏭ **GESTE 3 — redémarrage** : le geste n'a besoin que du service **HektorConsoleWorkerActions** (`link_hektor_conjoint` et les rattachements
+de mandant y sont). ⚠ Les lignes non commitées de l'autre session touchent la signature Youtrust et la génération du document de mandat :
+ce sont des travaux du service **Documents**. Redémarrer SEULEMENT Actions charge notre geste sans mettre leur code en service là où il
+s'exécuterait.
