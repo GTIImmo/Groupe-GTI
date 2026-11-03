@@ -371,3 +371,12 @@
 .av3 .av3-bien:not(.av3-pub-bien) .av3-lieu { max-width: 100%; }
 .av3 .av3-bien:not(.av3-pub-bien) .av3-nego { flex: 0 1 auto; max-width: 100%; }
 .av3 .av3-bien:not(.av3-pub-bien) .av3-nego-nom { overflow: hidden; text-overflow: ellipsis; }
+/* tri par en-tete (03/11 soir) */
+.av3 .av3-tri { display: inline-flex; align-items: center; gap: 4px; padding: 0; border: 0; background: transparent; font: inherit; color: inherit; letter-spacing: inherit; text-transform: inherit; cursor: pointer; }
+.av3 .av3-tri svg { width: 12px; height: 12px; opacity: .35; transition: opacity .15s; }
+.av3 .av3-tri:hover { color: #222323; }
+.av3 .av3-tri:hover svg { opacity: .8; }
+.av3 .av3-tri.on { color: #c5005f; }
+.av3 .av3-tri.on svg { opacity: 1; }
+.av3 .av3-tri:focus-visible { outline: 2px solid #c5005f; outline-offset: 2px; border-radius: 4px; }
+.app-shell.app-shell-modern .panel-grid.av3 .table-wrap.listing-table-active thead th .av3-tri.on { color: #c5005f !important; }

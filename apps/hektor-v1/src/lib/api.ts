@@ -48,6 +48,9 @@ export type AppFilters = {
   // Vue Publicite (03/11/2026) : annonces DIFFUSABLES absentes de ce portail (cle de portails_resume).
   // Facultatif : absent = pas de filtre. ⚠ L'inverse de `passerelle` (qui veut dire « presente sur »).
   absentDe?: string
+  // Tri par en-tete du listing Annonces (03/11/2026) : '' / absent = l'ordre habituel.
+  // Valeurs : date_desc|date_asc|prix_desc|prix_asc|fin_asc|fin_desc|diff_desc|diff_asc (TriAnnonces).
+  tri?: string
 }
 
 function normalizeMandateStatusValue(value: string | null | undefined) {
@@ -6790,6 +6793,31 @@ async function prependProvisionalRows(rows: MandatRecord[], page: number, filter
   return [...pending.map(provisionalToMandatRecord), ...rows]
 }
 
+// Mode sans base : le meme tri que la requete (cases vides en fin de liste). Sans tri : ordre d'origine.
+function comparerTriLocal(tri?: string) {
+  const champ: Record<string, [string, number]> = {
+    date_desc: ['date_enregistrement_annonce', -1], date_asc: ['date_enregistrement_annonce', 1],
+    prix_desc: ['prix', -1], prix_asc: ['prix', 1],
+    fin_asc: ['mandat_date_fin', 1], fin_desc: ['mandat_date_fin', -1],
+    diff_desc: ['nb_portails_actifs', -1], diff_asc: ['nb_portails_actifs', 1],
+  }
+  const regle = champ[(tri ?? '').trim()]
+  return (a: object, b: object) => {
+    if (!regle) return 0
+    const [cle, sens] = regle
+    const va = (a as Record<string, unknown>)[cle]
+    const vb = (b as Record<string, unknown>)[cle]
+    const videA = va == null || va === ''
+    const videB = vb == null || vb === ''
+    if (videA || videB) return videA === videB ? 0 : videA ? 1 : -1
+    const na = Number(va), nb = Number(vb)
+    const diff = Number.isFinite(na) && Number.isFinite(nb) && cle !== 'date_enregistrement_annonce' && cle !== 'mandat_date_fin'
+      ? na - nb
+      : String(va).localeCompare(String(vb))
+    return diff * sens
+  }
+}
+
 export async function loadMandatsPage({
   filters,
   page,
@@ -6815,7 +6843,7 @@ export async function loadMandatsPage({
           dernier_work_status: null,
         })),
         filters,
-      ) as unknown as MandatRecord[],
+      ).sort(comparerTriLocal(filters.tri)) as unknown as MandatRecord[],
       page,
       pageSize,
     )
@@ -6843,10 +6871,27 @@ export async function loadMandatsPage({
     applyNegotiatorScopeToQuery(supabase.from(dossiersCurrentView).select('*', { count: countMode }), scope),
     filters,
   )
-    .order('has_diffusion_error', { ascending: false })
-    .order('nb_portails_actifs', { ascending: false })
-    .order('date_enregistrement_annonce', { ascending: false, nullsFirst: false })
-    .order('app_dossier_id', { ascending: false })
+  // Tri par en-tete (03/11/2026). Sans tri : l'ordre habituel, INCHANGE. Les cases vides (prix,
+  // fin de mandat) vont toujours en fin de liste ; app_dossier_id departage, pour une pagination stable.
+  const tri = (filters.tri ?? '').trim()
+  const triColonne: Record<string, [string, boolean]> = {
+    date_desc: ['date_enregistrement_annonce', false], date_asc: ['date_enregistrement_annonce', true],
+    prix_desc: ['prix', false], prix_asc: ['prix', true],
+    fin_asc: ['mandat_date_fin', true], fin_desc: ['mandat_date_fin', false],
+    diff_desc: ['nb_portails_actifs', false], diff_asc: ['nb_portails_actifs', true],
+  }
+  if (triColonne[tri]) {
+    // ⚠ un tri ne RETIRE rien : les fins de mandat absentes sont NULL (166 sur 705 au 03/11, aucune
+    //   chaine vide) et `nullsFirst: false` les met en fin de liste dans les deux sens.
+    const [colonne, ascending] = triColonne[tri]
+    query = query.order(colonne, { ascending, nullsFirst: false }).order('app_dossier_id', { ascending: false })
+  } else {
+    query = query
+      .order('has_diffusion_error', { ascending: false })
+      .order('nb_portails_actifs', { ascending: false })
+      .order('date_enregistrement_annonce', { ascending: false, nullsFirst: false })
+      .order('app_dossier_id', { ascending: false })
+  }
   if (requestScopedIds) {
     query = requestScopedIds.length > 0 ? query.in('app_dossier_id', requestScopedIds) : query.eq('app_dossier_id', -1)
   }

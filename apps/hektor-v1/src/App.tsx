@@ -264,7 +264,7 @@ import { BvIcon } from './BienvuIcons'
 import RedacteurPanel from './RedacteurPanel'
 // Listing Annonces V2 (lot 1, 03/11/2026) -- derriere VITE_APP_ANNONCES_LISTE_V2, eteint par defaut.
 import { APP_ANNONCES_LISTE_V2, AnnonceFiltrePresence, AnnonceOnglets, AnnoncePresence, AnnoncePubCells, AnnoncePubColgroup, AnnoncePubHead, AnnoncePubReperes, AnnonceV2Cells, AnnonceV2Colgroup, AnnonceV2Head, AnnonceV2Reperes, PORTAIL_ID_COMMUN, PORTAILS_PUB, demanderRubriqueAOuverture, portailsDeLaLigne, prendreRubriqueDemandee } from './AnnoncesListeV2'
-import type { EtatCase } from './AnnoncesListeV2'
+import type { EtatCase, TriAnnonces } from './AnnoncesListeV2'
 import ContactSearchFields, { contactSearchValueToInput, defaultContactSearchValue, type ContactSearchFieldsValue } from './ContactSearchFields'
 import './contact-new.css'
 import './ajout-conjoint.css'
@@ -25748,6 +25748,11 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               }))
               setMandatPage(1)
             }}
+            tri={(filters.tri ?? '') as TriAnnonces}
+            onTri={(tri) => {
+              setFilters((current) => ({ ...current, tri: tri || undefined }))
+              setMandatPage(1)
+            }}
           />
         ) : screen === 'estimations' ? (
           <MandatsScreen
@@ -26952,6 +26957,9 @@ function MandatsScreen(props: {
   /** la carte qui filtre ('gti', une cle de portail) et le geste qui pose / retire ce filtre */
   filtrePresence?: string | null
   onFiltrePresence?: (cle: string | null) => void
+  /** tri par en-tete, fait par le serveur sur toute la liste ('' = ordre habituel) */
+  tri?: TriAnnonces
+  onTri?: (tri: TriAnnonces) => void
 }) {
   const isEstimationMode = props.mode === 'estimation'
   // Listing V2 (lot 1, 03/11/2026) : seulement le mode Annonces. L'ecran Estimations partage ce
@@ -26977,7 +26985,7 @@ function MandatsScreen(props: {
   const [presenceChargement, setPresenceChargement] = useState(false)
   // Cle de rechargement : les filtres de la liste SANS ceux que les cartes posent elles-memes.
   const presenceKey = vuePub && props.presenceFilters
-    ? JSON.stringify({ f: { ...props.presenceFilters, absentDe: null, diffusable: null }, s: props.presenceScope ?? null })
+    ? JSON.stringify({ f: { ...props.presenceFilters, absentDe: null, diffusable: null, tri: null }, s: props.presenceScope ?? null })
     : ''
   useEffect(() => {
     if (!presenceKey || !props.presenceFilters) return
@@ -27193,7 +27201,7 @@ function MandatsScreen(props: {
               </colgroup>
             )}
             <thead>
-              {listeV2 ? (vuePub ? <AnnoncePubHead /> : <AnnonceV2Head />) : isEstimationMode ? (
+              {listeV2 ? (vuePub ? <AnnoncePubHead tri={props.tri} onTri={props.onTri} /> : <AnnonceV2Head tri={props.tri} onTri={props.onTri} />) : isEstimationMode ? (
                 <tr><th>Photo</th><th>Bien &amp; propriétaire <span className="si">↕</span></th><th>Valeur estimée <span className="si">↕</span></th><th>Stade <span className="si">↕</span></th><th>Actions</th></tr>
               ) : (
                 <tr><th className="av-pad-l">Photo</th><th>Bien</th><th>Négociateur</th><th>Statut</th><th>Diffusion</th><th className="av-right">Vues 30 j</th><th className="av-pad-r av-right">Actions</th></tr>

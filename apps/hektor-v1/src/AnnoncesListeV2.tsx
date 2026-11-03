@@ -99,13 +99,47 @@ export function AnnonceV2Colgroup() {
   )
 }
 
-export function AnnonceV2Head() {
+// ── Tri par en-tete (03/11 soir, Frederic : « il est toujours utile de pouvoir trier les colonnes ») ──
+// Le tri est fait PAR LE SERVEUR sur toute la liste (filtre `tri` de loadMandatsPage), pas sur la page.
+// Un clic trie, un 2e inverse, un 3e revient a l'ordre habituel (erreurs, portails, mise en vente).
+export type TriAnnonces = '' | 'date_desc' | 'date_asc' | 'prix_desc' | 'prix_asc' | 'fin_asc' | 'fin_desc' | 'diff_desc' | 'diff_asc'
+const TRI_CYCLE: Record<'date' | 'prix' | 'fin' | 'diff', [TriAnnonces, TriAnnonces]> = {
+  date: ['date_desc', 'date_asc'],
+  prix: ['prix_desc', 'prix_asc'],
+  fin: ['fin_asc', 'fin_desc'],
+  diff: ['diff_desc', 'diff_asc'],
+}
+const TRI_TITRE: Record<'date' | 'prix' | 'fin' | 'diff', [string, string]> = {
+  date: ['mise en vente, les plus récentes d’abord', 'mise en vente, les plus anciennes d’abord'],
+  prix: ['prix, du plus cher', 'prix, du moins cher'],
+  fin: ['fin de mandat, la plus proche d’abord', 'fin de mandat, la plus lointaine d’abord'],
+  diff: ['nombre de portails, le plus d’abord', 'nombre de portails, le moins d’abord'],
+}
+export type TriProps = { tri?: TriAnnonces; onTri?: (tri: TriAnnonces) => void }
+
+function EnteteTri(p: TriProps & { col: 'date' | 'prix' | 'fin' | 'diff'; label: string }) {
+  if (!p.onTri) return <>{p.label}</>
+  const [premier, second] = TRI_CYCLE[p.col]
+  const etat = p.tri === premier ? 1 : p.tri === second ? 2 : 0
+  const suivant: TriAnnonces = etat === 0 ? premier : etat === 1 ? second : ''
+  const titre = etat === 0 ? `Trier par ${TRI_TITRE[p.col][0]}` : etat === 1 ? `Trié par ${TRI_TITRE[p.col][0]} — cliquer pour inverser` : `Trié par ${TRI_TITRE[p.col][1]} — cliquer pour revenir à l’ordre habituel`
+  // fleche : vers le bas = 1er sens (« le plus d'abord » ; pour la fin de mandat, « la plus proche »)
+  const fleche = etat === 0 ? 'M8 10l4-4 4 4M8 14l4 4 4-4' : etat === 1 ? 'M12 5v14M6 13l6 6 6-6' : 'M12 19V5M6 11l6-6 6 6'
+  return (
+    <button type="button" className={`av3-tri${etat ? ' on' : ''}`} title={titre} aria-label={titre} onClick={() => p.onTri?.(suivant)}>
+      {p.label}
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={fleche} /></svg>
+    </button>
+  )
+}
+
+export function AnnonceV2Head(p: TriProps = {}) {
   return (
     <tr>
-      <th className="av3-l">Bien</th>
-      <th>Prix</th>
-      <th>Mandat</th>
-      <th className="av3-c">Diffusion</th>
+      <th className="av3-l" aria-sort={p.tri?.startsWith('date') ? (p.tri === 'date_asc' ? 'ascending' : 'descending') : undefined}><EnteteTri {...p} col="date" label="Bien" /></th>
+      <th aria-sort={p.tri?.startsWith('prix') ? (p.tri === 'prix_asc' ? 'ascending' : 'descending') : undefined}><EnteteTri {...p} col="prix" label="Prix" /></th>
+      <th aria-sort={p.tri?.startsWith('fin') ? (p.tri === 'fin_asc' ? 'ascending' : 'descending') : undefined}><EnteteTri {...p} col="fin" label="Mandat" /></th>
+      <th className="av3-c" aria-sort={p.tri?.startsWith('diff') ? (p.tri === 'diff_asc' ? 'ascending' : 'descending') : undefined}><EnteteTri {...p} col="diff" label="Diffusion" /></th>
       <th className="av3-r">Actions</th>
     </tr>
   )
@@ -415,11 +449,11 @@ export function AnnoncePubColgroup() {
   )
 }
 
-export function AnnoncePubHead() {
+export function AnnoncePubHead(p: TriProps = {}) {
   return (
     <tr>
-      <th className="av3-l">Bien</th>
-      <th>Prix</th>
+      <th className="av3-l"><EnteteTri {...p} col="date" label="Bien" /></th>
+      <th><EnteteTri {...p} col="prix" label="Prix" /></th>
       {PORTAILS_PUB.map((portail) => (
         <th key={portail.key} className="av3-c av3-th-portail" title={portail.nom}>
           <span className="av3-th-p">
