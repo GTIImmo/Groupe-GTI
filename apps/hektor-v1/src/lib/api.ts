@@ -45,6 +45,9 @@ export type AppFilters = {
   contactSearchScope: string
   // C.15 : la famille d'offre Hektor ('0' vente, '10' vente immo pro, '6' neuf).
   offreType: string
+  // Vue Publicite (03/11/2026) : annonces DIFFUSABLES absentes de ce portail (cle de portails_resume).
+  // Facultatif : absent = pas de filtre. ⚠ L'inverse de `passerelle` (qui veut dire « presente sur »).
+  absentDe?: string
 }
 
 function normalizeMandateStatusValue(value: string | null | undefined) {
@@ -2257,6 +2260,7 @@ function hasActiveFilters(filters: AppFilters) {
       normalizeFilterValue(filters.validationDiffusion) ||
       normalizeFilterValue(filters.diffusable) ||
       normalizeFilterValue(filters.passerelle) ||
+      normalizeFilterValue(filters.absentDe ?? '') ||
       normalizeFilterValue(filters.erreurDiffusion) ||
       normalizeFilterValue(filters.priority) ||
       normalizeFilterValue(filters.workStatus) ||
@@ -2369,6 +2373,7 @@ function applyLocalDossierFilters<T extends Dossier & { mandants_texte?: string 
   const validationDiffusion = normalizeFilterValue(filters.validationDiffusion)
   const diffusable = normalizeFilterValue(filters.diffusable)
   const passerelle = normalizeFilterValue(filters.passerelle)
+  const absentDe = normalizeFilterValue(filters.absentDe ?? '')
   const erreurDiffusion = normalizeFilterValue(filters.erreurDiffusion)
   const priority = normalizeFilterValue(filters.priority)
   const latestByDossierAndType = requestScope || requestType ? buildLatestRequestRowsByDossierAndType(readLocalDiffusionRequests()) : null
@@ -2413,6 +2418,7 @@ function applyLocalDossierFilters<T extends Dossier & { mandants_texte?: string 
             : (item.validation_diffusion_state ?? '') === validationDiffusion)) &&
       (!diffusable || (diffusable === 'diffusable' ? isDiffusable : !isDiffusable)) &&
       (!passerelle || portails.includes(passerelle)) &&
+      (!absentDe || (isDiffusable && !portails.includes(absentDe))) &&
       (!erreurDiffusion || (erreurDiffusion === 'avec_erreur' ? hasErreurDiffusion : !hasErreurDiffusion)) &&
       (!priority || (item.priority ?? '') === priority)
     )
@@ -2536,6 +2542,10 @@ function applyDossierFiltersToQuery(baseQuery: any, filters: AppFilters) {
   if (diffusable === 'diffusable') query = query.eq('diffusable', '1')
   if (diffusable === 'non_diffusable') query = query.or('diffusable.is.null,diffusable.eq.0')
   if (passerelle) query = query.ilike('portails_resume', `%${passerelle}%`)
+  const absentDe = normalizeFilterValue(filters.absentDe ?? '')
+  if (absentDe) {
+    query = query.eq('diffusable', '1').or(`portails_resume.is.null,portails_resume.not.ilike.%${absentDe}%`)
+  }
   if (erreurDiffusion === 'avec_erreur') query = query.eq('has_diffusion_error', true)
   if (erreurDiffusion === 'sans_erreur') query = query.or('has_diffusion_error.is.null,has_diffusion_error.eq.false,has_diffusion_error.eq.0')
   if (priority) query = query.eq('priority', priority)
@@ -2906,6 +2916,7 @@ function canUseLightweightAnnonceIndexesForFilters(filters: AppFilters) {
     !offreStatus &&
     !compromisStatus &&
     !passerelle &&
+    !normalizeFilterValue(filters.absentDe ?? '') &&
     !erreurDiffusion &&
     (!validationDiffusion || validationDiffusion === '__not_validated__')
   )
@@ -7546,6 +7557,41 @@ export async function loadPortailsEnErreur(appDossierIds: number[]): Promise<Map
     result.set(row.app_dossier_id, set)
   }
   return result
+}
+
+// Vue Publicite (03/11/2026) : les cartes « Presence sur les portails ». Memes filtres que la liste
+// (recherche, agence, negociateur...) SAUF le filtre de carte lui-meme (absentDe) et `diffusable`,
+// que les cartes calculent elles-memes : sinon cliquer une carte fausserait toutes les autres.
+export type PresencePortails = { diffusables: number; nonDiffusables: number; enLigne: Record<string, number> }
+export async function loadPresencePortails(filters: AppFilters, portalKeys: string[], scope?: DataScope | null): Promise<PresencePortails> {
+  const base: AppFilters = { ...filters, absentDe: undefined, diffusable: allFilterValue }
+  const compter = (rows: Array<{ diffusable?: string | null; portails_resume?: string | null }>): PresencePortails => {
+    const result: PresencePortails = { diffusables: 0, nonDiffusables: 0, enLigne: Object.fromEntries(portalKeys.map((k) => [k, 0])) }
+    for (const row of rows) {
+      if (String(row.diffusable ?? '').trim() !== '1') { result.nonDiffusables += 1; continue }
+      result.diffusables += 1
+      const portails = new Set(String(row.portails_resume ?? '').split(',').map((v) => v.trim()).filter(Boolean))
+      for (const k of portalKeys) if (portails.has(k)) result.enLigne[k] += 1
+    }
+    return result
+  }
+  if (!hasSupabaseEnv || !supabase) {
+    return compter(applyLocalDossierFilters(filterByNegotiatorEmail(mockMandats, scope) as unknown as Dossier[], base) as unknown as MandatRecord[])
+  }
+  const rows: Array<{ diffusable?: string | null; portails_resume?: string | null }> = []
+  const lot = 1000
+  for (let from = 0; ; from += lot) {
+    const { data, error } = await applyDossierFiltersToQuery(
+      applyNegotiatorScopeToQuery(supabase.from(dossiersCurrentView).select('app_dossier_id,diffusable,portails_resume'), scope),
+      base,
+    )
+      .order('app_dossier_id', { ascending: true })
+      .range(from, from + lot - 1)
+    if (error || !data) throw new Error(error?.message ?? 'Unable to load presence portails')
+    rows.push(...(data as typeof rows))
+    if (data.length < lot) break
+  }
+  return compter(rows)
 }
 
 export async function loadDiffusionRequests(): Promise<DiffusionRequest[]> {

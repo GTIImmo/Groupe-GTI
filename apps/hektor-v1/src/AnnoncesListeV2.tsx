@@ -119,6 +119,7 @@ export function AnnonceV2Reperes() {
       <span><i style={{ background: '#f4f5f6', border: '1.5px solid #e2e5e6' }} />Pas diffusable (antenne barrée)</span>
       <span><i style={{ width: 9, height: 9, borderRadius: 9, background: '#b66a16' }} />Portail en erreur</span>
       <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2f7d59" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={ICONE.bouclier} /></svg>Bouclier : mandat validé ou non</span>
+      <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#b5182f" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={ICONE.bouclier} /></svg>Rouge : numéro sans fiche mandat chez Hektor</span>
     </div>
   )
 }
@@ -299,16 +300,17 @@ export function AnnonceV2Cells(p: AnnonceV2CellsProps) {
 }
 
 // ── Vue Publicite (lot 3, 03/11/2026 -- maquette V8 validee) ─────────────────────────────────────
-// Une case par portail, cochable DANS le listing quand l'annonce est diffusable ; sinon une bande
-// « Faire la demande ». Une seule action par ligne : la fleche « Ouvrir » (decision V8 de Frederic).
+// Au-dessus : 6 cartes « Presence sur les portails » (site GTI + 5 portails), cliquables en filtre
+// « diffusables absentes de X ». Dans la liste : une case par portail quand l'annonce est diffusable,
+// sinon une bande « Faire la demande ». Une seule action par ligne : la fleche « Ouvrir » (V8).
 // L'etat « en ligne » vient de `portails_resume` (deja dans la ligne) ; l'envoi chez Hektor est fait
 // par l'ecran (MandatsScreen), ce composant ne fait que dessiner.
 export const PORTAILS_PUB = [
-  { key: 'leboncoinDirect', court: 'LB', nom: 'Leboncoin' },
-  { key: 'bienicidirect', court: 'BI', nom: "Bien'ici" },
-  { key: 'paper', court: 'PA', nom: 'Paper' },
-  { key: 'etreproprio', court: 'EP', nom: 'Être propriétaire' },
-  { key: 'superimmo', court: 'SI', nom: 'Superimmo' },
+  { key: 'leboncoinDirect', court: 'LB', nom: 'Leboncoin', libelle: 'Leboncoin', teinte: '#A5793D' },
+  { key: 'bienicidirect', court: 'BI', nom: "Bien'ici", libelle: "Bien'ici", teinte: '#C5005F' },
+  { key: 'paper', court: 'PA', nom: 'Paper', libelle: 'Paper', teinte: '#1F7A4A' },
+  { key: 'etreproprio', court: 'EP', nom: 'Etreproprio', libelle: 'Etrepro.', teinte: '#3A4A95' },
+  { key: 'superimmo', court: 'SI', nom: 'Superimmo', libelle: 'Superimmo', teinte: '#0F6874' },
 ] as const
 
 // Numeros de passerelle chez Hektor COMMUNS a toutes les agences (mesures le 03/11 dans
@@ -336,12 +338,62 @@ export function AnnonceOnglets(p: { vue: 'liste' | 'pub'; onChange: (vue: 'liste
   )
 }
 
+const nombreFr = (n: number) => new Intl.NumberFormat('fr-FR').format(n)
+
+/** Les 6 cartes : `actif` = la carte qui filtre ('gti', une cle de portail, ou null). */
+export function AnnoncePresence(p: {
+  presence: { diffusables: number; nonDiffusables: number; enLigne: Record<string, number> } | null
+  chargement: boolean
+  actif: string | null
+  onPick: (cle: string | null) => void
+}) {
+  const base = p.presence?.diffusables ?? 0
+  const cartes = [
+    { cle: 'gti', court: 'GTI', nom: 'Site GTI', teinte: '#222323', valeur: base, unite: 'diffusables', pct: base ? 100 : 0, pied: 'Suit « Diffusable »', titre: `Absentes du site GTI : ${nombreFr(p.presence?.nonDiffusables ?? 0)} annonces pas encore diffusables` },
+    ...PORTAILS_PUB.map((portail) => {
+      const on = p.presence?.enLigne[portail.key] ?? 0
+      const abs = Math.max(0, base - on)
+      return { cle: portail.key, court: portail.court, nom: portail.nom, teinte: portail.teinte, valeur: on, unite: `/ ${nombreFr(base)}`, pct: base ? (on / base) * 100 : 0, pied: `${nombreFr(abs)} absente${abs > 1 ? 's' : ''}`, titre: `Voir les ${nombreFr(abs)} annonces diffusables absentes de ${portail.nom}` }
+    }),
+  ]
+  return (
+    <section className={`av3-presence${p.chargement ? ' charge' : ''}`} aria-label="Présence sur les portails">
+      {cartes.map((carte) => {
+        const actif = p.actif === carte.cle
+        return (
+          <button key={carte.cle} type="button" className={`av3-carte${actif ? ' on' : ''}`} aria-pressed={actif} title={carte.titre} onClick={() => p.onPick(actif ? null : carte.cle)}>
+            <span className="av3-carte-tete"><span className="av3-pastille" style={{ background: carte.teinte }} aria-hidden="true">{carte.court}</span>{carte.nom}</span>
+            <span className="av3-carte-val"><b>{p.presence ? nombreFr(carte.valeur) : '…'}</b><span>{carte.unite}</span></span>
+            <span className="av3-carte-barre" aria-hidden="true"><i style={{ width: `${carte.pct.toFixed(1)}%`, background: carte.teinte }} /></span>
+            <span className="av3-carte-pied">{carte.pied}</span>
+          </button>
+        )
+      })}
+    </section>
+  )
+}
+
+/** La barre noire du filtre de carte, comme la maquette. */
+export function AnnonceFiltrePresence(p: { actif: string | null; presence: { diffusables: number; nonDiffusables: number; enLigne: Record<string, number> } | null; onClear: () => void }) {
+  if (!p.actif) return null
+  const portail = PORTAILS_PUB.find((x) => x.key === p.actif)
+  const texte = portail
+    ? `Diffusables absentes de ${portail.nom}${p.presence ? ` · ${nombreFr(Math.max(0, p.presence.diffusables - (p.presence.enLigne[portail.key] ?? 0)))}` : ''}`
+    : `Absentes du site GTI : pas encore diffusables${p.presence ? ` · ${nombreFr(p.presence.nonDiffusables)}` : ''}`
+  return (
+    <div className="av3-filtre" role="status">
+      <span>{texte}</span>
+      <button type="button" onClick={p.onClear}>Retirer le filtre</button>
+    </div>
+  )
+}
+
 export function AnnoncePubColgroup() {
   return (
     <colgroup>
       <col />{/* bien -- flexible */}
-      <col style={{ width: '106px' }} />{/* prix */}
-      {PORTAILS_PUB.map((portail) => <col key={portail.key} style={{ width: '56px' }} />)}
+      <col style={{ width: '128px' }} />{/* prix + signaux */}
+      {PORTAILS_PUB.map((portail) => <col key={portail.key} style={{ width: '64px' }} />)}
       <col style={{ width: '70px' }} />{/* ouvrir */}
     </colgroup>
   )
@@ -352,8 +404,15 @@ export function AnnoncePubHead() {
     <tr>
       <th className="av3-l">Bien</th>
       <th>Prix</th>
-      {PORTAILS_PUB.map((portail) => <th key={portail.key} className="av3-c" title={portail.nom}>{portail.court}</th>)}
-      <th className="av3-r" aria-label="Ouvrir" />
+      {PORTAILS_PUB.map((portail) => (
+        <th key={portail.key} className="av3-c av3-th-portail" title={portail.nom}>
+          <span className="av3-th-p">
+            <span className="av3-pastille" style={{ background: portail.teinte }} aria-hidden="true">{portail.court}</span>
+            <span className="av3-th-nom">{portail.libelle}</span>
+          </span>
+        </th>
+      ))}
+      <th className="av3-r"><span className="av3-sr">Ouvrir</span></th>
     </tr>
   )
 }
@@ -362,33 +421,60 @@ export function AnnoncePubReperes() {
   return (
     <div className="av3-reperes">
       <b>Repères</b>
-      {PORTAILS_PUB.map((portail) => <span key={portail.key}><b>{portail.court}</b>{portail.nom}</span>)}
-      <span><i style={{ background: '#2f7d59' }} />En ligne : cliquer retire</span>
-      <span><i style={{ background: '#fff', border: '1.5px solid #cfd3d4' }} />Absente : cliquer publie</span>
-      <span><i style={{ background: '#fff6ea', border: '1.5px solid #dd7a18' }} />Portail en erreur</span>
+      <span><i style={{ background: '#2f7d59' }} />En ligne : décocher pour retirer</span>
+      <span><i style={{ background: '#fff', border: '2px solid #cfd3d4' }} />Absente : cocher pour publier</span>
+      <span><i style={{ background: '#fff3df', border: '2px solid #b66a16' }} />Erreur : cocher pour relancer</span>
+      <span>La case ne change qu'après la réponse de Hektor</span>
     </div>
   )
 }
 
 export type AnnoncePubCellsProps = BienPrixProps & {
   /** null = annonce diffusable (les cases) ; sinon le texte de la bande, et son bouton s'il y en a un */
-  bande: null | { texte: string; bouton?: { label: string; onClick: () => void } }
+  bande: null | { texte: string; bouton?: { label: string; onClick: () => void; attente?: boolean } }
   cases: Record<string, { etat: EtatCase; titre: string }>
   onToggle: (portalKey: string) => void
   onOpen: () => void
 }
 
 export function AnnoncePubCells(p: AnnoncePubCellsProps) {
+  const { item } = p
+  const nbPhotos = Math.max(nombrePhotos(item), p.photoUrl ? 1 : 0)
+  const prix = euros(item.prix)
+  const aUnMandat = Boolean(String(item.numero_mandat ?? '').trim())
+  const meta = [p.typeLabel, aUnMandat ? `N° ${item.numero_mandat}` : 'Sans mandat', item.ville].filter(Boolean).join(' · ')
+  // Les signaux de la maquette, sous le prix : ce qu'un negociateur doit voir pour sa pub.
+  const nEnLigne = Object.values(p.cases).filter((c) => c.etat === 'enligne' || c.etat === 'retrait').length
+  const fin = jourLocal(item.mandat_date_fin)
+  const signaux: Array<{ t: string; cls: string }> = []
+  if (aUnMandat && fin && fin.getTime() < Date.now()) signaux.push({ t: 'Mandat échu', cls: 'echu' })
+  if (p.transactionLabel && p.transactionLabel !== 'Brouillon' && nEnLigne > 0) signaux.push({ t: `Encore en ligne · ${p.transactionLabel.toLowerCase()}`, cls: 'transac' })
+  if (!p.bande && nEnLigne === 0 && !p.transactionLabel) signaux.push({ t: 'Visible nulle part', cls: 'nulle' })
   return (
     <>
-      <BienPrixCells item={p.item} photoUrl={p.photoUrl} typeLabel={p.typeLabel} negoName={p.negoName} transactionLabel={p.transactionLabel} />
+      <td className="av3-l">
+        <div className="av3-bien av3-pub-bien">
+          <div className="av3-photo">
+            {p.photoUrl ? <img src={p.photoUrl} alt="" loading="lazy" /> : null}
+            <span className="av3-nimg" title={`${nbPhotos} photo${nbPhotos > 1 ? 's' : ''}`}><Svg d={ICONE.photo} strokeWidth={2.4} />{nbPhotos}</span>
+          </div>
+          <div className="av3-txt">
+            <span className="av3-titre" title={`${item.titre_bien ?? ''}${item.hektor_annonce_id ? ` — annonce ${item.hektor_annonce_id}` : ''}`}>{item.titre_bien}</span>
+            <span className="av3-pub-meta">{meta}</span>
+            {p.transactionLabel ? <span className="av3-tags"><span className="av3-tag transac">{p.transactionLabel}</span></span> : null}
+          </div>
+        </div>
+      </td>
+      <td>
+        <div className={`av3-prix${prix ? '' : ' vide'}`}>{prix ?? 'Prix à saisir'}</div>
+        {signaux.map((s) => <div key={s.t} className={`av3-signal ${s.cls}`}>{s.t}</div>)}
+      </td>
       {p.bande ? (
         <td colSpan={PORTAILS_PUB.length} className="av3-pub-bande-td">
           <div className="av3-pub-bande" onClick={(event) => event.stopPropagation()}>
             <span>{p.bande.texte}</span>
             {p.bande.bouton ? (
-              <button type="button" className="av3-pub-demande" onClick={(event) => { event.stopPropagation(); p.bande?.bouton?.onClick() }}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 12 20 4l-6 16-3-7z" /></svg>
+              <button type="button" className={`av3-pub-demande${p.bande.bouton.attente ? ' attente' : ''}`} disabled={p.bande.bouton.attente} onClick={(event) => { event.stopPropagation(); if (!p.bande?.bouton?.attente) p.bande?.bouton?.onClick() }}>
                 {p.bande.bouton.label}
               </button>
             ) : null}
@@ -409,7 +495,7 @@ export function AnnoncePubCells(p: AnnoncePubCellsProps) {
               disabled={occupe}
               onClick={(event) => { event.stopPropagation(); if (!occupe) p.onToggle(portail.key) }}
             >
-              {kase.etat === 'enligne' ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m5 12.5 4.2 4.2L19 7" /></svg> : null}
+              {kase.etat === 'enligne' ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m5 12.5 4.2 4.2L19 7" /></svg> : null}
               {kase.etat === 'erreur' ? <b aria-hidden="true">!</b> : null}
               {kase.etat === 'echec' ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17" /></svg> : null}
               {occupe ? <i className="av3-case-roue" aria-hidden="true" /> : null}

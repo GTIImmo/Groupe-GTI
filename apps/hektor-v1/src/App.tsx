@@ -198,6 +198,7 @@ import {
   type ContactEditStatus,
   loadRapprochementCounts,
   loadPortailsEnErreur,
+  loadPresencePortails,
   type RapprochementCount,
   hasOffreAchatEnCours,
   hasOffreAchatRefusee,
@@ -262,7 +263,7 @@ import type { ViewerItem } from './BienvuViewer'
 import { BvIcon } from './BienvuIcons'
 import RedacteurPanel from './RedacteurPanel'
 // Listing Annonces V2 (lot 1, 03/11/2026) -- derriere VITE_APP_ANNONCES_LISTE_V2, eteint par defaut.
-import { APP_ANNONCES_LISTE_V2, AnnonceOnglets, AnnoncePubCells, AnnoncePubColgroup, AnnoncePubHead, AnnoncePubReperes, AnnonceV2Cells, AnnonceV2Colgroup, AnnonceV2Head, AnnonceV2Reperes, PORTAIL_ID_COMMUN, PORTAILS_PUB, demanderRubriqueAOuverture, portailsDeLaLigne, prendreRubriqueDemandee } from './AnnoncesListeV2'
+import { APP_ANNONCES_LISTE_V2, AnnonceFiltrePresence, AnnonceOnglets, AnnoncePresence, AnnoncePubCells, AnnoncePubColgroup, AnnoncePubHead, AnnoncePubReperes, AnnonceV2Cells, AnnonceV2Colgroup, AnnonceV2Head, AnnonceV2Reperes, PORTAIL_ID_COMMUN, PORTAILS_PUB, demanderRubriqueAOuverture, portailsDeLaLigne, prendreRubriqueDemandee } from './AnnoncesListeV2'
 import type { EtatCase } from './AnnoncesListeV2'
 import ContactSearchFields, { contactSearchValueToInput, defaultContactSearchValue, type ContactSearchFieldsValue } from './ContactSearchFields'
 import './contact-new.css'
@@ -25732,6 +25733,20 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             mode="active"
             currentUserName={profile?.display_name ?? profile?.email ?? null}
             currentUserRole={profile?.role ?? null}
+            presenceFilters={dataFilters}
+            presenceScope={dataScope}
+            filtrePresence={filters.absentDe || (filters.diffusable === 'non_diffusable' ? 'gti' : null)}
+            onFiltrePresence={(cle) => {
+              // La carte GTI = « pas encore diffusables » (filtre Diffusable existant) ; une carte de
+              // portail = « diffusables absentes de ce portail » (filtre absentDe). Une seule a la fois.
+              setActiveMandatKpiAction(null)
+              setFilters((current) => ({
+                ...current,
+                absentDe: cle && cle !== 'gti' ? cle : undefined,
+                diffusable: cle === 'gti' ? 'non_diffusable' : current.diffusable === 'non_diffusable' ? allFilterValue : current.diffusable,
+              }))
+              setMandatPage(1)
+            }}
           />
         ) : screen === 'estimations' ? (
           <MandatsScreen
@@ -26930,6 +26945,12 @@ function MandatsScreen(props: {
   /** vue Publicite : qui coche (trace dans app_diffusion_target) */
   currentUserName?: string | null
   currentUserRole?: string | null
+  /** vue Publicite : les cartes comptent avec les MEMES filtres que la liste */
+  presenceFilters?: AppFilters
+  presenceScope?: DataScope | null
+  /** la carte qui filtre ('gti', une cle de portail) et le geste qui pose / retire ce filtre */
+  filtrePresence?: string | null
+  onFiltrePresence?: (cle: string | null) => void
 }) {
   const isEstimationMode = props.mode === 'estimation'
   // Listing V2 (lot 1, 03/11/2026) : seulement le mode Annonces. L'ecran Estimations partage ce
@@ -26951,6 +26972,23 @@ function MandatsScreen(props: {
   const [casesEnCours, setCasesEnCours] = useState<Record<string, 'envoi' | 'retrait'>>({})
   const [echecsCases, setEchecsCases] = useState<Record<string, string>>({})
   const [portailsErreur, setPortailsErreur] = useState<Map<number, Set<string>>>(new Map())
+  const [presence, setPresence] = useState<{ diffusables: number; nonDiffusables: number; enLigne: Record<string, number> } | null>(null)
+  const [presenceChargement, setPresenceChargement] = useState(false)
+  // Cle de rechargement : les filtres de la liste SANS ceux que les cartes posent elles-memes.
+  const presenceKey = vuePub && props.presenceFilters
+    ? JSON.stringify({ f: { ...props.presenceFilters, absentDe: null, diffusable: null }, s: props.presenceScope ?? null })
+    : ''
+  useEffect(() => {
+    if (!presenceKey || !props.presenceFilters) return
+    let cancelled = false
+    setPresenceChargement(true)
+    loadPresencePortails(props.presenceFilters, PORTAILS_PUB.map((x) => x.key), props.presenceScope)
+      .then((r) => { if (!cancelled) setPresence(r) })
+      .catch(() => { if (!cancelled) setPresence(null) })
+      .finally(() => { if (!cancelled) setPresenceChargement(false) })
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [presenceKey])
   const pubIdsKey = vuePub ? props.mandats.filter((m) => m.diffusable === '1').map((m) => m.app_dossier_id).join(',') : ''
   useEffect(() => {
     if (!pubIdsKey) { setPortailsErreur(new Map()); return }
@@ -26991,6 +27029,10 @@ function MandatsScreen(props: {
       const suivant = publier ? [...enLigne.filter((k) => k !== portalKey), portalKey] : enLigne.filter((k) => k !== portalKey)
       const resume = buildPortalsResume(suivant)
       setResumeLocal((c) => ({ ...c, [id]: resume }))
+      const avant = enLigne.includes(portalKey)
+      if (avant !== publier) {
+        setPresence((pr) => pr ? { ...pr, enLigne: { ...pr.enLigne, [portalKey]: Math.max(0, (pr.enLigne[portalKey] ?? 0) + (publier ? 1 : -1)) } } : pr)
+      }
       if (enErreur) {
         setPortailsErreur((m) => { const n = new Map(m); const set = new Set(n.get(id) ?? []); set.delete(portalKey); n.set(id, set); return n })
       }
@@ -27027,18 +27069,18 @@ function MandatsScreen(props: {
     }
     return cases
   }
-  const bandePub = (item: MandatRecord, isLightweight: boolean): null | { texte: string; bouton?: { label: string; onClick: () => void } } => {
+  const bandePub = (item: MandatRecord, isLightweight: boolean): null | { texte: string; bouton?: { label: string; onClick: () => void; attente?: boolean } } => {
     if (item.is_provisional) return { texte: 'En création…' }
-    if (isLightweight) return { texte: 'Fiche importée : ouvrir pour la compléter' }
-    if (!String(item.numero_mandat ?? '').trim()) return { texte: "Sans mandat : rien à diffuser pour l'instant" }
+    if (isLightweight) return { texte: 'Fiche importée : ouvrir pour la compléter.' }
+    if (!String(item.numero_mandat ?? '').trim()) return { texte: "Pas de mandat : le créer d'abord." }
     if (String(item.diffusable ?? '').trim() === '1') return null
     const demande = latestActionRequest(props.requests, item.app_dossier_id, 'demande_diffusion')
     const statut = demande?.request_status ?? null
     const ouvrir = () => props.onOpenRequestModal(item.app_dossier_id, 'nego', 'demande_diffusion')
-    if (statut === 'pending' || statut === 'in_progress') return { texte: 'Demande envoyée · en attente de la Direction' }
-    if (statut === 'waiting_commercial') return { texte: 'La Direction demande une correction', bouton: { label: 'Corriger', onClick: ouvrir } }
+    if (statut === 'pending' || statut === 'in_progress') return { texte: 'Demande envoyée à la Direction.', bouton: { label: 'En attente', onClick: ouvrir, attente: true } }
+    if (statut === 'waiting_commercial') return { texte: 'La Direction demande une correction.', bouton: { label: 'Corriger', onClick: ouvrir } }
     return {
-      texte: statut === 'refused' ? 'Demande refusée' : isValidationApproved(item.validation_diffusion_state) ? 'Validée, pas encore diffusable' : 'Pas encore validée ni diffusable',
+      texte: statut === 'refused' ? 'Demande refusée.' : isValidationApproved(item.validation_diffusion_state) ? 'Validé, pas encore diffusable.' : 'Pas encore diffusable.',
       bouton: { label: 'Faire la demande', onClick: ouvrir },
     }
   }
@@ -27081,6 +27123,12 @@ function MandatsScreen(props: {
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8v5M12 16h.01" /></svg>
           <span>{rapproNotice}</span>
         </div>
+      ) : null}
+      {vuePub ? (
+        <>
+          <AnnonceFiltrePresence actif={props.filtrePresence ?? null} presence={presence} onClear={() => props.onFiltrePresence?.(null)} />
+          <AnnoncePresence presence={presence} chargement={presenceChargement} actif={props.filtrePresence ?? null} onPick={(cle) => props.onFiltrePresence?.(cle)} />
+        </>
       ) : null}
       <section className={`panel panel-wide ${isEstimationMode ? 'estim-v2-card' : 'panel-active-listing'}`}>
         <div className="panel-head">

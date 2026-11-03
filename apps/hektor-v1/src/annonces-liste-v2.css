@@ -290,3 +290,51 @@
 .app-shell.app-shell-modern .panel-grid.av3 .panel-active-listing > .panel-head { grid-template-columns: auto auto minmax(0, 1fr) !important; align-items: center !important; column-gap: 14px !important; }
 .app-shell.app-shell-modern .panel-grid.av3 .panel-active-listing > .panel-head > .av3-onglets { margin-left: 0; }
 .app-shell.app-shell-modern .panel-grid.av3 .panel-active-listing > .panel-head > .page-controls { justify-self: end !important; }
+
+/* ── Vue Publicite, 2e passe (03/11 soir) : cartes de presence, barre de filtre, en-tetes, signaux ── */
+.av3 .av3-presence { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; transition: opacity .2s; }
+.av3 .av3-presence.charge { opacity: .6; }
+.av3 .av3-carte { text-align: left; font: inherit; color: #222323; cursor: pointer; background: #fff; border: 2px solid #e2e5e6; border-radius: 16px; padding: 12px 13px; display: flex; flex-direction: column; gap: 7px; min-width: 0; transition: border-color .15s, box-shadow .15s, transform .12s; }
+.av3 .av3-carte:hover { border-color: #e7a9c6; box-shadow: 0 4px 14px rgba(34, 35, 35, .07); }
+.av3 .av3-carte:active { transform: scale(.985); }
+.av3 .av3-carte:focus-visible { outline: 2px solid #c5005f; outline-offset: 2px; }
+.av3 .av3-carte.on { background: #fdf0f6; border-color: #c5005f; }
+.av3 .av3-carte-tete { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.av3 .av3-pastille { flex: 0 0 auto; width: 26px; height: 26px; border-radius: 8px; color: #fff; font-size: 10px; font-weight: 800; letter-spacing: .02em; display: grid; place-items: center; }
+.av3 .av3-carte-val { display: flex; align-items: baseline; gap: 5px; }
+.av3 .av3-carte-val b { font-size: 24px; font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.av3 .av3-carte-val span { font-size: 12px; color: #5c6163; }
+.av3 .av3-carte-barre { height: 5px; border-radius: 9px; background: #eef0f1; display: flex; overflow: hidden; }
+.av3 .av3-carte-barre i { display: block; height: 100%; border-radius: 9px; transition: width .4s ease; }
+.av3 .av3-carte-pied { font-size: 12px; font-weight: 600; color: #5c6163; }
+.av3 .av3-filtre { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 12px; background: #222323; color: #fff; font-size: 13.5px; font-weight: 700; }
+.av3 .av3-filtre button { margin-left: auto; height: 30px; padding: 0 12px; border-radius: 9px; border: 1px solid rgba(255, 255, 255, .3); background: transparent; color: #fff; font: inherit; font-weight: 700; font-size: 12.5px; cursor: pointer; }
+.av3 .av3-filtre button:hover { background: rgba(255, 255, 255, .1); }
+.av3 .av3-th-p { display: inline-flex; flex-direction: column; align-items: center; gap: 3px; }
+.av3 .av3-th-p .av3-pastille { width: 24px; height: 24px; border-radius: 7px; }
+.av3 .av3-th-nom { font-size: 11px; color: #222323; font-weight: 700; text-transform: none; letter-spacing: 0; white-space: nowrap; }
+.av3 .av3-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.av3 .av3-pub-bien .av3-photo { width: 96px; height: 72px; }
+.av3 .av3-pub-meta { font-size: 12.5px; color: #5c6163; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.av3 .av3-signal { font-size: 11.5px; font-weight: 700; margin-top: 4px; line-height: 1.25; }
+.av3 .av3-signal.echu { color: #b94a48; }
+.av3 .av3-signal.transac { color: #6e42a8; }
+.av3 .av3-signal.nulle { color: #b66a16; }
+/* cases et bande au trait de la maquette (bord 2 px, rayon 8 ; bouton de demande plein) */
+.av3 .av3-case { border-width: 2px; border-radius: 8px; }
+.av3 .av3-case.erreur { background: #fff3df; border-color: #b66a16; color: #b66a16; }
+.av3 .av3-pub-bande { justify-content: center; padding: 8px 10px; border-radius: 12px; background: #f6f7f8; border: 1px dashed #cfd3d4; font-weight: 600; }
+.av3 .av3-pub-demande { height: 32px; padding: 0 12px; border-radius: 9px; border: 1.5px solid #c5005f; background: #c5005f; color: #fff; white-space: nowrap; }
+.av3 .av3-pub-demande:hover { background: #a8004f; border-color: #a8004f; }
+.av3 .av3-pub-demande.attente, .av3 .av3-pub-demande:disabled { background: #eef0f1; border-color: #e2e5e6; color: #5c6163; cursor: default; }
+/* l'ancienne liste : gris, marge et coupe sur tout span de cellule */
+.app-shell.app-shell-modern .panel-grid.av3 .table-wrap.listing-table-active .av3-pub-meta { color: #5c6163 !important; margin: 0 !important; display: block !important; -webkit-line-clamp: unset !important; }
+.app-shell.app-shell-modern .panel-grid.av3 .table-wrap.listing-table-active thead th.av3-th-portail { padding: 8px 2px !important; letter-spacing: 0 !important; text-align: center !important; }
+.app-shell.app-shell-modern .panel-grid.av3 .table-wrap.listing-table-active .av3-th-p .av3-pastille { color: #fff !important; }
+.app-shell.app-shell-modern .panel-grid.av3 .table-wrap.listing-table-active .av3-th-nom { color: #222323 !important; }
+.app-shell.app-shell-modern .panel-grid.av3 .table-wrap.listing-table-active .av3-pub-demande { color: #fff !important; }
+.app-shell.app-shell-modern .panel-grid.av3 .table-wrap.listing-table-active .av3-pub-demande.attente { color: #5c6163 !important; }
+/* mesure a 1280 px : 949 px pour 6 cartes -> elles tiennent sur UNE ligne a partir de 900 px */
+@media (min-width: 900px) { .av3 .av3-presence { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+.av3 .av3-carte-val b { font-size: 22px; }
+.av3 .av3-th-nom { font-size: 10.5px; }
