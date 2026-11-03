@@ -914,3 +914,20 @@ est « couple » et son résumé « nommé » (la nuit du 02→03/11 : aujourd'h
 - **Pour réparer EA32621** (écriture chez nous, en attente d'accord) : `refresh_contact_inproc.py --contact-id 10260585`, PUIS
   `--contact-id 10260586` (la coquille d'abord, pour que la porteuse trouve sa place 2). Rien chez Hektor : 2 lectures `ContactById`.
   Le miroir local étant réparé, la nuit suivante recalculera aussi la nature des deux fiches.
+
+## 41. FAUT-IL CORRIGER LA RÈGLE DU BALAYAGE ? MESURES ET OPTIONS *(03/11 matin, « Mais il faut corriger la règle du balayage ??? »)*
+
+- **Essai du tri** (9 lectures `ListContacts`, page 1, actifs) : `sort=datemaj`, `dateMaj`, `date_maj`, `dateModification` rendent
+  TOUS la même page que `sort=id DESC` → **Hektor ne sait pas trier par date de modification** (nom inconnu = repli sur le numéro).
+  `dateLastTraitement ASC` rend un ordre différent de `id ASC` → ce tri-là est bien appliqué.
+- **Les 60 fiches lues cette nuit** (pages 1 à 3) sont exactement les 60 numéros les plus récents (606139 → 606067, créées du 29/10
+  au 02/11) : une création compte comme « traitement ». Depuis le 20/10, la liste « actifs » a quand même vu 31 fiches anciennes
+  (n° 12787 à 604536) : certains gestes Hektor remontent bien une fiche, le rattachement de couple non.
+- **Ampleur, sur un échantillon** : 32 fiches anciennes (n° < 600000) ont une `datemaj` ≥ 20/10 connue par une relecture de fiche ;
+  9 seulement portent la même date dans le suivi de la liste. ⚠ Échantillon biaisé (fiches qu'on a ouvertes), pas un taux.
+- **Options présentées, rien décidé** :
+  A. règle pour nos propres gestes : tout geste couple (les 680) relit lui-même les DEUX fiches (`refresh_contact_inproc.py`) —
+     aucun changement à la nuit ; ne couvre pas un couple fait directement dans Hektor ;
+  B. relecture tournante la nuit : N `ContactById` par nuit (les plus anciennement relus d'abord, périmètre à choisir) — coûte
+     N requêtes sur le quota (nuit ≈ 4 500, règle des 40 %) et allonge le push ;
+  C. chercher dans l'API une autre porte (liste filtrée par date de modification) — non mesuré.
