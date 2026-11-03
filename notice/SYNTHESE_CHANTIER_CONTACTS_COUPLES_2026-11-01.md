@@ -1060,3 +1060,13 @@ pour un numéro sont RELUS TOUT DE SUITE, jamais « à la nuit ». Rien n'est co
   B. **dans le run de 04:00** : remplacer la lecture courte des contacts (3 pages) par la liste entière ; le gain de la vitesse
      d'avant sur la lecture Hektor (~50 min) paie la liste (~57 min) → fin du run à peu près inchangée (~06:20-06:30).
   Dans les deux cas : la vitesse d'avant d'abord revérifiée, arrêt au premier refus ; le dimanche, les archivés au même endroit.
+- ⛔ **Règle de Frédéric (03/11) : ne changer la vitesse QUE des tâches qui n'appellent QUE l'API, jamais la console.**
+  Mesuré dans le code : les deux freins sont SÉPARÉS —
+  · API (`/Api/…`, client Python `HektorClient`) : `HEKTOR_MIN_REQUEST_INTERVAL_MS`, défaut 1 000 ms DANS LE CODE
+    (`hektor_pipeline/common.py` l. 95), **posé nulle part** (ni `.env`, ni `phase2/.env`, ni les `.ps1`) → réglable pour UN
+    processus en le posant dans le `.ps1` de sa tâche, sans toucher aux autres ;
+  · console (`xmlrpc.php`, `/admin/`) : `CONSOLE_HEKTOR_MIN_REQUEST_INTERVAL_MS=1000` dans `Console/.env` (worker, mise en file,
+    `sync_hektor_drafts.py`, `sync_hektor_immo_pro.py`) → **on n'y touche pas**.
+  ⇒ la tâche de 02:00 (`sync_active_searches.py` → `sync_contact_details.py` → `ContactById`, puis étapes locales) n'appelle
+    QUE l'API : elle peut être accélérée seule. Le run de 04:00 MÉLANGE l'API et la console (brouillons, immo pro, chauffage,
+    champs manquants) : il reste tel quel. ⇒ **Créneau A (tâche de 02:00) seul conforme à la règle.**
