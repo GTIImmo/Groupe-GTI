@@ -1561,3 +1561,24 @@ Documents : à signaler à l'autre session (Youtrust reste derrière son interru
 4. Le nouveau conjoint a été affiché « Non affecté · Groupe GTI Firminy » côté négociateur (compte de la session, pas celui de la personne) :
    à vérifier — il devrait sans doute prendre le négociateur de la personne.
 **Non éprouvé en réel** : le choix « une fiche existante », les biens reliés, un négociateur, le téléphone.
+
+## 55. CRAN OUVERT À TOUS ET LES 4 DÉFAUTS CORRIGÉS *(03/11 soir, « Ouvre le cran à tout le monde et corrige les défauts, fais une optimisation ergonomique et graphique de la modale »)*
+
+- **Cran** `contacts_couples_ajout = on` (17:13:30 UTC) : le bouton est visible pour tous ceux qui ont le droit de gérer le contact
+  (dès que le nouvel écran est en ligne pour la fenêtre refaite ; l'ancienne fenêtre marche déjà).
+- **1. Civilité « _ »** : un code de couple à une place vide (« _ », « _Mr/Mme » — 2 fiches) s'affichait tel quel. Règle commune à la nuit
+  (`build_contacts_layer.py`, `civilite_affichee`) et à l'écran (`civiliteAffichee`) : on ne garde que les places remplies (« _ » → rien,
+  « _Mr/Mme » → « Mr/Mme », « M_ » → « M. ») ; un code aux deux places remplies hors table reste tel quel (témoin « m_mme »). L'import des
+  mandats de recherche ne voit aucune différence (empreinte identique, vérifié). Essais 5/5 (serveur) et 3 contrôles écran.
+- **2. La fenêtre refaite** (`ajout-conjoint.css`, même famille que l'assistant « Nouveau contact ») : en-tête avec la personne, un vrai
+  sélecteur à deux positions (« Un nouveau contact » / « Une fiche existante », état actif visible et dit aux lecteurs d'écran), champs en
+  grille, case RGPD de taille normale avec son explication, liste de fiches à choisir comme des boutons radio, encart « ce qui va se
+  passer », erreurs en rouge, **réussite qui reste affichée** jusqu'à « Fermer », Échap pour fermer, focus sur le premier champ ; au
+  téléphone : feuille plein largeur en bas, une colonne.
+- **3. La fiche du conjoint ne s'ouvre plus** : la création du conjoint n'est plus suivie par l'écran (c'est ce suivi qui ouvrait sa fiche) ;
+  seul l'ajout du conjoint est suivi.
+- **4. Le conjoint naît chez le négociateur de la personne** (son e-mail, son numéro, son agence) ; un négociateur qui n'a pas le droit de
+  créer chez ce collègue retombe sur son propre compte, comme la création habituelle.
+- Build vert ; essai écran **34/34** ; commit c8e7239 (seules mes lignes de `App.tsx` ; l'autre session y a des modifications en cours,
+  laissées dans la copie de travail). **Non poussé, pas vu à l'écran** : à pousser, puis l'ouvrir sur une vraie personne seule SANS enregistrer
+  (ordinateur et téléphone). ⚠ La correction de la civilité côté serveur agit à la prochaine nuit (ou à la relecture d'une fiche).
