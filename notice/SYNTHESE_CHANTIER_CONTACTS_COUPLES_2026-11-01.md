@@ -1351,3 +1351,26 @@ Hektor/Supabase, 0 écriture), les points lourds REVÉRIFIÉS par moi (marqués 
 - ⏰ **Reste, chaque geste sur « vas-y »** : (1) mesurer l'effet des 9 334 dans l'app et la taille de l'envoi ; (2) trancher
   « recherches après un refus » ; (3) basculer la tâche (`-Appliquer`, administrateur) ; (4) allumer l'interrupteur du run ;
   (5) après la 1re nuit et le rapport, la purge ; (6) les archivés le dimanche suivent seuls (`--scope auto`).
+
+## 49. LES 9 342 « SANS NÉGOCIATEUR » : CE QUE LA RÉPARATION CHANGERAIT DANS L'APP *(03/11, « oui fais les mesures » ; lecture seule)*
+
+- **Qui ils sont** : 9 342 contacts actifs (9 334 dans la simulation, à quelques fiches près) qui ont un négociateur nommé chez
+  Hektor et AUCUN chez nous. Chacun figure deux fois dans nos pages : page du 23/06 (avec négociateur) et page du 30/03
+  (`id_negociateur` NULL, réponse de Hektor en mars). La page de mars gagne à la normalisation. Leur `datemaj` Hektor est
+  surtout de 2025 : le négociateur a été posé sans bouger la date, le run ne pouvait pas le voir.
+- **Dans la couche envoyée à l'app** (`phase2.sqlite`, lien par `hektor_target_id`) : seuls les contacts « éligibles » partent
+  (`-ContactsEligibleOnly`). Sur les 32 473 changements de négociateur, **4 383 sont envoyés à l'app** : 2 602 « vide → nommé »
+  (tous liés à une annonce), 799 « vide → agence », 892 « 25 → 2 », 86 « nommé → autre », 4 entre agence et nommé.
+  Les 28 090 autres ne sont pas dans l'app aujourd'hui.
+- **Qui voit quoi (RLS `app_contact_current_select_scoped`)** : tout utilisateur au périmètre « réseau » voit tous les
+  contacts. **Les 6 comptes actifs (4 admin, 2 commerciaux) sont TOUS au périmètre « réseau »** ⇒ **aucun changement de
+  visibilité aujourd'hui**. L'annuaire des contacts n'applique pas le filtre « mes contacts » du commercial
+  (`applyContactFiltersToQuery`, sans portée ; la portée ne s'applique qu'aux annonces, mandats, archives, brouillons).
+- **Ce qui change à l'écran** : la colonne et le filtre « Commercial » (2 602 contacts sortent de « Sans commercial ») et le
+  nom d'agence (1 690 passent de Firminy à Saint-Étienne, surtout les « 25 → 2 » ; 358 « Ambert » ne diffèrent que par des
+  espaces). Sur les 2 602, **2 140 reçoivent le négociateur de l'annonce à laquelle ils sont liés** ; 79 un autre ; 383 dont
+  l'annonce n'a pas de négociateur connu. Seuls 12 contacts tomberaient au nom d'un des 2 commerciaux actifs sans passer par
+  leur bien.
+- **Le jour où un compte passera au périmètre « agence » ou « négociateur »**, ces contacts suivront leur négociateur Hektor :
+  c'est le comportement voulu par la règle, plus le défaut des pages de mars.
+- **L'envoi** : la nuit du 03/11 a poussé 8 193 contacts en 48 s ⇒ ~4 400 de plus ≈ moins d'une minute. Pas de risque de durée.
