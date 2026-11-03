@@ -795,3 +795,17 @@ fonction en base, accord · 6 prévisionnel). Les maquettes sont mises de côté
 Contrôles : `npm run build` vert ; serveur de démonstration local (données inventées) à 1 440 px (4 colonnes, 0 débordement), 375 px
 (2 colonnes, 0 débordement), les 4 onglets rendus sans bloc en erreur ; les seules erreurs console sont l'adresse
 `/api/hektor-diffusion/broadcasts` absente du serveur de démonstration. ⏳ À voir sur les vraies données après le push.
+
+## 28. Retour à la v3 (03/11) — Frédéric : « je n'aime pas la v6, je préfère la v3 », « la v3 avec les ajouts », code fe5e6e9 gardé
+
+Les directions sombres, A / B / C et la v6 sont ABANDONNÉES (elles restent sur le canevas, hors du parcours). La maquette rouvre sur le
+**Tableau de bord v3**. Ajouts à la v3 (même style : Hanken Grotesk / Plus Jakarta, fond clair, couleur par domaine) :
+- **Tableau de bord** : bande « L'essentiel » en 12 chiffres qui défilent (honoraires 1,80 M€ HT, actes 284, 6 354 € par acte, prix moyen
+  127 758 €, taux 5,0 %, prix obtenu 94,6 %, offres 347, compromis 276, mandats 682, disponibles 573, mandat → acte 216 j, acquéreurs
+  9 465), chacun mène à sa planche.
+- **Classements** (planche neuve, onglet ajouté sur les 7 planches v3) : négociateurs (26) / agences (17), tris honoraires, progression,
+  actes, honoraires par acte, mandats, exclusivité, compromis (agences), portefeuille ; les trois premiers en tête ; HT / TTC.
+- **Affaires** : le prix obtenu (histogramme des remises), le délai de l'offre acceptée au compromis (26 / 52 / 22 %), l'exclusif contre le
+  simple (78 j contre 91 j jusqu'à la 1re offre), les offres par négociateur et leur passage en compromis.
+Calculs des planches Classements et Affaires exécutés hors ligne : sans erreur. Le code de l'app fe5e6e9 (l'essentiel dans le vrai
+écran) est GARDÉ, non poussé : il servira au codage de la v3.
