@@ -1257,3 +1257,7 @@ Hektor/Supabase, 0 écriture), les points lourds REVÉRIFIÉS par moi (marqués 
   · **1er rattrapage** : ~2 200 contacts → ~1 550 annonces → **~+52 min** s'il passait d'un coup → le run finirait vers ~07:10 ;
     la descente de 06:45 ATTEND la fin du run (`run_descente.ps1`, garde « Quotidien en cours ») : pas de casse, mais l'app serait
     à jour ~25 min plus tard. ⇒ **plafond, p. ex. 300 annonces/nuit (+10 min)** : rattrapage en ~5 nuits.
+- **Sans plafond, la chaîne du matin** (`scheduled/run_descente.ps1` l. 61-100, lu le 03/11) : la descente de 06:45 ATTEND le run
+  **45 min au plus** (jusqu'à 07:30), puis RENONCE (exit 1, doublures d'hier, alerte). Run +52 min ⇒ fin ~07:10 ⇒ descente
+  ~07:10 → ~07:35 : ça passe, avec **~20 min de marge** seulement ; app à jour ~25 min plus tard. La sauvegarde de 08:00 et les
+  relances (Supabase seul) ne sont pas touchées. Un retard de plus le même matin ferait sauter la descente ⇒ plafond recommandé.
