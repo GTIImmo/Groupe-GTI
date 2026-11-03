@@ -1636,6 +1636,13 @@ def resolve_generic_max_pages(args: argparse.Namespace, resource_name: str, boot
         return max(1, ceil(args.offre_recent_limit / 20))
     if resource_name == "ventes":
         return None if args.max_pages == 0 else args.max_pages
+    # 03/11/2026 -- depuis le 26/10, DetailedBroadcastList (v2) est PAGINEE (20/page, ~80 pages).
+    # Plafonnee ici a --update-max-pages (5), la reponse est toujours incomplete : la normalisation
+    # la refuse et la diffusion par portail reste figee. C'est un INSTANTANE, pas un delta : il
+    # faut toutes les pages, ou rien. ~80 requetes par nuit. Voir normalize_source.passerelles_v2_actif.
+    # Interrupteur : APP_PASSERELLES_V2=1 (eteint : plafond comme avant).
+    if resource_name == "broadcasts" and (os.environ.get("APP_PASSERELLES_V2") or "0").strip() == "1":
+        return None if args.max_pages == 0 else args.max_pages
     return None if args.update_max_pages == 0 else args.update_max_pages
 
 

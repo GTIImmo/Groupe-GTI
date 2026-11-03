@@ -115,6 +115,76 @@ BROADCAST_WRAPPER_KEY = "platforms"
 BROADCAST_BILAN: Dict[str, Any] = {}
 
 
+# 03/11/2026 -- LA DIFFUSION PAR PORTAIL ETAIT FIGEE AU 26/10, ET S'EFFACAIT PAR MORCEAUX.
+# Depuis le 26/10, `DetailedBroadcastList` (version v2) rend une AUTRE forme :
+#     passerelle : `code` au lieu de `nom`
+#     diffusion  : `propertyId` au lieu de `annonce_id`, `agent{lastName,firstName}` au lieu de
+#                  `commercial{nom,prenom}`, `exportStatus` au lieu de `export_status`
+# et elle est PAGINEE (20 par page, ~80 pages) -- le run `update` n'en lisait que 5.
+# Effet mesure le 03/11 : `upsert_broadcast_listings` EFFACAIT chaque nuit les lignes des
+# passerelles aperçues (Bien'ici n° 2 a 5 : Ambert, Annonay, Brioude, Craponne) puis ne
+# reinserait rien (aucun `annonce_id`) ; et `hektor_broadcast.nom` passait a NULL.
+# Interrupteur : APP_PASSERELLES_V2=1 -> lit les deux formes, et N'EFFACE RIEN tant que la
+# reponse n'est pas complete. Eteint : comportement d'avant, a l'identique.
+# Le pendant cote descente est dans sync_raw.py (resolve_generic_max_pages).
+def passerelles_v2_actif() -> bool:
+    return (os.environ.get("APP_PASSERELLES_V2") or "0").strip() == "1"
+
+
+def broadcast_reponse_complete_v2(conn: sqlite3.Connection) -> tuple[bool, str]:
+    """La reponse PAGINEE fait-elle autorite ? (pendant v2 de broadcast_reponse_complete)
+
+    ⚠ L'ancien controle exige qu'AUCUNE page n'annonce de suite : juste pour une reponse d'une
+      seule page, toujours faux pour 80 pages (chacune annonce la suivante). Essai reel du
+      03/11 : 81 pages completes, refusees par lui.
+    On exige ici : aucune erreur ; toutes les pages du MEME passage (un seul run_id -- sinon
+      deux nuits melangees) ; pages contigues ; la DERNIERE n'annonce pas de suite ; au moins
+      une passerelle. Le compte des diffusions contre `metadata.total` est fait a cote.
+    """
+    lignes = list(fetch_latest_raw_payloads(conn, "list_broadcasts"))
+    if not lignes:
+        return False, "aucune page"
+    runs = {ligne["run_id"] for ligne in lignes}
+    if len(runs) > 1:
+        return False, "pages de %s passages differents" % len(runs)
+    par_page: Dict[int, Dict[str, Any]] = {}
+    for ligne in lignes:
+        try:
+            payload = json.loads(ligne["payload_json"])
+        except (ValueError, TypeError):
+            return False, "page illisible"
+        if payload.get("error"):
+            return False, "erreur rendue par Hektor"
+        par_page[int(ligne["page"] or 0)] = payload
+    numeros = sorted(par_page)
+    if numeros != list(range(numeros[0], numeros[-1] + 1)):
+        return False, "pages non contigues"
+    meta = par_page[numeros[-1]].get("metadata") or {}
+    if isinstance(meta, dict) and meta.get("nextPage") is not None:
+        return False, "la derniere page lue (%s) annonce encore une suite (%s)" % (numeros[-1], meta.get("nextPage"))
+    if not iter_broadcast_platforms(conn):
+        return False, "aucune passerelle"
+    return True, "%s page(s)" % len(numeros)
+
+
+def broadcast_bilan_pages(conn: sqlite3.Connection) -> Dict[str, Any]:
+    """Pages lues et total annonce par Hektor, pour le journal (jamais pour decider)."""
+    pages = 0
+    total = None
+    page_suivante = None
+    for ligne in fetch_latest_raw_payloads(conn, "list_broadcasts"):
+        pages += 1
+        try:
+            meta = (json.loads(ligne["payload_json"]) or {}).get("metadata") or {}
+        except (ValueError, TypeError):
+            continue
+        if isinstance(meta, dict):
+            total = meta.get("total", total)
+            if meta.get("nextPage") is not None:
+                page_suivante = meta.get("nextPage")
+    return {"pages": pages, "total": total, "page_suivante": page_suivante}
+
+
 def iter_broadcast_platforms(conn: sqlite3.Connection) -> list[Dict[str, Any]]:
     """Les passerelles du brut `list_broadcasts`, carton ouvert et ecarts comptes.
 
@@ -1724,7 +1794,7 @@ def upsert_broadcasts(conn: sqlite3.Connection) -> None:
             """,
             (
                 str(item.get("id") or ""),
-                item.get("nom"),
+                (item.get("nom") or item.get("code")) if passerelles_v2_actif() else item.get("nom"),
                 item.get("count"),
                 json_dumps(item.get("listings")),
                 json_dumps(item),
@@ -1790,6 +1860,35 @@ def upsert_broadcast_listings(conn: sqlite3.Connection) -> None:
     que le delete-never des photos et des liens, appliquee au bon grain.
     """
     items = iter_broadcast_platforms(conn)
+    v2 = passerelles_v2_actif()
+    complete_v2, raison_v2 = broadcast_reponse_complete_v2(conn) if v2 else (False, "")
+    if v2 and not complete_v2:
+        # 03/11 : une reponse incomplete ne touche a RIEN -- ni effacement, ni ajout. Avant,
+        # chaque passerelle aperçue sur les 5 premieres pages perdait ses lignes.
+        bilan_pages = broadcast_bilan_pages(conn)
+        print(
+            "[passerelles] REFUS : reponse incomplete -- %s (%s page(s) lue(s), total annonce %s)"
+            " -> hektor_broadcast_listing garde son dernier etat complet"
+            % (raison_v2, bilan_pages["pages"], bilan_pages["total"]),
+            file=sys.stderr,
+        )
+        return
+    if v2:
+        # Deuxieme verrou : le nombre de diffusions DISTINCTES lues doit atteindre le total que
+        # Hektor annonce. Sinon une page manquante passerait pour « complete » et les passerelles
+        # absentes seraient effacees (essai du 03/11 sur copie : 1 546 lignes -> 80).
+        distinctes = {
+            (str(item.get("id") or ""), str(l.get("annonce_id") or l.get("propertyId") or ""))
+            for item in items for l in (item.get("listings") or []) if isinstance(l, dict)
+        }
+        total_annonce = broadcast_bilan_pages(conn)["total"]
+        if isinstance(total_annonce, int) and len(distinctes) < total_annonce:
+            print(
+                "[passerelles] REFUS : %s diffusion(s) distincte(s) lue(s) pour %s annoncee(s) par Hektor"
+                " -> hektor_broadcast_listing garde son dernier etat complet" % (len(distinctes), total_annonce),
+                file=sys.stderr,
+            )
+            return
     rafraichies = [
         str(item.get("id") or "").strip()
         for item in items
@@ -1812,16 +1911,18 @@ def upsert_broadcast_listings(conn: sqlite3.Connection) -> None:
     #   ⭐ La ligne de `hektor_broadcast`, elle, RESTE : c'est sa date de derniere
     #      vue qui a permis de dater la mort de la n° 37 au 03/04. On efface
     #      l'ETAT, jamais la TRACE.
-    if rafraichies and broadcast_reponse_complete(conn):
+    if rafraichies and (complete_v2 if v2 else broadcast_reponse_complete(conn)):
         marques = ",".join("?" * len(rafraichies))
         conn.execute(
             "DELETE FROM hektor_broadcast_listing WHERE hektor_broadcast_id NOT IN (%s)" % marques,
             rafraichies,
         )
 
+    lues = 0
+    sans_annonce = 0
     for item in items:
         broadcast_id = str(item.get("id") or "").strip()
-        passerelle = item.get("nom")
+        passerelle = (item.get("nom") or item.get("code")) if v2 else item.get("nom")
         listings = item.get("listings") or []
         if not broadcast_id or not isinstance(listings, list):
             continue
@@ -1829,11 +1930,26 @@ def upsert_broadcast_listings(conn: sqlite3.Connection) -> None:
         for listing in listings:
             if not isinstance(listing, dict):
                 continue
-            annonce_id = normalized_id(listing.get("annonce_id"))
-            commercial = listing.get("commercial") or {}
+            if v2:
+                # Les deux formes : l'ancienne (snake_case, francais) et la v2 du 26/10.
+                annonce_id = normalized_id(listing.get("annonce_id") or listing.get("propertyId"))
+                agent = listing.get("commercial") or listing.get("agent") or {}
+                commercial = {
+                    "id": agent.get("id"),
+                    "type": agent.get("type"),
+                    "nom": agent.get("nom") or agent.get("lastName"),
+                    "prenom": agent.get("prenom") or agent.get("firstName"),
+                } if isinstance(agent, dict) else {}
+                listing = dict(listing)
+                listing["export_status"] = listing.get("export_status") or listing.get("exportStatus")
+            else:
+                annonce_id = normalized_id(listing.get("annonce_id"))
+                commercial = listing.get("commercial") or {}
             commercial_id = normalized_id(commercial.get("id")) if isinstance(commercial, dict) else None
             if not annonce_id:
+                sans_annonce += 1
                 continue
+            lues += 1
             conn.execute(
                 """
                 INSERT INTO hektor_broadcast_listing(
@@ -1862,6 +1978,12 @@ def upsert_broadcast_listings(conn: sqlite3.Connection) -> None:
                     now_utc_iso(),
                 ),
             )
+    if v2:
+        print(
+            "[passerelles] COMPLETE : %s passerelle(s), %s diffusion(s) ecrite(s), %s sans numero d'annonce"
+            % (len(set(rafraichies)), lues, sans_annonce),
+            file=sys.stderr,
+        )
     conn.commit()
 
 
