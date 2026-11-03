@@ -984,3 +984,14 @@ est « couple » et son résumé « nommé » (la nuit du 02→03/11 : aujourd'h
   **41 modifiés en 4 semaines** ⇒ ~200 depuis mai. Bilan : **~2 200 fiches à relire (~1 h)**, mais la liste fait ~17 700 pages
   (**~4 h 55**) : c'est la LISTE qui pèse, pas les fiches. Total ≈ 6 h, ~20 000 requêtes → à couper en deux nuits
   (actifs ≈ 2 h 20 + ~55 min ; archivés ≈ 2 h 35 + ~6 min). Rien de lancé.
+- **Le créneau dans la nuit (mesure 03/11, journaux des nuits du 31/10 au 03/11, heure d'hiver)** :
+  · ⚠ les tâches tournent **1 h plus tôt** que l'heure affichée par le planificateur depuis le passage à l'heure d'hiver
+    (déclencheurs posés en +02:00) : run à 04:00, recherches à 02:00, balayage à 23:00, documents à 21:00 ;
+  · occupation réelle de Hektor : photos 20:00-20:05 · documents 21:18-23:17 · balayage photos (1 000 travaux du worker)
+    23:00 → 00:18 / 01:01 · recherches 02:00-03:51 (4 000 fiches) · run 04:00-06:18 · descente 06:45-07:08 (Supabase) ;
+  · **libre aujourd'hui : ~01:00 → 02:00 (1 h)** — trop court ;
+  · ⭐ le balayage des photos annonçait « 2 nuits restantes » le 02/11 : une fois fini (~29 travaux/nuit), **23:20 → 02:00
+    ≈ 2 h 40 se libère** → la liste des actifs (~2 h 20) ou des archivés (~2 h 35, juste) y tient, une par nuit ;
+  · ⚠ les ~2 000 fiches des actifs ne tiennent pas dans le même créneau : le run de 04:00 les relirait (plafond 1 000/nuit,
+    +~28 min) → le run finirait vers 06:46, APRÈS le départ de la descente (06:45). À régler : plafond abaissé (500/nuit,
+    4 nuits, +14 min) ou vérifier la garde entre run et descente.
