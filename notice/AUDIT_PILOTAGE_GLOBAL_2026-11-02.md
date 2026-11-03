@@ -765,3 +765,16 @@ acceptée → compromis **32 j** médiane, 26 % sous 3 semaines, 22 % au-delà d
 RIBBES 20 → 10, COUDERT 19 → 14, GENTES 19 → 17, VALLA 19 → 13, LEGRAND 16 → 8, DELAVAUD 16 → 11, RAYNAUD 15 → 12 (les offres récentes
 n'ont pas encore eu le temps d'aboutir). Années : 2023 485 actes / 6 561 € HT par acte · 2024 391 / 6 355 · 2025 353 / 6 216 ·
 2026 284 / 6 354 — la baisse de 31 % de 2023 à 2025 vient du volume.
+
+## 26. Pilotage v6 — direction B retenue, « musclée » (03/11) — même lien, ouvre sur `Pilotage.dc.html`, RIEN CODÉ
+
+Frédéric : « B, mais il faut beaucoup d'indicateurs, dont les plus simples, et le classement par négo, par agence ». Une seule planche
+interactive : **l'essentiel en 12 chiffres** (honoraires 1,80 M€ HT −0,5 % · actes 284 −3 % · honoraires par acte 6 354 € +2,7 % ·
+prix moyen de vente 127 758 € pour 36,3 M€ vendus · taux d'honoraires 5,0 % HT · mandats 682 · exclusivité 37 % · disponibles 573 ·
+sous offre 41 / sous compromis 89 · mandat → acte 216 j · prix obtenu 94,6 % · acquéreurs vivants 9 465) ; **le fil de la vente** (4 étapes
+cliquables, chacune son analyse ; mandats par mois exclusifs / autres ajoutés ; quatre ans d'actes) ; **classements** négociateurs /
+agences, triables par honoraires, progression, actes, honoraires par acte, mandats, exclusivité, compromis, portefeuille.
+Mesures : honoraires par négociateur = honoraires de la vente × pourcentage de `app_affaire_repartition` (ventes janv.-oct., HT, essais
+et honoraires > 20 % du prix écartés), 2026 contre 2025 ; mandats et portefeuille au négociateur de la fiche ; agences : actes et prix
+moyen 2026 (somme des actes = 284, cohérente), mandats et exclusifs 2026 à date, disponibles du jour. Code de la page exécuté hors ligne
+sur 5 réglages (tri, unité, agences) : sans erreur.
