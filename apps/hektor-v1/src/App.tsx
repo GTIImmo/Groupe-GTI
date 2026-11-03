@@ -8421,7 +8421,7 @@ function actionMenuHelperText(typeLabel: string, stateLabel: string) {
 // buildMandatActionModel) ; on ajoute seulement le MOT, et « Acceptée » pendant 48 h (decision du 03/11).
 type ActionPillKind = 'neutral' | 'sent' | 'progress' | 'fix' | 'refused' | 'accepted'
 const ACTION_PILL_ICON: Record<ActionPillKind, string> = {
-  neutral: 'M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z',
+  neutral: 'M9.5 3.5h5v5l2.5 3h-10l2.5-3zM5 14.5h14v3H5zM7 20.5h10',
   sent: 'M4 12 20 4l-6 16-3-7z',
   progress: 'M12 7v5l3 2',
   fix: 'M4 20h4L19 9l-4-4L4 16z',
@@ -12706,7 +12706,7 @@ function MandatActionMenu(props: {
     if (props.variant === 'pill') {
       return (
         <span className="act t-none" title="Pas encore de numéro de mandat">
-          <span className="act-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M7 3h7l4 4v14H7zM12 11v6M9 14h6" /></svg></span>
+          <span className="act-seal"><svg className="act-ring" viewBox="0 0 28 28" aria-hidden="true"><circle className="trk" cx="14" cy="14" r="12" transform="rotate(-90 14 14)" /><circle className="arc" cx="14" cy="14" r="12" transform="rotate(-90 14 14)" /><circle className="run" cx="14" cy="14" r="12" /></svg><svg className="act-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M7 3h7l4 4v14H7zM12 11v6M9 14h6" /></svg></span>
           <span className="act-txt"><span className="act-type">Pas de N°</span><span className="act-state">Sans mandat</span></span>
         </span>
       )
@@ -12729,9 +12729,8 @@ function MandatActionMenu(props: {
             setMenuOpen((value) => !value)
           }}
         >
-          <span className="act-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={ACTION_PILL_ICON[pill.kind]} /></svg></span>
+          <span className="act-seal"><svg className="act-ring" viewBox="0 0 28 28" aria-hidden="true"><circle className="trk" cx="14" cy="14" r="12" transform="rotate(-90 14 14)" /><circle className="arc" cx="14" cy="14" r="12" transform="rotate(-90 14 14)" /><circle className="run" cx="14" cy="14" r="12" /></svg><svg className="act-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={ACTION_PILL_ICON[pill.kind]} /></svg><i className="act-dot" aria-hidden="true" /></span>
           <span className="act-txt"><span className="act-type">{pill.type}</span><span className="act-state">{pill.state}</span></span>
-          <svg className="act-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
         </button>
       ) : (
       <button

@@ -93,7 +93,7 @@ export function AnnonceV2Colgroup() {
       <col style={{ width: '106px' }} />{/* prix */}
       <col style={{ width: '146px' }} />{/* mandat : bouclier + periode */}
       <col style={{ width: '78px' }} />{/* diffusion : un symbole de 34 px (78 : l'en-tete « DIFFUSION » doit tenir) */}
-      <col style={{ width: '278px' }} />{/* actions : pilule 126 + 3 x 34 + 3 x 6 + padding 30 -- meme hauteur 34 px que les boutons Contacts */}
+      <col style={{ width: '264px' }} />{/* actions : sceau 112 + 3 x 34 + 3 x 6 + padding 30 -- meme hauteur 34 px que les boutons Contacts */}
     </colgroup>
   )
 }
