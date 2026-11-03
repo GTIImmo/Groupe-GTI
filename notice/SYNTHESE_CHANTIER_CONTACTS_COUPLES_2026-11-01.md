@@ -1005,3 +1005,28 @@ est « couple » et son résumé « nommé » (la nuit du 02→03/11 : aujourd'h
   1 h 20** dès le 08/09 (05:00 → 06:17), frein d'1 s par requête posé (Lot B). Même travail ⇒ avant ≈ **2,5 requêtes/s**, sans
   qu'aucun bannissement ne vienne du run lui-même (ceux d'août-septembre : rattrapage, sondes, connexions, objets supprimés).
   À ce rythme : liste des actifs **~57 min**, archivés **~61 min** → les deux tiendraient dans le créneau 23:20 – 02:00.
+
+## 42. LES CORRECTIFS À FAIRE — LE PRINCIPE DE FRÉDÉRIC *(03/11, « résume-moi les correctifs à faire »)*
+
+Principe posé : toujours le même — récupérer les fiches NOUVELLES et les fiches MISES À JOUR ; revenir à la vitesse d'avant
+(À REVÉRIFIER D'ABORD) ; les archivés le dimanche ; nos gestes chez nous IMMÉDIATEMENT, et ceux qui ont encore besoin de Hektor
+pour un numéro sont RELUS TOUT DE SUITE, jamais « à la nuit ». Rien n'est codé ; chaque pièce attend son « vas-y ».
+
+1. **La nuit, du lundi au samedi : la liste ENTIÈRE des contacts actifs** (~8 500 pages, par numéro), puis relecture des seules
+   fiches dont la date Hektor est plus récente que notre dernière relecture (règle existante). Option existante
+   `--full-listing-refresh --contact-scope active --listing-max-pages 0` ; nouvelle tâche planifiée dans le créneau 23:20 – 02:00
+   (libre dès la fin du balayage des photos), déclarée d'abord au moniteur de santé, réglée sur une sœur.
+2. **Le dimanche : la liste entière des archivés** (~9 200 pages), même principe.
+3. **La vitesse d'avant, revérifiée d'abord** : le run lisait ~2,5 req/s jusqu'au 07/09 (§41). Réglage par processus
+   (`HEKTOR_MIN_REQUEST_INTERVAL_MS`) pour CETTE tâche seulement ; montée par paliers ; arrêt net au premier refus ou silence ;
+   compte des requêtes de la nuit au journal. Point à surveiller : ~17 000 requêtes par nuit avec le reste.
+4. **Le premier rattrapage** : ~2 200 fiches modifiées depuis mai (~1 h) — par la tâche elle-même ou par le run (plafond 1 000).
+   ⚠ si c'est le run : il dépasserait 06:45 (départ de la descente) → plafond abaissé ou garde run/descente vérifiée.
+5. **Nos gestes contacts : chez nous à l'instant, relus tout de suite quand Hektor donne un numéro.** À AUDITER geste par geste
+   (créer, modifier, archiver/réactiver, conjoint/couple, rattachement de coquille, relations au bien) : qui écrit chez nous
+   d'abord, qui relit après Hektor, et sur QUELLES fiches. ⭐ Le rattachement d'une coquille (les 680) devra relire les DEUX
+   fiches (porteuse et coquille) : c'est ce qui a manqué pour EA32621.
+6. **EA32621 lui-même** : réparé par la première nuit du point 1, ou tout de suite par deux relectures (accord demandé).
+7. Trouvés en passant, à trancher à part : les tâches partent 1 h plus tôt depuis l'heure d'hiver (déclencheurs en +02:00) ;
+   Matterport refusé (401) cette nuit ; la comparaison date Hektor (heure de Paris) / date de relecture (UTC) ne fait que des
+   relectures en trop, jamais d'oubli.
