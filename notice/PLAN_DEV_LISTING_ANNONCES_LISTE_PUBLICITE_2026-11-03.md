@@ -287,3 +287,14 @@ numéros de passerelles (0c) et les droits (4).
 - ⚠ **L'apercu local ecrit par `hektor_diffusion_writeback.py`** (api locale) : NE PAS cliquer une case en mode local sur un vrai numero de dossier.
 - ⚠ **Reserve Leboncoin** : des annonces sont encore publiees sur les ANCIENNES passerelles LB 35-44 alors que la table d'agence donne 45-61. Decocher LB sur l'une d'elles enverrait le retrait au mauvais numero. A eprouver sur 62774, puis mesurer combien sont concernees.
 - **Reste** : push ; essai reel (cocher puis decocher PA sur 62774) avec accord ; alerte REFUS au moniteur ; telephone (lot 5).
+
+## 03/11 18:00 -- ESSAI REEL de la vue Publicite : VERT (accord de Frederic)
+
+- **En ligne** : `79cad52` (contient `19baf05`) sur Vercel READY ; Render sur `0d1f608` (lot 4).
+- **Cible** : 62774 est CLOS (hors liste) et le seul essai diffusable (62963) n'a pas de mandat -> Frederic a choisi une VRAIE annonce : **61713 / mandat 18433, Local commercial, Courpiere**, validee, diffusable, sur Bien'ici seul, 0 cible avant.
+- **Par l'ecran, dans son Chrome (compte admin)**, vue Publicite, case Paper :
+  - cocher : « envoi » puis **en ligne en 9 s** ; fiche NON ouverte ; base : cible 20/paper enabled au nom de Frederic, `portails_resume` = `bienicidirect, paper`, validation `valide` et diffusable `1` INCHANGES ; **Hektor relu a part** (GET ListPasserelles) : passerelles 11 bienicidirect + **20 paper**.
+  - decocher : « retrait » puis **absente en 7 s** ; base : `bienicidirect`, 1 portail ; **Hektor relu** : 11 bienicidirect seul. -> RETOUR EXACT a l'etat d'avant.
+- Reste en base une ligne cible `20/paper disabled` (trace du geste, sans effet).
+- ⚠ **Pas encore eprouve** : un clic par un NEGOCIATEUR (le lot 4 en ligne le permet) ; Bien'ici / Leboncoin (numero d'agence ; Courpiere = 11) ; la reserve des anciennes passerelles LB 35-44.
+- Onglet de Frederic remis sur « Liste » apres l'essai.
