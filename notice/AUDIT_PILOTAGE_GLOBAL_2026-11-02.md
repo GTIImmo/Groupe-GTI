@@ -731,3 +731,21 @@ part tombée et délai de réponse du vendeur ; compromis 276 contre 345). **Tab
 refusées » (l'idée « prix trop haut » est retirée), deux lignes à traiter ajoutées (14 offres sans réponse, 2 224 acheteurs à
 rappeler). Animations à l'ouverture (montée des cartes, barres qui poussent, pouls « données de la nuit »), coupées si l'appareil
 demande moins de mouvement. Chiffre d'affaires, Mandats et Stock : inchangés.
+
+## 24. Pilotage v5 (03/11) — nouvelle direction : RÉSULTATS d'abord, LEVIERS ensuite — même lien, RIEN CODÉ
+
+Frédéric : « design pas très beau, je ne vois aucune animation, trop orienté annulations et refus ; une vision claire des résultats
+puis on optimise ». Deux planches neuves, interactives (bouton Play / vue plein écran), thème sombre, police Geist :
+- **Résultats** (`Resultats.dc.html`, nouvelle entrée) : honoraires 2026 à date **1,80 M€ HT** (chiffres qui défilent), bascule
+  « 2026 à date / 12 mois glissants » et HT / TTC ; moteurs **actes 284 contre 293 (−3 %)** × **honoraires par acte 6 354 € contre
+  6 187 € (+2,7 %)** ; courbe animée des 12 mois glissants de janv. 2023 à oct. 2026 avec lecture au survol ; les années **2023
+  3,18 M€ / 485 actes · 2024 2,48 / 391 · 2025 2,19 / 353 · 2026 1,80 à date / 284** — le recul vient du NOMBRE d'actes, pas des
+  honoraires par acte ; agences (11 sur 17 en hausse) et 10 premiers négociateurs ; « ce qui fait le résultat » (exclusif 59 % vendus
+  contre 28 %, 94 % du prix obtenu, 87 % des compromis à l'acte, 216 j) ; indicateurs avancés (mandats 682, exclusivité 37 %,
+  compromis −20 %).
+- **Leviers** (`Leviers.dc.html`) : les trois leviers de la semaine (32 affaires gagnées à sécuriser = 178 k€ HT mesurés ;
+  2 224 acheteurs qualifiés ; ≈ 1 970 € HT la valeur d'un mandat simple passé en exclusif), 14 leviers filtrables par domaine avec
+  une action chacun, agences à accompagner (Monistrol −57 %, Saint-Just −50 %, Brioude −38 %, Tence −35 %).
+Série mensuelle mesurée sur `app_affaire_ledger` (ventes, honoraires entrée + sortie, essais et honoraires > 20 % du prix écartés).
+« Ordre de grandeur » = dossiers × 6 354 € HT, dit comme tel à l'écran. ⏳ Attend l'avis de Frédéric avant de passer les 5 autres
+onglets dans cette direction.
