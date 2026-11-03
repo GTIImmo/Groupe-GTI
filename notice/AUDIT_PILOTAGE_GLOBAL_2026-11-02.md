@@ -1025,3 +1025,9 @@ Contrôle fait dans le Chrome de Frédéric, en lecture seule. Le filtre d'agenc
 2. **Exclusif contre simple** : en 2026, l'exclusif met 110 jours jusqu'à la première offre, le simple 81. Sur 2025 et 2026 ensemble, c'est 86 contre 90.
    - L'écart vient du fait que l'on compte les premières offres REÇUES dans l'année : un vieux mandat qui reçoit enfin son offre allonge le délai de son type.
    - La phrase « l'exclusivité n'avance pas la première offre » tirait donc une conclusion fausse. Elle est remplacée par une mise en garde qui donne les deux mesures.
+
+**Second contrôle réel (après le push de 2bf6e7b)** :
+- Le tableau des notaires est aligné sur le registre et la mise en garde « exclusif contre simple » est en ligne.
+- Mais seules **4 des 11** dates dépassées s'affichaient : les 7 autres sont chez des notaires sous le seuil (moins de 5 actes, moins de 3 compromis).
+- Corrigé (786d13c) : un notaire qui a une date dépassée paraît toujours dans le tableau.
+- Vérifié en base : les 11 dates dépassées du registre sont toutes dans la fonction, avec leur notaire. ⏳ L'écran doit donc en montrer 11 après le push.
