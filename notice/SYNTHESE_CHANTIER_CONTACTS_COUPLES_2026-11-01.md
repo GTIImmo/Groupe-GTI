@@ -953,3 +953,13 @@ est « couple » et son résumé « nommé » (la nuit du 02→03/11 : aujourd'h
   4 req/s (26/08), 17 connexions en 22 s (17/09), relectures d'objets supprimés en rafale (18/09). ⭐ Contre-témoin : la lecture
   complète du 23/06 (17 360 pages en ~33 min, ~9 req/s) n'a PAS été bannie. Ce qui est sûr : tenir 1 req/s, éviter les longues
   expositions sans pause, ne jamais rejouer des refus, ne jamais multiplier les connexions.
+- **Le temps des fiches relues ensuite (Frédéric : « il faut ajouter le traitement des fiches détail »)** — mesures du 03/11 :
+  · rythme RÉEL d'une relecture de fiche, traitement compris : la tâche des recherches a relu **4 018 contacts en 6 669 s**
+    (02:00 → 03:51) = **1,66 s par fiche** ;
+  · combien de vieilles fiches changent : sur 3 701 fiches anciennes relues depuis le 02/11, **1 modifiée en 7 jours, 33 en 30 j,
+    192 en 90 j** (0,9 % par mois, 5,2 % en 90 j). ⚠ Échantillon = acquéreurs à recherche active, sans doute PLUS vivants que la
+    moyenne : l'estimation est un plafond ;
+  · ⇒ PREMIER TOUR (le suivi date surtout du 23/06, ~4 mois de retard) : ~5 % des 170 000 actifs = **~8 500 fiches à relire**,
+    ~950 par nuit sur 9 nuits = **~26 min de fiches + ~17 min de liste ≈ 45 min par nuit** ;
+  · ENSUITE (régime) : ~0,9 %/mois × 9 nuits ≈ 450 par tour = **~50 fiches par nuit ≈ 1,5 min + 17 min de liste ≈ 20 min**.
+  · Les archivés (~9 200 pages) ne sont pas comptés : à décider s'ils en font partie.
