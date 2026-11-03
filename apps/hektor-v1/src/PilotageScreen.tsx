@@ -1,4 +1,6 @@
 // Pilotage (02/11/2026) — écran ADMIN, LECTURE SEULE, quatre onglets : vue d'ensemble, ventes, mandats, stock.
+// 03/11 : étape 1 de la refonte (notice/AUDIT_PILOTAGE_GLOBAL_2026-11-02.md § 27) — « L'essentiel » en 12 chiffres
+// qui défilent, entrée animée des blocs, barres et courbes qui se dessinent.
 // Maquette validée : https://claude.ai/artifact/CJ9v7PnqkNvYHNGsG8R1Qr ; audit et décisions :
 // notice/AUDIT_PILOTAGE_GLOBAL_2026-11-02.md. Les lectures et les calculs sont dans lib/pilotage.ts.
 // Décisions de Frédéric : admins seuls, honoraires HT par défaut (TTC d'un clic), comparaison à l'année
@@ -71,6 +73,24 @@ function Carte({ libelle, genre, valeur, detail, ecartValeur, courbe, onClick, g
   return onClick
     ? <button type="button" className="pl-carte pl-kpi is-cliquable" onClick={onClick}>{contenu}</button>
     : <div className="pl-carte pl-kpi">{contenu}</div>
+}
+
+// Un chiffre qui défile jusqu'à sa valeur (1,1 s). Coupé si l'appareil demande moins de mouvement.
+function Compteur({ valeur, format }: { valeur: number; format: (x: number) => string }) {
+  const [affiche, setAffiche] = useState(valeur)
+  useEffect(() => {
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) { setAffiche(valeur); return undefined }
+    let id = 0
+    const debut = performance.now()
+    const tour = (t: number) => {
+      const p = Math.min(1, (t - debut) / 1100)
+      setAffiche(valeur * (1 - Math.pow(1 - p, 3)))
+      if (p < 1) id = requestAnimationFrame(tour)
+    }
+    id = requestAnimationFrame(tour)
+    return () => cancelAnimationFrame(id)
+  }, [valeur])
+  return <>{format(affiche)}</>
 }
 
 function Indisponible({ quoi, onReessayer }: { quoi: string; onReessayer: () => void }) {
@@ -158,7 +178,7 @@ export default function PilotageScreen() {
             <span className="pl-surtitre">Pilotage · réseau GTI · réservé aux administrateurs</span>
             <h1 id="pl-titre" className="pl-titre">{ONGLETS.find((o) => o.cle === onglet)?.libelle}</h1>
           </div>
-          <span className="pl-mute pl-fraicheur">{chargement ? 'Lecture des données…' : `Données de cette nuit · lues le ${new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}`}</span>
+          <span className="pl-mute pl-fraicheur"><i className={`pl-vif${chargement ? ' is-attente' : ''}`} aria-hidden="true" />{chargement ? 'Lecture des données…' : `Données de cette nuit · lues le ${new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}`}</span>
         </div>
         <nav className="pl-onglets" role="tablist" aria-label="Onglets du pilotage">
           {ONGLETS.map((o) => (
@@ -194,14 +214,11 @@ export default function PilotageScreen() {
 
       {chargement ? (
         <div className="pl-grille-kpi">{[0, 1, 2, 3].map((i) => <div key={i} className="pl-carte pl-kpi"><span className="pl-sk" /><span className="pl-sk is-grand" /></div>)}</div>
-      ) : onglet === 'ensemble' ? (
-        Ensemble()
-      ) : onglet === 'ventes' ? (
-        Ventes()
-      ) : onglet === 'mandats' ? (
-        Mandats()
       ) : (
-        Stock()
+        // La clé rejoue l'entrée animée à chaque changement d'onglet, d'année ou d'agence.
+        <div key={`${onglet}-${annee}-${agence ?? ''}`} className="pl-contenu">
+          {onglet === 'ensemble' ? Ensemble() : onglet === 'ventes' ? Ventes() : onglet === 'mandats' ? Mandats() : Stock()}
+        </div>
       )}
     </section>
   )
@@ -216,26 +233,47 @@ export default function PilotageScreen() {
     })).sort((a, b) => (b.v?.h ?? 0) - (a.v?.h ?? 0))
     const maxH = Math.max(1, ...lignes.map((l) => l.v?.h ?? 0))
     const maxFlux = Math.max(1, ...mois.map((i) => Math.max(mandats?.parMois[i].n ?? 0, ventes?.parMois[i].n ?? 0)))
+    // L'essentiel : 12 chiffres simples, chacun ouvre l'onglet qui le détaille (demande de Frédéric, 03/11).
+    const parActe = ventes && ventes.ventes ? ventes.honoraires / ventes.ventes : 0
+    const parActePrec = ventes && ventes.ventesPrec ? ventes.honorairesPrec / ventes.ventesPrec : 0
+    const prixMoyen = ventes && ventes.ventes ? ventes.volume / ventes.ventes : 0
+    const prixMoyenPrec = ventes && ventes.ventesPrec ? ventes.volumePrec / ventes.ventesPrec : 0
+    const taux = ventes && ventes.volume ? ((ventes.honoraires * coef) / ventes.volume) * 100 : 0
+    const tauxPrec = ventes && ventes.volumePrec ? ((ventes.honorairesPrec * coef) / ventes.volumePrec) * 100 : 0
+    const virgule = (x: number, d = 1) => x.toFixed(d).replace('.', ',')
+    const delai = ventes?.delaiOffreActe ?? null
+    const delaiPrec = ventes?.delaiOffreActePrec ?? null
     return (
       <>
-        <div className="pl-grille-kpi is-six">
-          {ventes ? <>
-            <Carte libelle={`Honoraires ${unite}`} genre="résultat" valeur={euros(ventes.honoraires)} ecartValeur={comparer ? ecart(ventes.honoraires, ventes.honorairesPrec) : null} detail={comparer ? `contre ${compact(ventes.honorairesPrec)}` : `${ventes.ventes} ventes`} onClick={() => setOnglet('ventes')}
-              courbe={<Courbe valeurs={ventes.parMois.slice(0, moisVisibles).map((m) => m.h)} prec={comparer ? ventes.parMoisPrec.map((m) => m.h) : undefined} couleur="#c5005f" max={Math.max(...ventes.parMois.map((m) => m.h), ...ventes.parMoisPrec.map((m) => m.h))} />} />
-            <Carte libelle="Ventes actées" genre="résultat" valeur={entier.format(ventes.ventes)} ecartValeur={comparer ? ecart(ventes.ventes, ventes.ventesPrec) : null} detail={comparer ? `contre ${ventes.ventesPrec}` : ''} onClick={() => setOnglet('ventes')}
-              courbe={<Courbe valeurs={ventes.parMois.slice(0, moisVisibles).map((m) => m.n)} prec={comparer ? ventes.parMoisPrec.map((m) => m.n) : undefined} couleur="#c5005f" max={Math.max(...ventes.parMois.map((m) => m.n), ...ventes.parMoisPrec.map((m) => m.n))} />} />
-            <Carte libelle="Actes déjà datés" genre="à venir" valeur={compact(ventes.actesDates.h)} detail={`${ventes.actesDates.n} compromis, dont ${ventes.actesDates.dIciTroisMois.n} d’ici trois mois`} onClick={() => setOnglet('ventes')} />
-          </> : <Indisponible quoi="Le registre des ventes" onReessayer={reessayer} />}
-          {mandats ? <>
-            <Carte libelle="Mandats rentrés" genre="avancé" valeur={entier.format(mandats.n)} ecartValeur={comparer ? ecart(mandats.n, mandats.nPrec) : null} detail={comparer ? `contre ${mandats.nPrec}` : ''} onClick={() => setOnglet('mandats')}
-              courbe={<Courbe valeurs={mandats.parMois.slice(0, moisVisibles).map((m) => m.n)} prec={comparer ? mandats.parMoisPrec : undefined} couleur="#2f5fa7" max={Math.max(...mandats.parMois.map((m) => m.n), ...mandats.parMoisPrec)} />} />
-            <Carte libelle="Exclusivité" genre="avancé" valeur={`${pourcent(mandats.exclusifs, mandats.n)} %`} ecartValeur={comparer ? ecartPoints(pourcent(mandats.exclusifs, mandats.n), pourcent(mandats.exclusifsPrec, mandats.nPrec)) : null} detail={comparer ? `contre ${pourcent(mandats.exclusifsPrec, mandats.nPrec)} %` : `${mandats.exclusifs} exclusifs`} onClick={() => setOnglet('mandats')}
-              courbe={<Courbe valeurs={mandats.parMois.slice(0, moisVisibles).map((m) => (m.n ? (m.ex / m.n) * 100 : 0))} couleur="#2f5fa7" max={80} />} />
-          </> : <Indisponible quoi="Le registre des mandats" onReessayer={reessayer} />}
-          {stock ? (
-            <Carte libelle="C.A potentiel du stock" genre="photo du jour" valeur={compact(stock.potentiel)} detail={`${stock.actifs} biens en vente, dont ${stock.sansHonoraires} sans honoraires saisis`} onClick={() => setOnglet('stock')} />
-          ) : <Indisponible quoi="Le stock" onReessayer={reessayer} />}
-        </div>
+        <section className="pl-essentiel" aria-label="L'essentiel">
+          <span className="pl-lib">L’essentiel · {enCours ? `${annee} à date` : annee}{comparer ? ` · comparé à ${libelleComparaison}` : ''}</span>
+          <div className="pl-grille-kpi is-douze">
+            {ventes ? <>
+              <Carte libelle={`Honoraires ${unite}`} genre="résultat" valeur={<Compteur valeur={ventes.honoraires} format={compact} />} ecartValeur={comparer ? ecart(ventes.honoraires, ventes.honorairesPrec) : null} detail={comparer ? `contre ${compact(ventes.honorairesPrec)}` : ''} onClick={() => setOnglet('ventes')}
+                courbe={<Courbe valeurs={ventes.parMois.slice(0, moisVisibles).map((m) => m.h)} prec={comparer ? ventes.parMoisPrec.map((m) => m.h) : undefined} couleur="#c5005f" max={Math.max(...ventes.parMois.map((m) => m.h), ...ventes.parMoisPrec.map((m) => m.h))} />} />
+              <Carte libelle="Actes signés" genre="résultat" valeur={<Compteur valeur={ventes.ventes} format={(x) => entier.format(Math.round(x))} />} ecartValeur={comparer ? ecart(ventes.ventes, ventes.ventesPrec) : null} detail={comparer ? `contre ${ventes.ventesPrec}` : ''} onClick={() => setOnglet('ventes')}
+                courbe={<Courbe valeurs={ventes.parMois.slice(0, moisVisibles).map((m) => m.n)} prec={comparer ? ventes.parMoisPrec.map((m) => m.n) : undefined} couleur="#c5005f" max={Math.max(...ventes.parMois.map((m) => m.n), ...ventes.parMoisPrec.map((m) => m.n))} />} />
+              <Carte libelle="Honoraires par acte" genre="résultat" valeur={<Compteur valeur={parActe} format={euros} />} ecartValeur={comparer ? ecart(parActe, parActePrec) : null} detail={comparer ? `contre ${euros(parActePrec)}` : `${unite}, en moyenne`} onClick={() => setOnglet('ventes')} />
+              <Carte libelle="Prix moyen de vente" genre="résultat" valeur={<Compteur valeur={prixMoyen} format={(x) => `${entier.format(Math.round(x))} €`} />} ecartValeur={comparer ? ecart(prixMoyen, prixMoyenPrec) : null} detail={comparer ? `contre ${entier.format(Math.round(prixMoyenPrec))} €` : 'prix de l’acte'} onClick={() => setOnglet('ventes')} />
+              <Carte libelle="Taux d’honoraires" genre="résultat" valeur={<Compteur valeur={taux} format={(x) => `${virgule(x)} %`} />} ecartValeur={comparer && tauxPrec ? { texte: `${taux >= tauxPrec ? '▲ +' : '▼ −'}${virgule(Math.abs(taux - tauxPrec))} pt`, bon: taux >= tauxPrec } : null} detail={`honoraires ${unite} ÷ prix de vente`} onClick={() => setOnglet('ventes')} />
+              <Carte libelle="Volume vendu" genre="résultat" valeur={<Compteur valeur={ventes.volume} format={(x) => `${virgule(x / 1e6)} M€`} />} ecartValeur={comparer ? ecart(ventes.volume, ventes.volumePrec) : null} detail={comparer ? `contre ${virgule(ventes.volumePrec / 1e6)} M€` : 'somme des prix de vente'} onClick={() => setOnglet('ventes')} />
+            </> : <Indisponible quoi="Le registre des ventes" onReessayer={reessayer} />}
+            {mandats ? <>
+              <Carte libelle="Mandats rentrés" genre="avancé" valeur={<Compteur valeur={mandats.n} format={(x) => entier.format(Math.round(x))} />} ecartValeur={comparer ? ecart(mandats.n, mandats.nPrec) : null} detail={comparer ? `contre ${mandats.nPrec}` : ''} onClick={() => setOnglet('mandats')}
+                courbe={<Courbe valeurs={mandats.parMois.slice(0, moisVisibles).map((m) => m.n)} prec={comparer ? mandats.parMoisPrec : undefined} couleur="#2f5fa7" max={Math.max(...mandats.parMois.map((m) => m.n), ...mandats.parMoisPrec)} />} />
+              <Carte libelle="Exclusivité" genre="avancé" valeur={<Compteur valeur={pourcent(mandats.exclusifs, mandats.n)} format={(x) => `${Math.round(x)} %`} />} ecartValeur={comparer ? ecartPoints(pourcent(mandats.exclusifs, mandats.n), pourcent(mandats.exclusifsPrec, mandats.nPrec)) : null} detail={comparer ? `contre ${pourcent(mandats.exclusifsPrec, mandats.nPrec)} %` : `${mandats.exclusifs} exclusifs`} onClick={() => setOnglet('mandats')}
+                courbe={<Courbe valeurs={mandats.parMois.slice(0, moisVisibles).map((m) => (m.n ? (m.ex / m.n) * 100 : 0))} couleur="#2f5fa7" max={80} />} />
+            </> : <Indisponible quoi="Le registre des mandats" onReessayer={reessayer} />}
+            {stock ? <>
+              <Carte libelle="Biens en vente" genre="photo du jour" valeur={<Compteur valeur={stock.actifs} format={(x) => entier.format(Math.round(x))} />} detail={`C.A potentiel ${compact(stock.potentiel)}`} onClick={() => setOnglet('stock')} />
+              <Carte libelle="Biens engagés" genre="photo du jour" valeur={<Compteur valeur={stock.engages} format={(x) => entier.format(Math.round(x))} />} detail={`${stock.sousOffre} sous offre · ${stock.sousCompromis} sous compromis`} onClick={() => setOnglet('stock')} />
+            </> : <Indisponible quoi="Le stock" onReessayer={reessayer} />}
+            {ventes ? <>
+              <Carte libelle="Actes déjà datés" genre="à venir" valeur={<Compteur valeur={ventes.actesDates.h} format={compact} />} detail={`${ventes.actesDates.n} compromis, dont ${ventes.actesDates.dIciTroisMois.n} d’ici trois mois`} onClick={() => setOnglet('ventes')} />
+              <Carte libelle="De l’offre à l’acte" genre="délai" valeur={delai != null ? <Compteur valeur={delai} format={(x) => `${Math.round(x)} j`} /> : '–'} ecartValeur={comparer && delai != null && delaiPrec ? { texte: `${delai <= delaiPrec ? '▼ −' : '▲ +'}${Math.abs(delai - delaiPrec)} j`, bon: delai <= delaiPrec } : null} detail={comparer && delaiPrec ? `contre ${delaiPrec} j · médiane` : 'médiane des ventes'} onClick={() => setOnglet('ventes')} />
+            </> : null}
+          </div>
+        </section>
 
         <div className="pl-deux">
           <section className="pl-carte pl-bloc" aria-label="Entrées et sorties par mois">

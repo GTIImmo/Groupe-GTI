@@ -242,6 +242,8 @@ export type VentesCalcul = {
   delaiOffreCompromis: number | null
   delaiCompromisActe: number | null
   delaisPrec: [number | null, number | null]
+  delaiOffreActe: number | null
+  delaiOffreActePrec: number | null
   parMois: Array<{ n: number; h: number }>
   parMoisPrec: Array<{ n: number; h: number }>
   actesDates: { n: number; h: number; parMois: Map<string, { n: number; h: number }>; dIciTroisMois: { n: number; h: number } }
@@ -272,6 +274,8 @@ export function calculerVentes(source: Exclude<PilotageSources['ventes'], Error>
     mediane(lignes.filter((l) => estDate(l.date_offre) && estDate(l.date_compromis)).map((l) => jours(l.date_offre as string, l.date_compromis as string)).filter((x) => x >= 0)),
     mediane(lignes.filter((l) => estDate(l.date_compromis) && estDate(l.date_vente)).map((l) => jours(l.date_compromis as string, l.date_vente as string)).filter((x) => x >= 0)),
   ]
+  const delaiTotal = (lignes: RegistreDossierRow[]) =>
+    mediane(lignes.filter((l) => estDate(l.date_offre) && estDate(l.date_vente)).map((l) => jours(l.date_offre as string, l.date_vente as string)).filter((x) => x >= 0))
   // Actes déjà datés : compromis en cours dont l'acte est prévu à partir d'aujourd'hui (N et N-1 lus).
   const jour = aujourdhui()
   const vus = new Set<number>()
@@ -316,6 +320,7 @@ export function calculerVentes(source: Exclude<PilotageSources['ventes'], Error>
     ventes: n.length, ventesPrec: p.length,
     volume: somme(n.map((l) => l.montant)), volumePrec: somme(p.map((l) => l.montant)),
     delaiOffreCompromis: delais(n)[0], delaiCompromisActe: delais(n)[1], delaisPrec: delais(p),
+    delaiOffreActe: delaiTotal(n), delaiOffreActePrec: delaiTotal(p),
     parMois: mois(n), parMoisPrec: mois(pAnnee),
     actesDates: actes, negos, attribue: somme(negos.map((x) => x.part)), agences,
   }

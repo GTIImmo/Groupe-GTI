@@ -778,3 +778,20 @@ Mesures : honoraires par négociateur = honoraires de la vente × pourcentage de
 et honoraires > 20 % du prix écartés), 2026 contre 2025 ; mandats et portefeuille au négociateur de la fiche ; agences : actes et prix
 moyen 2026 (somme des actes = 284, cohérente), mandats et exclusifs 2026 à date, disponibles du jour. Code de la page exécuté hors ligne
 sur 5 réglages (tri, unité, agences) : sans erreur.
+
+## 27. Retour au VRAI écran — étape 1 codée (03/11) : l'essentiel en 12 chiffres, le relief, le mouvement
+
+Frédéric : « reprends le pilotage actuel avec mes dernières idées », puis « vas-y » sur le plan en 6 étapes (1 socle visuel et
+essentiel · 2 classements négos / agences · 3 offres et compromis · 4 stock juste, fonction + 2 colonnes, accord · 5 acquéreurs,
+fonction en base, accord · 6 prévisionnel). Les maquettes sont mises de côté.
+**Étape 1, dans `PilotageScreen.tsx`, `pilotage.css`, `lib/pilotage.ts`** — lecture seule, rien en base :
+- Vue d'ensemble : la bande « L'essentiel » remplace les 6 cartes — honoraires, actes, honoraires par acte, prix moyen de vente, taux
+  d'honoraires (honoraires ÷ prix, en HT ou TTC), volume vendu, mandats rentrés, exclusivité, biens en vente (avec le C.A potentiel),
+  biens engagés, actes déjà datés, délai de l'offre à l'acte (médiane, nouveau calcul `delaiOffreActe`). Chacun ouvre son onglet.
+- `Compteur` : chaque chiffre défile jusqu'à sa valeur (1,1 s). Entrée en cascade des blocs à chaque changement d'onglet, d'année ou
+  d'agence ; barres qui poussent, colonnes qui se lèvent, courbes qui se dévoilent ; cartes qui se soulèvent au survol ; point vert
+  « données de la nuit » qui pulse. Tout est coupé si l'appareil demande moins de mouvement.
+- Grille de 12 : 6, 4, 3 ou 2 colonnes selon la largeur (jamais une carte seule sur sa ligne).
+Contrôles : `npm run build` vert ; serveur de démonstration local (données inventées) à 1 440 px (4 colonnes, 0 débordement), 375 px
+(2 colonnes, 0 débordement), les 4 onglets rendus sans bloc en erreur ; les seules erreurs console sont l'adresse
+`/api/hektor-diffusion/broadcasts` absente du serveur de démonstration. ⏳ À voir sur les vraies données après le push.
