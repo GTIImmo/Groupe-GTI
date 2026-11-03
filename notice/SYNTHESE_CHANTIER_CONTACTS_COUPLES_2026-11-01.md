@@ -892,3 +892,25 @@ est « couple » et son résumé « nommé » (la nuit du 02→03/11 : aujourd'h
   ⚠ La réponse vide ne peut pas servir de confirmation : un futur geste automatique devra RELIRE `refCouple` pour savoir si c'est fait.
 - ⏰ **À vérifier le 03/11 après la nuit** : notre couche doit voir 467326 en COUPLE, conjoint = 467325 (état « vide » → bouton
   « Compléter le conjoint »), et la coquille ne doit plus apparaître comme une fiche à part dans l'annuaire.
+
+## 40. ⛔ LA NUIT N'A PAS VU LE RATTACHEMENT : LE LISTING DES CONTACTS SUIT UNE AUTRE DATE *(03/11 matin, « Le run a dû finir, vérifie »)*
+
+- **Le run** : fini à 06:18:23, code 0. Étapes couples vertes (« conjoints » : 1 902 conjoints nommés envoyés) ; notaires du registre
+  des ventes **1 280** (« jamais couple ») et chez Supabase **1 071 notaires, AUCUN avec un couple** → le contrôle du §24 est ✅.
+  Hors chantier : Matterport en échec 2/2 cette nuit (**401 « unauthorized »** de leur API ; il passait le 02/11), non bloquant.
+- ⛔ **EA32621 n'est PAS à jour chez nous** : Supabase montre encore 10260586 en `personne_seule` (`couple_json.etat = aucun`) et
+  10260585 sans lien de couple. Le miroir local (`data/hektor.sqlite`) porte toujours `date_maj = 2025-12-22` pour les deux.
+- **Chez Hektor, tout y est** (`ContactById`, lecture, 2 requêtes) : refCouple 467326 / 467326, et la `datemaj` a BIEN bougé —
+  **467326 : 2026-11-02 23:47:29, 467325 : 2026-11-02 23:48:01**.
+- ⭐ **LA CAUSE (code, `sync_raw.py`, `sync_contact_listing_variant`)** : la nuit lit `ListContacts` trié par **`dateLastTraitement`
+  DESC** et s'arrête à la première page entièrement sous le curseur. Les 3 pages lues à 03:51 vont de 29/10 à 02/11 18:52:57 et
+  **ne contiennent pas 467326** alors que sa `datemaj` (23:47) est plus récente que tout ce qu'elles portent → le rattachement
+  **change `datemaj` mais PAS `dateLastTraitement`**. La fiche ne remonte jamais en tête du tri : la nuit ne la relira pas, ni
+  ce soir ni plus tard. Même famille que le mandat saisi après coup (mémoire « le run de nuit ne relit le détail que si… »).
+- ⚠ **CE QUE ÇA CHANGE POUR LES 680** : un rattachement fait chez Hektor n'arrive chez nous que si on RELIT les deux fiches
+  nous-mêmes. Un futur geste devra donc relire `ContactById` des DEUX fiches (porteuse ET coquille) puis recalculer le couple —
+  c'est ce que fait déjà `phase2/sync/refresh_contact_inproc.py` (détail → normalisation → couche → conjoint → push), fiche par
+  fiche. ⚠ Et un couple créé par un négociateur DIRECTEMENT dans Hektor est sans doute invisible de la même façon (non mesuré).
+- **Pour réparer EA32621** (écriture chez nous, en attente d'accord) : `refresh_contact_inproc.py --contact-id 10260585`, PUIS
+  `--contact-id 10260586` (la coquille d'abord, pour que la porteuse trouve sa place 2). Rien chez Hektor : 2 lectures `ContactById`.
+  Le miroir local étant réparé, la nuit suivante recalculera aussi la nature des deux fiches.
