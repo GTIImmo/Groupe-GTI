@@ -1528,3 +1528,8 @@ empreintes : distribution `1d1409b5…`, droits `4e1acaa5…`. File des travaux 
 de mandant y sont). ⚠ Les lignes non commitées de l'autre session touchent la signature Youtrust et la génération du document de mandat :
 ce sont des travaux du service **Documents**. Redémarrer SEULEMENT Actions charge notre geste sans mettre leur code en service là où il
 s'exécuterait.
+
+**✅ GESTE 3 — REDÉMARRÉ par Frédéric** : vérifié par l'heure des processus — ⚠ **les QUATRE services** ont démarré à 17:49:02-04 (Actions
+17:49:02, Admin 17:49:03, Documents 17:49:04, SyncLight 17:49:04), après l'écriture du worker (16:45:03). Le geste est donc chargé. ⚠ Mais
+les lignes NON COMMITÉES de l'autre session (signature Youtrust, mandataire du document de mandat) sont désormais EN SERVICE dans
+Documents : à signaler à l'autre session (Youtrust reste derrière son interrupteur ; la génération du document de mandat, elle, passe par ce code).
