@@ -263,7 +263,7 @@ import type { ViewerItem } from './BienvuViewer'
 import { BvIcon } from './BienvuIcons'
 import RedacteurPanel from './RedacteurPanel'
 // Listing Annonces V2 (lot 1, 03/11/2026) -- derriere VITE_APP_ANNONCES_LISTE_V2, eteint par defaut.
-import { APP_ANNONCES_LISTE_V2, AnnonceFiltrePresence, AnnonceOnglets, AnnoncePresence, AnnoncePubCells, AnnoncePubColgroup, AnnoncePubHead, AnnoncePubReperes, AnnonceV2Cells, AnnonceV2Colgroup, AnnonceV2Head, AnnonceV2Reperes, PORTAIL_ID_COMMUN, PORTAILS_PUB, demanderRubriqueAOuverture, portailsDeLaLigne, prendreRubriqueDemandee } from './AnnoncesListeV2'
+import { APP_ANNONCES_LISTE_V2, AnnonceCarteMobile, AnnonceFiltrePresence, AnnonceOnglets, AnnoncePresence, AnnoncePubCells, AnnoncePubColgroup, AnnoncePubHead, AnnoncePubReperes, AnnonceV2Cells, AnnonceV2Colgroup, AnnonceV2Head, AnnonceV2Reperes, PORTAIL_ID_COMMUN, PORTAILS_PUB, demanderRubriqueAOuverture, portailsDeLaLigne, prendreRubriqueDemandee } from './AnnoncesListeV2'
 import type { EtatCase, TriAnnonces } from './AnnoncesListeV2'
 import ContactSearchFields, { contactSearchValueToInput, defaultContactSearchValue, type ContactSearchFieldsValue } from './ContactSearchFields'
 import './contact-new.css'
@@ -24715,6 +24715,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             onOpenDetailPage={openDossierDetailPage}
             onOpenLightweightDetail={openLightweightDetailImport}
             onOpenRequestModal={openRequestModal}
+            vignetteV2={APP_ANNONCES_LISTE_V2}
           />
         ) : screen === 'estimations' ? (
           <MobileMandatCards
@@ -40043,6 +40044,8 @@ function MobileMandatCards(props: {
   onOpenDetailPage: (id: number) => void
   onOpenLightweightDetail: (item: MandatRecord) => void
   onOpenRequestModal: (id: number, role?: 'nego' | 'pauline') => void
+  /** lot 5 (03/11) : la carte « version retenue », pour l'ecran Annonces seulement */
+  vignetteV2?: boolean
 }) {
   const title = props.mode === 'estimation' ? 'Estimations' : 'Annonces actives'
   if (props.mandats.length === 0) {
@@ -40081,6 +40084,36 @@ function MobileMandatCards(props: {
           item.register_source_kind ?? 'current',
           index,
         ].join('-')
+        if (props.vignetteV2 && props.mode === 'active') {
+          // Meme regle de statut que la liste du bureau (MandatsScreen, avStatut).
+          const statutMobile = item.is_brouillon ? 'Brouillon'
+            : item.is_provisional ? (item.provisional_status === 'error' ? 'Erreur de création' : 'En création…')
+            : item.vente_id ? 'Vendu'
+            : hasCompromisEnCours(item) ? 'Sous compromis'
+            : hasOffreAchatEnCours(item) ? 'Offre reçue'
+            : null
+          const ouvrir = () => (isLightweight ? props.onOpenLightweightDetail(item) : props.onOpenDetailPage(item.app_dossier_id))
+          return (
+            <AnnonceCarteMobile
+              key={cardKey}
+              item={item}
+              photoUrl={listingPreviewUrl(item.images_preview_json, item.photo_url_listing)}
+              typeLabel={libelleTypeBien(item)}
+              negoName={commercialDisplay(item)}
+              transactionLabel={statutMobile}
+              validated={isValidationApproved(item.validation_diffusion_state)}
+              onAction={!isLightweight ? () => props.onOpenRequestModal(item.app_dossier_id, 'nego') : undefined}
+              primaryLabel={primaryLabel}
+              onOpen={ouvrir}
+              extra={(isLightweight || item.numero_mandat) ? (
+                <span className="av3m-extra">
+                  {isLightweight ? <span className={`mobile-detail-chip ${hasExportedDetail ? 'is-ready' : ''}`}>{hasExportedDetail ? 'Détail prêt' : 'Détail à charger'}</span> : null}
+                  <PastilleFicheMandatDe item={item} />
+                </span>
+              ) : null}
+            />
+          )
+        }
         return (
           <article key={cardKey} className={`mobile-list-card ${isLightweight ? 'is-lightweight-listing' : ''} ${hasExportedDetail ? 'has-detail-cache' : ''}`}>
             <div className="mobile-card-top">

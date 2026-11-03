@@ -65,17 +65,6 @@ function initiales(nom: string) {
   return nom.split(/\s+/).filter(Boolean).map((mot) => mot.charAt(0)).join('').slice(0, 2).toUpperCase()
 }
 
-// « Tatiana CROZET » -> « Tatiana C. » (03/11) : le prenom entier, l'initiale du NOM (les mots tout en
-// majuscules). Un nom sans prenom reconnaissable reste entier. Le nom complet reste dans l'info-bulle.
-function nomCourt(nom: string) {
-  const mots = nom.split(/\s+/).filter(Boolean)
-  const estNom = (mot: string) => mot.length > 1 && mot === mot.toUpperCase() && /\p{L}/u.test(mot)
-  const prenom = mots.filter((mot) => !estNom(mot))
-  const noms = mots.filter(estNom)
-  if (!prenom.length || !noms.length) return nom
-  return `${prenom.join(' ')} ${noms[0].charAt(0)}.`
-}
-
 const ICONE = {
   photo: 'M4 8h3l2-3h6l2 3h3v11H4zM12 16.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4z',
   lieu: 'M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21zM12 12a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z',
@@ -193,20 +182,15 @@ export type AnnonceV2CellsProps = {
 
 type BienPrixProps = Pick<AnnonceV2CellsProps, 'item' | 'photoUrl' | 'typeLabel' | 'negoName' | 'transactionLabel'>
 
-// Les cellules Bien et Prix : les MEMES dans la vue Liste et la vue Publicite.
-function BienPrixCells(p: BienPrixProps) {
-  const { item } = p
-  // Une vignette affichee compte au moins pour une photo (garde : listes sans `images_preview_json_app`).
-  const nbPhotos = Math.max(nombrePhotos(item), p.photoUrl ? 1 : 0)
-  const titreVide = !String(item.titre_bien ?? '').trim() || String(item.titre_bien).startsWith('[Sans titre]')
-  const prix = euros(item.prix)
-  const manques = [
-    titreVide ? 'sans titre' : null,
-    prix ? null : 'sans prix',
-    nbPhotos < 5 ? `${nbPhotos} photo${nbPhotos > 1 ? 's' : ''}` : null,
-    p.negoName ? null : 'sans négociateur',
-  ].filter(Boolean) as string[]
+// Le statut de l'annonce, TOUJOURS affiche (Actif compris), a cote du type de bien (03/11 soir).
+function statutAffiche(item: MandatRecord, transactionLabel: string | null) {
+  const statut = transactionLabel ?? (String(item.statut_annonce ?? '').trim() || 'Actif')
+  const statutCls = /compromis/i.test(statut) ? 'compromis' : /offre/i.test(statut) ? 'offre' : /vendu/i.test(statut) ? 'vendu' : /brouillon|cr[ée]ation/i.test(statut) ? 'brouillon' : /actif/i.test(statut) ? 'actif' : 'autre'
+  return { statut, statutCls }
+}
 
+// Le dernier changement de prix (bureau ET telephone).
+function changementDePrix(item: MandatRecord) {
   const ancien = euros(item.price_change_last_old_value)
   const variation = (() => {
     const a = Number(item.price_change_last_old_value)
@@ -223,36 +207,55 @@ function BienPrixCells(p: BienPrixProps) {
   })()
   const changeLe = jourLocal(item.price_change_last_detected_at)
   const ilYa = changeLe ? Math.max(0, Math.round((Date.now() - changeLe.getTime()) / 86400000)) : null
-  const aUnMandat = Boolean(String(item.numero_mandat ?? '').trim())
+  return { ancien, variation, ilYa }
+}
+
+// La periode du mandat (bureau ET telephone).
+function periodeDuMandat(item: MandatRecord) {
+  const debut = jourLocal(item.mandat_date_debut)
+  const fin = jourLocal(item.mandat_date_fin)
+  if (!debut || !fin || fin <= debut) return null
+  const maintenant = Date.now()
+  const pct = Math.max(0, Math.min(100, Math.round(((maintenant - debut.getTime()) / (fin.getTime() - debut.getTime())) * 100)))
+  const reste = Math.ceil((fin.getTime() - maintenant) / 86400000)
+  const etat = reste < 0 ? 'echu' : reste <= 30 ? 'bientot' : ''
+  const texte = reste < 0 ? `Échu depuis ${-reste} j` : reste <= 30 ? `Reste ${reste} j` : `Reste ${Math.round((fin.getTime() - maintenant) / MOIS_MS)} mois`
+  return { debut: dateCourte(debut), fin: dateCourte(fin), pct, etat, texte }
+}
+
+// Les cellules Bien et Prix : les MEMES dans la vue Liste et la vue Publicite.
+function BienPrixCells(p: BienPrixProps) {
+  const { item } = p
+  // Une vignette affichee compte au moins pour une photo (garde : listes sans `images_preview_json_app`).
+  const nbPhotos = Math.max(nombrePhotos(item), p.photoUrl ? 1 : 0)
+  const titreVide = !String(item.titre_bien ?? '').trim() || String(item.titre_bien).startsWith('[Sans titre]')
+  const prix = euros(item.prix)
+  // 03/11 soir (maquette « version retenue ») : l'etiquette « A completer » disparait -- chaque manque se
+  // voit A SA PLACE : « Titre a saisir », pastille photos ambre « n/5 », « Prix a saisir », « Non affecte ».
+  const peuDePhotos = nbPhotos < 5
+  const { statut, statutCls } = statutAffiche(item, p.transactionLabel)
+  const { ancien, variation, ilYa } = changementDePrix(item)
   const nego = p.negoName && p.negoName !== '-' ? p.negoName : null
   const agence = String(item.agence_nom ?? '').replace(/^Groupe GTI\s*/i, '').trim() || '—'
 
   return (
     <>
       <td className="av3-l">
-        <div className="av3-bien">
+        {/* 03/11 soir -- maquette « version retenue » de Frederic : la photo entiere (96 x 72), seulement le
+            nombre de photos ; la VILLE en surtitre ; le titre ; le type de bien + le STATUT ; le negociateur
+            en entier. Le n° et le type de mandat sont passes dans la colonne Mandat. */}
+        <div className="av3-bien av3-vignette">
           <div className="av3-photo">
             {p.photoUrl ? <img src={p.photoUrl} alt="" loading="lazy" /> : null}
-            <span className="av3-nimg" title={`${nbPhotos} photo${nbPhotos > 1 ? 's' : ''}`}><Svg d={ICONE.photo} strokeWidth={2.4} />{nbPhotos}</span>
+            <span className={`av3-nimg${peuDePhotos ? ' peu' : ''}`} title={`${nbPhotos} photo${nbPhotos > 1 ? 's' : ''}${peuDePhotos ? ' — 5 conseillées' : ''}`}><Svg d={ICONE.photo} strokeWidth={2.4} />{peuDePhotos ? `${nbPhotos}/5` : nbPhotos}</span>
           </div>
           <div className="av3-txt">
-            <span className="av3-titre" title={`${item.titre_bien ?? ''}${item.hektor_annonce_id ? ` — annonce ${item.hektor_annonce_id}` : ''}`}>{item.titre_bien}</span>
-            <span className="av3-tags">
-              <span className="av3-ids">{aUnMandat ? `N° ${item.numero_mandat}` : 'Sans mandat'}</span>
-              <span className="av3-tag">{p.typeLabel}</span>
-              {item.mandat_type ? <span className={`av3-tag${/exclu/i.test(item.mandat_type) ? ' excl' : ''}`}>{item.mandat_type.charAt(0) + item.mandat_type.slice(1).toLowerCase()}</span> : null}
-              {p.transactionLabel ? <span className="av3-tag transac">{p.transactionLabel}</span> : null}
-              {manques.length ? <span className="av3-tag manque" title={`À compléter : ${manques.join(', ')}`}>À compléter{manques.length === 1 ? ` · ${manques[0]}` : ` · ${manques.length}`}</span> : null}
-            </span>
-            <span className="av3-ligne">
-              {/* 03/11 (Frederic) : UNE ligne comme avant, mais le negociateur n'est plus coupe : la ville
-                  seule (elle cede la place, « … »), le negociateur en forme courte « Tatiana C. » qui tient
-                  toujours. Code postal, nom complet et agence restent dans les info-bulles. */}
-              {item.ville ? <span className="av3-lieu" title={`${item.ville}${item.code_postal ? ` ${item.code_postal}` : ''}`}><Svg d={ICONE.lieu} strokeWidth={2.2} /><span className="av3-ville">{item.ville}</span></span> : null}
-              <span className="av3-nego" title={nego ? `${nego} · agence ${agence}` : 'Non affecté'}>
-                <span className={`av3-ini${nego ? '' : ' vide'}`} aria-hidden="true">{nego ? initiales(nego) : '—'}</span>
-                <span className={`av3-nego-nom${nego ? '' : ' vide'}`}>{nego ? nomCourt(nego) : 'Non affecté'}</span>
-              </span>
+            {item.ville ? <span className="av3-surtitre" title={`${item.ville}${item.code_postal ? ` ${item.code_postal}` : ''}`}><Svg d={ICONE.lieu} strokeWidth={2.4} />{item.ville}</span> : null}
+            <span className={`av3-titre${titreVide ? ' vide' : ''}`} title={`${titreVide ? 'Pas de titre chez Hektor' : item.titre_bien ?? ''}${item.hektor_annonce_id ? ` — annonce ${item.hektor_annonce_id}` : ''}`}>{titreVide ? 'Titre à saisir' : item.titre_bien}</span>
+            <span className="av3-meta">{p.typeLabel}<span className={`av3-statut ${statutCls}`}>{statut}</span></span>
+            <span className="av3-negoligne" title={nego ? `${nego} · agence ${agence}` : 'Pas de négociateur'}>
+              <span className={`av3-ini${nego ? '' : ' vide'}`} aria-hidden="true">{nego ? initiales(nego) : '—'}</span>
+              <span className={`av3-nego-nom${nego ? '' : ' vide'}`}>{nego ?? 'Non affecté'}</span>
             </span>
           </div>
         </div>
@@ -272,6 +275,75 @@ function BienPrixCells(p: BienPrixProps) {
   )
 }
 
+// ── Telephone (lot 5, 03/11 soir -- maquette « telephone » validee avec la version retenue) ─────────
+// Grande photo (nombre de photos seul), ville en surtitre, titre, prix + ecart, type + statut, la ligne
+// du mandat (bouclier + n°, type, reste, antenne), le negociateur en entier, deux boutons.
+export function AnnonceCarteMobile(p: {
+  item: MandatRecord
+  photoUrl: string | null
+  typeLabel: string
+  negoName: string | null
+  transactionLabel: string | null
+  validated: boolean
+  actionLabel?: string | null
+  onAction?: () => void
+  primaryLabel: string
+  onOpen: () => void
+  extra?: ReactNode
+}) {
+  const { item } = p
+  const nbPhotos = Math.max(nombrePhotos(item), p.photoUrl ? 1 : 0)
+  const peuDePhotos = nbPhotos < 5
+  const titreVide = !String(item.titre_bien ?? '').trim() || String(item.titre_bien).startsWith('[Sans titre]')
+  const prix = euros(item.prix)
+  const { ancien, variation, ilYa } = changementDePrix(item)
+  const { statut, statutCls } = statutAffiche(item, p.transactionLabel)
+  const aUnMandat = Boolean(String(item.numero_mandat ?? '').trim())
+  const bouclier = !aUnMandat ? { cls: 'sans', marque: 'M9 12h6', titre: 'Pas encore de numéro de mandat' } : p.validated ? { cls: 'ok', marque: 'm9 12 2 2 4-4', titre: 'Mandat validé par la Direction' } : { cls: 'attente', marque: 'M12 9v3M12 15h.01', titre: 'Mandat pas encore validé par la Direction' }
+  const periode = periodeDuMandat(item)
+  const portails = Number(item.nb_portails_actifs ?? 0) || 0
+  const diffusable = String(item.diffusable ?? '').trim() === '1'
+  const antenne = !diffusable ? 'non' : portails > 0 ? 'enligne' : 'zero'
+  const nego = p.negoName && p.negoName !== '-' ? p.negoName : null
+  return (
+    <article className="av3 av3m-carte">
+      <button type="button" className="av3m-photo" onClick={p.onOpen} aria-label="Ouvrir la fiche">
+        {p.photoUrl ? <img src={p.photoUrl} alt="" loading="lazy" /> : null}
+        <span className={`av3m-nimg${peuDePhotos ? ' peu' : ''}`}><Svg d={ICONE.photo} strokeWidth={2.4} />{peuDePhotos ? `${nbPhotos}/5` : nbPhotos}</span>
+      </button>
+      <div className="av3m-corps">
+        {item.ville ? <span className="av3m-ville"><Svg d={ICONE.lieu} strokeWidth={2.4} />{item.ville}</span> : null}
+        <span className={`av3m-titre${titreVide ? ' vide' : ''}`}>{titreVide ? 'Titre à saisir' : item.titre_bien}</span>
+        <div className="av3m-ligne">
+          <div>
+            <div className={`av3m-prix${prix ? '' : ' vide'}`}>{prix ?? 'Prix à saisir'}</div>
+            {ancien && variation ? <div className="av3m-avant"><s>{ancien}</s> <b className={variation.baisse ? 'baisse' : ''}>{variation.texte}</b>{ilYa != null ? ` · il y a ${ilYa} j` : ''}</div> : null}
+          </div>
+          <span className="av3m-meta">{p.typeLabel}<span className={`av3-statut ${statutCls}`}>{statut}</span></span>
+        </div>
+        <div className="av3m-mandat">
+          <span className={`av3-mnum ${bouclier.cls}`} title={bouclier.titre}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={ICONE.bouclier} /><path d={bouclier.marque} /></svg>
+            {aUnMandat ? `N° ${item.numero_mandat}` : 'Sans mandat'}
+          </span>
+          {aUnMandat && item.mandat_type ? <span className={`av3-mtype${/exclu/i.test(item.mandat_type) ? ' excl' : ''}`}>{item.mandat_type.charAt(0) + item.mandat_type.slice(1).toLowerCase()}</span> : null}
+          {periode ? <span className={`av3-reste ${periode.etat}`}>{periode.texte}</span> : null}
+          <span className={`av3-antenne av3m-antenne ${antenne}`} role="img" aria-label={!diffusable ? 'Pas diffusable' : portails > 0 ? `En ligne sur ${portails} portail${portails > 1 ? 's' : ''}` : 'Diffusable, sur aucun portail'}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true"><path d={ICONE.antenne} />{antenne === 'non' ? <path d="M4 4l16 16" strokeWidth={2.4} /> : null}</svg>
+            {antenne === 'enligne' ? <span className="nb">{portails}</span> : null}
+          </span>
+        </div>
+        <span className="av3m-nego"><span className={`av3-ini${nego ? '' : ' vide'}`} aria-hidden="true">{nego ? initiales(nego) : '—'}</span>{nego ?? 'Non affecté'}</span>
+        {p.extra}
+        <div className="av3m-actions">
+          {p.onAction ? <button type="button" className="av3m-action" onClick={p.onAction}>{p.actionLabel ?? 'Action métier'}</button> : null}
+          <button type="button" className="av3m-ouvrir" onClick={p.onOpen}>{p.primaryLabel}<Svg d={ICONE.fleche} strokeWidth={2.4} /></button>
+        </div>
+      </div>
+    </article>
+  )
+}
+
 export function AnnonceV2Cells(p: AnnonceV2CellsProps) {
   const { item } = p
   const aUnMandat = Boolean(String(item.numero_mandat ?? '').trim())
@@ -283,17 +355,7 @@ export function AnnonceV2Cells(p: AnnonceV2CellsProps) {
   // Un numero sans fiche chez Hektor (03/11) : la pastille rouge REMPLACE le bouclier, qui disait « Validé ».
   const ficheMandat = useFicheMandat(item)
 
-  const debut = jourLocal(item.mandat_date_debut)
-  const fin = jourLocal(item.mandat_date_fin)
-  const periode = (() => {
-    if (!debut || !fin || fin <= debut) return null
-    const maintenant = Date.now()
-    const pct = Math.max(0, Math.min(100, Math.round(((maintenant - debut.getTime()) / (fin.getTime() - debut.getTime())) * 100)))
-    const reste = Math.ceil((fin.getTime() - maintenant) / 86400000)
-    const etat = reste < 0 ? 'echu' : reste <= 30 ? 'bientot' : ''
-    const texte = reste < 0 ? `Échu depuis ${-reste} j` : reste <= 30 ? `Reste ${reste} j` : `Reste ${Math.round((fin.getTime() - maintenant) / MOIS_MS)} mois`
-    return { debut: dateCourte(debut), fin: dateCourte(fin), pct, etat, texte }
-  })()
+  const periode = periodeDuMandat(item)
 
   const portails = Number(item.nb_portails_actifs ?? 0) || 0
   const diffusable = String(item.diffusable ?? '').trim() === '1'
@@ -305,18 +367,22 @@ export function AnnonceV2Cells(p: AnnonceV2CellsProps) {
     <>
       <BienPrixCells item={item} photoUrl={p.photoUrl} typeLabel={p.typeLabel} negoName={p.negoName} transactionLabel={p.transactionLabel} />
       <td>
+        {/* 03/11 soir (maquette « version retenue ») : la colonne dit TOUT du mandat -- le bouclier (valide
+            ou non) porte le n°, puis le type de mandat, puis la periode (dates au survol de la barre). */}
         <div className="av3-mandat">
           {ficheMandat ? <PastilleFicheMandat etat={ficheMandat} /> : (
-            <span className={`av3-bouclier ${bouclier.cls}`} title={bouclier.titre}>
+            <span className={`av3-mnum ${bouclier.cls}`} title={bouclier.titre} aria-label={`${bouclier.label}${aUnMandat ? ` — mandat n° ${item.numero_mandat}` : ''}`}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={ICONE.bouclier} /><path d={bouclier.marque} /></svg>
-              {bouclier.label}
+              {aUnMandat ? `N° ${item.numero_mandat}` : 'Sans mandat'}
             </span>
           )}
+          {aUnMandat && item.mandat_type ? (
+            <span className={`av3-mtype${/exclu/i.test(item.mandat_type) ? ' excl' : ''}`}>{item.mandat_type.charAt(0) + item.mandat_type.slice(1).toLowerCase()}</span>
+          ) : null}
           {periode ? (
             <>
-              <span className="av3-dates"><span>{periode.debut}</span><span>{periode.fin}</span></span>
-              <span className={`av3-barre ${periode.etat}`} aria-hidden="true"><i style={{ width: `${periode.pct}%` }} /></span>
-              <span className={`av3-reste ${periode.etat}`}>{periode.texte}</span>
+              <span className={`av3-barre ${periode.etat}`} title={`Du ${periode.debut} au ${periode.fin}`}><i style={{ width: `${periode.pct}%` }} /></span>
+              <span className={`av3-reste ${periode.etat}`} title={`Du ${periode.debut} au ${periode.fin}`}>{periode.texte}</span>
             </>
           ) : null}
         </div>
