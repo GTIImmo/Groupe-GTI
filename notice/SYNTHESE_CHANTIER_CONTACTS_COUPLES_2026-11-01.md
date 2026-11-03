@@ -1533,3 +1533,31 @@ s'exécuterait.
 17:49:02, Admin 17:49:03, Documents 17:49:04, SyncLight 17:49:04), après l'écriture du worker (16:45:03). Le geste est donc chargé. ⚠ Mais
 les lignes NON COMMITÉES de l'autre session (signature Youtrust, mandataire du document de mandat) sont désormais EN SERVICE dans
 Documents : à signaler à l'autre session (Youtrust reste derrière son interrupteur ; la génération du document de mandat, elle, passe par ce code).
+
+## 54. PIÈCE G — L'ESSAI RÉEL : LA CHAÎNE ENTIÈRE MARCHE *(03/11 ~17:50-18:00, « Oui, sans bien »)*
+
+- **Cran** `contacts_couples_ajout = admin` (16:51:52 UTC).
+- **Fiche fictive Un créée par l'écran** (compte formation, Propriétaire, personne seule, `@example.com`, e-mail RGPD décoché — vérifié dans la
+  charge : `send_rgpd_email = false`) : **20000036 ↔ 606177** ; nature calculée et envoyée (`nature_des_fiches.py` + envoi de la fiche) →
+  `personne_seule`.
+- **Par l'écran (Chrome de Frédéric, admin)** : fiche Un → le bouton **« + Ajouter un conjoint »** est là → « Un nouveau contact » : ESSAI AJOUT /
+  Deux / e-mail fictif / RGPD décoché → « Ajouter le conjoint ».
+- **Le déroulé, relevé au journal du travail** : création de Deux (**20000037 ↔ 606178**, 16:56:10 → 16:56:28) ; `link_hektor_conjoint` pris par
+  le service actions à 16:56:29 ; contexte négociateur (compte formation) ; **avant** : `606177 → ""`, `606178 → ""` ; **une** requête de
+  transformation (réponse `{"success":"ok"}`) ; **preuve au 1er essai** : `606177 → 606177`, `606178 → 606177` ; biens : 0 (aucun, comme prévu) ;
+  **relecture des deux fiches en 41 s** (conjoint 14,4 s, personne 13,6 s, nature 8,2 s, deux envois) ; travail `done` à 16:57:26.
+- **Chez nous après** : 20000036 `couple`, résumé « nommé » sur 20000037 (prénom Deux), 20000037 `conjoint` rattaché à 20000036.
+  **À l'écran** : la fiche Un montre la pastille « Couple » et les deux onglets Un / Deux ; le bouton a disparu (normal : elle n'est plus seule).
+- **Nettoyage par l'app** : Un supprimée (« tout le foyer ») puis Deux supprimée → 2 travaux `done` ; **0 reste** chez Supabase, dans la couche
+  locale et dans le miroir. File : 0. Onglet fermé ; les deux onglets de Frédéric non touchés.
+
+**Défauts vus pendant l'essai, NON corrigés (à décider)** :
+1. **La civilité devient « _ »** après la transformation (Hektor), et l'écran l'affiche devant le nom : « _ Un ESSAI AJOUT ». Le traducteur des
+   codes de civilité (P1) ne connaît pas ce « _ ». Cosmétique, mais visible.
+2. **La fenêtre est brute** : le choix « nouveau / existante » ne montre pas lequel est actif, la case RGPD est énorme et son libellé passe sous
+   les boutons ; un clic de formulaire automatique ne la décochait pas (un vrai clic, si). À reprendre au propre (style des autres fenêtres).
+3. **Après l'envoi, l'écran a ouvert la fiche du nouveau conjoint** (le suivi de la création le fait) : le message de réussite de la fenêtre
+   n'est pas vu. Sans gravité, mais pas voulu.
+4. Le nouveau conjoint a été affiché « Non affecté · Groupe GTI Firminy » côté négociateur (compte de la session, pas celui de la personne) :
+   à vérifier — il devrait sans doute prendre le négociateur de la personne.
+**Non éprouvé en réel** : le choix « une fiche existante », les biens reliés, un négociateur, le téléphone.
