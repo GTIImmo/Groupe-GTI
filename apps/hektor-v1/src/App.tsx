@@ -259,6 +259,8 @@ import { BienvuViewer } from './BienvuViewer'
 import type { ViewerItem } from './BienvuViewer'
 import { BvIcon } from './BienvuIcons'
 import RedacteurPanel from './RedacteurPanel'
+// Listing Annonces V2 (lot 1, 03/11/2026) -- derriere VITE_APP_ANNONCES_LISTE_V2, eteint par defaut.
+import { APP_ANNONCES_LISTE_V2, AnnonceV2Cells, AnnonceV2Colgroup, AnnonceV2Head, AnnonceV2Reperes, demanderRubriqueAOuverture, prendreRubriqueDemandee } from './AnnoncesListeV2'
 import ContactSearchFields, { contactSearchValueToInput, defaultContactSearchValue, type ContactSearchFieldsValue } from './ContactSearchFields'
 import './contact-new.css'
 import RechercheGlobale, { type GroupeRecherche } from './RechercheGlobale'
@@ -8413,6 +8415,39 @@ function actionMenuHelperText(typeLabel: string, stateLabel: string) {
   return 'Ouvrir cette action'
 }
 
+// Listing V2 (03/11/2026) : ce que dit le bouton « Action » en pilule. MEME regle que le ton
+// d'aujourd'hui (actionTriggerToneFromRequest + priorite validation > baisse > annulation de
+// buildMandatActionModel) ; on ajoute seulement le MOT, et « Acceptée » pendant 48 h (decision du 03/11).
+type ActionPillKind = 'neutral' | 'sent' | 'progress' | 'fix' | 'refused' | 'accepted'
+const ACTION_PILL_ICON: Record<ActionPillKind, string> = {
+  neutral: 'M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z',
+  sent: 'M4 12 20 4l-6 16-3-7z',
+  progress: 'M12 7v5l3 2',
+  fix: 'M4 20h4L19 9l-4-4L4 16z',
+  refused: 'M7 7l10 10M17 7 7 17',
+  accepted: 'm5 12.5 4.2 4.2L19 7',
+}
+function actionPillState(requests: DiffusionRequest[], appDossierId: number): { kind: ActionPillKind; type: string; state: string } {
+  const types: Array<[BusinessRequestType, string]> = [['demande_diffusion', 'Validation'], ['demande_baisse_prix', 'Baisse prix'], ['demande_annulation_mandat', 'Annulation']]
+  for (const [type, label] of types) {
+    const request = latestActionRequest(requests, appDossierId, type)
+    const status = request?.request_status ?? null
+    if (status === 'pending') return { kind: 'sent', type: label, state: 'Envoyée' }
+    if (status === 'in_progress') return { kind: 'progress', type: label, state: 'En cours' }
+    if (status === 'waiting_commercial') return { kind: 'fix', type: label, state: 'À corriger' }
+    if (status === 'refused') return { kind: 'refused', type: label, state: 'Refusée' }
+  }
+  const limite = Date.now() - 48 * 3600 * 1000
+  for (const [type, label] of types) {
+    const acceptee = requests.find((item) => item.app_dossier_id === appDossierId
+      && normalizeRequestType(item.request_type) === type
+      && item.request_status === 'accepted'
+      && Date.parse(item.processed_at ?? '') >= limite)
+    if (acceptee) return { kind: 'accepted', type: label, state: 'Acceptée' }
+  }
+  return { kind: 'neutral', type: 'Mandat', state: 'Actions' }
+}
+
 function actionTriggerToneFromRequest(request: DiffusionRequest | null | undefined): ActionTriggerTone {
   const status = request?.request_status ?? null
   if (status === 'pending' || status === 'in_progress') return 'creation'
@@ -12642,6 +12677,8 @@ function MandatActionMenu(props: {
   currentRequest?: DiffusionRequest | null
   onOpenRequestModal: (id: number, role?: 'nego' | 'pauline', requestType?: BusinessRequestType) => void
   onOpenDiffusionModal: (id: number) => void
+  /** Listing V2 (03/11) : declencheur en pilule animee. Absent = bouton « Action » d'avant. */
+  variant?: 'pill'
 }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const actionModel = buildMandatActionModel({
@@ -12655,11 +12692,37 @@ function MandatActionMenu(props: {
   })
 
   if (!actionModel.hasMandat) {
+    if (props.variant === 'pill') {
+      return (
+        <span className="act t-none" title="Pas encore de numéro de mandat">
+          <span className="act-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M7 3h7l4 4v14H7zM12 11v6M9 14h6" /></svg></span>
+          <span className="act-txt"><span className="act-type">Pas de N°</span><span className="act-state">Sans mandat</span></span>
+        </span>
+      )
+    }
     return <span className="table-note">Sans mandat</span>
   }
 
+  const pill = props.variant === 'pill' ? actionPillState(props.requests, props.mandat.app_dossier_id) : null
+
   return (
     <div className="action-menu-shell">
+      {pill ? (
+        <button
+          className={`act t-${pill.kind}`}
+          type="button"
+          title={`${pill.type} · ${pill.state}`}
+          aria-label={`Actions disponibles — ${pill.type} : ${pill.state}`}
+          onClick={(event) => {
+            event.stopPropagation()
+            setMenuOpen((value) => !value)
+          }}
+        >
+          <span className="act-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={ACTION_PILL_ICON[pill.kind]} /></svg></span>
+          <span className="act-txt"><span className="act-type">{pill.type}</span><span className="act-state">{pill.state}</span></span>
+          <svg className="act-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+        </button>
+      ) : (
       <button
         className={`ghost-button button-subtle action-menu-trigger action-menu-trigger-${actionModel.triggerTone}`}
         type="button"
@@ -12671,6 +12734,7 @@ function MandatActionMenu(props: {
         <span className="action-menu-trigger-dot" aria-hidden="true" />
         <span>Action</span>
       </button>
+      )}
       {menuOpen ? (
         <div
           className="action-menu-dialog-backdrop"
@@ -26835,6 +26899,9 @@ function MandatsScreen(props: {
   mode?: 'active' | 'estimation'
 }) {
   const isEstimationMode = props.mode === 'estimation'
+  // Listing V2 (lot 1, 03/11/2026) : seulement le mode Annonces. L'ecran Estimations partage ce
+  // composant et ne change PAS.
+  const listeV2 = APP_ANNONCES_LISTE_V2 && !isEstimationMode
   const listingTotalLabel = `${new Intl.NumberFormat('fr-FR').format(props.mandatsTotal)} ${props.totalNoun ?? (isEstimationMode ? 'estimations' : 'annonces actives')}`
   // Badge « acquéreurs correspondants non proposés » — comptage batch pour la page courante.
   const [acqCounts, setAcqCounts] = useState<Map<number, RapprochementCount>>(new Map())
@@ -26868,7 +26935,7 @@ function MandatsScreen(props: {
     return () => { cancelled = true }
   }, [isEstimationMode, eligibleIdsKey])
   return (
-    <section className={`panel-grid ${isEstimationMode ? 'estim-v2' : 'panel-grid-active-listing annonces-v2'}`}>
+    <section className={`panel-grid ${isEstimationMode ? 'estim-v2' : `panel-grid-active-listing annonces-v2${listeV2 ? ' av3' : ''}`}`}>
       {rapproNotice ? (
         <div className="av-notice" role="status" onClick={() => setRapproNotice(null)}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8v5M12 16h.01" /></svg>
@@ -26916,7 +26983,7 @@ function MandatsScreen(props: {
         <div className={`table-wrap listing-table-wrap ${isEstimationMode ? 'estim-v2-tablewrap' : 'listing-table-active'} ${props.loading ? 'is-refreshing' : ''}`}>
           {props.loading ? <div className="listing-loading-banner">{APP_BIENVU_ENABLED ? <BienvuLoader label="Chargement…" /> : 'Chargement du listing...'}</div> : null}
           <table>
-            {!isEstimationMode ? (
+            {listeV2 ? <AnnonceV2Colgroup /> : !isEstimationMode ? (
               <colgroup>
                 <col style={{ width: '112px' }} />{/* photo (vignette 100px) */}
                 <col />{/* bien — flexible */}
@@ -26936,7 +27003,7 @@ function MandatsScreen(props: {
               </colgroup>
             )}
             <thead>
-              {isEstimationMode ? (
+              {listeV2 ? <AnnonceV2Head /> : isEstimationMode ? (
                 <tr><th>Photo</th><th>Bien &amp; propriétaire <span className="si">↕</span></th><th>Valeur estimée <span className="si">↕</span></th><th>Stade <span className="si">↕</span></th><th>Actions</th></tr>
               ) : (
                 <tr><th className="av-pad-l">Photo</th><th>Bien</th><th>Négociateur</th><th>Statut</th><th>Diffusion</th><th className="av-right">Vues 30 j</th><th className="av-pad-r av-right">Actions</th></tr>
@@ -27033,7 +27100,45 @@ function MandatsScreen(props: {
                         else props.onOpenDetailPage(item.app_dossier_id)
                       }}
                     >
-                      {isEstimationMode ? (
+                      {listeV2 ? (
+                        <AnnonceV2Cells
+                          item={item}
+                          photoUrl={listingPreviewUrl(item.images_preview_json, item.photo_url_listing)}
+                          typeLabel={libelleTypeBien(item)}
+                          negoName={avNegoName}
+                          transactionLabel={item.is_brouillon ? 'Brouillon' : avStatut.c ? avStatut.l : null}
+                          validated={isValidationApproved(item.validation_diffusion_state)}
+                          isLightweight={isLightweight}
+                          actionSlot={isLightweight ? (
+                            <button className="lightweight-row-action" data-kind={rowActionKind} type="button" onClick={(event) => { event.stopPropagation(); props.onOpenLightweightDetail(item) }} title={rowActionTitle} aria-label={rowActionStrong}>
+                              <LightweightActionGlyph kind={rowActionKind} />
+                            </button>
+                          ) : item.is_provisional ? (
+                            item.provisional_status === 'error'
+                              ? <button type="button" className="av-prov-dismiss" title="Retirer cette création échouée" onClick={(event) => { event.stopPropagation(); handleDismissProvisional(item.creation_token) }}>Retirer</button>
+                              : <span className="act t-none"><span className="act-txt"><span className="act-type">Envoi</span><span className="act-state">En création…</span></span></span>
+                          ) : (
+                            <MandatActionMenu mandat={item} role="nego" requests={props.requests} onOpenRequestModal={props.onOpenRequestModal} onOpenDiffusionModal={props.onOpenDiffusionModal} variant="pill" />
+                          )}
+                          showRappro={avShowRappro}
+                          rapproEligible={avEligible}
+                          rapproBadge={avBadge}
+                          rapproTotal={avCount?.n_total ?? 0}
+                          onRappro={() => props.onOpenRapprochement?.(item)}
+                          canEdit={!isLightweight && !item.is_provisional}
+                          onEdit={() => {
+                            demanderRubriqueAOuverture('lebien')
+                            props.onSelectMandat(item.app_dossier_id)
+                            props.onOpenDetailPage(item.app_dossier_id)
+                          }}
+                          onOpen={() => {
+                            if (item.is_provisional) return
+                            props.onSelectMandat(item.app_dossier_id)
+                            if (isLightweight) props.onOpenLightweightDetail(item)
+                            else props.onOpenDetailPage(item.app_dossier_id)
+                          }}
+                        />
+                      ) : isEstimationMode ? (
                         <>
                           <td>
                             <div className="ev2-thumb">
@@ -27197,6 +27302,7 @@ function MandatsScreen(props: {
               })}
             </tbody>
           </table>
+          {listeV2 ? <AnnonceV2Reperes /> : null}
         </div>
       </section>
     </section>
@@ -31075,7 +31181,9 @@ function CkChaineLignes({ lignes }: { lignes: AffaireLedgerRow[] }) {
 
 function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   const detailVariant = props.detailVariant ?? 'annonce'
-  const [activeTab, setActiveTab] = useState<string>('synthese')
+  // Listing V2 (03/11) : le bouton « Modifier » de la ligne depose 'lebien' juste avant d'ouvrir.
+  // Sans demande (cas de toujours), la fiche s'ouvre sur 'synthese' comme avant.
+  const [activeTab, setActiveTab] = useState<string>(() => prendreRubriqueDemandee() ?? 'synthese')
   const [estimEditorOpen, setEstimEditorOpen] = useState(false)
   const [estimRefreshKey, setEstimRefreshKey] = useState(0)
   const [showAutres, setShowAutres] = useState(false)
