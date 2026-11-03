@@ -325,3 +325,10 @@ numéros de passerelles (0c) et les droits (4).
 - Filtre Paper : **147** annonces, aucune de la page sur Paper (requete `absentDe` juste cote serveur), 1 s. Filtre Site GTI : **267**, toutes en bande. « Retirer le filtre » : 705.
 - 2 lignes du filtre Paper en bande « Pas de mandat » : 63419 et 63339, diffusable = 1 SANS numero de mandat (fiches « [Sans titre] », type « 0 ») -- comportement voulu. ⚠ Le libelle « Type 0 » vient de `libelleTypeBien` (aussi dans la Liste) : a regarder a part.
 - Onglet de Frederic remis sur « Liste ».
+
+## 03/11 soir -- TITRES DES ANNONCES : audit fait, SORTI en chantier a part (decision de Frederic)
+
+- **Mesure (705 actives)** : 179 « [Sans titre] <n° dossier> » (fabrique par `phase2/pipeline/view_generale.py` l. 283 quand Hektor n'a ni `titre` ni `texte_principal_titre`) -- 122 sans mandat non diffusables, 29 avec mandat non diffusables, **19 diffusables deja EN LIGNE** (ex. 59109, 52931, 52231). 54 titres tout en MAJUSCULES, 86 de plus de 70 caracteres.
+- **Hektor relu (API, lecture seule)** : 59109 et 52931 ont `textes[].titre` = `" "` / `""` alors que la description est remplie ; temoin 61713 a son titre. -> le titre n'a JAMAIS ete saisi, notre synchro ne perd rien.
+- **Pistes proposees, rien code** : A titre de secours a l'affichage (« Maison a <ville> », italique) ; B carte « Titre a saisir » (179) pour faire corriger par la fiche ; C titre redige depuis la description, valide par le nego, envoye chez Hektor (ecriture Hektor) ; D casse normale pour les titres TOUT EN MAJUSCULES (formule prototypee : minuscules + majuscule en tete et apres « ! . – », sigles T2/F3/GTI gardes, villes recapitalisees ; limites : accents absents non restituables, lieux hors liste, affichage seul).
+- ⛔ **Frederic, 03/11 : « laisse, c'est un chantier a part ».** Ne pas le reprendre dans ce chantier.
