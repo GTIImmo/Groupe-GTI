@@ -676,3 +676,7 @@ seconde, montant, validité). Sur les offres 2026 hors essais :
 - Réponse du vendeur : **2 jours** en médiane ; 94 réponses en moins d'une heure (saisies après coup).
 - 14 offres attendent une réponse (90,6 % du prix en médiane) ; 340 / 369 portent une validité.
 ⛔ La maquette v3 dit « refus > 30 % : prix sans doute trop haut » — **c'est faux**, à retirer.
+
+**03/11 — Frédéric : les mandants de VA6482 sont de VRAIS CLIENTS. « Attends. »** Rien n'est supprimé sur 24113. Le bien d'un
+vrai mandat exclusif (18787) porte donc les essais du 22-23/10 : vente d'essai 23358 (statut « Vendu »), compromis 50137, offres
+d'essai, et des contacts ESSAI ajoutés à ses mandants. ⏳ En attente de sa décision.
