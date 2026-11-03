@@ -1464,3 +1464,9 @@ e-mail ou un téléphone (vu sur les fictives : recopiés).
 **À trancher par Frédéric** : (a) un seul choix « nouveau conjoint », ou aussi « une fiche existante » (recherche par nom, comme Hektor) ;
 (b) qui a le bouton (admins d'abord, comme les autres crans) ; (c) les liens au bien du nouveau conjoint (rien, ou les mêmes que la personne) ;
 (d) l'ordre : ce geste d'abord, les 680 ensuite avec le même travail.
+
+**Décisions de Frédéric (03/11 soir)** : (a) **les deux** — un nouveau conjoint ET une fiche existante ; (b) **les deux** — compris comme
+« admins et négociateurs », c'est-à-dire le même cran que « Compléter le conjoint » (`contacts_couples_modif = on`, droit de gérer les contacts),
+à confirmer ; (c) **les mêmes biens** que la personne ; (d) **« tu m'expliques »** — l'ordre est expliqué, pas encore tranché.
+⭐ Pour (c), le geste existe déjà : `link_hektor_mandant` (`selectnouveauproprio_sup`, l. 17652), qui sait dire « déjà relié » par l'API
+avant d'écrire — il ne doublera donc pas un lien que Hektor aurait posé lui-même au rattachement.
