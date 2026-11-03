@@ -1266,3 +1266,20 @@ Hektor/Supabase, 0 écriture), les points lourds REVÉRIFIÉS par moi (marqués 
   pour finir avant 04:00), soit quelques centaines par nuit pendant le rattrapage (~1-1,6 s par fiche). Les annonces confiées au
   run suivent (~0,7 par contact) : ~200 → **~7 min de plus** pour le run. Le plafond sur les annonces devient un simple
   filet de sécurité (valeur haute), pas un réglage de rythme.
+
+## 46. LE PASSAGE À BLANC EST ÉCRIT ET ÉPROUVÉ HORS LIGNE *(03/11, « Oui, à blanc d'abord » ; commit 214a83e)*
+
+- `phase2/sync/liste_contacts_nuit.py` (neuf, dormant, rien ne l'appelle) : lit `ListContacts` triée par numéro, page après page ;
+  vitesse pour CE processus (`--intervalle-ms`, défaut 1 000 = le frein actuel ; refus sous 300 ms) ; pause toutes les 500 pages
+  (30 s) ; `--heure-limite` (HH:MM) ; UNE seule tentative de connexion ; arrêt net au premier refus (sortie 3) ou si Hektor ne
+  répond plus après la patience habituelle 2/8/30 s (sortie 4) ; reprise par NUMÉRO (relit la dernière page, recule tant
+  qu'elle commence après le dernier numéro lu, 60 pages au plus) ; son carnet `liste_nuit_contact`, son tour `liste_nuit_tour`,
+  ses pages sous `nuit_liste_contacts_<scope>` ; rapport JSON dans `logs/liste_contacts_nuit/` (numéros seulement) : fiches à
+  relire, dont jamais lues, dates `0000`, annonces liées, absents du miroir, négociateurs qui changeraient (principaux couples
+  de valeurs), liens de couple et états archivés différents.
+- `phase2/sync/test_liste_contacts_nuit.py` : **TOUT VERT** — tour complet ; plafond puis reprise après 25 départs sous la
+  position (1 page de recul, **aucun contact sauté**) ; création vue au tour suivant ; refus 403 (arrêt net, reprise gardée,
+  aucune page après le refus) ; heure limite (00:20, 01:56, 23:10 la veille) ; rapport ; ⭐ **TÉMOIN : carnet du run, curseur
+  et pages `list_contacts_*` INTACTS** ; 3 VRAIES pages du 23/06 relues (60 contacts, ordre respecté).
+- ⏰ **Reste : le passage à blanc RÉEL chez Hektor** (~8 500 requêtes) — moment et vitesse à décider par Frédéric. Il crée les
+  deux tables dans `data/hektor.sqlite` (additif). Rien d'autre n'est touché.
