@@ -1000,3 +1000,8 @@ est « couple » et son résumé « nommé » (la nuit du 02→03/11 : aujourd'h
   en 6 h), heures de pointe **4,5 à 5,7 requêtes/s** (29/05 07h : 20 528 en une heure) ; liste du 23/06 : pointes à
   **11 à 12,7 pages/s**. Aucun bannissement à l'époque — le premier est du 19/08 (1,5 req/s pendant 4 h). ⚠ Le pare-feu a pu
   se durcir depuis : ces chiffres disent ce qui passait AVANT, pas ce qui passe aujourd'hui.
+- **Le rythme du RUN DE NUIT avant / après le frein du 07/09 (journaux `.tmp/full_pipeline_*.log`, août → septembre)** :
+  la lecture Hektor du run (`phase1 sync_raw`) prenait **~30 min** chaque nuit jusqu'au 07/09 (05:30 → 06:00), puis **~1 h 17 à
+  1 h 20** dès le 08/09 (05:00 → 06:17), frein d'1 s par requête posé (Lot B). Même travail ⇒ avant ≈ **2,5 requêtes/s**, sans
+  qu'aucun bannissement ne vienne du run lui-même (ceux d'août-septembre : rattrapage, sondes, connexions, objets supprimés).
+  À ce rythme : liste des actifs **~57 min**, archivés **~61 min** → les deux tiendraient dans le créneau 23:20 – 02:00.
