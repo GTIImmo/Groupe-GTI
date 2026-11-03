@@ -644,3 +644,35 @@ redescendu 61398 en « Bien actif » de lui-même, donc le geste « Actif » n'a
 `diffusable = 1`, voir la mémoire du 23/10). Relecture `refresh_console_data` `e50c0b62` terminée à 08:06:24 :
 `Actif`, `diffusable 0`, plus de compromis sur la fiche Hektor. ⬜ PEREIRA reste négociatrice de 61398 (aucun
 geste « sans négociateur » dans l'app) — ✅ DÉCIDÉ le 03/11 par Frédéric : « on la laisse ».
+
+## 21. Les offres d'achat, re-mesurées — et les transactions d'ESSAI encore vivantes (03/11, lecture seule)
+
+**Les essais faussent le pilotage.** Transactions `present_in_hektor` d'essai encore au registre (repérées par les mandants
+« test » au mot entier — jamais TESTUD —, les acquéreurs TEST / ESSAI / CODEX et les e-mails `example.invalid`) :
+- **VA6482 / 24113** (bien d'essai des transactions depuis le 22/10 ; ⚠ ses mandants portent AUSSI la famille PHILIBERT,
+  mandat EXCLUSIF 18787, statut **Vendu**, diffusable 1) : vente **23358** (23/10), compromis **50137**, offre acceptée **33116**,
+  offres refusées **32849** (acquéreur « TEST GTI », 25/06), **33109, 33110, 33112, 33114, 33115** ;
+- **24933** (« Test SELL AND SIGNE ») : offres refusées 33037, 33038, 33042, 33043, 33046, 33048, proposée 33050 ;
+- **62774** (bac à sable, mandat clos le 21/10) : compromis annulé 50048, offres refusées 33026, 33027 ;
+- **62965** (« CLAUDE TESTCLAUDE ») : offres refusées 33119, 33120 ;
+- **23287** (mandant « test GERPHAGNON », acquéreur « test DOUBLE TEST ») : compromis 19133 + **vente 5537, 25/11/2024, 300 000 €**
+  — comptée dans le C.A 2024 ;
+- **41559** (VRAI mandant Christian CHAPON) : offre acceptée 20588, acquéreur « Test vv GERPHAGNON », sans date.
+- ⚠ **À NE PAS supprimer sans vérification** : **42965**, vente 3226 du 25/02/2025, 202 000 €, mandante réelle Marie-Thérèse
+  JOUVE, acquéreur fiché « test » (#412576) + un second acquéreur — sans doute une VRAIE vente mal saisie. 42195 (HAMELIN, 2018) :
+  faux positif.
+- 2026 : **16 des 76 offres refusées** sont des essais ; **Firminy : 8 de ses refus** (24933, 62965).
+- Un compromis ou une vente **supprimés chez Hektor disparaissent du registre** (50147, 50128-50135 : 0 ligne). Une offre : aucun
+  geste dans l'app (« une offre ne se supprime pas », note du 22/10) ; Hektor a un bouton `delete_offre_suivi` (relevé du 28/08,
+  jamais éprouvé).
+
+**Les offres refusées ne sont PAS des refus du vendeur.** `propositions_json` porte l'historique de chaque offre (type, date à la
+seconde, montant, validité). Sur les offres 2026 hors essais :
+- **54 des 61 « refusées » ont été ACCEPTÉES d'abord** (`proposition > accepte > refus`) ; **3 seulement** sont un refus direct.
+  Le « taux de refus » est en réalité un taux d'**offres tombées après acceptation** (désistement, financement, ou remplacée).
+- 30 refusées sont sur un bien où une autre offre a été acceptée le même jour ou après (concurrence / remplacement).
+- Les refusées valent 96,1 % du prix du mandat en médiane, les acceptées 94,7 % : le prix n'est pas la cause.
+- **Aucune contre-proposition** n'est saisie dans Hektor (1 tour par offre) : une contre-offre devient une NOUVELLE offre.
+- Réponse du vendeur : **2 jours** en médiane ; 94 réponses en moins d'une heure (saisies après coup).
+- 14 offres attendent une réponse (90,6 % du prix en médiane) ; 340 / 369 portent une validité.
+⛔ La maquette v3 dit « refus > 30 % : prix sans doute trop haut » — **c'est faux**, à retirer.
