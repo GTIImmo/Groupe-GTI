@@ -643,4 +643,4 @@ SUPPRIMÉ par l'app (job `delete_hektor_compromis` `5eb1bdc9`, `done`, `redescen
 redescendu 61398 en « Bien actif » de lui-même, donc le geste « Actif » n'a PAS été joué (il remet
 `diffusable = 1`, voir la mémoire du 23/10). Relecture `refresh_console_data` `e50c0b62` terminée à 08:06:24 :
 `Actif`, `diffusable 0`, plus de compromis sur la fiche Hektor. ⬜ PEREIRA reste négociatrice de 61398 (aucun
-geste « sans négociateur » dans l'app).
+geste « sans négociateur » dans l'app) — ✅ DÉCIDÉ le 03/11 par Frédéric : « on la laisse ».
