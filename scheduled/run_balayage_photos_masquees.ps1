@@ -49,6 +49,13 @@
 #   de masquees est de 0,7 % contre 3,6 % sur les vivantes, et les 44 277 archives
 #   + historiques couteraient 44 NUITS pour ~700 photos. `--scope archive` reste
 #   disponible A LA MAIN.
+#   ⭐ 03/11/2026 -- FREDERIC ROUVRE LES VENDUS/CLOS PUIS LES ARCHIVES, a 1 000 par
+#     nuit, en gardant la mise a jour des trois. Rien ne change ICI : l'empileur lit
+#     APP_BALAYAGE_PHOTOS_PERIMETRES=vivant,historique,archive dans .env (le controle
+#     du matin aussi), et APP_BALAYAGE_PHOTOS_REVOIR_ABSENTES=1 fait revoir d'abord
+#     les annonces dont une photo a ete declaree disparue depuis notre visite.
+#     Retirer les deux lignes de .env = retour exact au seul parc vivant.
+#     La decision et l'audit sont ecrits dans l'en-tete de l'empileur (HORS_AUTO).
 #
 # LES DEUX REFUS, ET ILS SORTENT EN 1 (convention du projet : un refus doit se VOIR
 #   au Planificateur et dans check_gti_health) :

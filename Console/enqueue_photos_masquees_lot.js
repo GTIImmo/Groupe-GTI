@@ -93,6 +93,45 @@ const HORS_AUTO = {
   brouillon:  "chantier 6 : leurs 956 photos sont deja sur le serveur, et loadDossier ne connait pas cet index.",
 };
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// 03/11/2026 -- FREDERIC ROUVRE LES VENDUS/CLOS ET LES ARCHIVES       (decision)
+// ═══════════════════════════════════════════════════════════════════════════════
+// « Apres la fin du rattrapage des photos masquees actives, faire les archivees,
+//   en gardant la mise a jour des actives + archivees en meme temps » -- et
+//   « d'abord l'index des vendus/clos avant archive ». A 1 000 par nuit.
+// POURQUOI MAINTENANT : le 03/11 il ne reste que 559 vivantes ; des le 04/11 le lot
+//   n'aurait plus porte que 0 a 4 annonces par nuit (16 journaux), et les 44 020
+//   non vivantes jamais visitees (8 957 vendus/clos + 35 063 archives) seraient
+//   perdues a la coupure. La raison du 19/10 (aucun risque de PUBLICATION) reste
+//   vraie ; c'est la valeur d'ARCHIVE qui l'emporte, et le quota ne bouge pas.
+// L'AUDIT DU 03/11 (lecture seule) :
+//   · loadDossier connait les trois index, et sync_hektor_photos est dans
+//     READ_ONLY_ARCHIVE_JOB_TYPES : une archive se LIT, ne se modifie pas ;
+//   · les trois cles sont la meme serie (app_dossier_id renomme), et AUCUNE
+//     annonce n'est dans deux index a la fois (0, mesure du 03/11) ;
+//   · une non vivante n'a pas de derive (cloudWanted, regle G.8) : pas de coffre ;
+//   · depuis la lecture admin du 29/10 un travail prend ~2 s, vivant ou non
+//     (seule archive mesuree en admin : 2,0 s pour 14 photos).
+// INTERRUPTEUR : APP_BALAYAGE_PHOTOS_PERIMETRES (dans .env, lu aussi par le
+//   controle du matin qui rejoue ce script en --dry-run). Absent = comme avant,
+//   le seul parc vivant. « vivant,historique,archive » = l'ordre de Frederic.
+//   ⚠ Il ne joue QUE sans --scope : un --scope explicite garde son sens a la main.
+const PERIMETRES_AUTO = String(process.env.APP_BALAYAGE_PHOTOS_PERIMETRES || "").split(",")
+  .map((s) => s.trim()).filter(Boolean);
+
+// 03/11/2026 -- LES ANNONCES DONT UNE PHOTO A ETE DECLAREE DISPARUE DEPUIS NOTRE
+//   DERNIERE VISITE. L'entretien de 20:00 marque `present_in_hektor = false` toute
+//   photo que le flux API ne liste plus -- or ce flux ne liste QUE les visibles :
+//   une photo MASQUEE chez Hektor (pas depuis l'app) y ressemble trait pour trait a
+//   une supprimee, et sort du panneau (loadConsolePhotos filtre present_in_hektor).
+//   Les verrous 7 et 8 ne protegent que les masquees que NOUS connaissons deja.
+//   Revisiter l'annonce tranche : la lecture Console voit les deux listes, et
+//   upsertConsolePhotos remet present_in_hektor = true a une masquee retrouvee.
+//   Mesure du 03/11 : 28 annonces / 248 photos marquees en 14 jours (~2 par
+//   nuit), dont 22 / 199 jamais revues depuis. Cout : quelques travaux par nuit.
+//   INTERRUPTEUR : APP_BALAYAGE_PHOTOS_REVOIR_ABSENTES=1. Absent = comme avant.
+const REVOIR_ABSENTES = String(process.env.APP_BALAYAGE_PHOTOS_REVOIR_ABSENTES || "").trim() === "1";
+
 // ⚠⚠ LA MARGE DE FUSEAU HORAIRE -- ET ELLE N'EST PAS DECORATIVE.
 // Le miroir garde `hektor_annonce.date_maj` en heure LOCALE sans fuseau ecrit
 // ('2026-02-20 13:07:26'), et `app_console_job.finished_at` est en UTC. Les
@@ -172,6 +211,14 @@ function parseArgs() {
   }
   if (!SOURCES[args.scope]) {
     throw new Error("--scope doit valoir : " + Object.keys(SOURCES).join(", "));
+  }
+  // 03/11 : sans --scope, l'interrupteur dit quels perimetres enchainer.
+  args.perimetres = [args.scope];
+  if (!argv.includes("--scope") && PERIMETRES_AUTO.length) {
+    const inconnus = PERIMETRES_AUTO.filter((p) => !SOURCES[p]);
+    if (inconnus.length) throw new Error("APP_BALAYAGE_PHOTOS_PERIMETRES inconnu(s) : " + inconnus.join(", "));
+    if (PERIMETRES_AUTO[0] !== "vivant") throw new Error("APP_BALAYAGE_PHOTOS_PERIMETRES doit commencer par vivant (la vitrine passe en premier)");
+    args.perimetres = [...new Set(PERIMETRES_AUTO)];
   }
   if (!Number.isFinite(args.limit) || args.limit <= 0) throw new Error("--limit doit etre un nombre > 0");
   return args;
@@ -273,7 +320,6 @@ async function refusEventuel(args, enFile) {
 
 async function main() {
   const args = parseArgs();
-  const source = SOURCES[args.scope];
 
   if (HORS_AUTO[args.scope] && !argv.includes("--scope")) {
     throw new Error("perimetre hors balayage automatique : " + HORS_AUTO[args.scope]);
@@ -316,48 +362,102 @@ async function main() {
 
   const dates = lireDatesDuMiroir();
 
-  // ── LE PERIMETRE ──────────────────────────────────────────────────────────
-  const annonces = [];
-  await lirePages(source.table + "?select=" + source.idColumn + ",hektor_annonce_id",
-    source.idColumn, (row) => {
-      if (row[source.idColumn] == null || !row.hektor_annonce_id) return;
-      annonces.push({ dossier: Number(row[source.idColumn]), annonce: String(row.hektor_annonce_id) });
-    });
+  // 03/11 : les photos declarees disparues depuis notre derniere visite (voir REVOIR_ABSENTES).
+  const absentesDepuis = new Map();   // annonce -> dernier marquage
+  if (REVOIR_ABSENTES) {
+    await lirePages("app_console_photo?select=id,hektor_annonce_id,absent_depuis&present_in_hektor=is.false"
+      + "&absent_depuis=not.is.null", "id", (row) => {
+        if (!row.hektor_annonce_id || !row.absent_depuis) return;
+        const a = String(row.hektor_annonce_id);
+        const t = Date.parse(row.absent_depuis);
+        if (Number.isFinite(t) && (!absentesDepuis.has(a) || t > absentesDepuis.get(a))) absentesDepuis.set(a, t);
+      });
+  }
 
-  // ── LE LOT : LES MODIFIEES D'ABORD, LES JAMAIS-VISITEES ENSUITE ───────────
-  const aMettreAJour = [];
-  const jamaisVues = [];
+  // ── LES PERIMETRES, DANS L'ORDRE DE FREDERIC ──────────────────────────────
+  // ⚠ Une annonce ne se pose qu'UNE fois, meme si elle venait a figurer dans deux
+  //   index (0 le 03/11, mais rien ne l'interdit) : la premiere liste gagne.
+  const vues = new Set();
+  const parts = [];   // { perimetre, aRevoir, aMettreAJour, jamaisVues, ... }
   let sansDateAuMiroir = 0;
   let ecarteesErreur = 0;
   const nomsEcartees = [];
+  for (const perimetre of args.perimetres) {
+    const src = SOURCES[perimetre];
+    const annonces = [];
+    await lirePages(src.table + "?select=" + src.idColumn + ",hektor_annonce_id",
+      src.idColumn, (row) => {
+        if (row[src.idColumn] == null || !row.hektor_annonce_id) return;
+        annonces.push({ dossier: Number(row[src.idColumn]), annonce: String(row.hektor_annonce_id) });
+      });
+    // Hors vivant, les plus RECENTES d'abord : leurs photos sont les plus probablement
+    //   encore chez Hektor, et c'est ce qu'on perdrait en premier a la coupure.
+    if (perimetre !== "vivant") annonces.sort((x, y) => y.dossier - x.dossier);
 
-  for (const a of annonces) {
-    if (enFile.has(a.annonce)) continue;
-    if (erreurs.has(a.annonce)) {
-      ecarteesErreur += 1;
-      if (nomsEcartees.length < 20) nomsEcartees.push(a.annonce);
-      continue;
+    const part = { perimetre, annonces: annonces.length, aRevoir: [], aMettreAJour: [], jamaisVues: [], sansDate: 0 };
+    for (const a of annonces) {
+      if (vues.has(a.annonce)) continue;
+      vues.add(a.annonce);
+      if (enFile.has(a.annonce)) continue;
+      if (erreurs.has(a.annonce)) {
+        ecarteesErreur += 1;
+        if (nomsEcartees.length < 20) nomsEcartees.push(a.annonce);
+        continue;
+      }
+      if (!derniereVisite.has(a.annonce)) { part.jamaisVues.push(a); continue; }
+      const derniere = derniereVisite.get(a.annonce);
+      if (absentesDepuis.has(a.annonce) && absentesDepuis.get(a.annonce) > derniere) { part.aRevoir.push(a); continue; }
+      const quand = dates.get(a.annonce);
+      if (quand == null) { part.sansDate += 1; sansDateAuMiroir += 1; continue; }
+      if (quand > derniere - MARGE_FUSEAU_MS) part.aMettreAJour.push(a);
     }
-    if (!derniereVisite.has(a.annonce)) { jamaisVues.push(a); continue; }
-    const quand = dates.get(a.annonce);
-    if (quand == null) { sansDateAuMiroir += 1; continue; }
-    if (quand > derniereVisite.get(a.annonce) - MARGE_FUSEAU_MS) aMettreAJour.push(a);
+    parts.push(part);
   }
 
-  const lot = aMettreAJour.concat(jamaisVues).slice(0, args.limit);
+  // ── LE LOT ────────────────────────────────────────────────────────────────
+  //   ⓪ les photos declarees disparues (tous perimetres)
+  //   ① les MODIFIEES, perimetre par perimetre (vivant, vendus/clos, archives)
+  //   ② les JAMAIS VISITEES, perimetre par perimetre
+  // Avec le seul perimetre vivant et sans ⓪, c'est EXACTEMENT l'ordre d'avant.
+  const aRevoir = parts.flatMap((p) => p.aRevoir);
+  const aMettreAJour = parts.flatMap((p) => p.aMettreAJour);
+  const jamaisVues = parts.flatMap((p) => p.jamaisVues);
+  const lot = aRevoir.concat(aMettreAJour, jamaisVues).slice(0, args.limit);
+  const annoncesDuPerimetre = parts.reduce((s, p) => s + p.annonces, 0);
+
+  // Ce que le lot prend dans chaque part -- calcule dans l'ordre de remplissage.
+  let placesRestantes = lot.length;
+  const prendre = (n) => { const k = Math.min(n, placesRestantes); placesRestantes -= k; return k; };
+  const prisRevoir = prendre(aRevoir.length);
+  const prisMaj = parts.map((p) => prendre(p.aMettreAJour.length));
+  const prisBalayage = parts.map((p) => prendre(p.jamaisVues.length));
 
   const bilan = {
-    scope: args.scope,
+    scope: args.perimetres.join(","),
     mode: args.dryRun ? "dry-run" : "applique",
     limite: args.limit,
-    annonces_du_perimetre: annonces.length,
+    annonces_du_perimetre: annoncesDuPerimetre,
     deja_visitees: derniereVisite.size,
     // les deux parts du lot, separees : c'est ce qui dit ou on en est
-    part_mise_a_jour_disponible: aMettreAJour.length,
+    // (03/11 : la « mise a jour » compte aussi les annonces a revoir apres une disparition)
+    part_mise_a_jour_disponible: aRevoir.length + aMettreAJour.length,
     part_balayage_disponible: jamaisVues.length,
     lot_pose: lot.length,
-    dont_mise_a_jour: Math.min(aMettreAJour.length, lot.length),
-    dont_balayage: Math.max(0, lot.length - aMettreAJour.length),
+    dont_mise_a_jour: Math.min(aRevoir.length + aMettreAJour.length, lot.length),
+    dont_balayage: Math.max(0, lot.length - aRevoir.length - aMettreAJour.length),
+    // 03/11 : le detail par perimetre -- un controle qui AGREGE perd ce qui sert a agir.
+    revoir_photos_disparues: REVOIR_ABSENTES
+      ? { disponibles: aRevoir.length, dans_le_lot: prisRevoir, exemples: aRevoir.slice(0, 10).map((a) => a.annonce) }
+      : "eteint (APP_BALAYAGE_PHOTOS_REVOIR_ABSENTES)",
+    par_perimetre: parts.map((p, i) => ({
+      perimetre: p.perimetre,
+      annonces: p.annonces,
+      a_revoir: p.aRevoir.length,
+      a_mettre_a_jour: p.aMettreAJour.length,
+      jamais_vues: p.jamaisVues.length,
+      sans_date_au_miroir: p.sansDate,
+      dans_le_lot: { mise_a_jour: prisMaj[i], balayage: prisBalayage[i] },
+    })),
     deja_en_file: enFile.size,
     // ⚠ ECARTEES POUR ERREUR : comptees ET NOMMEES. Le projet a paye deux fois
     //   l'exclusion definitive silencieuse (les 527 brouillons, les 33 annonces
@@ -371,7 +471,7 @@ async function main() {
     sans_date_au_miroir: sansDateAuMiroir,
     requetes_hektor_attendues: lot.length * 2,
     nuits_restantes_a_ce_rythme: args.limit > 0
-      ? Math.ceil((aMettreAJour.length + jamaisVues.length) / args.limit) : null,
+      ? Math.ceil((aRevoir.length + aMettreAJour.length + jamaisVues.length) / args.limit) : null,
   };
 
   if (!lot.length) {

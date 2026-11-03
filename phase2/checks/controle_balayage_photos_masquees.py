@@ -113,6 +113,25 @@ def lire(chemin: str):
         return json.loads(reponse.read().decode("utf-8"))
 
 
+def lire_tout(chemin: str, cle: str) -> list:
+    """Toutes les lignes, PAGINEES par curseur sur `cle` (unique, dans le select).
+
+    ⚠ 03/11/2026 : PostgREST plafonne TOUTE reponse a 1 000 lignes, quelle que soit
+      la limite demandee. Le point 5 lisait `limit=5000` et comptait 101 annonces
+      porteuses de masquees alors qu'il y en avait 337 (3 932 photos) -- en silence.
+    """
+    lignes, curseur = [], None
+    while True:
+        suite = "" if curseur is None else f"&{cle}=gt.{urllib.parse.quote(str(curseur), safe='')}"
+        page = lire(f"{chemin}{suite}&order={cle}.asc&limit=1000")
+        if not page:
+            return lignes
+        lignes.extend(page)
+        if len(page) < 1000:
+            return lignes
+        curseur = page[-1][cle]
+
+
 def compter(chemin: str) -> int:
     """Compte EXACT par l'en-tete Content-Range (jamais une page tronquee)."""
     requete = urllib.request.Request(
@@ -297,7 +316,7 @@ titre("⑤ ⭐ LA RECOLTE : combien de masquees ramenees ?")
 try:
     masquees = compter("app_console_photo?select=id&visible=is.false")
     annonces = len({r["app_dossier_id"] for r in
-                    lire("app_console_photo?select=app_dossier_id&visible=is.false&limit=5000")})
+                    lire_tout("app_console_photo?select=id,app_dossier_id&visible=is.false", "id")})
     ligne("photos masquees chez nous", masquees, REF["masquees_avant"],
           "✅ en hausse" if masquees > REF["masquees_avant"] else "🟠 inchange")
     if masquees <= REF["masquees_avant"]:
@@ -335,14 +354,20 @@ try:
     ligne("masquees avec un derive (la vanne)", avec_derive, REF["masquees_avec_derive_avant"])
     # ⚠ On reproduit EXACTEMENT ce que la fonction produirait, cote lecture : une
     #   masquee ne doit JAMAIS figurer dans images_preview_json_app.
+    # ⚠⚠ 03/11/2026 : CES DEUX LECTURES ETAIENT TRONQUEES A 1 000 LIGNES (plafond
+    #   PostgREST, `limit=2000` et `limit=20000` n'y changeaient rien). Le verrou ne
+    #   comparait donc qu'UNE PARTIE des 3 829 masquees a derive a UNE PARTIE des
+    #   galeries -- sur le controle le plus important du fichier. Paginees.
+    lignes_masquees = lire_tout("app_console_photo?select=id,derives_json&visible=is.false"
+                                "&present_in_hektor=is.true&derives_json=not.is.null", "id")
     chemins = {BASE_COFFRE + (r["derives_json"] or {}).get("w400", {}).get("chemin", "")
-               for r in lire("app_console_photo?select=derives_json&visible=is.false"
-                             "&present_in_hektor=is.true&derives_json=not.is.null&limit=2000")
-               if (r.get("derives_json") or {}).get("w400")}
+               for r in lignes_masquees if (r.get("derives_json") or {}).get("w400")}
+    galeries = lire_tout("app_dossier_current?select=app_dossier_id,images_preview_json_app"
+                         "&images_preview_json_app=not.is.null", "app_dossier_id")
+    ligne("masquees comparees / galeries lues", f"{len(chemins)} / {len(galeries)}")
     fuites = 0
     exemples = []
-    for d in lire("app_dossier_current?select=app_dossier_id,images_preview_json_app"
-                  "&images_preview_json_app=not.is.null&limit=20000"):
+    for d in galeries:
         for e in (d.get("images_preview_json_app") or []):
             if isinstance(e, dict) and e.get("url") in chemins:
                 fuites += 1
@@ -369,10 +394,33 @@ try:
     bilan = json.loads(proc.stdout[proc.stdout.index("{"):proc.stdout.rindex("}") + 1])
     reste = bilan.get("part_mise_a_jour_disponible", 0) + bilan.get("part_balayage_disponible", 0)
     ligne("deja visitees", bilan.get("deja_visitees"), REF["travaux_done_avant"])
-    ligne("RESTE A FAIRE", reste, REF["annonces_a_faire_avant"],
-          "✅ ca avance" if reste < REF["annonces_a_faire_avant"] else "🟠 rien n'a avance")
-    if reste >= REF["annonces_a_faire_avant"]:
-        oranges.append("le curseur n'a pas avance")
+    # ⚠ 03/11/2026 : avec APP_BALAYAGE_PHOTOS_PERIMETRES, le lot enchaine vivant ->
+    #   vendus/clos -> archives. La reference figee du 19/10 (13 490) ne vaut que pour
+    #   le VIVANT : comparer le total (~44 500 le 04/11) crierait « rien n'a avance »
+    #   chaque matin. On juge donc le vivant sur sa reference, et on AFFICHE chaque
+    #   perimetre -- un controle qui agrege perd ce qui sert a agir.
+    parts = bilan.get("par_perimetre") or []
+    if parts:
+        for p in parts:
+            ligne(f"  {p.get('perimetre')} : jamais vues", p.get("jamais_vues"),
+                  None, f"(+ {p.get('a_mettre_a_jour', 0)} a mettre a jour, {p.get('a_revoir', 0)} a revoir)")
+        vivant = next((p for p in parts if p.get("perimetre") == "vivant"), None)
+        reste_vivant = (vivant.get("jamais_vues", 0) + vivant.get("a_mettre_a_jour", 0)
+                        + vivant.get("a_revoir", 0)) if vivant else reste
+        ligne("RESTE A FAIRE (tous perimetres)", reste)
+        ligne("dont VIVANT", reste_vivant, REF["annonces_a_faire_avant"],
+              "✅ ca avance" if reste_vivant < REF["annonces_a_faire_avant"] else "🟠 rien n'a avance")
+        if reste_vivant >= REF["annonces_a_faire_avant"]:
+            oranges.append("le curseur du vivant n'a pas avance")
+        revoir = bilan.get("revoir_photos_disparues")
+        if isinstance(revoir, dict):
+            ligne("photos disparues : annonces a revoir", revoir.get("disponibles"), None,
+                  f"exemples {revoir.get('exemples')}" if revoir.get("disponibles") else "")
+    else:
+        ligne("RESTE A FAIRE", reste, REF["annonces_a_faire_avant"],
+              "✅ ca avance" if reste < REF["annonces_a_faire_avant"] else "🟠 rien n'a avance")
+        if reste >= REF["annonces_a_faire_avant"]:
+            oranges.append("le curseur n'a pas avance")
     ligne("nuits restantes", bilan.get("nuits_restantes_a_ce_rythme"))
     ligne("ecartees pour erreur", bilan.get("ecartees_pour_erreur"), 0)
     if bilan.get("ecartees_pour_erreur"):
