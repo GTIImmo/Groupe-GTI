@@ -95,6 +95,9 @@ const ACTION_JOB_TYPES = new Set([
   // chose : les deux doivent rester d'accord, sinon le travail n'est reclame par
   // personne et reste « pending » a vie, SANS erreur.
   "archive_hektor_contact",
+  // COUPLES 03/11/2026 : « Ajouter un conjoint » (rattacher une fiche comme conjoint). Meme session, meme
+  // objet que la modification d'un contact ; jumelle en base : app_console_claim_next_job, branche `actions`.
+  "link_hektor_conjoint",
   "add_hektor_contact_search",
   "update_hektor_contact_search",
   "delete_hektor_contact_search",
@@ -20117,7 +20120,7 @@ async function fetchLocalContactSearchSnapshot(job, contactId, searchIndex) {
 const JOB_TYPES_A_NOTIFIER = new Set([
   "create_hektor_draft_annonce", "create_hektor_contact", "create_hektor_mandant_contact",
   "update_hektor_mandant_contact", "link_hektor_mandant", "delete_hektor_contact",
-  "update_hektor_annonce_fields", "update_hektor_contact", "archive_hektor_contact",
+  "update_hektor_annonce_fields", "update_hektor_contact", "archive_hektor_contact", "link_hektor_conjoint",
   "add_hektor_contact_search", "update_hektor_contact_search", "delete_hektor_contact_search",
   "change_hektor_annonce_status", "archive_hektor_annonce", "restore_hektor_annonce",
   "delete_hektor_annonce", "assign_hektor_annonce_negotiator",
@@ -20144,6 +20147,7 @@ const JOB_LIBELLES = {
   // libelle doit rester vrai dans les deux cas -- il sert a prevenir l'utilisateur
   // quand le geste n'aboutit pas.
   archive_hektor_contact: "L'archivage (ou la reactivation) du contact",
+  link_hektor_conjoint: "L'ajout du conjoint",
   add_hektor_contact_search: "L'ajout de la recherche",
   update_hektor_contact_search: "La modification de la recherche",
   delete_hektor_contact_search: "La suppression de la recherche",
@@ -20762,6 +20766,184 @@ async function guardContactSearchOverwrite(job, contactId, payload, negoEmail, i
       search_index: searchIndex,
       reason: fresh ? "negociateur_a_modifie_la_recherche_dans_hektor" : "recherche_introuvable_cote_hektor",
     },
+  };
+}
+
+// ═════════════════════════════════════════════════════════════════════
+// COUPLES · PIÈCE G — « AJOUTER UN CONJOINT » À UNE PERSONNE SEULE      03/11/2026
+// ═════════════════════════════════════════════════════════════════════
+// Note : notice/SYNTHESE_CHANTIER_CONTACTS_COUPLES_2026-11-01.md §52-53. Le travail est pose par
+// app_ajouter_conjoint_optimistic, qui a DEJA ecrit le couple chez nous (photo d'avant dans la charge).
+//
+// LA COMMANDE, relevee dans le code de la page Hektor (fonction `transforme`, fenetre « Transformer en
+// couple ») et prouvee le 02/11 sur 3 fiches fictives et sur le vrai cas EA32621 (synthese §36, §39) :
+//     GET xmlrpc.php?mode=contacts-create-transformeContactToConjunct&conjoint=<seconde>&refCouple=<porteuse>
+// ⛔ Le formulaire que la page ouvre ENSUITE (« Ajouter un nouveau contact ») n'est JAMAIS enregistre :
+//   c'est lui qui a fait disparaitre une fiche le 30/10 (essai E6). On n'envoie que la requete.
+// ⛔ LA REPONSE NE PROUVE RIEN : `{"success":"ok"}` sur les fictives, VIDE sur EA32621. La seule preuve est
+//   la relecture de `refCouple` par l'API : porteuse -> elle-meme, conjoint -> la porteuse.
+// ⛔ UNE SEULE ECRITURE : si la preuve ne vient pas, on ne renvoie pas (une 2e transformation sur une fiche
+//   deja liee n'est pas mesuree) -- on remet nos fiches comme avant et on dit de verifier chez Hektor.
+// Les BIENS du conjoint (decision c de Frederic) et la RELECTURE des deux fiches ne partent qu'APRES la
+// preuve, en best-effort : le couple existe chez Hektor quoi qu'il arrive ensuite.
+const CONJOINT_ATTENTE_CREATION_MS = 120000;
+
+function caseDeMenageLibre(valeur, soi) {
+  const texte = String(valeur == null ? "" : valeur).trim();
+  return texte === "" || texte === "0" || texte === String(soi);
+}
+
+async function lireCasesDeMenage(job, ids, step) {
+  const args = ["phase2/sync/contact_refcouple_from_api.py"];
+  for (const id of ids) args.push("--contact-id", String(id));
+  const out = await runProjectPythonScript(args, { timeoutMs: 60000, previewSize: 20000 });
+  const derniere = String(out.stdout || "").trim().split(/\r?\n/).filter(Boolean).pop() || "{}";
+  const lu = safeJsonParse(derniere) || {};
+  const lus = lu.lus && typeof lu.lus === "object" ? lu.lus : {};
+  await logJob(job.id, step, "done", "Cases de menage relues par l'API Hektor", { lus, erreur: lu._error || null });
+  return lus;
+}
+
+// Un conjoint NOUVEAU vient d'etre cree par l'app : sa creation (priorite 18) passe avant ce travail
+// (priorite 25) sur le meme service, mais on ne le suppose pas -- on lit sa case cible, et on n'attend que
+// si sa creation est encore en file.
+async function cibleHektorDuConjoint(job, identite) {
+  const debut = Date.now();
+  for (;;) {
+    const lignes = await supabaseRequest(
+      `app_contact_current?hektor_contact_id=eq.${encodeURIComponent(identite)}&select=hektor_target_id&limit=1`, { method: "GET" });
+    const cible = Array.isArray(lignes) && lignes[0] ? String(lignes[0].hektor_target_id || "").trim() : "";
+    if (cible) return cible;
+    if (Number(identite) < PLAGE_NUMEROS_APP) return identite;
+    const params = new URLSearchParams({ select: "id,status", job_type: "eq.create_hektor_contact", status: "in.(pending,running)", limit: "1" });
+    params.append("payload_json->>app_identite", `eq.${identite}`);
+    const enFile = await supabaseRequest(`app_console_job?${params.toString()}`, { method: "GET" });
+    if (!Array.isArray(enFile) || !enFile.length) {
+      throw new Error(`Le conjoint ${identite} n'a pas de numero Hektor et sa creation n'est pas en cours : rien n'est envoye.`);
+    }
+    if (Date.now() - debut > CONJOINT_ATTENTE_CREATION_MS) {
+      throw new Error(`Le conjoint ${identite} n'est toujours pas cree chez Hektor apres ${Math.round(CONJOINT_ATTENTE_CREATION_MS / 1000)} s : rien n'est envoye. Relancer le geste quand sa fiche sera creee.`);
+    }
+    await logJob(job.id, "conjoint_attente", "running", "Le conjoint est en cours de creation chez Hektor : on attend son numero", { identite });
+    await sleep(5000);
+  }
+}
+
+async function handleLinkHektorConjoint(job) {
+  const payload = safeJsonParse(job.payload_json);
+  const principal = String(payload.hektor_contact_id || "").trim();
+  const conjoint = String(payload.conjoint_id || "").trim();
+  if (!/^\d+$/.test(principal) || !/^\d+$/.test(conjoint) || principal === conjoint) {
+    throw new Error("Numeros de la personne et du conjoint requis, et differents");
+  }
+  let requetePartie = false;
+  let principalHektor = null;
+  let conjointHektor = null;
+  let preuve = null;
+  try {
+    principalHektor = await cibleHektorContact(principal, { contexte: "link_hektor_conjoint" });
+    conjointHektor = await cibleHektorDuConjoint(job, conjoint);
+    if (String(principalHektor) === String(conjointHektor)) throw new Error("Les deux fiches visent le meme numero Hektor");
+
+    // La session : celle de la modification d'un contact (meme objet, memes droits).
+    const context = await loadContactExecutionContext(principal);
+    const contextPayload = {
+      ...payload,
+      hektor_user_email: payload.hektor_user_email || context.contact.negociateur_email || null,
+      target_hektor_user_email: payload.target_hektor_user_email || context.contact.negociateur_email || null,
+      contact_negociateur_email: context.contact.negociateur_email || null,
+      contact_hektor_agence_id: context.contact.hektor_agence_id || null,
+      hektor_agence_id: payload.hektor_agence_id || context.contact.hektor_agence_id || null,
+      target_hektor_agence_id: payload.target_hektor_agence_id || context.contact.hektor_agence_id || null,
+      contact_hektor_negociateur_id: context.contact.hektor_negociateur_id || null,
+      hektor_negociateur_id: payload.hektor_negociateur_id || context.contact.hektor_negociateur_id || null,
+      target_hektor_negociateur_id: payload.target_hektor_negociateur_id || context.contact.hektor_negociateur_id || null,
+    };
+    const executionPayload = await resolveContactAgencyExecutionPayload(contextPayload) || contactAgencyExecutionPayload(contextPayload);
+    await ensureHektorExecutionContext(job, context.dossier, executionPayload, { preferRequester: true, preferDossierOwner: true, required: true });
+
+    // 1. AVANT : deux personnes seules chez Hektor. Une lecture ratee n'est jamais un vert.
+    const avant = await lireCasesDeMenage(job, [principalHektor, conjointHektor], "conjoint_avant");
+    for (const [qui, id] of [["La personne", principalHektor], ["Le conjoint", conjointHektor]]) {
+      const lu = avant[String(id)];
+      if (!lu || lu.trouve !== true) throw new Error(`${qui} (${id}) n'a pas pu etre relu(e) par l'API : on n'ecrit pas a l'aveugle`);
+      if (!caseDeMenageLibre(lu.refCouple, id)) throw new Error(`${qui} (${id}) est deja dans un menage chez Hektor (refCouple ${lu.refCouple}) : rien n'est envoye`);
+      // refCouple = elle-meme vaut aussi pour la PORTEUSE d'un couple : le formulaire tranche.
+      const html = await fetchHektorContactEditForm(id);
+      const formulaire = hektorContactFormGroup(html);
+      if (formulaire.couple) throw new Error(`${qui} (${id}) est deja une fiche de couple chez Hektor : rien n'est envoye`);
+      if (!extractHektorFormValues(html, formulaire.group).has("nom")) {
+        throw new Error(`Le formulaire de ${String(qui).toLowerCase()} (${id}) est illisible : on n'ecrit pas a l'aveugle`);
+      }
+    }
+
+    // 2. L'ECRITURE, UNE SEULE FOIS.
+    await logJob(job.id, "hektor_conjoint", "running", "Rattachement du conjoint chez Hektor (Transformer en couple)", {
+      porteuse: String(principalHektor), conjoint: String(conjointHektor),
+    });
+    requetePartie = true;
+    const reponse = await hektorFetch(
+      `${XMLRPC_URL}?mode=contacts-create-transformeContactToConjunct&conjoint=${encodeURIComponent(String(conjointHektor))}&refCouple=${encodeURIComponent(String(principalHektor))}`,
+      { headers: { Referer: `${ADMIN_URL}?page=/mes-contacts/mon-contact&id=${encodeURIComponent(String(principalHektor))}` } });
+    const reponseTexte = String(reponse && reponse.text != null ? reponse.text : "").slice(0, 200);
+
+    // 3. LA PREUVE : refCouple relu des deux cotes, trois essais espaces.
+    for (let essai = 1; essai <= 3 && !preuve; essai += 1) {
+      await sleep(2000);
+      const apres = await lireCasesDeMenage(job, [principalHektor, conjointHektor], "conjoint_preuve");
+      const p = apres[String(principalHektor)];
+      const c = apres[String(conjointHektor)];
+      if (p && p.trouve === true && c && c.trouve === true
+          && String(p.refCouple) === String(principalHektor) && String(c.refCouple) === String(principalHektor)) {
+        preuve = { essai, porteuse: p.refCouple, conjoint: c.refCouple, reponse: reponseTexte };
+      }
+    }
+    if (!preuve) {
+      throw new Error(`Hektor n'a pas confirme le menage (refCouple relu sans le lien ; reponse « ${reponseTexte} »). `
+        + "La requete est partie UNE fois et n'est pas renvoyee : verifier la fiche chez Hektor.");
+    }
+    await logJob(job.id, "hektor_conjoint", "done", "Menage confirme par l'API : porteuse -> elle-meme, conjoint -> la porteuse", preuve);
+  } catch (erreur) {
+    // On remet NOS fiches comme avant -- seulement si elles portent encore ce que le geste avait ecrit.
+    try {
+      const remis = await supabaseRequest("rpc/app_conjoint_annuler_optimiste", {
+        method: "POST", body: JSON.stringify({ p_job_id: job.id }) });
+      await logJob(job.id, "conjoint_annule", "done", "Les deux fiches sont remises comme avant chez nous", {
+        remis, requete_partie: requetePartie });
+    } catch (erreurRetour) {
+      await logJob(job.id, "conjoint_annule", "error",
+        "⛔ Le couple n'est pas confirme chez Hektor ET nos fiches n'ont pas pu etre remises : a reprendre a la main", {
+          principal, conjoint, error: erreurRetour && erreurRetour.message ? erreurRetour.message : String(erreurRetour) });
+    }
+    throw erreur;
+  }
+
+  // A partir d'ici le couple EXISTE chez Hektor : tout ce qui suit est best-effort.
+  let biens = null;
+  try {
+    biens = await supabaseRequest("rpc/app_conjoint_relier_biens", { method: "POST", body: JSON.stringify({ p_job_id: job.id }) });
+    await logJob(job.id, "conjoint_biens", "done", "Les biens de la personne sont demandes pour le conjoint (rattachements de mandant en file)", { biens });
+  } catch (erreur) {
+    biens = { ok: false, error: erreur && erreur.message ? erreur.message : String(erreur) };
+    await logJob(job.id, "conjoint_biens", "error", "Couple pose, mais les biens du conjoint n'ont pas ete demandes -- a refaire a la main", biens);
+  }
+  let relecture = null;
+  try {
+    const out = await runProjectPythonScript(
+      ["phase2/contacts/relire_couple_rattache.py", "--principal", principal, "--conjoint", conjoint],
+      { timeoutMs: 300000, previewSize: 20000 });
+    relecture = safeJsonParse(String(out.stdout || "").trim().split(/\r?\n/).filter(Boolean).pop() || "{}");
+    await logJob(job.id, "conjoint_relecture", "done", "Les deux fiches sont relues et renvoyees a l'app", relecture);
+  } catch (erreur) {
+    relecture = { ok: false, error: erreur && erreur.message ? String(erreur.message).slice(0, 600) : String(erreur) };
+    await logJob(job.id, "conjoint_relecture", "error",
+      "Couple pose chez Hektor, mais la relecture a echoue -- l'ecran garde l'ecriture du clic ; relancer la relecture", relecture);
+  }
+  return {
+    status: "linked",
+    principal, conjoint,
+    porteuse_hektor: String(principalHektor), conjoint_hektor: String(conjointHektor),
+    preuve, biens, relecture,
   };
 }
 
@@ -24178,6 +24360,9 @@ async function runHandler(job) {
     // seul type (la charge porte `archive: true|false`).
     case "archive_hektor_contact":
       return handleArchiveHektorContact(job);
+    // COUPLES 03/11/2026 : « Ajouter un conjoint ».
+    case "link_hektor_conjoint":
+      return handleLinkHektorConjoint(job);
     case "add_hektor_contact_search":
       return handleAddHektorContactSearch(job);
     case "update_hektor_contact_search":
