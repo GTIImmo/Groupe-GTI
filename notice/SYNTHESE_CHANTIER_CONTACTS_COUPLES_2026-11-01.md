@@ -1608,3 +1608,13 @@ Documents : à signaler à l'autre session (Youtrust reste derrière son interru
   initiales du couple sont dans les onglets juste en dessous.
 - Build vert ; essai écran **43/43** (dont les aides neuves jouées : initiales, biens partagés sans achats) ; essais voisins verts.
   **Non poussé, pas vu en ligne.**
+
+- **Vu en ligne (03/11 soir, Chrome de Frédéric, RIEN enregistré, 0 travail créé — vérifié en base)** : la carte « Ajouter un conjoint »
+  sur une vraie personne seule ; la fenêtre (le foyer en tête ; la saisie d'un prénom remplit la place — « EM » — et le lien passe au
+  magenta ; l'interrupteur RGPD ; l'encart des biens) ; le mode « fiche existante » (recherche, liste avec initiales, la fiche choisie
+  remplit la place, « Former le couple » s'active) ; Échap ferme. Sur un couple nommé et sur un couple à compléter : les places dans les
+  onglets, le bloc doré et « Compléter le conjoint ».
+- **Trois retouches** (f1ea578, aperçu vérifié en injectant la feuille dans la page) : onglets du couple en COLONNE (sur le volet étroit,
+  les noms étaient coupés : « JOLY … », « Conjo… ») ; les initiales de la personne PASSENT au-dessus de la place « + » (elles étaient
+  masquées) ; la fiche choisie reste magenta au survol. ⚠ Noté, non changé : la recherche de l'annuaire trouve aussi par le nom du
+  négociateur (« durand » ramène les contacts d'une négociatrice de ce nom) — c'est la recherche commune des choix de contact.
