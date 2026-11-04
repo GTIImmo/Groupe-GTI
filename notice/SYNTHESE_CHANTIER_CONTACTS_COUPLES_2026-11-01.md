@@ -2085,3 +2085,35 @@ Le notaire n'a pas de page neuve : sa fiche existe (type Notaire, 28/10). Sa tui
 - où vit le métier (§68) ;
 - la place d'Archiver et de Supprimer, et de l'activité ;
 - si les demandes d'estimation et les candidats quittent l'annuaire.
+
+## 70. RÉCUPÉRER LES CONTACTS DU REGISTRE ET LES VRAIS PARTENAIRES — MESURÉ À BLANC *(04/11, « on n'a pas fini sur les contacts, il faut récupérer les 50 000 avec relation… et en plus les partenaires » ; lecture seule, rien codé)*
+
+Mesure sur la base du serveur (`app_relation` local, 132 943 liens ; types d'offre du miroir ; classeur Netty) :
+- Le registre nomme 94 090 contacts sur des biens qui ne sont pas des locations. Parmi eux :
+  - 44 774 sont déjà dans l'app ;
+  - **18 021 sont des cases vides** de conjoint : elles restent dehors, la nature les reconnaît ;
+  - ⇒ **31 295 vraies personnes entreraient** : 21 873 actives et 9 422 archivées.
+  Les 2 173 contacts cités seulement sur des locations restent au serveur (décision du 26/08).
+- **Les vrais partenaires** (codes professionnels de Netty, appariés sans ambiguïté) :
+  - pros hors notaires : 97, dont 25 déjà dans l'app et 72 qui entreraient ;
+  - notaires : 844, dont 656 déjà dans l'app et 188 qui entreraient.
+  - ⇒ **238 de plus** que ceux du registre.
+- Ce que ces contacts emportent : 1 622 recherches, toutes inactives (gardées par la décision du 14/10). Leurs liens sont déjà dans le
+  registre chez Supabase.
+- **Le poids** : ~31 500 fiches complètes, ~5 Ko chacune avec les index chez Supabase, soit **~160 Mo** (+50 % sur la table des contacts,
+  317 Mo). Le premier envoi fait ~105 lots de 300, moins que le renvoi du 01/11 (62 000 fiches pour la nature).
+
+**Le correctif proposé** (sur le modèle EXACT du 11/09, `elargir_perimetre_console.py`) :
+- **une passe neuve de nuit, `elargir_perimetre_registre.py`**, placée juste après celle du 11/09 et avant le push. Elle lit `app_relation`
+  EN LOCAL (aucune lecture de Supabase) et pose `supabase_sync_eligible = 1` avec la raison **`registre_relation`** sur les contacts nommés.
+  Elle laisse dehors les cases vides et les contacts cités seulement sur des locations. Interrupteur éteint par défaut ; à blanc d'abord ;
+  vérification « personne n'est entré sans raison, personne n'est sorti ».
+- **les partenaires** : la même passe, avec la raison **`partenaire_netty`**, pour les 238. Il faut alors garder le métier de Netty quelque
+  part sur le serveur : une petite table locale (numéro, codes), sans nom, tirée une fois du classeur. ⚠ C'est aussi la question « où vit
+  le métier » du chantier des partenaires : à trancher par Frédéric, et à dire à l'autre session.
+- **Ce que ça pourrait casser** :
+  - le premier envoi (~31 500 lignes) : à faire une nuit calme ;
+  - l'annuaire montre ~31 000 contacts de plus, dont 9 422 archivés (ceux-là, cachés par le filtre « actifs ») ;
+  - une relecture d'une fiche garde les raisons de la ligne connue (4d299c7) : elle ne fait donc pas ressortir ces contacts ;
+  - le remède des contacts figés (§64, allumé) garde ensuite à jour tout contact entré ;
+  - les compteurs de l'annuaire (l'instantané des statistiques) grossissent d'autant.
