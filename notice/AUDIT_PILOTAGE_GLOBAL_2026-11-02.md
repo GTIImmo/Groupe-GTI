@@ -1111,3 +1111,19 @@ Frédéric : « c'est une erreur… c'est pas normal, audite le projet et expliq
 **L'écran** : un sélecteur « Négociateur » (la liste suit l'agence ; « · ancien » pour une personne sans fiche active) ; les sources sont réduites AVANT les calculs (`filtrerParPersonne`, lib/pilotage.ts) ; un bandeau dit ce qui est compté et **le contrôle par le nom** : lignes rattachées par le numéro, par le nom, et les désaccords (son numéro sous un autre nom ; son nom sous le numéro d'un autre — non comptées). Les classements restent ceux du réseau, sa ligne surlignée.
 ⚠ Limite connue : les compromis ne lisent pas la répartition (l'écran ne la charge que pour les ventes), ils vont au négociateur du bien.
 Contrôlé sur le serveur d'essai (7 onglets, écran large et téléphone). ⏳ **Attendu en ligne pour Claire RIBBES (négociateur 15 / utilisateur 39), mesuré en base** : 18 actes 2026, **120 100 € TTC / 100 083 € HT** de part d'honoraires, 38 mandats 2026, 63 biens en vente.
+
+### 40 quater. La méthode existait déjà — et l'annuaire n'est PAS un registre à nous (04/11)
+
+Frédéric : « nous avions déjà identifié ce problème de plusieurs numéros et une méthode pour le gérer, cherche encore », puis « normalement tous les registres restent chez nous donc Hektor ne devrait pas l'écraser ».
+
+**La méthode déjà décidée, retrouvée** :
+- **C.18 (28/08, `53f817c`)** — Vincent-Lucas GONZALEZ existe trois fois chez Hektor sous le même e-mail ; 25 personnes multi-agences ; 3 annonces étaient parties dans la mauvaise agence. Règle : les identifiants qui ne trompent pas d'abord, l'e-mail en dernier recours, puis choisir la ligne (agence demandée, puis fiche active). `Console/console_job_worker.js` l. ~2928 et ~8468.
+- **Droits du registre (31/10, `supabase/patch_registre_dossiers_droits_2026-10-31.sql`)** — `app_mes_chaines_nommees()` : « tous les numéros de l'annuaire qui portent mon e-mail (un par agence, actifs ou non : les parts anciennes sont au nom d'anciens numéros) ». `notice/AUDIT_GESTES_REGISTRE_TRANSACTIONS_2026-10-30.md` l. 106.
+- ⇒ le filtre du pilotage (§40 ter) applique **la même règle** (la personne = les fiches au même e-mail). ⛔ Ma faute de méthode : je l'ai redécouverte au lieu de la lire (leçon 15 : chercher si le projet a DÉJÀ tranché).
+
+**L'annuaire : un miroir de Hektor, pas un registre à nous** (mesuré dans le code) :
+- `normalize_source.py:556` `upsert_negos` : chaque nuit, la liste des négociateurs de Hektor est recopiée dans `hektor_negociateur` (local) en **upsert** — une fiche n'est jamais supprimée, mais **son n° d'utilisateur, son agence, son nom et son e-mail sont réécrits** par ce que Hektor dit cette nuit-là ;
+- `phase2/sync/push_hektor_directory_to_supabase.py` reconstruit `app_hektor_negotiator_agency_directory` depuis cette table, puis `delete_missing` ; `is_active` vient de la liste des actifs de Hektor ;
+- **aucun historique** : on ne sait pas ce qu'une fiche disait hier.
+- ⇒ Hektor ne peut pas faire DISPARAÎTRE une fiche, mais il peut la **changer** ; et le regroupement par e-mail (C.18, droits du registre, pilotage) dépend de ce qu'il dit le soir même. Si une adresse change ou est réattribuée, des parts anciennes changeraient de personne sans bruit. **Non mesuré** : si c'est déjà arrivé (rien n'en garde la trace).
+- Ce n'est pas contraire à une décision écrite (le registre des mandats et le carnet des affaires sont à nous ; l'annuaire n'a jamais été déclaré registre) — **c'est un trou** au regard de la règle « tous les registres restent chez nous ». À trancher par Frédéric.
