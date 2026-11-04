@@ -252,3 +252,78 @@ Deux niveaux, parce qu'une personne a plusieurs fiches chez Hektor :
 - ⏳ **Étape 2** (la mise à jour de nuit : adopter les fiches nouvelles, journaliser les changements, signal sur un
   changement d'e-mail) — pas commencée. Tant qu'elle n'existe pas, le registre est une PHOTO du 04/11 : une fiche créée chez
   Hektor demain n'y entrera pas seule.
+
+## 12. Étape 2 — LA MISE À JOUR DE NUIT : l'audit (04/11) — Frédéric : « oui audit étape 2 » — ⛔ rien n'est codé
+
+**Périmètre** : le registre des négociateurs (3 tables), la nuit. Gestes : la nuit LIT l'annuaire, les comptes, la
+répartition et les dernières listes de Hektor déjà téléchargées ; elle ÉCRIT seulement dans le registre. Aucun appel à
+Hektor, aucun travail du worker, rien ne change pour l'app (personne ne lit le registre).
+
+### 12.1 Ce que la nuit sait, et où (mesuré)
+
+- `run_full_pipeline.ps1` l. 1369 : « phase2 push hektor directory to supabase » reconstruit l'annuaire (219 fiches, depuis
+  la table locale qui ne purge jamais) et `app_user_directory` (les comptes ACTIFS sous le compte principal, purgé). C'est
+  LE moment où tout est frais : l'étape du registre se place **juste après**.
+- **La présence chez Hektor** n'est connue que localement : `raw_api_response`, `list_negos` + `list_negos_inactive`,
+  relues chaque nuit (`sync_raw.py` l. 849 ; ce matin pages 0-2 et 0-4 à 03:55-03:56). ⚠ Une page qui n'existe plus reste
+  avec sa vieille date (pages 3-4 d'avril, 5-8 de juin) : **seules les pages de la nuit comptent**. Ce matin : 186 fiches.
+- **Le compte admin n° 4** n'est dans AUCUNE de ces sources (§10) : rattaché par décision, il ne doit jamais être déclaré
+  absent par la nuit.
+- **Pas d'historique ailleurs** (§2) : le journal du registre sera le premier.
+- **La descente du matin** recopiera les 3 tables en local toute seule (`pull_from_supabase.py` lit le schéma exposé) ;
+  ⚠ la **sauvegarde quotidienne** (`backup_critical.py`, liste fixe `CRITICAL_TABLES`) ne les prend pas : à ajouter.
+
+### 12.2 Les cas de la nuit (le tableau des gestes de l'objet « fiche » et « personne »)
+
+- **fiche connue, rien n'a changé** → `derniere_vue` = cette nuit.
+- **fiche connue, un champ a changé** (nom, prénom, e-mail, n° d'utilisateur, agence, téléphones, actif) → le journal
+  garde AVANT / APRÈS ; la fiche prend la valeur de Hektor ; **la personne ne bouge pas** (rattachement fixe).
+- **fiche absente de la liste de la nuit** → `present_chez_hektor = false`, `absent_depuis`, une ligne au journal. Jamais
+  supprimée. **Réapparue** → l'inverse, au journal.
+- **fiche NOUVELLE** (n° inconnu) → adoptée : son e-mail (s'il n'est pas une boîte d'agence) appartient à UNE personne →
+  rattachée à elle ; c'est une agence (mêmes règles qu'à l'étape 1) → à l'agence ; son nom est celui d'UNE personne →
+  rattachée ET signalée ; sinon → **personne nouvelle**, signalée. Jamais de fusion de deux personnes par la nuit.
+- **compte utilisateur** (secrétaire, agence) nouveau / disparu → mêmes règles ; le n° 4 est hors de ces règles.
+- **n° d'utilisateur nouveau dans la répartition** (sans fiche) → place « numéro de répartition », signalée.
+- **compte de l'app nouveau** sans personne → relié par l'e-mail d'une fiche de négociateur ; à défaut par le nom, signalé.
+- **la personne** : jamais supprimée ; `actif` recalculé (une fiche active ou un compte présent).
+
+### 12.3 Les signaux — le patron du projet
+
+Le projet signale une anomalie de données par **une vue des lignes ouvertes + une sentinelle « data.… » du moniteur**
+(`monitoring/check_gti_health.py`, ex. `data.contact_modif_ecart` l. 773 : sévérité warning, se tait quand un admin marque
+« vu » par une RPC). Proposé : `data.negociateur_registre_signal` (warning), sur les lignes du journal marquées « à
+signaler » et non traitées. ⚠ Les warnings ne font pas sonner l'e-mail du matin (seuls les critical) : ils s'y LISENT.
+
+### 12.4 Les planchers — une nuit ratée ne doit rien abîmer
+
+- si la liste de la nuit compte **moins de 90 %** des fiches présentes la veille → **aucune absence** n'est marquée, un
+  signal « liste Hektor incomplète » est posé ;
+- si `app_user_directory` a moins de 40 comptes (le cas d'une réponse vide, §2 et A3) → aucun compte n'est déclaré absent ;
+- l'étape est **non bloquante** (`Invoke-OptionalStepWithRetry`, une tentative) : ratée, le registre garde la nuit d'avant.
+
+### 12.5 Ce que ça pourrait casser ailleurs
+
+Rien en production ne lit le registre. L'étape lit des tables que d'autres écrivent, sans les toucher ; zéro appel Hektor ;
+quelques secondes. Le seul risque est pour le registre lui-même (une mauvaise adoption) : d'où l'essai à blanc et les
+signaux. ⚠ Une clé de battement neuve doit être DÉCLARÉE dans `app_worker_registry` avant d'être utilisée (mémoire
+« battement : clé non enregistrée part dans le vide »), et une tâche surveillée se déclare dans `check_gti_health.py`.
+
+### 12.6 La proposition — en pièces
+
+1. **SQL** (patch + inverse + essai en transaction annulée) : le journal reçoit `evenement`, `a_signaler`, `traite_le`,
+   `traite_par` (additif) ; une fonction `app_negociateur_registre_maintenir(p_presents, p_nuit, p_a_blanc)` réservée au
+   service, qui fait tout le §12.2 et rend son compte rendu ; la vue des signaux ouverts ; la RPC admin « marquer vu ».
+2. **Python** `phase2/sync/maintenir_registre_negociateurs.py` : lit la présence de la nuit dans le local (pages de la nuit
+   seulement), appelle la fonction, écrit le compte rendu au journal du run. **Interrupteur `.env`
+   `APP_REGISTRE_NEGOCIATEURS`** : `0` = rien, `blanc` = calcule et écrit seulement le compte rendu, `1` = écrit.
+3. **Le run** : une étape non bloquante juste après l'annuaire, clé de battement `phase2.registre_negociateurs` déclarée.
+4. **La surveillance** : la sentinelle `data.negociateur_registre_signal` ; et les 3 tables dans `backup_critical.py`.
+5. **L'épreuve** : une nuit « à blanc » (compte rendu lu le matin, rien d'écrit), puis allumage.
+
+### 12.7 Ce qui se décide avec Frédéric
+
+1. Quels changements **signalent** : proposé = e-mail, n° d'utilisateur, nom, personne nouvelle, rattachement par le nom,
+   liste incomplète ; **au journal seulement** = téléphone, agence, actif, présence.
+2. Les règles d'adoption d'une fiche nouvelle (§12.2) telles quelles ?
+3. Commencer par une nuit à blanc, puis allumer ?
