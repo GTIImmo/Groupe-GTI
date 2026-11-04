@@ -365,3 +365,13 @@ signaux. ⚠ Une clé de battement neuve doit être DÉCLARÉE dans `app_worker_
 - C'est le même plafond que celui qui fige la diffusion par portail depuis le 26/10 (mémoire
   `diffusion-portails-figee-plafond-5-pages`). Remède proposé, À PART (code du run, attend son « vas-y ») : lire toutes les
   pages des négociateurs la nuit (comme les ventes) — environ 4 requêtes de plus par nuit.
+
+### 13 ter. ✅ ÉTAPE 2 POSÉE (04/11) — Frédéric : « FAIS LE SQL TOI MEME TU AS MON ACCORD ENSUITE JE POUSSE »
+
+- Migration `registre_negociateurs_nuit_2026_11_04` posée ; son contrôle de fin est passé (essai à blanc, 0 ligne écrite).
+- **Droits vérifiés** : ni `authenticated` ni `anon` ne peuvent lancer la nuit ni adopter une fiche ; `anon` ne lit pas la
+  vue des signaux et ne peut pas « marquer vu » ; personne n'écrit au journal par l'API. Clé de battement déclarée.
+- **Le vrai script, à blanc, contre la vraie base** (`--a-blanc`) : code 0, compte rendu = 185 personnes, 242 fiches,
+  1 signal « liste incomplète » (la nuit ne lit pas la liste complète, §13 bis), **0 faux changement** ; journal resté à 0.
+- **`.env` : `APP_REGISTRE_NEGOCIATEURS=blanc`** (ajouté sans lire le fichier) — la PREMIÈRE NUIT sera à blanc. ⏰ Demain
+  matin : lire le compte rendu dans le journal du run (étape « phase2 registre des negociateurs ») ; puis passer à `1`.
