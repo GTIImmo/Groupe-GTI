@@ -1674,3 +1674,23 @@ Documents : à signaler à l'autre session (Youtrust reste derrière son interru
 - Les **9 388** personnes seules à place 2 vide du §57 sont un AUTRE sujet : leurs civilités sont vide, « M. » ou « Mme. », jamais « Mr/Mme ».
 - Correctif possible (rien n'est fait, il faut un « vas-y ») : reconnaître aussi « _Mr/Mme ». EA32621 passerait alors « couple » + « vide »,
   et la fiche montrerait « Compléter le conjoint ».
+
+## 57 ter. « _Mr/Mme » RECONNU PAR LA RÈGLE DE NATURE : AUDITÉ, CODÉ, ÉPROUVÉ, PAS ENCORE EN SERVICE *(04/11, « Oui, vas-y » puis « audit pour être sûr, normalement on avait déjà repris »)*
+
+- **L'audit : ce qui existait déjà.** « _Mr/Mme » n'était traité que pour l'AFFICHAGE (§55 : `civilite_affichee` de la nuit et
+  `civiliteAffichee` de l'écran, « _Mr/Mme » → « Mr/Mme »). Pour la NATURE, rien : `nature_des_fiches.py` est le seul endroit qui juge
+  une civilité de couple. Aucune fonction ni vue chez Supabase ne teste « M_Mme » ou « Mr./Mme » (mesuré dans `pg_proc` et `pg_views`).
+- **Ce qui était déjà décidé, et que la règle ne tenait pas** : au §37, le pire cas annoncé du rattachement d'une coquille était
+  « un couple à place 2 vide, déjà géré par Compléter le conjoint ». Au §39, l'attente était « 467326 en COUPLE, état vide → Compléter ».
+  La correction ne fait que tenir ce qui était déjà convenu.
+- **Pourquoi le « _ » suffit** : c'est le formulaire de COUPLE de Hektor, avec une civilité par place. Au §39, Hektor montrait bien
+  467326 dans un formulaire de couple. Toutes les civilités à « _ » du miroir local sont déjà des couples ou des deuxièmes fiches
+  (M_Mme 416 couples, Mme_M 9, Mme_Mme 4, M_M 2…), sauf la porteuse d'EA32621.
+- **Le code** : `civilite_de_couple()` (`CIVILITES_COUPLE` OU une civilité qui contient « _ ») remplace l'égalité exacte dans `nature()`.
+  L'ordre ne change pas : une deuxième fiche reste jugée d'abord comme deuxième fiche, et un notaire reste notaire.
+- **Éprouvé** : `test_nature_des_fiches` donne **29/29** (dont le cas EA32621, le témoin inverse « Mr/Mme » sans « _ » qui reste seule, et le notaire).
+  ⭐ Sur la table entière (lecture seule, rattachement allumé comme la nuit), **l'ancienne règle redonne la table de la nuit à l'identique**
+  (356 835 sur 356 835). **La nouvelle ne change qu'UNE fiche** : 10260586, `personne_seule` → `couple`, place 2 `case_vide`.
+- **En service à la prochaine nuit** (étape « nature » du run de 04:00, puis l'envoi). Rien n'a été écrit chez Supabase ni chez Hektor.
+  ⏰ **Le 05/11** : 10260586 en `couple` chez Supabase, et sa fiche doit montrer « Couple · conjoint à compléter » avec le bouton.
+- **Retour arrière** : revenir sur ce commit. La nuit suivante recalcule toute la table.

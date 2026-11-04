@@ -60,6 +60,20 @@ class Natures(unittest.TestCase):
         self.assertEqual(r["3"]["couple_deuxieme"], "aucune_deuxieme_fiche")
         self.assertEqual(r["4"]["couple_deuxieme"], "aucun_lien")
 
+    def test_formulaire_de_couple_a_place_vide(self):
+        # EA32621 (04/11) : « Transformer en couple » sur une personne sans civilite -> « _Mr/Mme », coquille en place 2.
+        r = calculer(fiche(1, lien=1, nom="DUPONT", prenom="Anne", civilite="_Mr/Mme"),
+                     fiche(2, lien=1, civilite="_Mr/Mme"))
+        self.assertEqual(r["1"]["nature_fiche"], "couple")
+        self.assertEqual(r["1"]["couple_deuxieme"], "case_vide")
+        self.assertEqual(r["2"]["nature_fiche"], "case_conjoint_vide")
+        # temoin inverse : sans « _ », la meme forme reste une personne seule (regle des imports, inchangee)
+        r = calculer(fiche(1, lien=1, nom="DUPONT", prenom="Anne", civilite="Mr/Mme"), fiche(2, lien=1))
+        self.assertEqual(r["1"]["nature_fiche"], "personne_seule")
+        # et un notaire reste notaire, meme en formulaire de couple
+        self.assertEqual(m.calculer({"1": fiche(1, nom="ETUDE", civilite="_Mr/Mme")}, None, notaires={"1"})[0]["nature_fiche"],
+                         "notaire")
+
     def test_fiche_vide_sans_lien_est_orpheline(self):
         self.assertEqual(calculer(fiche(1, civilite="Mr./Mme"))["1"]["nature_fiche"], "case_vide_orpheline")
 

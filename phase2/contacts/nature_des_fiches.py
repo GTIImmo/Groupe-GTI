@@ -76,6 +76,17 @@ TABLE_ANCIEN = "ancien_logiciel_contact"
 
 # Les signes d'un couple sur une premiere fiche (audit du 01/11, §1).
 CIVILITES_COUPLE = {"Mr./Mme", "M_Mme", "Mme_M", "Mme_Mme", "M_M"}
+# COUPLES (04/11/2026) : le « _ » est le formulaire de COUPLE de Hektor (une civilite par place). Apres
+#   « Transformer en couple » sur une personne sans civilite, Hektor ecrit « _Mr/Mme » (place 1 vide) :
+#   EA32621 restait « personne seule » parce que le test etait une egalite exacte (synthese couples §57 bis).
+#   Mesure du 04/11 sur les 356 835 fiches : 1 seule change (10260586) ; l'ancienne regle redonne la table
+#   de la nuit a l'identique.
+SEPARATEUR_DE_PLACES = "_"
+
+
+def civilite_de_couple(civilite: Any) -> bool:
+    texte = _texte(civilite)
+    return texte in CIVILITES_COUPLE or SEPARATEUR_DE_PLACES in texte
 DEUX_PRENOMS = re.compile(r"(\bet\b|&|/|\+|\bepoux\b|\bm\.? et mme\b)")
 DEUX_NOMS = re.compile(r"\b(et|epoux)\b|&")
 MADAME_ANCIEN = 2          # `gender` de l'ancien logiciel : 2 = Madame
@@ -118,7 +129,7 @@ def nature(fiche: dict[str, Any], fiches: dict[str, dict[str, Any]],
         return "conjoint" if normaliser(fiche.get("prenom")) else "conjoint_sans_prenom"
     if not nommee(fiche):
         return "case_vide_orpheline"
-    signe = (_texte(fiche.get("civilite")) in CIVILITES_COUPLE
+    signe = (civilite_de_couple(fiche.get("civilite"))
              or bool(DEUX_PRENOMS.search(normaliser(fiche.get("prenom"))))
              or bool(DEUX_NOMS.search(normaliser(fiche.get("nom"))))
              or any(normaliser(s.get("prenom")) for s in secondes.get(numero, [])))
