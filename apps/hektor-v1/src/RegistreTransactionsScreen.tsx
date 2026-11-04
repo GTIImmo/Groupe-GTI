@@ -4,6 +4,8 @@ import {
   loadDossierDeLaChaine, loadHistoriqueDuDossier, loadNomsNegociateurs, loadRegistreDossiers, loadRepartitionsDesChaines,
   type AffaireLedgerRow, type AffairePartieRow, type DossierDeLaChaine, type HistoriqueDossierLigne, type RegistreDossierRow, type RegistreEtape, type RepartitionLigne,
 } from './lib/api'
+import { compterRepartitions, construireRepereDepuisRegistre, lireRegistre, lireRepartitions, type RepereNegos } from './lib/pilotage'
+import { partDe } from './lib/repartitionEffective'
 import type { ConsoleDocument } from './types'
 import './registre-transactions.css'
 
@@ -1225,6 +1227,12 @@ function FicheDossier(props: {
   )
 }
 
+/** Les honoraires d'une ligne : entiers, ou SA part quand un négociateur est choisi et qu'elle n'est pas de 100 %. */
+function SaPart({ honoraires, part }: { honoraires: number; part: number }) {
+  if (Math.abs(part - 1) < 1e-9) return <>{formatEuros(honoraires)}</>
+  return <span title={`sa part : ${entier.format(Math.round(part * 100))} % de ${formatEuros(honoraires)}`}>{formatEuros(honoraires * part)} <span className="rt-mute">· {entier.format(Math.round(part * 100))} %</span></span>
+}
+
 export default function RegistreTransactionsScreen({ isAdmin, libelleTypeBien, onOuvrirBien, onGeste, fenetreOuverte, onOuvrirContact }: RegistreTransactionsScreenProps) {
   // v3.1 : période, mois, filtre d'étape, tri et sens, « Où je suis nommé », agence et négociateur
   // sont gardés dans le navigateur (lecture une seule fois, à l'ouverture). La recherche ne l'est pas.
@@ -1245,6 +1253,11 @@ export default function RegistreTransactionsScreen({ isAdmin, libelleTypeBien, o
   const [noms, setNoms] = useState<Map<string, string>>(new Map())
   const [page, setPage] = useState(1)
   const [repartitions, setRepartitions] = useState<Map<string, RepartitionLigne[]>>(new Map())
+  // 04/11 : SA PART quand un négociateur est choisi -- la MÊME règle de calcul que le pilotage (lib/repartitionEffective.ts :
+  // sans répartition 100 % au négociateur du mandat, un seul côté saisi recopié, total ramené à 100 %). Le registre des
+  // négociateurs donne la personne de l'e-mail choisi ; la répartition de toute la période est lue à part.
+  const [repere, setRepere] = useState<RepereNegos | null>(null)
+  const [repTout, setRepTout] = useState<{ cle: string; lu: Map<string, RepartitionLigne[]> } | null>(null)
   const [ouverte, setOuverte] = useState<RegistreDossierRow | null>(null)
   const [relectureFiche, setRelectureFiche] = useState(0)
   const fenetreEtaitOuverte = useRef(false)
@@ -1320,6 +1333,36 @@ export default function RegistreTransactionsScreen({ isAdmin, libelleTypeBien, o
 
   useEffect(() => setPage(1), [annee, moisActif, etape, recherche, seulementNomme, tri, sens, agenceActive, negoActif])
 
+  useEffect(() => {
+    if (!isAdmin) return undefined
+    let annule = false
+    lireRegistre().then(
+      (registre) => { if (!annule) setRepere(construireRepereDepuisRegistre(registre)) },
+      (cause: unknown) => console.error('[registre des transactions] registre des négociateurs illisible', cause),
+    )
+    return () => { annule = true }
+  }, [isAdmin])
+  // Une année entière (~15 lectures) dès l'ouverture pour un admin : le menu propose aussi ceux qui n'ont qu'une part sur
+  // le bien d'un autre. « Toutes années » : seulement quand un négociateur est choisi.
+  const cleRep = `${annee ?? 'tout'}-${relecture}-${lignes.length}`
+  const lireToutesRep = isAdmin && (annee != null || Boolean(negoActif)) && lignes.length > 0
+  useEffect(() => {
+    if (!lireToutesRep) return undefined
+    let annule = false
+    lireRepartitions(lignes.map((ligne) => ligne.app_chaine_id)).then(
+      (lu) => { if (!annule) setRepTout({ cle: cleRep, lu }) },
+      (cause: unknown) => console.error('[registre des transactions] répartition illisible', cause),
+    )
+    return () => { annule = true }
+  }, [lireToutesRep, lignes, cleRep])
+  const comptees = useMemo(() => (repere && repTout && repTout.cle === cleRep ? compterRepartitions(lignes, repTout.lu, repere) : null), [repere, repTout, cleRep, lignes])
+  const personneChoisie = negoActif && repere ? repere.parEmail.get(negoActif) ?? null : null
+  // Tant que sa part n'est pas calculable (lecture en cours, ou e-mail inconnu du registre), le filtre reste celui
+  // d'avant : les biens qu'il suit, honoraires entiers -- et l'indicateur le dit.
+  const partActive = Boolean(negoActif && personneChoisie && comptees)
+  const partDuDossier = useMemo(() => (ligne: RegistreDossierRow) => (
+    comptees && personneChoisie ? partDe(comptees.get(String(ligne.app_chaine_id)) ?? [], personneChoisie) : 1), [comptees, personneChoisie])
+
   const nomDuNegociateur = (email: string | null | undefined) => noms.get(String(email ?? '').trim().toLowerCase()) ?? null
   const aDesNommes = useMemo(() => lignes.some((ligne) => ligne.je_suis_nomme), [lignes])
   // Sans dossier « nommé », la case est cachée : un réglage gardé ne doit pas vider la liste en silence.
@@ -1336,15 +1379,19 @@ export default function RegistreTransactionsScreen({ isAdmin, libelleTypeBien, o
     // Comparé SANS les espaces de bord, comme la liste des choix : les 34 dossiers d'Ambert arrivent
     // en « Groupe GTI Ambert   » (mesuré le 02/11) et le filtre n'en trouvait aucun.
     if (agenceActive && (ligne.agence_nom ?? '').trim() !== agenceActive.trim()) return false
-    if (negoActif && String(ligne.negociateur_email ?? '').trim().toLowerCase() !== negoActif) return false
+    if (negoActif) {
+      if (partActive) { if (!(partDuDossier(ligne) > 0)) return false }
+      else if (String(ligne.negociateur_email ?? '').trim().toLowerCase() !== negoActif) return false
+    }
     return true
-  }), [lignes, moisActif, agenceActive, negoActif])
+  }), [lignes, moisActif, agenceActive, negoActif, partActive, partDuDossier])
 
   const chiffres = useMemo(() => {
     const ventes = lignesBase.filter((ligne) => ligne.etape === 'vendu' && (annee == null || anneeDe(ligne.date_vente) === annee))
     const compromis = lignesBase.filter((ligne) => ligne.etape === 'compromis')
     const offres = lignesBase.filter((ligne) => OFFRES.includes(ligne.etape))
-    const somme = (liste: RegistreDossierRow[], cle: 'montant' | 'honoraires') => liste.reduce((total, ligne) => total + (ligne[cle] ?? 0), 0)
+    // Honoraires : SA PART quand un négociateur est choisi ; le volume (prix) reste entier, comme au pilotage.
+    const somme = (liste: RegistreDossierRow[], cle: 'montant' | 'honoraires') => liste.reduce((total, ligne) => total + (ligne[cle] ?? 0) * (cle === 'honoraires' && partActive ? partDuDossier(ligne) : 1), 0)
     const parEtape = new Map<RegistreEtape, number>()
     for (const ligne of lignesBase) parEtape.set(ligne.etape, (parEtape.get(ligne.etape) ?? 0) + 1)
     return {
@@ -1356,7 +1403,7 @@ export default function RegistreTransactionsScreen({ isAdmin, libelleTypeBien, o
       offres: offres.length,
       parEtape,
     }
-  }, [lignesBase, annee])
+  }, [lignesBase, annee, partActive, partDuDossier])
 
   // Le tri, dans les deux sens ; un dossier sans prix ou sans honoraires reste en bas.
   const comparer = useMemo(() => {
@@ -1462,10 +1509,13 @@ export default function RegistreTransactionsScreen({ isAdmin, libelleTypeBien, o
     { cle: 'en_cours', libelle: 'En cours', nombre: EN_COURS.reduce((total, cle) => total + (chiffres.parEtape.get(cle) ?? 0), 0) },
     ...ETAPES.map((item) => ({ cle: item.cle, libelle: item.libelle, nombre: chiffres.parEtape.get(item.cle) ?? 0 })),
   ]
+  const detailPart = !negoActif ? 'entrée + sortie, sur les ventes'
+    : partActive ? 'sa part, selon la répartition'
+      : repere && !personneChoisie ? 'les biens qu’il suit (inconnu du registre des négociateurs)' : 'les biens qu’il suit (calcul de sa part…)'
   const indicateurs: Array<{ libelle: string; valeur: string; detail: string; filtre: Exclude<FiltreEtape, null> }> = [
-    { libelle: `Honoraires actés · ${periode}`, valeur: formatMillions(chiffres.honoraires), detail: 'entrée + sortie, sur les ventes', filtre: 'vendu' },
+    { libelle: `Honoraires actés · ${periode}`, valeur: formatMillions(chiffres.honoraires), detail: detailPart, filtre: 'vendu' },
     { libelle: 'Ventes actées', valeur: entier.format(chiffres.ventes), detail: chargement ? '' : `${formatMillions(chiffres.volume)} de volume`, filtre: 'vendu' },
-    { libelle: 'Sous compromis', valeur: entier.format(chiffres.compromis), detail: chargement ? '' : `${formatMillions(chiffres.honorairesAttendus)} d’honoraires attendus`, filtre: 'compromis' },
+    { libelle: 'Sous compromis', valeur: entier.format(chiffres.compromis), detail: chargement ? '' : `${formatMillions(chiffres.honorairesAttendus)} d’honoraires attendus${partActive ? ' (sa part)' : ''}`, filtre: 'compromis' },
     { libelle: 'Offres en cours', valeur: entier.format(chiffres.offres), detail: 'proposées ou acceptées', filtre: 'offres' },
   ]
 
@@ -1475,6 +1525,18 @@ export default function RegistreTransactionsScreen({ isAdmin, libelleTypeBien, o
   const negociateurs = Array.from(new Set(lignes.map((ligne) => String(ligne.negociateur_email ?? '').trim().toLowerCase()).filter(Boolean)))
     .map((email) => ({ email, nom: noms.get(email) ?? email }))
     .sort((a, b) => a.nom.localeCompare(b.nom, 'fr'))
+  // 04/11 : aussi ceux qui n'ont qu'une PART (sur le bien d'un autre), par leur personne du registre.
+  if (comptees && repere) {
+    const deja = new Set(negociateurs.map((item) => repere.parEmail.get(item.email) ?? item.email))
+    for (const parts of comptees.values()) for (const x of parts) {
+      const qui = x.personne ? repere.personnes.get(x.personne) : undefined
+      const email = qui ? [...qui.emails][0] : undefined
+      if (!qui || !email || deja.has(qui.cle) || /supprim/i.test(qui.nom)) continue
+      deja.add(qui.cle)
+      negociateurs.push({ email, nom: qui.nom })
+    }
+    negociateurs.sort((a, b) => a.nom.localeCompare(b.nom, 'fr'))
+  }
   if (nego && !negociateurs.some((item) => item.email === nego)) negociateurs.push({ email: nego, nom: noms.get(nego) ?? nego })
 
   const horsDefaut = annee !== MEMOIRE_DEFAUT.annee || moisActif !== '' || etape !== null || tri !== 'recent' || sens !== 'desc' || nommeActif
@@ -1726,7 +1788,7 @@ export default function RegistreTransactionsScreen({ isAdmin, libelleTypeBien, o
                         <td>{ligne.acquereur_nom ? <span className="v3-clamp" title={ligne.acquereur_nom}>{ligne.acquereur_nom}</span> : <span className="rt-mute">—</span>}</td>
                         <td><Parcours ligne={ligne} /></td>
                         <td className="rt-droite rt-num">{formatEuros(ligne.montant)}</td>
-                        <td className="rt-droite rt-num">{ligne.honoraires ? formatEuros(ligne.honoraires) : <span className="rt-mute">—</span>}</td>
+                        <td className="rt-droite rt-num">{ligne.honoraires ? <SaPart honoraires={ligne.honoraires} part={partActive ? partDuDossier(ligne) : 1} /> : <span className="rt-mute">—</span>}</td>
                         <td><Repartition lignes={repartitions.get(String(ligne.app_chaine_id))} /></td>
                       </tr>
                     )
@@ -1752,7 +1814,7 @@ export default function RegistreTransactionsScreen({ isAdmin, libelleTypeBien, o
                       </span>
                       <span className="rt-carte-prix">
                         <b className="rt-num">{formatEuros(ligne.montant)}</b>
-                        <span className="rt-mute rt-num">{ligne.honoraires ? `${formatEuros(ligne.honoraires)} d’honoraires` : 'sans honoraires'}</span>
+                        <span className="rt-mute rt-num">{ligne.honoraires ? <><SaPart honoraires={ligne.honoraires} part={partActive ? partDuDossier(ligne) : 1} /> d’honoraires</> : 'sans honoraires'}</span>
                       </span>
                     </span>
                   </>

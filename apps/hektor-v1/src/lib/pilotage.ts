@@ -10,7 +10,12 @@
 //   . les noms d'agence arrivent sous plusieurs formes (« Groupe GTI Ambert␣␣␣ », « Groupe Gti Le Puy en
 //     Velay », « COURPIÈRE ») : on compare par une CLÉ (cleAgence), jamais par le texte brut.
 import { hasSupabaseEnv, supabase } from './supabase'
-import { loadRegistreDossiers, loadRepartitionsDesChaines, type RegistreDossierRow, type RepartitionLigne } from './api'
+import { loadRegistreDossiers, rangRepartition, type RegistreDossierRow, type RepartitionLigne } from './api'
+import { repartitionEffective, type RegleRepartition } from './repartitionEffective'
+
+/** Une ligne de répartition telle que le pilotage la COMPTE (04/11) : saisie, ou fabriquée par la règle de calcul
+ *  (repartitionEffective), avec la personne du registre quand elle est connue. */
+export type LigneRepartition = RepartitionLigne & { personne?: string | null; nomRegistre?: string | null; regle?: RegleRepartition }
 
 // ───────────────────────────── les ESSAIS, écartés partout ─────────────────────────────
 // Décision de Frédéric (03/11) : les transactions d'essai qu'on ne supprime pas chez Hektor sont ÉCARTÉES du pilotage.
@@ -52,7 +57,7 @@ export type PilotagePortail = { dossier: number; portail: string; ok: boolean; e
 
 export type PilotageSources = {
   annee: number
-  ventes: { n: RegistreDossierRow[]; p: RegistreDossierRow[]; repN: Map<string, RepartitionLigne[]>; repP: Map<string, RepartitionLigne[]> } | Error
+  ventes: { n: RegistreDossierRow[]; p: RegistreDossierRow[]; repN: Map<string, LigneRepartition[]>; repP: Map<string, LigneRepartition[]> } | Error
   mandats: PilotageMandat[] | Error
   stock: PilotageStock[] | Error
   signatures: PilotageSignature[] | Error
@@ -122,17 +127,41 @@ async function lireVentes(annee: number) {
   const [toutN, toutP] = await Promise.all([loadRegistreDossiers(annee), loadRegistreDossiers(annee - 1)])
   const n = toutN.filter((ligne) => !estAnnonceEssai(ligne.hektor_annonce_id))
   const p = toutP.filter((ligne) => !estAnnonceEssai(ligne.hektor_annonce_id))
-  const chaines = (lignes: RegistreDossierRow[]) => lignes.filter((ligne) => ligne.etape === 'vendu').map((ligne) => ligne.app_chaine_id)
+  // 04/11 : la répartition de TOUS les dossiers lus, compromis et offres compris (avant : les ventes seulement, et un
+  // compromis allait à 100 % au négociateur du bien). La règle de calcul en a besoin partout.
+  const chaines = (lignes: RegistreDossierRow[]) => lignes.map((ligne) => ligne.app_chaine_id)
   const [repN, repP] = await Promise.all([lireRepartitions(chaines(n)), lireRepartitions(chaines(p))])
   return { n, p, repN, repP }
 }
 
-// La lecture de la répartition passe par l'adresse : on la découpe en paquets de 150 dossiers.
-async function lireRepartitions(ids: number[]) {
+// La lecture de la répartition passe par l'adresse : on la découpe en paquets de 100 dossiers (6 lignes au plus par
+// dossier, sous le plafond de 1 000 lignes d'une réponse).
+// ⛔ 04/11 : une lecture RATÉE fait échouer l'onglet (lecture à part de loadRepartitionsDesChaines, qui rend une carte
+//   vide en silence) — avec la règle de calcul, un dossier lu « sans répartition » irait à 100 % au négociateur du
+//   mandat, et le chiffre serait faux sans que rien ne le dise.
+export async function lireRepartitions(ids: number[]) {
   const sortie = new Map<string, RepartitionLigne[]>()
-  for (let i = 0; i < ids.length; i += 150) {
-    const lu = await loadRepartitionsDesChaines(ids.slice(i, i + 150))
-    for (const [cle, lignes] of lu) sortie.set(cle, lignes)
+  if (!hasSupabaseEnv || !supabase) return sortie
+  const cles = Array.from(new Set(ids.map((x) => String(x ?? '').trim()).filter((x) => /^\d+$/.test(x))))
+  for (let i = 0; i < cles.length; i += 100) {
+    const { data, error } = await supabase
+      .from('app_affaire_repartition')
+      .select('app_chaine_id,cote,rang,hektor_user_id,nom_au_moment,pourcentage,origine')
+      .in('app_chaine_id', cles.slice(i, i + 100))
+    if (error) throw new Error(`répartition des honoraires illisible : ${error.message}`)
+    for (const row of (data ?? []) as Array<Record<string, unknown>>) {
+      const cle = String(row.app_chaine_id ?? '').trim()
+      const liste = sortie.get(cle) ?? []
+      liste.push({
+        cote: String(row.cote) === 'sortie' ? 'sortie' : 'entree',
+        rang: rangRepartition(row.rang),
+        hektorUserId: String(row.hektor_user_id ?? '').trim(),
+        nomAuMoment: (row.nom_au_moment as string | null) ?? null,
+        pourcentage: Number(row.pourcentage ?? 0),
+        origine: (row.origine as string | null) ?? null,
+      })
+      sortie.set(cle, liste)
+    }
   }
   return sortie
 }
@@ -240,7 +269,7 @@ export type PilotageRegistre = {
   personnes: Array<{ id: number; nom: string; email: string | null; type: string; actif: boolean }>
   fiches: Array<{ personne: number; nego: string | null; user: string | null; email: string | null; nom: string | null }>
 }
-async function lireRegistre(): Promise<PilotageRegistre> {
+export async function lireRegistre(): Promise<PilotageRegistre> {
   if (!hasSupabaseEnv || !supabase) return mockRegistre()
   const client = supabase
   const [personnes, fiches] = await Promise.all([
@@ -399,12 +428,15 @@ export function calculerVentes(source: Exclude<PilotageSources['ventes'], Error>
     if (date.slice(0, 7) <= limite.slice(0, 7)) { actes.dIciTroisMois.n += 1; actes.dIciTroisMois.h += ligne.honoraires ?? 0 }
   }
   // Négociateurs : part = honoraires × pourcentage / 100, entrée et sortie confondues.
-  const parts = (lignes: RegistreDossierRow[], rep: Map<string, RepartitionLigne[]>) => {
+  // 04/11 : la répartition COMPTÉE (règle de calcul, appliquerRepartition), rangée par PERSONNE du registre : un compte
+  // que Hektor a renommé « Cet utilisateur a été supprimé » revient à son titulaire, et une personne à plusieurs
+  // comptes n'a qu'une ligne. Sans personne connue : le n° de compte, comme avant.
+  const parts = (lignes: RegistreDossierRow[], rep: Map<string, LigneRepartition[]>) => {
     const sortie = new Map<string, { nom: string; part: number; dossiers: Set<number> }>()
     for (const ligne of lignes) {
       for (const r of rep.get(String(ligne.app_chaine_id)) ?? []) {
-        const id = r.hektorUserId || '0'
-        const e = sortie.get(id) ?? { nom: nomPersonne(r.nomAuMoment), part: 0, dossiers: new Set<number>() }
+        const id = r.personne || r.hektorUserId || '0'
+        const e = sortie.get(id) ?? { nom: r.nomRegistre ?? nomPersonne(r.nomAuMoment), part: 0, dossiers: new Set<number>() }
         e.part += ((ligne.honoraires ?? 0) * r.pourcentage) / 100
         e.dossiers.add(ligne.app_chaine_id)
         sortie.set(id, e)
@@ -1047,6 +1079,49 @@ function rattacher(repere: RepereNegos, numero: Numero, nom: string | null | und
   return { cle: n ? repere.parNom.get(n) ?? null : null, par: 'nom' as const, nom: n, nomOk: true }
 }
 
+/** LA RÈGLE DE CALCUL DE LA RÉPARTITION (04/11, Frédéric), appliquée UNE FOIS aux sources, avant le filtre et les
+ *  calculs : chaque dossier lu (vente, compromis, offre) reçoit sa répartition COMPTÉE (lib/repartitionEffective.ts),
+ *  chaque ligne avec sa personne du registre. Le « négociateur du mandat » est celui du bien, trouvé par son e-mail au
+ *  registre. ⚠ Le registre des répartitions (app_affaire_repartition) n'est pas touché : la saisie se corrigera dans
+ *  le chantier du classeur ; ici on ne fait que compter. */
+export function appliquerRepartition(sources: PilotageSources, repere: RepereNegos): PilotageSources {
+  if (sources.ventes instanceof Error) return sources
+  const v = sources.ventes
+  return { ...sources, ventes: { ...v, repN: compterRepartitions(v.n, v.repN, repere), repP: compterRepartitions(v.p, v.repP, repere) } }
+}
+
+/** La répartition COMPTÉE de chaque dossier (clé : app_chaine_id). La même pour le pilotage et le registre des
+ *  transactions : un négociateur a le même chiffre dans les deux écrans. */
+export function compterRepartitions(lignes: RegistreDossierRow[], rep: Map<string, RepartitionLigne[]>, repere: RepereNegos): Map<string, LigneRepartition[]> {
+  const qui = (x: RepartitionLigne) => {
+    const r = rattacher(repere, { user: x.hektorUserId }, x.nomAuMoment)
+    return { personne: r.cle, nom: r.cle ? repere.personnes.get(r.cle)?.nom ?? null : null }
+  }
+  const sortie = new Map<string, LigneRepartition[]>()
+  for (const l of lignes) {
+    const cle = String(l.app_chaine_id)
+    const personne = repere.parEmail.get(cleEmail(l.negociateur_email)) ?? null
+    const mandat = personne ? { personne, nom: repere.personnes.get(personne)?.nom ?? null } : null
+    sortie.set(cle, repartitionEffective(rep.get(cle) ?? [], mandat, qui))
+  }
+  return sortie
+}
+
+/** Pour les CALCULS seulement (après le filtre, qui garde les noms lus pour son contrôle) : un mandat ou un bien dont le
+ *  n° de négociateur est au registre prend le NOM du registre, pour que les cumuls par nom (Mandats, Stock, Classements)
+ *  retrouvent la même personne que les ventes (« gti immobilier » -> « Groupe GTI Firminy »). */
+export function nommerParRegistre(sources: PilotageSources, repere: RepereNegos): PilotageSources {
+  const nom = (nego: string | null | undefined, lu: string | null) => {
+    const cle = nego ? repere.parNego.get(String(nego).trim()) : undefined
+    return (cle && repere.personnes.get(cle)?.nom) || lu
+  }
+  return {
+    ...sources,
+    mandats: sources.mandats instanceof Error ? sources.mandats : sources.mandats.map((m) => ({ ...m, nego: nom(m.negoId, m.nego) })),
+    stock: sources.stock instanceof Error ? sources.stock : sources.stock.map((s) => ({ ...s, commercial_nom: nom(s.commercial_id, s.commercial_nom) })),
+  }
+}
+
 /** Les personnes qui ont au moins une ligne dans les sources (dans l'agence choisie, si elle l'est), par nom. */
 export function personnesPresentes(sources: PilotageSources, repere: RepereNegos, agence: string | null): Personne[] {
   const vues = new Set<string>()
@@ -1059,7 +1134,7 @@ export function personnesPresentes(sources: PilotageSources, repere: RepereNegos
       for (const l of lignes) {
         if (!garde(l.agence_nom)) continue
         const lr = rep.get(String(l.app_chaine_id)) ?? []
-        if (lr.length) for (const x of lr) noter({ user: x.hektorUserId }, x.nomAuMoment)
+        if (lr.length) for (const x of lr) { if (x.personne) vues.add(x.personne); else noter({ user: x.hektorUserId }, x.nomAuMoment) }
         else noter({ email: l.negociateur_email }, null)
       }
     }
@@ -1085,13 +1160,21 @@ export function filtrerParPersonne(sources: PilotageSources, repere: RepereNegos
 
   let ventes = sources.ventes
   if (!(ventes instanceof Error)) {
-    const reduire = (lignes: RegistreDossierRow[], rep: Map<string, RepartitionLigne[]>) => {
+    // Une ligne fabriquée « 100 % au négociateur du mandat » n'a pas de n° de compte : elle porte déjà la personne,
+    // trouvée par l'e-mail du négociateur du bien au registre (comptée « par le numéro » au contrôle).
+    const estLigne = (x: LigneRepartition) => {
+      if (x.regle !== 'mandat_100') return est({ user: x.hektorUserId }, x.nomAuMoment)
+      if (x.personne !== cle) return false
+      controle.parNumero += 1
+      return true
+    }
+    const reduire = (lignes: RegistreDossierRow[], rep: Map<string, LigneRepartition[]>) => {
       const sortie: RegistreDossierRow[] = []
-      const repSortie = new Map<string, RepartitionLigne[]>()
+      const repSortie = new Map<string, LigneRepartition[]>()
       for (const l of lignes) {
         const lr = rep.get(String(l.app_chaine_id)) ?? []
         if (lr.length) {
-          const miennes = lr.filter((x) => est({ user: x.hektorUserId }, x.nomAuMoment))
+          const miennes = lr.filter(estLigne)
           if (!miennes.length) continue
           const part = miennes.reduce((t, x) => t + x.pourcentage, 0) / 100
           const fois = (v: number | null) => (v == null ? null : v * part)

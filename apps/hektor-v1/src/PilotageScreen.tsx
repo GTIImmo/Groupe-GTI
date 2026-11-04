@@ -11,7 +11,8 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import {
   aujourdhui, calculerAffaires, calculerAffairesPlus, calculerClassements, calculerMandats, calculerPortails, calculerSignatures, calculerStock, calculerVentes, cleAgence,
-  construireRepere, construireRepereDepuisRegistre, filtrerParPersonne, lireAcquereurs, loadPilotage, mediane, nomAgence, personnesPresentes,
+  appliquerRepartition, construireRepere, construireRepereDepuisRegistre, filtrerParPersonne, lireAcquereurs, loadPilotage, mediane, nomAgence, nommerParRegistre,
+  personnesPresentes,
   type LigneClassement, type PilotageAcquereurs, type PilotageSources,
 } from './lib/pilotage'
 import { hasSupabaseEnv } from './lib/supabase'
@@ -262,7 +263,9 @@ export default function PilotageScreen() {
     if (!(sources.registre instanceof Error)) return construireRepereDepuisRegistre(sources.registre)
     return sources.annuaire instanceof Error ? null : construireRepere(sources.annuaire)
   }, [sources])
-  const personnes = useMemo(() => (sources && repere ? personnesPresentes(sources, repere, agence) : []), [sources, repere, agence])
+  // 04/11 : la RÈGLE DE CALCUL de la répartition, appliquée une fois, avant le filtre et tous les calculs (lib/repartitionEffective.ts).
+  const comptees = useMemo(() => (sources && repere ? appliquerRepartition(sources, repere) : sources), [sources, repere])
+  const personnes = useMemo(() => (comptees && repere ? personnesPresentes(comptees, repere, agence) : []), [comptees, repere, agence])
   const personne = qui && repere ? repere.personnes.get(qui) ?? null : null
   // Une agence où il n'a rien : le choix du négociateur tombe (seulement une fois les données lues).
   useEffect(() => {
@@ -291,8 +294,10 @@ export default function PilotageScreen() {
   const libelleComparaison = enCours ? `${annee - 1} à la même date` : `${annee - 1}`
 
   // Le négociateur choisi : les sources sont réduites à ses lignes AVANT les calculs, qui ne changent pas.
-  const vue = useMemo(() => (sources && repere && personne ? filtrerParPersonne(sources, repere, personne.cle) : null), [sources, repere, personne])
-  const src = vue?.sources ?? sources
+  const vue = useMemo(() => (comptees && repere && personne ? filtrerParPersonne(comptees, repere, personne.cle) : null), [comptees, repere, personne])
+  // Les noms du registre pour les cumuls par nom (Mandats, Stock, Classements) — APRÈS le filtre, qui garde son contrôle.
+  const src = useMemo(() => { const base = vue?.sources ?? comptees; return base && repere ? nommerParRegistre(base, repere) : base }, [vue, comptees, repere])
+  const reseauSrc = useMemo(() => (comptees && repere ? nommerParRegistre(comptees, repere) : comptees), [comptees, repere])
   const ventes = useMemo(() => (src && !(src.ventes instanceof Error) ? calculerVentes(src.ventes, annee, agence) : null), [src, annee, agence])
   const mandats = useMemo(() => (src && !(src.mandats instanceof Error) ? calculerMandats(src.mandats, annee, agence) : null), [src, annee, agence])
   const stock = useMemo(() => (src && !(src.stock instanceof Error) ? calculerStock(src.stock, agence) : null), [src, agence])
@@ -309,19 +314,19 @@ export default function PilotageScreen() {
   }, [src, annee, agence])
   // Les classements restent ceux de TOUT le réseau (le négociateur choisi y est surligné) : calculés sur les sources entières.
   const reseau = useMemo(() => {
-    if (!personne || !sources) return null
+    if (!personne || !reseauSrc) return null
     return {
-      ventes: sources.ventes instanceof Error ? null : calculerVentes(sources.ventes, annee, agence),
-      mandats: sources.mandats instanceof Error ? null : calculerMandats(sources.mandats, annee, agence),
-      affaires: sources.ventes instanceof Error ? null : calculerAffaires(sources.ventes, annee, agence),
+      ventes: reseauSrc.ventes instanceof Error ? null : calculerVentes(reseauSrc.ventes, annee, agence),
+      mandats: reseauSrc.mandats instanceof Error ? null : calculerMandats(reseauSrc.mandats, annee, agence),
+      affaires: reseauSrc.ventes instanceof Error ? null : calculerAffaires(reseauSrc.ventes, annee, agence),
     }
-  }, [personne, sources, annee, agence])
+  }, [personne, reseauSrc, annee, agence])
   const classements = useMemo(() => {
     const v = reseau ? reseau.ventes : ventes
     const m = reseau ? reseau.mandats : mandats
-    const st = sources && !(sources.stock instanceof Error) ? sources.stock : null
+    const st = reseauSrc && !(reseauSrc.stock instanceof Error) ? reseauSrc.stock : null
     return v || m || st ? calculerClassements(v, m, st, reseau ? reseau.affaires : affaires, agence) : null
-  }, [reseau, ventes, mandats, sources, affaires, agence])
+  }, [reseau, ventes, mandats, reseauSrc, affaires, agence])
   const portails = useMemo(() => (src && !(src.portails instanceof Error) && !(src.stock instanceof Error) ? calculerPortails(src.portails, src.stock, agence) : null), [src, agence])
 
   // Les agences proposées au filtre : toutes celles que les sources connaissent, une seule fois chacune.
@@ -391,7 +396,7 @@ export default function PilotageScreen() {
       {personne && vue ? (
         <div className="pl-nego-bandeau" role="note">
           <b>{personne.nom}</b>
-          <span>Ventes et compromis répartis : <b>sa part</b> des honoraires · offres, mandats, stock, signatures, acquéreurs : <b>ses biens et ses fiches</b>{personne.negos.size > 1 ? ` (ses ${personne.negos.size} fiches négociateur réunies)` : ''}.</span>
+          <span>Ventes, compromis et offres en cours : <b>sa part</b> des honoraires (répartition, sinon 100 % au négociateur du mandat) · prix obtenu, notaires, mandats, stock, signatures, acquéreurs : <b>ses biens et ses fiches</b>{personne.negos.size > 1 ? ` (ses ${personne.negos.size} fiches négociateur réunies)` : ''}.</span>
           <span className="pl-mute">{repere?.source === 'registre' ? 'Registre des négociateurs' : 'Annuaire de Hektor (le registre ne répond pas)'} · contrôle : {entier.format(vue.controle.parNumero)} lignes rattachées par le numéro{vue.controle.parNom ? `, ${entier.format(vue.controle.parNom)} par le nom (sans numéro)` : ''}{vue.controle.nomDifferent ? ` · ⚠ ${entier.format(vue.controle.nomDifferent)} portent son numéro sous un autre nom` : ''}{vue.controle.autreNumero ? ` · ⚠ ${entier.format(vue.controle.autreNumero)} portent son nom sous le numéro d’un autre (non comptées)` : ''}.</span>
           <button type="button" className="pl-lien-nom" onClick={() => setQui(null)}>Revenir à tous</button>
         </div>
@@ -1056,7 +1061,7 @@ export default function PilotageScreen() {
             </div>
             <span className="pl-note">
               {classeQui === 'negos'
-                ? 'Honoraires = part de la répartition de chaque vente ; mandats au négociateur de la fiche ; portefeuille = biens en vente aujourd’hui à son nom. Les trois sources sont rapprochées par le nom.'
+                ? 'Honoraires = part de la répartition de chaque vente (sans répartition : 100 % au négociateur du mandat ; un seul côté saisi : le même des deux côtés ; total ramené à 100 %) ; mandats au négociateur de la fiche ; portefeuille = biens en vente aujourd’hui à son nom. Les trois sources sont rapprochées par la personne du registre des négociateurs.'
                 : 'Agence du dossier, comme le registre des transactions ; portefeuille = biens en vente aujourd’hui.'}
               {' '}La progression demande au moins 5 000 € l’an passé, l’honoraire par acte au moins 3 actes, l’exclusivité au moins 5 mandats.
             </span>

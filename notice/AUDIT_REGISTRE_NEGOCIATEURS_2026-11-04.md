@@ -524,3 +524,41 @@ partage rien.
 **Remède proposé, PAS codé :** pilotage — lire la répartition aussi pour les compromis (et corriger le bandeau) ;
 Transactions — quand un négociateur est choisi, compter SA part (dossiers où il a une part, ses biens comme ceux des
 autres), ou à défaut dire en clair « les biens qu'il suit, honoraires entiers ». Décision de Frédéric.
+
+## 21. LA RÈGLE DE CALCUL DE LA RÉPARTITION, posée dans le pilotage ET les transactions (04/11)
+
+**Décision de Frédéric** : « corrige le mode de calcul, on corrigera la répartition des honoraires avec le sheet dans
+le chantier dédié ». Ses réponses : aucune répartition → 100 % au négociateur du mandat ; répartition à 0 % → 50 % / 50 % ;
+un seul côté saisi (entrée OU sortie) → le même négociateur de l'autre côté ; total incomplet → ramené à 100 % dans la même
+proportion ; pilotage ET transactions, compromis compris. « Pense au registre des répartitions d'honoraires. »
+
+**Le registre des répartitions n'est PAS touché.** `app_affaire_repartition` reste ce que la nuit (`app_repartition_absorber`,
+depuis Hektor) et la saisie (`app_repartition_commission_set`) y mettent ; la règle ne fait que COMPTER, côté écran.
+Lecteurs en base vérifiés : `app_mes_chaines_nommees` (les DROITS « où je suis nommé » — inchangés : être nommé reste une
+question de saisie), `app_negociateur_registre_maintenir`, la vue `app_v_repartition_orpheline`. La fiche d'un dossier
+montre toujours la saisie telle quelle, avec sa ligne « Non attribué » : c'est ce qui restera à corriger au classeur.
+
+**Le code** :
+- `lib/repartitionEffective.ts` (neuf) : `repartitionEffective()` — LA règle, une seule fonction — et `partDe()`.
+- `lib/pilotage.ts` : la répartition est lue pour TOUS les dossiers (compromis et offres compris, avant : les ventes
+  seulement) par une lecture qui ÉCHOUE franchement (avant : `loadRepartitionsDesChaines` rendait une carte vide en silence,
+  ce qui avec la règle aurait donné 100 % au mandat sans rien dire) ; `appliquerRepartition` / `compterRepartitions` (la
+  personne du registre sur chaque ligne ; le négociateur du mandat = celui du bien, par son e-mail au registre) ;
+  `nommerParRegistre` (les cumuls par nom de Mandats / Stock / Classements prennent le nom du registre, APRÈS le filtre,
+  qui garde son contrôle) ; Ventes rangées par PERSONNE (plus de « Négociateur supprimé »).
+- `PilotageScreen.tsx` : la règle appliquée une fois, avant le filtre et tous les calculs ; bandeau et note des
+  classements corrigés (« ventes, compromis et offres en cours : sa part… »).
+- `RegistreTransactionsScreen.tsx` : un négociateur choisi → les dossiers où il a une PART (ses biens et ceux des autres),
+  honoraires actés et attendus = SA part, la liste montre « X € · 50 % » ; le menu propose aussi ceux qui n'ont qu'une part
+  sur le bien d'un autre ; tant que sa part n'est pas calculable, l'ancien filtre (biens suivis) et l'indicateur le dit.
+  Le volume reste le prix entier (comme au pilotage).
+
+**Contrôlé** : build vert. Règle : 12 cas réels + 5 cas construits, tous verts (essai hors ligne). ⭐ **LE VRAI CODE exécuté
+sur les vraies ventes 2026** (script en lecture seule, `appliquerRepartition` + `calculerVentes` + `filtrerParPersonne`) :
+286 ventes, 2 168 198 € d'honoraires, **attribués 2 168 199 € (100 %, arrondis)**, **0 ligne « supprimé »**. Sandrine
+DELAVAUD 83 991 → 98 991 € (61739 recopié), Hugo LABBE 8 000 € (le contrôle dit « 2 portent son numéro sous un autre nom »),
+Aline VALETTE 14 000 € (39664, 100 % au mandat), Annonay 10 500 €. ⭐ **Témoin indépendant** : la même règle écrite en SQL
+donne **les mêmes 33 lignes à l'euro près**. ⚠ Pas encore VU à l'écran : il faut la mise en ligne (push) — puis contrôle
+dans l'app (pilotage filtré Sandrine DELAVAUD 98 991 € TTC ; Transactions filtré sur elle, même chiffre).
+⚠ Reste au négociateur du bien (non réparti par la règle) : l'onglet Affaires « prix obtenu, notaires » (source
+`app_pilotage_affaires_plus`), mandats, stock, signatures, acquéreurs — comme le dit le bandeau.
