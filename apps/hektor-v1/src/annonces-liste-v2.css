@@ -433,8 +433,8 @@
 .av3m-carte .av3m-corps { padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 7px; }
 .av3m-carte .av3m-ville { display: flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 800; color: #8c0044; }
 .av3m-carte .av3m-ville svg { width: 13px; height: 13px; flex: none; }
-.av3m-carte .av3m-titre { font-size: 16px; font-weight: 800; line-height: 1.28; color: #222323; }
-.av3m-carte .av3m-titre.vide { font-style: italic; font-weight: 600; color: #7c8082; }
+.av3m-carte .av3m-titre { font-size: 16px; font-weight: 500; line-height: 1.28; color: #222323; }
+.av3m-carte .av3m-titre.vide { font-style: italic; font-weight: 500; color: #7c8082; }
 .av3m-carte .av3m-ligne { display: flex; justify-content: space-between; align-items: flex-end; gap: 8px; flex-wrap: wrap; }
 .av3m-carte .av3m-prix { font-size: 19px; font-weight: 800; color: #222323; white-space: nowrap; }
 .av3m-carte .av3m-prix.vide { font-size: 14px; color: #b66a16; }
