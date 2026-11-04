@@ -226,6 +226,29 @@ Deux niveaux, parce qu'une personne a plusieurs fiches chez Hektor :
   GERPHAGNON, Franck GERPHAGNON, Pauline GIRINON) puis des agences (« AGENCES SUPPRIMÉE », « COMPTE FORMATION »…) — le même
   nom et le même rôle que le compte n° 4 du worker. ⇒ **son compte admin = u4, partagé avec le worker.** Restait : Le patch devra l'ajouter (source : le journal du worker, faute
   de lecture par l'API), et le type de sa personne (dirigeant / administrateur).
+- ✅ **LISTE VALIDÉE PAR FRÉDÉRIC le 04/11** (« je valide »), sur `REGISTRE_NEGOCIATEURS_CORRESPONDANCE_2026-11-04.csv`
+  (185 personnes, 242 fiches) : les rattachements tels quels, y compris les 4 secrétaires rangées « négociateur », les 11
+  fiches sans e-mail réunies par le nom, les agences (Firminy avec « gti immobilier » et « Négo GTI »), et lui-même
+  administrateur avec le compte n° 4.
 - ⚠ La dernière marque (« e-mail partagé ») a été ajoutée après le dernier essai complet : la pose la vérifiera (une erreur
   de texte annule toute la pose, rien ne resterait à moitié).
 
+
+## 11. ✅ ÉTAPE 1 POSÉE EN PRODUCTION (04/11) — Frédéric : « Oui, pose-la »
+
+- Migration `registre_negociateurs_etape1_2026_11_04` (texte : `supabase/patch_registre_negociateurs_2026-11-04.sql`) :
+  garde de départ et les 4 contrôles de fin **passés** (toutes les fiches de l'annuaire, tous les n° de la répartition,
+  aucune personne sans fiche).
+- **Le résultat réel = la table validée, à l'octet** : empreinte md5 des 242 lignes `a71424e78813a39607f661437952d22e`, la
+  même que `REGISTRE_NEGOCIATEURS_CORRESPONDANCE_2026-11-04.csv`. Personnes 1000001 → 1000185 ; 1000001 = Frédéric
+  GERPHAGNON, administrateur, actif, compte de l'app relié. Types : 1 administrateur, 164 négociateurs, 18 agences, 2 inconnus.
+- **Droits** : un commercial actif lit 185 personnes et 242 fiches, le journal reste fermé (0) ; la clé publique ne lit rien.
+  ⚠ **Trouvé au contrôle et corrigé** (migration `registre_negociateurs_lecture_seule_2026_11_04`) : les droits par
+  défaut de Supabase donnaient insert/update/delete/TRUNCATE à `authenticated` — « revoke from public » ne les ferme pas
+  (mémoire `revoke-from-public-ne-ferme-pas-authenticated`). La RLS bloquait déjà l'écriture, mais TRUNCATE ne passe pas par
+  elle. Retirés ; contrôle vert.
+- **Rien d'autre n'a bougé** : l'annuaire a toujours 219 fiches ; aucun lecteur (app, worker, run de nuit) ne lit encore le
+  registre. Retour arrière : `patch_registre_negociateurs_2026-11-04_INVERSE.sql`.
+- ⏳ **Étape 2** (la mise à jour de nuit : adopter les fiches nouvelles, journaliser les changements, signal sur un
+  changement d'e-mail) — pas commencée. Tant qu'elle n'existe pas, le registre est une PHOTO du 04/11 : une fiche créée chez
+  Hektor demain n'y entrera pas seule.

@@ -213,6 +213,10 @@ create policy app_negociateur_fiche_lecture on public.app_negociateur_fiche for 
 create policy app_negociateur_journal_lecture on public.app_negociateur_journal for select to authenticated using (public.is_app_admin());
 revoke all on public.app_negociateur_personne, public.app_negociateur_fiche, public.app_negociateur_journal from anon, public;
 grant select on public.app_negociateur_personne, public.app_negociateur_fiche, public.app_negociateur_journal to authenticated;
+-- ⚠ ajouté APRÈS la pose (migration registre_negociateurs_lecture_seule_2026_11_04) : les droits par défaut de Supabase donnent
+-- TOUT à authenticated sur une table neuve, et « revoke from public » ne le ferme pas. TRUNCATE ne passe pas par la RLS.
+revoke insert, update, delete, truncate, references, trigger
+    on public.app_negociateur_personne, public.app_negociateur_fiche, public.app_negociateur_journal from authenticated;
 grant all on public.app_negociateur_personne, public.app_negociateur_fiche, public.app_negociateur_journal to service_role;
 
 comment on table public.app_negociateur_personne is 'REGISTRE DES NÉGOCIATEURS (04/11/2026) -- la PERSONNE, notre numéro (>= 1 000 001). Une ligne n''est jamais supprimée. Ses fiches Hektor sont dans app_negociateur_fiche. Voir notice/AUDIT_REGISTRE_NEGOCIATEURS_2026-11-04.md';
