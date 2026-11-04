@@ -189,20 +189,19 @@
 #fa-cx-root .fxf-place.vide{border:2px dashed #a8814a;color:#a8814a;background:transparent;font-size:15px}
 #fa-cx-root .fxf-place.ajout{border:2px dashed #c2125f;color:#c2125f;background:#fff}
 
-/* personne seule : la carte « Ajouter un conjoint » */
-#fa-cx-root .fxf-ajout{display:flex;align-items:center;gap:14px;width:100%;margin:2px 0 14px;padding:14px;border-radius:16px;
-  border:1px solid #eae1d7;background:linear-gradient(180deg,#fff 0%,#faf6f1 100%);font:inherit;text-align:left;cursor:pointer;
+/* personne seule : la pastille « Ajouter un conjoint » (compacte depuis le 04/11, la phrase passe en infobulle) */
+#fa-cx-root .fxf-ajout{display:inline-flex;align-items:center;gap:10px;max-width:100%;height:40px;margin:2px 0 14px;padding:0 14px 0 6px;border-radius:999px;
+  border:1px solid #eae1d7;background:#fff;font:inherit;text-align:left;cursor:pointer;
   transition:border-color .15s,box-shadow .15s}
-#fa-cx-root .fxf-ajout:hover{border-color:#f1c9da;box-shadow:0 6px 18px -10px rgba(194,18,95,.45)}
+#fa-cx-root .fxf-ajout:hover{border-color:#f1c9da;box-shadow:0 4px 12px -8px rgba(194,18,95,.45)}
 #fa-cx-root .fxf-ajout:focus-visible{outline:2px solid #c2125f;outline-offset:2px}
-#fa-cx-root .fxf-places{position:relative;width:74px;height:44px;flex:none}
-#fa-cx-root .fxf-places .fxf-place{position:absolute;top:0;width:44px;height:44px;font-size:15px;box-shadow:0 0 0 3px #fff}
+#fa-cx-root .fxf-places{position:relative;width:46px;height:28px;flex:none}
+#fa-cx-root .fxf-places .fxf-place{position:absolute;top:0;width:28px;height:28px;font-size:11px;box-shadow:0 0 0 2px #fff}
+#fa-cx-root .fxf-places .fxf-place svg{width:13px;height:13px}
 #fa-cx-root .fxf-places .fxf-place.p1{left:0;z-index:1}
-#fa-cx-root .fxf-places .fxf-place.ajout{left:30px;transition:transform .15s}
-#fa-cx-root .fxf-ajout:hover .fxf-place.ajout{transform:translateX(3px)}
-#fa-cx-root .fxf-ajout-tx{display:flex;flex-direction:column;gap:3px;min-width:0}
-#fa-cx-root .fxf-ajout-tx b{font-size:15px;font-weight:800;color:#9d0f4e}
-#fa-cx-root .fxf-ajout-tx span{font-size:12.5px;color:#8a807a;line-height:1.35}
+#fa-cx-root .fxf-places .fxf-place.ajout{left:22px;top:2px;width:24px;height:24px;transition:transform .15s}
+#fa-cx-root .fxf-ajout:hover .fxf-place.ajout{transform:translateX(2px)}
+#fa-cx-root .fxf-ajout-tx{min-width:0;font-size:13.5px;font-weight:800;color:#9d0f4e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 /* un couple : chaque personne a sa place dans l'onglet */
 #fa-cx-root .fxf-foyer{margin:4px 0 14px}

@@ -47169,15 +47169,17 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
                 </div>
               ) : null}
               {peutAjouterConjoint ? (
-                <button className="fxf-ajout" type="button" onClick={() => setAjoutConjointOuvert(true)}>
+                <button
+                  className="fxf-ajout"
+                  type="button"
+                  title={`Pas encore de conjoint sur cette fiche. Il partagera les biens de ${props.contact.prenom || props.contact.nom || 'ce contact'}.`}
+                  onClick={() => setAjoutConjointOuvert(true)}
+                >
                   <span className="fxf-places" aria-hidden="true">
                     <span className="fxf-place p1">{initialesDePlace(props.contact.prenom, props.contact.nom)}</span>
                     <span className="fxf-place ajout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg></span>
                   </span>
-                  <span className="fxf-ajout-tx">
-                    <b>Ajouter un conjoint</b>
-                    <span>Pas encore de conjoint sur cette fiche. Il partagera les biens de {props.contact.prenom || props.contact.nom || 'ce contact'}.</span>
-                  </span>
+                  <b className="fxf-ajout-tx">Ajouter un conjoint</b>
                 </button>
               ) : null}
 
