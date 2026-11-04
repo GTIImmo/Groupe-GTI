@@ -742,6 +742,25 @@ DATA_SENTINELS: list[dict[str, Any]] = [
         },
     },
     {
+        # Registre des negociateurs, etape 2 (04/11/2026) : ce que la nuit a vu et qu'un humain doit regarder --
+        # un e-mail, un n° d'utilisateur ou un nom qui change sur une fiche Hektor, une personne nouvelle, une fiche
+        # rattachee par le nom, une liste de Hektor incomplete. Une ligne par signal ; elle se tait quand un admin l'a
+        # marquee « vue » (app_negociateur_signal_traiter). WARNING : rien n'est corrige tout seul, le registre ne
+        # deplace jamais une fiche d'une personne a l'autre. notice/AUDIT_REGISTRE_NEGOCIATEURS_2026-11-04.md §12.
+        "key": "data.negociateur_registre_signal",
+        "severity": "warning",
+        "label": "Registre des negociateurs : changements vus la nuit a regarder",
+        "table": "app_v_negociateur_signaux",
+        "params": {"traite_le": "is.null"},
+        "rule": "absolute",
+        "max": 0,
+        "sample": {
+            "select": "nuit,evenement,champ,avant,apres,nom",
+            "order": "id.desc",
+            "limit": 5,
+        },
+    },
+    {
         # Chantier 8 / R4 (26/10/2026) : les ECARTS DU CARNET DES TRANSACTIONS. Une ligne = une saisie partie
         # chez Hektor (creation ou modification d'une offre, d'un compromis, d'une vente) que R3 a jugee en
         # « conflit » (Hektor porte autre chose -- et R2 garde notre valeur : elle peut cacher une correction

@@ -1370,6 +1370,17 @@ Invoke-Step -Label "phase2 push hektor directory to supabase" -Arguments @(
     "phase2\sync\push_hektor_directory_to_supabase.py"
 ) -WorkerKey "supabase.push_hektor_directory"
 
+# REGISTRE DES NEGOCIATEURS, ETAPE 2 (04/11/2026) -- LA MISE A JOUR DE NUIT.
+# Adopte les fiches Hektor nouvelles, journalise chaque changement (avant / apres), marque les absences, signale
+# (sentinelle data.negociateur_registre_signal) les changements d'e-mail, de n° d'utilisateur ou de nom et les
+# personnes nouvelles. Ne fusionne jamais deux personnes, ne supprime jamais rien. Aucune requete chez Hektor.
+# SA PLACE : JUSTE APRES l'annuaire ci-dessus, qui vient de rafraichir ses deux sources (fiches et comptes).
+# Interrupteur APP_REGISTRE_NEGOCIATEURS (.env) : 0 eteint · blanc = compte rendu seul · 1 = ecrit.
+# NON BLOQUANTE : ratee, le registre garde la nuit d'avant. notice/AUDIT_REGISTRE_NEGOCIATEURS_2026-11-04.md §12.
+Invoke-OptionalStepWithRetry -Label "phase2 registre des negociateurs" -Arguments @(
+    "phase2\sync\maintenir_registre_negociateurs.py"
+) -MaxAttempts 1 -RetryDelaySeconds 0 -WorkerKey "phase2.registre_negociateurs"
+
 # COUPLES · P2 (31/10/2026) -- LA PREMIERE FICHE CONNAIT SON CONJOINT.
 # Pose `couple_json` sur chaque premiere fiche d'un couple et marque « conjoint »
 # la seconde fiche nommee (qui devient eligible). Note COUPLES_ERGONOMIE... §23.

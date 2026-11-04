@@ -167,6 +167,11 @@ CRITICAL_TABLES: dict[str, list[str]] = {
         "app_pending_resolution",          # les reponses des humains aux alertes
         "app_contact_identite_app",        # la correspondance des contacts redescendue du cloud
         "app_notification",
+        # 04/11/2026 -- LE REGISTRE DES NEGOCIATEURS (nos numeros de personne, leurs fiches Hektor, le journal de nuit).
+        # Il vit dans le cloud et arrive ici par la descente ; le journal est le SEUL historique des fiches Hektor.
+        "app_negociateur_personne",
+        "app_negociateur_fiche",
+        "app_negociateur_journal",
     ],
     "hektor": [
         "sync_meta",                       # 4 curseurs delta : sans eux, re-pull complet

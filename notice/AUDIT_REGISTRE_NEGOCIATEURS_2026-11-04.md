@@ -327,3 +327,41 @@ signaux. ⚠ Une clé de battement neuve doit être DÉCLARÉE dans `app_worker_
    liste incomplète ; **au journal seulement** = téléphone, agence, actif, présence.
 2. Les règles d'adoption d'une fiche nouvelle (§12.2) telles quelles ?
 3. Commencer par une nuit à blanc, puis allumer ?
+
+## 13. Étape 2 CODÉE et éprouvée (04/11) — Frédéric : « Oui, vas-y » — ⏳ le patch attend d'être COLLÉ
+
+- **La base** : `supabase/patch_registre_negociateurs_nuit_2026-11-04.sql` (+ `_INVERSE`). Le journal reçoit événement,
+  signal, nuit, levée ; `app_negociateur_registre_maintenir(p_presents, p_a_blanc)` (service seulement) ; l'aide
+  `app_neg_adopter` ; la vue `app_v_negociateur_signaux` ; la RPC admin `app_negociateur_signal_traiter` ; la clé de
+  battement `phase2.registre_negociateurs`. **À blanc = le même chemin, puis tout est annulé** (exception rattrapée dans un
+  sous-bloc) : le compte rendu du matin est exactement ce que la vraie nuit aurait fait.
+- **Éprouvé sur des COPIES temporaires du registre** (garde : les noms mènent aux copies ; témoin : le vrai registre est
+  resté à 242 fiches, journal 0) :
+  - à blanc → compte rendu, 0 ligne écrite ;
+  - la nuit d'aujourd'hui (liste incomplète) → 1 signal « liste incomplète », 0 faux changement ;
+  - e-mail de Claire RIBBES changé → au journal, signalé ; fiche n° 225 de Lucca MEJEAN retirée → réadoptée PAR L'E-MAIL à
+    sa personne (1000039) ; liste complète sans n° 5 → Mélanie LEGRAND « disparue » ; nuit suivante → « réapparue »,
+    `absent_depuis` effacé ; liste de 10 fiches → plancher, aucune absence, pas de 2e signal ; le compte admin n° 4 intact.
+- **Le script** `phase2/sync/maintenir_registre_negociateurs.py` (interrupteur `APP_REGISTRE_NEGOCIATEURS` : absent ou 0 =
+  rien, `blanc`, `1`) ; **le run** : étape non bloquante juste après l'annuaire (`run_full_pipeline.ps1`) ; **la
+  sentinelle** `data.negociateur_registre_signal` (`check_gti_health.py`, domaine data_quality) ; **la sauvegarde** :
+  les 3 tables dans `backup_critical.py`.
+- ⛔ **L'outil a REFUSÉ la pose** (écriture en production) : c'est la règle du projet, **Frédéric colle**
+  `patch_registre_negociateurs_nuit_2026-11-04.sql` dans l'éditeur SQL de Supabase ; le patch se contrôle lui-même (un
+  essai à blanc à la fin, 0 ligne écrite exigée). Tant qu'il n'est pas collé : l'étape de nuit dit « éteint » (code 0) et
+  la sentinelle est « illisible » (inconnu, pas critique).
+- Ensuite : poser `APP_REGISTRE_NEGOCIATEURS=blanc` dans `.env` pour la première nuit ; lire le compte rendu au journal
+  du run le matin ; puis `1`.
+
+### 13 bis. ⚠ TROUVÉ EN CODANT : la nuit ne lit JAMAIS la liste complète des négociateurs
+
+- `sync_raw.py:1665` `resolve_generic_max_pages` : en mode nuit, les négociateurs sont plafonnés à `--update-max-pages`
+  (5) ; **et** `iter_pages` compte depuis 0 alors que Hektor commence à 1 — les pages « 0 » et « 1 » sont la MÊME page 1.
+  Mesuré dans `raw_api_response` : `list_negos_inactive` = 152 fiches sur 8 pages, la nuit lit les pages 1, 1, 2, 3, 4 ;
+  les pages 5 à 8 n'ont plus été lues depuis le **05/06**. (`list_negos`, les actifs, tient en 2 pages : complète.)
+- Conséquence : la présence chez Hektor n'est jamais complète → le script le voit (aucune page « sans page suivante » pour
+  la liste complète) et passe une présence INCONNUE → la nuit ne marque aucune absence, un seul signal. Pas de faux
+  « disparu », mais pas de vrai non plus.
+- C'est le même plafond que celui qui fige la diffusion par portail depuis le 26/10 (mémoire
+  `diffusion-portails-figee-plafond-5-pages`). Remède proposé, À PART (code du run, attend son « vas-y ») : lire toutes les
+  pages des négociateurs la nuit (comme les ventes) — environ 4 requêtes de plus par nuit.
