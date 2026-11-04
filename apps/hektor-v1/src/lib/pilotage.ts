@@ -28,12 +28,15 @@ export const estAnnonceEssai = (annonce: number | string | null | undefined) => 
 
 // ───────────────────────────── les lignes lues ─────────────────────────────
 
-export type PilotageMandat = { debut: string; type: string; agence: string | null; nego: string | null; montant: number | null }
+// annonce / negoId (04/11) : le bien et le n° de NÉGOCIATEUR du mandat, pour le filtre par négociateur
+export type PilotageMandat = { debut: string; type: string; agence: string | null; nego: string | null; montant: number | null; annonce: number | null; negoId: string | null }
 export type PilotageStock = {
   app_dossier_id: number
   statut_annonce: string
   agence_nom: string | null
   commercial_nom: string | null
+  commercial_id: string | null
+  hektor_annonce_id: number | null
   prix: number | null
   mandat_type: string | null
   mandat_date_debut: string | null
@@ -44,7 +47,7 @@ export type PilotageStock = {
   price_change_last_new_value: number | null
   honoraires: number | null
 }
-export type PilotageSignature = { statut: 'signed' | 'pending'; signeLe: string | null }
+export type PilotageSignature = { statut: 'signed' | 'pending'; signeLe: string | null; annonce: number | null }
 export type PilotagePortail = { dossier: number; portail: string; ok: boolean; erreur: boolean }
 
 export type PilotageSources = {
@@ -57,6 +60,8 @@ export type PilotageSources = {
   // 03/11 : deux lectures réservées aux admins (supabase/patch_pilotage_acquereurs_affaires_2026-11-03.sql)
   acquereurs: PilotageAcquereurs | Error
   affairesPlus: PilotageAffairesPlus | Error
+  // 04/11 : l'annuaire des négociateurs (les deux numéros de chaque fiche), pour le filtre par négociateur
+  annuaire: PilotageNegociateur[] | Error
 }
 
 export type PilotageAcquereurs = {
@@ -68,16 +73,20 @@ export type PilotageAcquereurs = {
   negos: Array<{ nom: string; crees: number; crees_prec: number; vivantes: number; avec_rech: number; completes: number; joignables: number; touchees90: number }>
 }
 export type PilotageAffairesPlus = {
-  offres: Array<{ d: string; state: string | null; agence: string | null; type: string | null; ratio: number | null; jours: number | null; premiere: boolean }>
-  actes: Array<{ d: string; agence: string | null; etude_id: string | null; etude: string | null; delai: number | null; retard: boolean | null }>
+  // nego / nego_nom (04/11) : le n° et le nom du négociateur du mandat (offres) ou du bien (actes, compromis)
+  offres: Array<{ d: string; state: string | null; agence: string | null; nego?: string | null; nego_nom?: string | null; type: string | null; ratio: number | null; jours: number | null; premiere: boolean }>
+  actes: Array<{ d: string; agence: string | null; nego?: string | null; nego_nom?: string | null; etude_id: string | null; etude: string | null; delai: number | null; retard: boolean | null }>
   // 03/11, 2e pose : les compromis en cours, notaire retrouvé par son numéro (même numéro que sur les ventes)
-  compromis?: Array<{ app_chaine_id?: number; d: string; prevue: string | null; agence: string | null; etude_id: string | null; etude: string | null }>
+  compromis?: Array<{ app_chaine_id?: number; d: string; prevue: string | null; agence: string | null; nego?: string | null; nego_nom?: string | null; etude_id: string | null; etude: string | null }>
 }
 
 // L'agence (clé de cleAgence) filtre les fiches par l'agence de la fiche, celle du négociateur qui la suit.
-export async function lireAcquereurs(annee: number, agence: string | null = null): Promise<PilotageAcquereurs> {
+// La personne (04/11) : TOUS ses n° de négociateur, et ses noms (clé cleNom) en repli pour une fiche sans numéro.
+export async function lireAcquereurs(annee: number, agence: string | null = null, personne: { negos: string[]; noms: string[] } | null = null): Promise<PilotageAcquereurs> {
   if (!hasSupabaseEnv || !supabase) return mockAcquereurs()
-  const { data, error } = await supabase.rpc('app_pilotage_acquereurs', { p_annee: annee, p_agence: agence })
+  const { data, error } = await supabase.rpc('app_pilotage_acquereurs', {
+    p_annee: annee, p_agence: agence, p_negos: personne ? personne.negos : null, p_noms: personne ? personne.noms : null,
+  })
   if (error) throw new Error(error.message)
   if (!data) throw new Error('lecture réservée aux administrateurs')
   return data as PilotageAcquereurs
@@ -131,7 +140,7 @@ async function lireMandats(annee: number): Promise<PilotageMandat[]> {
   const client = supabase
   const lignes = await toutLire<Record<string, unknown>>((de, a) => client
     .from('app_mandat_register_current')
-    .select('hektor_annonce_id,mandat_date_debut,mandat_type,agence_nom,commercial_nom,mandat_montant,register_source_kind')
+    .select('hektor_annonce_id,mandat_date_debut,mandat_type,agence_nom,commercial_nom,commercial_id,mandat_montant,register_source_kind')
     .gte('mandat_date_debut', `${annee - 1}-01-01`)
     .lte('mandat_date_debut', `${annee}-12-31 23:59:59`)
     .order('register_row_id', { ascending: true })
@@ -144,6 +153,8 @@ async function lireMandats(annee: number): Promise<PilotageMandat[]> {
       agence: (ligne.agence_nom as string | null) ?? null,
       nego: (ligne.commercial_nom as string | null) ?? null,
       montant: nombre(ligne.mandat_montant),
+      annonce: nombre(ligne.hektor_annonce_id),
+      negoId: String(ligne.commercial_id ?? '').trim() || null,
     }))
 }
 
@@ -156,6 +167,8 @@ async function lireStock(): Promise<PilotageStock[]> {
     statut_annonce: String(ligne.statut_annonce ?? ''),
     agence_nom: (ligne.agence_nom as string | null) ?? null,
     commercial_nom: (ligne.commercial_nom as string | null) ?? null,
+    commercial_id: String(ligne.commercial_id ?? '').trim() || null,
+    hektor_annonce_id: nombre(ligne.hektor_annonce_id),
     prix: nombre(ligne.prix),
     mandat_type: (ligne.mandat_type as string | null) ?? null,
     mandat_date_debut: (ligne.mandat_date_debut as string | null) ?? null,
@@ -180,7 +193,7 @@ async function lireSignatures(): Promise<PilotageSignature[]> {
     .range(de, a))
   return lignes
     .filter((ligne) => !estAnnonceEssai(ligne.hektor_annonce_id))
-    .map((ligne) => ({ statut: ligne.signature?.status === 'signed' ? 'signed' as const : 'pending' as const, signeLe: dateSignature(ligne.signature?.signed_at) }))
+    .map((ligne) => ({ statut: ligne.signature?.status === 'signed' ? 'signed' as const : 'pending' as const, signeLe: dateSignature(ligne.signature?.signed_at), annonce: nombre(ligne.hektor_annonce_id) }))
 }
 
 // « 12/03/2026 à 14:05 » -> « 2026-03-12 »
@@ -201,17 +214,34 @@ async function lirePortails(): Promise<PilotagePortail[]> {
   return lignes.map((ligne) => ({ dossier: Number(ligne.app_dossier_id), portail: String(ligne.passerelle_key ?? ''), ok: ligne.is_success === true, erreur: ligne.is_error === true }))
 }
 
+// L'annuaire des négociateurs, reconstruit chaque nuit (push_hektor_directory_to_supabase.py) : 219 fiches, chacune
+// avec son n° de NÉGOCIATEUR et son n° d'UTILISATEUR (Claire RIBBES : 15 et 39). Mesuré le 04/11 : 219 ↔ 219.
+async function lireAnnuaire(): Promise<PilotageNegociateur[]> {
+  if (!hasSupabaseEnv || !supabase) return mockAnnuaire()
+  const client = supabase
+  const lignes = await toutLire<Record<string, unknown>>((de, a) => client
+    .from('app_hektor_negotiator_agency_directory')
+    .select('hektor_negociateur_id,hektor_user_id,prenom,nom,email,agence_nom,is_active')
+    .order('hektor_negociateur_id', { ascending: true })
+    .range(de, a))
+  return lignes.map((l) => ({
+    nego: String(l.hektor_negociateur_id ?? '').trim(), user: String(l.hektor_user_id ?? '').trim() || null,
+    nom: `${String(l.prenom ?? '').trim()} ${String(l.nom ?? '').trim()}`.trim(), email: String(l.email ?? '').trim() || null,
+    agence: (l.agence_nom as string | null) ?? null, actif: l.is_active === true,
+  })).filter((l) => l.nego)
+}
+
 /** Tout ce que le pilotage lit, pour l'année choisie et la précédente. Une source qui échoue n'empêche
  *  pas les autres : elle revient en Error, et seul son onglet le dit. */
 export async function loadPilotage(annee: number): Promise<PilotageSources> {
-  const [ventes, mandats, stock, signatures, portails, acquereurs, affairesPlus] = await Promise.allSettled([
+  const [ventes, mandats, stock, signatures, portails, acquereurs, affairesPlus, annuaire] = await Promise.allSettled([
     hasSupabaseEnv && supabase ? lireVentes(annee) : Promise.resolve(mockVentes(annee)),
-    lireMandats(annee), lireStock(), lireSignatures(), lirePortails(), lireAcquereurs(annee), lireAffairesPlus(annee),
+    lireMandats(annee), lireStock(), lireSignatures(), lirePortails(), lireAcquereurs(annee), lireAffairesPlus(annee), lireAnnuaire(),
   ])
   const v = <T,>(r: PromiseSettledResult<T>) => (r.status === 'fulfilled' ? r.value : enErreur(r.reason))
   return {
     annee, ventes: v(ventes), mandats: v(mandats), stock: v(stock), signatures: v(signatures), portails: v(portails),
-    acquereurs: v(acquereurs), affairesPlus: v(affairesPlus),
+    acquereurs: v(acquereurs), affairesPlus: v(affairesPlus), annuaire: v(annuaire),
   }
 }
 
@@ -630,7 +660,7 @@ function mockMandats(annee: number): PilotageMandat[] {
         debut: `${an}-${String(1 + Math.floor(r() * finMois)).padStart(2, '0')}-${String(1 + Math.floor(r() * 27)).padStart(2, '0')}`,
         type: t < 0.42 ? 'EXCLUSIF' : t < 0.5 ? 'ACCORD' : 'SIMPLE',
         agence: AGENCES_MAQUETTE[Math.floor(r() * AGENCES_MAQUETTE.length)], nego: NEGOS_MAQUETTE[Math.floor(r() * NEGOS_MAQUETTE.length)],
-        montant: 90000 + Math.round(r() * 180000),
+        montant: 90000 + Math.round(r() * 180000), annonce: null, negoId: null,
       })
     }
   }
@@ -648,6 +678,7 @@ function mockStock(): PilotageStock[] {
     const t = r()
     return {
       app_dossier_id: 900000 + i, statut_annonce: statut, agence_nom: AGENCES_MAQUETTE[Math.floor(r() * AGENCES_MAQUETTE.length)], commercial_nom: NEGOS_MAQUETTE[i % NEGOS_MAQUETTE.length],
+      commercial_id: String((i % NEGOS_MAQUETTE.length) + 101), hektor_annonce_id: null,
       prix, mandat_type: t < 0.28 ? 'EXCLUSIF' : t < 0.36 ? 'ACCORD' : t < 0.8 ? 'SIMPLE' : null, mandat_date_debut: r() < 0.85 ? debut : null, mandat_date_fin: fin,
       diffusable: r() < 0.6 ? '1' : '0', nb_portails_actifs: r() < 0.95 ? 4 : 0,
       price_change_last_old_value: r() < 0.15 ? prix * 1.07 : null, price_change_last_new_value: prix, honoraires: r() < 0.72 ? Math.round(prix * 0.065) : null,
@@ -655,11 +686,24 @@ function mockStock(): PilotageStock[] {
   })
 }
 
+// Maquette : chaque négociateur a sa fiche n° 101… (celle du stock de maquette) et une 2e fiche dans une autre
+// agence, sous le même e-mail — comme chez Hektor.
+function mockAnnuaire(): PilotageNegociateur[] {
+  return NEGOS_MAQUETTE.flatMap((nom, i) => {
+    const propre = nomPersonne(nom)
+    const email = `${propre.split(' ').pop()?.toLowerCase()}@exemple.fr`
+    return [
+      { nego: String(101 + i), user: String(i + 1), nom: propre, email, agence: AGENCES_MAQUETTE[i % AGENCES_MAQUETTE.length], actif: true },
+      { nego: String(201 + i), user: String(51 + i), nom: propre, email, agence: AGENCES_MAQUETTE[(i + 3) % AGENCES_MAQUETTE.length], actif: false },
+    ]
+  })
+}
+
 function mockSignatures(): PilotageSignature[] {
   const r = hasard(59)
   const an = aujourdhui().slice(0, 4)
   const finMois = Number(aujourdhui().slice(5, 7))
-  return Array.from({ length: 360 }, () => ({ statut: r() < 0.9 ? 'signed' as const : 'pending' as const, signeLe: `${an}-${String(2 + Math.floor(r() * Math.max(1, finMois - 1))).padStart(2, '0')}-10` }))
+  return Array.from({ length: 360 }, () => ({ statut: r() < 0.9 ? 'signed' as const : 'pending' as const, signeLe: `${an}-${String(2 + Math.floor(r() * Math.max(1, finMois - 1))).padStart(2, '0')}-10`, annonce: null }))
 }
 
 function mockPortails(): PilotagePortail[] {
@@ -755,7 +799,7 @@ export type LigneClassement = {
   compromis: number
 }
 
-const cleNom = (nom: string) => nomPersonne(nom).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim()
+export const cleNom = (nom: string) => nomPersonne(nom).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim()
 
 export function calculerClassements(ventes: VentesCalcul | null, mandats: MandatsCalcul | null, stock: PilotageStock[] | null, affaires: AffairesCalcul | null, agence: string | null) {
   const vide = (cle: string, nom: string): LigneClassement => ({ cle, nom, ca: 0, caPrec: 0, actes: 0, mandats: 0, mandatsPrec: 0, exclusifs: 0, portefeuille: 0, potentiel: 0, compromis: 0 })
@@ -883,4 +927,133 @@ function mockAffairesPlus(annee: number): PilotageAffairesPlus {
     etude_id: String(i % 4), etude: etudes[i % 4], app_chaine_id: 900000 + i,
   }))
   return { offres, actes, compromis }
+}
+
+// ───────────────────────────── le pilotage PAR NÉGOCIATEUR (04/11) ─────────────────────────────
+// notice/AUDIT_PILOTAGE_GLOBAL_2026-11-02.md §40-40 ter. Un négociateur a DEUX numéros chez Hektor : sa fiche
+// NÉGOCIATEUR (stock, mandats, contacts — Claire RIBBES = 15) et son compte UTILISATEUR (répartition des honoraires —
+// Claire RIBBES = 39) ; et une personne a souvent UNE fiche par agence (Marion BILLIG DURAND : 52, 39, 89). L'annuaire
+// relie tout : la PERSONNE = les fiches de l'annuaire au même e-mail (à défaut au même nom). Une ligne se rattache par son
+// NUMÉRO ; par sécurité (Frédéric, 04/11), son nom est contrôlé, et sert de repli quand le numéro manque.
+//   . une vente répartie compte pour lui avec SA PART : honoraires × somme de ses pourcentages / 100 ;
+//   . une vente sans répartition, une offre, un compromis : le négociateur du bien (e-mail du registre) ;
+//   . mandats, stock, signatures : le négociateur du mandat ou du bien ; diffusion : par le stock filtré ;
+//   . prix obtenu, notaires : le négociateur que la base rend sur chaque ligne ; acquéreurs : lecture à part.
+export type PilotageNegociateur = { nego: string; user: string | null; nom: string; email: string | null; agence: string | null; actif: boolean }
+export type Personne = { cle: string; nom: string; actif: boolean; negos: Set<string>; users: Set<string>; emails: Set<string>; noms: Set<string> }
+export type RepereNegos = { personnes: Map<string, Personne>; parNego: Map<string, string>; parUser: Map<string, string>; parEmail: Map<string, string>; parNom: Map<string, string> }
+/** Ce que le filtre a fait, pour le dire à l'écran : lignes rattachées par le numéro, par le nom (sans numéro), et les
+ *  désaccords — son numéro mais un autre nom, ou son nom mais le numéro d'un autre. */
+export type ControleNego = { parNumero: number; parNom: number; nomDifferent: number; autreNumero: number }
+
+const cleEmail = (email: string | null | undefined) => String(email ?? '').trim().toLowerCase()
+const cleNomSur = (nom: string | null | undefined) => (String(nom ?? '').trim() ? cleNom(String(nom)) : '')
+
+export function construireRepere(annuaire: PilotageNegociateur[]): RepereNegos {
+  const repere: RepereNegos = { personnes: new Map(), parNego: new Map(), parUser: new Map(), parEmail: new Map(), parNom: new Map() }
+  // Les fiches avec e-mail d'abord (l'e-mail regroupe les fiches d'une même personne), les actives en tête (nom affiché).
+  const lignes = [...annuaire].sort((a, b) => Number(!cleEmail(a.email)) - Number(!cleEmail(b.email)) || Number(b.actif) - Number(a.actif))
+  for (const l of lignes) {
+    const email = cleEmail(l.email)
+    const nom = cleNomSur(l.nom)
+    const cle = (email && repere.parEmail.get(email)) || (nom && repere.parNom.get(nom)) || `p:${email || nom || `n${l.nego}`}`
+    const p = repere.personnes.get(cle) ?? { cle, nom: nomPersonne(l.nom), actif: false, negos: new Set<string>(), users: new Set<string>(), emails: new Set<string>(), noms: new Set<string>() }
+    p.actif = p.actif || l.actif
+    p.negos.add(l.nego); repere.parNego.set(l.nego, cle)
+    if (l.user) { p.users.add(l.user); repere.parUser.set(l.user, cle) }
+    if (email) { p.emails.add(email); repere.parEmail.set(email, cle) }
+    if (nom) { p.noms.add(nom); if (!repere.parNom.has(nom)) repere.parNom.set(nom, cle) }
+    repere.personnes.set(cle, p)
+  }
+  return repere
+}
+
+type Numero = { nego?: string | null; user?: string | null; email?: string | null }
+function rattacher(repere: RepereNegos, numero: Numero, nom: string | null | undefined) {
+  const n = cleNomSur(nom)
+  const parNumero = (numero.nego && repere.parNego.get(String(numero.nego).trim()))
+    || (numero.user && repere.parUser.get(String(numero.user).trim()))
+    || (numero.email && repere.parEmail.get(cleEmail(numero.email))) || null
+  if (parNumero) return { cle: parNumero, par: 'numero' as const, nom: n, nomOk: !n || (repere.personnes.get(parNumero)?.noms.has(n) ?? false) }
+  return { cle: n ? repere.parNom.get(n) ?? null : null, par: 'nom' as const, nom: n, nomOk: true }
+}
+
+/** Les personnes qui ont au moins une ligne dans les sources (dans l'agence choisie, si elle l'est), par nom. */
+export function personnesPresentes(sources: PilotageSources, repere: RepereNegos, agence: string | null): Personne[] {
+  const vues = new Set<string>()
+  const garde = (ag: string | null | undefined) => !agence || cleAgence(ag) === agence
+  const noter = (numero: Numero, nom: string | null | undefined) => { const r = rattacher(repere, numero, nom); if (r.cle) vues.add(r.cle) }
+  if (!(sources.stock instanceof Error)) for (const s of sources.stock) if (garde(s.agence_nom)) noter({ nego: s.commercial_id }, s.commercial_nom)
+  if (!(sources.mandats instanceof Error)) for (const m of sources.mandats) if (garde(m.agence)) noter({ nego: m.negoId }, m.nego)
+  if (!(sources.ventes instanceof Error)) {
+    for (const [lignes, rep] of [[sources.ventes.n, sources.ventes.repN], [sources.ventes.p, sources.ventes.repP]] as const) {
+      for (const l of lignes) {
+        if (!garde(l.agence_nom)) continue
+        const lr = rep.get(String(l.app_chaine_id)) ?? []
+        if (lr.length) for (const x of lr) noter({ user: x.hektorUserId }, x.nomAuMoment)
+        else noter({ email: l.negociateur_email }, null)
+      }
+    }
+  }
+  return [...vues].map((cle) => repere.personnes.get(cle) as Personne)
+    .filter((p) => p && !/supprim/i.test(p.nom))
+    .sort((a, b) => a.nom.localeCompare(b.nom, 'fr'))
+}
+
+/** Les sources réduites à une personne. Les calculs des onglets ne changent pas : ils reçoivent moins de lignes. */
+export function filtrerParPersonne(sources: PilotageSources, repere: RepereNegos, cle: string): { sources: PilotageSources; controle: ControleNego } {
+  const controle: ControleNego = { parNumero: 0, parNom: 0, nomDifferent: 0, autreNumero: 0 }
+  const moi = repere.personnes.get(cle)
+  const est = (numero: Numero, nom: string | null | undefined) => {
+    const r = rattacher(repere, numero, nom)
+    if (r.cle === cle) {
+      if (r.par === 'numero') { controle.parNumero += 1; if (!r.nomOk) controle.nomDifferent += 1 } else controle.parNom += 1
+      return true
+    }
+    if (r.par === 'numero' && r.nom && moi?.noms.has(r.nom)) controle.autreNumero += 1
+    return false
+  }
+
+  let ventes = sources.ventes
+  if (!(ventes instanceof Error)) {
+    const reduire = (lignes: RegistreDossierRow[], rep: Map<string, RepartitionLigne[]>) => {
+      const sortie: RegistreDossierRow[] = []
+      const repSortie = new Map<string, RepartitionLigne[]>()
+      for (const l of lignes) {
+        const lr = rep.get(String(l.app_chaine_id)) ?? []
+        if (lr.length) {
+          const miennes = lr.filter((x) => est({ user: x.hektorUserId }, x.nomAuMoment))
+          if (!miennes.length) continue
+          const part = miennes.reduce((t, x) => t + x.pourcentage, 0) / 100
+          const fois = (v: number | null) => (v == null ? null : v * part)
+          sortie.push({ ...l, honoraires: fois(l.honoraires), honoraires_entree: fois(l.honoraires_entree), honoraires_sortie: fois(l.honoraires_sortie) })
+          repSortie.set(String(l.app_chaine_id), miennes)
+        } else if (est({ email: l.negociateur_email }, null)) sortie.push(l)
+      }
+      return { lignes: sortie, rep: repSortie }
+    }
+    const n = reduire(ventes.n, ventes.repN)
+    const p = reduire(ventes.p, ventes.repP)
+    ventes = { n: n.lignes, p: p.lignes, repN: n.rep, repP: p.rep }
+  }
+
+  const mandats = sources.mandats instanceof Error ? sources.mandats : sources.mandats.filter((m) => est({ nego: m.negoId }, m.nego))
+  const stock = sources.stock instanceof Error ? sources.stock : sources.stock.filter((s) => est({ nego: s.commercial_id }, s.commercial_nom))
+
+  // Signatures : le négociateur du bien, retrouvé par le mandat (ou le stock) de la même annonce.
+  let signatures = sources.signatures
+  if (!(signatures instanceof Error)) {
+    const parAnnonce = new Map<number, { nego: string | null; nom: string | null }>()
+    if (!(sources.mandats instanceof Error)) for (const m of sources.mandats) if (m.annonce != null) parAnnonce.set(m.annonce, { nego: m.negoId, nom: m.nego })
+    if (!(sources.stock instanceof Error)) for (const s of sources.stock) if (s.hektor_annonce_id != null) parAnnonce.set(s.hektor_annonce_id, { nego: s.commercial_id, nom: s.commercial_nom })
+    signatures = signatures.filter((x) => { const q = x.annonce != null ? parAnnonce.get(x.annonce) : undefined; return q ? est({ nego: q.nego }, q.nom) : false })
+  }
+
+  let affairesPlus = sources.affairesPlus
+  if (!(affairesPlus instanceof Error)) {
+    const garde = (x: { nego?: string | null; nego_nom?: string | null }) => est({ nego: x.nego }, x.nego_nom)
+    affairesPlus = { offres: affairesPlus.offres.filter(garde), actes: affairesPlus.actes.filter(garde), compromis: (affairesPlus.compromis ?? []).filter(garde) }
+  }
+
+  return { sources: { ...sources, ventes, mandats, stock, signatures, affairesPlus }, controle }
 }

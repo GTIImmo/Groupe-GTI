@@ -1092,3 +1092,22 @@ Frédéric : « c'est une erreur… c'est pas normal, audite le projet et expliq
 ⇒ **Ce n'est pas un défaut des données : c'est le modèle de Hektor (une personne = un utilisateur + une fiche négociateur), et le projet a déjà le pont.** La faute est dans MON audit : j'ai comparé un n° de négociateur à un n° d'utilisateur sans passer par l'annuaire. ⛔ Leçon : avant de dire « deux numérotations », chercher la table qui les relie (la note juin le disait : « négo 1 / user 2 », « négo 42 / user 68 »).
 
 **Ce que ça change au dessin du §40** : la clé du filtre doit être **le NUMÉRO, pas le nom** — le n° d'utilisateur, celui de la répartition (le C.A), le n° de négociateur étant traduit par l'annuaire pour le stock, les mandats, les offres et les acquéreurs. Le nom ne sert plus que pour afficher, et pour les non-personnes. Rien n'a été posé en base, rien n'a été codé.
+
+### 40 ter. Une PERSONNE = plusieurs fiches ; le patch et l'écran (04/11) — Frédéric : « OUI REPRENDS audit avec filtre sur le nom par securité »
+
+**Audit du chemin par numéro** :
+- ⭐⭐ **Une même personne a UNE fiche négociateur par agence**, chacune avec son n° de négociateur et son n° d'utilisateur, sous le MÊME e-mail : Marion BILLIG DURAND 52/77 (Craponne, active), 39/58 (Tence), 89/112 (Le Puy) ; Dylan JOURGET 4 fiches, Pauline GIRINON 4, 19 personnes actives en ont plusieurs ; « Groupe GTI » (accueil@) en a 11. L'annuaire est cohérent : **0 e-mail porte deux noms, 0 nom porte deux e-mails** ; 13 fiches sans e-mail.
+- ⇒ la clé est **la personne** = toutes les fiches de l'annuaire au même e-mail (à défaut au même nom), et TOUS ses numéros.
+- Preuve que ça compte : **29 fiches acquéreurs vivantes** sont sous le 2e numéro d'une personne active (Guillaume PERRET n° 96, Stephanie JEOFFROY n° 85). Avec son seul numéro actif (91), PERRET aurait **16** fiches vivantes ; avec ses deux, **25** — exactement sa ligne par le nom.
+- Le registre des transactions ne rend que l'e-mail du négociateur (pas de numéro) : l'e-mail est la clé de la personne, 889 chaînes 2025-2026 sur 889 qui en portent un le retrouvent.
+- Stock, mandats, répartition 2025-2026 : **0 ligne** sous une fiche non active d'une personne active aujourd'hui.
+
+**Le patch** (`supabase/patch_pilotage_par_nego_2026-11-04.sql`, inverse `…_INVERSE.sql`, migration `pilotage_par_nego_2026_11_04`), **POSÉ le 04/11 avec l'accord de Frédéric**, lecture seule :
+- `app_pilotage_stock()` rend aussi `commercial_id` ;
+- `app_pilotage_acquereurs(p_annee, p_agence, p_negos, p_noms)` : ses numéros, et son nom en repli pour une fiche sans numéro ;
+- `app_pilotage_affaires_plus` : `nego` / `nego_nom` sur chaque offre, acte, compromis.
+- **Contrôles sous le compte de Frédéric, tous verts** : sans filtre, chiffres IDENTIQUES à avant (17 089 fiches, 9 483 vivantes, vivier 9 483 / 4 027 / 3 337 / 2 939 / 2 806 ; 672 offres, 639 actes, 126 compromis ; 712 biens) ; Marion 478 vivantes et 77 créées (= sa ligne d'avant), PERRET 25, JEOFFROY 133 ; négociateur retrouvé sur 663 offres / 672, 613 actes / 639, 105 compromis / 126 ; un compte non admin n'obtient rien, la clé publique n'a aucun droit, une seule version de la fonction.
+
+**L'écran** : un sélecteur « Négociateur » (la liste suit l'agence ; « · ancien » pour une personne sans fiche active) ; les sources sont réduites AVANT les calculs (`filtrerParPersonne`, lib/pilotage.ts) ; un bandeau dit ce qui est compté et **le contrôle par le nom** : lignes rattachées par le numéro, par le nom, et les désaccords (son numéro sous un autre nom ; son nom sous le numéro d'un autre — non comptées). Les classements restent ceux du réseau, sa ligne surlignée.
+⚠ Limite connue : les compromis ne lisent pas la répartition (l'écran ne la charge que pour les ventes), ils vont au négociateur du bien.
+Contrôlé sur le serveur d'essai (7 onglets, écran large et téléphone). ⏳ **Attendu en ligne pour Claire RIBBES (négociateur 15 / utilisateur 39), mesuré en base** : 18 actes 2026, **120 100 € TTC / 100 083 € HT** de part d'honoraires, 38 mandats 2026, 63 biens en vente.

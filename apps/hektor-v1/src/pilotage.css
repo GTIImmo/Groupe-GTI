@@ -406,6 +406,11 @@ button.pl-carte:focus-visible, .pl-ecran button:focus-visible, .pl-ecran select:
 .pl-cl-lignes { min-width: 620px; display: flex; flex-direction: column; gap: 2px; }
 .pl-cl-ligne { display: grid; grid-template-columns: 30px 200px minmax(0, 1fr) 96px 84px 84px; gap: 14px; align-items: center; padding: 8px 10px; margin: 0 -10px; border-radius: 12px; font-size: 13.5px; transition: background .2s ease; }
 .pl-cl-ligne:hover { background: #f7f8fa; }
+/* 04/11 : le négociateur choisi, surligné dans le classement du réseau */
+.pl-cl-ligne.is-moi, .pl-cl-ligne.is-moi:hover { background: #fdeef5; box-shadow: inset 3px 0 0 #c5005f; }
+.pl-nego-bandeau { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; margin: 0 0 14px; padding: 12px 16px; border-radius: 14px; background: #fdeef5; border: 1px solid #f6cfe0; font-size: 13px; line-height: 1.45; }
+.pl-nego-bandeau > b { font-size: 15px; color: #8a0043; }
+.pl-nego-bandeau > span { min-width: 0; }
 .pl-cl-ligne-nom, .pl-cl-ligne .pl-lien-nom { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pl-cl-rang { font-family: var(--pl-disp); font-size: 13px; color: var(--pl-mute); }
 .pl-cl-rang.is-podium { color: var(--pl-marque); }

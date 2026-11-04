@@ -11,7 +11,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import {
   aujourdhui, calculerAffaires, calculerAffairesPlus, calculerClassements, calculerMandats, calculerPortails, calculerSignatures, calculerStock, calculerVentes, cleAgence,
-  lireAcquereurs, loadPilotage, mediane, nomAgence,
+  construireRepere, filtrerParPersonne, lireAcquereurs, loadPilotage, mediane, nomAgence, personnesPresentes,
   type LigneClassement, type PilotageAcquereurs, type PilotageSources,
 } from './lib/pilotage'
 import { hasSupabaseEnv } from './lib/supabase'
@@ -223,6 +223,8 @@ export default function PilotageScreen() {
   const [ttc, setTtc] = useState(depart.ttc)
   const [annee, setAnnee] = useState(ANNEE_COURANTE)
   const [agence, setAgence] = useState<string | null>(null)
+  // 04/11 : le négociateur choisi (clé de la PERSONNE dans l'annuaire, tous ses numéros) ; null = tous
+  const [qui, setQui] = useState<string | null>(null)
   const [comparer, setComparer] = useState(true)
   const [sources, setSources] = useState<PilotageSources | null>(null)
   const [essai, setEssai] = useState(0)
@@ -253,16 +255,27 @@ export default function PilotageScreen() {
     return () => { annule = true }
   }, [annee, essai])
 
-  // Acquéreurs filtrés par agence : une lecture à part, rejouée quand l'agence change (la lecture « tout le réseau »
-  // arrive avec les autres sources).
-  const [acqAgence, setAcqAgence] = useState<{ cle: string; lu: PilotageAcquereurs | Error } | null>(null)
+  // L'annuaire des négociateurs : une personne = toutes ses fiches (un n° de négociateur par agence, un n° d'utilisateur).
+  const repere = useMemo(() => (sources && !(sources.annuaire instanceof Error) ? construireRepere(sources.annuaire) : null), [sources])
+  const personnes = useMemo(() => (sources && repere ? personnesPresentes(sources, repere, agence) : []), [sources, repere, agence])
+  const personne = qui && repere ? repere.personnes.get(qui) ?? null : null
+  // Une agence où il n'a rien : le choix du négociateur tombe (seulement une fois les données lues).
   useEffect(() => {
-    if (!agence) return undefined
+    if (qui && sources && repere && !personnes.some((p) => p.cle === qui)) setQui(null)
+  }, [qui, sources, repere, personnes])
+
+  // Acquéreurs filtrés par agence et/ou par négociateur : une lecture à part, rejouée quand l'un change (la lecture
+  // « tout le réseau » arrive avec les autres sources).
+  const [acqAgence, setAcqAgence] = useState<{ cle: string; lu: PilotageAcquereurs | Error } | null>(null)
+  const cleAcq = `${annee}-${agence ?? ''}-${personne?.cle ?? ''}`
+  useEffect(() => {
+    if (!agence && !personne) return undefined
     let annule = false
-    const cle = `${annee}-${agence}`
-    lireAcquereurs(annee, agence).then((lu) => { if (!annule) setAcqAgence({ cle, lu }) }, (e) => { if (!annule) setAcqAgence({ cle, lu: e instanceof Error ? e : new Error(String(e)) }) })
+    const cle = cleAcq
+    const qui2 = personne ? { negos: [...personne.negos], noms: [...personne.noms] } : null
+    lireAcquereurs(annee, agence, qui2).then((lu) => { if (!annule) setAcqAgence({ cle, lu }) }, (e) => { if (!annule) setAcqAgence({ cle, lu: e instanceof Error ? e : new Error(String(e)) }) })
     return () => { annule = true }
-  }, [annee, agence, essai])
+  }, [annee, agence, personne, cleAcq, essai])
 
   const reessayer = () => setEssai((x) => x + 1)
   const enCours = annee === ANNEE_COURANTE
@@ -272,23 +285,39 @@ export default function PilotageScreen() {
   const compact = (x: number) => { const y = x * coef; return y >= 1e6 ? `${(y / 1e6).toFixed(2).replace('.', ',')} M€` : `${entier.format(Math.round(y / 1000))} k€` }
   const libelleComparaison = enCours ? `${annee - 1} à la même date` : `${annee - 1}`
 
-  const ventes = useMemo(() => (sources && !(sources.ventes instanceof Error) ? calculerVentes(sources.ventes, annee, agence) : null), [sources, annee, agence])
-  const mandats = useMemo(() => (sources && !(sources.mandats instanceof Error) ? calculerMandats(sources.mandats, annee, agence) : null), [sources, annee, agence])
-  const stock = useMemo(() => (sources && !(sources.stock instanceof Error) ? calculerStock(sources.stock, agence) : null), [sources, agence])
-  const signatures = useMemo(() => (sources && !(sources.signatures instanceof Error) ? calculerSignatures(sources.signatures, annee) : null), [sources, annee])
-  const affaires = useMemo(() => (sources && !(sources.ventes instanceof Error) ? calculerAffaires(sources.ventes, annee, agence) : null), [sources, annee, agence])
-  const acqLu = agence ? (acqAgence && acqAgence.cle === `${annee}-${agence}` ? acqAgence.lu : undefined) : sources?.acquereurs
+  // Le négociateur choisi : les sources sont réduites à ses lignes AVANT les calculs, qui ne changent pas.
+  const vue = useMemo(() => (sources && repere && personne ? filtrerParPersonne(sources, repere, personne.cle) : null), [sources, repere, personne])
+  const src = vue?.sources ?? sources
+  const ventes = useMemo(() => (src && !(src.ventes instanceof Error) ? calculerVentes(src.ventes, annee, agence) : null), [src, annee, agence])
+  const mandats = useMemo(() => (src && !(src.mandats instanceof Error) ? calculerMandats(src.mandats, annee, agence) : null), [src, annee, agence])
+  const stock = useMemo(() => (src && !(src.stock instanceof Error) ? calculerStock(src.stock, agence) : null), [src, agence])
+  const signatures = useMemo(() => (src && !(src.signatures instanceof Error) ? calculerSignatures(src.signatures, annee) : null), [src, annee])
+  const affaires = useMemo(() => (src && !(src.ventes instanceof Error) ? calculerAffaires(src.ventes, annee, agence) : null), [src, annee, agence])
+  const acqLu = agence || personne ? (acqAgence && acqAgence.cle === cleAcq ? acqAgence.lu : undefined) : sources?.acquereurs
   const acquereurs = acqLu && !(acqLu instanceof Error) ? acqLu : null
   const acqEnLecture = acqLu === undefined
   const affairesPlus = useMemo(() => {
-    if (!sources || sources.affairesPlus instanceof Error) return null
-    const enCours = sources.ventes instanceof Error || !hasSupabaseEnv ? null
-      : new Set([...sources.ventes.n, ...sources.ventes.p].filter((l) => l.etape === 'compromis').map((l) => l.app_chaine_id))
-    return calculerAffairesPlus(sources.affairesPlus, annee, agence, enCours)
-  }, [sources, annee, agence])
-  const classements = useMemo(() => (ventes || mandats || stock
-    ? calculerClassements(ventes, mandats, sources && !(sources.stock instanceof Error) ? sources.stock : null, affaires, agence) : null), [ventes, mandats, stock, sources, affaires, agence])
-  const portails = useMemo(() => (sources && !(sources.portails instanceof Error) && !(sources.stock instanceof Error) ? calculerPortails(sources.portails, sources.stock, agence) : null), [sources, agence])
+    if (!src || src.affairesPlus instanceof Error) return null
+    const enCours = src.ventes instanceof Error || !hasSupabaseEnv ? null
+      : new Set([...src.ventes.n, ...src.ventes.p].filter((l) => l.etape === 'compromis').map((l) => l.app_chaine_id))
+    return calculerAffairesPlus(src.affairesPlus, annee, agence, enCours)
+  }, [src, annee, agence])
+  // Les classements restent ceux de TOUT le réseau (le négociateur choisi y est surligné) : calculés sur les sources entières.
+  const reseau = useMemo(() => {
+    if (!personne || !sources) return null
+    return {
+      ventes: sources.ventes instanceof Error ? null : calculerVentes(sources.ventes, annee, agence),
+      mandats: sources.mandats instanceof Error ? null : calculerMandats(sources.mandats, annee, agence),
+      affaires: sources.ventes instanceof Error ? null : calculerAffaires(sources.ventes, annee, agence),
+    }
+  }, [personne, sources, annee, agence])
+  const classements = useMemo(() => {
+    const v = reseau ? reseau.ventes : ventes
+    const m = reseau ? reseau.mandats : mandats
+    const st = sources && !(sources.stock instanceof Error) ? sources.stock : null
+    return v || m || st ? calculerClassements(v, m, st, reseau ? reseau.affaires : affaires, agence) : null
+  }, [reseau, ventes, mandats, sources, affaires, agence])
+  const portails = useMemo(() => (src && !(src.portails instanceof Error) && !(src.stock instanceof Error) ? calculerPortails(src.portails, src.stock, agence) : null), [src, agence])
 
   // Les agences proposées au filtre : toutes celles que les sources connaissent, une seule fois chacune.
   const agencesConnues = useMemo(() => {
@@ -337,6 +366,13 @@ export default function PilotageScreen() {
             {agencesConnues.map((a) => <option key={a} value={a}>{nomAgence(a)}</option>)}
           </select>
         </label>
+        <label className="pl-filtre">
+          <span>Négociateur</span>
+          <select value={qui ?? ''} onChange={(e) => setQui(e.target.value || null)} disabled={!repere}>
+            <option value="">{repere ? `Tous (${personnes.length})` : 'Annuaire indisponible'}</option>
+            {personnes.map((p) => <option key={p.cle} value={p.cle}>{p.nom}{p.actif ? '' : ' · ancien'}</option>)}
+          </select>
+        </label>
         {onglet !== 'stock' ? (
           <button type="button" className={`pl-bascule${comparer ? ' is-actif' : ''}`} aria-pressed={comparer} onClick={() => setComparer((x) => !x)}>Comparer à {libelleComparaison}</button>
         ) : <span className="pl-puce" title="Le stock n’est gardé qu’au jour le jour">Photo du jour, sans comparaison possible</span>}
@@ -347,11 +383,20 @@ export default function PilotageScreen() {
         </div>
       </div>
 
+      {personne && vue ? (
+        <div className="pl-nego-bandeau" role="note">
+          <b>{personne.nom}</b>
+          <span>Ventes et compromis répartis : <b>sa part</b> des honoraires · offres, mandats, stock, signatures, acquéreurs : <b>ses biens et ses fiches</b>{personne.negos.size > 1 ? ` (ses ${personne.negos.size} fiches négociateur réunies)` : ''}.</span>
+          <span className="pl-mute">Contrôle : {entier.format(vue.controle.parNumero)} lignes rattachées par le numéro{vue.controle.parNom ? `, ${entier.format(vue.controle.parNom)} par le nom (sans numéro)` : ''}{vue.controle.nomDifferent ? ` · ⚠ ${entier.format(vue.controle.nomDifferent)} portent son numéro sous un autre nom` : ''}{vue.controle.autreNumero ? ` · ⚠ ${entier.format(vue.controle.autreNumero)} portent son nom sous le numéro d’un autre (non comptées)` : ''}.</span>
+          <button type="button" className="pl-lien-nom" onClick={() => setQui(null)}>Revenir à tous</button>
+        </div>
+      ) : null}
+
       {chargement ? (
         <div className="pl-grille-kpi">{[0, 1, 2, 3].map((i) => <div key={i} className="pl-carte pl-kpi"><span className="pl-sk" /><span className="pl-sk is-grand" /></div>)}</div>
       ) : (
-        // La clé rejoue l'entrée animée à chaque changement d'onglet, d'année ou d'agence.
-        <div key={`${onglet}-${annee}-${agence ?? ''}`} className="pl-contenu">
+        // La clé rejoue l'entrée animée à chaque changement d'onglet, d'année, d'agence ou de négociateur.
+        <div key={`${onglet}-${annee}-${agence ?? ''}-${qui ?? ''}`} className="pl-contenu">
           {onglet === 'ensemble' ? Ensemble() : onglet === 'ventes' ? Ventes() : onglet === 'affaires' ? Affaires() : onglet === 'mandats' ? Mandats() : onglet === 'stock' ? Stock() : onglet === 'acquereurs' ? Acquereurs() : Classements()}
         </div>
       )}
@@ -804,7 +849,7 @@ export default function PilotageScreen() {
   // ───────────────────────── ACQUÉREURS (03/11) ─────────────────────────
   // Le fichier acquéreurs en chiffres (lecture admin app_pilotage_acquereurs) : aucune fiche nominative ne sort.
   function Acquereurs() {
-    if (acqEnLecture) return <div className="pl-carte pl-indispo" role="status"><span className="pl-mute">Lecture du fichier acquéreurs de {nomAgence(agence ?? '')}…</span></div>
+    if (acqEnLecture) return <div className="pl-carte pl-indispo" role="status"><span className="pl-mute">Lecture du fichier acquéreurs{personne ? ` de ${personne.nom}` : ''}{agence ? ` · ${nomAgence(agence)}` : ''}…</span></div>
     if (!acquereurs) return <Indisponible quoi="Le fichier acquéreurs" onReessayer={reessayer} />
     const a = acquereurs
     const v = Math.max(1, a.vivantes)
@@ -833,7 +878,7 @@ export default function PilotageScreen() {
     const maxCrees = Math.max(1, ...negos.map((n) => n.crees))
     return (
       <>
-        <span className="pl-puce">{agence ? `Fiches de l’agence ${nomAgence(agence)} : l’agence de la fiche, celle du négociateur qui la suit` : 'Tout le réseau'}</span>
+        <span className="pl-puce">{personne ? `Fiches suivies par ${personne.nom}${agence ? ` · agence ${nomAgence(agence)}` : ''}` : agence ? `Fiches de l’agence ${nomAgence(agence)} : l’agence de la fiche, celle du négociateur qui la suit` : 'Tout le réseau'}</span>
         <div className="pl-grille-kpi">
           <Carte libelle="Fiches vivantes" genre="fichier" valeur={<Compteur valeur={a.vivantes} format={(x) => entier.format(Math.round(x))} />} detail={`${entier.format(a.total)} fiches acquéreurs en tout`} />
           <Carte libelle={`Créées en ${annee}`} genre="activité" valeur={<Compteur valeur={a.crees} format={(x) => entier.format(Math.round(x))} />} ecartValeur={comparer ? ecart(a.crees, a.crees_prec) : null} detail={comparer ? `contre ${entier.format(a.crees_prec)} · ${libelleComparaison}` : ''} />
@@ -992,7 +1037,7 @@ export default function PilotageScreen() {
                 {classes.map((l, i) => {
                   const v = tri.valeur(l) ?? 0
                   return (
-                    <div key={l.cle} className="pl-cl-ligne pl-glisse" style={{ animationDelay: `${Math.min(i, 20) * 35 + 200}ms` }}>
+                    <div key={l.cle} className={`pl-cl-ligne pl-glisse${classeQui === 'negos' && personne?.noms.has(l.cle) ? ' is-moi' : ''}`} style={{ animationDelay: `${Math.min(i, 20) * 35 + 200}ms` }}>
                       <b className={`pl-num pl-cl-rang${i < 3 ? ' is-podium' : ''}`}>{i + 1}</b>
                       {classeQui === 'agences' ? <button type="button" className="pl-lien-nom" onClick={() => setAgence(l.cle)}>{l.nom}</button> : <b className="pl-cl-ligne-nom">{l.nom}</b>}
                       <span className="pl-tdb-agence-piste"><span className={v < 0 ? 'is-negatif' : ''} style={{ width: `${(Math.abs(v) / max) * 100}%` }} /></span>
