@@ -1975,3 +1975,10 @@ Recherche dans les notes (accents ignorés), l'historique git et la mémoire. **
   par notre registre des relations sont absents de l'app** : c'est l'usage le plus utile d'un index.
 - **Ordre proposé** : 1. le remède des contacts figés (§64) ; 2. l'index, en commençant par les contacts du registre ; 3. les doublons
   (cahier du 29/06 à valider) ; 4. les données personnelles.
+
+- ✅ **ALLUMÉ le 04/11 vers 11:36** (« Oui, allume ») : `APP_GARDER_CONTACTS_DEJA_POUSSES=1` est ajouté à la fin du `.env`, avec
+  son commentaire, et une copie datée du `.env` d'avant est gardée.
+  Vérifié à blanc, l'interrupteur étant lu dans le `.env` : 63 168 chargés, 227 à envoyer, comme prévu.
+  ⚠ Les relectures d'une fiche le lisent aussi dès maintenant : un contact déjà envoyé, archivé et non éligible est rafraîchi s'il est ouvert.
+  ⏰ **Le 05/11 au matin** : la ligne de l'envoi des contacts du run doit montrer ~227 envois et 0 suppression. Chez Supabase, les 104 doivent
+  être `archive = true` et les 211 doivent avoir leur nature.
