@@ -101,11 +101,13 @@ export type FoyerPersonne = {
   nom?: string | null
 }
 
-export type FoyerOnglet = { titre: string; sousTitre: string; vide: boolean }
+// `fiche` et `principal` (04/11/2026) : les deux morceaux de `sousTitre`, séparés pour la liste du foyer.
+export type FoyerOnglet = { titre: string; sousTitre: string; vide: boolean; fiche: string | null; principal: boolean }
 
 export type FoyerAffiche = {
   etiquette: string
   incomplet: boolean
+  situation: string | null       // « mariés » / « pacsés », ou null
   onglets: [FoyerOnglet, FoyerOnglet]
 }
 
@@ -133,11 +135,12 @@ export function foyerAffiche(
   return {
     etiquette,
     incomplet,
+    situation: situation ?? null,
     onglets: [
-      { titre: nomDeLOnglet(principal), sousTitre: `fiche ${principal.hektor_contact_id} · principal`, vide: false },
+      { titre: nomDeLOnglet(principal), sousTitre: `fiche ${principal.hektor_contact_id} · principal`, vide: false, fiche: principal.hektor_contact_id, principal: true },
       conjoint
-        ? { titre: nomDeLOnglet(conjoint), sousTitre: `fiche ${conjoint.hektor_contact_id}`, vide: false }
-        : { titre: 'Conjoint', sousTitre: 'à compléter', vide: true },
+        ? { titre: nomDeLOnglet(conjoint), sousTitre: `fiche ${conjoint.hektor_contact_id}`, vide: false, fiche: conjoint.hektor_contact_id, principal: false }
+        : { titre: 'Conjoint', sousTitre: 'à compléter', vide: true, fiche: null, principal: false },
     ],
   }
 }

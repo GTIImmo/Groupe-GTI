@@ -13583,7 +13583,9 @@ const PASTILLE_TEXTES: Record<EtatPastille, [string, string]> = {
   ok: ['Hektor · à jour', 'Tout ce qui a été fait ici est arrivé chez Hektor.'],
   rouge: ['Hektor · à vérifier', 'Hektor n’a pas encore pris un geste. Votre saisie est gardée chez nous ; un administrateur est prévenu et s’en occupe.'],
 }
-function PastilleSuivi(props: { appDossierId?: number | null; hektorAnnonceId?: string | number | null; contactId?: string | null; pied?: boolean }) {
+// `cacherSiAJour` (04/11/2026, demande de Frederic sur la fiche contact) : « a jour » ne s'affiche plus ; « en attente »
+// et « a verifier » restent, pour ne pas taire un geste qui coince.
+function PastilleSuivi(props: { appDossierId?: number | null; hektorAnnonceId?: string | number | null; contactId?: string | null; pied?: boolean; cacherSiAJour?: boolean }) {
   const contexte = useContext(TravauxContext)
   const relecture = useRelectureRubriques()
   // Ce que la base sait et que l'onglet peut ignorer (un autre onglet, un rechargement) : une saisie en attente ou
@@ -13623,6 +13625,7 @@ function PastilleSuivi(props: { appDossierId?: number | null; hektorAnnonceId?: 
   useBattement(enCours || rejoue)
   if (!SUIVI_PASTILLE || !contexte) return null
   const etat: EtatPastille = base.rouge ? 'rouge' : enCours || rejoue || photos || base.attente ? 'attente' : 'ok'
+  if (etat === 'ok' && props.cacherSiAJour) return null
   const [libelle, detail] = PASTILLE_TEXTES[etat]
   // Les photos de la creation partent DEPUIS l'onglet : le seul conseil qu'on garde, dans la bulle.
   const bulle = photos ? `${detail} ${photos} photo${photos > 1 ? 's' : ''} en attente d’envoi : ne fermez pas cet onglet.` : detail
@@ -47157,7 +47160,7 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
                 </div>
                 <div className="fa-cx-hero-tx">
                   <div className="fa-cx-name">{contactFullName}</div>
-                  {SUIVI_PASTILLE ? <PastilleSuivi contactId={String(props.contact.hektor_contact_id)} /> : null}
+                  {SUIVI_PASTILLE ? <PastilleSuivi contactId={String(props.contact.hektor_contact_id)} cacherSiAJour /> : null}
                   {dirCategories.length > 1 ? (
                     <div className="fa-cx-type-pills">
                       {dirCategories.slice(0, 3).map((cat, index) => (
@@ -47168,22 +47171,32 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
                   ) : (
                     <span className="fa-cx-type-pill">{dominantTypeLabel}</span>
                   )}
-                  {foyer ? (
-                    <span className={`fa-cx-couple-pill${foyer.affiche.incomplet ? ' incomplet' : ''}`}>
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="8.5" cy="8" r="3.2" /><circle cx="16" cy="9" r="2.8" /><path d="M2.8 19c.6-3.1 3-4.9 5.7-4.9s5.1 1.8 5.7 4.9" /><path d="M14 14.5c.6-.3 1.3-.4 2-.4 2.3 0 4.3 1.6 4.9 4.5" /></svg>
-                      {foyer.affiche.etiquette}
-                    </span>
-                  ) : null}
                 </div>
               </div>
 
-              {/* COUPLES, pièce G (03/11/2026, maquette « le foyer, deux places ») : chaque personne a sa PLACE (ses
-                  initiales) ; la place vide est en pointillés ; un foyer incomplet se lit dans un bloc doré avec son bouton. */}
-              {foyer ? (
-                <div className={`fxf-foyer${foyer.affiche.incomplet ? ' incomplet' : ''}`}>
-                  <div className="fa-cx-foyer" role="tablist" aria-label="Les deux personnes du couple">
-                    {foyer.affiche.onglets.map((onglet, index) => {
+              {/* COUPLES (04/11/2026, « le foyer en liste », remplace les deux grandes places de la pièce G et la pastille
+                  « Couple ») : une ligne par personne, la personne affichée marquée ; la ligne vide est en pointillés et
+                  porte son geste -- « Ajouter un conjoint » (personne seule) ou « Compléter » (foyer incomplet, en doré). */}
+              {foyer || peutAjouterConjoint ? (
+                <div className={`fxf-liste${foyer?.affiche.incomplet ? ' incomplet' : ''}`}>
+                  <div className="fxf-liste-hd">
+                    <span>Foyer</span>
+                    <span>{!foyer ? '1 personne' : foyer.affiche.incomplet ? 'à compléter' : `2 personnes${foyer.affiche.situation ? ` · ${foyer.affiche.situation}` : ''}`}</span>
+                  </div>
+                  <div role={foyer ? 'tablist' : undefined} aria-label={foyer ? 'Les deux personnes du couple' : undefined}>
+                    {foyer ? foyer.affiche.onglets.map((onglet, index) => {
                       const numero = (index + 1) as 1 | 2
+                      if (onglet.vide) {
+                        return (
+                          <div key={`foyer-onglet-${numero}`} className="fxf-ligne vide" title="Hektor connaît la place du conjoint, mais elle est vide : son nom suffit pour la remplir.">
+                            <span className="fxf-place vide" aria-hidden="true">?</span>
+                            <span className="fxf-ligne-nom">Conjoint</span>
+                            {completerConjointId ? (
+                              <button className="fxf-completer" type="button" onClick={() => { setCompleterConjoint(true); setEditing(true) }}>Compléter</button>
+                            ) : null}
+                          </div>
+                        )
+                      }
                       const actif = ongletFoyer === numero
                       return (
                         <button
@@ -47191,44 +47204,35 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
                           type="button"
                           role="tab"
                           aria-selected={actif}
-                          aria-disabled={onglet.vide || undefined}
-                          className={`fxf-tab${actif ? ' on' : ''}${onglet.vide ? ' vide' : ''}`}
-                          title={onglet.vide ? 'Conjoint à compléter (pas encore de fiche)' : numero === 2 ? 'Coordonnées du conjoint (lecture seule)' : undefined}
-                          onClick={() => { if (!onglet.vide) setOngletFoyer(numero) }}
+                          className={`fxf-ligne${actif ? ' on' : ''}`}
+                          title={numero === 2 ? 'Coordonnées du conjoint (lecture seule)' : undefined}
+                          onClick={() => setOngletFoyer(numero)}
                         >
-                          <span className={`fxf-place${onglet.vide ? ' vide' : numero === 1 ? ' p1' : ' p2'}`} aria-hidden="true">{onglet.vide ? '?' : initialesDePlace(onglet.titre)}</span>
-                          <span className="fxf-tab-tx">
-                            <b>{onglet.vide ? 'Conjoint' : onglet.titre}</b>
-                            <i>{onglet.vide ? 'place vide' : onglet.sousTitre}</i>
-                          </span>
+                          <span className={`fxf-place ${numero === 1 ? 'p1' : 'p2'}`} aria-hidden="true">{initialesDePlace(onglet.titre)}</span>
+                          <span className="fxf-ligne-nom">{onglet.titre}{onglet.principal ? <span className="fxf-principal">principal</span> : null}</span>
+                          {onglet.fiche ? <span className="fxf-fiche">{onglet.fiche}</span> : null}
                         </button>
                       )
-                    })}
+                    }) : (
+                      <>
+                        <div className="fxf-ligne on">
+                          <span className="fxf-place p1" aria-hidden="true">{initialesDePlace(props.contact.prenom, props.contact.nom)}</span>
+                          <span className="fxf-ligne-nom">{props.contact.prenom || props.contact.nom || contactFullName}</span>
+                          <span className="fxf-fiche">{props.contact.hektor_contact_id}</span>
+                        </div>
+                        <button
+                          className="fxf-ligne ajout"
+                          type="button"
+                          title={`Pas encore de conjoint sur cette fiche. Il partagera les biens de ${props.contact.prenom || props.contact.nom || 'ce contact'}.`}
+                          onClick={() => setAjoutConjointOuvert(true)}
+                        >
+                          <span className="fxf-place ajout" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg></span>
+                          <span className="fxf-ligne-nom">Ajouter un conjoint</span>
+                        </button>
+                      </>
+                    )}
                   </div>
-                  {completerConjointId ? (
-                    <>
-                      <button className="fxf-completer" type="button" onClick={() => { setCompleterConjoint(true); setEditing(true) }}>
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.1} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
-                        Compléter le conjoint
-                      </button>
-                      <p className="fxf-note">Hektor connaît la place du conjoint, mais elle est vide : son nom suffit pour la remplir.</p>
-                    </>
-                  ) : null}
                 </div>
-              ) : null}
-              {peutAjouterConjoint ? (
-                <button
-                  className="fxf-ajout"
-                  type="button"
-                  title={`Pas encore de conjoint sur cette fiche. Il partagera les biens de ${props.contact.prenom || props.contact.nom || 'ce contact'}.`}
-                  onClick={() => setAjoutConjointOuvert(true)}
-                >
-                  <span className="fxf-places" aria-hidden="true">
-                    <span className="fxf-place p1">{initialesDePlace(props.contact.prenom, props.contact.nom)}</span>
-                    <span className="fxf-place ajout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg></span>
-                  </span>
-                  <b className="fxf-ajout-tx">Ajouter un conjoint</b>
-                </button>
               ) : null}
 
               <div className="fa-cx-actions">
