@@ -1179,7 +1179,10 @@ export function filtrerParPersonne(sources: PilotageSources, repere: RepereNegos
           const part = miennes.reduce((t, x) => t + x.pourcentage, 0) / 100
           const fois = (v: number | null) => (v == null ? null : v * part)
           sortie.push({ ...l, honoraires: fois(l.honoraires), honoraires_entree: fois(l.honoraires_entree), honoraires_sortie: fois(l.honoraires_sortie) })
-          repSortie.set(String(l.app_chaine_id), miennes)
+          // ⛔ 04/11 : les honoraires sont DÉJÀ réduits à sa part ; ses lignes sont donc remises à 100 % de cette part.
+          //   Gardées à leur pourcentage, le bloc « Négociateurs » de l'onglet Ventes multipliait une 2e fois (vu en
+          //   ligne : 91 592 € « 93 % attribués » pour Sandrine DELAVAUD, contre 98 991 € en tête).
+          repSortie.set(String(l.app_chaine_id), miennes.map((x) => ({ ...x, pourcentage: part > 0 ? x.pourcentage / part : 0 })))
         } else if (est({ email: l.negociateur_email }, null)) sortie.push(l)
       }
       return { lignes: sortie, rep: repSortie }

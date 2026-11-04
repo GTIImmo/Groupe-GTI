@@ -562,3 +562,14 @@ donne **les mêmes 33 lignes à l'euro près**. ⚠ Pas encore VU à l'écran : 
 dans l'app (pilotage filtré Sandrine DELAVAUD 98 991 € TTC ; Transactions filtré sur elle, même chiffre).
 ⚠ Reste au négociateur du bien (non réparti par la règle) : l'onglet Affaires « prix obtenu, notaires » (source
 `app_pilotage_affaires_plus`), mandats, stock, signatures, acquéreurs — comme le dit le bandeau.
+- ✅ **VU EN LIGNE le 04/11** (déploiement Vercel de `f545e13`, fichier `index-BPsbhBlX.js`), dans le Chrome de Frédéric :
+  pilotage, onglet Ventes, réseau entier : **aucune ligne « supprimé »** ; filtré Sandrine DELAVAUD : nouveau bandeau, contrôle
+  245 lignes par le numéro, **honoraires TTC à date 98 991 €** (l'attendu exact), 12 ventes, 5 compromis datés 24 k€.
+  Transactions 2026 filtré sur elle : **99 k€ « sa part, selon la répartition »**, 12 ventes, 5 compromis 24 k€ « (sa part) »,
+  lignes « 5 150 € · 50 % » (dont un bien d'Alice RONDEAU où elle a la sortie) ; Claudie FERNANDEZ (parts seulement) est
+  au menu. « contre 0 € » en 2025 : juste (ses 2 ventes 2025 sont après le 4 novembre).
+- ⛔ **Trouvé à l'écran, CORRIGÉ (non encore en ligne)** : filtré, le bloc « Négociateurs » de l'onglet Ventes disait
+  91 592 € « 93 % attribués » — les honoraires déjà réduits à sa part étaient multipliés une 2e fois par ses pourcentages
+  (défaut d'avant la règle, devenu visible). Ses lignes sont remises à 100 % de sa part (`filtrerParPersonne`). Vrai code
+  rejoué : bloc = tête pour Sandrine (98 991), Nicolas COUDERT (165 200), Hugo LABBE (8 000), Claire RIBBES (120 100).
+  Réglages de Frédéric remis comme avant l'essai (filtre Transactions « tous », pilotage onglet Stock en HT).
