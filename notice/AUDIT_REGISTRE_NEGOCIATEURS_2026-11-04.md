@@ -466,3 +466,33 @@ signaux. ⚠ Une clé de battement neuve doit être DÉCLARÉE dans `app_worker_
   négociateur (4 232), soit un n° sans collision ; sur 2 298 liens de RDV, 705 sans adresse, 0 collision. **Piège dormant**,
   fermé : la comparaison ne garde que `commercialId` et `hektorNegociateurId` (tous les appelants passent un n° de
   négociateur). Build vert. Pas de preuve à l'écran possible : aucun cas à montrer.
+
+## 19. Les CUMULS par négociateur du pilotage (04/11) — Frédéric : « quelques erreurs de cumul »
+
+**Ce qui est corrigé et ce qui ne l'est pas.** Le FILTRE par négociateur lit le registre (§ étape 3, vu en ligne le 04/11 :
+« Registre des négociateurs · 342 lignes rattachées par le numéro » pour Claire RIBBES). Mais les CUMULS par négociateur ne
+passent PAS par le registre (`lib/pilotage.ts`) : Ventes regroupe par n° de COMPTE de la répartition sous le nom de la
+première ligne (`parts`, l. 402) ; Mandats par le NOM écrit (`calculerMandats`, l. 499) ; Stock par le nom sans accents
+(l. 594) ; Classements fusionne les trois PAR LE NOM (`calculerClassements`, l. 848).
+
+**Mesuré (base, 04/11), source par source :**
+- Mandats 2026 et 2025 (767 en 2025) : **propres** — un nom = une personne du registre ; 9 mandats 2026 sans négociateur.
+- Stock (712 biens, 32 personnes) : propre, sauf 2 biens écrits « gti immobilier » / « Groupe GTI » (comptes d'agence
+  Firminy et Saint-Étienne au registre) et 1 mandat « gti immobilier ».
+- **Ventes : le défaut.** Des lignes de répartition portent le nom « Cet utilisateur a été supprimé » (c'est ainsi que
+  Hektor nomme un compte supprimé) alors que LE REGISTRE CONNAÎT leur titulaire. Le pilotage les range sous « Négociateur
+  supprimé » : 2026 → Hugo LABBE (compte 54, annonce 35474, ≈ 8 000 €) et le compte d'agence d'Annonay (17, 35529,
+  ≈ 10 500 €) ; 2025 (la colonne « an passé ») → Annonay 22 lignes ≈ 60 500 €, Firminy (19) ≈ 10 000 €.
+- **Ventes : 12 dossiers vendus en 2026 dont la répartition ne fait pas 100 %** (la règle du pilotage : entrée + sortie =
+  100 %, vraie pour 274 dossiers sur 286). 5 sans aucune ligne (39664, 59196, 59525, 29425, 23238), 1 à 0 % (62527), 6
+  partiels (61739 à 50 %, 59393 50 %, 59119 50 %, 47348 50 %, 45671 75 %, 1993 88 %) → **≈ 77 000 € d'honoraires 2026
+  attribués à personne** (honoraires lus au registre des affaires, approximation). Ce n'est pas un défaut de code : c'est
+  une répartition à compléter ; mais l'écran ne le DIT pas dans le classement, donc la somme des négociateurs ne fait pas
+  le total.
+
+**Remède proposé, PAS codé (attend le « vas-y ») :**
+- A — les cumuls par PERSONNE DU REGISTRE : Ventes par compte → personne (`parUser`), Mandats et Stock par n° de
+  négociateur → personne (`parNego`), le nom en repli seulement ; Classements fusionne par la personne. Effet mesuré :
+  Hugo LABBE +8 000 € en 2026, les comptes d'agence retrouvent leurs lignes, plus de ligne « Négociateur supprimé ».
+- B — une ligne « non réparti » visible (Ventes et Classements), avec la liste des 12 dossiers, pour que le cumul des
+  négociateurs égale le total ; les compléter reste un geste de saisie.
