@@ -62,6 +62,8 @@ export type PilotageSources = {
   affairesPlus: PilotageAffairesPlus | Error
   // 04/11 : l'annuaire des négociateurs (les deux numéros de chaque fiche), pour le filtre par négociateur
   annuaire: PilotageNegociateur[] | Error
+  // 04/11 : LE REGISTRE DES NÉGOCIATEURS (nos personnes et leurs fiches Hektor) ; l'annuaire ne sert plus que de repli
+  registre: PilotageRegistre | Error
 }
 
 export type PilotageAcquereurs = {
@@ -231,17 +233,42 @@ async function lireAnnuaire(): Promise<PilotageNegociateur[]> {
   })).filter((l) => l.nego)
 }
 
+// LE REGISTRE DES NÉGOCIATEURS (04/11, notice/AUDIT_REGISTRE_NEGOCIATEURS_2026-11-04.md) : la personne (NOTRE numéro) et
+// TOUTES ses fiches Hektor, rattachées une fois pour toutes — y compris ce que l'annuaire ne sait pas (le compte admin n° 4,
+// les comptes de secrétaire, les numéros de la répartition sans fiche, les anciens que Hektor ne liste plus).
+export type PilotageRegistre = {
+  personnes: Array<{ id: number; nom: string; email: string | null; type: string; actif: boolean }>
+  fiches: Array<{ personne: number; nego: string | null; user: string | null; email: string | null; nom: string | null }>
+}
+async function lireRegistre(): Promise<PilotageRegistre> {
+  if (!hasSupabaseEnv || !supabase) return mockRegistre()
+  const client = supabase
+  const [personnes, fiches] = await Promise.all([
+    toutLire<Record<string, unknown>>((de, a) => client.from('app_negociateur_personne')
+      .select('app_personne_id,nom,email,type_personne,actif').order('app_personne_id', { ascending: true }).range(de, a)),
+    toutLire<Record<string, unknown>>((de, a) => client.from('app_negociateur_fiche')
+      .select('app_fiche_id,app_personne_id,hektor_negociateur_id,hektor_user_id,email_vu,nom_vu').order('app_fiche_id', { ascending: true }).range(de, a)),
+  ])
+  if (!personnes.length) throw new Error('registre des négociateurs vide')
+  return {
+    personnes: personnes.map((p) => ({ id: Number(p.app_personne_id), nom: String(p.nom ?? ''), email: (p.email as string | null) ?? null,
+      type: String(p.type_personne ?? ''), actif: p.actif === true })),
+    fiches: fiches.map((f) => ({ personne: Number(f.app_personne_id), nego: String(f.hektor_negociateur_id ?? '').trim() || null,
+      user: String(f.hektor_user_id ?? '').trim() || null, email: (f.email_vu as string | null) ?? null, nom: (f.nom_vu as string | null) ?? null })),
+  }
+}
+
 /** Tout ce que le pilotage lit, pour l'année choisie et la précédente. Une source qui échoue n'empêche
  *  pas les autres : elle revient en Error, et seul son onglet le dit. */
 export async function loadPilotage(annee: number): Promise<PilotageSources> {
-  const [ventes, mandats, stock, signatures, portails, acquereurs, affairesPlus, annuaire] = await Promise.allSettled([
+  const [ventes, mandats, stock, signatures, portails, acquereurs, affairesPlus, annuaire, registre] = await Promise.allSettled([
     hasSupabaseEnv && supabase ? lireVentes(annee) : Promise.resolve(mockVentes(annee)),
-    lireMandats(annee), lireStock(), lireSignatures(), lirePortails(), lireAcquereurs(annee), lireAffairesPlus(annee), lireAnnuaire(),
+    lireMandats(annee), lireStock(), lireSignatures(), lirePortails(), lireAcquereurs(annee), lireAffairesPlus(annee), lireAnnuaire(), lireRegistre(),
   ])
   const v = <T,>(r: PromiseSettledResult<T>) => (r.status === 'fulfilled' ? r.value : enErreur(r.reason))
   return {
     annee, ventes: v(ventes), mandats: v(mandats), stock: v(stock), signatures: v(signatures), portails: v(portails),
-    acquereurs: v(acquereurs), affairesPlus: v(affairesPlus), annuaire: v(annuaire),
+    acquereurs: v(acquereurs), affairesPlus: v(affairesPlus), annuaire: v(annuaire), registre: v(registre),
   }
 }
 
@@ -699,6 +726,20 @@ function mockAnnuaire(): PilotageNegociateur[] {
   })
 }
 
+// Maquette : le registre tiré de l'annuaire de maquette (une personne par e-mail).
+function mockRegistre(): PilotageRegistre {
+  const annuaire = mockAnnuaire()
+  const ids = new Map<string, number>()
+  for (const l of annuaire) if (!ids.has(l.email ?? l.nom)) ids.set(l.email ?? l.nom, 1000001 + ids.size)
+  return {
+    personnes: [...ids.entries()].map(([cle, id]) => {
+      const l = annuaire.find((x) => (x.email ?? x.nom) === cle) as PilotageNegociateur
+      return { id, nom: l.nom, email: l.email, type: 'negociateur', actif: annuaire.some((x) => (x.email ?? x.nom) === cle && x.actif) }
+    }),
+    fiches: annuaire.map((l) => ({ personne: ids.get(l.email ?? l.nom) as number, nego: l.nego, user: l.user, email: l.email, nom: l.nom })),
+  }
+}
+
 function mockSignatures(): PilotageSignature[] {
   const r = hasard(59)
   const an = aujourdhui().slice(0, 4)
@@ -940,8 +981,8 @@ function mockAffairesPlus(annee: number): PilotageAffairesPlus {
 //   . mandats, stock, signatures : le négociateur du mandat ou du bien ; diffusion : par le stock filtré ;
 //   . prix obtenu, notaires : le négociateur que la base rend sur chaque ligne ; acquéreurs : lecture à part.
 export type PilotageNegociateur = { nego: string; user: string | null; nom: string; email: string | null; agence: string | null; actif: boolean }
-export type Personne = { cle: string; nom: string; actif: boolean; negos: Set<string>; users: Set<string>; emails: Set<string>; noms: Set<string> }
-export type RepereNegos = { personnes: Map<string, Personne>; parNego: Map<string, string>; parUser: Map<string, string>; parEmail: Map<string, string>; parNom: Map<string, string> }
+export type Personne = { cle: string; nom: string; actif: boolean; type?: string; negos: Set<string>; users: Set<string>; emails: Set<string>; noms: Set<string> }
+export type RepereNegos = { source: 'registre' | 'annuaire'; personnes: Map<string, Personne>; parNego: Map<string, string>; parUser: Map<string, string>; parEmail: Map<string, string>; parNom: Map<string, string> }
 /** Ce que le filtre a fait, pour le dire à l'écran : lignes rattachées par le numéro, par le nom (sans numéro), et les
  *  désaccords — son numéro mais un autre nom, ou son nom mais le numéro d'un autre. */
 export type ControleNego = { parNumero: number; parNom: number; nomDifferent: number; autreNumero: number }
@@ -950,7 +991,7 @@ const cleEmail = (email: string | null | undefined) => String(email ?? '').trim(
 const cleNomSur = (nom: string | null | undefined) => (String(nom ?? '').trim() ? cleNom(String(nom)) : '')
 
 export function construireRepere(annuaire: PilotageNegociateur[]): RepereNegos {
-  const repere: RepereNegos = { personnes: new Map(), parNego: new Map(), parUser: new Map(), parEmail: new Map(), parNom: new Map() }
+  const repere: RepereNegos = { source: 'annuaire', personnes: new Map(), parNego: new Map(), parUser: new Map(), parEmail: new Map(), parNom: new Map() }
   // Les fiches avec e-mail d'abord (l'e-mail regroupe les fiches d'une même personne), les actives en tête (nom affiché).
   const lignes = [...annuaire].sort((a, b) => Number(!cleEmail(a.email)) - Number(!cleEmail(b.email)) || Number(b.actif) - Number(a.actif))
   for (const l of lignes) {
@@ -964,6 +1005,34 @@ export function construireRepere(annuaire: PilotageNegociateur[]): RepereNegos {
     if (email) { p.emails.add(email); repere.parEmail.set(email, cle) }
     if (nom) { p.noms.add(nom); if (!repere.parNom.has(nom)) repere.parNom.set(nom, cle) }
     repere.personnes.set(cle, p)
+  }
+  return repere
+}
+
+/** Le repère tiré du REGISTRE : la personne est celle du registre (rattachement fixe, décidé une fois), avec tous ses
+ *  numéros. L'e-mail de la personne passe avant celui de ses fiches (une boîte partagée ne déplace personne). */
+export function construireRepereDepuisRegistre(registre: PilotageRegistre): RepereNegos {
+  const repere: RepereNegos = { source: 'registre', personnes: new Map(), parNego: new Map(), parUser: new Map(), parEmail: new Map(), parNom: new Map() }
+  const parId = new Map<number, Personne>()
+  for (const p of registre.personnes) {
+    const cle = `r:${p.id}`
+    const personne: Personne = { cle, nom: nomPersonne(p.nom), actif: p.actif, type: p.type, negos: new Set(), users: new Set(), emails: new Set(), noms: new Set() }
+    const nom = cleNomSur(p.nom)
+    if (nom) { personne.noms.add(nom); if (!repere.parNom.has(nom)) repere.parNom.set(nom, cle) }
+    const email = cleEmail(p.email)
+    if (email) { personne.emails.add(email); repere.parEmail.set(email, cle) }
+    repere.personnes.set(cle, personne)
+    parId.set(p.id, personne)
+  }
+  for (const f of registre.fiches) {
+    const personne = parId.get(f.personne)
+    if (!personne) continue
+    if (f.nego) { personne.negos.add(f.nego); repere.parNego.set(f.nego, personne.cle) }
+    if (f.user) { personne.users.add(f.user); repere.parUser.set(f.user, personne.cle) }
+    const email = cleEmail(f.email)
+    if (email) { personne.emails.add(email); if (!repere.parEmail.has(email)) repere.parEmail.set(email, personne.cle) }
+    const nom = cleNomSur(f.nom)
+    if (nom) { personne.noms.add(nom); if (!repere.parNom.has(nom)) repere.parNom.set(nom, personne.cle) }
   }
   return repere
 }

@@ -11,7 +11,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import {
   aujourdhui, calculerAffaires, calculerAffairesPlus, calculerClassements, calculerMandats, calculerPortails, calculerSignatures, calculerStock, calculerVentes, cleAgence,
-  construireRepere, filtrerParPersonne, lireAcquereurs, loadPilotage, mediane, nomAgence, personnesPresentes,
+  construireRepere, construireRepereDepuisRegistre, filtrerParPersonne, lireAcquereurs, loadPilotage, mediane, nomAgence, personnesPresentes,
   type LigneClassement, type PilotageAcquereurs, type PilotageSources,
 } from './lib/pilotage'
 import { hasSupabaseEnv } from './lib/supabase'
@@ -256,7 +256,12 @@ export default function PilotageScreen() {
   }, [annee, essai])
 
   // L'annuaire des négociateurs : une personne = toutes ses fiches (un n° de négociateur par agence, un n° d'utilisateur).
-  const repere = useMemo(() => (sources && !(sources.annuaire instanceof Error) ? construireRepere(sources.annuaire) : null), [sources])
+  // Le registre des négociateurs d'abord (nos personnes, rattachements fixes) ; l'annuaire de Hektor en repli seulement.
+  const repere = useMemo(() => {
+    if (!sources) return null
+    if (!(sources.registre instanceof Error)) return construireRepereDepuisRegistre(sources.registre)
+    return sources.annuaire instanceof Error ? null : construireRepere(sources.annuaire)
+  }, [sources])
   const personnes = useMemo(() => (sources && repere ? personnesPresentes(sources, repere, agence) : []), [sources, repere, agence])
   const personne = qui && repere ? repere.personnes.get(qui) ?? null : null
   // Une agence où il n'a rien : le choix du négociateur tombe (seulement une fois les données lues).
@@ -370,7 +375,7 @@ export default function PilotageScreen() {
           <span>Négociateur</span>
           <select value={qui ?? ''} onChange={(e) => setQui(e.target.value || null)} disabled={!repere}>
             <option value="">{repere ? `Tous (${personnes.length})` : 'Annuaire indisponible'}</option>
-            {personnes.map((p) => <option key={p.cle} value={p.cle}>{p.nom}{p.actif ? '' : ' · ancien'}</option>)}
+            {personnes.map((p) => <option key={p.cle} value={p.cle}>{p.nom}{p.type === 'agence' ? ' · agence' : p.actif ? '' : ' · ancien'}</option>)}
           </select>
         </label>
         {onglet !== 'stock' ? (
@@ -387,7 +392,7 @@ export default function PilotageScreen() {
         <div className="pl-nego-bandeau" role="note">
           <b>{personne.nom}</b>
           <span>Ventes et compromis répartis : <b>sa part</b> des honoraires · offres, mandats, stock, signatures, acquéreurs : <b>ses biens et ses fiches</b>{personne.negos.size > 1 ? ` (ses ${personne.negos.size} fiches négociateur réunies)` : ''}.</span>
-          <span className="pl-mute">Contrôle : {entier.format(vue.controle.parNumero)} lignes rattachées par le numéro{vue.controle.parNom ? `, ${entier.format(vue.controle.parNom)} par le nom (sans numéro)` : ''}{vue.controle.nomDifferent ? ` · ⚠ ${entier.format(vue.controle.nomDifferent)} portent son numéro sous un autre nom` : ''}{vue.controle.autreNumero ? ` · ⚠ ${entier.format(vue.controle.autreNumero)} portent son nom sous le numéro d’un autre (non comptées)` : ''}.</span>
+          <span className="pl-mute">{repere?.source === 'registre' ? 'Registre des négociateurs' : 'Annuaire de Hektor (le registre ne répond pas)'} · contrôle : {entier.format(vue.controle.parNumero)} lignes rattachées par le numéro{vue.controle.parNom ? `, ${entier.format(vue.controle.parNom)} par le nom (sans numéro)` : ''}{vue.controle.nomDifferent ? ` · ⚠ ${entier.format(vue.controle.nomDifferent)} portent son numéro sous un autre nom` : ''}{vue.controle.autreNumero ? ` · ⚠ ${entier.format(vue.controle.autreNumero)} portent son nom sous le numéro d’un autre (non comptées)` : ''}.</span>
           <button type="button" className="pl-lien-nom" onClick={() => setQui(null)}>Revenir à tous</button>
         </div>
       ) : null}

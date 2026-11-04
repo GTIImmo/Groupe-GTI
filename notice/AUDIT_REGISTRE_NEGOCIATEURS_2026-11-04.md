@@ -393,3 +393,17 @@ signaux. ⚠ Une clé de battement neuve doit être DÉCLARÉE dans `app_worker_
 - **Attendu la nuit du 04 au 05/11 (à blanc)** : la liste complète lue (environ 4 requêtes de plus), `liste_ok = true`,
   ~34 fiches « disparues » (celles des vieilles pages) et 1 signal « disparitions nombreuses » — à lire avec Frédéric avant
   de passer l'interrupteur à `1`.
+
+## 15. Étape 3, premier lecteur : LE PILOTAGE LIT LE REGISTRE (04/11) — Frédéric : « j'ai push enchaine »
+
+- `lib/pilotage.ts` : `lireRegistre()` lit `app_negociateur_personne` + `app_negociateur_fiche` ; `construireRepereDepuisRegistre()`
+  fait la personne = celle du registre (rattachement fixe) avec TOUS ses numéros — y compris le compte admin n° 4, les
+  comptes de secrétaire, les n° de la répartition sans fiche. L'e-mail de la personne passe avant celui de ses fiches.
+- `PilotageScreen.tsx` : le registre d'abord, **l'annuaire de Hektor en repli** si le registre ne répond pas (le bandeau dit
+  lequel sert) ; le sélecteur marque « · agence » les agences et « · ancien » les personnes que le registre dit inactives.
+- Ce que ça change à l'écran (mesuré dans le registre) : Pauline GIRINON, Caroline GERPHAGNON, Delphine BLANCHARD ne sont
+  plus « ancien » (actives par leur compte de secrétaire) ; « Groupe GTI » n'est plus UNE personne de 11 fiches mais une
+  agence par agence ; « gti immobilier » rejoint l'agence de Firminy ; Frédéric = administrateur avec le compte n° 4.
+- Contrôlé sur le serveur d'essai (le bandeau dit « Registre des négociateurs », mêmes chiffres qu'avec l'annuaire) ;
+  build vert. ⏳ Contrôle en ligne après le push.
+- Rien d'autre ne lit encore le registre : menus, répartition, droits, rendez-vous, worker = à venir, un par un.
