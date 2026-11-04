@@ -1127,3 +1127,19 @@ Frédéric : « nous avions déjà identifié ce problème de plusieurs numéros
 - **aucun historique** : on ne sait pas ce qu'une fiche disait hier.
 - ⇒ Hektor ne peut pas faire DISPARAÎTRE une fiche, mais il peut la **changer** ; et le regroupement par e-mail (C.18, droits du registre, pilotage) dépend de ce qu'il dit le soir même. Si une adresse change ou est réattribuée, des parts anciennes changeraient de personne sans bruit. **Non mesuré** : si c'est déjà arrivé (rien n'en garde la trace).
 - Ce n'est pas contraire à une décision écrite (le registre des mandats et le carnet des affaires sont à nous ; l'annuaire n'a jamais été déclaré registre) — **c'est un trou** au regard de la règle « tous les registres restent chez nous ». À trancher par Frédéric.
+
+### 40 quinquies. Les négociateurs qui ne sont plus que chez nous (04/11) — Frédéric : « il n'y a pas des négociateurs anciens chez nous qui ne sont pas chez Hektor ? »
+
+Mesuré sans appeler Hektor : la table locale `hektor_negociateur` (219 fiches) contre la DERNIÈRE liste que Hektor a rendue (`raw_api_response`, `list_negos` + `list_negos_inactive`, 04/11 03:55) : **186 fiches chez Hektor, dont 34 actives**.
+
+**1. 33 fiches n'existent plus que chez nous** (Hektor ne les liste plus ; la table locale ne purge jamais, l'annuaire de l'app les garde) :
+- 6 portent des données : Pauline GIRINON n° 16 (163 annonces, 4 929 contacts), Delphine BLANCHARD n° 21 (15 / 3 871), **Aline VALETTE n° 42 (960 annonces, 2 918 contacts)**, Caroline GERPHAGNON n° 24 (245 / 2 731), Franck GERPHAGNON n° 19 (170 / 20), Frédéric GERPHAGNON n° 20 (41 / 12) — ce sont les « orphelins gardés inactifs » du chantier de juin ;
+- 23 sont des fiches secondaires vides de personnes connues (Marion BILLIG DURAND 39 et 89, Pauline GIRINON 14, 22, 53, Nicolas COUDERT 34 et 58…) ;
+- 4 n'ont été vues qu'au 07/09 : Manel ARFAOUI DE RAFFIN 198, Jérome CHABANNES 165, Monique CHABRIER 190, Eléonore GRASSO 179.
+- ⇒ elles survivent par un effet de bord (« on ne purge jamais la table locale »), pas par une décision ; mais le pilotage les retrouve (choix « · ancien »).
+
+**2. 5 numéros d'utilisateur de la répartition n'ont AUCUNE fiche** — 1 364 lignes : n° 0 « Cet utilisateur a été supprimé » (460 dossiers, 2011-2024), n° 24 idem (145 dossiers, 2006-2012), et les comptes d'agence Annonay 17 (49 dossiers, jusqu'au 30/01/2026), Firminy 19 (24), Ambert 23 (4). La personne est perdue : Hektor a effacé le nom, il ne reste que « supprimé ».
+
+**3. Les 14 anciens du classeur** (2017-2025, avant Hektor) : un nom, aucun numéro, nulle part (`AUDIT_REPARTITION_ANCIENS_NEGOCIATEURS_2026-11-01.md`).
+
+⇒ **Le pilotage par négociateur couvre le groupe 1, pas les groupes 2 et 3.** C'est la même question que le §40 quater : un registre des négociateurs à nous garderait ces personnes, leurs fiches et leurs noms, au lieu de dépendre de ce que Hektor liste encore.
