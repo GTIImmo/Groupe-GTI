@@ -1894,3 +1894,50 @@ Recherche dans les notes (accents ignorés), l'historique git et la mémoire. **
 - **Cinq décisions attendues** (§6 de la note) : qui entre dans l'index ; les champs (téléphone et e-mail) ; la forme de la fiche à la demande ;
   le premier envoi ; les garde-fous.
 - ⚠ **L'ordre est obligatoire** : l'index et le repli d'abord, le verrou remis sur 20 000 000 ensuite.
+
+## 63. TOUT MESURER AVANT DE CHOISIR : LES 216, LE DÉBIT, ET POURQUOI TANT D'ARCHIVÉS LIÉS AUX ANNONCES *(04/11, « c'est important de tout mesurer correctement, le remède est peut-être plus simple que prévu » ; « cherche pourquoi autant de contacts archivés liés aux annonces, audite l'historique et les codes doublon » ; lecture seule)*
+
+**Les 216 contacts figés** (§61) :
+- **Pourquoi ils sont sortis** :
+  - leurs recherches sont TOUTES inactives (114 en local, 106 contacts en ont chez Supabase, 0 active) ;
+  - leurs liens ne portent que sur des annonces archivées (mandant 139, propriétaire 7, acquéreur 10).
+  - Chez Supabase, leur raison d'avant était `active_annonce_relation` ou `active_search`. Aucun n'était « nommé dans une transaction ».
+- **Ce qui les cite dans l'app** : 102 sont dans le registre des relations, 106 ont des recherches (inactives, gardées par la décision du 14/10)
+  et 10 ont des liens envoyés.
+- **Quand** (date de leur dernier envoi, donc à peu près celle de leur sortie) : par paquets. Le 03/10 en compte 89, le 15/10 69 et le 13/10 27,
+  le reste est un filet de 1 à 9 par jour. En moyenne, environ 5 par jour sur 42 jours.
+
+**Pourquoi 22 644 contacts archivés sont dans l'app — trois causes, mesurées** :
+1. ⭐ **Pour la règle d'envoi, « annonce active » veut dire « annonce NON ARCHIVÉE chez Hektor »** (`load_active_annonce_ids`,
+   `build_contacts_layer.py` l. 902 : `archive = '0'`). Les biens VENDUS et les ESTIMATIONS en font partie.
+   Pour les contacts archivés (personnes, sans les cases vides), leurs 30 337 liens se répartissent ainsi :
+   - Vendu **22 814** ;
+   - Estimation **7 067** ;
+   - Mandat clos 258, Clos 105 ;
+   - Actif **64**, Sous compromis 20, Sous offre 8.
+   ⇒ **92 liens seulement sur un bien réellement en vente**. Le reste est de l'affaire passée. Même profil chez les actifs : Vendu 22 267,
+   Estimation 7 160, Actif 969. Cela recoupe ⑦-1 (14/10) : 55 contacts archivés sur 52 biens réellement en vente.
+2. ⭐ **Trois journées d'archivage EN MASSE chez Hektor** (date `date_maj` des contacts archivés) :
+   - le **07/09/2023** : 72 658 contacts archivés, presque tous Saint-Étienne, créés en 2018-2021, entre 10 h 56 et 12 h 33 ;
+   - le **26/03/2025** : 51 938, plusieurs agences, créés en 2011-2014, entre 21 h 51 et 22 h 32 ;
+   - le **06/10/2021** : 22 773, Le Puy, Firminy, Annonay.
+   ⇒ Parmi les 21 690 archivés envoyés à l'app et liés à une annonce non archivée, **15 891 (73 %) viennent de ces trois journées**
+   (7 030 + 6 628 + 2 233). Ce sont des purges faites en lot, pas des gestes un par un.
+   Le 26/03/2025 a aussi touché 80 212 contacts restés ACTIFS (une mise à jour de masse, et pas un archivage).
+   ⚠ Qui les a faites et pourquoi : **non établi**. Aucune note du projet ne les mentionne.
+3. **Les doublons, en partie** : 4 374 des 17 675 personnes archivées sont dans un groupe de doublons (high 3 137, medium 685, critical 410,
+   low 142). Dans 3 408 des 30 337 liens, un contact ACTIF tient le même rôle sur la même annonce : c'est sans doute l'ancienne fiche et la
+   nouvelle. Le code des doublons ne fait que proposer : `CAHIER_CHARGES_DOUBLONS` interdit l'archivage automatique, et il n'existe aucun geste
+   de fusion dans l'app.
+   ⇒ Les doublons sont une cause MINEURE. La cause majeure, c'est la règle d'envoi et les trois purges.
+
+**Ce que ça change pour le remède** :
+- Le flux est petit (~5 contacts par jour, par paquets) et ne touche que des affaires passées.
+- ⇒ **Le remède le plus simple tient en une clause** : la nuit envoie aussi les contacts déjà envoyés, comme la décision du 14/10 l'a fait pour
+  les recherches. Ensuite, le verrou est remis sur 20 000 000. Il n'aurait alors plus rien à retirer, puisque la couche locale garde tout le monde.
+  C'est +216 lignes aujourd'hui, et environ 150 par mois.
+- L'index global (§62) n'est PAS nécessaire pour régler les contacts figés. Il reste une amélioration à part : retrouver dans l'annuaire les
+  ~176 000 anciens clients jamais envoyés.
+- Une question de fond est révélée, à trancher à part : faut-il que « lié à une annonce » veuille dire « annonce non archivée » (vendus et
+  estimations compris), ou « bien encore en vente » ? C'est ce qui fait que la majorité des 63 000 contacts de l'app sont des affaires passées.
+  Rien n'est proposé ici : ce serait un changement de périmètre (décision de Frédéric, 8b clos « par choix »).
