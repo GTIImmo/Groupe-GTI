@@ -443,3 +443,26 @@ signaux. ⚠ Une clé de battement neuve doit être DÉCLARÉE dans `app_worker_
   prochain redémarrage — ⛔ qui chargera AUSSI les modifications non commitées de l'autre session dans ce fichier
   (signature Youtrust, génération de mandat). Le redémarrage se décide avec Frédéric, file vide (0 pending, 0 running).
 - Seul mon bloc est commité ; les autres blocs du fichier restent à l'autre session.
+- ✅ **ACTIF depuis le 04/11 à 14:13:34-36** : Frédéric a poussé et redémarré les 4 services (heure des processus mesurée
+  par `Win32_Process`, après le commit `eda00f0` de 14:09:38). File vide au redémarrage, aucun travail coupé. ⚠ Ce
+  redémarrage a aussi mis en service le code NON commité de l'autre session dans ce fichier.
+
+## 18. L'interrupteur allumé, les menus audités, l'agenda corrigé (04/11) — Frédéric : « ALLUME TOUT DE SUITE ET ENCHAINE »
+
+- **Interrupteur** : `.env` `APP_REGISTRE_NEGOCIATEURS=1` (ligne remplacée sans lire le fichier). La nuit du 05/11 ÉCRIT.
+- **Essai à blanc forcé juste après** (`--a-blanc`) : les pages de la nuit du 04/11 étaient encore plafonnées (96 fiches,
+  1 liste sur 2 lue jusqu'au bout) → `liste_ok: false`, **aucune absence marquée**, 1 signal `liste_incomplete`,
+  49 comptes cohérents, rien écrit. C'est le plancher qui joue ; la correction de `sync_raw` agit dès cette nuit.
+- **Les menus** (`loadHektorNegotiatorOptions`, `api.ts`) : ils lisent l'annuaire, actifs seulement. Mesuré : annuaire
+  30 actifs = registre 30 actifs, **0 sans jumeau** (même n° de négociateur, même compte, même agence). Basculer ne
+  changerait rien à l'écran aujourd'hui. ⚠ Ces options partent dans des gestes chez Hektor (changer le négociateur d'un
+  bien : `target_agency_id_user` ; créer un contact : `hektorAgencyUserId`) et portent `agence_id_user`, **que le registre
+  n'a pas**. Basculer = ajouter cette colonne au registre (écriture en base) → **non fait, à décider par Frédéric**.
+- **⛔ Trouvé en passant, CORRIGÉ : l'agenda Google d'une autre personne.** `resolveGoogleWorkspaceCalendarEmail`
+  (`App.tsx`) cherchait l'agenda, à défaut d'adresse Workspace, en comparant le n° de NÉGOCIATEUR aussi au n° de COMPTE
+  des options. Mesuré : **22 anciens numéros** tombaient sur un compte actif (21 sur une autre personne : Aline VALETTE
+  n° 42 → Dylan JOURGET, Marion BILLIG DURAND n° 39 → Claire RIBBES…), et parmi les actifs le n° 55 (Christine BRAVARD) →
+  Stéphanie MARTINEZ. **0 cas réel ce jour** : sur 13 525 biens, les 4 256 sans adresse Workspace n'ont soit pas de
+  négociateur (4 232), soit un n° sans collision ; sur 2 298 liens de RDV, 705 sans adresse, 0 collision. **Piège dormant**,
+  fermé : la comparaison ne garde que `commercialId` et `hektorNegociateurId` (tous les appelants passent un n° de
+  négociateur). Build vert. Pas de preuve à l'écran possible : aucun cas à montrer.

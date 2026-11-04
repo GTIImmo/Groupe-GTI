@@ -36842,7 +36842,12 @@ function resolveGoogleWorkspaceCalendarEmail(input: {
   const match = (input.hektorNegotiators ?? []).find((option) => {
     const optionEmail = normalizeEmail(option.email)
     if (!isGoogleWorkspaceEmail(optionEmail)) return false
-    if (commercialId && [option.idUser, option.commercialId, option.hektorNegociateurId].map(safeText).includes(commercialId)) return true
+    // ⛔ 04/11/2026 (registre des negociateurs, audit §18) : commercialId est un n° de NEGOCIATEUR chez
+    //   tous les appelants (contact, dossier, lien de RDV). Le comparer aussi a option.idUser (n° de COMPTE)
+    //   prenait l'agenda d'une AUTRE personne : 22 anciens numeros tombaient sur un compte actif (Aline
+    //   VALETTE n° 42 -> Dylan JOURGET), et parmi les actifs le n° 55 (BRAVARD) -> Stephanie MARTINEZ.
+    //   0 cas mesure ce jour (piege dormant). Meme famille que les 178 telephones des liens de RDV.
+    if (commercialId && [option.commercialId, option.hektorNegociateurId].map(safeText).includes(commercialId)) return true
     return Boolean(label && safeText(option.label).toLowerCase() === label)
   })
   const matchedEmail = normalizeEmail(match?.email)
