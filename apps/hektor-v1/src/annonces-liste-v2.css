@@ -31,7 +31,7 @@
 .av3 .av3-nimg { position: absolute; left: 5px; bottom: 5px; display: inline-flex; align-items: center; gap: 3px; padding: 2px 6px; border-radius: 7px; background: rgba(34, 35, 35, .78); color: #fff; font-size: 10.5px; font-weight: 800; }
 .av3 .av3-nimg svg { width: 10px; height: 10px; }
 .av3 .av3-txt { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
-.av3 .av3-titre { font-weight: 700; font-size: 14.5px; line-height: 1.3; color: #222323; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.av3 .av3-titre { font-weight: 500; font-size: 14.5px; line-height: 1.3; color: #222323; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .av3 .av3-tags { display: flex; flex-wrap: wrap; gap: 5px; }
 .av3 .av3-tag { font-size: 11px; font-weight: 700; border-radius: 6px; padding: 2px 7px; background: #eef0f1; color: #3b4143; white-space: nowrap; }
 .av3 .av3-tag.excl { background: #fdf0f6; color: #8c0044; font-weight: 800; }
@@ -382,7 +382,7 @@
 .av3 .av3-nimg.peu { background: #fff3df; color: #8a4f0f; }
 .av3 .av3-surtitre { display: flex; align-items: center; gap: 3px; min-width: 0; font-size: 12px; font-weight: 800; color: #8c0044; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .av3 .av3-surtitre svg { width: 12px; height: 12px; flex: none; }
-.av3 .av3-titre.vide { font-style: italic; font-weight: 600; color: #7c8082; }
+.av3 .av3-titre.vide { font-style: italic; font-weight: 500; color: #7c8082; }
 .av3 .av3-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 6px; font-size: 12px; font-weight: 600; color: #5c6163; }
 .av3 .av3-statut { font-size: 10.5px; font-weight: 800; border-radius: 6px; padding: 1px 7px; white-space: nowrap; }
 .av3 .av3-statut.actif { background: #e8f5ee; color: #2f7d59; }
