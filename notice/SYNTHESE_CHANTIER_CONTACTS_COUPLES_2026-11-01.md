@@ -2189,3 +2189,33 @@ Mesure sur la base du serveur (`app_relation` local, 132 943 liens ; types d'off
   5. `recalculer_types_contacts.py`.
   Durées de cette nuit : l'envoi de 4 214 fiches en 39 s, les numéros en 18 s, les types en 25 s ⇒ **~10 minutes** au total.
   La nuit suivante ne les renverra pas (leur empreinte sera la même).
+
+## 73. ✅ LES 31 533 SONT DANS L'APP — ENVOYÉS EN JOURNÉE, PAR LES COMMANDES DU RUN *(04/11, 13:54-14:00, « peux-tu faire la même commande que le run »)*
+
+- **1. Le périmètre registre** (13:54:44 → :47) : annuaire de 62 952 à **94 485 (+31 533)**, vérification OK.
+- **2. Les conjoints des couples** (13:54:55 → 13:55:03) : 4 788 conjoints nommés marqués ; **+123** contacts éligibles, soit 94 608.
+- **3. L'envoi des contacts**, à blanc puis réel, avec les arguments de la nuit (13:55:52 → 13:56:49, **57 s**) :
+  - 31 847 fiches et 1 641 recherches (inactives) envoyées ;
+  - 0 contact supprimé (les 25 « disparues » sont écartées par le verrou et déjà absentes) ; 11 liens retirés, le ménage habituel ;
+  - l'instantané des statistiques est à jour (éligibles 94 608 : 62 410 actifs, 32 198 archivés).
+- **4. La descente des numéros** (`pousser_numeros_contact.py`) : **22 seulement** mis à jour.
+  ⛔ **DÉFAUT TROUVÉ** : le script ne transmet que les contacts de la COPIE de Supabase (`app_contact_current__sb`), qui n'est descendue
+  qu'à 06:45. Un contact envoyé par la nuit de 06:05 n'a donc son `app_contact_id` qu'à la nuit SUIVANTE (c'est la cause des 22 du §66).
+  - **Rattrapé à la main** : même fonction `app_contact_id_backfill`, qui ne fait que mettre à jour, avec pour liste les contacts de l'état
+    d'envoi absents de la copie (31 576). **31 573 mises à jour en 23 s ; plus AUCUNE fiche sans numéro chez Supabase.**
+  - **Correctif proposé (rien fait)** : joindre l'état d'envoi local plutôt que la copie du matin. La fonction ne peut que mettre à jour,
+    donc c'est sans risque.
+- **5. Les types** (`recalculer_types_contacts.py`) : **ÉCHEC**, avec le message « canceling statement due to statement timeout ». L'API
+  coupe à **8 s** (`authenticator`, `statement_timeout=8s`).
+  - **Rattrapé directement en base** (`select app_recalculer_tous_les_types()`) : **31 226 types posés en 14 s**.
+  - ⛔ **RISQUE POUR CHAQUE NUIT** : un second passage, sans aucun changement, prend **7,2 s**, juste sous la limite. La nuit risque donc
+    d'échouer à son tour, sans dommage (l'étape est facultative et le battement le dit), mais les types du jour ne seraient plus repris.
+  - **Correctif proposé (rien fait, patch en base = accord)** : recalculer par tranches de numéros, depuis le script, plutôt qu'en une seule
+    requête.
+- **Contrôles chez Supabase** :
+  - **94 741 fiches, 331 Mo** (contre ~480 estimés) ;
+  - 0 sans nature, 0 sans numéro ;
+  - raison `registre_relation` : 31 295 ; `partenaire_netty` : 260 ;
+  - échantillon des contacts figés : 10 archivés sur 10 sont bien `archive = true` ;
+  - 4 850 fiches sans type : des contacts sans aucun lien (partenaires, conjoints), c'est normal.
+- **Pas encore vu** : l'annuaire à l'écran.
