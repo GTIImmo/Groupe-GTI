@@ -452,3 +452,30 @@
 .av3m-carte .av3m-ouvrir { flex: 1; height: 44px; border-radius: 12px; border: 0; background: #c5005f; color: #fff; font: inherit; font-size: 13.5px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; gap: 4px; cursor: pointer; }
 .av3m-carte .av3m-ouvrir svg { width: 16px; height: 16px; }
 .av3m-carte .av3m-action:active, .av3m-carte .av3m-ouvrir:active { transform: scale(.98); }
+
+/* ── Telephone, vue Publicite (04/11) ─────────────────────────────────────────────────────────── */
+.av3m-entete { display: flex; flex-direction: column; gap: 10px; margin: 0 0 12px; }
+.av3m-entete .av3-onglets { margin-left: 0; display: flex; }
+.av3m-entete .av3-onglets button { flex: 1; justify-content: center; height: 38px; font-size: 13.5px; }
+.av3m-entete .av3-presence { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; }
+.av3m-entete .av3-carte { flex: 0 0 112px; padding: 9px 10px; border-radius: 14px; scroll-snap-align: start; }
+.av3m-entete .av3-carte-tete { font-size: 12px; gap: 6px; }
+.av3m-entete .av3-pastille { width: 22px; height: 22px; font-size: 9px; border-radius: 7px; }
+.av3m-entete .av3-carte-val b { font-size: 19px; }
+.av3m-entete .av3-carte-val span, .av3m-entete .av3-carte-pied { font-size: 11px; }
+.av3m-entete .av3-filtre { font-size: 12.5px; padding: 9px 12px; }
+.av3m-entete .av3-filtre button { height: 32px; }
+.av3m-pub .av3m-photo { height: 130px; }
+.av3m-pub .av3m-corps { gap: 6px; }
+.av3m-cases { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; padding-top: 8px; border-top: 1px solid rgba(34, 35, 35, .07); }
+.av3m-case { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.av3m-cases .av3-case { width: 44px; height: 44px; border-radius: 11px; }
+.av3m-cases .av3-case svg { width: 20px; height: 20px; }
+.av3m-case-nom { font-size: 11px; font-weight: 800; color: #5c6163; letter-spacing: .02em; }
+.av3m-bande { flex-wrap: wrap; justify-content: space-between; padding: 10px 12px; }
+.av3m-bande .av3-pub-demande { height: 40px; padding: 0 14px; }
+/* mesure 375 px : la rangee de cartes qui defile imposait sa largeur (734 px) a toute la liste -- un
+   element de grille ne retrecit pas sous son contenu sans min-width: 0 */
+.av3m-entete, .av3m-entete .av3-presence, .av3m-carte { min-width: 0; max-width: 100%; }
+.mobile-card-list:has(.av3m-entete) { min-width: 0; }
+.av3m-entete .av3-onglets { width: 100%; align-self: stretch; box-sizing: border-box; }

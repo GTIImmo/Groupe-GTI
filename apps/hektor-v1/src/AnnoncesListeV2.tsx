@@ -290,6 +290,12 @@ export function AnnonceCarteMobile(p: {
   primaryLabel: string
   onOpen: () => void
   extra?: ReactNode
+  /** vue Publicite au telephone (04/11) : les cases de portail ou la bande, a la place du detail */
+  pub?: {
+    bande: null | { texte: string; bouton?: { label: string; onClick: () => void; attente?: boolean } }
+    cases: Record<string, { etat: EtatCase; titre: string }>
+    onToggle: (portalKey: string) => void
+  }
 }) {
   const { item } = p
   const nbPhotos = Math.max(nombrePhotos(item), p.photoUrl ? 1 : 0)
@@ -305,12 +311,64 @@ export function AnnonceCarteMobile(p: {
   const diffusable = String(item.diffusable ?? '').trim() === '1'
   const antenne = !diffusable ? 'non' : portails > 0 ? 'enligne' : 'zero'
   const nego = p.negoName && p.negoName !== '-' ? p.negoName : null
+  const photo = (
+    <button type="button" className="av3m-photo" onClick={p.onOpen} aria-label="Ouvrir la fiche">
+      {p.photoUrl ? <img src={p.photoUrl} alt="" loading="lazy" /> : null}
+      <span className={`av3m-nimg${peuDePhotos ? ' peu' : ''}`}><Svg d={ICONE.photo} strokeWidth={2.4} />{peuDePhotos ? `${nbPhotos}/5` : nbPhotos}</span>
+    </button>
+  )
+  if (p.pub) {
+    // Vue Publicite (maquette telephone) : photo plus basse, ville, titre, puis les 5 cases de 40 px
+    // (assez grandes pour le doigt) -- ou la bande « Faire la demande ». Toucher la photo ouvre la fiche.
+    const pub = p.pub
+    return (
+      <article className="av3 av3m-carte av3m-pub">
+        {photo}
+        <div className="av3m-corps">
+          {item.ville ? <span className="av3m-ville"><Svg d={ICONE.lieu} strokeWidth={2.4} />{item.ville}</span> : null}
+          <span className={`av3m-titre${titreVide ? ' vide' : ''}`}>{titreVide ? 'Titre à saisir' : item.titre_bien}</span>
+          {pub.bande ? (
+            <div className="av3-pub-bande av3m-bande">
+              <span>{pub.bande.texte}</span>
+              {pub.bande.bouton ? (
+                <button type="button" className={`av3-pub-demande${pub.bande.bouton.attente ? ' attente' : ''}`} disabled={pub.bande.bouton.attente} onClick={() => { if (!pub.bande?.bouton?.attente) pub.bande?.bouton?.onClick() }}>{pub.bande.bouton.label}</button>
+              ) : null}
+            </div>
+          ) : (
+            <div className="av3m-cases" role="group" aria-label="Portails">
+              {PORTAILS_PUB.map((portail) => {
+                const kase = pub.cases[portail.key] ?? { etat: 'absent' as EtatCase, titre: portail.nom }
+                const occupe = kase.etat === 'envoi' || kase.etat === 'retrait'
+                return (
+                  <span key={portail.key} className="av3m-case">
+                    <button
+                      type="button"
+                      role="checkbox"
+                      aria-checked={kase.etat === 'enligne' || kase.etat === 'retrait'}
+                      aria-label={kase.titre}
+                      title={kase.titre}
+                      className={`av3-case ${kase.etat}`}
+                      disabled={occupe}
+                      onClick={() => { if (!occupe) pub.onToggle(portail.key) }}
+                    >
+                      {kase.etat === 'enligne' ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m5 12.5 4.2 4.2L19 7" /></svg> : null}
+                      {kase.etat === 'erreur' ? <b aria-hidden="true">!</b> : null}
+                      {kase.etat === 'echec' ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17" /></svg> : null}
+                      {occupe ? <i className="av3-case-roue" aria-hidden="true" /> : null}
+                    </button>
+                    <span className="av3m-case-nom">{portail.court}</span>
+                  </span>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      </article>
+    )
+  }
   return (
     <article className="av3 av3m-carte">
-      <button type="button" className="av3m-photo" onClick={p.onOpen} aria-label="Ouvrir la fiche">
-        {p.photoUrl ? <img src={p.photoUrl} alt="" loading="lazy" /> : null}
-        <span className={`av3m-nimg${peuDePhotos ? ' peu' : ''}`}><Svg d={ICONE.photo} strokeWidth={2.4} />{peuDePhotos ? `${nbPhotos}/5` : nbPhotos}</span>
-      </button>
+      {photo}
       <div className="av3m-corps">
         {item.ville ? <span className="av3m-ville"><Svg d={ICONE.lieu} strokeWidth={2.4} />{item.ville}</span> : null}
         <span className={`av3m-titre${titreVide ? ' vide' : ''}`}>{titreVide ? 'Titre à saisir' : item.titre_bien}</span>

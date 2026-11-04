@@ -24716,6 +24716,21 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             onOpenLightweightDetail={openLightweightDetailImport}
             onOpenRequestModal={openRequestModal}
             vignetteV2={APP_ANNONCES_LISTE_V2}
+            requests={diffusionRequests}
+            currentUserName={profile?.display_name ?? profile?.email ?? null}
+            currentUserRole={profile?.role ?? null}
+            presenceFilters={dataFilters}
+            presenceScope={dataScope}
+            filtrePresence={filters.absentDe || (filters.diffusable === 'non_diffusable' ? 'gti' : null)}
+            onFiltrePresence={(cle) => {
+              setActiveMandatKpiAction(null)
+              setFilters((current) => ({
+                ...current,
+                absentDe: cle && cle !== 'gti' ? cle : undefined,
+                diffusable: cle === 'gti' ? 'non_diffusable' : current.diffusable === 'non_diffusable' ? allFilterValue : current.diffusable,
+              }))
+              setMandatPage(1)
+            }}
           />
         ) : screen === 'estimations' ? (
           <MobileMandatCards
@@ -26906,6 +26921,151 @@ function LightweightActionGlyph({ kind }: { kind: 'import' | 'ready' | 'archived
   return (<svg {...common}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="m7 10 5 5 5-5" /><path d="M12 15V3" /></svg>)
 }
 
+// ── Vue Publicite : la logique (onglet, cartes de presence, cases, envoi chez Hektor, bandes) ─────────
+// Sortie de MandatsScreen le 04/11/2026 pour etre PARTAGEE avec le telephone (MobileMandatCards) : les
+// deux ecrans font exactement le meme geste. Le code est celui du 03/11, deplace tel quel.
+function usePubliciteAnnonces(p: {
+  actif: boolean
+  mandats: MandatRecord[]
+  presenceFilters?: AppFilters
+  presenceScope?: DataScope | null
+  requests: DiffusionRequest[]
+  onOpenRequestModal: (id: number, role?: 'nego' | 'pauline', requestType?: BusinessRequestType) => void
+  currentUserName?: string | null
+  currentUserRole?: string | null
+  onNotice: (message: string) => void
+}) {
+  // Vue Publicite (lot 3, 03/11/2026) : onglet retenu par navigateur (simple confort).
+  const [vueAnnonces, setVueAnnonces] = useState<'liste' | 'pub'>(() => {
+    try { return window.localStorage.getItem('bienvu.annonces.vue') === 'pub' ? 'pub' : 'liste' } catch { return 'liste' }
+  })
+  const changerVueAnnonces = (vue: 'liste' | 'pub') => {
+    setVueAnnonces(vue)
+    try { window.localStorage.setItem('bienvu.annonces.vue', vue) } catch { /* stockage indisponible : l'onglet ne sera pas retenu */ }
+  }
+  const vuePub = p.actif && vueAnnonces === 'pub'
+  // Ce qui vient d'etre fait dans cette session, en attendant la relecture de la nuit :
+  //   resumeLocal -- la nouvelle liste des portails (aussi enregistree sur le dossier, persist-state) ;
+  //   casesEnCours -- l'envoi en cours ; echecsCases -- le refus de Hektor, affiche sur la case.
+  const [resumeLocal, setResumeLocal] = useState<Record<number, string>>({})
+  const [casesEnCours, setCasesEnCours] = useState<Record<string, 'envoi' | 'retrait'>>({})
+  const [echecsCases, setEchecsCases] = useState<Record<string, string>>({})
+  const [portailsErreur, setPortailsErreur] = useState<Map<number, Set<string>>>(new Map())
+  const [presence, setPresence] = useState<{ diffusables: number; nonDiffusables: number; enLigne: Record<string, number> } | null>(null)
+  const [presenceChargement, setPresenceChargement] = useState(false)
+  // Cle de rechargement : les filtres de la liste SANS ceux que les cartes posent elles-memes.
+  const presenceKey = vuePub && p.presenceFilters
+    ? JSON.stringify({ f: { ...p.presenceFilters, absentDe: null, diffusable: null, tri: null }, s: p.presenceScope ?? null })
+    : ''
+  useEffect(() => {
+    if (!presenceKey || !p.presenceFilters) return
+    let cancelled = false
+    setPresenceChargement(true)
+    loadPresencePortails(p.presenceFilters, PORTAILS_PUB.map((x) => x.key), p.presenceScope)
+      .then((r) => { if (!cancelled) setPresence(r) })
+      .catch(() => { if (!cancelled) setPresence(null) })
+      .finally(() => { if (!cancelled) setPresenceChargement(false) })
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [presenceKey])
+  const pubIdsKey = vuePub ? p.mandats.filter((m) => m.diffusable === '1').map((m) => m.app_dossier_id).join(',') : ''
+  useEffect(() => {
+    if (!pubIdsKey) { setPortailsErreur(new Map()); return }
+    let cancelled = false
+    loadPortailsEnErreur(pubIdsKey.split(',').map(Number))
+      .then((m) => { if (!cancelled) setPortailsErreur(m) })
+      .catch(() => { if (!cancelled) setPortailsErreur(new Map()) })
+    return () => { cancelled = true }
+  }, [pubIdsKey])
+  const basculerPortail = async (item: MandatRecord, portalKey: string) => {
+    const id = item.app_dossier_id
+    const cle = `${id}:${portalKey}`
+    if (casesEnCours[cle]) return
+    const enLigne = portailsDeLaLigne(resumeLocal[id] ?? item.portails_resume)
+    const enErreur = Boolean(portailsErreur.get(id)?.has(portalKey))
+    // Une case en erreur se REPUBLIE ; sinon le clic inverse l'etat.
+    const publier = enErreur || !enLigne.includes(portalKey)
+    setCasesEnCours((c) => ({ ...c, [cle]: publier ? 'envoi' : 'retrait' }))
+    setEchecsCases((c) => { const n = { ...c }; delete n[cle]; return n })
+    try {
+      let broadcastId: string | undefined = PORTAIL_ID_COMMUN[portalKey]
+      if (!broadcastId) {
+        const apercu = await previewDefaultDiffusionTargets({ appDossierId: id })
+        broadcastId = (apercu.targets ?? []).find((t) => t.portal_key === portalKey)?.hektor_broadcast_id
+      }
+      if (!broadcastId) throw new Error(`Numéro de passerelle introuvable pour l'agence ${item.agence_nom ?? ''}`.trim())
+      // ⚠ UNE SEULE cible : _run_apply agit sur TOUTES les lignes de app_diffusion_target du dossier,
+      //   donc un seul ordre part chez Hektor -- les autres portails ne sont pas touches.
+      await saveDiffusionTargets({
+        mandat: item,
+        targets: [{ hektor_broadcast_id: broadcastId, portal_key: portalKey, target_state: publier ? 'enabled' : 'disabled' }],
+        requestedByName: p.currentUserName ?? null,
+        requestedByRole: p.currentUserRole ?? null,
+      })
+      const result = await applyDiffusionTargetsOnHektor({ appDossierId: id, dryRun: false, ensureDiffusable: false })
+      const refus = (result.failed ?? []).find((f) => f.action === 'add' || f.action === 'remove')
+      if (refus) throw new Error(safeText(refus.error) || 'Hektor a refusé')
+      const suivant = publier ? [...enLigne.filter((k) => k !== portalKey), portalKey] : enLigne.filter((k) => k !== portalKey)
+      const resume = buildPortalsResume(suivant)
+      setResumeLocal((c) => ({ ...c, [id]: resume }))
+      const avant = enLigne.includes(portalKey)
+      if (avant !== publier) {
+        setPresence((pr) => pr ? { ...pr, enLigne: { ...pr.enLigne, [portalKey]: Math.max(0, (pr.enLigne[portalKey] ?? 0) + (publier ? 1 : -1)) } } : pr)
+      }
+      if (enErreur) {
+        setPortailsErreur((m) => { const n = new Map(m); const set = new Set(n.get(id) ?? []); set.delete(portalKey); n.set(id, set); return n })
+      }
+      // Hektor a CONFIRME ; on reporte sur le dossier. Si ce report rate, la relecture de la nuit
+      // remettra l'app d'accord -- on le DIT plutot que de se taire.
+      await setDossierHektorState(id, { portailsResume: resume, nbPortailsActifs: suivant.length })
+        .catch(() => p.onNotice("Fait chez Hektor. L'app se mettra à jour à la relecture de cette nuit."))
+    } catch (error) {
+      // Une trace complete (couleurs de terminal comprises) peut remonter : on garde sa derniere ligne utile.
+      const lignes = (error instanceof Error ? error.message : '').replace(/\u001b\[[0-9;]*m/g, '').split(/\r?\n/).map((l) => l.trim()).filter(Boolean)
+      const message = (lignes.length > 1 ? lignes[lignes.length - 1] : lignes[0] ?? '') || "Échec de l'envoi à Hektor"
+      setEchecsCases((c) => ({ ...c, [cle]: message.slice(0, 180) }))
+    } finally {
+      setCasesEnCours((c) => { const n = { ...c }; delete n[cle]; return n })
+    }
+  }
+  const casesDeLaLigne = (item: MandatRecord) => {
+    const id = item.app_dossier_id
+    const enLigne = new Set(portailsDeLaLigne(resumeLocal[id] ?? item.portails_resume))
+    const erreurs = portailsErreur.get(id)
+    const cases: Record<string, { etat: EtatCase; titre: string }> = {}
+    for (const portail of PORTAILS_PUB) {
+      const cle = `${id}:${portail.key}`
+      const enCours = casesEnCours[cle]
+      const echec = echecsCases[cle]
+      const etat: EtatCase = enCours ?? (echec ? 'echec' : erreurs?.has(portail.key) ? 'erreur' : enLigne.has(portail.key) ? 'enligne' : 'absent')
+      const titre = etat === 'envoi' ? `${portail.nom} : envoi à Hektor…`
+        : etat === 'retrait' ? `${portail.nom} : retrait en cours…`
+        : etat === 'echec' ? `${portail.nom} : ${echec} — cliquer pour réessayer`
+        : etat === 'erreur' ? `${portail.nom} : en erreur chez Hektor — cliquer pour republier`
+        : etat === 'enligne' ? `${portail.nom} : en ligne — cliquer pour retirer`
+        : `${portail.nom} : absente — cliquer pour publier`
+      cases[portail.key] = { etat, titre }
+    }
+    return cases
+  }
+  const bandePub = (item: MandatRecord, isLightweight: boolean): null | { texte: string; bouton?: { label: string; onClick: () => void; attente?: boolean } } => {
+    if (item.is_provisional) return { texte: 'En création…' }
+    if (isLightweight) return { texte: 'Fiche importée : ouvrir pour la compléter.' }
+    if (!String(item.numero_mandat ?? '').trim()) return { texte: "Pas de mandat : le créer d'abord." }
+    if (String(item.diffusable ?? '').trim() === '1') return null
+    const demande = latestActionRequest(p.requests, item.app_dossier_id, 'demande_diffusion')
+    const statut = demande?.request_status ?? null
+    const ouvrir = () => p.onOpenRequestModal(item.app_dossier_id, 'nego', 'demande_diffusion')
+    if (statut === 'pending' || statut === 'in_progress') return { texte: 'Demande envoyée à la Direction.', bouton: { label: 'En attente', onClick: ouvrir, attente: true } }
+    if (statut === 'waiting_commercial') return { texte: 'La Direction demande une correction.', bouton: { label: 'Corriger', onClick: ouvrir } }
+    return {
+      texte: statut === 'refused' ? 'Demande refusée.' : isValidationApproved(item.validation_diffusion_state) ? 'Validé, pas encore diffusable.' : 'Pas encore diffusable.',
+      bouton: { label: 'Faire la demande', onClick: ouvrir },
+    }
+  }
+  return { vueAnnonces, changerVueAnnonces, vuePub, presence, presenceChargement, basculerPortail, casesDeLaLigne, bandePub }
+}
+
 function MandatsScreen(props: {
   mandats: MandatRecord[]
   mandatsTotal: number
@@ -26966,134 +27126,18 @@ function MandatsScreen(props: {
   // Listing V2 (lot 1, 03/11/2026) : seulement le mode Annonces. L'ecran Estimations partage ce
   // composant et ne change PAS.
   const listeV2 = APP_ANNONCES_LISTE_V2 && !isEstimationMode
-  // Vue Publicite (lot 3, 03/11/2026) : onglet retenu par navigateur (simple confort).
-  const [vueAnnonces, setVueAnnonces] = useState<'liste' | 'pub'>(() => {
-    try { return window.localStorage.getItem('bienvu.annonces.vue') === 'pub' ? 'pub' : 'liste' } catch { return 'liste' }
+  // Vue Publicite : la logique est partagee avec le telephone (usePubliciteAnnonces, 04/11).
+  const { vueAnnonces, changerVueAnnonces, vuePub, presence, presenceChargement, basculerPortail, casesDeLaLigne, bandePub } = usePubliciteAnnonces({
+    actif: listeV2,
+    mandats: props.mandats,
+    presenceFilters: props.presenceFilters,
+    presenceScope: props.presenceScope,
+    requests: props.requests,
+    onOpenRequestModal: props.onOpenRequestModal,
+    currentUserName: props.currentUserName,
+    currentUserRole: props.currentUserRole,
+    onNotice: (message) => setRapproNotice(message),
   })
-  const changerVueAnnonces = (vue: 'liste' | 'pub') => {
-    setVueAnnonces(vue)
-    try { window.localStorage.setItem('bienvu.annonces.vue', vue) } catch { /* stockage indisponible : l'onglet ne sera pas retenu */ }
-  }
-  const vuePub = listeV2 && vueAnnonces === 'pub'
-  // Ce qui vient d'etre fait dans cette session, en attendant la relecture de la nuit :
-  //   resumeLocal -- la nouvelle liste des portails (aussi enregistree sur le dossier, persist-state) ;
-  //   casesEnCours -- l'envoi en cours ; echecsCases -- le refus de Hektor, affiche sur la case.
-  const [resumeLocal, setResumeLocal] = useState<Record<number, string>>({})
-  const [casesEnCours, setCasesEnCours] = useState<Record<string, 'envoi' | 'retrait'>>({})
-  const [echecsCases, setEchecsCases] = useState<Record<string, string>>({})
-  const [portailsErreur, setPortailsErreur] = useState<Map<number, Set<string>>>(new Map())
-  const [presence, setPresence] = useState<{ diffusables: number; nonDiffusables: number; enLigne: Record<string, number> } | null>(null)
-  const [presenceChargement, setPresenceChargement] = useState(false)
-  // Cle de rechargement : les filtres de la liste SANS ceux que les cartes posent elles-memes.
-  const presenceKey = vuePub && props.presenceFilters
-    ? JSON.stringify({ f: { ...props.presenceFilters, absentDe: null, diffusable: null, tri: null }, s: props.presenceScope ?? null })
-    : ''
-  useEffect(() => {
-    if (!presenceKey || !props.presenceFilters) return
-    let cancelled = false
-    setPresenceChargement(true)
-    loadPresencePortails(props.presenceFilters, PORTAILS_PUB.map((x) => x.key), props.presenceScope)
-      .then((r) => { if (!cancelled) setPresence(r) })
-      .catch(() => { if (!cancelled) setPresence(null) })
-      .finally(() => { if (!cancelled) setPresenceChargement(false) })
-    return () => { cancelled = true }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [presenceKey])
-  const pubIdsKey = vuePub ? props.mandats.filter((m) => m.diffusable === '1').map((m) => m.app_dossier_id).join(',') : ''
-  useEffect(() => {
-    if (!pubIdsKey) { setPortailsErreur(new Map()); return }
-    let cancelled = false
-    loadPortailsEnErreur(pubIdsKey.split(',').map(Number))
-      .then((m) => { if (!cancelled) setPortailsErreur(m) })
-      .catch(() => { if (!cancelled) setPortailsErreur(new Map()) })
-    return () => { cancelled = true }
-  }, [pubIdsKey])
-  const basculerPortail = async (item: MandatRecord, portalKey: string) => {
-    const id = item.app_dossier_id
-    const cle = `${id}:${portalKey}`
-    if (casesEnCours[cle]) return
-    const enLigne = portailsDeLaLigne(resumeLocal[id] ?? item.portails_resume)
-    const enErreur = Boolean(portailsErreur.get(id)?.has(portalKey))
-    // Une case en erreur se REPUBLIE ; sinon le clic inverse l'etat.
-    const publier = enErreur || !enLigne.includes(portalKey)
-    setCasesEnCours((c) => ({ ...c, [cle]: publier ? 'envoi' : 'retrait' }))
-    setEchecsCases((c) => { const n = { ...c }; delete n[cle]; return n })
-    try {
-      let broadcastId: string | undefined = PORTAIL_ID_COMMUN[portalKey]
-      if (!broadcastId) {
-        const apercu = await previewDefaultDiffusionTargets({ appDossierId: id })
-        broadcastId = (apercu.targets ?? []).find((t) => t.portal_key === portalKey)?.hektor_broadcast_id
-      }
-      if (!broadcastId) throw new Error(`Numéro de passerelle introuvable pour l'agence ${item.agence_nom ?? ''}`.trim())
-      // ⚠ UNE SEULE cible : _run_apply agit sur TOUTES les lignes de app_diffusion_target du dossier,
-      //   donc un seul ordre part chez Hektor -- les autres portails ne sont pas touches.
-      await saveDiffusionTargets({
-        mandat: item,
-        targets: [{ hektor_broadcast_id: broadcastId, portal_key: portalKey, target_state: publier ? 'enabled' : 'disabled' }],
-        requestedByName: props.currentUserName ?? null,
-        requestedByRole: props.currentUserRole ?? null,
-      })
-      const result = await applyDiffusionTargetsOnHektor({ appDossierId: id, dryRun: false, ensureDiffusable: false })
-      const refus = (result.failed ?? []).find((f) => f.action === 'add' || f.action === 'remove')
-      if (refus) throw new Error(safeText(refus.error) || 'Hektor a refusé')
-      const suivant = publier ? [...enLigne.filter((k) => k !== portalKey), portalKey] : enLigne.filter((k) => k !== portalKey)
-      const resume = buildPortalsResume(suivant)
-      setResumeLocal((c) => ({ ...c, [id]: resume }))
-      const avant = enLigne.includes(portalKey)
-      if (avant !== publier) {
-        setPresence((pr) => pr ? { ...pr, enLigne: { ...pr.enLigne, [portalKey]: Math.max(0, (pr.enLigne[portalKey] ?? 0) + (publier ? 1 : -1)) } } : pr)
-      }
-      if (enErreur) {
-        setPortailsErreur((m) => { const n = new Map(m); const set = new Set(n.get(id) ?? []); set.delete(portalKey); n.set(id, set); return n })
-      }
-      // Hektor a CONFIRME ; on reporte sur le dossier. Si ce report rate, la relecture de la nuit
-      // remettra l'app d'accord -- on le DIT plutot que de se taire.
-      await setDossierHektorState(id, { portailsResume: resume, nbPortailsActifs: suivant.length })
-        .catch(() => setRapproNotice("Fait chez Hektor. L'app se mettra à jour à la relecture de cette nuit."))
-    } catch (error) {
-      // Une trace complete (couleurs de terminal comprises) peut remonter : on garde sa derniere ligne utile.
-      const lignes = (error instanceof Error ? error.message : '').replace(/\u001b\[[0-9;]*m/g, '').split(/\r?\n/).map((l) => l.trim()).filter(Boolean)
-      const message = (lignes.length > 1 ? lignes[lignes.length - 1] : lignes[0] ?? '') || "Échec de l'envoi à Hektor"
-      setEchecsCases((c) => ({ ...c, [cle]: message.slice(0, 180) }))
-    } finally {
-      setCasesEnCours((c) => { const n = { ...c }; delete n[cle]; return n })
-    }
-  }
-  const casesDeLaLigne = (item: MandatRecord) => {
-    const id = item.app_dossier_id
-    const enLigne = new Set(portailsDeLaLigne(resumeLocal[id] ?? item.portails_resume))
-    const erreurs = portailsErreur.get(id)
-    const cases: Record<string, { etat: EtatCase; titre: string }> = {}
-    for (const portail of PORTAILS_PUB) {
-      const cle = `${id}:${portail.key}`
-      const enCours = casesEnCours[cle]
-      const echec = echecsCases[cle]
-      const etat: EtatCase = enCours ?? (echec ? 'echec' : erreurs?.has(portail.key) ? 'erreur' : enLigne.has(portail.key) ? 'enligne' : 'absent')
-      const titre = etat === 'envoi' ? `${portail.nom} : envoi à Hektor…`
-        : etat === 'retrait' ? `${portail.nom} : retrait en cours…`
-        : etat === 'echec' ? `${portail.nom} : ${echec} — cliquer pour réessayer`
-        : etat === 'erreur' ? `${portail.nom} : en erreur chez Hektor — cliquer pour republier`
-        : etat === 'enligne' ? `${portail.nom} : en ligne — cliquer pour retirer`
-        : `${portail.nom} : absente — cliquer pour publier`
-      cases[portail.key] = { etat, titre }
-    }
-    return cases
-  }
-  const bandePub = (item: MandatRecord, isLightweight: boolean): null | { texte: string; bouton?: { label: string; onClick: () => void; attente?: boolean } } => {
-    if (item.is_provisional) return { texte: 'En création…' }
-    if (isLightweight) return { texte: 'Fiche importée : ouvrir pour la compléter.' }
-    if (!String(item.numero_mandat ?? '').trim()) return { texte: "Pas de mandat : le créer d'abord." }
-    if (String(item.diffusable ?? '').trim() === '1') return null
-    const demande = latestActionRequest(props.requests, item.app_dossier_id, 'demande_diffusion')
-    const statut = demande?.request_status ?? null
-    const ouvrir = () => props.onOpenRequestModal(item.app_dossier_id, 'nego', 'demande_diffusion')
-    if (statut === 'pending' || statut === 'in_progress') return { texte: 'Demande envoyée à la Direction.', bouton: { label: 'En attente', onClick: ouvrir, attente: true } }
-    if (statut === 'waiting_commercial') return { texte: 'La Direction demande une correction.', bouton: { label: 'Corriger', onClick: ouvrir } }
-    return {
-      texte: statut === 'refused' ? 'Demande refusée.' : isValidationApproved(item.validation_diffusion_state) ? 'Validé, pas encore diffusable.' : 'Pas encore diffusable.',
-      bouton: { label: 'Faire la demande', onClick: ouvrir },
-    }
-  }
   const listingTotalLabel = `${new Intl.NumberFormat('fr-FR').format(props.mandatsTotal)} ${props.totalNoun ?? (isEstimationMode ? 'estimations' : 'annonces actives')}`
   // Badge « acquéreurs correspondants non proposés » — comptage batch pour la page courante.
   const [acqCounts, setAcqCounts] = useState<Map<number, RapprochementCount>>(new Map())
@@ -40043,13 +40087,48 @@ function MobileMandatCards(props: {
   mode: 'active' | 'estimation'
   onOpenDetailPage: (id: number) => void
   onOpenLightweightDetail: (item: MandatRecord) => void
-  onOpenRequestModal: (id: number, role?: 'nego' | 'pauline') => void
+  onOpenRequestModal: (id: number, role?: 'nego' | 'pauline', requestType?: BusinessRequestType) => void
   /** lot 5 (03/11) : la carte « version retenue », pour l'ecran Annonces seulement */
   vignetteV2?: boolean
+  /** vue Publicite au telephone (04/11) : memes donnees que le bureau */
+  requests?: DiffusionRequest[]
+  currentUserName?: string | null
+  currentUserRole?: string | null
+  presenceFilters?: AppFilters
+  presenceScope?: DataScope | null
+  filtrePresence?: string | null
+  onFiltrePresence?: (cle: string | null) => void
 }) {
   const title = props.mode === 'estimation' ? 'Estimations' : 'Annonces actives'
+  // ⚠ AVANT tout return (lecon de la page blanche du 27/10) : le meme crochet que le bureau.
+  const [noticePub, setNoticePub] = useState<string | null>(null)
+  const pub = usePubliciteAnnonces({
+    actif: Boolean(props.vignetteV2) && props.mode === 'active',
+    mandats: props.mandats,
+    presenceFilters: props.presenceFilters,
+    presenceScope: props.presenceScope,
+    requests: props.requests ?? [],
+    onOpenRequestModal: props.onOpenRequestModal,
+    currentUserName: props.currentUserName,
+    currentUserRole: props.currentUserRole,
+    onNotice: (message) => setNoticePub(message),
+  })
+  const enTetePub = props.vignetteV2 && props.mode === 'active' ? (
+    <div className="av3 av3m-entete">
+      <AnnonceOnglets vue={pub.vueAnnonces} onChange={pub.changerVueAnnonces} />
+      {pub.vuePub ? (
+        <>
+          <AnnoncePresence presence={pub.presence} chargement={pub.presenceChargement} actif={props.filtrePresence ?? null} onPick={(cle) => props.onFiltrePresence?.(cle)} />
+          <AnnonceFiltrePresence actif={props.filtrePresence ?? null} presence={pub.presence} onClear={() => props.onFiltrePresence?.(null)} />
+        </>
+      ) : null}
+      {noticePub ? <div className="av-notice" role="status" onClick={() => setNoticePub(null)}>{noticePub}</div> : null}
+    </div>
+  ) : null
   if (props.mandats.length === 0) {
-    return <section className="mobile-empty-card">{props.loading ? 'Chargement...' : 'Aucune ligne disponible.'}</section>
+    return enTetePub
+      ? <>{enTetePub}<section className="mobile-empty-card">{props.loading ? 'Chargement...' : 'Aucune ligne disponible.'}</section></>
+      : <section className="mobile-empty-card">{props.loading ? 'Chargement...' : 'Aucune ligne disponible.'}</section>
   }
   return (
     <section className="mobile-card-list" aria-label={title}>
@@ -40060,6 +40139,7 @@ function MobileMandatCards(props: {
         </div>
         <span>{props.mandats.length} / {props.total}</span>
       </div>
+      {enTetePub}
       {props.mandats.map((item, index) => {
         const isLightweight = props.mode === 'active' && isLightweightAnnonceRecord(item)
         const isArchive = props.mode === 'active' && isArchivedAnnonceRecord(item)
@@ -40105,6 +40185,11 @@ function MobileMandatCards(props: {
               onAction={!isLightweight ? () => props.onOpenRequestModal(item.app_dossier_id, 'nego') : undefined}
               primaryLabel={primaryLabel}
               onOpen={ouvrir}
+              pub={pub.vuePub ? {
+                bande: pub.bandePub(item, isLightweight),
+                cases: pub.casesDeLaLigne(item),
+                onToggle: (portalKey) => { void pub.basculerPortail(item, portalKey) },
+              } : undefined}
               extra={(isLightweight || item.numero_mandat) ? (
                 <span className="av3m-extra">
                   {isLightweight ? <span className={`mobile-detail-chip ${hasExportedDetail ? 'is-ready' : ''}`}>{hasExportedDetail ? 'Détail prêt' : 'Détail à charger'}</span> : null}
