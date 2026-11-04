@@ -611,3 +611,24 @@ comptes de Franck est relié à sa personne (et l'autre archivé ?).
   1000036 FRANCK GERPHAGNON est reliée au compte `franck.gerphagnon@gti-immobilier.fr` (`3603c8bc…`) ; le compte gmail
   (`0b500395…`) n'est plus relié, ni supprimé ni archivé. Journal : `compte_app_relie`, avant = le gmail. La nuit ne le
   défera pas (son étape D ne relie qu'une personne SANS compte).
+
+## 23. LES MENUS DE NÉGOCIATEURS LISENT LE REGISTRE (04/11) — Frédéric : « OK 1 ET APRES 2 », « reprend le dev »
+
+**Le point bloquant (§18)** : les menus (`loadHektorNegotiatorOptions`, `loadNegotiatorOptionForContact`) envoient à Hektor
+le n° du compte d'AGENCE (`agence_id_user`) — changer le négociateur d'un bien, créer un contact. Le registre ne le
+portait pas, et il ne se déduit pas (18 agences = 18 comptes d'agence, mais le lien agence → compte n'est pas au registre).
+
+**Le patch** `supabase/patch_registre_negociateurs_agence_user_2026-11-04.sql` (+ `_INVERSE`) : une colonne
+`app_negociateur_fiche.agence_id_user`, remplie depuis l'annuaire par le n° de négociateur, et TENUE CHAQUE NUIT : sept
+lignes de `app_negociateur_registre_maintenir` modifiées EN PLACE depuis la version en base (empreinte `e68a3f86…`
+vérifiée ; chaque ancre doit apparaître une fois, sinon ARRÊT) — lecture, création, journal des changements, mise à jour,
+comparaison. ⭐ **Éprouvé dans une transaction ANNULÉE** : 219 fiches remplies, **30 actifs sur 30 au bon compte
+d'agence**, 0 écart avec l'annuaire, la nuit à blanc ne journalise aucun faux changement, et le RETOUR ARRIÈRE rend la
+fonction à l'IDENTIQUE (empreinte `e68a3f86…` retrouvée). ⚠ Mon 1er essai s'est arrêté sur MON contrôle (seuil 7 au lieu
+de 5) — tout annulé, vérifié (pas de colonne, empreinte intacte), seuil corrigé.
+
+**Le front** (`lib/api.ts`) : les deux lectures passent par le REGISTRE d'abord (jamais purgé : une nuit où Hektor rend
+une liste tronquée ne vide plus le menu ; `loadNegotiatorOptionForContact` retrouve aussi les anciens), l'annuaire en
+REPLI (registre illisible, vide, ou colonne pas encore posée → l'ordre de mise en ligne est sans danger). Mesuré : pour
+les 30 actifs, nom, e-mail, agence, n° de négociateur, n° de compte et n° de compte d'agence IDENTIQUES à l'annuaire —
+le menu ne change pas à l'œil. Build vert. ⏳ Patch à poser (accord), puis push, puis contrôle dans un menu.

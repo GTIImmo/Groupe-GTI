@@ -6420,21 +6420,44 @@ export async function loadHektorNegotiatorOptions(scope?: DataScope | null): Pro
   // Actif = colonne is_active de l'annuaire (dérivée de listNegos actif=1 côté sync).
   // On NE filtre PLUS sur app_user_directory : cette table ne couvre que les ~12 users
   // directs du compte parent (2 NEGO) et excluait donc 99% des négociateurs réels.
-  const [directoryResult, dossierResult] = await Promise.all([
+  // ⭐ 04/11/2026 (registre des négociateurs, audit §23) : les fiches viennent du REGISTRE (jamais purgé : une nuit où
+  //   Hektor rend une liste tronquée ne vide plus le menu), avec le n° de compte d'agence qu'il porte depuis le 04/11.
+  //   Mêmes colonnes, mêmes numéros Hektor que l'annuaire (mesuré : 30 actifs = 30, même agence, même compte d'agence).
+  //   L'annuaire reste le REPLI (registre illisible, vide, ou colonne pas encore posée).
+  const [registreResult, dossierResult] = await Promise.all([
     supabase
-      .from('app_hektor_negotiator_agency_directory')
-      .select('hektor_negociateur_id,hektor_user_id,hektor_agence_id,agence_id_user,agence_nom,display_name,email,is_active')
-      .order('agence_nom', { ascending: true })
-      .order('display_name', { ascending: true })
-      .limit(500),
+      .from('app_negociateur_fiche')
+      .select('hektor_negociateur_id,hektor_user_id,hektor_agence_id,agence_id_user,agence_nom,nom_vu,email_vu,actif_chez_hektor')
+      .eq('sorte', 'fiche_negociateur')
+      .limit(1000),
     supabase
       .from('app_dossiers_current')
       .select('commercial_id,commercial_nom,negociateur_email,agence_nom')
       .limit(4000),
   ])
+  if (dossierResult.error) throw new Error(dossierResult.error.message)
+  let directoryResult: { data: unknown[] | null; error: { message: string } | null }
+  const fichesRegistre = (registreResult.data ?? []) as Array<Record<string, unknown>>
+  if (!registreResult.error && fichesRegistre.some((f) => f.actif_chez_hektor === true)) {
+    const rangees = fichesRegistre.map((f) => ({
+      hektor_negociateur_id: f.hektor_negociateur_id as string | null, hektor_user_id: f.hektor_user_id as string | null,
+      hektor_agence_id: f.hektor_agence_id as string | null, agence_id_user: f.agence_id_user as string | null,
+      agence_nom: f.agence_nom as string | null, display_name: f.nom_vu as string | null, email: f.email_vu as string | null,
+      is_active: f.actif_chez_hektor === true,
+    }))
+    rangees.sort((a, b) => String(a.agence_nom ?? '').localeCompare(String(b.agence_nom ?? ''), 'fr') || String(a.display_name ?? '').localeCompare(String(b.display_name ?? ''), 'fr'))
+    directoryResult = { data: rangees, error: null }
+  } else {
+    if (registreResult.error) console.warn('[menus négociateurs] registre illisible, repli sur l’annuaire', registreResult.error.message)
+    directoryResult = await supabase
+      .from('app_hektor_negotiator_agency_directory')
+      .select('hektor_negociateur_id,hektor_user_id,hektor_agence_id,agence_id_user,agence_nom,display_name,email,is_active')
+      .order('agence_nom', { ascending: true })
+      .order('display_name', { ascending: true })
+      .limit(500)
+  }
 
   if (directoryResult.error) throw new Error(directoryResult.error.message)
-  if (dossierResult.error) throw new Error(dossierResult.error.message)
 
   const dossierByEmail = new Map<string, { commercial_id?: string | null; commercial_nom?: string | null; negociateur_email?: string | null; agence_nom?: string | null }>()
   for (const row of (dossierResult.data ?? []) as Array<{ commercial_id?: string | null; commercial_nom?: string | null; negociateur_email?: string | null; agence_nom?: string | null }>) {
@@ -6483,7 +6506,26 @@ export async function loadNegotiatorOptionForContact(params: {
   if (!negId && !email) return null
   const selectCols = 'hektor_negociateur_id,hektor_user_id,hektor_agence_id,agence_id_user,agence_nom,display_name,email'
   let row: { hektor_negociateur_id?: string | number | null; hektor_user_id?: string | number | null; hektor_agence_id?: string | number | null; agence_id_user?: string | number | null; agence_nom?: string | null; display_name?: string | null; email?: string | null } | null = null
-  if (negId) {
+  // ⭐ 04/11/2026 (audit §23) : le REGISTRE d'abord -- il garde toutes les fiches, anciens compris (l'annuaire est
+  //   reconstruit chaque nuit). Par le n° de négociateur, à défaut par l'e-mail ; l'annuaire en repli.
+  {
+    const regCols = 'hektor_negociateur_id,hektor_user_id,hektor_agence_id,agence_id_user,agence_nom,nom_vu,email_vu'
+    const enLigne = (f: Record<string, unknown> | undefined) => (f ? {
+      hektor_negociateur_id: f.hektor_negociateur_id as string | null, hektor_user_id: f.hektor_user_id as string | null,
+      hektor_agence_id: f.hektor_agence_id as string | null, agence_id_user: f.agence_id_user as string | null,
+      agence_nom: f.agence_nom as string | null, display_name: f.nom_vu as string | null, email: f.email_vu as string | null,
+    } : null)
+    if (negId) {
+      const { data, error } = await supabase.from('app_negociateur_fiche').select(regCols).eq('sorte', 'fiche_negociateur').eq('hektor_negociateur_id', negId).limit(1)
+      if (!error) row = enLigne((data ?? [])[0] as Record<string, unknown> | undefined)
+    }
+    if (!row && email) {
+      const { data, error } = await supabase.from('app_negociateur_fiche').select(regCols).eq('sorte', 'fiche_negociateur').eq('email_vu', email)
+        .order('actif_chez_hektor', { ascending: false }).limit(1)
+      if (!error) row = enLigne((data ?? [])[0] as Record<string, unknown> | undefined)
+    }
+  }
+  if (!row && negId) {
     const { data, error } = await supabase
       .from('app_hektor_negotiator_agency_directory')
       .select(selectCols)
