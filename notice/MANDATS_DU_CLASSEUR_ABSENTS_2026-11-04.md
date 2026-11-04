@@ -1,5 +1,37 @@
 # Les mandats que le classeur connait et que le registre n a pas -- 04/11/2026
 
+## ⛔⛔ LIRE CECI AVANT D OUVRIR UN CHANTIER : LE SUJET EST PROBABLEMENT DEJA TRANCHE
+
+**A4bis le disait deja le 31/10**, section « C : Mandat » :
+
+> « Les 134 ecarts ne s'ecrasent pas : sur un **mandat de recherche**, le classeur
+> porte le **numero de recherche** et nous celui de **vente**. **Les deux sont justes.** »
+
+**Et ma mesure du 04/11 qui semblait contredire cela etait FAUSSE.** J'avais annonce
+« 87 de ces numeros sont dans le miroir local mais pas au registre, donc l'importeur
+les perd ». C'etait un **faux positif de recherche textuelle** : je cherchais le numero
+entre guillemets dans tout le blob `mandats_json`, et il matchait n'importe quel autre
+champ (un montant, un identifiant).
+
+⭐ **La verification par annonce le prouve** : pour le numero 11935, l'annonce trouvee
+(30128) porte en realite le mandat **7087** -- au miroir **et** au registre, identiques.
+Idem 12257 -> 16446, 12566 -> 2574, 13187 -> 3483. **Le miroir et le registre concordent
+parfaitement : l'importeur ne perd rien.**
+
+➡ **Ces 107 numeros ne sont donc pas des mandats manquants** : ce sont tres probablement
+des numeros d'une AUTRE serie (recherche), exactement ce que A4bis decrivait.
+⬜ Ce qui resterait a verifier, si on rouvrait le sujet : que ces 107 numeros
+correspondent bien a des numeros de recherche, en les croisant avec
+`app_contact_mandat_recherche_current` (32 lignes) et le classeur colonne par colonne.
+
+⚠ **Les 23 numeros au-dela de 18339** (la frontiere ou l'API de Hektor s'est figee le
+30/01/2026) restent le seul trou connu et reel -- c'est celui que le rattrapage de
+fevrier traitait (`phase2/sync/manual_mandat_corrections.py`, 77 annonces reparees).
+
+---
+
+## La liste brute, telle que mesuree (a lire avec la reserve ci-dessus)
+
 **115 lignes**, **107 numeros distincts**.
 
 ```
