@@ -2012,7 +2012,7 @@ Recherche dans les notes (accents ignorés), l'historique git et la mémoire. **
   3. « À classer » : les 16 098 fiches sans métier, avec un rangement proposé d'après Netty (78 notaires, 673 demandes d'estimation,
      332 candidats, 10 165 « autre » ou sans type, 4 567 inconnues de Netty), à confirmer par lot ou une par une.
 - **L'inventaire qui la fonde** :
-  - l'annuaire v2 (, segments par rôle) ;
+  - l'annuaire v2 (`ContactsScreen`, segments par rôle) ;
   - le type Notaire et sa fiche (28/10, bleu encre et balance) ;
   - ⭐ **le formulaire de création connaît déjà le MÉTIER d'un partenaire chez Hektor** (`hektorPartnerJobOptions`, `App.tsx` ~41067 :
     Notaire 2, Diagnostiqueur 4, Syndic 5, Apporteur 15, Banque 19, Confrère 3…). Mais l'API de Hektor ne le RENVOIE pas : la nuit ne le lit
