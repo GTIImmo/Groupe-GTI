@@ -607,3 +607,7 @@ de Sandrine → relié par l'e-mail ; inconnu → personne créée (création) /
 gmail pour le compte @gti → refusé (conflit) ; choix libre → relié ; personne inexistante → erreur rendue. Build vert.
 ⏳ À mettre en ligne (Render + Vercel, par le push), puis à voir dans l'outil. ⛔ À DÉCIDER par Frédéric : lequel des deux
 comptes de Franck est relié à sa personne (et l'autre archivé ?).
+- ✅ **Décision de Frédéric (04/11) : « le compte @gti »** — posée en base (une ligne, garde avant/après) : la personne
+  1000036 FRANCK GERPHAGNON est reliée au compte `franck.gerphagnon@gti-immobilier.fr` (`3603c8bc…`) ; le compte gmail
+  (`0b500395…`) n'est plus relié, ni supprimé ni archivé. Journal : `compte_app_relie`, avant = le gmail. La nuit ne le
+  défera pas (son étape D ne relie qu'une personne SANS compte).
