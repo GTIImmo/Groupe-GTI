@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Accroche annonce · intervenants du bien</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=Spectral:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#1c1815;--ink-soft:#544b45;--muted:#8a807a;--faint:#a89e95;--line:#eae1d7;--line-soft:#f2ece3;--paper:#fbf8f3;--blue:#3a5a8a;--blue-ink:#2c4770;--blue-soft:#e7edf7;--blue-line:#cfd9ea;--green:#2f8a5b;--gold:#a8814a}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Hanken Grotesk',system-ui,sans-serif;color:var(--ink);background:rgba(18,14,10,.5);min-height:100vh;padding:14px 22px 22px;display:flex;flex-direction:column;align-items:center;-webkit-font-smoothing:antialiased}
+@keyframes modalIn{from{opacity:0;transform:scale(.955) translateY(16px)}to{opacity:1;transform:none}}
+.mpanel{position:relative;width:min(920px,98vw);border-radius:24px;overflow:hidden;box-shadow:0 50px 110px -32px rgba(18,14,10,.75);display:flex;flex-direction:column;max-height:93vh;background:var(--paper);animation:modalIn .5s cubic-bezier(.22,1,.36,1)}
+.mhead{position:relative;display:flex;align-items:center;gap:14px;padding:15px 20px;background:linear-gradient(115deg,#1a1e26,#14171f 55%);color:#fff;flex:none;overflow:hidden}
+.mhead::before{content:"";position:absolute;right:-40px;top:-60px;width:280px;height:180px;background:radial-gradient(circle at 60% 40%,rgba(58,90,138,.5),transparent 62%)}
+.mhead>*{position:relative;z-index:1}
+.mi{width:42px;height:42px;border-radius:13px;background:linear-gradient(150deg,#5578b0,#33507d);display:flex;align-items:center;justify-content:center;flex:none;box-shadow:inset 0 1px 0 rgba(255,255,255,.3),0 10px 22px -8px rgba(0,0,0,.4)}.mi svg{width:21px;height:21px}
+.mtitle .ey{font-size:9.5px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#a7bcda}
+.mtitle .mt{font-family:'Spectral',serif;font-size:19px;font-weight:600;margin-top:1px}.mtitle .msb{font-size:12px;color:#98a2b0}
+.hbtn{margin-left:auto;width:40px;height:40px;border-radius:50%;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.06);color:#c3c9d3;cursor:pointer;display:flex;align-items:center;justify-content:center}.hbtn:hover{background:#fff;color:#14171f}.hbtn svg{width:16px;height:16px}
+.mbody{flex:1;overflow-y:auto;padding:18px 22px 8px;background:var(--paper)}
+.toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.tb-strip{font-size:11.5px;color:var(--muted);background:#fff;border:1px solid var(--line);border-radius:99px;padding:6px 13px}.tb-strip b{color:var(--ink)}
+.tbtn{font:inherit;font-size:12.5px;font-weight:700;border:1px solid var(--line);background:#fff;border-radius:10px;padding:8px 13px;cursor:pointer;color:var(--ink-soft);display:inline-flex;align-items:center;gap:7px;transition:.14s}.tbtn svg{width:14px;height:14px}.tbtn:hover{border-color:var(--blue);color:var(--blue)}
+.tbtn.brand{margin-left:auto;background:linear-gradient(150deg,#4f74ad,#33507d);border-color:#33507d;color:#fff}.tbtn.brand:hover{color:#fff}
+.sec-h{display:flex;align-items:center;gap:8px;margin:20px 2px 11px}
+.sec-h .l{font-family:'Spectral',serif;font-size:14px;font-weight:600}.sec-h .bar{flex:1;height:1px;background:var(--line)}.sec-h .k{font-size:9.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--faint)}
+/* carte mandant */
+.contact{border:1px solid var(--line);border-radius:16px;background:#fff;overflow:hidden;margin-bottom:13px}
+.ct-top{display:flex;align-items:center;gap:13px;padding:14px 16px;background:linear-gradient(100deg,var(--blue-soft),#fff 62%);border-bottom:1px solid var(--line)}
+.ct-av{width:46px;height:46px;border-radius:13px;flex:none;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;color:#fff;background:linear-gradient(150deg,#5578b0,#33507d);box-shadow:0 8px 18px -9px rgba(58,90,138,.7)}
+.ct-id{flex:1;min-width:0}.ct-nm{font-size:15px;font-weight:800}.ct-role{font-size:11.5px;color:var(--blue-ink);font-weight:700}
+.ct-badge{font-size:10px;font-weight:800;border-radius:99px;padding:4px 10px;background:var(--blue-soft);color:var(--blue-ink)}
+.ct-acts{display:flex;gap:7px}
+.ct-a{font:inherit;font-size:11.5px;font-weight:700;border:1px solid var(--line);background:#fff;border-radius:9px;padding:6px 10px;cursor:pointer;color:var(--ink-soft);display:inline-flex;align-items:center;gap:5px;text-decoration:none}.ct-a svg{width:13px;height:13px}.ct-a:hover{border-color:var(--blue);color:var(--blue)}
+.ct-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 22px;padding:15px 16px}
+.cg{display:flex;flex-direction:column;gap:3px}.cg.full{grid-column:1/-1}
+.cg .ck{font-size:9.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:5px}
+.cg .cv{font-size:13px;font-weight:600;border:1px solid transparent;border-radius:8px;padding:6px 9px;margin-left:-9px;cursor:text;transition:.14s}
+.cg .cv:hover{background:#fbf7f1;border-color:var(--line)}
+.cg .cv.locked{cursor:not-allowed;color:var(--muted)}.cg .cv.locked:hover{background:transparent;border-color:transparent}
+.cg .cv .pen{float:right;width:12px;height:12px;color:var(--faint);opacity:0;transition:.14s}.cg .cv:hover .pen{opacity:1}
+.lockchip{font-size:9px;font-weight:800;color:var(--faint);display:inline-flex;align-items:center;gap:3px}.lockchip svg{width:9px;height:9px}
+/* Diagnostics & syndic */
+.inter{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.ic-card{border:1px solid var(--line);border-radius:13px;background:#fff;padding:13px 15px}
+.ic-r{font-size:9.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);margin-bottom:6px;display:flex;align-items:center;gap:6px}.ic-r svg{width:13px;height:13px;color:var(--blue)}
+.ic-n{font-size:13.5px;font-weight:700}.ic-s{font-size:11.5px;color:var(--muted);margin-top:2px}
+.ic-links{display:flex;gap:7px;margin-top:9px}
+.ic-links a{font-size:11px;font-weight:700;color:var(--ink-soft);background:#f6f1ea;border:1px solid var(--line);border-radius:8px;padding:4px 9px;text-decoration:none;display:inline-flex;align-items:center;gap:4px}.ic-links a svg{width:11px;height:11px}.ic-links a:hover{border-color:var(--blue);color:var(--blue)}
+.ic-empty{font-size:12px;color:var(--faint);font-style:italic}
+.ic-add{font:inherit;font-size:11px;font-weight:700;color:var(--blue);background:none;border:0;border-bottom:1px dashed var(--blue-line);padding:0 0 1px;cursor:pointer;margin-top:8px}
+/* barre enregistrement */
+.savebar{position:sticky;bottom:0;display:none;align-items:center;gap:11px;background:#fff;border:1px solid var(--gold);border-left:4px solid var(--gold);border-radius:13px;padding:11px 15px;margin:8px 0 4px;box-shadow:0 12px 28px -14px rgba(0,0,0,.35)}
+.savebar.on{display:flex}
+.savebar .st{flex:1;font-size:12.5px;font-weight:700}.savebar .ss{font-size:11px;color:var(--muted);font-weight:600}
+.sv-btn{font:inherit;font-size:12.5px;font-weight:700;border-radius:9px;padding:8px 14px;cursor:pointer;border:1px solid var(--line);background:#fff}
+.sv-btn.primary{background:linear-gradient(150deg,#4f74ad,#33507d);border-color:#33507d;color:#fff}
+.mfoot{display:flex;align-items:center;gap:10px;padding:12px 22px 15px;border-top:1px solid var(--line);background:var(--paper);flex:none}
+.mfoot .sp{flex:1;font-size:11.5px;color:var(--muted)}
+.fbtn{font:inherit;font-size:13px;font-weight:700;cursor:pointer;border-radius:11px;padding:10px 16px;border:1px solid var(--line);background:#fff;color:var(--ink-soft)}
+@media(max-width:720px){.ct-grid,.inter{grid-template-columns:1fr}.toolbar{gap:8px}.tbtn.brand{margin-left:0}}
+body.embed{background:transparent;padding:0;min-height:0;height:auto;display:block}
+body.embed .mpanel{width:100%;max-width:none;height:auto;max-height:none;border-radius:0;box-shadow:none;animation:none}
+body.embed .mbody{overflow:visible}
+body.embed .mhead{display:none}
+
+.ic-r .src{margin-left:auto;font-size:9px;letter-spacing:.04em;color:#6f665f;background:#f4efe7;border:1px solid var(--line);border-radius:999px;padding:1px 7px}
+.ic-r .src.neuf{color:#9a4a05;background:#fdeedb;border-color:#f0c99a}
+.ic-links a.act{color:#fff;background:#c5005f;border-color:#c5005f}
+.ic-chg{margin-left:auto;font:inherit;font-size:11px;font-weight:700;color:var(--muted);background:none;border:0;cursor:pointer;text-decoration:underline dotted}
+.ic-card.ghost{background:#fbf8f3;border-style:dashed}
+.ic-card.picking{border-color:#c5005f;box-shadow:0 0 0 3px rgba(197,0,95,.10);position:relative}
+.pk{margin-top:10px;border:1px solid var(--line);border-radius:12px;background:#fff;box-shadow:0 18px 36px -18px rgba(28,24,21,.35);overflow:hidden}
+.pk-q{display:flex;align-items:center;gap:8px;padding:9px 11px;border-bottom:1px solid var(--line-soft)}
+.pk-q svg{width:14px;height:14px;color:var(--muted)}.pk-q input{flex:1;border:0;outline:0;font:inherit;font-size:12.5px;background:transparent}
+.pk-f{font-size:10.5px;font-weight:800;color:#5b4a9e;background:#efecf9;border:1px solid #dcd6f0;border-radius:999px;padding:2px 8px;white-space:nowrap}
+.pk-g{font-size:9.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);padding:9px 12px 4px}
+.pk-it{display:flex;align-items:center;gap:10px;width:100%;padding:8px 12px;border:0;background:none;font:inherit;text-align:left;cursor:pointer}
+.pk-it:hover,.pk-it.on{background:#f6f2fb}
+.pk-it .av{width:30px;height:30px;flex:none;border-radius:9px;display:grid;place-items:center;font-size:11px;font-weight:800;color:#3b2f73;background:#efecf9;border:1px solid #dcd6f0}
+.pk-it .t{flex:1;min-width:0;display:flex;flex-direction:column}.pk-it b{font-size:12.5px}.pk-it small{font-size:11px;color:var(--muted)}
+.pk-it .why{font-size:10px;font-weight:800;color:#1f6e44;background:#e6f4ec;border:1px solid #b9dcc6;border-radius:999px;padding:2px 7px;white-space:nowrap}
+.pk-foot{display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--line-soft);font-size:10.5px;color:var(--faint)}
+.pk-new{font:inherit;font-size:11.5px;font-weight:800;color:#c5005f;background:none;border:0;cursor:pointer;padding:0}
+.inter{align-items:start}.ic-links{flex-wrap:wrap}.ic-links a{white-space:nowrap}.pk-new{white-space:nowrap}
+.ic-note{margin:12px 2px 0;font-size:11.5px;color:var(--muted);line-height:1.5}
+</style>
+</head>
+<body>
+<script>if(new URLSearchParams(location.search).get('embed')){document.body.classList.add('embed');(function(){function ph(){if(window.parent!==window)window.parent.postMessage({t:'rubH',h:Math.max(document.body.scrollHeight,document.body.offsetHeight)},'*');}addEventListener('load',ph);setTimeout(ph,150);setTimeout(ph,500);try{new ResizeObserver(ph).observe(document.body);}catch(e){}document.addEventListener('click',function(){setTimeout(ph,90);});}());}</script>
+<div class="mpanel">
+ <div class="mhead">
+  <span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8"><circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0 1 12 0"/><circle cx="17.5" cy="9.5" r="2.2"/><path d="M15 20a5 5 0 0 1 6.5-4.8"/></svg></span>
+  <div class="mtitle"><div class="ey">Mandat &amp; contacts</div><div class="mt">Contacts du bien</div><div class="msb">EM71401 · Maison de caractère · mandants &amp; intervenants</div></div>
+  <button class="hbtn" id="hclose"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+ </div>
+ <div class="mbody">
+  <div class="toolbar">
+   <span class="tb-strip">Source <b>API AnnonceById</b> · <b>2 mandants</b> · Julien SAURA, Mme Lashermes Maryline</span>
+   <button class="tbtn brand" onclick="alert('Ouvre la boîte d’édition Hektor (App→Hektor).')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>Modifier les contacts</button>
+  </div>
+
+  <div class="sec-h"><span class="l">Mandants / Propriétaires</span><span class="bar"></span><button class="tbtn" style="padding:6px 11px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Ajouter un mandant</button></div>
+
+  <!-- MANDANT PRINCIPAL -->
+  <div class="contact">
+   <div class="ct-top"><span class="ct-av">JS</span><div class="ct-id"><div class="ct-nm">Julien SAURA</div><div class="ct-role">Vendeur · mandant principal</div></div><span class="ct-badge">Contact 18542</span>
+    <div class="ct-acts"><a class="ct-a" href="tel:0612345678"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.6A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.4-1.2a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg>Appeler</a><a class="ct-a" href="mailto:julien.saura@gmail.com"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>E-mail</a><a class="ct-a" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="3.2"/><path d="M5 20a7 7 0 0 1 14 0"/></svg>Fiche contact</a></div>
+   </div>
+   <div class="ct-grid">
+    <div class="cg"><span class="ck">Rôle</span><span class="cv" contenteditable>Vendeur (mandant)</span></div>
+    <div class="cg"><span class="ck">ID Hektor <span class="lockchip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>lié</span></span><span class="cv locked">18542</span></div>
+    <div class="cg"><span class="ck">Téléphone</span><span class="cv" contenteditable>06 12 34 56 78<svg class="pen" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></span></div>
+    <div class="cg"><span class="ck">E-mail</span><span class="cv" contenteditable>julien.saura@gmail.com<svg class="pen" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></span></div>
+    <div class="cg"><span class="ck">MAJ Hektor <span class="lockchip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>lié</span></span><span class="cv locked">08/07/2026</span></div>
+    <div class="cg"><span class="ck">Adresse</span><span class="cv" contenteditable>23 rue bellevue, 42450 Sury-le-Comtal</span></div>
+    <div class="cg full"><span class="ck">Commentaire</span><span class="cv" contenteditable>Vendeur motivé, disponible en semaine après 17 h.</span></div>
+   </div>
+  </div>
+
+  <!-- MANDANT SECONDAIRE -->
+  <div class="contact">
+   <div class="ct-top"><span class="ct-av">ML</span><div class="ct-id"><div class="ct-nm">Mme Lashermes Maryline</div><div class="ct-role">Co-vendeur · indivision</div></div><span class="ct-badge">Contact 18543</span>
+    <div class="ct-acts"><a class="ct-a" href="tel:0698765432"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.6A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.4-1.2a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg>Appeler</a><a class="ct-a" href="mailto:lashermes.maryline@outlook.fr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>E-mail</a><a class="ct-a" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="3.2"/><path d="M5 20a7 7 0 0 1 14 0"/></svg>Fiche contact</a></div>
+   </div>
+   <div class="ct-grid">
+    <div class="cg"><span class="ck">Rôle</span><span class="cv" contenteditable>Co-vendeur (indivision)</span></div>
+    <div class="cg"><span class="ck">ID Hektor <span class="lockchip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>lié</span></span><span class="cv locked">18543</span></div>
+    <div class="cg"><span class="ck">Téléphone</span><span class="cv" contenteditable>06 98 76 54 32</span></div>
+    <div class="cg"><span class="ck">E-mail</span><span class="cv" contenteditable>lashermes.maryline@outlook.fr</span></div>
+    <div class="cg full"><span class="ck">Commentaire</span><span class="cv" contenteditable>Contact secondaire — passer par Julien SAURA en priorité.</span></div>
+   </div>
+  </div>
+
+  <!-- DIAGNOSTICS & SYNDIC -->
+  <div class="sec-h"><span class="l">Intervenants du bien</span><span class="bar"></span><span class="k">Hektor · registre · saisie</span></div>
+  <div class="inter">
+    <div class="ic-card"><div class="ic-r"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 18a8 8 0 1 1 16 0"/><path d="M12 18l4-6"/></svg>Diagnostiqueur<span class="src">Hektor</span></div><div class="ic-n">Diag Habitat 42</div><div class="ic-s">DPE D · 212 kWh · rapport du 12/09/2026 · amiante, plomb</div><div class="ic-links"><a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 5a2 2 0 0 1 2-2h2.5l1.5 4-2 1.5a12 12 0 0 0 5 5l1.5-2 4 1.5V18a2 2 0 0 1-2 2A15 15 0 0 1 4 5Z"/></svg>Appeler</a><a href="fiche-partenaire-v1.html?m=diag">Fiche partenaire →</a><a href="#" class="act">Commander un diagnostic</a><button class="ic-chg" type="button">Changer</button></div></div>
+
+    <div class="ic-card picking"><div class="ic-r"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 9h.01M15 9h.01M9 13h.01M15 13h.01"/></svg>Syndic<span class="src">copropriété : 24 lots</span></div><div class="ic-n ic-empty">Non renseigné</div><div class="ic-s">Le bien est en copropriété (fiche du bien) : le syndic est attendu.</div>
+      <div class="pk" role="dialog" aria-label="Choisir le syndic">
+        <label class="pk-q"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input placeholder="Chercher un syndic : nom, ville, numéro…" aria-label="Chercher un syndic"><span class="pk-f">Syndics seulement ✕</span></label>
+        <div class="pk-g">Proposés pour ce bien</div>
+        <button class="pk-it on" type="button"><span class="av">ML</span><span class="t"><b>Cabinet Monts &amp; Lots</b><small>Syndic · déjà syndic de 2 de nos biens au 12 rue de l'Exemple</small></span><span class="why">même adresse</span></button>
+        <button class="pk-it" type="button"><span class="av">SM</span><span class="t"><b>Syndic des Monts</b><small>Syndic · 3 copropriétés avec nous à Saint-Étienne</small></span><span class="why">même ville</span></button>
+        <div class="pk-g">Tous les partenaires</div>
+        <button class="pk-it" type="button"><span class="av">CV</span><span class="t"><b>Cabinet Copro Velay</b><small>Syndic · Le Puy-en-Velay</small></span></button>
+        <div class="pk-foot"><button type="button" class="pk-new">＋ Créer un partenaire syndic</button><span>Le même moteur que le mandant et le notaire.</span></div>
+      </div>
+    </div>
+
+    <div class="ic-card"><div class="ic-r"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 21h18M6 21V9l6-4 6 4v12M10 21v-5h4v5"/></svg>Notaire vendeur<span class="src">registre</span></div><div class="ic-n">Me Étienne Garnier</div><div class="ic-s">Étude Garnier · Firminy · compromis du 21/10</div><div class="ic-links"><a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 5a2 2 0 0 1 2-2h2.5l1.5 4-2 1.5a12 12 0 0 0 5 5l1.5-2 4 1.5V18a2 2 0 0 1-2 2A15 15 0 0 1 4 5Z"/></svg>Appeler</a><a href="fiche-notaire-v3.html">Fiche notaire →</a></div></div>
+
+    <div class="ic-card"><div class="ic-r"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 21h18M6 21V9l6-4 6 4v12M10 21v-5h4v5"/></svg>Notaire acquéreur<span class="src">registre</span></div><div class="ic-n">Me Nadia Collet</div><div class="ic-s">Étude Collet · Unieux</div><div class="ic-links"><a href="fiche-notaire-v3.html">Fiche notaire →</a></div></div>
+
+    <div class="ic-card"><div class="ic-r"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 11l4-4 3 3 4-4"/><path d="M14 6h4v4"/><path d="M4 20h16"/></svg>Apporté par<span class="src neuf">saisi</span></div><div class="ic-n">Julien Morel</div><div class="ic-s">Parrain · apport vendeur du 14/03/2025 · commission 1 200 € à l'acte</div><div class="ic-links"><a href="fiche-partenaire-v1.html?m=apporteur">Fiche partenaire →</a><button class="ic-chg" type="button">Changer</button></div></div>
+
+    <div class="ic-card ghost"><div class="ic-r"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 10l9-6 9 6"/><path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8"/><path d="M3 20h18"/></svg>Financement de l'acquéreur<span class="src">affaire</span></div><div class="ic-n">Courtage Horizon</div><div class="ic-s">Courtier de la famille Roche · condition de prêt le 08/11 (J-4)</div><div class="ic-links"><a href="accroche-affaire-v1.html">Voir dans l'affaire →</a></div></div>
+  </div>
+  <p class="ic-note">Chaque carte dit d'où vient le lien : <b>Hektor</b> (ses listes « diagnostiqueur » et « syndic », par numéro de contact), <b>registre</b> (les notaires des affaires), <b>saisi</b> (un lien neuf posé ici), <b>affaire</b> (lu sur la fiche de l'affaire, pas modifiable ici).</p>
+
+
+  <div class="savebar" id="savebar"><div style="flex:1"><div class="st" id="saveTxt">1 champ modifié</div><div class="ss">Une seule vague vers Hektor (débounce ~10 min)</div></div><button class="sv-btn" onclick="resetSave()">Annuler</button><button class="sv-btn primary" onclick="resetSave()">Enregistrer</button></div>
+ </div>
+ <div class="mfoot">
+  <span class="sp">Édition en place · les champs « lié » (ID / MAJ Hektor) sont en lecture seule.</span>
+  <button class="fbtn" id="fclose">Fermer</button>
+ </div>
+</div>
+<script>
+let dirty=0;
+document.querySelectorAll('.cv[contenteditable]').forEach(el=>{const o=el.textContent;el.addEventListener('input',()=>{const was=el.dataset.dirty==='1';const now=el.textContent!==o;if(now&&!was){el.dataset.dirty='1';dirty++;}else if(!now&&was){el.dataset.dirty='0';dirty--;}upd();});});
+function upd(){const sb=document.getElementById('savebar');sb.classList.toggle('on',dirty>0);document.getElementById('saveTxt').textContent=dirty+' champ'+(dirty>1?'s':'')+' modifié'+(dirty>1?'s':'');}
+function resetSave(){dirty=0;document.querySelectorAll('.cv').forEach(el=>el.dataset.dirty='0');upd();}
+document.getElementById('hclose').onclick=document.getElementById('fclose').onclick=()=>{if(window.parent!==window)window.parent.postMessage('gti-close','*');};
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&window.parent!==window)window.parent.postMessage('gti-close','*');});
+</script>
+</body>
+</html>
