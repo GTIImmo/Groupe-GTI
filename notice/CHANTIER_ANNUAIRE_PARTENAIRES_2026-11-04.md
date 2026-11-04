@@ -1041,6 +1041,33 @@ nuit du 04 au 05/11.
   (neufs), `phase2/sync/export_app_payload.py`, `run_full_pipeline.ps1` (modifiés). La nuit lit les fichiers du
   disque : elle tournera même sans commit.
 
+## 14. LOT 2, PIÈCE 1 — LE REGISTRE EN BASE : ✅ POSÉ LE 04/11 (accord de Frédéric « oui tu as mon accord »)
+
+✅ **Posé** par la migration `registre_partenaires_2026_11_04` (le contenu du fichier, garde comprise). **Répétition :
+9 verts sur 9** (tables, RLS, anon fermé, authenticated en lecture seule, fonctions exécutables et SECURITY DEFINER,
+index d'unicité, tables vides). Retour arrière : `_INVERSE.sql` (il recopie d'abord les lignes dans des tables datées).
+
+- **Fichiers** : `supabase/patch_registre_partenaires_2026-11-04.sql` (+ `_REPETITION.sql`, `_INVERSE.sql`), sur le patron
+  EXACT de `app_notaire_interlocuteur` (patch_notaire_blocs_2026-10-28.sql).
+- **Ce qu'il pose** (rien d'existant n'est modifié, rien chez Hektor) :
+  - `app_partenaire_metier` : le métier d'un contact (notre numéro), plusieurs possibles, source netty / hektor / ecran,
+    confirmé par / le ;
+  - `app_partenaire_lien` : partenaire ↔ bien (syndic, diagnostiqueur), ↔ affaire (courtier, banque, apporteur),
+    ↔ client (courtier, apporteur — Q1) ; origine app / hektor / netty ; deux contrôles en base interdisent un rôle
+    sur le mauvais objet ou deux cibles à la fois ; un même lien actif n'existe qu'une fois ;
+  - `app_partenaire_metier_ecrire` et `app_partenaire_lien_ecrire` : tout compte actif, auteur et heure écrits, « retirer »
+    ne détruit rien ; un double-clic ne fait pas deux lignes ; confirmer un métier de Netty ou Hektor garde sa source.
+  - Lecture : tout compte actif (RLS) ; anon : rien ; authenticated : lecture seule, écriture par les fonctions.
+  - SANS clé étrangère vers `app_contact_current` (la nuit y supprime un contact qui sort de l'app).
+- **Éprouvé dans des transactions ANNULÉES** (le bloc finit par une erreur voulue ; vérifié après : 0 table, 0 fonction) :
+  - essai 1 (structure, droits, contraintes, témoins) : **13 verts sur 13** ;
+  - essai 2 (le patch COMPLET, en se faisant passer pour le compte de Frédéric) : **9 verts sur 9** — compte reconnu,
+    double-clic, auteur et origine, retrait daté, retrait double refusé, courtier sur un bien refusé, confirmation d'un
+    métier de Hektor (source gardée), second métier (source écran), retrait d'un métier.
+- **À faire, avec l'accord de Frédéric** : coller le patch, puis la répétition (9 contrôles). Ensuite la PIÈCE 2 : la
+  reprise de nuit (métier depuis Netty et les listes de Hektor ; liens syndic depuis
+  `hektor_annonce_diag_contacts_detail`, en traduisant les numéros Hektor en nos numéros).
+
 ### 7 ter. Les dépendances (techniques, pas un ordre décidé)
 
 - 0 avant tout le reste ; 0.1 avant B2 ; 0.2 avant B1 ; 0.6 avant B5 ; 0.3 avant B6 ; 0.4 avant B7 ; 0.5 avant C2.
