@@ -807,10 +807,15 @@ DATA_SENTINELS: list[dict[str, Any]] = [
         # (lignes manquantes / en trop) et compte les erreurs du declencheur des 24 dernieres heures. Elle doit valoir 0.
         # Si elle sonne : regarder l'echantillon ; une reconstruction remet tout d'aplomb (app_affaire_partie_reconstruire()).
         # Note : notice/AUDIT_COHERENCE_REGISTRES_ET_TYPES_DE_CONTACTS_2026-10-26.md §15-18.
+        # ⚠ 04/11/2026 -- ON NE LIT PLUS LA VUE EN DIRECT : elle recalcule les 31 128 transactions en 8,3 s,
+        #   l'API coupe a 8 s -> la sonde basculait « illisible » une fois sur deux depuis le 26/10 (20 bascules),
+        #   alors qu'elle n'a jamais trouve un ecart. La base fait le releve a :40 chaque heure (pg_cron
+        #   affaire-partie-releve-ecarts, supabase/patch_releve_ecarts_parties_2026-11-04.sql) ; on lit le releve.
+        #   Sa fraicheur est gardee par cron.health (tache en echec ou en retard = alerte la-bas).
         "key": "data.affaire_partie_ecart",
         "severity": "warning",
         "label": "Table des parties : ecarts avec le registre des transactions, ou declencheur en panne",
-        "table": "app_v_affaire_partie_ecarts",
+        "table": "app_affaire_partie_ecart_releve",
         "params": {},
         "rule": "absolute",
         "max": 0,
