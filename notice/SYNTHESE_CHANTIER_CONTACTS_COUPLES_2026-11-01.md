@@ -2239,3 +2239,28 @@ Mesure sur la base du serveur (`app_relation` local, 132 943 liens ; types d'off
     (la première et la dernière couvrent tout le reste). Si la fonction par tranches manque, il revient à l'appel unique.
     **Lancé comme la nuit : 7 tranches, 3,8 s en tout**, 0 type à changer.
 - **Retour arrière** : remettre le script sur l'appel unique, puis coller `_INVERSE.sql`.
+
+## 75. LES ALERTES DU MONITORING APRÈS L'ENVOI DU 04/11 — LUES UNE PAR UNE *(04/11, « contrôle mon monitoring, j'ai des alertes sûrement liées à ton travail » ; lecture seule)*
+
+Passage du moniteur du 04/11 à 14:49 (heure de Paris) : 0 critique, 9 avertissements, 1 inconnu. Chacun est relié à sa cause
+(historique `app_monitor_event`) :
+
+**Liés à l'envoi des 31 533 — attendus, ils se referment avec la nuit** :
+- `data.contact_lignes_sans_numero` : **2 684** (32 le matin). Ce sont 1 655 recherches, 940 rapprochements, 77 liens et 12 lignes
+  d'historique des contacts entrés, dont la colonne `app_contact_id` n'est pas encore remplie. C'est l'étape de nuit « propager numeros de
+  contact » (`app_contact_id_propager`) qui la remplit. Je ne l'avais pas lancée à 14:00.
+- `data.couples_non_traduits` : **26 067** (seuil 3 000). Il y a 23 364 « conjoints sans numéro d'app » (même étape, même remède) et
+  2 703 « conjoints absents de l'app » : ce sont les cases vides de conjoint, laissées dehors exprès.
+- `data.contacts_satellites` : 1 ligne d'historique à retraduire (même étape).
+- `data.contacts_doublons` (9 518 → 14 817) et `data.contacts_sans_nego` (7 919 → 12 418) : la règle « croissance » sonne parce que
+  l'app compte 31 533 contacts de plus. C'est leur nouvel état réel, pas une dégradation : les doublons et les contacts sans négociateur
+  sont déjà connus (§65, §49).
+
+**Antérieurs, sans lien avec ce travail** :
+- `console.jobs.errors` : 10 en 48 h, 0 dans la dernière demi-heure. Ce sont 2 relectures du 02/11 (10216417), 2 relectures du 04/11 au matin
+  (« pas encore créé chez Hektor », avant l'allumage de la nature à 08:26), 2 statuts d'annonce du 02-03/11, 1 relecture d'annonce, et
+  1 synchro de documents. AUCUN après mes changements.
+- `data.affaire_partie_ecart` : « inconnu » (délai dépassé sur `app_v_affaire_partie_ecarts`). Il alterne inconnu / vert depuis le 03/11, donc
+  avant l'envoi. ⚠ À surveiller : la vue pourrait souffrir d'une table des contacts plus grosse (non mesuré).
+- `logs.pipeline.latest` et le battement `matterport.sync_models` : le refus 401 de Matterport, connu depuis le 03/11.
+- 5 battements « sans premier signe » : connus.
