@@ -61,13 +61,20 @@ def _date(texte: str) -> datetime | None:
 
 def presents_de_la_nuit() -> tuple[list[str] | None, str]:
     """Les n° de negociateur que la liste de Hektor de CETTE nuit contient, et une phrase qui dit d'ou ils viennent."""
+    presents, origine, _total = presents_et_total()
+    return presents, origine
+
+
+def presents_et_total() -> tuple[list[str] | None, str, int | None]:
+    """Les presents, la phrase, et le TOTAL que Hektor annonce pour la liste complete (listNegos actif=0, qui rend
+    aussi les actifs) : une liste lue jusqu'a ce total fait foi (la fonction ne lui oppose plus le plancher des 90 %)."""
     conn = sqlite3.connect(f"file:{HEKTOR_DB.as_posix()}?mode=ro", uri=True)
     try:
         pages = []
         for liste in LISTES:
             pages += conn.execute(
                 """
-                SELECT r.fetched_at, r.payload_json FROM raw_api_response r
+                SELECT r.endpoint_name, r.fetched_at, r.payload_json FROM raw_api_response r
                 JOIN (SELECT endpoint_name, object_type, object_id_key, page_key, MAX(id) AS max_id
                         FROM raw_api_response WHERE endpoint_name = ?
                        GROUP BY endpoint_name, object_type, object_id_key, page_key) l ON l.max_id = r.id
@@ -76,23 +83,27 @@ def presents_de_la_nuit() -> tuple[list[str] | None, str]:
             ).fetchall()
     finally:
         conn.close()
-    dates = [d for d in (_date(p[0]) for p in pages) if d]
+    dates = [d for d in (_date(p[1]) for p in pages) if d]
     if not dates:
-        return None, "aucune liste de negociateurs dans raw_api_response"
+        return None, "aucune liste de negociateurs dans raw_api_response", None
     derniere = max(dates)
     if datetime.now(timezone.utc) - derniere > PLUS_VIEILLE:
-        return None, f"la liste la plus recente date du {derniere.isoformat()} : trop vieille, presence inconnue"
+        return None, f"la liste la plus recente date du {derniere.isoformat()} : trop vieille, presence inconnue", None
     ids: set[str] = set()
     gardees = 0
     fins = 0  # pages de la nuit qui disent « pas de page suivante » : une par liste lue jusqu'au bout
-    for quand, payload in pages:
+    total = None
+    for liste, quand, payload in pages:
         d = _date(quand)
         if not d or derniere - d > FENETRE_NUIT:
             continue  # une page d'une autre nuit (elle n'existe plus chez Hektor, ou la nuit ne l'a pas relue)
         gardees += 1
         corps = json.loads(payload) or {}
-        if (corps.get("metadata") or {}).get("nextPage", "absent") is None:
+        meta = corps.get("metadata") or {}
+        if meta.get("nextPage", "absent") is None:
             fins += 1
+        if liste == "list_negos_inactive" and str(meta.get("total") or "").isdigit():
+            total = int(meta["total"])
         data = corps.get("data") or []
         for item in data if isinstance(data, list) else []:
             if isinstance(item, dict) and str(item.get("id") or "").strip():
@@ -102,16 +113,17 @@ def presents_de_la_nuit() -> tuple[list[str] | None, str]:
     #   entier. Une liste qui n'est pas lue jusqu'a sa derniere page ne dit PAS qui a disparu -> presence inconnue.
     if fins < len(LISTES):
         return None, (f"liste incomplete : {len(ids)} fiches sur {gardees} pages de la nuit, {fins} liste(s) sur {len(LISTES)} "
-                      f"lue(s) jusqu'a la derniere page (plafond de pages de sync_raw) -- aucune absence ne sera marquee")
-    return sorted(ids, key=lambda x: int(x) if x.isdigit() else 0), f"{len(ids)} fiches sur {gardees} pages de la nuit (la plus recente : {derniere.isoformat()})"
+                      f"lue(s) jusqu'a la derniere page (plafond de pages de sync_raw) -- aucune absence ne sera marquee"), None
+    return (sorted(ids, key=lambda x: int(x) if x.isdigit() else 0),
+            f"{len(ids)} fiches sur {gardees} pages de la nuit, total annonce {total} (la plus recente : {derniere.isoformat()})", total)
 
 
-def appeler(presents: list[str] | None, a_blanc: bool) -> dict:
+def appeler(presents: list[str] | None, a_blanc: bool, total: int | None = None) -> dict:
     url = (os.environ.get("SUPABASE_URL") or os.environ.get("VITE_SUPABASE_URL") or "").strip().rstrip("/")
     cle = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "").strip()
     if not url or not cle:
         raise RuntimeError("SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY requis")
-    corps = json.dumps({"p_presents": presents, "p_a_blanc": a_blanc}).encode("utf-8")
+    corps = json.dumps({"p_presents": presents, "p_a_blanc": a_blanc, "p_total": total}).encode("utf-8")
     requete = urllib.request.Request(
         f"{url}/rest/v1/rpc/app_negociateur_registre_maintenir", data=corps, method="POST",
         headers={"apikey": cle, "Authorization": f"Bearer {cle}", "Content-Type": "application/json"},
@@ -130,9 +142,9 @@ def main() -> int:
     args = parser.parse_args()
     charger_env()
 
-    presents, origine = presents_de_la_nuit()
+    presents, origine, total = presents_et_total()
     if args.presents:
-        print(json.dumps({"origine": origine, "presents": presents}, ensure_ascii=False))
+        print(json.dumps({"origine": origine, "total": total, "presents": presents}, ensure_ascii=False))
         return 0
 
     mode = (os.environ.get("APP_REGISTRE_NEGOCIATEURS") or "0").strip().lower()
@@ -144,7 +156,7 @@ def main() -> int:
     a_blanc = mode == "blanc"
     print(f"registre des negociateurs : {'A BLANC' if a_blanc else 'ECRITURE'} · presence : {origine}")
     try:
-        rapport = appeler(presents, a_blanc)
+        rapport = appeler(presents, a_blanc, total)
     except Exception as erreur:  # noqa: BLE001
         print(f"ECHEC : {erreur}")
         return 1

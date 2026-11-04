@@ -375,3 +375,21 @@ signaux. ⚠ Une clé de battement neuve doit être DÉCLARÉE dans `app_worker_
   1 signal « liste incomplète » (la nuit ne lit pas la liste complète, §13 bis), **0 faux changement** ; journal resté à 0.
 - **`.env` : `APP_REGISTRE_NEGOCIATEURS=blanc`** (ajouté sans lire le fichier) — la PREMIÈRE NUIT sera à blanc. ⏰ Demain
   matin : lire le compte rendu dans le journal du run (étape « phase2 registre des negociateurs ») ; puis passer à `1`.
+
+## 14. ✅ LA NUIT LIRA LA LISTE COMPLÈTE DES NÉGOCIATEURS (04/11) — Frédéric : « VAS Y »
+
+- **`sync_raw.py`** `resolve_generic_max_pages` : `negos` n'a plus le plafond de 5 pages du mode nuit (comme `ventes`) ;
+  la boucle s'arrête seule à la dernière page. Les autres listes gardent leur plafond. Le départ à 0 (pages « 0 » et
+  « 1 » = la même) n'est PAS changé : il touche toutes les listes ; ici une requête de trop, sans conséquence.
+- **Éprouvé hors ligne** (faux client, aucun appel à Hektor) : negos → toutes les pages ; annonces 5, contacts 5,
+  diffusion 5, mandats 15, offres 10, compromis 10 inchangés ; une liste de 152 fiches / 8 pages → 9 requêtes, **152 fiches
+  lues** ; témoin avec l'ancien plafond → 5 requêtes, **80 fiches** — exactement la mesure de ce matin.
+- **Le piège que ça ouvrait, traité** : l'étape 1 a compté 186 fiches « présentes » (vieilles pages d'avril et de juin) ;
+  la vraie liste en compte 152 → le plancher des 90 % aurait tout bloqué. Migration
+  `registre_negociateurs_nuit_total_2026_11_04` (`supabase/patch_registre_negociateurs_nuit_total_2026-11-04.sql`,
+  + `_INVERSE`) : la fonction reçoit `p_total` (le total annoncé par Hektor) ; **une liste lue jusqu'à ce total fait foi** ;
+  plus de 5 disparitions en une nuit → signal `disparitions_nombreuses`. Contrôle de fin passé (liste de 152 / total 152 :
+  acceptée, 34 disparitions comptées, 0 ligne écrite à blanc). Le script transmet le total de `list_negos_inactive`.
+- **Attendu la nuit du 04 au 05/11 (à blanc)** : la liste complète lue (environ 4 requêtes de plus), `liste_ok = true`,
+  ~34 fiches « disparues » (celles des vieilles pages) et 1 signal « disparitions nombreuses » — à lire avec Frédéric avant
+  de passer l'interrupteur à `1`.

@@ -1643,6 +1643,16 @@ def resolve_generic_max_pages(args: argparse.Namespace, resource_name: str, boot
     # Interrupteur : APP_PASSERELLES_V2=1 (eteint : plafond comme avant).
     if resource_name == "broadcasts" and (os.environ.get("APP_PASSERELLES_V2") or "0").strip() == "1":
         return None if args.max_pages == 0 else args.max_pages
+    # 04/11/2026 -- LES NEGOCIATEURS SE LISENT EN ENTIER, comme les ventes. Plafonnee a --update-max-pages (5), la
+    # liste complete (listNegos actif=0 : 152 fiches, 8 pages de 20) n'etait jamais lue jusqu'au bout : les pages 5 a 8
+    # n'avaient plus ete relues depuis le 05/06/2026 (mesure dans raw_api_response). Le registre des negociateurs ne
+    # pouvait donc pas savoir qui a disparu chez Hektor (maintenir_registre_negociateurs.py : « liste incomplete »).
+    # C'est un INSTANTANE, pas un delta : toutes les pages, ou rien. ~4 requetes de plus par nuit ; la boucle s'arrete
+    # seule a la derniere page (nextPage vide). ⚠ iter_pages part de 0 et Hektor de 1 : les pages « 0 » et « 1 » sont la
+    # meme page -- une requete de trop, sans consequence ici ; ce decalage touche TOUTES les listes, il n'est pas corrige ici.
+    # notice/AUDIT_REGISTRE_NEGOCIATEURS_2026-11-04.md §13 bis.
+    if resource_name == "negos":
+        return None if args.max_pages == 0 else args.max_pages
     return None if args.update_max_pages == 0 else args.update_max_pages
 
 
