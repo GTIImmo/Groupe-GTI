@@ -3546,8 +3546,11 @@ export async function loadContactsPage({
   const from = (page - 1) * pageSize
   const to = from + pageSize - 1
   // Contacts is a high-volume listing; exact counts can hit Supabase statement timeout under RLS.
+  // La page garde donc son estimation ; le CHIFFRE d'un annuaire filtre vient de
+  // countContactsExact, lance en parallele (04/11/2026, voir plus bas).
   const countMode: 'planned' = 'planned'
   const statsSnapshot = canUseContactStatsSnapshot(filters) ? await loadContactStatsSnapshot() : null
+  const exactCountPromise = statsSnapshot ? Promise.resolve(null) : countContactsExact(filters, couples)
   const base = supabase.from(contactsCurrentView)
   const { data, error, count } = await applyContactFiltersToQuery(
     couples
@@ -3568,14 +3571,38 @@ export async function loadContactsPage({
   if (error || !data) throw new Error(error?.message ?? 'Unable to load contacts')
   const minimumTotal = from + data.length + (data.length === pageSize ? 1 : 0)
   const exactSummaryTotal = contactSummaryTotalForFilters(filters, statsSnapshot)
+  const exactFilteredTotal = await exactCountPromise
   const lignes = await prependProvisionalContacts(
     (data as AppContact[]).map(normalizeContactRow), page, filters)
   return {
     rows: lignes,
-    total: Math.max(exactSummaryTotal ?? count ?? 0, minimumTotal),
+    total: Math.max(exactSummaryTotal ?? exactFilteredTotal ?? count ?? 0, minimumTotal),
     page,
     pageSize,
   }
+}
+
+// ⚠ 04/11/2026 -- LE CHIFFRE D'UN ANNUAIRE FILTRE ETAIT UNE ESTIMATION.
+//   Filtre « Mandants » : 383 affiches pour 25 481 reels (583 pour 34 041 avec les
+//   archives). `count: 'planned'` rend l'estimation du planificateur, et sous RLS la
+//   regle du perimetre l'ecrase (462 prevues, 25 481 trouvees). Seul « Tous » etait
+//   juste : il lit l'instantane de la nuit.
+//   Mesure du 04/11, en jouant `authenticated` : le compte EXACT prend 0,14 s en
+//   admin, 0,10 s en commercial (tous les profils sont en perimetre « reseau »).
+//   Memes conditions que la page (une personne, une ligne). Si le compte exact echoue
+//   un jour (delai depasse, perimetre plus etroit), on rend null et l'appelant garde
+//   l'estimation : jamais pire qu'avant.
+async function countContactsExact(filters: AppFilters, couples: boolean): Promise<number | null> {
+  if (!hasSupabaseEnv || !supabase) return null
+  const base = supabase.from(contactsCurrentView).select('hektor_contact_id', { count: 'exact', head: true })
+  const { error, count } = await applyContactFiltersToQuery(
+    couples
+      ? base.or(SANS_DOUBLE_DE_COUPLE_ROLE).or(SANS_CASE_VIDE_DE_COUPLE)
+      : base.or(SANS_FICHE_DE_MENAGE),
+    filters,
+  )
+  if (error || typeof count !== 'number') return null
+  return count
 }
 
 /** G-6, 23/09/2026 : ON RETROUVE PAR LES DEUX NUMEROS.
@@ -3635,12 +3662,17 @@ export async function loadContactCoupleInfo(contactId: string): Promise<ContactC
 
 async function countContacts(filters: AppFilters, patch: Partial<AppFilters> = {}, extra?: (query: any) => any) {
   if (!hasSupabaseEnv || !supabase) return 0
-  let query = applyContactFiltersToQuery(
-    supabase.from(contactsCurrentView).select('hektor_contact_id', { count: 'planned', head: true }),
-    { ...filters, ...patch },
-  )
-  if (extra) query = extra(query)
-  const { error, count } = await query
+  // 04/11/2026 : compte EXACT, l'estimation n'est plus qu'un repli (voir countContactsExact).
+  const run = (mode: 'exact' | 'planned') => {
+    let query = applyContactFiltersToQuery(
+      supabase!.from(contactsCurrentView).select('hektor_contact_id', { count: mode, head: true }),
+      { ...filters, ...patch },
+    )
+    if (extra) query = extra(query)
+    return query
+  }
+  let { error, count } = await run('exact')
+  if (error) ({ error, count } = await run('planned'))
   if (error) throw new Error(error.message)
   return count ?? 0
 }
