@@ -2023,3 +2023,65 @@ Recherche dans les notes (accents ignorés), l'historique git et la mémoire. **
   - si les demandes d'estimation et les candidats sortent de l'annuaire vers leurs propres écrans (leads, recrutement).
 - Les nombres de la maquette sont ceux de l'audit (§67). Les cinq cartes du tri font 15 815 ; le reste (~280) est fait de petits types
   (webcontacts, apporteurs, administration…).
+
+## 69. PARTENAIRES, REFONTE « HAUT NIVEAU » : AUDIT DES DEUX FICHES, PAGES PAR MÉTIER, ANIMATIONS *(04/11, « rehausse le niveau… animations dynamiques, ergonomie moderne… audite la page contact et la page contact notaire et propose des pages adaptées aux métiers » ; « sauf notaires qui existe déjà » ; rien codé)*
+
+**La maquette** : https://claude.ai/artifact/Y7xzFasspGEyAX14v4v838 (privée, données fictives). Sept planches :
+- 1. l'annuaire, INTERACTIF : six tuiles de métier, dont la couleur bascule au clic ; la liste entre en cascade ; un aperçu glisse depuis la
+  droite, avec un anneau d'activité animé et le bouton « Ouvrir la page métier » ;
+- 2. le téléphone, INTERACTIF : des cartes, et une feuille qui monte du bas ;
+- 3 à 6. une page par métier : banque et courtier, diagnostiqueur, apporteur et parrain, syndic. Toutes ont un bandeau teinté du métier, des
+  chiffres qui comptent à l'ouverture, des barres et des étapes qui se remplissent, et des cartes qui se soulèvent au survol ;
+- 7. « À classer ».
+Les animations sont coupées si l'appareil demande moins de mouvement (`prefers-reduced-motion`).
+Le notaire n'a pas de page neuve : sa fiche existe (type Notaire, 28/10). Sa tuile mène à la page existante.
+
+**L'audit des deux fiches** (inventaire complet par un agent, lecture du code) :
+- **Fiche contact V2** (`ContactDetailPopupV2`, App.tsx ~46431) : volet gauche (identité, foyer, actions, coordonnées, négociateur),
+  recherches et rapprochements, biens et mandats, « À faire », activité (fil, RDV Google, e-mails Gmail), qualité de la fiche, et 7 modales.
+- **Fiche notaire V2** : elle ajoute les interlocuteurs de l'étude, 4 chiffres clés, les dossiers en cours, « À venir », les ventes signées,
+  l'activité « Avec nous » et les confrères fréquents.
+- **Points faibles relevés, et la réponse de la maquette** :
+  1. « Créer un RDV » et « E-mail » apparaissent 3 fois chacun → une seule fois, en clair, dans le bandeau.
+  2. Les actions sont des icônes seules (info-bulle inopérante au doigt) → des boutons avec leur libellé. L'action propre au métier est en
+     magenta (« Orienter un acquéreur », « Commander un diagnostic », « Noter une affaire apportée », « Demander un pré-état daté »).
+  3. « Supprimer » est dans le même menu « … » qu'« Archiver » → la maquette n'en garde que « Modifier, Changer le métier, Ouvrir dans
+     Hektor ». ⚠ La place d'Archiver et de Supprimer reste À DESSINER (une zone à part, avec une seule façon de confirmer).
+  4. Trois façons de confirmer → une seule modale (à dessiner).
+  5. Une erreur de chargement s'affiche comme un vide → des états d'erreur distincts (à dessiner).
+  6. « Ouvrir dans Hektor » est visible sans numéro Hektor → à cacher dans ce cas.
+  7. Un contact archivé n'est pas en lecture seule → à décider.
+  8. La fiche notaire compte jusqu'à 11 sections sur un seul défilement → les pages métier en ont 4 ou 5, sur deux colonnes.
+
+**ANTI-PERTE — chaque fonction de la fiche contact, et sa place sur une page partenaire** :
+- Retour, fil de navigation, pastille de suivi → le fil « Partenaires › métier » en haut.
+- Identité et types → le bandeau (nom, métier, « partenaire depuis »).
+- Foyer et couple (compléter, ajouter un conjoint) → ⚠ RETIRÉS d'une page partenaire, comme le fait déjà la fiche notaire (un professionnel
+  n'a pas de conjoint). Ils restent sur la fiche client.
+- Créer un RDV, Modifier, Ouvrir dans Hektor, Archiver, Supprimer → « Créer un RDV » dans le bandeau ; « ⋯ » pour Modifier / Changer le
+  métier / Ouvrir dans Hektor ; ⚠ Archiver et Supprimer sont à placer.
+- Coordonnées (tel:, e-mail, adresse) → les boutons Appeler / Écrire, plus le bloc « Interlocuteurs » (repris de la fiche notaire).
+- Négociateur, actif/archivé, éligibilité, doublon → ⚠ À PLACER : ce sont des éléments de pied, absents de la maquette.
+- Recherches et rapprochement → ⚠ sans objet pour un partenaire (ils restent pour un client qui serait aussi partenaire).
+- Biens et mandats liés → remplacés par le bloc du métier (acquéreurs orientés, commandes, affaires apportées, copropriétés).
+- « À faire », relances (marquer fait, reporter, planifier) → le bloc « À faire », avec « + Relance ».
+- Activité (fil, RDV, e-mails, filtres, bon de visite, Google Agenda) → ⚠ À PLACER : la maquette ne la montre pas, elle doit rester en bas
+  de chaque page.
+- Qualité de la fiche, « Comparer & fusionner » → ⚠ À PLACER (repliée en bas, comme aujourd'hui).
+- Les 7 modales → toutes reprises telles quelles ; seuls leurs boutons de départ changent de place.
+
+**D'où viendraient les données** (mesuré, voir les post-it de la maquette) :
+- **Hektor ne porte AUCUNE donnée de métier** pour la banque, le courtier, le syndic, le diagnostiqueur ou l'apporteur. Il a seulement le
+  bloc `diagnostiques` (les valeurs du DPE, sans auteur) et `copropriete_statut_syndicat` (494 annonces). Aucune colonne chez Supabase.
+- Netty : 53 liens « apporteur d'affaires » sur 50 202. Il connaît le MÉTIER (codes 9, 14, 34, 84…), pas l'activité.
+- ⇒ **Chaque page métier suppose un LIEN NEUF, saisi dans l'app** : courtier ↔ acquéreur, diagnostiqueur ↔ bien, apporteur ↔ affaire,
+  syndic ↔ bien. Ce sont les boutons magenta. Au premier jour, les blocs seraient VIDES. Ils se rempliraient au fil des gestes.
+  Seuls existent déjà : les coordonnées, les échéances des conditions de prêt (registre des transactions), les DPE des biens, les champs
+  de copropriété, la répartition des honoraires et les documents.
+
+**À décider par Frédéric, avant de coder** :
+- la maquette elle-même (retours) ;
+- les quatre liens neufs (lequel d'abord) ;
+- où vit le métier (§68) ;
+- la place d'Archiver et de Supprimer, et de l'activité ;
+- si les demandes d'estimation et les candidats quittent l'annuaire.
