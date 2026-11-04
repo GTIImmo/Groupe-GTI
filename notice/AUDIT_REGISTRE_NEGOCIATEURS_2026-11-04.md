@@ -573,3 +573,6 @@ dans l'app (pilotage filtré Sandrine DELAVAUD 98 991 € TTC ; Transactions fil
   (défaut d'avant la règle, devenu visible). Ses lignes sont remises à 100 % de sa part (`filtrerParPersonne`). Vrai code
   rejoué : bloc = tête pour Sandrine (98 991), Nicolas COUDERT (165 200), Hugo LABBE (8 000), Claire RIBBES (120 100).
   Réglages de Frédéric remis comme avant l'essai (filtre Transactions « tous », pilotage onglet Stock en HT).
+- ✅ **Correction du bloc VUE EN LIGNE le 04/11** (déploiement de `63552e1`, `index-BymjBxGI.js`) : filtré Sandrine
+  DELAVAUD, bloc « Négociateurs » = **98 991 €, « attribués sur 98 991 € (100 %) »**, égal à la tête. Réglages remis
+  (pilotage onglet Stock, HT).
