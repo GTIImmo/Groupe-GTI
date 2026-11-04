@@ -1097,6 +1097,33 @@ index d'unicité, tables vides). Retour arrière : `_INVERSE.sql` (il recopie d'
   - Effet chaque nuit dès le 04-05/11, juste après la lecture du syndic. Retour arrière : retirer la ligne du `.env`
     (les lignes déjà écrites restent ; `_INVERSE.sql` du patch les recopie avant de retirer le registre).
 
+## 16. LOT 1 — LES PARTENAIRES DE HEKTOR ENTRENT DANS L'APP (04/11 soir, « donc lot 1 »)
+
+**A8 — la raison d'entrée élargie** (`phase2/contacts/elargir_perimetre_registre.py`, fichier du chantier ⑧, modifié
+de façon ADDITIVE ; il était propre, sans modification en cours) :
+- troisième raison **`partenaire_hektor`** : un contact que Hektor range en métier Syndic ou Diagnostiqueur (les choix des
+  listes de l'annonce, `hektor_diag_contacts_choix`), plus ceux dont le formulaire porte un métier utile
+  (`hektor_contact_metier`, hors notaire, autre, collaborateur, « à supprimer ») ; numéros Hektor traduits en nos numéros ;
+- ⚠ 9 des 96 syndics et diagnostiqueurs sont des SOCIÉTÉS sans nom ni prénom : pour cette raison SEULE, la raison sociale
+  (`display_name`) vaut nom ; la garde de la case vide reste entière pour les deux autres raisons ;
+- lu seulement si les colonnes existent, liste passée en paramètre facultatif : les 11 essais d'origine passent
+  inchangés ; **4 essais ajoutés** (syndic qui entre, société par sa raison sociale, la case vide du registre reste
+  dehors, témoin sans liste) → **15 verts sur 15** ;
+- **à blanc sur la vraie base : 95 contacts entreraient** (les 75 syndics et 20 diagnostiqueurs absents de l'app),
+  0 par les autres raisons. L'étape étant déjà ALLUMÉE (`APP_PERIMETRE_REGISTRE=1`), **ils entreront la nuit du 04-05/11**
+  et partiront chez Supabase avec l'envoi des contacts. Retour arrière : retirer la raison du fichier (ceux déjà envoyés
+  restent, comme au §71 de la synthèse).
+
+**A9 — le métier des partenaires créés depuis la migration** :
+- `Console/extract_hektor_metier_contacts.js` (neuf, jumeau de l'extracteur du syndic : le formulaire d'un contact, une
+  requête par fiche, lecture seule) et `phase2/contacts/metier_hektor_contacts.py` (neuf : range dans la table locale
+  `hektor_contact_metier`, mise à jour sans être vidée ; `--importer` un compte rendu, ou `--lire`).
+- Lecture faite le 04/11 (312 s, 203 fiches, 0 erreur) : **199 notaires, 4 sans métier**. ⇒ Il n'y a pas de banque ni
+  d'apporteur caché parmi les partenaires récents : ce sont les notaires des compromis. Rangés (203), écartés par les
+  deux étapes (notaires laissés de côté) : la reprise du registre trouve 0 métier de plus, l'entrée reste à 95.
+- Non branché la nuit : les nouveaux syndics et diagnostiqueurs arrivent déjà par les listes de l'annonce, relues chaque
+  nuit. `--lire` reste disponible pour une relecture ponctuelle.
+
 ### 7 ter. Les dépendances (techniques, pas un ordre décidé)
 
 - 0 avant tout le reste ; 0.1 avant B2 ; 0.2 avant B1 ; 0.6 avant B5 ; 0.3 avant B6 ; 0.4 avant B7 ; 0.5 avant C2.

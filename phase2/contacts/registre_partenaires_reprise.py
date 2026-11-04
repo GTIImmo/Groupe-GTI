@@ -7,6 +7,8 @@ Note : notice/CHANTIER_ANNUAIRE_PARTENAIRES_2026-11-04.md (§13 syndic lu chaque
 CE QUE FAIT CE SCRIPT (lot 2, pièce 2). Il lit, EN LOCAL :
   - `contact_metier_netty` (phase2.sqlite) : le métier des professionnels de Netty, par NOTRE numéro de contact ;
   - `hektor_diag_contacts_choix` (hektor.sqlite) : les contacts de métier Syndic / Diagnostiqueur chez Hektor ;
+  - `hektor_contact_metier` (hektor.sqlite, s'il existe) : le métier lu dans le formulaire des partenaires créés
+    chez Hektor depuis la migration (metier_hektor_contacts.py, §16) ;
   - `hektor_annonce_diag_contacts_detail` (hektor.sqlite) : le syndic et le diagnostiqueur posés sur chaque annonce ;
 et complète chez Supabase le registre posé le 04/11 (`app_partenaire_metier`, `app_partenaire_lien`).
 
@@ -53,6 +55,14 @@ METIER_NETTY = {
     "marchand_de_biens": "marchand_de_biens", "lotisseur": "autre", "gestionnaire": "autre",
 }
 LISTE_HEKTOR = {"syndic": "syndic", "diagnostiqueur": "diagnostiqueur"}
+# Le métier lu dans le formulaire Hektor (hektor_contact_metier, metier_hektor_contacts.py) → le registre.
+# Laissés de côté : 2 Notaire (sa fiche existe), 6 Autre et '' (rien ne dit un métier), 7 Collaborateur (nos salariés),
+# 16 « A supprimer ». 3 Confrère = une autre agence → agent immobilier. 21 Lotisseur → autre.
+METIER_HEKTOR = {
+    "1": "promoteur", "3": "agent_immobilier", "4": "diagnostiqueur", "5": "syndic", "8": "societe", "15": "apporteur",
+    "17": "administration", "18": "societe", "19": "banque", "20": "mandataire", "21": "autre", "22": "agent_immobilier",
+    "23": "technicien",
+}
 
 
 def charger_env() -> None:
@@ -144,6 +154,19 @@ def metiers_voulus() -> tuple[dict[tuple[str, str], str], Counter]:
                 continue
             voulus.setdefault((notre, LISTE_HEKTOR[str(liste)]), "hektor")
             comptes["hektor"] += 1
+        if hk.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='hektor_contact_metier'").fetchone():
+            for numero_hektor, code in hk.execute(
+                    "SELECT hektor_contact_id, metier_code FROM hektor_contact_metier WHERE statut = 'done'"):
+                metier = METIER_HEKTOR.get(str(code or ""))
+                if not metier:
+                    comptes[f"hektor_formulaire_ecarte_{code or 'vide'}"] += 1
+                    continue
+                notre = traduction.get(str(numero_hektor))
+                if not notre:
+                    comptes["hektor_numero_inconnu"] += 1
+                    continue
+                voulus.setdefault((notre, metier), "hektor")
+                comptes["hektor_formulaire"] += 1
     finally:
         hk.close()
     return voulus, comptes

@@ -18,8 +18,14 @@ DEUX RAISONS NEUVES, posees sur des contacts NON eligibles seulement :
                         l'app et pas absent ; jamais retire), sur au moins un bien qui n'est
                         PAS une location (decision du 26/08 : les locations restent au serveur)
     partenaire_netty    un code professionnel de Netty (contact_metier_netty)
+    partenaire_hektor   (ajoutee le 04/11 soir, chantier partenaires, lot 1) un contact que Hektor range
+                        en metier Syndic ou Diagnostiqueur : les choix des deux listes de l'annonce
+                        (`hektor_diag_contacts_choix`, data/hektor.sqlite, lue par
+                        sync_hektor_contacts_diagnostics.py). Note : CHANTIER_ANNUAIRE_PARTENAIRES §16.
 ⛔ JAMAIS une case vide : une fiche sans nom ni prenom reste dehors (ce sont les places de
    conjoint de la migration, que la nature reconnait de la meme facon).
+   ⚠ Sauf pour partenaire_hektor : un syndic est souvent une SOCIETE, sans nom ni prenom mais avec sa
+   raison sociale (`display_name`) -- 9 des 96 au 04/11. Pour cette raison seule, la raison sociale vaut nom.
 ⚠ A REJOUER CHAQUE NUIT, APRES build_contacts_layer et elargir_perimetre_console (la couche
   est refaite par DELETE + INSERT), AVANT le push. Lit la base LOCALE seulement.
 ⛔ INTERRUPTEUR APP_PERIMETRE_REGISTRE (.env) : absent = eteint, rien n'est fait.
@@ -46,6 +52,7 @@ MIROIR = RACINE / "data" / "hektor.sqlite"
 CIBLE = "app_contact_current"
 RAISON_REGISTRE = "registre_relation"
 RAISON_PARTENAIRE = "partenaire_netty"
+RAISON_PARTENAIRE_HEKTOR = "partenaire_hektor"
 LOCATIONS = {"2", "8", "11"}   # offre_type de Hektor : location, location saisonniere, immobilier pro en location
 
 
@@ -92,18 +99,60 @@ def partenaires_netty(conn: sqlite3.Connection) -> set[str]:
     return {str(r[0]) for r in conn.execute("SELECT hektor_contact_id FROM contact_metier_netty")}
 
 
-def a_faire_entrer(conn: sqlite3.Connection, registre: set[str], pros: set[str]) -> list[tuple[str, str]]:
+def choix_hektor(miroir: Path) -> set[str]:
+    """Les numeros HEKTOR des contacts de metier Syndic / Diagnostiqueur (choix des listes de l'annonce)."""
+    if not miroir.exists():
+        return set()
+    m = sqlite3.connect(f"file:{miroir}?mode=ro", uri=True, timeout=30)
+    try:
+        numeros: set[str] = set()
+        if table_existe(m, "hektor_diag_contacts_choix"):
+            numeros |= {str(r[0]) for r in m.execute("SELECT hektor_contact_id FROM hektor_diag_contacts_choix")}
+        # Et le metier lu dans le formulaire des partenaires crees depuis la migration (metier_hektor_contacts.py).
+        # Ecartes : '' non defini, 2 Notaire (sa fiche existe), 6 Autre, 7 Collaborateur (nos salaries), 16 A supprimer.
+        if table_existe(m, "hektor_contact_metier"):
+            numeros |= {str(r[0]) for r in m.execute(
+                "SELECT hektor_contact_id FROM hektor_contact_metier WHERE statut = 'done' "
+                "AND COALESCE(metier_code, '') NOT IN ('', '2', '6', '7', '16')")}
+        return numeros
+    finally:
+        m.close()
+
+
+def colonnes(conn: sqlite3.Connection, table: str) -> set[str]:
+    return {str(r[1]) for r in conn.execute(f"PRAGMA table_info({table})")}
+
+
+def partenaires_hektor(conn: sqlite3.Connection, numeros_hektor: set[str]) -> set[str]:
+    """Nos numeros des contacts que Hektor range en Syndic / Diagnostiqueur (traduits par hektor_target_id)."""
+    if not numeros_hektor or "hektor_target_id" not in colonnes(conn, CIBLE):
+        return set()
+    return {str(cid) for cid, cible in conn.execute(f"SELECT hektor_contact_id, hektor_target_id FROM {CIBLE} "
+                                                    "WHERE hektor_target_id IS NOT NULL")
+            if str(cible) in numeros_hektor}
+
+
+def a_faire_entrer(conn: sqlite3.Connection, registre: set[str], pros: set[str],
+                   pros_hektor: set[str] | None = None) -> list[tuple[str, str]]:
+    pros_hektor = pros_hektor or set()
+    avec_affichage = "display_name" in colonnes(conn, CIBLE)
     conn.row_factory = sqlite3.Row
     try:
         sortie = []
         for ligne in conn.execute(
-                f"SELECT hektor_contact_id, nom, prenom, eligibility_reasons_json FROM {CIBLE} "
+                f"SELECT hektor_contact_id, nom, prenom, eligibility_reasons_json"
+                f"{', display_name' if avec_affichage else ''} FROM {CIBLE} "
                 f"WHERE COALESCE(supabase_sync_eligible, 0) = 0"):
             cid = str(ligne["hektor_contact_id"])
-            neuves = ([RAISON_REGISTRE] if cid in registre else []) + ([RAISON_PARTENAIRE] if cid in pros else [])
+            neuves = (([RAISON_REGISTRE] if cid in registre else []) + ([RAISON_PARTENAIRE] if cid in pros else [])
+                      + ([RAISON_PARTENAIRE_HEKTOR] if cid in pros_hektor else []))
             if not neuves:
                 continue
-            if not (str(ligne["nom"] or "").strip() or str(ligne["prenom"] or "").strip()):
+            a_un_nom = bool(str(ligne["nom"] or "").strip() or str(ligne["prenom"] or "").strip())
+            if not a_un_nom and RAISON_PARTENAIRE_HEKTOR in neuves and avec_affichage:
+                a_un_nom = bool(str(ligne["display_name"] or "").strip())   # la raison sociale d'une societe
+                neuves = [RAISON_PARTENAIRE_HEKTOR] if a_un_nom else neuves  # les autres raisons gardent leur garde
+            if not a_un_nom:
                 continue  # une case vide reste dehors
             try:
                 raisons = json.loads(ligne["eligibility_reasons_json"] or "[]")
@@ -118,23 +167,26 @@ def a_faire_entrer(conn: sqlite3.Connection, registre: set[str], pros: set[str])
         conn.row_factory = None
 
 
-def executer(conn: sqlite3.Connection, offre: dict[str, str], dry_run: bool) -> int:
+def executer(conn: sqlite3.Connection, offre: dict[str, str], dry_run: bool,
+             numeros_hektor: set[str] | None = None) -> int:
     if not table_existe(conn, "app_relation"):
         print("[perimetre registre] REFUS : app_relation absente en local -- rien n'est modifie")
         return 2
     registre = nommes_par_le_registre(conn, offre)
     pros = partenaires_netty(conn)
+    pros_hektor = partenaires_hektor(conn, numeros_hektor or set())
     avant = conn.execute(f"SELECT COUNT(*) FROM {CIBLE} WHERE supabase_sync_eligible = 1").fetchone()[0]
-    entrants = a_faire_entrer(conn, registre, pros)
-    par_raison = {RAISON_REGISTRE: 0, RAISON_PARTENAIRE: 0}
+    entrants = a_faire_entrer(conn, registre, pros, pros_hektor)
+    par_raison = {RAISON_REGISTRE: 0, RAISON_PARTENAIRE: 0, RAISON_PARTENAIRE_HEKTOR: 0}
     for raisons, _ in entrants:
         for r in par_raison:
             par_raison[r] += int(r in raisons)
     print("[perimetre registre] nommes par le registre (hors locations) %7d" % len(registre))
     print("[perimetre registre] partenaires Netty                      %7d" % len(pros))
+    print("[perimetre registre] partenaires Hektor (syndic, diag.)     %7d" % len(pros_hektor))
     print("[perimetre registre] annuaire avant                         %7d" % avant)
-    print("[perimetre registre] a faire entrer                         %7d   (registre %d, partenaires %d)"
-          % (len(entrants), par_raison[RAISON_REGISTRE], par_raison[RAISON_PARTENAIRE]))
+    print("[perimetre registre] a faire entrer                         %7d   (registre %d, partenaires %d, Hektor %d)"
+          % (len(entrants), par_raison[RAISON_REGISTRE], par_raison[RAISON_PARTENAIRE], par_raison[RAISON_PARTENAIRE_HEKTOR]))
     if dry_run:
         print("[perimetre registre] --dry-run : rien n'a ete ecrit.")
         return 0
@@ -163,7 +215,7 @@ def main() -> int:
     conn = sqlite3.connect(args.phase2_db, timeout=30)
     conn.execute("PRAGMA busy_timeout=30000")
     try:
-        return executer(conn, types_d_offre(args.miroir), args.dry_run)
+        return executer(conn, types_d_offre(args.miroir), args.dry_run, choix_hektor(args.miroir))
     finally:
         conn.close()
 

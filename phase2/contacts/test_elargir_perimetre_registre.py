@@ -87,6 +87,44 @@ class PerimetreRegistre(unittest.TestCase):
         self.assertIn("10000010", eligibles(c), "bien absent du miroir : pas une location prouvee")
 
 
+def base_hektor(contacts, relations=()):
+    """Comme base(), avec la raison sociale (display_name) et le numero Hektor (hektor_target_id)."""
+    c = sqlite3.connect(":memory:")
+    c.execute("CREATE TABLE app_contact_current (hektor_contact_id TEXT PRIMARY KEY, nom TEXT, prenom TEXT, display_name TEXT, "
+              "hektor_target_id TEXT, supabase_sync_eligible INTEGER, eligibility_reasons_json TEXT)")
+    c.executemany("INSERT INTO app_contact_current VALUES (?,?,?,?,?,?,?)", contacts)
+    c.execute("CREATE TABLE app_relation (app_contact_id INTEGER, hektor_annonce_id TEXT, source TEXT, "
+              "present_in_hektor INTEGER, absent_depuis TEXT, retire_le TEXT)")
+    c.executemany("INSERT INTO app_relation VALUES (?,?,?,?,?,?)", list(relations))
+    return c
+
+
+class PartenairesHektor(unittest.TestCase):
+    """La raison partenaire_hektor (04/11 soir, chantier partenaires §16)."""
+    OFFRE = {"100": "0"}
+
+    def test_un_syndic_de_hektor_entre(self):
+        c = base_hektor([("10000020", "SYNDIC DES MONTS", "", "SYNDIC DES MONTS", "602487", 0, "[]")])
+        self.assertEqual(m.executer(c, self.OFFRE, False, {"602487"}), 0)
+        self.assertEqual(eligibles(c), {"10000020": ["partenaire_hektor"]})
+
+    def test_une_societe_sans_nom_ni_prenom_entre_par_sa_raison_sociale(self):
+        c = base_hektor([("10000021", "", "", "CABINET COPRO", "602010", 0, "[]"),
+                         ("10000022", "", "", "", "602011", 0, "[]")])
+        m.executer(c, self.OFFRE, False, {"602010", "602011"})
+        self.assertEqual(eligibles(c), {"10000021": ["partenaire_hektor"]}, "sans raison sociale non plus : dehors")
+
+    def test_la_raison_sociale_ne_fait_pas_entrer_une_case_vide_du_registre(self):
+        c = base_hektor([("10000023", "", "", "M. et Mme X", "999", 0, "[]")], [(10000023, "100", "hektor", 1, None, None)])
+        m.executer(c, self.OFFRE, False, {"602487"})
+        self.assertEqual(eligibles(c), {}, "la garde de la case vide reste entiere pour le registre")
+
+    def test_temoin_sans_liste_de_hektor_rien_ne_change(self):
+        c = base_hektor([("10000020", "SYNDIC", "", "SYNDIC", "602487", 0, "[]")])
+        m.executer(c, self.OFFRE, False)
+        self.assertEqual(eligibles(c), {})
+
+
 class MetierNetty(unittest.TestCase):
     def test_appariement_sans_ambiguite(self):
         c = base([("1", "Dupont", "Paul", 0, "[]", "2020-01-01 10:00"), ("2", "MARTIN", "Ana", 0, "[]", "2021-02-02"),
