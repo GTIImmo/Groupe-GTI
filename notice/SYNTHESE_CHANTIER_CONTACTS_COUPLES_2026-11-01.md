@@ -1729,3 +1729,38 @@ Remesuré dans le code d'aujourd'hui (`console_job_worker.js`, fonctions chez Su
    la nature : c'est la base toute prête.
 
 **Non mesuré** : pourquoi les 209 fiches ont perdu leur éligibilité ; ce que l'écran montre après « Compléter » avant la nuit.
+
+## 59. « NATURE AU CLIC » — AUDIT EN PROFONDEUR DE CE QUI EXISTE *(04/11, « nature au clic, mais il faut bien auditer notre projet en profondeur pour comprendre ce qui a déjà été fait » ; lecture seule, rien codé)*
+
+**Ce qui était déjà décidé ou écrit** :
+- §9 (01/11) : le défaut est CONNU depuis la pose. « Un contact né dans l'app dans la journée n'a pas de nature avant la nuit ; la relecture d'une
+  fiche dans la journée renvoie la nature de la nuit précédente. L'écran devra lire vide comme pas encore calculé. »
+  ⚠ Ce dernier point n'est PAS fait : une nature vide n'affiche ni foyer ni bouton (`peutRecevoirUnConjoint` exige `personne_seule`).
+- Pièce G (§53) : le SEUL geste qui tient déjà la nature. La fonction écrit la nature au clic chez Supabase (personne `couple`, conjoint `conjoint`).
+  Après Hektor, `relire_couple_rattache.py` recalcule la nature de toute la table locale (~8 s), puis envoie les deux fiches.
+
+**Le chemin de la nature, dans le code** :
+- `nature_des_fiches.py` (étape du run de 04:00) calcule TOUTE la table locale et la REMPLACE (`DROP TABLE` puis recréation, une transaction).
+- `push_contacts_to_supabase.py` : `ajouter_nature()` joint cette table locale à chaque ligne envoyée (interrupteur `APP_CONTACT_NATURE`, allumé).
+  Une fiche absente de la table part avec une nature VIDE.
+- **La relecture d'une fiche** (`refresh_contact_inproc.py` : détail → normalisation → couche → conjoint → envoi) n'a PAS d'étape « nature ».
+  Son envoi reprend donc la nature de la nuit d'avant, ou vide pour un contact neuf. ⭐ Le précédent existe pourtant : l'étape « conjoint »
+  (`conjoints_des_couples.py --contact-id`, P2 du 31/10) recalcule LE couple de la fiche avant l'envoi, pour la même raison.
+- **Les fonctions au clic** (`pg_proc`) : seule `app_ajouter_conjoint_optimistic` écrit `nature_fiche`. Créer, créer un mandant, modifier,
+  modifier ou compléter le conjoint, archiver : aucune.
+- **Les deux périmètres d'envoi** : la nuit n'envoie que les éligibles (`run_quotidien.ps1` : `-ContactsEligibleOnly`). Une relecture envoie
+  les actifs OU éligibles (`active_or_eligible`). ⇒ Un contact actif non éligible n'est rafraîchi chez Supabase QUE par une relecture.
+  C'est l'explication des 211 natures vides du §58 : ces fiches ont été envoyées par une relecture avant le 01/11, et la nuit ne les reprend jamais.
+- **Ce qui lit la nature** : l'annuaire masque `case_conjoint_vide` (`api.ts:271`, une nature vide reste visible) ; la fiche (foyer si
+  `couple`, bouton « Ajouter » si `personne_seule`) ; la fonction d'ajout (refuse cases et conjoints, laisse passer le vide).
+  Aucune vue ni aucune autre fonction chez Supabase.
+
+**L'usage réel** (travaux `done`, 30 derniers jours) : 19 créations de contact, 1 création de mandant, 5 modifications, 1 modification de mandant,
+3 archivages, 1 ajout de conjoint, 12 suppressions.
+
+**Ce que ça pourrait casser ailleurs** :
+- la nature change l'empreinte d'une ligne (renvoi de la ligne, sans danger) ;
+- l'annuaire masque ou montre une coquille selon sa nature ;
+- la règle « un notaire n'est jamais un couple » et le rattachement des orphelines ne se calculent que sur la table entière ;
+- `DROP TABLE` à chaque geste : un lecteur au même moment (l'envoi de la nuit) trouverait une table absente → il n'envoie RIEN de la nature
+  (garde existante). C'est sans dommage, mais déjà le cas avec G.
