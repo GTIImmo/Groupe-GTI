@@ -33,6 +33,22 @@ DEFAULT_JSON_OUTPUT = ROOT / "matterport" / "matterport_sync_preview.json"
 PHASE2_DB = ROOT / "phase2" / "phase2.sqlite"
 HEKTOR_DB = ROOT / "data" / "hektor.sqlite"
 MATTERPORT_GRAPHQL_URL = "https://api.matterport.com/api/models/graph"
+# ⚠ 04/11/2026 -- DEPUIS LA NUIT DU 02 AU 03/11, L'API PUBLIQUE NE LIT PLUS RIEN.
+#   Le compte n'a pas la licence developpeur (deja vu en mai sur les ECRITURES, d'ou
+#   les gestes passes par la console : notice/NOTE_MATTERPORT_ACTIONS_API_EN_ATTENTE_
+#   2026-05-05.md). Jusqu'au 02/11 l'offre gratuite laissait LIRE ; depuis, chaque
+#   modele repond `model.locked` et la recherche ne rend que la demo « Get Started ».
+#   Une seconde cle du meme compte a le meme refus (04/11) : c'est le compte, pas la cle.
+# ⭐ On lit donc par la porte de la CONSOLE web, avec la session deja utilisee par les
+#   gestes (Console/matterport_storage_state.json). Mesure du 04/11 : elle accepte les
+#   requetes EXACTES ci-dessous, et 40 modeles tires au hasard sont identiques champ par
+#   champ a la lecture du 02/11. L'interrupteur MATTERPORT_SOURCE=api ramene l'ancien
+#   chemin (le jour ou la licence serait prise).
+# ⚠ Cette porte n'est pas documentee : Matterport peut la changer sans prevenir.
+MATTERPORT_CONSOLE_GRAPHQL_URL = "https://my.matterport.com/api/mp/models/graph"
+MATTERPORT_CONSOLE_HOST = "my.matterport.com"
+MATTERPORT_STORAGE_STATE_PATH = ROOT / "Console" / "matterport_storage_state.json"
+MATTERPORT_SOURCES = ("console", "api")
 MATTERPORT_SHOW_URL = "https://my.matterport.com/show/?m={model_id}"
 MATTERPORT_GROUP_NAMESPACE = uuid.UUID("8b741103-5a9b-4432-8b25-e5fb53df5cf8")
 MATTERPORT_MODEL_NAMESPACE = uuid.UUID("a0dcfb5d-e5e7-4577-9452-efad253de4f5")
@@ -115,8 +131,52 @@ class MatterportCredentials:
     token_secret: str
 
 
+SESSION_CONSOLE_EXPIREE = (
+    "Session console Matterport expiree ou refusee ({detail}). "
+    "Relancer : node Console/matterport_playwright_login.js (elle sert aussi aux gestes du worker)."
+)
+
+
+def console_cookie_header(storage_state_path: Path, host: str = MATTERPORT_CONSOLE_HOST) -> str:
+    """Les cookies que le navigateur enverrait a `host`, lus dans la session Playwright.
+
+    LECTURE SEULE : le fichier appartient a Console/matterport_playwright_login.js et
+    aux gestes ; on ne le reecrit jamais. Les cookies perimes sont ecartes.
+    """
+    if not storage_state_path.exists():
+        raise RuntimeError(SESSION_CONSOLE_EXPIREE.format(detail=f"fichier absent : {storage_state_path}"))
+    state = json.loads(storage_state_path.read_text(encoding="utf-8"))
+    now = time.time()
+    pairs: list[str] = []
+    for cookie in state.get("cookies") or []:
+        domain = normalize_text(cookie.get("domain")).lstrip(".").lower()
+        if not domain or not (host == domain or host.endswith("." + domain)):
+            continue
+        expires = cookie.get("expires")
+        if expires not in (None, -1) and float(expires) < now:
+            continue
+        pairs.append(f"{cookie.get('name')}={cookie.get('value')}")
+    if not pairs:
+        raise RuntimeError(SESSION_CONSOLE_EXPIREE.format(detail="aucun cookie valable dans la session"))
+    return "; ".join(pairs)
+
+
 class MatterportClient:
-    def __init__(self, credentials: MatterportCredentials) -> None:
+    def __init__(self, credentials: MatterportCredentials | None = None, *, source: str = "api", storage_state_path: Path = MATTERPORT_STORAGE_STATE_PATH) -> None:
+        self.source = source
+        if source == "console":
+            self.url = MATTERPORT_CONSOLE_GRAPHQL_URL
+            self.headers = {
+                "Cookie": console_cookie_header(storage_state_path),
+                "Content-Type": "application/json",
+                "Origin": f"https://{MATTERPORT_CONSOLE_HOST}",
+                "Referer": f"https://{MATTERPORT_CONSOLE_HOST}/models",
+                "User-Agent": "Mozilla/5.0 (GTI sync_matterport_models)",
+            }
+            return
+        if credentials is None:
+            raise RuntimeError("Matterport API : identifiants manquants")
+        self.url = MATTERPORT_GRAPHQL_URL
         token = f"{credentials.token_id}:{credentials.token_secret}".encode("utf-8")
         self.headers = {
             "Authorization": f"Basic {base64.b64encode(token).decode('ascii')}",
@@ -125,16 +185,33 @@ class MatterportClient:
 
     def graphql(self, query: str, variables: dict[str, Any] | None = None) -> dict[str, Any]:
         payload = json.dumps({"query": query, "variables": variables or {}}, ensure_ascii=True).encode("utf-8")
-        request = urllib.request.Request(MATTERPORT_GRAPHQL_URL, data=payload, headers=self.headers, method="POST")
+        request = urllib.request.Request(self.url, data=payload, headers=self.headers, method="POST")
         try:
             with urllib.request.urlopen(request, timeout=HTTP_TIMEOUT_SECONDS, context=MATTERPORT_SSL_CONTEXT) as response:
                 body = response.read().decode("utf-8")
         except urllib.error.HTTPError as error:
             body = error.read().decode("utf-8", errors="replace")
-            raise RuntimeError(f"Matterport API HTTP {error.code}: {body[:500]}") from error
+            if self.source == "console" and error.code in (401, 403):
+                raise RuntimeError(SESSION_CONSOLE_EXPIREE.format(detail=f"HTTP {error.code}")) from error
+            raise RuntimeError(f"Matterport {self.source} HTTP {error.code}: {body[:500]}") from error
         except urllib.error.URLError as error:
-            raise RuntimeError(f"Matterport API unreachable: {error}") from error
-        parsed = json.loads(body)
+            raise RuntimeError(f"Matterport {self.source} unreachable: {error}") from error
+        try:
+            parsed = json.loads(body)
+        except json.JSONDecodeError as error:
+            # Une session morte renvoie la page de connexion (HTML), pas du JSON.
+            if self.source == "console":
+                raise RuntimeError(SESSION_CONSOLE_EXPIREE.format(detail=f"reponse non JSON : {body[:120]!r}")) from error
+            raise RuntimeError(f"Matterport {self.source} : reponse non JSON : {body[:300]!r}") from error
+        # ⭐ Eprouve le 04/11 avec de faux cookies : une session morte ne repond PAS
+        #   « unauthorized » mais `organization.unspecified` (« No organization is
+        #   currently selected »), en HTTP 200. Sans ce code, le message clair ne sortait pas.
+        if self.source == "console" and any(
+            ((err.get("extensions") or {}).get("code") or "").lower()
+            in ("request.unauthorized", "unauthenticated", "auth.unauthenticated", "organization.unspecified")
+            for err in parsed.get("errors") or []
+        ):
+            raise RuntimeError(SESSION_CONSOLE_EXPIREE.format(detail=json.dumps(parsed["errors"], ensure_ascii=True)[:300]))
         if parsed.get("errors"):
             raise RuntimeError(f"Matterport GraphQL error: {json.dumps(parsed['errors'], ensure_ascii=True)[:1000]}")
         return parsed.get("data") or {}
@@ -198,6 +275,23 @@ def load_credentials() -> MatterportCredentials:
     if not token_id or not token_secret:
         raise RuntimeError(f"Missing Matterport credentials in {MATTERPORT_ENV_FILE}")
     return MatterportCredentials(token_id=token_id, token_secret=token_secret)
+
+
+def matterport_source() -> str:
+    """L'interrupteur MATTERPORT_SOURCE (matterport/.env ou environnement) : console par defaut."""
+    load_env_file(MATTERPORT_ENV_FILE)
+    source = os.getenv("MATTERPORT_SOURCE", "console").strip().lower() or "console"
+    if source not in MATTERPORT_SOURCES:
+        raise RuntimeError(f"MATTERPORT_SOURCE={source!r} inconnu (attendu : {', '.join(MATTERPORT_SOURCES)})")
+    return source
+
+
+def make_client() -> MatterportClient:
+    source = matterport_source()
+    if source == "console":
+        storage = Path(os.getenv("MATTERPORT_STORAGE_STATE_PATH") or MATTERPORT_STORAGE_STATE_PATH)
+        return MatterportClient(source="console", storage_state_path=storage)
+    return MatterportClient(load_credentials(), source="api")
 
 
 def scan_matterport_models(client: MatterportClient, max_models: int | None = None) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
@@ -280,7 +374,8 @@ def numero_app_par_annonce() -> dict[str, int]:
     app_dossier_id depuis app_view_generale... sans jamais l'ecrire. Cette table le
     rend disponible a l'envoi.
 
-    ⚠ Matterport ne parle JAMAIS a Hektor (le run n'appelle que api.matterport.com) :
+    ⚠ Matterport ne parle JAMAIS a Hektor (le run n'appelle que Matterport -- la porte
+    de la console my.matterport.com depuis le 04/11, api.matterport.com avant) :
     le numero Hektor n'y sert qu'a designer l'annonce. Le doubler par le notre est
     donc sans effet sur Matterport, et c'est ce qui permettra a la visite de rester
     rattachee a son bien apres la coupure.
@@ -974,8 +1069,8 @@ def main(argv: list[str] | None = None) -> int:
     if args.input_json:
         rows, groups = load_preview_json(args.input_json)
     else:
-        credentials = load_credentials()
-        client = MatterportClient(credentials)
+        client = make_client()
+        print(f"MATTERPORT_SOURCE: {client.source} ({client.url})")
         models, _folders = scan_matterport_models(client, max_models=max_models)
         rows, groups = build_preview_rows(models, min_mandat_digits=args.min_mandat_digits)
         write_outputs(rows, groups, args.output, args.json_output)
