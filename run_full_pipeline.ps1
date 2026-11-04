@@ -853,6 +853,19 @@ else {
     Write-RunLog "SKIP hektor syndic et diagnostiqueur"
 }
 
+# Le registre des partenaires (04/11/2026, lot 2 piece 2) : complete app_partenaire_metier et app_partenaire_lien chez
+# Supabase depuis le serveur (metier de Netty, listes de Hektor, syndics lus juste au-dessus). N'ajoute que ce qui manque,
+# ne touche jamais un lien pose dans l'app. ⛔ ETEINT tant que APP_REGISTRE_PARTENAIRES n'est pas dans le .env : le script
+# le dit et sort en 0. Non bloquant. Note : notice/CHANTIER_ANNUAIRE_PARTENAIRES_2026-11-04.md §15.
+$registrePartenairesOk = $false
+Invoke-OptionalStepWithRetry -Label "phase2 registre des partenaires" -Arguments @(
+    "phase2\contacts\registre_partenaires_reprise.py",
+    "--ecrire"
+) -MaxAttempts 1 -RetryDelaySeconds 60 -Succeeded ([ref]$registrePartenairesOk)
+if (-not $registrePartenairesOk) {
+    Write-RunLog "WARN  phase2 registre des partenaires non execute cette nuit (echec non bloquant) - pipeline poursuivi"
+}
+
 # Contact champs manquants (naissance/lieu/matrimonial) : Hektor ne les rend pas par l'API.
 # Scraper Console leger, cache local resumable, recents d'abord. Limite a un seul lot (50)
 # comme le chauffage ; les gros rattrapages passent par la commande dediee en vagues.

@@ -1068,6 +1068,35 @@ index d'unicité, tables vides). Retour arrière : `_INVERSE.sql` (il recopie d'
   reprise de nuit (métier depuis Netty et les listes de Hektor ; liens syndic depuis
   `hektor_annonce_diag_contacts_detail`, en traduisant les numéros Hektor en nos numéros).
 
+## 15. LOT 2, PIÈCE 2 — REMPLIR LE REGISTRE CHAQUE NUIT (04/11, « oui pièce 2 ») — ÉCRIT, ÉTEINT
+
+- `phase2/contacts/registre_partenaires_reprise.py` (neuf) : lit EN LOCAL `contact_metier_netty`,
+  `hektor_diag_contacts_choix` et `hektor_annonce_diag_contacts_detail`, traduit les numéros Hektor en nos numéros
+  (`hektor_target_id` → `hektor_contact_id`), et complète chez Supabase `app_partenaire_metier` et
+  `app_partenaire_lien`. Règles : notaires laissés de côté ; un métier n'est qu'AJOUTÉ (jamais modifié ni retiré par la
+  nuit) ; un lien « hektor » est ajouté s'il manque, retiré (daté) si Hektor change ou retire le syndic d'une annonce
+  qu'il vient de relire ; un lien posé dans l'APP n'est jamais touché, l'écart est compté. À blanc par défaut ;
+  `--ecrire` n'écrit que si `APP_REGISTRE_PARTENAIRES` est dans le `.env` (sinon « éteint », sortie 0 — témoin vérifié).
+  Vérification après écriture : tout métier voulu est bien là, sinon sortie 1.
+- **À blanc sur la vraie base** : **213 métiers** à poser (Netty 118 hors 844 notaires : apporteur 35, courtier 22,
+  diagnostiqueur 16, parrain 15, banque 8, administration 7, société 5, mandataire 4, autres 6 ; Hektor 95 : syndic 75,
+  diagnostiqueur 20) et **83 liens** (79 syndics + 4 diagnostiqueurs sur des annonces) ; 0 à retirer, 0 écart.
+- `run_full_pipeline.ps1` : étape « phase2 registre des partenaires » juste après la lecture du syndic, non bloquante.
+  Syntaxe vérifiée, BOM intact.
+- ⚠ Les 75 syndics de Hektor ne sont pas encore des contacts de l'app (raison d'entrée élargie A8, fichier du chantier ⑧) :
+  le registre porte leur numéro, la fiche viendra quand ils entreront.
+- ✅ **ALLUMÉ ET REMPLI le 04/11 vers 19:33 (« oui, allume »)** :
+  - `.env` : copie datée `.env.avant_registre_partenaires_20261104_1933`, puis `APP_REGISTRE_PARTENAIRES=1` ajouté à
+    la fin avec son commentaire (fins de ligne du fichier respectées, ligne présente une seule fois) ;
+  - premier remplissage (`logs/manual/registre_partenaires_2026-11-04.json`, code 0) : 213 métiers + 83 liens écrits,
+    vérification interne 0 manquant ;
+  - **contrôle chez Supabase** : 213 métiers actifs (Netty 118, Hektor 95 : syndic 75, diagnostiqueur 20), 83 liens
+    actifs (syndic 79, diagnostiqueur 4, origine « hektor »), **0 lien sans dossier**, 29 syndics différents, **0 lien
+    dont le partenaire n'a pas le métier** ;
+  - **second passage** : 0 à ajouter, 0 à retirer (la reprise ne fait pas de double).
+  - Effet chaque nuit dès le 04-05/11, juste après la lecture du syndic. Retour arrière : retirer la ligne du `.env`
+    (les lignes déjà écrites restent ; `_INVERSE.sql` du patch les recopie avant de retirer le registre).
+
 ### 7 ter. Les dépendances (techniques, pas un ordre décidé)
 
 - 0 avant tout le reste ; 0.1 avant B2 ; 0.2 avant B1 ; 0.6 avant B5 ; 0.3 avant B6 ; 0.4 avant B7 ; 0.5 avant C2.
