@@ -1694,3 +1694,38 @@ Documents : à signaler à l'autre session (Youtrust reste derrière son interru
 - **En service à la prochaine nuit** (étape « nature » du run de 04:00, puis l'envoi). Rien n'a été écrit chez Supabase ni chez Hektor.
   ⏰ **Le 05/11** : 10260586 en `couple` chez Supabase, et sa fiche doit montrer « Couple · conjoint à compléter » avec le bouton.
 - **Retour arrière** : revenir sur ce commit. La nuit suivante recalcule toute la table.
+
+## 58. AUDIT DES GESTES CONTACTS (§42, POINT 5) : CE QUI EST DÉJÀ FAIT, CE QUI MANQUE *(04/11, « avant, audit de ce qu'on a déjà fait, et ensuite les gestes si nécessaire » ; lecture seule, rien codé)*
+
+**Déjà fait** — sources : chantier ⑧ (8a, 8a bis, 8a-A, 8a-B, 8a6, C), `AUDIT_PORTES_DE_CREATION` §2 quinquies, ce chantier (pièces E, F, G).
+Remesuré dans le code d'aujourd'hui (`console_job_worker.js`, fonctions chez Supabase) :
+- **Créer un contact, créer un mandant** : la fiche est écrite au clic (`app_create_contact_optimistic`, `app_create_mandant_contact_optimistic`).
+  Elle est relue après Hektor (`executerCreationContactHektor` l. 19611, `executerCreationMandantContact` l. 21376), et la paire de numéros est apprise
+  (8a bis, 21/10). Le contrôle au retour est en place (8a6).
+- **Modifier un contact ou un mandant** (une seule fonction, `app_edit_contact_optimistic`) : 12 colonnes et le commentaire sont écrits au clic, et le
+  contrôle au retour est en place (8a-A, 8a-B). La fiche est relue après Hektor (l. 19690), et **le conjoint aussi** (l. 19706, pièce E).
+- **Archiver ou réactiver** : écrit au clic (`app_console_archiver_contact_optimistic`), relu après (l. 19814).
+- **Supprimer** : la fiche disparaît de l'app sans trace (prouvé le 03/11, §54).
+- **Recherches (ajouter, modifier, supprimer)** : relues après (l. 19912, 21114, 21233). Le « rafraîchissement perdu » par le numéro Hektor est
+  corrigé depuis 8a bis (21/10).
+- **Relier ou retirer un mandant d'un bien** : la ligne `app_relation` est posée au clic (30/09).
+- **Conjoint** : « Modifier » (E), « Compléter » (F), « Ajouter » (G). Seul « Ajouter » relit les DEUX fiches ET recalcule la nature
+  (`relire_couple_rattache.py`).
+- **Un couple fait directement dans Hektor par un négociateur** : depuis le 04/11, la nuit des contacts relit les fiches dont la date a bougé (§57).
+
+**Ce qui manque — trois trous, aucun corrigé :**
+1. **La nature n'est recalculée que la nuit**, sauf après « Ajouter un conjoint ». Aucune autre fonction au clic ne touche `nature_fiche`
+   (mesuré dans `pg_proc`), et une relecture seule renvoie la nature de la veille.
+   ⇒ Un contact créé aujourd'hui n'a pas de nature jusqu'au lendemain, donc pas de bouton « Ajouter un conjoint » avant.
+   Après « Compléter », la coquille reste `case_conjoint_vide` jusqu'à la nuit : l'effet sur l'écran n'est **pas mesuré**.
+2. **Un contact qui n'est pas éligible au cloud n'a jamais de nature chez Supabase.** C'est le cas d'un contact sans bien : la nuit calcule sa nature
+   en local, mais l'envoi ne prend que les éligibles. Mesure : **211 fiches chez Supabase sans nature**. Les 211 sont toutes en local, avec une
+   nature, et toutes non éligibles (`supabase_sync_eligible = 0`).
+   - 209 sont nées chez Hektor et ne sont plus éligibles : elles ne sont plus rafraîchies du tout ;
+   - 2 sont nées dans l'app sans aucun lien. **20000007** est l'essai du 21/10, dont la suppression attend un accord. **20000010** n'est pas identifiée.
+   Les 7 autres contacts nés dans l'app ont un lien et une nature.
+   ⇒ Un contact créé dans l'app sans bien ne pourra JAMAIS recevoir « Ajouter un conjoint ».
+3. **Rattacher une coquille (les 680)** : aucun geste dans l'app. Le travail `link_hektor_conjoint` sait déjà relire les deux fiches et recalculer
+   la nature : c'est la base toute prête.
+
+**Non mesuré** : pourquoi les 209 fiches ont perdu leur éligibilité ; ce que l'écran montre après « Compléter » avant la nuit.
