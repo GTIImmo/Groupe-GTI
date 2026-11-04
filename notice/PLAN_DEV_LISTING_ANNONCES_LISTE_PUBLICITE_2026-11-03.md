@@ -365,3 +365,10 @@ numéros de passerelles (0c) et les droits (4).
 - Telephone : onglets, cartes de presence defilantes + filtre, cartes d'annonce en mode Publicite (`AnnonceCarteMobile` prop `pub`) avec 5 cases de 44 px ou la bande.
 - Piege : un element de grille sans `min-width: 0` -> la rangee defilante elargissait la liste a 734 px (corrige).
 - Reste : essai reel d'une case AU TELEPHONE (meme code que le bureau, deja eprouve sur 61713) ; essai par un negociateur.
+
+## 04/11 -- antenne lisible (bureau) + les deux fenetres au telephone (non pousse)
+
+- Antenne (`5b718ed`) : le span de l'antenne etait coupe par `.listing-table-wrap td span { overflow: hidden }` -> chiffre et erreur tronques ; coupure levee, pastilles agrandies (chiffre vert sur blanc, erreur orange « ! »).
+- Fenetres au telephone (`modales-telephone.css` + ajouts `.rq-mobile` dans App.tsx) : panneau du bas, en-tete compact, barre fixe ; demande = onglets du type, suivi 3 etapes, reponses rapides, carte de resume reparee (ecrasee a 56 px) ; statut = pastilles + description, grille du formulaire reparee (rangee a 2 px), champs 46 px, avertissement « Clos ».
+- Non fait (de la maquette) : blocs repliables du formulaire de statut ; libelle du bouton (« Envoyer vers Offre » garde) ; la pastille choisie ne defile pas seule dans la rangee.
+- ⚠ Non verifie : l'effet d'une cloture sur l'offre / le compromis (vu sur l'essai du 21/10, pas retrouve comme regle dans le code) -- l'avertissement ne l'affirme pas.
