@@ -196,3 +196,25 @@ Deux niveaux, parce qu'une personne a plusieurs fiches chez Hektor :
 - À trancher en route : le type de personne (négociateur, secrétaire, compte d'agence comme « Groupe GTI » / accueil@) et
   les 13 fiches sans e-mail (rattachées par le nom → liste à valider par Frédéric).
 
+## 10. Étape 1 PRÉPARÉE (04/11) — Frédéric : « Oui, prépare l'étape 1 » — ⛔ RIEN N'EST POSÉ
+
+- Patch : `supabase/patch_registre_negociateurs_2026-11-04.sql` ; retour arrière `…_INVERSE.sql` (les trois tables).
+  Garde au départ (s'arrête si une table existe déjà) ; contrôles à la fin (toutes les fiches de l'annuaire et tous les
+  n° d'utilisateur de la répartition ont leur place, aucune personne sans fiche) — un contrôle faux annule tout.
+  Droits : lecture pour les comptes actifs de l'app (comme l'annuaire), le journal pour les admins ; aucune écriture par l'API.
+- **Les sources** : les 219 fiches de l'annuaire ; les comptes de `app_user_directory` qui n'ont pas de fiche
+  (14 agences, 5 secrétaires) ; les n° de la répartition qui n'ont rien (0, 24, 23).
+- **Trois pièges trouvés en le préparant, et traités** :
+  - le compte Hektor « Compte Formation » (u1) porte l'adresse de Frédéric ; Tence et Yssingeaux partagent `yssingeaux@` ;
+    Pauline GIRINON a un compte de secrétaire sous une adresse gmail au nom de Sasha ⇒ **les agences ne se réunissent
+    jamais par l'e-mail** (une personne par agence), et une personne citée sous deux adresses est réunie par son nom,
+    marquée à valider ;
+  - mon premier essai perdait les n° de la répartition sans fiche : une colonne sans nom dans une sous-requête lisait la
+    colonne de la requête extérieure (`select u_id from comptes` = toujours vrai) — colonnes nommées partout ;
+  - 17 personnes ont pour e-mail une boîte d'agence (craponne@, gtiimmobilier.ambert@wanadoo.fr…) ⇒ marquées « e-mail
+    partagé », pour qu'à l'étape 2 la nuit ne s'en serve jamais pour rattacher une nouvelle fiche.
+- **L'essai (tables temporaires, rien ne reste)** : 187 personnes, 241 fiches ou comptes — 167 négociateurs dont 33 actifs,
+  18 agences, 2 utilisateurs supprimés ; 5 comptes de l'app reliés. Liste : `REGISTRE_NEGOCIATEURS_A_VALIDER_2026-11-04.md`.
+- ⚠ La dernière marque (« e-mail partagé ») a été ajoutée après le dernier essai complet : la pose la vérifiera (une erreur
+  de texte annule toute la pose, rien ne resterait à moitié).
+
