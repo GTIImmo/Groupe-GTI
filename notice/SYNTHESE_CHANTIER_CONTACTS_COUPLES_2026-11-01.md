@@ -2001,3 +2001,25 @@ Recherche dans les notes (accents ignorés), l'historique git et la mémoire. **
 - Les 16 098 « partenaires » de Hektor sont surtout des fiches sans type ou « Autre », plus 673 demandes d'estimation et 332 candidats.
 - Les vrais professionnels sont **1 469** : 1 257 notaires, déjà traités (type Notaire du 28/10), et **~212 autres** (courtiers, apporteurs,
   banques, diagnostiqueurs…). ⇒ Un annuaire de partenaires est petit et faisable depuis le classeur de Netty.
+
+## 68. MAQUETTE « ANNUAIRE DES PARTENAIRES » *(04/11, « Oui, maquette » ; rien codé)*
+
+- **Maquette** (Design, privée) : https://claude.ai/artifact/Y7xzFasspGEyAX14v4v838. Trois planches, données FICTIVES :
+  1. l'annuaire sur ordinateur : onglets Clients / Partenaires ; les métiers à gauche, avec leur nombre ; la liste du métier choisi, triée par
+     activité avec l'agence (le nombre d'actes vient du registre des ventes) ; la fiche du partenaire à droite (appeler, écrire, chiffres avec
+     l'agence, dernières affaires, agences, source du métier, ouvrir la fiche, changer le métier) ;
+  2. le téléphone : les métiers en pastilles, des cartes avec « Appeler » et « Écrire » ;
+  3. « À classer » : les 16 098 fiches sans métier, avec un rangement proposé d'après Netty (78 notaires, 673 demandes d'estimation,
+     332 candidats, 10 165 « autre » ou sans type, 4 567 inconnues de Netty), à confirmer par lot ou une par une.
+- **L'inventaire qui la fonde** :
+  - l'annuaire v2 (, segments par rôle) ;
+  - le type Notaire et sa fiche (28/10, bleu encre et balance) ;
+  - ⭐ **le formulaire de création connaît déjà le MÉTIER d'un partenaire chez Hektor** (`hektorPartnerJobOptions`, `App.tsx` ~41067 :
+    Notaire 2, Diagnostiqueur 4, Syndic 5, Apporteur 15, Banque 19, Confrère 3…). Mais l'API de Hektor ne le RENVOIE pas : la nuit ne le lit
+    jamais, et aucune colonne chez nous ne le porte.
+- **Ce que la maquette suppose, à décider** :
+  - où vit le métier chez nous (une colonne neuve, remplie depuis Netty et confirmée à l'écran) ;
+  - si « Changer le métier » écrit chez Hektor ;
+  - si les demandes d'estimation et les candidats sortent de l'annuaire vers leurs propres écrans (leads, recrutement).
+- Les nombres de la maquette sont ceux de l'audit (§67). Les cinq cartes du tri font 15 815 ; le reste (~280) est fait de petits types
+  (webcontacts, apporteurs, administration…).
