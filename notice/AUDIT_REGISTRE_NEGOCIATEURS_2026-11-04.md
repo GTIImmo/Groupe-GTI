@@ -149,3 +149,24 @@ Hektor » serait à revoir à la coupure).
 2. **B** : avancer maintenant une partie du chapitre 26 (le registre dormant + son journal), ou le garder à sa place ?
 3. **A2 et A3** : les faire avec A1, ou à leur place dans le plan (A3 = chapitre 5) ?
 4. La plage de nos numéros de personne (proposition : ≥ 1 000 000, comme les relations et les mandats posés par l'app).
+
+## 8. LA DÉCISION DE FRÉDÉRIC (04/11) — son propre registre, sur le modèle des autres
+
+> « Je veux faire mon propre registre des négociateurs comme contacts, annonces etc… mais ne pas perdre les anciens
+> inactifs, que mon app lise direct ce registre, on utilise encore les anciens ID Hektor comme aujourd'hui pour les
+> workers etc… comme les autres registres. »
+
+**Le modèle des autres registres, relu** (`phase2/identite/registre_contacts.py`, commentaires de `app_mandat`,
+`app_relation`, `app_affaire_ledger`) : NOTRE numéro, le numéro de Hektor à côté (vide pour ce qui naît chez nous),
+**une ligne n'est jamais supprimée** (`absent_depuis` / `present_in_hektor = false`), maintenu CHAQUE NUIT après la
+couche qui fabrique la source, idempotent.
+
+**Ce que ça donne pour les négociateurs — mesuré le 04/11** : 219 fiches Hektor → **168 personnes** (regroupées par
+e-mail, à défaut par nom), dont **30 actives** et 25 à plusieurs fiches ; + 5 numéros d'utilisateur sans fiche ; + les 14
+anciens du classeur (plus tard). Numéros Hektor : négociateur jusqu'à 225, utilisateur jusqu'à 268.
+
+Deux niveaux, parce qu'une personne a plusieurs fiches chez Hektor :
+- **la personne** — notre numéro, nom, e-mail, actif ou ancien, et son compte de l'app ;
+- **ses fiches Hektor** — n° de négociateur + n° d'utilisateur + agence, rattachées une fois pour toutes ; **ce sont ces
+  numéros que les workers continuent d'utiliser**, comme aujourd'hui.
+
