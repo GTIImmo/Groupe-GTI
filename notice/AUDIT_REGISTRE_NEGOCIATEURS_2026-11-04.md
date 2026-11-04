@@ -632,3 +632,8 @@ une liste tronquée ne vide plus le menu ; `loadNegotiatorOptionForContact` retr
 REPLI (registre illisible, vide, ou colonne pas encore posée → l'ordre de mise en ligne est sans danger). Mesuré : pour
 les 30 actifs, nom, e-mail, agence, n° de négociateur, n° de compte et n° de compte d'agence IDENTIQUES à l'annuaire —
 le menu ne change pas à l'œil. Build vert. ⏳ Patch à poser (accord), puis push, puis contrôle dans un menu.
+- ✅ **PATCH POSÉ le 04/11** (Frédéric : « Oui vas y ») — migration `registre_negociateurs_agence_user_2026_11_04`, ses
+  contrôles internes passés. Mesuré après : 219 fiches de négociateur sur 219 remplies, **30 actifs sur 30 au bon compte
+  d'agence**, droits inchangés (`authenticated` : lecture seule), aucune ligne parasite au journal. Nouvelle empreinte de
+  la fonction de nuit : `725267743d8fedad1c582d830250673a` (l'INVERSE la rend à `e68a3f86…`). ⏳ Reste : le push (le front
+  lit déjà le registre dès qu'il est en ligne), puis un menu vu à l'œil.
