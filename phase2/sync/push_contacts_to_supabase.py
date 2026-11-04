@@ -70,6 +70,42 @@ def contact_nature_allume() -> bool:
     return _CONTACT_NATURE_ALLUME
 
 
+# ── CONTACTS (04/11/2026) — UN CONTACT DEJA ENVOYE RESTE A JOUR (synthese couples §61-63) ──
+# La nuit n'envoie que les ELIGIBLES. Un contact qui cesse de l'etre (recherche inactive, bien
+# archive) devrait sortir de l'app -- mais le verrou C-4 (est_ne_dans_l_app, plus bas) le prend
+# pour un contact ne dans l'app depuis la bascule du 23/09 : il n'est donc ni retire ni rafraichi.
+# Il reste FIGE (216 au 04/11, dont 104 archives chez Hektor montres actifs).
+# Le remede est celui du 14/10 pour les recherches (--garder-recherches-deja-poussees) : le
+# perimetre des CONTACTS s'elargit d'un OR aux contacts deja envoyes (etat de push local).
+# ⛔ INTERRUPTEUR APP_GARDER_CONTACTS_DEJA_POUSSES (.env) : absent = eteint, rien ne change.
+# ⚠ Le verrou C-4 n'est PAS touche : avec ce remede, il n'a plus rien a proteger (un contact
+#   deja envoye n'est plus jamais « disparu ») ; le remettre sur 20 000 000 SEUL retirerait les 216.
+# ⚠ Les statistiques de l'annuaire gardent le perimetre des eligibles (stats_contact_where).
+_GARDER_CONTACTS_ALLUME: bool | None = None
+
+
+def garder_contacts_deja_pousses_allume() -> bool:
+    global _GARDER_CONTACTS_ALLUME
+    if _GARDER_CONTACTS_ALLUME is None:
+        for env_file in DEFAULT_ENV_FILES:
+            load_env_file(env_file)
+        _GARDER_CONTACTS_ALLUME = (os.environ.get("APP_GARDER_CONTACTS_DEJA_POUSSES") or "").strip().lower() in {
+            "1", "on", "true", "oui"}
+    return _GARDER_CONTACTS_ALLUME
+
+
+def elargir_aux_contacts_deja_pousses(contact_where: str) -> str:
+    """Le perimetre des contacts, plus ceux que l'etat de push dit deja envoyes. Vide = deja tout."""
+    if not contact_where.strip():
+        return contact_where
+    deja = (f"hektor_contact_id IN (SELECT row_key FROM {PUSH_STATE_TABLE}"
+            " WHERE table_name = 'app_contact_current')")
+    base = contact_where.strip()
+    if base.upper().startswith("WHERE "):
+        base = base[6:].strip()
+    return f"WHERE (({base}) OR {deja})"
+
+
 def ajouter_nature(db_path: Path, rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Ajoute les 6 champs de nature a CHAQUE ligne (meme jeu de cles partout : PGRST102)."""
     conn = _connect(db_path)
@@ -819,6 +855,16 @@ def main() -> int:
         clause_contacts,
     )
     stats_contact_where = contact_where
+    if garder_contacts_deja_pousses_allume():
+        # APRES stats_contact_where (les compteurs restent ceux des eligibles), AVANT le filtre
+        # par contact (une relecture d'un contact deja envoye le rafraichit aussi).
+        conn = _connect(args.phase2_db)
+        try:
+            ensure_push_state(conn)  # la sous-requete la lit (table creee si la base est neuve)
+        finally:
+            conn.close()
+        contact_where = elargir_aux_contacts_deja_pousses(contact_where)
+        print("[push contacts] contacts deja envoyes gardes a jour (APP_GARDER_CONTACTS_DEJA_POUSSES)")
     if contact_ids:
         contact_id_where = sqlite_text_in("hektor_contact_id", contact_ids)
         contact_where = scoped_where(contact_where, contact_id_where)

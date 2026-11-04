@@ -1941,3 +1941,27 @@ Recherche dans les notes (accents ignorés), l'historique git et la mémoire. **
 - Une question de fond est révélée, à trancher à part : faut-il que « lié à une annonce » veuille dire « annonce non archivée » (vendus et
   estimations compris), ou « bien encore en vente » ? C'est ce qui fait que la majorité des 63 000 contacts de l'app sont des affaires passées.
   Rien n'est proposé ici : ce serait un changement de périmètre (décision de Frédéric, 8b clos « par choix »).
+
+## 64. LE REMÈDE EN UNE CLAUSE : ÉCRIT, ÉPROUVÉ À BLANC, ÉTEINT *(04/11, « oui, prépare-le »)*
+
+- **Le code** (`phase2/sync/push_contacts_to_supabase.py`) :
+  - `garder_contacts_deja_pousses_allume()` lit l'interrupteur **`APP_GARDER_CONTACTS_DEJA_POUSSES`** (.env). Il est absent, donc éteint.
+  - `elargir_aux_contacts_deja_pousses()` ajoute au périmètre des contacts un `OR` : les contacts déjà envoyés, tels que les connaît l'état
+    d'envoi local.
+  - La clause se pose APRÈS `stats_contact_where` (les compteurs de l'annuaire restent ceux des éligibles) et AVANT le filtre par contact :
+    une relecture d'un contact déjà envoyé le rafraîchit aussi.
+  - C'est le même patron que `--garder-recherches-deja-poussees` du 14/10.
+  - Aucun changement dans le run de nuit : l'interrupteur suffit.
+  - ⚠ Le verrou C-4 n'est PAS touché. Avec ce remède il n'a plus rien à protéger ; le remettre sur 20 000 000 seul retirerait les 216.
+- **Éprouvé à blanc** (la commande exacte de la nuit avec `--dry-run`, sur la vraie base ; rien n'est envoyé) :
+  - éteint : 62 952 contacts chargés, 11 à envoyer, 241 « disparues » ;
+  - **allumé : 63 168 chargés (+216), 227 à envoyer (+216), 25 « disparues »**.
+  Ces 25 sont absentes de la couche locale ET déjà absentes de Supabase (suppressions faites par l'app, contacts d'essai). Le verrou les écarte
+  de toute façon. Liens et recherches : inchangés.
+- **Essais** : `phase2/sync/test_garder_contacts_deja_pousses.py` **4/4** (dont le témoin du périmètre d'avant) ; `test_dirty_guards` vert ;
+  `phase2/checks/test_c4_suppressions.py` : ses vrais contrôles passent.
+  ⚠ Ses deux « PREUVES » échouent, mais AVANT ce changement aussi : elles comparent à `git show HEAD:…`, qui contient déjà le correctif du 23/09.
+  Le banc est périmé sur ce point : c'est noté, pas corrigé.
+- **Pour l'allumer** (ton accord) : ajouter `APP_GARDER_CONTACTS_DEJA_POUSSES=1` dans le `.env`.
+  La nuit suivante, les 216 partent. Le contrôle du lendemain doit montrer les 104 archivés passés archivés chez Supabase et la nature présente.
+  **Retour arrière** : retirer la ligne.
