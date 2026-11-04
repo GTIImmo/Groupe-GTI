@@ -2148,3 +2148,15 @@ Mesure sur la base du serveur (`app_relation` local, 132 943 liens ; types d'off
   ⏰ Contrôle du lendemain : la ligne de l'étape au journal (+31 533), l'envoi des contacts, la taille de la table, l'annuaire.
 - **Retour arrière** : retirer la ligne. La nuit suivante remet le périmètre d'avant pour la couche. ⚠ Ceux qui sont déjà envoyés RESTENT
   chez Supabase, à jour (§64) : pour les retirer, il faudrait un geste à part.
+
+- ✅ **ALLUMÉ le 04/11 vers 13:41** (« allume », contre ma recommandation d'attendre le contrôle du 05/11) :
+  `APP_PERIMETRE_REGISTRE=1` est à la fin du `.env`, avec son commentaire, et une copie datée du `.env` d'avant est gardée.
+  Vérifié à blanc, lu depuis le `.env` : 31 533 à faire entrer.
+  ⚠ Cette nuit font donc leur premier tour ENSEMBLE : le remède des contacts figés (§64), la règle « _Mr/Mme » (§57 ter) et ce périmètre.
+  ⏰ **Le 05/11 au matin** :
+  - l'étape au journal (« annuaire apres … (+31 533) », vérification OK) ;
+  - l'envoi des contacts (~31 750 envois : les 31 533 et les 216, 0 suppression) ;
+  - la taille de `app_contact_current` chez Supabase (~317 → ~480 Mo) ;
+  - la durée du run ;
+  - l'annuaire à l'écran ;
+  - EA32621 en couple.
