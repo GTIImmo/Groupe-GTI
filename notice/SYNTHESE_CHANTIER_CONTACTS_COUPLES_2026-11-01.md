@@ -1858,3 +1858,28 @@ Aucun redémarrage n'est nécessaire : chaque relecture relit le `.env`.
      Et le verrou est remis sur 20 000 000, pour qu'il dise ce qu'il veut dire. Il n'aurait alors plus rien à retirer, sauf un contact
      sorti de la couche locale ; or la couche garde même un contact supprimé chez Hektor quand un bien le cite (`supprimee_chez_hektor`).
   C. ne rien faire : 104 contacts restent faussement actifs, et le nombre grandit à chaque contact qui s'endort.
+
+## 61 bis. CE QUE LE PROJET AVAIT DÉJÀ FAIT SUR CE SUJET *(04/11, « attention, nous avons déjà fait un chantier sur ce problème, audite en profondeur pour le retrouver »)*
+
+Recherche dans les notes (accents ignorés), l'historique git et la mémoire. **Cinq chantiers touchent ce sujet ; aucun ne le règle :**
+1. **11/09 — l'élargissement du périmètre** (`elargir_perimetre_console.py`) : une personne nommée dans une transaction reste dans l'app
+   (règle `console_transaction_party`). Il était FAIT pour que les vendeurs et acquéreurs d'un bien sorti du parc ne disparaissent pas.
+2. **21/09 — C.16, les contacts que Hektor ne connaît plus** (`marquer_contacts_disparus.py`) : « ON NE SUPPRIME JAMAIS, ON MARQUE »
+   (`absent_depuis`). Sa note disait alors que les fiches qui perdent leur éligibilité « ont quitté l'app d'elles-mêmes ». C'était vrai AVANT
+   la bascule.
+3. **23/09 — C-4, pendant la bascule** (`AUDIT_COMPLET_AVANT_BASCULE` §C-4) : le verrou « un contact né dans l'app n'est jamais déclaré
+   disparu », posé à `>= 10 000 000`. ⇒ **C'est l'origine** : la même bascule a mis tous les contacts dans cette plage, et le distributeur
+   des contacts nés dans l'app à 20 000 000 (22/09).
+4. **14/10 — les recherches orphelines** (`AUDIT_RECHERCHES_ORPHELINES` et `CORRECTIFS_RECHERCHES_MESURES`). ⭐ **Le symptôme y est déjà
+   écrit** : « Le contact n'est pas supprimé de Supabase — il n'est simplement plus mis à jour. Seules ses recherches sont retirées. »
+   (35 contacts, `eligible = 0` en local et vrai dans Supabase.) Le correctif posé, **B**, garde les RECHERCHES des contacts déjà envoyés
+   (`--garder-recherches-deja-poussees`, allumé dans `run_quotidien.ps1`). Mais il ne rafraîchit pas la FICHE du contact, et la cause
+   (le verrou) n'a pas été cherchée.
+5. **15/10 — ⑦-1, archiver un contact** : il note le risque « sortir de l'éligibilité → supprimé du cloud la nuit suivante, comme les
+   35 fiches du 14/10 ». ⚠ Ce n'était pas le cas : elles n'avaient PAS été supprimées (point 4). Trois sorties y sont proposées (refuser,
+   avertir, refuser seulement si c'est la dernière raison) : **rien n'est décidé**.
+
+**Ce que ça change à ma proposition du §61** : rien sur le fond, et deux appuis de plus.
+- **B prolonge exactement la décision du 14/10.** On garde déjà les recherches d'un contact déjà envoyé ; on garderait aussi sa fiche, à jour.
+- **A est contraire à la règle de C.16** (« on ne supprime jamais, on marque ») et à l'élargissement du 11/09.
+- ⚠ Une conséquence pour ⑦-1 : son risque « supprimé du cloud » n'existe pas aujourd'hui. Avec B, il n'existerait plus du tout.
