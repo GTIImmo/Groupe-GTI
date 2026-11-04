@@ -17919,35 +17919,19 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       if (!courante && chargeOffre && !statusChangeCommissionTouchee) {
         setStatusChangeChargeCommission(chargeOffre)
         setStatusChangeCommissionTouchee(true)
-      } else if (!courante && !chargeOffre && !statusChangeCommissionTouchee) {
-        // ⑧ (04/11/2026) : LE PREMIER ACTE D'UN DOSSIER -- LA CHARGE VIENT DU MANDAT.
-        //
-        // SA DECISION : « a la creation d'une transaction dans un nouveau dossier
-        //   chaine, la modale propose la charge a partir du mandat lie, en
-        //   pre-remplissage. C'est tout. Il faut surtout rien changer au reste. »
-        //
-        // ⛔ CETTE BRANCHE NE S'OUVRE QUE SI LES DEUX AUTRES SE TAISENT :
-        //   . `courante` vide  -> on CREE (en modification, la transaction fait foi,
-        //     et c'est normal : la modale lit le registre des AFFAIRES)
-        //   . `chargeOffre` vide -> RIEN A REPRENDRE dans la chaine, donc c'est le
-        //     premier acte (offre, compromis ou vente : peu importe lequel)
-        //   . `statusChangeCommissionTouchee` faux -> l'humain n'a pas choisi
-        //   L'ordre de priorite est donc : SAISIE > la chaine > LE MANDAT > defaut.
-        //
-        // ⚠ QUEL MANDAT. La case de la modale est souvent vide (« Attribue
-        //   automatiquement si vide ») : on prend alors celui du dossier ouvert,
-        //   comme le fait deja le bloc « VIE DU MANDAT » (l. 21166).
-        const numeroMandat = String(statusChangeSelectedMandat
-          || selectedDossier?.numero_mandat || '').trim()
-        const chargeMandat = numeroMandat
-          ? String(chargeParMandat[numeroMandat] ?? '').trim() : ''
-        if (chargeMandat) {
-          setStatusChangeChargeCommission(chargeMandat)
-          setStatusChangeCommissionTouchee(true)
-          setNoticeMessage(`Charge des honoraires reprise du mandat ${numeroMandat} :`
-            + ` ${chargeMandat}. Modifiez-la si elle a changé.`)
-        }
       }
+      // ⛔ 04/11/2026 : J'AVAIS MIS ICI LA REPRISE DEPUIS LE MANDAT. ELLE NE S'EST
+      //   JAMAIS EXECUTEE, et c'est l'essai de Frederic qui l'a montre (« je ne le
+      //   vois pas »). DEUX gardes de CET effet la rendaient inaccessible, et elles
+      //   se cumulaient exactement dans le cas vise :
+      //     . sa 1re ligne sort si le statut n'est ni « compromise » ni « sold »
+      //       -> l'OFFRE etait exclue d'emblee ;
+      //     . `if (!cle) return` sort s'il n'y a aucun dossier OUVERT -> or « le
+      //       premier acte d'un NOUVEAU dossier » est precisement ce cas-la.
+      //   ⭐ LA LECON : un build vert ne dit pas que le code est ATTEINT. J'avais
+      //     audite le COMPORTEMENT de cette reprise, pas ses CONDITIONS D'ENTREE.
+      //   ➡ Elle vit maintenant dans SON PROPRE effet, plus bas, qui ne depend ni
+      //     du statut choisi ni de la chaine. Cet effet-ci n'est pas touche.
       return
     }
     setStatusChangeHonorairesEntree(repris)
@@ -17957,15 +17941,60 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     if (charge) setStatusChangeChargeCommission(charge)
     setNoticeMessage(`Commission reprise de l'offre : ${repris}. Modifiez-la si elle a change.`)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    // ⚠⚠ `chargeParMandat` EST OBLIGATOIRE DANS CETTE LISTE (04/11/2026) : elle
-    //   arrive d'une lecture ASYNCHRONE du registre. Sans elle, l'effet tournait
-    //   une fois AVANT l'arrivee de la charge, ne posait rien, et ne se rejouait
-    //   JAMAIS -- le pre-remplissage n'aurait marche qu'un coup sur deux, au hasard
-    //   de la course entre le reseau et l'ouverture de la modale.
-    //   ⭐ Rejouer est SANS DANGER : les trois gardes du debut tiennent, et
-    //     `statusChangeCommissionTouchee` interdit de repasser sur un choix humain.
-  }, [statusChangeAffaires, statusChangeStatus, statusChangeAffaireChoisie,
-      chargeParMandat, statusChangeSelectedMandat, selectedDossier?.numero_mandat])
+  }, [statusChangeAffaires, statusChangeStatus, statusChangeAffaireChoisie])
+
+  /** ⑧ (04/11/2026) — LE PREMIER ACTE D'UN DOSSIER REPREND LA CHARGE DU MANDAT.
+   *
+   *  SA DEMANDE, DANS SES MOTS : « uniquement a la creation d'une transaction dans
+   *  un nouveau dossier chaine, la modal propose la charge a partir du mandat lie
+   *  en pre remplissage, c'est tout. Il faut surtout rien changer au reste. »
+   *
+   *  ⛔ POURQUOI UN EFFET A PART, ET PAS UNE BRANCHE DANS CELUI DU DESSUS : j'avais
+   *    essaye, et ca N A JAMAIS TOURNE. Cet effet-la sort si le statut n'est ni
+   *    « compromise » ni « sold » (donc jamais pour une OFFRE), puis une seconde
+   *    fois s'il n'y a aucun dossier OUVERT -- or « premier acte d'un NOUVEAU
+   *    dossier » veut precisement dire qu'il n'y en a pas. Les deux gardes se
+   *    cumulaient dans le seul cas vise.
+   *
+   *  L'ORDRE DE PRIORITE, et il est tenu par la POSITION de cet effet :
+   *    SAISIE HUMAINE  >  la CHAINE (l'offre)  >  LE MANDAT  >  defaut « vendeur »
+   *    React execute les effets dans l'ordre de declaration. Celui du dessus passe
+   *    donc en premier et, s'il reprend quelque chose, il leve
+   *    `statusChangeCommissionTouchee` -- ce qui ferme la porte a celui-ci.
+   *
+   *  ⚠ ET ON LE VERIFIE QUAND MEME, sans se fier au seul ordre : on refait le test
+   *    de la charge portee par l'offre de la chaine, et on s'abstient si elle en a
+   *    une. Deux verrous valent mieux qu'un ordre de declaration.
+   *
+   *  ⚠ `chargeParMandat` arrive d'une lecture ASYNCHRONE : elle DOIT etre dans les
+   *    dependances, sinon l'effet tourne avant son arrivee et ne se rejoue jamais.
+   */
+  useEffect(() => {
+    if (!statusChangeTarget) return                 // la modale est fermee
+    if (statusChangeCommissionTouchee) return       // saisie, ou deja repris
+    if (affaireCourantePourStatut()) return         // on MODIFIE : la transaction fait foi
+    // ⚠ RIEN NE DOIT VENIR DE LA CHAINE : si l'offre du dossier porte une charge,
+    //   c'est ELLE qui compte, et l'effet du dessus s'en charge.
+    const cle = repartitionChaineId()
+    if (cle) {
+      const offre = statusChangeAffaires.find((a) => String(a.kind) === 'offre'
+        && String(a.app_chaine_id) === cle)
+      if (String(offre?.charge_commission_app ?? '').trim()) return
+    }
+    // ⚠ QUEL MANDAT : celui saisi dans la modale s'il y en a un, sinon celui du bien
+    //   vise. La case est souvent vide (« Attribue automatiquement si vide »).
+    const numeroMandat = String(statusChangeSelectedMandat
+      || statusChangeTarget?.numero_mandat || '').trim()
+    if (!numeroMandat) return
+    const chargeMandat = String(chargeParMandat[numeroMandat] ?? '').trim()
+    if (!chargeMandat) return
+    setStatusChangeChargeCommission(chargeMandat)
+    setStatusChangeCommissionTouchee(true)
+    setNoticeMessage(`Charge des honoraires reprise du mandat ${numeroMandat} :`
+      + ` ${chargeMandat}. Modifiez-la si elle a changé.`)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusChangeTarget, statusChangeCommissionTouchee, statusChangeAffaires,
+      chargeParMandat, statusChangeSelectedMandat, statusChangeTarget?.numero_mandat])
 
   /** Ajoute une condition, du catalogue ou libre. Trente au maximum -- la base
    *  en refuse davantage, et l'ecran doit dire la meme chose qu'elle. */
