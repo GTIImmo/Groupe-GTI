@@ -1009,6 +1009,24 @@ def normalize_broadcast_rows(rows: list[dict[str, object]]) -> list[dict[str, ob
     return list(normalized_by_key.values())
 
 
+def broadcast_compare_keys(rows: Iterable[dict[str, object]]) -> set[tuple[int, str, str, str]]:
+    # 04/11/2026 -- l'ETAT fait partie de la cle comparee. Avant, seule la cle (dossier, portail,
+    # commercial) l'etait : un portail passe de « error » a « broadcasted » chez Hektor (ou l'inverse)
+    # n'etait JAMAIS renvoye -- mesure du 04/11 : 12 lignes / 8 annonces figees « error » dans Supabase
+    # depuis juin-octobre alors que Hektor les disait exportees (18680, 61680, 62171...). Un changement
+    # d'etat fait maintenant remplacer les lignes de CE dossier, comme un portail ajoute ou retire.
+    return {
+        (
+            int(row["app_dossier_id"]),
+            str(row["passerelle_key"] or ""),
+            str(row.get("commercial_key") or ""),
+            str(row.get("current_state") or ""),
+        )
+        for row in rows
+        if row.get("app_dossier_id") is not None and row.get("passerelle_key") is not None
+    }
+
+
 def map_hashes(rows: list[dict[str, object]], *, id_key: str) -> dict[int, str]:
     return {int(row[id_key]): str(row["source_hash"]) for row in rows}
 
@@ -1549,7 +1567,7 @@ def main() -> None:
         )
         remote_broadcast_rows = client.fetch_rows_by_ids(
             path="app_mandat_broadcast_current",
-            select="app_dossier_id,passerelle_key,commercial_key",
+            select="app_dossier_id,passerelle_key,commercial_key,current_state",
             id_column="app_dossier_id",
             ids=sorted(set(candidate_ids) | set(stale_ids) | set(broadcast_candidate_ids)),
             order="app_dossier_id.asc",
@@ -1614,15 +1632,8 @@ def main() -> None:
                 for app_dossier_id in (set(candidate_ids) | set(local_work_hashes) | set(remote_work_hashes))
                 if local_work_hashes.get(app_dossier_id, []) != remote_work_hashes.get(app_dossier_id, [])
             )
-        remote_broadcast_keys = {
-            (int(row["app_dossier_id"]), str(row["passerelle_key"] or ""), str(row.get("commercial_key") or ""))
-            for row in remote_broadcast_rows
-            if row.get("app_dossier_id") is not None and row.get("passerelle_key") is not None
-        }
-        local_broadcast_keys = {
-            (int(row["app_dossier_id"]), str(row["passerelle_key"] or ""), str(row.get("commercial_key") or ""))
-            for row in current_broadcasts
-        }
+        remote_broadcast_keys = broadcast_compare_keys(remote_broadcast_rows)
+        local_broadcast_keys = broadcast_compare_keys(current_broadcasts)
         if args.full_rebuild:
             broadcast_replace_ids = sorted(set(broadcast_candidate_ids) | {key[0] for key in remote_broadcast_keys})
         else:
