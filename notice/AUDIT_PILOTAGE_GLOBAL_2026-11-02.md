@@ -1143,3 +1143,15 @@ Mesuré sans appeler Hektor : la table locale `hektor_negociateur` (219 fiches) 
 **3. Les 14 anciens du classeur** (2017-2025, avant Hektor) : un nom, aucun numéro, nulle part (`AUDIT_REPARTITION_ANCIENS_NEGOCIATEURS_2026-11-01.md`).
 
 ⇒ **Le pilotage par négociateur couvre le groupe 1, pas les groupes 2 et 3.** C'est la même question que le §40 quater : un registre des négociateurs à nous garderait ces personnes, leurs fiches et leurs noms, au lieu de dépendre de ce que Hektor liste encore.
+
+### 40 sexies. ✅ Le filtre par négociateur EN LIGNE, contrôlé sur les vraies données (04/11, bundle `index-B_Dop7fy.js`)
+
+Claire RIBBES (négociateur 15 / utilisateur 39), dans le Chrome de Frédéric, comparé à la base :
+- **Ventes** : 100 083 € HT de part d'honoraires, 18 actes — = la base (120 100 € TTC / 1,2) ;
+- **Mandats 2026** : 38 — = la base ; **Stock** : 18 + 45 = 63 biens en vente — = la base ;
+- **Acquéreurs** : 1 045 fiches, 955 vivantes, 268 créées en 2026 — = la base (fiches au n° de négociateur 15) ;
+- **Classements** : tout le réseau, sa ligne surlignée ; **contrôle** : 342 lignes rattachées par le numéro, 0 par le nom,
+  0 désaccord.
+- Le sélecteur propose 42 personnes. ⚠ À reprendre quand l'écran lira le registre (étape 3) : Pauline GIRINON, Caroline
+  GERPHAGNON et Delphine BLANCHARD y sont « · ancien » (leurs fiches de négociateur sont inactives ; le registre, lui, les
+  sait actives par leur compte de secrétaire), et les comptes d'agence « Groupe GTI », « gti immobilier » y figurent.
