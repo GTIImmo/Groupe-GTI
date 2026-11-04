@@ -1,0 +1,135 @@
+/* ── Les deux fenetres au TELEPHONE (04/11/2026, maquette validee par Frederic) ───────────────────
+   « Demande a la Direction » (bouton Action) et « Changer le statut ». Au telephone, chacune devient un
+   panneau qui monte du bas, avec une barre d'action fixe. AU BUREAU, RIEN NE CHANGE : tout est sous
+   @media (max-width: 767px), et les ajouts .rq-mobile sont masques au bureau.
+   Rien de ce qui est enregistre ou envoye a Hektor n'est touche : seulement la presentation. */
+.rq-mobile { display: none; }
+
+@media (max-width: 767px) {
+  /* panneau du bas, commun aux deux fenetres */
+  .modal-overlay:has(> .request-modal-v3), .modal-overlay:has(> .status-change-modal) { display: flex !important; align-items: flex-end !important; justify-content: center !important; padding: 0 !important; }
+  .modal-overlay > .request-modal-v3, .modal-overlay > .status-change-modal {
+    width: 100% !important; max-width: 100% !important; max-height: 94vh !important; margin: 0 !important;
+    border-radius: 22px 22px 0 0 !important; display: flex !important; flex-direction: column !important;
+    box-shadow: 0 -10px 40px rgba(12, 19, 28, .25) !important;
+  }
+  /* LE DEFAUT MESURE : la colonne tassait ses enfants (carte de resume 430 px ecrasee a 56 px, contenu
+     coupe). Plus aucun enfant ne retrecit ; c'est le panneau qui defile. */
+  .request-modal-v3 { overflow-y: auto !important; overscroll-behavior: contain; padding: 0 16px 0 !important; }
+  .request-modal-v3 > * { flex-shrink: 0 !important; }
+  .rq-mobile { display: flex; }
+
+  /* en-tete compact, colle en haut, avec la poignee */
+  .request-modal-v3 > .request-modal-head, .status-change-modal > .status-change-head {
+    position: sticky; top: 0; z-index: 3; margin: 0 -16px !important; padding: 18px 16px 12px !important;
+    background: #fff !important; border-bottom: 1px solid rgba(34, 35, 35, .08); display: flex !important; align-items: center !important; gap: 10px !important;
+  }
+  .request-modal-v3 > .request-modal-head::before, .status-change-modal > .status-change-head::before {
+    content: ""; position: absolute; top: 7px; left: 50%; width: 42px; height: 5px; margin-left: -21px; border-radius: 9px; background: #d6d9da;
+  }
+  .request-modal-head h3, .status-change-head h3 { font-size: 17px !important; margin: 0 !important; color: #222323 !important; }
+  .request-modal-head .eyebrow, .status-change-head .eyebrow { font-size: 10.5px !important; margin: 0 0 2px !important; }
+  .status-change-head .modal-hero-icon { display: none !important; }
+  .request-modal-head .request-type-chip { display: none !important; }
+  /* « Fermer » devient un rond ✕ */
+  .request-modal-head .request-modal-close, .status-change-head > .ghost-button {
+    flex: 0 0 38px !important; width: 38px !important; height: 38px !important; min-height: 0 !important; padding: 0 !important; margin-left: auto !important;
+    border-radius: 50% !important; background: #f1f2f3 !important; border: 0 !important; font-size: 0 !important; color: #3b4143 !important;
+    display: grid !important; place-items: center !important;
+  }
+  .request-modal-head .request-modal-close::before, .status-change-head > .ghost-button::before { content: "✕"; font-size: 15px; font-weight: 700; }
+
+  /* barre d'action fixe en bas : le bouton principal en grand, « Annuler » en lien */
+  .request-modal-v3 > .modal-actions, .status-change-form .modal-actions {
+    position: sticky !important; bottom: 0; z-index: 3; margin: 8px -16px 0 !important; padding: 12px 16px calc(14px + env(safe-area-inset-bottom)) !important;
+    background: #fff !important; border-top: 1px solid rgba(34, 35, 35, .08) !important; display: flex !important; flex-direction: column-reverse !important; gap: 6px !important;
+  }
+  .request-modal-v3 > .modal-actions .button-primary, .status-change-form .modal-actions .button-primary {
+    width: 100% !important; min-height: 52px !important; border-radius: 14px !important; font-size: 15.5px !important; font-weight: 800 !important;
+  }
+  .request-modal-v3 > .modal-actions .button-subtle, .status-change-form .modal-actions .button-subtle {
+    width: 100% !important; min-height: 40px !important; background: transparent !important; border: 0 !important; box-shadow: none !important; color: #5c6163 !important; font-weight: 700 !important;
+  }
+
+  /* ── la demande ── */
+  .request-modal-v3 .modal-subline { margin: 10px 0 0 !important; font-size: 12.5px !important; color: #5c6163 !important; }
+  .request-modal-v3 .request-summary-card { margin-top: 10px !important; border-radius: 16px !important; }
+  .request-modal-v3 .request-summary-hero { grid-template-columns: 64px minmax(0, 1fr) !important; gap: 12px !important; align-items: center !important; }
+  .request-modal-v3 .request-summary-illus { width: 64px !important; height: 64px !important; overflow: hidden; }
+  .request-modal-v3 .request-summary-illus svg { width: 64px !important; height: 64px !important; }
+  .request-modal-v3 .request-summary-heading { font-size: 17px !important; }
+  .request-modal-v3 .request-summary-metrics { grid-template-columns: 1fr 1fr !important; }
+  .request-modal-v3 .rq-type-select { display: none !important; }
+  .request-modal-v3 .request-form-grid { grid-template-columns: 1fr !important; }
+  .rq-tabs { gap: 4px; padding: 4px; border-radius: 14px; background: #f1f2f3; margin-top: 12px; }
+  .rq-tabs button { flex: 1; min-height: 40px; border: 0; border-radius: 10px; background: transparent; font: inherit; font-size: 12.5px; font-weight: 800; color: #5c6163; cursor: pointer; }
+  .rq-tabs button.on { background: #fff; color: #c5005f; box-shadow: 0 1px 3px rgba(0, 0, 0, .12); }
+  .rq-tabs button:disabled:not(.on) { opacity: .45; }
+  .rq-track { align-items: flex-start; margin-top: 14px; }
+  .rq-st { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; font-size: 11px; font-weight: 700; color: #9da0a0; position: relative; }
+  .rq-st i { width: 30px; height: 30px; border-radius: 50%; border: 2.5px solid #dfe2e3; background: #fff; display: grid; place-items: center; font-style: normal; font-size: 12px; font-weight: 800; z-index: 1; box-sizing: border-box; }
+  .rq-st::after { content: ""; position: absolute; top: 14px; left: calc(50% + 15px); right: calc(-50% + 15px); height: 2.5px; background: #dfe2e3; }
+  .rq-st:last-child::after { display: none; }
+  .rq-st.ok { color: #2f7d59; } .rq-st.ok i { border-color: #2f7d59; background: #2f7d59; color: #fff; } .rq-st.ok::after { background: #2f7d59; }
+  .rq-st.cur { color: #3f7fa6; } .rq-st.cur i { border-color: #3f7fa6; color: #3f7fa6; box-shadow: 0 0 0 5px rgba(63, 127, 166, .14); }
+  .rq-st.fix { color: #b65f0c; } .rq-st.fix i { border-color: #dd7a18; color: #dd7a18; box-shadow: 0 0 0 5px rgba(221, 122, 24, .16); }
+  .rq-st.ko { color: #b13d33; } .rq-st.ko i { border-color: #d15347; background: #d15347; color: #fff; }
+  .request-modal-v3 .request-message-field textarea { min-height: 104px !important; border-radius: 14px !important; font-size: 15px !important; }
+  .rq-sugg { flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .rq-sugg button { border: 0; border-radius: 16px; padding: 7px 11px; background: #f1f2f3; color: #3b4143; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+  .rq-sugg button:active { background: #fdf0f6; color: #8c0044; }
+
+  /* ── changer le statut ── */
+  .status-change-modal { overflow: hidden !important; }
+  .status-change-modal .status-change-form { flex: 1 1 auto !important; min-height: 0 !important; overflow-y: auto !important; overscroll-behavior: contain; padding: 12px 16px 0 !important; }
+  .status-change-modal .status-change-summary { padding: 12px 14px !important; border-radius: 14px !important; }
+  /* les 5 statuts : une rangee de pastilles au lieu de 5 cartes de 98 px */
+  .status-change-form > .status-choice-grid { display: flex !important; flex-wrap: nowrap !important; overflow-x: auto !important; gap: 6px !important; margin-top: 12px !important; padding-bottom: 2px; scrollbar-width: none; }
+  .status-change-form > .status-choice-grid > .status-choice-card {
+    flex: 0 0 auto !important; min-height: 42px !important; padding: 0 16px !important; border-radius: 21px !important;
+    display: flex !important; align-items: center !important; justify-content: center !important; white-space: nowrap;
+  }
+  .status-change-form > .status-choice-grid > .status-choice-card span { display: none !important; }
+  .status-change-form > .status-choice-grid > .status-choice-card strong { font-size: 14px !important; }
+  .status-change-form > .status-choice-grid > .status-choice-card.is-selected { border-color: #c5005f !important; background: #fdf0f6 !important; color: #8c0044 !important; }
+  .st-desc { display: block; margin: 6px 2px 4px; font-size: 12.5px; color: #5c6163; }
+  .status-change-modal .status-change-section { border-radius: 16px !important; padding: 14px !important; margin-top: 12px !important; }
+  .status-change-modal .filter-field input, .status-change-modal .filter-field select, .status-change-modal input[type="text"], .status-change-modal input[type="date"], .status-change-modal input[type="number"] {
+    min-height: 46px !important; border-radius: 12px !important; font-size: 15px !important;
+  }
+  .status-change-modal .admin-form-grid { grid-template-columns: 1fr 1fr !important; gap: 10px !important; }
+  .st-warn { display: block; border-radius: 14px; background: #fff1ef; border: 1px solid #f3c9c3; padding: 12px 14px; margin-bottom: 10px; font-size: 12.5px; line-height: 1.45; font-weight: 600; color: #8c3329; }
+  .st-warn b { display: block; font-size: 13.5px; margin-bottom: 2px; }
+
+  /* mesure : l'en-tete de la demande garde son fond SOMBRE d'origine (plus specifique, on le garde : il est
+     reussi) mais il etait en colonne et « Fermer » prenait 375 px. Titre et ✕ sur une ligne. */
+  .modal-overlay > .request-modal-v3 > .request-modal-head { flex-direction: row !important; align-items: center !important; padding: 18px 16px 14px !important; }
+  .modal-overlay > .request-modal-v3 > .request-modal-head > .request-modal-title { flex: 1 1 auto !important; min-width: 0 !important; }
+  .modal-overlay > .request-modal-v3 > .request-modal-head > .request-modal-close { flex: 0 0 38px !important; width: 38px !important; max-width: 38px !important; background: rgba(255, 255, 255, .14) !important; color: #fff !important; }
+  .modal-overlay > .request-modal-v3 > .request-modal-head h3 { color: #fff !important; }
+  .modal-overlay > .request-modal-v3 > .request-modal-head::before { background: rgba(255, 255, 255, .35); }
+  /* le panneau de la demande garde un retrait de 0 (regle existante plus forte) : l'en-tete et la barre du bas
+     ne se decalent donc pas de -16 px */
+  .modal-overlay > .request-modal-v3 > .request-modal-head, .modal-overlay > .request-modal-v3 > .modal-actions { margin-left: 0 !important; margin-right: 0 !important; }
+  /* ordre a l'ecran (le code garde le sien) : en-tete, sous-ligne, onglets du type, resume, suivi, puis le reste */
+  .modal-overlay > .request-modal-v3 > * { order: 10; }
+  .modal-overlay > .request-modal-v3 > .request-modal-head { order: 0; }
+  .modal-overlay > .request-modal-v3 > .modal-subline { order: 1; }
+  .modal-overlay > .request-modal-v3 > .rq-tabs { order: 2; }
+  .modal-overlay > .request-modal-v3 > .request-summary-card { order: 3; }
+  .modal-overlay > .request-modal-v3 > .rq-track { order: 4; }
+  .modal-overlay > .request-modal-v3 > .modal-actions { order: 99; }
+  .modal-overlay > .request-modal-v3 > .rq-tabs, .modal-overlay > .request-modal-v3 > .rq-track, .modal-overlay > .request-modal-v3 > .rq-sugg { margin-left: 16px; margin-right: 16px; }
+  /* mesure (statut) : le formulaire est une GRILLE qui tassait ses lignes -- la rangee de pastilles faisait
+     2 px de haut et chevauchait la suite. Au telephone : une colonne, aucun enfant ne retrecit. */
+  .modal-overlay > .status-change-modal .status-change-form { display: flex !important; flex-direction: column !important; gap: 12px !important; }
+  .modal-overlay > .status-change-modal .status-change-form > * { flex-shrink: 0 !important; margin-top: 0 !important; }
+  .modal-overlay > .status-change-modal > .status-change-head { margin-left: 0 !important; margin-right: 0 !important; }
+  .modal-overlay > .status-change-modal .status-change-form > .modal-actions { margin-left: -16px !important; margin-right: -16px !important; }
+  /* en-tete du statut : fond sombre d'origine garde, titre et ✕ sur une ligne */
+  .modal-overlay > .status-change-modal > .status-change-head { flex-direction: row !important; align-items: center !important; justify-content: flex-start !important; text-align: left !important; padding: 18px 16px 14px !important; }
+  .modal-overlay > .status-change-modal > .status-change-head > div { flex: 1 1 auto !important; min-width: 0 !important; text-align: left !important; }
+  .modal-overlay > .status-change-modal > .status-change-head > .ghost-button { flex: 0 0 38px !important; width: 38px !important; max-width: 38px !important; background: rgba(255, 255, 255, .14) !important; color: #fff !important; }
+  .modal-overlay > .status-change-modal > .status-change-head h3 { color: #fff !important; }
+  .modal-overlay > .status-change-modal > .status-change-head::before { background: rgba(255, 255, 255, .35); }
+}

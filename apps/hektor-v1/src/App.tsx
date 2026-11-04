@@ -271,6 +271,7 @@ import './ajout-conjoint.css'
 import RechercheGlobale, { type GroupeRecherche } from './RechercheGlobale'
 import './fil-navigation.css'
 import './suivi-travaux.css'
+import './modales-telephone.css'
 import { compterAnnoncesAilleurs, type AnnoncesAilleurs } from './lib/api'
 import { bvs, bvt } from './lib/bienvuTexte'
 import { MENTION_AVENANT, MENTION_MANDAT, repereHtml, repereSignature, zoneMentionHtml } from './lib/signatureAnchors'
@@ -22321,6 +22322,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                     </button>
                   ))}
                 </div>
+                {/* 04/11 -- TELEPHONE (.rq-mobile) : les statuts y sont des pastilles ; leur description passe
+                    sous la rangee, pour le statut choisi seulement. */}
+                <p className="rq-mobile st-desc">{hektorStatusTargetOptions.find((option) => option.value === statusChangeStatus)?.description ?? ''}</p>
                 {statusChangeNeedsTransaction(statusChangeStatus) ? (
                   <>
                     <section className="status-change-section">
@@ -22923,6 +22927,12 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                   </>
                 ) : statusChangeStatus === 'closed' ? (
                   <section className="status-change-section">
+                    {/* 04/11 -- TELEPHONE : un geste lourd s'annonce. Seulement ce que le code fait SUREMENT
+                        (la diffusion coupee ; le statut chez Hektor, date et raison chez nous). */}
+                    <div className="rq-mobile st-warn" role="note">
+                      <b>Clôturer le mandat {statusChangeTarget.numero_mandat ?? ''}</b>
+                      La diffusion sur les portails sera coupée. Le statut « Clos » part chez Hektor ; la date et la raison restent chez nous. S'il y a une offre ou un compromis en cours, vérifie-les avant de clôturer.
+                    </div>
                     <div>
                       <p className="eyebrow">Cloture mandat</p>
                       {/* 3c (13/10/2026) : CE TEXTE DISAIT FAUX. « Motif transmis à Hektor »
@@ -23657,9 +23667,40 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                   </article>
                 </div>
               </section>
+              {/* 04/11 -- TELEPHONE seulement (.rq-mobile, masque au bureau) : le suivi de la demande en 3 etapes
+                  (meme sens que le sceau du bouton Action) et le type en onglets. Memes regles que le menu
+                  deroulant ci-dessous (types desactives, verrouillage pendant une demande en cours). */}
+              {(() => {
+                const st = requestModalRequest?.request_status ?? null
+                const etape = !st ? 1 : st === 'accepted' || st === 'refused' ? 3 : 2
+                const fin = st === 'accepted' ? 'Acceptée' : st === 'refused' ? 'Refusée' : 'Décision'
+                const milieu = st === 'waiting_commercial' ? 'À corriger' : st === 'in_progress' ? 'En cours' : 'Envoyée'
+                const cls = (n: number) => (n < etape || (n === 3 && etape === 3 && st === 'accepted') ? 'ok' : n === etape ? (n === 2 && st === 'waiting_commercial' ? 'fix' : n === 3 && st === 'refused' ? 'ko' : 'cur') : '')
+                return (
+                  <div className="rq-mobile rq-track" aria-label="Où en est la demande">
+                    {[['Préparée', 1], [milieu, 2], [fin, 3]].map(([label, n]) => (
+                      <span key={String(n)} className={`rq-st ${cls(Number(n))}`}><i aria-hidden="true">{cls(Number(n)) === 'ok' ? '✓' : String(n)}</i>{String(label)}</span>
+                    ))}
+                  </div>
+                )
+              })()}
+              {requestModalRole !== 'pauline' ? (
+                <div className="rq-mobile rq-tabs" role="tablist" aria-label="Type de demande">
+                  {requestTypeOptions.map((option) => {
+                    const verrou = Boolean(requestModalRequest && (requestModalRequest.request_status === 'pending' || requestModalRequest.request_status === 'in_progress' || requestModalRequest.request_status === 'waiting_commercial'))
+                    const interdit = (option.value === 'demande_baisse_prix' && !requestModalEligibleForPriceDrop) || (option.value === 'demande_annulation_mandat' && !requestModalEligibleForCancellation)
+                    const actif = requestModalEffectiveType === option.value
+                    return (
+                      <button key={option.value} type="button" role="tab" aria-selected={actif} className={actif ? 'on' : ''} disabled={(verrou && !actif) || interdit} onClick={() => setRequestModalType(option.value as BusinessRequestType)}>
+                        {option.value === 'demande_baisse_prix' ? 'Baisse de prix' : option.value === 'demande_annulation_mandat' ? 'Annulation' : 'Validation'}
+                      </button>
+                    )
+                  })}
+                </div>
+              ) : null}
               {requestModalRole !== 'pauline' ? (
                 <div className="admin-form-grid request-form-grid">
-                  <label className="filter-field">
+                  <label className="filter-field rq-type-select">
                     <span>Type de demande</span>
                     <select
                       value={requestModalEffectiveType}
@@ -23729,6 +23770,13 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                   }
                 />
               </label>
+              {requestModalRole !== 'pauline' && requestModalEffectiveType === 'demande_diffusion' ? (
+                <div className="rq-mobile rq-sugg" aria-label="Réponses rapides">
+                  {['Mandat signé', 'Photos ajoutées', 'Prix validé avec le vendeur', 'Merci de valider le bien'].map((texte) => (
+                    <button key={texte} type="button" onClick={() => setRequestModalComment((courant) => (courant.trim() ? `${courant.trim()} ${texte}.` : `${texte}.`))}>{texte}</button>
+                  ))}
+                </div>
+              ) : null}
               {requestModalRole === 'pauline' ? (
                 <div className="admin-form-grid request-form-grid">
                   <label className="filter-field">
