@@ -1818,3 +1818,12 @@ Aucun redémarrage n'est nécessaire : chaque relecture relit le `.env`.
   Vérifié à blanc : l'interrupteur est lu (ménage d'EA32621 → `couple` ; 20000007 → `personne_seule`), et rien n'est écrit.
   ⏳ **Pas encore vu sur une vraie relecture** : la prochaine ouverture d'une fiche, ou le prochain geste, doit montrer « [nature] … ligne(s) du
   ménage réécrite(s) » dans le compte rendu du travail `refresh_console_contact_data`.
+
+- ✅ **VU EN VRAI le 04/11** : l'interrupteur est posé à 08:26:41. Deux relectures réelles ont suivi, à 08:27:48 et 08:28:26
+  (travaux `refresh_console_contact_data` `done`, contacts 10650562 et 10650564). Chacune a réécrit SON ménage dans la table locale :
+  10650562 `couple` et 10650563 `conjoint` ; 10650564 `couple` et 10650565 `conjoint`. Chez Supabase, les quatre fiches portent la même
+  nature, et la principale a son conjoint « nommé ».
+  ⚠ Le compte rendu du travail ne montre pas la ligne « [nature] » : la sortie gardée est coupée avant (~2 100 caractères). La preuve est
+  donc l'heure `calcule_le` des lignes de la table locale.
+  Hors de ce changement : 2 relectures en erreur ce matin (07:06 et 07:15 UTC, contacts 10651002 et 10650996). Le worker refuse avant toute
+  étape Python : « pas encore créé chez Hektor : rien à viser ». C'est son refus normal pour un contact qui n'a pas encore son numéro Hektor.
