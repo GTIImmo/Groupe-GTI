@@ -637,3 +637,10 @@ le menu ne change pas à l'œil. Build vert. ⏳ Patch à poser (accord), puis p
   d'agence**, droits inchangés (`authenticated` : lecture seule), aucune ligne parasite au journal. Nouvelle empreinte de
   la fonction de nuit : `725267743d8fedad1c582d830250673a` (l'INVERSE la rend à `e68a3f86…`). ⏳ Reste : le push (le front
   lit déjà le registre dès qu'il est en ligne), puis un menu vu à l'œil.
+- ✅ **EN LIGNE et vu le 04/11** (Vercel `index-H-2wWDRo.js`, Chrome de Frédéric) : au chargement, l'app lit
+  `app_negociateur_fiche` avec `agence_id_user` (réponse 200) et **ne lit plus l'annuaire pour les menus** (0 lecture de
+  `app_hektor_negotiator_agency_directory` sur la page) — le repli n'a pas joué. ⚠ À ne pas confondre : le filtre
+  « Négociateur » de la liste des annonces (50 noms, anciens compris, ex. Aline VALETTE) vient des NOMS PORTÉS PAR LES BIENS
+  (`filterCatalog.commercials`), pas de ces menus ; inchangé. La fenêtre « Nouvelle annonce » a été ouverte puis annulée
+  (rien créé) : son menu de négociateurs n'apparaît qu'à une étape plus loin, que je n'ai pas franchie (risque de brouillon
+  chez Hektor).
