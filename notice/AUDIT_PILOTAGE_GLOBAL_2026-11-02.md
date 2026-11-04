@@ -1046,3 +1046,49 @@ Contrôle fait dans le Chrome de Frédéric, en lecture seule. Le filtre d'agenc
 - ⚠ Deux comptes d'agence paraissent comme des négociateurs : « Groupe GTI » (1 engagé) et « gti immobilier » (1 en vente). Dans Acquéreurs, « Groupe GTI » est sorti du tableau et nommé dans la note ; ici pas encore — à décider.
 - **Les deux compromis corrigés le 02/11 ont tenu la nuit** (relus à 04:55) : 50039 = 95 000 / net 88 000 / honoraires 7 000, **taux 7,368** (il était resté à 7,000) ✅ ; 50030 = 193 000 / honoraires 10 000 / net 183 000, taux 5,181 ✅ — la relecture ne les a pas remis à l'envers.
 - **Mandats 2026 : 674** ce matin (494 actifs + 180 historiques, relus à 05:05). L'écart du 02/11 (682 contre 672) reste **non expliqué** : il faudrait la liste des numéros du 02/11, que rien n'a gardée (le registre n'est pas dans la sauvegarde quotidienne).
+
+## 40. Le pilotage par négociateur — audit avant le code (04/11) — Frédéric : « il sera top de pouvoir avoir un pilotage par nego aussi donc adapté », puis « oui les deux tu as mon accord mais audit avant »
+
+**Périmètre** : l'écran Pilotage, en LECTURE SEULE. Les gestes : annonce, contact, recherche, relation, transaction, mandat, document, RDV — **lire seulement** ; aucun ne se crée, ne se modifie ni ne se supprime par cet écran. Aucune écriture chez Hektor, aucun travail du worker.
+
+**1. Deux numérotations des négociateurs — le lien ne peut PAS se faire par numéro.** Le stock et le registre des mandats portent `commercial_id` (Claire RIBBES = 15, Marion BILLIG DURAND = 52) ; la répartition et l'annuaire portent le numéro Hektor de l'utilisateur (Claire RIBBES = 39, Marion BILLIG DURAND = 77). Pas d'écart constant. ⭐ **Le NOM tient partout** : pour chaque négociateur actif, un seul numéro par source, un seul nom une fois la civilité, la casse et les accents retirés (`cleNom` de lib/pilotage.ts, déjà la clé des Classements). Variantes rencontrées, toutes absorbées : « Mme. Alice RONDEAU », « M. Arnaud VALLA », « FRANCK GERPHAGNON », « Stéphanie / Stephanie MARTINEZ ». Hors négociateurs : « Cet utilisateur a été supprimé » (numéros 17, 19, 54 de la répartition) et les comptes d'agence (« Groupe GTI », « Groupe GTI Firminy », « gti immobilier »).
+
+**2. Ce que chaque source sait du négociateur** (mesuré le 04/11) :
+- **Ventes 2026** : 281 actes sur 286 ont une répartition ; 271 à une seule personne, 10 partagés. La somme des pourcentages vaut 100 % sur 274, moins sur 7 (50 % ×4, 75 %, 87,5 %, 0 %) — le reste n'est attribué à personne, comme dans le classement. ⚠ **Sur 279 actes répartis, 6 n'ont PAS le négociateur du bien dans leur répartition** : le C.A suit donc la RÉPARTITION (qui a touché les honoraires), pas le bien.
+- **Compromis en cours** : 87 sur 87 répartis. Compromis annulés : 1 sur 18. Offres : aucune répartition, mais 500 chaînes 2026 sur 503 portent l'e-mail du négociateur du bien, et **les 500 retrouvent un nom** par le registre des mandats.
+- **Mandats et stock** : chaque ligne porte son négociateur (`commercial_nom`) ; 33 mandats 2025-2026 et 9 biens du stock sans numéro.
+- **Signatures** : 454 documents signés sur 456 et 54 en attente sur 56 sont sur une annonce dont le mandat 2025-2026 est déjà lu par l'écran — filtrables sans toucher la base.
+- **Acquéreurs** : la fiche porte `commercial_nom` ; 41 noms dont 4 anciens (hélène FAURE, Hugo LABBE, Pierrick MARTINEZ, Stephane PIOCHEL). La fonction ne filtre que par agence → **patch**.
+- **Prix obtenu, exclusif / simple, notaires** (`app_pilotage_affaires_plus`) : offres, actes et compromis ne portent que l'agence → **patch** : ajouter le négociateur du mandat (offres) ou du bien (actes, compromis), clés additives, signature inchangée.
+
+**3. Ce que ça pourrait casser ailleurs** : les deux fonctions n'ont qu'un appelant, `lib/pilotage.ts` (cherché dans tout le dépôt). `app_pilotage_acquereurs` change de signature (un 3e paramètre `p_nego` par défaut nul) : l'écran déjà en ligne l'appelle avec `p_annee` et `p_agence` seuls, il continue de marcher entre le patch et le déploiement. `app_pilotage_affaires_plus` garde sa signature ; une clé de plus dans chaque ligne ne gêne pas l'écran actuel. La garde admin (`is_app_admin`) et les droits (authenticated, service_role ; pas public ni anon) sont reposés à l'identique.
+
+**4. Le dessin retenu** :
+- un sélecteur « Négociateur » à côté de « Agence » (la liste suit l'agence choisie ; les deux se combinent) ;
+- les sources sont filtrées AVANT les calculs, qui ne changent pas : une vente partagée compte pour lui avec SA part des honoraires (somme de ses pourcentages), un acte sans répartition va au négociateur du bien ; offres au négociateur du bien ; mandats, stock, diffusion et signatures par le négociateur du bien ou du mandat ; acquéreurs et prix/notaires par les deux fonctions patchées ;
+- les Classements restent ceux de tout le réseau, avec sa ligne surlignée.
+
+### 40 bis. ⛔ CORRECTION du point 1 — le lien PAR NUMÉRO EST possible, j'avais comparé deux numéros différents (04/11)
+
+Frédéric : « c'est une erreur… c'est pas normal, audite le projet et explique pourquoi il y a eu des chantiers sur les numéros de négociateur ».
+
+**Ce que j'avais écrit est faux.** « Claire RIBBES = 15 dans le stock, 39 dans la répartition » n'est pas deux numérotations concurrentes : ce sont **deux numéros DIFFÉRENTS que Hektor donne à la même personne**, et le projet a déjà la table qui les relie.
+- **Le n° de NÉGOCIATEUR** (`idnego`, liste `listNegos`) : celui que portent les annonces (`NEGOCIATEUR`) et les contacts (`id_negociateur`) → chez nous `app_dossier_current.commercial_id`, `app_mandat_register_current.commercial_id`, `app_contact_current.hektor_negociateur_id`. Claire RIBBES = **15**.
+- **Le n° d'UTILISATEUR** (le compte qui se connecte) : celui de la page des commissions → `app_affaire_repartition.hektor_user_id`, et celui de l'annuaire des comptes `app_user_directory.id_user`. Claire RIBBES = **39**.
+- **La table de correspondance existe** : `app_hektor_negotiator_agency_directory` (`hektor_negociateur_id` ↔ `hektor_user_id`, plus nom, e-mail, agence, `is_active`), reconstruite chaque nuit par `phase2/sync/push_hektor_directory_to_supabase.py` depuis `hektor_negociateur` local. 219 lignes, **219 négociateurs ↔ 219 utilisateurs, un pour un**. Claire RIBBES : négociateur 15 ↔ utilisateur 39.
+
+**Mesuré le 04/11 par cette table** :
+- stock : 703 biens sur 703 retrouvent leur négociateur par le numéro, **703 avec le même nom** ;
+- mandats 2025-2026 : 1 409 sur 1 409, **1 409 avec le même nom** ;
+- répartition 2025-2026 : 3 285 lignes sur 3 351 retrouvent leur utilisateur ; les 66 autres sont **les non-personnes déjà connues** (« Cet utilisateur a été supprimé » 17 et 19, « Groupe GTI Firminy » 19) ; 6 lignes du n° 54 disent « supprimé » dans la page des commissions alors que l'annuaire le nomme Hugo LABBE.
+
+**Pourquoi il y a eu des chantiers sur ces numéros** (notes relues : `NOTE_CROISEMENT_UTILISATEUR_NEGO_EMAIL_2026-03-31.md`, `NOTE_ANNUAIRE_NEGOS_ACTIFS_INACTIFS_2026-05-29.md`, `NOTE_CORRECTIFS_NEGO_DOUBLONS_2026-06-21.md`, `HANDOFF_CHANTIER_IDNEGO_MAPPING_2026-06-21.md`, `AUDIT_REPARTITION_ANCIENS_NEGOCIATEURS_2026-11-01.md`) :
+- **mars** : rapprocher l'utilisateur connecté de son négociateur — par l'e-mail, faute de numéro commun (d'où `negociateur_email` sur les dossiers) ;
+- **juin, 1** : `app_user_directory` ne contenait que les comptes directs du compte parent (2 négociateurs) → listes de négociateurs à 2 et **écritures chez Hektor bloquées** (« Contexte negociateur Hektor requis ») ; corrigé en y versant les 30 actifs, et les listes filtrées sur `app_hektor_negotiator_agency_directory.is_active` ;
+- **juin, 2** : Hektor avait **renuméroté et dédoublonné** ses négociateurs (29 numéros disparus : 18 doublons, 11 départs) ; et **255 000 contacts** avaient un n° de négociateur faux chez nous, parce que Hektor change le négociateur d'un contact par script SANS bouger sa date de mise à jour, et qu'un détail périmé « 0 » gagnait sur le listing frais (`normalize_source.py:880`). Corrigé (listing d'abord), relu en entier, et relu chaque 1er du mois par le run ;
+- **juin, 3** : un négociateur INACTIF ne peut pas être « endossé » chez Hektor → écriture par l'agence (`isOwnerNegotiatorActive`, 37adbc0) ;
+- **1er novembre** : l'annuaire est PURGÉ chaque nuit, un inactif a un numéro, les 14 anciens du classeur (d'avant Hektor) n'en ont aucun.
+
+⇒ **Ce n'est pas un défaut des données : c'est le modèle de Hektor (une personne = un utilisateur + une fiche négociateur), et le projet a déjà le pont.** La faute est dans MON audit : j'ai comparé un n° de négociateur à un n° d'utilisateur sans passer par l'annuaire. ⛔ Leçon : avant de dire « deux numérotations », chercher la table qui les relie (la note juin le disait : « négo 1 / user 2 », « négo 42 / user 68 »).
+
+**Ce que ça change au dessin du §40** : la clé du filtre doit être **le NUMÉRO, pas le nom** — le n° d'utilisateur, celui de la répartition (le C.A), le n° de négociateur étant traduit par l'annuaire pour le stock, les mandats, les offres et les acquéreurs. Le nom ne sert plus que pour afficher, et pour les non-personnes. Rien n'a été posé en base, rien n'a été codé.
