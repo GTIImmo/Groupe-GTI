@@ -1883,3 +1883,14 @@ Recherche dans les notes (accents ignorés), l'historique git et la mémoire. **
 - **B prolonge exactement la décision du 14/10.** On garde déjà les recherches d'un contact déjà envoyé ; on garderait aussi sa fiche, à jour.
 - **A est contraire à la règle de C.16** (« on ne supprime jamais, on marque ») et à l'élargissement du 11/09.
 - ⚠ Une conséquence pour ⑦-1 : son risque « supprimé du cloud » n'existe pas aujourd'hui. Avec B, il n'existerait plus du tout.
+
+## 62. L'INDEX GLOBAL DES CONTACTS : AUDIT FAIT, À DÉCIDER *(04/11, « pourquoi ne pas faire l'index global des archivés et actifs ? », « oui »)*
+
+- La note à part : `notice/AUDIT_INDEX_GLOBAL_CONTACTS_2026-11-04.md`, en lecture seule, rien n'est codé.
+- **Le constat** : les annonces ont trois index légers et une fiche préparée à la demande depuis le serveur ; les contacts n'ont ni l'un ni l'autre.
+  C'est le défaut de fond derrière les 216 contacts figés.
+- **Les mesures** : 176 417 personnes hors de l'app (64 039 actives, 112 378 archivées, cases vides exclues) ; une ligne légère pèse 336 octets
+  (estimation de 120 à 200 Mo) ; une recherche dans l'annuaire prend 16 ms aujourd'hui.
+- **Cinq décisions attendues** (§6 de la note) : qui entre dans l'index ; les champs (téléphone et e-mail) ; la forme de la fiche à la demande ;
+  le premier envoi ; les garde-fous.
+- ⚠ **L'ordre est obligatoire** : l'index et le repli d'abord, le verrou remis sur 20 000 000 ensuite.
