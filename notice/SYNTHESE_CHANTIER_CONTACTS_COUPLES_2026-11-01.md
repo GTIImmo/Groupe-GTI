@@ -1812,3 +1812,9 @@ Remesuré dans le code d'aujourd'hui (`console_job_worker.js`, fonctions chez Su
 **Pour l'allumer** (écriture de configuration : ton accord) : ajouter `APP_NATURE_A_LA_RELECTURE=1` dans `C:\Hektor\Projet\.env`.
 Aucun redémarrage n'est nécessaire : chaque relecture relit le `.env`.
 **Retour arrière** : retirer la ligne du `.env`.
+
+- ✅ **ALLUMÉ le 04/11 vers 08:26** (« Oui, allume ») : `APP_NATURE_A_LA_RELECTURE=1` est ajouté à la fin du `.env`, avec sa ligne de
+  commentaire. Une copie datée du `.env` d'avant est dans le dossier de travail de la session.
+  Vérifié à blanc : l'interrupteur est lu (ménage d'EA32621 → `couple` ; 20000007 → `personne_seule`), et rien n'est écrit.
+  ⏳ **Pas encore vu sur une vraie relecture** : la prochaine ouverture d'une fiche, ou le prochain geste, doit montrer « [nature] … ligne(s) du
+  ménage réécrite(s) » dans le compte rendu du travail `refresh_console_contact_data`.
