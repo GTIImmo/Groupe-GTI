@@ -1,0 +1,243 @@
+notre_n_personne;nom;type;actif;email;notre_n_fiche;sorte;hektor_n_negociateur;hektor_n_utilisateur;agence;type_compte_hektor;fiche_active_chez_hektor;encore_listee_par_hektor;rattachee_par;compte_app;a_valider
+1000001;Frédéric GERPHAGNON;administrateur;oui;frederic.gerphagnon@gti-immobilier.fr;1000001;compte_utilisateur;;4;;ADMIN;oui;oui;decision;oui;e-mail partagé avec une agence (pas une clé de rattachement)
+1000001;Frédéric GERPHAGNON;administrateur;oui;frederic.gerphagnon@gti-immobilier.fr;1000002;fiche_negociateur;20;46;Groupe GTI Firminy;;non;non;email;oui;e-mail partagé avec une agence (pas une clé de rattachement)
+1000002;Compte Formation;agence;oui;;1000003;compte_utilisateur;;1;;AGENCE;oui;oui;agence;non;
+1000003;Groupe GTI ANNONAY;agence;oui;;1000004;compte_utilisateur;;17;;AGENCE;oui;oui;agence;non;
+1000003;Groupe GTI ANNONAY;agence;oui;;1000005;fiche_negociateur;79;104;Groupe GTI ANNONAY;;non;oui;agence;non;
+1000004;Groupe Gti Brioude;agence;oui;;1000006;compte_utilisateur;;18;;AGENCE;oui;oui;agence;non;
+1000005;Groupe GTI COURPIERE;agence;oui;;1000007;compte_utilisateur;;9;;AGENCE;oui;oui;agence;non;
+1000005;Groupe GTI COURPIERE;agence;oui;;1000008;fiche_negociateur;74;99;Groupe GTI COURPIERE;;non;oui;agence;non;
+1000006;Groupe Gti Craponne-sur-arzon;agence;oui;;1000009;compte_utilisateur;;11;;AGENCE;oui;oui;agence;non;
+1000007;Groupe Gti Dunières;agence;oui;;1000010;compte_utilisateur;;15;;AGENCE;oui;oui;agence;non;
+1000008;Groupe GTI Firminy;agence;oui;;1000011;compte_utilisateur;;19;;AGENCE;oui;oui;agence;non;
+1000008;Groupe GTI Firminy;agence;oui;;1000012;fiche_negociateur;25;50;Groupe GTI Firminy;;non;oui;agence;non;
+1000008;Groupe GTI Firminy;agence;oui;;1000013;fiche_negociateur;220;263;Groupe GTI Firminy;;non;oui;agence;non;
+1000008;Groupe GTI Firminy;agence;oui;;1000014;fiche_negociateur;224;267;Groupe GTI Firminy;;non;oui;agence;non;
+1000009;Groupe GTI Monistrol sur Loire;agence;oui;;1000015;compte_utilisateur;;21;;AGENCE;oui;oui;agence;non;
+1000009;Groupe GTI Monistrol sur Loire;agence;oui;;1000016;fiche_negociateur;83;108;Groupe GTI Monistrol sur Loire;;non;oui;agence;non;
+1000010;Groupe GTI Montbrison;agence;oui;;1000017;compte_utilisateur;;20;;AGENCE;oui;oui;agence;non;
+1000010;Groupe GTI Montbrison;agence;oui;;1000018;fiche_negociateur;82;107;Groupe GTI Montbrison;;non;oui;agence;non;
+1000010;Groupe GTI Montbrison;agence;oui;;1000019;fiche_negociateur;86;110;Groupe GTI Montbrison;;non;oui;agence;non;
+1000011;Groupe Gti Saint-bonnet-le-château;agence;oui;;1000020;compte_utilisateur;;13;;AGENCE;oui;oui;agence;non;
+1000012;Groupe Gti Saint-didier-en-velay;agence;oui;;1000021;compte_utilisateur;;12;;AGENCE;oui;oui;agence;non;
+1000013;Groupe GTI Saint-Just-Saint-Rambert;agence;oui;;1000022;compte_utilisateur;;10;;AGENCE;oui;oui;agence;non;
+1000013;Groupe GTI Saint-Just-Saint-Rambert;agence;oui;;1000023;fiche_negociateur;75;100;Groupe GTI Saint-Just-Saint-Rambert;;non;oui;agence;non;
+1000014;Groupe Gti Tence;agence;oui;;1000024;compte_utilisateur;;16;;AGENCE;oui;oui;agence;non;
+1000015;Groupe Gti Yssingeaux;agence;oui;;1000025;compte_utilisateur;;14;;AGENCE;oui;oui;agence;non;
+1000016;Groupe GTI Ambert;agence;non;;1000026;fiche_negociateur;12;34;Groupe GTI Ambert;;non;oui;agence;non;
+1000016;Groupe GTI Ambert;agence;non;;1000027;numero_repartition;;23;;;non;non;agence;non;
+1000017;Groupe GTI Issoire;agence;non;;1000028;fiche_negociateur;98;123;Groupe GTI Issoire;;non;oui;agence;non;
+1000018;Groupe Gti Le Puy en Velay;agence;non;;1000029;fiche_negociateur;99;124;Groupe Gti Le Puy en Velay;;non;oui;agence;non;
+1000019;Groupe GTI Saint-Etienne;agence;non;;1000030;fiche_negociateur;2;27;Groupe GTI Saint-Etienne;;non;oui;agence;non;
+1000020;Utilisateur supprimé n° 0;inconnu;non;;1000031;numero_repartition;;0;;;non;non;seul;non;utilisateur supprimé chez Hektor
+1000021;Utilisateur supprimé n° 24;inconnu;non;;1000032;numero_repartition;;24;;;non;non;seul;non;utilisateur supprimé chez Hektor
+1000022;Alice RONDEAU;negociateur;oui;rondeau@gti-immobilier.fr;1000033;fiche_negociateur;8;33;Groupe GTI Ambert;;oui;oui;email;non;
+1000023;Arnaud VALLA;negociateur;oui;arnaud.valla@gti-immobilier.fr;1000034;fiche_negociateur;47;72;Groupe GTI Yssingeaux;;oui;oui;email;non;
+1000024;Caroline GERPHAGNON;negociateur;oui;caroline.gerphagnon@gti-immobilier.fr;1000035;compte_utilisateur;;5;;SECRETAIRE;oui;oui;email;non;fiche de négociateur ET compte de secrétaire
+1000024;Caroline GERPHAGNON;negociateur;oui;caroline.gerphagnon@gti-immobilier.fr;1000036;fiche_negociateur;24;49;Groupe GTI Firminy;;non;non;email;non;fiche de négociateur ET compte de secrétaire
+1000025;Céline HERITIER;negociateur;oui;heritier@gti-immobilier.fr;1000037;fiche_negociateur;38;57;Groupe GTI Tence;;non;oui;email;non;
+1000025;Céline HERITIER;negociateur;oui;heritier@gti-immobilier.fr;1000038;fiche_negociateur;56;82;Groupe GTI COURPIERE;;oui;oui;email;non;
+1000026;Christèle GENTES;negociateur;oui;gentes@gti-immobilier.fr;1000039;fiche_negociateur;7;32;Groupe Gti Le Puy en Velay;;oui;oui;email;non;
+1000026;Christèle GENTES;negociateur;oui;gentes@gti-immobilier.fr;1000040;fiche_negociateur;65;89;Groupe GTI Firminy;;non;non;email;non;
+1000026;Christèle GENTES;negociateur;oui;gentes@gti-immobilier.fr;1000041;fiche_negociateur;80;106;Groupe GTI BRIOUDE;;non;non;email;non;
+1000027;Christine BRAVARD;negociateur;oui;bravard@gti-immobilier.fr;1000042;fiche_negociateur;55;80;Groupe GTI COURPIERE;;oui;oui;email;non;
+1000028;Claire RIBBES;negociateur;oui;ribbes@gti-immobilier.fr;1000043;fiche_negociateur;15;39;Groupe GTI Issoire;;oui;oui;email;non;
+1000029;Clarisse SAPET;negociateur;oui;sapet@gti-immobilier.fr;1000044;fiche_negociateur;45;71;Groupe GTI Yssingeaux;;oui;oui;email;non;
+1000030;Claudie FERNANDEZ;negociateur;oui;fernandez@gti-immobilier.fr;1000045;fiche_negociateur;48;73;Groupe GTI Saint-Bonnet-le-Château;;oui;oui;email;non;
+1000030;Claudie FERNANDEZ;negociateur;oui;fernandez@gti-immobilier.fr;1000046;fiche_negociateur;61;86;Groupe GTI Saint-Etienne;;non;non;email;non;
+1000030;Claudie FERNANDEZ;negociateur;oui;fernandez@gti-immobilier.fr;1000047;fiche_negociateur;77;102;Groupe GTI Craponne-sur-Arzon;;non;non;email;non;
+1000031;Corinne REYNAUD;negociateur;oui;corinne.reynaud@gti-immobilier.fr;1000048;fiche_negociateur;90;115;Groupe GTI ANNONAY;;oui;oui;email;non;
+1000032;Delphine BLANCHARD;negociateur;oui;blanchard@gti-immobilier.fr;1000049;compte_utilisateur;;6;;SECRETAIRE;oui;oui;email;non;fiche de négociateur ET compte de secrétaire
+1000032;Delphine BLANCHARD;negociateur;oui;blanchard@gti-immobilier.fr;1000050;fiche_negociateur;21;45;Groupe GTI Firminy;;non;non;email;non;fiche de négociateur ET compte de secrétaire
+1000032;Delphine BLANCHARD;negociateur;oui;blanchard@gti-immobilier.fr;1000051;fiche_negociateur;60;85;Groupe GTI Saint-Etienne;;non;non;email;non;fiche de négociateur ET compte de secrétaire
+1000032;Delphine BLANCHARD;negociateur;oui;blanchard@gti-immobilier.fr;1000052;fiche_negociateur;88;114;Groupe Gti Le Puy en Velay;;non;non;email;non;fiche de négociateur ET compte de secrétaire
+1000033;Dylan JOURGET;negociateur;oui;jourget@gti-immobilier.fr;1000053;fiche_negociateur;17;42;Groupe GTI Monistrol sur Loire;;oui;oui;email;non;
+1000033;Dylan JOURGET;negociateur;oui;jourget@gti-immobilier.fr;1000054;fiche_negociateur;62;87;Groupe GTI Saint-Didier-en-Velay;;non;oui;email;non;
+1000033;Dylan JOURGET;negociateur;oui;jourget@gti-immobilier.fr;1000055;fiche_negociateur;73;91;Groupe GTI Firminy;;non;oui;email;non;
+1000033;Dylan JOURGET;negociateur;oui;jourget@gti-immobilier.fr;1000056;fiche_negociateur;78;103;Groupe GTI Craponne-sur-Arzon;;non;oui;email;non;
+1000034;Elodie POUGET;negociateur;oui;pouget@gti-immobilier.fr;1000057;fiche_negociateur;13;40;Groupe GTI Issoire;;oui;oui;email;non;
+1000035;Emmanuelle PEREIRA;negociateur;oui;pereira@gti-immobilier.fr;1000058;fiche_negociateur;26;51;Groupe GTI Firminy;;oui;oui;email;oui;
+1000035;Emmanuelle PEREIRA;negociateur;oui;pereira@gti-immobilier.fr;1000059;fiche_negociateur;51;76;Groupe GTI Craponne-sur-Arzon;;non;oui;email;oui;
+1000035;Emmanuelle PEREIRA;negociateur;oui;pereira@gti-immobilier.fr;1000060;fiche_negociateur;84;109;Groupe GTI Monistrol sur Loire;;non;oui;email;oui;
+1000036;FRANCK GERPHAGNON;negociateur;oui;franck.gerphagnon@gmail.com;1000061;compte_utilisateur;;7;;SECRETAIRE;oui;oui;email;oui;fiche de négociateur ET compte de secrétaire
+1000036;FRANCK GERPHAGNON;negociateur;oui;franck.gerphagnon@gmail.com;1000062;fiche_negociateur;1;2;Compte formation;;oui;oui;email;oui;fiche de négociateur ET compte de secrétaire
+1000036;FRANCK GERPHAGNON;negociateur;oui;franck.gerphagnon@gmail.com;1000063;fiche_negociateur;19;44;Groupe GTI Firminy;;non;non;email;oui;fiche de négociateur ET compte de secrétaire
+1000037;Guillaume PERRET;negociateur;oui;perret@gti-immobilier.fr;1000064;fiche_negociateur;91;116;Groupe GTI Monistrol sur Loire;;oui;oui;email;non;
+1000037;Guillaume PERRET;negociateur;oui;perret@gti-immobilier.fr;1000065;fiche_negociateur;96;122;Groupe GTI Monistrol sur Loire;;non;oui;email;non;
+1000038;Lionel FLANDIN;negociateur;oui;flandin@gti-immobilier.fr;1000066;fiche_negociateur;49;74;Groupe GTI Saint-Bonnet-le-Château;;oui;oui;email;non;
+1000039;Lucca MEJEAN;negociateur;oui;mejean@gti-immobilier.fr;1000067;fiche_negociateur;225;268;Groupe Gti Le Puy en Velay;;oui;oui;email;non;
+1000040;Lucille FORLICO;negociateur;oui;forlico@gti-immobilier.fr;1000068;fiche_negociateur;4;29;Groupe GTI Saint-Etienne;;oui;oui;email;non;
+1000040;Lucille FORLICO;negociateur;oui;forlico@gti-immobilier.fr;1000069;fiche_negociateur;63;88;Groupe GTI Firminy;;non;non;email;non;
+1000041;Marion BILLIG DURAND;negociateur;oui;durand@gti-immobilier.fr;1000070;fiche_negociateur;39;58;Groupe GTI Tence;;non;non;email;non;
+1000041;Marion BILLIG DURAND;negociateur;oui;durand@gti-immobilier.fr;1000071;fiche_negociateur;52;77;Groupe GTI Craponne-sur-Arzon;;oui;oui;email;non;
+1000041;Marion BILLIG DURAND;negociateur;oui;durand@gti-immobilier.fr;1000072;fiche_negociateur;89;112;Groupe Gti Le Puy en Velay;;non;non;email;non;
+1000042;Mélanie LEGRAND;negociateur;oui;legrand@gti-immobilier.fr;1000073;fiche_negociateur;5;30;Groupe GTI Saint-Etienne;;oui;oui;email;oui;
+1000042;Mélanie LEGRAND;negociateur;oui;legrand@gti-immobilier.fr;1000074;fiche_negociateur;76;101;Groupe GTI Saint-Just-Saint-Rambert;;non;oui;email;oui;
+1000043;Nadege PEYRARD;negociateur;oui;peyrard@gti-immobilier.fr;1000075;fiche_negociateur;36;64;Groupe GTI Tence;;non;oui;email;non;
+1000043;Nadege PEYRARD;negociateur;oui;peyrard@gti-immobilier.fr;1000076;fiche_negociateur;44;69;Groupe GTI Dunières;;oui;oui;email;non;
+1000043;Nadege PEYRARD;negociateur;oui;peyrard@gti-immobilier.fr;1000077;fiche_negociateur;68;94;Groupe GTI Firminy;;non;oui;email;non;
+1000044;Nicolas BOUCHET;negociateur;oui;bouchet@gti-immobilier.fr;1000078;fiche_negociateur;46;70;Groupe GTI Yssingeaux;;oui;oui;email;non;
+1000044;Nicolas BOUCHET;negociateur;oui;bouchet@gti-immobilier.fr;1000079;fiche_negociateur;59;84;Groupe GTI Tence;;non;non;email;non;
+1000044;Nicolas BOUCHET;negociateur;oui;bouchet@gti-immobilier.fr;1000080;fiche_negociateur;87;113;Groupe Gti Le Puy en Velay;;non;non;email;non;
+1000045;Nicolas COUDERT;negociateur;oui;coudert@gti-immobilier.fr;1000081;fiche_negociateur;34;61;Groupe GTI Tence;;non;non;email;non;
+1000045;Nicolas COUDERT;negociateur;oui;coudert@gti-immobilier.fr;1000082;fiche_negociateur;57;81;Groupe GTI COURPIERE;;oui;oui;email;non;
+1000045;Nicolas COUDERT;negociateur;oui;coudert@gti-immobilier.fr;1000083;fiche_negociateur;58;83;Groupe GTI Yssingeaux;;non;non;email;non;
+1000046;Nicolas RAYNAUD;negociateur;oui;raynaud@gti-immobilier.fr;1000084;fiche_negociateur;37;66;Groupe GTI Tence;;non;non;email;non;
+1000046;Nicolas RAYNAUD;negociateur;oui;raynaud@gti-immobilier.fr;1000085;fiche_negociateur;50;75;Groupe GTI Saint-Didier-en-Velay;;oui;oui;email;non;
+1000047;Olivier POMBAR;negociateur;oui;pombar@gti-immobilier.fr;1000086;fiche_negociateur;27;53;Groupe GTI BRIOUDE;;oui;oui;email;non;
+1000047;Olivier POMBAR;negociateur;oui;pombar@gti-immobilier.fr;1000087;fiche_negociateur;43;65;Groupe GTI Tence;;non;non;email;non;
+1000048;Pauline GIRINON;negociateur;oui;p.girinon@gti-immobilier.fr;1000088;compte_utilisateur;;3;;SECRETAIRE;oui;oui;nom;oui;réunie par le nom (plusieurs e-mails) / fiche de négociateur ET compte de secrétaire
+1000048;Pauline GIRINON;negociateur;oui;p.girinon@gti-immobilier.fr;1000089;compte_utilisateur;;8;;SECRETAIRE;oui;oui;email;oui;réunie par le nom (plusieurs e-mails) / fiche de négociateur ET compte de secrétaire
+1000048;Pauline GIRINON;negociateur;oui;p.girinon@gti-immobilier.fr;1000090;fiche_negociateur;14;38;Groupe GTI Issoire;;non;non;email;oui;réunie par le nom (plusieurs e-mails) / fiche de négociateur ET compte de secrétaire
+1000048;Pauline GIRINON;negociateur;oui;p.girinon@gti-immobilier.fr;1000091;fiche_negociateur;16;41;Groupe GTI Monistrol sur Loire;;non;non;email;oui;réunie par le nom (plusieurs e-mails) / fiche de négociateur ET compte de secrétaire
+1000048;Pauline GIRINON;negociateur;oui;p.girinon@gti-immobilier.fr;1000092;fiche_negociateur;22;47;Groupe GTI Firminy;;non;non;email;oui;réunie par le nom (plusieurs e-mails) / fiche de négociateur ET compte de secrétaire
+1000048;Pauline GIRINON;negociateur;oui;p.girinon@gti-immobilier.fr;1000093;fiche_negociateur;53;78;Groupe GTI Craponne-sur-Arzon;;non;non;email;oui;réunie par le nom (plusieurs e-mails) / fiche de négociateur ET compte de secrétaire
+1000049;Sandrine DELAVAUD;negociateur;oui;delavaud@gti-immobilier.fr;1000094;fiche_negociateur;9;36;Groupe GTI Ambert;;oui;oui;email;non;
+1000049;Sandrine DELAVAUD;negociateur;oui;delavaud@gti-immobilier.fr;1000095;fiche_negociateur;93;118;Groupe GTI Tence;;non;non;email;non;
+1000050;Simon DECHAUD;negociateur;oui;dechaud@gti-immobilier.fr;1000096;fiche_negociateur;6;31;Groupe Gti Le Puy en Velay;;oui;oui;email;non;
+1000050;Simon DECHAUD;negociateur;oui;dechaud@gti-immobilier.fr;1000097;fiche_negociateur;64;90;Groupe GTI Firminy;;non;non;email;non;
+1000050;Simon DECHAUD;negociateur;oui;dechaud@gti-immobilier.fr;1000098;fiche_negociateur;81;105;Groupe GTI BRIOUDE;;non;non;email;non;
+1000051;Stephanie JEOFFROY;negociateur;oui;jeoffroy@gti-immobilier.fr;1000099;fiche_negociateur;18;43;Groupe GTI Montbrison;;oui;oui;email;non;
+1000051;Stephanie JEOFFROY;negociateur;oui;jeoffroy@gti-immobilier.fr;1000100;fiche_negociateur;40;62;Groupe GTI Tence;;non;oui;email;non;
+1000051;Stephanie JEOFFROY;negociateur;oui;jeoffroy@gti-immobilier.fr;1000101;fiche_negociateur;85;111;Groupe GTI Montbrison;;non;oui;email;non;
+1000052;Stéphanie MARTINEZ;negociateur;oui;stephanie.martinez@gti-immobilier.fr;1000102;fiche_negociateur;30;55;Groupe GTI ANNONAY;;oui;oui;email;non;
+1000052;Stéphanie MARTINEZ;negociateur;oui;stephanie.martinez@gti-immobilier.fr;1000103;fiche_negociateur;35;63;Groupe GTI Tence;;non;oui;email;non;
+1000052;Stéphanie MARTINEZ;negociateur;oui;stephanie.martinez@gti-immobilier.fr;1000104;fiche_negociateur;67;93;Groupe GTI Firminy;;non;oui;email;non;
+1000053;Sylvie TEYSSONNIER;negociateur;oui;teyssonnier@gti-immobilier.fr;1000105;fiche_negociateur;41;67;Groupe GTI Tence;;oui;oui;email;non;
+1000054;Tatiana CROIZIER;negociateur;oui;croizier@gti-immobilier.fr;1000106;fiche_negociateur;54;79;Groupe GTI Saint-Just-Saint-Rambert;;oui;oui;email;non;
+1000055;Adeline CHEVROLAIS;negociateur;non;chevrolais@gti-immobilier.fr;1000107;fiche_negociateur;180;223;Groupe GTI Saint-Etienne;;non;oui;email;non;
+1000056;Alain DORIER;negociateur;non;dorier@gti-immobilier.fr;1000108;fiche_negociateur;104;147;Groupe GTI Saint-Bonnet-le-Château;;non;oui;email;non;
+1000057;Alexandra GUEROULT;negociateur;non;;1000109;fiche_negociateur;222;265;Groupe GTI Montbrison;;non;oui;nom;non;sans e-mail, réunie par le nom
+1000058;Aline VALETTE;negociateur;non;valette@gti-immobilier.fr;1000110;fiche_negociateur;42;68;Groupe GTI Tence;;non;non;email;non;
+1000059;Amandine jouve;negociateur;non;jouve@gti-immobilier.fr;1000111;fiche_negociateur;207;250;Agences supprimée;;non;oui;email;non;
+1000060;Anne FARGET;negociateur;non;farget@gti-immobilier.fr;1000112;fiche_negociateur;202;245;Groupe GTI Ambert;;non;oui;email;non;
+1000061;Anne VALANCOGNE;negociateur;non;veauche@gti-immobilier.fr;1000113;fiche_negociateur;196;239;Groupe GTI Firminy;;non;oui;email;non;e-mail partagé avec une agence (pas une clé de rattachement)
+1000062;Annette BERARD;negociateur;non;gtiimmobilier.craponne@wanadoo.fr;1000114;fiche_negociateur;170;213;Groupe GTI Craponne-sur-Arzon;;non;oui;email;non;e-mail partagé avec une agence (pas une clé de rattachement)
+1000063;Arthur VIVIER;negociateur;non;vivier@gti-immobilier.fr;1000115;fiche_negociateur;205;248;Agences supprimée;;non;oui;email;non;
+1000064;Baptiste BRUEL;negociateur;non;bruel@gti-immobilier.fr;1000116;fiche_negociateur;11;37;Groupe GTI Ambert;;non;non;email;non;
+1000065;Béatrice LIOGIER;negociateur;non;liogier@gti-immobilier.fr;1000117;fiche_negociateur;122;165;Groupe GTI Monistrol sur Loire;;non;oui;email;non;
+1000066;BEKCER Sonia;negociateur;non;bekcer@gti-immobilier.fr;1000118;fiche_negociateur;123;166;Groupe GTI ANNONAY;;non;oui;email;non;
+1000067;Benjamin Sabatier;negociateur;non;sabatier@gti-immobilier.fr;1000119;fiche_negociateur;143;186;Groupe GTI BRIOUDE;;non;oui;email;non;
+1000068;Benjamin TRIOLLIER;negociateur;non;triollier@gti-immobilier.fr;1000120;fiche_negociateur;125;168;Groupe GTI Saint-Etienne;;non;oui;email;non;
+1000069;Cassandra QUIOC;negociateur;non;quioc@gti-immobilier.fr;1000121;fiche_negociateur;136;179;Groupe GTI Firminy;;non;oui;email;non;
+1000070;Cécile MOUREY-LIBOZ;negociateur;non;moureyliboz@gti-immobilier.fr;1000122;fiche_negociateur;133;176;Groupe GTI Issoire;;non;oui;email;non;
+1000071;Céline REMAUDIERE;negociateur;non;remaudiere@gti-immobilier.fr;1000123;fiche_negociateur;117;160;Groupe GTI Ambert;;non;oui;email;non;
+1000072;Charlène PARANIER;negociateur;non;;1000124;fiche_negociateur;212;255;Groupe GTI Saint-Just-Saint-Rambert;;non;oui;nom;non;sans e-mail, réunie par le nom
+1000073;Chloe GOKTAS;negociateur;non;goktas@gti-immobilier.fr;1000125;fiche_negociateur;140;183;Groupe GTI Saint-Just-Saint-Rambert;;non;oui;email;non;
+1000074;Christine CROZIER;negociateur;non;crozier@gti-immobilier.fr;1000126;fiche_negociateur;187;230;Groupe GTI Montbrison;;non;oui;email;non;
+1000075;Cindy Fayard;negociateur;non;fayard@gti-immobilier.fr;1000127;fiche_negociateur;142;185;Groupe GTI Firminy;;non;oui;email;non;
+1000076;Clara MEARY;negociateur;non;meary@gti-immobilier.fr;1000128;fiche_negociateur;107;150;Groupe GTI Montbrison;;non;oui;email;non;
+1000077;Clémence GIRINON;negociateur;non;girinon@gti-immobilier.fr;1000129;fiche_negociateur;167;210;Groupe GTI Firminy;;non;oui;email;non;
+1000078;Clémentine ASIS GUERRERO;negociateur;non;asisguerrero@gti-immobilier.fr;1000130;fiche_negociateur;109;152;Groupe GTI Firminy;;non;oui;email;non;
+1000079;Corentin DAUDET;negociateur;non;daudet@gti-immobilier.fr;1000131;fiche_negociateur;206;249;Agences supprimée;;non;oui;email;non;
+1000080;Cyril LACHAIZE;negociateur;non;lachaize@gti-immobilier.fr;1000132;fiche_negociateur;3;28;Groupe GTI Saint-Etienne;;non;oui;email;non;
+1000081;Cyril MASSARDIER;negociateur;non;;1000133;fiche_negociateur;217;260;Groupe GTI Firminy;;non;oui;nom;non;sans e-mail, réunie par le nom
+1000082;Damien REBOULLET;negociateur;non;reboullet@gti-immobilier.fr;1000134;fiche_negociateur;200;243;Groupe GTI Firminy;;non;oui;email;non;
+1000083;Daniel ADDEZI;negociateur;non;;1000135;fiche_negociateur;223;266;Groupe GTI Saint-Etienne;;non;oui;nom;non;sans e-mail, réunie par le nom
+1000084;Daniel KRUG;negociateur;non;gtiimmobilier.yssingeaux@wanadoo.fr;1000136;fiche_negociateur;154;197;Groupe GTI Yssingeaux;;non;oui;email;non;e-mail partagé avec une agence (pas une clé de rattachement)
+1000085;Daniel PASCAL;negociateur;non;pascal@gti-immobilier.fr;1000137;fiche_negociateur;172;215;Groupe GTI Firminy;;non;oui;email;non;
+1000086;David BADIER;negociateur;non;badier@gti-immobilier.fr;1000138;fiche_negociateur;178;221;Groupe GTI Firminy;;non;oui;email;non;
+1000087;Eddy BARD;negociateur;non;gtiimmobilier.stchamond@orange.fr;1000139;fiche_negociateur;173;216;Groupe GTI Firminy;;non;oui;email;non;e-mail partagé avec une agence (pas une clé de rattachement)
+1000088;Eléonore GRASSO;negociateur;non;grasso@gti-immobilier.fr;1000140;fiche_negociateur;179;222;Groupe Gti Le Puy en Velay;;non;non;email;non;
+1000089;Eric KUPKOWSKI;negociateur;non;kupkowski@gti-immobilier.fr;1000141;fiche_negociateur;148;191;Groupe GTI Craponne-sur-Arzon;;non;oui;email;non;
+1000090;Eric SADOWSKI;negociateur;non;sadowski@gti-immobilier.fr;1000142;fiche_negociateur;101;144;Groupe GTI Saint-Bonnet-le-Château;;non;oui;email;non;
+1000091;Estelle DE FONSECA;negociateur;non;defonseca@gti-immobilier.fr;1000143;fiche_negociateur;144;187;Groupe GTI Issoire;;non;oui;email;non;
+1000092;Fabien CELLE;negociateur;non;celle.fabien@wanadoo.fr;1000144;fiche_negociateur;159;202;Groupe GTI Saint-Just-Saint-Rambert;;non;oui;email;non;
+1000093;Fabien LASHERMES;negociateur;non;;1000145;fiche_negociateur;215;258;Groupe GTI Firminy;;non;oui;nom;non;sans e-mail, réunie par le nom
+1000094;Fabien MALEYSSON;negociateur;non;maleysson@gti-immobilier.fr;1000146;fiche_negociateur;108;151;Groupe GTI Monistrol sur Loire;;non;oui;email;non;
+1000095;Fabrice DELOMBRE;negociateur;non;;1000147;fiche_negociateur;218;261;Groupe GTI Saint-Just-Saint-Rambert;;non;oui;nom;non;sans e-mail, réunie par le nom
+1000096;Florence CATTIAUX;negociateur;non;cattiaux@gti-immobilier.fr;1000148;fiche_negociateur;105;148;Groupe GTI Saint-Bonnet-le-Château;;non;oui;email;non;
+1000097;Florian THIVILLIER;negociateur;non;thivillier@gti-immobilier.fr;1000149;fiche_negociateur;131;174;Groupe GTI Saint-Etienne;;non;oui;email;non;
+1000098;Franck BELLERI;negociateur;non;gtiimmobilier.stetienne@wanadoo.fr;1000150;fiche_negociateur;166;209;Groupe GTI Firminy;;non;oui;email;non;e-mail partagé avec une agence (pas une clé de rattachement)
+1000099;Franck THIBIER;negociateur;non;thibier@gti-immobilier.fr;1000151;fiche_negociateur;121;164;Groupe GTI Issoire;;non;oui;email;non;
+1000100;Frédéric MONNE;negociateur;non;;1000152;fiche_negociateur;219;262;Groupe GTI Yssingeaux;;non;oui;nom;non;sans e-mail, réunie par le nom
+1000101;Frédérique JORAND;negociateur;non;jorand@gti-immobilier.fr;1000153;fiche_negociateur;10;35;Groupe GTI Ambert;;non;oui;email;non;
+1000101;Frédérique JORAND;negociateur;non;jorand@gti-immobilier.fr;1000154;fiche_negociateur;32;60;Groupe GTI Tence;;non;oui;email;non;
+1000102;Gérard MOLLIN;negociateur;non;mollin@gti-immobilier.fr;1000155;fiche_negociateur;201;244;Groupe GTI Montbrison;;non;oui;email;non;
+1000103;Ghislaine GULIAN -MERCIER;negociateur;non;mercier@gti-immobilier.fr;1000156;fiche_negociateur;134;177;Groupe GTI Saint-Etienne;;non;oui;email;non;
+1000104;Gilles CHANAL;negociateur;non;chanal@gti-immobilier.fr;1000157;fiche_negociateur;162;205;Groupe GTI Firminy;;non;oui;email;non;
+1000105;grégory JACQUEMOND;negociateur;non;jacquemond@gti-immobilier.fr;1000158;fiche_negociateur;191;234;Groupe GTI Saint-Etienne;;non;oui;email;non;
+1000106;Grégory NIEWRZEDA;negociateur;non;niewrzeda@gti-immobilier.fr;1000159;fiche_negociateur;126;169;Groupe GTI Saint-Just-Saint-Rambert;;non;oui;email;non;
+1000107;Hannah WEATHERLY;negociateur;non;gtiimmobilier.ambert@wanadoo.fr;1000160;fiche_negociateur;177;220;Groupe GTI Ambert;;non;oui;email;non;e-mail partagé avec une agence (pas une clé de rattachement)
+1000108;Hélène DEFOUR;negociateur;non;craponne@gti-immobilier.fr;1000161;fiche_negociateur;210;253;Groupe GTI Craponne-sur-Arzon;;non;oui;email;non;e-mail partagé avec une agence (pas une clé de rattachement)
+1000109;hélène FAURE;negociateur;non;;1000162;fiche_negociateur;213;256;Groupe GTI Firminy;;non;oui;nom;non;sans e-mail, réunie par le nom
+1000110;Hélène PONSONNET;negociateur;non;ponsonnet@gti-immobilier.fr;1000163;fiche_negociateur;185;228;Groupe GTI Saint-Just-Saint-Rambert;;non;oui;email;non;
+1000111;Hugo LABBE;negociateur;non;labbe@gti-immobilier.fr;1000164;fiche_negociateur;29;54;Groupe GTI ANNONAY;;non;oui;email;non;
+1000111;Hugo LABBE;negociateur;non;labbe@gti-immobilier.fr;1000165;fiche_negociateur;33;59;Groupe GTI Tence;;non;oui;email;non;
+1000111;Hugo LABBE;negociateur;non;labbe@gti-immobilier.fr;1000166;fiche_negociateur;66;92;Groupe GTI Firminy;;non;oui;email;non;
+1000112;Isabelle CORDELLE;negociateur;non;cordelle.gti@gmail.com;1000167;fiche_negociateur;149;192;Groupe GTI Saint-Didier-en-Velay;;non;oui;email;non;
+1000113;Jade BARRAUD;negociateur;non;barraud@gti-immobilier.fr;1000168;fiche_negociateur;138;181;Groupe GTI Saint-Etienne;;non;oui;email;non;
+1000114;Jean Maxime GRANGIER;negociateur;non;grangier@gti-immobilier.fr;1000169;fiche_negociateur;127;170;Groupe GTI Saint-Just-Saint-Rambert;;non;oui;email;non;
+1000115;Jean VALLA;negociateur;non;jean.valla@gti-immobilier.fr;1000170;fiche_negociateur;192;235;Groupe GTI Tence;;non;oui;email;non;
+1000116;Jean-Claude FAURE;negociateur;non;faure@gti-immobilier.fr;1000171;fiche_negociateur;160;203;Groupe GTI BRIOUDE;;non;oui;email;non;
+1000117;Jean-pierre DARNE;negociateur;non;darne.gti@gmail.com;1000172;fiche_negociateur;208;251;Agences supprimée;;non;oui;email;non;
+1000118;Jérome BEAL;negociateur;non;beal@gti-immobilier.fr;1000173;fiche_negociateur;188;231;Groupe GTI Firminy;;non;oui;email;non;
+1000119;Jérome CHABANNES;negociateur;non;gtiimmobilier.lepuy@wanadoo.fr;1000174;fiche_negociateur;165;208;Groupe Gti Le Puy en Velay;;non;non;email;non;e-mail partagé avec une agence (pas une clé de rattachement)
+1000120;Joel CHAMPAGNAC;negociateur;non;champagnac@gti-immobilier.fr;1000175;fiche_negociateur;195;238;Groupe GTI Ambert;;non;oui;email;non;
+1000121;Julie CHAMPAGNAC;negociateur;non;julie.champagnac@gti-immobilier.fr;1000176;fiche_negociateur;110;153;Groupe Gti Le Puy en Velay;;non;oui;email;non;
+1000122;Julie ROCHETTE;negociateur;non;rochette@gti-immobilier.fr;1000177;fiche_negociateur;183;226;Groupe GTI Firminy;;non;oui;email;non;
+1000123;Laetitia BAYOD;negociateur;non;bayod@gti-immobilier.fr;1000178;fiche_negociateur;199;242;Groupe GTI Firminy;;non;oui;email;non;
+1000124;Laura COURT;negociateur;non;l.court@gti-immobilier.fr;1000179;fiche_negociateur;129;172;Groupe GTI Montbrison;;non;oui;email;non;
+1000125;Laure CAVARD;negociateur;non;cavard@gti-immobilier.fr;1000180;fiche_negociateur;106;149;Groupe GTI Issoire;;non;oui;email;non;
+1000126;Laurent MASSACRIER;negociateur;non;massacrier@gti-immobilier.fr;1000181;fiche_negociateur;137;180;Groupe GTI Montbrison;;non;oui;email;non;
+1000127;Léa DE PERETTI DE LA ROCCA;negociateur;non;deperetti@gti-immobilier.fr;1000182;fiche_negociateur;203;246;Agences supprimée;;non;oui;email;non;
+1000128;Lucie DECHANDON;negociateur;non;alves@gti-immobilier.fr;1000183;fiche_negociateur;135;178;Groupe GTI Monistrol sur Loire;;non;oui;email;non;
+1000129;Ludivine DESMAREST;negociateur;non;desmarest@gti-immobilier.fr;1000184;fiche_negociateur;111;154;Groupe GTI Saint-Etienne;;non;oui;email;non;
+1000130;Ludivine MEILLER;negociateur;non;meiller@gti-immobilier.fr;1000185;fiche_negociateur;182;225;Groupe GTI Saint-Etienne;;non;oui;email;non;
+1000131;Ludovic LEGER;negociateur;non;leger@gti-immobilier.fr;1000186;fiche_negociateur;128;171;Groupe GTI Monistrol sur Loire;;non;oui;email;non;
+1000132;Luigi VINCI;negociateur;non;;1000187;fiche_negociateur;214;257;Groupe GTI Firminy;;non;oui;nom;non;sans e-mail, réunie par le nom
+1000133;Maeva ITIM;negociateur;non;itim@gti-immobilier.fr;1000188;fiche_negociateur;112;155;Groupe GTI Saint-Etienne;;non;oui;email;non;
+1000134;Magali DI MARIA;negociateur;non;dimaria@gti-immobilier.fr;1000189;fiche_negociateur;147;190;Groupe GTI Saint-Etienne;;non;oui;email;non;
+1000135;Manel ARFAOUI DE RAFFIN;negociateur;non;manel@gti-immobilier.fr;1000190;fiche_negociateur;198;241;Groupe Gti Le Puy en Velay;;non;non;email;non;
+1000136;Manon ACHON;negociateur;non;achon@gti-immobilier.fr;1000191;fiche_negociateur;115;158;Groupe GTI BRIOUDE;;non;oui;email;non;
+1000137;Marc KRIGER;negociateur;non;marc.kriger@gti-immobilier.fr;1000192;fiche_negociateur;169;212;Groupe GTI Saint-Bonnet-le-Château;;non;oui;email;non;
+1000138;Marine SAY;negociateur;non;say@gti-immobilier.fr;1000193;fiche_negociateur;113;156;Groupe GTI Saint-Just-Saint-Rambert;;non;oui;email;non;
+1000139;Marion BARBE;negociateur;non;barbe@gti-immobilier.fr;1000194;fiche_negociateur;114;157;Groupe GTI ANNONAY;;non;oui;email;non;
+1000140;Maryline POURRAT;negociateur;non;pourrat@gti-immobilier.fr;1000195;fiche_negociateur;186;229;Groupe GTI Firminy;;non;oui;email;non;
+1000141;Maud ROBIN;negociateur;non;gtiimmobilier.veauche@orange.fr;1000196;fiche_negociateur;175;218;Groupe GTI Firminy;;non;oui;email;non;e-mail partagé avec une agence (pas une clé de rattachement)
+1000142;Maxime CHANTUREAU;negociateur;non;chantureau@gti-immobilier.fr;1000197;fiche_negociateur;118;161;Groupe GTI Issoire;;non;oui;email;non;
+1000143;Mehdi LAKTIBI;negociateur;non;laktibi@gti-immobilier.fr;1000198;fiche_negociateur;141;184;Groupe GTI Saint-Just-Saint-Rambert;;non;oui;email;non;
+1000144;Mélissa CANTY;negociateur;non;canty@gti-immobilier.fr;1000199;fiche_negociateur;119;162;Groupe GTI Saint-Just-Saint-Rambert;;non;oui;email;non;
+1000145;Michel BALMAYER;negociateur;non;balmayer@gti-immobilier.fr;1000200;fiche_negociateur;194;237;Groupe GTI Ambert;;non;oui;email;non;
+1000146;Michèle THOMAS;negociateur;non;thomas@gti-immobilier.fr;1000201;fiche_negociateur;204;247;Agences supprimée;;non;oui;email;non;
+1000147;Michele TOUILLOUX;negociateur;non;touilloux@gti-immobilier.fr;1000202;fiche_negociateur;151;194;Groupe GTI Saint-Just-Saint-Rambert;;non;oui;email;non;
+1000148;Mickael BOUCHET;negociateur;non;bouchet.gti@gmail.com;1000203;fiche_negociateur;150;193;Groupe GTI Firminy;;non;oui;email;non;
+1000149;Monique CHABRIER;negociateur;non;chabrier@gti-immobilier.fr;1000204;fiche_negociateur;190;233;Groupe Gti Le Puy en Velay;;non;non;email;non;
+1000150;Morgane SANGUIN;negociateur;non;sanguin@gti-immobilier.fr;1000205;fiche_negociateur;156;199;Groupe GTI Saint-Bonnet-le-Château;;non;oui;email;non;
+1000151;Murielle HUBERDEAU;negociateur;non;huberdeau@gti-immobilier.fr;1000206;fiche_negociateur;171;214;Groupe GTI Ambert;;non;oui;email;non;
+1000152;Mylène KRIGER;negociateur;non;gtiimmobilier.stbonnet@wanadoo.fr;1000207;fiche_negociateur;155;198;Groupe GTI Saint-Bonnet-le-Château;;non;oui;email;non;e-mail partagé avec une agence (pas une clé de rattachement)
+1000153;Nadine BALANDRAUD;negociateur;non;balandraud@gti-immobilier.fr;1000208;fiche_negociateur;181;224;Groupe GTI Saint-Just-Saint-Rambert;;non;oui;email;non;
+1000154;Nelly MARCON;negociateur;non;nelly.marcon@gti-immobilier.fr;1000209;fiche_negociateur;157;200;Groupe GTI Saint-Etienne;;non;oui;email;non;
+1000155;Nicolas REYNAUD;negociateur;non;reynaud@gti-immobilier.fr;1000210;fiche_negociateur;153;196;Groupe Gti Le Puy en Velay;;non;oui;email;non;
+1000156;Nicolas ROUANNET;negociateur;non;rouannet@gti-immobilier.fr;1000211;fiche_negociateur;145;188;Groupe Gti Le Puy en Velay;;non;oui;email;non;
+1000157;Nicole VURPILLOT;negociateur;non;monistrol@gti-immobilier.fr;1000212;fiche_negociateur;209;252;Groupe GTI Monistrol sur Loire;;non;oui;email;non;e-mail partagé avec une agence (pas une clé de rattachement)
+1000158;Odile DUCERF;negociateur;non;;1000213;fiche_negociateur;216;259;Groupe GTI Montbrison;;non;oui;nom;non;sans e-mail, réunie par le nom
+1000159;Olivier DUMUR;negociateur;non;dumur@gti-immobilier.fr;1000214;fiche_negociateur;193;236;Groupe GTI Firminy;;non;oui;email;non;
+1000160;Paolo DE FREITAS;negociateur;non;defreitas@gti-immobilier.fr;1000215;fiche_negociateur;163;206;Groupe GTI Saint-Etienne;;non;oui;email;non;
+1000161;Pascale GUILBERT;negociateur;non;guilbert@gti-immobilier.fr;1000216;fiche_negociateur;189;232;Groupe GTI Yssingeaux;;non;oui;email;non;
+1000162;Peggy DELVAUX;negociateur;non;delvaux@gti-immobilier.fr;1000217;fiche_negociateur;139;182;Groupe GTI Issoire;;non;oui;email;non;
+1000163;Pierrick MARTINEZ;negociateur;non;martinez@gti-immobilier.fr;1000218;fiche_negociateur;31;56;Groupe GTI ANNONAY;;non;oui;email;non;
+1000164;Ramazan KUS;negociateur;non;kus@gti-immobilier.fr;1000219;fiche_negociateur;120;163;Groupe GTI Saint-Just-Saint-Rambert;;non;oui;email;non;
+1000165;Roger CHANTELOUBE;negociateur;non;gtiimmobilier.commerce@wanadoo.fr;1000220;fiche_negociateur;164;207;Groupe GTI Monistrol sur Loire;;non;oui;email;non;e-mail partagé avec une agence (pas une clé de rattachement)
+1000166;Sabrina BLACHIER;negociateur;non;blachier@gti-immobilier.fr;1000221;fiche_negociateur;132;175;Groupe GTI ANNONAY;;non;oui;email;non;
+1000167;Sabrina NICOLOSI;negociateur;non;nicolosi@gti-immobilier.fr;1000222;fiche_negociateur;103;146;Groupe GTI Montbrison;;non;oui;email;non;
+1000168;Sarah ALILI;negociateur;non;alili@gti-immobilier.fr;1000223;fiche_negociateur;146;189;Groupe GTI Firminy;;non;oui;email;non;
+1000169;Sarah ROMUALD;negociateur;non;romuald@gti-immobilier.fr;1000224;fiche_negociateur;100;142;Groupe GTI Firminy;;non;oui;email;non;
+1000170;Sébastien MENUT;negociateur;non;menut@gti-immobilier.fr;1000225;fiche_negociateur;102;145;Groupe GTI COURPIERE;;non;oui;email;non;
+1000171;Sébastien VIALETTE;negociateur;non;vialette@gti-immobilier.fr;1000226;fiche_negociateur;116;159;Groupe GTI Saint-Just-Saint-Rambert;;non;oui;email;non;
+1000172;Serge RAGAZZON;negociateur;non;gti.immobilier@orange.fr;1000227;fiche_negociateur;158;201;Groupe GTI Firminy;;non;oui;email;non;e-mail partagé avec une agence (pas une clé de rattachement)
+1000173;Solange ROMERA;negociateur;non;romera@gti-immobilier.fr;1000228;fiche_negociateur;152;195;Groupe GTI Monistrol sur Loire;;non;oui;email;non;
+1000174;Sophie DEBULOIS;negociateur;non;debulois@gti-immobilier.fr;1000229;fiche_negociateur;124;167;Groupe GTI Ambert;;non;oui;email;non;
+1000175;Stephane DESOUSA;negociateur;non;desousa@gti-immobilier.fr;1000230;fiche_negociateur;184;227;Groupe GTI Saint-Didier-en-Velay;;non;oui;email;non;
+1000176;Stephane PIOCHEL;negociateur;non;dunieres@gti-immobilier.fr;1000231;fiche_negociateur;211;254;Groupe GTI Firminy;;non;oui;email;non;e-mail partagé avec une agence (pas une clé de rattachement)
+1000177;Stéphane SANIAL;negociateur;non;sanial@gti-immobilier.fr;1000232;fiche_negociateur;174;217;Groupe GTI Firminy;;non;oui;email;non;
+1000178;Stéphanie BARDOTTI;negociateur;non;bardotti@gti-immobilier.fr;1000233;fiche_negociateur;130;173;Groupe GTI Saint-Bonnet-le-Château;;non;oui;email;non;
+1000179;Stéphanie CHAZOT;negociateur;non;gtiimmobilier.montbrison@orange.fr;1000234;fiche_negociateur;176;219;Groupe GTI Montbrison;;non;oui;email;non;e-mail partagé avec une agence (pas une clé de rattachement)
+1000180;Stéphanie PONT;negociateur;non;pont@gti-immobilier.fr;1000235;fiche_negociateur;197;240;Groupe GTI ANNONAY;;non;oui;email;non;
+1000181;Sylvain FERRARA;negociateur;non;gtiimmobilier.dorian@wanadoo.fr;1000236;fiche_negociateur;161;204;Groupe GTI Saint-Etienne;;non;oui;email;non;e-mail partagé avec une agence (pas une clé de rattachement)
+1000182;Tharah KLAU;negociateur;non;;1000237;fiche_negociateur;221;264;Groupe Gti Le Puy en Velay;;non;oui;nom;non;sans e-mail, réunie par le nom
+1000183;Thierry GONON;negociateur;non;gonon@gti-immobilier.fr;1000238;fiche_negociateur;168;211;Groupe GTI Firminy;;non;oui;email;non;
+1000184;Vincent-Lucas GONZALEZ;negociateur;non;gonzalez@gti-immobilier.fr;1000239;fiche_negociateur;23;48;Groupe GTI Firminy;;non;oui;email;non;
+1000184;Vincent-Lucas GONZALEZ;negociateur;non;gonzalez@gti-immobilier.fr;1000240;fiche_negociateur;95;120;Groupe GTI Saint-Etienne;;non;oui;email;non;
+1000184;Vincent-Lucas GONZALEZ;negociateur;non;gonzalez@gti-immobilier.fr;1000241;fiche_negociateur;97;121;Groupe GTI Monistrol sur Loire;;non;non;email;non;
+1000185;Vivien BERGER;negociateur;non;berger@gti-immobilier.fr;1000242;fiche_negociateur;28;52;Groupe GTI BRIOUDE;;non;oui;email;non;

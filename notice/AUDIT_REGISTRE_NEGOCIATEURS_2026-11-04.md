@@ -215,6 +215,17 @@ Deux niveaux, parce qu'une personne a plusieurs fiches chez Hektor :
     partagé », pour qu'à l'étape 2 la nuit ne s'en serve jamais pour rattacher une nouvelle fiche.
 - **L'essai (tables temporaires, rien ne reste)** : 187 personnes, 241 fiches ou comptes — 167 négociateurs dont 33 actifs,
   18 agences, 2 utilisateurs supprimés ; 5 comptes de l'app reliés. Liste : `REGISTRE_NEGOCIATEURS_A_VALIDER_2026-11-04.md`.
+- ⛔ **Frédéric : « je retrouve pas mon compte », « j'ai un compte admin chez Hektor »** (04/11). Mesuré : le compte
+  ADMINISTRATEUR de Hektor n'est dans AUCUNE de nos tables — `push_hektor_directory_to_supabase.py:144` ne lit que
+  `/Api/User/UsersOfParent/` (les comptes SOUS le compte principal), jamais le compte principal lui-même (le n° 4 manque
+  dans la suite 1-21). Le journal du worker le connaît : « Session Hektor administrateur active », `user_id 4`, rôle
+  ADMIN, alias « GROUPE GTI IMMOBILIER » (3 354 sessions en 3 jours). Dans l'essai, Frédéric n'apparaît que par sa fiche
+  n° 20 (Firminy, plus listée) ⇒ classé « ancien », et le compte Hektor « Compte Formation » (u1, type AGENCE) porte son
+  adresse. ✅ **Vérifié dans son Chrome le 04/11** (lecture seule) : le compte connecté chez Hektor est « GROUPE GTI
+  IMMOBILIER — Administrateur », en tête de l'organigramme, au-dessus des 4 secrétaires (Delphine BLANCHARD, Caroline
+  GERPHAGNON, Franck GERPHAGNON, Pauline GIRINON) puis des agences (« AGENCES SUPPRIMÉE », « COMPTE FORMATION »…) — le même
+  nom et le même rôle que le compte n° 4 du worker. ⇒ **son compte admin = u4, partagé avec le worker.** Restait : Le patch devra l'ajouter (source : le journal du worker, faute
+  de lecture par l'API), et le type de sa personne (dirigeant / administrateur).
 - ⚠ La dernière marque (« e-mail partagé ») a été ajoutée après le dernier essai complet : la pose la vérifiera (une erreur
   de texte annule toute la pose, rien ne resterait à moitié).
 

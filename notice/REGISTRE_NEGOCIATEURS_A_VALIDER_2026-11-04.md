@@ -9,10 +9,24 @@
 > utilisateur de Hektor sans fiche de négociateur (secrétaire, agence) ; « répartition u23 » = un numéro qui n'existe plus
 > que dans la répartition des honoraires.
 
-## En chiffres
+## La table de correspondance (nos numéros ↔ ceux de Hektor)
 
-- **187 personnes**, **241 fiches ou comptes** : 167 négociateurs (33 actifs), 18 agences (14 actives), 2 « utilisateur
-  supprimé ».
+`REGISTRE_NEGOCIATEURS_CORRESPONDANCE_2026-11-04.csv` — **une ligne par fiche ou compte Hektor (242 lignes)**, séparateur
+« ; », à ouvrir dans un tableur. Colonnes : notre n° de personne · nom · type · actif · e-mail · notre n° de fiche · sorte
+(fiche de négociateur / compte utilisateur / numéro vu seulement dans la répartition) · **n° de négociateur Hektor** · **n°
+d'utilisateur Hektor** · agence · type de compte Hektor (ADMIN, AGENCE, SECRETAIRE) · fiche active chez Hektor · encore
+listée par Hektor · rattachée par (e-mail, nom, agence, seul, décision) · compte de l'app · à valider.
+Contrôlé : 185 personnes, 219 n° de négociateur et 242 n° d'utilisateur, chacun une seule fois. **Les numéros 1000xxx sont
+numérotés dans un ordre fixe** (type, actifs d'abord, nom) : ce sont ceux qui seront posés, si l'annuaire n'a pas bougé
+d'ici là.
+
+## En chiffres (essai complet du 04/11, après ta décision sur le compte admin)
+
+- **Toi : 1000001, administrateur, actif** — ton compte admin Hektor n° 4 « GROUPE GTI IMMOBILIER » (rattaché par ta
+  décision ; l'API ne le rend jamais, il est connu par le journal du worker et vérifié dans ton Chrome) + ta fiche n° 20
+  Firminy (plus listée) + ton compte de l'app.
+- **185 personnes**, **242 fiches ou comptes** : 1 administrateur, 164 négociateurs (33 actifs, 131 anciens), 18 agences (14 actives),
+  2 « utilisateur supprimé ».
 - Toutes les 219 fiches de l'annuaire ont leur place ; tous les numéros d'utilisateur de la répartition aussi.
 - 5 comptes de l'app sont reliés à leur personne (Frédéric, Franck, Pauline GIRINON, Emmanuelle PEREIRA, Mélanie LEGRAND) ;
   le compte d'essai `codex.test@` et le compte commercial inactif `sashagerphagnon@gmail.com` n'ont pas de personne.
@@ -68,10 +82,10 @@
 - Sylvie TEYSSONNIER n41 Tence ✓ · Tatiana CROIZIER n54 Saint-Just ✓
 - (+ Pauline GIRINON, Caroline GERPHAGNON, Delphine BLANCHARD, Franck GERPHAGNON : ① ci-dessus)
 
-## ④ Les anciens (aucune fiche active) — 134 personnes, toutes gardées
+## ④ Les anciens (aucune fiche active) — 131 personnes, toutes gardées
 
 Ceux qui ont plusieurs fiches ou qui ne sont plus chez Hektor :
-- Aline VALETTE n42 Tence † · Baptiste BRUEL n11 Ambert † · Frédéric GERPHAGNON n20 Firminy † (+ compte de l'app)
+- Aline VALETTE n42 Tence † · Baptiste BRUEL n11 Ambert † · (Frédéric GERPHAGNON n'est plus ici : administrateur, voir plus haut)
 - Frédérique JORAND n10 Ambert, n32 Tence · Hugo LABBE n29 Annonay, n33 Tence, n66 Firminy
 - Vincent-Lucas GONZALEZ n23 Firminy, n95 Saint-Étienne, n97 Monistrol † · Cyril LACHAIZE n3 Saint-Étienne · Pierrick MARTINEZ n31 Annonay
 - Manel ARFAOUI DE RAFFIN n198 †, Jérome CHABANNES n165 †, Monique CHABRIER n190 †, Eléonore GRASSO n179 † (Le Puy)
