@@ -13887,6 +13887,10 @@ export default function App() {
   //   fiche ouverte depuis l'écran Annonces n'y serait pas, et on retomberait
   //   sur une ligne vide SANS ERREUR. Une absence est pire qu'une erreur.
   const [clotureParMandat, setClotureParMandat] = useState<Record<string, string>>({})
+  // ⑧ (04/11/2026) : la CHARGE des honoraires par n° de mandat, pour le
+  //   pre-remplissage du PREMIER acte d'un dossier. Elle arrive par le MEME
+  //   chargement que `clotureParMandat` -- aucune requete de plus.
+  const [chargeParMandat, setChargeParMandat] = useState<Record<string, string>>({})
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [googleWorkspaceIdentity, setGoogleWorkspaceIdentity] = useState<GoogleWorkspaceIdentity | null>(null)
   const [userNegotiatorContext, setUserNegotiatorContext] = useState<UserNegotiatorContext | null>(null)
@@ -15787,20 +15791,27 @@ export default function App() {
   //   vue : notre date d'abord, celle de Hektor ensuite. On ne choisit pas ici.
   useEffect(() => {
     const aid = selectedDossier?.hektor_annonce_id
-    if (!aid) { setClotureParMandat({}); return }
+    if (!aid) { setClotureParMandat({}); setChargeParMandat({}); return }
     let cancelled = false
     void loadRegisterCycleAffaires(aid)
       .then((rows) => {
         if (cancelled) return
         const map: Record<string, string> = {}
+        // ⑧ (04/11/2026) : LA CHARGE PASSE PAR LA MEME BOUCLE. Rien a charger de
+        //   plus -- c'est la lecon du 13/10 sur la date de cloture : « la bonne
+        //   valeur etait deja chargee, a cote ».
+        const charges: Record<string, string> = {}
         for (const r of rows) {
           const n = String(r.numero_mandat ?? '').trim()
           const d = String(r.mandat_date_cloture ?? '').trim()
           if (n && d) map[n] = d
+          const c = String(r.mandat_charge_honoraires_app ?? '').trim()
+          if (n && c) charges[n] = c
         }
         setClotureParMandat(map)
+        setChargeParMandat(charges)
       })
-      .catch(() => { if (!cancelled) setClotureParMandat({}) })
+      .catch(() => { if (!cancelled) { setClotureParMandat({}); setChargeParMandat({}) } })
     return () => { cancelled = true }
   }, [selectedDossier?.hektor_annonce_id, dataReloadKey])
 
@@ -17908,6 +17919,34 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       if (!courante && chargeOffre && !statusChangeCommissionTouchee) {
         setStatusChangeChargeCommission(chargeOffre)
         setStatusChangeCommissionTouchee(true)
+      } else if (!courante && !chargeOffre && !statusChangeCommissionTouchee) {
+        // ⑧ (04/11/2026) : LE PREMIER ACTE D'UN DOSSIER -- LA CHARGE VIENT DU MANDAT.
+        //
+        // SA DECISION : « a la creation d'une transaction dans un nouveau dossier
+        //   chaine, la modale propose la charge a partir du mandat lie, en
+        //   pre-remplissage. C'est tout. Il faut surtout rien changer au reste. »
+        //
+        // ⛔ CETTE BRANCHE NE S'OUVRE QUE SI LES DEUX AUTRES SE TAISENT :
+        //   . `courante` vide  -> on CREE (en modification, la transaction fait foi,
+        //     et c'est normal : la modale lit le registre des AFFAIRES)
+        //   . `chargeOffre` vide -> RIEN A REPRENDRE dans la chaine, donc c'est le
+        //     premier acte (offre, compromis ou vente : peu importe lequel)
+        //   . `statusChangeCommissionTouchee` faux -> l'humain n'a pas choisi
+        //   L'ordre de priorite est donc : SAISIE > la chaine > LE MANDAT > defaut.
+        //
+        // ⚠ QUEL MANDAT. La case de la modale est souvent vide (« Attribue
+        //   automatiquement si vide ») : on prend alors celui du dossier ouvert,
+        //   comme le fait deja le bloc « VIE DU MANDAT » (l. 21166).
+        const numeroMandat = String(statusChangeSelectedMandat
+          || selectedDossier?.numero_mandat || '').trim()
+        const chargeMandat = numeroMandat
+          ? String(chargeParMandat[numeroMandat] ?? '').trim() : ''
+        if (chargeMandat) {
+          setStatusChangeChargeCommission(chargeMandat)
+          setStatusChangeCommissionTouchee(true)
+          setNoticeMessage(`Charge des honoraires reprise du mandat ${numeroMandat} :`
+            + ` ${chargeMandat}. Modifiez-la si elle a changé.`)
+        }
       }
       return
     }
@@ -17918,7 +17957,15 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     if (charge) setStatusChangeChargeCommission(charge)
     setNoticeMessage(`Commission reprise de l'offre : ${repris}. Modifiez-la si elle a change.`)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusChangeAffaires, statusChangeStatus, statusChangeAffaireChoisie])
+    // ⚠⚠ `chargeParMandat` EST OBLIGATOIRE DANS CETTE LISTE (04/11/2026) : elle
+    //   arrive d'une lecture ASYNCHRONE du registre. Sans elle, l'effet tournait
+    //   une fois AVANT l'arrivee de la charge, ne posait rien, et ne se rejouait
+    //   JAMAIS -- le pre-remplissage n'aurait marche qu'un coup sur deux, au hasard
+    //   de la course entre le reseau et l'ouverture de la modale.
+    //   ⭐ Rejouer est SANS DANGER : les trois gardes du debut tiennent, et
+    //     `statusChangeCommissionTouchee` interdit de repasser sur un choix humain.
+  }, [statusChangeAffaires, statusChangeStatus, statusChangeAffaireChoisie,
+      chargeParMandat, statusChangeSelectedMandat, selectedDossier?.numero_mandat])
 
   /** Ajoute une condition, du catalogue ou libre. Trente au maximum -- la base
    *  en refuse davantage, et l'ecran doit dire la meme chose qu'elle. */

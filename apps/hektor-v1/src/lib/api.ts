@@ -7133,6 +7133,13 @@ export type CycleAffaire = {
   statut_annonce: string | null
   mandat_date_fin: string | null
   mandat_date_cloture: string | null
+  // ⑧ (04/11/2026) : QUI PAIE LES HONORAIRES, pour le PRE-REMPLISSAGE du premier
+  //   acte d'un dossier. Sa decision : « a la creation d'une transaction dans un
+  //   nouveau dossier chaine, la modale propose la charge a partir du mandat lie ».
+  //   ⚠ Le carnet `app_mandat_champ_app` -- celui qui FAIT FOI -- a RLS activee et
+  //     ZERO politique : le front ne peut pas le lire. On passe donc par la vue,
+  //     qui sert deja notre valeur. Meme chemin que `mandat_date_cloture`.
+  mandat_charge_honoraires_app: string | null
   offre_id: string | null
   offre_state: string | null
   compromis_id: string | null
@@ -7146,7 +7153,7 @@ export async function loadRegisterCycleAffaires(hektorAnnonceId: number | string
   if (!/^\d+$/.test(cleanId)) return []
   const { data, error } = await supabase
     .from('app_registre_mandats_current')
-    .select('numero_mandat,statut_annonce,mandat_date_fin,mandat_date_cloture,offre_id,offre_state,compromis_id,compromis_state,vente_id,affaires_detail_json')
+    .select('numero_mandat,statut_annonce,mandat_date_fin,mandat_date_cloture,mandat_charge_honoraires_app,offre_id,offre_state,compromis_id,compromis_state,vente_id,affaires_detail_json')
     .eq('hektor_annonce_id', Number(cleanId))
     .not('numero_mandat', 'is', null)
   if (error || !data) return []
