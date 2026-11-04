@@ -1827,3 +1827,34 @@ Aucun redémarrage n'est nécessaire : chaque relecture relit le `.env`.
   donc l'heure `calcule_le` des lignes de la table locale.
   Hors de ce changement : 2 relectures en erreur ce matin (07:06 et 07:15 UTC, contacts 10651002 et 10650996). Le worker refuse avant toute
   étape Python : « pas encore créé chez Hektor : rien à viser ». C'est son refus normal pour un contact qui n'a pas encore son numéro Hektor.
+
+## 61. ⛔ LES 211 SANS NATURE : LA NUIT NE RETIRE PLUS AUCUN CONTACT DE SUPABASE DEPUIS LE 23/09 *(04/11, « on enchaîne » ; lecture seule, rien codé)*
+
+- **Ce qu'elles sont** : 216 contacts que Supabase a déjà reçus (ils sont dans l'état d'envoi local, dernier envoi entre le 23/09 et le 27/10)
+  et qui ne sont plus éligibles. La nuit n'envoie que les éligibles, donc ils ne sont plus jamais rafraîchis. 211 d'entre eux n'ont pas de
+  nature, parce que la nature est née le 01/11.
+- **Ce qu'ils montrent de faux, mesuré chez Supabase** :
+  - **104 sont ARCHIVÉS chez Hektor mais ACTIFS dans l'app** (2 seulement ont un lien au registre) ;
+  - 107 sont actifs des deux côtés, dont 96 avec un lien au registre (sans doute des vendeurs ou acquéreurs de biens sortis du parc) ;
+  - 5 sont archivés des deux côtés.
+- **La cause, dans le code** : `push_contacts_to_supabase.py`, `est_ne_dans_l_app()` (l. 645), et le verrou C-4 (l. ~1003) qui retire
+  des « disparues » tout contact né dans l'app. Le verrou les reconnaît à `>= 10 000 000`. Or depuis la bascule du 23/09, TOUTES les identités
+  de contact sont dans cette plage : 356 815 sur 356 824 dans la couche, 63 171 sur 63 193 dans l'état d'envoi.
+  La vraie plage des contacts nés dans l'app est **>= 20 000 000** : le distributeur `app_contact_identite_seq` a été placé à 20 000 000 le 22/09,
+  et en est aujourd'hui à 20 000 037.
+  ⇒ Le verrou écarte TOUTES les disparues : la nuit ne retire plus aucun contact de Supabase. Sur les 30 nuits de journaux gardés, il y a
+  eu 1 seule suppression de contact (le 22/10).
+  Le commentaire du verrou le disait lui-même : « il ne devrait jamais mordre ». Il mord sur tout.
+- **Calcul des disparues refait à blanc** : 241, dont 216 encore dans la couche (non éligibles) et 25 absentes de la couche. Ces 25 sont
+  déjà absentes de Supabase : les suppressions faites par l'app et les contacts d'essai.
+- **Ce qui ne s'est PAS perdu, au contraire** : comme rien n'a été retiré, aucun contact lié à une affaire n'a disparu de l'app. La décision
+  du 30/09 (« les liens acquéreur montent toujours ») s'en trouve protégée par accident.
+- **Les options, rien n'est décidé** :
+  A. remettre le verrou sur 20 000 000 SEUL : la nuit suivante retire les 216 de l'app, dont 96 liés au registre. ⛔ Ça casserait des
+     affaires et la règle « un numéro ne se perd jamais ».
+  B. ⭐ **la nuit envoie aussi les contacts DÉJÀ ENVOYÉS** (éligibles OU dans l'état d'envoi), sur le modèle exact de la décision B du 14/10
+     pour les recherches (« une recherche qui a déjà existé dans Supabase n'en est plus retirée parce que son contact s'est endormi »).
+     Les 216 seraient rafraîchis : les 104 archivés passent archivés, la nature arrive. Le coût est de +216 lignes.
+     Et le verrou est remis sur 20 000 000, pour qu'il dise ce qu'il veut dire. Il n'aurait alors plus rien à retirer, sauf un contact
+     sorti de la couche locale ; or la couche garde même un contact supprimé chez Hektor quand un bien le cite (`supprimee_chez_hektor`).
+  C. ne rien faire : 104 contacts restent faussement actifs, et le nombre grandit à chaque contact qui s'endort.
