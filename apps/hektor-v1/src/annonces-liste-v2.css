@@ -479,3 +479,16 @@
 .av3m-entete, .av3m-entete .av3-presence, .av3m-carte { min-width: 0; max-width: 100%; }
 .mobile-card-list:has(.av3m-entete) { min-width: 0; }
 .av3m-entete .av3-onglets { width: 100%; align-self: stretch; box-sizing: border-box; }
+
+/* 04/11 -- Frederic : « le chiffre et l'erreur passerelle ne sont pas bien visibles » sur l'antenne.
+   Cause : l'antenne est un span, et `.listing-table-wrap td span { overflow: hidden }` (+ marge, coupe a
+   une ligne) TRONQUAIT les deux pastilles posees a cheval sur son bord. On leve la coupure et on les
+   rend lisibles : chiffre vert sur blanc cercle de vert, erreur orange avec un « ! ». */
+.app-shell.app-shell-modern .panel-grid.av3 .table-wrap.listing-table-active .av3-antenne { overflow: visible !important; display: grid !important; margin: 0 !important; -webkit-line-clamp: unset !important; }
+.av3 .av3-antenne .nb { top: -8px; right: -8px; min-width: 19px; height: 19px; padding: 0 4px; border-radius: 99px; background: #fff; color: #2f7d59; border: 2px solid #2f7d59; font-size: 10.5px; line-height: 15px; box-shadow: 0 1px 3px rgba(34, 35, 35, .18); }
+.av3 .av3-antenne .err { bottom: -7px; right: -7px; width: 17px; height: 17px; box-sizing: border-box; border-radius: 99px; background: #dd7a18; border: 2px solid #fff; box-shadow: 0 1px 3px rgba(34, 35, 35, .2); display: grid; place-items: center; }
+.av3 .av3-antenne .err::after { content: "!"; color: #fff; font-size: 10px; font-weight: 900; line-height: 1; }
+.app-shell.app-shell-modern .panel-grid.av3 .table-wrap.listing-table-active .av3-antenne .nb { color: #2f7d59 !important; display: block !important; margin: 0 !important; overflow: visible !important; -webkit-line-clamp: unset !important; }
+.app-shell.app-shell-modern .panel-grid.av3 .table-wrap.listing-table-active .av3-antenne .err { display: grid !important; margin: 0 !important; overflow: visible !important; }
+/* l'antenne a besoin de place pour ses pastilles : la cellule ne la coupe plus non plus */
+.app-shell.app-shell-modern .panel-grid.av3 .table-wrap.listing-table-active .av3-dif { overflow: visible !important; padding: 6px 0 !important; }
