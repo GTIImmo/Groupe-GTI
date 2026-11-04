@@ -592,6 +592,7 @@ C.9-couple · C.13-c · E.1 (recherches, visites, documents, signatures) · A.3 
 - ⚠ **Une autre session travaille en parallèle** : relire `git log` avant d'écrire, et stager
   **fichier par fichier**.
 - ⚠ **Les alertes n'ont qu'UN seul canal** : `WHATSAPP_ALERT_WEBHOOK` n'a jamais été posé.
+- ⛔ **Matterport : l'API est HORS SERVICE depuis le 03/11** (pas de licence développeur, `model.locked`). **L'entrée** (la lecture de nuit, `sync_matterport_models.py`) **et la sortie** (les gestes du worker) **passent toutes deux par la CONSOLE**, avec la session `Console/matterport_storage_state.json`. Détail : `notice/NOTE_MATTERPORT_ACTIONS_API_EN_ATTENTE_2026-05-05.md`.
 - ⚠ **11 tâches sont surveillées** par `check_gti_health.py` ; une tâche neuve se **déclare AVANT**
   d'être enregistrée, et se **compare réglage par réglage** à une sœur qui marche.
 
