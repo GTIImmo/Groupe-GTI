@@ -105,3 +105,59 @@ Couche locale (`phase2.sqlite`), nature de la nuit :
 - Le chemin d'un négociateur (tous les comptes sont au périmètre réseau aujourd'hui).
 - Les 18 tables qui pointent un contact (`marquer_contacts_disparus.py`) : lesquelles supposent aujourd'hui que le contact est dans la table
   complète.
+
+## 9. LES DOUBLONS — CE QUI EXISTE, CE QUI EST FAIT, CE QUI RESTE *(04/11, « on reprend l'audit des contacts, les doublons et les 176 000 »)*
+
+- **Le cahier des charges existe** (`CAHIER_CHARGES_DOUBLONS_CONTACTS_2026-06-29.md`, « version de cadrage, à valider avant développement ») :
+  - un workflow de qualité des données, « pas un script de suppression » ;
+  - 4 règles de détection, 5 priorités (recherches actives d'abord), 7 lots ;
+  - l'archivage automatique y est interdit.
+- **Ce qui est fait : le lot 0 seulement.**
+  - Le détecteur tourne chaque nuit (`build_contacts_layer.py`, `duplicate_key_groups`) et pose sur chaque fiche `duplicate_group_count`,
+    `duplicate_max_severity` et `duplicate_primary_candidate_id`.
+  - L'app ne s'en sert que pour une pastille de risque (`contactHasDuplicateRisk`, `App.tsx` 40539), le tri de l'annuaire (les fiches à
+    doublons d'abord) et un compteur.
+  - Les tables de groupes ne partent pas dans le cloud : `--include-duplicates` n'est pas passé la nuit.
+- **Ce qui n'est pas fait** : les lots 1 à 6 (affinage des règles, couche de décisions, écran de revue, traitement). Le geste « fusionner deux
+  fiches » n'existe pas (L5 / E.0-bis reporté, CH39 proposé le 07/10, rien de décidé).
+- **La mesure la plus récente** (audit des couples anciens §8, 01/11) : 37 715 groupes, 48 333 fiches.
+  - 27 500 groupes sont la même personne : 12 950 personnes en 27 810 fiches, soit **14 860 fiches en trop**. Dans l'app : 2 868 personnes
+    touchées, et **444 ont deux fiches vivantes ou plus**.
+  - 4 132 groupes ont le même nom avec des prénoms différents (des conjoints ou une famille, pas des doublons).
+  - 3 888 groupes partagent un e-mail sous des noms différents ; 2 195 ont le même prénom et des noms différents.
+  - Les doublons ont fabriqué 9 232 foyers automatiques en trop.
+- **Le lien avec l'index** :
+  - un index de tous les contacts mettrait sous les yeux des agents les 14 860 fiches en trop, aujourd'hui invisibles parce qu'elles sont
+    hors de l'app (11 956 actives et 25 099 archivées hors de l'app sont dans un groupe) ;
+  - ⇒ l'index et les doublons se décident ENSEMBLE : soit l'index montre la pastille de doublon et propose la fiche principale
+    (`duplicate_primary_candidate_id`), soit il n'expose que la fiche principale de chaque groupe « même personne ».
+
+## 10. LES 176 417 PERSONNES HORS DE L'APP — QUI ELLES SONT
+
+- **64 039 actives** :
+  - 50 694 joignables (36 081 par e-mail, 44 120 par téléphone) ;
+  - par type : mandant 22 410, acquéreur 21 816, **partenaire 16 098**, mandant + partenaire 1 976, acquéreur + mandant 1 673 ;
+  - 23 242 ont un lien avec un bien (désormais archivé) ; 51 seulement ont une recherche, inactive ;
+  - 11 956 sont dans un groupe de doublons ; 605 sont marquées supprimées chez Hektor ;
+  - dernière modification : mars 2025 pour 25 302, novembre 2024 pour 14 215 (les mises à jour de masse, §63) ;
+  - créées surtout entre 2019 et 2026 (de 2 000 à 5 000 par an).
+- **112 378 archivées** :
+  - 108 784 joignables ;
+  - 25 099 dans un groupe de doublons ;
+  - 10 334 avec un lien à un bien ; **57 263 avec une recherche, inactive** (d'anciens acquéreurs) ;
+  - dernière modification : surtout les trois purges (mars 2025 44 420, septembre 2023 34 670, octobre 2021 13 120).
+- **Ce qui les cite déjà dans l'app** : le REGISTRE des relations. Chez Supabase, **50 920 contacts du registre (63 182 liens) sont absents de
+  l'app**, sur 96 313 contacts cités.
+  ⇒ L'historique d'un bien sorti du parc nomme des personnes dont l'app n'a pas la fiche. C'est le trou qu'un index fermerait le plus
+  utilement : une fiche à la demande depuis le registre.
+- **Ce qui reste non mesuré** : ce que l'écran montre aujourd'hui quand il rencontre ces 50 920 (un nom, un numéro, rien ?) ; la part des
+  partenaires qui seraient utiles dans l'annuaire.
+
+## 11. CE QUI SE DÉCIDE, DANS L'ORDRE PROPOSÉ
+
+1. **Les contacts figés** : le remède en une clause est prêt et éteint (synthèse couples §64). Il est indépendant de tout le reste.
+2. **L'index** : qui y entre. Les mesures suggèrent de commencer par **les contacts cités par le registre** (50 920). Ce sont eux qui manquent à
+   l'écran, plutôt que les 176 417 d'un coup.
+3. **Les doublons** : valider (ou revoir) le cahier des charges du 29/06 avant d'exposer plus de fiches, et décider si l'index montre les
+   doublons ou seulement la fiche principale.
+4. **Les données personnelles** : téléphone et e-mail dans l'index, oui ou non.

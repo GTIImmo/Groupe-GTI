@@ -1965,3 +1965,13 @@ Recherche dans les notes (accents ignorés), l'historique git et la mémoire. **
 - **Pour l'allumer** (ton accord) : ajouter `APP_GARDER_CONTACTS_DEJA_POUSSES=1` dans le `.env`.
   La nuit suivante, les 216 partent. Le contrôle du lendemain doit montrer les 104 archivés passés archivés chez Supabase et la nature présente.
   **Retour arrière** : retirer la ligne.
+
+## 65. DOUBLONS ET 176 417 PERSONNES HORS DE L'APP : AUDIT FAIT *(04/11, « puis on reprend l'audit des contacts, les doublons et les 176 000 »)*
+
+- Le détail est dans `notice/AUDIT_INDEX_GLOBAL_CONTACTS_2026-11-04.md` §9 à §11.
+- **Doublons** : du cahier des charges du 29/06, seul le lot 0 est fait (le détecteur de nuit, une pastille, le tri). Il n'y a ni revue ni
+  fusion. On compte 14 860 fiches en trop, et 444 personnes ont deux fiches vivantes dans l'app.
+- **Les 176 417** : 64 039 actives (dont 16 098 partenaires) et 112 378 archivées (dont 57 263 anciens acquéreurs). ⭐ **50 920 contacts cités
+  par notre registre des relations sont absents de l'app** : c'est l'usage le plus utile d'un index.
+- **Ordre proposé** : 1. le remède des contacts figés (§64) ; 2. l'index, en commençant par les contacts du registre ; 3. les doublons
+  (cahier du 29/06 à valider) ; 4. les données personnelles.
