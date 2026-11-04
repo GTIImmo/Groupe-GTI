@@ -2160,3 +2160,32 @@ Mesure sur la base du serveur (`app_relation` local, 132 943 liens ; types d'off
   - la durée du run ;
   - l'annuaire à l'écran ;
   - EA32621 en couple.
+
+## 72. AVANT D'ENVOYER LES 31 533 EN JOURNÉE : AUDIT DE NOUVEAU *(04/11, « as-tu pensé à tout, aux mises à jour, aux dates… audit de nouveau » ; lecture seule)*
+
+- **Ce que la nuit fait autour de l'envoi des contacts** (`run_full_pipeline.ps1`, dans l'ordre) :
+  1. le périmètre console, puis le périmètre registre (§71) ;
+  2. … les conjoints des couples, puis la nature ;
+  3. **l'envoi des contacts** ;
+  4. le ménage des orphelins de recherche, **la descente des numéros** (`pousser_numeros_contact.py`, qui remplit `app_contact_id` chez
+     Supabase pour les fiches neuves : c'est lui qui manquait aux 22 fiches du §66), la propagation des numéros, les contacts devenus
+     acquéreurs, et **le type depuis nos registres** (`app_recalculer_tous_les_types`).
+  ⇒ Envoyer « seulement les contacts » laisserait les fiches neuves SANS `app_contact_id` et SANS type jusqu'à la nuit, et les conjoints
+  nommés de 3 106 d'entre elles dehors.
+- **Les dates** : `refreshed_at` est la seule colonne de date typée chez Supabase. Elle est remplie et en 2026 pour les 31 533 ; il n'y a
+  **aucune date « 0000 »** ni `date_maj` vide (le piège du 27/10).
+- **La fraîcheur** :
+  - le détail des fiches date surtout de mai (27 044) et juin (3 431), comme pour tout le parc ;
+  - ⭐ mais **la liste de cette nuit a vu 21 968 des 31 533** (toutes les actives), et **7 seulement** ont été modifiées chez Hektor depuis notre
+    dernière relecture. La nuit des contacts relit ces 7 elle-même.
+  - Les 9 559 archivées ne sont relues par la liste que le dimanche.
+- **Le poids d'un lot** : le plus long commentaire fait 3 562 caractères, bien sous la limite d'un lot de 300 (mesurée le 02/10).
+- **Ce qu'elles emportent** : 1 645 recherches, toutes inactives. Les liens sont déjà dans le registre.
+- **La séquence proposée**, pour ces contacts seulement, avec les commandes exactes de la nuit :
+  1. `elargir_perimetre_registre.py` (local) ;
+  2. `conjoints_des_couples.py` (local, idempotent) ;
+  3. l'envoi des contacts, d'abord À BLANC (`--dry-run`), puis réel ;
+  4. `pousser_numeros_contact.py` ;
+  5. `recalculer_types_contacts.py`.
+  Durées de cette nuit : l'envoi de 4 214 fiches en 39 s, les numéros en 18 s, les types en 25 s ⇒ **~10 minutes** au total.
+  La nuit suivante ne les renverra pas (leur empreinte sera la même).
