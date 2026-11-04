@@ -411,3 +411,19 @@ signaux. ⚠ Une clé de battement neuve doit être DÉCLARÉE dans `app_worker_
   négociateurs » ; Claire RIBBES inchangée (100 083 € HT, 18 actes, 38 mandats, 151 k€ de potentiel ; 342 lignes par le
   numéro, 0 par le nom) ; le sélecteur compte 44 personnes ; Pauline GIRINON, Caroline GERPHAGNON, Delphine BLANCHARD n'y
   sont plus « ancien » ; les agences y sont marquées « · agence » (Annonay, Firminy, Saint-Étienne).
+
+## 16. Étape 3, deuxième lecteur : LES RENDEZ-VOUS LISENT LE REGISTRE (04/11) — Frédéric : « Oui, enchaîne »
+
+- **Le code** (`backend/app/services/appointment_service.py`) : une aide `_load_registre_negociateur(commercial_id, email)` —
+  la personne par son n° de NÉGOCIATEUR (à défaut par l'e-mail d'une fiche, s'il ne désigne qu'une personne), puis le
+  téléphone de sa fiche, à défaut d'une autre fiche de la même personne (actives d'abord). **Jamais `id_user = commercial_id`.**
+  Deux appelants corrigés : `_load_contact_details` (page publique de rendez-vous, recopiée dans le lien) et
+  `_hydrate_estimation_negotiator` — ⚠ trouvé en passant : la page d'ESTIMATION avait le même défaut, et il y donnait le
+  NOM et l'E-MAIL d'une autre personne en plus du téléphone (la clé de rotation `user_id` n'est pas touchée).
+- **Éprouvé en lecture seule contre la vraie base** : Aline VALETTE (n° 42), Mélanie LEGRAND (n° 5), Hugo LABBE (n° 29),
+  Claire RIBBES (n° 15) reçoivent chacun LEUR téléphone ; l'ancien chemin leur donnait celui de Dylan JOURGET, Caroline
+  GERPHAGNON, Lucille FORLICO, et de l'agence de Dunières ; par l'e-mail seul → Claire RIBBES ; un n° inconnu → rien.
+- **La réparation des 178 liens** : `supabase/patch_rdv_telephone_negociateur_2026-11-04.sql` (+ `_INVERSE`), sauvegarde
+  datée `app_appointment_public_link_avant_tel_20261104`. Mesuré à blanc : 178 liens faux, 178 retrouvent leur négociateur
+  au registre, 178 recevront son téléphone, 0 restera vide. Contrôle de fin : plus aucun lien au téléphone d'une autre
+  personne. ⛔ **À poser APRÈS la mise en ligne du backend** (Render) : l'ancien code réécrit un lien dont une case est vide.

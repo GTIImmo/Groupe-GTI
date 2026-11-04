@@ -292,6 +292,43 @@ class AppointmentService:
             "brandLogoUrl": self._resolve_appointment_email_logo(),
         }
 
+    def _load_registre_negociateur(self, commercial_id: str | None, email: str | None) -> dict[str, Any] | None:
+        """Les coordonnees d'un negociateur, lues dans le REGISTRE DES NEGOCIATEURS (04/11/2026).
+
+        Par son n° de NEGOCIATEUR (`commercial_id` des biens) : sa fiche, et a defaut de telephone sur elle, les autres
+        fiches de la MEME personne (une par agence chez Hektor), les actives d'abord. A defaut de numero, par l'e-mail
+        d'une fiche de negociateur, s'il ne designe qu'une personne. JAMAIS par `id_user = commercial_id` : ce sont deux
+        numerotations differentes (Claire RIBBES : negociateur 15, utilisateur 39). Rend None si rien n'est sur.
+        """
+        try:
+            personne = None
+            if commercial_id:
+                rows = self._rest_get("app_negociateur_fiche", params={
+                    "select": "app_personne_id", "hektor_negociateur_id": f"eq.{commercial_id}", "limit": "1"})
+                personne = rows[0].get("app_personne_id") if rows else None
+            if personne is None and email:
+                rows = self._rest_get("app_negociateur_fiche", params={
+                    "select": "app_personne_id", "sorte": "eq.fiche_negociateur", "email_vu": f"eq.{email.strip().lower()}"})
+                ids = {r.get("app_personne_id") for r in rows}
+                personne = ids.pop() if len(ids) == 1 else None
+            if personne is None:
+                return None
+            fiches = self._rest_get("app_negociateur_fiche", params={
+                "select": "hektor_negociateur_id,telephone,portable,email_vu,nom_vu,actif_chez_hektor,sorte",
+                "app_personne_id": f"eq.{personne}", "sorte": "eq.fiche_negociateur",
+                "order": "actif_chez_hektor.desc,app_fiche_id.asc"})
+            # sa propre fiche d'abord, puis ses autres fiches
+            fiches.sort(key=lambda f: 0 if str(f.get("hektor_negociateur_id") or "") == str(commercial_id or "") else 1)
+            for fiche in fiches:
+                tel = self._coalesce_text(fiche.get("telephone"))
+                portable = self._coalesce_text(fiche.get("portable"))
+                if tel or portable:
+                    return {"tel": tel, "portable": portable, "email": self._coalesce_text(fiche.get("email_vu")),
+                            "label": self._coalesce_text(fiche.get("nom_vu")), "personne": personne}
+            return {"tel": None, "portable": None, "email": None, "label": None, "personne": personne}
+        except Exception:
+            return None
+
     def _load_contact_details(self, dossier: dict[str, Any]) -> dict[str, Any]:
         details = {
             "negociateurPhone": None,
@@ -303,32 +340,13 @@ class AppointmentService:
         negotiator_email = str(dossier.get("negociateur_email") or "").strip()
         agence_nom = str(dossier.get("agence_nom") or "").strip()
         if commercial_id or negotiator_email:
-            try:
-                user_rows: list[dict[str, Any]] = []
-                if negotiator_email:
-                    user_rows = self._rest_get(
-                        "app_user_directory",
-                        params={
-                            "select": "tel,portable,email",
-                            "email": f"eq.{negotiator_email}",
-                            "limit": "1",
-                        },
-                    )
-                if not user_rows and commercial_id:
-                    user_rows = self._rest_get(
-                        "app_user_directory",
-                        params={
-                            "select": "tel,portable,email",
-                            "id_user": f"eq.{commercial_id}",
-                            "limit": "1",
-                        },
-                    )
-                if user_rows:
-                    user_row = user_rows[0]
-                    details["negociateurPhone"] = self._coalesce_text(user_row.get("tel"))
-                    details["negociateurMobile"] = self._coalesce_text(user_row.get("portable"))
-            except Exception:
-                pass
+            # 04/11/2026 -- le telephone vient du REGISTRE DES NEGOCIATEURS, par le n° de NEGOCIATEUR du bien.
+            # ⛔ Avant : a defaut de l'e-mail, on cherchait `id_user = commercial_id` -- un n° de negociateur pris pour un n° de
+            #   compte -- et 178 liens publics ont recu le telephone d'une AUTRE personne (notice/AUDIT_REGISTRE_NEGOCIATEURS_2026-11-04.md §3 bis).
+            coordonnees = self._load_registre_negociateur(commercial_id, negotiator_email)
+            if coordonnees:
+                details["negociateurPhone"] = coordonnees.get("tel")
+                details["negociateurMobile"] = coordonnees.get("portable")
 
         if agence_nom:
             try:
@@ -534,37 +552,17 @@ class AppointmentService:
         }
         if not negotiator:
             return details
+        # ⚠ `user_id` est ici le `commercial_id` des biens (_read_dynamic_agency_negotiators) : un n° de NEGOCIATEUR, pas un n° de
+        #   compte. Il sert toujours de cle a la rotation (inchange) ; les coordonnees viennent du REGISTRE (04/11/2026).
+        #   ⛔ Avant : a defaut de l'e-mail, `id_user = user_id` donnait le NOM, l'E-MAIL et le TELEPHONE d'une autre personne.
         user_id = str(negotiator.get("user_id") or "").strip()
         email = str(negotiator.get("negotiator_email") or "").strip()
-        try:
-            user_rows: list[dict[str, Any]] = []
-            if email:
-                user_rows = self._rest_get(
-                    "app_user_directory",
-                    params={
-                        "select": "id_user,display_name,email,tel,portable",
-                        "email": f"eq.{email}",
-                        "limit": "1",
-                    },
-                )
-            if not user_rows and user_id:
-                user_rows = self._rest_get(
-                    "app_user_directory",
-                    params={
-                        "select": "id_user,display_name,email,tel,portable",
-                        "id_user": f"eq.{user_id}",
-                        "limit": "1",
-                    },
-                )
-            if user_rows:
-                user_row = user_rows[0]
-                details["user_id"] = str(user_row.get("id_user") or details["user_id"] or "").strip() or None
-                details["label"] = self._coalesce_text(user_row.get("display_name"), details["label"])
-                details["email"] = self._coalesce_text(user_row.get("email"), details["email"])
-                details["phone"] = self._coalesce_text(user_row.get("tel"), user_row.get("portable"), details["phone"])
-                details["mobile"] = self._coalesce_text(user_row.get("portable"), user_row.get("tel"), details["mobile"], details["phone"])
-        except Exception:
-            pass
+        coordonnees = self._load_registre_negociateur(user_id or None, email or None)
+        if coordonnees:
+            details["label"] = self._coalesce_text(details["label"], coordonnees.get("label"))
+            details["email"] = self._coalesce_text(details["email"], coordonnees.get("email"))
+            details["phone"] = self._coalesce_text(coordonnees.get("tel"), coordonnees.get("portable"), details["phone"])
+            details["mobile"] = self._coalesce_text(coordonnees.get("portable"), coordonnees.get("tel"), details["mobile"], details["phone"])
         if not details["mobile"]:
             details["mobile"] = details["phone"]
         if not details["phone"]:
