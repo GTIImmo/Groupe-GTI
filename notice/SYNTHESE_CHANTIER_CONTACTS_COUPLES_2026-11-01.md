@@ -1982,3 +1982,14 @@ Recherche dans les notes (accents ignorés), l'historique git et la mémoire. **
   ⚠ Les relectures d'une fiche le lisent aussi dès maintenant : un contact déjà envoyé, archivé et non éligible est rafraîchi s'il est ouvert.
   ⏰ **Le 05/11 au matin** : la ligne de l'envoi des contacts du run doit montrer ~227 envois et 0 suppression. Chez Supabase, les 104 doivent
   être `archive = true` et les 211 doivent avoir leur nature.
+
+## 66. LES 50 911, LA RÈGLE D'ENVOI, LES PARTENAIRES ET UNE CORRECTION DU §63 *(04/11 ; détail : `AUDIT_INDEX_GLOBAL_CONTACTS_2026-11-04.md` §12-15)*
+
+- **Les 50 911** (et non 50 920 : 9 étaient de nouveaux contacts sans `app_contact_id`) sont tous propriétaires ou mandants de biens sortis du
+  parc. 49 214 sont sur l'index des archives, et 2 468 sur des locations (qui restent au serveur, décision du 26/08).
+- **La règle d'envoi** : quatre formes, rien n'est décidé. ⭐ La plus simple, R2, ajoute une 4e raison, « nommé par notre registre » : +49 214
+  fiches, ~250 Mo, à mesurer à blanc.
+- **Les partenaires** : chez Hektor, « partenaire » est surtout la case par défaut de l'import. 65 % des 16 098 n'avaient AUCUN type dans
+  l'ancien logiciel. Les vrais partenaires seraient ses codes 7, 13 et 80-86, dont la signification n'est écrite nulle part : question à Frédéric.
+- ⛔ **§63 corrigé** : les « trois purges » ne sont pas prouvées. L'ancien logiciel n'avait que 201 fiches archivées ; les dates étaient des
+  journées de modification en masse, recopiées par Hektor. L'archivage vient très probablement de la migration de mars 2026.

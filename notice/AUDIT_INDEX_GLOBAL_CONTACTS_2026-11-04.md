@@ -161,3 +161,69 @@ Couche locale (`phase2.sqlite`), nature de la nuit :
 3. **Les doublons** : valider (ou revoir) le cahier des charges du 29/06 avant d'exposer plus de fiches, et décider si l'index montre les
    doublons ou seulement la fiche principale.
 4. **Les données personnelles** : téléphone et e-mail dans l'index, oui ou non.
+
+## 12. LES 50 920 VÉRIFIÉS : 50 911, TOUS PROPRIÉTAIRES DE BIENS SORTIS DU PARC *(04/11, « vérifier et mesurer les 50 920 et revoir la règle »)*
+
+- ⛔ **Correction de ma mesure** : la jointure passait par `app_contact_current.app_contact_id`, qui est VIDE sur 22 fiches de l'app. Ce sont
+  des contacts nés chez Hektor cette nuit, propriétaires de 9 biens vivants, que j'avais crus absents. Joint sur le bon numéro
+  (`hektor_contact_id` = l'identité) : **50 911 contacts, 63 172 liens**.
+  ⚠ 22 fiches sans `app_contact_id` chez Supabase : à suivre, sans effet mesuré.
+- **Ce qu'ils sont** : 100 % « propriétaire du bien » (mandant ou propriétaire), aucun acquéreur. Sur les biens :
+  - **index des archives : 49 214 contacts, 28 385 biens** ;
+  - aucun index : 2 468 contacts sur 1 930 biens, dont 1 926 dans la plage 55 120 – 58 871, c'est-à-dire **des LOCATIONS** (`offre_type` 2 et 11,
+    « Mandat clos »). Les locations restent au serveur par décision du 26/08 ;
+  - parc vivant et index des vendus : **0**.
+- **Ce que l'écran montre** :
+  - pour un bien VIVANT, la rubrique Contact lit le registre (`loadAnnonceMandants`, `api.ts` 10794). Un lien sans fiche « n'est pas jeté » :
+    la ligne revient avec un nom vide, et l'appelant la reconnaît ;
+  - pour un bien ARCHIVÉ, la fiche vient du cache préparé depuis le serveur (`mandants_texte`, `proprietaires_json`), donc avec des noms.
+  - ⚠ **Non vérifié à l'écran** : ce qui se passe quand on clique sur un de ces noms. Il n'existe aucune fiche à ouvrir dans l'app.
+
+## 13. LA RÈGLE D'ENVOI — CE QU'ELLE DIT, ET CE QU'ON POURRAIT CHANGER (rien n'est décidé)
+
+- **Elle dit** (`build_contacts_layer.py` l. 1750, plus `elargir_perimetre_console.py`) : un contact monte s'il a
+  (1) un lien à une annonce NON ARCHIVÉE (vendus et estimations compris), ou (2) une recherche active, ou (3) un rôle dans une transaction
+  lue par la console. Elle ne regarde ni l'archivage du contact, ni notre registre.
+- **Ce qui en découle** : les propriétaires d'un bien VENDU non archivé sont dans l'app, ceux d'un bien ARCHIVÉ n'y sont pas, alors que
+  notre registre les nomme dans les deux cas (49 214 dans le second).
+- **Les formes possibles** :
+  - **R1 — ne rien changer.** Les 49 214 restent nommés dans l'historique du bien, sans fiche.
+  - **R2 — ajouter une 4e raison : « nommé par notre registre des relations »** (hors locations). +49 214 fiches complètes dans l'app,
+    ~5 Ko chacune avec les index, soit **~250 Mo**, plus une fois et demie la table d'aujourd'hui (317 Mo).
+    Un seul ajout à la règle, sur le modèle exact de la 3e raison du 11/09.
+  - **R3 — la même chose, mais en INDEX LÉGER** (§1-8) : ~336 octets par ligne, soit ~17 Mo plus les index, avec la fiche à la demande.
+    Plus léger, mais c'est le chantier de l'index.
+  - **R4 — resserrer** (« lié à un bien encore en vente ») : retirerait ~45 000 contacts d'affaires passées. ⛔ Contraire aux décisions du
+    11/09 et du 30/09 (vendeurs et acquéreurs d'un bien vendu gardés) et à 8b.
+- ⭐ **R2 est la plus simple** : elle suit la règle du 11/09 (« si Hektor nomme quelqu'un dans une transaction, l'app doit pouvoir le nommer ») ;
+  ici, « si NOTRE registre nomme quelqu'un, l'app doit pouvoir l'ouvrir ». Son coût est le poids, à mesurer à blanc avant d'en décider.
+
+## 14. LES PARTENAIRES ET LES CLASSEURS DE L'ANCIEN LOGICIEL *(04/11, « travailler les 16 098 pour voir si on peut en sortir un annuaire de partenaires, consulte aussi nos classeurs contacts Excel »)*
+
+- **Chez Hektor**, la typologie ne dit que « partenaire », sans métier ni catégorie : 31 086 fiches actives hors de l'app portent le type
+  `["partenaire"]` seul, dont **16 098 personnes** (les cases vides exclues).
+  - Les champs utiles sont presque vides : SIRET 79, commentaire 3 598.
+  - Coordonnées : 9 230 avec e-mail et téléphone, 3 929 avec e-mail seul, 2 432 avec téléphone seul, 15 495 sans rien (surtout les cases vides).
+- **Le classeur de l'ancien logiciel** (`contacts_extraits.xlsx`, 202 218 fiches, lu en comptes seulement) porte un code `contact_type`
+  (une liste), une `company_name` (2 946 remplies) et une `origin`.
+- **Le croisement** (nom, prénom, jour de création ; même méthode que les appariements c3 du 01/11) : **11 531 des 16 098 partenaires
+  retrouvés** (11 349 sans ambiguïté). Leur type dans l'ancien logiciel :
+  - **AUCUN type : 7 543 (65 %)** ;
+  - code 7 : 2 622 ; code 82 : 673 ; code 85 : 332 ; code 13 : 78 ; code 80 : 73 ; une poignée d'autres ;
+  - 21 seulement ont une société.
+  - Témoins : les acquéreurs de Hektor sont « 17 » dans l'ancien logiciel (11 358) ; les mandants y sont « 24 » ou « 2, 24 » (11 498).
+  ⇒ ⭐ **« Partenaire » chez Hektor est surtout la case par défaut de l'import : les fiches SANS TYPE de l'ancien logiciel.** Un annuaire de
+  partenaires tiré de cette typologie serait surtout du bruit.
+- **Les vrais partenaires** sont sans doute les codes 7, 13 et 80 à 86 de l'ancien logiciel (le 13 porte beaucoup de sociétés : 409 sur 1 257).
+  ⚠ **La signification des codes n'est écrite nulle part** dans le projet (270 combinaisons, `AUDIT_MIGRATION_C3` l. 233). Il faut que
+  Frédéric (ou l'ancien logiciel) dise ce que sont 7, 13, 80, 81, 82, 83, 84, 85 et 86.
+- **Ce qui serait possible ensuite** : un annuaire de partenaires construit sur les codes confirmés + la société + les coordonnées, avec
+  la fiche Hektor en lien (11 349 appariés sans ambiguïté). Rien n'est proposé avant la signification des codes.
+
+## 15. ⛔ CORRECTION DU §63 (synthèse couples) : LES « TROIS PURGES » NE SONT PAS PROUVÉES
+
+- Dans l'ancien logiciel, **201 fiches seulement étaient archivées** sur 202 218. Les journées du 26/03/2025 (72 028 fiches) et du 20/12/2024
+  (65 845) y sont des journées de **MODIFICATION en masse** (`time_modified`), et Hektor a recopié ces dates dans `date_maj`.
+- ⇒ L'archivage de ~184 000 contacts a très probablement été posé **à la migration de mars 2026** (une règle d'import), et les dates du §63
+  sont des dates de modification héritées, pas des dates d'archivage. La journée du 07/09/2023 (72 658, Saint-Étienne) n'apparaît pas dans
+  l'ancien logiciel : son origine est **non établie**.
