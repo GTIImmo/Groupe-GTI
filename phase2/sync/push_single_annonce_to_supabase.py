@@ -697,7 +697,16 @@ def push_payload(client: SupabaseRestClient, payload: dict[str, Any], app_dossie
     # ⚠ UN ECHEC NE DOIT PAS FAIRE ECHOUER LE PUSH. Le push a REUSSI ; la date, au
     #   pire, revient a la nuit suivante (le carnet la porte). On enveloppe donc, et
     #   on journalise -- un silence serait pire que le defaut.
+    # ⑧ 04/11/2026 : LA CHARGE DES HONORAIRES SUIT LE MEME CHEMIN QUE LA CLOTURE.
+    #   Sa fonction existait depuis le 02/11 et N ETAIT APPELEE PAR PERSONNE -- un
+    #   mecanisme installe a moitie. Et ca mordait deja : le 04/11 a 18:43, deux
+    #   annonces relues ont perdu leur charge a l'affichage. Rien n'etait perdu (le
+    #   carnet la porte, verifie : 0 ligne alteree, 0 disparue), mais plus rien ne la
+    #   remettait -- les 23 479 charges se seraient effacees une par une, en silence.
+    #   ⚠ MEME REGLE QUE SA VOISINE : par annonce, enveloppee, et un echec ne fait
+    #     JAMAIS tomber le push.
     cloture_reposee: object = None
+    charge_reposee: object = None
     annonces_registre = sorted({
         str(row.get("hektor_annonce_id")).strip()
         for row in current_mandat_register_rows
@@ -715,6 +724,19 @@ def push_payload(client: SupabaseRestClient, payload: dict[str, Any], app_dossie
         except Exception as exc:  # noqa: BLE001 -- le push ne doit pas tomber pour ca
             print(f"[cloture] re-pose impossible pour {annonce} ({exc}) "
                   f"-- la date reviendra au run de nuit", flush=True)
+        # ⚠ DANS SON PROPRE try : un echec de la cloture ne doit pas priver la charge
+        #   de sa re-pose, et reciproquement. Elles visent deux colonnes distinctes.
+        try:
+            charge_reposee = client._request(
+                method="POST",
+                path="rpc/app_reposer_charge_mandat_app",
+                payload={"target_annonce": annonce},
+            )
+            if isinstance(charge_reposee, dict) and charge_reposee.get("statut") == "refus":
+                print(f"[charge] REFUS du garde-fou : {charge_reposee.get('raison')}", flush=True)
+        except Exception as exc:  # noqa: BLE001 -- le push ne doit pas tomber pour ca
+            print(f"[charge] re-pose impossible pour {annonce} ({exc}) "
+                  f"-- la charge reviendra au run de nuit", flush=True)
 
     return {
         "dossiers_upserted": len(current_dossiers),
@@ -723,6 +745,7 @@ def push_payload(client: SupabaseRestClient, payload: dict[str, Any], app_dossie
         "broadcasts_replaced": len(current_broadcasts),
         "mandat_register_replaced": len(current_mandat_register_rows),
         "cloture_reposee": cloture_reposee,
+        "charge_reposee": charge_reposee,
     }
 
 

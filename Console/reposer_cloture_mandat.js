@@ -4,10 +4,21 @@
  *
  *   node Console/reposer_cloture_mandat.js
  *
- * Il appelle UNE fonction Supabase et rend compte. Il ne contient AUCUNE logique :
+ * Il appelle DEUX fonctions Supabase et rend compte. Il ne contient AUCUNE logique :
  * la regle vit en base, la ou les donnees sont.
  *
  *   app_reposer_cloture_mandat_app()   le registre REFLETE le carnet
+ *   app_reposer_charge_mandat_app()    idem pour QUI PAIE LES HONORAIRES  (04/11/2026)
+ *
+ * ⭐ LA CHARGE A ETE AJOUTEE LE 04/11, ET ELLE AVAIT LE MEME TROU, EN PIRE : sa
+ *   fonction existait depuis le 02/11 et N ETAIT APPELEE PAR PERSONNE. Mesure du
+ *   04/11 : `app_reposer_charge_mandat_app` n'apparaissait dans aucun .py/.js/.ps1
+ *   du depot, alors que sa soeur la cloture etait branchee ICI et dans
+ *   push_single_annonce_to_supabase.py. Un MECANISME INSTALLE A MOITIE.
+ *   ⚠ Et ca MORDAIT DEJA : le 04/11 a 18:43, deux annonces relues ont perdu leur
+ *     charge a l'affichage (54672/17251 et une autre). Rien n'etait perdu -- le
+ *     carnet les portait -- mais plus rien ne les remettait. Sur la duree, les
+ *     23 479 charges se seraient effacees une par une, en silence.
  *
  * POURQUOI IL EXISTE. La ligne de registre qui AFFICHE notre date de cloture est
  * DETRUITE PUIS REFAITE a chaque push :
@@ -62,8 +73,24 @@ async function rpc(nom) {
   const repose = await rpc("app_reposer_cloture_mandat_app");
   console.log(`cloture mandat : ${JSON.stringify(repose)}`);
 
-  if (repose && repose.statut === "refus") {
-    console.error(`REFUS : ${repose.raison || "garde-fou"}`);
+  // ⚠ ON NE SORT PAS TOUT DE SUITE SUR UN REFUS DE LA CLOTURE : la charge a son
+  //   propre garde-fou et doit avoir sa chance. On retient le refus et on tranche
+  //   a la fin -- sinon un plancher franchi d'un cote ferait sauter l'autre repose
+  //   en silence, et c'est exactement le genre de demi-mecanisme qu'on repare ici.
+  let refus = (repose && repose.statut === "refus") ? `cloture : ${repose.raison || "garde-fou"}` : null;
+
+  // ⑧ 04/11/2026 : LA CHARGE DES HONORAIRES, meme patron, meme garde-fou en base.
+  //   ⚠ Elle est reposee APRES la cloture et INDEPENDAMMENT : un echec de l'une ne
+  //     doit pas emporter l'autre. Elles ne se touchent pas (colonnes differentes).
+  const chargeReposee = await rpc("app_reposer_charge_mandat_app");
+  console.log(`charge honoraires : ${JSON.stringify(chargeReposee)}`);
+  if (chargeReposee && chargeReposee.statut === "refus") {
+    refus = refus ? `${refus} | charge : ${chargeReposee.raison || "garde-fou"}`
+                  : `charge : ${chargeReposee.raison || "garde-fou"}`;
+  }
+
+  if (refus) {
+    console.error(`REFUS : ${refus}`);
     process.exitCode = 1;
     return;
   }
