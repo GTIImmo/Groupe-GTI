@@ -82,6 +82,15 @@
     [switch]$HektorChauffageForce,
     [switch]$HektorChauffageSkipJobCheck,
     [bool]$HektorChauffageRefreshSession = $true,
+    # Syndic et diagnostiqueur des annonces en copropriete (04/11/2026, chantier partenaires).
+    # ETEINT tant que la limite vaut 0. Decision de Frederic : « toutes les nuits, en une fois ».
+    # ALLUME le 04/11/2026 (« oui, allume ») : 1 000 couvre les 731 coproprietes. Retour arriere : 0.
+    [switch]$SkipHektorDiagContacts,
+    [int]$HektorDiagContactsLimit = 1000,
+    [string]$HektorDiagContactsScope = "copro",
+    [double]$HektorDiagContactsDelaySeconds = 1.0,
+    [int]$HektorDiagContactsBatchSize = 100,
+    [int]$HektorDiagContactsBatchPauseSeconds = 30,
     [switch]$SkipContactMissing,
     [int]$ContactMissingLimit = 50,
     [int]$ContactMissingStaleDays = 30,
@@ -810,6 +819,38 @@ if (-not $SkipHektorChauffage -and $HektorChauffageLimit -gt 0) {
 }
 else {
     Write-RunLog "SKIP hektor chauffage delta"
+}
+
+# Syndic et diagnostiqueur des annonces en copropriete (04/11/2026, chantier partenaires).
+# Jumeau de l'etape chauffage : UN seul bloc console (« diagnostiques »), une requete par annonce,
+# ~731 annonces en ~20 min a 1 req/s, relues TOUTES chaque nuit (--force), par decision de Frederic.
+# La nuit (export_app_payload.py) transmet ensuite la lecture la plus recente a l'app.
+# ⚠ BUDGET : la nuit consomme deja ~12 800 requetes Hektor depuis le 04/11 (liste entiere des
+#   contacts) ; ces ~731 s'y ajoutent. Note : notice/CHANTIER_ANNUAIRE_PARTENAIRES_2026-11-04.md §11-13.
+# ⚠ Pas de -WorkerKey : aucune cle n'existe encore dans app_worker_registry pour cette etape, et un
+#   battement sur une cle absente part dans le vide (lecon du 13/10). A ajouter avant de s'y fier.
+# Non bloquante, comme le chauffage : un echec n'empeche jamais la publication.
+if (-not $SkipHektorDiagContacts -and $HektorDiagContactsLimit -gt 0) {
+    $hektorDiagContactsDelayArg = $HektorDiagContactsDelaySeconds.ToString([System.Globalization.CultureInfo]::InvariantCulture)
+    $hektorDiagContactsArgs = @(
+        "phase2\sync\sync_hektor_contacts_diagnostics.py",
+        "--scope", $HektorDiagContactsScope,
+        "--limit", [string]$HektorDiagContactsLimit,
+        "--force",
+        "--delay-seconds", $hektorDiagContactsDelayArg,
+        "--batch-size", [string]$HektorDiagContactsBatchSize,
+        "--batch-pause-seconds", [string]$HektorDiagContactsBatchPauseSeconds,
+        "--refresh-session-on-expired"
+    )
+    $diagContactsOk = $false
+    Invoke-OptionalStepWithRetry -Label "hektor syndic et diagnostiqueur" -Arguments $hektorDiagContactsArgs `
+        -MaxAttempts 1 -RetryDelaySeconds 60 -Succeeded ([ref]$diagContactsOk)
+    if (-not $diagContactsOk) {
+        Write-RunLog "WARN  hektor syndic et diagnostiqueur non execute cette nuit (echec non bloquant) - pipeline poursuivi"
+    }
+}
+else {
+    Write-RunLog "SKIP hektor syndic et diagnostiqueur"
 }
 
 # Contact champs manquants (naissance/lieu/matrimonial) : Hektor ne les rend pas par l'API.

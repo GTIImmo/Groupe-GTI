@@ -1529,9 +1529,54 @@ def build_chauffage_detail_by_annonce(
     return output
 
 
+def build_diag_contacts_detail_by_annonce(
+    con: sqlite3.Connection,
+    annonce_ids: list[object],
+) -> dict[str, dict[str, object]]:
+    """Le syndic et le diagnostiqueur lus par sync_hektor_contacts_diagnostics.py (04/11/2026).
+
+    Meme forme que `diagnostics_contacts_console_json` de l'outil complet ; table absente = rien.
+    """
+    cleaned_ids = sorted({str(value or "").strip() for value in annonce_ids if str(value or "").strip()})
+    if not cleaned_ids:
+        return {}
+    output: dict[str, dict[str, object]] = {}
+    for start in range(0, len(cleaned_ids), SQLITE_IN_MAX):
+        batch = cleaned_ids[start : start + SQLITE_IN_MAX]
+        placeholders = ",".join("?" for _ in batch)
+        try:
+            rows = con.execute(
+                f"""
+                SELECT
+                    hektor_annonce_id,
+                    status,
+                    diag_contacts_json,
+                    extracted_at
+                FROM hektor.hektor_annonce_diag_contacts_detail
+                WHERE hektor_annonce_id IN ({placeholders})
+                """,
+                batch,
+            ).fetchall()
+        except sqlite3.OperationalError as exc:
+            if "no such table" in str(exc).lower():
+                return {}
+            raise
+        for hektor_annonce_id, status, diag_contacts_json, extracted_at in rows:
+            annonce_id = str(hektor_annonce_id or "").strip()
+            if not annonce_id:
+                continue
+            output[annonce_id] = {
+                "status": status,
+                "diag_contacts": safe_json_loads(diag_contacts_json, None),
+                "extracted_at": extracted_at,
+            }
+    return output
+
+
 def attach_console_missing_fields(con: sqlite3.Connection, rows: list[dict[str, object]]) -> list[dict[str, object]]:
     console_by_annonce = build_console_detail_by_annonce(con, [row.get("hektor_annonce_id") for row in rows])
     chauffage_by_annonce = build_chauffage_detail_by_annonce(con, [row.get("hektor_annonce_id") for row in rows])
+    diag_contacts_by_annonce = build_diag_contacts_detail_by_annonce(con, [row.get("hektor_annonce_id") for row in rows])
     enriched: list[dict[str, object]] = []
     json_keys = {
         "secteur_console_json": "secteur_console_json",
@@ -1565,6 +1610,13 @@ def attach_console_missing_fields(con: sqlite3.Connection, rows: list[dict[str, 
             next_row["chauffage_console_extracted_at"] = chauffage_detail.get("extracted_at")
             if chauffage_status == "done":
                 next_row["chauffage_console_json"] = compact_json_field(chauffage_detail.get("chauffage"))
+        # Le syndic et le diagnostiqueur : la lecture LA PLUS RECENTE gagne, celle de l'outil complet
+        # (21 pages, rare) ou celle du bloc seul (chaque nuit sur les coproprietes). Aucun champ neuf.
+        diag_detail = diag_contacts_by_annonce.get(str(row.get("hektor_annonce_id") or "").strip())
+        if diag_detail and str(diag_detail.get("status") or "").strip() == "done" and isinstance(diag_detail.get("diag_contacts"), dict):
+            console_at = str(next_row.get("console_missing_fields_extracted_at") or "") if next_row.get("console_missing_fields_status") == "done" else ""
+            if not console_at or str(diag_detail.get("extracted_at") or "") >= console_at:
+                next_row["diagnostics_contacts_console_json"] = compact_json_field(diag_detail.get("diag_contacts"))
         enriched.append(next_row)
     return enriched
 
