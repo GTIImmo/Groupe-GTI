@@ -2117,3 +2117,34 @@ Mesure sur la base du serveur (`app_relation` local, 132 943 liens ; types d'off
   - une relecture d'une fiche garde les raisons de la ligne connue (4d299c7) : elle ne fait donc pas ressortir ces contacts ;
   - le remède des contacts figés (§64, allumé) garde ensuite à jour tout contact entré ;
   - les compteurs de l'annuaire (l'instantané des statistiques) grossissent d'autant.
+
+## 71. REGISTRE + PARTENAIRES DANS L'APP : ÉCRIT, ÉPROUVÉ À BLANC, BRANCHÉ ÉTEINT *(04/11, « Oui, vas-y »)*
+
+- **`phase2/contacts/metier_netty.py`** (neuf) : il apparie les fiches PROFESSIONNELLES du classeur Netty à la couche, par nom, prénom et jour
+  de création, sans ambiguïté, puis range numéro + codes dans la table locale **`contact_metier_netty`**, sans aucun nom.
+  - Il est à blanc par défaut et n'écrit qu'avec `--ecrire`.
+  - Résultat : 1 444 fiches pros, **941 retenues** (482 non appariées, 20 ambiguës) : notaire 844, apporteur 35, courtier 22,
+    diagnostiqueur 16, parrain 15, banque 8, administration 7…
+  - ✅ **La table est posée sur le serveur le 04/11** : 941 lignes, 4 colonnes (numéro, codes, métiers, date).
+  - ⚠ C'est la première réponse à « où vit le métier » (§68) : à dire au chantier des partenaires.
+- **`phase2/contacts/elargir_perimetre_registre.py`** (neuf), sur le patron du 11/09. Deux raisons neuves, posées seulement sur des contacts
+  NON éligibles :
+  - `registre_relation` : lien vivant d'`app_relation`, sur au moins un bien qui n'est pas une location ;
+  - `partenaire_netty`.
+  Jamais une case vide (fiche sans nom ni prénom). Une seule transaction, vérification « aucun éligible sans raison » et
+  « avant + entrants = après ». Il lit la base LOCALE seulement.
+  **Interrupteur `APP_PERIMETRE_REGISTRE` (.env), absent donc éteint.**
+- **La nuit** (`run_full_pipeline.ps1`) : une étape NON BLOQUANTE juste après « perimetre contacts cites par la console », donc avant les
+  conjoints (l. ~1403), la nature (l. ~1418) et le push (l. ~1453). Syntaxe PowerShell vérifiée (0 erreur). BOM et fins de ligne du fichier
+  inchangés.
+- **Éprouvé** :
+  - `test_elargir_perimetre_registre` **11/11** : propriétaire d'un bien archivé ; location seule, case vide, lien retiré ou absent qui restent
+    dehors ; location plus vente ; lien posé par l'app ; un éligible pas touché ; partenaire et cumul des raisons ; à blanc et idempotence ;
+    registre absent ; type d'offre inconnu.
+  - **Sur la vraie base, à blanc** : 94 090 nommés hors locations, annuaire de 62 952, **31 533 à faire entrer**, dont 31 295 par le registre et
+    260 par les partenaires (22 en commun). C'est exactement la mesure du §70. Éteinte, l'étape ne fait rien.
+- **Pour l'allumer** (ton accord) : ajouter `APP_PERIMETRE_REGISTRE=1` dans le `.env`. La nuit suivante, ~31 500 contacts partent vers
+  Supabase (~160 Mo) ; le remède du §64 les garde ensuite à jour.
+  ⏰ Contrôle du lendemain : la ligne de l'étape au journal (+31 533), l'envoi des contacts, la taille de la table, l'annuaire.
+- **Retour arrière** : retirer la ligne. La nuit suivante remet le périmètre d'avant pour la couche. ⚠ Ceux qui sont déjà envoyés RESTENT
+  chez Supabase, à jour (§64) : pour les retirer, il faudrait un geste à part.

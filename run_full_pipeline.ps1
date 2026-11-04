@@ -1321,6 +1321,17 @@ Invoke-Step -Label "phase2 perimetre contacts cites par la console" -Arguments @
     "phase2\contacts\elargir_perimetre_console.py"
 ) -WorkerKey "phase2.perimetre_console"
 
+# 04/11/2026 -- SI NOTRE REGISTRE NOMME QUELQU'UN, L'APP DOIT POUVOIR OUVRIR SA FICHE.
+# Meme patron, meme place (apres la couche et la passe ci-dessus, avant le push) : les
+# proprietaires des biens ARCHIVES nommes par app_relation (hors locations) et les vrais
+# professionnels de Netty (contact_metier_netty) entrent dans le perimetre. Lit la base
+# LOCALE. NON BLOQUANTE : ratee, ces contacts n'entrent pas cette nuit, rien d'autre.
+# Interrupteur APP_PERIMETRE_REGISTRE (.env) : absent = la passe ne fait rien.
+# Synthese couples §70-71.
+Invoke-OptionalStepWithRetry -Label "phase2 perimetre contacts nommes par le registre" -Arguments @(
+    "phase2\contacts\elargir_perimetre_registre.py"
+) -MaxAttempts 1 -RetryDelaySeconds 0
+
 # C.19 (29/08) -- LES CHAMPS D'AFFAIRE APPARTIENNENT A L'APP.
 # PLACE ICI, ET PAS AILLEURS : affaire_ledger.py ci-dessus vient de relire le miroir
 # Hektor et de reposer SA valeur dans le ledger. Nos corrections doivent donc etre
