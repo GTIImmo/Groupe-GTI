@@ -358,3 +358,10 @@ numéros de passerelles (0c) et les droits (4).
 - ⚠ Correction de mon propos : la « coupure a 1 000 lignes » n'existe que si un paquet de 500 ids depasse 1 000 lignes -- vrai dans mon 1er essai (333 ids), PAS dans l'envoi reel. `fetch_rows_by_ids` ne pagine toujours pas : un risque dormant si un paquet grossit (note, non traite).
 - ⏰ **Controle de la nuit du 05/11** : `app_mandat_broadcast_current` ne doit plus porter que les vraies attentes (`error` = `pending` chez Hektor, 3 au 04/11) ; les 12 lignes des 8 annonces doivent etre `broadcasted`, datees du 05/11.
 - Retour arriere : revenir sur le commit (les lignes deja corrigees restent justes).
+
+## 04/11 -- vue Publicite AU TELEPHONE codee (non poussee)
+
+- Logique partagee : `usePubliciteAnnonces` (App.tsx, avant `MandatsScreen`) = le code du 03/11 deplace tel quel ; `MandatsScreen` et `MobileMandatCards` l'appellent.
+- Telephone : onglets, cartes de presence defilantes + filtre, cartes d'annonce en mode Publicite (`AnnonceCarteMobile` prop `pub`) avec 5 cases de 44 px ou la bande.
+- Piege : un element de grille sans `min-width: 0` -> la rangee defilante elargissait la liste a 734 px (corrige).
+- Reste : essai reel d'une case AU TELEPHONE (meme code que le bureau, deja eprouve sur 61713) ; essai par un negociateur.
