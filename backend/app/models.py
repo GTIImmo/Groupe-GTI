@@ -29,6 +29,8 @@ class CreateUserPayload(BaseModel):
     # defaut « reseau » : un compte cree sans cette case voit tout, exactement
     # comme avant que la colonne existe.
     perimetre: UserPerimetre = "reseau"
+    # 04/11/2026 : la personne du REGISTRE DES NEGOCIATEURS choisie par l'admin (None = automatique, par l'e-mail).
+    registrePersonneId: int | None = None
 
 
 class UpdateUserPayload(BaseModel):
@@ -42,6 +44,8 @@ class UpdateUserPayload(BaseModel):
     # None = « ne touche pas au perimetre de ce compte ». Un ecran plus ancien
     # qui n'envoie pas la case ne doit pas remettre tout le monde a « reseau ».
     perimetre: UserPerimetre | None = None
+    # 04/11/2026 : la personne du REGISTRE DES NEGOCIATEURS choisie par l'admin (None = ne rien changer, ou automatique).
+    registrePersonneId: int | None = None
 
 
 class SendResetPayload(BaseModel):

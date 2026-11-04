@@ -46,6 +46,9 @@ import {
   loadSuiviRequestStats,
   loadHektorAgencyOptions,
   loadHektorNegotiatorOptions,
+  loadRegistrePersonnes,
+  texteRegistreLien,
+  type RegistrePersonneChoix,
   loadNegotiatorOptionForContact,
   loadRepartitionPersonnes,
   loadRepartition,
@@ -14319,6 +14322,11 @@ export default function App() {
   const [editUserDisplayName, setEditUserDisplayName] = useState('')
   const [editUserIsActive, setEditUserIsActive] = useState(true)
   const [editUserPerimetre, setEditUserPerimetre] = useState<UserPerimetre>('reseau')
+  // 04/11/2026 : le registre des négociateurs dans l'outil (null = illisible ; '' = automatique)
+  const [registrePersonnes, setRegistrePersonnes] = useState<RegistrePersonneChoix[] | null>([])
+  const [newUserRegistrePersonne, setNewUserRegistrePersonne] = useState('')
+  const [editUserRegistrePersonne, setEditUserRegistrePersonne] = useState('')
+  const [editUserRegistreInitial, setEditUserRegistreInitial] = useState('')
   const [requestModalRole, setRequestModalRole] = useState<'nego' | 'pauline'>('nego')
   const [requestModalDecision, setRequestModalDecision] = useState('in_progress')
   const [requestModalRefusalReason, setRequestModalRefusalReason] = useState('')
@@ -20069,6 +20077,16 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     }
   }
 
+  // 04/11/2026 -- le registre des négociateurs dans l'outil « Utilisateurs » : la personne de chaque compte, et le choix.
+  async function relireRegistrePersonnes() {
+    try {
+      setRegistrePersonnes(await loadRegistrePersonnes())
+    } catch (error) {
+      console.error('[utilisateurs] registre des négociateurs illisible', error)
+      setRegistrePersonnes(null)
+    }
+  }
+
   async function handleCreateAppUser(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setUserToolLoading(true)
@@ -20084,7 +20102,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         displayName,
         isActive: newUserIsActive,
         perimetre: newUserPerimetre,
+        registrePersonneId: newUserRegistrePersonne ? Number(newUserRegistrePersonne) : null,
       })
+      setNewUserRegistrePersonne('')
       setNewUserEmail('')
       setNewUserPassword('')
       setNewUserRole('commercial')
@@ -20093,9 +20113,10 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       setNewUserDisplayName('')
       setNewUserIsActive(true)
       setNewUserPerimetre('reseau')
-      setErrorMessage(`Utilisateur cree : ${result.email}`)
+      setErrorMessage(`Utilisateur cree : ${result.email} · ${texteRegistreLien(result.registre)}`)
       // 3c (26/10) : le nouvel utilisateur apparait dans la liste sans rouvrir l'outil.
       if (L_ECRAN_SUIT_LE_CLIC) void loadAppUsers().then(setAppUsers).catch(() => undefined)
+      void relireRegistrePersonnes()
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Erreur de creation utilisateur')
     } finally {
@@ -20162,6 +20183,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setUserToolOpen(true)
     setUserToolLoading(true)
     setErrorMessage(null)
+    void relireRegistrePersonnes()
     try {
       setAppUsers(await loadAppUsers())
     } catch (error) {
@@ -20180,6 +20202,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setEditUserDisplayName(user.display_name ?? '')
     setEditUserIsActive(Boolean(user.is_active))
     setEditUserPerimetre(user.perimetre ?? 'reseau')
+    const relie = registrePersonnes?.find((p) => p.appUserId === user.id)
+    setEditUserRegistrePersonne(relie ? String(relie.id) : '')
+    setEditUserRegistreInitial(relie ? String(relie.id) : '')
   }
 
   function resetEditUser() {
@@ -20191,6 +20216,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setEditUserDisplayName('')
     setEditUserIsActive(true)
     setEditUserPerimetre('reseau')
+    setEditUserRegistrePersonne('')
+    setEditUserRegistreInitial('')
   }
 
   async function handleUpdateAppUser(event: FormEvent<HTMLFormElement>) {
@@ -20200,7 +20227,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setErrorMessage(null)
     try {
       const displayName = editUserDisplayName.trim() || `${editUserFirstName.trim()} ${editUserLastName.trim()}`.trim()
-      await updateAppUser({
+      const resultat = await updateAppUser({
         id: editingUserId,
         email: editUserEmail.trim(),
         role: editUserRole,
@@ -20209,10 +20236,13 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         displayName,
         isActive: editUserIsActive,
         perimetre: editUserPerimetre,
+        // la personne n'est envoyée que si l'admin l'a CHANGÉE (sinon : automatique, qui ne défait rien)
+        registrePersonneId: editUserRegistrePersonne && editUserRegistrePersonne !== editUserRegistreInitial ? Number(editUserRegistrePersonne) : null,
       })
       setAppUsers(await loadAppUsers())
+      void relireRegistrePersonnes()
       resetEditUser()
-      setErrorMessage('Utilisateur mis a jour')
+      setErrorMessage(`Utilisateur mis a jour · ${texteRegistreLien(resultat.registre)}`)
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Erreur de mise a jour utilisateur')
     } finally {
@@ -26086,6 +26116,16 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                       {USER_PERIMETRES.find((item) => item.valeur === newUserPerimetre)?.aide}
                     </small>
                   </label>
+                  <label className="filter-field">
+                    <span>Personne du registre des négociateurs</span>
+                    <select value={newUserRegistrePersonne} onChange={(event) => setNewUserRegistrePersonne(event.target.value)}>
+                      <option value="">Automatique (par l’e-mail ; sinon créée « sans fiche Hektor »)</option>
+                      {(registrePersonnes ?? []).filter((p) => p.type !== 'agence').map((p) => (
+                        <option key={p.id} value={p.id} disabled={Boolean(p.appUserId)}>{p.nom}{p.email ? ` · ${p.email}` : ''}{p.actif ? '' : ' · ancien'}{p.appUserId ? ' · déjà relié' : ''}</option>
+                      ))}
+                    </select>
+                    <small className="field-hint">{registrePersonnes === null ? 'Registre illisible : le compte sera relié automatiquement.' : 'À choisir quand l’e-mail du compte n’est pas celui de sa fiche Hektor (gmail, ancienne adresse).'}</small>
+                  </label>
                   <label className="checkbox-inline">
                     <input type="checkbox" checked={newUserIsActive} onChange={(event) => setNewUserIsActive(event.target.checked)} />
                     Utilisateur actif
@@ -26105,6 +26145,10 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                       <strong>{userFullName(user)}</strong>
                       <span>{user.email ?? '-'}</span>
                       <span>{profileRoleLabel(user.role)} · {user.is_active ? 'Actif' : 'Archive'}</span>
+                      {registrePersonnes ? (() => {
+                        const relie = registrePersonnes.find((p) => p.appUserId === user.id)
+                        return <span className={relie ? undefined : 'field-hint'}>Registre : {relie ? `${relie.nom} (n° ${relie.id})` : 'pas relié -- choisissez sa personne en le modifiant'}</span>
+                      })() : null}
                       <div className="hero-actions">
                         <button className="ghost-button" type="button" onClick={() => startEditUser(user)}>Modifier</button>
                         <button className="ghost-button" type="button" onClick={() => void handleSendPasswordReset(user.email)}>Mot de passe perdu</button>
@@ -26153,6 +26197,15 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                       <small className="field-hint">
                         {USER_PERIMETRES.find((item) => item.valeur === editUserPerimetre)?.aide}
                       </small>
+                    </label>
+                    <label className="filter-field">
+                      <span>Personne du registre des négociateurs</span>
+                      <select value={editUserRegistrePersonne} onChange={(event) => setEditUserRegistrePersonne(event.target.value)}>
+                        <option value="">{editUserRegistreInitial ? 'Garder la personne actuelle' : 'Automatique (par l’e-mail ou le nom)'}</option>
+                        {(registrePersonnes ?? []).filter((p) => p.type !== 'agence').map((p) => (
+                          <option key={p.id} value={p.id} disabled={Boolean(p.appUserId) && p.appUserId !== editingUserId}>{p.nom}{p.email ? ` · ${p.email}` : ''}{p.actif ? '' : ' · ancien'}{p.appUserId && p.appUserId !== editingUserId ? ' · déjà relié à un autre compte' : ''}</option>
+                        ))}
+                      </select>
                     </label>
                     <label className="checkbox-inline">
                       <input type="checkbox" checked={editUserIsActive} onChange={(event) => setEditUserIsActive(event.target.checked)} />

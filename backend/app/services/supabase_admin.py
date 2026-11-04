@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+import re
+import unicodedata
+from datetime import date, datetime, timezone
 from typing import Any
 
 import requests
@@ -194,6 +196,137 @@ class SupabaseAdminService:
         self._raise_for_response(response, "Unable to upsert app_google_workspace_identity")
         rows = response.json() or []
         return rows[0] if rows else identity_payload
+
+    # ---- Le REGISTRE DES NÉGOCIATEURS (04/11/2026) --------------------------------------------------------------
+    # Frédéric : « penser au nouvel utilisateur dans l'app ». Audit : notice/AUDIT_REGISTRE_NEGOCIATEURS_2026-11-04.md
+    # §9 et §22. À la création (et à la modification) d'un compte, il est relié TOUT DE SUITE à sa personne du registre :
+    #   1. la personne choisie par l'admin (le cas tordu : Franck, compte @gti-immobilier.fr, fiche Hektor en gmail) ;
+    #   2. sinon UNE personne au même e-mail (le sien ou celui d'une de ses fiches Hektor) ;
+    #   3. sinon des personnes au même NOM -> rien n'est relié, l'écran propose de choisir (jamais de lien deviné) ;
+    #   4. sinon une personne « sans fiche Hektor » est créée et signalée ; sa fiche s'y rattachera seule la nuit où
+    #      elle arrivera chez Hektor (la nuit adopte par l'e-mail de la personne).
+    # Le compte est déjà créé quand on arrive ici : un échec du registre ne le défait pas, il est RENDU à l'écran.
+
+    _CIVILITE = re.compile(r"^\s*(m_mme|mr\.?/mme\.?|mme\.?|mlle\.?|mr\.?|m\.)\s+", re.IGNORECASE)
+
+    def _cle_nom(self, nom: str | None) -> str:
+        """La même clé que app_neg_cle_nom (la nuit) : civilité retirée, sans accents, minuscules, espaces réduits."""
+        texte = self._CIVILITE.sub("", str(nom or ""))
+        texte = "".join(c for c in unicodedata.normalize("NFD", texte) if unicodedata.category(c) != "Mn")
+        return re.sub(r"\s+", " ", texte.strip()).lower()
+
+    def _journal_registre(self, personne: int, apres: str, *, evenement: str = "compte_app_relie", a_signaler: bool = False) -> None:
+        response = requests.post(
+            f"{self.settings.supabase_url}/rest/v1/app_negociateur_journal",
+            headers=self._rest_headers(),
+            json=[{"app_personne_id": personne, "evenement": evenement, "champ": "app_user_id", "apres": apres,
+                   "a_signaler": a_signaler, "nuit": date.today().isoformat()}],
+            timeout=30,
+        )
+        self._raise_for_response(response, "Unable to write app_negociateur_journal")
+
+    def _relier_personne(self, personne: int, user_id: str, apres: str, *, a_signaler: bool = False) -> None:
+        response = requests.patch(
+            f"{self.settings.supabase_url}/rest/v1/app_negociateur_personne",
+            headers=self._rest_headers(),
+            params={"app_personne_id": f"eq.{personne}"},
+            json={"app_user_id": user_id, "updated_at": datetime.now(timezone.utc).isoformat()},
+            timeout=30,
+        )
+        self._raise_for_response(response, "Unable to link app_negociateur_personne")
+        self._journal_registre(personne, apres, a_signaler=a_signaler)
+
+    def lier_registre_negociateurs(self, *, user_id: str, email: str, nom: str, role: str, is_active: bool,
+                                   personne_choisie: int | None = None, creer: bool = True) -> dict[str, Any]:
+        email = self._normalize_email(email)
+        personnes = self._rest_rows(
+            "app_negociateur_personne",
+            {"select": "app_personne_id,nom,email,type_personne,actif,app_user_id", "order": "app_personne_id.asc", "limit": 2000},
+            "Unable to read app_negociateur_personne",
+        )
+        par_id = {int(p["app_personne_id"]): p for p in personnes}
+        resume = lambda p, etat, **extra: {"etat": etat, "personne": int(p["app_personne_id"]), "nom": p.get("nom"), **extra}  # noqa: E731
+        actuelle = next((p for p in personnes if str(p.get("app_user_id") or "") == str(user_id)), None)
+
+        # 1. le choix de l'admin
+        if personne_choisie is not None:
+            cible = par_id.get(int(personne_choisie))
+            if not cible:
+                return {"etat": "erreur", "message": f"Personne {personne_choisie} absente du registre des négociateurs"}
+            if actuelle and int(actuelle["app_personne_id"]) == int(personne_choisie):
+                return resume(cible, "deja")
+            if cible.get("app_user_id") and str(cible["app_user_id"]) != str(user_id):
+                return resume(cible, "conflit", message="Cette personne est déjà reliée à un autre compte de l'app")
+            if actuelle:
+                # le compte change de personne : l'ancienne lâche le compte, et c'est écrit au journal
+                response = requests.patch(
+                    f"{self.settings.supabase_url}/rest/v1/app_negociateur_personne",
+                    headers=self._rest_headers(),
+                    params={"app_personne_id": f"eq.{int(actuelle['app_personne_id'])}"},
+                    json={"app_user_id": None, "updated_at": datetime.now(timezone.utc).isoformat()},
+                    timeout=30,
+                )
+                self._raise_for_response(response, "Unable to unlink app_negociateur_personne")
+                self._journal_registre(int(actuelle["app_personne_id"]), f"{email} retiré (relié à {cible.get('nom')} par l'admin)")
+            self._relier_personne(int(cible["app_personne_id"]), user_id, f"{email} (choix de l'admin)")
+            return resume(cible, "relie", par="choix")
+        if actuelle:
+            return resume(actuelle, "deja")
+
+        # 2. par l'e-mail : celui de la personne, ou celui d'une de ses fiches Hektor
+        fiches = self._rest_rows(
+            "app_negociateur_fiche",
+            {"select": "app_personne_id", "email_vu": f"eq.{email}", "limit": 100},
+            "Unable to read app_negociateur_fiche",
+        ) if email else []
+        ids = {int(p["app_personne_id"]) for p in personnes if self._normalize_email(p.get("email")) == email and email}
+        ids |= {int(f["app_personne_id"]) for f in fiches}
+        ids = {i for i in ids if par_id.get(i) and par_id[i].get("type_personne") != "agence"}
+        if len(ids) == 1:
+            cible = par_id[next(iter(ids))]
+            if cible.get("app_user_id"):
+                return resume(cible, "conflit", message="La personne de cet e-mail est déjà reliée à un autre compte de l'app")
+            self._relier_personne(int(cible["app_personne_id"]), user_id, f"{email} (par l'e-mail)")
+            return resume(cible, "relie", par="email")
+
+        # 3. par le nom : on PROPOSE, on ne relie pas. ⚠ Même une personne déjà reliée à un AUTRE compte est proposée :
+        #    Franck a deux comptes de l'app (gmail, relié ; @gti-immobilier.fr, non relié) -- créer une personne aurait
+        #    fabriqué un doublon de lui (mesuré le 04/11). L'écran dit qu'elle est déjà reliée.
+        cle = self._cle_nom(nom)
+        candidats = [p for p in personnes if cle and self._cle_nom(p.get("nom")) == cle
+                     and p.get("type_personne") not in ("agence", "inconnu")]
+        if len(ids) > 1 or candidats:
+            liste = [par_id[i] for i in sorted(ids)] if len(ids) > 1 else candidats
+            return {"etat": "a_choisir", "candidats": [{"personne": int(p["app_personne_id"]), "nom": p.get("nom"), "email": p.get("email"),
+                                                        "dejaRelie": bool(p.get("app_user_id"))} for p in liste]}
+
+        # 4. personne inconnue : née dans l'app, sans fiche Hektor, signalée -- À LA CRÉATION du compte seulement (un compte
+        #    existant qu'on modifie, comme le compte d'essai, ne fait pas naître une personne sans qu'on le demande)
+        if not creer:
+            return {"etat": "non_relie"}
+        type_personne = {"admin": "administrateur", "commercial": "negociateur"}.get(str(role), "inconnu")
+        response = requests.post(
+            f"{self.settings.supabase_url}/rest/v1/app_negociateur_personne",
+            headers={**self._rest_headers(), "Prefer": "return=representation"},
+            json=[{"nom": str(nom or email).strip() or email, "email": email or None, "type_personne": type_personne,
+                   "actif": bool(is_active), "origine": "app", "app_user_id": user_id,
+                   "a_valider": f"née dans l'app le {date.today().strftime('%d/%m/%Y')} (compte {email}), sans fiche Hektor",
+                   "cle_regroupement": f"app:{user_id}"}],
+            timeout=30,
+        )
+        self._raise_for_response(response, "Unable to create app_negociateur_personne")
+        cree = (response.json() or [{}])[0]
+        self._journal_registre(int(cree["app_personne_id"]), f"{email} (personne née dans l'app, sans fiche Hektor)",
+                               evenement="personne_nouvelle", a_signaler=True)
+        return resume(cree, "cree")
+
+    def _lier_registre_sans_echec(self, **params: Any) -> dict[str, Any]:
+        try:
+            return self.lier_registre_negociateurs(**params)
+        except HTTPException as error:
+            return {"etat": "erreur", "message": str(error.detail)}
+        except Exception as error:  # noqa: BLE001 -- le compte est créé : on rend l'échec, on ne le défait pas
+            return {"etat": "erreur", "message": str(error)}
 
     def load_profile(self, user: AuthenticatedUser) -> dict[str, Any]:
         params = {
@@ -435,6 +568,10 @@ class SupabaseAdminService:
             role=payload["role"],
             is_active=payload.get("isActive", True),
         )
+        registre = self._lier_registre_sans_echec(
+            user_id=user_id, email=email, nom=display_name, role=payload["role"], is_active=payload.get("isActive", True),
+            personne_choisie=payload.get("registrePersonneId"),
+        )
         return {
             "ok": True,
             "userId": user_id,
@@ -444,6 +581,7 @@ class SupabaseAdminService:
                 "hektorUserId": identity.get("hektor_user_id") if identity else None,
                 "hektorNegociateurId": identity.get("hektor_negociateur_id") if identity else None,
             },
+            "registre": registre,
         }
 
     def update_user(self, payload: dict[str, Any]) -> dict[str, Any]:
@@ -479,8 +617,13 @@ class SupabaseAdminService:
             role=payload["role"],
             is_active=is_active,
         )
+        registre = self._lier_registre_sans_echec(
+            user_id=payload["id"], email=email, nom=display_name, role=payload["role"], is_active=is_active,
+            personne_choisie=payload.get("registrePersonneId"), creer=False,
+        )
         return {
             "ok": True,
+            "registre": registre,
             "googleWorkspaceIdentity": {
                 "linkStatus": identity.get("link_status") if identity else None,
                 "hektorUserId": identity.get("hektor_user_id") if identity else None,

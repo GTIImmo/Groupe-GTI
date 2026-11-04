@@ -8389,6 +8389,51 @@ export async function sendDiffusionDecisionEmail(input: {
 //   (le chemin normal) que vers la fonction Supabase (le secours) et vers l'API
 //   locale. Les trois ont ete mis a jour le 12/10 -- ne pas en oublier un, sinon
 //   le reglage se perd en silence selon le chemin emprunte.
+// 04/11/2026 -- LE REGISTRE DES NEGOCIATEURS : a la creation (et a la modification) d'un compte, le backend le relie
+//   a sa personne du registre et rend ce qu'il a fait (backend/app/services/supabase_admin.py, lier_registre_negociateurs).
+//   `registrePersonneId` = la personne choisie par l'admin ; absent = automatique (par l'e-mail, sinon proposition par
+//   le nom, sinon personne « nee dans l'app » -- a la creation seulement). ⚠ Le secours (fonction Supabase admin-users)
+//   ne relie pas : la nuit le fera par l'e-mail.
+export type RegistreLien = {
+  etat: 'relie' | 'deja' | 'cree' | 'a_choisir' | 'conflit' | 'non_relie' | 'erreur'
+  personne?: number
+  nom?: string | null
+  par?: string
+  message?: string
+  candidats?: Array<{ personne: number; nom: string | null; email: string | null; dejaRelie?: boolean }>
+}
+
+export type RegistrePersonneChoix = { id: number; nom: string; email: string | null; type: string; actif: boolean; appUserId: string | null }
+
+/** Les personnes du registre des negociateurs, pour le choix de l'outil « Utilisateurs » (lecture, comptes actifs). */
+export async function loadRegistrePersonnes(): Promise<RegistrePersonneChoix[]> {
+  if (!hasSupabaseEnv || !supabase) return []
+  const { data, error } = await supabase
+    .from('app_negociateur_personne')
+    .select('app_personne_id,nom,email,type_personne,actif,app_user_id')
+    .order('nom', { ascending: true })
+    .limit(2000)
+  if (error) throw new Error(error.message)
+  return ((data ?? []) as Array<Record<string, unknown>>).map((p) => ({
+    id: Number(p.app_personne_id), nom: String(p.nom ?? ''), email: (p.email as string | null) ?? null,
+    type: String(p.type_personne ?? ''), actif: p.actif === true, appUserId: (p.app_user_id as string | null) ?? null,
+  }))
+}
+
+/** Ce que l'outil a fait du compte dans le registre, en une phrase. */
+export function texteRegistreLien(lien: RegistreLien | null | undefined): string {
+  if (!lien) return 'registre : non traité (chemin de secours) -- la nuit reliera par l’e-mail'
+  switch (lien.etat) {
+    case 'relie': return `registre : relié à ${lien.nom ?? `n° ${lien.personne}`}${lien.par === 'email' ? ' (par l’e-mail)' : lien.par === 'choix' ? ' (votre choix)' : ''}`
+    case 'deja': return `registre : déjà relié à ${lien.nom ?? `n° ${lien.personne}`}`
+    case 'cree': return `registre : personne créée « ${lien.nom ?? ''} » (sans fiche Hektor, à valider ; la nuit rattachera sa fiche par l’e-mail)`
+    case 'a_choisir': return `registre : à choisir -- ${(lien.candidats ?? []).map((c) => `${c.nom}${c.dejaRelie ? ' (déjà reliée à un autre compte)' : ''}`).join(', ')} ; choisissez la personne en modifiant le compte`
+    case 'conflit': return `registre : non relié -- ${lien.message ?? 'conflit'}`
+    case 'non_relie': return 'registre : pas relié (aucune personne au même e-mail ni au même nom) ; choisissez la personne si elle existe'
+    default: return `registre : échec -- ${lien.message ?? 'erreur inconnue'} (le compte, lui, est enregistré)`
+  }
+}
+
 export async function createAppUser(input: {
   email: string
   password: string
@@ -8398,19 +8443,20 @@ export async function createAppUser(input: {
   displayName: string
   isActive: boolean
   perimetre: UserPerimetre
+  registrePersonneId?: number | null
 }) {
   if (input.password.trim().length < 8) {
     throw new Error('Le mot de passe temporaire doit contenir au moins 8 caracteres')
   }
   if (canUseBackendApi()) {
-    return invokeBackendApi<{ ok: true; userId: string; email: string }>('/admin/users/create', {
+    return invokeBackendApi<{ ok: true; userId: string; email: string; registre?: RegistreLien }>('/admin/users/create', {
       method: 'POST',
       body: input,
     })
   }
   assertBackendApiConfigured()
   if (!canUseLocalDiffusionDevApi() && hasSupabaseEnv && supabase) {
-    return invokeSupabaseFunction<{ ok: true; userId: string; email: string }>('admin-users', {
+    return invokeSupabaseFunction<{ ok: true; userId: string; email: string; registre?: RegistreLien }>('admin-users', {
       action: 'create',
       ...input,
     })
@@ -8424,7 +8470,7 @@ export async function createAppUser(input: {
   if (!response.ok || payload?.ok === false) {
     throw new Error(formatCreateUserError(payload?.error ?? 'Unable to create user'))
   }
-  return payload as { ok: true; userId: string; email: string }
+  return payload as { ok: true; userId: string; email: string; registre?: RegistreLien }
 }
 
 function formatCreateUserError(message: unknown) {
@@ -8467,16 +8513,17 @@ export async function updateAppUser(input: {
   displayName: string
   isActive: boolean
   perimetre: UserPerimetre
+  registrePersonneId?: number | null
 }) {
   if (canUseBackendApi()) {
-    return invokeBackendApi<{ ok: true }>('/admin/users/update', {
+    return invokeBackendApi<{ ok: true; registre?: RegistreLien }>('/admin/users/update', {
       method: 'POST',
       body: input,
     })
   }
   assertBackendApiConfigured()
   if (!canUseLocalDiffusionDevApi() && hasSupabaseEnv && supabase) {
-    const payload = await invokeSupabaseFunction<{ ok: true }>('admin-users', {
+    const payload = await invokeSupabaseFunction<{ ok: true; registre?: RegistreLien }>('admin-users', {
       action: 'update',
       ...input,
     })
@@ -8491,7 +8538,7 @@ export async function updateAppUser(input: {
   if (!response.ok || payload?.ok === false) {
     throw new Error(payload?.error ?? 'Unable to update user')
   }
-  return payload as { ok: true }
+  return payload as { ok: true; registre?: RegistreLien }
 }
 
 export async function sendPasswordResetEmail(input: { email: string }) {

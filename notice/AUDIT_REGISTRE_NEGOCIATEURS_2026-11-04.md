@@ -576,3 +576,34 @@ dans l'app (pilotage filtré Sandrine DELAVAUD 98 991 € TTC ; Transactions fil
 - ✅ **Correction du bloc VUE EN LIGNE le 04/11** (déploiement de `63552e1`, `index-BymjBxGI.js`) : filtré Sandrine
   DELAVAUD, bloc « Négociateurs » = **98 991 €, « attribués sur 98 991 € (100 %) »**, égal à la tête. Réglages remis
   (pilotage onglet Stock, HT).
+
+## 22. Le NOUVEL UTILISATEUR DE L'APP relié au registre dès sa création (04/11) — Frédéric : « OK 1 ET APRES 2 »
+
+**Avant** : l'outil « Utilisateurs » (backend `create_user` / `update_user`) reliait le compte à Hektor par l'annuaire, une
+fois (`app_google_workspace_identity`), et ne touchait PAS au registre ; seule la nuit reliait un compte à une personne
+(par l'e-mail d'une fiche, à défaut le nom, signalé). Mesuré : 8 comptes, 5 reliés ; non reliés : CODEX (essai), Sasha
+Gerphagnon (gmail, sans fiche), Franck GERPHAGNON (compte @gti-immobilier.fr). ⚠ **Franck a DEUX comptes de l'app** : le
+gmail (`0b500395…`, relié à la personne 1000036) et le @gti (`3603c8bc…`, non relié) — une personne n'a qu'un compte.
+
+**Le remède (codé, aucune modification de la base)** — `backend/app/services/supabase_admin.py`
+`lier_registre_negociateurs`, appelé après la création et la modification :
+1. la personne CHOISIE par l'admin (refus si elle est reliée à un autre compte ; si le compte change de personne,
+   l'ancienne le lâche, les deux au journal) ;
+2. sinon UNE personne au même e-mail (le sien ou celui d'une de ses fiches Hektor, jamais une agence) → reliée ;
+3. sinon des personnes au même NOM (même clé que la nuit, `app_neg_cle_nom`), MÊME déjà reliées → rien n'est relié,
+   l'écran PROPOSE (évite le doublon de Franck) ;
+4. sinon, **à la création seulement**, une personne « née dans l'app, sans fiche Hektor » (`origine = 'app'`,
+   `a_valider`, journal `personne_nouvelle` signalé) ; sa fiche Hektor s'y rattachera la nuit par l'e-mail
+   (`app_neg_adopter` cherche aussi `personne.email`). À la modification : « pas relié », rien n'est créé.
+Le compte est déjà créé quand on arrive là : un échec du registre est RENDU à l'écran, il ne défait pas le compte.
+`models.py` : `registrePersonneId` (facultatif). Front : `lib/api.ts` (`RegistreLien`, `loadRegistrePersonnes`,
+`texteRegistreLien`), `App.tsx` outil « Utilisateurs » : la personne de chaque compte (« Registre : X (n° …) » ou « pas
+relié »), un choix « Personne du registre des négociateurs » à la création et à la modification, le message dit ce qui a
+été fait. ⚠ Le chemin de SECOURS (fonction Supabase `admin-users`, hors push) ne relie pas : la nuit le fera par l'e-mail.
+
+**Éprouvé contre la vraie base, écritures interceptées (rien d'écrit)** : 9 cas sur 9 — Franck @gti (modification ET
+création) → « à choisir : FRANCK GERPHAGNON (déjà reliée) », pas de doublon ; Frédéric → « déjà » ; nouveau compte au mail
+de Sandrine → relié par l'e-mail ; inconnu → personne créée (création) / « pas relié » (modification) ; choix de Franck
+gmail pour le compte @gti → refusé (conflit) ; choix libre → relié ; personne inexistante → erreur rendue. Build vert.
+⏳ À mettre en ligne (Render + Vercel, par le push), puis à voir dans l'outil. ⛔ À DÉCIDER par Frédéric : lequel des deux
+comptes de Franck est relié à sa personne (et l'autre archivé ?).
