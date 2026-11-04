@@ -407,3 +407,7 @@ signaux. ⚠ Une clé de battement neuve doit être DÉCLARÉE dans `app_worker_
 - Contrôlé sur le serveur d'essai (le bandeau dit « Registre des négociateurs », mêmes chiffres qu'avec l'annuaire) ;
   build vert. ⏳ Contrôle en ligne après le push.
 - Rien d'autre ne lit encore le registre : menus, répartition, droits, rendez-vous, worker = à venir, un par un.
+- ✅ **Contrôlé EN LIGNE le 04/11** (bundle `index-COn_gXxf.js`, Chrome de Frédéric) : le bandeau dit « Registre des
+  négociateurs » ; Claire RIBBES inchangée (100 083 € HT, 18 actes, 38 mandats, 151 k€ de potentiel ; 342 lignes par le
+  numéro, 0 par le nom) ; le sélecteur compte 44 personnes ; Pauline GIRINON, Caroline GERPHAGNON, Delphine BLANCHARD n'y
+  sont plus « ancien » ; les agences y sont marquées « · agence » (Annonay, Firminy, Saint-Étienne).
