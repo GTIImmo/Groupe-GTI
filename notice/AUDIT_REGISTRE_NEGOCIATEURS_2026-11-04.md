@@ -427,3 +427,8 @@ signaux. ⚠ Une clé de battement neuve doit être DÉCLARÉE dans `app_worker_
   datée `app_appointment_public_link_avant_tel_20261104`. Mesuré à blanc : 178 liens faux, 178 retrouvent leur négociateur
   au registre, 178 recevront son téléphone, 0 restera vide. Contrôle de fin : plus aucun lien au téléphone d'une autre
   personne. ⛔ **À poser APRÈS la mise en ligne du backend** (Render) : l'ancien code réécrit un lien dont une case est vide.
+- ✅ **POSÉE le 04/11** après la mise en ligne du backend (Render `/health` : commit `3f82225`, qui contient `72b71a0`) —
+  migration `rdv_telephone_negociateur_2026_11_04`. Contrôle de fin passé (plus aucun lien au téléphone d'une autre
+  personne). Mesuré ensuite : **178 liens sauvés et réparés**, et SEULEMENT eux (178 touchés sur 2 298) ; la sauvegarde
+  n'est lisible ni par `anon` ni par `authenticated`. **Le lien actif de l'annonce 33220** (Hugo LABBE) : avant
+  06…27 = Lucille FORLICO → après 07…54 = Hugo LABBE, au registre.
