@@ -2534,16 +2534,12 @@ async function resolveHektorExecutionUser(job, dossier, payload, options = {}) {
   if (options.preferDossierOwner && dossier && dossier.commercial_id) {
     const agencyDirectoryUser = await resolveHektorNegotiatorFromAgencyDirectory(dossier).catch(() => null);
     if (agencyDirectoryUser && agencyDirectoryUser.idUser) return agencyDirectoryUser;
-
-    const directoryUser = await loadHektorDirectoryUserById(dossier.commercial_id).catch(() => null);
-    if (directoryUser && directoryUser.id_user) {
-      return {
-        idUser: String(directoryUser.id_user),
-        label: directoryUser.display_name || dossier.commercial_nom || null,
-        email: directoryUser.email || dossier.negociateur_email || null,
-        source: "dossier_commercial_id_legacy",
-      };
-    }
+    // 04/11/2026 -- RETIRE : le recours « dossier_commercial_id_legacy » cherchait le COMPTE dont l'id_user vaut
+    // `dossier.commercial_id` -- un n° de NEGOCIATEUR pris pour un n° de compte. Mesure : 20 des 41 n° de negociateur en
+    // usage tombaient sur le compte d'une AUTRE personne (Aline VALETTE n° 42 -> compte 42 de Dylan JOURGET) ; le worker
+    // aurait ecrit chez Hektor sous son identite. Il n'a jamais servi (0 travail sur ~5 500 depuis le 15/05). A defaut de
+    // l'annuaire, la suite passe par l'e-mail du negociateur du bien, qui designe la bonne personne.
+    // notice/AUDIT_REGISTRE_NEGOCIATEURS_2026-11-04.md §3 bis et §17.
   }
 
   const emails = [];

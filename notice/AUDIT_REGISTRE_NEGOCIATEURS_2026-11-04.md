@@ -432,3 +432,14 @@ signaux. ⚠ Une clé de battement neuve doit être DÉCLARÉE dans `app_worker_
   personne). Mesuré ensuite : **178 liens sauvés et réparés**, et SEULEMENT eux (178 touchés sur 2 298) ; la sauvegarde
   n'est lisible ni par `anon` ni par `authenticated`. **Le lien actif de l'annonce 33220** (Hugo LABBE) : avant
   06…27 = Lucille FORLICO → après 07…54 = Hugo LABBE, au registre.
+
+## 17. Le worker : le piège endormi RETIRÉ (04/11) — Frédéric : « Oui, enchaîne »
+
+- `Console/console_job_worker.js`, `resolveHektorExecutionUser` : le recours `dossier_commercial_id_legacy` (chercher le
+  COMPTE dont l'id_user vaut le n° de NÉGOCIATEUR du bien) est retiré. À défaut de l'annuaire par agence, la suite passe
+  déjà par l'e-mail du négociateur du bien, qui désigne la bonne personne. Rien ne lisait cette source (cherché dans tout
+  le dépôt). Syntaxe vérifiée (`node --check`) ; le worker n'a pas été lancé (règle : ne jamais le lancer pour l'inspecter).
+- ⚠ **Pas encore actif** : les 4 services worker tournent sur le code chargé à leur démarrage. Le retrait n'agira qu'au
+  prochain redémarrage — ⛔ qui chargera AUSSI les modifications non commitées de l'autre session dans ce fichier
+  (signature Youtrust, génération de mandat). Le redémarrage se décide avec Frédéric, file vide (0 pending, 0 running).
+- Seul mon bloc est commité ; les autres blocs du fichier restent à l'autre session.
