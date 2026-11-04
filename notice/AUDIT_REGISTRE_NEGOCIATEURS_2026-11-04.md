@@ -170,3 +170,29 @@ Deux niveaux, parce qu'une personne a plusieurs fiches chez Hektor :
 - **ses fiches Hektor** — n° de négociateur + n° d'utilisateur + agence, rattachées une fois pour toutes ; **ce sont ces
   numéros que les workers continuent d'utiliser**, comme aujourd'hui.
 
+## 9. Les deux arrivées — un nouveau négociateur dans Hektor, un nouvel utilisateur dans l'app (04/11)
+
+**Aujourd'hui, mesuré dans le code** :
+- **un négociateur créé dans Hektor** (décision du 19/09) arrive LA NUIT : `list_negos` → `upsert_negos` → annuaire
+  (actif) → `app_user_directory` (NEGO) → il paraît dans les menus le lendemain matin. Il n'a pas de compte dans l'app
+  tant qu'un admin ne l'a pas créé ;
+- **un utilisateur créé dans l'app** (outil « Utilisateurs », `backend/app/services/supabase_admin.py:379` `create_user`,
+  e-mail @gti-immobilier.fr obligatoire) est relié à Hektor **une seule fois, à la création**, par son e-mail
+  (`_resolve_hektor_google_identity` l. 55 → `app_google_workspace_identity`). ⚠ C'est une PHOTO : si le compte est créé
+  avant que sa fiche Hektor existe ou soit descendue, le lien reste vide et n'est jamais refait seul. Mesuré : 6 photos,
+  toutes de juin et d'octobre ; Pauline GIRINON, Franck GERPHAGNON et Frédéric GERPHAGNON « liés » sans aucun numéro Hektor.
+- les droits, eux, passent par l'e-mail du compte (§3) : ils marchent dès que les copies de la nuit portent cet e-mail.
+
+**Avec le registre** — il devient le point qui relie les trois : la personne ↔ ses fiches Hektor ↔ son compte de l'app.
+- **Nouveau négociateur dans Hektor** : la nuit, sa fiche est adoptée. Son e-mail est déjà celui d'une personne (une
+  nouvelle agence pour quelqu'un de connu) → rattachée à elle ; c'est l'e-mail d'un compte de l'app sans personne → la
+  personne est créée et reliée au compte ; inconnu → personne créée, marquée « nouvelle », et un signal. Jamais de fusion
+  ni de déplacement automatique au-delà de ces cas sans ambiguïté.
+- **Nouvel utilisateur dans l'app** : à la création, l'outil cherche la personne au même e-mail → reliée ; sinon une
+  personne « sans fiche Hektor » est créée, et sa fiche s'y rattachera seule la nuit où elle arrivera. Pour les cas
+  tordus (e-mail gmail contre e-mail de l'agence, comme Franck), un choix manuel de la personne dans l'outil.
+- **Hektor reste celui qui crée les fiches et les numéros** tant qu'il vit (décision du 19/09 inchangée) ; le registre ne
+  fait que les ADOPTER, comme `app_contact` adopte les contacts.
+- À trancher en route : le type de personne (négociateur, secrétaire, compte d'agence comme « Groupe GTI » / accueil@) et
+  les 13 fiches sans e-mail (rattachées par le nom → liste à valider par Frédéric).
+
