@@ -496,3 +496,31 @@ première ligne (`parts`, l. 402) ; Mandats par le NOM écrit (`calculerMandats`
   Hugo LABBE +8 000 € en 2026, les comptes d'agence retrouvent leurs lignes, plus de ligne « Négociateur supprimé ».
 - B — une ligne « non réparti » visible (Ventes et Classements), avec la liste des 12 dossiers, pour que le cumul des
   négociateurs égale le total ; les compléter reste un geste de saisie.
+
+## 20. Filtré par négociateur : compte-t-on SA PART de commission ? (04/11) — question de Frédéric
+
+**Pilotage** (`filtrerParPersonne`, `lib/pilotage.ts` l. 1073) :
+- VENTES ACTÉES : OUI. Pour chaque dossier vendu, honoraires × (somme de SES pourcentages, entrée + sortie) / 100 ; un
+  dossier où il n'a aucune part est retiré ; une part sur le bien d'un autre est comptée. ⚠ Le NOMBRE de ventes compte 1
+  par dossier où il a une part (pas 0,5), et le VOLUME garde le prix entier. Dossier vendu SANS répartition → 100 % au
+  négociateur du bien (repli par l'e-mail).
+- COMPROMIS, OFFRES, ACTES À VENIR, onglet Affaires : NON. La répartition n'est lue que pour les chaînes VENDUES
+  (`lireVentes` → `chaines()` filtre `etape === 'vendu'`) ; le reste passe au négociateur DU BIEN, à 100 %. ⚠ Le bandeau
+  dit « Ventes et compromis répartis : sa part » — FAUX pour les compromis. Mesuré : 126 compromis en cours, 88 ont déjà
+  une répartition saisie, 8 partagés entre plusieurs personnes.
+- Mandats, stock, signatures, acquéreurs : le négociateur du bien ou de la fiche (normal, rien ne se partage).
+
+**Registre des transactions** (`RegistreTransactionsScreen.tsx` l. 1331-1356) : NON. Le filtre (admin seulement) garde
+les dossiers dont LE BIEN est suivi par ce négociateur (`negociateur_email`) et les chiffres de tête additionnent 100 %
+des honoraires. Une part sur le bien d'un autre n'apparaît pas ; un bien partagé compte en entier. La répartition ne sert
+qu'à l'affichage de la fiche (avec la ligne « Non attribué »).
+
+**L'écart, mesuré sur les ventes 2026 (TTC, registre des affaires)** — Transactions contre Pilotage :
+Sandrine DELAVAUD 14 ventes / 123 290 € contre 12 / 83 991 € · Aline VALETTE 2 / 23 000 € contre 0 · Nicolas COUDERT
+14 / 142 700 € contre 16 / 165 200 € · Lionel FLANDIN 66 000 € contre 48 250 € · Alice RONDEAU 43 850 € contre 60 649 € ·
+Claudie FERNANDEZ 0 contre 3 / 15 000 €. Claire RIBBES : identique (18 ventes, 120 100 € TTC = 100 083 € HT), elle ne
+partage rien.
+
+**Remède proposé, PAS codé :** pilotage — lire la répartition aussi pour les compromis (et corriger le bandeau) ;
+Transactions — quand un négociateur est choisi, compter SA part (dossiers où il a une part, ses biens comme ceux des
+autres), ou à défaut dire en clair « les biens qu'il suit, honoraires entiers ». Décision de Frédéric.
