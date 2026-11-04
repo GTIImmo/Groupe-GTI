@@ -14,11 +14,17 @@ et complète chez Supabase le registre posé le 04/11 (`app_partenaire_metier`, 
 
 LES RÈGLES (décisions de Frédéric du 04/11, §6 bis) :
   - rien ne part chez Hektor ; les numéros de Hektor sont traduits en NOS numéros (`hektor_target_id` → `hektor_contact_id`) ;
-  - les notaires sont laissés de côté (ils ont leur fiche, 28/10) ;
+  - les notaires sont laissés de côté (ils ont leur fiche, 28/10) -- SAUF interrupteur des notaires allumé (voir plus bas) ;
   - un métier n'est AJOUTÉ que s'il manque ; une ligne existante n'est jamais modifiée ; aucun métier n'est retiré par la nuit ;
   - un lien syndic / diagnostiqueur de Hektor est ajouté s'il manque. Si Hektor CHANGE ou RETIRE le syndic d'une annonce
     qu'il vient de relire, le lien d'origine « hektor » est retiré (daté), jamais effacé. Un lien posé dans l'APP n'est
     jamais touché : en cas d'écart, l'app gagne et l'écart est COMPTÉ dans le compte rendu (Q3).
+
+LE NOTAIRE (décision « A » de Frédéric, 04/11 au soir, §17) : il entre au registre comme les autres métiers, de trois
+sources — Netty (« notaire »), le formulaire Hektor (code 2) et la table des parties chez Supabase (rôles notaire_vendeur /
+notaire_acquereur, source « transactions »). ⛔ Second interrupteur APP_REGISTRE_PARTENAIRES_NOTAIRES : tant qu'il est
+éteint, les notaires restent de côté comme avant (le contrôle du métier refuserait « notaire » sans le patch
+patch_registre_partenaires_notaire_2026-11-04.sql — et un lot refusé ferait échouer TOUT le lot).
 
 ⛔ INTERRUPTEUR APP_REGISTRE_PARTENAIRES (.env) : absent = éteint, rien n'est écrit (le script le dit et sort en 0).
 ⚠ PAR DÉFAUT À BLANC : rien n'est écrit sans --ecrire.
@@ -79,8 +85,8 @@ def charger_env() -> None:
                 os.environ[cle] = valeur.strip().strip('"').strip("'")
 
 
-def interrupteur_allume() -> bool:
-    return (os.environ.get("APP_REGISTRE_PARTENAIRES") or "").strip().lower() in {"1", "on", "true", "oui"}
+def interrupteur_allume(nom: str = "APP_REGISTRE_PARTENAIRES") -> bool:
+    return (os.environ.get(nom) or "").strip().lower() in {"1", "on", "true", "oui"}
 
 
 def lecture_seule(chemin: Path) -> sqlite3.Connection:
@@ -127,15 +133,32 @@ def lire_tout(table: str, select: str, filtres: dict[str, str]) -> list[dict]:
 
 
 # ── Ce que le serveur sait ───────────────────────────────────────────────────
-def metiers_voulus() -> tuple[dict[tuple[str, str], str], Counter]:
+def notaires_des_transactions() -> set[str]:
+    """Nos numéros des contacts qui tiennent un rôle de notaire dans la table des parties (Supabase)."""
+    numeros: set[str] = set()
+    debut = 0
+    while True:
+        page = _requete("GET", "app_affaire_partie", {"select": "app_contact_id",
+                        "role": "in.(notaire_vendeur,notaire_acquereur)", "app_contact_id": "not.is.null",
+                        "order": "app_contact_id.asc", "limit": "1000", "offset": str(debut)})
+        page = page if isinstance(page, list) else []
+        numeros |= {str(l["app_contact_id"]) for l in page}
+        if len(page) < 1000:
+            return numeros
+        debut += 1000
+
+
+def metiers_voulus(avec_notaires: bool = False) -> tuple[dict[tuple[str, str], str], Counter]:
     """{(notre numéro, métier): source} et les comptes."""
     voulus: dict[tuple[str, str], str] = {}
     comptes: Counter = Counter()
+    metier_netty_de = {**METIER_NETTY, **({"notaire": "notaire"} if avec_notaires else {})}
+    metier_hektor_de = {**METIER_HEKTOR, **({"2": "notaire"} if avec_notaires else {})}
     p2 = lecture_seule(BASE_PHASE2)
     try:
         for contact_id, metiers_json in p2.execute("SELECT hektor_contact_id, metiers_json FROM contact_metier_netty"):
             for metier_netty in json.loads(metiers_json or "[]"):
-                metier = METIER_NETTY.get(str(metier_netty))
+                metier = metier_netty_de.get(str(metier_netty))
                 if not metier:
                     comptes[f"netty_ecarte_{metier_netty}"] += 1
                     continue
@@ -157,7 +180,7 @@ def metiers_voulus() -> tuple[dict[tuple[str, str], str], Counter]:
         if hk.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='hektor_contact_metier'").fetchone():
             for numero_hektor, code in hk.execute(
                     "SELECT hektor_contact_id, metier_code FROM hektor_contact_metier WHERE statut = 'done'"):
-                metier = METIER_HEKTOR.get(str(code or ""))
+                metier = metier_hektor_de.get(str(code or ""))
                 if not metier:
                     comptes[f"hektor_formulaire_ecarte_{code or 'vide'}"] += 1
                     continue
@@ -169,6 +192,10 @@ def metiers_voulus() -> tuple[dict[tuple[str, str], str], Counter]:
                 comptes["hektor_formulaire"] += 1
     finally:
         hk.close()
+    if avec_notaires:
+        for notre in sorted(notaires_des_transactions()):
+            voulus.setdefault((notre, "notaire"), "transactions")
+            comptes["transactions_notaire"] += 1
     return voulus, comptes
 
 
@@ -215,6 +242,8 @@ def liens_voulus() -> tuple[dict[tuple[int, str], dict], Counter, set[int]]:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Remplit le registre des partenaires depuis le serveur (à blanc par défaut).")
     parser.add_argument("--ecrire", action="store_true", help="écrire chez Supabase (sinon : compter seulement)")
+    parser.add_argument("--notaires-a-blanc", action="store_true",
+                        help="compter aussi les notaires, interrupteur éteint (sans effet avec --ecrire)")
     args = parser.parse_args()
     charger_env()
 
@@ -222,7 +251,10 @@ def main() -> int:
         print(json.dumps({"statut": "eteint", "raison": "APP_REGISTRE_PARTENAIRES absent ou faux dans .env : rien n'est écrit"}, ensure_ascii=False))
         return 0
 
-    metiers, c_metiers = metiers_voulus()
+    avec_notaires = interrupteur_allume("APP_REGISTRE_PARTENAIRES_NOTAIRES") or args.notaires_a_blanc
+    if avec_notaires and args.ecrire and not interrupteur_allume("APP_REGISTRE_PARTENAIRES_NOTAIRES"):
+        avec_notaires = False   # --notaires-a-blanc ne sert qu'à compter : jamais d'écriture de notaire sans l'interrupteur
+    metiers, c_metiers = metiers_voulus(avec_notaires)
     liens, c_liens, relues = liens_voulus()
 
     existants_metier = {(r["contact_id"], r["metier"]) for r in lire_tout(
@@ -259,7 +291,7 @@ def main() -> int:
             a_retirer_lien.extend(l["id"] for l in actifs if l["origine"] == "hektor")
 
     compte_rendu = {
-        "statut": "a_blanc" if not args.ecrire else "ecrit",
+        "statut": "a_blanc" if not args.ecrire else "ecrit", "notaires": avec_notaires,
         "metiers_voulus": len(metiers), "metiers_deja_la": len(metiers) - len(a_ajouter_metier),
         "metiers_a_ajouter": len(a_ajouter_metier),
         "metiers_par_source_et_metier": Counter(f"{l['source']}:{l['metier']}" for l in a_ajouter_metier),

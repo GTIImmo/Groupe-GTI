@@ -1124,6 +1124,83 @@ de façon ADDITIVE ; il était propre, sans modification en cours) :
 - Non branché la nuit : les nouveaux syndics et diagnostiqueurs arrivent déjà par les listes de l'annonce, relues chaque
   nuit. `--lire` reste disponible pour une relecture ponctuelle.
 
+✅ **Lot 1 commité le 04/11 : `b9dca1b`** (« Oui, commite »).
+
+## 17. LE NOTAIRE ENTRE AU REGISTRE — DÉCISION « A » (04/11 soir) — ✅ POSÉ ET ALLUMÉ, LA NUIT ÉCRIT
+
+**La question de Frédéric** : *« les partenaires ajoutés à partir de Netty et les notaires déjà présents dans l'annuaire
+sont-ils regroupés avec les syndics et diagnostiqueurs récupérés ? »* Réponse : Netty + Hektor oui (même registre, 213
+métiers) ; les notaires non, par construction (leur type vient de la table des parties). Deux formes proposées :
+**A** les notaires entrent au registre (une seule source pour l'annuaire) · **B** ils restent à part (deux sources).
+**Frédéric : « A ».**
+
+**Mesuré (lecture seule)** — trois sources de notaires, par NOTRE numéro de contact :
+- table des parties chez Supabase (rôles `notaire_vendeur` / `notaire_acquereur`) : **1 333** personnes, dont 1 127 dans l'app ;
+- Netty (`contact_metier_netty`, « notaire ») : **844**, tous dans l'app (raison `partenaire_netty`) ;
+- formulaire Hektor (`hektor_contact_metier`, code 2) : **199**, dont 144 dans l'app ;
+- recoupements : parties ∩ Netty 574 · parties ∩ Hektor 146 · Netty ∩ Hektor 0 ⇒ **1 656 notaires distincts**, dont
+  **1 397 déjà dans l'app** ; 0 hors de la couche locale ; 10 portent déjà un autre métier au registre (permis : un
+  contact peut avoir plusieurs métiers).
+
+**Préparé** :
+- `supabase/patch_registre_partenaires_notaire_2026-11-04.sql` : remplace DEUX contrôles de `app_partenaire_metier` —
+  le métier accepte `notaire`, la source accepte `transactions` (= la table des parties). Empreintes vérifiées avant, sinon
+  arrêt. Aucune ligne écrite. `_REPETITION.sql` (6 contrôles), `_INVERSE.sql` (copie datée des lignes notaire /
+  transactions, puis contrôles remis à leur forme EXACTE du 04/11, empreintes vérifiées).
+- **Essai dans une transaction annulée (04/11)** : patch → un notaire « transactions » s'écrit ; un métier inconnu, une
+  source inconnue et un doublon sont REFUSÉS ; inverse → 1 ligne copiée, les deux empreintes reviennent, 213 lignes avant
+  et après. Base vérifiée inchangée ensuite (empreintes `64401c40…` et `90bff85f…`).
+- `registre_partenaires_reprise.py` : les notaires (Netty « notaire », Hektor code 2, table des parties en source
+  `transactions`, dans cet ordre de priorité) derrière un **SECOND interrupteur `APP_REGISTRE_PARTENAIRES_NOTAIRES`,
+  ÉTEINT**. ⚠ Pourquoi un second interrupteur : sans le patch, le contrôle refuserait « notaire », et un lot de 500 refusé
+  ferait échouer TOUT le lot (les syndics avec). `--notaires-a-blanc` compte sans jamais écrire.
+  À blanc : interrupteur éteint → **0 ajout** (rien ne change cette nuit) ; avec les notaires → **1 656 ajouts**
+  (Netty 844, Hektor 199, transactions 613).
+
+**Ce qui NE change pas** : le type « Notaire » d'un contact (toujours tiré de la table des parties), la fiche notaire du
+28/10, la vue `app_contact_relations_current`, `app_partenaire_lien` (pas de rôle notaire : le notaire d'une affaire est
+déjà dans la table des parties), le lot 1 (`elargir_perimetre_registre.py` écarte toujours le code 2 : les 55 notaires
+Hektor hors de l'app n'y entrent pas — **question ouverte**, voir plus bas). Rien chez Hektor.
+
+**Ce que ça pourrait casser ailleurs** : rien ne lit encore `app_partenaire_metier` (l'annuaire est le lot 3). Le seul
+lecteur est la reprise de nuit elle-même, protégée par l'interrupteur.
+
+✅ **FAIT le 04/11 vers 21:10** (Frédéric : « d'abord finir les correctifs en cours sur le regroupement ») :
+① patch posé chez Supabase (migration `registre_partenaires_notaire_2026_11_04`), **répétition 6/6 verte** ;
+② `APP_REGISTRE_PARTENAIRES_NOTAIRES=1` ajouté au `.env` (copie : `.env.avant_registre_notaires_20261104_2111`) ;
+à blanc, interrupteur allumé : **1 656 notaires à ajouter** (Netty 844, transactions 613, Hektor 199), 0 lien touché ;
+③ commit. ⇒ **La nuit du 04-05/11 les écrit** (étape « phase2 registre des partenaires »).
+⏰ **Contrôle du 05/11** : `app_partenaire_metier` actif = 213 + 1 656 = **1 869** ; `metier = 'notaire'` = 1 656
+(sources netty 844 / transactions 613 / hektor 199) ; l'étape en code 0 dans le journal du run.
+Retour arrière : éteindre l'interrupteur, PUIS `_INVERSE.sql`.
+**Question ouverte** : les **259 notaires qui ne sont pas dans l'app** (206 venus des transactions, 53 de Hektor) doivent-ils
+y entrer ? Aujourd'hui l'annuaire ne pourra afficher que les 1 397 présents.
+
+### 17 bis. POURQUOI LES 206 NOTAIRES DES TRANSACTIONS NE SONT PAS DANS L'APP (04/11, « pourquoi les 206 n'y sont pas ? »)
+
+Mesuré, lecture seule. **Ce n'est pas une décision, c'est un trou** : la règle qui fait entrer « toute personne que Hektor
+nomme dans une transaction » (`phase2/contacts/elargir_perimetre_console.py`, raison `console_transaction_party`, écrite
+le 11/09 — elle fait entrer 1 087 des 1 127 notaires présents) **ne lit qu'UNE des trois places** où le registre trouve
+ses notaires : la liste `parties_json` du formulaire recopié (`app_affaire_console`). Or le registre des transactions
+(`app_affaire_ledger`, colonnes `notaire_mandant_id` / `notaire_acquereur_id`, ajoutées le 16/09, CINQ JOURS APRÈS la
+règle) les prend aussi ailleurs. Les 206 : 683 lignes de la table des parties, 640 transactions, toutes présentes chez
+Hektor, toutes d'origine « listes du registre », 0 dans Netty :
+- **337 lignes de COMPROMIS (≈ 199 personnes)** : lues par la console le **10/09**, avant que `parties_json` existe. Le
+  notaire est dans les colonnes `notaires_mandant` / `notaires_acquereur` du formulaire recopié, que la règle ne lit pas ;
+  `parties_json` y est VIDE ;
+- **341 lignes de VENTES** : le notaire vient de l'**API de la vente** (règle de fusion du 16/09 : « vente, l'API
+  d'abord »). Le formulaire de la vente a une liste de notaires vide (lu les 14-15/09). La règle ne lit pas le registre ;
+- **5 lignes de ventes** : le formulaire nomme un AUTRE notaire que l'API (les « 27 contradictions » du 16/09 ; le
+  registre garde l'API).
+⚠ **Au passage** : la table des parties n'a PAS de numéro Hektor pour ces notaires, parce qu'elle le cherche dans
+`app_contact_current` de Supabase… où ils ne sont pas. Le trou s'entretient lui-même.
+⚠⚠ **LEÇON 9 — la même cause touche toute la famille** : personnes de la table des parties absentes de l'app, par rôle :
+**acquéreurs 1 301 · vendeurs 496 · notaires du vendeur 133 · notaires de l'acquéreur 98**. Une partie des acquéreurs
+et vendeurs peut entrer dès la nuit du 05/11 par la raison `registre_relation` de ⑧ (liens aux annonces) : **à
+re-mesurer après la nuit** avant de conclure.
+**Remède proposé (rien n'est codé)** : faire lire à la règle d'entrée la table des parties elle-même (nos numéros,
+déjà calculés), au lieu du seul formulaire recopié. Périmètre (notaires seuls ou toute la famille) : **à Frédéric**.
+
 ### 7 ter. Les dépendances (techniques, pas un ordre décidé)
 
 - 0 avant tout le reste ; 0.1 avant B2 ; 0.2 avant B1 ; 0.6 avant B5 ; 0.3 avant B6 ; 0.4 avant B7 ; 0.5 avant C2.
