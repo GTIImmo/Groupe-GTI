@@ -1764,3 +1764,51 @@ Remesuré dans le code d'aujourd'hui (`console_job_worker.js`, fonctions chez Su
 - la règle « un notaire n'est jamais un couple » et le rattachement des orphelines ne se calculent que sur la table entière ;
 - `DROP TABLE` à chaque geste : un lecteur au même moment (l'envoi de la nuit) trouverait une table absente → il n'envoie RIEN de la nature
   (garde existante). C'est sans dommage, mais déjà le cas avec G.
+
+## 60. LA NATURE À LA RELECTURE (« A ») : ÉCRITE, ÉPROUVÉE, ÉTEINTE *(04/11, « vas-y, fais le correctif après un nouvel audit de mon projet pour être sûr »)*
+
+**Le nouvel audit a changé le plan : C est abandonné, A suffit.**
+- La création peut faire naître un COUPLE d'un coup : `app_create_contact_optimistic` appelle `app_contact_creer_conjoint` (« la personne 2 naît
+  avec la 1 », 31/10, cran `couple_nait_complet`). Et un couple peut être écrit dans le nom (« Paul et Anne »).
+- Écrire « personne seule » au clic (C) aurait donc été faux dans ces deux cas. Pour bien faire, il aurait fallu recopier la règle de nature
+  en SQL : une deuxième règle à tenir à jour. ⇒ Abandonné.
+- A couvre la création : la relecture arrive environ 40 s après le clic.
+- Le modèle exact existait déjà : l'étape « conjoint » de la relecture (`conjoints_des_couples.py --contact-id`, P2 du 31/10). Elle a un
+  interrupteur, ne lève jamais, et se calcule par ménage.
+
+**Le code** (dormant) :
+- `nature_des_fiches.py --contact-id N` : `menage_du_contact`, `calculer_menage`, `ecrire_lignes`, `executer_pour_contact`.
+  - Ménage écrit : la principale, la fiche, les secondes de la principale, et les cases que la nuit leur a rattachées.
+  - Contexte lu en plus : les secondes de chacun.
+  - Le calcul passe par LA MÊME fonction `calculer()` que la nuit.
+  - Le rattachement des orphelines garde la valeur de la nuit (`rattachee_a` et `rattachement` relus dans la table).
+  - L'écriture se fait par `INSERT OR REPLACE` des seules lignes du ménage, jamais par `DROP`. Si la table est absente, rien n'est écrit.
+  - Interrupteur **`APP_NATURE_A_LA_RELECTURE`** (.env), ABSENT donc éteint. Sortie toujours 0 avec `--contact-id`.
+- `refresh_contact_inproc.py` : une étape « nature » entre « conjoint » et « push ».
+- Hors de ce mode, le calcul de la nuit n'est pas touché.
+
+**Éprouvé** :
+- `test_nature_des_fiches` **37/37**, dont 8 neufs : EA32621 relu par la coquille comme par la personne ; seul le ménage est réécrit, une fiche
+  hors ménage garde sa valeur ; contact né aujourd'hui ; table absente ; contact inconnu ; principale disparue ; rattachement de la nuit gardé ;
+  Madame de l'ancien logiciel.
+- ⭐ **Témoin sur la vraie base, en lecture seule** : 416 fiches (250 au hasard, plus les cas difficiles : rattachées et leurs personnes, ménages
+  de 3 fiches ou plus, notaires, Madames, EA32621). **779 lignes de ménage comparées au calcul de la table entière : 0 écart.**
+- EA32621 : 10260586 `couple` / `case_vide`, 10260585 `case_conjoint_vide`.
+- Durée : **0,8 à 1,2 s par relecture**, à comparer aux ~40 s de la relecture. Elle vient de la colonne `hektor_couple_contact_id`, qui n'a pas
+  d'index (~190 ms par lecture) ; la couche est refaite chaque nuit, donc on n'en ajoute pas.
+- Éteinte, l'étape sort en 0 sans rien faire (vérifié).
+- ⚠ Le banc de la relecture (`test_relecture_apprend_la_paire_8a.py`) était **déjà à 12/17 AVANT** ce changement. Il n'avait pas appris l'étape
+  « conjoint » du 31/10. Il est mis à jour (les étapes « conjoint » et « nature » reçoivent NOTRE numéro) : **17/17** ; et la version d'avant
+  donne 12/17 (témoin inverse).
+
+**Ce que ça pourrait casser ailleurs** :
+- La relecture d'une fiche ne peut pas échouer à cause de cette étape (sortie 0, exceptions gardées).
+- Un ancien ménage que la fiche vient de quitter n'est pas recalculé : la nuit le refait.
+- Une écriture pendant le remplacement de la table par la nuit : la nuit la recouvre avec un calcul complet, ce qui est sans dommage.
+- La nature change l'empreinte de la ligne, donc la ligne est renvoyée une fois.
+- **Ce que ça ne règle PAS** : les 211 fiches non éligibles (§58, trou 2). Elles n'auront leur nature qu'à leur prochaine relecture
+  (ouverture de la fiche).
+
+**Pour l'allumer** (écriture de configuration : ton accord) : ajouter `APP_NATURE_A_LA_RELECTURE=1` dans `C:\Hektor\Projet\.env`.
+Aucun redémarrage n'est nécessaire : chaque relecture relit le `.env`.
+**Retour arrière** : retirer la ligne du `.env`.

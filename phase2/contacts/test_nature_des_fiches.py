@@ -254,3 +254,75 @@ class RattachementNeFaitPasUnCouple(unittest.TestCase):
         self.assertEqual(r["1"]["nature_fiche"], "case_conjoint_vide", "la coquille reste masquee")
         self.assertEqual(r["4"]["nature_fiche"], "couple", "temoin : un couple ECRIT dans le nom reste couple (les 123)")
 
+
+
+class NatureALaRelecture(unittest.TestCase):
+    """04/11 (§59-60) : la relecture d'une fiche recalcule SON menage, comme la nuit, sans toucher au reste."""
+
+    def base(self, *fiches, natures=None, ancien=None):
+        c = sqlite3.connect(":memory:")
+        c.execute("CREATE TABLE app_contact_current (hektor_contact_id TEXT PRIMARY KEY, hektor_target_id TEXT, "
+                  "hektor_couple_contact_id TEXT, hektor_agence_id TEXT, civilite TEXT, nom TEXT, prenom TEXT, "
+                  "archive INTEGER, supabase_sync_eligible INTEGER, date_enregistrement TEXT)")
+        for f in fiches:
+            c.execute("INSERT INTO app_contact_current VALUES (?,?,?,?,?,?,?,?,?,?)",
+                      (f["hektor_contact_id"], f["hektor_target_id"], f["hektor_couple_contact_id"], f["hektor_agence_id"],
+                       f["civilite"], f["nom"], f["prenom"], f["archive"], 0, "2020-01-01"))
+        if natures is not None:
+            m.ecrire(c, natures)
+        if ancien is not None:
+            c.execute("CREATE TABLE ancien_logiciel_contact (hektor_contact_id TEXT, gender INTEGER)")
+            c.executemany("INSERT INTO ancien_logiciel_contact VALUES (?,?)", ancien)
+        return c
+
+    def nature_table(self, c):
+        return {r[0]: r[1] for r in c.execute("SELECT hektor_contact_id, nature_fiche FROM contact_nature_current")}
+
+    def test_ea32621_par_la_coquille_comme_par_la_personne(self):
+        F = (fiche(1, lien=1, nom="DUPONT", prenom="Anne", civilite="_Mr/Mme"), fiche(2, lien=1, civilite="_Mr/Mme"),
+             fiche(9, nom="AUTRE", prenom="Luc"))
+        for depart in ("1", "2"):
+            c = self.base(*F, natures=m.calculer({}, None))
+            r = {l["hektor_contact_id"]: (l["nature_fiche"], l["couple_deuxieme"]) for l in m.calculer_menage(c, depart)}
+            self.assertEqual(r, {"1": ("couple", "case_vide"), "2": ("case_conjoint_vide", None)}, depart)
+
+    def test_n_ecrit_que_le_menage_et_garde_le_reste(self):
+        F = (fiche(1, lien=1, nom="DUPONT", prenom="Paul", civilite="M."), fiche(2, lien=1, nom="DUPONT", prenom="Anne"),
+             fiche(9, nom="AUTRE", prenom="Luc"))
+        c = self.base(*F, natures=[{**l, "nature_fiche": "VIEILLE"} for l in m.calculer({f["hektor_contact_id"]: f for f in F}, None)])
+        self.assertEqual(m.executer_pour_contact(c, "2"), 0)
+        self.assertEqual(self.nature_table(c), {"1": "couple", "2": "conjoint", "9": "VIEILLE"},
+                         "le menage est recalcule ; la fiche 9, hors menage, garde la valeur de la nuit")
+
+    def test_contact_ne_aujourd_hui_absent_de_la_table(self):
+        c = self.base(fiche(20000001, nom="NEUF", prenom="Jean"), natures=[])
+        m.executer_pour_contact(c, "20000001")
+        self.assertEqual(self.nature_table(c), {"20000001": "personne_seule"})
+
+    def test_table_absente_rien_n_est_cree(self):
+        c = self.base(fiche(1, nom="A", prenom="B"))
+        self.assertEqual(m.executer_pour_contact(c, "1"), 0)
+        self.assertIsNone(c.execute("SELECT 1 FROM sqlite_master WHERE name='contact_nature_current'").fetchone())
+
+    def test_contact_inconnu_rien_a_faire(self):
+        c = self.base(fiche(1, nom="A"), natures=[])
+        self.assertEqual(m.calculer_menage(c, "777"), [])
+
+    def test_principale_disparue_la_seconde_reste_orpheline(self):
+        c = self.base(fiche(2, lien=1), natures=[])
+        self.assertEqual([(l["hektor_contact_id"], l["nature_fiche"]) for l in m.calculer_menage(c, "2")],
+                         [("2", "case_vide_orpheline")])
+
+    def test_le_rattachement_de_la_nuit_est_garde(self):
+        F = {"1": fiche(1), "2": fiche(2, nom="DIAZ", prenom="Paul")}
+        nuit = m.calculer(F, None, {"1": "2"}, None)
+        self.assertEqual({l["hektor_contact_id"]: l["rattachee_a"] for l in nuit}, {"1": "2", "2": None})
+        c = self.base(*F.values(), natures=nuit)
+        r = {l["hektor_contact_id"]: l for l in m.calculer_menage(c, "2")}
+        self.assertEqual((r["1"]["nature_fiche"], r["1"]["rattachee_a"]), ("case_conjoint_vide", "2"),
+                         "la case rattachee par la nuit reste masquee quand on relit sa personne")
+        self.assertEqual(r["2"]["nature_fiche"], "personne_seule")
+
+    def test_madame_de_l_ancien_logiciel_rendue_aussi(self):
+        c = self.base(fiche(1, nom="A", prenom="B", cible=55), natures=[], ancien=[("55", 2)])
+        self.assertEqual(m.calculer_menage(c, "1")[0]["civilite_app"], "Mme.")

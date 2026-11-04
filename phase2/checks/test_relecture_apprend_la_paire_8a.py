@@ -53,31 +53,31 @@ def verifie(nom, obtenu, attendu):
 # 1. contact ANCIEN par son identite -> chemin d'avant, Hektor vise par 414000
 n, a = rci.resoudre_le_numero("10650744")
 verifie("1 ancien, identite : resolution", (n, a), ("10650744", None))
-verifie("1 ancien, identite : etapes", etapes(n), {"detail": "414000", "normalize": "414000", "build": "10650744", "push": "10650744"})
+verifie("1 ancien, identite : etapes", etapes(n), {"detail": "414000", "normalize": "414000", "build": "10650744", "conjoint": "10650744", "nature": "10650744", "push": "10650744"})
 # 2. contact ANCIEN par son numero Hektor -> 8a bis (21/10) : on rend SON IDENTITE,
 #    sinon le push n'envoie rien (le rafraichissement perdu du 08/10)
 n, a = rci.resoudre_le_numero("414000")
 verifie("2 ancien, numero Hektor : on rend l'IDENTITE", (n, a), ("10650744", None))
 verifie("2 : etapes (Hektor par son numero, la fiche par la notre)", etapes(n),
-        {"detail": "414000", "normalize": "414000", "build": "10650744", "push": "10650744"})
+        {"detail": "414000", "normalize": "414000", "build": "10650744", "conjoint": "10650744", "nature": "10650744", "push": "10650744"})
 verifie("2 : aucune paire ecrite pour les anciens", lignes_corresp(), [])
 # 3. contact NE AUJOURD'HUI, par NOTRE numero (vraie paire lue dans Supabase)
 n, a = rci.resoudre_le_numero("20000006")
 verifie("3 neuf, identite : resolution", (n, a), ("20000006", None))
 verifie("3 : la paire est apprise", lignes_corresp(), [("605922", "20000006")])
 verifie("3 : Hektor vise par SON numero, la fiche par la NOTRE", etapes(n),
-        {"detail": "605922", "normalize": "605922", "build": "20000006", "push": "20000006"})
+        {"detail": "605922", "normalize": "605922", "build": "20000006", "conjoint": "20000006", "nature": "20000006", "push": "20000006"})
 # 4. LE CAS DU DOUBLON : le meme contact recu avec le numero HEKTOR
 k = sqlite3.connect(base); k.execute("DELETE FROM app_contact_identite_app"); k.commit(); k.close()
 n, a = rci.resoudre_le_numero("605922")
 verifie("4 neuf, numero Hektor : on rend NOTRE numero", (n, a), ("20000006", None))
 verifie("4 : etapes (plus de doublon possible)", etapes(n),
-        {"detail": "605922", "normalize": "605922", "build": "20000006", "push": "20000006"})
+        {"detail": "605922", "normalize": "605922", "build": "20000006", "conjoint": "20000006", "nature": "20000006", "push": "20000006"})
 # 4 bis. LE CAS DE L'ESSAI 2 DU 21/10 : la paire est DEJA apprise, recu avec le numero Hektor
 n, a = rci.resoudre_le_numero("605922")
 verifie("4 bis paire deja connue, numero Hektor : NOTRE numero", (n, a), ("20000006", None))
 verifie("4 bis : etapes", etapes(n),
-        {"detail": "605922", "normalize": "605922", "build": "20000006", "push": "20000006"})
+        {"detail": "605922", "normalize": "605922", "build": "20000006", "conjoint": "20000006", "nature": "20000006", "push": "20000006"})
 # 4 ter. identite AMBIGUE (deux identites pour un numero) -> on ne choisit pas
 k = sqlite3.connect(base); k.execute("INSERT INTO app_contact VALUES (10999999,'10999999','777000')")
 k.execute("INSERT INTO app_contact VALUES (10999998,'10999998','777000')"); k.commit(); k.close()

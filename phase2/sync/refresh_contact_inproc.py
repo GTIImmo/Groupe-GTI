@@ -297,6 +297,13 @@ def _steps(contact_id: str):
         ("conjoint", "phase2/contacts/conjoints_des_couples.py", [
             "--contact-id", identite,
         ]),
+        # COUPLES (04/11/2026) : meme raison pour la NATURE -- sans cette etape, le push
+        # envoie la nature de la nuit d'avant (ou RIEN pour un contact ne aujourd'hui).
+        # Recalcule le menage de la fiche seulement (synthese couples §59-60).
+        # Interrupteur APP_NATURE_A_LA_RELECTURE ; cette etape ne leve jamais (sortie 0).
+        ("nature", "phase2/contacts/nature_des_fiches.py", [
+            "--contact-id", identite,
+        ]),
         # --include-archived-searches (21/08/2026) : meme raison que dans le run de 03:00.
         # Sans elle, ouvrir une fiche contact suffirait a resupprimer ses recherches
         # archivees de Supabase, et a reorpheliner ce qui pointait dessus.

@@ -49,7 +49,9 @@ rien dans `hektor_couple_contact_id` : seule cette table le sait (`rattachee_a`)
 Usage :
     python phase2/contacts/nature_des_fiches.py            (remplace la table)
     python phase2/contacts/nature_des_fiches.py --a-blanc  (compte, n'ecrit rien)
-Sortie : 0 = fait · 1 = echec.
+    python phase2/contacts/nature_des_fiches.py --contact-id N [--a-blanc]
+        (relecture d'une fiche : recalcule SON menage ; interrupteur APP_NATURE_A_LA_RELECTURE ; ne leve jamais)
+Sortie : 0 = fait · 1 = echec (jamais 1 avec --contact-id).
 """
 from __future__ import annotations
 
@@ -383,20 +385,151 @@ def executer(conn: sqlite3.Connection, a_blanc: bool = False, rattacher: bool = 
     return 0
 
 
+# ── COUPLES (04/11/2026) — LA NATURE A LA RELECTURE D'UNE FICHE (synthese couples §59-60) ──
+# La nuit calcule toute la table ; une relecture d'une fiche (refresh_contact_inproc.py) envoyait
+# donc la nature de la veille, ou RIEN pour un contact ne dans la journee. Meme remede que
+# l'etape « conjoint » de la relecture : recalculer LE MENAGE de la fiche avant l'envoi.
+# ⛔ INTERRUPTEUR APP_NATURE_A_LA_RELECTURE (.env) : eteint, rien n'est fait (la nuit suffit).
+# ⚠ Le MENAGE (ecrit) = la principale P de la fiche, la fiche, toutes les secondes de P, et les
+#   cases rattachees par la nuit a l'un d'eux. Le CONTEXTE (lu, pas ecrit) = en plus les secondes
+#   de chacun : la nature d'un membre ne depend que de lui, de sa principale et de ses secondes.
+# ⚠ Ce qui ne se calcule que sur TOUTE la table garde la valeur de la nuit : le rattachement des
+#   cases orphelines (`rattachee_a`, `rattachement`, repris de la table tel quel). Un ancien
+#   menage que la fiche vient de quitter n'est pas recalcule : la nuit s'en charge.
+# ⚠ N'ecrit QUE des lignes (INSERT OR REPLACE) : jamais de DROP. Table absente -> rien.
+
+def a_la_relecture_allume() -> bool:
+    return (os.environ.get("APP_NATURE_A_LA_RELECTURE") or "").strip().lower() in {"1", "on", "true", "oui"}
+
+
+def _fiches_par_numeros(conn: sqlite3.Connection, numeros: set[str]) -> dict[str, dict[str, Any]]:
+    if not numeros:
+        return {}
+    conn.row_factory = sqlite3.Row
+    try:
+        marques = ",".join("?" * len(numeros))
+        return {_texte(r["hektor_contact_id"]): dict(r) for r in conn.execute(
+            f"SELECT {COLONNES} FROM app_contact_current WHERE hektor_contact_id IN ({marques})", sorted(numeros))}
+    finally:
+        conn.row_factory = None
+
+
+def _secondes_de(conn: sqlite3.Connection, numeros: set[str]) -> set[str]:
+    if not numeros:
+        return set()
+    marques = ",".join("?" * len(numeros))
+    return {_texte(r[0]) for r in conn.execute(
+        f"SELECT hektor_contact_id FROM app_contact_current WHERE hektor_couple_contact_id IN ({marques})",
+        sorted(numeros))}
+
+
+def menage_du_contact(conn: sqlite3.Connection, numero: str) -> tuple[set[str], dict[str, dict[str, Any]], dict[str, str], dict[str, str]]:
+    """(numeros a ecrire, fiches du contexte, rattachements de la nuit, mises de cote de la nuit)."""
+    fiche = _fiches_par_numeros(conn, {numero}).get(numero)
+    if fiche is None:
+        return set(), {}, {}, {}
+    lien = _texte(fiche.get("hektor_couple_contact_id"))
+    principale = lien or numero
+    membres = {numero, principale} | _secondes_de(conn, {principale})
+    rattache: dict[str, str] = {}
+    cote: dict[str, str] = {}
+    if conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (TABLE,)).fetchone():
+        marques = ",".join("?" * len(membres))
+        for case, personne, raison in conn.execute(
+                f"SELECT hektor_contact_id, rattachee_a, rattachement FROM {TABLE} "
+                f"WHERE hektor_contact_id IN ({marques}) OR rattachee_a IN ({marques})",
+                sorted(membres) + sorted(membres)):
+            case, personne = _texte(case), _texte(personne)
+            if personne:
+                rattache[case] = personne
+                membres |= {case, personne}
+            if _texte(raison):
+                cote[case] = _texte(raison)
+    contexte_numeros = set(membres) | _secondes_de(conn, membres)
+    contexte = _fiches_par_numeros(conn, contexte_numeros)
+    for case, personne in rattache.items():
+        contexte_numeros |= _secondes_de(conn, {personne})
+    contexte.update(_fiches_par_numeros(conn, contexte_numeros - set(contexte)))
+    membres &= set(contexte)
+    rattache = {c: p for c, p in rattache.items() if c in contexte and p in contexte}
+    return membres, contexte, rattache, {c: r for c, r in cote.items() if c in membres}
+
+
+def madames_parmi(conn: sqlite3.Connection, fiches: dict[str, dict[str, Any]]) -> set[str] | None:
+    """Comme madames_de_l_ancien_logiciel, limite aux numeros HEKTOR des fiches donnees."""
+    if not conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (TABLE_ANCIEN,)).fetchone():
+        return None
+    cibles = sorted({_texte(f.get("hektor_target_id")) for f in fiches.values()} - {""})
+    if not cibles:
+        return set()
+    genres: dict[str, set[Any]] = defaultdict(set)
+    marques = ",".join("?" * len(cibles))
+    for hid, genre in conn.execute(f"SELECT hektor_contact_id, gender FROM {TABLE_ANCIEN} "
+                                   f"WHERE hektor_contact_id IN ({marques})", cibles):
+        genres[str(hid)].add(genre)
+    return {hid for hid, g in genres.items() if g == {MADAME_ANCIEN}}
+
+
+def calculer_menage(conn: sqlite3.Connection, numero: str) -> list[dict[str, Any]]:
+    """Les lignes de nature du menage de la fiche, calculees par LA MEME fonction que la nuit."""
+    membres, contexte, rattache, cote = menage_du_contact(conn, numero)
+    if not membres:
+        return []
+    lignes = calculer(contexte, madames_parmi(conn, contexte), rattache, cote, notaires_hektor(conn))
+    return [l for l in lignes if l["hektor_contact_id"] in membres]
+
+
+def ecrire_lignes(conn: sqlite3.Connection, lignes: list[dict[str, Any]]) -> bool:
+    """Remplace CES lignes seulement. False si la table n'existe pas (la nuit la creera)."""
+    if not conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (TABLE,)).fetchone():
+        return False
+    calcule_le = datetime.now().isoformat(timespec="seconds")
+    with conn:
+        conn.executemany(
+            f"INSERT OR REPLACE INTO {TABLE} VALUES (:hektor_contact_id, :nature_fiche, :couple_deuxieme, :civilite_app, "
+            ":civilite_source, :suit_principale_archivee, :supprimee_chez_hektor, :rattachee_a, :rattachement, :calcule_le)",
+            [{**l, "calcule_le": calcule_le} for l in lignes])
+    return True
+
+
+def executer_pour_contact(conn: sqlite3.Connection, numero: str, a_blanc: bool = False) -> int:
+    lignes = calculer_menage(conn, numero)
+    if not lignes:
+        print(f"[nature] le contact {numero} n'est pas dans la couche : rien a faire")
+        return 0
+    print(f"[nature] menage de {numero} : " + ", ".join(f"{l['hektor_contact_id']}={l['nature_fiche']}" for l in lignes))
+    if a_blanc:
+        print("[nature] A BLANC : rien n'est ecrit")
+        return 0
+    if not ecrire_lignes(conn, lignes):
+        print(f"[nature] table {TABLE} absente : rien n'est ecrit (la nuit la creera)")
+        return 0
+    print(f"[nature] {len(lignes)} ligne(s) du menage reecrite(s)")
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--phase2-db", type=Path, default=DEFAULT_PHASE2_DB)
     ap.add_argument("--a-blanc", action="store_true")
     ap.add_argument("--rattacher", action="store_true", help="allume le rattachement pour CET appel")
+    ap.add_argument("--contact-id", help="relecture d'une fiche : recalcule SON menage seulement (ne leve jamais)")
     args = ap.parse_args()
     charger_env()
+    contact_id = (args.contact_id or "").strip()
+    if contact_id and not a_la_relecture_allume():
+        print("[nature] interrupteur APP_NATURE_A_LA_RELECTURE eteint : rien a faire (la nuit suffit)")
+        return 0
     conn = sqlite3.connect(args.phase2_db, timeout=30)
     conn.execute("PRAGMA busy_timeout=30000")
     try:
+        if contact_id:
+            return executer_pour_contact(conn, contact_id, args.a_blanc)
         return executer(conn, args.a_blanc, args.rattacher or rattachement_allume())
     except Exception as erreur:  # noqa: BLE001
         print(f"[nature] ECHEC : {erreur}", file=sys.stderr)
-        return 1
+        # La relecture d'une fiche ne doit JAMAIS echouer a cause de la nature : la nuit la recalcule.
+        return 0 if contact_id else 1
     finally:
         conn.close()
 
