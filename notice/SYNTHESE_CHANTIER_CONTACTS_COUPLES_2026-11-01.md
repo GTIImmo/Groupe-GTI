@@ -1993,3 +1993,11 @@ Recherche dans les notes (accents ignorés), l'historique git et la mémoire. **
   l'ancien logiciel. Les vrais partenaires seraient ses codes 7, 13 et 80-86, dont la signification n'est écrite nulle part : question à Frédéric.
 - ⛔ **§63 corrigé** : les « trois purges » ne sont pas prouvées. L'ancien logiciel n'avait que 201 fiches archivées ; les dates étaient des
   journées de modification en masse, recopiées par Hektor. L'archivage vient très probablement de la migration de mars 2026.
+
+## 67. LES CODES DE L'ANCIEN LOGICIEL (NETTY) TROUVÉS : LES « PARTENAIRES » N'EN SONT PAS *(04/11 ; détail : `AUDIT_INDEX_GLOBAL_CONTACTS_2026-11-04.md` §16)*
+
+- La notice « notice modelo » (Téléchargements) est la documentation de l'API **Netty**. Elle donne `contact_type` (13 Notaire, 17 Acquéreur,
+  24 Propriétaire, 82 Demande d'estimation, 85 Candidat, 7 Autre…), `origin` et `gender`.
+- Les 16 098 « partenaires » de Hektor sont surtout des fiches sans type ou « Autre », plus 673 demandes d'estimation et 332 candidats.
+- Les vrais professionnels sont **1 469** : 1 257 notaires, déjà traités (type Notaire du 28/10), et **~212 autres** (courtiers, apporteurs,
+  banques, diagnostiqueurs…). ⇒ Un annuaire de partenaires est petit et faisable depuis le classeur de Netty.

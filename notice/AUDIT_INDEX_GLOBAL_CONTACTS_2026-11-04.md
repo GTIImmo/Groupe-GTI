@@ -227,3 +227,41 @@ Couche locale (`phase2.sqlite`), nature de la nuit :
 - ⇒ L'archivage de ~184 000 contacts a très probablement été posé **à la migration de mars 2026** (une règle d'import), et les dates du §63
   sont des dates de modification héritées, pas des dates d'archivage. La journée du 07/09/2023 (72 658, Saint-Étienne) n'apparaît pas dans
   l'ancien logiciel : son origine est **non établie**.
+
+## 16. LES CODES DE L'ANCIEN LOGICIEL — TROUVÉS DANS « NOTICE MODELO » *(04/11, « tu arrives à lire la notice dossier notice modelo dans téléchargements »)*
+
+- **La source** : `C:\Users\admin\Downloads\notice modelo.txt`. C'est la documentation OpenAPI de l'API **Netty** (« Groupe GTI Immobilier »,
+  production), l'ancien logiciel, avec 17 chemins (`/contacts`, `/affairs`, `/mandates`, `/types`…). Hors du dépôt ; lue en lecture seule.
+- **`contact_type`** :
+  1 Locataire · 2 Vendeur · 3 Maintenance · 4 Administration · 5 Technicien · 6 Bailleur · 7 **Autre** · 8 Marchand de biens ·
+  9 Apporteur d'affaires · 10 Fournisseur · 11 Huissier · 12 Avocat · 13 **Notaire** · 14 Banque · 15 Partenaire · 16 Agent immobilier ·
+  17 **Acquéreur** · 22 Mandataire · 23 Collaborateur · 24 **Propriétaire** · 25 Investisseur · 26 Gestionnaire · 27 Promoteur ·
+  29 **Prospect** · 34 Diagnostiqueur · 35 Newsletter · 36 Société · 37 Lotisseur · 80 **WebContact** · 81 WebContact – Envoi à un ami ·
+  82 **WebContact – Demande d'estimation** · 83 WebContact – Alerte e-mail · 84 Courtier · 85 **Candidat** · 86 Parrain ·
+  87 WebContact – Compte.
+- **`origin`** :
+  1 Passage à l'agence · 2 Site web de l'agence · 3 Portail · 4 Relationnel · 5 Annonce presse · … · 90 Leboncoin – Formulaire ·
+  93 **Site web – Visite virtuelle** · 94-99 Site web (acquéreur, estimation, recrutement, alerte, divers) · 100 Maline.
+  (La liste complète est dans la notice.)
+- **`gender`** : 1 M. · 2 Mme. · 3 Mlle. Les valeurs 4, 5 et 6 vues dans le classeur (les couples) ne sont PAS documentées dans la notice.
+
+**Ce que ça dit des 16 098 « partenaires » de Hektor** (§14, 11 349 appariés sans ambiguïté) : ce ne sont pas des partenaires.
+- Sans type : 7 543 ; Autre : 2 622 ;
+- **demandes d'estimation du site : 673** (des leads vendeurs) ;
+- **candidats : 332** (du recrutement) ;
+- notaires 78, webcontacts 73…
+
+**Les vrais professionnels de l'ancien logiciel** (classeur, par métier ; une fiche peut en avoir plusieurs) : **1 469** en tout.
+- **Notaires : 1 257**. 845 sont retrouvés chez Hektor (748 typés « partenaire »), **657 sont déjà dans l'app**. Ils sont couverts par le chantier du
+  type Notaire (28/10 : la fiche et l'écran des notaires) et par le registre des ventes (1 280 notaires).
+- **Les autres métiers : ~212 fiches** :
+  - courtiers 43, apporteurs d'affaires 43, banques 39, diagnostiqueurs 30, parrains 17, sociétés 12, administration 11 ;
+  - plus une poignée de mandataires, agents immobiliers, investisseurs et marchands de biens.
+  - 113 sont retrouvés chez Hektor, et 31 sont dans l'app.
+  - Presque tous sont joignables.
+
+⇒ **Un annuaire de partenaires est faisable et PETIT** : les notaires (déjà traités) plus ~200 professionnels, que le classeur de Netty
+classe par métier, alors que Hektor ne le fait pas.
+⇒ **Deux gisements trouvés en passant**, à rattacher à d'autres chantiers :
+- les **demandes d'estimation du site** (673 rangées « partenaire », 1 052 dans l'ancien logiciel) → les leads (A.5) ;
+- les **candidats** (332 rangés « partenaire », 429 dans l'ancien logiciel) → le site de recrutement.
