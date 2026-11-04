@@ -1622,3 +1622,42 @@ Documents : à signaler à l'autre session (Youtrust reste derrière son interru
 - **✅ Retouches EN LIGNE, vues** (déploiement de 1459489, Chrome de Frédéric, rien enregistré) : onglets du couple en colonne, noms entiers
   (« JOLY Cindy » / « Conjoint · place vide ») ; les initiales de la personne devant la place « + » sur la carte. ⏳ Restent non vus en vrai :
   la fenêtre au téléphone, et une vraie réussite (le prochain usage réel la montrera).
+
+## 57. LA PREMIÈRE VRAIE NUIT DES CONTACTS, CONTRÔLÉE *(04/11 matin, « Le run de nuit est fini, vérifie ton travail » ; lecture seule)*
+
+- **La liste** (`nuit_contacts_2026-11-04_00-20-01.log`, code 0) : départ prévu à 00:20, mais la garde « file vide » a attendu
+  **26 min** (00:20 → 00:46). Le worker vidait encore les **1 000 photos** posées par le balayage de 23:00 (toutes `done`).
+  Le tour REEL est parti à 00:48. Il s'est arrêté sur l'**heure limite de 01:55**, à la page **8 114 sur ~8 504** (162 280 contacts),
+  avec 0 recul, 0 page hors ordre et **0 refus**. Le tour n'est donc PAS terminé (`termine_le` vide, dernier numéro lu 596439).
+  ⭐ Le code le reprend PAR NUMÉRO la nuit suivante (`lire_la_liste`, « reprise du tour ») : il reste ~390 pages, quelques minutes.
+- **Les fiches** : 239 à relire, **180 relues** avant 01:58, 0 introuvable, 0 illisible. Il en reste 59 (dont 35 jamais lues)
+  pour la nuit suivante.
+- **Les requêtes chez Hektor** : 8 114 pages et 180 fiches, plus la connexion, en 5 878 s. Le volume est celui que Frédéric a accepté au §50.
+- **Les recherches** sont parties à 02:00 pile, comme avant : 4 026 contacts en 6 685 s (les nuits d'avant : 6 669 à 6 740 s),
+  code 0. Elles n'ont pas changé.
+- **Le run de 04:00** : la ligne « [liste de nuit] » indique 180 contacts relus et **132 annonces relues en plus** (plafond 600).
+  Le run a fini à 06:19:22, code 0 (les jours d'avant : 06:12 à 06:18), donc sans allongement visible.
+  Hors chantier : Matterport est en échec 2/2 pour la 2e nuit, avec un **401 « unauthorized »** de leur API (déjà vu le 03/11, §40), non bloquant.
+- **La descente de 06:45** : pas encore finie au moment du contrôle (06:40), donc non mesurée ici.
+- **La civilité « _ »** (pièce G) : les 2 fiches « _Mr/Mme » s'affichent maintenant « Mr/Mme … » chez Supabase, sans tiret bas.
+  La traduction de la nuit marche.
+- **Le couple d'essai** 20000036/37 (606177/78) n'est pas revenu : 0 fiche et 0 lien chez Supabase. Dans la nuit, aucun autre
+  `link_hektor_conjoint` que celui de l'essai d'hier : personne n'a encore utilisé le geste pour de vrai.
+- ⚠ **EA32621 (10260586) n'est PAS « couple », et c'est la règle, pas une panne.** Ce que la nuit a calculé à 06:05 :
+  10260585 = `case_conjoint_vide` (lien vers 10260586, rôle `menage_resolu`) ; 10260586 = `personne_seule`, `couple_json.etat = vide`.
+  Hektor a rangé la civilité sous le code **« _Mr/Mme »** (place 1 vide), qui n'est pas un code de couple (`CIVILITES_COUPLE`),
+  et la place 2 n'a pas de prénom. Pour la règle de nature, c'est donc une personne seule dont la place 2 est vide :
+  la coquille est masquée, la personne reste seule (décision du 02/11, §33).
+  ⛔ Mon attente du §39 (« doit voir 467326 en COUPLE ») était donc FAUSSE : je l'avais écrite avant cette règle.
+  ⚠ **Ce que ça veut dire à l'écran** : la fiche ne montre ni « Compléter le conjoint » (réservé à la nature `couple` + `vide`)
+  ni « Ajouter un conjoint » (réservé à `couple_json` absent ou « aucun » ; la base refuserait de toute façon avec
+  `personne_deja_en_couple`, puisqu'une case vide la suit déjà chez Hektor).
+  ⭐ **Mesure** : chez Supabase, **9 388 contacts actifs** sont dans ce cas exact (`personne_seule` + état `vide` + lien). Pour eux,
+  l'app n'offre AUCUN geste de couple. C'est voulu au sens où ajouter une fiche par-dessus une case existante ferait un doublon.
+  Le geste qui leur irait serait « remplir la place 2 existante » (comme « Compléter »), mais ouvert aux personnes seules.
+  **Rien n'est décidé : c'est à Frédéric.**
+- ⏰ **Reste à faire** : la nuit du 05/11 doit finir le tour (« reprise du tour … à la page 8114 » puis `tour_termine`). Ensuite
+  seulement, la purge des pages de mars devient possible : `--purger-pages-perimees` à blanc, puis `--confirmer` avec accord.
+  Avant cela, elle est refusée par construction (« aucun tour REEL terminé »).
+  ⚠ Si le balayage des photos pose encore 1 000 travaux à 23:00, chaque nuit perdra ~26 min de liste. Un tour fera alors un peu plus
+  d'une nuit, ce qui reste sans gravité grâce à la reprise.
