@@ -1661,3 +1661,16 @@ Documents : à signaler à l'autre session (Youtrust reste derrière son interru
   Avant cela, elle est refusée par construction (« aucun tour REEL terminé »).
   ⚠ Si le balayage des photos pose encore 1 000 travaux à 23:00, chaque nuit perdra ~26 min de liste. Un tour fera alors un peu plus
   d'une nuit, ce qui reste sans gravité grâce à la reprise.
+
+## 57 bis. ⛔ CORRECTION DU §57 : EA32621 EST BIEN UN COUPLE PAR SA CIVILITÉ, LA RÈGLE RATE UNE GRAPHIE *(04/11, « mais EA32621 a pourtant Mr/Mme ?? »)*
+
+- Frédéric a raison. La règle de nature compte la civilité **« Mr./Mme »** comme un signe de couple (`CIVILITES_COUPLE`,
+  `nature_des_fiches.py` l. 78). Mesure du miroir local : **25 300 fiches « couple »** portent cette civilité.
+- EA32621 porte la même civilité, mais sous une **autre graphie** : **« _Mr/Mme »**, sans point et avec une place 1 vide. C'est la forme
+  que Hektor écrit après « Transformer en couple » sur une personne sans civilité. Le test est une égalité exacte : il ne la reconnaît pas.
+- ⛔ Le §57 disait « c'est la règle, pas une panne » : c'est FAUX. C'est un trou de la règle, sur une graphie que personne n'avait vue.
+  Aujourd'hui il ne touche que **les 2 fiches d'EA32621** (1 porteuse, 1 coquille), mais chaque futur rattachement d'une coquille
+  à une personne sans civilité produira la même graphie.
+- Les **9 388** personnes seules à place 2 vide du §57 sont un AUTRE sujet : leurs civilités sont vide, « M. » ou « Mme. », jamais « Mr/Mme ».
+- Correctif possible (rien n'est fait, il faut un « vas-y ») : reconnaître aussi « _Mr/Mme ». EA32621 passerait alors « couple » + « vide »,
+  et la fiche montrerait « Compléter le conjoint ».
