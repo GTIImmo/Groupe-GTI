@@ -67,11 +67,17 @@ def main() -> int:
     conn.execute("PRAGMA busy_timeout = 30000")
     try:
         # On n'envoie QUE ce que Supabase connait : la doublure descendue le dit.
+        # ⚠ 04/11/2026 (synthese couples §73-74) : la doublure n'est descendue qu'a 06:45, APRES le
+        #   push de 06:05. Un contact envoye cette nuit n'y est donc pas encore, et n'avait son numero
+        #   que la nuit SUIVANTE (22 fiches au 04/11 au matin ; 31 573 apres l'envoi du jour). On ajoute
+        #   les contacts que l'ETAT D'ENVOI local dit deja envoyes. Sans risque : app_contact_id_backfill
+        #   ne fait que mettre a jour, un numero que Supabase ne connait pas ne touche aucune ligne.
         lignes = conn.execute("""
             SELECT r.hektor_contact_id, r.app_contact_id
               FROM app_contact r
-              JOIN app_contact_current__sb s
-                ON s.hektor_contact_id = r.hektor_contact_id
+             WHERE r.hektor_contact_id IN (SELECT s.hektor_contact_id FROM app_contact_current__sb s)
+                OR r.hektor_contact_id IN (SELECT e.row_key FROM app_contact_supabase_push_state e
+                                           WHERE e.table_name = 'app_contact_current')
              ORDER BY r.app_contact_id
         """).fetchall()
     finally:

@@ -2219,3 +2219,23 @@ Mesure sur la base du serveur (`app_relation` local, 132 943 liens ; types d'off
   - échantillon des contacts figés : 10 archivés sur 10 sont bien `archive = true` ;
   - 4 850 fiches sans type : des contacts sans aucun lien (partenaires, conjoints), c'est normal.
 - **Pas encore vu** : l'annuaire à l'écran.
+
+## 74. LES DEUX DÉFAUTS DU §73, CORRIGÉS *(04/11, « Oui, corrige »)*
+
+- **1. Les numéros** (`phase2/identite/pousser_numeros_contact.py`) : la liste à transmettre est maintenant « dans la copie du matin OU dans
+  l'état d'envoi local ». Un contact envoyé par la nuit reçoit donc son `app_contact_id` dès la même nuit. C'est sans risque :
+  `app_contact_id_backfill` ne fait que mettre à jour.
+  À blanc : **94 755** à transmettre (contre 63 179), en 48 lots, ~25 s la nuit.
+- **2. Les types** :
+  - **le patch** `supabase/patch_types_par_tranche_2026-11-04.sql` (+ `_REPETITION`, `_INVERSE`) crée
+    **`app_recalculer_types_tranche(p_de, p_a)`**, la même règle bornée à une tranche de numéros. Garde : la fonction ne doit pas exister et
+    celle d'origine doit avoir son empreinte `22f51f24…`. Droits : service_role seulement.
+  - **la répétition**, dans une transaction annulée : 500 types abîmés exprès, **500 réparés par tranches**, puis la fonction d'origine ne
+    trouve plus AUCUN écart (les deux règles disent la même chose). Bornes absurdes refusées ; droits justes. Ensuite, rien n'est resté
+    (ni fonction ni type abîmé).
+  - ✅ **POSÉ le 04/11** (migration `types_par_tranche_2026_11_04`). Empreinte `66e5cd1b…`. anon et authenticated : non ;
+    service_role : oui. La fonction d'origine est intacte.
+  - **le script** `phase2/sync/recalculer_types_contacts.py` appelle par tranches d'environ 15 000 contacts, bornées depuis l'état d'envoi
+    (la première et la dernière couvrent tout le reste). Si la fonction par tranches manque, il revient à l'appel unique.
+    **Lancé comme la nuit : 7 tranches, 3,8 s en tout**, 0 type à changer.
+- **Retour arrière** : remettre le script sur l'appel unique, puis coller `_INVERSE.sql`.
