@@ -1596,7 +1596,8 @@ déploiement, d'abord pour les admins.
   session) : bloc à 15-356 px, **aucun débordement**, sous le statut.
 - Non vu : le mode sombre au téléphone (règles posées) ; un compte NON admin (le cran « admin » le cache, par construction
   du crochet des couples).
-**Reste** : passer `partenaires_ecran` à « on » pour tout le monde (accord) ; puis la pièce 3.2.
+✅ **`partenaires_ecran = on` le 05/11 (« Oui, pour tous »)** : le bloc « Métier » est visible pour tout le monde
+(un réglage, effet au rechargement de la page). Retour arrière : `admin` ou `off`. **Suite : la pièce 3.2.**
 
 ### 7 ter. Les dépendances (techniques, pas un ordre décidé)
 
