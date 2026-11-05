@@ -1333,6 +1333,11 @@ l'interrupteur allumé** :
 **Reste, chacun sur accord** : pousser ; redémarrer les 4 services (file vide) ; poser `contact_partenaire_modif = on` ;
 essai réel sur deux fiches d'essai (un partenaire personne, un partenaire société) : modifier le téléphone, relire le
 formulaire chez Hektor, puis supprimer les fiches.
+✅ **Poussé** (fab36af en ligne, poussé avec 0d267bb et 463c11a par une autre session). ✅ **Les 4 services redémarrés par
+Frédéric le 05/11 à 10:24:37-39** (cette session n'a pas les droits d'administrateur : `Restart-Service` refusé, même avec
+`-Force`) ; file vide avant ; numéros 18476/13496/15524/6912 → 5248/19604/17796/17088 ; journaux sans erreur ; le fichier
+chargé porte le correctif. La session Youtrust avait confirmé que ses morceaux non commités du worker sont prêts et dorment
+derrière `signature_youtrust` = off. **L'interrupteur `contact_partenaire_modif` reste ÉTEINT.**
 
 ### 7 ter. Les dépendances (techniques, pas un ordre décidé)
 
