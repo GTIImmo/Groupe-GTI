@@ -1865,6 +1865,15 @@ pour tout le monde (au rechargement). Retour arrière : `admin` ou `off`. **Suit
   liens de GIBERT). Difficile à atteindre (la fiche couvre l'interrupteur ; atteint par script), mais une fiche ne doit
   jamais montrer un autre contact : quitter le côté Partenaires ferme désormais la fiche du catalogue. Essai 66/66.
   ✅ Poussé (`7dbd6bb`, « Ok ») et REJOUÉ en ligne : fiche GIBERT ouverte → côté Clients → la fiche se ferme, adresse `?ecran=contacts`.
+
+#### 26 septies. ⛔ PIÈCE 3.3c FERMÉE PAR DÉCISION (05/11) — la zone sensible ne se fait pas
+
+- Expliquée à Frédéric (planches 8 et 9 : Archiver / Supprimer sortis du menu vers une « zone sensible » en bas, une
+  fenêtre commune, suppression par case à cocher + raison obligatoire). **Sa réponse : « Non, on peut garder comme
+  contact "…" ».**
+- ⇒ Sur la fiche métier, **Archiver et Supprimer restent dans le menu « ⋯ », comme sur la fiche contact**, avec les
+  confirmations d'aujourd'hui (boîte du navigateur pour archiver, texte `SUPPRIMER CONTACT <n>` à taper pour supprimer).
+  Rien n'est codé. Les décisions P2 (case à cocher) et K3 tombent avec elle. **Ne pas relancer.**
   ⚠ Le repli `contactsDirectory.find(...) ?? contactsDirectory[0]` d'App.tsx est ANCIEN et sert à toute l'app : non
   touché, à signaler.
 
