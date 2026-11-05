@@ -967,3 +967,28 @@ Dunières, Issoire, St-Bonnet, St-Didier, St-Étienne, St-Just, Yssingeaux) — 
 - l'agence n° 26 « Agences supprimée » : gardée dans la liste (statut « Supprimée ») ou cachée par défaut.
 
 ➡ Étape suivante (2) : tables + nuit à blanc — ⛔ écriture en base de production, ACCORD OBLIGATOIRE.
+
+## 37. La maquette retournée : CES REGISTRES SONT LES NÔTRES (05/11) — Frédéric — ⛔ rien n'est codé
+
+Sa consigne : « il faut que ce registre soit plus orienté vers l'app que vers Hektor ; il est important de savoir sur quel
+id est reliée la fiche utilisateur et laquelle est active chez Hektor, mais ce n'est pas ce que l'on doit voir en premier ».
+
+Ce qui a changé (maquette, version 10) :
+- **Liste des utilisateurs** : personne (notre n°, l'e-mail À NOUS), fonction, agence, portable, ACCÈS À L'APP (rôle,
+  périmètre, dernière connexion), statut chez nous. Hektor n'a plus qu'une colonne grise « Synchro Hektor » (à jour /
+  1 écart / éteint) dont le survol donne les numéros. Les 18 comptes d'agence sortent de la liste (registre des agences).
+  Nouveau : « Comptes de l'app reliés à personne · 3 » (codex.test@, franck.gerphagnon@gmail.com désactivé,
+  sashagerphagnon@gmail.com désactivé).
+- **Fiche** (exemple Franck GERPHAGNON, n° 1000036) : « Qui il est » → « Son accès à l'app » (+ ses deux autres comptes
+  non reliés, dont `gmail.ccom` = faute de frappe, jamais connecté) → historique → **« Synchro avec Hektor » en bas** :
+  par quelle fiche l'accès agit chez Hektor (négo n° 1), et ses 3 fiches (négo 1 active, compte 7 actif, négo 19 éteinte).
+  L'écart d'e-mail (gti contre gmail.com) est l'exemple « À valider ».
+- **Ajouter** : identité, fonction, agence, portable d'abord ; puis l'accès ; « Déjà au registre ? » ; le lien Hektor
+  se fait « en coulisse ».
+- **Agences / fiche d'agence / société** : nos numéros et nos coordonnées d'abord ; les numéros Hektor en dernière colonne
+  grise ou dans « Synchro avec Hektor » en bas.
+
+Mesures du 05/11 reprises dans la maquette : 167 personnes hors agences, 34 actives (champ `actif` du registre), 133
+anciens, 34 « à valider », 5 comptes de l'app reliés. ⚠ Le champ `actif` du registre dit déjà « actif chez nous » :
+toi, Pauline, Caroline et Delphine BLANCHARD y sont ACTIFS ; ce sont les MENUS qui lisent la fiche négo (`actif_chez_hektor`).
+La règle reste à trancher (§36).
