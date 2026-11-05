@@ -725,3 +725,15 @@ Pilotage, Transactions, l'agenda global, l'outil Utilisateurs. Constat de fond :
   case à cocher « afficher les anciens » (décochée par défaut). Pilotage, Transactions, Utilisateurs : la même case.
 - Réaffecter le négociateur d'un bien : masquer l'entrée pour un négociateur (aujourd'hui : un message d'erreur).
 - Une seule fonction d'app (registre, mode saisie / filtre / administration, valeur en place) servira tous les menus.
+
+## 28. ⛔ PAS DE COMPTES D'AGENCE DANS LES CHOIX DE NÉGOCIATEUR (05/11) — décision de Frédéric
+
+« Les comptes agences n'ont rien à faire dans le choix des négociateurs. » La case « comptes d'agence » (§27) est
+ABANDONNÉE — elle n'avait jamais été codée. Vérifié le 05/11 : les menus de choix proposent 30 personnes, comme
+l'annuaire avant le registre, 0 agence. Ce qui reste, et pourquoi :
+- `agence_id_user` sur les fiches (§23) : numéro TECHNIQUE envoyé à Hektor AVEC le négociateur choisi (Hektor l'exige pour
+  changer le négociateur d'un bien ou créer un contact) — n'ajoute aucune agence au choix ; À GARDER.
+- le rattachement des comptes d'agence (§25) : GARDÉ (« Oui, garde-le »). Seul effet affiché : 290 lignes de répartition
+  2006-2012 du compte n° 24 (« Cet utilisateur a été supprimé » chez Hektor) passent de « Négociateur supprimé » à l'agence
+  du Puy dans le pilotage ; Ambert (8 lignes) était déjà à Ambert ; les comptes 22 et 25 ne portent aucune ligne.
+Le plan des menus (§27) continue SANS agences.
