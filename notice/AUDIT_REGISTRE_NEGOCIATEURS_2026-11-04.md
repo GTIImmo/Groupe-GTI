@@ -1225,3 +1225,45 @@ du registre (`fonction` toujours vide) — à confirmer : un manager n'a plus l'
 **Rectifié le 05/11 à 14:54 UTC** (Frédéric : « Non, remets admin ») : le compte de Franck est remis **administrateur** par
 le geste existant (« Modifier son accès », depuis le registre, dans le Chrome de Frédéric). Vérifié en base : rôle admin,
 actif, tout le réseau ; lien Hektor recalculé et juste (2/1, `registre_fiche_active`, 14:54:12) ; registre toujours relié.
+
+
+## 44. Le ménage du compte n° 3, et l'abandon du lot B (05/11)
+
+- **Lot B ABANDONNÉ** (Frédéric) : pas d'« ajouter une personne sans accès à l'app ». Après la coupure, un utilisateur
+  n'existe que par son compte de l'app (la création de compte fait déjà naître la personne) ; les personnes sans compte
+  sont l'historique repris de Hektor.
+- **Compte Hektor n° 3** (« Pauline GIRINON », sashagerphagnon@gmail.com, dernière connexion 09/10/2025) : un compte
+  d'ESSAI, rangé sous l'agence COMPTE FORMATION, INACTIF — visible seulement avec le filtre « Tous les comptes » de
+  l'organigramme (vu dans le Chrome de Frédéric). ⛔ Le champ `state` de `UsersOfParent` vaut '1' pour les 20 comptes,
+  inactif compris : ce n'est PAS l'indicateur actif. Fiche 1000088 figée `rattache_par = 'decision'`,
+  `actif_chez_hektor = false` (la nuit saute les fiches « decision »), tracé au journal. Le vrai compte de Pauline = n° 8.
+- **L'accès d'essai de l'app** (même adresse, désactivé, rien derrière lui) : SUPPRIMÉ sur demande de Frédéric ;
+  sauvegarde sans secret `app_user_supprime_sashagerphagnon_20261105`.
+
+## 45. AUDIT DE L'ÉTAPE 4 — la recopie des fichiers (05/11) — Frédéric : « Oui, l'audit » — ⛔ rien n'est codé
+
+**Ce que Hektor héberge** (mesuré : copie locale de la nuit, un appel `UsersOfParent` en lecture, téléchargements d'essai) :
+- **Photos de négociateurs** : 10 personnalisées sur 219 fiches (CDN `staticlbi.com/.../negociateurs/avatar_…`, jusqu'à
+  1,1 Mo) ; 209 = l'image par défaut `nego.jpg`. Secrétaires et administrateur : image par défaut `secretaire.png`.
+- **Photos d'agence** : 17 personnalisées sur 19 (`.../agences/avatar_…`, ~300 Ko) ; 2 = `agence.png` par défaut.
+- **Logo** : UN seul, commun aux 19 agences et aux 219 fiches (`logosadmin/logoadmin_temp_1229405569.jpg`, 6 Ko).
+- **Barème** : ⚠ le lien que donne Hektor (`/i/redac/honoraires?honofor=4`) répond **500** sur les deux domaines. Le
+  barème vivant est la page publique `www.gti-immobilier.fr/honoraires` et son **PDF `/honoraires.pdf`** (200, 2,6 Ko) :
+  tranches de 15 000 € (1 800 €) à > 400 001 € (4,5 %), location 8 € + 3 € TTC du m².
+- Tout se télécharge **hors quota d'API** (CDN et site public) : zéro requête Hektor.
+
+**Ce qui est chez nous** : les colonnes existent (`app_negociateur_personne.photo_url`, `app_registre_agence.logo_url /
+avatar_url / bareme_url`, `app_registre_societe.logo_url / bareme_url`) ; la nuit y écrira les ADRESSES de Hektor dès le
+06/11 (la photo par défaut `nego.jpg` est déjà écartée, `agence.png` ne l'est pas). Aucun fichier copié. Le coffre public
+`gti-photo` existe (celui des photos d'annonces).
+
+**Qui les lit** : seul l'écran du registre (photo de la fiche, « chez Hektor — à recopier » pour le logo et le barème).
+Les PDF du worker et les e-mails utilisent NOS logos (embarqués, `app_setting.appointment_email_logo_url`, `/rdv/gti-logo.png`).
+⚠ Noté pour l'étape 5 : le REPLI des PDF du worker pointe `www.gti-immobilier.fr/images/logoSite.png` (le site de Hektor),
+`console_job_worker.js` l. 8260 et 9269.
+
+**Proposition** : une table `app_registre_fichier` (objet, n°, champ, adresse source, chemin chez nous, empreinte, taille,
+type, recopié le) ; un script de nuit après le registre des agences, derrière l'interrupteur `APP_REGISTRE_FICHIERS`
+(absent = éteint, `blanc` = mesure sans écrire) : il télécharge chaque adresse de Hektor, la dépose dans `gti-photo/registre/…`
+SEULEMENT si l'empreinte change, et ne touche jamais aux colonnes (Hektor complète, il n'écrase pas). Images par défaut
+écartées, exclusion déclarée. L'écran lit notre copie d'abord, Hektor en repli. Le dépôt par un admin = un lot à part.
