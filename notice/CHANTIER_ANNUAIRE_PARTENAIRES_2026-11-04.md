@@ -1285,6 +1285,55 @@ GOUDARD PATOT · 10217295 IMMO DE FRANCE FOREZ VELAY ; `nom` et `prenom` restent
 non relancé : « Contact 10217339 ».
 ⏰ **Contrôle du 06/11 au matin** : la nuit garde ces 8 noms (la couche entière est refaite) et 10217339 reste présent.
 
+## 20. D-2 « MODIFIER UN PARTENAIRE » — AUDIT COMPLÉTÉ (05/11, « OK » pour attaquer D-2) — rien codé
+
+**Lecture seule chez Hektor** (GET du formulaire d'édition, 3 fiches) : il y a **DEUX** formulaires de partenaire, pas un :
+- **partenaire PERSONNE** — groupe `mefContacts/contacts_full_accueil_partenaire` : civilite, nom, prenom, metier,
+  téléphones, e-mails, localité, adresse, naissance, commentaires… (GIBERT IMMOBILIER 414566 en est un, nom VIDE) ;
+- **partenaire SOCIÉTÉ** — groupe `mefContacts/partenaireMoraleInfo` : sociale, juridique, siret, metier, url, logo,
+  téléphones, e-mails, localité, adresse, commentaires — **pas de `nom`** (FONCIA LOIRE AUVERGNE 423684, ACTIV'
+  EXPERTISES 56169).
+⚠ **Correction du §18 ter** : pour une vraie SOCIÉTÉ, l'API rend la raison sociale dans `nom` (423684 : `nom` = « FONCIA
+LOIRE AUVERGNE »). C'est GIBERT qui est une fiche PERSONNE sans nom. Et l'API ne distingue pas les deux (56169, société,
+sort avec civilité « M. » et prénom « Franck ») : **seul le formulaire relu dit la sorte de fiche**.
+**Le worker** (`updateHektorContactIdentity`) ne connaît que `contacts_full_accueil` et `contactCoupleAll` ; il filtre le
+formulaire sur ce groupe (`extractHektorFormValues`, égalité stricte) ⇒ 0 champ ⇒ « introuvable ». Les DEUX sortes de
+partenaire échouent. Et même relu, une société n'a pas de `nom` : la garde actuelle la refuserait encore.
+**La fenêtre « Modifier le contact »** (`ContactEditModalV2`, App.tsx) envoie toujours `person_type` personne seule,
+`companyName` vide, et préremplit le nom par `contact.nom || contact.display_name` ⇒ ⚠ sur une fiche SANS nom, enregistrer
+écrirait chez Hektor le nom AFFICHÉ — y compris un nom fabriqué « Contact N » (défaut dormant : 0 cas à ce jour).
+**Mesure Supabase (05/11)** : 14 772 contacts de l'app portent la typologie partenaire ; 2 563 sans nom ni prénom, dont
+242 au nom fabriqué ; 3 794 noms fabriqués en tout. 29 modifications de contact depuis juin (27 faites, 2 erreurs),
+**0 sur un partenaire** et 0 avec un nom fabriqué : rien d'abîmé.
+**Remède proposé** : A worker — reconnaître les 4 groupes par le formulaire relu (celui qui porte `nom` ou `sociale`) ;
+société ⇒ le nom part dans `sociale`, civilité / prénom ignorés, le reste relu ne bouge pas ; personne seule et couple
+inchangés. B fenêtre — ne jamais préremplir le nom avec « Contact N ». C fenêtre « société » (raison sociale, forme,
+SIRET) = lot 3. ⚠ Le POST `contacts-saveDataEditContact` avec ces deux groupes n'est PAS prouvé : essai réel sur fiches
+d'essai (accord), puis redémarrage des 4 services file vide (accord).
+
+✅ **A ET B CODÉS le 05/11** (« Oui, vas-y ») — **rien n'est actif tant que les 4 services ne sont pas redémarrés et
+l'interrupteur allumé** :
+- **A, worker** (`console_job_worker.js`) : `hektorContactFormGroup(html, { partenaires })` reconnaît
+  `contacts_full_accueil_partenaire` et `partenaireMoraleInfo` (le couple d'abord, puis la société, puis la personne) ;
+  `updateHektorContactIdentity` exige `sociale` pour une société, la passe en statut 3 (le nom saisi part dans
+  `sociale`), et retire de son envoi les champs de personne qu'elle n'a pas (civilite, nom, prenom, dateNaissance,
+  lieuNaissance, marital_status) ; le compte rendu porte `formulaire`. La modification d'un MANDANT n'est pas touchée.
+  ⛔ **Interrupteur `app_setting` « contact_partenaire_modif »** (absent = éteint ; lecture ratée = éteint).
+- **Essais** : `Console/test_partenaire_modification.js` **17/17** (témoins éteint, seul et couple inchangés ; métier,
+  forme juridique, SIRET, site et commentaire gardés ; aucun champ de personne ajouté à une société) ;
+  `test_couple_modification.js` vert (le contrôle (9) accepte le 2e argument) ; `test_couple_seconde_fiche.js` vert.
+  ⚠ `test_porte_contacts.js` : **2 échecs DÉJÀ PRÉSENTS avant ce changement** (vérifié sur le worker de HEAD) — « les
+  mandants d'une création d'annonce sont traduits », « AUCUN filtre ne jette plus un numéro d'app en silence ». Hors D-2.
+- **B, écran** (`App.tsx`, `contactIdentityInputFromContact`) : le nom proposé n'est plus jamais « Contact N » (case vide,
+  l'enregistrement demande un nom) ; les deux fenêtres de modification en profitent ; les recherches n'utilisent que le
+  type. Pas d'interrupteur (une case vide au lieu d'un nom fabriqué). `npm run build` vert. ⚠ **Pas vu à l'écran** :
+  l'aperçu local n'a pas de session ; à voir à l'essai réel.
+- ⚠ Commit du worker : SEULS ces morceaux (l. ~19 370-19 465) ; le worker portait aussi des changements Youtrust d'une
+  autre session, NON commités par moi.
+**Reste, chacun sur accord** : pousser ; redémarrer les 4 services (file vide) ; poser `contact_partenaire_modif = on` ;
+essai réel sur deux fiches d'essai (un partenaire personne, un partenaire société) : modifier le téléphone, relire le
+formulaire chez Hektor, puis supprimer les fiches.
+
 ### 7 ter. Les dépendances (techniques, pas un ordre décidé)
 
 - 0 avant tout le reste ; 0.1 avant B2 ; 0.2 avant B1 ; 0.6 avant B5 ; 0.3 avant B6 ; 0.4 avant B7 ; 0.5 avant C2.

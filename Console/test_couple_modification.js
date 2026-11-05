@@ -94,7 +94,7 @@ controle("(8) TÉMOIN INVERSE : sans le statut 2, le bloc _m2 n'est pas touché 
 
 // 4. le branchement dans les deux portes
 controle("(9) updateHektorContactIdentity lit ET renvoie le groupe du formulaire relu",
-  /hektorContactFormGroup\(formHtml\)/.test(morceaux.maj) && /extractHektorFormValues\(formHtml, formulaire\.group\)/.test(morceaux.maj) && /body\.set\("group", formulaire\.group\)/.test(morceaux.maj));
+  /hektorContactFormGroup\(formHtml[,)]/.test(morceaux.maj) && /extractHektorFormValues\(formHtml, formulaire\.group\)/.test(morceaux.maj) && /body\.set\("group", formulaire\.group\)/.test(morceaux.maj));
 controle("(10) un couple relu est édité comme un couple (statut 2)", /if \(formulaire\.couple\) contact\.contactStatus = "2"/.test(morceaux.maj));
 controle("(11) la modification d'un MANDANT lit et renvoie aussi le groupe relu",
   /extractHektorFormValues\(formHtml, formulaire\.group\)/.test(morceaux.mandant) && /body\.set\("group", formulaire\.group\)/.test(morceaux.mandant));

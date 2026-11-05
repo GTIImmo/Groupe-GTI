@@ -19244,26 +19244,62 @@ async function applyHektorContactPostCreateStep(job, created, payload) {
 //   Une personne seule garde EXACTEMENT le chemin d'avant (même groupe, même extraction).
 const HEKTOR_GROUPE_CONTACT_SEUL = "mefContacts/contacts_full_accueil";
 const HEKTOR_GROUPE_CONTACT_COUPLE = "mefContacts/contactCoupleAll";
+// ⭐ PARTENAIRES (05/11/2026) -- DEUX AUTRES FORMULAIRES (chantier partenaires §18 et §20, défaut D-2).
+//   Lus en GET le 05/11 : un partenaire PERSONNE porte group="mefContacts/contacts_full_accueil_partenaire"
+//   (civilite, nom, prenom, metier…, ex. 414566) ; un partenaire SOCIÉTÉ porte group="mefContacts/partenaireMoraleInfo"
+//   (sociale, juridique, siret, metier, url…, PAS de « nom », ex. 423684). L'API ne distingue pas les deux : seul le
+//   formulaire relu le dit. Sans eux, toute modification d'un partenaire s'arrêtait sur « introuvable ».
+//   ⛔ Interrupteur app_setting « contact_partenaire_modif » (absent = éteint = le chemin d'avant, à l'identique).
+const HEKTOR_GROUPE_PARTENAIRE_PERSONNE = "mefContacts/contacts_full_accueil_partenaire";
+const HEKTOR_GROUPE_PARTENAIRE_SOCIETE = "mefContacts/partenaireMoraleInfo";
+// Les champs d'une PERSONNE qu'une société n'a pas : on ne les ajoute pas à son envoi.
+const HEKTOR_CHAMPS_PERSONNE_SEULEMENT = ["civilite", "nom", "prenom", "dateNaissance", "lieuNaissance", "marital_status"];
 
-function hektorContactFormGroup(html) {
+function hektorContactFormGroup(html, options = {}) {
   const source = String(html || "");
-  return new RegExp(`\\bgroup=["']${HEKTOR_GROUPE_CONTACT_COUPLE}["']`).test(source)
-    ? { group: HEKTOR_GROUPE_CONTACT_COUPLE, couple: true }
-    : { group: HEKTOR_GROUPE_CONTACT_SEUL, couple: false };
+  const porte = (groupe) => new RegExp(`\\bgroup=["']${groupe}["']`).test(source);
+  if (porte(HEKTOR_GROUPE_CONTACT_COUPLE)) return { group: HEKTOR_GROUPE_CONTACT_COUPLE, couple: true };
+  if (options.partenaires) {
+    if (porte(HEKTOR_GROUPE_PARTENAIRE_SOCIETE)) {
+      return { group: HEKTOR_GROUPE_PARTENAIRE_SOCIETE, couple: false, partenaire: true, societe: true };
+    }
+    if (porte(HEKTOR_GROUPE_PARTENAIRE_PERSONNE)) {
+      return { group: HEKTOR_GROUPE_PARTENAIRE_PERSONNE, couple: false, partenaire: true, societe: false };
+    }
+  }
+  return { group: HEKTOR_GROUPE_CONTACT_SEUL, couple: false };
+}
+
+async function interrupteurModifPartenaire() {
+  try {
+    const rows = await supabaseRequest("app_setting?select=value&key=eq.contact_partenaire_modif&limit=1", { method: "GET" });
+    const value = Array.isArray(rows) && rows[0] ? String(rows[0].value || "").trim().toLowerCase() : "";
+    return ["on", "true", "1", "yes"].includes(value);
+  } catch (_) {
+    return false; // lecture ratée = éteint : le chemin d'avant
+  }
 }
 
 async function updateHektorContactIdentity(job, contactId, payload) {
   const contact = normalizeHektorContactPayload({ ...payload, hektor_contact_id: contactId }, { requireContactId: true, requireName: true });
   const formHtml = await fetchHektorContactEditForm(contactId);
-  const formulaire = hektorContactFormGroup(formHtml);
+  const formulaire = hektorContactFormGroup(formHtml, { partenaires: await interrupteurModifPartenaire() });
   const values = extractHektorFormValues(formHtml, formulaire.group);
-  if (!values.has("nom")) {
+  // Une société n'a pas de « nom » : son nom est la raison sociale (PARTENAIRES, 05/11/2026).
+  if (!values.has(formulaire.societe ? "sociale" : "nom")) {
     throw new Error(`Formulaire edition contact Hektor introuvable pour ${contactId}`);
   }
+  const relus = new Set(values.keys());
   // Le formulaire RELU fait foi : un couple chez Hektor est édité comme un couple (bloc _m2), quoi que dise
   // l'envoi (l'écran envoie « personne_seule » en modification). Rien ne change pour une personne seule.
   if (formulaire.couple) contact.contactStatus = "2";
+  // Même règle pour une société : le nom saisi part dans « sociale » ; forme juridique, SIRET, métier et site ne
+  // bougent que s'ils sont envoyés (l'écran les envoie vides = rien), sinon ils restent comme Hektor les a rendus.
+  if (formulaire.societe) contact.contactStatus = "3";
   applyHektorContactIdentityValues(values, contact);
+  if (formulaire.societe) {
+    for (const champ of HEKTOR_CHAMPS_PERSONNE_SEULEMENT) if (!relus.has(champ)) values.delete(champ);
+  }
 
   await applyContactLocalityIds(values, contact, job, contactId);
 
@@ -19301,6 +19337,8 @@ async function updateHektorContactIdentity(job, contactId, payload) {
     hektor_contact_id: String(contactId),
     // COUPLES (02/11/2026) : le formulaire relu était celui d'un couple (le handler fait relire la seconde fiche).
     couple: formulaire.couple,
+    // PARTENAIRES (05/11/2026) : le formulaire relu, pour le journal du travail.
+    formulaire: formulaire.group,
     contact: {
       civilite: contact.civility,
       nom: contact.lastName,

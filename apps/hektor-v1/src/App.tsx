@@ -41196,7 +41196,10 @@ function contactIdentityInputFromContact(contact: AppContact, hektorUserEmail?: 
         : 'acquereur'
   return {
     civility: contact.civilite ?? '',
-    lastName: contact.nom || contact.display_name || '',
+    // PARTENAIRES (05/11/2026, chantier partenaires §20) : « Contact 10217339 » est un nom FABRIQUÉ par la couche
+    // pour une fiche sans nom ni prénom. Proposé dans la case Nom, il partirait chez Hektor au premier enregistrement :
+    // la case reste vide, et l'enregistrement demande un nom.
+    lastName: contact.nom || (/^Contact \d+$/.test((contact.display_name ?? '').trim()) ? '' : contact.display_name) || '',
     firstName: contact.prenom ?? '',
     companyName: '',
     legalForm: '',
