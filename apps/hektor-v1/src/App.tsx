@@ -23562,7 +23562,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                             Une offre acceptée ou un compromis est en cours : on n'enregistre pas
                             de nouvelle offre, et on ne reprend pas une autre offre tant que ce
                             dossier vit — il faudrait d'abord le libérer. Une offre d'un autre
-                            acquéreur encore en cours peut seulement être refusée (« Choisir »).
+                            acquéreur encore en cours peut seulement être refusée (« Choisir »),
+                            sauf une offre oubliée, datée d'avant le compromis : elle peut alors être
+                            acceptée pour s'y rattacher.
                             Les actions ci-dessous visent l'offre en cours.
                           </span>
                         </p>
@@ -23811,6 +23813,15 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                                     {personnesEcarts.some((e) => e.kind === a.kind && e.hektor_affaire_id === numero)
                                       ? <i className="sca-perdue">personne non gardée par Hektor</i> : null}
                                     {!numero ? <i>née dans l'app, sans numéro Hektor</i> : null}
+                                    {/* 05/11 (option 2) : l'offre « proposee » et son compromis -- lecture seule. */}
+                                    {(() => {
+                                      const r = rattachementOffreProposee(statusChangeAffaires, a)
+                                      if (!r) return null
+                                      const quand = r.compromis.date ? ` du ${formatDate(r.compromis.date)}` : ''
+                                      return <i className="sca-dossier">{r.quand === 'fait'
+                                        ? `rattachée au compromis${quand}`
+                                        : `sera rattachée cette nuit au compromis${quand}`}</i>
+                                    })()}
                                   </span>
                                 </summary>
                                 <div className="sca-body">
@@ -23896,6 +23907,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                   if (!verrou) return null
                   const estVente = String(verrou.kind) === 'vente'
                   const numero = String(verrou.hektor_affaire_id ?? '').trim()
+                  // 05/11 (option 2) : une offre restee « proposee » dans le dossier de son compromis y est bien rattachee.
+                  const offreVisee = affaireCourantePourStatut()
+                  const rattachee = offreVisee ? rattachementOffreProposee(statusChangeAffaires, offreVisee) : null
                   return (
                     <p className="status-change-note">
                       <strong>On ne revient plus sur cette offre.</strong>{' '}
@@ -23903,6 +23917,26 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                       {numero ? ` (n° ${numero})` : ''}. La refuser ou l'accepter maintenant
                       couperait l'affaire en deux dans le registre. Pour y revenir, il faut
                       d'abord {estVente ? 'supprimer la vente' : 'annuler le compromis'}.
+                      {rattachee?.quand === 'fait'
+                        ? ' Elle est restée « proposée », ce qui est fréquent : elle est bien rattachée à ce compromis.'
+                        : ''}
+                    </p>
+                  )
+                })()}
+                {(() => {
+                  // 05/11 (option 1) : l'offre oubliee qui se regularise -- on dit ce que fait « Accepter » ici.
+                  if (statusChangeStatus !== 'offer') return null
+                  const offre = affaireCourantePourStatut()
+                  const compromis = compromisDeLaRegularisation(statusChangeAffaires, offre)
+                  if (!compromis || !offre) return null
+                  const dateOffre = dateOffreFaite(offre)
+                  return (
+                    <p className="status-change-note">
+                      <strong>Régularisation possible.</strong>{' '}
+                      Cette offre date du {formatDate(dateOffre)}, avant le compromis
+                      {compromis.date ? ` du ${formatDate(compromis.date)}` : ' en cours'}. Si c'est bien elle qui a
+                      mené au compromis, « Accepter l'offre » la rattache à ce compromis (au calcul de la nuit).
+                      Si c'est une offre concurrente, refuse-la.
                     </p>
                   )
                 })()}
@@ -23983,9 +24017,12 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                       </button>
                       ) : null}
                       {/* ⑧ (26/10) : une offre ecartee d'un bien engage se refuse, elle ne s'accepte pas
-                          (la crainte du 08/09 : engager le bien deux fois). */}
+                          (la crainte du 08/09 : engager le bien deux fois).
+                          05/11 : SAUF l'offre oubliee qui se regularise (offreARegulariser) -- datee avant
+                          l'unique compromis, sans autre offre acceptee : l'accepter la rattache a lui. */}
                       {!gesteOffreSansEffet(affaireCourantePourStatut(), 'accepte')
-                       && !offreEcarteeSurBienEngage(statusChangeAffaires, affaireCourantePourStatut()) ? (
+                       && (!offreEcarteeSurBienEngage(statusChangeAffaires, affaireCourantePourStatut())
+                           || offreARegulariser(statusChangeAffaires, affaireCourantePourStatut())) ? (
                       <button className="ghost-button button-subtle" type="button"
                         onClick={() => handleGesteHektor('accepte')}
                         disabled={statusChangePending || statusChangeCorrectionPending}>
@@ -31255,6 +31292,104 @@ function offreEcarteeSurBienEngage(
   if (!affaireEstVivante(affaire)) return false
   if (AFFAIRE_ETATS_ACCEPTES.has(String(affaire.state ?? '').trim().toLowerCase())) return false
   return !offreVerrouilleeParSonDossier(lignes, affaire)
+}
+
+/** 05/11/2026 -- LA DATE A LAQUELLE UNE OFFRE A ETE FAITE : sa PREMIERE proposition, comme la nuit
+ *  (`_date_de_tri`, phase2/sync/affaire_ledger.py). La colonne `date` porte le DERNIER evenement (un refus,
+ *  une acceptation) : s'en servir rangerait l'offre apres le compromis qu'elle a precede. Rend « AAAA-MM-JJ »,
+ *  ou '' si rien d'utilisable. */
+function dateOffreFaite(a: AffaireLedgerRow): string {
+  const utile = (v: unknown) => {
+    const d = String(v ?? '').trim()
+    return /^\d{4}-\d{2}-\d{2}/.test(d) && !d.startsWith('0000') ? d.slice(0, 10) : ''
+  }
+  let dates: string[] = []
+  try {
+    const brut = typeof a.propositions_json === 'string' ? JSON.parse(a.propositions_json) : a.propositions_json
+    if (Array.isArray(brut)) {
+      dates = brut.map((p) => String((p as { date?: unknown } | null)?.date ?? '').trim()).filter(Boolean)
+    }
+  } catch { dates = [] }
+  return (dates.length ? utile([...dates].sort()[0]) : '') || utile(a.date)
+}
+
+/** 05/11/2026 -- L'OFFRE OUBLIEE QUI SE REGULARISE (option 1, notice/AUDIT_REFONTE_MODALE_STATUT_2026-11-05.md §13-14).
+ *
+ *  LE CAS. Une offre est restee « proposee » dans son dossier, et le compromis qu'elle a precede vit dans un AUTRE
+ *  dossier -- le rattachement du § 2.8 n'a pas joue parce que l'acquereur n'a pas le meme numero (l'offre au nom de
+ *  Monsieur, le compromis au nom de Madame). L'ecran ne proposait que « Refuser » (decision du 26/10), ce qui serait
+ *  faux : c'est elle qui a mene au compromis.
+ *  LA REGLE : on rend « Accepter » a cette offre, et a elle seule, quand le run de nuit la rattacherait alors a CE
+ *  compromis sans ambiguite (regle du 04/09 : un compromis rejoint la chaine ouverte qui a une offre ACCEPTEE, par
+ *  ordre de date). D'ou les quatre conditions :
+ *    1. c'est une offre ECARTEE (la fonction ci-dessus : bien engage, vivante, ni acceptee ni refusee, pas dans le
+ *       dossier d'un compromis ou d'une vente) ;
+ *    2. aucune offre ACCEPTEE ne vit dans un dossier ouvert -- sinon le compromis s'y rattache deja et celle-ci est
+ *       une vraie concurrente (la crainte du 08/09 reste entiere) ;
+ *    3. UN seul compromis vivant tient le bien, et son dossier ne porte AUCUNE offre -- s'il en porte une (§ 2.8,
+ *       meme acquereur), accepter celle-ci le detacherait de la sienne ;
+ *    4. l'offre est datee AVANT ce compromis, ou le meme jour (la nuit range l'offre avant le compromis a date egale).
+ *  ⚠ ECRAN SEULEMENT : la base l'accepte deja (app_geste_affaire_optimistic ne lit que le dossier de l'offre). Rien
+ *    ne change dans le geste lui-meme -- `handleGesteHektor('accepte')`. */
+function offreARegulariser(
+  lignes: AffaireLedgerRow[],
+  affaire: AffaireLedgerRow | null | undefined,
+): boolean {
+  return compromisDeLaRegularisation(lignes, affaire) != null
+}
+
+/** Le compromis auquel l'offre se rattacherait (voir offreARegulariser), ou null. */
+function compromisDeLaRegularisation(
+  lignes: AffaireLedgerRow[],
+  affaire: AffaireLedgerRow | null | undefined,
+): AffaireLedgerRow | null {
+  if (!affaire || !offreEcarteeSurBienEngage(lignes, affaire)) return null
+  const cleDe = (a: AffaireLedgerRow) => (a.app_chaine_id != null ? String(a.app_chaine_id) : 'seule-' + String(a.app_affaire_id))
+  const dossiers = dossiersOuvertsDuBien(lignes)
+  const ouverts = new Set(dossiers.filter((d) => d.ouvert).map((d) => d.chaine))
+  const acceptee = lignes.some((a) => String(a.kind) === 'offre' && affaireEstVivante(a)
+    && AFFAIRE_ETATS_ACCEPTES.has(String(a.state ?? '').trim().toLowerCase()) && ouverts.has(cleDe(a)))
+  if (acceptee) return null
+  const tenus = dossiers.filter((d) => d.ouvert && d.genres.has('compromis'))
+  if (tenus.length !== 1 || tenus[0].genres.has('offre')) return null
+  const compromis = lignes.filter((a) => String(a.kind) === 'compromis' && cleDe(a) === tenus[0].chaine && affaireEstVivante(a))
+  if (compromis.length !== 1) return null
+  const dOffre = dateOffreFaite(affaire)
+  const dCompromis = String(compromis[0].date ?? '').trim().slice(0, 10)
+  if (!dOffre || !/^\d{4}-\d{2}-\d{2}$/.test(dCompromis) || dCompromis.startsWith('0000')) return null
+  return dOffre <= dCompromis ? compromis[0] : null
+}
+
+/** 05/11/2026 -- CE QUE LA MODALE DIT D'UNE OFFRE « PROPOSEE » ET D'UN COMPROMIS (option 2, meme note §14).
+ *  LECTURE SEULE. Deux cas, ceux du § 2.8 (decision du 30/10, allume la nuit ET a la creation dans l'app) :
+ *    'fait'  l'offre est dans le dossier d'un compromis vivant : elle y est rattachee, meme restee « proposee »
+ *            (Hektor laisse souvent l'offre en l'etat apres le compromis) ;
+ *    'nuit'  elle est dans un AUTRE dossier, ouvert, sans compromis ni offre acceptee, et partage un acquereur
+ *            (meme numero) avec UN seul compromis vivant, date apres elle : le run de nuit l'y rattachera.
+ *  Rend le compromis concerne, ou null. */
+function rattachementOffreProposee(
+  lignes: AffaireLedgerRow[],
+  offre: AffaireLedgerRow,
+): { quand: 'fait' | 'nuit'; compromis: AffaireLedgerRow } | null {
+  if (String(offre.kind) !== 'offre' || !affaireEstVivante(offre)) return null
+  if (AFFAIRE_ETATS_ACCEPTES.has(String(offre.state ?? '').trim().toLowerCase())) return null
+  const cleDe = (a: AffaireLedgerRow) => (a.app_chaine_id != null ? String(a.app_chaine_id) : 'seule-' + String(a.app_affaire_id))
+  const vivants = lignes.filter((a) => String(a.kind) === 'compromis' && affaireEstVivante(a))
+  const memeDossier = vivants.find((c) => cleDe(c) === cleDe(offre))
+  if (memeDossier) return { quand: 'fait', compromis: memeDossier }
+  const dossier = dossiersOuvertsDuBien(lignes).find((d) => d.chaine === cleDe(offre))
+  if (!dossier || !dossier.ouvert || dossier.genres.has('compromis')) return null
+  if (lignes.some((a) => cleDe(a) === cleDe(offre) && String(a.kind) === 'offre'
+    && AFFAIRE_ETATS_ACCEPTES.has(String(a.state ?? '').trim().toLowerCase()))) return null
+  const numeros = (a: AffaireLedgerRow) => new Set(lireMandantsAffaire(a.acquereurs_json).map((p) => p.id).filter((id) => id && id !== '0'))
+  const siens = numeros(offre)
+  if (!siens.size) return null
+  const dOffre = dateOffreFaite(offre)
+  const candidats = vivants.filter((c) => {
+    const d = String(c.date ?? '').trim().slice(0, 10)
+    return [...numeros(c)].some((id) => siens.has(id)) && dOffre !== '' && /^\d{4}-\d{2}-\d{2}$/.test(d) && dOffre <= d
+  })
+  return candidats.length === 1 ? { quand: 'nuit', compromis: candidats[0] } : null
 }
 
 /** ⑧ (26/10/2026) -- PAS DE NOUVELLE OFFRE SUR UN BIEN ENGAGE (§58 point 5, n° 2).
