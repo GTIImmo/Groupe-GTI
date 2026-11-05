@@ -16210,6 +16210,9 @@ export default function App() {
   const [contactFermerSignal, setContactFermerSignal] = useState(0)
   // PARTENAIRES 3.5 (05/11/2026) : le côté de l'annuaire, « clients » (la liste d'aujourd'hui) ou « metiers » (le catalogue).
   const [contactsVue, setContactsVue] = useState<'clients' | 'metiers'>('clients')
+  // Côté Partenaires, le catalogue porte son propre en-tête (maquette planche 1) : la barre du haut des clients se cache.
+  const catalogueCranApp = useCranCouplesVisible('partenaires_catalogue', profile?.role ?? null)
+  const vueMetiersApp = screen === 'contacts' && contactsVue === 'metiers' && catalogueCranApp
   const restaurationAdresseRef = useRef<{ cible: string; jusqua: number } | null>(null)
   const ficheDemandeeParAdresseRef = useRef<number | null>(null)
   const adresseVoulue = useMemo(() => {
@@ -25824,7 +25827,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       {fenetreRechercheGlobale}
       <div className="workspace-shell">
         <main className="content">
-        {screen !== 'suivi' && screen !== 'accueil' && screen !== 'agenda' && screen !== 'transactions' && screen !== 'pilotage' ? (
+        {screen !== 'suivi' && screen !== 'accueil' && screen !== 'agenda' && screen !== 'transactions' && screen !== 'pilotage' && !vueMetiersApp ? (
         <section className={`hero ${screen === 'estimations' ? 'estim-toolbar' : ''}`.trim()}>
           <div className="hero-stack">
               <div className="hero-top-row">
@@ -26604,6 +26607,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             closeSignal={contactFermerSignal}
             vue={contactsVue}
             onVueChange={setContactsVue}
+            onOpenCreate={() => setContactCreateOpen(true)}
             loading={contactsLoading}
             hasActiveFilters={activeFilters.length > 0}
             createOpen={contactCreateOpen}
@@ -48894,6 +48898,7 @@ function ContactsScreen(props: {
   // PARTENAIRES 3.5 (05/11/2026) : le côté de l'annuaire (« clients » = la liste d'aujourd'hui, « metiers » = le catalogue).
   vue?: 'clients' | 'metiers'
   onVueChange?: (vue: 'clients' | 'metiers') => void
+  onOpenCreate?: () => void
 }) {
   const formatNumber = new Intl.NumberFormat('fr-FR')
   const listingTotalLabel = `${formatNumber.format(props.contactsTotal)} contacts`
@@ -49011,19 +49016,23 @@ function ContactsScreen(props: {
           </ContactWorkflowModal>
         ) : null}
 
-        {catalogueVisible ? (
+        {catalogueVisible && !vueMetiers ? (
           <div className="vue-switch" role="group" aria-label="Côté de l'annuaire">
             <button type="button" aria-pressed={!vueMetiers} onClick={() => props.onVueChange?.('clients')}>Clients</button>
             <button type="button" aria-pressed={vueMetiers} onClick={() => props.onVueChange?.('metiers')}>Partenaires</button>
           </div>
         ) : null}
         {vueMetiers ? (
-          <CataloguePartenaires onOuvrir={(contact) => {
-            setContactCatalogue(contact)
-            props.onSelectContact(contact.hektor_contact_id)
-            setDetailInitialEditing(false)
-            setDetailOpen(true)
-          }} />
+          <CataloguePartenaires
+            onOuvrir={(contact) => {
+              setContactCatalogue(contact)
+              props.onSelectContact(contact.hektor_contact_id)
+              setDetailInitialEditing(false)
+              setDetailOpen(true)
+            }}
+            onVueClients={() => props.onVueChange?.('clients')}
+            onAjouter={props.canManageContacts ? props.onOpenCreate : undefined}
+          />
         ) : (<>
         <div className="segments">
           <button type="button" className={`seg ${activeRole === '' && !props.searchActive ? 'active' : ''}`} onClick={() => { if (props.searchActive) props.onToggleSearchActive?.(); selectRole('') }}><span>Tous</span><span className="cnt">{formatNumber.format(props.contactsTotal)}</span></button>

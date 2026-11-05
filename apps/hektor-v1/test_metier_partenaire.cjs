@@ -173,8 +173,8 @@ const reg = [
   { contact_id: "6", metier: "administration" }, { contact_id: "9", metier: "syndic" },
 ];
 const cg = cat.construireCatalogue(reg, [C("1"), C("2"), C("3", { archive: "1" }), C("4"), C("5"), C("6")], [C("7"), C("8", { archive: true }), C("7")]);
-controle("(51) cinq tuiles et c'est tout (notaire, syndic, diag, courtier, apporteur)",
-  J(cat.TUILES_CATALOGUE.map((t) => t.tuile)) === J(["notaire", "syndic", "diag", "courtier", "apporteur"]) && J(Object.keys(cg).sort()) === J(["apporteur", "courtier", "diag", "notaire", "syndic"]));
+controle("(51) cinq tuiles et c'est tout, dans l'ordre de la maquette (notaire, banques et courtiers, diag, apporteurs, syndics)",
+  J(cat.TUILES_CATALOGUE.map((t) => t.tuile)) === J(["notaire", "courtier", "diag", "apporteur", "syndic"]) && J(Object.keys(cg).sort()) === J(["apporteur", "courtier", "diag", "notaire", "syndic"]));
 controle("(52) société et administration ne sont PAS au catalogue", ![].concat(...Object.values(cg).map((t) => [...t.actifs, ...t.archives])).some((l) => l.id === "5" || l.id === "6"));
 controle("(53) banque + courtier = une seule ligne, avec ses deux métiers", cg.courtier.actifs.length === 1 && J(cg.courtier.actifs[0].metiers) === J(["banque", "courtier"]));
 controle("(54) les archivés à part (« 1 », true)", cg.apporteur.archives.length === 1 && cg.apporteur.actifs.length === 0 && cg.notaire.archives.length === 1);
@@ -193,6 +193,16 @@ controle("(60) l'adresse garde « vue=metiers » ; « voir le contact » remet l
   && /function showContactInDirectory\(normalizedId: string\) \{\s*setScreen\('contacts'\)\s*setContactsVue\('clients'\)/.test(app));
 const catTsx = fs.readFileSync(path.resolve(__dirname, "src", "CataloguePartenaires.tsx"), "utf8");
 controle("(61) le catalogue ne fait que LIRE (aucune écriture, aucune fonction appelée)", !/\.(insert|update|upsert|delete|rpc)\(/.test(catTsx));
+
+// ── 3.5, le dessin de la maquette (05/11, « oui ») ──
+const cg2 = cat.construireCatalogue([{ contact_id: "1", metier: "syndic" }, { contact_id: "2", metier: "syndic" }], [C("1"), C("2", { ville: "Firminy", phone_primary: "06" })], []);
+controle("(62) sans ville ni téléphone ni e-mail, la carte montre le NUMÉRO (doublons discernables)",
+  cg2.syndic.actifs.find((l) => l.id === "1").detail === "n° 1" && cg2.syndic.actifs.find((l) => l.id === "2").detail === "Firminy");
+controle("(63) la recherche trouve aussi par numéro et par téléphone", cat.filtrerCatalogue(cg2.syndic.actifs, "1").some((l) => l.id === "1") && cat.filtrerCatalogue(cg2.syndic.actifs, "06").length === 1);
+controle("(64) côté Partenaires, la barre du haut des clients se cache ; le catalogue porte l'interrupteur et « Ajouter un partenaire »",
+  /&& !vueMetiersApp \? \(\s*<section className=\{`hero/.test(app) && /onAjouter=\{props\.canManageContacts \? props\.onOpenCreate : undefined\}/.test(app)
+  && /\{catalogueVisible && !vueMetiers \? \(/.test(app) && /className="pa-switch"/.test(catTsx) && /Ajouter un partenaire/.test(catTsx));
+controle("(65) l'aperçu : l'activité est « en construction », jamais un faux chiffre", /Activité avec l'agence sur 12 mois · en construction/.test(catTsx) && !/\d+ ?%/.test(catTsx.replace(/\/\/.*$/gm, "")));
 
 console.log(echecs.length ? `\n${echecs.length} contrôle(s) en échec` : "\nTout est vert.");
 process.exit(echecs.length ? 1 : 0);

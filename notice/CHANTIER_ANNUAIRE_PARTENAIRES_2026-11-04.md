@@ -1838,6 +1838,25 @@ pour tout le monde (au rechargement). Retour arrière : `admin` ou `off`. **Suit
   ⚠ Un négociateur ne voit au catalogue que les contacts de SON périmètre (politique `app_contact_current_select_scoped`,
   la même que la liste des clients) : ses nombres peuvent être plus petits que ceux de l'admin. Non vu en vrai.
 
+#### 26 sexies. 3.5 — LE DESSIN REFAIT SUR LA MAQUETTE (05/11, « oui »)
+
+- **Le défaut, vu par Frédéric** : « le design du catalogue ne correspond pas à ta maquette ». Cause : de la planche 1 je
+  n'avais repris que les TEXTES, et dessiné avec les styles de la liste des contacts, sans rien lui montrer avant de coder
+  (contre la méthode). L'aperçu de droite avait été retiré sans le lui demander.
+- **Refait à l'identique** (mesures de `Main.dc.html`) : en-tête « Clients | Partenaires » (pastille beige) + recherche
+  420 px + « Ajouter un partenaire » (ouvre la création de contact existante, droit de gérer les contacts) ; titre 34 px ;
+  tuiles à icône dans l'ordre de la maquette (Notaires, Banques et courtiers, Diagnostiqueurs, Apporteurs et parrains,
+  Syndics), la choisie remplie de sa couleur ; liste en cartes (avatar carré, « métier · ville », colonne activité,
+  étiquette) ; filtre Agence ; aperçu à droite (bandeau coloré, Appeler / Écrire / RDV, trois chiffres, dernières
+  affaires, lieux, « Ouvrir la fiche … ») ; un clic choisit, « Ouvrir la fiche » (ou double-clic) ouvre.
+- **Adaptations dites et acceptées** : police et couleurs de l'app (celles des fiches) ; l'activité avec l'agence n'existe
+  pas → « — » et « en construction » (anneau, chiffres, dernières affaires ; tri par nom) ; RDV grisé (il se crée depuis
+  la fiche) ; ni « Administrations » ni « fiches à classer ». Côté Partenaires, la barre du haut des clients se cache.
+- **Retouche du numéro faite** : une carte sans ville, téléphone ni e-mail montre « n° … » ; la recherche trouve aussi
+  par numéro.
+- **Contrôle avant le push** : banc local à données FICTIVES (esbuild, base simulée, servi par le serveur des maquettes,
+  retiré ensuite) : 1212 px et 900 px, sans débordement. Essai `test_metier_partenaire.cjs` **65/65**.
+
 ### 7 ter. Les dépendances (techniques, pas un ordre décidé)
 
 - 0 avant tout le reste ; 0.1 avant B2 ; 0.2 avant B1 ; 0.6 avant B5 ; 0.3 avant B6 ; 0.4 avant B7 ; 0.5 avant C2.

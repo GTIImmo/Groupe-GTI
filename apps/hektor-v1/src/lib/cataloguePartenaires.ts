@@ -6,12 +6,14 @@
 
 export type TuileCatalogue = 'notaire' | 'syndic' | 'diag' | 'courtier' | 'apporteur'
 
-export const TUILES_CATALOGUE: { tuile: TuileCatalogue; libelle: string; sous: string; couleur: string }[] = [
-  { tuile: 'notaire', libelle: 'Notaires', sous: 'actes et dossiers', couleur: '#3b4a8c' },
-  { tuile: 'syndic', libelle: 'Syndics', sous: 'copropriétés', couleur: '#5b4a9e' },
-  { tuile: 'diag', libelle: 'Diagnostiqueurs', sous: 'DPE et contrôles', couleur: '#b26a0e' },
-  { tuile: 'courtier', libelle: 'Banques et courtiers', sous: 'financements', couleur: '#1f7a55' },
-  { tuile: 'apporteur', libelle: 'Apporteurs et parrains', sous: 'affaires apportées', couleur: '#b0306f' },
+// Libellés et icônes de la maquette (planche 1) ; couleurs = celles des fiches déjà en ligne (contact-detail-v2.css),
+// pour que la tuile et la fiche aient la même teinte. `court` = le mot du bouton « Ouvrir la fiche … ».
+export const TUILES_CATALOGUE: { tuile: TuileCatalogue; libelle: string; court: string; sous: string; couleur: string; doux: string; icone: string }[] = [
+  { tuile: 'notaire', libelle: 'Notaires', court: 'notaire', sous: 'actes et dossiers', couleur: '#3b4a8c', doux: '#eceefa', icone: 'M12 3v18M7 21h10M5 7h14M5 7l-3 7h6zM19 7l-3 7h6z' },
+  { tuile: 'courtier', libelle: 'Banques et courtiers', court: 'courtier', sous: 'financements', couleur: '#1f7a55', doux: '#e5f3ec', icone: 'M3 10l9-6 9 6M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 20h18' },
+  { tuile: 'diag', libelle: 'Diagnostiqueurs', court: 'diagnostiqueur', sous: 'DPE et contrôles', couleur: '#b26a0e', doux: '#fbf0e1', icone: 'M4 18a8 8 0 1 1 16 0M12 18l4-6' },
+  { tuile: 'apporteur', libelle: 'Apporteurs et parrains', court: 'apporteur', sous: 'affaires apportées', couleur: '#b0306f', doux: '#fbe9f2', icone: 'M8 12l3 3 5-6M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z' },
+  { tuile: 'syndic', libelle: 'Syndics', court: 'syndic', sous: 'copropriétés', couleur: '#5b4a9e', doux: '#efecf9', icone: 'M3 11l9-7 9 7v9H3zM10 20v-6h4v6' },
 ]
 
 // Le métier du registre → sa tuile. Tout autre métier (société, administration…) n'est PAS au catalogue.
@@ -33,8 +35,12 @@ export type ContactCatalogue = {
   ville?: string | null
   phone_primary?: string | null
   email?: string | null
+  agence_nom?: string | null
 }
-export type LigneCatalogue = { id: string; nom: string; detail: string; metiers: string[]; archive: boolean; recherche: string }
+export type LigneCatalogue = {
+  id: string; nom: string; detail: string; metiers: string[]; archive: boolean; recherche: string
+  ville: string; telephone: string; email: string; agence: string
+}
 export type Catalogue = Record<TuileCatalogue, { actifs: LigneCatalogue[]; archives: LigneCatalogue[] }>
 
 const texte = (v: unknown) => String(v ?? '').trim()
@@ -45,10 +51,17 @@ export function nomDuContact(c: ContactCatalogue): string {
   return [c.prenom, c.nom].map(texte).filter(Boolean).join(' ') || texte(c.display_name) || `Contact ${c.hektor_contact_id}`
 }
 
+// `detail` = la 2e ligne d'une carte : la ville, sinon le téléphone, sinon l'e-mail, sinon le NUMÉRO (des doublons sans
+// coordonnées, comme les trois « GIBERT IMMOBILIER », restent ainsi discernables).
 function ligne(c: ContactCatalogue, metiers: string[]): LigneCatalogue {
   const nom = nomDuContact(c)
-  const detail = [texte(c.ville), texte(c.phone_primary) || texte(c.email)].filter(Boolean).join(' · ')
-  return { id: texte(c.hektor_contact_id), nom, detail, metiers, archive: estArchive(c.archive), recherche: sansAccents(`${nom} ${detail}`) }
+  const id = texte(c.hektor_contact_id)
+  const ville = texte(c.ville), telephone = texte(c.phone_primary), email = texte(c.email)
+  const detail = ville || telephone || email || `n° ${id}`
+  return {
+    id, nom, detail, metiers, archive: estArchive(c.archive), ville, telephone, email, agence: texte(c.agence_nom),
+    recherche: sansAccents(`${nom} ${ville} ${telephone} ${email} ${id}`),
+  }
 }
 
 const parNom = (a: LigneCatalogue, b: LigneCatalogue) => a.nom.localeCompare(b.nom, 'fr', { sensitivity: 'base' }) || a.id.localeCompare(b.id)
@@ -73,7 +86,7 @@ export function construireCatalogue(
     metiersParTuile.set(tuile, m)
   }
   const vide = () => ({ actifs: [] as LigneCatalogue[], archives: [] as LigneCatalogue[] })
-  const out: Catalogue = { notaire: vide(), syndic: vide(), diag: vide(), courtier: vide(), apporteur: vide() }
+  const out: Catalogue = { notaire: vide(), courtier: vide(), diag: vide(), apporteur: vide(), syndic: vide() }
   const vus = new Set<string>()
   for (const c of notaires ?? []) {
     const id = texte(c?.hektor_contact_id)
