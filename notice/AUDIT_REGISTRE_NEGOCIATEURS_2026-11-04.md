@@ -1222,3 +1222,6 @@ civilité → « Mme ». La colonne est écrite (`updated_at` 14:44:59), le carn
 À 14:46:10, Frédéric a passé le compte de l'app de Franck en **manager** par « Modifier son accès » (le geste existant) :
 le lien Hektor a été recalculé et reste juste (`registre_fiche_active`, 2/1). ⚠ C'est le RÔLE dans l'app, pas la fonction
 du registre (`fonction` toujours vide) — à confirmer : un manager n'a plus l'écran Utilisateurs, ni Pilotage, ni Santé.
+**Rectifié le 05/11 à 14:54 UTC** (Frédéric : « Non, remets admin ») : le compte de Franck est remis **administrateur** par
+le geste existant (« Modifier son accès », depuis le registre, dans le Chrome de Frédéric). Vérifié en base : rôle admin,
+actif, tout le réseau ; lien Hektor recalculé et juste (2/1, `registre_fiche_active`, 14:54:12) ; registre toujours relié.
