@@ -1718,6 +1718,24 @@ trouvable (Archiver / Supprimer en bas au lieu du menu) ; la fiche client et la 
   28 lignes trop haut — vu par une vérification de la version en attente, refait) ; version en attente vérifiée valide
   sans ses lignes.
 
+✅✅ **3.3a EN LIGNE ET VUE, POUR LES ADMINS (05/11)** (« Oui, vas-y ») :
+- Poussé (`7c597e1`, avec `a0df1a4` / `e42a8be` Youtrust et `cd68af6` registre) ; `app_setting.partenaires_fiche = admin`
+  à **14:54:34**.
+- Vu dans le Chrome de Frédéric (admin), 1280 × 665 : **GIBERT IMMOBILIER** (10215568) violet `ty-syndic`, icône
+  d'immeuble, pastille « Syndic », « Demander un document » grisé « bientôt », RDV, ⋯ ; menu : Modifier la fiche, Ouvrir
+  dans Hektor, Changer le métier, Archiver, Supprimer (ces deux derniers jusqu'à 3.3c) ; **Michelle BONNET** (10011026,
+  archivée) vert `ty-courtier`, pastilles « Courtier » + « Mandant », « Orienter un acquéreur », bandeau « Fiche archivée ·
+  elle reste modifiable. Réactiver » ; **M. Franck ACTIV' EXPERTISES** (10030093) ambre `ty-diag`, « Commander un
+  diagnostic » ; **PICARD Philippe STE CIVILE** (10177505) gris-bleu `ty-partenaire`, pastilles Société + Mandant +
+  Propriétaire, PAS d'action, RDV + ⋯ ; un **acquéreur** (10650959) : inchangé (`ty-acq`, RDV + Modifier + ⋯, pas de bloc).
+- ⚠ **Défaut vu en ligne et corrigé** : « Demander un document » était COUPÉ (« Dema… ») — le volet est plus étroit que la
+  maquette. Réglé (`fb741de`) : RDV et ⋯ à 40 px, « bientôt » en étiquette sur le coin, pas de « + » sur un bouton
+  « bientôt », police 12 px. Essayé d'abord par injection du style dans la page en ligne ; **mesuré : 0 px de dépassement
+  pour les quatre libellés** (« Noter une affaire apportée », le plus long, compris). En ligne vers 15:00 : bureau et
+  téléphone (cadre 390 px) sans coupure ni débordement.
+- Non vu : le mode sombre au téléphone ; un compte non admin (caché par le cran).
+**Reste** : `partenaires_fiche` sur « on » (accord) ; puis 3.3b (le travail) et 3.3c (la zone sensible).
+
 ### 7 ter. Les dépendances (techniques, pas un ordre décidé)
 
 - 0 avant tout le reste ; 0.1 avant B2 ; 0.2 avant B1 ; 0.6 avant B5 ; 0.3 avant B6 ; 0.4 avant B7 ; 0.5 avant C2.
