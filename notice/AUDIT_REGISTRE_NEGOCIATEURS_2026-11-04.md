@@ -644,3 +644,13 @@ le menu ne change pas à l'œil. Build vert. ⏳ Patch à poser (accord), puis p
   (`filterCatalog.commercials`), pas de ces menus ; inchangé. La fenêtre « Nouvelle annonce » a été ouverte puis annulée
   (rien créé) : son menu de négociateurs n'apparaît qu'à une étape plus loin, que je n'ai pas franchie (risque de brouillon
   chez Hektor).
+
+## 24. LA 1re NUIT QUI ÉCRIT (05/11, étape « phase2 registre des negociateurs » à 06:28:47) — contrôle du matin
+
+Mesuré en base à 06:35 (le run, lui, tournait encore : rattrapage des photos) : **liste complète lue — 152 fiches
+présentes** (96 la nuit d'avant, plafonnée) ; journal de la nuit = **34 `disparue` + 1 `disparitions_nombreuses`
+signalé**, exactement l'attendu ; **30 actives, 0 active marquée absente** ; 67 fiches « absentes de chez Hektor » (les 34
+de la nuit + 33 déjà absentes depuis la photo du 04/11), toutes GARDÉES ; aucune fiche créée (pas de nouveau
+négociateur) ; 185 personnes, aucune supprimée. ⚠ Le signal `disparitions_nombreuses` fera crier la sentinelle
+`data.negociateur_registre_signal` au prochain passage du moniteur : il est ATTENDU (vieilles pages), à marquer traité
+(`app_negociateur_signal_traiter`) — décision de Frédéric.
