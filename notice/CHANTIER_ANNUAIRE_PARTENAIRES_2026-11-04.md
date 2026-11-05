@@ -1653,6 +1653,20 @@ de n'importe quel contact (trace de l'auteur gardée) ; rien chez Hektor.
 **Reste** : pousser ; poser `partenaires_metier_modif = admin` ; essai réel sur une fiche d'essai (ajouter, retirer, relire
 le registre) ; voir les trois formats ; puis « on » pour tous (accord).
 
+✅✅ **3.2 EN LIGNE ET PROUVÉE EN RÉEL, POUR LES ADMINS (05/11)** (« Oui, vas-y ») :
+- Poussé (`1cc4b88`, `957d489`) ; déploiement Vercel prêt vers 14:26 (le paquet contient `partenaires_metier_modif`) ;
+  `app_setting.partenaires_metier_modif = admin` à **14:25:01**.
+- Fiche d'essai **M. AVOIR TEST4** (10354488, aucun métier) dans le Chrome de Frédéric, écran 1280 × 665 :
+  « ⋯ › Changer le métier » présent ; fenêtre entière à l'écran ; « Syndic » choisi → bilan « 1 ajout » → Enregistrer →
+  fenêtre fermée, bloc relu « Syndic · Saisi dans l'app le 05/11/2026 · Changer » ; registre : ligne **1892** syndic /
+  ecran, écrite à 14:27:12 par frederic.gerphagnon@… ; puis « Changer » → « Retirer » (barré, « 1 retrait ») →
+  Enregistrer → bloc disparu ; ligne 1892 **retirée et datée** 14:27:53 par frederic.gerphagnon@… (pas effacée).
+- Téléphone (cadre de 390 px, même session) : la fenêtre ouverte par le menu est un volet du bas, boutons visibles, aucun
+  débordement ; fermée sans enregistrer.
+- Non vu : le mode sombre au téléphone (règles posées) ; un compte non admin (caché par le cran).
+**Reste** : passer `partenaires_metier_modif` à « on » pour tous (accord) ; la nuit du 05 au 06/11 doit garder 1892
+retirée (la garde ne rajoute pas un métier retiré).
+
 ### 7 ter. Les dépendances (techniques, pas un ordre décidé)
 
 - 0 avant tout le reste ; 0.1 avant B2 ; 0.2 avant B1 ; 0.6 avant B5 ; 0.3 avant B6 ; 0.4 avant B7 ; 0.5 avant C2.
