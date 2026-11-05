@@ -1167,3 +1167,6 @@ secrétaire 7 « noté, jamais envoyé dans un geste », la fiche 19 éteinte ; 
 - l'e-mail affiché était celui de Hektor (gmail de Franck) : c'est l'accès @gti qui passe devant (règle de l'étape 2) ;
 - « à saisir » pour une fonction → « à choisir » ; le fixe n'est montré que s'il diffère du portable ; la synchro est
   ouverte par défaut (comme la maquette) ; plus de nom d'interrupteur à l'écran.
+**✅ RETOUCHES VUES EN LIGNE le 05/11** (Render et Vercel sur `544641a`) : les dates de connexion sont celles de la base
+(Franck 15/09, Frédéric 31/10, Pauline 05/11, LEGRAND 20/05, PEREIRA « jamais connecté » — vrai, aucune connexion ; les
+3 comptes non reliés : 05/06, 01/06, 01/04) et l'e-mail de Franck est son accès @gti. Lot A clos.
