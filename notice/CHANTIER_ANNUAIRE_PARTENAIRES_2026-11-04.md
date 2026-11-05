@@ -1585,6 +1585,19 @@ déploiement, d'abord pour les admins.
 **Reste** : pousser ; poser `partenaires_ecran = admin` (accord) ; voir le bloc sur une vraie fiche (GIBERT IMMOBILIER
 10215568, un courtier Netty, un notaire) au bureau, écran bas et téléphone ; puis « on » pour tous (accord).
 
+✅✅ **3.1 EN LIGNE ET VUE, POUR LES ADMINS (05/11)** (« Oui, vas-y ») :
+- Poussé (`7e56422`, avec `ac1ae14`, `d38589a`, `be61445` d'autres sessions) ; déploiement Vercel du commit `be61445`
+  prêt vers 13:05 (le paquet contient le bloc) ; `app_setting.partenaires_ecran = admin` à **13:03:48**.
+- Vu dans le Chrome de Frédéric (admin), écran 1280 × 665 : **GIBERT IMMOBILIER** (10215568) « Métier · Syndic ·
+  D'après Hektor », sous le statut ; **M. Fabrice GUERY** (10001493) « Courtier · Parrain · Notaire · D'après l'ancien
+  logiciel (Netty) » ; **M. Rachid RABHI** (10000258) « Notaire · D'après l'ancien logiciel (Netty) » ; un acquéreur
+  (10650959) : aucun bloc. Aucun contact de l'app n'a deux métiers d'origines différentes (cas couvert par l'essai (7)).
+- Téléphone : la fenêtre de Chrome refusant de se redimensionner, même fiche ouverte dans un cadre de 390 px (même
+  session) : bloc à 15-356 px, **aucun débordement**, sous le statut.
+- Non vu : le mode sombre au téléphone (règles posées) ; un compte NON admin (le cran « admin » le cache, par construction
+  du crochet des couples).
+**Reste** : passer `partenaires_ecran` à « on » pour tout le monde (accord) ; puis la pièce 3.2.
+
 ### 7 ter. Les dépendances (techniques, pas un ordre décidé)
 
 - 0 avant tout le reste ; 0.1 avant B2 ; 0.2 avant B1 ; 0.6 avant B5 ; 0.3 avant B6 ; 0.4 avant B7 ; 0.5 avant C2.
