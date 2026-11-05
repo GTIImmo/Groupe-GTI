@@ -167,6 +167,13 @@
 .fa-contact-v2 .fa-cx-neg-sb { font-size: 10.5px; color: var(--muted); margin-top: 2px; }
 .fa-contact-v2 .fa-cx-status { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-start; margin-top: 2px; padding-top: 11px; border-top: 1px solid var(--line-soft); }
 .fa-contact-v2 .fa-cx-st-chip { font-size: 10.5px; font-weight: 700; color: var(--ink-soft); background: #fff; border: 1px solid var(--line); border-radius: 99px; padding: 4px 10px; display: inline-flex; align-items: center; gap: 6px; }
+/* PARTENAIRES, lot 3 pièce 3.1 (05/11/2026) — le bloc « Métier » (maquette fiche-partenaire-v1). */
+.fa-contact-v2 .fa-cx-metier { margin-top: 10px; padding: 10px 11px; border-radius: 12px; background: #fff; border: 1px solid var(--line); display: flex; align-items: center; gap: 10px; min-width: 0; }
+.fa-contact-v2 .fa-cx-metier > div { min-width: 0; }
+.fa-contact-v2 .fa-cx-metier .k { font-size: 10.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #8a7f6e; }
+.fa-contact-v2 .fa-cx-metier .v { font-size: 13px; font-weight: 800; color: var(--ty-deep); overflow-wrap: anywhere; }
+.fa-contact-v2 .fa-cx-metier .s { font-size: 11.5px; color: #7a6f63; line-height: 1.35; overflow-wrap: anywhere; }
+.fa-contact-v2 .fa-cx-metier.erreur .s { color: #a3412b; }
 .fa-contact-v2 .fa-cx-st-chip .d { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
 .fa-contact-v2 .fa-cx-st-chip.archived .d { background: var(--annonce-c); }
 .fa-contact-v2 .fa-cx-st-chip.app { color: var(--brand-ink); background: var(--brand-soft); border-color: var(--brand-line); }
@@ -498,6 +505,10 @@
   /* Chips de filtre, statut, formulaires, jauge : fonds sombres */
   .fa-contact-v2 .fa-cx-aflt button { background: var(--md-surface-2); border-color: var(--md-border); color: var(--md-text-muted); }
   .fa-contact-v2 .fa-cx-st-chip { background: rgba(255, 255, 255, .07); border-color: var(--md-border); color: var(--md-text); }
+  .fa-contact-v2 .fa-cx-metier { background: rgba(255, 255, 255, .07); border-color: var(--md-border); }
+  .fa-contact-v2 .fa-cx-metier .v { color: var(--md-text); }
+  .fa-contact-v2 .fa-cx-metier .k,
+  .fa-contact-v2 .fa-cx-metier .s { color: var(--md-text-muted); }
   .fa-contact-v2 .fa-cx-plan-form input,
   .fa-contact-v2 .fa-cx-plan-form select { background: var(--md-inset); border-color: var(--md-border); color: var(--md-text); }
   .fa-contact-v2 .fa-cx-comp-bar { background: rgba(255, 255, 255, .10); }

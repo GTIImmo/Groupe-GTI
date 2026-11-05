@@ -255,6 +255,7 @@ import ContactSearchModal from './ContactSearchModal'
 import RechercheAcquereur, { type VisitePlanInput } from './RechercheAcquereur'
 import RapprochementMandat, { type MandatContext } from './RapprochementMandat'
 import { FICHE_NOTAIRE_V2, NotaireAVenir, NotaireDossiers, NotaireInterlocuteurs, NotaireKpis, NotaireVentesEtAvecNous, construireVueNotaire, useFicheNotaire } from './FicheNotaire'
+import { BlocMetierPartenaire, useMetiersPartenaire } from './MetierPartenaire'
 import NotificationsBell from './NotificationsBell'
 import SanteSystemeScreen from './SanteSystemeScreen'
 import RegistreTransactionsScreen, { type GesteDuRegistre } from './RegistreTransactionsScreen'
@@ -46758,6 +46759,9 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
   // COUPLES, pièce G (03/11/2026) : « Ajouter un conjoint » sur une PERSONNE SEULE (cran `contacts_couples_ajout`).
   const ajoutConjointVisible = useCranCouplesVisible('contacts_couples_ajout', props.profileRole)
   const [ajoutConjointOuvert, setAjoutConjointOuvert] = useState(false)
+  // PARTENAIRES, lot 3 pièce 3.1 (05/11/2026) : le MÉTIER du registre, sous le statut (cran `partenaires_ecran`).
+  const partenairesEcran = useCranCouplesVisible('partenaires_ecran', props.profileRole)
+  const metiersPartenaire = useMetiersPartenaire(String(props.contact.hektor_contact_id ?? ''), partenairesEcran)
   // La fiche ouverte ne porte pas toujours sa nature (cela dépend de l'écran qui l'ouvre) : on la lit, comme le foyer.
   const [natureLue, setNatureLue] = useState<{ pour: string; nature_fiche?: string | null; couple_json?: unknown } | null>(null)
   useEffect(() => {
@@ -47638,6 +47642,7 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
                   {vueNotaire?.partenaireDepuis ? <span className="fa-cx-st-chip app"><span className="d" />Partenaire depuis {vueNotaire.partenaireDepuis.slice(0, 4)}</span> : null}
                   {hasSeverity ? <span className="fa-cx-st-chip sev"><span className="d" />{severityLabel}</span> : null}
                 </div>
+                <BlocMetierPartenaire metiers={metiersPartenaire} />
               </div>
             </aside>
 

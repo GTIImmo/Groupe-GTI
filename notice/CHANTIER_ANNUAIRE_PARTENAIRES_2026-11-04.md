@@ -1543,6 +1543,48 @@ réel (créer un partenaire avec métier → 1 ligne au registre → le supprime
   `cleanup.registre_des_partenaires = {status: done, metiers_effaces: 1, liens_effaces: 0}` ; **0 ligne pour 20000045** ;
   0 fiche ; journal des suppressions 1 ; formulaire Hektor vide. Registre : **1 869 actifs** (inchangé).
 
+## 24. LOT 3 — LA PAGE PARTENAIRE : AUDIT ET DÉCOUPAGE (05/11, « ok donc on enchaîne ») — rien codé
+
+**Ce qui existe** :
+- le design validé (§6.3, `maquettes/fiche-partenaire-v1.html`, quatre métiers) ; les décisions E1 « a » (Modifier,
+  Archiver, Supprimer partent chez Hektor — ✅ réparés et prouvés : D-2, D-5, §23), P1, P2, P4, K8 réglé ;
+- la fiche notaire n'est PAS une page à part : ce sont des BLOCS de la fiche contact V2 (`ContactDetailPopupV2`,
+  `App.tsx` ~46685 ; `FicheNotaire.tsx`, 549 l.), allumés quand la catégorie dominante est « notaire »
+  (`ContactDirectoryType` = notaire | mandant | proprietaire | acheteur | acquereur | autre) ⇒ la page partenaire suit le
+  MÊME chemin : des blocs dans la fiche contact, allumés par le MÉTIER du registre ;
+- en base : `app_partenaire_metier` et `app_partenaire_lien` lisibles par tout compte actif (RLS `is_app_user_active`) ;
+  `app_partenaire_metier_ecrire` et `app_partenaire_lien_ecrire` (jamais appelées par l'écran) ;
+  `app_notaire_interlocuteur` (0 ligne) et `app_notaire_interlocuteur_ecrire` ;
+- **le front ne lit RIEN du registre aujourd'hui** (0 référence à `app_partenaire_*`).
+**Découpage proposé (une pièce à la fois, chacune derrière l'interrupteur, contrôlée bureau / écran bas / téléphone)** :
+- **3.1 (A2)** afficher le métier et sa source dans le volet gauche de la fiche contact (« Syndic · Hektor »), pour
+  tout contact qui a un métier actif ; lecture seule. Petit, utile tout de suite, et socle des suivantes.
+- **3.2 (A3)** « Changer le métier » (ajouter / retirer, `app_partenaire_metier_ecrire`) **+ la garde de nuit « un métier
+  retiré à l'écran ne revient pas »** (sinon la nuit défait le retrait, §23) — les deux ensemble.
+- **3.3 (K1, K4, K3)** le squelette de la fiche partenaire : chiffres et section du métier « en construction » (ils se
+  remplissent aux lots 4 à 7), menu « ⋯ » réduit, zone sensible en bas (Archiver, Supprimer — gestes existants).
+- **3.4 (K2)** les interlocuteurs pour tous les partenaires (généraliser `app_notaire_interlocuteur`, vide : rien à
+  déplacer) — forme à présenter.
+- **3.5 (K6)** l'annuaire des partenaires : la liste par métier, tirée du registre, sur l'annuaire v2.
+- **3.6 (K7, K5)** le téléphone et les états chargement / vide / erreur (vérifiés à chaque pièce, finis ici).
+- B3 (le sélecteur de partenaire) va au lot 4, avec le bloc « Intervenants du bien » qui l'utilise.
+**Interrupteur** : le plan disait `VITE_APP_PARTENAIRES` (Vercel, redéploiement pour allumer). Proposé à la place : un
+réglage `app_setting` « partenaires_ecran » (off / admin / on), **comme les couples** (`contacts_couples_*`) — s'allume sans
+déploiement, d'abord pour les admins.
+
+✅ **PIÈCE 3.1 CODÉE le 05/11** (« Oui, vas-y 3.1 ») — invisible tant que le réglage n'existe pas :
+- `src/lib/metierPartenaire.ts` (règles pures : libellés français, origine « d'après l'ancien logiciel (Netty) » /
+  « d'après Hektor » / « d'après ses transactions » / « saisi dans l'app le jj/mm/aaaa », une origine commune dite une
+  fois) ; `src/MetierPartenaire.tsx` (`useMetiersPartenaire` lit les lignes ACTIVES du contact par notre numéro, rien
+  d'écrit ; `BlocMetierPartenaire` : rien en chargement ou sans métier, une erreur DITE) ; branché dans
+  `ContactDetailPopupV2` (crochet `useCranCouplesVisible('partenaires_ecran')`, bloc sous le statut du volet gauche, comme la
+  maquette) ; style `.fa-cx-metier` (+ mode sombre) dans `contact-detail-v2.css`.
+- Essais : `test_metier_partenaire.cjs` **15/15** ; `test_fiche_notaire.cjs` vert ; `npm run build` vert.
+- ⚠ Incident évité : la session Youtrust avait emporté mes 5 lignes d'`App.tsx` dans son commit de la signature (P4) ;
+  défait par elle avant tout push (`ac1ae14` refait sans elles). Mes lignes commitées à part.
+**Reste** : pousser ; poser `partenaires_ecran = admin` (accord) ; voir le bloc sur une vraie fiche (GIBERT IMMOBILIER
+10215568, un courtier Netty, un notaire) au bureau, écran bas et téléphone ; puis « on » pour tous (accord).
+
 ### 7 ter. Les dépendances (techniques, pas un ordre décidé)
 
 - 0 avant tout le reste ; 0.1 avant B2 ; 0.2 avant B1 ; 0.6 avant B5 ; 0.3 avant B6 ; 0.4 avant B7 ; 0.5 avant C2.
