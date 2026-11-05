@@ -304,3 +304,162 @@ tranchée pour ce cas. Restent Q2 à Q6.
 ### 8.6 Tranché le 05/11 — D26 à D30
 « Oui, Q2 à Q6 » : mes recommandations du §7 sont retenues (détail : plan signature, « D26 à D30 »). Toutes les questions
 de la proposition sont tranchées ; la suite est la maquette (lot 6a), puis le lot 6b en pièces.
+
+## 9. La maquette (lot 6a, étape 4) — 05/11/2026, rien codé
+
+Fichier : `C:\Hektor\_maquette_work\signature_youtrust_fenetre_envoi.html` (hors dépôt, comme les autres maquettes ;
+données fictives ; jetons de couleur et de police repris de `fa-mandat-v3.css` l. 13-21, bandeau, onglets, cartes et
+boutons dessinés comme `.mandat-document-editor.is-open`). Cinq vues :
+1. **Mandants et signataires** : ordre de signature en clair ; une carte par personne avec son état (prêt / il manque) et
+   un crayon par champ qui écrit sur la fiche ; le conjoint non lié en carte dorée « La lier au bien comme mandante » (D25),
+   avec l'avertissement du mandat numéroté et la règle « Modifier le conjoint » ; la mandante sans e-mail, crayon ouvert,
+   portable en 2e téléphone (D27) ; le négociateur verrouillé (D21) ; la place de conjoint vide en bande écartée avec
+   « Compléter le conjoint » ; « Ajouter un mandant », aucune case à décocher (D29).
+2. **Contrôle et envoi** : la liste de contrôle, la raison du blocage, les crédits ; un seul bouton grisé ; puis le même
+   écran pendant l'envoi (4 étapes) et « Signer maintenant » (D8).
+3. **Après l'envoi** : une ligne par personne (signé, ouvert, e-mail non délivré → « Corriger l'adresse », relancer) ;
+   ce que fait la correction d'après l'essai D30 ; Annuler, Signé à la main, preuves, boutons ImmoSign gardés (R2).
+4. **Téléphone** (390 px) : cartes repliées, manques ouverts, onglets sur une ligne, bouton d'étape en bas.
+5. **Rien ne se perd** : chaque fonction d'aujourd'hui et sa place demain.
+Vérifiée dans le navigateur intégré (bureau et vue téléphone). ✅ **VALIDÉE par Frédéric le 05/11** (« OUI VALIDE »),
+qui demande aussi les onglets **Bien, Prix, Clauses** dans la maquette (§9.1).
+
+### 9.1 Bien, Prix, Clauses ajoutés, et deux oublis réparés (05/11)
+Lus dans le code (`App.tsx`, onglets `bien` / `prix` / `clauses`, `missingFields`, pied de l'assistant) :
+- **Bien** : verrouillés = type de mandat, désignation, type de bien, adresse (bloc « Ce que dit la fiche du bien », avec un
+  lien « Ouvrir la fiche du bien » — NOUVEAU, aujourd'hui aucun lien) ; crayon = pièces, surface habitable, surface terrain
+  (`CorrigeableAnnonceField`, inchangé) ; liste = occupation (Libre / Loué / Occupé par le mandant) en 3 boutons.
+- **Prix** : crayon = prix FAI, net vendeur, honoraires TTC ; charge (Mandant / Acquéreur) en 2 boutons, obligatoire ;
+  une ligne de calcul « net + honoraires = FAI » — NOUVEAU, **à confirmer par Frédéric**.
+- **Clauses** : couverture incluse, exécution anticipée (Non renseignée / Demandée / Refusée), clause particulière.
+- ⚠ **Oublis de la 1re maquette, réparés** : le N° de mandat, la date de signature et le libellé global (en tête de
+  l'onglet Mandants aujourd'hui) ; « Aperçu imprimable » et « Copier JSON » (pied du dernier onglet). Le contrôle exige
+  aussi le numéro et la date (`missingFields`) : ajoutés à la liste de « Contrôle et envoi ».
+- Vérifiée à 1280 × 665 (la fenêtre de Frédéric) et en colonne étroite.
+
+---
+
+## 10. ⛔ CORRECTION DE FRÉDÉRIC (05/11) — LA FENÊTRE ENVOIE UN PDF, ELLE NE LE FAIT PAS
+
+*Ses mots : « nous avons déjà un éditeur de document ; le but de cette modale est l'envoi en signature électronique d'un
+PDF, donc on ne va pas le modifier ici. Rien ne doit modifier le PDF qui va être envoyé : bien, prix, clauses et surtout
+la présence ou non d'un mandant. Si un signataire n'est pas présent sur le mandat, il ne doit pas être rajouté en
+signataire. »* ⇒ les §4, §9 et §9.1 (onglets Bien / Prix / Clauses dans la fenêtre d'envoi, conjoint lié depuis la
+fenêtre d'envoi) sont **ÉCARTÉS pour la fenêtre d'envoi**. La maquette validée reste valable pour son principe de cartes
+par personne, PAS pour la modification du contenu.
+
+### 10.1 L'audit (code et base, 05/11)
+- **Le PDF fixe les signataires.** Il imprime pour chaque mandant le nom, la qualité, l'adresse, le téléphone et l'e-mail
+  (`mandatMandantsHtml`, App.tsx ~l. 4918), puis la page « Signatures » : une case « Mandant i — nom » par mandant, dans
+  l'ORDRE de `draft.mandants`, et la case « Mandataire — Groupe GTI » en dernier (`mandatSignatureBlocksHtml`). Les repères
+  Youtrust suivent cet ordre : s1..sN les mandants, sN+1 le mandataire.
+- ⚠⚠ **Le worker ne lit PAS les signataires dans le document** : `handleYoutrustSendSignature` prend `payload_json.mandants`
+  du travail, c'est-à-dire **la liste que l'écran lui donne**. Son seul garde-fou est le COMPTE des repères
+  (2 × N + 1). Une liste fausse de même taille (un autre mandant, un ordre inversé) passerait : quelqu'un signerait dans la
+  case d'un autre. C'est exactement ce que Frédéric interdit.
+- **La liste imprimée existe, mais elle n'est pas rangée avec le PDF** : l'écran l'envoie au travail de génération
+  (`render_payload.mandants`, `lib/api.ts` ~l. 9692), le worker ne la recopie pas sur le document. Le document n'a que
+  `generation_job_id` (chemin « chez nous », lot 4 bis).
+- ⚠ **L'identifiant imprimé n'est pas le numéro de la fiche** : c'est celui de la carte de l'écran
+  (`detail-contact-<rang>-<numéro Hektor>`, ou `mandant-<horodatage>` pour une ligne ajoutée à la main).
+- **Mesure** : 18 générations de mandat en tout (29/06 → 24/07, toutes réussies, 2 auteurs, AUCUNE depuis 60 jours) ;
+  11 portent la liste, 15 mandants imprimés, dont 3 sans prénom et 3 sans e-mail. ⇒ aucun document existant à reprendre :
+  la règle neuve peut être stricte dès le premier jour.
+
+### 10.2 L'idée : les signataires viennent DU DOCUMENT, jamais de l'écran
+1. **À la génération** (Youtrust allumé), le worker range avec le PDF la **liste figée de ce qu'il a imprimé** :
+   `metadata_json.signataires_du_pdf` = rang, civilité, prénom, nom, e-mail et téléphone imprimés, **numéro de la fiche**,
+   et le nombre de repères attendus. C'est une PHOTO : elle ne change plus jamais.
+2. **À l'envoi**, le travail ne porte que le numéro du document. Le worker **lit la photo**, et refuse si elle manque
+   (« ce PDF n'a pas été fait par l'éditeur avec ses cases de signature : régénérez-le »). Il garde le contrôle des repères
+   et, après l'activation, celui d'une case par signataire.
+3. **La fenêtre d'envoi devient une confirmation** : le nom du PDF, son aperçu, la liste des signataires **lue dans la
+   photo**, en lecture seule (noms, ordre, nombre), puis le mandataire et « Envoyer en signature ». Pas d'onglet Bien, Prix
+   ou Clauses, pas d'ajout ni de retrait de signataire.
+4. **Une erreur de contenu** (mandant oublié, nom faux, conjoint absent, prix) : un seul bouton, « Corriger dans l'éditeur
+   et régénérer ». La fenêtre ne corrige jamais le contenu.
+5. **Le bouton « Signature »** n'apparaît que sur un document qui porte la photo (plus précis que « nom contient mandat »,
+   D28).
+
+### 10.3 Ce que ça change aux décisions
+- **D25 (lier le conjoint)** : ne peut plus vivre dans la fenêtre d'envoi. S'il est gardé, sa place est l'ÉDITEUR, avant
+  la génération. → question à Frédéric.
+- **D23 (e-mail saisi à l'envoi)** et **D30 (corriger l'e-mail après l'envoi)** : l'e-mail et le portable sont des
+  CANAUX DE REMISE ; les compléter ne touche pas le PDF, mais le PDF imprime l'e-mail du moment de la génération. → question
+  à Frédéric : complétable à l'envoi (enregistré sur la fiche), ou refus et régénération.
+- **D26 (onglets fusionnés)**, **D27 (2e téléphone)** : sortent de la fenêtre d'envoi ; D26 relève de l'éditeur.
+- **D29 (aucun mandant décoché)** : devient automatique — tous les mandants de la photo signent.
+- ⚠ Rien n'est codé ; le lot 4 (worker) devra être retouché : lire la photo au lieu de `payload_json.mandants`.
+
+### 10.4 Tranché le 05/11 — D31 à D33
+1. **Le conjoint se décide dans l'ÉDITEUR**, pour savoir s'il apparaît ou non dans le document (D32).
+2. **A** : un e-mail ou un portable manquant se complète à l'envoi, sur la fiche ; le PDF ne change pas (D33).
+⏭ Suite : audit du couple dans l'éditeur (§11).
+
+---
+
+## 11. LE COUPLE DANS L'ÉDITEUR DU DOCUMENT — audit du 05/11 (D32), rien codé
+
+### 11.1 Comment l'éditeur décide aujourd'hui qui est dans le document
+- Les mandants du document = **les contacts liés au bien** (`props.contacts` de la fiche), passés à
+  `buildMandatDocumentDraft` → `buildMandatDocumentMandants` (App.tsx ~l. 4441). Tous y sont, verrouillés ; on ne choisit rien.
+- Un couple n'est reconnu que si **ses deux fiches sont liées au bien** : `buildDetailContactsFromProprietaires` fusionne par
+  `refCouple` (`contactMergeKey` / `mergeDetailContacts`), et le couple fusionné porte ses `members`. La case vide est écartée
+  depuis le 02/11 (3-A, critère de TEXTE).
+- **L'éditeur ne lit ni `nature_fiche` ni `couple_json`.** Un conjoint nommé mais non lié au bien est donc **invisible** :
+  il n'apparaît pas, et rien ne dit qu'il existe. Les lecteurs du couple existent pourtant déjà, pour la fiche contact
+  (`lib/coupleAffichage.ts` : `foyerAffiche`, `conjointNommeId`, `conjointVideId`, `peutRecevoirUnConjoint`).
+- Mesure (biens vivants, §8.2) : 42 couples « conjoint nommé » mandants, dont **10 avec le conjoint lié** (il apparaît
+  aujourd'hui) et **32 sans** (il n'apparaît pas) ; 289 cases vides (écartées) ; 246 personnes seules dont la place de
+  conjoint chez Hektor est vide.
+
+### 11.2 Ce que je propose — dans l'onglet « Mandants » de l'éditeur, AVANT la génération
+Pour chaque mandant qui forme un couple, une ligne « Le conjoint figure-t-il dans ce mandat ? » :
+- **conjoint nommé ET lié au bien** (10) : il apparaît, comme aujourd'hui (choix « Oui » coché) ; « Non » le retire du
+  document seulement — question (a) ;
+- **conjoint nommé mais non lié** (32) : « Non » par défaut (comme aujourd'hui) ; « Oui » le **lie au bien comme mandant**
+  (D25, clic confirmé, porte `app_link_mandant_optimistic`) puis il apparaît dans le document — question (b) ;
+- **place de conjoint vide** : « Le conjoint n'est pas connu » + « Compléter le conjoint » (geste F) ou « Ajouter un
+  conjoint » (geste G), puis il revient ici ; sinon le mandant signe seul.
+Le choix est imprimé tel quel, et la PHOTO du §10.2 le fige au moment de la génération.
+
+Avec Youtrust allumé, le contrôle de l'éditeur ajoute : **un mandant imprimé sans prénom ou sans nom bloque la génération**
+(c'est du contenu, il se corrige sur la fiche) — question (c) ; un e-mail ou un portable manquant n'est qu'un avertissement,
+il se complète à l'envoi (D33).
+
+---
+
+## 12. « CORRIGER AU MOMENT DE LA SIGNATURE » = RÉGÉNÉRER — idée ergonomique (05/11, rien codé)
+
+*Question de Frédéric : « si on souhaite modifier à la signature quelque chose hormis tel et mail, il faut qu'on propose de
+régénérer le PDF ; as-tu une idée ergonomique ? »*
+
+1. **Deux sortes de crayons dans la fenêtre d'envoi.** E-mail et portable : le crayon corrige sur place (D33). Tout le
+   reste (nom, prénom, adresse, bien, prix, clauses, liste des mandants) : un crayon « cadenas » qui ne modifie rien et
+   ouvre une bulle : « Ceci est imprimé dans le mandat. Le corriger demande de régénérer le PDF. [Corriger le mandat] ».
+2. **Un seul chemin : « Corriger le mandat ».** Il rouvre l'éditeur **sur le bon onglet** (Mandants pour un nom, Prix pour
+   un montant), avec un bandeau : « Correction avant l'envoi — quand c'est fait : Régénérer et revenir à l'envoi ».
+3. **Retour automatique à l'envoi**, sur le NOUVEAU PDF, avec **ce qui a changé** entre les deux photos : « Prix
+   205 000 → 199 000 € », « + Mme Sophie DUPONT ». On vérifie d'un coup d'œil, puis « Envoyer en signature ».
+4. **L'ancien PDF n'est pas effacé** : il reste dans les documents, marqué « Remplacé le 05/11 à 10:52 — jamais envoyé »,
+   sans bouton Signature.
+5. **Détection toute seule** : à l'ouverture de la fenêtre d'envoi, la photo du PDF est comparée à la fiche d'aujourd'hui.
+   Si un mandant, un nom ou le prix a changé depuis la génération, un bandeau prévient : « La fiche a changé depuis ce PDF
+   (Mme X ajoutée, prix modifié) : régénérer avant d'envoyer ? » — le même esprit que le bandeau « la fiche a changé » de
+   l'éditeur (`draftStale`). On peut quand même envoyer le PDF tel qu'il est, en le disant.
+6. **Si la demande est DÉJÀ partie** : corriger le contenu = annuler la demande Youtrust (motif « erreur dans le
+   document »), régénérer, renvoyer. La fenêtre le dit avant : « La demande en cours sera annulée et les signataires
+   prévenus ; un nouvel envoi recompte les crédits. » ⚠ Le décompte exact des crédits sur une demande annulée est NON MESURÉ.
+
+### 12.1 La maquette du parcours (05/11, rien codé)
+Fichier : `C:\Hektor\_maquette_work\signature_youtrust_corriger_regenerer.html` (données fictives, jetons de
+`fa-mandat-v3.css`). Huit vues : (1) la fenêtre d'envoi devenue confirmation — le PDF (nom, date, nombre de cases),
+« Voir le PDF », « Corriger le mandat », les signataires lus dans le PDF avec 🔒 sur ce qui est imprimé et ✎ sur l'e-mail
+et le portable, l'envoi bloqué tant qu'un e-mail manque ; (2) la bulle « Ceci est imprimé dans le mandat → Corriger le
+mandat / Laisser tel quel » ; (3) l'éditeur rouvert sur le bon onglet avec le bandeau « Correction avant l'envoi » et
+« Régénérer et revenir à l'envoi » (la question du conjoint y figure, D32) ; (4) le retour à l'envoi avec « ce qui a
+changé » (nom, mandant ajouté, prix, nombre de signataires donc de crédits) ; (5) le bandeau « la fiche a changé depuis
+ce PDF » avec « Régénérer » ou « Envoyer quand même… » (confirmation écrite au journal) ; (6) les documents du bien,
+l'ancien PDF « remplacé, jamais envoyé », sans bouton Signature ; (7) « corriger un mandat déjà envoyé » = annuler,
+régénérer, tout le monde re-signe ; (8) le téléphone. Vérifiée à 1280 × 665 et en 390 px. ✅ **VALIDÉE le 05/11**
+(« Oui, validé »). Découpage du lot 6b en pièces P1-P8 : plan signature, avant le lot 6 bis.

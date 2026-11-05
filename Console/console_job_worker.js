@@ -8734,6 +8734,66 @@ async function handleGenerateMandatDocument(job) {
   };
 }
 
+// A.2 lot 6b P1 (05/11/2026, D31) -- LA PHOTO DU PDF : qui le PDF fait signer, et dans quel ordre.
+// Frederic : « rien ne doit modifier le PDF qui va etre envoye ; si un signataire n'est pas present sur le
+// mandat, il ne doit pas etre rajoute en signataire ». L'envoi (P2) lira CETTE photo, plus la liste que
+// l'ecran lui donne (`payload_json.mandants`, que seul le COMPTE des reperes controlait).
+// La liste vient du rendu (`render_payload.mandants` = `draft.mandants`, la source des cases imprimees) ;
+// elle est CONFRONTEE au HTML reellement rendu : signatures s1..sN+1 et mentions s1..sN, sinon la photo
+// est marquee invalide (l'envoi la refusera -- un PDF genere sans reperes, par exemple).
+// ⚠ L'identifiant du rendu est celui de la CARTE de l'ecran (`detail-contact-<rang>-<n°>`, `…-member-<n°>`,
+//   ou `mandant-<horodatage>`) : le numero de fiche en est deduit tant que l'ecran ne le donne pas lui-meme.
+function ficheDuMandantImprime(m) {
+  const explicite = cleanString(m && (m.hektor_contact_id || m.fiche_id));
+  if (explicite) return { numero: explicite, source: "ecran" };
+  const id = String((m && m.id) || "");
+  const membre = id.match(/-member-(\d+)$/);
+  if (membre) return { numero: membre[1], source: "id_ecran" };
+  const carte = id.match(/^[a-z-]*contact-\d+-(\d+)$/i);
+  if (carte) return { numero: carte[1], source: "id_ecran" };
+  return { numero: null, source: null };
+}
+
+function photoSignatairesDuPdf(payload) {
+  const html = String((payload && payload.html) || "");
+  const rendu = payload && payload.render_payload && typeof payload.render_payload === "object" ? payload.render_payload : {};
+  const mandants = Array.isArray(rendu.mandants) ? rendu.mandants : [];
+  const indices = (motif) => [...new Set([...html.matchAll(motif)].map((x) => Number(x[1])))].sort((a, b) => a - b);
+  const signatures = indices(/\{\{s(\d+)\|signature\|/g);
+  const mentions = indices(/\{\{s(\d+)\|mention\|/g);
+  const n = mandants.length;
+  const suite = (k) => Array.from({ length: k }, (_, i) => i + 1);
+  const pareil = (a, b) => a.length === b.length && a.every((x, i) => x === b[i]);
+  const problemes = [];
+  if (!n) problemes.push("aucun mandant dans le rendu (render_payload.mandants)");
+  if (!pareil(signatures, suite(n + 1))) problemes.push(`cases de signature du PDF ${JSON.stringify(signatures)}, attendu 1..${n + 1}`);
+  if (!pareil(mentions, suite(n))) problemes.push(`mentions du PDF ${JSON.stringify(mentions)}, attendu 1..${n}`);
+  return {
+    version: 1,
+    pris_le: new Date().toISOString(),
+    valide: problemes.length === 0,
+    problemes,
+    reperes_attendus: 2 * n + 1,
+    reperes_trouves: signatures.length + mentions.length,
+    mandants: mandants.map((m, i) => {
+      const fiche = ficheDuMandantImprime(m);
+      return {
+        rang: i + 1,
+        civilite: cleanString(m && m.civilite) || null,
+        prenom: cleanString(m && m.prenom) || null,
+        nom: cleanString(m && m.nom) || null,
+        qualite: cleanString(m && m.qualite) || null,
+        adresse: cleanString(m && m.adresse) || null,
+        email: cleanString(m && m.email) || null,
+        telephone: cleanString(m && m.telephone) || null,
+        id_ecran: cleanString(m && m.id) || null,
+        hektor_contact_id: fiche.numero,
+        hektor_contact_id_source: fiche.source,
+      };
+    }),
+  };
+}
+
 // A.2 lot 4 bis (D24) -- le mandat genere NAIT CHEZ NOUS, et seulement chez nous.
 // ⚠ REPRENABLE : un travail rejoue retrouve SA ligne (metadata_json.generation_job_id) au lieu
 //   d'en creer une seconde.
@@ -8773,16 +8833,20 @@ async function enregistrerMandatChezNous(job, dossier, payload, label, filename,
         document_label: label,
         // Avenant : nouveau prix PROPOSE, passif (comme le chemin Hektor : metadata_json.avenant_new_price).
         ...(payload.avenant_new_price != null ? { avenant_new_price: String(payload.avenant_new_price) } : {}),
+        // A.2 lot 6b P1 (D31) : la photo de qui ce PDF fait signer -- elle ne change plus jamais.
+        signataires_du_pdf: photoSignatairesDuPdf(payload),
       },
     };
     await supabaseRequest("app_console_document", { method: "POST", prefer: "return=minimal", body: JSON.stringify([ligne]) });
   }
   const range = await persistProvidedDocumentFile(ligne, pdfBuffer, "application/pdf", { cloud: shouldKeepCloud(dossier) });
+  const photo = (ligne.metadata_json && ligne.metadata_json.signataires_du_pdf) || null;
   await logJob(job.id, "mandat_pdf", "done", "Mandat genere, enregistre chez nous (signature Youtrust : pas de depot Hektor)", {
     hektor_annonce_id: String(dossier.hektor_annonce_id),
     app_document_id: ligne.id,
     pdf_bytes: pdfBuffer.length,
     storage_path: range.storage_path,
+    signataires_du_pdf: photo ? { valide: photo.valide, mandants: photo.mandants.length, problemes: photo.problemes } : null,
   });
   return {
     ok: true,

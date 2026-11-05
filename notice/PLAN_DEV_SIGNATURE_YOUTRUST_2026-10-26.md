@@ -667,6 +667,17 @@ principale), jamais par la porte du mandant (§8.3 de la proposition). **Rien co
   est mort. Forme du bouton retenue en attendant : corriger (PATCH) → relire le signataire → afficher « nouvel e-mail
   envoyé par Youtrust » ; « Relancer » reste un geste à part.
 
+**⛔ D31 à D33 — LA FENÊTRE D'ENVOI NE TOUCHE PAS AU PDF** *(Frédéric, 05/11 ; détail : proposition §10)* :
+- **D31** « Rien ne doit modifier le PDF qui va être envoyé » : ni bien, ni prix, ni clauses, ni la présence d'un mandant ;
+  un signataire absent du mandat n'est pas ajouté. ⇒ les signataires viennent du DOCUMENT : à la génération, le worker range
+  la photo des mandants imprimés avec le PDF ; l'envoi la relit (plus `payload_json.mandants`). *(L'idée de la photo : ses
+  réponses 1 et 2 la supposent ; je la lui ai redite pour qu'il la corrige si je me trompe.)*
+- **D32** « La notion du couple et de son conjoint doit être faite dans l'ÉDITEUR du document, pour savoir s'il apparaît ou
+  pas dans le document. » ⇒ D25 (lier le conjoint) quitte la fenêtre d'envoi et va dans l'éditeur, avant la génération.
+- **D33** = **A** : un e-mail ou un portable manquant se complète dans la fenêtre d'envoi et s'enregistre sur la fiche ; le
+  PDF ne change pas. ⇒ D23 et D30 restent, comme canaux de remise.
+- **Remplacés** : D25 (sa place), D26 et D27 (sortent de la fenêtre d'envoi), D29 (devient automatique).
+
 ### LOT 6b — Les écrans (O6, O7, O8) + aiguillage R2 · 1,5–2 j
 
 **Ce qu'il fait.** Interrupteur allumé :
@@ -698,6 +709,41 @@ complet (envoi → suivi → relance → contresignature dans l'app → signé) 
 ImmoSign existant dont les boutons répondent comme avant.
 
 **Accord.** « vas-y » ; **déploiement Vercel**.
+
+**⭐ LOT 6b REDÉCOUPÉ LE 05/11** — après D31-D33 et les deux maquettes validées (« OUI VALIDE » pour les cartes,
+« Oui, validé » pour le parcours « corriger puis régénérer » ; proposition §10-§12.1). Tout reste derrière
+`signature_youtrust` ; chaque pièce a son « vas-y », son essai, son retour arrière. ⚠ Le texte du lot 6b ci-dessus
+(« signataires modifiables ») est REMPLACÉ par ce découpage : seuls l'e-mail et le portable se corrigent à l'envoi.
+- **P1 — worker : la photo du PDF.** À la génération (chemin « chez nous », mandat ET avenant), ranger
+  `metadata_json.signataires_du_pdf` (rang, civilité, prénom, nom, e-mail et téléphone imprimés, numéro de la fiche,
+  repères attendus) depuis `render_payload.mandants`. ⚠ L'identifiant imprimé est celui de la carte de l'écran
+  (`detail-contact-<rang>-<n°>`) : le vrai numéro de fiche doit être porté par l'écran.
+  ✅ **P1 CODÉ LE 05/11, NON ACTIF** (interrupteur éteint, services non redémarrés, rien commité au moment d'écrire) :
+  `ficheDuMandantImprime` + `photoSignatairesDuPdf` (worker, avant `enregistrerMandatChezNous`), photo rangée dans
+  `metadata_json.signataires_du_pdf` à la création de la ligne, et dite au journal du travail. La photo est CONFRONTÉE au
+  HTML rendu : signatures s1..sN+1 et mentions s1..sN, sinon `valide: false` + `problemes` (P2 refusera l'envoi).
+  Essai `Console/test_photo_signataires_pdf.js` **23/23**, sur le HTML RÉEL du gabarit (mandat 2/3/4 mandants, avenant 2)
+  écrit par `test_reperes_signature.mjs` : refus d'un rendu à 3 mandants pour un PDF à 2 (et l'inverse), d'un PDF sans
+  repères, d'un rendu vide ; numéro de fiche (carte, membre de couple, ligne à la main = aucun, numéro de l'écran
+  prioritaire) ; copie figée ; rejeu = une ligne ; ⭐ témoin inverse : le worker d'avant ne range aucune photo.
+  `test_mandat_chez_nous_et_mandataire.js` mis à jour (tranches de la photo) et vert ; voisins verts (R1, couples,
+  documents retirés). Aucun autre lecteur de `handleGenerateMandatDocument`.
+- **P2 — worker : l'envoi lit la photo.** `handleYoutrustSendSignature` ne prend plus `payload_json.mandants` ; il lit la
+  photo, refuse si elle manque, n'accepte de l'écran que des corrections d'e-mail / portable PAR RANG. Contrôles O3
+  gardés. P1 + P2 = un seul redémarrage des services (documents + synchro), file vide.
+- **P3 — base + worker : le 2e téléphone (D27)** dans la porte « modifier un mandant », pour qu'un portable complété à
+  l'envoi n'écrase pas un fixe.
+- **P4 — écran : la fenêtre d'envoi-confirmation** (maquette « corriger » vue 1-2) : PDF, signataires lus dans la photo,
+  🔒 / ✎, envoi bloqué tant qu'un e-mail manque ; elle remplace `SignaturePromptModal` quand l'interrupteur est allumé.
+- **P5 — écran : « Corriger le mandat »** (vues 3, 4, 6) : l'éditeur rouvert sur le bon onglet avec son bandeau,
+  « Régénérer et revenir à l'envoi », « ce qui a changé » ; l'ancien PDF marqué « remplacé, jamais envoyé », sans bouton
+  Signature.
+- **P6 — écran : « la fiche a changé depuis ce PDF »** (vue 5), comparaison photo ↔ fiche à l'ouverture.
+- **P7 — éditeur : le couple (D32)** et le contrôle du prénom / nom — attend les réponses (a), (b), (c) de la
+  proposition §11.2.
+- **P8 — le suivi par personne** (« Relancer », « Corriger l'adresse », vue 7 « déjà envoyé ») : après le lot 5 (avis
+  Youtrust), dont il a besoin.
+Ordre proposé : P1 → P2 → P3 → P4 → P5 → P6 → P7, puis lot 5, puis P8.
 
 ### LOT 6 bis — La signature sur place, sur tablette (O9) · 0,5–1 j
 
