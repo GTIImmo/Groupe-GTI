@@ -812,3 +812,7 @@ Aucun changement pour les 8 comptes actuels (tous « réseau ») ; la faille est
 - OUTIL UTILISATEURS (« Personne du registre », création et modification) : par défaut les 34 personnes actives au lieu de
   167 ; la case « Afficher les anciens dans « Personne du registre » » montre tout ; la personne déjà reliée ou choisie reste.
 - Build vert. ⏳ À pousser et voir à l'écran.
+- ✅ **VU EN LIGNE le 05/11** (Vercel `index-B75ACLSC.js`, Chrome de Frédéric, compte admin) : PILOTAGE 35 noms sans la
+  case, 44 avec (9 « · ancien » : Aline VALETTE, Anne FARGET, Cyril LACHAIZE, Frédérique JORAND, Hugo LABBE, Joel
+  CHAMPAGNAC, Lucie DECHANDON, Vincent-Lucas GONZALEZ, Vivien BERGER) ; TRANSACTIONS 29 sans, 35 avec (6 anciens) ;
+  UTILISATEURS « Personne du registre » 34 sans, 167 avec. Cases remises décochées, tiroir refermé, rien d'enregistré.
