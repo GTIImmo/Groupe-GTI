@@ -46072,6 +46072,9 @@ function ContactDetailPopupBase(props: {
   initialEditing?: boolean
   backContext?: 'annonce' | 'annuaire'
   dataLoading?: boolean
+  // PARTENAIRES (05/11/2026, règle de Frédéric) : la fiche MÉTIER (syndic, diagnostiqueur, courtier, apporteur) ne s'ouvre
+  // que DEPUIS LE CATALOGUE DES MÉTIERS ; partout ailleurs, la fiche contact normale. Seul ce catalogue passe la valeur.
+  ouverture?: 'catalogue_metiers'
 }) {
   const [editing, setEditing] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -47221,8 +47224,12 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
   // PARTENAIRES, pièce 3.3a (05/11/2026) : un métier actif autre que notaire fait de la fiche une FICHE PARTENAIRE
   // (couleur et icône du métier, action propre au métier, menu réduit, bandeau d'archivage). La fiche notaire garde la main ;
   // la fiche client ne change pas (P4). Cran éteint ou lecture pas prête : la fiche d'avant, à l'identique.
-  const profilPartenaire = partenairesEcran && ficheCran && !estFicheNotaire && metiersPartenaire.etat === 'pret'
+  // ⛔ Règle du 05/11 : la PORTE choisit la fiche, pas le contact — une fiche client ne change jamais (41 clients sur 202
+  // avaient pris la fiche partenaire). Fiche métier seulement depuis le catalogue des métiers, et seulement pour les métiers
+  // connus (famille « autre » = société, administration… : pas de fiche dédiée).
+  const profilBrut = partenairesEcran && ficheCran && props.ouverture === 'catalogue_metiers' && !estFicheNotaire && metiersPartenaire.etat === 'pret'
     ? profilDuPartenaire(metiersPartenaire.lignes) : null
+  const profilPartenaire = profilBrut && profilBrut.famille !== 'autre' ? profilBrut : null
   // PARTENAIRES, pièce 3.3b (05/11/2026) : la partie droite du métier (chiffres, section, « À venir », « avec nous »), montrée
   // « en construction » ; rien pour la famille « autre ». Comme le notaire, la bande Recherche se cache sans recherche active
   // (pas pour « autre » : une société peut être acquéreur, elle garde « Ajouter une recherche »).

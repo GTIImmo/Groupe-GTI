@@ -109,9 +109,9 @@ controle("(30) plusieurs métiers : le principal suit l'ordre (courtier avant pa
 controle("(31) un métier sans action (société) : famille autre, pas de bouton", J(P(["societe"])) === J({ metier: "societe", famille: "autre", action: null, lot: null, libelles: ["Société"] }));
 controle("(32) un métier inconnu reste lisible, famille autre", P(["geometre_expert"]).famille === "autre" && P(["geometre_expert"]).libelles[0] === "Geometre expert");
 
-controle("(33) le cran `partenaires_fiche` ET le bloc métier ET pas fiche notaire ET lecture prête",
+controle("(33) le cran `partenaires_fiche` ET le bloc métier ET ouverte depuis le catalogue ET pas fiche notaire ET lecture prête",
   /useCranCouplesVisible\('partenaires_fiche', props\.profileRole\)/.test(app)
-  && /profilPartenaire = partenairesEcran && ficheCran && !estFicheNotaire && metiersPartenaire\.etat === 'pret'/.test(app));
+  && /profilBrut = partenairesEcran && ficheCran && props\.ouverture === 'catalogue_metiers' && !estFicheNotaire && metiersPartenaire\.etat === 'pret'/.test(app));
 controle("(34) la couleur : ty-<famille> (ty-partenaire pour « autre »), sinon la classe d'avant",
   /profilPartenaire\s*\?\s*`ty-\$\{profilPartenaire\.famille === 'autre' \? 'partenaire' : profilPartenaire\.famille\}`\s*:\s*primaryCategory === 'notaire'/.test(app));
 controle("(35) l'action du métier est montrée DÉSACTIVÉE (« bientôt »)", /className="fa-cx-act primary wide bientot" type="button" disabled/.test(app));
@@ -148,6 +148,14 @@ const fp = fs.readFileSync(path.resolve(__dirname, "src", "FichePartenaire.tsx")
 controle("(46) FichePartenaire : aucune lecture ni écriture (ni supabase, ni rpc, ni fetch)", !/supabase|\.rpc\(|fetch\(/.test(fp.replace(/^\/\/.*$/gm, "")));
 controle("(47) section, À venir et avec nous disent « en construction » ; les chiffres valent « — » (pas de faux zéro)",
   (fp.match(/<EnConstruction/g) || []).length === 3 && /aria-label="pas encore de données">—</.test(fp));
+
+// ── Règle du 05/11 : la PORTE choisit la fiche ; une fiche client ne change jamais ──
+controle("(48) la fiche métier n'existe que si la fiche est ouverte depuis le catalogue des métiers (propriété « ouverture »)",
+  /ouverture\?: 'catalogue_metiers'/.test(app) && (app.match(/catalogue_metiers/g) || []).length >= 2);
+controle("(49) famille « autre » (société, administration…) : pas de fiche dédiée",
+  /const profilPartenaire = profilBrut && profilBrut\.famille !== 'autre' \? profilBrut : null/.test(app));
+controle("(50) aucune autre porte ne passe « ouverture » (le catalogue n'existe pas encore : aucune fiche métier ne s'ouvre)",
+  !/ouverture="catalogue_metiers"|ouverture: 'catalogue_metiers'|ouverture=\{'catalogue_metiers'\}/.test(app));
 
 console.log(echecs.length ? `\n${echecs.length} contrôle(s) en échec` : "\nTout est vert.");
 process.exit(echecs.length ? 1 : 0);

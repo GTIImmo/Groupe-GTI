@@ -1761,6 +1761,27 @@ pour tout le monde (au rechargement). Retour arrière : `admin` ou `off`. **Suit
 - Non vu : le mode sombre ; un compte non admin.
 - **Suite : 3.3c** (Archiver et Supprimer sortis du menu, suppression avec case à cocher et raison).
 
+#### 26 ter. ⛔ LA PORTE CHOISIT LA FICHE — RÈGLE DE FRÉDÉRIC (05/11, après la mise en ligne de 3.3b)
+
+- **Le défaut** (vu par Frédéric sur PICARD) : 3.3a/3.3b décidaient la fiche d'après le CONTACT (un métier au registre ⇒
+  fiche partenaire). Mesure : sur 202 fiches partenaire, **41 sont des clients** — 31 à métier connu (17 mandants,
+  16 propriétaires, 2 acheteurs, 3 recherches actives ; ex. Michelle BONNET, courtier + mandante) et 10 « autre »
+  (PICARD, « société »). Leur fiche avait changé (couleur, menu, bouton du métier, blocs, Recherche cachée). Affichage
+  seulement : aucune donnée touchée.
+- **La règle, dans ses mots** : « une fiche contact pour nos clients, et une fiche notaire, une fiche syndic, une fiche
+  courtier, une fiche apporteur [+ diagnostiqueur, confirmé] et c'est tout ». Un contact lié à un métier est visible
+  **dans le catalogue des métiers, avec sa fiche dédiée** ; s'il est aussi client, **depuis la liste des clients on ouvre
+  sa fiche contact normale** (il apparaît donc aux deux endroits, de deux manières). **Le notaire est dans le catalogue** :
+  sa fiche dédiée est la fiche notaire d'aujourd'hui, inchangée. « Société n'est pas un métier. »
+- **Le correctif** : la fiche reçoit `ouverture='catalogue_metiers'` ; SEUL le catalogue (3.5) la passera. Sans elle, ou
+  pour la famille « autre », pas de fiche métier. Fiche notaire : rien ne change (ni sa fiche ni son ouverture).
+- ⚠ **Conséquence assumée** : tant que le catalogue (3.5) n'existe pas, aucune fiche syndic / diag / courtier / apporteur ne
+  s'ouvre ; 3.5 vient juste après.
+- Ce qui reste sur toutes les fiches : le bloc « Métier » (3.1, seulement si le contact a un métier) et « Changer le
+  métier » (3.2, au menu) — c'est par là qu'on range un contact dans le catalogue. À retirer si Frédéric le demande.
+- Essai : `test_metier_partenaire.cjs` 50/50 ; le contrôle (50) vérifie qu'aucune porte ne passe encore la valeur — à
+  changer avec 3.5.
+
 ### 7 ter. Les dépendances (techniques, pas un ordre décidé)
 
 - 0 avant tout le reste ; 0.1 avant B2 ; 0.2 avant B1 ; 0.6 avant B5 ; 0.3 avant B6 ; 0.4 avant B7 ; 0.5 avant C2.
