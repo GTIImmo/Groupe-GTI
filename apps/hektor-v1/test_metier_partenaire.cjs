@@ -154,8 +154,45 @@ controle("(48) la fiche métier n'existe que si la fiche est ouverte depuis le c
   /ouverture\?: 'catalogue_metiers'/.test(app) && (app.match(/catalogue_metiers/g) || []).length >= 2);
 controle("(49) famille « autre » (société, administration…) : pas de fiche dédiée",
   /const profilPartenaire = profilBrut && profilBrut\.famille !== 'autre' \? profilBrut : null/.test(app));
-controle("(50) aucune autre porte ne passe « ouverture » (le catalogue n'existe pas encore : aucune fiche métier ne s'ouvre)",
-  !/ouverture="catalogue_metiers"|ouverture: 'catalogue_metiers'|ouverture=\{'catalogue_metiers'\}/.test(app));
+controle("(50) UNE SEULE porte passe « ouverture » : l'écran Contacts, côté Partenaires (vueMetiers)",
+  (app.match(/ouverture=\{[^}]*catalogue_metiers[^}]*\}/g) || []).length === 1
+  && /ouverture=\{vueMetiers \? 'catalogue_metiers' : undefined\}/.test(app));
+
+// ── PIÈCE 3.5 : le catalogue des métiers ──
+let cat;
+try {
+  const { code } = esbuild.transformSync(fs.readFileSync(path.resolve(__dirname, "src", "lib", "cataloguePartenaires.ts"), "utf8"), { loader: "ts", format: "cjs" });
+  const module = { exports: {} };
+  vm.runInNewContext(code, { module, exports: module.exports });
+  cat = module.exports;
+} catch (e) { console.log(`⛔ ${e.message}`); process.exit(2); }
+const C = (id, extra = {}) => ({ hektor_contact_id: id, prenom: "", nom: `N${id}`, archive: false, ...extra });
+const reg = [
+  { contact_id: "1", metier: "syndic" }, { contact_id: "2", metier: "banque" }, { contact_id: "2", metier: "courtier" },
+  { contact_id: "3", metier: "parrain" }, { contact_id: "4", metier: "diagnostiqueur" }, { contact_id: "5", metier: "societe" },
+  { contact_id: "6", metier: "administration" }, { contact_id: "9", metier: "syndic" },
+];
+const cg = cat.construireCatalogue(reg, [C("1"), C("2"), C("3", { archive: "1" }), C("4"), C("5"), C("6")], [C("7"), C("8", { archive: true }), C("7")]);
+controle("(51) cinq tuiles et c'est tout (notaire, syndic, diag, courtier, apporteur)",
+  J(cat.TUILES_CATALOGUE.map((t) => t.tuile)) === J(["notaire", "syndic", "diag", "courtier", "apporteur"]) && J(Object.keys(cg).sort()) === J(["apporteur", "courtier", "diag", "notaire", "syndic"]));
+controle("(52) société et administration ne sont PAS au catalogue", ![].concat(...Object.values(cg).map((t) => [...t.actifs, ...t.archives])).some((l) => l.id === "5" || l.id === "6"));
+controle("(53) banque + courtier = une seule ligne, avec ses deux métiers", cg.courtier.actifs.length === 1 && J(cg.courtier.actifs[0].metiers) === J(["banque", "courtier"]));
+controle("(54) les archivés à part (« 1 », true)", cg.apporteur.archives.length === 1 && cg.apporteur.actifs.length === 0 && cg.notaire.archives.length === 1);
+controle("(55) un notaire en double n'est compté qu'une fois ; un contact sans fiche est ignoré (9)", cg.notaire.actifs.length === 1 && cg.syndic.actifs.length === 1);
+const lignes = [{ id: "1", nom: "Étude Durand", detail: "Firminy · 06", recherche: "etude durand firminy · 06" }, { id: "2", nom: "Martin", detail: "Lyon", recherche: "martin lyon" }];
+controle("(56) la recherche : chaque mot, accents ignorés, vide = tout", cat.filtrerCatalogue(lignes, "ÉTUDE firm").length === 1 && cat.filtrerCatalogue(lignes, " ").length === 2 && cat.filtrerCatalogue(lignes, "durand lyon").length === 0);
+controle("(57) le nom : prénom + nom, sinon le nom affiché, sinon « Contact N »",
+  cat.nomDuContact({ hektor_contact_id: "1", prenom: "Ana", nom: "B" }) === "Ana B" && cat.nomDuContact({ hektor_contact_id: "2", display_name: "SCI X" }) === "SCI X" && cat.nomDuContact({ hektor_contact_id: "3" }) === "Contact 3");
+controle("(58) l'annuaire : cran `partenaires_catalogue`, pastille Notaire retirée là où il est visible",
+  /useCranCouplesVisible\('partenaires_catalogue', props\.profileRole\)/.test(app) && /\{TYPE_NOTAIRE_ECRAN && !catalogueVisible \? <button/.test(app));
+controle("(59) la fiche du catalogue vient du catalogue (pas du 1er de la page des clients)",
+  /const ficheContact = vueMetiers && contactCatalogue && contactCatalogue\.hektor_contact_id !== props\.selectedContact\?\.hektor_contact_id/.test(app)
+  && /contact=\{ficheContact\}/.test(app));
+controle("(60) l'adresse garde « vue=metiers » ; « voir le contact » remet le côté clients",
+  /const CLES_ADRESSE = \['ecran', 'annonce', 'contact', 'vue'\]/.test(app) && /p\.set\('vue', 'metiers'\)/.test(app)
+  && /function showContactInDirectory\(normalizedId: string\) \{\s*setScreen\('contacts'\)\s*setContactsVue\('clients'\)/.test(app));
+const catTsx = fs.readFileSync(path.resolve(__dirname, "src", "CataloguePartenaires.tsx"), "utf8");
+controle("(61) le catalogue ne fait que LIRE (aucune écriture, aucune fonction appelée)", !/\.(insert|update|upsert|delete|rpc)\(/.test(catTsx));
 
 console.log(echecs.length ? `\n${echecs.length} contrôle(s) en échec` : "\nTout est vert.");
 process.exit(echecs.length ? 1 : 0);

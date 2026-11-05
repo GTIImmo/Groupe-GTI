@@ -1,0 +1,56 @@
+/* CHANTIER PARTENAIRES · PIÈCE 3.5 (05/11/2026) — le catalogue des métiers (CataloguePartenaires.tsx).
+   Dans .annuaire-v2 (police et encre de l'annuaire) ; une couleur par métier, celle de sa fiche (contact-detail-v2.css). */
+.annuaire-v2 .vue-switch{display:inline-flex;gap:4px;padding:4px;background:#fff;border:1px solid rgba(34,35,35,.1);border-radius:12px;box-shadow:0 1px 4px rgba(34,35,35,.05);align-self:flex-start;}
+.annuaire-v2 .vue-switch button{font:inherit;font-size:13.5px;font-weight:700;padding:8px 18px;border-radius:9px;border:0;background:transparent;color:#5a6263;cursor:pointer;}
+.annuaire-v2 .vue-switch button:hover{background:#f4f5f6;color:var(--gti-ink);}
+.annuaire-v2 .vue-switch button[aria-pressed="true"]{background:var(--gti-ink);color:#fff;}
+
+.cat-partenaires{display:flex;flex-direction:column;gap:14px;min-width:0;}
+.cat-head h1{margin:0;font-size:22px;font-weight:800;letter-spacing:-.01em;}
+.cat-head p{margin:4px 0 0;font-size:13.5px;color:#5a6263;}
+
+.cat-tiles{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;}
+.cat-tile{--tc:#3b4a8c;font:inherit;text-align:left;display:flex;flex-direction:column;gap:3px;padding:14px 16px;border-radius:14px;cursor:pointer;
+  background:#fff;border:1px solid rgba(34,35,35,.1);box-shadow:0 1px 4px rgba(34,35,35,.05);border-top:3px solid var(--tc);min-width:0;}
+.cat-tile:hover{background:color-mix(in srgb,var(--tc) 4%,#fff);}
+.cat-tile.on{background:color-mix(in srgb,var(--tc) 9%,#fff);border-color:color-mix(in srgb,var(--tc) 40%,rgba(34,35,35,.1));box-shadow:inset 0 -2px 0 var(--tc);}
+.cat-tile-n{font-size:24px;font-weight:800;color:var(--tc);font-variant-numeric:tabular-nums;line-height:1.1;}
+.cat-tile-l{font-size:13.5px;font-weight:800;color:var(--gti-ink);}
+.cat-tile-s{font-size:12px;color:#6b7273;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+.cat-list{background:#fff;border:1px solid rgba(34,35,35,.1);border-radius:14px;box-shadow:0 1px 4px rgba(34,35,35,.05);padding:14px 16px;min-width:0;}
+.cat-list-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:10px;}
+.cat-list-head h2{margin:0;font-size:16px;font-weight:800;color:var(--cat);}
+.cat-search input{font:inherit;font-size:13.5px;width:260px;max-width:100%;padding:8px 12px;border-radius:10px;border:1px solid rgba(34,35,35,.16);background:#fbfbfb;}
+.cat-search input:focus{outline:2px solid color-mix(in srgb,var(--cat) 45%,transparent);outline-offset:1px;background:#fff;}
+.cat-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;}
+
+.cat-rows{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;}
+.cat-rows li + li{border-top:1px solid rgba(34,35,35,.07);}
+.cat-row{font:inherit;width:100%;display:flex;align-items:center;gap:12px;padding:10px 6px;border:0;background:transparent;text-align:left;cursor:pointer;border-radius:10px;color:var(--gti-ink);}
+.cat-row:hover{background:color-mix(in srgb,var(--cat) 6%,#fff);}
+.cat-row:disabled{cursor:progress;}
+.cat-row.archive{opacity:.72;}
+.cat-av{flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:800;color:#fff;background:var(--cat);}
+.cat-who{display:flex;flex-direction:column;min-width:0;flex:1;}
+.cat-name{font-size:14px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.cat-detail{font-size:12.5px;color:#6b7273;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.cat-tags{display:flex;gap:4px;flex:none;}
+.cat-tag{font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:99px;background:color-mix(in srgb,var(--cat) 12%,#fff);color:var(--cat);}
+.cat-arch{flex:none;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:99px;background:rgba(34,35,35,.07);color:#5a6263;}
+.cat-go{flex:none;font-size:18px;color:#9aa0a1;width:14px;text-align:center;}
+
+.cat-archives{margin-top:10px;border-top:1px dashed rgba(34,35,35,.14);padding-top:10px;}
+.cat-archives-btn{font:inherit;font-size:13px;font-weight:700;padding:7px 12px;border-radius:9px;border:1px solid rgba(34,35,35,.14);background:#fff;color:#3b4143;cursor:pointer;}
+.cat-archives-btn:hover{background:#f4f5f6;}
+.cat-empty{padding:18px 6px;font-size:13.5px;color:#6b7273;}
+.cat-error{padding:10px 12px;border-radius:10px;background:#fdecec;color:#8a1c1c;font-size:13px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+.cat-error button{font:inherit;font-size:12.5px;font-weight:700;border:1px solid currentColor;background:transparent;color:inherit;border-radius:8px;padding:3px 10px;cursor:pointer;}
+
+@media (max-width: 1100px){ .cat-tiles{grid-template-columns:repeat(3,minmax(0,1fr));} }
+@media (max-width: 640px){
+  .cat-tiles{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .cat-tags{display:none;}
+  .cat-search input{width:100%;}
+  .cat-list-head label{flex:1 1 100%;}
+}

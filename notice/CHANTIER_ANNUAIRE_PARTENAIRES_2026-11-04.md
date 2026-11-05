@@ -1806,7 +1806,24 @@ pour tout le monde (au rechargement). Retour arrière : `admin` ou `off`. **Suit
   normale).
 - ✅ **Décision de Frédéric (05/11)** : **la pastille « Notaire » sort de la liste des clients** (« je la retire ») — retirée
   seulement là où le catalogue est visible (même cran), pour ne jamais perdre l'accès aux notaires.
-- ⬜ À confirmer : les archivés à part, les actifs d'abord.
+- ✅ Confirmé (« Oui, vas-y ») : les actifs d'abord, les archivés à part (bouton « Voir les archivés (n) »).
+
+#### 26 quinquies. PIÈCE 3.5 — CODÉE (05/11), derrière le cran `partenaires_catalogue` (pas encore posé = éteint)
+
+- `lib/cataloguePartenaires.ts` (règles pures : 5 tuiles, banque→courtier, parrain→apporteur, société/administration
+  dehors, actifs/archivés, recherche sans accents), `CataloguePartenaires.tsx` (lecture seule : registre + fiches ;
+  notaires = rôle notaire, règle actuelle, lus par pages de 1 000), `catalogue-partenaires.css`.
+- Écran Contacts : interrupteur « Clients | Partenaires » (cran visible seulement) ; côté Clients = la liste d'avant ;
+  côté Partenaires = le catalogue. Un clic lit la fiche COMPLÈTE (`select *`) et l'ouvre avec
+  `ouverture='catalogue_metiers'`. ⚠ Pourquoi pas par le numéro seul : `selectedContact` vient de la PAGE de la liste
+  des clients et retombe sur son 1er contact si le numéro n'y est pas (App.tsx, `contactsDirectory.find(...) ?? [0]`).
+- Adresse : clé `vue=metiers` ajoutée ; un rechargement garde le côté Partenaires et la fiche métier ;
+  `showContactInDirectory` (« voir le contact » depuis une annonce…) remet toujours le côté Clients.
+- Pastille « Notaire » retirée de la liste des clients LÀ OÙ le cran est visible ; un filtre « notaire » mémorisé est remis
+  à « Tous ».
+- ⚠ **Le téléphone** a son propre écran de contacts (`MobileContactCards`, sans pastilles) : **pas de catalogue au
+  téléphone** dans cette pièce → les fiches syndic / diag / courtier / apporteur n'y sont pas accessibles (K7).
+- Essai `test_metier_partenaire.cjs` **61/61** (11 nouveaux, dont (50) : une seule porte passe la fiche métier).
 
 ### 7 ter. Les dépendances (techniques, pas un ordre décidé)
 

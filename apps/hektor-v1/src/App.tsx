@@ -261,6 +261,7 @@ import { FICHE_NOTAIRE_V2, NotaireAVenir, NotaireDossiers, NotaireInterlocuteurs
 import { BlocMetierPartenaire, FenetreMetierPartenaire, useMetiersPartenaire } from './MetierPartenaire'
 import { blocsDuPartenaire, profilDuPartenaire } from './lib/metierPartenaire'
 import { PartenaireAVenir, PartenaireAvecNous, PartenaireChiffres, PartenaireSectionMetier } from './FichePartenaire'
+import CataloguePartenaires from './CataloguePartenaires'
 import NotificationsBell from './NotificationsBell'
 import SanteSystemeScreen from './SanteSystemeScreen'
 import RegistreTransactionsScreen, { type GesteDuRegistre } from './RegistreTransactionsScreen'
@@ -13488,7 +13489,9 @@ const ADRESSE_VERS_ECRAN: Record<string, Screen> = {
   accueil: 'accueil', annonces: 'mandats', estimations: 'estimations', mandats: 'registre',
   contacts: 'contacts', agenda: 'agenda', suivi: 'suivi', sante: 'sante', transactions: 'transactions', pilotage: 'pilotage',
 }
-const CLES_ADRESSE = ['ecran', 'annonce', 'contact'] as const
+// PARTENAIRES 3.5 (05/11/2026) : `vue=metiers` = le côté « Partenaires » de l'annuaire (le catalogue des métiers) ; une fiche
+//   rouverte par l'adresse y garde sa fiche métier.
+const CLES_ADRESSE = ['ecran', 'annonce', 'contact', 'vue'] as const
 
 // ⛔ 26/10/2026 -- POINT 2 : CHAQUE ECRAN GARDE SA MEMOIRE (choix « A » de Frederic).
 //   Un seul jeu de filtres pour toute l'app, remis a zero par openScreen a chaque changement
@@ -16205,6 +16208,8 @@ export default function App() {
   // La fiche contact de l'ecran Contacts est un etat LOCAL du composant : il nous previent.
   const [contactFicheOuverte, setContactFicheOuverte] = useState(false)
   const [contactFermerSignal, setContactFermerSignal] = useState(0)
+  // PARTENAIRES 3.5 (05/11/2026) : le côté de l'annuaire, « clients » (la liste d'aujourd'hui) ou « metiers » (le catalogue).
+  const [contactsVue, setContactsVue] = useState<'clients' | 'metiers'>('clients')
   const restaurationAdresseRef = useRef<{ cible: string; jusqua: number } | null>(null)
   const ficheDemandeeParAdresseRef = useRef<number | null>(null)
   const adresseVoulue = useMemo(() => {
@@ -16213,8 +16218,9 @@ export default function App() {
     if (detailOpen && selectedDossierId != null) p.set('annonce', String(selectedDossierId))
     if (detailOpen && annonceContactId) p.set('contact', annonceContactId)
     else if (screen === 'contacts' && contactFicheOuverte && selectedContactId) p.set('contact', selectedContactId)
+    if (!detailOpen && screen === 'contacts' && contactsVue === 'metiers') p.set('vue', 'metiers')
     return p.toString()
-  }, [screen, detailOpen, selectedDossierId, annonceContactId, contactFicheOuverte, selectedContactId])
+  }, [screen, detailOpen, selectedDossierId, annonceContactId, contactFicheOuverte, selectedContactId, contactsVue])
 
   // Garde les parametres qui ne sont pas a nous ; remplace les trois notres.
   function fusionnerAdresse(searchActuel: string, notre: string) {
@@ -16260,6 +16266,8 @@ export default function App() {
       } else if (contactFicheOuverte) {
         setContactFermerSignal((n) => n + 1)
       }
+      // PARTENAIRES 3.5 : le côté de l'annuaire suit l'adresse (APRÈS showContactInDirectory, qui remet « clients »).
+      setContactsVue(p.get('vue') === 'metiers' ? 'metiers' : 'clients')
       return true
     }
     if (Number.isFinite(annonce) && annonce > 0) {
@@ -16558,6 +16566,7 @@ export default function App() {
   // SANS la garde détail-ouvert. Réutilisé par le retour depuis le détail dossier.
   function showContactInDirectory(normalizedId: string) {
     setScreen('contacts')
+    setContactsVue('clients') // PARTENAIRES 3.5 : « voir le contact » ouvre toujours la fiche CLIENT
     setDetailOpen(false)
     setSelectedContactId(normalizedId)
     setContactDirectLookupId(normalizedId)
@@ -26593,6 +26602,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             openContactId={contactDirectLookupId}
             onDetailOpenChange={setContactFicheOuverte}
             closeSignal={contactFermerSignal}
+            vue={contactsVue}
+            onVueChange={setContactsVue}
             loading={contactsLoading}
             hasActiveFilters={activeFilters.length > 0}
             createOpen={contactCreateOpen}
@@ -48880,9 +48891,26 @@ function ContactsScreen(props: {
   // fermer sur un « precedent ». Les boutons de la fiche ne changent pas.
   onDetailOpenChange?: (open: boolean) => void
   closeSignal?: number
+  // PARTENAIRES 3.5 (05/11/2026) : le côté de l'annuaire (« clients » = la liste d'aujourd'hui, « metiers » = le catalogue).
+  vue?: 'clients' | 'metiers'
+  onVueChange?: (vue: 'clients' | 'metiers') => void
 }) {
   const formatNumber = new Intl.NumberFormat('fr-FR')
   const listingTotalLabel = `${formatNumber.format(props.contactsTotal)} contacts`
+  // PARTENAIRES 3.5 (05/11/2026, règles de Frédéric) : le catalogue des métiers, derrière le cran `partenaires_catalogue`.
+  //   Une fiche ouverte depuis le catalogue reçoit `ouverture='catalogue_metiers'` (fiche syndic / diag / courtier /
+  //   apporteur ; notaire = la fiche notaire d'aujourd'hui). La pastille « Notaire » quitte la liste des clients LÀ OÙ le
+  //   catalogue est visible (« je la retire »). Cran éteint : l'annuaire d'avant, à l'identique.
+  const catalogueVisible = useCranCouplesVisible('partenaires_catalogue', props.profileRole)
+  const vueMetiers = catalogueVisible && props.vue === 'metiers'
+  // La liste des clients ne connaît pas les contacts du catalogue (props.selectedContact retomberait sur le 1er de la page) :
+  // le catalogue rend la fiche COMPLÈTE qu'il a lue ; liens et recherches se chargent déjà par le numéro choisi.
+  const [contactCatalogue, setContactCatalogue] = useState<AppContact | null>(null)
+  const ficheContact = vueMetiers && contactCatalogue && contactCatalogue.hektor_contact_id !== props.selectedContact?.hektor_contact_id
+    ? contactCatalogue : props.selectedContact
+  const surFiltreNotaire = catalogueVisible && props.activeRole === 'notaire'
+  const onSelectRole = props.onSelectRole
+  useEffect(() => { if (surFiltreNotaire) onSelectRole?.('') }, [surFiltreNotaire, onSelectRole])
   const [detailOpen, setDetailOpen] = useState(false)
   const [detailInitialEditing, setDetailInitialEditing] = useState(false)
   useEffect(() => {
@@ -48983,6 +49011,20 @@ function ContactsScreen(props: {
           </ContactWorkflowModal>
         ) : null}
 
+        {catalogueVisible ? (
+          <div className="vue-switch" role="group" aria-label="Côté de l'annuaire">
+            <button type="button" aria-pressed={!vueMetiers} onClick={() => props.onVueChange?.('clients')}>Clients</button>
+            <button type="button" aria-pressed={vueMetiers} onClick={() => props.onVueChange?.('metiers')}>Partenaires</button>
+          </div>
+        ) : null}
+        {vueMetiers ? (
+          <CataloguePartenaires onOuvrir={(contact) => {
+            setContactCatalogue(contact)
+            props.onSelectContact(contact.hektor_contact_id)
+            setDetailInitialEditing(false)
+            setDetailOpen(true)
+          }} />
+        ) : (<>
         <div className="segments">
           <button type="button" className={`seg ${activeRole === '' && !props.searchActive ? 'active' : ''}`} onClick={() => { if (props.searchActive) props.onToggleSearchActive?.(); selectRole('') }}><span>Tous</span><span className="cnt">{formatNumber.format(props.contactsTotal)}</span></button>
           <button type="button" className={`seg ${activeRole === 'proprietaire' && !props.searchActive ? 'active' : ''}`} onClick={() => { if (props.searchActive) props.onToggleSearchActive?.(); selectRole('proprietaire') }}><span className="dot" style={{ background: '#c2701a' }} /><span>Propriétaires</span></button>
@@ -48990,7 +49032,7 @@ function ContactsScreen(props: {
           <button type="button" className={`seg ${activeRole === 'acquereur' && !props.searchActive ? 'active' : ''}`} onClick={() => { if (props.searchActive) props.onToggleSearchActive?.(); selectRole('acquereur') }}><span className="dot" style={{ background: '#2f8a5b' }} /><span>Acheteurs</span></button>
           <button type="button" className={`seg ${props.searchActive ? 'active' : ''}`} onClick={() => { props.onSelectRole?.(''); props.onToggleSearchActive?.() }}><span className="dot" style={{ background: '#2f7c86' }} /><span>Acquéreurs</span></button>
           {/* ⑧ notaire, étape 3 (28/10) : la pastille visible de l'annuaire -- même filtre que les menus (contactRoleFilterValues : les deux côtés) */}
-          {TYPE_NOTAIRE_ECRAN ? <button type="button" className={`seg ${activeRole === 'notaire' && !props.searchActive ? 'active' : ''}`} onClick={() => { if (props.searchActive) props.onToggleSearchActive?.(); selectRole('notaire') }}><span className="dot" style={{ background: '#3b4a8c' }} /><span>Notaires</span></button> : null}
+          {TYPE_NOTAIRE_ECRAN && !catalogueVisible ? <button type="button" className={`seg ${activeRole === 'notaire' && !props.searchActive ? 'active' : ''}`} onClick={() => { if (props.searchActive) props.onToggleSearchActive?.(); selectRole('notaire') }}><span className="dot" style={{ background: '#3b4a8c' }} /><span>Notaires</span></button> : null}
           <div className="seg-sep" />
           <button type="button" className={`seg-sub mandat ${sousMandatOn ? 'on' : ''}`} onClick={() => setSousMandatOn((value) => !value)}>{AV_ICONS.mandat}Sous mandat</button>
           <button type="button" className={`seg-sub search ${props.searchActive ? 'on' : ''}`} onClick={() => props.onToggleSearchActive?.()}>{AV_ICONS.search}Recherche active</button>
@@ -49126,11 +49168,13 @@ function ContactsScreen(props: {
             </div>
           )}
         </div>
+        </>)}
       </div>
-      {detailOpen && props.selectedContact ? (
+      {detailOpen && ficheContact ? (
         <ContactDetailPopup
-          key={props.selectedContact.hektor_contact_id}
-          contact={props.selectedContact}
+          key={ficheContact.hektor_contact_id}
+          contact={ficheContact}
+          ouverture={vueMetiers ? 'catalogue_metiers' : undefined}
           relations={props.selectedRelations}
           searches={props.selectedSearches}
           dataLoading={props.selectedSearchesLoading}
