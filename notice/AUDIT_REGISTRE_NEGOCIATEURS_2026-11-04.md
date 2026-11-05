@@ -749,3 +749,33 @@ Le plan des menus (§27) continue SANS agences.
   crée un RDV) est ramené à sa boîte s'il en différait. Admin et manager inchangés.
 - Build vert. ⏳ À pousser. ⏳ Reste le gros morceau : les FILTRES « Négociateur » (tout le monde pour tous, case « afficher
   les anciens ») et la même case dans Pilotage, Transactions, Utilisateurs.
+
+## 30. « SES BIENS » DEVIENT UN PRÉFILTRE RETIRABLE ; LE FILTRE « NÉGOCIATEUR » POUR TOUS (05/11) — Frédéric : « vas y »
+
+**Le constat** : depuis la 1re version de l'app (07/04/2026), un compte `commercial` avait une BARRIÈRE d'écran
+(`dataScope` = son e-mail) sur toutes ses listes — alors que la base lui ouvre le réseau depuis le chantier ② (12/10,
+réglage « Tout le réseau »). Ce n'était pas une décision : un reste. Son filtre « Négociateur » ne montrait que lui.
+
+**Le code** (`App.tsx`) :
+- `listScope` remplace `dataScope` pour les LISTES (annonces, mandats, contacts, travaux), leurs compteurs, la présence
+  des diffusions, « annonces ailleurs ». `dataScope` reste la barrière des usages internes (bien d'un travail, saisie des
+  mandants, menus de saisie = son nom d'office).
+- Préfiltre « Mes biens » / « Mes contacts » en tête du filtre « Négociateur » pour un négociateur, actif à l'ouverture ;
+  « Tous » ou un collègue le retire ; « Réinitialiser » le remet. La recherche globale porte sur le réseau.
+- ⛔ **Le réglage du compte est respecté** (question de Frédéric) : un compte « Son agence » ou « Ses biens seulement »
+  garde la barrière d'écran (son préfiltre ne se retire pas), ET la base l'applique de toute façon — vérifié le 05/11 :
+  `app_dossiers_current`, `app_contacts_current`, `app_work_items_current` sont en `security_invoker`, et les règles des
+  tables (`app_dossier_current`, `app_contact_current`) lisent `app_perimetre_courant()`. Aujourd'hui les 8 comptes sont
+  « réseau ».
+- Le filtre « Négociateur » (7 endroits, une seule fonction `renderFiltreNegociateur`) : le catalogue est construit sur
+  tout ce que la base laisse voir ; les noms qui ne sont plus actifs au registre (`loadNomsNegociateursActifs`) ne
+  paraissent qu'avec la case « Afficher les anciens » ; la valeur en place reste proposée. Mesuré : 41 noms portés par les
+  biens → 34 par défaut, +7 avec la case (Aline VALETTE, Cyril LACHAIZE, Groupe GTI, gti immobilier, Pierrick MARTINEZ,
+  Vincent-Lucas GONZALEZ, Vivien BERGER). Lecture ratée du registre → tous les noms montrés.
+- Build vert. ⏳ À pousser, puis voir à l'écran (admin : la case ; un négociateur : « Mes biens » retirable).
+
+**⛔ Trouvé en vérifiant, PAS corrigé (écriture en base, accord requis)** : la vue `app_registre_mandats_current` n'est PAS en
+`security_invoker` et `authenticated` a le droit de la lire → elle lit `app_mandat_register_current` (règle : admin et
+manager seulement) avec les droits de son propriétaire. L'ÉCRAN du registre est réservé admin/manager, mais un compte
+négociateur peut lire tout le registre par l'API. Remède : `alter view … set (security_invoker = true)` — à mesurer avant
+(qui la lit : `loadMandatRegisterPage`, `loadMandatFilterCatalog`…).

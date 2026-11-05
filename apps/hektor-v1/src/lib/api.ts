@@ -8511,6 +8511,23 @@ export type RegistreLien = {
 
 export type RegistrePersonneChoix = { id: number; nom: string; email: string | null; type: string; actif: boolean; appUserId: string | null }
 
+/** 05/11/2026 (audit §30) : les NOMS des négociateurs ACTIFS du registre (fiches actives et personnes actives), pour que le
+ *  filtre « Négociateur » range les autres noms portés par les fiches parmi les « anciens ». Une lecture ratée lève : l'écran
+ *  montre alors tous les noms (rien n'est caché sur une lecture incomplète). */
+export async function loadNomsNegociateursActifs(): Promise<string[]> {
+  if (!hasSupabaseEnv || !supabase) return []
+  const [fiches, personnes] = await Promise.all([
+    supabase.from('app_negociateur_fiche').select('nom_vu').eq('sorte', 'fiche_negociateur').eq('actif_chez_hektor', true).limit(1000),
+    supabase.from('app_negociateur_personne').select('nom').eq('actif', true).neq('type_personne', 'agence').limit(2000),
+  ])
+  if (fiches.error) throw new Error(fiches.error.message)
+  if (personnes.error) throw new Error(personnes.error.message)
+  const noms = [...((fiches.data ?? []) as Array<{ nom_vu?: string | null }>).map((f) => f.nom_vu ?? ''),
+    ...((personnes.data ?? []) as Array<{ nom?: string | null }>).map((p) => p.nom ?? '')]
+  if (!noms.some((nom) => nom.trim())) throw new Error('registre des négociateurs vide')
+  return noms.filter((nom) => nom.trim())
+}
+
 /** Les personnes du registre des negociateurs, pour le choix de l'outil « Utilisateurs » (lecture, comptes actifs). */
 export async function loadRegistrePersonnes(): Promise<RegistrePersonneChoix[]> {
   if (!hasSupabaseEnv || !supabase) return []

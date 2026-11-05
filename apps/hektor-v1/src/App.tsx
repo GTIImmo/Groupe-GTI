@@ -47,6 +47,7 @@ import {
   loadHektorAgencyOptions,
   loadHektorNegotiatorOptions,
   loadRegistrePersonnes,
+  loadNomsNegociateursActifs,
   texteRegistreLien,
   type RegistrePersonneChoix,
   loadNegotiatorOptionForContact,
@@ -256,6 +257,7 @@ import { FICHE_NOTAIRE_V2, NotaireAVenir, NotaireDossiers, NotaireInterlocuteurs
 import NotificationsBell from './NotificationsBell'
 import SanteSystemeScreen from './SanteSystemeScreen'
 import RegistreTransactionsScreen, { type GesteDuRegistre } from './RegistreTransactionsScreen'
+import { cleNom } from './lib/pilotage'
 import PilotageScreen from './PilotageScreen'
 import { bvBoot } from './lib/bienvuBoot'
 import { APP_BIENVU_ENABLED } from './lib/bienvuFlag'
@@ -325,6 +327,8 @@ function hasHektorNegotiator(dossier: HektorNegotiatorRequiredDossier) {
 }
 
 const allFilterValue = '__all__'
+/** 05/11/2026 : la valeur du filtre « Négociateur » qui veut dire « mes biens » (le préfiltre d'un négociateur). */
+const PREFILTRE_MES_BIENS = '__mes_biens__'
 const activeArchiveFilterValue = '__active__'
 const archivedFilterValue = '__archived__'
 const brouillonFilterValue = '__brouillon__'
@@ -14462,6 +14466,19 @@ export default function App() {
     if (profile?.role !== 'commercial') return undefined
     return { negotiatorEmail: sessionEmail || null }
   }, [profile?.role, sessionEmail])
+  // ⭐ 05/11/2026 (audit §30, Frédéric) : « ses biens » devient un PRÉFILTRE qu'il peut retirer (« Tous », un collègue), au lieu
+  //   d'une barrière posée le 07/04 quand un négociateur ne voyait que ses biens. `dataScope` reste la barrière des usages
+  //   internes (retrouver le bien d'un travail, saisie des mandants, menus de saisie) ; `listScope` sert aux LISTES, à leurs
+  //   compteurs et à la recherche. ⛔ Un compte réglé sur « Son agence » ou « Ses biens seulement » (case de l'outil
+  //   Utilisateurs) garde la barrière : son préfiltre ne se retire pas. La base l'applique de toute façon (vues en
+  //   security_invoker, règles app_perimetre_courant) -- l'écran ne fait que rester cohérent avec elle.
+  const [prefiltreMesBiens, setPrefiltreMesBiens] = useState(true)
+  const perimetreReseau = (profile?.perimetre ?? 'reseau') === 'reseau'
+  const prefiltreActif = Boolean(dataScope) && (prefiltreMesBiens || !perimetreReseau)
+  const listScope = useMemo<DataScope | undefined>(() => (prefiltreActif ? dataScope : undefined), [prefiltreActif, dataScope])
+  // Le filtre « Négociateur » (05/11) : tout le monde, la case « afficher les anciens » (ceux qui portent encore des fiches).
+  const [voirAnciensNegos, setVoirAnciensNegos] = useState(false)
+  const [nomsNegosActifs, setNomsNegosActifs] = useState<Set<string> | null>(null)
   const draftNegotiatorOptions = useMemo(() => {
     const selectedAgency = draftAnnonceAgency.trim()
     return hektorNegotiators.filter((item) => {
@@ -14693,10 +14710,12 @@ export default function App() {
       setBootLoading(false)
     }
 
-    Promise.all([loadFilterCatalog(dataScope), loadMandatFilterCatalog(dataScope).catch(() => null)])
+    Promise.all([loadFilterCatalog(perimetreReseau ? undefined : dataScope), loadMandatFilterCatalog(perimetreReseau ? undefined : dataScope).catch(() => null)])
       .then(([catalog, mandatCatalog]) => setFilterCatalog(mandatCatalog ? mergeCatalog(catalog, { ...emptyFilterCatalog, ...mandatCatalog }) : catalog))
       .catch(() => setFilterCatalog(emptyFilterCatalog))
       .finally(() => setCatalogLoading(false))
+    // 05/11/2026 : les noms actifs du registre, pour la case « afficher les anciens » (lecture ratée = tous les noms montrés)
+    loadNomsNegociateursActifs().then((noms) => setNomsNegosActifs(new Set(noms.map((nom) => cleNom(nom)).filter(Boolean))), () => setNomsNegosActifs(null))
   }
 
   useEffect(() => {
@@ -14843,8 +14862,8 @@ export default function App() {
     if (screen === 'contacts') return
     let cancelled = false
     const statsPromise = screen === 'registre'
-      ? loadMandatRegisterStats({ ...dataFilters, mandat: withMandatFilterValue }, dataScope)
-      : loadMandatStats(dataFilters, dataScope)
+      ? loadMandatRegisterStats({ ...dataFilters, mandat: withMandatFilterValue }, listScope)
+      : loadMandatStats(dataFilters, listScope)
     statsPromise
       .then((stats) => {
         if (!cancelled) setMandatStats(stats)
@@ -14855,13 +14874,13 @@ export default function App() {
     return () => {
       cancelled = true
     }
-  }, [session, dataFilters, dataScope, screen])
+  }, [session, dataFilters, listScope, screen])
 
   useEffect(() => {
     if (hasSupabaseEnv && !session) return
     if (screen === 'contacts') return
     let cancelled = false
-    loadSuiviRequestStats(dataFilters, dataScope)
+    loadSuiviRequestStats(dataFilters, listScope)
       .then((stats) => {
         if (!cancelled) setSuiviRequestStats(stats)
       })
@@ -14871,13 +14890,13 @@ export default function App() {
     return () => {
       cancelled = true
     }
-  }, [session, dataFilters, dataScope, screen])
+  }, [session, dataFilters, listScope, screen])
 
   useEffect(() => {
     if (hasSupabaseEnv && !session) return
     if (screen === 'contacts') return
     let cancelled = false
-    loadCommercialRequestStats(dataFilters, dataScope)
+    loadCommercialRequestStats(dataFilters, listScope)
       .then((stats) => {
         if (!cancelled) setCommercialRequestStats(stats)
       })
@@ -14887,7 +14906,7 @@ export default function App() {
     return () => {
       cancelled = true
     }
-  }, [session, dataFilters, dataScope, screen])
+  }, [session, dataFilters, listScope, screen])
 
   // 11/10 (Frédéric, méthode C) : un travail terminé ne recharge l'écran QUE s'il le concerne.
   // Avant, la fin de N'IMPORTE QUEL travail suivi (y compris celui d'un collègue sur une autre
@@ -15408,7 +15427,7 @@ export default function App() {
           page: 1,
           pageSize: contactPageSize,
         }))
-      : loadContactsPage({ filters: dataFilters, page: contactPage, pageSize: contactPageSize, scope: dataScope, couples: contactsCouplesVisible })
+      : loadContactsPage({ filters: dataFilters, page: contactPage, pageSize: contactPageSize, scope: listScope, couples: contactsCouplesVisible })
     contactsPromise
       .then((contactsPage) => {
         if (cancelled) return
@@ -15443,7 +15462,7 @@ export default function App() {
     return () => {
       cancelled = true
     }
-  }, [session, dataFilters, dataScope, screen, contactPage, contactDirectLookupId, dataReloadKey, contactsCouplesCran, contactsCouplesVisible])
+  }, [session, dataFilters, listScope, screen, contactPage, contactDirectLookupId, dataReloadKey, contactsCouplesCran, contactsCouplesVisible])
 
   // Chargement autonome de la fiche contact affichée en pop-up par-dessus une annonce.
   // Dépend de dataReloadKey (comme la source « listing », effet selectedContact) pour que
@@ -15574,7 +15593,7 @@ export default function App() {
     if (screen === 'contacts') return
     let cancelled = false
     // POINT 7c : la cle d'une vue = tout ce qui fait partir cette lecture, sauf la relecture (dataReloadKey).
-    const cleVue = JSON.stringify([session?.user?.id ?? null, screen, dataFilters, dossierPage, mandatPage, workItemPage, dataScope ?? null])
+    const cleVue = JSON.stringify([session?.user?.id ?? null, screen, dataFilters, dossierPage, mandatPage, workItemPage, listScope ?? null])
     if (LISTE_DEJA_VUE) {
       const precedente = vueAfficheeRef.current
       if (precedente?.cle !== cleVue) {
@@ -15614,15 +15633,15 @@ export default function App() {
     const nextMandatPage = screen === 'suivi' ? 1 : mandatPage
     const nextMandatPageSize = screen === 'suivi' ? 1000 : mandatPageSize
     const lightweightAnnonceListing = (screen === 'annonces' || screen === 'mandats') && usesLightweightAnnonceIndex(dataFilters)
-    const dossiersPromise = loadDossiersPage({ filters: dataFilters, page: dossierPage, pageSize: dossierPageSize, scope: dataScope })
+    const dossiersPromise = loadDossiersPage({ filters: dataFilters, page: dossierPage, pageSize: dossierPageSize, scope: listScope })
     const mandatsPromise = screen === 'annonces' && lightweightAnnonceListing
       ? Promise.resolve({ rows: [] as MandatRecord[], total: 0, page: nextMandatPage, pageSize: nextMandatPageSize })
       : screen === 'registre'
-        ? loadMandatRegisterPage({ filters: { ...dataFilters, mandat: withMandatFilterValue }, page: nextMandatPage, pageSize: nextMandatPageSize, scope: dataScope })
-        : loadMandatsPage({ filters: dataFilters, page: nextMandatPage, pageSize: nextMandatPageSize, scope: dataScope })
+        ? loadMandatRegisterPage({ filters: { ...dataFilters, mandat: withMandatFilterValue }, page: nextMandatPage, pageSize: nextMandatPageSize, scope: listScope })
+        : loadMandatsPage({ filters: dataFilters, page: nextMandatPage, pageSize: nextMandatPageSize, scope: listScope })
     const workItemsPromise = lightweightAnnonceListing
       ? Promise.resolve({ rows: [] as WorkItem[], total: 0, page: workItemPage, pageSize: workItemPageSize })
-      : loadWorkItemsPage({ filters: dataFilters, page: workItemPage, pageSize: workItemPageSize, scope: dataScope })
+      : loadWorkItemsPage({ filters: dataFilters, page: workItemPage, pageSize: workItemPageSize, scope: listScope })
 
     mandatsPromise
       .then((nextMandatsPage) => {
@@ -15686,7 +15705,7 @@ export default function App() {
     return () => {
       cancelled = true
     }
-  }, [session, dataFilters, dossierPage, mandatPage, workItemPage, dataScope, screen, dataReloadKey])
+  }, [session, dataFilters, dossierPage, mandatPage, workItemPage, listScope, screen, dataReloadKey])
 
   useEffect(() => {
     if (selectedDossierId == null) return
@@ -16131,7 +16150,37 @@ export default function App() {
     setContactPage(1)
   }
 
+  // Le filtre « Négociateur » des listes (05/11/2026, audit §30) : « Mes biens » / « Mes contacts » en tête pour un
+  //   négociateur (le préfiltre, retirable s'il voit tout le réseau), puis tout le monde ; les anciens -- noms portés par des
+  //   fiches mais plus actifs au registre -- seulement avec la case. La valeur en place reste toujours proposée.
+  function renderFiltreNegociateur() {
+    const estNegociateur = Boolean(dataScope)
+    const libelleMoi = screen === 'contacts' ? 'Mes contacts' : 'Mes biens'
+    const noms = filterCatalog.commercials.filter((nom) => voirAnciensNegos || !nomsNegosActifs || nomsNegosActifs.has(cleNom(nom)) || nom === filters.commercial)
+    const valeur = prefiltreActif ? PREFILTRE_MES_BIENS : filters.commercial
+    return (
+      <>
+        <FilterSelect
+          label="Negociateur"
+          value={valeur}
+          onChange={(value) => {
+            if (value === PREFILTRE_MES_BIENS) { setPrefiltreMesBiens(true); updateFilter('commercial', allFilterValue); return }
+            if (estNegociateur && !perimetreReseau) return
+            setPrefiltreMesBiens(false)
+            updateFilter('commercial', value)
+          }}
+          options={[...(estNegociateur ? [{ value: PREFILTRE_MES_BIENS, label: libelleMoi }] : []), { value: withoutCommercialFilterValue, label: 'Sans' }, ...noms]}
+        />
+        <label className="checkbox-inline">
+          <input type="checkbox" checked={voirAnciensNegos} onChange={(event) => setVoirAnciensNegos(event.target.checked)} />
+          Afficher les anciens
+        </label>
+      </>
+    )
+  }
+
   function resetFilters() {
+    setPrefiltreMesBiens(true)
     setAnnonceSearchScope('current')
     setContactDirectLookupId(null)
     setFilters(defaultFiltersForScreen(screen))
@@ -20621,11 +20670,11 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     : null
   // POINT 4 (26/10/2026) : « ET AILLEURS ? » -- compte en parallele de la liste, jamais devant elle.
   const [annoncesAilleurs, setAnnoncesAilleurs] = useState<{ cle: string; valeur: AnnoncesAilleurs | null } | null>(null)
-  const cleAilleurs = RECHERCHE_GLOBALE && canExtendAnnonceSearch ? JSON.stringify([dataFilters, dataScope]) : ''
+  const cleAilleurs = RECHERCHE_GLOBALE && canExtendAnnonceSearch ? JSON.stringify([dataFilters, listScope]) : ''
   useEffect(() => {
     if (!cleAilleurs) return
     let annule = false
-    compterAnnoncesAilleurs({ filters: dataFilters, scope: dataScope })
+    compterAnnoncesAilleurs({ filters: dataFilters, scope: listScope })
       .then((valeur) => { if (!annule) setAnnoncesAilleurs({ cle: cleAilleurs, valeur }) })
       .catch(() => { if (!annule) setAnnoncesAilleurs({ cle: cleAilleurs, valeur: null }) })
     return () => { annule = true }
@@ -24576,7 +24625,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     <RechercheGlobale
       ouverte={rechercheGlobaleOuverte}
       filtresDeBase={defaultFiltersForScreen('mandats')}
-      scope={dataScope}
+      scope={perimetreReseau ? undefined : dataScope}
       onFermer={() => setRechercheGlobaleOuverte(false)}
       onOuvrirAnnonce={rechercheOuvrirAnnonce}
       onOuvrirHorsCatalogue={rechercheOuvrirHorsCatalogue}
@@ -24708,7 +24757,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 <button className="ghost-button" type="button" onClick={() => setFiltersOpen(false)}>Fermer</button>
               </div>
               <div className="filter-grid">
-                <FilterSelect label="Negociateur" value={filters.commercial} onChange={(value) => updateFilter('commercial', value)} options={[{ value: withoutCommercialFilterValue, label: 'Sans' }, ...filterCatalog.commercials]} />
+                {renderFiltreNegociateur()}
                 <FilterSelect label="Agence" value={filters.agency} onChange={(value) => updateFilter('agency', value)} options={filterCatalog.agencies} />
                 {(screen as Screen) !== 'contacts' ? (
                   <FilterSelect label="Type d'offre" value={filters.offreType} onChange={(value) => updateFilter('offreType', value)} options={FAMILLES_OFFRE} />
@@ -24877,7 +24926,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             currentUserName={profile?.display_name ?? profile?.email ?? null}
             currentUserRole={profile?.role ?? null}
             presenceFilters={dataFilters}
-            presenceScope={dataScope}
+            presenceScope={listScope}
             filtrePresence={filters.absentDe || (filters.diffusable === 'non_diffusable' ? 'gti' : null)}
             onFiltrePresence={(cle) => {
               setActiveMandatKpiAction(null)
@@ -25375,7 +25424,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             <div className="filter-grid">
             {screen === 'annonces' ? (
               <>
-                <FilterSelect label="Negociateur" value={filters.commercial} onChange={(value) => updateFilter('commercial', value)} options={[{ value: withoutCommercialFilterValue, label: 'Sans' }, ...filterCatalog.commercials]} />
+                {renderFiltreNegociateur()}
                 <FilterSelect label="Agence" value={filters.agency} onChange={(value) => updateFilter('agency', value)} options={filterCatalog.agencies} />
                 {(screen as Screen) !== 'contacts' ? (
                   <FilterSelect label="Type d'offre" value={filters.offreType} onChange={(value) => updateFilter('offreType', value)} options={FAMILLES_OFFRE} />
@@ -25457,7 +25506,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               </>
             ) : screen === 'estimations' ? (
               <>
-                <FilterSelect label="Negociateur" value={filters.commercial} onChange={(value) => updateFilter('commercial', value)} options={[{ value: withoutCommercialFilterValue, label: 'Sans' }, ...filterCatalog.commercials]} />
+                {renderFiltreNegociateur()}
                 <FilterSelect label="Agence" value={filters.agency} onChange={(value) => updateFilter('agency', value)} options={filterCatalog.agencies} />
                 {(screen as Screen) !== 'contacts' ? (
                   <FilterSelect label="Type d'offre" value={filters.offreType} onChange={(value) => updateFilter('offreType', value)} options={FAMILLES_OFFRE} />
@@ -25474,7 +25523,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               </>
             ) : screen === 'contacts' ? (
               <>
-                <FilterSelect label="Negociateur" value={filters.commercial} onChange={(value) => updateFilter('commercial', value)} options={[{ value: withoutCommercialFilterValue, label: 'Sans' }, ...filterCatalog.commercials]} />
+                {renderFiltreNegociateur()}
                 <FilterSelect label="Agence" value={filters.agency} onChange={(value) => updateFilter('agency', value)} options={filterCatalog.agencies} />
                 {(screen as Screen) !== 'contacts' ? (
                   <FilterSelect label="Type d'offre" value={filters.offreType} onChange={(value) => updateFilter('offreType', value)} options={FAMILLES_OFFRE} />
@@ -25516,7 +25565,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               </>
             ) : screen === 'mandats' ? (
               <>
-                <FilterSelect label="Negociateur" value={filters.commercial} onChange={(value) => updateFilter('commercial', value)} options={[{ value: withoutCommercialFilterValue, label: 'Sans' }, ...filterCatalog.commercials]} />
+                {renderFiltreNegociateur()}
                 <FilterSelect label="Agence" value={filters.agency} onChange={(value) => updateFilter('agency', value)} options={filterCatalog.agencies} />
                 {(screen as Screen) !== 'contacts' ? (
                   <FilterSelect label="Type d'offre" value={filters.offreType} onChange={(value) => updateFilter('offreType', value)} options={FAMILLES_OFFRE} />
@@ -25627,7 +25676,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                     placeholder="Exemple : Dupont"
                   />
                 </label>
-                <FilterSelect label="Negociateur" value={filters.commercial} onChange={(value) => updateFilter('commercial', value)} options={[{ value: withoutCommercialFilterValue, label: 'Sans' }, ...filterCatalog.commercials]} />
+                {renderFiltreNegociateur()}
                 <FilterSelect label="Agence" value={filters.agency} onChange={(value) => updateFilter('agency', value)} options={filterCatalog.agencies} />
                 {(screen as Screen) !== 'contacts' ? (
                   <FilterSelect label="Type d'offre" value={filters.offreType} onChange={(value) => updateFilter('offreType', value)} options={FAMILLES_OFFRE} />
@@ -25716,7 +25765,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               </>
             ) : (
               <>
-                <FilterSelect label="Negociateur" value={filters.commercial} onChange={(value) => updateFilter('commercial', value)} options={[{ value: withoutCommercialFilterValue, label: 'Sans' }, ...filterCatalog.commercials]} />
+                {renderFiltreNegociateur()}
                 <FilterSelect label="Agence" value={filters.agency} onChange={(value) => updateFilter('agency', value)} options={filterCatalog.agencies} />
                 {(screen as Screen) !== 'contacts' ? (
                   <FilterSelect label="Type d'offre" value={filters.offreType} onChange={(value) => updateFilter('offreType', value)} options={FAMILLES_OFFRE} />
@@ -25908,7 +25957,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             currentUserName={profile?.display_name ?? profile?.email ?? null}
             currentUserRole={profile?.role ?? null}
             presenceFilters={dataFilters}
-            presenceScope={dataScope}
+            presenceScope={listScope}
             filtrePresence={filters.absentDe || (filters.diffusable === 'non_diffusable' ? 'gti' : null)}
             onFiltrePresence={(cle) => {
               // La carte GTI = « pas encore diffusables » (filtre Diffusable existant) ; une carte de
