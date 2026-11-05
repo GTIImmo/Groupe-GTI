@@ -1668,6 +1668,56 @@ le registre) ; voir les trois formats ; puis « on » pour tous (accord).
 gérer les contacts (admin, manager, commercial). Retour arrière : `admin` ou `off`. ⏰ **Contrôle du 06/11** : la nuit
 garde 1892 retirée (`metiers_retires_ecartes`, et aucune ligne active syndic pour 10354488). **Suite : pièce 3.3.**
 
+## 26. LOT 3, PIÈCE 3.3 — LE SQUELETTE DE LA FICHE PARTENAIRE : AUDIT (05/11, « Oui, audite 3.3 ») — rien codé
+
+**La maquette** (`fiche-partenaire-v1.html`) : volet gauche (icône et pastille du métier, action propre au métier en
+magenta, coordonnées, interlocuteurs, négociateur, statut, métier) ; travail : quatre chiffres, la section du métier
+(étapes, dossiers, pièces), « À venir », deux blocs « avec nous », l'activité, la qualité repliée, et une **zone sensible
+en bas** (Archiver, Supprimer). Menu « ⋯ » réduit : Modifier, Changer le métier, Ouvrir dans Hektor.
+**Les décisions déjà prises** : P1 « B » (archivée = modifiable, un bandeau « Réactiver ») ; P2 « B » (supprimer : une case
+« je comprends » + la raison, plus de texte à taper — le worker exige `SUPPRIMER CONTACT <n>` : la fenêtre l'enverra
+elle-même, le geste ne change pas, admin et manager) ; P4 « B » (la fiche CLIENT ne change pas) ; 27/10 pour le notaire :
+les blocs sans données sont MONTRÉS, marqués « en construction ».
+**La fiche aujourd'hui** (`ContactDetailPopupV2`) : volet (pastilles de type tirées des liens, actions RDV / Modifier / ⋯,
+coordonnées, foyer, négociateur, statut, métier 3.1-3.2) ; travail (Recherche & rapprochement — masquée pour un notaire
+sans recherche active —, Biens & mandats liés, À faire, Activité, Qualité) ; menu ⋯ : Ouvrir dans Hektor, Changer le
+métier, Archiver, Supprimer (fenêtre `ContactWorkflowModal` avec texte à taper).
+**Mesure (05/11)** : **202 fiches de l'app** ont un métier actif autre que notaire (syndic 75, diagnostiqueur 36,
+apporteur 35, courtier 22, parrain 15, banque 8…) ; dont 10 aussi notaires, **4 avec une recherche active**, **38 avec des
+biens liés**, **57 archivées** ; 196 portent déjà la typologie partenaire de Hektor.
+**Découpage proposé (trois pièces, même interrupteur à créer `partenaires_fiche`, admin puis on)** :
+- **3.3a — le volet** : la pastille du métier (couleur du métier), l'action propre au métier en magenta (désactivée,
+  « en construction » jusqu'aux lots 4-7), le menu ⋯ réduit (Modifier, Changer le métier, Ouvrir dans Hektor caché sans
+  numéro Hektor), le bandeau « Archivé · Réactiver » (P1).
+- **3.3b — le travail** : les quatre chiffres, la section du métier, « À venir » et les deux blocs « avec nous », MONTRÉS
+  et marqués « en construction » (règle du 27/10) ; « Recherche & rapprochement » masquée sans recherche active (comme le
+  notaire ; les 4 qui en ont la gardent) ; « Biens & mandats liés », Activité et Qualité gardés tels quels.
+- **3.3c — la zone sensible** en bas (Archiver, Supprimer, sortis du menu) et la fenêtre de suppression à case à cocher
+  (P2), sur la fiche partenaire seulement (P4).
+**Quelle fiche devient « partenaire »** (proposé) : un contact qui a un métier actif AUTRE que notaire ; s'il est aussi
+classé notaire (10 cas), la fiche notaire existante garde la main.
+Ce que ça pourrait casser : 202 fiches changent d'allure (interrupteur, admins d'abord) ; un geste déplacé doit rester
+trouvable (Archiver / Supprimer en bas au lieu du menu) ; la fiche client et la fiche notaire ne bougent pas.
+
+✅ **3.3a CODÉE le 05/11** (« Oui, vas-y 3.3a ») — invisible tant que le cran `partenaires_fiche` n'existe pas :
+- `lib/metierPartenaire.ts` : `profilDuPartenaire()` — un métier actif autre que notaire ⇒ fiche partenaire ; métier
+  principal dans l'ordre de `METIERS_ORDONNES` ; famille (courtier+banque, diag, syndic, apporteur+parrain, autre) ;
+  action et lot (syndic « Demander un document » lot 4 ; diag « Commander un diagnostic » lot 5 ; courtier « Orienter un
+  acquéreur » et apporteur « Noter une affaire apportée » lots 6 et 7 ; « autre » sans bouton).
+- `App.tsx` (`ContactDetailPopupV2`) : `profilPartenaire` = `partenaires_ecran` ET `partenaires_fiche` ET pas fiche notaire
+  ET lecture prête ; couleur `ty-<famille>` (`ty-partenaire` pour « autre ») et icône du métier ; pastille du métier avec
+  les autres rôles du contact à côté (rien de perdu) ; l'action du métier en magenta, LARGE, **désactivée « bientôt »**
+  (règle du 27/10) ; RDV passe en second ; « Modifier la fiche » passe dans le menu ⋯ (K4) ; « Ouvrir dans Hektor »
+  caché sans numéro Hektor ; bandeau « Fiche archivée · elle reste modifiable » + « Réactiver » (P1, geste existant).
+  Archiver et Supprimer restent dans le menu jusqu'à la pièce 3.3c.
+- `contact-detail-v2.css` : couleurs des familles (reprises de la maquette), icônes, bouton large « bientôt », bandeau
+  (+ sombre).
+- Essais : `test_metier_partenaire.cjs` **39/39** ; `test_fiche_notaire.cjs` vert ; `npm run build` vert.
+- ⚠ `App.tsx` portait en même temps des lignes NON commitées de la session Youtrust (lot 6b P6) : **seuls mes morceaux
+  commités** (mise en attente morceau par morceau AVEC contexte ; un premier essai sans contexte avait posé un morceau
+  28 lignes trop haut — vu par une vérification de la version en attente, refait) ; version en attente vérifiée valide
+  sans ses lignes.
+
 ### 7 ter. Les dépendances (techniques, pas un ordre décidé)
 
 - 0 avant tout le reste ; 0.1 avant B2 ; 0.2 avant B1 ; 0.6 avant B5 ; 0.3 avant B6 ; 0.4 avant B7 ; 0.5 avant C2.

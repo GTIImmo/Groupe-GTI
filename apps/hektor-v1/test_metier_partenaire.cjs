@@ -95,5 +95,33 @@ controle("(25) deux portes : « Changer » dans le bloc et « Changer le métier
   && /\{peutChangerMetier \? \([\s\S]{0,700}Changer le métier/.test(app));
 controle("(26) la fenêtre relit le bloc après l'enregistrement", /onEnregistre=\{metiersPartenaire\.recharger\}/.test(app));
 
+// ── PIÈCE 3.3a : le volet de la fiche partenaire ──
+const { profilDuPartenaire } = api;
+const P = (lignes) => profilDuPartenaire(lignes.map((metier) => ({ metier, source: "netty" })));
+controle("(27) sans métier, ou notaire seul : pas une fiche partenaire", profilDuPartenaire([]) === null && P(["notaire"]) === null);
+controle("(28) un syndic : famille syndic, « Demander un document », lot 4",
+  J(P(["syndic"])) === J({ metier: "syndic", famille: "syndic", action: "Demander un document", lot: "lot 4", libelles: ["Syndic"] }), J(P(["syndic"])));
+controle("(29) courtier et banque → famille courtier ; apporteur et parrain → famille apporteur ; diagnostiqueur → diag",
+  P(["banque"]).famille === "courtier" && P(["parrain"]).famille === "apporteur" && P(["diagnostiqueur"]).action === "Commander un diagnostic");
+controle("(30) plusieurs métiers : le principal suit l'ordre (courtier avant parrain), le notaire n'entre pas dans le titre",
+  J(P(["parrain", "notaire", "courtier"])) === J({ metier: "courtier", famille: "courtier", action: "Orienter un acquéreur", lot: "lots 6 et 7", libelles: ["Courtier", "Parrain"] }),
+  J(P(["parrain", "notaire", "courtier"])));
+controle("(31) un métier sans action (société) : famille autre, pas de bouton", J(P(["societe"])) === J({ metier: "societe", famille: "autre", action: null, lot: null, libelles: ["Société"] }));
+controle("(32) un métier inconnu reste lisible, famille autre", P(["geometre_expert"]).famille === "autre" && P(["geometre_expert"]).libelles[0] === "Geometre expert");
+
+controle("(33) le cran `partenaires_fiche` ET le bloc métier ET pas fiche notaire ET lecture prête",
+  /useCranCouplesVisible\('partenaires_fiche', props\.profileRole\)/.test(app)
+  && /profilPartenaire = partenairesEcran && ficheCran && !estFicheNotaire && metiersPartenaire\.etat === 'pret'/.test(app));
+controle("(34) la couleur : ty-<famille> (ty-partenaire pour « autre »), sinon la classe d'avant",
+  /profilPartenaire\s*\?\s*`ty-\$\{profilPartenaire\.famille === 'autre' \? 'partenaire' : profilPartenaire\.famille\}`\s*:\s*primaryCategory === 'notaire'/.test(app));
+controle("(35) l'action du métier est montrée DÉSACTIVÉE (« bientôt »)", /className="fa-cx-act primary wide bientot" type="button" disabled/.test(app));
+controle("(36) menu réduit : « Modifier la fiche » passe dans le menu, le bouton Modifier quitte la rangée",
+  /props\.canManageContacts && !profilPartenaire \?/.test(app) && /profilPartenaire && props\.canManageContacts \? \([\s\S]{0,800}Modifier la fiche/.test(app));
+controle("(37) « Ouvrir dans Hektor » caché sur une fiche partenaire sans numéro Hektor", /\{!profilPartenaire \|\| cibleHektorDuContact\(props\.contact\) \? \(/.test(app));
+controle("(38) P1 : bandeau « Fiche archivée · elle reste modifiable » + Réactiver (le geste d'archivage existant)",
+  /profilPartenaire && isArchived \?/.test(app) && /archivage\.basculer\(\)[\s\S]{0,120}'Réactiver'/.test(app));
+controle("(39) les autres rôles du contact restent dits à côté du métier",
+  /profilPartenaire\.libelles\.join\(' · '\)[\s\S]{0,200}dirCategories\.filter\(\(cat\) => cat !== 'autre'\)/.test(app));
+
 console.log(echecs.length ? `\n${echecs.length} contrôle(s) en échec` : "\nTout est vert.");
 process.exit(echecs.length ? 1 : 0);

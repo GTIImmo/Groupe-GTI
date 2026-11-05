@@ -117,6 +117,28 @@
 .fa-contact-v2.ty-vendeur .fa-cx-av .fa-cx-ty-vendeur,
 .fa-contact-v2.ty-mandant .fa-cx-av .fa-cx-ty-mandant,
 .fa-contact-v2.ty-notaire .fa-cx-av .fa-cx-ty-notaire { display: flex; }
+/* PARTENAIRES, pièce 3.3a (05/11/2026) — les familles de métier (maquettes/fiche-partenaire-v1.html, couleurs reprises). */
+.fa-contact-v2.ty-courtier { --ty: #1f7a55; --ty-deep: #145238; --ty-mid: #2f9a6d; --ty-soft: #e5f3ec; --ty-line: #c9e6d7; --ty-g1: #2f9a6d; --ty-g2: #1f7a55; --ty-g3: #145238; }
+.fa-contact-v2.ty-diag { --ty: #b26a0e; --ty-deep: #774505; --ty-mid: #cf8a2e; --ty-soft: #fbf0e1; --ty-line: #f0dcbd; --ty-g1: #cf8a2e; --ty-g2: #b26a0e; --ty-g3: #774505; }
+.fa-contact-v2.ty-syndic { --ty: #5b4a9e; --ty-deep: #3b2f73; --ty-mid: #7464b8; --ty-soft: #efecf9; --ty-line: #dcd6f0; --ty-g1: #7464b8; --ty-g2: #5b4a9e; --ty-g3: #3b2f73; }
+.fa-contact-v2.ty-apporteur { --ty: #b0306f; --ty-deep: #7a1c4b; --ty-mid: #c9518a; --ty-soft: #fbe9f2; --ty-line: #f2cde0; --ty-g1: #c9518a; --ty-g2: #b0306f; --ty-g3: #7a1c4b; }
+.fa-contact-v2.ty-partenaire { --ty: #4a6670; --ty-deep: #2d434b; --ty-mid: #5f808b; --ty-soft: #e9eff1; --ty-line: #d3dfe3; --ty-g1: #5f808b; --ty-g2: #4a6670; --ty-g3: #2d434b; }
+.fa-contact-v2.ty-courtier .fa-cx-av .fa-cx-ty-courtier,
+.fa-contact-v2.ty-diag .fa-cx-av .fa-cx-ty-diag,
+.fa-contact-v2.ty-syndic .fa-cx-av .fa-cx-ty-syndic,
+.fa-contact-v2.ty-apporteur .fa-cx-av .fa-cx-ty-apporteur,
+.fa-contact-v2.ty-partenaire .fa-cx-av .fa-cx-ty-partenaire { display: flex; }
+/* l'action propre au métier, large, MONTRÉE « bientôt » (en construction jusqu'à son lot) */
+.fa-contact-v2 .fa-cx-act.primary.wide { width: auto; flex: 3.2; padding: 0 12px; gap: 7px; font: inherit; font-size: 12.5px; font-weight: 800; color: #fff; white-space: nowrap; min-width: 0; }
+.fa-contact-v2 .fa-cx-act.primary.wide svg { width: 17px; height: 17px; flex: none; }
+.fa-contact-v2 .fa-cx-act.primary.wide .fa-cx-act-tx { overflow: hidden; text-overflow: ellipsis; }
+.fa-contact-v2 .fa-cx-act.primary.wide.bientot { cursor: not-allowed; filter: saturate(.55); opacity: .78; box-shadow: none; transform: none; }
+.fa-contact-v2 .fa-cx-act-bientot { flex: none; font-size: 9.5px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; padding: 2px 6px; border-radius: 99px; background: rgba(255, 255, 255, .22); }
+/* décision P1 « B » : une fiche partenaire archivée reste modifiable, un bandeau le dit */
+.fa-contact-v2 .fa-cx-archive-band { display: flex; align-items: center; gap: 10px; margin: 2px 0 10px; padding: 9px 11px; border-radius: 12px; background: #f7f1e6; border: 1px solid #e6d8bf; font-size: 12px; font-weight: 700; color: #6b5636; }
+.fa-contact-v2 .fa-cx-archive-band span { min-width: 0; flex: 1; }
+.fa-contact-v2 .fa-cx-archive-band button { flex: none; font: inherit; font-size: 11.5px; font-weight: 800; color: var(--ty); background: #fff; border: 1px solid var(--ty-line); border-radius: 8px; padding: 5px 9px; cursor: pointer; }
+.fa-contact-v2 .fa-cx-archive-band button:disabled { opacity: .5; cursor: not-allowed; }
 
 /* ── Cluster d'actions (RDV magenta + Modifier + Plus) avec tooltip au survol ── */
 .fa-contact-v2 .fa-cx-actions { position: relative; margin-top: 15px; padding-top: 15px; display: flex; gap: 8px; }
@@ -508,6 +530,8 @@
   .fa-contact-v2 .fa-cx-aflt button { background: var(--md-surface-2); border-color: var(--md-border); color: var(--md-text-muted); }
   .fa-contact-v2 .fa-cx-st-chip { background: rgba(255, 255, 255, .07); border-color: var(--md-border); color: var(--md-text); }
   .fa-contact-v2 .fa-cx-metier { background: rgba(255, 255, 255, .07); border-color: var(--md-border); }
+  .fa-contact-v2 .fa-cx-archive-band { background: rgba(217, 191, 143, .10); border-color: rgba(217, 191, 143, .35); color: #e2c48f; }
+  .fa-contact-v2 .fa-cx-archive-band button { background: rgba(255, 255, 255, .07); border-color: var(--md-border); color: var(--md-text); }
   .fa-contact-v2 .fa-cx-metier .v { color: var(--md-text); }
   .fa-contact-v2 .fa-cx-metier .k,
   .fa-contact-v2 .fa-cx-metier .s { color: var(--md-text-muted); }

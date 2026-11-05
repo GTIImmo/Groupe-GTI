@@ -257,6 +257,7 @@ import RechercheAcquereur, { type VisitePlanInput } from './RechercheAcquereur'
 import RapprochementMandat, { type MandatContext } from './RapprochementMandat'
 import { FICHE_NOTAIRE_V2, NotaireAVenir, NotaireDossiers, NotaireInterlocuteurs, NotaireKpis, NotaireVentesEtAvecNous, construireVueNotaire, useFicheNotaire } from './FicheNotaire'
 import { BlocMetierPartenaire, FenetreMetierPartenaire, useMetiersPartenaire } from './MetierPartenaire'
+import { profilDuPartenaire } from './lib/metierPartenaire'
 import NotificationsBell from './NotificationsBell'
 import SanteSystemeScreen from './SanteSystemeScreen'
 import RegistreTransactionsScreen, { type GesteDuRegistre } from './RegistreTransactionsScreen'
@@ -46857,6 +46858,8 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
   // pièce 3.2 (05/11/2026) : « Changer le métier » (cran `partenaires_metier_modif`, et le droit de gérer les contacts).
   const metierModifCran = useCranCouplesVisible('partenaires_metier_modif', props.profileRole)
   const peutChangerMetier = partenairesEcran && metierModifCran && Boolean(props.canManageContacts) && metiersPartenaire.etat === 'pret'
+  // pièce 3.3a (05/11/2026) : le volet de la FICHE PARTENAIRE (cran `partenaires_fiche`) — voir profilPartenaire plus bas.
+  const ficheCran = useCranCouplesVisible('partenaires_fiche', props.profileRole)
   const [fenetreMetierOuverte, setFenetreMetierOuverte] = useState(false)
   // La fiche ouverte ne porte pas toujours sa nature (cela dépend de l'écran qui l'ouvre) : on la lit, comme le foyer.
   const [natureLue, setNatureLue] = useState<{ pour: string; nature_fiche?: string | null; couple_json?: unknown } | null>(null)
@@ -47015,7 +47018,14 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
     return construireVueNotaire(ficheNotaire.fiche, aujourdhui)
   }, [ficheNotaire.fiche])
   const masquerRecherche = estFicheNotaire && Number(props.contact.active_search_count ?? 0) === 0
-  const typeClass = primaryCategory === 'notaire'
+  // PARTENAIRES, pièce 3.3a (05/11/2026) : un métier actif autre que notaire fait de la fiche une FICHE PARTENAIRE
+  // (couleur et icône du métier, action propre au métier, menu réduit, bandeau d'archivage). La fiche notaire garde la main ;
+  // la fiche client ne change pas (P4). Cran éteint ou lecture pas prête : la fiche d'avant, à l'identique.
+  const profilPartenaire = partenairesEcran && ficheCran && !estFicheNotaire && metiersPartenaire.etat === 'pret'
+    ? profilDuPartenaire(metiersPartenaire.lignes) : null
+  const typeClass = profilPartenaire
+    ? `ty-${profilPartenaire.famille === 'autre' ? 'partenaire' : profilPartenaire.famille}`
+    : primaryCategory === 'notaire'
     ? 'ty-notaire' // ⑧ notaire, étape 3 : bleu encre + balance (maquette fiche-notaire-v2)
     : primaryCategory === 'mandant'
     ? 'ty-mandant'
@@ -47575,12 +47585,26 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
                   <span className="fa-cx-ty-ic fa-cx-ty-acheteur"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><circle cx="7.5" cy="15.5" r="4.2" /><path d="M10.5 12.5 20 3" /><path d="M17 6l2.4 2.4M14 9l1.9 1.9" /></svg></span>
                   <span className="fa-cx-ty-ic fa-cx-ty-vendeur"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l7-6 7 6" /><path d="M5 10v9h9v-9" /><path d="M8.5 19v-4.5h3V19" /><rect x="15.5" y="4" width="6" height="4.2" rx="1" /><path d="M18.5 8.2V12" /></svg></span>
                   <span className="fa-cx-ty-ic fa-cx-ty-mandant"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round"><path d="M6 3h8l4 4v14H6z" /><path d="M14 3v4h4" /><path d="M9 11h6M9 14h4" /><path d="M9 17.5c1-1.4 2.3-1.4 2.8 0s1.5 1.4 2.5 0" /></svg></span>
+                  {/* PARTENAIRES, pièce 3.3a : l'icône du métier (maquette fiche-partenaire-v1), montrée par la classe ty-<famille> */}
+                  <span className="fa-cx-ty-ic fa-cx-ty-courtier"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round"><path d="M3 10l9-6 9 6" /><path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8" /><path d="M3 21h18" /></svg></span>
+                  <span className="fa-cx-ty-ic fa-cx-ty-diag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round"><path d="M4 18a8 8 0 1 1 16 0" /><path d="M12 18l4-6" /></svg></span>
+                  <span className="fa-cx-ty-ic fa-cx-ty-syndic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round"><path d="M3 21h18M5 21V7l7-4 7 4v14" /><path d="M9 9h.01M15 9h.01M9 13h.01M15 13h.01M9 17h.01M15 17h.01" /></svg></span>
+                  <span className="fa-cx-ty-ic fa-cx-ty-apporteur"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round"><path d="M7 11l4-4 3 3 4-4" /><path d="M14 6h4v4" /><path d="M4 20h16" /></svg></span>
+                  <span className="fa-cx-ty-ic fa-cx-ty-partenaire"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="7" width="18" height="13" rx="2.5" /><path d="M8.5 7V5.5A1.5 1.5 0 0 1 10 4h4a1.5 1.5 0 0 1 1.5 1.5V7" /><path d="M3 12.5h18" /></svg></span>
                   <span className="fa-cx-ty-ic fa-cx-ty-notaire"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v17" /><path d="M8 20h8" /><path d="M5 7h14" /><path d="M12 5.2 5 7" /><path d="m12 5.2 7 1.8" /><path d="M5 7 2.5 13a2.6 2.6 0 0 0 5 0Z" /><path d="M19 7l-2.5 6a2.6 2.6 0 0 0 5 0Z" /></svg></span>
                 </div>
                 <div className="fa-cx-hero-tx">
                   <div className="fa-cx-name">{contactFullName}</div>
                   {SUIVI_PASTILLE ? <PastilleSuivi contactId={String(props.contact.hektor_contact_id)} cacherSiAJour /> : null}
-                  {dirCategories.length > 1 ? (
+                  {profilPartenaire ? (
+                    // PARTENAIRES, pièce 3.3a : le métier d'abord ; les autres rôles du contact (mandant, acheteur…) restent dits.
+                    <div className="fa-cx-type-pills">
+                      <span className="fa-cx-type-pill">{profilPartenaire.libelles.join(' · ')}</span>
+                      {dirCategories.filter((cat) => cat !== 'autre').slice(0, 2).map((cat, index) => (
+                        <span key={`fa-cx-type-pill-p-${index}`} className="fa-cx-type-pill multi" style={{ ['--rc']: categoryColor(cat) } as CSSProperties}>{contactDirectoryTypeLabel[cat]}</span>
+                      ))}
+                    </div>
+                  ) : dirCategories.length > 1 ? (
                     <div className="fa-cx-type-pills">
                       {dirCategories.slice(0, 3).map((cat, index) => (
                         <span key={`fa-cx-type-pill-${index}`} className="fa-cx-type-pill multi" style={{ ['--rc']: categoryColor(cat) } as CSSProperties}>{contactDirectoryTypeLabel[cat]}</span>
@@ -47592,6 +47616,17 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
                   )}
                 </div>
               </div>
+
+              {profilPartenaire && isArchived ? (
+                // PARTENAIRES, pièce 3.3a — décision P1 « B » (04/11) : une fiche partenaire archivée reste MODIFIABLE ;
+                // un bandeau le dit, avec « Réactiver » (le même geste que le menu, qui part chez Hektor).
+                <div className="fa-cx-archive-band" role="status">
+                  <span>Fiche archivée · elle reste modifiable.</span>
+                  {props.canManageContacts ? (
+                    <button type="button" disabled={archivage.pending} onClick={() => { void archivage.basculer() }}>{archivage.pending ? 'Patientez…' : 'Réactiver'}</button>
+                  ) : null}
+                </div>
+              ) : null}
 
               {/* COUPLES (04/11/2026, « le foyer en liste », remplace les deux grandes places de la pièce G et la pastille
                   « Couple ») : une ligne par personne, la personne affichée marquée ; la ligne vide est en pointillés et
@@ -47655,10 +47690,20 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
               ) : null}
 
               <div className="fa-cx-actions">
-                <button className="fa-cx-act primary" type="button" data-tip="Créer un RDV" aria-label="Créer un RDV" onClick={handleOpenCreateGoogleContactAgenda}>
+                {profilPartenaire?.action ? (
+                  // PARTENAIRES, pièce 3.3a : l'action propre au métier (maquette), MONTRÉE et marquée « en construction »
+                  // jusqu'à son lot (décision du 27/10 : un bloc sans données se montre). Elle ne fait rien.
+                  <button className="fa-cx-act primary wide bientot" type="button" disabled aria-disabled="true"
+                    title={`${profilPartenaire.action} : en construction (${profilPartenaire.lot} du chantier partenaires)`}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+                    <span className="fa-cx-act-tx">{profilPartenaire.action}</span>
+                    <span className="fa-cx-act-bientot">bientôt</span>
+                  </button>
+                ) : null}
+                <button className={`fa-cx-act ${profilPartenaire?.action ? 'ghost' : 'primary'}`} type="button" data-tip="Créer un RDV" aria-label="Créer un RDV" onClick={handleOpenCreateGoogleContactAgenda}>
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4.5" width="18" height="16" rx="2.5" /><path d="M16 2.5v4M8 2.5v4M3 9.5h18" /><path d="M12 13.5v4M10 15.5h4" /></svg>
                 </button>
-                {props.canManageContacts ? (
+                {props.canManageContacts && !profilPartenaire ? (
                   <button className="fa-cx-act ghost" type="button" data-tip="Modifier la fiche" aria-label="Modifier la fiche" onClick={() => setEditing(true)}>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
                   </button>
@@ -47669,10 +47714,18 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
                   </button>
                   {contactActionsOpen ? (
                     <div className="fa-cx-act-menu">
+                      {profilPartenaire && props.canManageContacts ? (
+                        // PARTENAIRES, pièce 3.3a (K4) : sur la fiche partenaire, « Modifier » passe dans le menu réduit.
+                        <button className="fa-cx-menu-item" type="button" onClick={() => { setContactActionsOpen(false); setEditing(true) }}>
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7}><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>Modifier la fiche
+                        </button>
+                      ) : null}
+                      {!profilPartenaire || cibleHektorDuContact(props.contact) ? (
                       <button className="fa-cx-menu-item" type="button" onClick={() => { setContactActionsOpen(false); openHektorContact(cibleHektorDuContact(props.contact)) }}>
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7}><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3Z" /><path d="m9 12 2 2 4-4" /></svg>Ouvrir dans Hektor
                         <svg className="fa-cx-menu-ext" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M7 17 17 7M9 7h8v8" /></svg>
                       </button>
+                      ) : null}
                       {peutChangerMetier ? (
                         <button className="fa-cx-menu-item" type="button" onClick={() => { setContactActionsOpen(false); setFenetreMetierOuverte(true) }}>
                           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7}><path d="M4 7h16M4 12h10M4 17h7" /><path d="m16 15 3 3 3-3" /></svg>Changer le métier

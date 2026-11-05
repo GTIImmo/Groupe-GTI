@@ -34,6 +34,35 @@ export function planDesChangements(actifs: string[], retraits: Iterable<string>,
   return [...aRetirer.map((metier) => ({ metier, retirer: true })), ...aAjouter.map((metier) => ({ metier, retirer: false }))]
 }
 
+// PIÈCE 3.3a (05/11/2026) — le volet de la FICHE PARTENAIRE (maquette fiche-partenaire-v1).
+// Une fiche devient « partenaire » quand le contact a un métier actif AUTRE que notaire (le notaire a sa fiche, 28/10).
+// Le métier principal = le premier dans l'ordre de METIERS_ORDONNES ; il donne la couleur (famille), l'icône et l'action
+// propre au métier (bouton magenta, « en construction » jusqu'aux lots 4 à 7). Une famille sans action = pas de bouton.
+export type FamillePartenaire = 'courtier' | 'diag' | 'syndic' | 'apporteur' | 'autre'
+export type ProfilPartenaire = { metier: string; famille: FamillePartenaire; action: string | null; lot: string | null; libelles: string[] }
+
+const FAMILLE: Record<string, FamillePartenaire> = {
+  courtier: 'courtier', banque: 'courtier', diagnostiqueur: 'diag', syndic: 'syndic', apporteur: 'apporteur', parrain: 'apporteur',
+}
+const ACTION: Record<Exclude<FamillePartenaire, 'autre'>, [string, string]> = {
+  syndic: ['Demander un document', 'lot 4'],
+  diag: ['Commander un diagnostic', 'lot 5'],
+  courtier: ['Orienter un acquéreur', 'lots 6 et 7'],
+  apporteur: ['Noter une affaire apportée', 'lots 6 et 7'],
+}
+
+export function profilDuPartenaire(lignes: LigneMetier[] | null | undefined): ProfilPartenaire | null {
+  const actifs = new Set((lignes ?? []).map((l) => l?.metier).filter((m): m is string => Boolean(m) && m !== 'notaire'))
+  if (!actifs.size) return null
+  const ordonnes = METIERS_ORDONNES.filter((m) => actifs.has(m.metier))
+  const inconnus = [...actifs].filter((m) => !METIERS_ORDONNES.some((o) => o.metier === m)).sort()
+  const metier = ordonnes[0]?.metier ?? inconnus[0]
+  const famille = FAMILLE[metier] ?? 'autre'
+  const [action, lot] = famille === 'autre' ? [null, null] : ACTION[famille]
+  const libelles = [...ordonnes.map((m) => m.libelle), ...inconnus.map((m) => majuscule(m.replace(/_/g, ' ')))]
+  return { metier, famille, action, lot, libelles }
+}
+
 const dateCourte = (v: string | null | undefined) => {
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(v ?? '').trim())
   return m ? `${m[3]}/${m[2]}/${m[1]}` : null
