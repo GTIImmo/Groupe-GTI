@@ -257,7 +257,8 @@ import RechercheAcquereur, { type VisitePlanInput } from './RechercheAcquereur'
 import RapprochementMandat, { type MandatContext } from './RapprochementMandat'
 import { FICHE_NOTAIRE_V2, NotaireAVenir, NotaireDossiers, NotaireInterlocuteurs, NotaireKpis, NotaireVentesEtAvecNous, construireVueNotaire, useFicheNotaire } from './FicheNotaire'
 import { BlocMetierPartenaire, FenetreMetierPartenaire, useMetiersPartenaire } from './MetierPartenaire'
-import { profilDuPartenaire } from './lib/metierPartenaire'
+import { blocsDuPartenaire, profilDuPartenaire } from './lib/metierPartenaire'
+import { PartenaireAVenir, PartenaireAvecNous, PartenaireChiffres, PartenaireSectionMetier } from './FichePartenaire'
 import NotificationsBell from './NotificationsBell'
 import SanteSystemeScreen from './SanteSystemeScreen'
 import RegistreTransactionsScreen, { type GesteDuRegistre } from './RegistreTransactionsScreen'
@@ -47100,12 +47101,15 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
     const aujourdhui = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10)
     return construireVueNotaire(ficheNotaire.fiche, aujourdhui)
   }, [ficheNotaire.fiche])
-  const masquerRecherche = estFicheNotaire && Number(props.contact.active_search_count ?? 0) === 0
   // PARTENAIRES, pièce 3.3a (05/11/2026) : un métier actif autre que notaire fait de la fiche une FICHE PARTENAIRE
   // (couleur et icône du métier, action propre au métier, menu réduit, bandeau d'archivage). La fiche notaire garde la main ;
   // la fiche client ne change pas (P4). Cran éteint ou lecture pas prête : la fiche d'avant, à l'identique.
   const profilPartenaire = partenairesEcran && ficheCran && !estFicheNotaire && metiersPartenaire.etat === 'pret'
     ? profilDuPartenaire(metiersPartenaire.lignes) : null
+  // PARTENAIRES, pièce 3.3b (05/11/2026) : la partie droite du métier (chiffres, section, « À venir », « avec nous »), montrée
+  // « en construction » ; rien pour la famille « autre ». Comme le notaire, la bande Recherche se cache sans recherche active.
+  const blocsPartenaire = blocsDuPartenaire(profilPartenaire?.famille)
+  const masquerRecherche = (estFicheNotaire || Boolean(profilPartenaire)) && Number(props.contact.active_search_count ?? 0) === 0
   const typeClass = profilPartenaire
     ? `ty-${profilPartenaire.famille === 'autre' ? 'partenaire' : profilPartenaire.famille}`
     : primaryCategory === 'notaire'
@@ -47895,9 +47899,11 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
             <div className="fa-cx-work">
               {estFicheNotaire ? (vueNotaire ? <NotaireKpis vue={vueNotaire} />
                 : <div className="fa-cx-ech-empty">{ficheNotaire.erreur ? `Fiche notaire indisponible (${ficheNotaire.erreur})` : 'Chargement des dossiers du notaire…'}</div>) : null}
+              {blocsPartenaire ? <PartenaireChiffres blocs={blocsPartenaire} /> : null}
               <div className="fa-cx-dash-top">
                 <div className="fa-cx-dash-main">
               {vueNotaire ? <NotaireDossiers vue={vueNotaire} onOpenDossier={(id) => { props.onClose(); props.onOpenDossier(id) }} /> : null}
+              {blocsPartenaire ? <PartenaireSectionMetier blocs={blocsPartenaire} /> : null}
               {masquerRecherche ? null : (<>
               {/* ── Lot 2 — Bande « Recherche & rapprochement » (portage maquette v30) ── */}
               <div className="fa-cx-sec" style={{ ['--sc']: '#2f7c86' } as CSSProperties}>
@@ -48109,6 +48115,7 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
                 {/* ── Lot 5 — Colonne latérale « À faire » (relances du contact) ── */}
                 <div className="fa-cx-dash-side">
                   {vueNotaire ? <NotaireAVenir vue={vueNotaire} /> : null}
+                  {blocsPartenaire ? <PartenaireAVenir blocs={blocsPartenaire} /> : null}
                   <div className="fa-cx-sec" style={{ ['--sc']: '#c2512a' } as CSSProperties}>
                     <span className="fa-cx-sec-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M9 6h11M9 12h11M9 18h11" /><path d="M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2" /></svg></span>
                     À faire
@@ -48177,6 +48184,7 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
               </div>
 
               {vueNotaire ? <NotaireVentesEtAvecNous vue={vueNotaire} fiche={ficheNotaire.fiche} /> : null}
+              {blocsPartenaire ? <PartenaireAvecNous blocs={blocsPartenaire} /> : null}
 
               {/* ── Lot 4 — Bande « Activité & relation » (pleine largeur, portage maquette v30) ── */}
               <div className="fa-cx-sec" style={{ ['--sc']: '#2f6fa8' } as CSSProperties}>

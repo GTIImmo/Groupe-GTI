@@ -123,5 +123,31 @@ controle("(38) P1 : bandeau « Fiche archivée · elle reste modifiable » + Ré
 controle("(39) les autres rôles du contact restent dits à côté du métier",
   /profilPartenaire\.libelles\.join\(' · '\)[\s\S]{0,200}dirCategories\.filter\(\(cat\) => cat !== 'autre'\)/.test(app));
 
+// ── PIÈCE 3.3b : la partie droite de la fiche partenaire ──
+const { blocsDuPartenaire } = api;
+const familles = ["syndic", "diag", "courtier", "apporteur"];
+controle("(40) chaque famille a 4 chiffres, une section avec ses étapes, « À venir » et 2 blocs « avec nous »",
+  familles.every((f) => { const b = blocsDuPartenaire(f); return b && b.chiffres.length === 4 && b.section.etapes.length >= 3 && b.aVenir && b.avecNous.length === 2 && /^lots? /.test(b.lot); }));
+controle("(41) « autre », absent ou inconnu : pas de blocs", blocsDuPartenaire("autre") === null && blocsDuPartenaire(null) === null && blocsDuPartenaire(undefined) === null);
+controle("(42) le lot des blocs = le lot de l'action du métier",
+  familles.every((f) => { const prof = profilDuPartenaire([{ metier: { syndic: "syndic", diag: "diagnostiqueur", courtier: "courtier", apporteur: "apporteur" }[f], source: "netty" }]); return prof.lot === blocsDuPartenaire(f).lot; }));
+controle("(43) les libellés de la maquette sont repris (syndic, diag, courtier, apporteur)",
+  J(blocsDuPartenaire("syndic").section.etapes) === J(["Demandes", "AG à venir", "À jour"])
+  && J(blocsDuPartenaire("diag").section.etapes) === J(["Commandé", "RDV fixé", "Rapport reçu", "Au coffre"])
+  && J(blocsDuPartenaire("courtier").section.etapes) === J(["Orientés", "Accord de principe", "Offre de prêt", "Financés"])
+  && J(blocsDuPartenaire("apporteur").section.etapes) === J(["Contact apporté", "Mandat", "Commission due", "Réglé"]));
+controle("(44) branchement : blocs du profil, et Recherche cachée sans recherche active (notaire OU partenaire)",
+  /const blocsPartenaire = blocsDuPartenaire\(profilPartenaire\?\.famille\)/.test(app)
+  && /const masquerRecherche = \(estFicheNotaire \|\| Boolean\(profilPartenaire\)\) && Number\(props\.contact\.active_search_count \?\? 0\) === 0/.test(app));
+controle("(45) les 4 blocs sont posés à leur place (chiffres avant le tableau, section, À venir, avec nous)",
+  /<PartenaireChiffres blocs=\{blocsPartenaire\} \/>[\s\S]{0,120}fa-cx-dash-top/.test(app)
+  && /<NotaireDossiers[\s\S]{0,200}<PartenaireSectionMetier blocs=\{blocsPartenaire\} \/>/.test(app)
+  && /<NotaireAVenir vue=\{vueNotaire\} \/> : null\}\s*\{blocsPartenaire \? <PartenaireAVenir/.test(app)
+  && /<NotaireVentesEtAvecNous[^\n]*\n\s*\{blocsPartenaire \? <PartenaireAvecNous/.test(app));
+const fp = fs.readFileSync(path.resolve(__dirname, "src", "FichePartenaire.tsx"), "utf8");
+controle("(46) FichePartenaire : aucune lecture ni écriture (ni supabase, ni rpc, ni fetch)", !/supabase|\.rpc\(|fetch\(/.test(fp.replace(/^\/\/.*$/gm, "")));
+controle("(47) section, À venir et avec nous disent « en construction » ; les chiffres valent « — » (pas de faux zéro)",
+  (fp.match(/<EnConstruction/g) || []).length === 3 && /aria-label="pas encore de données">—</.test(fp));
+
 console.log(echecs.length ? `\n${echecs.length} contrôle(s) en échec` : "\nTout est vert.");
 process.exit(echecs.length ? 1 : 0);

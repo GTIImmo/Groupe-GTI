@@ -63,6 +63,61 @@ export function profilDuPartenaire(lignes: LigneMetier[] | null | undefined): Pr
   return { metier, famille, action, lot, libelles }
 }
 
+// PIÈCE 3.3b (05/11/2026) — la partie droite de la fiche partenaire, par famille (libellés de la maquette
+// fiche-partenaire-v1). Les données n'existent pas encore : chaque bloc est MONTRÉ, marqué « en construction » avec son lot
+// (règle du 27/10). La famille « autre » n'a pas de blocs propres.
+export type BlocsPartenaire = {
+  lot: string
+  chiffres: [string, string][]   // [titre, ce qui y viendra]
+  section: { titre: string; etapes: string[]; texte: string }
+  aVenir: string
+  avecNous: [string, string][]   // [titre, ce qui y viendra]
+}
+const BLOCS: Record<Exclude<FamillePartenaire, 'autre'>, BlocsPartenaire> = {
+  syndic: {
+    lot: 'lot 4',
+    chiffres: [['Copropriétés', 'les immeubles où il est syndic'], ['Demandes ouvertes', 'documents demandés, en attente'],
+      ['Biens en vente', 'nos biens dans ses copropriétés'], ['Pré-état daté', 'son délai moyen de réponse']],
+    section: { titre: 'Copropriétés', etapes: ['Demandes', 'AG à venir', 'À jour'],
+      texte: 'Les copropriétés où il est syndic, nos biens dedans, les documents demandés et reçus.' },
+    aVenir: 'Les demandes en attente, les assemblées générales et les échéances des compromis.',
+    avecNous: [['Nos biens dans ses copropriétés', 'les biens de nos mandats, immeuble par immeuble'],
+      ['Demandes et délais', 'pré-état daté, PV d’assemblée, carnet d’entretien : ce qu’on demande et en combien de jours']],
+  },
+  diag: {
+    lot: 'lot 5',
+    chiffres: [['Biens diagnostiqués', 'les biens qu’il a diagnostiqués pour nous'], ['Commandes en cours', 'commandées, rendez-vous fixés'],
+      ['DPE à refaire ≤ 6 mois', 'mandats en cours dont le DPE expire'], ['Rapport rendu', 'son délai moyen']],
+    section: { titre: 'Commandes et biens', etapes: ['Commandé', 'RDV fixé', 'Rapport reçu', 'Au coffre'],
+      texte: 'Les diagnostics commandés, leurs rendez-vous, les rapports reçus et rangés au coffre.' },
+    aVenir: 'Les rendez-vous de diagnostic et les rapports attendus.',
+    avecNous: [['Ses biens, par classe énergie', 'la répartition des DPE de ses biens'],
+      ['Ses diagnostics, par type', 'DPE, amiante, électricité, gaz, plomb']],
+  },
+  courtier: {
+    lot: 'lots 6 et 7',
+    chiffres: [['Acquéreurs suivis', 'nos acquéreurs qu’il finance'], ['Conditions de prêt ≤ 15 j', 'les échéances proches'],
+      ['Financés · 12 mois', 'les dossiers menés à la vente'], ['Offre de prêt', 'son délai moyen']],
+    section: { titre: 'Acquéreurs suivis', etapes: ['Orientés', 'Accord de principe', 'Offre de prêt', 'Financés'],
+      texte: 'Les acquéreurs orientés vers lui, l’avancement de leur financement et les pièces échangées.' },
+    aVenir: 'Les conditions de prêt qui arrivent à échéance et les rendez-vous.',
+    avecNous: [['Avec nous', 'les acquéreurs orientés depuis le début, par agence'],
+      ['Banques de ses dossiers', 'les banques prêteuses des affaires qu’il a suivies']],
+  },
+  apporteur: {
+    lot: 'lots 6 et 7',
+    chiffres: [['Affaires apportées', 'depuis le début'], ['En cours', 'contacts et mandats apportés'],
+      ['Commission due', 'à régler'], ['Transformées', 'apports devenus des ventes']],
+    section: { titre: 'Affaires apportées', etapes: ['Contact apporté', 'Mandat', 'Commission due', 'Réglé'],
+      texte: 'Les affaires qu’il nous a apportées, du premier contact à la commission réglée.' },
+    aVenir: 'Les commissions à régler et les relances.',
+    avecNous: [['Ce qu’il nous apporte', 'vendeurs et acquéreurs apportés'], ['Commissions', 'convenues, dues et réglées, année par année']],
+  },
+}
+export function blocsDuPartenaire(famille: FamillePartenaire | null | undefined): BlocsPartenaire | null {
+  return famille && famille !== 'autre' ? BLOCS[famille] : null
+}
+
 const dateCourte = (v: string | null | undefined) => {
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(v ?? '').trim())
   return m ? `${m[3]}/${m[2]}/${m[1]}` : null
