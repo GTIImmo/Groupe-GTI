@@ -1373,3 +1373,29 @@ le périmètre de la recherche de contacts peut viser la mauvaise agence (lectur
 
 **Prérequis commun** : agences ET coordonnées des personnes sont VIDES dans le registre (0/185 portables, 0 agence) jusqu'à
 la 1re nuit qui écrit (06/11). Rien ne peut basculer avant. Chaque bascule garde l'annuaire de Hektor en REPLI.
+
+## 48. ÉTAPE 5, LECTEUR 1 : LA PAGE PUBLIQUE DE RDV LIT LE REGISTRE, ET LES LIENS LE SUIVENT (05/11) — Frédéric : « 1 puis 2 », puis « 1 » (les liens suivent le registre) — CODÉ, NON POUSSÉ
+
+**Ce qui change** (`backend/app/services/appointment_service.py`, seul fichier du serveur touché) :
+- **L'agence** (tél, mail) vient d'abord du REGISTRE DES AGENCES (`_load_registre_agence`) : par l'écriture EXACTE du nom
+  dans les alias, sinon par la CLÉ (`_cle_agence`, identique à `app_neg_cle_agence` — vérifié sur les 31 écritures réelles
+  des biens, contacts, liens, annuaires et registre des mandats : 0 différence). Clé ambiguë ou rien : `None`. L'annuaire de
+  Hektor reste le REPLI, champ par champ.
+- **Le négociateur** : ses coordonnées À NOUS (`app_negociateur_personne.telephone / portable`) passent devant ses fiches
+  Hektor (`_load_registre_negociateur`, aussi lu par l'estimation : le tél du conseiller y suit donc la même règle).
+- **Le lien relit à chaque ouverture** (`_maybe_enrich_link_contacts`) et sa copie n'est réécrite QUE si une valeur a
+  changé. Ordre : registre → annuaire de Hektor → COPIE du lien → texte de l'annonce (la copie passe avant le texte : un
+  lien sans portable ne relit pas l'annonce à chaque ouverture). Si tout tombe, la copie reste.
+- Rien ne part chez Hektor ; aucune table, aucun droit, aucun worker touché ; avant la 1re nuit (registre vide) la page
+  rend EXACTEMENT ce qu'elle rend aujourd'hui.
+
+**Les essais** (`backend/tests/test_rdv_suit_le_registre.py`, hors ligne) : **20/20 verts** — registre vide = rien ne change ni
+ne s'écrit (témoin) ; correction au registre = le lien figé est réécrit ; 2e ouverture = aucune écriture ; repli champ par
+champ ; portable à nous ; pannes = copie gardée sans relire l'annonce ; lien vide = texte de l'annonce comme avant ; clé
+ambiguë = annuaire ; écriture exacte départage. **Témoin inverse** : les mêmes essais sur l'ANCIEN code → **10 rouges**,
+exactement les 10 des nouveautés. Essais voisins : `test_lien_hektor_par_registre` 13/13, `test_email_tracking` et
+`test_relance_engine` verts ; `test_rapprochement_email` ROUGE **à l'identique sur l'ancien code** (libellé d'e-mail, sans
+rapport).
+
+**Reste** : pousser APRÈS la nuit du 06/11 (Render se déploie seul) ; puis mesurer en lecture ce que donneraient les 2 304
+liens (combien changent, lesquels) ; puis voir une page en vrai.

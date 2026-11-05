@@ -319,17 +319,57 @@ class AppointmentService:
                 "order": "actif_chez_hektor.desc,app_fiche_id.asc"})
             # sa propre fiche d'abord, puis ses autres fiches
             fiches.sort(key=lambda f: 0 if str(f.get("hektor_negociateur_id") or "") == str(commercial_id or "") else 1)
+            trouve = {"tel": None, "portable": None, "email": None, "label": None, "personne": personne}
             for fiche in fiches:
                 tel = self._coalesce_text(fiche.get("telephone"))
                 portable = self._coalesce_text(fiche.get("portable"))
                 if tel or portable:
-                    return {"tel": tel, "portable": portable, "email": self._coalesce_text(fiche.get("email_vu")),
-                            "label": self._coalesce_text(fiche.get("nom_vu")), "personne": personne}
-            return {"tel": None, "portable": None, "email": None, "label": None, "personne": personne}
+                    trouve = {"tel": tel, "portable": portable, "email": self._coalesce_text(fiche.get("email_vu")),
+                              "label": self._coalesce_text(fiche.get("nom_vu")), "personne": personne}
+                    break
+            # 05/11/2026 (§48) -- les coordonnees A NOUS de la personne passent devant ses fiches : ce sont celles qu'un
+            # administrateur corrige dans le registre (le carnet) ; la nuit les remplit depuis Hektor sans jamais les ecraser.
+            # Vides (avant la 1re nuit, ou personne sans numero) : la fiche Hektor, comme avant.
+            try:
+                coords = self._rest_get("app_negociateur_personne", params={
+                    "select": "telephone,portable", "app_personne_id": f"eq.{personne}", "limit": "1"})
+            except Exception:
+                coords = []
+            if coords:
+                trouve["tel"] = self._coalesce_text(coords[0].get("telephone"), trouve["tel"])
+                trouve["portable"] = self._coalesce_text(coords[0].get("portable"), trouve["portable"])
+            return trouve
         except Exception:
             return None
 
-    def _load_contact_details(self, dossier: dict[str, Any]) -> dict[str, Any]:
+    @staticmethod
+    def _cle_agence(value: Any) -> str:
+        """La cle d'agence du registre, a l'identique de `app_neg_cle_agence` (SQL) et de `cleAgence` (front) :
+        sans « Groupe GTI » en tete, sans accents, en majuscules, espaces et tirets fondus en un tiret."""
+        texte = re.sub(r"^\s*groupe\s+gti\s*", "", str(value or ""), flags=re.IGNORECASE)
+        texte = "".join(c for c in unicodedata.normalize("NFD", texte) if unicodedata.category(c) != "Mn").strip()
+        return re.sub(r"[\s-]+", "-", texte).upper()
+
+    def _load_registre_agence(self, agence_nom: str) -> dict[str, Any] | None:
+        """L'agence du REGISTRE DES AGENCES (05/11/2026, §48) : par l'ecriture exacte de son nom, sinon par sa cle (les
+        ALIAS : toutes les ecritures connues d'une agence). Rend son tel et son mail, ou None si rien n'est sur."""
+        try:
+            alias = self._rest_get("app_registre_agence_alias", params={"select": "cle,app_agence_id,ecriture", "limit": "500"})
+            cle = self._cle_agence(agence_nom)
+            exacte = {a.get("app_agence_id") for a in alias if str(a.get("ecriture") or "").strip().lower() == agence_nom.strip().lower()}
+            par_cle = {a.get("app_agence_id") for a in alias if cle and str(a.get("cle") or "") == cle}
+            ids = exacte if len(exacte) == 1 else par_cle
+            if len(ids) != 1:
+                return None
+            rows = self._rest_get("app_registre_agence", params={
+                "select": "app_agence_id,telephone,email", "app_agence_id": f"eq.{ids.pop()}", "limit": "1"})
+            if not rows:
+                return None
+            return {"tel": self._coalesce_text(rows[0].get("telephone")), "mail": self._coalesce_text(rows[0].get("email"))}
+        except Exception:
+            return None
+
+    def _load_contact_details(self, dossier: dict[str, Any], current: dict[str, Any] | None = None) -> dict[str, Any]:
         details = {
             "negociateurPhone": None,
             "negociateurMobile": None,
@@ -349,21 +389,37 @@ class AppointmentService:
                 details["negociateurMobile"] = coordonnees.get("portable")
 
         if agence_nom:
-            try:
-                agency_rows = self._rest_get(
-                    "app_agence_directory",
-                    params={
-                        "select": "tel,mail",
-                        "nom": f"ilike.{agence_nom}",
-                        "limit": "1",
-                    },
-                )
-                if agency_rows:
-                    agency_row = agency_rows[0]
-                    details["agencePhone"] = self._coalesce_text(agency_row.get("tel"))
-                    details["agenceEmail"] = self._coalesce_text(agency_row.get("mail"))
-            except Exception:
-                pass
+            # 05/11/2026 (§48) -- l'agence vient d'abord du REGISTRE DES AGENCES (ce qu'un administrateur y corrige arrive
+            # enfin sur la page) ; l'annuaire de Hektor reste le REPLI, champ par champ.
+            registre = self._load_registre_agence(agence_nom)
+            if registre:
+                details["agencePhone"] = registre.get("tel")
+                details["agenceEmail"] = registre.get("mail")
+            if not (details["agencePhone"] and details["agenceEmail"]):
+                try:
+                    agency_rows = self._rest_get(
+                        "app_agence_directory",
+                        params={
+                            "select": "tel,mail",
+                            "nom": f"ilike.{agence_nom}",
+                            "limit": "1",
+                        },
+                    )
+                    if agency_rows:
+                        agency_row = agency_rows[0]
+                        details["agencePhone"] = self._coalesce_text(details["agencePhone"], agency_row.get("tel"))
+                        details["agenceEmail"] = self._coalesce_text(details["agenceEmail"], agency_row.get("mail"))
+                except Exception:
+                    pass
+
+        # 05/11/2026 (§48) -- le lien relit a chaque ouverture : ce qui manque encore reprend la COPIE du lien avant de
+        # fouiller le texte de l'annonce (sinon un lien sans portable relirait l'annonce a chaque ouverture).
+        if current:
+            cles_copie = {"negociateurPhone": "negociateur_phone", "negociateurMobile": "negociateur_mobile",
+                          "agencePhone": "agence_phone", "agenceEmail": "agence_email"}
+            for cle, colonne in cles_copie.items():
+                if not details[cle]:
+                    details[cle] = self._coalesce_text(current.get(colonne))
 
         if not all(details.values()):
             detail_payload = self._read_detail_payload_by_annonce(int(dossier["hektor_annonce_id"]))
@@ -389,10 +445,11 @@ class AppointmentService:
             "agence_phone": self._coalesce_text(link.get("agence_phone")),
             "agence_email": self._coalesce_text(link.get("agence_email")),
         }
-        if all(current.values()) and not force:
-            return link
-
-        details = self._load_contact_details(dossier)
+        # 05/11/2026 (§48, decision de Frederic : « ils suivent le registre ») -- le lien relit ses coordonnees A CHAQUE
+        # ouverture, et sa copie n'est reecrite que si elles ont change. ⛔ Avant : une copie complete n'etait JAMAIS relue
+        # (1 522 liens sur 2 304 figes au 05/11), donc une correction n'arrivait pas chez les clients deja servis.
+        # `force` reste accepte pour les appelants ; il n'a plus d'effet.
+        details = self._load_contact_details(dossier, current)
         payload = {
             "negociateur_phone": details.get("negociateurPhone") or current["negociateur_phone"],
             "negociateur_mobile": details.get("negociateurMobile") or current["negociateur_mobile"],
