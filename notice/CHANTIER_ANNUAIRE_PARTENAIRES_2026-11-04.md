@@ -1339,6 +1339,28 @@ Frédéric le 05/11 à 10:24:37-39** (cette session n'a pas les droits d'adminis
 chargé porte le correctif. La session Youtrust avait confirmé que ses morceaux non commités du worker sont prêts et dorment
 derrière `signature_youtrust` = off. **L'interrupteur `contact_partenaire_modif` reste ÉTEINT.**
 
+✅✅ **ALLUMÉ ET PROUVÉ EN RÉEL le 05/11** (« Oui, vas-y ») :
+- `app_setting.contact_partenaire_modif = on` posé à 10:26:38 (retour arrière : `off`).
+- Deux fiches d'essai créées par l'écran (Contacts → Nouveau contact), compte formation, e-mail RGPD décoché :
+  **ZZ ESSAI SOCIETE BIENVU** (20000039 / Hektor 606216, personne morale, SARL, métier Syndic, tél. 0499999901 — le
+  0400000000 du 04/11 déclenchait un « doublon possible » avec un vrai contact) et **M. Bienvu ZZ ESSAI PARTENAIRE
+  PERSONNE** (20000040 / 606217, personne physique, Diagnostiqueur, 0499999902). Relu en GET : 606216 porte
+  `partenaireMoraleInfo`, 606217 `contacts_full_accueil_partenaire` — exactement la mesure du §20.
+- Téléphone changé par « Modifier le contact » (0499999911 / 0499999912, RGPD décoché) ; envoi à 10:42-10:44 :
+  **2 travaux `update_hektor_contact` FAITS, 0 erreur** ; compte rendu `formulaire` = le bon groupe pour chacun ; la
+  société part en statut 3. **Relu chez Hektor** : raison sociale « ZZ ESSAI SOCIETE BIENVU » et SARL intactes ;
+  civilité M., nom, prénom intacts ; le NOUVEAU numéro est bien chez Hektor. ⇒ **D-2 RÉPARÉ** (avant : « introuvable »).
+- ⚠⚠ **DÉFAUT D-5 TROUVÉ, ANCIEN, HORS D-2** : changer un téléphone depuis l'app **AJOUTE une ligne** chez Hektor au
+  lieu de remplacer — les 2 fiches ont ancien + nouveau numéro. Cause : `replaceContactTelephoneParams` envoie
+  `id_telephone[]` VIDE (donc « nouveau téléphone ») et Hektor garde ceux qu'on ne renvoie pas. Commun à TOUTES les
+  modifications de contact depuis juin : **604020 a 5 téléphones** (4 changements depuis l'app, juin et 12/10) ;
+  14 modifications avec téléphone depuis juin. **Rien corrigé** : à décider par Frédéric.
+- Rappels vus pendant l'essai : D-1 (métier « Non défini » chez Hektor après création, les deux fiches) ; D-4 (RGPD
+  coché par défaut dans « Modifier le contact »).
+- **Suppression** par l'écran (raison + « SUPPRIMER CONTACT 2000003x ») : 2 travaux `delete_hektor_contact` faits ;
+  0 ligne dans `app_contact_current` et `app_contact_pending` ; 2 lignes au journal des suppressions ; formulaire Hektor
+  vide (0 octet) pour 606216 et 606217. Onglet Chrome refermé.
+
 ### 7 ter. Les dépendances (techniques, pas un ordre décidé)
 
 - 0 avant tout le reste ; 0.1 avant B2 ; 0.2 avant B1 ; 0.6 avant B5 ; 0.3 avant B6 ; 0.4 avant B7 ; 0.5 avant C2.
