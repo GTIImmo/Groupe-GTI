@@ -816,3 +816,18 @@ Aucun changement pour les 8 comptes actuels (tous « réseau ») ; la faille est
   case, 44 avec (9 « · ancien » : Aline VALETTE, Anne FARGET, Cyril LACHAIZE, Frédérique JORAND, Hugo LABBE, Joel
   CHAMPAGNAC, Lucie DECHANDON, Vincent-Lucas GONZALEZ, Vivien BERGER) ; TRANSACTIONS 29 sans, 35 avec (6 anciens) ;
   UTILISATEURS « Personne du registre » 34 sans, 167 avec. Cases remises décochées, tiroir refermé, rien d'enregistré.
+
+## 33. MAQUETTE « REGISTRE DES UTILISATEURS » (05/11) — Frédéric : « oui » — ⛔ rien n'est codé
+
+Idée de Frédéric : un vrai écran admin, ouvert par le bouton « Utilisateurs », avec le listing du registre et ses
+fonctions (dont « Ajouter un utilisateur »). Maquette (données réelles du 05/11) :
+https://claude.ai/artifact/XMLpyh5kDkfpXPwGTB5738 — trois écrans :
+1. LA LISTE : 6 chiffres (185 personnes, 34 actifs, 133 anciens, 18 agences, 8 comptes dont 5 reliés, 34 à valider),
+   recherche, agence, type, « Tous / Avec un compte / Sans compte / À valider », case « Afficher les anciens » (vivante),
+   une ligne par PERSONNE du registre (type, agence active, n° Hektor, compte de l'app, statut).
+2. LA FICHE (exemple réel : Dylan JOURGET, 4 fiches dont 3 disparues le 05/11) : ses fiches Hektor, son journal, son compte
+   de l'app (« Créer son compte »), ce qu'il y a à valider (« Marquer traité »), ce que l'app retient de lui.
+3. AJOUTER : le formulaire d'aujourd'hui en pleine page, la personne du registre déjà proposée quand on vient de sa fiche,
+   et le message de résultat.
+À trancher à la validation : qui y accède (admin seul, ou managers aussi comme l'outil actuel) ; ce qu'on fait des 34
+« à valider » (une file de travail ?) ; l'ajout d'un ancien sans fiche Hektor (les 14 du classeur).
