@@ -731,6 +731,15 @@ ImmoSign existant dont les boutons répondent comme avant.
 - **P2 — worker : l'envoi lit la photo.** `handleYoutrustSendSignature` ne prend plus `payload_json.mandants` ; il lit la
   photo, refuse si elle manque, n'accepte de l'écran que des corrections d'e-mail / portable PAR RANG. Contrôles O3
   gardés. P1 + P2 = un seul redémarrage des services (documents + synchro), file vide.
+  ✅ **P2 CODÉ LE 05/11, NON ACTIF** : `signatairesDepuisLaPhoto` (worker, bloc du lot 4) ; `handleYoutrustSendSignature`
+  prend les mandants de la photo, ignore `payload_json.mandants` (et l'écrit au journal), accepte de l'écran
+  `payload_json.corrections = [{ rang, email?, telephone? }]` et REFUSE toute autre clé (« le reste est imprimé ») ou un
+  rang hors du PDF ; refus sans photo ou photo invalide, AVANT tout appel à Youtrust ; chaque signataire de notre ligne
+  garde `hektor_contact_id` et `corrige`. Essais : `Console/test_envoi_lit_la_photo.js` **18/18** hors ligne (faux
+  Youtrust, aucun crédit) — ⭐ témoin inverse : le worker d'avant faisait signer LES NOMS DE L'ÉCRAN, à nombre égal ;
+  `essai_youtrust_handler_sandbox.js` mis à la règle (la photo remplace la liste ; scène 6 = photo fausse) et rejoué
+  **en vraie sandbox le 05/11, 18/18**, sur un PDF RÉEL du gabarit (mandat à 2 mandants, `test_reperes_signature.mjs` →
+  Chromium), boîte de Frédéric seulement, code par e-mail. Voisins verts (photo, 4 bis, R1, couples).
 - **P3 — base + worker : le 2e téléphone (D27)** dans la porte « modifier un mandant », pour qu'un portable complété à
   l'envoi n'écrase pas un fixe.
 - **P4 — écran : la fenêtre d'envoi-confirmation** (maquette « corriger » vue 1-2) : PDF, signataires lus dans la photo,

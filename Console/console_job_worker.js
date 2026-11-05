@@ -6368,6 +6368,44 @@ async function mandataireDuMandat(job, payload, dossier) {
   throw refusEtatYoutrust("Mandataire introuvable : le negociateur du bien est inactif ou sans e-mail, et la personne qui envoie n'a pas de compte avec e-mail.");
 }
 
+// A.2 lot 6b P2 (05/11/2026, D31 + D33) -- LES SIGNATAIRES VIENNENT DU PDF, JAMAIS DE L'ECRAN.
+// La photo rangee a la generation (P1, metadata_json.signataires_du_pdf) dit qui le PDF fait signer et dans
+// quel ordre (s1..sN). L'ecran ne peut corriger QUE l'e-mail et le portable d'un rang (canaux de remise, D33) :
+// toute autre cle est refusee (« le reste est imprime ») -- Frederic : « rien ne doit modifier le PDF ».
+// Sans photo, ou photo invalide : refus, il faut regenerer (aucun document existant a reprendre : 18
+// generations en tout, aucune depuis 60 jours, mesure du 05/11).
+function signatairesDepuisLaPhoto(doc, corrections) {
+  const nomDoc = (doc && doc.document_name) || "?";
+  const photo = doc && doc.metadata_json && doc.metadata_json.signataires_du_pdf;
+  if (!photo || !Array.isArray(photo.mandants)) {
+    throw refusEtatYoutrust(`Le document « ${nomDoc} » n'a pas ete fait par l'editeur avec ses cases de signature : regenerez le mandat, puis envoyez-le.`);
+  }
+  if (photo.valide !== true || !photo.mandants.length) {
+    throw refusEtatYoutrust(`Le PDF « ${nomDoc} » ne correspond pas a ses mandants (${(photo.problemes || []).join(" ; ") || "photo invalide"}) : regenerez le mandat.`);
+  }
+  const parRang = new Map();
+  for (const c of Array.isArray(corrections) ? corrections : []) {
+    const rang = Number(c && c.rang);
+    if (!Number.isInteger(rang) || rang < 1 || rang > photo.mandants.length) {
+      throw refusEtatYoutrust(`Correction pour le rang ${c && c.rang} : ce PDF a ${photo.mandants.length} mandant(s).`);
+    }
+    const autres = Object.keys(c).filter((k) => !["rang", "email", "telephone"].includes(k));
+    if (autres.length) {
+      throw refusEtatYoutrust(`Seuls l'e-mail et le portable se corrigent a l'envoi (rang ${rang} : ${autres.join(", ")}). Le reste est imprime : corrigez le mandat et regenerez-le.`);
+    }
+    parRang.set(rang, c);
+  }
+  return photo.mandants.map((m) => {
+    const c = parRang.get(m.rang) || {};
+    return {
+      rang: m.rang, civilite: m.civilite, prenom: m.prenom, nom: m.nom, hektor_contact_id: m.hektor_contact_id || null,
+      email: c.email !== undefined ? cleanString(c.email) : m.email,
+      telephone: c.telephone !== undefined ? cleanString(c.telephone) : m.telephone,
+      corrige: Object.keys(c).filter((k) => k !== "rang"),
+    };
+  });
+}
+
 async function handleYoutrustSendSignature(job) {
   await exigerInterrupteurYoutrust();
   const payload = safeJsonParse(job.payload_json) || {};
@@ -6402,9 +6440,12 @@ async function handleYoutrustSendSignature(job) {
   }
 
   // 3. Les signataires : mandants dans l'ORDRE des cases (s1..sN), puis le mandataire (sN+1).
+  // lot 6b P2 : la liste vient de la PHOTO du PDF ; celle de l'ecran (payload_json.mandants) est ignoree.
+  const mandantsBruts = signatairesDepuisLaPhoto(doc, payload.corrections);
+  if (Array.isArray(payload.mandants)) {
+    await logJob(job.id, "youtrust", "running", "Liste de signataires de l'ecran ignoree : les signataires viennent du PDF", { ecran: payload.mandants.length, pdf: mandantsBruts.length });
+  }
   const dossier = await loadDossier({ app_dossier_id: doc.app_dossier_id, hektor_annonce_id: doc.hektor_annonce_id });
-  const mandantsBruts = Array.isArray(payload.mandants) ? payload.mandants : [];
-  if (!mandantsBruts.length) throw refusEtatYoutrust("Aucun mandant a faire signer (payload_json.mandants).");
   // D17 + D21 : le negociateur DU BIEN s'il est actif, sinon l'expediteur, jamais l'agence.
   const mandataireBrut = await mandataireDuMandat(job, payload, dossier);
   const nego = {
@@ -6429,6 +6470,8 @@ async function handleYoutrustSendSignature(job) {
     return {
       index: p.index, role: p.role, prenom, nom, email, telephone: portable, otp: portable ? "otp_sms" : "otp_email",
       ...(p.role === "mandataire" ? { source: (p.brut && p.brut.source) || null } : {}),
+      // lot 6b P2 : d'ou vient ce mandant (photo du PDF), et ce que l'ecran a corrige (e-mail / portable seulement).
+      ...(p.role === "mandant" ? { hektor_contact_id: p.brut.hektor_contact_id || null, corrige: p.brut.corrige || [] } : {}),
     };
   });
   if (problemes.length) throw refusEtatYoutrust(`Envoi impossible : ${problemes.join(" ; ")}.`);

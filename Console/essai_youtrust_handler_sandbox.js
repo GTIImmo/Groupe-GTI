@@ -80,6 +80,10 @@ const H = new Function(...Object.keys(doublures),
   ...Object.values(doublures));
 
 const mandant = (i) => ({ prenom: "Frederic", nom: `Gerphagnon (mandant ${i})`, email: BOITE, telephone: "" });
+// lot 6b P2 (05/11) : les signataires viennent de la PHOTO du PDF (metadata_json.signataires_du_pdf), plus du payload.
+const photoDuPdf = (n) => ({ version: 1, valide: true, problemes: [], reperes_attendus: 2 * n + 1, reperes_trouves: 2 * n + 1,
+  mandants: Array.from({ length: n }, (_, i) => ({ rang: i + 1, ...mandant(i + 1), hektor_contact_id: null })) });
+base.documents.get(DOC).metadata_json.signataires_du_pdf = photoDuPdf(N);
 const job = (payload) => ({ id: `job-${Date.now()}`, requested_by: null, payload_json: payload });
 const attendre = (ms) => new Promise((r) => setTimeout(r, ms));
 const echecs = [];
@@ -147,8 +151,11 @@ async function refus(promesse) { try { await promesse; return null; } catch (e) 
   const lu5 = await client.lireDemande(r1.provider_request_id);
   controle("5. annulation : Youtrust « canceled », notre ligne « canceled », miroir « cancelled »", r5.status === "cancelled" && lu5.status === "canceled" && dem.status === "canceled" && sig5.status === "cancelled", `${lu5.status} ${dem.status} ${sig5.status}`);
 
-  // 6. PDF a 2 mandants envoye avec UN seul -> refuse AVANT activation (aucun credit)
-  const r6 = await refus(H.handleYoutrustSendSignature(job({ ...payload, mandants: Array.from({ length: N - 1 }, (_, i) => mandant(i + 1)) })));
+  // 6. PDF a 2 mandants dont la PHOTO n'en a qu'un (photo fausse) -> refuse AVANT activation (aucun credit).
+  //    lot 6b P2 : la liste vient de la photo ; on fausse donc la photo, la liste de l'ecran ne compte plus.
+  base.documents.get(DOC).metadata_json.signataires_du_pdf = photoDuPdf(N - 1);
+  const r6 = await refus(H.handleYoutrustSendSignature(job(payload)));
+  base.documents.get(DOC).metadata_json.signataires_du_pdf = photoDuPdf(N);
   const dem6 = base.demandes[base.demandes.length - 1];
   const lu6 = dem6 && dem6.provider_request_id ? await client.lireDemande(dem6.provider_request_id).catch((e) => ({ status: `illisible (${e.status})` })) : null;
   controle(`6. reperes : ${2 * N + 1} dans le PDF, ${2 * N - 1} attendus -> REFUS D'ETAT avant activation`, /repere\(s\)/.test(r6 || "") && dem6.status === "failed", r6);
