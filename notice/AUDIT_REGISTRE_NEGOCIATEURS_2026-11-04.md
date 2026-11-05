@@ -1120,3 +1120,9 @@ vert (ils mordent vraiment).
 `comptes_hektor` avec le 7. ⚠ Sa fiche active est rangée dans l'agence « Compte formation » (déjà le défaut de la fiche
 contact, par la ruse du nom). ⚠ Le lien reste une PHOTO prise à l'enregistrement : une mise à jour de nuit = étape à part.
 Retour arrière : `git revert` du commit.
+
+**✅ PROUVÉ EN RÉEL le 05/11** : poussé par Frédéric, Render sur `71bb15d` (démarré 13:35:06 UTC, lu sur `/health`).
+Compte de Franck réenregistré par Frédéric à 13:41:06 → sa ligne porte `hektor_user_id 2`, `hektor_negociateur_id 1`,
+`negociateur_email franck.gerphagnon@gmail.com`, `match_source registre_fiche_active`, `agence_nom Compte formation`,
+`comptes_hektor [SECRETAIRE 7]`. Le registre n'a pas bougé (toujours relié à son compte @gti, 0 ligne de journal,
+0 personne née). Les 5 autres lignes inchangées (aucune n'a été réenregistrée).
