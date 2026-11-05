@@ -204,5 +204,8 @@ controle("(64) côté Partenaires, la barre du haut des clients se cache ; le ca
   && /\{catalogueVisible && !vueMetiers \? \(/.test(app) && /className="pa-switch"/.test(catTsx) && /Ajouter un partenaire/.test(catTsx));
 controle("(65) l'aperçu : l'activité est « en construction », jamais un faux chiffre", /Activité avec l'agence sur 12 mois · en construction/.test(catTsx) && !/\d+ ?%/.test(catTsx.replace(/\/\/.*$/gm, "")));
 
+controle("(66) quitter le côté Partenaires ferme la fiche ouverte depuis le catalogue (jamais le 1er client de la page à sa place)",
+  /if \(!vueMetiers && contactCatalogue\) \{ setDetailOpen\(false\); setContactCatalogue\(null\) \}/.test(app));
+
 console.log(echecs.length ? `\n${echecs.length} contrôle(s) en échec` : "\nTout est vert.");
 process.exit(echecs.length ? 1 : 0);

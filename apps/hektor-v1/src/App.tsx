@@ -48911,6 +48911,11 @@ function ContactsScreen(props: {
   // La liste des clients ne connaît pas les contacts du catalogue (props.selectedContact retomberait sur le 1er de la page) :
   // le catalogue rend la fiche COMPLÈTE qu'il a lue ; liens et recherches se chargent déjà par le numéro choisi.
   const [contactCatalogue, setContactCatalogue] = useState<AppContact | null>(null)
+  // ⛔ (05/11, vu en ligne) : quitter le côté Partenaires avec une fiche du catalogue ouverte la faisait retomber sur
+  // props.selectedContact = le 1er client de la page (un AUTRE contact, avec les liens du premier). On ferme la fiche.
+  useEffect(() => {
+    if (!vueMetiers && contactCatalogue) { setDetailOpen(false); setContactCatalogue(null) }
+  }, [vueMetiers, contactCatalogue])
   const ficheContact = vueMetiers && contactCatalogue && contactCatalogue.hektor_contact_id !== props.selectedContact?.hektor_contact_id
     ? contactCatalogue : props.selectedContact
   const surFiltreNotaire = catalogueVisible && props.activeRole === 'notaire'

@@ -1856,6 +1856,16 @@ pour tout le monde (au rechargement). Retour arrière : `admin` ou `off`. **Suit
   par numéro.
 - **Contrôle avant le push** : banc local à données FICTIVES (esbuild, base simulée, servi par le serveur des maquettes,
   retiré ensuite) : 1212 px et 900 px, sans débordement. Essai `test_metier_partenaire.cjs` **65/65**.
+- ✅ **Poussé (`619f1e0`, sorti en `997ba57` ; Vercel est resté ~5 min « en préparation », puis a relancé seul) et vu
+  en ligne** (1280 × 665) : en-tête de la maquette, barre du haut des clients cachée, tuiles 632 / 9 / 22 / 26 / 75 ; les
+  trois GIBERT IMMOBILIER enfin discernables (n° 10215568, 10352769, 10650712) ; aperçu → « Ouvrir la fiche syndic » →
+  fiche syndic ; retour côté Clients : barre du haut revenue, pastille Notaire absente.
+- ⛔ **Défaut trouvé en ligne et corrigé (non poussé)** : repasser côté Clients avec une fiche du catalogue OUVERTE la
+  faisait retomber sur `props.selectedContact` = le 1er client de la page (M. Julien NEYRET à la place de GIBERT, avec les
+  liens de GIBERT). Difficile à atteindre (la fiche couvre l'interrupteur ; atteint par script), mais une fiche ne doit
+  jamais montrer un autre contact : quitter le côté Partenaires ferme désormais la fiche du catalogue. Essai 66/66.
+  ⚠ Le repli `contactsDirectory.find(...) ?? contactsDirectory[0]` d'App.tsx est ANCIEN et sert à toute l'app : non
+  touché, à signaler.
 
 ### 7 ter. Les dépendances (techniques, pas un ordre décidé)
 
