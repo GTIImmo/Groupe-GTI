@@ -389,7 +389,7 @@ type ChampSaisie = {
   titre: string
   /** la valeur À NOUS (la colonne), pas la valeur déduite de Hektor */
   valeur: string | null
-  /** ce que Hektor donne, en grisé, quand la nôtre est vide */
+  /** ce que l'écran affiche aujourd'hui (Hektor, ou l'accès @gti pour l'e-mail), en grisé, quand la nôtre est vide */
   indice?: string
   type?: 'texte' | 'choix' | 'date'
   options?: Array<[string, string]>
@@ -447,12 +447,13 @@ function FormulaireSaisie({ objet, id, champs, carnet, onGeste, onFermer }: {
                   {(c.options ?? []).map(([val, lib]) => <option key={val} value={val}>{lib}</option>)}
                 </select>
               ) : (
-                <input type={c.type === 'date' ? 'date' : 'text'} value={valeurs[c.champ] ?? ''} placeholder={c.indice ? `Hektor : ${c.indice}` : ''} list={liste}
+                <input type={c.type === 'date' ? 'date' : 'text'} value={valeurs[c.champ] ?? ''} placeholder={c.indice ? `affiché : ${c.indice}` : ''} list={liste}
                   onChange={(e) => setValeurs({ ...valeurs, [c.champ]: e.target.value })} disabled={occupe} />
               )}
               {liste ? <datalist id={liste}>{c.suggestions?.map((x) => <option key={x} value={x} />)}</datalist> : null}
               <span className="ru-aide">
-                {auCarnet ? <>saisi chez nous · <button type="button" className="ru-lien ru-gauche is-mini" disabled={occupe} onClick={() => void rendre(c)}>Rendre à Hektor</button></> : 'repris de Hektor'}
+                {auCarnet ? <>saisi chez nous · <button type="button" className="ru-lien ru-gauche is-mini" disabled={occupe} onClick={() => void rendre(c)}>Rendre à Hektor</button></>
+                  : c.valeur ? 'repris de Hektor' : 'vide chez nous · la nuit le remplira'}
               </span>
             </label>
           )
@@ -575,7 +576,8 @@ function FichePersonne(props: {
                     ...(donnees.agences ?? []).map((a): [string, string] => [String(a.id), a.nom])] },
                 { champ: 'email_pro', titre: 'E-mail professionnel', valeur: p.emailPro, indice: v.email || undefined },
                 { champ: 'portable', titre: 'Portable', valeur: p.portable, indice: v.portable || undefined },
-                { champ: 'telephone', titre: 'Téléphone fixe', valeur: p.telephone, indice: telephone(v.ficheActive?.telephone) || undefined },
+                { champ: 'telephone', titre: 'Téléphone fixe', valeur: p.telephone,
+                  indice: ((fixe) => (fixe && fixe !== v.portable ? fixe : undefined))(telephone(v.ficheActive?.telephone)) },
               ]} />
             ) : (
             <div className="ru-grille-qui">
@@ -699,7 +701,7 @@ function FichePersonne(props: {
                   </div>
                 )
               })}
-              <span className="ru-mute ru-petit">« Garder la nôtre » ne change rien chez Hektor : l’écart ne revient plus.</span>
+              {ecartsHisto.length ? <span className="ru-mute ru-petit">« Garder la nôtre » ne change rien chez Hektor : l’écart ne revient plus.</span> : null}
             </section>
           ) : null}
           <section className="ru-carte ru-bloc">

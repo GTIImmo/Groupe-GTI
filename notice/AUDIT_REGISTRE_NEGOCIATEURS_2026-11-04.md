@@ -1211,3 +1211,8 @@ après la pose et le push : une saisie sur une fiche, puis la nuit.
 `patch_registre_saisie_lot_c_2026_11_05`) : les 9 contrôles de la répétition sont VERTS (carnet vide, aucune saisie). La
 nuit des négociateurs a maintenant l'empreinte `a2dab5d05f2b02f0d03357b510679785` (avant : `725267743d…`, que l'inverse
 sait retrouver).
+**✅ VU EN LIGNE le 05/11** (consultation seule, formulaire ouvert puis ANNULÉ : carnet 0, gestes 0 vérifiés en base) : fiche
+de Franck → « Modifier », « Modifier son accès », « Le passer en ancien », « C'est vu » ; le formulaire s'ouvre avec les
+valeurs affichées en grisé. Retouches de libellés (commit suivant) : le grisé dit « affiché : » (l'e-mail montré est
+l'accès @gti, pas Hektor), le fixe n'est pas proposé s'il égale le portable, un champ vide dit « vide chez nous · la nuit le
+remplira » (pas « repris de Hektor »), la phrase « Garder la nôtre » seulement s'il y a un écart.
