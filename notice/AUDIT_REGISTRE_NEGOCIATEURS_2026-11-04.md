@@ -1270,3 +1270,46 @@ SEULEMENT si l'empreinte change, et ne touche jamais aux colonnes (Hektor compl�
 
 **⏸ DÉCISION (05/11) — Frédéric : « ce n'est pas très utile, on verra plus tard, pas la peine de récupérer ces fichiers
 tout de suite ».** L'étape 4 est REPORTÉE, rien n'est codé. La mesure ci-dessus reste valable pour le jour où on la reprendra.
+
+## 46. AUDIT DE L'ÉTAPE 5 — les lecteurs qui lisent encore les annuaires de Hektor (05/11) — Frédéric : « Oui, l'audit » — ⛔ rien n'est codé
+
+Recensé dans le code (front, API, worker) et en base (fonctions, politiques) : tout ce qui lit `app_agence_directory`,
+`app_user_directory`, `app_hektor_negotiator_agency_directory` ou compare un `agence_nom` en texte.
+
+**A. RESTENT sur l'annuaire de Hektor — décision du §39 (« tout geste qui communique avec Hektor garde les fiches
+actives chez Hektor »)** : worker `loadActiveHektorNegoUserIds`, `loadHektorDirectoryUserByEmail/ById`,
+`loadHektorNegotiatorAgencyRows`, `resolveHektorExecutionUser` (l. 2360-2493), `resolveAgencyContextForFallback`
+(l. 2837), `handleAssignHektorAnnonceNegotiator` (l. 17784) ; en base `app_console_create_contact_search_job`,
+`app_console_create_update_contact_job`, `app_console_resolve_contact_hektor_user` ; front : la fenêtre « affecter un
+négociateur » (`loadHektorAgencyOptions`, l'agence y est un n° HEKTOR envoyé à Hektor). ⛔ Ne pas basculer.
+
+**B. Les COORDONNÉES affichées ou imprimées — candidates** :
+1. Pages publiques RDV / estimation (`appointment_service.py`) : tél et mail de l'agence par son NOM (l. 354), agence
+   d'estimation par n° Hektor ou par clé de nom (l. 439-480). ⚠ Les liens publics portent la clé : à garder lisibles.
+2. PDF du worker : bloc « Agence » (`resolveEstimNegotiatorContact`, l. 8804, par nom) et coordonnées du conseiller
+   (`loadAgencyDirectoryRowForOwner`, l. 2882).
+3. Le mandataire Youtrust (`mandataireDuMandat`, l. 6350 : nom, e-mail, portable du négociateur du bien). ⚠ Circuit de
+   signature (A.2) : à voir avec l'autre session.
+Mesure du jour (annuaire des agences) : Tence porte le mail ET le tél d'Yssingeaux ; Saint-Étienne = dorian@ ; Courpière
+est désormais juste (courpiere@). L'intérêt de basculer : une correction saisie dans le registre arrive enfin sur les
+pages publiques et les PDF ; aujourd'hui elle n'y arrive pas.
+
+**C. L'APPARTENANCE à une agence (texte) — candidates** :
+4. Les droits « son agence » : `app_mon_agence()` (agence du négociateur ACTIF de même e-mail, en TEXTE), lue par
+   `app_voit_cette_ligne`, `app_voit_ce_dossier_selon_perimetre`, `app_mes_biens_selon_perimetre` et 5 politiques
+   (biens, contacts, registre des mandats, deux index d'annonces). ⭐ MESURE : AUCUN compte n'a le périmètre « agence »
+   (6 comptes actifs, tous « réseau ») → ces droits DORMENT. Et un compte secrétaire n'aurait AUCUNE agence (pas de fiche
+   négociateur).
+5. Le pilotage : l'agence d'un négociateur vient de l'annuaire (`pilotage.ts` `lireAnnuaire`), en texte.
+6. Les filtres d'agence de l'écran : ils lisent l'`agence_nom` des lignes elles-mêmes. Mesure : 13 533 biens et 94 859
+   contacts, TOUS au nom exact d'une agence de l'annuaire, sauf « Agences supprimée » (115 biens, 108 contacts) → rien à
+   corriger aujourd'hui.
+
+**Ce que ça pourrait casser** : A — les gestes (d'où : on n'y touche pas). B1 — un lien public déjà envoyé (on garde la
+lecture par clé et par n° Hektor, le registre porte le n° Hektor de chaque agence). B2-B3 — le worker : fichier partagé
+avec l'autre session, redémarrage des 4 services file vide. C4 — les droits : un écart = un négociateur qui voit trop ou
+pas assez (dormant aujourd'hui, donc éprouvable sans risque). Chaque lecteur basculé garde l'annuaire de Hektor en REPLI
+si le registre ne répond pas.
+
+**Ordre proposé** (un « vas-y » chacun, APRÈS la 1re nuit qui écrit les agences, le 06/11) : B1 (API seule, Render) →
+B2 (worker) → C5 (pilotage) → C4 (droits, avec un témoin inverse) ; B3 avec l'autre session ; C6 rien.
