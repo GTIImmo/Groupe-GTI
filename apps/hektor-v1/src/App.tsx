@@ -31979,10 +31979,25 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   }
   /** ⑧ (05/11/2026) — QUI PAIE LES HONORAIRES, pour le bloc « À la charge de ».
    *
-   *  ⛔ CE BLOC EXISTAIT ET NE S'ALLUMAIT JAMAIS : il est conditionne a
-   *    `affaire.honoraires.charge`, et la seule construction de cet objet posait
-   *    `charge: ''` EN DUR. Il etait donc ecrit, rendu, et invisible depuis
-   *    toujours.
+   *  ⛔⛔ A LIRE AVANT DE S'EN SERVIR : CE BLOC NE S'AFFICHE QUASIMENT JAMAIS, et
+   *    ce n'est pas a cause de cette fonction. Verifie en ligne le 05/11 sur le
+   *    temoin 62768 (charge acquereur, honoraires presents) : ZERO element
+   *    `.fa-ck-hf` dans la page.
+   *    LA CAUSE : il y a DEUX branches pour construire la fiche affaire, et le
+   *    code le dit lui-meme (« 2.1 : LE REGISTRE D'ABORD, LA DERIVATION EN
+   *    FILET »). Si le bien a des affaires au registre -- donc presque toujours --
+   *    c'est la branche REGISTRE qui sert, et elle NE CONSTRUIT AUCUN objet
+   *    `honoraires`. Le bloc ne peut donc pas exister. `ckChargeDe` n'alimente
+   *    que le FILET, pris dans les cas rares.
+   *
+   *  ⛔ DECISION DE FREDERIC, 05/11 : ON EN RESTE LA. « la charge sur le registre
+   *    des mandats me suffit ». On ne construit PAS de bloc honoraires dans la
+   *    branche registre -- ce serait inventer un affichage, pas reparer un defaut.
+   *    ⬜ NE PAS ROUVRIR sans lui. Et ne pas « reparer » cette fonction : elle est
+   *      juste, elle est simplement dans la branche peu frequentee.
+   *
+   *  ⚠ CE QUI ETAIT VRAI, ET QUI RESTE VRAI : dans la branche filet, `charge`
+   *    etait `''` EN DUR -- le bloc y etait donc mort aussi. C'est corrige ici.
    *
    *  ⭐ RIEN A CHARGER : `ckCycleAff` porte deja la charge depuis le 04/11 (elle a
    *    ete ajoutee au select de loadRegisterCycleAffaires). Meme patron que
