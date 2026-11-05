@@ -35,6 +35,33 @@ class EcarterLesSupprimes(unittest.TestCase):
         self.assertEqual(l, {})
 
 
+class EcarterLesRetires(unittest.TestCase):
+    """§25 (05/11) : un métier retiré à l'écran n'est jamais rajouté par la nuit."""
+
+    def test_un_metier_retire_n_est_plus_voulu(self):
+        m, n = r.ecarter_les_retires(METIERS, {("10215568", "syndic")}, set())
+        self.assertNotIn(("10215568", "syndic"), m)
+        self.assertEqual(n, 1)
+
+    def test_un_metier_retire_puis_remis_a_l_ecran_reste_voulu(self):
+        m, n = r.ecarter_les_retires(METIERS, {("10215568", "syndic")}, {("10215568", "syndic")})
+        self.assertIn(("10215568", "syndic"), m)
+        self.assertEqual(n, 0)
+
+    def test_le_retrait_d_un_metier_ne_touche_pas_les_autres_du_meme_contact(self):
+        m, _ = r.ecarter_les_retires(METIERS, {("20000044", "syndic")}, set())
+        self.assertIn(("20000044", "notaire"), m)
+        self.assertNotIn(("20000044", "syndic"), m)
+
+    def test_temoin_sans_retrait_rien_ne_change(self):
+        self.assertEqual(r.ecarter_les_retires(METIERS, set(), set()), (METIERS, 0))
+
+    def test_seuls_les_retraits_faits_par_quelqu_un_sont_lus(self):
+        with mock.patch.object(r, "lire_tout", return_value=[{"id": 1, "contact_id": 10215568, "metier": "syndic"}]) as lire:
+            self.assertEqual(r.metiers_retires_par_quelquun(), {("10215568", "syndic")})
+        self.assertEqual(lire.call_args[0][2], {"retire_le": "not.is.null", "retire_par": "not.is.null"})
+
+
 class LeJournalDesSuppressions(unittest.TestCase):
     def test_les_deux_formes_du_numero_sont_lues(self):
         lignes = [{"id": "a", "app_contact_id": None, "identite": "20000044"},

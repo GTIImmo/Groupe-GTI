@@ -21,6 +21,7 @@ LES RÈGLES (décisions de Frédéric du 04/11, §6 bis) :
     jamais touché : en cas d'écart, l'app gagne et l'écart est COMPTÉ dans le compte rendu (Q3).
   - (05/11, §23) un contact SUPPRIMÉ depuis l'app (journal `app_console_deleted_contact_log`) n'a plus aucune ligne :
     la suppression les efface (décision « Effacer »), et la nuit ne les recrée jamais.
+  - (05/11, §25) un métier RETIRÉ par quelqu'un (à l'écran, `retire_par` rempli) n'est jamais rajouté : le retrait fait foi.
 
 LE NOTAIRE (décision « A » de Frédéric, 04/11 au soir, §17) : il entre au registre comme les autres métiers, de trois
 sources — Netty (« notaire »), le formulaire Hektor (code 2) et la table des parties chez Supabase (rôles notaire_vendeur /
@@ -260,6 +261,20 @@ def ecarter_les_supprimes(metiers: dict[tuple[str, str], str], liens: dict[tuple
     return gardes_m, gardes_l, (len(metiers) - len(gardes_m)) + (len(liens) - len(gardes_l))
 
 
+def metiers_retires_par_quelquun() -> set[tuple[str, str]]:
+    """(notre numéro, métier) dont une ligne a été RETIRÉE par quelqu'un (`retire_par` rempli) -- §25, pièce 3.2."""
+    return {(str(l["contact_id"]), str(l["metier"])) for l in lire_tout(
+        "app_partenaire_metier", "id,contact_id,metier", {"retire_le": "not.is.null", "retire_par": "not.is.null"})}
+
+
+def ecarter_les_retires(metiers: dict[tuple[str, str], str], retires: set[tuple[str, str]],
+                        actifs: set[tuple[str, str]]) -> tuple[dict[tuple[str, str], str], int]:
+    """§25 (05/11) : un métier retiré à l'écran fait foi -- la nuit ne le rajoute JAMAIS. S'il a été remis à l'écran
+    (une ligne active existe), il reste voulu comme les autres."""
+    gardes = {cle: source for cle, source in metiers.items() if cle not in retires or cle in actifs}
+    return gardes, len(metiers) - len(gardes)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Remplit le registre des partenaires depuis le serveur (à blanc par défaut).")
     parser.add_argument("--ecrire", action="store_true", help="écrire chez Supabase (sinon : compter seulement)")
@@ -283,6 +298,8 @@ def main() -> int:
 
     existants_metier = {(r["contact_id"], r["metier"]) for r in lire_tout(
         "app_partenaire_metier", "id,contact_id,metier", {"retire_le": "is.null"})}
+    # §25 (05/11) : un métier retiré par quelqu'un n'est plus voulu (sinon la vérification finale le réclamerait).
+    metiers, ecartes_retires = ecarter_les_retires(metiers, metiers_retires_par_quelquun(), existants_metier)
     existants_lien = lire_tout("app_partenaire_lien", "id,partenaire_id,role,hektor_annonce_id,origine",
                                {"retire_le": "is.null", "objet": "eq.bien"})
     actif_par_cle: dict[tuple[int, str], list[dict]] = {}
@@ -322,6 +339,7 @@ def main() -> int:
         "liens_voulus": len(liens), "liens_a_ajouter": len(a_ajouter_lien), "liens_a_retirer": len(set(a_retirer_lien)),
         "ecarts_app_gagne": ecarts_app,
         "contacts_supprimes_ecartes": ecartes_supprimes,
+        "metiers_retires_ecartes": ecartes_retires,
         "comptes_sources": {**c_metiers, **c_liens},
     }
 

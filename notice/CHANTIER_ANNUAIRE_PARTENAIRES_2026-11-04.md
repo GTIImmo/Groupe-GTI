@@ -1599,6 +1599,45 @@ déploiement, d'abord pour les admins.
 ✅ **`partenaires_ecran = on` le 05/11 (« Oui, pour tous »)** : le bloc « Métier » est visible pour tout le monde
 (un réglage, effet au rechargement de la page). Retour arrière : `admin` ou `off`. **Suite : la pièce 3.2.**
 
+## 25. LOT 3, PIÈCE 3.2 — « CHANGER LE MÉTIER » : AUDIT (05/11, « Oui, audite 3.2 ») — rien codé
+
+**La maquette** (`fiche-partenaire-v1.html`) place le geste à deux endroits — un bouton « Changer » dans le bloc métier
+(l. 809) et « Changer le métier » dans le menu « ⋯ » (l. 784) — mais **la fenêtre n'a jamais été dessinée**.
+**L'écriture existe** : `app_partenaire_metier_ecrire(p_contact, p_metier, p_retirer)` (empreinte `02baca86…`) —
+SECURITY DEFINER, exige un compte actif ; ajoute (source « ecran », `confirme_par` / `ecrit_par` = l'auteur), CONFIRME un
+métier déjà actif (`confirme_le`), ou RETIRE en datant (`retire_le`, `retire_par`) ; ouverte à `authenticated`, fermée à
+`anon`. Le bloc de la 3.1 sait déjà se relire (`useMetiersPartenaire`).
+**Les droits** : à l'écran, « Modifier la fiche » est montré à admin, manager et commercial (`canManageContacts`) ; la
+fonction accepte tout compte actif. Aujourd'hui 6 comptes actifs (4 admin, 2 commercial).
+**La nuit** (`registre_partenaires_reprise.py`) ne compare qu'aux lignes ACTIVES : un métier retiré à l'écran serait
+**RAJOUTÉ** la nuit suivante si Netty, Hektor ou les transactions le « veulent » encore. Mesure : 1 seule ligne retirée en
+base (1890, la fiche d'essai 20000044, supprimée et au journal) ⇒ **aucun retrait réel à protéger aujourd'hui**.
+**Remède proposé** :
+1. **Fenêtre « Métier du contact »** — à DESSINER d'abord (maquette, comme « Ajouter un conjoint » le 03/11) : les
+   métiers actifs avec leur origine et « Retirer », la liste des autres métiers à ajouter, un seul « Enregistrer » ;
+   ouverte par « Changer » (bloc) et par « ⋯ › Changer le métier » (y compris pour un contact SANS métier : c'est la
+   seule façon d'en faire un partenaire). Droits : comme « Modifier la fiche » (recommandé).
+2. **Garde de nuit** : un couple (contact, métier) dont une ligne a été retirée PAR QUELQU'UN (`retire_par` rempli) et qui
+   n'a pas de ligne active n'est **jamais rajouté** ; compte rendu `metiers_retires_ecartes`. Le retrait humain fait foi ;
+   le remettre = le rajouter à l'écran.
+3. **Interrupteur à part** `partenaires_metier_modif` (admin, puis on) — le bloc de lecture (3.1) est déjà ouvert à tous.
+Ce que ça pourrait casser : un métier retiré par erreur ne revient plus tout seul ; un commercial peut changer le métier
+de n'importe quel contact (trace de l'auteur gardée) ; rien chez Hektor.
+
+✅ **« Oui, vas-y » (05/11) — garde de nuit CODÉE, fenêtre DESSINÉE ; la fenêtre n'est PAS codée (attend sa validation)** :
+- **Garde de nuit** (`registre_partenaires_reprise.py`) : `metiers_retires_par_quelquun()` (lignes `retire_le` ET
+  `retire_par` remplis) ; `ecarter_les_retires()` les retire de ce qui est VOULU sauf s'ils ont été remis (ligne active) ;
+  compte rendu `metiers_retires_ecartes`. Sous `APP_REGISTRE_PARTENAIRES`, active dès la nuit du 05 au 06/11. Essais :
+  `test_registre_partenaires_supprimes.py` **10/10** (+5). À blanc sur la base : `metiers_retires_ecartes` = 0 (le seul
+  retrait, 1890, est la fiche d'essai supprimée), comptes inchangés (1 870 voulus, 1 869 là).
+- **Maquette** `maquettes/fenetre-metier-v1.html` (données FICTIVES ; famille « Ajouter un conjoint ») : en-tête « Métier
+  du contact » ; « Ses métiers » avec l'origine et « Retirer » (barré + « Garder » une fois marqué) ; « Ajouter un
+  métier » en pastilles (les six métiers du chantier d'abord, en gras) ; une note « vit chez nous, ne revient pas avec
+  la nuit » ; un bilan « 1 ajout · 1 retrait » et « Enregistrer » grisé sans changement ; cas sans métier (« pour en faire
+  un partenaire »). Contrôlée : bureau, écran bas 1280 × 665 en sombre (corps qui défile, boutons toujours visibles —
+  corrigé après un premier essai qui dépassait de 3 px et des boutons restés blancs), téléphone 375 × 812 (volet du bas,
+  aucun débordement).
+
 ### 7 ter. Les dépendances (techniques, pas un ordre décidé)
 
 - 0 avant tout le reste ; 0.1 avant B2 ; 0.2 avant B1 ; 0.6 avant B5 ; 0.3 avant B6 ; 0.4 avant B7 ; 0.5 avant C2.

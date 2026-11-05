@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Métier du contact — maquette v1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,600&display=swap" rel="stylesheet">
+<style>
+/* CHANTIER PARTENAIRES · LOT 3, PIÈCE 3.2 (05/11/2026) — la fenêtre « Métier du contact ».
+   Maquette, données FICTIVES. Famille visuelle : la fenêtre « Ajouter un conjoint » (ajout-conjoint.css, validée le 03/11).
+   Palette : magenta = l'action ; vert = « sera ajouté » ; rouge doux = « sera retiré » ; teal = l'origine (lecture). */
+:root{
+  --ink:#1c1815;--ink-soft:#564d47;--muted:#8a807a;--faint:#a89e95;
+  --line:#eae1d7;--line-soft:#f1eae1;--line-strong:#ddd2c6;--card:#fffdfb;--card-2:#faf6f1;--sable:#f1ece4;
+  --brand:#c2125f;--brand-ink:#9d0f4e;--brand-soft:#fdf0f6;--brand-line:#f1c9da;
+  --teal:#2f7c86;--teal-soft:#e6f1f1;--teal-line:#d7e7e7;
+  --green:#2f8a5b;--green-ink:#1f6a44;--green-soft:#e9f3ec;--green-line:#cfe7d8;
+  --danger:#b3261e;--danger-soft:#fbeceb;--danger-line:#f1c9c6;
+}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;font-family:'Hanken Grotesk',system-ui,sans-serif;color:var(--ink);background:#e9e2d8;
+  -webkit-font-smoothing:antialiased}
+/* la fiche, floutée derrière */
+.fond{position:fixed;inset:0;padding:28px;display:flex;gap:18px;filter:blur(1.5px);opacity:.55;pointer-events:none}
+.fond .volet{width:280px;border-radius:22px;background:#f7f3ee;border:1px solid var(--line)}
+.fond .travail{flex:1;border-radius:22px;background:#fbf8f4;border:1px solid var(--line)}
+.voile{position:fixed;inset:0;background:rgba(28,24,21,.42);backdrop-filter:blur(2px);display:flex;align-items:center;
+  justify-content:center;padding:28px 16px}
+
+/* ── LA FENÊTRE ── (l'en-tête et les boutons restent visibles ; seul le corps défile, même sur un écran bas) */
+.fm{width:100%;max-width:560px;max-height:calc(100vh - 56px);background:var(--card);border-radius:22px;overflow:hidden;
+  box-shadow:0 24px 60px rgba(28,24,21,.30),0 2px 6px rgba(28,24,21,.08);display:flex;flex-direction:column}
+.fm-tete,.fm-pied{flex:none}
+.fm-tete{display:flex;align-items:center;gap:13px;padding:18px 20px 16px;border-bottom:1px solid var(--line-soft);
+  background:linear-gradient(180deg,#fff,var(--card))}
+.fm-ic{width:44px;height:44px;flex:none;border-radius:14px;display:grid;place-items:center;color:#fff;
+  background:linear-gradient(155deg,#3f97a1,#1f5560)}
+.fm-ic svg{width:21px;height:21px}
+.fm-titres{min-width:0;flex:1}
+.fm-sur{font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.fm-titre{font-family:'Fraunces',serif;font-size:21px;font-weight:600;line-height:1.15;margin-top:2px}
+.fm-qui{font-size:12.5px;color:var(--ink-soft);margin-top:3px;overflow-wrap:anywhere}
+.fm-x{flex:none;width:34px;height:34px;border-radius:10px;border:1px solid var(--line);background:#fff;color:var(--ink-soft);
+  display:grid;place-items:center;cursor:pointer}
+.fm-x svg{width:15px;height:15px}
+
+.fm-corps{padding:16px 20px 14px;display:flex;flex-direction:column;gap:18px;overflow:auto;min-height:0}
+.fm-k{font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#8a7f6e;margin-bottom:8px;
+  display:flex;align-items:center;gap:8px}
+.fm-k .n{font-weight:700;letter-spacing:0;text-transform:none;color:var(--faint)}
+
+/* ses métiers */
+.fm-actuels{display:flex;flex-direction:column;gap:8px}
+.fm-actuel{display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:14px;border:1px solid var(--line);background:#fff}
+.fm-actuel .pt{width:9px;height:9px;border-radius:50%;background:var(--teal);flex:none}
+.fm-actuel .t{min-width:0;flex:1}
+.fm-actuel .nm{font-size:14px;font-weight:800;color:#1f5560}
+.fm-actuel .or{font-size:11.5px;color:#7a6f63;line-height:1.35;margin-top:1px;overflow-wrap:anywhere}
+.fm-actuel button{flex:none;font:inherit;font-size:12px;font-weight:800;border-radius:9px;padding:6px 10px;cursor:pointer;
+  color:var(--danger);background:#fff;border:1px solid var(--danger-line)}
+.fm-actuel.retire{background:var(--danger-soft);border-color:var(--danger-line)}
+.fm-actuel.retire .pt{background:var(--danger)}
+.fm-actuel.retire .nm{color:var(--danger);text-decoration:line-through;text-decoration-thickness:1.5px}
+.fm-actuel.retire button{color:var(--ink-soft);border-color:var(--line-strong)}
+.fm-vide{padding:14px;border-radius:14px;border:1px dashed var(--line-strong);background:var(--card-2);font-size:12.5px;
+  color:var(--ink-soft);line-height:1.45}
+
+/* ajouter */
+.fm-choix{display:flex;flex-wrap:wrap;gap:7px}
+.fm-pill{font:inherit;font-size:12.5px;font-weight:700;color:var(--ink-soft);background:#fff;border:1px solid var(--line-strong);
+  border-radius:99px;padding:7px 12px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:background .15s,border-color .15s}
+.fm-pill:hover{border-color:var(--brand-line);background:var(--brand-soft)}
+.fm-pill svg{width:13px;height:13px;display:none}
+.fm-pill.on{color:var(--green-ink);background:var(--green-soft);border-color:var(--green-line)}
+.fm-pill.on svg{display:block}
+.fm-pill.prem{font-weight:800}
+
+.fm-note{display:flex;gap:9px;align-items:flex-start;padding:11px 12px;border-radius:12px;background:var(--teal-soft);
+  border:1px solid var(--teal-line);font-size:12px;color:#2b5d65;line-height:1.45}
+.fm-note svg{width:16px;height:16px;flex:none;margin-top:1px}
+
+.fm-pied{display:flex;align-items:center;gap:10px;padding:14px 20px;border-top:1px solid var(--line-soft);background:var(--card-2)}
+.fm-bilan{flex:1;min-width:0;font-size:12.5px;color:var(--muted)}
+.fm-bilan b{color:var(--ink);font-weight:800}
+.fm-bilan .aj{color:var(--green-ink)}
+.fm-bilan .re{color:var(--danger)}
+.fm-btn{font:inherit;font-size:13.5px;font-weight:800;border-radius:12px;padding:10px 16px;cursor:pointer;border:1px solid var(--line-strong);
+  background:#fff;color:var(--ink-soft)}
+.fm-btn.go{color:#fff;border-color:transparent;background:linear-gradient(155deg,#d83a7e,#9d0f4e);box-shadow:0 8px 18px -10px rgba(194,18,95,.8)}
+.fm-btn.go:disabled{opacity:.42;cursor:not-allowed;box-shadow:none}
+
+/* sélecteur de cas (maquette seulement : il n'existe pas dans l'app) */
+.mq{position:fixed;left:50%;top:10px;transform:translateX(-50%);z-index:30;display:flex;gap:4px;padding:4px;border-radius:999px;
+  background:#211a13;box-shadow:0 14px 30px -14px rgba(0,0,0,.7);max-width:calc(100vw - 24px);overflow-x:auto}
+.mq button{font:800 12px 'Hanken Grotesk',sans-serif;color:#e8ded2;background:transparent;border:0;border-radius:999px;padding:8px 13px;
+  cursor:pointer;white-space:nowrap}
+.mq button.on{background:#fff;color:#211a13}
+
+@media (max-width:560px){
+  .voile{padding:0;align-items:flex-end}
+  .fm{border-radius:22px 22px 0 0;max-width:none;max-height:92vh}
+  .fm-pied{flex-wrap:wrap}
+  .fm-bilan{flex-basis:100%}
+  .fm-btn{flex:1}
+}
+@media (prefers-color-scheme:dark){
+  body{background:#16120f}
+  .fond .volet,.fond .travail{background:#221c18;border-color:#3a322b}
+  .fm{background:#1f1a16;color:#efe7dd}
+  .fm-tete{background:#241e19;border-color:#3a322b}
+  .fm-qui,.fm-actuel .or,.fm-vide,.fm-bilan{color:#b9ada0}
+  .fm-x,.fm-actuel,.fm-pill,.fm-btn{background:#2a231e;border-color:#43392f;color:#e5dbcf}
+  .fm-actuel .nm{color:#8fc9cf}
+  .fm-vide{background:#241e19;border-color:#43392f}
+  .fm-note{background:#1c2a2c;border-color:#2c4448;color:#a9d3d8}
+  .fm-pied{background:#241e19;border-color:#3a322b}
+  .fm-bilan b{color:#efe7dd}
+  .fm-pill.on{background:#18301f;border-color:#2c5a3a;color:#9fd8b5}
+  .fm-actuel.retire{background:#341c1a;border-color:#5c2a26}
+  .fm-actuel button{background:#2a231e;border-color:#6a3530;color:#f0a49b}
+  .fm-actuel.retire button{border-color:#43392f;color:#e5dbcf}
+  .fm-btn.go{color:#fff;border-color:transparent;background:linear-gradient(155deg,#d83a7e,#9d0f4e)}
+}
+</style>
+</head>
+<body>
+<div class="fond" aria-hidden="true"><div class="volet"></div><div class="travail"></div></div>
+
+<div class="voile">
+  <div class="fm" role="dialog" aria-modal="true" aria-labelledby="fm-titre">
+    <div class="fm-tete">
+      <span class="fm-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2.5"/><path d="M8.5 7V5.5A1.5 1.5 0 0 1 10 4h4a1.5 1.5 0 0 1 1.5 1.5V7"/><path d="M3 12.5h18"/></svg></span>
+      <div class="fm-titres">
+        <div class="fm-sur">Partenaire</div>
+        <div class="fm-titre" id="fm-titre">Métier du contact</div>
+        <div class="fm-qui" id="fm-qui"></div>
+      </div>
+      <button class="fm-x" type="button" aria-label="Fermer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </div>
+
+    <div class="fm-corps">
+      <div>
+        <div class="fm-k">Ses métiers <span class="n" id="fm-nb"></span></div>
+        <div class="fm-actuels" id="fm-actuels"></div>
+      </div>
+      <div>
+        <div class="fm-k">Ajouter un métier</div>
+        <div class="fm-choix" id="fm-choix"></div>
+      </div>
+      <div class="fm-note">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.6v.4"/></svg>
+        <span>Le métier vit <b>chez nous</b> : rien n'est envoyé à Hektor. Un métier retiré ici ne revient pas avec la mise à jour de la nuit ; on le remet en l'ajoutant.</span>
+      </div>
+    </div>
+
+    <div class="fm-pied">
+      <div class="fm-bilan" id="fm-bilan"></div>
+      <button class="fm-btn" type="button">Annuler</button>
+      <button class="fm-btn go" type="button" id="fm-ok">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<div class="mq" role="tablist" aria-label="Choisir le cas de la maquette" id="mq"></div>
+
+<script>
+const METIERS = [
+  ['syndic','Syndic'],['diagnostiqueur','Diagnostiqueur'],['courtier','Courtier'],['banque','Banque'],['apporteur','Apporteur'],
+  ['parrain','Parrain'],['notaire','Notaire'],['agent_immobilier','Agent immobilier'],['mandataire','Mandataire'],
+  ['promoteur','Promoteur'],['marchand_de_biens','Marchand de biens'],['investisseur','Investisseur'],['administration','Administration'],
+  ['societe','Société'],['avocat','Avocat'],['huissier','Huissier'],['technicien','Technicien'],['autre','Autre']];
+const PREMIERS = new Set(['syndic','diagnostiqueur','courtier','banque','apporteur','parrain']);
+const CAS = {
+  syndic: { tab: 'Un syndic (Hektor)', qui: 'CABINET DES TILLEULS · contact 10000001',
+    actuels: [['syndic', "D'après Hektor"]] },
+  vide: { tab: 'Sans métier', qui: 'M. Paul DURAND · contact 10000002', actuels: [] },
+  plusieurs: { tab: 'Plusieurs métiers', qui: 'M. Jean MARTIN · contact 10000003',
+    actuels: [['courtier', "D'après l'ancien logiciel (Netty)"], ['parrain', "D'après l'ancien logiciel (Netty)"], ['notaire', "D'après l'ancien logiciel (Netty)"]] },
+};
+const $ = (id) => document.getElementById(id);
+const nom = (k) => (METIERS.find(([c]) => c === k) || [k, k])[1];
+let etat = { cas: 'syndic', retires: new Set(), ajouts: new Set() };
+
+function rendre() {
+  const c = CAS[etat.cas];
+  $('fm-qui').textContent = c.qui;
+  $('fm-nb').textContent = c.actuels.length ? `· ${c.actuels.length}` : '';
+  $('fm-actuels').innerHTML = c.actuels.length ? c.actuels.map(([k, or]) => {
+    const r = etat.retires.has(k);
+    return `<div class="fm-actuel ${r ? 'retire' : ''}"><span class="pt"></span><div class="t"><div class="nm">${nom(k)}</div>
+      <div class="or">${r ? 'Sera retiré à l’enregistrement' : or}</div></div>
+      <button type="button" data-retirer="${k}">${r ? 'Garder' : 'Retirer'}</button></div>`;
+  }).join('') : `<div class="fm-vide">Aucun métier pour l'instant. Choisissez-en un ci-dessous pour en faire un <b>partenaire</b> : il apparaîtra dans l'annuaire des partenaires.</div>`;
+  const deja = new Set(c.actuels.map(([k]) => k));
+  $('fm-choix').innerHTML = METIERS.filter(([k]) => !deja.has(k)).map(([k, l]) =>
+    `<button type="button" class="fm-pill ${PREMIERS.has(k) ? 'prem' : ''} ${etat.ajouts.has(k) ? 'on' : ''}" data-ajouter="${k}" aria-pressed="${etat.ajouts.has(k)}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"/></svg>${l}</button>`).join('');
+  const a = etat.ajouts.size, r = etat.retires.size;
+  $('fm-bilan').innerHTML = a + r === 0 ? 'Aucun changement' :
+    [a ? `<b class="aj">${a} ajout${a > 1 ? 's' : ''}</b>` : '', r ? `<b class="re">${r} retrait${r > 1 ? 's' : ''}</b>` : ''].filter(Boolean).join(' · ');
+  $('fm-ok').disabled = a + r === 0;
+  document.querySelectorAll('[data-retirer]').forEach((b) => b.onclick = () => {
+    const k = b.dataset.retirer; etat.retires.has(k) ? etat.retires.delete(k) : etat.retires.add(k); rendre(); });
+  document.querySelectorAll('[data-ajouter]').forEach((b) => b.onclick = () => {
+    const k = b.dataset.ajouter; etat.ajouts.has(k) ? etat.ajouts.delete(k) : etat.ajouts.add(k); rendre(); });
+  document.querySelectorAll('#mq button').forEach((b) => b.classList.toggle('on', b.dataset.k === etat.cas));
+}
+$('mq').innerHTML = Object.keys(CAS).map((k) => `<button type="button" role="tab" data-k="${k}">${CAS[k].tab}</button>`).join('');
+document.querySelectorAll('#mq button').forEach((b) => b.onclick = () => { etat = { cas: b.dataset.k, retires: new Set(), ajouts: new Set() }; rendre(); });
+rendre();
+</script>
+</body>
+</html>
