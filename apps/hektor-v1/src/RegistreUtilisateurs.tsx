@@ -3,13 +3,14 @@
 // avec Hektor en bas, en gris. Décision du 05/11 : le bouton « Utilisateurs » existant ouvre cet écran, ADMINISTRATEURS
 // SEULS, et « Ajouter » / « Modifier son accès » / « lien de mot de passe » rappellent les gestes qui marchaient déjà
 // (App.tsx : handleCreateAppUser, handleUpdateAppUser, handleSendPasswordReset).
-// ⛔ Cet écran n'ÉCRIT RIEN. La saisie au carnet (portable, fonction, agence…) et l'ajout d'une personne sans compte de l'app
-//   sont les lots B et C : un « vas-y » chacun.
+// ⭐ LOT C (05/11, §43) : la SAISIE AU CARNET -- « Modifier » sur une personne, une agence, la société ; le statut
+//   actif / ancien ; trancher un écart ; « c'est vu ». Fonctions en base, administrateurs seuls, rien ne part chez Hektor.
+//   L'ajout d'une personne sans compte de l'app reste le lot B.
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { cleAgence, nomAgence } from './lib/pilotage'
 import {
-  loadHistoriquePersonne, loadRegistreUtilisateurs,
-  type RuAgence, type RuDonnees, type RuEvenement, type RuFiche, type RuPersonne,
+  loadHistoriquePersonne, loadRegistreUtilisateurs, marquerPersonneVue, rendreRegistre, saisirRegistre, trancherEcart,
+  type RuAgence, type RuDonnees, type RuEvenement, type RuFiche, type RuObjet, type RuPersonne,
 } from './lib/registreUtilisateurs'
 import { USER_PERIMETRES, type UserProfile } from './types'
 import './registre-utilisateurs.css'
@@ -125,6 +126,9 @@ export default function RegistreUtilisateurs(props: Props) {
   const [onglet, setOnglet] = useState<Onglet>('utilisateurs')
   const [ficheId, setFicheId] = useState<number | null>(null)
   const [agenceId, setAgenceId] = useState<number | null>(null)
+  const [version, setVersion] = useState(0)
+  const [notice, setNotice] = useState<string | null>(null)
+  const apresGeste = (texte: string) => { setNotice(texte); setVersion((n) => n + 1) }
 
   useEffect(() => {
     let annule = false
@@ -134,7 +138,7 @@ export default function RegistreUtilisateurs(props: Props) {
       .catch((e) => { console.error('[registre] lecture impossible', e); if (!annule) setDonnees(null) })
       .finally(() => { if (!annule) setChargement(false) })
     return () => { annule = true }
-  }, [props.relecture])
+  }, [props.relecture, version])
 
   // Échap ferme la fiche ouverte, puis l'écran
   useEffect(() => {
@@ -155,7 +159,7 @@ export default function RegistreUtilisateurs(props: Props) {
     .map((p) => construireVue(p, comptesParId, agencesParId, donnees?.ecartsParPersonne.get(p.id) ?? 0)), [donnees, comptesParId, agencesParId])
 
   const ouvrirFiche = (id: number) => { setOnglet('utilisateurs'); setAgenceId(null); setFicheId(id) }
-  const changerOnglet = (o: Onglet) => { setOnglet(o); setFicheId(null); setAgenceId(null) }
+  const changerOnglet = (o: Onglet) => { setOnglet(o); setFicheId(null); setAgenceId(null); setNotice(null) }
 
   const fiche = ficheId != null ? vues.find((v) => v.p.id === ficheId) ?? null : null
   const agence = agenceId != null ? agencesParId.get(agenceId) ?? null : null
@@ -172,6 +176,7 @@ export default function RegistreUtilisateurs(props: Props) {
           <button className="ru-fermer" type="button" onClick={props.onFermer}>Fermer</button>
         </div>
         {props.message ? <p className="ru-message" role="status">{props.message}</p> : null}
+        {notice ? <p className="ru-message" role="status">{notice}</p> : null}
         {chargement && !donnees ? <p className="ru-mute">Lecture du registre…</p> : null}
         {!chargement && !donnees ? <p className="ru-alerte">Le registre n’a pas pu être lu. Le détail est dans la console.</p> : null}
         {donnees && donnees.erreurs.length ? <p className="ru-alerte">Pas pu être lu : {donnees.erreurs.join(', ')}. Le reste s’affiche.</p> : null}
@@ -181,7 +186,7 @@ export default function RegistreUtilisateurs(props: Props) {
             onOuvrir={ouvrirFiche} onAjouter={() => props.onAjouter()} onModifierAcces={props.onModifierAcces} />
         ) : null}
         {donnees && onglet === 'utilisateurs' && fiche ? (
-          <FichePersonne v={fiche} donnees={donnees} comptes={props.comptes} onRetour={() => setFicheId(null)}
+          <FichePersonne v={fiche} donnees={donnees} comptes={props.comptes} onRetour={() => setFicheId(null)} version={version} onGeste={apresGeste}
             onModifierAcces={props.onModifierAcces} onLienMotDePasse={props.onLienMotDePasse}
             onDonnerAcces={() => props.onAjouter({
               prenom: fiche.p.prenom ?? '', nom: fiche.p.nomFamille ?? fiche.p.nom, email: fiche.email, personneId: fiche.p.id,
@@ -191,9 +196,9 @@ export default function RegistreUtilisateurs(props: Props) {
           <ListeAgences donnees={donnees} vues={vues} onOuvrir={setAgenceId} />
         ) : null}
         {donnees && onglet === 'agences' && agence ? (
-          <FicheAgence agence={agence} donnees={donnees} vues={vues} onRetour={() => setAgenceId(null)} onOuvrirPersonne={ouvrirFiche} />
+          <FicheAgence agence={agence} donnees={donnees} vues={vues} onRetour={() => setAgenceId(null)} onOuvrirPersonne={ouvrirFiche} onGeste={apresGeste} />
         ) : null}
-        {donnees && onglet === 'societe' ? <Societe donnees={donnees} /> : null}
+        {donnees && onglet === 'societe' ? <Societe donnees={donnees} onGeste={apresGeste} /> : null}
       </div>
     </div>
   )
@@ -377,19 +382,127 @@ function Champ({ titre, valeur, aide, ton, siVide = 'à saisir' }: { titre: stri
   )
 }
 
+// ---- La saisie au carnet (lot C) ------------------------------------------------------------------------------------
+
+type ChampSaisie = {
+  champ: string
+  titre: string
+  /** la valeur À NOUS (la colonne), pas la valeur déduite de Hektor */
+  valeur: string | null
+  /** ce que Hektor donne, en grisé, quand la nôtre est vide */
+  indice?: string
+  type?: 'texte' | 'choix' | 'date'
+  options?: Array<[string, string]>
+  suggestions?: string[]
+}
+
+function FormulaireSaisie({ objet, id, champs, carnet, onGeste, onFermer }: {
+  objet: RuObjet; id: number; champs: ChampSaisie[]; carnet: Set<string>; onGeste: (texte: string) => void; onFermer: () => void
+}) {
+  const [valeurs, setValeurs] = useState<Record<string, string>>(() => Object.fromEntries(champs.map((c) => [c.champ, c.valeur ?? ''])))
+  const [occupe, setOccupe] = useState(false)
+  const [erreur, setErreur] = useState<string | null>(null)
+  const modifies = champs.filter((c) => (valeurs[c.champ] ?? '').trim() !== (c.valeur ?? '').trim())
+
+  async function enregistrer() {
+    if (!modifies.length) { onFermer(); return }
+    setOccupe(true)
+    setErreur(null)
+    try {
+      await saisirRegistre(objet, id, Object.fromEntries(modifies.map((c) => [c.champ, (valeurs[c.champ] ?? '').trim() || null])))
+      onGeste(`${modifies.length} champ${modifies.length > 1 ? 's' : ''} enregistré${modifies.length > 1 ? 's' : ''} chez nous : ${modifies.map((c) => c.titre.toLowerCase()).join(', ')}. La nuit ne les écrase plus.`)
+      onFermer()
+    } catch (e) {
+      setErreur(e instanceof Error ? e.message : String(e))
+    } finally {
+      setOccupe(false)
+    }
+  }
+
+  async function rendre(c: ChampSaisie) {
+    setOccupe(true)
+    setErreur(null)
+    try {
+      await rendreRegistre(objet, id, c.champ)
+      onGeste(`${c.titre} rendu à Hektor : la nuit prochaine le reposera.`)
+      onFermer()
+    } catch (e) {
+      setErreur(e instanceof Error ? e.message : String(e))
+    } finally {
+      setOccupe(false)
+    }
+  }
+
+  return (
+    <form className="ru-saisie" onSubmit={(e) => { e.preventDefault(); void enregistrer() }}>
+      <div className="ru-saisie-grille">
+        {champs.map((c) => {
+          const auCarnet = carnet.has(`${objet}:${id}:${c.champ}`)
+          const liste = c.suggestions?.length ? `ru-sugg-${c.champ}` : undefined
+          return (
+            <label key={c.champ} className="ru-saisie-champ">
+              <span className="ru-mute ru-petit">{c.titre}</span>
+              {c.type === 'choix' ? (
+                <select value={valeurs[c.champ] ?? ''} onChange={(e) => setValeurs({ ...valeurs, [c.champ]: e.target.value })} disabled={occupe}>
+                  {(c.options ?? []).map(([val, lib]) => <option key={val} value={val}>{lib}</option>)}
+                </select>
+              ) : (
+                <input type={c.type === 'date' ? 'date' : 'text'} value={valeurs[c.champ] ?? ''} placeholder={c.indice ? `Hektor : ${c.indice}` : ''} list={liste}
+                  onChange={(e) => setValeurs({ ...valeurs, [c.champ]: e.target.value })} disabled={occupe} />
+              )}
+              {liste ? <datalist id={liste}>{c.suggestions?.map((x) => <option key={x} value={x} />)}</datalist> : null}
+              <span className="ru-aide">
+                {auCarnet ? <>saisi chez nous · <button type="button" className="ru-lien ru-gauche is-mini" disabled={occupe} onClick={() => void rendre(c)}>Rendre à Hektor</button></> : 'repris de Hektor'}
+              </span>
+            </label>
+          )
+        })}
+      </div>
+      {erreur ? <p className="ru-alerte">{erreur}</p> : null}
+      <div className="ru-actions ru-saisie-pied">
+        <span className="ru-mute ru-petit">{modifies.length ? `${modifies.length} champ${modifies.length > 1 ? 's' : ''} modifié${modifies.length > 1 ? 's' : ''}` : 'Rien de modifié'} · un champ vidé reste vide (la nuit ne le remplit plus)</span>
+        <button className="ru-fermer" type="button" onClick={onFermer} disabled={occupe}>Annuler</button>
+        <button className="ru-bouton" type="submit" disabled={occupe || !modifies.length}>{occupe ? 'Enregistrement…' : 'Enregistrer'}</button>
+      </div>
+    </form>
+  )
+}
+
+const FONCTIONS = ['Négociateur', 'Agent commercial', 'Secrétaire', 'Assistante', 'Responsable d’agence', 'Administrateur', 'Gérant']
+
 function FichePersonne(props: {
-  v: Vue; donnees: RuDonnees; comptes: UserProfile[]; onRetour: () => void
+  v: Vue; donnees: RuDonnees; comptes: UserProfile[]; onRetour: () => void; version: number; onGeste: (texte: string) => void
   onModifierAcces: (c: UserProfile) => void; onLienMotDePasse: (email: string) => void; onDonnerAcces: () => void
 }) {
   const { v, donnees } = props
   const p = v.p
   const [historique, setHistorique] = useState<RuEvenement[] | null | undefined>(undefined)
+  const [edition, setEdition] = useState(false)
+  const [confirmeStatut, setConfirmeStatut] = useState(false)
+  const [occupe, setOccupe] = useState(false)
+  const [erreur, setErreur] = useState<string | null>(null)
   useEffect(() => {
     let annule = false
     setHistorique(undefined)
     void loadHistoriquePersonne(p.id).then((h) => { if (!annule) setHistorique(h) })
     return () => { annule = true }
-  }, [p.id])
+  }, [p.id, props.version])
+  useEffect(() => { setEdition(false); setConfirmeStatut(false); setErreur(null) }, [p.id])
+
+  async function geste(action: () => Promise<unknown>, texte: string) {
+    setOccupe(true)
+    setErreur(null)
+    try {
+      await action()
+      props.onGeste(texte)
+    } catch (e) {
+      setErreur(e instanceof Error ? e.message : String(e))
+    } finally {
+      setOccupe(false)
+      setConfirmeStatut(false)
+    }
+  }
+  const statutAuCarnet = donnees.carnet.has(`personne:${p.id}:actif`)
 
   const identite = p.appUserId ? donnees.identites.get(p.appUserId) : undefined
   const autresComptes = useMemo(() => {
@@ -420,15 +533,51 @@ function FichePersonne(props: {
           </div>
         </div>
         <div className="ru-actions">
-          {v.compte ? <button className="ru-bouton-ligne" type="button" onClick={() => props.onModifierAcces(v.compte as UserProfile)}>Modifier son accès</button> : null}
-          {!v.compte && p.actif ? <button className="ru-bouton-ligne" type="button" onClick={props.onDonnerAcces}>Lui donner l’accès à l’app</button> : null}
+          {!edition ? <button className="ru-bouton-ligne" type="button" onClick={() => setEdition(true)}>Modifier</button> : null}
+          {v.compte ? <button className="ru-bouton-ligne is-gris" type="button" onClick={() => props.onModifierAcces(v.compte as UserProfile)}>Modifier son accès</button> : null}
+          {!v.compte && p.actif ? <button className="ru-bouton-ligne is-gris" type="button" onClick={props.onDonnerAcces}>Lui donner l’accès à l’app</button> : null}
+          {confirmeStatut ? (
+            <>
+              <button className="ru-bouton" type="button" disabled={occupe}
+                onClick={() => void geste(() => saisirRegistre('personne', p.id, { actif: !p.actif }), p.actif ? `${p.nom} passe en ancien chez nous. La nuit ne le remet plus actif.` : `${p.nom} redevient actif chez nous.`)}>
+                {p.actif ? 'Confirmer : ancien' : 'Confirmer : actif'}
+              </button>
+              <button className="ru-fermer" type="button" onClick={() => setConfirmeStatut(false)}>Annuler</button>
+            </>
+          ) : (
+            <button className="ru-fermer" type="button" disabled={occupe} onClick={() => setConfirmeStatut(true)}
+              title={p.actif ? 'Il sort des listes d’actifs (répartition, filtres). Rien ne change chez Hektor.' : undefined}>
+              {p.actif ? 'Le passer en ancien' : 'Le remettre actif'}
+            </button>
+          )}
         </div>
       </div>
+      {erreur ? <p className="ru-alerte">{erreur}</p> : null}
+      {statutAuCarnet ? (
+        <p className="ru-mute ru-petit ru-ligne-info">Statut {p.actif ? 'actif' : 'ancien'} saisi chez nous : la nuit ne le recalcule plus.{' '}
+          <button type="button" className="ru-lien ru-gauche is-mini" disabled={occupe}
+            onClick={() => void geste(() => rendreRegistre('personne', p.id, 'actif'), 'Statut rendu à Hektor : la nuit prochaine le recalculera.')}>Rendre le statut à Hektor</button>
+        </p>
+      ) : null}
 
       <div className="ru-colonnes">
         <div className="ru-principal">
           <section className="ru-carte">
-            <div className="ru-carte-tete"><h2>Qui il est</h2><span className="ru-mute ru-petit">nos données · la saisie ici arrive avec le lot suivant</span></div>
+            <div className="ru-carte-tete"><h2>Qui il est</h2><span className="ru-mute ru-petit">nos données ; ce que vous saisissez ici, la nuit ne l’écrase plus</span></div>
+            {edition ? (
+              <FormulaireSaisie objet="personne" id={p.id} carnet={donnees.carnet} onGeste={props.onGeste} onFermer={() => setEdition(false)} champs={[
+                { champ: 'civilite', titre: 'Civilité', valeur: p.civilite, type: 'choix', options: [['', '—'], ['M.', 'M.'], ['Mme', 'Mme']] },
+                { champ: 'prenom', titre: 'Prénom', valeur: p.prenom },
+                { champ: 'nom_famille', titre: 'Nom', valeur: p.nomFamille, indice: p.prenom ? undefined : p.nom },
+                { champ: 'fonction', titre: 'Fonction', valeur: p.fonction, indice: v.fonctionDeduite ? v.fonction : undefined, suggestions: FONCTIONS },
+                { champ: 'app_agence_id', titre: 'Agence', valeur: p.appAgenceId == null ? null : String(p.appAgenceId), type: 'choix',
+                  options: [['', (donnees.agences ?? []).length ? (v.agenceDeduite ? `— (Hektor : ${v.agence})` : '—') : '— (les agences arrivent avec la nuit)'],
+                    ...(donnees.agences ?? []).map((a): [string, string] => [String(a.id), a.nom])] },
+                { champ: 'email_pro', titre: 'E-mail professionnel', valeur: p.emailPro, indice: v.email || undefined },
+                { champ: 'portable', titre: 'Portable', valeur: p.portable, indice: v.portable || undefined },
+                { champ: 'telephone', titre: 'Téléphone fixe', valeur: p.telephone, indice: telephone(v.ficheActive?.telephone) || undefined },
+              ]} />
+            ) : (
             <div className="ru-grille-qui">
               <div className="ru-photo">
                 {p.photo ? <img src={p.photo} alt="" /> : <span className="ru-avatar is-tres-grand" aria-hidden="true">{initiales(p.nom)}</span>}
@@ -444,6 +593,7 @@ function FichePersonne(props: {
               <Champ titre="Portable" valeur={v.portable} />
               <Champ titre="Téléphone fixe" valeur={((fixe) => (fixe && fixe !== v.portable ? fixe : ''))(telephone(p.telephone ?? v.ficheActive?.telephone))} />
             </div>
+            )}
           </section>
 
           <section className="ru-carte">
@@ -517,10 +667,39 @@ function FichePersonne(props: {
         <aside className="ru-cote">
           {p.aValider || ecartsHisto.length ? (
             <section className="ru-carte ru-bloc ru-a-valider">
-              <h2>À valider</h2>
-              {p.aValider ? <p>{p.aValider}</p> : null}
-              {ecartsHisto.map((h, i) => <p key={i}>{h.texte}</p>)}
-              <span className="ru-mute ru-petit">Trancher ici arrive avec la saisie au carnet (lot suivant).</span>
+              <h2>À valider · {(p.aValider ? 1 : 0) + ecartsHisto.length}</h2>
+              {p.aValider ? (
+                <div className="ru-pile">
+                  <p>{p.aValider}</p>
+                  <div className="ru-actions">
+                    <button className="ru-bouton is-sombre" type="button" disabled={occupe}
+                      onClick={() => void geste(() => marquerPersonneVue(p.id), `« À valider » retiré pour ${p.nom}.`)}>C’est vu</button>
+                  </div>
+                </div>
+              ) : null}
+              {ecartsHisto.map((h, i) => {
+                const ecart = h.ecart
+                return (
+                  <div key={i} className="ru-pile">
+                    <p>{h.texte}</p>
+                    {ecart ? (
+                      <div className="ru-actions">
+                        <button className="ru-bouton is-sombre" type="button" disabled={occupe}
+                          onClick={() => void geste(() => trancherEcart(ecart.source, ecart.id, 'garder'), 'Écart tranché : la nôtre est gardée, il ne revient plus.')}>
+                          {ecart.source === 'registre' ? 'Garder la nôtre' : 'Classer'}
+                        </button>
+                        {ecart.source === 'registre' && ecart.chezHektor ? (
+                          <button className="ru-fermer" type="button" disabled={occupe}
+                            onClick={() => void geste(() => trancherEcart('registre', ecart.id, 'prendre'), 'Écart tranché : la valeur de Hektor est prise chez nous.')}>
+                            Prendre celle de Hektor
+                          </button>
+                        ) : null}
+                      </div>
+                    ) : null}
+                  </div>
+                )
+              })}
+              <span className="ru-mute ru-petit">« Garder la nôtre » ne change rien chez Hektor : l’écart ne revient plus.</span>
             </section>
           ) : null}
           <section className="ru-carte ru-bloc">
@@ -621,9 +800,10 @@ function ListeAgences({ donnees, vues, onOuvrir }: { donnees: RuDonnees; vues: V
   )
 }
 
-function FicheAgence({ agence: a, donnees, vues, onRetour, onOuvrirPersonne }: {
-  agence: RuAgence; donnees: RuDonnees; vues: Vue[]; onRetour: () => void; onOuvrirPersonne: (id: number) => void
+function FicheAgence({ agence: a, donnees, vues, onRetour, onOuvrirPersonne, onGeste }: {
+  agence: RuAgence; donnees: RuDonnees; vues: Vue[]; onRetour: () => void; onOuvrirPersonne: (id: number) => void; onGeste: (texte: string) => void
 }) {
+  const [edition, setEdition] = useState(false)
   const membres = equipe(a, vues)
   const partageAvec = (donnees.agences ?? []).filter((x) => x.id !== a.id && a.email && x.email?.toLowerCase() === a.email.toLowerCase())
   const carnet = (champ: string) => donnees.carnet.has(`agence:${a.id}:${champ}`)
@@ -640,7 +820,21 @@ function FicheAgence({ agence: a, donnees, vues, onRetour, onOuvrirPersonne }: {
       <div className="ru-colonnes">
         <div className="ru-principal">
           <section className="ru-carte">
-            <div className="ru-carte-tete"><h2>Coordonnées — à nous</h2><span className="ru-mute ru-petit">la saisie ici arrive avec le lot suivant</span></div>
+            <div className="ru-carte-tete"><h2>Coordonnées — à nous</h2>
+              {!edition ? <button className="ru-bouton-ligne is-petit" type="button" onClick={() => setEdition(true)}>Modifier l’agence</button> : null}</div>
+            {edition ? (
+              <FormulaireSaisie objet="agence" id={a.id} carnet={donnees.carnet} onGeste={onGeste} onFermer={() => setEdition(false)} champs={[
+                { champ: 'nom', titre: 'Nom affiché', valeur: a.nom },
+                { champ: 'telephone', titre: 'Téléphone', valeur: a.telephone },
+                { champ: 'email', titre: 'E-mail', valeur: a.email },
+                { champ: 'adresse', titre: 'Adresse', valeur: a.adresse },
+                { champ: 'code_postal', titre: 'Code postal', valeur: a.codePostal },
+                { champ: 'ville', titre: 'Ville', valeur: a.ville },
+                { champ: 'responsable', titre: 'Responsable', valeur: a.responsable },
+                { champ: 'siret_etablissement', titre: 'SIRET de l’établissement', valeur: a.siret },
+                { champ: 'site', titre: 'Site', valeur: a.site },
+              ]} />
+            ) : (
             <div className="ru-grille-3">
               <Champ titre="Nom affiché" valeur={a.nom} aide={origine('nom', a.nom)} />
               <Champ titre="Téléphone" valeur={telephone(a.telephone)} aide={origine('telephone', a.telephone)} />
@@ -649,6 +843,7 @@ function FicheAgence({ agence: a, donnees, vues, onRetour, onOuvrirPersonne }: {
               <Champ titre="Responsable" valeur={a.responsable} />
               <Champ titre="SIRET de l’établissement" valeur={a.siret} aide={a.siret ? undefined : 'la société a le sien'} />
             </div>
+            )}
           </section>
           <section className="ru-carte ru-bloc">
             <h2>Les écritures de son nom</h2>
@@ -683,7 +878,20 @@ function FicheAgence({ agence: a, donnees, vues, onRetour, onOuvrirPersonne }: {
 
 // ---- La société ---------------------------------------------------------------------------------------------------
 
-function Societe({ donnees }: { donnees: RuDonnees }) {
+const CHAMPS_SOCIETE: Array<[string, string]> = [
+  ['raison_sociale', 'Raison sociale'], ['forme', 'Forme'], ['siret', 'SIRET'], ['naf', 'Code NAF'], ['capital', 'Capital'],
+  ['rcs', 'RCS (numéro)'], ['rcs_ville', 'RCS (ville)'], ['tva', 'TVA intracommunautaire'], ['siege_adresse', 'Siège : adresse'],
+  ['siege_code_postal', 'Siège : code postal'], ['siege_ville', 'Siège : ville'], ['telephone', 'Téléphone'], ['email', 'E-mail'],
+  ['assureur_nom', 'Assureur RCP'], ['rcp_numero', 'N° de contrat RCP'], ['assureur_adresse', 'Assureur : adresse'],
+  ['assureur_code_postal', 'Assureur : code postal'], ['assureur_ville', 'Assureur : ville'], ['mediateur_nom', 'Médiateur'],
+  ['mediateur_adresse', 'Médiateur : adresse'], ['mediateur_code_postal', 'Médiateur : code postal'], ['mediateur_ville', 'Médiateur : ville'],
+  ['mediateur_site', 'Médiateur : site'], ['carte_type', 'Carte : type'], ['carte_numero', 'Carte : numéro'],
+  ['carte_delivree_par', 'Carte : délivrée par'], ['carte_detenteur', 'Carte : détenteur'], ['carte_maniement_fonds', 'Carte : maniement de fonds'],
+  ['carte_validite', 'Carte : valable jusqu’au'], ['carte_garant', 'Carte : garant'], ['carte_montant', 'Carte : montant de la garantie'],
+]
+
+function Societe({ donnees, onGeste }: { donnees: RuDonnees; onGeste: (texte: string) => void }) {
+  const [edition, setEdition] = useState(false)
   const s = donnees.societe
   const nbAgences = (donnees.agences ?? []).filter((a) => !pasUneVraieAgence(a)).length
   const ligne = (...parts: Array<string | null | undefined>) => parts.filter(Boolean).join(' · ')
@@ -699,9 +907,17 @@ function Societe({ donnees }: { donnees: RuDonnees }) {
         <div className="ru-tete-texte">
           <span className="ru-surtitre">Une seule société{nbAgences ? ` · ses ${nbAgences} agences` : ''}</span>
           <h1>{s.raison_sociale ?? 'La société'}</h1>
-          <span className="ru-mute">Nos informations légales, à nous. Reprises une fois de Hektor ; ce qui manque se saisira ici.</span>
+          <span className="ru-mute">Nos informations légales, à nous. Reprises de Hektor ; ce que vous saisissez ici, la nuit ne l’écrase plus.</span>
         </div>
+        {!edition ? <button className="ru-bouton-ligne" type="button" onClick={() => setEdition(true)}>Modifier</button> : null}
       </div>
+      {edition ? (
+        <section className="ru-carte">
+          <div className="ru-carte-tete"><h2>Modifier la société</h2></div>
+          <FormulaireSaisie objet="societe" id={Number(s.app_societe_id ?? 3000001)} carnet={donnees.carnet} onGeste={onGeste} onFermer={() => setEdition(false)}
+            champs={CHAMPS_SOCIETE.map(([champ, titre]) => ({ champ, titre, valeur: s[champ] ?? null, type: champ === 'carte_validite' ? 'date' : 'texte' }))} />
+        </section>
+      ) : null}
       <div className="ru-colonnes">
         <div className="ru-principal">
           <section className="ru-carte">

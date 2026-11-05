@@ -1170,3 +1170,40 @@ secrétaire 7 « noté, jamais envoyé dans un geste », la fiche 19 éteinte ; 
 **✅ RETOUCHES VUES EN LIGNE le 05/11** (Render et Vercel sur `544641a`) : les dates de connexion sont celles de la base
 (Franck 15/09, Frédéric 31/10, Pauline 05/11, LEGRAND 20/05, PEREIRA « jamais connecté » — vrai, aucune connexion ; les
 3 comptes non reliés : 05/06, 01/06, 01/04) et l'e-mail de Franck est son accès @gti. Lot A clos.
+
+## 43. ÉTAPE 3, LOT C : LA SAISIE AU CARNET, AVEC LE STATUT (05/11) — Frédéric : « Vas-y, avec le statut »
+
+**Audit** : la nuit des agences respecte déjà le carnet (`app_registre_poser` : un champ au carnet n'est plus écrit, un
+écart de Hektor est journalisé une fois par valeur) ; mais la NUIT DES NÉGOCIATEURS recalcule `actif` sans le consulter
+(`app_negociateur_registre_maintenir`, la boucle « actif recalculé ») → un « ancien » saisi aurait été remis actif.
+
+**Le patch** `supabase/patch_registre_saisie_lot_c_2026-11-05.sql` (+ `_INVERSE`, + `_REPETITION` = 9 contrôles à
+coller après) :
+- `app_registre_saisir(objet, id, champs)` : un ADMINISTRATEUR (contrôle `is_app_admin()` DANS la fonction) écrit des
+  champs d'une personne (civilité, prénom, nom, fonction, agence, e-mail pro, portable, fixe, **actif**), d'une agence
+  ou de la société ; la valeur est écrite, INSCRITE AU CARNET (qui, quand) et tracée au journal (`saisie`, avant →
+  après, `par`) ; les écarts ouverts du champ se classent. Liste fermée des champs (`app_registre_champs_saisissables`).
+- `app_registre_rendre` (le champ sort du carnet, la nuit le repose), `app_registre_trancher` (« garder » / « prendre »,
+  ou classer un signal des fiches), `app_registre_personne_vue` (retire « À valider », motif gardé au journal).
+- La nuit des négociateurs : UNE ligne ajoutée (`where not exists … champ = 'actif'`), posée par remplacement d'ancre
+  sur empreinte vérifiée (`725267743d8fedad1c582d830250673a`).
+- ⛔ Rien ne part chez Hektor. Les gestes vers Hektor gardent leurs fiches actives (§39) : le statut saisi ne touche que
+  ce qui lit `app_negociateur_personne.actif` (répartition, filtres « anciens »).
+
+**Répétition dans une transaction annulée (05/11), TOUT VERT** : 3 champs saisis (carnet 3, journal 3, à son nom) ;
+⭐ UNE VRAIE NUIT DES NÉGOCIATEURS exécutée en écriture : Franck saisi « ancien » RESTE ancien, et le TÉMOIN (Mélanie
+LEGRAND mise ancienne SANS carnet) est remis active ; rendre, prendre, garder, écart déjà tranché refusé, « vu », agence
+d'essai (n° explicite, compteur non consommé) ; refus : champ interdit, statut vide, agence absente, négociateur (×2) ;
+l'INVERSE rend la nuit identique à l'octet (même empreinte). Après annulation : rien n'est resté.
+⚠ La pose par l'outil a été REFUSÉE (écriture en production) : Frédéric colle le patch puis la répétition.
+
+**L'écran** (`RegistreUtilisateurs.tsx`, `lib/registreUtilisateurs.ts`) : « Modifier » sur la fiche d'une personne,
+d'une agence et de la société (un formulaire, « saisi chez nous · Rendre à Hektor » / « repris de Hektor » sous chaque
+champ, la valeur de Hektor en grisé) ; « Le passer en ancien » / « Le remettre actif » en DEUX clics ; « À valider » :
+« C'est vu », « Garder la nôtre », « Prendre celle de Hektor ». L'écran se relit après chaque geste.
+
+**La sentinelle** `data.registre_ecart` (warning) dans `monitoring/check_gti_health.py` : les écarts non tranchés de
+`app_registre_journal`. (Seule ma ligne est commitée dans ce fichier : l'autre session y a des modifications en cours.)
+
+**Contrôle** : `npm run build` vert (types compris) ; le moniteur charge 45 sondes dont la nouvelle. ⏰ À voir EN RÉEL
+après la pose et le push : une saisie sur une fiche, puis la nuit.

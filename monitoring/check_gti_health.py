@@ -721,6 +721,26 @@ DATA_SENTINELS: list[dict[str, Any]] = [
         },
     },
     {
+        # Registre des utilisateurs et des agences, lot C (05/11/2026, audit §43) : LES ÉCARTS À TRANCHER.
+        # Une ligne = un champ saisi chez nous (le carnet) que Hektor donne autrement, ou un e-mail de Hektor qui
+        # n'est pas celui de l'accès à l'app. La nuit l'écrit UNE fois par valeur (app_registre_poser) ; elle se tait
+        # dès qu'un administrateur l'a tranché dans l'écran (« Garder la nôtre » / « Prendre celle de Hektor »,
+        # app_registre_trancher), ou a saisi le champ.
+        # WARNING, comme ses sœurs : un écart se REGARDE ; rien ne part chez Hektor, rien n'est corrigé tout seul.
+        "key": "data.registre_ecart",
+        "severity": "warning",
+        "label": "Registre des utilisateurs et des agences : écarts avec Hektor à trancher",
+        "table": "app_registre_journal",
+        "params": {"evenement": "eq.ecart", "a_signaler": "is.true", "traite_le": "is.null"},
+        "rule": "absolute",
+        "max": 0,
+        "sample": {
+            "select": "objet,objet_id,champ,avant,apres,nuit",
+            "order": "vu_le.desc",
+            "limit": 5,
+        },
+    },
+    {
         # Chantier 8 / 8a-C (22/10/2026) : le CONTROLE AU RETOUR d'une MODIFICATION d'annonce.
         # Une ligne = un champ parti chez Hektor qu'il a REMPLACE ou n'a pas garde (la
         # copropriete tombait ainsi le 22/10, remise a NON par la sauvegarde du secteur), ou une

@@ -80,7 +80,13 @@ export type RuAgence = {
 
 export type RuSociete = Record<string, string | null>
 
-export type RuEvenement = { quand: string; texte: string; aSignaler: boolean }
+export type RuEvenement = {
+  quand: string
+  texte: string
+  aSignaler: boolean
+  /** un écart pas encore tranché : de quel journal, quel numéro, quelle valeur chez Hektor */
+  ecart?: { source: 'registre' | 'negociateur'; id: number; champ: string | null; chezHektor: string | null }
+}
 
 export type RuDonnees = {
   personnes: RuPersonne[] | null
@@ -220,13 +226,19 @@ export async function loadHistoriquePersonne(id: number): Promise<RuEvenement[] 
   type Ligne = Record<string, unknown>
   const [nego, registre] = await Promise.all([
     lire<Ligne>('le journal des négociateurs', erreurs, supabase.from('app_negociateur_journal')
-      .select('evenement,champ,avant,apres,a_signaler,vu_le').eq('app_personne_id', id).order('vu_le', { ascending: false }).limit(200)),
+      .select('id,evenement,champ,avant,apres,a_signaler,vu_le,traite_le').eq('app_personne_id', id).order('vu_le', { ascending: false }).limit(200)),
     lire<Ligne>('le journal du registre', erreurs, supabase.from('app_registre_journal')
-      .select('evenement,champ,avant,apres,a_signaler,vu_le').eq('objet', 'personne').eq('objet_id', id).order('vu_le', { ascending: false }).limit(200)),
+      .select('id,evenement,champ,avant,apres,a_signaler,vu_le,traite_le').eq('objet', 'personne').eq('objet_id', id).order('vu_le', { ascending: false }).limit(200)),
   ])
   if (nego === null && registre === null) return null
-  return [...(nego ?? []), ...(registre ?? [])]
-    .map((j) => ({ quand: String(j.vu_le ?? ''), texte: phraseJournal(j), aSignaler: j.a_signaler === true }))
+  const evenement = (source: 'registre' | 'negociateur') => (j: Record<string, unknown>): RuEvenement => {
+    const ouvert = j.a_signaler === true && j.traite_le == null
+    return {
+      quand: String(j.vu_le ?? ''), texte: phraseJournal(j), aSignaler: ouvert,
+      ecart: ouvert ? { source, id: Number(j.id), champ: txt(j.champ), chezHektor: j.evenement === 'ecart' ? txt(j.apres) : null } : undefined,
+    }
+  }
+  return [...(nego ?? []).map(evenement('negociateur')), ...(registre ?? []).map(evenement('registre'))]
     .sort((a, b) => b.quand.localeCompare(a.quand))
 }
 
@@ -249,7 +261,31 @@ function phraseJournal(j: Record<string, unknown>): string {
     case 'actif': return `${champ || 'Statut'} : ${avant ?? '—'} → ${apres ?? '—'}`
     case 'ecart': return `Écart avec Hektor sur ${champ.toLowerCase() || 'un champ'} : chez nous ${avant ?? '—'}, chez Hektor ${apres ?? '—'}`
     case 'pose': return `${champ} posé : ${apres ?? '—'}`
+    case 'saisie': return `${champ} saisi chez nous : ${avant ?? '—'} → ${apres ?? '(vide)'}`
+    case 'rendu': return `${champ} rendu à Hektor (la nuit le reposera)`
+    case 'tranche': return `Écart sur ${champ.toLowerCase() || 'un champ'} tranché : ${apres ?? ''}`
+    case 'vu': return `« À valider » vu : ${avant ?? ''}`
     case 'changement': return `${champ || 'Changement'} : ${avant ?? '—'} → ${apres ?? '—'}`
     default: return `${String(j.evenement ?? 'Événement')}${champ ? ` · ${champ}` : ''}${apres ? ` : ${apres}` : ''}`
   }
 }
+
+// ---- LOT C (05/11/2026, §43) : LES GESTES DE SAISIE. Administrateurs seuls : chaque fonction le vérifie EN BASE.
+//      Rien ne part chez Hektor ; la nuit respecte le carnet (et le statut actif saisi).
+export type RuObjet = 'personne' | 'agence' | 'societe'
+
+async function appeler(fonction: string, params: Record<string, unknown>): Promise<Record<string, unknown>> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Base indisponible')
+  const { data, error } = await supabase.rpc(fonction, params)
+  if (error) throw new Error(error.message)
+  return (data ?? {}) as Record<string, unknown>
+}
+
+/** valeur null ou '' = vidé exprès (le carnet garde « vide », la nuit ne remplit plus) */
+export const saisirRegistre = (objet: RuObjet, id: number, champs: Record<string, string | number | boolean | null>) =>
+  appeler('app_registre_saisir', { p_objet: objet, p_id: id, p_champs: champs })
+export const rendreRegistre = (objet: RuObjet, id: number, champ: string) =>
+  appeler('app_registre_rendre', { p_objet: objet, p_id: id, p_champ: champ })
+export const trancherEcart = (source: 'registre' | 'negociateur', id: number, choix: 'garder' | 'prendre') =>
+  appeler('app_registre_trancher', { p_source: source, p_id: id, p_choix: choix })
+export const marquerPersonneVue = (id: number) => appeler('app_registre_personne_vue', { p_id: id })
