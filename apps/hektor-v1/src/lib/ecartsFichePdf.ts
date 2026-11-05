@@ -5,7 +5,13 @@
 //      les clauses et les options se SAISISSENT dans l'editeur : la fiche n'en dit rien, elles ne sont pas comparees.
 import type { ContenuImprimePdf, PhotoSignatairesPdf } from './api'
 
-export type MandantImprime = { civilite: string | null; prenom: string | null; nom: string | null }
+export type MandantImprime = { civilite: string | null; prenom: string | null; nom: string | null; id?: string | null }
+// Le numero de fiche d'une carte de l'editeur -- memes regles que le worker (ficheDuMandantImprime) et que
+// lib/conjointsDuMandat.ts (recopiees ici : ce module reste sans dependance).
+const ficheDeLaCarte = (id?: string | null) => {
+  const t = String(id ?? '')
+  return t.match(/-member-(\d+)$/)?.[1] ?? t.match(/^[a-z-]*contact-\d+-(\d+)$/i)?.[1] ?? null
+}
 export type FicheDuJourPdf = { mandants: MandantImprime[]; contenu: ContenuImprimePdf }
 export type LigneDiff = { k: string; avant?: string; apres?: string; plus?: string; moins?: string; note?: string }
 
@@ -71,7 +77,10 @@ export function ecartsAvecLaFiche(photo: PhotoSignatairesPdf | null, contenu: Co
   const lignes: LigneDiff[] = []
   const resume: string[] = []
   if (!photo || !fiche) return { lignes, resume, prixCompare: false }
-  const p = photo.mandants ?? [], f = fiche.mandants ?? []
+  // P7 (D34) : un conjoint RETIRE expres de ce mandat n'est pas un ecart -- on l'ote de la fiche avant de comparer.
+  const retires = new Set((contenu?.conjoints_retires ?? []).map(String))
+  const p = photo.mandants ?? []
+  const f = (fiche.mandants ?? []).filter((m) => { const n = ficheDeLaCarte(m.id); return !(n && retires.has(n)) })
   for (let i = 0; i < Math.max(p.length, f.length); i += 1) {
     if (p[i] && f[i] && cleNom(p[i]) !== cleNom(f[i])) {
       lignes.push({ k: `Mandant ${i + 1}`, avant: nomImprime(p[i]), apres: nomImprime(f[i]) })

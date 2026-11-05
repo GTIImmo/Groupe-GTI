@@ -10083,7 +10083,7 @@ export function documentRemplace(document: Pick<ConsoleDocument, 'metadata_json'
 }
 export type ContenuImprimePdf = Partial<Record<'numero_mandat' | 'type_mandat' | 'date_signature' | 'mandants_libelle' | 'bien_titre' | 'bien_adresse'
   | 'surface_habitable' | 'surface_terrain' | 'nombre_pieces' | 'etat_occupation' | 'prix_vente' | 'prix_net_vendeur' | 'honoraires_ttc'
-  | 'honoraires_charge' | 'clause_particuliere' | 'execution_anticipee', string | null>> & { version?: number; inclure_couverture?: boolean | null }
+  | 'honoraires_charge' | 'clause_particuliere' | 'execution_anticipee', string | null>> & { version?: number; inclure_couverture?: boolean | null; conjoints_retires?: string[] }
 export function contenuImprimeDuDocument(document: Pick<ConsoleDocument, 'metadata_json'>): ContenuImprimePdf | null {
   const c = (document.metadata_json as { contenu_imprime?: ContenuImprimePdf } | null)?.contenu_imprime
   return c && typeof c === 'object' ? c : null
@@ -10102,6 +10102,34 @@ export async function loadFichesDesSignataires(numerosHektor: string[]): Promise
     .in('hektor_target_id', numeros)
   if (error) throw new Error(error.message)
   for (const row of (data ?? []) as FicheSignataire[]) fiches.set(String(row.hektor_target_id), row)
+  return fiches
+}
+
+// A.2 lot 6b P7 (05/11/2026) : la nature et le conjoint de chaque mandant du bien (couple_json, calcule la nuit et a la
+// relecture), plus la fiche des conjoints nommes (pour leur civilite). Lecture seule ; une erreur = pas de question.
+export type FicheCoupleMandant = { hektor_target_id: string; nature_fiche: string | null; couple_json: unknown; civilite_app: string | null }
+export async function loadCouplesDesMandants(numerosHektor: string[]): Promise<Map<string, FicheCoupleMandant>> {
+  const fiches = new Map<string, FicheCoupleMandant>()
+  if (!hasSupabaseEnv || !supabase) return fiches
+  const lire = async (numeros: string[]) => {
+    const propres = Array.from(new Set(numeros.filter((n) => /^\d+$/.test(n) && !fiches.has(n))))
+    if (!propres.length || !supabase) return
+    const { data, error } = await supabase
+      .from('app_contact_current')
+      .select('hektor_target_id,nature_fiche,couple_json,civilite_app')
+      .in('hektor_target_id', propres)
+    if (error) throw new Error(error.message)
+    for (const row of (data ?? []) as FicheCoupleMandant[]) fiches.set(String(row.hektor_target_id), row)
+  }
+  await lire(numerosHektor)
+  const conjoints: string[] = []
+  for (const f of fiches.values()) {
+    let json = f.couple_json as { etat?: string; conjoint?: { hektor_id?: string | number | null } } | string | null
+    if (typeof json === 'string') { try { json = JSON.parse(json) } catch { json = null } }
+    // Le numero HEKTOR du conjoint (`hektor_id`) : `id` est notre numero (mesure du 05/11).
+    if (json && typeof json === 'object' && json.etat === 'nomme' && json.conjoint?.hektor_id != null) conjoints.push(String(json.conjoint.hektor_id))
+  }
+  await lire(conjoints)
   return fiches
 }
 

@@ -92,6 +92,8 @@ import {
   loadAppSettingActive,
   photoSignatairesDuDocument,
   documentRemplace,
+  loadCouplesDesMandants,
+  type FicheCoupleMandant,
   loadAppSettingValeur,
   loadContactCoupleInfo,
   editConjointOptimistic,
@@ -281,6 +283,7 @@ import './contact-new.css'
 import './ajout-conjoint.css'
 import EnvoiSignatureYoutrust, { EVENEMENT_CORRIGER_MANDAT, type DemandeCorrectionMandat, type OngletCorrection } from './EnvoiSignatureYoutrust'
 import type { FicheDuJourPdf } from './lib/ecartsFichePdf'
+import { ficheDuMandant, mandantsImprimes, mandantsSansPrenomOuNom, situationsDesConjoints, type FicheCouple, type SituationConjoint } from './lib/conjointsDuMandat'
 import RechercheGlobale, { type GroupeRecherche } from './RechercheGlobale'
 import './fil-navigation.css'
 import './suivi-travaux.css'
@@ -4604,7 +4607,7 @@ function buildMandatDocumentDraft(
 // d'ouverture, sans saisie) -- pour « la fiche a change depuis ce PDF ». Seuls les champs que la fiche porte.
 function ficheDuJourPourEnvoi(draft: MandatDocumentDraft): FicheDuJourPdf {
   return {
-    mandants: draft.mandants.map((m) => ({ civilite: m.civilite || null, prenom: m.prenom || null, nom: m.nom || null })),
+    mandants: draft.mandants.map((m) => ({ civilite: m.civilite || null, prenom: m.prenom || null, nom: m.nom || null, id: m.id })),
     contenu: {
       numero_mandat: draft.numeroMandat || null,
       type_mandat: draft.typeMandat || null,
@@ -5406,6 +5409,13 @@ function MandatDocumentEditor(props: {
   const [envoiAncien, setEnvoiAncien] = useState<ConsoleDocument | null>(null)
   // P6 : un PDF que l'editeur VIENT de generer est la saisie du moment -- on ne le compare pas a la fiche.
   const [envoiJusteGenere, setEnvoiJusteGenere] = useState(false)
+  // A.2 lot 6b P7 (D34-D36) : le couple dans l'editeur -- seulement si `signature_youtrust` est allume.
+  const youtrustActif = useSignatureYoutrust()
+  const [couplesDesMandants, setCouplesDesMandants] = useState<Map<string, FicheCoupleMandant>>(new Map())
+  const [conjointsRetires, setConjointsRetires] = useState<Set<string>>(new Set())
+  const [conjointsAjoutes, setConjointsAjoutes] = useState<Map<string, MandatDocumentMandant>>(new Map())
+  const [lienAConfirmer, setLienAConfirmer] = useState<string | null>(null)
+  const [lienEnCours, setLienEnCours] = useState(false)
   // Type de document : mandat de vente OU avenant (modification d'un mandat actif). L'avenant n'est
   // disponible que si un mandat est deja actif ; dans ce cas il est preselectionne.
   const [docMode, setDocMode] = useState<'mandat' | 'avenant'>(() =>
@@ -5464,6 +5474,54 @@ function MandatDocumentEditor(props: {
     draftBaselineRef.current = JSON.stringify(initialDraft)
     setDraftStale(false)
   }
+  // A.2 lot 6b P7 : la nature et le conjoint de chaque mandant, lus a l'ouverture (Youtrust allume ; une erreur = pas
+  // de question, le mandat reste celui d'aujourd'hui).
+  const numerosDesMandants = initialDraft.mandants.map((m) => ficheDuMandant(m.id)).filter(Boolean).join(',')
+  useEffect(() => {
+    if (!open || !youtrustActif || !numerosDesMandants) return
+    let annule = false
+    loadCouplesDesMandants(numerosDesMandants.split(','))
+      .then((fiches) => { if (!annule) setCouplesDesMandants(fiches) })
+      .catch(() => { /* lecture ratee : aucune question n'est posee */ })
+    return () => { annule = true }
+  }, [open, youtrustActif, numerosDesMandants])
+  useEffect(() => {
+    setConjointsRetires(new Set())
+    setConjointsAjoutes(new Map())
+    setLienAConfirmer(null)
+  }, [draftIdentity])
+  const situationsConjoints = useMemo(
+    () => (youtrustActif ? situationsDesConjoints(draft.mandants, couplesDesMandants as Map<string, FicheCouple>) : []),
+    [youtrustActif, draft.mandants, couplesDesMandants],
+  )
+  // Le mandat TEL QU'IL SERA IMPRIME (D34 retraits, D35 ajouts) : c'est lui qui part dans l'apercu, la generation et la
+  // photo du PDF. Eteint : le brouillon d'avant, a l'identique.
+  const draftDuDocument = useMemo<MandatDocumentDraft>(
+    () => (youtrustActif ? { ...draft, mandants: mandantsImprimes(draft.mandants, conjointsRetires, conjointsAjoutes, situationsConjoints) } : draft),
+    [youtrustActif, draft, conjointsRetires, conjointsAjoutes, situationsConjoints],
+  )
+  // D36 : Youtrust allume, un mandant imprime sans prenom ou sans nom bloque la generation.
+  const sansPrenomNom = youtrustActif ? mandantsSansPrenomOuNom(draftDuDocument.mandants) : []
+  const lierLeConjoint = async (s: Extract<SituationConjoint, { cas: 'non_lie' }>) => {
+    setLienEnCours(true)
+    setMessage(null)
+    try {
+      await createLinkHektorMandantJobOptimistic({ dossier: props.dossier, contactId: s.conjoint, contactLabel: s.nomConjoint })
+      setConjointsAjoutes((cur) => new Map(cur).set(s.conjoint, s.mandant))
+      setConjointsRetires((cur) => { const n = new Set(cur); n.delete(s.conjoint); return n })
+      setMessage(bvs(`${s.nomConjoint} est lié(e) au bien comme mandant(e) : il ou elle figure dans ce mandat.`))
+    } catch (e) {
+      setMessage(bvs(`Le lien n'a pas pu être posé (${e instanceof Error ? e.message : 'erreur'}) : ${s.nomConjoint} ne figure pas dans ce mandat.`))
+    } finally {
+      setLienEnCours(false)
+      setLienAConfirmer(null)
+    }
+  }
+  const choisirConjoint = (conjoint: string, figure: boolean) => {
+    setConjointsRetires((cur) => { const n = new Set(cur); if (figure) n.delete(conjoint); else n.add(conjoint); return n })
+    setMessage(null)
+  }
+
   // Modale refermée alors que la fiche avait changé : le brouillon se recale sur la fiche.
   useEffect(() => {
     if (!open && draftStale) reloadDraftFromFiche()
@@ -5532,9 +5590,11 @@ function MandatDocumentEditor(props: {
     !draft.honorairesCharge ? 'charge honoraires' : '',
     !draft.dateSignature ? 'date de signature' : '',
     !selectedSignatureRecipients.length ? 'signataire' : '',
+    sansPrenomNom.length ? 'prénom ou nom d’un mandant' : '',
     selectedSignatureRecipients.some((recipient) => !recipient.email && !recipient.telephone) ? 'coordonnees signataire' : '',
   ].filter(Boolean)
-  const payload = buildMandatDocumentPayload(draft, props.dossier)
+  // P7 : le mandat imprime (draftDuDocument) ; les conjoints retires expres sont notes pour que P6 ne les prenne pas pour un ecart.
+  const payload = { ...buildMandatDocumentPayload(draftDuDocument, props.dossier), ...(conjointsRetires.size ? { conjoints_retires: Array.from(conjointsRetires) } : {}) }
 
   // Assistant « couleurs mariées » : ordre des onglets, teinte + picto par onglet,
   // navigation Précédent/Suivant. L'aperçu et « Générer » n'apparaissent qu'au dernier
@@ -5556,7 +5616,7 @@ function MandatDocumentEditor(props: {
   // Aperçu affiché : toujours en avenant (pas d'onglets) ; en mandat, seulement au Contrôle.
   const showDocPreview = isAvenant || isLastMandatTab
   const mandatTabHasGap = (tab: string): boolean => {
-    if (tab === 'mandants') return !draft.numeroMandat || !draft.dateSignature || (!draft.mandantsLibelle && draft.mandants.every((m) => !mandatMandantDisplayName(m)))
+    if (tab === 'mandants') return !draft.numeroMandat || !draft.dateSignature || (!draft.mandantsLibelle && draft.mandants.every((m) => !mandatMandantDisplayName(m))) || sansPrenomNom.length > 0
     if (tab === 'bien') return !draft.bienAdresse
     if (tab === 'prix') return !draft.prixVente || !draft.honorairesTtc || !draft.honorairesCharge
     if (tab === 'signature') return !selectedSignatureRecipients.length || selectedSignatureRecipients.some((r) => !r.email && !r.telephone)
@@ -5619,14 +5679,14 @@ function MandatDocumentEditor(props: {
       setPreviewUrl('')
       return
     }
-    const html = docMode === 'avenant' ? avenantPreviewHtml(draft, props.dossier) : mandatPreviewHtml(draft, props.dossier, props.contacts)
+    const html = docMode === 'avenant' ? avenantPreviewHtml(draftDuDocument, props.dossier) : mandatPreviewHtml(draftDuDocument, props.dossier, props.contacts)
     const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
     const url = URL.createObjectURL(blob)
     setPreviewUrl(url)
     return () => {
       URL.revokeObjectURL(url)
     }
-  }, [draft, open, props.contacts, props.dossier, docMode])
+  }, [draftDuDocument, open, props.contacts, props.dossier, docMode])
 
   const copyPayload = async () => {
     try {
@@ -5659,9 +5719,16 @@ function MandatDocumentEditor(props: {
       // Éteint : le HTML envoyé est celui d'avant, identique à l'aperçu. L'aperçu, lui, n'a jamais de repères.
       const reperes = await loadAppSettingActive('signature_youtrust')
       youtrustGen = reperes
+      // A.2 lot 6b P7 (D36) : Youtrust exige un prenom ET un nom par signataire -- on le dit ici, pas a l'envoi.
+      const manquants = reperes ? mandantsSansPrenomOuNom(draftDuDocument.mandants) : []
+      if (manquants.length) {
+        setMessage(bvs(`Génération bloquée : ${manquants.join(' ; ')}. Corrigez la fiche du contact (une fiche de couple écrite dans un seul nom se sépare en deux personnes), puis régénérez.`))
+        setPdfBusy(false)
+        return
+      }
       await createGenerateMandatPdfJob({
         dossier: { app_dossier_id: props.dossier.app_dossier_id, hektor_annonce_id: props.dossier.hektor_annonce_id },
-        html: docMode === 'avenant' ? avenantPreviewHtml(draft, props.dossier, { reperes }) : mandatPreviewHtml(draft, props.dossier, props.contacts, { reperes }),
+        html: docMode === 'avenant' ? avenantPreviewHtml(draftDuDocument, props.dossier, { reperes }) : mandatPreviewHtml(draftDuDocument, props.dossier, props.contacts, { reperes }),
         payload,
         numeroMandat: draft.numeroMandat || null,
         // Avenant : nom de document dedie + lie au n° de mandat -> apparait ainsi dans Hektor + ImmoSign.
@@ -5881,8 +5948,58 @@ function MandatDocumentEditor(props: {
                   <LockedDataField label="Libelle global" value={draft.mandantsLibelle} completeIn="la fiche du contact" wide />
                 </div>
                 <p className="mandat-document-locknote">Les mandants proviennent des contacts liés à la fiche. Pour ajouter, retirer ou corriger un mandant, passez par la fiche du contact.</p>
+                {/* A.2 lot 6b P7 (D34-D36) : le couple se decide ICI, avant la generation (Youtrust allume seulement). */}
+                {situationsConjoints.length ? (
+                  <div className="ens-couples">
+                    {situationsConjoints.map((s) => {
+                      const nomPrincipal = (() => { const m = draft.mandants.find((x) => ficheDuMandant(x.id) === s.principal); return m ? mandatMandantDisplayName(m) : `fiche ${s.principal}` })()
+                      if (s.cas === 'inconnu') {
+                        return (
+                          <div key={s.principal} className="ens-couple">
+                            <b>{nomPrincipal}</b> vit en couple, mais <b>le conjoint n’est pas connu</b> (sa place est vide chez Hektor).
+                            Complétez-le depuis la fiche du contact (« Compléter le conjoint ») ; sinon, {nomPrincipal} signe seul(e).
+                          </div>
+                        )
+                      }
+                      const ajoute = s.cas === 'non_lie' && conjointsAjoutes.has(s.conjoint)
+                      const lie = s.cas === 'lie' || ajoute
+                      const figure = lie && !conjointsRetires.has(s.conjoint)
+                      return (
+                        <div key={s.principal} className="ens-couple">
+                          <div className="ens-couple-q">
+                            <span>
+                              <b>{s.nomConjoint}</b>, conjoint(e) de {nomPrincipal}, figure-t-il (elle) dans ce mandat ?
+                              {!lie ? <small> Il (elle) n’est pas lié(e) au bien aujourd’hui{s.cas === 'non_lie' && s.archive ? ' et sa fiche est archivée : réactivez-la d’abord pour pouvoir la lier' : ''}.</small> : ajoute ? <small> Lié(e) au bien à l’instant.</small> : null}
+                            </span>
+                            <span className="ens-couple-choix">
+                              <button type="button" className={figure ? 'on' : ''} disabled={lienEnCours || (s.cas === 'non_lie' && !ajoute && s.archive)}
+                                title={s.cas === 'non_lie' && !ajoute && s.archive ? 'Sa fiche est archivée chez Hektor : réactivez-la avant de la lier au bien.' : undefined}
+                                onClick={() => { if (lie) choisirConjoint(s.conjoint, true); else setLienAConfirmer(s.conjoint) }}>Oui</button>
+                              <button type="button" className={!figure ? 'on' : ''} disabled={lienEnCours}
+                                onClick={() => { setLienAConfirmer(null); if (lie) choisirConjoint(s.conjoint, false) }}>Non</button>
+                            </span>
+                          </div>
+                          {lie && !figure ? <small className="ens-couple-note">Retiré(e) de ce mandat seulement : sa fiche et son lien au bien restent.</small> : null}
+                          {s.cas === 'non_lie' && !ajoute && lienAConfirmer === s.conjoint ? (
+                            <div className="ens-couple-confirme">
+                              <span>Lier <b>{s.nomConjoint}</b> au bien comme mandant(e) ? Le lien s’écrit chez nous puis chez Hektor.
+                                ⚠ Sur un mandat numéroté, il ne pourra pas être retiré depuis l’app.</span>
+                              <span className="ens-couple-choix">
+                                <button type="button" className="on" disabled={lienEnCours} onClick={() => void lierLeConjoint(s)}>{lienEnCours ? 'Lien…' : 'Lier et l’inclure'}</button>
+                                <button type="button" disabled={lienEnCours} onClick={() => setLienAConfirmer(null)}>Annuler</button>
+                              </span>
+                            </div>
+                          ) : null}
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : null}
+                {sansPrenomNom.length ? (
+                  <p className="mandat-document-warning">Signature électronique : {sansPrenomNom.join(' ; ')}. Corrigez la fiche du contact avant de générer.</p>
+                ) : null}
                 <div className="mandat-document-mandants">
-                  {draft.mandants.map((mandant, index) => (
+                  {draftDuDocument.mandants.map((mandant, index) => (
                     <section key={mandant.id || index} className="mandat-document-mandant-card">
                       <div className="mandat-document-mandant-head">
                         <strong>Mandant {index + 1}</strong>
@@ -5969,7 +6086,7 @@ function MandatDocumentEditor(props: {
                 <div className="mandat-document-checklist">
                   <strong>Controle avant document final</strong>
                   <p>{missingFields.length ? `Champs obligatoires à compléter : ${missingFields.join(', ')}.` : 'Toutes les données principales sont renseignées.'}</p>
-                  <p>{draft.mandants.length} mandant{draft.mandants.length > 1 ? 's' : ''} dans le document. Le modele complet source est utilise pour le rendu imprimable.</p>
+                  <p>{draftDuDocument.mandants.length} mandant{draftDuDocument.mandants.length > 1 ? 's' : ''} dans le document. Le modele complet source est utilise pour le rendu imprimable.</p>
                   <p>{selectedSignatureRecipients.length} destinataire{selectedSignatureRecipients.length > 1 ? 's' : ''} prepare{selectedSignatureRecipients.length > 1 ? 's' : ''} pour ImmoSign.</p>
                 </div>
               </div>

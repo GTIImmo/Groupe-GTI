@@ -123,6 +123,20 @@
 .ens-pill-remplace { font-size: 11px; font-weight: 800; border-radius: 99px; padding: 3px 9px; background: #efe9e0; color: #6b6058; white-space: nowrap; }
 .ens-doc-remplace { opacity: .78; background: repeating-linear-gradient(135deg, #fbf8f3 0 10px, #f6f1ea 10px 20px); }
 
+/* P7 -- le couple dans l'onglet « Mandants » de l'éditeur (maquette « corriger » vue 3, la question du conjoint). */
+.ens-couples { display: flex; flex-direction: column; gap: 8px; margin: 10px 0 12px; }
+.ens-couple { border: 1px solid #e9e1d3; border-radius: 12px; padding: 10px 12px; background: #fffdf9; font-size: 13px; line-height: 1.45; color: #241f22; }
+.ens-couple small { color: #6b6058; }
+.ens-couple-q { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; }
+.ens-couple-q > span:first-child { flex: 1 1 260px; min-width: 0; }
+.ens-couple-choix { display: inline-flex; gap: 6px; flex-wrap: wrap; }
+.ens-couple-choix button { font: inherit; font-weight: 800; font-size: 12px; border-radius: 99px; padding: 5px 14px; border: 1px solid #e9e1d3; background: #fff; color: #241f22; cursor: pointer; }
+.ens-couple-choix button.on { border-color: #b3134f; background: #fbe6ee; color: #8b0f3d; box-shadow: 0 0 0 3px #fbe6ee; }
+.ens-couple-choix button:disabled { opacity: .55; cursor: not-allowed; }
+.ens-couple-note { display: block; margin-top: 6px; }
+.ens-couple-confirme { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 8px; padding: 9px 11px; border-radius: 10px; background: #fbefd8; border: 1px solid #efcf9c; color: #6e4304; }
+.ens-couple-confirme > span:first-child { flex: 1 1 240px; min-width: 0; }
+
 /* Téléphone et fenêtre étroite : une colonne, le bouton principal sur toute la largeur. */
 @media (max-width: 760px) {
   .ens-voile { padding: 0; align-items: stretch; }

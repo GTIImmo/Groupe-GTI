@@ -8874,6 +8874,8 @@ function contenuImprimeDuPdf(payload) {
     clause_particuliere: cleanString(m.clause_particuliere),
     execution_anticipee: cleanString(o.execution_anticipee_demandee),
     inclure_couverture: oui(o.inclure_couverture),
+    // lot 6b P7 (D34) : les conjoints lies au bien que l'agent a RETIRES de ce mandat, expres (pas un ecart a signaler).
+    conjoints_retires: Array.isArray(r.conjoints_retires) ? r.conjoints_retires.map((x) => cleanString(x)).filter(Boolean) : [],
   };
 }
 

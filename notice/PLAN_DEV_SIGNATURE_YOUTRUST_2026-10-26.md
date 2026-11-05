@@ -678,6 +678,16 @@ principale), jamais par la porte du mandant (§8.3 de la proposition). **Rien co
   PDF ne change pas. ⇒ D23 et D30 restent, comme canaux de remise.
 - **Remplacés** : D25 (sa place), D26 et D27 (sortent de la fenêtre d'envoi), D29 (devient automatique).
 
+**D34 à D36 — LE COUPLE DANS L'ÉDITEUR** *(Frédéric, 05/11 : « ok » après la réexplication des questions (a), (b), (c) de la
+proposition §11.2, recommandation « oui » aux trois ; détail : proposition §11.2)* :
+- **D34** (a) : un conjoint nommé ET lié au bien est dans le mandat par défaut (comme aujourd'hui) ; « Non » le retire du
+  DOCUMENT seulement (sa fiche et son lien au bien restent).
+- **D35** (b) : un conjoint nommé mais NON lié au bien est absent par défaut (comme aujourd'hui) ; « Oui » le lie au bien
+  comme mandant (clic confirmé, porte `app_link_mandant_optimistic`, comme « Lier comme mandant »), puis il apparaît.
+- **D36** (c) : Youtrust allumé, un mandant imprimé sans prénom ou sans nom BLOQUE la génération (il se corrige sur la
+  fiche) ; un e-mail ou un portable manquant n'est qu'un avertissement (il se complète à l'envoi, D33).
+- Place de conjoint vide : « Le conjoint n'est pas connu » + gestes F / G existants ; sinon le mandant signe seul.
+
 ### LOT 6b — Les écrans (O6, O7, O8) + aiguillage R2 · 1,5–2 j
 
 **Ce qu'il fait.** Interrupteur allumé :
@@ -845,8 +855,36 @@ ImmoSign existant dont les boutons répondent comme avant.
   ⚠ NON ÉPROUVÉ en réel (interrupteur éteint). ⚠ Risque connu : juste après une correction de prix ou de nom sur la
   fiche, si la fiche affichée n'est pas encore relue, le bandeau peut parler de l'ancienne valeur — il ne bloque
   rien, il propose de régénérer.
-- **P7 — éditeur : le couple (D32)** et le contrôle du prénom / nom — attend les réponses (a), (b), (c) de la
-  proposition §11.2.
+- **P7 — éditeur : le couple (D32)** et le contrôle du prénom / nom — ✅ réponses reçues le 05/11 : « oui » aux trois
+  (D34, D35, D36). ✅ « vas-y » le 05/11.
+  🔎 **AUDIT DE P7 (05/11)** : les cartes de l'éditeur portent le numéro HEKTOR (registre : `hektor_target_id` ; détail
+  Hektor : `item.id`) ; ⚠⚠ **`couple_json.conjoint.id` est NOTRE numéro** (0 sur 40 trouvés comme numéro Hektor, 25 sur
+  40 comme le nôtre) ; le numéro Hektor du conjoint est **`couple_json.conjoint.hektor_id`** (300 sur 300, égal à sa
+  fiche 253 fois sur 253) — c'est lui que vise la porte « lier comme mandant ». ⛔ Règle du 02/11 tenue : couple ⇔
+  `nature_fiche = 'couple'` (16 052 personnes seules ont un `couple_json` « vide »). **Mesure refaite avec les règles
+  du code** (biens vivants, lecture seule) : 688 biens avec mandant, 54 couples mandants, 42 conjoints nommés → **10
+  liés (a)**, **32 non liés (b)**, 0 archivé ; **6 places vides** ; 1 353 personnes, **43 sans prénom** (bloquées par
+  D36 si Youtrust est allumé), 0 sans nom — exactement le §8.2.
+  ✅ **P7 CODÉ LE 05/11** (rien commité, rien déployé ; tout derrière `signature_youtrust`, éteint = l'éditeur d'avant) :
+  · `src/lib/conjointsDuMandat.ts` (nouveau, pur) : `situationsDesConjoints` (lie / non_lie / inconnu), `mandantsImprimes`
+    (retraits D34, ajouts D35 juste après le principal, jamais deux fois), `mandantsSansPrenomOuNom` (D36).
+  · `lib/api.ts` : `loadCouplesDesMandants` (nature, couple_json, civilité ; lecture seule).
+  · éditeur : onglet « Mandants » — une ligne par couple « X, conjoint(e) de Y, figure-t-il (elle) dans ce mandat ? »
+    Oui / Non ; (b) « Oui » ouvre une confirmation (« ⚠ sur un mandat numéroté, il ne pourra pas être retiré depuis
+    l'app ») puis `createLinkHektorMandantJobOptimistic` (porte existante) et l'imprime ; un conjoint archivé ne se lie
+    pas ; place vide → « le conjoint n'est pas connu, complétez-le depuis la fiche du contact ». La liste affichée,
+    l'aperçu, la génération et la photo du PDF suivent le mandat TEL QU'IL SERA IMPRIMÉ (`draftDuDocument`). D36 :
+    avertissement dans l'onglet et l'onglet en « ! », et la génération est REFUSÉE au clic (interrupteur relu) avec le
+    rang et ce qui manque.
+  · le PDF retient les conjoints retirés exprès (`contenu_imprime.conjoints_retires`, worker, dormant) → le bandeau de P6
+    ne les prend pas pour un écart.
+  · essais : `apps/hektor-v1/test_conjoints_du_mandat.cjs` **26/26** (numéros, a, b, archive, relecture sans doublon,
+    place vide, règle de nature, couple_json en texte, D36, worker, branchements ; témoin : sans la note, P6 crierait) ;
+    P6 18/18 ; worker 23, 18, 23, 22 ; build vert ; cartes vues (balisage recopié sur une page d'essai, retirée) à
+    1280 × 665 et 375 px.
+  ⚠ NON FAIT, à décider : « Compléter » / « Ajouter » le conjoint DEPUIS l'éditeur (gestes F / G) — aujourd'hui un texte
+  renvoie à la fiche du contact. ⚠ NON ÉPROUVÉ en réel : la lecture des couples, le lien posé depuis l'éditeur, le blocage
+  (interrupteur éteint en production).
 - **P8 — le suivi par personne** (« Relancer », « Corriger l'adresse », vue 7 « déjà envoyé ») : après le lot 5 (avis
   Youtrust), dont il a besoin.
 Ordre proposé : P1 → P2 → P3 → P4 → P5 → P6 → P7, puis lot 5, puis P8.

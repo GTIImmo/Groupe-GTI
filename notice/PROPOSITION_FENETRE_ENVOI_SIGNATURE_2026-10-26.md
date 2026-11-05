@@ -427,6 +427,9 @@ Avec Youtrust allumé, le contrôle de l'éditeur ajoute : **un mandant imprimé
 (c'est du contenu, il se corrige sur la fiche) — question (c) ; un e-mail ou un portable manquant n'est qu'un avertissement,
 il se complète à l'envoi (D33).
 
+✅ **RÉPONSE DE FRÉDÉRIC (05/11)** : « ok » après la réexplication, recommandation « oui » aux trois → (a) = D34,
+(b) = D35, (c) = D36 (plan signature, après D33). Rien codé : c'est la pièce P7.
+
 ---
 
 ## 12. « CORRIGER AU MOMENT DE LA SIGNATURE » = RÉGÉNÉRER — idée ergonomique (05/11, rien codé)
