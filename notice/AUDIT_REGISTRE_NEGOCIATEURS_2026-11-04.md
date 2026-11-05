@@ -1040,3 +1040,38 @@ Frédéric → 46 (40). ⚠ Non vu : la modale de changement de statut elle-mêm
 ⚠ Réserve : un NÉGOCIATEUR ne lit `app_affaire_repartition` que sur son périmètre (politique `app_affaire_repartition_read`)
 — pour lui, le choix de la fiche peut retomber sur « la plus récente » (ex. Delphine → 114). Sans effet sur les comptes :
 le Pilotage retrouve la part par la PERSONNE, quelle que soit la fiche.
+
+## 40. ÉTAPE 2 POSÉE : les tables et la tenue de nuit À BLANC (05/11) — Frédéric : « Oui, étape 2 »
+
+**Posé en production** (`supabase/patch_registre_utilisateurs_agences_etape2_2026-11-05.sql`, migration appliquée ;
+retour arrière `..._INVERSE.sql`) — additif, TABLES VIDES, rien n'est lu par l'app, aucun worker touché :
+- `app_registre_societe` (une ligne, n° 3000001), `app_registre_agence` (n° 2000001+, n° Hektor à côté, jamais
+  supprimée), `app_registre_agence_alias` (clé = `app_neg_cle_agence`, la même que `cleAgence` du front),
+  `app_registre_champ_app` (LE CARNET), `app_registre_journal` (pose / changement / nouvelle / disparue / réapparue / écart) ;
+- `app_negociateur_personne` + 9 colonnes vides : civilité, prénom, nom de famille, fonction, agence (notre n°), e-mail
+  pro, téléphone, portable, photo ;
+- `app_registre_poser` + `app_registre_utilisateurs_agences_maintenir(p_agences, p_negos, p_a_blanc)` : « Hektor
+  complète, il n'écrase pas » (une valeur vide n'efface rien ; un champ du carnet n'est jamais écrit, un écart se signale
+  une fois par valeur) ; l'e-mail de l'ACCÈS À L'APP fait foi pour l'e-mail pro (une autre adresse chez Hektor = écart) ;
+- droits : agences et alias lisibles par les comptes actifs ; société, carnet et journal par les administrateurs ;
+  AUCUNE écriture ni exécution pour un compte connecté (contrôlé) ; clé de battement `phase2.registre_agences` déclarée.
+
+**L'essai dans une transaction annulée** (annuaires en base + fiche brute du Compte formation), en ÉCRITURE réelle :
+20 agences, société complète (33 champs : SIRET, RCS, TVA, RCP Allianz, médiateur, carte CPI … valable au 14/09/2027),
+787 coordonnées ; un 2e passage = 0 changement (idempotent) ; un champ mis au carnet n'est pas écrasé et sort en écart ;
+l'écart d'e-mail de Franck sort (gti contre gmail.com). ⭐ **Il a trouvé un défaut** : un compteur de numéros N'EST PAS
+annulé par un retour arrière — chaque nuit à blanc aurait brûlé 20 numéros (1re agence née 2000021). Corrigé : à blanc, le
+compteur est remis derrière le plus grand numéro posé ; le patch le contrôle (compteur à 2000000 après son essai).
+
+**La vraie nuit, à blanc, avec les listes BRUTES** (`python phase2/sync/maintenir_registre_agences.py --a-blanc`, 19
+agences, 219 négociateurs, aucune écriture — vérifié après : 0 agence, 0 journal, compteur 2000000) :
+19 agences numérotées EXACTEMENT comme la maquette (2000001 Ambert … 2000007 Firminy … 2000010 Monistrol … 2000014
+Saint-Étienne … 2000018 Agences supprimée, 2000019 Compte formation), 19 alias, 134 champs d'agence, 33 de la société,
+904 coordonnées de personnes (137 portables, 165 agences rattachées), 1 écart (Franck), **0 écriture d'agence non
+rattachée** dans les fiches et les biens. Accents intacts (vérifiés hors console).
+
+**Branché dans le run** (`run_full_pipeline.ps1`, juste après « phase2 registre des negociateurs », non bloquant,
+`-MaxAttempts 1`). ⛔ Interrupteur `APP_REGISTRE_AGENCES` ABSENT = éteint : pour la nuit à blanc, Frédéric ajoute
+`APP_REGISTRE_AGENCES=blanc` dans le .env (je ne lis ni n'écris le .env). Le passage à `1` = une décision à part, après
+lecture du compte rendu de la nuit.
+⚠ Pas encore de sentinelle sur les écarts (`app_registre_journal.a_signaler`) : elle viendra avec les écrans (étape 3).

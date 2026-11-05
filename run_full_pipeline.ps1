@@ -1446,6 +1446,18 @@ Invoke-OptionalStepWithRetry -Label "phase2 registre des negociateurs" -Argument
     "phase2\sync\maintenir_registre_negociateurs.py"
 ) -MaxAttempts 1 -RetryDelaySeconds 0 -WorkerKey "phase2.registre_negociateurs"
 
+# REGISTRE DES UTILISATEURS ET DES AGENCES, ETAPE 2 (05/11/2026) -- LA TENUE DE NUIT.
+# Tient la societe (juridique, carte professionnelle), les agences sous NOTRE numero (2000001+, alias) et les
+# coordonnees des personnes, depuis les fiches BRUTES de Hektor deja telechargees (data/hektor.sqlite).
+# Un champ du carnet (modifie dans l'app) n'est jamais ecrit ; un ecart se signale. Rien dans l'app ne lit
+# encore ces tables. Aucune requete chez Hektor.
+# SA PLACE : APRES le registre des negociateurs ci-dessus (elle lit ses personnes et ses fiches).
+# Interrupteur APP_REGISTRE_AGENCES (.env) : 0 eteint · blanc = compte rendu seul · 1 = ecrit.
+# NON BLOQUANTE : ratee, le registre garde la nuit d'avant. notice/AUDIT_REGISTRE_NEGOCIATEURS_2026-11-04.md §40.
+Invoke-OptionalStepWithRetry -Label "phase2 registre des agences" -Arguments @(
+    "phase2\sync\maintenir_registre_agences.py"
+) -MaxAttempts 1 -RetryDelaySeconds 0 -WorkerKey "phase2.registre_agences"
+
 # COUPLES · P2 (31/10/2026) -- LA PREMIERE FICHE CONNAIT SON CONJOINT.
 # Pose `couple_json` sur chaque premiere fiche d'un couple et marque « conjoint »
 # la seconde fiche nommee (qui devient eligible). Note COUPLES_ERGONOMIE... §23.
