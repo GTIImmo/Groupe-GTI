@@ -81,7 +81,7 @@ class FauxSupabase {
 }
 
 // Monte les vraies fonctions d'une version du worker contre un faux Supabase et des doublures.
-function monter(src, faux, doublures) {
+function monter(src, faux, doublures, retiresEffaces = true) {
   const noms = [
     "function signatureProtegee(",            // absent dans la version d'avant : normal
     "function entryPriority(",
@@ -102,6 +102,7 @@ function monter(src, faux, doublures) {
   // eslint-disable-next-line no-new-func
   return new Function("supabaseRequest", "crypto", "storageSafeFilename", "logJob", "D",
     `const XMLRPC_URL = "https://hektor.invalid/xmlrpc.php";
+     const DOCUMENTS_RETIRES_EFFACES = ${retiresEffaces ? "true" : "false"}; // ⑧ 8f (29/10) : marquer au lieu d'effacer
      const { ensureHektorExecutionContext, hektorFetch, buildSignatureMapFromHtml, restoreAdminAfterSignatureRead,
              downloadSignedProcedureDocument, upsertSyntheticSignedRow } = D;
      ${blocs.join("\n")}
@@ -180,11 +181,12 @@ const lignesScene3 = lignes.map((l) => (l.id === L_YOU
 
 // ── 4. LA PURGE ───────────────────────────────────────────────────────────────────
 // Les 3 documents ont disparu de la liste Hektor (et de ses empreintes) ; les 10 voisins restent.
-async function scene4(src) {
+// retiresEffaces : true = l'effacement d'avant le 29/10 ; false = le defaut depuis ⑧ 8f (on MARQUE).
+async function scene4(src, retiresEffaces = true) {
   const faux = new FauxSupabase(lignes);
   const presentes = entrees.slice(3);
   const D = { hektorFetch: async () => ({ text: "<html></html>" }), buildSignatureMapFromHtml: () => new Map() };
-  const n = await monter(src, faux, D).pruneDeletedDocuments({ id: "job-test" }, dossier, presentes);
+  const n = await monter(src, faux, D, retiresEffaces).pruneDeletedDocuments({ id: "job-test" }, dossier, presentes);
   return { faux, n };
 }
 
@@ -221,6 +223,15 @@ async function scene4(src) {
     controle("4. purge -- APRES : la ligne « a la main » est GARDEE", Boolean(ligne(n4.faux, L_MAN)));
     controle("4. purge -- TEMOIN INVERSE : la ligne ImmoSign disparue est TOUJOURS purgee", !ligne(n4.faux, L_IMM) && n4.n === 1, `n=${n4.n}`);
     controle("4. purge -- TEMOIN INVERSE : les 10 voisines sont intactes", n4.faux.lignes.filter((l) => l.document_name.startsWith("Voisin")).length === 10);
+
+    // 4 bis. ⑧ 8f (29/10/2026) : par defaut, un document retire chez Hektor est GARDE et MARQUE. La garde R1
+    // doit tenir aussi sur ce chemin : une ligne Youtrust ou « a la main » n'est ni effacee NI marquee.
+    const m4 = await scene4(srcNeuf, false);
+    const marquee = (id) => ligne(m4.faux, id) && ligne(m4.faux, id).present_in_hektor === false;
+    controle("4 bis. marquage -- la ligne Youtrust est GARDEE et NON marquee", Boolean(ligne(m4.faux, L_YOU)) && !marquee(L_YOU));
+    controle("4 bis. marquage -- la ligne « a la main » est GARDEE et NON marquee", Boolean(ligne(m4.faux, L_MAN)) && !marquee(L_MAN));
+    controle("4 bis. marquage -- TEMOIN INVERSE : la ligne ImmoSign disparue est GARDEE et MARQUEE", marquee(L_IMM));
+    controle("4 bis. marquage -- TEMOIN INVERSE : les 10 voisines sont intactes", m4.faux.lignes.filter((l) => l.document_name.startsWith("Voisin") && l.present_in_hektor !== false).length === 10);
   } catch (e) {
     console.log("ECHEC  le montage n'a pas pu tourner -- " + (e && e.stack ? e.stack.split("\n").slice(0, 3).join(" | ") : e));
     process.exit(2);

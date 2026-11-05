@@ -435,6 +435,57 @@ les 5 types **sur ses biens seulement**, témoin inverse du cockpit.
 >   reçoit ensuite le dépôt → indispensable à la coupure, et supprime l'attente de 150 s
 >   (**lot 4 bis**, avant le lot 6b).
 >
+> **✅ Réponses de Frédéric (26/10) :**
+> - **D21** — ✅ précisé (26/10) : **le négociateur DU BIEN signe** quand il est actif ; **la
+>   personne qui envoie** signe seulement s'il est inactif ou absent de l'annuaire ; **jamais**
+>   l'e-mail de l'agence.
+> - **Procédures ImmoSign en cours à l'allumage** — ✅ (26/10) : leurs boutons **Relancer /
+>   Annuler sont GARDÉS** jusqu'à leur fin (R2) ; aucun nouvel envoi ImmoSign.
+> - **D22** — *« il faut ajouter par défaut le conjoint »* : une fiche de couple donne **deux
+>   signataires d'office** (le conjoint est pré-ajouté, à compléter) ; société → représentant.
+> - **D23** — oui : e-mail saisi à l'envoi ET enregistré sur la fiche du contact.
+> - **D24** — réexpliqué, puis ✅ **oui** (26/10) : *« le mandat généré est enregistré chez nous
+>   d'abord, Hektor le reçoit ensuite en arrière-plan »* → **lot 4 bis**.
+> - ⛔ **RAPPEL DE FRÉDÉRIC (26/10)** : *« quand on allume le système de signature électronique de
+>   mon app, ce sera UNIQUEMENT Youtrust, plus ImmoSign ; on garde uniquement la lecture par la
+>   console, les runs qui mettent à jour les états »*. ⇒ interrupteur ALLUMÉ : **aucun nouvel envoi
+>   ImmoSign** (plus de bouton « ouvrir Hektor pour signer ») ; le mandat généré est enregistré
+>   **chez nous seulement, SANS dépôt chez Hektor** (le seul but du dépôt était ImmoSign — mémoire
+>   du 29/06) ; le mandat signé et ses preuves restent chez nous (**D12 tombe**). La lecture
+>   ImmoSign par les runs continue pour les procédures déjà en cours. « Interrupteur éteint =
+>   comme aujourd'hui » ne désigne QUE la période avant l'allumage, pas une option.
+> - ⭐ **EXIGENCE GÉNÉRALE** : *« il faut une fenêtre d'envoi qui contrôle la complétude des
+>   signataires, et propose de mettre à jour si nécessaire certaines infos sur les signataires »*.
+>   ⇒ **La fenêtre d'envoi vient AVANT la fabrication du PDF** : les cases de signature dépendent
+>   des signataires (un conjoint ajouté = une case de plus). Cœur du lot 6a/6b.
+>
+> ### ✅ LOT 4 BIS CODÉ ET ÉPROUVÉ LE 26/10 — NON ACTIF (worker non redémarré), interrupteur éteint
+> **D24** — `handleGenerateMandatDocument` : signature Youtrust **allumée** → `enregistrerMandatChezNous`
+> (ligne `source = 'app'`, `envoi_hektor_statut = 'sans_hektor'`, `hektor_document_id` NULL ;
+> **reprenable** par `metadata_json.generation_job_id`) ; **aucun** travail `upload_document_to_hektor`.
+> ⛔ **LA RÈGLE DE STOCKAGE EST RESPECTÉE** — Frédéric, 26/10 : *« il ne faut pas changer les règles
+> s'il y a des raisons que uniquement certains états »*. J'avais d'abord FORCÉ la copie au coffre ;
+> l'audit a retrouvé les 3 raisons de `shouldKeepCloud` (indépendance : le serveur porte tout ;
+> volume ; le coffre n'est PAS sauvegardé — mémoire `stockage-documents-serveur-cloud-acces`) et
+> le mécanisme à la demande déjà prévu (`prepare_document_cloud`). ⇒ copie serveur toujours,
+> coffre seulement pour les biens vivants ; **l'envoi Youtrust lit la copie SERVEUR**
+> (`lirePdfDuDocumentPourSignature` : serveur d'abord, coffre ensuite, refus si ce n'est pas un PDF).
+> Mesure : 18 générations de mandat depuis le 29/06 (essais) ; en usage normal (Estimation, Actif)
+> la règle met déjà le mandat au coffre — le forçage ne servait à rien, il contournait la règle ailleurs. **Éteinte** :
+> le chemin d'avant, **inchangé** (seule différence : la lecture de l'interrupteur).
+> **D21** — `mandataireDuMandat` : négo DU BIEN s'il est actif et a un e-mail ; sinon l'expéditeur
+> (`job.requested_by` → compte, complété par l'annuaire en égalité EXACTE d'e-mail — `ilike` traite
+> `_` en joker) ; sinon **refus d'état** ; le résolveur de l'avis de valeur (repli agence) n'est
+> plus appelé par l'envoi.
+> **Preuves :** `node Console/test_mandat_chez_nous_et_mandataire.js` **22/22** (éteint = mêmes
+> appels et même charge que le code d'AVANT, tiré de git ; allumé = 1 ligne, 0 travail Hektor,
+> coffre SELON LA RÈGLE (Estimation : oui ; Vendu : non), lecture serveur puis coffre, refus d'un
+> non-PDF, pas de doublon au rejeu ; D21 : actif, inactif, absent, sans e-mail, joker `_`,
+> hors annuaire, refus, fenêtre). Tous les tests du lot 4 **verts** (garde R1 22, signataires 16,
+> adoption 16, domaine 13, envoi différé 35, choix PDF 7) + essai sandbox réel **18/18** à
+> 3 mandants. ⚠ Écran (lot 6b) : avec Youtrust allumé, la question « Faire signer ? » qui ouvre
+> Hektor ne doit plus apparaître — c'est la fenêtre d'envoi qui la remplace.
+>
 > **Payload attendu du front (lot 6b)** : `{ app_console_document_id, document_kind, numero_mandat,
 > bien_adresse, mandants: [{prenom, nom, email, telephone}] (ordre des cases), mandataire? }`.
 >
@@ -534,6 +585,28 @@ de l'audit trail = fichiers du coffre.
 **Accord.** **Déploiement de la fonction Supabase** (manuel, pas par push) ; secret du
 webhook posé par Frédéric ; redémarrage du worker.
 
+### ⭐ L'OUTIL DE RÉDACTION — décision de Frédéric (26/10)
+*« Actuellement Hektor, mais nous avons déjà développé dans l'app un éditeur de documents qu'il
+faut utiliser. »* — Mesuré le 26/10 : les mandats signés viennent à 498/499 du modèle ImmoSign de
+Hektor (texte Hektor : « Inscrit au registre des mandats au numéro… », « loi Hoguet ») ; s'y
+ajoutent 95 fichiers « Mandat de vente 2026 » produits par **Word** (Microsoft) ou **iText**,
+déposés dans Hektor ; le générateur de l'app n'a servi qu'à **18 essais** et **0 avenant**.
+**L'outil à utiliser = `MandatDocumentEditor`** (mandat ET avenant ; `EstimationDocumentEditor`
+pour l'avis de valeur ; le bon de visite n'est qu'imprimable). Ce qu'il a DÉJÀ tranché :
+- **les mandants sont VERROUILLÉS** (`LockedDataField`) : *« pour ajouter, retirer ou corriger un
+  mandant, passez par la fiche du contact »* ⇒ D22 et D23 se complètent **sur la fiche du
+  contact**, par les gestes existants — jamais dans le document ;
+- le bien et le prix se corrigent au **crayon** (`CorrigeableAnnonceField`), enregistré sur l'annonce ;
+- un onglet **« Signature »** existe : destinataires pré-remplis depuis les mandants, canal
+  e-mail / SMS, « modifiable avant envoi ImmoSign » ⇒ **c'est la base de la fenêtre d'envoi** (6a/6b),
+  à faire évoluer plutôt qu'à recréer ; ⚠ en mode Youtrust, un signataire = une CASE du PDF :
+  la liste ne peut plus accepter un destinataire libre sans mandant (le contrôle des repères
+  refuserait l'envoi) ; le conjoint pré-ajouté (D22) doit donc devenir un **mandant de la fiche**.
+- ⚠ à vérifier au lot 6a : que le gabarit couvre les modèles Hektor utilisés (« Mandat (Avec saisie
+  du numéro) », « Mandat (Vente ou Recherche) », « Mandat de vente simple », « viager »…) ; l'état
+  de l'interrupteur Mandat V3 (`VITE_APP_MANDAT_V3_ENABLED`) sur Vercel (absent des `.env` locaux) ;
+  et la formation des négociateurs (le vrai changement pour eux : RÉDIGER dans l'app).
+
 ### LOT 6a — L'ERGONOMIE AVANT LE CODE (méthode de Frédéric) · 1 j + ses validations
 
 *Ajouté le 26/10 à la demande de Frédéric : « on ajoute des fonctions, il faudra réfléchir au
@@ -553,6 +626,46 @@ front et à l'ergonomie ».* Méthode « ergonomie d'abord, design ensuite » (m
 
 **Le dos n'attend pas l'écran :** les lots 3, 4, 5 et 7 rangent **tous** les avis ; l'écran
 choisit ensuite quoi en montrer. Aucune donnée n'est perdue si une décision d'écran change.
+
+**⭐ D25 — LE CONJOINT NON LIÉ AU BIEN : ON LE LIE COMME MANDANT** *(Frédéric, 05/11 : « Le lier comme mandant »)*.
+Audit du 05/11 (proposition §8) : sur 42 couples « conjoint nommé » mandants de biens vivants, le conjoint n'est mandant
+du même bien que 10 fois ; les 32 autres sont connus chez nous (`couple_json.conjoint`) mais ne seraient ni dans le PDF
+ni signataires. La fenêtre d'envoi **propose de lier le conjoint au bien comme mandant, en un clic CONFIRMÉ par l'agent**,
+par la porte qui existe (`app_link_mandant_optimistic` → travail `link_hektor_mandant`, 5 fois `done`, jamais sur une
+seconde fiche). Mesuré : les 14 conjoints déjà mandants d'un bien vivant viennent TOUS de Hektor (synchro) → Hektor
+accepte une seconde fiche comme mandant. ⚠ À savoir : la porte de liaison n'a pas de refus sur un mandat numéroté, mais
+celle du **retrait** en a un (`app_unlink_mandant_optimistic`) → un lien fait par erreur sur un mandat numéroté ne se
+défait pas depuis l'app : d'où la confirmation. Corriger ce conjoint ensuite passe par « modifier le conjoint » (fiche
+principale), jamais par la porte du mandant (§8.3 de la proposition). **Rien codé** : lot 6b, après la maquette.
+
+**⭐ D26 à D30 — LES CINQ AUTRES RÉPONSES** *(Frédéric, 05/11 : « Oui, Q2 à Q6 », mes recommandations de la proposition §7)* :
+- **D26 (Q2)** l'éditeur passe de 6 à 5 onglets : « Mandants » et « Signature » fusionnent en « Mandants et signataires ».
+- **D27 (Q3)** la porte « modifier un mandant » apprend le **2e téléphone** (`phone_secondary`) : un portable saisi pour la
+  signature ne remplace plus un fixe. ⚠ Touche la fonction `app_update_mandant_contact_optimistic` (liste de 8 champs) ET le
+  worker (`updateHektorMandantContact` n'écrit que la 1re case `telephone[]`) : patch additif, à proposer avec son retour arrière.
+- **D28 (Q4)** Youtrust allumé, le bouton « Signature » n'apparaît que sur un **mandat ou un avenant**.
+- **D29 (Q5)** **aucun mandant ne se décoche** : tous signent ; un cas spécial passe par « Signé à la main ».
+- **D30 (Q6)** la correction d'un e-mail APRÈS l'envoi est **éprouvée en sandbox d'abord**, avant de prévoir le bouton.
+  ✅ **ÉPROUVÉ LE 05/11** (`Console/essai_youtrust_correction_signataire.js`, sandbox, boîte de Frédéric seulement, code
+  par e-mail) : deux demandes, chacune ANNULÉE à la fin. **(a)** signataire encore « initiated » (invitation pas partie) :
+  prénom puis e-mail changés → **acceptés**. **(b)** signataire « notified » (invitation partie, `--attendre-notifie`) :
+  prénom seul → **accepté** ; e-mail vers un alias de la même boîte (`+essai-a2`) → **accepté**, le statut reste
+  « notified », l'adresse relue est la nouvelle. ⭐ **Le lien de signature CHANGE à chaque correction** (empreintes
+  `bd0d87f12a` → `7fde090548` → `171eef04d8`) : notre « Signer maintenant » devra relire le lien après une correction.
+  ⚠ **NON MESURÉ** : si Youtrust renvoie une invitation à la nouvelle adresse (à lire dans la boîte de Frédéric : demande
+  `d4fd50e8…`, le 05/11 vers 10:20), et si l'ANCIEN lien est mort. ⇒ le bouton « corriger l'e-mail » est POSSIBLE ; sa
+  forme dépend de la réponse sur le renvoi (sinon : corriger PUIS relancer avec `send_reminder`).
+  ✅ **LA RÉPONSE (05/11, e-mails collés par Frédéric, demande `d4fd50e8…`)** : (1) 09:24:14 UTC l'invitation de départ,
+  « Bonjour Frederic (avant) », vers l'adresse d'origine ; (2) **09:24:19 UTC « Vos coordonnées ont été mises à jour »**,
+  « Bonjour Frederic (corrige) », « Vous pouvez maintenant terminer le processus de signature », **avec un lien neuf**
+  (même `magic_link_id`, autre jeton). ⇒ **Youtrust PRÉVIENT TOUT SEUL le signataire après une correction** : le bouton
+  « corriger » n'a PAS à relancer. ⚠ Ce 2e e-mail est parti vers l'adresse d'ORIGINE : il répond à la correction du
+  PRÉNOM. Pour l'e-mail changé vers l'alias, rien n'est arrivé — **limite de la sandbox, prouvée** : 3e essai
+  (`c40bdbe3…`, 10:29) → la relance vers l'alias est REFUSÉE, HTTP 400 « In sandbox mode, the recipient email must
+  belong to your organization ». ⇒ **Ce qui reste NON PROUVÉ et ne peut pas l'être en sandbox** : qu'en production le
+  message parte vers la NOUVELLE adresse (à faire confirmer par Youtrust / le commercial, avec D5) ; et si l'ancien lien
+  est mort. Forme du bouton retenue en attendant : corriger (PATCH) → relire le signataire → afficher « nouvel e-mail
+  envoyé par Youtrust » ; « Relancer » reste un geste à part.
 
 ### LOT 6b — Les écrans (O6, O7, O8) + aiguillage R2 · 1,5–2 j
 

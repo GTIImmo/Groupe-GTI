@@ -6318,6 +6318,56 @@ async function majMiroirSignatureDocument(documentId, signature) {
   });
 }
 
+// Le PDF a signer : la copie SERVEUR d'abord (elle existe toujours -- le serveur porte tout), le
+// coffre ensuite (il n'a de copie que des biens vivants). Jamais un fichier qui n'est pas un PDF.
+async function lirePdfDuDocumentPourSignature(doc) {
+  const local = doc && doc.metadata_json && doc.metadata_json.local_archive_path;
+  let fichier = null;
+  if (local && isReadableFile(local)) fichier = readLocalArchiveFile(local, "application/pdf");
+  else if (doc && doc.storage_path) fichier = await downloadStorageObject(doc.storage_path);
+  if (!fichier || !Buffer.isBuffer(fichier.buffer) || fichier.buffer.subarray(0, 5).toString("latin1") !== "%PDF-") {
+    throw refusEtatYoutrust(`Le fichier du document « ${doc && doc.document_name} » est introuvable ou n'est pas un PDF.`);
+  }
+  return fichier;
+}
+
+// D21 (Frederic, 26/10) : le NEGOCIATEUR DU BIEN signe pour GTI s'il est ACTIF dans l'annuaire et
+// a un e-mail ; sinon LA PERSONNE QUI ENVOIE (son compte, complete par l'annuaire) ; JAMAIS
+// l'e-mail de l'agence -- le resolveur de l'avis de valeur (resolveEstimNegotiatorContact) y
+// retombait, il n'est donc PAS utilise ici. La fenetre d'envoi (lot 6b) peut fournir le sien.
+// Mesure du 26/10 : 625 biens vivants a negociateur actif, 37 inactif, 50 absent de l'annuaire.
+async function mandataireDuMandat(job, payload, dossier) {
+  if (payload.mandataire && typeof payload.mandataire === "object") {
+    return { ...payload.mandataire, source: "fenetre_envoi" };
+  }
+  const colonnes = "select=prenom,nom,display_name,email,portable,telephone,is_active";
+  const depuisAnnuaire = (r, source) => (r && emailSignataireValide(r.email) ? {
+    prenom: cleanString(r.prenom), nom: cleanString(r.nom), nomComplet: cleanString(r.display_name),
+    email: cleanString(r.email), telephone: cleanString(r.portable) || cleanString(r.telephone), source,
+  } : null);
+  const idNego = cleanString(dossier && dossier.commercial_id);
+  if (idNego) {
+    const rows = await supabaseRequest(`app_hektor_negotiator_agency_directory?${colonnes}&hektor_negociateur_id=eq.${encodeURIComponent(idNego)}&limit=1`, { method: "GET" });
+    const r = Array.isArray(rows) ? rows[0] : null;
+    const m = r && r.is_active ? depuisAnnuaire(r, "negociateur_du_bien") : null;
+    if (m) return m;
+  }
+  if (job && job.requested_by) {
+    const profils = await supabaseRequest(`app_user_profile?select=email,first_name,last_name,display_name&id=eq.${encodeURIComponent(job.requested_by)}&limit=1`, { method: "GET" });
+    const p = Array.isArray(profils) ? profils[0] : null;
+    if (p && emailSignataireValide(p.email)) {
+      const email = String(p.email).trim().toLowerCase();
+      // ⚠ ilike traite « _ » en joker : on relit plusieurs lignes et on garde l'egalite EXACTE.
+      const rows = await supabaseRequest(`app_hektor_negotiator_agency_directory?${colonnes}&email=ilike.${encodeURIComponent(email)}&limit=5`, { method: "GET" });
+      const exacte = (Array.isArray(rows) ? rows : []).find((r) => String(r.email || "").trim().toLowerCase() === email);
+      const m = depuisAnnuaire(exacte, "expediteur");
+      if (m) return m;
+      return { prenom: cleanString(p.first_name), nom: cleanString(p.last_name), nomComplet: cleanString(p.display_name), email: cleanString(p.email), telephone: null, source: "expediteur" };
+    }
+  }
+  throw refusEtatYoutrust("Mandataire introuvable : le negociateur du bien est inactif ou sans e-mail, et la personne qui envoie n'a pas de compte avec e-mail.");
+}
+
 async function handleYoutrustSendSignature(job) {
   await exigerInterrupteurYoutrust();
   const payload = safeJsonParse(job.payload_json) || {};
@@ -6330,7 +6380,8 @@ async function handleYoutrustSendSignature(job) {
   const docRows = await supabaseRequest(`app_console_document?id=eq.${encodeURIComponent(documentId)}&select=id,app_dossier_id,hektor_annonce_id,document_name,storage_path,metadata_json&limit=1`, { method: "GET" });
   const doc = Array.isArray(docRows) && docRows[0];
   if (!doc) throw refusEtatYoutrust(`Document ${documentId} introuvable.`);
-  if (!doc.storage_path) throw refusEtatYoutrust(`Le document « ${doc.document_name} » n'a pas de fichier dans le coffre.`);
+  const localPdf = doc.metadata_json && doc.metadata_json.local_archive_path;
+  if (!doc.storage_path && !localPdf) throw refusEtatYoutrust(`Le document « ${doc.document_name} » n'a de fichier ni au coffre ni sur le serveur.`);
   const sigActuelle = (doc.metadata_json && doc.metadata_json.signature) || {};
   if (sigActuelle.source === "manuscrite" || sigActuelle.status === "signed") {
     throw refusEtatYoutrust(`Le document « ${doc.document_name} » est deja signe.`);
@@ -6354,10 +6405,13 @@ async function handleYoutrustSendSignature(job) {
   const dossier = await loadDossier({ app_dossier_id: doc.app_dossier_id, hektor_annonce_id: doc.hektor_annonce_id });
   const mandantsBruts = Array.isArray(payload.mandants) ? payload.mandants : [];
   if (!mandantsBruts.length) throw refusEtatYoutrust("Aucun mandant a faire signer (payload_json.mandants).");
-  // D17 : le mandataire = le negociateur DU BIEN (la fiche) ; la fenetre d'envoi peut le changer.
-  const negoResolu = await resolveEstimNegotiatorContact(payload.mandataire ? { negociateur: payload.mandataire } : {}, dossier).catch(() => null);
-  const nego = negoResolu || {};
-  const mandataireBrut = payload.mandataire || { nomComplet: nego.nom, email: nego.email, telephone: nego.telephone };
+  // D17 + D21 : le negociateur DU BIEN s'il est actif, sinon l'expediteur, jamais l'agence.
+  const mandataireBrut = await mandataireDuMandat(job, payload, dossier);
+  const nego = {
+    nom: [mandataireBrut.prenom, mandataireBrut.nom].filter(Boolean).join(" ") || mandataireBrut.nomComplet || null,
+    email: mandataireBrut.email || null,
+    telephone: mandataireBrut.telephone || null,
+  };
   const personnes = [
     ...mandantsBruts.map((m, i) => ({ role: "mandant", index: i + 1, brut: m })),
     { role: "mandataire", index: mandantsBruts.length + 1, brut: mandataireBrut },
@@ -6372,7 +6426,10 @@ async function handleYoutrustSendSignature(job) {
     else if (!prenom) problemes.push(`${libelle} (${nom}) n'a pas de prenom -- fiche de couple a eclater en deux signataires, ou representant de societe a indiquer`);
     if (!emailSignataireValide(email)) problemes.push(`${libelle} (${[prenom, nom].filter(Boolean).join(" ") || "?"}) n'a pas d'e-mail valide`);
     // D16 : portable mobile -> code par SMS ; sinon repli code par e-mail.
-    return { index: p.index, role: p.role, prenom, nom, email, telephone: portable, otp: portable ? "otp_sms" : "otp_email" };
+    return {
+      index: p.index, role: p.role, prenom, nom, email, telephone: portable, otp: portable ? "otp_sms" : "otp_email",
+      ...(p.role === "mandataire" ? { source: (p.brut && p.brut.source) || null } : {}),
+    };
   });
   if (problemes.length) throw refusEtatYoutrust(`Envoi impossible : ${problemes.join(" ; ")}.`);
 
@@ -6423,7 +6480,7 @@ async function handleYoutrustSendSignature(job) {
     external_id: documentId,
   });
   await majDemandeSignature(demande.id, { provider_request_id: sr.id, sandbox: client.sandbox, erreur: null });
-  const fichier = await downloadStorageObject(doc.storage_path);
+  const fichier = await lirePdfDuDocumentPourSignature(doc);
   const youDoc = await client.ajouterDocument(sr.id, { buffer: fichier.buffer, filename: textes.filename, parseAnchors: true });
   // O3 AVANT ACTIVATION (aucun credit consomme) : le PDF doit porter EXACTEMENT les reperes de
   // ces signataires -- une mention + une signature par mandant, et la case du mandataire.
@@ -8624,6 +8681,12 @@ async function handleGenerateMandatDocument(job) {
 
   const label = (payload.document_label && String(payload.document_label).trim()) || "Mandat de vente";
   const filename = storageSafeFilename(`${label}.pdf`, "mandat-de-vente.pdf");
+  // A.2 lot 4 bis (26/10/2026, D24) : signature Youtrust ALLUMEE -> le mandat est enregistre CHEZ
+  // NOUS SEULEMENT, sans depot Hektor (le seul but du depot etait ImmoSign -- regle de Frederic
+  // du 26/10 : « uniquement Youtrust »). ETEINTE : le chemin d'avant, inchange (ci-dessous).
+  if (await interrupteurSignatureYoutrust()) {
+    return enregistrerMandatChezNous(job, dossier, payload, label, filename, pdfBuffer);
+  }
   const tempPath = `temp/uploads/${job.id}/${filename}`;
   await uploadStorageObject(tempPath, pdfBuffer, "application/pdf");
 
@@ -8668,6 +8731,66 @@ async function handleGenerateMandatDocument(job) {
     pdf_bytes: pdfBuffer.length,
     temp_storage_path: tempPath,
     upload_job_id: uploadJob ? uploadJob.id : null,
+  };
+}
+
+// A.2 lot 4 bis (D24) -- le mandat genere NAIT CHEZ NOUS, et seulement chez nous.
+// ⚠ REPRENABLE : un travail rejoue retrouve SA ligne (metadata_json.generation_job_id) au lieu
+//   d'en creer une seconde.
+// ⚠ LA REGLE DE STOCKAGE EST RESPECTEE (pas de forcage -- Frederic, 26/10 : « il ne faut pas
+//   changer les regles ») : copie SERVEUR toujours, copie COFFRE seulement si shouldKeepCloud
+//   (biens vivants ; raisons : independance, volume, le coffre n'est pas sauvegarde -- memoire
+//   stockage-documents-serveur-cloud-acces). Youtrust n'a pas besoin du coffre : le worker tourne
+//   SUR le serveur et lit la copie serveur (lirePdfDuDocumentPourSignature).
+// ⚠ envoi_hektor_statut = 'sans_hektor' : ni « a envoyer » ni « echec » -> la reprise des envois
+//   (run_reprise_envois_hektor) ne le prend pas, l'ecran n'affiche aucun « envoi echoue ».
+//   hektor_document_id reste NULL : la ligne survit a la synchro de nuit (regle du 14/10).
+async function enregistrerMandatChezNous(job, dossier, payload, label, filename, pdfBuffer) {
+  const existantes = await supabaseRequest(
+    `app_console_document?metadata_json->>generation_job_id=eq.${encodeURIComponent(job.id)}&select=*&limit=1`,
+    { method: "GET" },
+  );
+  let ligne = Array.isArray(existantes) && existantes[0] ? existantes[0] : null;
+  if (!ligne) {
+    ligne = {
+      id: crypto.randomUUID(),
+      app_dossier_id: dossier.app_dossier_id != null ? dossier.app_dossier_id : (job.app_dossier_id || null),
+      hektor_annonce_id: String(dossier.hektor_annonce_id),
+      document_name: filename,
+      document_type: "Mandat",
+      visibility: payload.visibility === "shared" ? "shared" : "private",
+      source: "app",
+      storage_bucket: STORAGE_BUCKET,
+      storage_path: null,
+      storage_status: "uploading",
+      mime_type: "application/pdf",
+      envoi_hektor_statut: "sans_hektor",
+      metadata_json: {
+        cree_par_app: true,
+        cree_le: new Date().toISOString(),
+        genere_par: "generate_mandat_document",
+        generation_job_id: job.id,
+        document_label: label,
+        // Avenant : nouveau prix PROPOSE, passif (comme le chemin Hektor : metadata_json.avenant_new_price).
+        ...(payload.avenant_new_price != null ? { avenant_new_price: String(payload.avenant_new_price) } : {}),
+      },
+    };
+    await supabaseRequest("app_console_document", { method: "POST", prefer: "return=minimal", body: JSON.stringify([ligne]) });
+  }
+  const range = await persistProvidedDocumentFile(ligne, pdfBuffer, "application/pdf", { cloud: shouldKeepCloud(dossier) });
+  await logJob(job.id, "mandat_pdf", "done", "Mandat genere, enregistre chez nous (signature Youtrust : pas de depot Hektor)", {
+    hektor_annonce_id: String(dossier.hektor_annonce_id),
+    app_document_id: ligne.id,
+    pdf_bytes: pdfBuffer.length,
+    storage_path: range.storage_path,
+  });
+  return {
+    ok: true,
+    hektor_annonce_id: String(dossier.hektor_annonce_id),
+    pdf_bytes: pdfBuffer.length,
+    app_document_id: ligne.id,
+    storage_path: range.storage_path,
+    sans_hektor: true,
   };
 }
 

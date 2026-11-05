@@ -38,6 +38,11 @@ async function supabaseRequest(chemin, options = {}) {
   const m = options.method || "GET";
   base.journal.push(`${m} ${chemin.split("?")[0]}`);
   if (chemin.startsWith("app_setting")) return [{ value: base.setting }];
+  // D21 : le negociateur DU BIEN (actif) = la boite de Frederic, sans portable (code e-mail)
+  if (chemin.startsWith("app_hektor_negotiator_agency_directory")) {
+    return [{ prenom: "Frederic", nom: "Gerphagnon (negociateur)", display_name: "Frederic Gerphagnon", email: BOITE, portable: "", telephone: "", is_active: true }];
+  }
+  if (chemin.startsWith("app_user_profile")) return [];
   if (chemin.startsWith("app_console_document")) {
     const id = decodeURIComponent((chemin.match(/id=eq\.([^&]+)/) || [])[1] || "");
     const d = base.documents.get(id);
@@ -61,7 +66,9 @@ const doublures = {
   logJob: async (_id, etape, statut, message) => { base.journal.push(`LOG ${etape}/${statut} ${message}`); },
   safeJsonParse: (v) => (typeof v === "string" ? JSON.parse(v) : v || {}),
   downloadStorageObject: async () => ({ buffer: fs.readFileSync(pdfChemin), mimeType: "application/pdf" }),
-  loadDossier: async () => ({ app_dossier_id: 9000001, hektor_annonce_id: "70001", commercial_nom: "Frederic Gerphagnon", negociateur_email: BOITE }),
+  isReadableFile: () => false,
+  readLocalArchiveFile: () => { throw new Error("pas de copie serveur dans l'essai"); },
+  loadDossier: async () => ({ app_dossier_id: 9000001, hektor_annonce_id: "70001", commercial_id: "N-ESSAI", commercial_nom: "Frederic Gerphagnon", negociateur_email: BOITE }),
   resolveEstimNegotiatorContact: async () => ({ nom: "Frederic Gerphagnon", email: BOITE, telephone: null }),
   MARQUE_REFUS_ETAT: "[REFUS D'ETAT]",
   require: (m) => require(m === "./youtrust_client" ? path.join(__dirname, "youtrust_client") : m),
