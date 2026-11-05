@@ -263,6 +263,7 @@ import SanteSystemeScreen from './SanteSystemeScreen'
 import RegistreTransactionsScreen, { type GesteDuRegistre } from './RegistreTransactionsScreen'
 import { cleNom } from './lib/pilotage'
 import PilotageScreen from './PilotageScreen'
+import RegistreUtilisateurs, { type RuPreRemplissage } from './RegistreUtilisateurs'
 import { bvBoot } from './lib/bienvuBoot'
 import { APP_BIENVU_ENABLED } from './lib/bienvuFlag'
 import { BienvuLogin } from './BienvuLogin'
@@ -14503,6 +14504,15 @@ export default function App() {
   const [userToolLoading, setUserToolLoading] = useState(false)
   const [appUsers, setAppUsers] = useState<UserProfile[]>([])
   const [editingUserId, setEditingUserId] = useState<string | null>(null)
+  // Registre des utilisateurs (05/11/2026, étape 3 lot A) : le bouton « Utilisateurs » ouvre la maquette validée,
+  // ADMINISTRATEURS SEULS (décision de Frédéric) ; le tiroir de compte ne s'ouvre plus que par-dessus, sur UN formulaire.
+  const [registreUOuvert, setRegistreUOuvert] = useState(false)
+  const [registreURelecture, setRegistreURelecture] = useState(0)
+  const [formulaireCompte, setFormulaireCompte] = useState<'creer' | 'modifier' | null>(null)
+  useEffect(() => {
+    // le formulaire de modification s'est vidé (enregistré ou annulé) : le tiroir se referme sur le registre
+    if (userToolOpen && formulaireCompte === 'modifier' && !editingUserId) setUserToolOpen(false)
+  }, [userToolOpen, formulaireCompte, editingUserId])
   const [newUserEmail, setNewUserEmail] = useState('')
   const [newUserPassword, setNewUserPassword] = useState('')
   const [newUserRole, setNewUserRole] = useState<UserProfile['role']>('commercial')
@@ -20396,6 +20406,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
 
   // 04/11/2026 -- le registre des négociateurs dans l'outil « Utilisateurs » : la personne de chaque compte, et le choix.
   async function relireRegistrePersonnes() {
+    setRegistreURelecture((n) => n + 1)
     try {
       setRegistrePersonnes(await loadRegistrePersonnes())
     } catch (error) {
@@ -20431,6 +20442,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       setNewUserIsActive(true)
       setNewUserPerimetre('reseau')
       setErrorMessage(`Utilisateur cree : ${result.email} · ${texteRegistreLien(result.registre)}`)
+      if (formulaireCompte) setUserToolOpen(false)
       // 3c (26/10) : le nouvel utilisateur apparait dans la liste sans rouvrir l'outil.
       if (L_ECRAN_SUIT_LE_CLIC) void loadAppUsers().then(setAppUsers).catch(() => undefined)
       void relireRegistrePersonnes()
@@ -20497,7 +20509,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   }
 
   async function openUserTool() {
-    setUserToolOpen(true)
+    setRegistreUOuvert(true)
     setUserToolLoading(true)
     setErrorMessage(null)
     void relireRegistrePersonnes()
@@ -20508,6 +20520,23 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     } finally {
       setUserToolLoading(false)
     }
+  }
+
+  /** Depuis le registre : le tiroir de compte, réduit au formulaire demandé (les gestes sont ceux d'avant). */
+  function ouvrirFormulaireCompte(mode: 'creer' | 'modifier', compte?: UserProfile, pre?: RuPreRemplissage) {
+    setErrorMessage(null)
+    if (mode === 'modifier' && compte) startEditUser(compte)
+    else {
+      resetEditUser()
+      if (pre) {
+        setNewUserFirstName(pre.prenom)
+        setNewUserLastName(pre.nom)
+        setNewUserEmail(pre.email)
+        setNewUserRegistrePersonne(String(pre.personneId))
+      }
+    }
+    setFormulaireCompte(mode)
+    setUserToolOpen(true)
   }
 
   function startEditUser(user: UserProfile) {
@@ -24826,6 +24855,195 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       onVoirTout={rechercheVoirTout}
     />
   ) : null
+  const tiroirUtilisateurs = userToolOpen && isAdmin ? (
+        <div className="filters-overlay" style={registreUOuvert ? { zIndex: 260 } : undefined} onClick={() => setUserToolOpen(false)}>
+          <section className="filters-drawer" onClick={(event) => event.stopPropagation()}>
+            <div className="filters-head">
+              <div>
+                <p className="eyebrow">Administration</p>
+                <strong>{formulaireCompte === 'modifier' ? 'Modifier son accès à l’app' : 'Ajouter un utilisateur'}</strong>
+              </div>
+              <button className="ghost-button" type="button" onClick={() => setUserToolOpen(false)}>Fermer</button>
+            </div>
+            <div className="panel-grid">
+              {formulaireCompte !== 'modifier' ? (
+              <section className="panel">
+                <div className="panel-head"><div><p className="eyebrow">Creation</p><h3>Nouvel utilisateur</h3></div></div>
+                <form className="filter-grid" onSubmit={handleCreateAppUser}>
+                  <label className="filter-field">
+                    <span>Prénom</span>
+                    <input value={newUserFirstName} onChange={(event) => setNewUserFirstName(event.target.value)} required />
+                  </label>
+                  <label className="filter-field">
+                    <span>Nom</span>
+                    <input value={newUserLastName} onChange={(event) => setNewUserLastName(event.target.value)} required />
+                  </label>
+                  <label className="filter-field">
+                    <span>Nom affiche</span>
+                    <input value={newUserDisplayName} onChange={(event) => setNewUserDisplayName(event.target.value)} placeholder="Laisser vide pour Prenom Nom" />
+                  </label>
+                  <label className="filter-field">
+                    <span>Email</span>
+                    <input type="email" value={newUserEmail} onChange={(event) => setNewUserEmail(event.target.value)} required />
+                  </label>
+                  <label className="filter-field">
+                    <span>Mot de passe temporaire</span>
+                    <input type="text" value={newUserPassword} onChange={(event) => setNewUserPassword(event.target.value)} minLength={8} required />
+                  </label>
+                  <label className="filter-field">
+                    <span>Role</span>
+                    <select value={newUserRole} onChange={(event) => setNewUserRole(event.target.value as UserProfile['role'])}>
+                      <option value="commercial">Negociateur</option>
+                      <option value="manager">Manager</option>
+                      <option value="admin">Administrateur</option>
+                      <option value="lecture">Lecture</option>
+                    </select>
+                  </label>
+                  {/* PERIMETRE (12/10/2026) : jusqu'ou ce compte voit. Il ne remplace
+                      PAS le role -- un negociateur reste « Negociateur », on regle
+                      seulement sa vue. « Tout le reseau » par defaut, donc un compte
+                      cree sans y toucher se comporte comme avant que la case existe. */}
+                  <label className="filter-field">
+                    <span>Jusqu'ou il voit</span>
+                    <select value={newUserPerimetre} onChange={(event) => setNewUserPerimetre(event.target.value as UserPerimetre)}>
+                      {USER_PERIMETRES.map((item) => (
+                        <option key={item.valeur} value={item.valeur}>{item.libelle}</option>
+                      ))}
+                    </select>
+                    <small className="field-hint">
+                      {USER_PERIMETRES.find((item) => item.valeur === newUserPerimetre)?.aide}
+                    </small>
+                  </label>
+                  <label className="filter-field">
+                    <span>Personne du registre des négociateurs</span>
+                    <select value={newUserRegistrePersonne} onChange={(event) => setNewUserRegistrePersonne(event.target.value)}>
+                      <option value="">Automatique (par l’e-mail ; sinon créée « sans fiche Hektor »)</option>
+                      {(registrePersonnes ?? []).filter((p) => p.type !== 'agence' && (voirAnciensRegistre || p.actif || String(p.id) === newUserRegistrePersonne)).map((p) => (
+                        <option key={p.id} value={p.id} disabled={Boolean(p.appUserId)}>{p.nom}{p.email ? ` · ${p.email}` : ''}{p.actif ? '' : ' · ancien'}{p.appUserId ? ' · déjà relié' : ''}</option>
+                      ))}
+                    </select>
+                    <small className="field-hint">{registrePersonnes === null ? 'Registre illisible : le compte sera relié automatiquement.' : 'À choisir quand l’e-mail du compte n’est pas celui de sa fiche Hektor (gmail, ancienne adresse).'}</small>
+                  </label>
+                  <label className="checkbox-inline">
+                    <input type="checkbox" checked={voirAnciensRegistre} onChange={(event) => setVoirAnciensRegistre(event.target.checked)} />
+                    Afficher les anciens dans « Personne du registre »
+                  </label>
+                  <label className="checkbox-inline">
+                    <input type="checkbox" checked={newUserIsActive} onChange={(event) => setNewUserIsActive(event.target.checked)} />
+                    Utilisateur actif
+                  </label>
+                  <div className="hero-actions">
+                    <button className="ghost-button" type="button" onClick={() => setUserToolOpen(false)}>Annuler</button>
+                    <button type="submit" disabled={userToolLoading}>{userToolLoading ? 'Création...' : 'Creer l utilisateur'}</button>
+                  </div>
+                </form>
+              </section>
+              ) : null}
+              {formulaireCompte == null ? (
+              <section className="panel">
+                <div className="panel-head"><div><p className="eyebrow">Gestion</p><h3>Utilisateurs existants</h3></div></div>
+                {userToolLoading ? <p className="loading-inline">Chargement...</p> : null}
+                <div className="timeline-list">
+                  {appUsers.map((user) => (
+                    <article key={user.id} className="timeline-card">
+                      <strong>{userFullName(user)}</strong>
+                      <span>{user.email ?? '-'}</span>
+                      <span>{profileRoleLabel(user.role)} · {user.is_active ? 'Actif' : 'Archive'}</span>
+                      {registrePersonnes ? (() => {
+                        const relie = registrePersonnes.find((p) => p.appUserId === user.id)
+                        return <span className={relie ? undefined : 'field-hint'}>Registre : {relie ? `${relie.nom} (n° ${relie.id})` : 'pas relié -- choisissez sa personne en le modifiant'}</span>
+                      })() : null}
+                      <div className="hero-actions">
+                        <button className="ghost-button" type="button" onClick={() => startEditUser(user)}>Modifier</button>
+                        <button className="ghost-button" type="button" onClick={() => void handleSendPasswordReset(user.email)}>Mot de passe perdu</button>
+                      </div>
+                    </article>
+                  ))}
+                  {appUsers.length === 0 && !userToolLoading ? <p className="empty-state">Aucun utilisateur charge.</p> : null}
+                </div>
+              </section>
+              ) : null}
+              {editingUserId ? (
+                <section className="panel">
+                  <div className="panel-head"><div><p className="eyebrow">Edition</p><h3>Modifier l utilisateur</h3></div></div>
+                  <form className="filter-grid" onSubmit={handleUpdateAppUser}>
+                    <label className="filter-field">
+                      <span>Prénom</span>
+                      <input value={editUserFirstName} onChange={(event) => setEditUserFirstName(event.target.value)} required />
+                    </label>
+                    <label className="filter-field">
+                      <span>Nom</span>
+                      <input value={editUserLastName} onChange={(event) => setEditUserLastName(event.target.value)} required />
+                    </label>
+                    <label className="filter-field">
+                      <span>Nom affiche</span>
+                      <input value={editUserDisplayName} onChange={(event) => setEditUserDisplayName(event.target.value)} />
+                    </label>
+                    <label className="filter-field">
+                      <span>Email</span>
+                      <input type="email" value={editUserEmail} onChange={(event) => setEditUserEmail(event.target.value)} required />
+                    </label>
+                    <label className="filter-field">
+                      <span>Role</span>
+                      <select value={editUserRole} onChange={(event) => setEditUserRole(event.target.value as UserProfile['role'])}>
+                        <option value="commercial">Negociateur</option>
+                        <option value="manager">Manager</option>
+                        <option value="admin">Administrateur</option>
+                        <option value="lecture">Lecture</option>
+                      </select>
+                    </label>
+                    <label className="filter-field">
+                      <span>Jusqu'ou il voit</span>
+                      <select value={editUserPerimetre} onChange={(event) => setEditUserPerimetre(event.target.value as UserPerimetre)}>
+                        {USER_PERIMETRES.map((item) => (
+                          <option key={item.valeur} value={item.valeur}>{item.libelle}</option>
+                        ))}
+                      </select>
+                      <small className="field-hint">
+                        {USER_PERIMETRES.find((item) => item.valeur === editUserPerimetre)?.aide}
+                      </small>
+                    </label>
+                    <label className="filter-field">
+                      <span>Personne du registre des négociateurs</span>
+                      <select value={editUserRegistrePersonne} onChange={(event) => setEditUserRegistrePersonne(event.target.value)}>
+                        <option value="">{editUserRegistreInitial ? 'Garder la personne actuelle' : 'Automatique (par l’e-mail ou le nom)'}</option>
+                        {(registrePersonnes ?? []).filter((p) => p.type !== 'agence' && (voirAnciensRegistre || p.actif || String(p.id) === editUserRegistrePersonne || String(p.id) === editUserRegistreInitial)).map((p) => (
+                          <option key={p.id} value={p.id} disabled={Boolean(p.appUserId) && p.appUserId !== editingUserId}>{p.nom}{p.email ? ` · ${p.email}` : ''}{p.actif ? '' : ' · ancien'}{p.appUserId && p.appUserId !== editingUserId ? ' · déjà relié à un autre compte' : ''}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="checkbox-inline">
+                      <input type="checkbox" checked={voirAnciensRegistre} onChange={(event) => setVoirAnciensRegistre(event.target.checked)} />
+                      Afficher les anciens dans « Personne du registre »
+                    </label>
+                    <label className="checkbox-inline">
+                      <input type="checkbox" checked={editUserIsActive} onChange={(event) => setEditUserIsActive(event.target.checked)} />
+                      Utilisateur actif
+                    </label>
+                    <div className="hero-actions">
+                      <button className="ghost-button" type="button" onClick={resetEditUser}>Annuler</button>
+                      <button type="submit" disabled={userToolLoading}>{userToolLoading ? 'Enregistrement...' : 'Enregistrer'}</button>
+                    </div>
+                  </form>
+                </section>
+              ) : null}
+            </div>
+          </section>
+        </div>
+  ) : null
+  const ecranRegistreUtilisateurs = registreUOuvert && isAdmin ? (
+    <RegistreUtilisateurs
+      comptes={appUsers}
+      comptesCharges={!userToolLoading || appUsers.length > 0}
+      relecture={registreURelecture}
+      message={errorMessage}
+      enPause={userToolOpen}
+      onFermer={() => { setRegistreUOuvert(false); setFormulaireCompte(null); setErrorMessage(null) }}
+      onAjouter={(pre) => ouvrirFormulaireCompte('creer', undefined, pre)}
+      onModifierAcces={(compte) => ouvrirFormulaireCompte('modifier', compte)}
+      onLienMotDePasse={(email) => void handleSendPasswordReset(email)}
+    />
+  ) : null
   if (!responsiveExperience.isDesktop) {
     const mobileScreenTitle = screenHeader.title
     const mobileUserLabel = resolvedUserNegotiatorContext?.commercial_nom || profile?.display_name || 'Utilisateur'
@@ -24856,7 +25074,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         userLabel={mobileUserLabel}
         agencyLabel={mobileAgencyLabel}
         onNavigate={openScreen}
-        onOpenUsers={isManagerOrAdmin ? () => void openUserTool() : undefined}
+        onOpenUsers={isAdmin ? () => void openUserTool() : undefined}
         onSignOut={session ? handleSignOut : undefined}
         onOpenSearch={RECHERCHE_GLOBALE ? () => setRechercheGlobaleOuverte(true) : undefined}
         activite={SUIVI_DANS_LA_FICHE && !SUIVI_PASTILLE && mesTravauxListe.length ? { enCours: mesTravauxEnCours, echecs: mesTravauxEchecs, liste: <ListeMesTravaux /> } : undefined}
@@ -25290,6 +25508,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         {appModals}
         {fenetreRechercheGlobale}
         {pastilleFilMobile}
+        {ecranRegistreUtilisateurs}
+        {tiroirUtilisateurs}
       </>
       </TravauxContext.Provider>
       </FilNavigationContext.Provider>
@@ -25400,7 +25620,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 <>
                   <span className="rn-pop-fond" aria-hidden="true" onClick={() => setMenuCompteOuvert(false)} />
                   <div className="rn-pop" role="menu" aria-label="Mon compte">
-                    {isManagerOrAdmin ? (
+                    {isAdmin ? (
                       <button type="button" role="menuitem" onClick={() => { setMenuCompteOuvert(false); void openUserTool() }}>
                         <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="9" cy="8.5" r="3.2" stroke="currentColor" strokeWidth={2} /><path d="M3.5 19a5.5 5.5 0 0 1 11 0M15.5 5.6a3.2 3.2 0 0 1 0 5.8M17.5 14.2a5.5 5.5 0 0 1 3 4.8" stroke="currentColor" strokeWidth={2} strokeLinecap="round" /></svg>
                         Utilisateurs
@@ -25428,7 +25648,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               <div className="user-card-actions">
                 <CompteurMesTravaux />
                 <NotificationsBell negociateurEmail={sessionEmail} />
-                {isManagerOrAdmin ? <button className="signout-button-inline" type="button" title="Utilisateurs" data-short="U" onClick={() => void openUserTool()}>Utilisateurs</button> : null}
+                {isAdmin ? <button className="signout-button-inline" type="button" title="Utilisateurs" data-short="U" onClick={() => void openUserTool()}>Utilisateurs</button> : null}
                 {session ? <button className="signout-button-inline" type="button" title="Se deconnecter" data-short="S" onClick={handleSignOut}>Se deconnecter</button> : null}
               </div>
             </div>
@@ -26375,178 +26595,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         </main>
       </div>
 
-      {userToolOpen && isManagerOrAdmin ? (
-        <div className="filters-overlay" onClick={() => setUserToolOpen(false)}>
-          <section className="filters-drawer" onClick={(event) => event.stopPropagation()}>
-            <div className="filters-head">
-              <div>
-                <p className="eyebrow">Administration</p>
-                <strong>Ajouter un utilisateur</strong>
-              </div>
-              <button className="ghost-button" type="button" onClick={() => setUserToolOpen(false)}>Fermer</button>
-            </div>
-            <div className="panel-grid">
-              <section className="panel">
-                <div className="panel-head"><div><p className="eyebrow">Creation</p><h3>Nouvel utilisateur</h3></div></div>
-                <form className="filter-grid" onSubmit={handleCreateAppUser}>
-                  <label className="filter-field">
-                    <span>Prénom</span>
-                    <input value={newUserFirstName} onChange={(event) => setNewUserFirstName(event.target.value)} required />
-                  </label>
-                  <label className="filter-field">
-                    <span>Nom</span>
-                    <input value={newUserLastName} onChange={(event) => setNewUserLastName(event.target.value)} required />
-                  </label>
-                  <label className="filter-field">
-                    <span>Nom affiche</span>
-                    <input value={newUserDisplayName} onChange={(event) => setNewUserDisplayName(event.target.value)} placeholder="Laisser vide pour Prenom Nom" />
-                  </label>
-                  <label className="filter-field">
-                    <span>Email</span>
-                    <input type="email" value={newUserEmail} onChange={(event) => setNewUserEmail(event.target.value)} required />
-                  </label>
-                  <label className="filter-field">
-                    <span>Mot de passe temporaire</span>
-                    <input type="text" value={newUserPassword} onChange={(event) => setNewUserPassword(event.target.value)} minLength={8} required />
-                  </label>
-                  <label className="filter-field">
-                    <span>Role</span>
-                    <select value={newUserRole} onChange={(event) => setNewUserRole(event.target.value as UserProfile['role'])}>
-                      <option value="commercial">Negociateur</option>
-                      <option value="manager">Manager</option>
-                      <option value="admin">Administrateur</option>
-                      <option value="lecture">Lecture</option>
-                    </select>
-                  </label>
-                  {/* PERIMETRE (12/10/2026) : jusqu'ou ce compte voit. Il ne remplace
-                      PAS le role -- un negociateur reste « Negociateur », on regle
-                      seulement sa vue. « Tout le reseau » par defaut, donc un compte
-                      cree sans y toucher se comporte comme avant que la case existe. */}
-                  <label className="filter-field">
-                    <span>Jusqu'ou il voit</span>
-                    <select value={newUserPerimetre} onChange={(event) => setNewUserPerimetre(event.target.value as UserPerimetre)}>
-                      {USER_PERIMETRES.map((item) => (
-                        <option key={item.valeur} value={item.valeur}>{item.libelle}</option>
-                      ))}
-                    </select>
-                    <small className="field-hint">
-                      {USER_PERIMETRES.find((item) => item.valeur === newUserPerimetre)?.aide}
-                    </small>
-                  </label>
-                  <label className="filter-field">
-                    <span>Personne du registre des négociateurs</span>
-                    <select value={newUserRegistrePersonne} onChange={(event) => setNewUserRegistrePersonne(event.target.value)}>
-                      <option value="">Automatique (par l’e-mail ; sinon créée « sans fiche Hektor »)</option>
-                      {(registrePersonnes ?? []).filter((p) => p.type !== 'agence' && (voirAnciensRegistre || p.actif || String(p.id) === newUserRegistrePersonne)).map((p) => (
-                        <option key={p.id} value={p.id} disabled={Boolean(p.appUserId)}>{p.nom}{p.email ? ` · ${p.email}` : ''}{p.actif ? '' : ' · ancien'}{p.appUserId ? ' · déjà relié' : ''}</option>
-                      ))}
-                    </select>
-                    <small className="field-hint">{registrePersonnes === null ? 'Registre illisible : le compte sera relié automatiquement.' : 'À choisir quand l’e-mail du compte n’est pas celui de sa fiche Hektor (gmail, ancienne adresse).'}</small>
-                  </label>
-                  <label className="checkbox-inline">
-                    <input type="checkbox" checked={voirAnciensRegistre} onChange={(event) => setVoirAnciensRegistre(event.target.checked)} />
-                    Afficher les anciens dans « Personne du registre »
-                  </label>
-                  <label className="checkbox-inline">
-                    <input type="checkbox" checked={newUserIsActive} onChange={(event) => setNewUserIsActive(event.target.checked)} />
-                    Utilisateur actif
-                  </label>
-                  <div className="hero-actions">
-                    <button className="ghost-button" type="button" onClick={() => setUserToolOpen(false)}>Annuler</button>
-                    <button type="submit" disabled={userToolLoading}>{userToolLoading ? 'Création...' : 'Creer l utilisateur'}</button>
-                  </div>
-                </form>
-              </section>
-              <section className="panel">
-                <div className="panel-head"><div><p className="eyebrow">Gestion</p><h3>Utilisateurs existants</h3></div></div>
-                {userToolLoading ? <p className="loading-inline">Chargement...</p> : null}
-                <div className="timeline-list">
-                  {appUsers.map((user) => (
-                    <article key={user.id} className="timeline-card">
-                      <strong>{userFullName(user)}</strong>
-                      <span>{user.email ?? '-'}</span>
-                      <span>{profileRoleLabel(user.role)} · {user.is_active ? 'Actif' : 'Archive'}</span>
-                      {registrePersonnes ? (() => {
-                        const relie = registrePersonnes.find((p) => p.appUserId === user.id)
-                        return <span className={relie ? undefined : 'field-hint'}>Registre : {relie ? `${relie.nom} (n° ${relie.id})` : 'pas relié -- choisissez sa personne en le modifiant'}</span>
-                      })() : null}
-                      <div className="hero-actions">
-                        <button className="ghost-button" type="button" onClick={() => startEditUser(user)}>Modifier</button>
-                        <button className="ghost-button" type="button" onClick={() => void handleSendPasswordReset(user.email)}>Mot de passe perdu</button>
-                      </div>
-                    </article>
-                  ))}
-                  {appUsers.length === 0 && !userToolLoading ? <p className="empty-state">Aucun utilisateur charge.</p> : null}
-                </div>
-              </section>
-              {editingUserId ? (
-                <section className="panel">
-                  <div className="panel-head"><div><p className="eyebrow">Edition</p><h3>Modifier l utilisateur</h3></div></div>
-                  <form className="filter-grid" onSubmit={handleUpdateAppUser}>
-                    <label className="filter-field">
-                      <span>Prénom</span>
-                      <input value={editUserFirstName} onChange={(event) => setEditUserFirstName(event.target.value)} required />
-                    </label>
-                    <label className="filter-field">
-                      <span>Nom</span>
-                      <input value={editUserLastName} onChange={(event) => setEditUserLastName(event.target.value)} required />
-                    </label>
-                    <label className="filter-field">
-                      <span>Nom affiche</span>
-                      <input value={editUserDisplayName} onChange={(event) => setEditUserDisplayName(event.target.value)} />
-                    </label>
-                    <label className="filter-field">
-                      <span>Email</span>
-                      <input type="email" value={editUserEmail} onChange={(event) => setEditUserEmail(event.target.value)} required />
-                    </label>
-                    <label className="filter-field">
-                      <span>Role</span>
-                      <select value={editUserRole} onChange={(event) => setEditUserRole(event.target.value as UserProfile['role'])}>
-                        <option value="commercial">Negociateur</option>
-                        <option value="manager">Manager</option>
-                        <option value="admin">Administrateur</option>
-                        <option value="lecture">Lecture</option>
-                      </select>
-                    </label>
-                    <label className="filter-field">
-                      <span>Jusqu'ou il voit</span>
-                      <select value={editUserPerimetre} onChange={(event) => setEditUserPerimetre(event.target.value as UserPerimetre)}>
-                        {USER_PERIMETRES.map((item) => (
-                          <option key={item.valeur} value={item.valeur}>{item.libelle}</option>
-                        ))}
-                      </select>
-                      <small className="field-hint">
-                        {USER_PERIMETRES.find((item) => item.valeur === editUserPerimetre)?.aide}
-                      </small>
-                    </label>
-                    <label className="filter-field">
-                      <span>Personne du registre des négociateurs</span>
-                      <select value={editUserRegistrePersonne} onChange={(event) => setEditUserRegistrePersonne(event.target.value)}>
-                        <option value="">{editUserRegistreInitial ? 'Garder la personne actuelle' : 'Automatique (par l’e-mail ou le nom)'}</option>
-                        {(registrePersonnes ?? []).filter((p) => p.type !== 'agence' && (voirAnciensRegistre || p.actif || String(p.id) === editUserRegistrePersonne || String(p.id) === editUserRegistreInitial)).map((p) => (
-                          <option key={p.id} value={p.id} disabled={Boolean(p.appUserId) && p.appUserId !== editingUserId}>{p.nom}{p.email ? ` · ${p.email}` : ''}{p.actif ? '' : ' · ancien'}{p.appUserId && p.appUserId !== editingUserId ? ' · déjà relié à un autre compte' : ''}</option>
-                        ))}
-                      </select>
-                    </label>
-                    <label className="checkbox-inline">
-                      <input type="checkbox" checked={voirAnciensRegistre} onChange={(event) => setVoirAnciensRegistre(event.target.checked)} />
-                      Afficher les anciens dans « Personne du registre »
-                    </label>
-                    <label className="checkbox-inline">
-                      <input type="checkbox" checked={editUserIsActive} onChange={(event) => setEditUserIsActive(event.target.checked)} />
-                      Utilisateur actif
-                    </label>
-                    <div className="hero-actions">
-                      <button className="ghost-button" type="button" onClick={resetEditUser}>Annuler</button>
-                      <button type="submit" disabled={userToolLoading}>{userToolLoading ? 'Enregistrement...' : 'Enregistrer'}</button>
-                    </div>
-                  </form>
-                </section>
-              ) : null}
-            </div>
-          </section>
-        </div>
-      ) : null}
+      {ecranRegistreUtilisateurs}
+      {tiroirUtilisateurs}
     </div>
     </DesktopLayout>
     </TravauxContext.Provider>

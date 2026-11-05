@@ -1126,3 +1126,32 @@ Compte de Franck réenregistré par Frédéric à 13:41:06 → sa ligne porte `h
 `negociateur_email franck.gerphagnon@gmail.com`, `match_source registre_fiche_active`, `agence_nom Compte formation`,
 `comptes_hektor [SECRETAIRE 7]`. Le registre n'a pas bougé (toujours relié à son compte @gti, 0 ligne de journal,
 0 personne née). Les 5 autres lignes inchangées (aucune n'a été réenregistrée).
+
+## 42. ÉTAPE 3, LOT A : LA MAQUETTE DERRIÈRE LE BOUTON « UTILISATEURS » (05/11) — Frédéric : « Changé la règle d'accès à ce bouton en limitant aux admins donc plus besoin de l'ancien »
+
+**Ses décisions** : réutiliser l'existant (le bouton « Utilisateurs » et les gestes qui marchent) ; après le clic, LA
+MAQUETTE validée (§38) ; le bouton réservé aux ADMINISTRATEURS (le tiroir des managers disparaît).
+
+**Ce qui est codé (front seul, lecture seule)** :
+- `apps/hektor-v1/src/RegistreUtilisateurs.tsx` + `registre-utilisateurs.css` (préfixe `ru-`) + lectures
+  `lib/registreUtilisateurs.ts` : onglets Utilisateurs / Agences / La société ; liste (chiffres de tête, recherche, agence,
+  fonction, accès, anciens), fiche d'une personne (qui il est, son accès à l'app, historique = les deux journaux, synchro
+  Hektor en bas : la fiche des gestes ET le compte secrétaire « noté, jamais envoyé »), « comptes de l'app reliés à
+  personne », registre des agences (liste, fiche, écritures, équipe, e-mails partagés) et la société. Une source illisible
+  n'éteint que son bloc.
+- La fonction et l'agence non saisies sont DÉDUITES de Hektor et l'écran le dit (« d'après ses comptes / fiches chez
+  Hektor ») : fonction = la seule que donnent ses comptes ACTIFS (Franck : négo + secrétaire → « à choisir ») ; agence = sa
+  fiche négo active, sinon la seule de ses fiches, sinon « à choisir ».
+- `App.tsx` : les TROIS entrées (bouton d'en-tête, menu « Mon compte », menu du téléphone) passent de manager+admin à
+  **admin** ; elles ouvrent le registre. « Ajouter un utilisateur », « Lui donner l'accès à l'app » (pré-rempli, personne
+  choisie), « Modifier son accès », « Relier à une personne » et « Envoyer un lien de mot de passe » rappellent les gestes
+  EXISTANTS (`handleCreateAppUser`, `handleUpdateAppUser`, `handleSendPasswordReset`) : le tiroir s'ouvre par-dessus,
+  réduit au formulaire demandé, et se referme après l'enregistrement ; le registre se relit.
+- ⭐ Trouvaille : sur TÉLÉPHONE, le bouton « Utilisateurs » n'ouvrait RIEN (le tiroir n'existait que dans le rendu
+  ordinateur). Le tiroir et le registre sont maintenant rendus par les deux.
+
+**Contrôle** : `npm run build` vert ; aperçu local (mode sans base) : l'écran s'ouvre sur téléphone et sur ordinateur, le
+formulaire de création s'ouvre seul par-dessus. Chiffres attendus en réel (mesurés en base) : 167 personnes dont 133
+anciens, 34 actives, 5 accès + 3 comptes reliés à personne, 34 à valider, 18 comptes d'agence. ⏰ À voir EN RÉEL après le
+push. Agences et société : vides tant que la nuit n'a pas écrit (l'écran le dit).
+Retour arrière : `git revert` du commit (aucune base touchée).
