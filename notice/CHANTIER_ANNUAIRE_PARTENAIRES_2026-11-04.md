@@ -1753,7 +1753,13 @@ pour tout le monde (au rechargement). Retour arrière : `admin` ou `off`. **Suit
   dès le déploiement**. Retour arrière : `partenaires_fiche = admin` ou `off`, ou revenir sur `ce654b8`.
 - **Contrôles** : `test_metier_partenaire.cjs` **47/47** (8 nouveaux) ; `npm run build` vert ; la version mise en attente
   construite à part (seuls mes morceaux d'App.tsx commités, les lignes des autres sessions laissées en l'état).
-- **Reste** : pousser (accord), voir en ligne (bureau, 1280 × 665, téléphone), puis **3.3c**.
+- ✅ **Poussé et vu en ligne le 05/11** (`e9c8965`, puis la retouche `b712572` poussée avec 4 commits d'autres sessions,
+  « Oui, pousse tout ») : syndic GIBERT IMMOBILIER (10650712), courtier Michelle BONNET (10011026), diagnostiqueur ACTIV'
+  EXPERTISES (10030093) à 1280 × 665, rien de coupé ; téléphone (cadre 390 px) : chiffres sur deux colonnes, pas de
+  défilement de côté ; PICARD (« autre », 10177505) garde « Recherche & rapprochement » ; un acquéreur (10650959)
+  inchangé. Retouche mesurée : 37 px entre la section et le titre suivant (2 px avant).
+- Non vu : le mode sombre ; un compte non admin.
+- **Suite : 3.3c** (Archiver et Supprimer sortis du menu, suppression avec case à cocher et raison).
 
 ### 7 ter. Les dépendances (techniques, pas un ordre décidé)
 
