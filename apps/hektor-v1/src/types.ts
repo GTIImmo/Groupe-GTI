@@ -345,6 +345,8 @@ export type UserProfile = {
   // absent des comptes lus avant le 12/10 : on lit donc toujours avec un repli
   // sur « reseau », jamais en supposant que la cle existe.
   perimetre?: UserPerimetre | null
+  /** dernière connexion (comptes de connexion), rendue par /admin/users/list depuis le 05/11 ; ABSENTE = inconnue */
+  last_sign_in_at?: string | null
 }
 
 export type GoogleWorkspaceIdentity = {

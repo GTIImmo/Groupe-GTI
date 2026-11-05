@@ -113,7 +113,7 @@ function construireVue(p: RuPersonne, comptes: Map<string, UserProfile>, agences
   const actifsHektor = actives.length > 0
   return {
     p, compte, fonction, fonctionDeduite, agence, agenceDeduite, portable: telephone(portable),
-    email: p.emailPro ?? p.email ?? compte?.email ?? '', ficheActive,
+    email: p.emailPro ?? (compte?.email && /@gti-immobilier\.fr$/i.test(compte.email) ? compte.email : null) ?? p.email ?? compte?.email ?? '', ficheActive,
     ids: p.fiches.map(decrireFiche).join(' · ') || 'aucune fiche chez Hektor',
     sync: ecarts > 0 ? 'ecart' : actifsHektor ? 'a_jour' : 'eteint', ecarts,
   }
@@ -321,7 +321,7 @@ function ListeUtilisateurs(props: {
                 return (
                   <div key={c.id} className="ru-orphelin">
                     <b>{c.email ?? c.display_name ?? c.id}</b>
-                    <span className="ru-mute">{(ROLES[c.role] ?? c.role).toLowerCase()} · {c.is_active ? 'actif' : 'désactivé'}{identite?.derniereConnexion ? ` · vu le ${date(identite.derniereConnexion)}` : ' · jamais connecté'}</span>
+                    <span className="ru-mute">{(ROLES[c.role] ?? c.role).toLowerCase()} · {c.is_active ? 'actif' : 'désactivé'}{derniereConnexion(c, identite) ? ` · ${derniereConnexion(c, identite)}` : ''}</span>
                     <button className="ru-lien" type="button" onClick={() => props.onModifierAcces(c)}>Relier à une personne</button>
                   </div>
                 )
@@ -335,10 +335,17 @@ function ListeUtilisateurs(props: {
   )
 }
 
+/** « vu le … », « jamais connecté » (la date est connue et vide), ou « » quand le serveur ne l'a pas rendue */
+function derniereConnexion(compte: UserProfile, identite?: { derniereConnexion: string | null }, long = false) {
+  const quand = compte.last_sign_in_at ?? identite?.derniereConnexion ?? null
+  if (quand) return long ? date(quand, true) : `vu le ${date(quand)}`
+  return 'last_sign_in_at' in compte ? (long ? 'jamais' : 'jamais connecté') : ''
+}
+
 function Acces({ v, identite }: { v: Vue; identite?: { derniereConnexion: string | null } }) {
   if (!v.compte) return <div className="ru-acces"><span className="ru-mute">Pas d’accès</span></div>
   if (!v.compte.is_active) return <div className="ru-acces"><span className="ru-mute">Accès désactivé</span></div>
-  const vu = identite?.derniereConnexion ? `vu le ${date(identite.derniereConnexion)}` : 'jamais connecté'
+  const vu = derniereConnexion(v.compte, identite)
   return (
     <div className="ru-acces">
       <span className="ru-acces-role">{ROLES[v.compte.role] ?? v.compte.role} · {perimetre(v.compte.perimetre).toLowerCase()}</span>
@@ -359,12 +366,12 @@ function Chiffre({ titre, valeur, detail, ton, petit }: { titre: string; valeur:
 
 // ---- Fiche d'une personne -----------------------------------------------------------------------------------------
 
-function Champ({ titre, valeur, aide, ton }: { titre: string; valeur: ReactNode; aide?: string; ton?: 'ok' | 'attention' }) {
+function Champ({ titre, valeur, aide, ton, siVide = 'à saisir' }: { titre: string; valeur: ReactNode; aide?: string; ton?: 'ok' | 'attention'; siVide?: string }) {
   const vide = valeur == null || valeur === ''
   return (
     <div className="ru-champ">
       <span className="ru-mute ru-petit">{titre}</span>
-      <b className={vide ? 'ru-a-saisir' : undefined}>{vide ? 'à saisir' : valeur}</b>
+      <b className={vide ? 'ru-a-saisir' : undefined}>{vide ? siVide : valeur}</b>
       {aide ? <span className={`ru-aide${ton ? ` is-${ton}` : ''}`}>{aide}</span> : null}
     </div>
   )
@@ -429,13 +436,13 @@ function FichePersonne(props: {
               <Champ titre="Civilité" valeur={p.civilite} />
               <Champ titre="Prénom" valeur={prenom} />
               <Champ titre="Nom" valeur={nomFamille || (prenom ? '' : p.nom)} />
-              <Champ titre="Fonction" valeur={v.fonction} aide={v.fonctionDeduite ? 'd’après ses comptes chez Hektor' : v.fonction ? undefined : 'négociateur, secrétaire, administrateur…'} />
-              <Champ titre="Agence" valeur={v.agence} aide={v.agenceDeduite ? 'd’après ses fiches chez Hektor' : undefined}
+              <Champ titre="Fonction" valeur={v.fonction} siVide="à choisir" aide={v.fonctionDeduite ? 'd’après ses comptes chez Hektor' : v.fonction ? undefined : 'négociateur, secrétaire, administrateur…'} />
+              <Champ titre="Agence" valeur={v.agence} siVide={p.actif ? 'à choisir' : '—'} aide={v.agenceDeduite ? 'd’après ses fiches chez Hektor' : undefined}
                 ton={/formation/i.test(v.agence) ? 'attention' : undefined} />
               <Champ titre="Statut" valeur={p.actif ? 'Actif' : 'Ancien'} aide={p.actif ? 'travaille avec nous' : 'gardé, jamais supprimé'} />
-              <Champ titre="E-mail professionnel" valeur={p.emailPro ?? p.email} aide={v.compte?.email && v.compte.email.toLowerCase() === String(p.emailPro ?? p.email ?? '').toLowerCase() ? 'celle de son accès à l’app' : undefined} ton="ok" />
+              <Champ titre="E-mail professionnel" valeur={v.email} aide={v.compte?.email && v.compte.email.toLowerCase() === v.email.toLowerCase() ? 'celle de son accès à l’app' : undefined} ton="ok" />
               <Champ titre="Portable" valeur={v.portable} />
-              <Champ titre="Téléphone fixe" valeur={telephone(p.telephone ?? v.ficheActive?.telephone)} />
+              <Champ titre="Téléphone fixe" valeur={((fixe) => (fixe && fixe !== v.portable ? fixe : ''))(telephone(p.telephone ?? v.ficheActive?.telephone))} />
             </div>
           </section>
 
@@ -449,7 +456,7 @@ function FichePersonne(props: {
                 <Champ titre="Identifiant" valeur={v.compte.email} />
                 <Champ titre="Rôle" valeur={ROLES[v.compte.role] ?? v.compte.role} aide={v.compte.is_active ? undefined : 'accès désactivé'} ton="attention" />
                 <Champ titre="Jusqu’où il voit" valeur={perimetre(v.compte.perimetre)} />
-                <Champ titre="Dernière connexion" valeur={identite?.derniereConnexion ? date(identite.derniereConnexion, true) : 'jamais'} />
+                <Champ titre="Dernière connexion" valeur={derniereConnexion(v.compte, identite, true) || 'inconnue'} />
               </div>
             ) : (
               <p className="ru-corps ru-mute">Pas d’accès à l’app.{p.actif ? ' « Lui donner l’accès à l’app » ouvre la création de compte, déjà reliée à cette personne.' : ''}</p>
@@ -476,7 +483,7 @@ function FichePersonne(props: {
             </ol>
           </section>
 
-          <details className="ru-synchro">
+          <details className="ru-synchro" open>
             <summary>
               <span className="ru-synchro-titre">Synchro avec Hektor</span>
               <span className="ru-mute ru-petit">{p.fiches.length} fiche{p.fiches.length > 1 ? 's' : ''} chez Hektor{donnees.derniereNuit ? ` · dernière lecture nuit du ${date(donnees.derniereNuit)}` : ''}{v.ecarts ? ` · ${v.ecarts} écart${v.ecarts > 1 ? 's' : ''}` : ''}</span>
@@ -549,7 +556,7 @@ function RegistreVide({ quoi }: { quoi: string }) {
     <section className="ru-carte ru-bloc">
       <h2>{quoi} : pas encore rempli</h2>
       <span>Ce registre est rempli et tenu par la nuit, à partir des listes que la nuit télécharge déjà. Elle n’a pas encore écrit.</span>
-      <span className="ru-mute ru-petit">Il se remplit la première nuit où la tenue est allumée en écriture (APP_REGISTRE_AGENCES=1).</span>
+      <span className="ru-mute ru-petit">Il se remplit la première nuit où cette tenue écrit.</span>
     </section>
   )
 }

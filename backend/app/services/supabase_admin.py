@@ -572,7 +572,25 @@ class SupabaseAdminService:
             timeout=30,
         )
         self._raise_for_response(response, "Unable to list users")
-        return response.json() or []
+        users = response.json() or []
+        # Registre des utilisateurs (05/11/2026, §42) : la DERNIÈRE CONNEXION vient des comptes de connexion -- la colonne
+        # app_google_workspace_identity.last_login_at n'a jamais été tenue (vide pour les 6 comptes). Lecture seule ; si
+        # elle échoue, la clé est ABSENTE (l'écran dit « inconnue », jamais « jamais connecté »).
+        try:
+            auth_response = requests.get(
+                f"{self.settings.supabase_url}/auth/v1/admin/users",
+                headers=self._admin_headers(),
+                params={"page": 1, "per_page": 1000},
+                timeout=30,
+            )
+            if auth_response.ok:
+                connexions = {str(u.get("id")): u.get("last_sign_in_at") for u in (auth_response.json().get("users") or [])}
+                for user in users:
+                    if str(user.get("id")) in connexions:
+                        user["last_sign_in_at"] = connexions[str(user.get("id"))]
+        except Exception:  # noqa: BLE001 -- la liste des comptes ne dépend pas de cette date
+            pass
+        return users
 
     def _load_profile_by_id(self, user_id: str) -> dict[str, Any]:
         response = requests.get(

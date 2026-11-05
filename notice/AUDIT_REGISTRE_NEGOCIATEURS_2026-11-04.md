@@ -1155,3 +1155,15 @@ formulaire de création s'ouvre seul par-dessus. Chiffres attendus en réel (mes
 anciens, 34 actives, 5 accès + 3 comptes reliés à personne, 34 à valider, 18 comptes d'agence. ⏰ À voir EN RÉEL après le
 push. Agences et société : vides tant que la nuit n'a pas écrit (l'écran le dit).
 Retour arrière : `git revert` du commit (aucune base touchée).
+
+**✅ VU EN LIGNE le 05/11** (Chrome de Frédéric, consultation seule, version Vercel de `d62e757` qui contient `8fe4c3c`) : les
+chiffres sont EXACTEMENT ceux de la base — 167 personnes dont 133 anciens, 34 actives, 5 accès + 3 comptes reliés à
+personne, 34 à valider, synchro nuit du 05/11. Fiche de Franck : la fiche des gestes n° 1 (Compte formation), le compte
+secrétaire 7 « noté, jamais envoyé dans un geste », la fiche 19 éteinte ; agences : « pas encore rempli ».
+**Ce que l'œil a trouvé, corrigé dans le commit suivant** :
+- « jamais connecté » MENTAIT : `app_google_workspace_identity.last_login_at` n'a JAMAIS été tenue (vide pour les 6). La
+  vraie date est `auth.users.last_sign_in_at` (Franck 15/09, Pauline 05/11…) → `list_users` (serveur) l'ajoute à chaque
+  compte, en lecture ; si elle n'est pas rendue, l'écran dit « inconnue », jamais « jamais connecté ».
+- l'e-mail affiché était celui de Hektor (gmail de Franck) : c'est l'accès @gti qui passe devant (règle de l'étape 2) ;
+- « à saisir » pour une fonction → « à choisir » ; le fixe n'est montré que s'il diffère du portable ; la synchro est
+  ouverte par défaut (comme la maquette) ; plus de nom d'interrupteur à l'écran.
