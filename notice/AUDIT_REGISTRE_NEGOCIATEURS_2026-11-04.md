@@ -1032,3 +1032,11 @@ personnes actives sans fiche négo active, chacune avec SA fiche la plus employ�
 récente). Mesure du 05/11 : 30 → 34, avec Frédéric n° 46 (40 lignes), Caroline n° 49 (156), Delphine BLANCHARD n° 45 (56 —
 et non 114, la plus récente, 0 ligne), Pauline n° 41 (2). Repli sur l'annuaire inchangé. `npm run build` vert. ⏰ À voir en
 ligne après le push : la liste de la répartition doit montrer les 4 noms.
+
+**Contrôle en ligne (05/11, après le push de 02468bd)** : Vercel a servi `index-BzMLpYk6.js`, qui porte le code neuf. Dans
+l'app ouverte avec la session de Frédéric, les mêmes lectures que `loadRepartitionPersonnes` rendent 219 fiches, 30 numéros
+actifs chez Hektor + 4 ajouts = **34** : Caroline → 49 (156 lignes), Delphine BLANCHARD → 45 (56), Pauline → 41 (2),
+Frédéric → 46 (40). ⚠ Non vu : la modale de changement de statut elle-même (pas ouverte, pour ne rien enregistrer).
+⚠ Réserve : un NÉGOCIATEUR ne lit `app_affaire_repartition` que sur son périmètre (politique `app_affaire_repartition_read`)
+— pour lui, le choix de la fiche peut retomber sur « la plus récente » (ex. Delphine → 114). Sans effet sur les comptes :
+le Pilotage retrouve la part par la PERSONNE, quelle que soit la fiche.
