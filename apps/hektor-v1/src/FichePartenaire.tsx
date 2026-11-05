@@ -33,7 +33,7 @@ export function PartenaireSectionMetier(props: { blocs: BlocsPartenaire }) {
         <EnConstruction titre={props.blocs.lot} />
         <span className="fa-cx-sec-ln" />
       </div>
-      <section className="fa-cx-mod full">
+      <section className="fa-cx-mod full" style={{ marginBottom: 24 }}>
         <div className="fa-cx-stages">
           {s.etapes.map((etape) => (
             <div key={etape} className="fa-cx-stage wip"><b>—</b><span>{etape}</span></div>
@@ -54,7 +54,7 @@ export function PartenaireAVenir(props: { blocs: BlocsPartenaire }) {
         <EnConstruction />
         <span className="fa-cx-sec-ln" />
       </div>
-      <section className="fa-cx-mod full">
+      <section className="fa-cx-mod full" style={{ marginBottom: 24 }}>
         <div className="fa-cx-ech-empty">{props.blocs.aVenir}</div>
       </section>
     </>

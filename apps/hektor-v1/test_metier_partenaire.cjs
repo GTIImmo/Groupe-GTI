@@ -136,9 +136,9 @@ controle("(43) les libellés de la maquette sont repris (syndic, diag, courtier,
   && J(blocsDuPartenaire("diag").section.etapes) === J(["Commandé", "RDV fixé", "Rapport reçu", "Au coffre"])
   && J(blocsDuPartenaire("courtier").section.etapes) === J(["Orientés", "Accord de principe", "Offre de prêt", "Financés"])
   && J(blocsDuPartenaire("apporteur").section.etapes) === J(["Contact apporté", "Mandat", "Commission due", "Réglé"]));
-controle("(44) branchement : blocs du profil, et Recherche cachée sans recherche active (notaire OU partenaire)",
+controle("(44) branchement : blocs du profil, et Recherche cachée sans recherche active (notaire OU partenaire à blocs ; pas « autre »)",
   /const blocsPartenaire = blocsDuPartenaire\(profilPartenaire\?\.famille\)/.test(app)
-  && /const masquerRecherche = \(estFicheNotaire \|\| Boolean\(profilPartenaire\)\) && Number\(props\.contact\.active_search_count \?\? 0\) === 0/.test(app));
+  && /const masquerRecherche = \(estFicheNotaire \|\| Boolean\(blocsPartenaire\)\) && Number\(props\.contact\.active_search_count \?\? 0\) === 0/.test(app));
 controle("(45) les 4 blocs sont posés à leur place (chiffres avant le tableau, section, À venir, avec nous)",
   /<PartenaireChiffres blocs=\{blocsPartenaire\} \/>[\s\S]{0,120}fa-cx-dash-top/.test(app)
   && /<NotaireDossiers[\s\S]{0,200}<PartenaireSectionMetier blocs=\{blocsPartenaire\} \/>/.test(app)

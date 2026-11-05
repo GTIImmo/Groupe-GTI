@@ -1744,8 +1744,9 @@ pour tout le monde (au rechargement). Retour arrière : `admin` ou `off`. **Suit
   (« lot N · en construction »), **« À venir »** en tête de la colonne de droite, et les **deux blocs « avec nous »** sous
   le tableau de bord. Syndic (lot 4), diagnostiqueur (lot 5), courtier/banque et apporteur/parrain (lots 6 et 7). La famille
   **« autre »** (société, promoteur…) n'a **rien** de plus : elle garde la fiche d'avant.
-- **La bande Recherche** se cache sur une fiche partenaire **sans recherche active**, comme sur la fiche notaire ; un
-  partenaire qui a une recherche active la garde. Biens liés, Activité et Qualité restent.
+- **La bande Recherche** se cache sur une fiche partenaire **à blocs** (les quatre familles) **sans recherche active**,
+  comme sur la fiche notaire ; un partenaire qui a une recherche active la garde. ⚠ Corrigé après la mise en ligne : la
+  première version la cachait aussi pour « autre » (vu sur PICARD, 10177505) — une société peut être acquéreur. Biens liés, Activité et Qualité restent.
 - **Où** : `lib/metierPartenaire.ts` (`blocsDuPartenaire`, données pures), `FichePartenaire.tsx` (4 composants, aucune
   lecture ni écriture, classes de `fiche-notaire-v2.css`), 6 lignes dans `ContactDetailPopupV2`.
 - **Cran** : le même que 3.3a (`partenaires_ecran` + `partenaires_fiche`, tous deux à « on ») — ⚠ donc **visible de tous

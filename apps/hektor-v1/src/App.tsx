@@ -47224,9 +47224,10 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
   const profilPartenaire = partenairesEcran && ficheCran && !estFicheNotaire && metiersPartenaire.etat === 'pret'
     ? profilDuPartenaire(metiersPartenaire.lignes) : null
   // PARTENAIRES, pièce 3.3b (05/11/2026) : la partie droite du métier (chiffres, section, « À venir », « avec nous »), montrée
-  // « en construction » ; rien pour la famille « autre ». Comme le notaire, la bande Recherche se cache sans recherche active.
+  // « en construction » ; rien pour la famille « autre ». Comme le notaire, la bande Recherche se cache sans recherche active
+  // (pas pour « autre » : une société peut être acquéreur, elle garde « Ajouter une recherche »).
   const blocsPartenaire = blocsDuPartenaire(profilPartenaire?.famille)
-  const masquerRecherche = (estFicheNotaire || Boolean(profilPartenaire)) && Number(props.contact.active_search_count ?? 0) === 0
+  const masquerRecherche = (estFicheNotaire || Boolean(blocsPartenaire)) && Number(props.contact.active_search_count ?? 0) === 0
   const typeClass = profilPartenaire
     ? `ty-${profilPartenaire.famille === 'autre' ? 'partenaire' : profilPartenaire.famille}`
     : primaryCategory === 'notaire'
