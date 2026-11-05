@@ -831,3 +831,29 @@ https://claude.ai/artifact/XMLpyh5kDkfpXPwGTB5738 — trois écrans :
    et le message de résultat.
 À trancher à la validation : qui y accède (admin seul, ou managers aussi comme l'outil actuel) ; ce qu'on fait des 34
 « à valider » (une file de travail ?) ; l'ajout d'un ancien sans fiche Hektor (les 14 du classeur).
+
+## 34. AUDIT (05/11) — les COORDONNÉES des utilisateurs et un REGISTRE DES AGENCES, en vue de la coupure
+
+Frédéric : « il manque dans mon registre de récupérer et conserver les coordonnées mail etc. des utilisateurs … pour avoir
+un registre des utilisateurs complet et utilisable de manière autonome avec nos id. Également il faut un registre des
+Agences similaire … impossible d'ajouter une agence avant la coupure donc on note « À venir » sur le bouton ajouter ».
+
+**Ce que Hektor fournit sur un NÉGOCIATEUR** (listes `list_negos` / `list_negos_inactive` et `nego_by_id`, les mêmes
+12 champs ; local `data/hektor.sqlite` `hektor_negociateur.raw_json`, 219 fiches) : id, idUser, agence, nom, prénom,
+fonction (un CODE : 159, 465…), téléphone, portable, e-mail, couleur, logo, avatar (photo, URL du CDN de Hektor). Rien
+d'autre par l'API (ni adresse, ni signature, ni carte).
+**Ce que le registre garde** : par FICHE `nom_vu` (prénom + nom collés), `email_vu`, téléphone, portable, agence, les
+numéros ; par PERSONNE seulement `nom` et `email`. **Manquent** : prénom / nom séparés, fonction, photo, logo, couleur — et
+surtout des coordonnées À NOUS sur la personne (aujourd'hui elles ne vivent que sur les fiches, recopiées de Hektor
+chaque nuit : à la coupure elles se figent sans qu'on puisse les tenir).
+
+**Ce que Hektor fournit sur une AGENCE** (`list_agences`, local `hektor_agence.raw_json`, 19 agences) : id, idUser (compte
+d'agence), nom, alias, mail, tél, fax, site, responsable, couleur, logo, avatar, **barème** (URL d'un document), parent,
+type ; **informations juridiques** (forme, raison sociale, SIRET, NAF, capital, RCS et sa ville, TVA, siège social,
+signature, téléphone et e-mail de la société, RCP, RSAC, médiateur et son adresse, assureur et son adresse) ; **carte
+professionnelle** (type, numéro, délivrée par, DATE DE VALIDITÉ — ex. 14/09/2027 —, détenteur, maniement de fonds, garant,
+montant, adresse et compte du garant). ⚠ Pas d'adresse postale de l'agence elle-même dans l'API (seulement le siège).
+**Ce que la base de l'app garde** : `app_agence_directory` = id, compte, nom, mail, tél, responsable, parent — le reste
+(juridique, carte, barème, logo) n'existe QUE dans le fichier local de la nuit, pas dans la base de l'app.
+**Fichiers hébergés chez Hektor** (photos des négociateurs, logos, barèmes) : à RECOPIER chez nous avant la coupure.
+⛔ Rien n'est codé. Proposition au §35 (à valider).
