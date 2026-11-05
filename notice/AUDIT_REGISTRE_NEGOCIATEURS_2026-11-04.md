@@ -785,3 +785,20 @@ négociateur peut lire tout le registre par l'API. Remède : `alter view … set
   Pierrick MARTINEZ, Stéphane PIOCHEL, Vincent-Lucas GONZALEZ, Vivien BERGER) — plus que les 7 mesurés sur les biens seuls,
   le catalogue reprenant aussi mandats et travaux. Case remise décochée. ⚠ Non vu : le préfiltre « Mes biens » d'un compte
   négociateur (pas de session négociateur pour l'essai).
+
+## 31. ✅ LA FAILLE DU REGISTRE DES MANDATS FERMÉE (05/11) — Frédéric : « Oui, audite et corrige »
+
+**Le défaut** : `app_registre_mandats_current` (vue) n'était pas en `security_invoker` → elle lisait
+`app_mandat_register_current` (règle : admin/manager seulement) avec les droits de son propriétaire ; `authenticated` a
+SELECT. Mesuré avec le compte de Mélanie LEGRAND : 24 577 lignes par la vue, 0 par la table. Un compte réglé « Ses biens
+seulement » aurait lu tout le registre.
+**Pourquoi pas « fermer »** : lecteurs mesurés dans le code — écran Registre (admin/manager), recherche globale (catégorie
+mandats, négociateurs compris), `loadRegisterCycleAffaires` (fiche d'un bien : date de clôture du mandat, charge des
+honoraires, offre / compromis / vente — tous les jours pour les négociateurs), `loadMandatFilterCatalog`, pastille « fiche
+de mandat ailleurs », vue `app_filter_catalog_registre`. Fermer aurait vidé la fiche de leurs biens.
+**Le remède posé** (`supabase/patch_registre_mandats_perimetre_2026-11-05.sql` + `_INVERSE`, migration
+`registre_mandats_perimetre_2026_11_05`) : une 2e règle de lecture sur la table, COPIE de celle des biens (réseau / agence /
+portefeuille), et la vue en `security_invoker`. Éprouvé dans une transaction annulée : Mélanie « réseau » 24 577 (inchangé),
+Mélanie « ses biens seulement » 346 (les siennes), admin 24 577, catalogue 93. Vérifié après la pose : Mélanie lit 24 577 par
+la VUE et par la TABLE ; témoin positif — elle voit le cycle de son bien 62527 (mandat 18712) et de 59393 / 61739.
+Aucun changement pour les 8 comptes actuels (tous « réseau ») ; la faille est fermée pour les réglages restreints.
