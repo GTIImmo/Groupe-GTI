@@ -704,3 +704,24 @@ seconde), l'annuaire en REPLI (registre illisible ou vide). Les lignes de répar
 Mesuré avant : 155 e-mails des deux côtés, **0 nom différent**, même ensemble de négociateurs actifs (0 d'un côté sans
 l'autre). Build vert. ⏳ À pousser, puis voir la fenêtre de répartition et un nom dans Transactions.
 Reste à l'étape 3 : les DROITS (`app_mes_chaines_nommees`, ce que voit un négociateur).
+
+## 27. LES MENUS DE CHOIX DE NÉGOCIATEUR — inventaire et DÉCISIONS de Frédéric (05/11) — ⛔ rien n'est codé
+
+Inventaire complet (agent de recherche, lecture seule) : 6 menus de saisie (nouvelle annonce/estimation, réaffecter le
+négociateur d'un bien, répartition des honoraires, création de contact, modification de contact, + une ancienne version
+morte), les filtres « Négociateur » des listes (Annonces, Estimations, Contacts, Registre des mandats, Suivi, mobile),
+Pilotage, Transactions, l'agenda global, l'outil Utilisateurs. Constat de fond : pour un compte `commercial`, `dataScope`
+(App.tsx:14461) ne charge QUE sa fiche dans `hektorNegotiators` — d'où sa présélection, mais aussi des filtres réduits.
+
+**Décisions (05/11)** :
+- SAISIE / MODIFICATION : un négociateur a SON NOM d'office (son agence aussi ; s'il a plusieurs fiches, le choix entre
+  SES agences seulement). Admin / manager : actifs d'agences actives, case à cocher « comptes d'agence » (on peut choisir
+  une agence, mais derrière la case). Valeur déjà en place : affichée, « ancien » s'il l'est, non choisissable pour une
+  nouvelle ligne.
+- MODIFICATION D'UN CONTACT : le négociateur ne peut que GARDER la valeur en place ou mettre SON nom (« OK ta propo »).
+  ⚠ À vérifier avant de coder : ce que `app_edit_contact_optimistic` fait du compte choisi.
+- AGENDA : un négociateur n'a accès qu'à SA boîte — plus de saisie libre d'une autre adresse.
+- FILTRES : tout le monde voit tout le monde (tous les comptes ont le périmètre « réseau », mesuré : 8 comptes sur 8),
+  case à cocher « afficher les anciens » (décochée par défaut). Pilotage, Transactions, Utilisateurs : la même case.
+- Réaffecter le négociateur d'un bien : masquer l'entrée pour un négociateur (aujourd'hui : un message d'erreur).
+- Une seule fonction d'app (registre, mode saisie / filtre / administration, valeur en place) servira tous les menus.
