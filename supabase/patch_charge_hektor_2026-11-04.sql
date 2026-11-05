@@ -119,6 +119,14 @@ with ex as (
                       where k.champ = 'charge_commission'
                         and k.hektor_annonce_id = r.hektor_annonce_id::text
                         and k.numero_mandat = r.numero_mandat::text)
+     -- GARDE 4 (05/11/2026) : LES EXCLUSIONS DECLAREES. Sa decision « C » sur les
+     --   2 mandats que le CLASSEUR se contredit lui-meme. ⚠ CETTE GARDE MANQUAIT
+     --   LE 04/11, et ca s'est vu : la pose du miroir avait rempli 46338/17322
+     --   avec « vendeur » -- precisement le point conteste. Retiree le 05/11.
+     --   ⛔ TOUTE porte qui pose la charge DOIT consulter cette table.
+     and not exists (select 1 from public.app_charge_exclusion e
+                      where e.hektor_annonce_id = r.hektor_annonce_id::text
+                        and e.numero_mandat = r.numero_mandat::text)
 ), q as (
   select ann, man,
          case when coalesce(v,0) > 0 and coalesce(a,0) > 0 then null

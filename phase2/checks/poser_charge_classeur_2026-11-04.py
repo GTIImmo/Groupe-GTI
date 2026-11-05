@@ -131,6 +131,16 @@ def main() -> int:
     carnet = lire_tout(cl, "app_mandat_champ_app",
                        "hektor_annonce_id,numero_mandat,champ,valeur_app,origine",
                        "hektor_annonce_id.asc,numero_mandat.asc,champ.asc")
+    # ⛔ LES EXCLUSIONS DECLAREES (05/11/2026, sa decision « C ») -- les mandats dont
+    #   le CLASSEUR se contredit lui-meme. Une exclusion deliberee se DECLARE, sinon
+    #   elle ressemble a un oubli et quelqu'un la « repare ».
+    #   ⚠ CETTE GARDE MANQUAIT LE 04/11 : la pose du miroir avait rempli 46338/17322
+    #     avec « vendeur », justement le point conteste. Chaque porte doit la lire.
+    exclus = {(str(e["hektor_annonce_id"]).strip(), str(e["numero_mandat"]).strip())
+              for e in lire_tout(cl, "app_charge_exclusion",
+                                 "hektor_annonce_id,numero_mandat",
+                                 "hektor_annonce_id.asc,numero_mandat.asc")}
+    print("  exclusions declarees : %d" % len(exclus))
     print("  pont : %d liens . registre : %d mandats . carnet : %d lignes"
           % (len(liens), len(reg), len(carnet)))
 
@@ -179,6 +189,9 @@ def main() -> int:
         cible = next(iter(cibles))
         if cible not in mandats_existants:
             motifs["le mandat n est pas au registre"] += 1
+            continue
+        if cible in exclus:
+            motifs["EXCLU PAR DECISION (classeur contradictoire)"] += 1
             continue
         if cible in carnet_deja:
             motifs["le carnet porte DEJA une valeur (on n ecrase pas)"] += 1
@@ -287,12 +300,23 @@ def main() -> int:
                      % (q(ann), q(man), q(CHAMP), q(m), q(ORIGINE), q("classeur:" + iu)))
     sql.append(",\n".join(corps))
     sql.append("on conflict (hektor_annonce_id, numero_mandat, champ) do nothing;")
+    # (le fichier n'est ecrit que s'il y a quelque chose dedans -- voir plus bas)
     sql.append("")
     sql.append("-- Puis on repose le reflet sur la colonne du registre.")
     sql.append("select public.app_reposer_charge_mandat_app(null, 10000) as repose;")
     sql.append("")
-    SORTIE_SQL.parent.mkdir(parents=True, exist_ok=True)
-    io.open(SORTIE_SQL, "w", encoding="utf-8", newline="\n").write("\n".join(sql))
+    # ⛔⛔ ON N ECRASE PAS LE FICHIER QUAND IL N Y A RIEN A POSER (corrige le 05/11).
+    #   Ma 1re version le reecrivait a CHAQUE passage. Au 2e passage il n'y avait plus
+    #   rien a poser, et elle a produit « values » suivi de RIEN puis « on conflict » :
+    #   un SQL INVALIDE. Pire, elle a ECRASE L ARCHIVE des 837 lignes reellement
+    #   posees -- il a fallu la recuperer avec git checkout.
+    #   ⭐ LA LECON : un script qui regenere un fichier doit se demander ce qu'il
+    #     ecrase. « Rien a poser » n'autorise pas a detruire la trace du geste.
+    if corps:
+        SORTIE_SQL.parent.mkdir(parents=True, exist_ok=True)
+        io.open(SORTIE_SQL, "w", encoding="utf-8", newline="\n").write("\n".join(sql))
+    else:
+        print("  SQL : rien a poser -> fichier NON reecrit (l archive du geste est gardee)")
 
     # ── LE RAPPORT ────────────────────────────────────────────────────────────
     r = []
@@ -363,7 +387,7 @@ def main() -> int:
     io.open(SORTIE_RAPPORT, "w", encoding="utf-8", newline="\n").write("\n".join(r))
 
     print()
-    print("  SQL     : %s" % SORTIE_SQL)
+    print("  SQL     : %s" % (SORTIE_SQL if corps else "(non reecrit)"))
     print("  rapport : %s" % SORTIE_RAPPORT)
     print("FIN -- aucune ecriture en base, classeur en LECTURE seule")
     return 0
