@@ -1276,8 +1276,14 @@ syndic 75, diagnostiqueur 36 — **exactement l'attendu du §17**.
 ✅ **ALLUMÉ le 05/11 à 09:31** (« Allume et commite ») : ligne 132 du `.env`, copie
 `.env.avant_nom_partenaire_liste_20261105_0931` ; vérifié sans rien écrire : la couche ET la règle d'entrée le lisent
 allumé (GIBERT IMMOBILIER sort sous son nom, 423727 reste « Contact 423727 »).
-⏰ **Contrôle du 06/11 au matin** : chez Supabase, les 8 numéros 10215568, 10215569, 10215570, 10215778, 10215780,
-10216239, 10217294, 10217295 portent leur nom ; 10217339 reste « Contact 10217339 » et toujours présent.
+✅ **LES 8 MIS À JOUR TOUT DE SUITE le 05/11 à 09:32-09:34** (Frédéric : « peux-tu le faire maintenant pour mettre à
+jour les 9 ») : `phase2/sync/refresh_contact_inproc.py --contact-id <id>` (l'outil du worker : 1 lecture chez Hektor,
+couche, push), un par un, 2 s de pause, aucune tâche du projet en cours ; 8 sorties en code 0. **Chez Supabase** :
+10215568 GIBERT IMMOBILIER · 10215569 AGENCE IMMOBILIERE DE BELLEVUE · 10215570 PICHET IMMOBILIER SERVICES ·
+10215778 SOCIETE DE GESTION IMMOBILIERE · 10215780 DETROIS IMMOBILIER · 10216239 CABINET MELLIER MICHAS · 10217294
+GOUDARD PATOT · 10217295 IMMO DE FRANCE FOREZ VELAY ; `nom` et `prenom` restent vides. 10217339 (sans nom nulle part)
+non relancé : « Contact 10217339 ».
+⏰ **Contrôle du 06/11 au matin** : la nuit garde ces 8 noms (la couche entière est refaite) et 10217339 reste présent.
 
 ### 7 ter. Les dépendances (techniques, pas un ordre décidé)
 
