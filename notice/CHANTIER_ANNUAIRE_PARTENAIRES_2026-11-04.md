@@ -1478,6 +1478,59 @@ lire sa ligne au registre, supprimer la fiche — et décider du sort de sa lign
 - Registre après : **1 869 actifs, dont 1 656 notaires** (inchangé) ; 1 ligne « ecran » au total, 0 active.
 - ⚠ Toujours ouvert (« vu en passant ») : supprimer un contact ne retire pas ses lignes du registre ; ici retiré à la main.
 
+## 23. SUPPRIMER UN CONTACT LAISSE SES LIGNES AU REGISTRE DES PARTENAIRES — AUDIT (05/11, « Oui, audite-le ») — rien codé
+
+**La suppression aujourd'hui** (`handleDeleteHektorContact`, `console_job_worker.js` ~l. 22046) : Hektor, puis le
+nettoyage Supabase (`app_proposition`, `app_bien_acquereur_statut`, `app_contact_search_current`,
+`app_contact_relation_current`, `app_contact_duplicate_member_current`, `app_contact_current` + les clés de recherche),
+la base locale (`delete_local_contact.py`), et le registre des LIENS `app_relation` — **effacé physiquement**, décision de
+Frédéric du 08/10 (5g : « je veux que les lignes soient physiquement effacées », exception assumée au « jamais effacer »).
+**Rien pour le registre des PARTENAIRES** : `app_partenaire_metier` et `app_partenaire_lien` gardent leurs lignes actives.
+Or ce registre a été posé le 04/11 avec la règle inverse : **on retire en datant, on n'efface jamais**.
+**Mesure (05/11)** : 1 869 métiers actifs, dont **257 sur un contact absent de l'app** (hektor 53, transactions 204) —
+**aucun** ne vient d'une suppression (0 contact du journal des suppressions) : ce sont les notaires hors périmètre de l'app
+(le trou de `console_transaction_party`, §17 bis). 83 liens actifs, 0 sur un contact absent. 40 suppressions au journal
+depuis le début. ⇒ **Aucun cas réel aujourd'hui** ; la fiche d'essai 20000044 a été retirée à la main.
+**⚠ Un second trou, plus important pour le lot 3** : la nuit (`registre_partenaires_reprise.py`) compare ce qu'elle
+« veut » aux seules lignes ACTIVES ⇒ un métier RETIRÉ (par une suppression, ou demain par « Retirer le métier » à l'écran)
+est **RAJOUTÉ la nuit suivante** si une source le veut encore (Netty, Hektor, table des parties). Pour un contact supprimé,
+Netty et Hektor passent par la couche locale (le contact n'y est plus) ; la table des parties, non mesuré.
+**Remède proposé** :
+1. Worker, à la suppression (après le registre des liens) : RETIRER EN DATANT les métiers actifs du contact et ses liens
+   actifs (comme partenaire ou comme client), `retire_par` = celui qui supprime ; compte rendu et journal comme pour
+   `app_relation`. Interrupteur app_setting proposé `partenaire_retire_a_la_suppression`. (Autre forme : effacer
+   physiquement, comme `app_relation` le 08/10 — ⚠ contraire à la règle du registre des partenaires : à trancher.)
+2. Nuit : **un métier déjà retiré pour ce contact n'est jamais rajouté** (un retrait humain fait foi) ; les liens d'origine
+   « hektor » gardent leur logique (Hektor peut remettre un syndic). Derrière l'interrupteur de la nuit déjà allumé
+   `APP_REGISTRE_PARTENAIRES`, ou un second — à présenter.
+Ce que ça pourrait casser : un métier retiré PAR ERREUR ne reviendrait plus tout seul (il faudrait le remettre à la main) ;
+la suppression gagne 2 requêtes Supabase, sans toucher à Hektor ni au reste du nettoyage.
+
+✅ **DÉCISION DE FRÉDÉRIC (05/11) : « Effacer »** — à la suppression d'un contact, ses lignes du registre des partenaires
+(métiers, et liens où il est partenaire ou client) sont **EFFACÉES physiquement**, comme `app_relation` depuis le 08/10.
+Exception assumée à la règle « on retire en datant » du registre ; la trace reste dans le journal du travail et dans
+`app_console_deleted_contact_log`. ⇒ Remède 1 révisé : DELETE au lieu de PATCH. Remède 2 réduit : la nuit ne rajoute pas
+un métier pour un contact du journal des suppressions ; « un retrait à l'écran fait foi » est reporté au lot 3 (A3).
+
+✅ **CODÉ le 05/11** (« Oui, vas-y ») — rien n'est actif côté worker tant que les 4 services ne sont pas redémarrés et
+l'interrupteur allumé :
+- **Worker** (`handleDeleteHektorContact`, juste après le registre des liens) : EFFACE `app_partenaire_metier` du contact
+  (`contact_id` = notre numéro) et `app_partenaire_lien` où il est `partenaire_id` OU `client_contact_id` (DELETE avec
+  `return=representation`, pour compter) ; compte rendu `cleanup.registre_des_partenaires` et journal du travail ; une
+  erreur va dans `cleanup.errors` et au journal, la suppression continue ; aucune requête vers Hektor. Nouvel outil
+  `interrupteurAppSetting(cle)`. ⛔ **Interrupteur `app_setting` « partenaire_efface_a_la_suppression »** (absent = éteint).
+- **Nuit** (`registre_partenaires_reprise.py`) : `contacts_supprimes()` lit le journal des suppressions (notre numéro,
+  `app_contact_id` ou `before_json.hektor_contact_id`) ; `ecarter_les_supprimes()` les retire de ce qui est VOULU (métiers
+  et liens) — pas seulement de ce qui est ajouté, la vérification finale comparant à tout le voulu. Compte rendu :
+  `contacts_supprimes_ecartes`. Sans interrupteur à part (il n'empêche que des lignes pour des contacts qui n'existent
+  plus) : actif dès la nuit du 05 au 06/11, sous `APP_REGISTRE_PARTENAIRES`.
+- Essais : `Console/test_partenaire_suppression.js` **11/11** ; `phase2/contacts/test_registre_partenaires_supprimes.py`
+  **5/5** ; avec les essais voisins, 31 verts en Python ; D-5, D-2 et couples toujours verts.
+- **À blanc sur la base réelle (05/11)** : 29 contacts supprimés lus au journal ; `contacts_supprimes_ecartes` = 0 ;
+  métiers voulus 1 870, déjà là 1 869, 1 à ajouter (un notaire neuf des transactions) ; 83 liens, 0 à ajouter / retirer.
+**Reste, chacun sur accord** : redémarrage des 4 services (Frédéric) ; `partenaire_efface_a_la_suppression = on` ; essai
+réel (créer un partenaire avec métier → 1 ligne au registre → le supprimer → 0 ligne, compte rendu « done »).
+
 ### 7 ter. Les dépendances (techniques, pas un ordre décidé)
 
 - 0 avant tout le reste ; 0.1 avant B2 ; 0.2 avant B1 ; 0.6 avant B5 ; 0.3 avant B6 ; 0.4 avant B7 ; 0.5 avant C2.

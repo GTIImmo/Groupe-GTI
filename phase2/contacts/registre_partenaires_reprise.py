@@ -19,6 +19,8 @@ LES RÈGLES (décisions de Frédéric du 04/11, §6 bis) :
   - un lien syndic / diagnostiqueur de Hektor est ajouté s'il manque. Si Hektor CHANGE ou RETIRE le syndic d'une annonce
     qu'il vient de relire, le lien d'origine « hektor » est retiré (daté), jamais effacé. Un lien posé dans l'APP n'est
     jamais touché : en cas d'écart, l'app gagne et l'écart est COMPTÉ dans le compte rendu (Q3).
+  - (05/11, §23) un contact SUPPRIMÉ depuis l'app (journal `app_console_deleted_contact_log`) n'a plus aucune ligne :
+    la suppression les efface (décision « Effacer »), et la nuit ne les recrée jamais.
 
 LE NOTAIRE (décision « A » de Frédéric, 04/11 au soir, §17) : il entre au registre comme les autres métiers, de trois
 sources — Netty (« notaire »), le formulaire Hektor (code 2) et la table des parties chez Supabase (rôles notaire_vendeur /
@@ -239,6 +241,25 @@ def liens_voulus() -> tuple[dict[tuple[int, str], dict], Counter, set[int]]:
 
 
 # ── La reprise ───────────────────────────────────────────────────────────────
+def contacts_supprimes() -> set[str]:
+    """NOS numéros des contacts supprimés depuis l'app (journal des suppressions, chez Supabase)."""
+    numeros: set[str] = set()
+    for ligne in lire_tout("app_console_deleted_contact_log", "id,app_contact_id,identite:before_json->>hektor_contact_id", {}):
+        for cle in ("app_contact_id", "identite"):
+            if ligne.get(cle) not in (None, ""):
+                numeros.add(str(ligne[cle]))
+    return numeros
+
+
+def ecarter_les_supprimes(metiers: dict[tuple[str, str], str], liens: dict[tuple[int, str], dict],
+                          supprimes: set[str]) -> tuple[dict[tuple[str, str], str], dict[tuple[int, str], dict], int]:
+    """§23 (05/11) : la suppression d'un contact EFFACE ses lignes du registre (décision de Frédéric, « Effacer ») ;
+    la nuit ne doit pas les recréer depuis une source qui le connaît encore (la table des parties, par exemple)."""
+    gardes_m = {cle: source for cle, source in metiers.items() if cle[0] not in supprimes}
+    gardes_l = {cle: voulu for cle, voulu in liens.items() if str(voulu.get("partenaire")) not in supprimes}
+    return gardes_m, gardes_l, (len(metiers) - len(gardes_m)) + (len(liens) - len(gardes_l))
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Remplit le registre des partenaires depuis le serveur (à blanc par défaut).")
     parser.add_argument("--ecrire", action="store_true", help="écrire chez Supabase (sinon : compter seulement)")
@@ -256,6 +277,9 @@ def main() -> int:
         avec_notaires = False   # --notaires-a-blanc ne sert qu'à compter : jamais d'écriture de notaire sans l'interrupteur
     metiers, c_metiers = metiers_voulus(avec_notaires)
     liens, c_liens, relues = liens_voulus()
+    # §23 (05/11) : jamais une ligne pour un contact supprimé depuis l'app (retiré de ce qui est VOULU, pas seulement de
+    # ce qui est ajouté : la vérification finale compare à tout ce qui est voulu).
+    metiers, liens, ecartes_supprimes = ecarter_les_supprimes(metiers, liens, contacts_supprimes())
 
     existants_metier = {(r["contact_id"], r["metier"]) for r in lire_tout(
         "app_partenaire_metier", "id,contact_id,metier", {"retire_le": "is.null"})}
@@ -297,6 +321,7 @@ def main() -> int:
         "metiers_par_source_et_metier": Counter(f"{l['source']}:{l['metier']}" for l in a_ajouter_metier),
         "liens_voulus": len(liens), "liens_a_ajouter": len(a_ajouter_lien), "liens_a_retirer": len(set(a_retirer_lien)),
         "ecarts_app_gagne": ecarts_app,
+        "contacts_supprimes_ecartes": ecartes_supprimes,
         "comptes_sources": {**c_metiers, **c_liens},
     }
 

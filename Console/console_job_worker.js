@@ -18770,6 +18770,17 @@ function remplacerCoordonnee(values, suffixe, label, valeur, options = {}) {
   ecrireLignesCoordonnees(values, suffixe, lignes);
 }
 
+// Un interrupteur de la table des réglages : « on », « true », « 1 », « yes » = allumé ; absent ou lecture ratée = éteint.
+async function interrupteurAppSetting(cle) {
+  try {
+    const rows = await supabaseRequest(`app_setting?select=value&key=eq.${encodeURIComponent(cle)}&limit=1`, { method: "GET" });
+    const value = Array.isArray(rows) && rows[0] ? String(rows[0].value || "").trim().toLowerCase() : "";
+    return ["on", "true", "1", "yes"].includes(value);
+  } catch (_) {
+    return false;
+  }
+}
+
 async function interrupteurCoordonneesRemplacer() {
   try {
     const rows = await supabaseRequest("app_setting?select=value&key=eq.contact_coordonnees_remplacer&limit=1", { method: "GET" });
@@ -22283,6 +22294,39 @@ async function handleDeleteHektorContact(job) {
       "Contact supprime mais le registre des liens n'a PAS pu etre efface -- des liens pointent une personne qui n'existe plus",
       { app_contact_id: numeroDemande,
         error: erreur && erreur.message ? erreur.message : String(erreur) });
+  }
+
+  // ⭐ PARTENAIRES (05/11/2026, chantier partenaires §23) -- LE REGISTRE DES PARTENAIRES SUIT LA SUPPRESSION.
+  //   Décision de Frédéric : « Effacer » -- comme le registre des liens ci-dessus (08/10), les lignes du contact sont
+  //   EFFACÉES physiquement : ses métiers (app_partenaire_metier) et ses liens, qu'il y soit le partenaire ou le client
+  //   (app_partenaire_lien). Exception assumée à la règle « on retire en datant » de ce registre ; la trace reste dans
+  //   le journal du travail et dans app_console_deleted_contact_log. La clé est NOTRE numéro (numeroDemande).
+  //   ⛔ Interrupteur app_setting « partenaire_efface_a_la_suppression » (absent ou lecture ratée = éteint, rien n'est fait).
+  try {
+    if (await interrupteurAppSetting("partenaire_efface_a_la_suppression")) {
+      const numero = encodeURIComponent(String(numeroDemande));
+      const effacer = async (chemin) => {
+        const lignes = await supabaseRequest(chemin, { method: "DELETE", headers: { Prefer: "return=representation" } });
+        return Array.isArray(lignes) ? lignes.length : 0;
+      };
+      const metiers = await effacer(`app_partenaire_metier?contact_id=eq.${numero}`);
+      const liens = (await effacer(`app_partenaire_lien?partenaire_id=eq.${numero}`))
+        + (await effacer(`app_partenaire_lien?client_contact_id=eq.${numero}`));
+      cleanup.registre_des_partenaires = { status: "done", metiers_effaces: metiers, liens_effaces: liens };
+      await logJob(job.id, "registre_des_partenaires", "done",
+        metiers + liens > 0
+          ? `Le contact est efface du registre des partenaires : ${metiers} metier(s), ${liens} lien(s)`
+          : "Aucune ligne a effacer dans le registre des partenaires",
+        { app_contact_id: numeroDemande, metiers_effaces: metiers, liens_effaces: liens });
+    } else {
+      cleanup.registre_des_partenaires = { status: "skipped", reason: "interrupteur_eteint" };
+    }
+  } catch (erreur) {
+    cleanup.errors.push({ step: "registre_des_partenaires",
+      error: erreur && erreur.message ? erreur.message : String(erreur) });
+    await logJob(job.id, "registre_des_partenaires", "error",
+      "Contact supprime mais le registre des partenaires n'a PAS pu etre efface -- des lignes pointent une personne qui n'existe plus",
+      { app_contact_id: numeroDemande, error: erreur && erreur.message ? erreur.message : String(erreur) });
   }
 
   cleanup.build = { status: "skipped", reason: "contact_delete_cleanup_is_already_scoped" };
