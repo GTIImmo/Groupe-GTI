@@ -66,7 +66,10 @@ def main() -> int:
     return 0
 
 
-TAILLE_TRANCHE = 15000   # ~31 500 contacts se calculent en 1,4 s : 15 000 laissent une large marge sous 8 s
+# 05/11/2026 (synthese couples §77) : 15 000 -> 5 000. Base chaude, 15 000 contacts prennent 0,4 s ; mais juste apres
+# les grosses ecritures de la nuit (base froide), la 1re tranche a depasse les 8 s (05/11, 06:31, rattrapee au 2e essai)
+# et une autre mesure l'a vue a 7 s pendant la descente. Des tranches 3 fois plus legeres gardent la marge.
+TAILLE_TRANCHE = 5000
 
 
 def bornes_des_tranches() -> list[str]:

@@ -2283,3 +2283,23 @@ Passage du moniteur du 04/11 à 14:49 (heure de Paris) : 0 critique, 9 avertisse
 **Hektor** : aucun refus, sauf le 403 de session expirée du chauffage, rattrapé comme chaque nuit (présent les 01, 02, 03 et 04/11). La liste des contacts n'a lu que 392 pages au lieu des 8 114 d'hier : la nuit est donc loin du plafond.
 
 ⚠ **Trouvé en passant, non expliqué** : à partir de l'étape « phase2 registre des partenaires » (06:16:38), les sorties des scripts Python n'apparaissent plus dans `logs/scheduled/quotidien_*.log` — seules les lignes START/DONE restent, avec une ligne vide entre elles. Hier, la ligne « [type des contacts] … » y était. Les étapes ont bien tourné (preuve par la base et les journaux de l'API), mais le journal ne dit plus ce qu'elles ont fait. Cause non cherchée.
+
+## 77. LES DÉPASSEMENTS DE 8 S DE LA NUIT DU 05/11 — AUDIT, PUIS TRANCHES DE 5 000 *(05/11 matin, « il faut travailler sur le temps maximum de 8 s… on peut améliorer ? », puis « Oui fais le »)*
+
+**Le cadre** : l'API coupe à 8 s (`authenticator` : `statement_timeout=8s`, `lock_timeout=8s` ; `service_role` n'a pas de réglage propre). Le client des scripts (`SupabaseRestClient`) réessaie jusqu'à 4 fois sur un 500 (pauses de 1,5 s, 3 s, 4,5 s). Cette nuit, les deux appels qui ont dépassé ont réussi au 2e essai.
+
+**1. La propagation des numéros (`app_contact_id_propager`) : rien à corriger.** Son carnet (`app_contact_id_propagation_log`) dit tout : 26 260 lignes remplies cette nuit, dont 23 368 liens de couple, à cause des 31 533 contacts arrivés le 04/11. Les nuits d'avant, elle en remplissait de 112 à 744. À vide, elle prend 0,4 s. C'est un rattrapage, il ne reviendra pas.
+
+**2. Le type des contacts par tranches : la durée dépend de l'ÉTAT de la base, pas seulement du volume.** Mesures dans des transactions annulées (0 changement écrit) :
+- base chaude : une tranche de 15 000 prend 0,4 s, et les 7 tranches 3 s en tout ;
+- pendant la descente de 06:45 (base occupée) : tranches de 15 000 à 7,0 / 4,7 / 4,6 / 4,6 / 3,1 / 2,8 / 0,8 s ;
+- la nuit, juste après les grosses écritures (Supabase écrivait encore 12 868 pages sur disque depuis 05:29:30), la 1re tranche a dépassé les 8 s ;
+- la requête de la 1re tranche, écrite en direct et la base chaude : 1,1 s (EXPLAIN ANALYZE). Le mode de plan (`plan_cache_mode` personnalisé ou générique) n'y change rien.
+- ⭐ **Le premier appel paie le réchauffement** : avec des tranches de 5 000, toujours pendant la descente, la 1re tranche prend 11,7 s, puis 3,2 / 2,4 / 1,6 / 1,4 s… jusqu'à 0,2 s pour les dernières. Une fois la base réchauffée, la même 1re tranche ne prend plus que 0,27 s. Elle n'est pas plus lourde que les autres : 4 787 liens et 4 740 parties, contre 4 733 et 3 531 pour la 2e.
+
+**Le geste (« Oui fais le »)** : `TAILLE_TRANCHE` passe de 15 000 à 5 000 dans `phase2/sync/recalculer_types_contacts.py`. Cela donne 19 tranches au lieu de 7, bornes vérifiées : croissantes, sans doublon, de `''` à `99999999`. Ce chiffre n'est lu que par ce script ; la règle de calcul et le repli sur l'appel unique ne changent pas. Retour arrière : remettre 15000.
+
+⚠ **Ce que ce geste NE règle PAS** : le premier appel reste exposé au réchauffement d'une base froide ou occupée. Il est couvert par les 4 essais du client, puisque l'essai annulé a déjà réchauffé la base. Le geste allège toutes les autres tranches, mesuré sous la même charge : 15 000 → 4,6 s, 5 000 → 3,2 s au plus. Si les journaux de Supabase montrent encore un dépassement sur la 1re tranche, la suite serait une première tranche très petite, ou un appel de réchauffement ; rien de cela n'est fait.
+⛔ **Écarté** : relever la limite de 8 s pour `service_role`. Cela toucherait le worker et tous les scripts.
+
+⏰ **Le 06/11 au matin**, regarder les journaux Postgres de Supabase vers 05:30 UTC : y a-t-il un `canceling statement due to statement timeout` ? Puis compter les appels à `rpc/app_recalculer_types_tranche` : 19 attendus, tous en 200.
