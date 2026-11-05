@@ -1207,3 +1207,7 @@ champ, la valeur de Hektor en grisé) ; « Le passer en ancien » / « Le remett
 
 **Contrôle** : `npm run build` vert (types compris) ; le moniteur charge 45 sondes dont la nouvelle. ⏰ À voir EN RÉEL
 après la pose et le push : une saisie sur une fiche, puis la nuit.
+**✅ POSÉ le 05/11 vers 14:37 UTC** (Frédéric : « colle le sql et je pousse » ; migration
+`patch_registre_saisie_lot_c_2026_11_05`) : les 9 contrôles de la répétition sont VERTS (carnet vide, aucune saisie). La
+nuit des négociateurs a maintenant l'empreinte `a2dab5d05f2b02f0d03357b510679785` (avant : `725267743d…`, que l'inverse
+sait retrouver).
