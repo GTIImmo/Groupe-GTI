@@ -1781,6 +1781,13 @@ pour tout le monde (au rechargement). Retour arrière : `admin` ou `off`. **Suit
   métier » (3.2, au menu) — c'est par là qu'on range un contact dans le catalogue. À retirer si Frédéric le demande.
 - Essai : `test_metier_partenaire.cjs` 50/50 ; le contrôle (50) vérifie qu'aucune porte ne passe encore la valeur — à
   changer avec 3.5.
+- ✅ **Poussé (`732109c`, avec 3 commits « Registre » d'une autre session, « Vas-y ») et vu en ligne le 05/11** :
+  PICARD (10177505) et Michelle BONNET (10011026) = fiche **Mandant** d'avant (Recherche, Biens, pas de bouton de
+  métier) ; le syndic GIBERT IMMOBILIER (10650712) = fiche ordinaire ; un notaire à rôle (10008890) = fiche notaire
+  intacte (Dossiers en cours, Actes ≤ 30 jours…). Le bloc « Métier » reste visible avec « Changer ».
+- ⚠ **Pour 3.5** : M. Rachid RABHI (10000258) a le métier notaire au registre (Netty) mais aucun rôle notaire dans les
+  transactions → il n'a PAS la fiche notaire (c'était déjà le cas avant). Le catalogue devra dire quelle fiche ouvrir
+  pour les notaires du registre sans transaction (registre : 1 656 notaires).
 
 ### 7 ter. Les dépendances (techniques, pas un ordre décidé)
 
