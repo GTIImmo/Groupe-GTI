@@ -1399,3 +1399,10 @@ rapport).
 
 **Reste** : pousser APRÈS la nuit du 06/11 (Render se déploie seul) ; puis mesurer en lecture ce que donneraient les 2 304
 liens (combien changent, lesquels) ; puis voir une page en vrai.
+
+**✅ EN LIGNE le 05/11 (poussé par Frédéric ; Render sur f889043), prouvé par deux vrais liens** : Firminy
+(u1ITQE0yMsQrCSmh), déjà juste → page identique, copie NON réécrite (updated_at du 31/10 inchangé) ; Dunières
+(HV8d8BjbHoKY2YDh), copie à tence@ → la page rend dunieres@, copie réécrite à 19:43:05. ⭐ MESURE : seuls **443 liens sont
+ACTIFS** sur 2 304 (les autres répondent 404 « Lien RDV introuvable », sans rapport) ; registre encore vide, UN SEUL lien actif
+changeait (celui de Dunières). Les 1 107 « mails à changer » comptés avant étaient presque tous des liens INACTIFS.
+⏰ Reste : après la nuit du 06/11, mesurer les 443 contre le registre rempli.
