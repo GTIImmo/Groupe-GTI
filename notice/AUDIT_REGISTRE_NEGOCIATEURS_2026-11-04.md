@@ -684,3 +684,11 @@ appelait « anciens comptes d'agence » : FAUX. Le n° 2 porte encore 31 003 con
   personne « agence » du registre est incomplète et marquée inactive alors que l'agence vit.
 ⏳ Remède à proposer (écriture en base, accord requis) : rattacher les comptes 25, 22, 24, 23 à leur agence, et faire dire
 « agence » (jamais « ancien ») à l'écran pour le type agence.
+- ✅ **CORRIGÉ le 05/11** (Frédéric : « Rattache oui ») — `supabase/patch_registre_negociateurs_comptes_agence_2026-11-05.sql`
+  (+ `_INVERSE`), migration `registre_negociateurs_comptes_agence_2026_11_05`. Comptes d'agence rattachés PAR DÉCISION
+  (la nuit ne les touche pas, ne les marque jamais absents — même règle que le compte admin n° 4) : n° 25 → Groupe GTI
+  Saint-Etienne (créé), n° 22 → Groupe GTI Issoire (créé), n° 24 → Groupe Gti Le Puy en Velay (fiche déplacée depuis
+  « Utilisateur supprimé n° 24 », qui reste, vide, avec une note), n° 23 → Groupe GTI Ambert (de « numéro de répartition »
+  à compte d'agence). Les 4 agences ACTIVES. Éprouvé avant dans une transaction annulée, nuit à blanc comprise (aucun
+  évènement nouveau sur ces fiches). Mesuré après : **18 comptes d'agence sur 19 sous leur agence** ; reste le n° 26
+  (agence 19 « Agences supprimée »), non demandé ; 8 lignes de journal ; 0 signal ouvert.
