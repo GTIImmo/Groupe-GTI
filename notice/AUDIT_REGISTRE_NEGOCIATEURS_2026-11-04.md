@@ -692,3 +692,15 @@ appelait « anciens comptes d'agence » : FAUX. Le n° 2 porte encore 31 003 con
   à compte d'agence). Les 4 agences ACTIVES. Éprouvé avant dans une transaction annulée, nuit à blanc comprise (aucun
   évènement nouveau sur ces fiches). Mesuré après : **18 comptes d'agence sur 19 sous leur agence** ; reste le n° 26
   (agence 19 « Agences supprimée »), non demandé ; 8 lignes de journal ; 0 signal ouvert.
+
+## 26. LA RÉPARTITION DES HONORAIRES LIT LE REGISTRE (05/11) — Frédéric : « Vas-y »
+
+Deux lectures de l'annuaire restaient autour de la répartition (`lib/api.ts`) :
+- `loadRepartitionPersonnes` — la liste des négociateurs ACTIFS proposés dans la fenêtre de répartition (par n° de
+  COMPTE, celui que la répartition enregistre) ;
+- `loadNomsNegociateurs` — le NOM d'un négociateur par son e-mail (registre des transactions : fiche, menu, recherche).
+Les deux lisent maintenant les fiches du REGISTRE (actives seulement pour la première ; la fiche active d'abord pour la
+seconde), l'annuaire en REPLI (registre illisible ou vide). Les lignes de répartition déjà saisies ne changent pas.
+Mesuré avant : 155 e-mails des deux côtés, **0 nom différent**, même ensemble de négociateurs actifs (0 d'un côté sans
+l'autre). Build vert. ⏳ À pousser, puis voir la fenêtre de répartition et un nom dans Transactions.
+Reste à l'étape 3 : les DROITS (`app_mes_chaines_nommees`, ce que voit un négociateur).

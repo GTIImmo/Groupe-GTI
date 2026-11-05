@@ -6604,6 +6604,29 @@ export type RepartitionLigne = {
  *    C'est precisement ce que Hektor ne sait pas faire. */
 export async function loadRepartitionPersonnes(): Promise<RepartitionPersonne[]> {
   if (!hasSupabaseEnv || !supabase) return []
+  // ⭐ 05/11/2026 (registre des négociateurs, audit §26) : les fiches ACTIVES du REGISTRE d'abord (même n° de compte, même
+  //   nom, même agence que l'annuaire -- mesuré : 30 actifs identiques), l'annuaire en repli si le registre est illisible
+  //   ou vide. Le n° de compte reste celui que la répartition enregistre : rien ne change pour les lignes déjà saisies.
+  {
+    const { data: fiches, error: erreurRegistre } = await supabase
+      .from('app_negociateur_fiche')
+      .select('hektor_user_id,nom_vu,agence_nom')
+      .eq('sorte', 'fiche_negociateur')
+      .eq('actif_chez_hektor', true)
+      .limit(1000)
+    if (!erreurRegistre && fiches && fiches.length) {
+      const vus = new Set<string>()
+      const out: RepartitionPersonne[] = []
+      for (const f of fiches as Array<{ hektor_user_id?: string | null; nom_vu?: string | null; agence_nom?: string | null }>) {
+        const idUser = String(f.hektor_user_id ?? '').trim()
+        if (!idUser || vus.has(idUser)) continue
+        vus.add(idUser)
+        out.push({ idUser, nom: (f.nom_vu ?? '').trim() || `Utilisateur ${idUser}`, agenceNom: f.agence_nom ?? null })
+      }
+      return out.sort((a, b) => a.nom.localeCompare(b.nom, 'fr'))
+    }
+    if (erreurRegistre) console.warn('[répartition] registre illisible, repli sur l’annuaire', erreurRegistre.message)
+  }
   const { data, error } = await supabase
     .from('app_hektor_negotiator_agency_directory')
     .select('hektor_user_id,display_name,agence_nom,is_active')
@@ -9316,6 +9339,27 @@ export async function loadNomsNegociateurs(emails: Array<string | null | undefin
       if (nom) out.set(cle, nom)
     }
     return out
+  }
+  // ⭐ 05/11/2026 (audit §26) : le REGISTRE d'abord -- il garde toutes les fiches, anciens compris ; la fiche active passe
+  //   devant quand un e-mail en a plusieurs. L'annuaire en repli (registre illisible ou vide).
+  try {
+    const { data: fiches, error: erreurRegistre } = await supabase
+      .from('app_negociateur_fiche')
+      .select('email_vu,nom_vu,actif_chez_hektor')
+      .eq('sorte', 'fiche_negociateur')
+      .order('actif_chez_hektor', { ascending: false })
+      .limit(2000)
+    if (!erreurRegistre && fiches && fiches.length) {
+      for (const f of fiches as Array<{ email_vu?: string | null; nom_vu?: string | null }>) {
+        const cle = String(f.email_vu ?? '').trim().toLowerCase()
+        const nom = String(f.nom_vu ?? '').trim()
+        if (!cle || !nom || !cles.has(cle) || out.has(cle)) continue
+        out.set(cle, nom)
+      }
+      return out
+    }
+  } catch {
+    /* repli sur l'annuaire */
   }
   try {
     const { data, error } = await supabase
