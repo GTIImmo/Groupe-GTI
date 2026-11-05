@@ -33279,7 +33279,9 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   if ((props.allowMarkValidation || props.allowMarkDiffusable) && !isLightweightDetail) ckMoreItems.push({ label: 'Pilotage', ico: '<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><path d="M4 22V15"/>', onClick: () => setPilotageOpen(true) })
   // Réaffecter = ouvrir la modale d'affectation (qui crée le job worker assign_hektor_negotiator),
   // PAS naviguer vers l'onglet Contact (bug : le worker dédié n'était jamais déclenché).
-  if (props.onMissingNegotiator && !isLightweightDetail) ckMoreItems.push({ label: 'Réaffecter le négociateur', ico: CK_ICON.contact, onClick: () => props.onMissingNegotiator?.(dossier) })
+  // 05/11/2026 (audit §27) : masqué pour un négociateur -- le geste est réservé aux admins et managers, et l'entrée ne lui
+  //   montrait qu'un message d'erreur. Les panneaux (photos, documents, mandat) gardent leur message « demande à un admin ».
+  if (props.onMissingNegotiator && !isLightweightDetail && props.profileRole !== 'commercial') ckMoreItems.push({ label: 'Réaffecter le négociateur', ico: CK_ICON.contact, onClick: () => props.onMissingNegotiator?.(dossier) })
   if (ckMoreItems.length > 0 && ((props.onArchiveAnnonce && !isLightweightDetail) || props.onDeleteAnnonce)) ckMoreItems.push({ sep: true })
   if (props.onArchiveAnnonce && !isLightweightDetail) ckMoreItems.push({ label: 'Archiver', ico: '<path d="M3 7h18v4H3zM5 11v9h14v-9M9 15h6"/>', onClick: () => props.onArchiveAnnonce?.(dossier) })
   // Régression corrigée (audit §5 bis #11) : le désarchivage existait dans l'ancienne fiche
@@ -37097,7 +37099,9 @@ function GoogleAgendaGlobalScreen(props: {
 
   useEffect(() => {
     if (!calendarEmail && defaultEmail) setCalendarEmail(defaultEmail)
-  }, [calendarEmail, defaultEmail])
+    // 05/11/2026 : un négociateur reste sur SA boîte (l'agenda lu et celui où se crée un RDV)
+    else if (!canSelectTeam && defaultEmail && normalizeEmail(calendarEmail) !== normalizeEmail(defaultEmail)) setCalendarEmail(defaultEmail)
+  }, [calendarEmail, defaultEmail, canSelectTeam])
 
   useEffect(() => {
     setAvailability(null)
@@ -37196,7 +37200,9 @@ function GoogleAgendaGlobalScreen(props: {
         <div className="google-agenda-global-controls">
           <label className="filter-field">
             <span>Agenda</span>
-            <input list="google-agenda-global-calendar-options" value={calendarEmail} onChange={(event) => setCalendarEmail(event.target.value)} placeholder={`nego@${googleWorkspaceDomain}`} />
+            {/* 05/11/2026 (audit §27, Frédéric) : un négociateur n'a accès qu'à SA boîte -- plus de saisie libre d'une autre
+                adresse ; admin et manager gardent le choix de l'équipe. */}
+            <input list="google-agenda-global-calendar-options" value={canSelectTeam ? calendarEmail : (defaultEmail || calendarEmail)} onChange={(event) => { if (canSelectTeam) setCalendarEmail(event.target.value) }} readOnly={!canSelectTeam} placeholder={`nego@${googleWorkspaceDomain}`} />
             <datalist id="google-agenda-global-calendar-options">
               {calendarOptions.map((option) => <option key={option.email} value={option.email}>{option.label}</option>)}
             </datalist>
@@ -45329,7 +45335,7 @@ function ContactEditModalV2(props: {
                 <option value="">{props.profileRole === 'commercial' ? 'Accès personnel' : 'Choisir le négociateur'}</option>
                 {availableHektorNegotiators.map((negotiator) => (
                   <option key={`edit-hektor-user-${negotiator.idUser}`} value={negotiator.idUser}>
-                    {negotiator.label}{negotiator.agenceNom ? ` — ${negotiator.agenceNom}` : ''}{negotiator.email ? ` — ${negotiator.email}` : ''}
+                    {negotiator.label}{negotiator.actif === false ? ' (ancien)' : ''}{negotiator.agenceNom ? ` — ${negotiator.agenceNom}` : ''}{negotiator.email ? ` — ${negotiator.email}` : ''}
                   </option>
                 ))}
               </select>

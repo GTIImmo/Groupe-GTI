@@ -378,6 +378,8 @@ export type HektorNegotiatorOption = {
   hektorNegociateurId?: string | null
   hektorAgenceId?: string | null
   agenceIdUser?: string | null
+  /** 05/11/2026 : faux = un ANCIEN (fiche inactive chez Hektor), affiché « (ancien) » quand il est la valeur en place. */
+  actif?: boolean
 }
 
 export type HektorAgencyOption = {

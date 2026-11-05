@@ -6504,16 +6504,17 @@ export async function loadNegotiatorOptionForContact(params: {
   const negId = String(params.hektorNegociateurId ?? '').trim()
   const email = normalizeEmail(params.negociateurEmail)
   if (!negId && !email) return null
-  const selectCols = 'hektor_negociateur_id,hektor_user_id,hektor_agence_id,agence_id_user,agence_nom,display_name,email'
-  let row: { hektor_negociateur_id?: string | number | null; hektor_user_id?: string | number | null; hektor_agence_id?: string | number | null; agence_id_user?: string | number | null; agence_nom?: string | null; display_name?: string | null; email?: string | null } | null = null
+  const selectCols = 'hektor_negociateur_id,hektor_user_id,hektor_agence_id,agence_id_user,agence_nom,display_name,email,is_active'
+  let row: { hektor_negociateur_id?: string | number | null; hektor_user_id?: string | number | null; hektor_agence_id?: string | number | null; agence_id_user?: string | number | null; agence_nom?: string | null; display_name?: string | null; email?: string | null; is_active?: boolean | null } | null = null
   // ⭐ 04/11/2026 (audit §23) : le REGISTRE d'abord -- il garde toutes les fiches, anciens compris (l'annuaire est
   //   reconstruit chaque nuit). Par le n° de négociateur, à défaut par l'e-mail ; l'annuaire en repli.
   {
-    const regCols = 'hektor_negociateur_id,hektor_user_id,hektor_agence_id,agence_id_user,agence_nom,nom_vu,email_vu'
+    const regCols = 'hektor_negociateur_id,hektor_user_id,hektor_agence_id,agence_id_user,agence_nom,nom_vu,email_vu,actif_chez_hektor'
     const enLigne = (f: Record<string, unknown> | undefined) => (f ? {
       hektor_negociateur_id: f.hektor_negociateur_id as string | null, hektor_user_id: f.hektor_user_id as string | null,
       hektor_agence_id: f.hektor_agence_id as string | null, agence_id_user: f.agence_id_user as string | null,
       agence_nom: f.agence_nom as string | null, display_name: f.nom_vu as string | null, email: f.email_vu as string | null,
+      is_active: f.actif_chez_hektor === true,
     } : null)
     if (negId) {
       const { data, error } = await supabase.from('app_negociateur_fiche').select(regCols).eq('sorte', 'fiche_negociateur').eq('hektor_negociateur_id', negId).limit(1)
@@ -6555,6 +6556,7 @@ export async function loadNegotiatorOptionForContact(params: {
     hektorNegociateurId: row.hektor_negociateur_id == null ? null : String(row.hektor_negociateur_id),
     hektorAgenceId: row.hektor_agence_id == null ? null : String(row.hektor_agence_id),
     agenceIdUser: row.agence_id_user == null ? null : String(row.agence_id_user),
+    actif: row.is_active == null ? undefined : row.is_active === true,
   }
 }
 

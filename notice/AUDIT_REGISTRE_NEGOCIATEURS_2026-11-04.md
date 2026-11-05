@@ -737,3 +737,15 @@ l'annuaire avant le registre, 0 agence. Ce qui reste, et pourquoi :
   2006-2012 du compte n° 24 (« Cet utilisateur a été supprimé » chez Hektor) passent de « Négociateur supprimé » à l'agence
   du Puy dans le pilotage ; Ambert (8 lignes) était déjà à Ambert ; les comptes 22 et 25 ne portent aucune ligne.
 Le plan des menus (§27) continue SANS agences.
+
+## 29. Menus de choix, 1re livraison (05/11) — Frédéric : « Oui, commence »
+
+- MODIFICATION D'UN CONTACT : le comportement voulu EXISTAIT déjà (un négociateur ne voit que son nom + le négociateur en
+  place du contact → il garde ou met son nom). Ajouté : « (ancien) » à côté du négociateur en place quand sa fiche est
+  inactive (`HektorNegotiatorOption.actif`, rempli par `loadNegotiatorOptionForContact` depuis le registre ou l'annuaire).
+- RÉAFFECTER LE NÉGOCIATEUR D'UN BIEN : l'entrée du menu « Plus » de la fiche bien est MASQUÉE pour un négociateur (elle ne
+  lui montrait qu'une erreur). Les panneaux photos / documents / mandat gardent leur message « demande à un admin ».
+- AGENDA GLOBAL : pour un négociateur, le champ « Agenda » est en lecture seule sur SA boîte, et l'agenda lu (et celui où se
+  crée un RDV) est ramené à sa boîte s'il en différait. Admin et manager inchangés.
+- Build vert. ⏳ À pousser. ⏳ Reste le gros morceau : les FILTRES « Négociateur » (tout le monde pour tous, case « afficher
+  les anciens ») et la même case dans Pilotage, Transactions, Utilisateurs.
