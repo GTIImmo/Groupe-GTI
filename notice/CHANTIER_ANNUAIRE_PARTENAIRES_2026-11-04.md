@@ -1420,6 +1420,51 @@ lignes chez Hektor : même nombre, nouvelle valeur), puis la supprimer.
 - Ménage NON fait (décision de Frédéric) : les lignes en trop des fiches d'essai (604020…) et le numéro en double de
   GIMBERT 603585 / BRUNON 602945.
 
+## 22. D-1 « LE MÉTIER D'UN PARTENAIRE CRÉÉ DANS L'APP EST PERDU » — AUDIT (05/11, « enchaîne D1 ») — rien codé
+
+**Ce qui est déjà tranché** : D2 (04/11, Frédéric) — le métier et les liens vivent **chez nous seulement**, rien ne part
+chez Hektor pour ce chantier ; recommandation acceptée : « ne rien changer à la création » (le chemin Hektor existe et il
+est prouvé). ⇒ D-1 ne se répare PAS chez Hektor (son métier « Non défini » est sans conséquence pour nous) : il faut que
+**notre registre** (`app_partenaire_metier`) reçoive le métier choisi à la création.
+**Ce qui existe** : `app_partenaire_metier_ecrire(p_contact, p_metier, p_retirer)` (lot 2, SECURITY DEFINER, compte
+actif exigé, source « ecran », trace de l'auteur) — **appelée par personne**. La nuit (`registre_partenaires_reprise.py`)
+n'AJOUTE que ce qui manque et **ne retire jamais un métier** ⇒ une ligne « ecran » survit.
+**Le trou** : la création (`app_create_contact_optimistic`, 9 237 caractères, empreinte `278d5570…`) range la charge
+(dont `partner_job_id`) dans le travail `create_hektor_contact` et la fiche provisoire, mais n'écrit **rien** au registre ;
+le worker envoie `metier` à Hektor, qui l'ignore.
+**Mesure (05/11)** : depuis juin, **3** créations de partenaire avec métier, toutes mes fiches d'essai (20000038,
+20000039, 20000040), supprimées ⇒ **0 vraie fiche touchée**, le défaut dort.
+**Correspondance code Hektor → métier du registre** (celle de la nuit, `METIER_HEKTOR`) : 1 promoteur, 3 et 22
+agent_immobilier, 4 diagnostiqueur, 5 syndic, 8 et 18 societe, 15 apporteur, 17 administration, 19 banque, 20
+mandataire, 21 autre, 23 technicien ; + 2 notaire et 6 autre ; **7 Collaborateur et 16 « À supprimer » : rien d'écrit**.
+**Remède proposé (A, recommandé)** : un déclencheur ADDITIF sur `app_console_job`, seulement à l'insertion d'un travail
+`create_hektor_contact` dont la charge porte `partner_job_id` et `app_identite` : il écrit la ligne du registre (source
+« ecran », auteur = celui qui crée), dans la MÊME transaction que la création ; la grosse fonction de création n'est pas
+touchée ; toutes les portes de création sont couvertes. Il ne doit JAMAIS faire échouer une création (une erreur est
+écrite au journal, pas levée). Interrupteur app_setting proposé `partenaire_metier_a_la_creation`. Patch + répétition +
+inverse, collés sur accord. **B** (autre forme) : l'écran appelle `app_partenaire_metier_ecrire` juste après la création
+(code du front, déploiement Vercel ; une seconde porte de création l'oublierait).
+**Vu en passant (non traité)** : supprimer un contact ne retire pas ses lignes du registre (le nettoyage de
+`delete_hektor_contact` ne connaît pas `app_partenaire_metier`) — à décider.
+
+✅ **REMÈDE A ÉCRIT ET RÉPÉTÉ le 05/11** (« Oui, vas-y (A) ») — **rien n'est posé chez Supabase** :
+- `supabase/patch_partenaire_metier_creation_2026-11-05.sql` : interrupteur `partenaire_metier_a_la_creation` posé
+  « off » ; fonction `app_partenaire_metier_a_la_creation_trg()` (SECURITY DEFINER, fermée à anon et authenticated) ;
+  déclencheur AFTER INSERT sur `app_console_job` WHEN `job_type = 'create_hektor_contact'`. Il n'écrit que pour
+  `contact_kind = partenaire` avec `partner_job_id` et `app_identite` ; source « ecran », auteur = `requested_by` ;
+  pas de doublon ; une erreur = WARNING, la création n'échoue jamais. Gardes : n'existe pas déjà, empreintes des deux
+  contrôles (`0d785740…` métier, `e322ef89…` source). Modèle : `app_contact_saisie_modif_job_trg` (8a-B).
+- `…_INVERSE.sql` : retire déclencheur, fonction, interrupteur ; vérifie qu'aucune trace ne reste et que les deux
+  déclencheurs voisins de `app_console_job` sont là. Les lignes déjà écrites RESTENT (vrais métiers).
+- `…_REPETITION.sql` (générée depuis les deux) : **26 / 26 essais verts**, joués chez Supabase à 11:3x dans une
+  transaction annulée (témoin éteint ; syndic ; pas de doublon ; 2e métier ; 7, 16, inconnu → rien ; acquéreur ou sans
+  type → rien ; une MODIFICATION → rien ; sans numéro ou sans métier → rien ; les 13 codes de la correspondance un par
+  un ; 26 travaux créés ; registre qui refuse → le travail est créé quand même ; `app_create_contact_optimistic` intacte
+  `278d5570…` ; fonction fermée ; retour arrière complet). Vérifié après : 0 déclencheur, 0 fonction, 0 interrupteur,
+  0 ligne et 0 travail d'essai.
+**Reste, chacun sur accord** : coller le patch ; allumer ; essai réel (créer un partenaire avec un métier depuis l'écran,
+lire sa ligne au registre, supprimer la fiche — et décider du sort de sa ligne au registre, voir « vu en passant »).
+
 ### 7 ter. Les dépendances (techniques, pas un ordre décidé)
 
 - 0 avant tout le reste ; 0.1 avant B2 ; 0.2 avant B1 ; 0.6 avant B5 ; 0.3 avant B6 ; 0.4 avant B7 ; 0.5 avant C2.
