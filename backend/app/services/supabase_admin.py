@@ -54,7 +54,77 @@ class SupabaseAdminService:
         self._raise_for_response(response, fallback)
         return response.json() or []
 
-    def _resolve_hektor_google_identity(self, email: str, role: str) -> dict[str, Any]:
+    # ---- Le lien par le REGISTRE (05/11/2026) -------------------------------------------------------------------
+    # Frédéric : « ajout d'utilisateur dans l'app qui se relie à l'utilisateur Hektor actif connu ». Audit :
+    # notice/AUDIT_REGISTRE_NEGOCIATEURS_2026-11-04.md §41. Quand l'e-mail du compte ne trouve rien chez Hektor (Franck :
+    # compte @gti-immobilier.fr, fiche Hektor en gmail), le compte prend la fiche négociateur de SA PERSONNE du registre.
+    # ⛔ « Il faut surtout pas casser les workers » : ce numéro part dans les gestes (le worker exécute au nom de ce compte,
+    #   et refuse tout numéro qui n'est pas un NÉGOCIATEUR de app_user_directory -- loadHektorDirectoryUserById). Donc :
+    #   UNE SEULE fiche négociateur ACTIVE chez Hektor, confirmée par les deux annuaires que lit le worker ; jamais une fiche
+    #   éteinte, jamais un compte secrétaire ou administrateur. Ceux-là (Frédéric 4, Franck 7, Pauline 8…) sont NOTÉS dans
+    #   metadata_json.comptes_hektor, que rien n'envoie chez Hektor.
+
+    def _registre_fiches(self, personne: int) -> list[dict[str, Any]]:
+        return self._rest_rows(
+            "app_negociateur_fiche",
+            {
+                "select": "sorte,hektor_negociateur_id,hektor_user_id,agence_nom,email_vu,user_type,actif_chez_hektor",
+                "app_personne_id": f"eq.{int(personne)}",
+                "limit": 100,
+            },
+            "Unable to read app_negociateur_fiche",
+        )
+
+    def _identite_par_registre(self, personne: int, fiches: list[dict[str, Any]], metadata: dict[str, Any]) -> dict[str, Any] | None:
+        actives = [f for f in fiches if f.get("sorte") == "fiche_negociateur" and f.get("actif_chez_hektor") is True
+                   and str(f.get("hektor_user_id") or "").strip()]
+        metadata["registre_fiches_negociateur_actives"] = len(actives)
+        if len(actives) != 1:
+            return None  # aucune, ou plusieurs : rien n'est deviné
+        fiche = actives[0]
+        user_id = str(fiche["hektor_user_id"]).strip()
+        nego_id = str(fiche.get("hektor_negociateur_id") or "").strip()
+        # les deux annuaires que lit le worker doivent la connaître ACTIVE, sinon le geste échouerait
+        annuaire = [
+            row for row in self._rest_rows(
+                "app_hektor_negotiator_agency_directory",
+                {"select": "hektor_negociateur_id,hektor_user_id,agence_nom,email,is_active",
+                 "hektor_user_id": f"eq.{user_id}", "is_active": "eq.true", "limit": 10},
+                "Unable to resolve Hektor negotiator agency directory",
+            )
+            if row.get("is_active") is True and (not nego_id or str(row.get("hektor_negociateur_id") or "").strip() == nego_id)
+        ]
+        utilisateurs = self._rest_rows(
+            "app_user_directory",
+            {"select": "id_user,user_type", "id_user": f"eq.{user_id}", "user_type": "eq.NEGO", "limit": 1},
+            "Unable to resolve Hektor user directory",
+        )
+        if len(annuaire) != 1 or not utilisateurs:
+            metadata["registre_refus"] = "fiche_active_absente_des_annuaires_du_worker"
+            return None
+        # l'e-mail de la fiche n'est repris que s'il est à elle seule (une boîte partagée d'agence ouvrirait
+        # l'agenda et Gmail de toute l'agence à un négociateur : _assert_workspace_subject_allowed)
+        email_fiche = self._normalize_email(fiche.get("email_vu"))
+        if email_fiche:
+            partage = self._rest_rows(
+                "app_negociateur_fiche",
+                {"select": "app_personne_id", "email_vu": f"eq.{email_fiche}", "app_personne_id": f"neq.{int(personne)}", "limit": 1},
+                "Unable to read app_negociateur_fiche",
+            )
+            if partage:
+                metadata["registre_email_partage"] = email_fiche
+                email_fiche = ""
+        metadata["match_source"] = "registre_fiche_active"
+        metadata["agence_nom"] = annuaire[0].get("agence_nom")
+        return {
+            "link_status": "linked",
+            "hektor_user_id": user_id,
+            "hektor_negociateur_id": nego_id or None,
+            "negociateur_email": email_fiche or None,
+            "metadata_json": metadata,
+        }
+
+    def _resolve_hektor_google_identity(self, email: str, role: str, personne: int | None = None) -> dict[str, Any]:
         normalized = self._normalize_email(email)
         user_rows = [
             row for row in self._rest_rows(
@@ -87,6 +157,15 @@ class SupabaseAdminService:
             "user_directory_count": len(user_rows),
             "active_agency_directory_count": len(agency_rows),
         }
+        fiches_registre: list[dict[str, Any]] = []
+        if personne is not None:
+            fiches_registre = self._registre_fiches(personne)
+            metadata["registre_personne"] = int(personne)
+            # le compte Hektor de la PERSONNE (administrateur, secrétaire) : noté pour l'écran, jamais envoyé
+            metadata["comptes_hektor"] = [
+                {"hektor_user_id": str(f.get("hektor_user_id") or ""), "type": f.get("user_type"), "actif": f.get("actif_chez_hektor") is True}
+                for f in fiches_registre if f.get("sorte") == "compte_utilisateur"
+            ]
 
         conflict_reason: str | None = None
         selected_user = user_rows[0] if len(user_rows) == 1 else None
@@ -139,6 +218,12 @@ class SupabaseAdminService:
                 "metadata_json": metadata,
             }
 
+        # l'e-mail n'a rien trouvé : la fiche négociateur active de la personne du registre (05/11, voir plus haut)
+        if personne is not None:
+            par_registre = self._identite_par_registre(personne, fiches_registre, metadata)
+            if par_registre:
+                return par_registre
+
         metadata["match_source"] = "workspace_only"
         if role == "commercial":
             metadata["conflict_reason"] = "commercial_without_hektor_match"
@@ -158,14 +243,15 @@ class SupabaseAdminService:
             "metadata_json": metadata,
         }
 
-    def _sync_google_workspace_identity(self, *, user_id: str, email: str, role: str, is_active: bool) -> dict[str, Any] | None:
+    def _sync_google_workspace_identity(self, *, user_id: str, email: str, role: str, is_active: bool,
+                                        personne: int | None = None) -> dict[str, Any] | None:
         normalized = self._normalize_email(email)
         if not self._is_workspace_email(normalized):
             if is_active:
                 raise HTTPException(status_code=400, detail=f"Utilisateur actif hors domaine {self.settings.google_workspace_domain} refuse")
             return None
 
-        resolved = self._resolve_hektor_google_identity(normalized, role) if is_active else {
+        resolved = self._resolve_hektor_google_identity(normalized, role, personne) if is_active else {
             "link_status": "disabled",
             "hektor_user_id": None,
             "hektor_negociateur_id": None,
@@ -319,6 +405,13 @@ class SupabaseAdminService:
         self._journal_registre(int(cree["app_personne_id"]), f"{email} (personne née dans l'app, sans fiche Hektor)",
                                evenement="personne_nouvelle", a_signaler=True)
         return resume(cree, "cree")
+
+    @staticmethod
+    def _personne_reliee(registre: dict[str, Any] | None) -> int | None:
+        """La personne du registre à laquelle le compte EST relié après lier_registre_negociateurs (sinon None)."""
+        if not registre or registre.get("etat") not in ("relie", "deja", "cree") or registre.get("personne") is None:
+            return None
+        return int(registre["personne"])
 
     def _lier_registre_sans_echec(self, **params: Any) -> dict[str, Any]:
         try:
@@ -562,15 +655,17 @@ class SupabaseAdminService:
         profile = self._upsert_profile(profile_payload)
         if str(profile.get("id") or "") != str(user_id):
             raise HTTPException(status_code=500, detail="Profil utilisateur incoherent apres creation")
+        # 05/11/2026 : le REGISTRE D'ABORD, puis le compte Hektor -- qui peut alors passer par la personne du registre
+        registre = self._lier_registre_sans_echec(
+            user_id=user_id, email=email, nom=display_name, role=payload["role"], is_active=payload.get("isActive", True),
+            personne_choisie=payload.get("registrePersonneId"),
+        )
         identity = self._sync_google_workspace_identity(
             user_id=user_id,
             email=email,
             role=payload["role"],
             is_active=payload.get("isActive", True),
-        )
-        registre = self._lier_registre_sans_echec(
-            user_id=user_id, email=email, nom=display_name, role=payload["role"], is_active=payload.get("isActive", True),
-            personne_choisie=payload.get("registrePersonneId"),
+            personne=self._personne_reliee(registre),
         )
         return {
             "ok": True,
@@ -611,15 +706,17 @@ class SupabaseAdminService:
             timeout=30,
         )
         self._raise_for_response(response, "Unable to update user profile")
+        # 05/11/2026 : le REGISTRE D'ABORD, puis le compte Hektor (voir create_user)
+        registre = self._lier_registre_sans_echec(
+            user_id=payload["id"], email=email, nom=display_name, role=payload["role"], is_active=is_active,
+            personne_choisie=payload.get("registrePersonneId"), creer=False,
+        )
         identity = self._sync_google_workspace_identity(
             user_id=payload["id"],
             email=email,
             role=payload["role"],
             is_active=is_active,
-        )
-        registre = self._lier_registre_sans_echec(
-            user_id=payload["id"], email=email, nom=display_name, role=payload["role"], is_active=is_active,
-            personne_choisie=payload.get("registrePersonneId"), creer=False,
+            personne=self._personne_reliee(registre),
         )
         return {
             "ok": True,

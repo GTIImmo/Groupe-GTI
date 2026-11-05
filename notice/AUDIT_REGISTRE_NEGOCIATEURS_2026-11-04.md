@@ -1075,3 +1075,48 @@ rattachée** dans les fiches et les biens. Accents intacts (vérifiés hors cons
 `APP_REGISTRE_AGENCES=blanc` dans le .env (je ne lis ni n'écris le .env). Le passage à `1` = une décision à part, après
 lecture du compte rendu de la nuit.
 ⚠ Pas encore de sentinelle sur les écarts (`app_registre_journal.a_signaler`) : elle viendra avec les écrans (étape 3).
+
+## 41. LE LIEN « COMPTE DE L'APP → COMPTE HEKTOR » PASSE PAR LE REGISTRE (05/11) — Frédéric : « Vas-y »
+
+**La demande** : « ajout d'utilisateur dans l'app qui se relie à l'utilisateur Hektor actif connu » ; puis « moi j'ai un
+compte à relier (le compte principal), ensuite Franck, Caroline, Pauline et Delphine sont tous à relier sur des comptes
+secrétaires chez Hektor ».
+
+**Audit (code + base, 05/11)** :
+- `backend/app/services/supabase_admin.py` cherchait le compte Hektor **par l'e-mail seul**, et **seulement parmi les
+  NÉGOCIATEURS** (`app_user_directory.user_type = NEGO`), **AVANT** de relier le compte à sa personne du registre.
+  Résultat sur les 6 comptes de l'app : LEGRAND (30/5) et PEREIRA (51/26) reliés ; Franck (@gti, fiche Hektor en gmail),
+  Frédéric, Pauline et le compte d'essai NON reliés.
+- Les comptes Hektor de la personne sont DÉJÀ au registre (`app_negociateur_fiche`, sorte `compte_utilisateur`) :
+  Frédéric **ADMIN n° 4** · Franck **SECRÉTAIRE n° 7** · Caroline **5** · Pauline **8** (et un 2e, n° 3, adresse
+  sashagerphagnon@gmail.com — à confirmer par Frédéric) · Delphine **6**. Caroline et Delphine n'ont pas encore de compte
+  dans l'app ; leur e-mail Hektor est le leur, la création les reliera par l'e-mail.
+- **Qui lit le lien** : aucune fonction en base, ni le worker, ni la nuit. Le FRONT seul (`App.tsx` ~21140) : le
+  négociateur par défaut de la fiche contact et de l'agenda, et ce numéro PART DANS LES GESTES
+  (`hektor_user_id` → `resolveHektorExecutionUser`, qui **refuse tout numéro qui n'est pas un NEGO** de
+  `app_user_directory` — `loadHektorDirectoryUserById`, console_job_worker.js l. 2384). Le lien entre aussi dans la
+  RLS des rendez-vous (`negociateur_email`) et dans le droit Agenda/Gmail d'un négociateur
+  (`_assert_workspace_subject_allowed`).
+- ⛔ **Donc un compte SECRÉTAIRE ou ADMIN ne peut PAS aller dans `hektor_user_id`** : les gestes partiraient au nom d'une
+  secrétaire, ou échoueraient. Deux liens séparés.
+
+**Le correctif (serveur seul, `supabase_admin.py`)** :
+1. `create_user` / `update_user` : le **registre d'abord**, puis le compte Hektor (`_personne_reliee`).
+2. `_resolve_hektor_google_identity(…, personne)` : l'e-mail garde la priorité ; s'il ne trouve rien, la **fiche
+   négociateur ACTIVE de la personne** (`_identite_par_registre`) — seulement s'il y en a **exactement une**, confirmée
+   **active par les deux annuaires que lit le worker** ; son e-mail n'est repris que s'il n'appartient à aucune autre
+   personne (une boîte d'agence ouvrirait l'agenda et Gmail de l'agence). Jamais une fiche éteinte.
+3. Les comptes administrateur/secrétaire de la personne sont **notés** dans `metadata_json.comptes_hektor` (pour l'écran
+   du registre, étape 3), **jamais envoyés**.
+Mesure de la base au 05/11 : 0 personne à deux fiches actives, 0 fiche active à e-mail partagé, 0 fiche active hors
+`app_user_directory` — les garde-fous ne mordent sur personne aujourd'hui.
+
+**Contrôle hors ligne** : `backend/tests/test_lien_hektor_par_registre.py` — **13/13 verts** (les 6 vrais comptes +
+5 garde-fous + l'ordre registre → Hektor). **Avarie** : garde-fous retirés → les 4 essais de garde ROUGISSENT, Franck reste
+vert (ils mordent vraiment).
+
+**Ce qui reste** : pousser (Render se déploie seul) ; puis **réenregistrer le compte de Franck** dans l'écran Utilisateurs
+→ sa ligne doit porter `hektor_user_id 2`, `hektor_negociateur_id 1`, `match_source registre_fiche_active`, et
+`comptes_hektor` avec le 7. ⚠ Sa fiche active est rangée dans l'agence « Compte formation » (déjà le défaut de la fiche
+contact, par la ruse du nom). ⚠ Le lien reste une PHOTO prise à l'enregistrement : une mise à jour de nuit = étape à part.
+Retour arrière : `git revert` du commit.
