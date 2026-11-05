@@ -1531,6 +1531,18 @@ l'interrupteur allumé :
 **Reste, chacun sur accord** : redémarrage des 4 services (Frédéric) ; `partenaire_efface_a_la_suppression = on` ; essai
 réel (créer un partenaire avec métier → 1 ligne au registre → le supprimer → 0 ligne, compte rendu « done »).
 
+✅✅ **§23 ALLUMÉ ET PROUVÉ EN RÉEL le 05/11** (« Oui, vas-y », puis « C'est redémarré ») :
+- 4 services redémarrés par Frédéric à **12:37:05-07**, journaux sans erreur, mon code chargé.
+  ⚠ **Le fichier chargé portait AUSSI un changement NON commité de la session Youtrust** (modifié à 12:36:38) : la règle
+  D-5 étendue à `updateHektorMandantContact` (lot 6b P3). L'interrupteur `contact_coordonnees_remplacer` étant « on »,
+  **ce changement est ACTIF depuis 12:37** pour toute modification de mandant. Pas à moi : signalé à Frédéric et à la
+  session Youtrust (message envoyé), non touché.
+- `partenaire_efface_a_la_suppression = on` à **12:37:48**.
+- Fiche d'essai par l'écran : **ZZ ESSAI SUPPRESSION REGISTRE** (20000045 / Hektor 606235, SARL, Syndic) → ligne 1891
+  « syndic / ecran » au registre (D-1). Supprimée par l'écran → travail fait ; compte rendu
+  `cleanup.registre_des_partenaires = {status: done, metiers_effaces: 1, liens_effaces: 0}` ; **0 ligne pour 20000045** ;
+  0 fiche ; journal des suppressions 1 ; formulaire Hektor vide. Registre : **1 869 actifs** (inchangé).
+
 ### 7 ter. Les dépendances (techniques, pas un ordre décidé)
 
 - 0 avant tout le reste ; 0.1 avant B2 ; 0.2 avant B1 ; 0.6 avant B5 ; 0.3 avant B6 ; 0.4 avant B7 ; 0.5 avant C2.
