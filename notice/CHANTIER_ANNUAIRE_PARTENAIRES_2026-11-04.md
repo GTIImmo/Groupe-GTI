@@ -1864,6 +1864,7 @@ pour tout le monde (au rechargement). Retour arrière : `admin` ou `off`. **Suit
   faisait retomber sur `props.selectedContact` = le 1er client de la page (M. Julien NEYRET à la place de GIBERT, avec les
   liens de GIBERT). Difficile à atteindre (la fiche couvre l'interrupteur ; atteint par script), mais une fiche ne doit
   jamais montrer un autre contact : quitter le côté Partenaires ferme désormais la fiche du catalogue. Essai 66/66.
+  ✅ Poussé (`7dbd6bb`, « Ok ») et REJOUÉ en ligne : fiche GIBERT ouverte → côté Clients → la fiche se ferme, adresse `?ecran=contacts`.
   ⚠ Le repli `contactsDirectory.find(...) ?? contactsDirectory[0]` d'App.tsx est ANCIEN et sert à toute l'app : non
   touché, à signaler.
 
