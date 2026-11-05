@@ -267,6 +267,10 @@ export default function PilotageScreen() {
   const comptees = useMemo(() => (sources && repere ? appliquerRepartition(sources, repere) : sources), [sources, repere])
   const personnes = useMemo(() => (comptees && repere ? personnesPresentes(comptees, repere, agence) : []), [comptees, repere, agence])
   const personne = qui && repere ? repere.personnes.get(qui) ?? null : null
+  // Le menu « Négociateur » (05/11) : les anciens -- personnes inactives au registre -- seulement avec la case « Afficher les
+  //   anciens » ; les agences restent (« · agence ») ; la personne choisie reste toujours proposée.
+  const [voirAnciens, setVoirAnciens] = useState(false)
+  const personnesMenu = useMemo(() => personnes.filter((p) => voirAnciens || p.actif || p.type === 'agence' || p.cle === qui), [personnes, voirAnciens, qui])
   // Une agence où il n'a rien : le choix du négociateur tombe (seulement une fois les données lues).
   useEffect(() => {
     if (qui && sources && repere && !personnes.some((p) => p.cle === qui)) setQui(null)
@@ -379,9 +383,14 @@ export default function PilotageScreen() {
         <label className="pl-filtre">
           <span>Négociateur</span>
           <select value={qui ?? ''} onChange={(e) => setQui(e.target.value || null)} disabled={!repere}>
-            <option value="">{repere ? `Tous (${personnes.length})` : 'Annuaire indisponible'}</option>
-            {personnes.map((p) => <option key={p.cle} value={p.cle}>{p.nom}{p.type === 'agence' ? ' · agence' : p.actif ? '' : ' · ancien'}</option>)}
+            <option value="">{repere ? `Tous (${personnesMenu.length})` : 'Annuaire indisponible'}</option>
+            {personnesMenu.map((p) => <option key={p.cle} value={p.cle}>{p.nom}{p.type === 'agence' ? ' · agence' : p.actif ? '' : ' · ancien'}</option>)}
           </select>
+        </label>
+        {/* 05/11/2026 (audit §32) : les anciens seulement avec la case ; le choix en place reste proposé. */}
+        <label className="pl-filtre pl-case">
+          <input type="checkbox" checked={voirAnciens} onChange={(e) => setVoirAnciens(e.target.checked)} />
+          <span>Afficher les anciens</span>
         </label>
         {onglet !== 'stock' ? (
           <button type="button" className={`pl-bascule${comparer ? ' is-actif' : ''}`} aria-pressed={comparer} onClick={() => setComparer((x) => !x)}>Comparer à {libelleComparaison}</button>

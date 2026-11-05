@@ -14335,6 +14335,8 @@ export default function App() {
   const [newUserRegistrePersonne, setNewUserRegistrePersonne] = useState('')
   const [editUserRegistrePersonne, setEditUserRegistrePersonne] = useState('')
   const [editUserRegistreInitial, setEditUserRegistreInitial] = useState('')
+  // 05/11/2026 (audit §32) : les anciens de la liste « Personne du registre » seulement avec la case
+  const [voirAnciensRegistre, setVoirAnciensRegistre] = useState(false)
   const [requestModalRole, setRequestModalRole] = useState<'nego' | 'pauline'>('nego')
   const [requestModalDecision, setRequestModalDecision] = useState('in_progress')
   const [requestModalRefusalReason, setRequestModalRefusalReason] = useState('')
@@ -26245,11 +26247,15 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                     <span>Personne du registre des négociateurs</span>
                     <select value={newUserRegistrePersonne} onChange={(event) => setNewUserRegistrePersonne(event.target.value)}>
                       <option value="">Automatique (par l’e-mail ; sinon créée « sans fiche Hektor »)</option>
-                      {(registrePersonnes ?? []).filter((p) => p.type !== 'agence').map((p) => (
+                      {(registrePersonnes ?? []).filter((p) => p.type !== 'agence' && (voirAnciensRegistre || p.actif || String(p.id) === newUserRegistrePersonne)).map((p) => (
                         <option key={p.id} value={p.id} disabled={Boolean(p.appUserId)}>{p.nom}{p.email ? ` · ${p.email}` : ''}{p.actif ? '' : ' · ancien'}{p.appUserId ? ' · déjà relié' : ''}</option>
                       ))}
                     </select>
                     <small className="field-hint">{registrePersonnes === null ? 'Registre illisible : le compte sera relié automatiquement.' : 'À choisir quand l’e-mail du compte n’est pas celui de sa fiche Hektor (gmail, ancienne adresse).'}</small>
+                  </label>
+                  <label className="checkbox-inline">
+                    <input type="checkbox" checked={voirAnciensRegistre} onChange={(event) => setVoirAnciensRegistre(event.target.checked)} />
+                    Afficher les anciens dans « Personne du registre »
                   </label>
                   <label className="checkbox-inline">
                     <input type="checkbox" checked={newUserIsActive} onChange={(event) => setNewUserIsActive(event.target.checked)} />
@@ -26327,10 +26333,14 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                       <span>Personne du registre des négociateurs</span>
                       <select value={editUserRegistrePersonne} onChange={(event) => setEditUserRegistrePersonne(event.target.value)}>
                         <option value="">{editUserRegistreInitial ? 'Garder la personne actuelle' : 'Automatique (par l’e-mail ou le nom)'}</option>
-                        {(registrePersonnes ?? []).filter((p) => p.type !== 'agence').map((p) => (
+                        {(registrePersonnes ?? []).filter((p) => p.type !== 'agence' && (voirAnciensRegistre || p.actif || String(p.id) === editUserRegistrePersonne || String(p.id) === editUserRegistreInitial)).map((p) => (
                           <option key={p.id} value={p.id} disabled={Boolean(p.appUserId) && p.appUserId !== editingUserId}>{p.nom}{p.email ? ` · ${p.email}` : ''}{p.actif ? '' : ' · ancien'}{p.appUserId && p.appUserId !== editingUserId ? ' · déjà relié à un autre compte' : ''}</option>
                         ))}
                       </select>
+                    </label>
+                    <label className="checkbox-inline">
+                      <input type="checkbox" checked={voirAnciensRegistre} onChange={(event) => setVoirAnciensRegistre(event.target.checked)} />
+                      Afficher les anciens dans « Personne du registre »
                     </label>
                     <label className="checkbox-inline">
                       <input type="checkbox" checked={editUserIsActive} onChange={(event) => setEditUserIsActive(event.target.checked)} />

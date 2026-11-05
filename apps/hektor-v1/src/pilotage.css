@@ -475,3 +475,6 @@ button.pl-carte:focus-visible, .pl-ecran button:focus-visible, .pl-ecran select:
 }
 .app-shell .side-rail .screen-nav .nav-button[title="Pilotage"]::before { -webkit-mask-image: var(--pl-picto) !important; mask-image: var(--pl-picto) !important; }
 .app-shell.app-shell-modern.menu-net .side-rail .screen-nav .nav-button[title="Pilotage"] { --rn-i: var(--pl-picto); }
+/* 05/11/2026 : la case « Afficher les anciens » du menu Négociateur */
+.pl-filtre.pl-case { padding: 0 12px; cursor: pointer; }
+.pl-filtre.pl-case input { margin: 0; }

@@ -1250,6 +1250,8 @@ export default function RegistreTransactionsScreen({ isAdmin, libelleTypeBien, o
   const [sens, setSens] = useState<Sens>(depart.sens)
   const [agence, setAgence] = useState(depart.agence)
   const [nego, setNego] = useState(depart.nego)
+  // 05/11/2026 (audit §32) : les anciens du menu « Négociateur » seulement avec la case
+  const [voirAnciensNegos, setVoirAnciensNegos] = useState(false)
   const [noms, setNoms] = useState<Map<string, string>>(new Map())
   const [page, setPage] = useState(1)
   const [repartitions, setRepartitions] = useState<Map<string, RepartitionLigne[]>>(new Map())
@@ -1538,6 +1540,14 @@ export default function RegistreTransactionsScreen({ isAdmin, libelleTypeBien, o
     negociateurs.sort((a, b) => a.nom.localeCompare(b.nom, 'fr'))
   }
   if (nego && !negociateurs.some((item) => item.email === nego)) negociateurs.push({ email: nego, nom: noms.get(nego) ?? nego })
+  // Un ancien = une personne INACTIVE au registre (une agence n'en est pas un) ; inconnu du registre = montré (rien n'est
+  //   caché sur une lecture incomplète) ; le négociateur choisi reste toujours proposé.
+  const estAncien = (email: string) => {
+    const cle = repere?.parEmail.get(email)
+    const qui = cle ? repere?.personnes.get(cle) : undefined
+    return Boolean(qui && !qui.actif && qui.type !== 'agence')
+  }
+  const negociateursMenu = negociateurs.filter((item) => voirAnciensNegos || !estAncien(item.email) || item.email === nego)
 
   const horsDefaut = annee !== MEMOIRE_DEFAUT.annee || moisActif !== '' || etape !== null || tri !== 'recent' || sens !== 'desc' || nommeActif
     || Boolean(agenceActive) || Boolean(negoActif)
@@ -1683,9 +1693,13 @@ export default function RegistreTransactionsScreen({ isAdmin, libelleTypeBien, o
                 <Selecteur icone="personnes">
                   <select value={nego} onChange={(event) => setNego(event.target.value)}>
                     <option value="">Tous les négociateurs</option>
-                    {negociateurs.map((item) => <option key={item.email} value={item.email}>{item.nom}</option>)}
+                    {negociateursMenu.map((item) => <option key={item.email} value={item.email}>{item.nom}{estAncien(item.email) ? ' · ancien' : ''}</option>)}
                   </select>
                 </Selecteur>
+              </label>
+              <label className="rt-case">
+                <input type="checkbox" checked={voirAnciensNegos} onChange={(event) => setVoirAnciensNegos(event.target.checked)} />
+                Afficher les anciens
               </label>
             </>
           ) : null}

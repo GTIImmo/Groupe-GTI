@@ -802,3 +802,13 @@ portefeuille), et la vue en `security_invoker`. Éprouvé dans une transaction a
 Mélanie « ses biens seulement » 346 (les siennes), admin 24 577, catalogue 93. Vérifié après la pose : Mélanie lit 24 577 par
 la VUE et par la TABLE ; témoin positif — elle voit le cycle de son bien 62527 (mandat 18712) et de 59393 / 61739.
 Aucun changement pour les 8 comptes actuels (tous « réseau ») ; la faille est fermée pour les réglages restreints.
+
+## 32. La case « Afficher les anciens » partout (05/11) — Frédéric : « ON ENCHAINE ALORS »
+
+- PILOTAGE (menu « Négociateur ») : les personnes inactives au registre ne paraissent qu'avec la case ; les agences restent
+  (« · agence ») ; la personne choisie reste proposée. Style `.pl-filtre.pl-case`.
+- TRANSACTIONS (menu admin « Négociateur ») : même règle, la mention « · ancien » ajoutée ; un e-mail inconnu du registre
+  reste montré (rien n'est caché sur une lecture incomplète).
+- OUTIL UTILISATEURS (« Personne du registre », création et modification) : par défaut les 34 personnes actives au lieu de
+  167 ; la case « Afficher les anciens dans « Personne du registre » » montre tout ; la personne déjà reliée ou choisie reste.
+- Build vert. ⏳ À pousser et voir à l'écran.
