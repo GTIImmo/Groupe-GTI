@@ -1734,7 +1734,8 @@ trouvable (Archiver / Supprimer en bas au lieu du menu) ; la fiche client et la 
   pour les quatre libellés** (« Noter une affaire apportée », le plus long, compris). En ligne vers 15:00 : bureau et
   téléphone (cadre 390 px) sans coupure ni débordement.
 - Non vu : le mode sombre au téléphone ; un compte non admin (caché par le cran).
-**Reste** : `partenaires_fiche` sur « on » (accord) ; puis 3.3b (le travail) et 3.3c (la zone sensible).
+✅ **`partenaires_fiche = on` le 05/11 (« Oui, pour tous »)** : les 202 fiches partenaire de l'app prennent leur volet
+pour tout le monde (au rechargement). Retour arrière : `admin` ou `off`. **Suite : 3.3b (le travail), puis 3.3c.**
 
 ### 7 ter. Les dépendances (techniques, pas un ordre décidé)
 
