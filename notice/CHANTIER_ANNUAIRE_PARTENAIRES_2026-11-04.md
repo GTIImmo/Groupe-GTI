@@ -1465,6 +1465,19 @@ inverse, collés sur accord. **B** (autre forme) : l'écran appelle `app_partena
 **Reste, chacun sur accord** : coller le patch ; allumer ; essai réel (créer un partenaire avec un métier depuis l'écran,
 lire sa ligne au registre, supprimer la fiche — et décider du sort de sa ligne au registre, voir « vu en passant »).
 
+✅✅ **POSÉ, ALLUMÉ ET PROUVÉ EN RÉEL le 05/11** (« Oui, vas-y ») :
+- Patch collé comme migration `partenaire_metier_a_la_creation_2026_11_05` ; contrôlé : déclencheur présent (AFTER INSERT,
+  WHEN create_hektor_contact), interrupteur « off », fonction fermée à anon et authenticated, 3 déclencheurs sur
+  `app_console_job`, `app_create_contact_optimistic` inchangée (`278d5570…`).
+- `partenaire_metier_a_la_creation = on` à **11:51:21**.
+- Fiche d'essai par l'écran : **ZZ ESSAI METIER SYNDIC** (20000044 / Hektor 606232, société SARL, métier Syndic, compte
+  formation, RGPD décoché). **Registre : ligne 1890 « syndic / ecran » écrite à 11:52:27.374756, la même micro-seconde
+  que le travail de création, auteur = celui qui crée.** Le travail Hektor est fait à 11:52:43.
+- Supprimée par l'écran (travail fait, 0 ligne dans `app_contact_current`, journal des suppressions 1, formulaire Hektor
+  vide) ; puis **ligne 1890 retirée en la datant** (`retire_le` 11:53:56, `retire_par` = l'auteur), pas effacée.
+- Registre après : **1 869 actifs, dont 1 656 notaires** (inchangé) ; 1 ligne « ecran » au total, 0 active.
+- ⚠ Toujours ouvert (« vu en passant ») : supprimer un contact ne retire pas ses lignes du registre ; ici retiré à la main.
+
 ### 7 ter. Les dépendances (techniques, pas un ordre décidé)
 
 - 0 avant tout le reste ; 0.1 avant B2 ; 0.2 avant B1 ; 0.6 avant B5 ; 0.3 avant B6 ; 0.4 avant B7 ; 0.5 avant C2.
