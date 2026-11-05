@@ -1216,3 +1216,9 @@ de Franck → « Modifier », « Modifier son accès », « Le passer en ancien 
 valeurs affichées en grisé. Retouches de libellés (commit suivant) : le grisé dit « affiché : » (l'e-mail montré est
 l'accès @gti, pas Hektor), le fixe n'est pas proposé s'il égale le portable, un champ vide dit « vide chez nous · la nuit le
 remplira » (pas « repris de Hektor »), la phrase « Garder la nôtre » seulement s'il y a un écart.
+**✅ PREMIÈRE SAISIE RÉELLE le 05/11 à 14:44:59 UTC, par Frédéric, depuis l'écran** : Caroline GERPHAGNON (1000024),
+civilité → « Mme ». La colonne est écrite (`updated_at` 14:44:59), le carnet porte `Mme` À SON NOM, le journal porte
+`saisie` (avant vide → Mme, `par` = Frédéric). La chaîne écran → fonction → carnet → journal est prouvée.
+À 14:46:10, Frédéric a passé le compte de l'app de Franck en **manager** par « Modifier son accès » (le geste existant) :
+le lien Hektor a été recalculé et reste juste (`registre_fiche_active`, 2/1). ⚠ C'est le RÔLE dans l'app, pas la fonction
+du registre (`fonction` toujours vide) — à confirmer : un manager n'a plus l'écran Utilisateurs, ni Pilotage, ni Santé.
