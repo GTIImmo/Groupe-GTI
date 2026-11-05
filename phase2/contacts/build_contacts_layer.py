@@ -128,6 +128,10 @@ class ContactRow:
     # que porte le MIROIR, qui est une copie de Hektor. On le garde au moment
     # ou on lui substitue l'identite de l'app -- deux lignes plus bas.
     hektor_target_id: str | None = None
+    # Chantier partenaires, 05/11/2026 : le nom que HEKTOR montre pour ce syndic /
+    # diagnostiqueur dans les listes de l'annonce. Pose apres le chargement (voir
+    # nommer_par_la_liste_des_partenaires) ; None hors de ces listes ou interrupteur eteint.
+    libelle_liste_partenaire: str | None = None
 
     @property
     def est_fiche_de_menage(self) -> bool:
@@ -197,7 +201,12 @@ class ContactRow:
         #   personne pour les nommer. Toutes identiques a l'ecran, impossibles a
         #   distinguer l'une de l'autre.
         if not clean_text(self.nom) and not clean_text(self.prenom):
-            return f"Contact {self.hektor_contact_id}"
+            # ── UN SYNDIC SOCIETE N'A NI NOM NI PRENOM (05/11/2026). Cree par le bouton « + »
+            #   de l'annonce dans Hektor, il n'a que son titre de fiche, que l'API ne rend pas
+            #   (GIBERT IMMOBILIER, 414566). Son nom est pourtant dans la liste du menu « Syndic » /
+            #   « Diagnostiqueur » de l'annonce, deja lue la nuit : on reprend CE QUE HEKTOR
+            #   AFFICHE, on n'invente rien. Note : CHANTIER_ANNUAIRE_PARTENAIRES §18 ter et §19.
+            return clean_text(self.libelle_liste_partenaire) or f"Contact {self.hektor_contact_id}"
         return " ".join(part for part in [civilite_affichee(self.civilite), self.prenom, self.nom] if clean_text(part)) or f"Contact {self.hektor_contact_id}"
 
     @property
@@ -835,7 +844,59 @@ def load_contacts(
     sql += " ORDER BY CAST(hektor_contact_id AS INTEGER)"
     if limit and limit > 0:
         sql += f" LIMIT {int(limit)}"
-    return resoudre_menages(conn, [contact_from_row(row) for row in conn.execute(sql, params).fetchall()])
+    contacts = resoudre_menages(conn, [contact_from_row(row) for row in conn.execute(sql, params).fetchall()])
+    return nommer_par_la_liste_des_partenaires(conn, contacts)
+
+
+# ── LE NOM D'UN SYNDIC / DIAGNOSTIQUEUR SANS NOM NI PRENOM (chantier partenaires, 05/11/2026) ──
+# ⛔ INTERRUPTEUR APP_NOM_PARTENAIRE_PAR_LA_LISTE (.env) : absent = eteint, le nom affiche reste
+#   celui d'avant (« Contact <numero> »), a l'identique. Le meme interrupteur ferme, dans
+#   elargir_perimetre_registre.py, l'entree d'un partenaire dont le nom est fabrique.
+INTERRUPTEUR_NOM_PARTENAIRE = "APP_NOM_PARTENAIRE_PAR_LA_LISTE"
+
+
+def interrupteur_nom_partenaire() -> bool:
+    import os
+    valeur = os.environ.get(INTERRUPTEUR_NOM_PARTENAIRE)
+    if valeur is None:
+        # La nuit et le worker ne passent pas tous par le meme chargeur : on lit le .env nous-memes.
+        fichier = ROOT / ".env"
+        if fichier.exists():
+            for ligne in fichier.read_text(encoding="utf-8").splitlines():
+                cle, egal, reste = ligne.strip().partition("=")
+                if egal and cle.strip() == INTERRUPTEUR_NOM_PARTENAIRE:
+                    valeur = reste.strip().strip('"').strip("'")
+    return (valeur or "").strip().lower() in {"1", "on", "true", "oui"}
+
+
+def nommer_par_la_liste_des_partenaires(conn: sqlite3.Connection, contacts: list[ContactRow]) -> list[ContactRow]:
+    """Donne a un syndic / diagnostiqueur sans nom ni prenom le libelle de la liste de l'annonce.
+
+    La liste (`hektor_diag_contacts_choix`, posee par sync_hektor_contacts_diagnostics.py) est rangee
+    sous le numero de HEKTOR : on la lit avec `hektor_target_id`, jamais avec l'identite de l'app.
+    Seules les fiches sans nom NI prenom, hors menage, sont concernees : 9 sur 96 le 05/11.
+    """
+    if not interrupteur_nom_partenaire() or not table_exists(conn, "hektor_diag_contacts_choix"):
+        return contacts
+    sans_nom = {c.hektor_target_id for c in contacts
+                if c.hektor_target_id and not clean_text(c.nom) and not clean_text(c.prenom)
+                and not c.est_fiche_de_menage}
+    if not sans_nom:
+        return contacts
+    libelles: dict[str, str] = {}
+    # Un numero present dans les deux listes : le syndic d'abord, puis l'ordre alphabetique -- stable.
+    for numero, libelle in conn.execute(
+            "SELECT hektor_contact_id, libelle FROM hektor_diag_contacts_choix "
+            "WHERE NULLIF(TRIM(libelle), '') IS NOT NULL "
+            "ORDER BY CASE liste WHEN 'syndic' THEN 0 ELSE 1 END, liste").fetchall():
+        numero = clean_text(numero)
+        if numero in sans_nom and numero not in libelles:
+            libelles[numero] = clean_text(libelle)
+    if not libelles:
+        return contacts
+    return [replace(c, libelle_liste_partenaire=libelles[c.hektor_target_id])
+            if c.hektor_target_id in libelles else c
+            for c in contacts]
 
 
 def resoudre_menages(conn: sqlite3.Connection, contacts: list[ContactRow]) -> list[ContactRow]:

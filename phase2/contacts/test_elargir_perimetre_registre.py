@@ -5,8 +5,10 @@
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 import unittest
+from unittest import mock
 
 from phase2.contacts import elargir_perimetre_registre as m
 from phase2.contacts import metier_netty as netty
@@ -118,6 +120,20 @@ class PartenairesHektor(unittest.TestCase):
         c = base_hektor([("10000023", "", "", "M. et Mme X", "999", 0, "[]")], [(10000023, "100", "hektor", 1, None, None)])
         m.executer(c, self.OFFRE, False, {"602487"})
         self.assertEqual(eligibles(c), {}, "la garde de la case vide reste entiere pour le registre")
+
+    def test_un_nom_fabrique_reste_dehors_interrupteur_allume(self):
+        """05/11 : « Contact <numero> » est fabrique par la couche, ce n'est pas une raison sociale."""
+        c = base_hektor([("10000024", "", "", "Contact 10000024", "423727", 0, "[]"),
+                         ("10000025", "", "", "GIBERT IMMOBILIER", "414566", 0, "[]")])
+        with mock.patch.dict(os.environ, {"APP_NOM_PARTENAIRE_PAR_LA_LISTE": "1"}):
+            m.executer(c, self.OFFRE, False, {"423727", "414566"})
+        self.assertEqual(eligibles(c), {"10000025": ["partenaire_hektor"]})
+
+    def test_temoin_interrupteur_eteint_le_nom_fabrique_entre_comme_avant(self):
+        c = base_hektor([("10000024", "", "", "Contact 10000024", "423727", 0, "[]")])
+        with mock.patch.dict(os.environ, {"APP_NOM_PARTENAIRE_PAR_LA_LISTE": ""}):
+            m.executer(c, self.OFFRE, False, {"423727"})
+        self.assertEqual(eligibles(c), {"10000024": ["partenaire_hektor"]}, "eteint = la regle du 04/11, a l'identique")
 
     def test_temoin_sans_liste_de_hektor_rien_ne_change(self):
         c = base_hektor([("10000020", "SYNDIC", "", "SYNDIC", "602487", 0, "[]")])

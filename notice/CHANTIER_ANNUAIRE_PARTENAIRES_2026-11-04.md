@@ -1201,6 +1201,84 @@ re-mesurer après la nuit** avant de conclure.
 **Remède proposé (rien n'est codé)** : faire lire à la règle d'entrée la table des parties elle-même (nos numéros,
 déjà calculés), au lieu du seul formulaire recopié. Périmètre (notaires seuls ou toute la famille) : **à Frédéric**.
 
+## 18. D-2 « MODIFIER UN PARTENAIRE » — AUDIT (04/11 soir, « push puis modifier une société ») — rien codé
+
+Poussé avant : `acc097c..cdeb374`.
+**La cause, mesurée (lecture seule du formulaire de 2 syndics chez Hektor, 414566 et 414567)** : le formulaire d'un
+PARTENAIRE porte le groupe **`mefContacts/contacts_full_accueil_partenaire`**. Le worker (`updateHektorContactIdentity`,
+`console_job_worker.js` ~l. 19378) ne connaît que deux groupes : `contacts_full_accueil` (personne seule) et
+`contactCoupleAll` (couple, corrigé le 02/11) ; `extractHektorFormValues` compare le groupe à l'IDENTIQUE (l. 10445)
+⇒ aucun champ relu, pas de `nom` ⇒ « Formulaire edition contact Hektor introuvable ». **C'est donc TOUT partenaire
+(personne ou société), pas seulement une société.** Le groupe d'une personne MORALE n'est pas mesuré (la fiche d'essai
+606202 est supprimée).
+**Ampleur** : 29 modifications de contact depuis juin, 27 faites, 2 en erreur « introuvable » (20000031 le 02/11, couple,
+corrigé depuis ; 20000038, mon essai). **Aucun partenaire réel modifié à ce jour** : rien d'abîmé, le défaut dort.
+**Remède proposé** : comme pour les couples, prendre le groupe du formulaire RELU — celui du champ `nom` ou `sociale` —
+au lieu d'une liste de noms ; si le formulaire porte `sociale`, traiter la fiche en société (status 3 : la raison sociale
+part dans `sociale`, le reste ne bouge pas). La fenêtre de l'écran (qui montre une société comme une personne) est un
+second temps.
+
+### 18 bis. ⛔ ERREUR DANS MON LOT 1 (trouvée le 04/11 soir en cherchant un syndic société)
+
+J'avais écrit (§16) : « une société sans nom ni prénom entre par sa raison sociale (`display_name`) ». **C'est faux** :
+la couche locale ne porte AUCUNE raison sociale ; pour une fiche sans nom ni prénom, `display_name` est FABRIQUÉ
+(« Contact 10215568 », `build_contacts_layer.py` l. 200). ⇒ **9 des 95 entrants de cette nuit entreront nommés « Contact
+1021… »** au lieu de « GIBERT IMMOBILIER », « PICHET IMMOBILIER SERVICES »… (leur vrai nom est dans
+`hektor_diag_contacts_choix.libelle`). Ce n'est pas une perte (3 777 contacts de l'app portent déjà un tel nom), mais
+c'est exactement ce que la garde de la case vide voulait éviter. Décision à Frédéric : les garder dehors ce soir (2 lignes)
+ou les laisser entrer. **Frédéric : « les laisser… mais on va corriger pour les prochains ».**
+
+### 18 ter. OÙ HEKTOR RANGE LE NOM D'UN PARTENAIRE « SANS NOM » (05/11 matin, après le run fini à 06:43, lecture seule)
+
+- **9 592 fiches « partenaire » ont un nom fabriqué** dans la couche (« Contact 1… »), dont **250 dans l'app** ; 0 fiche née dans
+  l'app. ⚠ Ce n'étaient PAS 9 592 sociétés cachées :
+- l'API (raw_json) ET le formulaire d'édition ont `nom` et `prenom` **VIDES**, même pour GIBERT IMMOBILIER (414566) : le mot
+  « GIBERT » n'est nulle part dans le formulaire (0 occurrence), ni en mode consultation ;
+- Hektor l'affiche pourtant en titre de la fiche : il vient de la requête `mode=contacts-contactProfile-setContactContent`
+  (le profil), calculé côté Hektor (vu dans Chrome, requête écoutée) ;
+- même requête sur 4 fiches de l'échantillon (583835, 523707, 599679, 560025) : **AUCUN titre** ⇒ ce sont des fiches
+  réellement VIDES chez Hektor (métier « Non défini », rien nulle part), pas des sociétés.
+⇒ **Le cas « société au nom caché » est celui des syndics / diagnostiqueurs créés par le bouton « + » de l'annonce.**
+**Remède proposé (rien codé)** : (1) le nom affiché prend le libellé de la liste syndic / diagnostiqueur
+(`hektor_diag_contacts_choix.libelle`, 0 requête) avant « Contact … », et la règle d'entrée l'accepte ; (2) pour un autre
+partenaire sans nom, s'il s'en présente, le titre du profil (1 requête par fiche) — à mesurer quand on traitera courtier et
+apporteur.
+
+## 19. LE NOM DES SYNDICS / DIAGNOSTIQUEURS SANS NOM — CODÉ LE 05/11, ÉTEINT (« je valide le correctif »)
+
+Frédéric (05/11) : « raison sociale plus tard, d'abord finir le chantier des partenaires ; je valide le correctif pour
+récupérer les noms à partir de la liste lors du run de nuit » — pour les 9 entrés le 04/11 et les futurs.
+⚠ « Le bouton + » = celui de la fiche annonce **dans l'admin de Hektor** (pas dans l'app). Un partenaire société créé
+**depuis l'app** a son nom dans la case « nom » de Hektor (essai ZZ ESSAI SYNDIC BIENVU du 04/11, relu 2 min après :
+`nom` et `display_name` justes) : il n'est pas concerné.
+⚠ L'API de Hektor ne rend AUCUN champ raison sociale (champs de 414566 listés le 05/11 : `siret` oui, raison sociale
+non). Ajouter une colonne « raison sociale » chez nous = plus tard (Frédéric).
+
+**Le code** (interrupteur `.env` **`APP_NOM_PARTENAIRE_PAR_LA_LISTE`**, absent = éteint, à l'identique d'avant) :
+- `build_contacts_layer.py` : `nommer_par_la_liste_des_partenaires()` après `resoudre_menages()` dans `load_contacts`
+  (donc la nuit ET la relecture du worker) ; une fiche sans nom NI prénom, hors ménage, prend le `libelle` de
+  `hektor_diag_contacts_choix` (lu par `hektor_target_id`, le syndic avant le diagnostiqueur), sinon « Contact N » ;
+  `nom` et `prenom` restent vides (on n'invente rien) ;
+- `elargir_perimetre_registre.py` : interrupteur allumé, un `display_name` égal à « Contact <numéro> » ne vaut plus nom
+  (la garde de la case vide redevient entière) ;
+- essais : `test_nom_partenaire_liste.py` 9/9 (dont témoin éteint, ménage, libellé vide, table absente) et
+  `test_elargir_perimetre_registre.py` +2 (nom fabriqué dehors / témoin éteint) ; avec `test_contacts_layer` et
+  `test_couple_couche` : **27 essais verts**.
+
+**Mesure à blanc** (copie de Hektor de la nuit du 05/11, lecture seule) : sur les 96 de la liste, **8 changent** —
+GIBERT IMMOBILIER, AGENCE IMMOBILIERE DE BELLEVUE, PICHET IMMOBILIER SERVICES, SOCIETE DE GESTION IMMOBILIERE,
+DETROIS IMMOBILIER, CABINET MELLIER MICHAS, GOUDARD PATOT, IMMO DE FRANCE FOREZ VELAY ; **le 9e (diagnostiqueur 423727,
+chez nous 10217339) n'a de nom nulle part**, même pas dans la liste : il reste « Contact 10217339 », ne rentre plus par
+`partenaire_hektor`, mais il est déjà dans l'app et `APP_GARDER_CONTACTS_DEJA_POUSSES=1` le garde à jour.
+**Contrôle du registre ce matin** : 1 869 actifs dont 1 656 notaires (netty 844, transactions 613, hektor 199),
+syndic 75, diagnostiqueur 36 — **exactement l'attendu du §17**.
+**Retour arrière** : retirer la ligne du `.env` ; la nuit suivante refait les noms d'avant.
+✅ **ALLUMÉ le 05/11 à 09:31** (« Allume et commite ») : ligne 132 du `.env`, copie
+`.env.avant_nom_partenaire_liste_20261105_0931` ; vérifié sans rien écrire : la couche ET la règle d'entrée le lisent
+allumé (GIBERT IMMOBILIER sort sous son nom, 423727 reste « Contact 423727 »).
+⏰ **Contrôle du 06/11 au matin** : chez Supabase, les 8 numéros 10215568, 10215569, 10215570, 10215778, 10215780,
+10216239, 10217294, 10217295 portent leur nom ; 10217339 reste « Contact 10217339 » et toujours présent.
+
 ### 7 ter. Les dépendances (techniques, pas un ordre décidé)
 
 - 0 avant tout le reste ; 0.1 avant B2 ; 0.2 avant B1 ; 0.6 avant B5 ; 0.3 avant B6 ; 0.4 avant B7 ; 0.5 avant C2.

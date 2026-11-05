@@ -26,6 +26,8 @@ DEUX RAISONS NEUVES, posees sur des contacts NON eligibles seulement :
    conjoint de la migration, que la nature reconnait de la meme facon).
    ⚠ Sauf pour partenaire_hektor : un syndic est souvent une SOCIETE, sans nom ni prenom mais avec sa
    raison sociale (`display_name`) -- 9 des 96 au 04/11. Pour cette raison seule, la raison sociale vaut nom.
+   ⚠ 05/11 : ce `display_name` etait FABRIQUE (« Contact <numero> »). Interrupteur APP_NOM_PARTENAIRE_PAR_LA_LISTE
+   allume : la couche le remplace par le nom de la liste de l'annonce, et un nom encore fabrique reste dehors.
 ⚠ A REJOUER CHAQUE NUIT, APRES build_contacts_layer et elargir_perimetre_console (la couche
   est refaite par DELETE + INSERT), AVANT le push. Lit la base LOCALE seulement.
 ⛔ INTERRUPTEUR APP_PERIMETRE_REGISTRE (.env) : absent = eteint, rien n'est fait.
@@ -64,6 +66,11 @@ def allume() -> bool:
     except Exception:  # noqa: BLE001 -- sans .env, l'interrupteur reste eteint
         pass
     return (os.environ.get("APP_PERIMETRE_REGISTRE") or "").strip().lower() in {"1", "on", "true", "oui"}
+
+
+def nom_fabrique_refuse() -> bool:
+    """Interrupteur APP_NOM_PARTENAIRE_PAR_LA_LISTE (.env, charge par allume()) : le meme que la couche."""
+    return (os.environ.get("APP_NOM_PARTENAIRE_PAR_LA_LISTE") or "").strip().lower() in {"1", "on", "true", "oui"}
 
 
 def table_existe(conn: sqlite3.Connection, nom: str) -> bool:
@@ -150,7 +157,14 @@ def a_faire_entrer(conn: sqlite3.Connection, registre: set[str], pros: set[str],
                 continue
             a_un_nom = bool(str(ligne["nom"] or "").strip() or str(ligne["prenom"] or "").strip())
             if not a_un_nom and RAISON_PARTENAIRE_HEKTOR in neuves and avec_affichage:
-                a_un_nom = bool(str(ligne["display_name"] or "").strip())   # la raison sociale d'une societe
+                affiche = str(ligne["display_name"] or "").strip()
+                # ⚠ 05/11 : ce n'etait PAS une raison sociale -- la couche fabrique « Contact <numero> »
+                #   pour une fiche sans nom ni prenom ; 9 syndics sont entres sous ce faux nom le 04/11.
+                #   Interrupteur allume, la couche y met le nom de la liste de l'annonce, et un nom
+                #   ENCORE fabrique est une case vide (§19 de la note du chantier).
+                if nom_fabrique_refuse() and affiche == f"Contact {cid}":
+                    affiche = ""
+                a_un_nom = bool(affiche)   # le nom que Hektor montre pour ce syndic / diagnostiqueur
                 neuves = [RAISON_PARTENAIRE_HEKTOR] if a_un_nom else neuves  # les autres raisons gardent leur garde
             if not a_un_nom:
                 continue  # une case vide reste dehors
