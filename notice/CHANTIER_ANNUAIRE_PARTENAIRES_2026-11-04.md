@@ -1824,6 +1824,15 @@ pour tout le monde (au rechargement). Retour arrière : `admin` ou `off`. **Suit
 - ⚠ **Le téléphone** a son propre écran de contacts (`MobileContactCards`, sans pastilles) : **pas de catalogue au
   téléphone** dans cette pièce → les fiches syndic / diag / courtier / apporteur n'y sont pas accessibles (K7).
 - Essai `test_metier_partenaire.cjs` **61/61** (11 nouveaux, dont (50) : une seule porte passe la fiche métier).
+- ✅ **Poussé (`743cb96`, « Oui, pousse et pose ») ; `app_setting.partenaires_catalogue = admin` posé le 05/11 à 18:10.**
+  Vu en ligne (admin, 1280 × 665) : interrupteur présent, pastille « Notaire » absente côté Clients ; tuiles Notaires
+  632 (+498 archivés = 1 130), Syndics 75, Diagnostiqueurs 22 (+14), Banques et courtiers 9 (+21), Apporteurs et
+  parrains 26 (+24) — conformes à la mesure. GIBERT IMMOBILIER (10215568) → fiche syndic, et un RECHARGEMENT de
+  `?ecran=contacts&contact=10215568&vue=metiers` la rouvre en fiche syndic ; un notaire (10036717) → fiche notaire ;
+  Michelle BONNET (archivée, 10011026) → fiche courtier avec le bandeau d'archivage ; la même par la liste des clients
+  (`?ecran=contacts&contact=10011026`) → fiche Mandant, côté Clients.
+- ⚠ Vu : trois « GIBERT IMMOBILIER » sans ville ni téléphone sont indiscernables dans la liste (doublons des données).
+  Retouche proposée : montrer le numéro quand il n'y a ni ville ni téléphone. Non vu : un compte non admin, le mode sombre.
 
 ### 7 ter. Les dépendances (techniques, pas un ordre décidé)
 
