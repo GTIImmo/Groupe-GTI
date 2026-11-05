@@ -1792,6 +1792,22 @@ pour tout le monde (au rechargement). Retour arrière : `admin` ou `off`. **Suit
   AUJOURD'HUI la fiche notaire dans l'app**, avec cette même fiche. Un contact comme RABHI (sans rôle notaire) n'a pas
   la fiche notaire et ne l'aura pas. ⚠ J'avais d'abord compris « tout notaire du registre, sans liaison » : faux, corrigé.
 
+#### 26 quater. PIÈCE 3.5 — LE CATALOGUE DES MÉTIERS : AUDIT (05/11, « OK on enchaîne ») — rien codé
+
+- **Maquette validée le 04/11** (planche 1, `Main.dc.html`) : interrupteur « Clients | Partenaires » en tête de
+  l'annuaire, tuiles par métier, liste, aperçu à droite (« Ouvrir la page »). Ses tuiles « Administrations » et « fiches
+  à classer » tombent avec la règle du 05/11 (« et c'est tout »).
+- **Les cinq tuiles, mesurées** : Notaires 1 130 (ceux qui ont la fiche notaire aujourd'hui ; 498 archivés) · Syndics 75 ·
+  Apporteurs et parrains 50 (24 archivés) · Diagnostiqueurs 36 (14) · Banques et courtiers 30 (21).
+- **Proposé** : l'interrupteur dans l'écran Contacts (côté Clients = la liste d'aujourd'hui) ; côté Partenaires les
+  cinq tuiles, la liste du métier, recherche par nom ; un clic ouvre la fiche dédiée avec `ouverture='catalogue_metiers'`
+  (notaire : la fiche notaire d'aujourd'hui). L'aperçu de droite plus tard (ses chiffres n'existent pas). Nouveau cran
+  `partenaires_catalogue`, admin d'abord. ⚠ L'adresse doit garder « vue métiers » (sinon un rechargement rouvre la fiche
+  normale).
+- ✅ **Décision de Frédéric (05/11)** : **la pastille « Notaire » sort de la liste des clients** (« je la retire ») — retirée
+  seulement là où le catalogue est visible (même cran), pour ne jamais perdre l'accès aux notaires.
+- ⬜ À confirmer : les archivés à part, les actifs d'abord.
+
 ### 7 ter. Les dépendances (techniques, pas un ordre décidé)
 
 - 0 avant tout le reste ; 0.1 avant B2 ; 0.2 avant B1 ; 0.6 avant B5 ; 0.3 avant B6 ; 0.4 avant B7 ; 0.5 avant C2.
