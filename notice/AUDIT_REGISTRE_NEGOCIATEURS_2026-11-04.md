@@ -992,3 +992,22 @@ Mesures du 05/11 reprises dans la maquette : 167 personnes hors agences, 34 acti
 anciens, 34 « à valider », 5 comptes de l'app reliés. ⚠ Le champ `actif` du registre dit déjà « actif chez nous » :
 toi, Pauline, Caroline et Delphine BLANCHARD y sont ACTIFS ; ce sont les MENUS qui lisent la fiche négo (`actif_chez_hektor`).
 La règle reste à trancher (§36).
+
+## 38. MAQUETTE VALIDÉE ET QUATRE DÉCISIONS (05/11) — Frédéric : « oui » — ⛔ rien n'est codé
+
+La maquette orientée app (§37, version 10) est validée. Décisions, dans ses réponses :
+1. **Règle de l'actif dans les menus de négociateurs (filtres, saisie) : « actif chez nous »** — le champ `actif` de
+   `app_negociateur_personne` décide, plus `actif_chez_hektor` de la fiche négo. Effet mesuré : Frédéric, Pauline,
+   Caroline et Delphine BLANCHARD redeviennent actifs dans les menus (30 → 34). Les comptes d'agence restent HORS des
+   choix de négociateurs (décision du 05/11, inchangée). ⚠ C'est une modification de code EXISTANT (front) : « vas-y » à
+   demander ; lecteurs à basculer : `loadHektorNegotiatorOptions`, `loadNegotiatorOptionForContact`,
+   `loadNomsNegociateursActifs` (api.ts), et les filtres qui s'en servent.
+2. **Accès aux deux registres : administrateurs seuls.**
+3. **Ajouter une personne sans fiche Hektor : permis dès maintenant** (notre numéro tout de suite ; les 14 anciens du
+   classeur pourront être saisis).
+4. **L'agence n° 26 « Agences supprimée » : VISIBLE dans la liste**, statut « Supprimée ».
+- Non tranché explicitement, gardé tel que maquetté : les « à valider » sont un repère à côté du nom + un filtre, pas une
+  file de travail.
+
+➡ Suite : (a) la règle de l'actif dans les menus (code front, « vas-y ») ; (b) étape 2 du §35 — tables + nuit à blanc
+(⛔ écriture en base de production, ACCORD OBLIGATOIRE).
