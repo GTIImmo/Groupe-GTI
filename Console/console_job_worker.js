@@ -21704,13 +21704,26 @@ async function updateHektorMandantContact(job, annonceId, contactId, payload) {
   values.set("nom", lastName);
   if (firstName !== null) values.set("prenom", firstName);
   if (civility !== null) values.set("civilite", civility);
-  replaceFirstArrayParam(values, "email[]", email);
-  if (!values.has("label_email[]")) replaceFirstArrayParam(values, "label_email[]", "email");
-  if (!values.has("id_email[]")) replaceFirstArrayParam(values, "id_email[]", "");
-  if (phone !== null) {
-    replaceFirstArrayParam(values, "telephone[]", phone);
-    if (!values.has("label_telephone[]")) replaceFirstArrayParam(values, "label_telephone[]", "portable");
-    if (!values.has("id_telephone[]")) replaceFirstArrayParam(values, "id_telephone[]", "");
+  // A.2 lot 6b P3 (05/11/2026) -- LA REGLE D-5 DANS LA PORTE DU MANDANT (chantier partenaires §21).
+  //   Le chemin d'avant (replaceFirstArrayParam) VIDE toutes les valeurs `telephone[]` / `email[]` et n'en remet
+  //   qu'une, sans toucher aux `label_*[]` / `id_*[]` relus : un mandant a portable + fixe perdait la 2e valeur et
+  //   la 1re pouvait etre le fixe (le portable saisi prenait alors l'etiquette « fixe »). Un portable complete a
+  //   l'envoi en signature (D33) ne doit pas ecraser le fixe : on remplace la ligne de MEME etiquette, avec son
+  //   numero interne, comme la porte du contact. Une valeur vide ne part pas : elle n'efface rien chez Hektor.
+  //   ⛔ Meme interrupteur que D-5 (« contact_coordonnees_remplacer ») : eteint = le chemin d'avant, a l'identique.
+  const remplacer = await interrupteurCoordonneesRemplacer();
+  if (remplacer) {
+    remplacerCoordonnee(values, "email", "email", email, { repliSurLaDerniere: true });
+    if (phone) remplacerCoordonnee(values, "telephone", "portable", phone);
+  } else {
+    replaceFirstArrayParam(values, "email[]", email);
+    if (!values.has("label_email[]")) replaceFirstArrayParam(values, "label_email[]", "email");
+    if (!values.has("id_email[]")) replaceFirstArrayParam(values, "id_email[]", "");
+    if (phone !== null) {
+      replaceFirstArrayParam(values, "telephone[]", phone);
+      if (!values.has("label_telephone[]")) replaceFirstArrayParam(values, "label_telephone[]", "portable");
+      if (!values.has("id_telephone[]")) replaceFirstArrayParam(values, "id_telephone[]", "");
+    }
   }
   if (address !== null) values.set("adresse", address);
   if (city !== null) values.set("ville", city);
@@ -21730,6 +21743,7 @@ async function updateHektorMandantContact(job, annonceId, contactId, payload) {
     hektor_annonce_id: String(annonceId),
     hektor_contact_id: String(contactId),
     fields: Object.keys(payload || {}).filter((key) => payload[key] != null),
+    coordonnees: remplacer ? "remplacees_par_etiquette" : "premiere_ligne",
   });
 
   const response = await hektorFetch(XMLRPC_URL, {

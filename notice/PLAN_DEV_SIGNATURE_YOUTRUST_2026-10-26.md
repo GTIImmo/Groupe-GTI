@@ -742,6 +742,30 @@ ImmoSign existant dont les boutons répondent comme avant.
   Chromium), boîte de Frédéric seulement, code par e-mail. Voisins verts (photo, 4 bis, R1, couples).
 - **P3 — base + worker : le 2e téléphone (D27)** dans la porte « modifier un mandant », pour qu'un portable complété à
   l'envoi n'écrase pas un fixe.
+  🔎 **AUDIT DE P3 (05/11), rien codé** : la porte du MANDANT (`updateHektorMandantContact`) écrit le téléphone dans la
+  PREMIÈRE ligne `telephone[]`, quelle que soit son étiquette (`replaceFirstArrayParam`) → si cette ligne est le fixe, le
+  portable saisi l'écrase (et garde l'étiquette « fixe »). C'est le vrai risque. ⭐ **Le remède existe déjà ailleurs** :
+  le chantier partenaires a posé le 05/11 la règle D-5 dans la porte du CONTACT (`remplacerCoordonnee` : on remplace la
+  ligne de MÊME étiquette, portable ou fixe, avec son numéro interne ; sinon on en ajoute une), derrière l'interrupteur
+  `contact_coordonnees_remplacer` = **on** depuis le 05/11 10:05 UTC. ⇒ P3 devient : **la porte du mandant suit D-5**
+  (même fonction, même interrupteur) ; éteint = le chemin d'avant. **Pas de patch Supabase** : le 2e téléphone n'est pas
+  nécessaire pour D33 (le portable va sur la ligne « portable », le fixe reste). Mesure : 10 modifications de mandant en
+  tout, la dernière le 08/10, 2 avec un téléphone. ✅ « vas-y » de Frédéric (05/11).
+  ✅ **P3 CODÉ LE 05/11** (rien commité au moment d'écrire, services non redémarrés) : `updateHektorMandantContact`
+  lit `interrupteurCoordonneesRemplacer()` ; allumé → `remplacerCoordonnee` pour l'e-mail (repli sur la dernière ligne)
+  et le portable (une valeur vide ne part pas) ; éteint → le chemin d'avant, à l'octet ; le journal dit
+  `coordonnees: remplacees_par_etiquette | premiere_ligne`. ⚠⚠ **PAS DORMANT** : l'interrupteur D-5 est déjà « on » →
+  actif au prochain redémarrage des services, pour le geste « modifier un mandant » de tous. ⭐ Le témoin inverse a prouvé
+  un DÉFAUT DORMANT de l'ancien chemin : `replaceFirstArrayParam` vide TOUTES les valeurs `telephone[]` et n'en remet
+  qu'une, sans toucher aux étiquettes → un mandant portable + fixe perdait la valeur du fixe. Essai
+  `Console/test_mandant_coordonnees.js` **15/15** (portable + fixe, fixe en 1re ligne, aucun téléphone, téléphone vide,
+  éteint = à l'octet sur 4 envois, interrupteur illisible = éteint). Voisins verts (D-5, couples, partenaires, photo,
+  envoi, 4 bis, R1). ⚠ `Console/test_localite_mandant.js` était CASSÉ depuis le 02/11 (« hektorContactFormGroup is not
+  defined ») : réparé en lui ajoutant les tranches manquantes, 8/8. Session partenaires prévenue.
+  ⚠⚠ **P3 ACTIF EN PRODUCTION DEPUIS LE 05/11 À 12:37:05, AVANT SON COMMIT** : Frédéric a redémarré les 4 services pour
+  le correctif des partenaires (fichier écrit à 12:36:38, avec mes lignes) — vérifié par l'heure des processus
+  (12:37:05-07) ; 0 erreur aux 4 journaux depuis ; 0 modification de mandant et 0 travail Youtrust depuis 12:30 UTC.
+  P1 et P2 sont chargés aussi, mais dorment (`signature_youtrust` = off).
 - **P4 — écran : la fenêtre d'envoi-confirmation** (maquette « corriger » vue 1-2) : PDF, signataires lus dans la photo,
   🔒 / ✎, envoi bloqué tant qu'un e-mail manque ; elle remplace `SignaturePromptModal` quand l'interrupteur est allumé.
 - **P5 — écran : « Corriger le mandat »** (vues 3, 4, 6) : l'éditeur rouvert sur le bon onglet avec son bandeau,

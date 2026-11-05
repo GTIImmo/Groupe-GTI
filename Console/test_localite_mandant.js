@@ -46,6 +46,17 @@ const morceaux = {
   attr: tranche("function attrValue("),
   extract: tranche("function extractHektorFormValues("),
 };
+// 05/11/2026 (A.2 lot 6b P3) : la porte de modification appelle aussi des pieces ajoutees APRES cet essai --
+//   hektorContactFormGroup (couples, 02/11 : l'essai tombait depuis sur « hektorContactFormGroup is not defined »)
+//   et la regle D-5 (remplacerCoordonnee, interrupteurCoordonneesRemplacer ; sans base, l'interrupteur vaut ETEINT).
+//   On les monte telles quelles ; ce que l'essai verifie (la localite) ne change pas.
+const ligneSrc = (debut) => { const i = src.indexOf(debut); return i < 0 ? "" : src.slice(i, src.indexOf("\n", i) + 1); };
+const ANNEXES = [
+  ...["const HEKTOR_GROUPE_CONTACT_SEUL = ", "const HEKTOR_GROUPE_CONTACT_COUPLE = ", "const HEKTOR_GROUPE_PARTENAIRE_PERSONNE = ",
+    "const HEKTOR_GROUPE_PARTENAIRE_SOCIETE = "].map(ligneSrc),
+  ...["function hektorContactFormGroup(", "function lignesCoordonnees(", "function poserCoordonnee(", "function ecrireLignesCoordonnees(",
+    "function remplacerCoordonnee(", "async function interrupteurCoordonneesRemplacer("].map((d) => tranche(d) || ""),
+].join("\n");
 const manquants = Object.keys(morceaux).filter((k) => !morceaux[k]);
 controle("(1) LA PREUVE D'ABORD : les deux portes du mandant appellent la recherche d'identifiants",
   !manquants.length && /applyContactLocalityIds\(values, \{ city, postalCode \}/.test(morceaux.creer || "")
@@ -83,7 +94,7 @@ function monter({ resoudre, versionAvant = false } = {}) {
     modifier = modifier.replace(/const localite = await applyContactLocalityIds\([^;]*\);/, "const localite = undefined;");
   }
   vm.runInContext([morceaux.clean, morceaux.replaceParam, morceaux.replaceFirst, morceaux.decode, morceaux.attr,
-    morceaux.extract, morceaux.apply, creer, modifier,
+    morceaux.extract, morceaux.apply, ANNEXES, creer, modifier,
     "this.creer = createHektorMandantContact; this.modifier = updateHektorMandantContact; this.apply = applyContactLocalityIds;"].join("\n"), contexte);
   return { contexte, posts, journal };
 }
