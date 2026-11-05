@@ -1313,3 +1313,63 @@ si le registre ne répond pas.
 
 **Ordre proposé** (un « vas-y » chacun, APRÈS la 1re nuit qui écrit les agences, le 06/11) : B1 (API seule, Render) →
 B2 (worker) → C5 (pilotage) → C4 (droits, avec un témoin inverse) ; B3 avec l'autre session ; C6 rien.
+
+## 47. ÉTAPE 5, AUDIT APPROFONDI (05/11) — Frédéric : « audit de nouveau de manière approfondie, il ne faut pas faire d'erreur » — ⛔ rien n'est codé
+
+Méthode : la base mesurée en production (toutes les fonctions, vues, politiques, déclencheurs et tâches pg_cron qui lisent
+un annuaire) ; chaque lecteur relu dans son code avec ses appelants ; un balayage INDÉPENDANT de tout le dépôt (front,
+API, worker, scripts, fonction edge, fichiers locaux de la nuit) ; puis croisement. ⚠ Le §46 contenait DEUX erreurs, corrigées ici.
+
+**⛔ Erreur 1 du §46** : `loadAgencyDirectoryRowForOwner` (worker l. 2875) n'est PAS un simple lecteur de coordonnées : il
+sert aussi `isOwnerNegotiatorActive` (l. 2913), qui décide si un geste part au nom du négociateur ou de l'AGENCE
+(`ensureHektorExecutionContext` l. 2957). → On n'y touche pas ; le PDF devra lire le registre À CÔTÉ.
+**⛔ Erreur 2 du §46** : le pilotage lit DÉJÀ le registre ; l'annuaire n'y est qu'un repli (`pilotage.ts` l. 70), et
+ses regroupements d'agence viennent des lignes elles-mêmes. → Rien à basculer.
+
+**1. RESTENT sur Hektor (§39 : tout ce qui choisit un compte, une agence ou une passerelle chez Hektor)** — worker :
+`loadActiveHektorNegoUserIds`, `loadHektorDirectoryUserByEmail/ById`, `loadHektorNegotiatorAgencyRows`,
+`agencyNameMatches`, `resolveHektorNegotiatorFromAgencyDirectory`, `resolveHektorExecutionUser`,
+`resolveAgencyContextForFallback`, `loadAgencyDirectoryRowForOwner`, `isOwnerNegotiatorActive`,
+`resolveContactAgencyExecutionPayload` (l. 19281), `handleAssignHektorAnnonceNegotiator` ; `Console/resolve_hektor_annonce_agency.py`
+(compte d'agence lu dans le fichier local) ; base : `app_console_resolve_contact_hektor_user` et ses deux copies (contacts,
+recherches, espace client) ; front : `loadUserNegotiatorContext` (compte Hektor par défaut), menus de négociateurs et
+choix d'agence de la fenêtre « affecter » ; diffusion : cibles par nom d'agence (`hektor_bridge.py` l. 185, fonction edge
+`hektor-diffusion` l. 140, `hektor_diffusion_writeback.py` l. 145, aperçu `api.ts` l. 8170). Plus `app_mes_chaines_nommees`
+(droits « où je suis nommé » : inchangés, §15) et la connexion (`_resolve_hektor_google_identity`, déjà adossée au registre).
+
+**2. DÉJÀ sur le registre (annuaire en repli)** : menus de négociateurs, fiche contact, répartition, noms du registre des
+transactions, pilotage, pages RDV pour le TÉLÉPHONE DU NÉGOCIATEUR.
+
+**3. LES CANDIDATS — ce que voient ou reçoivent des clients et des tiers** :
+- **3a. Page publique de RDV** (`appointment_service._load_contact_details` l. 332) : tél et mail de l'AGENCE par son nom
+  (`app_agence_directory`, `nom=ilike`). Le tél du négociateur vient des FICHES du registre (copie de Hektor), pas des
+  coordonnées À NOUS de la personne. ⚠⚠ **Le lien garde une COPIE** (`app_appointment_public_link`) et ne la relit que s'il
+  lui manque une valeur : **1 522 liens sur 2 304 sont figés** (116 créés en 60 jours, par les e-mails de rapprochement).
+  Basculer la lecture ne change donc RIEN pour eux ; seuls les liens neufs ou incomplets en profitent — sauf décision de
+  rafraîchir les copies. Mesure : 25 liens de Tence portent le mail d'Yssingeaux, 47 de Saint-Étienne portent dorian@.
+  Aucune demande de RDV n'a jamais été enregistrée (`app_appointment_request` vide).
+- **3b. Page publique d'estimation** (l. 439-642) : agence par clé de nom ; son MAIL sert de DESTINATAIRE de la demande
+  quand le conseiller n'en a pas ; son tél sert de repli. ⚠ La rotation du conseiller prend les négociateurs des biens de
+  l'agence, INACTIFS COMPRIS (Saint-Étienne : 6 tournent, 2 actifs). ⚠ La page sans agence prend la 1re agence « gti » par
+  tri de TEXTE du n° → ANNONAY. Dernier usage mesuré : 18/06 (rotation de Saint-Étienne, 66 passages).
+- **3c. PDF « avis de valeur »** (`resolveEstimNegotiatorContact` l. 8767) : bloc Agence (`app_agence_directory` par nom) et
+  coordonnées du conseiller + QR vCard. 1 PDF en 60 jours. (Le PDF du MANDAT est construit par l'écran : l'agence n'y est
+  qu'un nom.)
+- **3d. Signataire Youtrust** (`mandataireDuMandat` l. 6339) : e-mail et portable du négociateur envoyés à Youtrust.
+  Circuit A.2 de l'autre session (commits du 05/11) : à faire avec elle.
+- **3e. Vitrine** (`Ecrans Android/export_project_vitrine.py` l. 425) : tél du négociateur, sinon de l'agence, lus dans le
+  fichier local. Usage non mesuré.
+- **3f. Mentions légales CODÉES EN DUR à 4 endroits** (mandat `App.tsx` l. 4822, espace client `espace_client.py` l. 1180,
+  e-mails `rapprochement_email.py` l. 87, avis de valeur worker l. 8642) : capital, siège, RCS, carte CPI. Pas une
+  dépendance à Hektor (elles survivent à la coupure) ; le registre de la société pourrait les fournir — carte valable
+  jusqu'au 14/09/2027.
+
+**4. Les droits « son agence »** (`app_mon_agence()` + 5 politiques + `app_mes_biens_selon_perimetre`) : par e-mail → fiche
+négociateur active → nom d'agence en TEXTE. DORMANTS : 0 compte au périmètre « agence » (6 actifs, tous « réseau »).
+
+**5. Trouvé en passant, hors périmètre, NON corrigé** : la fenêtre de RDV (`App.tsx` l. 39188) cherche le négociateur avec
+`idUser: dossier.commercial_id` — un n° de NÉGOCIATEUR pris pour un n° de COMPTE (le piège de Claire RIBBES 15/39) ; effet :
+le périmètre de la recherche de contacts peut viser la mauvaise agence (lecture seule, rien ne part chez Hektor).
+
+**Prérequis commun** : agences ET coordonnées des personnes sont VIDES dans le registre (0/185 portables, 0 agence) jusqu'à
+la 1re nuit qui écrit (06/11). Rien ne peut basculer avant. Chaque bascule garde l'annuaire de Hektor en REPLI.
