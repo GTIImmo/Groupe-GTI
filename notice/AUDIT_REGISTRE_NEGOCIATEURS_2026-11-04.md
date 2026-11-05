@@ -779,3 +779,9 @@ réglage « Tout le réseau »). Ce n'était pas une décision : un reste. Son f
 manager seulement) avec les droits de son propriétaire. L'ÉCRAN du registre est réservé admin/manager, mais un compte
 négociateur peut lire tout le registre par l'API. Remède : `alter view … set (security_invoker = true)` — à mesurer avant
 (qui la lit : `loadMandatRegisterPage`, `loadMandatFilterCatalog`…).
+- ✅ **EN LIGNE et vu le 05/11** (Vercel `index-2sJGO2mP.js`, Chrome de Frédéric, compte admin, liste Annonces) : filtre
+  « Négociateur » = 35 noms (+ Tous, Sans) sans la case ; la case « Afficher les anciens » en ajoute 13 (Aline VALETTE,
+  Charlène PARANIER, Cyril LACHAIZE, Frédéric MONNE, Groupe GTI, gti immobilier, Hélène DEFOUR, Négo GTI, Nicole VURPILLOT,
+  Pierrick MARTINEZ, Stéphane PIOCHEL, Vincent-Lucas GONZALEZ, Vivien BERGER) — plus que les 7 mesurés sur les biens seuls,
+  le catalogue reprenant aussi mandats et travaux. Case remise décochée. ⚠ Non vu : le préfiltre « Mes biens » d'un compte
+  négociateur (pas de session négociateur pour l'essai).
