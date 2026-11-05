@@ -654,3 +654,11 @@ de la nuit + 33 déjà absentes depuis la photo du 04/11), toutes GARDÉES ; auc
 négociateur) ; 185 personnes, aucune supprimée. ⚠ Le signal `disparitions_nombreuses` fera crier la sentinelle
 `data.negociateur_registre_signal` au prochain passage du moniteur : il est ATTENDU (vieilles pages), à marquer traité
 (`app_negociateur_signal_traiter`) — décision de Frédéric.
+- ✅ **Les 34 « disparues » relues une par une (05/11)** : toutes ont encore leur FICHE et leur PERSONNE au registre ; toutes
+  étaient DÉJÀ des fiches inactives chez Hektor (aucune fiche active n'a disparu). 20 appartiennent à des personnes qui ont
+  une autre fiche encore présente (Dylan JOURGET, Emmanuelle PEREIRA, Céline HERITIER, Mélanie LEGRAND, Nadège PEYRARD,
+  Stéphanie JEOFFROY, Stéphanie MARTINEZ, Guillaume PERRET, Vincent-Lucas GONZALEZ, 7 comptes d'agence) ; 14 à des anciens
+  sans fiche restante (Hugo LABBE ×3, Frédérique JORAND ×2, Cyril LACHAIZE, Pierrick MARTINEZ, Tharah KLAU, agences d'Ambert,
+  Issoire, Le Puy, Saint-Étienne). Signal `disparitions_nombreuses` du 05/11 **marqué traité** à la demande de Frédéric
+  (« Oui ») — fait en base au nom de son compte (`traite_par` = son app_user_id ; la RPC exige une session admin) ;
+  0 signal ouvert ensuite.
