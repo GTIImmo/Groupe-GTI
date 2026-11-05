@@ -10141,6 +10141,8 @@ export async function createYoutrustSendSignatureJob(input: {
   numeroMandat?: string | null
   bienAdresse?: string | null
   corrections: CorrectionSignataire[]
+  // A.2 lot 6b P6 : envoye malgre une fiche changee depuis le PDF (ce que la fenetre a montre, confirme par l'humain).
+  ecartsAcceptes?: string[]
 }): Promise<ConsoleJob> {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
   const userId = await requireSupabaseUserId()
@@ -10156,6 +10158,7 @@ export async function createYoutrustSendSignatureJob(input: {
         numero_mandat: input.numeroMandat ?? null,
         bien_adresse: input.bienAdresse ?? null,
         corrections: input.corrections,
+        ...(input.ecartsAcceptes && input.ecartsAcceptes.length ? { ecarts_acceptes: input.ecartsAcceptes } : {}),
       },
       priority: 24,
       requested_by: userId,

@@ -819,6 +819,32 @@ ImmoSign existant dont les boutons répondent comme avant.
   ⚠ NON ÉPROUVÉ en réel : la boucle entière dans l'app (interrupteur éteint en production) — l'ouverture de l'éditeur
   par le panneau, l'attente de la marque, la marque posée par le vrai worker (il faut redémarrer les services).
 - **P6 — écran : « la fiche a changé depuis ce PDF »** (vue 5), comparaison photo ↔ fiche à l'ouverture.
+  🔎 **AUDIT DE P6 (05/11)** : « la fiche d'aujourd'hui » = le brouillon d'ouverture de l'éditeur
+  (`buildMandatDocumentDraft(dossier, detail, contacts, address)`), le même chemin que celui qui a imprimé le PDF.
+  Les trois écrans qui montrent le panneau Documents (cockpit, fiche bureau, téléphone) ont `detail`, `contacts` et
+  `address`. On ne compare QUE ce que la fiche porte : mandants (ordre et noms), n° et type de mandat, bien,
+  adresse, pièces, surfaces, prix FAI, net vendeur, honoraires. La date, la charge, l'occupation, les clauses et les
+  options se saisissent dans l'éditeur : pas comparées (sinon le bandeau sonnerait à chaque fois).
+  ✅ **P6 CODÉ LE 05/11** (rien commité, rien déployé) :
+  · `src/lib/ecartsFichePdf.ts` (nouveau, pur) : `ecartsAvecLaFiche` (PDF → fiche ; espaces, casse et écriture des
+    montants ne font pas un écart ; une fiche muette ne contredit pas le PDF) ; « ce qui a changé » de P5 y est
+    déplacé, à l'identique.
+  · fenêtre d'envoi : cadre ambre « ⚠ La fiche a changé depuis ce PDF » (PDF : … → fiche : …) ; le pied devient
+    « Envoyer quand même… » + « ↻ Régénérer avant d'envoyer » (= « Corriger le mandat ») ; « Envoyer quand même »
+    demande une confirmation écrite (« Envoyer le PDF du 04/11 17:05 tel qu'il est — sans Mme X, Prix FAI 205 000 € ? ») ;
+    le choix part dans la demande (`payload_json.ecarts_acceptes`) et le worker l'écrit au journal du travail (une
+    ligne, dormante derrière l'interrupteur). Un PDF d'avant le 05/11 (sans `contenu_imprime`) : seuls les mandants,
+    et il le dit.
+  · panneau Documents : reçoit la fiche aux 3 endroits ; éditeur : ne compare PAS un PDF qu'il vient de générer
+    (c'est la saisie du moment), compare celui qu'on retrouve par « Revenir à l'envoi sans rien changer ».
+  · essais : `apps/hektor-v1/test_ecarts_fiche_pdf.cjs` **18/18** (fidèle = 0 écart, écritures différentes = 0
+    avec témoin, mandant ajouté / retiré / renommé, prix, fiche muette, champs saisis ignorés, PDF d'avant le 05/11,
+    sans fiche, P5 déplacé inchangé, mêmes clés que le worker et que l'écran, les 3 panneaux, la trace) ; voisins
+    worker verts (23, 18, 23, 26, 22) ; build vert ; vu sur une page d'essai temporaire (retirée) à 1280 × 665 et
+    375 px, confirmation comprise.
+  ⚠ NON ÉPROUVÉ en réel (interrupteur éteint). ⚠ Risque connu : juste après une correction de prix ou de nom sur la
+  fiche, si la fiche affichée n'est pas encore relue, le bandeau peut parler de l'ancienne valeur — il ne bloque
+  rien, il propose de régénérer.
 - **P7 — éditeur : le couple (D32)** et le contrôle du prénom / nom — attend les réponses (a), (b), (c) de la
   proposition §11.2.
 - **P8 — le suivi par personne** (« Relancer », « Corriger l'adresse », vue 7 « déjà envoyé ») : après le lot 5 (avis

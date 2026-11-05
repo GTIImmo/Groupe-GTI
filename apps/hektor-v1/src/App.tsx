@@ -278,6 +278,7 @@ import ContactSearchFields, { contactSearchValueToInput, defaultContactSearchVal
 import './contact-new.css'
 import './ajout-conjoint.css'
 import EnvoiSignatureYoutrust, { EVENEMENT_CORRIGER_MANDAT, type DemandeCorrectionMandat, type OngletCorrection } from './EnvoiSignatureYoutrust'
+import type { FicheDuJourPdf } from './lib/ecartsFichePdf'
 import RechercheGlobale, { type GroupeRecherche } from './RechercheGlobale'
 import './fil-navigation.css'
 import './suivi-travaux.css'
@@ -4597,6 +4598,26 @@ function buildMandatDocumentDraft(
   }
 }
 
+// A.2 lot 6b P6 (05/11/2026) : ce que la FICHE dirait aujourd'hui, par LE MEME chemin que l'editeur (brouillon
+// d'ouverture, sans saisie) -- pour « la fiche a change depuis ce PDF ». Seuls les champs que la fiche porte.
+function ficheDuJourPourEnvoi(draft: MandatDocumentDraft): FicheDuJourPdf {
+  return {
+    mandants: draft.mandants.map((m) => ({ civilite: m.civilite || null, prenom: m.prenom || null, nom: m.nom || null })),
+    contenu: {
+      numero_mandat: draft.numeroMandat || null,
+      type_mandat: draft.typeMandat || null,
+      bien_titre: draft.bienTitre || null,
+      bien_adresse: draft.bienAdresse || null,
+      nombre_pieces: draft.nombrePieces || null,
+      surface_habitable: draft.surfaceHabitable || null,
+      surface_terrain: draft.surfaceTerrain || null,
+      prix_vente: draft.prixVente || null,
+      prix_net_vendeur: draft.prixNetVendeur || null,
+      honoraires_ttc: draft.honorairesTtc || null,
+    },
+  }
+}
+
 function buildMandatDocumentPayload(draft: MandatDocumentDraft, dossier: Dossier) {
   const mandantsLibelle = mandatMandantsLabel(draft.mandants, draft.mandantsLibelle)
   return {
@@ -5381,6 +5402,8 @@ function MandatDocumentEditor(props: {
   // la regeneration le remplace (le worker le marque) et revient a l'envoi avec « ce qui a change » (envoiAncien).
   const [correction, setCorrection] = useState<{ ancien: ConsoleDocument } | null>(null)
   const [envoiAncien, setEnvoiAncien] = useState<ConsoleDocument | null>(null)
+  // P6 : un PDF que l'editeur VIENT de generer est la saisie du moment -- on ne le compare pas a la fiche.
+  const [envoiJusteGenere, setEnvoiJusteGenere] = useState(false)
   // Type de document : mandat de vente OU avenant (modification d'un mandat actif). L'avenant n'est
   // disponible que si un mandat est deja actif ; dans ce cas il est preselectionne.
   const [docMode, setDocMode] = useState<'mandat' | 'avenant'>(() =>
@@ -5468,6 +5491,7 @@ function MandatDocumentEditor(props: {
   const revenirALEnvoiSansChanger = () => {
     if (!correction) return
     setEnvoiYoutrustDoc(correction.ancien)
+    setEnvoiJusteGenere(false)
     setCorrection(null)
   }
   // Demande venue du panneau Documents (meme bien) : le premier editeur monte la prend, un seul s'ouvre.
@@ -5716,6 +5740,7 @@ function MandatDocumentEditor(props: {
           setCorrection(null)
           setEnvoiAncien(ancienFrais)
           setEnvoiYoutrustDoc(fresh)
+          setEnvoiJusteGenere(true)
           return
         }
         if (fresh) {
@@ -5723,6 +5748,7 @@ function MandatDocumentEditor(props: {
           if (youtrustGen) {
             setMessage(bvs('Mandat enregistré chez nous.'))
             setEnvoiYoutrustDoc(fresh)
+            setEnvoiJusteGenere(true)
             return
           }
           setMessage(bvs('Mandat depose dans Hektor.'))
@@ -6012,6 +6038,7 @@ function MandatDocumentEditor(props: {
                 onClose={() => { setEnvoiYoutrustDoc(null); setEnvoiAncien(null) }}
                 onCorriger={(onglet) => { ouvrirCorrection(envoiYoutrustDoc, onglet); return true }}
                 ancien={envoiAncien}
+                ficheDuJour={envoiJusteGenere ? null : ficheDuJourPourEnvoi(initialDraft)}
               />
             ) : null}
           </div>
@@ -11494,7 +11521,7 @@ function MandatSignatureTracker({ dossier, onJobCreated }: { dossier: Dossier; o
   )
 }
 
-function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJobCreated, onMissingNegotiator, onDocumentsChanged }: { dossier: Dossier; compact?: boolean; skin?: 'classic' | 'v21'; onJobCreated?: (job: ConsoleJob) => void; onMissingNegotiator?: MissingNegotiatorHandler; onDocumentsChanged?: () => void }) {
+function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJobCreated, onMissingNegotiator, onDocumentsChanged, ficheDuMandat }: { dossier: Dossier; compact?: boolean; skin?: 'classic' | 'v21'; onJobCreated?: (job: ConsoleJob) => void; onMissingNegotiator?: MissingNegotiatorHandler; onDocumentsChanged?: () => void; ficheDuMandat?: { detail: DossierDetailPayload; contacts: DetailContact[]; address: string } | null }) {
   const [documents, setDocuments] = useState<ConsoleDocument[]>([])
   // Skin « v21 » (cockpit) : filtre + tiroir d'ajout. Non utilises en skin classique.
   const [docFilter, setDocFilter] = useState<'tous' | 'prep' | 'signed' | 'cloud'>('tous')
@@ -11510,6 +11537,10 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
     if (detail.pris) setEnvoiDoc(null)
     return detail.pris
   }
+  // A.2 lot 6b P6 : la fiche d'aujourd'hui (meme brouillon que l'editeur), calculee a l'ouverture de la fenetre.
+  const ficheDuJour = useMemo(() => (envoiDoc && ficheDuMandat
+    ? ficheDuJourPourEnvoi(buildMandatDocumentDraft(dossier, ficheDuMandat.detail, ficheDuMandat.contacts, ficheDuMandat.address))
+    : null), [envoiDoc, ficheDuMandat, dossier])
   const mentionRemplace = (document: ConsoleDocument) => {
     const r = documentRemplace(document)
     return r ? `Remplacé le ${new Date(r.le).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })} par une version régénérée — jamais envoyé` : null
@@ -12036,6 +12067,7 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
             onClose={() => setEnvoiDoc(null)}
             onSent={(job) => { onJobCreated?.(job); void refreshDocuments(true) }}
             onCorriger={(onglet) => demanderCorrection(envoiDoc, onglet)}
+            ficheDuJour={ficheDuJour}
           />
         ) : null}
       </div>
@@ -12132,6 +12164,7 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
             onClose={() => setEnvoiDoc(null)}
             onSent={(job) => { onJobCreated?.(job); void refreshDocuments(true) }}
             onCorriger={(onglet) => demanderCorrection(envoiDoc, onglet)}
+            ficheDuJour={ficheDuJour}
           />
         ) : null}
       </div>
@@ -32713,7 +32746,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
       <section className="detail-section">
         {isLightweightDetail
           ? <ReadOnlyDetailNotice label="Les documents ne peuvent pas etre modifies depuis une fiche d'index leger." />
-          : <ConsoleDocumentsPanel dossier={dossier} skin="v21" onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} onDocumentsChanged={() => { const id = dossier?.app_dossier_id; if (id) void loadConsoleDocuments(id).then(setCkDocs).catch(() => {}) }} />}
+          : <ConsoleDocumentsPanel dossier={dossier} ficheDuMandat={{ detail: props.detail, contacts: props.contacts, address: props.address }} skin="v21" onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} onDocumentsChanged={() => { const id = dossier?.app_dossier_id; if (id) void loadConsoleDocuments(id).then(setCkDocs).catch(() => {}) }} />}
       </section>
     </div>
   )
@@ -36240,7 +36273,7 @@ function DossierDetailLayoutBase(props: {
 
               {activeDetailTab === 'content' ? (
               <section className="detail-section detail-console-documents-section">
-                {isLightweightDetail ? <ReadOnlyDetailNotice label="Les documents ne peuvent pas etre ajoutes ou modifies depuis une fiche d'index leger." /> : <ConsoleDocumentsPanel dossier={dossier} onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} />}
+                {isLightweightDetail ? <ReadOnlyDetailNotice label="Les documents ne peuvent pas etre ajoutes ou modifies depuis une fiche d'index leger." /> : <ConsoleDocumentsPanel dossier={dossier} ficheDuMandat={{ detail: props.detail, contacts: props.contacts, address: props.address }} onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} />}
               </section>
               ) : null}
 
@@ -40292,7 +40325,7 @@ function MobileDossierDetail(props: {
           <HektorAnnonceFieldDetailPanel dossier={dossier} detail={props.detail} />
         </div>
         {!isLightweightDetail ? <div className="mobile-console-documents">
-          <ConsoleDocumentsPanel dossier={dossier} compact onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} />
+          <ConsoleDocumentsPanel dossier={dossier} ficheDuMandat={{ detail: props.detail, contacts: props.contacts, address: props.address }} compact onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} />
         </div> : null}
         {!isLightweightDetail ? <ConsolePhotosPanel dossier={dossier} apiImages={props.images} compact onOpenImage={props.onOpenImage} onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} /> : null}
         {props.texts.map((text) => (

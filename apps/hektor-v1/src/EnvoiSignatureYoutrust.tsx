@@ -12,6 +12,8 @@
 // N'est montee que si l'interrupteur `signature_youtrust` est allume (App.tsx) ; eteint, rien ne change a l'ecran.
 // P5 (05/11) : « Corriger le mandat » rouvre l'editeur (onCorriger) ; au retour d'une regeneration, `ancien` est le
 //   PDF remplace et la fenetre dit « ce qui a change » (maquette « corriger » vues 3-4). Un PDF remplace ne part pas.
+// P6 (05/11) : `ficheDuJour` -- si la fiche a change depuis le PDF (mandants, bien, prix, honoraires), un bandeau le dit
+//   et propose de regenerer ; « Envoyer quand meme… » demande une confirmation, ecrite dans la demande (vue 5).
 import { useEffect, useMemo, useState } from 'react'
 import {
   contenuImprimeDuDocument,
@@ -21,11 +23,10 @@ import {
   enregistrerCanalDuMandant,
   loadFichesDesSignataires,
   photoSignatairesDuDocument,
-  type ContenuImprimePdf,
   type CorrectionSignataire,
   type FicheSignataire,
-  type PhotoSignatairesPdf,
 } from './lib/api'
+import { ceQuiAChange, ecartsAvecLaFiche, type FicheDuJourPdf } from './lib/ecartsFichePdf'
 import type { ConsoleDocument, ConsoleJob, Dossier } from './types'
 import './envoi-signature.css'
 
@@ -48,46 +49,6 @@ export type OngletCorrection = 'mandants' | 'bien' | 'prix' | 'clauses' | 'aperc
 export const EVENEMENT_CORRIGER_MANDAT = 'hektor:corriger-mandat'
 export type DemandeCorrectionMandat = { app_dossier_id: Dossier['app_dossier_id']; document: ConsoleDocument; onglet: OngletCorrection; pris: boolean }
 
-// P5 -- « ce qui a change » entre deux PDF : les signataires (photos) et ce qui est imprime (contenu_imprime).
-const CHAMPS_IMPRIMES: Array<[keyof ContenuImprimePdf, string, 'euros' | 'texte']> = [
-  ['numero_mandat', 'N° mandat', 'texte'], ['type_mandat', 'Type de mandat', 'texte'], ['date_signature', 'Date de signature', 'texte'],
-  ['bien_titre', 'Bien', 'texte'], ['bien_adresse', 'Adresse du bien', 'texte'], ['nombre_pieces', 'Pièces', 'texte'],
-  ['surface_habitable', 'Surface habitable', 'texte'], ['surface_terrain', 'Surface terrain', 'texte'], ['etat_occupation', 'Occupation', 'texte'],
-  ['prix_vente', 'Prix FAI', 'euros'], ['prix_net_vendeur', 'Net vendeur', 'euros'], ['honoraires_ttc', 'Honoraires TTC', 'euros'],
-  ['honoraires_charge', 'Charge des honoraires', 'texte'], ['execution_anticipee', 'Exécution anticipée', 'texte'],
-  ['inclure_couverture', 'Couverture', 'texte'], ['clause_particuliere', 'Clause particulière', 'texte'],
-]
-function montrer(valeur: unknown, forme: 'euros' | 'texte'): string {
-  if (valeur === true) return 'Oui'
-  if (valeur === false) return 'Non'
-  const t = String(valeur ?? '').trim()
-  if (!t) return '—'
-  if (forme === 'euros') { const n = Number(t.replace(/\s/g, '').replace(',', '.')); if (Number.isFinite(n)) return `${n.toLocaleString('fr-FR')} €` }
-  if (t === 'acquereur') return 'Acquéreur'
-  if (t === 'mandant') return 'Mandant'
-  return t.length > 80 ? `${t.slice(0, 77)}…` : t
-}
-type LigneDiff = { k: string; avant?: string; apres?: string; plus?: string; moins?: string; note?: string }
-function ceQuiAChange(ancienPhoto: PhotoSignatairesPdf | null, neuvePhoto: PhotoSignatairesPdf | null, ancienContenu: ContenuImprimePdf | null, neufContenu: ContenuImprimePdf | null) {
-  const lignes: LigneDiff[] = []
-  const nom = (m: { civilite: string | null; prenom: string | null; nom: string | null }) => [m.civilite, m.prenom, m.nom].filter(Boolean).join(' ') || '—'
-  const a = ancienPhoto?.mandants ?? [], n = neuvePhoto?.mandants ?? []
-  for (let i = 0; i < Math.max(a.length, n.length); i += 1) {
-    if (a[i] && n[i] && nom(a[i]) !== nom(n[i])) lignes.push({ k: `Mandant ${i + 1}`, avant: nom(a[i]), apres: nom(n[i]) })
-    else if (!a[i] && n[i]) lignes.push({ k: 'Mandants', plus: `＋ ${nom(n[i])}`, note: `(mandant ${i + 1})` })
-    else if (a[i] && !n[i]) lignes.push({ k: 'Mandants', moins: `− ${nom(a[i])}`, note: `(n’est plus dans le mandat)` })
-  }
-  if (a.length !== n.length) lignes.push({ k: 'Signataires', avant: String(a.length + 1), apres: String(n.length + 1), note: `· donc ${n.length + 1} crédits au lieu de ${a.length + 1}` })
-  const compare = Boolean(ancienContenu && neufContenu)
-  if (ancienContenu && neufContenu) {
-    for (const [cle, label, forme] of CHAMPS_IMPRIMES) {
-      const av = montrer(ancienContenu[cle], forme), ap = montrer(neufContenu[cle], forme)
-      if (av !== ap) lignes.push({ k: label, avant: av, apres: ap })
-    }
-  }
-  return { lignes, compare }
-}
-
 export default function EnvoiSignatureYoutrust(props: {
   document: ConsoleDocument
   dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'negociateur_email' | 'commercial_nom' | 'numero_mandat'>
@@ -98,9 +59,15 @@ export default function EnvoiSignatureYoutrust(props: {
   onCorriger?: (onglet: OngletCorrection) => boolean | void
   // P5 : le PDF que ce document remplace (retour d'une regeneration), relu apres la marque du worker.
   ancien?: ConsoleDocument | null
+  // P6 : ce que la fiche du bien dirait aujourd'hui (absent = pas de comparaison : PDF tout juste genere, fiche inconnue).
+  ficheDuJour?: FicheDuJourPdf | null
 }) {
   const photo = useMemo(() => photoSignatairesDuDocument(props.document), [props.document])
   const remplace = documentRemplace(props.document)
+  const ecarts = useMemo(() => ecartsAvecLaFiche(photo, contenuImprimeDuDocument(props.document), props.ficheDuJour ?? null),
+    [photo, props.document, props.ficheDuJour])
+  const ficheAChange = ecarts.lignes.length > 0
+  const [confirmerEcarts, setConfirmerEcarts] = useState(false)
   const diff = useMemo(() => (props.ancien
     ? ceQuiAChange(photoSignatairesDuDocument(props.ancien), photo, contenuImprimeDuDocument(props.ancien), contenuImprimeDuDocument(props.document))
     : null), [props.ancien, props.document, photo])
@@ -207,6 +174,8 @@ export default function EnvoiSignatureYoutrust(props: {
         numeroMandat: props.dossier.numero_mandat ?? null,
         bienAdresse: props.adresse ?? null,
         corrections,
+        // P6 : envoye malgre une fiche changee -- le choix est ecrit dans la demande (et au journal par le worker).
+        ...(ficheAChange ? { ecartsAcceptes: ecarts.lignes.map((l) => `${l.k} : ${l.avant ?? ''}${l.apres !== undefined ? ` (fiche : ${l.apres})` : ''}${l.plus ?? ''}${l.moins ?? ''}${l.note ? ` ${l.note}` : ''}`.trim()) } : {}),
       })
       props.onSent?.(job)
       setFait({ avertissements })
@@ -282,6 +251,27 @@ export default function EnvoiSignatureYoutrust(props: {
                 </div>
               ) : null}
             </>
+          ) : null}
+
+          {ficheAChange && !fait && !remplace && photo?.valide ? (
+            <div className="ens-diff ens-fiche-change">
+              <h3>⚠ La fiche a changé depuis ce PDF{dateGen ? ` (généré le ${dateGen})` : ''}</h3>
+              {ecarts.lignes.map((l, i) => (
+                <div key={i} className="ens-d">
+                  <span className="ens-k">{l.k}</span>
+                  {l.avant !== undefined ? <><span>PDF : <s>{l.avant}</s></span> → <span className="ens-n">fiche : {l.apres}</span></> : null}
+                  {l.plus ? <span className="ens-n">{l.plus}</span> : null}
+                  {l.moins ? <span className="ens-moins">{l.moins}</span> : null}
+                  {l.note ? <span className="ens-note">{l.note}</span> : null}
+                </div>
+              ))}
+              <div className="ens-note">Le PDF, lui, ne le dit pas. Régénérez-le pour qu’il suive la fiche{!ecarts.prixCompare ? ' (PDF généré avant le 05/11 : seuls les mandants sont comparés)' : ''}.</div>
+            </div>
+          ) : null}
+          {confirmerEcarts && ficheAChange && !fait ? (
+            <div className="ens-bandeau alerte">
+              <b>Envoyer le PDF{dateGen ? ` du ${dateGen}` : ''} tel qu’il est</b> — {ecarts.resume.join(', ')} ? Ce choix est écrit dans la demande d’envoi.
+            </div>
           ) : null}
 
           {remplace ? (
@@ -374,11 +364,23 @@ export default function EnvoiSignatureYoutrust(props: {
             <><span className="ens-esp" /><button type="button" className="ens-gros envoi" onClick={props.onClose}>Fermer</button></>
           ) : (
             <>
-              <span className="ens-note">{remplace ? 'Ce PDF est remplacé : envoyez le nouveau.' : !photo || !photo.valide ? 'Régénérez le mandat dans l’éditeur.' : manques.length ? <>L’envoi attend <b>l’e-mail de {manques.join(', ')}</b>.</> : <>Tout le monde est prêt · <b>{casesTotal} crédit{casesTotal > 1 ? 's' : ''}</b> Youtrust (un par signataire).</>}</span>
+              <span className="ens-note">{remplace ? 'Ce PDF est remplacé : envoyez le nouveau.' : !photo || !photo.valide ? 'Régénérez le mandat dans l’éditeur.' : manques.length ? <>L’envoi attend <b>l’e-mail de {manques.join(', ')}</b>.</> : ficheAChange ? <>La fiche a changé depuis ce PDF · <b>{casesTotal} crédit{casesTotal > 1 ? 's' : ''}</b> s’il part tel quel.</> : <>Tout le monde est prêt · <b>{casesTotal} crédit{casesTotal > 1 ? 's' : ''}</b> Youtrust (un par signataire).</>}</span>
               <span className="ens-esp" />
-              <button type="button" className="ens-gros envoi" onClick={() => void envoyer()} disabled={busy || bloque || manques.length > 0}>
-                {busy ? 'Envoi…' : 'Envoyer en signature'}
-              </button>
+              {ficheAChange && !bloque && !confirmerEcarts ? (
+                <>
+                  <button type="button" className="ens-gros sec" onClick={() => setConfirmerEcarts(true)} disabled={busy || manques.length > 0}>Envoyer quand même…</button>
+                  {props.onCorriger ? <button type="button" className="ens-gros envoi" onClick={() => corriger('mandants')} disabled={busy}>↻ Régénérer avant d’envoyer</button> : null}
+                </>
+              ) : ficheAChange && !bloque ? (
+                <>
+                  <button type="button" className="ens-gros sec" onClick={() => setConfirmerEcarts(false)} disabled={busy}>Annuler</button>
+                  <button type="button" className="ens-gros envoi" onClick={() => void envoyer()} disabled={busy || manques.length > 0}>{busy ? 'Envoi…' : 'Oui, envoyer ce PDF tel quel'}</button>
+                </>
+              ) : (
+                <button type="button" className="ens-gros envoi" onClick={() => void envoyer()} disabled={busy || bloque || manques.length > 0}>
+                  {busy ? 'Envoi…' : 'Envoyer en signature'}
+                </button>
+              )}
             </>
           )}
         </div>

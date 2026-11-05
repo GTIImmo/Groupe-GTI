@@ -6450,6 +6450,12 @@ async function handleYoutrustSendSignature(job) {
   if (Array.isArray(payload.mandants)) {
     await logJob(job.id, "youtrust", "running", "Liste de signataires de l'ecran ignoree : les signataires viennent du PDF", { ecran: payload.mandants.length, pdf: mandantsBruts.length });
   }
+  // lot 6b P6 (05/11/2026) : la fiche avait change depuis le PDF et l'humain a confirme l'envoi tel quel -- on l'ecrit.
+  if (Array.isArray(payload.ecarts_acceptes) && payload.ecarts_acceptes.length) {
+    await logJob(job.id, "youtrust", "running", "Envoye tel quel malgre une fiche changee depuis le PDF (confirme a l'ecran)", {
+      ecarts_acceptes: payload.ecarts_acceptes.slice(0, 20).map((x) => String(x).slice(0, 300)),
+    });
+  }
   const dossier = await loadDossier({ app_dossier_id: doc.app_dossier_id, hektor_annonce_id: doc.hektor_annonce_id });
   // D17 + D21 : le negociateur DU BIEN s'il est actif, sinon l'expediteur, jamais l'agence.
   const mandataireBrut = await mandataireDuMandat(job, payload, dossier);
