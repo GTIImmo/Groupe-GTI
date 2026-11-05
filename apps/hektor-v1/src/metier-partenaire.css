@@ -1,0 +1,95 @@
+/* CHANTIER PARTENAIRES · LOT 3, PIÈCE 3.2 (05/11/2026) — la fenêtre « Métier du contact » (.mtp), rendue hors de la
+   fiche par un portail. Maquette maquettes/fenetre-metier-v1.html ; famille visuelle de « Ajouter un conjoint » (.ajc).
+   Palette : magenta = l'action ; vert = « sera ajouté » ; rouge doux = « sera retiré » ; teal = l'origine. AUCUNE logique ici.
+   L'en-tête et les boutons restent visibles ; seul le corps défile (écran bas 1280 × 665 contrôlé sur la maquette). */
+.mtp-voile{position:fixed;inset:0;z-index:1200;display:flex;align-items:center;justify-content:center;padding:28px 16px;
+  background:rgba(28,24,21,.42);backdrop-filter:blur(2px)}
+.mtp{
+  --ink:#1c1815;--ink-soft:#564d47;--muted:#8a807a;--faint:#a89e95;
+  --line:#eae1d7;--line-soft:#f1eae1;--line-strong:#ddd2c6;--card:#fffdfb;--card-2:#faf6f1;
+  --brand-soft:#fdf0f6;--brand-line:#f1c9da;
+  --teal-soft:#e6f1f1;--teal-line:#d7e7e7;
+  --green-ink:#1f6a44;--green-soft:#e9f3ec;--green-line:#cfe7d8;
+  --danger:#b3261e;--danger-soft:#fbeceb;--danger-line:#f1c9c6;
+  font-family:'Hanken Grotesk',system-ui,sans-serif;color:var(--ink);-webkit-font-smoothing:antialiased;
+  width:100%;max-width:560px;max-height:calc(100vh - 56px);display:flex;flex-direction:column;background:var(--card);
+  border-radius:22px;overflow:hidden;box-shadow:0 24px 60px rgba(28,24,21,.30),0 2px 6px rgba(28,24,21,.08);
+  animation:mtp-entree .18s ease-out}
+.mtp *{box-sizing:border-box}
+@keyframes mtp-entree{from{opacity:0;transform:translateY(8px) scale(.985)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.mtp{animation:none}}
+
+.mtp-tete{flex:none;display:flex;align-items:center;gap:13px;padding:18px 20px 16px;border-bottom:1px solid var(--line-soft);
+  background:linear-gradient(180deg,#fff,var(--card))}
+.mtp-ic{width:44px;height:44px;flex:none;border-radius:14px;display:grid;place-items:center;color:#fff;background:linear-gradient(155deg,#3f97a1,#1f5560)}
+.mtp-ic svg{width:21px;height:21px}
+.mtp-titres{min-width:0;flex:1}
+.mtp-sur{font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.mtp-titre{font-family:'Fraunces',Georgia,serif;font-size:21px;font-weight:600;line-height:1.15;margin:2px 0 0}
+.mtp-qui{font-size:12.5px;color:var(--ink-soft);margin-top:3px;overflow-wrap:anywhere}
+.mtp-x{flex:none;width:34px;height:34px;border-radius:10px;border:1px solid var(--line);background:#fff;color:var(--ink-soft);display:grid;place-items:center;cursor:pointer}
+.mtp-x svg{width:15px;height:15px}
+
+.mtp-corps{min-height:0;overflow:auto;padding:16px 20px 14px;display:flex;flex-direction:column;gap:18px}
+.mtp-k{font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#8a7f6e;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.mtp-k .n{font-weight:700;letter-spacing:0;text-transform:none;color:var(--faint)}
+
+.mtp-actuels{display:flex;flex-direction:column;gap:8px}
+.mtp-actuel{display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:14px;border:1px solid var(--line);background:#fff}
+.mtp-actuel .pt{width:9px;height:9px;border-radius:50%;background:#2f7c86;flex:none}
+.mtp-actuel .t{min-width:0;flex:1}
+.mtp-actuel .nm{font-size:14px;font-weight:800;color:#1f5560}
+.mtp-actuel .or{font-size:11.5px;color:#7a6f63;line-height:1.35;margin-top:1px;overflow-wrap:anywhere}
+.mtp-actuel button{flex:none;font:inherit;font-size:12px;font-weight:800;border-radius:9px;padding:6px 10px;cursor:pointer;color:var(--danger);background:#fff;border:1px solid var(--danger-line)}
+.mtp-actuel.retire{background:var(--danger-soft);border-color:var(--danger-line)}
+.mtp-actuel.retire .pt{background:var(--danger)}
+.mtp-actuel.retire .nm{color:var(--danger);text-decoration:line-through;text-decoration-thickness:1.5px}
+.mtp-actuel.retire button{color:var(--ink-soft);border-color:var(--line-strong)}
+.mtp-vide{padding:14px;border-radius:14px;border:1px dashed var(--line-strong);background:var(--card-2);font-size:12.5px;color:var(--ink-soft);line-height:1.45}
+
+.mtp-choix{display:flex;flex-wrap:wrap;gap:7px}
+.mtp-pill{font:inherit;font-size:12.5px;font-weight:700;color:var(--ink-soft);background:#fff;border:1px solid var(--line-strong);border-radius:99px;padding:7px 12px;
+  cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:background .15s,border-color .15s}
+.mtp-pill:hover{border-color:var(--brand-line);background:var(--brand-soft)}
+.mtp-pill svg{width:13px;height:13px;display:none}
+.mtp-pill.prem{font-weight:800}
+.mtp-pill.on{color:var(--green-ink);background:var(--green-soft);border-color:var(--green-line)}
+.mtp-pill.on svg{display:block}
+
+.mtp-note{display:flex;gap:9px;align-items:flex-start;padding:11px 12px;border-radius:12px;background:var(--teal-soft);border:1px solid var(--teal-line);font-size:12px;color:#2b5d65;line-height:1.45}
+.mtp-note svg{width:16px;height:16px;flex:none;margin-top:1px}
+.mtp-erreur{padding:10px 12px;border-radius:12px;background:var(--danger-soft);border:1px solid var(--danger-line);color:var(--danger);font-size:12.5px;font-weight:700;line-height:1.4;overflow-wrap:anywhere}
+
+.mtp-pied{flex:none;display:flex;align-items:center;gap:10px;padding:14px 20px;border-top:1px solid var(--line-soft);background:var(--card-2)}
+.mtp-bilan{flex:1;min-width:0;font-size:12.5px;color:var(--muted)}
+.mtp-bilan b{font-weight:800}
+.mtp-bilan .aj{color:var(--green-ink)}
+.mtp-bilan .re{color:var(--danger)}
+.mtp-btn{font:inherit;font-size:13.5px;font-weight:800;border-radius:12px;padding:10px 16px;cursor:pointer;border:1px solid var(--line-strong);background:#fff;color:var(--ink-soft)}
+.mtp-btn.go{color:#fff;border-color:transparent;background:linear-gradient(155deg,#d83a7e,#9d0f4e);box-shadow:0 8px 18px -10px rgba(194,18,95,.8)}
+.mtp-btn:disabled,.mtp button:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
+
+@media (max-width:560px){
+  .mtp-voile{padding:0;align-items:flex-end}
+  .mtp{border-radius:22px 22px 0 0;max-width:none;max-height:92vh}
+  .mtp-pied{flex-wrap:wrap}
+  .mtp-bilan{flex-basis:100%}
+  .mtp-btn{flex:1}
+}
+
+/* Le sombre de l'app (mobile.css) : seulement sous 1180 px, comme la fiche. */
+@media (prefers-color-scheme: dark) and (max-width: 1180px){
+  .mtp{background:#1f1a16;color:#efe7dd}
+  .mtp-tete{background:#241e19;border-color:#3a322b}
+  .mtp-qui,.mtp-actuel .or,.mtp-vide,.mtp-bilan{color:#b9ada0}
+  .mtp-x,.mtp-actuel,.mtp-pill,.mtp-btn{background:#2a231e;border-color:#43392f;color:#e5dbcf}
+  .mtp-actuel .nm{color:#8fc9cf}
+  .mtp-actuel button{background:#2a231e;border-color:#6a3530;color:#f0a49b}
+  .mtp-actuel.retire{background:#341c1a;border-color:#5c2a26}
+  .mtp-actuel.retire button{border-color:#43392f;color:#e5dbcf}
+  .mtp-vide{background:#241e19;border-color:#43392f}
+  .mtp-note{background:#1c2a2c;border-color:#2c4448;color:#a9d3d8}
+  .mtp-pied{background:#241e19;border-color:#3a322b}
+  .mtp-pill.on{background:#18301f;border-color:#2c5a3a;color:#9fd8b5}
+  .mtp-btn.go{color:#fff;border-color:transparent;background:linear-gradient(155deg,#d83a7e,#9d0f4e)}
+}

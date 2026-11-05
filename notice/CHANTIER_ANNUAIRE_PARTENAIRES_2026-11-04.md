@@ -1638,6 +1638,21 @@ de n'importe quel contact (trace de l'auteur gardée) ; rien chez Hektor.
   corrigé après un premier essai qui dépassait de 3 px et des boutons restés blancs), téléphone 375 × 812 (volet du bas,
   aucun débordement).
 
+✅ **FENÊTRE CODÉE le 05/11** (« oui code-la ») — invisible tant que le cran n'existe pas :
+- `src/MetierPartenaire.tsx` : `FenetreMetierPartenaire` (portail, Échap et clic dehors ferment ; « Enregistrer » envoie
+  les RETRAITS puis les AJOUTS, un par un, par `app_partenaire_metier_ecrire` ; une erreur au milieu : ce qui est passé est
+  relu, l'arrêt est dit) ; `useMetiersPartenaire` sait se relire (`recharger`) ; le bloc reçoit un bouton « Changer ».
+- `src/lib/metierPartenaire.ts` : `METIERS_ORDONNES` (18, les six du chantier d'abord) et `planDesChangements` (ne retire
+  que l'actif, n'ajoute pas l'actif, ignore l'inconnu et les doublons).
+- `src/metier-partenaire.css` (la maquette, en `.mtp-*` ; sombre sous 1180 px comme la fiche) ; bouton « Changer » dans
+  `contact-detail-v2.css`.
+- Branché dans `ContactDetailPopupV2` : **deux portes** — « Changer » du bloc et « ⋯ › Changer le métier » (la seule pour
+  un contact SANS métier) ; visible si `partenaires_ecran` ET **`partenaires_metier_modif`** (nouveau cran, admin / on)
+  ET `canManageContacts` (admin, manager, commercial — comme « Modifier la fiche ») ET lecture prête.
+- Essais : `test_metier_partenaire.cjs` **27/27** ; `test_fiche_notaire.cjs` vert ; `npm run build` vert.
+**Reste** : pousser ; poser `partenaires_metier_modif = admin` ; essai réel sur une fiche d'essai (ajouter, retirer, relire
+le registre) ; voir les trois formats ; puis « on » pour tous (accord).
+
 ### 7 ter. Les dépendances (techniques, pas un ordre décidé)
 
 - 0 avant tout le reste ; 0.1 avant B2 ; 0.2 avant B1 ; 0.6 avant B5 ; 0.3 avant B6 ; 0.4 avant B7 ; 0.5 avant C2.

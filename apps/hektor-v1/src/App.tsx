@@ -255,7 +255,7 @@ import ContactSearchModal from './ContactSearchModal'
 import RechercheAcquereur, { type VisitePlanInput } from './RechercheAcquereur'
 import RapprochementMandat, { type MandatContext } from './RapprochementMandat'
 import { FICHE_NOTAIRE_V2, NotaireAVenir, NotaireDossiers, NotaireInterlocuteurs, NotaireKpis, NotaireVentesEtAvecNous, construireVueNotaire, useFicheNotaire } from './FicheNotaire'
-import { BlocMetierPartenaire, useMetiersPartenaire } from './MetierPartenaire'
+import { BlocMetierPartenaire, FenetreMetierPartenaire, useMetiersPartenaire } from './MetierPartenaire'
 import NotificationsBell from './NotificationsBell'
 import SanteSystemeScreen from './SanteSystemeScreen'
 import RegistreTransactionsScreen, { type GesteDuRegistre } from './RegistreTransactionsScreen'
@@ -46762,6 +46762,10 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
   // PARTENAIRES, lot 3 pièce 3.1 (05/11/2026) : le MÉTIER du registre, sous le statut (cran `partenaires_ecran`).
   const partenairesEcran = useCranCouplesVisible('partenaires_ecran', props.profileRole)
   const metiersPartenaire = useMetiersPartenaire(String(props.contact.hektor_contact_id ?? ''), partenairesEcran)
+  // pièce 3.2 (05/11/2026) : « Changer le métier » (cran `partenaires_metier_modif`, et le droit de gérer les contacts).
+  const metierModifCran = useCranCouplesVisible('partenaires_metier_modif', props.profileRole)
+  const peutChangerMetier = partenairesEcran && metierModifCran && Boolean(props.canManageContacts) && metiersPartenaire.etat === 'pret'
+  const [fenetreMetierOuverte, setFenetreMetierOuverte] = useState(false)
   // La fiche ouverte ne porte pas toujours sa nature (cela dépend de l'écran qui l'ouvre) : on la lit, comme le foyer.
   const [natureLue, setNatureLue] = useState<{ pour: string; nature_fiche?: string | null; couple_json?: unknown } | null>(null)
   useEffect(() => {
@@ -47577,6 +47581,11 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7}><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3Z" /><path d="m9 12 2 2 4-4" /></svg>Ouvrir dans Hektor
                         <svg className="fa-cx-menu-ext" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M7 17 17 7M9 7h8v8" /></svg>
                       </button>
+                      {peutChangerMetier ? (
+                        <button className="fa-cx-menu-item" type="button" onClick={() => { setContactActionsOpen(false); setFenetreMetierOuverte(true) }}>
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7}><path d="M4 7h16M4 12h10M4 17h7" /><path d="m16 15 3 3 3-3" /></svg>Changer le métier
+                        </button>
+                      ) : null}
                       {props.canManageContacts ? (
                         <button className="fa-cx-menu-item" type="button" disabled={archivage.pending} onClick={() => { setContactActionsOpen(false); void archivage.basculer() }}>
                           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7}><path d="M3 7h18v4H3z" /><path d="M5 11v9h14v-9" /><path d="M10 15h4" /></svg>{archivage.pending ? 'Patientez…' : archivage.libelle}{foyer && !archivage.pending ? ' (tout le foyer)' : ''}
@@ -47642,7 +47651,16 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
                   {vueNotaire?.partenaireDepuis ? <span className="fa-cx-st-chip app"><span className="d" />Partenaire depuis {vueNotaire.partenaireDepuis.slice(0, 4)}</span> : null}
                   {hasSeverity ? <span className="fa-cx-st-chip sev"><span className="d" />{severityLabel}</span> : null}
                 </div>
-                <BlocMetierPartenaire metiers={metiersPartenaire} />
+                <BlocMetierPartenaire metiers={metiersPartenaire} onChanger={peutChangerMetier ? () => setFenetreMetierOuverte(true) : undefined} />
+                {fenetreMetierOuverte && peutChangerMetier ? (
+                  <FenetreMetierPartenaire
+                    contactId={String(props.contact.hektor_contact_id ?? '')}
+                    nom={contactFullName}
+                    lignes={metiersPartenaire.lignes}
+                    onClose={() => setFenetreMetierOuverte(false)}
+                    onEnregistre={metiersPartenaire.recharger}
+                  />
+                ) : null}
               </div>
             </aside>
 

@@ -58,15 +58,42 @@ controle("(10) une ligne vide est ignorée", resumerMetiers([{ metier: "", sourc
 controle("(11) un même métier n'apparaît qu'une fois", resumerMetiers([{ metier: "syndic", source: "hektor" }, { metier: "syndic", source: "netty" }]).titre === "Syndic");
 
 const bloc = fs.readFileSync(BLOC, "utf8");
-controle("(12) lecture : lignes ACTIVES du contact, par notre numéro, rien d'écrit",
-  /from\('app_partenaire_metier'\)/.test(bloc) && /\.eq\('contact_id', contactId\.trim\(\)\)/.test(bloc) && /\.is\('retire_le', null\)/.test(bloc)
-  && !/\.insert\(|\.update\(|\.delete\(|\.rpc\(/.test(bloc));
+const lecture = bloc.slice(bloc.indexOf("export function useMetiersPartenaire("), bloc.indexOf("export function BlocMetierPartenaire("));
+controle("(12) lecture : lignes ACTIVES du contact, par notre numéro, rien d'écrit dans la lecture",
+  lecture.length > 0 && /from\('app_partenaire_metier'\)/.test(lecture) && /\.eq\('contact_id', contactId\.trim\(\)\)/.test(lecture)
+  && /\.is\('retire_le', null\)/.test(lecture) && !/\.insert\(|\.update\(|\.delete\(|\.rpc\(/.test(lecture));
+controle("(12 bis) la seule écriture du fichier est app_partenaire_metier_ecrire",
+  (bloc.match(/\.rpc\(/g) || []).length === 1 && (bloc.match(/supabase\.from\(/g) || []).length === 1
+  && !/\.(insert|upsert|update)\(/.test(bloc));
 controle("(13) une lecture ratée est DITE (jamais « aucun métier »)", /etat === 'erreur'/.test(bloc) && /Lecture du registre impossible/.test(bloc));
 
 const app = fs.readFileSync(APP, "utf8");
 controle("(14) le cran `partenaires_ecran` commande la lecture", /useCranCouplesVisible\('partenaires_ecran', props\.profileRole\)/.test(app)
   && /useMetiersPartenaire\(String\(props\.contact\.hektor_contact_id \?\? ''\), partenairesEcran\)/.test(app));
-controle("(15) le bloc est sous le statut, dans le volet gauche", /fa-cx-st-chip sev[\s\S]{0,200}<\/div>\s*<BlocMetierPartenaire metiers=\{metiersPartenaire\} \/>/.test(app));
+controle("(15) le bloc est sous le statut, dans le volet gauche", /fa-cx-st-chip sev[\s\S]{0,200}<\/div>\s*<BlocMetierPartenaire metiers=\{metiersPartenaire\}/.test(app));
+
+// ── PIÈCE 3.2 : la fenêtre « Métier du contact » ──
+const { planDesChangements, METIERS_ORDONNES } = api;
+controle("(16) 18 métiers, les six du chantier d'abord", METIERS_ORDONNES.length === 18
+  && J(METIERS_ORDONNES.filter((m) => m.premier).map((m) => m.metier)) === J(["syndic", "diagnostiqueur", "courtier", "banque", "apporteur", "parrain"])
+  && METIERS_ORDONNES.slice(0, 6).every((m) => m.premier) && METIERS_ORDONNES.every((m) => m.libelle));
+controle("(17) rien de changé = rien à envoyer", J(planDesChangements(["syndic"], [], [])) === "[]");
+controle("(18) les retraits partent AVANT les ajouts", J(planDesChangements(["syndic"], ["syndic"], ["diagnostiqueur"]))
+  === J([{ metier: "syndic", retirer: true }, { metier: "diagnostiqueur", retirer: false }]));
+controle("(19) on ne retire que ce qui est actif, on n'ajoute pas ce qui l'est déjà",
+  J(planDesChangements(["syndic"], ["courtier"], ["syndic", "banque"])) === J([{ metier: "banque", retirer: false }]));
+controle("(20) un métier inconnu n'est jamais envoyé", J(planDesChangements([], [], ["geometre"])) === "[]");
+controle("(21) un doublon dans la saisie n'est envoyé qu'une fois", J(planDesChangements([], [], ["syndic", "syndic"])) === J([{ metier: "syndic", retirer: false }]));
+controle("(22) l'écriture passe par app_partenaire_metier_ecrire (notre numéro, le métier, retirer ou non)",
+  /rpc\('app_partenaire_metier_ecrire', \{\s*p_contact: props\.contactId, p_metier: changement\.metier, p_retirer: changement\.retirer,\s*\}\)/.test(bloc));
+controle("(23) après une erreur, ce qui est passé est relu et l'arrêt est dit", /if \(faits > 0\) props\.onEnregistre\(\)/.test(bloc) && /échec : /.test(bloc));
+controle("(24) le geste : cran `partenaires_metier_modif` ET droit de gérer les contacts ET lecture prête",
+  /useCranCouplesVisible\('partenaires_metier_modif', props\.profileRole\)/.test(app)
+  && /peutChangerMetier = partenairesEcran && metierModifCran && Boolean\(props\.canManageContacts\) && metiersPartenaire\.etat === 'pret'/.test(app));
+controle("(25) deux portes : « Changer » dans le bloc et « Changer le métier » dans le menu ⋯",
+  /onChanger=\{peutChangerMetier \? \(\) => setFenetreMetierOuverte\(true\) : undefined\}/.test(app)
+  && /\{peutChangerMetier \? \([\s\S]{0,700}Changer le métier/.test(app));
+controle("(26) la fenêtre relit le bloc après l'enregistrement", /onEnregistre=\{metiersPartenaire\.recharger\}/.test(app));
 
 console.log(echecs.length ? `\n${echecs.length} contrôle(s) en échec` : "\nTout est vert.");
 process.exit(echecs.length ? 1 : 0);

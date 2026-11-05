@@ -14,6 +14,26 @@ export const LIBELLE_METIER: Record<string, string> = {
   technicien: 'Technicien', autre: 'Autre',
 }
 
+// PIÈCE 3.2 (05/11/2026) — la fenêtre « Métier du contact » (maquette maquettes/fenetre-metier-v1.html).
+// L'ordre des pastilles : les six métiers du chantier d'abord (marqués `premier`), puis les autres.
+const PREMIERS = ['syndic', 'diagnostiqueur', 'courtier', 'banque', 'apporteur', 'parrain']
+export const METIERS_ORDONNES: { metier: string; libelle: string; premier: boolean }[] = [
+  ...PREMIERS,
+  'notaire', 'agent_immobilier', 'mandataire', 'promoteur', 'marchand_de_biens', 'investisseur', 'administration',
+  'societe', 'avocat', 'huissier', 'technicien', 'autre',
+].map((metier) => ({ metier, libelle: LIBELLE_METIER[metier], premier: PREMIERS.includes(metier) }))
+
+// Ce que « Enregistrer » envoie, dans l'ordre : les RETRAITS d'abord (un métier retiré puis rajouté dans la même fenêtre
+// n'a pas de sens : on l'ignore), puis les AJOUTS. Seuls les métiers réellement actifs peuvent être retirés ; un métier
+// déjà actif n'est pas « ajouté ». Une liste vide = rien à envoyer.
+export function planDesChangements(actifs: string[], retraits: Iterable<string>, ajouts: Iterable<string>): { metier: string; retirer: boolean }[] {
+  const actuels = new Set(actifs)
+  const connus = new Set(METIERS_ORDONNES.map((m) => m.metier))
+  const aRetirer = [...new Set(retraits)].filter((m) => actuels.has(m))
+  const aAjouter = [...new Set(ajouts)].filter((m) => connus.has(m) && !actuels.has(m))
+  return [...aRetirer.map((metier) => ({ metier, retirer: true })), ...aAjouter.map((metier) => ({ metier, retirer: false }))]
+}
+
 const dateCourte = (v: string | null | undefined) => {
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(v ?? '').trim())
   return m ? `${m[3]}/${m[2]}/${m[1]}` : null
