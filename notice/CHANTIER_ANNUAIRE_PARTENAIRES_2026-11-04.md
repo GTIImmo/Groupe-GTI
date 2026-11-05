@@ -1788,9 +1788,9 @@ pour tout le monde (au rechargement). Retour arrière : `admin` ou `off`. **Suit
 - ⚠ **Pour 3.5** : M. Rachid RABHI (10000258) a le métier notaire au registre (Netty) mais aucun rôle notaire dans les
   transactions → il n'a PAS la fiche notaire (c'était déjà le cas avant). Le catalogue devra dire quelle fiche ouvrir
   pour les notaires du registre sans transaction (registre : 1 656 notaires).
-  ✅ **Tranché par Frédéric (05/11)** : « les fiches notaires doivent être dans le catalogue des partenaires, donc pas
-  besoin de liaison » → depuis le catalogue, **tout notaire du registre s'ouvre sur la fiche notaire**, transactions ou
-  non (0 dossier si aucune). C'est le métier au registre qui range au catalogue.
+  ✅ **Tranché par Frédéric (05/11)** : « respecter les règles actuelles » — **les notaires au catalogue sont ceux qui ont
+  AUJOURD'HUI la fiche notaire dans l'app**, avec cette même fiche. Un contact comme RABHI (sans rôle notaire) n'a pas
+  la fiche notaire et ne l'aura pas. ⚠ J'avais d'abord compris « tout notaire du registre, sans liaison » : faux, corrigé.
 
 ### 7 ter. Les dépendances (techniques, pas un ordre décidé)
 
