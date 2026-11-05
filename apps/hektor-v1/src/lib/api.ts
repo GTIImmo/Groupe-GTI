@@ -6609,21 +6609,67 @@ export async function loadRepartitionPersonnes(): Promise<RepartitionPersonne[]>
   // ⭐ 05/11/2026 (registre des négociateurs, audit §26) : les fiches ACTIVES du REGISTRE d'abord (même n° de compte, même
   //   nom, même agence que l'annuaire -- mesuré : 30 actifs identiques), l'annuaire en repli si le registre est illisible
   //   ou vide. Le n° de compte reste celui que la répartition enregistre : rien ne change pour les lignes déjà saisies.
+  // ⭐ 05/11/2026 (audit §39, décision de Frédéric §38) : « ACTIF CHEZ NOUS » -- le champ `actif` de la PERSONNE décide,
+  //   plus la fiche Hektor. Une personne active sans fiche négo active (administrateur, secrétaire : Frédéric, Pauline,
+  //   Caroline, Delphine BLANCHARD) entre avec UNE de ses fiches négo -- la plus récemment vue -- pour garder le n° de
+  //   compte que la répartition enregistre (le Pilotage la retrouve par sa personne, quelle que soit la fiche).
+  //   ⛔ Sans risque pour les workers : la répartition ne part JAMAIS chez Hektor (console_job_worker.js l. 14582,
+  //   aucun travail pour app_repartition_commission_set). Les menus de SAISIE, eux, restent sur les fiches actives
+  //   chez Hektor : leurs numéros partent chez lui (§39).
   {
-    const { data: fiches, error: erreurRegistre } = await supabase
-      .from('app_negociateur_fiche')
-      .select('hektor_user_id,nom_vu,agence_nom')
-      .eq('sorte', 'fiche_negociateur')
-      .eq('actif_chez_hektor', true)
-      .limit(1000)
-    if (!erreurRegistre && fiches && fiches.length) {
+    const [fichesResult, personnesResult] = await Promise.all([
+      supabase
+        .from('app_negociateur_fiche')
+        .select('app_personne_id,hektor_negociateur_id,hektor_user_id,nom_vu,agence_nom,actif_chez_hektor,derniere_vue')
+        .eq('sorte', 'fiche_negociateur')
+        .limit(1000),
+      supabase
+        .from('app_negociateur_personne')
+        .select('app_personne_id,nom')
+        .eq('actif', true)
+        .neq('type_personne', 'agence')
+        .limit(2000),
+    ])
+    const erreurRegistre = fichesResult.error ?? personnesResult.error
+    type FicheRep = { app_personne_id?: number | null; hektor_negociateur_id?: string | null; hektor_user_id?: string | null; nom_vu?: string | null; agence_nom?: string | null; actif_chez_hektor?: boolean | null; derniere_vue?: string | null }
+    const fiches = (fichesResult.data ?? []) as FicheRep[]
+    const personnes = (personnesResult.data ?? []) as Array<{ app_personne_id?: number | null; nom?: string | null }>
+    if (!erreurRegistre && fiches.some((f) => f.actif_chez_hektor === true)) {
       const vus = new Set<string>()
       const out: RepartitionPersonne[] = []
-      for (const f of fiches as Array<{ hektor_user_id?: string | null; nom_vu?: string | null; agence_nom?: string | null }>) {
+      const ajouter = (f: FicheRep, nom?: string | null) => {
         const idUser = String(f.hektor_user_id ?? '').trim()
-        if (!idUser || vus.has(idUser)) continue
+        if (!idUser || vus.has(idUser)) return
         vus.add(idUser)
-        out.push({ idUser, nom: (f.nom_vu ?? '').trim() || `Utilisateur ${idUser}`, agenceNom: f.agence_nom ?? null })
+        out.push({ idUser, nom: (nom ?? f.nom_vu ?? '').trim() || `Utilisateur ${idUser}`, agenceNom: f.agence_nom ?? null })
+      }
+      // 1. les fiches actives chez Hektor, comme avant (un vendeur actif garde son numéro habituel)
+      for (const f of fiches) if (f.actif_chez_hektor === true) ajouter(f)
+      // 2. les personnes actives chez nous qui n'ont aucune fiche négo active
+      //    avec la fiche DÉJÀ LA PLUS EMPLOYÉE dans les répartitions (mesuré le 05/11 : Delphine BLANCHARD a 56 lignes sur
+      //    son n° 45, aucune sur le plus récent 114), à défaut la plus récemment vue.
+      const dejaParPersonne = new Set(fiches.filter((f) => f.actif_chez_hektor === true).map((f) => f.app_personne_id))
+      const sansFiche = personnes.filter((p) => p.app_personne_id != null && !dejaParPersonne.has(p.app_personne_id))
+      const candidates = fiches.filter((f) => sansFiche.some((p) => p.app_personne_id === f.app_personne_id) && String(f.hektor_user_id ?? '').trim())
+      const emplois = new Map<string, number>()
+      if (candidates.length) {
+        const { data: lignes, error: erreurLignes } = await supabase
+          .from('app_affaire_repartition')
+          .select('hektor_user_id')
+          .in('hektor_user_id', candidates.map((f) => String(f.hektor_user_id).trim()))
+          .limit(5000)
+        if (erreurLignes) console.warn('[répartition] emplois illisibles, choix par la date', erreurLignes.message)
+        for (const l of (lignes ?? []) as Array<{ hektor_user_id?: string | null }>) {
+          const id = String(l.hektor_user_id ?? '').trim()
+          emplois.set(id, (emplois.get(id) ?? 0) + 1)
+        }
+      }
+      for (const p of sansFiche) {
+        const siennes = candidates.filter((f) => f.app_personne_id === p.app_personne_id)
+        siennes.sort((a, b) => (emplois.get(String(b.hektor_user_id).trim()) ?? 0) - (emplois.get(String(a.hektor_user_id).trim()) ?? 0)
+          || String(b.derniere_vue ?? '').localeCompare(String(a.derniere_vue ?? ''))
+          || Number(b.hektor_negociateur_id ?? 0) - Number(a.hektor_negociateur_id ?? 0))
+        if (siennes[0]) ajouter(siennes[0], p.nom)
       }
       return out.sort((a, b) => a.nom.localeCompare(b.nom, 'fr'))
     }

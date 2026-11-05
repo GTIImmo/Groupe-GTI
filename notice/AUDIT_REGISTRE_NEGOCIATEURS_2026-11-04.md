@@ -1011,3 +1011,24 @@ La maquette orientée app (§37, version 10) est validée. Décisions, dans ses 
 
 ➡ Suite : (a) la règle de l'actif dans les menus (code front, « vas-y ») ; (b) étape 2 du §35 — tables + nuit à blanc
 (⛔ écriture en base de production, ACCORD OBLIGATOIRE).
+
+## 39. « ACTIF CHEZ NOUS » : seulement ce qui reste dans l'app (05/11) — Frédéric : « il faut surtout pas casser les workers », « pour tous les gestes qui communiquent avec Hektor !!!! »
+
+**La règle posée** : tout geste qui COMMUNIQUE AVEC HEKTOR garde les fiches négociateur ACTIVES CHEZ HEKTOR (le numéro part
+chez lui par le worker ; une fiche éteinte = un refus, ou un bien rangé sous une fiche que son écran ne montre plus). Ce qui
+reste dans l'app suit « actif chez nous » (champ `actif` de `app_negociateur_personne`).
+
+L'audit des lecteurs (code, 05/11) :
+- **déjà « actif chez nous »** : les filtres « Négociateur » (`loadNomsNegociateursActifs` lit aussi les personnes
+  actives) ; les menus du Pilotage et des Transactions (`p.actif`).
+- **communiquent avec Hektor → INCHANGÉS** : `loadHektorNegotiatorOptions` (création d'annonce, réaffecter, propriétaire
+  d'un contact, boîte de l'agenda, RDV) et `loadNegotiatorOptionForContact` (fiche contact).
+- **reste dans l'app → BASCULÉ** : `loadRepartitionPersonnes` (choix des personnes de la répartition des honoraires).
+  Preuve qu'elle ne part pas chez Hektor : `console_job_worker.js` l. 14582 (« la répartition de commission ne part plus
+  chez Hektor ») et l. 22818 (`app_repartition_commission_set` → aucun travail).
+
+Le correctif (`apps/hektor-v1/src/lib/api.ts`, `loadRepartitionPersonnes`) : les 30 fiches actives comme avant, PLUS les
+personnes actives sans fiche négo active, chacune avec SA fiche la plus employée dans les répartitions (à défaut la plus
+récente). Mesure du 05/11 : 30 → 34, avec Frédéric n° 46 (40 lignes), Caroline n° 49 (156), Delphine BLANCHARD n° 45 (56 —
+et non 114, la plus récente, 0 ligne), Pauline n° 41 (2). Repli sur l'annuaire inchangé. `npm run build` vert. ⏰ À voir en
+ligne après le push : la liste de la répartition doit montrer les 4 noms.
