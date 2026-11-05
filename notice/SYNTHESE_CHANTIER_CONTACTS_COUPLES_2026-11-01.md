@@ -2264,3 +2264,22 @@ Passage du moniteur du 04/11 à 14:49 (heure de Paris) : 0 critique, 9 avertisse
   avant l'envoi. ⚠ À surveiller : la vue pourrait souffrir d'une table des contacts plus grosse (non mesuré).
 - `logs.pipeline.latest` et le battement `matterport.sync_models` : le refus 401 de Matterport, connu depuis le 03/11.
 - 5 battements « sans premier signe » : connus.
+
+## 76. CONTRÔLE DE LA NUIT DU 05/11 — LES CORRECTIFS DE LA VEILLE ONT TENU *(05/11 matin, « le run est-il ok ce matin avec les correctifs de la veille ? » ; lecture seule)*
+
+**Le run** : fini à 06:43:23, code 0, « Pipeline finished successfully ». Il dure 24 min de plus qu'hier (06:19), exactement l'étape « hektor syndic et diagnostiqueur » de la session partenaires (05:53 → 06:16, 731 annonces). ⚠ La descente part à 06:45 : il restait 1 min 38 s. Sa garde « le run quotidien tourne encore » (run_descente.ps1, Test-QuotidienEnCours) la protège, mais la marge fond.
+
+**La nuit des contacts** : reprise du tour à la page 8114, puis `tour_termine` à la page 8505 (392 pages, 7 830 contacts, 0 refus). 100 fiches relues. Recherches actives : 4 038 contacts en 6 697 s, comme chaque nuit. ➡ La purge des pages de mars peut maintenant être proposée (à blanc d'abord).
+
+**Chez Supabase, après le run** (mesuré à ~06:50) :
+- `app_contact_current` : 94 857 fiches (94 741 + 116, dont 96 `partenaire_hektor` entrés par la session partenaires), 332 Mo ;
+- 0 sans numéro, 0 sans type, 0 sans nature ; 31 347 `registre_relation`, 260 `partenaire_netty` ;
+- EA32621 (10260586) : `nature_fiche = couple`, `couple_deuxieme = case_vide` (le bouton « Compléter le conjoint » a de quoi s'allumer).
+
+**Les alertes du §75 se referment** : `app_contacts_sans_numero` 2 737 → **0** ; `app_v_couples_non_traduits` 26 067 → **2 703** (sous le seuil 3 000, le niveau normal d'avant). Le moniteur était passé à 04:49, AVANT la propagation (06:30) : il les montre encore, son prochain passage les fermera.
+
+**Types par tranches** : 7 tranches réussies (05:31:13 → 05:31:39). ⚠ Deux dépassements des 8 s de l'API cette nuit, tous deux rattrapés au 2e essai par le client : `app_contact_id_propager` (500 à 05:30:32, 200 à 05:30:42) et la 1re tranche des types (500 à 05:31:13, puis 200). Pas une panne, mais une marge mince : à surveiller les prochaines nuits.
+
+**Hektor** : aucun refus, sauf le 403 de session expirée du chauffage, rattrapé comme chaque nuit (présent les 01, 02, 03 et 04/11). La liste des contacts n'a lu que 392 pages au lieu des 8 114 d'hier : la nuit est donc loin du plafond.
+
+⚠ **Trouvé en passant, non expliqué** : à partir de l'étape « phase2 registre des partenaires » (06:16:38), les sorties des scripts Python n'apparaissent plus dans `logs/scheduled/quotidien_*.log` — seules les lignes START/DONE restent, avec une ligne vide entre elles. Hier, la ligne « [type des contacts] … » y était. Les étapes ont bien tourné (preuve par la base et les journaux de l'API), mais le journal ne dit plus ce qu'elles ont fait. Cause non cherchée.
