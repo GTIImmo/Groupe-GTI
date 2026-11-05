@@ -857,3 +857,82 @@ montant, adresse et compte du garant). ⚠ Pas d'adresse postale de l'agence ell
 (juridique, carte, barème, logo) n'existe QUE dans le fichier local de la nuit, pas dans la base de l'app.
 **Fichiers hébergés chez Hektor** (photos des négociateurs, logos, barèmes) : à RECOPIER chez nous avant la coupure.
 ⛔ Rien n'est codé. Proposition au §35 (à valider).
+
+## 35. AUDIT D'INTÉGRATION — registre des UTILISATEURS et des AGENCES (05/11) — ⛔ rien n'est codé
+
+Frédéric : « audit ce projet registre utilisateur et agence pour être sûr de son intégration dans mon app ».
+Règle du projet suivie : le modèle des autres registres (notre n°, n° Hektor à côté, jamais supprimé, tenu chaque nuit,
+« Hektor confirme, il n'écrase pas » : un champ modifié dans l'app devient le nôtre, un écart de Hektor se signale).
+
+### 35.1 Ce que l'app lit AUJOURD'HUI (mesuré dans le code le 05/11)
+
+AGENCES — toujours par leur NOM écrit, jamais par un numéro :
+- worker `console_job_worker.js:8481` : bloc « Agence » des PDF générés (`generate_mandat_document`, `generate_estimation_pdf`)
+  = tél, mail, responsable par `app_agence_directory?nom=ilike.<nom>` ; repli du tél/mail du conseiller sur ceux de l'agence ;
+- backend `appointment_service.py` (l. 354, 441-469) : tél/mail de l'agence sur les pages publiques RDV/estimation ; agence
+  par défaut, par id, par clé ;
+- front `loadHektorAgencyOptions` (`api.ts`) : menus d'agence (réaffecter un bien, créer un contact) ;
+- pilotage, filtres, droits « Son agence » (`app_mon_agence()`) : comparent `agence_nom` en TEXTE.
+COORDONNÉES DES NÉGOCIATEURS :
+- registre (déjà) : pages RDV / estimation (`_load_registre_negociateur`), menus, pilotage, Transactions ;
+- ANNUAIRE de Hektor (encore) dans le worker : l. 2406 et 2837 (compte qui exécute un geste ; « source de vérité
+  actif/inactif »), l. 2875 `loadAgencyDirectoryRowForOwner` (coordonnées du conseiller dans les PDF), l. 6350-6361 ;
+- Google Workspace pour l'agenda et l'e-mail (inchangé, propre à l'app).
+Le juridique et la carte professionnelle des agences ne sont lus NULLE PART dans l'app (les « SIRET » du code sont ceux des
+contacts société).
+
+### 35.2 Ce que les données disent (mesures)
+
+- 30 écritures différentes du nom d'agence dans biens / mandats / contacts → 29 après nettoyage (espaces, accents, casse) :
+  « Groupe GTI Ambert␣␣␣ », « COURPIÈRE » ≠ « Groupe GTI COURPIERE », « Groupe Gti Le Puy en Velay »… → un registre des
+  agences doit porter les ALIAS (toutes les écritures connues) pour rattacher chaque ligne à NOTRE n° d'agence.
+- Juridique : rempli sur UNE agence (« Compte formation » = la société Groupe G.T.I : SIRET 502 811 144 00018, RCS, TVA
+  FR24502811144, capital 309 968, siège 22 rue Jean Jaurès 42700 Firminy, RCP Allianz 60583928, médiateur ANM Conso) ; un
+  SIRET d'établissement sur une autre ; 17 vides.
+- Carte professionnelle : LA MÊME pour les 19 (CPI 4202 2019 000 043 878, CCI Saint-Étienne, détenteur Franck GERPHAGNON,
+  valable jusqu'au 14/09/2027). Barème et logo : 1 seul fichier chacun, communs.
+- Coordonnées douteuses chez Hektor : Courpière → ambert@, Saint-Just-Saint-Rambert → montbrison@, Saint-Didier → monistrol@.
+- Fonction des négociateurs : un champ MÉLANGÉ (« Collaborateur » 51, « Négociateur » 22, « Négociatrice » 19… et ~60
+  CODES numériques sans libellé). Photos : 10 personnalisées, les autres = image par défaut de Hektor.
+
+### 35.3 Le modèle proposé
+
+1. **La SOCIÉTÉ** (une ligne, notre n°) : raison sociale, forme, SIRET, NAF, capital, RCS et sa ville, TVA, siège, RCP et
+   assureur, médiateur, CARTE PROFESSIONNELLE (n°, délivrée par, validité, détenteur, garant), barème, logo. Source : la
+   fiche Hektor qui porte le juridique ; le reste à saisir chez nous.
+2. **Les AGENCES** (notre n° 2000001+) : nom, ALIAS (écritures connues), mail, tél, responsable, adresse (à saisir — Hektor
+   ne la donne pas), SIRET d'établissement, n° Hektor de l'agence et du COMPTE d'agence, actif. Bouton « Ajouter une
+   agence » = « À venir » (Frédéric : impossible avant la coupure).
+3. **Les PERSONNES** (registre actuel) gagnent leurs COORDONNÉES À NOUS : civilité, prénom, nom, e-mail pro, tél, portable,
+   fonction (texte libre, reprise de Hektor quand c'est du texte), photo (recopiée chez nous).
+4. **Le carnet** (même patron que `app_mandat_champ_app`) : un champ modifié dans l'app y est écrit (qui, quand) ; la nuit ne
+   le touche plus ; un écart avec Hektor devient un signal « à valider » dans la fiche.
+5. **Les fichiers** (10 photos, logo, barème) : recopiés dans notre stockage (CDN de Hektor, hors quota d'API), seulement
+   quand ils changent.
+
+### 35.4 Les gestes (objets × gestes)
+
+| | créer | modifier | désactiver / archiver | lire |
+|---|---|---|---|---|
+| société | non (une seule) | admin, dans l'app (carnet) | non | admin ; mentions des documents |
+| agence | « À venir » (après la coupure) | admin (carnet) ; Hektor la nuit sauf champs du carnet | la nuit (absente de Hektor) ; jamais supprimée | tous les comptes actifs |
+| personne | la nuit (fiche Hektor) ; l'outil Utilisateurs (née dans l'app) | admin (carnet) ; Hektor la nuit sauf carnet | la nuit (fiches inactives) | tous les comptes actifs |
+| compte de l'app | admin (outil Utilisateurs) | admin | admin (case « actif ») | admin |
+| fichiers (photo, logo, barème) | la nuit (recopie) ; admin (dépôt) | admin | — | tous |
+| signal / écart | la nuit | admin : « Marquer traité » / « garder la nôtre » / « prendre celle de Hektor » | — | admin |
+
+### 35.5 Ce que ça pourrait casser ailleurs — et l'ordre proposé
+
+- Les lecteurs par NOM d'agence (worker PDF, RDV, droits « Son agence », pilotage) : on ne les touche PAS au début ; le
+  registre des agences vient À CÔTÉ ; on bascule un lecteur à la fois, chacun avec son « vas-y » (comme pour les négos).
+- Le WORKER : 5 lectures de l'annuaire → à basculer en dernier, fichier partagé avec l'autre session (blocs non commités) ;
+  redémarrage des 4 services, file vide.
+- La purge de nuit de l'annuaire et de `app_agence_directory` sans plancher (B6 / L10-8e, toujours ouvert) : le registre
+  des agences, jamais purgé, en protège les lecteurs une fois basculés.
+- Droits : coordonnées et agences lisibles par tout compte actif (comme aujourd'hui) ; société / carte / carnet / signaux :
+  admin seulement ; écriture : aucune pour `authenticated` (piège des droits par défaut — révoquer).
+- Données à corriger À LA MAIN dans le carnet (mails d'agence croisés, adresses d'agence, fonctions en code).
+
+Ordre : (1) maquette complétée (coordonnées, écarts, société, agences, « À venir ») → (2) tables + nuit à blanc (rien lu
+par l'app) → (3) écrans Registre des utilisateurs / des agences → (4) recopie des fichiers → (5) lecteurs un par un
+(RDV, PDF du worker, menus d'agence, filtres, droits) → (6) le jour de la coupure : rien à convertir.
