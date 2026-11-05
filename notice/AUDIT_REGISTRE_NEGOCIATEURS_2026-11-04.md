@@ -1267,3 +1267,6 @@ type, recopié le) ; un script de nuit après le registre des agences, derrière
 (absent = éteint, `blanc` = mesure sans écrire) : il télécharge chaque adresse de Hektor, la dépose dans `gti-photo/registre/…`
 SEULEMENT si l'empreinte change, et ne touche jamais aux colonnes (Hektor complète, il n'écrase pas). Images par défaut
 écartées, exclusion déclarée. L'écran lit notre copie d'abord, Hektor en repli. Le dépôt par un admin = un lot à part.
+
+**⏸ DÉCISION (05/11) — Frédéric : « ce n'est pas très utile, on verra plus tard, pas la peine de récupérer ces fichiers
+tout de suite ».** L'étape 4 est REPORTÉE, rien n'est codé. La mesure ci-dessus reste valable pour le jour où on la reprendra.
