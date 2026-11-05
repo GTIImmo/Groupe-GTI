@@ -10041,6 +10041,112 @@ export async function createCancelSignatureJob(input: {
   return data as ConsoleJob
 }
 
+// ── A.2 lot 6b P4 (05/11/2026) -- LA FENETRE D'ENVOI YOUTRUST ─────────────────────────────────────────
+// Les signataires viennent de la PHOTO du PDF (metadata_json.signataires_du_pdf, rangee a la generation, P1) ;
+// le worker la relit a l'envoi (P2) et n'accepte de l'ecran que l'e-mail et le portable d'un rang (D31, D33).
+export type PhotoSignatairePdf = {
+  rang: number
+  civilite: string | null
+  prenom: string | null
+  nom: string | null
+  qualite?: string | null
+  adresse?: string | null
+  email: string | null
+  telephone: string | null
+  hektor_contact_id: string | null
+}
+export type PhotoSignatairesPdf = {
+  version: number
+  pris_le?: string
+  valide: boolean
+  problemes: string[]
+  reperes_attendus: number
+  mandants: PhotoSignatairePdf[]
+}
+export type CorrectionSignataire = { rang: number; email?: string; telephone?: string }
+
+export function photoSignatairesDuDocument(document: Pick<ConsoleDocument, 'metadata_json'>): PhotoSignatairesPdf | null {
+  const photo = (document.metadata_json as { signataires_du_pdf?: PhotoSignatairesPdf } | null)?.signataires_du_pdf
+  return photo && Array.isArray(photo.mandants) ? photo : null
+}
+
+// La fiche d'aujourd'hui de chaque signataire, par son numero Hektor (celui de la photo) : nature (un conjoint ne se
+// corrige pas par la porte du mandant, regle du §8.3 de la proposition), et le nom a renvoyer tel qu'il est.
+export type FicheSignataire = { hektor_target_id: string; hektor_contact_id: string; nom: string | null; prenom: string | null; email: string | null; phone_primary: string | null; nature_fiche: string | null }
+export async function loadFichesDesSignataires(numerosHektor: string[]): Promise<Map<string, FicheSignataire>> {
+  const fiches = new Map<string, FicheSignataire>()
+  const numeros = Array.from(new Set(numerosHektor.filter((n) => /^\d+$/.test(n))))
+  if (!numeros.length || !hasSupabaseEnv || !supabase) return fiches
+  const { data, error } = await supabase
+    .from('app_contact_current')
+    .select('hektor_target_id,hektor_contact_id,nom,prenom,email,phone_primary,nature_fiche')
+    .in('hektor_target_id', numeros)
+  if (error) throw new Error(error.message)
+  for (const row of (data ?? []) as FicheSignataire[]) fiches.set(String(row.hektor_target_id), row)
+  return fiches
+}
+
+// D33 : l'e-mail ou le portable complete a l'envoi s'enregistre SUR LA FICHE, par la porte du mandant (chez nous a la
+// seconde, Hektor ensuite, regle D-5 : la ligne de meme etiquette est remplacee). ⚠ On n'envoie QUE le nom d'aujourd'hui
+// (exige par la porte), l'e-mail et le portable : une cle presente mais vide EFFACERAIT chez Hektor (adresse, ville…),
+// une cle absente ne touche a rien -- c'est pour ca qu'on n'utilise pas createUpdateHektorMandantContactJob ici.
+export async function enregistrerCanalDuMandant(input: {
+  dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'negociateur_email'>
+  numeroHektor: string
+  nomActuel: string
+  email: string
+  portable?: string | null
+}): Promise<ConsoleJob> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
+  await requireSupabaseUserId()
+  const numero = input.numeroHektor.trim()
+  if (!/^\d+$/.test(numero)) throw new Error(bvs('ID contact Hektor numerique requis'))
+  const payload: Record<string, string> = { hektor_contact_id: numero, contact_id: numero, last_name: input.nomActuel.trim(), email: input.email.trim() }
+  if (input.portable && input.portable.trim()) payload.phone = input.portable.trim()
+  if (input.dossier.negociateur_email) payload.hektor_user_email = input.dossier.negociateur_email
+  const { data, error } = await supabase.rpc('app_update_mandant_contact_optimistic', {
+    target_app_dossier_id: input.dossier.app_dossier_id,
+    target_hektor_annonce_id: String(input.dossier.hektor_annonce_id),
+    target_contact_id: numero,
+    contact_payload: payload,
+    job_priority: 16,
+  })
+  if (error) throw new Error(error.message)
+  return data as ConsoleJob
+}
+
+// La demande d'envoi : le numero du document et, au plus, les corrections d'e-mail / portable par rang.
+export async function createYoutrustSendSignatureJob(input: {
+  document: Pick<ConsoleDocument, 'id' | 'app_dossier_id' | 'hektor_annonce_id' | 'document_name'>
+  kind: 'mandat' | 'avenant'
+  numeroMandat?: string | null
+  bienAdresse?: string | null
+  corrections: CorrectionSignataire[]
+}): Promise<ConsoleJob> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
+  const userId = await requireSupabaseUserId()
+  const { data, error } = await supabase
+    .from('app_console_job')
+    .insert({
+      job_type: 'youtrust_send_signature',
+      app_dossier_id: input.document.app_dossier_id,
+      hektor_annonce_id: String(input.document.hektor_annonce_id),
+      payload_json: {
+        app_console_document_id: input.document.id,
+        document_kind: input.kind,
+        numero_mandat: input.numeroMandat ?? null,
+        bien_adresse: input.bienAdresse ?? null,
+        corrections: input.corrections,
+      },
+      priority: 24,
+      requested_by: userId,
+    })
+    .select('*')
+    .single()
+  if (error || !data) throw new Error(error?.message ?? 'Unable to create Youtrust signature job')
+  return data as ConsoleJob
+}
+
 // Relance de signature ImmoSign : le worker POST ImmoSign-remindProcedureSignatories (mails de rappel).
 export async function createRelanceSignatureJob(input: {
   document: Pick<ConsoleDocument, 'id' | 'app_dossier_id' | 'hektor_annonce_id' | 'document_name'>

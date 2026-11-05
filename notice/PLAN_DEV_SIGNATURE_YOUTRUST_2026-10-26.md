@@ -768,6 +768,18 @@ ImmoSign existant dont les boutons répondent comme avant.
   P1 et P2 sont chargés aussi, mais dorment (`signature_youtrust` = off).
 - **P4 — écran : la fenêtre d'envoi-confirmation** (maquette « corriger » vue 1-2) : PDF, signataires lus dans la photo,
   🔒 / ✎, envoi bloqué tant qu'un e-mail manque ; elle remplace `SignaturePromptModal` quand l'interrupteur est allumé.
+  ✅ **P4 CODÉ LE 05/11** (rien commité ni déployé au moment d'écrire) : `EnvoiSignatureYoutrust.tsx` +
+  `envoi-signature.css` (préfixe `ens-`) ; `lib/api.ts` : `photoSignatairesDuDocument`, `loadFichesDesSignataires`
+  (par `hektor_target_id`), `enregistrerCanalDuMandant` (porte du mandant avec SEULEMENT nom d'aujourd'hui + e-mail +
+  portable — ⚠ `createUpdateHektorMandantContactJob` envoie des clés vides qui EFFACERAIENT adresse / ville chez Hektor),
+  `createYoutrustSendSignatureJob` (numéro du document + `corrections` par rang). `App.tsx` : `useSignatureYoutrust()` ;
+  panneau Documents (les 2 rendus) : allumé → « Signature » seulement sur un PDF qui porte sa photo et hors demande
+  Youtrust en cours, et il ouvre la nouvelle fenêtre ; éditeur : après la génération, la fenêtre s'ouvre sur le document
+  neuf (« Mandat enregistré chez nous »). Éteint : le chemin d'avant, à l'identique. Un CONJOINT : la correction part dans
+  la demande, pas sur sa fiche (message « Modifier le conjoint »). `npm run build` vert ; vu dans le navigateur sur une
+  page d'essai temporaire (document fictif, retirée ensuite) à 1280 × 665 et en 375 px : signataires, cadenas + bulle,
+  e-mail refusé puis accepté, envoi débloqué avec « 4 crédits », PDF sans photo / photo invalide refusés.
+  ⚠ NON ÉPROUVÉ : l'envoi réel par l'écran (interrupteur éteint en production) et l'écriture sur la fiche.
 - **P5 — écran : « Corriger le mandat »** (vues 3, 4, 6) : l'éditeur rouvert sur le bon onglet avec son bandeau,
   « Régénérer et revenir à l'envoi », « ce qui a changé » ; l'ancien PDF marqué « remplacé, jamais envoyé », sans bouton
   Signature.

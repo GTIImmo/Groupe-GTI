@@ -90,6 +90,7 @@ import {
   createGenerateEstimationPdfJob,
   createGenerateMandatPdfJob,
   loadAppSettingActive,
+  photoSignatairesDuDocument,
   loadAppSettingValeur,
   loadContactCoupleInfo,
   editConjointOptimistic,
@@ -273,6 +274,7 @@ import type { EtatCase, TriAnnonces } from './AnnoncesListeV2'
 import ContactSearchFields, { contactSearchValueToInput, defaultContactSearchValue, type ContactSearchFieldsValue } from './ContactSearchFields'
 import './contact-new.css'
 import './ajout-conjoint.css'
+import EnvoiSignatureYoutrust from './EnvoiSignatureYoutrust'
 import RechercheGlobale, { type GroupeRecherche } from './RechercheGlobale'
 import './fil-navigation.css'
 import './suivi-travaux.css'
@@ -5370,6 +5372,8 @@ function MandatDocumentEditor(props: {
   const [previewUrl, setPreviewUrl] = useState('')
   const [pdfBusy, setPdfBusy] = useState(false)
   const [signPromptOpen, setSignPromptOpen] = useState(false)
+  // A.2 lot 6b P4 : Youtrust allume, le mandat genere ouvre la fenetre d'envoi (le PDF ne va plus chez Hektor, D24).
+  const [envoiYoutrustDoc, setEnvoiYoutrustDoc] = useState<ConsoleDocument | null>(null)
   // Type de document : mandat de vente OU avenant (modification d'un mandat actif). L'avenant n'est
   // disponible que si un mandat est deja actif ; dans ce cas il est preselectionne.
   const [docMode, setDocMode] = useState<'mandat' | 'avenant'>(() =>
@@ -5580,10 +5584,13 @@ function MandatDocumentEditor(props: {
       const existing = await loadConsoleDocuments(props.dossier.app_dossier_id)
       beforeIds = new Set(existing.map((doc) => doc.id))
     } catch { /* on poursuit sans snapshot */ }
+    // A.2 lot 6b P4 : la suite (attente du document, fenetre de signature) suit le meme interrupteur.
+    let youtrustGen = false
     try {
       // A.2 lot 2 : l'interrupteur est relu AU MOMENT de la génération (absent/erreur = éteint).
       // Éteint : le HTML envoyé est celui d'avant, identique à l'aperçu. L'aperçu, lui, n'a jamais de repères.
       const reperes = await loadAppSettingActive('signature_youtrust')
+      youtrustGen = reperes
       await createGenerateMandatPdfJob({
         dossier: { app_dossier_id: props.dossier.app_dossier_id, hektor_annonce_id: props.dossier.hektor_annonce_id },
         html: docMode === 'avenant' ? avenantPreviewHtml(draft, props.dossier, { reperes }) : mandatPreviewHtml(draft, props.dossier, props.contacts, { reperes }),
@@ -5644,7 +5651,7 @@ function MandatDocumentEditor(props: {
       }
     }
 
-    setMessage(bvs('Mandat en cours de depot dans Hektor…'))
+    setMessage(youtrustGen ? bvs('Mandat en cours d’enregistrement…') : bvs('Mandat en cours de depot dans Hektor…'))
     // La pop-up de signature n'apparait QUE lorsque Hektor a reellement ajoute le document.
     const deadline = Date.now() + 150000
     const poll = async () => {
@@ -5652,8 +5659,13 @@ function MandatDocumentEditor(props: {
         const docs = await loadConsoleDocuments(props.dossier.app_dossier_id)
         const fresh = docs.find((doc) => !beforeIds.has(doc.id) && /mandat/i.test(doc.document_name || ''))
         if (fresh) {
-          setMessage(bvs('Mandat depose dans Hektor.'))
           setPdfBusy(false)
+          if (youtrustGen) {
+            setMessage(bvs('Mandat enregistré chez nous.'))
+            setEnvoiYoutrustDoc(fresh)
+            return
+          }
+          setMessage(bvs('Mandat depose dans Hektor.'))
           setSignPromptOpen(true)
           return
         }
@@ -5661,7 +5673,9 @@ function MandatDocumentEditor(props: {
       if (Date.now() < deadline) {
         window.setTimeout(() => { void poll() }, 4000)
       } else {
-        setMessage(bvs('Le mandat met du temps a arriver dans Hektor. Utilise le bouton « Signature » sur le document quand il apparait.'))
+        setMessage(youtrustGen
+          ? bvs('Le mandat met du temps à s’enregistrer. Utilise le bouton « Signature » sur le document quand il apparaît.')
+          : bvs('Le mandat met du temps a arriver dans Hektor. Utilise le bouton « Signature » sur le document quand il apparait.'))
         setPdfBusy(false)
       }
     }
@@ -5916,6 +5930,14 @@ function MandatDocumentEditor(props: {
                 items={(selectedSignatureRecipients.length ? selectedSignatureRecipients : draft.signatureRecipients).map((recipient) => `${signatureRecipientLabel(recipient)}${recipient.email ? ` · ${recipient.email}` : ''}${recipient.telephone ? ` · ${recipient.telephone}` : ''}`)}
                 onConfirm={openHektorForSignature}
                 onClose={() => setSignPromptOpen(false)}
+              />
+            ) : null}
+            {envoiYoutrustDoc ? (
+              <EnvoiSignatureYoutrust
+                document={envoiYoutrustDoc}
+                dossier={props.dossier}
+                adresse={props.address}
+                onClose={() => setEnvoiYoutrustDoc(null)}
               />
             ) : null}
           </div>
@@ -10448,7 +10470,19 @@ function sigIcon(kind: 'check' | 'clock' | 'pen' | 'x') {
   return <svg {...common}><path d="M4 20h4L19 9l-4-4L4 16z" /></svg>
 }
 
-type SignatureMeta = { status?: string; progress?: string | null; signed_at?: string | null; sent_at?: string | null; cancelled_at?: string | null; procedure_id?: number | string | null; hektor_doc_id?: number | string | null; source?: string | null; marked_manual_at?: string | null }
+// A.2 lot 6b P4 (05/11/2026) : l'interrupteur `signature_youtrust`, relu a l'ouverture (absent / illisible = eteint).
+// Eteint : rien ne change a l'ecran ; allume : le bouton « Signature » ouvre la fenetre d'envoi Youtrust.
+function useSignatureYoutrust() {
+  const [actif, setActif] = useState(false)
+  useEffect(() => {
+    let annule = false
+    void loadAppSettingActive('signature_youtrust').then((v) => { if (!annule) setActif(v) })
+    return () => { annule = true }
+  }, [])
+  return actif
+}
+
+type SignatureMeta = { provider?: string | null; status?: string; progress?: string | null; signed_at?: string | null; sent_at?: string | null; cancelled_at?: string | null; procedure_id?: number | string | null; hektor_doc_id?: number | string | null; source?: string | null; marked_manual_at?: string | null }
 
 // Pastille d'etat de signature, partagee par le bloc Documents et le suivi mandat.
 function SignatureBadge({ signature }: { signature?: SignatureMeta | null }) {
@@ -11392,6 +11426,9 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
   const [docFilter, setDocFilter] = useState<'tous' | 'prep' | 'signed' | 'cloud'>('tous')
   const [uploadOpen, setUploadOpen] = useState(false)
   const [signDoc, setSignDoc] = useState<ConsoleDocument | null>(null)
+  // A.2 lot 6b P4 : la fenetre d'envoi Youtrust (interrupteur allume seulement).
+  const signatureYoutrust = useSignatureYoutrust()
+  const [envoiDoc, setEnvoiDoc] = useState<ConsoleDocument | null>(null)
   const [loading, setLoading] = useState(false)
   const [pendingDocumentIds, setPendingDocumentIds] = useState<Set<string>>(() => new Set())
   const [deletingDocumentIds, setDeletingDocumentIds] = useState<Set<string>>(() => new Set())
@@ -11786,7 +11823,17 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
             Annuler
           </button>
         ) : null}
-        {signature?.status !== 'signed' ? (
+        {/* A.2 lot 6b P4 : Youtrust allume -> « Signature » seulement sur un PDF qui porte sa photo de signataires
+            (fait par l'editeur, P1), et pas pendant une demande Youtrust en cours ; il ouvre la fenetre d'envoi.
+            Eteint : le bouton d'avant, a l'identique (fenetre « Oui, ouvrir Hektor »). */}
+        {signatureYoutrust
+          ? (photoSignatairesDuDocument(document) && signature?.status !== 'signed' && !(signature?.provider === 'youtrust' && signature?.status === 'pending') ? (
+            <button className="ghost-button console-document-sign" type="button" onClick={() => setEnvoiDoc(document)}>
+              <span aria-hidden="true"><DetailIcon type="signature" /></span>
+              Signature
+            </button>
+          ) : null)
+          : signature?.status !== 'signed' ? (
           <button className="ghost-button console-document-sign" type="button" onClick={() => setSignDoc(document)}>
             <span aria-hidden="true"><DetailIcon type="signature" /></span>
             Signature
@@ -11893,6 +11940,15 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
             onClose={() => setSignDoc(null)}
           />
         ) : null}
+        {envoiDoc ? (
+          <EnvoiSignatureYoutrust
+            document={envoiDoc}
+            dossier={dossier}
+            adresse={[dossier.titre_bien, dossier.ville].filter(Boolean).join(' · ')}
+            onClose={() => setEnvoiDoc(null)}
+            onSent={(job) => { onJobCreated?.(job); void refreshDocuments(true) }}
+          />
+        ) : null}
       </div>
     )
   }
@@ -11975,6 +12031,15 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
             items={["Hektor va s'ouvrir sur l'onglet Documents : clique le picto signature sur le document, ajoute les signataires puis Envoyer."]}
             onConfirm={openHektorSignature}
             onClose={() => setSignDoc(null)}
+          />
+        ) : null}
+        {envoiDoc ? (
+          <EnvoiSignatureYoutrust
+            document={envoiDoc}
+            dossier={dossier}
+            adresse={[dossier.titre_bien, dossier.ville].filter(Boolean).join(' · ')}
+            onClose={() => setEnvoiDoc(null)}
+            onSent={(job) => { onJobCreated?.(job); void refreshDocuments(true) }}
           />
         ) : null}
       </div>
