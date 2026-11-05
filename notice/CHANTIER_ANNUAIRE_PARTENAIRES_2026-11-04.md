@@ -1833,6 +1833,10 @@ pour tout le monde (au rechargement). Retour arrière : `admin` ou `off`. **Suit
   (`?ecran=contacts&contact=10011026`) → fiche Mandant, côté Clients.
 - ⚠ Vu : trois « GIBERT IMMOBILIER » sans ville ni téléphone sont indiscernables dans la liste (doublons des données).
   Retouche proposée : montrer le numéro quand il n'y a ni ville ni téléphone. Non vu : un compte non admin, le mode sombre.
+- ✅ **`partenaires_catalogue = on` le 05/11 à 18:18 (« Ouvrir à tous »)** : le catalogue est visible de tous, et la
+  pastille « Notaire » quitte la liste des clients pour tous (au rechargement). Retour arrière : `admin` ou `off`.
+  ⚠ Un négociateur ne voit au catalogue que les contacts de SON périmètre (politique `app_contact_current_select_scoped`,
+  la même que la liste des clients) : ses nombres peuvent être plus petits que ceux de l'admin. Non vu en vrai.
 
 ### 7 ter. Les dépendances (techniques, pas un ordre décidé)
 
