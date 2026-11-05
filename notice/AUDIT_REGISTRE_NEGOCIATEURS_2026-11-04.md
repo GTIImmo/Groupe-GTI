@@ -936,3 +936,34 @@ contacts société).
 Ordre : (1) maquette complétée (coordonnées, écarts, société, agences, « À venir ») → (2) tables + nuit à blanc (rien lu
 par l'app) → (3) écrans Registre des utilisateurs / des agences → (4) recopie des fichiers → (5) lecteurs un par un
 (RDV, PDF du worker, menus d'agence, filtres, droits) → (6) le jour de la coupure : rien à convertir.
+
+## 36. ÉTAPE 1 DU §35 FAITE — la maquette est complète (05/11) — Frédéric : « Oui, étape 1 » — ⛔ rien n'est codé
+
+Maquette : https://claude.ai/artifact/XMLpyh5kDkfpXPwGTB5738 (canevas, version 7), six écrans :
+
+1. **Utilisateurs — la liste** : onglets Utilisateurs / Agences / La société ; compteurs (185 personnes, 34 « à valider ») ;
+   recherche, segments, case « Afficher les anciens » ; bouton « Ajouter un utilisateur ».
+2. **Utilisateurs — la fiche** (Dylan JOURGET) : les COORDONNÉES À NOUS, champ par champ avec leur source (« repris de
+   Hektor » / « modifié dans l'app » / « à saisir ») ; ses 4 fiches Hektor ; le journal ; un ÉCART à valider (« Garder la
+   nôtre » / « Prendre celle de Hektor ») ; l'encart « Ce que l'app retient ».
+3. **Ajouter un utilisateur** : le formulaire et le message de résultat.
+4. **Agences — la liste** : 19 lignes sous notre n° 2000001+ ; « Ajouter une agence » GRISÉ avec la pastille « À venir » ;
+   compteurs (17 agences + Compte formation + Agences supprimée · 30 négos actifs · 8 e-mails à vérifier · 19 à saisir) ;
+   les 8 e-mails croisés marqués ⚠.
+5. **Agence — la fiche** (Groupe GTI Saint-Étienne, n° 2000014, Hektor 18 / compte 25) : coordonnées à nous, adresse et
+   responsable « à saisir » ; les ÉCRITURES DE SON NOM (alias) ; ses numéros Hektor, dont l'ancienne fiche négo n° 2
+   gardée ; ses négos actifs ; l'écart de l'e-mail (firminy@) à valider.
+6. **La société** (Groupe G.T.I) : informations juridiques reprises de la fiche « Compte formation » ; la CARTE
+   PROFESSIONNELLE (T, CPI 4202 2019 000 043 878, CCI Saint-Étienne, F. GERPHAGNON, valable au 14/09/2027) avec un rappel
+   3 mois avant ; barème et logo « à recopier ».
+
+⚠ Correction en passant : la liste des agences disait « 7 e-mails à vérifier » alors qu'elle en marque 8 (Courpière,
+Dunières, Issoire, St-Bonnet, St-Didier, St-Étienne, St-Just, Yssingeaux) — corrigé à 8, comme au §34.
+
+**À trancher par Frédéric avant l'étape 2** (rien n'est choisi) :
+- qui ouvre ces registres : les administrateurs seuls, ou aussi les managers ;
+- les 34 « à valider » : une file de travail à vider, ou un simple repère dans la fiche ;
+- ajouter un ANCIEN sans fiche Hektor (les 14 anciens du classeur) : permis dès maintenant, ou après la coupure ;
+- l'agence n° 26 « Agences supprimée » : gardée dans la liste (statut « Supprimée ») ou cachée par défaut.
+
+➡ Étape suivante (2) : tables + nuit à blanc — ⛔ écriture en base de production, ACCORD OBLIGATOIRE.
