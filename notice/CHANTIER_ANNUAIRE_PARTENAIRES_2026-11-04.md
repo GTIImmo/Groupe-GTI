@@ -1361,6 +1361,49 @@ derrière `signature_youtrust` = off. **L'interrupteur `contact_partenaire_modif
   0 ligne dans `app_contact_current` et `app_contact_pending` ; 2 lignes au journal des suppressions ; formulaire Hektor
   vide (0 octet) pour 606216 et 606217. Onglet Chrome refermé.
 
+## 21. D-5 « LE TÉLÉPHONE S'AJOUTE AU LIEU DE REMPLACER » — AUDIT (05/11, « Oui, audite D-5 ») — rien codé
+
+**Les portes qui écrivent une coordonnée sur un contact EXISTANT** (`console_job_worker.js`) :
+- « Modifier le contact » (`updateHektorContactIdentity` → `applyHektorContactIdentityValues`) : téléphone
+  (`replaceContactTelephoneParams`), e-mail (`replaceParam id_email[] ""`), et pour un couple téléphone / e-mail du
+  conjoint (`id_*_m2[] ""`) — **toutes avec un numéro interne VIDE** ⇒ Hektor crée une ligne et garde les anciennes.
+  ⚠ La fenêtre envoie TOUS les champs à chaque enregistrement : même un numéro inchangé est renvoyé « neuf ».
+- Modification d'un MANDANT (`updateHektorMandantContact`) : remplace la valeur mais GARDE les `id_*` relus (pas
+  d'ajout). ⚠ Non mesuré : avec plusieurs téléphones relus, elle renvoie N numéros internes pour 1 numéro (tableaux
+  désalignés) — effet chez Hektor inconnu.
+- Les créations (`createHektorContact`, `createHektorMandantContact`) : numéro interne vide = normal (fiche neuve).
+**Mesure (lecture seule, 05/11)** : 12 contacts modifiés par « Modifier le contact » depuis juin ; formulaires relus chez
+Hektor (comptes, sans valeurs) : 604020 (TEST FERANCKd) **5 téléphones / 4 différents, 2 e-mails** ; 603798 (AVOIR TEST4)
+**3 e-mails** ; 603953 (TESTCLAUDE) 2 e-mails identiques ; 605925 (essai 8a) 2 téléphones ; Gladys DURIEUX 113412 : 1 / 1
+(rien) ; **les deux seules vraies personnes, M. Loïc GIMBERT 603585 et Mme Annick BRUNON 602945, ont leur numéro 2 fois** —
+mais c'est l'ancienne fenêtre (25/06, 21/08) qui envoyait le MÊME numéro en portable ET en fixe, pas l'accumulation.
+**Ce que voit l'app** : l'API ne rend qu'UN portable, UN fixe, UN e-mail (`coordonnees`), le plus récent de chaque sorte
+(604020 : portable = le dernier envoyé) ⇒ la nuit ramène le bon numéro, **l'app est juste** ; les lignes en trop vivent
+**chez Hektor seulement** (sa fiche, et tout ce que Hektor envoie lui-même : non mesuré).
+**Remède proposé** : pour le portable, le fixe, l'e-mail (et le conjoint), renvoyer le numéro interne de la ligne relue
+du même type (`label_telephone[]` portable / fixe, première ligne e-mail) avec la nouvelle valeur ; aucune ligne relue
+⇒ ligne neuve (comme aujourd'hui) ; les autres lignes relues renvoyées telles quelles. Interrupteur app_setting proposé
+`contact_coordonnees_remplacer`. Essai réel sur fiche d'essai (accord), redémarrage des 4 services (Frédéric).
+**Ménage** : rien d'urgent — les fiches à lignes multiples sont des fiches d'essai ; GIMBERT et BRUNON = un numéro en
+double (portable + fixe), à laisser ou à corriger à la main chez Hektor (décision de Frédéric).
+
+✅ **CODÉ le 05/11** (« Oui, vas-y ») — **rien n'est actif tant que les 4 services ne sont pas redémarrés et
+l'interrupteur allumé** :
+- `console_job_worker.js` : `lignesCoordonnees` / `poserCoordonnee` / `ecrireLignesCoordonnees` / `remplacerCoordonnee` ;
+  `applyHektorContactIdentityValues(values, contact, { remplacer })` — allumé, le portable, le fixe, l'e-mail et le
+  conjoint (`_m2`) remplacent la **DERNIÈRE** ligne relue de leur sorte (celle que l'API rend, donc celle que l'app
+  affiche) avec son numéro interne ; aucune ligne de la sorte = ligne neuve ; une valeur vide ne part pas ; les autres
+  lignes repartent telles quelles. Seule la MODIFICATION passe l'option ; la création ne change pas. Compte rendu :
+  `coordonnees` = « remplacees » / « ajoutees ».
+- Libellés mesurés en GET sur 604020 : `label_telephone[]` = select portable|fixe|bureau|fax ; `label_email[]` = « email ».
+- ⛔ **Interrupteur `app_setting` « contact_coordonnees_remplacer »** (absent = éteint ; lecture ratée = éteint).
+- Essais : `Console/test_coordonnees_remplacer.js` **17/17** (témoins éteint ; forme de 604020 : 5 lignes avant et après,
+  le dernier portable remplacé, les 4 autres intactes et dans l'ordre ; fixe ; e-mail ; aucune ligne ; valeur vide ;
+  conjoint ; la création non touchée) ; partenaires 17/17, couples verts.
+**Reste, chacun sur accord** : pousser ; redémarrage des 4 services par Frédéric (file vide) ; poser
+`contact_coordonnees_remplacer = on` ; essai réel sur une fiche d'essai (changer téléphone ET e-mail, relire TOUTES les
+lignes chez Hektor : même nombre, nouvelle valeur), puis la supprimer.
+
 ### 7 ter. Les dépendances (techniques, pas un ordre décidé)
 
 - 0 avant tout le reste ; 0.1 avant B2 ; 0.2 avant B1 ; 0.6 avant B5 ; 0.3 avant B6 ; 0.4 avant B7 ; 0.5 avant C2.

@@ -18665,7 +18665,60 @@ function replaceContactTelephoneParams(values, primaryPhone, secondaryPhone) {
   }
 }
 
-function applyHektorContactIdentityValues(values, contact) {
+// ── D-5 (05/11/2026, chantier partenaires §21) -- UNE COORDONNÉE SE REMPLACE, ELLE NE S'AJOUTE PAS. ──
+//   Chez Hektor, chaque téléphone / e-mail est une LIGNE (label_*[], id_*[], valeur) avec son numéro interne. Envoyée
+//   avec un numéro interne VIDE, une valeur crée une ligne de plus et l'ancienne reste : 604020 a 5 téléphones après
+//   4 changements depuis l'app. L'API n'en rend qu'une par sorte, la DERNIÈRE (604020 : portable = le dernier envoyé) :
+//   c'est celle que l'app affiche, donc celle que l'utilisateur vient de corriger -- on remplace CELLE-LÀ, avec son
+//   numéro interne relu ; aucune ligne de cette sorte = une ligne neuve (comme avant). Les autres lignes repartent
+//   telles que Hektor les a rendues.
+//   ⛔ Interrupteur app_setting « contact_coordonnees_remplacer » (absent = éteint = le chemin d'avant, à l'identique).
+function lignesCoordonnees(values, suffixe) {
+  const labels = values.getAll(`label_${suffixe}[]`);
+  const ids = values.getAll(`id_${suffixe}[]`);
+  const valeurs = values.getAll(`${suffixe}[]`);
+  const n = Math.max(labels.length, ids.length, valeurs.length);
+  return Array.from({ length: n }, (_, i) => ({ label: labels[i] ?? "", id: ids[i] ?? "", valeur: valeurs[i] ?? "" }));
+}
+
+function poserCoordonnee(lignes, label, valeur, options = {}) {
+  let i = -1;
+  for (let k = lignes.length - 1; k >= 0; k -= 1) if (lignes[k].label === label) { i = k; break; }
+  if (i < 0 && options.repliSurLaDerniere && lignes.length) i = lignes.length - 1;
+  if (i >= 0) lignes[i] = { ...lignes[i], valeur };
+  else lignes.push({ label, id: "", valeur });
+}
+
+function ecrireLignesCoordonnees(values, suffixe, lignes) {
+  values.delete(`label_${suffixe}[]`);
+  values.delete(`id_${suffixe}[]`);
+  values.delete(`${suffixe}[]`);
+  for (const ligne of lignes) {
+    values.append(`label_${suffixe}[]`, ligne.label);
+    values.append(`id_${suffixe}[]`, ligne.id);
+    values.append(`${suffixe}[]`, ligne.valeur);
+  }
+}
+
+function remplacerCoordonnee(values, suffixe, label, valeur, options = {}) {
+  const lignes = lignesCoordonnees(values, suffixe);
+  poserCoordonnee(lignes, label, valeur, options);
+  ecrireLignesCoordonnees(values, suffixe, lignes);
+}
+
+async function interrupteurCoordonneesRemplacer() {
+  try {
+    const rows = await supabaseRequest("app_setting?select=value&key=eq.contact_coordonnees_remplacer&limit=1", { method: "GET" });
+    const value = Array.isArray(rows) && rows[0] ? String(rows[0].value || "").trim().toLowerCase() : "";
+    return ["on", "true", "1", "yes"].includes(value);
+  } catch (_) {
+    return false; // lecture ratée = éteint : le chemin d'avant
+  }
+}
+
+function applyHektorContactIdentityValues(values, contact, options = {}) {
+  // D-5 : seule la MODIFICATION passe { remplacer: true } (une création n'a aucune ligne à remplacer).
+  const remplacer = options.remplacer === true;
   const isCompany = contact.contactStatus === "3";
   if (isCompany) {
     values.set("sociale", contact.companyName || contact.lastName || "");
@@ -18678,26 +18731,38 @@ function applyHektorContactIdentityValues(values, contact) {
   }
   if (contact.partnerJobId !== null && contact.partnerJobId !== undefined) values.set("metier", contact.partnerJobId || "");
   if (contact.website !== null && contact.website !== undefined) values.set("url", contact.website || "");
-  if (contact.email !== null && contact.email !== undefined) {
-    replaceParam(values, "label_email[]", "email");
-    replaceParam(values, "id_email[]", "");
-    replaceParam(values, "email[]", contact.email || "");
-  }
-  if (contact.phone !== null || contact.phoneSecondary !== null) {
-    replaceContactTelephoneParams(values, contact.phone || "", contact.phoneSecondary || "");
+  if (remplacer) {
+    // Une valeur vide ne part pas : elle ne peut rien effacer chez Hektor.
+    if (contact.email) remplacerCoordonnee(values, "email", "email", contact.email, { repliSurLaDerniere: true });
+    if (contact.phone) remplacerCoordonnee(values, "telephone", "portable", contact.phone);
+    if (contact.phoneSecondary) remplacerCoordonnee(values, "telephone", "fixe", contact.phoneSecondary);
+  } else {
+    if (contact.email !== null && contact.email !== undefined) {
+      replaceParam(values, "label_email[]", "email");
+      replaceParam(values, "id_email[]", "");
+      replaceParam(values, "email[]", contact.email || "");
+    }
+    if (contact.phone !== null || contact.phoneSecondary !== null) {
+      replaceContactTelephoneParams(values, contact.phone || "", contact.phoneSecondary || "");
+    }
   }
   if (contact.contactStatus === "2") {
     if (contact.spouseLastName) values.set("nom_m2", contact.spouseLastName);
     if (contact.spouseFirstName !== null && contact.spouseFirstName !== undefined) values.set("prenom_m2", contact.spouseFirstName || "");
-    if (contact.spouseEmail !== null && contact.spouseEmail !== undefined) {
-      replaceParam(values, "label_email_m2[]", "email");
-      replaceParam(values, "id_email_m2[]", "");
-      replaceParam(values, "email_m2[]", contact.spouseEmail || "");
-    }
-    if (contact.spousePhone !== null && contact.spousePhone !== undefined) {
-      replaceParam(values, "label_telephone_m2[]", "portable");
-      replaceParam(values, "id_telephone_m2[]", "");
-      replaceParam(values, "telephone_m2[]", contact.spousePhone || "");
+    if (remplacer) {
+      if (contact.spouseEmail) remplacerCoordonnee(values, "email_m2", "email", contact.spouseEmail, { repliSurLaDerniere: true });
+      if (contact.spousePhone) remplacerCoordonnee(values, "telephone_m2", "portable", contact.spousePhone);
+    } else {
+      if (contact.spouseEmail !== null && contact.spouseEmail !== undefined) {
+        replaceParam(values, "label_email_m2[]", "email");
+        replaceParam(values, "id_email_m2[]", "");
+        replaceParam(values, "email_m2[]", contact.spouseEmail || "");
+      }
+      if (contact.spousePhone !== null && contact.spousePhone !== undefined) {
+        replaceParam(values, "label_telephone_m2[]", "portable");
+        replaceParam(values, "id_telephone_m2[]", "");
+        replaceParam(values, "telephone_m2[]", contact.spousePhone || "");
+      }
     }
     if (contact.spouseAddress !== null && contact.spouseAddress !== undefined) values.set("adresse_m2", contact.spouseAddress || "");
     if (contact.spouseCity !== null && contact.spouseCity !== undefined) values.set("villeprivee", contact.spouseCity || "");
@@ -19419,7 +19484,9 @@ async function updateHektorContactIdentity(job, contactId, payload) {
   // Même règle pour une société : le nom saisi part dans « sociale » ; forme juridique, SIRET, métier et site ne
   // bougent que s'ils sont envoyés (l'écran les envoie vides = rien), sinon ils restent comme Hektor les a rendus.
   if (formulaire.societe) contact.contactStatus = "3";
-  applyHektorContactIdentityValues(values, contact);
+  // D-5 (05/11/2026) : interrupteur allumé, une coordonnée remplace sa ligne relue au lieu d'en ajouter une.
+  const remplacer = await interrupteurCoordonneesRemplacer();
+  applyHektorContactIdentityValues(values, contact, { remplacer });
   if (formulaire.societe) {
     for (const champ of HEKTOR_CHAMPS_PERSONNE_SEULEMENT) if (!relus.has(champ)) values.delete(champ);
   }
@@ -19462,6 +19529,8 @@ async function updateHektorContactIdentity(job, contactId, payload) {
     couple: formulaire.couple,
     // PARTENAIRES (05/11/2026) : le formulaire relu, pour le journal du travail.
     formulaire: formulaire.group,
+    // D-5 (05/11/2026) : « remplacees » = les lignes relues ont reçu les valeurs ; « ajoutees » = le chemin d'avant.
+    coordonnees: remplacer ? "remplacees" : "ajoutees",
     contact: {
       civilite: contact.civility,
       nom: contact.lastName,
