@@ -1664,8 +1664,9 @@ le registre) ; voir les trois formats ; puis « on » pour tous (accord).
 - Téléphone (cadre de 390 px, même session) : la fenêtre ouverte par le menu est un volet du bas, boutons visibles, aucun
   débordement ; fermée sans enregistrer.
 - Non vu : le mode sombre au téléphone (règles posées) ; un compte non admin (caché par le cran).
-**Reste** : passer `partenaires_metier_modif` à « on » pour tous (accord) ; la nuit du 05 au 06/11 doit garder 1892
-retirée (la garde ne rajoute pas un métier retiré).
+✅ **`partenaires_metier_modif = on` le 05/11 (« Oui, pour tous »)** : la fenêtre est ouverte à tout compte qui peut
+gérer les contacts (admin, manager, commercial). Retour arrière : `admin` ou `off`. ⏰ **Contrôle du 06/11** : la nuit
+garde 1892 retirée (`metiers_retires_ecartes`, et aucune ligne active syndic pour 10354488). **Suite : pièce 3.3.**
 
 ### 7 ter. Les dépendances (techniques, pas un ordre décidé)
 
