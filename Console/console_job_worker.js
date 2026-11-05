@@ -6376,6 +6376,11 @@ async function mandataireDuMandat(job, payload, dossier) {
 // generations en tout, aucune depuis 60 jours, mesure du 05/11).
 function signatairesDepuisLaPhoto(doc, corrections) {
   const nomDoc = (doc && doc.document_name) || "?";
+  // A.2 lot 6b P5 (05/11/2026) : un PDF REMPLACE par une regeneration ne part jamais (l'ecran n'offre plus le
+  // bouton ; ceci tient meme si une demande arrivait quand meme).
+  if (doc && doc.metadata_json && doc.metadata_json.remplace) {
+    throw refusEtatYoutrust(`Le PDF « ${nomDoc} » a ete remplace par une version regeneree : envoyez le nouveau mandat.`);
+  }
   const photo = doc && doc.metadata_json && doc.metadata_json.signataires_du_pdf;
   if (!photo || !Array.isArray(photo.mandants)) {
     throw refusEtatYoutrust(`Le document « ${nomDoc} » n'a pas ete fait par l'editeur avec ses cases de signature : regenerez le mandat, puis envoyez-le.`);
@@ -8837,6 +8842,75 @@ function photoSignatairesDuPdf(payload) {
   };
 }
 
+// A.2 lot 6b P5 (05/11/2026) -- CE QUE LE PDF IMPRIME, en court : sert a dire « ce qui a change » entre deux
+// generations (fenetre d'envoi, maquette « corriger » vue 4). Lu dans le rendu, comme la photo des signataires.
+function contenuImprimeDuPdf(payload) {
+  const r = payload && payload.render_payload && typeof payload.render_payload === "object" ? payload.render_payload : null;
+  if (!r) return null;
+  const m = r.mandat || {}, b = r.bien || {}, h = r.honoraires || {}, o = r.options || {};
+  const oui = (v) => (v === true ? true : v === false ? false : null);
+  return {
+    version: 1,
+    numero_mandat: cleanString(m.numero),
+    type_mandat: cleanString(m.type),
+    date_signature: cleanString(m.date_signature),
+    mandants_libelle: cleanString(r.mandants_libelle),
+    bien_titre: cleanString(b.titre),
+    bien_adresse: cleanString(b.adresse_complete),
+    surface_habitable: cleanString(b.surface_habitable),
+    surface_terrain: cleanString(b.surface_terrain),
+    nombre_pieces: cleanString(b.nombre_pieces),
+    etat_occupation: cleanString(b.etat_occupation),
+    prix_vente: cleanString(b.prix_vente),
+    prix_net_vendeur: cleanString(b.prix_net_vendeur),
+    honoraires_ttc: cleanString(h.montant_ttc),
+    honoraires_charge: cleanString(h.charge),
+    clause_particuliere: cleanString(m.clause_particuliere),
+    execution_anticipee: cleanString(o.execution_anticipee_demandee),
+    inclure_couverture: oui(o.inclure_couverture),
+  };
+}
+
+// A.2 lot 6b P5 (05/11/2026) -- « CORRIGER LE MANDAT » : la regeneration MARQUE l'ancien PDF, elle ne l'efface pas.
+// Maquette « corriger » vue 6 : « remplace, jamais envoye », sans bouton Signature. On ne marque QUE si le nouveau
+// PDF existe (on est appele apres son enregistrement), et seulement un PDF de l'editeur, du meme bien, jamais
+// envoye : un PDF signe ou en signature ne se « remplace » pas (on fait alors un avenant, ou on annule d'abord).
+// ⚠ Le PATCH porte la meme condition que la lecture (statut ni signed ni pending) : une demande partie entre les
+//   deux n'est pas marquee. Un echec ici ne defait JAMAIS la generation : il est rendu et ecrit au journal.
+async function marquerDocumentRemplace(job, nouveau, ancienId) {
+  const refus = (raison) => ({ marque: false, ancien_document_id: ancienId, raison });
+  try {
+    const rows = await supabaseRequest(
+      `app_console_document?id=eq.${encodeURIComponent(ancienId)}&select=id,app_dossier_id,document_name,metadata_json&limit=1`,
+      { method: "GET" },
+    );
+    const ancien = Array.isArray(rows) ? rows[0] : null;
+    if (!ancien) return refus("introuvable");
+    if (ancien.id === nouveau.id) return refus("meme_document");
+    if (String(ancien.app_dossier_id) !== String(nouveau.app_dossier_id)) return refus("autre_bien");
+    const meta = ancien.metadata_json && typeof ancien.metadata_json === "object" ? ancien.metadata_json : {};
+    if (!meta.signataires_du_pdf) return refus("pas_fait_par_l_editeur");
+    if (meta.remplace) {
+      // Travail rejoue : la marque est deja la notre.
+      return meta.remplace.par_document_id === nouveau.id
+        ? { marque: true, deja: true, ancien_document_id: ancienId }
+        : refus("deja_remplace");
+    }
+    const statut = meta.signature && meta.signature.status;
+    if (statut === "signed" || statut === "pending") return refus(`signature_${statut}`);
+    const remplace = { le: new Date().toISOString(), par_document_id: nouveau.id, par_generation_job_id: job.id, jamais_envoye: true };
+    const poses = await supabaseRequest(
+      `app_console_document?id=eq.${encodeURIComponent(ancienId)}`
+        + `&or=(metadata_json->signature->>status.is.null,metadata_json->signature->>status.not.in.(signed,pending))`,
+      { method: "PATCH", prefer: "return=representation", body: JSON.stringify({ metadata_json: { ...meta, remplace } }) },
+    );
+    if (!Array.isArray(poses) || !poses.length) return refus("signature_partie_entre_temps");
+    return { marque: true, ancien_document_id: ancienId, le: remplace.le };
+  } catch (e) {
+    return refus(`erreur: ${e && e.message ? e.message : e}`);
+  }
+}
+
 // A.2 lot 4 bis (D24) -- le mandat genere NAIT CHEZ NOUS, et seulement chez nous.
 // ⚠ REPRENABLE : un travail rejoue retrouve SA ligne (metadata_json.generation_job_id) au lieu
 //   d'en creer une seconde.
@@ -8878,18 +8952,28 @@ async function enregistrerMandatChezNous(job, dossier, payload, label, filename,
         ...(payload.avenant_new_price != null ? { avenant_new_price: String(payload.avenant_new_price) } : {}),
         // A.2 lot 6b P1 (D31) : la photo de qui ce PDF fait signer -- elle ne change plus jamais.
         signataires_du_pdf: photoSignatairesDuPdf(payload),
+        // A.2 lot 6b P5 : ce qu'il imprime (pour « ce qui a change »), et le PDF qu'il remplace s'il y en a un.
+        contenu_imprime: contenuImprimeDuPdf(payload),
+        ...(cleanString(payload.remplace_document_id) ? { remplace_document_id: cleanString(payload.remplace_document_id) } : {}),
       },
     };
     await supabaseRequest("app_console_document", { method: "POST", prefer: "return=minimal", body: JSON.stringify([ligne]) });
   }
   const range = await persistProvidedDocumentFile(ligne, pdfBuffer, "application/pdf", { cloud: shouldKeepCloud(dossier) });
   const photo = (ligne.metadata_json && ligne.metadata_json.signataires_du_pdf) || null;
+  // A.2 lot 6b P5 : APRES l'enregistrement du nouveau PDF, jamais avant.
+  const remplaceId = cleanString(payload.remplace_document_id);
+  const remplacement = remplaceId ? await marquerDocumentRemplace(job, ligne, remplaceId) : null;
+  if (remplacement && !remplacement.marque) {
+    await logJob(job.id, "mandat_remplace", "warning", `L'ancien PDF n'a pas ete marque remplace (${remplacement.raison})`, remplacement);
+  }
   await logJob(job.id, "mandat_pdf", "done", "Mandat genere, enregistre chez nous (signature Youtrust : pas de depot Hektor)", {
     hektor_annonce_id: String(dossier.hektor_annonce_id),
     app_document_id: ligne.id,
     pdf_bytes: pdfBuffer.length,
     storage_path: range.storage_path,
     signataires_du_pdf: photo ? { valide: photo.valide, mandants: photo.mandants.length, problemes: photo.problemes } : null,
+    ...(remplacement ? { remplacement } : {}),
   });
   return {
     ok: true,
@@ -8898,6 +8982,7 @@ async function enregistrerMandatChezNous(job, dossier, payload, label, filename,
     app_document_id: ligne.id,
     storage_path: range.storage_path,
     sans_hektor: true,
+    ...(remplacement ? { remplacement } : {}),
   };
 }
 

@@ -9726,6 +9726,8 @@ export async function createGenerateMandatPdfJob(input: {
   // le recopie dans metadata_json.avenant_new_price du document, POUR AFFICHAGE. N'altère jamais
   // le prix réel de l'annonce (qui ne change qu'à la validation de la baisse par la direction).
   avenantNewPrice?: string | null
+  // A.2 lot 6b P5 : « Corriger le mandat » -- le PDF que cette generation remplace (le worker le marque, sans l'effacer).
+  remplaceDocumentId?: string | null
 }): Promise<ConsoleJob> {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
   const userId = await requireSupabaseUserId()
@@ -9745,6 +9747,7 @@ export async function createGenerateMandatPdfJob(input: {
         numero_mandat: input.numeroMandat ?? null,
         render_payload: input.payload ?? null,
         avenant_new_price: input.avenantNewPrice ?? null,
+        ...(input.remplaceDocumentId ? { remplace_document_id: input.remplaceDocumentId } : {}),
       },
       priority: input.priority ?? 40,
       requested_by: userId,
@@ -10068,6 +10071,22 @@ export type CorrectionSignataire = { rang: number; email?: string; telephone?: s
 export function photoSignatairesDuDocument(document: Pick<ConsoleDocument, 'metadata_json'>): PhotoSignatairesPdf | null {
   const photo = (document.metadata_json as { signataires_du_pdf?: PhotoSignatairesPdf } | null)?.signataires_du_pdf
   return photo && Array.isArray(photo.mandants) ? photo : null
+}
+
+// A.2 lot 6b P5 (05/11/2026) -- « CORRIGER LE MANDAT ». La regeneration marque l'ancien PDF (worker,
+// metadata_json.remplace) : il reste dans les documents, sans bouton Signature, et le worker refuse de l'envoyer.
+// Le nouveau garde ce qu'il imprime (metadata_json.contenu_imprime), pour dire « ce qui a change ».
+export type DocumentRemplace = { le: string; par_document_id: string; jamais_envoye?: boolean }
+export function documentRemplace(document: Pick<ConsoleDocument, 'metadata_json'>): DocumentRemplace | null {
+  const r = (document.metadata_json as { remplace?: DocumentRemplace } | null)?.remplace
+  return r && typeof r === 'object' && r.par_document_id ? r : null
+}
+export type ContenuImprimePdf = Partial<Record<'numero_mandat' | 'type_mandat' | 'date_signature' | 'mandants_libelle' | 'bien_titre' | 'bien_adresse'
+  | 'surface_habitable' | 'surface_terrain' | 'nombre_pieces' | 'etat_occupation' | 'prix_vente' | 'prix_net_vendeur' | 'honoraires_ttc'
+  | 'honoraires_charge' | 'clause_particuliere' | 'execution_anticipee', string | null>> & { version?: number; inclure_couverture?: boolean | null }
+export function contenuImprimeDuDocument(document: Pick<ConsoleDocument, 'metadata_json'>): ContenuImprimePdf | null {
+  const c = (document.metadata_json as { contenu_imprime?: ContenuImprimePdf } | null)?.contenu_imprime
+  return c && typeof c === 'object' ? c : null
 }
 
 // La fiche d'aujourd'hui de chaque signataire, par son numero Hektor (celui de la photo) : nature (un conjoint ne se

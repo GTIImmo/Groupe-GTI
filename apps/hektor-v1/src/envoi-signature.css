@@ -93,6 +93,31 @@
 .ens-gros.envoi { color: #fff; border: 0; background: linear-gradient(120deg, var(--ens-mag) 0%, var(--ens-mag-deep) 40%, #a5793d 100%); box-shadow: 0 12px 26px -12px rgba(150, 20, 70, .75); }
 .ens-gros:disabled { opacity: .5; cursor: not-allowed; }
 
+/* P5 -- « ce qui a changé » au retour d'une régénération (maquette « corriger », vue 4). */
+.ens-diff { background: var(--ens-card); border: 1px solid var(--ens-line); border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+.ens-diff h3 { margin: 0; font-family: var(--ens-disp); font-weight: 600; font-size: 15.5px; }
+.ens-d { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: 13px; padding: 7px 10px; border-radius: 10px; background: var(--ens-paper); overflow-wrap: anywhere; }
+.ens-k { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; font-weight: 800; color: var(--ens-soft); min-width: 110px; }
+.ens-d s { color: #9b8f84; }
+.ens-n { font-weight: 800; color: var(--ens-green); }
+.ens-moins { font-weight: 800; color: #b42318; }
+
+/* P5 -- l'éditeur rouvert pour corriger avant l'envoi (vue 3) : bandeau en tête du formulaire. Il vit dans le
+   portail de l'éditeur (.fa-ck-mandat-v3), d'où ses propres jetons. */
+.ens-correction { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; border-radius: 12px; padding: 11px 14px; margin: 0 0 12px;
+  font-size: 13px; line-height: 1.45; color: #8b0f3d; background: linear-gradient(90deg, #fbe6ee, #fff3f7); border: 1px solid #f2c3d4; }
+.ens-correction .ens-correction-txt { flex: 1 1 260px; min-width: 0; }
+.ens-correction .ens-correction-bt { display: flex; flex-wrap: wrap; gap: 8px; }
+.ens-correction button { font: inherit; font-weight: 800; font-size: 12.5px; border-radius: 10px; padding: 8px 13px; cursor: pointer; }
+.ens-correction .ens-regen { color: #fff; border: 0; background: linear-gradient(120deg, #b3134f 0%, #8b0f3d 60%, #7f5a26 100%); }
+.ens-correction .ens-regen:disabled { opacity: .55; cursor: not-allowed; }
+.ens-correction .ens-retour { background: #fff; border: 1px solid #e9e1d3; color: #241f22; }
+
+/* P5 -- documents du bien : l'ancien PDF « remplacé, jamais envoyé » (vue 6). */
+.ens-remplace-mention { display: block; font-size: 12px; font-weight: 700; color: #6b6058; }
+.ens-pill-remplace { font-size: 11px; font-weight: 800; border-radius: 99px; padding: 3px 9px; background: #efe9e0; color: #6b6058; white-space: nowrap; }
+.ens-doc-remplace { opacity: .78; background: repeating-linear-gradient(135deg, #fbf8f3 0 10px, #f6f1ea 10px 20px); }
+
 /* Téléphone et fenêtre étroite : une colonne, le bouton principal sur toute la largeur. */
 @media (max-width: 760px) {
   .ens-voile { padding: 0; align-items: stretch; }
@@ -103,4 +128,6 @@
   .ens-sec small { display: block; margin: 2px 0 0; }
   .ens-pied .ens-esp { display: none; }
   .ens-gros { width: 100%; justify-content: center; }
+  .ens-k { min-width: 0; flex: 1 0 100%; }
+  .ens-correction .ens-correction-bt, .ens-correction button { width: 100%; }
 }

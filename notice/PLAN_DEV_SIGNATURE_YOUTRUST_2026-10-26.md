@@ -783,6 +783,41 @@ ImmoSign existant dont les boutons répondent comme avant.
 - **P5 — écran : « Corriger le mandat »** (vues 3, 4, 6) : l'éditeur rouvert sur le bon onglet avec son bandeau,
   « Régénérer et revenir à l'envoi », « ce qui a changé » ; l'ancien PDF marqué « remplacé, jamais envoyé », sans bouton
   Signature.
+  🔎 **AUDIT DE P5 (05/11)** : le front n'a AUCUN droit d'écriture sur `app_console_document` (la voie manuscrite passe
+  par une RPC dédiée) → la marque « remplacé » se pose dans le **worker**, au moment de la régénération (aucun patch
+  Supabase). L'ancien PDF ne portait pas ce qu'il imprime (la photo ne garde que les signataires) → le nouveau garde
+  `contenu_imprime`. Le panneau Documents et l'éditeur sont deux composants séparés : le panneau DEMANDE à l'éditeur du
+  même bien de s'ouvrir (événement `hektor:corriger-mandat`, le premier éditeur monté le prend, un seul s'ouvre).
+  ✅ **P5 CODÉ LE 05/11** (rien commité, rien déployé, services non redémarrés) :
+  · **worker** (dormant : seulement le chemin « Youtrust allumé ») : `enregistrerMandatChezNous` range
+    `contenu_imprime` (prix, net vendeur, honoraires, charge, bien, clauses, numéro, date…) et, si la charge porte
+    `remplace_document_id`, appelle `marquerDocumentRemplace` **APRÈS** l'enregistrement du nouveau PDF : il ne marque
+    qu'un PDF de l'éditeur, du même bien, ni signé ni en signature (le PATCH porte la même condition, syntaxe vérifiée
+    contre le vrai PostgREST par une lecture : 401 droits, contre 400 pour un filtre cassé exprès) ; un refus ou une
+    erreur ne défait JAMAIS la génération (avertissement `mandat_remplace` au journal). `signatairesDepuisLaPhoto`
+    **refuse** un PDF marqué remplacé (il ne part pas, même si une demande arrivait).
+  · **écran** : fenêtre d'envoi : « ✎ Corriger le mandat » (en-tête du PDF) et dans la bulle du cadenas (« Corriger le
+    mandat / Laisser tel quel ») ; au retour, bandeau « Nouveau mandat généré à … ; l'ancien gardé, marqué remplacé »
+    (ou, s'il n'a pas pu l'être : alerte « ne l'envoyez pas ») et **« ce qui a changé »** (noms, mandant ajouté ou
+    retiré, nombre de signataires donc de crédits, et tout ce qui est imprimé ; un ancien PDF sans `contenu_imprime` →
+    « seuls les signataires sont comparés ») ; un PDF remplacé ouvert → envoi bloqué. Éditeur : bandeau « Correction
+    avant l'envoi » avec « Revenir à l'envoi sans rien changer » et « ↻ Régénérer et revenir à l'envoi » ; il attend la
+    marque jusqu'à 45 s avant de revenir. Documents (les 2 rendus) : mention « Remplacé le … — jamais envoyé », pastille
+    « Remplacé », plus de bouton Signature. Ouvert depuis le panneau sans éditeur monté → « ouvrez-le depuis la rubrique
+    Mandat ».
+  · **ce que ça aurait cassé ailleurs, fermé** : le cockpit du mandat prend le PREMIER document « mandat » / « avenant »
+    venu (même nom pour l'ancien et le nouveau) → il pouvait lire le PDF remplacé, et afficher l'ANCIEN prix proposé
+    d'un avenant corrigé ; il saute désormais un PDF remplacé (`ckSigStatus`, `avenantDoc`). « Signé à la main » n'est
+    plus offert sur un PDF remplacé. Rien ne change pour un document non marqué (tous ceux d'aujourd'hui).
+  · **essais** : `Console/test_regeneration_remplace.js` **23/23** (marque, ordre « après », 8 refus dont signé / en
+    signature / autre bien / demande partie entre lecture et marque / 503, annulée = marquable, rejoué, génération
+    ordinaire inchangée, refus d'envoi, témoin inverse = le worker d'avant ne marque rien). Voisins verts après ajout des
+    deux fonctions à leurs montages : photo 23/23, chez nous 22/22, envoi 18/18, 4 bis 26/26, coordonnées 15/15,
+    localité 8/8. `npm run build` vert. Vu dans le navigateur sur une page d'essai temporaire (données fictives, retirée
+    ensuite) à 1280 × 665 et en 375 px : « ce qui a changé », ancien non marqué, PDF remplacé, bulle, bandeau éditeur,
+    ligne « Remplacé ».
+  ⚠ NON ÉPROUVÉ en réel : la boucle entière dans l'app (interrupteur éteint en production) — l'ouverture de l'éditeur
+  par le panneau, l'attente de la marque, la marque posée par le vrai worker (il faut redémarrer les services).
 - **P6 — écran : « la fiche a changé depuis ce PDF »** (vue 5), comparaison photo ↔ fiche à l'ouverture.
 - **P7 — éditeur : le couple (D32)** et le contrôle du prénom / nom — attend les réponses (a), (b), (c) de la
   proposition §11.2.

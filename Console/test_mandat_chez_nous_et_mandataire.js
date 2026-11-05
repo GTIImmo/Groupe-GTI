@@ -23,7 +23,7 @@ const tranche = (src, d) => { const i = src.indexOf(d); return i < 0 ? null : sr
 // ── (A) LA GENERATION ──────────────────────────────────────────────────────────────
 function monterGeneration(src, base, statut = "Estimation") {
   // lot 6b P1 (05/11) : enregistrerMandatChezNous appelle la photo du PDF -> ses tranches (absentes du code d'avant : filtrees).
-  const blocs = ["function shouldKeepCloud(", "function cleanString(", "function ficheDuMandantImprime(", "function photoSignatairesDuPdf(", "async function handleGenerateMandatDocument(", "async function enregistrerMandatChezNous("]
+  const blocs = ["function shouldKeepCloud(", "function cleanString(", "function ficheDuMandantImprime(", "function photoSignatairesDuPdf(", "function contenuImprimeDuPdf(", "async function marquerDocumentRemplace(", "async function handleGenerateMandatDocument(", "async function enregistrerMandatChezNous("]
     .map((d) => tranche(src, d)).filter(Boolean);
   const D = {
     safeJsonParse: (v) => (typeof v === "string" ? JSON.parse(v) : v || {}),

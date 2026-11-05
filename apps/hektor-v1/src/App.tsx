@@ -91,6 +91,7 @@ import {
   createGenerateMandatPdfJob,
   loadAppSettingActive,
   photoSignatairesDuDocument,
+  documentRemplace,
   loadAppSettingValeur,
   loadContactCoupleInfo,
   editConjointOptimistic,
@@ -275,7 +276,7 @@ import type { EtatCase, TriAnnonces } from './AnnoncesListeV2'
 import ContactSearchFields, { contactSearchValueToInput, defaultContactSearchValue, type ContactSearchFieldsValue } from './ContactSearchFields'
 import './contact-new.css'
 import './ajout-conjoint.css'
-import EnvoiSignatureYoutrust from './EnvoiSignatureYoutrust'
+import EnvoiSignatureYoutrust, { EVENEMENT_CORRIGER_MANDAT, type DemandeCorrectionMandat, type OngletCorrection } from './EnvoiSignatureYoutrust'
 import RechercheGlobale, { type GroupeRecherche } from './RechercheGlobale'
 import './fil-navigation.css'
 import './suivi-travaux.css'
@@ -5375,6 +5376,10 @@ function MandatDocumentEditor(props: {
   const [signPromptOpen, setSignPromptOpen] = useState(false)
   // A.2 lot 6b P4 : Youtrust allume, le mandat genere ouvre la fenetre d'envoi (le PDF ne va plus chez Hektor, D24).
   const [envoiYoutrustDoc, setEnvoiYoutrustDoc] = useState<ConsoleDocument | null>(null)
+  // A.2 lot 6b P5 : « Corriger le mandat » -- l'editeur rouvert pour corriger le PDF `ancien` avant l'envoi ;
+  // la regeneration le remplace (le worker le marque) et revient a l'envoi avec « ce qui a change » (envoiAncien).
+  const [correction, setCorrection] = useState<{ ancien: ConsoleDocument } | null>(null)
+  const [envoiAncien, setEnvoiAncien] = useState<ConsoleDocument | null>(null)
   // Type de document : mandat de vente OU avenant (modification d'un mandat actif). L'avenant n'est
   // disponible que si un mandat est deja actif ; dans ce cas il est preselectionne.
   const [docMode, setDocMode] = useState<'mandat' | 'avenant'>(() =>
@@ -5446,6 +5451,39 @@ function MandatDocumentEditor(props: {
     return () => {
       document.body.style.overflow = previousOverflow
     }
+  }, [open])
+
+  // A.2 lot 6b P5 : rouvrir l'editeur pour corriger un PDF avant son envoi (maquette « corriger » vue 3).
+  const ouvrirCorrection = (ancien: ConsoleDocument, onglet: OngletCorrection) => {
+    setEnvoiYoutrustDoc(null)
+    setEnvoiAncien(null)
+    setCorrection({ ancien })
+    if (/avenant/i.test(ancien.document_name || '')) setDocMode('avenant')
+    else setDocMode('mandat')
+    setActiveTab(onglet)
+    setMessage(null)
+    setOpen(true)
+  }
+  const revenirALEnvoiSansChanger = () => {
+    if (!correction) return
+    setEnvoiYoutrustDoc(correction.ancien)
+    setCorrection(null)
+  }
+  // Demande venue du panneau Documents (meme bien) : le premier editeur monte la prend, un seul s'ouvre.
+  useEffect(() => {
+    const ecoute = (event: Event) => {
+      const demande = (event as CustomEvent<DemandeCorrectionMandat>).detail
+      if (!demande || demande.pris || String(demande.app_dossier_id) !== String(props.dossier.app_dossier_id)) return
+      demande.pris = true
+      ouvrirCorrection(demande.document, demande.onglet)
+    }
+    window.addEventListener(EVENEMENT_CORRIGER_MANDAT, ecoute)
+    return () => window.removeEventListener(EVENEMENT_CORRIGER_MANDAT, ecoute)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [props.dossier.app_dossier_id])
+  // Editeur referme : la correction en cours est abandonnee (l'ancien PDF reste tel quel).
+  useEffect(() => {
+    if (!open) setCorrection(null)
   }, [open])
 
   const selectedSignatureRecipients = draft.signatureRecipients.filter((recipient) => recipient.selected)
@@ -5587,6 +5625,8 @@ function MandatDocumentEditor(props: {
     } catch { /* on poursuit sans snapshot */ }
     // A.2 lot 6b P4 : la suite (attente du document, fenetre de signature) suit le meme interrupteur.
     let youtrustGen = false
+    // A.2 lot 6b P5 : la correction en cours au moment du clic (le PDF que cette generation remplace).
+    const correctionEnCours = correction
     try {
       // A.2 lot 2 : l'interrupteur est relu AU MOMENT de la génération (absent/erreur = éteint).
       // Éteint : le HTML envoyé est celui d'avant, identique à l'aperçu. L'aperçu, lui, n'a jamais de repères.
@@ -5601,6 +5641,7 @@ function MandatDocumentEditor(props: {
         documentLabel: docMode === 'avenant' ? `Avenant au mandat - ${draft.numeroMandat || ''}`.trim().replace(/-\s*$/, '').trim() : null,
         // Avenant : le NOUVEAU prix proposé (« Nouveau prix FAI » = draft.prixVente) — passif, pour affichage.
         avenantNewPrice: docMode === 'avenant' ? (draft.prixVente || null) : null,
+        remplaceDocumentId: correctionEnCours ? correctionEnCours.ancien.id : null,
       })
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Generation PDF impossible.')
@@ -5655,10 +5696,27 @@ function MandatDocumentEditor(props: {
     setMessage(youtrustGen ? bvs('Mandat en cours d’enregistrement…') : bvs('Mandat en cours de depot dans Hektor…'))
     // La pop-up de signature n'apparait QUE lorsque Hektor a reellement ajoute le document.
     const deadline = Date.now() + 150000
+    // A.2 lot 6b P5 : la ligne du nouveau PDF nait AVANT que le worker marque l'ancien ; on laisse 45 s a la marque
+    // avant de revenir a l'envoi (sinon la fenetre dirait « pas marque » alors qu'il allait l'etre).
+    let marqueAttendueJusqua = 0
     const poll = async () => {
       try {
         const docs = await loadConsoleDocuments(props.dossier.app_dossier_id)
         const fresh = docs.find((doc) => !beforeIds.has(doc.id) && /mandat/i.test(doc.document_name || ''))
+        if (fresh && youtrustGen && correctionEnCours) {
+          const ancienFrais = docs.find((doc) => doc.id === correctionEnCours.ancien.id) ?? correctionEnCours.ancien
+          if (!marqueAttendueJusqua) marqueAttendueJusqua = Date.now() + 45000
+          if (!documentRemplace(ancienFrais) && Date.now() < marqueAttendueJusqua) {
+            window.setTimeout(() => { void poll() }, 3000)
+            return
+          }
+          setPdfBusy(false)
+          setMessage(bvs('Mandat régénéré et enregistré chez nous.'))
+          setCorrection(null)
+          setEnvoiAncien(ancienFrais)
+          setEnvoiYoutrustDoc(fresh)
+          return
+        }
         if (fresh) {
           setPdfBusy(false)
           if (youtrustGen) {
@@ -5717,6 +5775,18 @@ function MandatDocumentEditor(props: {
             {editorHead(true)}
             <div className={`mandat-document-editor-body ${showDocPreview ? 'has-doc-preview' : 'no-doc-preview'}`}>
               <div className="mandat-document-form">
+            {correction ? (
+              <div className="ens-correction" role="status">
+                <span className="ens-correction-txt">
+                  <b>Correction avant l’envoi.</b> Corrigez ce qui doit l’être (un mandant se corrige sur sa fiche), puis régénérez :
+                  vous revenez à l’envoi avec le nouveau mandat. Le PDF actuel n’est pas envoyé ; il reste dans les documents, marqué « remplacé ».
+                </span>
+                <span className="ens-correction-bt">
+                  <button type="button" className="ens-retour" onClick={revenirALEnvoiSansChanger} disabled={pdfBusy}>Revenir à l’envoi sans rien changer</button>
+                  <button type="button" className="ens-regen" onClick={() => void generatePdf()} disabled={pdfBusy}>{pdfBusy ? 'Génération…' : '↻ Régénérer et revenir à l’envoi'}</button>
+                </span>
+              </div>
+            ) : null}
             {draftStale ? (
               <p className="mandat-document-message" role="status">
                 La fiche a été mise à jour pendant votre saisie.{' '}
@@ -5938,7 +6008,9 @@ function MandatDocumentEditor(props: {
                 document={envoiYoutrustDoc}
                 dossier={props.dossier}
                 adresse={props.address}
-                onClose={() => setEnvoiYoutrustDoc(null)}
+                onClose={() => { setEnvoiYoutrustDoc(null); setEnvoiAncien(null) }}
+                onCorriger={(onglet) => { ouvrirCorrection(envoiYoutrustDoc, onglet); return true }}
+                ancien={envoiAncien}
               />
             ) : null}
           </div>
@@ -11430,6 +11502,17 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
   // A.2 lot 6b P4 : la fenetre d'envoi Youtrust (interrupteur allume seulement).
   const signatureYoutrust = useSignatureYoutrust()
   const [envoiDoc, setEnvoiDoc] = useState<ConsoleDocument | null>(null)
+  // A.2 lot 6b P5 : « Corriger le mandat » depuis la fenetre ouverte ici -> l'editeur du meme bien s'ouvre (s'il est monte).
+  const demanderCorrection = (document: ConsoleDocument, onglet: OngletCorrection) => {
+    const detail: DemandeCorrectionMandat = { app_dossier_id: dossier.app_dossier_id, document, onglet, pris: false }
+    window.dispatchEvent(new CustomEvent(EVENEMENT_CORRIGER_MANDAT, { detail }))
+    if (detail.pris) setEnvoiDoc(null)
+    return detail.pris
+  }
+  const mentionRemplace = (document: ConsoleDocument) => {
+    const r = documentRemplace(document)
+    return r ? `Remplacé le ${new Date(r.le).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })} par une version régénérée — jamais envoyé` : null
+  }
   const [loading, setLoading] = useState(false)
   const [pendingDocumentIds, setPendingDocumentIds] = useState<Set<string>>(() => new Set())
   const [deletingDocumentIds, setDeletingDocumentIds] = useState<Set<string>>(() => new Set())
@@ -11828,7 +11911,7 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
             (fait par l'editeur, P1), et pas pendant une demande Youtrust en cours ; il ouvre la fenetre d'envoi.
             Eteint : le bouton d'avant, a l'identique (fenetre « Oui, ouvrir Hektor »). */}
         {signatureYoutrust
-          ? (photoSignatairesDuDocument(document) && signature?.status !== 'signed' && !(signature?.provider === 'youtrust' && signature?.status === 'pending') ? (
+          ? (photoSignatairesDuDocument(document) && !documentRemplace(document) && signature?.status !== 'signed' && !(signature?.provider === 'youtrust' && signature?.status === 'pending') ? (
             <button className="ghost-button console-document-sign" type="button" onClick={() => setEnvoiDoc(document)}>
               <span aria-hidden="true"><DetailIcon type="signature" /></span>
               Signature
@@ -11840,7 +11923,7 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
             Signature
           </button>
         ) : null}
-        {APP_MANDAT_V3_ENABLED && signature?.status !== 'signed' && /mandat|avenant/i.test(`${document.document_name ?? ''} ${document.document_type ?? ''}`) ? (
+        {APP_MANDAT_V3_ENABLED && signature?.status !== 'signed' && !documentRemplace(document) && /mandat|avenant/i.test(`${document.document_name ?? ''} ${document.document_type ?? ''}`) ? (
           <button className="ghost-button console-document-sign-manual" type="button" onClick={() => void handleMarkSignedManual(document)} disabled={busyDocumentId === document.id} title="Le mandat a été signé sur papier : le marquer comme signé (passe le cockpit à « Signé »)">
             <span aria-hidden="true"><DetailIcon type="content" /></span>
             Signé à la main
@@ -11877,7 +11960,9 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
         : ''
       const badge = signed ? 'Signé' : st === 'pending' ? 'En signature' : st === 'to_send' ? 'À préparer' : d.storage_status === 'cloud_available' ? 'Cloud' : 'Indexé'
       const cloud = d.storage_status === 'cloud_available'
-      return { doc: d, type, typeLabel, signed, sigLabel, badge, cloud }
+      // A.2 lot 6b P5 : l'ancien PDF d'une regeneration (maquette « corriger » vue 6).
+      const remplace = mentionRemplace(d)
+      return { doc: d, type, typeLabel, signed, sigLabel, badge, cloud, remplace }
     })
     const cntAll = enriched.length
     const cntPrep = enriched.filter((e) => !e.signed).length
@@ -11918,15 +12003,16 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
 
         <div className="fa-ck-doclist">
           {shown.map((e) => (
-            <div key={e.doc.id} className="fa-ck-docitem">
+            <div key={e.doc.id} className={`fa-ck-docitem${e.remplace ? ' ens-doc-remplace' : ''}`}>
               <span className="fa-ck-dfic" aria-hidden="true"><CkIcon path={CK_ICON.documents} /></span>
               <div className="fa-ck-dinfo">
                 <div className="fa-ck-dnm-row"><span className="fa-ck-dnm">{e.doc.document_name}</span><span className={`fa-ck-dtype ${e.type}`}>{e.typeLabel}</span></div>
                 <div className="fa-ck-dmeta">{[consoleDocumentVisibilityLabel(e.doc.visibility), formatFileSize(e.doc.file_size)].filter((v) => v && v !== '-').join(' · ') || 'Document'}</div>
                 {e.sigLabel ? <div className={`fa-ck-docsig${e.signed ? ' signed' : ''}`}>{e.sigLabel}</div> : null}
+                {e.remplace ? <span className="ens-remplace-mention">{e.remplace}</span> : null}
               </div>
               <div className="fa-ck-dright">
-                <span className={`fa-ck-docbadge${e.signed ? ' ok' : ''}`}>{e.badge}</span>
+                {e.remplace ? <span className="ens-pill-remplace">Remplacé</span> : <span className={`fa-ck-docbadge${e.signed ? ' ok' : ''}`}>{e.badge}</span>}
                 {docRowActions(e.doc)}
               </div>
             </div>
@@ -11948,6 +12034,7 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
             adresse={[dossier.titre_bien, dossier.ville].filter(Boolean).join(' · ')}
             onClose={() => setEnvoiDoc(null)}
             onSent={(job) => { onJobCreated?.(job); void refreshDocuments(true) }}
+            onCorriger={(onglet) => demanderCorrection(envoiDoc, onglet)}
           />
         ) : null}
       </div>
@@ -11986,10 +12073,12 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
               const deleting = deletingDocumentIds.has(document.id)
               const signature = (document.metadata_json as { signature?: SignatureMeta } | null)?.signature ?? null
               return (
-                <article key={document.id} className={`console-document-row console-document-${document.storage_status}`}>
+                <article key={document.id} className={`console-document-row console-document-${document.storage_status}${documentRemplace(document) ? ' ens-doc-remplace' : ''}`}>
                   <span className="console-document-icon" data-ftype={consoleFileType(document)} aria-hidden="true"><DetailIcon type={consoleDocumentIconType(document)} /></span>
                   <div className="console-document-main">
                     <strong>{document.document_name}</strong>
+                    {/* A.2 lot 6b P5 : l'ancien PDF d'une regeneration, garde, sans bouton Signature. */}
+                    {mentionRemplace(document) ? <span className="ens-remplace-mention">{mentionRemplace(document)}</span> : null}
                     <span>{[document.document_type, consoleDocumentVisibilityLabel(document.visibility), formatFileSize(document.file_size)].filter((value) => value && value !== '-').join(' - ') || 'Document Console'}</span>
                     {/* 3e (13/10/2026) : « supprimé chez Hektor, gardé chez nous ».
                         Avant, la ligne restait (la synchro n'efface que les doublons)
@@ -12041,6 +12130,7 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
             adresse={[dossier.titre_bien, dossier.ville].filter(Boolean).join(' · ')}
             onClose={() => setEnvoiDoc(null)}
             onSent={(job) => { onJobCreated?.(job); void refreshDocuments(true) }}
+            onCorriger={(onglet) => demanderCorrection(envoiDoc, onglet)}
           />
         ) : null}
       </div>
@@ -32330,6 +32420,8 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
     const doc = ckDocs.find((d) => {
       const name = `${d.document_name ?? ''} ${d.document_type ?? ''}`
       if (exclude && exclude.test(name)) return false
+      // A.2 lot 6b P5 : un PDF remplace par une regeneration ne dit plus rien de l'etat du mandat.
+      if (documentRemplace(d)) return false
       return match.test(name)
     })
     const sig = (doc?.metadata_json as { signature?: SignatureMeta } | null)?.signature
@@ -32345,7 +32437,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   // Nouveau prix PROPOSÉ par l'avenant, annoté par le worker sur le document
   // (metadata_json.avenant_new_price) — AFFICHAGE SEUL. Le prix réel de l'annonce
   // (dossier.prix) n'est pas modifié tant que la baisse n'est pas validée.
-  const avenantDoc = ckDocs.find((d) => /avenant/i.test(`${d.document_name ?? ''} ${d.document_type ?? ''}`))
+  const avenantDoc = ckDocs.find((d) => /avenant/i.test(`${d.document_name ?? ''} ${d.document_type ?? ''}`) && !documentRemplace(d))
   const avenantNewPriceRaw = (avenantDoc?.metadata_json as { avenant_new_price?: string | number | null } | null)?.avenant_new_price
   const avenantNewPrice = avenantNewPriceRaw != null && String(avenantNewPriceRaw).trim() !== ''
     ? (formatPrice(Number(String(avenantNewPriceRaw).replace(/[^\d.-]/g, '')) || null) || null)

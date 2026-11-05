@@ -10,15 +10,21 @@
 //   regle D-5). ⚠ Pas pour un CONJOINT : sa fiche se corrige par « Modifier le conjoint », depuis la fiche principale
 //   (proposition §8.3) -- la correction part alors seulement dans la demande.
 // N'est montee que si l'interrupteur `signature_youtrust` est allume (App.tsx) ; eteint, rien ne change a l'ecran.
+// P5 (05/11) : « Corriger le mandat » rouvre l'editeur (onCorriger) ; au retour d'une regeneration, `ancien` est le
+//   PDF remplace et la fenetre dit « ce qui a change » (maquette « corriger » vues 3-4). Un PDF remplace ne part pas.
 import { useEffect, useMemo, useState } from 'react'
 import {
+  contenuImprimeDuDocument,
   createConsoleDocumentSignedUrl,
   createYoutrustSendSignatureJob,
+  documentRemplace,
   enregistrerCanalDuMandant,
   loadFichesDesSignataires,
   photoSignatairesDuDocument,
+  type ContenuImprimePdf,
   type CorrectionSignataire,
   type FicheSignataire,
+  type PhotoSignatairesPdf,
 } from './lib/api'
 import type { ConsoleDocument, ConsoleJob, Dossier } from './types'
 import './envoi-signature.css'
@@ -36,6 +42,51 @@ const NATURES_CONJOINT = new Set(['conjoint', 'conjoint_sans_prenom'])
 const masquer = (tel: string) => { const d = tel.replace(/\D/g, ''); return d.length >= 4 ? `•• ${d.slice(-4, -2)} ${d.slice(-2)}` : tel }
 
 type Saisie = { email?: string; telephone?: string }
+export type OngletCorrection = 'mandants' | 'bien' | 'prix' | 'clauses' | 'apercu'
+// P5 : le panneau Documents n'a pas l'editeur sous la main ; il demande a l'editeur DU MEME BIEN de s'ouvrir.
+// Le premier editeur monte qui repond met `pris` a vrai (un seul s'ouvre) ; personne -> la fenetre le dit.
+export const EVENEMENT_CORRIGER_MANDAT = 'hektor:corriger-mandat'
+export type DemandeCorrectionMandat = { app_dossier_id: Dossier['app_dossier_id']; document: ConsoleDocument; onglet: OngletCorrection; pris: boolean }
+
+// P5 -- « ce qui a change » entre deux PDF : les signataires (photos) et ce qui est imprime (contenu_imprime).
+const CHAMPS_IMPRIMES: Array<[keyof ContenuImprimePdf, string, 'euros' | 'texte']> = [
+  ['numero_mandat', 'N° mandat', 'texte'], ['type_mandat', 'Type de mandat', 'texte'], ['date_signature', 'Date de signature', 'texte'],
+  ['bien_titre', 'Bien', 'texte'], ['bien_adresse', 'Adresse du bien', 'texte'], ['nombre_pieces', 'Pièces', 'texte'],
+  ['surface_habitable', 'Surface habitable', 'texte'], ['surface_terrain', 'Surface terrain', 'texte'], ['etat_occupation', 'Occupation', 'texte'],
+  ['prix_vente', 'Prix FAI', 'euros'], ['prix_net_vendeur', 'Net vendeur', 'euros'], ['honoraires_ttc', 'Honoraires TTC', 'euros'],
+  ['honoraires_charge', 'Charge des honoraires', 'texte'], ['execution_anticipee', 'Exécution anticipée', 'texte'],
+  ['inclure_couverture', 'Couverture', 'texte'], ['clause_particuliere', 'Clause particulière', 'texte'],
+]
+function montrer(valeur: unknown, forme: 'euros' | 'texte'): string {
+  if (valeur === true) return 'Oui'
+  if (valeur === false) return 'Non'
+  const t = String(valeur ?? '').trim()
+  if (!t) return '—'
+  if (forme === 'euros') { const n = Number(t.replace(/\s/g, '').replace(',', '.')); if (Number.isFinite(n)) return `${n.toLocaleString('fr-FR')} €` }
+  if (t === 'acquereur') return 'Acquéreur'
+  if (t === 'mandant') return 'Mandant'
+  return t.length > 80 ? `${t.slice(0, 77)}…` : t
+}
+type LigneDiff = { k: string; avant?: string; apres?: string; plus?: string; moins?: string; note?: string }
+function ceQuiAChange(ancienPhoto: PhotoSignatairesPdf | null, neuvePhoto: PhotoSignatairesPdf | null, ancienContenu: ContenuImprimePdf | null, neufContenu: ContenuImprimePdf | null) {
+  const lignes: LigneDiff[] = []
+  const nom = (m: { civilite: string | null; prenom: string | null; nom: string | null }) => [m.civilite, m.prenom, m.nom].filter(Boolean).join(' ') || '—'
+  const a = ancienPhoto?.mandants ?? [], n = neuvePhoto?.mandants ?? []
+  for (let i = 0; i < Math.max(a.length, n.length); i += 1) {
+    if (a[i] && n[i] && nom(a[i]) !== nom(n[i])) lignes.push({ k: `Mandant ${i + 1}`, avant: nom(a[i]), apres: nom(n[i]) })
+    else if (!a[i] && n[i]) lignes.push({ k: 'Mandants', plus: `＋ ${nom(n[i])}`, note: `(mandant ${i + 1})` })
+    else if (a[i] && !n[i]) lignes.push({ k: 'Mandants', moins: `− ${nom(a[i])}`, note: `(n’est plus dans le mandat)` })
+  }
+  if (a.length !== n.length) lignes.push({ k: 'Signataires', avant: String(a.length + 1), apres: String(n.length + 1), note: `· donc ${n.length + 1} crédits au lieu de ${a.length + 1}` })
+  const compare = Boolean(ancienContenu && neufContenu)
+  if (ancienContenu && neufContenu) {
+    for (const [cle, label, forme] of CHAMPS_IMPRIMES) {
+      const av = montrer(ancienContenu[cle], forme), ap = montrer(neufContenu[cle], forme)
+      if (av !== ap) lignes.push({ k: label, avant: av, apres: ap })
+    }
+  }
+  return { lignes, compare }
+}
 
 export default function EnvoiSignatureYoutrust(props: {
   document: ConsoleDocument
@@ -43,8 +94,21 @@ export default function EnvoiSignatureYoutrust(props: {
   adresse?: string | null
   onClose: () => void
   onSent?: (job: ConsoleJob) => void
+  // P5 : rouvre l'editeur sur l'onglet donne ; rend false si aucun editeur n'a pu s'ouvrir (la fenetre le dit).
+  onCorriger?: (onglet: OngletCorrection) => boolean | void
+  // P5 : le PDF que ce document remplace (retour d'une regeneration), relu apres la marque du worker.
+  ancien?: ConsoleDocument | null
 }) {
   const photo = useMemo(() => photoSignatairesDuDocument(props.document), [props.document])
+  const remplace = documentRemplace(props.document)
+  const diff = useMemo(() => (props.ancien
+    ? ceQuiAChange(photoSignatairesDuDocument(props.ancien), photo, contenuImprimeDuDocument(props.ancien), contenuImprimeDuDocument(props.document))
+    : null), [props.ancien, props.document, photo])
+  const [corrigerImpossible, setCorrigerImpossible] = useState(false)
+  const corriger = (onglet: OngletCorrection) => {
+    if (!props.onCorriger) return
+    setCorrigerImpossible(props.onCorriger(onglet) === false)
+  }
   const kind: 'mandat' | 'avenant' = /avenant/i.test(props.document.document_name || '') ? 'avenant' : 'mandat'
   const [fiches, setFiches] = useState<Map<string, FicheSignataire>>(new Map())
   const [saisies, setSaisies] = useState<Record<number, Saisie>>({})
@@ -100,7 +164,7 @@ export default function EnvoiSignatureYoutrust(props: {
   }
 
   const envoyer = async () => {
-    if (!photo || busy || manques.length) return
+    if (!photo || busy || manques.length || remplace) return
     setBusy(true)
     setErreur(null)
     const corrections: CorrectionSignataire[] = []
@@ -156,6 +220,10 @@ export default function EnvoiSignatureYoutrust(props: {
   const casesTotal = photo ? photo.mandants.length + 1 : 0
   const genereLe = (props.document.metadata_json as { cree_le?: string } | null)?.cree_le || photo?.pris_le
   const dateGen = genereLe ? new Date(genereLe).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : null
+  const heure = (iso?: string | null) => (iso ? new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '?')
+  const ancienGenere = props.ancien ? ((props.ancien.metadata_json as { cree_le?: string } | null)?.cree_le || photoSignatairesDuDocument(props.ancien)?.pris_le) : null
+  const ancienMarque = props.ancien ? documentRemplace(props.ancien) : null
+  const bloque = !photo || !photo.valide || Boolean(remplace)
 
   return (
     <div className="ens-voile" role="dialog" aria-modal="true" aria-label="Envoyer en signature" onClick={() => { if (!busy) props.onClose() }}>
@@ -179,10 +247,48 @@ export default function EnvoiSignatureYoutrust(props: {
             <div className="ens-pdf-act">
               <button type="button" className="ens-btn sec" onClick={() => void ouvrirPdf()} disabled={!props.document.storage_path}
                 title={props.document.storage_path ? 'Ouvrir le PDF' : 'Ce PDF n’a de copie que sur le serveur'}>Voir le PDF</button>
+              {props.onCorriger && !fait && !remplace ? (
+                <button type="button" className="ens-btn sec" onClick={() => corriger('mandants')} disabled={busy}
+                  title="Rouvre l’éditeur du mandat : corriger, puis régénérer et revenir ici">✎ Corriger le mandat</button>
+              ) : null}
             </div>
           </div>
+          {corrigerImpossible ? (
+            <div className="ens-bandeau info">L’éditeur du mandat n’est pas ouvert sur cet écran : ouvrez-le depuis la rubrique <b>Mandat</b> du bien, corrigez, puis régénérez.</div>
+          ) : null}
 
-          {!photo || !photo.valide ? (
+          {props.ancien && !fait ? (
+            <>
+              {ancienMarque ? (
+                <div className="ens-bandeau ok"><b>Nouveau mandat généré à {heure(genereLe)}.</b> L’ancien ({heure(ancienGenere)}) est gardé dans les documents, marqué « remplacé, jamais envoyé ».</div>
+              ) : (
+                <div className="ens-bandeau alerte"><b>Nouveau mandat généré à {heure(genereLe)}</b>, mais l’ancien ({heure(ancienGenere)}) n’a pas pu être marqué « remplacé » : il reste dans les documents, ne l’envoyez pas.</div>
+              )}
+              {diff ? (
+                <div className="ens-diff">
+                  <h3>Ce qui a changé depuis le PDF de {heure(ancienGenere)}</h3>
+                  {diff.lignes.length ? diff.lignes.map((l, i) => (
+                    <div key={i} className="ens-d">
+                      <span className="ens-k">{l.k}</span>
+                      {l.avant !== undefined ? <><s>{l.avant}</s> → <span className="ens-n">{l.apres}</span></> : null}
+                      {l.plus ? <span className="ens-n">{l.plus}</span> : null}
+                      {l.moins ? <span className="ens-moins">{l.moins}</span> : null}
+                      {l.note ? <span className="ens-note">{l.note}</span> : null}
+                    </div>
+                  )) : <div className="ens-note">Rien n’a changé dans {diff.compare ? 'ce qui est imprimé' : 'les signataires'}.</div>}
+                  <div className="ens-note">{diff.compare
+                    ? (diff.lignes.length ? 'Tout le reste de ce qui est imprimé est identique.' : null)
+                    : 'Le contenu de l’ancien PDF n’est pas connu (généré avant le 05/11) : seuls les signataires sont comparés.'}</div>
+                </div>
+              ) : null}
+            </>
+          ) : null}
+
+          {remplace ? (
+            <div className="ens-bandeau alerte">
+              <b>Ce PDF a été remplacé</b> le {new Date(remplace.le).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })} par une version régénérée : il ne part plus en signature. Envoyez le nouveau mandat.
+            </div>
+          ) : !photo || !photo.valide ? (
             <div className="ens-bandeau alerte">
               <b>Ce PDF ne peut pas partir en signature.</b>{' '}
               {!photo
@@ -211,7 +317,10 @@ export default function EnvoiSignatureYoutrust(props: {
                         {bulle === m.rang ? (
                           <div className="ens-bulle" role="note">
                             <b>Ce nom est imprimé dans le mandat.</b> Le corriger demande de <b>régénérer le PDF</b> : corrigez la fiche dans l’éditeur du mandat, régénérez-le, puis revenez ici.
-                            <div className="ens-bulle-bt"><button type="button" className="ens-btn clair mini" onClick={() => setBulle(null)}>Compris</button></div>
+                            <div className="ens-bulle-bt">
+                              {props.onCorriger ? <button type="button" className="ens-btn prim mini" onClick={() => { setBulle(null); corriger('mandants') }}>Corriger le mandat</button> : null}
+                              <button type="button" className="ens-btn clair mini" onClick={() => setBulle(null)}>{props.onCorriger ? 'Laisser tel quel' : 'Compris'}</button>
+                            </div>
                           </div>
                         ) : null}
                       </div>
@@ -265,9 +374,9 @@ export default function EnvoiSignatureYoutrust(props: {
             <><span className="ens-esp" /><button type="button" className="ens-gros envoi" onClick={props.onClose}>Fermer</button></>
           ) : (
             <>
-              <span className="ens-note">{!photo || !photo.valide ? 'Régénérez le mandat dans l’éditeur.' : manques.length ? <>L’envoi attend <b>l’e-mail de {manques.join(', ')}</b>.</> : <>Tout le monde est prêt · <b>{casesTotal} crédit{casesTotal > 1 ? 's' : ''}</b> Youtrust (un par signataire).</>}</span>
+              <span className="ens-note">{remplace ? 'Ce PDF est remplacé : envoyez le nouveau.' : !photo || !photo.valide ? 'Régénérez le mandat dans l’éditeur.' : manques.length ? <>L’envoi attend <b>l’e-mail de {manques.join(', ')}</b>.</> : <>Tout le monde est prêt · <b>{casesTotal} crédit{casesTotal > 1 ? 's' : ''}</b> Youtrust (un par signataire).</>}</span>
               <span className="ens-esp" />
-              <button type="button" className="ens-gros envoi" onClick={() => void envoyer()} disabled={busy || !photo || !photo.valide || manques.length > 0}>
+              <button type="button" className="ens-gros envoi" onClick={() => void envoyer()} disabled={busy || bloque || manques.length > 0}>
                 {busy ? 'Envoi…' : 'Envoyer en signature'}
               </button>
             </>

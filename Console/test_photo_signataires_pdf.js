@@ -46,7 +46,7 @@ function monterPhoto(src) {
 
 // La generation entiere, interrupteur ALLUME, contre une fausse base (meme montage que l'essai du 4 bis).
 function monterGeneration(src, base) {
-  const blocs = ["function shouldKeepCloud(", "function cleanString(", "function ficheDuMandantImprime(", "function photoSignatairesDuPdf(",
+  const blocs = ["function shouldKeepCloud(", "function cleanString(", "function ficheDuMandantImprime(", "function photoSignatairesDuPdf(", "function contenuImprimeDuPdf(", "async function marquerDocumentRemplace(",
     "async function handleGenerateMandatDocument(", "async function enregistrerMandatChezNous("].map((d) => tranche(src, d)).filter(Boolean);
   const D = {
     safeJsonParse: (v) => (typeof v === "string" ? JSON.parse(v) : v || {}),
