@@ -6600,9 +6600,278 @@ async function handleYoutrustSendSignature(job) {
   };
 }
 
-// Lot 5 : la mise a jour d'etat (avis + rattrapage de nuit). Refus clair d'ici la.
-async function handleYoutrustSyncSignature(_job) {
-  throw refusEtatYoutrust("youtrust_sync_signature n'est pas encore en service (lot 5).");
+// A.2 lot 5, L5-2 (05/11/2026) -- LA MISE A JOUR D'UNE DEMANDE (avis de Youtrust, rattrapage de nuit, rafraichissement).
+// Idempotente : elle RELIT la demande chez Youtrust -- un avis peut arriver deux fois et dans le desordre (doc relue le
+// 05/11) : on ne le croit pas, il ne sert qu'a dire « regarde ». Puis : notre table, le miroir (regle R3), les avis traites.
+// ⛔ D39 : AUCUN refus sur l'interrupteur -- une demande partie se suit jusqu'au bout, comme la lecture ImmoSign.
+// ⛔ D37 : `signed_at` s'ecrit comme ImmoSign (« jj/mm/aaaa a hh:mm », heure de Paris) : le pilotage ne lit QUE cette
+//   forme (lib/pilotage.ts, dateSignature) ; l'heure exacte va a cote (`signed_at_iso`) et dans `done_at`.
+// ⛔ D18 / R1 : un document « signe a la main » garde sa marque ; un document d'un autre fournisseur n'est pas touche.
+// Le signe et les preuves (L5-3) et les notifications (L5-4) viendront ICI, sur les transitions rendues.
+const YOUTRUST_VERS_LANGUE_COMMUNE = {
+  draft: "to_send", approval: "pending", ongoing: "pending", paused: "pending",
+  done: "signed", expired: "expired", canceled: "cancelled", deleted: "cancelled", declined: "cancelled", rejected: "cancelled",
+};
+
+function dateFaconImmoSign(iso) {
+  const d = new Date(iso || "");
+  if (!iso || Number.isNaN(d.getTime())) return null;
+  const p = Object.fromEntries(new Intl.DateTimeFormat("fr-FR", {
+    timeZone: "Europe/Paris", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+  }).formatToParts(d).map((x) => [x.type, x.value]));
+  return `${p.day}/${p.month}/${p.year} à ${p.hour}:${p.minute}`;
+}
+
+// A.2 lot 5, L5-3 (05/11/2026) -- LE SIGNE ET LES PREUVES, une seule fois, quand la demande est `done`.
+// Modele ImmoSign (downloadSignedProcedureDocument) : le PDF signe sous `…/documents/<id>/signed/`, la COLONNE
+// storage_path pointe vers lui (la policy de lecture l'exige), `metadata_json.signed_document` le decrit ; l'ORIGINAL reste
+// a son chemin, jamais ecrase. Une preuve PDF par signataire sous `…/proofs/`, et ses preuves JSON dans `proofs`.
+// ⛔ La regle de stockage n'est pas reinterpretee : le signe va au COFFRE seulement si l'original y est (copie serveur
+//   toujours) ; sinon il reste sur le serveur, decrit, et le document garde son chemin d'origine.
+// ⛔ Que des PDF (jamais de ZIP) : un fichier qui ne commence pas par %PDF- est un refus, rien n'est ecrit.
+// Reprenable : une erreur laisse `signed_storage_path` vide -> le prochain passage (avis, nuit) recommence.
+function exigerPdfYoutrust(fichier, quoi) {
+  const buffer = fichier && fichier.buffer;
+  if (!Buffer.isBuffer(buffer) || buffer.subarray(0, 5).toString("latin1") !== "%PDF-") {
+    throw new Error(`Youtrust a rendu pour ${quoi} autre chose qu'un PDF (${(fichier && fichier.contentType) || "type inconnu"}) : rien n'est range.`);
+  }
+  return buffer;
+}
+
+async function rangerFichierSignature(doc, sousChemin, nomFichier, buffer, auCoffre) {
+  const storagePath = `annonces/${doc.hektor_annonce_id}/documents/${doc.id}/${sousChemin}/${nomFichier}`;
+  if (auCoffre) await uploadStorageObject(storagePath, buffer, "application/pdf");
+  const localPath = localDocumentPath(doc.hektor_annonce_id, doc.id, `${sousChemin}/${safeFilename(nomFichier, "fichier.pdf")}`);
+  try { writeLocalArchiveFile(localPath, buffer); } catch (_e) { /* copie serveur best-effort, comme ImmoSign */ }
+  return { storage_path: auCoffre ? storagePath : null, local_archive_path: localPath, size: buffer.length, sha256: sha256Buffer(buffer) };
+}
+
+async function rapatrierSigneYoutrust(client, demande, signers, signedAtTexte) {
+  const doc = await loadConsoleDocumentById(demande.app_console_document_id);
+  const md = doc.metadata_json || {};
+  if (md.signed_document && md.signed_document.provider === "youtrust") return { deja: true, signed_document: md.signed_document };
+  const auCoffre = doc.storage_status === "cloud_available";
+  // 1. Le PDF signe (un seul document dans la demande -> un PDF, jamais un ZIP).
+  const signe = exigerPdfYoutrust(await client.telechargerDocuments(demande.provider_request_id, "completed"), "le mandat signe");
+  const baseName = String(doc.document_name || "document").replace(/\.pdf$/i, "");
+  const nomSigne = storageSafeFilename(`${baseName} - signe.pdf`, `signed-${doc.id}.pdf`);
+  const fichierSigne = await rangerFichierSignature(doc, "signed", nomSigne, signe, auCoffre);
+  // 2. Les preuves, signataire par signataire (PDF au coffre + JSON dans la table).
+  const proofs = [];
+  for (const s of signers) {
+    if (!s.provider_signer_id || s.status !== "signed") continue;
+    const pdf = exigerPdfYoutrust(await client.telechargerAuditTrail(demande.provider_request_id, s.provider_signer_id), `les preuves du signataire ${s.index}`);
+    const nom = storageSafeFilename(`preuves-${s.index}-${s.role}.pdf`, `preuves-${s.index}.pdf`);
+    const rangee = await rangerFichierSignature(doc, "proofs", nom, pdf, auCoffre);
+    const audit = await client.lireAuditTrail(demande.provider_request_id, s.provider_signer_id).catch((e) => ({ erreur: e && e.message ? e.message : String(e) }));
+    proofs.push({ index: s.index, role: s.role, provider_signer_id: s.provider_signer_id, signed_at: s.signed_at || null, filename: nom, ...rangee, audit });
+  }
+  const signed_document = {
+    provider: "youtrust",
+    storage_bucket: STORAGE_BUCKET,
+    storage_path: fichierSigne.storage_path,
+    filename: nomSigne,
+    size: fichierSigne.size,
+    sha256: fichierSigne.sha256,
+    mime_type: "application/pdf",
+    provider_request_id: demande.provider_request_id,
+    signed_at: signedAtTexte || null,
+    downloaded_at: new Date().toISOString(),
+    local_archive_path: fichierSigne.local_archive_path,
+    preuves: proofs.map((p) => ({ index: p.index, role: p.role, filename: p.filename, storage_path: p.storage_path, local_archive_path: p.local_archive_path, size: p.size, sha256: p.sha256 })),
+  };
+  // 3. La ligne du document : relue juste avant (fusion sur le plus recent), le signe decrit ; la colonne storage_path
+  //    ne bascule vers le signe QUE s'il est au coffre (sinon la lecture de l'ecran viserait un objet absent).
+  const frais = await loadConsoleDocumentById(doc.id).catch(() => doc);
+  const mdFrais = frais.metadata_json || md;
+  await supabaseRequest(`app_console_document?id=eq.${encodeURIComponent(doc.id)}`, {
+    method: "PATCH",
+    prefer: "return=minimal",
+    body: JSON.stringify({
+      ...(auCoffre ? { storage_bucket: STORAGE_BUCKET, storage_path: fichierSigne.storage_path, storage_status: "cloud_available", file_size: fichierSigne.size, sha256: fichierSigne.sha256, mime_type: "application/pdf" } : {}),
+      metadata_json: { ...mdFrais, signed_document },
+      synced_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }),
+  });
+  await majDemandeSignature(demande.id, { signed_storage_path: fichierSigne.storage_path || fichierSigne.local_archive_path, proofs });
+  return { deja: false, signed_document, preuves: proofs.length, au_coffre: auCoffre };
+}
+
+// A.2 lot 5, L5-4 (05/11/2026, D38) -- LES QUATRE NOTIFICATIONS, au negociateur du bien (le mandataire de la demande,
+// D17/D21), et rien d'autre : « a vous de contresigner » (les mandants viennent TOUS de signer), « mandat signe »,
+// « e-mail non remis / incident » (avis signer.notification_delivery_failed / signer.error), « expire ».
+// ⚠ La cloche est saturee (1 963 non lues sur 1 998 le 05/11) : une notification par ETAPE, sur une TRANSITION (jamais
+//   reposee a chaque passage), et l'index unique (destinataire, dossier, type, non lu) ecarte le doublon.
+// ⚠ Une notification ratee ne fait jamais echouer la mise a jour : elle est ecrite au journal.
+async function notifierSignatureYoutrust(job, demande, { avant, signers, statut, langue, avisLus, tousLesMandantsSignes }) {
+  const mandataire = signers.find((s) => s.role === "mandataire") || {};
+  const destinataire = cleanString(mandataire.email);
+  if (!destinataire) return [{ type: null, pose: false, raison: "mandataire sans e-mail" }];
+  const quoi = demande.document_kind === "avenant" ? "L'avenant" : "Le mandat";
+  const nomDe = (s) => [s && s.prenom, s && s.nom].filter(Boolean).join(" ") || "un signataire";
+  const aPoser = [];
+  if (langue === "pending" && !tousLesMandantsSignes(avant) && tousLesMandantsSignes(signers)) {
+    aPoser.push({ type: "signature_a_contresigner", title: `${quoi} : à vous de contresigner`,
+      body: `Tous les mandants ont signé. Votre lien de signature Youtrust est dans votre boîte e-mail.` });
+  }
+  if (statut === "done" && demande.status !== "done") {
+    aPoser.push({ type: "signature_signee", title: `${quoi} est signé`, body: `Toutes les signatures sont faites. Le document signé et les preuves sont dans les documents du bien.` });
+  }
+  if (statut === "expired" && demande.status !== "expired") {
+    aPoser.push({ type: "signature_expiree", title: `${quoi} : la signature a expiré`, body: `La demande de signature a expiré avant d'être complète. Il faut la renvoyer.` });
+  }
+  const incidents = avisLus.filter((a) => a.event_name === "signer.notification_delivery_failed" || a.event_name === "signer.error");
+  if (incidents.length) {
+    const qui = Array.from(new Set(incidents.map((a) => nomDe(signers.find((s) => s.provider_signer_id === a.provider_signer_id)))));
+    const erreur = incidents.some((a) => a.event_name === "signer.error");
+    aPoser.push({ type: "signature_incident", title: erreur ? `${quoi} : incident de signature` : `${quoi} : e-mail non remis`,
+      body: erreur ? `Youtrust signale un incident pour ${qui.join(", ")} : la demande est à renvoyer.` : `L'invitation n'a pas pu être remise à ${qui.join(", ")} : vérifiez son adresse e-mail.` });
+  }
+  const resultat = [];
+  for (const n of aPoser) {
+    try {
+      const posees = await supabaseRequest("app_notification", {
+        method: "POST",
+        prefer: "return=representation,resolution=ignore-duplicates",
+        body: JSON.stringify([{ negociateur_email: destinataire, app_dossier_id: demande.app_dossier_id, ...n,
+          payload: { signature_request_id: demande.id, provider_request_id: demande.provider_request_id, app_console_document_id: demande.app_console_document_id } }]),
+      });
+      resultat.push({ type: n.type, pose: Array.isArray(posees) ? posees.length > 0 : true });
+    } catch (e) {
+      resultat.push({ type: n.type, pose: false, raison: e && e.message ? e.message : String(e) });
+      await logJob(job.id, "youtrust", "warning", `Notification non posee (${n.type})`, { erreur: e && e.message ? e.message : String(e) });
+    }
+  }
+  return resultat;
+}
+
+async function handleYoutrustSyncSignature(job) {
+  const payload = safeJsonParse(job.payload_json) || {};
+  const id = cleanString(payload.signature_request_id);
+  if (!id) throw refusEtatYoutrust("payload_json.signature_request_id requis.");
+  const demande = await chargerDemandeSignature(id);
+  if (!demande) throw refusEtatYoutrust(`Demande de signature ${id} introuvable.`);
+  if (!demande.provider_request_id) {
+    // Arretee avant Youtrust (reperes faux, refus) : rien a relire.
+    await logJob(job.id, "youtrust", "done", "Demande jamais partie chez Youtrust : rien a relire", { signature_request_id: id, status: demande.status });
+    return { status: "jamais_envoyee", signature_request_id: id };
+  }
+  const client = clientYoutrust();
+  let sr;
+  try {
+    sr = await client.lireDemande(demande.provider_request_id);
+  } catch (error) {
+    if (error && error.status === 404) {
+      await majDemandeSignature(demande.id, { erreur: "demande introuvable chez Youtrust (404)", last_synced_at: new Date().toISOString() });
+      throw refusEtatYoutrust(`La demande ${demande.provider_request_id} n'existe plus chez Youtrust (404).`);
+    }
+    throw error;
+  }
+  const maintenant = new Date().toISOString();
+
+  // 1. Les signataires : NOTRE liste (ordre des cases, roles), le statut de Youtrust ; l'heure de chaque signature
+  //    une seule fois (lue sur le signataire, qui la porte).
+  const chezYoutrust = new Map((Array.isArray(sr.signers) ? sr.signers : []).map((s) => [s.id, s]));
+  const avant = Array.isArray(demande.signers) ? demande.signers : [];
+  const signers = [];
+  for (const s of avant) {
+    const yt = s.provider_signer_id ? chezYoutrust.get(s.provider_signer_id) : null;
+    const n = { ...s };
+    if (yt && yt.status) n.status = yt.status;
+    if (n.status === "signed" && !n.signed_at && s.provider_signer_id) {
+      const detail = await client.lireSignataire(demande.provider_request_id, s.provider_signer_id).catch(() => null);
+      n.signed_at = (detail && detail.signed_at) || null;
+    }
+    signers.push(n);
+  }
+  const signes = signers.filter((s) => s.status === "signed").length;
+  const statut = cleanString(sr.status) || demande.status;
+  const langue = YOUTRUST_VERS_LANGUE_COMMUNE[statut] || "pending";
+  const derniereSignature = signers.map((s) => s.signed_at).filter(Boolean).sort().pop() || null;
+  const doneAt = langue === "signed" ? (demande.done_at || cleanString(sr.completed_at) || derniereSignature || maintenant) : (demande.done_at || null);
+  const canceledAt = langue === "cancelled" ? (demande.canceled_at || maintenant) : (demande.canceled_at || null);
+  const expiredAt = langue === "expired" ? (demande.expired_at || maintenant) : (demande.expired_at || null);
+
+  // 2. Les avis de cette demande encore « a traiter » (lus AVANT d'ecrire : on ne marque que ceux qu'on a vus).
+  const avis = await supabaseRequest(
+    `app_signature_event?provider_request_id=eq.${encodeURIComponent(demande.provider_request_id)}&processed_at=is.null&select=event_id,event_name,event_time,provider_signer_id&order=event_time.asc&limit=200`,
+    { method: "GET" },
+  );
+  const avisLus = Array.isArray(avis) ? avis : [];
+  const tousLesMandantsSignes = (liste) => {
+    const mandants = liste.filter((s) => s.role === "mandant");
+    return mandants.length > 0 && mandants.every((s) => s.status === "signed");
+  };
+  const dernierAvis = avisLus.map((a) => a.event_time).filter(Boolean).sort().pop() || null;
+
+  // 3. Notre table.
+  await majDemandeSignature(demande.id, {
+    status: statut,
+    signers,
+    expiration_at: cleanString(sr.expiration_date) || demande.expiration_at || null,
+    done_at: doneAt,
+    canceled_at: canceledAt,
+    expired_at: expiredAt,
+    last_synced_at: maintenant,
+    ...(dernierAvis ? { last_event_at: dernierAvis } : {}),
+    erreur: null,
+  });
+
+  // 4. Le miroir, dans la langue commune -- sauf « a la main » (D18) et autre fournisseur (R1).
+  let miroir = "ecrit";
+  const docRows = await supabaseRequest(`app_console_document?id=eq.${encodeURIComponent(demande.app_console_document_id)}&select=id,metadata_json&limit=1`, { method: "GET" });
+  const doc = Array.isArray(docRows) && docRows[0] ? docRows[0] : null;
+  const sigDoc = (doc && doc.metadata_json && doc.metadata_json.signature) || {};
+  if (!doc) miroir = "document_introuvable";
+  else if (sigDoc.source === "manuscrite") miroir = "signe_a_la_main_garde";
+  else if (sigDoc.provider && sigDoc.provider !== "youtrust") miroir = "autre_fournisseur";
+  else {
+    await majMiroirSignatureDocument(doc.id, {
+      status: langue,
+      progress: `${signes}/${signers.length}`,
+      provider_request_id: demande.provider_request_id,
+      signature_request_id: demande.id,
+      ...(langue === "signed" ? { signed_at: dateFaconImmoSign(doneAt), signed_at_iso: doneAt } : {}),
+      ...(langue === "cancelled" ? { cancelled_at: dateFaconImmoSign(canceledAt), cancelled_at_iso: canceledAt } : {}),
+      ...(langue === "expired" ? { expired_at: dateFaconImmoSign(expiredAt), expired_at_iso: expiredAt } : {}),
+    });
+  }
+
+  // 4 bis. L5-3 : a `done`, le signe et les preuves -- une seule fois (signed_storage_path), et seulement sur un document
+  //   dont on ecrit le miroir. AVANT de marquer les avis : un echec les laisse « a traiter », le passage suivant reprend.
+  let rapatriement = null;
+  if (langue === "signed" && miroir === "ecrit" && !demande.signed_storage_path) {
+    rapatriement = await rapatrierSigneYoutrust(client, demande, signers, dateFaconImmoSign(doneAt));
+    await logJob(job.id, "youtrust", "running", rapatriement.deja ? "Mandat signe deja range" : `Mandat signe range (${rapatriement.preuves} dossier(s) de preuves${rapatriement.au_coffre ? "" : ", serveur seulement"})`, {
+      provider_request_id: demande.provider_request_id, au_coffre: rapatriement.au_coffre, preuves: rapatriement.preuves,
+    });
+  }
+
+  // 5. Les avis vus sont traites.
+  if (avisLus.length) {
+    const liste = avisLus.map((a) => encodeURIComponent(`"${a.event_id}"`)).join(",");
+    await supabaseRequest(`app_signature_event?event_id=in.(${liste})&processed_at=is.null`, {
+      method: "PATCH", prefer: "return=minimal", body: JSON.stringify({ processed_at: maintenant }),
+    });
+  }
+
+  const transitions = {
+    statut_avant: demande.status || null, statut_apres: statut,
+    signes_avant: avant.filter((s) => s.status === "signed").length, signes_apres: signes,
+    mandants_tous_signes: signers.filter((s) => s.role === "mandant").every((s) => s.status === "signed"),
+  };
+  const notifications = miroir === "ecrit"
+    ? await notifierSignatureYoutrust(job, demande, { avant, signers, statut, langue, avisLus, tousLesMandantsSignes })
+    : [];
+  await logJob(job.id, "youtrust", "done", `Signature mise a jour (Youtrust : ${statut}, ${signes}/${signers.length})`, {
+    provider_request_id: demande.provider_request_id, langue, miroir, avis_traites: avisLus.length, transitions, notifications,
+  });
+  return {
+    status: "synced", signature_request_id: demande.id, youtrust_status: statut, langue, progress: `${signes}/${signers.length}`, miroir,
+    avis_traites: avisLus.length, transitions,
+    ...(rapatriement ? { signe: { deja: rapatriement.deja, preuves: rapatriement.preuves ?? null, au_coffre: rapatriement.au_coffre ?? null } } : {}),
+  };
 }
 
 async function demandeYoutrustDuTravail(job) {

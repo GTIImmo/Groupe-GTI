@@ -585,6 +585,135 @@ de l'audit trail = fichiers du coffre.
 **Accord.** **Déploiement de la fonction Supabase** (manuel, pas par push) ; secret du
 webhook posé par Frédéric ; redémarrage du worker.
 
+> ### 🔎 AUDIT DU LOT 5 — 05/11/2026 (lecture seule, rien codé)
+> *Audit limité au lot 5 (recevoir les avis, rapatrier le signé et les preuves, prévenir) ; les autres objets ne sont pas
+> mesurés ici.*
+>
+> **CE QUI EXISTE DÉJÀ.** Base (lot 3, en production) : `app_signature_request` (statut, signataires, dates `done_at` /
+> `canceled_at` / `expired_at`, `signed_storage_path`, `proofs`, `last_event_at`) et `app_signature_event` (`event_id`
+> clé primaire = dédoublonnage ; index « à traiter » sur `processed_at`), RLS en lecture seule pour les connectés,
+> aucune écriture ni pour `anon` ni pour `authenticated`. Au 05/11 : **0 demande, 0 avis, 0 travail Youtrust**,
+> interrupteur `off`. Le type `youtrust_sync_signature` est dans les trois verrous, et son handler est un refus
+> (« pas encore en service »). Client (`youtrust_client.js`) : `lireDemande`, `lireSignataire`, `telechargerDocuments`
+> (`version=completed`), `telechargerAuditTrail` (PDF par signataire) et `verifierSignatureWebhook` (HMAC sur le corps
+> brut) existent ; **manque** la lecture JSON des preuves (`GET …/signers/{id}/audit_trails`). Le miroir s'écrit par
+> `majMiroirSignatureDocument`. Le modèle ImmoSign du signé (`downloadSignedProcedureDocument`) : PDF sous
+> `…/documents/<id>/signed/`, la COLONNE `storage_path` pointe vers le signé (la policy de lecture l'exige),
+> `metadata_json.signed_document` {chemin, taille, sha256…} ; l'original reste à son chemin.
+>
+> **CE QUE DIT LA DOC YOUTRUST (relue le 05/11, developers.youtrust.com).** Chaque avis porte `event_id`,
+> `event_name`, `event_time` (époque Unix), `sandbox`, `data.signature_request` (état complet, `external_id`,
+> `signers[].status`) et `data.signer` (`status`, `signed_at`). En-tête `X-Yousign-Signature-256` = `sha256=` + HMAC hex
+> du corps BRUT. Réponse 2xx **en moins de 1 s** (10 s pour les nouvelles tentatives) ; 8 nouvelles tentatives sur ~4
+> jours ; **un même avis peut arriver plusieurs fois, et l'ORDRE n'est pas garanti** ⇒ le travail relit la demande chez
+> Youtrust au lieu de croire l'avis. Adresses d'origine : 5 plages publiées. **L'abonnement par l'API n'existe qu'en
+> production** (`POST /webhooks`, offres Plus et au-delà) : pendant l'essai, il se crée **à la main dans l'app** (M4).
+> Preuves JSON d'un signataire : seulement quand il a signé (IP, consentement, mode et heure du code, empreintes du
+> document, certificat) ; PDF par signataire et PDF de toutes les preuves.
+>
+> **CE QUE LE LOT 5 POURRAIT CASSER AILLEURS — trouvé :**
+> 1. ⚠⚠ **La date de signature.** Le pilotage ne lit `signed_at` qu'en « jj/mm/aaaa » (`lib/pilotage.ts:231`) et la
+>    pastille l'affiche telle quelle (« Signé le … »). ImmoSign écrit « 16/06/2026 à 14:35 » (459 signés, 0 en ISO).
+>    ⇒ Youtrust doit écrire **la même forme** (heure de Paris), l'heure exacte ISO à côté (`signed_at_iso`) et dans
+>    `done_at`. *Trouvé en passant, hors périmètre :* « signé à la main » écrit une date ISO → le pilotage ne la lirait
+>    pas ; dormant (0 document « à la main »).
+> 2. **Le fil du cockpit** lit `sent_at` en ISO : déjà ce que l'envoi écrit. Rien à faire.
+> 3. **L'interrupteur ne doit pas couper la lecture.** Une demande partie doit être suivie jusqu'au bout même si
+>    `signature_youtrust` repasse à `off` (même règle qu'ImmoSign : « la lecture n'est jamais coupée ») ⇒ le travail de
+>    mise à jour NE refuse PAS sur l'interrupteur, contrairement à l'envoi.
+> 4. **La fonction Supabase doit accepter un appel SANS jeton** (`verify_jwt = false`) : Youtrust n'en a pas. Les deux
+>    fonctions existantes l'exigent. Sa seule protection est donc le HMAC (401 sinon) ; elle n'écrit que l'avis et un
+>    travail, avec la clé de service.
+> 5. **La cloche est déjà saturée** : 1 963 notifications non lues sur 1 998 (1 800 rapprochements). L'index unique
+>    (destinataire, dossier, type, non lu) écarte les doublons ⇒ peu de types, un par étape, jamais par relance.
+> 6. **Le coffre** : la règle de stockage tient (serveur toujours, coffre pour les biens vivants) ; un mandat se signe
+>    sur un bien vivant, donc au coffre. Seulement des PDF (pas de ZIP). Le signé ne remplace pas l'objet original.
+> 7. **L'écran** : il sait « Ouvrir le signé » (`signed_document`) ; il n'existe **aucun** bouton « Ouvrir les preuves »
+>    (le tableau du §2 bis disait « existe déjà » : faux) ; et le cockpit (`ckSigStatus`) n'accepte un « en attente »
+>    qu'avec un `procedure_id` → un mandat Youtrust en cours n'y apparaît pas. ⇒ P8 (écran), pas le lot 5.
+> 8. **Les gardes existantes** : R1 (les lectures ImmoSign ne touchent pas une ligne `youtrust`), le marquage 8f et la
+>    nuit (ligne `sans_hektor`, sans numéro Hektor) laissent la ligne tranquille ; le mandat signé n'est PAS déposé chez
+>    Hektor (D12 tombée le 26/10).
+>
+> **⏰ LE CALENDRIER.** L'essai Youtrust finit vers le **09/11**. La preuve du lot 5 exige une signature COMPLÈTE en
+> sandbox (mandants puis négociateur), donc : la fonction déployée, l'abonnement créé dans l'app, le secret posé, les
+> services redémarrés — et quelqu'un qui signe.
+>
+> **PROPOSITION DE DÉCOUPAGE (à valider) :**
+> - **L5-1 la fonction `youtrust-webhook`** : HMAC (401), avis rangé (doublon ignoré), travail `youtrust_sync_signature`
+>   posé s'il n'y en a pas déjà un en attente pour cette demande, 200 tout de suite ; un avis d'une demande inconnue est
+>   gardé sans travail. Essai hors ligne (Deno) avec avis fabriqués, signature juste / fausse, doublon.
+> - **L5-2 la mise à jour** (`youtrust_sync_signature`, idempotent) : relit la demande et chaque signataire, met à jour
+>   la table, le miroir (R3 : `pending` + « x/N », `signed` + date ImmoSign + ISO, `cancelled`, `expired`), marque les
+>   avis traités ; respecte « à la main » (D18).
+> - **L5-3 le signé et les preuves** : à `done`, une seule fois : PDF signé (modèle ImmoSign) ; pour chaque signataire,
+>   le PDF de preuves (coffre) et le JSON (`proofs`) ; empreintes contrôlées.
+> - **L5-4 les notifications** au négociateur du bien : « les mandants ont signé : à vous de contresigner », « mandat
+>   signé », « e-mail non remis à … / incident », « expiré » — rien d'autre.
+>
+> **QUESTIONS POUR FRÉDÉRIC :**
+> - (Q1) la date de signature écrite comme ImmoSign (« jj/mm/aaaa à hh:mm »), l'heure exacte à côté — recommandé : oui ;
+> - (Q2) les 4 notifications ci-dessus, au négociateur du bien — recommandé : oui ;
+> - (Q3) le suivi continue même si l'interrupteur repasse à `off` — recommandé : oui ;
+> - (Q4) la preuve : qui signe en sandbox ? (a) toi, depuis ta boîte, 3 fois (code par e-mail) ; (b) moi, dans le
+>   navigateur intégré, sur les liens de signature que le worker demande à Youtrust, avec ton accord à chaque fois ;
+> - (Q5) l'ordre : L5-1 → L5-2 → L5-3 → L5-4, P8 (l'écran) ensuite.
+>
+> ✅ **RÉPONSES DE FRÉDÉRIC (05/11) : « Oui, et Q4 = a »** →
+> - **D37** (Q1) `signed_at` écrit comme ImmoSign, « jj/mm/aaaa à hh:mm » (heure de Paris), l'heure exacte ISO à côté ;
+> - **D38** (Q2) quatre notifications au négociateur du bien : à contresigner, signé, e-mail non remis / incident, expiré ;
+> - **D39** (Q3) le suivi d'une demande partie continue même interrupteur `off` ;
+> - **D40** (Q4 = a) la preuve en sandbox : **Frédéric signe lui-même**, depuis sa boîte, les 3 fois (code par e-mail) ;
+> - **D41** (Q5) l'ordre L5-1 → L5-2 → L5-3 → L5-4, puis P8.
+>
+> ✅ **L5-1 ÉCRIT LE 05/11** (code neuf dormant : rien déployé, rien commité, aucun abonnement créé) :
+> `supabase/functions/youtrust-webhook/logique.ts` (sans dépendance : HMAC par Web Crypto sur le corps BRUT, comparaison
+> à durée constante, rangement de l'avis, travail `youtrust_sync_signature` assuré s'il n'y en a pas déjà un EN ATTENTE
+> pour la demande, priorité 22, sans demandeur) + `index.ts` (branchement supabase-js avec la clé de service ; dépôt
+> idempotent `onConflict: 'event_id', ignoreDuplicates`). Réponses : 401 signature fausse / absente / corps modifié ;
+> 405 hors POST ; 400 corps illisible ou sans `event_id` ; 500 secret absent ou panne de base (Youtrust renvoie) ; 200
+> sinon. ⭐ Un avis rangé dont le travail a raté : au RENVOI, le doublon est ignoré MAIS le travail est posé.
+> Essai `supabase/functions/youtrust-webhook/test_logique.mjs` (Node 24 lit le TypeScript tel quel) **14/14**, avec
+> témoin (signatures calculées par node:crypto, un autre code que celui de la fonction). Vérifié en base (lecture) :
+> `requested_by` peut être vide, `status` vaut `pending` par défaut, aucun déclencheur sur ce type de travail.
+> ⚠ NON ÉPROUVÉ : le vrai Deno de Supabase (pas de Deno sur le serveur) et un vrai avis.
+> **Les gestes du déploiement (Frédéric)** : (1) déployer `npx supabase functions deploy youtrust-webhook
+> --no-verify-jwt` ; (2) créer l'abonnement dans l'app Youtrust (sandbox) vers
+> `https://<projet>.supabase.co/functions/v1/youtrust-webhook`, avis `signature_request.*` et `signer.*` du tableau
+> §2 bis ; (3) poser le secret : `npx supabase secrets set YOUTRUST_WEBHOOK_SECRET=…`. Sans L5-2 (worker), les avis
+> seront rangés et les travaux refusés proprement (« pas encore en service »).
+>
+> ✅ **L5-2 CODÉ LE 05/11** (« vas-y » de Frédéric ; rien commité, services non redémarrés) : `handleYoutrustSyncSignature`
+> relit la demande chez Youtrust, met à jour les signataires (statut ; heure de signature lue UNE fois sur le
+> signataire), la table (`status`, `done_at`, `canceled_at`, `expired_at`, `expiration_at`, `last_synced_at`,
+> `last_event_at`), le miroir R3 (`pending` « x/N », `signed`, `cancelled`, `expired`) et marque les avis vus comme
+> traités. **D37** : `signed_at` = « 05/11/2026 à 10:52 » (heure de Paris), l'ISO dans `signed_at_iso` ; **D39** : aucun
+> refus sur l'interrupteur ; **D18 / R1** : « à la main » et autre fournisseur non touchés ; 404 = refus d'état écrit
+> sur la demande, 503 = erreur ordinaire (rejouée). Les transitions sont rendues pour L5-3 / L5-4.
+> Essai `Console/test_youtrust_sync_signature.js` **23/23** (dont la VRAIE regex du pilotage qui lit la date, rejeu
+> idempotent, témoin inverse) ; voisins verts (18, 23, 23, 26, 22, 15, 8 ; couples 26).
+> ⚠ NON ÉPROUVÉ en réel : que `GET /signature_requests/{id}` rende bien `signers[].status` et `completed_at` (à voir
+> à la preuve sandbox, D40).
+>
+> ✅ **L5-3 CODÉ LE 05/11** (rien commité, services non redémarrés) : `rapatrierSigneYoutrust`, appelé par la mise à jour
+> à `done`, UNE fois (`signed_storage_path`), AVANT de marquer les avis (un échec les laisse « à traiter ») : PDF signé
+> (`version=completed`) sous `…/documents/<id>/signed/` + une preuve PDF par signataire sous `…/proofs/` (serveur
+> toujours ; COFFRE seulement si l'original y est — la règle de stockage n'est pas réinterprétée) ; la colonne
+> `storage_path` ne bascule vers le signé que s'il est au coffre ; `metadata_json.signed_document` (fournisseur youtrust,
+> taille, sha256, date façon ImmoSign, liste des preuves) ; les preuves JSON (`lireAuditTrail`, ajouté au client) dans
+> `app_signature_request.proofs` (une indisponibilité est notée, sans bloquer) ; l'original jamais écrasé ; un fichier
+> qui n'est pas un PDF (ZIP) = erreur ordinaire, rien rangé. « À la main » : rien téléchargé.
+> ✅ **L5-4 CODÉ LE 05/11** (D38) : `notifierSignatureYoutrust`, au MANDATAIRE de la demande, sur une TRANSITION
+> seulement : « à vous de contresigner » (les mandants viennent tous de signer), « signé », « e-mail non remis /
+> incident » (le signataire nommé), « expiré » ; l'index unique écarte le doublon ; une cloche en panne n'empêche pas la
+> mise à jour (avertissement au journal).
+> Essai `Console/test_youtrust_sync_signature.js` **42/42** (L5-2 + L5-3 + L5-4, témoin inverse) ; L5-1 14/14 ;
+> voisins verts (18, 23, 23, 26, 22, 15).
+> **RESTE** : commit ; puis les gestes de Frédéric (déployer la fonction `--no-verify-jwt`, créer l'abonnement M4 dans
+> l'app Youtrust, poser `YOUTRUST_WEBHOOK_SECRET`, redémarrer les 4 services file vide) ; puis la preuve sandbox
+> (D40 : Frédéric signe 3 fois) — **avant la fin de l'essai (~09/11)** ; puis P8 (l'écran : suivi par personne,
+> « Ouvrir les preuves », le cockpit qui voit un mandat Youtrust en cours) et le lot 7 (rattrapage de nuit).
+
 ### ⭐ L'OUTIL DE RÉDACTION — décision de Frédéric (26/10)
 *« Actuellement Hektor, mais nous avons déjà développé dans l'app un éditeur de documents qu'il
 faut utiliser. »* — Mesuré le 26/10 : les mandats signés viennent à 498/499 du modèle ImmoSign de

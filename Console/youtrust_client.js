@@ -116,6 +116,8 @@ function creerClientYoutrust(options = {}) {
       requete("POST", `/signature_requests/${srId}/signers/${signerId}/send_reminder`),
     telechargerAuditTrail: (srId, signerId) =>
       requete("GET", `/signature_requests/${srId}/signers/${signerId}/audit_trails/download`, { binaire: true }),
+    // A.2 lot 5 L5-3 : les preuves en JSON (IP, consentement, code, empreintes, certificat) -- seulement signataire signe.
+    lireAuditTrail: (srId, signerId) => requete("GET", `/signature_requests/${srId}/signers/${signerId}/audit_trails`),
   };
 }
 
