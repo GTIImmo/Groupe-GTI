@@ -662,3 +662,25 @@ négociateur) ; 185 personnes, aucune supprimée. ⚠ Le signal `disparitions_no
   Issoire, Le Puy, Saint-Étienne). Signal `disparitions_nombreuses` du 05/11 **marqué traité** à la demande de Frédéric
   (« Oui ») — fait en base au nom de son compte (`traite_par` = son app_user_id ; la RPC exige une session admin) ;
   0 signal ouvert ensuite.
+
+## 25. ⛔ CORRECTION (05/11) — les « Groupe GTI » NE SONT PAS des anciens ; et un TROU : 3 comptes d'agence absents
+
+Frédéric : « groupe gti saint etienne est pas en ancien… les anciens n'ont pas GTI dans leur libellé ». **Il a raison.**
+L'organigramme de Hektor (Mon réseau → Organigramme, lu le 05/11) montre les 18 agences VIVANTES, dont GROUPE GTI
+SAINT-ÉTIENNE (dernière connexion 30/10, 2 négociateurs = Lucille FORLICO n° 4 et Mélanie LEGRAND n° 5, 1 208 biens actifs).
+
+**Ce qui a « disparu » cette nuit n'est PAS une agence** : ce sont des FICHES DE NÉGOCIATEUR au nom de l'agence (« Groupe
+GTI », n° 2, accueil@ — Saint-Étienne ; n° 12 Ambert, n° 98 Issoire, n° 99 Le Puy…), que Hektor ne rend plus dans aucune
+liste (n° 2 vu pour la dernière fois dans la liste des ACTIFS, page 3, le 03/04/2026). Le registre les a rangées, à juste
+titre, sous la personne de l'agence (`app_neg_adopter` : un nom « Groupe GTI… » = l'agence). ⛔ Mon message du 05/11 les
+appelait « anciens comptes d'agence » : FAUX. Le n° 2 porte encore 31 003 contacts non archivés, 1 453 mandats, 171 biens.
+
+**Le trou trouvé en vérifiant** — le compte UTILISATEUR de l'agence (celui que les menus envoient comme `agence_id_user`) :
+- ABSENT du registre : Saint-Étienne (compte n° 25), Issoire (n° 22), « Agences supprimée » (agence 19, compte n° 26) ;
+- MAL RANGÉ : Le Puy (compte n° 24) est sous une personne « Utilisateur supprimé n° 24 » (type inconnu) au lieu de
+  « Groupe Gti Le Puy en Velay » ; Ambert (n° 23) n'y est que comme « numéro de répartition ».
+- Cause : les comptes d'agence viennent de `app_user_directory` (UsersOfParent, ~12 comptes) — ces 4-5 n'y sont pas.
+- Sans effet sur les menus (le n° du compte d'agence est recopié de l'annuaire sur chaque fiche, 30/30 justes), mais la
+  personne « agence » du registre est incomplète et marquée inactive alors que l'agence vit.
+⏳ Remède à proposer (écriture en base, accord requis) : rattacher les comptes 25, 22, 24, 23 à leur agence, et faire dire
+« agence » (jamais « ancien ») à l'écran pour le type agence.
