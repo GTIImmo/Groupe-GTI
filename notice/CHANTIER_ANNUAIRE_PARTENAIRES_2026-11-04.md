@@ -1737,6 +1737,23 @@ trouvable (Archiver / Supprimer en bas au lieu du menu) ; la fiche client et la 
 ✅ **`partenaires_fiche = on` le 05/11 (« Oui, pour tous »)** : les 202 fiches partenaire de l'app prennent leur volet
 pour tout le monde (au rechargement). Retour arrière : `admin` ou `off`. **Suite : 3.3b (le travail), puis 3.3c.**
 
+#### 26 bis. PIÈCE 3.3b — LA PARTIE DROITE (05/11, « Oui, vas-y 3.3b ») — codée, commitée `ce654b8`
+
+- **Ce que c'est** : la zone de travail de la fiche partenaire, par famille, avec les libellés de la maquette
+  `fiche-partenaire-v1` : **4 chiffres** (valeur « — », jamais un faux zéro), la **section du métier** avec ses étapes
+  (« lot N · en construction »), **« À venir »** en tête de la colonne de droite, et les **deux blocs « avec nous »** sous
+  le tableau de bord. Syndic (lot 4), diagnostiqueur (lot 5), courtier/banque et apporteur/parrain (lots 6 et 7). La famille
+  **« autre »** (société, promoteur…) n'a **rien** de plus : elle garde la fiche d'avant.
+- **La bande Recherche** se cache sur une fiche partenaire **sans recherche active**, comme sur la fiche notaire ; un
+  partenaire qui a une recherche active la garde. Biens liés, Activité et Qualité restent.
+- **Où** : `lib/metierPartenaire.ts` (`blocsDuPartenaire`, données pures), `FichePartenaire.tsx` (4 composants, aucune
+  lecture ni écriture, classes de `fiche-notaire-v2.css`), 6 lignes dans `ContactDetailPopupV2`.
+- **Cran** : le même que 3.3a (`partenaires_ecran` + `partenaires_fiche`, tous deux à « on ») — ⚠ donc **visible de tous
+  dès le déploiement**. Retour arrière : `partenaires_fiche = admin` ou `off`, ou revenir sur `ce654b8`.
+- **Contrôles** : `test_metier_partenaire.cjs` **47/47** (8 nouveaux) ; `npm run build` vert ; la version mise en attente
+  construite à part (seuls mes morceaux d'App.tsx commités, les lignes des autres sessions laissées en l'état).
+- **Reste** : pousser (accord), voir en ligne (bureau, 1280 × 665, téléphone), puis **3.3c**.
+
 ### 7 ter. Les dépendances (techniques, pas un ordre décidé)
 
 - 0 avant tout le reste ; 0.1 avant B2 ; 0.2 avant B1 ; 0.6 avant B5 ; 0.3 avant B6 ; 0.4 avant B7 ; 0.5 avant C2.
