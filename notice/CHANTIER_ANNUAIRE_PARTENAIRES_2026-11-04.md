@@ -1404,6 +1404,22 @@ l'interrupteur allumé** :
 `contact_coordonnees_remplacer = on` ; essai réel sur une fiche d'essai (changer téléphone ET e-mail, relire TOUTES les
 lignes chez Hektor : même nombre, nouvelle valeur), puis la supprimer.
 
+✅✅ **ALLUMÉ ET PROUVÉ EN RÉEL le 05/11** (« Oui, vas-y », puis « C'est redémarré ») :
+- Les 4 services redémarrés par Frédéric à **11:05:30-32** (journaux sans erreur ; fichier chargé = commit 2fca55b, rien
+  d'autre). `app_setting.contact_coordonnees_remplacer = on` posé à **11:05:51** (retour arrière : `off`).
+- Fiche d'essai par l'écran : **M. Bienvu ZZ ESSAI COORDONNEES** (20000043 / Hektor 606222, partenaire personne, compte
+  formation, RGPD décoché). Relue AVANT : 1 portable (n° interne 449901, 0499999921) et 1 e-mail (449902,
+  essai.d5.avant@example.invalid).
+- Modifiée par « Modifier le contact » : portable 0499999931 ET e-mail essai.d5.apres@example.invalid (RGPD décoché) ;
+  envoi à 11:18:51, travail **fait à 11:19:18**, compte rendu `coordonnees` = « remplacees ».
+- **Relue APRÈS chez Hektor : 1 portable (449901 → 0499999931), 1 e-mail (449902 → essai.d5.apres@…)** : mêmes numéros
+  internes, nouvelles valeurs, **aucune ligne ajoutée**. ⇒ **D-5 RÉPARÉ.**
+- Supprimée par l'écran : travail fait, 0 ligne dans `app_contact_current` / `app_contact_pending`, 1 ligne au journal
+  des suppressions, formulaire Hektor vide (0 octet). Onglet Chrome refermé.
+- ⚠ Non éprouvé en réel : le fixe et le conjoint (`_m2`) — couverts par les essais hors ligne (9) et (14) seulement.
+- Ménage NON fait (décision de Frédéric) : les lignes en trop des fiches d'essai (604020…) et le numéro en double de
+  GIMBERT 603585 / BRUNON 602945.
+
 ### 7 ter. Les dépendances (techniques, pas un ordre décidé)
 
 - 0 avant tout le reste ; 0.1 avant B2 ; 0.2 avant B1 ; 0.6 avant B5 ; 0.3 avant B6 ; 0.4 avant B7 ; 0.5 avant C2.
