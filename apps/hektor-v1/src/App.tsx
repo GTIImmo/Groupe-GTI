@@ -31918,6 +31918,37 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
     if (!num) return ''
     return String(ckCycleAff[num]?.mandat_date_cloture ?? '').trim()
   }
+  /** ⑧ (05/11/2026) — QUI PAIE LES HONORAIRES, pour le bloc « À la charge de ».
+   *
+   *  ⛔ CE BLOC EXISTAIT ET NE S'ALLUMAIT JAMAIS : il est conditionne a
+   *    `affaire.honoraires.charge`, et la seule construction de cet objet posait
+   *    `charge: ''` EN DUR. Il etait donc ecrit, rendu, et invisible depuis
+   *    toujours.
+   *
+   *  ⭐ RIEN A CHARGER : `ckCycleAff` porte deja la charge depuis le 04/11 (elle a
+   *    ete ajoutee au select de loadRegisterCycleAffaires). Meme patron que
+   *    `ckClotureDe` juste au-dessus -- meme carte, meme cle, meme repli.
+   *
+   *  ⚠ C'EST LA CHARGE DU MANDAT, ET C'EST LA BONNE SOURCE : sa regle metier du
+   *    03/11 -- « la charge peut changer, mais alors il faut REFAIRE un mandat ».
+   *    C'est donc le mandat qui la fixe, pas la transaction.
+   *
+   *  ⚠ ON N'INVENTE RIEN : si le mandat ne dit rien, on rend '' et le bloc reste
+   *    eteint, comme aujourd'hui. Couverture mesuree le 04/11 : 95,5 % du registre.
+   */
+  const ckChargeDe = (numero: string | null | undefined): string => {
+    const num = String(numero ?? '').trim()
+    if (!num) return ''
+    const brut = String(ckCycleAff[num]?.mandat_charge_honoraires_app ?? '').trim()
+    if (!brut) return ''
+    // ⚠ On AFFICHE le mot du metier, pas celui de la base. La base ne connait que
+    //   'vendeur' et 'acquereur' (la RPC refuse tout le reste) ; l'ecran doit dire
+    //   « Vendeur » et « Acquéreur », avec l'accent.
+    const bas = brut.toLowerCase()
+    if (bas.startsWith('vend')) return 'Vendeur'
+    if (bas.startsWith('acq')) return 'Acquéreur'
+    return brut
+  }
   const pClotureMandat = firstNonEmpty(
     ckClotureDe(dossier.numero_mandat),
     String((props.detail as Record<string, unknown>)['mandat_date_cloture'] ?? '').trim(),
@@ -34373,7 +34404,13 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                     compromis: hasC ? { prix: money('vente_prix') || formatPrice(dossier.prix), net, dateStart: dateOf('compromis_date_start'), dateActe: dateOf('date_signature_acte'), retract: '', sequestre: money('compromis_sequestre') } : null,
                     vente: pVendu ? { date: dateOf('vente_date'), prix: money('vente_prix') || formatPrice(dossier.prix), honoraires: money('vente_honoraires'), commission: money('vente_commission_agence'), notaires: '' } : null,
                     parties: { acq: acqNom ? { n: acqNom, s: 'Acquéreur' } : null, notAcq: null, notVend: null, vendeur },
-                    honoraires: honFai ? { fai: honFai, charge: '', taux: '', part: '', rendement: '' } : undefined,
+                    // ⑧ (05/11/2026) : `charge` etait '' EN DUR -- le bloc « À la charge
+                    //   de » (plus haut) est conditionne a cette valeur, il ne s'est donc
+                    //   JAMAIS allume. On le branche sur le registre, par le cycle regarde
+                    //   et avec le mandat du bien en repli. ⚠ Vide => bloc eteint, comme avant.
+                    honoraires: honFai ? { fai: honFai,
+                      charge: ckChargeDe(ckSelectedNumero) || ckChargeDe(dossier.numero_mandat),
+                      taux: '', part: '', rendement: '' } : undefined,
                   }
                 }
                 // ─── 2.1 : LE REGISTRE D'ABORD, LA DERIVATION EN FILET ───
