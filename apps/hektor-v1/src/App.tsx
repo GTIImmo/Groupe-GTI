@@ -287,6 +287,9 @@ import './contact-new.css'
 import './ajout-conjoint.css'
 // A.2 P8-3 (06/11/2026) : le suivi par signataire d'une demande Youtrust (Relancer une personne, Annuler la demande).
 import SuiviSignatairesYoutrust from './SuiviSignatairesYoutrust'
+// A.2 P8-4 (06/11/2026) : ouvrir l'original et les preuves d'un document signe (interrupteur `signature_preuves`).
+import { PiecesSignatureFenetre, useSignaturePreuves } from './PiecesSignature'
+import { piecesDeSignature } from './lib/piecesSignature'
 import EnvoiSignatureYoutrust, { EVENEMENT_CORRIGER_MANDAT, type DemandeCorrectionMandat, type OngletCorrection } from './EnvoiSignatureYoutrust'
 import type { FicheDuJourPdf } from './lib/ecartsFichePdf'
 import { ficheDuMandant, mandantsImprimes, mandantsSansPrenomOuNom, situationsDesConjoints, type FicheCouple, type SituationConjoint } from './lib/conjointsDuMandat'
@@ -11648,6 +11651,9 @@ function MandatSignatureTracker({ dossier, onJobCreated }: { dossier: Dossier; o
   const choixSignature = useChoixSignatureActif()
   const [choixDoc, setChoixDoc] = useState<ConsoleDocument | null>(null)
   const [envoiDoc, setEnvoiDoc] = useState<ConsoleDocument | null>(null)
+  // A.2 P8-4 : « Preuves » (original + preuves au coffre), derriere l'interrupteur `signature_preuves`.
+  const preuvesActives = useSignaturePreuves()
+  const [piecesDoc, setPiecesDoc] = useState<ConsoleDocument | null>(null)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -11737,12 +11743,18 @@ Le mandat passera à l'état « Signé ». À ne faire qu'une fois le PDF signé
                 <strong>{document.document_name}</strong>
                 <SignatureBadge signature={signature} />
                 {/* A.2 P8-3 : qui a signe, qui attend (Youtrust seulement ; ImmoSign garde ses boutons). */}
-                <SuiviSignatairesYoutrust document={document} gestesActifs={choixSignature.youtrust} onJobCreated={onJobCreated} onChange={() => { void refresh() }} />
+                <SuiviSignatairesYoutrust preuvesActives={preuvesActives} document={document} gestesActifs={choixSignature.youtrust} onJobCreated={onJobCreated} onChange={() => { void refresh() }} />
               </div>
               <div className="console-document-actions">
                 {hasSignedFile ? (
                   <button className="ghost-button console-document-open console-document-signed" type="button" onClick={() => void openSigned(document)} disabled={busyId === document.id}>
                     <span aria-hidden="true"><DetailIcon type="content" /></span>Ouvrir le signé
+                  </button>
+                ) : null}
+                {/* A.2 P8-4 : l'original et les preuves d'un document signe, au coffre. */}
+                {preuvesActives && hasSignedFile && piecesDeSignature(document).length ? (
+                  <button className="ghost-button console-document-preuves" type="button" onClick={() => setPiecesDoc(document)}>
+                    <span aria-hidden="true"><DetailIcon type="content" /></span>Preuves
                   </button>
                 ) : null}
                 {signature?.status === 'pending' && signature.procedure_id ? (
@@ -11765,6 +11777,7 @@ Le mandat passera à l'état « Signé ». À ne faire qu'une fois le PDF signé
           )
         })}
       </div>
+      {piecesDoc ? <PiecesSignatureFenetre document={piecesDoc} onClose={() => setPiecesDoc(null)} /> : null}
       {choixDoc ? (
         <ChoixSignatureFenetre
           document={choixDoc}
@@ -11800,6 +11813,9 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
   // A.2 P8-2 : le choix a trois signatures (allume si l'un des deux interrupteurs de la signature l'est).
   const choixSignature = useChoixSignatureActif()
   const [choixDoc, setChoixDoc] = useState<ConsoleDocument | null>(null)
+  // A.2 P8-4 : « Preuves » (original + preuves au coffre), derriere l'interrupteur `signature_preuves`.
+  const preuvesActives = useSignaturePreuves()
+  const [piecesDoc, setPiecesDoc] = useState<ConsoleDocument | null>(null)
   // A.2 lot 6b P5 : « Corriger le mandat » depuis la fenetre ouverte ici -> l'editeur du meme bien s'ouvre (s'il est monte).
   const demanderCorrection = (document: ConsoleDocument, onglet: OngletCorrection) => {
     const detail: DemandeCorrectionMandat = { app_dossier_id: dossier.app_dossier_id, document, onglet, pris: false }
@@ -12208,6 +12224,13 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
             {preparing ? 'En attente' : 'Preparer'}
           </button>
         )}
+        {/* A.2 P8-4 : l'original et les preuves d'un document signe (Youtrust ou ImmoSign), au coffre. */}
+        {preuvesActives && hasSignedFile && piecesDeSignature(document).length ? (
+          <button className="ghost-button console-document-preuves" type="button" onClick={() => setPiecesDoc(document)} title="Original non signé et preuves de signature">
+            <span aria-hidden="true"><DetailIcon type="content" /></span>
+            Preuves
+          </button>
+        ) : null}
         {signature?.status === 'pending' && signature.procedure_id ? (
           <button className="ghost-button console-document-relance" type="button" onClick={() => void handleRelanceSignature(document, signature.procedure_id!)} disabled={busyDocumentId === document.id} title="Envoyer un rappel de signature">
             <span aria-hidden="true"><DetailIcon type="hektor" /></span>
@@ -12334,7 +12357,7 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
                 {e.remplace ? <span className="ens-remplace-mention">{e.remplace}</span> : null}
                 {(() => { const m = mentionDepotHektor(e.doc); return m ? <span className={m.echec ? 'console-document-absent' : 'console-document-encours'}>{m.texte}</span> : null })()}
                 {/* A.2 P8-3 : qui a signe, qui attend (Youtrust seulement ; ImmoSign garde ses boutons). */}
-                <SuiviSignatairesYoutrust document={e.doc} gestesActifs={signatureYoutrust} onJobCreated={onJobCreated} onChange={() => { void refreshDocuments(true) }} />
+                <SuiviSignatairesYoutrust preuvesActives={preuvesActives} document={e.doc} gestesActifs={signatureYoutrust} onJobCreated={onJobCreated} onChange={() => { void refreshDocuments(true) }} />
               </div>
               <div className="fa-ck-dright">
                 {e.remplace ? <span className="ens-pill-remplace">Remplacé</span> : <span className={`fa-ck-docbadge${e.signed ? ' ok' : ''}`}>{e.badge}</span>}
@@ -12344,6 +12367,8 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
           ))}
         </div>
 
+        {/* A.2 P8-4 : les pieces de la signature. */}
+        {piecesDoc ? <PiecesSignatureFenetre document={piecesDoc} onClose={() => setPiecesDoc(null)} /> : null}
         {/* A.2 P8-2 : le choix a trois signatures. */}
         {choixDoc ? (
           <ChoixSignatureFenetre
@@ -12445,7 +12470,7 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
                     ) : null}
                     <SignatureBadge signature={signature} />
                     {/* A.2 P8-3 : qui a signe, qui attend (Youtrust seulement ; ImmoSign garde ses boutons). */}
-                    <SuiviSignatairesYoutrust document={document} gestesActifs={signatureYoutrust} onJobCreated={onJobCreated} onChange={() => { void refreshDocuments(true) }} />
+                    <SuiviSignatairesYoutrust preuvesActives={preuvesActives} document={document} gestesActifs={signatureYoutrust} onJobCreated={onJobCreated} onChange={() => { void refreshDocuments(true) }} />
                   </div>
                   <StatusPill value={deleting ? 'Suppression demandee' : preparing ? 'Demande envoyee' : consoleDocumentStatusLabel(document.storage_status)} />
                   {docRowActions(document)}
@@ -12454,6 +12479,8 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
             })}
           </div>
         ) : null}
+        {/* A.2 P8-4 : les pieces de la signature. */}
+        {piecesDoc ? <PiecesSignatureFenetre document={piecesDoc} onClose={() => setPiecesDoc(null)} /> : null}
         {/* A.2 P8-2 : le choix a trois signatures. */}
         {choixDoc ? (
           <ChoixSignatureFenetre

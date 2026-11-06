@@ -32,6 +32,7 @@ export type Ton = 'signe' | 'attente' | 'pas_son_tour' | 'refus' | 'neutre'
 
 export type LigneSuivi = {
   cle: string
+  index: number | null
   nom: string
   role: string
   email: string | null
@@ -90,6 +91,7 @@ export function suiviDeLaDemande(demande: DemandeSignature | null | undefined): 
     const providerSignerId = s.provider_signer_id ? String(s.provider_signer_id) : null
     return {
       cle: providerSignerId ?? `rang-${i}`,
+      index: s.index == null ? null : Number(s.index),
       nom,
       role: ROLES[String(s.role ?? '')] ?? 'Signataire',
       email: s.email ? String(s.email) : null,

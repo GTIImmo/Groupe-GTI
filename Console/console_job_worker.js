@@ -6671,6 +6671,21 @@ async function rangerFichierSignature(doc, sousChemin, nomFichier, buffer, auCof
   return { storage_path: auCoffre ? storagePath : null, local_archive_path: localPath, size: buffer.length, sha256: sha256Buffer(buffer) };
 }
 
+// A.2 P8-4 (06/11/2026) : la piste JSON de Youtrust porte le code recu par le signataire (`authentication.code`).
+// On remplace chaque `code` situe SOUS une cle `authentication` par « masqué » ; tout le reste est rendu a l'identique
+// (meme regle que patch_a2_p8_4_code_usage_unique_2026-11-06.sql, qui a nettoye la ligne deja enregistree).
+function masquerCodesUsageUnique(valeur, sousAuthentification = false) {
+  if (Array.isArray(valeur)) return valeur.map((v) => masquerCodesUsageUnique(v, sousAuthentification));
+  if (!valeur || typeof valeur !== "object") return valeur;
+  const sortie = {};
+  for (const [cle, v] of Object.entries(valeur)) {
+    sortie[cle] = sousAuthentification && cle === "code" && (typeof v === "string" || typeof v === "number")
+      ? "masqué"
+      : masquerCodesUsageUnique(v, cle === "authentication");
+  }
+  return sortie;
+}
+
 async function rapatrierSigneYoutrust(client, demande, signers, signedAtTexte) {
   const doc = await loadConsoleDocumentById(demande.app_console_document_id);
   const md = doc.metadata_json || {};
@@ -6688,7 +6703,8 @@ async function rapatrierSigneYoutrust(client, demande, signers, signedAtTexte) {
     const pdf = exigerPdfYoutrust(await client.telechargerAuditTrail(demande.provider_request_id, s.provider_signer_id), `les preuves du signataire ${s.index}`);
     const nom = storageSafeFilename(`preuves-${s.index}-${s.role}.pdf`, `preuves-${s.index}.pdf`);
     const rangee = await rangerFichierSignature(doc, "proofs", nom, pdf, auCoffre);
-    const audit = await client.lireAuditTrail(demande.provider_request_id, s.provider_signer_id).catch((e) => ({ erreur: e && e.message ? e.message : String(e) }));
+    // A.2 P8-4 : le code a usage unique ne se garde pas (il ne prouve rien : la preuve est `validated_at` + `mode`).
+    const audit = masquerCodesUsageUnique(await client.lireAuditTrail(demande.provider_request_id, s.provider_signer_id).catch((e) => ({ erreur: e && e.message ? e.message : String(e) })));
     proofs.push({ index: s.index, role: s.role, provider_signer_id: s.provider_signer_id, signed_at: s.signed_at || null, filename: nom, ...rangee, audit });
   }
   const signed_document = {

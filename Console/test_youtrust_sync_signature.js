@@ -48,7 +48,7 @@ function monter({ demande = demandeDeBase(), youtrust = {}, metadata = { signatu
     lireSignataire: async (_sr, id) => { yt.appels.push(`lireSignataire:${id}`); return { id, status: "signed", signed_at: (youtrust.signedAt || {})[id] || null }; },
     telechargerDocuments: async () => { yt.appels.push("telechargerDocuments"); return youtrust.signe || { buffer: Buffer.from("%PDF-1.7 mandat signe"), contentType: "application/pdf" }; },
     telechargerAuditTrail: async (_sr, id) => { yt.appels.push(`telechargerAuditTrail:${id}`); return { buffer: Buffer.from(`%PDF-1.7 preuves ${id}`), contentType: "application/pdf" }; },
-    lireAuditTrail: async (_sr, id) => { yt.appels.push(`lireAuditTrail:${id}`); if (youtrust.auditEnPanne) throw new Error("HTTP 500"); return { version: 1, signer: { id, ip_address: "203.0.113.7" }, authentication: { mode: "otp_email" } }; },
+    lireAuditTrail: async (_sr, id) => { yt.appels.push(`lireAuditTrail:${id}`); if (youtrust.auditEnPanne) throw new Error("HTTP 500"); return { version: 1, signer: { id, ip_address: "203.0.113.7" }, authentication: { mode: "otp_email", code: "123456", validated_at: "2026-11-05T10:50:00+00:00" } }; },
   };
   async function supabaseRequest(chemin, options = {}) {
     const m = options.method || "GET";
@@ -192,6 +192,10 @@ const signersYt = (s1, s2, s3) => [{ id: "yt-s1", status: s1 }, { id: "yt-s2", s
       controle("6. une preuve PDF par signataire (3) sous proofs/, et leurs preuves JSON dans la table",
         m.base.coffre.filter((c) => /\/proofs\/preuves-\d-(mandant|mandataire)\.pdf$/.test(c.chemin)).length === 3
           && m.base.demande.proofs.length === 3 && m.base.demande.proofs[0].audit.signer.ip_address === "203.0.113.7" && sd.preuves.length === 3, JSON.stringify(m.base.demande.proofs && m.base.demande.proofs.map((p) => p.storage_path)));
+      // A.2 P8-4 : le code a usage unique ne se garde pas ; la preuve (mode + heure de validation) reste.
+      controle("6. P8-4 : le CODE est masque dans les 3 preuves JSON, le mode et l'heure de validation restent",
+        m.base.demande.proofs.every((p) => p.audit.authentication.code === "masqué" && p.audit.authentication.mode === "otp_email" && p.audit.authentication.validated_at === "2026-11-05T10:50:00+00:00")
+          && !JSON.stringify(m.base.demande.proofs).includes("123456"), JSON.stringify(m.base.demande.proofs.map((p) => p.audit.authentication)));
       controle("6. l'ORIGINAL n'est jamais ecrase (aucun envoi a son chemin) ; signed_storage_path pose", !m.base.coffre.some((c) => c.chemin === "annonces/70005/documents/original.pdf") && m.base.demande.signed_storage_path === sd.storage_path);
       controle("6. le compte rendu le dit, et l'avis est traite APRES le rangement", r.signe && r.signe.preuves === 3 && r.signe.au_coffre === true && m.base.avis[0].processed_at);
       const appels = m.yt.appels.length;

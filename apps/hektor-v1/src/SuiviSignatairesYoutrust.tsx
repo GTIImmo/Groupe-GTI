@@ -7,6 +7,8 @@
 import { useEffect, useState } from 'react'
 import { createYoutrustCancelSignatureJob, createYoutrustRemindSignerJob, loadDemandeSignature } from './lib/api'
 import { suiviDeLaDemande, type DemandeSignature } from './lib/suiviSignataires'
+import { piecesDeSignature } from './lib/piecesSignature'
+import { ouvrirPieceSignature } from './PiecesSignature'
 import type { ConsoleDocument, ConsoleJob } from './types'
 import './suivi-signataires.css'
 
@@ -17,9 +19,11 @@ export function signatureYoutrustDuDocument(document: ConsoleDocument): Signatur
   return sig && sig.provider === 'youtrust' && sig.signature_request_id ? sig : null
 }
 
-export default function SuiviSignatairesYoutrust({ document, gestesActifs, onJobCreated, onChange }: {
+export default function SuiviSignatairesYoutrust({ document, gestesActifs, preuvesActives = false, onJobCreated, onChange }: {
   document: ConsoleDocument
   gestesActifs: boolean
+  // A.2 P8-4 : « Preuve » sur la ligne de chaque signataire qui a signe (interrupteur `signature_preuves`).
+  preuvesActives?: boolean
   onJobCreated?: (job: ConsoleJob) => void
   onChange?: () => void
 }) {
@@ -45,6 +49,16 @@ export default function SuiviSignatairesYoutrust({ document, gestesActifs, onJob
 
   if (!id) return null
   const suivi = suiviDeLaDemande(demande)
+  const preuves = preuvesActives ? piecesDeSignature(document).filter((p) => p.genre === 'preuve' && p.signataireIndex != null) : []
+
+  async function ouvrirPreuve(index: number) {
+    const piece = preuves.find((p) => p.signataireIndex === index)
+    if (!piece) return
+    setOccupe(piece.cle); setErreur(null)
+    try { await ouvrirPieceSignature(piece) }
+    catch (err) { setErreur(err instanceof Error ? err.message : 'Preuve indisponible') }
+    finally { setOccupe(null) }
+  }
 
   async function relancer(signerId: string, nom: string, email: string | null) {
     if (!window.confirm(`Renvoyer le lien de signature à ${nom}${email ? ` (${email})` : ''} ?\n\n${document.document_name}`)) return
@@ -92,6 +106,11 @@ export default function SuiviSignatairesYoutrust({ document, gestesActifs, onJob
                     <button type="button" className="ghost-button sst-relancer" disabled={occupe !== null}
                       onClick={() => void relancer(l.providerSignerId!, l.nom, l.email)}>
                       {occupe === l.providerSignerId ? 'Envoi…' : 'Relancer'}
+                    </button>
+                  ) : null}
+                  {l.ton === 'signe' && l.index != null && preuves.some((p) => p.signataireIndex === l.index) ? (
+                    <button type="button" className="ghost-button sst-relancer" disabled={occupe !== null} onClick={() => void ouvrirPreuve(l.index!)}>
+                      {occupe === `preuve-${l.index}` ? 'Ouverture…' : 'Preuve'}
                     </button>
                   ) : null}
                 </li>

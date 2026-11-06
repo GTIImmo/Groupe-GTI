@@ -82,7 +82,7 @@ const app = src("App.tsx");
 const api = src(path.join("lib", "api.ts"));
 const comp = src("SuiviSignatairesYoutrust.tsx");
 const worker = fs.readFileSync(path.resolve(__dirname, "..", "..", "Console", "console_job_worker.js"), "utf8");
-controle("5. le suivi est monté aux TROIS endroits (liste v21, liste classique, suivi du mandat)", (app.match(/<SuiviSignatairesYoutrust document=/g) || []).length === 3);
+controle("5. le suivi est monté aux TROIS endroits (liste v21, liste classique, suivi du mandat)", (app.match(/<SuiviSignatairesYoutrust (preuvesActives=\{preuvesActives\} )?document=/g) || []).length === 3);
 controle("5. gestes = interrupteur Youtrust (le worker les refuse sinon)", (app.match(/gestesActifs=\{signatureYoutrust\}/g) || []).length === 2 && /gestesActifs=\{choixSignature\.youtrust\}/.test(app)
   && /exigerInterrupteurYoutrust\(\);\s*\n\s*const payload = safeJsonParse\(job\.payload_json\)/.test(worker));
 controle("5. Youtrust SEULEMENT : le composant exige provider youtrust + signature_request_id (ImmoSign inchangé)",

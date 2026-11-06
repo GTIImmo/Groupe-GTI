@@ -1007,6 +1007,35 @@ webhook posé par Frédéric ; redémarrage du worker.
 >   ⚠ **Seul effet visible interrupteur éteint** : le document d'essai de 61398 (seule demande Youtrust de la base) montrera
 >   « Signataires — Signé par tous ». ⚠ **Non vu à l'écran** (pas de session locale). Non fait, hors P8-3 : « Signer
 >   maintenant » (`youtrust_signing_link`, lot 6 bis).
+> - ✅ **P8-4 CODÉ (06/11) — COMMITÉ, NON POUSSÉ, NON DÉPLOYÉ ; LES DEUX PATCHS POSÉS EN BASE (accord « Oui, vas-y ») ; WORKER NON REDÉMARRÉ** :
+>   **ouvrir l'original et les preuves** d'un document signé. Mesuré : Youtrust (61398) tout au coffre (original, signé,
+>   3 preuves) ; ImmoSign, 466 signés : ZIP des preuves et de la procédure au coffre pour 424 sur 464 (40 serveur seul),
+>   original au coffre pour 390 (un par document, à la racine du dossier, au nom de sa copie serveur). Les 24 856 chemins
+>   du coffre ont tous la forme `annonces/<annonce>/documents/<id>/…`, et ces dossiers ne contiennent rien d'autre.
+>   **A — la règle du coffre** (`supabase/patch_a2_p8_4_preuves_coffre_2026-11-06.sql` + `_REPETITION` + `_INVERSE`) :
+>   une branche OU — un objet du dossier d'un document qu'on peut déjà lire (fonction `app_console_dossier_document_lisible`,
+>   uuid vérifié avant conversion, numéro d'annonce du chemin, `cloud_available`, même garde d'accès). Répétition : admin
+>   5 fichiers sur 61398, chaque commercial voit EXACTEMENT ce que la garde lui ouvre, chemins mal formés faux, orphelin fermé.
+>   **B — le code à usage unique** (`supabase/patch_a2_p8_4_code_usage_unique_2026-11-06.sql` + `_REPETITION` + `_INVERSE`) :
+>   sauvegarde datée fermée à l'API, `code` -> « masqué » sur la seule ligne (essai à blanc : plus aucun code, heures,
+>   modes et empreintes identiques), et `authenticated` perd la colonne `proofs` (garde les 23 autres ; aucune vue ni
+>   fonction ne lit la table, le webhook et le worker ont la clé de service). **Worker** : `masquerCodesUsageUnique` avant
+>   de ranger la piste JSON (`test_youtrust_sync_signature.js` 43/43 ; TÉMOIN INVERSE contre HEAD : le code restait en
+>   clair). **Écran**, interrupteur `signature_preuves` (absent = éteint) : bouton « Preuves » (liste Documents, suivi du
+>   mandat) -> fenêtre « Pièces de la signature » (original, preuves PDF ou ZIP ; présence au coffre vérifiée à
+>   l'ouverture, une pièce absente est grisée « Sur le serveur seulement ») ; « Preuve » sur la ligne de chaque
+>   signataire Youtrust qui a signé. **Essais** : `test_pieces_signature.cjs` 23/23 (neuf) ; suivi 27/27 ; choix 21/21 ;
+>   cockpit 23/23 ; build vert sur HEAD + ces seuls blocs (le build du dossier de travail tombe sur la modale de statut V2,
+>   travail EN COURS d'une autre session, ligne `formulaire`). ⚠ Non mesuré : si les preuves PDF Youtrust impriment le
+>   code (texte en glyphes). ⚠ Non vu à l'écran.
+>   **POSE (06/11)** — A : règle posée (fonction fermée à anon), **répétition 9/9** (admin 5 fichiers ; chaque commercial,
+>   sur 40 fichiers dont 20 de ses biens : vu = garde, 0 écart ; chemins mal formés faux ; orphelin fermé). ⚠ Le 1er passage
+>   de la répétition a dépassé le délai (la garde sur les 848 ZIP par commercial) : réécrite sur échantillon, verdict
+>   inchangé (la vraie garde). **TÉMOIN INVERSE** : l'ancienne règle remise dans une transaction annulée -> le même
+>   commercial voit 0 de ses 20 ZIP (20 avec la neuve). B : sauvegarde `app_signature_request_avant_masquage_otp_20261106`
+>   (1 ligne, fermée à l'API), 1 ligne masquée, **répétition 6/6** (aucun code en clair ; heure et mode gardés ; `proofs`
+>   refusé à authenticated « 42501 » ; le suivi et les 11 avis se lisent). ⚠ Pendant la mesure, une lecture a affiché les
+>   3 codes déjà consommés de l'essai sandbox : c'est ce que B empêche désormais.
 > **Le nœud** : interrupteur allumé, un mandat généré naît `sans_hektor` (D24) → « signature Hektor » impossible sans le
 > DÉPOSER chez Hektor. Un chemin DORMANT existe (`completerEnvoiDocumentDiffere`, `upload_document_to_hektor` avec
 > `app_document_id` : « aucun appelant ») — jamais éprouvé. À l'inverse, un document venu de Hektor (modèle ImmoSign,

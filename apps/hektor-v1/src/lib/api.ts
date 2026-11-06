@@ -10319,6 +10319,37 @@ export async function createSignedProcedureDocumentUrl(document: ConsoleDocument
   return data.signedUrl
 }
 
+// A.2 P8-4 (06/11/2026) : ouvrir une piece d'un document signe (original, preuve, ZIP ImmoSign) -- lib/piecesSignature.ts.
+// La regle du coffre ne l'ouvre qu'a qui peut deja lire le document. Le coffre repond « not found » aussi bien pour une
+// piece absente (serveur seul) que refusee : le message le dit sans trancher.
+export async function createPieceSignatureUrl(piece: { storagePath: string; bucket: string | null; format: 'pdf' | 'zip' }, expiresIn = 300): Promise<string> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
+  const nom = piece.storagePath.split('/').pop() || 'piece'
+  const { data, error } = await supabase.storage
+    .from(piece.bucket || consoleDocumentsBucket)
+    .createSignedUrl(piece.storagePath, expiresIn, piece.format === 'zip' ? { download: nom } : undefined)
+  if (error || !data?.signedUrl) {
+    const absent = /not found|404|n'existe/i.test(error?.message ?? '')
+    throw new Error(absent ? bvs('Cette pièce n’est pas lisible au coffre : elle n’existe sans doute que sur le serveur.') : (error?.message ?? 'Pièce indisponible'))
+  }
+  return data.signedUrl
+}
+
+// A.2 P8-4 : la piece est-elle AU COFFRE ? (76 signes sur 466 n'y ont pas leur original au 06/11 : on ne propose pas
+// un bouton qui ne s'ouvrirait pas). Une lecture du dossier par piece, filtree sur son nom ; illisible -> « inconnu ».
+export async function piecesAuCoffre(pieces: Array<{ cle: string; storagePath: string; bucket: string | null }>): Promise<Record<string, boolean | null>> {
+  const sortie: Record<string, boolean | null> = {}
+  if (!hasSupabaseEnv || !supabase) { for (const p of pieces) sortie[p.cle] = null; return sortie }
+  await Promise.all(pieces.map(async (p) => {
+    const i = p.storagePath.lastIndexOf('/')
+    const dossier = p.storagePath.slice(0, i)
+    const nom = p.storagePath.slice(i + 1)
+    const { data, error } = await supabase!.storage.from(p.bucket || consoleDocumentsBucket).list(dossier, { search: nom, limit: 20 })
+    sortie[p.cle] = error ? null : (data ?? []).some((o) => o.name === nom)
+  }))
+  return sortie
+}
+
 export async function createPrepareArchivedAnnonceDetailJob(input: {
   dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'numero_dossier' | 'titre_bien'>
   priority?: number
