@@ -6366,6 +6366,54 @@ export async function loadGoogleWorkspaceIdentity(userId: string): Promise<Googl
   return (data as GoogleWorkspaceIdentity | null) ?? null
 }
 
+// ⛔ BON DE VISITE, « Représenté par » -- règle de Frédéric (06/11/2026, audit §56) : « toujours [la personne] connectée,
+//   sauf si admin : prendre le négo du contact ». Négociateur connecté -> lui-même (sa personne du registre, son agence) ;
+//   admin (ou autre) -> le négociateur du CONTACT s'il est actif au registre et n'est pas un compte admin ; sinon rien
+//   (la case reste « A completer »). Jamais une adresse e-mail à la place d'un nom. null = pas pu lire (l'appelant garde
+//   l'ancien comportement, sans l'adresse de l'agenda).
+export type RepresentantBonDeVisite = { nom: string | null; agence: string | null; source: 'utilisateur' | 'negociateur_du_contact' | 'a_completer' }
+
+export async function loadRepresentantBonDeVisite(hektorContactId: string | null | undefined): Promise<RepresentantBonDeVisite | null> {
+  if (!hasSupabaseEnv || !supabase) return null
+  try {
+    const { data: authData } = await supabase.auth.getUser()
+    const uid = authData?.user?.id
+    if (!uid) return null
+    const lireUn = async <T,>(table: string, colonnes: string, filtres: Record<string, string | number>) => {
+      let requete = supabase!.from(table).select(colonnes)
+      for (const [cle, valeur] of Object.entries(filtres)) requete = requete.eq(cle, valeur)
+      const { data, error } = await requete.limit(1)
+      if (error) throw new Error(error.message)
+      return ((data ?? [])[0] ?? null) as T | null
+    }
+    const agenceDuRegistre = async (appAgenceId: number | null | undefined) =>
+      appAgenceId ? (await lireUn<{ nom: string | null }>('app_registre_agence', 'nom', { app_agence_id: appAgenceId }))?.nom ?? null : null
+    const profil = await lireUn<{ role: string | null; display_name: string | null }>('app_user_profile', 'role,display_name', { id: uid })
+    if (profil?.role === 'commercial') {
+      const personne = await lireUn<{ nom: string | null; app_agence_id: number | null }>('app_negociateur_personne', 'nom,app_agence_id', { app_user_id: uid })
+      return { nom: personne?.nom?.trim() || profil.display_name?.trim() || null, agence: await agenceDuRegistre(personne?.app_agence_id), source: 'utilisateur' }
+    }
+    const contactId = String(hektorContactId ?? '').trim()
+    const contact = /^\d+$/.test(contactId)
+      ? await lireUn<{ hektor_negociateur_id: string | null; agence_nom: string | null }>('app_contact_current', 'hektor_negociateur_id,agence_nom', { hektor_contact_id: contactId })
+      : null
+    const idNego = String(contact?.hektor_negociateur_id ?? '').trim()
+    const vide: RepresentantBonDeVisite = { nom: null, agence: contact?.agence_nom?.trim() || null, source: 'a_completer' }
+    if (!idNego) return vide
+    const fiche = await lireUn<{ app_personne_id: number }>('app_negociateur_fiche', 'app_personne_id', { sorte: 'fiche_negociateur', hektor_negociateur_id: idNego, actif_chez_hektor: 'true' })
+    if (!fiche) return vide
+    const personne = await lireUn<{ nom: string | null; actif: boolean | null; app_user_id: string | null }>('app_negociateur_personne', 'nom,actif,app_user_id', { app_personne_id: fiche.app_personne_id })
+    if (!personne || personne.actif !== true) return vide
+    if (personne.app_user_id) {
+      const compte = await lireUn<{ role: string | null }>('app_user_profile', 'role', { id: personne.app_user_id })
+      if (compte?.role && compte.role !== 'commercial') return vide
+    }
+    return { nom: personne.nom?.trim() || null, agence: vide.agence, source: 'negociateur_du_contact' }
+  } catch {
+    return null
+  }
+}
+
 export async function loadUserNegotiatorContext(email: string | null | undefined): Promise<UserNegotiatorContext | null> {
   const normalized = normalizeEmail(email)
   if (!normalized) return null

@@ -60,6 +60,8 @@ import {
   type RepartitionPersonne,
   type RepartitionLigne,
   loadUserNegotiatorContext,
+  loadRepresentantBonDeVisite,
+  type RepresentantBonDeVisite,
   loadUserProfile,
   loadGoogleWorkspaceIdentity,
   loadGoogleCalendarEventLinks,
@@ -45019,7 +45021,7 @@ function visitVoucherEditableHtml(value: string | null | undefined, fallback = '
   return `<span class="editable-field" data-editable="true"${syncAttribute} contenteditable="false" spellcheck="false">${escapeHtml(cleanValue)}</span>`
 }
 
-function visitVoucherHtml(contact: AppContact, event: GoogleCalendarEventLink, relations: AppContactRelation[], propertyPhotoUrl?: string | null) {
+function visitVoucherHtml(contact: AppContact, event: GoogleCalendarEventLink, relations: AppContactRelation[], propertyPhotoUrl?: string | null, representant?: RepresentantBonDeVisite | null) {
   const relation = googleAgendaVisitRelation(event, relations)
   const contactName = appContactAgendaLabel(contact)
   const contactAddress = [contact.code_postal, contact.ville].filter(Boolean).join(' ')
@@ -45049,8 +45051,10 @@ function visitVoucherHtml(contact: AppContact, event: GoogleCalendarEventLink, r
     `Rendez-vous : ${formatDateTime(event.starts_at)}`,
   ].filter(Boolean)
   const voucherNumber = `BDV-${event.id.slice(0, 8).toUpperCase()}`
-  const agencyName = safeText(contact.agence_nom) || 'Groupe GTI'
-  const negotiatorName = safeText(contact.commercial_nom) || safeText(event.google_calendar_email) || 'A completer'
+  // ⛔ 06/11/2026 (§56) : « Représenté par » suit la règle de Frédéric (loadRepresentantBonDeVisite) -- la personne connectée
+  //   si elle est négociateur, sinon le négo du contact. Plus jamais l'ADRESSE de l'agenda (c'était celle d'un admin).
+  const agencyName = safeText(representant?.agence) || safeText(contact.agence_nom) || 'Groupe GTI'
+  const negotiatorName = (representant ? safeText(representant.nom) : safeText(contact.commercial_nom)) || 'A completer'
   return `<!doctype html>
 <html lang="fr">
 <head>
@@ -45191,8 +45195,9 @@ function visitVoucherHtml(contact: AppContact, event: GoogleCalendarEventLink, r
 </html>`
 }
 
-function openVisitVoucherPrint(contact: AppContact, event: GoogleCalendarEventLink, relations: AppContactRelation[], propertyPhotoUrl?: string | null, targetWindow?: Window | null) {
-  const html = visitVoucherHtml(contact, event, relations, propertyPhotoUrl)
+async function openVisitVoucherPrint(contact: AppContact, event: GoogleCalendarEventLink, relations: AppContactRelation[], propertyPhotoUrl?: string | null, targetWindow?: Window | null) {
+  const representant = await loadRepresentantBonDeVisite(contact.hektor_contact_id || safeText(event.hektor_contact_id)).catch(() => null)
+  const html = visitVoucherHtml(contact, event, relations, propertyPhotoUrl, representant)
   if (writeVisitVoucherWindow(targetWindow, html)) return
   const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
   const url = URL.createObjectURL(blob)

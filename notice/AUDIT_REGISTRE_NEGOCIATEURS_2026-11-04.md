@@ -1673,3 +1673,14 @@ Franck 5 du 2 au 8/06), 10 sur un bien, 0 à venir, 0 créé par un négociateur
 **Correctif proposé** : bon de visite → « Représenté par » = le négo propriétaire de l'agenda s'il est négociateur, sinon le
 négo ACTIF du bien, sinon l'agence seule (champ vide « À compléter ») ; « Agence » = l'agence du bien ; jamais une adresse
 e-mail à la place d'un nom. Agenda : décision à prendre (voir le message du 06/11).
+
+**Décision de Frédéric (06/11) pour le bon de visite : « toujours connecté sauf si admin prendre négo du contact ».** CODÉ (front) :
+`loadRepresentantBonDeVisite` (api.ts) — négociateur connecté → lui-même (personne du registre par son compte, son agence ; nom
+de profil s'il manque au registre) ; admin → le négo du CONTACT (`app_contact_current.hektor_negociateur_id`) s'il a une fiche
+active, une personne active et pas de compte autre que « commercial » ; sinon la case reste « A completer » (agence du contact).
+`visitVoucherHtml` ne retombe plus JAMAIS sur l'adresse de l'agenda (`event.google_calendar_email`) ; `openVisitVoucherPrint`
+résout le représentant au moment d'imprimer (les 6 points d'impression en profitent, la fenêtre est ouverte avant).
+Contrôles : `npm run build` vert ; essai hors ligne sur la vraie fonction extraite, 8/8 (LEGRAND connectée → elle-même et
+Saint-Étienne, même sur un contact de GENTES ; admin → GENTES ; contact sans négo / négo parti / négo admin / invité → à
+compléter ; panne → ancien nom du contact, jamais l'adresse). Témoin : l'ancien gabarit l. 45053 retombait sur
+`google_calendar_email`. Non vu à l'écran. L'agenda (un admin peut-il poser un RDV client sur son agenda ?) : NON TRANCHÉ.
