@@ -23078,6 +23078,11 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           statusChangeCloseEtat, setStatusChangeCloseEtat, statusChangeCloseRaison, setStatusChangeCloseRaison,
           statusChangeCloseDate, setStatusChangeCloseDate, statusChangeCloseReason, setStatusChangeCloseReason,
           hektorClosureEtatOptions, hektorClosureRaisonsFor, offreVerrouilleeParSonDossier, rattachementOffreProposee,
+          setStatusChangeAffaireChoisie, AFFAIRE_PAR_STATUT, AFFAIRE_ETATS_MORTS, AFFAIRE_GENRE_LABEL, affaireEtatLabel,
+          affairesVivantesPourStatut, avisPlusieursAffaires, gardeFouPourStatut, dossiersOuvertsDuBien, bienEngage,
+          offreEcarteeSurBienEngage, ckPartyName, parseJson, carnetAffaires, carnetEtats, carnetEcarts, carnetEcartErreur,
+          setCarnetEcartErreur, setCarnetRelecture, isAdmin, gestesEcartCarnet, trancherAffaireCarnetEcart, personnesEcarts,
+          personnesEcartErreur, setPersonnesEcartErreur, fermerAffairePersonneEcart, rechargerPersonnesEcarts, HistoriqueOffre,
           affaireCourante: affaireCourantePourStatut(),
         }}
           />

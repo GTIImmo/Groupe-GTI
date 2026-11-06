@@ -13,20 +13,22 @@
 // Lot 1 : en-tête, bandeau du bien, parcours (Actuel / Conseillé / Hors parcours / Lecture seule), guide GTI.
 // Lot 2 : le formulaire offre / compromis / vente (FormulaireTransaction), chaque saisie reprise mot pour mot.
 // Lot 3 : Actif, Clos (Cloture) et l'offre verrouillée par son dossier en lecture seule.
-// Les affaires du bien (lot 4) et les boutons d'envoi (lot 5) suivent : d'ici là, l'ancienne modale reste en
-// service (interrupteur éteint).
+// Lot 4 : les affaires du bien et leurs bandeaux (AffairesDuBien).
+// Les boutons d'envoi (lot 5) suivent : d'ici là, l'ancienne modale reste en service (interrupteur éteint).
 
 import { useState, type ComponentType, type Dispatch, type ReactNode, type SetStateAction } from 'react'
 import type { Dossier } from './types'
 import { situationDuBien, type AffaireLedgerRow, type GardesParcours, type HektorAnnonceStatusTarget } from './lib/statutParcours'
 import { DESCRIPTION_CARTE, guidePour } from './lib/statutGuide'
 import type {
-  AffaireCondition, ConditionCatalogueRow, DataScope, MandantContactSearchOption, RepartitionLigne, RepartitionPersonne,
+  AffaireCondition, AffairePersonneEcart, ConditionCatalogueRow, DataScope, MandantContactSearchOption, RepartitionLigne, RepartitionPersonne,
 } from './lib/statutV2Types'
 import { bvs } from './lib/bienvuTexte'
 
 type Setter<T> = Dispatch<SetStateAction<T>>
 type Cote = 'entree' | 'sortie'
+/** Une partie d'affaire, comme App.tsx la déclare (CkAffaireParty). */
+type CkAffaireParty = { id?: string | null; civilite?: string | null; nom?: string | null; prenom?: string | null; coordonnees?: unknown; app_contact_id?: string | number | null }
 /** Les motifs de clôture, comme App.tsx les déclare (formulaire PopinClos de Hektor). */
 type HektorClosureEtat = 'choiceNonRenouv' | 'choiceVendu' | 'choiceAutre'
 
@@ -107,7 +109,34 @@ export type FormulaireStatutProps = {
   hektorClosureEtatOptions: Array<{ value: HektorClosureEtat; label: string; raisons: Array<{ value: string; label: string }> }>
   hektorClosureRaisonsFor: (etat: HektorClosureEtat) => Array<{ value: string; label: string }>
   offreVerrouilleeParSonDossier: (lignes: AffaireLedgerRow[], affaire: AffaireLedgerRow | null | undefined) => AffaireLedgerRow | null
-  rattachementOffreProposee: (lignes: AffaireLedgerRow[], offre: AffaireLedgerRow) => { quand: string } | null
+  rattachementOffreProposee: (lignes: AffaireLedgerRow[], offre: AffaireLedgerRow) => { quand: string; compromis: AffaireLedgerRow } | null
+  // Lot 4 (06/11) — les affaires du bien et leurs bandeaux.
+  setStatusChangeAffaireChoisie: (value: number | null) => void
+  AFFAIRE_PAR_STATUT: Partial<Record<HektorAnnonceStatusTarget, string>>
+  AFFAIRE_ETATS_MORTS: Set<string>
+  AFFAIRE_GENRE_LABEL: Record<string, string>
+  affaireEtatLabel: (kind: string, state: string | null | undefined) => string
+  affairesVivantesPourStatut: () => AffaireLedgerRow[]
+  avisPlusieursAffaires: (genre: string, vivantes: AffaireLedgerRow[]) => { ton: 'normal' | 'avertir' | 'alerte'; titre: string; detail: string } | null
+  gardeFouPourStatut: () => { bloque: boolean; titre: string; detail: string } | null
+  dossiersOuvertsDuBien: (lignes: AffaireLedgerRow[]) => Array<{ chaine: string; ouvert: boolean }>
+  bienEngage: (lignes: AffaireLedgerRow[]) => boolean
+  offreEcarteeSurBienEngage: (lignes: AffaireLedgerRow[], affaire: AffaireLedgerRow | null | undefined) => boolean
+  ckPartyName: (p?: CkAffaireParty | null) => string
+  parseJson: <T>(value: string | null | undefined, fallback: T) => T
+  carnetAffaires: Map<number, Record<string, string>>
+  carnetEtats: Map<number, Record<string, string>>
+  carnetEcarts: Map<number, Set<string>>
+  carnetEcartErreur: string; setCarnetEcartErreur: Setter<string>
+  setCarnetRelecture: Setter<number>
+  isAdmin: boolean
+  gestesEcartCarnet: (etat: string) => Array<{ decision: 'hektor' | 'app' | 'attendre'; libelle: string; aide: string }>
+  trancherAffaireCarnetEcart: (appAffaireId: number, champ: string, decision: 'hektor' | 'app' | 'attendre') => Promise<void>
+  personnesEcarts: AffairePersonneEcart[]
+  personnesEcartErreur: string; setPersonnesEcartErreur: Setter<string>
+  fermerAffairePersonneEcart: (id: number) => Promise<void>
+  rechargerPersonnesEcarts: () => Promise<void>
+  HistoriqueOffre: ComponentType<{ propositions: unknown }>
   SelecteurNotaire: ComponentType<{
     libelle: string; aide: string; nom: string; numero: string; scope: DataScope | null | undefined
     onChoisir: (option: MandantContactSearchOption) => void; onRetirer: () => void
@@ -184,11 +213,12 @@ function Champ(props: { libelle: string; requis?: boolean; pastille?: Pastille |
   )
 }
 
-function Section(props: { titre: string; dest?: 'hektor' | 'nous' | 'mixte'; children: ReactNode; pied?: ReactNode }) {
+function Section(props: { titre: string; dest?: 'hektor' | 'nous' | 'mixte'; compte?: number; children: ReactNode; pied?: ReactNode }) {
   return (
     <section className="stv2-sec">
       <div className="stv2-sech">
         <h4>{props.titre}</h4>
+        {props.compte != null ? <span className="stv2-compte">{props.compte}</span> : null}
         {props.dest === 'hektor' ? <span className="stv2-dest stv2-dest-h">envoyé à Hektor</span> : null}
         {props.dest === 'nous' ? <span className="stv2-dest stv2-dest-n">gardé chez nous</span> : null}
       </div>
@@ -713,6 +743,284 @@ function FormulaireTransaction(props: {
   )
 }
 
+/** Les affaires du bien et leurs bandeaux (lot 4). ⛔ Tout est repris de l'ancien bloc : les mêmes calculs (sur les
+ *  mêmes fonctions d'App.tsx, passées), les mêmes conditions d'affichage, les mêmes gestes mot pour mot (« Choisir »,
+ *  « J'ai vu, fermer », les gestes admin sur un écart du carnet). Aucune requête nouvelle : statusChangeAffaires est
+ *  déjà chargée, et ne filtre rien (c'est ce qui permet de retrouver une affaire née dans l'app). */
+function AffairesDuBien(props: {
+  f: FormulaireStatutProps
+  statusChangeStatus: HektorAnnonceStatusTarget
+  statusChangeAffaires: AffaireLedgerRow[]
+}) {
+  const { statusChangeStatus, statusChangeAffaires } = props
+  const {
+    affaireCourante, setStatusChangeAffaireChoisie, AFFAIRE_PAR_STATUT, AFFAIRE_ETATS_MORTS, AFFAIRE_GENRE_LABEL,
+    affaireEtatLabel, affairesVivantesPourStatut, avisPlusieursAffaires, gardeFouPourStatut, dossiersOuvertsDuBien,
+    bienEngage, offreEcarteeSurBienEngage, affaireEstVivante, rattachementOffreProposee, ckPartyName, parseJson,
+    carnetAffaires, carnetEtats, carnetEcarts, carnetEcartErreur, setCarnetEcartErreur, setCarnetRelecture, isAdmin,
+    gestesEcartCarnet, trancherAffaireCarnetEcart, personnesEcarts, personnesEcartErreur, setPersonnesEcartErreur,
+    fermerAffairePersonneEcart, rechargerPersonnesEcarts, HistoriqueOffre, formatDate, formatPrice,
+  } = props.f
+  if (statusChangeAffaires.length === 0) {
+    return (
+      <Section titre="Les affaires de ce bien">
+        <p className="stv2-note">Aucune affaire lue pour ce bien : ni offre, ni compromis, ni vente.</p>
+      </Section>
+    )
+  }
+  const courante = affaireCourante
+  const vivantesDuGenre = affairesVivantesPourStatut()
+  const ambigu = vivantesDuGenre.length > 1
+  const avis = avisPlusieursAffaires(AFFAIRE_PAR_STATUT[statusChangeStatus] ?? '', vivantesDuGenre)
+  const garde = gardeFouPourStatut()
+  const dossiersClos = new Set(
+    dossiersOuvertsDuBien(statusChangeAffaires)
+      .filter((d) => !d.ouvert).map((d) => d.chaine))
+  const engage = bienEngage(statusChangeAffaires)
+  const GENRE = AFFAIRE_GENRE_LABEL
+  const etatLabel = affaireEtatLabel
+  const mandats = Array.from(new Set(
+    statusChangeAffaires
+      .map((a) => String(a.numero_mandat ?? '').trim())
+      .filter(Boolean),
+  ))
+  const visibles = personnesEcarts.filter((e) => statusChangeAffaires.some(
+    (a) => a.kind === e.kind && String(a.hektor_affaire_id ?? '').trim() === e.hektor_affaire_id))
+  const ton = (t: string) => (t === 'normal' ? 'info' : t === 'alerte' ? 'alerte' : 'warn')
+  return (
+    <Section titre="Les affaires de ce bien" compte={statusChangeAffaires.length}>
+      {garde ? (
+        <p className={`stv2-bandeau is-${garde.bloque ? 'alerte' : 'info'}`} role={garde.bloque ? 'alert' : 'status'}>
+          <b>{garde.titre}</b><span>{garde.detail}</span>
+        </p>
+      ) : null}
+      {avis && !courante ? (
+        <p className={`stv2-bandeau is-${ton(avis.ton)}`} role={avis.ton === 'normal' ? 'status' : 'alert'}>
+          <b>{avis.titre}</b><span>{avis.detail}</span>
+        </p>
+      ) : null}
+      {engage && (AFFAIRE_PAR_STATUT[statusChangeStatus] ?? '') === 'offre' ? (
+        <p className="stv2-bandeau is-info" role="status">
+          <b>Ce bien est déjà engagé</b>
+          <span>
+            Une offre acceptée ou un compromis est en cours : on n’enregistre pas de nouvelle offre, et on ne reprend
+            pas une autre offre tant que ce dossier vit — il faudrait d’abord le libérer. Une offre d’un autre acquéreur
+            encore en cours peut seulement être refusée (« Choisir »), sauf une offre oubliée, datée d’avant le
+            compromis : elle peut alors être acceptée pour s’y rattacher. Les actions ci-dessous visent l’offre en cours.
+          </span>
+        </p>
+      ) : null}
+      {courante && !affaireEstVivante(courante) ? (
+        <p className="stv2-bandeau is-alerte" role="alert">
+          <b>
+            Tu reprends {GENRE[courante.kind] ?? courante.kind}
+            {' '}{etatLabel(courante.kind, courante.state) ? `« ${etatLabel(courante.kind, courante.state)} »` : ''}
+          </b>
+          <span>
+            {bvs("Hektor l'accepte, et le geste ajoutera une ligne a son historique plutot que d'en corriger une. Mais rouvrir un dossier terminé peut en laisser deux ouverts sur ce bien : un compromis créé ensuite ne saurait plus auquel se rattacher, et partirait seul.")}
+          </span>
+        </p>
+      ) : null}
+      {mandats.length >= 2 ? (
+        <p className="stv2-bandeau is-info" role="status">
+          <b>{mandats.length} mandats différents sur ce bien</b>
+          <span>({mandats.join(', ')}). Les affaires les plus anciennes appartiennent à une mise en vente précédente :
+            vérifie le numéro avant d’agir.</span>
+        </p>
+      ) : null}
+      {visibles.length ? (
+        <div className="stv2-perdues">
+          {visibles.map((e) => (
+            <p key={e.id} className="stv2-bandeau is-alerte" role="alert">
+              <b>
+                Hektor n’a pas gardé {e.role === 'mandant' ? 'le mandant' : 'l’acquéreur'}{' '}
+                {e.contact_nom || `n° ${e.contact_id}`}
+              </b>
+              <span>
+                Sur {({ offre: "l'offre", compromis: 'le compromis', vente: 'la vente' } as Record<string, string>)[e.kind] ?? e.kind} n° {e.hektor_affaire_id},
+                {' '}envoi du {formatDate(e.constate_le)}. Hektor n’a signalé aucune erreur : la personne a simplement
+                {' '}disparu de la transaction. Vérifie la fiche chez Hektor, puis renvoie-la ou ferme ce message.
+              </span>
+              <span>
+                <button type="button" className="stv2-mini" onClick={async () => {
+                  setPersonnesEcartErreur('')
+                  try {
+                    await fermerAffairePersonneEcart(e.id)
+                    await rechargerPersonnesEcarts()
+                  } catch (err) {
+                    setPersonnesEcartErreur(err instanceof Error ? err.message : String(err))
+                  }
+                }}>
+                  J'ai vu, fermer
+                </button>
+              </span>
+            </p>
+          ))}
+          {personnesEcartErreur ? (
+            <small className="stv2-erreur">Fermeture impossible : {personnesEcartErreur}</small>
+          ) : null}
+        </div>
+      ) : null}
+      <ul className="stv2-affaires">
+        {statusChangeAffaires.map((a) => {
+          const morte = AFFAIRE_ETATS_MORTS.has(String(a.state ?? '').trim().toLowerCase())
+          const visee = courante != null && courante.app_affaire_id === a.app_affaire_id
+          // `acquereur_json` est du jsonb : PostgREST le rend déjà désérialisé (voir l'ancien bloc).
+          const acqBrut: unknown = a.acquereur_json
+          const acq = ckPartyName(
+            typeof acqBrut === 'string'
+              ? parseJson<CkAffaireParty | null>(acqBrut, null)
+              : (acqBrut as CkAffaireParty | null),
+          )
+          const numero = String(a.hektor_affaire_id ?? '').trim()
+          const partie = Boolean(numero) && a.present_in_hektor === false
+          // Deux sources, dans l'ordre du contrat d'autorité : le carnet (l'app) prime, puis la colonne du registre.
+          const carnet = carnetAffaires.get(Number(a.app_affaire_id)) ?? {}
+          const etats = carnetEtats.get(Number(a.app_affaire_id)) ?? {}
+          const champ = (cle: string, colonne?: unknown) => {
+            const duCarnet = String(carnet[cle] ?? '').trim()
+            if (duCarnet) return { v: duCarnet, app: true, cle }
+            const duLedger = colonne == null ? '' : String(colonne).trim()
+            return { v: duLedger, app: false, cle }
+          }
+          const notaireAffiche = <T extends { v: string; app: boolean }>(x: T, id: unknown, nom: unknown): T => {
+            const n = nom == null ? '' : String(nom).trim()
+            return x.app && n && x.v === String(id ?? '').trim() ? { ...x, v: n } : x
+          }
+          const argent = <T extends { v: string }>(x: T): T =>
+            x.v ? { ...x, v: formatPrice(x.v) } : x
+          const jour = <T extends { v: string }>(x: T): T =>
+            x.v ? { ...x, v: formatDate(x.v) } : x
+          const detail: Array<[string, { v: string; app: boolean; cle: string }]> = [
+            ['Montant', argent(champ('montant', a.montant))],
+            ['Prix public', argent(champ('prix_publique'))],
+            ['Prix net vendeur', argent(champ('prix_net_vendeur'))],
+            ['Honoraires', argent(champ('honoraires'))],
+            ['Taux honoraires', champ('taux_honoraires').v ? { ...champ('taux_honoraires'), v: `${champ('taux_honoraires').v} %` } : champ('taux_honoraires')],
+            ['Validité', champ('jours_validite', a.jours_validite).v ? { ...champ('jours_validite', a.jours_validite), v: `${champ('jours_validite', a.jours_validite).v} jours` } : champ('jours_validite', a.jours_validite)],
+            ['Rétractation', champ('jours_retractation').v
+              ? { ...champ('jours_retractation'), v: `${champ('jours_retractation').v} jours` }
+              : a.date_fin_retractation
+                ? { v: `jusqu'au ${formatDate(a.date_fin_retractation)}`, app: false, cle: 'jours_retractation' }
+                : champ('jours_retractation')],
+            ['Séquestre', argent(champ('sequestre', a.sequestre))],
+            ['Date', jour(champ('date', a.date))],
+            ["Date d'acte", jour(champ('date_acte', a.date_acte))],
+            ['Notaire acquéreur', notaireAffiche(champ('notaire_id', a.notaire_acquereur_nom || a.notaire_acquereur_id), a.notaire_acquereur_id, a.notaire_acquereur_nom)],
+            ['Notaire vendeur', notaireAffiche(champ('notaire_mandant_id', a.notaire_mandant_nom || a.notaire_mandant_id), a.notaire_mandant_id, a.notaire_mandant_nom)],
+            ['N° mandat', (() => {
+              const m = champ('numero_mandat', a.numero_mandat)
+              const devine = !m.app && m.v
+                && String(a.mandat_origine ?? '').startsWith('deduit')
+              return devine ? { ...m, v: `${m.v} · déduit` } : m
+            })()],
+          ]
+          // Qui peut-on désigner (règle du 08/09, corrigée le 26/10) : la même expression que l'ancien bloc.
+          const choisissable = (() => {
+            const genreVise = AFFAIRE_PAR_STATUT[statusChangeStatus] ?? ''
+            if (visee || a.kind !== genreVise) return false
+            if (genreVise === 'offre') return !engage || offreEcarteeSurBienEngage(statusChangeAffaires, a)
+            return ambigu && affaireEstVivante(a)
+              && !(a.app_chaine_id != null
+                   && dossiersClos.has(String(a.app_chaine_id)))
+          })()
+          const rattachement = rattachementOffreProposee(statusChangeAffaires, a)
+          return (
+            <li key={a.app_affaire_id}>
+              <details className={`stv2-aff${morte ? ' is-morte' : ''}${visee ? ' is-visee' : ''}`}>
+                <summary className="stv2-aff-ligne">
+                  <b className="stv2-aff-g">{GENRE[a.kind] ?? a.kind}</b>
+                  <span className={`stv2-aff-e${morte ? ' is-morte' : ''}`}>{etatLabel(a.kind, a.state)}</span>
+                  <span className="stv2-aff-m">{a.montant != null && String(a.montant).trim() ? formatPrice(a.montant) : '—'}</span>
+                  <span className="stv2-aff-d">{a.date ? formatDate(a.date) : '—'}</span>
+                  <span className="stv2-aff-a">{acq || '—'}</span>
+                  <span className="stv2-aff-t">
+                    {a.app_chaine_id != null ? (
+                      <i className={dossiersClos.has(String(a.app_chaine_id)) ? 'stv2-tag is-clos' : 'stv2-tag'}>
+                        dossier n° {a.app_chaine_id}
+                        {dossiersClos.has(String(a.app_chaine_id)) ? ' · terminé' : ''}
+                      </i>
+                    ) : null}
+                    {choisissable ? (
+                      <button type="button" className="stv2-mini"
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation()
+                                          setStatusChangeAffaireChoisie(a.app_affaire_id) }}>
+                        Choisir
+                      </button>
+                    ) : null}
+                    {visee ? <b className="stv2-tag is-visee">visée par les actions</b> : null}
+                    {partie ? <i className="stv2-tag is-alerte">plus dans Hektor</i> : null}
+                    {personnesEcarts.some((e) => e.kind === a.kind && e.hektor_affaire_id === numero)
+                      ? <i className="stv2-tag is-alerte">personne non gardée par Hektor</i> : null}
+                    {!numero ? <i className="stv2-tag">née dans l’app, sans numéro Hektor</i> : null}
+                    {rattachement ? (
+                      <i className="stv2-tag">{rattachement.quand === 'fait'
+                        ? `rattachée au compromis${rattachement.compromis.date ? ` du ${formatDate(rattachement.compromis.date)}` : ''}`
+                        : `sera rattachée cette nuit au compromis${rattachement.compromis.date ? ` du ${formatDate(rattachement.compromis.date)}` : ''}`}</i>
+                    ) : null}
+                  </span>
+                </summary>
+                <div className="stv2-aff-corps">
+                  <div className="stv2-aff-grille">
+                    {detail.map(([k, x]) => {
+                      // On ne qualifie QUE ce qui vient du carnet (3.1) ; les mots des états sont ceux de R3 (23/10).
+                      const etat = x.app ? String(etats[x.cle] ?? '') : ''
+                      const dit = etat === 'conflit' ? 'conflit'
+                        : etat === 'en_attente' ? 'pas encore parti'
+                        : etat === 'arrivee' ? 'arrivé'
+                        : etat === 'echec' ? 'échec, non envoyé'
+                        : etat === 'sans_objet' ? 'sans objet' : ''
+                      // R4 (26/10) : un champ en écart qui attend la réponse de l'admin porte ses deux gestes.
+                      const gestes = isAdmin && x.app
+                        && carnetEcarts.get(Number(a.app_affaire_id))?.has(x.cle)
+                        ? gestesEcartCarnet(etat) : []
+                      return (
+                        <div key={k} className={x.app ? 'is-app' : undefined}>
+                          <span className="stv2-aff-k">{k}</span>
+                          <span className="stv2-aff-v">
+                            {x.v || '—'}
+                            {dit ? <i className={`stv2-etat is-${etat}`}>{dit}</i> : null}
+                            {gestes.map((g) => (
+                              <button key={g.decision} type="button" className="stv2-mini" title={g.aide}
+                                onClick={async (e) => {
+                                  e.preventDefault(); e.stopPropagation()
+                                  setCarnetEcartErreur('')
+                                  try {
+                                    await trancherAffaireCarnetEcart(Number(a.app_affaire_id), x.cle, g.decision)
+                                    setCarnetRelecture((n) => n + 1)
+                                  } catch (err) {
+                                    setCarnetEcartErreur(err instanceof Error ? err.message : String(err))
+                                  }
+                                }}>
+                                {g.libelle}
+                              </button>
+                            ))}
+                          </span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                  {carnetEcartErreur && carnetEcarts.has(Number(a.app_affaire_id)) ? (
+                    <p className="stv2-erreur">Le geste n’est pas passé : {carnetEcartErreur}</p>
+                  ) : null}
+                  {a.kind === 'offre' ? <HistoriqueOffre propositions={a.propositions_json} /> : null}
+                  <div className="stv2-aff-pied">
+                    <span>N° app <b>{a.app_affaire_id}</b></span>
+                    <span>N° Hektor <b>{numero || '—'}</b></span>
+                    <span className="stv2-aff-leg">Les valeurs sur fond vert viennent de ta saisie : elles survivent au run
+                      de nuit. <b>Conflit</b> : quelqu’un a changé cette valeur chez Hektor. <b>Pas encore parti</b> :
+                      l’envoi n’est pas passé.</span>
+                  </div>
+                </div>
+              </details>
+            </li>
+          )
+        })}
+      </ul>
+    </Section>
+  )
+}
+
 /** Clos (lot 3). ⛔ Les gestes sont ceux de l'ancien bloc, mot pour mot. Les 3 motifs deviennent des cartes ; la
  *  raison reste un menu (ses valeurs dépendent du motif). Le texte de fin dit ce que le code fait VRAIMENT : depuis le
  *  28/08 seul le STATUT part chez Hektor (prouvé le 21/10 sur 62774 : `closure: cloture_locale_uniquement`) ; l'ancien
@@ -909,9 +1217,10 @@ export default function ModaleStatutV2(props: ModaleStatutV2Props) {
               </p>
             </Section>
           )}
+          <AffairesDuBien f={formulaire} statusChangeStatus={statusChangeStatus} statusChangeAffaires={statusChangeAffaires} />
           <div className="stv2-attente">
-            Lot 3 de la refonte : les affaires du bien arrivent au lot 4 et les boutons d’envoi au lot 5. Interrupteur
-            éteint, l’ancienne modale reste en service.
+            Lot 4 de la refonte : les boutons d’envoi et leurs explications arrivent au lot 5. Interrupteur éteint,
+            l’ancienne modale reste en service.
           </div>
         </div>
 

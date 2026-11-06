@@ -374,3 +374,58 @@
 @media (max-width: 767px) {
   .stv2 .stv2-motifs { grid-template-columns: 1fr; }
 }
+
+/* ═══ Lot 4 (06/11) — les affaires du bien et leurs bandeaux ═══ */
+.stv2 .stv2-compte { padding: 1px 8px; border-radius: 999px; background: var(--stv2-ink); color: #ffffff; font-size: 11.5px; font-weight: 700; }
+.stv2 .stv2-bandeau { margin: 0; display: flex; flex-direction: column; gap: 3px; padding: 10px 14px; border-radius: 12px; font-size: 13px; line-height: 1.5; }
+.stv2 .stv2-bandeau b { font-size: 13.5px; }
+.stv2 .stv2-bandeau.is-info { background: #f2f5fb; box-shadow: inset 0 0 0 1px #d9e1ef; color: #1f2f52; }
+.stv2 .stv2-bandeau.is-warn { background: #fff8ec; box-shadow: inset 0 0 0 1px #f0d8aa; color: #5e3a0b; }
+.stv2 .stv2-bandeau.is-alerte { background: #fbeceb; box-shadow: inset 0 0 0 1px #ecc4c2; color: #6b1f1d; }
+.stv2 .stv2-perdues { display: flex; flex-direction: column; gap: 8px; }
+.stv2 .stv2-erreur { margin: 0; font-size: 12px; color: #9e3532; }
+.stv2 .stv2-mini {
+  height: 28px; padding: 0 11px; border: 0; border-radius: 8px; cursor: pointer; white-space: nowrap;
+  font: inherit; font-size: 12.5px; font-weight: 700; color: var(--stv2-ink); background: #ffffff;
+  box-shadow: inset 0 0 0 1px var(--stv2-line-2); transition: box-shadow 150ms var(--stv2-ease);
+}
+.stv2 .stv2-mini:hover { box-shadow: inset 0 0 0 1px var(--stv2-ink); }
+.stv2 .stv2-mini:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(197, 0, 95, 0.35); }
+.stv2 .stv2-affaires { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.stv2 .stv2-aff { border-radius: 10px; background: #ffffff; box-shadow: inset 0 0 0 1px var(--stv2-line); }
+.stv2 .stv2-aff.is-visee { box-shadow: inset 0 0 0 1.5px var(--stv2-magenta); background: #fffafc; }
+.stv2 .stv2-aff.is-morte { background: var(--stv2-fond); }
+.stv2 .stv2-aff-ligne {
+  display: grid; grid-template-columns: 86px 96px 92px 86px minmax(0, 1fr); gap: 10px; align-items: center;
+  padding: 9px 12px; cursor: pointer; font-size: 13px; list-style: none;
+}
+.stv2 .stv2-aff-ligne::-webkit-details-marker { display: none; }
+.stv2 .stv2-aff-ligne:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(197, 0, 95, 0.35); border-radius: 10px; }
+.stv2 .stv2-aff-e { font-weight: 600; color: #1f5e41; }
+.stv2 .stv2-aff-e.is-morte { color: #8a8f91; text-decoration: line-through; }
+.stv2 .stv2-aff-m { font-weight: 600; text-align: right; }
+.stv2 .stv2-aff-d { color: var(--stv2-mute); }
+.stv2 .stv2-aff-a { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stv2 .stv2-aff-t { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.stv2 .stv2-aff-t:empty { display: none; }
+.stv2 .stv2-tag { font-style: normal; font-size: 11.5px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: #f1f2f3; color: #4a4f51; }
+.stv2 .stv2-tag.is-clos { background: #eceeef; color: #6b7072; }
+.stv2 .stv2-tag.is-visee { background: var(--stv2-magenta); color: #ffffff; }
+.stv2 .stv2-tag.is-alerte { background: #fbeceb; color: #8a2b29; }
+.stv2 .stv2-aff-corps { padding: 4px 12px 12px; border-top: 1px solid #f0f1f2; display: flex; flex-direction: column; gap: 10px; }
+.stv2 .stv2-aff-grille { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 16px; padding-top: 8px; }
+.stv2 .stv2-aff-grille > div { display: flex; flex-direction: column; gap: 2px; padding: 4px 6px; border-radius: 6px; }
+.stv2 .stv2-aff-grille > div.is-app { background: #eef7f2; }
+.stv2 .stv2-aff-k { font-size: 11.5px; color: var(--stv2-mute); }
+.stv2 .stv2-aff-v { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 13px; font-weight: 600; }
+.stv2 .stv2-etat { font-style: normal; font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: #f1f2f3; color: #4a4f51; }
+.stv2 .stv2-etat.is-conflit, .stv2 .stv2-etat.is-echec { background: #fbeceb; color: #8a2b29; }
+.stv2 .stv2-etat.is-en_attente { background: #fff1dc; color: #7a4a0e; }
+.stv2 .stv2-etat.is-arrivee { background: #e6f3ec; color: #1f5e41; }
+.stv2 .stv2-aff-pied { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12px; color: var(--stv2-mute); }
+.stv2 .stv2-aff-leg { flex-basis: 100%; }
+@media (max-width: 767px) {
+  .stv2 .stv2-aff-ligne { grid-template-columns: 1fr 1fr; }
+  .stv2 .stv2-aff-m { text-align: left; }
+  .stv2 .stv2-aff-grille { grid-template-columns: 1fr 1fr; }
+}

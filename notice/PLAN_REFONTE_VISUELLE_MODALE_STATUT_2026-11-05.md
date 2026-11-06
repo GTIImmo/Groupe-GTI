@@ -139,6 +139,22 @@ animations. La nouvelle vue LIT l'état existant et APPELLE les fonctions exista
 - **Lot 4 — les affaires du bien et tous les bandeaux.** Garde-fou, plusieurs affaires vivantes, bien
   engagé, reprise d'une affaire morte, plusieurs mandats, personnes non gardées (« J'ai vu, fermer »),
   détail dépliable, états du carnet, gestes admin sur un écart, « Choisir », historique de l'offre.
+  ✅ **FAIT le 06/11** — `AffairesDuBien` dans `src/ModaleStatutV2.tsx` : les bandeaux (garde-fou, plusieurs affaires
+  vivantes, bien engagé, reprise d'une affaire morte, plusieurs mandats, personnes non gardées avec « J'ai vu, fermer »)
+  puis une ligne dépliable par affaire (genre, état, montant, date, acquéreur, dossier, « Choisir », « visée par les
+  actions », plus dans Hektor, née dans l'app, rattachement) ; le détail (carnet d'abord, registre ensuite, états du
+  carnet, gestes admin sur un écart, historique de l'offre). Mêmes calculs, sur les fonctions d'App.tsx passées.
+  `App.tsx` : 5 lignes de plus dans `formulaire={{ … }}`. Parité : zone ajoutée à l'outil, **3 gestes sur 3** repris mot
+  pour mot (« Choisir », « J'ai vu, fermer », les gestes admin) ; formulaire 35/35, Clos 4/4. Empreintes 61 morceaux
+  identiques ; essais verts ; `npm run build` vert. **À l'écran** : la démonstration ne charge pas d'affaires, donc
+  un RENDU D'ESSAI de la vue (`react-dom/server`, affaires fabriquées : offre acceptée, offre refusée d'un dossier
+  terminé, compromis vivant visé, un écart de carnet, une personne non gardée), regardé à 1280 × 665 : bandeaux, offre
+  refusée barrée, dossier « terminé », compromis « visé », états « arrivé » / « conflit » et les deux gestes admin.
+  ⚠ Ce rendu n'exerce pas les VRAIES règles des bandeaux (elles sont passées, et déjà éprouvées par leurs essais) ;
+  la vraie liste se regardera en production au lot 8.
+  **Répartition des notes de fin** : « Modifier chez Hektor reprend… », régularisation, bien fermé aux transactions,
+  compromis verrouillé, offre acceptée figée — elles expliquent les BOUTONS, elles viennent au lot 5 avec eux
+  (l'offre verrouillée est déjà au lot 3).
 - **Lot 5 — le pied.** Les mêmes boutons avec les mêmes conditions (Refuser, Accepter, Modifier,
   Annuler le compromis, Supprimer le compromis, Supprimer la vente, Envoyer), les mêmes états « Envoi… »,
   nouvel ordre et nouveaux libellés ; aperçu « avant → après » au survol (texte seulement).
@@ -190,7 +206,7 @@ de style et la ligne d'aiguillage.
    lui dis. Avant, tout se contrôle en local (interrupteur allumé et éteint).
 4. ✅ **Oui à l'envoi réel de contrôle sur 62774, à la fin** — son accord se redemande au moment du geste.
 
-➡ ~~Prochaine étape : le lot 0~~ ✅ fait le 05/11. ~~Le lot 1~~ ✅ fait le 06/11. ~~Le lot 2~~ ✅ fait le 06/11. ~~Le lot 3~~ ✅ fait le 06/11.
-**Prochaine étape : le lot 4** (les affaires du bien et tous les bandeaux), qui attend son « vas-y ».
+➡ ~~Prochaine étape : le lot 0~~ ✅ fait le 05/11. ~~Le lot 1~~ ✅ fait le 06/11. ~~Le lot 2~~ ✅ fait le 06/11. ~~Le lot 3~~ ✅ fait le 06/11. ~~Le lot 4~~ ✅ fait le 06/11.
+**Prochaine étape : le lot 5** (le pied : les boutons, leurs conditions, leurs notes), qui attend son « vas-y ».
 ⚠ Reste hors de ce chantier : le défaut « Choisir » (audit §12, les champs principaux ne se rechargent pas),
 qui demande une décision à part — la refonte visuelle ne le corrige pas et ne doit pas le masquer.

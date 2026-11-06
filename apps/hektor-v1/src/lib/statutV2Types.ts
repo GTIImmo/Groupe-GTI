@@ -3,6 +3,7 @@
 // ses types passent par ici. Aucun code, aucune fonction.
 export type {
   AffaireCondition,
+  AffairePersonneEcart,
   ConditionCatalogueRow,
   DataScope,
   MandantContactSearchOption,
