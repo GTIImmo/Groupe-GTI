@@ -1445,3 +1445,32 @@ En avril, ces mails étaient croisés ; Hektor les a corrigés depuis. ⚠ Le «
 venait de la MÊME copie périmée : c'était faux aussi. Les négociateurs, eux, sont FRAIS (`list_negos` relu le 06/11 à
 03:53) : les 904 coordonnées des personnes sont justes. La fiche de Hektor porte en plus une ADRESSE d'agence (Courpière :
 7 Place de la Cité Administrative, 63120) que la liste ne rend pas.
+
+## 50. LE REGISTRE DES AGENCES RELU FRAIS, LES AGENCES REMISES DANS LE RUN, LA PAGE RDV AU « REGISTRE D'ABORD » (06/11) — Frédéric : « donc 1, mais ensuite il faut changer ton script […] puis oui on allume, puis le 4 pour le registre des négos et des agences, les deux »
+
+**1. Le registre des agences réécrit depuis Hektor FRAIS** (sur accord) : une requête en LECTURE (`ListAgences`, la même que
+l'annuaire de chaque nuit), puis la même fonction de base ; essai à blanc d'abord. Résultat : **les 9 mails d'avril corrigés**
+(Courpière courpiere@, Dunières dunieres@, Issoire issoire@, Saint-Bonnet stbonnet@, Saint-Didier stdidier@, Saint-Étienne
+dorian@, Saint-Just strambert@, Tence yssingeaux@ + 0471560236, Yssingeaux yssingeaux@) ; les adresses d'image et de barème
+passent sur www.gti-immobilier.fr ; **une 20e agence** née (n° 2000020, « Gestion site », AGENCE_SEULE, aucun bien, mail
+`…@gti-immobilier.frr` tel que chez Hektor). ⚠ **La société** : Hektor donne AUJOURD'HUI la carte professionnelle valable au
+**04/11/2025** (14/09/2027 en avril) — même n° CPI 4202 2019 000 043 878. Le registre reflète Hektor ; **à trancher par Frédéric**.
+
+**2. Pourquoi c'était périmé, et ce qui l'est encore** :
+- AGENCES : `run_full_pipeline.ps1` relisait `negos annonces contacts offres compromis ventes broadcasts` — PAS `agences`. La
+  copie locale vivait sur la réponse du 03/04. → **`agences` remis dans la liste** (une requête par nuit). Mesuré AVANT :
+  noms et n° de compte des 19 agences IDENTIQUES à avril (l'`agence_nom` des 13 533 biens et 94 859 contacts ne bouge pas,
+  donc ni droits, ni filtres, ni passerelles) ; changent les mails, le « parent » (lu nulle part en aval) et la 20e agence.
+  Script analysé sans erreur, encodage (BOM) préservé. `sync_raw.py` (modifié par une autre session) NON touché.
+- NÉGOCIATEURS : `list_negos` et `list_negos_inactive` sont relus CHAQUE nuit (06/11 03:53) — frais. ⚠ Mais `upsert_negos`
+  (`normalize_source.py` l. 595) réapplique APRÈS elles les 15 réponses `nego_by_id` du 03/04 : 11 concordent avec le jour,
+  4 sont des négociateurs disparus des listes (historique), **1 diffère** : Sylvie TEYSSONNIER n° 41 (avril : portable
+  0658803706 ; aujourd'hui : portable 0471560236, fixe 0471598145). NON corrigé (cœur de la normalisation, à décider).
+
+**3. L'interrupteur** : `APP_REGISTRE_AGENCES=1` à poser par Frédéric dans `C:\Hektor\Projet\.env` (je ne lis ni n'écris le .env).
+
+**4. La page RDV repasse au « registre d'abord »** (`_load_registre_agence` lit la colonne du registre : la saisie du carnet si un
+administrateur a corrigé, sinon la valeur de Hektor tenue par la nuit ; annuaire en repli champ par champ). Le négociateur
+l'était déjà (coordonnées À NOUS de la personne d'abord, §48). Essais **22/22** ; la version en ligne (aa3d016, carnet
+seulement) en échoue 6. **Mesure réelle avant de pousser** : sur les **439 liens actifs**, registre = annuaire pour le tél
+ET le mail de chaque agence, **0 lien ne changerait**.

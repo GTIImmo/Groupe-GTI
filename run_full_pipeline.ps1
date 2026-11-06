@@ -393,10 +393,15 @@ Write-RunLog "Options: PushAndroidFront=$PushAndroidFront SkipAndroid=$SkipAndro
 # La fraicheur des mandats vient entierement de MandatsByIdAnnonce, appele avec le
 # detail de chaque annonce (voir sync_annonce_details_with_mandats), ainsi que du
 # read-through -- tous deux inchanges.
+# 06/11/2026 (registre, audit §50) -- "agences" REVIENT dans la liste : UNE requete (ListAgences, non paginee).
+#   ⛔ Sans elle, la copie locale `hektor_agence` etait reconstruite chaque nuit depuis la SEULE reponse du 03/04/2026 :
+#   9 mails d'agence d'avril (croises depuis corriges chez Hektor) sont passes dans le registre des agences.
+#   Mesure avant de la remettre : noms et n° de compte des 19 agences IDENTIQUES a avril (l'agence_nom des biens et
+#   contacts ne bouge pas) ; seuls changent les mails, le « parent » (lu nulle part) et la 20e agence « Gestion site ».
 Invoke-Step -Label "phase1 sync_raw update" -Arguments @(
     "sync_raw.py",
     "--mode", "update",
-    "--resources", "negos", "annonces", "contacts", "offres", "compromis", "ventes", "broadcasts",
+    "--resources", "agences", "negos", "annonces", "contacts", "offres", "compromis", "ventes", "broadcasts",
     "--max-pages", [string]$DailyRawMaxPages,
     # Voir le bloc PERIMETRE DES TRANSACTIONS en tete de fichier.
     "--compromis-recent-limit", [string]$CompromisRecentLimit,
