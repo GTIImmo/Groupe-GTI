@@ -75,6 +75,24 @@ animations. La nouvelle vue LIT l'état existant et APPELLE les fonctions exista
 - **Lot 1 — coquille.** Interrupteur, composant vide branché, feuille `.stv2`, en-tête, bandeau du bien,
   parcours (cartes Actuel / Conseillé / Hors parcours / Lecture seule) et guide GTI. `statutParcours.ts`
   éprouvé sur les 11 situations de l'audit (§10.4).
+  ✅ **FAIT le 06/11** — `src/ModaleStatutV2.tsx`, `src/lib/statutParcours.ts`, `src/lib/statutGuide.ts`,
+  `src/statut-v2.css` (tout sous `.stv2`) ; interrupteur `APP_STATUT_V2_ENABLED` dans `App.tsx` : l'ancien bloc
+  est seulement ENTOURÉ (`{APP_STATUT_V2_ENABLED ? (…V2…) : (<>` avant, `</>)}` après), pas une ligne ne change.
+  Mesures : empreintes **61 morceaux identiques** + inventaire identique + parité verte ; `test_statut_parcours.cjs`
+  vert (11 situations, 9 cas voisins, 55 guides complets, témoin inverse sur 2 gardes) ; les 3 essais de la modale
+  verts ; `test_bienvu_textes` garde ses 2 rouges d'avant ; `npm run build` vert. À l'écran en local (démonstration
+  `hektor-mock-statut-v2`, port 5193) : 1280 × 665 et téléphone 375 × 812 ; interrupteur éteint
+  (`hektor-mock-statut-v2-eteint`, port 5192) : l'ancienne modale s'ouvre, la nouvelle n'est pas rendue.
+  **Les gardes sont PASSÉES à `statutParcours`** (etatFermeAuxTransactions, bienEngage, dossiersOuvertsDuBien,
+  isValidationApproved) : aucune règle recopiée. Le guide note la source de chaque phrase.
+  **Trouvé et corrigé pendant le lot** : la date vide de Hektor `0000-00-00` lue comme un mandat échu (attrapé par
+  l'essai) ; un registre VIDE sur un bien « Sous offre / Sous compromis » conseillait « Actif » (lecture en cours
+  ou ratée : désormais aucun conseil et un avertissement) ; au téléphone et jusqu'à 1 180 px la modale s'ouvrait
+  DERRIÈRE la fiche du bien (couche 50 < 100) → couche 180, comme `.modal-overlay` dans `mobile.css`.
+  **Écarts assumés** : la situation 5 (annulation du mandat demandée) n'est pas reconnue, la modale ne lit pas les
+  demandes et ce lot n'ajoute aucune lecture ; le bandeau « hors parcours » informe sans case à cocher (§1, point 4) ;
+  les descriptions des cartes parlent métier (« Un acquéreur propose un prix. »), les libellés restent ceux d'avant.
+  ⏰ Pour le lot 6 : au téléphone, la carte choisie peut être hors de la rangée qui défile.
 - **Lot 2 — le formulaire offre / compromis / vente.** L'affaire, les personnes (sélecteurs existants),
   honoraires et commission, répartition (repliée, MÊME éditeur complet dépliable), conditions
   suspensives, note, alerte d'écart de prix, pastilles Actuel / Repris / Modifié / À remplir (lues sur
@@ -134,7 +152,7 @@ de style et la ligne d'aiguillage.
    lui dis. Avant, tout se contrôle en local (interrupteur allumé et éteint).
 4. ✅ **Oui à l'envoi réel de contrôle sur 62774, à la fin** — son accord se redemande au moment du geste.
 
-➡ ~~Prochaine étape : le lot 0~~ ✅ fait le 05/11. **Prochaine étape : le lot 1** (la coquille derrière
-l'interrupteur), qui attend son « vas-y ».
+➡ ~~Prochaine étape : le lot 0~~ ✅ fait le 05/11. ~~Le lot 1~~ ✅ fait le 06/11. **Prochaine étape : le lot 2**
+(le formulaire offre / compromis / vente), qui attend son « vas-y ».
 ⚠ Reste hors de ce chantier : le défaut « Choisir » (audit §12, les champs principaux ne se rechargent pas),
 qui demande une décision à part — la refonte visuelle ne le corrige pas et ne doit pas le masquer.

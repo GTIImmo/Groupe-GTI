@@ -294,6 +294,8 @@ import RechercheGlobale, { type GroupeRecherche } from './RechercheGlobale'
 import './fil-navigation.css'
 import './suivi-travaux.css'
 import './modales-telephone.css'
+import './statut-v2.css'
+import ModaleStatutV2 from './ModaleStatutV2'
 import { compterAnnoncesAilleurs, type AnnoncesAilleurs } from './lib/api'
 import { bvs, bvt } from './lib/bienvuTexte'
 import { MENTION_AVENANT, MENTION_MANDAT, repereHtml, repereSignature, zoneMentionHtml } from './lib/signatureAnchors'
@@ -22990,6 +22992,23 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             </section>
           </div>
         ) : null}
+        {/* Refonte visuelle (lot 1, 06/11) : interrupteur allumé -> la nouvelle vue ; éteint -> l'ancien bloc ci-dessous,
+            ENTOURÉ sans qu'une ligne change. La nouvelle vue reçoit l'état et les fonctions, elle n'en a pas d'autres. */}
+        {APP_STATUT_V2_ENABLED ? (statusChangeTarget ? (
+          <ModaleStatutV2
+            statusChangeTarget={statusChangeTarget}
+            statusChangeStatus={statusChangeStatus}
+            setStatusChangeStatus={setStatusChangeStatus}
+            setStatusChangeAffaireChoisie={setStatusChangeAffaireChoisie}
+            statusChangeAffaires={statusChangeAffaires}
+            statusChangePending={statusChangePending}
+            closeStatusChangeModal={closeStatusChangeModal}
+            options={hektorStatusTargetOptions}
+            gardes={{ etatFermeAuxTransactions, bienEngage, dossiersOuvertsDuBien }}
+            isValidationApproved={isValidationApproved}
+            pastilleStatut={<StatusPill value={statusChangeTarget.statut_annonce} />}
+          />
+        ) : null) : (<>
         {statusChangeTarget ? (
           <div className="modal-overlay" onClick={closeStatusChangeModal}>
             <section className={`modal-panel modal-panel-wide status-change-modal${APP_COCKPIT_V2_ENABLED ? ' fa-ck-statusmodal' : ''}`} onClick={(event) => event.stopPropagation()}>
@@ -24308,6 +24327,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             </section>
           </div>
         ) : null}
+        </>)}
         {requestModalOpen && requestModalMandat ? (
           <div className="modal-overlay" onClick={closeRequestModal}>
             <section
@@ -30306,6 +30326,13 @@ const APP_CONTACT_V2_ENABLED =
 // signature/démarches/pilotage/historiques), aucune logique dupliquée. Voir PLAN_DEV_MANDAT_V3.md.
 const APP_MANDAT_V3_ENABLED =
   ['true', '1', 'on', 'yes'].includes(String(import.meta.env.VITE_APP_MANDAT_V3_ENABLED ?? '').trim().toLowerCase())
+
+// Modale « Changer le statut » V2 (refonte VISUELLE, plan notice/PLAN_REFONTE_VISUELLE_MODALE_STATUT_2026-11-05.md)
+// -- même garde-fou : OFF par défaut, lu au BUILD (bascule Vercel = rebuild). Flag OFF => ModaleStatutV2 jamais
+// monté, feuille .stv2 inerte, l'ancien bloc rendu tel quel (il n'est qu'ENTOURÉ, pas une ligne ne change :
+// test_statut_v2_empreintes.cjs le prouve). Frédéric pose la variable après le lot 8 (décision du 05/11).
+const APP_STATUT_V2_ENABLED =
+  ['true', '1', 'on', 'yes'].includes(String(import.meta.env.VITE_APP_STATUT_V2_ENABLED ?? '').trim().toLowerCase())
 
 // Un mandat de l'historique (rubrique Mandat V3), pour le popup « champs du mandat ».
 type Mv3HistItem = {
