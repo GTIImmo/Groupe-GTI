@@ -261,6 +261,7 @@ import { FICHE_NOTAIRE_V2, NotaireAVenir, NotaireDossiers, NotaireInterlocuteurs
 import { BlocMetierPartenaire, FenetreMetierPartenaire, useMetiersPartenaire } from './MetierPartenaire'
 import { blocsDuPartenaire, profilDuPartenaire } from './lib/metierPartenaire'
 import { PartenaireAVenir, PartenaireAvecNous, PartenaireChiffres, PartenaireInterlocuteurs, PartenaireSectionMetier } from './FichePartenaire'
+import { SyndicChiffres, SyndicCoproprietes, SyndicNosBiens, useFicheSyndic } from './FicheSyndic'
 import CataloguePartenaires from './CataloguePartenaires'
 import NotificationsBell from './NotificationsBell'
 import SanteSystemeScreen from './SanteSystemeScreen'
@@ -47247,6 +47248,8 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
   const peutChangerMetier = partenairesEcran && metierModifCran && Boolean(props.canManageContacts) && metiersPartenaire.etat === 'pret'
   // pièce 3.3a (05/11/2026) : le volet de la FICHE PARTENAIRE (cran `partenaires_fiche`) — voir profilPartenaire plus bas.
   const ficheCran = useCranCouplesVisible('partenaires_fiche', props.profileRole)
+  // PARTENAIRES 4.1 (06/11/2026) : la fiche SYNDIC remplie (lecture seule), cran `partenaires_syndic_fiche` (admin / on).
+  const syndicFicheCran = useCranCouplesVisible('partenaires_syndic_fiche', props.profileRole)
   const [fenetreMetierOuverte, setFenetreMetierOuverte] = useState(false)
   // La fiche ouverte ne porte pas toujours sa nature (cela dépend de l'écran qui l'ouvre) : on la lit, comme le foyer.
   const [natureLue, setNatureLue] = useState<{ pour: string; nature_fiche?: string | null; couple_json?: unknown } | null>(null)
@@ -47413,6 +47416,9 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
   const profilBrut = partenairesEcran && ficheCran && props.ouverture === 'catalogue_metiers' && !estFicheNotaire && metiersPartenaire.etat === 'pret'
     ? profilDuPartenaire(metiersPartenaire.lignes) : null
   const profilPartenaire = profilBrut && profilBrut.famille !== 'autre' ? profilBrut : null
+  // 4.1 : sur une fiche SYNDIC (cran allumé), les blocs « en construction » de 3.3b cèdent la place à ce qui existe.
+  const ficheSyndicActive = syndicFicheCran && profilPartenaire?.famille === 'syndic'
+  const ficheSyndic = useFicheSyndic(String(props.contact.hektor_contact_id ?? ''), ficheSyndicActive)
   // PARTENAIRES, pièce 3.3b (05/11/2026) : la partie droite du métier (chiffres, section, « À venir », « avec nous »), montrée
   // « en construction » ; rien pour la famille « autre ». Comme le notaire, la bande Recherche se cache sans recherche active
   // (pas pour « autre » : une société peut être acquéreur, elle garde « Ajouter une recherche »).
@@ -48210,11 +48216,13 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
             <div className="fa-cx-work">
               {estFicheNotaire ? (vueNotaire ? <NotaireKpis vue={vueNotaire} />
                 : <div className="fa-cx-ech-empty">{ficheNotaire.erreur ? `Fiche notaire indisponible (${ficheNotaire.erreur})` : 'Chargement des dossiers du notaire…'}</div>) : null}
-              {blocsPartenaire ? <PartenaireChiffres blocs={blocsPartenaire} /> : null}
+              {ficheSyndicActive ? <SyndicChiffres vue={ficheSyndic.vue} /> : blocsPartenaire ? <PartenaireChiffres blocs={blocsPartenaire} /> : null}
               <div className="fa-cx-dash-top">
                 <div className="fa-cx-dash-main">
               {vueNotaire ? <NotaireDossiers vue={vueNotaire} onOpenDossier={(id) => { props.onClose(); props.onOpenDossier(id) }} /> : null}
-              {blocsPartenaire ? <PartenaireSectionMetier blocs={blocsPartenaire} /> : null}
+              {ficheSyndicActive
+                ? <SyndicCoproprietes vue={ficheSyndic.vue} erreur={ficheSyndic.erreur} chargement={ficheSyndic.chargement} onOuvrirBien={(id) => { props.onClose(); props.onOpenDossier(id) }} />
+                : blocsPartenaire ? <PartenaireSectionMetier blocs={blocsPartenaire} /> : null}
               {masquerRecherche ? null : (<>
               {/* ── Lot 2 — Bande « Recherche & rapprochement » (portage maquette v30) ── */}
               <div className="fa-cx-sec" style={{ ['--sc']: '#2f7c86' } as CSSProperties}>
@@ -48495,7 +48503,7 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
               </div>
 
               {vueNotaire ? <NotaireVentesEtAvecNous vue={vueNotaire} fiche={ficheNotaire.fiche} /> : null}
-              {blocsPartenaire ? <PartenaireAvecNous blocs={blocsPartenaire} /> : null}
+              {ficheSyndicActive ? <SyndicNosBiens vue={ficheSyndic.vue} /> : blocsPartenaire ? <PartenaireAvecNous blocs={blocsPartenaire} /> : null}
 
               {/* ── Lot 4 — Bande « Activité & relation » (pleine largeur, portage maquette v30) ── */}
               <div className="fa-cx-sec" style={{ ['--sc']: '#2f6fa8' } as CSSProperties}>

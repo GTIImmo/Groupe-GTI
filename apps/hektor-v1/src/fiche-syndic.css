@@ -1,0 +1,30 @@
+/* CHANTIER PARTENAIRES · PIÈCE 4.1 (06/11/2026) — la fiche syndic remplie (FicheSyndic.tsx). Dans .fa-contact-v2 (--ty, --line…). */
+.fa-contact-v2 .sy-biens { display: flex; flex-direction: column; gap: 8px; }
+.fa-contact-v2 .sy-bien { display: flex; align-items: flex-start; gap: 12px; width: 100%; text-align: left; font: inherit; color: inherit;
+  border: 1px solid var(--line); border-radius: 12px; padding: 9px 12px 9px 9px; background: #fff; }
+.fa-contact-v2 button.sy-bien { cursor: pointer; transition: border-color .15s, box-shadow .15s; }
+.fa-contact-v2 button.sy-bien:hover { border-color: color-mix(in srgb, var(--ty) 40%, var(--line)); box-shadow: 0 6px 16px -10px rgba(32, 24, 18, .35); }
+.fa-contact-v2 .sy-thumb { width: 52px; height: 52px; flex: none; border-radius: 10px; overflow: hidden; border: 1px solid var(--line);
+  background: var(--ty-soft, #efecf9); display: grid; place-items: center; font-size: 10px; color: var(--muted); }
+.fa-contact-v2 .sy-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.fa-contact-v2 .sy-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.fa-contact-v2 .sy-top { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.fa-contact-v2 .sy-titre { font-size: 13.5px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fa-contact-v2 .sy-statut { flex: none; font-size: 9.5px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; border-radius: 999px;
+  padding: 2px 8px; background: #f1ece4; color: #6c625b; }
+.fa-contact-v2 .sy-statut.vente { background: color-mix(in srgb, var(--ty) 12%, #fff); color: var(--ty); }
+.fa-contact-v2 .sy-sous { font-size: 11.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fa-contact-v2 .sy-puces, .fa-contact-v2 .sy-docs { display: flex; flex-wrap: wrap; gap: 5px; }
+.fa-contact-v2 .sy-puce { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: color-mix(in srgb, var(--ty) 9%, #fff); color: var(--ty-deep, var(--ty)); }
+.fa-contact-v2 .sy-puce.alerte { background: #fff0ec; color: #a4381f; }
+.fa-contact-v2 .sy-puce.vide { background: #f6f3ee; color: var(--muted); font-weight: 600; }
+.fa-contact-v2 .sy-doc { font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: #e0f0f2; color: #1d5f68;
+  max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fa-contact-v2 .sy-doc.plus { background: #eef4f5; }
+.fa-contact-v2 .sy-doc.manque { background: #fff7f4; color: #a4381f; border: 1px dashed #e7a99b; font-weight: 600; max-width: none; white-space: normal; }
+.fa-contact-v2 .sy-note { margin-top: 10px; font-size: 11.5px; color: var(--muted); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.fa-contact-v2 .sy-repart { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.fa-contact-v2 .sy-repart > div { padding: 10px; border-radius: 12px; background: color-mix(in srgb, var(--ty) 7%, #fff); display: flex; flex-direction: column; gap: 2px; }
+.fa-contact-v2 .sy-repart b { font-size: 20px; color: var(--ty); }
+.fa-contact-v2 .sy-repart span { font-size: 11px; color: var(--muted); font-weight: 600; }
+@media (max-width: 640px) { .fa-contact-v2 .sy-doc { max-width: 160px; } .fa-contact-v2 .sy-repart b { font-size: 17px; } }

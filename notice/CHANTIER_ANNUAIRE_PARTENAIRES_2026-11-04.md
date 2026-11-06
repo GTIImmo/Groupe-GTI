@@ -1950,6 +1950,37 @@ pour tout le monde (au rechargement). Retour arrière : `admin` ou `off`. **Suit
   assistants », formulaire Nom / Rôle (gestionnaire, comptable…) / Téléphone / E-mail — ouvert puis ANNULÉ, rien saisi ;
   la fiche notaire 10008890 garde « Interlocuteurs de l'étude » et ses chiffres. Non éprouvé en réel : un ajout (ce
   serait une écriture en production) — prouvé seulement dans la transaction annulée.
+
+## 27. LOT 4 — LE SYNDIC (06/11)
+
+### 27.1 Audit (« Maintenant »)
+- **B6 déjà fait** : la nuit lit le syndic des 731 annonces en copropriété, la reprise range les liens au registre →
+  **80 biens reliés à 29 syndics** (max 16 pour IMMO DE FRANCE FOREZ VELAY), tous origine « hektor » ; les 29 sont nos
+  fiches (numéros vérifiés 29/29). Les 46 autres syndics du catalogue n'ont aucun bien relié.
+- **Copropriété** (`app_dossier_detail_current.detail_payload_json` → `copropriete_json`, texte JSON) : 79 des 80 biens ont
+  lots, quote-part annuelle, fonds de travaux, statut (`NOTPROCESS` = aucune procédure), plan de sauvegarde, n° de lots.
+- **Documents** : 807 documents sur ces biens, 159 de copropriété par leur nom, sur 35 biens.
+- **RNIC** (registre national des copropriétés) déjà interrogé par l'app (`loadCoproRnie`, backend `/copro/rnie`) :
+  immatriculation, lots, syndic, procédure → candidat pour l'immeuble (4.3).
+- `app_partenaire_lien_ecrire` existe (poser / retirer un lien) ; le bloc « Diagnostics et syndic » de la fiche annonce
+  montre le texte de Hektor sans choix ; défaut dormant B5 (texte libre envoyé à Hektor, 0 saisie).
+- Découpage proposé et accepté (« Oui, vas-y 4.1 ») : 4.1 fiche syndic remplie · 4.2 choisir le syndic d'un bien ·
+  4.3 l'immeuble · 4.4 « Demander un document » · 4.5 les assemblées générales · 4.6 le téléphone.
+- ⏸ Entre-temps (06/11), Frédéric a ouvert le **chantier GED** (`notice/CHANTIER_GED_DOCUMENTS_2026-11-06.md`) ; les documents
+  de copropriété y seront classés ; 4.1 les reconnaît provisoirement par le nom.
+
+### 27.2 Pièce 4.1 — la fiche syndic remplie, LECTURE SEULE — codée
+- `lib/ficheSyndic.ts` (règles pures : `lireCopro`, `estDocumentCopro`, `construireVueSyndic` ; on ne somme PAS les lots,
+  plusieurs biens peuvent être dans le même immeuble) ; `FicheSyndic.tsx` (lecture : liens → biens vivants puis index des
+  archives → détail → documents ; aucune écriture ; droits de chacun) ; `fiche-syndic.css`.
+- Sur une fiche SYNDIC ouverte depuis le catalogue, les blocs « en construction » de 3.3b cèdent la place : chiffres (nos
+  biens chez lui, biens en vente, charges moyennes ; demandes = 4.4), « Copropriétés » (une carte par bien : statut,
+  mandat, lots, charges / an, fonds de travaux, procédure, plan de sauvegarde, documents de copro ou « aucun au coffre » ;
+  un clic ouvre le bien), « Nos biens dans ses copropriétés » (en vente / vendus / autres) ; « Demandes et délais » et
+  « À venir » restent en construction (4.4, 4.5). Cran **`partenaires_syndic_fiche`** (absent = la fiche d'avant).
+- Contrôles : `test_metier_partenaire.cjs` **77/77** (6 nouveaux) ; `test_fiche_notaire.cjs` vert ; banc à données
+  FICTIVES (900 px et 390 px, aucun débordement) ; seuls mes morceaux d'App.tsx commités (le travail en cours de la session
+  signature laissé en l'état), version commitée construite à part.
   ⚠ Le repli `contactsDirectory.find(...) ?? contactsDirectory[0]` d'App.tsx est ANCIEN et sert à toute l'app : non
   touché, à signaler.
 

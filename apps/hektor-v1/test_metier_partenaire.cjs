@@ -141,9 +141,9 @@ controle("(44) branchement : blocs du profil, et Recherche cachée sans recherch
   && /const masquerRecherche = \(estFicheNotaire \|\| Boolean\(blocsPartenaire\)\) && Number\(props\.contact\.active_search_count \?\? 0\) === 0/.test(app));
 controle("(45) les 4 blocs sont posés à leur place (chiffres avant le tableau, section, À venir, avec nous)",
   /<PartenaireChiffres blocs=\{blocsPartenaire\} \/>[\s\S]{0,120}fa-cx-dash-top/.test(app)
-  && /<NotaireDossiers[\s\S]{0,200}<PartenaireSectionMetier blocs=\{blocsPartenaire\} \/>/.test(app)
+  && /<NotaireDossiers[\s\S]{0,500}<PartenaireSectionMetier blocs=\{blocsPartenaire\} \/>/.test(app)
   && /<NotaireAVenir vue=\{vueNotaire\} \/> : null\}\s*\{blocsPartenaire \? <PartenaireAVenir/.test(app)
-  && /<NotaireVentesEtAvecNous[^\n]*\n\s*\{blocsPartenaire \? <PartenaireAvecNous/.test(app));
+  && /<NotaireVentesEtAvecNous[^\n]*\n\s*\{(ficheSyndicActive \? <SyndicNosBiens vue=\{ficheSyndic\.vue\} \/> : )?blocsPartenaire \? <PartenaireAvecNous/.test(app));
 const fp = fs.readFileSync(path.resolve(__dirname, "src", "FichePartenaire.tsx"), "utf8");
 // 06/11 (3.4) : une seule lecture permise, celle des interlocuteurs ; l'écriture passe par le carnet du notaire (relais).
 controle("(46) FichePartenaire : une seule lecture (app_partenaire_interlocuteur), aucune écriture ni fetch",
@@ -223,6 +223,42 @@ controle("(68) téléphone : la carte de recherche des clients se cache côté P
 controle("(69) les pastilles et les actions du téléphone suivent la maquette (planche 2) et la fiche (3.3a)",
   J(cat.TUILES_CATALOGUE.map((t) => t.puce)) === J(["Notaires", "Banques", "Diagnostics", "Apporteurs", "Syndics"])
   && cat.TUILES_CATALOGUE.find((t) => t.tuile === "notaire").action === null && cat.TUILES_CATALOGUE.find((t) => t.tuile === "syndic").action === "Demander un document");
+
+// ── LOT 4, PIÈCE 4.1 : la fiche syndic remplie (06/11) ──
+let sy;
+try {
+  const { code } = esbuild.transformSync(fs.readFileSync(path.resolve(__dirname, "src", "lib", "ficheSyndic.ts"), "utf8"), { loader: "ts", format: "cjs" });
+  const module = { exports: {} };
+  vm.runInNewContext(code, { module, exports: module.exports });
+  sy = module.exports;
+} catch (e) { console.log(`⛔ ${e.message}`); process.exit(2); }
+const props = { copropriete: { value: "OUI" }, copropriete_lot: { value: "210 - 101" }, copropriete_nb_lot: { value: "255" }, copropriete_quote_part: { value: "2960" },
+  montant_fonds_travaux: { value: "0" }, copropriete_statut_syndicat: { value: "NOTPROCESS" }, copropriete_plan_sauvegarde: { value: "NON" } };
+const payload = JSON.stringify({ copropriete_detail: "OUI", copropriete_json: JSON.stringify({ titre: "copropriete", props }) });
+const cp = sy.lireCopro(payload);
+controle("(71) 4.1 lireCopro : le texte JSON imbriqué de Hektor (lots, quote-part, fonds, NOTPROCESS = aucune procédure, plan NON)",
+  cp && cp.lots === 255 && cp.quotePart === 2960 && cp.fondsTravaux === 0 && cp.procedure === "aucune" && cp.planSauvegarde === false && cp.numerosLots === "210 - 101");
+controle("(72) 4.1 lireCopro : rien de lisible = null (jamais un faux zéro) ; autre statut = procédure en cours",
+  sy.lireCopro("{}") === null && sy.lireCopro(null) === null && sy.lireCopro("pas du json") === null
+  && sy.lireCopro({ copropriete_json: { props: { copropriete_statut_syndicat: { value: "PROCESS" } } } }).procedure === "en_cours");
+controle("(73) 4.1 documents de copropriété reconnus par le nom (accents, espaces, « _ »), pas les autres",
+  ["Pré-état daté.pdf", "pre_etat_date_2025.pdf", "PV AG 2026.pdf", "pv_d_ag.pdf", "Procès-verbal assemblée.pdf", "reglement_de_copro.pdf", "Carnet d'entretien.pdf", "fiche_synthetique.pdf", "DTG immeuble.pdf"].every(sy.estDocumentCopro)
+  && !["Plan cadastral.pdf", "DPE.pdf", "Mandat de vente.pdf", "taxe_fonciere_2024.pdf", "compromis.pdf"].some(sy.estDocumentCopro));
+const vue = sy.construireVueSyndic({
+  liens: [{ hektor_annonce_id: 1, app_dossier_id: 11 }, { hektor_annonce_id: 2, app_dossier_id: 12 }, { hektor_annonce_id: 1, app_dossier_id: 11 }, { hektor_annonce_id: 3, app_dossier_id: null }],
+  biens: [{ hektor_annonce_id: 1, app_dossier_id: 11, titre_bien: "Zèbre T3", ville: "Firminy", statut_annonce: "Vendu" }, { hektor_annonce_id: 2, app_dossier_id: 12, titre_bien: "Appart T2", statut_annonce: "Actif", numero_mandat: "18 870" }],
+  details: [{ hektor_annonce_id: 2, detail_payload_json: payload }],
+  documents: [{ hektor_annonce_id: "2", document_name: "PV AG 2026.pdf" }, { hektor_annonce_id: "2", document_name: "DPE.pdf" }, { hektor_annonce_id: "2", document_name: "PV AG 2026.pdf" }],
+});
+controle("(74) 4.1 la vue : un bien par annonce (doublon de lien ignoré), en vente d'abord, inconnu montré par son numéro, docs copro seuls et sans doublon",
+  vue.biens.length === 3 && vue.biens[0].hektorAnnonceId === "2" && vue.biens[0].enVente && vue.enVente === 1 && vue.quotePartMoyenne === 2960
+  && J(vue.biens[0].documents) === J(["PV AG 2026.pdf"]) && vue.biens.some((b) => b.titre === "Bien 3" && b.appDossierId === null) && vue.avecDocuments === 1 && !("lots" in vue));
+const fsy = fs.readFileSync(path.resolve(__dirname, "src", "FicheSyndic.tsx"), "utf8");
+controle("(75) 4.1 FicheSyndic : LECTURE seule (aucune écriture, aucune fonction appelée)", !/\.(insert|update|upsert|delete|rpc)\(|fetch\(/.test(fsy.replace(/^\/\/.*$/gm, "")));
+controle("(76) 4.1 branchement : cran `partenaires_syndic_fiche`, fiche SYNDIC seulement, les blocs 3.3b ailleurs",
+  /useCranCouplesVisible\('partenaires_syndic_fiche', props\.profileRole\)/.test(app) && /const ficheSyndicActive = syndicFicheCran && profilPartenaire\?\.famille === 'syndic'/.test(app)
+  && /\{ficheSyndicActive \? <SyndicChiffres vue=\{ficheSyndic\.vue\} \/> : blocsPartenaire \? <PartenaireChiffres/.test(app)
+  && /\{ficheSyndicActive \? <SyndicNosBiens vue=\{ficheSyndic\.vue\} \/> : blocsPartenaire \? <PartenaireAvecNous/.test(app));
 
 console.log(echecs.length ? `\n${echecs.length} contrôle(s) en échec` : "\nTout est vert.");
 process.exit(echecs.length ? 1 : 0);
