@@ -1996,6 +1996,55 @@ pour tout le monde (au rechargement). Retour arrière : `admin` ou `off`. **Suit
   remettre à `admin`, ou supprimer la ligne (= la fiche partenaire d'avant).
 - Reste : 4.2 → 4.6.
 
+### 27.3 Pièce 4.2 — choisir le syndic d'un bien : AUDIT (06/11, « Oui, audit 4.2 »)
+Audit limité aux biens (annonces) et à leur syndic ; le diagnostiqueur n'est mesuré que pour l'assistant (B5).
+
+**Ce qu'on a, mesuré**
+- 13 535 annonces, **732 en copropriété** ; **79 ont un syndic**, identique chez Hektor et chez nous (0 écart, 0 bien à
+  deux syndics ; 80 liens actifs dont 1 bien hors du parc courant). **653 en copropriété SANS syndic, dont 72 en vente**
+  (Actif 64, sous offre 4, sous compromis 4).
+- Les 80 liens sont d'origine « hektor », posés par la nuit (`registre_partenaires_reprise.py`), aucun par l'app.
+- `app_partenaire_lien_ecrire` existe mais **personne ne l'appelle** ; elle ne vérifie que « compte actif » : ni le droit
+  sur le bien (un négociateur pourrait toucher le bien d'un autre), ni que le partenaire est bien un syndic, ni « un seul
+  syndic par bien ». Le droit sur un bien existe déjà : `app_console_can_access_dossier` (admin/manager tout ; négociateur
+  ses biens, y compris archives, historiques et brouillons).
+
+**Les écrans, mesurés (quel composant s'affiche)**
+- Ordinateur = `CockpitDetail` (cockpit v2). Son bloc « Diagnostics et syndic » (onglet Contact) lit `intervenants_json`,
+  qui n'existe sur **aucune** annonce (0 / 13 535) → **jamais affiché** ; ses boutons « Ajouter un syndic » et « Fiche »
+  n'ont pas d'action. **Sur ordinateur, on ne voit le syndic d'un bien nulle part.**
+- Téléphone = `MobileDossierDetail` : montre le texte relu de Hektor (`diagnostics_contacts_console_json`), en lecture.
+- L'ancien écran (`DossierDetailLayoutBase`, cockpit éteint) fait pareil que le téléphone.
+
+**L'assistant d'annonce (B5)**
+- Champs « Syndic » et « Diagnostiqueur » en TEXTE LIBRE ; le worker les envoie tels quels
+  (`setWizardTextIfPresent`, l. 12137) alors que Hektor attend un CONTACT → ignoré. Mesure : **17 envois en tout, tous
+  des essais** (mai-juin, 21-22/10), **0 vraie saisie**.
+- L'aide « Copropriété » (registre RNIC) propose aussi « À compléter : syndic (nom — type) », même défaut ; jamais cliqué
+  avec un syndic.
+- Le worker n'a pas à changer : il n'envoie le champ que s'il est présent.
+
+**La nuit et un choix fait dans l'app (lu dans `registre_partenaires_reprise.py`)**
+- Un lien « app » n'est jamais touché ; si Hektor dit autre chose, l'app gagne et l'écart est seulement COMPTÉ
+  (`ecarts_app_gagne`), dans un compte rendu que le journal du run ne garde pas (déjà signalé).
+- **Changer** de syndic marche sans toucher la nuit, à condition de retirer (daté, avec l'auteur) le lien « hektor ».
+- ⚠ **Retirer** un syndic venu de Hektor, sans en mettre un autre, serait **défait la nuit suivante** (la nuit remet le
+  lien tant que Hektor l'a). Remède connu, déjà posé pour les métiers (§25) : ne pas remettre un lien retiré par quelqu'un.
+
+**Découpage proposé**
+- 4.2a base : une fonction « poser / changer / retirer le syndic d'un bien » (droit sur le bien, partenaire qui EST
+  syndic au registre, l'ancien lien retiré daté avec l'auteur, en une seule opération) + un index « un seul syndic actif
+  par bien » (0 doublon aujourd'hui). Additif ; la fonction existante n'est pas touchée.
+- 4.2b fiche annonce (ordinateur) : ranimer le bloc de l'onglet Contact en « Syndic de la copropriété » : le syndic de chez
+  nous, d'où il vient (Hektor / app, qui, quand), Choisir, Changer, Retirer, Ouvrir sa fiche ; le choix dans les syndics
+  du catalogue (75), avec recherche, et en tête celui que propose le registre RNIC quand le nom correspond ; si Hektor
+  dit un autre syndic, le DIRE sur la carte (lu dans la fiche du bien, rien à ajouter).
+- 4.2c nuit : ne pas remettre un lien retiré par quelqu'un (comme §25).
+- 4.2d B5 : l'assistant ne propose plus « Syndic » en texte (et l'aide RNIC propose de CHOISIR le syndic au lieu d'écrire
+  un nom) ; « Diagnostiqueur » : à trancher (le retirer aussi maintenant, ou au lot 5 avec son sélecteur).
+- Téléphone : la carte du syndic en lecture tout de suite, ou le choix aussi (sinon 4.6).
+- Cran proposé : `partenaires_syndic_choix` (admin puis on), comme les autres.
+
 ### 7 ter. Les dépendances (techniques, pas un ordre décidé)
 
 - 0 avant tout le reste ; 0.1 avant B2 ; 0.2 avant B1 ; 0.6 avant B5 ; 0.3 avant B6 ; 0.4 avant B7 ; 0.5 avant C2.
