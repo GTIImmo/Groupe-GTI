@@ -1606,3 +1606,5 @@ admin : aucune présélection ; contact de PEREIRA : PEREIRA ; agenda de LEGRAND
 témoin ancien comportement → « FRANCK GERPHAGNON ». Non vu à l'écran (il faut une session admin).
 ⚠ App.tsx était modifié en même temps par une autre session (modale statut) : le commit a été construit sur HEAD + ce seul
 changement, son travail est resté dans l'arbre, non touché.
+
+**EN LIGNE le 06/11** : 3b30a0b servi par Render (commit 67a9ffb et suivants), f95c230 servi par Vercel (déploiement 8155bb7 READY). Base : les 4 comptes admin sans lien Hektor, LEGRAND 30/5 et PEREIRA 51/26 inchangés.
