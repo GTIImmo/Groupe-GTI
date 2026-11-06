@@ -2112,6 +2112,33 @@ créé, rien n'est poussé.
   accepte un n° ou un téléphone ; après un choix, le catalogue est relu (les comptes bougent). Rien en base.
   Contrôles (88)-(91) ; essai **92/92** ; construction verte ; banc fictif à 1280 × 665. Le regroupement des doublons
   (fiche principale) reste à étudier à part.
+- **EN LIGNE le 06/11** (« Oui, pousse ») : `fc682cf..9443981`. Vu sur le bien d'essai, sans rien choisir : « immo de
+  france » → 9 lignes « 9 fiches à ce nom », en tête n° 10217295 « 16 biens chez nous », les 8 autres « aucun de nos
+  biens » (aucune n'a de téléphone : c'est le compte de biens qui départage).
+
+### 27.5 Pièce 4.3 — l'immeuble : AUDIT (06/11, « ok enchaîne »)
+But prévu : regrouper nos biens d'un même immeuble (sur la fiche syndic, une « copropriété » = un immeuble et non un bien).
+**Ce que disent les sources, mesuré sur nos 732 biens en copropriété :**
+- **Registre national (RNIC)** : lu et gardé pour **3 biens seulement** (`app_dossier_estimation.sources.copro`, rempli
+  quand quelqu'un lance l'avis de valeur). Repère sûr (n° d'immatriculation), mais quasi absent ; le remplir demanderait
+  ~730 appels au registre (par notre serveur, pas Hektor).
+- **GPS** : INUTILISABLE pour ça — un même point (centre de Saint-Étienne) porte 72 biens et 64 adresses différentes.
+- **Adresse** (`adresse_detail` + code postal) : 718 / 732 renseignées ; **37 adresses partagées par 86 biens**. Mais des
+  variantes d'écriture (« 9 rue du champ mars 2eme étage » / « 9 rue du champs de mars »), des codes postaux différents
+  pour la même rue (42000 / 42100), et souvent le **même lot remis en vente** (une estimation puis une annonce) plutôt
+  que deux lots d'un immeuble.
+- **Lots** (`copropriete_nb_lot`) : souvent « 0 » (non saisi), ne départage pas.
+**Ce que ça changerait sur les fiches syndic aujourd'hui : presque rien.** Sur les 80 biens reliés à un syndic,
+**77 sont à des adresses différentes** : IMMO DE FRANCE 16 biens = 16 adresses, FONCIA 7 = 7. Seuls 2 regroupements :
+« 39 bd Docteur Philippe Raoul Duval » ×2 et « 7 rue Charles Rocher (Résidence Saint Clair 2) » ×3 — ce dernier
+manqué par l'adresse exacte à cause du mot « résidence ».
+**La GED n'en dépend plus** : sa règle « un seul endroit » (note GED §8.3 ter, en attente de Frédéric) propose de
+reconnaître « la même résidence » par le même syndic + la même adresse, au moment voulu, l'humain confirmant.
+⚠ **Coordination** : si Frédéric valide « un seul endroit » (« aucune liste de documents sur la fiche syndic »), les puces
+de documents de copropriété des cartes de la fiche syndic (4.1) devront partir.
+**Proposé à Frédéric** : A — ne pas créer d'objet « immeuble » maintenant (fermer 4.3 pour l'instant) et passer à 4.4 ;
+B — 4.3 léger : sur la fiche syndic, regrouper les biens à la même adresse « nettoyée » (numéro + rue + code postal, sans
+résidence / bâtiment / étage), en lecture, sans rien stocker.
 
 ### 7 ter. Les dépendances (techniques, pas un ordre décidé)
 
