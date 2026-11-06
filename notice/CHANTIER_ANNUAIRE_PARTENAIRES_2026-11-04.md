@@ -1874,6 +1874,23 @@ pour tout le monde (au rechargement). Retour arrière : `admin` ou `off`. **Suit
 - ⇒ Sur la fiche métier, **Archiver et Supprimer restent dans le menu « ⋯ », comme sur la fiche contact**, avec les
   confirmations d'aujourd'hui (boîte du navigateur pour archiver, texte `SUPPRIMER CONTACT <n>` à taper pour supprimer).
   Rien n'est codé. Les décisions P2 (case à cocher) et K3 tombent avec elle. **Ne pas relancer.**
+
+#### 26 octies. ✅ CONTRÔLE DU 06/11 AU MATIN (après le run, « vérifie tes correctifs »)
+
+- **Les 8 noms de syndics tiennent** : relus par la nuit le 06/11 à 05:46, tous sous leur nom (GIBERT IMMOBILIER, AGENCE
+  IMMOBILIERE DE BELLEVUE, PICHET IMMOBILIER SERVICES, SOCIETE DE GESTION IMMOBILIERE, DETROIS IMMOBILIER, CABINET
+  MELLIER MICHAS, GOUDARD PATOT, IMMO DE FRANCE FOREZ VELAY) ; 10217339 présent, toujours « Contact 10217339 ».
+- **Registre** : 1 870 actifs dont 1 657 notaires (attendu 1 869 / 1 656) ; l'écart = UNE ligne neuve, normale : 1893,
+  Me Julien MILAN (10651024), notaire côté vendeur, source transactions, écrite à 06:11 par l'étape du registre.
+  Sources : netty 962, transactions 614, hektor 294.
+- **Garde des métiers retirés** : 0 métier retiré par quelqu'un puis remis par la nuit (2 lignes retirées à la main,
+  dont 1892 toujours retirée depuis le 05/11 14:27) ; 0 ligne syndic active pour 10354488.
+- **Garde des contacts supprimés** : 41 contacts supprimés au journal ; 0 ligne de métier et 0 lien pour l'un d'eux.
+- Les 257 lignes actives sans fiche dans l'app = les notaires hors de l'app déjà connus (hektor 53, transactions 204 ;
+  ils étaient 259 : 2 sont entrés) — sujet mis de côté par Frédéric.
+- ⚠ **Trouvé** : le compte rendu JSON de l'étape (`contacts_supprimes_ecartes`, `metiers_retires_ecartes`…) n'est PAS
+  dans le journal du run (ligne vide entre START et DONE, `logs/scheduled/quotidien_2026-11-06_04-00-02.log` l. 3007) :
+  les gardes se contrôlent donc par la base, comme ci-dessus. À signaler, rien de changé.
   ⚠ Le repli `contactsDirectory.find(...) ?? contactsDirectory[0]` d'App.tsx est ANCIEN et sert à toute l'app : non
   touché, à signaler.
 
