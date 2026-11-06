@@ -121,8 +121,8 @@ controle("8. le cockpit lit la nouvelle règle", /const ckSigStatus = [\s\S]{0,4
 controle("8. plus de « (ImmoSign) » en dur dans le cran « édité »", !/envoyez-le à la signature \(ImmoSign\)/.test(app));
 controle("8. les textes « envoyé / signé » suivent le fournisseur", /\{mandatEnvoyeSur\} — vos mandants doivent signer/.test(app) && /<b>\{mandatSigneSur\}<\/b>/.test(app));
 controle("8. G5 : la liste v21 montre l'état du dépôt chez Hektor", /mentionDepotHektor\(e\.doc\)/.test(app) && /dépôt chez Hektor a échoué, il sera repris à 12:30/.test(app));
-controle("8. G6 : l'éditeur relit `mandat_nait_chez_nous` au clic et attend le dépôt confirmé avant la signature Hektor",
-  /chezNousGen = await loadAppSettingActive\('mandat_nait_chez_nous'\)/.test(app) && /chezNousGen && fresh\.envoi_hektor_statut !== 'envoye'/.test(app));
+controle("8. G6 : l'éditeur relit `mandat_nait_chez_nous` au clic et relit jusqu'au dépôt confirmé (depuis P8-2 : le choix « Hektor » reste fermé jusque-là)",
+  /chezNousGen = await loadAppSettingActive\('mandat_nait_chez_nous'\)/.test(app) && /const deposeOuFini = !chezNousGen \|\| fresh\.envoi_hektor_statut === 'envoye'/.test(app));
 
 console.log(echecs.length ? `\n${echecs.length} contrôle(s) en échec` : "\nTOUT EST VERT");
 process.exit(echecs.length ? 1 : 0);

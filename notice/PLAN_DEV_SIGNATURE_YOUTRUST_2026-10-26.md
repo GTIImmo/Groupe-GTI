@@ -970,6 +970,26 @@ webhook posé par Frédéric ; redémarrage du worker.
 >   38 « rien » → « signé » (dont les 5 dont le cockpit montre le cycle : 61398, 40612, 62457, 63173, 63248), 8 « attente
 >   périmée » → « signé », 2 « rien » → « attente », et **1 seul « signé » → « en attente » : 63443** (procédure 958 en cours
 >   APRÈS la 951 signée, mandat 18991) — à regarder avec Frédéric. ⚠ Non vu à l'écran (pas de session sur un serveur local).
+>   Commité `aa0baae` (06/11).
+> - ✅ **P8-2 CODÉ (écran, 06/11) — COMMITÉ, NON POUSSÉ, NON DÉPLOYÉ ; GARDE EN BASE POSÉE** : **un seul bouton « Signature », trois choix**
+>   (`src/lib/choixSignature.ts` + `ChoixSignatureFenetre`), allumé seulement si `signature_youtrust` OU
+>   `mandat_nait_chez_nous` l'est (`useChoixSignatureActif`) — les deux éteints : les boutons d'avant, à l'identique. Les trois
+>   choix restent VISIBLES ; un choix fermé ne fait que dire pourquoi. **Youtrust** : interrupteur + PDF de l'éditeur.
+>   **Hektor** : le document doit être chez Hektor (né chez nous : dépôt `envoye` ; sinon « dépôt en cours » / « échec, repris
+>   à 12:30 » / « pas chez Hektor »). **Manuscrite** : mandat ou avenant. ⭐ **Consigne de Frédéric** : une procédure lancée
+>   (Youtrust `pending`, ou ImmoSign `pending` avec procédure) → les trois restent, chacun dit « annulez-la d'abord ».
+>   Branché sur : la liste Documents (les deux présentations), le suivi de signature du mandat (`MandatSignatureTracker`,
+>   + sa signature manuscrite et sa fenêtre Youtrust), l'éditeur juste après « Générer » (le choix se met à jour tant que
+>   le dépôt n'est pas confirmé). **Garde en base POSÉE le 06/11** (accord de Frédéric « Oui, vas-y ») : `supabase/patch_a2_p8_2_signe_main_garde_2026-11-06.sql`
+>   (+ `_REPETITION`, tout dans une transaction annulée, 5 contrôles ; + `_INVERSE`) — `app_console_mark_document_signed_manual`
+>   refuse pendant une signature en cours. **Essais** : `test_choix_signature.cjs` 21/21 (neuf) ; cockpit 23/23 (contrôle G6
+>   mis à jour : l'attente du dépôt passe par le choix) ; conjoints 26/26 ; écarts 18/18 ; build OK (`tsc -b` compris).
+>   **Pose (06/11)** : empreinte `66e1ebec…` → `160f30c2…`, droits inchangés (authenticated, postgres, service_role).
+>   **Répétition : 5/5 vert**, document d'essai f0d73f5a **intact** après l'annulation (signé Youtrust, `updated_at` du matin).
+>   **Témoin inverse** : l'ancienne fonction, remise dans une transaction annulée, ACCEPTE le « signé à la main » sur un
+>   Youtrust en cours. ⚠ **Le 1er passage de la répétition a MENTI** : sa mise en scène, jouée en `authenticated`, n'écrivait
+>   rien (RLS active, aucune règle UPDATE sur `app_console_document`), la fonction voyait « signé » et le contrôle [2] tombait
+>   pour une fausse raison. Corrigé : mise en scène en propriétaire, APPEL seul en `authenticated`, chaque mise en scène vérifiée.
 > **Le nœud** : interrupteur allumé, un mandat généré naît `sans_hektor` (D24) → « signature Hektor » impossible sans le
 > DÉPOSER chez Hektor. Un chemin DORMANT existe (`completerEnvoiDocumentDiffere`, `upload_document_to_hektor` avec
 > `app_document_id` : « aucun appelant ») — jamais éprouvé. À l'inverse, un document venu de Hektor (modèle ImmoSign,

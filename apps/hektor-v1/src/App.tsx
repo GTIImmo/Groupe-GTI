@@ -287,6 +287,7 @@ import EnvoiSignatureYoutrust, { EVENEMENT_CORRIGER_MANDAT, type DemandeCorrecti
 import type { FicheDuJourPdf } from './lib/ecartsFichePdf'
 import { ficheDuMandant, mandantsImprimes, mandantsSansPrenomOuNom, situationsDesConjoints, type FicheCouple, type SituationConjoint } from './lib/conjointsDuMandat'
 import { etatSignatureDuMandat } from './lib/etatSignatureMandat'
+import { choixDeSignature, type Choix, type ChoixDeSignature } from './lib/choixSignature'
 import RechercheGlobale, { type GroupeRecherche } from './RechercheGlobale'
 import './fil-navigation.css'
 import './suivi-travaux.css'
@@ -5296,6 +5297,63 @@ function SignaturePromptModal({ intro, items, onConfirm, onClose }: { intro: str
   )
 }
 
+// A.2 P8-2 (06/11/2026, D42) : UN SEUL bouton « Signature », trois choix. Les trois restent VISIBLES ; un choix
+// impossible ne fait rien d'autre que DIRE pourquoi (Frederic : « laisser le bouton mais faire un message qui explique
+// a l'utilisateur d'annuler la procedure »). La regle vit dans lib/choixSignature.ts.
+function ChoixSignatureFenetre({ document, choix, onYoutrust, onHektor, onManuscrite, onClose }: {
+  document: ConsoleDocument
+  choix: ChoixDeSignature
+  onYoutrust: () => void
+  onHektor: () => void
+  onManuscrite: () => void
+  onClose: () => void
+}) {
+  const [raison, setRaison] = useState<string | null>(null)
+  const options: Array<{ cle: string; titre: string; detail: string; c: Choix; agir: () => void }> = [
+    { cle: 'youtrust', titre: 'Signature électronique (Youtrust)', detail: 'Les signataires reçoivent un lien par e-mail et signent avec un code.', c: choix.youtrust, agir: onYoutrust },
+    { cle: 'hektor', titre: 'Signature Hektor (ImmoSign)', detail: 'Hektor s’ouvre sur l’onglet Documents : vous y lancez la procédure.', c: choix.hektor, agir: onHektor },
+    { cle: 'manuscrite', titre: 'Signature manuscrite', detail: 'Le document a été signé sur papier : le marquer comme signé.', c: choix.manuscrite, agir: onManuscrite },
+  ]
+  return (
+    <div role="dialog" aria-modal="true" onClick={onClose}
+      style={{ position: 'fixed', inset: 0, zIndex: 10060, background: 'rgba(17,17,23,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+      <div className="mandat-sign-popup" onClick={(event) => event.stopPropagation()}
+        style={{ background: '#fff', borderRadius: '14px', maxWidth: '480px', width: '100%', padding: '22px 24px', boxShadow: '0 24px 70px rgba(0,0,0,0.35)' }}>
+        <strong style={{ display: 'block', fontSize: '17px', marginBottom: '6px' }}>Faire signer ce document</strong>
+        <p style={{ margin: '0 0 14px', color: '#555', fontSize: '13px' }}>{`Document : ${document.document_name ?? ''}`}</p>
+        <div style={{ display: 'grid', gap: '8px' }}>
+          {options.map((o) => (
+            <button key={o.cle} type="button" className={`ghost-button choix-signature-option${o.c.possible ? '' : ' is-ferme'}`} data-choix={o.cle}
+              aria-disabled={!o.c.possible}
+              onClick={() => { if (o.c.possible) { setRaison(null); o.agir() } else setRaison(o.c.raison) }}
+              style={{ display: 'block', textAlign: 'left', padding: '10px 12px', borderRadius: '10px', opacity: o.c.possible ? 1 : 0.6 }}>
+              <span style={{ display: 'block', fontWeight: 600 }}>{o.titre}</span>
+              <span style={{ display: 'block', fontSize: '12px', color: '#666' }}>{o.c.possible ? o.detail : o.c.raison}</span>
+            </button>
+          ))}
+        </div>
+        {raison ? <p className="console-documents-error" role="alert" style={{ margin: '12px 0 0' }}>{raison}</p> : null}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '14px' }}>
+          <button className="ghost-button button-subtle" type="button" onClick={onClose}>Fermer</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// A.2 P8-2 : le choix a trois boutons ne s'allume que si l'un des deux interrupteurs de la signature l'est
+// (`signature_youtrust` ou `mandat_nait_chez_nous`). Les deux eteints : l'ecran d'aujourd'hui, a l'identique.
+function useChoixSignatureActif() {
+  const youtrust = useSignatureYoutrust()
+  const [chezNous, setChezNous] = useState(false)
+  useEffect(() => {
+    let annule = false
+    void loadAppSettingActive('mandat_nait_chez_nous').then((v) => { if (!annule) setChezNous(v) })
+    return () => { annule = true }
+  }, [])
+  return { actif: youtrust || chezNous, youtrust }
+}
+
 // Champ « corrigeable » du mandat (mode mandat) : la valeur est reprise de la fiche
 // annonce ; le crayon ouvre une édition en place ; « Enregistrer » écrit dans la fiche via
 // la CHAÎNE OPTIMISTE EXISTANTE (editAnnonceOptimistic → RPC calque + job worker débouncé,
@@ -5406,6 +5464,9 @@ function MandatDocumentEditor(props: {
   const [signPromptOpen, setSignPromptOpen] = useState(false)
   // A.2 lot 6b P4 : Youtrust allume, le mandat genere ouvre la fenetre d'envoi (le PDF ne va plus chez Hektor, D24).
   const [envoiYoutrustDoc, setEnvoiYoutrustDoc] = useState<ConsoleDocument | null>(null)
+  // A.2 P8-2 (06/11/2026, D42) : le choix a trois signatures, ouvert juste apres la generation.
+  const [choixApresGen, setChoixApresGen] = useState<ConsoleDocument | null>(null)
+  const choixSignatureEditeur = useChoixSignatureActif()
   // A.2 lot 6b P5 : « Corriger le mandat » -- l'editeur rouvert pour corriger le PDF `ancien` avant l'envoi ;
   // la regeneration le remplace (le worker le marque) et revient a l'envoi avec « ce qui a change » (envoiAncien).
   const [correction, setCorrection] = useState<{ ancien: ConsoleDocument } | null>(null)
@@ -5800,6 +5861,8 @@ function MandatDocumentEditor(props: {
     // A.2 lot 6b P5 : la ligne du nouveau PDF nait AVANT que le worker marque l'ancien ; on laisse 45 s a la marque
     // avant de revenir a l'envoi (sinon la fenetre dirait « pas marque » alors qu'il allait l'etre).
     let marqueAttendueJusqua = 0
+    // A.2 P8-2 : le choix ne s'ouvre qu'UNE fois ; les relectures suivantes ne font que le mettre a jour.
+    let choixVuApresGen = false
     const poll = async () => {
       try {
         const docs = await loadConsoleDocuments(props.dossier.app_dossier_id)
@@ -5819,30 +5882,27 @@ function MandatDocumentEditor(props: {
           setEnvoiJusteGenere(true)
           return
         }
+        // A.2 P8-2 (06/11/2026, D42) : un interrupteur de la signature allume -> le mandat est la en secondes et le CHOIX
+        // a trois s'ouvre (Youtrust / Hektor / manuscrite). Ne chez nous, on continue de relire tant que le depot chez Hektor
+        // n'est pas confirme : le choix « Hektor » se debloque tout seul quand il l'est.
+        if (fresh && (youtrustGen || chezNousGen)) {
+          setPdfBusy(false)
+          const deposeOuFini = !chezNousGen || fresh.envoi_hektor_statut === 'envoye' || fresh.envoi_hektor_statut === 'echec'
+          setMessage(!chezNousGen ? bvs('Mandat enregistré chez nous. Choisissez comment le faire signer.')
+            : fresh.envoi_hektor_statut === 'envoye' ? bvs('Mandat enregistré chez nous et déposé dans Hektor. Choisissez comment le faire signer.')
+            : fresh.envoi_hektor_statut === 'echec' ? bvs('Mandat enregistré chez nous. Le dépôt chez Hektor a échoué : il sera repris à 12:30, la signature Hektor sera possible ensuite.')
+            : bvs('Mandat enregistré chez nous — dépôt chez Hektor en cours…'))
+          if (!choixVuApresGen) { choixVuApresGen = true; setChoixApresGen(fresh) }
+          else setChoixApresGen((ouvert) => (ouvert && ouvert.id === fresh.id ? fresh : ouvert))
+          if (deposeOuFini || Date.now() >= deadline) return
+          window.setTimeout(() => { void poll() }, 4000)
+          return
+        }
         if (fresh) {
-          // A.2 P8-0 / G6 : « occupe » reste tant qu'on attend le depot (sinon un 2e clic genererait un 2e mandat).
-          if (!(chezNousGen && !youtrustGen && fresh.envoi_hektor_statut !== 'envoye' && fresh.envoi_hektor_statut !== 'echec')) setPdfBusy(false)
-          if (youtrustGen) {
-            setMessage(bvs('Mandat enregistré chez nous.'))
-            setEnvoiYoutrustDoc(fresh)
-            setEnvoiJusteGenere(true)
-            return
-          }
-          // A.2 P8-0 / G6 : ne chez nous, il est la en secondes ; la signature Hektor attend que HEKTOR l'ait (depot
-          // confirme). En echec : on le DIT et on s'arrete -- la reprise de 12:30 le deposera.
-          if (chezNousGen && fresh.envoi_hektor_statut !== 'envoye') {
-            if (fresh.envoi_hektor_statut === 'echec') {
-              setPdfBusy(false)
-              setMessage(bvs('Mandat enregistré chez nous. Le dépôt chez Hektor a échoué : il sera repris à 12:30, la signature Hektor sera possible ensuite.'))
-              return
-            }
-            setMessage(bvs('Mandat enregistré chez nous — dépôt chez Hektor en cours…'))
-          } else {
-            setPdfBusy(false)
-            setMessage(chezNousGen ? bvs('Mandat enregistré chez nous et déposé dans Hektor.') : bvs('Mandat depose dans Hektor.'))
-            setSignPromptOpen(true)
-            return
-          }
+          setPdfBusy(false)
+          setMessage(bvs('Mandat depose dans Hektor.'))
+          setSignPromptOpen(true)
+          return
         }
       } catch { /* on reessaie */ }
       if (Date.now() < deadline) {
@@ -6169,6 +6229,27 @@ function MandatDocumentEditor(props: {
                 items={(selectedSignatureRecipients.length ? selectedSignatureRecipients : draft.signatureRecipients).map((recipient) => `${signatureRecipientLabel(recipient)}${recipient.email ? ` · ${recipient.email}` : ''}${recipient.telephone ? ` · ${recipient.telephone}` : ''}`)}
                 onConfirm={openHektorForSignature}
                 onClose={() => setSignPromptOpen(false)}
+              />
+            ) : null}
+            {choixApresGen ? (
+              <ChoixSignatureFenetre
+                document={choixApresGen}
+                choix={choixDeSignature(choixApresGen, { youtrustActif: choixSignatureEditeur.youtrust, manuscriteActive: APP_MANDAT_V3_ENABLED })}
+                onYoutrust={() => { const d = choixApresGen; setChoixApresGen(null); setEnvoiYoutrustDoc(d); setEnvoiJusteGenere(true) }}
+                onHektor={() => { setChoixApresGen(null); setSignPromptOpen(true) }}
+                onManuscrite={() => {
+                  const d = choixApresGen
+                  setChoixApresGen(null)
+                  if (!window.confirm(`Confirmer que ce document a été signé À LA MAIN par tous les mandants ?
+
+${d.document_name}
+
+Le mandat passera à l'état « Signé ». À ne faire qu'une fois le PDF signé joint aux documents.`)) return
+                  void markConsoleDocumentSignedManual(d.id)
+                    .then(() => setMessage(bvs('Document marqué comme signé (signature manuscrite).')))
+                    .catch((err) => setMessage(err instanceof Error ? err.message : 'Impossible de marquer le document comme signé'))
+                }}
+                onClose={() => setChoixApresGen(null)}
               />
             ) : null}
             {envoiYoutrustDoc ? (
@@ -11555,6 +11636,10 @@ function EstimationDataSection({ dossier, detail, refreshKey, onJobCreated, onOp
 function MandatSignatureTracker({ dossier, onJobCreated }: { dossier: Dossier; onJobCreated?: (job: ConsoleJob) => void }) {
   const [documents, setDocuments] = useState<ConsoleDocument[]>([])
   const [busyId, setBusyId] = useState<string | null>(null)
+  // A.2 P8-2 (06/11/2026, D42) : le meme choix a trois signatures que la liste Documents.
+  const choixSignature = useChoixSignatureActif()
+  const [choixDoc, setChoixDoc] = useState<ConsoleDocument | null>(null)
+  const [envoiDoc, setEnvoiDoc] = useState<ConsoleDocument | null>(null)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -11603,6 +11688,18 @@ function MandatSignatureTracker({ dossier, onJobCreated }: { dossier: Dossier; o
     catch (err) { setError(err instanceof Error ? err.message : 'Impossible de creer la demande de relance') }
     finally { setBusyId(null) }
   }
+  // A.2 P8-2 : « signature manuscrite » depuis le suivi -- le geste de la liste Documents, a l'identique.
+  async function signeALaMain(document: ConsoleDocument) {
+    if (!window.confirm(`Confirmer que ce document a été signé À LA MAIN par tous les mandants ?
+
+${document.document_name}
+
+Le mandat passera à l'état « Signé ». À ne faire qu'une fois le PDF signé joint aux documents.`)) return
+    setBusyId(document.id); setError(null); setMessage(null)
+    try { await markConsoleDocumentSignedManual(document.id); await refresh(); setMessage('Document marqué comme signé (signature manuscrite).') }
+    catch (err) { setError(err instanceof Error ? err.message : 'Impossible de marquer le document comme signé') }
+    finally { setBusyId(null) }
+  }
   async function cancel(document: ConsoleDocument, procedureId: number | string, hektorDocId?: number | string | null) {
     if (!window.confirm(`Annuler la signature en cours de ce document ?\n\n${document.document_name}`)) return
     setBusyId(document.id); setError(null); setMessage(null)
@@ -11648,8 +11745,8 @@ function MandatSignatureTracker({ dossier, onJobCreated }: { dossier: Dossier; o
                     <span aria-hidden="true"><DetailIcon type="actions" /></span>Annuler
                   </button>
                 ) : null}
-                {signature?.status !== 'signed' ? (
-                  <button className="ghost-button console-document-sign" type="button" onClick={openHektorSignature}>
+                {signature?.status !== 'signed' && !(choixSignature.actif && documentRemplace(document)) ? (
+                  <button className="ghost-button console-document-sign" type="button" onClick={choixSignature.actif ? () => setChoixDoc(document) : openHektorSignature}>
                     <span aria-hidden="true"><DetailIcon type="signature" /></span>Signature
                   </button>
                 ) : null}
@@ -11658,6 +11755,25 @@ function MandatSignatureTracker({ dossier, onJobCreated }: { dossier: Dossier; o
           )
         })}
       </div>
+      {choixDoc ? (
+        <ChoixSignatureFenetre
+          document={choixDoc}
+          choix={choixDeSignature(choixDoc, { youtrustActif: choixSignature.youtrust, manuscriteActive: APP_MANDAT_V3_ENABLED })}
+          onYoutrust={() => { const d = choixDoc; setChoixDoc(null); setEnvoiDoc(d) }}
+          onHektor={() => { setChoixDoc(null); openHektorSignature() }}
+          onManuscrite={() => { const d = choixDoc; setChoixDoc(null); void signeALaMain(d) }}
+          onClose={() => setChoixDoc(null)}
+        />
+      ) : null}
+      {envoiDoc ? (
+        <EnvoiSignatureYoutrust
+          document={envoiDoc}
+          dossier={dossier}
+          adresse={[dossier.titre_bien, dossier.ville].filter(Boolean).join(' · ')}
+          onClose={() => setEnvoiDoc(null)}
+          onSent={(job) => { onJobCreated?.(job); void refresh() }}
+        />
+      ) : null}
     </section>
   )
 }
@@ -11671,6 +11787,9 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
   // A.2 lot 6b P4 : la fenetre d'envoi Youtrust (interrupteur allume seulement).
   const signatureYoutrust = useSignatureYoutrust()
   const [envoiDoc, setEnvoiDoc] = useState<ConsoleDocument | null>(null)
+  // A.2 P8-2 : le choix a trois signatures (allume si l'un des deux interrupteurs de la signature l'est).
+  const choixSignature = useChoixSignatureActif()
+  const [choixDoc, setChoixDoc] = useState<ConsoleDocument | null>(null)
   // A.2 lot 6b P5 : « Corriger le mandat » depuis la fenetre ouverte ici -> l'editeur du meme bien s'ouvre (s'il est monte).
   const demanderCorrection = (document: ConsoleDocument, onglet: OngletCorrection) => {
     const detail: DemandeCorrectionMandat = { app_dossier_id: dossier.app_dossier_id, document, onglet, pris: false }
@@ -12091,6 +12210,14 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
             Annuler
           </button>
         ) : null}
+        {/* A.2 P8-2 (06/11/2026, D42) : un des deux interrupteurs de la signature allume -> UN SEUL bouton « Signature »
+            qui ouvre le choix a trois (Youtrust / Hektor / manuscrite). Les deux eteints : les boutons d'avant, a l'identique. */}
+        {choixSignature.actif ? (signature?.status !== 'signed' && !documentRemplace(document) ? (
+          <button className="ghost-button console-document-sign" type="button" onClick={() => setChoixDoc(document)} disabled={busyDocumentId === document.id}>
+            <span aria-hidden="true"><DetailIcon type="signature" /></span>
+            Signature
+          </button>
+        ) : null) : (<>
         {/* A.2 lot 6b P4 : Youtrust allume -> « Signature » seulement sur un PDF qui porte sa photo de signataires
             (fait par l'editeur, P1), et pas pendant une demande Youtrust en cours ; il ouvre la fenetre d'envoi.
             Eteint : le bouton d'avant, a l'identique (fenetre « Oui, ouvrir Hektor »). */}
@@ -12113,6 +12240,7 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
             Signé à la main
           </button>
         ) : null}
+        </>)}
         <button className="ghost-button console-document-delete" type="button" onClick={() => void handleDeleteDocument(document)} disabled={deleting || busyDocumentId === document.id}>
           <span aria-hidden="true"><DetailIcon type="actions" /></span>
           {deleting ? 'Suppression' : 'Supprimer'}
@@ -12204,6 +12332,17 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
           ))}
         </div>
 
+        {/* A.2 P8-2 : le choix a trois signatures. */}
+        {choixDoc ? (
+          <ChoixSignatureFenetre
+            document={choixDoc}
+            choix={choixDeSignature(choixDoc, { youtrustActif: choixSignature.youtrust, manuscriteActive: APP_MANDAT_V3_ENABLED })}
+            onYoutrust={() => { const d = choixDoc; setChoixDoc(null); setEnvoiDoc(d) }}
+            onHektor={() => { const d = choixDoc; setChoixDoc(null); setSignDoc(d) }}
+            onManuscrite={() => { const d = choixDoc; setChoixDoc(null); void handleMarkSignedManual(d) }}
+            onClose={() => setChoixDoc(null)}
+          />
+        ) : null}
         {signDoc ? (
           <SignaturePromptModal
             intro={`Document : ${signDoc.document_name}`}
@@ -12300,6 +12439,17 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
               )
             })}
           </div>
+        ) : null}
+        {/* A.2 P8-2 : le choix a trois signatures. */}
+        {choixDoc ? (
+          <ChoixSignatureFenetre
+            document={choixDoc}
+            choix={choixDeSignature(choixDoc, { youtrustActif: choixSignature.youtrust, manuscriteActive: APP_MANDAT_V3_ENABLED })}
+            onYoutrust={() => { const d = choixDoc; setChoixDoc(null); setEnvoiDoc(d) }}
+            onHektor={() => { const d = choixDoc; setChoixDoc(null); setSignDoc(d) }}
+            onManuscrite={() => { const d = choixDoc; setChoixDoc(null); void handleMarkSignedManual(d) }}
+            onClose={() => setChoixDoc(null)}
+          />
         ) : null}
         {signDoc ? (
           <SignaturePromptModal
