@@ -990,7 +990,7 @@ webhook posé par Frédéric ; redémarrage du worker.
 >   Youtrust en cours. ⚠ **Le 1er passage de la répétition a MENTI** : sa mise en scène, jouée en `authenticated`, n'écrivait
 >   rien (RLS active, aucune règle UPDATE sur `app_console_document`), la fonction voyait « signé » et le contrôle [2] tombait
 >   pour une fausse raison. Corrigé : mise en scène en propriétaire, APPEL seul en `authenticated`, chaque mise en scène vérifiée.
-> - ✅ **P8-3 CODÉ (écran, 06/11) — NON COMMITÉ, NON DÉPLOYÉ** : **le suivi par signataire** d'un document Youtrust
+> - ✅ **P8-3 CODÉ (écran, 06/11) — COMMITÉ `5e63d55`, NON POUSSÉ, NON DÉPLOYÉ** : **le suivi par signataire** d'un document Youtrust
 >   (`src/lib/suiviSignataires.ts` + `src/SuiviSignatairesYoutrust.tsx` + `suivi-signataires.css`), monté sous l'état de
 >   signature aux TROIS endroits (liste Documents v21 et classique, suivi du mandat). Il lit `app_signature_request` (⛔ jamais
 >   `proofs` : le code à usage unique y est), dans l'ordre des cases : « A signé le … à … » (heure de Paris), « Invité par
