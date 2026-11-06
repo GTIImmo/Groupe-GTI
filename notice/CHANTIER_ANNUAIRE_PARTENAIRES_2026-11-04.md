@@ -1940,6 +1940,10 @@ pour tout le monde (au rechargement). Retour arrière : `admin` ou `off`. **Suit
   ligne `masquerRecherche` avait changé sans que je le relance) : contrôle mis à jour.
 - **Ordre de pose** : 1. coller le patch (puis la répétition, 9 « OK ») ; 2. pousser l'écran (avant le patch, le carnet
   des fiches métier dirait « illisible »). Retour arrière : l'écran d'avant, PUIS `_INVERSE.sql`.
+- ✅ **PATCH POSÉ le 06/11 (« Vas-y »)** — migration `partenaire_interlocuteur_2026_11_06` ; **répétition 9/9 « OK »**
+  (0 ligne). L'app en ligne écrit par le relais : rien de cassé en attendant l'écran.
+- ⏸ **Écran NON poussé** : sous `ab8f8b7` se trouve `63fbe36` (autre session : code serveur `appointment_service.py` +
+  `run_full_pipeline.ps1`) — le pousser l'enverrait chez Render ; question posée à Frédéric.
   ⚠ Le repli `contactsDirectory.find(...) ?? contactsDirectory[0]` d'App.tsx est ANCIEN et sert à toute l'app : non
   touché, à signaler.
 
