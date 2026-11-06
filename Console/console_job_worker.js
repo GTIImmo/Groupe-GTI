@@ -6228,10 +6228,19 @@ function refusEtatYoutrust(message) {
   return new Error(`${MARQUE_REFUS_ETAT} ${message}`);
 }
 
-async function interrupteurSignatureYoutrust() {
+// A.2 (06/11/2026) : TROIS crans -- 'on' = tout le monde ; 'admin' = seulement un travail DEMANDE PAR UN ADMIN ACTIF
+// (essayer Youtrust en production sans que les negociateurs le voient : l'ecran ne leur propose rien, et ici un travail
+// pose par un non-admin est refuse) ; le reste = eteint. Sans travail ou sans demandeur, 'admin' = eteint.
+async function interrupteurSignatureYoutrust(job = null) {
   const rows = await supabaseRequest("app_setting?select=value&key=eq.signature_youtrust&limit=1", { method: "GET" });
   const value = Array.isArray(rows) && rows[0] ? String(rows[0].value || "").trim().toLowerCase() : "";
-  return ["on", "true", "1", "yes"].includes(value);
+  if (["on", "true", "1", "yes"].includes(value)) return true;
+  if (value !== "admin") return false;
+  const demandeur = job && cleanString(job.requested_by);
+  if (!demandeur) return false;
+  const profils = await supabaseRequest(`app_user_profile?select=role,is_active&id=eq.${encodeURIComponent(demandeur)}&limit=1`, { method: "GET" });
+  const profil = Array.isArray(profils) && profils[0] ? profils[0] : null;
+  return Boolean(profil && profil.is_active === true && String(profil.role || "") === "admin");
 }
 
 // A.2 P8-0 (06/11/2026, D42) : le mandat genere nait chez nous puis part chez Hektor. Absent ou « off » = eteint.
@@ -6241,9 +6250,9 @@ async function interrupteurMandatChezNous() {
   return ["on", "true", "1", "yes"].includes(value);
 }
 
-async function exigerInterrupteurYoutrust() {
-  if (!(await interrupteurSignatureYoutrust())) {
-    throw refusEtatYoutrust("La signature Youtrust est eteinte (app_setting signature_youtrust = off).");
+async function exigerInterrupteurYoutrust(job = null) {
+  if (!(await interrupteurSignatureYoutrust(job))) {
+    throw refusEtatYoutrust("La signature Youtrust est eteinte (app_setting signature_youtrust = off, ou « admin » et le demandeur n'est pas un admin actif).");
   }
 }
 
@@ -6437,7 +6446,7 @@ function signatairesDepuisLaPhoto(doc, corrections) {
 }
 
 async function handleYoutrustSendSignature(job) {
-  await exigerInterrupteurYoutrust();
+  await exigerInterrupteurYoutrust(job);
   const payload = safeJsonParse(job.payload_json) || {};
   const documentId = cleanString(payload.app_console_document_id);
   if (!documentId) throw refusEtatYoutrust("payload_json.app_console_document_id requis.");
@@ -6916,7 +6925,7 @@ async function handleYoutrustSyncSignature(job) {
 }
 
 async function demandeYoutrustDuTravail(job) {
-  await exigerInterrupteurYoutrust();
+  await exigerInterrupteurYoutrust(job);
   const payload = safeJsonParse(job.payload_json) || {};
   const id = cleanString(payload.signature_request_id);
   if (!id) throw refusEtatYoutrust("payload_json.signature_request_id requis.");
@@ -9197,7 +9206,7 @@ async function handleGenerateMandatDocument(job) {
   // A.2 P8-0 (06/11/2026, D42) : `mandat_nait_chez_nous` ALLUME -> chez nous d'abord, puis le depot chez Hektor en
   // arriere-plan, QUEL QUE SOIT l'interrupteur Youtrust (avant la coupure : trois signatures possibles). Il prime.
   const chezNousPuisHektor = await interrupteurMandatChezNous();
-  if (chezNousPuisHektor || await interrupteurSignatureYoutrust()) {
+  if (chezNousPuisHektor || await interrupteurSignatureYoutrust(job)) {
     return enregistrerMandatChezNous(job, dossier, payload, label, filename, pdfBuffer, { deposerChezHektor: chezNousPuisHektor });
   }
   const tempPath = `temp/uploads/${job.id}/${filename}`;

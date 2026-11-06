@@ -79,7 +79,7 @@ const immosign = (zipAuCoffre) => ({
 
 // 4. LES BRANCHEMENTS.
 const src = (f) => fs.readFileSync(path.resolve(__dirname, "src", f), "utf8");
-const app = src("App.tsx");
+const app = src("App.tsx").split(String.fromCharCode(13)).join("");
 const fen = src("PiecesSignature.tsx");
 const api = src(path.join("lib", "api.ts"));
 const suivi = src("SuiviSignatairesYoutrust.tsx");
@@ -91,6 +91,18 @@ controle("4. une pièce ABSENTE du coffre est grisée, sans geste (« Sur le ser
   /disabled=\{occupe !== null \|\| absente\}/.test(fen) && /Sur le serveur seulement/.test(fen) && /\.list\(dossier, \{ search: nom, limit: 20 \}\)/.test(api));
 controle("4. un ZIP se TÉLÉCHARGE, un PDF s'ouvre", /piece\.format === 'zip' \? \{ download: nom \} : undefined/.test(api));
 controle("4. le suivi Youtrust : « Preuve » sur la ligne d'un signataire qui a signé", /l\.ton === 'signe' && l\.index != null && preuves\.some/.test(suivi) && /preuvesActives=\{preuvesActives\} document=/.test(app));
+
+// 4 bis. ⭐ ESSAI RÉEL DU 06/11 : la fenêtre s'ouvrait 1 447 px AU-DESSUS de l'écran (le panneau de la fiche porte un
+//   `transform`, qui piège un `position: fixed`). Les trois fenêtres de la signature sont montées dans le body.
+{
+  const envoi = src("EnvoiSignatureYoutrust.tsx");
+  const debutChoix = app.indexOf("function ChoixSignatureFenetre(");
+  const choix = debutChoix < 0 ? "" : app.slice(debutChoix, app.indexOf("\n}\n", debutChoix) + 3);
+  controle("4 bis. les trois fenêtres (Pièces, choix à trois, envoi Youtrust) passent par un PORTAIL vers le body",
+    /return createPortal\(/.test(fen) && /window\.document\.body,/.test(fen)
+      && /return createPortal\(/.test(envoi) && /window\.document\.body,/.test(envoi)
+      && /return createPortal\(/.test(choix) && /window\.document\.body,/.test(choix), choix.slice(0, 80));
+}
 
 // 5. LES DEUX PATCHS.
 const sql = (f) => fs.readFileSync(path.resolve(__dirname, "..", "..", "supabase", f), "utf8");

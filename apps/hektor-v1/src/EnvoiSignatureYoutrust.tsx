@@ -15,6 +15,7 @@
 // P6 (05/11) : `ficheDuJour` -- si la fiche a change depuis le PDF (mandants, bien, prix, honoraires), un bandeau le dit
 //   et propose de regenerer ; « Envoyer quand meme… » demande une confirmation, ecrite dans la demande (vue 5).
 import { useEffect, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import {
   contenuImprimeDuDocument,
   createConsoleDocumentSignedUrl,
@@ -194,7 +195,9 @@ export default function EnvoiSignatureYoutrust(props: {
   const ancienMarque = props.ancien ? documentRemplace(props.ancien) : null
   const bloque = !photo || !photo.valide || Boolean(remplace)
 
-  return (
+  // A.2 P8-5 (06/11) : monte dans le body -- ouverte depuis le suivi du mandat (dans le panneau de la fiche, qui porte un
+  // `transform`), un `position: fixed` s'y retrouvait piege hors de l'ecran.
+  return createPortal(
     <div className="ens-voile" role="dialog" aria-modal="true" aria-label="Envoyer en signature" onClick={() => { if (!busy) props.onClose() }}>
       <div className="ens-modale" onClick={(event) => event.stopPropagation()}>
         <div className="ens-tete">
@@ -385,6 +388,7 @@ export default function EnvoiSignatureYoutrust(props: {
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    window.document.body,
   )
 }

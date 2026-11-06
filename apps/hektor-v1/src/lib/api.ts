@@ -9223,6 +9223,27 @@ export async function loadAppSettingValeur(key: string): Promise<string | null> 
   }
 }
 
+// A.2 (06/11/2026) : `signature_youtrust` a TROIS crans -- 'on' = tout le monde ; 'admin' = les admins ACTIFS seuls
+// (essayer Youtrust en production sans que les negociateurs le voient) ; le reste = eteint. Le worker refait la meme
+// regle sur le DEMANDEUR du travail (interrupteurSignatureYoutrust) : l'ecran ne fait que ne pas proposer.
+// Une lecture ratee = eteint, comme loadAppSettingActive.
+export async function loadSignatureYoutrustActive(): Promise<boolean> {
+  const valeur = await loadAppSettingValeur('signature_youtrust')
+  if (['on', 'true', '1', 'yes'].includes(valeur ?? '')) return true
+  if (valeur !== 'admin' || !hasSupabaseEnv || !supabase) return false
+  try {
+    const { data } = await supabase.auth.getUser()
+    const id = data?.user?.id
+    if (!id) return false
+    const { data: profil, error } = await supabase.from('app_user_profile').select('role,is_active').eq('id', id).maybeSingle()
+    if (error || !profil) return false
+    const p = profil as { role?: string | null; is_active?: boolean | null }
+    return p.is_active === true && p.role === 'admin'
+  } catch {
+    return false
+  }
+}
+
 // Registre des transactions (31/10/2026) : UNE LIGNE PAR DOSSIER (chaîne offre -> compromis -> vente),
 // lue par app_registre_dossiers (patch_registre_dossiers_droits_2026-10-31.sql). La fonction applique
 // la MÊME règle que la fiche : un admin voit tout, un négociateur ses biens + les dossiers où il est

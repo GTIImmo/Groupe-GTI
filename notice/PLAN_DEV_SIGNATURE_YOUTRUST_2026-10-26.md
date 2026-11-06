@@ -1046,6 +1046,33 @@ webhook posé par Frédéric ; redémarrage du worker.
 >   d'avant) ; pièces 23/23, suivi 27/27, choix 21/21, cockpit 23/23 ; build vert sur HEAD + ces blocs. ⚠ **Non fait, à
 >   décider** : un écran resté OUVERT ne voit pas une signature faite plus tard (avis Youtrust) avant la prochaine relecture
 >   de l'app ; et le fil du cockpit ne dit pas encore « expiré le … » (il lit « à envoyer »). ⚠ Non vu à l'écran.
+> - ⏰ **ESSAI RÉEL DU 06/11 (12:28-12:45), accord de Frédéric « je te laisse allumer et faire l'essai »** — les 4 services
+>   avaient redémarré à 12:28 (après `bef8599`, 11:45 : masquage du code actif), file vide. **Interrupteurs allumés à
+>   12:29** : `mandat_nait_chez_nous` = on, `signature_preuves` = on (globaux : pas de cran « admins seuls »).
+>   `signature_youtrust` **laissé éteint** (sandbox jusqu'au ~09/11, valable pour TOUS les négociateurs). **Vu sur 61398
+>   (déployé `index-BYpjH70j.js`)** : le cockpit lit « Signé — faire valider » (P8-1) ; le suivi affiche les 3 signataires
+>   dans l'ordre, heure de Paris, chacun avec « Preuve » (P8-3/P8-4) ; ⭐ **« Preuve » du 1er mandant ouvre la pièce au
+>   coffre** (`proofs/preuves-1-mandant.pdf`, « Dossier de preuves ») : la règle de lecture marche en production.
+>   ⚠⚠ **DÉFAUT TROUVÉ** : la fenêtre « Pièces de la signature » s'ouvrait **1 447 px au-dessus de l'écran** — le panneau
+>   de la fiche (`modal-panel-detail`) porte un `transform`, qui piège un `position: fixed`. Même piège pour la fenêtre
+>   du choix à trois (P8-2) et la fenêtre d'envoi Youtrust ouvertes depuis le suivi du mandat. **Corrigé** (non commité) :
+>   les trois montées par `createPortal(…, window.document.body)` (la règle du projet, 10 fenêtres déjà ainsi ; le
+>   paramètre `document` masque le global). Essai `test_pieces_signature.cjs` 24/24 (contrôle 4 bis) ; build vert sur
+>   HEAD + le correctif. ⚠ **La génération n'a PAS pu s'éprouver sur 61398** : son mandat est signé, l'écran ne montre
+>   plus l'éditeur — il faut un bien dont le mandat est à éditer.
+> - ✅ **LE CRAN « admin » DE `signature_youtrust` CODÉ (06/11, choix « 2 » de Frédéric) — NON COMMITÉ, worker NON
+>   REDÉMARRÉ** : pour essayer Youtrust EN PRODUCTION sans que les négociateurs le voient. Trois crans : `on` = tout le
+>   monde ; **`admin` = un travail DEMANDÉ PAR UN ADMIN ACTIF** ; le reste = éteint (modèle `registre_transactions_ecran`).
+>   **Worker** : `interrupteurSignatureYoutrust(job)` lit le profil du demandeur (`app_user_profile.role/is_active`) ; les
+>   trois portes lui passent le travail (envoi ; relance / annulation / lien ; génération). Un envoi posé par un
+>   négociateur est refusé avec la raison. **Écran** : `loadSignatureYoutrustActive()` (api.ts) — le crochet et la
+>   génération l'utilisent, plus aucune lecture à deux crans. L'avis Youtrust (`youtrust_sync_signature`) ne lit pas
+>   l'interrupteur : une demande lancée en « admin » se suit jusqu'au bout. **Essais** :
+>   `Console/test_signature_youtrust_cran_admin.js` 17/17 (neuf, code réel découpé, TÉMOIN INVERSE contre HEAD : avant,
+>   « admin » était éteint même pour un admin) ; essais Youtrust du worker verts (sync 43, signataires, mandat chez nous,
+>   dépôt différé, P8-0, photo) ; front verts (suivi 27/27 après mise à jour d'un contrôle, pièces 24/24, choix, cockpit,
+>   P8-5) ; build vert sur HEAD + ces changements (avec le correctif des fenêtres). ⏰ **Pour l'allumer** : commit + push,
+>   redémarrage des 4 services (file vide), puis `signature_youtrust` = `admin`.
 > **Le nœud** : interrupteur allumé, un mandat généré naît `sans_hektor` (D24) → « signature Hektor » impossible sans le
 > DÉPOSER chez Hektor. Un chemin DORMANT existe (`completerEnvoiDocumentDiffere`, `upload_document_to_hektor` avec
 > `app_document_id` : « aucun appelant ») — jamais éprouvé. À l'inverse, un document venu de Hektor (modèle ImmoSign,

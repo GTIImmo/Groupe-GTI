@@ -3,6 +3,7 @@
 // La liste des pièces vit dans lib/piecesSignature.ts ; la règle du coffre qui les ouvre, dans
 // supabase/patch_a2_p8_4_preuves_coffre_2026-11-06.sql (sans elle, chaque pièce répond « pas lisible »).
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { createPieceSignatureUrl, loadAppSettingActive, piecesAuCoffre } from './lib/api'
 import { piecesDeSignature, type PieceSignature } from './lib/piecesSignature'
 import type { ConsoleDocument } from './types'
@@ -48,7 +49,8 @@ export function PiecesSignatureFenetre({ document, onClose }: { document: Consol
     catch (err) { setErreur(err instanceof Error ? err.message : 'Pièce indisponible') }
     finally { setOccupe(null) }
   }
-  return (
+  // Monte dans le body : le panneau de la fiche porte un `transform`, qui piege un `position: fixed` (essai reel du 06/11).
+  return createPortal(
     <div role="dialog" aria-modal="true" onClick={onClose}
       style={{ position: 'fixed', inset: 0, zIndex: 10060, background: 'rgba(17,17,23,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
       <div onClick={(event) => event.stopPropagation()}
@@ -74,6 +76,7 @@ export function PiecesSignatureFenetre({ document, onClose }: { document: Consol
           <button className="ghost-button button-subtle" type="button" onClick={onClose}>Fermer</button>
         </div>
       </div>
-    </div>
+    </div>,
+    window.document.body,
   )
 }

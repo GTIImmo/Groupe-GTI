@@ -90,6 +90,7 @@ import {
   createGenerateEstimationPdfJob,
   createGenerateMandatPdfJob,
   loadAppSettingActive,
+  loadSignatureYoutrustActive,
   photoSignatairesDuDocument,
   documentRemplace,
   loadCouplesDesMandants,
@@ -5323,7 +5324,9 @@ function ChoixSignatureFenetre({ document, choix, onYoutrust, onHektor, onManusc
     { cle: 'hektor', titre: 'Signature Hektor (ImmoSign)', detail: 'Hektor s’ouvre sur l’onglet Documents : vous y lancez la procédure.', c: choix.hektor, agir: onHektor },
     { cle: 'manuscrite', titre: 'Signature manuscrite', detail: 'Le document a été signé sur papier : le marquer comme signé.', c: choix.manuscrite, agir: onManuscrite },
   ]
-  return (
+  // A.2 P8-5 (06/11) : monte dans le body -- le panneau de la fiche porte un `transform`, qui piege un `position: fixed`
+  // (essai reel : la fenetre s'ouvrait 1 447 px au-dessus de l'ecran). Le parametre `document` masque le global : window.document.
+  return createPortal(
     <div role="dialog" aria-modal="true" onClick={onClose}
       style={{ position: 'fixed', inset: 0, zIndex: 10060, background: 'rgba(17,17,23,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
       <div className="mandat-sign-popup" onClick={(event) => event.stopPropagation()}
@@ -5346,7 +5349,8 @@ function ChoixSignatureFenetre({ document, choix, onYoutrust, onHektor, onManusc
           <button className="ghost-button button-subtle" type="button" onClick={onClose}>Fermer</button>
         </div>
       </div>
-    </div>
+    </div>,
+    window.document.body,
   )
 }
 
@@ -5793,7 +5797,8 @@ function MandatDocumentEditor(props: {
     try {
       // A.2 lot 2 : l'interrupteur est relu AU MOMENT de la génération (absent/erreur = éteint).
       // Éteint : le HTML envoyé est celui d'avant, identique à l'aperçu. L'aperçu, lui, n'a jamais de repères.
-      const reperes = await loadAppSettingActive('signature_youtrust')
+      // A.2 (06/11) : meme lecture a trois crans que l'ecran ('admin' = les admins seuls) -- le worker la refait.
+      const reperes = await loadSignatureYoutrustActive()
       youtrustGen = reperes
       chezNousGen = await loadAppSettingActive('mandat_nait_chez_nous')
       // A.2 lot 6b P7 (D36) : Youtrust exige un prenom ET un nom par signataire -- on le dit ici, pas a l'envoi.
@@ -10821,7 +10826,8 @@ function useSignatureYoutrust() {
   const [actif, setActif] = useState(false)
   useEffect(() => {
     let annule = false
-    void loadAppSettingActive('signature_youtrust').then((v) => { if (!annule) setActif(v) })
+    // A.2 (06/11) : trois crans -- 'on' tout le monde, 'admin' les admins actifs seuls, le reste eteint.
+    void loadSignatureYoutrustActive().then((v) => { if (!annule) setActif(v) })
     return () => { annule = true }
   }, [])
   return actif

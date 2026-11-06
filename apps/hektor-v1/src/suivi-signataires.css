@@ -20,7 +20,7 @@
 .sst-ligne[data-ton='signe'] .sst-etat { color: #1f7a3d; }
 .sst-ligne[data-ton='attente'] .sst-etat { color: #b26a00; }
 .sst-ligne[data-ton='refus'] .sst-etat { color: #c5221f; }
-.sst-relancer, .sst-annuler { padding: 2px 10px; font-size: 12px; min-height: 0; }
+.sst-relancer, .sst-annuler { padding: 2px 10px; font-size: 12px; min-height: 0; height: auto; line-height: 1.5; border-radius: 8px; }
 .sst-pied { margin-top: 6px; }
 .sst-msg { margin: 6px 0 0; }
 .sst-vide { margin: 0; color: #6b6058; }
