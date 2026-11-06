@@ -1108,7 +1108,7 @@ webhook posé par Frédéric ; redémarrage du worker.
 >   14:33) : ⚠ pendant ~25 min le worker de production a tourné sur du code NON commité (le push de Frédéric de 14:55
 >   n'emportait que les commits des autres sessions). Sans danger (l'écran déployé n'envoyait pas la clé), mais à éviter.
 > - ✅ **LA FENÊTRE « FAIRE SIGNER » REFAITE (06/11, maquette https://claude.ai/artifact/TLNovTAuQax5GLFJ7MSJaf validée :
->   « oui aux points 1 à 4, abandonne 5 ») — NON COMMITÉE.** Nouveau fichier `src/ChoixSignatureFenetre.tsx` (+
+>   « oui aux points 1 à 4, abandonne 5 ») — COMMITÉE ET POUSSÉE `a25ab1e`, EN LIGNE (Vercel READY), vue en production sur 61398 (ancien modèle : « Régénérer le mandat », « Ouvrir Hektor »).** Nouveau fichier `src/ChoixSignatureFenetre.tsx` (+
 >   `choix-signature.css`, jetons de la fenêtre d'envoi) ; l'ancienne fonction quitte `App.tsx`. Habillage : bandeau et
 >   carte du document de la fenêtre d'envoi, trois voies qui disent leur verbe (« Préparer l'envoi », « Ouvrir Hektor »,
 >   « Marquer signé »), une voie fermée garde son titre lisible et dit sa raison en ambre (plus de texte grisé), « Fermer »
