@@ -2078,6 +2078,18 @@ créé, rien n'est poussé.
   (proposition RNIC en tête), changer, retirer, refus hors périmètre affiché, « Ouvrir sa fiche », téléphone sans débordement.
 - **Pour l'allumer (accord de Frédéric, geste par geste)** : 1. coller le patch puis la répétition (8 verts) ; 2. pousser ;
   3. créer `partenaires_syndic_choix = 'admin'` ; 4. essai réel sur un bien d'essai choisi par Frédéric.
+- **EN PRODUCTION le 06/11** (« Oui, pose et pousse ») : patch posé (migration `partenaire_syndic_du_bien_2026_11_06`),
+  répétition **8/8 verts** ; poussé `25c3b14..67a9ffb` (liste relue juste avant : celle annoncée) ; réglage créé à `admin`.
+  ⚠ **Vu en ligne : la carte n'apparaissait pas, même pour l'admin.** Cause : la page « Détail annonce » (appel de
+  `DossierDetailLayout` avec `eyebrow={detailEyebrowForScreen(screen)}`) est le seul des trois chemins vers la fiche d'un
+  bien qui ne transmet PAS `profileRole` → un cran « admin » y est toujours éteint. Défaut ANCIEN : il fait aussi voir
+  « Réaffecter le négociateur » aux négociateurs sur cette page (le code prévoit de le leur cacher). Non corrigé.
+  ⇒ **Décision de Frédéric : « syndic tout de suite à tous »** → `partenaires_syndic_choix = 'on'`.
+- **VU EN VRAI (lecture seule, aucun syndic choisi ni changé)** sur le bien 63303 (dossier 7589288) : carte « Syndic de la
+  copropriété » = IMMO DE FRANCE FOREZ VELAY, « repris de Hektor le 04/11/2026 », Ouvrir sa fiche / Changer / Retirer ;
+  « Ouvrir sa fiche » ouvre la fiche syndic PAR LE CATALOGUE (`vue=metiers`, 16 biens) ; téléphone (390 px) : la carte en
+  lecture, « Ouvrir sa fiche » seul, aucun débordement. Reste : l'essai réel d'un choix sur un bien d'essai.
+  Remarque : la carte montre « n° 10217295 » faute de ville et de téléphone sur la fiche de ce syndic.
 
 ### 7 ter. Les dépendances (techniques, pas un ordre décidé)
 
