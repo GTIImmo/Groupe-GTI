@@ -297,7 +297,9 @@ import EnvoiSignatureYoutrust, { EVENEMENT_CORRIGER_MANDAT, type DemandeCorrecti
 import type { FicheDuJourPdf } from './lib/ecartsFichePdf'
 import { ficheDuMandant, mandantsImprimes, mandantsSansPrenomOuNom, situationsDesConjoints, type FicheCouple, type SituationConjoint } from './lib/conjointsDuMandat'
 import { etatSignatureDuMandat } from './lib/etatSignatureMandat'
-import { choixDeSignature, type Choix, type ChoixDeSignature } from './lib/choixSignature'
+import { choixDeSignature } from './lib/choixSignature'
+// A.2 (06/11/2026) : la fenetre « Faire signer » refaite (maquette validee : habillage + points 1 a 4).
+import ChoixSignatureFenetre from './ChoixSignatureFenetre'
 import RechercheGlobale, { type GroupeRecherche } from './RechercheGlobale'
 import './fil-navigation.css'
 import './suivi-travaux.css'
@@ -5309,51 +5311,18 @@ function SignaturePromptModal({ intro, items, onConfirm, onClose }: { intro: str
   )
 }
 
-// A.2 P8-2 (06/11/2026, D42) : UN SEUL bouton « Signature », trois choix. Les trois restent VISIBLES ; un choix
-// impossible ne fait rien d'autre que DIRE pourquoi (Frederic : « laisser le bouton mais faire un message qui explique
-// a l'utilisateur d'annuler la procedure »). La regle vit dans lib/choixSignature.ts.
-function ChoixSignatureFenetre({ document, choix, onYoutrust, onHektor, onManuscrite, onClose }: {
-  document: ConsoleDocument
-  choix: ChoixDeSignature
-  onYoutrust: () => void
-  onHektor: () => void
-  onManuscrite: () => void
-  onClose: () => void
-}) {
-  const [raison, setRaison] = useState<string | null>(null)
-  const options: Array<{ cle: string; titre: string; detail: string; c: Choix; agir: () => void }> = [
-    { cle: 'youtrust', titre: 'Signature électronique (Youtrust)', detail: 'Les signataires reçoivent un lien par e-mail et signent avec un code.', c: choix.youtrust, agir: onYoutrust },
-    { cle: 'hektor', titre: 'Signature Hektor (ImmoSign)', detail: 'Hektor s’ouvre sur l’onglet Documents : vous y lancez la procédure.', c: choix.hektor, agir: onHektor },
-    { cle: 'manuscrite', titre: 'Signature manuscrite', detail: 'Le document a été signé sur papier : le marquer comme signé.', c: choix.manuscrite, agir: onManuscrite },
-  ]
-  // A.2 P8-5 (06/11) : monte dans le body -- le panneau de la fiche porte un `transform`, qui piege un `position: fixed`
-  // (essai reel : la fenetre s'ouvrait 1 447 px au-dessus de l'ecran). Le parametre `document` masque le global : window.document.
-  return createPortal(
-    <div role="dialog" aria-modal="true" onClick={onClose}
-      style={{ position: 'fixed', inset: 0, zIndex: 10060, background: 'rgba(17,17,23,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
-      <div className="mandat-sign-popup" onClick={(event) => event.stopPropagation()}
-        style={{ background: '#fff', borderRadius: '14px', maxWidth: '480px', width: '100%', padding: '22px 24px', boxShadow: '0 24px 70px rgba(0,0,0,0.35)' }}>
-        <strong style={{ display: 'block', fontSize: '17px', marginBottom: '6px' }}>Faire signer ce document</strong>
-        <p style={{ margin: '0 0 14px', color: '#555', fontSize: '13px' }}>{`Document : ${document.document_name ?? ''}`}</p>
-        <div style={{ display: 'grid', gap: '8px' }}>
-          {options.map((o) => (
-            <button key={o.cle} type="button" className={`ghost-button choix-signature-option${o.c.possible ? '' : ' is-ferme'}`} data-choix={o.cle}
-              aria-disabled={!o.c.possible}
-              onClick={() => { if (o.c.possible) { setRaison(null); o.agir() } else setRaison(o.c.raison) }}
-              style={{ display: 'block', textAlign: 'left', padding: '10px 12px', borderRadius: '10px', opacity: o.c.possible ? 1 : 0.6 }}>
-              <span style={{ display: 'block', fontWeight: 600 }}>{o.titre}</span>
-              <span style={{ display: 'block', fontSize: '12px', color: '#666' }}>{o.c.possible ? o.detail : o.c.raison}</span>
-            </button>
-          ))}
-        </div>
-        {raison ? <p className="console-documents-error" role="alert" style={{ margin: '12px 0 0' }}>{raison}</p> : null}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '14px' }}>
-          <button className="ghost-button button-subtle" type="button" onClick={onClose}>Fermer</button>
-        </div>
-      </div>
-    </div>,
-    window.document.body,
-  )
+// A.2 P8-2 (06/11/2026, D42) : UN SEUL bouton « Signature », trois choix -- la fenetre vit dans ChoixSignatureFenetre.tsx
+// (refaite le 06/11 sur la maquette validee par Frederic : habillage + points 1 a 4).
+// Point 3 : ouvrir l'editeur du MEME bien pour un NOUVEAU mandat. Ce n'est pas « Corriger le mandat » : rien n'est marque
+// « remplace » (un ancien modele Hektor le serait sinon a la regeneration). Rend false si aucun editeur n'a pris la demande.
+function demanderNouveauMandat(dossier: Pick<Dossier, 'app_dossier_id'>, document: ConsoleDocument): boolean {
+  const detail: DemandeCorrectionMandat = { app_dossier_id: dossier.app_dossier_id, document, onglet: 'mandants', pris: false, nouveau: true }
+  window.dispatchEvent(new CustomEvent(EVENEMENT_CORRIGER_MANDAT, { detail }))
+  return detail.pris
+}
+// Point 4 : mener au suivi des signataires du document (l'ancre est posee par SuiviSignatairesYoutrust).
+function allerAuSuivi(document: ConsoleDocument) {
+  window.document.getElementById(`sst-${document.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
 }
 
 // A.2 P8-2 : le choix a trois boutons ne s'allume que si l'un des deux interrupteurs de la signature l'est
@@ -5639,6 +5608,18 @@ function MandatDocumentEditor(props: {
       const demande = (event as CustomEvent<DemandeCorrectionMandat>).detail
       if (!demande || demande.pris || String(demande.app_dossier_id) !== String(props.dossier.app_dossier_id)) return
       demande.pris = true
+      // A.2 (06/11/2026) : « Regenerer le mandat » depuis la fenetre « Faire signer » -- un NOUVEAU mandat, rien n'est
+      // marque remplace (contrairement a « Corriger le mandat », qui garde le PDF d'origine pour le marquer).
+      if (demande.nouveau) {
+        setEnvoiYoutrustDoc(null)
+        setEnvoiAncien(null)
+        setCorrection(null)
+        setDocMode(/avenant/i.test(demande.document.document_name || '') ? 'avenant' : 'mandat')
+        setActiveTab('mandants')
+        setMessage(null)
+        setOpen(true)
+        return
+      }
       ouvrirCorrection(demande.document, demande.onglet)
     }
     window.addEventListener(EVENEMENT_CORRIGER_MANDAT, ecoute)
@@ -6266,6 +6247,9 @@ Le mandat passera à l'état « Signé ». À ne faire qu'une fois le PDF signé
                     .catch((err) => setMessage(err instanceof Error ? err.message : 'Impossible de marquer le document comme signé'))
                 }}
                 onClose={() => setChoixApresGen(null)}
+                adresse={props.address}
+                numeroMandat={props.dossier.numero_mandat != null ? String(props.dossier.numero_mandat) : null}
+                negociateur={props.dossier.commercial_nom ?? null}
               />
             ) : null}
             {envoiYoutrustDoc ? (
@@ -11809,6 +11793,11 @@ Le mandat passera à l'état « Signé ». À ne faire qu'une fois le PDF signé
           onHektor={() => { setChoixDoc(null); openHektorSignature() }}
           onManuscrite={() => { const d = choixDoc; setChoixDoc(null); void signeALaMain(d) }}
           onClose={() => setChoixDoc(null)}
+          adresse={[dossier.titre_bien, dossier.ville].filter(Boolean).join(', ')}
+          numeroMandat={dossier.numero_mandat != null ? String(dossier.numero_mandat) : null}
+          negociateur={dossier.commercial_nom ?? null}
+          onRegenerer={() => { const pris = demanderNouveauMandat(dossier, choixDoc); if (pris) setChoixDoc(null); return pris }}
+          onVoirSuivi={() => { const d = choixDoc; setChoixDoc(null); allerAuSuivi(d) }}
         />
       ) : null}
       {envoiDoc ? (
@@ -12403,6 +12392,11 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
             onHektor={() => { const d = choixDoc; setChoixDoc(null); setSignDoc(d) }}
             onManuscrite={() => { const d = choixDoc; setChoixDoc(null); void handleMarkSignedManual(d) }}
             onClose={() => setChoixDoc(null)}
+            adresse={[dossier.titre_bien, dossier.ville].filter(Boolean).join(', ')}
+            numeroMandat={dossier.numero_mandat != null ? String(dossier.numero_mandat) : null}
+            negociateur={dossier.commercial_nom ?? null}
+            onRegenerer={() => { const pris = demanderNouveauMandat(dossier, choixDoc); if (pris) setChoixDoc(null); return pris }}
+            onVoirSuivi={() => { const d = choixDoc; setChoixDoc(null); allerAuSuivi(d) }}
           />
         ) : null}
         {signDoc ? (
@@ -12515,6 +12509,11 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
             onHektor={() => { const d = choixDoc; setChoixDoc(null); setSignDoc(d) }}
             onManuscrite={() => { const d = choixDoc; setChoixDoc(null); void handleMarkSignedManual(d) }}
             onClose={() => setChoixDoc(null)}
+            adresse={[dossier.titre_bien, dossier.ville].filter(Boolean).join(', ')}
+            numeroMandat={dossier.numero_mandat != null ? String(dossier.numero_mandat) : null}
+            negociateur={dossier.commercial_nom ?? null}
+            onRegenerer={() => { const pris = demanderNouveauMandat(dossier, choixDoc); if (pris) setChoixDoc(null); return pris }}
+            onVoirSuivi={() => { const d = choixDoc; setChoixDoc(null); allerAuSuivi(d) }}
           />
         ) : null}
         {signDoc ? (

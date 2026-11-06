@@ -1104,6 +1104,27 @@ webhook posé par Frédéric ; redémarrage du worker.
 >   ENTRE deux éditions (vérifié en lisant le module servi). ⚠ **Ordre de mise en ligne** : redémarrer les 4 services
 >   AVANT d'utiliser le choix (l'ancien worker refuse la clé `code`, avec un message clair) ; Youtrust n'est ouvert
 >   qu'aux admins. Maquette mise à jour (planche, avant / après).
+>   ✅ **Commité et poussé `31506cd` (06/11)** — le worker l'avait déjà chargé au redémarrage de 14:55 (fichier écrit à
+>   14:33) : ⚠ pendant ~25 min le worker de production a tourné sur du code NON commité (le push de Frédéric de 14:55
+>   n'emportait que les commits des autres sessions). Sans danger (l'écran déployé n'envoyait pas la clé), mais à éviter.
+> - ✅ **LA FENÊTRE « FAIRE SIGNER » REFAITE (06/11, maquette https://claude.ai/artifact/TLNovTAuQax5GLFJ7MSJaf validée :
+>   « oui aux points 1 à 4, abandonne 5 ») — NON COMMITÉE.** Nouveau fichier `src/ChoixSignatureFenetre.tsx` (+
+>   `choix-signature.css`, jetons de la fenêtre d'envoi) ; l'ancienne fonction quitte `App.tsx`. Habillage : bandeau et
+>   carte du document de la fenêtre d'envoi, trois voies qui disent leur verbe (« Préparer l'envoi », « Ouvrir Hektor »,
+>   « Marquer signé »), une voie fermée garde son titre lisible et dit sa raison en ambre (plus de texte grisé), « Fermer »
+>   dans le bandeau, volet bas sur téléphone. **Point 1** : titre « Mandat de vente n° 18420 », « Généré dans l'app le
+>   06/11 à 12:40, 3 cases de signature », état du dépôt chez Hektor, « Voir le PDF ». **Point 2** : « Signent : … les
+>   mandants, puis <négociateur> en dernier » (photo du PDF ; un modèle Hektor : « se choisissent dans Hektor »).
+>   **Point 3** : « Régénérer le mandat » dans la raison Youtrust « pas fait par l'éditeur » ; il ouvre l'éditeur du bien
+>   pour un NOUVEAU mandat (`DemandeCorrectionMandat.nouveau`) — ⛔ PAS le chemin « Corriger le mandat », qui aurait marqué
+>   l'ancien modèle Hektor « remplacé » ; sans éditeur ouvert, la fenêtre le dit. **Point 4** : bandeau « Une signature
+>   électronique est en cours : 1 signature sur 3 » + « Voir le suivi » (ancre `sst-<id>` posée par le suivi).
+>   **Point 5 abandonné** : ordre inchangé (Youtrust, Hektor, manuscrite), aucune voie recommandée. Les trois gestes sont
+>   ceux d'avant. La lecture de l'identité est dans `lib/choixSignature.ts` (`identiteDuDocument`, `TEXTE_REGENERER`).
+>   **Essais** : `test_choix_signature.cjs` 30/30 (blocs 6 et 7 neufs, code réel), pièces 24/24 (4 bis suit le fichier),
+>   suivi, cockpit, P8-5, code par e-mail verts ; types et build verts sur HEAD + ces fichiers. **Vu sur la planche** (vrai
+>   composant) : cas normal, signature en cours, modèle Hektor (« Régénérer » sans éditeur -> le message), téléphone 375 px.
+>   ⚠ Visible par TOUS dès le déploiement : la fenêtre s'ouvre dès que `mandat_nait_chez_nous` est allumé (il l'est).
 > **Le nœud** : interrupteur allumé, un mandat généré naît `sans_hektor` (D24) → « signature Hektor » impossible sans le
 > DÉPOSER chez Hektor. Un chemin DORMANT existe (`completerEnvoiDocumentDiffere`, `upload_document_to_hektor` avec
 > `app_document_id` : « aucun appelant ») — jamais éprouvé. À l'inverse, un document venu de Hektor (modèle ImmoSign,

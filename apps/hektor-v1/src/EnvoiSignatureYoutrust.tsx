@@ -48,7 +48,8 @@ export type OngletCorrection = 'mandants' | 'bien' | 'prix' | 'clauses' | 'aperc
 // P5 : le panneau Documents n'a pas l'editeur sous la main ; il demande a l'editeur DU MEME BIEN de s'ouvrir.
 // Le premier editeur monte qui repond met `pris` a vrai (un seul s'ouvre) ; personne -> la fenetre le dit.
 export const EVENEMENT_CORRIGER_MANDAT = 'hektor:corriger-mandat'
-export type DemandeCorrectionMandat = { app_dossier_id: Dossier['app_dossier_id']; document: ConsoleDocument; onglet: OngletCorrection; pris: boolean }
+// nouveau (06/11/2026) : ouvrir l'editeur pour un NOUVEAU mandat, sans marquer ce document « remplace ».
+export type DemandeCorrectionMandat = { app_dossier_id: Dossier['app_dossier_id']; document: ConsoleDocument; onglet: OngletCorrection; pris: boolean; nouveau?: boolean }
 
 export default function EnvoiSignatureYoutrust(props: {
   document: ConsoleDocument

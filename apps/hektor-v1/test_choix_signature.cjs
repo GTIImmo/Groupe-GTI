@@ -75,9 +75,43 @@ const modele = (sig = { status: "to_send", procedure_id: null }) => ({ document_
 }
 
 // 6. LES BRANCHEMENTS dans App.tsx.
-const app = fs.readFileSync(path.resolve(__dirname, "src", "App.tsx"), "utf8");
-controle("6. la fenêtre de choix existe et garde les TROIS boutons visibles (un choix fermé dit sa raison)",
-  /function ChoixSignatureFenetre\(/.test(app) && /onClick=\{\(\) => \{ if \(o\.c\.possible\) \{ setRaison\(null\); o\.agir\(\) \} else setRaison\(o\.c\.raison\) \}\}/.test(app));
+const app = fs.readFileSync(path.resolve(__dirname, "src", "App.tsx"), "utf8").split(String.fromCharCode(13)).join("");
+// A.2 (06/11/2026) : la fenêtre refaite vit dans son propre fichier (maquette validée : habillage + points 1 à 4).
+const fen = fs.readFileSync(path.resolve(__dirname, "src", "ChoixSignatureFenetre.tsx"), "utf8").split(String.fromCharCode(13)).join("");
+controle("6. la fenêtre garde les TROIS voies visibles : une voie ouverte est un bouton, une voie fermée affiche sa raison",
+  fen.includes("{ cle: 'youtrust',") && fen.includes("{ cle: 'hektor',") && fen.includes("{ cle: 'manuscrite',")
+    && fen.includes('<button type="button" className="cxs-voie-main" onClick={v.agir}>') && fen.includes("{!ouvert && v.c.raison ? (")
+    && app.includes("import ChoixSignatureFenetre from './ChoixSignatureFenetre'") && !app.includes("function ChoixSignatureFenetre("));
+controle("6. ordre inchangé (point 5 abandonné) : Youtrust, puis Hektor, puis manuscrite, sans voie « recommandée »",
+  fen.indexOf("{ cle: 'youtrust',") < fen.indexOf("{ cle: 'hektor',") && fen.indexOf("{ cle: 'hektor',") < fen.indexOf("{ cle: 'manuscrite',")
+    && !/recommand/i.test(fen.split("\n").filter((l) => !l.trim().startsWith("//")).join("\n")));
+controle("6. point 3 : « Régénérer le mandat » seulement sur la raison « pas fait par l'éditeur », et sans marquer le document remplacé",
+  fen.includes("v.cle === 'youtrust' && v.c.raison === TEXTE_REGENERER && props.onRegenerer")
+    && app.includes("pris: false, nouveau: true }") && app.includes("if (demande.nouveau) {") && app.includes("setCorrection(null)"));
+controle("6. point 4 : « Voir le suivi » quand une signature Youtrust est en cours, vers l'ancre du suivi",
+  fen.includes("choix.procedureEnCours === 'youtrust' && props.onVoirSuivi") && app.includes("getElementById(`sst-${document.id}`)")
+    && fs.readFileSync(path.resolve(__dirname, "src", "SuiviSignatairesYoutrust.tsx"), "utf8").includes("id={`sst-${document.id}`}"));
+controle("6. la fenêtre reçoit le bien, le n° de mandat et le négociateur aux QUATRE montages",
+  (app.match(/numeroMandat=\{(props\.)?dossier\.numero_mandat != null \? String\((props\.)?dossier\.numero_mandat\) : null\}/g) || []).length === 4, String((app.match(/numeroMandat=/g) || []).length));
+
+// 7. Points 1 et 2 : ce que la fenêtre montre du document et de ses signataires (code réel).
+{
+  const photo = { valide: true, mandants: [{ prenom: "Anne", nom: "EXEMPLE" }, { prenom: "Paul", nom: "EXEMPLE" }] };
+  const ed = C.identiteDuDocument({ document_name: "Mandat de vente - 18420.pdf", document_type: "Mandat", source: "app", envoi_hektor_statut: "envoye", hektor_document_id: "x",
+    metadata_json: { cree_le: "2026-11-06T11:40:00Z", signataires_du_pdf: photo } }, { numeroMandat: "18420", negociateur: "Claire NÉGOCIATRICE" });
+  controle("7. mandat de l'éditeur : « Mandat de vente n° 18420 », généré le 06/11 à 12:40 (Paris), 3 cases, déposé",
+    ed.titre === "Mandat de vente n° 18420" && ed.meta === "Généré dans l’app le 06/11 à 12:40, 3 cases de signature" && ed.depot.texte === "Déposé chez Hektor" && ed.depot.ton === "ok", J(ed));
+  controle("7. qui signe : « Anne EXEMPLE et Paul EXEMPLE, les mandants, puis Claire NÉGOCIATRICE en dernier »",
+    ed.signataires === "Signent : Anne EXEMPLE et Paul EXEMPLE, les mandants, puis Claire NÉGOCIATRICE en dernier.", ed.signataires);
+  const depot = C.identiteDuDocument({ document_name: "Avenant au mandat - 18420.pdf", source: "app", envoi_hektor_statut: "a_envoyer", metadata_json: { signataires_du_pdf: { mandants: [{ prenom: "Anne", nom: "EXEMPLE" }] } } }, {});
+  controle("7. avenant, dépôt en cours, un seul mandant, négociateur inconnu", depot.titre === "Avenant au mandat" && depot.depot.ton === "attente"
+    && depot.signataires === "Signent : Anne EXEMPLE, le mandant, puis le négociateur en dernier.", J(depot));
+  const hk = C.identiteDuDocument({ document_name: "Mandat (Avec saisie du numéro) (Vente)", document_type: "document", source: "hektor_console_immosign", metadata_json: { signature: { status: "pending", progress: "1/3" } } }, { numeroMandat: "18420" });
+  controle("7. TÉMOIN modèle Hektor : son nom tel quel, « Modèle Hektor », « Chez Hektor », signataires choisis dans Hektor, « 1 signature sur 3 »",
+    hk.titre === "Mandat (Avec saisie du numéro) (Vente)" && /^Modèle Hektor/.test(hk.meta) && hk.depot.texte === "Chez Hektor" && /se choisissent dans Hektor/.test(hk.signataires) && hk.progression === "1 signature sur 3", J(hk));
+  controle("7. la raison « régénérez » de Youtrust est la constante qu'utilise le bouton du point 3",
+    C.choixDeSignature(modele(), on).youtrust.raison === C.TEXTE_REGENERER);
+}
 controle("6. allumée seulement si un interrupteur de la signature l'est (sinon l'écran d'avant)",
   /return \{ actif: youtrust \|\| chezNous, youtrust \}/.test(app) && /loadAppSettingActive\('mandat_nait_chez_nous'\)\.then/.test(app));
 controle("6. la liste Documents : un seul bouton « Signature » quand le choix est allumé, les anciens sinon",

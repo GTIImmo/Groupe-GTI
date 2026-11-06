@@ -96,8 +96,8 @@ controle("4. le suivi Youtrust : « Preuve » sur la ligne d'un signataire qui a
 //   `transform`, qui piège un `position: fixed`). Les trois fenêtres de la signature sont montées dans le body.
 {
   const envoi = src("EnvoiSignatureYoutrust.tsx");
-  const debutChoix = app.indexOf("function ChoixSignatureFenetre(");
-  const choix = debutChoix < 0 ? "" : app.slice(debutChoix, app.indexOf("\n}\n", debutChoix) + 3);
+  // La fenêtre du choix vit dans son propre fichier depuis sa refonte (06/11).
+  const choix = src("ChoixSignatureFenetre.tsx");
   controle("4 bis. les trois fenêtres (Pièces, choix à trois, envoi Youtrust) passent par un PORTAIL vers le body",
     /return createPortal\(/.test(fen) && /window\.document\.body,/.test(fen)
       && /return createPortal\(/.test(envoi) && /window\.document\.body,/.test(envoi)

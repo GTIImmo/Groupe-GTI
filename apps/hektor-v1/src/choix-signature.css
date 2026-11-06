@@ -1,0 +1,82 @@
+/* A.2 (06/11/2026) -- la fenetre « Faire signer » (ChoixSignatureFenetre.tsx). Memes jetons que la fenetre d'envoi
+   Youtrust (envoi-signature.css, .ens-voile) : les deux se suivent et doivent se lire comme un seul parcours.
+   Tout est prefixe « cxs- » : rien ne fuit. */
+.cxs-voile {
+  --cxs-mag: #b3134f; --cxs-mag-deep: #8b0f3d; --cxs-mag-soft: #fbe6ee;
+  --cxs-gold-soft: #f5ecd8; --cxs-gold-ink: #7a5626;
+  --cxs-green-ink: #175c37; --cxs-green-soft: #e6f3ec;
+  --cxs-amber-ink: #5c3a00; --cxs-amber-soft: #fbefd8; --cxs-amber-line: #ecd3a4;
+  --cxs-blue: #3a4a95; --cxs-blue-soft: #e9ebf8;
+  --cxs-ink: #241f22; --cxs-text: #4f453f; --cxs-soft: #6b6058; --cxs-line: #e9e1d3;
+  --cxs-card: #fffdf9; --cxs-paper: #f7f3ec;
+  --cxs-disp: 'Fraunces', 'Spectral', Georgia, serif;
+  position: fixed; inset: 0; z-index: 10060; background: rgba(36, 31, 34, .58);
+  display: flex; align-items: center; justify-content: center; padding: 16px;
+}
+.cxs-modale {
+  width: min(712px, 100%); max-height: calc(100vh - 32px); overflow: auto; border-radius: 18px;
+  background: var(--cxs-paper); color: var(--cxs-ink); font: 14px/1.45 Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  box-shadow: 0 30px 60px -30px rgba(40, 20, 25, .6), 0 0 0 1px rgba(0, 0, 0, .04);
+}
+.cxs-tete { display: flex; align-items: center; gap: 14px; padding: 16px 20px; color: #fff; background: linear-gradient(100deg, #3a0f22 0%, #2b1a22 55%, #183a40 100%); }
+.cxs-ico { width: 40px; height: 40px; flex: none; border-radius: 11px; background: var(--cxs-mag); display: grid; place-items: center; }
+.cxs-titres { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.cxs-titres strong { font-family: var(--cxs-disp); font-weight: 600; font-size: 21px; line-height: 1.2; }
+.cxs-titres small { font-size: 13px; opacity: .85; }
+.cxs-fermer { all: unset; box-sizing: border-box; padding: 9px 16px; border-radius: 10px; border: 1px solid rgba(255, 255, 255, .55); font-weight: 600; cursor: pointer; }
+.cxs-fermer:hover { background: rgba(255, 255, 255, .1); }
+.cxs-fermer:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+.cxs-corps { padding: 18px 20px 22px; display: flex; flex-direction: column; gap: 14px; }
+.cxs-doc { display: flex; align-items: center; gap: 14px; padding: 14px 16px; background: var(--cxs-card); border: 1px solid var(--cxs-line); border-radius: 14px; }
+.cxs-pdf { position: relative; width: 38px; height: 46px; flex: none; border-radius: 6px; border: 1px solid #e1d6c6; background: #fff; }
+.cxs-pdf i { position: absolute; left: 6px; right: 6px; top: 8px; height: 2px; background: var(--cxs-line); box-shadow: 0 6px 0 var(--cxs-line), 0 12px 0 var(--cxs-line); }
+.cxs-pdf b { position: absolute; left: 4px; bottom: 5px; padding: 1px 4px; border-radius: 3px; background: var(--cxs-mag); color: #fff; font-size: 9px; font-weight: 700; }
+.cxs-doc-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.cxs-doc-txt strong { font-family: var(--cxs-disp); font-weight: 600; font-size: 17px; overflow-wrap: anywhere; }
+.cxs-doc-txt small { font-size: 13px; color: var(--cxs-soft); }
+.cxs-doc-droite { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.cxs-depot { padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; background: #efe9df; color: var(--cxs-text); }
+.cxs-depot.ok { background: var(--cxs-green-soft); color: var(--cxs-green-ink); }
+.cxs-depot.attente { background: var(--cxs-amber-soft); color: var(--cxs-amber-ink); }
+.cxs-qui { margin: 0; color: var(--cxs-text); }
+
+.cxs-encours { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border-radius: 12px; background: var(--cxs-amber-soft); border: 1px solid var(--cxs-amber-line); color: var(--cxs-amber-ink); }
+.cxs-encours svg { flex: none; margin-top: 2px; }
+
+.cxs-question { font-family: var(--cxs-disp); font-weight: 600; font-size: 17px; margin-top: 2px; }
+.cxs-voies { display: flex; flex-direction: column; gap: 10px; }
+.cxs-voie { border-radius: 14px; background: var(--cxs-card); border: 1px solid var(--cxs-line); overflow: hidden; }
+.cxs-voie-main { all: unset; box-sizing: border-box; width: 100%; display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 14px; align-items: start; padding: 14px 16px; }
+button.cxs-voie-main { cursor: pointer; }
+.cxs-voie:not(.is-ferme):hover { border-color: #c9a3b1; box-shadow: 0 6px 18px -12px rgba(139, 15, 61, .45); }
+button.cxs-voie-main:focus-visible { outline: 2px solid var(--cxs-mag-deep); outline-offset: -2px; border-radius: 14px; }
+.cxs-voie.is-ferme { background: #fbf8f2; }
+.cxs-pastille { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; background: #efe9df; color: var(--cxs-soft); }
+.cxs-voie:not(.is-ferme) .cxs-pastille.youtrust { background: var(--cxs-mag-soft); color: var(--cxs-mag-deep); }
+.cxs-voie:not(.is-ferme) .cxs-pastille.hektor { background: var(--cxs-blue-soft); color: var(--cxs-blue); }
+.cxs-voie:not(.is-ferme) .cxs-pastille.manuscrite { background: var(--cxs-gold-soft); color: var(--cxs-gold-ink); }
+.cxs-voie-txt { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.cxs-voie-titre { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.cxs-voie-titre b { font-size: 16px; font-weight: 600; color: var(--cxs-ink); }
+.cxs-voie-titre small { font-size: 13px; color: var(--cxs-soft); }
+.cxs-voie-desc { color: var(--cxs-text); }
+.cxs-voie-faits { font-size: 13px; color: var(--cxs-soft); }
+.cxs-verbe { align-self: center; padding: 8px 14px; border-radius: 10px; background: var(--cxs-mag-deep); color: #fff; font-size: 13px; font-weight: 600; white-space: nowrap; }
+.cxs-verbe.ferme { background: transparent; color: var(--cxs-soft); border: 1px dashed #d8ccb9; padding: 7px 12px; }
+.cxs-raison { margin: -4px 16px 14px 74px; padding: 8px 10px; border-radius: 9px; background: var(--cxs-amber-soft); color: var(--cxs-amber-ink); font-size: 13px; display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: baseline; }
+.cxs-lien { all: unset; cursor: pointer; color: var(--cxs-mag-deep); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; }
+.cxs-lien:hover { color: var(--cxs-mag); }
+.cxs-lien:focus-visible { outline: 2px solid var(--cxs-mag-deep); outline-offset: 2px; border-radius: 3px; }
+.cxs-message { margin: 0; padding: 10px 12px; border-radius: 10px; background: var(--cxs-amber-soft); color: var(--cxs-amber-ink); }
+
+@media (max-width: 640px) {
+  .cxs-voile { padding: 0; align-items: flex-end; }
+  .cxs-modale { border-radius: 18px 18px 0 0; max-height: 92vh; }
+  .cxs-doc { flex-wrap: wrap; }
+  .cxs-doc-droite { flex-direction: row; align-items: center; width: 100%; justify-content: space-between; }
+  .cxs-voie-main { grid-template-columns: 40px minmax(0, 1fr); }
+  .cxs-verbe { grid-column: 2; justify-self: start; }
+  .cxs-raison { margin-left: 16px; }
+}
+@media (prefers-reduced-motion: reduce) { .cxs-voie { transition: none; } }

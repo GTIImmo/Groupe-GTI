@@ -84,7 +84,7 @@ export default function SuiviSignatairesYoutrust({ document, gestesActifs, preuv
   }
 
   return (
-    <div className="sst-suivi" data-statut={demande?.status ?? ''}>
+    <div className="sst-suivi" id={`sst-${document.id}`} data-statut={demande?.status ?? ''}>
       <button type="button" className="sst-entete" aria-expanded={ouvert} onClick={() => setOuvert((v) => !v)}>
         <span className="sst-chevron" aria-hidden="true">{ouvert ? '▾' : '▸'}</span>
         <span>{lu ? `Signataires — ${suivi.resume}` : 'Signataires — lecture…'}</span>
