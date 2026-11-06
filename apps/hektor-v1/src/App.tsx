@@ -23075,6 +23075,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           repartitionRangs, repartitionPoser, repartitionPourcentage, repartitionAjouterCase, repartitionRetirerCase,
           statusChangeNeedsTransaction, statusChangeNeedsSalePrice, mandantContactOptionTitle, mandantContactOptionSubtitle,
           formatDate, formatPrice, offreAccepteeAReprendreAuCompromis, affaireEstVivante, SelecteurMandants, SelecteurNotaire,
+          statusChangeCloseEtat, setStatusChangeCloseEtat, statusChangeCloseRaison, setStatusChangeCloseRaison,
+          statusChangeCloseDate, setStatusChangeCloseDate, statusChangeCloseReason, setStatusChangeCloseReason,
+          hektorClosureEtatOptions, hektorClosureRaisonsFor, offreVerrouilleeParSonDossier, rattachementOffreProposee,
           affaireCourante: affaireCourantePourStatut(),
         }}
           />

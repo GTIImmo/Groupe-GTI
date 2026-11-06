@@ -297,6 +297,7 @@ else {
   const ancien = dBloc < 0 || fBloc < 0 ? "" : lignesApp.slice(dBloc, fBloc + 1).join("\n");
   const ZONES = [
     { lot: 2, nom: "le formulaire offre / compromis / vente", debut: "{statusChangeNeedsTransaction(statusChangeStatus) ? (", fin: ") : statusChangeStatus === 'closed' ? (" },
+    { lot: 3, nom: "la clôture du mandat (Clos)", debut: ") : statusChangeStatus === 'closed' ? (", fin: "{bvs(\"Le statut Actif est envoyé directement" },
   ];
   const ECARTS_VOULUS = [
     // « Qui paie la commission » : le menu devient deux boutons (même valeur, mêmes setters). Le clic sur le choix

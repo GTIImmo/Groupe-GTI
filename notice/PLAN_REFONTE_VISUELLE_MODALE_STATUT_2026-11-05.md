@@ -119,6 +119,23 @@ animations. La nouvelle vue LIT l'état existant et APPELLE les fonctions exista
   titres des sélecteurs en capitales — défaite dans la vue seulement.
   ⚠ Le formulaire n'est pas encore un `<form>` et n'a pas de bouton d'envoi : c'est le lot 5.
 - **Lot 3 — Actif, Clos, offre en lecture seule.** Motifs, raison, date, « Précisez », mêmes messages.
+  ✅ **FAIT le 06/11** — `Cloture` et la section « Remettre le bien en vente » dans `src/ModaleStatutV2.tsx` ;
+  `App.tsx` : 3 lignes de plus dans `formulaire={{ … }}` (les 4 états de clôture et leurs setters,
+  `hektorClosureEtatOptions`, `hektorClosureRaisonsFor`, `offreVerrouilleeParSonDossier`, `rattachementOffreProposee`).
+  **Clos** : les 3 motifs en cartes, la raison reste un menu, la date, « Précisez » avec « À remplir » quand il est vide.
+  Les 4 gestes repris **mot pour mot** (zone ajoutée à la parité de l'outil : 4 sur 4). ⚠ **Un texte corrigé, parce
+  qu'il était faux** : « La clôture est définitive côté Hektor » (audit §7, I6 du 02/10) devient ce que le code fait —
+  le statut part chez Hektor et coupe la diffusion, la date et le motif restent chez nous (prouvé le 21/10 sur 62774 :
+  `closure: cloture_locale_uniquement`), le bien se remet en vente par « Actif » ; plus le conseil de la version
+  téléphone (« vérifie l'offre ou le compromis en cours »). **Actif** : aucune saisie, ce que fait le geste.
+  **Offre verrouillée par son dossier** (compromis ou vente derrière, règle du 16/09) : les 5 champs de l'offre passent
+  en `readOnly` avec la pastille « Figée » et le bandeau « On ne revient plus sur cette offre » (mêmes mots, et la
+  phrase de l'option 2 sur le rattachement) en pied de section — rien de ce qui part ne change (une valeur en lecture
+  seule reste la même). Mesures : empreintes 61 morceaux identiques ; parité 35/35 et 4/4 ; essais de la modale verts ;
+  `test_bienvu_textes` garde ses 2 rouges d'avant ; `npm run build` vert. À l'écran (démonstration, 1280 × 665 et
+  375 × 812) : changer de motif remet la raison sur la première du motif, « Précisez » n'apparaît qu'avec « Autre
+  motif ». ⚠ **Non vu à l'écran** : l'offre en lecture seule — la démonstration ne charge pas les affaires ; à
+  regarder en production au lot 8 (VM412).
 - **Lot 4 — les affaires du bien et tous les bandeaux.** Garde-fou, plusieurs affaires vivantes, bien
   engagé, reprise d'une affaire morte, plusieurs mandats, personnes non gardées (« J'ai vu, fermer »),
   détail dépliable, états du carnet, gestes admin sur un écart, « Choisir », historique de l'offre.
@@ -173,7 +190,7 @@ de style et la ligne d'aiguillage.
    lui dis. Avant, tout se contrôle en local (interrupteur allumé et éteint).
 4. ✅ **Oui à l'envoi réel de contrôle sur 62774, à la fin** — son accord se redemande au moment du geste.
 
-➡ ~~Prochaine étape : le lot 0~~ ✅ fait le 05/11. ~~Le lot 1~~ ✅ fait le 06/11. ~~Le lot 2~~ ✅ fait le 06/11.
-**Prochaine étape : le lot 3** (Actif, Clos, offre en lecture seule), qui attend son « vas-y ».
+➡ ~~Prochaine étape : le lot 0~~ ✅ fait le 05/11. ~~Le lot 1~~ ✅ fait le 06/11. ~~Le lot 2~~ ✅ fait le 06/11. ~~Le lot 3~~ ✅ fait le 06/11.
+**Prochaine étape : le lot 4** (les affaires du bien et tous les bandeaux), qui attend son « vas-y ».
 ⚠ Reste hors de ce chantier : le défaut « Choisir » (audit §12, les champs principaux ne se rechargent pas),
 qui demande une décision à part — la refonte visuelle ne le corrige pas et ne doit pas le masquer.

@@ -364,3 +364,13 @@
   .stv2 .stv2-cond { grid-template-columns: 1fr 1fr; }
   .stv2 .stv2-cond .stv2-champ:first-child { grid-column: 1 / -1; }
 }
+
+/* ═══ Lot 3 (06/11) — Clos ═══ */
+.stv2 .stv2-motifs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.stv2 .stv2-carte.stv2-motif { min-height: 52px; justify-content: center; animation: none; }
+.stv2 .stv2-champ:has(.stv2-bdg-manque) .stv2-zone { box-shadow: inset 0 0 0 1.5px #d9962b, 0 0 0 4px rgba(217, 150, 43, 0.14); }
+.stv2 .stv2-in input[readonly] { color: var(--stv2-mute); cursor: default; }
+.stv2 .stv2-in:has(input[readonly]) { background: var(--stv2-fond); box-shadow: none; }
+@media (max-width: 767px) {
+  .stv2 .stv2-motifs { grid-template-columns: 1fr; }
+}

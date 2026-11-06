@@ -12,8 +12,9 @@
 //
 // Lot 1 : en-tête, bandeau du bien, parcours (Actuel / Conseillé / Hors parcours / Lecture seule), guide GTI.
 // Lot 2 : le formulaire offre / compromis / vente (FormulaireTransaction), chaque saisie reprise mot pour mot.
-// Actif et Clos (lot 3), les affaires du bien (lot 4) et les boutons d'envoi (lot 5) suivent : d'ici là,
-// l'ancienne modale reste en service (interrupteur éteint).
+// Lot 3 : Actif, Clos (Cloture) et l'offre verrouillée par son dossier en lecture seule.
+// Les affaires du bien (lot 4) et les boutons d'envoi (lot 5) suivent : d'ici là, l'ancienne modale reste en
+// service (interrupteur éteint).
 
 import { useState, type ComponentType, type Dispatch, type ReactNode, type SetStateAction } from 'react'
 import type { Dossier } from './types'
@@ -26,6 +27,8 @@ import { bvs } from './lib/bienvuTexte'
 
 type Setter<T> = Dispatch<SetStateAction<T>>
 type Cote = 'entree' | 'sortie'
+/** Les motifs de clôture, comme App.tsx les déclare (formulaire PopinClos de Hektor). */
+type HektorClosureEtat = 'choiceNonRenouv' | 'choiceVendu' | 'choiceAutre'
 
 /** Lot 2 (06/11) — tout ce que le formulaire offre / compromis / vente de l'ancien bloc lit et appelle, SOUS LES
  *  MÊMES NOMS (App.tsx les passe en raccourci `{ statusChangeAmount, … }`). Rien d'autre. */
@@ -96,6 +99,15 @@ export type FormulaireStatutProps = {
     choisis: Array<{ id: string; nom: string }>; scope: DataScope | null | undefined
     onAjouter: (option: MandantContactSearchOption) => void; onRetirer: (id: string) => void
   }>
+  // Lot 3 (06/11) — Clos, et l'offre verrouillée par son dossier.
+  statusChangeCloseEtat: HektorClosureEtat; setStatusChangeCloseEtat: Setter<HektorClosureEtat>
+  statusChangeCloseRaison: string; setStatusChangeCloseRaison: Setter<string>
+  statusChangeCloseDate: string; setStatusChangeCloseDate: Setter<string>
+  statusChangeCloseReason: string; setStatusChangeCloseReason: Setter<string>
+  hektorClosureEtatOptions: Array<{ value: HektorClosureEtat; label: string; raisons: Array<{ value: string; label: string }> }>
+  hektorClosureRaisonsFor: (etat: HektorClosureEtat) => Array<{ value: string; label: string }>
+  offreVerrouilleeParSonDossier: (lignes: AffaireLedgerRow[], affaire: AffaireLedgerRow | null | undefined) => AffaireLedgerRow | null
+  rattachementOffreProposee: (lignes: AffaireLedgerRow[], offre: AffaireLedgerRow) => { quand: string } | null
   SelecteurNotaire: ComponentType<{
     libelle: string; aide: string; nom: string; numero: string; scope: DataScope | null | undefined
     onChoisir: (option: MandantContactSearchOption) => void; onRetirer: () => void
@@ -217,6 +229,7 @@ function FormulaireTransaction(props: {
     repartitionRangs, repartitionPoser, repartitionPourcentage, repartitionAjouterCase, repartitionRetirerCase,
     statusChangeNeedsSalePrice, mandantContactOptionTitle, mandantContactOptionSubtitle, formatDate, formatPrice,
     affaireCourante, offreAccepteeAReprendreAuCompromis, affaireEstVivante, SelecteurMandants, SelecteurNotaire,
+    offreVerrouilleeParSonDossier, rattachementOffreProposee,
   } = props.f
   // Seul état de la vue : la répartition repliée ou dépliée.
   const [repartitionOuverte, setRepartitionOuverte] = useState(false)
@@ -228,7 +241,14 @@ function FormulaireTransaction(props: {
   const compromisVivants = statusChangeStatus === 'sold' && !affaireCourante
     ? statusChangeAffaires.filter((a) => String(a.kind) === 'compromis' && affaireEstVivante(a)) : []
   const compromisRepris = compromisVivants.length === 1 ? compromisVivants[0] : null
+  // ─── LOT 3 : L'OFFRE VERROUILLÉE PAR SON DOSSIER (règle du 16/09) ───
+  // Son dossier porte un compromis ou une vente : la base refuse de la modifier. Ses champs passent en LECTURE
+  // SEULE (`readOnly` : la valeur reste la même, rien de ce qui part ne change) et la section dit pourquoi, avec
+  // les mots de l'ancien bandeau.
+  const verrou = statusChangeStatus === 'offer' ? offreVerrouilleeParSonDossier(statusChangeAffaires, affaireCourante) : null
+  const rattachee = verrou && affaireCourante ? rattachementOffreProposee(statusChangeAffaires, affaireCourante) : null
   const pastille = (cle: string, valeur: string, sources: Array<[string, unknown]>, requis = false): Pastille | null => {
+    if (verrou) return { texte: 'Figée', ton: 'actuel' }
     if (statusChangeTouches.includes(cle)) return { texte: 'Modifié', ton: 'modif' }
     if (requis && !String(valeur ?? '').trim()) return { texte: 'À remplir', ton: 'manque' }
     for (const [texte, source] of sources) {
@@ -253,7 +273,19 @@ function FormulaireTransaction(props: {
 
   return (
     <div className="stv2-form">
-      <Section titre={titreAffaire} dest="hektor">
+      <Section titre={verrou ? 'L’offre, en lecture seule' : titreAffaire} dest="hektor"
+        pied={verrou ? (
+          <p className="stv2-note is-alerte stv2-sec-pied" role="status">
+            <strong>On ne revient plus sur cette offre.</strong>{' '}
+            Son dossier porte {String(verrou.kind) === 'vente' ? 'une vente' : 'un compromis en cours'}
+            {String(verrou.hektor_affaire_id ?? '').trim() ? ` (n° ${String(verrou.hektor_affaire_id ?? '').trim()})` : ''}.
+            La refuser ou l’accepter maintenant couperait l’affaire en deux dans le registre. Pour y revenir, il faut
+            d’abord {String(verrou.kind) === 'vente' ? 'supprimer la vente' : 'annuler le compromis'}.
+            {rattachee?.quand === 'fait'
+              ? ' Elle est restée « proposée », ce qui est fréquent : elle est bien rattachée à ce compromis.'
+              : ''}
+          </p>
+        ) : null}>
         <div className="stv2-grille">
           {/* ⚠ Pas de « montant » sur la vente : chez Hektor une vente n'a pas de prix public (14/09). */}
           {statusChangeStatus !== 'sold' ? (
@@ -265,7 +297,7 @@ function FormulaireTransaction(props: {
                 if (statusChangeStatus === 'compromise' && !statusChangePrixVenteManuel) {
                   setStatusChangeSalePrice(event.target.value); toucherStatusChange('sale_price')
                 }
-              }} inputMode="numeric" placeholder="Ex : 180000" required /><span className="stv2-u">€</span></span>
+              }} inputMode="numeric" placeholder="Ex : 180000" required readOnly={Boolean(verrou)} /><span className="stv2-u">€</span></span>
             </Champ>
           ) : null}
           <Champ libelle="Prix de vente" requis={statusChangeNeedsSalePrice(statusChangeStatus)}
@@ -277,15 +309,15 @@ function FormulaireTransaction(props: {
               if (statusChangeStatus === 'sold') apresSaisieCommission({ montant: event.target.value })
               // Vider la case rend le prix de vente au montant.
               setStatusChangePrixVenteManuel(event.target.value.trim() !== '')
-            }} inputMode="numeric" placeholder="Ex : 180000" required={statusChangeNeedsSalePrice(statusChangeStatus)} /><span className="stv2-u">€</span></span>
+            }} inputMode="numeric" placeholder="Ex : 180000" required={statusChangeNeedsSalePrice(statusChangeStatus)} readOnly={Boolean(verrou)} /><span className="stv2-u">€</span></span>
           </Champ>
           <Champ libelle={statusChangeStatus === 'sold' ? 'Date de l’acte' : statusChangeStatus === 'compromise' ? 'Date du compromis' : 'Date de l’offre'} requis
             pastille={pastille('transaction_date', statusChangeDate, [['Actuel', affaireCourante?.date], ['Aujourd’hui', aujourdhui]], true)}>
-            <span className="stv2-in"><input type="date" value={statusChangeDate} onChange={(event) => { setStatusChangeDate(event.target.value); toucherStatusChange('transaction_date') }} required /></span>
+            <span className="stv2-in"><input type="date" value={statusChangeDate} onChange={(event) => { setStatusChangeDate(event.target.value); toucherStatusChange('transaction_date') }} required readOnly={Boolean(verrou)} /></span>
           </Champ>
           {statusChangeStatus === 'offer' ? (
             <Champ libelle="Validité de l’offre" pastille={pastille('validity_days', statusChangeValidityDays, [['Par défaut', '10']])}>
-              <span className="stv2-in"><input value={statusChangeValidityDays} onChange={(event) => { setStatusChangeValidityDays(event.target.value); toucherStatusChange('validity_days') }} inputMode="numeric" placeholder="10" /><span className="stv2-u">jours</span></span>
+              <span className="stv2-in"><input value={statusChangeValidityDays} onChange={(event) => { setStatusChangeValidityDays(event.target.value); toucherStatusChange('validity_days') }} inputMode="numeric" placeholder="10" readOnly={Boolean(verrou)} /><span className="stv2-u">jours</span></span>
             </Champ>
           ) : null}
           {statusChangeStatus === 'compromise' ? (
@@ -300,7 +332,7 @@ function FormulaireTransaction(props: {
           ) : null}
           <Champ libelle="N° de mandat" pastille={pastille('selected_mandat', statusChangeSelectedMandat,
             [['Actuel', affaireCourante?.numero_mandat], ['Repris du compromis', compromisRepris?.numero_mandat], ['Mandat du bien', statusChangeTarget.numero_mandat]])}>
-            <span className="stv2-in"><input value={statusChangeSelectedMandat} onChange={(event) => { setStatusChangeSelectedMandat(event.target.value); toucherStatusChange('selected_mandat') }} placeholder="Attribué automatiquement si vide" /></span>
+            <span className="stv2-in"><input value={statusChangeSelectedMandat} onChange={(event) => { setStatusChangeSelectedMandat(event.target.value); toucherStatusChange('selected_mandat') }} placeholder="Attribué automatiquement si vide" readOnly={Boolean(verrou)} /></span>
           </Champ>
         </div>
       </Section>
@@ -681,6 +713,69 @@ function FormulaireTransaction(props: {
   )
 }
 
+/** Clos (lot 3). ⛔ Les gestes sont ceux de l'ancien bloc, mot pour mot. Les 3 motifs deviennent des cartes ; la
+ *  raison reste un menu (ses valeurs dépendent du motif). Le texte de fin dit ce que le code fait VRAIMENT : depuis le
+ *  28/08 seul le STATUT part chez Hektor (prouvé le 21/10 sur 62774 : `closure: cloture_locale_uniquement`) ; l'ancien
+ *  « définitive côté Hektor » était trompeur (audit §7, I6 du 02/10). */
+function Cloture(props: { f: FormulaireStatutProps; statusChangeTarget: Dossier }) {
+  const { statusChangeTarget } = props
+  const {
+    statusChangeCloseEtat, setStatusChangeCloseEtat, statusChangeCloseRaison, setStatusChangeCloseRaison,
+    statusChangeCloseDate, setStatusChangeCloseDate, statusChangeCloseReason, setStatusChangeCloseReason,
+    hektorClosureEtatOptions, hektorClosureRaisonsFor,
+  } = props.f
+  const motifManque = statusChangeCloseEtat === 'choiceAutre' && !statusChangeCloseReason.trim()
+  return (
+    <Section titre={`Pourquoi le mandat ${statusChangeTarget.numero_mandat ?? ''} s’arrête`} dest="nous"
+      pied={
+        <p className="stv2-note stv2-sec-pied">
+          Le statut « Clos » part chez Hektor et coupe la diffusion sur les portails. La date et le motif restent chez
+          nous. Le bien se remet en vente par « Actif ». S’il y a une offre ou un compromis en cours, vérifie-les avant
+          de clôturer.
+        </p>
+      }>
+      <div className="stv2-motifs" role="radiogroup" aria-label="Motif de clôture">
+        {hektorClosureEtatOptions.map((etat) => (
+          <button
+            key={etat.value}
+            type="button"
+            role="radio"
+            aria-checked={statusChangeCloseEtat === etat.value}
+            className={`stv2-carte stv2-motif${statusChangeCloseEtat === etat.value ? ' is-selected' : ''}`}
+            onClick={() => { setStatusChangeCloseEtat(etat.value); setStatusChangeCloseRaison(etat.raisons[0]?.value ?? '') }}
+          >
+            <span className="stv2-carte-t">
+              <span className="stv2-marque">{statusChangeCloseEtat === etat.value ? <span className="stv2-marque-point" /> : null}</span>
+              {etat.label}
+            </span>
+          </button>
+        ))}
+      </div>
+      <div className="stv2-grille">
+        <Champ libelle="Raison">
+          <span className="stv2-in"><select value={statusChangeCloseRaison} onChange={(event) => setStatusChangeCloseRaison(event.target.value)}>
+            {hektorClosureRaisonsFor(statusChangeCloseEtat).map((raison) => (
+              <option key={raison.value} value={raison.value}>{raison.label}</option>
+            ))}
+          </select></span>
+        </Champ>
+        <Champ libelle="Date de clôture du mandat" aide="Vider la case efface notre date ; celle de Hektor revient s’il en a une.">
+          <span className="stv2-in"><input
+            type="date"
+            value={statusChangeCloseDate}
+            onChange={(event) => setStatusChangeCloseDate(event.target.value)}
+          /></span>
+        </Champ>
+      </div>
+      {statusChangeCloseEtat === 'choiceAutre' ? (
+        <Champ libelle="Précisez le motif" requis pastille={motifManque ? { texte: 'À remplir', ton: 'manque' } : null}>
+          <textarea className="stv2-zone" value={statusChangeCloseReason} onChange={(event) => setStatusChangeCloseReason(event.target.value)} placeholder="Ex : mandat clos à la demande du propriétaire" required />
+        </Champ>
+      ) : null}
+    </Section>
+  )
+}
+
 export default function ModaleStatutV2(props: ModaleStatutV2Props) {
   const {
     statusChangeTarget: cible, statusChangeStatus, setStatusChangeStatus, setStatusChangeAffaireChoisie,
@@ -804,12 +899,20 @@ export default function ModaleStatutV2(props: ModaleStatutV2Props) {
           {formulaire.statusChangeNeedsTransaction(statusChangeStatus) ? (
             <FormulaireTransaction f={formulaire} statusChangeTarget={cible} statusChangeStatus={statusChangeStatus}
               statusChangeAffaires={statusChangeAffaires} statusChangePending={statusChangePending} />
+          ) : statusChangeStatus === 'closed' ? (
+            <Cloture f={formulaire} statusChangeTarget={cible} />
           ) : (
-            <div className="stv2-attente">
-              Lot 2 de la refonte : la saisie de l’étape « {libelle(statusChangeStatus)} » arrive au lot 3, les affaires du
-              bien au lot 4 et les boutons d’envoi au lot 5. Interrupteur éteint, l’ancienne modale reste en service.
-            </div>
+            <Section titre="Remettre le bien en vente" dest="hektor">
+              <p className="stv2-note">
+                Aucune saisie : le statut « Actif » part directement chez Hektor, puis la fiche est relue.
+                La diffusion sur les portails est rallumée.
+              </p>
+            </Section>
           )}
+          <div className="stv2-attente">
+            Lot 3 de la refonte : les affaires du bien arrivent au lot 4 et les boutons d’envoi au lot 5. Interrupteur
+            éteint, l’ancienne modale reste en service.
+          </div>
         </div>
 
         <footer className="stv2-pied">
