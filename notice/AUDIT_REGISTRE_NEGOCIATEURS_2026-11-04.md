@@ -1684,3 +1684,5 @@ Contrôles : `npm run build` vert ; essai hors ligne sur la vraie fonction extra
 Saint-Étienne, même sur un contact de GENTES ; admin → GENTES ; contact sans négo / négo parti / négo admin / invité → à
 compléter ; panne → ancien nom du contact, jamais l'adresse). Témoin : l'ancien gabarit l. 45053 retombait sur
 `google_calendar_email`. Non vu à l'écran. L'agenda (un admin peut-il poser un RDV client sur son agenda ?) : NON TRANCHÉ.
+
+**Agenda — décision de Frédéric (06/11) : « Oui, laisser »** : un admin peut toujours poser un RDV client sur son propre agenda (invitation depuis sa boîte). Rien à coder ; seul le bon de visite suit la règle. Ne pas relancer.
