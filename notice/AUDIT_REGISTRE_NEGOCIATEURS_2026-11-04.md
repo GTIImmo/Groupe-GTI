@@ -1654,3 +1654,22 @@ du worker (12:42:41) ; journal `console_worker_service_documents.log` : démarra
 types ; un rafraîchissement posé à 13:23 traité (done). ⚠ Le redémarrage a aussi chargé un travail NON COMMITÉ d'une autre
 session (A.2 : 3e cran « admin » de l'interrupteur Youtrust) — inerte tant que `signature_youtrust` = off (mesuré : off).
 Pas encore vu sur un vrai PDF (aucun généré depuis).
+
+## 56. AGENDA GLOBAL ET BON DE VISITE SELON LA RÈGLE DU §54 — AUDIT (06/11) — Frédéric : « Oui, l'audit » — ⛔ rien n'est codé
+
+Audit limité à l'agenda (global et de l'annonce) et au bon de visite imprimé ; les autres objets ne sont pas mesurés.
+
+**Bon de visite** (`visitVoucherHtml`, App.tsx ~l. 45022) : bloc « Agence » = `contact.agence_nom` sinon « Groupe GTI » ;
+« Représenté par » = `contact.commercial_nom` (le négo du CONTACT, pas du bien) sinon `event.google_calendar_email` (L'ADRESSE
+de l'agenda) sinon « A completer ». Depuis l'agenda global (`visitVoucherContactFromGoogleEvent`) et depuis l'agenda d'une
+annonce (`visitVoucherContactFromAnnonceEvent` → `appContactFromDetailContact`), le contact est fabriqué SANS `commercial_nom`
+ni `agence_nom` → le bon imprime « Groupe GTI » et l'E-MAIL de l'agenda (celui d'un admin si le RDV est sur son agenda), jamais
+le négo du bien. Champs modifiables à la main avant impression.
+**Agenda global** (`GoogleAgendaGlobalScreen`) : agenda par défaut = `contactHektorUserEmail` (pour un admin : sa session) ;
+un admin/manager peut choisir l'agenda d'un négo (`canSelectTeam`), un négo reste sur le sien (05/11). Un RDV créé sur
+l'agenda d'un admin envoie l'invitation au client depuis la boîte de l'admin.
+**Mesure** (`app_google_calendar_event_link`) : 11 RDV en tout, TOUS sur des agendas d'admin (Frédéric 6 du 12 au 15/06,
+Franck 5 du 2 au 8/06), 10 sur un bien, 0 à venir, 0 créé par un négociateur → essais de juin ; aucun usage réel depuis.
+**Correctif proposé** : bon de visite → « Représenté par » = le négo propriétaire de l'agenda s'il est négociateur, sinon le
+négo ACTIF du bien, sinon l'agence seule (champ vide « À compléter ») ; « Agence » = l'agence du bien ; jamais une adresse
+e-mail à la place d'un nom. Agenda : décision à prendre (voir le message du 06/11).
