@@ -100,3 +100,50 @@ réaliste**, à faire confirmer ou corriger par l'humain.
 
 ⚠ Ce que ça pourrait casser : la synchro des documents (on n'y touche pas : le classement vit à côté) ; les écrans qui
 cherchent par le nom (ils gardent leur repli tant que GED-5 n'est pas branché) ; Hektor (rien ne lui est envoyé de plus).
+
+## 5. LE CONSEIL (06/11, « donne-moi la meilleure méthode… et analyse la signature pour ne rien casser »)
+
+### 5.1 La méthode
+1. **Le fichier ne bouge pas ; sa FICHE vit à côté.** Le fichier, son identité (`hektor_document_id`, chemin, sha256) et
+   sa synchro avec Hektor restent tels quels. Le classement (famille, type, rattachements, dates, statut, origine) va dans
+   des tables à nous que la synchro ne touche jamais.
+2. **Une nomenclature unique, courte, en base** (famille → type, codes stables, libellés modifiables), lue par tous les
+   écrans — plus aucune liste ni expression régulière en dur.
+3. **Un document peut concerner plusieurs objets** : bien, mandat, avenant → son mandat, affaire (offre, compromis, acte),
+   contact, partenaire.
+4. **Classer à l'entrée, l'humain confirme** : type proposé par le nom (plus tard par le contenu), origine tracée
+   (automatique / humain / généré par l'app), l'humain gagne toujours.
+5. **Cycle de vie** : versions (« remplace », existe déjà pour le mandat), statut, document signé = immuable.
+6. **Dates qui comptent** : validité des diagnostics (DPE 10 ans…), pré-état daté, pièce d'identité → alertes.
+7. **Complétude** : pour chaque étape (mandat, compromis, vente), la liste des pièces attendues et celles qui manquent.
+8. **Une seule porte pour trouver** : « les documents de telle famille / tel type pour tel objet ».
+
+### 5.2 La sécurité
+- Mesuré le 06/11 : coffre `hektor-console-documents` PRIVÉ (50 Mo), lecture limitée au périmètre du compte (règle
+  `app_console_document_select_scope` + règle du coffre), dépôt seulement dans `temp/`. **C'est sain ; à garder.**
+- À ajouter : une **sensibilité** par type (identité, RIB, avis d'imposition = données personnelles) → accès plus
+  restreint, durée de conservation (RGPD), jamais en pièce jointe sans le vouloir ; le **journal des consultations**
+  (`last_accessed_at` existe, à compléter) ; le **contrôle d'intégrité** des signés (sha256 vérifié au rapatriement et de
+  temps en temps) ; à l'entrée, **doublons** (sha256) et **formats refusés** dits tout de suite (ex. `.odt`).
+
+### 5.3 Ne pas casser la signature électronique (chantier A.2 Youtrust, autre session, essai jusqu'au ~09/11)
+- **Sa colonne vertébrale** : l'état de signature vit dans `metadata_json.signature` du document (`provider`
+  immosign / youtrust / manuscrite, `procedure_id`, `provider_request_id`), écrit par DEUX écrivains (Hektor/ImmoSign,
+  Youtrust) avec la règle R1 (un écrivain ne touche que les siens). `app_signature_request.app_console_document_id`
+  pointe sur la ligne du document.
+- **Règles pour la GED** : ne JAMAIS écrire `metadata_json` ni les colonnes d'identité / de stockage de
+  `app_console_document` ; la GED LIT l'état de signature, ne l'écrit pas ; un document signé ou en cours de signature ne
+  peut être ni supprimé ni remplacé depuis la GED ; les mandats générés par l'app (`genere_par`, `document_type`
+  « Mandat ») sont classés d'office « mandat » / « avenant ».
+- **Les lecteurs par le nom** (`/mandat/` du suivi de signature, `/avenant/` de l'envoi Youtrust, « Signé à la main »,
+  registre des transactions, pièces du notaire) gardent leur repli jusqu'à ce que GED-5 les remplace UN PAR UN, chacun
+  avec son essai.
+- **Calendrier** : l'autre session modifie en ce moment les mêmes fichiers (App.tsx, worker, panneau des documents) ;
+  tout ce qui touche l'écran des documents (GED-4, GED-6) attend la fin de ses lots ou se fait en accord avec elle. GED-1
+  à GED-3 (nomenclature, fiche à part, classement du stock) ne touchent ni l'écran ni la signature.
+
+### 5.4 L'ordre recommandé
+GED-1 nomenclature (validée par Frédéric) → GED-2 fiche à part + GED-3 classement du stock (base seule, rien à l'écran)
+→ GED-5 la porte « trouver », d'abord pour les besoins neufs (copropriété du syndic, pré-état daté), puis à la place des
+anciennes règles → GED-4 l'outil d'ajout (après les lots signature) → complétude et dates d'expiration → plus tard :
+lien de dépôt pour le client, lecture du contenu des PDF, bons de visite rangés comme documents.
