@@ -1374,7 +1374,7 @@ le périmètre de la recherche de contacts peut viser la mauvaise agence (lectur
 **Prérequis commun** : agences ET coordonnées des personnes sont VIDES dans le registre (0/185 portables, 0 agence) jusqu'à
 la 1re nuit qui écrit (06/11). Rien ne peut basculer avant. Chaque bascule garde l'annuaire de Hektor en REPLI.
 
-## 48. ÉTAPE 5, LECTEUR 1 : LA PAGE PUBLIQUE DE RDV LIT LE REGISTRE, ET LES LIENS LE SUIVENT (05/11) — Frédéric : « 1 puis 2 », puis « 1 » (les liens suivent le registre) — ✅ EN LIGNE (06/11, 10:51)
+## 48. ÉTAPE 5, LECTEUR 1 : LA PAGE PUBLIQUE DE RDV LIT LE REGISTRE, ET LES LIENS LE SUIVENT (05/11) — Frédéric : « 1 puis 2 », puis « 1 » (les liens suivent le registre) — ✅ EN LIGNE (f889043, poussé le 05/11 au soir)
 
 **Ce qui change** (`backend/app/services/appointment_service.py`, seul fichier du serveur touché) :
 - **L'agence** (tél, mail) vient d'abord du REGISTRE DES AGENCES (`_load_registre_agence`) : par l'écriture EXACTE du nom
@@ -1489,7 +1489,7 @@ table de cette nuit (0 différence = témoin) ; la NOUVELLE ne diffère QUE sur 
 **Effet** : actif dès le run de cette nuit (le run lance le fichier du serveur) ; Sylvie suivra Hektor dans la copie locale,
 puis l'annuaire, le registre des négociateurs et, si l'interrupteur des agences est allumé, ses coordonnées à nous.
 
-## 52. ÉTAPE 5, LECTEUR 2 : LA PAGE PUBLIQUE D'ESTIMATION (06/11) — Frédéric : « non c'est bon, enchaîne », puis « 1 » (Firminy) — CODÉ, NON POUSSÉ
+## 52. ÉTAPE 5, LECTEUR 2 : LA PAGE PUBLIQUE D'ESTIMATION (06/11) — Frédéric : « non c'est bon, enchaîne », puis « 1 » (Firminy) — ✅ EN LIGNE (06/11, 10:51)
 
 **L'audit** : la page (`apps/rdv-public`, `/public/appointments/estimation/…`) s'ouvre avec une agence (`?agency=…`) ou sans ;
 elle désigne un conseiller À TOUR DE RÔLE et la demande part sur son mail (sinon celui de l'agence). Usage mesuré très
