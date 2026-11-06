@@ -7,7 +7,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { hasSupabaseEnv, supabase } from './lib/supabase'
 import { loadCoproRnie } from './lib/api'
 import {
-  choixSyndics, ecartAvecHektor, lireSyndicDuBien, origineDuSyndic, syndicSelonHektor,
+  choixSyndics, distinguerSyndic, ecartAvecHektor, lireSyndicDuBien, origineDuSyndic, syndicSelonHektor,
   type SyndicCatalogue, type SyndicDuBien as Syndic,
 } from './lib/syndicDuBien'
 import './syndic-du-bien.css'
@@ -27,19 +27,28 @@ async function lireLesSyndics(): Promise<SyndicCatalogue[]> {
   const reg = await supabase.from('app_partenaire_metier').select('contact_id').eq('metier', 'syndic').is('retire_le', null)
   if (reg.error) throw new Error(reg.error.message)
   const ids = Array.from(new Set((reg.data ?? []).map((r) => String((r as { contact_id: string }).contact_id))))
+  // Combien de nos biens chaque fiche porte déjà : ce qui départage les homonymes (15 noms en double, 06/11).
+  const liens = await supabase.from('app_partenaire_lien').select('partenaire_id').eq('role', 'syndic').eq('objet', 'bien').is('retire_le', null)
+  if (liens.error) throw new Error(liens.error.message)
+  const biens = new Map<string, number>()
+  for (const l of (liens.data ?? []) as { partenaire_id: string }[]) biens.set(String(l.partenaire_id), (biens.get(String(l.partenaire_id)) ?? 0) + 1)
   const liste: SyndicCatalogue[] = []
   for (let i = 0; i < ids.length; i += 200) {
-    const r = await supabase.from('app_contact_current').select('hektor_contact_id,display_name,prenom,nom,ville,archive')
+    const r = await supabase.from('app_contact_current').select('hektor_contact_id,display_name,prenom,nom,ville,archive,phone_primary,email')
       .in('hektor_contact_id', ids.slice(i, i + 200))
     if (r.error) throw new Error(r.error.message)
     for (const c of (r.data ?? []) as Record<string, unknown>[]) {
       if (c.archive === true) continue
       const nom = String(c.display_name ?? '').trim() || [c.prenom, c.nom].filter(Boolean).join(' ').trim() || `Contact ${c.hektor_contact_id}`
-      liste.push({ id: String(c.hektor_contact_id), nom, ville: String(c.ville ?? '').trim() || null })
+      const id = String(c.hektor_contact_id)
+      liste.push({ id, nom, ville: String(c.ville ?? '').trim() || null, telephone: String(c.phone_primary ?? '').trim() || null,
+        email: String(c.email ?? '').trim() || null, biens: biens.get(id) ?? 0 })
     }
   }
   return liste
 }
+// Après un choix, les comptes de biens changent : la prochaine ouverture du choix relit le catalogue.
+const oublierLeCatalogue = () => { cataloguePromesse = null }
 const syndicsDuCatalogue = () => {
   if (!cataloguePromesse) cataloguePromesse = lireLesSyndics().catch((e) => { cataloguePromesse = null; throw e })
   return cataloguePromesse
@@ -115,6 +124,7 @@ export default function SyndicDuBien(props: {
     setTravail(null)
     if (r.error) { setErreur(r.error.message); return }
     setChoix(false); setRetrait(false); setRecherche('')
+    oublierLeCatalogue()
     setVersion((v) => v + 1)
   }
 
@@ -172,7 +182,7 @@ export default function SyndicDuBien(props: {
 
       {choix && !lectureSeule ? (
         <div className="sb-choix">
-          <input className="sb-recherche" type="search" placeholder="Chercher un syndic (nom, ville)…" value={recherche}
+          <input className="sb-recherche" type="search" placeholder="Chercher un syndic (nom, ville, n° ou téléphone)…" value={recherche}
             onChange={(e) => setRecherche(e.target.value)} autoFocus />
           {catalogue.etat === 'chargement' ? <p className="sb-vide">Lecture du catalogue des syndics…</p>
             : catalogue.etat === 'erreur' ? <p className="sb-erreur">Le catalogue n'a pas pu être lu : {catalogue.erreur}</p>
@@ -184,6 +194,8 @@ export default function SyndicDuBien(props: {
                     <button type="button" disabled={travail !== null} onClick={() => void ecrire(s.id, false)}>
                       <span className="sb-l-nom">{s.nom}</span>
                       {s.ville ? <span className="sb-l-ville">{s.ville}</span> : null}
+                      {s.homonymes > 1 ? <span className="sb-l-tag double" title="Plusieurs fiches portent ce nom : choisis celle qui porte déjà nos biens">{s.homonymes} fiches à ce nom</span> : null}
+                      <span className="sb-l-detail">{distinguerSyndic(s)}</span>
                       {s.propose === 'rnic' ? <span className="sb-l-tag">proposé par le registre des copropriétés</span>
                         : s.propose === 'hektor' ? <span className="sb-l-tag">indiqué dans Hektor</span> : null}
                       {travail === s.id ? <span className="sb-l-tag">enregistrement…</span> : null}

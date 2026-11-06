@@ -2106,6 +2106,12 @@ créé, rien n'est poussé.
   11 noms ×2. Conséquence : un utilisateur choisit au hasard, les biens d'un même syndic se répartissent sur plusieurs
   fiches, et la fiche syndic (4.1) n'en montre qu'une partie (les « 16 biens » d'IMMO DE FRANCE ne comptent que 10217295).
   Non traité — à présenter à Frédéric (montrer de quoi distinguer dans le choix, et/ou désigner une fiche principale).
+  ⇒ **Décision de Frédéric (06/11) : « Montrer de quoi choisir »** — CODÉ (front seul, même cran) : chaque ligne du choix
+  montre son n°, son téléphone (sinon l'e-mail) et « N biens chez nous » (liens syndic actifs) ; « N fiches à ce nom »
+  quand il y a des homonymes ; entre homonymes, la fiche qui porte DÉJÀ le plus de nos biens en tête ; la recherche
+  accepte un n° ou un téléphone ; après un choix, le catalogue est relu (les comptes bougent). Rien en base.
+  Contrôles (88)-(91) ; essai **92/92** ; construction verte ; banc fictif à 1280 × 665. Le regroupement des doublons
+  (fiche principale) reste à étudier à part.
 
 ### 7 ter. Les dépendances (techniques, pas un ordre décidé)
 

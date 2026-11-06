@@ -39,3 +39,6 @@
 .sb-l-tag { font-size: 10.5px; font-weight: 700; color: var(--sb); background: #efecf9; border-radius: 999px; padding: 1px 7px; }
 .sb-choix-pied { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 11px; color: #8a8195; flex-wrap: wrap; }
 .sb-syndic.tel .sb-k { margin-left: 0; width: 100%; }
+/* 06/11 : ce qui distingue deux fiches au même nom (15 noms en double au catalogue). */
+.sb-l-detail { flex-basis: 100%; font-size: 11px; color: #6f6680; }
+.sb-l-tag.double { color: #8a5a00; background: #fff3d6; }

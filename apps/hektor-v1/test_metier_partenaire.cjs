@@ -316,5 +316,27 @@ controle("(87) 4.2a le patch : droit sur le bien, syndic du registre, l'ancien r
   && /SET retire_le = now\(\), retire_par = auth\.uid\(\) WHERE id = v_actuel\.id/.test(patch42) && /CREATE UNIQUE INDEX app_partenaire_lien_un_syndic_uidx/.test(patch42)
   && /FROM PUBLIC, anon/.test(patch42) && !/hektor_api|console_job/.test(patch42));
 
+// ── 4.2 suite (06/11) : les syndics EN DOUBLE (15 noms, 41 fiches) — montrer de quoi choisir ──
+const homo = [{ id: "10217296", nom: "FONCIA LOIRE AUVERGNE", ville: null, telephone: null, email: null, biens: 0 },
+  { id: "10352728", nom: "FONCIA LOIRE AUVERGNE", ville: null, telephone: "04 77 00 00 01", biens: 5 },
+  { id: "10354119", nom: "Foncia Loire Auvergne", ville: null, email: "exemple@foncia.test", biens: 1 },
+  { id: "10215568", nom: "GIBERT IMMOBILIER", ville: "Firminy", telephone: "04 77 99 88 77", biens: 2 }];
+const ch2 = sb.choixSyndics({ catalogue: homo, recherche: "foncia", actuel: null, nomRnic: null, nomHektor: null });
+controle("(88) doublons : entre homonymes, la fiche qui porte DÉJÀ le plus de nos biens d'abord ; « 3 fiches à ce nom »",
+  J(ch2.map((c) => c.id)) === J(["10352728", "10354119", "10217296"]) && ch2.every((c) => c.homonymes === 3)
+  && sb.choixSyndics({ catalogue: homo, recherche: "gibert", actuel: null, nomRnic: null, nomHektor: null })[0].homonymes === 1);
+controle("(89) doublons : ce qui distingue une fiche (n°, téléphone sinon e-mail, nos biens)",
+  sb.distinguerSyndic(homo[1]) === "n° 10352728 · 04 77 00 00 01 · 5 biens chez nous"
+  && sb.distinguerSyndic(homo[2]) === "n° 10354119 · exemple@foncia.test · 1 bien chez nous"
+  && sb.distinguerSyndic(homo[0]) === "n° 10217296 · aucun de nos biens");
+controle("(90) doublons : un numéro tapé retrouve la fiche (n°) ou le téléphone",
+  J(sb.choixSyndics({ catalogue: homo, recherche: "10354", actuel: null, nomRnic: null, nomHektor: null }).map((c) => c.id)) === J(["10354119"])
+  && J(sb.choixSyndics({ catalogue: homo, recherche: "99 88", actuel: null, nomRnic: null, nomHektor: null }).map((c) => c.id)) === J(["10215568"]));
+const sbx2 = fs.readFileSync(path.resolve(__dirname, "src", "SyndicDuBien.tsx"), "utf8");
+controle("(91) doublons : la carte lit téléphone, e-mail et les liens actifs (biens par fiche), relit après un choix, et l'affiche",
+  /select\('hektor_contact_id,display_name,prenom,nom,ville,archive,phone_primary,email'\)/.test(sbx2)
+  && /from\('app_partenaire_lien'\)\.select\('partenaire_id'\)\.eq\('role', 'syndic'\)\.eq\('objet', 'bien'\)\.is\('retire_le', null\)/.test(sbx2)
+  && /oublierLeCatalogue\(\)\s*setVersion/.test(sbx2) && /\{distinguerSyndic\(s\)\}/.test(sbx2) && /s\.homonymes > 1 \?/.test(sbx2));
+
 console.log(echecs.length ? `\n${echecs.length} contrôle(s) en échec` : "\nTout est vert.");
 process.exit(echecs.length ? 1 : 0);
