@@ -10,6 +10,8 @@ import {
   choixSyndics, distinguerSyndic, ecartAvecHektor, lireSyndicDuBien, origineDuSyndic, syndicSelonHektor,
   type SyndicCatalogue, type SyndicDuBien as Syndic,
 } from './lib/syndicDuBien'
+import DemandeDocument from './DemandeDocument'
+import type { BienDemande } from './lib/demandeDocument'
 import './syndic-du-bien.css'
 
 export const EVENEMENT_OUVRIR_PARTENAIRE = 'bienvu:ouvrir-partenaire'
@@ -67,6 +69,9 @@ export default function SyndicDuBien(props: {
   latitude?: number | null         // pour la proposition du registre des copropriétés (RNIC), lue au clic « Choisir »
   longitude?: number | null
   variante?: 'bureau' | 'telephone'   // téléphone = lecture seule (le choix au téléphone viendra avec 4.6)
+  // 4.4 (06/11) : « Demander un document » à ce syndic pour CE bien (cran `partenaires_syndic_demande`).
+  bienDemande?: BienDemande | null
+  demandePossible?: boolean
 }) {
   const annonce = props.hektorAnnonceId
   const lectureSeule = props.variante === 'telephone'
@@ -79,6 +84,7 @@ export default function SyndicDuBien(props: {
   const [retrait, setRetrait] = useState(false)
   const [travail, setTravail] = useState<string | null>(null)
   const [erreur, setErreur] = useState<string | null>(null)
+  const [demande, setDemande] = useState(false)
 
   useEffect(() => {
     let annule = false
@@ -151,6 +157,9 @@ export default function SyndicDuBien(props: {
             <div className="sb-actions">
               {syndic.telephone ? <a className="sb-btn" href={`tel:${syndic.telephone.replace(/\s+/g, '')}`}><Ico d={TEL} />Appeler</a> : null}
               <button type="button" className="sb-btn" onClick={() => ouvrirFiche(syndic.partenaireId)}>Ouvrir sa fiche</button>
+              {!lectureSeule && props.demandePossible && props.bienDemande ? (
+                <button type="button" className="sb-btn sb-choisir" onClick={() => setDemande(true)}>Demander un document</button>
+              ) : null}
               {!lectureSeule ? <>
                 <button type="button" className="sb-btn" onClick={() => { setChoix((c) => !c); setRetrait(false) }}>Changer</button>
                 <button type="button" className="sb-btn sb-retirer" onClick={() => { setRetrait(true); setChoix(false) }}>Retirer</button>
@@ -179,6 +188,10 @@ export default function SyndicDuBien(props: {
       ) : null}
 
       {erreur ? <p className="sb-erreur">{erreur}</p> : null}
+
+      {demande && syndic && props.bienDemande ? (
+        <DemandeDocument syndicNom={syndic.nom} syndicEmail={syndic.email} biens={[props.bienDemande]} onClose={() => setDemande(false)} />
+      ) : null}
 
       {choix && !lectureSeule ? (
         <div className="sb-choix">

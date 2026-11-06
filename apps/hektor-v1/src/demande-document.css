@@ -1,0 +1,33 @@
+/* CHANTIER PARTENAIRES · PIÈCE 4.4 (06/11/2026) — la fenêtre « Demander un document » (DemandeDocument.tsx).
+   Couleur du métier syndic : #5b4a9e ; bouton principal : magenta de l'app. */
+.dd-fond{position:fixed;inset:0;z-index:1200;background:rgba(23,19,15,.42);display:grid;place-items:center;padding:20px;animation:dd-fond .2s ease both;}
+.dd-fenetre{--sb:#5b4a9e;width:min(920px,100%);max-height:calc(100vh - 40px);display:flex;flex-direction:column;background:#fff;border-radius:18px;box-shadow:0 30px 60px -20px rgba(23,19,15,.45);font-family:Inter,"Segoe UI",system-ui,sans-serif;color:#222323;overflow:hidden;animation:dd-ouvre .28s cubic-bezier(.2,.8,.2,1) both;}
+.dd-fenetre *{box-sizing:border-box;}
+.dd-tete{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:18px 22px 12px;border-bottom:1px solid #ece8f4;}
+.dd-tete h2{margin:0;font-size:19px;font-weight:800;}
+.dd-tete p{margin:3px 0 0;font-size:13px;color:var(--sb);font-weight:700;}
+.dd-fermer{width:34px;height:34px;border-radius:10px;border:1px solid #e3e0ea;background:#fff;display:grid;place-items:center;cursor:pointer;color:#5c6163;}
+.dd-fermer svg{width:15px;height:15px;}
+.dd-corps{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.35fr);gap:18px;padding:16px 22px;overflow:auto;}
+.dd-gauche,.dd-droite{display:flex;flex-direction:column;gap:12px;min-width:0;}
+.dd-champ{display:flex;flex-direction:column;gap:5px;font-size:13px;}
+.dd-champ > span{font-size:11.5px;font-weight:800;color:#6f6680;}
+.dd-champ em{font-style:normal;font-weight:700;color:#8a5a00;background:#fff3d6;border-radius:999px;padding:1px 7px;margin-left:6px;}
+.dd-champ select,.dd-champ input,.dd-champ textarea{font:inherit;font-size:13.5px;color:#222323;border:1px solid #ddd8e8;border-radius:10px;padding:8px 10px;background:#fff;width:100%;}
+.dd-champ input[readonly]{background:#faf9fd;}
+.dd-message textarea{min-height:260px;resize:vertical;line-height:1.45;}
+.dd-pieces{border:1px solid #ece8f4;border-radius:12px;padding:10px 12px;margin:0;display:flex;flex-direction:column;gap:7px;}
+.dd-pieces legend{font-size:11.5px;font-weight:800;color:#6f6680;padding:0 4px;}
+.dd-pieces label{display:flex;align-items:flex-start;gap:8px;font-size:13px;line-height:1.35;cursor:pointer;}
+.dd-pieces input{accent-color:var(--sb);margin-top:2px;}
+.dd-dest{margin:0;font-size:12.5px;color:#3d3550;}
+.dd-dest.manque{color:#8a5a00;background:#fff7e6;border:1px solid #f2dfb5;border-radius:10px;padding:7px 10px;}
+.dd-vide{margin:0;padding:22px;font-size:13.5px;color:#6f6680;}
+.dd-pied{display:flex;align-items:center;gap:10px;padding:12px 22px 16px;border-top:1px solid #ece8f4;flex-wrap:wrap;}
+.dd-note{margin-right:auto;font-size:12px;color:#8a8195;}
+.dd-btn{height:40px;display:inline-flex;align-items:center;padding:0 16px;border-radius:11px;border:1px solid #ddd8e8;background:#fff;font:inherit;font-size:13.5px;font-weight:800;color:#222323;cursor:pointer;text-decoration:none;}
+.dd-btn.primaire{background:#c5005f;border-color:#c5005f;color:#fff;box-shadow:0 6px 14px -6px rgba(197,0,95,.55);}
+@keyframes dd-fond{from{opacity:0}to{opacity:1}}
+@keyframes dd-ouvre{from{opacity:0;transform:translateY(12px) scale(.985)}to{opacity:1;transform:none}}
+@media (max-width:720px){.dd-corps{grid-template-columns:1fr;}.dd-message textarea{min-height:200px;}}
+@media (prefers-reduced-motion:reduce){.dd-fond,.dd-fenetre{animation:none;}}

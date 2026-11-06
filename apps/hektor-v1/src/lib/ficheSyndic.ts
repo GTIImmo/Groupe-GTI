@@ -67,6 +67,9 @@ export type BienSyndic = {
   photo: string | null
   copro: CoproDuBien | null
   documents: string[]
+  // 4.4 (06/11) : pour le message « Demander un document » (adresse lue dans le détail du bien).
+  adresse: string | null
+  codePostal: string | null
 }
 export type VueSyndic = {
   biens: BienSyndic[]
@@ -103,6 +106,7 @@ export function construireVueSyndic(input: {
     const b = parAnnonce.get(id) ?? {}
     const statut = texte(b.statut_annonce)
     const dossier = nombre(b.app_dossier_id ?? l.app_dossier_id)
+    const detail = objet(detailPar.get(id))
     biens.push({
       appDossierId: dossier,
       hektorAnnonceId: id,
@@ -114,6 +118,8 @@ export function construireVueSyndic(input: {
       photo: texte(b.photo) || null,
       copro: lireCopro(detailPar.get(id)),
       documents: (docsPar.get(id) ?? []).sort((a, z) => a.localeCompare(z, 'fr')),
+      adresse: texte(detail?.adresse_detail) || null,
+      codePostal: texte(detail?.code_postal_detail) || texte(detail?.code_postal) || null,
     })
   }
   biens.sort((a, z) => Number(z.enVente) - Number(a.enVente) || a.titre.localeCompare(z.titre, 'fr'))

@@ -344,5 +344,32 @@ controle("(91) doublons : la carte lit téléphone, e-mail et les liens actifs (
   && /from\('app_partenaire_lien'\)\.select\('partenaire_id'\)\.eq\('role', 'syndic'\)\.eq\('objet', 'bien'\)\.is\('retire_le', null\)/.test(sbx2)
   && /oublierLeCatalogue\(\)\s*setVersion/.test(sbx2) && /\{distinguerSyndic\(s\)\}/.test(sbx2) && /s\.homonymes > 1 \?/.test(sbx2));
 
+// ── 4.4 (06/11) : « Demander un document » au syndic, version simple ──
+let dd;
+try {
+  const { code } = esbuild.transformSync(fs.readFileSync(path.resolve(__dirname, "src", "lib", "demandeDocument.ts"), "utf8"), { loader: "ts", format: "cjs" });
+  const module = { exports: {} };
+  vm.runInNewContext(code, { module, exports: module.exports });
+  dd = module.exports;
+} catch (e) { console.log(`⛔ ${e.message}`); process.exit(2); }
+const bienD = { id: "1", titre: "T3 exemple", adresse: "12 rue Exemple", codePostal: "42000", ville: "Saint-Étienne", lots: "210 - 101", mandat: "18 870" };
+const msg = dd.messageDemande({ bien: bienD, pieces: dd.piecesParDefaut(), signature: "Négociatrice Test" });
+controle("(93) 4.4 le message : adresse, lots, mandat, les 5 pièces cochées d'office, le délai du pré-état daté, la signature",
+  msg.sujet === "Demande de documents de copropriété : 12 rue Exemple, 42000 Saint-Étienne (lots 210 - 101)"
+  && /- Adresse : 12 rue Exemple, 42000 Saint-Étienne/.test(msg.corps) && /- Lots : 210 - 101/.test(msg.corps) && /mandat n° 18 870/.test(msg.corps)
+  && dd.piecesParDefaut().length === 5 && /- Pré-état daté/.test(msg.corps) && /coût d'établissement du pré-état daté/.test(msg.corps) && /Négociatrice Test$/.test(msg.corps));
+const msg2 = dd.messageDemande({ bien: { id: "2", titre: "Studio", adresse: null, codePostal: null, ville: null, lots: null, mandat: null }, pieces: ["pv_ag"] });
+controle("(94) 4.4 une donnée absente n'est pas écrite (ni lot, ni mandat inventé) ; sans pré-état daté, pas de phrase sur son délai",
+  !/Lot|mandat n°|pré-état daté/.test(msg2.corps) && /Adresse : Studio/.test(msg2.corps) && /Groupe GTI$/.test(msg2.corps));
+controle("(95) 4.4 « ouvrir dans ma messagerie » seulement avec un e-mail valable (3 syndics sur 75 en ont un)",
+  dd.lienMessagerie("syndic@exemple.fr", "S", "C") === "mailto:syndic@exemple.fr?subject=S&body=C" && dd.lienMessagerie("", "S", "C") === null && dd.lienMessagerie("pas un mail", "S", "C") === null);
+const ddx = fs.readFileSync(path.resolve(__dirname, "src", "DemandeDocument.tsx"), "utf8").replace(/^\s*\/\/.*$/gm, "");
+controle("(96) 4.4 la fenêtre n'enregistre ni n'envoie RIEN (pas de base, pas de travail, pas de requête)",
+  !/supabase|rpc\(|fetch\(|console_job|insert|update\(/.test(ddx) && /createPortal\(/.test(ddx) && /navigator\.clipboard\.writeText/.test(ddx));
+controle("(97) 4.4 branchements derrière `partenaires_syndic_demande` : bouton de la fiche syndic (au lieu de « bientôt ») et carte syndic d'un bien",
+  /const demandeSyndicPossible = demandeSyndicCran && ficheSyndicActive/.test(app) && /\{demandeSyndicPossible \? \(\s*<button className="fa-cx-act primary wide" type="button" onClick=\{\(\) => setDemandeSyndicOuverte\(true\)\}>/.test(app)
+  && /demandePossible=\{demandeSyndicBienCran\}/.test(app) && (app.match(/useCranCouplesVisible\('partenaires_syndic_demande'/g) || []).length === 2
+  && /props\.demandePossible && props\.bienDemande \?/.test(sbx2));
+
 console.log(echecs.length ? `\n${echecs.length} contrôle(s) en échec` : "\nTout est vert.");
 process.exit(echecs.length ? 1 : 0);

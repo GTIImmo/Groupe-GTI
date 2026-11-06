@@ -2164,6 +2164,46 @@ résidence / bâtiment / étage), en lecture, sans rien stocker.
 - Contrôles : (64) réécrit pour la nouvelle règle ; 92/92 ; notaire vert ; construction verte, ET la version commitée
   construite à part ; banc fidèle (feuilles de style de l'app, données fictives) bureau 1280 × 665 et téléphone.
 
+## 28. PLAN ACCÉLÉRÉ DES LOTS 4 À 7 (06/11, Frédéric)
+> « Passe à 4.4 et peux-tu accélérer sur les fiches partenaires : on peut faire plus simple, avec toutes les pages, mais
+> les blocs à développer “en création” pour les faire plus tard, car cela n'apporte pas beaucoup, comme l'immeuble… Adapte
+> le chantier en gardant le principe général. »
+
+**Principe gardé** : la fiche métier s'ouvre depuis le catalogue ; les liens vivent chez nous ; rien n'est écrit chez
+Hektor ; ce qui n'existe pas encore est MONTRÉ « en construction » (règle du 27/10) ; chaque pièce derrière un cran.
+**Ce qui change** : pour chaque métier, on livre la page entière tout de suite avec ce qui EXISTE ; le reste reste un
+bloc « en construction ». On ne crée ni table de suivi ni objet nouveau tant que ce n'est pas nécessaire.
+Mesure du 06/11 (fiches au catalogue / avec e-mail / liens) : syndic 75 / **3** / 80 ; diagnostiqueur 36 / 29 / 4 ;
+apporteur 35 / 23 / 0 ; courtier 22 / 14 / 0 ; parrain 15 / 8 / 0 ; banque 8 / 7 / 0. Interlocuteurs saisis : 0.
+
+- **Lot 4 — syndic** : 4.1 fiche ✅ ; 4.2 choisir le syndic d'un bien ✅ ; **4.4 « Demander un document » SIMPLE** : un
+  message prêt (le bien, ses lots, son mandat, les pièces cochées), modifiable, à copier ou à ouvrir dans la messagerie
+  si l'e-mail est connu ; rien n'est stocké. EN CONSTRUCTION : l'immeuble (4.3), le suivi des demandes et des délais,
+  les assemblées générales (4.5), le choix du syndic au téléphone (4.6).
+- **Lot 5 — diagnostiqueur** : la fiche montre « Nos biens diagnostiqués » (même lecture que le syndic) ; choisir le
+  diagnostiqueur d'un bien (la carte du syndic, généralisée) ; « Commander un diagnostic » SIMPLE (message prêt, comme
+  4.4 — 29 sur 36 ont un e-mail). EN CONSTRUCTION : le suivi des commandes, le DPE qui expire.
+- **Lot 6 — courtier / banque** : la fiche (coordonnées, interlocuteurs : déjà là) ; « Orienter un acquéreur » SIMPLE
+  (message prêt avec le client choisi). EN CONSTRUCTION : les financements des affaires, les délais.
+- **Lot 7 — apporteur / parrain** : la fiche ; « Noter une affaire apportée » = poser le lien client ↔ apporteur dans
+  la table EXISTANTE (`app_partenaire_lien`, objet client) ; la reprise des 53 apports de Netty si elle reste simple.
+  EN CONSTRUCTION : la commission, l'historique des affaires.
+- Ordre proposé : 4.4 → lot 5 → lot 7 → lot 6 (le plus de données d'abord).
+
+### 28.1 Pièce 4.4 — « Demander un document » au syndic, version simple — CODÉE (06/11)
+- `lib/demandeDocument.ts` (règles : 7 pièces, les 5 premières cochées d'office — celles que la loi fait joindre à la
+  promesse, art. L721-2 CCH, et le pré-état daté ; le message ; le lien de messagerie) ; `DemandeDocument.tsx` (la
+  fenêtre : le bien, les pièces, le message modifiable, « Copier le message », « Ouvrir dans ma messagerie » si l'e-mail
+  est connu, sinon « ajoutez son e-mail sur sa fiche ») ; `demande-document.css`.
+- Ouverte depuis la fiche syndic (le bouton « Demander un document » n'est plus « bientôt ») et depuis la carte syndic
+  d'un bien (le bien déjà choisi). `lib/ficheSyndic.ts` lit en plus l'adresse et le code postal de chaque bien.
+- RIEN n'est enregistré ni envoyé par l'app (aucune base, aucun travail, aucune requête) ; « Demandes et délais »
+  reste en construction. Une donnée absente n'est pas écrite (ni lot ni mandat inventés).
+- Cran `partenaires_syndic_demande` (NON posé). ⚠ Sur la page « Détail annonce », la carte ne reçoit pas le rôle (défaut
+  ancien, §27.4) : en « admin », le bouton de la carte n'y paraît pas ; il paraît sur la fiche syndic.
+- Contrôles (93)-(97) ; essai **97/97** ; notaire vert ; construction verte ; banc à données fictives à 1280 × 665
+  (la fenêtre tient) et au téléphone (772 px sur 812, rien ne dépasse), avec et sans e-mail.
+
 ### 7 ter. Les dépendances (techniques, pas un ordre décidé)
 
 - 0 avant tout le reste ; 0.1 avant B2 ; 0.2 avant B1 ; 0.6 avant B5 ; 0.3 avant B6 ; 0.4 avant B7 ; 0.5 avant C2.
