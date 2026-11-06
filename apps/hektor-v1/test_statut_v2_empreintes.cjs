@@ -275,6 +275,44 @@ else {
   const v2 = fs.readFileSync(V2, "utf8");
   const interdits = [/from\s+['"]\.\/lib\/api['"]/, /supabase/i, /\bcreate[A-Z][A-Za-z]*Job\b/, /\bfetch\(/];
   for (const r of interdits) ok(!r.test(v2), `ModaleStatutV2.tsx n'utilise pas ${r}`);
+
+  // ─── LOT 2 (06/11) : LES GESTES DE SAISIE, REPRIS MOT POUR MOT ───
+  // Chaque gestionnaire (onChange, onClick, onChoisir, onRetirer, onAjouter) d'une zone DÉJÀ PORTÉE de l'ancien
+  // bloc doit se retrouver tel quel dans la nouvelle vue (commentaires et espaces mis à part). Un écart VOULU se
+  // DÉCLARE ci-dessous, avec sa raison ; tout autre écart est un échec.
+  const norm = (t) => t.replace(/\/\/[^\n]*/g, "").replace(/\{\/\*[\s\S]*?\*\/\}/g, "").replace(/\s+/g, "");
+  const gestionnaires = (t) => {
+    const out = []; const re = /\bon(Change|Click|Choisir|Retirer|Ajouter)=\{/g; let g;
+    while ((g = re.exec(t))) {
+      let k = g.index + g[0].length, p = 1;
+      while (p && k < t.length) { if (t[k] === "{") p++; else if (t[k] === "}") p--; k++; }
+      out.push(t.slice(g.index, k));
+    }
+    return out;
+  };
+  const lignesApp = src.app.replace(/\r\n/g, "\n").split("\n");
+  const dBloc = lignesApp.findIndex((l, k) => l.includes("{statusChangeTarget ? (") && lignesApp.slice(k, k + 4).join("").includes("status-change-modal"));
+  const mBloc = dBloc < 0 ? "" : lignesApp[dBloc].match(/^\s*/)[0];
+  const fBloc = lignesApp.findIndex((l, k) => k > dBloc && l === mBloc + ") : null}");
+  const ancien = dBloc < 0 || fBloc < 0 ? "" : lignesApp.slice(dBloc, fBloc + 1).join("\n");
+  const ZONES = [
+    { lot: 2, nom: "le formulaire offre / compromis / vente", debut: "{statusChangeNeedsTransaction(statusChangeStatus) ? (", fin: ") : statusChangeStatus === 'closed' ? (" },
+  ];
+  const ECARTS_VOULUS = [
+    // « Qui paie la commission » : le menu devient deux boutons (même valeur, mêmes setters). Le clic sur le choix
+    // déjà posé ne fait rien, comme un menu dont la valeur ne change pas : sinon la commission serait « touchée ».
+    "onChange={(event)=>{setStatusChangeChargeCommission(event.target.value)setStatusChangeCommissionTouchee(true)}}",
+  ];
+  const v2n = norm(v2);
+  for (const z of ZONES) {
+    const a = ancien.indexOf(z.debut), b = ancien.indexOf(z.fin, a);
+    if (a < 0 || b < 0) { ok(false, `lot ${z.lot} : zone « ${z.nom} » introuvable dans l'ancien bloc`); continue; }
+    const tous = gestionnaires(ancien.slice(a, b));
+    const differents = tous.filter((h) => !v2n.includes(norm(h)) && !ECARTS_VOULUS.includes(norm(h)));
+    for (const h of differents) console.log(`     différent : ${h.replace(/\s+/g, " ").slice(0, 150)}`);
+    ok(tous.length > 0 && differents.length === 0,
+      `lot ${z.lot} : ${z.nom} — ${tous.length - differents.length} gestes sur ${tous.length} repris mot pour mot ou déclarés`);
+  }
 }
 
 console.log(echecs ? `⛔ ${echecs} contrôle(s) en échec` : "TOUT VERT");

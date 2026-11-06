@@ -97,6 +97,27 @@ animations. La nouvelle vue LIT l'état existant et APPELLE les fonctions exista
   honoraires et commission, répartition (repliée, MÊME éditeur complet dépliable), conditions
   suspensives, note, alerte d'écart de prix, pastilles Actuel / Repris / Modifié / À remplir (lues sur
   `statusChangeTouches` et les fonctions de reprise existantes).
+  ✅ **FAIT le 06/11** — `FormulaireTransaction` dans `src/ModaleStatutV2.tsx` (+ `src/lib/statutV2Types.ts`, les TYPES
+  seulement). `App.tsx` : un seul ajout, la propriété `formulaire={{ … }}` qui passe les valeurs, setters et fonctions
+  SOUS LEURS PROPRES NOMS (raccourci), plus `affaireCourante: affaireCourantePourStatut()`. Les sélecteurs existants
+  (`SelecteurMandants`, `SelecteurNotaire`) sont passés tels quels.
+  ⭐ **Preuve nouvelle dans l'outil du lot 0** (`test_statut_v2_empreintes.cjs`, partie parité) : chaque gestionnaire
+  de saisie de la zone portée doit se retrouver MOT POUR MOT dans la vue, ou être déclaré. Résultat : **35 sur 35**,
+  dont **1 écart déclaré** — « Qui paie la commission » passe d'un menu à deux boutons (même valeur, mêmes setters ; un
+  clic sur le choix déjà posé ne fait rien, comme un menu dont la valeur ne change pas, sinon la commission serait
+  « touchée » à tort). Témoin inverse : retirer un seul `toucherStatusChange` dans la vue → contrôle ROUGE, le geste
+  nommé. Le contrôle s'étendra aux zones des lots 3 à 5.
+  **Pastilles** : « Modifié » lit `statusChangeTouches` ; « À remplir » suit les `required` de l'ancien bloc ; une source
+  (« Actuel », « Repris de l'offre », « Repris du compromis », « Prix du bien », « Aujourd'hui », « Par défaut »,
+  « Mandat du bien ») n'est nommée QUE si la valeur du champ lui est ÉGALE — jamais devinée.
+  **Répartition repliée** (résumé : jauge, noms, total) ; « Modifier » déplie le MÊME éditeur ; l'alerte de total reste
+  visible repliée. Mesures : empreintes 61 morceaux identiques ; essais de la modale verts ; `test_bienvu_textes`
+  garde ses 2 rouges d'avant ; `npm run build` vert. À l'écran (démonstration, 1280 × 665 et 375 × 812) : le montant
+  tapé fait suivre le prix de vente et déduit le net (200 000 − 10 000 = 190 000), chaque case touchée passe
+  « Modifié », « L'acquéreur » se choisit, la répartition se déplie, une condition libre s'ajoute ; l'onglet Offre
+  montre la validité et pas de conditions. Corrigé en passant : la règle générale `.filter-field span` mettait les
+  titres des sélecteurs en capitales — défaite dans la vue seulement.
+  ⚠ Le formulaire n'est pas encore un `<form>` et n'a pas de bouton d'envoi : c'est le lot 5.
 - **Lot 3 — Actif, Clos, offre en lecture seule.** Motifs, raison, date, « Précisez », mêmes messages.
 - **Lot 4 — les affaires du bien et tous les bandeaux.** Garde-fou, plusieurs affaires vivantes, bien
   engagé, reprise d'une affaire morte, plusieurs mandats, personnes non gardées (« J'ai vu, fermer »),
@@ -152,7 +173,7 @@ de style et la ligne d'aiguillage.
    lui dis. Avant, tout se contrôle en local (interrupteur allumé et éteint).
 4. ✅ **Oui à l'envoi réel de contrôle sur 62774, à la fin** — son accord se redemande au moment du geste.
 
-➡ ~~Prochaine étape : le lot 0~~ ✅ fait le 05/11. ~~Le lot 1~~ ✅ fait le 06/11. **Prochaine étape : le lot 2**
-(le formulaire offre / compromis / vente), qui attend son « vas-y ».
+➡ ~~Prochaine étape : le lot 0~~ ✅ fait le 05/11. ~~Le lot 1~~ ✅ fait le 06/11. ~~Le lot 2~~ ✅ fait le 06/11.
+**Prochaine étape : le lot 3** (Actif, Clos, offre en lecture seule), qui attend son « vas-y ».
 ⚠ Reste hors de ce chantier : le défaut « Choisir » (audit §12, les champs principaux ne se rechargent pas),
 qui demande une décision à part — la refonte visuelle ne le corrige pas et ne doit pas le masquer.

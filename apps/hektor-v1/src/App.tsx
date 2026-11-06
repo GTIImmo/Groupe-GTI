@@ -23027,6 +23027,29 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             gardes={{ etatFermeAuxTransactions, bienEngage, dossiersOuvertsDuBien }}
             isValidationApproved={isValidationApproved}
             pastilleStatut={<StatusPill value={statusChangeTarget.statut_annonce} />}
+        formulaire={{
+          statusChangeAmount, setStatusChangeAmount, statusChangeSalePrice, setStatusChangeSalePrice,
+          statusChangeDate, setStatusChangeDate, statusChangeValidityDays, setStatusChangeValidityDays,
+          statusChangeSignatureDate, setStatusChangeSignatureDate, statusChangeRetractionDays, setStatusChangeRetractionDays,
+          statusChangeSelectedMandat, setStatusChangeSelectedMandat, statusChangePrixVenteManuel, setStatusChangePrixVenteManuel,
+          statusChangeBuyers, statusChangeBuyerSearch, setStatusChangeBuyerSearch, statusChangeBuyerOptions,
+          statusChangeBuyerLoading, statusChangeBuyerError, statusChangeMandants, setStatusChangeMandants,
+          statusChangeMandantsAffirmes, setStatusChangeMandantsAffirmes, statusChangeSellerNotaryId, setStatusChangeSellerNotaryId,
+          statusChangeSellerNotaryNom, setStatusChangeSellerNotaryNom, statusChangeBuyerNotaryId, setStatusChangeBuyerNotaryId,
+          statusChangeBuyerNotaryNom, setStatusChangeBuyerNotaryNom, setStatusChangeNotairesAffirmes,
+          statusChangeBuyerFees, setStatusChangeBuyerFees, statusChangeBuyerFeesRate, setStatusChangeBuyerFeesRate,
+          statusChangeHonorairesEntree, setStatusChangeHonorairesEntree, setStatusChangeHonorairesEntreeTouche,
+          setStatusChangeCommissionTouchee, statusChangeChargeCommission, setStatusChangeChargeCommission,
+          statusChangeNetSellerPrice, setStatusChangeNetSellerPrice, statusChangeNetManuel, setStatusChangeNetManuel,
+          statusChangeSequestration, setStatusChangeSequestration, statusChangeConditions, conditionCatalogue,
+          statusChangeNote, setStatusChangeNote, statusChangeTouches, repartitionCases, repartitionPersonnes, repartitionTotal,
+          ecartPrixTransaction, dataScope, toucherStatusChange, apresSaisieCommission, ajouterAcquereurStatut,
+          retirerAcquereurStatut, ajouterCondition, modifierCondition, retirerCondition, echeanceCondition, repartitionLigne,
+          repartitionRangs, repartitionPoser, repartitionPourcentage, repartitionAjouterCase, repartitionRetirerCase,
+          statusChangeNeedsTransaction, statusChangeNeedsSalePrice, mandantContactOptionTitle, mandantContactOptionSubtitle,
+          formatDate, formatPrice, offreAccepteeAReprendreAuCompromis, affaireEstVivante, SelecteurMandants, SelecteurNotaire,
+          affaireCourante: affaireCourantePourStatut(),
+        }}
           />
         ) : null) : (<>
         {statusChangeTarget ? (

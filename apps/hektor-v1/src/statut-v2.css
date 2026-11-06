@@ -251,3 +251,116 @@
   .stv2 .stv2-hors { flex-wrap: wrap; }
   .stv2 .stv2-pied { padding: 10px 16px; }
 }
+
+/* ═══ Lot 2 (06/11) — le formulaire offre / compromis / vente ═══ */
+.stv2 .stv2-form { display: flex; flex-direction: column; gap: 14px; }
+.stv2 .stv2-sec { background: #ffffff; border: 1px solid var(--stv2-line); border-radius: 14px; }
+.stv2 .stv2-sech { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid #f0f1f2; }
+.stv2 .stv2-sech h4 { margin: 0; flex: 1; font-size: 14px; font-weight: 700; color: var(--stv2-ink); }
+.stv2 .stv2-secb { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 14px; }
+.stv2 .stv2-sec-pied { margin: 0 16px 14px; }
+.stv2 .stv2-dest { display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 600; white-space: nowrap; width: fit-content; }
+.stv2 .stv2-dest-h { background: #f1f2f3; color: #4a4f51; }
+.stv2 .stv2-dest-n { background: #fcedf4; color: var(--stv2-framboise); }
+.stv2 .stv2-grille { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px 16px; }
+.stv2 .stv2-champ { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.stv2 .stv2-lab { display: flex; align-items: center; gap: 6px; min-height: 20px; font-size: 12.5px; font-weight: 600; color: var(--stv2-ink-2); }
+.stv2 .stv2-req { color: var(--stv2-magenta); }
+.stv2 .stv2-bdg { margin-left: auto; padding: 1px 7px; border-radius: 999px; font-size: 10.5px; font-weight: 700; white-space: nowrap; }
+.stv2 .stv2-bdg-modif { background: var(--stv2-magenta); color: #ffffff; }
+.stv2 .stv2-bdg-manque { background: #fff1dc; color: #7a4a0e; }
+.stv2 .stv2-bdg-actuel { background: #f1f2f3; color: #4a4f51; }
+.stv2 .stv2-bdg-repris { background: #e6f3ec; color: #1f5e41; }
+.stv2 .stv2-in {
+  display: flex; align-items: center; gap: 8px; height: 42px; padding: 0 12px; box-sizing: border-box;
+  border-radius: 10px; background: #ffffff; box-shadow: inset 0 0 0 1px var(--stv2-line-2);
+  transition: box-shadow 180ms var(--stv2-ease);
+}
+.stv2 .stv2-in:hover { box-shadow: inset 0 0 0 1px #a9aeb1; }
+.stv2 .stv2-in:focus-within { box-shadow: inset 0 0 0 1.5px var(--stv2-magenta), 0 0 0 4px rgba(197, 0, 95, 0.12); }
+.stv2 .stv2-in input, .stv2 .stv2-in select {
+  flex: 1; min-width: 0; width: 100%; height: 100%; padding: 0; border: 0 !important; outline: 0; box-shadow: none !important;
+  background: transparent; font: inherit; font-size: 14.5px; font-weight: 600; color: var(--stv2-ink);
+}
+.stv2 .stv2-in input::placeholder { color: #8d9294; font-weight: 500; }
+.stv2 .stv2-u { flex: none; font-size: 13px; color: #6b7072; }
+.stv2 .stv2-champ:has(.stv2-bdg-manque) .stv2-in { box-shadow: inset 0 0 0 1.5px #d9962b, 0 0 0 4px rgba(217, 150, 43, 0.14); }
+.stv2 .stv2-champ:has(.stv2-bdg-modif) .stv2-in { box-shadow: inset 0 0 0 1.5px var(--stv2-magenta); }
+.stv2 .stv2-aide { font-size: 12px; line-height: 1.4; color: var(--stv2-mute); }
+.stv2 .stv2-note { margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--stv2-ink-2); }
+.stv2 .stv2-note.is-alerte { padding: 9px 12px; border-radius: 10px; background: #fff8ec; box-shadow: inset 0 0 0 1px #f0d8aa; color: #5e3a0b; }
+.stv2 .stv2-ligne { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 13px; }
+.stv2 .stv2-seg { display: inline-flex; gap: 2px; padding: 3px; border-radius: 10px; background: #f1f2f3; }
+.stv2 .stv2-seg button {
+  height: 34px; padding: 0 14px; border: 0; border-radius: 8px; background: transparent; cursor: pointer;
+  font: inherit; font-size: 13px; font-weight: 600; color: var(--stv2-ink-2);
+  transition: background-color 180ms var(--stv2-ease), box-shadow 180ms var(--stv2-ease);
+}
+.stv2 .stv2-seg button[aria-pressed="true"] { background: #ffffff; color: var(--stv2-ink); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12); }
+.stv2 .stv2-seg button:focus-visible, .stv2 .stv2-lnk:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(197, 0, 95, 0.35); }
+.stv2 .stv2-lnk {
+  padding: 0; border: 0; background: none; cursor: pointer; font: inherit; font-size: 13px; font-weight: 600; color: var(--stv2-ink);
+  text-decoration: underline; text-decoration-color: #c8ccce; text-underline-offset: 3px;
+}
+.stv2 .stv2-lnk:hover { text-decoration-color: var(--stv2-ink); }
+.stv2 .stv2-lnk:disabled { opacity: 0.5; cursor: not-allowed; }
+.stv2 .stv2-jauge { width: 120px; height: 8px; flex: none; overflow: hidden; border-radius: 999px; background: #eef0f1; }
+.stv2 .stv2-jauge span { display: block; height: 100%; background: var(--stv2-ink); border-radius: 999px; transition: width 240ms var(--stv2-ease); }
+.stv2 .stv2-resume { flex: 1; min-width: 0; color: var(--stv2-ink-2); }
+.stv2 .stv2-repartition { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; padding-top: 4px; border-top: 1px solid #f0f1f2; }
+.stv2 .stv2-rep-cote { display: flex; flex-direction: column; gap: 10px; padding-top: 10px; }
+.stv2 .stv2-rep-ligne { display: flex; gap: 8px; }
+.stv2 .stv2-rep-ligne .stv2-in { flex: 1; }
+.stv2 .stv2-rep-ligne .stv2-in-pct { flex: 0 0 96px; }
+.stv2 .stv2-rep-ajout { display: flex; gap: 14px; flex-wrap: wrap; }
+.stv2 .stv2-cond { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) auto; gap: 12px; align-items: end; }
+.stv2 .stv2-cond-retirer { height: 42px; }
+.stv2 .stv2-in-auto { flex: 0 1 320px; }
+.stv2 .stv2-zone {
+  width: 100%; box-sizing: border-box; padding: 10px 12px; resize: vertical; border: 0; border-radius: 10px;
+  box-shadow: inset 0 0 0 1px var(--stv2-line-2); font: inherit; font-size: 14px; color: var(--stv2-ink); background: #ffffff;
+}
+.stv2 .stv2-zone:focus { outline: none; box-shadow: inset 0 0 0 1.5px var(--stv2-magenta), 0 0 0 4px rgba(197, 0, 95, 0.12); }
+
+/* Les personnes : les sélecteurs EXISTANTS (SelecteurMandants, SelecteurNotaire et l'acquéreur), habillés ici
+   sans toucher à leurs fichiers. Leurs classes (filter-field, sca-acq-…) restent les leurs. */
+.stv2 .stv2-personnes { display: flex; flex-direction: column; gap: 14px; }
+.stv2 .stv2-notaires { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 16px; }
+.stv2 .stv2-personnes .filter-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+/* `.filter-field span` (styles.css) met TOUT span en capitales espacées : on le défait ici, dans la vue seulement. */
+.stv2 .stv2-personnes .filter-field span { text-transform: none; letter-spacing: normal; font-size: inherit; color: inherit; }
+.stv2 .stv2-personnes .filter-field > span:first-child { font-size: 12.5px; font-weight: 600; color: var(--stv2-ink-2); }
+.stv2 .stv2-personnes .filter-field > input {
+  height: 38px; padding: 0 12px; box-sizing: border-box; border: 0; border-radius: 10px;
+  box-shadow: inset 0 0 0 1px var(--stv2-line-2); font: inherit; font-size: 14px; background: #ffffff;
+}
+.stv2 .stv2-personnes .filter-field > input:focus { outline: none; box-shadow: inset 0 0 0 1.5px var(--stv2-magenta), 0 0 0 4px rgba(197, 0, 95, 0.12); }
+.stv2 .stv2-personnes .sca-acq-choisis { display: flex; flex-wrap: wrap; gap: 8px; }
+.stv2 .stv2-personnes .sca-acq-jeton {
+  display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 6px 0 12px;
+  border: 1px solid var(--stv2-line-2); border-radius: 999px; background: #ffffff; font-size: 13px;
+}
+.stv2 .stv2-personnes .sca-acq-jeton i { font-style: normal; font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: #f1f2f3; color: #4a4f51; }
+.stv2 .stv2-personnes .sca-acq-jeton.is-a-qualifier i.sca-acq-qualif { background: #fff1dc; color: #7a4a0e; }
+.stv2 .stv2-personnes .sca-acq-jeton button {
+  width: 22px; height: 22px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 50%;
+  background: #f1f2f3; color: var(--stv2-ink); cursor: pointer; font-size: 14px; line-height: 1;
+}
+.stv2 .stv2-personnes .sca-acq-jeton button:hover { background: #e3e5e6; }
+.stv2 .stv2-personnes .sca-acq-liste {
+  display: flex; flex-direction: column; max-height: 200px; overflow-y: auto;
+  border-radius: 10px; background: #ffffff; box-shadow: inset 0 0 0 1px var(--stv2-line), 0 10px 24px -14px rgba(0, 0, 0, 0.3);
+}
+.stv2 .stv2-personnes .sca-acq-liste button {
+  display: flex; flex-direction: column; gap: 1px; padding: 8px 12px; border: 0; border-bottom: 1px solid #f0f1f2;
+  background: transparent; text-align: left; cursor: pointer; font: inherit;
+}
+.stv2 .stv2-personnes .sca-acq-liste button:hover { background: var(--stv2-fond); }
+.stv2 .stv2-personnes .sca-acq-liste small, .stv2 .stv2-personnes .sca-acq-etat { font-size: 12px; color: var(--stv2-mute); }
+.stv2 .stv2-personnes .sca-acq-err { font-size: 12px; color: #9e3532; }
+
+@media (max-width: 767px) {
+  .stv2 .stv2-grille, .stv2 .stv2-notaires, .stv2 .stv2-repartition { grid-template-columns: 1fr; }
+  .stv2 .stv2-cond { grid-template-columns: 1fr 1fr; }
+  .stv2 .stv2-cond .stv2-champ:first-child { grid-column: 1 / -1; }
+}
