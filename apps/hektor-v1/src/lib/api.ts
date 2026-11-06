@@ -3921,13 +3921,36 @@ export async function loadContactSearches(contactId: string): Promise<AppContact
       parIndex.set(m.search_index, m)
     }
   })
+  // 06/11 : le rayon de chaque recherche, rattache par son nom (fige depuis le
+  // 21/09). Best-effort : sans lui, la modale montre 15 km, la valeur du moteur.
+  const rayons = await loadContactSearchRayons(contactId.trim())
   const rows = (data as AppContactSearch[]).map(normalizeContactSearchRow).map(
     (search) => {
       const m = parCle.get((search.contact_search_key ?? '').trim())
         ?? (search.search_index != null ? parIndex.get(search.search_index) : undefined)
-      return m ? { ...search, mandat_recherche: m } : search
+      const rayon = rayons.get((search.contact_search_key ?? '').trim())
+      const withRayon = rayon != null ? { ...search, rayon_km: rayon } : search
+      return m ? { ...withRayon, mandat_recherche: m } : withRayon
     })
   return prependProvisionalSearches(rows, contactId.trim())
+}
+
+async function loadContactSearchRayons(contactId: string): Promise<Map<string, number>> {
+  const out = new Map<string, number>()
+  if (!hasSupabaseEnv || !supabase || !contactId) return out
+  try {
+    const { data, error } = await supabase
+      .from('app_search_rayon')
+      .select('contact_search_key,rayon_km')
+      .eq('hektor_contact_id', contactId)
+    if (error || !data) return out
+    for (const row of data as Array<{ contact_search_key: string; rayon_km: number }>) {
+      if (row.contact_search_key && Number.isFinite(Number(row.rayon_km))) out.set(row.contact_search_key, Number(row.rayon_km))
+    }
+  } catch {
+    // table absente ou lecture refusee : on garde la valeur par defaut
+  }
+  return out
 }
 
 export type RapprochementComponent = { k: string; ok: boolean; v: string }
@@ -10770,6 +10793,12 @@ export async function editSearchOptimistic(input: {
   search: HektorContactSearchInput
   context?: HektorContactSearchJobContext
   debounceSeconds?: number
+  // 06/11 : les libelles des types, au meme rang que propertyTypeIds -- la base
+  // ecrit types_json en { code : libelle }, la forme de Hektor (avant : { code : code },
+  // et les ecrans affichaient le code).
+  typeLabels?: string[]
+  // 06/11 : le rayon autour des localites (0-40 km), lu par le moteur de rapprochement.
+  rayonKm?: number
 }): Promise<{ ok: boolean }> {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
   await requireSupabaseUserId()
@@ -10779,9 +10808,18 @@ export async function editSearchOptimistic(input: {
   if (!search.propertyTypeIds.length) throw new Error('Au moins un type de bien requis')
   if (!search.priceMax) throw new Error('Budget maximum requis')
   const contextPayload = hContactSearchContextPayload(input.context)
+  const rayon = input.rayonKm != null && Number.isFinite(input.rayonKm)
+    ? Math.max(0, Math.min(40, Math.round(input.rayonKm)))
+    : null
   const { data, error } = await supabase.rpc('app_edit_search_optimistic', {
     target_contact_id: cleanContactId,
-    search_payload: { ...contextPayload, search, search_index: input.searchIndex },
+    search_payload: {
+      ...contextPayload,
+      search,
+      search_index: input.searchIndex,
+      ...(input.typeLabels?.length ? { type_labels: input.typeLabels } : {}),
+      ...(rayon != null ? { rayon_km: String(rayon) } : {}),
+    },
     debounce_seconds: input.debounceSeconds ?? 600,
   })
   if (error) throw new Error(error.message ?? 'Édition de la recherche impossible')

@@ -19,7 +19,12 @@ export type ContactSearchFieldsValue = {
   bathrooms: number
   equipments: string[]
   dpeLetter: string
+  // 06/11 : le rayon autour des localites, en km. Absent = 15 km, la valeur du moteur.
+  rayonKm?: number
 }
+
+// Le rayon que le moteur de rapprochement applique a une recherche sans reglage.
+export const RAYON_PAR_DEFAUT_KM = 15
 
 export type OfferOption = { value: string; label: string }
 
@@ -163,6 +168,7 @@ export function contactSearchValueFromSearch(src: AppContactSearch): ContactSear
     bathrooms: num(crit.ITEM_SDB_SDE_MIN, 0),
     equipments,
     dpeLetter: crit.ITEM_DPE_CONS_LETTER || '',
+    rayonKm: src.rayon_km != null && Number.isFinite(Number(src.rayon_km)) ? Number(src.rayon_km) : RAYON_PAR_DEFAUT_KM,
   }
 }
 
@@ -174,6 +180,10 @@ export type ContactSearchFieldsProps = {
   showPreview?: boolean
   disabled?: boolean
   scrollRef?: React.RefObject<HTMLDivElement | null>
+  // 06/11 : le rayon n'est enregistre qu'a la MODIFICATION d'une recherche (il se
+  // range sous le nom de la recherche, qu'une recherche en creation n'a pas encore).
+  // Ailleurs le curseur reste a 15 km, verrouille, et l'ecran le dit.
+  rayonEditable?: boolean
 }
 
 export default function ContactSearchFields(props: ContactSearchFieldsProps) {
@@ -187,8 +197,12 @@ export default function ContactSearchFields(props: ContactSearchFieldsProps) {
   const [activeNav, setActiveNav] = useState('s-offre')
   const [showMoreTypes, setShowMoreTypes] = useState(false)
   const [locInput, setLocInput] = useState('')
+  // 06/11 : le rayon est un VRAI critere (enregistre a la modification, lu par le
+  // moteur de rapprochement). A la creation il reste a la valeur par defaut.
+  const rayonEditable = !!props.rayonEditable
+  const rayon = rayonEditable ? (value.rayonKm ?? RAYON_PAR_DEFAUT_KM) : RAYON_PAR_DEFAUT_KM
+  const setRayon = (km: number) => { if (rayonEditable) set({ rayonKm: km }) }
   // Champs visuels (alignés sur la maquette) — non envoyés au worker.
-  const [rayon, setRayon] = useState(15)
   const [financement, setFinancement] = useState('valide')
   const [alerteOn, setAlerteOn] = useState(true)
   const [alerteFreq, setAlerteFreq] = useState('quotidienne')
@@ -309,8 +323,9 @@ export default function ContactSearchFields(props: ContactSearchFieldsProps) {
             <label>Rayon autour des localités</label>
             <div className="slider">
               <div className="slider-top"><span className="slider-val">{rayon} km autour</span><span className="slider-cap">{rayon === 0 ? 'localités seules' : `~ ${Math.max(1, Math.round(rayon / 1.4))} communes`}</span></div>
-              <input type="range" min={0} max={40} step={5} value={rayon} aria-label="Rayon en km" disabled={disabled} onChange={(e) => setRayon(Number(e.target.value))} />
+              <input type="range" min={0} max={40} step={5} value={rayon} aria-label="Rayon en km" disabled={disabled || !rayonEditable} onChange={(e) => setRayon(Number(e.target.value))} />
               <div className="range-ends"><span>Localités seules</span><span>40 km</span></div>
+              {!rayonEditable ? <span className="ctx-hint">{RAYON_PAR_DEFAUT_KM} km par défaut — le rayon se règle une fois la recherche enregistrée (« Modifier la recherche »).</span> : null}
             </div>
           </div>
         </div>

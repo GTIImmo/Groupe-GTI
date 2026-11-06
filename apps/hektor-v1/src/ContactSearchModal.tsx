@@ -67,7 +67,15 @@ export default function ContactSearchModal(props: ContactSearchModalProps) {
         // Édition = optimiste : critères écrits direct dans Supabase (rapprochement
         // recalculé sur-le-champ par le RPC), push Hektor débouncé. Pas de job.
         // L'anti-écrasement (base_snapshot) est géré côté serveur via app_search_pending.
-        await editSearchOptimistic({ contactId: props.contactId, searchIndex: props.initialSearch.search_index, search, context })
+        // 06/11 : les libelles des types (la base ecrit { code : libelle }) et le rayon.
+        await editSearchOptimistic({
+          contactId: props.contactId,
+          searchIndex: props.initialSearch.search_index,
+          search,
+          context,
+          typeLabels: contactSearchTypeLabels(value.typeIds),
+          rayonKm: value.rayonKm,
+        })
         props.onOptimisticSaved?.()
         // Événement global : recharge la fiche/le rapprochement où qu'on soit (sans drilling).
         try { window.dispatchEvent(new CustomEvent('hektor:search-updated')) } catch { /* noop */ }
@@ -127,7 +135,7 @@ export default function ContactSearchModal(props: ContactSearchModalProps) {
           </div>
 
           <div className="wiz-scroll" ref={scrollRef}>
-            <ContactSearchFields value={value} onChange={setValue} offerOptions={props.offerOptions} scrollRef={scrollRef} />
+            <ContactSearchFields value={value} onChange={setValue} offerOptions={props.offerOptions} scrollRef={scrollRef} rayonEditable={isEdit} />
           </div>
 
           <div className="edit-foot">

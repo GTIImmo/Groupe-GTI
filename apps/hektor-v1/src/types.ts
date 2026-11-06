@@ -588,6 +588,10 @@ export type AppContactSearch = {
   // dans la table des recherches -- la descente Hektor la refait en entier
   // chaque nuit -- mais accroche a la volee par loadContactSearches.
   mandat_recherche?: AppContactMandatRecherche | null
+  // 06/11/2026 : le rayon autour des localites, en km (table a part
+  // app_search_rayon, accrochee par loadContactSearches). Absent = 15 km, la
+  // valeur que le moteur de rapprochement applique par defaut.
+  rayon_km?: number | null
 }
 
 // Une ligne de app_contact_mandat_recherche_current. `contact_search_key`
