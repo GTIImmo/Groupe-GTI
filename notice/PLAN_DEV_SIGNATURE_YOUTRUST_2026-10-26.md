@@ -1157,6 +1157,40 @@ webhook posé par Frédéric ; redémarrage du worker.
 >   fermé ne se rouvre pas ; un nouveau mandat le rouvre ; 5 min au plus. **Essais** : `test_choix_signature.cjs` (bloc 6 :
 >   10 contrôles neufs, dont 6 sur le VRAI code du relais découpé dans App.tsx) ; TÉMOIN : HEAD n'a pas le relais ;
 >   types et build verts sur HEAD + App.tsx. ⏰ À éprouver en production : regénérer sur 61398.
+
+> ## ⏰⏰ LA LISTE DE LA BASCULE YOUTRUST — sandbox -> production (fin de la sandbox ~09/11/2026)
+> *Écrite le 06/11 à la demande de Frédéric : « le câbler prêt pour ne pas oublier ». Tout le code est en place ; ce qui
+> suit, ce sont les GESTES et les PREUVES qui restent. Rien n'est coché tant que la preuve n'est pas écrite à côté.*
+>
+> **Si le contrat n'est pas signé à temps** : `signature_youtrust` = `off` (sinon un essai d'admin tombe en erreur sur
+> une clé expirée). ImmoSign, la lecture des signatures et `mandat_nait_chez_nous` ne dépendent pas de Youtrust.
+>
+> **A. Les gestes (Frédéric — secrets : ne JAMAIS les coller dans une conversation)**
+> - [ ] le contrat A.2 souscrit ; ⚠ **vérifier que l'offre inclut le CODE PAR SMS** (souvent facturé à part) ;
+> - [ ] la clé API de PRODUCTION dans `Console/.env` (`YOUTRUST_API_KEY`) ;
+> - [ ] `YOUTRUST_BASE_URL=https://api.yousign.app/v3` dans `Console/.env` — ⛔ sans cette ligne le client reste en
+>   SANDBOX (c'est sa valeur par défaut, `Console/youtrust_client.js`) ;
+> - [ ] le webhook recréé dans l'espace de PRODUCTION (même adresse : la fonction `youtrust-webhook`), et son nouveau
+>   secret posé : `npx supabase secrets set YOUTRUST_WEBHOOK_SECRET=<secret> --project-ref dwaqxfrinihnychuoptk` ;
+> - [ ] le refus de signer : regarder dans les réglages du compte s'il peut être activé (la page de la sandbox ne le
+>   proposait pas, essai du 06/11) — décision de Frédéric ;
+> - [ ] les 4 services redémarrés, file vide (le worker relit `.env`).
+>
+> **B. Les preuves, en restant sur `signature_youtrust = admin`, sur 61398 (prêt : étape « Édité »)**
+> - [ ] la demande est notée HORS sandbox (`app_signature_request.sandbox = false`) ;
+> - [ ] la fenêtre du choix s'ouvre après « Générer » (correctif `b05c3cc`, à pousser avant) ;
+> - [ ] **le code par SMS** : le portable de Frédéric (son accord), mis DANS LA DEMANDE seulement, jamais sur une fiche
+>   -> il reçoit le code sur son téléphone ;
+> - [ ] **le code par e-mail choisi malgré ce portable** -> AUCUN SMS reçu (le numéro n'est pas transmis) ;
+> - [ ] une signature complète : le PDF signé et les preuves rapatriés, le cockpit « Signé », la cloche ;
+> - [ ] un avis reçu par le NOUVEAU webhook (sinon le suivi ne bouge plus) ;
+> - [ ] l'envoi posé par un négociateur est refusé tant que le cran est « admin ».
+>
+> **C. L'ouverture** : `signature_youtrust` = `on` (tous les négociateurs), annoncée à l'équipe ; garder un œil sur le
+> monitoring (travaux en erreur) la première semaine.
+>
+> **Ce qui ne sera prouvé qu'en vrai, faute de pouvoir l'essayer avant** : le SMS (aucun portable sans l'accord de son
+> titulaire), le refus (non proposé par la sandbox).
 > **Le nœud** : interrupteur allumé, un mandat généré naît `sans_hektor` (D24) → « signature Hektor » impossible sans le
 > DÉPOSER chez Hektor. Un chemin DORMANT existe (`completerEnvoiDocumentDiffere`, `upload_document_to_hektor` avec
 > `app_document_id` : « aucun appelant ») — jamais éprouvé. À l'inverse, un document venu de Hektor (modèle ImmoSign,
