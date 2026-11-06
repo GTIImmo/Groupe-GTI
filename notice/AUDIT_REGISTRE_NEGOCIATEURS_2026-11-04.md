@@ -1515,3 +1515,7 @@ DELAVAUD — que l'ancien chemin ratait) ; Agences supprimée et Gestion site : 
 **Groupe GTI Firminy** (04 77 06 20 20, firminy@) — sans conseiller nommé, comme avant (la rotation ne joue qu'avec une
 agence) ; `?agency=saint-etienne` désigne **Lucille FORLICO** (n° 4, forlico@), agence dorian@ (= registre = annuaire,
 « laisse » de Frédéric), 555 créneaux. La rotation est passée de 66 à 67 passages : le prochain visiteur aura Mélanie LEGRAND.
+
+**Interrupteur allumé** (06/11, sur accord explicite de Frédéric) : `APP_REGISTRE_AGENCES=1` ajouté en fin de `.env` (2 lignes, rien d'autre
+lu ni touché) ; relu par le chargeur de la nuit (`push_contacts_to_supabase.load_env_file`) → « ECRIT ». La nuit du 06→07/11 est la
+1re à écrire le registre des agences d'elle-même.
