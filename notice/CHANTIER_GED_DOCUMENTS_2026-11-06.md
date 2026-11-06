@@ -142,6 +142,21 @@ cherchent par le nom (ils gardent leur repli tant que GED-5 n'est pas branché) 
   tout ce qui touche l'écran des documents (GED-4, GED-6) attend la fin de ses lots ou se fait en accord avec elle. GED-1
   à GED-3 (nomenclature, fiche à part, classement du stock) ne touchent ni l'écran ni la signature.
 
+### 5.3 bis La réponse de la session signature (06/11) — ce qu'elle touche, à ne pas piétiner
+- Règles GED **acceptées**. Elle demande de garder GED-4 APRÈS ses lots, ou de la prévenir avant.
+- **Commité (`3c32daa`, worker, non actif)** : `persistConsoleDocumentFile` préserve toute ligne qui porte
+  `metadata_json.signed_document` ; `handlePrepareDocumentCloud` monte le SIGNÉ d'un document signé (`monterSigneAuCoffre`) ;
+  le marquage « absent chez Hektor » épargne une ligne engagée en signature (`signatureSuivieOuSigne`) ; le dépôt différé
+  (`completerEnvoiDocumentDiffere`) a un anti-doublon ; interrupteur `app_setting` `mandat_nait_chez_nous` (absent = éteint).
+- **En cours, non commité, dans `App.tsx`** : `ConsoleDocumentsPanel` affiche l'état du dépôt Hektor
+  (`mentionDepotHektor`, `envoi_hektor_statut`) ; le cockpit lit `src/lib/etatSignatureMandat.ts` (et non plus le 1er
+  document `/mandat/`) ; l'éditeur relit `mandat_nait_chez_nous`.
+- **À venir dans `ConsoleDocumentsPanel`** : un bouton « Signature » unique (Youtrust / Hektor / manuscrite), le suivi par
+  signataire (lecture de `app_signature_request`), l'ouverture des preuves (règle de lecture du coffre élargie à
+  `proofs/` et `immosign/`).
+- ⛔ **Sa règle pour la GED** : un document signé garde l'ORIGINAL à côté (même ligne, `storage_path` basculé vers
+  `…/signed/`) ; ne jamais remonter `local_archive_path` (l'original) sur `storage_path`.
+
 ### 5.4 L'ordre recommandé
 GED-1 nomenclature (validée par Frédéric) → GED-2 fiche à part + GED-3 classement du stock (base seule, rien à l'écran)
 → GED-5 la porte « trouver », d'abord pour les besoins neufs (copropriété du syndic, pré-état daté), puis à la place des
