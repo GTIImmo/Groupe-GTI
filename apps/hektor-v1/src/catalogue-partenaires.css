@@ -169,3 +169,6 @@
 .pt-open{height:46px;border-radius:14px;border:1px solid #ddd2c6;background:#fff;color:#17130f;font:inherit;font-size:14px;font-weight:800;cursor:pointer;}
 .pt-open:disabled{cursor:progress;opacity:.8;}
 @media (prefers-reduced-motion: reduce){.pt-card,.pt-sheet,.pt-veil{animation:none}}
+/* 06/11 : le sélecteur « Clients | Partenaires » côté CLIENTS reprend le même dessin (son style `.vue-switch` avait été
+   perdu au redessin du 05/11, 619f1e0 — boutons du navigateur). Il ne s'étire pas sur toute la largeur. */
+.pa-switch.vue-switch{align-self:flex-start;width:fit-content;}

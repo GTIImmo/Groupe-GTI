@@ -49369,7 +49369,7 @@ function ContactsScreen(props: {
         ) : null}
 
         {catalogueVisible && !vueMetiers ? (
-          <div className="vue-switch" role="group" aria-label="Côté de l'annuaire">
+          <div className="pa-switch vue-switch" role="group" aria-label="Côté de l'annuaire">
             <button type="button" aria-pressed={!vueMetiers} onClick={() => props.onVueChange?.('clients')}>Clients</button>
             <button type="button" aria-pressed={vueMetiers} onClick={() => props.onVueChange?.('metiers')}>Partenaires</button>
           </div>
