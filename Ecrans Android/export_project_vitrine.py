@@ -198,6 +198,91 @@ def charger_adresses_chez_nous() -> dict[str, dict[str, Any]]:
     return trouvees
 
 
+# =============================================================================
+# 06/11/2026 (audit §57, Frédéric : « la vitrine doit prendre dans le registre, c'est les écrans en vitrine »)
+#   Le TÉLÉPHONE de l'agence et le NÉGOCIATEUR (nom + portable) viennent du REGISTRE, plus de la copie locale de Hektor :
+#   une correction saisie au carnet par un admin, ou un portable propre à la personne, arrive enfin sur les écrans.
+#   ⛔ Le NOM de l'agence ne change PAS de source : les écrans FILTRENT sur lui (script.js : ?agence=Saint-Etienne garde les
+#     biens dont le texte contient « SAINT-ETIENNE »). Le renommer au registre viderait un écran.
+#   ⛔ Le négociateur n'est imprimé que si sa PERSONNE est un NÉGOCIATEUR (pas une fiche d'agence comme « gti immobilier »),
+#     active au registre, et pas un compte admin de l'app (règle du 06/11, §54) ; sinon l'agence seule. On juge la PERSONNE, pas la fiche : un bien peut pointer une ancienne fiche éteinte
+#     d'un négociateur toujours là (mesure du 06/11 : Vincent-Lucas GONZALEZ, 2 biens sur ses fiches de Saint-Étienne/Firminy).
+#   Registre illisible -> la copie locale, comme avant (repli TOTAL, même patron que les photos). Interrupteur
+#   VITRINE_REGISTRE (absent = allumé ; 0/false/off/no = éteint).
+# =============================================================================
+
+VITRINE_REGISTRE = os.environ.get("VITRINE_REGISTRE", "1").strip().lower() not in ("0", "false", "off", "no")
+
+
+def _lire_table_registre(base: str, cle: str, table: str, select: str, filtres: dict[str, str] | None = None) -> list[dict[str, Any]]:
+    limite = 5000
+    query = urlencode({"select": select, **(filtres or {}), "limit": str(limite)})
+    requete = Request(f"{base}/rest/v1/{table}?{query}", headers={"apikey": cle, "Authorization": f"Bearer {cle}"}, method="GET")
+    with urlopen(requete, timeout=60, context=ssl.create_default_context()) as reponse:
+        lignes = json.loads(reponse.read().decode("utf-8"))
+    if not isinstance(lignes, list):
+        raise ValueError(f"{table} : réponse inattendue")
+    if len(lignes) >= limite:
+        raise ValueError(f"{table} : {len(lignes)} lignes, au plafond -> lecture incomplète refusée")
+    return lignes
+
+
+def charger_registre() -> dict[str, Any] | None:
+    """Le registre, une seule lecture : téléphone par n° d'agence Hektor, négociateur imprimable par n° Hektor. None = repli."""
+    if not VITRINE_REGISTRE:
+        return None
+    base, cle = charger_env_supabase()
+    if not base or not cle:
+        print("[vitrine] registre : identifiants Supabase absents -> copie locale de Hektor")
+        return None
+    try:
+        agences = _lire_table_registre(base, cle, "app_registre_agence", "hektor_agence_id,telephone")
+        fiches = _lire_table_registre(base, cle, "app_negociateur_fiche", "hektor_negociateur_id,app_personne_id,portable,telephone",
+                                      {"sorte": "eq.fiche_negociateur"})
+        personnes = _lire_table_registre(base, cle, "app_negociateur_personne", "app_personne_id,nom,actif,type_personne,portable,telephone,app_user_id")
+        profils = _lire_table_registre(base, cle, "app_user_profile", "id,role")
+    except (HTTPError, URLError, OSError, ValueError) as erreur:
+        print(f"[vitrine] registre : lecture impossible ({erreur}) -> copie locale de Hektor")
+        return None
+    if not agences or not fiches or not personnes:
+        print("[vitrine] registre : vide -> copie locale de Hektor")
+        return None
+    roles = {str(p.get("id")): str(p.get("role") or "") for p in profils}
+    par_personne = {str(p.get("app_personne_id")): p for p in personnes}
+    tel_agence = {str(a.get("hektor_agence_id")).strip(): str(a.get("telephone") or "").strip()
+                  for a in agences if str(a.get("hektor_agence_id") or "").strip()}
+    negos: dict[str, dict[str, str] | None] = {}
+    for fiche in fiches:
+        numero = str(fiche.get("hektor_negociateur_id") or "").strip()
+        if not numero:
+            continue
+        personne = par_personne.get(str(fiche.get("app_personne_id")))
+        compte = str((personne or {}).get("app_user_id") or "")
+        if (not personne or personne.get("actif") is not True or personne.get("type_personne") != "negociateur"
+                or (compte and roles.get(compte, "commercial") != "commercial")):
+            negos[numero] = None  # connu, mais pas imprimable -> l'agence seule
+            continue
+        portable = next((str(v).strip() for v in (personne.get("portable"), personne.get("telephone"), fiche.get("portable"), fiche.get("telephone"))
+                         if str(v or "").strip()), "")
+        negos[numero] = {"nom": str(personne.get("nom") or "").strip(), "portable": portable}
+    print(f"[vitrine] registre : {len(tel_agence)} agence(s), {sum(1 for v in negos.values() if v)} négociateur(s) imprimable(s)")
+    return {"tel_agence": tel_agence, "negos": negos}
+
+
+def contact_du_bien(row: sqlite3.Row, registre: dict[str, Any] | None) -> tuple[str, str, str]:
+    """(tél agence, nom du négo, portable du négo) : le registre d'abord, la copie locale si le registre est absent."""
+    local_nego = " ".join(part for part in [row["nego_prenom"], row["nego_nom"]] if part).strip()
+    local = (str(row["agence_tel"] or "").strip(), local_nego, str(row["nego_portable"] or "").strip())
+    if registre is None:
+        return local
+    tel = registre["tel_agence"].get(str(row["h_agence_id"] or "").strip()) or local[0]
+    numero = str(row["h_nego_id"] or "").strip()
+    nego = registre["negos"].get(numero) if numero else None
+    if not nego or not nego["nom"]:
+        return tel, "", ""
+    return tel, nego["nom"], nego["portable"]
+
+
 def photos_chez_nous(adresses: dict[str, dict[str, Any]], numero_hektor: Any, max_photos: int) -> list[str] | None:
     """NOS adresses pour une annonce, ou None s'il faut garder celles de Hektor.
 
@@ -342,12 +427,11 @@ def terrain_surface(terrain_json: str | None, fallback: Any) -> int | None:
     return as_int(fallback)
 
 
-def agency_label(row: sqlite3.Row) -> str:
+def agency_label(row: sqlite3.Row, contact: tuple[str, str, str] | None = None) -> str:
+    # le texte est LU par les écrans (script.js, extractContactFromAgence + filtre ?agence=) : son format ne change pas
     parts: list[str] = []
     agency = str(row["agence_nom"] or "").strip()
-    agency_phone = str(row["agence_tel"] or "").strip()
-    nego = " ".join(part for part in [row["nego_prenom"], row["nego_nom"]] if part).strip()
-    nego_phone = str(row["nego_portable"] or "").strip()
+    agency_phone, nego, nego_phone = contact if contact is not None else contact_du_bien(row, None)
     if agency:
         parts.append(agency)
     if agency_phone:
@@ -393,6 +477,7 @@ def build_qr_url(target_url: str) -> str:
 def build_items(limit: int | None, max_photos: int) -> list[dict[str, Any]]:
     # UNE seule lecture pour tout le catalogue, avant la boucle.
     adresses_app = charger_adresses_chez_nous()
+    registre = charger_registre()
     conn = connect(PHASE2_DB)
     try:
         sql = """
@@ -426,6 +511,8 @@ def build_items(limit: int | None, max_photos: int) -> list[dict[str, Any]]:
             h.nego_nom,
             h.nego_prenom,
             h.nego_portable,
+            h.h_agence_id,
+            h.h_nego_id,
             COALESCE(v.agence_nom, h.agence_nom) AS agence_nom
         FROM app_view_generale v
         LEFT JOIN (
@@ -435,7 +522,9 @@ def build_items(limit: int | None, max_photos: int) -> list[dict[str, Any]]:
                 ag.tel AS agence_tel,
                 n.nom AS nego_nom,
                 n.prenom AS nego_prenom,
-                n.portable AS nego_portable
+                n.portable AS nego_portable,
+                a.hektor_agence_id AS h_agence_id,
+                a.hektor_negociateur_id AS h_nego_id
             FROM hektor.hektor_annonce a
             LEFT JOIN hektor.hektor_agence ag ON ag.hektor_agence_id = a.hektor_agence_id
             LEFT JOIN hektor.hektor_negociateur n ON n.hektor_negociateur_id = a.hektor_negociateur_id
@@ -455,10 +544,11 @@ def build_items(limit: int | None, max_photos: int) -> list[dict[str, Any]]:
         surface = as_int(row["surface_habitable_detail"]) or as_int(row["surface"])
         listing_url = build_listing_url(row["hektor_annonce_id"])
         appointment_url = build_appointment_url(row["hektor_annonce_id"])
+        contact = contact_du_bien(row, registre)
         item = {
             "id": f"HEKTOR_{row['hektor_annonce_id']}",
             "ref": row["numero_dossier"] or row["numero_mandat"] or str(row["hektor_annonce_id"]),
-            "agence": agency_label(row),
+            "agence": agency_label(row, contact),
             "title": row["titre_bien"] or "Bien immobilier",
             "nature": property_type_label(row["type_bien"]),
             "propertyType": property_type_label(row["type_bien"]),
@@ -477,7 +567,7 @@ def build_items(limit: int | None, max_photos: int) -> list[dict[str, Any]]:
             "appointmentUrl": appointment_url,
             "qrUrl": build_qr_url(appointment_url or listing_url),
             "updatedAt": row["date_maj"] or "",
-            "phone": row["nego_portable"] or row["agence_tel"] or "",
+            "phone": contact[2] or contact[0] or "",
             "weight": 0,
             "terrain": terrain_surface(row["terrain_json"], row["surface_terrain_detail"]) or 0,
             "parkingInterieur": as_int(row["garage_box_detail"]) or 0,

@@ -1711,3 +1711,21 @@ CARNET (correction d'un admin) ni les coordonnées propres à la personne (PERRE
 agence = registre par son n° Hektor (sinon alias du nom), tél du registre ; négo = fiche du n° du bien → personne : nom et
 portable du registre, imprimé seulement si la fiche est ACTIVE, la personne active et pas un compte admin (sinon l'agence
 seule) ; registre illisible → la copie locale comme aujourd'hui (repli total, comme pour les photos).
+
+**CODÉ le 06/11 (Frédéric : « vas-y mais réaudite pour être bien sûr de ton écriture »)** — `export_project_vitrine.py` :
+`charger_registre()` (une lecture : agences, fiches, personnes, profils ; plafond = refus ; illisible → copie locale, repli total)
+et `contact_du_bien()` ; interrupteur `VITRINE_REGISTRE` (absent = allumé). Le TÉLÉPHONE de l'agence vient du registre par son
+n° Hektor ; le NÉGO (nom + portable) par le n° Hektor du bien → personne, imprimé seulement si la personne est un
+NÉGOCIATEUR (`type_personne`), ACTIVE, et pas un compte admin. ⛔ Le NOM de l'agence garde sa source : les écrans FILTRENT sur
+lui (`?agence=Saint-Etienne`, `normalizeAgency(x.agence).includes`). Le format du texte est inchangé (lu par
+`extractContactFromAgence`).
+**Le réaudit a corrigé deux erreurs de ma 1re écriture** : (1) juger la FICHE active masquait aussi un négo encore là dont le
+bien pointe une fiche éteinte → on juge la PERSONNE ; (2) juger la personne faisait imprimer une FICHE D'AGENCE (« gti
+immobilier » → « Groupe GTI Firminy », qui aurait en plus fait entrer un bien de Brioude dans le filtre Firminy) → on exige
+`type_personne = negociateur`.
+**Mesure sur les vraies données, sans rien publier** (catalogue construit en mémoire, avec / sans registre) : 438 biens, 31
+changent, tous voulus — PERRET (5) gagne 0763983009 ; Tence (23) prend 0471560236 (valeur actuelle de Hektor, validée) ;
+GONZALEZ (2, personne passée « ancien », 3 fiches éteintes : les écrans montraient le portable d'un parti) et « gti immobilier »
+(1, fiche d'agence) → l'agence seule. **Lecture par les écrans** (fonctions extraites des DEUX `script.js`) : même nom d'agence
+pour les 438, 0 téléphone illisible, négo avec portable 424 → 427, filtres d'agence identiques (Saint-Étienne 39, Firminy 33,
+Tence 23, Monistrol 12, Brioude 22, Yssingeaux 43). Actif dès la nuit du 06→07/11 (le run exécute la copie du serveur).
