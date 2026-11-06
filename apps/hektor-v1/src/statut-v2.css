@@ -34,7 +34,7 @@
 
 .stv2 .stv2-panel {
   width: min(1040px, 100%);
-  height: min(640px, calc(100vh - 36px));
+  height: min(820px, calc(100vh - 36px));
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -470,4 +470,74 @@
   .stv2 .stv2-principal { flex: 1 1 100%; }
   .stv2 .stv2-principal .stv2-btn { width: 100%; }
   .stv2 .stv2-apercu { width: auto; left: 0; }
+}
+
+/* ═══ Lot 6 (06/11) — le téléphone ═══
+   Les principes de l'ancienne modale au téléphone (modales-telephone.css) : une FEUILLE qui monte du bas avec sa
+   poignée, les statuts en rangée compacte et la description du choix dessous, le bouton principal en bas, pleine
+   largeur, des champs hauts. ⚠ Les champs passent à 16 px : en dessous, iOS zoome sur la page à chaque saisie. */
+.stv2 .stv2-desc-mobile { display: none; }
+/* LE DÉFAUT DÉJÀ PAYÉ PAR L'ANCIENNE MODALE (modales-telephone.css) : dans une colonne qui défile, un enfant qui
+   défile lui-même (la rangée des statuts, overflow-x) se laisse TASSER — vu le 06/11 à 390 px, les pastilles coupées.
+   Aucun enfant du corps ne rétrécit ; c'est le corps qui défile. */
+.stv2 .stv2-corps > * { flex-shrink: 0; }
+@media (max-width: 767px) {
+  .stv2 { align-items: end; }
+  .stv2 .stv2-panel {
+    height: auto; max-height: 94vh; max-height: 94dvh; border-radius: 22px 22px 0 0;
+    box-shadow: 0 -10px 40px rgba(12, 19, 28, 0.25);
+  }
+  .stv2 .stv2-head { position: relative; min-height: 60px; padding-top: 10px; }
+  .stv2 .stv2-head::before {
+    content: ''; position: absolute; top: 7px; left: 50%; width: 42px; height: 5px; margin-left: -21px;
+    border-radius: 9px; background: rgba(255, 255, 255, 0.35);
+  }
+  .stv2 .stv2-fermer { width: 40px; height: 40px; }
+  .stv2 .stv2-corps { padding: 14px 16px 16px; gap: 12px; overscroll-behavior: contain; }
+  /* la rangée des statuts : des pastilles, la description du choix dessous */
+  .stv2 .stv2-parcours { gap: 8px; padding-top: 12px; scrollbar-width: none; }
+  .stv2 .stv2-parcours::-webkit-scrollbar { display: none; }
+  .stv2 .stv2-carte { flex: 0 0 auto; min-height: 46px; padding: 0 16px; justify-content: center; border-radius: 23px; }
+  .stv2 .stv2-carte-d { display: none; }
+  .stv2 .stv2-carte.is-selected { background: var(--stv2-rose-soft); color: var(--stv2-framboise); }
+  .stv2 .stv2-etiquette { top: -10px; left: 10px; }
+  .stv2 .stv2-desc-mobile { display: block; margin: -4px 2px 0; font-size: 13px; line-height: 1.45; color: var(--stv2-mute); }
+  /* des champs hauts, et 16 px pour qu'iOS ne zoome pas */
+  .stv2 .stv2-in { height: 48px; }
+  .stv2 .stv2-in input, .stv2 .stv2-in select, .stv2 .stv2-zone,
+  .stv2 .stv2-personnes .filter-field > input, .stv2 .stv2-personnes .filter-field input { font-size: 16px; }
+  .stv2 .stv2-personnes .filter-field > input { height: 46px; }
+  .stv2 .stv2-seg { width: 100%; }
+  .stv2 .stv2-seg button { flex: 1; height: 42px; }
+  .stv2 .stv2-mini { height: 38px; padding: 0 14px; }
+  .stv2 .stv2-guide-btn { height: 40px; }
+  .stv2 .stv2-lnk { min-height: 40px; }
+  .stv2 .stv2-cond { grid-template-columns: 1fr 1fr; }
+  .stv2 .stv2-cond-retirer { grid-column: 1 / -1; height: 40px; justify-self: start; }
+  /* le pied : le geste principal en haut, pleine largeur ; le reste dessous ; Fermer tout en bas */
+  .stv2 .stv2-pied {
+    flex-direction: column-reverse; align-items: stretch; gap: 6px;
+    padding: 10px 16px calc(12px + env(safe-area-inset-bottom));
+  }
+  .stv2 .stv2-pied .stv2-btn { width: 100%; height: 46px; }
+  .stv2 .stv2-pied .stv2-btn-1 { height: 52px; border-radius: 14px; font-size: 15.5px; font-weight: 800; }
+  .stv2 .stv2-pied > .stv2-btn-2:first-child { box-shadow: none; color: var(--stv2-mute); }
+  .stv2 .stv2-danger { align-self: center; min-height: 40px; }
+  .stv2 .stv2-principal { flex: none; }
+  .stv2 .stv2-apercu { right: 0; left: 0; width: auto; }
+}
+/* écran bas (1280 × 665, portable 1366 × 600, fenêtre réduite) : on rend de la hauteur au corps, la seule zone qui
+   défile. Mesuré le 06/11 à 1280 × 665 : 445 px utiles sans ce réglage, contre 482 pour l'ancienne modale. */
+@media (min-width: 768px) and (max-height: 700px) {
+  .stv2 { padding: 8px; }
+  .stv2 .stv2-panel { height: calc(100vh - 16px); }
+  .stv2 .stv2-head { min-height: 52px; }
+  .stv2 .stv2-bien { min-height: 48px; }
+  .stv2 .stv2-pied { min-height: 56px; padding-top: 7px; padding-bottom: 7px; }
+}
+/* tablette (768 à 1 023 px) : trois colonnes de champs y sont trop serrées */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .stv2 .stv2-grille, .stv2 .stv2-aff-grille { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stv2 .stv2-cond { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .stv2 .stv2-cond-retirer { grid-column: 1 / -1; justify-self: start; }
 }

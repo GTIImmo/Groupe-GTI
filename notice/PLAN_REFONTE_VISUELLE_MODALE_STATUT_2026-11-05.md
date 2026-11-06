@@ -180,6 +180,21 @@ animations. La nouvelle vue LIT l'état existant et APPELLE les fonctions exista
   Mettre à jour le compromis, Enregistrer le compromis. ⚠ Rien n'a été ENVOYÉ : l'envoi réel est au lot 8 (62774,
   accord redemandé).
 - **Lot 6 — téléphone.** Même composant, mise en page étroite ; contrôle à 390, 768 et 1280 × 665.
+  ✅ **FAIT le 06/11** — `src/statut-v2.css` et `src/ModaleStatutV2.tsx` seulement (aucune ligne d'`App.tsx`).
+  **Téléphone (≤ 767 px)** : les principes de l'ancienne modale (`modales-telephone.css`) — une feuille qui monte du
+  bas avec sa poignée (94 dvh), les statuts en pastilles avec la description du choix dessous, le pied en colonne
+  inversée (geste principal en haut, 52 px, pleine largeur ; Fermer tout en bas), des cibles ≥ 38 px, des champs de
+  48 px **en 16 px** (en dessous, iOS zoome à chaque saisie ; l'ancienne était à 15). **La carte choisie reste
+  visible** : un `useEffect` d'interface fait défiler la RANGÉE seulement (jamais le corps). **Tablette (768–1 023)** :
+  champs sur 2 colonnes. **Hauteur** : plafond relevé de 640 à 820 px (les grands écrans gagnent de la place) ; à
+  ≤ 700 px de haut, en-tête, bandeau et pied se resserrent. Mesures : à 1280 × 665 la zone utile passe de 445 à
+  **487 px** (l'ancienne modale : 482) ; à 1366 × 600, 422 px et le pied visible ; à 390 × 844, rien ne déborde,
+  champs en 16 px. ⚠ **Défaut trouvé à l'écran et corrigé** : à 390 px la rangée des statuts était TASSÉE (pastilles
+  coupées) — le défaut que l'ancienne modale avait déjà payé ; même remède, aucun enfant du corps ne rétrécit.
+  Contrôlé : démonstration à 390 × 844, 768 × 1024, 1280 × 665 et 1366 × 600 ; rendu d'essai à 390 × 844 avec un
+  compromis en cours (le pied complet). Empreintes 61 morceaux identiques ; parité verte ; essais verts ; build vert.
+  ⏰ **Pour le lot 7** : avec un compromis en cours, les 5 boutons empilés prennent ~260 px au téléphone (comme
+  l'ancienne modale) — à resserrer si Frédéric le souhaite.
 - **Lot 7 — animations et accessibilité.** Courbes et durées du cockpit, tout coupé si moins
   d'animations est demandé, focus visible, contrastes.
 - **Lot 8 — contrôles et bascule** (§4), puis mise à jour des documents.
@@ -227,7 +242,8 @@ de style et la ligne d'aiguillage.
    lui dis. Avant, tout se contrôle en local (interrupteur allumé et éteint).
 4. ✅ **Oui à l'envoi réel de contrôle sur 62774, à la fin** — son accord se redemande au moment du geste.
 
-➡ ~~Prochaine étape : le lot 0~~ ✅ fait le 05/11. ~~Le lot 1~~ ✅ fait le 06/11. ~~Le lot 2~~ ✅ fait le 06/11. ~~Le lot 3~~ ✅ fait le 06/11. ~~Le lot 4~~ ✅ fait le 06/11. ~~Le lot 5~~ ✅ fait le 06/11.
-**Prochaine étape : le lot 6** (le téléphone), qui attend son « vas-y ».
+➡ ~~Prochaine étape : le lot 0~~ ✅ fait le 05/11. ~~Le lot 1~~ ✅ fait le 06/11. ~~Le lot 2~~ ✅ fait le 06/11. ~~Le lot 3~~ ✅ fait le 06/11. ~~Le lot 4~~ ✅ fait le 06/11. ~~Le lot 5~~ ✅ fait le 06/11, **poussé par Frédéric** (sommet distant `8155bb7`, interrupteur
+VÉRIFIÉ ÉTEINT dans le paquet servi). ~~Le lot 6~~ ✅ fait le 06/11.
+**Prochaine étape : le lot 7** (animations et accessibilité), qui attend son « vas-y ».
 ⚠ Reste hors de ce chantier : le défaut « Choisir » (audit §12, les champs principaux ne se rechargent pas),
 qui demande une décision à part — la refonte visuelle ne le corrige pas et ne doit pas le masquer.

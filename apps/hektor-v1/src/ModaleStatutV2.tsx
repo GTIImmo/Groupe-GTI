@@ -17,7 +17,7 @@
 // Lot 5 : le pied (Pied), ses notes (NotesDesBoutons) et l'aperçu « avant → après » ; la vue est un <form>.
 // Restent le téléphone (lot 6), les animations et l'accessibilité (lot 7), les contrôles et la bascule (lot 8).
 
-import { useState, type ComponentType, type Dispatch, type FormEvent, type ReactNode, type SetStateAction } from 'react'
+import { useEffect, useRef, useState, type ComponentType, type Dispatch, type FormEvent, type ReactNode, type SetStateAction } from 'react'
 import type { Dossier } from './types'
 import { situationDuBien, type AffaireLedgerRow, type GardesParcours, type HektorAnnonceStatusTarget } from './lib/statutParcours'
 import { DESCRIPTION_CARTE, guidePour } from './lib/statutGuide'
@@ -1298,6 +1298,16 @@ export default function ModaleStatutV2(props: ModaleStatutV2Props) {
     pastilleStatut, formulaire,
   } = props
   const [commentOuvert, setCommentOuvert] = useState(false)
+  // Lot 6 (06/11) : au téléphone la rangée des cartes défile ; la carte choisie doit y rester VISIBLE (sinon on
+  // choisit « Vendu » et on voit « Actif »). Interface seulement : on fait défiler la rangée, rien d'autre.
+  const rangee = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const r = rangee.current
+    const c = r?.querySelector<HTMLElement>('.stv2-carte.is-selected')
+    if (!r || !c || r.scrollWidth <= r.clientWidth) return
+    const doux = !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    r.scrollTo({ left: Math.max(0, c.offsetLeft - 16), behavior: doux ? 'smooth' : 'auto' })
+  }, [statusChangeStatus])
 
   const mandatValide = isValidationApproved(cible.validation_diffusion_state)
   const situation = situationDuBien({
@@ -1350,7 +1360,7 @@ export default function ModaleStatutV2(props: ModaleStatutV2Props) {
             valent donc au clic, et la touche Entrée dans un champ envoie, comme avant. */}
         <form className="stv2-envoi" onSubmit={formulaire.handleChangeHektorAnnonceStatus}>
         <div className="stv2-corps">
-          <div className="stv2-parcours" role="group" aria-label="Le statut à donner au bien">
+          <div ref={rangee} className="stv2-parcours" role="group" aria-label="Le statut à donner au bien">
             {situation.cartes.map((carte) => {
               const option = options.find((o) => o.value === carte.statut)
               const choisie = carte.statut === statusChangeStatus
@@ -1371,6 +1381,12 @@ export default function ModaleStatutV2(props: ModaleStatutV2Props) {
               ]
             })}
           </div>
+          {/* Au téléphone, les cartes ne montrent que leur nom : ce que veut dire la carte choisie passe dessous,
+              comme dans l'ancienne modale (.rq-mobile st-desc). Caché au bureau. */}
+          <p className="stv2-desc-mobile">
+            {carteChoisie && (carteChoisie.etat === 'lecture' || carteChoisie.etat === 'sans_effet')
+              ? carteChoisie.raison : DESCRIPTION_CARTE[statusChangeStatus]}
+          </p>
 
           <div key={statusChangeStatus} className={`stv2-guide stv2-guide-${guide.ton}`}>
             <div className="stv2-guide-haut">
