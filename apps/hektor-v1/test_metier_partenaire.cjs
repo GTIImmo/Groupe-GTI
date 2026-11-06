@@ -145,7 +145,12 @@ controle("(45) les 4 blocs sont posés à leur place (chiffres avant le tableau,
   && /<NotaireAVenir vue=\{vueNotaire\} \/> : null\}\s*\{blocsPartenaire \? <PartenaireAVenir/.test(app)
   && /<NotaireVentesEtAvecNous[^\n]*\n\s*\{blocsPartenaire \? <PartenaireAvecNous/.test(app));
 const fp = fs.readFileSync(path.resolve(__dirname, "src", "FichePartenaire.tsx"), "utf8");
-controle("(46) FichePartenaire : aucune lecture ni écriture (ni supabase, ni rpc, ni fetch)", !/supabase|\.rpc\(|fetch\(/.test(fp.replace(/^\/\/.*$/gm, "")));
+// 06/11 (3.4) : une seule lecture permise, celle des interlocuteurs ; l'écriture passe par le carnet du notaire (relais).
+controle("(46) FichePartenaire : une seule lecture (app_partenaire_interlocuteur), aucune écriture ni fetch",
+  (fp.match(/supabase\.from\(/g) || []).length === 1 && /supabase\.from\('app_partenaire_interlocuteur'\)\.select\(/.test(fp) && !/\.rpc\(|fetch\(|\.(insert|update|upsert|delete)\(/.test(fp.replace(/^\/\/.*$/gm, "")));
+controle("(70) 3.4 : le carnet sur les fiches métier seulement (pas « autre »), titre « Interlocuteurs », le notaire inchangé",
+  /\{blocsPartenaire && profilPartenaire && profilPartenaire\.famille !== 'autre'\s*\? <PartenaireInterlocuteurs/.test(app) && /titre="Interlocuteurs"/.test(fp)
+  && /\{props\.titre \?\? "Interlocuteurs de l'étude"\}/.test(fs.readFileSync(path.resolve(__dirname, "src", "FicheNotaire.tsx"), "utf8")));
 controle("(47) section, À venir et avec nous disent « en construction » ; les chiffres valent « — » (pas de faux zéro)",
   (fp.match(/<EnConstruction/g) || []).length === 3 && /aria-label="pas encore de données">—</.test(fp));
 

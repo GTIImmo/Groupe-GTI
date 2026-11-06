@@ -3,9 +3,10 @@
 // Quatre chiffres, la section du métier (ses étapes), « À venir » et les deux blocs « avec nous ». Les données n'existent pas
 // encore : chaque bloc est MONTRÉ et marqué « en construction » avec son lot (décision du 27/10, comme la fiche notaire).
 // Aucune lecture, aucune écriture. Les classes sont celles de la fiche notaire (fiche-notaire-v2.css).
-import type { CSSProperties } from 'react'
-import { EnConstruction } from './FicheNotaire'
-import type { BlocsPartenaire } from './lib/metierPartenaire'
+import { useEffect, useState, type CSSProperties } from 'react'
+import { EnConstruction, NotaireInterlocuteurs, type Interlocuteur } from './FicheNotaire'
+import { hasSupabaseEnv, supabase } from './lib/supabase'
+import type { BlocsPartenaire, FamillePartenaire } from './lib/metierPartenaire'
 
 const COULEURS_CHIFFRES = ['var(--ty)', '#c2512a', '#1f5b96', '#2f8a5b']
 
@@ -77,4 +78,41 @@ export function PartenaireAvecNous(props: { blocs: BlocsPartenaire }) {
       ))}
     </div>
   )
+}
+
+// PIÈCE 3.4 (06/11/2026) — LES INTERLOCUTEURS D'UN PARTENAIRE (maquette fiche-partenaire-v1, volet gauche). Le même carnet que
+// le notaire, sur la même table, renommée app_partenaire_interlocuteur (décision « A et on change le nom », patch du 06/11).
+// Lecture : la table (comptes actifs, RLS) ; écriture : le carnet du notaire (relais). Une lecture ratée est DITE.
+const EXEMPLES: Record<Exclude<FamillePartenaire, 'autre'>, { vide: string; role: string }> = {
+  syndic: { vide: 'Aucun interlocuteur enregistré : gestionnaires de copropriété, comptables, assistants.', role: 'Rôle : gestionnaire, comptable…' },
+  diag: { vide: 'Aucun interlocuteur enregistré : techniciens certifiés, planning, secrétariat.', role: 'Rôle : technicien, planning…' },
+  courtier: { vide: 'Aucun interlocuteur enregistré : courtiers, conseillers bancaires, assistants.', role: 'Rôle : courtier, conseiller, assistant…' },
+  apporteur: { vide: 'Aucun interlocuteur enregistré : les personnes de son réseau à contacter.', role: 'Rôle : associé, assistant…' },
+}
+
+export function PartenaireInterlocuteurs(props: { contactId: string; famille: Exclude<FamillePartenaire, 'autre'> }) {
+  const [etat, setEtat] = useState<{ lignes: Interlocuteur[] | null; erreur: string | null }>({ lignes: null, erreur: null })
+  const [version, setVersion] = useState(0)
+  useEffect(() => {
+    if (!hasSupabaseEnv || !supabase || !props.contactId.trim()) return
+    let annule = false
+    void supabase.from('app_partenaire_interlocuteur').select('id,nom,role,telephone,email')
+      .eq('contact_id', props.contactId.trim()).is('retire_le', null).order('nom').order('id')
+      .then(({ data, error }) => {
+        if (annule) return
+        setEtat(error ? { lignes: null, erreur: error.message } : { lignes: (data ?? []) as Interlocuteur[], erreur: null })
+      })
+    return () => { annule = true }
+  }, [props.contactId, version])
+  if (etat.erreur) {
+    return (
+      <div className="fa-cx-team">
+        <div className="fa-cx-team-head">Interlocuteurs</div>
+        <div className="fa-cx-ech-empty fa-cx-err">Interlocuteurs illisibles pour le moment ({etat.erreur}).</div>
+      </div>
+    )
+  }
+  const ex = EXEMPLES[props.famille]
+  return <NotaireInterlocuteurs notaireId={props.contactId} interlocuteurs={etat.lignes} onChange={() => setVersion((v) => v + 1)}
+    titre="Interlocuteurs" vide={ex.vide} exempleRole={ex.role} />
 }

@@ -266,7 +266,10 @@ export function EnConstruction(props: { titre?: string }) {
   return <span className="fa-cx-wip" title="Les données n'existent pas encore : le bloc est montré pour situer la fiche (décision du 27/10)">{props.titre ? `${props.titre} · ` : ''}en construction</span>
 }
 
-export function NotaireInterlocuteurs(props: { notaireId: string; interlocuteurs: Interlocuteur[] | null | undefined; onChange: () => void }) {
+// PIÈCE 3.4 (06/11/2026) : le même carnet sert aux fiches métier (syndic, diag, courtier, apporteur) — `titre`, `vide` et
+//   `exempleRole` sont réglables ; sans eux, le carnet du notaire est inchangé. L'écriture passe par l'ancien nom, devenu un
+//   RELAIS vers app_partenaire_interlocuteur_ecrire (patch du 06/11) : la même fonction pour tous.
+export function NotaireInterlocuteurs(props: { notaireId: string; interlocuteurs: Interlocuteur[] | null | undefined; onChange: () => void; titre?: string; vide?: string; exempleRole?: string }) {
   // ⑧ blocs (28/10) : le carnet de l'étude, SAISI dans l'app (Hektor n'a pas d'étude). Tout compte actif ajoute, modifie, retire ;
   //   « retirer » ne détruit rien (la base garde la ligne, avec qui et quand). Fonction app_notaire_interlocuteur_ecrire.
   const vide = { id: null as number | null, nom: '', role: '', telephone: '', email: '' }
@@ -287,7 +290,7 @@ export function NotaireInterlocuteurs(props: { notaireId: string; interlocuteurs
   const liste = props.interlocuteurs ?? []
   return (
     <div className="fa-cx-team">
-      <div className="fa-cx-team-head">Interlocuteurs de l'étude
+      <div className="fa-cx-team-head">{props.titre ?? "Interlocuteurs de l'étude"}
         {form ? null : <button className="add" type="button" onClick={() => { setForm({ ...vide }); setErreur(null) }}>+ Ajouter</button>}</div>
       {liste.map((i) => (
         <div key={i.id} className="fa-cx-mate">
@@ -303,11 +306,11 @@ export function NotaireInterlocuteurs(props: { notaireId: string; interlocuteurs
                 <button className="fa-cx-mate-call" type="button" title="Retirer" onClick={() => setARetirer(i.id)}>✕</button></>}
         </div>
       ))}
-      {!liste.length && !form ? <div className="fa-cx-ech-empty">Aucun interlocuteur enregistré : clercs, formalistes, associés de l'étude.</div> : null}
+      {!liste.length && !form ? <div className="fa-cx-ech-empty">{props.vide ?? "Aucun interlocuteur enregistré : clercs, formalistes, associés de l'étude."}</div> : null}
       {form ? (
         <form className="fa-cx-mate-form" onSubmit={(ev) => { ev.preventDefault(); void ecrire({ p_id: form.id, p_nom: form.nom, p_role: form.role, p_telephone: form.telephone, p_email: form.email }) }}>
           <input placeholder="Nom (obligatoire)" value={form.nom} maxLength={200} onChange={(ev) => setForm({ ...form, nom: ev.target.value })} required />
-          <input placeholder="Rôle : clerc, formaliste, associé…" value={form.role} maxLength={120} onChange={(ev) => setForm({ ...form, role: ev.target.value })} />
+          <input placeholder={props.exempleRole ?? 'Rôle : clerc, formaliste, associé…'} value={form.role} maxLength={120} onChange={(ev) => setForm({ ...form, role: ev.target.value })} />
           <input placeholder="Téléphone" value={form.telephone} maxLength={60} onChange={(ev) => setForm({ ...form, telephone: ev.target.value })} />
           <input placeholder="E-mail" type="email" value={form.email} maxLength={200} onChange={(ev) => setForm({ ...form, email: ev.target.value })} />
           <div className="fa-cx-mate-form-acts">

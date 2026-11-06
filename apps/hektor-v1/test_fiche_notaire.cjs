@@ -164,8 +164,9 @@ verifier("App.tsx : la fiche notaire n'est chargée que pour un notaire, derriè
   && /useFicheNotaire\(String\(props\.contact\.hektor_contact_id \?\? ''\), estFicheNotaire\)/.test(app));
 const blocs = ["<NotaireKpis", "<NotaireDossiers", "<NotaireAVenir", "<NotaireVentesEtAvecNous", "<NotaireInterlocuteurs"];
 verifier("App.tsx : les 5 blocs sont posés, chacun sous sa condition", blocs.every((b) => app.split(b).length === 2), blocs.filter((b) => app.split(b).length !== 2).join(","));
-verifier("App.tsx : « Recherche & rapprochement » ne s'efface que pour un notaire SANS recherche active",
-  /const masquerRecherche = estFicheNotaire && Number\(props\.contact\.active_search_count \?\? 0\) === 0/.test(app) && /\{masquerRecherche \? null : \(<>/.test(app));
+// 05/11 (partenaires 3.3b) : la même règle couvre aussi les fiches métier à blocs — pour le notaire, rien ne change.
+verifier("App.tsx : « Recherche & rapprochement » ne s'efface que pour un notaire (ou une fiche métier) SANS recherche active",
+  /const masquerRecherche = \(estFicheNotaire \|\| Boolean\(blocsPartenaire\)\) && Number\(props\.contact\.active_search_count \?\? 0\) === 0/.test(app) && /\{masquerRecherche \? null : \(<>/.test(app));
 verifier("App.tsx : la bande « Biens & mandats liés » reste (décision 3)", /Lot 3 — Bande « Biens & mandats liés »/.test(app.slice(app.indexOf("{masquerRecherche ? null : (<>"))));
 
 // 8. MUTANT : sans la borne des 6 mois

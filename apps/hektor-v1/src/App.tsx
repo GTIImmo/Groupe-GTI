@@ -260,7 +260,7 @@ import RapprochementMandat, { type MandatContext } from './RapprochementMandat'
 import { FICHE_NOTAIRE_V2, NotaireAVenir, NotaireDossiers, NotaireInterlocuteurs, NotaireKpis, NotaireVentesEtAvecNous, construireVueNotaire, useFicheNotaire } from './FicheNotaire'
 import { BlocMetierPartenaire, FenetreMetierPartenaire, useMetiersPartenaire } from './MetierPartenaire'
 import { blocsDuPartenaire, profilDuPartenaire } from './lib/metierPartenaire'
-import { PartenaireAVenir, PartenaireAvecNous, PartenaireChiffres, PartenaireSectionMetier } from './FichePartenaire'
+import { PartenaireAVenir, PartenaireAvecNous, PartenaireChiffres, PartenaireInterlocuteurs, PartenaireSectionMetier } from './FichePartenaire'
 import CataloguePartenaires from './CataloguePartenaires'
 import NotificationsBell from './NotificationsBell'
 import SanteSystemeScreen from './SanteSystemeScreen'
@@ -48145,6 +48145,9 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
               </div>
 
               {estFicheNotaire ? <NotaireInterlocuteurs notaireId={String(props.contact.hektor_contact_id ?? '')} interlocuteurs={ficheNotaire.fiche?.interlocuteurs} onChange={ficheNotaire.recharger} /> : null}
+              {/* PARTENAIRES 3.4 (06/11/2026) : le carnet des interlocuteurs sur les fiches métier (pas sur « autre », ni la fiche client) */}
+              {blocsPartenaire && profilPartenaire && profilPartenaire.famille !== 'autre'
+                ? <PartenaireInterlocuteurs contactId={String(props.contact.hektor_contact_id ?? '')} famille={profilPartenaire.famille} /> : null}
               <div className="fa-cx-foot">
                 <div className="fa-cx-foot-head">
                   <span className="fa-cx-foot-hic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><circle cx="12" cy="8" r="4" /><path d="M5 21a7 7 0 0 1 14 0" /></svg></span>Négociateur

@@ -1917,6 +1917,29 @@ pour tout le monde (au rechargement). Retour arrière : `admin` ou `off`. **Suit
   `aa3d016` (page RDV : `backend/app/services/appointment_service.py` + essai + notes → **parti chez Render**). Session
   « Vue registre transactions CRM immobilier » prévenue par message. Leçon : relire `origin/main..HEAD` JUSTE avant le
   push et redemander si la liste a changé depuis la question.
+
+#### 26 decies. PIÈCE 3.4 — LES INTERLOCUTEURS POUR TOUS LES MÉTIERS (06/11, « A et on change le nom ») — prête, NON posée
+
+- **Audit** : le carnet du notaire (`app_notaire_interlocuteur`, 28/10) est VIDE (0 ligne) ; sa fonction d'écriture accepte
+  déjà n'importe quel contact ; deux lecteurs seulement (l'écriture, et `app_notaire_fiche`) ; la descente découvre ses
+  tables seule (l'ancienne copie locale, vide, restera sur le serveur). La maquette met « Interlocuteurs + Ajouter » dans
+  le volet gauche de chaque fiche métier.
+- **Décision** : une seule table, renommée → `app_partenaire_interlocuteur`, colonne `contact_id`.
+- **Patch** `supabase/patch_partenaire_interlocuteur_2026-11-06.sql` (une transaction, empreintes vérifiées avant) :
+  renommage (table, colonne, séquence, index, contraintes, règle de lecture) ; `app_partenaire_interlocuteur_ecrire`
+  (même geste) ; l'ancien nom devient un RELAIS (l'app en ligne l'appelle) ; `app_notaire_fiche` lit le nouveau nom.
+  `_INVERSE.sql` (formes exactes rendues, empreintes vérifiées, lignes gardées) ; `_REPETITION.sql` (9 contrôles).
+- **Éprouvé dans une transaction annulée (06/11)** : patch → écriture (syndic 10215568), écriture par le relais (notaire
+  10008890) lue par la fiche notaire, modification, retrait, nom vide refusé → inverse → empreintes revenues ; base
+  vérifiée inchangée après. ⚠ 1er essai : l'inverse réécrivait la fiche AVANT de rendre le nom à la table (une fonction en
+  SQL est vérifiée à sa création) — ordre corrigé, 2e essai vert.
+- **Écran** : `PartenaireInterlocuteurs` (FichePartenaire.tsx) lit la table renommée et réutilise le carnet du notaire
+  (titre « Interlocuteurs », exemples par métier) ; fiches métier seulement (pas « autre », pas la fiche client) ; la
+  fiche notaire est inchangée (titre, textes, appel par le relais).
+- **Essais** : `test_metier_partenaire.cjs` 71/71 ; `test_fiche_notaire.cjs` vert — ⚠ il était ROUGE depuis 3.3b (la
+  ligne `masquerRecherche` avait changé sans que je le relance) : contrôle mis à jour.
+- **Ordre de pose** : 1. coller le patch (puis la répétition, 9 « OK ») ; 2. pousser l'écran (avant le patch, le carnet
+  des fiches métier dirait « illisible »). Retour arrière : l'écran d'avant, PUIS `_INVERSE.sql`.
   ⚠ Le repli `contactsDirectory.find(...) ?? contactsDirectory[0]` d'App.tsx est ANCIEN et sert à toute l'app : non
   touché, à signaler.
 
