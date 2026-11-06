@@ -2090,6 +2090,22 @@ créé, rien n'est poussé.
   « Ouvrir sa fiche » ouvre la fiche syndic PAR LE CATALOGUE (`vue=metiers`, 16 biens) ; téléphone (390 px) : la carte en
   lecture, « Ouvrir sa fiche » seul, aucun débordement. Reste : l'essai réel d'un choix sur un bien d'essai.
   Remarque : la carte montre « n° 10217295 » faute de ville et de téléphone sur la fiche de ce syndic.
+- **ESSAI RÉEL du choix (06/11, « choisis un bien test »)** sur le bien d'essai **63331** (dossier 10000009, « ESSAI 8A3
+  PIECE 3 - ne pas diffuser », mandant « Mandant ESSAI 8A C1 », en copropriété, sans syndic), par l'écran, compte de
+  Frédéric. Rien chez Hektor.
+  1. Choisir : recherche « foncia » → FONCIA LOIRE AUVERGNE (10217296) → ligne 90, origine app, posée par Frédéric ;
+     la carte dit « choisi dans l'app par Frederic Gerphagnon le 06/11/2026 ». (Registre RNIC : rien pour ce bien d'essai.)
+  2. Changer → AGENCE PEYROT (10355053) : ligne 90 retirée et ligne 91 posée À LA MÊME SECONDE, l'auteur des deux côtés.
+     « Ouvrir sa fiche » → la fiche d'AGENCE PEYROT (catalogue) montre le bien d'essai dans « Copropriétés ».
+  3. Retirer → confirmation (« la trace reste ») → « Aucun syndic ». Lignes 90 et 91 gardées, retirées, signées.
+  ⇒ **Le bien d'essai est revenu à son état d'avant** (aucun syndic actif). La nuit ne remettra rien (Hektor n'indique aucun
+  syndic sur 63331, et 4.2c ne remet pas un lien retiré par quelqu'un).
+- ⚠⚠ **TROUVÉ PAR L'ESSAI : LES DOUBLONS DE SYNDICS.** Dans le choix, « FONCIA LOIRE AUVERGNE » apparaît 4 fois, sans rien
+  pour les distinguer. Mesure : **15 noms de syndic en double au catalogue, 41 fiches**, presque toutes SANS ville —
+  IMMO DE FRANCE FOREZ VELAY ×9, FONCIA LOIRE AUVERGNE ×4, GIBERT IMMOBILIER ×3, SOCIÉTÉ DE GESTION IMMOBILIÈRE ×3, puis
+  11 noms ×2. Conséquence : un utilisateur choisit au hasard, les biens d'un même syndic se répartissent sur plusieurs
+  fiches, et la fiche syndic (4.1) n'en montre qu'une partie (les « 16 biens » d'IMMO DE FRANCE ne comptent que 10217295).
+  Non traité — à présenter à Frédéric (montrer de quoi distinguer dans le choix, et/ou désigner une fiche principale).
 
 ### 7 ter. Les dépendances (techniques, pas un ordre décidé)
 
