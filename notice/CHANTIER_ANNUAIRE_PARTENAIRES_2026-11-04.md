@@ -1992,7 +1992,9 @@ pour tout le monde (au rechargement). Retour arrière : `admin` ou `off`. **Suit
   « Fiche contact ». Téléphone (390 px) : 16 cartes, aucun débordement.
   ⚠ Vu au passage : certains biens s'affichent « [Sans titre] V790063303 » — c'est le titre tel qu'il est dans nos
   données (estimation sans titre), pas un défaut de la fiche.
-- Reste : ouvrir à tous (`on`) sur décision de Frédéric ; puis 4.2 → 4.6.
+- **OUVERTE À TOUS le 06/11** (Frédéric : « Ouvrir à tous ») : `partenaires_syndic_fiche = 'on'`. Retour arrière : la
+  remettre à `admin`, ou supprimer la ligne (= la fiche partenaire d'avant).
+- Reste : 4.2 → 4.6.
 
 ### 7 ter. Les dépendances (techniques, pas un ordre décidé)
 
