@@ -1909,6 +1909,14 @@ pour tout le monde (au rechargement). Retour arrière : `admin` ou `off`. **Suit
 - **Contrôles** : banc local à données FICTIVES en 390 × 844 (feuille 387→844 px, « Voir toute la fiche » visible,
   aucun débordement), retiré ensuite ; essai `test_metier_partenaire.cjs` **69/69** ((50) : deux portes seulement,
   bureau et téléphone) ; `npm run build` vert.
+- ✅ **Poussé (« Oui, pousse ») — sorti en `aa3d016`** et vu en ligne au téléphone (l'app réelle dans un cadre 390 × 844,
+  session admin) : interrupteur Clients | Partenaires ; côté Partenaires, carte de recherche des clients cachée ; pastilles
+  Notaires 633 / Banques 9 / Diagnostics 22 / Apporteurs 26 / Syndics 75 ; GIBERT IMMOBILIER → feuille (Appeler, Écrire,
+  RDV, « Demander un document · bientôt », « Voir toute la fiche ») → fiche SYNDIC, la feuille se range ; aucun débordement.
+- ⚠ **Le push a emporté 2 commits d'autres sessions arrivés après ma question** : `a7f3cdf` (Youtrust, notes) et
+  `aa3d016` (page RDV : `backend/app/services/appointment_service.py` + essai + notes → **parti chez Render**). Session
+  « Vue registre transactions CRM immobilier » prévenue par message. Leçon : relire `origin/main..HEAD` JUSTE avant le
+  push et redemander si la liste a changé depuis la question.
   ⚠ Le repli `contactsDirectory.find(...) ?? contactsDirectory[0]` d'App.tsx est ANCIEN et sert à toute l'app : non
   touché, à signaler.
 
