@@ -293,7 +293,6 @@ export default function CataloguePartenaires(props: {
             <div className="lc-title">
               <h1>Annuaire des partenaires</h1>
               <span className="lc-badge">{etat.catalogue ? `${TUILES_CATALOGUE.reduce((n, t) => n + (etat.catalogue?.[t.tuile]?.actifs.length ?? 0), 0).toLocaleString('fr-FR')} partenaires` : '…'}</span>
-              <OngletsAnnuaire vue="metiers" onVue={(v) => { if (v === 'clients') props.onVueClients() }} />
             </div>
             {agences.length ? (
               <label className="pa-agence"><span>Agence</span>

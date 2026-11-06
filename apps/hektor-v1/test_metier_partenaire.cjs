@@ -210,6 +210,9 @@ controle("(64) HARMONISATION (06/11) : la barre commune de l'app est AUSSI celle
   !/&& !vueMetiersApp \? \(\s*<section className=\{`hero/.test(app) && /value=\{vueMetiersApp \? rechercheCatalogue : searchDraft\}/.test(app)
   && /\{vueMetiersApp \? 'Ajouter un partenaire' : 'Nouveau contact'\}/.test(app) && (app.match(/disabled=\{vueMetiersApp\}/g) || []).length >= 3
   && /<CataloguePartenaires\s+enTeteCommun\s+requete=\{props\.rechercheCatalogue\}/.test(app) && /<OngletsAnnuaire vue="clients"/.test(app)
+  // 06/11 : l'onglet de vue vit SOUS la recherche, dans la barre commune ; plus dans le titre des cartes.
+  && /<div className="hero-onglets"><OngletsAnnuaire vue=\{vueMetiersApp \? 'metiers' : 'clients'\} onVue=\{setContactsVue\} \/><\/div>/.test(app)
+  && !/lc-badge[^\n]*\n\s*<OngletsAnnuaire/.test(catTsx) && !/\{catalogueVisible \? <OngletsAnnuaire/.test(app)
   && /<h1>Annuaire des partenaires<\/h1>/.test(catTsx) && /export function OngletsAnnuaire/.test(catTsx)
   && /props\.enTeteCommun && props\.variante !== 'telephone'/.test(catTsx) && /onAjouter=\{props\.canManageContacts \? props\.onOpenCreate : undefined\}/.test(app));
 controle("(65) l'aperçu : l'activité est « en construction », jamais un faux chiffre", /Activité avec l'agence sur 12 mois · en construction/.test(catTsx) && !/\d+ ?%/.test(catTsx.replace(/\/\/.*$/gm, "")));

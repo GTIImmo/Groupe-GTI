@@ -2153,6 +2153,14 @@ résidence / bâtiment / étage), en lecture, sans rien stocker.
   rangée de puces comme les catégories des clients (les deux cartes commencent à la même hauteur : 209 / 207 px au
   banc) ; Agence dans l'en-tête de la carte ; téléphone : l'onglet commun en pleine largeur (le reste inchangé).
 - Le sélecteur flottant et son correctif de style (546f1e2) disparaissent avec l'harmonisation.
+- **EN LIGNE le 06/11** (« Oui, pousse les deux », avec 223a0f1 de la session signature) et vu en vrai des deux côtés,
+  bureau et téléphone ; la recherche du haut filtre le catalogue ; Filtres / Stats / Priorités inactifs côté Partenaires.
+- **Retouche (06/11, Frédéric : « placés trop bas… non, sous la barre de recherche »)** : l'onglet de vue quitte le titre
+  des cartes et vit dans la barre commune, SOUS la recherche, à gauche (`.hero-onglets`) : 114 px du haut au lieu de
+  ~258, les deux cartes toujours alignées. Essayés et écartés sur la vraie page : DANS la barre (à 1280 px, recherche
+  réduite à 255 px, Stats / Priorités ne tiennent plus) ; en tête des catégories (la rangée passe sur deux lignes) ;
+  une ligne « Annuaire » tout en haut (proposée, refusée). Stats dépliées : l'onglet passe sous les chiffres (le forcer
+  juste sous la recherche les chevauche).
 - Contrôles : (64) réécrit pour la nouvelle règle ; 92/92 ; notaire vert ; construction verte, ET la version commitée
   construite à part ; banc fidèle (feuilles de style de l'app, données fictives) bureau 1280 × 665 et téléphone.
 

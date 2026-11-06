@@ -209,3 +209,5 @@
 .annuaire-v2 .pa-cat.commun .pa-tile-n{order:2;font-size:12px;font-weight:800;padding:2px 8px;border-radius:999px;background:rgba(34,35,35,.07);letter-spacing:0;}
 .annuaire-v2 .pa-cat.commun .pa-tile.on .pa-tile-n{background:rgba(255,255,255,.2);}
 .annuaire-v2 .pa-cat.commun .pa-tile-s{display:none;}
+/* 06/11 (« sous la barre de recherche ») : l'onglet de vue de l'annuaire vit dans la barre commune, sous la recherche, à gauche. */
+section.hero .hero-onglets{grid-column:1 / -1;justify-self:start;margin-top:2px;}

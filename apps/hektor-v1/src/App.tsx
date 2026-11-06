@@ -26330,6 +26330,11 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 ) : null}
               </div>
             )}
+            {/* HARMONISATION (06/11, Frédéric : « sous la barre de recherche ») : « Clients | Partenaires » sous la recherche,
+                dans la barre commune (avant : à côté du titre de la carte, trop bas). Stats dépliées : il passe dessous. */}
+            {screen === 'contacts' && catalogueCranApp ? (
+              <div className="hero-onglets"><OngletsAnnuaire vue={vueMetiersApp ? 'metiers' : 'clients'} onVue={setContactsVue} /></div>
+            ) : null}
           </div>
         </section>
         ) : null}
@@ -49445,7 +49450,6 @@ function ContactsScreen(props: {
             <div className="lc-title">
               <h1>Annuaire des contacts</h1>
               <span className="lc-badge">{listingTotalLabel}</span>
-              {catalogueVisible ? <OngletsAnnuaire vue="clients" onVue={(v) => { if (v === 'metiers') props.onVueChange?.('metiers') }} /> : null}
             </div>
             <div className="pager">
               {props.loading ? <span className="pg-load">Mise à jour…</span> : null}
