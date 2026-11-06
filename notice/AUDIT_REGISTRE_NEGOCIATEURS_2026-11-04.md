@@ -1608,3 +1608,26 @@ témoin ancien comportement → « FRANCK GERPHAGNON ». Non vu à l'écran (il 
 changement, son travail est resté dans l'arbre, non touché.
 
 **EN LIGNE le 06/11** : 3b30a0b servi par Render (commit 67a9ffb et suivants), f95c230 servi par Vercel (déploiement 8155bb7 READY). Base : les 4 comptes admin sans lien Hektor, LEGRAND 30/5 et PEREIRA 51/26 inchangés.
+
+## 55. LE PDF « AVIS DE VALEUR » SELON LA RÈGLE DU §54 — AUDIT (06/11) — Frédéric : « Oui, l'audit » — ⛔ rien n'est codé
+
+Remplace la proposition du §53 (fausse). Audit limité au PDF avis de valeur et à l'e-mail qui l'accompagne.
+
+**Aujourd'hui** : le bloc « Votre conseiller », son téléphone, son e-mail, son agence et le QR vCard = la personne CONNECTÉE
+(`negociateurConnecte`, worker `resolveEstimNegotiatorContact` + 50a7732), admin compris. L'écran envoie pourtant le négo du
+bien (`negociateur` : `commercial_nom`, `agence_nom`, `negociateur_email`, App.tsx l. ~6712 et ~17336) ; le worker l'écrase.
+L'e-mail d'estimation part au nom du négo du bien (ou accueil@).
+
+**Mesure des biens au statut estimation (12 821)** — le négo du bien selon le registre (fiche par `commercial_id`) :
+7 067 négo ACTIF (55 %) · 4 223 SANS négo (33 %) · 1 338 négo INACTIF · 193 sur une ancienne fiche d'ADMIN (Pauline n° 16
+Monistrol 158, Franck 18 + 5, Frédéric 12). Les autres statuts (714) : 690 actifs. ⇒ quand un ADMIN génère le PDF, 45 % des
+estimations n'ont pas de négociateur en charge utilisable : c'est le « cas exceptionnel » à définir.
+
+**La règle proposée** (worker, rôle lu par `requested_by` → `app_user_profile.role`) :
+- le demandeur est NÉGOCIATEUR → lui-même : sa fiche par le lien de son compte (`app_google_workspace_identity`), ses
+  coordonnées au registre (personne), son agence au registre ;
+- le demandeur est ADMIN → le négo du bien (`commercial_id`) s'il est ACTIF au registre et n'est pas une fiche d'admin :
+  nom et coordonnées du registre, agence du bien ;
+- sinon (sans négo, inactif, fiche d'admin) → CAS À TRANCHER ; jamais l'admin.
+Le QR suit la même identité. L'agence vient du registre (tél/mail), annuaire en repli. Registre muet → ancien chemin SANS
+l'identité de session pour un admin.
