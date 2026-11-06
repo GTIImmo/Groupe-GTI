@@ -2225,8 +2225,15 @@ apporteur 35 / 23 / 0 ; courtier 22 / 14 / 0 ; parrain 15 / 8 / 0 ; banque 8 / 7
   « en construction »), « Biens diagnostiqués » (la lecture de la fiche syndic, par rôle), bouton « Commander un
   diagnostic » (biens reliés). « Avec nous » reste en construction.
 - Cran `partenaires_diag` (NON posé). Mesure : 4 diagnostiqueurs posés chez Hektor sur 714 biens en vente ; 29 sur 36
-  ont un e-mail. ⚠ L'année de construction n'est saisie sur AUCUN bien en vente (« 0 ») : amiante et plomb seront
-  cochés d'office presque toujours (mieux vaut demander que manquer).
+  ont un e-mail. Année de construction connue sur **299 des 714** biens en vente (ma première mesure disait « aucun » :
+  elle cherchait le champ au mauvais endroit, il vit dans `diagnostiques_json`) ; inconnue = amiante et plomb cochés.
+- **EN LIGNE le 06/11** (« Oui ») : patch posé (migration `partenaire_du_bien_2026_11_06`), répétition 8/8 ; poussé
+  `ca89cb5..60ea64f` (SHA relu) ; `partenaires_diag = 'on'`. **Vu en vrai** sur le bien 62172 (Annonay) : carte
+  « Diagnostiqueur » = DS INGENIERIE « repris de Hektor » ; « Commander un diagnostic » : e-mail connu → « Ouvrir dans ma
+  messagerie » proposé, 7 diagnostics cochés (construit en 1948, en copropriété lot 7) ; « Ouvrir sa fiche » → fiche
+  diagnostiqueur (1 bien, chiffres, bouton). Rien envoyé.
+  ⚠ Vu en vrai : le type de bien sortait en CODE (« Bien : 2, 70 m² ») → corrigé (libellé de `propertyTypeLabel`, rien si
+  inconnu).
 - Contrôles (98)-(103) + (45), (76), (83), (91) mis à jour (le syndic garde ses gestes) ; essai **103/103** ; notaire
   vert ; construction verte ; banc fictif (carte, choix, fenêtre de commande à 1280 × 665).
 

@@ -35569,7 +35569,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                     mandat: String(dossier.numero_mandat ?? '').trim() || null,
                     annee: (() => { const a = Number(rawWizardDetailField(props.detail, 'ANNEE_CONS')); return a > 1000 ? a : null })(),
                     copro: /oui/i.test(String(rawWizardDetailField(props.detail, 'copropriete') ?? '')),
-                    typeBien: String(dossier.type_bien ?? '').trim() || null,
+                    typeBien: (() => { const t = propertyTypeLabel(dossier.type_bien); return t === '-' || /^Type \d+$/.test(t) ? null : t })(),
                     surface: detailStr('surface_habitable_detail') || null,
                   }}
                 />
