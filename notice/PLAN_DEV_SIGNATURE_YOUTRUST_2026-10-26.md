@@ -1125,6 +1125,38 @@ webhook posé par Frédéric ; redémarrage du worker.
 >   suivi, cockpit, P8-5, code par e-mail verts ; types et build verts sur HEAD + ces fichiers. **Vu sur la planche** (vrai
 >   composant) : cas normal, signature en cours, modèle Hektor (« Régénérer » sans éditeur -> le message), téléphone 375 px.
 >   ⚠ Visible par TOUS dès le déploiement : la fenêtre s'ouvre dès que `mandat_nait_chez_nous` est allumé (il l'est).
+> - ✅ **ESSAIS RÉELS DU 06/11 (15:35-16:05), accord de Frédéric « vas-y fais les essais 1 et tous les 2 » — sur 61398.**
+>   Pour faire revenir l'éditeur SANS réserver de numéro au registre (62965 / 63331 n'en ont pas, 2729 est échu : tout
+>   nouveau numéro = ligne officielle non annulable), le mandat signé de l'essai D40 (`f0d73f5a`) a été marqué
+>   `remplace` (sauvegarde `app_console_document_avant_essai_61398_20261106`, signature intacte) -> la rubrique repasse à
+>   « Étape 2 », n° 18420 conservé.
+>   **ESSAI 1 ✅** (`mandat_nait_chez_nous`) : « Générer le mandat » -> `generate_mandat_document` 15:40:40 -> 15:40:47 (7 s),
+>   `sans_hektor: false`, `depot_hektor: en_file` ; `upload_document_to_hektor` 15:40:46 -> 15:40:58 (12 s) `envoye` ;
+>   document `9cee3722` : source app, au coffre, numéro Hektor UNIQUE, photo des signataires valide (2 mandants), aucun
+>   doublon après la relecture de Hektor. ⚠⚠ **DÉFAUT** : la fenêtre du choix ne s'est PAS ouverte après la génération —
+>   la rubrique passe de `mv3Mode === 'editer'` à `'edite'`, deux branches qui montent CHACUNE leur `MandatDocumentEditor`
+>   (App.tsx ~33829 et ~33847) : l'éditeur qui attendait la fin est démonté, son choix avec. (Sans doute vrai aussi pour
+>   l'ancienne question « Faire signer ? » du chemin Hektor d'abord : non vérifié.) À corriger.
+>   **ESSAI 2 ✅** (envoi posé à la main comme D40 : Frédéric mandataire, son adresse pour les 2 mandants, demandeur =
+>   son compte admin -> le cran « admin » a laissé passer) : envoi 1 `sent` (3 × `otp_email`) ; avis `activated`,
+>   2 × `signer.notified` ; **relance** mandant 1 `reminded` (avis `reminder_executed`, puis `link_opened`, `signer.done` :
+>   Frédéric a signé depuis la relance) ; ⚠ les 2 mandants ayant la MÊME adresse et étant groupés, Youtrust n'envoie
+>   qu'UN e-mail (comme le 05/11) -> **relance du mandant 2** `reminded` : son lien arrive ; signé ; 2/3, mandataire
+>   `notified`. ⚠ **REFUS IMPOSSIBLE** : la page Youtrust ne propose pas « Refuser » (réglage du compte probable) -> l'état
+>   « refusé » reste éprouvé hors ligne seulement. **Annulation** à 2/3 : `canceled`, miroir « Signature annulée le
+>   06/11/2026 à 15:58 », avis `signature_request.canceled`. **Renvoi** après annulation : accepté, `sent` ; **annulé** à
+>   son tour. 0 travail en erreur, file vide. Non fait : le code par e-mail choisi avec un portable (aucun portable
+>   fourni : aucun numéro mis sur un signataire). **État laissé** : 61398 à l'étape « Édité », mandat d'essai annulé,
+>   l'ancien signé marqué remplacé (sauvegarde gardée) — prêt pour la première vraie signature après le 09/11.
+> - ✅ **CORRIGÉ (06/11, « vas-y ») — le choix qui disparaissait après « Générer » — NON COMMITÉ.** Deux causes : (1) chaque
+>   étape de la rubrique monte SA copie de l'éditeur ; (2) le choix, la fenêtre d'envoi et la question Hektor vivaient
+>   DANS le portail de l'éditeur OUVERT — la copie de l'étape suivante, fermée, ne pouvait rien afficher. Remède :
+>   un RELAIS par bien (`annoncerChoixApresGeneration` / `choixApresGenerationEnAttente` / `fermerChoixApresGeneration`,
+>   événement `hektor:choix-apres-generation`) que toute copie reprend à son montage et écoute ; les trois fenêtres
+>   SORTENT du portail de l'éditeur (le choix et l'envoi ont le leur ; la question Hektor reçoit un portail). Un choix
+>   fermé ne se rouvre pas ; un nouveau mandat le rouvre ; 5 min au plus. **Essais** : `test_choix_signature.cjs` (bloc 6 :
+>   10 contrôles neufs, dont 6 sur le VRAI code du relais découpé dans App.tsx) ; TÉMOIN : HEAD n'a pas le relais ;
+>   types et build verts sur HEAD + App.tsx. ⏰ À éprouver en production : regénérer sur 61398.
 > **Le nœud** : interrupteur allumé, un mandat généré naît `sans_hektor` (D24) → « signature Hektor » impossible sans le
 > DÉPOSER chez Hektor. Un chemin DORMANT existe (`completerEnvoiDocumentDiffere`, `upload_document_to_hektor` avec
 > `app_document_id` : « aucun appelant ») — jamais éprouvé. À l'inverse, un document venu de Hektor (modèle ImmoSign,

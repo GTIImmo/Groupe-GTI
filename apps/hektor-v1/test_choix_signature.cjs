@@ -119,8 +119,55 @@ controle("6. la liste Documents : un seul bouton « Signature » quand le choix 
 controle("6. la fenêtre est montée dans les DEUX présentations de la liste", (app.match(/\{\/\* A\.2 P8-2 : le choix a trois signatures\. \*\/\}/g) || []).length === 2);
 controle("6. le suivi du mandat ouvre le même choix (et sa signature manuscrite a le même texte)",
   /onClick=\{choixSignature\.actif \? \(\) => setChoixDoc\(document\) : openHektorSignature\}/.test(app) && /async function signeALaMain\(document: ConsoleDocument\)/.test(app));
-controle("6. l'éditeur ouvre le choix juste après la génération, et le met à jour jusqu'au dépôt confirmé",
-  /if \(fresh && \(youtrustGen \|\| chezNousGen\)\) \{/.test(app) && /setChoixApresGen\(\(ouvert\) => \(ouvert && ouvert\.id === fresh\.id \? fresh : ouvert\)\)/.test(app));
+// A.2 (06/11/2026) : ESSAI RÉEL sur 61398 -- le choix disparaissait après « Générer » : l'étape passe de « Éditer » à
+// « Édité », qui monte SA copie de l'éditeur, fermée. Corrigé par un RELAIS par bien + les fenêtres hors de l'éditeur ouvert.
+controle("6. l'éditeur confie le mandat généré au RELAIS à chaque relecture (dépôt en cours, puis confirmé)",
+  app.includes("if (fresh && (youtrustGen || chezNousGen)) {") && app.includes("annoncerChoixApresGeneration(props.dossier.app_dossier_id, fresh)") && !app.includes("choixVuApresGen"));
+controle("6. toute copie de l'éditeur reprend le choix en attente à son montage, et écoute le relais",
+  app.includes("const enAttente = choixApresGenerationEnAttente(props.dossier.app_dossier_id)") && app.includes("window.addEventListener(EVENEMENT_CHOIX_APRES_GENERATION, ecoute)"));
+{
+  const debutEd = app.indexOf("function MandatDocumentEditor(props: {");
+  const finEd = app.indexOf("\n}\n", debutEd);
+  const ed = app.slice(debutEd, finEd);
+  const portail = ed.indexOf("{open && typeof document !== 'undefined' ? createPortal(");
+  const finPortail = ed.indexOf("        ) : null}\n", ed.indexOf("          document.body,\n", ed.lastIndexOf("mandat-document-full-preview")));
+  const choix = ed.indexOf("{choixApresGen ? (");
+  controle("6. les trois fenêtres (choix, envoi, question Hektor) sont HORS de l'éditeur ouvert : elles s'ouvrent même éditeur fermé",
+    portail >= 0 && finPortail > portail && choix > finPortail && ed.indexOf("{envoiYoutrustDoc ? (") > finPortail && ed.indexOf("{signPromptOpen && typeof document !== 'undefined' ? createPortal(") > finPortail,
+    `${portail} / ${finPortail} / ${choix}`);
+  controle("6. chaque sortie du choix (Youtrust, Hektor, manuscrite, Fermer) le marque fermé : il ne se rouvre pas tout seul",
+    (ed.match(/fermerChoixApresGeneration\(props\.dossier\.app_dossier_id\)/g) || []).length === 4);
+}
+// Le relais lui-même, sur son vrai code (découpé dans App.tsx, types retirés par esbuild).
+{
+  const debut = app.indexOf("type ChoixEnAttente = ");
+  const fin = app.indexOf("function MandatDocumentEditor(props: {");
+  const morceau = app.slice(debut, fin);
+  const js = esbuild.transformSync(morceau + "\n;module.exports = { annoncerChoixApresGeneration, fermerChoixApresGeneration, choixApresGenerationEnAttente };", { loader: "ts", format: "cjs" }).code;
+  const annonces = [];
+  let maintenant = 1_000_000;
+  const env = { module: { exports: {} }, Map, String, Boolean, Date: { now: () => maintenant },
+    CustomEvent: function (nom, init) { this.type = nom; this.detail = init.detail; },
+    window: { dispatchEvent: (e) => annonces.push(e.detail) } };
+  vm.runInNewContext(js, env);
+  const R = env.module.exports;
+  const d1 = { id: "doc-1", envoi_hektor_statut: "a_envoyer" };
+  R.annoncerChoixApresGeneration(42, d1);
+  controle("6. relais : annoncer un mandat le diffuse, et une copie qui se monte le trouve en attente",
+    annonces.length === 1 && annonces[0].app_dossier_id === "42" && R.choixApresGenerationEnAttente(42) === d1);
+  const d1b = { id: "doc-1", envoi_hektor_statut: "envoye" };
+  R.annoncerChoixApresGeneration(42, d1b);
+  controle("6. relais : le dépôt confirmé met à jour le MÊME mandat", annonces.length === 2 && R.choixApresGenerationEnAttente(42) === d1b);
+  R.fermerChoixApresGeneration(42);
+  R.annoncerChoixApresGeneration(42, { id: "doc-1", envoi_hektor_statut: "envoye" });
+  controle("6. relais : fermé, il ne se rouvre pas (ni au montage, ni à la relecture suivante)", annonces.length === 2 && R.choixApresGenerationEnAttente(42) === null);
+  const d2 = { id: "doc-2" };
+  R.annoncerChoixApresGeneration(42, d2);
+  controle("6. relais : un NOUVEAU mandat généré rouvre le choix", annonces.length === 3 && R.choixApresGenerationEnAttente(42) === d2);
+  controle("6. TÉMOIN relais : un autre bien n'est pas concerné", R.choixApresGenerationEnAttente(43) === null);
+  maintenant += 6 * 60_000;
+  controle("6. relais : au-delà de 5 minutes, rouvrir la fiche ne repropose pas un vieux choix", R.choixApresGenerationEnAttente(42) === null);
+}
 const sql = fs.readFileSync(path.resolve(__dirname, "..", "..", "supabase", "patch_a2_p8_2_signe_main_garde_2026-11-06.sql"), "utf8");
 controle("6. la même règle CÔTÉ BASE est prête (patch : refus si Youtrust ou ImmoSign en attente)",
   /v_sig ->> 'status' = 'pending'/.test(sql) && /v_sig ->> 'provider' = 'youtrust' or nullif/.test(sql));

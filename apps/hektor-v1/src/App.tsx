@@ -5424,6 +5424,31 @@ function LockedDataField(props: {
   )
 }
 
+// A.2 (06/11/2026) -- LE RELAIS DU CHOIX APRES GENERATION. La rubrique Mandat monte une copie de l'editeur PAR ETAPE
+// (« Editer », « Edite »...) : quand le mandat genere arrive, l'etape change et la copie qui attendait est demontee.
+// Le mandat a faire signer est donc confie a ce relais, par bien : la copie suivante le reprend et ouvre le choix, et
+// chaque relecture (depot chez Hektor confirme) le met a jour. Fermer le choix le marque « ferme » : il ne se rouvre pas.
+type ChoixEnAttente = { doc: ConsoleDocument; le: number; ferme: boolean }
+const choixApresGeneration = new Map<string, ChoixEnAttente>()
+const EVENEMENT_CHOIX_APRES_GENERATION = 'hektor:choix-apres-generation'
+function annoncerChoixApresGeneration(dossierId: Dossier['app_dossier_id'], doc: ConsoleDocument) {
+  const cle = String(dossierId)
+  const avant = choixApresGeneration.get(cle)
+  const memeDoc = Boolean(avant && avant.doc.id === doc.id)
+  const ferme = memeDoc && Boolean(avant?.ferme)
+  choixApresGeneration.set(cle, { doc, le: memeDoc && avant ? avant.le : Date.now(), ferme })
+  if (!ferme && typeof window !== 'undefined') window.dispatchEvent(new CustomEvent(EVENEMENT_CHOIX_APRES_GENERATION, { detail: { app_dossier_id: cle, doc } }))
+}
+function fermerChoixApresGeneration(dossierId: Dossier['app_dossier_id']) {
+  const enCours = choixApresGeneration.get(String(dossierId))
+  if (enCours) enCours.ferme = true
+}
+// 5 minutes au plus : au-dela, rouvrir la fiche ne repropose pas un vieux choix.
+function choixApresGenerationEnAttente(dossierId: Dossier['app_dossier_id']): ConsoleDocument | null {
+  const enCours = choixApresGeneration.get(String(dossierId))
+  return enCours && !enCours.ferme && Date.now() - enCours.le < 5 * 60_000 ? enCours.doc : null
+}
+
 function MandatDocumentEditor(props: {
   dossier: Dossier
   detail: DossierDetailPayload
@@ -5453,6 +5478,19 @@ function MandatDocumentEditor(props: {
   // A.2 P8-2 (06/11/2026, D42) : le choix a trois signatures, ouvert juste apres la generation.
   const [choixApresGen, setChoixApresGen] = useState<ConsoleDocument | null>(null)
   const choixSignatureEditeur = useChoixSignatureActif()
+  // A.2 (06/11/2026) : le choix apres generation survit au changement d'etape (une autre copie de l'editeur le reprend).
+  useEffect(() => {
+    const cle = String(props.dossier.app_dossier_id)
+    const enAttente = choixApresGenerationEnAttente(props.dossier.app_dossier_id)
+    if (enAttente) setChoixApresGen(enAttente)
+    const ecoute = (event: Event) => {
+      const annonce = (event as CustomEvent<{ app_dossier_id: string; doc: ConsoleDocument }>).detail
+      if (!annonce || annonce.app_dossier_id !== cle) return
+      setChoixApresGen((ouvert) => (ouvert && ouvert.id !== annonce.doc.id ? ouvert : annonce.doc))
+    }
+    window.addEventListener(EVENEMENT_CHOIX_APRES_GENERATION, ecoute)
+    return () => window.removeEventListener(EVENEMENT_CHOIX_APRES_GENERATION, ecoute)
+  }, [props.dossier.app_dossier_id])
   // A.2 lot 6b P5 : « Corriger le mandat » -- l'editeur rouvert pour corriger le PDF `ancien` avant l'envoi ;
   // la regeneration le remplace (le worker le marque) et revient a l'envoi avec « ce qui a change » (envoiAncien).
   const [correction, setCorrection] = useState<{ ancien: ConsoleDocument } | null>(null)
@@ -5860,8 +5898,6 @@ function MandatDocumentEditor(props: {
     // A.2 lot 6b P5 : la ligne du nouveau PDF nait AVANT que le worker marque l'ancien ; on laisse 45 s a la marque
     // avant de revenir a l'envoi (sinon la fenetre dirait « pas marque » alors qu'il allait l'etre).
     let marqueAttendueJusqua = 0
-    // A.2 P8-2 : le choix ne s'ouvre qu'UNE fois ; les relectures suivantes ne font que le mettre a jour.
-    let choixVuApresGen = false
     const poll = async () => {
       try {
         const docs = await loadConsoleDocuments(props.dossier.app_dossier_id)
@@ -5891,8 +5927,8 @@ function MandatDocumentEditor(props: {
             : fresh.envoi_hektor_statut === 'envoye' ? bvs('Mandat enregistré chez nous et déposé dans Hektor. Choisissez comment le faire signer.')
             : fresh.envoi_hektor_statut === 'echec' ? bvs('Mandat enregistré chez nous. Le dépôt chez Hektor a échoué : il sera repris à 12:30, la signature Hektor sera possible ensuite.')
             : bvs('Mandat enregistré chez nous — dépôt chez Hektor en cours…'))
-          if (!choixVuApresGen) { choixVuApresGen = true; setChoixApresGen(fresh) }
-          else setChoixApresGen((ouvert) => (ouvert && ouvert.id === fresh.id ? fresh : ouvert))
+          // A.2 (06/11/2026) : par le RELAIS, pour que la copie de l'editeur de l'etape suivante l'ouvre aussi.
+          annoncerChoixApresGeneration(props.dossier.app_dossier_id, fresh)
           if (deposeOuFini || Date.now() >= deadline) return
           window.setTimeout(() => { void poll() }, 4000)
           return
@@ -6222,22 +6258,43 @@ function MandatDocumentEditor(props: {
                 </>
               )}
             </div>
-            {signPromptOpen ? (
+          </div>
+          {showDocPreview ? (
+            <aside className="mandat-document-preview" aria-label="Apercu document">
+              <div className="mandat-preview-head">
+                <span>GROUPE GTI</span>
+                <strong>{isAvenant ? 'AVENANT AU MANDAT' : 'MANDAT DE VENTE'}</strong>
+                <small>N {draft.numeroMandat || 'a completer'}</small>
+              </div>
+              {previewUrl ? <iframe className="mandat-document-full-preview" src={previewUrl} title="Apercu complet du document" /> : null}
+            </aside>
+          ) : null}
+        </div>
+            </div>
+          </div>,
+          document.body,
+        ) : null}
+      {/* A.2 (06/11/2026) : ces fenetres vivent HORS de l'editeur ouvert. Apres « Generer », la rubrique Mandat passe de
+          l'etape « Editer » a « Edite », qui monte SA propre copie de l'editeur, FERMEE : le choix doit pouvoir s'y ouvrir
+          (essai reel du 06/11 sur 61398 : il disparaissait). Le choix et l'envoi portent leur portail ; la question Hektor aussi. */}
+            {signPromptOpen && typeof document !== 'undefined' ? createPortal(
               <SignaturePromptModal
                 intro={`Dans la popin signature Hektor, fais signer ${isAvenant ? "l'avenant" : 'le mandat'} par ces signataires :`}
                 items={(selectedSignatureRecipients.length ? selectedSignatureRecipients : draft.signatureRecipients).map((recipient) => `${signatureRecipientLabel(recipient)}${recipient.email ? ` · ${recipient.email}` : ''}${recipient.telephone ? ` · ${recipient.telephone}` : ''}`)}
                 onConfirm={openHektorForSignature}
                 onClose={() => setSignPromptOpen(false)}
-              />
+              />,
+              document.body,
             ) : null}
             {choixApresGen ? (
               <ChoixSignatureFenetre
                 document={choixApresGen}
                 choix={choixDeSignature(choixApresGen, { youtrustActif: choixSignatureEditeur.youtrust, manuscriteActive: APP_MANDAT_V3_ENABLED })}
-                onYoutrust={() => { const d = choixApresGen; setChoixApresGen(null); setEnvoiYoutrustDoc(d); setEnvoiJusteGenere(true) }}
-                onHektor={() => { setChoixApresGen(null); setSignPromptOpen(true) }}
+                onYoutrust={() => { const d = choixApresGen; fermerChoixApresGeneration(props.dossier.app_dossier_id); setChoixApresGen(null); setEnvoiYoutrustDoc(d); setEnvoiJusteGenere(true) }}
+                onHektor={() => { fermerChoixApresGeneration(props.dossier.app_dossier_id); setChoixApresGen(null); setSignPromptOpen(true) }}
                 onManuscrite={() => {
                   const d = choixApresGen
+                  fermerChoixApresGeneration(props.dossier.app_dossier_id)
                   setChoixApresGen(null)
                   if (!window.confirm(`Confirmer que ce document a été signé À LA MAIN par tous les mandants ?
 
@@ -6248,7 +6305,7 @@ Le mandat passera à l'état « Signé ». À ne faire qu'une fois le PDF signé
                     .then(() => setMessage(bvs('Document marqué comme signé (signature manuscrite).')))
                     .catch((err) => setMessage(err instanceof Error ? err.message : 'Impossible de marquer le document comme signé'))
                 }}
-                onClose={() => setChoixApresGen(null)}
+                onClose={() => { fermerChoixApresGeneration(props.dossier.app_dossier_id); setChoixApresGen(null) }}
                 adresse={props.address}
                 numeroMandat={props.dossier.numero_mandat != null ? String(props.dossier.numero_mandat) : null}
                 negociateur={props.dossier.commercial_nom ?? null}
@@ -6267,22 +6324,6 @@ Le mandat passera à l'état « Signé ». À ne faire qu'une fois le PDF signé
                 ficheDuJour={envoiJusteGenere ? null : ficheDuJourPourEnvoi(initialDraft)}
               />
             ) : null}
-          </div>
-          {showDocPreview ? (
-            <aside className="mandat-document-preview" aria-label="Apercu document">
-              <div className="mandat-preview-head">
-                <span>GROUPE GTI</span>
-                <strong>{isAvenant ? 'AVENANT AU MANDAT' : 'MANDAT DE VENTE'}</strong>
-                <small>N {draft.numeroMandat || 'a completer'}</small>
-              </div>
-              {previewUrl ? <iframe className="mandat-document-full-preview" src={previewUrl} title="Apercu complet du document" /> : null}
-            </aside>
-          ) : null}
-        </div>
-            </div>
-          </div>,
-          document.body,
-        ) : null}
     </div>
   )
 }
