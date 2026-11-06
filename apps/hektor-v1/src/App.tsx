@@ -285,6 +285,7 @@ import './ajout-conjoint.css'
 import EnvoiSignatureYoutrust, { EVENEMENT_CORRIGER_MANDAT, type DemandeCorrectionMandat, type OngletCorrection } from './EnvoiSignatureYoutrust'
 import type { FicheDuJourPdf } from './lib/ecartsFichePdf'
 import { ficheDuMandant, mandantsImprimes, mandantsSansPrenomOuNom, situationsDesConjoints, type FicheCouple, type SituationConjoint } from './lib/conjointsDuMandat'
+import { etatSignatureDuMandat } from './lib/etatSignatureMandat'
 import RechercheGlobale, { type GroupeRecherche } from './RechercheGlobale'
 import './fil-navigation.css'
 import './suivi-travaux.css'
@@ -5713,6 +5714,9 @@ function MandatDocumentEditor(props: {
     } catch { /* on poursuit sans snapshot */ }
     // A.2 lot 6b P4 : la suite (attente du document, fenetre de signature) suit le meme interrupteur.
     let youtrustGen = false
+    // A.2 P8-0 / G6 (06/11/2026, D42) : `mandat_nait_chez_nous` allume -> la ligne nait chez nous en secondes, et le
+    // depot chez Hektor suit en arriere-plan. Relu au clic, comme l'autre (absent / illisible = eteint).
+    let chezNousGen = false
     // A.2 lot 6b P5 : la correction en cours au moment du clic (le PDF que cette generation remplace).
     const correctionEnCours = correction
     try {
@@ -5720,6 +5724,7 @@ function MandatDocumentEditor(props: {
       // Éteint : le HTML envoyé est celui d'avant, identique à l'aperçu. L'aperçu, lui, n'a jamais de repères.
       const reperes = await loadAppSettingActive('signature_youtrust')
       youtrustGen = reperes
+      chezNousGen = await loadAppSettingActive('mandat_nait_chez_nous')
       // A.2 lot 6b P7 (D36) : Youtrust exige un prenom ET un nom par signataire -- on le dit ici, pas a l'envoi.
       const manquants = reperes ? mandantsSansPrenomOuNom(draftDuDocument.mandants) : []
       if (manquants.length) {
@@ -5788,7 +5793,7 @@ function MandatDocumentEditor(props: {
       }
     }
 
-    setMessage(youtrustGen ? bvs('Mandat en cours d’enregistrement…') : bvs('Mandat en cours de depot dans Hektor…'))
+    setMessage(youtrustGen || chezNousGen ? bvs('Mandat en cours d’enregistrement…') : bvs('Mandat en cours de depot dans Hektor…'))
     // La pop-up de signature n'apparait QUE lorsque Hektor a reellement ajoute le document.
     const deadline = Date.now() + 150000
     // A.2 lot 6b P5 : la ligne du nouveau PDF nait AVANT que le worker marque l'ancien ; on laisse 45 s a la marque
@@ -5814,16 +5819,29 @@ function MandatDocumentEditor(props: {
           return
         }
         if (fresh) {
-          setPdfBusy(false)
+          // A.2 P8-0 / G6 : « occupe » reste tant qu'on attend le depot (sinon un 2e clic genererait un 2e mandat).
+          if (!(chezNousGen && !youtrustGen && fresh.envoi_hektor_statut !== 'envoye' && fresh.envoi_hektor_statut !== 'echec')) setPdfBusy(false)
           if (youtrustGen) {
             setMessage(bvs('Mandat enregistré chez nous.'))
             setEnvoiYoutrustDoc(fresh)
             setEnvoiJusteGenere(true)
             return
           }
-          setMessage(bvs('Mandat depose dans Hektor.'))
-          setSignPromptOpen(true)
-          return
+          // A.2 P8-0 / G6 : ne chez nous, il est la en secondes ; la signature Hektor attend que HEKTOR l'ait (depot
+          // confirme). En echec : on le DIT et on s'arrete -- la reprise de 12:30 le deposera.
+          if (chezNousGen && fresh.envoi_hektor_statut !== 'envoye') {
+            if (fresh.envoi_hektor_statut === 'echec') {
+              setPdfBusy(false)
+              setMessage(bvs('Mandat enregistré chez nous. Le dépôt chez Hektor a échoué : il sera repris à 12:30, la signature Hektor sera possible ensuite.'))
+              return
+            }
+            setMessage(bvs('Mandat enregistré chez nous — dépôt chez Hektor en cours…'))
+          } else {
+            setPdfBusy(false)
+            setMessage(chezNousGen ? bvs('Mandat enregistré chez nous et déposé dans Hektor.') : bvs('Mandat depose dans Hektor.'))
+            setSignPromptOpen(true)
+            return
+          }
         }
       } catch { /* on reessaie */ }
       if (Date.now() < deadline) {
@@ -5831,7 +5849,9 @@ function MandatDocumentEditor(props: {
       } else {
         setMessage(youtrustGen
           ? bvs('Le mandat met du temps à s’enregistrer. Utilise le bouton « Signature » sur le document quand il apparaît.')
-          : bvs('Le mandat met du temps a arriver dans Hektor. Utilise le bouton « Signature » sur le document quand il apparait.'))
+          : chezNousGen
+            ? bvs('Mandat enregistré chez nous ; le dépôt chez Hektor continue en arrière-plan. Utilise « Signature » sur le document quand il est déposé.')
+            : bvs('Le mandat met du temps a arriver dans Hektor. Utilise le bouton « Signature » sur le document quand il apparait.'))
         setPdfBusy(false)
       }
     }
@@ -11665,6 +11685,17 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
     const r = documentRemplace(document)
     return r ? `Remplacé le ${new Date(r.le).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })} par une version régénérée — jamais envoyé` : null
   }
+  // A.2 P8-0 / G5 (06/11/2026) : une action a une fin visible -- l'etat du DEPOT chez Hektor d'un document ne chez nous
+  // (ajout a la main, mandat genere). « sans_hektor » (mandat Youtrust seul) et NULL (venu de Hektor) : rien a dire.
+  const mentionDepotHektor = (document: ConsoleDocument): { texte: string; echec: boolean } | null => {
+    if (document.storage_status === 'pending_upload' || document.envoi_hektor_statut === 'a_envoyer') {
+      return { texte: bvs('Chez nous — dépôt chez Hektor en cours'), echec: false }
+    }
+    if (document.envoi_hektor_statut === 'echec') {
+      return { texte: bvs("Chez nous — le dépôt chez Hektor a échoué, il sera repris à 12:30"), echec: true }
+    }
+    return null
+  }
   const [loading, setLoading] = useState(false)
   const [pendingDocumentIds, setPendingDocumentIds] = useState<Set<string>>(() => new Set())
   const [deletingDocumentIds, setDeletingDocumentIds] = useState<Set<string>>(() => new Set())
@@ -12162,6 +12193,7 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
                 <div className="fa-ck-dmeta">{[consoleDocumentVisibilityLabel(e.doc.visibility), formatFileSize(e.doc.file_size)].filter((v) => v && v !== '-').join(' · ') || 'Document'}</div>
                 {e.sigLabel ? <div className={`fa-ck-docsig${e.signed ? ' signed' : ''}`}>{e.sigLabel}</div> : null}
                 {e.remplace ? <span className="ens-remplace-mention">{e.remplace}</span> : null}
+                {(() => { const m = mentionDepotHektor(e.doc); return m ? <span className={m.echec ? 'console-document-absent' : 'console-document-encours'}>{m.texte}</span> : null })()}
               </div>
               <div className="fa-ck-dright">
                 {e.remplace ? <span className="ens-pill-remplace">Remplacé</span> : <span className={`fa-ck-docbadge${e.signed ? ' ok' : ''}`}>{e.badge}</span>}
@@ -12250,7 +12282,7 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
                         aujourd'hui DEFINITIF -- et il etait muet.
                         ⭐ Le mot « chez nous » est la volontairement : c'est ce que
                         le negociateur doit retenir, le document ne risque rien. */}
-                    {document.storage_status === 'pending_upload' ? (
+                    {document.storage_status === 'pending_upload' || document.envoi_hektor_statut === 'a_envoyer' ? (
                       <span className="console-document-encours">
                         {bvs("Chez nous — envoi à Hektor en cours")}
                       </span>
@@ -32772,23 +32804,20 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   // garde-fou, le cockpit afficherait « Mandat édité — à envoyer » sur un mandat en
   // réalité signé. On n'accepte donc le statut que si une procédure existe ;
   // sinon on renvoie null → repli sur man_valider / dif (comportement sûr).
+  // A.2 P8-1 (06/11/2026) : la regle ci-dessus (procedure ou signe, sinon ignore) est GARDEE, mais elle s'applique a
+  // TOUS les documents du mandat et le PLUS RECENT etat fiable l'emporte -- au lieu du premier de la liste (ordre
+  // alphabetique : un vieux modele Hektor passait devant le mandat de l'app). Elle accepte aussi un mandat Youtrust en
+  // cours (sans procedure ImmoSign, R2) et un PDF de l'editeur pas encore parti. Detail : lib/etatSignatureMandat.ts.
   const ckSigStatus = (match: RegExp, exclude?: RegExp) => {
-    const doc = ckDocs.find((d) => {
-      const name = `${d.document_name ?? ''} ${d.document_type ?? ''}`
-      if (exclude && exclude.test(name)) return false
-      // A.2 lot 6b P5 : un PDF remplace par une regeneration ne dit plus rien de l'etat du mandat.
-      if (documentRemplace(d)) return false
-      return match.test(name)
-    })
-    const sig = (doc?.metadata_json as { signature?: SignatureMeta } | null)?.signature
-    if (!sig) return null
-    const hasProcedure = sig.procedure_id != null && String(sig.procedure_id).trim() !== ''
-    // Un statut « signé » reste fiable même sans procédure (il porte signed_at) ;
-    // mais « to_send » / « pending » sans procédure = défaut non fiable → ignoré.
-    if (!hasProcedure && sig.status !== 'signed') return null
-    return sig.status ?? null
+    // A.2 lot 6b P5 : un PDF remplace par une regeneration ne dit plus rien de l'etat du mandat.
+    const etat = etatSignatureDuMandat(ckDocs, match, exclude, (d) => Boolean(documentRemplace(d as ConsoleDocument)))
+    return etat ? etat.status : null
   }
   const mandatSig = ckSigStatus(/mandat/i, /avenant/i)
+  // A.2 P8-1 : le fournisseur de cet etat, pour que les textes ne disent plus « ImmoSign » d'un mandat Youtrust.
+  const mandatFournisseur = etatSignatureDuMandat(ckDocs, /mandat/i, /avenant/i, (d) => Boolean(documentRemplace(d as ConsoleDocument)))?.fournisseur ?? null
+  const mandatEnvoyeSur = mandatFournisseur === 'youtrust' ? 'Envoyé en signature électronique (Youtrust)' : 'Envoyé sur ImmoSign'
+  const mandatSigneSur = mandatFournisseur === 'youtrust' ? 'Signé électroniquement (Youtrust).' : mandatFournisseur === 'manuscrite' ? 'Signé à la main.' : 'Signé sur ImmoSign.'
   const avenantSig = ckSigStatus(/avenant/i)
   // Nouveau prix PROPOSÉ par l'avenant, annoté par le worker sur le document
   // (metadata_json.avenant_new_price) — AFFICHAGE SEUL. Le prix réel de l'annonce
@@ -32848,7 +32877,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
       desc: 'Le numéro de mandat est attribué : éditez le mandat, puis envoyez-le à la signature.',
       btns: [{ label: 'Éditer le mandat', rubKey: 'mandat' }, { label: 'Préparer les documents', rubKey: 'documents' }] },
     man_edite: { sub: "Mandat édité · à envoyer", sc: [{ label: "Envoyer à la signature", rubKey: 'mandat' }, { label: "Planifier la signature", rubKey: 'rendezvous' }, { label: "Écrire au mandant", rubKey: 'contact' }], label: 'Mandat édité — à envoyer', led: '#1f63b8',
-      desc: 'Document rédigé, envoyez-le à la signature (ImmoSign).',
+      desc: 'Document rédigé, envoyez-le à la signature.',
       btns: [{ label: 'Envoyer le mandat à la signature', rubKey: 'mandat' }, { label: 'Préparer les documents', rubKey: 'documents' }] },
     man_signature: { sub: "Mandat en signature · suivi propriétaire", sc: [{ label: "Relancer la signature", rubKey: 'mandat' }, { label: "Planifier un point", rubKey: 'rendezvous' }, { label: "Écrire au mandant", rubKey: 'contact' }], label: 'En signature — suivre / relancer', led: '#1f63b8',
       desc: 'En attente de signature du mandant.',
@@ -33500,7 +33529,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
           </>
         ) : mv3Mode === 'envoye' ? (
           <>
-            <div className="mv3-sh"><span className="mv3-ic blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M22 2 11 13" /><path d="M22 2 15 22l-4-9-9-4z" /></svg></span><div><div className="tt">Le mandat — envoyé en signature</div><div className="ss">Envoyé sur ImmoSign — vos mandants doivent signer</div></div><span className="tag" style={{ background: 'var(--mv3-blue-soft)', color: 'var(--mv3-blue)' }}>En signature</span></div>
+            <div className="mv3-sh"><span className="mv3-ic blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M22 2 11 13" /><path d="M22 2 15 22l-4-9-9-4z" /></svg></span><div><div className="tt">Le mandat — envoyé en signature</div><div className="ss">{mandatEnvoyeSur} — vos mandants doivent signer</div></div><span className="tag" style={{ background: 'var(--mv3-blue-soft)', color: 'var(--mv3-blue)' }}>En signature</span></div>
             <section className="mv3-card mv3-pad">
               <div className="mv3-gen2" style={{ marginBottom: 13 }}>
                 {mv3IllusEl('envoye')}
@@ -33516,7 +33545,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
             <section className="mv3-card mv3-pad">
               <div className="mv3-gen2" style={{ marginBottom: 13 }}>
                 {mv3IllusEl('valider')}
-                <div className="mv3-gen2-body"><p className="mv3-gen2-cap" style={{ margin: 0 }}><b>Signé sur ImmoSign.</b> Complétez votre annonce (documents, photos, texte des portails) avant de demander la validation.</p></div>
+                <div className="mv3-gen2-body"><p className="mv3-gen2-cap" style={{ margin: 0 }}><b>{mandatSigneSur}</b> Complétez votre annonce (documents, photos, texte des portails) avant de demander la validation.</p></div>
               </div>
               <div className="mv3-embed">{!isLightweightDetail ? <MandatSignatureTracker dossier={dossier} onJobCreated={props.onHektorActionJobCreated} /> : null}</div>
             </section>

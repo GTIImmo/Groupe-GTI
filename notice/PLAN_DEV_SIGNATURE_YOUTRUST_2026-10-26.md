@@ -956,6 +956,20 @@ webhook posé par Frédéric ; redémarrage du worker.
 >   défaut en vrai (« LIT original | MONTE …/signed/… ») ; G2-4, G2-7, G3-1, G3-5 rouges (absents).
 >   ⏰ **RESTE de P8** : l'écran (G5, G6, P8-1 cockpit, P8-2 bouton unique, P8-3 suivi, P8-4 preuves, P8-5), la garde de
 >   « signé à la main » en base, puis l'allumage et la preuve sur 61398.
+> - ✅ **P8-1 + G5 + G6 CODÉS (écran, 06/11) — commit `3c32daa` pour le worker ; l'écran NON DÉPLOYÉ** :
+>   **P8-1** `src/lib/etatSignatureMandat.ts` — le cockpit et Mandat V3 lisent TOUS les documents du mandat et le plus
+>   récent état fiable l'emporte (Youtrust tous états, procédure ImmoSign, signé, PDF de l'éditeur) ; ⚠ **piège trouvé par le
+>   rejeu** : pour ImmoSign `sent_at` = le jour où l'app a VU l'attente (18/08, 15/10), pas l'envoi → entre procédures
+>   ImmoSign, c'est le NUMÉRO qui ordonne (une attente de numéro inférieur au signé est périmée : 62806 809<843, 59502
+>   372<386, 63066 851<853). Textes « ImmoSign » en dur remplacés selon le fournisseur. **G5** la liste v21 (et l'ancienne)
+>   montre « Chez nous — dépôt chez Hektor en cours / a échoué, il sera repris à 12:30 ». **G6** l'éditeur relit
+>   `mandat_nait_chez_nous` au clic : la ligne est là en secondes, la signature Hektor n'est proposée qu'au dépôt CONFIRMÉ
+>   (occupé jusque-là ; échec dit et arrêt). **Essais** : `test_etat_signature_mandat.cjs` 23/23 (ancienne règle rejouée à
+>   côté : 8 cas où elle avait raison → même réponse) ; build OK ; conjoints 26/26, écarts 18/18.
+>   **REJEU SUR LE PARC (SQL, lecture seule, 630 biens vivants à document « mandat »)** : 581 IDENTIQUES ; 49 changent —
+>   38 « rien » → « signé » (dont les 5 dont le cockpit montre le cycle : 61398, 40612, 62457, 63173, 63248), 8 « attente
+>   périmée » → « signé », 2 « rien » → « attente », et **1 seul « signé » → « en attente » : 63443** (procédure 958 en cours
+>   APRÈS la 951 signée, mandat 18991) — à regarder avec Frédéric. ⚠ Non vu à l'écran (pas de session sur un serveur local).
 > **Le nœud** : interrupteur allumé, un mandat généré naît `sans_hektor` (D24) → « signature Hektor » impossible sans le
 > DÉPOSER chez Hektor. Un chemin DORMANT existe (`completerEnvoiDocumentDiffere`, `upload_document_to_hektor` avec
 > `app_document_id` : « aucun appelant ») — jamais éprouvé. À l'inverse, un document venu de Hektor (modèle ImmoSign,
