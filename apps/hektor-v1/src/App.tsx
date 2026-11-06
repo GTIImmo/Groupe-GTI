@@ -9903,6 +9903,17 @@ function normalizeEmail(value?: string | null) {
   return (value ?? '').trim().toLowerCase()
 }
 
+// ⛔ Règle de Frédéric (06/11/2026, audit §54) : un ADMIN agit au nom du négociateur en charge, jamais sous une fiche
+//   déduite de SA session -- son e-mail, ou son nom lu dans l'e-mail (« franck.gerphagnon » trouvait la fiche
+//   « FRANCK GERPHAGNON - Compte formation »). Seul un négociateur part de lui-même. Un e-mail désigné autrement
+//   (le propriétaire de l'agenda choisi, par exemple) reste.
+function emailHektorHorsSession(email: string | null | undefined, role: UserProfile['role'] | null | undefined, sessionEmail: string | null | undefined) {
+  if (role === 'commercial') return email ?? null
+  const normalized = normalizeEmail(email)
+  if (!normalized || normalized === normalizeEmail(sessionEmail)) return null
+  return email ?? null
+}
+
 function profileRoleLabel(role?: UserProfile['role'] | null) {
   if (role === 'admin') return 'Administrateur'
   if (role === 'manager') return 'Manager'
@@ -42629,6 +42640,7 @@ function HektorContactIdentityForm(props: {
   onContactInputCreated?: (contact: HektorContactIdentityInput, job: ConsoleJob) => void
 }) {
   const normalizedSessionEmail = normalizeEmail(props.sessionEmail)
+  const hektorUserEmailDesigne = emailHektorHorsSession(props.hektorUserEmail, props.profileRole, props.sessionEmail)
   const availableHektorNegotiators = useMemo(() => {
     const options = props.hektorNegotiators ?? []
     if (props.profileRole === 'commercial') {
@@ -42639,14 +42651,14 @@ function HektorContactIdentityForm(props: {
   const defaultHektorOption = useMemo(() => {
     if (props.contact) {
       return findContactHektorOption(availableHektorNegotiators, { email: props.contact.negociateur_email })
-        ?? findContactHektorOption(availableHektorNegotiators, { idUser: props.hektorUserId, email: props.hektorUserEmail })
+        ?? findContactHektorOption(availableHektorNegotiators, { idUser: props.hektorUserId, email: hektorUserEmailDesigne })
         ?? findContactHektorOption(availableHektorNegotiators, { email: props.profileRole === 'commercial' ? normalizedSessionEmail : null })
         ?? null
     }
-    return findContactHektorOption(availableHektorNegotiators, { idUser: props.hektorUserId, email: props.hektorUserEmail })
+    return findContactHektorOption(availableHektorNegotiators, { idUser: props.hektorUserId, email: hektorUserEmailDesigne })
       ?? findContactHektorOption(availableHektorNegotiators, { email: props.profileRole === 'commercial' ? normalizedSessionEmail : null })
       ?? null
-  }, [availableHektorNegotiators, normalizedSessionEmail, props.contact?.negociateur_email, props.hektorUserEmail, props.hektorUserId, props.profileRole])
+  }, [availableHektorNegotiators, normalizedSessionEmail, props.contact?.negociateur_email, hektorUserEmailDesigne, props.hektorUserId, props.profileRole])
   const initial = props.contact
     ? contactIdentityInputFromContact(props.contact, props.hektorUserEmail, props.hektorUserId)
     : { civility: '', lastName: '', firstName: '', companyName: '', legalForm: '', siret: '', partnerJobId: '', website: '', spouseLastName: '', spouseFirstName: '', spouseEmail: '', spousePhone: '', spouseAddress: '', spousePostalCode: '', spouseCity: '', email: '', phone: '', phoneSecondary: '', address: '', postalCode: '', city: '', birthDate: '', birthPlace: '', maritalStatus: '', contactKind: 'acquereur', personType: 'personne_seule', sourceId: '', categoryId: '', comments: '', sendRgpdEmail: true, crmMandateSummaryEnabled: null, crmMandateExpirationEnabled: null, crmBirthdayEnabled: null, hektorUserEmail: props.hektorUserEmail ?? null, hektorUserId: props.hektorUserId ?? null }
@@ -42707,10 +42719,10 @@ function HektorContactIdentityForm(props: {
   const [selectedHektorUserId, setSelectedHektorUserId] = useState(defaultHektorOption?.idUser ?? props.hektorUserId ?? '')
   const selectedHektorUser = useMemo(() => {
     return findContactHektorOption(availableHektorNegotiators, { idUser: selectedHektorUserId })
-      ?? findContactHektorOption(availableHektorNegotiators, { idUser: props.hektorUserId, email: props.hektorUserEmail })
+      ?? findContactHektorOption(availableHektorNegotiators, { idUser: props.hektorUserId, email: hektorUserEmailDesigne })
       ?? null
-  }, [availableHektorNegotiators, props.hektorUserEmail, props.hektorUserId, selectedHektorUserId])
-  const selectedHektorEmail = selectedHektorUser?.email ?? props.contact?.negociateur_email ?? props.hektorUserEmail ?? (props.profileRole === 'commercial' ? normalizedSessionEmail : null)
+  }, [availableHektorNegotiators, hektorUserEmailDesigne, props.hektorUserId, selectedHektorUserId])
+  const selectedHektorEmail = selectedHektorUser?.email ?? props.contact?.negociateur_email ?? hektorUserEmailDesigne ?? (props.profileRole === 'commercial' ? normalizedSessionEmail : null)
   const selectedHektorId = selectedHektorUser?.idUser ?? (availableHektorNegotiators.length === 0 ? (selectedHektorUserId.trim() || props.hektorUserId || null) : null)
   const selectedOwnerAnnonce = useMemo(() => {
     return ownerAnnonceOptions.find((option) => String(option.hektor_annonce_id) === ownerAnnonceId) ?? null
@@ -46582,7 +46594,7 @@ function ContactDetailPopupBase(props: {
     return next
   })
   const [contactDetailTab, setContactDetailTab] = useState<'summary' | 'rdv' | 'emails' | 'history' | 'notes' | 'sync'>('summary')
-  const contactSearchIdentity = useMemo(() => contactIdentityInputFromContact(props.contact, props.hektorUserEmail, props.hektorUserId), [props.contact, props.hektorUserEmail, props.hektorUserId])
+  const contactSearchIdentity = useMemo(() => contactIdentityInputFromContact(props.contact, emailHektorHorsSession(props.hektorUserEmail, props.profileRole, props.sessionEmail), props.hektorUserId), [props.contact, props.hektorUserEmail, props.hektorUserId, props.profileRole, props.sessionEmail])
   const contactSearchKind = contactSearchIdentity.contactKind ?? 'acquereur'
 
   async function handleDeleteContactSearch(search: AppContactSearch) {
@@ -47604,7 +47616,7 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
     if (next.has(key)) next.delete(key); else next.add(key)
     return next
   })
-  const contactSearchIdentity = useMemo(() => contactIdentityInputFromContact(props.contact, props.hektorUserEmail, props.hektorUserId), [props.contact, props.hektorUserEmail, props.hektorUserId])
+  const contactSearchIdentity = useMemo(() => contactIdentityInputFromContact(props.contact, emailHektorHorsSession(props.hektorUserEmail, props.profileRole, props.sessionEmail), props.hektorUserId), [props.contact, props.hektorUserEmail, props.hektorUserId, props.profileRole, props.sessionEmail])
   const contactSearchKind = contactSearchIdentity.contactKind ?? 'acquereur'
   // ── États Lots 4 & 5 : fil d'activité + relances « À faire » + formulaire « Planifier » ──
   const [contactActivity, setContactActivity] = useState<ContactActivityItem[]>([])

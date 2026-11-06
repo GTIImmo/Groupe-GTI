@@ -1592,3 +1592,17 @@ Compte formation), pas une valeur automatique.
   `app_google_workspace_identity_avant_regle_admin_20261106` (RLS, aucun droit public). Retour : recopier la ligne.
 - ⚠ Tant que ce n'est pas poussé, Render garde l'ancien code : réenregistrer le compte de Franck dans l'écran Utilisateurs le
   relierait de nouveau. Et une session de Franck déjà ouverte garde l'ancien lien jusqu'au rechargement de la page.
+
+**✅ 06/11, 2e volet (Frédéric : « vas-y fais la correction pour les admins »)** : la fenêtre de contact ne présélectionne plus
+pour un admin une fiche tirée de SA session. Avant : l'e-mail de session (repli de `contactHektorUserEmail`) passait par
+`findContactHektorOption`, qui lit aussi le NOM dans l'e-mail → « franck.gerphagnon » choisissait « FRANCK GERPHAGNON -
+Compte formation » (preuve : le contact du 05/11 au matin, avant le §41, partait déjà sous le n° 2). Après
+(`emailHektorHorsSession`, App.tsx) : pour un compte non « commercial », un e-mail égal à la session ne désigne plus personne ;
+la fenêtre prend le négociateur du contact, sinon oblige à choisir (garde existante « Choisis le negociateur Hektor… »). Un
+e-mail ou un numéro désigné autrement (propriétaire de l'agenda choisi) reste. Les recherches d'un contact (deux fiches) : l'e-mail
+de session d'un admin ne passe plus devant le négociateur du contact. Un négociateur : inchangé.
+Contrôles : `npm run build` vert (tsc compris) ; essai hors ligne sur les VRAIES fonctions extraites de App.tsx, 8/8 (Franck
+admin : aucune présélection ; contact de PEREIRA : PEREIRA ; agenda de LEGRAND : LEGRAND ; LEGRAND négociatrice : elle-même) ;
+témoin ancien comportement → « FRANCK GERPHAGNON ». Non vu à l'écran (il faut une session admin).
+⚠ App.tsx était modifié en même temps par une autre session (modale statut) : le commit a été construit sur HEAD + ce seul
+changement, son travail est resté dans l'arbre, non touché.
