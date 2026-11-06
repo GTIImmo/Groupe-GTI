@@ -51,12 +51,35 @@ const Ico = (props: { d: string; size?: number; width?: number }) => (
   <svg width={props.size ?? 18} height={props.size ?? 18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={props.width ?? 2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={props.d} /></svg>
 )
 const initiales = (nom: string) => nom.split(/\s+/).filter((m) => /^[A-Za-zÀ-ÿ]/.test(m)).slice(0, 2).map((m) => m[0]).join('').toUpperCase() || '•'
+// HARMONISATION DE L'ANNUAIRE (06/11/2026, maquette validée « Oui, code-la ») : « Clients | Partenaires » est un ONGLET DE
+// VUE comme « Liste | Publicité » des Annonces (même gabarit que `.av3-onglets`), posé à côté du titre de la carte, aux
+// deux côtés et au téléphone. Le fond blanc de l'onglet actif GLISSE d'un côté à l'autre (seul mouvement de la page).
+export function OngletsAnnuaire(props: { vue: 'clients' | 'metiers'; onVue: (vue: 'clients' | 'metiers') => void; pleine?: boolean }) {
+  // Le curseur part de l'ancien onglet et glisse vers le nouveau : au montage il est posé sur l'onglet d'AVANT.
+  const [pose, setPose] = useState<'clients' | 'metiers'>(props.vue === 'clients' ? 'metiers' : 'clients')
+  useEffect(() => { const t = window.requestAnimationFrame(() => setPose(props.vue)); return () => window.cancelAnimationFrame(t) }, [props.vue])
+  return (
+    <div className={`an-onglets${props.pleine ? ' pleine' : ''}`} role="group" aria-label="Côté de l'annuaire">
+      <span className={`an-curseur${pose === 'metiers' ? ' droite' : ''}`} aria-hidden="true" />
+      <button type="button" className={props.vue === 'clients' ? 'on' : ''} aria-pressed={props.vue === 'clients'} onClick={() => props.onVue('clients')}>
+        <Ico d="M9 11.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM2.5 20c.8-3.6 3.5-5.5 6.5-5.5s5.7 1.9 6.5 5.5M16 4.5a3.5 3.5 0 0 1 0 7M18.5 14.8c1.6.8 2.7 2.5 3 5.2" size={15} />Clients
+      </button>
+      <button type="button" className={props.vue === 'metiers' ? 'on' : ''} aria-pressed={props.vue === 'metiers'} onClick={() => props.onVue('metiers')}>
+        <Ico d="M5.5 7h13A2.5 2.5 0 0 1 21 9.5v8a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5v-8A2.5 2.5 0 0 1 5.5 7zM9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7M3 12.5h18" size={15} />Partenaires
+      </button>
+    </div>
+  )
+}
+
 const Wip = (props: { children?: ReactNode }) => <span className="pa-wip" title="Les données n'existent pas encore : la place est montrée (décision du 27/10)">{props.children ?? 'en construction'}</span>
 
 export default function CataloguePartenaires(props: {
   onOuvrir: (contact: AppContact) => void
   onVueClients: () => void
   onAjouter?: () => void
+  // HARMONISATION (06/11) : la barre commune de l'app porte la recherche et le « + » ; le catalogue n'a plus son en-tête.
+  enTeteCommun?: boolean
+  requete?: string
   // PIÈCE 3.6 (06/11/2026) : la version TÉLÉPHONE (maquette planche 2, Telephone.dc.html) — pastilles de métier, cartes,
   // et une feuille qui monte du bas au toucher d'une carte. Mêmes données, mêmes règles que le bureau.
   variante?: 'bureau' | 'telephone'
@@ -64,7 +87,9 @@ export default function CataloguePartenaires(props: {
   const [etat, setEtat] = useState<{ etat: 'chargement' | 'pret' | 'erreur'; catalogue?: Catalogue; erreur?: string }>({ etat: 'chargement' })
   const [version, setVersion] = useState(0)
   const [tuile, setTuile] = useState<TuileCatalogue>('notaire')
-  const [requete, setRequete] = useState('')
+  const [requeteLocale, setRequete] = useState('')
+  // Au téléphone, le catalogue garde SA recherche (la barre de commande y reste cachée) ; seul l'onglet devient commun.
+  const requete = props.enTeteCommun && props.variante !== 'telephone' ? (props.requete ?? '') : requeteLocale
   const [agence, setAgence] = useState(TOUTES)
   const [voirArchives, setVoirArchives] = useState(false)
   const [choisi, setChoisi] = useState<string | null>(null)
@@ -116,10 +141,12 @@ export default function CataloguePartenaires(props: {
     )
     return (
       <div className="pt-cat" style={{ ['--c']: cur.couleur, ['--s']: cur.doux } as CSSProperties}>
-        <div className="pa-switch pt-switch" role="group" aria-label="Côté de l'annuaire">
-          <button type="button" aria-pressed="false" onClick={props.onVueClients}>Clients</button>
-          <button type="button" aria-pressed="true">Partenaires</button>
-        </div>
+        {props.enTeteCommun ? <OngletsAnnuaire vue="metiers" onVue={(v) => { if (v === 'clients') props.onVueClients() }} pleine /> : (
+          <div className="pa-switch pt-switch" role="group" aria-label="Côté de l'annuaire">
+            <button type="button" aria-pressed="false" onClick={props.onVueClients}>Clients</button>
+            <button type="button" aria-pressed="true">Partenaires</button>
+          </div>
+        )}
         <header className="pt-header">
           <div className="pt-title">
             <h1>Partenaires</h1>
@@ -217,8 +244,9 @@ export default function CataloguePartenaires(props: {
   )
 
   return (
-    <div className="pa-cat" style={{ ['--c']: cur.couleur, ['--s']: cur.doux } as CSSProperties}>
+    <div className={`pa-cat${props.enTeteCommun ? ' commun' : ''}`} style={{ ['--c']: cur.couleur, ['--s']: cur.doux } as CSSProperties}>
       <header className="pa-header">
+        {props.enTeteCommun ? null : <>
         <div className="pa-top">
           <div className="pa-switch" role="group" aria-label="Côté de l'annuaire">
             <button type="button" aria-pressed="false" onClick={props.onVueClients}>Clients</button>
@@ -237,6 +265,7 @@ export default function CataloguePartenaires(props: {
           <h1>Partenaires</h1>
           <p>Les professionnels qui font avancer nos affaires, rangés par métier.</p>
         </div>
+        </>}
         {etat.etat === 'erreur' ? (
           <div className="pa-error" role="alert">Le catalogue n'a pas pu être lu ({etat.erreur}). <button type="button" onClick={() => setVersion((v) => v + 1)}>Réessayer</button></div>
         ) : null}
@@ -258,13 +287,38 @@ export default function CataloguePartenaires(props: {
         </div>
       </header>
 
+      {props.enTeteCommun ? (
+        <div className="listcard pa-listcard">
+          <div className="lc-head">
+            <div className="lc-title">
+              <h1>Annuaire des partenaires</h1>
+              <span className="lc-badge">{etat.catalogue ? `${TUILES_CATALOGUE.reduce((n, t) => n + (etat.catalogue?.[t.tuile]?.actifs.length ?? 0), 0).toLocaleString('fr-FR')} partenaires` : '…'}</span>
+              <OngletsAnnuaire vue="metiers" onVue={(v) => { if (v === 'clients') props.onVueClients() }} />
+            </div>
+            {agences.length ? (
+              <label className="pa-agence"><span>Agence</span>
+                <select aria-label="Agence" value={agence} onChange={(e) => { setAgence(e.target.value); setChoisi(null) }}>
+                  <option value={TOUTES}>Toutes</option>
+                  {agences.map((a) => <option key={a} value={a}>{a}</option>)}
+                </select>
+              </label>
+            ) : null}
+          </div>
+          {corps()}
+        </div>
+      ) : corps()}
+    </div>
+  )
+
+  function corps() {
+    return (
       <div className="pa-body">
         <section className="pa-list" aria-label="Liste des partenaires">
           <div className="pa-list-head">
             <span className="pa-list-l">{cur.libelle}</span>
             <span>· triés par nom (l'activité avec l'agence est <Wip />)</span>
             <div className="pa-spacer" />
-            {agences.length ? (
+            {agences.length && !props.enTeteCommun ? (
               <label className="pa-agence"><span>Agence</span>
                 <select aria-label="Agence" value={agence} onChange={(e) => { setAgence(e.target.value); setChoisi(null) }}>
                   <option value={TOUTES}>Toutes</option>
@@ -336,6 +390,6 @@ export default function CataloguePartenaires(props: {
           <aside className="pa-panel-empty" aria-label="Aperçu du partenaire">Choisissez un partenaire pour voir sa fiche en aperçu.</aside>
         )}
       </div>
-    </div>
-  )
+    )
+  }
 }

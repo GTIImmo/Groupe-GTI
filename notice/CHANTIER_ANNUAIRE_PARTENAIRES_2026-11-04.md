@@ -2140,6 +2140,22 @@ de documents de copropriété des cartes de la fiche syndic (4.1) devront partir
 B — 4.3 léger : sur la fiche syndic, regrouper les biens à la même adresse « nettoyée » (numéro + rue + code postal, sans
 résidence / bâtiment / étage), en lecture, sans rien stocker.
 
+### 27.6 Harmonisation de l'annuaire Clients / Partenaires (06/11, « Oui, code-la »)
+- Demande de Frédéric : « harmoniser les deux vues… en gardant une unité visuelle par rapport aux autres pages ». Relevé
+  sur l'app en ligne : Annonces et Clients ont la MÊME barre commune (recherche, bouton principal, Filtres,
+  Réinitialiser, Stats, Priorités) puis une carte « titre + compte + onglets de vue » (« Annonces actives | Liste ·
+  Publicité », `.av3-onglets`). Le côté Partenaires sortait du modèle (son propre en-tête, grand titre). Maquette :
+  https://claude.ai/artifact/Gqhn3Gmb9Ewwh56oSWpeYk (deux essais refusés avant : « plus haut de gamme », « harmoniser »).
+- Codé (dessin seulement, aucun geste changé) : la barre commune AUSSI côté Partenaires (recherche du catalogue,
+  « Ajouter un partenaire », Filtres / Stats / Priorités grisés, Réinitialiser vide la recherche) ; « Clients |
+  Partenaires » = `OngletsAnnuaire`, gabarit des onglets des Annonces, posé à côté du titre de la carte (« Annuaire des
+  contacts » / « Annuaire des partenaires » + compte), le fond blanc glisse d'un onglet à l'autre ; les métiers en
+  rangée de puces comme les catégories des clients (les deux cartes commencent à la même hauteur : 209 / 207 px au
+  banc) ; Agence dans l'en-tête de la carte ; téléphone : l'onglet commun en pleine largeur (le reste inchangé).
+- Le sélecteur flottant et son correctif de style (546f1e2) disparaissent avec l'harmonisation.
+- Contrôles : (64) réécrit pour la nouvelle règle ; 92/92 ; notaire vert ; construction verte, ET la version commitée
+  construite à part ; banc fidèle (feuilles de style de l'app, données fictives) bureau 1280 × 665 et téléphone.
+
 ### 7 ter. Les dépendances (techniques, pas un ordre décidé)
 
 - 0 avant tout le reste ; 0.1 avant B2 ; 0.2 avant B1 ; 0.6 avant B5 ; 0.3 avant B6 ; 0.4 avant B7 ; 0.5 avant C2.

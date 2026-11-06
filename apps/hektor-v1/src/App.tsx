@@ -264,7 +264,7 @@ import { PartenaireAVenir, PartenaireAvecNous, PartenaireChiffres, PartenaireInt
 import { SyndicChiffres, SyndicCoproprietes, SyndicNosBiens, useFicheSyndic } from './FicheSyndic'
 import SyndicDuBien, { EVENEMENT_OUVRIR_PARTENAIRE } from './SyndicDuBien'
 import { syndicSelonHektor } from './lib/syndicDuBien'
-import CataloguePartenaires from './CataloguePartenaires'
+import CataloguePartenaires, { OngletsAnnuaire } from './CataloguePartenaires'
 import NotificationsBell from './NotificationsBell'
 import SanteSystemeScreen from './SanteSystemeScreen'
 import RegistreTransactionsScreen, { type GesteDuRegistre } from './RegistreTransactionsScreen'
@@ -16471,6 +16471,8 @@ export default function App() {
   const [contactFermerSignal, setContactFermerSignal] = useState(0)
   // PARTENAIRES 3.5 (05/11/2026) : le côté de l'annuaire, « clients » (la liste d'aujourd'hui) ou « metiers » (le catalogue).
   const [contactsVue, setContactsVue] = useState<'clients' | 'metiers'>('clients')
+  // HARMONISATION DE L'ANNUAIRE (06/11/2026) : côté Partenaires, la barre commune de l'app porte la recherche du catalogue.
+  const [rechercheCatalogue, setRechercheCatalogue] = useState('')
   // Côté Partenaires, le catalogue porte son propre en-tête (maquette planche 1) : la barre du haut des clients se cache.
   const catalogueCranApp = useCranCouplesVisible('partenaires_catalogue', profile?.role ?? null)
   const vueMetiersApp = screen === 'contacts' && contactsVue === 'metiers' && catalogueCranApp
@@ -26157,20 +26159,21 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       {fenetreRechercheGlobale}
       <div className="workspace-shell">
         <main className="content">
-        {screen !== 'suivi' && screen !== 'accueil' && screen !== 'agenda' && screen !== 'transactions' && screen !== 'pilotage' && !vueMetiersApp ? (
+        {/* HARMONISATION (06/11) : la barre commune est AUSSI celle du côté Partenaires (avant : cachée, le catalogue avait la sienne). */}
+        {screen !== 'suivi' && screen !== 'accueil' && screen !== 'agenda' && screen !== 'transactions' && screen !== 'pilotage' ? (
         <section className={`hero ${screen === 'estimations' ? 'estim-toolbar' : ''}`.trim()}>
           <div className="hero-stack">
               <div className="hero-top-row">
                 <label className="search-box">
                   <span>Recherche rapide</span>
-                  <input value={searchDraft} onChange={(event) => setSearchDraft(event.target.value)} placeholder={screen === 'annonces' || screen === 'mandats' ? 'Rechercher une annonce, un bien, une ville...' : screen === 'contacts' ? 'Nom, email, telephone, ville, ID contact...' : screen === 'registre' ? 'Mandat, dossier, bien, mandant, commercial, ville' : screen === 'estimations' ? 'Projet, adresse, ville, proprietaire, negociateur' : 'Dossier, mandat, commercial, ville'} />
+                  <input value={vueMetiersApp ? rechercheCatalogue : searchDraft} onChange={(event) => (vueMetiersApp ? setRechercheCatalogue : setSearchDraft)(event.target.value)} placeholder={vueMetiersApp ? 'Partenaire : nom, ville, téléphone, e-mail…' : screen === 'annonces' || screen === 'mandats' ? 'Rechercher une annonce, un bien, une ville...' : screen === 'contacts' ? 'Nom, email, telephone, ville, ID contact...' : screen === 'registre' ? 'Mandat, dossier, bien, mandant, commercial, ville' : screen === 'estimations' ? 'Projet, adresse, ville, proprietaire, negociateur' : 'Dossier, mandat, commercial, ville'} />
                 </label>
                 <div className="hero-actions">
                   {screen === 'contacts'
-                    ? canManageContacts ? <button className="ghost-button button-primary draft-annonce-open-button" type="button" onClick={() => setContactCreateOpen(true)}>Nouveau contact</button> : null
+                    ? canManageContacts ? <button className="ghost-button button-primary draft-annonce-open-button" type="button" onClick={() => setContactCreateOpen(true)}>{vueMetiersApp ? 'Ajouter un partenaire' : 'Nouveau contact'}</button> : null
                     : canCreateHektorDraftAnnonce ? <button className={`ghost-button button-primary draft-annonce-open-button ${screen === 'estimations' ? 'estim-new-btn' : ''}`.trim()} type="button" onClick={() => setCreateFlow('choice')}>{screen === 'estimations' ? 'Nouvelle estimation' : 'Nouvelle annonce'}</button> : null}
-                  <button className="ghost-button" type="button" onClick={() => setFiltersOpen((open) => !open)}>{filtersOpen ? 'Masquer les filtres' : libelleBoutonFiltres}</button>
-                  <button className="ghost-button" type="button" onClick={resetFilters}>Reinitialiser</button>
+                  <button className="ghost-button" type="button" disabled={vueMetiersApp} title={vueMetiersApp ? "Côté Partenaires : métier et agence se choisissent dans l'annuaire" : undefined} onClick={() => setFiltersOpen((open) => !open)}>{filtersOpen ? 'Masquer les filtres' : libelleBoutonFiltres}</button>
+                  <button className="ghost-button" type="button" onClick={vueMetiersApp ? () => setRechercheCatalogue('') : resetFilters}>Reinitialiser</button>
                 </div>
               </div>
             {screen === 'mandats' ? (
@@ -26276,6 +26279,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                   <button
                     className={`ghost-button kpi-toggle-button ${commercialMetricsExpanded ? 'is-open' : ''}`}
                     type="button"
+                    disabled={vueMetiersApp}
                     onClick={() => setCommercialMetricsExpanded((value) => !value)}
                   >
                     <span className="control-icon control-icon-stats" aria-hidden="true" />
@@ -26285,6 +26289,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                   <button
                     className={`ghost-button kpi-toggle-button priority-toggle ${priorityPanelOpen ? 'is-open' : ''}`}
                     type="button"
+                    disabled={vueMetiersApp}
                     onClick={() => setPriorityPanelOpen((value) => !value)}
                   >
                     <span className="control-icon control-icon-priority" aria-hidden="true" />
@@ -26292,8 +26297,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                     <strong>{viewPriorities.length}</strong>
                   </button>
                 </div>
-                {priorityPanel}
-                {commercialMetricsExpanded ? (
+                {vueMetiersApp ? null : priorityPanel}
+                {commercialMetricsExpanded && !vueMetiersApp ? (
                   <div className="header-kpis header-kpis-secondary">
                     {statsMetrics.map((item) => (
                       <article
@@ -26938,6 +26943,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             vue={contactsVue}
             onVueChange={setContactsVue}
             onOpenCreate={() => setContactCreateOpen(true)}
+            rechercheCatalogue={rechercheCatalogue}
             loading={contactsLoading}
             hasActiveFilters={activeFilters.length > 0}
             createOpen={contactCreateOpen}
@@ -49272,6 +49278,7 @@ function ContactsScreen(props: {
   vue?: 'clients' | 'metiers'
   onVueChange?: (vue: 'clients' | 'metiers') => void
   onOpenCreate?: () => void
+  rechercheCatalogue?: string
 }) {
   const formatNumber = new Intl.NumberFormat('fr-FR')
   const listingTotalLabel = `${formatNumber.format(props.contactsTotal)} contacts`
@@ -49394,14 +49401,11 @@ function ContactsScreen(props: {
           </ContactWorkflowModal>
         ) : null}
 
-        {catalogueVisible && !vueMetiers ? (
-          <div className="pa-switch vue-switch" role="group" aria-label="Côté de l'annuaire">
-            <button type="button" aria-pressed={!vueMetiers} onClick={() => props.onVueChange?.('clients')}>Clients</button>
-            <button type="button" aria-pressed={vueMetiers} onClick={() => props.onVueChange?.('metiers')}>Partenaires</button>
-          </div>
-        ) : null}
+        {/* HARMONISATION (06/11) : plus de sélecteur flottant ; « Clients | Partenaires » est l'onglet de vue du titre de la carte. */}
         {vueMetiers ? (
           <CataloguePartenaires
+            enTeteCommun
+            requete={props.rechercheCatalogue}
             onOuvrir={(contact) => {
               setContactCatalogue(contact)
               props.onSelectContact(contact.hektor_contact_id)
@@ -49425,11 +49429,12 @@ function ContactsScreen(props: {
           <button type="button" className={`seg-sub search ${props.searchActive ? 'on' : ''}`} onClick={() => props.onToggleSearchActive?.()}>{AV_ICONS.search}Recherche active</button>
         </div>
 
-        <div className="listcard">
+        <div className={`listcard${catalogueVisible ? ' an-entre' : ''}`}>
           <div className="lc-head">
             <div className="lc-title">
               <h1>Annuaire des contacts</h1>
               <span className="lc-badge">{listingTotalLabel}</span>
+              {catalogueVisible ? <OngletsAnnuaire vue="clients" onVue={(v) => { if (v === 'metiers') props.onVueChange?.('metiers') }} /> : null}
             </div>
             <div className="pager">
               {props.loading ? <span className="pg-load">Mise à jour…</span> : null}
@@ -49635,10 +49640,8 @@ function MobileContactCards(props: {
     if (!vueMetiers && contactCatalogue) { setDetailOpen(false); setContactCatalogue(null) }
   }, [vueMetiers, contactCatalogue])
   const interrupteur = catalogueVisible ? (
-    <div className="pa-switch mobile-contacts-switch" role="group" aria-label="Côté de l'annuaire">
-      <button type="button" aria-pressed="true">Clients</button>
-      <button type="button" aria-pressed="false" onClick={() => props.onVueChange?.('metiers')}>Partenaires</button>
-    </div>
+    // HARMONISATION (06/11) : le même onglet de vue qu'au bureau, en pleine largeur.
+    <div className="mobile-contacts-switch"><OngletsAnnuaire vue="clients" onVue={(v) => { if (v === 'metiers') props.onVueChange?.('metiers') }} pleine /></div>
   ) : null
   useEffect(() => {
     if (props.openContactId && props.selectedContact?.hektor_contact_id === props.openContactId) {
@@ -49706,6 +49709,7 @@ function MobileContactCards(props: {
         ) : null}
         <CataloguePartenaires
           variante="telephone"
+          enTeteCommun
           onOuvrir={(contact) => {
             setContactCatalogue(contact)
             props.onSelectContact(contact.hektor_contact_id)

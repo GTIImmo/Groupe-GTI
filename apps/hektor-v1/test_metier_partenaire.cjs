@@ -206,9 +206,12 @@ const cg2 = cat.construireCatalogue([{ contact_id: "1", metier: "syndic" }, { co
 controle("(62) sans ville ni téléphone ni e-mail, la carte montre le NUMÉRO (doublons discernables)",
   cg2.syndic.actifs.find((l) => l.id === "1").detail === "n° 1" && cg2.syndic.actifs.find((l) => l.id === "2").detail === "Firminy");
 controle("(63) la recherche trouve aussi par numéro et par téléphone", cat.filtrerCatalogue(cg2.syndic.actifs, "1").some((l) => l.id === "1") && cat.filtrerCatalogue(cg2.syndic.actifs, "06").length === 1);
-controle("(64) côté Partenaires, la barre du haut des clients se cache ; le catalogue porte l'interrupteur et « Ajouter un partenaire »",
-  /&& !vueMetiersApp \? \(\s*<section className=\{`hero/.test(app) && /onAjouter=\{props\.canManageContacts \? props\.onOpenCreate : undefined\}/.test(app)
-  && /\{catalogueVisible && !vueMetiers \? \(/.test(app) && /className="pa-switch"/.test(catTsx) && /Ajouter un partenaire/.test(catTsx));
+controle("(64) HARMONISATION (06/11) : la barre commune de l'app est AUSSI celle du côté Partenaires (recherche du catalogue, « Ajouter un partenaire », Filtres / Stats / Priorités grisés) ; « Clients | Partenaires » est l'onglet de vue du titre, aux deux côtés et au téléphone",
+  !/&& !vueMetiersApp \? \(\s*<section className=\{`hero/.test(app) && /value=\{vueMetiersApp \? rechercheCatalogue : searchDraft\}/.test(app)
+  && /\{vueMetiersApp \? 'Ajouter un partenaire' : 'Nouveau contact'\}/.test(app) && (app.match(/disabled=\{vueMetiersApp\}/g) || []).length >= 3
+  && /<CataloguePartenaires\s+enTeteCommun\s+requete=\{props\.rechercheCatalogue\}/.test(app) && /<OngletsAnnuaire vue="clients"/.test(app)
+  && /<h1>Annuaire des partenaires<\/h1>/.test(catTsx) && /export function OngletsAnnuaire/.test(catTsx)
+  && /props\.enTeteCommun && props\.variante !== 'telephone'/.test(catTsx) && /onAjouter=\{props\.canManageContacts \? props\.onOpenCreate : undefined\}/.test(app));
 controle("(65) l'aperçu : l'activité est « en construction », jamais un faux chiffre", /Activité avec l'agence sur 12 mois · en construction/.test(catTsx) && !/\d+ ?%/.test(catTsx.replace(/\/\/.*$/gm, "")));
 
 controle("(66) quitter le côté Partenaires ferme la fiche ouverte depuis le catalogue (jamais le 1er client de la page à sa place)",

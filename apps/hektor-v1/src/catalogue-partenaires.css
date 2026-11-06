@@ -172,3 +172,40 @@
 /* 06/11 : le sélecteur « Clients | Partenaires » côté CLIENTS reprend le même dessin (son style `.vue-switch` avait été
    perdu au redessin du 05/11, 619f1e0 — boutons du navigateur). Il ne s'étire pas sur toute la largeur. */
 .pa-switch.vue-switch{align-self:flex-start;width:fit-content;}
+
+/* HARMONISATION DE L'ANNUAIRE (06/11/2026) — « Clients | Partenaires » = un onglet de vue, gabarit de `.av3-onglets`
+   (Annonces : « Liste | Publicité »), à côté du titre de la carte. Le fond blanc GLISSE d'un onglet à l'autre. */
+.an-onglets{position:relative;display:inline-grid;grid-template-columns:1fr 1fr;padding:3px;border-radius:11px;background:#f1f2f3;align-self:center;flex:none;}
+.an-curseur{position:absolute;top:3px;bottom:3px;left:3px;width:calc(50% - 3px);border-radius:8px;background:#fff;box-shadow:0 1px 3px rgba(34,35,35,.14);transition:transform .45s cubic-bezier(.5,-.1,.2,1.25);}
+.an-curseur.droite{transform:translateX(100%);}
+.an-onglets button{position:relative;z-index:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;height:30px;padding:0 14px;border:0;border-radius:8px;background:transparent;color:#5c6163;font:inherit;font-size:12.5px;font-weight:800;cursor:pointer;transition:color .3s;}
+.an-onglets button svg{width:15px;height:15px;}
+.an-onglets button:hover{color:#222323;}
+.an-onglets button.on{color:#c5005f;cursor:default;}
+.an-onglets button:focus-visible{outline:2px solid #c5005f;outline-offset:1px;}
+.an-onglets.pleine{display:grid;width:100%;}
+.an-onglets.pleine button{height:36px;}
+.annuaire-v2 .lc-title .an-onglets{margin-left:6px;}
+.annuaire-v2 .lc-title:has(.an-onglets){align-items:center;flex-wrap:wrap;}
+
+/* Le catalogue dans la carte commune : les tuiles au-dessus (comme les catégories des clients), la liste dans la carte. */
+.annuaire-v2 .pa-cat.commun{gap:16px;}
+.pa-cat.commun .pa-listcard{animation:an-entre .4s cubic-bezier(.2,.8,.2,1) both;}
+.pa-cat.commun .pa-listcard .pa-body{padding:0 26px 22px;}
+.pa-cat.commun .pa-listcard .lc-head .pa-agence{margin-left:auto;}
+.annuaire-v2 .listcard.an-entre{animation:an-entre .4s cubic-bezier(.2,.8,.2,1) both;}
+@keyframes an-entre{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
+@media (prefers-reduced-motion:reduce){.an-curseur,.an-onglets button{transition:none;}.pa-cat.commun .pa-listcard,.annuaire-v2 .listcard.an-entre{animation:none;}}
+/* Les métiers dans la carte commune : la MÊME rangée que les catégories des clients (barre blanche, puces de 36 px),
+   pour que la carte de l'annuaire commence à la même hauteur des deux côtés. La puce choisie prend la couleur du métier. */
+.annuaire-v2 .pa-cat.commun .pa-tiles{display:flex;flex-wrap:wrap;align-items:center;gap:8px;background:#fff;border:1px solid rgba(34,35,35,.1);border-radius:14px;box-shadow:0 1px 4px rgba(34,35,35,.05);padding:9px 12px;}
+.annuaire-v2 .pa-cat.commun .pa-tile{flex-direction:row;align-items:center;gap:8px;height:36px;padding:0 12px 0 6px;border:0;border-radius:10px;background:transparent;box-shadow:none;font-size:13.5px;}
+.annuaire-v2 .pa-cat.commun .pa-tile:hover{transform:none;background:#f4f5f6;}
+.annuaire-v2 .pa-cat.commun .pa-tile.on{background:var(--tc);color:#fff;box-shadow:0 6px 14px -8px var(--tc);}
+.annuaire-v2 .pa-cat.commun .pa-tile-top{display:contents;}
+.annuaire-v2 .pa-cat.commun .pa-tile-ic{width:26px;height:26px;border-radius:8px;order:0;}
+.annuaire-v2 .pa-cat.commun .pa-tile-ic svg{width:15px;height:15px;}
+.annuaire-v2 .pa-cat.commun .pa-tile-l{order:1;font-size:13.5px;white-space:nowrap;}
+.annuaire-v2 .pa-cat.commun .pa-tile-n{order:2;font-size:12px;font-weight:800;padding:2px 8px;border-radius:999px;background:rgba(34,35,35,.07);letter-spacing:0;}
+.annuaire-v2 .pa-cat.commun .pa-tile.on .pa-tile-n{background:rgba(255,255,255,.2);}
+.annuaire-v2 .pa-cat.commun .pa-tile-s{display:none;}
