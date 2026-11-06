@@ -15,7 +15,9 @@ const sansCR = (s) => s.split(String.fromCharCode(13)).join("");
 const srcNeuf = sansCR(fs.readFileSync(path.join(__dirname, "console_job_worker.js"), "utf8"));
 let srcAvant;
 try {
-  srcAvant = sansCR(execFileSync("git", ["show", "HEAD:Console/console_job_worker.js"], { cwd: racine, encoding: "utf8", maxBuffer: 128 * 1024 * 1024 }));
+  // La version d'AVANT le cran : le commit qui l'a introduit, moins un (HEAD le contient depuis 223a0f1).
+  const introduit = execFileSync("git", ["log", "--format=%H", "-S", "async function interrupteurSignatureYoutrust(job = null)", "--", "Console/console_job_worker.js"], { cwd: racine, encoding: "utf8" }).trim().split("\n").filter(Boolean).pop();
+  srcAvant = sansCR(execFileSync("git", ["show", `${introduit ? `${introduit}~1` : "HEAD"}:Console/console_job_worker.js`], { cwd: racine, encoding: "utf8", maxBuffer: 128 * 1024 * 1024 }));
 } catch (e) { console.log("ECHEC  version d'avant illisible -- " + e.message); process.exit(2); }
 
 const tranche = (src, debut) => { const i = src.indexOf(debut); if (i < 0) throw new Error(`introuvable : ${debut}`); return src.slice(i, src.indexOf("\n}\n", i) + 2); };

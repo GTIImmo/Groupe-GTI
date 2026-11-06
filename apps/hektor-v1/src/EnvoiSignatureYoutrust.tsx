@@ -86,6 +86,11 @@ export default function EnvoiSignatureYoutrust(props: {
   const [busy, setBusy] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
   const [fait, setFait] = useState<{ avertissements: string[] } | null>(null)
+  // A.2 (06/11/2026) : le code par e-mail CHOISI malgre un portable (par rang, et pour le negociateur). Ce n'est pas un
+  // canal de remise : rien ne s'ecrit sur la fiche ; le worker n'envoie alors pas le numero a Youtrust.
+  const [parEmail, setParEmail] = useState<Set<number>>(new Set())
+  const [negoParEmail, setNegoParEmail] = useState(false)
+  const basculerCode = (rang: number) => setParEmail((cur) => { const n = new Set(cur); if (n.has(rang)) n.delete(rang); else n.add(rang); return n })
 
   useEffect(() => {
     if (!photo) return
@@ -168,6 +173,14 @@ export default function EnvoiSignatureYoutrust(props: {
         avertissements.push(`${qui} : la fiche n'a pas pu être mise à jour (${e instanceof Error ? e.message : 'erreur'}) ; la correction part quand même dans la demande.`)
       }
     }
+    // A.2 (06/11/2026) : le code par e-mail choisi s'ajoute APRES l'enregistrement sur la fiche (qui ne lit que l'e-mail
+    // et le portable) -- un choix de code n'ecrit jamais la fiche. Seulement la ou un portable valide existe.
+    for (const m of photo.mandants) {
+      if (!parEmail.has(m.rang) || !portableValide(valeur(m.rang, 'telephone'))) continue
+      const c = corrections.find((x) => x.rang === m.rang)
+      if (c) c.code = 'email'
+      else corrections.push({ rang: m.rang, code: 'email' })
+    }
     try {
       const job = await createYoutrustSendSignatureJob({
         document: props.document,
@@ -175,6 +188,7 @@ export default function EnvoiSignatureYoutrust(props: {
         numeroMandat: props.dossier.numero_mandat ?? null,
         bienAdresse: props.adresse ?? null,
         corrections,
+        ...(negoParEmail ? { codeMandataire: 'email' as const } : {}),
         // P6 : envoye malgre une fiche changee -- le choix est ecrit dans la demande (et au journal par le worker).
         ...(ficheAChange ? { ecartsAcceptes: ecarts.lignes.map((l) => `${l.k} : ${l.avant ?? ''}${l.apres !== undefined ? ` (fiche : ${l.apres})` : ''}${l.plus ?? ''}${l.moins ?? ''}${l.note ? ` ${l.note}` : ''}`.trim()) } : {}),
       })
@@ -343,7 +357,14 @@ export default function EnvoiSignatureYoutrust(props: {
                           )
                         })}
                       </div>
-                      <div className="ens-otp">{portableValide(tel) ? `Code par SMS au ${masquer(tel)}` : 'Code par e-mail'}</div>
+                      {/* A.2 (06/11/2026) : la regle par defaut (portable -> SMS), et le choix de l'e-mail quand meme (Frederic). */}
+                      <div className="ens-otp">
+                        {portableValide(tel)
+                          ? (parEmail.has(m.rang)
+                            ? <><span>Code par e-mail <small>(choisi)</small></span><button type="button" className="ens-lien" onClick={() => basculerCode(m.rang)}>Revenir au SMS</button></>
+                            : <><span>Code par SMS au {masquer(tel)}</span><button type="button" className="ens-lien" onClick={() => basculerCode(m.rang)}>Envoyer le code par e-mail</button></>)
+                          : 'Code par e-mail'}
+                      </div>
                       <span className={`ens-etat ${manque ? 'ko' : 'ok'}`}>{manque ? '⚠ E-mail' : '✓ Prêt'}</span>
                     </div>
                   )
@@ -352,7 +373,11 @@ export default function EnvoiSignatureYoutrust(props: {
                   <span className="ens-rang">{casesTotal}</span>
                   <div className="ens-qui"><b>{props.dossier.commercial_nom || 'Le négociateur du bien'}</b><small>Mandataire · signe en dernier</small></div>
                   <div className="ens-canal"><div className="ens-note">Le négociateur du bien s’il est actif, sinon vous.</div></div>
-                  <div className="ens-otp" />
+                  <div className="ens-otp">
+                    {negoParEmail
+                      ? <><span>Code par e-mail <small>(choisi)</small></span><button type="button" className="ens-lien" onClick={() => setNegoParEmail(false)}>Revenir à la règle</button></>
+                      : <><span>SMS si son portable est connu, sinon e-mail</span><button type="button" className="ens-lien" onClick={() => setNegoParEmail(true)}>Toujours par e-mail</button></>}
+                  </div>
                   <span className="ens-etat nego">Ensuite</span>
                 </div>
               </div>

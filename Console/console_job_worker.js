@@ -6428,9 +6428,14 @@ function signatairesDepuisLaPhoto(doc, corrections) {
     if (!Number.isInteger(rang) || rang < 1 || rang > photo.mandants.length) {
       throw refusEtatYoutrust(`Correction pour le rang ${c && c.rang} : ce PDF a ${photo.mandants.length} mandant(s).`);
     }
-    const autres = Object.keys(c).filter((k) => !["rang", "email", "telephone"].includes(k));
+    const autres = Object.keys(c).filter((k) => !["rang", "email", "telephone", "code"].includes(k));
     if (autres.length) {
       throw refusEtatYoutrust(`Seuls l'e-mail et le portable se corrigent a l'envoi (rang ${rang} : ${autres.join(", ")}). Le reste est imprime : corrigez le mandat et regenerez-le.`);
+    }
+    // A.2 (06/11/2026) : le negociateur peut faire passer le CODE par e-mail meme si le mandant a un portable (Frederic).
+    // Une seule valeur admise : « email ». Ce n'est pas un canal de remise : rien ne s'ecrit sur la fiche.
+    if (c.code !== undefined && c.code !== "email") {
+      throw refusEtatYoutrust(`Mode du code inconnu pour le rang ${rang} (« ${c.code} ») : seul « email » se choisit a l'envoi.`);
     }
     parRang.set(rang, c);
   }
@@ -6440,6 +6445,7 @@ function signatairesDepuisLaPhoto(doc, corrections) {
       rang: m.rang, civilite: m.civilite, prenom: m.prenom, nom: m.nom, hektor_contact_id: m.hektor_contact_id || null,
       email: c.email !== undefined ? cleanString(c.email) : m.email,
       telephone: c.telephone !== undefined ? cleanString(c.telephone) : m.telephone,
+      codeParEmail: c.code === "email",
       corrige: Object.keys(c).filter((k) => k !== "rang"),
     };
   });
@@ -6493,6 +6499,11 @@ async function handleYoutrustSendSignature(job) {
   const dossier = await loadDossier({ app_dossier_id: doc.app_dossier_id, hektor_annonce_id: doc.hektor_annonce_id });
   // D17 + D21 : le negociateur DU BIEN s'il est actif, sinon l'expediteur, jamais l'agence.
   const mandataireBrut = await mandataireDuMandat(job, payload, dossier);
+  // A.2 (06/11/2026) : le meme choix pour le negociateur qui contresigne (« email » seulement).
+  if (payload.code_mandataire !== undefined && payload.code_mandataire !== null && payload.code_mandataire !== "email") {
+    throw refusEtatYoutrust(`Mode du code inconnu pour le mandataire (« ${payload.code_mandataire} ») : seul « email » se choisit a l'envoi.`);
+  }
+  if (payload.code_mandataire === "email") mandataireBrut.codeParEmail = true;
   const nego = {
     nom: [mandataireBrut.prenom, mandataireBrut.nom].filter(Boolean).join(" ") || mandataireBrut.nomComplet || null,
     email: mandataireBrut.email || null,
@@ -6506,7 +6517,9 @@ async function handleYoutrustSendSignature(job) {
   const signataires = personnes.map((p) => {
     const { prenom, nom } = prenomNomSignataire(p.brut);
     const email = cleanString(p.brut && p.brut.email);
-    const portable = portableE164(p.brut && p.brut.telephone);
+    // A.2 (06/11/2026) : code choisi par e-mail -> le numero ne part PAS chez Youtrust (aucun SMS possible).
+    const codeParEmail = Boolean(p.brut && p.brut.codeParEmail);
+    const portable = codeParEmail ? null : portableE164(p.brut && p.brut.telephone);
     const libelle = p.role === "mandataire" ? "le mandataire (negociateur)" : `le mandant ${p.index}`;
     if (!nom) problemes.push(`${libelle} n'a pas de nom`);
     else if (!prenom) problemes.push(`${libelle} (${nom}) n'a pas de prenom -- fiche de couple a eclater en deux signataires, ou representant de societe a indiquer`);
@@ -6514,6 +6527,7 @@ async function handleYoutrustSendSignature(job) {
     // D16 : portable mobile -> code par SMS ; sinon repli code par e-mail.
     return {
       index: p.index, role: p.role, prenom, nom, email, telephone: portable, otp: portable ? "otp_sms" : "otp_email",
+      ...(codeParEmail ? { code_choisi: "email" } : {}),
       ...(p.role === "mandataire" ? { source: (p.brut && p.brut.source) || null } : {}),
       // lot 6b P2 : d'ou vient ce mandant (photo du PDF), et ce que l'ecran a corrige (e-mail / portable seulement).
       ...(p.role === "mandant" ? { hektor_contact_id: p.brut.hektor_contact_id || null, corrige: p.brut.corrige || [] } : {}),

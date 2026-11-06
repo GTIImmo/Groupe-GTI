@@ -138,6 +138,37 @@ const noms = (yt) => yt.signataires.map((s) => `${s.info.first_name} ${s.info.la
     const reperes = monter(srcNeuf, { signataires_du_pdf: photo(2) }, 7);
     const r5 = await refus(reperes.H.handleYoutrustSendSignature(job({})));
     controle("5. reperes du PDF (7) differents de la photo (5) : REFUS avant activation, brouillon supprime", /repere/.test(r5 || "") && !reperes.yt.appels.includes("activer") && reperes.yt.appels.includes("supprimerBrouillon"), r5);
+
+    // 6. A.2 (06/11/2026) : LE CODE PAR E-MAIL CHOISI A L'ENVOI, meme quand le signataire a un portable (Frederic).
+    const NEGO_PORTABLE = { prenom: "Paul", nom: "NEGO", email: BOITE, telephone: "06 11 22 33 44" };
+    const defaut = monter(srcNeuf, { signataires_du_pdf: photo(2) }, 5);
+    await defaut.H.handleYoutrustSendSignature(job({ corrections: [{ rang: 1, telephone: "06 12 34 56 78" }], mandataire: NEGO_PORTABLE }));
+    controle("6. PAR DEFAUT rien ne change : mandant avec portable -> SMS, negociateur avec portable -> SMS",
+      defaut.yt.signataires[0].signature_authentication_mode === "otp_sms" && defaut.yt.signataires[2].signature_authentication_mode === "otp_sms",
+      defaut.yt.signataires.map((s) => s.signature_authentication_mode).join(","));
+    const choisi = monter(srcNeuf, { signataires_du_pdf: photo(2) }, 5);
+    await choisi.H.handleYoutrustSendSignature(job({ corrections: [{ rang: 1, telephone: "06 12 34 56 78", code: "email" }], code_mandataire: "email", mandataire: NEGO_PORTABLE }));
+    const c1 = choisi.yt.signataires[0];
+    const cn = choisi.yt.signataires[2];
+    controle("6. mandant 1 a un portable MAIS code choisi par e-mail -> otp_email, et le numero NE PART PAS chez Youtrust",
+      c1.signature_authentication_mode === "otp_email" && !("phone_number" in c1.info), JSON.stringify(c1));
+    controle("6. le negociateur aussi : code par e-mail, numero non transmis", cn.signature_authentication_mode === "otp_email" && !("phone_number" in cn.info), JSON.stringify(cn));
+    controle("6. TEMOIN dans le meme envoi : le mandant 2 sans choix garde la regle (e-mail, faute de portable)", choisi.yt.signataires[1].signature_authentication_mode === "otp_email");
+    const lignes = choisi.base.demandes[0].signers;
+    controle("6. notre ligne garde la trace du choix (code_choisi = email) pour le mandant 1 et le negociateur, pas pour le mandant 2",
+      lignes[0].code_choisi === "email" && lignes[2].code_choisi === "email" && lignes[1].code_choisi === undefined, JSON.stringify(lignes.map((s) => s.code_choisi)));
+    const inconnu = monter(srcNeuf, { signataires_du_pdf: photo(2) }, 5);
+    const r6 = await refus(inconnu.H.handleYoutrustSendSignature(job({ corrections: [{ rang: 1, code: "sms" }] })));
+    controle("6. une autre valeur que « email » (ici « sms ») : REFUS clair, Youtrust jamais appele", (r6 || "").includes("Mode du code inconnu") && inconnu.yt.appels.length === 0, r6);
+    const inconnuNego = monter(srcNeuf, { signataires_du_pdf: photo(2) }, 5);
+    const r6b = await refus(inconnuNego.H.handleYoutrustSendSignature(job({ code_mandataire: "fax" })));
+    controle("6. idem pour le negociateur : REFUS, Youtrust jamais appele", (r6b || "").includes("Mode du code inconnu pour le mandataire") && inconnuNego.yt.appels.length === 0, r6b);
+    // La version d'AVANT le choix : le commit qui l'introduit, moins un (HEAD tant qu'il n'est pas commite).
+    const introduitCode = git(["log", "--format=%H", "-S", "codeParEmail: c.code === \"email\"", "--", "Console/console_job_worker.js"]).trim().split("\n").filter(Boolean).pop();
+    const srcHead = git(["show", `${introduitCode ? `${introduitCode}~1` : "HEAD"}:Console/console_job_worker.js`]);
+    const ancien = monter(srcHead, { signataires_du_pdf: photo(2) }, 5);
+    const r6c = await refus(ancien.H.handleYoutrustSendSignature(job({ corrections: [{ rang: 1, telephone: "06 12 34 56 78", code: "email" }] })));
+    controle("6. TEMOIN INVERSE : le worker d'avant (HEAD) refuse la cle « code » (d'ou : redemarrer AVANT d'utiliser le choix)", (r6c || "").includes("Seuls l'e-mail et le portable"), r6c);
   } catch (e) {
     console.log("ECHEC  le montage n'a pas pu tourner -- " + (e && e.stack ? e.stack.split("\n").slice(0, 3).join(" | ") : e));
     process.exit(2);

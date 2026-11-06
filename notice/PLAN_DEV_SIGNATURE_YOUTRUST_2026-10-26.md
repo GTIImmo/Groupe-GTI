@@ -1073,6 +1073,37 @@ webhook posé par Frédéric ; redémarrage du worker.
 >   dépôt différé, P8-0, photo) ; front verts (suivi 27/27 après mise à jour d'un contrôle, pièces 24/24, choix, cockpit,
 >   P8-5) ; build vert sur HEAD + ces changements (avec le correctif des fenêtres). ⏰ **Pour l'allumer** : commit + push,
 >   redémarrage des 4 services (file vide), puis `signature_youtrust` = `admin`.
+>   **ÉTAT À 13:05** : commité `223a0f1` (NON POUSSÉ : sous lui, `d7bcdb4` de l'autre session, non poussé non plus —
+>   le push l'emporterait). `signature_youtrust` = **`admin`** (13:05). ⚠ **Le redémarrage m'est REFUSÉ** (« Impossible
+>   d'ouvrir le service » : la session n'a pas les droits d'administrateur) ; les services avaient redémarré à 12:42:28,
+>   **13 s AVANT** l'écriture du worker sur le disque (12:42:41) -> ils tournent SANS le cran. Sans effet en attendant :
+>   l'ancien worker et l'écran déployé lisent « admin » comme « off ». ⏰ Reste : le push, et le redémarrage par Frédéric.
+>   ✅ **13:22-13:30 — ACTIF ET VU** : Frédéric a poussé (`223a0f1` en tête de origin/main) et redémarré les 4 services
+>   (13:22:40-41, après l'écriture du worker à 12:42:41). Vercel `READY` sur `223a0f1` (paquet `index-BEjH2qnc.js` :
+>   une seule lecture de `signature_youtrust`, celle à trois crans). **Vu sur 61398** : la fenêtre « Pièces de la
+>   signature » s'affiche À L'ÉCRAN, 4 pièces trouvées au coffre (« Ouvrir ») ; **l'original non signé s'ouvre** (le
+>   seul chemin DÉDUIT) ; la fenêtre du choix à trois s'affiche, et pour Frédéric (admin) le choix Youtrust dit
+>   « régénérez le mandat » (vieux document sans photo) et non plus « pas encore activée » : **le cran admin est lu**.
+>   Aucun choix cliqué (la manuscrite ouvre un `window.confirm`, qui bloque l'extension). ⏰ **Reste** : la génération
+>   + le dépôt chez Hektor + un envoi Youtrust en « admin », sur un bien dont le mandat est à éditer (à choisir).
+> - ✅ **LE CODE PAR E-MAIL CHOISI À L'ENVOI (06/11, demande de Frédéric : « par défaut la règle, mais s'il souhaite un envoi
+>   par e-mail même si le signataire a son numéro ») — NON COMMITÉ, worker NON REDÉMARRÉ.** D16 reste la règle par défaut
+>   (portable valide -> `otp_sms`, sinon `otp_email`). **Fenêtre d'envoi** : sous « Code par SMS au •• 56 78 », le lien
+>   « Envoyer le code par e-mail » (retour : « Revenir au SMS ») ; sur la ligne du négociateur, « Toujours par e-mail »
+>   (« Revenir à la règle »). Le choix part dans la demande (`corrections[].code = "email"`, `code_mandataire = "email"`) ;
+>   ⛔ **il n'écrit JAMAIS la fiche** : il s'ajoute APRÈS l'enregistrement D33, qui ne lit que l'e-mail et le portable.
+>   **Worker, chemin Youtrust seulement** (`signatairesDepuisLaPhoto` + `handleYoutrustSendSignature`) : clé `code` admise
+>   (seule valeur « email », toute autre REFUSÉE), et pour un code choisi par e-mail **le numéro n'est pas transmis à
+>   Youtrust** (aucun SMS possible) ; trace `code_choisi: "email"` sur la ligne du signataire. **Essais** :
+>   `Console/test_envoi_lit_la_photo.js` (bloc 6, 8 contrôles neufs : défaut inchangé SMS/SMS, mandant + négociateur passés
+>   à l'e-mail sans `phone_number`, témoin mandant 2, trace, valeurs inconnues refusées ; TÉMOIN INVERSE : le worker
+>   d'avant refuse la clé) ; `apps/hektor-v1/test_code_par_email.cjs` 8/8 (neuf) ; essais Youtrust du worker et du front
+>   verts (le témoin du cran admin pointait HEAD, qui contient désormais le cran : il pointe le commit d'avant). **Vu sur la
+>   planche** : demande sortie `{"corrections":[{"rang":1,"code":"email"}],"codeMandataire":"email"}`, aucune écriture de
+>   fiche. ⚠ Les deux premiers essais ont montré une demande VIDE : le serveur local avait gardé un cliché du fichier pris
+>   ENTRE deux éditions (vérifié en lisant le module servi). ⚠ **Ordre de mise en ligne** : redémarrer les 4 services
+>   AVANT d'utiliser le choix (l'ancien worker refuse la clé `code`, avec un message clair) ; Youtrust n'est ouvert
+>   qu'aux admins. Maquette mise à jour (planche, avant / après).
 > **Le nœud** : interrupteur allumé, un mandat généré naît `sans_hektor` (D24) → « signature Hektor » impossible sans le
 > DÉPOSER chez Hektor. Un chemin DORMANT existe (`completerEnvoiDocumentDiffere`, `upload_document_to_hektor` avec
 > `app_document_id` : « aucun appelant ») — jamais éprouvé. À l'inverse, un document venu de Hektor (modèle ImmoSign,

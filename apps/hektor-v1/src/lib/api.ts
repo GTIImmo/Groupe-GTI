@@ -10159,7 +10159,8 @@ export type PhotoSignatairesPdf = {
   reperes_attendus: number
   mandants: PhotoSignatairePdf[]
 }
-export type CorrectionSignataire = { rang: number; email?: string; telephone?: string }
+// A.2 (06/11/2026) : `code: 'email'` = le code part par e-mail meme si le mandant a un portable (jamais ecrit sur la fiche).
+export type CorrectionSignataire = { rang: number; email?: string; telephone?: string; code?: 'email' }
 
 export function photoSignatairesDuDocument(document: Pick<ConsoleDocument, 'metadata_json'>): PhotoSignatairesPdf | null {
   const photo = (document.metadata_json as { signataires_du_pdf?: PhotoSignatairesPdf } | null)?.signataires_du_pdf
@@ -10264,6 +10265,8 @@ export async function createYoutrustSendSignatureJob(input: {
   corrections: CorrectionSignataire[]
   // A.2 lot 6b P6 : envoye malgre une fiche changee depuis le PDF (ce que la fenetre a montre, confirme par l'humain).
   ecartsAcceptes?: string[]
+  // A.2 (06/11/2026) : le negociateur qui contresigne recoit son code par e-mail meme s'il a un portable.
+  codeMandataire?: 'email'
 }): Promise<ConsoleJob> {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
   const userId = await requireSupabaseUserId()
@@ -10280,6 +10283,7 @@ export async function createYoutrustSendSignatureJob(input: {
         bien_adresse: input.bienAdresse ?? null,
         corrections: input.corrections,
         ...(input.ecartsAcceptes && input.ecartsAcceptes.length ? { ecarts_acceptes: input.ecartsAcceptes } : {}),
+        ...(input.codeMandataire === 'email' ? { code_mandataire: 'email' } : {}),
       },
       priority: 24,
       requested_by: userId,

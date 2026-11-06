@@ -72,6 +72,13 @@
 .ens-val { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .ens-cr { margin-left: auto; flex: 0 0 auto; width: 24px; height: 24px; border-radius: 7px; border: 1px solid var(--ens-line); background: #fff; display: grid; place-items: center; color: var(--ens-soft); font-size: 12px; }
 .ens-otp { font-size: 11.5px; font-weight: 700; color: var(--ens-soft); white-space: nowrap; }
+/* A.2 (06/11/2026) : le choix du code par e-mail, sous la regle par defaut. */
+.ens-otp { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; }
+.ens-otp small { font-weight: 600; }
+.ens-lien { all: unset; cursor: pointer; font-size: 11.5px; font-weight: 600; color: var(--ens-mag-deep); text-decoration: underline; text-underline-offset: 2px; white-space: nowrap; }
+.ens-lien:hover { color: var(--ens-mag); }
+.ens-sig.nego .ens-otp { white-space: normal; max-width: 220px; }
+.ens-lien:focus-visible { outline: 2px solid var(--ens-mag); outline-offset: 2px; border-radius: 3px; }
 .ens-etat { font-size: 11px; font-weight: 800; border-radius: 99px; padding: 4px 9px; white-space: nowrap; justify-self: end; }
 .ens-etat.ok { background: var(--ens-green-soft); color: var(--ens-green); }
 .ens-etat.ko { background: var(--ens-amber-soft); color: var(--ens-amber); }
