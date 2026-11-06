@@ -1519,3 +1519,28 @@ agence) ; `?agency=saint-etienne` désigne **Lucille FORLICO** (n° 4, forlico@)
 **Interrupteur allumé** (06/11, sur accord explicite de Frédéric) : `APP_REGISTRE_AGENCES=1` ajouté en fin de `.env` (2 lignes, rien d'autre
 lu ni touché) ; relu par le chargeur de la nuit (`push_contacts_to_supabase.load_env_file`) → « ECRIT ». La nuit du 06→07/11 est la
 1re à écrire le registre des agences d'elle-même.
+
+## 53. ÉTAPE 5, CANDIDAT 3c : LE PDF « AVIS DE VALEUR » — AUDIT (06/11) — Frédéric : « PDF avis de valeur » — ⛔ rien n'est codé
+
+Audit limité au PDF avis de valeur (`generate_estimation_pdf`, service worker DOCUMENTS) ; les autres objets ne sont pas mesurés.
+Gestes : il LIT (conseiller, agence) et CRÉE un document chez Hektor par le travail `upload_document_to_hektor`, inchangé.
+
+**Qui lit quoi** : `resolveEstimNegotiatorContact` (worker, seul appelant l. ~8945) part de l'e-mail du compte CONNECTÉ
+(`negociateurConnecte`, option B du 24/06), cherche la personne dans l'ANNUAIRE par e-mail (`loadAgencyDirectoryRowForOwner`,
+⛔ fonction partagée avec le choix du compte d'exécution, §47 : on n'y touche pas), puis l'agence par son NOM (`nom=ilike`).
+⚠ Depuis 50a7732 (26/06) le résultat remplace AUSSI le bloc visible « Votre conseiller » (la mémoire disait « QR seul ») : le
+conseiller imprimé est la personne connectée, pas le négociateur du bien.
+
+**Mesures** : 37 PDF en tout, 1 en 60 jours, 2 demandeurs seulement (Frédéric, Franck). Sur les 5 comptes vivants :
+Frédéric, Pauline, LEGRAND, PEREIRA → l'annuaire et le registre disent la même chose (nom, portable, agence, coordonnées).
+⛔ **Franck** : son e-mail de compte (`franck.gerphagnon@gti-immobilier.fr`) n'est PAS dans l'annuaire (qui n'a que son gmail) →
+le PDF MÉLANGE deux personnes : le NOM et le téléphone du négociateur du bien, l'E-MAIL de Franck, et un QR vCard au même
+mélange (ex. 05/08, bien de Tatiana CROIZIER). Le registre, lui, le connaît par son compte (personne 1000036 : nom, portable
+0625486395) — mais son agence y est « Compte formation » (fiche active n° 1), coordonnées 06.58.77.08.93 / frederic@ : à ne
+pas imprimer sur un document client.
+Le compte `codex.test` n'a d'identité nulle part (même mélange s'il générait un PDF).
+
+**Ce que la bascule ferait** : conseiller pris au REGISTRE par le NUMÉRO DU COMPTE qui a demandé (`requested_by` →
+`app_negociateur_personne.app_user_id`), plus par l'e-mail ; identité prise d'UNE seule source (jamais de mélange) ; agence du
+registre (tél/mail), annuaire en repli ; chemin actuel inchangé si le registre ne répond pas. Question ouverte : l'agence à
+imprimer quand celle de la personne est « Compte formation » (ou absente).
