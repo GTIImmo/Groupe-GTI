@@ -197,6 +197,21 @@ animations. La nouvelle vue LIT l'état existant et APPELLE les fonctions exista
   l'ancienne modale) — à resserrer si Frédéric le souhaite.
 - **Lot 7 — animations et accessibilité.** Courbes et durées du cockpit, tout coupé si moins
   d'animations est demandé, focus visible, contrastes.
+  ✅ **FAIT le 06/11** — `src/statut-v2.css` seulement. **Mouvements du cockpit** (`fa-cockpit-v2.css`,
+  `fa-mandat-v3.css`) : entrée « rise » 0,32 s sur `cubic-bezier(.22, 1, .36, 1)` en cascade, « pop » des pastilles,
+  transitions 150 / 240 ms sur `--bv-ease`, et la balise du mandat V3 (2,4 s) sur le bouton principal quand le
+  formulaire est complet (`:valid`, c'est-à-dire les `required` de l'ancien bloc tous remplis ; écran seulement).
+  **Moins d'animations demandé** : TOUT s'arrête, transitions comprises. ⭐ Éprouvé sans le vouloir : le navigateur de
+  test est réglé ainsi, et aucune animation n'y tourne (cartes, bouton) ; la balise est contrôlée par sa règle (elle
+  vise le bouton formulaire complet, plus formulaire incomplet). **Focus** : un contour magenta sur TOUT élément
+  cliquable de la vue, y compris les sélecteurs existants et leurs listes (37 sur 37), éprouvé au clavier.
+  **Contrastes MESURÉS** (chaque texte contre le fond réellement derrière lui, seuil 4,5 : 1, 3 : 1 en grand) : rendu
+  d'essai, 389 textes, **1 sous le seuil** (« dossier n° … · terminé », 4,31) → foncé ; puis 0. Démonstration, onglets
+  Compromis, Actif, Offre, Vendu (hors parcours), Clos : 0. Plus les textes d'aide des champs foncés (#6e7375).
+  Empreintes 61 morceaux identiques ; parité verte ; essais verts ; build vert.
+  ⚠ **Non fait, volontairement** : fermer avec Échap et garder le focus dans la fenêtre — l'ancienne modale ne le
+  fait pas, et ce serait un comportement nouveau (Échap fermerait la saisie en cours). À trancher. Le pied empilé au
+  téléphone (~260 px avec un compromis en cours) n'a pas été resserré non plus.
 - **Lot 8 — contrôles et bascule** (§4), puis mise à jour des documents.
 
 ## 4. Comment on prouve que « rien n'a changé derrière »
@@ -243,7 +258,8 @@ de style et la ligne d'aiguillage.
 4. ✅ **Oui à l'envoi réel de contrôle sur 62774, à la fin** — son accord se redemande au moment du geste.
 
 ➡ ~~Prochaine étape : le lot 0~~ ✅ fait le 05/11. ~~Le lot 1~~ ✅ fait le 06/11. ~~Le lot 2~~ ✅ fait le 06/11. ~~Le lot 3~~ ✅ fait le 06/11. ~~Le lot 4~~ ✅ fait le 06/11. ~~Le lot 5~~ ✅ fait le 06/11, **poussé par Frédéric** (sommet distant `8155bb7`, interrupteur
-VÉRIFIÉ ÉTEINT dans le paquet servi). ~~Le lot 6~~ ✅ fait le 06/11.
-**Prochaine étape : le lot 7** (animations et accessibilité), qui attend son « vas-y ».
+VÉRIFIÉ ÉTEINT dans le paquet servi). ~~Le lot 6~~ ✅ fait le 06/11. ~~Le lot 7~~ ✅ fait le 06/11.
+**Prochaine étape : le lot 8** (contrôles et bascule : parcours en production SANS envoyer, variable Vercel posée par
+Frédéric, envoi réel sur 62774 avec son accord), qui attend son « vas-y ».
 ⚠ Reste hors de ce chantier : le défaut « Choisir » (audit §12, les champs principaux ne se rechargent pas),
 qui demande une décision à part — la refonte visuelle ne le corrige pas et ne doit pas le masquer.

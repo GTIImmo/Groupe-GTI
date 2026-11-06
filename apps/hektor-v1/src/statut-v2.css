@@ -541,3 +541,58 @@
   .stv2 .stv2-cond { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .stv2 .stv2-cond-retirer { grid-column: 1 / -1; justify-self: start; }
 }
+
+/* ═══ Lot 7 (06/11) — animations et accessibilité ═══
+   LES MÊMES MOUVEMENTS QUE LE COCKPIT (fa-cockpit-v2.css, fa-mandat-v3.css) : entrée « rise » en 0,32 s sur la
+   courbe cubic-bezier(.22, 1, .36, 1), transitions de 150 ms (couleurs) et 240 ms (tailles) sur --bv-ease, balise
+   du bouton principal en 2,4 s (mv3beacon). ⛔ Jamais sur le conteneur fixe ; et TOUT est coupé quand l'utilisateur
+   demande moins d'animations (dernier bloc). */
+.stv2 { --stv2-entree: cubic-bezier(0.22, 1, 0.36, 1); --stv2-rapide: 150ms; --stv2-base: 240ms; }
+.stv2 .stv2-carte, .stv2 .stv2-in, .stv2 .stv2-btn, .stv2 .stv2-mini, .stv2 .stv2-seg button, .stv2 .stv2-guide-btn,
+.stv2 .stv2-fermer, .stv2 .stv2-zone {
+  transition-duration: var(--stv2-rapide);
+  transition-timing-function: var(--stv2-ease);
+}
+.stv2 .stv2-jauge span { transition: width var(--stv2-base) var(--stv2-ease); }
+@media (prefers-reduced-motion: no-preference) {
+  /* les cartes du parcours : l'entrée du cockpit, en cascade de 40 ms */
+  .stv2 .stv2-carte:not(.stv2-motif) { animation: stv2-rise 320ms var(--stv2-entree) both; }
+  .stv2 .stv2-guide, .stv2 .stv2-hors, .stv2 .stv2-repartition, .stv2 .stv2-aff-corps, .stv2 .stv2-guide-etapes {
+    animation: stv2-rise 320ms var(--stv2-entree) both;
+  }
+  /* une pastille qui apparaît (« Modifié », « À remplir ») : le « pop » du cockpit */
+  .stv2 .stv2-bdg { animation: stv2-pop var(--stv2-base) var(--stv2-entree) both; }
+  /* le bouton principal porte la balise du mandat V3 quand le formulaire est complet (:valid = les `required` de
+     l'ancien bloc sont tous remplis) — écran seulement, le clic reste le même */
+  .stv2 .stv2-envoi:valid .stv2-btn-1:not(:disabled) { animation: stv2-balise 2.4s ease-out 1s infinite; }
+}
+@keyframes stv2-rise { from { opacity: 0; transform: translateY(11px); } to { opacity: 1; transform: none; } }
+@keyframes stv2-pop { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+@keyframes stv2-balise {
+  0% { box-shadow: 0 6px 16px -8px rgba(197, 0, 95, 0.7), 0 0 0 0 rgba(197, 0, 95, 0.45); }
+  70%, 100% { box-shadow: 0 6px 16px -8px rgba(197, 0, 95, 0.7), 0 0 0 11px rgba(197, 0, 95, 0); }
+}
+
+/* LE FOCUS SE VOIT PARTOUT, y compris sur ce que la vue ne dessine pas elle-même (les sélecteurs existants, les
+   jetons, les listes de propositions) : un contour magenta, jamais supprimé sans remplaçant. */
+.stv2 :is(button, summary, a[href], select, textarea, input, [tabindex]):focus-visible {
+  outline: 3px solid rgba(197, 0, 95, 0.55);
+  outline-offset: 2px;
+}
+.stv2 .stv2-in :is(input, select):focus-visible, .stv2 .stv2-zone:focus-visible { outline: none; }
+.stv2 .stv2-fermer:focus-visible { outline: 3px solid #f6b6d5; outline-offset: 2px; }
+
+/* CONTRASTES (mesurés le 06/11, seuil 4,5 : 1 pour le texte) */
+.stv2 .stv2-in input::placeholder, .stv2 .stv2-zone::placeholder,
+.stv2 .stv2-personnes .filter-field input::placeholder { color: #6e7375; }
+.stv2 .stv2-aff-e.is-morte { color: #6b7072; }
+.stv2 .stv2-tag.is-clos { color: #555a5c; }
+
+/* MOINS D'ANIMATIONS DEMANDÉ : tout s'arrête, transitions comprises */
+@media (prefers-reduced-motion: reduce) {
+  .stv2 *, .stv2 *::before, .stv2 *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
