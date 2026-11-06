@@ -1686,3 +1686,28 @@ compléter ; panne → ancien nom du contact, jamais l'adresse). Témoin : l'anc
 `google_calendar_email`. Non vu à l'écran. L'agenda (un admin peut-il poser un RDV client sur son agenda ?) : NON TRANCHÉ.
 
 **Agenda — décision de Frédéric (06/11) : « Oui, laisser »** : un admin peut toujours poser un RDV client sur son propre agenda (invitation depuis sa boîte). Rien à coder ; seul le bon de visite suit la règle. Ne pas relancer.
+
+## 57. ÉTAPE 5, CANDIDAT 3e : LA VITRINE (LES ÉCRANS EN VITRINE D'AGENCE) — AUDIT (06/11) — Frédéric : « vérifie vitrine doit prendre dans le registre, c'est les écrans en vitrine » — ⛔ rien n'est codé
+
+Audit limité à la vitrine ; rien d'autre n'est mesuré.
+
+**Qui la fait** : `Ecrans Android/export_project_vitrine.py`, étape « android vitrine export and push » du RUN DE NUIT
+(`run_full_pipeline.ps1` l. ~1869) ; publie `catalogue_vitrine.json` sur GitHub (GTIImmo/vitrine) que lisent les écrans. Les
+photos viennent déjà de chez nous (Supabase, G.15). **L'agence et le négociateur viennent de la COPIE LOCALE de Hektor**
+(`hektor.sqlite` : `hektor_agence.tel`, `hektor_negociateur.nom/prenom/portable`, par `hektor_annonce`), pas du registre.
+Ce qui est imprimé, par bien : « <agence> TEL : <tél agence> NEGOCIATEUR EN CHARGE DU BIEN : <prénom nom> TEL : <portable> »,
+plus `phone` = portable du négo sinon tél de l'agence (et le QR du RDV, qui passe par la page RDV, déjà au registre).
+
+**Mesure de la publication de cette nuit (06/11 05:39, 438 biens)** comparée au registre :
+- agences : 16 sur 17 identiques ; ⛔ **Tence** publie 04 71 59 81 45 (copie d'AVRIL) alors que le registre porte 0471560236
+  (la valeur actuelle de Hektor, « laisse, cela correspond » de Frédéric) ;
+- négociateurs : 27 sur 28 identiques au registre ; ⛔ **Guillaume PERRET** (5 biens) publié SANS téléphone (copie locale vide),
+  le registre a 0763983009 ; TEYSSONNIER : 0658803706 des deux côtés (le registre suivra Hektor cette nuit, §51) ;
+- 8 biens sans négo (agence seule), 1 « gti immobilier » ; aucun admin imprimé.
+La copie locale des agences est relue chaque nuit depuis ce soir (§50) : Tence se corrigerait seul, mais pas une saisie du
+CARNET (correction d'un admin) ni les coordonnées propres à la personne (PERRET).
+
+**Correctif proposé** (script de nuit, additif) : une lecture du registre en tête (agences + alias, fiches + personnes) ; par bien,
+agence = registre par son n° Hektor (sinon alias du nom), tél du registre ; négo = fiche du n° du bien → personne : nom et
+portable du registre, imprimé seulement si la fiche est ACTIVE, la personne active et pas un compte admin (sinon l'agence
+seule) ; registre illisible → la copie locale comme aujourd'hui (repli total, comme pour les photos).
