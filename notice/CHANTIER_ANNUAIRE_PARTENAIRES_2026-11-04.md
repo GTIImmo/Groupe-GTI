@@ -1891,6 +1891,24 @@ pour tout le monde (au rechargement). Retour arrière : `admin` ou `off`. **Suit
 - ⚠ **Trouvé** : le compte rendu JSON de l'étape (`contacts_supprimes_ecartes`, `metiers_retires_ecartes`…) n'est PAS
   dans le journal du run (ligne vide entre START et DONE, `logs/scheduled/quotidien_2026-11-06_04-00-02.log` l. 3007) :
   les gardes se contrôlent donc par la base, comme ci-dessus. À signaler, rien de changé.
+
+#### 26 nonies. PIÈCE 3.6 — LE CATALOGUE AU TÉLÉPHONE (06/11, « d'abord 3.6 », « visible par tous ») — codée
+
+- **Le manque** : le téléphone a son propre écran de contacts (`MobileContactCards`), sans catalogue → aucune fiche
+  syndic / diag / courtier / apporteur n'y était accessible.
+- **Dessin = la planche 2** (`Telephone.dc.html`) : « Partenaires » + bouton « + », recherche, pastilles de métier qui
+  défilent (Notaires, Banques, Diagnostics, Apporteurs, Syndics, avec leur nombre), cartes ; au toucher, une FEUILLE qui
+  monte (bandeau du métier, Appeler / Écrire / RDV grisé, trois chiffres « — », « Activité avec l'agence : en
+  construction », l'action du métier « bientôt », « Voir toute la fiche » → la fiche dédiée). Sans « fiches à classer » ;
+  archivés à part.
+- **Branchement** : `CataloguePartenaires variante="telephone"` ; `MobileContactCards` reçoit `vue` / `onVueChange` /
+  `onOpenCreate`, montre l'interrupteur « Clients | Partenaires » au-dessus de la liste des clients, la fiche du catalogue
+  (pas le 1er de la page) avec `ouverture='catalogue_metiers'`, et la même garde de sortie qu'au bureau. La carte de
+  recherche des clients se cache côté Partenaires. **Même cran `partenaires_catalogue` (déjà « on »)** : visible de
+  tous dès le déploiement (choix de Frédéric).
+- **Contrôles** : banc local à données FICTIVES en 390 × 844 (feuille 387→844 px, « Voir toute la fiche » visible,
+  aucun débordement), retiré ensuite ; essai `test_metier_partenaire.cjs` **69/69** ((50) : deux portes seulement,
+  bureau et téléphone) ; `npm run build` vert.
   ⚠ Le repli `contactsDirectory.find(...) ?? contactsDirectory[0]` d'App.tsx est ANCIEN et sert à toute l'app : non
   touché, à signaler.
 

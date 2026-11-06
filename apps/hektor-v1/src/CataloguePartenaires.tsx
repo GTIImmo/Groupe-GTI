@@ -57,6 +57,9 @@ export default function CataloguePartenaires(props: {
   onOuvrir: (contact: AppContact) => void
   onVueClients: () => void
   onAjouter?: () => void
+  // PIÈCE 3.6 (06/11/2026) : la version TÉLÉPHONE (maquette planche 2, Telephone.dc.html) — pastilles de métier, cartes,
+  // et une feuille qui monte du bas au toucher d'une carte. Mêmes données, mêmes règles que le bureau.
+  variante?: 'bureau' | 'telephone'
 }) {
   const [etat, setEtat] = useState<{ etat: 'chargement' | 'pret' | 'erreur'; catalogue?: Catalogue; erreur?: string }>({ etat: 'chargement' })
   const [version, setVersion] = useState(0)
@@ -95,7 +98,99 @@ export default function CataloguePartenaires(props: {
     const { data, error } = await supabase.from('app_contact_current').select('*').eq('hektor_contact_id', id).maybeSingle()
     if (error || !data) { setOuverture({ id, erreur: error?.message ?? 'fiche introuvable' }); return }
     setOuverture(null)
+    if (props.variante === 'telephone') setChoisi(null) // la feuille se range : la fiche prend tout l'écran
     props.onOuvrir(data as AppContact)
+  }
+
+  if (props.variante === 'telephone') {
+    const metiers = (l: LigneCatalogue) => (tuile === 'notaire' ? ['Notaire'] : l.metiers.map((m) => LIBELLE_METIER_CATALOGUE[m] ?? m))
+    const carteTel = (l: LigneCatalogue, i: number) => (
+      <button key={l.id} type="button" className={`pt-card${l.archive ? ' archive' : ''}`} style={{ animationDelay: `${Math.min(i, 10) * 50}ms` }} onClick={() => setChoisi(l.id)}>
+        <span className="pt-av" aria-hidden="true">{initiales(l.nom)}</span>
+        <span className="pt-who">
+          <span className="pt-name">{l.nom}</span>
+          <span className="pt-sub">{metiers(l).join(' · ')} · {l.detail}{l.archive ? ' · archivé' : ''}</span>
+        </span>
+        <Ico d="m9 6 6 6-6 6" size={16} width={2.2} />
+      </button>
+    )
+    return (
+      <div className="pt-cat" style={{ ['--c']: cur.couleur, ['--s']: cur.doux } as CSSProperties}>
+        <div className="pa-switch pt-switch" role="group" aria-label="Côté de l'annuaire">
+          <button type="button" aria-pressed="false" onClick={props.onVueClients}>Clients</button>
+          <button type="button" aria-pressed="true">Partenaires</button>
+        </div>
+        <header className="pt-header">
+          <div className="pt-title">
+            <h1>Partenaires</h1>
+            {props.onAjouter ? <button type="button" className="pt-add" aria-label="Ajouter un partenaire" onClick={props.onAjouter}><Ico d="M12 5v14M5 12h14" size={18} width={2.6} /></button> : null}
+          </div>
+          <label className="pt-search">
+            <Ico d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20 20l-3.5-3.5" size={16} />
+            <input aria-label="Chercher un partenaire" placeholder="Nom, ville, téléphone…" value={requete} onChange={(e) => setRequete(e.target.value)} />
+          </label>
+          <div className="pt-chips" role="tablist" aria-label="Métiers">
+            {TUILES_CATALOGUE.map((t) => {
+              const c = etat.catalogue?.[t.tuile]
+              return (
+                <button key={t.tuile} type="button" role="tab" aria-selected={tuile === t.tuile} className={`pt-chip${tuile === t.tuile ? ' on' : ''}`}
+                  style={{ ['--tc']: t.couleur, ['--ts']: t.doux } as CSSProperties} onClick={() => choisirTuile(t.tuile)}>
+                  {t.puce} {c ? c.actifs.length : '…'}
+                </button>
+              )
+            })}
+          </div>
+        </header>
+        <div className="pt-list">
+          {etat.etat === 'erreur' ? <div className="pa-error" role="alert">Le catalogue n'a pas pu être lu ({etat.erreur}). <button type="button" onClick={() => setVersion((v) => v + 1)}>Réessayer</button></div> : null}
+          {ouverture?.erreur ? <div className="pa-error" role="alert">La fiche n'a pas pu être ouverte ({ouverture.erreur}). <button type="button" onClick={() => setOuverture(null)}>Fermer</button></div> : null}
+          {etat.etat === 'chargement' && !etat.catalogue ? <div className="pa-empty">Chargement du catalogue…</div> : null}
+          {etat.catalogue ? (
+            <>
+              {actifs.length ? actifs.map(carteTel) : <div className="pa-empty">{requete ? 'Aucun partenaire actif ne correspond.' : 'Aucun partenaire actif dans ce métier.'}</div>}
+              {archives.length ? (
+                <>
+                  <button type="button" className="pa-archives-btn pt-archives-btn" aria-expanded={voirArchives} onClick={() => setVoirArchives((v) => !v)}>
+                    {voirArchives ? 'Masquer' : 'Voir'} les archivés ({archives.length})
+                  </button>
+                  {voirArchives ? archives.map(carteTel) : null}
+                </>
+              ) : null}
+            </>
+          ) : null}
+        </div>
+        {sel ? (
+          <>
+            <div className="pt-veil" aria-hidden="true" onClick={() => setChoisi(null)} />
+            <section className="pt-sheet" role="dialog" aria-modal="true" aria-label={`Fiche de ${sel.nom}`} key={sel.id}>
+              <div className="pt-band">
+                <span className="pt-handle" aria-hidden="true" />
+                <div className="pt-band-id">
+                  <span className="pt-band-av" aria-hidden="true">{initiales(sel.nom)}</span>
+                  <div><div className="pt-band-name">{sel.nom}</div><div className="pt-band-sub">{metiers(sel).join(' · ')}{sel.ville ? ` · ${sel.ville}` : ''}</div></div>
+                  <button type="button" aria-label="Fermer" onClick={() => setChoisi(null)}><Ico d="M18 6 6 18M6 6l12 12" size={14} width={2.4} /></button>
+                </div>
+                <div className="pt-band-actions">
+                  {sel.telephone ? <a className="primary" href={`tel:${sel.telephone.replace(/\s+/g, '')}`}>Appeler</a> : <span className="primary off" title="Pas de téléphone sur la fiche">Appeler</span>}
+                  {sel.email ? <a href={`mailto:${sel.email}`}>Écrire</a> : <span className="off" title="Pas d'e-mail sur la fiche">Écrire</span>}
+                  <span className="off" title="Le RDV se crée depuis la fiche">RDV</span>
+                </div>
+              </div>
+              <div className="pt-sheet-body">
+                <div className="pa-kpis">
+                  {['affaires ensemble', 'en cours', 'délai moyen'].map((l) => <div key={l} className="pa-kpi"><div className="v">—</div><div className="l">{l}</div></div>)}
+                </div>
+                <div className="pt-wip-line">Activité avec l'agence : <Wip /></div>
+                {cur.action ? <button type="button" className="pt-action" disabled title="Arrive avec le lot du métier">{cur.action}<span className="pt-bientot">bientôt</span></button> : null}
+                <button type="button" className="pt-open" disabled={Boolean(ouverture)} onClick={() => { void ouvrir(sel.id) }}>
+                  {ouverture?.id === sel.id && !ouverture.erreur ? 'Ouverture…' : 'Voir toute la fiche'}
+                </button>
+              </div>
+            </section>
+          </>
+        ) : null}
+      </div>
+    )
   }
 
   const metiersDe = (l: LigneCatalogue) => (tuile === 'notaire' ? ['Notaire'] : l.metiers.map((m) => LIBELLE_METIER_CATALOGUE[m] ?? m))

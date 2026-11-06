@@ -25227,6 +25227,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         message: parseJson<{ message?: string | null }>(event.payload_json, {}).message || '',
       }))
     const showMobileCommandCard = screen !== 'accueil' && screen !== 'agenda' && screen !== 'transactions' && screen !== 'pilotage'
+      && !vueMetiersApp // PARTENAIRES 3.6 : côté Partenaires, le catalogue porte sa recherche et son « + »
 
     return (
       <FilNavigationContext.Provider value={contexteFilNavigation}>
@@ -25530,6 +25531,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             openContactId={contactDirectLookupId}
             onDetailOpenChange={setContactFicheOuverte}
             closeSignal={contactFermerSignal}
+            vue={contactsVue}
+            onVueChange={setContactsVue}
+            onOpenCreate={() => setContactCreateOpen(true)}
             contacts={contactsDirectory}
             total={contactsTotal}
             page={contactPage}
@@ -49244,8 +49248,29 @@ function MobileContactCards(props: {
   openContactId?: string | null
   onDetailOpenChange?: (open: boolean) => void
   closeSignal?: number
+  // PARTENAIRES 3.6 (06/11/2026) : le catalogue des métiers au téléphone (mêmes branchements que ContactsScreen).
+  vue?: 'clients' | 'metiers'
+  onVueChange?: (vue: 'clients' | 'metiers') => void
+  onOpenCreate?: () => void
 }) {
   const [detailOpen, setDetailOpen] = useState(false)
+  // PARTENAIRES 3.6 (06/11/2026, « visible par tous ») : même cran que le bureau (`partenaires_catalogue`). Une fiche
+  //   ouverte depuis le catalogue reçoit `ouverture='catalogue_metiers'` ; elle vient du catalogue (pas du 1er de la page des
+  //   clients) ; quitter le côté Partenaires la ferme (garde du 05/11). Cran éteint : l'écran d'avant, à l'identique.
+  const catalogueVisible = useCranCouplesVisible('partenaires_catalogue', props.profileRole)
+  const vueMetiers = catalogueVisible && props.vue === 'metiers'
+  const [contactCatalogue, setContactCatalogue] = useState<AppContact | null>(null)
+  const ficheContact = vueMetiers && contactCatalogue && contactCatalogue.hektor_contact_id !== props.selectedContact?.hektor_contact_id
+    ? contactCatalogue : props.selectedContact
+  useEffect(() => {
+    if (!vueMetiers && contactCatalogue) { setDetailOpen(false); setContactCatalogue(null) }
+  }, [vueMetiers, contactCatalogue])
+  const interrupteur = catalogueVisible ? (
+    <div className="pa-switch mobile-contacts-switch" role="group" aria-label="Côté de l'annuaire">
+      <button type="button" aria-pressed="true">Clients</button>
+      <button type="button" aria-pressed="false" onClick={() => props.onVueChange?.('metiers')}>Partenaires</button>
+    </div>
+  ) : null
   useEffect(() => {
     if (props.openContactId && props.selectedContact?.hektor_contact_id === props.openContactId) {
       setDetailOpen(true)
@@ -49263,9 +49288,71 @@ function MobileContactCards(props: {
     props.onSelectContact(contactId)
     setDetailOpen(true)
   }
+  const fiche = detailOpen && ficheContact ? (
+    <ContactDetailPopup
+      key={ficheContact.hektor_contact_id}
+      contact={ficheContact}
+      ouverture={vueMetiers ? 'catalogue_metiers' : undefined}
+      relations={props.selectedRelations}
+      searches={props.selectedSearches}
+      dataLoading={props.selectedSearchesLoading}
+      canManageContacts={props.canManageContacts}
+      canDeleteContacts={props.canDeleteContacts}
+      hektorUserEmail={props.hektorUserEmail}
+      hektorUserId={props.hektorUserId}
+      hektorNegotiators={props.hektorNegotiators}
+      profileRole={props.profileRole}
+      sessionEmail={props.sessionEmail}
+      onJobCreated={props.onJobCreated}
+      onContactDeleted={props.onContactDeleted}
+      onContactArchived={props.onContactArchived}
+      onClose={() => setDetailOpen(false)}
+      onOpenDossier={props.onOpenDossier}
+      onOpenRechercheAcquereur={props.onOpenRechercheAcquereur}
+    />
+  ) : null
+  if (vueMetiers) {
+    return (
+      <section className="mobile-card-list" aria-label="Partenaires">
+        {props.createOpen && props.canManageContacts ? (
+          <ContactWorkflowModal
+            title="Nouveau contact"
+            eyebrow={bvs("Creation Hektor")}
+            summary={bvs("Creation Hektor controlee, puis synchronisation locale et Supabase.")}
+            tone="create"
+            onClose={props.onCloseCreate}
+          >
+            <HektorContactIdentityForm
+              mode="create"
+              compact
+              hektorUserEmail={props.hektorUserEmail}
+              hektorUserId={props.hektorUserId}
+              hektorNegotiators={props.hektorNegotiators}
+              profileRole={props.profileRole}
+              sessionEmail={props.sessionEmail}
+              onCancel={props.onCloseCreate}
+              onJobCreated={props.onJobCreated}
+            />
+          </ContactWorkflowModal>
+        ) : null}
+        <CataloguePartenaires
+          variante="telephone"
+          onOuvrir={(contact) => {
+            setContactCatalogue(contact)
+            props.onSelectContact(contact.hektor_contact_id)
+            setDetailOpen(true)
+          }}
+          onVueClients={() => props.onVueChange?.('clients')}
+          onAjouter={props.canManageContacts ? props.onOpenCreate : undefined}
+        />
+        {fiche}
+      </section>
+    )
+  }
   if (props.contacts.length === 0) {
     return (
       <section className="mobile-empty-card">
+        {interrupteur}
         <span>{props.loading ? 'Chargement...' : 'Aucun contact disponible.'}</span>
         {props.createOpen && props.canManageContacts ? (
           <ContactWorkflowModal
@@ -49293,6 +49380,7 @@ function MobileContactCards(props: {
   }
   return (
     <section className="mobile-card-list" aria-label="Contacts">
+      {interrupteur}
       <div className="mobile-list-head">
         <div>
           <span className="mobile-section-kicker">Annuaire</span>
@@ -49358,28 +49446,7 @@ function MobileContactCards(props: {
         <span>Page {props.page} / {props.totalPages}</span>
         <button type="button" onClick={props.onNextContact} disabled={props.page >= props.totalPages}>Suiv</button>
       </div>
-      {detailOpen && props.selectedContact ? (
-        <ContactDetailPopup
-          key={props.selectedContact.hektor_contact_id}
-          contact={props.selectedContact}
-          relations={props.selectedRelations}
-          searches={props.selectedSearches}
-          dataLoading={props.selectedSearchesLoading}
-          canManageContacts={props.canManageContacts}
-          canDeleteContacts={props.canDeleteContacts}
-          hektorUserEmail={props.hektorUserEmail}
-          hektorUserId={props.hektorUserId}
-          hektorNegotiators={props.hektorNegotiators}
-          profileRole={props.profileRole}
-          sessionEmail={props.sessionEmail}
-          onJobCreated={props.onJobCreated}
-          onContactDeleted={props.onContactDeleted}
-          onContactArchived={props.onContactArchived}
-          onClose={() => setDetailOpen(false)}
-          onOpenDossier={props.onOpenDossier}
-          onOpenRechercheAcquereur={props.onOpenRechercheAcquereur}
-        />
-      ) : null}
+      {fiche}
     </section>
   )
 }

@@ -154,9 +154,9 @@ controle("(48) la fiche métier n'existe que si la fiche est ouverte depuis le c
   /ouverture\?: 'catalogue_metiers'/.test(app) && (app.match(/catalogue_metiers/g) || []).length >= 2);
 controle("(49) famille « autre » (société, administration…) : pas de fiche dédiée",
   /const profilPartenaire = profilBrut && profilBrut\.famille !== 'autre' \? profilBrut : null/.test(app));
-controle("(50) UNE SEULE porte passe « ouverture » : l'écran Contacts, côté Partenaires (vueMetiers)",
-  (app.match(/ouverture=\{[^}]*catalogue_metiers[^}]*\}/g) || []).length === 1
-  && /ouverture=\{vueMetiers \? 'catalogue_metiers' : undefined\}/.test(app));
+controle("(50) DEUX portes seulement passent « ouverture » : l'écran Contacts du bureau et celui du téléphone, côté Partenaires (vueMetiers)",
+  (app.match(/ouverture=\{[^}]*catalogue_metiers[^}]*\}/g) || []).length === 2
+  && (app.match(/ouverture=\{vueMetiers \? 'catalogue_metiers' : undefined\}/g) || []).length === 2);
 
 // ── PIÈCE 3.5 : le catalogue des métiers ──
 let cat;
@@ -206,6 +206,18 @@ controle("(65) l'aperçu : l'activité est « en construction », jamais un faux
 
 controle("(66) quitter le côté Partenaires ferme la fiche ouverte depuis le catalogue (jamais le 1er client de la page à sa place)",
   /if \(!vueMetiers && contactCatalogue\) \{ setDetailOpen\(false\); setContactCatalogue\(null\) \}/.test(app));
+
+// ── 3.6 : le téléphone (06/11, « visible par tous ») ──
+const iMob = app.indexOf("function MobileContactCards(props: {"), mob = app.slice(iMob, app.indexOf("function StatusPill(", iMob));
+controle("(67) téléphone : même cran, catalogue en version téléphone AVANT la liste vide, fiche du catalogue et garde de sortie",
+  /useCranCouplesVisible\('partenaires_catalogue', props\.profileRole\)/.test(mob) && /variante="telephone"/.test(mob)
+  && mob.indexOf("if (vueMetiers) {") > 0 && mob.indexOf("if (vueMetiers) {") < mob.indexOf("if (props.contacts.length === 0) {")
+  && /const ficheContact = vueMetiers && contactCatalogue/.test(mob) && /if \(!vueMetiers && contactCatalogue\) \{ setDetailOpen\(false\); setContactCatalogue\(null\) \}/.test(mob));
+controle("(68) téléphone : la carte de recherche des clients se cache côté Partenaires ; la feuille a « Voir toute la fiche »",
+  /const showMobileCommandCard = [^\n]*\n\s*&& !vueMetiersApp/.test(app) && /Voir toute la fiche/.test(catTsx) && /className="pt-sheet"/.test(catTsx));
+controle("(69) les pastilles et les actions du téléphone suivent la maquette (planche 2) et la fiche (3.3a)",
+  J(cat.TUILES_CATALOGUE.map((t) => t.puce)) === J(["Notaires", "Banques", "Diagnostics", "Apporteurs", "Syndics"])
+  && cat.TUILES_CATALOGUE.find((t) => t.tuile === "notaire").action === null && cat.TUILES_CATALOGUE.find((t) => t.tuile === "syndic").action === "Demander un document");
 
 console.log(echecs.length ? `\n${echecs.length} contrôle(s) en échec` : "\nTout est vert.");
 process.exit(echecs.length ? 1 : 0);

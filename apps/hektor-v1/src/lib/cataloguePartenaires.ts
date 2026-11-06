@@ -7,13 +7,14 @@
 export type TuileCatalogue = 'notaire' | 'syndic' | 'diag' | 'courtier' | 'apporteur'
 
 // Libellés et icônes de la maquette (planche 1) ; couleurs = celles des fiches déjà en ligne (contact-detail-v2.css),
-// pour que la tuile et la fiche aient la même teinte. `court` = le mot du bouton « Ouvrir la fiche … ».
-export const TUILES_CATALOGUE: { tuile: TuileCatalogue; libelle: string; court: string; sous: string; couleur: string; doux: string; icone: string }[] = [
-  { tuile: 'notaire', libelle: 'Notaires', court: 'notaire', sous: 'actes et dossiers', couleur: '#3b4a8c', doux: '#eceefa', icone: 'M12 3v18M7 21h10M5 7h14M5 7l-3 7h6zM19 7l-3 7h6z' },
-  { tuile: 'courtier', libelle: 'Banques et courtiers', court: 'courtier', sous: 'financements', couleur: '#1f7a55', doux: '#e5f3ec', icone: 'M3 10l9-6 9 6M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 20h18' },
-  { tuile: 'diag', libelle: 'Diagnostiqueurs', court: 'diagnostiqueur', sous: 'DPE et contrôles', couleur: '#b26a0e', doux: '#fbf0e1', icone: 'M4 18a8 8 0 1 1 16 0M12 18l4-6' },
-  { tuile: 'apporteur', libelle: 'Apporteurs et parrains', court: 'apporteur', sous: 'affaires apportées', couleur: '#b0306f', doux: '#fbe9f2', icone: 'M8 12l3 3 5-6M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z' },
-  { tuile: 'syndic', libelle: 'Syndics', court: 'syndic', sous: 'copropriétés', couleur: '#5b4a9e', doux: '#efecf9', icone: 'M3 11l9-7 9 7v9H3zM10 20v-6h4v6' },
+// pour que la tuile et la fiche aient la même teinte. `court` = le mot du bouton « Ouvrir la fiche … » ; `puce` = la
+// pastille du téléphone (planche 2) ; `action` = l'action propre au métier, « bientôt » (la même que la fiche, 3.3a).
+export const TUILES_CATALOGUE: { tuile: TuileCatalogue; libelle: string; court: string; puce: string; action: string | null; sous: string; couleur: string; doux: string; icone: string }[] = [
+  { tuile: 'notaire', libelle: 'Notaires', court: 'notaire', puce: 'Notaires', action: null, sous: 'actes et dossiers', couleur: '#3b4a8c', doux: '#eceefa', icone: 'M12 3v18M7 21h10M5 7h14M5 7l-3 7h6zM19 7l-3 7h6z' },
+  { tuile: 'courtier', libelle: 'Banques et courtiers', court: 'courtier', puce: 'Banques', action: 'Orienter un acquéreur', sous: 'financements', couleur: '#1f7a55', doux: '#e5f3ec', icone: 'M3 10l9-6 9 6M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 20h18' },
+  { tuile: 'diag', libelle: 'Diagnostiqueurs', court: 'diagnostiqueur', puce: 'Diagnostics', action: 'Commander un diagnostic', sous: 'DPE et contrôles', couleur: '#b26a0e', doux: '#fbf0e1', icone: 'M4 18a8 8 0 1 1 16 0M12 18l4-6' },
+  { tuile: 'apporteur', libelle: 'Apporteurs et parrains', court: 'apporteur', puce: 'Apporteurs', action: 'Noter une affaire apportée', sous: 'affaires apportées', couleur: '#b0306f', doux: '#fbe9f2', icone: 'M8 12l3 3 5-6M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z' },
+  { tuile: 'syndic', libelle: 'Syndics', court: 'syndic', puce: 'Syndics', action: 'Demander un document', sous: 'copropriétés', couleur: '#5b4a9e', doux: '#efecf9', icone: 'M3 11l9-7 9 7v9H3zM10 20v-6h4v6' },
 ]
 
 // Le métier du registre → sa tuile. Tout autre métier (société, administration…) n'est PAS au catalogue.
