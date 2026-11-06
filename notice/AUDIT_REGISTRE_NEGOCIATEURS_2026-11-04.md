@@ -1544,3 +1544,38 @@ Le compte `codex.test` n'a d'identité nulle part (même mélange s'il générai
 `app_negociateur_personne.app_user_id`), plus par l'e-mail ; identité prise d'UNE seule source (jamais de mélange) ; agence du
 registre (tél/mail), annuaire en repli ; chemin actuel inchangé si le registre ne répond pas. Question ouverte : l'agence à
 imprimer quand celle de la personne est « Compte formation » (ou absente).
+
+## 54. ⛔ AUDIT « UN ADMIN N'APPARAÎT JAMAIS SUR UN DOCUMENT » (06/11) — Frédéric : « j'ai peur d'avoir tout cassé, audit »
+
+**La règle (Frédéric, 06/11)** : un NÉGOCIATEUR agit en son nom ; un ADMIN utilise l'identité du NÉGOCIATEUR EN CHARGE du
+mandat ou du contact. L'identité d'un admin n'apparaît jamais sur un document d'annonce ou de contact (sauf cas exceptionnel à
+définir). ⛔ Ma proposition du §53 (« le conseiller pris au registre par le compte qui demande ») VIOLAIT cette règle : retirée.
+
+**Méthode** : deux lectures indépendantes du code (front ; serveur + worker) + mesures en base. Aucun code ne teste le rôle
+admin pour choisir une identité imprimée ; le seul test de rôle du worker est `role === "commercial"` (l. 2547).
+
+**CE QUE MON CHANTIER A CASSÉ — une seule chose** : 71bb15d (§41, 05/11) relie un compte à la fiche négociateur active de sa
+personne SANS FILTRE DE RÔLE (`supabase_admin._resolve_hektor_google_identity` l. ~221). Franck (ADMIN dans l'app) porte
+depuis le 05/11 13:41 `hektor_user_id 2` / négo 1 « Compte formation » (`app_google_workspace_identity`). Effet : la fenêtre de
+création de contact le propose par défaut, et ses recherches passent sous cette fiche (le `hektor_user_id` de la charge est
+prioritaire : worker l. 2489, SQL `app_console_create_update_contact_job` et `app_console_resolve_contact_hektor_user`).
+**Mesure : 0 geste d'écriture de Franck depuis 13:41** (2 rafraîchissements seulement) → aucun dégât à réparer.
+Frédéric et Pauline (admins sans fiche active) : `hektor_user_id` vide → inchangés.
+**Le reste de mon chantier respecte la règle** : page RDV (négo du bien ; 0 lien actif sur les 193 biens rangés au nom d'une
+fiche d'admin), page d'estimation (rotation sur fiches actives : aucune fiche d'admin active dans une vraie agence),
+correction de nuit des négos (données seules).
+Les 25 contacts créés par Frédéric au n° 2 depuis le 18/09 : clés `target_…` = choix fait dans la fenêtre (essais en
+Compte formation), pas une valeur automatique.
+
+**DÉJÀ LÀ AVANT MOI (non introduit par le registre)** :
+- Avis de valeur PDF (68fa3d4 + 50a7732, 24-26/06) : bloc « Votre conseiller » + QR = la personne CONNECTÉE, admin compris ;
+  l'e-mail d'estimation, lui, est au nom du négo du bien → les deux se contredisent. VIOLE.
+- Agenda global (App.tsx l. 21656) : un admin crée par défaut sur SON agenda ; le bon de visite qui en sort imprime l'adresse
+  de cet agenda (l. 44897). VIOLE.
+- Replis sur la boîte connectée quand le négo n'a pas d'adresse @gti : e-mail de rapprochement (l. 24982), envoi à un
+  acquéreur (l. 24951), e-mail CRM de la fiche contact (l. 44275). VIOLE EN REPLI.
+- Youtrust `mandataireDuMandat` (098290c, décision D21 du 26/10) : négo du bien s'il est actif, SINON LA PERSONNE QUI ENVOIE.
+  VIOLE EN REPLI (37 négos inactifs + 50 absents au 26/10) — décision de Frédéric à réarbitrer.
+- Gestes chez Hektor : la charge `hektor_user_id` passe devant le négo du contact sans contrôle de rôle (worker l. 2489).
+- RESPECTENT : PDF du mandat et avenant, e-mail d'estimation, espace client, page RDV, demandes de visite, gestes sur une annonce
+  (pas de `hektor_user_id` envoyé → négo du bien, ou l'agence s'il est inactif — repli agence actif).
