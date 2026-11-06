@@ -5055,6 +5055,15 @@ function signatureProtegee(sig) {
   return Boolean(sig && (sig.provider === "youtrust" || sig.source === "manuscrite"));
 }
 
+// A.2 P8-0 / G3 : une ligne engagee dans une signature (procedure en cours, signe rapatrie, Youtrust, a la main).
+function signatureSuivieOuSigne(row) {
+  const md = (row && row.metadata_json) || {};
+  const sig = md.signature || {};
+  if (md.signed_document || signatureProtegee(sig)) return true;
+  const procedure = sig.procedure_id != null && String(sig.procedure_id).trim() !== "";
+  return procedure && (sig.status === "pending" || sig.status === "signed" || sig.status === "refused");
+}
+
 async function upsertConsoleDocuments(dossier, entries, job = null) {
   const existingForAdoption = await loadExistingDocuments(String(dossier.hektor_annonce_id));
   // ⭐ AVANT TOUTE ECRITURE : reconnaitre par le chemin ce que le numero ne reconnait
@@ -5165,7 +5174,10 @@ async function upsertConsoleDocuments(dossier, entries, job = null) {
   const absents = existing.rows.filter((row) => row.hektor_document_id
     && !vusChezHektor.has(String(row.hektor_document_id))
     && row.present_in_hektor !== false            // deja marque : on n'ecrase pas sa date
-    && !duplicateIds.includes(row.id));           // celui-la vient d'etre efface
+    && !duplicateIds.includes(row.id)             // celui-la vient d'etre efface
+    // A.2 P8-0 / G3 (06/11/2026) : un document DEPOSE qui part en signature ImmoSign QUITTE la liste des depots
+    //   chez Hektor (seul precedent reel : 24113, 29/06). Ce n'est pas une suppression : on ne le marque pas.
+    && !signatureSuivieOuSigne(row));
   if (absents.length && vusChezHektor.size === 0) {
     console.warn(`[documents] liste Hektor VIDE pour l'annonce ${dossier.hektor_annonce_id} alors `
       + `que nous avons ${existing.rows.length} document(s) : on ne marque RIEN `
@@ -5218,7 +5230,13 @@ async function persistConsoleDocumentFile(dossier, document, options = {}) {
   // L'indexation modelo pointe le MEME document, mais son PDF "courant" n'est PAS signe :
   // le persister ecraserait le signe. On ne touche donc jamais au binaire de ces lignes
   // (leurs ZIP compagnons, eux, restent recuperes par persistImmoSignCompanionFiles).
-  if (metadata.modelo && metadata.signed_document) {
+  // ⚠ A.2 P8-0 / G2 (06/11/2026) : la garde ne couvrait QUE les modeles Hektor. Une ligne DEPOSEE chez Hektor
+  //   (mandat ne chez nous puis depose, ajout a la main) et signee ensuite -- par Youtrust ou par ImmoSign -- repasse
+  //   ici a chaque synchro : on relirait son ORIGINAL (local_archive_path) et on le monterait SUR LE CHEMIN DU SIGNE
+  //   (storage_path). Toute ligne qui porte un signed_document est donc preservee. Mesure du 06/11 : les 466 lignes
+  //   signees sont 464 modeles (deja couverts), 1 ligne synthetique hors liste et 1 ligne de l'app jamais deposee ->
+  //   rien d'existant ne change de chemin.
+  if (metadata.signed_document) {
     return {
       document_id: document.id,
       local_path: metadata.local_archive_path || (metadata.signed_document && metadata.signed_document.local_archive_path) || null,
@@ -6212,6 +6230,13 @@ function refusEtatYoutrust(message) {
 
 async function interrupteurSignatureYoutrust() {
   const rows = await supabaseRequest("app_setting?select=value&key=eq.signature_youtrust&limit=1", { method: "GET" });
+  const value = Array.isArray(rows) && rows[0] ? String(rows[0].value || "").trim().toLowerCase() : "";
+  return ["on", "true", "1", "yes"].includes(value);
+}
+
+// A.2 P8-0 (06/11/2026, D42) : le mandat genere nait chez nous puis part chez Hektor. Absent ou « off » = eteint.
+async function interrupteurMandatChezNous() {
+  const rows = await supabaseRequest("app_setting?select=value&key=eq.mandat_nait_chez_nous&limit=1", { method: "GET" });
   const value = Array.isArray(rows) && rows[0] ? String(rows[0].value || "").trim().toLowerCase() : "";
   return ["on", "true", "1", "yes"].includes(value);
 }
@@ -7391,6 +7416,12 @@ async function handlePrepareDocumentCloud(job) {
   if (!documentId) throw new Error("payload_json.document_id required");
   const document = await loadConsoleDocumentById(documentId);
 
+  // A.2 P8-0 / G2 (06/11/2026) : un document SIGNE se prepare avec son PDF SIGNE, jamais avec l'original
+  //   (persistConsoleDocumentFile le preserve desormais sans rien monter -- la ligne serait restee « uploading »).
+  if (document.metadata_json && document.metadata_json.signed_document) {
+    return monterSigneAuCoffre(document);
+  }
+
   await supabaseRequest(`app_console_document?id=eq.${encodeURIComponent(documentId)}`, {
     method: "PATCH",
     prefer: "return=minimal",
@@ -7405,6 +7436,38 @@ async function handlePrepareDocumentCloud(job) {
     bytes: result.bytes,
     sha256: result.sha256,
   };
+}
+
+// A.2 P8-0 / G2 : monte au coffre la copie SERVEUR du PDF signe (Youtrust range le signe sur le serveur seul quand
+// l'original n'etait pas au coffre). La colonne storage_path pointe alors le signe, comme apres un rapatriement.
+async function monterSigneAuCoffre(document) {
+  const md = document.metadata_json || {};
+  const sd = md.signed_document || {};
+  if (sd.storage_path && document.storage_status === "cloud_available" && document.storage_path === sd.storage_path) {
+    return { document_id: document.id, storage_path: sd.storage_path, local_path: sd.local_archive_path || null, bytes: Number(document.file_size) || 0, sha256: document.sha256 || null, signe: "deja_au_coffre" };
+  }
+  if (!sd.local_archive_path || !isReadableFile(sd.local_archive_path)) {
+    throw new Error(`PDF signe introuvable sur le serveur pour le document ${document.id} : rien n'est monte (l'original ne le remplacera pas).`);
+  }
+  const fichier = readLocalArchiveFile(sd.local_archive_path, "application/pdf");
+  const storagePath = sd.storage_path || `annonces/${document.hektor_annonce_id}/documents/${document.id}/signed/${storageSafeFilename(sd.filename || `${document.document_name || "document"} - signe.pdf`, `signed-${document.id}.pdf`)}`;
+  await uploadStorageObject(storagePath, fichier.buffer, "application/pdf");
+  const digest = sha256Buffer(fichier.buffer);
+  await supabaseRequest(`app_console_document?id=eq.${encodeURIComponent(document.id)}`, {
+    method: "PATCH",
+    prefer: "return=minimal",
+    body: JSON.stringify({
+      storage_path: storagePath,
+      storage_bucket: STORAGE_BUCKET,
+      storage_status: "cloud_available",
+      file_size: fichier.buffer.length,
+      sha256: digest,
+      mime_type: "application/pdf",
+      metadata_json: { ...md, signed_document: { ...sd, storage_path: storagePath, storage_bucket: STORAGE_BUCKET } },
+      updated_at: new Date().toISOString(),
+    }),
+  });
+  return { document_id: document.id, storage_path: storagePath, local_path: sd.local_archive_path, bytes: fichier.buffer.length, sha256: digest, signe: "monte" };
 }
 
 // =========================================================================
@@ -9007,8 +9070,11 @@ async function handleGenerateMandatDocument(job) {
   // A.2 lot 4 bis (26/10/2026, D24) : signature Youtrust ALLUMEE -> le mandat est enregistre CHEZ
   // NOUS SEULEMENT, sans depot Hektor (le seul but du depot etait ImmoSign -- regle de Frederic
   // du 26/10 : « uniquement Youtrust »). ETEINTE : le chemin d'avant, inchange (ci-dessous).
-  if (await interrupteurSignatureYoutrust()) {
-    return enregistrerMandatChezNous(job, dossier, payload, label, filename, pdfBuffer);
+  // A.2 P8-0 (06/11/2026, D42) : `mandat_nait_chez_nous` ALLUME -> chez nous d'abord, puis le depot chez Hektor en
+  // arriere-plan, QUEL QUE SOIT l'interrupteur Youtrust (avant la coupure : trois signatures possibles). Il prime.
+  const chezNousPuisHektor = await interrupteurMandatChezNous();
+  if (chezNousPuisHektor || await interrupteurSignatureYoutrust()) {
+    return enregistrerMandatChezNous(job, dossier, payload, label, filename, pdfBuffer, { deposerChezHektor: chezNousPuisHektor });
   }
   const tempPath = `temp/uploads/${job.id}/${filename}`;
   await uploadStorageObject(tempPath, pdfBuffer, "application/pdf");
@@ -9199,7 +9265,11 @@ async function marquerDocumentRemplace(job, nouveau, ancienId) {
 // ⚠ envoi_hektor_statut = 'sans_hektor' : ni « a envoyer » ni « echec » -> la reprise des envois
 //   (run_reprise_envois_hektor) ne le prend pas, l'ecran n'affiche aucun « envoi echoue ».
 //   hektor_document_id reste NULL : la ligne survit a la synchro de nuit (regle du 14/10).
-async function enregistrerMandatChezNous(job, dossier, payload, label, filename, pdfBuffer) {
+// A.2 P8-0 (06/11/2026, D42) : `deposerChezHektor` -- interrupteur `mandat_nait_chez_nous` allume : la ligne nait
+// `a_envoyer` et le DEPOT CHEZ HEKTOR part ensuite, par le chemin des ajouts a la main (completerEnvoiDocumentDiffere,
+// en production depuis le 19/10 ; repris par « GTI Reprise Envois Hektor » si Hektor ne repond pas). Eteint : la ligne
+// nait `sans_hektor`, comme le 26/10 (D24 seconde forme).
+async function enregistrerMandatChezNous(job, dossier, payload, label, filename, pdfBuffer, { deposerChezHektor = false } = {}) {
   const existantes = await supabaseRequest(
     `app_console_document?metadata_json->>generation_job_id=eq.${encodeURIComponent(job.id)}&select=*&limit=1`,
     { method: "GET" },
@@ -9218,7 +9288,7 @@ async function enregistrerMandatChezNous(job, dossier, payload, label, filename,
       storage_path: null,
       storage_status: "uploading",
       mime_type: "application/pdf",
-      envoi_hektor_statut: "sans_hektor",
+      envoi_hektor_statut: deposerChezHektor ? "a_envoyer" : "sans_hektor",
       metadata_json: {
         cree_par_app: true,
         cree_le: new Date().toISOString(),
@@ -9244,13 +9314,18 @@ async function enregistrerMandatChezNous(job, dossier, payload, label, filename,
   if (remplacement && !remplacement.marque) {
     await logJob(job.id, "mandat_remplace", "warning", `L'ancien PDF n'a pas ete marque remplace (${remplacement.raison})`, remplacement);
   }
-  await logJob(job.id, "mandat_pdf", "done", "Mandat genere, enregistre chez nous (signature Youtrust : pas de depot Hektor)", {
+  // A.2 P8-0 (D42) : le depot chez Hektor, APRES que la ligne et son fichier existent chez nous.
+  const depot = deposerChezHektor ? await poserDepotMandatChezHektor(job, dossier, ligne, payload) : null;
+  await logJob(job.id, "mandat_pdf", "done", deposerChezHektor
+    ? "Mandat genere, enregistre chez nous ; depot chez Hektor en file"
+    : "Mandat genere, enregistre chez nous (signature Youtrust : pas de depot Hektor)", {
     hektor_annonce_id: String(dossier.hektor_annonce_id),
     app_document_id: ligne.id,
     pdf_bytes: pdfBuffer.length,
     storage_path: range.storage_path,
     signataires_du_pdf: photo ? { valide: photo.valide, mandants: photo.mandants.length, problemes: photo.problemes } : null,
     ...(remplacement ? { remplacement } : {}),
+    ...(depot ? { depot_hektor: depot } : {}),
   });
   return {
     ok: true,
@@ -9258,9 +9333,54 @@ async function enregistrerMandatChezNous(job, dossier, payload, label, filename,
     pdf_bytes: pdfBuffer.length,
     app_document_id: ligne.id,
     storage_path: range.storage_path,
-    sans_hektor: true,
+    sans_hektor: !deposerChezHektor,
+    ...(depot ? { upload_job_id: depot.upload_job_id, depot_hektor: depot.etat } : {}),
     ...(remplacement ? { remplacement } : {}),
   };
+}
+
+// A.2 P8-0 (D42) : pose le travail de depot de CETTE ligne chez Hektor -- une seule fois (un travail rejoue retrouve
+// le sien : en file, en cours ou fini). Il ne fait jamais echouer la generation : la ligne reste `a_envoyer` et la tache
+// « GTI Reprise Envois Hektor » (12:30) la reprendra.
+async function poserDepotMandatChezHektor(job, dossier, ligne, payload) {
+  try {
+    const deja = await supabaseRequest(
+      `app_console_job?job_type=eq.upload_document_to_hektor&payload_json->>app_document_id=eq.${encodeURIComponent(ligne.id)}`
+        + "&status=in.(pending,running,done)&select=id,status&limit=1",
+      { method: "GET" },
+    );
+    if (Array.isArray(deja) && deja[0]) return { etat: "deja_en_file", upload_job_id: deja[0].id };
+    const rows = await supabaseRequest("app_console_job", {
+      method: "POST",
+      prefer: "return=representation",
+      body: JSON.stringify([{
+        job_type: "upload_document_to_hektor",
+        app_dossier_id: dossier.app_dossier_id || job.app_dossier_id || null,
+        hektor_annonce_id: String(dossier.hektor_annonce_id),
+        payload_json: {
+          app_document_id: ligne.id,
+          visibility: payload.visibility === "shared" ? "shared" : "private",
+          document_type: "Mandat",
+          original_filename: ligne.document_name,
+          document_label: (ligne.metadata_json && ligne.metadata_json.document_label) || null,
+          mime_type: "application/pdf",
+          origine: "generate_mandat_document",
+        },
+        status: "pending",
+        priority: 40,
+        requested_by: job.requested_by || null,
+        requested_at: new Date().toISOString(),
+      }]),
+    });
+    const travail = Array.isArray(rows) ? rows[0] : null;
+    return { etat: "en_file", upload_job_id: travail ? travail.id : null };
+  } catch (error) {
+    await logJob(job.id, "mandat_pdf", "warning", "Depot chez Hektor non pose : la ligne reste « a envoyer », la reprise de 12:30 le fera", {
+      app_document_id: ligne.id,
+      erreur: error && error.message ? error.message : String(error),
+    });
+    return { etat: "non_pose", erreur: error && error.message ? error.message : String(error) };
+  }
 }
 
 // Document « Plan cadastral » : page A4 designée (plan IGN + surcouche parcellaire,
@@ -9514,11 +9634,16 @@ async function completerEnvoiDocumentDiffere(job, dossier, payload) {
   );
   const ligne = Array.isArray(lignes) ? lignes[0] : null;
   if (!ligne) throw new Error(`Document ${payload.app_document_id} introuvable`);
-  if (!ligne.storage_path) throw new Error(`Document ${payload.app_document_id} sans fichier`);
+  // A.2 P8-0 / G4 (06/11/2026) : un document hors coffre (bien hors statut « vivant », regle shouldKeepCloud) n'a pas de
+  //   storage_path mais a sa copie SERVEUR -- on la lit, comme l'envoi Youtrust (lirePdfDuDocumentPourSignature).
+  const copieServeur = ligne.metadata_json && ligne.metadata_json.local_archive_path;
+  if (!ligne.storage_path && !isReadableFile(copieServeur)) throw new Error(`Document ${payload.app_document_id} sans fichier`);
 
   const filename = safeFilename(ligne.document_name || payload.original_filename, "document.pdf");
   const visibility = ligne.visibility === "shared" ? "shared" : "private";
-  const fichier = await downloadStorageObject(ligne.storage_path);
+  const fichier = ligne.storage_path
+    ? await downloadStorageObject(ligne.storage_path)
+    : readLocalArchiveFile(copieServeur, ligne.mime_type || "application/pdf");
 
   // ⚠⚠ LE TEMPORAIRE N'EST PAS UNE PLACE DEFINITIVE -- 3d / lot 2c (14/10/2026).
   // L'app depose son fichier sous temp/uploads/<travail>/ et pose la ligne en
@@ -9564,9 +9689,29 @@ async function completerEnvoiDocumentDiffere(job, dossier, payload) {
   try {
     await ensureHektorExecutionContext(job, dossier, payload,
       { preferRequester: true, preferDossierOwner: true, required: true });
-    const envoi = await envoyerDocumentAHektor(dossier, {
-      buffer: fichier.buffer, mimeType: fichier.mimeType, filename, visibility,
-    });
+    // A.2 P8-0 / G1 (06/11/2026) -- L'ANTI-DOUBLON. Le 23/10 sur 59203, 4 documents ont ete DEPOSES mais declares
+    //   « non confirmes » ; la reprise du 24/10 les a RENVOYES : 4 doublons chez Hektor. Avant de renvoyer une ligne
+    //   qui a deja ete tentee (echec, ou travail rejoue), on regarde si Hektor l'a DEJA : un document du meme nom
+    //   qu'aucune autre ligne ne reclame -> on l'ADOPTE au lieu de l'envoyer une seconde fois.
+    const dejaPris = await numerosHektorDejaPris(dossier, ligne);
+    const dejaTente = ligne.envoi_hektor_statut === "echec" || Number(job.attempt_count || 0) > 1;
+    let envoi = null;
+    if (dejaTente) {
+      const entriesAvant = await fetchConsoleDocumentEntries(dossier.hektor_annonce_id);
+      const adopte = documentNonReclame(entriesAvant, filename, dejaPris);
+      if (adopte) {
+        envoi = { entries: entriesAvant, found: adopte, adopte: true };
+        await logJob(job.id, "upload_document_to_hektor", "running",
+          "Document DEJA chez Hektor (tentative precedente) : adopte, pas renvoye", {
+            app_document_id: ligne.id, hektor_document_id: adopte.hektor_document_id,
+          });
+      }
+    }
+    if (!envoi) {
+      envoi = await envoyerDocumentAHektor(dossier, {
+        buffer: fichier.buffer, mimeType: fichier.mimeType, filename, visibility, dejaPris,
+      });
+    }
     if (!envoi.found) throw new Error(`Upload Hektor non confirme dans la liste documents: ${filename}`);
 
     // ADOPTION : on pose le numero Hektor sur NOTRE ligne AVANT de reindexer, pour que
@@ -9666,7 +9811,36 @@ async function completerEnvoiDocumentDiffere(job, dossier, payload) {
 // ⚠ IL NE LEVE PAS si le document n'est pas retrouve dans la liste : c'est a l'appelant
 // de decider. Le chemin immediat leve (comme avant), le chemin differe marque « echec »
 // et garde la ligne -- c'est toute la difference entre les deux.
-async function envoyerDocumentAHektor(dossier, { buffer, mimeType, filename, visibility }) {
+// A.2 P8-0 / G1 : les numeros Hektor deja portes par une AUTRE ligne de l'annonce (un document deja reconnu).
+// ⚠ Sauf la copie que la synchro aurait indexee ENTRE-TEMPS pour CE fichier (ligne venue de Hektor, meme nom, meme
+//   empreinte ou empreinte inconnue) : c'est notre propre depot, elle doit rester adoptable -- la reindexation qui suit
+//   l'adoption supprime alors ce doublon de ligne (meme numero, autre source : upsertConsoleDocuments).
+async function numerosHektorDejaPris(dossier, ligne) {
+  const rows = await supabaseRequest(
+    `app_console_document?hektor_annonce_id=eq.${encodeURIComponent(String(dossier.hektor_annonce_id))}&select=id,hektor_document_id,document_name,source,sha256,created_at&limit=2000`,
+    { method: "GET" },
+  );
+  const memeFichier = (r) => (r.sha256 && ligne.sha256)
+    ? r.sha256 === ligne.sha256
+    : (!r.sha256 && Boolean(r.created_at && ligne.created_at) && String(r.created_at) >= String(ligne.created_at));
+  const notreCopie = (r) => String(r.source || "").startsWith("hektor_console")
+    && r.document_name === ligne.document_name && memeFichier(r);
+  return new Set((Array.isArray(rows) ? rows : [])
+    .filter((r) => r.id !== ligne.id && r.hektor_document_id && !notreCopie(r))
+    .map((r) => String(r.hektor_document_id)));
+}
+
+// A.2 P8-0 / G1 : le document du meme nom qu'aucune autre ligne ne reclame. Meme rapprochement des noms que l'envoi
+// (egal, ou l'un contient l'autre) ; a egalite, le nom EXACT d'abord, puis le depot le plus recent.
+function documentNonReclame(entries, filename, dejaPris) {
+  const correspond = (e) => e.document_name === filename || e.document_name.includes(filename) || filename.includes(e.document_name);
+  const libres = (entries || []).filter((e) => e && e.document_name && correspond(e) && !(dejaPris && dejaPris.has(String(e.hektor_document_id))));
+  if (!libres.length) return null;
+  return libres.sort((a, b) => (Number(b.document_name === filename) - Number(a.document_name === filename))
+    || (Number(b.hektor_uploaded_document_id || 0) - Number(a.hektor_uploaded_document_id || 0)))[0];
+}
+
+async function envoyerDocumentAHektor(dossier, { buffer, mimeType, filename, visibility, dejaPris = null }) {
   const publicValue = visibility === "shared" ? "2" : "0";
   const publicKey = visibility === "shared" ? "partage" : "privee";
   const idContentDiv = visibility === "shared" ? "listDocUpload_partage" : "listDocUpload_privee";
@@ -9682,9 +9856,23 @@ async function envoyerDocumentAHektor(dossier, { buffer, mimeType, filename, vis
   form.set("Filedata", new Blob([buffer], { type: mimeType }), filename);
   await hektorFetch(`${ADMIN_URL}upload_uploadeddoc.php`, { method: "POST", body: form, headers: {} });
 
-  const entries = await fetchConsoleDocumentEntries(dossier.hektor_annonce_id);
-  const found = entries.find((entry) => entry.document_name === filename
-    || entry.document_name.includes(filename) || filename.includes(entry.document_name));
+  // A.2 P8-0 / G1 (06/11/2026) : la liste peut ne pas montrer encore le fichier qu'on vient d'envoyer (59203, 23/10 :
+  //   4 envois en 30 s declares « non confirmes » alors que Hektor les avait). On la RELIT avant de conclure, et l'on
+  //   prefere le document du meme nom qu'aucune autre ligne ne reclame (sinon on adoptait le numero d'un ANCIEN depot
+  //   du meme nom -- c'est ce qui a laisse les doublons de 59203 sans ligne a eux). Sans `dejaPris` (chemin immediat),
+  //   le choix est celui d'avant.
+  const correspond = (entry) => entry.document_name === filename
+    || entry.document_name.includes(filename) || filename.includes(entry.document_name);
+  let entries = [];
+  let found = null;
+  for (let lecture = 1; lecture <= 3; lecture += 1) {
+    if (lecture > 1) await sleep(3000);
+    entries = await fetchConsoleDocumentEntries(dossier.hektor_annonce_id);
+    found = (dejaPris && documentNonReclame(entries, filename, dejaPris))
+      || (dejaPris ? null : entries.find(correspond))
+      || null;
+    if (found) break;
+  }
   return { entries, found: found || null };
 }
 
@@ -9696,7 +9884,9 @@ async function handleUploadDocumentToHektor(job) {
   // C'est le modele des contacts, des annonces et des recherches -- les trois entites qui
   // ont deja leur couche optimiste. Documents et photos etaient les seules a exiger une
   // confirmation de Hektor pour exister. A la coupure, cela aurait arrete l'ajout.
-  // DORMANT : aucun appelant ne pose app_document_id tant que le front n'est pas bascule.
+  // ⚠ PLUS DORMANT (constate le 06/11/2026) : l'ajout a la main le pose depuis le 19/10 (lot 2c, RPC
+  //   app_console_creer_document_optimistic, api.ts) -- 11 travaux, 6 documents, tous `envoye`. Et depuis A.2 P8-0, le
+  //   mandat genere aussi (interrupteur `mandat_nait_chez_nous`, poserDepotMandatChezHektor).
   if (payload.app_document_id) {
     return await completerEnvoiDocumentDiffere(job, dossier, payload);
   }

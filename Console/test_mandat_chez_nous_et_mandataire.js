@@ -23,7 +23,8 @@ const tranche = (src, d) => { const i = src.indexOf(d); return i < 0 ? null : sr
 // ── (A) LA GENERATION ──────────────────────────────────────────────────────────────
 function monterGeneration(src, base, statut = "Estimation") {
   // lot 6b P1 (05/11) : enregistrerMandatChezNous appelle la photo du PDF -> ses tranches (absentes du code d'avant : filtrees).
-  const blocs = ["function shouldKeepCloud(", "function cleanString(", "function ficheDuMandantImprime(", "function photoSignatairesDuPdf(", "function contenuImprimeDuPdf(", "async function marquerDocumentRemplace(", "async function handleGenerateMandatDocument(", "async function enregistrerMandatChezNous("]
+  const blocs = ["function shouldKeepCloud(", "function cleanString(", "function ficheDuMandantImprime(", "function photoSignatairesDuPdf(", "function contenuImprimeDuPdf(", "async function marquerDocumentRemplace(", "async function handleGenerateMandatDocument(", "async function enregistrerMandatChezNous(",
+    "async function poserDepotMandatChezHektor("]   // A.2 P8-0 (06/11) : absente du code d'avant -> filtree
     .map((d) => tranche(src, d)).filter(Boolean);
   const D = {
     safeJsonParse: (v) => (typeof v === "string" ? JSON.parse(v) : v || {}),
@@ -41,9 +42,15 @@ function monterGeneration(src, base, statut = "Estimation") {
       return { storage_path: opts.cloud ? storage_path : null };
     },
     interrupteurSignatureYoutrust: async () => base.youtrust,
+    interrupteurMandatChezNous: async () => Boolean(base.chezNous),   // A.2 P8-0 (06/11)
     supabaseRequest: async (chemin, options = {}) => {
       const m = options.method || "GET";
       base.appels.push(`${m} ${chemin.split("?")[0]}${m === "GET" ? "?" + chemin.split("?")[1] : ""}`);
+      // A.2 P8-0 : « un depot est-il deja en file pour cette ligne ? »
+      if (chemin.startsWith("app_console_job") && m === "GET") {
+        const id = decodeURIComponent((chemin.match(/app_document_id=eq\.([^&]+)/) || [])[1] || "");
+        return base.travaux.filter((t) => t.payload_json && t.payload_json.app_document_id === id);
+      }
       if (chemin.startsWith("app_console_job") && m === "POST") { base.travaux.push(...JSON.parse(options.body)); return [{ id: "upload-1" }]; }
       if (chemin.startsWith("app_console_document") && m === "POST") { base.documents.push(...JSON.parse(options.body)); return null; }
       if (chemin.startsWith("app_console_document") && m === "GET") {
@@ -121,6 +128,27 @@ const profils = [
     controle("A2. ALLUME : le resultat porte app_document_id (l'envoi Youtrust en a besoin)", rOn.app_document_id === doc.id && rOn.sans_hektor === true);
     const rRejeu = await monterGeneration(srcNeuf, bOn)(jobGen);
     controle("A3. REJEU du meme travail : la MEME ligne, pas de doublon", bOn.documents.length === 1 && rRejeu.app_document_id === doc.id);
+
+    // A.2 P8-0 (06/11/2026, D42) : `mandat_nait_chez_nous` ALLUME -> chez nous d'abord, PUIS le depot chez Hektor.
+    for (const youtrust of [false, true]) {
+      const bCN = { youtrust, chezNous: true, appels: [], travaux: [], documents: [] };
+      const rCN = await monterGeneration(srcNeuf, bCN)({ ...jobGen, id: `job-gen-cn-${youtrust}` });
+      const dcn = bCN.documents[0] || {};
+      const t = bCN.travaux[0] || {};
+      const quand = youtrust ? "Youtrust allume aussi" : "Youtrust eteint";
+      controle(`A4. CHEZ NOUS PUIS HEKTOR (${quand}) : UNE ligne chez nous, « a_envoyer », avec la photo des signataires`,
+        bCN.documents.length === 1 && dcn.source === "app" && dcn.envoi_hektor_statut === "a_envoyer" && Boolean(dcn.metadata_json && dcn.metadata_json.signataires_du_pdf), JSON.stringify(dcn));
+      controle(`A4. (${quand}) : UN depot chez Hektor en file, par le chemin des ajouts (app_document_id), SANS fichier temporaire`,
+        bCN.travaux.length === 1 && t.job_type === "upload_document_to_hektor" && t.payload_json.app_document_id === dcn.id && !t.payload_json.temp_storage_path
+          && !bCN.appels.some((a) => /temp\/uploads/.test(a)), JSON.stringify(bCN.travaux));
+      controle(`A4. (${quand}) : la ligne existe AVANT le depot (POST document, puis POST travail)`,
+        bCN.appels.findIndex((a) => a.startsWith("POST app_console_document")) < bCN.appels.findIndex((a) => a.startsWith("POST app_console_job")), bCN.appels.join(" | "));
+      controle(`A4. (${quand}) : le resultat le dit (app_document_id, upload_job_id, pas « sans Hektor »)`,
+        rCN.app_document_id === dcn.id && rCN.upload_job_id === "upload-1" && rCN.sans_hektor === false, JSON.stringify(rCN));
+      const rRejeuCN = await monterGeneration(srcNeuf, bCN)({ ...jobGen, id: `job-gen-cn-${youtrust}` });
+      controle(`A5. (${quand}) REJEU : la meme ligne et AUCUN second depot (un seul travail)`,
+        bCN.documents.length === 1 && bCN.travaux.length === 1 && rRejeuCN.depot_hektor === "deja_en_file", JSON.stringify(rRejeuCN));
+    }
 
     // (B)
     const md = monterMandataire(annuaire, profils);

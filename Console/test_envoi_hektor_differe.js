@@ -38,19 +38,23 @@ function tranche(marque) {
 }
 
 const bloc = tranche("async function completerEnvoiDocumentDiffere(");
+// A.2 P8-0 / G1 (06/11) : l'anti-doublon, decoupe du VRAI worker lui aussi.
+const blocAideG1 = [tranche("async function numerosHektorDejaPris("), tranche("function documentNonReclame(")].join("\n");
 
-function charger(hektorEchoue, indexationEchoue = false) {
+function charger(hektorEchoue, indexationEchoue = false, opts = {}) {
   const journal = [];          // l'ORDRE des gestes, c'est ce qu'on verifie
   const patches = [];
   const faux = {
     supabaseRequest: async (chemin, options) => {
       if (!options || options.method === "GET") {
         journal.push("lecture_ligne");
-        return [{
-          id: "doc-1", hektor_annonce_id: "62087", document_name: "Mandat.pdf",
+        const ligne = { id: "doc-1", hektor_annonce_id: "62087", document_name: "Mandat.pdf",
           visibility: "private", storage_path: "annonces/62087/documents/doc-1/Mandat.pdf",
-          metadata_json: {},
-        }];
+          sha256: "S-NOTRE", created_at: "2026-11-06T08:00:00Z",
+          metadata_json: {}, ...(opts.ligne || {}) };
+        // P8-0 / G1 : la lecture des AUTRES lignes de l'annonce (numerosHektorDejaPris)
+        if (/select=id,hektor_document_id/.test(chemin)) return [ligne, ...(opts.autres || [])];
+        return [ligne];
       }
       journal.push("patch_ligne");
       patches.push(JSON.parse(options.body));
@@ -82,12 +86,15 @@ function charger(hektorEchoue, indexationEchoue = false) {
     enqueueRefreshConsoleDataJobBestEffort: async () => { journal.push("rafraichissement"); return null; },
     logJob: async () => { journal.push("journal"); },
     safeFilename: (n, f) => n || f,
+    isReadableFile: (chemin) => Boolean(opts.copieServeurLisible && chemin),
+    readLocalArchiveFile: () => { journal.push("LECTURE_SERVEUR"); return { buffer: Buffer.alloc(16, 1), mimeType: "application/pdf" }; },
+    fetchConsoleDocumentEntries: async () => { journal.push("LISTE_HEKTOR"); return opts.entries || []; },
     // 3d / lot 2c : declaree pour que l'epreuve puisse PROUVER qu'elle ne sert pas
     // quand la ligne n'est pas en attente d'envoi.
     deleteStorageObject: async (chemin) => { journal.push(`SUPPRESSION:${chemin}`); },
   };
   // eslint-disable-next-line no-new-func
-  const fn = new Function(...Object.keys(faux), `${bloc}; return completerEnvoiDocumentDiffere;`)(
+  const fn = new Function(...Object.keys(faux), `${bloc}; ${blocAideG1}; return completerEnvoiDocumentDiffere;`)(
     ...Object.values(faux));
   return { fn, journal, patches };
 }
@@ -157,6 +164,43 @@ function charger(hektorEchoue, indexationEchoue = false) {
       r && r.envoi_hektor === "envoye" && r.hektor_document_id === "H-99" && /app_console_document_pkey/.test(String(r.indexation_erreur || "")),
       JSON.stringify(r));
     controle("(r) l'echec du rangement est ecrit au journal", journal.includes("journal"), journal.join(" > "));
+
+    // ── ⑦ A.2 P8-0 / G1 (06/11) : L'ANTI-DOUBLON -- le cas de 59203 (23-24/10) ──
+    // La ligne a deja ete tentee (« echec ») et Hektor a DEJA le fichier : on l'adopte, on ne le renvoie pas.
+    const chezHektor = [{ hektor_document_id: "H-OLD", document_name: "Mandat.pdf", hektor_uploaded_document_id: "715224" }];
+    ({ fn, journal, patches } = charger(false, false, { ligne: { envoi_hektor_statut: "echec" }, entries: chezHektor }));
+    r = await fn({ id: "job-g1", attempt_count: 1 }, { hektor_annonce_id: "62087" }, { app_document_id: "doc-1" });
+    controle("(g1) ⭐⭐ deja tente + Hektor a le fichier : AUCUN renvoi", !journal.includes("APPEL_HEKTOR"), journal.join(" > "));
+    controle("(g1) ...et le numero de Hektor est ADOPTE, statut « envoye »",
+      patches.some((p) => p.hektor_document_id === "H-OLD" && p.envoi_hektor_statut === "envoye"), JSON.stringify(patches));
+    controle("(g1) ...le serveur garde quand meme sa copie, AVANT tout", journal.indexOf("ECRITURE_SERVEUR") >= 0 && journal.indexOf("ECRITURE_SERVEUR") < journal.indexOf("LISTE_HEKTOR"), journal.join(" > "));
+    // Temoin : PREMIER essai (a_envoyer, 1re tentative) -> on envoie, sans regarder (pas de tentative a reprendre).
+    ({ fn, journal, patches } = charger(false, false, { ligne: { envoi_hektor_statut: "a_envoyer" }, entries: chezHektor }));
+    r = await fn({ id: "job-g1b", attempt_count: 1 }, { hektor_annonce_id: "62087" }, { app_document_id: "doc-1" });
+    controle("(g2) TEMOIN : premier essai -> l'envoi part (on n'adopte rien a l'aveugle)", journal.includes("APPEL_HEKTOR") && !journal.includes("LISTE_HEKTOR"), journal.join(" > "));
+    // Travail REJOUE (le worker est tombe apres l'envoi) : meme anti-doublon que l'echec.
+    ({ fn, journal, patches } = charger(false, false, { ligne: { envoi_hektor_statut: "a_envoyer" }, entries: chezHektor }));
+    r = await fn({ id: "job-g1c", attempt_count: 2 }, { hektor_annonce_id: "62087" }, { app_document_id: "doc-1" });
+    controle("(g3) travail rejoue (tentative 2) -> adopte, pas renvoye", !journal.includes("APPEL_HEKTOR") && patches.some((p) => p.hektor_document_id === "H-OLD"), journal.join(" > "));
+    // Le document du meme nom est un AUTRE document, deja reconnu par une autre ligne (autre empreinte) -> on envoie.
+    ({ fn, journal, patches } = charger(false, false, { ligne: { envoi_hektor_statut: "echec" }, entries: chezHektor,
+      autres: [{ id: "doc-autre", hektor_document_id: "H-OLD", document_name: "Mandat.pdf", source: "hektor_console_uploaded_private", sha256: "S-AUTRE" }] }));
+    r = await fn({ id: "job-g1d", attempt_count: 1 }, { hektor_annonce_id: "62087" }, { app_document_id: "doc-1" });
+    controle("(g4) ⭐ un AUTRE document du meme nom (deja reconnu) n'est jamais adopte : l'envoi part", journal.includes("APPEL_HEKTOR") && !patches.some((p) => p.hektor_document_id === "H-OLD"), journal.join(" > "));
+    // La synchro a indexe ENTRE-TEMPS notre propre depot comme une ligne a part (meme nom, meme empreinte) -> adoptable.
+    ({ fn, journal, patches } = charger(false, false, { ligne: { envoi_hektor_statut: "echec" }, entries: chezHektor,
+      autres: [{ id: "doc-copie", hektor_document_id: "H-OLD", document_name: "Mandat.pdf", source: "hektor_console_uploaded_private", sha256: "S-NOTRE" }] }));
+    r = await fn({ id: "job-g1e", attempt_count: 1 }, { hektor_annonce_id: "62087" }, { app_document_id: "doc-1" });
+    controle("(g5) notre propre depot deja indexe a part (meme empreinte) -> adopte, pas renvoye", !journal.includes("APPEL_HEKTOR") && patches.some((p) => p.hektor_document_id === "H-OLD"), journal.join(" > "));
+
+    // ── ⑧ A.2 P8-0 / G4 (06/11) : un document hors coffre part avec sa copie SERVEUR ──
+    ({ fn, journal, patches } = charger(false, false, { ligne: { storage_path: null, metadata_json: { local_archive_path: "C:/serveur/m.pdf" } }, copieServeurLisible: true }));
+    r = await fn({ id: "job-g4", attempt_count: 1 }, { hektor_annonce_id: "62087" }, { app_document_id: "doc-1" });
+    controle("(g6) sans coffre : la copie serveur est lue, le depot part", journal.includes("LECTURE_SERVEUR") && !journal.includes("lecture_fichier") && journal.includes("APPEL_HEKTOR"), journal.join(" > "));
+    ({ fn, journal, patches } = charger(false, false, { ligne: { storage_path: null, metadata_json: {} } }));
+    leve = null;
+    try { await fn({ id: "job-g4b", attempt_count: 1 }, { hektor_annonce_id: "62087" }, { app_document_id: "doc-1" }); } catch (e) { leve = e.message; }
+    controle("(g7) TEMOIN : ni coffre ni serveur -> refus clair « sans fichier »", /sans fichier/.test(String(leve || "")), String(leve));
 
     // TEMOIN INVERSE : si l'echec survient AVANT la pose du numero, c'est bien un echec d'envoi.
     ({ fn, journal, patches } = charger(true, true));
@@ -308,10 +352,13 @@ function charger(hektorEchoue, indexationEchoue = false) {
         enqueueRefreshConsoleDataJobBestEffort: async () => null,
         logJob: async () => { journal.push("journal"); },
         safeFilename: (n, f) => n || f,
+        isReadableFile: () => false,
+        readLocalArchiveFile: () => ({ buffer: Buffer.alloc(16, 1), mimeType: "application/pdf" }),
+        fetchConsoleDocumentEntries: async () => [],
         deleteStorageObject: async (chemin) => { journal.push(`SUPPRESSION:${chemin}`); },
       };
       // eslint-disable-next-line no-new-func
-      const fn = new Function(...Object.keys(faux), `${bloc}; return completerEnvoiDocumentDiffere;`)(
+      const fn = new Function(...Object.keys(faux), `${bloc}; ${blocAideG1}; return completerEnvoiDocumentDiffere;`)(
         ...Object.values(faux));
       return { fn, journal, vus };
     }

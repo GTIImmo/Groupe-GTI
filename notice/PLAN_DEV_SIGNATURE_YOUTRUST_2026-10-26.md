@@ -772,6 +772,194 @@ webhook posé par Frédéric ; redémarrage du worker.
 >    faits par un autre travail ; « abandon » : les 3 mises à jour de contact). Vérifié avant : 0 ligne de carnet
 >    d'annonce au même instant, donc l'abandon ne défaisait rien. L'écran l'aurait refusé (moins de 3 h) : écrit en
 >    base directement. Reste à trancher sur 30 jours : **0**.
+>
+> 🔎 **AUDIT P8 (06/11, lecture seule : code worker + écran + base ; rien codé)**
+> **A. Le retour du signé — ImmoSign** (`downloadSignedProcedureDocument`, worker ~5677-5729) : **même ligne**, le
+> fichier signé est rangé **à côté** (`…/<id>/signed/<nom> - signe.pdf` au coffre, `signed_<nom> - signe.pdf` à plat sur
+> le serveur) et la colonne `storage_path` (+ taille, empreinte) **bascule vers le signé** ; l'original n'est ni écrasé ni
+> effacé ; `metadata_json.local_archive_path` reste celui de l'original. Preuves : 2 ZIP (`procedure-<id>.zip`,
+> `preuves-<id>.zip`) dans `metadata_json.immosign_files`, au coffre sous `immosign/` seulement si `shouldKeepCloud`
+> (le signé, lui, monte TOUJOURS). Mesure : 466 signés (465 ImmoSign + 1 Youtrust), 466 pointent `…/signed/…`, 464 ont
+> leur ZIP de preuves (manque 24113, connu ; et le Youtrust, qui range autrement), 0 « signé à la main ».
+> **Youtrust** (`rapatrierSigneYoutrust` ~6649) : même principe, mais (1) la colonne ne bascule que si l'original était
+> au coffre (sinon signé serveur seul, `signed_document.storage_path` nul) ; (2) preuves = 1 PDF par signataire dans
+> `signed_document.preuves[]` (`proofs/` au coffre, `proofs_preuves-…` à plat sur le serveur), JSON dans
+> `app_signature_request.proofs` ; (3) `signature` sans `procedure_id` (R2), avec `provider`, `provider_request_id`,
+> `signature_request_id`, `signed_at` façon ImmoSign + `signed_at_iso`, état `expired` en plus.
+> **B. La nuit ne touche pas un document Youtrust** (pas de numéro Hektor, source `app`, `signatureProtegee`, pas de
+> procédure). ⚠ Risques LATENTS, jamais observés : si la ligne recevait un jour un `hektor_document_id`,
+> `persistConsoleDocumentFile` remonterait l'ORIGINAL sur le chemin du SIGNÉ (le garde « signé préservé » ne couvre que
+> les lignes `modelo`) ; `prepare_document_cloud` monterait l'original d'un signé resté serveur seul ; le ménage du coffre
+> (`menage_coffre_documents.js:205`) protège `immosign/` et `signed/` mais **pas `proofs/`** ; « Supprimer » sur une ligne
+> `sans_hektor` finit en erreur (« ID Hektor supprimable absent ») — sans dégât, mais le geste n'existe pas.
+> **C. L'écran** — ce qui MARCHE pour Youtrust : la pastille (`SignatureBadge`, en cours et signé), la liste Documents et
+> ses filtres, « Ouvrir le signé », le fil d'activité (`app_cockpit_activite` accepte `provider_request_id`), le pilotage
+> (même forme de date). Ce qui NE MARCHE PAS :
+> 1. **Cockpit + Mandat V3** (`ckSigStatus`, App.tsx:32775 ; `mv3Mode`, 33087) : prend le PREMIER document dont le nom
+>    contient « mandat » ; la liste est triée `document_type` puis `document_name` (api.ts:8778) et la collation met
+>    `document` (Hektor) avant `Mandat` (l'app) → sur 61398 il lit un vieux « Mandat (Avec saisie du numéro) » sans
+>    procédure → `null` → « à éditer ». Et un Youtrust EN COURS serait ignoré même premier (exige `procedure_id`). Pendant
+>    une signature Youtrust, Mandat V3 réafficherait donc l'éditeur. Textes « ImmoSign » en dur (32851, 33503, 33519).
+> 2. **Boutons qui se trompent sur un Youtrust en cours** : « Signé à la main » (12078) reste affiché et la fonction
+>    `app_console_mark_document_signed_manual` ne teste ni le fournisseur ni l'état (elle marquerait « signé » une demande
+>    encore ouverte chez Youtrust) ; « Signature » de `MandatSignatureTracker` (11630) et de la liste quand l'interrupteur
+>    est éteint (12072) renvoient vers Hektor/ImmoSign pour un second envoi.
+> 3. **Aucun suivi par personne** (ni ImmoSign ni Youtrust) : rien dans `src` ne lit `app_signature_request` ;
+>    `MandatSignatureTracker` = une pastille par document (et il liste les 11 « mandat » de 61398, vieux modèles compris).
+> 4. **Aucun geste Youtrust à l'écran** : le worker a `youtrust_remind_signer`, `youtrust_cancel_signature`,
+>    `youtrust_signing_link` ; aucune fonction d'`api.ts` ne les pose. Relancer / Annuler restent gardés par `procedure_id`
+>    (donc masqués, sans faux geste ImmoSign).
+> 5. **Ouvrir les preuves : impossible pour TOUS** — la règle de lecture du coffre (`hektor_console_documents_read_scope`)
+>    n'ouvre qu'un objet dont le chemin est ÉGAL à la colonne `storage_path` d'un document `cloud_available` : ni les ZIP
+>    ImmoSign, ni les PDF de preuves Youtrust, ni l'ORIGINAL d'un document signé ne sont lisibles depuis l'écran.
+> 6. **Après l'envoi** : la liste est relue tout de suite (avant la fin du travail, ~4 s) sans relance ; depuis l'éditeur,
+>    aucune relecture ; le cockpit n'est relu qu'à la relecture de l'app. L'état `expired` n'a ni pastille ni libellé.
+>    ⚠ Correction après vérification : depuis la liste Documents, le travail d'envoi est SUIVI (`rememberHektorActionJob`)
+>    et sa fin relit l'app (App.tsx:15312-15320) — la liste se met donc à jour seule. Le trou réel : l'éditeur
+>    (pas d'`onSent`), et une signature faite plus tard (avis Youtrust) ne relit pas un écran resté ouvert.
+> **D. Mesure du cockpit sur le parc (règle d'aujourd'hui rejouée en SQL, même tri)** : 630 biens vivants ont au moins
+> un document « mandat » ; 317 n'ont aucun état fiable ; 240 lisent bien « signé ». ⚠ **40 lisent « rien » alors qu'un
+> état fiable existe** (36 signés, 4 en attente) et **21 ont à la fois une attente et un signé** (le gagnant dépend de
+> l'ordre alphabétique). Parmi les biens dont le cockpit montre le cycle du mandat (validation « à contrôler ») :
+> **3 affichent « à éditer » alors qu'un mandat signé existe** (61398, 63173, 62457) et 4 mélangent attente + signé.
+> Aucun signé n'est antérieur au mandat en cours (0 sur 299 biens) : le risque « vieux mandat signé » n'existe pas.
+> **E. Les preuves Youtrust (mesurées sur l'essai)** : par signataire, la preuve PDF (piste d'audit) ET la piste JSON :
+> identité (nom, prénom, e-mail, téléphone), adresse IP, contexte (« signé depuis le lien envoyé par courriel »), heure du
+> consentement et de fin, mode du code + heure de validation, **empreinte du document de départ (`initial_hash`) =
+> l'empreinte de NOTRE original (vérifié : `a0dadac8…` identique)**, empreinte après chaque signature, certificat
+> (DN, OID, empreinte, PEM ; « Yousign - Test » en sandbox), horodatage qualifié « Non », l'expéditeur (API + IP de notre
+> serveur). Plus l'historique des avis (`app_signature_event`). Non récupéré : la piste d'audit fusionnée de la demande
+> (`/signature_requests/{id}/audit_trails/download`, restreinte, activation par le support Youtrust) — inutile, on a
+> chaque signataire. ⚠ **La piste JSON contient le CODE à usage unique** (`authentication.code`) : on le garde en base
+> sans raison → à masquer.
+> **RÉPONSES DE FRÉDÉRIC (06/11)** : P8-2 = garder « Signé à la main » mais, **si une procédure est lancée**, un message
+> qui explique d'annuler la procédure pour pouvoir signer à la main ; P8-3 (suivi par personne) = OK ; P8-4 = OUI + analyser
+> ce que Youtrust donne comme preuves (fait, ci-dessus) ; P8-1 = à réexpliquer en détail (règle hybride) ; P8-5 =
+> « pas nécessaire pour Youtrust ? » (réponse : presque — voir C.6 corrigé).
+> **CONSIGNES DE FRÉDÉRIC (06/11, suite)** : (1) « ImmoSign a un système différent pour récupérer les états, il ne faut
+> pas le casser avant la coupure » ; (2) avant la coupure, **UN SEUL bouton « Signature »** qui propose un choix :
+> **signature électronique (Youtrust) · signature Hektor (ImmoSign) · signature manuscrite**.
+> **Ce qui fait vivre ImmoSign (P8 n'y touche PAS)** : lecture des états par la page Documents de Hektor
+> (`parseSignatureFromRow` → `reconcileSignatureStates`) à l'ouverture de la fiche et dans `sync_console_documents` ;
+> le suivi de nuit (`enqueue_console_sync_jobs.js`, `loadSignatureFollowSet` : toute annonce à procédure en cours) ;
+> le retour du signé (`downloadSignedProcedureDocument`, ZIP) et des compagnons (`persistImmoSignCompanionFiles`) ;
+> Relancer / Annuler (`relance_signature`, `cancel_signature_procedure`) ; la garde R1 (`signatureProtegee`). P8 ne change
+> que la LECTURE de l'écran (cockpit : la règle d'aujourd'hui devient le repli ; une procédure ImmoSign reste « fiable »)
+> et les boutons. ⚠ L'app ne sait PAS créer une procédure ImmoSign (aucun appel `ImmoSign-create…`) : « signature Hektor »
+> = ouvrir Hektor sur l'onglet Documents (fenêtre actuelle), et le document doit EXISTER chez Hektor.
+> **Les portes de signature d'aujourd'hui** : « Signature » de la liste Documents (interrupteur allumé → fenêtre Youtrust ;
+> éteint → « Oui, ouvrir Hektor ») ; « Signé à la main » (à part) ; « Signature » du suivi du mandat
+> (`MandatSignatureTracker`, toujours Hektor) ; l'éditeur qui ouvre la fenêtre Youtrust après « Générer » (allumé).
+> ⚠ **Réaudit (06/11, Frédéric : « normalement le document est déposé dans Hektor »)** : vrai AUJOURD'HUI — interrupteur
+> ÉTEINT en production, `handleGenerateMandatDocument` pose `upload_document_to_hektor` ; mesuré : les 18 générations
+> d'avant le 05/11 (24113, 62774) ont leur dépôt `done` (une seule sans dépôt retrouvé, 24113 le 29/06). Seule la génération
+> de l'essai (interrupteur ALLUMÉ, 05/11) est `sans_hektor`, par la règle de Frédéric du 26/10 (« allumé = UNIQUEMENT
+> Youtrust … sans dépôt chez Hektor »), qui avait remplacé la 1ʳᵉ forme de D24 (« chez nous d'abord, Hektor le reçoit
+> ensuite en arrière-plan »). Le choix à trois boutons revient sur cette règle → à trancher.
+> ✅ **TRANCHÉ (06/11) : A, « comme aujourd'hui il y a deux temps : d'abord l'édition d'un document qui fonctionnait,
+> puis la signature » — et REPRENDRE LE CODE QUI FONCTIONNAIT** (le chemin éprouvé, pas le dépôt différé dormant).
+> **Audit du chemin éprouvé** : `handleGenerateMandatDocument` (éteint) → PDF sous `temp/uploads/<travail>/` →
+> `upload_document_to_hektor` (priorité 40) → `envoyerDocumentAHektor` → la ligne naît de la LISTE Hektor
+> (`upsertConsoleDocuments`, source Hektor, `hektor_document_id`) → `persistProvidedDocumentFile` (serveur + coffre si
+> `shouldKeepCloud`) → temporaire retiré → relecture de la fiche. L'éditeur attend la ligne jusqu'à 150 s (App.tsx:5793)
+> puis ouvre la fenêtre « Signature Hektor ». **Il sait déjà porter une donnée de l'éditeur jusqu'à la ligne** : le prix
+> d'avenant (`avenant_new_price`) voyage dans la charge du dépôt et est FUSIONNÉ dans `metadata_json` après le dépôt
+> (fusion non destructive, worker ~9762). La synchro de nuit GARDE les clés ajoutées (`...current.metadata_json`, 5089)
+> et l'état Youtrust (`signatureProtegee`, 5108).
+> **Ce qui manque sur ce chemin pour Youtrust** : la photo des signataires (`signataires_du_pdf`), `contenu_imprime`,
+> `remplace_document_id` + la marque P5 de l'ancien PDF, `generation_job_id` — à faire voyager comme le prix d'avenant.
+> ⛔ **LE PIÈGE TROUVÉ** : une ligne DÉPOSÉE chez Hektor repasse dans `persistConsoleDocumentFile` à CHAQUE synchro
+> (boucle ~6958). Sa garde « signé préservé » ne couvre que les modèles Hektor (`modelo && signed_document`, 5221). Une
+> fois signée par Youtrust (ou par ImmoSign), elle relirait l'ORIGINAL (`local_archive_path`) et le MONTERAIT AU COFFRE
+> SUR LE CHEMIN DU SIGNÉ (`storage_path`), empreinte et taille comprises : l'écran ouvrirait le non signé. Mesure : les
+> 466 documents signés portant `signed_document` sont 464 modèles Hektor + 1 ligne `hektor_immosign_signed` absente +
+> l'essai Youtrust ⇒ **le cas « déposé puis signé » n'est JAMAIS arrivé** (les 18 générations n'ont jamais été signées) ;
+> la garde élargie à « toute ligne qui porte `signed_document` » ne change donc rien à l'existant.
+> 🔎 **AUDIT « LA MEILLEURE SOLUTION » (06/11, Frédéric : « audit, analyse projet et chantier »)**
+> 1. ⭐ **« Chez nous d'abord, Hektor ensuite » TOURNE DÉJÀ EN PRODUCTION pour les documents ajoutés à la main** depuis
+>    le 19/10 (lot 2c du chantier ③ : RPC `app_console_creer_document_optimistic`, api.ts:9076 →
+>    `completerEnvoiDocumentDiffere`) : 11 travaux, 6 documents, **tous finis chez Hektor** (`envoye`), repris par la tâche
+>    « GTI Reprise Envois Hektor » (12:30) quand le 1ᵉʳ essai échoue. ⚠ Le commentaire du worker (~9699, « DORMANT : aucun
+>    appelant ») est PÉRIMÉ. Et ces lignes `source = app` reçoivent bien de la synchro le bloc signature de Hektor
+>    (`to_send`, `hektor_doc_id`) : la lecture ImmoSign s'applique donc à NOTRE ligne une fois déposée.
+> 2. ⛔ **UN DÉFAUT RÉEL, NON CONNU, trouvé par cet audit** : le 23/10 sur **59203**, 4 documents ajoutés à la main ont été
+>    DÉPOSÉS chez Hektor (n° 715224-715227) mais le contrôle a conclu « Upload Hektor non confirmé dans la liste » → statut
+>    `echec` → la reprise du 24/10 les a **RENVOYÉS** (n° 715252-715255) ⇒ **4 documents EN DOUBLE chez Hektor**, et 2 lignes
+>    chacun chez nous (la nôtre + une `hektor_console_uploaded_private`). La reprise ne regarde pas si Hektor a DÉJÀ le
+>    fichier. Cause du « non confirmé » NON ÉTABLIE (4 envois en 30 s ; le même nom est confirmé le lendemain). Le chemin
+>    « Hektor d'abord » partage `envoyerDocumentAHektor` et donc le même risque à son rejeu.
+> 3. Le piège du signé (ci-dessus) vaut pour toute ligne déposée : à fermer AVANT qu'un mandat déposé soit signé.
+> **⇒ LA SOLUTION RECOMMANDÉE — « l'édition chez nous, le dépôt Hektor en arrière-plan, la signature au choix »** :
+> (a) l'édition naît TOUJOURS chez nous (le code du 26/10, prouvé le 05/11 : 4 s, photo des signataires) — l'interrupteur
+> ne décide plus du chemin de génération ; (b) le dépôt chez Hektor part TOUJOURS ensuite, par le chemin DÉJÀ EN
+> PRODUCTION des ajouts (statut `a_envoyer`, reprise à 12:30 si Hektor ne répond pas) ; (c) AVANT, corriger son défaut :
+> relire la liste de Hektor avant de conclure « non confirmé », et avant tout renvoi ADOPTER le document s'il y est déjà ;
+> (d) étendre la garde du signé à toute ligne qui porte `signed_document` ; (e) un seul bouton « Signature » à trois
+> choix — Youtrust (interrupteur + photo), Hektor (seulement une fois le dépôt `envoye`, sinon « dépôt en cours »),
+> manuscrite — et le message « annulez la procédure en cours » ; (f) la lecture ImmoSign ne change pas. À la coupure,
+> on éteint le dépôt et le choix Hektor, rien d'autre.
+> ✅ **VALIDÉE par Frédéric (06/11) « à une condition : un audit pour être sûr que tout fonctionne et est conforme à mon
+> projet »** → 🔎 **AUDIT DE CONFORMITÉ (06/11, code + base + notes ; rien codé)** :
+> **Conforme** — (1) à l'approche hybride du 29/06 (mémoire `feature-pdf-mandat-vers-hektor` : « Générer → tout
+> s'enregistre (Hektor + local + Supabase), puis "Faire signer ?" ») : mêmes deux temps, ordre inversé seulement ;
+> (2) à D24 première forme (26/10) ; (3) au chantier ③ (lot 2c, déjà en production pour les ajouts) et au chantier ⑧
+> (« naître complet chez nous, Hektor complète ») ; (4) aux 5 règles : un numéro ne se perd jamais (notre ligne garde son
+> id, adopte le n° Hektor), Hektor confirme sans écraser (adoption par le numéro posé AVANT la réindexation), fin visible
+> (à condition G5), Hektor reste à jour (dépôt toujours), le miroir n'est pas touché ; (5) à la règle de stockage
+> (`shouldKeepCloud` inchangée) ; (6) à R1/R2/D12/D18/D21/D31-33/P5 (rien de ces décisions ne bouge) ; (7) au quota Hektor
+> (un dépôt par mandat, comme aujourd'hui). (8) ⭐ **La lecture ImmoSign s'applique à notre ligne** : elle retrouve la
+> ligne suivie par `signature.hektor_doc_id` (~5889), que la synchro pose sur une ligne `app` déposée (mesuré : les 4 de
+> 59203 l'ont) ; à défaut, par le nom (candidate, ~5930).
+> **Ce qui ne fonctionnerait PAS sans correctif (G1-G6, à inclure dans le lot)** :
+> - **G1 doublon** (59203, 4 documents en double chez Hektor) : relire la liste avant « non confirmé », adopter avant
+>   tout renvoi.
+> - **G2 signé écrasé** : la garde « signé préservé » (~5221) ne couvre que les modèles Hektor → toute ligne à
+>   `signed_document`.
+> - **G3 « supprimé chez Hektor » sur un mandat signé** : un document déposé qui part en ImmoSign QUITTE la liste des
+>   dépôts (commentaire ~5732 ; seul précédent réel, 24113 le 29/06 : la ligne déposée a disparu, le signé vit dans une
+>   ligne à part `immosign-signed-710698-2`). Notre ligne `app` ne serait pas supprimée (la purge ignore la source `app`)
+>   mais MARQUÉE « absente » (~5165) → l'exempter quand elle porte une signature suivie.
+> - **G4 dépôt sans copie au coffre** : `completerEnvoiDocumentDiffere` exige `storage_path` (~9517) ; un bien hors statut
+>   « vivant » n'en a pas → lire la copie serveur, comme l'envoi Youtrust.
+> - **G5 fin visible** : l'état du dépôt (`a_envoyer` / `echec`) n'est affiché que par l'ancienne présentation (12257) →
+>   le montrer dans la liste v21 et dans le choix « Signature Hektor » (« dépôt en cours / en échec, repris à 12:30 »).
+> - **G6 l'éditeur** attend aujourd'hui Hektor (150 s) → attendre NOTRE ligne (4 s), puis ouvrir le choix.
+> **À trancher à part** : les 4 doublons de 59203 chez Hektor (suppression = geste chez Hektor) ; et D42 à écrire : « avant
+> la coupure, trois signatures (Youtrust, Hektor, manuscrite) ; à la coupure, Youtrust et manuscrite » (remplace le
+> rappel du 26/10 « allumé = uniquement Youtrust »).
+> **La preuve** : les essais hors ligne qui découpent déjà ces chemins (`test_envoi_hektor_differe.js`, reprise, garde
+> R1, photo, remplacement) + témoins inverses ; puis en réel sur 61398 : générer → ligne chez nous → dépôt chez Hektor
+> confirmé → les trois choix. ⚠ Lancer une vraie procédure ImmoSign consomme un crédit chez Hektor : à décider.
+> ✅ **« Oui supprime doublons. Et vas y » (Frédéric, 06/11)** :
+> - **Doublons de 59203 SUPPRIMÉS (06/11 ~08:40)** : les 4 seconds dépôts (n° Hektor 715252-715255, lignes
+>   `hektor_console_uploaded_private`) par le geste « Supprimer » de l'app (`delete_document_from_hektor`, trace complète
+>   dans le journal des suppressions, raison « doublon_hektor_59203 »). Vérifié avant : empreintes IDENTIQUES aux
+>   originaux, fichiers distincts. Après : 4 travaux `done`, suppression CONFIRMÉE chez Hektor par le worker, il reste
+>   1 ligne par document (la nôtre, n° 715224-715227), présente, fichier au coffre.
+> - **D42 (06/11)** : *avant la coupure, trois signatures — Youtrust, Hektor (ImmoSign), manuscrite ; à la coupure, Youtrust
+>   et manuscrite.* Remplace le rappel du 26/10 « allumé = uniquement Youtrust ». L'édition naît chez nous, le dépôt chez
+>   Hektor part ensuite.
+> - ✅ **P8-0 CODÉ (worker, 06/11) — NON ACTIF** (services non redémarrés ; nouvel interrupteur `mandat_nait_chez_nous`
+>   absent = éteint) : **G1** anti-doublon (`numerosHektorDejaPris`, `documentNonReclame` ; une ligne déjà tentée —
+>   `echec` ou travail rejoué — ADOPTE le document que Hektor a déjà au lieu de le renvoyer ; la liste est relue 3 fois
+>   avant « non confirmé » ; le numéro choisi est celui qu'aucune autre ligne ne réclame) ; **G2** « signé préservé » pour
+>   toute ligne à `signed_document` + `monterSigneAuCoffre` (« préparer » un signé monte le SIGNÉ) ; **G3**
+>   `signatureSuivieOuSigne` exempte du marquage « absent chez Hektor » ; **G4** dépôt différé depuis la copie serveur ;
+>   **génération** : interrupteur allumé → `enregistrerMandatChezNous` (ligne `a_envoyer`) puis `poserDepotMandatChezHektor`
+>   (un seul travail `upload_document_to_hektor` avec `app_document_id`, jamais deux au rejeu ; un échec de pose ne fait
+>   pas tomber la génération, la reprise de 12:30 le fera). Éteint : exactement le chemin d'avant (A1 le prouve).
+>   Commentaire « DORMANT » du worker corrigé. **Essais** : `test_envoi_hektor_differe` 44/44 (+9 : g1-g7) ;
+>   `test_p8_0_signe_preserve_et_absent` 14/14 (neuf) ; `test_mandat_chez_nous_et_mandataire` 32/32 (+10 : A4-A5) ;
+>   `test_photo_signataires_pdf` 23/23 ; `test_regeneration_remplace` 23/23 ; `test_garde_r1_signature` 26/26 ;
+>   `test_youtrust_sync_signature` 42/42 ; `test_nettoyage_temporaire` 9/9. **Témoins inverses (worker de HEAD)** :
+>   g1, g3, g5 ROUGES (renvoi au lieu d'adopter), g6 fait tomber l'essai (« sans fichier ») ; G2-1 ROUGE et MONTRE le
+>   défaut en vrai (« LIT original | MONTE …/signed/… ») ; G2-4, G2-7, G3-1, G3-5 rouges (absents).
+>   ⏰ **RESTE de P8** : l'écran (G5, G6, P8-1 cockpit, P8-2 bouton unique, P8-3 suivi, P8-4 preuves, P8-5), la garde de
+>   « signé à la main » en base, puis l'allumage et la preuve sur 61398.
+> **Le nœud** : interrupteur allumé, un mandat généré naît `sans_hektor` (D24) → « signature Hektor » impossible sans le
+> DÉPOSER chez Hektor. Un chemin DORMANT existe (`completerEnvoiDocumentDiffere`, `upload_document_to_hektor` avec
+> `app_document_id` : « aucun appelant ») — jamais éprouvé. À l'inverse, un document venu de Hektor (modèle ImmoSign,
+> 498/499 des mandats signés) n'a pas la photo des signataires → pas de Youtrust (il faut régénérer).
 > **RESTE (historique)** : les gestes de Frédéric (créer l'abonnement M4 dans
 > l'app Youtrust, poser `YOUTRUST_WEBHOOK_SECRET`, redémarrer les 4 services file vide) ; puis la preuve sandbox
 > (D40 : Frédéric signe 3 fois) — **avant la fin de l'essai (~09/11)** ; puis P8 (l'écran : suivi par personne,

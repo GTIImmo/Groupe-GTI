@@ -58,6 +58,7 @@ function monterGeneration(src, base) {
     uploadStorageObject: async () => {},
     persistProvidedDocumentFile: async () => ({ storage_path: null }),
     interrupteurSignatureYoutrust: async () => true,
+    interrupteurMandatChezNous: async () => false,   // A.2 P8-0 (06/11) : eteint ici
     supabaseRequest: async (chemin, options = {}) => {
       const m = options.method || "GET";
       if (chemin.startsWith("app_console_document") && m === "POST") { base.documents.push(...JSON.parse(options.body)); return null; }
