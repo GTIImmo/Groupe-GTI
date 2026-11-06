@@ -1374,7 +1374,7 @@ le périmètre de la recherche de contacts peut viser la mauvaise agence (lectur
 **Prérequis commun** : agences ET coordonnées des personnes sont VIDES dans le registre (0/185 portables, 0 agence) jusqu'à
 la 1re nuit qui écrit (06/11). Rien ne peut basculer avant. Chaque bascule garde l'annuaire de Hektor en REPLI.
 
-## 48. ÉTAPE 5, LECTEUR 1 : LA PAGE PUBLIQUE DE RDV LIT LE REGISTRE, ET LES LIENS LE SUIVENT (05/11) — Frédéric : « 1 puis 2 », puis « 1 » (les liens suivent le registre) — CODÉ, NON POUSSÉ
+## 48. ÉTAPE 5, LECTEUR 1 : LA PAGE PUBLIQUE DE RDV LIT LE REGISTRE, ET LES LIENS LE SUIVENT (05/11) — Frédéric : « 1 puis 2 », puis « 1 » (les liens suivent le registre) — ✅ EN LIGNE (06/11, 10:51)
 
 **Ce qui change** (`backend/app/services/appointment_service.py`, seul fichier du serveur touché) :
 - **L'agence** (tél, mail) vient d'abord du REGISTRE DES AGENCES (`_load_registre_agence`) : par l'écriture EXACTE du nom
@@ -1510,3 +1510,8 @@ Ambert␣␣␣ » ; (2) la page sans agence prenait la 1re agence « gti » au 
 voisins verts (RDV 22/22, lien Hektor 13/13). **Mesure réelle** : chaque agence ne fait plus tourner que ses actifs, tous en
 @gti (Firminy : Emmanuelle PEREIRA ; Saint-Étienne : Lucille FORLICO, Mélanie LEGRAND ; Ambert : Alice RONDEAU, Sandrine
 DELAVAUD — que l'ancien chemin ratait) ; Agences supprimée et Gestion site : personne (mail de l'agence).
+
+**En ligne** (poussé par Frédéric le 06/11 à 10:51, Render sert 03b74fd qui le contient) : la page sans agence ouvre
+**Groupe GTI Firminy** (04 77 06 20 20, firminy@) — sans conseiller nommé, comme avant (la rotation ne joue qu'avec une
+agence) ; `?agency=saint-etienne` désigne **Lucille FORLICO** (n° 4, forlico@), agence dorian@ (= registre = annuaire,
+« laisse » de Frédéric), 555 créneaux. La rotation est passée de 66 à 67 passages : le prochain visiteur aura Mélanie LEGRAND.
