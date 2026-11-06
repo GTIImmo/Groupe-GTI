@@ -67,6 +67,11 @@ animations. La nouvelle vue LIT l'état existant et APPELLE les fonctions exista
   bloc affiche et appelle (champs, jetons, sélecteurs, bandeaux, boutons et leurs conditions, versions
   téléphone `.rq-mobile`). Empreinte (hachage) des fonctions « derrière » du §0, pour prouver plus tard
   qu'elles n'ont pas bougé.
+  ✅ **FAIT le 05/11 (soir)** — `notice/INVENTAIRE_PARITE_MODALE_STATUT_2026-11-05.md` ; outil
+  `apps/hektor-v1/test_statut_v2_empreintes.cjs` + référence `statut_v2_reference.json` (sommet `e8bb683`) :
+  **61 morceaux** (49 fonctions, 11 effets, l'ancien bloc de 1 318 lignes), témoin inverse **4 sur 4**, contrôle
+  vert. Ligne de base des essais relevée (les 2 rouges de `test_bienvu_textes` existaient avant). Aucune ligne
+  de l'application modifiée.
 - **Lot 1 — coquille.** Interrupteur, composant vide branché, feuille `.stv2`, en-tête, bandeau du bien,
   parcours (cartes Actuel / Conseillé / Hors parcours / Lecture seule) et guide GTI. `statutParcours.ts`
   éprouvé sur les 11 situations de l'audit (§10.4).
@@ -121,9 +126,15 @@ Interrupteur éteint (variable Vercel à `false`, redéploiement) : l'ancienne m
 quelle. Le code ajouté est additif ; le retirer = supprimer le composant, les deux modules, la feuille
 de style et la ligne d'aiguillage.
 
-## 7. À trancher avant le lot 1
+## 7. Tranché par Frédéric le 05/11/2026 (soir)
 
-1. Valider les 6 remplacements du §1.
-2. Valider l'approche « composant séparé » (recommandé) plutôt qu'un rhabillage de l'ancien bloc.
-3. Qui pose `VITE_APP_STATUT_V2_ENABLED` dans Vercel, et quand (après le lot 8).
-4. L'envoi réel de contrôle sur 62774 : oui ou non.
+1. ✅ **Les 6 remplacements du §1 sont validés**, tels quels.
+2. ✅ **Composant séparé** (`ModaleStatutV2.tsx` derrière l'interrupteur), pas de rhabillage de l'ancien bloc.
+3. ✅ **Frédéric pose `VITE_APP_STATUT_V2_ENABLED=true` dans Vercel lui-même, APRÈS le lot 8**, quand je le
+   lui dis. Avant, tout se contrôle en local (interrupteur allumé et éteint).
+4. ✅ **Oui à l'envoi réel de contrôle sur 62774, à la fin** — son accord se redemande au moment du geste.
+
+➡ ~~Prochaine étape : le lot 0~~ ✅ fait le 05/11. **Prochaine étape : le lot 1** (la coquille derrière
+l'interrupteur), qui attend son « vas-y ».
+⚠ Reste hors de ce chantier : le défaut « Choisir » (audit §12, les champs principaux ne se rechargent pas),
+qui demande une décision à part — la refonte visuelle ne le corrige pas et ne doit pas le masquer.

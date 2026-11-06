@@ -1434,3 +1434,14 @@ réécriture) ; la version en ligne (f889043) échoue les cas 2, 3, 4 et 11 du n
 ⚠ **À trancher par Frédéric** : laquelle des deux sources de Hektor est la bonne, agence par agence (Tence : la fiche donne
 un numéro propre à Tence, le compte celui d'Yssingeaux). La bonne valeur se SAISIT au carnet (écran du registre) ; la nuit
 ne l'écrasera plus.
+
+**⛔ CORRECTION DU §49 (06/11, Frédéric : « je pense que tu fais une erreur ») — HEKTOR N'A PAS DEUX MAILS.** Vu dans son
+Chrome : l'organigramme ET la fiche de l'agence de Courpière (« Email de contact » et « Email de l'utilisateur ») disent
+courpiere@ ; les 9 agences de l'organigramme portent les valeurs de `app_agence_directory`. **La vraie cause est chez nous** :
+la copie locale `hektor_agence` est reconstruite chaque nuit (synced_at du jour) à partir d'UNE SEULE réponse brute de
+`ListAgences`, reçue le **03/04/2026** (`raw_api_response` id 77072) — le run ne relit pas les agences
+(`run_full_pipeline.ps1` l. 399 : `--resources negos annonces contacts offres compromis ventes broadcasts`, sans `agences`).
+En avril, ces mails étaient croisés ; Hektor les a corrigés depuis. ⚠ Le « Coordonnées douteuses chez Hektor » du §35.2
+venait de la MÊME copie périmée : c'était faux aussi. Les négociateurs, eux, sont FRAIS (`list_negos` relu le 06/11 à
+03:53) : les 904 coordonnées des personnes sont justes. La fiche de Hektor porte en plus une ADRESSE d'agence (Courpière :
+7 Place de la Cité Administrative, 63120) que la liste ne rend pas.

@@ -1,0 +1,492 @@
+{
+  "pose_le": "2026-11-05T17:48:38.665Z",
+  "commit": "e8bb683",
+  "empreintes": {
+    "app:handleChangeHektorAnnonceStatus": {
+      "exacte": "3b92f51d70aaa735",
+      "code": "d1e766845fdb35aa"
+    },
+    "app:handleGesteHektor": {
+      "exacte": "1c616a4083ed9077",
+      "code": "cae7a64beefabd6e"
+    },
+    "app:openStatusChangeModal": {
+      "exacte": "fffabf50452a1942",
+      "code": "6f19d25039efa861"
+    },
+    "app:closeStatusChangeModal": {
+      "exacte": "690d638b3f35f5a8",
+      "code": "117e7025ac9a1411"
+    },
+    "app:relireApresLeGeste": {
+      "exacte": "e17ed85cfec66cf3",
+      "code": "efc51ab4d4591041"
+    },
+    "app:rememberHektorActionJob": {
+      "exacte": "ea067e2260db062d",
+      "code": "37a0e8f054110390"
+    },
+    "app:affaireCourantePourStatut": {
+      "exacte": "fa460e4a719f9230",
+      "code": "9d000e4e28c1cd9c"
+    },
+    "app:affairesVivantesPourStatut": {
+      "exacte": "855e131c040b7e3b",
+      "code": "103184cb4d2cf7f4"
+    },
+    "app:gardeFouPourStatut": {
+      "exacte": "070adf27a94945aa",
+      "code": "c161091335b1d937"
+    },
+    "app:etatFermeAuxTransactions": {
+      "exacte": "73792bcfe768ca05",
+      "code": "2ebba62a3801d58e"
+    },
+    "app:bienEngage": {
+      "exacte": "54cff282c945dca6",
+      "code": "25a01c2d1a447a81"
+    },
+    "app:offreVerrouilleeParSonDossier": {
+      "exacte": "d087978e2bbeeacd",
+      "code": "0e3c8c0a6428f5c0"
+    },
+    "app:compromisVerrouilleParSaVente": {
+      "exacte": "d5587458ce45c1ec",
+      "code": "5b339e7fce3090d9"
+    },
+    "app:gesteOffreSansEffet": {
+      "exacte": "8cf8d4dc2438b51e",
+      "code": "b817db887264def0"
+    },
+    "app:modifierChezHektorPossible": {
+      "exacte": "f859131f4c485ef6",
+      "code": "72994297299a88d2"
+    },
+    "app:nouvelleOffreFermeeSurBienEngage": {
+      "exacte": "75006f1a4c390ead",
+      "code": "cedb32aa95316491"
+    },
+    "app:avisGardeFouSaisie": {
+      "exacte": "3fc3563244edc0c3",
+      "code": "d325275afb4be0f8"
+    },
+    "app:offreEcarteeSurBienEngage": {
+      "exacte": "6b0905dc4d0c66e3",
+      "code": "080d859a3dd33395"
+    },
+    "app:offreAccepteeFigeeChezHektor": {
+      "exacte": "5872e94518042ea3",
+      "code": "79a94c31ea3d2a75"
+    },
+    "app:dossiersOuvertsDuBien": {
+      "exacte": "607a7ded17ae6276",
+      "code": "f66088a71faeeb10"
+    },
+    "app:affaireEstVivante": {
+      "exacte": "70296c90f819432b",
+      "code": "85724e7ce28bad06"
+    },
+    "app:avisPlusieursAffaires": {
+      "exacte": "be61cf27ba99158d",
+      "code": "a103c51b56a0af89"
+    },
+    "app:gestesEcartCarnet": {
+      "exacte": "61fa4dd0b4a967a9",
+      "code": "f5a3f9c7cc7b583e"
+    },
+    "app:offreARegulariser": {
+      "exacte": "649696a1e52928c2",
+      "code": "a7a155355e8ec4a7"
+    },
+    "app:compromisDeLaRegularisation": {
+      "exacte": "d810807a83a235a0",
+      "code": "e78a32c84410f43b"
+    },
+    "app:rattachementOffreProposee": {
+      "exacte": "30f3c3e0acf8f627",
+      "code": "68df89781f465a10"
+    },
+    "app:dateOffreFaite": {
+      "exacte": "606875394e2c5e13",
+      "code": "f91ebbbdc13196e3"
+    },
+    "app:statusChangeNeedsTransaction": {
+      "exacte": "77eb791849880fdf",
+      "code": "abd173d017cddc85"
+    },
+    "app:statusChangeNeedsSalePrice": {
+      "exacte": "e85eae74083b5175",
+      "code": "89ca8f9f111083cf"
+    },
+    "app:hektorClosureRaisonsFor": {
+      "exacte": "e39bf584a30c1d95",
+      "code": "87475c743821072b"
+    },
+    "app:hektorStatusTargetLabel": {
+      "exacte": "19a3a3331ab50246",
+      "code": "c963032eef61c44b"
+    },
+    "app:toucherStatusChange": {
+      "exacte": "911bc30073c3b680",
+      "code": "df3b742e618ad3f8"
+    },
+    "app:apresSaisieCommission": {
+      "exacte": "e321346e830635cd",
+      "code": "d9084c4159576c4c"
+    },
+    "app:rechargerPersonnesEcarts": {
+      "exacte": "7b87384f94b2c0fe",
+      "code": "ddeec5c4841409be"
+    },
+    "app:ajouterAcquereurStatut": {
+      "exacte": "b4a1762197a96e01",
+      "code": "9a88df6f8ef87668"
+    },
+    "app:retirerAcquereurStatut": {
+      "exacte": "3d4d852b3b6b33fa",
+      "code": "2bd37f89748ba406"
+    },
+    "app:ajouterCondition": {
+      "exacte": "fe3c2b39ad9ffae9",
+      "code": "0bbd910d3cf1ba39"
+    },
+    "app:retirerCondition": {
+      "exacte": "4ee5faa02cd59e03",
+      "code": "ae9b5e8914857939"
+    },
+    "app:modifierCondition": {
+      "exacte": "10433df0591b2d38",
+      "code": "530bf27d1b7b2c32"
+    },
+    "app:repartitionPoser": {
+      "exacte": "bc34f14dcd275940",
+      "code": "0b4b71e26379c628"
+    },
+    "app:repartitionAjouterCase": {
+      "exacte": "a3835c788985fba2",
+      "code": "257113d14ef96db3"
+    },
+    "app:repartitionRetirerCase": {
+      "exacte": "642784e0824d93ae",
+      "code": "62669a741d6a0ca8"
+    },
+    "api:createChangeHektorAnnonceStatusJob": {
+      "exacte": "a33d424c88cda0dc",
+      "code": "c0b3b4dbf270ec0b"
+    },
+    "api:gesteAffaireOptimistic": {
+      "exacte": "ef8ad7f5bc838f5f",
+      "code": "85ce1868f178e7a1"
+    },
+    "api:setMandatClotureApp": {
+      "exacte": "2b82d44b316d0653",
+      "code": "cc5168da94ed1d85"
+    },
+    "api:saveRepartition": {
+      "exacte": "13975aa5b7d07459",
+      "code": "a486bfdaadcdbec4"
+    },
+    "api:ecrireAffaireCommission": {
+      "exacte": "411d2fd917e8b745",
+      "code": "79a4e2c49d212277"
+    },
+    "api:trancherAffaireCarnetEcart": {
+      "exacte": "dffd72f96571631c",
+      "code": "c0eaebd62d88c601"
+    },
+    "api:fermerAffairePersonneEcart": {
+      "exacte": "be7e6246f5d69795",
+      "code": "94bda0d810a26853"
+    },
+    "app:effet [statusChangeAffaires, statusChangeStatus, statusChangeAffaireChoisie]": {
+      "exacte": "756ffe5343d65bac",
+      "code": "81ac026a7ff32b62"
+    },
+    "app:effet [statusChangeAffaires, statusChangeStatus, statusChangeAffaireChoisie] #2": {
+      "exacte": "76206a3e3fb21f98",
+      "code": "9b0d273c12ebf5a7"
+    },
+    "app:effet [statusChangeTarget, statusChangeCommissionTouchee, statusChangeAffaires, chargeParMandat, statusChangeSelectedMandat, statusChangeTarget?.numero_mandat]": {
+      "exacte": "6799e55c20dbf330",
+      "code": "b84b6471384b473c"
+    },
+    "app:effet [statusChangeBuyerSearch, statusChangeTarget?.app_dossier_id]": {
+      "exacte": "cdfbe9df364810d5",
+      "code": "5c5d6cd6fb35a49c"
+    },
+    "app:effet [statusChangeAffaires, carnetRelecture]": {
+      "exacte": "601fd9afd1451bf4",
+      "code": "a6605c992f292e98"
+    },
+    "app:effet [statusChangeAffaires, statusChangeStatus, carnetAffaires]": {
+      "exacte": "492c83163a539235",
+      "code": "ec690e754754e8cb"
+    },
+    "app:effet [statusChangeAffaires, statusChangeStatus, carnetAffaires] #2": {
+      "exacte": "e4ffd2e0f2e922b2",
+      "code": "4911fb388b0daa5b"
+    },
+    "app:effet [statusChangeAffaires, statusChangeStatus, carnetAffaires] #3": {
+      "exacte": "53d73deeb48e19fb",
+      "code": "672f0d79f71ffe11"
+    },
+    "app:effet [statusChangeBuyerNotaryId, statusChangeBuyerNotaryNom, statusChangeSellerNotaryId, statusChangeSellerNotaryNom]": {
+      "exacte": "9044f55891e7d028",
+      "code": "18c4476ce3eb547a"
+    },
+    "app:effet [statusChangeTarget, repartitionChargeePour, repartitionChaineId, repartitionLignes, statusChangeBuyers, statusChangeBuyerContactId]": {
+      "exacte": "60f5d4fe5d1698a3",
+      "code": "5201369baebc3e44"
+    },
+    "app:effet [statusChangeAffaires, statusChangeStatus]": {
+      "exacte": "c0b247fd9fa3132a",
+      "code": "a555b50e49687208"
+    },
+    "app:ANCIEN BLOC de la modale": {
+      "exacte": "bbb069613fe5ea91",
+      "code": "bf16d6ff830ca16f"
+    }
+  },
+  "lignes": {
+    "app:handleChangeHektorAnnonceStatus": "19632-19940",
+    "app:handleGesteHektor": "19535-19622",
+    "app:openStatusChangeModal": "18500-18565",
+    "app:closeStatusChangeModal": "18567-18577",
+    "app:relireApresLeGeste": "15428-15430",
+    "app:rememberHektorActionJob": "14734-14740",
+    "app:affaireCourantePourStatut": "18732-18792",
+    "app:affairesVivantesPourStatut": "18692-18696",
+    "app:gardeFouPourStatut": "18726-18730",
+    "app:etatFermeAuxTransactions": "31200-31209",
+    "app:bienEngage": "31506-31516",
+    "app:offreVerrouilleeParSonDossier": "31160-31183",
+    "app:compromisVerrouilleParSaVente": "31222-31231",
+    "app:gesteOffreSansEffet": "31280-31286",
+    "app:modifierChezHektorPossible": "31448-31457",
+    "app:nouvelleOffreFermeeSurBienEngage": "31417-31419",
+    "app:avisGardeFouSaisie": "31638-31679",
+    "app:offreEcarteeSurBienEngage": "31301-31310",
+    "app:offreAccepteeFigeeChezHektor": "31262-31269",
+    "app:dossiersOuvertsDuBien": "31534-31611",
+    "app:affaireEstVivante": "31126-31130",
+    "app:avisPlusieursAffaires": "30903-30946",
+    "app:gestesEcartCarnet": "31033-31045",
+    "app:offreARegulariser": "31349-31354",
+    "app:compromisDeLaRegularisation": "31357-31376",
+    "app:rattachementOffreProposee": "31385-31408",
+    "app:dateOffreFaite": "31316-31329",
+    "app:statusChangeNeedsTransaction": "9335-9337",
+    "app:statusChangeNeedsSalePrice": "9339-9341",
+    "app:hektorClosureRaisonsFor": "9331-9333",
+    "app:hektorStatusTargetLabel": "9309-9311",
+    "app:toucherStatusChange": "14502-14504",
+    "app:apresSaisieCommission": "14540-14561",
+    "app:rechargerPersonnesEcarts": "18835-18838",
+    "app:ajouterAcquereurStatut": "18471-18484",
+    "app:retirerAcquereurStatut": "18486-18498",
+    "app:ajouterCondition": "18382-18392",
+    "app:retirerCondition": "18405-18407",
+    "app:modifierCondition": "18394-18403",
+    "app:repartitionPoser": "19256-19296",
+    "app:repartitionAjouterCase": "19210-19214",
+    "app:repartitionRetirerCase": "19216-19221",
+    "api:createChangeHektorAnnonceStatusJob": "12100-12354",
+    "api:gesteAffaireOptimistic": "12028-12042",
+    "api:setMandatClotureApp": "7254-7274",
+    "api:saveRepartition": "6782-6805",
+    "api:ecrireAffaireCommission": "2037-2049",
+    "api:trancherAffaireCarnetEcart": "1890-1899",
+    "api:fermerAffairePersonneEcart": "1853-1858",
+    "app:effet [statusChangeAffaires, statusChangeStatus, statusChangeAffaireChoisie]": "18221-18253",
+    "app:effet [statusChangeAffaires, statusChangeStatus, statusChangeAffaireChoisie] #2": "18274-18325",
+    "app:effet [statusChangeTarget, statusChangeCommissionTouchee, statusChangeAffaires, chargeParMandat, statusChangeSelectedMandat, statusChangeTarget?.numero_mandat]": "18353-18378",
+    "app:effet [statusChangeBuyerSearch, statusChangeTarget?.app_dossier_id]": "18427-18454",
+    "app:effet [statusChangeAffaires, carnetRelecture]": "18814-18828",
+    "app:effet [statusChangeAffaires, statusChangeStatus, carnetAffaires]": "18844-19024",
+    "app:effet [statusChangeAffaires, statusChangeStatus, carnetAffaires] #2": "19037-19062",
+    "app:effet [statusChangeAffaires, statusChangeStatus, carnetAffaires] #3": "19071-19085",
+    "app:effet [statusChangeBuyerNotaryId, statusChangeBuyerNotaryNom, statusChangeSellerNotaryId, statusChangeSellerNotaryNom]": "19093-19106",
+    "app:effet [statusChangeTarget, repartitionChargeePour, repartitionChaineId, repartitionLignes, statusChangeBuyers, statusChangeBuyerContactId]": "19325-19372",
+    "app:effet [statusChangeAffaires, statusChangeStatus]": "19374-19511",
+    "app:ANCIEN BLOC de la modale": "22802-24119"
+  },
+  "inventaire": {
+    "setters": [
+      "setCarnetEcartErreur",
+      "setCarnetRelecture",
+      "setPersonnesEcartErreur",
+      "setStatusChangeAffaireChoisie",
+      "setStatusChangeAmount",
+      "setStatusChangeBuyerFees",
+      "setStatusChangeBuyerFeesRate",
+      "setStatusChangeBuyerNotaryId",
+      "setStatusChangeBuyerNotaryNom",
+      "setStatusChangeBuyerSearch",
+      "setStatusChangeChargeCommission",
+      "setStatusChangeCloseDate",
+      "setStatusChangeCloseEtat",
+      "setStatusChangeCloseRaison",
+      "setStatusChangeCloseReason",
+      "setStatusChangeCommissionTouchee",
+      "setStatusChangeDate",
+      "setStatusChangeHonorairesEntree",
+      "setStatusChangeHonorairesEntreeTouche",
+      "setStatusChangeMandants",
+      "setStatusChangeMandantsAffirmes",
+      "setStatusChangeNetManuel",
+      "setStatusChangeNetSellerPrice",
+      "setStatusChangeNotairesAffirmes",
+      "setStatusChangeNote",
+      "setStatusChangePrixVenteManuel",
+      "setStatusChangeRetractionDays",
+      "setStatusChangeSalePrice",
+      "setStatusChangeSelectedMandat",
+      "setStatusChangeSellerNotaryId",
+      "setStatusChangeSellerNotaryNom",
+      "setStatusChangeSequestration",
+      "setStatusChangeSignatureDate",
+      "setStatusChangeStatus",
+      "setStatusChangeValidityDays"
+    ],
+    "gestes": [
+      "closeStatusChangeModal",
+      "handleChangeHektorAnnonceStatus",
+      "handleGesteHektor"
+    ],
+    "appels": [
+      "affaireCourantePourStatut",
+      "affaireEstVivante",
+      "affairesVivantesPourStatut",
+      "ajouterAcquereurStatut",
+      "ajouterCondition",
+      "apresSaisieCommission",
+      "argent",
+      "avisPlusieursAffaires",
+      "bienEngage",
+      "bvs",
+      "champ",
+      "ckPartyName",
+      "compromisDeLaRegularisation",
+      "compromisVerrouilleParSaVente",
+      "dateOffreFaite",
+      "dossiersOuvertsDuBien",
+      "echeanceCondition",
+      "etatFermeAuxTransactions",
+      "etatLabel",
+      "fermerAffairePersonneEcart",
+      "formatDate",
+      "formatPrice",
+      "gardeFouPourStatut",
+      "gesteOffreSansEffet",
+      "gestesEcartCarnet",
+      "handleChangeHektorAnnonceStatus",
+      "handleGesteHektor",
+      "hektorClosureRaisonsFor",
+      "hektorStatusTargetLabel",
+      "jour",
+      "mandantContactOptionSubtitle",
+      "mandantContactOptionTitle",
+      "modifierChezHektorPossible",
+      "modifierCondition",
+      "notaireAffiche",
+      "nouvelleOffreFermeeSurBienEngage",
+      "offreARegulariser",
+      "offreAccepteeFigeeChezHektor",
+      "offreEcarteeSurBienEngage",
+      "offreVerrouilleeParSonDossier",
+      "rattachementOffreProposee",
+      "rechargerPersonnesEcarts",
+      "repartitionAjouterCase",
+      "repartitionLigne",
+      "repartitionPoser",
+      "repartitionPourcentage",
+      "repartitionRangs",
+      "repartitionRetirerCase",
+      "retirerAcquereurStatut",
+      "retirerCondition",
+      "statusChangeNeedsSalePrice",
+      "statusChangeNeedsTransaction",
+      "toucherStatusChange",
+      "trancherAffaireCarnetEcart"
+    ],
+    "etats": [
+      "carnetAffaires",
+      "carnetEcartErreur",
+      "carnetEcarts",
+      "carnetEtats",
+      "personnesEcartErreur",
+      "personnesEcarts",
+      "repartitionCases",
+      "repartitionPersonnes",
+      "repartitionTotal",
+      "statusChangeAffaires",
+      "statusChangeAmount",
+      "statusChangeBuyerError",
+      "statusChangeBuyerFees",
+      "statusChangeBuyerFeesRate",
+      "statusChangeBuyerLoading",
+      "statusChangeBuyerNotaryId",
+      "statusChangeBuyerNotaryNom",
+      "statusChangeBuyerOptions",
+      "statusChangeBuyerSearch",
+      "statusChangeBuyers",
+      "statusChangeChargeCommission",
+      "statusChangeCloseDate",
+      "statusChangeCloseEtat",
+      "statusChangeCloseRaison",
+      "statusChangeCloseReason",
+      "statusChangeConditions",
+      "statusChangeCorrectionPending",
+      "statusChangeDate",
+      "statusChangeHonorairesEntree",
+      "statusChangeMandants",
+      "statusChangeMandantsAffirmes",
+      "statusChangeNetManuel",
+      "statusChangeNetSellerPrice",
+      "statusChangeNote",
+      "statusChangePending",
+      "statusChangePrixVenteManuel",
+      "statusChangeRetractionDays",
+      "statusChangeSalePrice",
+      "statusChangeSelectedMandat",
+      "statusChangeSellerNotaryId",
+      "statusChangeSellerNotaryNom",
+      "statusChangeSequestration",
+      "statusChangeSignatureDate",
+      "statusChangeStatus",
+      "statusChangeTarget",
+      "statusChangeValidityDays"
+    ],
+    "composants": [
+      "CkAffaireParty",
+      "HistoriqueOffre",
+      "SelecteurMandants",
+      "SelecteurNotaire",
+      "StatusPill"
+    ],
+    "boutons": [
+      "closeStatusChangeModal · Fermer",
+      "setStatusChangeStatus · } >",
+      "retirerAcquereurStatut · retirerAcquereurStatut(id)}>×",
+      "ajouterAcquereurStatut · ajouterAcquereurStatut(option)}>",
+      "repartitionAjouterCase · repartitionAjouterCase(cote)} disabled= > + un intervenant",
+      "repartitionRetirerCase · rtitionRetirerCase(cote)} disabled= > − retirer la case vide",
+      "retirerCondition · retirerCondition(rang)}> Retirer",
+      "ajouterCondition · ajouterCondition(null)}> ＋ Condition libre",
+      "setStatusChangeCloseEtat · } >",
+      "setPersonnesEcartErreur · PersonnesEcartErreur('') try catch (err) }}> J'ai vu, fermer",
+      "? · }> Choisir",
+      "? · opPropagation() setCarnetEcartErreur('') try catch (err) }}>",
+      "closeStatusChangeModal · Annuler",
+      "handleGesteHektor · handleGesteHektor('refus')} disabled= > Refuser l'offre",
+      "handleGesteHektor · handleGesteHektor('accepte')} disabled= > Accepter l'offre",
+      "handleChangeHektorAnnonceStatus · } disabled= title= >",
+      "handleGesteHektor · ektor('annuler_compromis')} disabled= > Annuler le compromis",
+      "handleGesteHektor · u bien redescend. Rien ne le remet.\"> Supprimer le compromis",
+      "handleGesteHektor · steHektor('supprimer_vente')} disabled= > Supprimer la vente",
+      "SUBMIT · {statusChangePending ? 'Envoi...' : `Envoyer vers $ `}"
+    ],
+    "conditions": 50,
+    "classes_telephone": 2
+  }
+}
