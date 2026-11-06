@@ -1944,6 +1944,12 @@ pour tout le monde (au rechargement). Retour arrière : `admin` ou `off`. **Suit
   (0 ligne). L'app en ligne écrit par le relais : rien de cassé en attendant l'écran.
 - ⏸ **Écran NON poussé** : sous `ab8f8b7` se trouve `63fbe36` (autre session : code serveur `appointment_service.py` +
   `run_full_pipeline.ps1`) — le pousser l'enverrait chez Render ; question posée à Frédéric.
+- ✅ **Poussé (« Pousse », liste relue juste avant : inchangée) — `aa3d016..940b35d`**, avec `175b076`, `63fbe36` (code
+  serveur page RDV + run de nuit, session « registre des agences ») et `caf0a04` (normalize_source.py). Vu en ligne :
+  GIBERT IMMOBILIER (fiche syndic) → « Interlocuteurs · + Ajouter », texte « gestionnaires de copropriété, comptables,
+  assistants », formulaire Nom / Rôle (gestionnaire, comptable…) / Téléphone / E-mail — ouvert puis ANNULÉ, rien saisi ;
+  la fiche notaire 10008890 garde « Interlocuteurs de l'étude » et ses chiffres. Non éprouvé en réel : un ajout (ce
+  serait une écriture en production) — prouvé seulement dans la transaction annulée.
   ⚠ Le repli `contactsDirectory.find(...) ?? contactsDirectory[0]` d'App.tsx est ANCIEN et sert à toute l'app : non
   touché, à signaler.
 
