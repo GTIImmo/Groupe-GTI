@@ -1,0 +1,31 @@
+/* A.2 P8-3 (06/11/2026) -- le suivi par signataire d'une demande Youtrust (SuiviSignatairesYoutrust.tsx).
+   Tout est prefixe « sst- » : rien ne fuit. Couleurs reprises de la pastille d'etat (SignatureBadge, App.tsx). */
+.sst-suivi { margin-top: 6px; font-size: 12.5px; color: #3c3c43; }
+.sst-entete {
+  display: inline-flex; align-items: center; gap: 6px; padding: 2px 0; border: 0; background: none;
+  font: inherit; color: #5f6368; cursor: pointer; text-align: left;
+}
+.sst-entete:hover { color: #241f22; }
+.sst-chevron { width: 10px; display: inline-block; }
+.sst-corps { margin: 4px 0 0 16px; }
+.sst-liste { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.sst-ligne { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+.sst-point { width: 8px; height: 8px; border-radius: 50%; background: #9aa0a6; flex: none; }
+.sst-ligne[data-ton='signe'] .sst-point { background: #1f7a3d; }
+.sst-ligne[data-ton='attente'] .sst-point { background: #b26a00; }
+.sst-ligne[data-ton='refus'] .sst-point { background: #c5221f; }
+.sst-qui { display: inline-flex; align-items: baseline; gap: 6px; min-width: 0; }
+.sst-role { color: #6b6058; font-size: 11.5px; }
+.sst-etat { color: #5f6368; }
+.sst-ligne[data-ton='signe'] .sst-etat { color: #1f7a3d; }
+.sst-ligne[data-ton='attente'] .sst-etat { color: #b26a00; }
+.sst-ligne[data-ton='refus'] .sst-etat { color: #c5221f; }
+.sst-relancer, .sst-annuler { padding: 2px 10px; font-size: 12px; min-height: 0; }
+.sst-pied { margin-top: 6px; }
+.sst-msg { margin: 6px 0 0; }
+.sst-vide { margin: 0; color: #6b6058; }
+@media (max-width: 640px) {
+  .sst-corps { margin-left: 4px; }
+  .sst-ligne { gap: 2px 8px; }
+  .sst-etat { flex-basis: 100%; padding-left: 14px; }
+}

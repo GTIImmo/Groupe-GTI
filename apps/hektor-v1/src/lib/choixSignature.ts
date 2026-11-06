@@ -29,11 +29,11 @@ export type ChoixDeSignature = {
 type Sig = { provider?: string | null; status?: string | null; procedure_id?: number | string | null }
 
 export const TEXTE_ANNULER_D_ABORD = {
-  youtrust: 'Une signature électronique (Youtrust) est en cours sur ce document : annulez-la d’abord.',
+  youtrust: 'Une signature électronique (Youtrust) est en cours sur ce document : annulez-la d’abord (« Annuler la signature », sous la liste des signataires).',
   immosign: 'Une signature Hektor (ImmoSign) est en cours sur ce document : annulez-la d’abord.',
 }
 export const TEXTE_MANUSCRITE_ANNULER = {
-  youtrust: 'Une signature électronique (Youtrust) est en cours : annulez-la d’abord pour pouvoir marquer ce document signé à la main.',
+  youtrust: 'Une signature électronique (Youtrust) est en cours : annulez-la d’abord pour pouvoir marquer ce document signé à la main (« Annuler la signature », sous la liste des signataires).',
   immosign: 'Une signature Hektor (ImmoSign) est en cours : annulez-la d’abord (bouton « Annuler ») pour pouvoir marquer ce document signé à la main.',
 }
 

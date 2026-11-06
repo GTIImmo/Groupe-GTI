@@ -990,6 +990,23 @@ webhook posé par Frédéric ; redémarrage du worker.
 >   Youtrust en cours. ⚠ **Le 1er passage de la répétition a MENTI** : sa mise en scène, jouée en `authenticated`, n'écrivait
 >   rien (RLS active, aucune règle UPDATE sur `app_console_document`), la fonction voyait « signé » et le contrôle [2] tombait
 >   pour une fausse raison. Corrigé : mise en scène en propriétaire, APPEL seul en `authenticated`, chaque mise en scène vérifiée.
+> - ✅ **P8-3 CODÉ (écran, 06/11) — NON COMMITÉ, NON DÉPLOYÉ** : **le suivi par signataire** d'un document Youtrust
+>   (`src/lib/suiviSignataires.ts` + `src/SuiviSignatairesYoutrust.tsx` + `suivi-signataires.css`), monté sous l'état de
+>   signature aux TROIS endroits (liste Documents v21 et classique, suivi du mandat). Il lit `app_signature_request` (⛔ jamais
+>   `proofs` : le code à usage unique y est), dans l'ordre des cases : « A signé le … à … » (heure de Paris), « Invité par
+>   e-mail — n'a pas encore signé », « En train de signer », « Pas encore son tour », « A refusé ». Relu quand le miroir du
+>   document bouge. **Les deux gestes, aux règles de Youtrust** (un refus = un travail en erreur = une alerte) : **Relancer**
+>   une personne seulement si la demande est `ongoing` ET elle `notified` (doc. Youtrust send_reminder) ; **Annuler la
+>   signature** seulement `ongoing` / `approval` ; chacun confirmé, la relance nomme la personne. Gestes seulement si
+>   l'interrupteur `signature_youtrust` est allumé (le worker les refuse sinon) ; éteint, le suivi reste lisible sans bouton.
+>   ImmoSign : rien ne change (ses boutons gardés par `procedure_id`). **Rien à poser en base ni au worker** : les trois
+>   verrous étaient déjà ouverts (contrainte de type, `app_console_can_request_job` admin + négociateur sur ses biens,
+>   liste du worker). Le message « annulez-la d'abord » de P8-2 (Youtrust) dit désormais où annuler. **Essais** :
+>   `test_suivi_signataires.cjs` 27/27 (neuf, dont les clés posées = celles que le worker lit) ; choix 21/21 ; cockpit 23/23 ;
+>   build OK. **Lecture réelle** en `authenticated` (Frédéric) de la demande de 61398 : 3 signataires, ordre et heures justes.
+>   ⚠ **Seul effet visible interrupteur éteint** : le document d'essai de 61398 (seule demande Youtrust de la base) montrera
+>   « Signataires — Signé par tous ». ⚠ **Non vu à l'écran** (pas de session locale). Non fait, hors P8-3 : « Signer
+>   maintenant » (`youtrust_signing_link`, lot 6 bis).
 > **Le nœud** : interrupteur allumé, un mandat généré naît `sans_hektor` (D24) → « signature Hektor » impossible sans le
 > DÉPOSER chez Hektor. Un chemin DORMANT existe (`completerEnvoiDocumentDiffere`, `upload_document_to_hektor` avec
 > `app_document_id` : « aucun appelant ») — jamais éprouvé. À l'inverse, un document venu de Hektor (modèle ImmoSign,

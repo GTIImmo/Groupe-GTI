@@ -3,6 +3,7 @@ import { mockRegistreDossiers, mockDetailPayloads, mockDiffusionRequestEvents, m
 import { hasSupabaseEnv, supabase, supabaseUrl } from './supabase'
 import type { AppContact, AppContactMandatRecherche, AppContactRelation, AppContactSearch, ConsoleDocument, ConsoleDocumentVisibility, ConsoleJob, ConsoleJobType, ConsolePhoto, ContactStats, DashboardSummary, DetailedDossier, DiffusionRequest, DiffusionRequestEvent, DiffusionTarget, Dossier, DossierDetail, GoogleWorkspaceIdentity, HektorAgencyOption, HektorNegotiatorOption, MandatBroadcast, MandatRecord, MatterportGroup, MatterportModelLink, UserNegotiatorContext, UserPerimetre, UserProfile, WorkItem } from '../types'
 import { bvs, bvt } from './bienvuTexte'
+import type { DemandeSignature } from './suiviSignataires'
 
 export type FilterCatalog = {
   commercials: string[]
@@ -10218,6 +10219,64 @@ export async function createYoutrustSendSignatureJob(input: {
     .single()
   if (error || !data) throw new Error(error?.message ?? 'Unable to create Youtrust signature job')
   return data as ConsoleJob
+}
+
+// A.2 P8-3 (06/11/2026) : le suivi par signataire. ⚠ JAMAIS la colonne `proofs` : la piste JSON de Youtrust porte le
+// code a usage unique (authentication.code). La regle de lecture est celle du portefeuille (app_signature_request_select_scope).
+export async function loadDemandeSignature(id: string): Promise<DemandeSignature | null> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
+  const { data, error } = await supabase
+    .from('app_signature_request')
+    .select('id,status,signers,expiration_at,done_at,canceled_at,expired_at,last_synced_at')
+    .eq('id', id)
+    .maybeSingle()
+  if (error) throw new Error(error.message)
+  return (data as DemandeSignature | null) ?? null
+}
+
+async function poserTravailYoutrust(jobType: 'youtrust_remind_signer' | 'youtrust_cancel_signature', input: {
+  document: Pick<ConsoleDocument, 'id' | 'app_dossier_id' | 'hektor_annonce_id' | 'document_name'>
+  signatureRequestId: string
+  providerSignerId?: string
+}): Promise<ConsoleJob> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
+  const userId = await requireSupabaseUserId()
+  const { data, error } = await supabase
+    .from('app_console_job')
+    .insert({
+      job_type: jobType,
+      app_dossier_id: input.document.app_dossier_id,
+      hektor_annonce_id: String(input.document.hektor_annonce_id),
+      payload_json: {
+        signature_request_id: input.signatureRequestId,
+        app_console_document_id: input.document.id,
+        document_name: input.document.document_name,
+        ...(input.providerSignerId ? { provider_signer_id: input.providerSignerId } : {}),
+      },
+      priority: 24,
+      requested_by: userId,
+    })
+    .select('*')
+    .single()
+  if (error || !data) throw new Error(error?.message ?? `Unable to create ${jobType} job`)
+  return data as ConsoleJob
+}
+
+// Relancer UN signataire (Youtrust renvoie son e-mail) -- seulement `notified` dans une demande `ongoing` (lib/suiviSignataires).
+export function createYoutrustRemindSignerJob(input: {
+  document: Pick<ConsoleDocument, 'id' | 'app_dossier_id' | 'hektor_annonce_id' | 'document_name'>
+  signatureRequestId: string
+  providerSignerId: string
+}): Promise<ConsoleJob> {
+  return poserTravailYoutrust('youtrust_remind_signer', input)
+}
+
+// Annuler la demande Youtrust : le worker l'annule chez Youtrust PUIS remet le document « annulé » (il redevient signable).
+export function createYoutrustCancelSignatureJob(input: {
+  document: Pick<ConsoleDocument, 'id' | 'app_dossier_id' | 'hektor_annonce_id' | 'document_name'>
+  signatureRequestId: string
+}): Promise<ConsoleJob> {
+  return poserTravailYoutrust('youtrust_cancel_signature', input)
 }
 
 // Relance de signature ImmoSign : le worker POST ImmoSign-remindProcedureSignatories (mails de rappel).

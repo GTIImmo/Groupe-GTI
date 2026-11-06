@@ -283,6 +283,8 @@ import type { EtatCase, TriAnnonces } from './AnnoncesListeV2'
 import ContactSearchFields, { contactSearchValueToInput, defaultContactSearchValue, type ContactSearchFieldsValue } from './ContactSearchFields'
 import './contact-new.css'
 import './ajout-conjoint.css'
+// A.2 P8-3 (06/11/2026) : le suivi par signataire d'une demande Youtrust (Relancer une personne, Annuler la demande).
+import SuiviSignatairesYoutrust from './SuiviSignatairesYoutrust'
 import EnvoiSignatureYoutrust, { EVENEMENT_CORRIGER_MANDAT, type DemandeCorrectionMandat, type OngletCorrection } from './EnvoiSignatureYoutrust'
 import type { FicheDuJourPdf } from './lib/ecartsFichePdf'
 import { ficheDuMandant, mandantsImprimes, mandantsSansPrenomOuNom, situationsDesConjoints, type FicheCouple, type SituationConjoint } from './lib/conjointsDuMandat'
@@ -11728,6 +11730,8 @@ Le mandat passera à l'état « Signé ». À ne faire qu'une fois le PDF signé
               <div className="console-document-main">
                 <strong>{document.document_name}</strong>
                 <SignatureBadge signature={signature} />
+                {/* A.2 P8-3 : qui a signe, qui attend (Youtrust seulement ; ImmoSign garde ses boutons). */}
+                <SuiviSignatairesYoutrust document={document} gestesActifs={choixSignature.youtrust} onJobCreated={onJobCreated} onChange={() => { void refresh() }} />
               </div>
               <div className="console-document-actions">
                 {hasSignedFile ? (
@@ -12323,6 +12327,8 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
                 {e.sigLabel ? <div className={`fa-ck-docsig${e.signed ? ' signed' : ''}`}>{e.sigLabel}</div> : null}
                 {e.remplace ? <span className="ens-remplace-mention">{e.remplace}</span> : null}
                 {(() => { const m = mentionDepotHektor(e.doc); return m ? <span className={m.echec ? 'console-document-absent' : 'console-document-encours'}>{m.texte}</span> : null })()}
+                {/* A.2 P8-3 : qui a signe, qui attend (Youtrust seulement ; ImmoSign garde ses boutons). */}
+                <SuiviSignatairesYoutrust document={e.doc} gestesActifs={signatureYoutrust} onJobCreated={onJobCreated} onChange={() => { void refreshDocuments(true) }} />
               </div>
               <div className="fa-ck-dright">
                 {e.remplace ? <span className="ens-pill-remplace">Remplacé</span> : <span className={`fa-ck-docbadge${e.signed ? ' ok' : ''}`}>{e.badge}</span>}
@@ -12432,6 +12438,8 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
                       </span>
                     ) : null}
                     <SignatureBadge signature={signature} />
+                    {/* A.2 P8-3 : qui a signe, qui attend (Youtrust seulement ; ImmoSign garde ses boutons). */}
+                    <SuiviSignatairesYoutrust document={document} gestesActifs={signatureYoutrust} onJobCreated={onJobCreated} onChange={() => { void refreshDocuments(true) }} />
                   </div>
                   <StatusPill value={deleting ? 'Suppression demandee' : preparing ? 'Demande envoyee' : consoleDocumentStatusLabel(document.storage_status)} />
                   {docRowActions(document)}
