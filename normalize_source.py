@@ -554,6 +554,9 @@ def upsert_agences(conn: sqlite3.Connection) -> None:
 
 
 def upsert_negos(conn: sqlite3.Connection) -> None:
+    # 06/11/2026 (registre, audit §51) -- les n° vus dans les LISTES du jour : une fiche de secours (nego_by_id) ne
+    # repasse plus par-dessus eux.
+    vus_dans_les_listes: set[str] = set()
     for endpoint_name in NEGO_LISTING_ENDPOINTS:
         for row in fetch_latest_raw_payloads(conn, endpoint_name):
             payload = json.loads(row["payload_json"])
@@ -563,6 +566,7 @@ def upsert_negos(conn: sqlite3.Connection) -> None:
             for item in data:
                 if not isinstance(item, dict):
                     continue
+                vus_dans_les_listes.add(str(item.get("id") or ""))
                 conn.execute(
                     """
                     INSERT INTO hektor_negociateur(
@@ -592,10 +596,15 @@ def upsert_negos(conn: sqlite3.Connection) -> None:
                         now_utc_iso(),
                     ),
                 )
+    # ⛔ Les fiches de secours (getNegoById, une par une) ne servent qu'aux negociateurs ABSENTS des listes du jour.
+    #   Avant le 06/11 elles repassaient apres les listes : les 15 lues le 03/04/2026 ecrasaient chaque nuit la version
+    #   fraiche (Sylvie TEYSSONNIER n° 41 gardait son portable d'avril). Rien n'est efface : la reponse reste rangee.
     for row in fetch_latest_raw_payloads(conn, "nego_by_id"):
         payload = json.loads(row["payload_json"])
         item = payload.get("negociateur")
         if not isinstance(item, dict):
+            continue
+        if str(item.get("id") or "") in vus_dans_les_listes:
             continue
         conn.execute(
             """

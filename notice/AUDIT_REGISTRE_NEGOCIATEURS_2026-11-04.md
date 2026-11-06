@@ -1474,3 +1474,17 @@ administrateur a corrigé, sinon la valeur de Hektor tenue par la nuit ; annuair
 l'était déjà (coordonnées À NOUS de la personne d'abord, §48). Essais **22/22** ; la version en ligne (aa3d016, carnet
 seulement) en échoue 6. **Mesure réelle avant de pousser** : sur les **439 liens actifs**, registre = annuaire pour le tél
 ET le mail de chaque agence, **0 lien ne changerait**.
+
+## 51. LES FICHES DE SECOURS D'AVRIL N'ÉCRASENT PLUS LES LISTES DU JOUR (06/11) — Frédéric : « 1 »
+
+**Le défaut** : `normalize_source.upsert_negos` reconstruit chaque nuit `hektor_negociateur` depuis les listes du jour
+(`list_negos`, `list_negos_inactive`), PUIS repose par-dessus les fiches de secours `nego_by_id` — 15, lues une à une le
+03/04/2026 parce qu'absentes alors de la seule liste des actifs. Depuis l'ajout de la liste des inactifs, 11 de ces 15 sont
+dans les listes : leur fiche d'avril les écrasait quand même. Une seule différait : Sylvie TEYSSONNIER n° 41 (avril
+06 58 80 37 06 ; Hektor aujourd'hui portable 04 71 56 02 36, fixe 04 71 59 81 45).
+**La correction** : une fiche de secours ne repasse plus sur un n° vu dans les listes du jour ; elle sert toujours aux
+négociateurs ABSENTS des listes (n° 37, 42, 43, 93 gardés). Si les listes manquent une nuit, le secours joue comme avant.
+**L'épreuve** (hors ligne, petite base faite des VRAIES réponses rangées) : l'ANCIENNE version reproduit à l'identique la
+table de cette nuit (0 différence = témoin) ; la NOUVELLE ne diffère QUE sur le n° 41, qui suit Hektor. Compilation verte.
+**Effet** : actif dès le run de cette nuit (le run lance le fichier du serveur) ; Sylvie suivra Hektor dans la copie locale,
+puis l'annuaire, le registre des négociateurs et, si l'interrupteur des agences est allumé, ses coordonnées à nous.
