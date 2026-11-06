@@ -12,6 +12,11 @@ export type BienDemande = {
   ville: string | null
   lots: string | null
   mandat: string | null
+  // Lot 5 (06/11) : pour la commande de diagnostics (facultatif ; une donnée absente n'est pas écrite).
+  annee?: number | null
+  copro?: boolean
+  typeBien?: string | null
+  surface?: string | null
 }
 
 export type PieceCopro = { cle: string; libelle: string; defaut: boolean }

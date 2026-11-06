@@ -31,3 +31,5 @@
 @keyframes dd-ouvre{from{opacity:0;transform:translateY(12px) scale(.985)}to{opacity:1;transform:none}}
 @media (max-width:720px){.dd-corps{grid-template-columns:1fr;}.dd-message textarea{min-height:200px;}}
 @media (prefers-reduced-motion:reduce){.dd-fond,.dd-fenetre{animation:none;}}
+/* Lot 5 (06/11) : « Commander un diagnostic » prend la couleur du diagnostiqueur (celle de sa fiche). */
+.dd-fenetre.diag{--sb:#b26a0e;}

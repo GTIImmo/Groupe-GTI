@@ -40,15 +40,15 @@ export function lireSyndicDuBien(brut: unknown): SyndicDuBien | null {
   }
 }
 
-// Le syndic que HEKTOR indique sur la fiche du bien (lu la nuit), ou null.
-export function syndicSelonHektor(detailDiagnostics: unknown): { numero: string; nom: string } | null {
+// Le syndic (ou, lot 5, le diagnostiqueur) que HEKTOR indique sur la fiche du bien (lu la nuit), ou null.
+export function syndicSelonHektor(detailDiagnostics: unknown, cle: 'syndic' | 'diagnostiqueur' = 'syndic'): { numero: string; nom: string } | null {
   let o: unknown = detailDiagnostics
   if (typeof o === 'string') {
     if (!o.trim().startsWith('{')) return null
     try { o = JSON.parse(o) } catch { return null }
   }
   if (!o || typeof o !== 'object') return null
-  const s = (o as Record<string, unknown>).syndic as Record<string, unknown> | undefined
+  const s = (o as Record<string, unknown>)[cle] as Record<string, unknown> | undefined
   const numero = texte(s?.value)
   const nom = texte(s?.selected_label)
   return numero ? { numero, nom: nom || `Contact ${numero}` } : null

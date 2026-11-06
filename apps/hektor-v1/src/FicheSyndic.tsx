@@ -20,10 +20,11 @@ async function lireBiens(table: string, ids: string[], avecDossier: boolean): Pr
   return ((r.data ?? []) as unknown as Record<string, unknown>[]).map((b) => ({ ...b, photo: b.photo_url_listing_app || b.photo_url_listing || null }))
 }
 
-async function lireVueSyndic(contactId: string): Promise<VueSyndic> {
+// Lot 5 (06/11) : la même lecture sert au diagnostiqueur (role='diagnostiqueur').
+async function lireVueSyndic(contactId: string, role: 'syndic' | 'diagnostiqueur' = 'syndic'): Promise<VueSyndic> {
   if (!hasSupabaseEnv || !supabase) throw new Error('base indisponible')
   const l = await supabase.from('app_partenaire_lien').select('hektor_annonce_id,app_dossier_id')
-    .eq('partenaire_id', contactId).eq('role', 'syndic').is('retire_le', null)
+    .eq('partenaire_id', contactId).eq('role', role).is('retire_le', null)
   if (l.error) throw new Error(`liens : ${l.error.message}`)
   const liens = (l.data ?? []) as { hektor_annonce_id: number | null; app_dossier_id: number | null }[]
   const ids = Array.from(new Set(liens.map((x) => String(x.hektor_annonce_id ?? '')).filter(Boolean)))
@@ -48,17 +49,17 @@ async function lireVueSyndic(contactId: string): Promise<VueSyndic> {
   })
 }
 
-export function useFicheSyndic(contactId: string, actif: boolean) {
+export function useFicheSyndic(contactId: string, actif: boolean, role: 'syndic' | 'diagnostiqueur' = 'syndic') {
   const [etat, setEtat] = useState<{ vue: VueSyndic | null; erreur: string | null; chargement: boolean }>({ vue: null, erreur: null, chargement: actif })
   useEffect(() => {
     if (!actif || !contactId.trim()) { setEtat({ vue: null, erreur: null, chargement: false }); return }
     let annule = false
     setEtat((e) => ({ ...e, chargement: true, erreur: null }))
-    lireVueSyndic(contactId.trim())
+    lireVueSyndic(contactId.trim(), role)
       .then((vue) => { if (!annule) setEtat({ vue, erreur: null, chargement: false }) })
       .catch((e) => { if (!annule) setEtat({ vue: null, erreur: e instanceof Error ? e.message : String(e), chargement: false }) })
     return () => { annule = true }
-  }, [contactId, actif])
+  }, [contactId, actif, role])
   return etat
 }
 
@@ -83,7 +84,7 @@ export function SyndicChiffres(props: { vue: VueSyndic | null }) {
   )
 }
 
-function CarteBien(props: { bien: BienSyndic; onOuvrir?: (id: number) => void }) {
+function CarteBien(props: { bien: BienSyndic; onOuvrir?: (id: number) => void; diag?: boolean }) {
   const b = props.bien
   const c = b.copro
   const puces: string[] = []
@@ -100,6 +101,9 @@ function CarteBien(props: { bien: BienSyndic; onOuvrir?: (id: number) => void })
           <span className={`sy-statut${b.enVente ? ' vente' : ''}`}>{b.statut}</span>
         </span>
         <span className="sy-sous">{[b.ville, b.mandat ? `mandat ${b.mandat}` : null, c?.numerosLots ? `lot ${c.numerosLots}` : null].filter(Boolean).join(' · ') || '—'}</span>
+        {props.diag ? (
+          <span className="sy-puces">{b.annee ? <span className="sy-puce">construit en {b.annee}</span> : <span className="sy-puce vide">année de construction non renseignée</span>}</span>
+        ) : <>
         <span className="sy-puces">
           {puces.map((p) => <span key={p} className="sy-puce">{p}</span>)}
           {c?.procedure === 'en_cours' ? <span className="sy-puce alerte">procédure en cours</span> : null}
@@ -112,6 +116,7 @@ function CarteBien(props: { bien: BienSyndic; onOuvrir?: (id: number) => void })
             {b.documents.length > 4 ? <span className="sy-doc plus">+{b.documents.length - 4}</span> : null}
           </span>
         ) : <span className="sy-docs"><span className="sy-doc manque">aucun document de copropriété au coffre</span></span>}
+        </>}
       </span>
     </>
   )
@@ -170,5 +175,46 @@ export function SyndicNosBiens(props: { vue: VueSyndic | null }) {
         <section className="fa-cx-mod full"><div className="fa-cx-ech-empty">pré-état daté, PV d'assemblée, carnet d'entretien : ce qu'on demande et en combien de jours</div></section>
       </div>
     </div>
+  )
+}
+
+// LOT 5 (06/11/2026) — la fiche DIAGNOSTIQUEUR, version simple : ses biens (liens du registre) ; le reste « en construction ».
+export function DiagChiffres(props: { vue: VueSyndic | null }) {
+  const v = props.vue
+  const kpi = (titre: string, valeur: string, sous: string, couleur: string, wip = false) => (
+    <div className="fa-cx-kpi" key={titre} style={{ ['--sc']: couleur } as CSSProperties}>
+      <div className="fa-cx-kpi-k">{titre}</div>
+      <div className="fa-cx-kpi-v">{valeur}</div>
+      <div className="fa-cx-kpi-s">{wip ? <EnConstruction titre={sous} /> : sous}</div>
+    </div>
+  )
+  return (
+    <div className="fa-cx-kpis">
+      {kpi('Nos biens avec lui', v ? String(v.biens.length) : '…', 'diagnostiqueur posé sur le bien', 'var(--ty)')}
+      {kpi('Biens en vente', v ? String(v.enVente) : '…', 'actifs, sous offre ou sous compromis', '#1f5b96')}
+      {kpi('Commandes en cours', '—', 'suivi des commandes', '#c2512a', true)}
+      {kpi('DPE à renouveler', '—', 'DPE qui expire', '#2f8a5b', true)}
+    </div>
+  )
+}
+
+export function DiagBiens(props: { vue: VueSyndic | null; erreur: string | null; chargement: boolean; onOuvrirBien?: (id: number) => void }) {
+  return (
+    <>
+      <div className="fa-cx-sec" style={{ ['--sc']: 'var(--ty)' } as CSSProperties}>
+        <span className="fa-cx-sec-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3 8-8" /><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9" /></svg></span>
+        Biens diagnostiqués
+        <span className="fa-cx-sec-meta">{props.vue ? `${props.vue.biens.length} bien${props.vue.biens.length > 1 ? 's' : ''}` : ''}</span>
+        <span className="fa-cx-sec-ln" />
+      </div>
+      <section className="fa-cx-mod full" style={{ marginBottom: 24 }}>
+        {props.erreur ? <div className="fa-cx-ech-empty fa-cx-err">Biens illisibles pour le moment ({props.erreur}).</div>
+          : props.chargement && !props.vue ? <div className="fa-cx-ech-empty">Chargement des biens…</div>
+          : props.vue && props.vue.biens.length ? (
+            <div className="sy-biens">{props.vue.biens.map((b) => <CarteBien key={b.hektorAnnonceId} bien={b} onOuvrir={props.onOuvrirBien} diag />)}</div>
+          ) : <div className="fa-cx-ech-empty">Aucun de nos biens n'est relié à ce diagnostiqueur : choisissez-le sur la fiche d'un bien (onglet Contact).</div>}
+        <div className="sy-note">Les commandes et leur suivi, le DPE qui expire : plus tard <EnConstruction titre="lot 5" /></div>
+      </section>
+    </>
   )
 }

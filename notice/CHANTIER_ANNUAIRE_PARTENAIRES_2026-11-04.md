@@ -2208,6 +2208,28 @@ apporteur 35 / 23 / 0 ; courtier 22 / 14 / 0 ; parrain 15 / 8 / 0 ; banque 8 / 7
   biens au choix, message prêt « 12 Rue Honoré de Balzac, 42000 Saint-Étienne · Lot : 5 · mandat n° 18953 », pas
   d'e-mail sur la fiche → seul « Copier le message » est proposé. Fenêtre refermée sans rien envoyer.
 
+### 28.2 Lot 5 — le diagnostiqueur, version simple — CODÉ (06/11, « Vas-y »)
+- **Base** (patch NON posé) `supabase/patch_partenaire_du_bien_2026-11-06.sql` (+ `_INVERSE`, `_REPETITION` 8 contrôles) :
+  geste GÉNÉRIQUE `app_partenaire_du_bien(rôle, …)` / `_lire` pour 'syndic' ou 'diagnostiqueur' (mêmes gardes que 4.2 :
+  droit sur le bien, métier au registre, l'ancien retiré daté avec l'auteur) + un seul diagnostiqueur actif par bien.
+  Le geste du syndic (4.2) n'est PAS touché. ⭐ Essai dans une transaction annulée : 12/12 verts (poser, même, changer,
+  un syndic refusé comme diagnostiqueur, rôle inconnu refusé, le générique marche aussi pour le syndic, lire, retirer le
+  diagnostiqueur laisse le syndic, négociateur sur son bien oui / sur un autre non) ; 0 trace après.
+- **Fiche du bien** : la carte « Diagnostiqueur » (tout bien, bureau) = la carte du syndic généralisée (`role`) :
+  choisir / changer / retirer / ouvrir sa fiche / ce que Hektor indique ; pas de registre RNIC pour lui. Téléphone : en
+  lecture. « Commander un diagnostic » = message prêt (`lib/commandeDiagnostic.ts`) : diagnostics du dossier de
+  diagnostic technique (art. L271-4 CCH), cochés selon le bien (DPE, ERP, électricité, gaz toujours ; amiante avant 1997,
+  plomb avant 1949, année inconnue = les deux ; Carrez si copropriété) ; adresse, type, surface, année, mandat ; rien
+  n'est enregistré. La fenêtre de 4.4 sert aux deux (`modele`).
+- **Fiche diagnostiqueur** (depuis le catalogue) : chiffres (nos biens avec lui, en vente ; commandes et DPE à renouveler
+  « en construction »), « Biens diagnostiqués » (la lecture de la fiche syndic, par rôle), bouton « Commander un
+  diagnostic » (biens reliés). « Avec nous » reste en construction.
+- Cran `partenaires_diag` (NON posé). Mesure : 4 diagnostiqueurs posés chez Hektor sur 714 biens en vente ; 29 sur 36
+  ont un e-mail. ⚠ L'année de construction n'est saisie sur AUCUN bien en vente (« 0 ») : amiante et plomb seront
+  cochés d'office presque toujours (mieux vaut demander que manquer).
+- Contrôles (98)-(103) + (45), (76), (83), (91) mis à jour (le syndic garde ses gestes) ; essai **103/103** ; notaire
+  vert ; construction verte ; banc fictif (carte, choix, fenêtre de commande à 1280 × 665).
+
 ### 7 ter. Les dépendances (techniques, pas un ordre décidé)
 
 - 0 avant tout le reste ; 0.1 avant B2 ; 0.2 avant B1 ; 0.6 avant B5 ; 0.3 avant B6 ; 0.4 avant B7 ; 0.5 avant C2.

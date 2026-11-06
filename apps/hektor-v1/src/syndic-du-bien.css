@@ -42,3 +42,6 @@
 /* 06/11 : ce qui distingue deux fiches au même nom (15 noms en double au catalogue). */
 .sb-l-detail { flex-basis: 100%; font-size: 11px; color: #6f6680; }
 .sb-l-tag.double { color: #8a5a00; background: #fff3d6; }
+/* Lot 5 (06/11) : la carte du diagnostiqueur prend la couleur de sa fiche. */
+.sb-syndic.diag{--sb:#b26a0e;}
+.sb-syndic.diag .sb-ic,.sb-syndic.diag .sb-l-tag{background:#fbefe0;}

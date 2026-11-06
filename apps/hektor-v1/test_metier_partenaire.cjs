@@ -141,9 +141,11 @@ controle("(44) branchement : blocs du profil, et Recherche cachée sans recherch
   && /const masquerRecherche = \(estFicheNotaire \|\| Boolean\(blocsPartenaire\)\) && Number\(props\.contact\.active_search_count \?\? 0\) === 0/.test(app));
 controle("(45) les 4 blocs sont posés à leur place (chiffres avant le tableau, section, À venir, avec nous)",
   /<PartenaireChiffres blocs=\{blocsPartenaire\} \/>[\s\S]{0,120}fa-cx-dash-top/.test(app)
-  && /<NotaireDossiers[\s\S]{0,500}<PartenaireSectionMetier blocs=\{blocsPartenaire\} \/>/.test(app)
+  && /<NotaireDossiers[\s\S]{0,800}<PartenaireSectionMetier blocs=\{blocsPartenaire\} \/>/.test(app)
   && /<NotaireAVenir vue=\{vueNotaire\} \/> : null\}\s*\{blocsPartenaire \? <PartenaireAVenir/.test(app)
-  && /<NotaireVentesEtAvecNous[^\n]*\n\s*\{(ficheSyndicActive \? <SyndicNosBiens vue=\{ficheSyndic\.vue\} \/> : )?blocsPartenaire \? <PartenaireAvecNous/.test(app));
+  && /<NotaireVentesEtAvecNous[^\n]*\n\s*\{(ficheSyndicActive \? <SyndicNosBiens vue=\{ficheSyndic\.vue\} \/> : )?blocsPartenaire \? <PartenaireAvecNous/.test(app)
+  // lot 5 (06/11) : le chiffre et la section du diagnostiqueur s'intercalent avant les blocs 3.3b, qui restent en dernier recours.
+  && /: ficheDiagActive \? <DiagChiffres vue=\{ficheDiag\.vue\} \/> : blocsPartenaire \? <PartenaireChiffres blocs=\{blocsPartenaire\} \/> : null\}/.test(app));
 const fp = fs.readFileSync(path.resolve(__dirname, "src", "FichePartenaire.tsx"), "utf8");
 // 06/11 (3.4) : une seule lecture permise, celle des interlocuteurs ; l'écriture passe par le carnet du notaire (relais).
 controle("(46) FichePartenaire : une seule lecture (app_partenaire_interlocuteur), aucune écriture ni fetch",
@@ -265,7 +267,7 @@ const fsy = fs.readFileSync(path.resolve(__dirname, "src", "FicheSyndic.tsx"), "
 controle("(75) 4.1 FicheSyndic : LECTURE seule (aucune écriture, aucune fonction appelée)", !/\.(insert|update|upsert|delete|rpc)\(|fetch\(/.test(fsy.replace(/^\/\/.*$/gm, "")));
 controle("(76) 4.1 branchement : cran `partenaires_syndic_fiche`, fiche SYNDIC seulement, les blocs 3.3b ailleurs",
   /useCranCouplesVisible\('partenaires_syndic_fiche', props\.profileRole\)/.test(app) && /const ficheSyndicActive = syndicFicheCran && profilPartenaire\?\.famille === 'syndic'/.test(app)
-  && /\{ficheSyndicActive \? <SyndicChiffres vue=\{ficheSyndic\.vue\} \/> : blocsPartenaire \? <PartenaireChiffres/.test(app)
+  && /\{ficheSyndicActive \? <SyndicChiffres vue=\{ficheSyndic\.vue\} \/> : (ficheDiagActive \? <DiagChiffres vue=\{ficheDiag\.vue\} \/> : )?blocsPartenaire \? <PartenaireChiffres/.test(app)
   && /\{ficheSyndicActive \? <SyndicNosBiens vue=\{ficheSyndic\.vue\} \/> : blocsPartenaire \? <PartenaireAvecNous/.test(app));
 
 // ── LOT 4, PIÈCE 4.2 : choisir le syndic d'un bien (06/11) ──
@@ -300,7 +302,7 @@ controle("(82) 4.2 d'où vient le syndic : « repris de Hektor » / « choisi da
   && sb.origineDuSyndic({ ...nous, origine: "hektor", posePar: null, poseLe: null }) === "repris de Hektor");
 const sbx = fs.readFileSync(path.resolve(__dirname, "src", "SyndicDuBien.tsx"), "utf8").replace(/^\s*\/\/.*$/gm, "");
 controle("(83) 4.2 la carte n'écrit QUE par la fonction gardée (aucune table écrite en direct, aucun travail chez Hektor)",
-  /rpc\('app_partenaire_syndic_du_bien', \{/.test(sbx) && !/\.(insert|update|upsert|delete)\(/.test(sbx) && !/console_job|create_hektor|fetch\(/.test(sbx));
+  /rpc\('app_partenaire_syndic_du_bien', \{/.test(sbx) && /rpc\('app_partenaire_du_bien', \{/.test(sbx) && !/\.(insert|upsert)\(/.test(sbx) && !/from\('[^']+'\)\s*\.(update|delete)\(/.test(sbx) && !/console_job|create_hektor|fetch\(/.test(sbx));
 controle("(84) 4.2 « Ouvrir sa fiche » passe par le CATALOGUE (vue métiers), l'écoute est AVANT le retour de connexion",
   /function showContactInDirectory\(normalizedId: string, vue: 'clients' \| 'metiers' = 'clients'\)/.test(app)
   && /if \(id\) showContactInDirectory\(id, 'metiers'\)/.test(app)
@@ -341,8 +343,8 @@ controle("(90) doublons : un numéro tapé retrouve la fiche (n°) ou le télép
 const sbx2 = fs.readFileSync(path.resolve(__dirname, "src", "SyndicDuBien.tsx"), "utf8");
 controle("(91) doublons : la carte lit téléphone, e-mail et les liens actifs (biens par fiche), relit après un choix, et l'affiche",
   /select\('hektor_contact_id,display_name,prenom,nom,ville,archive,phone_primary,email'\)/.test(sbx2)
-  && /from\('app_partenaire_lien'\)\.select\('partenaire_id'\)\.eq\('role', 'syndic'\)\.eq\('objet', 'bien'\)\.is\('retire_le', null\)/.test(sbx2)
-  && /oublierLeCatalogue\(\)\s*setVersion/.test(sbx2) && /\{distinguerSyndic\(s\)\}/.test(sbx2) && /s\.homonymes > 1 \?/.test(sbx2));
+  && /from\('app_partenaire_lien'\)\.select\('partenaire_id'\)\.eq\('role', role\)\.eq\('objet', 'bien'\)\.is\('retire_le', null\)/.test(sbx2)
+  && /oublierLeCatalogue\(role\)\s*setVersion/.test(sbx2) && /\{distinguerSyndic\(s\)\}/.test(sbx2) && /s\.homonymes > 1 \?/.test(sbx2));
 
 // ── 4.4 (06/11) : « Demander un document » au syndic, version simple ──
 let dd;
@@ -370,6 +372,41 @@ controle("(97) 4.4 branchements derrière `partenaires_syndic_demande` : bouton 
   /const demandeSyndicPossible = demandeSyndicCran && ficheSyndicActive/.test(app) && /\{demandeSyndicPossible \? \(\s*<button className="fa-cx-act primary wide" type="button" onClick=\{\(\) => setDemandeSyndicOuverte\(true\)\}>/.test(app)
   && /demandePossible=\{demandeSyndicBienCran\}/.test(app) && (app.match(/useCranCouplesVisible\('partenaires_syndic_demande'/g) || []).length === 2
   && /props\.demandePossible && props\.bienDemande \?/.test(sbx2));
+
+// ── LOT 5 (06/11) : le diagnostiqueur, version simple ──
+let cd;
+try {
+  const { code } = esbuild.transformSync(fs.readFileSync(path.resolve(__dirname, "src", "lib", "commandeDiagnostic.ts"), "utf8"), { loader: "ts", format: "cjs" });
+  const module = { exports: {} };
+  vm.runInNewContext(code, { module, exports: module.exports, require: () => ({}) });
+  cd = module.exports;
+} catch (e) { console.log(`⛔ ${e.message}`); process.exit(2); }
+const bienV = { id: "1", titre: "Maison exemple", adresse: "3 chemin Fictif", codePostal: "42700", ville: "Firminy", lots: null, mandat: "19 001", annee: 1962, copro: false, typeBien: "Maison", surface: "110" };
+controle("(98) lot 5 : diagnostics cochés d'office selon le bien (1962 : amiante oui, plomb non ; pas de Carrez hors copro ; année inconnue : les deux)",
+  J(cd.diagnosticsParDefaut(bienV).sort()) === J(["amiante", "dpe", "electricite", "erp", "gaz"])
+  && cd.diagnosticsParDefaut({ ...bienV, annee: null, copro: true }).includes("plomb") && cd.diagnosticsParDefaut({ ...bienV, annee: null, copro: true }).includes("carrez")
+  && !cd.diagnosticsParDefaut({ ...bienV, annee: 2005 }).includes("amiante"));
+const mc = cd.messageCommande({ bien: bienV, pieces: cd.diagnosticsParDefaut(bienV), signature: "Négociateur Essai" });
+controle("(99) lot 5 : le message de commande (adresse, bien, année, mandat, diagnostics, rendez-vous et tarif)",
+  mc.sujet === "Commande de diagnostics : 3 chemin Fictif, 42700 Firminy" && /- Bien : Maison, 110 m²/.test(mc.corps) && /- Année de construction : 1962/.test(mc.corps)
+  && /mandat n° 19 001/.test(mc.corps) && /- Repérage de l'amiante/.test(mc.corps) && !/plomb/.test(mc.corps) && /date de rendez-vous et de nous indiquer votre tarif/.test(mc.corps) && !/copropriété/i.test(mc.corps));
+controle("(100) lot 5 : ce que Hektor indique pour le DIAGNOSTIQUEUR se lit avec la même règle",
+  J(sb.syndicSelonHektor(JSON.stringify({ diagnostiqueur: { value: "191362", selected_label: "DIAG EXEMPLE" } }), "diagnostiqueur")) === J({ numero: "191362", nom: "DIAG EXEMPLE" })
+  && sb.syndicSelonHektor(JSON.stringify({ diagnostiqueur: { value: "191362", selected_label: "DIAG EXEMPLE" } })) === null);
+const sbx3 = fs.readFileSync(path.resolve(__dirname, "src", "SyndicDuBien.tsx"), "utf8");
+controle("(101) lot 5 : la carte sert au diagnostiqueur par le geste GÉNÉRIQUE ; le syndic garde ses fonctions de la 4.2 ; pas de RNIC pour un diagnostiqueur",
+  /rpc\('app_partenaire_du_bien', \{\s*p_role: role,/.test(sbx3) && /rpc\('app_partenaire_du_bien_lire', \{ p_role: role,/.test(sbx3)
+  && /role === 'syndic'\s*\? await supabase\.rpc\('app_partenaire_syndic_du_bien', \{/.test(sbx3) && /if \(role === 'syndic' && nomRnic === null/.test(sbx3)
+  && /modele=\{role === 'syndic' \? 'copro' : 'diag'\}/.test(sbx3));
+controle("(102) lot 5 : branchements derrière `partenaires_diag` : fiche (biens, chiffres, « Commander un diagnostic »), carte du bien (bureau), téléphone en lecture",
+  (app.match(/useCranCouplesVisible\('partenaires_diag'/g) || []).length === 3 && /const ficheDiagActive = diagCran && profilPartenaire\?\.famille === 'diag'/.test(app)
+  && /ficheDiagActive \? <DiagChiffres vue=\{ficheDiag\.vue\} \/>/.test(app) && /: ficheDiagActive \? <DiagBiens /.test(app)
+  && /<SyndicDuBien\s+role="diagnostiqueur"\s+appDossierId/.test(app) && /<SyndicDuBien\s+role="diagnostiqueur"\s+variante="telephone"/.test(app) && /modele="diag"/.test(app));
+const patch5 = fs.readFileSync(path.resolve(__dirname, "..", "..", "supabase", "patch_partenaire_du_bien_2026-11-06.sql"), "utf8");
+controle("(103) lot 5 : le patch générique (rôle syndic ou diagnostiqueur seulement, droit sur le bien, métier au registre, un seul diagnostiqueur par bien, anon fermé)",
+  /WHEN 'syndic' THEN 'syndic' WHEN 'diagnostiqueur' THEN 'diagnostiqueur' END/.test(patch5) && /app_console_can_access_dossier\(p_app_dossier_id, p_hektor_annonce_id::text\)/.test(patch5)
+  && /metier = p_role AND retire_le IS NULL/.test(patch5) && /CREATE UNIQUE INDEX app_partenaire_lien_un_diag_uidx/.test(patch5) && /FROM PUBLIC, anon/.test(patch5)
+  && !/app_partenaire_syndic_du_bien\(/.test(patch5.replace(/^--.*$/gm, "").replace(/to_regprocedure\('public\.app_partenaire_syndic_du_bien[^)]*\)'\)/g, "")));
 
 console.log(echecs.length ? `\n${echecs.length} contrôle(s) en échec` : "\nTout est vert.");
 process.exit(echecs.length ? 1 : 0);

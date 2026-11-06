@@ -264,7 +264,7 @@ import { FICHE_NOTAIRE_V2, NotaireAVenir, NotaireDossiers, NotaireInterlocuteurs
 import { BlocMetierPartenaire, FenetreMetierPartenaire, useMetiersPartenaire } from './MetierPartenaire'
 import { blocsDuPartenaire, profilDuPartenaire } from './lib/metierPartenaire'
 import { PartenaireAVenir, PartenaireAvecNous, PartenaireChiffres, PartenaireInterlocuteurs, PartenaireSectionMetier } from './FichePartenaire'
-import { SyndicChiffres, SyndicCoproprietes, SyndicNosBiens, useFicheSyndic } from './FicheSyndic'
+import { DiagBiens, DiagChiffres, SyndicChiffres, SyndicCoproprietes, SyndicNosBiens, useFicheSyndic } from './FicheSyndic'
 import SyndicDuBien, { EVENEMENT_OUVRIR_PARTENAIRE } from './SyndicDuBien'
 import DemandeDocument from './DemandeDocument'
 import { syndicSelonHektor } from './lib/syndicDuBien'
@@ -32901,6 +32901,8 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   // copropriété ou dont Hektor indique un syndic.
   const syndicChoixCran = useCranCouplesVisible('partenaires_syndic_choix', props.profileRole)
   const demandeSyndicBienCran = useCranCouplesVisible('partenaires_syndic_demande', props.profileRole)
+  // LOT 5 (06/11) : la carte « Diagnostiqueur » (tout bien), même geste que le syndic.
+  const diagBienCran = useCranCouplesVisible('partenaires_diag', props.profileRole)
   const syndicCarteVisible = syndicChoixCran && !isLightweightDetail
     &&(/oui/i.test(String(rawWizardDetailField(props.detail, 'copropriete') ?? '')) || Boolean(syndicSelonHektor(props.detail.diagnostics_contacts_console_json)))
   // Diffusé & en attente d'offre : le jalon Offre devient le jalon COURANT (comme le v26).
@@ -35550,6 +35552,25 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                     adresse: detailStr('adresse_detail') || null, codePostal: detailStr('code_postal_detail') || detailStr('code_postal') || null,
                     ville: String(dossier.ville ?? '').trim() || null, lots: lireCopro(props.detail)?.numerosLots ?? null,
                     mandat: String(dossier.numero_mandat ?? '').trim() || null,
+                  }}
+                />
+              ) : null}
+              {diagBienCran && !isLightweightDetail ? (
+                <SyndicDuBien
+                  role="diagnostiqueur"
+                  appDossierId={dossier.app_dossier_id ?? null}
+                  hektorAnnonceId={Number(dossier.hektor_annonce_id) || null}
+                  diagnosticsHektor={props.detail.diagnostics_contacts_console_json}
+                  demandePossible
+                  bienDemande={{
+                    id: String(dossier.hektor_annonce_id ?? ''), titre: String(dossier.titre_bien ?? ''),
+                    adresse: detailStr('adresse_detail') || null, codePostal: detailStr('code_postal_detail') || detailStr('code_postal') || null,
+                    ville: String(dossier.ville ?? '').trim() || null, lots: lireCopro(props.detail)?.numerosLots ?? null,
+                    mandat: String(dossier.numero_mandat ?? '').trim() || null,
+                    annee: (() => { const a = Number(rawWizardDetailField(props.detail, 'ANNEE_CONS')); return a > 1000 ? a : null })(),
+                    copro: /oui/i.test(String(rawWizardDetailField(props.detail, 'copropriete') ?? '')),
+                    typeBien: String(dossier.type_bien ?? '').trim() || null,
+                    surface: detailStr('surface_habitable_detail') || null,
                   }}
                 />
               ) : null}
@@ -40634,6 +40655,7 @@ function MobileDossierDetail(props: {
   const mobRegistreLuPourRef = useRef<number | string | null | undefined>(undefined)
   // PARTENAIRES 4.2 (06/11/2026) : le syndic du bien, EN LECTURE au téléphone (le choix viendra avec 4.6). Avant le retour.
   const mobSyndicCran = useCranCouplesVisible('partenaires_syndic_choix', props.profileRole)
+  const mobDiagCran = useCranCouplesVisible('partenaires_diag', props.profileRole)
   if (!dossier) return <section className="mobile-detail-empty">Aucun dossier sélectionné.</section>
 
   const primaryImage = props.images[0]?.url ?? dossier.photo_url_listing ?? null
@@ -41007,6 +41029,15 @@ function MobileDossierDetail(props: {
         {mobSyndicCran && !isLightweightDetail
           && (/oui/i.test(String(rawWizardDetailField(props.detail, 'copropriete') ?? '')) || Boolean(syndicSelonHektor(props.detail.diagnostics_contacts_console_json))) ? (
           <SyndicDuBien
+            variante="telephone"
+            appDossierId={dossier.app_dossier_id ?? null}
+            hektorAnnonceId={Number(dossier.hektor_annonce_id) || null}
+            diagnosticsHektor={props.detail.diagnostics_contacts_console_json}
+          />
+        ) : null}
+        {mobDiagCran && !isLightweightDetail ? (
+          <SyndicDuBien
+            role="diagnostiqueur"
             variante="telephone"
             appDossierId={dossier.app_dossier_id ?? null}
             hektorAnnonceId={Number(dossier.hektor_annonce_id) || null}
@@ -47787,6 +47818,12 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
   const demandeSyndicCran = useCranCouplesVisible('partenaires_syndic_demande', props.profileRole)
   const demandeSyndicPossible = demandeSyndicCran && ficheSyndicActive
   const [demandeSyndicOuverte, setDemandeSyndicOuverte] = useState(false)
+  // LOT 5 (06/11/2026) : la fiche DIAGNOSTIQUEUR, version simple (ses biens ; « Commander un diagnostic » = message prêt),
+  // derrière le cran `partenaires_diag`.
+  const diagCran = useCranCouplesVisible('partenaires_diag', props.profileRole)
+  const ficheDiagActive = diagCran && profilPartenaire?.famille === 'diag'
+  const ficheDiag = useFicheSyndic(String(props.contact.hektor_contact_id ?? ''), ficheDiagActive, 'diagnostiqueur')
+  const [commandeDiagOuverte, setCommandeDiagOuverte] = useState(false)
   // PARTENAIRES, pièce 3.3b (05/11/2026) : la partie droite du métier (chiffres, section, « À venir », « avec nous »), montrée
   // « en construction » ; rien pour la famille « autre ». Comme le notaire, la bande Recherche se cache sans recherche active
   // (pas pour « autre » : une société peut être acquéreur, elle garde « Ajouter une recherche »).
@@ -48458,6 +48495,15 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
                 </div>
               ) : null}
 
+              {commandeDiagOuverte ? (
+                <DemandeDocument
+                  modele="diag"
+                  syndicNom={contactFullName}
+                  syndicEmail={String(props.contact.email ?? '').trim() || null}
+                  biens={(ficheDiag.vue?.biens ?? []).map((b) => ({ id: b.hektorAnnonceId, titre: b.titre, adresse: b.adresse, codePostal: b.codePostal, ville: b.ville || null, lots: b.copro?.numerosLots ?? null, mandat: b.mandat, annee: b.annee, copro: Boolean(b.copro) }))}
+                  onClose={() => setCommandeDiagOuverte(false)}
+                />
+              ) : null}
               {demandeSyndicOuverte ? (
                 <DemandeDocument
                   syndicNom={contactFullName}
@@ -48471,6 +48517,11 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
                   <button className="fa-cx-act primary wide" type="button" onClick={() => setDemandeSyndicOuverte(true)}>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 6h16v12H4zM4 7l8 6 8-6" /></svg>
                     <span className="fa-cx-act-tx">Demander un document</span>
+                  </button>
+                ) : ficheDiagActive ? (
+                  <button className="fa-cx-act primary wide" type="button" onClick={() => setCommandeDiagOuverte(true)}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 6h16v12H4zM4 7l8 6 8-6" /></svg>
+                    <span className="fa-cx-act-tx">Commander un diagnostic</span>
                   </button>
                 ) : profilPartenaire?.action ? (
                   // PARTENAIRES, pièce 3.3a : l'action propre au métier (maquette), MONTRÉE et marquée « en construction »
@@ -48597,12 +48648,13 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
             <div className="fa-cx-work">
               {estFicheNotaire ? (vueNotaire ? <NotaireKpis vue={vueNotaire} />
                 : <div className="fa-cx-ech-empty">{ficheNotaire.erreur ? `Fiche notaire indisponible (${ficheNotaire.erreur})` : 'Chargement des dossiers du notaire…'}</div>) : null}
-              {ficheSyndicActive ? <SyndicChiffres vue={ficheSyndic.vue} /> : blocsPartenaire ? <PartenaireChiffres blocs={blocsPartenaire} /> : null}
+              {ficheSyndicActive ? <SyndicChiffres vue={ficheSyndic.vue} /> : ficheDiagActive ? <DiagChiffres vue={ficheDiag.vue} /> : blocsPartenaire ? <PartenaireChiffres blocs={blocsPartenaire} /> : null}
               <div className="fa-cx-dash-top">
                 <div className="fa-cx-dash-main">
               {vueNotaire ? <NotaireDossiers vue={vueNotaire} onOpenDossier={(id) => { props.onClose(); props.onOpenDossier(id) }} /> : null}
               {ficheSyndicActive
                 ? <SyndicCoproprietes vue={ficheSyndic.vue} erreur={ficheSyndic.erreur} chargement={ficheSyndic.chargement} onOuvrirBien={(id) => { props.onClose(); props.onOpenDossier(id) }} />
+                : ficheDiagActive ? <DiagBiens vue={ficheDiag.vue} erreur={ficheDiag.erreur} chargement={ficheDiag.chargement} onOuvrirBien={(id) => { props.onClose(); props.onOpenDossier(id) }} />
                 : blocsPartenaire ? <PartenaireSectionMetier blocs={blocsPartenaire} /> : null}
               {masquerRecherche ? null : (<>
               {/* ── Lot 2 — Bande « Recherche & rapprochement » (portage maquette v30) ── */}

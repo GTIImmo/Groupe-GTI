@@ -70,6 +70,8 @@ export type BienSyndic = {
   // 4.4 (06/11) : pour le message « Demander un document » (adresse lue dans le détail du bien).
   adresse: string | null
   codePostal: string | null
+  // Lot 5 (06/11) : pour « Commander un diagnostic » (année lue dans `diagnostiques_json`, « 0 » = inconnue).
+  annee: number | null
 }
 export type VueSyndic = {
   biens: BienSyndic[]
@@ -120,6 +122,7 @@ export function construireVueSyndic(input: {
       documents: (docsPar.get(id) ?? []).sort((a, z) => a.localeCompare(z, 'fr')),
       adresse: texte(detail?.adresse_detail) || null,
       codePostal: texte(detail?.code_postal_detail) || texte(detail?.code_postal) || null,
+      annee: (() => { const a = nombre(objet(objet(objet(detail?.diagnostiques_json)?.props)?.ANNEE_CONS)?.value); return a && a > 1000 ? a : null })(),
     })
   }
   biens.sort((a, z) => Number(z.enVente) - Number(a.enVente) || a.titre.localeCompare(z.titre, 'fr'))
