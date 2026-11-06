@@ -2045,6 +2045,40 @@ Audit limité aux biens (annonces) et à leur syndic ; le diagnostiqueur n'est m
 - Téléphone : la carte du syndic en lecture tout de suite, ou le choix aussi (sinon 4.6).
 - Cran proposé : `partenaires_syndic_choix` (admin puis on), comme les autres.
 
+### 27.4 Pièce 4.2 — CODÉE (06/11, « Oui, vas-y 4.2 », avec les trois choix par défaut)
+Choix par défaut retenus : le diagnostiqueur de l'assistant attend le lot 5 ; le téléphone montre le syndic en LECTURE ;
+cran `partenaires_syndic_choix` (admin d'abord). **Rien n'est en production** : le patch n'est pas posé, le réglage pas
+créé, rien n'est poussé.
+- **4.2a base** — `supabase/patch_partenaire_syndic_du_bien_2026-11-06.sql` (+ `_INVERSE`, `_REPETITION` 8 contrôles) :
+  index « un seul syndic actif par bien » ; `app_partenaire_syndic_du_bien(dossier, annonce, partenaire, retirer)` (compte
+  actif, DROIT SUR LE BIEN par `app_console_can_access_dossier`, partenaire = syndic du registre, l'ancien retiré daté
+  avec l'auteur, en une opération, verrou de ligne) ; `app_partenaire_syndic_du_bien_lire(annonce)` (nom, origine, auteur).
+  ⭐ **Essai dans une transaction annulée, 11/11 verts** : l'index refuse un 2e syndic ; poser / même syndic = inchangé /
+  changer (1 actif, l'ancien retiré par l'admin) / un notaire refusé / lire (nom, « app », auteur) / retirer (0 actif) /
+  rien à retirer refusé / sans numéro d'annonce refusé ; un négociateur pose sur SON bien, est refusé sur celui d'un autre.
+  Après l'essai : 0 trace (fonctions, index, liens), 80 syndics actifs inchangés.
+- **4.2b fiche annonce (ordinateur)** — `SyndicDuBien.tsx`, `lib/syndicDuBien.ts`, `syndic-du-bien.css`. Onglet Contact du
+  cockpit, sur un bien en copropriété ou dont Hektor indique un syndic. Choisir / Changer / Retirer (confirmation, la trace
+  reste) / Appeler / Ouvrir sa fiche. Le choix : les syndics du catalogue avec recherche (nom, ville) ; en tête celui que
+  propose le registre RNIC (lu au clic « Choisir », un appel) puis celui de Hektor, quand le nom correspond. L'écart avec
+  Hektor est DIT sur la carte (« Hektor indique un autre syndic… Hektor n'est pas modifié »). « Ouvrir sa fiche » ouvre la
+  fiche syndic PAR LE CATALOGUE (vue métiers ; événement `bienvu:ouvrir-partenaire`, écouté avant le retour de connexion).
+  Le vieux bloc dormant « Diagnostics et syndic » (intervenants_json) n'est pas touché.
+- **Téléphone** — la même carte en lecture (Appeler, Ouvrir sa fiche, l'écart) dans « Contacts » de la fiche du bien.
+- **4.2c nuit** — `registre_partenaires_reprise.py` : un lien retiré par quelqu'un n'est jamais remis pour le même
+  partenaire sur le même bien ; si Hektor indique un AUTRE partenaire, il est posé ; l'écart « l'app gagne » est compté
+  d'abord. Compteur `liens_retires_ecartes`. Essai hors ligne (lectures remplacées, aucune écriture) 4/4 verts.
+  ⚠ Le lancement à blanc sur les vraies données a été refusé par l'outil (lecture de la production) : il tournera la nuit.
+- **4.2d assistant (B5)** — cran allumé : plus de « Syndic » en texte dans l'assistant de création ni dans l'édition du
+  cockpit ; l'aide « Copropriété » (RNIC) ne propose plus d'écrire le nom du syndic chez Hektor. Le worker n'est pas
+  touché (il n'envoie le champ que s'il est présent). « Diagnostiqueur » reste (lot 5).
+- **Contrôles** : `test_metier_partenaire.cjs` **88/88** (11 nouveaux, (60) mis à jour : le côté « clients » reste le
+  défaut) ; `test_fiche_notaire.cjs` vert ; construction verte, ET la version commitée construite à part (seuls mes 14
+  morceaux d'App.tsx ; le travail en cours de la session signature laissé en l'état) ; banc à données FICTIVES : choisir
+  (proposition RNIC en tête), changer, retirer, refus hors périmètre affiché, « Ouvrir sa fiche », téléphone sans débordement.
+- **Pour l'allumer (accord de Frédéric, geste par geste)** : 1. coller le patch puis la répétition (8 verts) ; 2. pousser ;
+  3. créer `partenaires_syndic_choix = 'admin'` ; 4. essai réel sur un bien d'essai choisi par Frédéric.
+
 ### 7 ter. Les dépendances (techniques, pas un ordre décidé)
 
 - 0 avant tout le reste ; 0.1 avant B2 ; 0.2 avant B1 ; 0.6 avant B5 ; 0.3 avant B6 ; 0.4 avant B7 ; 0.5 avant C2.

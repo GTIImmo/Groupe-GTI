@@ -262,6 +262,8 @@ import { BlocMetierPartenaire, FenetreMetierPartenaire, useMetiersPartenaire } f
 import { blocsDuPartenaire, profilDuPartenaire } from './lib/metierPartenaire'
 import { PartenaireAVenir, PartenaireAvecNous, PartenaireChiffres, PartenaireInterlocuteurs, PartenaireSectionMetier } from './FichePartenaire'
 import { SyndicChiffres, SyndicCoproprietes, SyndicNosBiens, useFicheSyndic } from './FicheSyndic'
+import SyndicDuBien, { EVENEMENT_OUVRIR_PARTENAIRE } from './SyndicDuBien'
+import { syndicSelonHektor } from './lib/syndicDuBien'
 import CataloguePartenaires from './CataloguePartenaires'
 import NotificationsBell from './NotificationsBell'
 import SanteSystemeScreen from './SanteSystemeScreen'
@@ -11115,7 +11117,9 @@ function EstimIcon({ name }: { name: string }) {
   )
 }
 
-function EstimationDataSection({ dossier, detail, refreshKey, onJobCreated, onOpenEditor }: { dossier: Dossier; detail: DossierDetailPayload; refreshKey?: number; onJobCreated?: (job: ConsoleJob) => void; onOpenEditor?: () => void }) {
+function EstimationDataSection({ dossier, detail, refreshKey, onJobCreated, onOpenEditor, profileRole }: { dossier: Dossier; detail: DossierDetailPayload; refreshKey?: number; onJobCreated?: (job: ConsoleJob) => void; onOpenEditor?: () => void; profileRole?: UserProfile['role'] | null }) {
+  // PARTENAIRES 4.2d (06/11/2026) : cran allumé, l'aide « Copropriété » ne propose plus d'ÉCRIRE le nom du syndic chez Hektor.
+  const syndicAuChoix = useCranCouplesVisible('partenaires_syndic_choix', profileRole)
   const [estim, setEstim] = useState<DossierEstimation | null>(null)
   const [dvfBusy, setDvfBusy] = useState(false)
   const [dvfMsg, setDvfMsg] = useState<string | null>(null)
@@ -11583,7 +11587,7 @@ function EstimationDataSection({ dossier, detail, refreshKey, onJobCreated, onOp
                   return t ? `Syndic ${t}` : ''
                 })()
                 const syndicComposed = [String(copro!.syndic_nom ?? '').trim(), typeSyndic].filter(Boolean).join(' — ')
-                if (syndicComposed && !String(curSyndic ?? '').trim()) { fields.syndic = syndicComposed; labels.push(`syndic (${syndicComposed})`) }
+                if (syndicComposed && !String(curSyndic ?? '').trim() && !syndicAuChoix) { fields.syndic = syndicComposed; labels.push(`syndic (${syndicComposed})`) }
                 // Procédure -> statut syndicat (case Hektor à options).
                 const statutCode = (() => {
                   if (!copro!.procedure) return 'PAS_DE_PROCEDURE'
@@ -15036,10 +15040,13 @@ export default function App() {
     : draftAnnonceTypeRules.surfaceMode === 'garage'
       ? draftAnnonceAdvanced.garageSurface
       : draftAnnonceSurface
+  const syndicChoixCranApp = useCranCouplesVisible('partenaires_syndic_choix', profile?.role ?? null)
   const draftAnnonceVisibleWizardGroups = filterDraftAnnonceWizardGroupsForProfile(draftAnnonceWizardGroups, draftAnnonceTypeRules.kind)
     // Visibilite conditionnelle (ex. sous-champs piscine si Piscine=Oui) : lue sur les valeurs courantes
     // (draftAnnonceAdvanced pour un showIf.advanced, sinon les champs wizard).
     .map((section) => ({ ...section, fields: section.fields.filter((field) => {
+      // PARTENAIRES 4.2d (B5) : plus de « Syndic » en texte libre (Hektor l'ignore) ; il se choisit sur la fiche du bien.
+      if (syndicChoixCranApp && field.name === 'syndic') return false
       if (!field.showIf) return true
       const src = field.showIf.advanced ? (draftAnnonceAdvanced as Record<string, string>) : draftAnnonceWizardFields
       return (src[field.showIf.field] ?? '') === field.showIf.value
@@ -16760,9 +16767,11 @@ export default function App() {
 
   // Affiche la fiche contact sur l'écran Contacts (lookup direct + réouverture du pop-up),
   // SANS la garde détail-ouvert. Réutilisé par le retour depuis le détail dossier.
-  function showContactInDirectory(normalizedId: string) {
+  function showContactInDirectory(normalizedId: string, vue: 'clients' | 'metiers' = 'clients') {
     setScreen('contacts')
-    setContactsVue('clients') // PARTENAIRES 3.5 : « voir le contact » ouvre toujours la fiche CLIENT
+    // PARTENAIRES 3.5 : « voir le contact » ouvre toujours la fiche CLIENT ; 4.2 : « Ouvrir sa fiche » d'un syndic, depuis
+    // un bien, ouvre la fiche MÉTIER par le catalogue (règle du 05/11).
+    setContactsVue(vue)
     setDetailOpen(false)
     setSelectedContactId(normalizedId)
     setContactDirectLookupId(normalizedId)
@@ -16784,6 +16793,17 @@ export default function App() {
     if (detailOpen) { setAnnonceContactId(normalizedId); return }
     showContactInDirectory(normalizedId)
   }
+
+  // PARTENAIRES 4.2 (06/11/2026) : « Ouvrir sa fiche » sur la carte du syndic d'un bien → la fiche syndic, PAR LE CATALOGUE.
+  useEffect(() => {
+    const ecoute = (event: Event) => {
+      const id = String((event as CustomEvent<{ contactId?: string }>).detail?.contactId ?? '').trim()
+      if (id) showContactInDirectory(id, 'metiers')
+    }
+    window.addEventListener(EVENEMENT_OUVRIR_PARTENAIRE, ecoute)
+    return () => window.removeEventListener(EVENEMENT_OUVRIR_PARTENAIRE, ecoute)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   async function handlePrepareArchivedAnnonceDetail(dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'numero_dossier' | 'titre_bien'>) {
     setErrorMessage(null)
@@ -32759,6 +32779,11 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   )
   const pClos = !pVendu && (Boolean(pClotureMandat) || /clos|clotur/i.test(String(dossier.statut_annonce ?? '')))
   const detailStr = (k: string) => { const v = (props.detail as Record<string, unknown>)[k]; return v == null ? '' : String(v) }
+  // PARTENAIRES 4.2 (06/11/2026) : la carte « Syndic de la copropriété » (cran `partenaires_syndic_choix`), sur un bien en
+  // copropriété ou dont Hektor indique un syndic.
+  const syndicChoixCran = useCranCouplesVisible('partenaires_syndic_choix', props.profileRole)
+  const syndicCarteVisible = syndicChoixCran && !isLightweightDetail
+    &&(/oui/i.test(String(rawWizardDetailField(props.detail, 'copropriete') ?? '')) || Boolean(syndicSelonHektor(props.detail.diagnostics_contacts_console_json)))
   // Diffusé & en attente d'offre : le jalon Offre devient le jalon COURANT (comme le v26).
   const pDiffused = pMandatNum && pMandatOk && (Number(dossier.nb_portails_actifs) || 0) > 0
   const parcours: Array<{ label: string; state: 'done' | 'cur' | 'todo'; sub: string; date: string }> = [
@@ -34589,6 +34614,9 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                 // Ne garder que les champs pertinents pour le type de bien, puis retirer les
                 // sections devenues vides (ex. « Copropriété » sur un terrain).
                 .map((sec) => (ckProfileFields ? { ...sec, fields: sec.fields.filter(([, k]) => ckProfileFields.has(k)) } : sec))
+                // PARTENAIRES 4.2d (B5) : le syndic se CHOISIT dans la carte de l'onglet Contact ; le texte libre partait
+                // chez Hektor, qui l'ignore (il attend un contact).
+                .map((sec) => (syndicChoixCran ? { ...sec, fields: sec.fields.filter(([, k]) => k !== 'syndic') } : sec))
                 .filter((sec) => sec.fields.length > 0)
                 .map((sec) => {
                 const fval = (k: string) => String(edited[k] ?? wizFieldValue(k) ?? '')
@@ -34859,7 +34887,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                   <button type="button" className="fa-ck-rep-btn primary" onClick={() => setEstimEditorOpen(true)}>Générer le PDF de l'avis</button>
                 </div>
               ) : null}
-              <EstimationDataSection dossier={dossier} detail={props.detail} refreshKey={estimRefreshKey} onJobCreated={props.onHektorActionJobCreated} onOpenEditor={() => setEstimEditorOpen(true)} />
+              <EstimationDataSection dossier={dossier} detail={props.detail} refreshKey={estimRefreshKey} onJobCreated={props.onHektorActionJobCreated} onOpenEditor={() => setEstimEditorOpen(true)} profileRole={props.profileRole} />
             </div>
           ) : activeTab === 'mandat' ? (APP_MANDAT_V3_ENABLED ? renderMandatRubriqueV3() : (
             /* `md-root` : réutilise le design du détail mandat du registre (chiffres clés +
@@ -35390,6 +35418,15 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                   })}
                 </div>
               ) : <p className="fa-ck-empty">Aucun contact lié.</p>}
+              {syndicCarteVisible ? (
+                <SyndicDuBien
+                  appDossierId={dossier.app_dossier_id ?? null}
+                  hektorAnnonceId={Number(dossier.hektor_annonce_id) || null}
+                  diagnosticsHektor={props.detail.diagnostics_contacts_console_json}
+                  latitude={Number(props.detail.latitude_detail) || null}
+                  longitude={Number(props.detail.longitude_detail) || null}
+                />
+              ) : null}
               {(() => {
                 const inter = parseJson<Array<{ role: string; name: string; sub?: string; phone?: string }>>(detailStr('intervenants_json') || '[]', [])
                 const roleIcon = (role: string) => {
@@ -36290,7 +36327,7 @@ function DossierDetailLayoutBase(props: {
                   </section>
                   {!isLightweightDetail ? (
                     <section className="fa-section">
-                      <EstimationDataSection dossier={dossier} detail={props.detail} refreshKey={estimRefreshKey} onJobCreated={props.onHektorActionJobCreated} onOpenEditor={() => setEstimEditorOpen(true)} />
+                      <EstimationDataSection dossier={dossier} detail={props.detail} refreshKey={estimRefreshKey} onJobCreated={props.onHektorActionJobCreated} onOpenEditor={() => setEstimEditorOpen(true)} profileRole={props.profileRole} />
                     </section>
                   ) : null}
                 </div>
@@ -40469,6 +40506,8 @@ function MobileDossierDetail(props: {
   // 3b (26/10) : avant le retour anticipe, pour ne pas changer le nombre de hooks.
   const mobRelecture = useRelectureRubriques()
   const mobRegistreLuPourRef = useRef<number | string | null | undefined>(undefined)
+  // PARTENAIRES 4.2 (06/11/2026) : le syndic du bien, EN LECTURE au téléphone (le choix viendra avec 4.6). Avant le retour.
+  const mobSyndicCran = useCranCouplesVisible('partenaires_syndic_choix', props.profileRole)
   if (!dossier) return <section className="mobile-detail-empty">Aucun dossier sélectionné.</section>
 
   const primaryImage = props.images[0]?.url ?? dossier.photo_url_listing ?? null
@@ -40693,7 +40732,7 @@ function MobileDossierDetail(props: {
         <details className="mobile-detail-section mobile-detail-disclosure" open>
           <summary>Estimation</summary>
           <div className="mobile-detail-embedded mobile-estim-body">
-            <EstimationDataSection dossier={dossier} detail={props.detail} refreshKey={estimRefreshKey} onJobCreated={props.onHektorActionJobCreated} onOpenEditor={() => setEstimEditorOpen(true)} />
+            <EstimationDataSection dossier={dossier} detail={props.detail} refreshKey={estimRefreshKey} onJobCreated={props.onHektorActionJobCreated} onOpenEditor={() => setEstimEditorOpen(true)} profileRole={props.profileRole} />
           </div>
         </details>
       ) : null}
@@ -40839,6 +40878,15 @@ function MobileDossierDetail(props: {
             })}
           </div>
         ) : <p className="mobile-detail-muted">Aucun contact detaille.</p>}
+        {mobSyndicCran && !isLightweightDetail
+          && (/oui/i.test(String(rawWizardDetailField(props.detail, 'copropriete') ?? '')) || Boolean(syndicSelonHektor(props.detail.diagnostics_contacts_console_json))) ? (
+          <SyndicDuBien
+            variante="telephone"
+            appDossierId={dossier.app_dossier_id ?? null}
+            hektorAnnonceId={Number(dossier.hektor_annonce_id) || null}
+            diagnosticsHektor={props.detail.diagnostics_contacts_console_json}
+          />
+        ) : null}
         {diagnosticContactFacts.length > 0 ? (
           <div className="mobile-detail-lines">
             <strong>Diagnostics et syndic</strong>

@@ -195,7 +195,9 @@ controle("(59) la fiche du catalogue vient du catalogue (pas du 1er de la page d
   && /contact=\{ficheContact\}/.test(app));
 controle("(60) l'adresse garde « vue=metiers » ; « voir le contact » remet le côté clients",
   /const CLES_ADRESSE = \['ecran', 'annonce', 'contact', 'vue'\]/.test(app) && /p\.set\('vue', 'metiers'\)/.test(app)
-  && /function showContactInDirectory\(normalizedId: string\) \{\s*setScreen\('contacts'\)\s*setContactsVue\('clients'\)/.test(app));
+  // 4.2 (06/11) : le côté devient un paramètre, « clients » par défaut ; « voir le contact » n'en passe aucun.
+  && /function showContactInDirectory\(normalizedId: string, vue: 'clients' \| 'metiers' = 'clients'\) \{\s*setScreen\('contacts'\)[\s\S]{0,300}?setContactsVue\(vue\)/.test(app)
+  && /if \(detailOpen\) \{ setAnnonceContactId\(normalizedId\); return \}\s*showContactInDirectory\(normalizedId\)\s*\}/.test(app));
 const catTsx = fs.readFileSync(path.resolve(__dirname, "src", "CataloguePartenaires.tsx"), "utf8");
 controle("(61) le catalogue ne fait que LIRE (aucune écriture, aucune fonction appelée)", !/\.(insert|update|upsert|delete|rpc)\(/.test(catTsx));
 
@@ -259,6 +261,60 @@ controle("(76) 4.1 branchement : cran `partenaires_syndic_fiche`, fiche SYNDIC s
   /useCranCouplesVisible\('partenaires_syndic_fiche', props\.profileRole\)/.test(app) && /const ficheSyndicActive = syndicFicheCran && profilPartenaire\?\.famille === 'syndic'/.test(app)
   && /\{ficheSyndicActive \? <SyndicChiffres vue=\{ficheSyndic\.vue\} \/> : blocsPartenaire \? <PartenaireChiffres/.test(app)
   && /\{ficheSyndicActive \? <SyndicNosBiens vue=\{ficheSyndic\.vue\} \/> : blocsPartenaire \? <PartenaireAvecNous/.test(app));
+
+// ── LOT 4, PIÈCE 4.2 : choisir le syndic d'un bien (06/11) ──
+let sb;
+try {
+  const { code } = esbuild.transformSync(fs.readFileSync(path.resolve(__dirname, "src", "lib", "syndicDuBien.ts"), "utf8"), { loader: "ts", format: "cjs" });
+  const module = { exports: {} };
+  vm.runInNewContext(code, { module, exports: module.exports });
+  sb = module.exports;
+} catch (e) { console.log(`⛔ ${e.message}`); process.exit(2); }
+const diagHektor = JSON.stringify({ diagnostiqueur: { value: "", selected_label: "" }, syndic: { value: "423683", selected_label: "IMMO DE FRANCE FOREZ VELAY" } });
+controle("(77) 4.2 ce que Hektor indique : lu dans le texte JSON de la fiche ; vide ou illisible = null",
+  J(sb.syndicSelonHektor(diagHektor)) === J({ numero: "423683", nom: "IMMO DE FRANCE FOREZ VELAY" })
+  && sb.syndicSelonHektor(JSON.stringify({ syndic: { value: "" } })) === null && sb.syndicSelonHektor("") === null && sb.syndicSelonHektor("pas du json") === null);
+controle("(78) 4.2 même société : sans accents ni mots vides (« Agence immobilière de Bellevue » = « AGENCE BELLEVUE ») ; FONCIA ≠ CITYA",
+  sb.memeSociete("Agence immobilière de Bellevue", "AGENCE BELLEVUE") && sb.memeSociete("FONCIA", "FONCIA LOIRE AUVERGNE")
+  && !sb.memeSociete("FONCIA LOIRE", "CITYA LOIRE") && !sb.memeSociete("", "FONCIA"));
+const nous = sb.lireSyndicDuBien({ id: 5, partenaire_id: "10217295", origine: "app", pose_le: "2026-11-06T10:00:00Z", pose_par: "Frédéric", nom: "IMMO DE FRANCE FOREZ VELAY" });
+controle("(79) 4.2 l'écart avec Hektor : montré seulement s'il indique un AUTRE syndic (ou un syndic quand nous n'en avons pas)",
+  sb.ecartAvecHektor(nous, { nom: "Immo de France Forez-Velay" }) === null && sb.ecartAvecHektor(nous, { nom: "FONCIA" }) === "FONCIA"
+  && sb.ecartAvecHektor(null, { nom: "FONCIA" }) === "FONCIA" && sb.ecartAvecHektor(nous, null) === null && sb.lireSyndicDuBien(null) === null);
+const cat42 = [{ id: "1", nom: "CITYA BELLEVUE", ville: "Saint-Étienne" }, { id: "2", nom: "FONCIA LOIRE AUVERGNE", ville: "Saint-Étienne" },
+  { id: "3", nom: "AGENCE GIBERT", ville: "Firminy" }, { id: "4", nom: "IMMO DE FRANCE FOREZ VELAY", ville: "Le Puy-en-Velay" }];
+const ch = sb.choixSyndics({ catalogue: cat42, recherche: "", actuel: "3", nomRnic: "FONCIA", nomHektor: "IMMO DE FRANCE FOREZ VELAY" });
+controle("(80) 4.2 le sélecteur : le proposé par le registre RNIC en tête, puis celui de Hektor, puis l'ordre alphabétique ; le syndic actuel retiré",
+  J(ch.map((c) => c.id)) === J(["2", "4", "1"]) && ch[0].propose === "rnic" && ch[1].propose === "hektor" && ch[2].propose === null);
+controle("(81) 4.2 le sélecteur : la recherche par début de mot, sur le nom ET la ville, sans accents",
+  J(sb.choixSyndics({ catalogue: cat42, recherche: "saint eti", actuel: null, nomRnic: null, nomHektor: null }).map((c) => c.id)) === J(["1", "2"])
+  && J(sb.choixSyndics({ catalogue: cat42, recherche: "gib", actuel: null, nomRnic: null, nomHektor: null }).map((c) => c.id)) === J(["3"]));
+controle("(82) 4.2 d'où vient le syndic : « repris de Hektor » / « choisi dans l'app par X le JJ/MM/AAAA »",
+  sb.origineDuSyndic(nous) === "choisi dans l'app par Frédéric le 06/11/2026"
+  && sb.origineDuSyndic({ ...nous, origine: "hektor", posePar: null, poseLe: null }) === "repris de Hektor");
+const sbx = fs.readFileSync(path.resolve(__dirname, "src", "SyndicDuBien.tsx"), "utf8").replace(/^\s*\/\/.*$/gm, "");
+controle("(83) 4.2 la carte n'écrit QUE par la fonction gardée (aucune table écrite en direct, aucun travail chez Hektor)",
+  /rpc\('app_partenaire_syndic_du_bien', \{/.test(sbx) && !/\.(insert|update|upsert|delete)\(/.test(sbx) && !/console_job|create_hektor|fetch\(/.test(sbx));
+controle("(84) 4.2 « Ouvrir sa fiche » passe par le CATALOGUE (vue métiers), l'écoute est AVANT le retour de connexion",
+  /function showContactInDirectory\(normalizedId: string, vue: 'clients' \| 'metiers' = 'clients'\)/.test(app)
+  && /if \(id\) showContactInDirectory\(id, 'metiers'\)/.test(app)
+  && app.indexOf("window.addEventListener(EVENEMENT_OUVRIR_PARTENAIRE") < app.indexOf("if (hasSupabaseEnv && recoveryMode && !bootLoading)"));
+controle("(85) 4.2 branchements derrière `partenaires_syndic_choix` : cockpit (carte), téléphone (LECTURE), assistant et aide RNIC sans syndic en texte",
+  (app.match(/useCranCouplesVisible\('partenaires_syndic_choix'/g) || []).length === 4
+  && /\{syndicCarteVisible \? \(\s*<SyndicDuBien/.test(app) && /<SyndicDuBien\s+variante="telephone"/.test(app)
+  && /if \(syndicChoixCranApp && field\.name === 'syndic'\) return false/.test(app)
+  && /syndicChoixCran \? \{ \.\.\.sec, fields: sec\.fields\.filter\(\(\[, k\]\) => k !== 'syndic'\) \}/.test(app)
+  && /!String\(curSyndic \?\? ''\)\.trim\(\) && !syndicAuChoix\) \{ fields\.syndic = syndicComposed/.test(app)
+  && (app.match(/onOpenEditor=\{\(\) => setEstimEditorOpen\(true\)\} profileRole=\{props\.profileRole\} \/>/g) || []).length === 3);
+const nuit = fs.readFileSync(path.resolve(__dirname, "..", "..", "phase2", "contacts", "registre_partenaires_reprise.py"), "utf8");
+controle("(86) 4.2c la nuit ne remet pas un lien retiré par quelqu'un (même partenaire, même bien), et le compte",
+  /def liens_retires_par_quelquun\(\)/.test(nuit) && /"retire_par": "not\.is\.null", "objet": "eq\.bien"/.test(nuit)
+  && /if \(annonce, role, str\(voulu\["partenaire"\]\)\) in liens_retires:/.test(nuit) && /"liens_retires_ecartes": liens_retires_ecartes/.test(nuit));
+const patch42 = fs.readFileSync(path.resolve(__dirname, "..", "..", "supabase", "patch_partenaire_syndic_du_bien_2026-11-06.sql"), "utf8");
+controle("(87) 4.2a le patch : droit sur le bien, syndic du registre, l'ancien retiré daté avec l'auteur, un seul syndic par bien, anon fermé",
+  /app_console_can_access_dossier\(p_app_dossier_id, p_hektor_annonce_id::text\)/.test(patch42) && /metier = 'syndic' AND retire_le IS NULL/.test(patch42)
+  && /SET retire_le = now\(\), retire_par = auth\.uid\(\) WHERE id = v_actuel\.id/.test(patch42) && /CREATE UNIQUE INDEX app_partenaire_lien_un_syndic_uidx/.test(patch42)
+  && /FROM PUBLIC, anon/.test(patch42) && !/hektor_api|console_job/.test(patch42));
 
 console.log(echecs.length ? `\n${echecs.length} contrôle(s) en échec` : "\nTout est vert.");
 process.exit(echecs.length ? 1 : 0);

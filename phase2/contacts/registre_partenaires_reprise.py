@@ -22,6 +22,8 @@ LES RÈGLES (décisions de Frédéric du 04/11, §6 bis) :
   - (05/11, §23) un contact SUPPRIMÉ depuis l'app (journal `app_console_deleted_contact_log`) n'a plus aucune ligne :
     la suppression les efface (décision « Effacer »), et la nuit ne les recrée jamais.
   - (05/11, §25) un métier RETIRÉ par quelqu'un (à l'écran, `retire_par` rempli) n'est jamais rajouté : le retrait fait foi.
+  - (06/11, §27.4, pièce 4.2c) de même, un LIEN syndic / diagnostiqueur retiré par quelqu'un n'est jamais remis pour le même
+    partenaire sur le même bien. Si Hektor indique ensuite un AUTRE partenaire, c'est une information neuve : il est posé.
 
 LE NOTAIRE (décision « A » de Frédéric, 04/11 au soir, §17) : il entre au registre comme les autres métiers, de trois
 sources — Netty (« notaire »), le formulaire Hektor (code 2) et la table des parties chez Supabase (rôles notaire_vendeur /
@@ -267,6 +269,13 @@ def metiers_retires_par_quelquun() -> set[tuple[str, str]]:
         "app_partenaire_metier", "id,contact_id,metier", {"retire_le": "not.is.null", "retire_par": "not.is.null"})}
 
 
+def liens_retires_par_quelquun() -> set[tuple[int, str, str]]:
+    """(annonce, rôle, notre numéro) dont un lien de bien a été RETIRÉ par quelqu'un (`retire_par` rempli) -- §27.4, 4.2c."""
+    return {(int(l["hektor_annonce_id"]), str(l["role"]), str(l["partenaire_id"])) for l in lire_tout(
+        "app_partenaire_lien", "id,partenaire_id,role,hektor_annonce_id",
+        {"retire_le": "not.is.null", "retire_par": "not.is.null", "objet": "eq.bien"}) if l.get("hektor_annonce_id") is not None}
+
+
 def ecarter_les_retires(metiers: dict[tuple[str, str], str], retires: set[tuple[str, str]],
                         actifs: set[tuple[str, str]]) -> tuple[dict[tuple[str, str], str], int]:
     """§25 (05/11) : un métier retiré à l'écran fait foi -- la nuit ne le rajoute JAMAIS. S'il a été remis à l'écran
@@ -313,12 +322,17 @@ def main() -> int:
     a_ajouter_lien: list[dict] = []
     a_retirer_lien: list[int] = []
     ecarts_app = 0
+    liens_retires = liens_retires_par_quelquun()
+    liens_retires_ecartes = 0
     for (annonce, role), voulu in sorted(liens.items()):
         actifs = actif_par_cle.get((annonce, role), [])
         if any(l["partenaire_id"] == voulu["partenaire"] for l in actifs):
             continue
         if any(l["origine"] == "app" for l in actifs):
             ecarts_app += 1          # l'app a posé un autre partenaire : l'app gagne, on compte l'écart
+            continue
+        if (annonce, role, str(voulu["partenaire"])) in liens_retires:
+            liens_retires_ecartes += 1   # 4.2c : retiré à l'écran, le retrait fait foi (les liens « hektor » actifs restent)
             continue
         a_retirer_lien.extend(l["id"] for l in actifs if l["origine"] == "hektor")   # Hektor a changé de syndic
         ligne = {"partenaire_id": voulu["partenaire"], "role": role, "objet": "bien",
@@ -340,6 +354,7 @@ def main() -> int:
         "ecarts_app_gagne": ecarts_app,
         "contacts_supprimes_ecartes": ecartes_supprimes,
         "metiers_retires_ecartes": ecartes_retires,
+        "liens_retires_ecartes": liens_retires_ecartes,
         "comptes_sources": {**c_metiers, **c_liens},
     }
 

@@ -1,0 +1,41 @@
+/* CHANTIER PARTENAIRES · PIÈCE 4.2 (06/11/2026) — « Syndic de la copropriété » sur la fiche d'un bien (SyndicDuBien.tsx).
+   Couleur du métier syndic (catalogue) : #5b4a9e. */
+.sb-syndic { --sb: #5b4a9e; margin-top: 18px; display: flex; flex-direction: column; gap: 10px; }
+.sb-tete { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.sb-ic { width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; background: #efecf9; color: var(--sb); flex: none; }
+.sb-ic svg { width: 15px; height: 15px; }
+.sb-titre { font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #3d3550; }
+.sb-k { font-size: 11px; color: #8a8195; margin-left: auto; }
+.sb-carte { border: 1px solid #e6e0f2; border-radius: 12px; padding: 12px 14px; background: #fff; display: flex; flex-direction: column; gap: 4px; }
+.sb-carte.vide { flex-direction: row; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; background: #faf9fd; }
+.sb-nom { font-size: 14.5px; font-weight: 700; color: #241d33; }
+.sb-nom.vide { font-weight: 600; color: #8a8195; }
+.sb-sous { font-size: 12px; color: #6f6680; }
+.sb-origine { font-size: 11px; color: var(--sb); font-weight: 600; }
+.sb-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.sb-btn { display: inline-flex; align-items: center; gap: 5px; font: inherit; font-size: 12px; font-weight: 700; padding: 5px 11px; border-radius: 999px;
+  border: 1px solid #ddd5ee; background: #fff; color: #3d3550; cursor: pointer; text-decoration: none; }
+.sb-btn svg { width: 13px; height: 13px; }
+.sb-btn:hover { border-color: var(--sb); color: var(--sb); }
+.sb-btn:disabled { opacity: .55; cursor: default; }
+.sb-retirer { color: #a4381f; border-color: #f0c9bf; }
+.sb-retirer:hover { color: #a4381f; border-color: #a4381f; }
+.sb-choisir { background: var(--sb); color: #fff; border-color: var(--sb); }
+.sb-choisir:hover { color: #fff; filter: brightness(1.08); }
+.sb-confirme { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; padding: 8px 10px; border-radius: 10px; background: #fff4f1; font-size: 12px; color: #6b2c1d; }
+.sb-confirme > span { flex: 1 1 200px; }
+.sb-ecart { margin: 0; font-size: 12px; color: #7a5310; background: #fff7e6; border: 1px solid #f2dfb5; border-radius: 10px; padding: 7px 10px; }
+.sb-erreur { margin: 0; font-size: 12px; color: #a4381f; }
+.sb-vide { margin: 0; font-size: 12px; color: #8a8195; }
+.sb-choix { border: 1px solid #ddd5ee; border-radius: 12px; padding: 10px; background: #fcfbff; display: flex; flex-direction: column; gap: 8px; }
+.sb-recherche { width: 100%; box-sizing: border-box; font: inherit; font-size: 13px; padding: 8px 10px; border-radius: 9px; border: 1px solid #ddd5ee; background: #fff; }
+.sb-liste { list-style: none; margin: 0; padding: 0; max-height: 260px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
+.sb-liste button { width: 100%; text-align: left; font: inherit; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; padding: 7px 10px;
+  border-radius: 9px; border: 1px solid transparent; background: #fff; cursor: pointer; }
+.sb-liste button:hover { border-color: var(--sb); }
+.sb-liste button:disabled { opacity: .6; cursor: default; }
+.sb-l-nom { font-size: 13px; font-weight: 700; color: #241d33; }
+.sb-l-ville { font-size: 11.5px; color: #8a8195; }
+.sb-l-tag { font-size: 10.5px; font-weight: 700; color: var(--sb); background: #efecf9; border-radius: 999px; padding: 1px 7px; }
+.sb-choix-pied { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 11px; color: #8a8195; flex-wrap: wrap; }
+.sb-syndic.tel .sb-k { margin-left: 0; width: 100%; }
