@@ -1647,3 +1647,10 @@ Vraies données (lecture) : les 6 biens des derniers PDF générés par des admi
 imprimeraient leur négo du bien (GENTES, PEREIRA, TEYSSONNIER, CROIZIER, BILLIG DURAND, VALLA), coordonnées du registre.
 ⚠ TEYSSONNIER : le registre porte encore 0658803706 (copie d'avril) ; la nuit du 06→07 doit le passer à 0471560236 (§51).
 Reste : push, puis redémarrer HektorConsoleWorkerDocuments FILE VIDE (c'est lui qui porte `generate_estimation_pdf`).
+
+**✅ EN SERVICE le 06/11 à 13:22** : 18e90ae poussé ; les 4 services worker redémarrés par Frédéric (file vide vérifiée avant :
+0 pending, 0 running). Preuve par l'heure des processus : node de DOCUMENTS (pid 21424) né à 13:22:41, après la dernière écriture
+du worker (12:42:41) ; journal `console_worker_service_documents.log` : démarrage propre, `generate_estimation_pdf` dans ses
+types ; un rafraîchissement posé à 13:23 traité (done). ⚠ Le redémarrage a aussi chargé un travail NON COMMITÉ d'une autre
+session (A.2 : 3e cran « admin » de l'interrupteur Youtrust) — inerte tant que `signature_youtrust` = off (mesuré : off).
+Pas encore vu sur un vrai PDF (aucun généré depuis).
