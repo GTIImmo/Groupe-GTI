@@ -8896,6 +8896,96 @@ async function resolveEstimNegotiatorContact(payload, dossier, opts) {
   return out;
 }
 
+// ⛔ RÈGLE DE FRÉDÉRIC (06/11/2026, audit §54-§55) -- QUI EST IMPRIMÉ SUR L'AVIS DE VALEUR (bloc « Votre conseiller » + QR) :
+//   . le demandeur est NÉGOCIATEUR (role « commercial ») -> lui-même : sa personne du registre, reliée à son compte ;
+//   . sinon (admin…) -> le négociateur DU BIEN (commercial_id) s'il est actif au registre et n'est pas la personne d'un
+//     compte admin ;
+//   . sinon -> L'AGENCE SEULE (décision du 06/11) : pas de nom (« Votre conseiller Groupe GTI »), tél et mail de l'agence.
+//   Jamais l'identité d'un admin. L'agence : celle du négociateur demandeur, sinon celle du bien ; registre d'abord,
+//   annuaire en repli champ par champ. Mesure du 06/11 : 45 % des estimations n'ont pas de négociateur utilisable.
+//   Rend { contact, source }, ou { repli } pour un négociateur absent du registre ; LÈVE si le registre ne répond pas.
+function cleAgenceRegistre(value) {
+  // la même clé que app_neg_cle_agence (SQL), cleAgence (front) et _cle_agence (serveur)
+  const texte = String(value || "").replace(/^\s*groupe\s+gti\s*/i, "").normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
+  return texte.replace(/[\s-]+/g, "-").toUpperCase();
+}
+
+async function conseillerAvisDeValeurSelonRegle(job, dossier) {
+  const lire = async (chemin) => {
+    const rows = await supabaseRequest(chemin, { method: "GET" });
+    if (!Array.isArray(rows)) throw new Error(`registre muet : ${chemin.split("?")[0]}`);
+    return rows;
+  };
+  const enc = encodeURIComponent;
+  const colonnesPersonne = "app_personne_id,nom,email,email_pro,telephone,portable,actif,app_agence_id,app_user_id";
+  const demandeur = cleanString(job && job.requested_by);
+  const profil = demandeur ? (await lire(`app_user_profile?select=role&id=eq.${enc(demandeur)}&limit=1`))[0] : null;
+  let personne = null;
+  let fiche = null;
+  let source = "agence_seule";
+  if (profil && profil.role === "commercial") {
+    personne = (await lire(`app_negociateur_personne?select=${colonnesPersonne}&app_user_id=eq.${enc(demandeur)}&limit=1`))[0] || null;
+    if (!personne) return { repli: "negociateur_absent_du_registre" };
+    source = "negociateur_demandeur";
+  } else {
+    const idNego = cleanString(dossier && dossier.commercial_id);
+    if (idNego) {
+      const fiches = await lire(`app_negociateur_fiche?select=app_personne_id,actif_chez_hektor,email_vu,telephone,portable&sorte=eq.fiche_negociateur&hektor_negociateur_id=eq.${enc(idNego)}&limit=5`);
+      fiche = fiches.find((f) => f.actif_chez_hektor === true) || null;
+      if (fiche) {
+        const p = (await lire(`app_negociateur_personne?select=${colonnesPersonne}&app_personne_id=eq.${enc(fiche.app_personne_id)}&limit=1`))[0] || null;
+        const roleCompte = p && p.app_user_id
+          ? ((await lire(`app_user_profile?select=role&id=eq.${enc(p.app_user_id)}&limit=1`))[0] || {}).role || null
+          : null;
+        // une personne sans compte dans l'app est un négociateur ; un compte autre que « commercial » ne s'imprime jamais
+        if (p && p.actif === true && (!roleCompte || roleCompte === "commercial")) {
+          personne = p;
+          source = "negociateur_du_bien";
+        }
+      }
+    }
+  }
+  let agence = null;
+  if (source === "negociateur_demandeur" && personne.app_agence_id) {
+    agence = (await lire(`app_registre_agence?select=nom,telephone,email,responsable&app_agence_id=eq.${enc(personne.app_agence_id)}&limit=1`))[0] || null;
+  }
+  const nomAgenceBien = cleanString(dossier && dossier.agence_nom);
+  if (!agence && nomAgenceBien) {
+    const alias = await lire("app_registre_agence_alias?select=cle,app_agence_id,ecriture&limit=500");
+    const cle = cleAgenceRegistre(nomAgenceBien);
+    const exacte = new Set(alias.filter((a) => String(a.ecriture || "").trim().toLowerCase() === nomAgenceBien.toLowerCase()).map((a) => a.app_agence_id));
+    const parCle = new Set(alias.filter((a) => cle && String(a.cle || "") === cle).map((a) => a.app_agence_id));
+    const ids = exacte.size === 1 ? exacte : parCle;
+    if (ids.size === 1) {
+      agence = (await lire(`app_registre_agence?select=nom,telephone,email,responsable&app_agence_id=eq.${enc([...ids][0])}&limit=1`))[0] || null;
+    }
+  }
+  const nomAgence = cleanString(agence && agence.nom) || nomAgenceBien;
+  let annuaire = null;
+  if (nomAgence && !(cleanString(agence && agence.telephone) && cleanString(agence && agence.email))) {
+    const ar = await supabaseRequest(`app_agence_directory?select=tel,mail,responsable&nom=ilike.${enc(nomAgence)}&limit=1`, { method: "GET" }).catch(() => null);
+    annuaire = Array.isArray(ar) && ar.length ? ar[0] : null;
+  }
+  const agenceTel = cleanString(agence && agence.telephone) || cleanString(annuaire && annuaire.tel);
+  const agenceMail = cleanString(agence && agence.email) || cleanString(annuaire && annuaire.mail);
+  const agenceResponsable = cleanString(agence && agence.responsable) || cleanString(annuaire && annuaire.responsable);
+  if (!personne) {
+    return { source, contact: { nom: null, agence: nomAgence, email: agenceMail, telephone: agenceTel, agenceTel, agenceMail, agenceResponsable } };
+  }
+  const portable = [personne.portable, personne.telephone, fiche && fiche.portable, fiche && fiche.telephone]
+    .map(cleanString).find((v) => v && /\d{6,}/.test(v)) || null;
+  return {
+    source,
+    contact: {
+      nom: cleanString(personne.nom),
+      agence: nomAgence,
+      email: cleanString(personne.email_pro) || cleanString(personne.email) || cleanString(fiche && fiche.email_vu) || agenceMail,
+      telephone: portable || agenceTel,
+      agenceTel, agenceMail, agenceResponsable,
+    },
+  };
+}
+
 async function handleGenerateEstimationPdf(job) {
   const payload = safeJsonParse(job.payload_json);
   const dossier = await loadDossier(job);
@@ -8955,11 +9045,27 @@ async function handleGenerateEstimationPdf(job) {
       catch (_) { /* best effort : le PDF se génère sans le bloc cadastre */ }
     }
   }
-  // Bloc « Votre conseiller » + QR vCard (option B = conseiller CONNECTÉ, repli négo dossier).
-  // On enrichit le bloc visible avec le mobile résolu + les coordonnées agence (tél/mail).
+  // Bloc « Votre conseiller » + QR vCard. ⛔ 06/11/2026 (§55) : QUI est imprimé suit la règle de Frédéric
+  // (conseillerAvisDeValeurSelonRegle) ; l'ancien chemin « conseiller CONNECTÉ » ne sert plus qu'en repli, et jamais
+  // avec la session d'un admin (registre muet -> pas de session ; négociateur absent du registre -> sa session, c'est lui).
   try {
-    const c = await resolveEstimNegotiatorContact(payload, dossier, { preferConnected: true });
-    if (c) {
+    let regle = null;
+    let sessionPermise = false;
+    try {
+      regle = await conseillerAvisDeValeurSelonRegle(job, dossier);
+      sessionPermise = !!(regle && regle.repli);
+    } catch (_) { regle = null; }
+    const c = regle && regle.contact
+      ? regle.contact
+      : await resolveEstimNegotiatorContact(payload, dossier, { preferConnected: sessionPermise });
+    if (c && regle && regle.contact) {
+      // la règle a tranché : l'identité vient d'UNE seule source, rien n'est complété par le négo envoyé par l'écran
+      payload.negociateur = Object.assign({}, payload.negociateur, {
+        nom: c.nom, agence: c.agence, email: c.email, telephone: c.telephone,
+        agenceTel: c.agenceTel, agenceMail: c.agenceMail, agenceResponsable: c.agenceResponsable,
+        source_identite: regle.source,
+      });
+    } else if (c) {
       payload.negociateur = Object.assign({}, payload.negociateur, {
         nom: c.nom || (payload.negociateur && payload.negociateur.nom) || null,
         agence: c.agence || (payload.negociateur && payload.negociateur.agence) || null,
@@ -8969,6 +9075,8 @@ async function handleGenerateEstimationPdf(job) {
         agenceMail: c.agenceMail || null,
         agenceResponsable: c.agenceResponsable || null,
       });
+    }
+    if (c) {
       if (c.nom || c.telephone || c.email) {
         const QRCode = require("qrcode");
         payload._vcardQrSvg = await QRCode.toString(estimVCard(c), {

@@ -1631,3 +1631,19 @@ estimations n'ont pas de négociateur en charge utilisable : c'est le « cas exc
 - sinon (sans négo, inactif, fiche d'admin) → CAS À TRANCHER ; jamais l'admin.
 Le QR suit la même identité. L'agence vient du registre (tél/mail), annuaire en repli. Registre muet → ancien chemin SANS
 l'identité de session pour un admin.
+
+**Décision de Frédéric (06/11) : « L'agence seule »** pour le cas sans négociateur utilisable. **CODÉ** (worker,
+`conseillerAvisDeValeurSelonRegle` + `cleAgenceRegistre`, branché dans `handleGenerateEstimationPdf`) :
+- négociateur demandeur → lui-même (personne du registre par son compte, son agence au registre) ; négociateur absent du
+  registre → l'ancien chemin, sa session (c'est lui) ;
+- admin (ou pas de demandeur) → le négo du bien s'il a une fiche ACTIVE, une personne active, et pas de compte autre que
+  « commercial » ; agence du bien ;
+- sinon → l'agence seule (nom vide → « Votre conseiller Groupe GTI », tél/mail de l'agence, QR de l'agence) ;
+- quand la règle tranche, l'identité vient d'UNE source (plus de complément par le négo envoyé par l'écran) ; registre muet →
+  ancien chemin SANS la session (jamais un admin).
+Essai `Console/test_avis_valeur_regle_admin.js` (lecture seule, fonctions extraites du worker) : **11/11** ; témoin sur
+l'ancien worker : Frédéric génère sur le bien de GENTES → « Frédéric GERPHAGNON / Groupe GTI Firminy » imprimé.
+Vraies données (lecture) : les 6 biens des derniers PDF générés par des admins (63156, 62609, 62884, 62853, 62764, 62597)
+imprimeraient leur négo du bien (GENTES, PEREIRA, TEYSSONNIER, CROIZIER, BILLIG DURAND, VALLA), coordonnées du registre.
+⚠ TEYSSONNIER : le registre porte encore 0658803706 (copie d'avril) ; la nuit du 06→07 doit le passer à 0471560236 (§51).
+Reste : push, puis redémarrer HektorConsoleWorkerDocuments FILE VIDE (c'est lui qui porte `generate_estimation_pdf`).
