@@ -1007,7 +1007,7 @@ webhook posé par Frédéric ; redémarrage du worker.
 >   ⚠ **Seul effet visible interrupteur éteint** : le document d'essai de 61398 (seule demande Youtrust de la base) montrera
 >   « Signataires — Signé par tous ». ⚠ **Non vu à l'écran** (pas de session locale). Non fait, hors P8-3 : « Signer
 >   maintenant » (`youtrust_signing_link`, lot 6 bis).
-> - ✅ **P8-4 CODÉ (06/11) — COMMITÉ, NON POUSSÉ, NON DÉPLOYÉ ; LES DEUX PATCHS POSÉS EN BASE (accord « Oui, vas-y ») ; WORKER NON REDÉMARRÉ** :
+> - ✅ **P8-4 CODÉ (06/11) — COMMITÉ `bef8599`, SUR origin/main (parti avec le push d'une autre session) ; LES DEUX PATCHS POSÉS EN BASE (accord « Oui, vas-y ») ; WORKER NON REDÉMARRÉ ; interrupteur `signature_preuves` ÉTEINT** :
 >   **ouvrir l'original et les preuves** d'un document signé. Mesuré : Youtrust (61398) tout au coffre (original, signé,
 >   3 preuves) ; ImmoSign, 466 signés : ZIP des preuves et de la procédure au coffre pour 424 sur 464 (40 serveur seul),
 >   original au coffre pour 390 (un par document, à la racine du dossier, au nom de sa copie serveur). Les 24 856 chemins
