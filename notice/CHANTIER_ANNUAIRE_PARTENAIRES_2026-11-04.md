@@ -1983,6 +1983,16 @@ pour tout le monde (au rechargement). Retour arrière : `admin` ou `off`. **Suit
   signature laissé en l'état), version commitée construite à part.
   ⚠ Le repli `contactsDirectory.find(...) ?? contactsDirectory[0]` d'App.tsx est ANCIEN et sert à toute l'app : non
   touché, à signaler.
+- **EN LIGNE le 06/11** (accord de Frédéric : « oui ») : poussé `940b35d..03b74fd` — la liste relue juste avant le push
+  était celle annoncée (avec les commits des autres sessions : A.2 front `aa0baae`, worker A.2 `3c32daa`, estimation
+  publique `7ddc14b`, notes GED). Réglage posé : `app_setting.partenaires_syndic_fiche = 'admin'`. Vercel prêt en 45 s.
+- **VU EN VRAI** sur IMMO DE FRANCE FOREZ VELAY (10217295), compte admin : chiffres 16 biens · 7 avec documents de
+  copro · 10 en vente · charges moyennes 1 312 € ; 16 cartes, 24 puces de documents, 9 « aucun document au coffre » ;
+  « Nos biens dans ses copropriétés » 10 / 0 / 6. Le clic sur une carte ouvre bien l'annonce (7589288), avec le retour
+  « Fiche contact ». Téléphone (390 px) : 16 cartes, aucun débordement.
+  ⚠ Vu au passage : certains biens s'affichent « [Sans titre] V790063303 » — c'est le titre tel qu'il est dans nos
+  données (estimation sans titre), pas un défaut de la fiche.
+- Reste : ouvrir à tous (`on`) sur décision de Frédéric ; puis 4.2 → 4.6.
 
 ### 7 ter. Les dépendances (techniques, pas un ordre décidé)
 
