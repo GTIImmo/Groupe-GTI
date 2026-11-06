@@ -2203,6 +2203,10 @@ apporteur 35 / 23 / 0 ; courtier 22 / 14 / 0 ; parrain 15 / 8 / 0 ; banque 8 / 7
   ancien, §27.4) : en « admin », le bouton de la carte n'y paraît pas ; il paraît sur la fiche syndic.
 - Contrôles (93)-(97) ; essai **97/97** ; notaire vert ; construction verte ; banc à données fictives à 1280 × 665
   (la fenêtre tient) et au téléphone (772 px sur 812, rien ne dépasse), avec et sans e-mail.
+- **EN LIGNE le 06/11** (« Pousse et allume ») : poussé `9008515..ca89cb5` (le SHA relu, ce commit seul) ; réglage
+  `partenaires_syndic_demande = 'on'`. **Vu en vrai** sur IMMO DE FRANCE FOREZ VELAY (fiche syndic) : bouton actif, 16
+  biens au choix, message prêt « 12 Rue Honoré de Balzac, 42000 Saint-Étienne · Lot : 5 · mandat n° 18953 », pas
+  d'e-mail sur la fiche → seul « Copier le message » est proposé. Fenêtre refermée sans rien envoyer.
 
 ### 7 ter. Les dépendances (techniques, pas un ordre décidé)
 
