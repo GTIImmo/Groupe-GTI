@@ -291,8 +291,10 @@ VÉRIFIÉ ÉTEINT dans le paquet servi). ~~Le lot 6~~ ✅ fait le 06/11. ~~Le lo
 **La nouvelle modale est EN PRODUCTION depuis le 06/11** (interrupteur allumé, contrôlé sans envoyer sur VM412 et
 Jullianges). **06/11, après la bascule** : audit des champs « Vendeurs » et « N° de mandat »
 (`notice/AUDIT_CHAMPS_VENDEURS_ET_MANDAT_MODALE_STATUT_2026-11-06.md`) — les deux retirés de la vue, et la modale
-n'envoie plus de numéro de mandat (il faisait partir les offres sans mandat). **Reste : pousser ce correctif, puis
-l'envoi réel de contrôle sur 62774 (une offre, qui doit revenir avec le mandat de Hektor), avec l'accord de Frédéric
-au moment du geste.**
+n'envoie plus de numéro de mandat (il faisait partir les offres sans mandat). ✅ **Poussé, puis l'envoi réel de
+contrôle FAIT le 06/11 à 16:40** depuis la nouvelle modale, avec l'accord de Frédéric — sur **61398** (bien d'essai ;
+62774 est clos depuis le 21/10) : offre 33132 de 170 000 €, `done`, 0 erreur, **mandat parti sous la forme de Hektor
+`3-PROTEXA`** et rendu par Hektor (`id_mandat 3`, `PROTEXA`). Détail : note d'audit §4. ⏰ Reste à lire après la
+nuit : `mandat_origine = hektor` au registre pour l'offre 33132.
 ⚠ Reste hors de ce chantier : le défaut « Choisir » (audit §12, les champs principaux ne se rechargent pas),
 qui demande une décision à part — la refonte visuelle ne le corrige pas et ne doit pas le masquer.

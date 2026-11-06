@@ -24,8 +24,9 @@ siens ; tableau = l'app affirme »).
 - Offres : **0 sur 707**. Le formulaire d'offre de Hektor n'a pas de vendeurs : le champ y est donc toujours vide, et
   y toucher n'aurait de sens que pour le carnet.
 
-**Usage réel.** 9 envois en tout depuis le 16/09, **tous sur les biens d'essai** (24933 le 16/09, 24113 le 23/10, par
-Frédéric pour éprouver le geste). **Aucun usage réel.**
+**Usage réel.** 9 envois en tout depuis le 16/09, **tous des essais** (24933 le 16/09, 24113 le 23/10, par
+Frédéric pour éprouver le geste). **Aucun usage réel.** ⛔ *Correction du 06/11 :* 24113 (VA6482, mandat 18787) **n'est
+PAS un bien d'essai**, ce sont de vrais clients (Frédéric, 03/11) ; il a seulement servi de banc aux essais du 22-23/10.
 
 **Risque du champ.** Une liste tapée incomplète REMPLACE la bonne liste de Hektor (le code le dit : « une liste
 incomplète ferait pire que mieux »).
@@ -58,7 +59,7 @@ champ `numero_mandat`) — et le carnet resert au préremplissage suivant : la b
 **Ce que Hektor en a gardé (registre).** Sur 24933, les offres créées du 01 au 03/09 avec « 11939 » sont TOUTES
 revenues **sans mandat** (`mandat_origine = deduit_unique` : c'est notre registre qui le devine) ; celle du 04/09,
 créée avec « 10261-HEKTOR », porte le sien (`hektor`). Même partage sur 24113 le 23/10 (`deduit_periode` contre
-`hektor`). ⚠ Ce sont des biens d'essai ; sur le parc, les offres de 2025+ n'ont leur mandat de Hektor que pour 291 sur
+`hektor`). ⚠ Ce sont des essais (24113 est un vrai bien client qui a servi de banc) ; sur le parc, les offres de 2025+ n'ont leur mandat de Hektor que pour 291 sur
 707 (395 déduits) — cette faiblesse vient surtout des offres saisies chez Hektor, pas de l'app (22 offres seulement
 sont parties de l'app).
 
@@ -103,6 +104,16 @@ visuel : elle demande son propre « vas-y ».
   renvoi) et attendus absents ; tout geste ou condition qui les porte est attendu absent ; leur retour serait un écart.
   Le contrôle a signalé EXACTEMENT un écart, `handleChangeHektorAnnonceStatus` — la ligne décidée — puis la
   référence a été reposée (sommet `8c321a4`). Essais de la modale verts ; `npm run build` vert.
-- ⏳ **Le témoin positif reste à faire** : l'offre réelle sur 62774, une fois ce code poussé et déployé — le journal
-  doit porter `forme_mandat = <id>-<FAMILLE>` et le registre, après la nuit, `mandat_origine = hektor`.
+- ✅ **Le témoin positif est FAIT le 06/11 à 16:40** (poussé par Frédéric, paquet servi `index-Cgh_zedy.js` vérifié :
+  `selectedMandat:""`, interrupteur `"true"`). Cible : **61398** (mandants « TEST GTI Delphine », Actif, diffusable 0,
+  mandat 18420) — 62774 est clos depuis le 21/10, et 24113 est un VRAI client. Offre de 170 000 €, 06/11, 10 jours,
+  acquéreur d'essai ESSAI 8 CINQ (605976), envoyée depuis la NOUVELLE modale avec l'accord de Frédéric. Travail
+  `ac20049d-0717-4f4f-9c6e-184cb7d3e2ae` : `done`, `verifie: true`, 0 erreur. Charge : `selected_mandat` **vide**.
+  Journal `hektor_transaction` : **`forme_mandat_selectionne = 3-PROTEXA`** (la valeur de Hektor, plus un numéro seul),
+  et la réponse de Hektor porte l'offre **33132** avec **`id_mandat: 3`, `type_mandat: PROTEXA`** → l'offre est née
+  AVEC son mandat. Preuve « deux portes » (fiche + API) verte. ⏰ Reste à lire après la nuit : `mandat_origine` de
+  l'offre 33132 au registre doit valoir `hektor` (à 16:40 : `hektor_mandat_id` vide, `mandat_origine` vide,
+  `numero_mandat` 18420 — le registre n'est pas encore relu).
+- ⚠ Le bien d'essai 61398 est maintenant « Sous offre » chez Hektor, avec l'offre 33132 en cours ; la refuser pour le
+  remettre « Actif » serait un autre geste chez Hektor, non fait (décision de Frédéric).
 - ⚠ L'ancienne modale (interrupteur éteint) affiche toujours la case « N° de mandat », mais sa valeur ne part plus.
