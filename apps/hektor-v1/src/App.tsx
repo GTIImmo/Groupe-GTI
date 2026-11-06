@@ -23094,6 +23094,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           offreEcarteeSurBienEngage, ckPartyName, parseJson, carnetAffaires, carnetEtats, carnetEcarts, carnetEcartErreur,
           setCarnetEcartErreur, setCarnetRelecture, isAdmin, gestesEcartCarnet, trancherAffaireCarnetEcart, personnesEcarts,
           personnesEcartErreur, setPersonnesEcartErreur, fermerAffairePersonneEcart, rechargerPersonnesEcarts, HistoriqueOffre,
+          statusChangeCorrectionPending, handleGesteHektor, handleChangeHektorAnnonceStatus, gesteOffreSansEffet,
+          offreARegulariser, compromisDeLaRegularisation, dateOffreFaite, modifierChezHektorPossible,
+          offreAccepteeFigeeChezHektor, compromisVerrouilleParSaVente, nouvelleOffreFermeeSurBienEngage, hektorStatusTargetLabel,
           affaireCourante: affaireCourantePourStatut(),
         }}
           />

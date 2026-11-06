@@ -14,9 +14,10 @@
 // Lot 2 : le formulaire offre / compromis / vente (FormulaireTransaction), chaque saisie reprise mot pour mot.
 // Lot 3 : Actif, Clos (Cloture) et l'offre verrouillée par son dossier en lecture seule.
 // Lot 4 : les affaires du bien et leurs bandeaux (AffairesDuBien).
-// Les boutons d'envoi (lot 5) suivent : d'ici là, l'ancienne modale reste en service (interrupteur éteint).
+// Lot 5 : le pied (Pied), ses notes (NotesDesBoutons) et l'aperçu « avant → après » ; la vue est un <form>.
+// Restent le téléphone (lot 6), les animations et l'accessibilité (lot 7), les contrôles et la bascule (lot 8).
 
-import { useState, type ComponentType, type Dispatch, type ReactNode, type SetStateAction } from 'react'
+import { useState, type ComponentType, type Dispatch, type FormEvent, type ReactNode, type SetStateAction } from 'react'
 import type { Dossier } from './types'
 import { situationDuBien, type AffaireLedgerRow, type GardesParcours, type HektorAnnonceStatusTarget } from './lib/statutParcours'
 import { DESCRIPTION_CARTE, guidePour } from './lib/statutGuide'
@@ -137,6 +138,19 @@ export type FormulaireStatutProps = {
   fermerAffairePersonneEcart: (id: number) => Promise<void>
   rechargerPersonnesEcarts: () => Promise<void>
   HistoriqueOffre: ComponentType<{ propositions: unknown }>
+  // Lot 5 (06/11) — le pied et les notes qui expliquent ses boutons.
+  statusChangeCorrectionPending: boolean
+  handleGesteHektor: (geste: 'refus' | 'accepte' | 'annuler_compromis' | 'supprimer_compromis' | 'supprimer_vente') => Promise<void>
+  handleChangeHektorAnnonceStatus: (event: FormEvent<HTMLFormElement>, reprendre?: boolean) => Promise<void>
+  gesteOffreSansEffet: (affaire: AffaireLedgerRow | null | undefined, geste: 'refus' | 'accepte') => boolean
+  offreARegulariser: (lignes: AffaireLedgerRow[], affaire: AffaireLedgerRow | null | undefined) => boolean
+  compromisDeLaRegularisation: (lignes: AffaireLedgerRow[], affaire: AffaireLedgerRow | null | undefined) => AffaireLedgerRow | null
+  dateOffreFaite: (a: AffaireLedgerRow) => string
+  modifierChezHektorPossible: (statut: string, affaire: AffaireLedgerRow | null | undefined, lignes: AffaireLedgerRow[]) => boolean
+  offreAccepteeFigeeChezHektor: (affaire: AffaireLedgerRow | null | undefined) => boolean
+  compromisVerrouilleParSaVente: (lignes: AffaireLedgerRow[], affaire: AffaireLedgerRow | null | undefined) => AffaireLedgerRow | null
+  nouvelleOffreFermeeSurBienEngage: (statut: string, lignes: AffaireLedgerRow[]) => boolean
+  hektorStatusTargetLabel: (value: HektorAnnonceStatusTarget | string | null | undefined) => string
   SelecteurNotaire: ComponentType<{
     libelle: string; aide: string; nom: string; numero: string; scope: DataScope | null | undefined
     onChoisir: (option: MandantContactSearchOption) => void; onRetirer: () => void
@@ -1021,6 +1035,199 @@ function AffairesDuBien(props: {
   )
 }
 
+// ─── Lot 5 (06/11) — le pied, ses notes, l'aperçu « avant → après » ───
+const GENRE_DU_STATUT: Record<string, string> = { offer: 'l’offre', compromise: 'le compromis', sold: 'la vente' }
+const LIBELLE_ENVOI: Record<string, string> = {
+  active: 'Remettre en vente', offer: 'Enregistrer l’offre', compromise: 'Enregistrer le compromis',
+  sold: 'Enregistrer la vente', closed: 'Clore le mandat',
+}
+/** L'aperçu du bouton principal : TEXTE seulement, et seulement ce que le code fait sûrement (plan §1 et §3). */
+const APRES: Record<string, { statut: string; effets: string[] }> = {
+  active: { statut: 'Actif', effets: ['La diffusion sur les portails repart.', 'La fiche est relue après l’envoi.'] },
+  offer: { statut: 'Sous offre', effets: ['L’offre est enregistrée chez Hektor.', 'Les honoraires vendeur, la répartition et la note restent chez nous.'] },
+  compromise: { statut: 'Sous compromis', effets: ['Le compromis est enregistré chez Hektor.', 'Les conditions suspensives, la répartition et la note restent chez nous.'] },
+  sold: { statut: 'Vendu', effets: ['Le mandat est clos chez nous à la date de la vente.', 'Le bien reste dans tes biens, au statut Vendu.'] },
+  closed: { statut: 'Clos', effets: ['La diffusion sur les portails est coupée.', 'La date et le motif restent chez nous.'] },
+}
+
+/** Les notes qui expliquent les boutons (ancien bloc, juste au-dessus du pied) — mêmes conditions, les mots suivent
+ *  les nouveaux libellés. L'offre verrouillée par son dossier est dite au lot 3, dans sa section. */
+function NotesDesBoutons(props: { f: FormulaireStatutProps; statusChangeTarget: Dossier; statusChangeStatus: HektorAnnonceStatusTarget; statusChangeAffaires: AffaireLedgerRow[]; etatFermeAuxTransactions: GardesParcours['etatFermeAuxTransactions'] }) {
+  const { statusChangeTarget, statusChangeStatus, statusChangeAffaires, etatFermeAuxTransactions } = props
+  const {
+    affaireCourante, modifierChezHektorPossible, compromisDeLaRegularisation, dateOffreFaite, compromisVerrouilleParSaVente,
+    offreAccepteeFigeeChezHektor, offreVerrouilleeParSonDossier, statusChangeNeedsTransaction, formatDate,
+  } = props.f
+  const notes: Array<{ titre: string; texte: string }> = []
+  if (modifierChezHektorPossible(statusChangeStatus, affaireCourante, statusChangeAffaires)) {
+    notes.push({
+      titre: `Ce bien porte déjà ${statusChangeStatus === 'offer' ? 'une offre' : statusChangeStatus === 'compromise' ? 'un compromis' : 'une vente'}.`,
+      texte: `« Mettre à jour ${GENRE_DU_STATUT[statusChangeStatus] ?? ''} » reprend celle-là au lieu d’en créer une seconde. Un champ laissé vide n’efface rien : il conserve ce que Hektor porte déjà.`,
+    })
+  }
+  if (statusChangeStatus === 'offer' && affaireCourante) {
+    const compromis = compromisDeLaRegularisation(statusChangeAffaires, affaireCourante)
+    if (compromis) {
+      notes.push({
+        titre: 'Régularisation possible.',
+        texte: `Cette offre date du ${formatDate(dateOffreFaite(affaireCourante))}, avant le compromis${compromis.date ? ` du ${formatDate(compromis.date)}` : ' en cours'}. Si c’est bien elle qui a mené au compromis, « Accepter l’offre » la rattache à ce compromis (au calcul de la nuit). Si c’est une offre concurrente, refuse-la.`,
+      })
+    }
+  }
+  if (statusChangeNeedsTransaction(statusChangeStatus)) {
+    const ferme = etatFermeAuxTransactions(statusChangeTarget)
+    if (ferme) {
+      notes.push({
+        titre: ferme === 'vendu' ? 'Ce bien est vendu.' : ferme === 'clos' ? 'Ce bien est clos.' : 'Ce bien est en estimation.',
+        texte: 'On n’y enregistre pas d’offre, de compromis ni de vente : elles se font sur un bien Actif. '
+          + (ferme === 'vendu' ? 'Pour revenir en arrière, il faut d’abord supprimer la vente (onglet Vendu).'
+            : 'Pour en enregistrer une, remets d’abord le bien en vente (onglet Actif).'),
+      })
+    }
+  }
+  const vente = statusChangeStatus === 'compromise' ? compromisVerrouilleParSaVente(statusChangeAffaires, affaireCourante) : null
+  if (vente) {
+    const numero = String(vente.hektor_affaire_id ?? '').trim()
+    notes.push({
+      titre: 'On ne revient plus sur ce compromis.',
+      texte: `Son dossier porte une vente${numero ? ` (n° ${numero})` : ''}. Le modifier, l’annuler ou le supprimer maintenant remettrait le bien « Sous compromis ». Pour y revenir, il faut d’abord supprimer la vente.`,
+    })
+  }
+  if (offreAccepteeFigeeChezHektor(affaireCourante)) {
+    const refusHorsDePortee = Boolean(offreVerrouilleeParSonDossier(statusChangeAffaires, affaireCourante))
+    notes.push({
+      titre: 'Cette offre est acceptée : son montant ne se corrige plus directement.',
+      texte: 'Une fois acceptée, une offre est figée chez Hektor : il n’ouvre même pas son formulaire, et l’envoi échouerait sans un mot d’explication.'
+        + (refusHorsDePortee
+          ? ' Pour y revenir, il faut d’abord défaire ce que dit la section de l’offre.'
+          : ' Pour changer le montant : refuse l’offre, corrige-la, puis accepte-la de nouveau.'),
+    })
+  }
+  if (!notes.length) return null
+  return (
+    <div className="stv2-notes" role="note">
+      {notes.map((n) => <p key={n.titre} className="stv2-bandeau is-info"><b>{n.titre}</b><span>{n.texte}</span></p>)}
+    </div>
+  )
+}
+
+/** Le pied (lot 5). ⛔ Chaque bouton garde SA condition d'affichage, SA condition d'extinction et SON geste, mot pour
+ *  mot (contrôle de parité). Changent : l'ordre (les gestes sans retour à gauche, en lien rouge, à l'écart ; le geste
+ *  principal à droite), les libellés, et l'aperçu « avant → après » au survol ou au focus du bouton principal. */
+function Pied(props: {
+  f: FormulaireStatutProps
+  statusChangeTarget: Dossier
+  statusChangeStatus: HektorAnnonceStatusTarget
+  statusChangeAffaires: AffaireLedgerRow[]
+  statusChangePending: boolean
+  closeStatusChangeModal: () => void
+  etatFermeAuxTransactions: GardesParcours['etatFermeAuxTransactions']
+}) {
+  const { statusChangeTarget, statusChangeStatus, statusChangeAffaires, statusChangePending, closeStatusChangeModal, etatFermeAuxTransactions } = props
+  const {
+    affaireCourante, statusChangeCorrectionPending, handleGesteHektor, handleChangeHektorAnnonceStatus, gesteOffreSansEffet,
+    offreEcarteeSurBienEngage, offreARegulariser, offreVerrouilleeParSonDossier, modifierChezHektorPossible,
+    offreAccepteeFigeeChezHektor, compromisVerrouilleParSaVente, statusChangeNeedsTransaction,
+    nouvelleOffreFermeeSurBienEngage, gardeFouPourStatut, hektorStatusTargetLabel,
+  } = props.f
+  // Seul état de la vue : l'aperçu ouvert ou fermé (survol / focus du bouton principal).
+  const [apercu, setApercu] = useState(false)
+  const affaireCourantePourStatut = () => affaireCourante
+  const principalAbsent = (statusChangeNeedsTransaction(statusChangeStatus)
+    && etatFermeAuxTransactions(statusChangeTarget))
+   || nouvelleOffreFermeeSurBienEngage(statusChangeStatus, statusChangeAffaires)
+  const apres = APRES[statusChangeStatus]
+  return (
+    <footer className="stv2-pied">
+      <button className="stv2-btn stv2-btn-2" type="button" onClick={closeStatusChangeModal} disabled={statusChangePending || statusChangeCorrectionPending}>Fermer</button>
+      {affaireCourantePourStatut() && statusChangeStatus === 'compromise'
+       && !compromisVerrouilleParSaVente(statusChangeAffaires, affaireCourantePourStatut()) ? (
+        <button className="stv2-danger" type="button"
+          onClick={() => handleGesteHektor('supprimer_compromis')}
+          disabled={statusChangePending || statusChangeCorrectionPending}
+          title="Le compromis disparaît de Hektor et le statut du bien redescend. Rien ne le remet.">
+          Supprimer le compromis…
+        </button>
+      ) : null}
+      {affaireCourantePourStatut() && statusChangeStatus === 'sold' ? (
+        <button className="stv2-danger" type="button"
+          onClick={() => handleGesteHektor('supprimer_vente')}
+          disabled={statusChangePending || statusChangeCorrectionPending}>
+          Supprimer la vente…
+        </button>
+      ) : null}
+      <span className="stv2-pied-espace" />
+      {affaireCourantePourStatut() && statusChangeStatus === 'offer'
+       && !offreVerrouilleeParSonDossier(statusChangeAffaires,
+                                         affaireCourantePourStatut()) ? (
+        <>
+          {!gesteOffreSansEffet(affaireCourantePourStatut(), 'refus') ? (
+          <button className="stv2-btn stv2-btn-2" type="button"
+            onClick={() => handleGesteHektor('refus')}
+            disabled={statusChangePending || statusChangeCorrectionPending}>
+            Refuser l’offre
+          </button>
+          ) : null}
+          {!gesteOffreSansEffet(affaireCourantePourStatut(), 'accepte')
+           && (!offreEcarteeSurBienEngage(statusChangeAffaires, affaireCourantePourStatut())
+               || offreARegulariser(statusChangeAffaires, affaireCourantePourStatut())) ? (
+          <button className="stv2-btn stv2-btn-2" type="button"
+            onClick={() => handleGesteHektor('accepte')}
+            disabled={statusChangePending || statusChangeCorrectionPending}>
+            Accepter l’offre
+          </button>
+          ) : null}
+        </>
+      ) : null}
+      {affaireCourantePourStatut() && statusChangeStatus === 'compromise'
+       && !compromisVerrouilleParSaVente(statusChangeAffaires, affaireCourantePourStatut()) ? (
+        <button className="stv2-btn stv2-btn-2" type="button"
+          onClick={() => handleGesteHektor('annuler_compromis')}
+          disabled={statusChangePending || statusChangeCorrectionPending}
+          title="Le compromis tombe : la trace reste. C’est le geste normal quand une vente ne se fait pas.">
+          Annuler le compromis
+        </button>
+      ) : null}
+      {modifierChezHektorPossible(statusChangeStatus, affaireCourantePourStatut(), statusChangeAffaires) ? (
+        <button className="stv2-btn stv2-btn-2" type="button"
+          onClick={(e) => { void handleChangeHektorAnnonceStatus(e as unknown as FormEvent<HTMLFormElement>, true) }}
+          disabled={statusChangePending || statusChangeCorrectionPending
+            || offreAccepteeFigeeChezHektor(affaireCourantePourStatut())}
+          title={offreAccepteeFigeeChezHektor(affaireCourantePourStatut())
+            ? 'Une offre acceptée est figée chez Hektor : il n’ouvre pas son formulaire, la mise à jour ne peut pas aboutir.'
+            : 'Reprend la transaction existante chez Hektor au lieu d’en créer une nouvelle.'}>
+          {statusChangePending ? 'Envoi…' : `Mettre à jour ${GENRE_DU_STATUT[statusChangeStatus] ?? ''}`}
+        </button>
+      ) : null}
+      {principalAbsent ? null : (
+        <span className="stv2-principal">
+          <button className="stv2-btn stv2-btn-1" type="submit"
+            aria-describedby={apercu && apres ? 'stv2-apercu' : undefined}
+            onMouseEnter={() => setApercu(true)} onMouseLeave={() => setApercu(false)}
+            onFocus={() => setApercu(true)} onBlur={() => setApercu(false)}
+            title={gardeFouPourStatut()?.bloque
+              ? `${gardeFouPourStatut()?.titre} — ${gardeFouPourStatut()?.detail}`
+              : undefined}
+            disabled={statusChangePending || statusChangeCorrectionPending
+              || Boolean(gardeFouPourStatut()?.bloque)}>
+            {statusChangePending ? 'Envoi…' : (LIBELLE_ENVOI[statusChangeStatus] ?? `Envoyer vers ${hektorStatusTargetLabel(statusChangeStatus)}`)}
+          </button>
+          {apercu && apres ? (
+            <span id="stv2-apercu" role="tooltip" className="stv2-apercu">
+              <span className="stv2-apercu-statuts">
+                <span className="stv2-pill">{statusChangeTarget.statut_annonce || '—'}</span>
+                <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h13M13 6l6 6-6 6" /></svg>
+                <span className="stv2-pill stv2-pill-apres">{apres.statut}</span>
+              </span>
+              {apres.effets.map((x) => <span key={x} className="stv2-apercu-effet">{x}</span>)}
+            </span>
+          ) : null}
+        </span>
+      )}
+    </footer>
+  )
+}
+
 /** Clos (lot 3). ⛔ Les gestes sont ceux de l'ancien bloc, mot pour mot. Les 3 motifs deviennent des cartes ; la
  *  raison reste un menu (ses valeurs dépendent du motif). Le texte de fin dit ce que le code fait VRAIMENT : depuis le
  *  28/08 seul le STATUT part chez Hektor (prouvé le 21/10 sur 62774 : `closure: cloture_locale_uniquement`) ; l'ancien
@@ -1139,6 +1346,9 @@ export default function ModaleStatutV2(props: ModaleStatutV2Props) {
           </span>
         </div>
 
+        {/* Comme l'ancien bloc : un <form> dont l'envoi est handleChangeHektorAnnonceStatus ; les `required` des champs
+            valent donc au clic, et la touche Entrée dans un champ envoie, comme avant. */}
+        <form className="stv2-envoi" onSubmit={formulaire.handleChangeHektorAnnonceStatus}>
         <div className="stv2-corps">
           <div className="stv2-parcours" role="group" aria-label="Le statut à donner au bien">
             {situation.cartes.map((carte) => {
@@ -1218,15 +1428,14 @@ export default function ModaleStatutV2(props: ModaleStatutV2Props) {
             </Section>
           )}
           <AffairesDuBien f={formulaire} statusChangeStatus={statusChangeStatus} statusChangeAffaires={statusChangeAffaires} />
-          <div className="stv2-attente">
-            Lot 4 de la refonte : les boutons d’envoi et leurs explications arrivent au lot 5. Interrupteur éteint,
-            l’ancienne modale reste en service.
-          </div>
+          <NotesDesBoutons f={formulaire} statusChangeTarget={cible} statusChangeStatus={statusChangeStatus}
+            statusChangeAffaires={statusChangeAffaires} etatFermeAuxTransactions={gardes.etatFermeAuxTransactions} />
         </div>
 
-        <footer className="stv2-pied">
-          <button className="stv2-btn stv2-btn-2" type="button" onClick={closeStatusChangeModal} disabled={statusChangePending}>Fermer</button>
-        </footer>
+        <Pied f={formulaire} statusChangeTarget={cible} statusChangeStatus={statusChangeStatus}
+          statusChangeAffaires={statusChangeAffaires} statusChangePending={statusChangePending}
+          closeStatusChangeModal={closeStatusChangeModal} etatFermeAuxTransactions={gardes.etatFermeAuxTransactions} />
+        </form>
       </section>
     </div>
   )

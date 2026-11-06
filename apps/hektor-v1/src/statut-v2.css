@@ -429,3 +429,45 @@
   .stv2 .stv2-aff-m { text-align: left; }
   .stv2 .stv2-aff-grille { grid-template-columns: 1fr 1fr; }
 }
+
+/* ═══ Lot 5 (06/11) — le pied, ses notes, l'aperçu « avant → après » ═══ */
+.stv2 .stv2-envoi { flex: 1; min-height: 0; display: flex; flex-direction: column; margin: 0; }
+.stv2 .stv2-notes { display: flex; flex-direction: column; gap: 8px; }
+.stv2 .stv2-pied { position: relative; flex-wrap: wrap; }
+.stv2 .stv2-pied-espace { flex: 1; }
+.stv2 .stv2-btn-1 { background: var(--stv2-magenta); color: #ffffff; box-shadow: 0 6px 16px -8px rgba(197, 0, 95, 0.7); }
+.stv2 .stv2-btn-1:hover:not(:disabled) { background: #a9004f; }
+.stv2 .stv2-btn-1:disabled { background: #ebd3de; box-shadow: none; opacity: 1; }
+.stv2 .stv2-danger {
+  padding: 0; border: 0; background: none; cursor: pointer; font: inherit; font-size: 13px; font-weight: 600;
+  color: #9e3532; text-decoration: underline; text-decoration-color: #e3b5b3; text-underline-offset: 3px;
+}
+.stv2 .stv2-danger:hover:not(:disabled) { text-decoration-color: #9e3532; }
+.stv2 .stv2-danger:disabled { opacity: 0.5; cursor: not-allowed; }
+.stv2 .stv2-danger:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(197, 0, 95, 0.35); border-radius: 4px; }
+.stv2 .stv2-principal { position: relative; display: inline-flex; }
+.stv2 .stv2-apercu {
+  position: absolute; right: 0; bottom: calc(100% + 12px); z-index: 6; width: 340px;
+  display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; border-radius: 14px;
+  background: var(--stv2-ink); color: #e3e5e6; font-size: 13px; line-height: 1.45;
+  box-shadow: 0 20px 44px rgba(0, 0, 0, 0.32); pointer-events: none;
+}
+.stv2 .stv2-apercu::after {
+  content: ''; position: absolute; right: 36px; bottom: -6px; width: 12px; height: 12px;
+  background: var(--stv2-ink); transform: rotate(45deg);
+}
+.stv2 .stv2-apercu-statuts { display: flex; align-items: center; gap: 10px; color: #f6b6d5; }
+.stv2 .stv2-apercu .stv2-pill { background: rgba(255, 255, 255, 0.12); color: #ffffff; }
+.stv2 .stv2-apercu .stv2-pill-apres { background: var(--stv2-magenta); }
+.stv2 .stv2-apercu-effet { display: flex; gap: 9px; }
+.stv2 .stv2-apercu-effet::before { content: ''; width: 5px; height: 5px; margin-top: 8px; flex: none; border-radius: 50%; background: #f6b6d5; }
+@media (prefers-reduced-motion: no-preference) {
+  .stv2 .stv2-apercu { animation: stv2-glisse 220ms var(--stv2-ease) both; }
+}
+@media (max-width: 767px) {
+  .stv2 .stv2-pied-espace { display: none; }
+  .stv2 .stv2-pied .stv2-btn { flex: 1 1 auto; }
+  .stv2 .stv2-principal { flex: 1 1 100%; }
+  .stv2 .stv2-principal .stv2-btn { width: 100%; }
+  .stv2 .stv2-apercu { width: auto; left: 0; }
+}

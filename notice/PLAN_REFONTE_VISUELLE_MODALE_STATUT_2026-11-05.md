@@ -158,6 +158,27 @@ animations. La nouvelle vue LIT l'état existant et APPELLE les fonctions exista
 - **Lot 5 — le pied.** Les mêmes boutons avec les mêmes conditions (Refuser, Accepter, Modifier,
   Annuler le compromis, Supprimer le compromis, Supprimer la vente, Envoyer), les mêmes états « Envoi… »,
   nouvel ordre et nouveaux libellés ; aperçu « avant → après » au survol (texte seulement).
+  ✅ **FAIT le 06/11** — `Pied` et `NotesDesBoutons` dans `src/ModaleStatutV2.tsx`. La vue est désormais un
+  `<form onSubmit={handleChangeHektorAnnonceStatus}>` comme l'ancien bloc : les `required` jouent au clic, Entrée
+  envoie (aucun bouton sans `type`). **Libellés** : le bouton principal dit ce qu'il fait (« Enregistrer l'offre / le
+  compromis / la vente », « Remettre en vente », « Clore le mandat ») ; « Modifier chez Hektor » devient « Mettre à
+  jour l'offre / le compromis / la vente » ; « Annuler » devient « Fermer ». **Ordre** : Fermer et les gestes sans
+  retour (« Supprimer le compromis… », « Supprimer la vente… », en lien rouge) à gauche, à l'écart ; Refuser,
+  Accepter, Annuler le compromis, Mettre à jour, puis le bouton principal à droite. La confirmation du navigateur pour
+  supprimer reste (elle est dans `handleGesteHektor`, plan §1 point 3). **Aperçu** au survol ou au focus du bouton
+  principal : statut avant → après et deux effets sûrs (texte seulement). **Les 5 notes** qui expliquent les boutons
+  (mise à jour d'une affaire existante, régularisation, bien fermé aux transactions, compromis verrouillé, offre
+  acceptée figée) : mêmes conditions, mots alignés sur les nouveaux libellés. `App.tsx` : 3 lignes de plus.
+  ⭐ **L'outil de parité contrôle aussi les CONDITIONS** (les `disabled={…}` et les conditions d'affichage
+  `{cond ? (`), sur toutes les zones portées : formulaire 25/25, Clos 1/1, affaires 10/10 (1 écart déclaré : « Aucune
+  affaire lue » au lieu de rien), pied 15/15 ; gestes : pied 7/7. Il a trouvé son propre défaut (un commentaire
+  `/* */` au milieu d'une expression n'était pas retiré) — corrigé. Témoin inverse : retirer le garde-fou de
+  l'extinction du bouton principal → ROUGE, la condition nommée. Empreintes 61 morceaux identiques ; essais verts ;
+  `npm run build` vert. **À l'écran** : démonstration (1280 × 665 et 375 × 812) — formulaire réel, le montant vidé rend
+  le formulaire invalide (`checkValidity`, sans envoyer), « Clore le mandat » avec « Précisez » vide aussi, aperçu
+  vu au survol ; rendu d'essai avec un compromis en cours — Fermer, Supprimer le compromis…, Annuler le compromis,
+  Mettre à jour le compromis, Enregistrer le compromis. ⚠ Rien n'a été ENVOYÉ : l'envoi réel est au lot 8 (62774,
+  accord redemandé).
 - **Lot 6 — téléphone.** Même composant, mise en page étroite ; contrôle à 390, 768 et 1280 × 665.
 - **Lot 7 — animations et accessibilité.** Courbes et durées du cockpit, tout coupé si moins
   d'animations est demandé, focus visible, contrastes.
@@ -206,7 +227,7 @@ de style et la ligne d'aiguillage.
    lui dis. Avant, tout se contrôle en local (interrupteur allumé et éteint).
 4. ✅ **Oui à l'envoi réel de contrôle sur 62774, à la fin** — son accord se redemande au moment du geste.
 
-➡ ~~Prochaine étape : le lot 0~~ ✅ fait le 05/11. ~~Le lot 1~~ ✅ fait le 06/11. ~~Le lot 2~~ ✅ fait le 06/11. ~~Le lot 3~~ ✅ fait le 06/11. ~~Le lot 4~~ ✅ fait le 06/11.
-**Prochaine étape : le lot 5** (le pied : les boutons, leurs conditions, leurs notes), qui attend son « vas-y ».
+➡ ~~Prochaine étape : le lot 0~~ ✅ fait le 05/11. ~~Le lot 1~~ ✅ fait le 06/11. ~~Le lot 2~~ ✅ fait le 06/11. ~~Le lot 3~~ ✅ fait le 06/11. ~~Le lot 4~~ ✅ fait le 06/11. ~~Le lot 5~~ ✅ fait le 06/11.
+**Prochaine étape : le lot 6** (le téléphone), qui attend son « vas-y ».
 ⚠ Reste hors de ce chantier : le défaut « Choisir » (audit §12, les champs principaux ne se rechargent pas),
 qui demande une décision à part — la refonte visuelle ne le corrige pas et ne doit pas le masquer.

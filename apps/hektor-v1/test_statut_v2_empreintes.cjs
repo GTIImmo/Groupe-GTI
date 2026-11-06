@@ -280,7 +280,7 @@ else {
   // Chaque gestionnaire (onChange, onClick, onChoisir, onRetirer, onAjouter) d'une zone DÉJÀ PORTÉE de l'ancien
   // bloc doit se retrouver tel quel dans la nouvelle vue (commentaires et espaces mis à part). Un écart VOULU se
   // DÉCLARE ci-dessous, avec sa raison ; tout autre écart est un échec.
-  const norm = (t) => t.replace(/\/\/[^\n]*/g, "").replace(/\{\/\*[\s\S]*?\*\/\}/g, "").replace(/\s+/g, "");
+  const norm = (t) => t.replace(/\/\/[^\n]*/g, "").replace(/\{\/\*[\s\S]*?\*\/\}/g, "").replace(/\/\*[\s\S]*?\*\//g, "").replace(/\s+/g, "");
   const gestionnaires = (t) => {
     const out = []; const re = /\bon(Change|Click|Choisir|Retirer|Ajouter)=\{/g; let g;
     while ((g = re.exec(t))) {
@@ -297,6 +297,7 @@ else {
   const ancien = dBloc < 0 || fBloc < 0 ? "" : lignesApp.slice(dBloc, fBloc + 1).join("\n");
   const ZONES = [
     { lot: 2, nom: "le formulaire offre / compromis / vente", debut: "{statusChangeNeedsTransaction(statusChangeStatus) ? (", fin: ") : statusChangeStatus === 'closed' ? (" },
+    { lot: 5, nom: "le pied (les boutons)", debut: "<div className=\"modal-actions\">", fin: "</form>" },
     { lot: 4, nom: "les affaires du bien et leurs bandeaux", debut: "{statusChangeAffaires.length > 0 ? (() => {", fin: "{modifierChezHektorPossible(statusChangeStatus, affaireCourantePourStatut(), statusChangeAffaires) ? (" },
     { lot: 3, nom: "la clôture du mandat (Clos)", debut: ") : statusChangeStatus === 'closed' ? (", fin: "{bvs(\"Le statut Actif est envoyé directement" },
   ];
@@ -306,6 +307,50 @@ else {
     "onChange={(event)=>{setStatusChangeChargeCommission(event.target.value)setStatusChangeCommissionTouchee(true)}}",
   ];
   const v2n = norm(v2);
+  // ─── LOT 5 (06/11) : LES CONDITIONS AUSSI ───
+  // Un bouton, c'est un geste ET deux conditions : quand il s'affiche, quand il s'éteint. On extrait de chaque zone
+  // les `disabled={…}` et les conditions d'affichage (`{cond ? (` et `{cond ? null : (`), et chacune doit se
+  // retrouver telle quelle dans la vue — sinon elle est déclarée ici avec sa raison.
+  const disabledDe = (t) => {
+    const out = []; const re = /\bdisabled=\{/g; let g;
+    while ((g = re.exec(t))) {
+      let k = g.index + g[0].length, p = 1;
+      while (p && k < t.length) { if (t[k] === "{") p++; else if (t[k] === "}") p--; k++; }
+      out.push(t.slice(g.index, k));
+    }
+    return out;
+  };
+  const conditionsDe = (t) => {
+    const out = []; const re = /\?\s*(\(|null\s*:\s*\()/g; let g;
+    while ((g = re.exec(t))) {
+      // on remonte jusqu'à l'accolade qui ouvre l'expression JSX, en comptant parenthèses et accolades
+      let k = g.index - 1, p = 0;
+      while (k >= 0) {
+        const c = t[k];
+        if (c === ")" || c === "}") p++;
+        else if (c === "(") { if (p === 0) break; p--; }
+        else if (c === "{") { if (p === 0) break; p--; }
+        k--;
+      }
+      if (k >= 0 && t[k] === "{") out.push(t.slice(k + 1, g.index).trim());
+    }
+    return out.filter((c) => c.length > 0 && !/^\s*\/\*/.test(c));
+  };
+  const CONDITIONS_VOULUES = [
+    // Lot 4 : l'ancien bloc ne montre RIEN quand le bien n'a aucune affaire ; la vue dit « Aucune affaire lue pour ce
+    // bien » (même test, inversé : `if (statusChangeAffaires.length === 0) return …`). Écran seulement.
+    "statusChangeAffaires.length>0",
+  ];
+  for (const z of ZONES) {
+    const a = ancien.indexOf(z.debut), b = ancien.indexOf(z.fin, a);
+    if (a < 0 || b < 0) continue;
+    const zone = ancien.slice(a, b);
+    const conds = [...disabledDe(zone), ...conditionsDe(zone)];
+    const absentes = conds.filter((c) => !v2n.includes(norm(c)) && !CONDITIONS_VOULUES.includes(norm(c)));
+    for (const c of absentes) console.log(`     condition absente : ${c.replace(/\s+/g, " ").slice(0, 150)}`);
+    ok(conds.length === 0 || absentes.length === 0,
+      `lot ${z.lot} : ${z.nom} — ${conds.length - absentes.length} conditions sur ${conds.length} reprises telles quelles`);
+  }
   for (const z of ZONES) {
     const a = ancien.indexOf(z.debut), b = ancien.indexOf(z.fin, a);
     if (a < 0 || b < 0) { ok(false, `lot ${z.lot} : zone « ${z.nom} » introuvable dans l'ancien bloc`); continue; }
