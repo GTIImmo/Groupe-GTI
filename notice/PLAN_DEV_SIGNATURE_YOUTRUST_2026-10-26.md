@@ -709,7 +709,70 @@ webhook posé par Frédéric ; redémarrage du worker.
 > mise à jour (avertissement au journal).
 > Essai `Console/test_youtrust_sync_signature.js` **42/42** (L5-2 + L5-3 + L5-4, témoin inverse) ; L5-1 14/14 ;
 > voisins verts (18, 23, 23, 26, 22, 15).
-> **RESTE** : commit ; puis les gestes de Frédéric (déployer la fonction `--no-verify-jwt`, créer l'abonnement M4 dans
+> ✅ **COMMITÉ** (`781110d`, 05/11). ✅ **FONCTION DÉPLOYÉE LE 05/11** par moi, sur l'accord explicite de Frédéric
+> (« déploie toi-même ») : `youtrust-webhook` version 1, ACTIVE, `verify_jwt = false`, fichiers identiques au commit
+> (empreintes contrôlées avant). Éprouvée sans rien écrire : GET → 405 ; POST sans secret → 500 « secret absent » ;
+> base inchangée (0 avis, 0 travail). ⚠ **Démarrage à froid : 1,34 s au premier appel** (0,08 à 0,10 s ensuite) — au-delà
+> de la seconde exigée par Youtrust pour un premier envoi ⇒ **cocher « relance automatique » (auto_retry) à la création
+> de l'abonnement** : la nouvelle tentative a 10 s de délai. Un avis perdu reste rattrapé par le travail suivant ou la
+> nuit (lot 7).
+> ✅ **GESTES FAITS LE 05/11 au soir** : abonnement créé par Frédéric dans l'app Youtrust (sandbox, tous les avis
+> cochés — sans effet nuisible : un avis sans demande est rangé sans travail) ; secret `YOUTRUST_WEBHOOK_SECRET` posé
+> par lui dans Supabase (vérifié : un avis à signature fausse rend désormais 401 « signature invalide », plus 500 ;
+> base inchangée) — ⚠ que ce soit la BONNE clé ne se saura qu'au premier vrai avis ; **les 4 services redémarrés par
+> Frédéric à 18:15:51-53**, file vide avant (0 en attente, 0 en cours ; dernier travail fini à 18:15:41), code sur le
+> disque = `781110d` sans modification, processus lancés APRÈS l'écriture du fichier (16:43:28), journaux de démarrage
+> normaux (le service Documents annonce `youtrust_sync_signature`), 0 erreur depuis.
+> **RESTE** : la preuve sandbox (D40). ⚠ L'envoi exige l'interrupteur `signature_youtrust` (éteint pour tous).
+> ✅ **PREUVE SANDBOX D40 — FAITE (05/11 au soir → 06/11 07:09, bien d'essai 61398 / mandat 18420, Chrome de Frédéric)** :
+> ✅ **2 sur 3 signés, chaîne prouvée de bout en bout jusque-là** : génération chez nous seulement (`f0d73f5a…`,
+> 183 593 octets, photo des 3 signataires, `sans_hektor`) → envoi (`0eed0f32…`, 4 s, 3 × `otp_email`, demande
+> Youtrust `c3d1f2be…`, notre ligne `4f9582e4…`) → avis reçus par la fonction et traités 4 à 6 s après (activated,
+> notified ×2, link_opened, done ×2, notified mandataire) → Pauline signée 20:03:49 UTC, Delphine 20:07:13 UTC,
+> document « pending 2/3 » → cloche « Le mandat : à vous de contresigner » posée au mandataire à 20:07:21.
+> ✅✅ **D40 PROUVÉ LE 06/11 au matin** : contresignature de Frédéric 06:09:05 UTC → avis `signer.done` +
+> `signature_request.done` traités à 06:09:11 → demande `done` (06:09:07) → document « signed 3/3 »,
+> `signed_at` « 06/11/2026 à 07:09 » (heure de Paris, façon ImmoSign) + `signed_at_iso` → **PDF signé rangé à 06:09:12**
+> sous `…/signed/Mandat de vente - 18420 - signe.pdf` (285 311 octets) **au coffre ET sur le serveur, empreinte
+> identique** (`f832c780…`, recalculée sur le disque), la colonne `storage_path` pointe vers lui, **l'original intact**
+> (183 593 octets) → **3 preuves PDF** (une par signataire, `proofs/`, coffre + serveur, empreintes vérifiées) et 3
+> preuves JSON dans la table → cloche « Le mandat est signé » au mandataire à 06:09:14, et « Le mandat est signé » au
+> fil d'activité de la fiche. La nuit n'a rien abîmé (vérifié avant la signature : fiches, attentes, document, demande,
+> 0 critical à la sonde de 06:48).
+> ⚠ **Vu à l'écran : le cockpit dit encore « Numéro attribué — à éditer »** alors que le mandat est signé — c'est
+> exactement le point P8 (« le cockpit qui voit un mandat Youtrust ») : `ckSigStatus` prend le PREMIER document
+> « mandat » de la liste (ici l'ancien ImmoSign annulé), pas celui de Youtrust.
+> ~~⏰ RESTE : la contresignature de Frédéric (mandataire), le 06/11 au matin après le run.~~ Interrupteur : allumé
+> seulement 19:37:50-19:38:58, 19:42:03-19:45:23 et 19:58:56-19:59:28 ; **éteint** depuis (la suite n'en a pas besoin).
+> **Ce que l'essai a trouvé (rien n'est corrigé dans le code, tout est à trancher par Frédéric)** :
+> 1. **Une vieille procédure ImmoSign « en attente » cache l'éditeur** (mode `envoye` du cockpit) : il a fallu annuler la
+>    procédure d'essai 107 du 19/08 (accord de Frédéric ; un 2ᵉ travail d'annulation, né d'un clic bloqué par la fenêtre
+>    de confirmation, a fini en erreur « déjà supprimée »).
+> 2. **Le garde-fou P7 a mordu pour de vrai** : « TEST GTI Delphine » sans prénom → génération refusée. Fiche corrigée
+>    dans l'app (prénom Delphine, nom TEST GTI) ; **Hektor a refusé** (« formulaire d'édition introuvable » : fiche
+>    archivée), la correction n'existe que chez nous.
+> 3. ⚠⚠ **Corriger un e-mail / un portable dans la fenêtre d'envoi RÉÉCRIT LA FICHE DU CONTACT** (chez nous + un travail
+>    `update_hektor_mandant_contact` + une attente `app_contact_pending`). Les alias d'essai se sont retrouvés sur les
+>    fiches 115527 et 140142 ; Hektor n'a rien pris (fiches archivées, puis garde anti-écrasement → 2 conflits). Adresses
+>    d'origine remises chez nous, les 2 attentes abandonnées (trace dans `app_pending_resolution`). ⬜ **À confronter à
+>    D33** (« l'écran ne corrige que les canaux de remise ») : une correction pour UN envoi doit-elle toucher la fiche ?
+> 4. ⚠⚠ **Le mandataire part en code SMS sur le portable de l'annuaire** (ici le vrai portable d'Emmanuelle PEREIRA) et
+>    **l'écran ne permet pas de le changer**. Le travail accepte `payload.mandataire` (D21, « fenêtre d'envoi ») : c'est
+>    ce qui a servi, posé à la main avec l'accord de Frédéric (mandataire = lui, code par e-mail).
+> 5. **La sandbox refuse les alias « + »** (déjà su le 05/11 matin) : 1ᵉʳ envoi `87e3855a…` en HTTP 400 à l'activation,
+>    brouillon jeté tout seul au rejeu. ⚠ **Le worker n'écrit pas le corps du refus** (ni au journal ni dans `erreur`) :
+>    il a fallu le retrouver dans ce plan.
+> 6. **Gmail range les e-mails des deux mandants dans UNE conversation** (même objet, même boîte) : Frédéric n'a vu
+>    que le premier. En production chaque mandant a sa boîte ; sans effet, sauf deux mandants à la même adresse.
+> 7. L'avis `signature_request.deleted` du brouillon jeté reste « non traité » pour toujours (plus rattaché à rien) :
+>    sans effet, à savoir.
+> 8. **Le monitoring a crié 3 fois** (20:48 : 2 critical « travaux en erreur » ; 21:51 : `data.contact_conflit` 2) — tout
+>    vient de l'essai. Conflits soldés ; ✅ **les 5 travaux en erreur tranchés le 05/11 à 23:21** (accord de Frédéric),
+>    même trace que `app_action_resolve` dans `app_pending_resolution` (« refait » : annulation en double et 1ᵉʳ envoi,
+>    faits par un autre travail ; « abandon » : les 3 mises à jour de contact). Vérifié avant : 0 ligne de carnet
+>    d'annonce au même instant, donc l'abandon ne défaisait rien. L'écran l'aurait refusé (moins de 3 h) : écrit en
+>    base directement. Reste à trancher sur 30 jours : **0**.
+> **RESTE (historique)** : les gestes de Frédéric (créer l'abonnement M4 dans
 > l'app Youtrust, poser `YOUTRUST_WEBHOOK_SECRET`, redémarrer les 4 services file vide) ; puis la preuve sandbox
 > (D40 : Frédéric signe 3 fois) — **avant la fin de l'essai (~09/11)** ; puis P8 (l'écran : suivi par personne,
 > « Ouvrir les preuves », le cockpit qui voit un mandat Youtrust en cours) et le lot 7 (rattrapage de nuit).
