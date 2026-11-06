@@ -508,8 +508,20 @@ class AppointmentService:
         )
         if not rows:
             raise HTTPException(status_code=500, detail="Aucune agence disponible pour l'estimation")
-        preferred = next((row for row in rows if "gti" in self._normalize_text(row.get("nom"))), None)
-        return preferred or rows[0]
+        # 06/11/2026 (§52, decision de Frederic) -- la page sans agence = FIRMINY, l'agence du siege.
+        #   ⛔ Avant : la 1re agence « gti » au tri du n° en TEXTE ('1', '10', ...) -> Annonay, par hasard.
+        firminy = next((row for row in rows if self._cle_agence(row.get("nom")) == "FIRMINY"), None)
+        preferred = firminy or next((row for row in rows if "gti" in self._normalize_text(row.get("nom"))), None)
+        return self._avec_registre_agence(preferred or rows[0])
+
+    def _avec_registre_agence(self, row: dict[str, Any]) -> dict[str, Any]:
+        """La ligne de l'annuaire, avec le tel et le mail du REGISTRE DES AGENCES quand il les porte (06/11/2026, §52) :
+        meme regle que la page de RDV (§48-§50), l'annuaire reste le repli champ par champ."""
+        registre = self._load_registre_agence(str(row.get("nom") or "")) if row.get("nom") else None
+        if not registre:
+            return row
+        return {**row, "tel": self._coalesce_text(registre.get("tel"), row.get("tel")),
+                "mail": self._coalesce_text(registre.get("mail"), row.get("mail"))}
 
     def _read_agency_by_id(self, agency_id: str) -> dict[str, Any]:
         rows = self._rest_get(
@@ -536,10 +548,47 @@ class AppointmentService:
         )
         for row in rows:
             if self._build_agency_key(row.get("nom")) == normalized_key:
-                return row
+                return self._avec_registre_agence(row)
         raise HTTPException(status_code=404, detail="Agence introuvable pour l'estimation")
 
+    def _read_registre_agency_negotiators(self, agency: dict[str, Any]) -> list[dict[str, Any]] | None:
+        """Les negociateurs ACTIFS de l'agence, lus dans le REGISTRE (06/11/2026, §52) : une fiche de negociateur ACTIVE
+        chez Hektor dans CETTE agence (par son n° d'agence Hektor), d'une personne que l'app n'a pas passee en « ancien ».
+        Rend None si le registre ne repond pas (l'appelant garde alors son ancien chemin)."""
+        agence_id = str(agency.get("id_agence") or "").strip()
+        if not agence_id:
+            return None
+        try:
+            fiches = self._rest_get("app_negociateur_fiche", params={
+                "select": "app_personne_id,hektor_negociateur_id,nom_vu,email_vu",
+                "sorte": "eq.fiche_negociateur", "actif_chez_hektor": "eq.true", "hektor_agence_id": f"eq.{agence_id}",
+                "order": "hektor_negociateur_id.asc"})
+            ids = sorted({str(f.get("app_personne_id")) for f in fiches if f.get("app_personne_id") is not None})
+            actives: set[str] = set()
+            if ids:
+                personnes = self._rest_get("app_negociateur_personne", params={
+                    "select": "app_personne_id,actif", "app_personne_id": f"in.({','.join(ids)})"})
+                actives = {str(p.get("app_personne_id")) for p in personnes if p.get("actif") is True}
+        except Exception:
+            return None
+        out: list[dict[str, Any]] = []
+        for f in fiches:
+            nego = str(f.get("hektor_negociateur_id") or "").strip()
+            if not nego or str(f.get("app_personne_id")) not in actives:
+                continue
+            out.append({"user_id": nego, "negotiator_label": self._coalesce_text(f.get("nom_vu")),
+                        "negotiator_email": self._coalesce_text(f.get("email_vu")), "negotiator_phone": None})
+        return out
+
     def _read_dynamic_agency_negotiators(self, agency: dict[str, Any]) -> list[dict[str, Any]]:
+        # 06/11/2026 (§52) -- la rotation ne prend plus que les negociateurs ACTIFS de l'agence (le registre).
+        #   ⛔ Avant : toute personne ayant un bien dans l'agence, inactifs compris (Firminy : 7 tournaient, 1 active) ;
+        #   et `agence_nom=ilike.<nom>` ratait les ecritures avec espaces (« Groupe GTI Ambert   »).
+        #   Registre muet (panne) : l'ancien chemin ci-dessous, inchange. Registre qui repond SANS actif : liste vide ->
+        #   la demande part sur le mail de l'agence, comme avant pour une agence sans negociateur.
+        registre = self._read_registre_agency_negotiators(agency)
+        if registre is not None:
+            return registre
         agency_name = str(agency.get("nom") or "").strip()
         if not agency_name:
             return []

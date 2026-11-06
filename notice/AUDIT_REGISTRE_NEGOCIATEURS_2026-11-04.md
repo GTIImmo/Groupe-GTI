@@ -1488,3 +1488,25 @@ négociateurs ABSENTS des listes (n° 37, 42, 43, 93 gardés). Si les listes man
 table de cette nuit (0 différence = témoin) ; la NOUVELLE ne diffère QUE sur le n° 41, qui suit Hektor. Compilation verte.
 **Effet** : actif dès le run de cette nuit (le run lance le fichier du serveur) ; Sylvie suivra Hektor dans la copie locale,
 puis l'annuaire, le registre des négociateurs et, si l'interrupteur des agences est allumé, ses coordonnées à nous.
+
+## 52. ÉTAPE 5, LECTEUR 2 : LA PAGE PUBLIQUE D'ESTIMATION (06/11) — Frédéric : « non c'est bon, enchaîne », puis « 1 » (Firminy) — CODÉ, NON POUSSÉ
+
+**L'audit** : la page (`apps/rdv-public`, `/public/appointments/estimation/…`) s'ouvre avec une agence (`?agency=…`) ou sans ;
+elle désigne un conseiller À TOUR DE RÔLE et la demande part sur son mail (sinon celui de l'agence). Usage mesuré très
+faible : une seule rotation enregistrée (Saint-Étienne, 66 passages, dernier le 18/06) ; aucune demande jamais enregistrée.
+Défauts : (1) la rotation prenait toute personne ayant un bien dans l'agence, INACTIFS COMPRIS — 7 agences sur 18 (Firminy
+7 dont 1 active, Saint-Étienne 5 dont 2, Ambert, Annonay, Brioude, Tence) ; et `agence_nom=ilike.<nom>` ratait « Groupe GTI
+Ambert␣␣␣ » ; (2) la page sans agence prenait la 1re agence « gti » au tri du n° en TEXTE → ANNONAY.
+
+**Ce qui change** (`appointment_service.py`) :
+- `_read_registre_agency_negotiators` : la rotation = les fiches de négociateur ACTIVES chez Hektor dans CETTE agence (par le
+  n° d'agence Hektor, plus par le nom), d'une personne que l'app n'a pas passée en « ancien ». Registre muet (panne) :
+  l'ancien chemin, inchangé. Registre sans actif : personne ne tourne → la demande part sur le mail de l'agence (comme avant).
+- `_read_default_agency_row` : la page sans agence = **FIRMINY** (décision de Frédéric).
+- `_avec_registre_agence` : tél et mail de l'agence du REGISTRE d'abord (même règle que la page RDV, §50), annuaire en repli ;
+  le n° d'agence reste celui de Hektor (clé de la rotation inchangée).
+
+**Les essais** (`backend/tests/test_estimation_registre.py`) : **12/12** ; l'ancienne version en échoue 8 (témoin). Essais
+voisins verts (RDV 22/22, lien Hektor 13/13). **Mesure réelle** : chaque agence ne fait plus tourner que ses actifs, tous en
+@gti (Firminy : Emmanuelle PEREIRA ; Saint-Étienne : Lucille FORLICO, Mélanie LEGRAND ; Ambert : Alice RONDEAU, Sandrine
+DELAVAUD — que l'ancien chemin ratait) ; Agences supprimée et Gestion site : personne (mail de l'agence).
