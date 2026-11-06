@@ -227,10 +227,20 @@ animations. La nouvelle vue LIT l'état existant et APPELLE les fonctions exista
   5. À l'écran en local : les 5 statuts × 390 × 844, 768 × 1024, 1280 × 665, interrupteur ALLUMÉ (15 sur 15 : pied et
      carte choisie visibles, rien ne déborde, le bon libellé) et ÉTEINT (l'ancienne modale, « Annuler » / « Envoyer vers
      … », la nouvelle jamais rendue).
-  6. ⏳ **En production SANS envoyer** : il faut que Frédéric POUSSE les lots 6 à 8, puis pose
-     `VITE_APP_STATUT_V2_ENABLED=true` dans Vercel (Production) ET REDÉPLOIE (la variable est lue au build : sans
-     nouveau build elle ne fait rien). Contrôle ensuite : VM412 et Jullianges, les 5 statuts, rien envoyé, et l'offre en
-     lecture seule (jamais vue en démonstration, faute d'affaires). Retour arrière : variable vide, redéploiement.
+  6. ✅ **EN PRODUCTION, SANS ENVOYER — 06/11.** Bascule : Frédéric a poussé les lots 6 à 8 et posé la variable.
+     ⚠ **Deux faux départs, à retenir** : (a) une variable posée APRÈS la construction ne compte pas — il faut
+     REDÉPLOYER ; (b) Vercel REFUSE une variable « Secret » dont le nom commence par `VITE_` (préfixe public) : le
+     formulaire bloquait, la variable n'existait donc pas, et deux redéploiements ont produit le même paquet (même
+     contenu = même fichier). Remède : type **Config**. Vérifié ensuite dans le paquet servi (`index-CoyP2ng2.js`) :
+     l'interrupteur de la modale compilé à `"true"`. ⚠ Interroger le site toutes les 10 s depuis le serveur a
+     déclenché le pare-feu de Vercel (contrôle anti-robot) : vérifier depuis le Chrome de Frédéric, en une lecture.
+     **VM412** (sous compromis, 4 affaires) : Actuel Compromis, Conseillé Vendu, Offre grisée, Actif et Clos hors
+     parcours ; les 4 affaires et leurs dossiers (dont « terminé ») ; le garde-fou éteint « Enregistrer le compromis » ;
+     pied Supprimer / Annuler / Mettre à jour le compromis ; **l'offre en lecture seule vue en vrai** (5 champs
+     « Figée », « On ne revient plus sur cette offre… n° 50120 », Refuser/Accepter absents, « Mettre à jour l'offre »
+     éteint) ; Vendu « Repris du compromis ». **Jullianges** (Actif, aucune affaire) : Conseillé Offre, Actif grisé,
+     Vendu hors parcours, « Aucune affaire lue », les 5 onglets et leurs boutons. **Rien envoyé** : sur les deux biens,
+     les seuls travaux de la période sont deux `refresh_console_data` (la relecture posée à l'ouverture d'une fiche).
   7. ⏳ **L'envoi réel sur 62774**, avec son accord redemandé au moment du geste.
 
 ## 4. Comment on prouve que « rien n'a changé derrière »
@@ -278,7 +288,11 @@ de style et la ligne d'aiguillage.
 
 ➡ ~~Prochaine étape : le lot 0~~ ✅ fait le 05/11. ~~Le lot 1~~ ✅ fait le 06/11. ~~Le lot 2~~ ✅ fait le 06/11. ~~Le lot 3~~ ✅ fait le 06/11. ~~Le lot 4~~ ✅ fait le 06/11. ~~Le lot 5~~ ✅ fait le 06/11, **poussé par Frédéric** (sommet distant `8155bb7`, interrupteur
 VÉRIFIÉ ÉTEINT dans le paquet servi). ~~Le lot 6~~ ✅ fait le 06/11. ~~Le lot 7~~ ✅ fait le 06/11. **Lot 8 : étapes 1 à 5 faites le 06/11.**
-**Prochaine étape : Frédéric pousse, pose la variable dans Vercel et redéploie** ; puis le contrôle en production sans
-envoyer, puis l'envoi réel sur 62774 avec son accord.
+**La nouvelle modale est EN PRODUCTION depuis le 06/11** (interrupteur allumé, contrôlé sans envoyer sur VM412 et
+Jullianges). **06/11, après la bascule** : audit des champs « Vendeurs » et « N° de mandat »
+(`notice/AUDIT_CHAMPS_VENDEURS_ET_MANDAT_MODALE_STATUT_2026-11-06.md`) — les deux retirés de la vue, et la modale
+n'envoie plus de numéro de mandat (il faisait partir les offres sans mandat). **Reste : pousser ce correctif, puis
+l'envoi réel de contrôle sur 62774 (une offre, qui doit revenir avec le mandat de Hektor), avec l'accord de Frédéric
+au moment du geste.**
 ⚠ Reste hors de ce chantier : le défaut « Choisir » (audit §12, les champs principaux ne se rechargent pas),
 qui demande une décision à part — la refonte visuelle ne le corrige pas et ne doit pas le masquer.

@@ -280,8 +280,17 @@ else {
   // Les listes viennent de la référence (setters, gestes, fonctions appelées, états lus, composants) : un nom de
   // l'ancien bloc absent de la vue serait un geste ou une information perdus en route.
   const motsV2 = new Set(v2.match(/[A-Za-z_$][A-Za-z0-9_$]*/g));
+  // ─── 06/11 : DEUX CHAMPS RETIRÉS PAR DÉCISION DE FRÉDÉRIC ───
+  // notice/AUDIT_CHAMPS_VENDEURS_ET_MANDAT_MODALE_STATUT_2026-11-06.md : « Vendeurs » (Hektor les pose seul, jamais
+  // envoyés sans geste, 0 usage réel) et « N° de mandat » (nuisible à l'offre ; la modale ne l'envoie plus).
+  // Ces noms, et tout geste ou condition qui les porte, sont ATTENDUS absents de la vue. Leur retour serait un écart.
+  const RETIRES = ["statusChangeMandants", "setStatusChangeMandants", "statusChangeMandantsAffirmes",
+    "setStatusChangeMandantsAffirmes", "statusChangeSelectedMandat", "setStatusChangeSelectedMandat", "SelecteurMandants"];
+  const porteUnRetire = (t) => RETIRES.some((n) => new RegExp(`\\b${n}\\b`).test(t));
+  const revenus = RETIRES.filter((n) => motsV2.has(n));
+  ok(revenus.length === 0, `les champs retirés le 06/11 (vendeurs, n° de mandat) restent absents de la vue${revenus.length ? " — revenus : " + revenus.join(", ") : ""}`);
   for (const k of ["setters", "gestes", "appels", "etats", "composants"]) {
-    const liste = (ref.inventaire && ref.inventaire[k]) || [];
+    const liste = ((ref.inventaire && ref.inventaire[k]) || []).filter((n) => !RETIRES.includes(n));
     const absents = liste.filter((n) => !motsV2.has(n));
     if (absents.length) console.log(`     absents (${k}) : ${absents.join(", ")}`);
     ok(liste.length > 0 && absents.length === 0, `inventaire de l'ancien bloc — ${k} : ${liste.length - absents.length} sur ${liste.length} dans la vue`);
@@ -361,7 +370,7 @@ else {
     if (a < 0 || b < 0) continue;
     const zone = ancien.slice(a, b);
     const conds = [...disabledDe(zone), ...conditionsDe(zone)];
-    const absentes = conds.filter((c) => !v2n.includes(norm(c)) && !CONDITIONS_VOULUES.includes(norm(c)));
+    const absentes = conds.filter((c) => !v2n.includes(norm(c)) && !CONDITIONS_VOULUES.includes(norm(c)) && !porteUnRetire(c));
     for (const c of absentes) console.log(`     condition absente : ${c.replace(/\s+/g, " ").slice(0, 150)}`);
     ok(conds.length === 0 || absentes.length === 0,
       `lot ${z.lot} : ${z.nom} — ${conds.length - absentes.length} conditions sur ${conds.length} reprises telles quelles`);
@@ -370,7 +379,7 @@ else {
     const a = ancien.indexOf(z.debut), b = ancien.indexOf(z.fin, a);
     if (a < 0 || b < 0) { ok(false, `lot ${z.lot} : zone « ${z.nom} » introuvable dans l'ancien bloc`); continue; }
     const tous = gestionnaires(ancien.slice(a, b));
-    const differents = tous.filter((h) => !v2n.includes(norm(h)) && !ECARTS_VOULUS.includes(norm(h)));
+    const differents = tous.filter((h) => !v2n.includes(norm(h)) && !ECARTS_VOULUS.includes(norm(h)) && !porteUnRetire(h));
     for (const h of differents) console.log(`     différent : ${h.replace(/\s+/g, " ").slice(0, 150)}`);
     ok(tous.length > 0 && differents.length === 0,
       `lot ${z.lot} : ${z.nom} — ${tous.length - differents.length} gestes sur ${tous.length} repris mot pour mot ou déclarés`);

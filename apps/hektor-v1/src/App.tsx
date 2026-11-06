@@ -19981,7 +19981,11 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         signatureDate: statusChangeSignatureDate,
         validityDays: statusChangeValidityDays,
         retractionDays: statusChangeRetractionDays,
-        selectedMandat: statusChangeSelectedMandat,
+        // 06/11/2026 -- PLUS DE N° DE MANDAT DEPUIS LA MODALE (audit AUDIT_CHAMPS_VENDEURS_ET_MANDAT_MODALE_STATUT_2026-11-06.md,
+        // decision de Frederic). Hektor attend SA forme (« 553-PROTEXA ») ; le numero seul que la case portait
+        // (« 18787 », prerempli) passait devant elle a l'offre et Hektor l'ignorait sans erreur : offre sans mandat.
+        // Vide, le worker reposte la valeur de Hektor (normalizeStatusTransactionPayload). Compromis et vente : ignore.
+        selectedMandat: '',
         buyerContactId: statusChangeBuyerContactId,
         buyerContactIds: statusChangeBuyers
           .map((x) => String(x.hektor_contact_id ?? '').trim()).filter(Boolean),
@@ -23102,10 +23106,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           statusChangeAmount, setStatusChangeAmount, statusChangeSalePrice, setStatusChangeSalePrice,
           statusChangeDate, setStatusChangeDate, statusChangeValidityDays, setStatusChangeValidityDays,
           statusChangeSignatureDate, setStatusChangeSignatureDate, statusChangeRetractionDays, setStatusChangeRetractionDays,
-          statusChangeSelectedMandat, setStatusChangeSelectedMandat, statusChangePrixVenteManuel, setStatusChangePrixVenteManuel,
+          statusChangePrixVenteManuel, setStatusChangePrixVenteManuel,
           statusChangeBuyers, statusChangeBuyerSearch, setStatusChangeBuyerSearch, statusChangeBuyerOptions,
-          statusChangeBuyerLoading, statusChangeBuyerError, statusChangeMandants, setStatusChangeMandants,
-          statusChangeMandantsAffirmes, setStatusChangeMandantsAffirmes, statusChangeSellerNotaryId, setStatusChangeSellerNotaryId,
+          statusChangeBuyerLoading, statusChangeBuyerError, statusChangeSellerNotaryId, setStatusChangeSellerNotaryId,
           statusChangeSellerNotaryNom, setStatusChangeSellerNotaryNom, statusChangeBuyerNotaryId, setStatusChangeBuyerNotaryId,
           statusChangeBuyerNotaryNom, setStatusChangeBuyerNotaryNom, setStatusChangeNotairesAffirmes,
           statusChangeBuyerFees, setStatusChangeBuyerFees, statusChangeBuyerFeesRate, setStatusChangeBuyerFeesRate,
@@ -23118,7 +23121,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           retirerAcquereurStatut, ajouterCondition, modifierCondition, retirerCondition, echeanceCondition, repartitionLigne,
           repartitionRangs, repartitionPoser, repartitionPourcentage, repartitionAjouterCase, repartitionRetirerCase,
           statusChangeNeedsTransaction, statusChangeNeedsSalePrice, mandantContactOptionTitle, mandantContactOptionSubtitle,
-          formatDate, formatPrice, offreAccepteeAReprendreAuCompromis, affaireEstVivante, SelecteurMandants, SelecteurNotaire,
+          formatDate, formatPrice, offreAccepteeAReprendreAuCompromis, affaireEstVivante, SelecteurNotaire,
           statusChangeCloseEtat, setStatusChangeCloseEtat, statusChangeCloseRaison, setStatusChangeCloseRaison,
           statusChangeCloseDate, setStatusChangeCloseDate, statusChangeCloseReason, setStatusChangeCloseReason,
           hektorClosureEtatOptions, hektorClosureRaisonsFor, offreVerrouilleeParSonDossier, rattachementOffreProposee,

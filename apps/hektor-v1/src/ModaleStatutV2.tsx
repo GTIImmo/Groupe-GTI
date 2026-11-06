@@ -42,15 +42,12 @@ export type FormulaireStatutProps = {
   statusChangeValidityDays: string; setStatusChangeValidityDays: Setter<string>
   statusChangeSignatureDate: string; setStatusChangeSignatureDate: Setter<string>
   statusChangeRetractionDays: string; setStatusChangeRetractionDays: Setter<string>
-  statusChangeSelectedMandat: string; setStatusChangeSelectedMandat: Setter<string>
   statusChangePrixVenteManuel: boolean; setStatusChangePrixVenteManuel: Setter<boolean>
   statusChangeBuyers: MandantContactSearchOption[]
   statusChangeBuyerSearch: string; setStatusChangeBuyerSearch: Setter<string>
   statusChangeBuyerOptions: MandantContactSearchOption[]
   statusChangeBuyerLoading: boolean
   statusChangeBuyerError: string | null
-  statusChangeMandants: Array<{ id: string; nom: string }>; setStatusChangeMandants: Setter<Array<{ id: string; nom: string }>>
-  statusChangeMandantsAffirmes: boolean; setStatusChangeMandantsAffirmes: Setter<boolean>
   statusChangeSellerNotaryId: string; setStatusChangeSellerNotaryId: Setter<string>
   statusChangeSellerNotaryNom: string; setStatusChangeSellerNotaryNom: Setter<string>
   statusChangeBuyerNotaryId: string; setStatusChangeBuyerNotaryId: Setter<string>
@@ -98,10 +95,6 @@ export type FormulaireStatutProps = {
   affaireCourante: AffaireLedgerRow | null
   offreAccepteeAReprendreAuCompromis: (lignes: AffaireLedgerRow[]) => AffaireLedgerRow | null
   affaireEstVivante: (a: AffaireLedgerRow) => boolean
-  SelecteurMandants: ComponentType<{
-    choisis: Array<{ id: string; nom: string }>; scope: DataScope | null | undefined
-    onAjouter: (option: MandantContactSearchOption) => void; onRetirer: (id: string) => void
-  }>
   // Lot 3 (06/11) — Clos, et l'offre verrouillée par son dossier.
   statusChangeCloseEtat: HektorClosureEtat; setStatusChangeCloseEtat: Setter<HektorClosureEtat>
   statusChangeCloseRaison: string; setStatusChangeCloseRaison: Setter<string>
@@ -256,10 +249,9 @@ function FormulaireTransaction(props: {
     statusChangeAmount, setStatusChangeAmount, statusChangeSalePrice, setStatusChangeSalePrice,
     statusChangeDate, setStatusChangeDate, statusChangeValidityDays, setStatusChangeValidityDays,
     statusChangeSignatureDate, setStatusChangeSignatureDate, statusChangeRetractionDays, setStatusChangeRetractionDays,
-    statusChangeSelectedMandat, setStatusChangeSelectedMandat, statusChangePrixVenteManuel, setStatusChangePrixVenteManuel,
+    statusChangePrixVenteManuel, setStatusChangePrixVenteManuel,
     statusChangeBuyers, statusChangeBuyerSearch, setStatusChangeBuyerSearch, statusChangeBuyerOptions,
-    statusChangeBuyerLoading, statusChangeBuyerError, statusChangeMandants, setStatusChangeMandants,
-    statusChangeMandantsAffirmes, setStatusChangeMandantsAffirmes, statusChangeSellerNotaryId, setStatusChangeSellerNotaryId,
+    statusChangeBuyerLoading, statusChangeBuyerError, statusChangeSellerNotaryId, setStatusChangeSellerNotaryId,
     statusChangeSellerNotaryNom, setStatusChangeSellerNotaryNom, statusChangeBuyerNotaryId, setStatusChangeBuyerNotaryId,
     statusChangeBuyerNotaryNom, setStatusChangeBuyerNotaryNom, setStatusChangeNotairesAffirmes,
     statusChangeBuyerFees, setStatusChangeBuyerFees, statusChangeBuyerFeesRate, setStatusChangeBuyerFeesRate,
@@ -272,7 +264,7 @@ function FormulaireTransaction(props: {
     retirerAcquereurStatut, ajouterCondition, modifierCondition, retirerCondition, echeanceCondition, repartitionLigne,
     repartitionRangs, repartitionPoser, repartitionPourcentage, repartitionAjouterCase, repartitionRetirerCase,
     statusChangeNeedsSalePrice, mandantContactOptionTitle, mandantContactOptionSubtitle, formatDate, formatPrice,
-    affaireCourante, offreAccepteeAReprendreAuCompromis, affaireEstVivante, SelecteurMandants, SelecteurNotaire,
+    affaireCourante, offreAccepteeAReprendreAuCompromis, affaireEstVivante, SelecteurNotaire,
     offreVerrouilleeParSonDossier, rattachementOffreProposee,
   } = props.f
   // Seul état de la vue : la répartition repliée ou dépliée.
@@ -374,10 +366,9 @@ function FormulaireTransaction(props: {
               </Champ>
             </>
           ) : null}
-          <Champ libelle="N° de mandat" pastille={pastille('selected_mandat', statusChangeSelectedMandat,
-            [['Actuel', affaireCourante?.numero_mandat], ['Repris du compromis', compromisRepris?.numero_mandat], ['Mandat du bien', statusChangeTarget.numero_mandat]])}>
-            <span className="stv2-in"><input value={statusChangeSelectedMandat} onChange={(event) => { setStatusChangeSelectedMandat(event.target.value); toucherStatusChange('selected_mandat') }} placeholder="Attribué automatiquement si vide" readOnly={Boolean(verrou)} /></span>
-          </Champ>
+          {/* 06/11 (décision de Frédéric, audit AUDIT_CHAMPS_VENDEURS_ET_MANDAT_MODALE_STATUT_2026-11-06.md) : plus de
+              « N° de mandat ». Ignoré au compromis et à la vente ; à l'offre, prérempli d'un numéro seul, il passait
+              DEVANT la valeur de Hektor (« 553-PROTEXA ») et l'offre partait sans mandat. La modale ne l'envoie plus. */}
         </div>
       </Section>
 
@@ -445,28 +436,9 @@ function FormulaireTransaction(props: {
                 ? <small className="sca-acq-etat">Aucun contact trouvé dans ton périmètre.</small>
                 : null}
           </div>
-          <SelecteurMandants
-            choisis={statusChangeMandants}
-            scope={dataScope}
-            onAjouter={(option) => {
-              const id = String(option.hektor_contact_id ?? '').trim()
-              if (!id) return
-              setStatusChangeMandants((liste) => (
-                liste.some((x) => x.id === id)
-                  ? liste
-                  : [...liste, { id, nom: mandantContactOptionTitle(option) }]))
-              setStatusChangeMandantsAffirmes(true)
-            }}
-            onRetirer={(id) => {
-              setStatusChangeMandants((liste) => liste.filter((x) => x.id !== id))
-              setStatusChangeMandantsAffirmes(true)
-            }} />
-          {statusChangeMandantsAffirmes ? (
-            <p className="stv2-note is-alerte">
-              La liste des vendeurs sera <strong>{bvs("envoyée à Hektor")}</strong> et remplacera la sienne. Tant que tu
-              n’y touches pas, c’est la sienne qui vaut.
-            </p>
-          ) : null}
+          {/* 06/11 (même décision) : plus de champ « Vendeurs ». Hektor les pose seul à partir du mandat (699/699
+              compromis, 640/642 ventes depuis 2025) ; sans geste, la liste ne partait jamais — 9 usages, tous sur des
+              biens d'essai. Le retirer ne change rien à ce qui part. */}
           <div className="stv2-notaires">
             <SelecteurNotaire
               libelle="Notaire des vendeurs"
