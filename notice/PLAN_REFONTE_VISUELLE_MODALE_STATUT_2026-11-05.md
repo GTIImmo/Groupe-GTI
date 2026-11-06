@@ -213,6 +213,25 @@ animations. La nouvelle vue LIT l'état existant et APPELLE les fonctions exista
   fait pas, et ce serait un comportement nouveau (Échap fermerait la saisie en cours). À trancher. Le pied empilé au
   téléphone (~260 px avec un compromis en cours) n'a pas été resserré non plus.
 - **Lot 8 — contrôles et bascule** (§4), puis mise à jour des documents.
+  🔧 **EN COURS le 06/11 — les étapes 1 à 5 du §4 sont FAITES, les étapes 6 et 7 attendent Frédéric.**
+  1. Empreintes : **61 morceaux identiques** (référence du 05/11, l'autre session a modifié `App.tsx` dix fois depuis
+     sans toucher un seul morceau suivi).
+  2. Parité, ⭐ **complète** : l'inventaire du lot 0 est retrouvé ENTIER dans la vue — setters 35/35, gestes 3/3,
+     fonctions 54/54, états 46/46, composants 5/5 — et chaque zone de l'ancien bloc est couverte, de l'en-tête au pied :
+     gestes repris mot pour mot (en-tête et cartes 2/2, formulaire 35/35, Clos 4/4, affaires 3/3, pied 7/7) et conditions
+     d'affichage et d'extinction (1/1, 25/25, 1/1, 10/10, 15/15). **3 écarts déclarés**, tous d'écran : la carte passe
+     par `choisir` (mêmes deux appels), « qui paie » en deux boutons, « Aucune affaire lue » au lieu de rien.
+  3. Les règles des boutons : `test_boutons_modale_point5`, `test_heritage_compromis_offre`, `test_offre_regularisation`
+     verts ; `test_statut_parcours` vert (11 situations).
+  4. `npm run build` vert.
+  5. À l'écran en local : les 5 statuts × 390 × 844, 768 × 1024, 1280 × 665, interrupteur ALLUMÉ (15 sur 15 : pied et
+     carte choisie visibles, rien ne déborde, le bon libellé) et ÉTEINT (l'ancienne modale, « Annuler » / « Envoyer vers
+     … », la nouvelle jamais rendue).
+  6. ⏳ **En production SANS envoyer** : il faut que Frédéric POUSSE les lots 6 à 8, puis pose
+     `VITE_APP_STATUT_V2_ENABLED=true` dans Vercel (Production) ET REDÉPLOIE (la variable est lue au build : sans
+     nouveau build elle ne fait rien). Contrôle ensuite : VM412 et Jullianges, les 5 statuts, rien envoyé, et l'offre en
+     lecture seule (jamais vue en démonstration, faute d'affaires). Retour arrière : variable vide, redéploiement.
+  7. ⏳ **L'envoi réel sur 62774**, avec son accord redemandé au moment du geste.
 
 ## 4. Comment on prouve que « rien n'a changé derrière »
 
@@ -258,8 +277,8 @@ de style et la ligne d'aiguillage.
 4. ✅ **Oui à l'envoi réel de contrôle sur 62774, à la fin** — son accord se redemande au moment du geste.
 
 ➡ ~~Prochaine étape : le lot 0~~ ✅ fait le 05/11. ~~Le lot 1~~ ✅ fait le 06/11. ~~Le lot 2~~ ✅ fait le 06/11. ~~Le lot 3~~ ✅ fait le 06/11. ~~Le lot 4~~ ✅ fait le 06/11. ~~Le lot 5~~ ✅ fait le 06/11, **poussé par Frédéric** (sommet distant `8155bb7`, interrupteur
-VÉRIFIÉ ÉTEINT dans le paquet servi). ~~Le lot 6~~ ✅ fait le 06/11. ~~Le lot 7~~ ✅ fait le 06/11.
-**Prochaine étape : le lot 8** (contrôles et bascule : parcours en production SANS envoyer, variable Vercel posée par
-Frédéric, envoi réel sur 62774 avec son accord), qui attend son « vas-y ».
+VÉRIFIÉ ÉTEINT dans le paquet servi). ~~Le lot 6~~ ✅ fait le 06/11. ~~Le lot 7~~ ✅ fait le 06/11. **Lot 8 : étapes 1 à 5 faites le 06/11.**
+**Prochaine étape : Frédéric pousse, pose la variable dans Vercel et redéploie** ; puis le contrôle en production sans
+envoyer, puis l'envoi réel sur 62774 avec son accord.
 ⚠ Reste hors de ce chantier : le défaut « Choisir » (audit §12, les champs principaux ne se rechargent pas),
 qui demande une décision à part — la refonte visuelle ne le corrige pas et ne doit pas le masquer.

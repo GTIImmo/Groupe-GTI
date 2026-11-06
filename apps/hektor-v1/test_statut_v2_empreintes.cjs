@@ -276,6 +276,17 @@ else {
   const interdits = [/from\s+['"]\.\/lib\/api['"]/, /supabase/i, /\bcreate[A-Z][A-Za-z]*Job\b/, /\bfetch\(/];
   for (const r of interdits) ok(!r.test(v2), `ModaleStatutV2.tsx n'utilise pas ${r}`);
 
+  // ─── LOT 8 (06/11) : TOUT CE QUE L'ANCIEN BLOC UTILISE, LA VUE L'UTILISE (plan §4.2) ───
+  // Les listes viennent de la référence (setters, gestes, fonctions appelées, états lus, composants) : un nom de
+  // l'ancien bloc absent de la vue serait un geste ou une information perdus en route.
+  const motsV2 = new Set(v2.match(/[A-Za-z_$][A-Za-z0-9_$]*/g));
+  for (const k of ["setters", "gestes", "appels", "etats", "composants"]) {
+    const liste = (ref.inventaire && ref.inventaire[k]) || [];
+    const absents = liste.filter((n) => !motsV2.has(n));
+    if (absents.length) console.log(`     absents (${k}) : ${absents.join(", ")}`);
+    ok(liste.length > 0 && absents.length === 0, `inventaire de l'ancien bloc — ${k} : ${liste.length - absents.length} sur ${liste.length} dans la vue`);
+  }
+
   // ─── LOT 2 (06/11) : LES GESTES DE SAISIE, REPRIS MOT POUR MOT ───
   // Chaque gestionnaire (onChange, onClick, onChoisir, onRetirer, onAjouter) d'une zone DÉJÀ PORTÉE de l'ancien
   // bloc doit se retrouver tel quel dans la nouvelle vue (commentaires et espaces mis à part). Un écart VOULU se
@@ -297,6 +308,7 @@ else {
   const ancien = dBloc < 0 || fBloc < 0 ? "" : lignesApp.slice(dBloc, fBloc + 1).join("\n");
   const ZONES = [
     { lot: 2, nom: "le formulaire offre / compromis / vente", debut: "{statusChangeNeedsTransaction(statusChangeStatus) ? (", fin: ") : statusChangeStatus === 'closed' ? (" },
+    { lot: 1, nom: "l'en-tête et les cartes de statut", debut: "<div className=\"panel-head status-change-head\">", fin: "{statusChangeNeedsTransaction(statusChangeStatus) ? (" },
     { lot: 5, nom: "le pied (les boutons)", debut: "<div className=\"modal-actions\">", fin: "</form>" },
     { lot: 4, nom: "les affaires du bien et leurs bandeaux", debut: "{statusChangeAffaires.length > 0 ? (() => {", fin: "{modifierChezHektorPossible(statusChangeStatus, affaireCourantePourStatut(), statusChangeAffaires) ? (" },
     { lot: 3, nom: "la clôture du mandat (Clos)", debut: ") : statusChangeStatus === 'closed' ? (", fin: "{bvs(\"Le statut Actif est envoyé directement" },
@@ -305,6 +317,9 @@ else {
     // « Qui paie la commission » : le menu devient deux boutons (même valeur, mêmes setters). Le clic sur le choix
     // déjà posé ne fait rien, comme un menu dont la valeur ne change pas : sinon la commission serait « touchée ».
     "onChange={(event)=>{setStatusChangeChargeCommission(event.target.value)setStatusChangeCommissionTouchee(true)}}",
+    // Lot 1 : la carte de statut appelle `choisir(carte.statut)`, qui fait les DEUX mêmes appels dans le même ordre
+    // (setStatusChangeStatus puis setStatusChangeAffaireChoisie(null)) — partagée avec « Aller à l'étape conseillée ».
+    "onClick={()=>{setStatusChangeStatus(option.value);setStatusChangeAffaireChoisie(null)}}",
   ];
   const v2n = norm(v2);
   // ─── LOT 5 (06/11) : LES CONDITIONS AUSSI ───

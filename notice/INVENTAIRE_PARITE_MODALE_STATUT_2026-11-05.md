@@ -151,7 +151,17 @@ téléphone** (`rq-mobile`).
   modale) — à ne pas compter comme une régression au lot 8.
 - `test_statut_v2_empreintes.cjs` : vert, 61 morceaux, témoin 4 sur 4.
 
-## 7. Hors de ce chantier, rappel
+## 7. Au lot 8 (06/11) : ce que la vue reprend, mesuré
+
+L'outil (`test_statut_v2_empreintes.cjs`) retrouve dans `ModaleStatutV2.tsx` tout l'inventaire du §3 — setters 35/35,
+gestes 3/3, fonctions 54/54, états 46/46, composants 5/5 — et, zone par zone de l'ancien bloc, les gestes mot pour mot
+(2 + 35 + 4 + 3 + 7) et les conditions d'affichage et d'extinction (1 + 25 + 1 + 10 + 15). Trois écarts sont déclarés
+dans l'outil, avec leur raison, tous d'écran : la carte de statut passe par `choisir` (les deux mêmes appels), « Qui
+paie la commission » en deux boutons (un clic sur le choix déjà posé ne fait rien), « Aucune affaire lue » au lieu de
+rien. Témoins inverses joués pendant les lots : un `toucherStatusChange` retiré, le garde-fou retiré de l'extinction du
+bouton principal — chaque fois ROUGE, et nommé.
+
+## 8. Hors de ce chantier, rappel
 
 Le défaut « Choisir » (audit §12) : le grand préremplissage ne dépend pas de l'affaire choisie. La refonte ne le
 corrige pas — son effet est dans les 61 morceaux, donc le toucher ferait rougir le contrôle, ce qui est voulu.
