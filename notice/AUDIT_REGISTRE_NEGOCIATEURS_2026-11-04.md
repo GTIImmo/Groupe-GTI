@@ -1579,3 +1579,16 @@ Compte formation), pas une valeur automatique.
 - Gestes chez Hektor : la charge `hektor_user_id` passe devant le négo du contact sans contrôle de rôle (worker l. 2489).
 - RESPECTENT : PDF du mandat et avenant, e-mail d'estimation, espace client, page RDV, demandes de visite, gestes sur une annonce
   (pas de `hektor_user_id` envoyé → négo du bien, ou l'agence s'il est inactif — repli agence actif).
+
+**✅ CORRIGÉ le 06/11 (Frédéric : « Oui, vas-y »)** :
+- Code (`supabase_admin._resolve_hektor_google_identity`) : un compte qui n'est pas « commercial » (admin, manager, lecture)
+  rend TOUJOURS un lien vide (`match_source compte_non_negociateur`), ni par l'e-mail ni par le registre ; ses comptes Hektor
+  restent notés dans `comptes_hektor`. Le chemin du §41 reste entier pour un NÉGOCIATEUR.
+- Essais `backend/tests/test_lien_hektor_par_registre.py` : **15/15** (Franck admin jamais relié ; un admin à l'e-mail d'un
+  négo actif non plus, manager et lecture pareil ; le cas Franck en « commercial » encore relié ; les 5 garde-fous du registre
+  désormais éprouvés sur un compte négociateur). Témoin : ancien code → 4 rouges.
+- Base (accord) : ligne de Franck dans `app_google_workspace_identity` remise à vide (`hektor_user_id`, `hektor_negociateur_id`,
+  `negociateur_email` = null ; `comptes_hektor [SECRETAIRE 7]` gardé). Sauvegarde datée
+  `app_google_workspace_identity_avant_regle_admin_20261106` (RLS, aucun droit public). Retour : recopier la ligne.
+- ⚠ Tant que ce n'est pas poussé, Render garde l'ancien code : réenregistrer le compte de Franck dans l'écran Utilisateurs le
+  relierait de nouveau. Et une session de Franck déjà ouverte garde l'ancien lien jusqu'au rechargement de la page.

@@ -63,6 +63,7 @@ class SupabaseAdminService:
     #   UNE SEULE fiche négociateur ACTIVE chez Hektor, confirmée par les deux annuaires que lit le worker ; jamais une fiche
     #   éteinte, jamais un compte secrétaire ou administrateur. Ceux-là (Frédéric 4, Franck 7, Pauline 8…) sont NOTÉS dans
     #   metadata_json.comptes_hektor, que rien n'envoie chez Hektor.
+    #   ⛔ Et seulement pour un compte NÉGOCIATEUR (role « commercial ») : un admin n'est jamais relié (06/11, §54).
 
     def _registre_fiches(self, personne: int) -> list[dict[str, Any]]:
         return self._rest_rows(
@@ -166,6 +167,21 @@ class SupabaseAdminService:
                 {"hektor_user_id": str(f.get("hektor_user_id") or ""), "type": f.get("user_type"), "actif": f.get("actif_chez_hektor") is True}
                 for f in fiches_registre if f.get("sorte") == "compte_utilisateur"
             ]
+
+        # ⛔ RÈGLE DE FRÉDÉRIC (06/11, audit §54) : un compte qui n'est pas NÉGOCIATEUR (admin, manager, lecture) n'est JAMAIS
+        #   relié à une fiche négociateur, ni par l'e-mail ni par le registre. Un admin agit au nom du négociateur en charge du
+        #   mandat ou du contact ; son identité n'apparaît sur aucun document. Le 05/11 (§41), l'admin Franck avait été relié
+        #   à sa fiche « Compte formation » : ses contacts et ses recherches seraient partis sous ce nom chez Hektor.
+        if role != "commercial":
+            metadata["match_source"] = "compte_non_negociateur"
+            metadata["role"] = role
+            return {
+                "link_status": "linked",
+                "hektor_user_id": None,
+                "hektor_negociateur_id": None,
+                "negociateur_email": None,
+                "metadata_json": metadata,
+            }
 
         conflict_reason: str | None = None
         selected_user = user_rows[0] if len(user_rows) == 1 else None

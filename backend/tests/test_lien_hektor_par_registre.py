@@ -84,27 +84,42 @@ def faux(fiches=None, users=None, annuaire=None):
 
 # --- les vrais comptes -------------------------------------------------------------------------------------------
 
-def test_franck_relie_a_sa_fiche_active_par_le_registre():
+def test_franck_admin_jamais_relie_a_sa_fiche_negociateur():
+    """06/11 (§54) : Franck est ADMIN dans l'app -> jamais relié à sa fiche « Compte formation » (règle de Frédéric)."""
     r = faux()._resolve_hektor_google_identity("franck.gerphagnon@gti-immobilier.fr", "admin", 1000036)
+    assert (r["link_status"], r["hektor_user_id"], r["hektor_negociateur_id"], r["negociateur_email"]) == ("linked", None, None, None)
+    assert r["metadata_json"]["match_source"] == "compte_non_negociateur"
+    # son compte secrétaire reste NOTÉ, pas envoyé
+    assert {"hektor_user_id": "7", "type": "SECRETAIRE", "actif": True} in r["metadata_json"]["comptes_hektor"]
+
+
+def test_negociateur_relie_a_sa_fiche_active_par_le_registre():
+    """Le chemin du §41 reste vrai pour un NÉGOCIATEUR (même cas que Franck, compte « commercial »)."""
+    r = faux()._resolve_hektor_google_identity("franck.gerphagnon@gti-immobilier.fr", "commercial", 1000036)
     assert (r["link_status"], r["hektor_user_id"], r["hektor_negociateur_id"]) == ("linked", "2", "1")
     assert r["negociateur_email"] == "franck.gerphagnon@gmail.com"
     assert r["metadata_json"]["match_source"] == "registre_fiche_active"
-    # son compte secrétaire est NOTÉ, pas envoyé
-    assert {"hektor_user_id": "7", "type": "SECRETAIRE", "actif": True} in r["metadata_json"]["comptes_hektor"]
+
+
+def test_admin_jamais_relie_meme_par_son_email():
+    """Un admin dont l'e-mail est celui d'un NÉGOCIATEUR actif n'est pas relié non plus (manager et lecture pareil)."""
+    for role in ("admin", "manager", "lecture"):
+        r = faux()._resolve_hektor_google_identity("pereira@gti-immobilier.fr", role, 1000035)
+        assert (r["hektor_user_id"], r["hektor_negociateur_id"], r["negociateur_email"]) == (None, None, None), role
+        assert r["metadata_json"]["match_source"] == "compte_non_negociateur", role
 
 
 def test_franck_sans_registre_reste_comme_avant():
     """Témoin : sans la personne du registre, rien ne change (c'est bien le registre qui relie)."""
     r = faux()._resolve_hektor_google_identity("franck.gerphagnon@gti-immobilier.fr", "admin", None)
-    assert (r["link_status"], r["hektor_user_id"], r["metadata_json"]["match_source"]) == ("linked", None, "workspace_only")
+    assert (r["link_status"], r["hektor_user_id"], r["metadata_json"]["match_source"]) == ("linked", None, "compte_non_negociateur")
     assert "comptes_hektor" not in r["metadata_json"]
 
 
 def test_frederic_compte_admin_note_jamais_envoye():
     r = faux()._resolve_hektor_google_identity("frederic.gerphagnon@gti-immobilier.fr", "admin", 1000001)
-    assert (r["hektor_user_id"], r["hektor_negociateur_id"], r["metadata_json"]["match_source"]) == (None, None, "workspace_only")
+    assert (r["hektor_user_id"], r["hektor_negociateur_id"], r["metadata_json"]["match_source"]) == (None, None, "compte_non_negociateur")
     assert r["metadata_json"]["comptes_hektor"] == [{"hektor_user_id": "4", "type": "ADMIN", "actif": True}]
-    assert r["metadata_json"]["registre_fiches_negociateur_actives"] == 0
 
 
 def test_pauline_deux_comptes_secretaires_notes_aucun_envoye():
@@ -131,32 +146,32 @@ def test_commercial_sans_rien_reste_en_attente():
 
 def test_deux_fiches_actives_rien_n_est_devine():
     fiches = FICHES + [fiche(1000036, "fiche_negociateur", "99", "999", True, "franck.gerphagnon@gmail.com")]
-    r = faux(fiches=fiches)._resolve_hektor_google_identity("franck.gerphagnon@gti-immobilier.fr", "admin", 1000036)
+    r = faux(fiches=fiches)._resolve_hektor_google_identity("franck.gerphagnon@gti-immobilier.fr", "commercial", 1000036)
     assert r["hektor_user_id"] is None and r["metadata_json"]["registre_fiches_negociateur_actives"] == 2
 
 
 def test_fiche_active_inconnue_du_worker_refusee():
     users = [u for u in USERS if u["id_user"] != "2"]  # le worker refuserait ce numéro (loadHektorDirectoryUserById)
-    r = faux(users=users)._resolve_hektor_google_identity("franck.gerphagnon@gti-immobilier.fr", "admin", 1000036)
+    r = faux(users=users)._resolve_hektor_google_identity("franck.gerphagnon@gti-immobilier.fr", "commercial", 1000036)
     assert r["hektor_user_id"] is None
     assert r["metadata_json"]["registre_refus"] == "fiche_active_absente_des_annuaires_du_worker"
 
 
 def test_fiche_active_eteinte_dans_l_annuaire_refusee():
     annuaire = [dict(a, is_active=False) if a["hektor_user_id"] == "2" else a for a in ANNUAIRE]
-    r = faux(annuaire=annuaire)._resolve_hektor_google_identity("franck.gerphagnon@gti-immobilier.fr", "admin", 1000036)
+    r = faux(annuaire=annuaire)._resolve_hektor_google_identity("franck.gerphagnon@gti-immobilier.fr", "commercial", 1000036)
     assert r["hektor_user_id"] is None
 
 
 def test_fiche_eteinte_jamais_prise():
     fiches = [dict(f, actif_chez_hektor=False) if f["hektor_user_id"] == "2" else f for f in FICHES]
-    r = faux(fiches=fiches)._resolve_hektor_google_identity("franck.gerphagnon@gti-immobilier.fr", "admin", 1000036)
+    r = faux(fiches=fiches)._resolve_hektor_google_identity("franck.gerphagnon@gti-immobilier.fr", "commercial", 1000036)
     assert r["hektor_user_id"] is None  # la fiche 19 (éteinte) n'est pas prise à sa place
 
 
 def test_boite_partagee_pas_reprise_comme_email():
     fiches = FICHES + [fiche(1000008, "fiche_negociateur", "25", "50", False, "franck.gerphagnon@gmail.com")]
-    r = faux(fiches=fiches)._resolve_hektor_google_identity("franck.gerphagnon@gti-immobilier.fr", "admin", 1000036)
+    r = faux(fiches=fiches)._resolve_hektor_google_identity("franck.gerphagnon@gti-immobilier.fr", "commercial", 1000036)
     assert r["hektor_user_id"] == "2" and r["negociateur_email"] is None
     assert r["metadata_json"]["registre_email_partage"] == "franck.gerphagnon@gmail.com"
 
