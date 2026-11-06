@@ -63,8 +63,9 @@ class Faux(AppointmentService):
         return dict(TEXTE_ANNONCE)
 
 
-def tables(agences=None, alias=None, personnes=None):
+def tables(agences=None, alias=None, personnes=None, carnet=None):
     return {
+        "app_registre_champ_app": carnet or [],
         "app_agence_directory": ANNUAIRE_AGENCES,
         "app_negociateur_fiche": FICHES,
         "app_registre_agence": agences or [],
@@ -77,7 +78,10 @@ DOSSIER_TENCE = {"hektor_annonce_id": 60001, "commercial_id": "26", "negociateur
                  "agence_nom": "Groupe GTI Tence"}
 LIEN_FIGE = {"id": "lien-1", "negociateur_phone": "04 77 00 00 26", "negociateur_mobile": "06 00 00 00 26",
              "agence_phone": "0471560236", "agence_email": "yssingeaux@gti-immobilier.fr"}
-REGISTRE_TENCE = [{"app_agence_id": 2000009, "telephone": "04 71 56 02 36", "email": "tence@gti-immobilier.fr"}]
+REGISTRE_TENCE = [{"app_agence_id": 2000009, "telephone": "04 71 59 81 45", "email": "tence@gti-immobilier.fr"}]
+# La correction SAISIE par un administrateur (le carnet) : la seule chose du registre que la page prend (§49).
+CARNET_TENCE = [{"objet": "agence", "objet_id": 2000009, "champ": "email", "valeur": "tence@gti-immobilier.fr"},
+                {"objet": "agence", "objet_id": 2000009, "champ": "telephone", "valeur": "04 71 56 02 36"}]
 ALIAS_TENCE = [{"cle": "TENCE", "app_agence_id": 2000009, "ecriture": "Groupe GTI Tence"}]
 
 resultats: list[tuple[str, bool]] = []
@@ -95,7 +99,7 @@ essai("1. registre vide : aucune réécriture", s.ecrits == [])
 essai("1. registre vide : le texte de l'annonce n'est pas relu", "texte_annonce" not in s.lus)
 
 # 2. Le registre porte la correction : le lien déjà envoyé la SUIT.
-s = Faux(tables(REGISTRE_TENCE, ALIAS_TENCE))
+s = Faux(tables(REGISTRE_TENCE, ALIAS_TENCE, carnet=CARNET_TENCE))
 lien = s._maybe_enrich_link_contacts(dict(LIEN_FIGE), DOSSIER_TENCE)
 essai("2. correction au registre : le lien figé est réécrit", len(s.ecrits) == 1 and s.ecrits[0]["agence_email"] == "tence@gti-immobilier.fr")
 essai("2. ... avec le tél du registre", s.ecrits and s.ecrits[0]["agence_phone"] == "04 71 56 02 36")
@@ -103,12 +107,12 @@ essai("2. ... et le négociateur inchangé", s.ecrits and s.ecrits[0]["negociate
 
 # 3. Une 2e ouverture, déjà à jour : aucune réécriture.
 deja = {**LIEN_FIGE, "agence_phone": "04 71 56 02 36", "agence_email": "tence@gti-immobilier.fr"}
-s = Faux(tables(REGISTRE_TENCE, ALIAS_TENCE))
+s = Faux(tables(REGISTRE_TENCE, ALIAS_TENCE, carnet=CARNET_TENCE))
 s._maybe_enrich_link_contacts(dict(deja), DOSSIER_TENCE)
 essai("3. lien déjà à jour : aucune réécriture", s.ecrits == [])
 
-# 4. Le registre a le tél mais pas le mail : le mail vient de l'annuaire (repli champ par champ).
-s = Faux(tables([{"app_agence_id": 2000009, "telephone": "04 71 56 02 36", "email": None}], ALIAS_TENCE))
+# 4. Seul le tél est saisi au carnet : le mail vient de l'annuaire (repli champ par champ).
+s = Faux(tables(REGISTRE_TENCE, ALIAS_TENCE, carnet=CARNET_TENCE[1:]))
 d = s._load_contact_details(DOSSIER_TENCE)
 essai("4. tél du registre", d["agencePhone"] == "04 71 56 02 36")
 essai("4. mail en repli sur l'annuaire", d["agenceEmail"] == "yssingeaux@gti-immobilier.fr")
@@ -138,9 +142,18 @@ essai("8. clé ambiguë : repli sur l'annuaire", d["agenceEmail"] == "yssingeaux
 
 # 9. L'écriture EXACTE départage une clé ambiguë.
 s = Faux(tables(REGISTRE_TENCE + [{"app_agence_id": 2000099, "telephone": "x", "email": "autre@x.fr"}],
-                [{"cle": "TENCE", "app_agence_id": 2000009, "ecriture": "Groupe GTI Tence"}, {"cle": "TENCE", "app_agence_id": 2000099, "ecriture": "B"}]))
+                [{"cle": "TENCE", "app_agence_id": 2000009, "ecriture": "Groupe GTI Tence"}, {"cle": "TENCE", "app_agence_id": 2000099, "ecriture": "B"}],
+                carnet=CARNET_TENCE))
 d = s._load_contact_details(DOSSIER_TENCE)
 essai("9. écriture exacte : la bonne agence", d["agenceEmail"] == "tence@gti-immobilier.fr")
+
+# 11. ⛔ LE CAS DU 06/11 : le registre porte la valeur de la FICHE agence de Hektor (croisée), rien au carnet -> la page
+#     garde la source d'avant (l'annuaire, le compte de l'agence) et le lien n'est PAS réécrit.
+s = Faux(tables([{"app_agence_id": 2000009, "telephone": "04 71 59 81 45", "email": "lepuy@gti-immobilier.fr"}], ALIAS_TENCE))
+s._maybe_enrich_link_contacts(dict(LIEN_FIGE), DOSSIER_TENCE)
+essai("11. registre sans carnet : aucune réécriture", s.ecrits == [])
+d = s._load_contact_details(DOSSIER_TENCE)
+essai("11. registre sans carnet : le mail de l'annuaire, pas celui de la fiche", d["agenceEmail"] == "yssingeaux@gti-immobilier.fr")
 
 # 10. La clé Python = la clé SQL sur les écritures difficiles.
 essai("10. clé : espaces de fin", AppointmentService._cle_agence("Groupe GTI Ambert    ") == "AMBERT")

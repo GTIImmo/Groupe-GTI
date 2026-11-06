@@ -1406,3 +1406,31 @@ liens (combien changent, lesquels) ; puis voir une page en vrai.
 ACTIFS** sur 2 304 (les autres répondent 404 « Lien RDV introuvable », sans rapport) ; registre encore vide, UN SEUL lien actif
 changeait (celui de Dunières). Les 1 107 « mails à changer » comptés avant étaient presque tous des liens INACTIFS.
 ⏰ Reste : après la nuit du 06/11, mesurer les 443 contre le registre rempli.
+
+## 49. CONTRÔLE DE LA NUIT DU 06/11, 1re ÉCRITURE DU REGISTRE DES AGENCES, ET UN DÉFAUT RATTRAPÉ (06/11)
+
+**La nuit** (run 04:00 → 06:39:40, code 0, aucune erreur) : registre des négociateurs relu à 06:24 (170 fiches vues, 0
+événement) ; carnet intact (civilité de Caroline) ; fiche 1000088 toujours « decision ». ⚠ **Le registre des agences n'a
+RIEN écrit** : l'étape a pris le chemin « interrupteur éteint » (< 1 s) → `APP_REGISTRE_AGENCES` n'est pas à 1 dans le .env
+lu par le run (non lu par moi). ⚠ Le journal du run ne garde plus la sortie des étapes depuis le 05/11 (le 04/11 il
+gardait encore le compte rendu de l'annuaire) — noté, non traité.
+
+**La 1re écriture, à la main, sur accord de Frédéric (« Oui, écris-le »)** : `APP_REGISTRE_AGENCES=1` posé pour ce seul
+lancement (le .env non touché) ; essai à blanc d'abord (rien écrit, compteur 2000000), puis écriture : **19 agences
+(2000001-2000019), 19 alias, la société (SIRET 50281114400018, carte CPI valable au 14/09/2027), 904 coordonnées pour 167
+personnes (137 portables, 165 agences), 1 écart (Franck, gmail)**, 0 écriture non rattachée ; carnet intact. Portables des
+personnes : 137 sur 137 présents dans leurs fiches (aucun croisement).
+
+**⛔ LE DÉFAUT, vu au contrôle et corrigé dans l'heure** : Hektor a DEUX sources du mail d'une agence et elles se
+contredisent — la FICHE agence (liste des agences, reprise par le registre) et le COMPTE de l'agence (`app_agence_directory`,
+ce que montrent la page RDV d'avant et l'organigramme de Hektor). **9 agences diffèrent** : Courpière ambert@ / courpiere@,
+Dunières tence@ / dunieres@, Issoire brioude@ / issoire@, Saint-Bonnet craponne@ / stbonnet@, Saint-Didier monistrol@ /
+stdidier@, Saint-Étienne firminy@ / dorian@, Saint-Just montbrison@ / strambert@, Tence tence@ + 04 71 59 81 45 /
+yssingeaux@ + 04 71 56 02 36, Yssingeaux lepuy@ / yssingeaux@ — **240 liens actifs** derrière. La page du §48 prenait le
+registre EN PREMIER : elle aurait servi la fiche croisée. Mesuré : **0 lien réécrit** entre l'écriture et la correction.
+**Correction** (`_load_registre_agence`) : la page ne prend du registre QUE ce qu'un administrateur a SAISI au carnet ;
+sinon l'annuaire, sa source d'avant. Essais 22/22 (nouveau cas 11 : registre croisé sans carnet → annuaire, aucune
+réécriture) ; la version en ligne (f889043) échoue les cas 2, 3, 4 et 11 du nouvel essai → la correction est nécessaire.
+⚠ **À trancher par Frédéric** : laquelle des deux sources de Hektor est la bonne, agence par agence (Tence : la fiche donne
+un numéro propre à Tence, le compte celui d'Yssingeaux). La bonne valeur se SAISIT au carnet (écran du registre) ; la nuit
+ne l'écrasera plus.

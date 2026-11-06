@@ -352,7 +352,8 @@ class AppointmentService:
 
     def _load_registre_agence(self, agence_nom: str) -> dict[str, Any] | None:
         """L'agence du REGISTRE DES AGENCES (05/11/2026, §48) : par l'ecriture exacte de son nom, sinon par sa cle (les
-        ALIAS : toutes les ecritures connues d'une agence). Rend son tel et son mail, ou None si rien n'est sur."""
+        ALIAS : toutes les ecritures connues d'une agence). Rend le tel et le mail SAISIS AU CARNET (None pour un champ
+        non saisi), ou None si l'agence n'est pas sure."""
         try:
             alias = self._rest_get("app_registre_agence_alias", params={"select": "cle,app_agence_id,ecriture", "limit": "500"})
             cle = self._cle_agence(agence_nom)
@@ -361,11 +362,15 @@ class AppointmentService:
             ids = exacte if len(exacte) == 1 else par_cle
             if len(ids) != 1:
                 return None
-            rows = self._rest_get("app_registre_agence", params={
-                "select": "app_agence_id,telephone,email", "app_agence_id": f"eq.{ids.pop()}", "limit": "1"})
-            if not rows:
-                return None
-            return {"tel": self._coalesce_text(rows[0].get("telephone")), "mail": self._coalesce_text(rows[0].get("email"))}
+            # ⛔ 06/11/2026 (§49) -- SEULEMENT ce qu'un administrateur a SAISI au carnet. Hektor a deux sources pour le
+            #   mail d'une agence et elles se contredisent : la FICHE agence (reprise par le registre : Courpiere -> ambert@,
+            #   9 agences croisees) et le COMPTE de l'agence (`app_agence_directory`, ce que la page et l'organigramme
+            #   montraient : courpiere@). Hors carnet, la page garde donc sa source d'avant ; le registre ne parle que
+            #   pour une correction faite chez nous.
+            carnet = self._rest_get("app_registre_champ_app", params={
+                "select": "champ,valeur", "objet": "eq.agence", "objet_id": f"eq.{ids.pop()}"})
+            saisi = {str(k.get("champ")): self._coalesce_text(k.get("valeur")) for k in carnet}
+            return {"tel": saisi.get("telephone"), "mail": saisi.get("email")}
         except Exception:
             return None
 
@@ -389,8 +394,8 @@ class AppointmentService:
                 details["negociateurMobile"] = coordonnees.get("portable")
 
         if agence_nom:
-            # 05/11/2026 (§48) -- l'agence vient d'abord du REGISTRE DES AGENCES (ce qu'un administrateur y corrige arrive
-            # enfin sur la page) ; l'annuaire de Hektor reste le REPLI, champ par champ.
+            # 05/11/2026 (§48, resserre le 06/11 §49) -- une correction SAISIE au registre des agences passe devant ; sinon
+            # l'annuaire de Hektor, la source d'avant, champ par champ.
             registre = self._load_registre_agence(agence_nom)
             if registre:
                 details["agencePhone"] = registre.get("tel")
