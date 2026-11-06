@@ -6267,6 +6267,8 @@ Le mandat passera à l'état « Signé ». À ne faire qu'une fois le PDF signé
                 dossier={props.dossier}
                 adresse={props.address}
                 onClose={() => { setEnvoiYoutrustDoc(null); setEnvoiAncien(null) }}
+                // A.2 P8-5 : l'envoi fini, la liste Documents et le suivi du mandat se relisent (« En attente · 0/N »).
+                onSent={(job) => relireQuandLeTravailFinit(job)}
                 onCorriger={(onglet) => { ouvrirCorrection(envoiYoutrustDoc, onglet); return true }}
                 ancien={envoiAncien}
                 ficheDuJour={envoiJusteGenere ? null : ficheDuJourPourEnvoi(initialDraft)}
@@ -10825,7 +10827,7 @@ function useSignatureYoutrust() {
   return actif
 }
 
-type SignatureMeta = { provider?: string | null; status?: string; progress?: string | null; signed_at?: string | null; sent_at?: string | null; cancelled_at?: string | null; procedure_id?: number | string | null; hektor_doc_id?: number | string | null; source?: string | null; marked_manual_at?: string | null }
+type SignatureMeta = { provider?: string | null; status?: string; progress?: string | null; signed_at?: string | null; sent_at?: string | null; cancelled_at?: string | null; expired_at?: string | null; procedure_id?: number | string | null; hektor_doc_id?: number | string | null; source?: string | null; marked_manual_at?: string | null }
 
 // Pastille d'etat de signature, partagee par le bloc Documents et le suivi mandat.
 function SignatureBadge({ signature }: { signature?: SignatureMeta | null }) {
@@ -10835,6 +10837,8 @@ function SignatureBadge({ signature }: { signature?: SignatureMeta | null }) {
     signed: { bg: '#e6f4ea', fg: '#1f7a3d', icon: 'check', label: `Signé${signature?.signed_at ? ` le ${signature.signed_at}` : ''}` },
     pending: { bg: '#fff3e0', fg: '#b26a00', icon: 'clock', label: `En attente${signature?.progress ? ` · ${signature.progress}` : ''}` },
     cancelled: { bg: '#f1f3f4', fg: '#5f6368', icon: 'x', label: `Signature annulée${signature?.cancelled_at ? ` le ${signature.cancelled_at}` : ''}` },
+    // A.2 P8-5 : Youtrust seul connait l'expiration (le lien a depasse sa date) -- le document redevient a envoyer.
+    expired: { bg: '#fbefd8', fg: '#b06a05', icon: 'x', label: `Signature expirée${signature?.expired_at ? ` le ${signature.expired_at}` : ''} — à renvoyer` },
     to_send: { bg: '#f1f3f4', fg: '#5f6368', icon: 'pen', label: 'À envoyer en signature' },
   }
   const v = variants[st]
@@ -12313,8 +12317,10 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
         : st === 'pending' ? 'En attente de signature'
         : st === 'to_send' ? 'À envoyer en signature'
         : st === 'cancelled' ? 'Signature annulée'
+        // A.2 P8-5 : l'expiration Youtrust se dit (le document redevient a envoyer).
+        : st === 'expired' ? `Signature expirée${sig?.expired_at ? ` le ${sig.expired_at}` : ''} — à renvoyer`
         : ''
-      const badge = signed ? 'Signé' : st === 'pending' ? 'En signature' : st === 'to_send' ? 'À préparer' : d.storage_status === 'cloud_available' ? 'Cloud' : 'Indexé'
+      const badge = signed ? 'Signé' : st === 'pending' ? 'En signature' : st === 'expired' ? 'Expirée' : st === 'to_send' ? 'À préparer' : d.storage_status === 'cloud_available' ? 'Cloud' : 'Indexé'
       const cloud = d.storage_status === 'cloud_available'
       // A.2 lot 6b P5 : l'ancien PDF d'une regeneration (maquette « corriger » vue 6).
       const remplace = mentionRemplace(d)
@@ -14298,6 +14304,23 @@ const EVENEMENT_GESTE_FAIT = 'hektor:geste-fait'
 function signalerGeste() {
   if (!L_ECRAN_SUIT_LE_CLIC || typeof window === 'undefined') return
   try { window.dispatchEvent(new CustomEvent(EVENEMENT_GESTE_FAIT)) } catch { /* noop */ }
+}
+// A.2 P8-5 (06/11/2026) : un travail pose HORS du suivi de l'app (l'editeur de mandat n'a pas d'onJobCreated) -> on
+// attend SA fin (relue toutes les 3 s, 2 min au plus), puis on relit l'app comme apres tout geste. Sans ca, l'envoi en
+// signature depuis l'editeur laissait la liste Documents et le suivi du mandat sur « a envoyer » jusqu'a la relecture.
+function relireQuandLeTravailFinit(job: Pick<ConsoleJob, 'id'> | null | undefined, delaiMaxMs = 120000) {
+  if (!L_ECRAN_SUIT_LE_CLIC || !job?.id || typeof window === 'undefined' || import.meta.env.MODE === 'mock') return
+  const fin = Date.now() + delaiMaxMs
+  const verifier = () => {
+    void loadConsoleJobsByIds([String(job.id)])
+      .then((jobs) => {
+        const lu = jobs[0]
+        if (lu && !isConsoleJobActive(lu)) { signalerGeste(); return }
+        if (Date.now() < fin) window.setTimeout(verifier, 3000)
+      })
+      .catch(() => { if (Date.now() < fin) window.setTimeout(verifier, 5000) })
+  }
+  window.setTimeout(verifier, 3000)
 }
 // Un compteur qui monte a chaque relecture de l'app : a mettre dans les dependances de l'effet
 // qui lit la rubrique. Il vaut 0 tant que rien n'a ete relu (premier rendu inchange).

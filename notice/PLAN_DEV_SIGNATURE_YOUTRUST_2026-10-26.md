@@ -1036,6 +1036,16 @@ webhook posé par Frédéric ; redémarrage du worker.
 >   (1 ligne, fermée à l'API), 1 ligne masquée, **répétition 6/6** (aucun code en clair ; heure et mode gardés ; `proofs`
 >   refusé à authenticated « 42501 » ; le suivi et les 11 avis se lisent). ⚠ Pendant la mesure, une lecture a affiché les
 >   3 codes déjà consommés de l'essai sandbox : c'est ce que B empêche désormais.
+> - ✅ **P8-5 CODÉ (06/11) — COMMITÉ, NON POUSSÉ, NON DÉPLOYÉ** : (1) **après un envoi depuis l'éditeur, l'écran se relit** —
+>   l'éditeur n'avait pas d'`onSent` (la liste Documents et le suivi du mandat restaient « à envoyer » jusqu'à la relecture
+>   de l'app). Désormais `relireQuandLeTravailFinit(job)` relit le travail toutes les 3 s (2 min au plus) et, fini, appelle
+>   `signalerGeste()` : la relecture de l'app est relayée aux rubriques (déjà en place, points 3b/3c du 26/10). (2) **« expirée »
+>   se dit** : pastille « Signature expirée le … — à renvoyer » (liste classique, suivi du mandat) et libellé + pastille
+>   « Expirée » en v21 ; le document se renvoie (le bouton « Signature » n'écarte que « signé »). Le worker écrivait déjà
+>   `expired_at` au format affiché. **Essais** : `test_p8_5_relecture_et_expiree.cjs` 10/10 (neuf, TÉMOIN contre le code
+>   d'avant) ; pièces 23/23, suivi 27/27, choix 21/21, cockpit 23/23 ; build vert sur HEAD + ces blocs. ⚠ **Non fait, à
+>   décider** : un écran resté OUVERT ne voit pas une signature faite plus tard (avis Youtrust) avant la prochaine relecture
+>   de l'app ; et le fil du cockpit ne dit pas encore « expiré le … » (il lit « à envoyer »). ⚠ Non vu à l'écran.
 > **Le nœud** : interrupteur allumé, un mandat généré naît `sans_hektor` (D24) → « signature Hektor » impossible sans le
 > DÉPOSER chez Hektor. Un chemin DORMANT existe (`completerEnvoiDocumentDiffere`, `upload_document_to_hektor` avec
 > `app_document_id` : « aucun appelant ») — jamais éprouvé. À l'inverse, un document venu de Hektor (modèle ImmoSign,
