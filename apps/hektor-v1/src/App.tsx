@@ -26106,6 +26106,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 actionRequests={selectedDossierRequests}
                 currentActionRequest={screen === 'suivi' ? selectedDossierRequest : null}
                 actionRole={screen === 'suivi' ? 'pauline' : 'nego'}
+                roleConnecte={profile?.role ?? null}
                 onOpenRequestModal={openRequestModal}
                 onOpenDiffusionModal={openDiffusionModal}
                 detailLoading={detailLoading}
@@ -27209,6 +27210,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 actionRequests={selectedDossierRequests}
                 currentActionRequest={screen === 'suivi' ? selectedDossierRequest : null}
                 actionRole={screen === 'suivi' ? 'pauline' : 'nego'}
+                roleConnecte={profile?.role ?? null}
                 onOpenRequestModal={openRequestModal}
                 onOpenDiffusionModal={openDiffusionModal}
                 detailLoading={detailLoading}
@@ -33041,10 +33043,10 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   const diagBienCran = useCranCouplesVisible('partenaires_diag', props.profileRole)
   // Plan, étape 2b (07/11/2026) : même cran que l'assistant. Allumé : dans « Le Bien », le texte libre « Diagnostiqueur »
   // cède la place à la carte (Hektor l'ignorait), la carte du syndic entre dans « Copropriété », et « ＋ Nouveau » s'ajoute.
-  const choixPartenairesSaisieCk = useCranCouplesVisible('partenaires_choix_saisie', props.profileRole)
+  const choixPartenairesSaisieCk = useCranCouplesVisible('partenaires_choix_saisie', props.roleConnecte ?? props.profileRole)
   // Plan, étape 4a (07/11/2026) : l'onglet Contact habillé selon la planche 1 VALIDÉE (06/11, version 6), cran
   // `partenaires_design_contact`. Mêmes contenus, mêmes gestes : seul l'habillage change (contact-du-bien.css).
-  const designContactCk = useCranCouplesVisible('partenaires_design_contact', props.profileRole)
+  const designContactCk = useCranCouplesVisible('partenaires_design_contact', props.roleConnecte ?? props.profileRole)
   const syndicCarteVisible = syndicChoixCran && !isLightweightDetail
     &&(/oui/i.test(String(rawWizardDetailField(props.detail, 'copropriete') ?? '')) || Boolean(syndicSelonHektor(props.detail.diagnostics_contacts_console_json)))
   // Diffusé & en attente d'offre : le jalon Offre devient le jalon COURANT (comme le v26).
@@ -36133,6 +36135,11 @@ function DossierDetailLayoutBase(props: {
   actionRequests?: DiffusionRequest[]
   currentActionRequest?: DiffusionRequest | null
   actionRole?: 'nego' | 'pauline'
+  // Plan partenaires (07/11/2026) : le rôle de la personne connectée, pour les crans « admin » de la fiche. ⚠ `profileRole`
+  // n'est PAS passé par les appelants de l'App (mesuré le 07/11) : un cran « admin » y valait toujours « éteint ». Il n'est
+  // pas ajouté parce que d'autres gestes de la fiche le lisent (ex. « Réaffecter le négociateur » pour un négociateur) :
+  // ce serait changer leur comportement. Seuls les crans neufs lisent `roleConnecte`.
+  roleConnecte?: UserProfile['role'] | null
   onOpenRequestModal?: (id: number, role?: 'nego' | 'pauline', requestType?: BusinessRequestType) => void
   onOpenDiffusionModal?: (id: number) => void
   detailLoading: boolean
@@ -40816,6 +40823,11 @@ function MobileDossierDetail(props: {
   actionRequests?: DiffusionRequest[]
   currentActionRequest?: DiffusionRequest | null
   actionRole?: 'nego' | 'pauline'
+  // Plan partenaires (07/11/2026) : le rôle de la personne connectée, pour les crans « admin » de la fiche. ⚠ `profileRole`
+  // n'est PAS passé par les appelants de l'App (mesuré le 07/11) : un cran « admin » y valait toujours « éteint ». Il n'est
+  // pas ajouté parce que d'autres gestes de la fiche le lisent (ex. « Réaffecter le négociateur » pour un négociateur) :
+  // ce serait changer leur comportement. Seuls les crans neufs lisent `roleConnecte`.
+  roleConnecte?: UserProfile['role'] | null
   onOpenRequestModal?: (id: number, role?: 'nego' | 'pauline', requestType?: BusinessRequestType) => void
   onOpenDiffusionModal?: (id: number) => void
   detailLoading: boolean
