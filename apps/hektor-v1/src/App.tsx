@@ -306,6 +306,7 @@ import RechercheGlobale, { type GroupeRecherche } from './RechercheGlobale'
 import './fil-navigation.css'
 import './suivi-travaux.css'
 import './modales-telephone.css'
+import './contact-du-bien.css'
 import './statut-v2.css'
 import ModaleStatutV2 from './ModaleStatutV2'
 import { compterAnnoncesAilleurs, type AnnoncesAilleurs } from './lib/api'
@@ -33041,6 +33042,9 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   // Plan, étape 2b (07/11/2026) : même cran que l'assistant. Allumé : dans « Le Bien », le texte libre « Diagnostiqueur »
   // cède la place à la carte (Hektor l'ignorait), la carte du syndic entre dans « Copropriété », et « ＋ Nouveau » s'ajoute.
   const choixPartenairesSaisieCk = useCranCouplesVisible('partenaires_choix_saisie', props.profileRole)
+  // Plan, étape 4a (07/11/2026) : l'onglet Contact habillé selon la planche 1 VALIDÉE (06/11, version 6), cran
+  // `partenaires_design_contact`. Mêmes contenus, mêmes gestes : seul l'habillage change (contact-du-bien.css).
+  const designContactCk = useCranCouplesVisible('partenaires_design_contact', props.profileRole)
   const syndicCarteVisible = syndicChoixCran && !isLightweightDetail
     &&(/oui/i.test(String(rawWizardDetailField(props.detail, 'copropriete') ?? '')) || Boolean(syndicSelonHektor(props.detail.diagnostics_contacts_console_json)))
   // Diffusé & en attente d'offre : le jalon Offre devient le jalon COURANT (comme le v26).
@@ -35605,13 +35609,13 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
               <CkAbandonDossiers dossiers={ckAbandonDossiers} onOpenContact={props.onOpenContact} />
             </div>
           ) : activeTab === 'contact' ? (
-            <div className="fa-ck-rub fa-ck-contact">
+            <div className={`fa-ck-rub fa-ck-contact${designContactCk ? ' ckc' : ''}`}>
               <div className="fa-ck-ct-toolbar">
                 {/* ③c 02/10/2026 : l'etiquette disait « API AnnonceById » -- c'etait
                     vrai tant que la rubrique lisait proprietaires_json. Elle lit
                     desormais NOTRE registre. Un bandeau qui nomme sa source doit la
                     nommer JUSTE, sinon il trompe plus qu'il n'informe. */}
-                <span className="fa-ck-ct-strip">Source <b>Registre des liens</b> · <b>{props.contacts.length} mandant{props.contacts.length > 1 ? 's' : ''}</b>{props.contacts.length > 0 ? ` · ${props.contacts.slice(0, 3).map((c) => c.name || `${c.firstName ?? ''} ${c.lastName ?? ''}`.trim()).filter(Boolean).join(', ')}` : ''}</span>
+                <span className="fa-ck-ct-strip" hidden={designContactCk}>Source <b>Registre des liens</b> · <b>{props.contacts.length} mandant{props.contacts.length > 1 ? 's' : ''}</b>{props.contacts.length > 0 ? ` · ${props.contacts.slice(0, 3).map((c) => c.name || `${c.firstName ?? ''} ${c.lastName ?? ''}`.trim()).filter(Boolean).join(', ')}` : ''}</span>
                 {ckSelectedNumero !== 'ALL' && ckSelectedNumero !== ckCurrentNumero ? (
                   <span style={{ fontSize: 11.5, color: 'rgba(34,35,35,.5)', marginLeft: 8 }}>Contacts actuels — non historisés par cycle</span>
                 ) : null}
@@ -35635,12 +35639,14 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                   ) : null}
                 </div>
               ) : null}
-              <div className="fa-ck-ct-sec"><span className="l">Mandants / Propriétaires</span><span className="bar" /></div>
+              {designContactCk ? (
+                <div className="ckc-sec"><span className="l">Mandants / Propriétaires</span><span className="src">registre des liens · {props.contacts.length} mandant{props.contacts.length > 1 ? 's' : ''}</span><span className="bar" /></div>
+              ) : <div className="fa-ck-ct-sec"><span className="l">Mandants / Propriétaires</span><span className="bar" /></div>}
               {isLightweightDetail
                 ? <ReadOnlyDetailNotice label="Les contacts ne sont pas modifiables depuis une fiche d'index leger." />
                 : <HektorMandantContactForm dossier={dossier} onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} />}
               {props.contacts.length > 0 ? (
-                <div className="fa-ck-ct-list">
+                <div className={designContactCk ? 'ckc-deux' : 'fa-ck-ct-list'}>
                   {props.contacts.map((c) => {
                     const name = c.name || `${c.civility ?? ''} ${c.firstName ?? ''} ${c.lastName ?? ''}`.trim() || 'Contact'
                     const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('') || 'C'
@@ -35648,6 +35654,49 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                     const ctField = (k: string, v: string | null | undefined, locked?: boolean, full?: boolean) => v && String(v).trim()
                       ? <div className={`fa-ck-cg${full ? ' full' : ''}`}><span className="fa-ck-ck">{k}{locked ? <span className="fa-ck-lock"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>lié</span> : null}</span><span className={`fa-ck-cv${locked ? ' locked' : ''}`}>{v}</span></div>
                       : null
+                    // 4a (07/11) : la carte de visite du mandant (planche 1, version 6). Mêmes données et mêmes gestes que la
+                    // carte d'avant ; « Modifier » et « Retirer » sont les composants existants, seulement habillés.
+                    if (designContactCk) {
+                      const ligne = (cle: string, icone: ReactNode, valeur: string | null | undefined, opts?: { note?: boolean; vide?: string }) => {
+                        const v = String(valeur ?? '').trim()
+                        if (!v && !opts?.vide) return null
+                        return (
+                          <div className="ckc-li"><i>{icone}</i><span className="t"><span className="k">{cle}</span>
+                            <span className={`v${v ? (opts?.note ? ' note' : '') : ' vide'}`}>{v ? (opts?.note ? `« ${v} »` : v) : opts?.vide}</span></span></div>
+                        )
+                      }
+                      return (
+                        <article key={c.id} className="ckc-carte">
+                          <div className="ckc-tete">
+                            <div className="ckc-ident"><span className="ckc-mono" aria-hidden="true">{initials}</span>
+                              <span style={{ minWidth: 0 }}><span className="ckc-nom">{name}</span>
+                                <span className="ckc-sous">{c.role || 'Contact'}{c.sourceId ? <><span className="pt" /><span className="no"><svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>Contact {c.sourceId}</span></> : null}</span></span></div>
+                            <div className="ckc-gestes">
+                              {c.phone ? <a className="ckc-geste" href={`tel:${c.phone.replace(/\s+/g, '')}`}><span><svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.6A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.4-1.2a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z" /></svg></span>Appeler</a>
+                                : <span className="ckc-geste off" aria-hidden="true"><span><svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.6A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.4-1.2a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z" /></svg></span>Appeler</span>}
+                              {c.email ? <a className="ckc-geste" href={`mailto:${c.email}`}><span><svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" /></svg></span>E-mail</a>
+                                : <span className="ckc-geste off" aria-hidden="true"><span><svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" /></svg></span>E-mail</span>}
+                              {c.sourceId && props.onOpenContact ? <button type="button" className="ckc-geste p" onClick={() => props.onOpenContact?.(c.sourceId ?? '')}><span><svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true"><circle cx="12" cy="8" r="3.2" /><path d="M5 20a7 7 0 0 1 14 0" /></svg></span>Ouvrir la fiche</button> : null}
+                            </div>
+                          </div>
+                          <div className="ckc-lignes">
+                            {ligne('Téléphone', <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.6A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.4-1.2a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z" /></svg>, c.phone, { vide: 'non renseigné' })}
+                            {ligne('E-mail', <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" /></svg>, c.email, { vide: 'non renseigné' })}
+                            {ligne('Adresse', <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z" /><circle cx="12" cy="9.5" r="2.3" /></svg>, addr)}
+                            {ligne('Commentaire', <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>, c.comment, { note: true })}
+                          </div>
+                          <div className="ckc-pied">
+                            {!isLightweightDetail ? (
+                              <>
+                                <HektorMandantContactEditForm dossier={dossier} contact={c} compact onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} />
+                                <RetirerMandantBouton dossier={dossier} contact={c} onJobCreated={props.onHektorActionJobCreated} />
+                              </>
+                            ) : null}
+                            {c.dateUpdated ? <span className="ckc-maj"><svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>Hektor · mis à jour le {c.dateUpdated}</span> : null}
+                          </div>
+                        </article>
+                      )
+                    }
                     return (
                       <div key={c.id} className="fa-ck-ct-card">
                         <div className="fa-ck-ct-top">
@@ -35697,8 +35746,14 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                   })}
                 </div>
               ) : <p className="fa-ck-empty">Aucun contact lié.</p>}
+              <div className={designContactCk ? 'ckc-part' : undefined} style={designContactCk ? undefined : { display: 'contents' }}>
+              {designContactCk && (syndicCarteVisible || (diagBienCran && !isLightweightDetail)) ? (
+                <div className="ckc-sec"><span className="l">Partenaires du bien</span><span className="bar" /></div>
+              ) : null}
+              <div className={designContactCk ? 'ckc-deux' : undefined} style={designContactCk ? undefined : { display: 'contents' }}>
               {syndicCarteVisible ? (
                 <SyndicDuBien
+                  habillage={designContactCk ? 'ticket' : undefined}
                   appDossierId={dossier.app_dossier_id ?? null}
                   hektorAnnonceId={Number(dossier.hektor_annonce_id) || null}
                   diagnosticsHektor={props.detail.diagnostics_contacts_console_json}
@@ -35717,6 +35772,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
               {diagBienCran && !isLightweightDetail ? (
                 <SyndicDuBien
                   role="diagnostiqueur"
+                  habillage={designContactCk ? 'ticket' : undefined}
                   appDossierId={dossier.app_dossier_id ?? null}
                   hektorAnnonceId={Number(dossier.hektor_annonce_id) || null}
                   diagnosticsHektor={props.detail.diagnostics_contacts_console_json}
@@ -35734,6 +35790,8 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                   }}
                 />
               ) : null}
+              </div>
+              </div>
               {(() => {
                 const inter = parseJson<Array<{ role: string; name: string; sub?: string; phone?: string }>>(detailStr('intervenants_json') || '[]', [])
                 const roleIcon = (role: string) => {

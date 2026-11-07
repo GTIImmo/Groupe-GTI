@@ -47,3 +47,33 @@
 .sb-syndic.diag .sb-ic,.sb-syndic.diag .sb-l-tag{background:#fbefe0;}
 /* Plan partenaires 2b (07/11) : le choix dans l'assistant (rubrique « Intervenants », grille de 12 colonnes) prend toute la largeur. */
 .draft-annonce-partenaires > .sb-saisie { grid-column: 1 / -1; margin-top: 4px; }
+
+/* 4a (07/11, planche 1 validée, cran partenaires_design_contact) : la carte en « ticket » dans l'onglet Contact —
+   bande de la couleur du métier à gauche, nom en Fraunces, gestes sur un second rang. Mêmes gestes que la carte. */
+.sb-syndic.sb-ticket { --m: #5b4a9e; position: relative; margin-top: 0; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 10px 13px;
+  padding: 12px 14px 10px 20px; border-radius: 18px; background: #fff; border: 1px solid #eae1d7; overflow: hidden;
+  box-shadow: 0 1px 2px rgba(32,24,18,.04), 0 20px 38px -32px color-mix(in srgb, var(--m) 90%, transparent); }
+.sb-syndic.sb-ticket.diag { --m: #b26a0e; }
+.sb-syndic.sb-ticket::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; background: linear-gradient(180deg, var(--m), color-mix(in srgb, var(--m) 25%, transparent)); }
+.sb-syndic.sb-ticket::after { content: ''; position: absolute; right: -60px; top: -70px; width: 220px; height: 170px; background: radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--m) 13%, transparent), transparent 62%); pointer-events: none; }
+.sb-ticket .sb-pic { position: relative; width: 44px; height: 44px; border-radius: 14px; flex: none; display: grid; place-items: center; color: #fff;
+  background: linear-gradient(150deg, color-mix(in srgb, var(--m) 72%, #fff), var(--m)); box-shadow: 0 10px 18px -10px var(--m); }
+.sb-ticket .sb-pic svg { width: 19px; height: 19px; }
+.sb-ticket .sb-pid { position: relative; flex: 1; min-width: 0; }
+.sb-ticket .sb-met { display: block; font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--m); }
+.sb-ticket .sb-pnom { display: block; font-family: Fraunces, Spectral, Georgia, serif; font-weight: 600; font-size: 16.5px; letter-spacing: -.01em; color: #1c1815;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+.sb-ticket .sb-pnom.vide { color: #a89e95; font-weight: 500; }
+.sb-ticket .sb-orig { display: block; font-size: 11.5px; color: #8a807a; font-weight: 600; margin-top: 1px; }
+.sb-ticket .sb-pact { position: relative; flex-basis: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding-top: 9px; border-top: 1px dashed #eae1d7; }
+.sb-ticket .sb-mini { display: flex; flex-wrap: wrap; gap: 2px; margin-left: -7px; }
+.sb-syndic.sb-ticket .sb-lien { display: inline-flex; align-items: center; border: 0; background: none; border-radius: 8px; padding: 3px 7px;
+  font: inherit; font-size: 11.5px; font-weight: 800; color: #544b45; text-decoration: none; cursor: pointer; }
+.sb-syndic.sb-ticket .sb-lien:hover { background: #f3ede5; color: #1c1815; }
+.sb-syndic.sb-ticket .sb-lien.ret { color: #a3392f; }
+.sb-syndic.sb-ticket .sb-lien.ret:hover { background: #fbecea; }
+.sb-syndic.sb-ticket .sb-gros { margin-left: auto; border: 0; border-radius: 11px; padding: 8px 13px; font: inherit; font-size: 12px; font-weight: 800; color: #fff; cursor: pointer;
+  background: linear-gradient(150deg, color-mix(in srgb, var(--m) 80%, #fff), var(--m)); box-shadow: 0 10px 18px -11px var(--m); }
+.sb-syndic.sb-ticket .sb-gros:hover { filter: brightness(.93); }
+.sb-syndic.sb-ticket :focus-visible { outline: 2px solid #c2125f; outline-offset: 2px; }
+.sb-ticket > .sb-confirme, .sb-ticket > .sb-ecart, .sb-ticket > .sb-erreur, .sb-ticket > .sb-choix { position: relative; flex-basis: 100%; margin: 0; }

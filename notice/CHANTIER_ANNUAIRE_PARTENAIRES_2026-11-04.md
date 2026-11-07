@@ -2547,6 +2547,57 @@ au-dessus de l'assistant. Corrigé en route : la carte coincée dans une colonne
 ⚠ **Non vu** : « Le Bien » (la fiche détaillée ne s'ouvre pas en maquette) ; le catalogue réel et le lien réel (il faut
 la base : après pose du cran en `admin`, une annonce d'essai créée avec son accord, puis retirée).
 
+**En ligne (07/11)** : `5cc3f25` poussé (avec deux notes de la session « modale statut », 75522aa et 8ac5dd9, sans code),
+Vercel `dpl_ED4XCiKKFDaKnsudP4kpWXbHhTk5` READY ; l'app en production ouverte DÉCONNECTÉE : écran de connexion normal,
+pas de page blanche (hooks au-dessus du return), seuls des 401 attendus. Cran absent : rien ne change pour personne.
+
+### 28.7 Plan, étapes 3 et 4 : AUDIT (07/11, « enchaîne ») — rien codé
+
+**Étape 3 — retirer les champs texte « Diagnostiqueur » et « Syndic »** : à l'écran, c'est déjà fait par le cran
+`partenaires_choix_saisie` (assistant ET « Le Bien »). Ce qui reste est du **ménage de code**, à faire seulement une fois
+le cran à « on » et éprouvé : les deux `wf('diagnostiqueur' | 'syndic')` de l'assistant (l. ~1664), les deux entrées de
+`CK_LB_SECTIONS`, les listes de champs par type de bien (l. ~2115, ~2218), et la branche de l'aide « Copropriété » qui
+écrivait le nom du syndic en texte (déjà coupée par `partenaires_syndic_choix`).
+- **Trouvé en passant** : l'ancien bloc « Diagnostics et syndic · Intervenants console Hektor » de l'onglet Contact lit
+  `intervenants_json` sur la fiche du bien. **Aucune fiche de bien ne porte ce champ en production** (seule colonne de ce
+  nom : `app_affaire_console`, et les données de maquette) : le bloc ne s'affiche jamais, et ses boutons « Fiche » et
+  « ＋ Ajouter un syndic » n'ont aucune action. Code mort, à retirer avec l'étape 4.
+
+**Étape 4 — appliquer le design validé**, trois pièces, une à la fois, derrière un cran (`admin` d'abord) :
+- **4a · Contact** (planche 1, version 6 validée) : carte de visite du mandant (monogramme, nom en Fraunces, trois gestes
+  ronds, coordonnées en lignes, commentaire, pied Modifier / Retirer / date Hektor) ; partenaires en « ticket » avec la
+  bande de couleur du métier. ⚠ La carte mandant contient deux gestes réels (`HektorMandantContactEditForm`,
+  `RetirerMandantBouton`) : ils sont GARDÉS tels quels, seul l'habillage change.
+- **4b · Copropriété** (planche 2) : la carte du syndic EN TÊTE de la section (2b la met après les cases), les 7 cases
+  modifiables en place, inchangées.
+- **4c · Diagnostics** (planche 3) : la carte du diagnostiqueur en tête, le DPE en chiffres, les 8 diagnostics en tableau
+  résultat / date / commentaire (chaque case reste modifiable en place, même enregistrement `onFieldSave`), une date vide
+  affichée « — » au lieu de « 0000-00-00 » (affichage seul : la valeur n'est pas réécrite).
+- **Téléphone** : pas dessiné ; tant qu'il ne l'est pas, le téléphone garde l'écran d'aujourd'hui.
+- Non mesuré : combien de biens affichent aujourd'hui « 0000-00-00 » dans les diagnostics.
+
+#### 28.7 bis — Pièce 4a CODÉE (07/11, « Code d'abord ») — poussée le 07/11 (« Oui, pousse et allume »)
+
+Cran **`partenaires_design_contact`** (absent = l'onglet Contact d'avant ; `admin` ; `on`). Allumé :
+- **Mandants / Propriétaires** : titre en Fraunces avec la source (« registre des liens · N mandants », le bandeau
+  « Source … » est masqué puisque le titre le porte) ; cartes de visite en grille de deux (une seule colonne sous
+  1 100 px) : monogramme rond (sans filigrane), nom en Fraunces, rôle et « Contact n° » ; trois gestes ronds Appeler /
+  E-mail / Ouvrir la fiche (Appeler et E-mail en pointillé quand le numéro ou l'adresse manque) ; Téléphone, E-mail
+  (« non renseigné » s'il manque), Adresse, Commentaire (en italique) ; pied « Modifier » / « Retirer » / « Hektor · mis
+  à jour le … ». ⚠ « Modifier » et « Retirer » sont les composants EXISTANTS (`HektorMandantContactEditForm`,
+  `RetirerMandantBouton`), seulement habillés en CSS : leurs confirmations, leurs refus expliqués et leur formulaire
+  s'ouvrent sur toute la largeur de la carte. Le « ✎ » mal encodé (« âœŽ ») du bouton Modifier est masqué sous le cran
+  et remplacé par un crayon dessiné (le texte d'origine n'est pas corrigé : il reste visible sans le cran).
+- **Partenaires du bien** : titre, puis les deux cartes `SyndicDuBien` en grille, avec l'habillage `ticket` (bande de
+  la couleur du métier, pastille, nom en Fraunces, origine ; Appeler / Ouvrir sa fiche / Changer / Retirer, et le
+  bouton du métier : « Demander un document », « Commander un diagnostic », ou « Choisir » quand il n'y en a pas). Le
+  bas de la carte (écart avec Hektor, erreur, demande, choix) est partagé par les deux habillages (constante `dessous`).
+- Données de maquette : ces crans sont « on » en mode maquette (sans base), comme le registre.
+
+**Contrôles** : `npm run build` vert. ⚠ **NON VU À L'ÉCRAN** : en maquette, la fiche détaillée d'une annonce ne s'ouvre
+pas, et l'app réelle locale demande la connexion de Frédéric. Le voir passe par le cran en `admin` (lui seul).
+Fichiers : `App.tsx`, `SyndicDuBien.tsx`, `syndic-du-bien.css`, `contact-du-bien.css` (nouveau), `lib/api.ts`.
+
 ### 7 ter. Les dépendances (techniques, pas un ordre décidé)
 
 - 0 avant tout le reste ; 0.1 avant B2 ; 0.2 avant B1 ; 0.6 avant B5 ; 0.3 avant B6 ; 0.4 avant B7 ; 0.5 avant C2.

@@ -97,6 +97,9 @@ export default function SyndicDuBien(props: {
   role?: RoleDuBien
   // 2b (07/11) : « ＋ Nouveau » dans le choix (crée le contact, son métier, puis le relie au bien).
   nouveauPossible?: boolean
+  // 4a (07/11, planche 1 validée) : 'ticket' = la même carte, mêmes gestes, habillée en ticket (bande de la couleur du
+  // métier) dans l'onglet Contact, cran `partenaires_design_contact`. Absent : la carte d'avant.
+  habillage?: 'ticket'
 }) {
   const role: RoleDuBien = props.role ?? 'syndic'
   const T = TEXTES[role]
@@ -173,48 +176,9 @@ export default function SyndicDuBien(props: {
     try { window.dispatchEvent(new CustomEvent(EVENEMENT_OUVRIR_PARTENAIRE, { detail: { contactId: id } })) } catch { /* noop */ }
   }
 
-  return (
-    <section className={`sb-syndic${lectureSeule ? ' tel' : ''}${role === 'diagnostiqueur' ? ' diag' : ''}`} aria-label={T.titre}>
-      <div className="sb-tete">
-        <span className="sb-ic"><Ico d={T.icone} /></span>
-        <span className="sb-titre">{T.titre}</span>
-        <span className="sb-k">chez nous · Hektor n'est pas modifié</span>
-      </div>
-
-      {!bienConnu ? <p className="sb-vide">Le bien n'a pas encore de numéro : le {T.nom} se choisira quand il l'aura.</p>
-        : lecture.etat === 'chargement' ? <p className="sb-vide">Lecture du {T.nom}…</p>
-        : lecture.etat === 'erreur' ? <p className="sb-erreur">Le {T.nom} n'a pas pu être lu : {lecture.erreur}</p>
-        : syndic ? (
-          <div className="sb-carte">
-            <div className="sb-nom">{syndic.nom}</div>
-            <div className="sb-sous">{[syndic.ville, syndic.telephone].filter(Boolean).join(' · ') || `n° ${syndic.partenaireId}`}</div>
-            <div className="sb-origine">{origineDuSyndic(syndic)}</div>
-            <div className="sb-actions">
-              {syndic.telephone ? <a className="sb-btn" href={`tel:${syndic.telephone.replace(/\s+/g, '')}`}><Ico d={TEL} />Appeler</a> : null}
-              <button type="button" className="sb-btn" onClick={() => ouvrirFiche(syndic.partenaireId)}>Ouvrir sa fiche</button>
-              {!lectureSeule && props.demandePossible && props.bienDemande ? (
-                <button type="button" className="sb-btn sb-choisir" onClick={() => setDemande(true)}>{T.action}</button>
-              ) : null}
-              {!lectureSeule ? <>
-                <button type="button" className="sb-btn" onClick={() => { setChoix((c) => !c); setRetrait(false) }}>Changer</button>
-                <button type="button" className="sb-btn sb-retirer" onClick={() => { setRetrait(true); setChoix(false) }}>Retirer</button>
-              </> : null}
-            </div>
-            {retrait ? (
-              <div className="sb-confirme">
-                <span>Retirer {syndic.nom} de ce bien ? La trace reste (qui, quand).</span>
-                <button type="button" className="sb-btn sb-retirer" disabled={travail !== null} onClick={() => void ecrire(null, true)}>{travail === 'retrait' ? 'Retrait…' : 'Oui, retirer'}</button>
-                <button type="button" className="sb-btn" onClick={() => setRetrait(false)}>Non</button>
-              </div>
-            ) : null}
-          </div>
-        ) : (
-          <div className="sb-carte vide">
-            <div className="sb-nom vide">{T.aucun}</div>
-            {!lectureSeule ? <button type="button" className="sb-btn sb-choisir" onClick={() => setChoix((c) => !c)}>{T.choisir}</button> : null}
-          </div>
-        )}
-
+  // Écart avec Hektor, erreur, « Demander un document », choix dans le catalogue : communs aux deux habillages.
+  const dessous = (
+    <>
       {ecart ? (
         <p className="sb-ecart">
           {syndic ? <>Hektor indique un autre {T.nom} : <b>{ecart}</b>. C'est celui de l'app qui compte ; Hektor n'est pas modifié.</>
@@ -265,6 +229,95 @@ export default function SyndicDuBien(props: {
           </div>
         </div>
       ) : null}
+    </>
+  )
+
+  if (props.habillage === 'ticket' && !lectureSeule) {
+    const etat = !bienConnu ? `Le bien n'a pas encore de numéro : le ${T.nom} se choisira quand il l'aura.`
+      : lecture.etat === 'chargement' ? `Lecture du ${T.nom}…`
+      : lecture.etat === 'erreur' ? `Le ${T.nom} n'a pas pu être lu : ${lecture.erreur}`
+      : syndic ? [origineDuSyndic(syndic), syndic.ville, syndic.telephone].filter(Boolean).join(' · ')
+      : "chez nous · Hektor n'est pas modifié"
+    return (
+      <section className={`sb-syndic sb-ticket${role === 'diagnostiqueur' ? ' diag' : ''}`} aria-label={T.titre}>
+        <span className="sb-pic"><Ico d={T.icone} /></span>
+        <span className="sb-pid">
+          <span className="sb-met">{T.titre}</span>
+          <span className={`sb-pnom${syndic ? '' : ' vide'}`}>{syndic ? syndic.nom : T.aucun}</span>
+          <span className={`sb-orig${lecture.etat === 'erreur' ? ' sb-erreur' : ''}`}>{etat}</span>
+        </span>
+        {bienConnu && lecture.etat === 'pret' ? (
+          <span className="sb-pact">
+            {syndic ? (
+              <span className="sb-mini">
+                {syndic.telephone ? <a className="sb-lien" href={`tel:${syndic.telephone.replace(/\s+/g, '')}`}>Appeler</a> : null}
+                <button type="button" className="sb-lien" onClick={() => ouvrirFiche(syndic.partenaireId)}>Ouvrir sa fiche</button>
+                <button type="button" className="sb-lien" onClick={() => { setChoix((c) => !c); setRetrait(false) }}>Changer</button>
+                <button type="button" className="sb-lien ret" onClick={() => { setRetrait(true); setChoix(false) }}>Retirer</button>
+              </span>
+            ) : null}
+            {syndic && props.demandePossible && props.bienDemande ? (
+              <button type="button" className="sb-gros" onClick={() => setDemande(true)}>{T.action}</button>
+            ) : !syndic ? (
+              <button type="button" className="sb-gros" onClick={() => setChoix((c) => !c)}>{T.choisir}</button>
+            ) : null}
+          </span>
+        ) : null}
+        {retrait && syndic ? (
+          <div className="sb-confirme">
+            <span>Retirer {syndic.nom} de ce bien ? La trace reste (qui, quand).</span>
+            <button type="button" className="sb-btn sb-retirer" disabled={travail !== null} onClick={() => void ecrire(null, true)}>{travail === 'retrait' ? 'Retrait…' : 'Oui, retirer'}</button>
+            <button type="button" className="sb-btn" onClick={() => setRetrait(false)}>Non</button>
+          </div>
+        ) : null}
+        {dessous}
+      </section>
+    )
+  }
+
+  return (
+    <section className={`sb-syndic${lectureSeule ? ' tel' : ''}${role === 'diagnostiqueur' ? ' diag' : ''}`} aria-label={T.titre}>
+      <div className="sb-tete">
+        <span className="sb-ic"><Ico d={T.icone} /></span>
+        <span className="sb-titre">{T.titre}</span>
+        <span className="sb-k">chez nous · Hektor n'est pas modifié</span>
+      </div>
+
+      {!bienConnu ? <p className="sb-vide">Le bien n'a pas encore de numéro : le {T.nom} se choisira quand il l'aura.</p>
+        : lecture.etat === 'chargement' ? <p className="sb-vide">Lecture du {T.nom}…</p>
+        : lecture.etat === 'erreur' ? <p className="sb-erreur">Le {T.nom} n'a pas pu être lu : {lecture.erreur}</p>
+        : syndic ? (
+          <div className="sb-carte">
+            <div className="sb-nom">{syndic.nom}</div>
+            <div className="sb-sous">{[syndic.ville, syndic.telephone].filter(Boolean).join(' · ') || `n° ${syndic.partenaireId}`}</div>
+            <div className="sb-origine">{origineDuSyndic(syndic)}</div>
+            <div className="sb-actions">
+              {syndic.telephone ? <a className="sb-btn" href={`tel:${syndic.telephone.replace(/\s+/g, '')}`}><Ico d={TEL} />Appeler</a> : null}
+              <button type="button" className="sb-btn" onClick={() => ouvrirFiche(syndic.partenaireId)}>Ouvrir sa fiche</button>
+              {!lectureSeule && props.demandePossible && props.bienDemande ? (
+                <button type="button" className="sb-btn sb-choisir" onClick={() => setDemande(true)}>{T.action}</button>
+              ) : null}
+              {!lectureSeule ? <>
+                <button type="button" className="sb-btn" onClick={() => { setChoix((c) => !c); setRetrait(false) }}>Changer</button>
+                <button type="button" className="sb-btn sb-retirer" onClick={() => { setRetrait(true); setChoix(false) }}>Retirer</button>
+              </> : null}
+            </div>
+            {retrait ? (
+              <div className="sb-confirme">
+                <span>Retirer {syndic.nom} de ce bien ? La trace reste (qui, quand).</span>
+                <button type="button" className="sb-btn sb-retirer" disabled={travail !== null} onClick={() => void ecrire(null, true)}>{travail === 'retrait' ? 'Retrait…' : 'Oui, retirer'}</button>
+                <button type="button" className="sb-btn" onClick={() => setRetrait(false)}>Non</button>
+              </div>
+            ) : null}
+          </div>
+        ) : (
+          <div className="sb-carte vide">
+            <div className="sb-nom vide">{T.aucun}</div>
+            {!lectureSeule ? <button type="button" className="sb-btn sb-choisir" onClick={() => setChoix((c) => !c)}>{T.choisir}</button> : null}
+          </div>
+        )}
+
+      {dessous}
     </section>
   )
 }
