@@ -3,6 +3,8 @@
 // Écriture : `app_partenaire_syndic_du_bien` (droit sur le bien, partenaire = syndic du registre, l'ancien lien retiré daté).
 // Lecture : `app_partenaire_syndic_du_bien_lire`. Rien chez Hektor (décision D2) ; ce que Hektor indique est seulement montré.
 // « Ouvrir sa fiche » passe par le catalogue des partenaires (règle du 05/11 : une fiche métier s'ouvre depuis le catalogue).
+// Plan, étape 2a (07/11, §28.6) : la carte lit et pose aussi par NOTRE numéro du bien (`app_dossier_id`) — une annonce
+// née dans l'app a son syndic avant que Hektor rende son numéro (~90 s). Le numéro Hektor, quand il est là, reste passé.
 import { useEffect, useMemo, useState } from 'react'
 import { hasSupabaseEnv, supabase } from './lib/supabase'
 import { loadCoproRnie } from './lib/api'
@@ -15,6 +17,14 @@ import type { BienDemande } from './lib/demandeDocument'
 import './syndic-du-bien.css'
 
 export const EVENEMENT_OUVRIR_PARTENAIRE = 'bienvu:ouvrir-partenaire'
+// Plan, étape 2b (07/11, §28.6) : « ＋ Nouveau » demande à l'App principale (qui connaît les négociateurs) d'ouvrir la
+// création de contact existante, réglée sur « partenaire » et le métier ; une fois le contact né (NOTRE numéro, tout de
+// suite) et son métier écrit chez nous, elle rappelle `poser` avec son numéro.
+export const EVENEMENT_CREER_PARTENAIRE = 'bienvu:creer-partenaire'
+export type DemandeCreerPartenaire = { role: RoleDuBien; poser: (id: string, nom: string) => void }
+const demanderNouveauPartenaire = (demande: DemandeCreerPartenaire) => {
+  try { window.dispatchEvent(new CustomEvent<DemandeCreerPartenaire>(EVENEMENT_CREER_PARTENAIRE, { detail: demande })) } catch { /* noop */ }
+}
 
 // LOT 5 (06/11/2026) : la même carte sert au DIAGNOSTIQUEUR (role='diagnostiqueur') — geste générique
 // `app_partenaire_du_bien` / `_lire` ; le syndic garde ses fonctions de la 4.2 (rien ne change pour lui).
@@ -26,11 +36,11 @@ const TEXTES: Record<RoleDuBien, { titre: string; nom: string; aucun: string; ch
     chercher: 'Chercher un diagnostiqueur (nom, ville, n° ou téléphone)…', icone: 'M9 11l3 3 8-8M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9' },
 }
 
-async function lireLeSyndic(annonce: number, role: RoleDuBien = 'syndic'): Promise<Syndic | null> {
+async function lireLeSyndic(annonce: number | null, role: RoleDuBien = 'syndic', dossier: number | null = null): Promise<Syndic | null> {
   if (!hasSupabaseEnv || !supabase) throw new Error('base indisponible')
   const r = role === 'syndic'
-    ? await supabase.rpc('app_partenaire_syndic_du_bien_lire', { p_hektor_annonce_id: annonce })
-    : await supabase.rpc('app_partenaire_du_bien_lire', { p_role: role, p_hektor_annonce_id: annonce })
+    ? await supabase.rpc('app_partenaire_syndic_du_bien_lire', { p_hektor_annonce_id: annonce, p_app_dossier_id: dossier })
+    : await supabase.rpc('app_partenaire_du_bien_lire', { p_role: role, p_hektor_annonce_id: annonce, p_app_dossier_id: dossier })
   if (r.error) throw new Error(r.error.message)
   return lireSyndicDuBien(r.data)
 }
@@ -85,10 +95,14 @@ export default function SyndicDuBien(props: {
   bienDemande?: BienDemande | null
   demandePossible?: boolean
   role?: RoleDuBien
+  // 2b (07/11) : « ＋ Nouveau » dans le choix (crée le contact, son métier, puis le relie au bien).
+  nouveauPossible?: boolean
 }) {
   const role: RoleDuBien = props.role ?? 'syndic'
   const T = TEXTES[role]
   const annonce = props.hektorAnnonceId
+  const dossier = props.appDossierId
+  const bienConnu = Boolean(annonce || dossier)
   const lectureSeule = props.variante === 'telephone'
   const [lecture, setLecture] = useState<{ etat: 'chargement' | 'pret' | 'erreur'; syndic?: Syndic | null; erreur?: string }>({ etat: 'chargement' })
   const [version, setVersion] = useState(0)
@@ -103,13 +117,15 @@ export default function SyndicDuBien(props: {
 
   useEffect(() => {
     let annule = false
-    if (!annonce) { setLecture({ etat: 'pret', syndic: null }); return }
+    if (!bienConnu) { setLecture({ etat: 'pret', syndic: null }); return }
     setLecture((avant) => (avant.etat === 'pret' ? avant : { etat: 'chargement' }))
-    lireLeSyndic(annonce, role)
+    // Notre numéro seulement quand Hektor n'a pas encore rendu le sien : pour tous les autres biens, la lecture reste
+    // celle d'avant (par le numéro Hektor seul).
+    lireLeSyndic(annonce, role, annonce ? null : dossier)
       .then((syndic) => { if (!annule) setLecture({ etat: 'pret', syndic }) })
       .catch((e: unknown) => { if (!annule) setLecture({ etat: 'erreur', erreur: e instanceof Error ? e.message : String(e) }) })
     return () => { annule = true }
-  }, [annonce, version, role])
+  }, [annonce, dossier, bienConnu, version, role])
 
   // Le sélecteur : les syndics du catalogue (une lecture par session) et, une fois, la proposition du registre RNIC.
   useEffect(() => {
@@ -137,7 +153,7 @@ export default function SyndicDuBien(props: {
   }), [catalogue.liste, recherche, syndic?.partenaireId, nomRnic, hektor?.nom])
 
   async function ecrire(partenaire: string | null, retirer: boolean) {
-    if (!hasSupabaseEnv || !supabase || !annonce) return
+    if (!hasSupabaseEnv || !supabase || !bienConnu) return
     setTravail(retirer ? 'retrait' : partenaire); setErreur(null)
     const r = role === 'syndic'
       ? await supabase.rpc('app_partenaire_syndic_du_bien', {
@@ -165,7 +181,7 @@ export default function SyndicDuBien(props: {
         <span className="sb-k">chez nous · Hektor n'est pas modifié</span>
       </div>
 
-      {!annonce ? <p className="sb-vide">Le bien n'a pas encore de numéro d'annonce : le {T.nom} se choisira quand il l'aura.</p>
+      {!bienConnu ? <p className="sb-vide">Le bien n'a pas encore de numéro : le {T.nom} se choisira quand il l'aura.</p>
         : lecture.etat === 'chargement' ? <p className="sb-vide">Lecture du {T.nom}…</p>
         : lecture.etat === 'erreur' ? <p className="sb-erreur">Le {T.nom} n'a pas pu être lu : {lecture.erreur}</p>
         : syndic ? (
@@ -239,7 +255,91 @@ export default function SyndicDuBien(props: {
           <div className="sb-choix-pied">
             {role === 'syndic' && nomRnic === null && props.latitude && props.longitude ? <span>Lecture du registre des copropriétés…</span>
               : nomRnic ? <span>Registre des copropriétés : {nomRnic}</span> : null}
+            {props.nouveauPossible ? (
+              <button type="button" className="sb-btn sb-choisir" disabled={travail !== null}
+                onClick={() => demanderNouveauPartenaire({ role, poser: (id) => { oublierLeCatalogue(role); void ecrire(id, false) } })}>
+                ＋ Nouveau {T.nom}
+              </button>
+            ) : null}
             <button type="button" className="sb-btn" onClick={() => { setChoix(false); setRecherche('') }}>Fermer</button>
+          </div>
+        </div>
+      ) : null}
+    </section>
+  )
+}
+
+// Plan, étape 2b (07/11, §28.6) : le même choix, AVANT que le bien existe (assistant de création). Rien n'est écrit ici :
+// le choix est rendu au parent, qui pose le lien quand la création a rendu notre numéro du bien.
+export type PartenaireChoisi = { id: string; nom: string }
+export function ChoixPartenaire(props: {
+  role: RoleDuBien
+  valeur: PartenaireChoisi | null
+  onChange: (valeur: PartenaireChoisi | null) => void
+}) {
+  const T = TEXTES[props.role]
+  const [ouvert, setOuvert] = useState(false)
+  const [catalogue, setCatalogue] = useState<{ etat: 'chargement' | 'pret' | 'erreur'; liste?: SyndicCatalogue[]; erreur?: string }>({ etat: 'chargement' })
+  const [recherche, setRecherche] = useState('')
+  useEffect(() => {
+    if (!ouvert) return
+    let annule = false
+    syndicsDuCatalogue(props.role)
+      .then((liste) => { if (!annule) setCatalogue({ etat: 'pret', liste }) })
+      .catch((e: unknown) => { if (!annule) setCatalogue({ etat: 'erreur', erreur: e instanceof Error ? e.message : String(e) }) })
+    return () => { annule = true }
+  }, [ouvert, props.role])
+  const liste = useMemo(() => choixSyndics({
+    catalogue: catalogue.liste ?? [], recherche, actuel: props.valeur?.id ?? null, nomRnic: null, nomHektor: null,
+  }), [catalogue.liste, recherche, props.valeur?.id])
+  const choisir = (valeur: PartenaireChoisi) => { props.onChange(valeur); setOuvert(false); setRecherche('') }
+  const nouveau = () => demanderNouveauPartenaire({ role: props.role, poser: (id, nom) => { oublierLeCatalogue(props.role); choisir({ id, nom }) } })
+
+  return (
+    <section className={`sb-syndic sb-saisie${props.role === 'diagnostiqueur' ? ' diag' : ''}`} aria-label={T.titre}>
+      <div className="sb-tete">
+        <span className="sb-ic"><Ico d={T.icone} /></span>
+        <span className="sb-titre">{T.titre}</span>
+        <span className="sb-k">relié au bien à l'enregistrement</span>
+      </div>
+      {props.valeur ? (
+        <div className="sb-carte">
+          <div className="sb-nom">{props.valeur.nom}</div>
+          <div className="sb-actions">
+            <button type="button" className="sb-btn" onClick={() => setOuvert((o) => !o)}>Changer</button>
+            <button type="button" className="sb-btn sb-retirer" onClick={() => props.onChange(null)}>Retirer</button>
+          </div>
+        </div>
+      ) : (
+        <div className="sb-carte vide">
+          <div className="sb-nom vide">{T.aucun}</div>
+          <button type="button" className="sb-btn sb-choisir" onClick={() => setOuvert((o) => !o)}>{T.choisir}</button>
+        </div>
+      )}
+      {ouvert ? (
+        <div className="sb-choix">
+          <input className="sb-recherche" type="search" placeholder={T.chercher} value={recherche}
+            onChange={(e) => setRecherche(e.target.value)} autoFocus />
+          {catalogue.etat === 'chargement' ? <p className="sb-vide">Lecture du catalogue…</p>
+            : catalogue.etat === 'erreur' ? <p className="sb-erreur">Le catalogue n'a pas pu être lu : {catalogue.erreur}</p>
+            : liste.length === 0 ? <p className="sb-vide">Aucun {T.nom} du catalogue ne correspond : « ＋ Nouveau {T.nom} » le crée.</p>
+            : (
+              <ul className="sb-liste">
+                {liste.map((s) => (
+                  <li key={s.id}>
+                    <button type="button" onClick={() => choisir({ id: s.id, nom: s.nom })}>
+                      <span className="sb-l-nom">{s.nom}</span>
+                      {s.ville ? <span className="sb-l-ville">{s.ville}</span> : null}
+                      {s.homonymes > 1 ? <span className="sb-l-tag double" title="Plusieurs fiches portent ce nom : choisis celle qui porte déjà nos biens">{s.homonymes} fiches à ce nom</span> : null}
+                      <span className="sb-l-detail">{distinguerSyndic(s)}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          <div className="sb-choix-pied">
+            <button type="button" className="sb-btn sb-choisir" onClick={nouveau}>＋ Nouveau {T.nom}</button>
+            <button type="button" className="sb-btn" onClick={() => { setOuvert(false); setRecherche('') }}>Fermer</button>
           </div>
         </div>
       ) : null}

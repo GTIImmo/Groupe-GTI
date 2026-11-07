@@ -9261,7 +9261,8 @@ export async function loadAppSettingActive(key: string): Promise<boolean> {
 // ('admin' = les admins seuls, 'on' = tout le monde, le reste = caché).
 export async function loadAppSettingValeur(key: string): Promise<string | null> {
   // Mode maquette (dev local, sans base) : l'ecran du registre s'y montre, pour le voir sans se connecter.
-  if (!hasSupabaseEnv || !supabase) return key === 'registre_transactions_ecran' ? 'on' : null
+  // Plan partenaires 2b (07/11) : le choix du syndic / diagnostiqueur à la saisie aussi.
+  if (!hasSupabaseEnv || !supabase) return ['registre_transactions_ecran', 'partenaires_choix_saisie'].includes(key) ? 'on' : null
   try {
     const { data, error } = await supabase.from('app_setting').select('value').eq('key', key).maybeSingle()
     if (error || !data) return null

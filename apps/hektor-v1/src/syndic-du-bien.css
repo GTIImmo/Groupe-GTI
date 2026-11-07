@@ -45,3 +45,5 @@
 /* Lot 5 (06/11) : la carte du diagnostiqueur prend la couleur de sa fiche. */
 .sb-syndic.diag{--sb:#b26a0e;}
 .sb-syndic.diag .sb-ic,.sb-syndic.diag .sb-l-tag{background:#fbefe0;}
+/* Plan partenaires 2b (07/11) : le choix dans l'assistant (rubrique « Intervenants », grille de 12 colonnes) prend toute la largeur. */
+.draft-annonce-partenaires > .sb-saisie { grid-column: 1 / -1; margin-top: 4px; }

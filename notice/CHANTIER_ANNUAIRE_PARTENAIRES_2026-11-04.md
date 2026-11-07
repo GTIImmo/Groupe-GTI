@@ -2237,6 +2237,316 @@ apporteur 35 / 23 / 0 ; courtier 22 / 14 / 0 ; parrain 15 / 8 / 0 ; banque 8 / 7
 - Contrôles (98)-(103) + (45), (76), (83), (91) mis à jour (le syndic garde ses gestes) ; essai **103/103** ; notaire
   vert ; construction verte ; banc fictif (carte, choix, fenêtre de commande à 1280 × 665).
 
+### 28.3 Création « par photo, avec l'IA » (le scanner) : AUDIT (06/11, question de Frédéric) — rien codé
+
+Audit limité à la création d'annonce par le scanner ; lecture seule du code.
+- **Le chemin** : « Nouvelle annonce » → « Par photo, avec l'IA » → « Scanner la fiche » (App.tsx ~22296) → le serveur lit
+  les photos (`POST /annonces/scan-fiche`, `backend/app/services/openai_listing_sheet_service.py`, liste `FIELD_KEYS`,
+  consignes `agent_registry.py` « scan_fiche ») → `applyDraftAnnonceScan` (App.tsx ~17750) remplit LE MÊME brouillon que
+  la saisie manuelle → écran « Fiche analysée » avec deux boutons : « Détailler dans l'assistant » (le même assistant) ou
+  **« Créer l'estimation » qui crée DIRECTEMENT** (`handleCreateDraftAnnonce(null, { skipStepGate: true })`, ~22363).
+- **Ce que l'IA lit des partenaires : RIEN.** Le patron papier (`public/patron-fiche-saisie.html`, 5 pages,
+  `draft_annonce_v1`) n'a aucune case syndic, diagnostiqueur ou notaire ; il a seulement Copropriété oui/non, lots,
+  quote-part, fonds travaux, statut du syndicat. `FIELD_KEYS` non plus. Fiche d'essai : `backend/evals/scan_fiche/`.
+- **⚠ Le piège** : si le choix du syndic et du diagnostiqueur n'est mis QUE dans l'étape 5 de l'assistant, le bouton
+  « Créer l'estimation » le **saute**. Le chemin du scanner doit donc avoir son propre bloc « Intervenants » sur l'écran
+  « Fiche analysée ».
+- **⚠ Trouvé en passant (hors partenaires)** : l'IA lit un SECOND vendeur (`mandant2*`, 8 champs, backend et type
+  `api.ts:990`) mais `applyDraftAnnonceScan` ne l'utilise jamais (0 occurrence dans App.tsx) : le co-vendeur écrit sur
+  la fiche est perdu sans prévenir.
+- **La mise à jour proposée, en 3 morceaux** (à trancher, rien n'est décidé) :
+  1. écran « Fiche analysée » : un bloc « Intervenants » (syndic si Copropriété = Oui, diagnostiqueur), le même sélecteur
+     que l'assistant (catalogue, proposé, « ＋ Nouveau ») ; le lien se pose avec la création, comme à la main ;
+  2. patron papier + IA : deux lignes « Syndic (nom, ville ou téléphone) » et « Diagnostiqueur » en page 4 (Technique),
+     4 champs ajoutés à `FIELD_KEYS` et aux consignes, la fiche d'essai complétée ; l'écran **cherche** le nom lu dans le
+     catalogue et le **propose** (« lu sur la fiche : X — Confirmer »), jamais de lien posé sans un clic ; rien trouvé →
+     « ＋ Nouveau » prérempli ;
+  3. (option, sujet à part) le second vendeur lu par l'IA : l'assistant n'a qu'UN mandant à la création, il faudrait
+     d'abord lui donner une place pour le second.
+  Le notaire reste hors du scanner : il se choisit au compromis (décision du plan).
+- **⛔ DÉCISION DE FRÉDÉRIC (06/11) : « mets de côté ma demande sur le scanner IA, on va faire un chantier à part ».**
+  Ce §28.3 en est le point de départ ; il ne se code PAS dans le chantier des partenaires.
+
+### 28.4 Rubrique Contact → « Les intervenants de la vente » : AUDIT + ANALYSE GRAPHIQUE (06/11) — maquette, rien codé
+
+Frédéric a refusé deux maquettes (« pas très jolie », puis « il faut faire bien mieux : les mandants sont liés aux autres
+partenaires et il y a aussi les acquéreurs »). Audit en lecture seule.
+
+**Ce que la base sait déjà (mesuré le 06/11 sur les 713 biens vivants : Actif 581, Sous offre 39, Sous compromis 93)**
+- Mandants : 674 biens en ont un ; **355 en ont plusieurs** (couples, indivisions) → un « foyer vendeur », pas une fiche.
+- Acquéreurs : **149 biens** ont un acquéreur dans une affaire (`app_affaire_partie`, rôle `acquereur`) ; offres
+  acceptée 130 / refusée 30 / en cours 2 ; compromis actifs 95 (4 avec plusieurs acquéreurs).
+- Notaires : sur les **93 biens sous compromis, 93 ont le notaire du vendeur ET celui de l'acquéreur** (rôles
+  `notaire_vendeur`, `notaire_acquereur`). Sur les 581 sans compromis, **79 ont un mandant dont le notaire est déjà
+  connu** par une autre affaire où il était partie → de quoi PROPOSER le notaire du vendeur dès le mandat.
+- Syndic relié : 42 biens vivants ; diagnostiqueur : 4. `app_partenaire_lien` a déjà les colonnes `app_affaire_id` et
+  `client_contact_id` (un partenaire peut être relié à une affaire ou à un client) : 0 ligne aujourd'hui.
+
+**Ce que l'écran en fait aujourd'hui (vu sur le bien sous compromis 18844, lecture seule)**
+- Rubrique Contact : **1 034 px** de haut ; seulement les mandants (une carte de ~480 px chacun, avec n° et date Hektor),
+  puis syndic et diagnostiqueur sous la ligne de flottaison. **Aucun acquéreur, aucun notaire.**
+- Rubrique Affaires : « Parties à l'affaire » (acquéreur + mandant) à **y = 1 636 px**, deux écrans plus bas ; les notaires
+  n'y sont qu'en TEXTE (« Notaire acquéreur / Notaire mandant ») dans le détail du compromis, pas reliés à leur fiche.
+- Donc les personnes d'une vente sont éparpillées sur trois endroits, et la moitié n'est pas cliquable.
+
+**La maquette (planche 1 du canevas RcvReTV74PM2L1ZEEWdoNq, interactive, 3 étapes)** : « la table de la vente ».
+- Deux côtés face à face, le bien au milieu avec l'avancement (mandat, offre, compromis, acte).
+- Côté vendeur : le foyer des mandants, et RATTACHÉS à lui par un trait : son notaire (proposé d'après son historique,
+  « Confirmer »), le diagnostiqueur qu'il commande.
+- Côté acquéreur : vide au mandat (renvoi au Rapprochement), les offres en lice sous offre, le foyer des acquéreurs au
+  compromis ; rattachés : son notaire, sa banque ou son courtier (bloc « en création », lot 6).
+- Sous le bien : l'immeuble et son syndic (proposé par le registre, « Confirmer »).
+- Style du cockpit (Fraunces, Hanken Grotesk, pastilles dégradées, étiquettes de métier du catalogue). Vérifiée en
+  aperçu local à 1280 × 665 pour les 3 étapes, sans défilement. Téléphone : pas encore dessiné.
+- **⛔ REFUSÉE par Frédéric (06/11)** : « il faut que cela ressemble à une rubrique contact annonce, pas un suivi de
+  dossier ». → **Version 2 de la planche 1** : la rubrique Contact garde la forme d'un carnet de contacts : section
+  « Vendeurs » (cartes contact du style réel `.fa-ck-ct-card`, resserrées, 2 par ligne), section « Acquéreurs » (même
+  carte), et sur chaque carte une ligne « Ses partenaires » en puces (notaire, courtier « en création ») ; puis
+  « Partenaires du bien » (syndic proposé « Confirmer », diagnostiqueur « Commander »). Plus d'avancement, plus de bien
+  au centre. Aperçu local vérifié à 1280 × 665 (tient sans défilement).
+- **⛔ RÈGLE DE FRÉDÉRIC (06/11) — les acquéreurs dans la rubrique Contact** : « visibles uniquement si transaction en
+  cours ; si transaction annulée ou refusée, on retire l'acquéreur, qui reste dans Affaires ». Mise en œuvre :
+  compromis `active` → les acquéreurs du compromis (et seulement eux) ; sinon offre `proposed` / `en_cours` /
+  `accepted` → les acquéreurs de ces offres ; `refused` / `cancelled` → absents de Contact, toujours dans Affaires.
+  Mesure 06/11 sur les biens vivants : Sous compromis 93 (93 compromis actifs) ; Sous offre 39 (37 offres vives,
+  1 compromis actif, 1 seulement tombée) ; Actif 17 biens avec une affaire, dont 16 seulement tombées (rien affiché) et
+  1 avec un compromis actif (écart de statut à regarder). ⚠ Non tranché : l'acquéreur APRÈS la vente (bien vendu).
+- **⚠ Frédéric (06/11) : « mais il n'y a pas que les actifs ! »** — mesure refaite sur TOUS les biens (57 875 :
+  `app_dossier_current` + `app_historical_annonce_index_current` + `app_archive_annonce_index_current`) :
+  Estimation 12 821 (13 avec une affaire, dont **8 avec une vente** et 4 avec une offre vive : anomalies) ·
+  Vendu 8 828 (tous avec une vente) · Clos 135 (**21 avec une offre encore « vive »**) · Archivé-clos 34 831
+  (**1 131 avec une offre encore « vive » et 10 avec un compromis « actif »**) · Archivé-vendu 425 (424 ventes) ·
+  Archivé-actif 90 (1 offre vive) · Archivé-estimation 32 · plus les 713 vivants ci-dessus.
+  ⭐ **Conséquence** : l'état de la transaction ne suffit pas. Chez Hektor, une offre acceptée n'est jamais refermée
+  quand le bien est clos ou archivé : avec l'état seul, **1 152 biens clos ou archivés** afficheraient un acquéreur
+  « en cours » périmé. La règle doit donc AUSSI regarder le statut du bien : « en cours » seulement si le bien est
+  Actif, Sous offre ou Sous compromis ; clos ou archivé → aucun acquéreur dans Contact (il reste dans Affaires).
+  Reste à trancher : le bien VENDU (8 828 + 424 archivés).
+- **⛔ FRÉDÉRIC (06/11) : « non, tu compliques ».** LA RÈGLE RETENUE, SIMPLE, sur tous les biens quel que soit leur
+  statut : **l'acquéreur s'affiche dans Contact, sauf si sa transaction est refusée ou annulée** (`refused`,
+  `cancelled`) ; dans ce cas il ne reste que dans Affaires. Une vente le garde donc visible. Pas de règle sur le
+  statut du bien. Les chiffres ci-dessus restent une mesure, pas une règle.
+- **⛔ DÉCISION DE FRÉDÉRIC (06/11), qui REMPLACE les deux points précédents** : « pour faire plus simple, fais comme
+  aujourd'hui SANS ACQUÉREUR, uniquement les contacts avec une super présentation et les liens, ensuite les
+  partenaires ». → **Pas d'acquéreur dans la rubrique Contact** (ils restent dans Affaires). **Version 3 de la
+  planche 1** : section « Mandants » (cartes riches : nom en Fraunces, état de la fiche « complète » / « e-mail
+  manquant », Appeler / E-mail / Fiche / ⋯, téléphone, e-mail, adresse, puis un encart « Ses liens » : co-mandant,
+  son notaire — proposé avec « Confirmer » quand il est connu par une autre vente —, ses autres biens) ; puis
+  « Partenaires du bien » (syndic proposé « Confirmer », diagnostiqueur « Commander », « ＋ Ajouter un partenaire du
+  bien »). Mesure à l'appui : sur 1 241 mandants des biens vivants, **443 ont d'autres biens** (3,5 en moyenne,
+  estimations et historique compris). Aperçu vérifié à 1280 × 665.
+- **⛔ FRÉDÉRIC (06/11) : « non, fais du design mais n'ajoute pas de fonctions ».** → **Version 4 de la planche 1** :
+  EXACTEMENT le contenu et les gestes d'aujourd'hui, redessinés. Mandants / Propriétaires (source « registre des
+  liens »), « Ajouter un mandant » ; par mandant : nom, rôle, n° de contact (lié), Appeler, E-mail, Ouvrir la fiche,
+  téléphone, e-mail, adresse, commentaire, Modifier, Retirer, date de mise à jour Hektor (liée). Partenaires du bien :
+  les deux cartes existantes (`SyndicDuBien`) avec leur origine, « Demander un document » / « Commander un
+  diagnostic », Ouvrir sa fiche, Changer, Retirer. **Retirés** de la maquette : ses liens (co-mandant, notaire,
+  autres biens), l'état de la fiche, les propositions « Confirmer », « Ajouter un partenaire du bien ».
+  Aperçu vérifié à 1280 × 665.
+- **Frédéric (06/11) : « oui c'est ça », mais « juste en graphisme tu peux faire mieux ».** → **Version 5** (même
+  contenu, mêmes gestes) : carte de visite du mandant (monogramme rond en Fraunces cerclé de blanc, grandes initiales
+  en filigrane dans le bandeau, nom en Fraunces 20 px), les trois gestes en boutons ronds avec leur libellé dessous
+  (E-mail grisé en pointillé quand il manque), coordonnées en lignes avec pastille d'icône, commentaire en italique,
+  pied Modifier / Retirer / date Hektor ; partenaires en « ticket » avec la bande de couleur du métier à gauche
+  (comme le prix et la carte d'état du cockpit), nom en Fraunces, gestes sur un second rang. Aperçu vérifié à
+  1280 × 665.
+- **✅ VALIDÉE par Frédéric (06/11) : « oui, mais sans les énormes initiales dans les mandants »** → filigrane retiré
+  (version 6). C'est LA référence graphique de la rubrique Contact. Reste à reprendre dans ce style : planche 2
+  (Copropriété), 3 (Diagnostics), 4 (création), puis la version téléphone.
+- **Planches 2 à 4 refaites dans ce style (06/11, « Oui, reprends-les »)**, mêmes champs qu'aujourd'hui (relevés
+  dans `App.tsx` ~30641 et l'assistant ~1640) : 2 · Copropriété = la carte du syndic (celle de Contact) + les 7 cases
+  modifiables en place ; 3 · Diagnostics & énergie = la carte du diagnostiqueur (au lieu de la case « À renseigner »
+  contradictoire), DPE en chiffres (sans lettre calculée), les 8 diagnostics en tableau résultat / date / commentaire,
+  dates vides « — » au lieu de « 0000-00-00 » ; 4 · création étape 5 = « Les intervenants du bien » (diagnostiqueur,
+  syndic) choisis dans l'annuaire avec « ＋ Nouveau » sur place — c'est le changement du PLAN accepté, le seul
+  comportement neuf des 4 planches. Aperçus vérifiés à 1280 × 665. Téléphone : pas dessiné.
+
+### 28.5 Plan, étape 1 — relier un partenaire à un bien sans numéro Hektor : AUDIT + PATCH — ✅ POSÉ le 06/11 (« Oui, pose-le »)
+
+**Pose (06/11)** : migration `partenaire_bien_sans_numero_2026_11_06` (gardes d'empreinte passées), puis
+`NOTIFY pgrst`. Répétition : structure **9/9 OK** ; essais des gestes **9 OK, 0 KO** (bien d'essai 118 / 102, transaction
+annulée). Témoin après : 84 liens actifs (inchangé), 86 au total, 0 sur le bien d'essai, 0 sans numéro Hektor. Vu en
+vrai dans l'app en ligne (bien 18844, lecture seule) : la carte « Syndic de la copropriété » se charge toujours
+(CABINET DELOMIER, « repris de Hektor le 04/11/2026 »). Tâche `partenaire-lien-numeros` active à :50. Aucun écran
+n'appelle encore les gestes sans numéro Hektor : ça vient à l'étape 2. Fichiers SQL non commités.
+
+**Audit (lecture seule, base de production)**
+- Une annonce créée dans l'app naît dans `app_dossier_current` avec NOTRE numéro (`v_id`, plage 10000000+) et
+  `hektor_annonce_id = NULL` (`app_create_annonce_job_optimistic`) ; Hektor rend le sien ~90 s plus tard et notre
+  numéro RESTE (les 4 annonces nées dans l'app, 10000000 → 10000009, ont aujourd'hui les deux).
+- Les 4 fonctions du geste refusent sans numéro Hektor (« Le bien n'a pas encore de numéro d'annonce ») et cherchent le
+  partenaire actuel par le seul numéro Hektor. La table, elle, accepte déjà un lien par notre seul numéro (contrainte
+  `objet = 'bien' AND (app_dossier_id OR hektor_annonce_id)`). Les deux index « un par bien » ne portent que sur le
+  numéro Hektor → un lien sans numéro Hektor ne serait protégé par rien.
+- 84 liens actifs (80 syndics, 4 diagnostiqueurs), tous avec les deux numéros, paires cohérentes : 0 écart ; 0 doublon
+  par notre numéro.
+- La reprise de nuit (`registre_partenaires_reprise.py`) et la fiche partenaire (`FicheSyndic.tsx`) ne lisent les liens
+  QUE par le numéro Hektor ; la tâche `app_sweep_stale_provisionals` ne touche pas `app_dossier_current`.
+
+**Le patch** : `supabase/patch_partenaire_bien_sans_numero_2026-11-06.sql` (+ `_INVERSE`, `_REPETITION`) —
+2 index uniques par notre numéro ; les 2 gestes acceptent notre numéro seul si le bien est dans `app_dossier_current`
+(et y reprennent le numéro Hektor s'il est arrivé) ; les 2 lectures prennent un 3e paramètre facultatif ;
+`app_partenaire_lien_completer_numeros()` + pg_cron `partenaire-lien-numeros` à :50 chaque heure (l'app gagne).
+Gardes d'empreinte (713b6c0f, 7551bf56, cacb639d, 6e4c905d) ; une seule transaction. Répétition : 9 contrôles de
+structure + 9 essais des gestes dans une transaction toujours annulée.
+
+**Ce que ça pourrait casser** : (1) le front d'aujourd'hui appelle les lectures avec 1 ou 2 paramètres → ils marchent
+tels quels (le 3e est facultatif ; l'ancienne signature est retirée pour éviter deux homonymes côté API, d'où le
+`NOTIFY pgrst`) ; (2) un lien sans numéro Hektor est invisible pour la reprise de nuit et la fiche partenaire jusqu'à
+la complétion (au plus une heure) ; si la nuit passe avant, la reprise ne le voit pas mais ne peut pas créer un 2e
+syndic (l'index par notre numéro refuserait — un refus ferait échouer son lot de 500 : c'est pour ça que la complétion
+tourne à :50, avant) ; (3) rien n'appelle encore les gestes sans numéro Hektor : le comportement visible ne change
+qu'à l'étape 2.
+**✅ 1re nuit après la pose (contrôle du 07/11, lecture seule)** : les étapes « syndic et diagnostiqueur » (05:54-06:22) et « registre des partenaires » (06:22:12-06:22:19) sont en DONE ; la reprise a posé 1 lien (syndic de 62147 / 1388149, origine hektor, les deux numéros cohérents) et n'en a retiré aucun ; 85 liens actifs (84 + 1), 0 sans numéro Hektor, 0 sans notre numéro, 0 doublon ; tâche `partenaire-lien-numeros` : 13 passages, 0 échec ; les 8 contrôles de structure de la répétition restent OK.
+- **Ce qui change un comportement, à trancher** : (1) les acquéreurs et notaires viennent de la table des parties
+  (lecture seule, pas de geste neuf) ; (2) « Confirmer » un notaire = un lien `app_partenaire_lien` rôle notaire sur
+  l'affaire ou le client (geste neuf) ; (3) proposer le notaire d'après l'historique du mandant = règle neuve.
+
+### 28.6 Plan, étape 2 — choisir le syndic et le diagnostiqueur à l'enregistrement de l'annonce : AUDIT (07/11, « Oui ») — rien codé
+
+> Audit limité à l'annonce (création et modification) et au contact partenaire créé sur place. Les autres objets ne
+> sont pas touchés : pas de transaction, pas de mandat, pas de recherche, rien chez Hektor (décidé : Hektor n'est pas
+> informé des liens).
+
+**Ce qui existe déjà (mesuré dans le code et la base le 07/11)**
+- La carte `SyndicDuBien.tsx` (syndic et diagnostiqueur, onglet Contact de la fiche) sait choisir dans le catalogue
+  et poser le lien. Mais elle **lit et écrit par le numéro Hektor seul** (`if (!annonce) return`, l. 140 ; la
+  lecture ne passe que `p_hektor_annonce_id`) : sur une annonce née dans l'app, tant que Hektor n'a pas rendu son
+  numéro (~90 s), elle affiche « aucun » et ne peut rien poser. L'étape 1 a ouvert la base ; l'écran n'en profite pas.
+- L'assistant de création, étape 5 « Détails · Diagnostics & énergie » (`App.tsx` l. 1664-1665), a deux champs
+  texte `diagnostiqueur` et `syndic`. Le `syndic` est **déjà masqué** quand le cran `partenaires_syndic_choix` est
+  allumé (il l'est : l. 15159 dans l'assistant, l. 34781 dans « Le Bien ») ; le `diagnostiqueur` est encore saisi en
+  texte libre dans les deux. Rappel : Hektor porte un syndic sur 79 biens sur 732 en copropriété, un diagnostiqueur
+  sur 4 sur 714.
+- La création (`app_create_annonce_job_optimistic`, interrupteur `c9_annonce_nait_dans_app` = on) pose déjà, **dans
+  la même transaction**, le lien du mandant choisi (bloc `@P4a`) et le mandant neuf (`@P4b`). Le travail rendu porte
+  `payload_json.app_dossier_id` (ex. 10000009) : l'écran connaît notre numéro du bien dès la réponse.
+- Les droits : `app_console_can_access_dossier` reconnaît un bien né dans l'app par notre numéro (les 4 biens
+  10 000 000+ sont dans `app_annonces_current` avec leur négociateur) : un négociateur pourra relier son annonce
+  neuve.
+- Créer un contact : la fenêtre `HektorContactIdentityForm` (mode create) existe et sert déjà ailleurs (l'agenda la
+  réutilise avec `onContactInputCreated`). `app_create_contact_optimistic` donne au contact **notre numéro tout de
+  suite** (≥ 20 000 000, `payload_json.app_identite` du travail rendu), et ce numéro est gardé au retour de Hektor
+  (adoption, 23/10). Le catalogue range les partenaires par **notre** numéro (1 871 métiers, plage 10 000 258 -
+  10 651 058, 0 numéro Hektor) : un contact neuf y entre sans conversion.
+- Donner le métier : `app_partenaire_metier_ecrire(p_contact, p_metier)` (source « ecran ») existe et sert à la fiche.
+  Le geste du lien exige ce métier (« Ce contact n'est pas un … du catalogue ») : l'ordre est donc créer → métier →
+  lien.
+
+**Ce qu'il faudrait faire (deux pièces, une à la fois)**
+- **2a — la carte sait travailler par notre numéro** : `SyndicDuBien` lit avec `p_app_dossier_id` en plus, et pose
+  même sans numéro Hektor. Petit, additif, utile tout seul (annonce neuve ouverte avant le retour de Hektor).
+- **2b — le choix dans la saisie** :
+  - *Création* : à l'étape 5, le champ texte « Diagnostiqueur » cède la place à un sélecteur du catalogue, et un
+    sélecteur « Syndic » apparaît si le bien est en copropriété (la même liste, la même recherche que la carte).
+    Chacun a « ＋ Nouveau » : la fenêtre de création de contact existante, puis le métier, puis le partenaire est
+    choisi. Le lien se pose **après** la réponse de la création, avec `payload_json.app_dossier_id` (geste de
+    l'étape 1, sans numéro Hektor). Si ce geste échoue, l'annonce est créée quand même et l'écran le dit (« le
+    syndic n'a pas été relié : choisis-le dans l'onglet Contact »).
+  - *Modification* : dans « Le Bien », sections Copropriété et Diagnostics, le champ texte « Diagnostiqueur » cède
+    la place à la même carte (enregistrement immédiat, comme les autres champs de cet écran qui s'écrivent au champ).
+- Le retrait du texte libre « Diagnostiqueur » de l'assistant et de « Le Bien » est l'**étape 3** ; en 2b il est
+  remplacé, pas supprimé ailleurs (la valeur Hektor existante reste lisible dans la carte, « indiqué dans Hektor »).
+
+**Le choix à trancher : où se pose le lien à la création**
+- **A (recommandé)** — l'écran pose le lien juste après la création (le geste de l'étape 1 a été fait pour ça). Rien
+  ne change dans la fonction de création, qui est grosse et sensible. Défaut : deux appels, donc un lien peut manquer
+  si le second échoue (dit à l'écran, rattrapable dans l'onglet Contact).
+- **B** — la fonction de création reçoit `initial_syndic` / `initial_diagnostiqueur` et pose le lien dans sa
+  transaction, comme le mandant (`@P4a`). Tout ou rien, mais on retouche `app_create_annonce_job_optimistic`.
+
+**Ce que ça pourrait casser**
+- Le contact créé par « ＋ Nouveau » part chez Hektor comme tout contact (travail `create_hektor_contact`) : il y
+  apparaîtra sans métier (Hektor n'est pas informé, c'est décidé). La reprise de nuit n'ajoute que ce qui manque :
+  elle ne retirera pas le métier « ecran ».
+- La reprise de nuit lit les liens par numéro Hektor : un lien posé avant le retour de Hektor est complété par la
+  tâche de :50 (étape 1) ; mesuré cette nuit, elle tourne sans échec.
+- Le scanner IA (« Créer l'estimation » saute l'assistant) ne passera pas par ce choix : il reste au chantier à part
+  (§28.3).
+- Le téléphone : la carte y est en lecture seule (variante `telephone`) ; l'assistant au téléphone n'est pas mesuré.
+- Non mesuré : si le champ texte `diagnostiqueur` envoyé à Hektor y est gardé ou ignoré (pour le syndic, il est
+  ignoré).
+
+#### 28.6 bis — Audit approfondi (07/11, « Audit pour être sûr ») — rien codé
+
+Six points vérifiés, dont deux qui **corrigent** le §28.6 :
+1. **Le texte « Diagnostiqueur » part dans le vide, comme le syndic — PROUVÉ.** Essai réel du 22/10 (annonce
+   10000009, `app_annonce_saisie_naissance.verdict`) : `diagnostiqueur` envoyé « Cabinet Diag Loire », relu
+   **absent** ; `syndic` envoyé « Syndic Foncia Firminy », relu **absent**. Remplacer le champ ne perd donc rien
+   chez Hektor (la réserve « non mesuré » du §28.6 tombe).
+2. **« ＋ Nouveau » existe presque déjà.** La fenêtre de création de contact connaît le type « partenaire » et la
+   liste des métiers de Hektor (Syndic = 5, Diagnostiqueur = 4, l. 42296) ; le worker l'envoie
+   (`partner_job_id`, l. 19341). **Six créations réelles réussies** les 04-05/11 (20000038 à 20000045, essais
+   supprimés depuis). Il manque seulement de pouvoir **ouvrir la fenêtre déjà réglée** sur « partenaire + syndic »
+   (deux réglages en plus, additifs). Conséquence : Hektor apprend le **métier** du contact (pas le lien).
+   Le métier est aussi écrit chez nous tout de suite (`app_partenaire_metier_ecrire`), sinon le partenaire ne
+   serait choisissable que le lendemain ; la reprise de nuit, qui traduit les numéros Hektor en nôtres
+   (`hektor_target_id` → `hektor_contact_id`), retrouvera le même couple et n'ajoutera rien.
+3. **Correction sur B.** Le bloc du mandant (`@P4a`, 200 lignes, 10 590 caractères pour toute la fonction) est
+   enveloppé dans `exception when others then raise warning` : s'il rate, la création continue **en silence**.
+   Un lien partenaire posé de la même façon raterait donc aussi en silence ; pour le rendre « tout ou rien », il
+   faudrait qu'un souci de syndic **fasse échouer la création de l'annonce**. B n'est donc pas plus sûr que A ;
+   il est plus caché.
+4. **A tient** : la fonction de création rend toujours `payload_json.app_dossier_id` (fin de fonction, ligne
+   `jsonb_build_object('creation_token', …, 'app_dossier_id', v_id)`) ; l'interrupteur `c9_annonce_nait_dans_app`
+   est à « on » et `PROVISIONAL_CREATION_ENABLED = true` (api.ts l. 6932). Si un jour le numéro manquait, l'écran
+   dirait « à choisir dans l'onglet Contact ».
+5. **Le téléphone** : l'assistant s'ouvre AUSSI au téléphone (bouton « Nouveau », l. 25645 → le même assistant).
+   Le choix devra donc être contrôlé à 375 px. La carte de la fiche reste en lecture seule au téléphone.
+6. **Les doublons** : la fenêtre cherche les doublons avant de créer (nom, e-mail, téléphone). Elle ne permet pas
+   de « reprendre » une fiche client existante comme partenaire — et c'est voulu (règle du 05/11 : une fiche client
+   ne change jamais, la fiche métier s'ouvre depuis le catalogue). L'utilisateur annule et choisit dans le
+   catalogue, ou confirme la création.
+
+Modification : un seul chemin modifie ces champs, « Le Bien » du cockpit (sections Copropriété et Diagnostics,
+champs enregistrés un par un). L'ancienne vue détail ne fait qu'afficher les intervenants lus chez Hektor.
+
+#### 28.6 ter — Pièce 2a CODÉE (07/11, « A ») — poussée le 07/11 avec 2b
+
+`SyndicDuBien.tsx` seul (+14 / −8) : la carte connaît le bien par l'un OU l'autre numéro (`bienConnu`). Elle lit par
+**notre** numéro **seulement quand le numéro Hektor manque** (`annonce ? null : dossier`) : pour tous les biens qui ont
+leur numéro Hektor, la lecture est **identique** à avant. L'écriture passait déjà les deux numéros ; elle n'est plus
+bloquée quand le numéro Hektor manque. Le message « pas encore de numéro » ne sort plus que si le bien n'a ni l'un ni
+l'autre. Les 4 appelants (bureau et téléphone, syndic et diagnostiqueur) passent déjà `appDossierId`.
+- Prudence mesurée avant de choisir la lecture : les lectures et les gestes cherchent par l'un OU l'autre numéro ; un
+  numéro interne d'archive, d'historique ou de brouillon qui croiserait celui d'un autre bien vivant fausserait la
+  carte. Mesuré : **0** croisement sur les trois index, **0** lien incohérent. D'où, quand même, la lecture par notre
+  numéro réservée au bien sans numéro Hektor.
+- Contrôle : `npm run build` vert. ⚠ **Pas vu à l'écran** : l'app locale réelle demande la connexion de Frédéric (je
+  ne saisis pas son mot de passe). Le chemin « sans numéro Hektor » est prouvé côté base (répétition de l'étape 1,
+  essai 3) ; il sera prouvé à l'écran avec 2b, sur une annonce d'essai créée avec son accord.
+
+#### 28.6 quater — Pièce 2b CODÉE (07/11, « Enchaîne ») — poussée le 07/11 (« Oui vas-y »), DORMANTE (cran absent)
+
+**Interrupteur** : cran `partenaires_choix_saisie` (`app_setting`, n'existe pas encore) — absent = l'écran d'avant,
+`admin` = les admins seuls, `on` = tout le monde. L'allumer est une écriture en production : avec l'accord de Frédéric.
+
+Ce que le cran allumé change :
+- **Assistant de création, étape 5** : le texte libre « Diagnostiqueur » (et « Syndic ») disparaît ; une rubrique
+  « Intervenants » propose le diagnostiqueur, et le syndic si « Copropriété » = Oui (`ChoixPartenaire`,
+  `SyndicDuBien.tsx`) : choix dans le catalogue, ou « ＋ Nouveau ». Rien n'est écrit pendant la saisie.
+- **À l'enregistrement** (`App.tsx`, après `createHektorDraftAnnonceJobOptimistic`) : solution **A** — le lien est
+  posé par notre numéro du bien (`payload_json.app_dossier_id`, geste de l'étape 1 sans numéro Hektor), AVANT
+  d'ouvrir la fiche (POINT 3a) pour qu'elle le montre. Un échec ne défait pas la création : il est affiché (« choisis-le
+  dans l'onglet Contact »).
+- **« ＋ Nouveau »** : un signal `bienvu:creer-partenaire` (même patron que `bienvu:ouvrir-partenaire`) ; l'App
+  principale ouvre la création de contact existante, réglée « Partenaire » + métier Hektor (prop neuve
+  `partenaireImpose` : Syndic = 5, Diagnostiqueur = 4) ; au retour, le métier est écrit chez nous
+  (`app_partenaire_metier_ecrire`, NOTRE numéro `app_identite`) puis le partenaire est choisi (assistant) ou relié
+  (carte d'une fiche). La fenêtre passe au-dessus de l'assistant (z-index 4200 contre 50).
+- **« Le Bien » (modification)** : texte libre « Diagnostiqueur » retiré ; la carte du syndic dans « Copropriété »,
+  celle du diagnostiqueur dans « Diagnostics », avec « ＋ Nouveau » ; les cartes de l'onglet Contact gagnent aussi
+  « ＋ Nouveau ».
+- Mode maquette (sans base) : `loadAppSettingValeur` rend « on » pour ce cran aussi (précédent : le registre), pour le
+  voir sans connexion.
+
+**Contrôles** : `npm run build` vert (tsc compris). Vu en maquette : bureau 1440×900, écran bas 1280×665, téléphone
+375 px (pas de défilement de côté) — la rubrique, le syndic qui n'apparaît qu'avec Copropriété = Oui, les champs texte
+retirés (reste « Statut syndicat », voulu), « ＋ Nouveau » qui ouvre la fenêtre réglée « Partenaire / Diagnostiqueur »
+au-dessus de l'assistant. Corrigé en route : la carte coincée dans une colonne de la grille de 12 → pleine largeur.
+⚠ **Non vu** : « Le Bien » (la fiche détaillée ne s'ouvre pas en maquette) ; le catalogue réel et le lien réel (il faut
+la base : après pose du cran en `admin`, une annonce d'essai créée avec son accord, puis retirée).
+
 ### 7 ter. Les dépendances (techniques, pas un ordre décidé)
 
 - 0 avant tout le reste ; 0.1 avant B2 ; 0.2 avant B1 ; 0.6 avant B5 ; 0.3 avant B6 ; 0.4 avant B7 ; 0.5 avant C2.

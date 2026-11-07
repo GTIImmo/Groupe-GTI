@@ -265,7 +265,7 @@ import { BlocMetierPartenaire, FenetreMetierPartenaire, useMetiersPartenaire } f
 import { blocsDuPartenaire, profilDuPartenaire } from './lib/metierPartenaire'
 import { PartenaireAVenir, PartenaireAvecNous, PartenaireChiffres, PartenaireInterlocuteurs, PartenaireSectionMetier } from './FichePartenaire'
 import { DiagBiens, DiagChiffres, SyndicChiffres, SyndicCoproprietes, SyndicNosBiens, useFicheSyndic } from './FicheSyndic'
-import SyndicDuBien, { EVENEMENT_OUVRIR_PARTENAIRE } from './SyndicDuBien'
+import SyndicDuBien, { ChoixPartenaire, EVENEMENT_CREER_PARTENAIRE, EVENEMENT_OUVRIR_PARTENAIRE, type DemandeCreerPartenaire, type PartenaireChoisi } from './SyndicDuBien'
 import DemandeDocument from './DemandeDocument'
 import { syndicSelonHektor } from './lib/syndicDuBien'
 import { lireCopro } from './lib/ficheSyndic'
@@ -15152,12 +15152,19 @@ export default function App() {
       ? draftAnnonceAdvanced.garageSurface
       : draftAnnonceSurface
   const syndicChoixCranApp = useCranCouplesVisible('partenaires_syndic_choix', profile?.role ?? null)
+  // PARTENAIRES, plan étape 2b (07/11/2026, §28.6) : cran `partenaires_choix_saisie` ('admin' = les admins seuls, 'on' =
+  // tout le monde, absent = l'assistant d'avant). Allumé : le syndic et le diagnostiqueur se CHOISISSENT dans le catalogue
+  // (ou se créent sur place) au lieu d'un texte libre que Hektor ignore (essai réel du 22/10 : les deux relus « absent »),
+  // et le lien est posé dès que la création a rendu notre numéro du bien.
+  const choixPartenairesSaisie = useCranCouplesVisible('partenaires_choix_saisie', profile?.role ?? null)
+  const [draftPartenaires, setDraftPartenaires] = useState<{ syndic: PartenaireChoisi | null; diagnostiqueur: PartenaireChoisi | null }>({ syndic: null, diagnostiqueur: null })
   const draftAnnonceVisibleWizardGroups = filterDraftAnnonceWizardGroupsForProfile(draftAnnonceWizardGroups, draftAnnonceTypeRules.kind)
     // Visibilite conditionnelle (ex. sous-champs piscine si Piscine=Oui) : lue sur les valeurs courantes
     // (draftAnnonceAdvanced pour un showIf.advanced, sinon les champs wizard).
     .map((section) => ({ ...section, fields: section.fields.filter((field) => {
       // PARTENAIRES 4.2d (B5) : plus de « Syndic » en texte libre (Hektor l'ignore) ; il se choisit sur la fiche du bien.
       if (syndicChoixCranApp && field.name === 'syndic') return false
+      if (choixPartenairesSaisie && (field.name === 'syndic' || field.name === 'diagnostiqueur')) return false
       if (!field.showIf) return true
       const src = field.showIf.advanced ? (draftAnnonceAdvanced as Record<string, string>) : draftAnnonceWizardFields
       return (src[field.showIf.field] ?? '') === field.showIf.value
@@ -16918,6 +16925,36 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // PARTENAIRES, plan étape 2b (07/11/2026) : « ＋ Nouveau » syndic / diagnostiqueur (carte du bien ou assistant) → la
+  // création de contact existante, réglée « partenaire » + métier. Le contact né (NOTRE numéro, tout de suite), son métier
+  // est écrit chez nous (sinon il ne serait choisissable qu'après la nuit), puis celui qui l'a demandé le reçoit.
+  const [partenaireACreer, setPartenaireACreer] = useState<DemandeCreerPartenaire | null>(null)
+  const [partenaireACreerErreur, setPartenaireACreerErreur] = useState<string | null>(null)
+  useEffect(() => {
+    const ecoute = (event: Event) => {
+      const demande = (event as CustomEvent<DemandeCreerPartenaire>).detail
+      if (demande?.role && typeof demande.poser === 'function') { setPartenaireACreerErreur(null); setPartenaireACreer(demande) }
+    }
+    window.addEventListener(EVENEMENT_CREER_PARTENAIRE, ecoute)
+    return () => window.removeEventListener(EVENEMENT_CREER_PARTENAIRE, ecoute)
+  }, [])
+  async function surPartenaireCree(demande: DemandeCreerPartenaire, contact: HektorContactIdentityInput, job: ConsoleJob) {
+    rememberHektorActionJob(job)
+    const id = numeroCreeDansLeTravail(job, 'app_identite')
+    const nom = (contact.companyName || [contact.firstName, contact.lastName].filter(Boolean).join(' ')).trim() || `Contact ${id ?? ''}`
+    if (!id || !hasSupabaseEnv || !supabase) {
+      setPartenaireACreerErreur(`Le contact est créé, mais son numéro n'est pas revenu : donne-lui le métier depuis sa fiche, puis choisis-le.`)
+      return
+    }
+    const { error } = await supabase.rpc('app_partenaire_metier_ecrire', { p_contact: id, p_metier: demande.role, p_retirer: false })
+    if (error) {
+      setPartenaireACreerErreur(`Le contact ${nom} est créé, mais son métier n'a pas pu être écrit : ${error.message}`)
+      return
+    }
+    setPartenaireACreer(null)
+    demande.poser(id, nom)
+  }
+
   async function handlePrepareArchivedAnnonceDetail(dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'numero_dossier' | 'titre_bien'>) {
     setErrorMessage(null)
     setNoticeMessage(null)
@@ -17606,6 +17643,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setDraftAnnonceScanReview([])
     setDraftAnnonceScanInputVersion((value) => value + 1)
     setDraftMandantChoice('none')
+    setDraftPartenaires({ syndic: null, diagnostiqueur: null })
     setDraftExistingMandantSearch('')
     setDraftExistingMandantId('')
     setDraftExistingMandantOptions([])
@@ -18389,6 +18427,22 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         setDraftAnnonceEstimationScan(null)
       }
       setDraftAnnonceModalOpen(false)
+      // PARTENAIRES, plan étape 2b (07/11/2026) : le syndic et le diagnostiqueur choisis sont reliés par NOTRE numéro du
+      // bien (geste de l'étape 1, sans numéro Hektor), AVANT d'ouvrir la fiche pour qu'elle les montre. Un échec ne défait
+      // pas la création : il est dit, et le choix se refait dans l'onglet Contact.
+      const partenairesNonRelies: string[] = []
+      if (choixPartenairesSaisie && (draftPartenaires.syndic || draftPartenaires.diagnostiqueur)) {
+        const dossierCree = Number(numeroCreeDansLeTravail(job, 'app_dossier_id')) || null
+        for (const [role, choisi] of [['syndic', draftPartenaires.syndic], ['diagnostiqueur', draftPartenaires.diagnostiqueur]] as const) {
+          if (!choisi) continue
+          if (!dossierCree || !hasSupabaseEnv || !supabase) { partenairesNonRelies.push(`${role} (${choisi.nom})`); continue }
+          const lien = role === 'syndic'
+            ? await supabase.rpc('app_partenaire_syndic_du_bien', { p_app_dossier_id: dossierCree, p_hektor_annonce_id: null, p_partenaire: choisi.id, p_retirer: false })
+            : await supabase.rpc('app_partenaire_du_bien', { p_role: role, p_app_dossier_id: dossierCree, p_hektor_annonce_id: null, p_partenaire: choisi.id, p_retirer: false })
+          if (lien.error) partenairesNonRelies.push(`${role} (${choisi.nom}) : ${lien.error.message}`)
+        }
+        setDraftPartenaires({ syndic: null, diagnostiqueur: null })
+      }
       // POINT 3a (26/10/2026) : la fiche de l'annonce creee s'ouvre tout de suite, par NOTRE numero,
       // et la liste se relit (l'annonce y est deja). La file des photos et du scan ne change pas :
       // elle suit le travail (rememberHektorActionJob ci-dessus), pas la fiche ouverte.
@@ -18400,6 +18454,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       setNoticeMessage(queuedPhotos.length
         ? `${queuedPhotos.length} photo(s) preparee(s). Elles seront envoyees par le worker photos des que l annonce sera synchronisee dans l app.`
         : null)
+      if (partenairesNonRelies.length) {
+        setErrorMessage(`L'annonce est créée, mais ce partenaire n'a pas été relié : ${partenairesNonRelies.join(' ; ')}. Choisis-le dans l'onglet Contact de la fiche.`)
+      }
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : bvs('Impossible de creer la demande d annonce Hektor'))
     } finally {
@@ -22367,6 +22424,29 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             </section>
           </div>
         ) : null}
+        {partenaireACreer ? (
+          <ContactWorkflowModal
+            title={partenaireACreer.role === 'syndic' ? 'Nouveau syndic' : 'Nouveau diagnostiqueur'}
+            eyebrow="Partenaire"
+            summary="La fiche naît « partenaire » avec son métier, entre au catalogue, puis est choisie."
+            tone="create"
+            onClose={() => setPartenaireACreer(null)}
+          >
+            {partenaireACreerErreur ? <p className="sb-erreur">{partenaireACreerErreur}</p> : null}
+            <HektorContactIdentityForm
+              mode="create"
+              compact
+              partenaireImpose={{ metierHektor: partenaireACreer.role === 'syndic' ? '5' : '4' }}
+              hektorUserEmail={contactHektorUserEmail}
+              hektorUserId={contactHektorUserId}
+              hektorNegotiators={hektorNegotiators}
+              profileRole={profile?.role ?? null}
+              sessionEmail={sessionEmail}
+              onCancel={() => setPartenaireACreer(null)}
+              onContactInputCreated={(contact, job) => { void surPartenaireCree(partenaireACreer, contact, job) }}
+            />
+          </ContactWorkflowModal>
+        ) : null}
         {draftAnnonceModalOpen ? (
           <div className="modal-overlay" onClick={closeDraftAnnonceModal}>
             <section className="modal-panel modal-panel-wide draft-annonce-modal" onClick={(event) => event.stopPropagation()}>
@@ -22716,6 +22796,20 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 {draftAnnonceStep === 'details' ? (
                   <>
                     {draftAnnonceDetailGroups.map(renderDraftAnnonceWizardSection)}
+                    {choixPartenairesSaisie ? (
+                      <section className="draft-annonce-section draft-annonce-wizard-section draft-annonce-partenaires">
+                        <div className="draft-annonce-section-title">
+                          <span>Page 5</span>
+                          <strong>Intervenants</strong>
+                        </div>
+                        <ChoixPartenaire role="diagnostiqueur" valeur={draftPartenaires.diagnostiqueur}
+                          onChange={(valeur) => setDraftPartenaires((avant) => ({ ...avant, diagnostiqueur: valeur }))} />
+                        {draftAnnonceWizardFields.copropriete === 'OUI' ? (
+                          <ChoixPartenaire role="syndic" valeur={draftPartenaires.syndic}
+                            onChange={(valeur) => setDraftPartenaires((avant) => ({ ...avant, syndic: valeur }))} />
+                        ) : null}
+                      </section>
+                    ) : null}
                     {draftAnnonceAdvancedSections.slice(1).map(renderDraftAnnonceAdvancedSection)}
                   </>
                 ) : null}
@@ -32944,6 +33038,9 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   const demandeSyndicBienCran = useCranCouplesVisible('partenaires_syndic_demande', props.profileRole)
   // LOT 5 (06/11) : la carte « Diagnostiqueur » (tout bien), même geste que le syndic.
   const diagBienCran = useCranCouplesVisible('partenaires_diag', props.profileRole)
+  // Plan, étape 2b (07/11/2026) : même cran que l'assistant. Allumé : dans « Le Bien », le texte libre « Diagnostiqueur »
+  // cède la place à la carte (Hektor l'ignorait), la carte du syndic entre dans « Copropriété », et « ＋ Nouveau » s'ajoute.
+  const choixPartenairesSaisieCk = useCranCouplesVisible('partenaires_choix_saisie', props.profileRole)
   const syndicCarteVisible = syndicChoixCran && !isLightweightDetail
     &&(/oui/i.test(String(rawWizardDetailField(props.detail, 'copropriete') ?? '')) || Boolean(syndicSelonHektor(props.detail.diagnostics_contacts_console_json)))
   // Diffusé & en attente d'offre : le jalon Offre devient le jalon COURANT (comme le v26).
@@ -34779,6 +34876,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                 // PARTENAIRES 4.2d (B5) : le syndic se CHOISIT dans la carte de l'onglet Contact ; le texte libre partait
                 // chez Hektor, qui l'ignore (il attend un contact).
                 .map((sec) => (syndicChoixCran ? { ...sec, fields: sec.fields.filter(([, k]) => k !== 'syndic') } : sec))
+                .map((sec) => (choixPartenairesSaisieCk ? { ...sec, fields: sec.fields.filter(([, k]) => k !== 'syndic' && k !== 'diagnostiqueur') } : sec))
                 .filter((sec) => sec.fields.length > 0)
                 .map((sec) => {
                 const fval = (k: string) => String(edited[k] ?? wizFieldValue(k) ?? '')
@@ -34810,6 +34908,25 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                         </>
                       ) : null}
                     </div>
+                    {choixPartenairesSaisieCk && !isLightweightDetail && sec.key === 'copropriete' && syndicChoixCran ? (
+                      <SyndicDuBien
+                        appDossierId={dossier.app_dossier_id ?? null}
+                        hektorAnnonceId={Number(dossier.hektor_annonce_id) || null}
+                        diagnosticsHektor={props.detail.diagnostics_contacts_console_json}
+                        latitude={Number(props.detail.latitude_detail) || null}
+                        longitude={Number(props.detail.longitude_detail) || null}
+                        nouveauPossible
+                      />
+                    ) : null}
+                    {choixPartenairesSaisieCk && !isLightweightDetail && sec.key === 'diagnostics' && diagBienCran ? (
+                      <SyndicDuBien
+                        role="diagnostiqueur"
+                        appDossierId={dossier.app_dossier_id ?? null}
+                        hektorAnnonceId={Number(dossier.hektor_annonce_id) || null}
+                        diagnosticsHektor={props.detail.diagnostics_contacts_console_json}
+                        nouveauPossible
+                      />
+                    ) : null}
                     {/* Carte interactive du secteur DANS le bloc Localisation (leaflet + IGN + parcellaire). Cliquer
                         une parcelle la retient pour toute l'app (Le Bien + Estimation), app-only. */}
                     {sec.key === 'localisation' ? (
@@ -35588,6 +35705,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                   latitude={Number(props.detail.latitude_detail) || null}
                   longitude={Number(props.detail.longitude_detail) || null}
                   demandePossible={demandeSyndicBienCran}
+                  nouveauPossible={choixPartenairesSaisieCk}
                   bienDemande={{
                     id: String(dossier.hektor_annonce_id ?? ''), titre: String(dossier.titre_bien ?? ''),
                     adresse: detailStr('adresse_detail') || null, codePostal: detailStr('code_postal_detail') || detailStr('code_postal') || null,
@@ -35603,6 +35721,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                   hektorAnnonceId={Number(dossier.hektor_annonce_id) || null}
                   diagnosticsHektor={props.detail.diagnostics_contacts_console_json}
                   demandePossible
+                  nouveauPossible={choixPartenairesSaisieCk}
                   bienDemande={{
                     id: String(dossier.hektor_annonce_id ?? ''), titre: String(dossier.titre_bien ?? ''),
                     adresse: detailStr('adresse_detail') || null, codePostal: detailStr('code_postal_detail') || detailStr('code_postal') || null,
@@ -42767,6 +42886,9 @@ function HektorContactIdentityForm(props: {
   onCancel?: () => void
   onJobCreated?: (job: ConsoleJob) => void
   onContactInputCreated?: (contact: HektorContactIdentityInput, job: ConsoleJob) => void
+  // PARTENAIRES, plan étape 2b (07/11/2026) : création ouverte depuis « ＋ Nouveau » d'un syndic / diagnostiqueur -- la
+  // fiche naît « partenaire » avec son métier Hektor (Syndic = 5, Diagnostiqueur = 4). Sans cette prop : rien ne change.
+  partenaireImpose?: { metierHektor: string } | null
 }) {
   const normalizedSessionEmail = normalizeEmail(props.sessionEmail)
   const hektorUserEmailDesigne = emailHektorHorsSession(props.hektorUserEmail, props.profileRole, props.sessionEmail)
@@ -42790,7 +42912,7 @@ function HektorContactIdentityForm(props: {
   }, [availableHektorNegotiators, normalizedSessionEmail, props.contact?.negociateur_email, hektorUserEmailDesigne, props.hektorUserId, props.profileRole])
   const initial = props.contact
     ? contactIdentityInputFromContact(props.contact, props.hektorUserEmail, props.hektorUserId)
-    : { civility: '', lastName: '', firstName: '', companyName: '', legalForm: '', siret: '', partnerJobId: '', website: '', spouseLastName: '', spouseFirstName: '', spouseEmail: '', spousePhone: '', spouseAddress: '', spousePostalCode: '', spouseCity: '', email: '', phone: '', phoneSecondary: '', address: '', postalCode: '', city: '', birthDate: '', birthPlace: '', maritalStatus: '', contactKind: 'acquereur', personType: 'personne_seule', sourceId: '', categoryId: '', comments: '', sendRgpdEmail: true, crmMandateSummaryEnabled: null, crmMandateExpirationEnabled: null, crmBirthdayEnabled: null, hektorUserEmail: props.hektorUserEmail ?? null, hektorUserId: props.hektorUserId ?? null }
+    : { civility: '', lastName: '', firstName: '', companyName: '', legalForm: '', siret: '', partnerJobId: props.partenaireImpose?.metierHektor ?? '', website: '', spouseLastName: '', spouseFirstName: '', spouseEmail: '', spousePhone: '', spouseAddress: '', spousePostalCode: '', spouseCity: '', email: '', phone: '', phoneSecondary: '', address: '', postalCode: '', city: '', birthDate: '', birthPlace: '', maritalStatus: '', contactKind: props.partenaireImpose ? 'partenaire' : 'acquereur', personType: 'personne_seule', sourceId: '', categoryId: '', comments: '', sendRgpdEmail: true, crmMandateSummaryEnabled: null, crmMandateExpirationEnabled: null, crmBirthdayEnabled: null, hektorUserEmail: props.hektorUserEmail ?? null, hektorUserId: props.hektorUserId ?? null }
   const [civility, setCivility] = useState(initial.civility ?? '')
   const [lastName, setLastName] = useState(initial.lastName ?? '')
   const [firstName, setFirstName] = useState(initial.firstName ?? '')
@@ -42929,7 +43051,7 @@ function HektorContactIdentityForm(props: {
   useEffect(() => {
     const next = props.contact
       ? contactIdentityInputFromContact(props.contact, props.hektorUserEmail, props.hektorUserId)
-      : { civility: '', lastName: '', firstName: '', companyName: '', legalForm: '', siret: '', partnerJobId: '', website: '', spouseLastName: '', spouseFirstName: '', spouseEmail: '', spousePhone: '', spouseAddress: '', spousePostalCode: '', spouseCity: '', email: '', phone: '', phoneSecondary: '', address: '', postalCode: '', city: '', birthDate: '', birthPlace: '', maritalStatus: '', contactKind: 'acquereur', personType: 'personne_seule', sourceId: '', categoryId: '', comments: '', sendRgpdEmail: true, crmMandateSummaryEnabled: null, crmMandateExpirationEnabled: null, crmBirthdayEnabled: null, hektorUserEmail: props.hektorUserEmail ?? null, hektorUserId: props.hektorUserId ?? null }
+      : { civility: '', lastName: '', firstName: '', companyName: '', legalForm: '', siret: '', partnerJobId: props.partenaireImpose?.metierHektor ?? '', website: '', spouseLastName: '', spouseFirstName: '', spouseEmail: '', spousePhone: '', spouseAddress: '', spousePostalCode: '', spouseCity: '', email: '', phone: '', phoneSecondary: '', address: '', postalCode: '', city: '', birthDate: '', birthPlace: '', maritalStatus: '', contactKind: props.partenaireImpose ? 'partenaire' : 'acquereur', personType: 'personne_seule', sourceId: '', categoryId: '', comments: '', sendRgpdEmail: true, crmMandateSummaryEnabled: null, crmMandateExpirationEnabled: null, crmBirthdayEnabled: null, hektorUserEmail: props.hektorUserEmail ?? null, hektorUserId: props.hektorUserId ?? null }
     setCivility(next.civility ?? '')
     setLastName(next.lastName ?? '')
     setFirstName(next.firstName ?? '')
