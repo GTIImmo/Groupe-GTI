@@ -111,9 +111,12 @@ visuel : elle demande son propre « vas-y ».
   `ac20049d-0717-4f4f-9c6e-184cb7d3e2ae` : `done`, `verifie: true`, 0 erreur. Charge : `selected_mandat` **vide**.
   Journal `hektor_transaction` : **`forme_mandat_selectionne = 3-PROTEXA`** (la valeur de Hektor, plus un numéro seul),
   et la réponse de Hektor porte l'offre **33132** avec **`id_mandat: 3`, `type_mandat: PROTEXA`** → l'offre est née
-  AVEC son mandat. Preuve « deux portes » (fiche + API) verte. ⏰ Reste à lire après la nuit : `mandat_origine` de
-  l'offre 33132 au registre doit valoir `hektor` (à 16:40 : `hektor_mandat_id` vide, `mandat_origine` vide,
-  `numero_mandat` 18420 — le registre n'est pas encore relu).
+  AVEC son mandat. Preuve « deux portes » (fiche + API) verte. À 16:40, avant la nuit : `hektor_mandat_id` vide,
+  `mandat_origine` vide, `numero_mandat` 18420 (le registre n'était pas encore relu).
+- ✅ **Lu après la nuit, le 07/11** (registre relu à 05:24:27) : l'offre 33132 porte **`mandat_origine = hektor`**,
+  **`hektor_mandat_id = 3`**, `numero_mandat` 18420, `present_in_hektor` vrai, 170 000 €, 10 jours, état `proposed`.
+  Le témoin positif est complet de bout en bout : l'offre partie de la modale est née chez Hektor AVEC son mandat, et
+  notre registre le reconnaît comme venant de Hektor (plus une déduction).
 - ⚠ Le bien d'essai 61398 est maintenant « Sous offre » chez Hektor, avec l'offre 33132 en cours ; la refuser pour le
   remettre « Actif » serait un autre geste chez Hektor, non fait (décision de Frédéric).
 - ⚠ L'ancienne modale (interrupteur éteint) affiche toujours la case « N° de mandat », mais sa valeur ne part plus.
