@@ -3947,6 +3947,7 @@ async function createHektorAnnonceWithHttpDirect(job, payload) {
     bytes: wizardResponse.buffer.length,
   });
 
+  const suiviPreparations = nouveauSuiviPreparationsCache();
   const wizardFieldCaptures = await applyHektorCreateWizardFields(
     job,
     fetchAfterAnnonceId,
@@ -3954,6 +3955,7 @@ async function createHektorAnnonceWithHttpDirect(job, payload) {
     { offredem, idType, statutAnnonce, programmeNeuf, typeTransac },
     payload,
     wizardResponse.text,
+    suiviPreparations,
   );
   captured.push(...wizardFieldCaptures);
 
@@ -3985,8 +3987,12 @@ async function createHektorAnnonceWithHttpDirect(job, payload) {
     });
   }
 
+  // 07/11 : les preparations du cache encore en vol (voir PREPARATION_CACHE_WIZARD_DELAI_MS).
+  const preparationsCache = await attendrePreparationsCache(suiviPreparations);
+
   await logJob(job.id, "hektor_annonce_http", "done", "Annonce creee et activee via commandes HTML directes", {
     idannWizard,
+    preparations_cache: preparationsCache,
     captured,
   });
 
@@ -12352,26 +12358,78 @@ async function fetchHektorWizardBienHtml(fetcher, idannWizard, meta) {
   return response.text;
 }
 
-async function postHektorWizardCreateStep(job, fetcher, idannWizard, meta, step, body) {
+// 07/11/2026 -- « PREPARER LE CACHE » N'EST PLUS ATTENDU (note CHANTIER_ANNUAIRE_PARTENAIRES §28.8 quater).
+// A chaque page de l'assistant, la page de Hektor appelle deepFlowReality-setDeepCache, puis envoie
+// la page 6 ms apres SANS attendre la reponse (labs_Bien_Wizard_New.js l. 408, valideEtapeWizard,
+// relu le 07/11 : une seule fonction pour toutes les pages). Mesure du 07/11 dans la page de Hektor
+// en negociatrice (idUser 51, le contexte meme de ce worker) : la page repond en 0,9 s, setDeepCache
+// en 30,1 s. Nous l'ATTENDIONS avec un delai de 30 s : toute creation tombait 0,1 s avant la
+// reponse, APRES « ajoutebien » (annonces orphelines 63474 et 63475). Jusqu'au 22/10 il repondait
+// en moins de 3 s (80 creations depuis mai, assistant de 14 a 45 s pour 6 pages) : defaut jamais vu.
+// On fait comme Hektor : on le lance, on ne l'attend pas, et son echec ne fait jamais echouer la
+// creation -- il est seulement note au compte rendu.
+// Delai large : un abandon sur delai declenche le recul de 15 s du frein (hektorNoteReject) sur
+// les appels suivants ; a 90 s, la reponse de 30 s arrive avant.
+const PREPARATION_CACHE_WIZARD_DELAI_MS = 90000;
+// En fin de creation, on laisse au plus 45 s aux preparations encore en vol (pour le compte rendu,
+// et pour qu'aucun appel de cette annonce ne soit en vol quand le travail suivant change de
+// negociateur), puis on continue SANS elles.
+const PREPARATION_CACHE_WIZARD_ATTENTE_FIN_MS = 45000;
+
+function nouveauSuiviPreparationsCache() {
+  return { promesses: [], comptesRendus: [] };
+}
+
+// Ne rejette JAMAIS : une promesse rejetee que personne n'attend arreterait le processus.
+function lancerPreparationCacheWizard(fetcher, idannWizard, step, suivi) {
+  const debut = Date.now();
+  // Appel DIRECT (pas dans un .then) : il prend son tour au frein AVANT la page, comme chez Hektor.
+  const promesse = fetcher(XMLRPC_URL, {
+      method: "POST",
+      body: new URLSearchParams({
+        mode: "deepFlowReality-setDeepCache",
+        idann: String(idannWizard),
+        step: String(step),
+      }),
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+        Referer: `${ADMIN_URL}?page=/mes-biens/ajouter-un-nouveau-bien`,
+      },
+      timeoutMs: PREPARATION_CACHE_WIZARD_DELAI_MS,
+    })
+    .then(
+      (resultat) => ({ step, ms: Date.now() - debut, status: resultat.response.status }),
+      (error) => ({ step, ms: Date.now() - debut, erreur: String(error && error.message ? error.message : error).slice(0, 200) }),
+    )
+    .then((compteRendu) => {
+      if (suivi) suivi.comptesRendus.push(compteRendu);
+      return compteRendu;
+    });
+  if (suivi) suivi.promesses.push(promesse);
+  return promesse;
+}
+
+// Attend les preparations en vol, au plus PREPARATION_CACHE_WIZARD_ATTENTE_FIN_MS ; ne leve jamais.
+async function attendrePreparationsCache(suivi) {
+  if (!suivi || !suivi.promesses.length) return { lancees: 0, finies: [], attente_fin_ms: 0 };
+  const debut = Date.now();
+  await Promise.race([Promise.all(suivi.promesses), sleep(PREPARATION_CACHE_WIZARD_ATTENTE_FIN_MS)]);
+  return {
+    lancees: suivi.promesses.length,
+    finies: suivi.comptesRendus.slice(),
+    attente_fin_ms: Date.now() - debut,
+  };
+}
+
+async function postHektorWizardCreateStep(job, fetcher, idannWizard, meta, step, body, suiviPreparations) {
   await logJob(job.id, "hektor_annonce_wizard", "running", `Sauvegarde page Hektor ${step} du wizard`, {
     hektor_annonce_id: String(idannWizard),
     step,
     fields: Array.from(body.keys()).filter((key) => !["mode", "step", "idann", "offredem", "programme_neuf", "isInterkabActive"].includes(key)).slice(0, 80),
   });
 
-  await fetcher(XMLRPC_URL, {
-    method: "POST",
-    body: new URLSearchParams({
-      mode: "deepFlowReality-setDeepCache",
-      idann: String(idannWizard),
-      step: String(step),
-    }),
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
-      Referer: `${ADMIN_URL}?page=/mes-biens/ajouter-un-nouveau-bien`,
-    },
-    timeoutMs: 30000,
-  });
+  // 07/11 : lance, JAMAIS attendu -- comme la page de Hektor (voir PREPARATION_CACHE_WIZARD_DELAI_MS).
+  lancerPreparationCacheWizard(fetcher, idannWizard, step, suiviPreparations);
 
   const response = await fetcher(XMLRPC_URL, {
     method: "POST",
@@ -12391,7 +12449,7 @@ async function postHektorWizardCreateStep(job, fetcher, idannWizard, meta, step,
   };
 }
 
-async function applyHektorCreateWizardFields(job, fetcher, idannWizard, meta, payload, firstWizardHtml) {
+async function applyHektorCreateWizardFields(job, fetcher, idannWizard, meta, payload, firstWizardHtml, suiviPreparations) {
   const captured = [];
   let html = firstWizardHtml;
   const steps = [
@@ -12405,7 +12463,7 @@ async function applyHektorCreateWizardFields(job, fetcher, idannWizard, meta, pa
 
   for (const item of steps) {
     const body = await item.build(idannWizard, meta, html, payload);
-    const result = await postHektorWizardCreateStep(job, fetcher, idannWizard, meta, item.step, body);
+    const result = await postHektorWizardCreateStep(job, fetcher, idannWizard, meta, item.step, body, suiviPreparations);
     captured.push(result);
     if (item.step !== 7) {
       html = await fetchHektorWizardBienHtml(fetcher, idannWizard, meta);

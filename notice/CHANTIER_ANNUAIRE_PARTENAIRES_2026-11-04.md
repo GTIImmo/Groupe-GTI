@@ -2598,6 +2598,268 @@ Cran **`partenaires_design_contact`** (absent = l'onglet Contact d'avant ; `admi
 pas, et l'app réelle locale demande la connexion de Frédéric. Le voir passe par le cran en `admin` (lui seul).
 Fichiers : `App.tsx`, `SyndicDuBien.tsx`, `syndic-du-bien.css`, `contact-du-bien.css` (nouveau), `lib/api.ts`.
 
+**En essai pour les admins (07/11, « Oui, pousse et allume »)** : `1f0536b` (4a) puis `21d7b79` poussés ; crans
+`partenaires_choix_saisie` et `partenaires_design_contact` posés à **`admin`** à 09:51:16 (`app_setting`, avec leur
+description). ⚠ **Premier essai raté, cause trouvée** : la fiche d'un bien ne reçoit PAS `profileRole` de l'App (aucun
+des deux appelants ne le passe) — un cran « admin » y valait toujours « éteint » ; les crans déjà en place marchaient
+parce qu'ils sont à « on ». Corrigé par `roleConnecte` (prop neuve, lue SEULEMENT par ces deux crans) : passer
+`profileRole` aurait changé d'autres gestes de la fiche (ex. « Réaffecter le négociateur », aujourd'hui proposé aussi à
+un négociateur parce que le rôle manque — trouvaille notée, non traitée).
+**Vu en vrai** (Chrome de Frédéric, bien 18844, lecture seule, 1280 × 665) : onglet Contact = carte de visite du mandant
+(« Retirer » grisé avec sa raison « le mandat n° 18844 a été généré »), tickets « CABINET DELOMIER » (Demander un
+document) et « Aucun diagnostiqueur » (Choisir) ; le choix ouvre le vrai catalogue (22 diagnostiqueurs) avec « ＋ Nouveau
+diagnostiqueur », refermé sans rien choisir. « Le Bien » : carte du syndic dans Copropriété, le texte libre
+« Diagnostiqueur » retiré des Diagnostics (14/34). ⚠ **Pas encore essayé** : la création d'une annonce avec un partenaire
+choisi, et « ＋ Nouveau » jusqu'au bout (ils écrivent chez Hektor : à faire par Frédéric ou avec son accord). Le format de
+la date « mis à jour le 2026-10-02 14:06:07 » est celui d'avant (même donnée, non reformatée).
+
+#### 28.7 ter — ESSAI RÉEL de 2a + 2b par moi (07/11, « FAIS LE TOI MÊME »)
+
+Dans le Chrome de Frédéric, écran Annonces → « Nouvelle annonce » → assistant : « ESSAI PARTENAIRES 2B - ne pas
+diffuser », Groupe GTI Firminy, Emmanuelle PEREIRA, 8 rue de l'Ondaine 42700 Firminy, 100 000 €, Copropriété = Oui.
+- **Diagnostiqueur choisi dans le catalogue** : Ardrodiag (10355367). ✅
+- **Syndic créé sur place par « ＋ Nouveau syndic »** : la fenêtre s'est ouverte réglée « Partenaire / Syndic » (compte
+  à choisir : pas de négociateur présélectionné pour un admin, choisi PEREIRA) ; contact « ZZ ESSAI SYNDIC 2B »,
+  0499999961 → **notre n° 20000046 tout de suite, métier `syndic:ecran` écrit, travail `create_hektor_contact` done,
+  n° Hektor 606274** ; il est revenu choisi dans l'assistant. ✅
+- **« Créer l'annonce »** : fiche ouverte sur notre n° **10000202** ; **les deux liens posés par notre numéro** (ids 102
+  syndic, 103 diagnostiqueur, origine app, 10:07:24, `hektor_annonce_id` vide comme prévu) ; l'onglet Contact les
+  montre AVANT tout numéro Hektor (« choisi dans l'app par Frederic Gerphagnon le 07/11/2026 ») — la pièce 2a prouvée. ✅
+- ⛔ **Le travail de création de l'annonce chez Hektor a ÉCHOUÉ** : `Hektor timeout 30000ms on .../admin/xmlrpc.php`
+  (10:07:24 → 10:08:01, recul de 15 s au journal du worker). Rien n'indique que Hektor l'ait créée (aucune annonce de ce
+  titre dans la synchro). Sans rapport avec le code du chantier (le worker n'est pas touché).
+- ⚠ **Mon erreur de méthode** : créée depuis l'écran **Annonces**, l'annonce part `creation_status = active`
+  (`App.tsx` ~15211 : « estimation » seulement depuis l'écran Estimations ou le scanner). Les essais 8a étaient en
+  estimation. ⛔ **NE PAS « Relancer » ce travail** : il créerait chez Hektor une annonce d'essai ACTIVE.
+- **Reste à nettoyer (décision de Frédéric)** : le travail en erreur 68e21008 (« Abandonner » défait le geste : la
+  fiche provisoire 10000202, visible dans la liste d'Emmanuelle PEREIRA, disparaît), les liens 102/103, le contact
+  d'essai 20000046 / 606274 (chez Hektor aussi).
+
+#### 28.7 quater — Pourquoi la création a échoué, et le nettoyage (07/11, « il faut nettoyer mais pourquoi le worker a planté ! »)
+
+**Ce n'est pas un plantage du worker, c'est Hektor qui n'a pas répondu, et le worker ne sait pas réparer après.**
+Trace `app_console_job_log` du travail 68e21008 : 10:07:24 pris par le service « actions » ; contexte admin puis
+négociateur (51, PEREIRA) OK ; 10:07:28 « ajoutebien » → **Hektor crée l'annonce 63474** ; 10:07:30 envoi de la
+**page 2 de l'assistant Hektor** (`ajoutebien_wizardBien` : idMandant, statut, prix, négociateur, copropriété) →
+**aucune réponse en 30 s** → `Hektor timeout 30000ms`, recul de 15 s, travail en erreur avec
+`created_hektor_annonce_id: 63474` dans sa trace.
+- **Hektor seul en cause pour le délai** : sur les 20 créations précédentes, cette page 2 a répondu en 0,9 à 3,4 s, y
+  compris en « Actif » (4 fois fin août, 3,0-3,4 s) et avec copropriété (22/10, 2,9 s). Aucun autre délai dépassé dans
+  les deux heures. Le statut « Actif » (mon erreur de méthode) n'est pas la cause.
+- ⚠⚠ **LE VRAI DÉFAUT, ANCIEN, HORS DU CHANTIER** : quand la création échoue APRÈS « ajoutebien », le worker garde le
+  numéro (63474) dans sa trace mais ne le pose pas sur la fiche provisoire (10000202 restait sans numéro Hektor) et ne
+  nettoie rien → **une annonce à moitié créée, ACTIVE, orpheline chez Hektor**, que la synchro aurait ramenée comme une
+  fiche de plus. Et « Relancer » recréerait une deuxième annonce. Correctif à auditer (code du worker : son accord).
+
+**Nettoyage fait (07/11, ~10:16-10:25)** : les liens 102 et 103 retirés par le bouton « Retirer » (trace : Frédéric,
+10:16:05 et 10:16:08) ; le contact d'essai 20000046 / 606274 supprimé par « Supprimer le contact » (raison écrite,
+travail `delete_hektor_contact` done ; son métier n'est plus actif) ; **l'annonce 63474 supprimée chez Hektor** par le
+travail `delete_hektor_annonce` 4209f343 (créé à son nom par la fonction de l'app, confirmation « SUPPRIMER 63474 »,
+fiche 10000202) : « Suppression Hektor envoyée et VÉRIFIÉE (existait avant, absente après) », et la fiche 10000202 a
+disparu de chez nous. Contrôle : 85 liens actifs (comme avant l'essai), 0 sans numéro. ⛔ Le travail 68e21008 reste
+« error » (il n'existe pas d'état « annulé ») : **NE PAS LE RELANCER**.
+
+### 28.8 La création d'annonce interrompue : AUDIT d'un correctif du worker (07/11, « explique plus clairement et audite un correctif ») — rien codé
+
+> Audit limité au geste « créer une annonce » (`create_hektor_draft_annonce`). Les autres gestes ne sont pas mesurés.
+
+**Ce qui s'est passé, étape par étape** (`Console/console_job_worker.js`, trace `app_console_job_log` du travail 68e21008) :
+1. `createHektorAnnonceWithHttpDirect` (l. ~3880) envoie `ajoutebien` → Hektor crée l'annonce et rend son numéro
+   **63474** (10:07:28). À partir de là, l'annonce EXISTE chez Hektor.
+2. `ajoutebien_wizardBien` (délai 60 s) → répond.
+3. `applyHektorCreateWizardFields` → `postHektorWizardCreateStep` (l. ~12355) pour la page 2 : il envoie D'ABORD un appel
+   préparatoire `deepFlowReality-setDeepCache` (délai **30 s**), puis la page elle-même (60 s). **C'est l'appel préparatoire
+   qui n'a pas répondu** : début 10:07:30.1, erreur 10:08:01.0 = 30,9 s. Hektor seul en cause (les 82 autres créations
+   depuis juillet : 0 échec ; cette étape répond en 0,9 à 3,4 s).
+4. L'erreur remonte : `createHektorAnnonce` (l. ~4000) note `created_hektor_annonce_id: 63474` et relance l'erreur ;
+   `handleCreateHektorDraftAnnonceWithProvisional` (l. ~25331) marque la fiche provisoire « Erreur de création »
+   (`app_annonce_provisional`, la liste l'affiche), retire les liens MANDANT nés au clic (`retirerLiensDeLaCreationEchouee`,
+   table `app_relation`), et s'arrête.
+
+**Les trois trous** (le premier existe depuis toujours ; le troisième vient de la pièce 2b) :
+- **T1 — l'annonce à moitié créée reste chez Hektor**, ACTIVE si elle était demandée active, et notre fiche ne connaît pas
+  son numéro (le 63474 n'est que dans la trace). La synchro l'aurait ramenée comme une fiche de plus.
+- **T2 — « Relancer » crée une DEUXIÈME annonce** (le travail repart de `ajoutebien`, sans regarder la trace).
+- **T3 — les liens partenaires (2b) ne sont pas retirés** : `retirerLiensDeLaCreationEchouee` ne regarde que
+  `app_relation`, pas `app_partenaire_lien`. Mesuré sur l'essai : les liens 102/103 sont restés sur la fiche en échec.
+
+**Le correctif proposé** (une seule pièce, dans le worker ; additif ; redémarrage des services par Frédéric, file vide) :
+- **C1 — réessayer UNE fois l'appel préparatoire** `setDeepCache` (il ne fait que préparer un cache côté Hektor, il est
+  rejouable), avec 60 s, avant d'abandonner. Réduit la chance de l'échec ; ne le supprime pas.
+- **C2 — si la création échoue APRÈS que Hektor a donné un numéro : défaire ce qu'on vient de créer**, avec les mêmes
+  garde-fous que le geste « Supprimer l'annonce » (l. ~23108) : lire l'annonce avant, ne supprimer QUE le numéro rendu par
+  CE travail, prouver la suppression par l'absence. Puis l'erreur reste une erreur (« Erreur de création », relançable
+  sans doublon).
+  - **Si la suppression échoue ou ne peut pas se prouver** : le numéro est écrit sur la fiche provisoire et une alerte
+    nomme l'orpheline (« annonce n° … créée à moitié, à supprimer ») — on ne la perd jamais de vue.
+- **C3 — garde de relance** : avant `ajoutebien`, si la trace du travail porte déjà un numéro créé ET que l'annonce existe
+  encore chez Hektor, le travail refuse de recréer (il dit pourquoi).
+- **C4 — T3** : `retirerLiensDeLaCreationEchouee` retire aussi les liens `app_partenaire_lien` nés avec la fiche
+  (`app_dossier_id` = la fiche, `hektor_annonce_id` vide, origine `app`), daté, trace gardée.
+
+**L'autre voie, écartée sauf avis contraire — « reprendre au lieu de défaire »** : garder 63474, le poser sur la fiche,
+et finir de remplir l'annonce plus tard par une mise à jour des champs. Elle garde le numéro, mais une annonce ACTIVE
+à moitié remplie resterait visible chez Hektor (et sur les portails si elle devenait diffusable) le temps de la reprise,
+et le code est beaucoup plus gros (reprendre une création au milieu des pages).
+
+**Ce que ça pourrait casser** : C2 supprime chez Hektor, sans clic humain — d'où la règle stricte : seulement le numéro
+que CE travail vient de recevoir, seulement s'il est lisible, preuve par l'absence ; jamais une annonce existante. C1
+rallonge au pire de 60 s une création qui échoue de toute façon. C3 peut bloquer une relance légitime si la lecture de
+Hektor rate (elle le dira). C4 ne touche que les liens nés avec cette fiche. Non mesuré : si `setDeepCache` est
+indispensable à la page 2 (s'il ne l'était pas, on pourrait aussi l'ignorer en cas de délai).
+**Comment on vérifiera** : un essai « à blanc » qui simule le délai (script, sans Hektor), puis un essai réel depuis
+l'écran Estimations avec son accord.
+
+#### 28.8 bis — L'ESSAI MESURÉ (07/11, « refaire un test mesuré avant de corriger », « les remplir un minimum ») — ⛔ REPRODUIT
+
+**Essai A** (écran **Estimations**, donc `creation_status = estimation`), fiche remplie comme une vraie : « ESSAI MESURE A
+ESTIMATION - ne pas diffuser », Groupe GTI Firminy / Emmanuelle PEREIRA, 120 000 €, 65 m², 3 pièces, 2 chambres,
+8 rue de l'Ondaine 42700 Firminy, copropriété Oui (lot 14, 32 lots), DPE 190 / 40 au 01-10-2026, étage 2/4, ascenseur,
+cave, balcon, 1975 — 17 champs détaillés, **aucun partenaire choisi**.
+Trace (travail 4e90ba56) : 10:39:21.5 `ajoutebien` → **Hektor crée 63475** ; 10:39:22.8 page 2 (24 champs) ; **10:39:53.7
+`Hektor timeout 30000ms`** — exactement comme l'essai du matin. **L'essai B (Actif) n'a pas été lancé** : A suffit à
+trancher. 63475 supprimée par `delete_hektor_annonce` 9979465e (« envoyée et VÉRIFIÉE », caches locaux nettoyés),
+fiche 10000203 disparue.
+
+**Conclusions mesurées** :
+- **Ce n'est ni le hasard, ni le statut Actif, ni les partenaires** (aucun partenaire dans A ; rien des partenaires ne part
+  chez Hektor). **Créer une annonce depuis l'app ne marche plus**, à coup sûr, depuis une date entre le **22/10** (dernière
+  création réussie, page 2 en 2,9 s) et aujourd'hui.
+- **Notre code n'a pas changé** : `git log -L` depuis le 20/10 sur `postHektorWizardCreateStep`, `hektorFetch` et
+  `hektorThrottle` : aucun commit. Le changement vient de **Hektor** : son appel `deepFlowReality-setDeepCache` (appel
+  préparatoire avant chaque page du formulaire) ne répond plus.
+- **Indice** : les scripts de l'admin Hektor (accueil, lus dans le Chrome de Frédéric, lecture seule) ne contiennent PLUS
+  aucun `setDeepCache` — seul `deepFlowReality-dfrPackRequest` (une demande de « pack DFR ») y reste. Non prouvé que
+  leur propre page de création ne l'appelle plus (page non ouverte : elle crée l'annonce).
+- **Impact** : toute annonce créée par l'app depuis cette date part à moitié chez Hektor puis échoue (orpheline). Il y en
+  a eu deux, les miennes (63474, 63475), toutes deux supprimées. Les négociateurs n'ont pas créé d'annonce dans l'app
+  depuis le 22/10.
+
+**Le correctif change donc de nature** : ce n'est plus « un délai rare à amortir » mais **un appel devenu mort chez
+Hektor**. À auditer : capturer ce que fait AUJOURD'HUI la vraie page de création de Hektor (outil réseau, sur une
+création faite par un humain), puis aligner le worker (retirer ou rendre facultatif `setDeepCache`) — plus les garde-fous
+C2-C4 du §28.8 qui restent utiles.
+
+#### 28.8 ter — LA CAUSE, VUE DANS LA PAGE DE HEKTOR (07/11, ~11:00, « utilise ta session Chrome pour voir où est le problème »)
+
+Page « Ajouter un nouveau bien » de l'admin Hektor ouverte dans le Chrome de Frédéric (compte admin GROUPE GTI
+IMMOBILIER), statut Estimation, type Appartement, clic « Étape suivante ». **La page de Hektor ELLE-MÊME ne passe plus à
+l'étape 2.** Console de la page :
+1. `SyntaxError: Identifier 'videoWindow' has already been declared` (script en ligne de la page, l. 2884) — une
+   variable déclarée deux fois fait échouer tout ce bloc de script ;
+2. donc les fonctions qu'il définit n'existent pas : `ReferenceError: setOffreDemWizard is not defined` ;
+3. au clic : **`ReferenceError: setDeepCache is not defined`** dans `valideEtapeWizard`
+   (`labs/wizard/labs_Bien_Wizard_New.js`, l. 408) — **le même `setDeepCache` qui ne répond plus à notre worker**.
+Aucun appel `ajoutebien` n'est parti : rien n'a été créé chez Hektor par cet examen.
+
+**Conclusion** : régression **de Hektor** (code de leur page et de leur serveur autour de « deepFlowReality / DeepCache »),
+pas de notre app ni du chantier. Les négociateurs ont créé dans Hektor 6 annonces le 06/11, 5 le 05/11, 11 le 04/11 : la
+panne date vraisemblablement d'une mise à jour de Hektor **entre le 06/11 au soir et le 07/11 matin**. ⚠ Lundi, les
+négociateurs risquent de ne plus pouvoir créer d'annonce DANS HEKTOR non plus (non vérifié pour un compte négociateur).
+**À faire par Frédéric** : signaler au support Hektor / La Boîte Immo, preuves ci-dessus (les trois erreurs, le fichier
+et la ligne). **Côté worker** (à décider, accord requis) : rendre `setDeepCache` facultatif (délai court, on continue)
+seulement si un essai prouve que la page se sauve sans lui ; et les garde-fous C2-C4 du §28.8.
+
+#### 28.8 quater — ⭐ LA CAUSE RACINE, MESURÉE EN NÉGOCIATRICE (07/11, ~11:05, « fais un test dans Chrome avec un accès négociateur »)
+
+Dans le Chrome de Frédéric : connexion automatique Hektor « en tant que » Emmanuelle PEREIRA (n° 51, comme le worker :
+`?call=authenticate&mode=autologin&idUser=51`), page « Ajouter un nouveau bien », relevé de chaque appel `xmlrpc.php`
+(mode, heure, durée, statut) posé dans la page.
+- En négociatrice, les fonctions `setDeepCache` / `setOffreDemWizard` / `valideEtapeWizard` EXISTENT une fois la page
+  chargée (les mêmes erreurs « videoWindow » apparaissent au chargement, sans conséquence ici). Estimation + Appartement
+  + « Étape suivante » → **la page de Hektor passe à l'étape 2** (Photos) ; elle a créé l'estimation d'essai **63477**.
+- Le relevé : `11:05:32.053 deepFlowReality-setDeepCache` puis, **6 ms plus tard, sans l'attendre**,
+  `11:05:32.059 annonce-createBien-Ajx_Bien_wizardStepNew` (893 ms, 200) ; la page continue. **`setDeepCache` répond
+  en 30 114 ms** (statut 200).
+- ⭐⭐ **D'où la panne du worker** : `postHektorWizardCreateStep` ATTEND `setDeepCache` avec un délai de **30 000 ms**
+  avant d'envoyer la page — il abandonne 0,1 s avant la réponse de Hektor, et toute la création tombe. La page de Hektor,
+  elle, ne l'attend jamais : c'est un appel « lancé et oublié ». Le ralentissement de cet appel chez Hektor (récent : 0,9 à
+  3,4 s pour toute l'étape jusqu'au 22/10) a rendu fatale une attente qui n'aurait jamais dû être bloquante.
+- L'erreur vue en admin (`setDeepCache is not defined`) est un défaut de LA PAGE ADMIN de Hektor, distinct ; elle ne
+  concerne pas les négociateurs (leur page passe).
+
+**Nettoyage** : retour au compte admin par « Retour » (menu du profil) — vérifié « GROUPE GTI IMMOBILIER / Administrateur » ;
+63477 supprimée (`delete_hektor_annonce` 7115a0ae, « envoyée et VÉRIFIÉE »). Le n° 63476 (entre 63475 et 63477) renvoie
+**403 Accès interdit** à notre admin : il n'est pas à GTI (numérotation partagée) — pas une trace de l'examen.
+
+**Le correctif devient simple et sûr** : faire comme la page de Hektor — envoyer `setDeepCache` SANS l'attendre (ou
+l'attendre très peu et ignorer son délai), puis envoyer la page. Plus les garde-fous C2-C4 du §28.8 (création
+interrompue défaite, pas de relance en doublon, liens partenaires retirés). Essai : une création depuis l'écran
+Estimations après redémarrage des services (Frédéric), puis suppression.
+
+#### 28.8 quinquies — AUDIT DE CONFIRMATION et correctif PROPOSÉ (07/11, « refais un audit, il faut être sûr de ton correctif ») — rien posé dans le dépôt
+
+L'essai « à part, sans redémarrer » est abandonné (« non laisse tombe »).
+
+**1. Le worker utilise EXACTEMENT le mécanisme de l'essai Chrome** (code + journaux) :
+- `handleCreateHektorDraftAnnonce` → `ensureHektorExecutionContext` : retour à la session ADMIN (n° 4), puis
+  `switchHektorUserContextOnce` → `?call=authenticate&mode=autologin&idUser=<n>`, la même adresse que dans Chrome ;
+- journal de l'essai A (4e90ba56, 07/11 10:39) : « Session Hektor administrateur active » (4, ADMIN), puis « Contexte
+  Hektor négociateur actif » **51, NEGO, Mme. Emmanuelle PEREIRA** — le compte de l'essai Chrome ; même chose le 22/10
+  (a62233e2, réussi) ;
+- aucun repli « agence » ici (`CONSOLE_HEKTOR_AGENCY_FALLBACK` non demandé ; la négociatrice est active).
+
+**2. Le point de rupture est bien `setDeepCache`** : page 2 notée à 10:39:22.755, erreur « Hektor timeout **30000** ms »
+à 10:39:53.664 (30,9 s = 1 s de frein + 30 s). Dans `postHektorWizardCreateStep`, seul `setDeepCache` a 30 000 ms (la
+page : 60 000). Historique : **80 créations réussies depuis mai**, assistant de 14 à 45 s pour 6 pages (une à 92 s le
+21/10) — `setDeepCache` répondait vite, jusqu'au 22/10 inclus.
+
+**3. La page de Hektor ne l'attend à AUCUNE page** : `labs_Bien_Wizard_New.js` relu le 07/11 (servi par
+`?call=getJs&js=labs/wizard/…`) — une seule fonction `valideEtapeWizard(keyGroup, step, …)` pour toutes les pages,
+l. 408 `setDeepCache(idann, step)` puis, plus bas et sans attente, l'appel `annonce-createBien-Ajx_Bien_wizardStepNew`.
+Ligne identique dans notre copie du 16/05 (`Console/exports/labs_Bien_Wizard_New_latest.js`) : l'appel est entré dans le
+worker le 29/05 (`963d5dc`), recopié de la page, mais en version **attendue**.
+
+**4. Ailleurs** : `setDeepCache` n'a qu'UN appelant dans tout le dépôt (la modification d'annonce ne l'utilise pas ; le
+repli Playwright le neutralise déjà).
+
+**Le correctif proposé** (copie du worker dans le dossier de travail, `correctif.diff`, 102 lignes ; vrai fichier INTACT) :
+- `lancerPreparationCacheWizard` : `setDeepCache` est **lancé, jamais attendu**, et part AVANT la page (comme Hektor) ;
+  la promesse **ne rejette jamais** (un rejet non écouté arrêterait le processus) ; délai porté à **90 s** (un abandon sur
+  délai déclenche le recul de 15 s du frein sur les appels suivants : à 90 s, la réponse de 30 s arrive avant) ;
+- `attendrePreparationsCache`, en fin de création, après l'activation : au plus **45 s** pour les préparations en vol (compte
+  rendu, et aucun appel de cette annonce en vol quand le travail suivant change de négociateur), puis on continue sans elles ;
+- compte rendu `preparations_cache` (lancées, finies avec durée et statut ou erreur, attente) dans le journal du travail.
+- ⭐ **Essai hors ligne VERT, 15 contrôles** (faux Hektor, délais ÷ 100 ; cas lent 30,1 s, cas qui pend, cas en erreur) :
+  6 pages envoyées sans attendre, chaque préparation AVANT sa page, fin bornée, erreurs notées, aucun rejet non écouté.
+  ⚠ Le premier passage a été ROUGE sur l'ordre (la page partait avant la préparation) : corrigé, l'appel est direct.
+
+**Ce qu'il pourrait casser** : rien d'autre ne l'appelle ; même nombre d'appels à Hektor. NON MESURÉ : jusqu'à 6
+`setDeepCache` en vol à la fois sur la même annonce (la page n'en a qu'un par clic humain) ; deux appels presque simultanés
+(préparation puis page, comme les 6 ms de Hektor) au lieu d'un par seconde. Une création prendra ~20-30 s de plus (fin bornée).
+
+✅ **POSÉ dans `Console/console_job_worker.js` le 07/11 (« Oui »)** : fichier vérifié intact avant (identique à la copie),
+après pose identique octet pour octet à la copie éprouvée, `node --check` vert, essai hors ligne relancé sur le vrai fichier :
+VERT (+74 / -16 lignes). ⏰ **Inactif tant que les 4 services ne sont pas redémarrés (Frédéric, file vide)** ; puis essai
+réel depuis l'écran Estimations et suppression. Ni commité ni poussé.
+
+**Pas dans ce correctif** (à part, après la preuve) : C2-C4 du §28.8 — toute AUTRE panne après « ajoutebien » laisse encore
+une orpheline.
+
+#### 28.8 sexies — ✅ ACTIF ET PROUVÉ EN RÉEL (07/11 soir, « C'est redémarré »)
+
+- **Les 4 services** ont redémarré le 07/11 à **18:45:35-37** (heure des processus `node.exe` sous chaque service), donc
+  APRÈS la pose (fichier écrit à 16:22). File vide avant l'essai (0 pending, 0 running).
+- **Essai réel**, dans le Chrome de Frédéric, depuis l'écran **Estimations**, même fiche que l'essai raté de 10:39 (28 champs,
+  agence Firminy, négociatrice PEREIRA, statut « Estimation ») : fiche provisoire **10000204**, travail
+  `53fc0873-73c3-455b-9336-34a2716d6cba`, lancé à 18:47:51 (heure de Paris, comme toutes les heures de ce paragraphe).
+- **Résultat : CRÉATION RÉUSSIE**, annonce **63478**, travail `done` à 18:49:18 (83 s au total ; assistant 44 s). Les 7 pages
+  sont passées entre 18:48:03 et 18:48:16 — ce matin, la page 2 tombait.
+- **Le compte rendu `preparations_cache`** : 6 lancées, **6 finies, toutes en 200**, en **30 795 à 30 958 ms** chacune — donc
+  toutes AU-DESSUS de l'ancien délai de 30 000 ms : l'ancien code les aurait toutes abandonnées. Attente de fin : 20,2 s.
+- **Contrôle de naissance** (`app_annonce_saisie_naissance`, 28 champs comparés) : 27 identiques ou de même valeur, **1 écart :
+  CHARGES 120 → 0**. ⚠ **Il ne vient PAS du correctif** : les journaux de chaque page listent les champs envoyés et
+  `CHARGES` n'y figure jamais. J'avais rempli le « Charges » de l'étape **Détails** (copropriété), qui part seulement en
+  `copro_charges` ; le worker ne le pose que si la page 7 porte déjà ce champ (`setWizardNumberIfPresent`), et la phase des
+  champs initiaux n'a pas renvoyé `mandat_infofi`. L'essai du 22/10 (10000009/63331) portait AUSSI la clé exacte `CHARGES`
+  (étape Prix), d'où son 150 gardé. ➡ **Trou à part, antérieur, NON TRAITÉ** : des charges saisies seulement à l'étape
+  Détails n'arrivent pas chez Hektor. À auditer s'il le demande.
+- **Nettoyage** : travail `delete_hektor_annonce` `97adc18d-1010-4bd8-9422-1de3a54a7836` (18:52:07) → « Suppression Hektor
+  envoyée et VÉRIFIÉE (existait avant, absente après) », caches locaux nettoyés, `done` à 18:52:42 ; 0 ligne restante
+  pour 10000204 / 63478 ; file vide.
+- ⏰ **Reste** : commit + push du worker et de cette note (accord requis) ; C2-C4 toujours non faits ; signaler à Hektor
+  la lenteur de `setDeepCache` (~31 s) et l'erreur de leur page admin — non décidé.
+
 ### 7 ter. Les dépendances (techniques, pas un ordre décidé)
 
 - 0 avant tout le reste ; 0.1 avant B2 ; 0.2 avant B1 ; 0.6 avant B5 ; 0.3 avant B6 ; 0.4 avant B7 ; 0.5 avant C2.
