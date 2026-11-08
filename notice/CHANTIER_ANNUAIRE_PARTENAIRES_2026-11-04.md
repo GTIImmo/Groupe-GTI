@@ -2854,11 +2854,388 @@ une orpheline.
   champs initiaux n'a pas renvoyé `mandat_infofi`. L'essai du 22/10 (10000009/63331) portait AUSSI la clé exacte `CHARGES`
   (étape Prix), d'où son 150 gardé. ➡ **Trou à part, antérieur, NON TRAITÉ** : des charges saisies seulement à l'étape
   Détails n'arrivent pas chez Hektor. À auditer s'il le demande.
+  **Daté le 07/11 (question « c'est nouveau ? ») : NON, il date de fin mai.** Deux lignes du worker le font :
+  `skipFinancial` écarte `copro_charges` des champs d'après-création (commit `963d5dc`, 29/05, en comptant sur
+  l'assistant) et la page 7 ne pose CHARGES que si son formulaire le porte déjà (`setWizardNumberIfPresent`,
+  `3746214`, 01/06). Les deux cases « Charges » de l'écran existent depuis fin mai. **Mesure sur les 85 créations
+  depuis mai** : 3 seulement avaient les charges de l'étape Détails sans la clé CHARGES — 1 test Codex du 07/06
+  (62425) et mes 2 essais du 07/11. **Sur les 29 créations réelles (hors tests), AUCUNE n'avait de charges** :
+  aucune vraie annonce touchée.
 - **Nettoyage** : travail `delete_hektor_annonce` `97adc18d-1010-4bd8-9422-1de3a54a7836` (18:52:07) → « Suppression Hektor
   envoyée et VÉRIFIÉE (existait avant, absente après) », caches locaux nettoyés, `done` à 18:52:42 ; 0 ligne restante
   pour 10000204 / 63478 ; file vide.
 - ⏰ **Reste** : commit + push du worker et de cette note (accord requis) ; C2-C4 toujours non faits ; signaler à Hektor
   la lenteur de `setDeepCache` (~31 s) et l'erreur de leur page admin — non décidé.
+
+#### 28.8 septies — DEUX ESSAIS « 100 % DES CASES » (07/11 soir, « une maison et un appartement tout rempli »)
+
+> Fait à sa demande, dans son Chrome, depuis l'écran **Estimations**, négociatrice PEREIRA, Firminy. Un remplisseur
+> automatique a rempli **chaque case visible** de chaque étape (OUI quand proposé, sinon une valeur réaliste), trois
+> passages par étape pour attraper les cases qui apparaissent (piscine = OUI, honoraires vendeur = OUI), + 2 pièces.
+> Laissées vides EXPRÈS : « DPE non concerné / vierge / altitude » (contradictoires avec un DPE saisi) et « Diffusable »
+> (forcé à 0 par le worker). Le juge est le verdict de la pièce 3 du chantier ⑧ (`app_annonce_saisie_naissance`).
+> Audit préalable du chantier ⑧ relu (C8 = `CHANTIER_8_GARDE_CHEZ_NOUS_2026-10-21.md`).
+
+- **Appartement** : 163 cases, fiche 10000205 → **63479** ; 126 champs jugés : 6 écarts, 14 « console seule » gardés.
+- **Maison** : 167 cases, fiche 10000206 → **63480** ; 131 champs jugés : 7 écarts, 13 « console seule » gardés.
+- Les deux supprimés ensuite (travaux `0d71d4e5…`, `421c44b8…`), vérifiés absents chez Hektor.
+
+**Ce qui ne revient pas correctement, hors des 21 « console seule »** :
+1. **Le TITRE — NOUVEAU.** Deux cases : « Titre / repère interne » (étape 1, clé `title`) et « Titre annonce » (étape 7,
+   `titre`). L'assistant pose celui de l'étape 7, puis `postHektorPrincipalTextUpdate` (console_job_worker.js ~l. 12660)
+   renvoie `fields.title` = celui de l'étape 1 et **l'écrase**. ⚠ Le libellé dit « repère interne » mais il part comme
+   TITRE PUBLIC de l'annonce.
+2. **Le TEXTE de l'annonce** (`corps`) — même mécanisme : « Description » (étape 1) écrase « Texte annonce » (étape 7).
+   Déjà relevé (C8:897-899, point F, non rangé).
+3. **Les CHARGES** saisies seulement à l'étape Détails (`copro_charges`) — §28.8 sexies. Quand les deux cases
+   « Charges » portent la même valeur, tout passe (vu ici : 150 → 150). Mesuré aussi : les autres doublons simples
+   (lots, quote-part, fonds travaux, cuisine, vue, surfaces, pièces…) reviennent tous identiques.
+4. **PISCINE : « Type de piscine » et « Nature piscine » — NOUVEAU.** Cases de TEXTE libre dans la modale
+   (App.tsx:1582-1583), mais LISTES chez Hektor (nature = COQUE / TRADITIONNELLE / HORS-SOL / SEMI-ENTERREE,
+   console_job_worker.js:11314) : un texte qui ne correspond à aucune option est perdu (« absent »).
+5. **`Particularites`** — absent, déjà connu (ESSAI_173:46, groupe liste que l'API rend vide).
+- Normaux ou dus à mon remplisseur : `villeprivee` (recalculée par la BAN), `latitude`/`longitude` (BAN), 14 dates
+  (même date, autre forme), `NB_ETAGES` 150 → 127 (mon remplisseur a pris « étaGES » pour une case DPE ; Hektor plafonne
+  à 127), `floorState` (j'avais mis rez-de-chaussée ET étage 3, Hektor a recalculé).
+
+**Pourquoi nos saisies sont remplacées sur la fiche** : décision écrite, pas un oubli. `CHAMPS_APP_ANNONCE` reste vide
+(28/09, PLAN:497-504 ; tranché de nouveau le 13/10, CHANTIER_3:1495-1521) : tant que Hektor diffuse, sa valeur fait foi
+pour les champs qu'il entretient (« modèle B » : pousser, relire, garder ce que Hektor a retenu, montrer le verdict).
+La saisie, elle, est protégée À PART (pièce 3, table jamais touchée par la relecture) et l'écart est signalé. Ouvert
+depuis le 22/10 : « rejuger aussi les écarts qui ne sont pas console seule — à corriger » (C8:1281-1283).
+
+**Les ajouter aux 21 ? NON pour ces cas** : les 21 sont les champs que l'API ne rend JAMAIS. Titre, texte, charges,
+piscine sont rendus par Hektor : les reposer chez nous afficherait une valeur que Hektor (donc les portails) n'a pas —
+on cacherait la perte au lieu de la corriger. Les correctifs vont à la SOURCE (rien codé, en attente de son accord) :
+A titre/texte : ne renvoyer `title`/`description` après l'assistant que si l'étape 7 est vide (ou une seule case) ;
+B charges : ne plus écarter `copro_charges` quand la clé exacte CHARGES manque (`skipFinancial`) ;
+C piscine : proposer les listes de Hektor dans la modale au lieu d'un texte libre ;
+D `Particularites` : à auditer (forme liste).
+
+#### 28.8 octies — AUDIT DES 3 CORRECTIFS (07/11, « Oui les 3 ») — rien codé, attend son « vas-y »
+
+Les trois se font dans `apps/hektor-v1/src/App.tsx` SEUL (la modale de création) : ni worker, ni base, ni redémarrage.
+- **A titre / texte.** L'écran n'a aucun lien entre « Titre / repère interne » (`draftAnnonceTitle`, l. 22529) et
+  « Titre annonce » (`titre`, l. 1752), ni entre « Description » (l. 1297) et « Texte annonce » (`corps`, l. 1753) — seul
+  le scanner remplit les deux (l. 22407, 22984). Le worker prend `title` avant `titre` (`firstDefined`, alias
+  `["title","titre"]`, l. 13172) et le renvoie après l'assistant (l. 13333). MESURE : 31 créations portaient les deux
+  titres, 29 identiques, 2 différents = mes essais du 07/11 ; les 89 modifications (`update_hektor_annonce_fields`)
+  n'envoient QUE `title`, jamais `titre`. CORRECTIF : à l'envoi (l. 18347), `title` = `titre` de l'étape 7 s'il est
+  rempli, sinon l'étape 1 ; idem `description` = `corps` sinon « Description ». Le worker n'est pas touché, donc la
+  modification ne bouge pas.
+- **B charges.** À l'envoi, l'écran recopie déjà 8 cases simples dans les cases Hektor (`setHektorWizardField`,
+  l. 18329-18341 : surfterrain, SURFACE_GARAGE, NB_NIVEAUX, GARAGE_BOX, JARDIN-, PISCINE-, EXPOSITION, vuee) — pas les
+  charges. CORRECTIF : même geste pour CHARGES, MAIS seulement si la case de l'étape 6 est vide (elle gagne toujours).
+  Le worker l'envoie alors par le chemin éprouvé le 22/10 (10000009 : 150 → 150). Pas de changement à `skipFinancial`
+  (le lever ferait re-sauver le groupe prix/honoraires après la création).
+- **C piscine.** Le code le disait (l. 1909) : « selects Hektor -> 'text' pour l'instant (listes d'options à ajouter
+  plus tard) ». Listes RÉELLES lues dans le journal du worker (refus `select_no_option_match`) : type = PRIVATIVE /
+  COLLECTIVE / COLLECTIVE SURVEILLEE ; nature = COQUE / TRADITIONNELLE / HORS-SOL / SEMI-ENTERREE. CORRECTIF : deux
+  listes d'options sur les 2 cases (l. 1582-1583) et le scanner en `enum` (l. 1911-1912), comme les 12 listes qui le
+  sont déjà. Sur les deux essais, Hektor n'a refusé AUCUNE autre case de liste.
+- **Ce que ça pourrait casser** : A — si quelqu'un remplit les deux titres différemment, c'est l'étape 7 qui part
+  (aujourd'hui l'étape 1) ; le titre provisoire de la liste suit. B — rien hors création. C — un mot du scanner qui ne
+  correspond à aucune option laisse la case vide (aujourd'hui il partait et Hektor le refusait en silence) ; les
+  synonymes du worker (« béton » → traditionnelle) ne servent plus pour ces deux cases.
+- **Contrôle prévu** : `npm run build` ; push (Vercel) ; un essai réel Estimations (deux titres différents, charges à
+  l'étape Détails seulement, piscine choisie dans la liste), verdict à 0 écart sur ces champs, puis suppression.
+
+#### 28.8 nonies — QUE VEUT DIRE LA CASE « CHARGES » DE HEKTOR ? (08/11, « je pense que c'est plutôt loyer + charges, audit »)
+
+- **Une seule case** chez Hektor : `CHARGES`, libellé « Charges », dans le groupe `mandat_infofi` (avec prix, dépôt de
+  garantie, taxes). Sur 3 000 fiches, aucune autre case dont le libellé contient « charge » (hors `CHARGES_DETAIL`).
+  La copropriété a sa propre case : `copropriete_quote_part`, libellé Hektor **« Quote part annuelle »**.
+- **MESURE (13 534 fiches, 08/11)** : toutes nos annonces sont des ventes (types d'offre 0, 10, 6 ; aucune location).
+  `CHARGES` remplie sur 124 (97 appartements, 17 maisons), médiane **100**. `Quote part annuelle` remplie sur 278,
+  médiane **1 199**. Sur les 26 qui ont les deux, **22 ont « Charges » × 12 ≈ quote-part** (rapport 0,8-1,25 ; 15 à
+  1,00 tout juste). ⇒ **En vente, « Charges » = les charges de copropriété PAR MOIS ; « Quote part annuelle » = les
+  mêmes, PAR AN** (la mention obligatoire ALUR). Ce n'est pas « loyer + charges ».
+- Les écarts : sur des maisons, la case sert parfois à autre chose (« Soit élec 1100/an et 400 € granulés », « Loyer »
+  3 012, 34 000, 70 000 sur un type 30) — saisies libres, pas un autre sens de la case.
+- ⚠ **Non mesuré** : en LOCATION, la même case porterait probablement les charges locatives mensuelles — nous n'avons
+  aucune location pour le vérifier. Et ce que Hektor envoie aux portails à partir de cette case.
+- **Ce que ça change au correctif B** : rien sur le fond — `coproCharges` → `CHARGES` est le bon rangement, le même que
+  la lecture (`rawDetailProp(detail,'mandat_infofi','CHARGES')`, l. 2842) et le PDF d'estimation (« Charges copro. »).
+  ⚠ Mais la modale montre la même case Hektor à DEUX endroits sous le seul mot « Charges », sans unité (bloc copro et
+  étape 6), et « Quote-part » sans dire « annuelle » : rien n'empêche de saisir un montant annuel dans « Charges ».
+  Préciser les libellés (« Charges de copro / mois », « Quote-part annuelle ») est à SA décision (libellés seulement).
+
+#### 28.8 decies — LES 3 CORRECTIFS CODÉS, avec les libellés (08/11, « 3 correctifs avec libellés plus clairs »)
+
+Tout dans `apps/hektor-v1/src/App.tsx`, `npm run build` vert ; ni worker, ni base, ni redémarrage.
+- **A** : à l'envoi, `title` = `titre` de l'étape 7 s'il est rempli, sinon l'étape 1 ; `description` = `corps`, sinon
+  « Description » (`draftAnnonceTitreEnvoye` / `draftAnnonceTexteEnvoye`, juste avant `createHektorDraftAnnonceJobOptimistic`).
+- **B** : `CHARGES` ← `coproCharges` seulement si l'étape 6 l'a laissée vide (même geste que les 8 miroirs voisins).
+- **C** : `wizardPiscineTypeOptions` / `wizardPiscineNatureOptions` sur les deux cases, et le scanner en `enum`.
+  « Collective surveillée » rangée AVANT « Collective » (le scanner prend la 1re option contenue — même précaution que
+  « Semi équipée » avant « Équipée »). MESURE : toutes les valeurs déjà chez Hektor sont dans les listes (type :
+  47 PRIVATIVE ; nature : 22 TRADITIONNELLE, 7 COQUE, 7 HORS-SOL, 4 SEMI-ENTERREE) → aucune fiche existante ne
+  s'affiche avec une valeur hors liste.
+- **Libellés** : « Charges copro / mois » (bloc copro ET étape 6), « Quote-part annuelle » (bloc copro ET étape
+  Copropriété). ⚠ Les groupes de l'assistant servent aussi à la fiche d'un bien (`buildHektorWizardDetailGroups`,
+  formulaire d'édition) : les libellés et les listes de piscine y changent aussi — même sens, même case. Le
+  formulaire « 5. Details - Copropriete » (l. 882, autre liste) garde « Charges » / « Quote-part » : non touché.
+- **Reste** : push (accord), puis l'essai réel Estimations et sa suppression ; rien n'a été vu à l'écran avant.
+- ⛔ **08/11 : PAS POUSSÉ, par décision** — « on ne peut pas avoir deux cases pour la même chose » : voir §28.9. A et B
+  y deviennent inutiles (remplacés par la case unique) ; C (listes de piscine) est gardé.
+
+#### 28.9 — AUDIT : DEUX CASES POUR LA MÊME CHOSE, modale + worker (08/11, « audit en profondeur… proposer une correction »)
+
+Audit limité à la **création d'annonce** (modale + worker + calque de naissance) ; la fiche d'un bien est regardée en
+§28.9.6 seulement pour l'inventaire. Rien n'est codé.
+
+**28.9.1 Histoire (git).** Les deux blocs naissent ENSEMBLE le **29/05** (`963d5dc`, « expanded draft announcement
+fields ») : `draftAnnonceAdvancedSections` (anciens noms de l'app, envoyés « à plat » : `copro_charges`…) et
+`draftAnnonceWizardGroups` (noms exacts de Hektor, envoyés dans `hektor_wizard_fields`). `c496833` (30/05) les affiche
+dans le même écran (bloc ancien en bas de Détails, « Texte public » en Diffusion). Ensuite, au lieu de trancher, des
+RECOPIES au fil des bugs : 8 à l'envoi le 01/06 (`4e7cd03`, qui retire aussi l'affichage de l'étape 1 de l'assistant),
+24 au scanner le 06/07 (`cac9b63` : « Le wizard affiche certains champs 2x »), CHARGES le 08/11 (non poussé).
+**Aucune note ne décide** de garder les deux ou d'en retirer un (recherche notice/, racine, notes supprimées).
+
+**28.9.2 Inventaire, appartement (le profil le plus chargé).**
+- Bloc ancien en bas de Détails (24 cases) : CHAQUE case a son double dans l'assistant (vérifié par script, aucun
+  manque). Diffusion : « Description » double « Texte annonce ».
+- Haut de la modale (Titre, Prix, Surface, Pièces, Chambres, Niveaux) : doublés en Diffusion (`titre`, `prix`,
+  `surfappart`, `nbpieces`, `NB_CHAMBRES`, `NB_NIVEAUX`) ; Prix aussi en Mandat/Prix.
+- Dans l'assistant lui-même : `prix` et `PRIXNETVENDEUR` (étapes 6 et 7), `EXPOSITION`, `vuee`, `GARAGE_BOX`,
+  `NB_CHAMBRES` (5 et 7), `SURFACE_GARAGE` (garage, 5 et 7) — même valeur (même clé), deux cases à l'écran.
+- Au total jusqu'à **3 cases** pour : prix, prix net vendeur, chambres, exposition, vue, garages.
+- ⚠ Manques à combler AVANT de retirer le bloc ancien : terrain → `etat_exterieur` ; immeuble → `NB_SDB`, `NB_SE`,
+  `NB_WC` (absents des étapes affichées pour ces profils).
+- Chez Hektor : UNE case par information. Son assistant répète certains champs d'une page à l'autre (prix, chambres,
+  exposition…), mais le worker pose déjà chaque valeur exacte sur CHAQUE page (`applyExactHektorWizardFields`,
+  l. 12101-12122) : une seule case dans la modale suffit.
+
+**28.9.3 Qui gagne : TROIS RÈGLES QUI SE CONTREDISENT** (vérifié dans le code).
+1. Pendant l'assistant : le nom Hektor gagne (posé en dernier sur chaque page, l. 12122).
+2. Après l'assistant : `applyHektorAnnonceFieldUpdates` envoie d'abord les groupes « nom Hektor » (l. 13367) PUIS les
+   groupes « à plat » (secteur, intérieur, extérieur, diagnostics, copro, l. 13442-13501) → **l'ancien nom gagne au
+   final** pour presque toutes les paires. Sauf `prix`, `PRIXNETVENDEUR`, `CHARGES` (écartés par `skipFinancial`,
+   l. 13277) et `SURF_SEJOUR` (pas de clé à plat) → là le nom Hektor gagne.
+3. Notre base (« naître complet ») : `calque := plat || wiz` (`patch_8a2b…`, l. 130) → **le nom Hektor gagne**.
+- Masquage : le front envoie TOUTES les clés à plat, à `null` si vides (`api.ts` l. 12855-12885), et `firstDefined`
+  s'arrête sur une clé présente même nulle (l. 18945-18949) → un `copro_charges: null` cache `CHARGES` dans la voie à
+  plat. C'est, avec `skipFinancial`, la mécanique exacte des charges perdues.
+- Modification d'une annonce (`update_hektor_annonce_fields`) : la boîte « nom Hektor » est reconstruite à partir des
+  clés à plat (l. 13562) → les deux portent la même valeur, pas de conflit.
+
+**28.9.4 Mesure sur les 87 créations réelles (`app_console_job`, 08/11).** Les deux cases portent presque toujours la
+même valeur. « Différents » = surtout le même état écrit deux fois (« Bon » / code « 6 » : 14 sur 36 pour l'état
+extérieur ; « Séparée » / « SEPAREE »), plus de vrais désaccords seulement sur des essais (juin : Carrez 80,5 / 120,1,
+surface 725 / 82,6 ; mes essais du 07/11 : titres et textes). Aucun cas réel de négociateur avec deux valeurs.
+
+**28.9.5 PROPOSITION — « une information = une case = un nom = une règle ».** Vocabulaire de référence : les noms de
+Hektor (ceux de l'assistant), déjà utilisés par la fiche d'un bien (cockpit), par le calque de naissance et par la
+note des 173 champs (« source de vérité »).
+- **Modale (`App.tsx`)** :
+  - M1 retirer de l'écran le bloc ancien (Intérieur / Extérieur / Diagnostics-copro) et « Description » ; avant,
+    ajouter les 4 cases manquantes (terrain, immeuble) ;
+  - M2 chaque information une seule fois : le haut (titre, prix, surface, pièces, chambres, niveaux) n'est plus
+    répété en Diffusion ; prix net vendeur seulement en Mandat/Prix ; exposition, vue, garages, chambres seulement
+    en Détails. ⚖ À SA DÉCISION : où vit le prix (haut, recommandé : obligatoire et montré dans la liste provisoire)
+    et le titre (haut, renommé « Titre de l'annonce » ; « repère interne » est faux, il part chez Hektor) ;
+  - M3 à l'envoi, UNE fonction remplit les deux voies avec la même valeur (clé à plat = nom Hektor) : elle remplace
+    les 8 recopies, le correctif B (charges) et le correctif A (titre/texte) ; le scanner remplit la case gardée
+    (aujourd'hui jardin, piscine, terrasses et description ne vont QUE dans le bloc ancien, l. 17852-17867).
+- **Worker (`console_job_worker.js`)**, filet de sécurité pour les travaux déjà en file ou venus d'un autre écran :
+  - W1 à l'entrée de `create_hektor_draft_annonce`, unifier chaque paire : le nom Hektor gagne s'il est rempli, sinon
+    l'ancien nom, et les deux reçoivent la même valeur → les règles 1, 2 et 3 donnent le même résultat ;
+  - W2 une clé à plat NULLE ne masque plus le nom Hektor (lecture qui saute le vide, dans la normalisation seule) ;
+  - pas de changement à `skipFinancial` (les charges passent par le groupe « nom Hektor », prouvé le 22/10).
+  - Redémarrage des 4 services, file vide.
+- **Base** : rien (le calque dit déjà « nom Hektor gagne »).
+- **Ce que ça pourrait casser** : l'habitude des négociateurs (le bloc du bas disparaît, ses cases existent plus
+  haut) ; le compteur « N champs remplis » baisse (moins de cases) ; les 4 cases ajoutées pour terrain/immeuble
+  partent chez Hektor sous leur nom exact (à éprouver) ; W1 change le gagnant pour un travail qui porterait deux
+  valeurs différentes (aujourd'hui l'ancien nom, demain le nom Hektor) — 0 cas réel mesuré.
+- **Contrôle** : essai hors ligne de W1/W2 (faux Hektor, comme le 07/11) ; `npm run build` ; deux essais réels
+  Estimations (maison et appartement à 100 %), verdict de naissance à 0 écart, suppression.
+- **Ordre** : modale d'abord (la cause), worker ensuite (le filet), deux poussées séparées.
+
+**28.9.6 Fiche d'un bien (inventaire seulement, hors correctif).** Le cockpit (seule édition au bureau,
+`APP_COCKPIT_V2_ENABLED`) utilise les noms Hektor, sans doublon interne. Restent deux autres portes sur les mêmes
+cases : le crayon « Corriger » du mandat (`CorrigeableAnnonceField`, prix, net vendeur, pièces, surface, terrain,
+honoraires — enregistré tout de suite, anciens noms) et « Reporter dans la fiche » de l'estimation (cases vides
+seulement). Code mort : `hektorAdvancedSections` (l. 813-907), `buildHektorAdvancedDraft` (l. 2820),
+`createUpdateHektorAnnonceFieldsJob` (`api.ts` l. 11975). À trancher par lui, chantier à part.
+
+#### 28.9 bis — SECOND PASSAGE (08/11, « où se trouve Corriger mandat… le worker de modification… la nature du bien »)
+
+**Où est « Corriger ».** Ce n'est PAS une modification du mandat : c'est le crayon (`CorrigeableAnnonceField`,
+App.tsx l. 5365, infobulle « Corriger — met à jour la fiche ») dans **« Préparer le mandat »** (`MandatDocumentEditor`,
+l. 5469), onglets **Bien** (Pièces, Surface habitable, Surface terrain) et **Prix** (Prix FAI, Net vendeur, Honoraires
+TTC), l. 6161-6171. Il corrige l'ANNONCE (`editAnnonceOptimistic`) pour que le document du mandat soit juste. On y
+arrive par la rubrique Mandat de la fiche (étape « Édité », et « Actions mandat (Hektor) » l. 35438), par l'avenant,
+par le téléphone (l. 41245) et par le registre des mandats (l. 29632). Vu à l'écran le 08/11 sur 7589405 : sur un
+mandat déjà signé, l'éditeur n'est plus proposé (« Ouvrir le signé »).
+
+**Modification depuis la rubrique Bien (cockpit).** Même chemin pour toutes les portes : `editAnnonceOptimistic` →
+RPC `app_edit_annonce_optimistic` → `app_annonce_pending` (push 600 s plus tard) → `update_hektor_annonce_fields`.
+- La RPC fusionne les corrections par NOM de case : `push_fields = ancien || nouveau` (lu en base le 08/11).
+- Le cockpit envoie les noms Hektor (`prix`, `surfappart`, `nbpieces`…) ; le crayon du mandat envoie les anciens noms
+  (`price`, `surface`, `roomCount`, `landSurface`, `netSellerPrice`, `fees`).
+- Le worker lit l'ancien nom AVANT le nom Hektor (`["price","prix"]`, `["room_count","roomCount","nbpieces"]`…,
+  l. 13170-13230). ⛔ PIÈGE : crayon puis cockpit sur le même prix en moins de 10 min → l'attente porte les deux noms
+  → le worker renvoie la valeur du CRAYON, la plus ancienne. MESURE : 0 travail sur 89 avec les deux noms d'une même
+  case (jamais arrivé) ; mais les deux vocabulaires servent (surface 26 / surfappart 4, price 17 / prix 4, title 16 /
+  titre 2, roomCount 3 / nbpieces 3).
+- La modification ne porte PAS la nature du bien (0 travail sur 60 jours) → le worker ne filtre rien par nature en
+  modification ; seul l'écran filtre.
+
+**Nature du bien : QUATRE listes à tenir d'accord** — écran (`draftAnnonceWizardFieldsByProfile` + communes ;
+`draftAnnonceAdvancedVisibleFieldsByProfile`) et worker (`HEKTOR_WIZARD_FIELDS_BY_PROFILE`,
+`HEKTOR_UPDATE_FIELDS_BY_PROFILE`, l. 11735-11870). Comparaison par script (étapes affichées 3, 5, 6, 7) :
+- ⛔ **`Particularites`** (appartement, maison, immeuble) : affichée, JAMAIS envoyée — aucun code du worker ne la pose,
+  ni en création ni en modification (c'est la réserve D de §28.8 septies : « absente au retour ») ;
+- **`SURFACE_JARDIN`** (terrain) : affichée, jetée par le worker en création ;
+- chauffage (immeuble) et `codeprive`/`villeprivee` : jetés de la voie « nom Hektor » mais envoyés par leur voie à part
+  (chauffage, secteur) — pas une perte ;
+- l'écran et l'assistant d'un même profil se recoupent par ailleurs ; le bloc ancien n'a d'équivalent manquant que
+  pour terrain (`etat_exterieur`) et immeuble (`NB_SDB`, `NB_SE`, `NB_WC`).
+
+**PROPOSITION REVUE — un seul vocabulaire (les noms Hektor), une seule règle, une seule liste par nature.**
+- Écran : M1-M3 (§28.9.5) + **M4** le crayon « Corriger » envoie les noms Hektor (`prix`, `PRIXNETVENDEUR`, `nbpieces`,
+  `surfappart`, `surfterrain`) → plus aucun écran n'envoie deux noms pour une case. ⚠ `fees` part vers `HONORAIRES`,
+  qui n'est PAS la case « Montant honoraires acquéreur » (`_tauxHonoraire2`) de la fiche : non touché, à vérifier à part.
+- Worker : W1-W2 (création) + **W3** en modification, si une attente porte deux noms d'une même case avec deux valeurs,
+  le nom Hektor gagne et c'est écrit au journal (même règle qu'à la création) ; **W4** la liste par nature du worker
+  accepte tout ce que l'écran montre (`SURFACE_JARDIN` pour un terrain).
+- `Particularites` : à traiter à part (format de Hektor = liste de numéros, jamais éprouvé) — en attendant, à SA
+  décision : la cacher, ou la laisser affichée en sachant qu'elle ne part pas.
+- Base : rien.
+
+**28.9 ter — PRÉCISIONS (08/11).** ⚖ DÉCISION : **« Particularités on masque »** (en attendant son chantier).
+- « Il ne devrait plus y avoir de paire » : JUSTE. Revu : l'écran n'envoie plus QUE le nom Hektor (`api.ts` cesse
+  d'ajouter les anciennes clés à `null`) ; la seconde porte du worker lit déjà les noms Hektor dans ses listes d'alias
+  (sauf `SURF_SEJOUR`, envoyé par la porte « nom Hektor »). W1/W2 ne servent plus qu'aux travaux venus d'un onglet
+  resté ouvert sur l'ANCIENNE version de l'app (le code d'un onglet ne change qu'au rechargement).
+- Le piège des 10 minutes : la cause est corrigée par M4 (un seul nom par case → la fusion `ancien || nouveau` de
+  `app_edit_annonce_optimistic` garde la DERNIÈRE). Pour qu'un ancien onglet ne puisse plus le recréer, la vraie
+  correction est dans la RPC : traduire les anciens noms en noms Hektor AVANT la fusion (la dernière gagne toujours).
+  W3 (« le nom Hektor gagne ») n'aurait PAS garanti « la dernière gagne » → remplacé par ce correctif de la RPC.
+  Écriture en base de production : accord obligatoire, sauvegarde de la définition et inverse prêts.
+
+**28.9 quater — CONTRÔLE FINAL AVANT CODE (08/11, « contrôle une dernière fois avant de coder »).** Personne d'autre n'a
+touché App.tsx / api.ts / worker depuis 19f5742. Trois contrôles : écran, worker, base (fonctions lues en base).
+Ce que le contrôle CHANGE au plan :
+1. ⛔ **Le haut de la modale est lui-même branché sur l'ANCIEN bloc** : Surface terrain, Surface (garage), Jardin,
+   Piscine, Garage, Situation, Vue écrivent dans `draftAnnonceAdvanced` (App.tsx ~l. 22665-22727) ; titre, prix,
+   surface, pièces, chambres, niveaux ont chacun LEUR état. Une même case peut donc vivre dans TROIS états.
+2. ⛔ **Conflit caché, déjà présent** : le scanner recopie prix/surface/pièces/chambres/niveaux dans les noms Hektor
+   (l. 17931-17956) et l'IA écrit `titre` ; ces copies GAGNENT (worker et base). Corriger le prix en haut après un
+   scan n'a aucun effet chez Hektor (0 cas mesuré sur 87, mais le piège est là).
+3. ⛔ **`draftAnnonceWizardGroups` est PARTAGÉ** (modale de modification, panneau, cockpit, filtre d'envoi l. 2393) :
+   on n'y retire rien ; les répétitions se cachent SEULEMENT au rendu de la modale de création.
+4. **Garder des anciennes clés** dans la charge, recalculées depuis la case unique : `title` (texte de recherche de
+   `app_annonce_corps_de_naissance`, libellé du travail l. 9625, ligne provisoire), `price` (ligne provisoire),
+   `address`/`postal_code`/`city` (commune). Les 27 clés du bloc ancien disparaissent.
+5. **Worker, double écriture** : si l'ancien chemin relit les noms Hektor, chaque groupe part deux fois (≈10 requêtes
+   de plus par création, quota). → à la création, l'ancien chemin saute ce que le chemin « nom Hektor » écrit déjà.
+   Le « masquage par une case vide » (W2) devient SANS OBJET : il ne gêne plus quand la valeur est sous le nom Hektor.
+6. **Nature du bien, worker** : il jetterait `NB_SDB`/`NB_SE`/`NB_WC` (immeuble), `etat_exterieur` et `SURFACE_JARDIN`
+   (terrain) → ses listes reprennent celles de l'écran.
+7. **Nombres** : le chemin « nom Hektor » ne convertit pas « 85,5 » → l'écran convertit avant l'envoi.
+8. **Écran, à rediriger** : sous-cases piscine (`showIf` sur `PISCINE-`), récap et compteurs, données de l'IA
+   rédactrice (l. 18082-18127), 4 miroirs manquants du scanner (`corps`, `JARDIN-`, `PISCINE-`, `NB_TERRASSE`).
+9. **`Particularites` masquée partout** : listes par nature (l. 2078, 2180, 2309), groupe étape 5 (l. 1557), cockpit
+   (`CK_LB_SECTIONS` l. 30756, montré pour un type inconnu), scanner (l. 1863).
+10. **Base** confirmée : `app_annonce_corps_de_naissance` et `app_annonce_calque_modif` traduisent déjà les anciens
+    noms et font gagner le nom Hektor ; la RPC `app_edit_annonce_optimistic` connaît les deux familles ; la file passe
+    les champs tels quels (`app_annonce_enqueue_due_pushes`). Transition : une attente d'avant le déploiement avec
+    `price` + une correction d'après avec `prix` → le worker, `v_price` et `app_annonce_reappliquer_saisies` liraient
+    `price` (périmé) → la RPC traduit ET retire l'ancien nom de l'attente à la fusion.
+11. `fees` (crayon « Honoraires TTC » → `HONORAIRES`) ≠ `_tauxHonoraire2` : laissé tel quel, à trancher à part.
+12. Non vérifiés : `Console/test_suite_creation_avertie.js`, `phase2/checks/annonce_un_numero.py` (à lire au codage).
+
+**PLAN FINAL (rien codé)** — principe : la modale n'a plus qu'UN état, aux noms Hektor ; toute case affichée (haut
+compris) lit et écrit cet état → deux cases ne peuvent plus diverger, et chaque information n'est affichée qu'une fois.
+- Écran (App.tsx, api.ts) : un état ; le haut relié aux noms Hektor (titre, prix, surfappart, nbpieces, NB_CHAMBRES,
+  NB_NIVEAUX, surfterrain, SURFACE_GARAGE, JARDIN-, PISCINE-, GARAGE_BOX, EXPOSITION, vuee) ; répétitions cachées au
+  rendu de la création ; bloc ancien et « Description » retirés ; 4 cases ajoutées (terrain, immeuble) ; scanner, IA,
+  récap, compteurs, piscine redirigés ; nombres convertis ; charge = noms Hektor + `title`/`price`/adresse recalculés ;
+  crayon du mandat aux noms Hektor (sauf `fees`) ; `Particularites` masquée ; libellé « Titre de l'annonce ».
+- Worker : à la création, chaque case écrite UNE fois ; listes par nature = celles de l'écran ; comptes rendus et
+  alertes lisent aussi `titre`/`prix`. Redémarrage des 4 services, file vide.
+- Base : `app_edit_annonce_optimistic` traduit les anciens noms et retire l'ancien nom de l'attente (accord, sauvegarde,
+  inverse).
+- Contrôle : build ; essai hors ligne du worker ; essais réels Estimations (appartement, maison, terrain, immeuble ;
+  scan puis correction du prix en haut ; crayon puis rubrique Bien en moins de 10 min) ; suppression des essais.
+
+**28.9 quinquies — AUDIT DE TOUS LES LIENS (08/11, « penser à toutes les conséquences, vérifier tous les liens »).**
+⚠ Vocabulaire corrigé : « l'ancien bloc » était FAUX — les deux sont nés le même jour (29/05). À l'écran ce sont
+les sections marquées **« Detail app »** (noms de l'app), à côté des sections **« Page 5 / 6 / 7 »** (noms Hektor).
+Trois contrôles (écran + mandat, worker + scripts, base lue en direct). Résultats :
+- **Écran** : l'état unique aux noms Hektor EXISTE déjà (`draftAnnonceWizardFields`). Une seule modale (l. 22474),
+  une seule fonction d'envoi ; deuxième chemin à adapter : la création rapide par l'IA (« gcc », l. 22422-22444).
+  À adapter : cases du haut, remise à zéro, surface du récap, compteurs, piscine (`showIf` sur `PISCINE-`), scanner,
+  IA (lecture l. 18082-18127 ; retour en DEUX copies l. 22430 et 23005), récap l. 23021-23030.
+- **Lecteurs du calque des modifications (`app_optimistic_overlay`)** : les 7 lecteurs de l'écran lisent DÉJÀ les noms
+  Hektor → traduire dans la RPC ne prive aucun écran ; ne pas traduire `composition_pieces`, `latitude`, `longitude`.
+- **Mandat** : le brouillon du document (`buildMandatDocumentDraft` l. 4576-4641) ne lit pas le calque pour le prix, le
+  net vendeur, la surface → juste après un crayon, le PDF et l'alerte « la fiche a changé depuis ce PDF »
+  (`ficheDuJourPourEnvoi` l. 4645) lisent l'ancienne valeur tant que Hektor n'a pas répondu (défaut DÉJÀ présent) →
+  lire le calque d'abord. `fees` → `HONORAIRES` = même destination (alias du worker, et lu par le brouillon l. 4605).
+- **Worker** : le format de la charge ne change PAS si l'écran garde toutes les clés d'aujourd'hui, simplement
+  CALCULÉES depuis l'état unique → aucun lecteur ne voit de différence (ligne provisoire, recherche de la base,
+  libellé du travail, `app_en_attente_humain`, pages de l'assistant qui lisent les clés à plat SANS filtre de nature).
+  ⇒ **le worker n'a PAS besoin d'être modifié** pour que le correctif soit juste. La copropriété reste protégée (garde
+  indépendante de l'ordre). Seule amélioration possible, À PART : ≈ −8 requêtes Hektor par création en ne réécrivant
+  pas par l'ancien chemin ce que le chemin « nom Hektor » a RÉELLEMENT écrit (jamais le secteur : identifiants de commune).
+- **Base** : seule la RPC `app_edit_annonce_optimistic` change (traduire avant `col_map`/`json_map`/`scoring_keys`/
+  `v_base`, retirer le jumeau ancien de l'attente à la fusion). `app_annonce_reappliquer_saisies`, le contrôle de
+  naissance et le contrôle des modifications acceptent déjà les noms Hektor.
+- Scripts : `phase2/checks/annonce_un_numero.py`, `build_inventory_from_exports.js`, `test_garde_copropriete.js` sûrs ;
+  `test_suite_creation_avertie.js` probablement déjà périmé (à relancer avant de s'y fier).
+
+**PLAN DÉFINITIF**
+- Écran : un état ; cases du haut = vues sur les noms Hektor ; sections « Detail app » retirées ; répétitions cachées
+  dans la modale de création seulement ; 4 cases ajoutées (terrain, immeuble) ; scanner, IA (2 copies), récap,
+  compteurs, piscine redirigés ; nombres convertis ; charge INCHANGÉE dans sa forme (toutes les clés recalculées
+  depuis l'état unique) ; crayon aux noms Hektor (`fees` → `HONORAIRES`) ; brouillon du mandat lit le calque d'abord ;
+  `Particularites` masquée (groupes, listes, cockpit l. 30756, scanner) ; libellés. Mise en ligne = push (Vercel).
+- Base : la RPC traduit (accord, sauvegarde, inverse, répétition).
+- Worker : RIEN dans ce correctif ; la réduction des requêtes est proposée à part.
+
+**28.9 sexies — CODÉ (08/11, « Oui » au plan définitif) ; fonction de la base POSÉE et écran POUSSÉ le 08/11 (« Oui pour les deux »).**
+- **Écran (`App.tsx`, non commité)** :
+  - plus d'état à part : titre, prix, surface, pièces, chambres, niveaux et les 27 clés « Detail app » LISENT la case
+    Hektor de même sens (`draftAnnonceAdvancedWizardName`, d'après les alias du worker) ; les cases du haut l'ÉCRIVENT ;
+  - sections « Detail app » retirées (Intérieur, Extérieur, Diagnostics / copro, Texte public) ; « Titre / repère
+    interne » devient « Titre de l'annonce » ; « Surface terrain » d'une maison ajoutée en haut, à côté du jardin
+    (elle n'existait qu'en bas) ;
+  - répétitions cachées dans la modale de création SEULEMENT (`draftAnnonceNomsAuHaut` ; prix net vendeur seulement en
+    Mandat / Prix) : les groupes partagés ne perdent rien ;
+  - 4 cases ajoutées aux listes par nature : terrain `etat_exterieur`, immeuble `NB_SDB` / `NB_SE` / `NB_WC` ;
+  - `Particularites` masquée : groupe de l'étape 5 (donc aussi modification, panneau, fiche), 3 listes, cockpit, scanner ;
+  - piscine : `showIf` sur `PISCINE-` (le drapeau `advanced` est retiré du type) ; compteurs sans double compte ;
+    remise à zéro = vider l'état unique ;
+  - scanner : titre vers `titre` ; texte, jardin, piscine, terrasses vers leur case (les 4 miroirs manquants) ; le texte
+    BRUT non résolu (cuisine, exposition, états) n'est plus posé dans une case à liste ;
+  - IA (2 endroits) : `titre` et `corps` seulement ;
+  - envoi : `normaliserNombresCreationAnnonce` (« 85,5 » → 85.5, « 180 000 » → 180000) puis TOUTES les clés d'avant
+    recalculées depuis l'état unique : même forme de charge, même valeur dans les deux voies ; les correctifs A (titre)
+    et B (charges) du 08/11 deviennent sans objet et sont retirés ; C (listes piscine) et les libellés restent ;
+  - crayon « Corriger » du mandat aux noms Hektor (`nbpieces`, `surfappart`, `surfterrain`, `prix`, `PRIXNETVENDEUR`,
+    `HONORAIRES`) ; brouillon du mandat (donc PDF et « la fiche a changé ») lit le calque d'abord.
+- **Contrôle hors ligne** : `npm run build` vert ; script `verif_cases.py` (bloc-notes) sur les 6 natures : aucune
+  case « Detail app » perdue, aucune case affichée deux fois ; conversion des nombres essayée (180 000, 85,5, 45.43,
+  texte laissé tel quel). ⚠ PAS ENCORE VU À L'ÉCRAN : la modale exige une connexion ; la vérification se fera sur
+  l'app en ligne après le push, avec les essais Estimations.
+- **Base — POSÉE le 08/11** (migration `annonce_un_nom_par_case_2026_11_08`, garde passée ; empreinte neuve
+  `0b74a921348150dcaaca90a773989944`, marque présente, droits inchangés : utilisateurs oui, public non ; 16 attentes en
+  cours, aucune avec un ancien nom) : `supabase/patch_annonce_un_nom_par_case_2026-11-08.sql` (+ `_INVERSE`,
+  `_REPETITION`). Garde par empreinte 5eb2c1a4… ; traduction de 33 anciens noms ; retrait du jumeau ancien dans
+  l'attente ET le calque. Sauvegarde de la définition vérifiée au caractère près (même empreinte). Répétition jouée
+  (transaction annulée, admin simulé, bien vivant 10000009) : **10 OK, 0 KO** ; après coup rien n'est resté.
+  Une 1re tentative sur 62774 a échoué (« dossier_not_found » : 62774 n'est plus parmi les vivants) et a prouvé que
+  l'annulation défait aussi la pose de la fonction (empreinte inchangée).
+- Tous les écrans de l'app envoient désormais les noms Hektor (formulaire de modification, estimation « Reporter »,
+  cockpit, crayon) : la fonction de la base est le filet des onglets restés sur l'ancienne version.
+- **Worker** : rien. Aucun redémarrage.
+- **Reste** : essais réels Estimations (appartement, maison,
+  terrain, immeuble ; scan puis prix corrigé en haut ; crayon puis rubrique Bien en moins de 10 min), verdict 0 écart,
+  suppression des essais. Ouverts à part : HONORAIRES vs `_tauxHonoraire2` ; le vrai envoi des Particularités ; la
+  réduction des requêtes du worker ; `test_suite_creation_avertie.js` à relancer avant de s'y fier.
 
 ### 7 ter. Les dépendances (techniques, pas un ordre décidé)
 
