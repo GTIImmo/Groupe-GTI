@@ -1943,7 +1943,6 @@ const draftAnnonceAdvancedVisibleFieldsByProfile: Record<HektorPropertyProfileKi
     'description',
     'netSellerPrice',
     'landSurface',
-    'exteriorState',
   ],
   garage: [
     'description',
@@ -1957,9 +1956,6 @@ const draftAnnonceAdvancedVisibleFieldsByProfile: Record<HektorPropertyProfileKi
     'netSellerPrice',
     'carrezSurface',
     'livingSurface',
-    'bathroomCount',
-    'showerRoomCount',
-    'wcCount',
     'exteriorState',
     'garageCount',
     'garageSurface',
@@ -2202,8 +2198,7 @@ const draftAnnonceWizardFieldsByProfile: Record<HektorPropertyProfileKind, Recor
       'terrain_constructible', 'terrain_surface_constructible', 'SHON', 'terrain_viabilise',
       'terrain_raccordement_eau', 'terrain_raccordement_gaz', 'terrain_raccordement_electricite',
       'terrain_raccordement_telephone', 'terrain_arbore', 'terrain_piscinable', 'SURFACE_JARDIN',
-      // 08/11 (§28.9) : l'etat exterieur d'un terrain etait saisi dans « Detail app », retiree.
-      'etat_exterieur',
+      // 08/11 (§28.9 septies) : PAS d'etat exterieur pour un terrain -- Hektor ne le garde pas (essai 63483), case masquee.
       'EAU',
       'ASSAINISSEMENT',
       'DISTRIBUTION_EAU',
@@ -2242,10 +2237,7 @@ const draftAnnonceWizardFieldsByProfile: Record<HektorPropertyProfileKind, Recor
     1: ['surfappart'],
     3: ['immeuble'],
     5: [
-      // 08/11 (§28.9) : SDB, salles d'eau et WC d'un immeuble etaient saisis dans « Detail app », retiree.
-      'NB_SDB',
-      'NB_SE',
-      'NB_WC',
+      // 08/11 (§28.9 septies) : PAS de SDB, salles d'eau ni WC pour un immeuble -- Hektor les relit a 0 (essai 63484), cases masquees.
       'SURF_CARREZ',
       'SURF_SEJOUR',
       'MURS_MITOYENS',

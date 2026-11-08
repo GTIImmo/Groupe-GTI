@@ -3232,10 +3232,60 @@ Trois contrôles (écran + mandat, worker + scripts, base lue en direct). Résul
 - Tous les écrans de l'app envoient désormais les noms Hektor (formulaire de modification, estimation « Reporter »,
   cockpit, crayon) : la fonction de la base est le filet des onglets restés sur l'ancienne version.
 - **Worker** : rien. Aucun redémarrage.
+- **En ligne (08/11, commit `9ebfa47`, Vercel READY) — VU À L'ÉCRAN** dans son Chrome, écran Estimations, modale
+  ouverte puis FERMÉE sans créer (0 création en base) : « Titre de l'annonce » ; compteur juste (5 cases = 5, plus de
+  double compte) ; appartement, maison, terrain, immeuble : aucune section « Detail app », aucune « Particularités »,
+  aucune case répétée (prix net vendeur seulement en Mandat / Prix) ; maison : surface terrain, jardin, piscine en
+  haut, et les détails de la piscine s'ouvrent quand on coche « Oui » en haut ; terrain : état extérieur présent ;
+  immeuble : SDB, salles d'eau, WC présents ; valeurs gardées en changeant de type ; 0 erreur console.
 - **Reste** : essais réels Estimations (appartement, maison,
   terrain, immeuble ; scan puis prix corrigé en haut ; crayon puis rubrique Bien en moins de 10 min), verdict 0 écart,
   suppression des essais. Ouverts à part : HONORAIRES vs `_tauxHonoraire2` ; le vrai envoi des Particularités ; la
   réduction des requêtes du worker ; `test_suite_creation_avertie.js` à relancer avant de s'y fier.
+
+**28.9 septies — ESSAIS RÉELS (08/11, « Oui »).** Écran Estimations, son Chrome, PEREIRA / Groupe GTI Firminy,
+titres « ESSAI … ne pas diffuser ». Juge : `app_annonce_saisie_naissance` (création) et `app_annonce_saisie_modif`
+(modification). File vide et 4 services en marche avant de commencer.
+- **Charge envoyée** : sur chaque essai, chaque clé à plat porte EXACTEMENT la valeur de sa case Hektor (titre/titre,
+  price/prix, surface/surfappart, land_surface/surfterrain, garden/JARDIN-, pool/PISCINE-, copro_charges/CHARGES…) ;
+  nombres convertis (« 180 000 » → 180000, « 85,5 » → 85.5, « 1 620,5 » → 1620.5).
+- **Essais ciblés** : appartement 10000207 → 63481 : 27 cases, **0 écart** (CHARGES 120 arrive enfin) ; maison
+  10000208 → 63482 : 29 cases, **0 écart** (terrain, jardin, piscine, type/nature de piscine) ; terrain 10000209 →
+  63483 : 13 cases, 1 écart `etat_exterieur` absent ; immeuble 10000210 → 63484 : 16 cases, 3 écarts `NB_SDB` / `NB_SE`
+  / `NB_WC` relus 0.
+- **Essais 100 % (à sa demande, « tu n'as pas rempli les 130 ou 160 champs ? »)** : remplisseur réécrit (règles du
+  07/11 : chaque case visible, trois passages, OUI si proposé ; vides exprès : DPE non concerné/vierge/altitude,
+  Diffusable, Masquer le prix, latitude/longitude ; pas de pièces de composition). Appartement 127 cases → 10000211 /
+  **63485** : 122 jugées, **0 écart** (07/11 : 6), 14 console seule, 13 dates « autre forme ». Maison 132 cases →
+  10000212 / **63486** : 127 jugées, **0 écart** (07/11 : 7), 13 console seule, 12 dates « autre forme ». (Moins de cases
+  que le 07/11 — 163/167 — parce que les doublons d'écran ont disparu.) ⚠ Le prix net vendeur de ces deux essais vaut
+  12.5 : valeur par défaut de MON remplisseur, pas un défaut.
+- **Modification, la dernière gagne** (10000207 / 63481) : 16:03 appel à l'ANCIEN nom `price` = 181000, au nom de
+  Frédéric, comme un onglet resté sur l'ancienne version → l'attente porte `prix` = 181000 ; 16:05 rubrique Bien
+  (écran) `prix` = 182000 → l'attente porte `prix` = 182000 seul ; 16:16 travail `update_hektor_annonce_fields` →
+  « mise à jour effectuée », **Hektor relit 182000**, contrôle de modification 0 écart. (Avant le correctif : 181000.)
+  ⚠ Le crayon « Corriger » lui-même n'a pas été cliqué : il n'est proposé qu'après « Générer le numéro de mandat »
+  (ligne définitive au registre) ; il envoie désormais le même nom (`prix`) que la rubrique Bien.
+- ⚠ **Trouvé, ANTÉRIEUR au correctif (même perte avant, sans bruit, par « Detail app »)** :
+  - immeuble : le worker ne laisse passer ni `NB_SDB`/`NB_SE`/`NB_WC` (assistant, `HEKTOR_WIZARD_FIELDS_BY_PROFILE`
+    building) ni `bathroom_count`/`shower_room_count`/`wc_count` (après, `HEKTOR_UPDATE_FIELDS_BY_PROFILE` building)
+    → Hektor reste à 0 ;
+  - terrain : `exterior_state` est envoyé (liste land) mais Hektor ne le rend pas : il n'a probablement pas cette case
+    pour un terrain.
+  - À SA DÉCISION : immeuble = ouvrir ces 3 cases dans le worker (modification du worker + redémarrage, à éprouver), ou
+    les masquer ; terrain = masquer l'état extérieur.
+  - ✅ **DÉCIDÉ (08/11) : « Masque à l'écran car elles ne sont pas utiles. »** Le worker n'est PAS touché. Fait dans
+    `App.tsx` : retirées des listes par nature (`draftAnnonceWizardFieldsByProfile`, étape 5) `NB_SDB`/`NB_SE`/`NB_WC`
+    pour building et `etat_exterieur` pour land — ce qui les retire d'un coup de la création, de la fiche (détail), du
+    formulaire de modification et du cockpit, qui lisent tous ces listes ; et retirées des clés plates autorisées
+    (`draftAnnonceAdvancedVisibleFieldsByProfile` : bathroomCount/showerRoomCount/wcCount pour building, exteriorState
+    pour land), pour qu'une valeur saisie sous une autre nature puis changée ne parte plus. C'est le retour aux listes
+    d'avant le 08/11 matin (ces cases n'y étaient pas ; elles ne vivaient que dans « Detail app », supprimée).
+    L'état extérieur d'un immeuble, lui, reste (Hektor le garde, essai 63484). Compilation verte.
+- Remarque d'écran, non traitée : sur la fiche 10000207, le fil d'Ariane affichait « Annonce 10000210 » (le numéro de
+  la dernière création) au lieu de 10000207.
+- **Suppression** : 6 travaux `delete_hektor_annonce` (même geste que le 07/11), tous `done`, `after_found: false` chez
+  Hektor (63481 → 63486), plus aucune fiche 10000207-10000212 dans l'app, aucune attente restante.
 
 ### 7 ter. Les dépendances (techniques, pas un ordre décidé)
 
