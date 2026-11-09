@@ -9,13 +9,13 @@
 
 | # | le point | état |
 |---|---|---|
-| 8a | contact : champs écrits chez nous à la **création** et à la **modification** | 🔎 **audit REFAIT le 21/10 à la demande de Frédéric (« on l'a déjà fait ») — verdict corrigé : FAUX pour l'étape 2**, il avait raison ; attend sa décision de clore |
+| 8a | contact : champs écrits chez nous à la **création** et à la **modification** | ✅ 22/10 — le contact et l'annonce naissent complets chez nous, avec leur contrôle au retour (pièces 1 à 3, A, B, 1, 2, C) ; **D reporté par Frédéric** *(ligne remise à jour le 09/11)* |
 | 8b | périmètre du cloud : 62 139 éligibles sur 356 597 | ✅ **CLOS le 22/10 par décision** — un choix, pas un défaut ; le détail des 356 597 est sur le serveur et dans l'instantané du dimanche |
 | 8c | corps complet des archives d'annonces seulement dans le miroir `data/hektor.sqlite` | ✅ 29/10 — copie complète de `hektor.sqlite` chaque dimanche (2a68830), 1re le 01/11 |
 | 8d | sauvegarde quotidienne : `app_relation`, `app_relation_registry`, `app_mandat`, carnets ; stockage Supabase ; Veeam jamais restauré | ✅ 29/10 — les registres dans la sauvegarde quotidienne (0d249cf) ; le reste : « rien de plus », la copie du dimanche suffit |
 | 8e | bon de visite archivé nulle part | ➡ 29/10 — RANGÉ À L'ÉTAPE 3 par Frédéric (« C ») : avec la prise de rendez-vous dans l'app ; 8 rendez-vous d'essai en juin, les vraies visites passent par Hektor |
 | 8f | document retiré dans Hektor : ligne supprimée sans trace | ✅ 29/10 — gardé avec la mention « supprimé chez Hektor » (6b0efc7, services redémarrés 15:27) |
-| 8g | ⏳ C.9-couple : la mesure exige un geste humain, **tant que Hektor vit** | ⬜ |
+| 8g | ⏳ C.9-couple : la mesure exige un geste humain, **tant que Hektor vit** | 🔧 29/10 audit (le chemin « couple » de l'app n'avait jamais servi), puis **le chantier des contacts et des couples** du 01 au 05/11 : nature des fiches, gestes du conjoint éprouvés en réel sur des fiches fictives, nuit des contacts, 31 533 contacts du registre dans l'app — `notice/SYNTHESE_CHANTIER_CONTACTS_COUPLES_2026-11-01.md` §0-78. Reste : des décisions (9 388 seuls, 680 coquilles, doublons, RGPD de l'index) *(09/11)* |
 
 ---
 
