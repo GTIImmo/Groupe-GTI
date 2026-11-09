@@ -3917,6 +3917,26 @@ l'Ondaine 42700 Firminy, Copropriété = Oui. Départ : 85 liens actifs, 0 sans 
   (ordre des blocs inchangé) : **tout vert** ; `npm run build` vert. Hors de mon travail, 4 autres bancs sortent en échec
   (`test_ajouter_conjoint_ecran` (40)(41), `test_petits_defauts_point6` n° 1, `test_bienvu_textes`, `test_genants_front`) — mon diff ne touche ni le conjoint ni les dates ; non mesuré sur la version d'avant.
 - ⏳ Pas encore vu à l'écran (le mode démo n'a pas de données de partenaire) : à voir en ligne, cran à `admin`.
+- ✅ **Poussé seul** (« Oyi », 09/11) : `6d5c2dc` sur origin/main, sans les commits locaux des autres sessions. Cran
+  `partenaires_courtier` = **`admin`** (app_setting, 15:36 UTC). **Vu en ligne** sur le courtier 10001493 (« Courtier ·
+  Parrain ») : « Acquéreurs suivis · 0 client », « ＋ Orienter un acquéreur » (en-tête et section), Orientés 0, les trois
+  autres étapes « — », « lot 6 · en construction ». Les 4 cartes du haut restent « — » (cadres fixes, comme au lot 7).
+  ⏳ Reste : l'essai réel (orienter un client d'essai, lire le message, retirer), puis allumer pour tous.
+- ✅ **ESSAI RÉEL (09/11, 16:11-16:12, « Oui »)** sur le courtier 10001493, avec le client d'essai du lot 7 (M. ERIC DUPONT,
+  Issoire, n° 10353923, une recherche d'achat active). « ＋ Orienter un acquéreur » → « eric dupont » → 1 résultat →
+  « Orienter » : « 1 client », Orientés 1, ligne « M. ERIC DUPONT · Issoire · n° 10353923 · noté le 09/11/2026 · Orienté ·
+  Message · Retirer », et **le message s'ouvre seul** : objet « Un acquéreur à accompagner : M. ERIC DUPONT » ; corps avec
+  « Bien recherché : Maison, Mas, Bastide, Propriete… » (10 types → 4 + …), « Budget : jusqu'à 150 000 € » (prix_min 0 non
+  écrit), « Secteur : Issoire 63500 », signé « Groupe GTI ». **Contrôlé : ni téléphone ni e-mail du client**, ni dans le
+  corps ni dans le lien ; « Ouvrir dans ma messagerie » = `mailto:` vers l'e-mail **du courtier**. « Fermer » puis
+  « Message » : le même texte revient. Base : lien **156** (courtier, objet client, origine app, posé par Frédéric
+  16:11:54), actifs 99 → 100. « Retirer » → « Oui » : retour à « Aucun acquéreur orienté » ; lien 156 `retire_le`
+  16:12:46, `retire_par` rempli ; actifs 100 → 99, **0 lien courtier actif** ; **0 travail vers Hektor** pendant l'essai
+  (le seul travail de l'heure est la relecture `refresh_console_contact_data` de 15:36, posée à l'ouverture de la fiche) ;
+  console sans erreur. ⏳ Reste : allumer pour tous (cran `partenaires_courtier` → `on`), sur sa décision.
+- ✅ **ALLUMÉ POUR TOUS (09/11, « Oui »)** : `partenaires_courtier` = **`on`** (app_setting). Les 30 courtiers et banques
+  du registre (22 courtiers, 8 banques) ont « Acquéreurs suivis » et « Orienter un acquéreur ». Le retour arrière : remettre
+  le cran à `admin` (ou le supprimer) ; les liens posés restent en base (`app_partenaire_lien`, rôle courtier).
 
 ### 7 ter. Les dépendances (techniques, pas un ordre décidé)
 
