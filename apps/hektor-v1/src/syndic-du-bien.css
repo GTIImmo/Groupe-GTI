@@ -77,3 +77,7 @@
 .sb-syndic.sb-ticket .sb-gros:hover { filter: brightness(.93); }
 .sb-syndic.sb-ticket :focus-visible { outline: 2px solid #c2125f; outline-offset: 2px; }
 .sb-ticket > .sb-confirme, .sb-ticket > .sb-ecart, .sb-ticket > .sb-erreur, .sb-ticket > .sb-choix { position: relative; flex-basis: 100%; margin: 0; }
+/* 09/11 (§28.13, vu en ligne) : le halo (::after, right: -60px) rendait la carte DÉFILABLE de 60 px malgré
+   overflow: hidden ; le curseur posé dans la recherche du choix la faisait glisser à gauche (icône et nom coupés).
+   « clip » coupe pareil, sans zone de défilement. */
+.sb-syndic.sb-ticket { overflow: clip; }

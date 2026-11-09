@@ -3473,6 +3473,54 @@ l'Ondaine 42700 Firminy, Copropriété = Oui. Départ : 85 liens actifs, 0 sans 
   la règle globale `table th` donnait un fond gris et des majuscules aux en-têtes de ligne. Téléphone : composant à part
   (`MobileDossierDetail`), non touché. Non vu : une vraie date « 0000-00-00 » à l'écran (la maquette locale n'en a pas ;
   la règle est tenue par le contrôle (102 bis)).
+- ✅ **POUSSÉ (a226fde) et cran posé à `admin` le 09/11 à 08:51:01 (« Oui, les deux »)** — insertion
+  `app_setting.partenaires_design_bien = 'admin'`. **VU EN LIGNE** sur l'annonce 1346991 (EA32418, Actif) : Copropriété =
+  ticket « PLOTTON IMMOBILIER, repris de Hektor le 04/11/2026 » (Ouvrir sa fiche / Changer / Retirer) en tête, 7 cases en
+  grille de 4 ; Diagnostics = ticket « Aucun diagnostiqueur » + « ＋ Choisir le diagnostiqueur », DPE 329 / 13 / 2 560 € /
+  3 510 € / 2026-05-21 / 2021, cases oui/non à 0, tableau des 8 diagnostics avec les dates en « — » — **les 8 valent
+  « 0000-00-00 » en base** (vérifié). Console sans erreur. ⚠ Remarque, pas de mon fait : « Statut syndicat » montre la
+  valeur brute de Hektor « NOTPROCESS » (déjà ainsi avant). **Retour arrière** : `value = 'off'` (ou supprimer la ligne).
+- ✅ **ALLUMÉ POUR TOUS le 09/11 à 08:58:08 (« ok vas y »)** : `partenaires_design_bien` `admin` → **`on`** ; un
+  négociateur (jeton simulé) le lit bien à « on ».
+
+#### 28.13 — ⏳ À FAIRE (demande de Frédéric, 09/11) : une fenêtre « Ajouter un partenaire » à part
+> « il faudra pas oublier dans le chantier de faire une modal ajouter partenaire avec un design et une ergonomie
+> différente que ajoute contact "client" mais qui fonctionne quand même avec les workers… car actuellement le lien
+> ajouter syndic ou ajouter partenaires montre une modal pas avec recherche »
+- **Aujourd'hui** : « ＋ Nouveau syndic / diagnostiqueur » (carte du bien, assistant de création ; événement
+  `bienvu:creer-partenaire`, `SyndicDuBien.tsx` l. 23-27) et « Ajouter un partenaire » (annuaire, côté Partenaires)
+  ouvrent la création de contact CLIENT, seulement préréglée sur « partenaire » et le métier — sans recherche préalable.
+- **Ce qu'il veut** : une fenêtre propre aux partenaires, d'un design et d'une ergonomie à elle, AVEC une recherche
+  (retrouver la fiche qui existe avant d'en créer une), et qui passe toujours par les mêmes workers (création du contact
+  chez Hektor, notre numéro tout de suite, métier écrit chez nous).
+- Rien n'est audité ni dessiné. Méthode : audit (les deux portes, le chemin du worker, les doublons — 15 noms en double
+  au catalogue le 06/11) → maquette sur l'écran réel → « vas-y ».
+- 🔎 **AUDIT (09/11, « Vas y »)** — rien codé pour la fenêtre :
+  · **Les portes** : (1) « Ajouter un partenaire » de l'annuaire (bureau `setContactCreateOpen` App.tsx ~l. 26218 →
+    `ContactsScreen` ~l. 49672 ; téléphone ~l. 50007) ouvre la fenêtre CLIENT « Nouveau contact » **réglée sur
+    Acquéreur**, étape 2 « Recherche acquéreur » — vu en ligne ; rien ne la règle sur partenaire. (2) « ＋ Nouveau syndic /
+    diagnostiqueur » (carte du bien, assistant ; événement `bienvu:creer-partenaire` → App.tsx ~l. 22325) ouvre la même
+    fenêtre avec `partenaireImpose` (Type Partenaire, Personne morale, métier pré-choisi, étape 2 « Fiche directe ») —
+    vu en ligne ; son en-tête affiche « Nouveau contact » et non « Nouveau diagnostiqueur ». Puis `surPartenaireCree` :
+    numéro (`app_identite`) → `app_partenaire_metier_ecrire` → la carte pose le lien.
+  · **Le chemin worker** : `HektorContactIdentityForm` → travail `create_hektor_contact` (création chez Hektor, notre
+    numéro tout de suite) ; le déclencheur D-1 (`partenaire_metier_a_la_creation` = **on**) écrit le métier chez nous si
+    le travail porte `contact_kind = partenaire` + `partner_job_id`. La nouvelle fenêtre peut garder EXACTEMENT ce chemin.
+  · **Ce que la fenêtre montre à un partenaire** (vu en ligne) : compte / négociateur, type, structure, civilité, nom,
+    prénom, e-mail, métier (17 choix, dont « A supprimer », « Collaborateur », « Societe » deux fois), site, portable,
+    fixe, CP, adresse, ville, **date et lieu de naissance, statut matrimonial**, source, catégorie, **3 automatismes CRM
+    (mail nouveau mandat, échéance, anniversaire)**, ⚠ **« Envoyer l'e-mail d'activation Espace personnel / RGPD » COCHÉ
+    par défaut** (`sendRgpdEmail: true`), note.
+  · **La recherche** : AUCUNE dans la fenêtre. Seul le choix depuis la carte du bien en a une, limitée au catalogue du
+    métier (déjà partenaire). Une fiche CLIENT qui est en fait le partenaire n'y est pas trouvée.
+  · **Mesures** : 181 fiches partenaires (syndic, diagnostiqueur, apporteur, courtier, banque, parrain) : e-mail 79,
+    téléphone 94, ville 81, adresse 67, **sans prénom 87** (des sociétés), **date de naissance 0** ; noms en double parmi
+    les 1 872 métiers actifs (notaires compris) : **52** ; créations de partenaires sur 30 jours : 8.
+- 🐞 **Défaut trouvé pendant l'audit, CORRIGÉ dans le code (pas poussé)** : dans la carte « ticket » (4a Contact et
+  4b/4c Le Bien, allumés pour tous ce matin), le halo `::after` (right : -60 px) rendait la carte défilable de 60 px ;
+  le curseur posé dans la recherche du choix la faisait glisser à gauche (icône et nom coupés). Mesuré en ligne
+  (`scrollWidth` 904 pour 844, `scrollLeft` 60) ; correctif `overflow: clip` (syndic-du-bien.css), éprouvé dans la page
+  en ligne (scrollLeft reste 0 après le focus). Build et tests verts.
 
 ### 7 ter. Les dépendances (techniques, pas un ordre décidé)
 
