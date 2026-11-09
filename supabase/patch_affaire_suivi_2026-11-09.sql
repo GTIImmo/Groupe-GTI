@@ -123,11 +123,22 @@ create table if not exists public.app_affaire_suivi (
   --   une déduction refaite chaque nuit (voir l'en-tête).
   id_unique          text    primary key,
 
-  -- ─── LES TROIS DATES ET NUMÉROS
-  -- ⭐ date_annulation FAIT l'état « annulée » (sa règle du 09/11). C'est la seule
-  --   mémoire de l'annulation : chez Hektor une vente annulée est SUPPRIMÉE, pas
-  --   marquée — mesuré, 9 277 ventes sur 9 277 ont un état VIDE.
-  date_annulation    date,
+  -- ─── LES DEUX DATES ET NUMÉROS
+  -- ⛔⛔ `date_annulation` A ÉTÉ RETIRÉE DE CETTE TABLE LE 09/11, et c'est une
+  --   DÉCISION DE FRÉDÉRIC : « il faut aussi ajouter dans le registre des colonnes
+  --   date d'annulation, qui permet d'annuler le dossier dans le registre des
+  --   transactions et de faire une modification de l'état des transactions dans la
+  --   chaîne. »
+  --   ⭐ SA PLACE EST DANS app_affaire_ledger, PAS ICI, pour trois raisons mesurées :
+  --     ① la règle de chaînage la lirait dans la table qu'elle lit DÉJÀ — quatre
+  --        sauts en moins (chaîne -> transactions -> gel -> cette table) ;
+  --     ② le registre est DÉJÀ en local, donc pas d'attente de la descente de 07:30
+  --        alors que le run tourne à 05:00 ;
+  --     ③ elle est alors PAR TRANSACTION, ce qui est exactement ce que la cascade
+  --        demande : marquer l'offre, le compromis et la vente du même dossier.
+  --   Elle sera protégée du run par OMISSION (absente du ON CONFLICT), le patron que
+  --   le projet nomme ainsi et qui protège déjà six colonnes.
+  --   Spécification : notice/SPEC_ANNULATION_AFFAIRE_2026-11-09.md
   date_vente_reglee  date,       -- ⚠ ce n'est PAS notre date d'acte : +3 j de médiane
   numero_facture     text,       -- ⚠ du numéro ET du texte dans la même case
 
@@ -147,7 +158,7 @@ create table if not exists public.app_affaire_suivi (
 
   -- ⭐ une ligne qui ne porte RIEN n'a pas de raison d'exister
   constraint app_affaire_suivi_pas_vide check (
-    date_annulation is not null or date_vente_reglee is not null
+    date_vente_reglee is not null
     or numero_facture is not null or en_attente_de is not null
     or commentaires is not null or avis_a_envoyer is not null
     or avis_commentaire is not null or avis_envoye is not null
@@ -173,9 +184,10 @@ comment on column public.app_affaire_suivi.id_unique is
   'les transactions de l''affaire se lisent là-bas, avec leur rôle.';
 
 -- ─────────────────────────────────────────────────────── ② L'INDEX
--- ⭐ le seul utile aujourd'hui : « quelles affaires sont annulées ? »
-create index if not exists app_affaire_suivi_annulation_idx
-  on public.app_affaire_suivi (date_annulation) where date_annulation is not null;
+-- ⭐ retrouver une ligne depuis le classeur reste utile ; l'index sur les
+--   annulations n'a plus lieu d'etre ici (la date vit au registre).
+create index if not exists app_affaire_suivi_id_unique_idx
+  on public.app_affaire_suivi (id_unique);
 
 -- ─────────────────────────────────────────────────────── ③ LES DROITS
 -- ⛔ `revoke all from public` NE FERME PAS `authenticated` : chaque rôle se nomme.
@@ -200,18 +212,18 @@ select '① la table existe'                                  as controle,
   from information_schema.tables
  where table_schema = 'public' and table_name = 'app_affaire_suivi'
 union all
-select '② elle a 12 colonnes', count(*),
-       case when count(*) = 12 then 'VERT' else 'ROUGE' end
+select '② elle a 11 colonnes', count(*),
+       case when count(*) = 11 then 'VERT' else 'ROUGE' end
   from information_schema.columns
  where table_schema = 'public' and table_name = 'app_affaire_suivi'
 union all
 -- ⛔⛔ LE CONTRÔLE QUI DIT QUE LA FAUTE EST RÉPARÉE : aucune colonne de cette table
 --    ne doit s'accrocher à un numéro de chaîne (règle du 28/10).
-select '③ AUCUNE colonne app_chaine_id (règle du 28/10)', count(*),
+select '③ ni colonne de chaîne, ni date d''annulation (elle vit au registre)', count(*),
        case when count(*) = 0 then 'VERT' else 'ROUGE' end
   from information_schema.columns
  where table_schema = 'public' and table_name = 'app_affaire_suivi'
-   and column_name like '%chaine%'
+   and (column_name like '%chaine%' or column_name like '%annulation%')
 union all
 select '④ la clé primaire est bien id_unique', count(*),
        case when count(*) = 1 then 'VERT' else 'ROUGE' end
