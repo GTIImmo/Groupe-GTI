@@ -38,6 +38,33 @@
 --   PHASE A, qui est un rattrapage UNE SEULE FOIS. La suite a déjà un nom et un rang
 --   dans le projet — voir ci-dessous.
 --
+-- ─── ⭐ LA CONFORMITÉ AU SYSTÈME DE CHAÎNAGE — vérifiée le 09/11 sur sa demande ───
+-- Frédéric, 09/11 : « est-ce que ton patch est conforme au système de chaînage ? »
+-- TROIS points vérifiés, et un défaut trouvé (corrigé, contrôles ⑩ et ⑪ ci-dessous) :
+--
+-- ① ✅ LA TABLE NE S'ACCROCHE PLUS À UN NUMÉRO DE CHAÎNE. Plus aucune colonne
+--    `*chaine*`, et le contrôle ③ le vérifie. La règle du 28/10 est respectée.
+--
+-- ② ✅ LE CHAÎNAGE POURRA REMONTER JUSQU'ICI. Le recalcul tourne EN LOCAL
+--    (`recalculer_les_chaines(con: sqlite3.Connection)`, base `phase2/phase2.sqlite`,
+--    6,7 Go), et j'ai vérifié que `app_classeur_lien` Y EXISTE DÉJÀ — donc le chemin
+--    chaîne -> transactions -> ligne du classeur -> ici est possible sans plomberie
+--    nouvelle.
+--    ⚠ MAIS `app_affaire_suivi` doit DESCENDRE en local. Elle descendra seule : la
+--    descente (scheduled/run_descente.ps1, 07:30) découvre les tables du schéma.
+--    ⛔ ET ELLE DESCEND APRÈS LE RUN (05:00). Le run lira donc la table telle qu'elle
+--    était la veille — SANS CONSÉQUENCE pour une date d'annulation venue du classeur,
+--    qui ne change jamais. ⚠ À reprendre en PHASE B, où l'app écrirait la date : elle
+--    mettrait alors 24 h à agir sur le chaînage.
+--
+-- ③ ⚠ LES DEUX COPIES DE LA FORMULE N'AURONT PAS LE MÊME ACCÈS AUX DONNÉES.
+--    `recalculer_les_chaines()` lit le LOCAL (table descendue, un jour de retard) ;
+--    `app_chaine_pour()` tourne dans Supabase et lirait la table EN DIRECT. Elles
+--    peuvent donc diverger sur une date saisie dans la journée. Nul en phase A (la
+--    date vient du classeur, une fois), réel en phase B.
+--    ⛔ C'est exactement l'avertissement du patch du 05/09 : « Deux copies d'une
+--    formule divergent tôt ou tard : toute correction ici doit être reportée là-bas. »
+--
 -- ─── ⬜ CE QUI VIENDRA APRÈS, ET QUI N'EST PAS CE PATCH ───
 -- L'identifiant d'affaire propre à notre registre s'appelle `app_dossier_affaire_id`
 -- dans la note du 29/10 : « l'étiquette STABLE ». Elle y est déclarée NÉCESSAIRE —
@@ -220,4 +247,36 @@ select '⑨ TÉMOIN : le gel porte bien des « ID Unique » distincts',
        count(distinct id_unique),
        case when count(distinct id_unique) > 4000 then 'VERT' else 'ROUGE' end
   from public.app_classeur_lien
+union all
+-- ⛔⛔ LES DEUX TÉMOINS DE CONFORMITÉ AU CHAÎNAGE. Frédéric, 09/11 : « est-ce que
+--    ton patch est conforme au système de chaînage ? » — et ils manquaient.
+--    ⭐ POURQUOI ILS SONT INDISPENSABLES : la fermeture d'une chaîne par
+--    `date_annulation` devra remonter chaîne -> transactions -> app_classeur_lien
+--    -> id_unique -> ici. Si une chaîne portait DEUX lignes du classeur, elle
+--    aurait DEUX dates d'annulation candidates et la règle ne saurait pas laquelle
+--    prendre. Aujourd'hui la correspondance est 1 ↔ 1 (mesuré le 09/11 : 4 688
+--    lignes ↔ 4 688 chaînes, zéro exception sur 12 422 transactions), mais c'est
+--    exactement ce qu'une FUSION casserait — le cas dangereux nommé par
+--    notice/ANALYSE_LIEN_PAR_DOSSIER_OU_PAR_TRANSACTION_2026-10-29.md § 1 ③.
+--    ⛔ Ces deux contrôles doivent donc être REJOUÉS avant d'allumer la fermeture,
+--    pas seulement aujourd'hui.
+select '⑩ CONFORMITÉ : 1 ligne du classeur = 1 chaîne, sans exception',
+       count(*),
+       case when count(*) = 0 then 'VERT' else 'ROUGE' end
+  from (select l.id_unique
+          from public.app_classeur_lien l
+          join public.app_affaire_ledger g on g.app_affaire_id = l.app_affaire_id
+         group by l.id_unique
+        having count(distinct g.app_chaine_id) <> 1
+            or count(*) filter (where g.app_chaine_id is null) > 0) as mauvaises
+union all
+select '⑪ CONFORMITÉ, le TÉMOIN INVERSE : 1 chaîne = 1 ligne du classeur',
+       count(*),
+       case when count(*) = 0 then 'VERT' else 'ROUGE' end
+  from (select g.app_chaine_id
+          from public.app_classeur_lien l
+          join public.app_affaire_ledger g on g.app_affaire_id = l.app_affaire_id
+         where g.app_chaine_id is not null
+         group by g.app_chaine_id
+        having count(distinct l.id_unique) <> 1) as partagees
  order by 1;
