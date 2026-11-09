@@ -48050,6 +48050,10 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
   const apporteurCran = useCranCouplesVisible('partenaires_apporteur', props.profileRole)
   const apporteurActif = apporteurCran && profilPartenaire?.famille === 'apporteur'
   const [noterApport, setNoterApport] = useState(0)
+  // LOT 6 (09/11/2026, §28.21) : la fiche COURTIER / BANQUE — « Acquéreurs suivis » et « Orienter un acquéreur » (même
+  // composant, rôle courtier ; message prêt SANS les coordonnées du client), derrière le cran `partenaires_courtier`.
+  const courtierCran = useCranCouplesVisible('partenaires_courtier', props.profileRole)
+  const courtierActif = courtierCran && profilPartenaire?.famille === 'courtier'
   // PARTENAIRES, pièce 3.3b (05/11/2026) : la partie droite du métier (chiffres, section, « À venir », « avec nous »), montrée
   // « en construction » ; rien pour la famille « autre ». Comme le notaire, la bande Recherche se cache sans recherche active
   // (pas pour « autre » : une société peut être acquéreur, elle garde « Ajouter une recherche »).
@@ -48754,6 +48758,11 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
                     <span className="fa-cx-act-tx">Noter une affaire apportée</span>
                   </button>
+                ) : courtierActif && props.canManageContacts ? (
+                  <button className="fa-cx-act primary wide" type="button" onClick={() => setNoterApport((n) => n + 1)}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+                    <span className="fa-cx-act-tx">Orienter un acquéreur</span>
+                  </button>
                 ) : profilPartenaire?.action ? (
                   // PARTENAIRES, pièce 3.3a : l'action propre au métier (maquette), MONTRÉE et marquée « en construction »
                   // jusqu'à son lot (décision du 27/10 : un bloc sans données se montre). Elle ne fait rien.
@@ -48887,6 +48896,7 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
                 ? <SyndicCoproprietes vue={ficheSyndic.vue} erreur={ficheSyndic.erreur} chargement={ficheSyndic.chargement} onOuvrirBien={(id) => { props.onClose(); props.onOpenDossier(id) }} />
                 : ficheDiagActive ? <DiagBiens vue={ficheDiag.vue} erreur={ficheDiag.erreur} chargement={ficheDiag.chargement} onOuvrirBien={(id) => { props.onClose(); props.onOpenDossier(id) }} />
                 : apporteurActif ? <AffairesApportees partenaireId={String(props.contact.hektor_contact_id ?? '')} peutEcrire={Boolean(props.canManageContacts)} noterSignal={noterApport} />
+                : courtierActif ? <AffairesApportees role="courtier" partenaireId={String(props.contact.hektor_contact_id ?? '')} partenaireEmail={String(props.contact.email ?? '').trim() || null} peutEcrire={Boolean(props.canManageContacts)} noterSignal={noterApport} />
                 : blocsPartenaire ? <PartenaireSectionMetier blocs={blocsPartenaire} /> : null}
               {masquerRecherche ? null : (<>
               {/* ── Lot 2 — Bande « Recherche & rapprochement » (portage maquette v30) ── */}

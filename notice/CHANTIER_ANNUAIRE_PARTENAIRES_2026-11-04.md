@@ -3878,6 +3878,46 @@ l'Ondaine 42700 Firminy, Copropriété = Oui. Départ : 85 liens actifs, 0 sans 
   ne remplit pas — sans rapport avec la reprise.
 - **Retour arrière** : `_INVERSE.sql` retire les liens `origine = 'netty'` et vérifie que les autres sont intacts.
 
+#### 28.20 — LOT 6 (courtier et banque) : AUDIT (09/11, « on passe à la suite ») — rien codé
+- **Mesure** : 22 courtiers (14 avec e-mail) et 8 banques (7 avec e-mail) au catalogue ; **0 lien** ; aucune donnée de
+  financement nulle part — 0 des 18 582 affaires de `app_affaire_console` ne parle de prêt, de banque ou de courtier
+  (conditions suspensives vides de ce côté), les intervenants Hektor ne sont que NEGO / AGENCE ; Netty n'a pas de
+  relation courtier (seulement vendeur, acquéreur, notaire, apporteur). ⇒ **rien à reprendre**, on part de zéro.
+- **Ce qui existe déjà** : la fiche (coordonnées, interlocuteurs) ; famille `courtier` = courtier ET banque
+  (`metierPartenaire.ts` l. 45) ; blocs « Acquéreurs suivis » (Orientés / Accord de principe / Offre de prêt / Financés)
+  et bouton « Orienter un acquéreur » montrés « bientôt » ; le geste de base `app_partenaire_du_client` accepte DÉJÀ le
+  rôle `courtier` (métier courtier ou banque) — préparé au lot 7 ; contrainte : objet client → rôle courtier ou
+  apporteur (une banque se relie donc avec le rôle `courtier`).
+- **Proposé (calque du lot 7)** : (1) section « Acquéreurs suivis » réelle = les clients reliés, avec l'étape lue au
+  registre (offre / compromis / vente) ; « Accord de principe » et « Offre de prêt » restent « en construction » ;
+  (2) bouton « Orienter un acquéreur » = choisir le client (même panneau de recherche) → le lien est posé chez nous +
+  un message prêt à copier ou à ouvrir dans la messagerie (rien n'est envoyé par l'app) ; (3) cran
+  `partenaires_courtier`. Aucun patch de base nécessaire.
+- ⚠ **Ce que ça pourrait casser** : `AffairesApportees` sert le lot 7 — le généraliser par une propriété (rôle) avec
+  l'apporteur par défaut, et rejouer les contrôles du lot 7 ; la chaîne des boutons d'en-tête (une branche de plus
+  avant « bientôt »). ⚠ **RGPD** : envoyer les coordonnées d'un client à un courtier demande l'accord du client.
+
+#### 28.21 — LOT 6 CODÉ (09/11, « Oui, sans coordonnées ») — DORMANT (cran absent), pas poussé
+- ⛔ **Décision de Frédéric** : le message ne porte **ni le téléphone ni l'e-mail du client** — son nom, son projet et où il
+  en est, rien d'autre.
+- `lib/affairesApportees.ts` : `etapeDuClient(roles, defaut)` (le libellé « sans étape » devient « Orienté » pour le
+  courtier) ; `compterOrientes` (Orientés = tous ; Accord de principe / Offre de prêt / Financés = « en construction »).
+- `lib/orienterAcquereur.ts` (neuf, pur) : `rechercheAchat` (seule une recherche d'ACHAT, offre « 0 », décrit le projet),
+  `lignesProjet` (biens recherchés, budget, secteur — une donnée absente n'est pas écrite), `messageOrientation` (sujet
+  « Un acquéreur à accompagner : … », où il en est si offre / compromis / vente, signé « Groupe GTI »).
+- `AffairesApportees.tsx` : propriété `role` (`apporteur` par défaut → **rien ne change pour le lot 7**), textes par rôle ;
+  en courtier : « Acquéreurs suivis », « ＋ Orienter un acquéreur » (même recherche, même geste `app_partenaire_du_client`
+  avec `p_role: 'courtier'`), puis le **message prêt** s'ouvre (modifiable, « Copier le message », « Ouvrir dans ma
+  messagerie » si la fiche du courtier a un e-mail) ; un bouton « Message » par acquéreur le rouvre. Le message lit
+  seulement la recherche du client (`offre, types_json, villes_json, prix_min, prix_max`). Rien n'est envoyé par l'app.
+- `App.tsx` (+10 lignes) : cran `partenaires_courtier`, `courtierActif` (famille courtier = courtier ET banque), bouton
+  d'en-tête « Orienter un acquéreur » (avant le « bientôt »), section avant le bloc « en construction ». `lib/api.ts` :
+  le cran dans la liste du mode démo.
+- Contrôles (113)-(117) ajoutés, (112) adapté à la forme commune (rôle par défaut apporteur), (45) marge 800 → 1 200
+  (ordre des blocs inchangé) : **tout vert** ; `npm run build` vert. Hors de mon travail, 4 autres bancs sortent en échec
+  (`test_ajouter_conjoint_ecran` (40)(41), `test_petits_defauts_point6` n° 1, `test_bienvu_textes`, `test_genants_front`) — mon diff ne touche ni le conjoint ni les dates ; non mesuré sur la version d'avant.
+- ⏳ Pas encore vu à l'écran (le mode démo n'a pas de données de partenaire) : à voir en ligne, cran à `admin`.
+
 ### 7 ter. Les dépendances (techniques, pas un ordre décidé)
 
 - 0 avant tout le reste ; 0.1 avant B2 ; 0.2 avant B1 ; 0.6 avant B5 ; 0.3 avant B6 ; 0.4 avant B7 ; 0.5 avant C2.
