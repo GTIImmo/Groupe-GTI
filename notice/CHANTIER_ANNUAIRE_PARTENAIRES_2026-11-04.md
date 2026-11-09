@@ -3588,6 +3588,23 @@ l'Ondaine 42700 Firminy, Copropriété = Oui. Départ : 85 liens actifs, 0 sans 
   case de recherche (style général des `input`), et le message « base indisponible ».
   ⚠ **Pas encore éprouvé avec la vraie base** : la recherche réelle, « En faire un … », une vraie création (écrit chez
   Hektor : essai depuis Estimations… à décider avec Frédéric) — tout cela se voit en allumant le cran pour lui seul.
+- **Mise en ligne (09/11, « Oui, les deux » puis « Pousser le mien seul »)** : la branche locale portait 2 commits NON
+  poussés d'une autre session (chantier Classeur : `52e67f3` alias des négociateurs, `0fdf64b` regel des 9 lignes) ; mon
+  commit local `bb650f2` était posé dessus. Pour ne pas les envoyer, un commit à part `58ce259` a été construit sur
+  `origin/main` (index temporaire, mêmes 7 fichiers, contenu identique à `bb650f2`, vérifié) et poussé seul ; les 2
+  commits Classeur restent en local (`ahead 3, behind 1`) — la session Classeur devra fusionner `origin/main` avant son
+  push (sans conflit : mes fichiers ne croisent pas les siens). Cran `partenaires_fenetre_ajout` = **`admin`** posé à
+  11:59:45. ⚠ **Vercel n'a lancé AUCUN déploiement pour `58ce259`** (vérifié 5 min après : GitHub porte bien `58ce259`
+  sur `main`, dernier déploiement = `927cff6`) — la fenêtre n'est donc pas encore en ligne.
+  → Vercel a démarré SEUL, avec ~10 min de retard (`dpl_27d1Tqj8…`, 58ce259) : aucun déploiement lancé à la main.
+- **VU EN LIGNE (09/11, cran `admin`, lecture seule, rien créé)** : Contacts → Partenaires → « Ajouter un partenaire » →
+  « Ajouter un syndic », pastilles avec les vrais comptes (syndic 75, diagnostiqueur 36, apporteur 35, courtier 22,
+  parrain 15, banque 8) ; « foncia » → « Déjà syndic au catalogue 8 » (FONCIA LOIRE AUVERGNE n° 10352728 « 7 de nos
+  biens » en tête ; les doublons se voient : FONCIA LOIRE AUVERGNE ×4) et « Dans vos contacts, sans ce métier 1 »
+  (CABINET FONCIA IGD, Saint-Étienne, « En faire un syndic » — non cliqué). Console sans erreur.
+  🐞 **Défaut trouvé** : « 0477493374 » ramenait AUSSI 0477473112 — le motif « *04*77*49*33*74* » acceptait n'importe quoi
+  entre les paires. **Corrigé (pas poussé)** : le numéro se cherche sous ses 3 formes exactes (collé, paires à points,
+  paires à espaces), valeurs entre guillemets dans le filtre ; contrôle (105) mis à jour ; build vert, tout vert.
 
 #### 28.14 — ⏳ DEMANDE DE FRÉDÉRIC (09/11) : pré-remplir dès l'adresse, à la création d'une annonce
 > « l'ajout d'une annonce active ou estimation : dès l'ajout de l'adresse du bien, l'app doit faire le script déjà

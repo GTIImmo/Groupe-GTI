@@ -11,7 +11,7 @@ import { createHektorContactJob, fetchCommunesForPostalCode } from './lib/api'
 import type { ConsoleJob, HektorNegotiatorOption } from './types'
 import {
   METIERS_AJOUT, apparenceMetier, avertissementVille, compteRetenu, comptesHektor, detailContact, entreeCreation, ficheVide,
-  grouperResultats, libellesMetier, manquesFiche, motifDeRecherche, type ContactTrouve, type FichePartenaire, type MetierAjout,
+  grouperResultats, libellesMetier, manquesFiche, motifsDeRecherche, type ContactTrouve, type FichePartenaire, type MetierAjout,
 } from './lib/ajouterPartenaire'
 import './ajouter-partenaire.css'
 
@@ -77,8 +77,8 @@ export default function AjouterPartenaire(props: {
 
   // La recherche, à la frappe (3 caractères, pause de 300 ms), dans TOUS les contacts, sous la règle d'accès habituelle.
   useEffect(() => {
-    const motif = motifDeRecherche(saisie)
-    if (!motif) { setRecherche({ etat: 'vide', liste: [] }); return }
+    const motifs = motifsDeRecherche(saisie)
+    if (!motifs.length) { setRecherche({ etat: 'vide', liste: [] }); return }
     if (!hasSupabaseEnv || !supabase) { setRecherche({ etat: 'erreur', liste: [], erreur: 'base indisponible' }); return }
     let vivant = true
     setRecherche((r) => ({ ...r, etat: 'chargement' }))
@@ -86,7 +86,7 @@ export default function AjouterPartenaire(props: {
       try {
         const c = await supabase!.from('app_contact_current')
           .select('hektor_contact_id,display_name,prenom,nom,ville,phone_primary,phone_secondary,email,archive')
-          .or(`search_text.ilike.${motif},email.ilike.${motif},phone_secondary.ilike.${motif}`)
+          .or(motifs.flatMap((m) => ['search_text', 'email', 'phone_secondary'].map((col) => `${col}.ilike."${m}"`)).join(','))
           .or('couple_role.is.null,couple_role.neq.menage_resolu')
           .limit(20)
         if (c.error) throw new Error(c.error.message)
