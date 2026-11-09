@@ -3521,6 +3521,223 @@ l'Ondaine 42700 Firminy, Copropriété = Oui. Départ : 85 liens actifs, 0 sans 
   le curseur posé dans la recherche du choix la faisait glisser à gauche (icône et nom coupés). Mesuré en ligne
   (`scrollWidth` 904 pour 844, `scrollLeft` 60) ; correctif `overflow: clip` (syndic-du-bien.css), éprouvé dans la page
   en ligne (scrollLeft reste 0 après le focus). Build et tests verts.
+  **Poussé (927cff6, « Oui, pousse »), VU EN LIGNE** : CSS servi contient `.sb-syndic.sb-ticket{overflow:clip}` ; sur
+  EA32418, « ＋ Choisir le diagnostiqueur » → curseur dans la recherche, `scrollLeft` 0, icône et « Ardrodiag » entiers.
+- 🎨 **MAQUETTE (09/11, « Oui, maquette »)** — canevas https://claude.ai/artifact/RcvReTV74PM2L1ZEEWdoNq, planches 5 et
+  6 (`AjoutPartenaire1.dc.html`, `AjoutPartenaire2.dc.html`), 1280 × 665, données fictives. UNE fenêtre pour les trois
+  portes (annuaire bureau et téléphone, « ＋ Nouveau » de la carte du bien, assistant de création), en deux temps :
+  · **1 · Chercher** : le métier en pastilles (syndic 75, diagnostiqueur 36, apporteur 35, courtier 22, parrain 15,
+    banque 8 — comptes du registre), une grande recherche (nom, téléphone, e-mail, ville) dans TOUS les contacts, deux
+    groupes de résultats : « Déjà syndic au catalogue » (Choisir / Ouvrir sa fiche) et « Dans vos contacts, sans ce
+    métier » (« En faire un syndic » = le geste EXISTANT `app_partenaire_metier_ecrire` : aucune nouvelle fiche, rien
+    chez Hektor) ; en bas « Aucun ne correspond ? ＋ Créer un nouveau syndic ».
+  · **2 · Créer** : Société / Personne ; raison sociale ; la personne à qui parler (facultatif) ; téléphone, portable,
+    e-mail ; adresse, CP, ville (communes du CP, comme C-3) ; site ; note ; « créé sous ton compte ». À droite : l'aperçu
+    en ticket, « à l'enregistrement » (1 notre numéro tout de suite, 2 Hektor par le worker, 3 métier inscrit, 4 relié au
+    bien si ouverte depuis un bien) et « réglé pour un partenaire ».
+  · **Retirés** pour un partenaire : naissance, situation familiale, source, catégorie, la liste des 17 métiers.
+  · **⏳ DÉCISIONS ATTENDUES** : (a) l'e-mail d'activation « espace client / RGPD » — coché par défaut aujourd'hui,
+    proposé COUPÉ ; (b) les 3 automatismes clients (nouveau mandat, échéance, anniversaire) — proposés COUPÉS ; (c) les
+    NOTAIRES hors de cette fenêtre (leur catalogue suit la table des parties, 1 659 au registre) ; (d) « Société » par
+    défaut (87 des 181 partenaires n'ont pas de prénom). Rien n'est codé.
+  · ✅ **DÉCIDÉ (09/11) : « Non, juste couleur et libellé »** — la fenêtre ne change selon le métier QUE par la couleur,
+    l'icône et les libellés ; la fiche est la même pour tous (mesure à l'appui de la question : syndic 75/75 sans prénom,
+    3 e-mails, 1 téléphone ; diagnostiqueur 12/36 sans prénom ; apporteur, courtier, parrain, banque : tous avec prénom).
+    Les décisions (a) à (d) restent sans réponse explicite.
+- 🔎 **AUDIT POUR CODER (09/11, « Oui on reprend »)** — rien codé :
+  · **Créer** : `HektorContactIdentityForm` appelle `createHektorContactJob({ contact, priority: 18 })` (lib/api.ts
+    l. 11583) avec `HektorContactIdentityInput` (l. 10677) : `contactKind`, `personType`, `partnerJobId`, `sendRgpdEmail`
+    (vrai par défaut), `crmMandateSummaryEnabled` / `crmMandateExpirationEnabled` / `crmBirthdayEnabled` (vide = réglage
+    Hektor). La ville suit le code postal par `useCommunesDuCodePostal` + `avertissementLocaliteContact` (8a C-3) :
+    réutilisables tels quels. Après la création : `surPartenaireCree` (App.tsx ~l. 16925) = numéro → métier → poser.
+  · **Codes métier Hektor** (`registre_partenaires_reprise.py`, METIER_HEKTOR) : syndic 5, diagnostiqueur 4, apporteur
+    15, banque 19 ; **courtier et parrain n'ont PAS de code Hektor** → envoyer « non défini » (le déclencheur D-1
+    n'écrit rien) et écrire le métier chez nous ensuite, comme `surPartenaireCree` le fait déjà (envoyer « 21 Autre »
+    créerait une ligne « autre » parasite au registre).
+  · **Chercher** : `app_contact_current.search_text` (index trigramme), sous la règle d'accès : mesuré en négociateur
+    « foncia » 9 fiches en **455 ms**, « 0477 » 20 fiches en **3 ms** → recherche à la frappe (3 caractères, pause
+    300 ms) tenable.
+  · **« En faire un syndic »** : `app_partenaire_metier_ecrire(contact, métier)` existe, tout utilisateur actif, anon
+    fermé ; rien chez Hektor. ⚠ Le contact reste aussi dans l'annuaire Clients (son type chez Hektor ne change pas).
+- **PLAN DE CODE PROPOSÉ** : `AjouterPartenaire.tsx` (+ `lib/ajouterPartenaire.ts` pur, + CSS), derrière un cran neuf
+  `partenaires_fenetre_ajout` (admin d'abord) ; branché aux 3 portes (annuaire bureau et téléphone ; événement
+  `bienvu:creer-partenaire` de la carte du bien et de l'assistant) ; cran éteint = fenêtres d'aujourd'hui. Temps 1 :
+  pastilles des 6 métiers, recherche dans tous les contacts, deux groupes (déjà au catalogue : Choisir / Ouvrir sa fiche ;
+  sans ce métier : « En faire un … ») ; Temps 2 : la fiche courte, envoyée par `createHektorContactJob` (même travail,
+  même worker), puis métier écrit et lien posé comme aujourd'hui. Contrôles dans `test_metier_partenaire.cjs`.
+- ✅ **CODÉ (09/11, « Oui » aux quatre réglages), ni commité ni poussé, cran PAS posé (= éteint pour tous)** :
+  · `lib/ajouterPartenaire.ts` (pur) : les 6 métiers et leur code Hektor (courtier / parrain sans code), couleur et
+    libellés pris aux tuiles du catalogue, motif de recherche (mots qui se suivent, téléphone par paires de chiffres),
+    deux groupes de résultats, la fiche → `HektorContactIdentityInput` (partenaire, société par défaut,
+    `sendRgpdEmail: false` et les 3 automatismes à `false` — vérifié jusqu'au worker : `_email_rgpd` n'est envoyé que si
+    vrai, l. 19660), ce qui manque, la ville qui suit le code postal, le compte Hektor (même règle que la fenêtre client,
+    admin jamais sous l'e-mail de sa session) ;
+  · `AjouterPartenaire.tsx` + `ajouter-partenaire.css` : la fenêtre en deux temps (planches 5 et 6), plein écran au
+    téléphone ; recherche à la frappe dans `app_contact_current` (`search_text` / `email` / `phone_secondary`, sans les
+    fiches de ménage, 20 au plus), métiers et biens reliés lus au registre ; « Choisir » / « Ouvrir sa fiche » ;
+    « En faire un … » = `app_partenaire_metier_ecrire` ; « Créer le … » = `createHektorContactJob` (même travail que la
+    fenêtre client) puis le métier, puis `poser` (depuis un bien) ou la fiche au catalogue (annuaire) ;
+  · `App.tsx` : cran `partenaires_fenetre_ajout` ; l'événement `bienvu:creer-partenaire` (carte du bien, assistant) et
+    « Ajouter un partenaire » de l'annuaire (bureau, téléphone, en-tête) ouvrent la nouvelle fenêtre quand il est allumé ;
+    côté Clients et cran éteint : rien ne change ; `lib/api.ts` : le mode maquette allume ce cran ;
+  · `test_metier_partenaire.cjs` : (104) à (109). Build vert, tout vert.
+- **Contrôle** : vu dans l'aperçu local (mode maquette, sans base) : « Ajouter un syndic » (couleur syndic), temps 2
+  « Nouveau syndic » conforme à la planche 6 (raison sociale reprise de la recherche, compte à choisir, « À
+  l'enregistrement » 1-4, « Réglé pour un partenaire ») ; « Créer » vide → « Il manque un téléphone ou un e-mail, le
+  négociateur. » ; téléphone 375 px : plein écran, couleur diagnostiqueur. Corrigé pendant le contrôle : le cadre de la
+  case de recherche (style général des `input`), et le message « base indisponible ».
+  ⚠ **Pas encore éprouvé avec la vraie base** : la recherche réelle, « En faire un … », une vraie création (écrit chez
+  Hektor : essai depuis Estimations… à décider avec Frédéric) — tout cela se voit en allumant le cran pour lui seul.
+
+#### 28.14 — ⏳ DEMANDE DE FRÉDÉRIC (09/11) : pré-remplir dès l'adresse, à la création d'une annonce
+> « l'ajout d'une annonce active ou estimation : dès l'ajout de l'adresse du bien, l'app doit faire le script déjà
+> existant permettant d'appeler les tables nécessaires pour récupérer le nom du syndic et le nom du diagnostiqueur si
+> ceux-ci existent et pré-remplir les champs éventuellement récupérés comme année de construction, DPE etc. »
+- **Ce qui existe déjà** (`lib/api.ts`) : `loadCadastre` (l. 4680), `loadCoproRnie` (l. 4946 : `syndic_nom`, nb de lots,
+  période de construction, immatriculation…), `loadBdnb` (l. 4960 : année de construction, DPE « théorique », niveaux,
+  logements, matériaux…), `loadDpe` (l. 4971, ADEME : étiquettes DPE / GES, date, consommation, émissions, surface).
+  Utilisés AUJOURD'HUI dans l'écran Estimation (`EstimationDataSection` ~l. 11143, boutons, résultats gardés comme
+  « sources d'estimation » du dossier) et `EstimationDocumentEditor` (~l. 6551) ; la RNIC propose aussi le syndic dans
+  le choix de la carte du bien (`SyndicDuBien`).
+- **Ce qui n'existe pas** : rien ne se déclenche à la saisie de l'adresse dans l'assistant de création ; aucune de ces
+  sources ne donne le NOM DU DIAGNOSTIQUEUR (`DpeData` n'a pas ce champ) — piste à mesurer : nos propres biens à la même
+  adresse / dans le même immeuble (liens `app_partenaire_lien`, diagnostics indiqués par Hektor).
+- Rien n'est audité en profondeur ni codé.
+- 🔎 **MESURES DES TEMPS (09/11, « est-ce possible ergonomiquement avec les temps de traitement ? »)** — appels directs
+  aux services publics depuis le serveur, adresse d'EA32418 (45.420265, 4.383159), deux passages :
+  · RNB (bâtiment le plus proche) 0,28 / 0,12 s · BDNB id 0,33 / 0,09 s · BDNB fiche 0,13 / 0,12 s · DPE ADEME
+    0,27 / 0,08 s · cadastre (parcelle) 0,13 / 0,04 s → **la chaîne bâti + DPE tient sous 1 s** ;
+  · **RNIC (registre des copropriétés, API tabulaire data.gouv) : 6 à 15 s PAR question**, le serveur en pose jusqu'à 3
+    à la suite (3 colonnes de référence cadastrale) puis cherche les parcelles voisines → **15 à 35 s, parfois rien** (rien
+    trouvé ici sur la parcelle 42218000LN0003) ;
+  · notre serveur (Render, `gti-backend-xlyf`) : `/health` 0,2-0,3 s, démarré le 06/11, pas de mise en veille.
+  · Ce qui revient, réel : BDNB **1977, 4 niveaux, 16 logements**, DPE « théorique » E ; ADEME **2 DPE à l'adresse** :
+    E du 21/05/2026 (85,5 m², c'est celui de la fiche) et D du 27/08/2024 (100,6 m²) → dans un immeuble, le BON logement
+    se choisit par la surface : il faut la surface avant, ou proposer les deux.
+  · **Notre base** : 1 960 biens sur 10 611 (18 %) partagent leur adresse avec un autre de nos biens ; seuls 84 biens ont
+    un partenaire relié → le diagnostiqueur « par l'adresse » trouvera peu aujourd'hui, davantage avec le temps.
+- ⭐ **Frédéric (09/11) : « dans ce plan tu utilises les outils de l'estimation avec nos données internes, DVF etc. ? »**
+  → la machinerie EXISTE déjà : « Tout générer » de l'estimation (`EstimationDocumentEditor.loadAllEditor`, App.tsx
+  ~l. 6537) lance EN PARALLÈLE marché DVF (`loadDvfComparables`, notre table DVF interne par RPC), cadre de vie,
+  cadastre, BDNB, DPE, patrimoine, loyers, INSEE, et RNIC si copropriété, et GARDE chaque résultat comme « source
+  d'estimation » du dossier (`saveDossierEstimationSource` → `app_dossier_estimation.sources`). Le pré-remplissage doit
+  RÉUTILISER cette machinerie et ce stockage (ne rien refaire à côté) : les sources « bâti » remplissent les cases de
+  l'annonce, les autres (DVF, cadre, loyers, INSEE, patrimoine) préparent l'estimation et l'avis de valeur. À auditer :
+  l'adresse est saisie AVANT que le dossier existe (résultats à garder en mémoire, puis à poser sur le dossier né).
+
+#### 28.15 — PROPOSITION : « le dossier du bien se remplit à l'adresse » (09/11, demande de Frédéric) — rien codé
+> « une proposition où tu utilises l'existant, car nous avons sur le serveur les bases pré-téléchargées pour la plupart,
+> mais que tu développes un système sur mesure pour l'ajout d'annonce ; il faut toujours un geste humain pour valider ou
+> pouvoir modifier une information pré-remplie. Cette amélioration doit être réfléchie. »
+- **L'existant, mesuré** : DÉJÀ CHEZ NOUS (Supabase) : DVF `app_dvf_vente` (83 942 ventes, 48 Mo), loyers
+  `app_commune_loyers`, INSEE `app_commune_insee`, risques `app_commune_risques`, communes `ref_commune_geo`
+  (scripts `backend/scripts/ingest_*.py`). EN DIRECT (serveur → services publics) : RNB → BDNB, DPE ADEME, cadastre IGN,
+  RNIC. Les fonctions de l'écran Estimation (`loadAllEditor`) et le rangement par dossier
+  (`app_dossier_estimation.sources`) existent. L'assistant de création : étape 1 Offre (surface, pièces, niveaux…),
+  2 adresse, 3 Secteur, 4 Composition, 5 Détails (dont Construction, Diagnostics & énergie, Copropriété), 6 Mandat / Prix,
+  7 Texte.
+- **Le principe** : un moteur unique « recherches du bien » (les fonctions EXISTANTES, rien de refait), déclenché quand
+  l'adresse est VALIDÉE (coordonnées connues), qui ne remplit RIEN tout seul. Il dépose des **propositions** dans un
+  panneau « Trouvé pour cette adresse » à côté de l'assistant ; chaque proposition montre la valeur, la source, sa date,
+  son degré de sûreté, et trois gestes : **Reprendre** · **Modifier puis reprendre** · **Ignorer**. Une case reprise
+  porte la marque « repris · BDNB » et reste modifiable comme les autres ; ce que l'utilisateur a TAPÉ n'est jamais
+  remplacé : en cas de désaccord, la proposition s'affiche « vous : X · trouvé : Y ».
+- **Trois niveaux de sûreté** : (1) le BÂTIMENT (année de construction, niveaux, logements — BDNB, sûr pour l'immeuble) ;
+  (2) le LOGEMENT (DPE ADEME : sûr seulement si un seul DPE à l'adresse, ou si la surface déjà saisie le départage ; sinon
+  les DPE trouvés sont PROPOSÉS au choix — 2 DPE à l'adresse d'EA32418) ; (3) le VOISINAGE (RNIC par parcelle voisine,
+  DPE « à proximité ») : toujours « à vérifier », jamais repris d'un coup. Le DPE « théorique » de la BDNB n'est jamais
+  proposé comme DPE.
+- **Les partenaires** : le nom du syndic du RNIC est rapproché de NOTRE catalogue (nom) → « Choisir SYNDIC X » si la
+  fiche existe, sinon « Créer ce syndic » ouvre la fenêtre « Ajouter un partenaire » (§28.13) pré-remplie du nom ; le
+  diagnostiqueur : celui déjà relié à un de NOS biens à la même adresse (18 % de nos biens partagent leur adresse).
+- **Les temps** : bâti + DPE + cadastre < 1 s → propositions quasi immédiates ; RNIC 15-35 s → arrive plus tard (une
+  pastille « syndic trouvé ») sans bloquer. Option : **télécharger le RNIC de nos départements dans notre base**, comme
+  DVF (script `ingest_rnic.py`, mise à jour trimestrielle) → réponse instantanée et plus de dépendance au service lent.
+- **L'estimation prête** : le même passage lance aussi DVF, cadre de vie, loyers, INSEE, patrimoine, risques ; ils ne
+  remplissent aucune case de l'annonce mais sont gardés en attente et POSÉS sur le dossier dès sa naissance (notre
+  numéro, 1,3 s) → l'écran Estimation et l'avis de valeur sont prêts sans relance.
+- **La trace** : chaque valeur reprise garde sa source (sources du dossier + la saisie de naissance déjà gardée,
+  `app_annonce_saisie_naissance`) ; on saura toujours « d'où vient ce 1977 ».
+- **Découpage proposé** : P1 le moteur + le panneau pour bâti / DPE / cadastre (assistant de création) ; P2 copropriété,
+  syndic et diagnostiqueur (avec §28.13) ; P3 le RNIC téléchargé chez nous ; P4 les sources de l'estimation posées sur le
+  dossier né ; P5 le même panneau dans « Le Bien » d'une annonce existante (bouton « Chercher pour cette adresse »).
+- **Décisions attendues** : (a) panneau à côté de l'assistant, ou propositions sous chaque case ; (b) un « Tout reprendre »
+  limité aux valeurs sûres, ou toujours case par case ; (c) télécharger le RNIC chez nous (P3).
+- ⛔ **REFUSÉ (09/11) : « Non, j'aime pas l'ergonomie, il faut faire plus pratique pour l'utilisateur ; j'attends ta
+  recommandation d'expert. Si doute (ex. DPE ou autre), montrer les choix possibles. »** → le panneau « Reprendre /
+  Ignorer » valeur par valeur est abandonné (trop de gestes).
+- **RECOMMANDATION (09/11) : « confirmer, pas saisir »** — UN écran de confirmation, UN geste :
+  · juste après l'adresse, une étape courte « Ce que nous savons de ce bien » : les valeurs SÛRES en phrases simples,
+    déjà cochées (« Immeuble de 1977 · 4 niveaux · 16 logements », « Parcelle LN 3 ») ; chaque valeur se corrige d'un
+    clic sur place ; une coche se retire si c'est faux ;
+  · les DOUTES en cartes à choisir, la plus probable mise en avant (DPE d'EA32418 : « E · 21/05/2026 · 85,5 m² —
+    le plus proche de vos 85 m² » / « D · 27/08/2024 · 100,6 m² » / « Aucun de ces DPE ») ; même forme pour une
+    copropriété voisine ou un syndic à rapprocher du catalogue ;
+  · un seul bouton « Reprendre et continuer » = le geste humain ; « Passer » = rien n'est repris ;
+  · ensuite, les cases reprises portent une marque discrète « repris · source » et restent modifiables ; ce qui a été tapé
+    avant (ou lu par le scan IA) n'est jamais écrasé : le désaccord devient une carte à choisir « votre saisie / trouvé » ;
+  · le lent (RNIC, 15-35 s) : la ligne « Copropriété : recherche en cours… » ne bloque pas ; si on est déjà plus loin, la
+    proposition attend à l'étape Copropriété, au même format de cartes. Avec le RNIC téléchargé chez nous (P3), tout est
+    sur le même écran dès l'adresse → recommandé.
+
+#### 28.16 — LA VRAIE FENÊTRE « Nouvelle annonce », relevée en ligne (09/11, « base-toi d'abord sur la modale actuelle »)
+- **Entrée** : « Nouvelle annonce » → « Manuellement » ou « Par photo, avec l'IA » (un agent lit la fiche et pré-remplit).
+- **7 onglets** : 1 Offre (prix et bien) · 2 Photos · 3 Secteur (adresse) · 4 Composition (pièces) · 5 Détails ·
+  6 Mandat / Prix · 7 Diffusion ; compteur « champs remplis » par étape ; Annuler / Retour / Suivant.
+- **1 Offre** : titre, « Scanner la fiche (photos) », agence, négociateur, type (familles puis sous-types), « Données
+  obligatoires » : prix, surface habitable, pièces, chambres, niveaux, garage, situation, vue.
+- **3 Secteur** : « Adresse privée » = adresse, code postal, ville — **cases de texte simples : aucune suggestion
+  d'adresse, aucune liste de communes, rien n'est localisé** (essai « 12 rue Larionov » + 42000 : rien) ; puis un bloc
+  « Page 3 » : code postal public, ville publique, **adresse privée (rue), commune privée, code postal privé (déjà
+  demandés juste au-dessus)**, immeuble, transport, proximité, environnement, **latitude et longitude à taper à la main**.
+  ⚠ L'app sait déjà localiser une adresse (`geocodeAddress`, Géoplateforme, utilisé par « Le Bien » l. ~34327) et le
+  worker relocalise à la création (`geocodeAddressBAN`) — l'assistant ne s'en sert pas.
+- 🔎 **AUDIT DU SYSTÈME D'ADRESSE (09/11, « normalement il y a tout un système, ça ne se saisit pas à la main »)** —
+  Frédéric a raison sur le fond : **la position n'est pas saisie à la main en pratique**. À la création, la saisie passe
+  par `applyCreatedAnnonceInitialFields` → `normalizeHektorAnnonceUpdatePayload` → le chemin de modification du worker
+  (console_job_worker.js ~l. 13385-13440) : (1) `resolveHektorPublicLocality` (code postal + ville → identifiants de
+  commune Hektor) ; (2) `geocodeAddressBAN` (Géoplateforme) sur l'adresse privée → `updateHektorLocaliteByFeature` (la
+  localité privée Hektor, `idville` + latitude / longitude) ; Hektor rend ensuite les coordonnées à la relecture. Les
+  cases « Latitude / Longitude » de l'assistant ne sont qu'un forçage facultatif. Côté écran, « Le Bien » relocalise à
+  chaque changement d'adresse (`geocodeAddress`, mémoire « adresse-edit-geoloc-et-overlay »).
+  **Ce qui manque pour le pré-remplissage** : PENDANT la saisie, l'assistant ne connaît pas la position (elle n'existe
+  qu'après le worker) et ne propose rien (code : trois `<input>` simples, App.tsx ~l. 22670).
+  ⚠ **Mesure qui compte** : l'adresse réelle d'EA32418 est « 12 Rue Larionov, **42100** » ; tapée « 12 rue larionov
+  42000 », la recherche libre de la Géoplateforme rend « 12 Rue de Laharpe 42000 » (score **0,48**, au-dessus du seuil
+  0,35 de `geocodeAddress`) → **un mauvais point possible** ; la recherche à suggestions (`/geocodage/completion`, 0,04 à
+  0,07 s) rend « 12 Rue Larionov, 42100 » aux bonnes coordonnées. Choisir une suggestion = la bonne adresse ET la bonne
+  position dès la saisie.
+- ⛔ **MIS DE CÔTÉ PAR FRÉDÉRIC (09/11) : « Donc on oublie l'idée et on revient au chantier »** — §28.14 à §28.16
+  (pré-remplissage à l'adresse) restent ÉCRITS comme mémoire, rien n'est à faire. Ne pas relancer de soi-même.
+  ⚠ Remarque gardée, hors chantier : une adresse tapée avec un mauvais code postal peut être localisée dans une AUTRE rue
+  par la recherche libre (score 0,48 > seuil 0,35) — le worker de création utilise ce même service ; non mesuré sur le
+  parc (combien de biens mal placés), non traité.
+- **5 Détails** : Intérieur · Extérieur & annexes · Construction récente · Équipements & confort · **Diagnostics &
+  énergie (37 cases, dont année de construction, DPE, GES, coûts, année de référence, 8 diagnostics × résultat / date /
+  commentaire)** · **Copropriété (7 cases)** · Disponibilité & visite · **Intervenants** (choix syndic / diagnostiqueur).
+- Fermé sans rien créer (aucune photo choisie → fermeture directe).
+- **PROPOSITION SUR CETTE BASE (09/11)** — mêmes 7 onglets, mêmes cases, rien de déplacé hors de l'assistant :
+  1. **Étape 3, l'adresse devient UNE case avec suggestions** (même source que `geocodeAddress`) : choisir une suggestion
+     remplit adresse, code postal, ville, ET latitude / longitude ; les cases en double du bloc « Page 3 » (adresse privée
+     (rue), commune privée, code postal privé) suivent la même valeur au lieu d'être retapées. C'est AUSSI ce qui donne
+     au worker la bonne commune (les villes perdues chez Hektor faute d'identifiant de commune, chantier ⑧ C).
+  2. **Juste sous l'adresse, une carte « Ce que nous savons de cette adresse »**, qui se remplit en quelques secondes :
+     les valeurs sûres en phrases, déjà cochées (« Construit en 1977 · 4 niveaux · 16 logements », « Parcelle LN 3 ») ;
+     les doutes en cartes à choisir, la plus probable en avant (« DPE E · 21/05/2026 · 85,5 m² — le plus proche de vos
+     85 m² » / « DPE D · 27/08/2024 · 100,6 m² » / « Aucun ») ; un seul bouton **« Reprendre ces informations »** (le
+     geste humain) ; « Plus tard » = rien n'est repris, les propositions attendent dans les sections concernées.
+  3. **Étape 5, les sections concernées le montrent** : en tête de « Diagnostics & énergie » et « Copropriété », une
+     ligne « 6 cases reprises de l'adresse · voir » ; chaque case reprise porte « repris · DPE ADEME » et reste
+     modifiable ; une case déjà tapée (ou lue par le scan IA) n'est jamais remplacée — le désaccord devient un choix
+     « votre saisie / trouvé ».
+  4. **Intervenants** : « Syndic trouvé au registre : FONCIA… — Choisir (il est au catalogue) » ou « Créer ce syndic »
+     (fenêtre §28.13, nom déjà rempli) ; diagnostiqueur d'un de nos biens à la même adresse s'il existe.
+  5. **Le lent** (registre des copropriétés) : « recherche en cours… » dans la carte, sans bloquer ; s'il arrive après,
+     il apparaît dans Copropriété / Intervenants au même format. Recommandé : RNIC téléchargé chez nous.
+  6. **« Par photo, avec l'IA »** : même carte après la lecture ; ce que la fiche papier dit l'emporte, l'adresse
+     complète le reste.
+  7. **L'estimation prête** : DVF, cadre de vie, loyers, INSEE, risques sont pris au même moment et posés sur le dossier
+     né — sans case à remplir dans l'assistant.
 
 ### 7 ter. Les dépendances (techniques, pas un ordre décidé)
 
