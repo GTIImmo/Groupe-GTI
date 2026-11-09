@@ -953,22 +953,67 @@ mais **aucun écart n'a été rattrapé en onze jours**, sauf la charge des
 honoraires posée le 04/11. ⛔ **Donc rien ne se répare tout seul : ce chantier
 est le seul chemin.**
 
-### ⬜ TROIS RÉSERVES NEUVES, ouvertes le 09/11 — la première bloque P1.4
+### ⭐⭐ L'AUDIT DES 21 COLONNES DU RAPPORT — *09/11, et il fallait le faire*
+
+**Sa question du 09/11 était plus large que la charge** : *si le rapport se
+trompe de case sur une colonne, il peut se tromper sur dix.* **Les 21 colonnes
+ont donc été auditées une par une**, en lisant le code *(l. 519-700)* puis en
+mesurant, pour chacune, **la part de nos cases vides là où le classeur est
+rempli** — la signature exacte de la faute de la charge.
 
 ```
-1. ⛔ LE RAPPORT LIT LA MAUVAISE CASE SUR LA CHARGE. Il annonce « 933 charges a
-   prendre » alors que `mandat_charge_honoraires_app` du registre en porte
-   23 474 : il mesure `charge_commission_app` du ledger, qui a 7 lignes.
-   ⛔⛔ ET LES AUTRES COLONNES N'ONT PAS ETE VERIFIEES pour la meme faute. Un
-   rapport qui se trompe de case sur une colonne peut se tromper sur dix.
-   ➡ A LEVER AVANT d'ecrire le patch : c'est lui qui donne les listes.
-2. ⚠ 211 CONTRE 413 ECARTS sur l'offre d'achat (voir LOT 3). Mon decompte large
-   et le rapport ne disent pas la meme chose ; la tolerance appliquee par le
-   rapport n'est pas identifiee. Je ne crois NI l'un NI l'autre tant que
-   l'ecart n'est pas explique.
-3. ⚠ LES LIGNES NON RELIEES N'ONT PAS DE SENTINELLE, et leur nombre MONTE :
+LE VERDICT : UNE SEULE FAUTE SUR 21.
+
+Charge Commission   100,0 % de nos cases vides sur 933 comparables   ⛔ FAUTIVE
+Acquereur             0,6 %       Agence         0,8 %      Nature     0,8 %
+Mandat                0,7 %       product_ref    1,6 %      Ville      1,4 %
+Vente Fixee           1,3 %       Vente Prevue   1,7 %      Compromis  3,3 %
+Offre Achat           4,8 %       Negociateur 1  4,9 %      Vendeur    8,0 %
+Commission TTC        8,1 %       Negociateur 2 13,5 %      Notaire   19,2 %
+Negociateur 3        23,1 %       Prix           0,0 %      Etat       0,0 %
+Vente Reglee        100,0 %  et  N° de facture  100,0 %  -> VOULU et DECLARE
+```
+
+⭐ **Et les taux de vides SONT exactement les trous à combler du § 4** : offre
+d'achat 178, compromis 113, vente fixée 39, notaire 483, vendeur 375. Les deux
+mesures, faites séparément, **tombent sur les mêmes nombres** — c'est le témoin
+croisé de l'audit.
+
+⛔ **MA PROPRE FAUTE, pendant cet audit, et elle vaut une leçon** : mon premier
+critère comptait nos vides sur **toutes** les lignes, et déclarait
+« Négociateur 2 » **suspecte à 87,5 %**. Faux : le rapport force notre case à
+vide dès que la case du classeur est vide *(le `continue` de la l. 636)*, et
+cette colonne n'est remplie que 675 fois. Le vrai taux est **13,5 %**.
+➡ **Un dénominateur faux fabrique une alerte fausse** — et une alerte fausse
+coûte autant qu'un défaut manqué.
+
+### ⬜ LES RÉSERVES OUVERTES, au 09/11 au soir
+
+```
+1. ⛔ LE RAPPORT LIT LA MAUVAISE CASE SUR LA CHARGE -- SEULE FAUTE CONFIRMEE.
+   Il annonce « 933 charges a prendre » alors que le registre des mandats en
+   porte 23 474 : il mesure `charge_commission_app` du LEDGER (7 lignes) au
+   lieu de `mandat_charge_honoraires_app` du REGISTRE.
+   ⭐ Sans consequence sur le rattrapage : Q est TRANCHEE et DEJA EXECUTEE le
+   04/11. Mais le rapport MENT a l'ecran, et on s'y fie pour les listes.
+   ➡ UNE LIGNE A CHANGER : la case lue, l. 557.
+2. ✅ LEVEE -- 211 CONTRE 413 ECARTS : la tolerance est DANS LE CODE, l. 578,
+   `abs((dc - dn).days) <= 3`. Le rapport declare IDENTIQUE tout ecart de date
+   de TROIS JOURS OU MOINS. Mon decompte large comptait tout ecart non nul :
+   413 - 211 = 202 ecarts absorbes par cette tolerance, ce qui recoupe mes
+   « 265 a moins de sept jours ». ⭐ LES DEUX MESURES SE RECOUPENT, et la
+   tolerance de 3 jours est JUSTE au vu du LOT 3 (signature contre reception).
+3. ⚠ NEUVE -- LE CSV DU RAPPORT EST D'AVANT LE REGEL. Il porte 4 679 lignes,
+   le gel en compte 4 688 depuis le regel du 09/11 : NEUF LIGNES MANQUENT.
+   ➡ RELANCER LE RAPPORT APRES LE REGEL, sinon le patch oubliera ces 9 lignes.
+4. ⚠ LES LIGNES NON RELIEES N'ONT PAS DE SENTINELLE, et leur nombre MONTE :
    94 le 02/11, 101 le 05/11, 104 le 09/11. Personne n'est averti. Trois sont
    deja auditees (18491 = mandat de recherche, normal ; 130d81ac = mandat 18728
    et annonce 62503 existants mais AUCUNE transaction ; c6233284 = mandat 18967
    absent alors que l'offre 30801 existe, 485 000 EUR du 06/11).
 ```
+
+⭐ **Un chiffre que l'audit a donné en passant, et qui sert à la PHASE B** : sur
+l'offre d'achat, **926 lignes ont une date chez nous et rien au classeur**
+*(compromis 777, vente fixée 763)*. C'est le **cas 2** des quatre cas — ce que
+l'app aura à écrire **dans** le classeur quand elle en deviendra le rédacteur.
