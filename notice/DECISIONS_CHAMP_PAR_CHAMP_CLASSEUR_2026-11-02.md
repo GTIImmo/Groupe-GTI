@@ -13,11 +13,33 @@ colonne est marquée ⬜, **rien ne s'écrit pour elle**.
 ## § 1. L'ÉTAT DE LA REVUE
 
 ```
-TRANCHEES          7 colonnes   I J K L M N  +  Q (02/11)
-RESTE A VOIR      31 colonnes
+TRANCHEES         38 colonnes   ⭐ LA REVUE EST COMPLETE -- 09/11/2026
+RESTE A VOIR       0 colonne
                  -------------
                   38 colonnes
 ```
+
+⭐ **Les 38 choix vivent à DEUX endroits, et ils doivent dire la même chose :**
+ce fichier *(§ 4, un par un, avec la mesure qui a justifié le choix)* et la page
+de travail où **Frédéric les a notés lui-même**, colonne par colonne
+*(`https://claude.ai/artifact/JFtYqskwiwgWANvgT8nk4S`, collection `choix` — elle
+porte aussi ses mots et la date de chaque décision)*.
+
+**Les quatre choix possibles, dans ses mots du 09/11** — *« on fait rien · on
+récupère tout · on récupère que les vides · on compare juste »* :
+
+```
+TOUT            16 colonnes   le classeur ECRASE, ou remplit un champ NEUF
+LES VIDES        7 colonnes   on ne remplit que NOS TROUS, on ne corrige rien
+COMPARER JUSTE   1 colonne    on mesure et on affiche, on n'ecrit pas
+RIEN            14 colonnes   on n'y touche pas
+```
+
+⚠⚠ **Ce que « les vides » ne fait pas, et il l'a dit le 09/11** : *« car
+actuellement si mon apps a des erreurs on ne corrige rien »*. Sur les
+7 colonnes en « les vides », **une valeur fausse chez nous reste fausse**. Le
+choix a été fait colonne par colonne **après avoir mesuré que les écarts ne sont
+pas des erreurs du classeur** — voir chaque ligne du § 4.
 
 ---
 
@@ -722,39 +744,231 @@ traduire à l'écriture, et ⚠ notre « Mandant » est pollué depuis le 17/0
 
 ---
 
-## § 4. ⬜ LES 30 COLONNES QUI RESTENT À TRANCHER
+## § 4. ✅ LES DÉCISIONS DES LOTS 2 À 7 — *prises les 09/11, lot par lot*
+
+> ⛔ **Le LOT 1** *(I J K L M N, et Q)* **reste aux § 2 et § 3** : il porte la paie,
+> il a sa propre démonstration, et il a été tranché le 02/11. **Ne pas le recopier
+> ici.**
+
+### LOT 2 — LE FINANCIER
 
 ```
-LOT 2  LE FINANCIER        P Commission TTC · AF Prix · AA Numero de facture
-                           (+ Q, reposee)
-LOT 3  LES DATES           S Offre Achat · T Compromis · W Vente Fixee
-                           · Y Vente Reglee
-LOT 4  DATES ET ETAT       V Vente Prevue · Z Annulee · R Etat Actuel
-                           · U Signe + X Signee
-LOT 5  LES IDENTITES       AB Acquereur · AD Vendeur · O Notaire · H Agence
-LOT 6  LE BIEN             C Mandat · B product_ref · D Nature · AG Ville
-                           · AC Adresse Acquereur · AE Adresse Vendeur
-LOT 7  NOTES ET TECHNIQUE  F En attente de · G COMMENTAIRES · AH Avis a
-                           envoyer · AI Commentaire Avis · AJ Avis envoye
-                           · AK Divers · E Lien CRM · A affair_uuid
-                           · AL ID Unique
+P   Commission TTC      LES VIDES   386 de nos cases sont vides
+AF  Prix                COMPARER    3 688 lignes hors perimetre, 1 020 portent
+                                    un DEPARTEMENT au lieu d'un prix
+AA  Numero de facture    TOUT       aucun champ chez nous -> CHAMP NEUF
+Q   Charge commission    TOUT       deja EXECUTE le 04/11 (voir § 3)
 ```
+
+⭐ **P — la cause des 83 conflits est mesurée le 09/11, et ce ne sont pas des
+erreurs** : **44 d'entre eux sont un facteur 2**, le rapport **0,500** revenant
+sans cesse *(9 500 / 19 000 · 2 750 / 5 500 · 5 000 / 10 000 · 4 250 / 8 500)*.
+Le classeur note **une part**, nous portons **le total**. Plus 2 cas HT contre
+TTC. ⬜ **Réserve** : ce que le classeur appelle « commission » sur ces 44 lignes
+n'est pas identifié *(la part d'un négociateur ? celle de GTI dans un partage ?)*
+— ça ne gêne pas « les vides », qui ne touche aucun conflit.
+
+⚠ **AF** — la question *« le classeur avant 2025, nous après ? »* reste ouverte,
+mais « comparer juste » n'écrit rien, donc elle n'est pas bloquante.
+
+### LOT 3 — LES DATES
+
+```
+S   Offre Achat         LES VIDES   178 de nos cases sont vides
+T   Compromis           LES VIDES   115 vides . 3 246 dates CONCORDENT
+W   Vente Fixee         LES VIDES    39 vides . 2 868 dates CONCORDENT
+Y   Vente Reglee         TOUT       ce n'est PAS notre date d'acte (+3 j de
+                                    mediane) -> CHAMP NEUF
+```
+
+⭐⭐ **La réserve du 29/10 est FERMÉE le 09/11 : un écart de date n'est pas une
+erreur.** Les écarts ont été croisés avec l'état de l'affaire, comme la réserve
+le demandait. Sur l'offre d'achat, **265 des 413 écarts sont à moins de sept
+jours** — signature contre réception, ou un week-end qui décale. Les vrais
+écarts sont **30 cas à plus d'un mois, tous sur des affaires annulées** : la date
+du classeur y est celle d'un essai abandonné que nous n'avons pas gardé. Le
+compromis et la vente fixée sont encore plus propres *(86 et 80 écarts)*.
+
+⬜ **Réserve ouverte, et elle doit tomber avant le patch** : mon décompte large
+compte **413 écarts** sur l'offre d'achat là où `rapport_gel_tous_les_champs.py`
+en annonce **211**. Le rapport applique donc une tolérance que je n'ai pas
+retrouvée dans son code. **Les deux chiffres ne se recoupent pas ; je ne les
+crois ni l'un ni l'autre tant que l'écart n'est pas expliqué.**
+
+### LOT 4 — LES DATES ET L'ÉTAT
+
+```
+V   Vente Prevue         TOUT       le plus gros conflit des 38 (1 768), et il
+                                    est NORMAL : une date previsionnelle bouge
+Z   Annulee              TOUT       896 dates, 100 % lisibles -> CHAMP NEUF
+R   Etat Actuel          RIEN       c'est un etat CALCULE, pas une saisie
+U   Signe                RIEN       TRUE / FALSE . jamais mesuree
+X   Signee               RIEN       TRUE / FALSE . jamais mesuree
+```
+
+⭐ **Z — la mesure du 09/11 a changé la décision.** Elle était notée « les
+vides », et **ce choix était inexécutable** : nous n'avons **aucune** date
+d'annulation, seulement un état *(`cancelled` / `refused`)* sur 2 504 affaires,
+qui dit **que** l'affaire est tombée, jamais **quand**. Sa décision du 09/11 :
+*« Annulée tout avec un nouveau champ »*. Les 896 dates entrent alors **sans un
+seul conflit possible, par construction**.
+
+⚠ **U et X n'ont jamais été mesurées, et c'est écrit dans la page de travail.**
+Elles sont à « rien », donc l'absence de mesure ne bloque rien.
+
+### LOT 5 — LES IDENTITÉS
+
+```
+AB  Acquereur           LES VIDES    28 vides . sauter les 462 lignes douteuses
+AD  Vendeur             LES VIDES   375 vides . la MEME liste de 462
+O   Notaire              RIEN       nous portons DEUX notaires, lui UN SEUL
+H   Agence               RIEN       le classeur dit QUI A VENDU, nous OU LE
+                                    BIEN EST PARQUE aujourd'hui
+```
+
+⭐ **AB / AD — le chiffre de 2 209 était trompeur, corrigé le 09/11 : ce sont
+462 lignes à sauter, pas 2 209.** Les 2 209 sont des **transactions** au chaînage
+douteux ; seules **462 lignes du classeur** les touchent *(441 ventes réglées,
+20 annulées)*, contre **4 226 sur un chaînage sain**.
+
+⭐⭐ **H — la cause des 498 conflits est établie le 09/11, en trois passes, avec
+son témoin inverse.** (1) La part de conflits **tombe avec l'année** : 28 % en
+2018, 15 % en 2021, 3 % en 2023, **zéro sur 455 affaires en 2026**. (2) **287 des
+498** portent **Firminy** de notre côté, alors que Firminy ne pèse que 13,6 % du
+registre — quatre fois trop. (3) **75,6 %** de ces lignes portent un négociateur
+**ancien**, contre **30,7 %** sur les lignes qui concordent. **Le mécanisme** : le
+négociateur part, le bien perd son agence, Hektor le rattache au siège. ⭐ **Son
+hypothèse du 09/11 était juste**, et c'est elle qui a fermé la réserve du 29/10.
+
+⬜ **À part, non décidé** : créer **AUREC** *(Aurec-sur-Loire, 54 affaires
+2018-2024)* et **CHATEL** *(26 affaires 2018-2021, commune inconnue)* en statut
+`'fermee'` dans `app_registre_agence`. Ça ne répare **aucun** conflit : ça garde
+la trace de deux agences de l'histoire du groupe. ⚠ **Le registre des agences est
+le chantier de l'autre session** *(posé le 05/11)* — la prévenir avant d'y
+toucher.
+
+⭐ **O — la question « dans lequel des deux notaires ? », ouverte depuis le 29/10,
+est FERMÉE le 09/11 par sa décision** : *« le notaire on ne récupère rien »*.
+Remplir nos 483 vides demanderait de deviner dans lequel des deux écrire.
+
+### LOT 6 — LE BIEN
+
+```
+C   Mandat              LES VIDES    33 vides ⛔ MAIS IL MANQUE LA COLONNE
+B   product_ref          RIEN       remplie a 14 %, et la meme reference
+                                    designe parfois 4 affaires (Netty)
+D   Nature               RIEN       1 623 des 1 650 ecarts = le classeur dit
+                                    « Autre » et nous SAVONS. Reste 27 vrais
+AG  Ville                RIEN       « St Etienne 42100 21 bd. Pasteur » contre
+                                    « Saint-Etienne » : pas des erreurs
+AC  Adresse Acquereur    RIEN       1,3 % des lignes
+AE  Adresse Vendeur      RIEN       799 cases, jamais mesurees
+```
+
+⛔⛔ **C est la seule décision des lots 2 à 7 qui soit BLOQUÉE par un préalable
+technique.** `numero_mandat` est de **CLASSE C** *(à Hektor, relu chaque nuit)* :
+**une écriture y est effacée au run suivant**. Il faut d'abord **une colonne « à
+nous »**, sur le modèle des `_app` — c'est le préalable n° 3 du § 6 de `A5`,
+écrit le 29/10 et **toujours pas fait**.
+
+### LOT 7 — LES NOTES ET LA TECHNIQUE
+
+```
+F   En attente de        TOUT       en BLOC, sans interpreter -> CHAMP NEUF
+G   COMMENTAIRES         TOUT       en BLOC, sans interpreter -> CHAMP NEUF
+AH  Avis a envoyer       TOUT       120 valeurs distinctes -> CHAMP NEUF
+AI  Commentaire Avis     TOUT       392 cases -> CHAMP NEUF
+AJ  Avis envoye          TOUT       des PRENOMS dedans -> CHAMP NEUF
+AK  Divers               RIEN       0,3 % des lignes
+E   Lien CRM             RIEN       cinq logiciels successifs, quatre morts
+A   affair_uuid          RIEN       vide sur TOUTES les lignes
+AL  ID Unique            RIEN       ⛔ LA CLE DU PONT -- NE JAMAIS Y TOUCHER
+```
+
+⭐ **F — « V » veut dire Vendu**, et c'est mesuré : 1 537 lignes sur 1 537 sont
+« Vente réglée ». Rond vert → réglée 96 %, rond rouge → annulée 99 %. Les motifs
+pointent une annulation à 100 % *(rétractation 129, prêt refusé 107)*.
+**G** est la seule trace du **pourquoi** : sur les dossiers en cours, **rempli à
+100 %, jusqu'à 1 450 caractères**. ⛔ **Les deux se reprennent en BLOC, sans
+interpréter** — c'est sa consigne, et elle évite d'inventer une sémantique.
+
+⭐ **Les trois colonnes d'Avis, mesurées le 09/11 — aucune n'est une case à
+cocher.** **AH** : 120 valeurs distinctes *(1 830 « oui », 243 « non », ~180 qui
+précisent **à qui**)*. **AJ** : « ok » 1 699, « X » 218, et **des prénoms**
+*(Marion 190, Nico 59, Claire 24)* plus des motifs *(« négo parti », « pas de
+mail »)*. **AI** : 392 cases, « ok » 195, « 1 » 115, le reste libre.
+⚠ **AH et AJ se contredisent sur 229 lignes** — à reprendre tels quels, sans
+arbitrer.
 
 ---
 
-## § 5. ⛔ DEUX RÉSERVES QUI VALENT POUR TOUTE LA REVUE
+## § 4 bis. ⛔⛔ CE QUI BLOQUE ENCORE L'EXÉCUTION — **neuf champs**
 
-### ⛔ L'apparieur ne lit que la plage `A1:AL6000`
+**Les 38 décisions sont prises, mais neuf d'entre elles ne sont pas exécutables
+aujourd'hui, faute de case où écrire.**
+
+```
+HUIT colonnes mises a TOUT n'ont AUCUN champ en face chez nous :
+    Y  Vente Reglee        AA N° de facture     F  En attente de
+    G  COMMENTAIRES        AH Avis a envoyer    AI Commentaire Avis
+    AJ Avis envoye         Z  Annulee
+UNE colonne mise aux VIDES ecrit dans un champ de CLASSE C :
+    C  Mandat  ->  il faut `numero_mandat_app`, sinon la NUIT L'EFFACE
+```
+
+⛔ **C'est une écriture en base de production ET une décision de périmètre :
+neuf champs ne se créent pas sans son accord.** Tant qu'ils n'existent pas,
+**P1.4 ne peut couvrir que les 7 autres colonnes** *(P S T W AB AD, et AF en
+simple comparaison)*.
+
+---
+
+## § 5. ⛔ LES RÉSERVES QUI VALENT POUR TOUTE LA REVUE
+
+### ⛔ L'apparieur ne lit que la plage `A1:AL6000` — **toujours vraie**
 
 Les 38 colonnes vont **exactement de A à AL**. Donc **toute colonne ajoutée à
 droite de AL est invisible, en silence**. Réserve écrite le 31/10, jamais
 corrigée. ⬜ **Relire jusqu'à `BZ`** — deux caractères à changer, mais un appel
 à l'API Google, donc son accord.
 
-### ⚠ Les chiffres d'écart viennent du rapport du 29/10
+⚠⚠ **Et le 09/11 elle a gagné une seconde moitié : la limite de LIGNES mordra
+avant celle des colonnes.** Le classeur portait **4 783 lignes le 09/11** contre
+un plafond de **6 000** — il reste **~1 200 lignes de marge**. Le jour où elle
+sera franchie, **les lignes du bas disparaîtront sans un mot**, exactement comme
+les colonnes à droite de AL. **À corriger dans le même geste.**
 
-Le classeur lui-même est mesuré sur le cache du **01/11 18:47** (4 780 lignes,
-38 colonnes), sans appel réseau. Les verdicts d'écart, eux, viennent de
-`notice/A4_RAPPORT_GEL_TOUS_LES_CHAMPS_2026-10-29.csv`. Le gel a gagné 2 lignes
-depuis. ⛔ Le rapport n'a **pas** été relancé : son script écrit par-dessus les
-fichiers du 29/10 (noms de sortie en dur) et demande un login Google.
+### ✅ Les chiffres d'écart venaient du rapport du 29/10 — **LEVÉE le 09/11**
+
+La réserve disait deux choses : les verdicts dataient du 29/10, et le script
+écrivait par-dessus ses propres sorties *(noms en dur)*. **Les deux sont
+corrigés** : `phase2/checks/rapport_gel_tous_les_champs.py` **date désormais ses
+sorties du jour** *(`A4_RAPPORT_GEL_TOUS_LES_CHAMPS_<jour>.csv`)*, et **le
+rapport a été relancé** sur les données du 09/11.
+
+⭐⭐ **La relance est elle-même une mesure, et sa réponse compte : les écarts sont
+STABLES à onze jours d'intervalle.** Le classeur est passé de 4 780 à **4 783
+lignes**, le gel de 12 413 à **12 422 liens**, les non reliées de 94 à **104** —
+mais **aucun écart n'a été rattrapé en onze jours**, sauf la charge des
+honoraires posée le 04/11. ⛔ **Donc rien ne se répare tout seul : ce chantier
+est le seul chemin.**
+
+### ⬜ TROIS RÉSERVES NEUVES, ouvertes le 09/11 — la première bloque P1.4
+
+```
+1. ⛔ LE RAPPORT LIT LA MAUVAISE CASE SUR LA CHARGE. Il annonce « 933 charges a
+   prendre » alors que `mandat_charge_honoraires_app` du registre en porte
+   23 474 : il mesure `charge_commission_app` du ledger, qui a 7 lignes.
+   ⛔⛔ ET LES AUTRES COLONNES N'ONT PAS ETE VERIFIEES pour la meme faute. Un
+   rapport qui se trompe de case sur une colonne peut se tromper sur dix.
+   ➡ A LEVER AVANT d'ecrire le patch : c'est lui qui donne les listes.
+2. ⚠ 211 CONTRE 413 ECARTS sur l'offre d'achat (voir LOT 3). Mon decompte large
+   et le rapport ne disent pas la meme chose ; la tolerance appliquee par le
+   rapport n'est pas identifiee. Je ne crois NI l'un NI l'autre tant que
+   l'ecart n'est pas explique.
+3. ⚠ LES LIGNES NON RELIEES N'ONT PAS DE SENTINELLE, et leur nombre MONTE :
+   94 le 02/11, 101 le 05/11, 104 le 09/11. Personne n'est averti. Trois sont
+   deja auditees (18491 = mandat de recherche, normal ; 130d81ac = mandat 18728
+   et annonce 62503 existants mais AUCUNE transaction ; c6233284 = mandat 18967
+   absent alors que l'offre 30801 existe, 485 000 EUR du 06/11).
+```
