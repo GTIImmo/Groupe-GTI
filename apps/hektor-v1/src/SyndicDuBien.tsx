@@ -122,9 +122,11 @@ export default function SyndicDuBien(props: {
     let annule = false
     if (!bienConnu) { setLecture({ etat: 'pret', syndic: null }); return }
     setLecture((avant) => (avant.etat === 'pret' ? avant : { etat: 'chargement' }))
-    // Notre numéro seulement quand Hektor n'a pas encore rendu le sien : pour tous les autres biens, la lecture reste
-    // celle d'avant (par le numéro Hektor seul).
-    lireLeSyndic(annonce, role, annonce ? null : dossier)
+    // Notre numéro quand Hektor n'a pas encore rendu le sien, ET toujours pour un bien né dans l'app (n° ≥ 10 000 000) :
+    // ses liens sont posés sur notre numéro et ne reçoivent le numéro Hektor qu'à la complétion de :50 -- sans lui, la
+    // carte affichait « Aucun » jusqu'à une heure (essai 10000213 / 63487, 08/11, §28.10). La lecture cherche par l'un OU
+    // l'autre numéro. Pour les biens venus de Hektor, rien ne change (numéro Hektor seul).
+    lireLeSyndic(annonce, role, !annonce || (dossier ?? 0) >= 10_000_000 ? dossier : null)
       .then((syndic) => { if (!annule) setLecture({ etat: 'pret', syndic }) })
       .catch((e: unknown) => { if (!annule) setLecture({ etat: 'erreur', erreur: e instanceof Error ? e.message : String(e) }) })
     return () => { annule = true }

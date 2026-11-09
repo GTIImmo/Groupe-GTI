@@ -3281,11 +3281,80 @@ titres « ESSAI … ne pas diffuser ». Juge : `app_annonce_saisie_naissance` (c
     (`draftAnnonceAdvancedVisibleFieldsByProfile` : bathroomCount/showerRoomCount/wcCount pour building, exteriorState
     pour land), pour qu'une valeur saisie sous une autre nature puis changée ne parte plus. C'est le retour aux listes
     d'avant le 08/11 matin (ces cases n'y étaient pas ; elles ne vivaient que dans « Detail app », supprimée).
-    L'état extérieur d'un immeuble, lui, reste (Hektor le garde, essai 63484). Compilation verte.
+    L'état extérieur d'un immeuble, lui, reste (Hektor le garde, essai 63484). Compilation verte. Poussé (`3c71940`,
+    Vercel READY) et **VU EN LIGNE** le 08/11 (modale Estimations ouverte puis fermée sans créer) : terrain, étape 5 =
+    plus d'état extérieur (Eau, Assainissement présents) ; immeuble, étape 5 = plus de SDB / salles d'eau / WC (état
+    extérieur, Carrez, Ascenseur, Année construction présents) ; 0 erreur console.
 - Remarque d'écran, non traitée : sur la fiche 10000207, le fil d'Ariane affichait « Annonce 10000210 » (le numéro de
   la dernière création) au lieu de 10000207.
 - **Suppression** : 6 travaux `delete_hektor_annonce` (même geste que le 07/11), tous `done`, `after_found: false` chez
   Hektor (63481 → 63486), plus aucune fiche 10000207-10000212 dans l'app, aucune attente restante.
+
+#### 28.10 — ESSAI RÉEL DES PARTENAIRES REPRIS (08/11, « Vas y ») — reprise de §28.7 ter, cette fois depuis Estimations
+
+Son Chrome, écran **Estimations** → « Nouvelle estimation » → Manuellement : « ESSAI PARTENAIRES 2B bis - ne pas
+diffuser », Groupe GTI Firminy, Emmanuelle PEREIRA, appartement, 100 000 €, 60 m², 3 pièces, 2 chambres, 8 rue de
+l'Ondaine 42700 Firminy, Copropriété = Oui. Départ : 85 liens actifs, 0 sans numéro, file vide, crans
+`partenaires_choix_saisie` et `partenaires_design_contact` à `admin`.
+- **Étape 5, rubrique « Intervenants »** : le syndic n'apparaît qu'avec Copropriété = Oui ✅. Diagnostiqueur choisi
+  dans le catalogue : **Ardrodiag (10355367)** ✅.
+- **« ＋ Nouveau syndic »** : fenêtre réglée « Partenaire / Personne morale / métier Syndic », compte PEREIRA choisi ;
+  « ZZ ESSAI SYNDIC 2B BIS », 0499999962 → **notre n° 20000047 tout de suite**, métier `syndic` source `ecran` écrit
+  (18:13:51 UTC), travail `create_hektor_contact` done en 16 s, paire apprise **20000047 ↔ 606275** ; revenu choisi
+  dans l'assistant ✅.
+- **Création** (18:14:25 UTC) : fiche ouverte sur **10000213**, statut **Estimation** ; **liens 104 (syndic) et 105
+  (diagnostiqueur) posés par notre numéro** au même instant, `hektor_annonce_id` vide ; l'onglet Contact les montre
+  aussitôt (« choisi dans l'app par Frederic Gerphagnon le 08/11/2026 ») ✅. ⚠ Mon second « Suivant » est tombé sur
+  « Créer l'annonce » (même place du bouton) : l'étape 7 n'a pas été regardée avant la création.
+- **Chez Hektor** : travail `create_hektor_draft_annonce` done en **70 s** (18:14:28 → 18:15:35), **annonce 63487**,
+  posée sur la fiche (`hektor_annonce_id` = 63487). Le correctif du worker (§28.8 sexies) tient.
+- ⚠⚠ **DÉFAUT TROUVÉ — l'écran perd les partenaires entre le retour de Hektor et :50** : fiche rechargée à 18:17 →
+  onglet Contact « Aucun syndic » / « Aucun diagnostiqueur », et « Le Bien » / Diagnostics « Aucun diagnostiqueur »,
+  alors que les liens 104/105 sont actifs. Cause : la carte (`SyndicDuBien.tsx` l. 127, `lireLeSyndic(annonce, role,
+  annonce ? null : dossier)`) ne passe notre numéro QUE si le numéro Hektor manque — la prudence que j'avais choisie
+  pour 2a (§28.6 ter). Dès que 63487 arrive, elle cherche par 63487 seul, et les liens ne le portent qu'après la tâche
+  `partenaire-lien-numeros` (à :50 chaque heure) → **jusqu'à une heure** d'écran vide. La lecture en base
+  (`app_partenaire_du_bien_lire`) sait déjà chercher par l'un OU l'autre numéro : seul l'écran se prive du second.
+- ✅ **Le geste d'écriture, lui, est protégé dans cette fenêtre** (lu dans `app_partenaire_du_bien` : il cherche le lien
+  actuel par l'un OU l'autre numéro) — éprouvé : « Le Bien » → Diagnostics → choisi **AUDIT CONSTRUCTION (10353724)**
+  à 18:18:03 → le lien 105 (Ardrodiag) **retiré**, le lien **106 posé avec les deux numéros** (10000213 / 63487),
+  aucun doublon ; la carte l'affiche aussitôt.
+- **Complétion à :50** : tâche `partenaire-lien-numeros` 18:50:00 UTC « succeeded » → le lien **104 porte 63487** ;
+  fiche rechargée : les deux cartes réapparaissent (ZZ ESSAI SYNDIC 2B BIS, AUDIT CONSTRUCTION) ✅. (Le lien retiré 105
+  reste sans numéro Hektor : la tâche ne touche que les liens actifs, sans conséquence.)
+- Remarques d'écran, non traitées : le fil d'Ariane affiche « #null » tant que Hektor n'a pas rendu son numéro (puis
+  « #63487 ») ; le syndic créé sur place apparaît dans l'annuaire **Clients** (« Contact », « À qualifier »).
+- **Nettoyage (18:51-18:54 UTC)** : liens 104 et 106 retirés par « Retirer » (avec la confirmation « la trace reste ») ;
+  contact 20000047 supprimé par « Supprimer le contact » (raison écrite) → `delete_hektor_contact` done,
+  `hektor_delete_sent: true`, **`after_found: false`** (606275), son métier n'existe plus ; annonce supprimée par
+  `app_console_create_delete_annonce_job` à son nom (« SUPPRIMER 63487 ») → `delete_hektor_annonce` done,
+  **`after_found: false`**. Contrôle : 0 fiche 10000213 / 63487, 0 contact 20000047 / 606275, 0 attente, **85 liens
+  actifs (comme au départ), 0 sans numéro**, file vide.
+- ⏳ **À SA DÉCISION — corriger l'écran vide** (modification de code existant, `SyndicDuBien.tsx` seul) :
+  A — la carte passe TOUJOURS les deux numéros (la lecture en base cherche déjà par l'un ou l'autre ; c'est une ligne) ;
+  la prudence de §28.6 ter visait un croisement de numéros mesuré à 0. B — la carte passe notre numéro seulement pour un
+  bien né dans l'app (n° ≥ 10 000 000) : le cas exact, rien ne change pour les biens venus de Hektor. C — compléter le
+  numéro Hektor du lien dès son retour (déclencheur en base) : plus lourd, touche une table centrale.
+- ✅ **DÉCIDÉ : B (08/11, « B »)** — `SyndicDuBien.tsx`, la lecture passe notre numéro quand Hektor n'a pas rendu le
+  sien **ou** quand le bien est né dans l'app (`dossier >= 10 000 000`) ; biens venus de Hektor : inchangé. L'écriture
+  (`ecrire`) passait déjà les deux numéros, rien n'y bouge. `npm run build` vert. **Répétition en base, annulée** (admin
+  simulé, 10000009 / 63331, un lien diagnostiqueur posé sur notre numéro seul, comme entre la création et :50) : lecture
+  « numéro Hektor seul » (l'ancienne carte) → **rien** ; lecture « les deux numéros » (la nouvelle) → **le partenaire**.
+  Après coup : 0 ligne restée, 85 liens actifs. Mesuré aussi : **0 lien actif dont le numéro Hektor contredit celui du
+  dossier** (le croisement que craignait §28.6 ter n'existe pas). ⚠ **Pas vu à l'écran** : aucun bien né dans l'app ne
+  porte de lien aujourd'hui (l'essai est nettoyé) ; le prochain essai de création le montrera.
+- 🔎 **Audit avant de pousser (08-09/11, « Audit d'abord »)** : la lecture en base est unique (le syndic appelle la
+  générique), un seul numéro passé = comportement d'avant ; les **6 appelants** (Le Bien, onglet Contact, téléphone ×
+  syndic/diagnostiqueur) passent tous les deux numéros ; plus grand numéro de bien venu de Hektor **7 589 452** (la
+  limite ne peut pas se tromper) ; **0** bien avec deux liens actifs d'un même métier, **0** numéro Hektor en double,
+  **0** lien qui contredit son bien, lien retiré jamais relu ; le geste d'écriture et la création ne bougent pas.
+  ⭐ **Même défaut trouvé à l'autre bout** : la **fiche du partenaire** (`FicheSyndic.tsx`, ses biens) ne lisait que les
+  liens qui ont un numéro Hektor → un bien né dans l'app y manquait jusqu'à :50.
+- ✅ **Corrigé aussi (09/11, « Les 2 »)** : `FicheSyndic.tsx` prend, pour un lien sans numéro Hektor, celui de la fiche du
+  bien (`app_dossiers_current`, mêmes droits que la lecture des biens juste après) dès que Hektor l'a rendu. Les ~70 s
+  avant le retour de Hektor restent sans le bien sur cette fiche (tout y est rangé par numéro Hektor : détail, documents ;
+  le changer serait une refonte). Build vert. **Répétition annulée** (admin, rôle `authenticated`, lien diagnostiqueur
+  10014013 sur 10000009 seul) : ancienne fiche → **rien** ; complément → **10000009 → 63331**. 0 ligne restée, 85 actifs.
 
 ### 7 ter. Les dépendances (techniques, pas un ordre décidé)
 

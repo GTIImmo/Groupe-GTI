@@ -26,8 +26,21 @@ async function lireVueSyndic(contactId: string, role: 'syndic' | 'diagnostiqueur
   const l = await supabase.from('app_partenaire_lien').select('hektor_annonce_id,app_dossier_id')
     .eq('partenaire_id', contactId).eq('role', role).is('retire_le', null)
   if (l.error) throw new Error(`liens : ${l.error.message}`)
-  const liens = (l.data ?? []) as { hektor_annonce_id: number | null; app_dossier_id: number | null }[]
-  const ids = Array.from(new Set(liens.map((x) => String(x.hektor_annonce_id ?? '')).filter(Boolean)))
+  const liensBruts = (l.data ?? []) as { hektor_annonce_id: number | null; app_dossier_id: number | null }[]
+  // 09/11 (§28.10) : un lien posé sur NOTRE numéro (bien né dans l'app) ne reçoit le numéro Hektor qu'à la complétion de
+  // :50 ; on le prend sur la fiche du bien dès que Hektor l'a rendu -- sinon le bien manquait ici jusqu'à une heure.
+  const sansHektor = Array.from(new Set(liensBruts.filter((x) => !x.hektor_annonce_id && x.app_dossier_id).map((x) => String(x.app_dossier_id))))
+  const hektorPar = new Map<string, number>()
+  if (sansHektor.length) {
+    const r = await supabase.from('app_dossiers_current').select('app_dossier_id,hektor_annonce_id').in('app_dossier_id', sansHektor)
+    if (r.error) throw new Error(`biens nés dans l'app : ${r.error.message}`)
+    for (const b of (r.data ?? []) as { app_dossier_id: unknown; hektor_annonce_id: unknown }[]) {
+      if (Number(b.hektor_annonce_id)) hektorPar.set(String(b.app_dossier_id), Number(b.hektor_annonce_id))
+    }
+  }
+  const liens = liensBruts.map((x) => (x.hektor_annonce_id || !x.app_dossier_id ? x
+    : { ...x, hektor_annonce_id: hektorPar.get(String(x.app_dossier_id)) ?? null }))
+  const ids =Array.from(new Set(liens.map((x) => String(x.hektor_annonce_id ?? '')).filter(Boolean)))
   if (!ids.length) return construireVueSyndic({ liens, biens: [], details: [], documents: [] })
   // Le bien : le parc vivant d'abord, puis les index des archives (comme la fiche notaire).
   const vivants = await lireBiens('app_dossiers_current', ids, true)
