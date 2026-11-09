@@ -3605,6 +3605,34 @@ l'Ondaine 42700 Firminy, Copropriété = Oui. Départ : 85 liens actifs, 0 sans 
   🐞 **Défaut trouvé** : « 0477493374 » ramenait AUSSI 0477473112 — le motif « *04*77*49*33*74* » acceptait n'importe quoi
   entre les paires. **Corrigé (pas poussé)** : le numéro se cherche sous ses 3 formes exactes (collé, paires à points,
   paires à espaces), valeurs entre guillemets dans le filtre ; contrôle (105) mis à jour ; build vert, tout vert.
+  **Poussé seul (2aa0819, « Vas y », même méthode que 58ce259 : les 2 commits Classeur restent en local), Vercel prêt.
+  VU EN LIGNE** : « 0477493374 » → **1 seul** contact (CABINET FONCIA IGD) ; « 04.28.55 » → Ardrodiag et M. Dérumeaux
+  (04.28.55.00.20, tous deux diagnostiqueurs, proposés « En faire un syndic ») ; « foncia loire » → les 4 FONCIA LOIRE
+  AUVERGNE du catalogue. Console sans erreur. Fenêtre fermée sans rien créer.
+  ⏳ Reste à éprouver : « En faire un … » et une vraie création (écrivent ; la création écrit chez Hektor) — avec accord.
+- ✅ **ESSAI RÉEL (09/11, 12:29-12:34, « Oui, essaie »)** — départ : 75 syndics, 36 diagnostiqueurs, 1 872 métiers
+  actifs, file vide, aucune fiche « ZZ ESSAI ».
+  · Annuaire → « Ajouter un partenaire » → syndic → recherche « ZZ ESSAI SYNDIC » : « Aucun contact ne correspond » →
+    « ＋ Créer un nouveau syndic » (raison sociale reprise de la recherche) → « ZZ ESSAI SYNDIC FENETRE - ne pas
+    utiliser », fixe 04 99 99 99 61, 42700 Firminy, note, sous Emmanuelle PEREIRA → « Créer le syndic ».
+  · **En moins de 4 s** la fiche du catalogue s'ouvre : **notre numéro 20000048**, « Syndic », « Hektor · en attente ».
+    Métier `syndic` **une seule ligne** (1898, source écran, même seconde que la création — déclencheur D-1 + écriture de
+    la fenêtre, aucun doublon). Charge du travail : `contact_kind` partenaire, `person_type` personne_morale,
+    `partner_job_id` 5, **`send_rgpd_email` false**, automatismes false, compte pereira@.
+  · **Hektor : créé en 21 s, n° 606288** ; paire 20000048 ↔ 606288 ; `crm_settings` tous false ; aucune mention RGPD au
+    compte rendu ; après relecture : nom, Firminy, 42700 gardés ; le numéro revient en téléphone PRINCIPAL (Hektor range
+    le seul numéro ainsi — non perdu) ; négociateur pereira@.
+  · « En faire un diagnostiqueur » (pastille Diagnostiqueur, recherche, groupe « sans ce métier » qui montre « · syndic »)
+    → ligne 1899 `diagnostiqueur` écrite, fiche « Syndic · Diagnostiqueur » ; **aucun travail d'écriture chez Hektor**
+    (seulement les relectures que l'ouverture d'une fiche demande).
+  · **Nettoyage** : « ⋯ » → « Supprimer » (confirmation « SUPPRIMER CONTACT 20000048 ») → `delete_hektor_contact` done,
+    **`after_found: false`** ; 0 fiche restante (20000048 / 606288 / « ZZ ESSAI »), 0 ligne de métier ; retour à **75 /
+    36 / 1 872**, file vide.
+  · Remarque : les pastilles comptent les métiers (syndic 75 → 76 pendant l'essai) ; la tuile « Syndics » de l'annuaire
+    compte les fiches visibles du catalogue (76 pendant l'essai aussi) — cohérent.
+- ✅ **ALLUMÉ POUR TOUS le 09/11 à 12:35:35 (« Oui, pour tous »)** : `partenaires_fenetre_ajout` `admin` → **`on`** ; un
+  négociateur (jeton simulé) le lit bien à « on ». Retour arrière : remettre `admin` ou `off` (les fenêtres d'avant
+  reviennent). Un négociateur crée sous son propre compte (règle reprise de la fenêtre client).
 
 #### 28.14 — ⏳ DEMANDE DE FRÉDÉRIC (09/11) : pré-remplir dès l'adresse, à la création d'une annonce
 > « l'ajout d'une annonce active ou estimation : dès l'ajout de l'adresse du bien, l'app doit faire le script déjà
