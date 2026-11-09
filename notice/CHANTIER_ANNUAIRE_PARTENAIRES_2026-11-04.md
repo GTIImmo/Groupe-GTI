@@ -3934,6 +3934,9 @@ l'Ondaine 42700 Firminy, Copropriété = Oui. Départ : 85 liens actifs, 0 sans 
   16:12:46, `retire_par` rempli ; actifs 100 → 99, **0 lien courtier actif** ; **0 travail vers Hektor** pendant l'essai
   (le seul travail de l'heure est la relecture `refresh_console_contact_data` de 15:36, posée à l'ouverture de la fiche) ;
   console sans erreur. ⏳ Reste : allumer pour tous (cran `partenaires_courtier` → `on`), sur sa décision.
+- ✅ **ALLUMÉ POUR TOUS (09/11, « Oui »)** : `partenaires_courtier` = **`on`** (app_setting). Les 30 courtiers et banques
+  du registre (22 courtiers, 8 banques) ont « Acquéreurs suivis » et « Orienter un acquéreur ». Le retour arrière : remettre
+  le cran à `admin` (ou le supprimer) ; les liens posés restent en base (`app_partenaire_lien`, rôle courtier).
 
 ### 7 ter. Les dépendances (techniques, pas un ordre décidé)
 
