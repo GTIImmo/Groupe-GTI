@@ -433,5 +433,46 @@ controle("(103) lot 5 : le patch générique (rôle syndic ou diagnostiqueur seu
   && /metier = p_role AND retire_le IS NULL/.test(patch5) && /CREATE UNIQUE INDEX app_partenaire_lien_un_diag_uidx/.test(patch5) && /FROM PUBLIC, anon/.test(patch5)
   && !/app_partenaire_syndic_du_bien\(/.test(patch5.replace(/^--.*$/gm, "").replace(/to_regprocedure\('public\.app_partenaire_syndic_du_bien[^)]*\)'\)/g, "")));
 
+// ── §28.13 (09/11) : la fenêtre « Ajouter un partenaire » ──
+let ap;
+try {
+  const { code } = esbuild.transformSync(fs.readFileSync(path.resolve(__dirname, "src", "lib", "ajouterPartenaire.ts"), "utf8"), { loader: "ts", format: "cjs" });
+  const module = { exports: {} };
+  vm.runInNewContext(code, { module, exports: module.exports, require: (p) => (/cataloguePartenaires/.test(p) ? cat : {}) });
+  ap = module.exports;
+} catch (e) { console.log(`⛔ ${e.message}`); process.exit(2); }
+controle("(104) §28.13 les 6 métiers et leur code Hektor ; courtier et parrain SANS code (rien de parasite au registre) ; pas de notaire",
+  J(ap.METIERS_AJOUT.map((m) => `${m.metier}:${m.hektor}`)) === J(["syndic:5", "diagnostiqueur:4", "apporteur:15", "courtier:", "parrain:", "banque:19"])
+  && !ap.estMetierAjout("notaire") && ap.apparenceMetier("syndic").couleur === "#5b4a9e" && ap.libellesMetier("apporteur").enFaire === "En faire un apporteur");
+controle("(105) §28.13 la recherche : 3 caractères, mots qui se suivent, téléphone par paires, caractères dangereux retirés",
+  ap.motifDeRecherche("fo") === null && ap.motifDeRecherche("foncia loire") === "*foncia*loire*" && ap.motifDeRecherche("04 28 55 00 20") === "*04*28*55*00*20*"
+  && ap.motifDeRecherche("0428550020") === "*04*28*55*00*20*" && ap.motifDeRecherche("a,b(c)") === "*a*b*c*");
+const trouves = [
+  { id: "1", nom: "Zèbre Syndic", ville: null, telephone: null, email: null, archive: false, metiers: ["syndic"], biens: 0 },
+  { id: "2", nom: "Alpha Syndic", ville: null, telephone: null, email: null, archive: false, metiers: ["syndic"], biens: 7 },
+  { id: "3", nom: "Client", ville: "Firminy", telephone: "06", email: null, archive: false, metiers: [], biens: 0 },
+  { id: "4", nom: "Archivé", ville: null, telephone: null, email: null, archive: true, metiers: ["syndic"], biens: 9 },
+];
+const g = ap.grouperResultats(trouves, "syndic");
+controle("(106) §28.13 deux groupes : déjà au catalogue (plus de biens d'abord, archivés après) / sans ce métier",
+  J(g.deja.map((c) => c.id)) === J(["2", "1", "4"]) && J(g.autres.map((c) => c.id)) === J(["3"]) && ap.detailContact(trouves[2]) === "Firminy · n° 3 · 06");
+const f = { ...ap.ficheVide(), raisonSociale: "SYNDIC EXEMPLE", prenom: "Marc", nom: "Exemple", telephone: "04 77 00 00 00", codePostal: "42000", ville: "Saint-Étienne" };
+const e = ap.entreeCreation(f, "courtier", { email: "nego@x.fr", idUser: "39" });
+controle("(107) §28.13 la fiche → createHektorContactJob : partenaire, société par défaut, RIEN d'espace client ni d'automatisme, fixe = phoneSecondary, interlocuteur en note, courtier sans code",
+  ap.ficheVide().forme === "societe" && e.contactKind === "partenaire" && e.personType === "personne_morale" && e.lastName === "SYNDIC EXEMPLE" && e.companyName === "SYNDIC EXEMPLE"
+  && e.sendRgpdEmail === false && e.crmMandateSummaryEnabled === false && e.crmMandateExpirationEnabled === false && e.crmBirthdayEnabled === false
+  && e.phone === "" && e.phoneSecondary === "04 77 00 00 00" && e.partnerJobId === "" && /Interlocuteur : Marc Exemple/.test(e.comments) && e.hektorUserEmail === "nego@x.fr");
+controle("(108) §28.13 ce qui manque avant de créer ; la ville suit le code postal",
+  J(ap.manquesFiche(ap.ficheVide(), false)) === J(["la raison sociale", "un téléphone ou un e-mail", "le négociateur"]) && ap.manquesFiche(f, true).length === 0
+  && ap.avertissementVille("42000", "Firminy", ["Saint-Étienne"]) !== null && ap.avertissementVille("42000", "saint etienne", ["Saint-Étienne"]) === null);
+
+const negos = [{ idUser: "39", label: "Lucille", email: "forlico@gti.fr", agenceNom: "SE" }, { idUser: "12", label: "Franck formation", email: "franck@gmail.com", agenceNom: "F" }];
+const cNego = ap.comptesHektor(negos, { role: "commercial", sessionEmail: "FORLICO@gti.fr", hektorUserId: null, hektorUserEmail: "forlico@gti.fr" });
+const cAdmin = ap.comptesHektor(negos, { role: "admin", sessionEmail: "franck@gmail.com", hektorUserId: null, hektorUserEmail: "franck@gmail.com" });
+controle("(109) §28.13 le compte : un négociateur ne voit et ne prend que lui-même ; un admin n'est JAMAIS pris sous l'e-mail de sa session",
+  cNego.dispo.length === 1 && cNego.defaut && cNego.defaut.idUser === "39" && cAdmin.dispo.length === 2 && cAdmin.defaut === null
+  && ap.compteRetenu(null, false, { role: "admin", sessionEmail: "franck@gmail.com", hektorUserId: null, hektorUserEmail: "franck@gmail.com" }).email === null
+  && ap.compteRetenu(negos[0], false, { role: "admin", sessionEmail: "x", hektorUserId: null, hektorUserEmail: null }).idUser === "39");
+
 console.log(echecs.length ? `\n${echecs.length} contrôle(s) en échec` : "\nTout est vert.");
 process.exit(echecs.length ? 1 : 0);

@@ -266,6 +266,7 @@ import { blocsDuPartenaire, profilDuPartenaire } from './lib/metierPartenaire'
 import { PartenaireAVenir, PartenaireAvecNous, PartenaireChiffres, PartenaireInterlocuteurs, PartenaireSectionMetier } from './FichePartenaire'
 import { DiagBiens, DiagChiffres, SyndicChiffres, SyndicCoproprietes, SyndicNosBiens, useFicheSyndic } from './FicheSyndic'
 import SyndicDuBien, { ChoixPartenaire, EVENEMENT_CREER_PARTENAIRE, EVENEMENT_OUVRIR_PARTENAIRE, type DemandeCreerPartenaire, type PartenaireChoisi } from './SyndicDuBien'
+import AjouterPartenaire, { type DemandeAjoutPartenaire } from './AjouterPartenaire'
 import DemandeDocument from './DemandeDocument'
 import { syndicSelonHektor } from './lib/syndicDuBien'
 import { lireCopro } from './lib/ficheSyndic'
@@ -15131,6 +15132,12 @@ export default function App() {
   // (ou se créent sur place) au lieu d'un texte libre que Hektor ignore (essai réel du 22/10 : les deux relus « absent »),
   // et le lien est posé dès que la création a rendu notre numéro du bien.
   const choixPartenairesSaisie = useCranCouplesVisible('partenaires_choix_saisie', profile?.role ?? null)
+  // PARTENAIRES §28.13 (09/11/2026) : cran `partenaires_fenetre_ajout` — allumé, les trois portes (« Ajouter un
+  // partenaire » de l'annuaire, « ＋ Nouveau » de la carte du bien et de l'assistant) ouvrent la fenêtre à part
+  // « Ajouter un partenaire » (chercher d'abord, créer ensuite) ; absent, les fenêtres d'avant.
+  const fenetreAjoutPartenaire = useCranCouplesVisible('partenaires_fenetre_ajout', profile?.role ?? null)
+  const fenetreAjoutPartenaireRef = useRef(fenetreAjoutPartenaire)
+  fenetreAjoutPartenaireRef.current = fenetreAjoutPartenaire
   const [draftPartenaires, setDraftPartenaires] = useState<{ syndic: PartenaireChoisi | null; diagnostiqueur: PartenaireChoisi | null }>({ syndic: null, diagnostiqueur: null })
   // 08/11 (§28.9) : chaque information n'est affichee qu'UNE fois. Ce que montre deja le haut de l'etape 1 n'est pas
   // repete dans les pages, et le prix net vendeur ne vit qu'en « Mandat / Prix ». Seulement dans CETTE modale : les
@@ -16517,6 +16524,9 @@ export default function App() {
   // Côté Partenaires, le catalogue porte son propre en-tête (maquette planche 1) : la barre du haut des clients se cache.
   const catalogueCranApp = useCranCouplesVisible('partenaires_catalogue', profile?.role ?? null)
   const vueMetiersApp = screen === 'contacts' && contactsVue === 'metiers' && catalogueCranApp
+  // §28.13 : « Ajouter un partenaire » (côté Partenaires de l'annuaire) ouvre la fenêtre à part si son cran est allumé ;
+  // côté Clients, et cran éteint, la création de contact d'avant.
+  const ouvrirCreationContact = () => { if (vueMetiersApp && fenetreAjoutPartenaire) setAjoutPartenaire({}); else setContactCreateOpen(true) }
   const restaurationAdresseRef = useRef<{ cible: string; jusqua: number } | null>(null)
   const ficheDemandeeParAdresseRef = useRef<number | null>(null)
   const adresseVoulue = useMemo(() => {
@@ -16914,10 +16924,15 @@ export default function App() {
   // est écrit chez nous (sinon il ne serait choisissable qu'après la nuit), puis celui qui l'a demandé le reçoit.
   const [partenaireACreer, setPartenaireACreer] = useState<DemandeCreerPartenaire | null>(null)
   const [partenaireACreerErreur, setPartenaireACreerErreur] = useState<string | null>(null)
+  const [ajoutPartenaire, setAjoutPartenaire] = useState<DemandeAjoutPartenaire | null>(null)
   useEffect(() => {
     const ecoute = (event: Event) => {
       const demande = (event as CustomEvent<DemandeCreerPartenaire>).detail
-      if (demande?.role && typeof demande.poser === 'function') { setPartenaireACreerErreur(null); setPartenaireACreer(demande) }
+      if (demande?.role && typeof demande.poser === 'function') {
+        // §28.13 : cran allumé → la fenêtre à part, métier fixé, le contact retenu est relié au bien par `poser`.
+        if (fenetreAjoutPartenaireRef.current) { setAjoutPartenaire({ metier: demande.role, metierFige: true, poser: demande.poser }); return }
+        setPartenaireACreerErreur(null); setPartenaireACreer(demande)
+      }
     }
     window.addEventListener(EVENEMENT_CREER_PARTENAIRE, ecoute)
     return () => window.removeEventListener(EVENEMENT_CREER_PARTENAIRE, ecoute)
@@ -22322,6 +22337,20 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             </section>
           </div>
         ) : null}
+        {ajoutPartenaire ? (
+          <AjouterPartenaire
+            demande={ajoutPartenaire}
+            negociateurs={hektorNegotiators}
+            profileRole={profile?.role ?? null}
+            sessionEmail={sessionEmail}
+            hektorUserId={contactHektorUserId}
+            hektorUserEmail={contactHektorUserEmail}
+            numeroDuTravail={(job) => numeroCreeDansLeTravail(job, 'app_identite')}
+            onTravail={rememberHektorActionJob}
+            onOuvrirFiche={(id) => showContactInDirectory(id, 'metiers')}
+            onFermer={() => setAjoutPartenaire(null)}
+          />
+        ) : null}
         {partenaireACreer ? (
           <ContactWorkflowModal
             title={partenaireACreer.role === 'syndic' ? 'Nouveau syndic' : 'Nouveau diagnostiqueur'}
@@ -25905,7 +25934,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             closeSignal={contactFermerSignal}
             vue={contactsVue}
             onVueChange={setContactsVue}
-            onOpenCreate={() => setContactCreateOpen(true)}
+            onOpenCreate={ouvrirCreationContact}
             contacts={contactsDirectory}
             total={contactsTotal}
             page={contactPage}
@@ -26215,7 +26244,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 </label>
                 <div className="hero-actions">
                   {screen === 'contacts'
-                    ? canManageContacts ? <button className="ghost-button button-primary draft-annonce-open-button" type="button" onClick={() => setContactCreateOpen(true)}>{vueMetiersApp ? 'Ajouter un partenaire' : 'Nouveau contact'}</button> : null
+                    ? canManageContacts ? <button className="ghost-button button-primary draft-annonce-open-button" type="button" onClick={ouvrirCreationContact}>{vueMetiersApp ? 'Ajouter un partenaire' : 'Nouveau contact'}</button> : null
                     : canCreateHektorDraftAnnonce ? <button className={`ghost-button button-primary draft-annonce-open-button ${screen === 'estimations' ? 'estim-new-btn' : ''}`.trim()} type="button" onClick={() => setCreateFlow('choice')}>{screen === 'estimations' ? 'Nouvelle estimation' : 'Nouvelle annonce'}</button> : null}
                   <button className="ghost-button" type="button" disabled={vueMetiersApp} title={vueMetiersApp ? "Côté Partenaires : métier et agence se choisissent dans l'annuaire" : undefined} onClick={() => setFiltersOpen((open) => !open)}>{filtersOpen ? 'Masquer les filtres' : libelleBoutonFiltres}</button>
                   <button className="ghost-button" type="button" onClick={vueMetiersApp ? () => setRechercheCatalogue('') : resetFilters}>Reinitialiser</button>
@@ -26992,7 +27021,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             closeSignal={contactFermerSignal}
             vue={contactsVue}
             onVueChange={setContactsVue}
-            onOpenCreate={() => setContactCreateOpen(true)}
+            onOpenCreate={ouvrirCreationContact}
             rechercheCatalogue={rechercheCatalogue}
             loading={contactsLoading}
             hasActiveFilters={activeFilters.length > 0}
