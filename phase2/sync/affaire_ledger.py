@@ -618,7 +618,17 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
                   # les RECOIT a la redescente, pour que la sauvegarde de nuit
                   # emporte aussi cette connaissance.
                   "honoraires_entree_app", "honoraires_sortie_app",
-                  "charge_commission_app"):
+                  "charge_commission_app",
+                  # ⭐ L'ETIQUETTE DE DOSSIER (09/11/2026). MEME PATRON que le
+                  # lot 1a : le local ne les ECRIT jamais, il les RECOIT a la
+                  # redescente -- pour que la sauvegarde de nuit emporte aussi
+                  # les etiquettes. Sans cette ligne, l'autre liste
+                  # (COLONNES_QUE_LE_PUSH_N_ENVOIE_PAS) les reclamerait a
+                  # Supabase et le filet local les ecarterait a chaque run :
+                  # le mecanisme serait installe A MOITIE.
+                  # ⓘ TEXT, comme les autres : SQLite ne type pas, et l'uuid
+                  #   descend en texte de PostgREST.
+                  "app_dossier_uuid", "app_dossier_numero"):
         if neuve not in colonnes:
             con.execute(f"ALTER TABLE {LEDGER_TABLE} ADD COLUMN {neuve} TEXT")
             con.commit()
@@ -2306,6 +2316,14 @@ COLONNES_QUE_LE_PUSH_N_ENVOIE_PAS = (
     # ⚠ A ne pas confondre avec honoraires_entree / honoraires_sortie, de
     #   CLASSE C : Hektor les calcule, il fait foi, elles SONT relues.
     "honoraires_entree_app", "honoraires_sortie_app", "charge_commission_app",
+    # ⭐ L'ETIQUETTE DE DOSSIER (09/11/2026) -- condition C1 de l'audit du 29/10.
+    # Elle entre ici AVANT tout remplissage, et ce n'est pas une precaution de
+    # principe : voir la lecon du 07/09 juste en dessous. Une etiquette que le
+    # push renvoie se fait ecraser par un miroir local qui ne la connait pas
+    # encore -- et un identifiant efface ne se refait pas identique.
+    # ⛔ UN SEUL EMETTEUR, ET C'EST SUPABASE (C3) : app_poser_etiquettes_dossier,
+    #    apres le calcul des groupes (C2). Ni le clic ni le push n'en posent.
+    "app_dossier_uuid", "app_dossier_numero",
 )
 
 
