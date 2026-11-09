@@ -3827,6 +3827,56 @@ l'Ondaine 42700 Firminy, Copropriété = Oui. Départ : 85 liens actifs, 0 sans 
     grisé « en construction ») ouvre le panneau quand le cran est allumé et que l'utilisateur gère les contacts.
   · `test_metier_partenaire.cjs` : (110) à (112). Build vert, tout vert. ⚠ Pas vu à l'écran : la maquette locale n'a pas
     le registre des métiers ; la preuve se fera en ligne, cran pour Frédéric seul.
+- ✅ **EN PRODUCTION (09/11, « Oui »)** : patch `app_partenaire_du_client` appliqué (fonction + index, anon non,
+  authenticated oui, 0 lien client) ; poussé **7aa03c7** (branche à jour, aucun commit d'autrui) ; cran
+  `partenaires_apporteur` = **`admin`** à 13:06:27. **VU EN LIGNE** (lecture seule) : fiche de Christine LOVAGLIO
+  (10215062, apporteur) → bouton d'en-tête « ＋ Noter une affaire apportée » ACTIF, section « Affaires apportées » réelle
+  (0 client ; étapes 0 / 0 / — / — ; « Commission convenue, due, réglée » en construction) ; panneau : « lovaglio » →
+  « Aucun contact ne correspond » (elle-même écartée, voulu) ; « dupont » → 15 contacts avec « Noter ». Console sans
+  erreur. Rien n'a été noté. ⏳ Pas encore éprouvé : un vrai « Noter » puis « Retirer » (écrit chez nous seulement).
+- ✅ **ESSAI RÉEL (09/11, 13:44-13:45, « Oui »)** sur la fiche de Christine LOVAGLIO : en-tête « ＋ Noter une affaire
+  apportée » → « eric dupont » → 1 résultat (M. ERIC DUPONT, Issoire, n° 10353923) → « Noter » : la section passe à
+  « 1 client », la ligne « M. ERIC DUPONT · Issoire · n° 10353923 · noté le 09/11/2026 » avec l'étape « Contact apporté »
+  (ses rôles au registre : aucun) et « Retirer ». Base : lien **111** (apporteur, objet client, origine app, posé par
+  Frédéric 13:44:37), **0 travail d'écriture** vers Hektor. « Retirer » → « Oui » : retour à « 0 client » ; lien 111
+  `retire_le` 13:45:14, `retire_par` Frédéric (la trace reste) ; **0 lien client actif** ; console sans erreur.
+- ✅ **ALLUMÉ POUR TOUS le 09/11 à 13:57:30 (« Oui »)** : `partenaires_apporteur` `admin` → **`on`** ; un négociateur
+  (jeton simulé) lit « on » et peut appeler `app_partenaire_du_client`. Retour arrière : remettre `admin` ou `off`.
+  Restent du lot 7 : la commission (H1) et la reprise des 53 apports de Netty en propositions (B7).
+
+#### 28.18 — LA REPRISE DES 53 APPORTS DE NETTY : AUDIT (09/11, « la reprise des 53 apports de Netty ; on verra plus tard pour la commission ») — rien écrit
+- **Source** : `affairs_contacts_relations.xlsx` (export figé du 27/02/2026, à la racine, hors git) : 53 relations
+  `*_business_provider` (43 côté vendeur `representative`, 10 côté acquéreur `applicant`), 0 supprimée ; les clients de
+  l'affaire = les `representative` (ou `applicant`) de la même affaire.
+- **Rapprochement** (même méthode que `metier_netty.py` : nom + prénom + jour de création, paire UNIQUE seulement, couche
+  locale `phase2.sqlite` en lecture seule ; aucun nom sorti) : 39 apporteurs → **34 retrouvés** (7 relations sans) ;
+  clients **77 retrouvés / 9 introuvables** ; 1 apport sans client ; **60 couples apporteur ↔ client**, dont 1 où
+  l'apporteur EST le client (écarté).
+- ⭐ **Le point qui change tout** : lier au CLIENT (Q1 « A ») lève l'ambiguïté du lot 0 (51 affaires → 107 biens) — on ne
+  devine pas le bien, on relie la personne. Mais **seuls 8 des 30 apporteurs ont le métier apporteur ou parrain** au
+  catalogue : par métier au registre, **apporteur 5 → 10 liens, parrain 3 → 4 liens, AUCUN métier 19 → 41 liens (39 dont
+  le client est dans l'app), notaire 2 → 4 liens**. 11 clients sont archivés (gardés : c'est l'histoire).
+- **Choix à faire** : (A) reprendre les **14 liens sûrs** (apporteur ou parrain au catalogue) ; (B) en plus, donner aux
+  **19 apporteurs sans métier** le métier « apporteur » (source Netty, ils ont apporté une affaire) → **+39 liens**, ils
+  entrent au catalogue des apporteurs ; les 2 notaires : laissés de côté (leur fiche est celle d'un notaire).
+  La date d'un lien repris = la date de la relation dans Netty ; origine `netty` ; écrit chez nous seulement.
+
+#### 28.19 — LA REPRISE DES 14 LIENS SÛRS : ÉCRITE EN PRODUCTION (09/11, « Les 14 » puis « Oui »)
+- **Choix de Frédéric : A**, les 14 liens dont l'apporteur a déjà le métier apporteur ou parrain. B (donner le métier aux
+  19 sans métier) **n'est pas fait**.
+- **Patch** `supabase/patch_reprise_apports_netty_2026-11-09.sql` (+ `_INVERSE`, `_REPETITION`) : 14 lignes
+  `app_partenaire_lien` (role apporteur, objet client, origine `netty`, `pose_le` = date de la relation Netty, `pose_par`
+  vide). Gardes : apporteur ≠ client, métier apporteur/parrain actif, client présent dans `app_contact_current`, pas de
+  lien actif identique ; il refuse s'il existe déjà un lien netty, et **n'écrit rien s'il n'en passe pas exactement 14**.
+- **Répétition 8/8** (rien gardé). ⚠ Au premier passage 7/8 : MON attendu disait 9 apporteurs, il y en a **8** — les
+  données étaient justes.
+- **Écrit le 09/11** : liens **142 à 155**, 8 apporteurs, dates 03/03/2016 → 30/12/2025, 14 actifs sans auteur ; les 91
+  autres liens (6 app, 85 hektor) intacts.
+- **Vu à l'écran** (production, `?ecran=contacts&vue=metiers&contact=10091890`) : section « Affaires apportées »,
+  « 5 clients », chacun « noté le 31/03/2016 », étape « Sous mandat ». ⚠ Les 4 cases du haut (« Affaires apportées —
+  depuis le début »…) restent à « — » : ce sont les cadres fixes de `metierPartenaire.ts` (l. 109), que le lot 7 simple
+  ne remplit pas — sans rapport avec la reprise.
+- **Retour arrière** : `_INVERSE.sql` retire les liens `origine = 'netty'` et vérifie que les autres sont intacts.
 
 ### 7 ter. Les dépendances (techniques, pas un ordre décidé)
 
