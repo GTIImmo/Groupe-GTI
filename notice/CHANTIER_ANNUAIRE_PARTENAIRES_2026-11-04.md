@@ -3784,6 +3784,50 @@ l'Ondaine 42700 Firminy, Copropriété = Oui. Départ : 85 liens actifs, 0 sans 
   7. **L'estimation prête** : DVF, cadre de vie, loyers, INSEE, risques sont pris au même moment et posés sur le dossier
      né — sans case à remplir dans l'assistant.
 
+#### 28.17 — LOT 7 (apporteur et parrain) : AUDIT (09/11, « résous le commit push et enchaîne la suite ») — rien codé
+- **Mise en ligne réglée d'abord** : la branche locale avait 4 commits d'avance / 2 de retard (ton push refusé) ; ma note
+  commitée (327c853), fusion de `origin/main` (seul conflit : ma note, ma version contenait tout le texte en ligne —
+  vérifié — gardée), poussé `4e3140d` : les 2 commits du Classeur sont en ligne, branche à jour.
+- **Ce qui existe** : 50 fiches apporteur ou parrain au registre des métiers (35 + 15), toutes venues de Netty ;
+  `app_partenaire_lien` accepte DÉJÀ l'apporteur sur un CLIENT (`objet = 'client'`, `client_contact_id`, rôles
+  apporteur / courtier) et sur une AFFAIRE (`objet = 'affaire'`, `app_affaire_id`, rôles courtier / banque /
+  apporteur) — deux contrôles en base l'encadrent ; un parrain se range en rôle `apporteur`. **0 lien** de ce genre
+  aujourd'hui ; aucune fonction pour les écrire (`app_partenaire_du_bien` = syndic / diagnostiqueur sur un bien).
+  La fiche d'un apporteur (`lib/metierPartenaire.ts`, BLOCS.apporteur) n'a que des blocs « en construction » :
+  chiffres (affaires apportées, en cours, commission due, transformées), « Affaires apportées » (Contact apporté →
+  Mandat → Commission due → Réglé), « Ce qu'il nous apporte », « Commissions » ; l'action « Noter une affaire
+  apportée » est annoncée.
+- **Décisions déjà prises** : Q1 « A » (un partenaire se relie à un CLIENT dès le premier jour) ; P4 « B » (la fiche
+  CLIENT ne change pas → pas de « Apporté par » sur la fiche client) ; plan accéléré du 06/11 : « Noter une affaire
+  apportée » = poser le lien client ↔ apporteur dans la table existante ; la commission et l'historique « en
+  construction » ; la reprise des 53 apports de Netty « si elle reste simple » (lot 0 : 39 apporteurs, 51 sur 53
+  retrouvés chez Hektor, mais 51 affaires → 107 biens possibles : une PROPOSITION à confirmer, pas un rattachement
+  automatique). Source Netty : `C:/Hektor/Projet/affairs_contacts_relations.xlsx` (export figé du 27/02/2026).
+- **PROPOSITION (version simple)** :
+  · 7.1 « Noter une affaire apportée » sur la fiche de l'apporteur : chercher le CLIENT (même recherche que la fenêtre
+    « Ajouter un partenaire »), le choisir → lien `objet client`, rôle `apporteur` ; une fonction neuve
+    `app_partenaire_du_client` (utilisateur actif, droit sur le contact, retrait = trace) — écrit chez nous seulement ;
+  · 7.2 la fiche de l'apporteur se remplit avec ce qui EXISTE : ses clients apportés, et pour chacun l'étape lue au
+    registre (contact apporté / sous mandat / vente) ; « Commission » reste « en construction » ;
+  · 7.3 plus tard : la commission (H1) et la reprise des 53 apports de Netty en propositions à confirmer.
+- ✅ **CODÉ (09/11, « Oui »), rien d'appliqué ni de poussé, cran PAS posé** :
+  · `supabase/patch_partenaire_du_client_2026-11-09.sql` (+ `_INVERSE`, `_REPETITION`) : `app_partenaire_du_client(p_role,
+    p_client, p_partenaire, p_retirer)` (SECURITY DEFINER, utilisateur actif, rôle apporteur = métier apporteur ou parrain,
+    rôle courtier = courtier ou banque — prêt pour le lot 6 ; client existant ; pas soi-même ; même lien actif une seule
+    fois → « inchange » ; retrait = trace qui / quand) + index unique `app_partenaire_lien_un_client_uidx` (rôle, client,
+    partenaire, actifs) ; anon fermé. **Répétition jouée, annulée : 9 OK, 0 KO** (apporteur 10011329, client 10000045 :
+    pose, inchangé, une seule ligne `origine app` posée par l'admin, refus d'un syndic, refus d'un rôle « syndic »,
+    refus de soi-même, retrait, trace du retrait, droits). Après coup : ni fonction ni index, 0 lien client.
+  · `lib/affairesApportees.ts` (pur) : l'étape d'un client apporté lue au registre (`relation_roles_json` : vente >
+    compromis > offre > mandat > propriétaire > contact), les 4 étapes de la fiche (commission « en construction »), le tri.
+  · `AffairesApportees.tsx` + CSS : la section « Affaires apportées » réelle (étapes, liste des clients apportés, Retirer
+    avec confirmation), « ＋ Noter une affaire apportée » (recherche du client, mêmes motifs que la fenêtre partenaire,
+    sans l'apporteur lui-même ni les déjà notés) ; « Commission » reste « en construction ».
+  · `App.tsx` : cran `partenaires_apporteur` dans la fiche ; le bouton de l'en-tête « Noter une affaire apportée » (jusque-là
+    grisé « en construction ») ouvre le panneau quand le cran est allumé et que l'utilisateur gère les contacts.
+  · `test_metier_partenaire.cjs` : (110) à (112). Build vert, tout vert. ⚠ Pas vu à l'écran : la maquette locale n'a pas
+    le registre des métiers ; la preuve se fera en ligne, cran pour Frédéric seul.
+
 ### 7 ter. Les dépendances (techniques, pas un ordre décidé)
 
 - 0 avant tout le reste ; 0.1 avant B2 ; 0.2 avant B1 ; 0.6 avant B5 ; 0.3 avant B6 ; 0.4 avant B7 ; 0.5 avant C2.

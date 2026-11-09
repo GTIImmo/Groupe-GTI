@@ -267,6 +267,7 @@ import { PartenaireAVenir, PartenaireAvecNous, PartenaireChiffres, PartenaireInt
 import { DiagBiens, DiagChiffres, SyndicChiffres, SyndicCoproprietes, SyndicNosBiens, useFicheSyndic } from './FicheSyndic'
 import SyndicDuBien, { ChoixPartenaire, EVENEMENT_CREER_PARTENAIRE, EVENEMENT_OUVRIR_PARTENAIRE, type DemandeCreerPartenaire, type PartenaireChoisi } from './SyndicDuBien'
 import AjouterPartenaire, { type DemandeAjoutPartenaire } from './AjouterPartenaire'
+import AffairesApportees from './AffairesApportees'
 import DemandeDocument from './DemandeDocument'
 import { syndicSelonHektor } from './lib/syndicDuBien'
 import { lireCopro } from './lib/ficheSyndic'
@@ -48044,6 +48045,11 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
   const ficheDiagActive = diagCran && profilPartenaire?.famille === 'diag'
   const ficheDiag = useFicheSyndic(String(props.contact.hektor_contact_id ?? ''), ficheDiagActive, 'diagnostiqueur')
   const [commandeDiagOuverte, setCommandeDiagOuverte] = useState(false)
+  // LOT 7 (09/11/2026, §28.17) : la fiche APPORTEUR / PARRAIN — « Affaires apportées » réelles et « Noter une affaire
+  // apportée » (lien partenaire ↔ client, chez nous seulement), derrière le cran `partenaires_apporteur`.
+  const apporteurCran = useCranCouplesVisible('partenaires_apporteur', props.profileRole)
+  const apporteurActif = apporteurCran && profilPartenaire?.famille === 'apporteur'
+  const [noterApport, setNoterApport] = useState(0)
   // PARTENAIRES, pièce 3.3b (05/11/2026) : la partie droite du métier (chiffres, section, « À venir », « avec nous »), montrée
   // « en construction » ; rien pour la famille « autre ». Comme le notaire, la bande Recherche se cache sans recherche active
   // (pas pour « autre » : une société peut être acquéreur, elle garde « Ajouter une recherche »).
@@ -48743,6 +48749,11 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 6h16v12H4zM4 7l8 6 8-6" /></svg>
                     <span className="fa-cx-act-tx">Commander un diagnostic</span>
                   </button>
+                ) : apporteurActif && props.canManageContacts ? (
+                  <button className="fa-cx-act primary wide" type="button" onClick={() => setNoterApport((n) => n + 1)}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+                    <span className="fa-cx-act-tx">Noter une affaire apportée</span>
+                  </button>
                 ) : profilPartenaire?.action ? (
                   // PARTENAIRES, pièce 3.3a : l'action propre au métier (maquette), MONTRÉE et marquée « en construction »
                   // jusqu'à son lot (décision du 27/10 : un bloc sans données se montre). Elle ne fait rien.
@@ -48875,6 +48886,7 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
               {ficheSyndicActive
                 ? <SyndicCoproprietes vue={ficheSyndic.vue} erreur={ficheSyndic.erreur} chargement={ficheSyndic.chargement} onOuvrirBien={(id) => { props.onClose(); props.onOpenDossier(id) }} />
                 : ficheDiagActive ? <DiagBiens vue={ficheDiag.vue} erreur={ficheDiag.erreur} chargement={ficheDiag.chargement} onOuvrirBien={(id) => { props.onClose(); props.onOpenDossier(id) }} />
+                : apporteurActif ? <AffairesApportees partenaireId={String(props.contact.hektor_contact_id ?? '')} peutEcrire={Boolean(props.canManageContacts)} noterSignal={noterApport} />
                 : blocsPartenaire ? <PartenaireSectionMetier blocs={blocsPartenaire} /> : null}
               {masquerRecherche ? null : (<>
               {/* ── Lot 2 — Bande « Recherche & rapprochement » (portage maquette v30) ── */}

@@ -475,5 +475,31 @@ controle("(109) §28.13 le compte : un négociateur ne voit et ne prend que lui-
   && ap.compteRetenu(null, false, { role: "admin", sessionEmail: "franck@gmail.com", hektorUserId: null, hektorUserEmail: "franck@gmail.com" }).email === null
   && ap.compteRetenu(negos[0], false, { role: "admin", sessionEmail: "x", hektorUserId: null, hektorUserEmail: null }).idUser === "39");
 
+// ── LOT 7 (09/11, §28.17) : les affaires apportées ──
+let aa;
+try {
+  const { code } = esbuild.transformSync(fs.readFileSync(path.resolve(__dirname, "src", "lib", "affairesApportees.ts"), "utf8"), { loader: "ts", format: "cjs" });
+  const module = { exports: {} };
+  vm.runInNewContext(code, { module, exports: module.exports });
+  aa = module.exports;
+} catch (e) { console.log(`⛔ ${e.message}`); process.exit(2); }
+controle("(110) lot 7 : l'étape d'un client apporté est lue au registre (vente > compromis > offre > mandat > propriétaire > contact), texte JSON accepté",
+  aa.etapeDuClient(["mandant", "acquereur_vente"]).etape === "vente" && aa.etapeDuClient('["acquereur_offre"]').etape === "offre"
+  && aa.etapeDuClient(["mandant", "proprietaire"]).libelle === "Sous mandat" && aa.etapeDuClient(null).etape === "contact" && aa.etapeDuClient([]).libelle === "Contact apporté");
+const apports = [
+  { lienId: 1, clientId: "a", nom: "A", etape: "contact", poseLe: "2026-11-01" },
+  { lienId: 2, clientId: "b", nom: "B", etape: "mandat", poseLe: "2026-11-02" },
+  { lienId: 3, clientId: "c", nom: "C", etape: "vente", poseLe: "2026-10-01" },
+];
+const ce = aa.compterEtapes(apports);
+controle("(111) lot 7 : les étapes de la fiche (contact = tous, mandat compté, commission « en construction ») ; les plus avancés d'abord",
+  ce["Contact apporté"] === 3 && ce["Mandat"] === 1 && ce["Commission due"] === null && ce["Réglé"] === null
+  && J(aa.trierApports(apports).map((x) => x.clientId)) === J(["c", "b", "a"]));
+const aaTsx = fs.readFileSync(path.resolve(__dirname, "src", "AffairesApportees.tsx"), "utf8");
+controle("(112) lot 7 : derrière le cran `partenaires_apporteur` ; écrit par `app_partenaire_du_client` SEULEMENT (rien chez Hektor), lit les liens objet client",
+  /useCranCouplesVisible\('partenaires_apporteur', props\.profileRole\)/.test(app) && /: apporteurActif \? <AffairesApportees /.test(app)
+  && /supabase\.rpc\('app_partenaire_du_client', \{ p_role: 'apporteur'/.test(aaTsx) && (aaTsx.match(/\.rpc\(/g) || []).length === 1
+  && !/\.(insert|update|upsert|delete)\(/.test(aaTsx) && !/createHektor|console_job/.test(aaTsx) && /\.eq\('objet', 'client'\)/.test(aaTsx));
+
 console.log(echecs.length ? `\n${echecs.length} contrôle(s) en échec` : "\nTout est vert.");
 process.exit(echecs.length ? 1 : 0);

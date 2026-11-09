@@ -9262,7 +9262,7 @@ export async function loadAppSettingActive(key: string): Promise<boolean> {
 export async function loadAppSettingValeur(key: string): Promise<string | null> {
   // Mode maquette (dev local, sans base) : l'ecran du registre s'y montre, pour le voir sans se connecter.
   // Plan partenaires 2b-4a (07/11) : les crans des partenaires aussi (choix à la saisie, design de l'onglet Contact, cartes).
-  if (!hasSupabaseEnv || !supabase) return ['registre_transactions_ecran', 'partenaires_choix_saisie', 'partenaires_design_contact', 'partenaires_design_bien', 'partenaires_fenetre_ajout', 'partenaires_syndic_choix', 'partenaires_diag'].includes(key) ? 'on' : null
+  if (!hasSupabaseEnv || !supabase) return ['registre_transactions_ecran', 'partenaires_choix_saisie', 'partenaires_design_contact', 'partenaires_design_bien', 'partenaires_fenetre_ajout', 'partenaires_apporteur', 'partenaires_syndic_choix', 'partenaires_diag'].includes(key) ? 'on' : null
   try {
     const { data, error } = await supabase.from('app_setting').select('value').eq('key', key).maybeSingle()
     if (error || !data) return null
