@@ -13,53 +13,48 @@ import './fiche-syndic.css'
 
 const COLONNES_BIEN = 'hektor_annonce_id,numero_mandat,titre_bien,ville,statut_annonce,photo_url_listing_app,photo_url_listing'
 
-async function lireBiens(table: string, ids: string[], avecDossier: boolean): Promise<Record<string, unknown>[]> {
+async function lireBiens(table: string, champ: 'app_dossier_id' | 'hektor_annonce_id', ids: string[], avecDossier: boolean): Promise<Record<string, unknown>[]> {
   if (!supabase || !ids.length) return []
-  const r = await supabase.from(table).select(avecDossier ? `app_dossier_id,${COLONNES_BIEN}` : COLONNES_BIEN).in('hektor_annonce_id', ids)
+  const r = await supabase.from(table).select(avecDossier ? `app_dossier_id,${COLONNES_BIEN}` : COLONNES_BIEN).in(champ, ids)
   if (r.error) throw new Error(`${table} : ${r.error.message}`)
   return ((r.data ?? []) as unknown as Record<string, unknown>[]).map((b) => ({ ...b, photo: b.photo_url_listing_app || b.photo_url_listing || null }))
 }
 
 // Lot 5 (06/11) : la même lecture sert au diagnostiqueur (role='diagnostiqueur').
+// 09/11 (§28.10) : l'app doit marcher Hektor coupé -> le bien, son détail et ses documents se lisent par NOTRE numéro
+// (`app_dossier_id`, porté par chaque lien). Le numéro Hektor, déjà chez nous, ne sert plus qu'aux biens sortis du parc
+// vivant (vendus / clos / archivés : leurs index n'ont que lui) et à un lien qui n'aurait pas le nôtre (0 le 09/11).
 async function lireVueSyndic(contactId: string, role: 'syndic' | 'diagnostiqueur' = 'syndic'): Promise<VueSyndic> {
   if (!hasSupabaseEnv || !supabase) throw new Error('base indisponible')
   const l = await supabase.from('app_partenaire_lien').select('hektor_annonce_id,app_dossier_id')
     .eq('partenaire_id', contactId).eq('role', role).is('retire_le', null)
   if (l.error) throw new Error(`liens : ${l.error.message}`)
-  const liensBruts = (l.data ?? []) as { hektor_annonce_id: number | null; app_dossier_id: number | null }[]
-  // 09/11 (§28.10) : un lien posé sur NOTRE numéro (bien né dans l'app) ne reçoit le numéro Hektor qu'à la complétion de
-  // :50 ; on le prend sur la fiche du bien dès que Hektor l'a rendu -- sinon le bien manquait ici jusqu'à une heure.
-  const sansHektor = Array.from(new Set(liensBruts.filter((x) => !x.hektor_annonce_id && x.app_dossier_id).map((x) => String(x.app_dossier_id))))
-  const hektorPar = new Map<string, number>()
-  if (sansHektor.length) {
-    const r = await supabase.from('app_dossiers_current').select('app_dossier_id,hektor_annonce_id').in('app_dossier_id', sansHektor)
-    if (r.error) throw new Error(`biens nés dans l'app : ${r.error.message}`)
-    for (const b of (r.data ?? []) as { app_dossier_id: unknown; hektor_annonce_id: unknown }[]) {
-      if (Number(b.hektor_annonce_id)) hektorPar.set(String(b.app_dossier_id), Number(b.hektor_annonce_id))
+  const liens = (l.data ?? []) as { hektor_annonce_id: number | null; app_dossier_id: number | null }[]
+  const unique = (v: (number | null)[]) => Array.from(new Set(v.map((x) => String(x ?? '')).filter(Boolean)))
+  const dossiers = unique(liens.map((x) => x.app_dossier_id))
+  if (!dossiers.length && !liens.some((x) => x.hektor_annonce_id)) return construireVueSyndic({ liens, biens: [], details: [], documents: [] })
+  // Le bien : le parc vivant par notre numéro d'abord, puis les index des archives par le numéro Hektor (comme la fiche notaire).
+  const vivants = await lireBiens('app_dossiers_current', 'app_dossier_id', dossiers, true)
+  const vus = new Set(vivants.map((b) => String(b.app_dossier_id)))
+  const reste = unique(liens.filter((x) => !vus.has(String(x.app_dossier_id ?? ''))).map((x) => x.hektor_annonce_id))
+  const archives = await lireBiens('app_archive_annonce_index_current', 'hektor_annonce_id', reste, false)
+  const trouves = new Set(archives.map((b) => String(b.hektor_annonce_id)))
+  const historiques = await lireBiens('app_historical_annonce_index_current', 'hektor_annonce_id', reste.filter((id) => !trouves.has(id)), false)
+  const lire = async <T,>(table: string, colonnes: string, quoi: string): Promise<T[]> => {
+    const lignes: T[] = []
+    for (const [champ, ids] of [['app_dossier_id', dossiers], ['hektor_annonce_id', reste]] as const) {
+      if (!ids.length) continue
+      const r = await supabase!.from(table).select(colonnes).in(champ, ids)
+      if (r.error) throw new Error(`${quoi} : ${r.error.message}`)
+      lignes.push(...((r.data ?? []) as unknown as T[]))
     }
+    return lignes
   }
-  const liens = liensBruts.map((x) => (x.hektor_annonce_id || !x.app_dossier_id ? x
-    : { ...x, hektor_annonce_id: hektorPar.get(String(x.app_dossier_id)) ?? null }))
-  const ids =Array.from(new Set(liens.map((x) => String(x.hektor_annonce_id ?? '')).filter(Boolean)))
-  if (!ids.length) return construireVueSyndic({ liens, biens: [], details: [], documents: [] })
-  // Le bien : le parc vivant d'abord, puis les index des archives (comme la fiche notaire).
-  const vivants = await lireBiens('app_dossiers_current', ids, true)
-  const trouves = new Set(vivants.map((b) => String(b.hektor_annonce_id)))
-  const reste = ids.filter((id) => !trouves.has(id))
-  const archives = reste.length ? await lireBiens('app_archive_annonce_index_current', reste, false) : []
-  archives.forEach((b) => trouves.add(String(b.hektor_annonce_id)))
-  const reste2 = reste.filter((id) => !trouves.has(id))
-  const historiques = reste2.length ? await lireBiens('app_historical_annonce_index_current', reste2, false) : []
-  const d = await supabase.from('app_dossier_detail_current').select('hektor_annonce_id,detail_payload_json').in('hektor_annonce_id', ids)
-  if (d.error) throw new Error(`détail des biens : ${d.error.message}`)
-  const doc = await supabase.from('app_console_document').select('hektor_annonce_id,document_name').in('hektor_annonce_id', ids)
-  if (doc.error) throw new Error(`documents : ${doc.error.message}`)
-  return construireVueSyndic({
-    liens,
-    biens: [...vivants, ...archives, ...historiques],
-    details: (d.data ?? []) as { hektor_annonce_id: number | null; detail_payload_json: unknown }[],
-    documents: (doc.data ?? []) as { hektor_annonce_id: string | null; document_name: string | null }[],
-  })
+  const details = await lire<{ hektor_annonce_id: number | null; app_dossier_id: number | null; detail_payload_json: unknown }>(
+    'app_dossier_detail_current', 'app_dossier_id,hektor_annonce_id,detail_payload_json', 'détail des biens')
+  const documents = await lire<{ hektor_annonce_id: string | null; app_dossier_id: number | null; document_name: string | null }>(
+    'app_console_document', 'app_dossier_id,hektor_annonce_id,document_name', 'documents')
+  return construireVueSyndic({ liens, biens: [...vivants, ...archives, ...historiques], details, documents })
 }
 
 export function useFicheSyndic(contactId: string, actif: boolean, role: 'syndic' | 'diagnostiqueur' = 'syndic') {
@@ -151,7 +146,7 @@ export function SyndicCoproprietes(props: { vue: VueSyndic | null; erreur: strin
         {props.erreur ? <div className="fa-cx-ech-empty fa-cx-err">Copropriétés illisibles pour le moment ({props.erreur}).</div>
           : props.chargement && !props.vue ? <div className="fa-cx-ech-empty">Chargement des copropriétés…</div>
           : props.vue && props.vue.biens.length ? (
-            <div className="sy-biens">{props.vue.biens.map((b) => <CarteBien key={b.hektorAnnonceId} bien={b} onOuvrir={props.onOuvrirBien} />)}</div>
+            <div className="sy-biens">{props.vue.biens.map((b) => <CarteBien key={b.cle} bien={b} onOuvrir={props.onOuvrirBien} />)}</div>
           ) : <div className="fa-cx-ech-empty">Aucun de nos biens n'est relié à ce syndic chez Hektor (liste « Syndic » de l'annonce).</div>}
         <div className="sy-note">Un bien = sa copropriété, en attendant le regroupement par immeuble (pièce 4.3) <EnConstruction titre="4.3" /></div>
       </section>
@@ -224,7 +219,7 @@ export function DiagBiens(props: { vue: VueSyndic | null; erreur: string | null;
         {props.erreur ? <div className="fa-cx-ech-empty fa-cx-err">Biens illisibles pour le moment ({props.erreur}).</div>
           : props.chargement && !props.vue ? <div className="fa-cx-ech-empty">Chargement des biens…</div>
           : props.vue && props.vue.biens.length ? (
-            <div className="sy-biens">{props.vue.biens.map((b) => <CarteBien key={b.hektorAnnonceId} bien={b} onOuvrir={props.onOuvrirBien} diag />)}</div>
+            <div className="sy-biens">{props.vue.biens.map((b) => <CarteBien key={b.cle} bien={b} onOuvrir={props.onOuvrirBien} diag />)}</div>
           ) : <div className="fa-cx-ech-empty">Aucun de nos biens n'est relié à ce diagnostiqueur : choisissez-le sur la fiche d'un bien (onglet Contact).</div>}
         <div className="sy-note">Les commandes et leur suivi, le DPE qui expire : plus tard <EnConstruction titre="lot 5" /></div>
       </section>

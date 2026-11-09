@@ -57,8 +57,10 @@ export const estDocumentCopro = (nom: string | null | undefined) => DOC_COPRO.te
 
 const EN_VENTE = new Set(['actif', 'sous offre', 'sous compromis'])
 export type BienSyndic = {
+  // 09/11 (§28.10) : la CLÉ d'un bien est NOTRE numéro (« h » + numéro Hektor seulement pour un lien qui n'a pas le nôtre).
+  cle: string
   appDossierId: number | null
-  hektorAnnonceId: string
+  hektorAnnonceId: string          // '' tant que Hektor n'a pas rendu le sien (ou s'il est coupé)
   titre: string
   ville: string
   statut: string
@@ -82,44 +84,61 @@ export type VueSyndic = {
 
 // Les biens du syndic, triés : en vente d'abord, puis par titre. Un bien inconnu des index (rare) reste montré par son numéro.
 // ⚠ On ne SOMME pas les lots : plusieurs de nos biens peuvent être dans le même immeuble (le regroupement vient en 4.3).
+// 09/11 (§28.10) : l'app doit marcher Hektor coupé -> tout se rapproche par NOTRE numéro (`app_dossier_id`) d'abord ; le
+// numéro Hektor (déjà chez nous) ne sert plus qu'en repli : biens archivés (leurs index n'ont que lui), lien sans le nôtre.
 export function construireVueSyndic(input: {
   liens: { hektor_annonce_id: string | number | null; app_dossier_id: string | number | null }[]
   biens: Record<string, unknown>[]
-  details: { hektor_annonce_id: string | number | null; detail_payload_json: unknown }[]
-  documents: { hektor_annonce_id: string | number | null; document_name: string | null }[]
+  details: { hektor_annonce_id: string | number | null; app_dossier_id?: string | number | null; detail_payload_json: unknown }[]
+  documents: { hektor_annonce_id: string | number | null; app_dossier_id?: string | number | null; document_name: string | null }[]
 }): VueSyndic {
-  const parAnnonce = new Map(input.biens.map((b) => [texte(b.hektor_annonce_id), b]))
-  const detailPar = new Map(input.details.map((d) => [texte(d.hektor_annonce_id), d.detail_payload_json]))
-  const docsPar = new Map<string, string[]>()
+  const indexer = <T,>(rangs: T[], cle: (r: T) => unknown) => {
+    const m = new Map<string, T>()
+    for (const r of rangs) { const k = texte(cle(r)); if (k && !m.has(k)) m.set(k, r) }
+    return m
+  }
+  const bienParDossier = indexer(input.biens, (b) => b.app_dossier_id)
+  const bienParAnnonce = indexer(input.biens, (b) => b.hektor_annonce_id)
+  const detailParDossier = indexer(input.details, (d) => d.app_dossier_id)
+  const detailParAnnonce = indexer(input.details, (d) => d.hektor_annonce_id)
+  const docsPar = new Map<string, string[]>()   // clés « d<notre n°> » et « h<n° Hektor> »
   for (const doc of input.documents) {
     if (!estDocumentCopro(doc.document_name)) continue
-    const k = texte(doc.hektor_annonce_id)
-    const liste = docsPar.get(k) ?? []
     const nom = texte(doc.document_name)
-    if (!liste.includes(nom)) liste.push(nom)
-    docsPar.set(k, liste)
+    for (const k of [texte(doc.app_dossier_id) && `d${texte(doc.app_dossier_id)}`, texte(doc.hektor_annonce_id) && `h${texte(doc.hektor_annonce_id)}`]) {
+      if (!k) continue
+      const liste = docsPar.get(k) ?? []
+      if (!liste.includes(nom)) liste.push(nom)
+      docsPar.set(k, liste)
+    }
   }
   const vus = new Set<string>()
   const biens: BienSyndic[] = []
   for (const l of input.liens) {
-    const id = texte(l.hektor_annonce_id)
-    if (!id || vus.has(id)) continue
-    vus.add(id)
-    const b = parAnnonce.get(id) ?? {}
+    const dossierLien = texte(l.app_dossier_id)
+    const annonceLien = texte(l.hektor_annonce_id)
+    const cle = dossierLien || (annonceLien && `h${annonceLien}`)
+    if (!cle || vus.has(cle)) continue
+    vus.add(cle)
+    const b = (dossierLien && bienParDossier.get(dossierLien)) || (annonceLien && bienParAnnonce.get(annonceLien)) || {}
     const statut = texte(b.statut_annonce)
     const dossier = nombre(b.app_dossier_id ?? l.app_dossier_id)
-    const detail = objet(detailPar.get(id))
+    const id = texte(b.hektor_annonce_id) || annonceLien
+    const ligneDetail = (dossierLien && detailParDossier.get(dossierLien)) || (id && detailParAnnonce.get(id)) || null
+    const detail = objet(ligneDetail?.detail_payload_json)
+    const docs = new Set([...(dossierLien ? docsPar.get(`d${dossierLien}`) ?? [] : []), ...(id ? docsPar.get(`h${id}`) ?? [] : [])])
     biens.push({
+      cle,
       appDossierId: dossier,
       hektorAnnonceId: id,
-      titre: texte(b.titre_bien) || `Bien ${id}`,
+      titre: texte(b.titre_bien) || `Bien ${id || dossierLien}`,
       ville: texte(b.ville),
       statut: statut || 'inconnu',
       enVente: EN_VENTE.has(statut.toLowerCase()),
       mandat: texte(b.numero_mandat) || null,
       photo: texte(b.photo) || null,
-      copro: lireCopro(detailPar.get(id)),
-      documents: (docsPar.get(id) ?? []).sort((a, z) => a.localeCompare(z, 'fr')),
+      copro: lireCopro(ligneDetail?.detail_payload_json),
+      documents: [...docs].sort((a, z) => a.localeCompare(z, 'fr')),
       adresse: texte(detail?.adresse_detail) || null,
       codePostal: texte(detail?.code_postal_detail) || texte(detail?.code_postal) || null,
       annee: (() => { const a = nombre(objet(objet(objet(detail?.diagnostiques_json)?.props)?.ANNEE_CONS)?.value); return a && a > 1000 ? a : null })(),

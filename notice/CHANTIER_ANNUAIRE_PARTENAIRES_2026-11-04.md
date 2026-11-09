@@ -3355,6 +3355,27 @@ l'Ondaine 42700 Firminy, Copropriété = Oui. Départ : 85 liens actifs, 0 sans 
   avant le retour de Hektor restent sans le bien sur cette fiche (tout y est rangé par numéro Hektor : détail, documents ;
   le changer serait une refonte). Build vert. **Répétition annulée** (admin, rôle `authenticated`, lien diagnostiqueur
   10014013 sur 10000009 seul) : ancienne fiche → **rien** ; complément → **10000009 → 63331**. 0 ligne restée, 85 actifs.
+  Poussé : **69c9934**, Vercel prêt, le code servi contient les deux.
+- ⛔ **REPRIS LE 09/11 — Frédéric : « mon app doit fonctionner même si Hektor est coupé, donc il faut lire nos numéros ;
+  l'id Hektor est pour les workers ».** Il a raison : B et le complément d'hier ATTENDAIENT encore un numéro que seul Hektor
+  donne (Hektor coupé, un bien né dans l'app ne serait jamais apparu sur la fiche de son partenaire). Mesure : **85 liens
+  sur 85 portent notre numéro** ; liste des biens, détail et documents du parc vivant l'ont aussi (couverture identique
+  par les deux numéros : 82 biens, 82 détails, 887 documents) ; seuls les index des ARCHIVES n'ont que le numéro Hektor
+  (2 liens hors parc vivant : 7589192/63205, 5853060/40529) — un numéro déjà chez nous, pas une attente de Hektor.
+- ✅ **FAIT (09/11, « Vas y »)** :
+  · `SyndicDuBien.tsx` : la carte passe TOUJOURS notre numéro (et le numéro Hektor en plus) — B retiré ;
+  · `lib/ficheSyndic.ts` : un bien de la fiche a pour CLÉ notre numéro (`cle`) ; bien, détail, documents rapprochés par
+    notre numéro d'abord, le numéro Hektor en repli ; `hektorAnnonceId` vaut '' tant que Hektor n'a rien rendu ;
+  · `FicheSyndic.tsx` : lit le parc vivant, le détail et les documents par `app_dossier_id` ; les archives par le numéro
+    Hektor des seuls liens hors parc vivant ; le complément d'hier (69c9934) est retiré ;
+  · `App.tsx` (2 lignes) : « Demander un document » et « Commander un diagnostic » prennent `cle` comme identifiant du
+    choix (seul usage : la valeur du menu déroulant ; le texte envoyé utilise adresse, mandat, lots) ;
+  · `test_metier_partenaire.cjs` : contrôle **(74 bis)** — un bien né dans l'app sans numéro Hektor a titre, copro et
+    documents ; l'archivé reste trouvé ; un bien par numéro. **Tout vert** (le (74) d'avant inchangé). Build vert.
+  · **Comparaison en base, ancienne / nouvelle lecture, sur les 85 liens** : 85 biens trouvés des deux côtés, **908
+    documents des deux côtés** — rien de perdu pour les biens venus de Hektor.
+  · Ce qui reste au numéro Hektor dans ce chantier : la complétion de :50 (pour les workers) et les archives.
+  ⚠ Pas encore vu à l'écran ; aucun bien né dans l'app ne porte de lien aujourd'hui.
 
 ### 7 ter. Les dépendances (techniques, pas un ordre décidé)
 

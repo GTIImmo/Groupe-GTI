@@ -263,6 +263,18 @@ const vue = sy.construireVueSyndic({
 controle("(74) 4.1 la vue : un bien par annonce (doublon de lien ignoré), en vente d'abord, inconnu montré par son numéro, docs copro seuls et sans doublon",
   vue.biens.length === 3 && vue.biens[0].hektorAnnonceId === "2" && vue.biens[0].enVente && vue.enVente === 1 && vue.quotePartMoyenne === 2960
   && J(vue.biens[0].documents) === J(["PV AG 2026.pdf"]) && vue.biens.some((b) => b.titre === "Bien 3" && b.appDossierId === null) && vue.avecDocuments === 1 && !("lots" in vue));
+// 09/11 (§28.10) : Hektor coupé -> un bien né dans l'app (lien sur NOTRE numéro seul) a tout ce qu'il faut ; un bien archivé
+// (index par numéro Hektor seul) reste trouvé ; deux liens d'un même bien = un bien.
+const vueApp = sy.construireVueSyndic({
+  liens: [{ hektor_annonce_id: null, app_dossier_id: 10000213 }, { hektor_annonce_id: 40529, app_dossier_id: 5853060 }, { hektor_annonce_id: 63487, app_dossier_id: 10000213 }],
+  biens: [{ app_dossier_id: 10000213, hektor_annonce_id: null, titre_bien: "Né dans l'app", statut_annonce: "Estimation" }, { hektor_annonce_id: 40529, titre_bien: "Vendu archivé", statut_annonce: "Vendu" }],
+  details: [{ app_dossier_id: 10000213, hektor_annonce_id: null, detail_payload_json: payload }],
+  documents: [{ app_dossier_id: 10000213, hektor_annonce_id: null, document_name: "PV AG 2026.pdf" }, { app_dossier_id: null, hektor_annonce_id: "40529", document_name: "Pré-état daté.pdf" }],
+});
+const nApp = vueApp.biens.find((b) => b.cle === "10000213"), nArch = vueApp.biens.find((b) => b.cle === "5853060");
+controle("(74 bis) 09/11 Hektor coupé : un bien né dans l'app se lit par NOTRE numéro (titre, copro, documents) ; l'archivé par le numéro Hektor ; un bien par numéro",
+  vueApp.biens.length === 2 && nApp && nApp.titre === "Né dans l'app" && nApp.hektorAnnonceId === "" && nApp.appDossierId === 10000213 && nApp.copro && nApp.copro.lots === 255
+  && J(nApp.documents) === J(["PV AG 2026.pdf"]) && nArch && nArch.titre === "Vendu archivé" && J(nArch.documents) === J(["Pré-état daté.pdf"]));
 const fsy = fs.readFileSync(path.resolve(__dirname, "src", "FicheSyndic.tsx"), "utf8");
 controle("(75) 4.1 FicheSyndic : LECTURE seule (aucune écriture, aucune fonction appelée)", !/\.(insert|update|upsert|delete|rpc)\(|fetch\(/.test(fsy.replace(/^\/\/.*$/gm, "")));
 controle("(76) 4.1 branchement : cran `partenaires_syndic_fiche`, fiche SYNDIC seulement, les blocs 3.3b ailleurs",

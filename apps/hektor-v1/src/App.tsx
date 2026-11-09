@@ -48628,7 +48628,7 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
                   modele="diag"
                   syndicNom={contactFullName}
                   syndicEmail={String(props.contact.email ?? '').trim() || null}
-                  biens={(ficheDiag.vue?.biens ?? []).map((b) => ({ id: b.hektorAnnonceId, titre: b.titre, adresse: b.adresse, codePostal: b.codePostal, ville: b.ville || null, lots: b.copro?.numerosLots ?? null, mandat: b.mandat, annee: b.annee, copro: Boolean(b.copro) }))}
+                  biens={(ficheDiag.vue?.biens ?? []).map((b) => ({ id: b.cle, titre: b.titre, adresse: b.adresse, codePostal: b.codePostal, ville: b.ville || null, lots: b.copro?.numerosLots ?? null, mandat: b.mandat, annee: b.annee, copro: Boolean(b.copro) }))}
                   onClose={() => setCommandeDiagOuverte(false)}
                 />
               ) : null}
@@ -48636,7 +48636,7 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
                 <DemandeDocument
                   syndicNom={contactFullName}
                   syndicEmail={String(props.contact.email ?? '').trim() || null}
-                  biens={(ficheSyndic.vue?.biens ?? []).map((b) => ({ id: b.hektorAnnonceId, titre: b.titre, adresse: b.adresse, codePostal: b.codePostal, ville: b.ville || null, lots: b.copro?.numerosLots ?? null, mandat: b.mandat }))}
+                  biens={(ficheSyndic.vue?.biens ?? []).map((b) => ({ id: b.cle, titre: b.titre, adresse: b.adresse, codePostal: b.codePostal, ville: b.ville || null, lots: b.copro?.numerosLots ?? null, mandat: b.mandat }))}
                   onClose={() => setDemandeSyndicOuverte(false)}
                 />
               ) : null}
