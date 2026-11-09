@@ -2312,3 +2312,5 @@ Passage du moniteur du 04/11 à 14:49 (heure de Paris) : 0 critique, 9 avertisse
 - La garde de la descente a servi le 07/11 : le run a fini à 06:51:58, la descente de 06:45 a attendu (« le run quotidien tourne encore, on patiente »). Les autres nuits, le run finit entre 06:39 et 06:40.
 
 **Ce qui reste vrai** : les sorties Python ne figurent toujours pas au journal du run après l'étape du registre des partenaires (une ligne vide entre START et DONE). Le chiffre de contacts remis n'est donc lisible nulle part la nuit. Cause non cherchée (§76).
+
+**La purge des pages de mars : DÉJÀ FAITE** (Frédéric : « je crois que c'est déjà fait », il avait raison). Elle a été faite le 06/11 par la session du run de nuit : 2 252 pages retirées, avec une sauvegarde datée. Vérifié le 09/11 en lecture seule dans `data/hektor.sqlite` : `list_contacts_active` porte 8 508 pages, de la page 1 à la page 8 508, toutes écrites par le tour du 08/11 à 23:20 ; aucune page de mars. Le ⏰ du §76 est soldé.
