@@ -307,6 +307,7 @@ import './fil-navigation.css'
 import './suivi-travaux.css'
 import './modales-telephone.css'
 import './contact-du-bien.css'
+import './le-bien-design.css'
 import './statut-v2.css'
 import ModaleStatutV2 from './ModaleStatutV2'
 import { compterAnnoncesAilleurs, type AnnoncesAilleurs } from './lib/api'
@@ -30659,13 +30660,17 @@ const CK_WIZARD_FIELD_BY_NAME: Record<string, DraftAnnonceWizardField> = Object.
   draftAnnonceWizardGroups.flatMap((g) => g.fields).map((f) => [f.name, f]),
 )
 // Champ éditable EN PLACE (comme .ed-el du v21) : clic → input/select ancré sur le champ.
-function CkInlineField({ label, name, unit, value, edited, readOnly, onSave }: { label: string; name: string; unit?: string; value: string; edited: boolean; readOnly?: boolean; onSave: (name: string, value: string) => void }) {
+// 09/11 (partenaires §28.12, cran `partenaires_design_bien`) : deux options d'AFFICHAGE, facultatives -- `vide` remplace
+// « À renseigner » (le tableau des diagnostics montre « — ») ; `dateZeroVide` montre une date « 0000-00-00 » (date vide de
+// Hektor) comme vide. La valeur n'est jamais réécrite : la modification part toujours de la valeur réelle.
+function CkInlineField({ label, name, unit, value, edited, readOnly, onSave, vide, dateZeroVide }: { label: string; name: string; unit?: string; value: string; edited: boolean; readOnly?: boolean; onSave: (name: string, value: string) => void; vide?: string; dateZeroVide?: boolean }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(value)
   const field = CK_WIZARD_FIELD_BY_NAME[name]
   const options = field?.options
   const raw = (value ?? '').trim()
-  const display = !raw ? '' : options ? (options.find((o) => o.value === raw)?.label ?? raw) : (unit && !/[€m²%]/.test(raw) ? `${raw} ${unit}` : raw)
+  const montre = dateZeroVide && /^0000-00-00/.test(raw) ? '' : raw
+  const display = !montre ? '' : options ? (options.find((o) => o.value === montre)?.label ?? montre) : (unit && !/[€m²%]/.test(montre) ? `${montre} ${unit}` : montre)
   const start = () => { if (readOnly) return; setDraft(raw); setEditing(true) }
   const commit = () => { setEditing(false); if (draft.trim() !== raw) onSave(name, draft.trim()) }
   return (
@@ -30686,10 +30691,58 @@ function CkInlineField({ label, name, unit, value, edited, readOnly, onSave }: {
         )
       ) : (
         <span className="fv" role={readOnly ? undefined : 'button'} tabIndex={readOnly ? undefined : 0} title={readOnly ? undefined : `Modifier — ${label}`} onClick={start} onKeyDown={(e) => { if (!readOnly && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); start() } }}>
-          {display || 'À renseigner'}
+          {display || (vide ?? 'À renseigner')}
           {readOnly ? null : <svg className="fa-ck-lb-pen" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>}
         </span>
       )}
+    </div>
+  )
+}
+
+// 4c (09/11/2026, §28.12, planche « Diag » validée le 06/11) : la section Diagnostics rangée en trois groupes -- les
+// chiffres du DPE, ses cases oui/non, et le tableau des 8 diagnostics (résultat / date / commentaire). Chaque cellule
+// reste la case modifiable d'avant (CkInlineField, même enregistrement). Un champ hors de ces groupes reste dans la
+// grille d'avant (`reste`) : aucun champ ne disparaît.
+const CK_DPE_CHIFFRES = ['dpe_cons', 'dpe_ges', 'dpe_couts_min', 'dpe_couts_max', 'dpe_date', 'dpe_annee_reference']
+const CK_DPE_DRAPEAUX = ['dpe_non_concerne', 'dpe_vierge', 'isDpeAltitude', 'valeurEnergieFinale']
+const CK_DIAG_LIGNES: Array<[string, string]> = [['Amiante', 'diag_amiante'], ['Électrique', 'diag_electrique'], ['Plomb', 'diag_plomb'],
+  ['Termites', 'diag_termites'], ['Gaz', 'diag_gaz'], ['Loi Carrez', 'diag_loi_carrez'], ['Risques naturels', 'diag_risques_nat_tech'],
+  ['Assainissement', 'diag_assainissement']]
+type CkChamp = [string, string, string?]
+function repartirDiagnostics(fields: CkChamp[]) {
+  const par = new Map(fields.map((f) => [f[1], f]))
+  const pris = new Set<string>()
+  const prendre = (k: string) => { const f = par.get(k); if (f) pris.add(k); return f ?? null }
+  const chiffres = CK_DPE_CHIFFRES.map(prendre).filter((f): f is CkChamp => f !== null)
+  const drapeaux = CK_DPE_DRAPEAUX.map(prendre).filter((f): f is CkChamp => f !== null)
+  const lignes = CK_DIAG_LIGNES.map(([libelle, base]) => ({ libelle, resultat: prendre(base), date: prendre(`${base}_date`), commentaire: prendre(`${base}_commentaire`) }))
+    .filter((l) => l.resultat || l.date || l.commentaire)
+  return { chiffres, drapeaux, lignes, reste: fields.filter((f) => !pris.has(f[1])) }
+}
+function CkDiagnosticsDessin(props: { groupes: ReturnType<typeof repartirDiagnostics>; c: string;
+  caseDuBien: (label: string, k: string, unit?: string, options?: { vide?: string; dateZeroVide?: boolean }) => ReactNode }) {
+  const { chiffres, drapeaux, lignes } = props.groupes
+  const cellule = (f: CkChamp | null, options?: { vide?: string; dateZeroVide?: boolean }) =>
+    f ? props.caseDuBien(f[0], f[1], f[2], options) : <span className="fa-ck-lb-tiret">—</span>
+  return (
+    <div className="fa-ck-lb-diag" style={{ ['--c']: props.c } as CSSProperties}>
+      {chiffres.length ? <div className="fa-ck-lb-dpe">{chiffres.map((f) => props.caseDuBien(f[0], f[1], f[2], { dateZeroVide: f[1] === 'dpe_date' }))}</div> : null}
+      {drapeaux.length ? <div className="fa-ck-lb-drapeaux">{drapeaux.map((f) => props.caseDuBien(f[0], f[1], f[2]))}</div> : null}
+      {lignes.length ? (
+        <table className="fa-ck-lb-diagtab">
+          <thead><tr><th scope="col">Diagnostic</th><th scope="col">Résultat</th><th scope="col">Date</th><th scope="col">Commentaire</th></tr></thead>
+          <tbody>
+            {lignes.map((l) => (
+              <tr key={l.libelle}>
+                <th scope="row">{l.libelle}</th>
+                <td>{cellule(l.resultat)}</td>
+                <td>{cellule(l.date, { vide: '—', dateZeroVide: true })}</td>
+                <td className="com">{cellule(l.commentaire, { vide: '—' })}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : null}
     </div>
   )
 }
@@ -32936,6 +32989,9 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   const demandeSyndicBienCran = useCranCouplesVisible('partenaires_syndic_demande', props.profileRole)
   // LOT 5 (06/11) : la carte « Diagnostiqueur » (tout bien), même geste que le syndic.
   const diagBienCran = useCranCouplesVisible('partenaires_diag', props.profileRole)
+  // PARTENAIRES 4b / 4c (09/11/2026, §28.12, planches Copro / Diag validées le 06/11) : « Le Bien » redessiné --
+  // carte du syndic / du diagnostiqueur EN TÊTE, cases en grille, diagnostics en tableau. Mêmes champs, mêmes gestes.
+  const designBienCk = useCranCouplesVisible('partenaires_design_bien', props.roleConnecte ?? props.profileRole)
   // Plan, étape 2b (07/11/2026) : même cran que l'assistant. Allumé : dans « Le Bien », le texte libre « Diagnostiqueur »
   // cède la place à la carte (Hektor l'ignorait), la carte du syndic entre dans « Copropriété », et « ＋ Nouveau » s'ajoute.
   const choixPartenairesSaisieCk = useCranCouplesVisible('partenaires_choix_saisie', props.roleConnecte ?? props.profileRole)
@@ -34784,6 +34840,31 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                 const total = sec.fields.length
                 const filled = sec.fields.filter(([, k]) => fval(k).trim() && fval(k).trim() !== '0').length
                 const ckSecOpen = ckOpenSecs.has(sec.key)
+                // 4b / 4c : la même carte qu'avant, mais EN TÊTE et habillée en ticket quand le cran est allumé.
+                const designBien = designBienCk && (sec.key === 'copropriete' || sec.key === 'diagnostics')
+                const cartePartenaire = choixPartenairesSaisieCk && !isLightweightDetail && sec.key === 'copropriete' && syndicChoixCran ? (
+                  <SyndicDuBien
+                    habillage={designBien ? 'ticket' : undefined}
+                    appDossierId={dossier.app_dossier_id ?? null}
+                    hektorAnnonceId={Number(dossier.hektor_annonce_id) || null}
+                    diagnosticsHektor={props.detail.diagnostics_contacts_console_json}
+                    latitude={Number(props.detail.latitude_detail) || null}
+                    longitude={Number(props.detail.longitude_detail) || null}
+                    nouveauPossible
+                  />
+                ) : choixPartenairesSaisieCk && !isLightweightDetail && sec.key === 'diagnostics' && diagBienCran ? (
+                  <SyndicDuBien
+                    role="diagnostiqueur"
+                    appDossierId={dossier.app_dossier_id ?? null}
+                    hektorAnnonceId={Number(dossier.hektor_annonce_id) || null}
+                    habillage={designBien ? 'ticket' : undefined}
+                    diagnosticsHektor={props.detail.diagnostics_contacts_console_json}
+                    nouveauPossible
+                  />
+                ) : null
+                const caseDuBien = (label: string, k: string, unit?: string, options?: { vide?: string; dateZeroVide?: boolean }) => (
+                  <CkInlineField key={k} label={label} name={k} unit={unit} value={fval(k)} edited={k in edited} readOnly={isLightweightDetail || CK_NON_PUSHABLE_INLINE.has(k)} onSave={onFieldSave} vide={options?.vide} dateZeroVide={options?.dateZeroVide} />
+                )
                 return (
                   <div key={sec.key} className={`fa-ck-lb-secwrap fa-ck-lb-acc${ckSecOpen ? ' open' : ''}`} style={{ ['--sc']: sec.c, ['--sbg']: sec.bg } as CSSProperties}>
                     <button type="button" className="fa-ck-pub-sec fa-ck-lb-sectrig" aria-expanded={ckSecOpen} onClick={() => toggleCkSec(sec.key)}>
@@ -34794,10 +34875,10 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                     </button>
                     {ckSecOpen ? (
                     <div className="fa-ck-lb-secbody">
-                    <div className="fa-ck-lb-feats" style={{ ['--c']: sec.c } as CSSProperties}>
-                      {sec.fields.map(([label, k, unit]) => (
-                        <CkInlineField key={k} label={label} name={k} unit={unit} value={fval(k)} edited={k in edited} readOnly={isLightweightDetail || CK_NON_PUSHABLE_INLINE.has(k)} onSave={onFieldSave} />
-                      ))}
+                    {designBien && cartePartenaire ? <div className="fa-ck-lb-tete-carte">{cartePartenaire}</div> : null}
+                    {designBien && sec.key === 'diagnostics' ? <CkDiagnosticsDessin groupes={repartirDiagnostics(sec.fields)} c={sec.c} caseDuBien={caseDuBien} /> : null}
+                    <div className={`fa-ck-lb-feats${designBien && sec.key === 'copropriete' ? ' fa-ck-lb-feats4' : ''}`} style={{ ['--c']: sec.c } as CSSProperties}>
+                      {(designBien && sec.key === 'diagnostics' ? repartirDiagnostics(sec.fields).reste : sec.fields).map(([label, k, unit]) => caseDuBien(label, k, unit))}
                       {/* Éléments de la parcelle cadastrale RETENUE (lecture) — récupérés au clic sur la carte
                           ci-dessous ; source unique = app_dossier_estimation.sources.cadastre (partagée avec l'estimation). */}
                       {sec.key === 'localisation' && ckParcelle ? (
@@ -34809,25 +34890,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                         </>
                       ) : null}
                     </div>
-                    {choixPartenairesSaisieCk && !isLightweightDetail && sec.key === 'copropriete' && syndicChoixCran ? (
-                      <SyndicDuBien
-                        appDossierId={dossier.app_dossier_id ?? null}
-                        hektorAnnonceId={Number(dossier.hektor_annonce_id) || null}
-                        diagnosticsHektor={props.detail.diagnostics_contacts_console_json}
-                        latitude={Number(props.detail.latitude_detail) || null}
-                        longitude={Number(props.detail.longitude_detail) || null}
-                        nouveauPossible
-                      />
-                    ) : null}
-                    {choixPartenairesSaisieCk && !isLightweightDetail && sec.key === 'diagnostics' && diagBienCran ? (
-                      <SyndicDuBien
-                        role="diagnostiqueur"
-                        appDossierId={dossier.app_dossier_id ?? null}
-                        hektorAnnonceId={Number(dossier.hektor_annonce_id) || null}
-                        diagnosticsHektor={props.detail.diagnostics_contacts_console_json}
-                        nouveauPossible
-                      />
-                    ) : null}
+                    {!designBien ? cartePartenaire : null}
                     {/* Carte interactive du secteur DANS le bloc Localisation (leaflet + IGN + parcellaire). Cliquer
                         une parcelle la retient pour toute l'app (Le Bien + Estimation), app-only. */}
                     {sec.key === 'localisation' ? (

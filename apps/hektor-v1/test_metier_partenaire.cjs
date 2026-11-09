@@ -417,6 +417,16 @@ controle("(102) lot 5 : branchements derrière `partenaires_diag` : fiche (biens
   (app.match(/useCranCouplesVisible\('partenaires_diag'/g) || []).length === 3 && /const ficheDiagActive = diagCran && profilPartenaire\?\.famille === 'diag'/.test(app)
   && /ficheDiagActive \? <DiagChiffres vue=\{ficheDiag\.vue\} \/>/.test(app) && /: ficheDiagActive \? <DiagBiens /.test(app)
   && /<SyndicDuBien\s+role="diagnostiqueur"\s+appDossierId/.test(app) && /<SyndicDuBien\s+role="diagnostiqueur"\s+variante="telephone"/.test(app) && /modele="diag"/.test(app));
+// 4b / 4c (09/11, §28.12) : « Le Bien » redessiné derrière son cran ; la case garde la VRAIE valeur pour la modification
+// (« 0000-00-00 » n'est montré « — » qu'à l'affichage) ; aucun champ perdu (le reste retombe dans la grille d'avant).
+controle("(102 bis) 4b/4c : cran `partenaires_design_bien`, carte en tête habillée en ticket, valeur réelle à la modification, aucun champ perdu",
+  /useCranCouplesVisible\('partenaires_design_bien', props\.roleConnecte \?\? props\.profileRole\)/.test(app)
+  && /const designBien = designBienCk && \(sec\.key === 'copropriete' \|\| sec\.key === 'diagnostics'\)/.test(app)
+  && /\{designBien && cartePartenaire \? <div className="fa-ck-lb-tete-carte">\{cartePartenaire\}<\/div> : null\}/.test(app)
+  && /\{!designBien \? cartePartenaire : null\}/.test(app)
+  && /const montre = dateZeroVide && \/\^0000-00-00\/\.test\(raw\) \? '' : raw/.test(app) && /const start = \(\) => \{ if \(readOnly\) return; setDraft\(raw\); setEditing\(true\) \}/.test(app)
+  && /return \{ chiffres, drapeaux, lignes, reste: fields\.filter\(\(f\) => !pris\.has\(f\[1\]\)\) \}/.test(app)
+  && /repartirDiagnostics\(sec\.fields\)\.reste : sec\.fields/.test(app));
 const patch5 = fs.readFileSync(path.resolve(__dirname, "..", "..", "supabase", "patch_partenaire_du_bien_2026-11-06.sql"), "utf8");
 controle("(103) lot 5 : le patch générique (rôle syndic ou diagnostiqueur seulement, droit sur le bien, métier au registre, un seul diagnostiqueur par bien, anon fermé)",
   /WHEN 'syndic' THEN 'syndic' WHEN 'diagnostiqueur' THEN 'diagnostiqueur' END/.test(patch5) && /app_console_can_access_dossier\(p_app_dossier_id, p_hektor_annonce_id::text\)/.test(patch5)

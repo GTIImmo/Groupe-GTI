@@ -3423,6 +3423,56 @@ l'Ondaine 42700 Firminy, Copropriété = Oui. Départ : 85 liens actifs, 0 sans 
 - ✅ **APPLIQUÉ EN PRODUCTION le 09/11 à 08:15 (« Oui, applique »)** — base calme (0 requête active, file vide). Contrôle
   en `authenticated` (admin) juste après : index **valide**, 248 Ko ; anon **non**, authenticated **oui** ; **1 132
   numéros en 10,1 ms**, **identiques** à l'ancienne lecture ; 1 132 fiches relues par numéro.
+  Poussé (**6c2b58c**), Vercel prêt, le code servi appelle la fonction. **VU EN LIGNE** : catalogue des partenaires
+  ouvert, **634 notaires / 766 partenaires** (les mêmes chiffres que le matin), console sans erreur ; côté base
+  (pg_stat_statements) : **3 appels de l'app, 8,3 ms en moyenne, 10 ms au plus**.
+
+#### 28.11 — ALLUMÉ POUR TOUS (09/11, 08:22:49, « Allumer pour tous »)
+- `app_setting.partenaires_choix_saisie` : `admin` → **`on`** (choisir syndic / diagnostiqueur, et « ＋ Nouveau », dans
+  l'assistant de création et dans « Le Bien » ; les champs texte d'avant restent masqués) ;
+- `app_setting.partenaires_design_contact` : `admin` → **`on`** (onglet Contact : carte du mandant et partenaires en
+  « ticket » ; mêmes contenus, mêmes gestes).
+- Seuls ces deux crans de l'écran lisent ces clés (App.tsx l. 15132, 32941, 32944) ; les deux passent par `roleConnecte`
+  (défaut de la fiche sans `profileRole` corrigé le 07/11). Contrôle : un négociateur (rôle `authenticated`, jeton simulé)
+  lit bien les deux à « on ». Les écritures restent gardées par la base (`app_partenaire_du_bien` : droit sur le bien).
+- **Retour arrière** : remettre la valeur `admin` (une ligne chacune) — l'écran revient à l'état d'avant au chargement.
+- Non vu : l'écran d'un négociateur (pas de compte d'essai ouvert de mon côté).
+- Suite prévue (étape 3, §28.7) : le ménage des anciens champs texte « Syndic » / « Diagnostiqueur » — à faire une fois
+  l'allumage éprouvé quelques jours.
+
+#### 28.12 — Étape 4b / 4c (Copropriété, Diagnostics) : AUDIT (09/11, « Oui, 4b et 4c ») — rien codé
+- **Les planches validées** : canevas https://claude.ai/artifact/RcvReTV74PM2L1ZEEWdoNq, `project/Copro.dc.html` et
+  `project/Diag.dc.html` (06/11, « Planches 2 à 4 refaites dans ce style »).
+- **L'écran réel** : « Le Bien » du cockpit, `App.tsx` ~l. 34769 (`CK_LB_SECTIONS` l. 30626, chaque case =
+  `CkInlineField` l. 30662, enregistrement `onFieldSave`). Les cartes `SyndicDuBien` sont posées APRÈS les cases
+  (Copropriété : 7 cases ; Diagnostics : 34 cases en grille, `repeat(auto-fill, minmax(230px, 1fr))`).
+- **Mesure** : sur 13 534 biens vivants, **13 518** portent au moins une date « 0000-00-00 » dans leurs diagnostics
+  (elle s'affiche telle quelle aujourd'hui).
+- **Ce qui est proposé** (mêmes champs, mêmes gestes, rien d'ajouté) : 4b la carte du syndic en TÊTE (habillage
+  « ticket » de l'onglet Contact), les 7 cases en grille de 4 ; 4c la carte du diagnostiqueur en tête, les chiffres du
+  DPE en grandes cases, les 4 cases DPE oui/non en ligne, les 8 diagnostics en tableau résultat / date / commentaire
+  (chaque cellule reste une case modifiable en place), une date « 0000-00-00 » montrée « — » SANS réécrire la valeur ;
+  tout champ qui ne rentre dans aucun de ces groupes reste dans la grille d'aujourd'hui (aucun champ perdu). Le compteur
+  « x / y » de la section ne change pas. Pas de couleur par résultat (« Négatif » vert…) : ce serait une règle neuve.
+- **Cran neuf** `partenaires_design_bien` (absent = éteint ; à poser à `admin` avec accord). Téléphone : inchangé.
+- ✅ **CODÉ (09/11, « Vas y »), ni commité ni poussé, cran PAS posé (= éteint pour tous)** :
+  · `App.tsx` : cran `designBienCk` (par `roleConnecte`) ; dans la boucle de « Le Bien », la carte `SyndicDuBien` est
+    construite une fois (`cartePartenaire`) et posée EN TÊTE habillée en ticket si le cran est allumé, sinon APRÈS les
+    cases comme avant ; `caseDuBien` = la même `CkInlineField` ; Copropriété → grille de 4 (`fa-ck-lb-feats4`) ;
+    Diagnostics → `CkDiagnosticsDessin` (chiffres DPE, cases oui/non, tableau des 8 diagnostics) + `repartirDiagnostics`
+    qui renvoie le `reste` dans la grille d'avant ; `CkInlineField` gagne deux options d'AFFICHAGE facultatives (`vide`,
+    `dateZeroVide`) — la modification part toujours de la valeur réelle (`setDraft(raw)`) ;
+  · `le-bien-design.css` (neuf), importé après `contact-du-bien.css` ; aucune règle ne s'applique sans les classes posées
+    derrière le cran ;
+  · `lib/api.ts` : le mode maquette (sans base) allume aussi `partenaires_design_bien` (comme les autres crans du chantier) ;
+  · `test_metier_partenaire.cjs` : **(102 bis)** ; le (102) restait vert en gardant `appDossierId` juste après `role`.
+- **Contrôle** : build vert, toute la suite verte. **VU dans l'aperçu local (mode maquette, Chrome 1280 px)** : Copropriété
+  (« Grand T3 Bellevue ») = carte syndic en tête, 7 cases en grille de 4, libellé au-dessus ; un clic sur « Lot » ouvre la
+  modification, Échap l'annule ; Diagnostics = carte en tête, DPE en grandes cases (210 / 32 / 980 € / 1 380 € /
+  15/05/2026 / 2021), 4 cases oui/non, tableau (Amiante Oui 15/05/2026 …), vides en « — ». Corrigé pendant le contrôle :
+  la règle globale `table th` donnait un fond gris et des majuscules aux en-têtes de ligne. Téléphone : composant à part
+  (`MobileDossierDetail`), non touché. Non vu : une vraie date « 0000-00-00 » à l'écran (la maquette locale n'en a pas ;
+  la règle est tenue par le contrôle (102 bis)).
 
 ### 7 ter. Les dépendances (techniques, pas un ordre décidé)
 

@@ -1,0 +1,61 @@
+/* PARTENAIRES 4b / 4c (09/11/2026, note partenaires §28.12) — « Le Bien » redessiné, cran `partenaires_design_bien`.
+   Planches « Copro » et « Diag » validées le 06/11. MÊMES champs, MÊMES gestes : chaque case reste la case modifiable
+   en place (CkInlineField) ; seul l'habillage change. Rien ici ne s'applique tant que le cran est éteint (les classes
+   ne sont posées que derrière lui). */
+
+/* La carte du syndic / du diagnostiqueur, EN TÊTE de la section. */
+.fa-ck-lb-tete-carte { margin: 10px 0 12px; }
+
+/* 4b · Copropriété : les cases en grille de 4, le libellé AU-DESSUS de la valeur. */
+.fa-ck-lb-feats.fa-ck-lb-feats4 { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.fa-ck-lb-feats4 .fa-ck-lb-feat,
+.fa-ck-lb-dpe .fa-ck-lb-feat,
+.fa-ck-lb-drapeaux .fa-ck-lb-feat { flex-direction: column; align-items: flex-start; gap: 3px; padding: 9px 12px 10px; border-radius: 13px; background: #fbf9f6; border-color: #f0eae2; }
+.fa-ck-lb-feats4 .fa-ck-lb-feat .fl,
+.fa-ck-lb-dpe .fa-ck-lb-feat .fl,
+.fa-ck-lb-drapeaux .fa-ck-lb-feat .fl { font-size: 9.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--fa-muted, #8a807a); }
+.fa-ck-lb-feats4 .fa-ck-lb-feat .fv,
+.fa-ck-lb-dpe .fa-ck-lb-feat .fv,
+.fa-ck-lb-drapeaux .fa-ck-lb-feat .fv { margin-left: 0; text-align: left; font-size: 15px; font-variant-numeric: tabular-nums; color: var(--fa-ink, #1c1815); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fa-ck-lb-feats4 .fa-ck-lb-feat.off .fv,
+.fa-ck-lb-dpe .fa-ck-lb-feat.off .fv,
+.fa-ck-lb-drapeaux .fa-ck-lb-feat.off .fv { font-size: 11.5px; color: var(--fa-faint, #a89e95); border: 1px dashed #ddd3c7; border-radius: 99px; padding: 1px 9px; margin-top: 2px; }
+.fa-ck-lb-feats4 .fa-ck-lb-feat.editable:hover,
+.fa-ck-lb-dpe .fa-ck-lb-feat.editable:hover,
+.fa-ck-lb-drapeaux .fa-ck-lb-feat.editable:hover { background: #fff; }
+.fa-ck-lb-feats4 .fa-ck-inline-ed,
+.fa-ck-lb-dpe .fa-ck-inline-ed,
+.fa-ck-lb-drapeaux .fa-ck-inline-ed { width: 100%; }
+
+/* 4c · Diagnostics : les chiffres du DPE en grandes cases, ses cases oui / non en ligne, puis le tableau. */
+.fa-ck-lb-diag { margin-bottom: 8px; overflow-x: auto; }
+.fa-ck-lb-dpe { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 8px; }
+.fa-ck-lb-dpe .fa-ck-lb-feat:not(.off) .fv { font-family: Fraunces, Spectral, Georgia, serif; font-weight: 600; font-size: 21px; letter-spacing: -.01em; }
+.fa-ck-lb-drapeaux { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 10px; }
+.fa-ck-lb-drapeaux .fa-ck-lb-feat { padding: 7px 11px 8px; }
+.fa-ck-lb-drapeaux .fa-ck-lb-feat .fv { font-size: 13px; }
+
+.fa-ck-lb-diagtab { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 12.5px; }
+.fa-ck-lb-diagtab th[scope="col"] { text-align: left; font-size: 9.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--fa-muted, #8a807a); padding: 0 10px 6px; }
+.fa-ck-lb-diagtab th { background: transparent; }
+.fa-ck-lb-diagtab th[scope="row"] { text-align: left; font-size: 12.5px; font-weight: 800; letter-spacing: 0; text-transform: none; color: var(--fa-ink, #1c1815); padding: 6px 10px; border-top: 1px solid #f2eee8; white-space: nowrap; width: 19%; vertical-align: middle; }
+.fa-ck-lb-diagtab td { padding: 3px 6px; border-top: 1px solid #f2eee8; vertical-align: middle; }
+.fa-ck-lb-diagtab tbody tr:hover td,
+.fa-ck-lb-diagtab tbody tr:hover th { background: #fbf9f6; }
+.fa-ck-lb-diagtab td:nth-child(2) { width: 18%; }
+.fa-ck-lb-diagtab td:nth-child(3) { width: 15%; }
+/* Dans le tableau, la case perd son cadre : le libellé reste lu par les lecteurs d'écran, pas affiché. */
+.fa-ck-lb-diagtab .fa-ck-lb-feat { border: 0; background: none; box-shadow: none; padding: 3px 4px; border-radius: 8px; gap: 6px; }
+.fa-ck-lb-diagtab .fa-ck-lb-feat.off { border: 0; background: none; }
+.fa-ck-lb-diagtab .fa-ck-lb-feat.editable:hover { box-shadow: none; background: #fff; outline: 1px solid color-mix(in srgb, var(--c, #2f8a5b) 40%, #eae1d7); }
+.fa-ck-lb-diagtab .fa-ck-lb-feat .fl { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.fa-ck-lb-diagtab .fa-ck-lb-feat .fv { margin-left: 0; text-align: left; font-size: 12.5px; font-weight: 800; color: var(--fa-ink, #1c1815); }
+.fa-ck-lb-diagtab .fa-ck-lb-feat.off .fv { font-weight: 600; font-style: normal; color: var(--fa-faint, #a89e95); }
+.fa-ck-lb-diagtab td.com .fa-ck-lb-feat:not(.off) .fv { font-family: Fraunces, Georgia, serif; font-weight: 500; font-style: italic; color: var(--fa-ink-soft, #544b45); white-space: normal; }
+.fa-ck-lb-diagtab .fa-ck-inline-ed { width: 100%; }
+.fa-ck-lb-tiret { color: var(--fa-faint, #a89e95); padding: 0 4px; }
+
+@media (max-width: 1100px) {
+  .fa-ck-lb-feats.fa-ck-lb-feats4, .fa-ck-lb-drapeaux { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .fa-ck-lb-dpe { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
