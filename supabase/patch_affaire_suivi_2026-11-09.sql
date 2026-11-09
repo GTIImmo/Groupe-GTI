@@ -262,15 +262,17 @@ select '⑨ TÉMOIN : le gel porte bien des « ID Unique » distincts',
 union all
 -- ⛔⛔ LES DEUX TÉMOINS DE CONFORMITÉ AU CHAÎNAGE. Frédéric, 09/11 : « est-ce que
 --    ton patch est conforme au système de chaînage ? » — et ils manquaient.
---    ⭐ POURQUOI ILS SONT INDISPENSABLES : la fermeture d'une chaîne par
---    `date_annulation` devra remonter chaîne -> transactions -> app_classeur_lien
---    -> id_unique -> ici. Si une chaîne portait DEUX lignes du classeur, elle
---    aurait DEUX dates d'annulation candidates et la règle ne saurait pas laquelle
---    prendre. Aujourd'hui la correspondance est 1 ↔ 1 (mesuré le 09/11 : 4 688
---    lignes ↔ 4 688 chaînes, zéro exception sur 12 422 transactions), mais c'est
---    exactement ce qu'une FUSION casserait — le cas dangereux nommé par
+--    ⭐ POURQUOI ILS RESTENT INDISPENSABLES, MÊME SANS LA DATE D'ANNULATION :
+--    cette table est clé par `id_unique`, la ligne du classeur. Pour afficher ses
+--    sept colonnes sur une AFFAIRE, l'écran devra remonter
+--    chaîne -> transactions -> app_classeur_lien -> id_unique -> ici. Si une chaîne
+--    portait DEUX lignes du classeur, elle aurait DEUX jeux de valeurs candidates
+--    et rien ne dirait lequel montrer. Aujourd'hui la correspondance est 1 ↔ 1
+--    (mesuré le 09/11 : 4 688 lignes ↔ 4 688 chaînes, zéro exception sur 12 422
+--    transactions), mais c'est exactement ce qu'une FUSION casserait — le cas
+--    dangereux nommé par
 --    notice/ANALYSE_LIEN_PAR_DOSSIER_OU_PAR_TRANSACTION_2026-10-29.md § 1 ③.
---    ⛔ Ces deux contrôles doivent donc être REJOUÉS avant d'allumer la fermeture,
+--    ⛔ Ces deux contrôles doivent donc être REJOUÉS avant de brancher l'affichage,
 --    pas seulement aujourd'hui.
 select '⑩ CONFORMITÉ : 1 ligne du classeur = 1 chaîne, sans exception',
        count(*),
