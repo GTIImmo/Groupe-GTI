@@ -141,9 +141,10 @@ controle("(44) branchement : blocs du profil, et Recherche cachée sans recherch
   && /const masquerRecherche = \(estFicheNotaire \|\| Boolean\(blocsPartenaire\)\) && Number\(props\.contact\.active_search_count \?\? 0\) === 0/.test(app));
 controle("(45) les 4 blocs sont posés à leur place (chiffres avant le tableau, section, À venir, avec nous)",
   /<PartenaireChiffres blocs=\{blocsPartenaire\} \/>[\s\S]{0,120}fa-cx-dash-top/.test(app)
-  && /<NotaireDossiers[\s\S]{0,800}<PartenaireSectionMetier blocs=\{blocsPartenaire\} \/>/.test(app)
+  && /<NotaireDossiers[\s\S]{0,1200}<PartenaireSectionMetier blocs=\{blocsPartenaire\} \/>/.test(app)
   && /<NotaireAVenir vue=\{vueNotaire\} \/> : null\}\s*\{blocsPartenaire \? <PartenaireAVenir/.test(app)
   && /<NotaireVentesEtAvecNous[^\n]*\n\s*\{(ficheSyndicActive \? <SyndicNosBiens vue=\{ficheSyndic\.vue\} \/> : )?blocsPartenaire \? <PartenaireAvecNous/.test(app)
+  // lot 6 (09/11) : la section du courtier s'insère avant PartenaireSectionMetier (marge 800 -> 1200, ordre inchangé).
   // lot 5 (06/11) : le chiffre et la section du diagnostiqueur s'intercalent avant les blocs 3.3b, qui restent en dernier recours.
   && /: ficheDiagActive \? <DiagChiffres vue=\{ficheDiag\.vue\} \/> : blocsPartenaire \? <PartenaireChiffres blocs=\{blocsPartenaire\} \/> : null\}/.test(app));
 const fp = fs.readFileSync(path.resolve(__dirname, "src", "FichePartenaire.tsx"), "utf8");
@@ -498,8 +499,39 @@ controle("(111) lot 7 : les étapes de la fiche (contact = tous, mandat compté,
 const aaTsx = fs.readFileSync(path.resolve(__dirname, "src", "AffairesApportees.tsx"), "utf8");
 controle("(112) lot 7 : derrière le cran `partenaires_apporteur` ; écrit par `app_partenaire_du_client` SEULEMENT (rien chez Hektor), lit les liens objet client",
   /useCranCouplesVisible\('partenaires_apporteur', props\.profileRole\)/.test(app) && /: apporteurActif \? <AffairesApportees /.test(app)
-  && /supabase\.rpc\('app_partenaire_du_client', \{ p_role: 'apporteur'/.test(aaTsx) && (aaTsx.match(/\.rpc\(/g) || []).length === 1
+  && /supabase\.rpc\('app_partenaire_du_client', \{ p_role: role,/.test(aaTsx) && /const role: RolePartenaire = props\.role \?\? 'apporteur'/.test(aaTsx)
+  && (aaTsx.match(/\.rpc\(/g) || []).length === 1
   && !/\.(insert|update|upsert|delete)\(/.test(aaTsx) && !/createHektor|console_job/.test(aaTsx) && /\.eq\('objet', 'client'\)/.test(aaTsx));
+
+// ── LOT 6 (09/11) — courtier et banque : « Acquéreurs suivis », « Orienter un acquéreur » (§28.21) ──
+const co = aa.compterOrientes(apports);
+controle("(113) lot 6 : un acquéreur sans étape est « Orienté » ; les étapes de la fiche (orientés = tous, accord / offre de prêt / financés « en construction »)",
+  aa.etapeDuClient([], "Orienté").libelle === "Orienté" && aa.etapeDuClient(["acquereur_compromis"], "Orienté").libelle === "Compromis (acquéreur)"
+  && co["Orientés"] === 3 && co["Accord de principe"] === null && co["Offre de prêt"] === null && co["Financés"] === null);
+let oa;
+try {
+  const { code } = esbuild.transformSync(fs.readFileSync(path.resolve(__dirname, "src", "lib", "orienterAcquereur.ts"), "utf8"), { loader: "ts", format: "cjs" });
+  const module = { exports: {} };
+  vm.runInNewContext(code, { module, exports: module.exports });
+  oa = module.exports;
+} catch (e) { console.log(`⛔ ${e.message}`); process.exit(2); }
+const achat = { offre: "0", types_json: { 1: "Maison", 2: "Appartement" }, villes_json: ["Veauche 42340", "Saint-Galmier 42330"], prix_min: "", prix_max: "250000" };
+controle("(114) lot 6 : seule une recherche d'ACHAT (offre 0) décrit le projet ; une location ne dit rien au courtier",
+  oa.rechercheAchat([{ offre: "2" }, achat]) === achat && oa.rechercheAchat([{ offre: "2" }]) === null && oa.rechercheAchat([]) === null);
+const m1 = oa.messageOrientation({ client: "M. Jean ESSAI", etape: "offre", recherche: achat });
+controle("(115) lot 6 : le message dit le projet (biens, budget, secteur) et où il en est ; signé « Groupe GTI » par défaut",
+  m1.sujet === "Un acquéreur à accompagner : M. Jean ESSAI" && m1.corps.includes("- Bien recherché : Maison, Appartement")
+  && m1.corps.includes("- Budget : jusqu'à 250 000 €") && m1.corps.includes("- Secteur : Veauche 42340, Saint-Galmier 42330")
+  && m1.corps.includes("une offre d’achat est en cours") && m1.corps.trim().endsWith("Groupe GTI"), m1.corps);
+const m2 = oa.messageOrientation({ client: "M. Jean ESSAI", etape: "contact", recherche: null });
+controle("(116) lot 6 : une donnée absente n'est pas écrite ; ⛔ JAMAIS de coordonnées du client (le message n'en reçoit pas)",
+  !/Budget|Secteur|Bien recherché|Où il en est/.test(m2.corps) && !/@|\d{2}[ .]?\d{2}[ .]?\d{2}[ .]?\d{2}[ .]?\d{2}/.test(m1.corps + m2.corps)
+  && !/phone|email|telephone/i.test(fs.readFileSync(path.resolve(__dirname, "src", "lib", "orienterAcquereur.ts"), "utf8").replace(/^\/\/.*$/gm, "")));
+controle("(117) lot 6 : derrière le cran `partenaires_courtier` (famille courtier = courtier ET banque) ; même composant, rôle courtier ; le message ne lit que la recherche (pas de coordonnées)",
+  /useCranCouplesVisible\('partenaires_courtier', props\.profileRole\)/.test(app) && /courtierActif = courtierCran && profilPartenaire\?\.famille === 'courtier'/.test(app)
+  && /: courtierActif \? <AffairesApportees role="courtier" /.test(app) && /courtierActif && props\.canManageContacts \?/.test(app)
+  && /from\('app_contact_search_current'\)\.select\('offre,types_json,villes_json,prix_min,prix_max'\)/.test(aaTsx)
+  && /messageOrientation\(\{ client: message\.client\.nom, etape: message\.client\.etape, recherche: message\.recherche \}\)/.test(aaTsx));
 
 console.log(echecs.length ? `\n${echecs.length} contrôle(s) en échec` : "\nTout est vert.");
 process.exit(echecs.length ? 1 : 0);

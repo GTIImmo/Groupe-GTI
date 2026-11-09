@@ -17,10 +17,11 @@ const roles = (v: unknown): string[] => {
   if (typeof v === 'string' && v.trim().startsWith('[')) { try { const a = JSON.parse(v); return Array.isArray(a) ? a.map(String) : [] } catch { return [] } }
   return []
 }
-export function etapeDuClient(relationRoles: unknown): { etape: EtapeApport; libelle: string } {
+// Lot 6 (09/11) : le même registre sert au courtier ; seul le libellé du client « sans étape » change (`defaut`).
+export function etapeDuClient(relationRoles: unknown, defaut = 'Contact apporté'): { etape: EtapeApport; libelle: string } {
   const r = new Set(roles(relationRoles))
   const trouve = ORDRE.find(([, role]) => r.has(role))
-  return trouve ? { etape: trouve[0], libelle: trouve[2] } : { etape: 'contact', libelle: 'Contact apporté' }
+  return trouve ? { etape: trouve[0], libelle: trouve[2] } : { etape: 'contact', libelle: defaut }
 }
 
 export type ClientApporte = { lienId: number; clientId: string; nom: string; ville: string | null; archive: boolean; poseLe: string | null; etape: EtapeApport; libelle: string }
@@ -33,6 +34,11 @@ export function compterEtapes(liste: ClientApporte[]): Record<'Contact apporté'
     'Commission due': null,
     'Réglé': null,
   }
+}
+// LOT 6 (09/11) — les étapes de la fiche d'un courtier ou d'une banque (BLOCS.courtier) : « Orientés » = tous ; l'accord de
+// principe, l'offre de prêt et le financement n'existent nulle part (0 donnée de prêt sur 18 582 affaires) : « en construction ».
+export function compterOrientes(liste: ClientApporte[]): Record<'Orientés' | 'Accord de principe' | 'Offre de prêt' | 'Financés', number | null> {
+  return { 'Orientés': liste.length, 'Accord de principe': null, 'Offre de prêt': null, 'Financés': null }
 }
 // Les plus avancés d'abord (vente → contact), puis le plus récent.
 export function trierApports(liste: ClientApporte[]): ClientApporte[] {
