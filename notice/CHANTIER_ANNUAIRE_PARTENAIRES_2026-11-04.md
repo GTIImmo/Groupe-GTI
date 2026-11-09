@@ -3376,6 +3376,53 @@ l'Ondaine 42700 Firminy, Copropriété = Oui. Départ : 85 liens actifs, 0 sans 
     documents des deux côtés** — rien de perdu pour les biens venus de Hektor.
   · Ce qui reste au numéro Hektor dans ce chantier : la complétion de :50 (pour les workers) et les archives.
   ⚠ Pas encore vu à l'écran ; aucun bien né dans l'app ne porte de lien aujourd'hui.
+  Poussé (**8bf46f0**, « Oui commit push »), Vercel prêt. **VU EN LIGNE le 09/11** (lecture seule, rien envoyé) : fiche
+  syndic IMMO DE FRANCE FOREZ VELAY (10217295) ouverte depuis le catalogue → **17 biens** (= la base), 8 avec documents de
+  copro, 11 en vente, 1 367 € ; « Demander un document » : le menu porte notre numéro (7589288), changer de bien met à
+  jour objet et message ; ouvrir un bien depuis la fiche → annonce 7589288, rubrique Copropriété → carte syndic « IMMO DE
+  FRANCE FOREZ VELAY n° 10217295, repris de Hektor le 04/11 ». Console : 0 erreur. ⚠ Remarque, non liée à ce correctif
+  (écran non touché) : la PREMIÈRE lecture du catalogue des partenaires a échoué sur « statement timeout » ; « Réessayer »
+  a marché aussitôt (766 partenaires).
+- 🔎 **Le délai dépassé du catalogue, mesuré (09/11, « Oui regarde »)** — rien de modifié :
+  · l'échec est à **07:14:51** (heure de Paris) ; à cette minute, le run de nuit (fin 07:39) écrivait le registre des affaires
+    (07:12:34 → 07:14:18) puis la doublure du registre des liens (07:14:19 →) : base occupée ;
+  · la requête lourde est celle des NOTAIRES (`CataloguePartenaires.tsx` l. 38-46) : « rôle notaire_vendeur OU
+    notaire_acquereur » dans `relation_roles_json`, triée par numéro, par pages de 1 000. **Aucun index sur cette colonne**
+    → chaque page parcourt TOUTE la table des contacts (94 895 fiches, 1 132 notaires) : page 1 = 91 233 fiches écartées,
+    page 2 = 93 763 (le décalage repart du début). Mesuré à chaud, en `authenticated` : 142 + 147 ms ;
+  · un utilisateur connecté a une limite de **8 s** par requête (`authenticated`, `statement_timeout=8s`) ; les lectures
+    réussies de cette forme vont jusqu'à **3,45 s** (pg_stat_statements, 52 appels, 146 884 blocs lus sur disque) — une
+    lecture annulée n'y est pas comptée, donc le nombre d'échecs passés n'est pas mesurable ;
+  · la même forme de filtre sert aux puces de rôle de l'annuaire des contacts (`lib/api.ts` l. 2586) ;
+  · remède proposé, NON fait : un index GIN (`jsonb_path_ops`) sur `relation_roles_json` — à répéter d'abord (vérifier
+    que les puces Mandants / Propriétaires de l'annuaire, qui trouvent beaucoup de fiches, ne changent pas de chemin).
+- 🔎 **Répétition de l'index (09/11 08:05, « Oui »), transaction ANNULÉE** — base calme (run fini, descente finie à
+  08:10, file vide) : index construit en **200 ms**, **248 Ko** ; mesuré en `authenticated` (admin), 8 lectures avant /
+  après (catalogue notaires p1/p2, annuaire Mandants page + compte, Propriétaires, Acquéreurs page + compte, Notaires) :
+  **aucune n'utilise l'index, temps inchangés** (catalogue 113 → 105 ms, 107 → 106 ms ; annuaire 1-8 ms). Sans RLS (même
+  transaction) : **Bitmap Index Scan, 3,5 ms, 678 blocs**. ⛔ **Cause : sous RLS, `@>` (`jsonb_contains`) n'est pas
+  LEAKPROOF** → la règle d'accès passe d'abord, ligne par ligne, et l'index est inutilisable (même famille que la mémoire
+  « RLS + ::text tuent l'index »). **L'index seul ne sert à rien pour l'écran.** Les puces de l'annuaire ne sont pas
+  gênées (elles trouvent vite 50 lignes dans l'ordre du tri).
+  · remède alternatif proposé, NON fait : index + une petite fonction `SECURITY DEFINER` qui ne rend QUE les numéros des
+    notaires (utilisateur actif, `anon` fermé) ; l'écran relit ensuite les fiches par numéro (`in`, 200 par 200, comme les
+    autres métiers) **sous la règle d'accès habituelle** : le périmètre ne change pas.
+- ✅ **PRÉPARÉ et RÉPÉTÉ (09/11, « oui »), PAS APPLIQUÉ** :
+  · `supabase/patch_catalogue_notaires_numeros_2026-11-09.sql` (+ `_INVERSE`, `_REPETITION`) : l'index GIN et
+    `app_catalogue_notaires_ids()` (SECURITY DEFINER, `is_app_user_active`, rend `text[]` des numéros, archives comprises,
+    même règle des deux côtés) ; anon fermé, authenticated + service_role ; garde : rien n'est écrit si l'un existe déjà ;
+    `lock_timeout` 3 s. Propriétaire de la table : `postgres` (BYPASSRLS) → la fonction lit l'index.
+  · **Répétition jouée, annulée : 8 OK, 0 KO** — 01 l'index sert · 02 mêmes 1 132 numéros que l'ancienne lecture, même
+    ordre · 03 autant de fiches relues par numéro · 04 **5,9 ms contre 85,5 ms** · 05 un négociateur voit les mêmes 1 132
+    fiches qu'avant · 06 compte inconnu refusé · 07 droits · 08 l'annuaire (puce Mandants) ne change pas de chemin.
+    Après coup : ni fonction ni index restés. (La répétition jouée portait le corps sans ses lignes de commentaire.)
+  · `CataloguePartenaires.tsx` : les notaires = numéros par la fonction puis fiches par numéro (200 par 200) ; **repli sur
+    la lecture d'avant** si la fonction manque ou refuse → l'écran peut partir AVANT ou APRÈS le patch sans casser.
+    `test_metier_partenaire.cjs` (61) : plus d'interdiction totale des fonctions, une seule lecture permise. Build vert,
+    tout vert. Ni commité, ni poussé.
+- ✅ **APPLIQUÉ EN PRODUCTION le 09/11 à 08:15 (« Oui, applique »)** — base calme (0 requête active, file vide). Contrôle
+  en `authenticated` (admin) juste après : index **valide**, 248 Ko ; anon **non**, authenticated **oui** ; **1 132
+  numéros en 10,1 ms**, **identiques** à l'ancienne lecture ; 1 132 fiches relues par numéro.
 
 ### 7 ter. Les dépendances (techniques, pas un ordre décidé)
 

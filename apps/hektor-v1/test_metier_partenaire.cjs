@@ -201,7 +201,10 @@ controle("(60) l'adresse garde « vue=metiers » ; « voir le contact » remet l
   && /function showContactInDirectory\(normalizedId: string, vue: 'clients' \| 'metiers' = 'clients'\) \{\s*setScreen\('contacts'\)[\s\S]{0,300}?setContactsVue\(vue\)/.test(app)
   && /if \(detailOpen\) \{ setAnnonceContactId\(normalizedId\); return \}\s*showContactInDirectory\(normalizedId\)\s*\}/.test(app));
 const catTsx = fs.readFileSync(path.resolve(__dirname, "src", "CataloguePartenaires.tsx"), "utf8");
-controle("(61) le catalogue ne fait que LIRE (aucune écriture, aucune fonction appelée)", !/\.(insert|update|upsert|delete|rpc)\(/.test(catTsx));
+// 09/11 (§28.10) : une seule fonction permise, la LECTURE des numéros des notaires (index), avec repli sur la lecture d'avant.
+controle("(61) le catalogue ne fait que LIRE (aucune écriture ; seule fonction : app_catalogue_notaires_ids, avec repli)",
+  !/\.(insert|update|upsert|delete)\(/.test(catTsx) && (catTsx.match(/\.rpc\(/g) || []).length === 1
+  && /\.rpc\('app_catalogue_notaires_ids'\)/.test(catTsx) && /relation_roles_json\.cs\./.test(catTsx));
 
 // ── 3.5, le dessin de la maquette (05/11, « oui ») ──
 const cg2 = cat.construireCatalogue([{ contact_id: "1", metier: "syndic" }, { contact_id: "2", metier: "syndic" }], [C("1"), C("2", { ville: "Firminy", phone_primary: "06" })], []);

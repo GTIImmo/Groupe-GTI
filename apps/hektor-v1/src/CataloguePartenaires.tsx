@@ -34,6 +34,21 @@ async function lireCatalogue(): Promise<Catalogue> {
     contacts.push(...((r.data ?? []) as ContactCatalogue[]))
   }
   // Les notaires : la règle actuelle (celle de la fiche notaire), les deux côtés de la table des parties.
+  // 09/11 (note partenaires §28.10) : sous la règle d'accès, la recherche par rôle ne peut pas servir de l'index et
+  // parcourait les 94 895 contacts (délai de 8 s dépassé pendant le run). On prend d'abord les NUMÉROS par la fonction
+  // (index, quelques ms), puis les fiches par numéro comme les autres métiers -- sous la règle habituelle. Si la fonction
+  // manque ou refuse, on retombe sur la lecture d'avant.
+  const numeros = await supabase.rpc('app_catalogue_notaires_ids')
+  if (!numeros.error && Array.isArray(numeros.data)) {
+    const idsNotaires = (numeros.data as unknown[]).map(String)
+    const notaires: ContactCatalogue[] = []
+    for (let i = 0; i < idsNotaires.length; i += 200) {
+      const r = await supabase.from('app_contact_current').select(COLONNES).in('hektor_contact_id', idsNotaires.slice(i, i + 200))
+      if (r.error) throw new Error(r.error.message)
+      notaires.push(...((r.data ?? []) as ContactCatalogue[]))
+    }
+    return construireCatalogue(registre, contacts, notaires)
+  }
   const notaires: ContactCatalogue[] = []
   for (let debut = 0; ; debut += PAGE) {
     const r = await supabase.from('app_contact_current').select(COLONNES)
