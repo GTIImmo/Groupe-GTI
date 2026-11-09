@@ -73,10 +73,78 @@ ONGLET = "Sheet1"
 #: ⭐ LES ALIAS CONFIRMES PAR FREDERIC (29/10) -- « OUI C'EST LA MEME PERSONNE ».
 #:   Preuves : l'alias SEUL negociateur donne 70/70 et 55/58 ; les deux noms ne
 #:   coexistent JAMAIS sur une ligne ; le nom cible n'apparait JAMAIS au classeur.
-ALIAS_NEGOCIATEUR = {
+#: ⭐ DEPUIS LE 09/11/2026 CES ALIAS VIVENT EN BASE, dans la table
+#:   `app_classeur_alias_negociateur` (posee avec l'accord de Frederic).
+#:   Ce dictionnaire n'est plus que le REPLI : si la table est illisible, on
+#:   garde les deux alias connus PLUTOT que de les perdre en silence -- sans eux
+#:   le rapport compte la meme personne deux fois sur 282 cases.
+#: ⛔ ET LE REPLI SE DIT A L'ECRAN. Un repli muet est un faux vert.
+#: ⚠ LES NOMBRES CI-DESSOUS SONT DES `hektor_user_id`, et le code les compare
+#:   bien a des hektor_user_id (l. 556) : il etait JUSTE. Mais un nombre seul est
+#:   AMBIGU -- 68 et 178 sont AUSSI des numeros de NEGOCIATEUR, et ils designent
+#:   alors Nadege PEYRARD et David BADIER, deux autres personnes. C'est pour ca
+#:   que la table porte `app_personne_id`, qui n'a qu'un seul sens possible.
+ALIAS_REPLI = {
     "GIRAUD": ("68", "Aline VALETTE"),
     "ALVES MENDES": ("178", "Lucie DECHANDON"),
 }
+
+#: Rempli par charger_alias() au demarrage. Jamais lu avant.
+ALIAS_NEGOCIATEUR: dict[str, tuple[str, str]] = {}
+
+
+def charger_alias(cl) -> str:
+    """Lit `app_classeur_alias_negociateur` et remplit ALIAS_NEGOCIATEUR.
+
+    La table porte `app_personne_id` ; le rapport, lui, compare des
+    `hektor_user_id`. On fait donc le pont par les FICHES de la personne -- et
+    une personne peut en avoir plusieurs, ce qu'un nombre code en dur ne savait
+    pas porter.
+
+    Rend une phrase a IMPRIMER : d'ou viennent les alias, et combien.
+    ⛔ Sur echec, on retombe sur ALIAS_REPLI et on le DIT.
+    """
+    global ALIAS_NEGOCIATEUR
+    try:
+        rangs = lire_tout(cl, "app_classeur_alias_negociateur",
+                          "texte_classeur,app_personne_id,nom_chez_nous",
+                          "texte_classeur.asc")
+        fiches = lire_tout(cl, "app_negociateur_fiche",
+                           "app_personne_id,hektor_user_id", "app_personne_id.asc")
+    except Exception as exc:  # noqa: BLE001
+        ALIAS_NEGOCIATEUR = dict(ALIAS_REPLI)
+        return ("alias : LECTURE DE LA TABLE RATEE (%s) -> REPLI sur les %d alias "
+                "codes. Ce n'est PAS un vert." % (type(exc).__name__, len(ALIAS_REPLI)))
+    if not rangs:
+        ALIAS_NEGOCIATEUR = dict(ALIAS_REPLI)
+        return ("alias : la table est VIDE -> REPLI sur les %d alias codes. "
+                "A verifier." % len(ALIAS_REPLI))
+
+    user_ids: dict[str, set[str]] = {}
+    for f in fiches:
+        pid = str(f.get("app_personne_id") or "").strip()
+        uid = str(f.get("hektor_user_id") or "").strip()
+        if pid and uid:
+            user_ids.setdefault(pid, set()).add(uid)
+
+    neuf: dict[str, tuple[str, str]] = {}
+    muets: list[str] = []
+    for r in rangs:
+        texte = str(r.get("texte_classeur") or "").strip()
+        pid = str(r.get("app_personne_id") or "").strip()
+        nom = str(r.get("nom_chez_nous") or "").strip()
+        ids = sorted(user_ids.get(pid, set()))
+        if not texte or not ids:
+            muets.append("%s (personne %s sans hektor_user_id)" % (texte, pid))
+            continue
+        # plusieurs fiches -> plusieurs user_id : on les garde tous, separes
+        for uid in ids:
+            neuf.setdefault(texte, (uid, nom))
+    ALIAS_NEGOCIATEUR = neuf
+    phrase = "alias : %d lus EN BASE (table du 09/11)" % len(neuf)
+    if muets:
+        phrase += " . ⚠ %d SANS IDENTIFIANT : %s" % (len(muets), ", ".join(muets))
+    return phrase
 
 #: ⭐ DE VRAIS ANCIENS NEGOCIATEURS, ABSENTS DE NOTRE REGISTRE (Frederic, 29/10).
 #:   ⛔ NE PAS les traiter comme des erreurs : c'est l'annuaire qui est incomplet.
@@ -354,6 +422,7 @@ def verdict(a_classeur, a_nous, egal) -> str:
 
 def main() -> int:
     cl = client()
+    print(charger_alias(cl))   # ⭐ AVANT tout calcul : le rapport s'en sert au ⑧
     entetes, lignes = charger_classeur()
     idx = {n: i for i, n in enumerate(entetes)}
 
@@ -650,7 +719,11 @@ def main() -> int:
     colonnes = ["ID Unique", "Mandat classeur", "Etat classeur", "roles geles", "chainage douteux"]
     for c in CHAMPS:
         colonnes += ["c_" + c, "n_" + c, "v_" + c]
-    dest = RACINE / "notice" / "A4_RAPPORT_GEL_TOUS_LES_CHAMPS_2026-10-29.csv"
+    # ⭐ LE RAPPORT PORTE LA DATE DE SA MESURE, pas une date figee dans le code.
+    #   Avant le 09/11 les deux noms etaient gravés au 29/10 : relancer le
+    #   rapport ECRASAIT la mesure d'origine en MENTANT sur sa date.
+    jour = date.today().isoformat()
+    dest = RACINE / "notice" / ("A4_RAPPORT_GEL_TOUS_LES_CHAMPS_%s.csv" % jour)
     with open(dest, "w", newline="", encoding="utf-8-sig") as f:
         w = csv.DictWriter(f, fieldnames=colonnes, delimiter=";", extrasaction="ignore")
         w.writeheader()
@@ -658,7 +731,7 @@ def main() -> int:
     print("\ndetail complet : %s  (%d lignes)" % (dest, len(detail)))
 
     ecarts = [d for d in detail if any(d.get("v_" + c) == ECART for c in CHAMPS)]
-    dest2 = RACINE / "notice" / "A4_RAPPORT_GEL_ECARTS_SEULS_2026-10-29.csv"
+    dest2 = RACINE / "notice" / ("A4_RAPPORT_GEL_ECARTS_SEULS_%s.csv" % jour)
     with open(dest2, "w", newline="", encoding="utf-8-sig") as f:
         w = csv.DictWriter(f, fieldnames=colonnes, delimiter=";", extrasaction="ignore")
         w.writeheader()
