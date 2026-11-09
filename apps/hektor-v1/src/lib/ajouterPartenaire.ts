@@ -36,16 +36,20 @@ const texte = (v: unknown) => String(v ?? '').trim()
 export const normaliser = (v: unknown) => texte(v).normalize('NFD').replace(/[̀-ͯ]/g, '')
   .replace(/[^\p{L}\p{N}]+/gu, ' ').replace(/\s+/g, ' ').trim().toLowerCase()
 
-// La recherche part dès 3 caractères. Le motif est celui d'un filtre « ilike » de PostgREST (« * » = n'importe quoi) :
-// les mots se suivent (« foncia loire » trouve « FONCIA LOIRE AUVERGNE ») ; un numéro se cherche par paires de chiffres
-// (« 0428550020 » trouve « 04.28.55.00.20 » comme « 04 28 55 00 20 », tels que les fiches les portent). Les caractères
-// qui casseraient le filtre (virgule, parenthèses, guillemets, « * », « % ») sont retirés.
-export function motifDeRecherche(saisie: string): string | null {
+// La recherche part dès 3 caractères. Les motifs sont ceux d'un filtre « ilike » de PostgREST (« * » = n'importe quoi) :
+// les mots se suivent (« foncia loire » trouve « FONCIA LOIRE AUVERGNE ») ; un numéro se cherche sous les TROIS formes
+// que portent les fiches — collé, en paires à points, en paires à espaces (« 0428550020 » trouve « 04.28.55.00.20 »).
+// 09/11, vu en ligne : un motif « *04*28*… » (n'importe quoi entre les paires) ramenait aussi d'AUTRES numéros. Les
+// caractères qui casseraient le filtre (virgule, parenthèses, guillemets, « * », « % ») sont retirés.
+export function motifsDeRecherche(saisie: string): string[] {
   const t = texte(saisie).replace(/[,()"*%\\]/g, ' ').replace(/\s+/g, ' ').trim()
-  if (t.length < 3) return null
-  const chiffres = t.replace(/[\s.\-]/g, '')
-  if (/^\+?\d{3,}$/.test(chiffres)) return `*${(chiffres.replace(/^\+/, '').match(/\d{1,2}/g) ?? []).join('*')}*`
-  return `*${t.split(' ').join('*')}*`
+  if (t.length < 3) return []
+  const chiffres = t.replace(/[\s.\-]/g, '').replace(/^\+/, '')
+  if (/^\d{3,}$/.test(chiffres)) {
+    const paires = chiffres.match(/\d{1,2}/g) ?? []
+    return [...new Set([`*${chiffres}*`, `*${paires.join('.')}*`, `*${paires.join(' ')}*`])]
+  }
+  return [`*${t.split(' ').join('*')}*`]
 }
 
 export type ContactTrouve = {

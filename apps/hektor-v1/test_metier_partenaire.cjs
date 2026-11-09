@@ -444,9 +444,10 @@ try {
 controle("(104) §28.13 les 6 métiers et leur code Hektor ; courtier et parrain SANS code (rien de parasite au registre) ; pas de notaire",
   J(ap.METIERS_AJOUT.map((m) => `${m.metier}:${m.hektor}`)) === J(["syndic:5", "diagnostiqueur:4", "apporteur:15", "courtier:", "parrain:", "banque:19"])
   && !ap.estMetierAjout("notaire") && ap.apparenceMetier("syndic").couleur === "#5b4a9e" && ap.libellesMetier("apporteur").enFaire === "En faire un apporteur");
-controle("(105) §28.13 la recherche : 3 caractères, mots qui se suivent, téléphone par paires, caractères dangereux retirés",
-  ap.motifDeRecherche("fo") === null && ap.motifDeRecherche("foncia loire") === "*foncia*loire*" && ap.motifDeRecherche("04 28 55 00 20") === "*04*28*55*00*20*"
-  && ap.motifDeRecherche("0428550020") === "*04*28*55*00*20*" && ap.motifDeRecherche("a,b(c)") === "*a*b*c*");
+controle("(105) §28.13 la recherche : 3 caractères, mots qui se suivent, téléphone sous ses 3 formes EXACTES (09/11 : pas de joker entre les paires), caractères dangereux retirés",
+  J(ap.motifsDeRecherche("fo")) === "[]" && J(ap.motifsDeRecherche("foncia loire")) === J(["*foncia*loire*"])
+  && J(ap.motifsDeRecherche("04 28 55 00 20")) === J(["*0428550020*", "*04.28.55.00.20*", "*04 28 55 00 20*"])
+  && J(ap.motifsDeRecherche("0428550020")) === J(["*0428550020*", "*04.28.55.00.20*", "*04 28 55 00 20*"]) && J(ap.motifsDeRecherche("a,b(c)")) === J(["*a*b*c*"]));
 const trouves = [
   { id: "1", nom: "Zèbre Syndic", ville: null, telephone: null, email: null, archive: false, metiers: ["syndic"], biens: 0 },
   { id: "2", nom: "Alpha Syndic", ville: null, telephone: null, email: null, archive: false, metiers: ["syndic"], biens: 7 },
