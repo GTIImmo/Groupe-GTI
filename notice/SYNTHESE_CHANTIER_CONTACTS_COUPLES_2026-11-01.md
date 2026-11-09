@@ -2303,3 +2303,12 @@ Passage du moniteur du 04/11 à 14:49 (heure de Paris) : 0 critique, 9 avertisse
 ⛔ **Écarté** : relever la limite de 8 s pour `service_role`. Cela toucherait le worker et tous les scripts.
 
 ⏰ **Le 06/11 au matin**, regarder les journaux Postgres de Supabase vers 05:30 UTC : y a-t-il un `canceling statement due to statement timeout` ? Puis compter les appels à `rpc/app_recalculer_types_tranche` : 19 attendus, tous en 200.
+
+## 78. CONTRÔLE DES TRANCHES DE 5 000 — QUATRE NUITS SANS DÉPASSEMENT *(09/11, « reprenons le chantier 8 » ; lecture seule)*
+
+**Ce qui est vérifié** (le ⏰ du §77, fait le 09/11 au lieu du 06/11) :
+- Les journaux de Supabase ne remontent que 24 h : seule la nuit du 09/11 est lisible chez eux. Les **19 appels** à `rpc/app_recalculer_types_tranche` sont **tous en 200**, de 05:25:41 à 05:26:09 UTC, et aucun `statement timeout` n'apparaît au journal Postgres. Le plus long écart entre deux appels est de 5,5 s, sous les 8 s.
+- Les nuits du 06, 07, 08 et 09/11 : l'étape « phase2 type des contacts depuis nos registres » finit en DONE chaque nuit, en 30 à 35 s (contre 26 s le 05/11 avec 7 tranches : 19 appels coûtent un peu plus de temps, mais aucun ne frôle la limite).
+- La garde de la descente a servi le 07/11 : le run a fini à 06:51:58, la descente de 06:45 a attendu (« le run quotidien tourne encore, on patiente »). Les autres nuits, le run finit entre 06:39 et 06:40.
+
+**Ce qui reste vrai** : les sorties Python ne figurent toujours pas au journal du run après l'étape du registre des partenaires (une ligne vide entre START et DONE). Le chiffre de contacts remis n'est donc lisible nulle part la nuit. Cause non cherchée (§76).
