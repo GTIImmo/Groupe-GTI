@@ -19,7 +19,7 @@
 | **6f** | **recherche créée dans Hektor** — le carnet « devenu acquéreur » est aveugle | audit §6 · §3 Recherche C5 | ⬜ |
 | **6g** | **2 recherches archivées disparues du cloud** (74680, 76218), 7 lignes accrochées | audit §6 · §3 Recherche C6/C7 | ⬜ |
 | **6h** | **RDV déplacé directement dans Google** — ne revient pas chez nous | audit §6 · §3 RDV C2 | ⬜ |
-| **6i** | **piste reçue du chantier ③** — les **fiches détail des biens clos** ne seraient plus rafraîchies (49624 : `hektor_mandat` dit 13/10, le détail dit 19/08) | `CHANTIER_3_HEKTOR_DABORD_2026-10-12.md` l. 3944 | ⬜ à mesurer ici |
+| **6i** | **piste reçue du chantier ③** — les **fiches détail des biens clos** ne seraient plus rafraîchies (49624 : `hektor_mandat` dit 13/10, le détail dit 19/08) | `CHANTIER_3_HEKTOR_DABORD_2026-10-12.md` l. 3944 | ⚠⚠ **ROUVERT le 02/11** — fermé le 15/10 sur une mesure FAUSSE (`synced_at` = heure de normalisation). Voir « 6i ROUVERT » sous la section 6i |
 
 **Ordre retenu : 6a d'abord** (seul point avec une date de péremption).
 
@@ -984,6 +984,77 @@ et la mesure ci-dessus le prouve *(8 806 en octobre)*.
 
 ➡ **6i se ferme sans correctif.** La seule chose à savoir : une archive modifiée chez Hektor
 est relue **la nuit suivante**, pas dans la seconde — et ça suffit.
+
+## ⚠⚠ 6i ROUVERT LE 02/11/2026 — LA MESURE DU 15/10 ÉTAIT FAUSSE
+
+**Le symptôme, signalé par Frédéric** : V790063303 (annonce 63303, mandat 18953), « Actif »,
+est **sans date** au registre des mandats. Chez Hektor, le mandat est complet : id 878,
+« Mandat de vente semi-exclusif », du 20/10/2026 au 19/11/2027.
+
+**La cause, mesurée** :
+- `sync_raw.py` ne relit `AnnonceById` **que si la `datemaj` du listing change**. La règle
+  est écrite, et c'est une décision (coût, bannissement d'IP de l'été) :
+  `notice/STATUT_DES_ARCHIVES_2026-10-09.md` §3-4.
+- Saisir ou compléter un mandat chez Hektor **ne bouge pas cette date** : 63303 est restée au
+  `2026-10-20 09:51:32`. Le détail lu à la création (bloc `mandats` vide) n'a **jamais** été
+  relu la nuit. La sauvegarde du 01/11 le prouve : `mandats_json = []`.
+- Seule une **ouverture de fiche** (`refresh_single_annonce.py`, le 02/11 à 08:50) l'a relu.
+  Mais elle ne met pas à jour `app_mandat`, que seul le run de nuit remplit
+  (`mandat_ledger.py`). Le registre est donc resté sans date.
+- ⭐ **Le filet qui devait rattraper les manques est mort** : `--missing-only`, sans effet depuis
+  le 21/07, a été **seulement marqué** au chantier ④ (4i, 11/10).
+
+**Pourquoi le 15/10 a conclu « sain »** : le chiffre « 8 806 fiches relues en octobre » venait de
+`hektor_annonce_detail.synced_at`. Cette colonne donne l'heure de la **normalisation**, qui
+réécrit **toutes** les fiches chaque nuit (61 433 à 04 h le 02/11), **pas l'heure de lecture
+chez Hektor**. L'heure de lecture réelle est `raw_api_response.fetched_at`. Mesurée le 02/11 sur
+les 8 956 biens vendus ou clos non archivés :
+`465 relus en octobre · 142 en septembre · 120 en août · 8 228 pas relus depuis JUILLET`.
+Et sur toutes les annonces actives : **23 449 sur 23 704 pas relues depuis plus de 7 jours**.
+⚠ **La section 6d s'appuie sur cette conclusion** (« `images_json` rafraîchi chaque nuit »).
+Elle est donc à **revoir**.
+
+**L'ampleur pour les mandats (02/11)** : 6 annonces actives ont un numéro de mandat au listing
+mais pas dans leur détail. Relues en direct chez Hektor (lecture seule, 5 appels) :
+- **3 ont en réalité leur mandat complet** : 63303 (n° 18953, réparée par l'ouverture de 08:50),
+  **62524** (n° 18979, du 29/10/2026 au 28/01/2028) et **63227** (n° 18951, du 18/10/2026 au
+  17/10/2027) ;
+- **3 n'en ont pas non plus chez Hektor** : 63244, 63003 et 62038.
+
+**Le correctif (code écrit le 02/11, interrupteur ÉTEINT, non commité)** :
+`sync_raw.py`, fonction `load_annonce_ids_detail_sans_mandat`. Le run relit **en plus** les
+annonces actives dont le détail ne porte pas le numéro de mandat du listing (détail absent, vide,
+ou portant un autre numéro). Le plafond est de 50 par nuit ; il y en a 5 aujourd'hui.
+- Interrupteur `APP_RELIRE_DETAIL_MANDAT_ABSENT=1` dans `.env`. Plafond :
+  `APP_RELIRE_DETAIL_MANDAT_ABSENT_PLAFOND`.
+- **Retour arrière** : retirer la ligne du `.env` (ou la mettre à `0`).
+- **Contrôle hors ligne, 5/5 verts** : la sélection rend exactement les 5 annonces ; le plafond est
+  respecté ; une annonce hors du listing de la nuit est écartée ; le témoin construit (détail
+  absent, vide, `null`, objet seul, JSON invalide, autre numéro, archivée, sans numéro) donne
+  exactement `9, 8, 7, 4, 3, 2`.
+- ✅ **ALLUMÉ LE 02/11 vers 10:35** (accord de Frédéric), pour le run du 03/11. Ligne ajoutée à la fin
+  du `.env` ; l'ancien `.env` est gardé dans le dossier temporaire de la session.
+- ✅ **ÉPROUVÉ AVANT LA NUIT, SUR DES COPIES DES DEUX BASES** (sauvegarde sqlite, `HEKTOR_DB_PATH`
+  redirigé vers la copie, aucune écriture en production) :
+  1. le vrai `main()` de `sync_raw.py`, avec un faux Hektor : interrupteur à 1 → l'annonce modifiée
+     **+ les 5** sont relues, et le journal écrit la ligne attendue ; interrupteur à 0 → l'annonce
+     modifiée seule, comme avant ;
+  2. la vraie relecture des 5 fiches (5 appels `AnnonceById`), puis `normalize_source.py`, puis
+     `mandat_ledger.refresh()` : **62524, 63227 et 63303 passent de « annonce, sans date » à
+     « detail » avec leurs dates, leur type et leur id Hektor** (924, 874, 878). Les 3 autres sont
+     inchangées. Bilan : 0 ligne neuve, 0 sortie ;
+  3. `build_mandat_register_rows` : le registre affiche `62524:18979 SIMPLE 2026-10-29 → 2028-01-28`,
+     `63303:18953 ACCORD 2026-10-20 → 2027-11-19` et `63227:18951 EXCLUSIF 2026-10-18 → 2027-10-17`.
+- **À vérifier après la première nuit allumée** : le journal du run porte
+  `[mandat absent du detail] 5 annonce(s), 5 relue(s) en plus` ; au matin, `app_mandat` porte les
+  dates de 62524 et 63227 (origine `detail`) ; le registre les affiche.
+
+⛔ **CE QUE LE CORRECTIF NE COUVRE PAS** : un mandat **déjà présent** dont Hektor change les dates
+ou le type sans toucher la `datemaj` ; plus largement, **toute** donnée du détail modifiée sans
+que la date bouge (photos, propriétaires, honoraires…). Rien ne le signale sans tout relire, et
+tout relire coûte ~23 700 appels. ⬜ **À trancher par Frédéric** : faut-il une relecture
+tournante (par exemple N fiches par nuit, les plus anciennement lues d'abord, d'après
+`fetched_at`) ?
 
 ---
 

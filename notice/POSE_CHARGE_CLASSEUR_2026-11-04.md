@@ -6,9 +6,9 @@ classeur **fait foi** -- donc elle va au carnet avec `origine = 'classeur'`.
 ## Ce que le classeur porte
 
 ```
-lignes du classeur                 4777
-charge renseignee                  957
-charge vide                        3820
+lignes du classeur                 4778
+charge renseignee                  959
+charge vide                        3819
 valeur REFUSEE (inconnue)          0
 doublons divergents                0
 ```
@@ -16,27 +16,21 @@ doublons divergents                0
 ## Ce qui est pose, et ce qui est ecarte
 
 ```
-A POSER                            839   (802 vendeur, 37 acquereur)
-ecartee -- fondue : meme mandat, meme charge (2e transaction) 55
+A POSER                            0   (0 vendeur, 0 acquereur)
+ecartee -- le carnet porte DEJA une valeur (on n ecrase pas) 893
 ecartee -- lien hors 1re passe (a valider / bonne)    29
-ecartee -- la ligne n est pas reliee par le gel       25
+ecartee -- la ligne n est pas reliee par le gel       26
+ecartee -- EXCLU PAR DECISION (classeur contradictoire) 4
 ecartee -- l affaire ne cite ni annonce ni mandat     4
 ecartee -- le mandat n est pas au registre            3
-conflits (deux lignes, deux charges) 2
-```
-
-### Les conflits, NOMMES (un controle qui agrege perd ce qui sert a agir)
-
-```
-46338/17322 : acquereur contre vendeur (ID afd672fa et cc33cc38)
-47174/17639 : vendeur contre acquereur (ID 2c2566d7 et df0ce30c)
+conflits (deux lignes, deux charges) 0
 ```
 
 ## Les temoins
 
 ```
-positif VENDEUR    annonce 10702 mandat 2154
-positif ACQUEREUR  annonce 11820 mandat 17888
+positif VENDEUR    rien a poser
+positif ACQUEREUR  rien a poser
 INVERSE            lignes vides du classeur qui seraient posees : 0
 ```
 

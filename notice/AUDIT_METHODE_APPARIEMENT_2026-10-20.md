@@ -2,6 +2,12 @@
 
 **20/10/2026, après la remise en ordre du chaînage. LECTURE SEULE.**
 
+> ⚠⚠ **L’ORDRE DES SIGNAUX DE CET AUDIT EST RÉVISÉ DEPUIS LE 23/10.** Voir
+> `notice/REGLE_APPARIEMENT_2026-10-23.md` : **la DATE passe en deuxième**, avant le vendeur
+> (594 des 737 contre 479 pour vendeur+ville+prix réunis), et **le prix d’annonce sort de la
+> règle**. Le POUVOIR DE CHAQUE SIGNAL et l’EXCLUSIVITÉ ci-dessous restent valables, mais ils
+> s’appliquent à l’**ÉTAGE 2** (quelle affaire dans le bien), pas au choix du bien.
+
 Demandé par Frédéric : *« refais un audit approfondi pour réfléchir à la meilleure règle
 de correspondance et méthode, ensuite propose-moi. »*
 

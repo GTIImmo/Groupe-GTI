@@ -6,8 +6,8 @@ Controles automatises de coherence sur `phase2.sqlite`.
 
 - `registre_couche_desaccord` : 0 | attente : DOIT RESTER A ZERO. Le matin du 24/09, ce compte valait 294 179 et personne ne le voyait : le registre avait numerote ces fiches, la couche les rangeait encore sous leur numero de Hektor, et le run suivant leur a donne une SECONDE identite -- 650 353 lignes au lieu de 356 166, en une nuit, sans une erreur. Ce n'etait pas une faute de code mais un DESACCORD entre deux cotes corrects pris separement. Toute valeur > 0 annonce le meme degat au prochain run.
 - `registre_identite_mal_rangee` : 0 | attente : DOIT RESTER A ZERO. L4-c-bis, 24/09 : l'INSERT des contacts neufs rangeait leur numero de Hektor dans hektor_contact_id -- colonne qui porte l'IDENTITE depuis la bascule -- et l'identite a cote. Le build ne les traduisait jamais : 23 contacts restes sous leur numero Hektor, et le controle d'accord ne les voyait pas (il ne cherchait que les doublons). registre_contacts.py repare ces lignes a chaque nuit ; une valeur > 0 apres son passage veut dire que la reparation n'a pas pu se faire.
-- `vue_generale_total` : 61370 | attente : doit rester stable entre deux runs hors variation source
-- `demandes_total` : 23270 | attente : doit rester stable entre deux runs hors variation source
+- `vue_generale_total` : 61606 | attente : doit rester stable entre deux runs hors variation source
+- `demandes_total` : 23589 | attente : doit rester stable entre deux runs hors variation source
 - `missing_titles` : 0 | attente : 0
 - `view_generale_without_dossier` : 0 | attente : 0
 - `demandes_without_view_generale` : 0 | attente : 0

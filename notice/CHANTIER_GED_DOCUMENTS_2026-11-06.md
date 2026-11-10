@@ -162,3 +162,495 @@ GED-1 nomenclature (validée par Frédéric) → GED-2 fiche à part + GED-3 cla
 → GED-5 la porte « trouver », d'abord pour les besoins neufs (copropriété du syndic, pré-état daté), puis à la place des
 anciennes règles → GED-4 l'outil d'ajout (après les lots signature) → complétude et dates d'expiration → plus tard :
 lien de dépôt pour le client, lecture du contenu des PDF, bons de visite rangés comme documents.
+
+## 6. GED-1 — LA NOMENCLATURE, CHIFFRÉE (06/11 après-midi) — ⏳ EN ATTENTE DE LA DÉCISION DE FRÉDÉRIC
+
+> Audit limité aux **documents** (`app_console_document`) : objets et gestes des autres familles non mesurés ici.
+> **Rien n'a été écrit** : ni base, ni Hektor, ni coffre, ni écran. Mesure rejouable :
+> `python phase2/checks/ged1_mesure_nomenclature.py` (lecture seule, `--reste` pour les noms non reconnus).
+
+### 6.1 La re-mesure (le §1 tient)
+- 193 392 documents, 25 987 annonces ; `document_type` ≠ « document » : **toujours 1** ; `source = 'app'` : 7 ; dernier
+  document créé le 05/11 à 21:17. Coffre : 24 856 documents `cloud_available` sur **5 101 biens** (= ce que l'app sait ouvrir).
+- Sources : console privée 189 243 · partagée 2 178 · modèles Hektor 1 150 (dont 985 « Bon de Visite Groupe GTI ») ·
+  ImmoSign 778 (dont 642 « Mandat (avec saisie du numéro) (vente) ») · signés ImmoSign 36 · app 7.
+
+### 6.2 La méthode
+- Le nom est mis à plat (accents, majuscules, `_`). ⚠ **Hektor coupe les lettres accentuées** : « foncie_re », « proprie_te »,
+  « e_tat », « pi_ce » — la mise à plat les recolle, sinon 1 nom sur 20 échappait.
+- **Règles ordonnées, la première qui gagne** (« offre de prêt » n'est pas une offre, « avenant au mandat » n'est pas un
+  mandat, un nom qui cite deux diagnostics est un dossier de diagnostics). Chaque règle a une **force** : *sûr* (mot clair) ou
+  *probable* (abréviation, mot ambigu → à faire confirmer par l'humain). Les noms vides de sens sont *muets*.
+- **Contrôle de justesse par le contenu** : ~70 PDF tirés au hasard ouverts EN LECTURE sur le disque du serveur. Types
+  *sûrs* : **33 sur 34** PDF lisibles conformes. Types *probables* : 2 règles fausses trouvées et corrigées (ci-dessous).
+- ⭐ **Ce que le contenu a appris, et que le nom ne disait pas** :
+  `odp_…` = **offre de prêt** (CA, CIC, CASDEN), pas une offre d'achat · `est_N` = **facture d'honoraires d'estimation**,
+  pas un avis de valeur · `rapport_<n>_<horodatage>` = **dossier d'estimation** (outil externe) · `copie_aae_promesse…` =
+  promesse signée chez le notaire · `AAAA_MM_JJ_facture_<nom>` = facture d'honoraires GTI (2015-2017) ·
+  `accord_honoraires_N` = le **courriel de validation** d'une baisse d'honoraires · `adp_…` = attestation de demande de prêt ·
+  `lp_…` = lettre au client · `annulation_<nom>` = courriel d'**annulation de vente** (pas de mandat) · `sci_<nom>_dossier` =
+  **dossier de diagnostics** (pas un Kbis) · `d1`…`d9` = la numérotation des diagnostiqueurs (d1 plomb, d2 amiante,
+  d4 gaz, d5 électricité, d6 risques, d7 DPE, d9 attestation sur l'honneur).
+
+### 6.3 Le résultat global
+**Sûr 145 305 (75,1 %) · probable 21 174 (10,9 %) · muet 10 574 (5,5 %) · non reconnu 16 339 (8,4 %)** ⇒ **86 %** des
+documents recevraient une proposition de type par leur seul nom.
+
+### 6.4 La nomenclature proposée — 14 familles, 59 types (+ partenaires, + non classé)
+Colonnes : code (le contrat, stable) · libellé (modifiable) · nombre · dont *probable* · biens où il s'ouvre dans l'app
+(sur 5 101) · rattachement naturel (pour GED-2). ⚠ = sensible (données personnelles).
+
+| famille | code | libellé | nb | prob. | biens app | rattachement |
+|---|---|---|---:|---:|---:|---|
+| **mandat** 31 769 | `mandat.vente` | Mandat de vente | 20 117 | | 921 (18 %) | mandat |
+| | `mandat.avenant` | Avenant au mandat (baisse de prix…) | 8 308 | | 264 | mandat |
+| | `mandat.fin` | Fin de mandat (résiliation, dénonciation) | 1 630 | | 23 | mandat |
+| | `mandat.honoraires` | Accord / baisse d'honoraires | 1 113 | | 80 | mandat |
+| | `mandat.recherche` | Mandat de recherche | 601 | | 15 | mandat (acquéreur) |
+| **justificatifs** du mandat 30 254 | `justif.titre` | Titre / origine de propriété (acte, donation, succession) | 13 723 | 3 501 | 722 (14 %) | bien + propriétaire |
+| | `justif.identite` ⚠ | Pièce d'identité | 8 591 | | 577 | contact |
+| | `justif.taxe` | Taxe foncière / impôts locaux | 5 336 | | 477 | bien |
+| | `justif.pouvoir` | Pouvoir / procuration | 944 | | 13 | contact |
+| | `justif.societe` | Société venderesse (Kbis, statuts) | 880 | 408 | 77 | contact |
+| | `justif.etat_civil` ⚠ | État civil / capacité (livret, mariage, décès, tutelle) | 745 | | 58 | contact |
+| | `justif.rib` ⚠ | RIB | 35 | | 8 | contact |
+| **transaction** 27 925 | `transaction.offre` | Offre d'achat (et sa réponse) | 10 948 | | 242 | affaire |
+| | `transaction.avant_contrat` | Compromis / promesse de vente | 7 896 | | 237 | affaire |
+| | `transaction.financement` ⚠ | Financement (offre / accord de prêt, simulation) | 4 563 | | 81 | affaire + acquéreur |
+| | `transaction.acte` | Acte de vente / attestation de vente | 1 346 | | 93 | affaire |
+| | `transaction.renseignements` | Fiche de renseignements acquéreurs / vendeurs | 1 330 | 1 330 | 86 | affaire |
+| | `transaction.notaire` | Dossier / courrier du notaire | 766 | 766 | 30 | affaire + notaire |
+| | `transaction.annulation` | Annulation d'une vente / désistement | 458 | 409 | 9 | affaire |
+| | `transaction.sru` | Notification SRU / rétractation | 386 | | 10 | affaire |
+| | `transaction.mobilier` | Liste du mobilier | 229 | 229 | 11 | affaire |
+| | `transaction.sequestre` | Séquestre / dépôt de garantie | 3 | | 0 | affaire |
+| **visite** 4 411 | `visite.bon` | Bon de visite | 4 388 | | 281 | bien + acquéreur |
+| | `visite.compte_rendu` | Compte rendu de visite | 23 | | 1 | bien |
+| **estimation** 5 734 | `estimation.avis` | Avis de valeur / dossier d'estimation | 5 734 | | 2 866 (56 %) | bien |
+| **diagnostics** 21 514 | `diag.dpe` | DPE | 6 231 | | 318 | bien |
+| | `diag.dossier` | Dossier de diagnostics (DDT) / autre | 5 792 | 68 | 362 | bien |
+| | `diag.erp` | État des risques (ERP, ERRIAL, Géorisques) | 2 919 | | 414 | bien |
+| | `diag.assainissement` | Assainissement (SPANC, raccordement) | 1 465 | | 103 | bien |
+| | `diag.amiante` | Amiante | 1 254 | | 80 | bien |
+| | `diag.surface` | Surface (Carrez, Boutin) | 1 047 | 1 047 | 135 | bien |
+| | `diag.electricite` | Électricité | 1 021 | | 87 | bien |
+| | `diag.gaz` | Gaz | 657 | | 38 | bien |
+| | `diag.plomb` | Plomb (CREP) | 596 | | 40 | bien |
+| | `diag.audit` | Audit énergétique | 453 | | 134 | bien |
+| | `diag.termites` | Termites / parasites / mérule | 79 | | 4 | bien |
+| **copropriété** 5 074 | `copro.pv_ag` | PV / convocation d'assemblée générale | 1 928 | 422 | 83 | bien (+ syndic) |
+| | `copro.arrete_charges` | Arrêté / décompte de charges (dépenses réelles) | 1 202 | 770 | 117 | bien (+ syndic) |
+| | `copro.appel_fonds` | Appels de fonds / provisions / budget prévisionnel | 913 | 14 | 108 | bien (+ syndic) |
+| | `copro.reglement` | Règlement de copropriété / état descriptif | 472 | | 50 | bien (+ syndic) |
+| | `copro.autre` | Autre document de copropriété | 284 | 284 | 27 | bien (+ syndic) |
+| | `copro.carnet` | Carnet d'entretien / fiche synthétique | 249 | | 41 | bien (+ syndic) |
+| | `copro.dtg` | DTG / plan pluriannuel de travaux | 23 | | 7 | bien (+ syndic) |
+| | `copro.etat_date` | Pré-état daté / état daté | **3** | | 1 | bien + affaire |
+| **urbanisme** et terrain 20 597 | `urba.cadastre` | Cadastre / parcelles | 15 693 | | 2 451 (48 %) | bien |
+| | `urba.permis` | Permis / déclaration de travaux / conformité | 1 710 | | 77 | bien |
+| | `urba.certificat` | Certificat d'urbanisme / PLU / lotissement | 1 586 | | 96 | bien |
+| | `urba.bornage` | Bornage / division / servitudes | 1 471 | | 127 | bien |
+| | `urba.etude_sol` | Étude de sol (G1, G2) | 137 | | 11 | bien |
+| **bien** 4 362 | `bien.plans` | Plans / vues du bien | 2 876 | 2 876 | 269 | bien |
+| | `bien.cles` | Clés (photo, remise) | 593 | 593 | 12 | bien |
+| | `bien.entretien` | Entretien / énergie (chaudière, ramonage, factures) | 501 | 501 | 43 | bien |
+| | `bien.descriptif` | Descriptif / fiche commerciale | 392 | 392 | 63 | bien |
+| **facturation** 10 302 | `facture.honoraires` | Facture / note d'honoraires GTI | 7 812 | | 1 341 | affaire / mandat |
+| | `facture.autre` | Autre facture | 1 766 | 1 766 | 109 | bien |
+| | `facture.devis` | Devis / travaux | 724 | 724 | 46 | bien |
+| **location** 794 | `location.bail` | Bail / état des lieux / quittance / gérance | 794 | | 47 | bien |
+| **entreprise** 165 | `entreprise.comptes` | Bilans / comptes (fonds de commerce) | 165 | 165 | 4 | bien |
+| **courrier** 2 138 | `courrier` | Courrier / lettre / accusé de réception | 2 138 | 2 138 | 59 | selon le cas |
+| **interne** 1 542 | `interne.notes` | Notes / suivi interne | 1 542 | 1 542 | 275 | bien |
+| **partenaires** 0 | `partenaire.convention` · `.assurance` · `.certification` · `.societe` · `.tarifs` · `.autre` | (proposés) | **0** | | | partenaire |
+| **non classé** 26 913 | `muet` | Nom muet (scan, photo, « sans titre ») | 10 574 | | 693 | — |
+| | `reste` | Nom parlant non reconnu | 16 339 | | 846 | — |
+
+- **Les documents générés par l'app** se classent d'office par leur ORIGINE, pas par le nom : avis de valeur →
+  `estimation.avis`, mandat → `mandat.vente`, avenant → `mandat.avenant`, plan cadastral → `urba.cadastre`.
+- **Le non reconnu (16 339)** : 5 913 « un nom propre + des chiffres » (`dupont_3.pdf`), 1 135 « attestation » sans
+  précision, 549 contrat / demande / autorisation, 409 « maison / terrain + lieu », 8 067 divers. Ni la règle ni le nom
+  n'y peuvent rien : c'est l'humain (ou, plus tard, la lecture du contenu).
+- **Partenaires (fiches métier) : vide aujourd'hui**, parce qu'aucun document ne peut s'accrocher à un partenaire. Seuls
+  236 noms du stock évoquent une assurance, une convention ou une certification, éparpillés dans les dossiers des biens.
+
+### 6.5 Ce que les chiffres disent (lecture métier)
+- **Le besoin du syndic couvre toute la famille copropriété**, pas seulement le pré-état daté *(rectifié par Frédéric le
+  06/11 : « arrêté de charges, règlement de copro, etc. »)*. Le stock existe : **4 972 documents de copropriété**, et
+  **161 biens** que l'app sait ouvrir en ont au moins un (charges 108 biens, PV d'AG 83, règlement 50, carnet / fiche
+  synthétique 41, DTG 7). Dans les charges, le nom distingue déjà deux choses que le métier distingue :
+  **ce qui a été dépensé** (arrêté de charges 25, décompte / relevé / régularisation 288) et **ce qui est appelé**
+  (appels de fonds / provisions 831, budget prévisionnel 11) ; 853 disent seulement « charges ».
+  ⚠ **Seul le pré-état daté est presque absent : 3 documents** — celui-là naîtra avec l'outil d'ajout (GED-4).
+- Sur les 5 101 biens dont l'app ouvre les documents (estimations comprises) : mandat de vente reconnu sur **18 %**,
+  titre de propriété 14 %, DPE 6 % (+ dossier de diagnostics 7 %), cadastre 48 %, avis de valeur 56 %. Les pièces
+  manquent souvent, ou dorment sous un nom muet. ⚠ La future **complétude** (§5.1-7) devra le dire sans accuser : le
+  dénominateur mêle biens en estimation et biens sous mandat (non séparés ici).
+- **7 812 factures d'honoraires GTI** dorment dans les dossiers des biens : ce sont des pièces de l'agence, pas du
+  client → leur visibilité est une question pour GED-2.
+
+### 6.6 Les écrans d'aujourd'hui y retrouvent-ils leurs pièces ? (préparation de GED-5)
+- **Pièces du notaire** (`FicheNotaire.tsx`, 11 règles) : toutes couvertes (`justif.titre`, `diag.*`,
+  `transaction.avant_contrat`, `transaction.sru`, `justif.identite`, `justif.taxe`, `mandat.vente`,
+  `transaction.sequestre`, `transaction.financement`, `diag.assainissement`, `urba.cadastre`).
+- **Cockpit v21** (`docTypeOf`, `App.tsx`) : avenant, mandat, diagnostic, avis, cadastre → couverts.
+- **Fiche syndic** (`estDocumentCopro`) → la famille `copropriété` entière.
+- **Registre des transactions** (`/compromis|promesse|offre|acte|authentique/`) → `transaction.offre / avant_contrat /
+  acte`. ⚠ Aujourd'hui une **offre de prêt y passe pour une offre** ; la nomenclature les sépare → au branchement, les
+  compteurs bougeront (voulu, à annoncer ce jour-là).
+- **Signature** (`/mandat/`, `/avenant/`, « Signé à la main ») → `mandat.vente`, `mandat.avenant`. ⚠ `/mandat/` attrape
+  aujourd'hui « avenant au mandat » ; la nomenclature les sépare.
+
+### 6.7 Ce que ça pourrait casser ailleurs
+- **Aujourd'hui, rien** : GED-1 n'a rien écrit. Seul ajout au dépôt : le script de mesure, en lecture seule (194
+  lectures REST de 1 000 lignes avec la clé de service, comme les autres contrôles ; zéro appel à Hektor). Les PDF ont
+  été ouverts en lecture sur le disque du serveur.
+- **Demain** (quand GED-2 et GED-5 s'en serviront) : les **codes deviennent un contrat** lu par plusieurs écrans. On
+  pourra changer un libellé, ajouter un type, mais **pas renommer un code** (un écran chercherait un type disparu) ;
+  scinder un type obligerait à reclasser. D'où la validation maintenant.
+- Les lecteurs par le nom gardent leur repli tant que GED-5 ne les remplace pas un par un ; deux changements de
+  comportement sont déjà connus (offre de prêt, avenant ≠ mandat — §6.6).
+- **Signature** : la nomenclature ne lit que le nom et la source ; elle n'écrit jamais `metadata_json` ; les 36 signés
+  ImmoSign se classent comme leur original. Aucune table de la session signature n'est touchée → pas de message à lui
+  envoyer pour GED-1 ; il sera prévenu avant GED-2.
+
+### 6.8 À trancher par Frédéric
+1. Le découpage en 14 familles (+ partenaires + non classé), dont **« justificatifs du mandat » séparés du « mandat »**.
+2. **Diagnostics : un type par diagnostic (11)** — recommandé, car leurs durées de validité diffèrent et serviront aux
+   alertes (§5.1-6) — ou un seul type « diagnostics » ?
+3. Garder les **petits types** qui servent à chercher (pré-état daté 3, séquestre 3, DTG 23, compte rendu de visite 23,
+   RIB 35), ou les fondre dans leur famille ?
+4. Les familles **courrier, interne, entreprise, location** : utiles, ou fondues dans « autre » ?
+5. Les **probables** (10,9 %) : en GED-3, proposés « à confirmer » (recommandé), ou pas proposés du tout ?
+6. Marquer **sensibles** dès la nomenclature : identité, état civil, RIB, financement — et les factures d'honoraires ?
+7. Les types **partenaires** proposés (convention, assurance, certification, Kbis, tarifs, autre) : à compléter par lui.
+8. **Copropriété : scinder les charges en deux types** — `copro.arrete_charges` (arrêté, décompte, relevé,
+   régularisation : les dépenses réelles) et `copro.appel_fonds` (appels de fonds, provisions, budget prévisionnel) — les
+   853 « charges » sans précision restant à confirmer ? *(question ajoutée après sa remarque du 06/11)*
+
+### 6.9 La décision de Frédéric
+- ✅ **Point 8 TRANCHÉ le 06/11 : « Oui, deux types »** → `copro.arrete_charges` et `copro.appel_fonds` (le tableau
+  ci-dessus est à jour ; total copropriété 5 074, les règles ont aussi appris « re_gularisation », « da_compte »,
+  « bilan_charges », « charges annuelles »). Les 853 « charges » sans précision sont proposées en `copro.arrete_charges`
+  *à confirmer* : sur 11 lues, 7 étaient des dépenses réelles et 4 des appels de fonds. Global après la scission :
+  sûr 75,8 %, probable 10,3 %, non reconnu 16 288.
+- ⏳ Points 1 à 7 : en attente. Le code (GED-2 et suite) attend son « vas-y », pièce par pièce.
+
+## 7. LE GAIN DE TEMPS — conseil du 06/11 (question de Frédéric : « je n'ai vu ni maquette ni gain de temps, hormis un classement »)
+
+> Il a raison : **un classement seul ne fait gagner de temps à personne.** C'est le socle ; le temps se gagne dans les
+> GESTES qu'il rend possibles. L'architecture (la fiche à part, que la synchro ne touche pas) reste la bonne ; c'est
+> l'ORDRE du §5.4 qui doit changer : commencer par ce que le collaborateur fait chaque jour.
+
+**Les volumes (mesurés le 06/11)** : au moins **8 601 documents déposés sur les 1 559 biens enregistrés depuis 12 mois**
+(plancher : les biens vendus / clos sortent de `app_dossier_current`), soit ~720 par mois, médiane 5 par bien.
+**12 598 fichiers identiques sont déposés sur plusieurs biens — 16 833 copies en trop** (même empreinte sha256) :
+cadastres, mandats, DPE, titres, compromis, taxes foncières.
+
+**Les gestes qui font gagner du temps, du plus rentable au moins** *(les minutes sont des ESTIMATIONS, à chronométrer
+sur l'écran réel avant d'être promises)* :
+1. **Déposer d'un coup** : glisser 10 fichiers, le type est proposé, l'humain ne corrige que l'erreur. Aujourd'hui :
+   un fichier à la fois, libellé et type à la main. ~30 s gagnées par document × ~8 600 / an ≈ **70 h / an**.
+2. **Les pièces manquantes, à chaque étape** (prise de mandat, offre, compromis) : une liste « reçu / manque » au lieu
+   de rouvrir les documents un par un — et un **lien de dépôt envoyé au client**, qui dépose lui-même ses pièces
+   (identité, titre, taxe foncière…), classées à l'arrivée. Supprime les scans et les relances.
+3. **Le dossier du notaire en un clic** : les 11 pièces de `FicheNotaire` existent déjà en liste ; les rassembler en un
+   envoi (lien ou archive) au lieu de les chercher et de les joindre une par une.
+4. **Déposer une fois, servir partout** : un règlement de copropriété, un PV d'AG, un cadastre servent à plusieurs
+   biens (16 833 copies le prouvent) → rattacher à l'immeuble / au syndic, et chaque lot en hérite.
+5. **Lire le contenu, pas seulement le nom** (lecture du PDF, reconnaissance de texte sur les scans) : classe les 14 %
+   muets ou non reconnus, et surtout **remplit l'annonce** — étiquette et date du DPE, surface Carrez, montant de la taxe
+   foncière, charges annuelles depuis l'arrêté de charges (obligatoires dans l'annonce). ⚠ Données personnelles : où et
+   par quoi le contenu est lu est à décider (sur notre serveur, ou un service extérieur).
+6. **Les alertes de validité** avant le compromis (état des risques 6 mois, électricité et gaz 3 ans, DPE 10 ans).
+7. **Une recherche unique** : « taxe foncière Dupont » trouve la pièce sans ouvrir le bien.
+
+**L'ordre recommandé, révisé** : GED-1 (la liste des types) → **GED-4 l'outil de dépôt** (gestes 1 et 4) **et les pièces
+manquantes** (geste 2), parce que c'est là que le temps se gagne → GED-2 / GED-3 en dessous (le classement du stock sert
+la recherche et les pièces manquantes) → le dossier du notaire → la lecture du contenu.
+⚠ GED-4 touche le panneau des documents : à faire avec la session signature (§5.3 bis).
+➡ **Prochaine étape proposée** : regarder l'écran de dépôt RÉEL (Chrome, 1280 × 665 et téléphone), le chronométrer,
+puis une maquette des parcours 1, 2 et 4 — avec données fictives. *(« Oui, vas-y » de Frédéric, 06/11 → §8)*
+
+## 8. LA MAQUETTE DES PARCOURS 1, 2 ET 4 (06/11 soir) — ⏳ À REGARDER PAR FRÉDÉRIC
+
+**Lien** : https://claude.ai/artifact/7Tf4Yt2i5VqZsvSoz6oeHo (privé). 5 écrans, données fictives : le dossier du bien
+(onglet Documents) · déposer 9 fichiers d'un coup · le téléphone (photographier une pièce) · demander des pièces au
+client + la page qu'il reçoit · la copropriété déposée une fois pour tous les lots.
+
+### 8.1 L'écran réel regardé d'abord (06/11, Chrome de Frédéric, 1280 × 665, bien actif 63417, RIEN envoyé)
+- 16 documents ; **13 cartes portent l'étiquette « DOCUMENT »**, aucune famille ; ordre alphabétique.
+- Une carte fait ~100 px de haut : **3 documents visibles** sur l'écran de 665 px.
+- **Un bouton « Signature » sur chaque carte**, cartes d'identité et cadastre compris.
+- Le tiroir d'ajout : Parcourir (un seul fichier) · Libellé · Privé / Public · Type (10 choix figés) · Envoyer =
+  **8 gestes par document** (estimation, non chronométrée : un vrai dépôt aurait écrit chez Hektor).
+- Rien ne dit ce qui manque : ce bien a déjà une promesse, mais pas de taxe foncière ni d'état des risques visible.
+- ⚠ Le rendu téléphone n'a pas pu être vu (la fenêtre de Chrome ne descend pas à 390 px) : le panneau y est le même, en
+  mode `compact` (`App.tsx`, `ConsoleDocumentsPanel` monté 3 fois). À voir sur un vrai téléphone.
+
+### 8.2 Habillage (ne change rien derrière)
+Documents rangés par famille, lignes de 44 px (une quinzaine visibles au lieu de 3), étiquette du type au lieu de
+« DOCUMENT », recherche et filtres par famille, bouton « Signature » montré seulement sur ce qui se signe.
+
+### 8.3 Fonctionnement nouveau — ⚠ À TRANCHER, un par un (rien n'est décidé)
+1. **Les pièces attendues par étape** (mandat, bien, vente) : une RÈGLE à écrire, qui dépend du bien (maison hors
+   réseau → assainissement ; copropriété → pièces de copro ; terrain → étude de sol). Base existante : les 11 pièces de
+   `FicheNotaire.tsx`.
+2. **Dépôt multiple avec type proposé** : la règle du §6 à l'entrée ; doublon reconnu par l'empreinte sha256 (la
+   colonne existe) ; format refusé dit tout de suite (`.odt`). ⚠ Touche `ConsoleDocumentsPanel` et
+   `createUploadDocumentToHektorJob` : à faire AVEC la session signature (§5.3 bis).
+3. **Rattacher un document à une personne ou à une affaire** (identité de Léa Bastide, offre de prêt → la vente) :
+   c'est GED-2.
+4. **Le lien de dépôt pour le client** : une page publique nouvelle (sécurité, durée du lien, données personnelles),
+   envoi par e-mail / SMS, relance automatique à 5 jours. Le plus gros gain, et le plus gros chantier.
+5. **La copropriété comme objet** (la résidence, ses lots, son syndic) : les documents communs déposés une fois.
+   Recoupe la fiche syndic du chantier partenaires.
+6. **Lire le contenu** (« lue sur la page : avis d'impôt », charges réelles de l'arrêté proposées pour l'annonce) :
+   reconnaissance de texte ; où et par quoi, à décider (données personnelles).
+7. **Les alertes de validité** (« état des risques valable jusqu'au 18/11 ») : il faut la date du diagnostic, donc
+   souvent la lecture du contenu (point 6).
+8. **Visibilité par défaut « privé »** pour les pièces sensibles (identité, prêt).
+
+### 8.3 ter LA RÈGLE QUI REMPLACE LE §8.3 bis — « un seul endroit » (06/11, après l'objection de Frédéric)
+> Frédéric : *« les documents seront visibles une fois sur le contact, une fois sur le bien, l'utilisateur risque de se
+> tromper, et le syndic séparé ??? Trouve mieux. »* — Il a raison : un document montré à trois endroits, c'est trois
+> endroits où chercher, et le doute sur celui qui fait foi.
+
+1. **Un seul endroit pour voir et déposer : l'onglet Documents du bien** (le dossier de la vente). Tout y est : pièces
+   du vendeur, des acquéreurs, de la copropriété.
+2. **Aucune autre liste de documents** : ni sur la fiche contact, ni sur la fiche syndic, ni sur une « résidence ».
+   Ces fiches ne gardent pas les documents ; le syndic est quelqu'un à qui l'on DEMANDE une pièce (bouton dans le
+   dossier, pièce 4.4 de l'autre chantier), pas un classeur.
+3. **Réutiliser sans recopier, au moment où l'on en a besoin** : quand un dossier attend une pièce déjà reçue ailleurs
+   (la même personne, la même résidence), il le PROPOSE : « 4 pièces de la résidence déjà reçues pour le lot 12 : les
+   reprendre ici ». Un clic = le même fichier relié à ce dossier, pas une copie. L'humain décide ; rien n'apparaît
+   tout seul dans un dossier.
+4. ⭐ **Conséquence : la GED ne dépend plus de la pièce 4.3 (l'immeuble)** pour les documents. Pour reconnaître « la même
+   résidence », le même syndic et la même adresse suffisent pour PROPOSER (l'humain confirme) ; le numéro du registre
+   national des copropriétés, s'il vient, rendra la proposition plus sûre. ⚠ À mesurer avant de le promettre : combien
+   de nos 80 biens chez un syndic partagent une adresse.
+- Maquette mise à jour (écran 5) : bandeau « Les reprendre ici », plus de bouton « Fiche du syndic », plus de liste des
+  lots.
+
+### 8.3 bis (REMPLACÉ par le §8.3 ter) « Le bloc copro, on le met où ? » — première proposition
+- **Une seule source : la copropriété elle-même** (la résidence), pas un bien. C'est l'« immeuble » prévu en **pièce 4.3
+  du chantier partenaires** (`CHANTIER_ANNUAIRE_PARTENAIRES_2026-11-04.md` §27.1 ; repère possible : le numéro du
+  registre national des copropriétés, déjà interrogé par l'app). Il n'existe pas encore : sans lui, pas d'héritage.
+- **Deux sortes de pièces** : communes à la résidence (règlement et état descriptif, PV d'AG, carnet d'entretien / fiche
+  synthétique, DTG / plan de travaux) ; propres au lot (arrêté de charges, appels de fonds, pré-état daté).
+- **Montrées à trois endroits, depuis la même source** : 1. l'onglet Documents de chaque lot (maquette, écran 5) ;
+  2. la fiche du syndic, regroupée par résidence (aujourd'hui « un bien = sa copropriété », §27.2 de l'autre chantier) ;
+  3. une ligne d'état sur la fiche du bien, dans le bloc « Diagnostics et syndic » (« copropriété : 4 pièces, pré-état
+  daté à demander »).
+- **Au dépôt d'une pièce commune**, l'app propose « pour toute la résidence (3 lots) » ou « seulement ce lot ».
+- **Mesuré le 06/11** : 1 472 documents de copropriété (par le nom) ; 125 fichiers identiques déposés sur plusieurs
+  biens, **169 copies en trop**, un même fichier sur 6 biens. Le gain est réel mais modeste aujourd'hui ; il grandit avec
+  l'outil d'ajout et la demande au syndic (4.4).
+- ⚠ **À coordonner avec le chantier partenaires** (`FicheSyndic.tsx`, `ficheSyndic.ts` : pas touchés ici).
+
+### 8.4 Ce que ça pourrait casser ailleurs
+Aujourd'hui rien : une maquette, aucun code. Demain : le point 2 touche le panneau que la session signature modifie en
+ce moment (bouton « Signature » unique, suivi des signataires) → la prévenir avant la première ligne ; les écrans qui
+cherchent par le nom gardent leur repli (§6.6) ; Hektor reçoit toujours le fichier comme aujourd'hui (le type reste
+chez nous).
+
+## 9. LES DOCUMENTS SUR LES FICHES CONTACT ET PARTENAIRE, ET LES 5 ÉTAPES (06/11 soir) — ⏳ À VALIDER
+
+> Frédéric : *« comment avoir les documents d'identité aussi dans la fiche contact […] en fonction de la nature du contact
+> (acquéreur, mandant, notaire, partenaire) — attention, une annonce peut avoir plusieurs mandats sur des périodes
+> différentes avec des contacts différents […] la complétude du mandat, de la mise en vente (demande de validation), de
+> l'offre, du compromis : il faut absolument la prendre en compte. »* Maquette : 3 écrans ajoutés (rangée 3) et l'écran 1
+> refait (les 5 étapes).
+
+### 9.1 Mesuré le 06/11 (lecture seule)
+- **Plusieurs mandats sur un bien : rare mais réel** — 57 biens en ont 2 ou plus, dont **39 avec des mandants
+  différents** ; 63417 en a même **deux en même temps** (exclusif du 02/11, simple du 03/11). (556 mandats de recherche
+  n'ont pas d'annonce.)
+- ⚠ **Le lien mandat ↔ mandants n'est presque jamais une fiche** : 391 mandats sur 27 474 portent un contact ; les autres
+  n'ont que `mandants_texte`. Le lien personne ↔ bien existe (`app_relation`, 74 251 « mandant », 58 663
+  « propriétaire »), mais **par annonce, pas par mandat** (6 seulement marqués « retirés »).
+- ✅ **L'affaire connaît ses parties** : `app_affaire_partie`, 31 126 affaires — vendeur 58 577, acquéreur 35 078,
+  notaire du vendeur 16 589, notaire de l'acquéreur 6 794.
+- ✅ **La mise en vente a déjà sa liste** : les motifs de refus de la validation (`refusalReasonOptions`, `App.tsx`) —
+  mandat non valide, DPE manquant, justificatif de propriété manquant, justificatif d'identité manquant (+ photos,
+  texte, barème : sans pièce). Baisse de prix : avenant signé. Annulation : document du mandat.
+
+### 9.2 La règle : UNE maison par document, montré là où il sert (précise le §8.3 ter)
+- **La maison dépend du type** (§6) :
+  pièce de la **personne** (identité, état civil, pouvoir, RIB, Kbis / statuts, financement) → la fiche de la personne ;
+  pièce du **bien** (diagnostics, cadastre, urbanisme, copropriété, titre de propriété) → le bien ;
+  pièce du **mandat** (mandat, avenant, fin, honoraires) → le mandat, avec son numéro et sa période ;
+  pièce de l'**affaire** (offre, compromis, acte, SRU, séquestre, renseignements) → l'affaire, avec ses parties.
+- **Le dossier du bien rassemble** ce qui sert au mandat EN COURS et à l'affaire EN COURS : pièces du bien + du mandat en
+  cours + des mandants de CE mandat + de l'affaire et de ses parties. Les pièces d'un mandat précédent (autres
+  mandants) restent avec lui, repliées (« Voir l'ancien mandat »), et ne comptent pas dans la complétude.
+- **La fiche contact montre « Ses pièces »** (celles dont elle est la maison), chacune avec « reçue pour… », et
+  **« Ses dossiers »** par rôle (mandante, acquéreuse…), avec un lien vers le dossier, jamais la liste des pièces du bien.
+- **Déposer ici ou là, c'est la même chose** : une seule maison, jamais deux copies. Une pièce encore valable est
+  PROPOSÉE au dossier suivant (nouveau mandat, nouvelle offre) au lieu d'être redemandée.
+- **Qui est concerné, au dépôt** : la colonne « Concerne » propose les mandants du mandat en cours et les parties de
+  l'affaire en cours ; l'humain choisit. ⚠ Vu le §9.1, on ne peut PAS déduire seul « le mandant de ce mandat » : le
+  rattachement document → personne doit être écrit par la GED (GED-2), pas recalculé.
+- **Selon la nature du contact** : mandant / propriétaire → identité, état civil, capacité, pouvoir, RIB, société ;
+  acquéreur → identité, financement (sensible), mandat de recherche ; **notaire** → aucune pièce propre, la fiche suit
+  les dossiers échangés avec l'étude (état et dates, lien vers le dossier) ; **diagnostiqueur et autres partenaires** →
+  leurs pièces propres (certifications, assurance avec date d'expiration, convention, tarifs) + où sont leurs rapports.
+- ⚠ Fiches métier : `FichePartenaire.tsx` / `FicheNotaire.tsx` appartiennent au chantier partenaires → à poser avec lui.
+
+### 9.3 Les 5 étapes (maquette, écran « La règle »)
+Le mandat (proposé ; appui : la génération du mandat est déjà bloquée sans nom et prénom des mandants) · la mise en
+vente (**écrit dans l'app** : les motifs de refus de Pauline) · l'offre (proposé) · le compromis (**écrit dans l'app** : les
+11 pièces de la fiche notaire ; copropriété et terrain proposés) · la vente (proposé). Une pièce reçue compte pour les
+étapes suivantes ; les pièces « si… » ne s'ajoutent que si la fiche le dit (société, tutelle, prêt, hors réseau,
+copropriété, terrain).
+⚠ **La demande de validation à Pauline pourrait montrer la liste** (« 4 pièces sur 4 ») AVANT l'envoi : la moitié de ses
+motifs de refus deviendrait impossible. À trancher : simple avertissement, ou envoi bloqué ?
+
+### 9.4 À trancher
+✅ **Point 1 VALIDÉ le 06/11 : « oui pour le principe »** — avec un recadrage : *« le niveau ergonomique et surtout
+design n'est pas suffisamment expert et pro, il faut faire mieux, et maquetter aussi l'intégration dans la fiche
+contact : les blocs, où et comment »* → §10.
+1. La règle « une maison par document » (§9.2). 2. Les 5 listes, ligne par ligne (surtout celles marquées
+« proposé »). 3. Avertir ou bloquer la demande de validation quand une pièce manque. 4. Ce que voit un négociateur sur
+la fiche d'un contact qui n'est pas son client (pièces sensibles).
+
+## 10. L'INTÉGRATION DANS LES VRAIES FICHES (06/11, nuit) — ⏳ À REGARDER PAR FRÉDÉRIC
+Maquette, rangée du haut : **A** (fiche du bien, onglet Documents) et **B** (fiche contact). Les écrans 1 et « fiche
+contact » de la première version sont marqués « remplacés ».
+
+### 10.1 La vraie fiche contact, regardée d'abord (prod, Chrome, 1280 × 665, un mandant de 63417, rien modifié)
+Colonne gauche : retour, identité, **Foyer** (personnes, « Ajouter un conjoint »), actions, coordonnées, négociateur.
+Zone de travail (`contact-detail-v2.css`, blocs `fa-cx-mod`, titres `fa-cx-sec`) : « Recherche & rapprochement » (2/3) et
+« À faire » (1/3) ; « Biens & mandats liés » ; « Activité & relation » (Fil / Rendez-vous / Échanges, filtres Tout,
+Annonce, RDV, Emails, Rapprochements, Transactions, Relances) ; « Qualité de la fiche » (repliée). La colonne de droite
+est vide sous « À faire ». ⚠ Vu au passage : « Biens & mandats liés » montrait le mandat 18989 mais pas le 18986 que le
+fil cite « signé » (deux mandats simultanés) — non creusé, à signaler.
+
+### 10.2 Les 3 ajouts sur la fiche contact (rien d'autre ne bouge)
+1. **Un bloc « Pièces »** dans la colonne de droite, sous « À faire » (la place vide) : les pièces de chaque personne du
+   foyer, avec leur validité ; ce qui manque est dit (« Jean : carte d'identité, manque ») ; « Déposer une pièce » reprend
+   exactement le geste de « Planifier une relance ». Pièces sensibles marquées d'un cadenas.
+2. **Dans « Biens & mandats liés », sous chaque mandat** : l'état de ses pièces (4 sur 5, « il manque la taxe foncière »)
+   et « Ouvrir les documents du bien ». Un mandat clos garde les siennes (autres mandants).
+3. **Dans « Activité & relation »** : un filtre « Pièces » et les événements « pièces demandées » / « pièce reçue ».
+
+### 10.3 La fiche du bien, onglet Documents (sous « Médias et documents », à côté de Photos et Visite 3D)
+- En haut, **la ligne des 5 étapes** (même dessin que le parcours du cockpit) : où en est le dossier, d'un regard.
+- Au centre, **l'étape en cours**, rangée par vendeurs / bien / acquéreurs : une ligne par pièce, ce qui manque hachuré
+  (on y glisse le fichier), action au bout de la ligne (Ouvrir, Demander, Relancer, Refaire).
+- À droite, **toujours visibles** : déposer (plusieurs fichiers), demander au client, envoyer au notaire (grisé tant
+  que des pièces manquent), chercher, et tous les documents par famille.
+- Contrôle du rendu : A et B regardés dans la maquette publiée (textes coupés raccourcis, un repère déplacé).
+  ⚠ Le téléphone n'est pas encore dessiné pour A et B (la fiche contact s'empile en une colonne sous 900 px).
+
+## 11. LES PIÈCES PAR ÉTAPE : AUDIT ET BONNES PRATIQUES DE LA PROFESSION (06/11, nuit) — ✅ 6 MOMENTS VALIDÉS (§11.7), points 2-4 ouverts
+> Frédéric : *« pour les étapes et les documents nécessaires par étape, refais un audit et une analyse des bonnes
+> pratiques de la profession, propose-moi. »* Remplace la liste du §9.3 (écran « La règle »).
+
+### 11.1 Sources (lues le 06/11) et leur poids
+- **Officiel** : service-public.gouv.fr F10798 (DDT en vente, vérifié le 07/03/2025) ; CCH L271-4 (DDT), L721-2
+  (copropriété, via réponses ministérielles) ; C. env. L125-5 (état des risques).
+- **Pratique notariale** : la liste « pièces à fournir et questionnaire » d'une étude (bordelais-ligne.notaires.fr) — la
+  plus concrète trouvée.
+- **Profession** : FNAIM (pré-état daté), sites d'agences et de presse spécialisée (offre d'achat, ERP, audit). Ces
+  sources secondaires se contredisent parfois : seules les règles concordantes sont retenues, le reste est marqué
+  « à vérifier ».
+- **L'app** : motifs de refus de Pauline (`refusalReasonOptions`), 11 pièces de `FicheNotaire.tsx`, génération du mandat
+  bloquée sans nom et prénom des mandants, parcours du cockpit (avis de valeur, mandat, offre, compromis, vente).
+
+### 11.2 Ce que la base dit de nos dossiers (06/11, reconnu par le NOM, biens en cours)
+| | Actif (583) | Sous offre (38) | Sous compromis (93) |
+|---|---:|---:|---:|
+| aucun document | **95** | 0 | 0 |
+| mandat (document) | 67 % | 97 % | 92 % |
+| pièce d'identité | **52 %** | 87 % | 95 % |
+| titre de propriété | 45 % | 63 % | 76 % |
+| taxe foncière | 32 % | 58 % | 54 % |
+| DPE ou dossier de diagnostics | **35 %** | 34 % | 52 % |
+| état des risques (ou DDT) | **50 %** | 61 % | 70 % |
+| cadastre | 59 % | 82 % | 80 % |
+| bon de visite | 22 % | 42 % | 59 % |
+| financement | — | 24 % | 37 % |
+| copro : règlement / PV d'AG / charges | 25 / 43 / 52 % (96) | 2, 4, 4 sur 8 | 5, 4, 4 sur 9 |
+⚠ **Lecture prudente** : une absence par le nom n'est pas une absence prouvée (14 % de noms muets ; un DDT contient souvent
+l'état des risques ; une pièce peut être chez le notaire ou sur papier). Mais l'ordre de grandeur est net : **l'état des
+risques, qui doit être remis dès la première visite, n'est au dossier que d'un bien actif sur deux**, et le rapport DPE
+d'un sur trois (l'étiquette, elle, est saisie dans la fiche : c'est ce que contrôle « Diagnostics manquants »).
+⚠ Un zéro a été corrigé en route (charges de copro à 0 % : mon script portait encore l'ancien nom du type).
+
+### 11.3 LA PROPOSITION — 6 moments, chaque pièce marquée OBLIGATOIRE / BONNE PRATIQUE / SI…
+**1. Prise de mandat** (avant la signature)
+- OBLIGATOIRE : identité de chaque mandant (vigilance anti-blanchiment : identifier, vérifier, garder 5 ans) ; le mandat
+  écrit, numéroté au registre (loi Hoguet).
+- BONNE PRATIQUE forte : titre de propriété (l'agent vérifie la qualité de vendeur) ; situation familiale — contrat de
+  mariage ou PACS, livret de famille (le conjoint doit consentir pour le logement de la famille) ; taxe foncière.
+- SI société : Kbis, statuts, pouvoir du gérant, bénéficiaires effectifs · SI succession ou indivision : attestation de
+  propriété ou de notoriété, tous les indivisaires · SI personne protégée : jugement, autorisation du juge · SI quelqu'un
+  signe pour un autre : pouvoir.
+**2. Mise en vente** (validation par Pauline, avant l'annonce et la 1re visite)
+- OBLIGATOIRE : DPE (étiquettes énergie et climat et estimation des dépenses dans l'annonce ; F ou G : « logement à
+  consommation énergétique excessive ») ; état des risques de moins de 6 mois, à remettre DÈS LA PREMIÈRE VISITE, et la
+  mention Géorisques dans l'annonce (depuis le 01/01/2023) ; audit énergétique SI maison ou monopropriété classée E, F ou
+  G (depuis 2025 pour E), remis aussi dès la 1re visite.
+- Les contrôles déjà écrits de Pauline : mandat valide, justificatif de propriété, d'identité (+ photos, texte, barème).
+- SI copropriété : l'annonce doit donner le nombre de lots, les charges annuelles et une éventuelle procédure (à vérifier
+  sur le texte) → arrêté de charges et fiche synthétique dès la mise en vente.
+- BONNE PRATIQUE : commander le DDT complet dès le mandat (pas de surprise amiante ou plomb au compromis).
+**3. Visites**
+- BONNE PRATIQUE forte : bon de visite signé (preuve de la mise en relation) ; ⭐ **tracer la remise de l'état des risques
+  (et de l'audit) à chaque visiteur** — c'est l'obligation la moins tenue (§11.2) et la plus facile à prouver avec la GED.
+**4. Offre**
+- BONNE PRATIQUE : offre écrite signée par chaque acquéreur (prix, financement, conditions, délai de validité de 5 à 10
+  jours) ; identité des acquéreurs (vigilance : à confirmer sur le texte pour l'acquéreur) ; plan de financement ou
+  accord de principe ; réponse écrite des vendeurs ; ⚠ toutes les offres sont transmises au vendeur, refusées comprises :
+  les garder au dossier.
+**5. Compromis** (le dossier au notaire)
+- Vendeurs : identité, état civil et régime matrimonial, titre de propriété, taxe foncière, RIB, attestation d'assurance
+  du bien (selon l'étude).
+- Diagnostics VALABLES À LA DATE DE SIGNATURE (service-public, avec leurs conditions) : DPE ; audit SI E, F, G ; plomb SI
+  avant 1949 ; amiante SI permis avant le 01/07/1997 ; électricité et gaz SI installation de plus de 15 ans ; termites SI
+  zone ; état des risques SI zone (6 mois) ; bruit SI zone d'aérodrome ; assainissement (non collectif : contrôle SPANC de
+  moins de 3 ans) ; mérule SI zone (dans l'acte) ; surface Carrez SI lot de copropriété ; carnet d'information du logement
+  SI permis ou déclaration depuis le 01/01/2023.
+- SI travaux ou construction de moins de 10 ans : permis ou déclaration, achèvement (DAACT), dommage-ouvrage ou factures
+  et décennales des entreprises.
+- SI copropriété : coordonnées du syndic, règlement et état descriptif (et modificatifs), PV des 3 dernières AG, fiche
+  synthétique, carnet d'entretien, amiante des parties communes, pré-état daté (pratique : seul l'état daté est légal, à
+  l'acte), DTG ou plan de travaux s'il existe.
+- SI loué : bail, congé · questionnaire vendeur : détecteur de fumée, ramonage, chaudière, cuve, contrats (alarme,
+  photovoltaïque, affichage).
+- Acquéreurs : identité, état civil, financement (apport, banque, montant), projet (travaux).
+- Après la signature : notification SRU (10 jours de rétractation, preuve d'envoi et de réception) ; attestation de
+  séquestre (dépôt de garantie, souvent 5 à 10 %).
+**6. Vente** (jusqu'à l'acte)
+- Offre de prêt acceptée et conditions levées ; SI copropriété : état daté du syndic ; diagnostics à date courte
+  revérifiés à la date de l'acte (état des risques, termites : 6 mois) ; attestation de vente ou copie de l'acte ;
+  facture d'honoraires ; remise des clés ; tout garder 5 ans (vigilance).
+
+### 11.4 Les durées de validité qui feront les alertes
+DPE 10 ans (⚠ les DPE de 2013 à mi-2021 ont expiré fin 2022 ou fin 2024) · électricité et gaz 3 ans · état des risques 6
+mois · termites 6 mois · plomb 1 an s'il est positif, sans limite sinon · amiante sans limite s'il est négatif et fait
+depuis le 01/04/2013 · assainissement non collectif 3 ans · audit énergétique : à vérifier (5 ans selon plusieurs
+sources) · bruit : à vérifier.
+
+### 11.5 Ce que ça change par rapport au §9.3
+Une étape « Visites » apparaît (bon de visite + remise de l'état des risques) ; la situation familiale entre au mandat ;
+le compromis suit la liste service-public avec ses CONDITIONS (âge du bien, zones, copropriété, travaux de moins de 10
+ans, location) au lieu d'une liste fixe ; les durées de validité deviennent des alertes ; tout est étiqueté obligatoire /
+bonne pratique / si… pour que l'app sache quoi BLOQUER et quoi seulement SIGNALER.
+
+### 11.6 À trancher
+1. Les 6 moments et leurs listes. 2. Ce qui BLOQUE (proposé : rien au début, seulement signaler ; puis bloquer la mise en
+vente sans DPE ni état des risques valables). 3. Tracer la remise de l'état des risques aux visiteurs. 4. Les conditions
+demandent des faits sur le bien (année de construction, chauffage, assainissement, zones) : les lire dans la fiche
+Hektor quand ils existent, sinon les demander une fois.
+
+### 11.7 La décision de Frédéric (06/11)
+- ✅ **Point 1 VALIDÉ** : *« Oui, validés »* — les 6 moments (prise de mandat, mise en vente, visites, offre, compromis,
+  vente) et leurs listes du §11.3, avec les étiquettes obligatoire / bonne pratique / si… et les durées du §11.4. Ils
+  remplacent les 5 étapes du §9.3 (écran « La règle » de la maquette).
+- ⏳ **Points 2, 3 et 4 encore ouverts** : ce qui bloque, la trace de la remise de l'état des risques aux visiteurs, où lire
+  les faits dont dépendent les conditions.
+- Restent « à vérifier » sur texte (non tranchés par cette validation) : vigilance anti-blanchiment pour l'acquéreur,
+  mentions de copropriété dans l'annonce, durée de validité de l'audit énergétique et du diagnostic bruit.
+- Rien n'est codé : GED-2 et la suite attendent toujours un « vas-y » explicite.

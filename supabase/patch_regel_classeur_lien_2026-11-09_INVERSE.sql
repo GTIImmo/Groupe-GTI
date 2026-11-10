@@ -6,6 +6,16 @@
 --   par une liste d'identifiants recopiee -- une liste peut se desynchroniser,
 --   la marque du poseur, non.
 --
+-- ⛔⛔ 10/11/2026 -- LA SAUVEGARDE N'EXISTE PLUS. `app_classeur_lien_avant_regel_20261109`
+--   a ete SUPPRIMEE le 10/11 avec l'accord de Frederic : elle faisait echouer la
+--   descente chaque nuit (12 404 lues / 12 413 attendues -- elle n'a AUCUNE cle
+--   primaire, donc le parcours par rang saute des lignes).
+--   ⭐ ON N'A RIEN PERDU : elle se reconstitue EXACTEMENT par une requete, et ca a
+--     ete verifie dans LES DEUX SENS avant de supprimer (0 ecart, 12 413 = 12 413) :
+--       select * from public.app_classeur_lien where gele_par is distinct from 'regel_2026-11-09';
+--   ➡ LES CONTROLES DE CE FICHIER qui comparent a la sauvegarde doivent donc la
+--     RECONSTITUER par la requete ci-dessus avant de tourner.
+--
 -- ⭐ ET IL VERIFIE QU'IL NE RESTE AUCUNE TRACE : la table doit revenir
 --   EXACTEMENT a la sauvegarde `app_classeur_lien_avant_regel_20261109`,
 --   comparee dans les DEUX sens.

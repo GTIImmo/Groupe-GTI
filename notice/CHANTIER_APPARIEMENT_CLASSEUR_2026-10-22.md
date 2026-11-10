@@ -3,6 +3,12 @@
 **22/10/2026.** Règle validée par Frédéric le 20/10, d'après
 `notice/AUDIT_METHODE_APPARIEMENT_2026-10-20.md`.
 
+> ⚠⚠ **L’ORDRE DES SIGNAUX DE CET AUDIT EST RÉVISÉ DEPUIS LE 23/10.** Voir
+> `notice/REGLE_APPARIEMENT_2026-10-23.md` : **la DATE passe en deuxième**, avant le vendeur
+> (594 des 737 contre 479 pour vendeur+ville+prix réunis), et **le prix d’annonce sort de la
+> règle**. Le POUVOIR DE CHAQUE SIGNAL et l’EXCLUSIVITÉ ci-dessous restent valables, mais ils
+> s’appliquent à l’**ÉTAGE 2** (quelle affaire dans le bien), pas au choix du bien.
+
 > **La règle retenue** : deux étages *(le bien, puis l'affaire)*, une cascade **par
 > précision** et non par score, et **l'exclusivité** — une chaîne prise n'est plus
 > candidate.
