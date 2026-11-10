@@ -8,8 +8,8 @@ Le cas : une offre faite le 01/09 au nom de Monsieur (A1), restee « proposee »
 Madame (B1). Noms differents : le § 2.8 ne les relie pas. L'ecran rend alors « Accepter » a l'offre
 (offreARegulariser). On verifie que, l'offre une fois ACCEPTEE, la nuit met le compromis dans SON dossier.
 
-TEMOIN INVERSE : la meme offre datee APRES le compromis, acceptee, ne doit PAS l'attirer -- c'est pourquoi l'ecran
-exige la date. Et l'offre laissee « proposee » ne doit rien attirer non plus (le probleme de depart).
+TEMOIN INVERSE : la meme offre datee APRES le compromis, acceptee, ne doit PAS l'attirer tant
+que les NOMS DIFFERENT -- c'etait la date qui refusait ; depuis la regle B (10/11), c'est le nom. Et l'offre laissee « proposee » ne doit rien attirer non plus (le probleme de depart).
 
     python phase2/sync/test_chainage_offre_regularisee.py
     sortie 0 = tout vert · 1 = un controle en echec
@@ -71,9 +71,9 @@ print("Meme jour")
 c = chaines([(101, "offre", "accepted", "2026-10-12", "A1"), (110, "compromis", "active", "2026-10-12", "B1")])
 ok(c[101] == c[110], "offre et compromis le meme jour : rattaches (l'offre est rangee d'abord)")
 
-print("TEMOIN INVERSE — l'offre datee APRES le compromis, acceptee")
+print("TEMOIN INVERSE — l'offre datee APRES le compromis, acceptee, NOMS DIFFERENTS")
 c = chaines([(101, "offre", "accepted", "2026-10-20", "A1"), (110, "compromis", "active", "2026-10-12", "B1")])
-ok(c[101] != c[110], "elle ne l'attire pas : c'est pourquoi l'ecran exige la date")
+ok(c[101] != c[110], "elle ne l'attire pas -- la date le refusait, et depuis la regle B c'est le NOM")
 
 print("Deja relie par le § 2.8 (meme acquereur), l'offre restee « proposee »")
 c = chaines([(101, "offre", "proposed", "2026-09-01", "A1"), (110, "compromis", "active", "2026-10-12", "A1")])
