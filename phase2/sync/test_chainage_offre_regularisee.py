@@ -80,5 +80,51 @@ c = chaines([(101, "offre", "proposed", "2026-09-01", "A1"), (110, "compromis", 
 ok(c[101] == c[110] if al.chainage_offre_proposee_actif() else True,
    "meme acquereur : deja dans le meme dossier (aucune regularisation necessaire)")
 
+# ═══ LES TROIS REGLES DE RECOLLEMENT (10/11/2026) ═════════════════════
+# ⚠⚠ POURQUOI ELLES SONT EPROUVEES ICI, et pas dans un fichier a part : la regle B
+#   touche EXACTEMENT le cas du temoin inverse ci-dessus. Celui-ci reste vert parce
+#   que ses deux noms different (A1 / B1) -- mais son libelle dit « c'est pourquoi
+#   l'ecran exige la date », et avec B allumee ce n'est plus la date qui refuse,
+#   C'EST LE NOM. Un temoin qui reste vert pour une autre raison que celle qu'il
+#   annonce est un temoin qu'on ne peut plus lire : les cas ci-dessous le disent.
+# ⭐ CHAQUE BLOC EST CONDITIONNEL A SON INTERRUPTEUR, comme celui du § 2.8 : le
+#   test doit rester vert interrupteurs eteints, c'est-a-dire en production.
+
+b_actif = al.chainage_offre_acceptee_seule_actif()
+print("REGLE B — l'offre acceptee datee APRES le compromis, AU MEME NOM")
+c = chaines([(101, "offre", "accepted", "2026-10-26", "A1"),
+             (110, "compromis", "active", "2026-10-12", "A1")])
+ok((c[101] == c[110]) if b_actif else (c[101] != c[110]),
+   "14 jours et meme nom : rattachee" if b_actif
+   else "regle B eteinte : rien ne bouge (comportement d'avant)")
+
+print("REGLE B, TEMOIN INVERSE — hors de la fenetre de 31 jours")
+c = chaines([(101, "offre", "accepted", "2027-02-21", "A1"),
+             (110, "compromis", "active", "2026-10-12", "A1")])
+ok(c[101] != c[110], "132 jours : PAS rattachee, meme au meme nom")
+
+print("REGLE B, TEMOIN INVERSE — dans la fenetre mais NOM DIFFERENT")
+c = chaines([(101, "offre", "accepted", "2026-10-26", "A1"),
+             (110, "compromis", "active", "2026-10-12", "B1")])
+ok(c[101] != c[110], "14 jours mais deux acheteurs : PAS rattachee")
+
+c_actif = al.chainage_vente_seule_actif()
+print("REGLE C — la vente seule datee AVANT son compromis actif, au meme nom")
+c = chaines([(101, "compromis", "active", "2026-10-12", "A1"),
+             (110, "vente", "sold", "2026-09-01", "A1")])
+ok((c[101] == c[110]) if c_actif else (c[101] != c[110]),
+   "l'ordre des dates est ignore : rattachee" if c_actif
+   else "regle C eteinte : rien ne bouge (comportement d'avant)")
+
+print("REGLE C, TEMOIN INVERSE — le compromis est ANNULE")
+c = chaines([(101, "compromis", "cancelled", "2026-10-12", "A1"),
+             (110, "vente", "sold", "2026-09-01", "A1")])
+ok(c[101] != c[110], "un compromis annule ne capte pas la vente")
+
+print("REGLE C, TEMOIN INVERSE — nom different")
+c = chaines([(101, "compromis", "active", "2026-10-12", "A1"),
+             (110, "vente", "sold", "2026-09-01", "B1")])
+ok(c[101] != c[110], "deux acheteurs : la vente reste seule")
+
 print("TOUT VERT" if not echecs else f"⛔ {echecs} controle(s) en echec")
 sys.exit(1 if echecs else 0)

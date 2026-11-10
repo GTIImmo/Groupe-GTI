@@ -1295,6 +1295,94 @@ def chainage_offre_sans_date_actif() -> bool:
     return os.environ.get("APP_CHAINAGE_OFFRE_SANS_DATE", "0") == "1"
 
 
+def chainage_vente_seule_actif() -> bool:
+    """REGLE C -- UNE VENTE SEULE REJOINT SON COMPROMIS ACTIF (10/11/2026).
+
+        APP_CHAINAGE_VENTE_SEULE=1   la regle joue
+        (absent ou 0)                comportement d'avant, A L'IDENTIQUE
+
+    Une vente qui forme a elle seule un dossier rejoint le dossier d'un compromis
+    ACTIF du meme bien, au MEME NOM, qui ne porte pas deja de vente -- QUEL QUE
+    SOIT L'ORDRE DES DATES. C'est la seule des trois regles qui ignore les dates,
+    et c'est delibere : `compromis -> vente` est la sequence normale du metier, le
+    nom suffit a l'etablir, et chez Hektor la vente est parfois datee AVANT son
+    propre compromis (saisie apres coup).
+
+    SIMULATION DU 10/11 (vraie fonction, copie en memoire, temoin 31 145/31 145) :
+        5 cas rattaches, 5 abstentions (plusieurs compromis actifs au meme nom)
+        0 dossier a deux ventes, 0 a deux compromis vivants
+
+    ⛔ LIMITEE AUX COMPROMIS VIVANTS, meme raison qu'au § 2.8 : avec les annules,
+      un compromis en doublon capte la vente et la vraie affaire reste a part.
+    ⚠ ABSTENTION DES QU'IL Y A PLUSIEURS CIBLES -- jamais de choix par le numero.
+    """
+    chainage_v2_actif()                      # il charge `.env` une fois pour tous
+    return os.environ.get("APP_CHAINAGE_VENTE_SEULE", "0") == "1"
+
+
+def chainage_offre_acceptee_seule_actif() -> bool:
+    """REGLE B -- UNE OFFRE ACCEPTEE SEULE REJOINT SON COMPROMIS (10/11/2026).
+
+        APP_CHAINAGE_OFFRE_ACCEPTEE_SEULE=1   la regle joue
+        (absent ou 0)                         comportement d'avant, A L'IDENTIQUE
+
+    Un dossier fait UNIQUEMENT d'offres, dont au moins une ACCEPTEE, rejoint le
+    dossier d'un compromis du meme bien, au MEME NOM, date de 0 a 31 jours AVANT
+    l'offre. L'offre est posterieure au compromis : c'est une offre REGULARISEE
+    apres coup, le cas que le chainage date ne peut pas voir puisqu'il range dans
+    l'ordre du temps.
+
+    ⭐ D'OU VIENT LA FENETRE DE 31 JOURS -- elle est MESUREE, pas choisie. Les
+      ecarts des 15 cas sont 1, 1, 2, 2, 4, 6, 7, 10, 11, 11, 14, 14, 23, 26 et
+      31 jours. Le suivant est a 132 : il y a un TROU de cent jours entre la
+      derniere regularisation plausible et le cas suivant. La fenetre se pose dans
+      ce trou, et elle n'y est pas sensible (28, 31 ou 60 donnent les memes 15).
+
+    SIMULATION DU 10/11 (vraie fonction, copie en memoire, temoin 31 145/31 145) :
+        15 cas rattaches ; 0 dossier a deux ventes, 0 a deux compromis vivants
+
+    ⛔ LE TEMOIN INVERSE DOIT RESTER VERT : phase2/sync/test_chainage_offre_regularisee.py
+      eprouve qu'une offre et un compromis de NOMS DIFFERENTS ne se rejoignent pas.
+    ⚠ ON NE TOUCHE PAS AUX ETATS DE LA CIBLE, comme au § 2.9 : l'offre est AJOUTEE
+      a une affaire deja constituee, elle n'ouvre ni ne ferme rien.
+    """
+    chainage_v2_actif()                      # il charge `.env` une fois pour tous
+    return os.environ.get("APP_CHAINAGE_OFFRE_ACCEPTEE_SEULE", "0") == "1"
+
+
+def chainage_compromis_annule_seul_actif() -> bool:
+    """REGLE A -- UN COMPROMIS ANNULE SANS DATE REJOINT SON OFFRE (10/11/2026).
+
+        APP_CHAINAGE_COMPROMIS_ANNULE_SEUL=1   la regle joue
+        (absent ou 0)                          comportement d'avant, A L'IDENTIQUE
+
+    Un compromis ANNULE, SANS DATE, reste SEUL -- il est le seul cas que ni le
+    § 2.6 (qui exige une offre dans la cible) ni le § 2.7 (qui ne prend que les
+    actifs) ne rattrapent. Il rejoint ici l'UNIQUE dossier du bien fait uniquement
+    d'offres dont une acceptee, si ce dossier est sans nom ou au meme nom.
+
+    ⚠⚠ IL N'EST PAS DANS `toutes` -- ET C'EST LA PARTICULARITE DE CETTE REGLE.
+      Une transaction sans date recoit `attribution[app_id] = app_id` et n'est
+      JAMAIS ajoutee a la liste des chaines du bien tant qu'un repli ne l'y met
+      pas. Les deux autres regles parcourent `toutes` ; celle-ci doit parcourir
+      `sans_date_du_bien` et ecarter ce qu'un repli a deja pris.
+
+    SIMULATION DU 10/11 (vraie fonction, copie en memoire, temoin 31 145/31 145) :
+        3 cas rattaches -- biens 11820, 30678, 41481
+        4 abstentions (plusieurs offres acceptees seules, ou nom different)
+
+    ⭐ « SANS NOM » EST ACCEPTE, et seulement ici : une offre sans acquereur lisible
+      sur un bien qui n'a qu'un seul dossier d'offres n'a rien d'ambigu. Les deux
+      autres regles, elles, EXIGENT le nom.
+    """
+    chainage_v2_actif()                      # il charge `.env` une fois pour tous
+    return os.environ.get("APP_CHAINAGE_COMPROMIS_ANNULE_SEUL", "0") == "1"
+
+
+# REGLE B : l'ecart maximal, en jours, entre un compromis et l'offre acceptee
+# qu'on lui rattache. MESURE le 10/11 -- voir chainage_offre_acceptee_seule_actif.
+FENETRE_OFFRE_REGULARISEE_JOURS = 31
+
 ETATS_OFFRE_MORTS = {"refused", "refusee"}
 ETATS_OFFRE_ACCEPTEE = {"accepted", "acceptee"}
 ETATS_COMPROMIS_MORTS = {"cancelled", "annule"}
@@ -1746,6 +1834,9 @@ def recalculer_les_chaines(con: sqlite3.Connection) -> dict[str, int]:
     v2 = chainage_v2_actif()
     offre_proposee = chainage_offre_proposee_actif()     # § 2.8 (30/10)
     offre_sans_date = chainage_offre_sans_date_actif()   # § 2.9 (02/11)
+    regle_vente_seule = chainage_vente_seule_actif()                     # C (10/11)
+    regle_offre_acceptee_seule = chainage_offre_acceptee_seule_actif()   # B (10/11)
+    regle_compromis_annule_seul = chainage_compromis_annule_seul_actif() # A (10/11)
     lignes = list(con.execute(f"""
         SELECT app_affaire_id, hektor_annonce_id, kind, state, date, acquereurs_json,
                propositions_json
@@ -2142,6 +2233,138 @@ def recalculer_les_chaines(con: sqlite3.Connection) -> dict[str, int]:
                 else:
                     signale(f"[{etiq}] aucune chaine a son nom -- reste seule")
 
+        # ═══ LES TROIS REGLES DE RECOLLEMENT (10/11/2026) ════════════
+        # Elles tournent APRES les replis des § 2.6 / 2.7 / 2.9 et AVANT la
+        # numerotation : elles travaillent sur des dossiers deja constitues, et
+        # chacune ne fait qu'une chose -- recoller deux dossiers du MEME BIEN qui
+        # n'auraient jamais du etre separes.
+        # ⭐ L'ORDRE C, PUIS B, PUIS A N'EST PAS INDIFFERENT. C ferme des dossiers
+        #   en leur donnant leur vente, ce qui empeche B d'y accrocher une offre ;
+        #   et A cherche des dossiers « que des offres », que B vient de vider.
+        #   C'est l'ordre simule le 10/11, celui dont les chiffres sont mesures.
+        # ⚠ CHACUNE S'ABSTIENT DES QU'IL Y A PLUSIEURS CIBLES. Le projet ne
+        #   departage jamais par le numero : une abstention se compte et se dit.
+        if regle_vente_seule or regle_offre_acceptee_seule or regle_compromis_annule_seul:
+            info = {x[0]: x for x in items}     # app_id -> (id, kind, state, date, acqs)
+
+            def membres_de(chaine: dict) -> list[tuple]:
+                return [info[m] for m in chaine["membres"] if m in info]
+
+            def jour(txt: object):
+                try:
+                    return datetime.fromisoformat(str(txt)[:10])
+                except Exception:                                   # noqa: BLE001
+                    return None
+
+            def absorber(source: dict, cible: dict) -> None:
+                """La cible prend les membres de la source, qui disparait.
+
+                ⚠ LA SOURCE SORT DE `toutes` : la numerotation fait `min(membres)`,
+                  et une liste vide la ferait tomber. On la retire aussi de
+                  `ouvertes`, qui porte la meme reference.
+                """
+                cible["membres"].extend(source["membres"])
+                cible["acquereurs"] |= source["acquereurs"]
+                cible["offres"].extend(source["offres"])
+                cible["a_une_vente"] = cible["a_une_vente"] or source["a_une_vente"]
+                source["membres"] = []
+                if source in toutes:
+                    toutes.remove(source)
+                if source in ouvertes:
+                    ouvertes.remove(source)
+
+            # --- REGLE C : UNE VENTE SEULE -> SON COMPROMIS ACTIF, MEME NOM ---
+            if regle_vente_seule:
+                for chaine in list(toutes):
+                    mb = membres_de(chaine)
+                    if len(mb) != 1 or mb[0][1] != "vente":
+                        continue
+                    acqs = mb[0][4]
+                    if not acqs:
+                        signale("[C] vente seule SANS NOM -- reste seule")
+                        continue
+                    cands = [c for c in toutes
+                             if c is not chaine
+                             and not c["a_une_vente"]
+                             and any(m[1] == "compromis" and m[2] not in ETATS_COMPROMIS_MORTS
+                                     for m in membres_de(c))
+                             and (acqs & c["acquereurs"])]
+                    if len(cands) == 1:
+                        absorber(chaine, cands[0])
+                        cands[0]["a_une_vente"] = True
+                        signale("[C] vente seule rattachee a son compromis actif (meme nom)")
+                    elif len(cands) > 1:
+                        signale("[C] plusieurs compromis actifs au meme nom -- abstention")
+                    else:
+                        signale("[C] aucun compromis actif a son nom -- reste seule")
+
+            # --- REGLE B : OFFRE ACCEPTEE SEULE -> COMPROMIS 0..31 j AVANT -----
+            if regle_offre_acceptee_seule:
+                for chaine in list(toutes):
+                    mb = membres_de(chaine)
+                    if not mb or any(m[1] != "offre" for m in mb):
+                        continue
+                    if not any(m[2] in ETATS_OFFRE_ACCEPTEE for m in mb):
+                        continue
+                    cands = []
+                    for c in toutes:
+                        if c is chaine:
+                            continue
+                        accroche = False
+                        for x in membres_de(c):
+                            if x[1] != "compromis":
+                                continue
+                            jc = jour(x[3])
+                            if jc is None:
+                                continue
+                            for o in mb:
+                                jo = jour(o[3])
+                                if jo is None or not (x[4] & o[4]):
+                                    continue
+                                if 0 <= (jo - jc).days <= FENETRE_OFFRE_REGULARISEE_JOURS:
+                                    accroche = True
+                                    break
+                            if accroche:
+                                break
+                        if accroche:
+                            cands.append(c)
+                    if len(cands) == 1:
+                        absorber(chaine, cands[0])
+                        signale("[B] offre acceptee seule rattachee a son compromis "
+                                "(meme nom, moins de %d jours avant)"
+                                % FENETRE_OFFRE_REGULARISEE_JOURS)
+                    elif len(cands) > 1:
+                        signale("[B] plusieurs compromis dans la fenetre -- abstention")
+
+            # --- REGLE A : COMPROMIS ANNULE SANS DATE -> L'UNIQUE OFFRE SEULE --
+            if regle_compromis_annule_seul:
+                deja_pris = {m for c in toutes for m in c["membres"]}
+                for app_id, kind, state, _d, acqs in sans_date_du_bien:
+                    if app_id in deja_pris or kind != "compromis":
+                        continue
+                    if state not in ETATS_COMPROMIS_MORTS:
+                        continue
+                    cands = []
+                    for c in toutes:
+                        mbc = membres_de(c)
+                        if not mbc or any(m[1] != "offre" for m in mbc):
+                            continue
+                        if not any(m[2] in ETATS_OFFRE_ACCEPTEE for m in mbc):
+                            continue
+                        cands.append(c)
+                    if len(cands) == 1 and (not cands[0]["acquereurs"]
+                                            or (acqs & cands[0]["acquereurs"])):
+                        cands[0]["membres"].append(app_id)
+                        cands[0]["compromis"] = True
+                        cands[0]["acquereurs"] |= acqs
+                        signale("[A] compromis annule sans date rattache a "
+                                "l unique offre acceptee seule")
+                    elif cands:
+                        signale("[A] plusieurs offres acceptees seules, ou nom "
+                                "different -- abstention")
+                    else:
+                        signale("[A] aucune offre acceptee seule -- reste seul")
+
         # ⚠ ON NUMEROTE A LA FIN, ET C'EST INDISPENSABLE. Le numero d'une chaine est
         # le plus petit app_affaire_id de ses membres -- or une transaction au numero
         # plus bas peut la rejoindre APRES coup. Numeroter au fil de l'eau laissait
@@ -2164,14 +2387,20 @@ def recalculer_les_chaines(con: sqlite3.Connection) -> dict[str, int]:
                 "chainage_v2": v2,
                 "chainage_sans_date": chainage_sans_date_niveau(),
                 "chainage_offre_proposee": offre_proposee,
-                "chainage_offre_sans_date": offre_sans_date}
+                "chainage_offre_sans_date": offre_sans_date,
+                "chainage_vente_seule": regle_vente_seule,
+                "chainage_offre_acceptee_seule": regle_offre_acceptee_seule,
+                "chainage_compromis_annule_seul": regle_compromis_annule_seul}
     resultat.update(anomalies)
     print(f"[ledger] chainage : {resultat['chaines']} chaines "
           f"({'V2 -- replis actifs' if v2 else 'regle d avant, V2 eteinte'}"
           f"{(' + sans-date cran %d' % resultat['chainage_sans_date'])
              if resultat['chainage_sans_date'] else ''}"
           f"{' + offre proposee (2.8)' if offre_proposee else ''}"
-          f"{' + offre sans date (2.9)' if offre_sans_date else ''})")
+          f"{' + offre sans date (2.9)' if offre_sans_date else ''}"
+          f"{' + vente seule (C)' if regle_vente_seule else ''}"
+          f"{' + offre acceptee seule (B)' if regle_offre_acceptee_seule else ''}"
+          f"{' + compromis annule seul (A)' if regle_compromis_annule_seul else ''})")
     return resultat
 
 
