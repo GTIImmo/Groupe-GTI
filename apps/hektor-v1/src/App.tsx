@@ -32154,7 +32154,37 @@ function avisGardeFouSaisie(genre: string, lignes: AffaireLedgerRow[]): AvisGard
   return null
 }
 
-type ChaineAffaire = { chaine: string; lignes: AffaireLedgerRow[]; rang: number; date: string }
+type ChaineAffaire = {
+  chaine: string
+  lignes: AffaireLedgerRow[]
+  rang: number
+  date: string
+  /** Les lignes a LISTER sous le dossier, effacees chez Hektor comprises (voir grouperDossiersVisibles). */
+  toutes?: AffaireLedgerRow[]
+}
+
+/** La regle du registre des transactions (app_registre_dossiers) et du chainage, mot pour mot :
+ *  un numero Hektor ET present_in_hektor faux. Sans numero = nee dans l'app = vivante. */
+function affaireEffaceeChezHektor(r: AffaireLedgerRow): boolean {
+  return Boolean(String(r.hektor_affaire_id ?? '').trim()) && r.present_in_hektor === false
+}
+
+/** ─── 10/11/2026 : LA RUBRIQUE « AFFAIRES » SUIT LE REGISTRE ───
+ *
+ *  loadAffairesForDossier ne filtre rien. La rubrique montrait donc les transactions EFFACEES
+ *  chez Hektor comme des dossiers en cours : bien 58979, le compromis 46189 (plus vu depuis le
+ *  07/09, sans date, acquereurs sans nom) passait EN TETE, « Préparer l'acte », devant l'offre
+ *  acceptee 28569 -- alors que le registre des transactions l'ecarte. 11 compromis dans ce cas.
+ *
+ *  Le dossier se CALCULE sans les effacees (etape, rang, ordre) ; un dossier qui n'a plus que
+ *  des effacees disparait. Mais dans un dossier encore vivant, la ligne effacee reste LISTEE
+ *  dans `toutes`, avec sa mention « plus dans Hektor » : on masque, on ne requalifie pas. */
+function grouperDossiersVisibles(rows: AffaireLedgerRow[]): ChaineAffaire[] {
+  const cle = (r: AffaireLedgerRow) =>
+    r.app_chaine_id != null ? String(r.app_chaine_id) : 'seule-' + String(r.app_affaire_id)
+  return grouperAffairesParChaine(rows.filter((r) => !affaireEffaceeChezHektor(r)))
+    .map((c) => ({ ...c, toutes: rows.filter((r) => cle(r) === c.chaine) }))
+}
 
 /** Range les lignes du registre en DOSSIERS D'AFFAIRE, un par chaine, le plus
  *  avance en premier. Une ligne sans chaine (registre pas encore rattrape) reste
@@ -35528,7 +35558,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                 //      ou lecture ratee », JAMAIS « aucune affaire ».
                 if (affMock) return <CkAffaires affaire={affMock} />
                 const chaines = ckRegistreAffaires && ckRegistreAffaires.length
-                  ? grouperAffairesParChaine(ckRegistreAffaires)
+                  ? grouperDossiersVisibles(ckRegistreAffaires)
                   : null
                 if (chaines && chaines.length) {
                   const c0 = props.contacts[0]
@@ -35545,7 +35575,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                       {chaines.map((c) => (
                         <div className="fa-ck-chaine" key={c.chaine}>
                           <CkAffaires affaire={ckAffaireDepuisChaine(c, vendeurReg, ckConsoleAffaires, ckDonneesApp)} />
-                          <CkChaineLignes lignes={c.lignes} />
+                          <CkChaineLignes lignes={c.toutes ?? c.lignes} />
                         </div>
                       ))}
                     </>
@@ -40951,7 +40981,9 @@ function MobileDossierDetail(props: {
       .catch(() => { if (vivant && !memeFiche) setMobRegistre(null) })
     return () => { vivant = false }
   }, [mobDossierId, mobRelecture])
-  const mobChaines = mobRegistre && mobRegistre.length ? grouperAffairesParChaine(mobRegistre) : null
+  // 10/11 : un bien dont tous les dossiers sont effaces chez Hektor retombe sur la carte d'avant.
+  const mobDossiers = mobRegistre && mobRegistre.length ? grouperDossiersVisibles(mobRegistre) : null
+  const mobChaines = mobDossiers && mobDossiers.length ? mobDossiers : null
 
   const compromisFacts = [
     ['ID', props.detail.compromis_id ?? '-'],
@@ -41124,7 +41156,7 @@ function MobileDossierDetail(props: {
                     <StatusPill value={acq || `${c.lignes.length} transaction${c.lignes.length > 1 ? 's' : ''}`} />
                   </div>
                   <div className="mobile-detail-lines">
-                    {c.lignes.map((l) => {
+                    {(c.toutes ?? c.lignes).map((l) => {
                       const numero = String(l.hektor_affaire_id ?? '').trim()
                       const prix = affairePrix(l.montant)
                       return (
