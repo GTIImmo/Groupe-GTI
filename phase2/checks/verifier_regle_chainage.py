@@ -172,7 +172,14 @@ def candidate_selon_supabase(membres: list[dict], genre: str) -> bool:
     if genre == "offre":
         return (not a_vente) and (not a_compromis) and (not a_offre or offre_vivante)
     if genre == "compromis":
-        return (not a_vente) and (not a_compromis) and offre_acceptee \
+        # § 2.8 (30/10) : a defaut d'offre acceptee, une offre VIVANTE non acceptee
+        # (« proposee ») du meme acquereur -- interrupteur app_setting
+        # 'chainage_offre_proposee'. On verifie la forme LARGE, allumee ou non :
+        # ce controle cherche une chaine FERMEE candidate, et la forme large doit
+        # elle aussi n'en trouver aucune (le nom, qu'elle exige en plus, ne peut
+        # que restreindre).
+        return (not a_vente) and (not a_compromis) \
+            and (offre_acceptee or (a_offre and offre_vivante)) \
             and (not a_offre or offre_vivante)
     if genre == "vente":
         return (not a_vente) and a_compromis and compromis_vivant
@@ -354,7 +361,68 @@ def main() -> int:
     print(f"      dont vendus autrefois et redevenus libres  : {revendus_libres}")
     print("      ⚠ ce sont EUX que la règle ne doit pas bloquer -- scénario de Frédéric,")
     print("        « on revend la maison des années plus tard ».")
-    return 0 if not divergences and not contredit and not apres_fermeture else 1
+    print("")
+    print("--- ⑥ LES TROIS REGLES DE RECOLLEMENT (10/11/2026) ---")
+    # ⚠⚠ POURQUOI CE CONTROLE EXISTE. Les cinq au-dessus jugent la FERMETURE
+    #   d'un dossier ; les trois regles de recollement, elles, ne ferment rien --
+    #   elles changent A QUEL DOSSIER une transaction appartient. Aucun des cinq
+    #   ne les voit donc passer, et le script aurait rendu « tout vert » sur une
+    #   regle qu'il n'avait jamais lue. C'est exactement la lecon du 16/09.
+    from phase2.sync import affaire_ledger as _al
+    etat_interrupteurs = [
+        ("C  vente seule", _al.chainage_vente_seule_actif()),
+        ("B  offre acceptee seule", _al.chainage_offre_acceptee_seule_actif()),
+        ("A  compromis annule seul", _al.chainage_compromis_annule_seul_actif()),
+    ]
+    # ⭐ ON DIT TOUJOURS SUR QUELLE REGLE ON JUGE. Un rapport qui ne nomme pas son
+    #   reglage ne se relit pas le lendemain : on ne sait plus ce qu'il mesurait.
+    for nom, allume in etat_interrupteurs:
+        print(f"   interrupteur {nom:28s} {'ALLUME' if allume else 'eteint'}")
+
+    deux_ventes = deux_compromis_vivants = plusieurs_offres = 0
+    offre_avec_compromis = 0
+    for membres in chaines.values():
+        ventes = sum(1 for m in membres if str(m.get("kind")) == "vente")
+        cp_vivants = sum(1 for m in membres if str(m.get("kind")) == "compromis"
+                         and etat(m) not in MORTS_COMPROMIS)
+        offres = sum(1 for m in membres if str(m.get("kind")) == "offre")
+        a_compromis = any(str(m.get("kind")) == "compromis" for m in membres)
+        if ventes > 1:
+            deux_ventes += 1
+        if cp_vivants > 1:
+            deux_compromis_vivants += 1
+        if offres > 1:
+            plusieurs_offres += 1
+        if offres and a_compromis:
+            offre_avec_compromis += 1
+
+    invariants_casses = deux_ventes + deux_compromis_vivants
+    print(f"   dossiers a DEUX VENTES              {deux_ventes}"
+          + ("   (aucun)" if not deux_ventes else "   <<< un recollement a trop pris"))
+    print(f"   dossiers a DEUX COMPROMIS VIVANTS   {deux_compromis_vivants}"
+          + ("   (aucun)" if not deux_compromis_vivants
+             else "   <<< un recollement a trop pris"))
+    # ⛔ UN ZERO NE SE CROIT PAS SANS TEMOIN POSITIF -- regle du projet. Les deux
+    #   compteurs ci-dessus doivent rendre 0 ; celui-ci, lui, DOIT etre non nul,
+    #   sinon c'est le regroupement lui-meme qui ne compte rien.
+    print(f"   TEMOIN POSITIF : dossiers a plusieurs OFFRES   {plusieurs_offres}"
+          + ("   <<< ZERO : le compteur ne compte rien, les deux zeros ci-dessus"
+             " ne valent rien" if not plusieurs_offres else "   (le compteur voit)"))
+
+    print("")
+    print("   ⚠ CE QUE ② SUPABASE NE SAIT PAS REFAIRE -- la regle B, et elle seule :")
+    print("     `app_chaine_pour` refuse d'ajouter une OFFRE a un dossier qui porte")
+    print("     deja un compromis (branche genre='offre' : `not a_compromis`). La")
+    print("     regle B, elle, le fait -- c'est son objet meme. Ce n'est PAS une")
+    print("     contradiction (② ne ferme rien a tort, le controle ② reste vert),")
+    print("     c'est un ECART DE REGROUPEMENT : une offre acceptee enregistree")
+    print("     depuis l'app APRES son compromis ouvrira un dossier neuf, et le run")
+    print("     de la nuit suivante le recollera. Divergence d'une journee.")
+    print(f"     dossiers portant une offre ET un compromis : {offre_avec_compromis}")
+    print("     ⭐ A TRANCHER LE JOUR OU L'APP CREERA CES OFFRES : aligner")
+    print("       `app_chaine_pour`, ou accepter le rattrapage de nuit.")
+
+    return 0 if not divergences and not contredit and not apres_fermeture and not invariants_casses else 1
 
 
 def _par_annonce(chaines: dict) -> dict:
