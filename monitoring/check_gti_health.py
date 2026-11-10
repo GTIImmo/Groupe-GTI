@@ -655,6 +655,69 @@ DATA_SENTINELS: list[dict[str, Any]] = [
         "max": 0,
     },
     {
+        # 29/10/2026 -- LA JUMELLE DE LA PRECEDENTE, POUR LES HONORAIRES.
+        #
+        # POURQUOI ELLE MANQUAIT. Le menage des repartitions existe depuis le 15/09
+        # (app_repartition_purger_orphelines, appelee par le run) et il compte ce
+        # qu'il garde : `saisies_orphelines_gardees`. Ce chiffre valait 2 AU JOURNAL
+        # DU RUN CHAQUE NUIT DEPUIS LE 29/09 -- trente nuits -- et PERSONNE NE LE
+        # LISAIT. Le defaut n'etait pas la detection : c'etait l'ecoute.
+        #
+        # POURQUOI CRITICAL, ET PAS WARNING COMME SA JUMELLE. Un orphelin de
+        # recherche se RATTACHE tout seul (app_sweep_search_orphans) : il se repare.
+        # Une repartition d'honoraires d'origine `saisie` est TAPEE PAR UN HUMAIN,
+        # elle ne se recalcule pas, et Hektor ne la porte pas (il ignore le 2e
+        # negociateur dans 525 cas sur 649, mesure du 19/10). Perdue = perdue.
+        # ⭐ C'est de l'argent, et c'est la seule donnee de cette famille qui ne
+        #   puisse pas etre reconstruite. A passer en warning d'un mot si Frederic
+        #   juge que ca sonne trop.
+        #
+        # SEUIL 0, ET IL EST ATTEIGNABLE : la vue est VIDE depuis le 29/10, apres
+        # le retrait des 2 lignes d'essai du bien 24933 (patch du meme jour).
+        # ⚠ La vue compte TOUTES les origines, pas seulement les saisies : une
+        #   DERIVEE orpheline voudrait dire que la purge de nuit n'a pas tourne,
+        #   et ca merite de se savoir aussi. Le diagnostic est dans la vue.
+        # 29/10/2026 -- LE GEL DU CLASSEUR. 12 404 liens figes entre les lignes du
+        # Sheet et NOS TRANSACTIONS (app_affaire_id, jamais app_chaine_id : celui-la
+        # est un min() recalcule chaque nuit, rien ne doit s'y accrocher).
+        # ⛔ SEUIL 0 SUR LE SEUL CAS GRAVE : « DISPARUE » -- la transaction n'est plus
+        #   dans notre registre, donc le lien ne pointe plus rien. Le registre est en
+        #   delete-never : ca ne devrait JAMAIS arriver, sauf suppression deliberee.
+        # ⚠ L'AUTRE CAS, « ABSENTE_CHEZ_HEKTOR », N'EST PAS COMPTE ICI : Hektor a
+        #   efface la transaction mais NOUS la gardons, donc le lien tient. Il y en a
+        #   5 au 29/10 (vues pour la derniere fois les 07/09 et 01/10). Les compter
+        #   ferait sonner une alerte pour un fait ancien et sans consequence.
+        "key": "data.classeur_lien_casse",
+        "severity": "critical",
+        "label": "Lien du classeur dont la transaction a disparu",
+        "table": "app_v_classeur_lien_casse",
+        "params": {"gravite": "eq.DISPARUE"},
+        "rule": "absolute",
+        "max": 0,
+        "sample": {
+            "select": "ligne_classeur,app_affaire_id,role,confiance,preuves,diagnostic",
+            "order": "ligne_classeur.asc",
+            "limit": 4,
+        },
+    },
+    {
+        "key": "data.repartition_orpheline",
+        "severity": "critical",
+        "label": "Repartition d'honoraires accrochee a un dossier disparu",
+        "table": "app_v_repartition_orpheline",
+        "params": {},
+        "rule": "absolute",
+        "max": 0,
+        # ⭐ L'ECHANTILLON : « une alerte qui dit 1 sans dire lequel oblige a
+        #   chercher ». On nomme le negociateur, son cote, sa part, et le
+        #   diagnostic (recuperable ou perdue) -- de quoi agir sans requete.
+        "sample": {
+            "select": "app_chaine_id,cote,nom_au_moment,pourcentage,origine,diagnostic",
+            "order": "ecrit_le.desc",
+            "limit": 4,
+        },
+    },
+    {
         "key": "data.annonce_partielle",
         # CRITICAL : un champ ignore au push = divergence app/Hektor invisible.
         "severity": "critical",

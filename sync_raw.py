@@ -440,6 +440,43 @@ def load_annonce_ids_missing_detail_sync(conn) -> list[str]:
     return [str(row["hektor_annonce_id"]).strip() for row in rows if str(row["hektor_annonce_id"] or "").strip()]
 
 
+# 02/11/2026 -- LE MANDAT SAISI APRES COUP N'ARRIVAIT JAMAIS.
+# Le detail n'est relu que si la `datemaj` du listing change (main, plus bas). Or
+# saisir ou completer le mandat chez Hektor NE BOUGE PAS cette date : V790063303
+# (annonce 63303, n 18953) a garde son detail du 20/10 sans mandat, donc notre
+# carnet `app_mandat` et le registre sont restes sans date -- jusqu'a ce qu'une
+# ouverture de fiche relise le detail. Mesure du 02/11 : 3 annonces sur 6 de ce
+# cas avaient leur mandat complet chez Hektor (63303, 62524, 63227).
+# ⚠ Le chantier ⑥ (6i, 15/10) avait conclu « relu chaque nuit » en lisant
+#   `hektor_annonce_detail.synced_at` -- c'est l'heure de la NORMALISATION, qui
+#   reecrit toutes les fiches. L'heure de lecture est `raw_api_response.fetched_at`.
+# On relit donc, en plus, les annonces actives dont le detail ne porte PAS le
+# numero de mandat du listing (detail absent, vide, ou un autre numero).
+# ⚠ Ne couvre PAS un mandat deja present dont Hektor change les dates : rien ne le
+#   signale sans tout relire.
+# Interrupteur : APP_RELIRE_DETAIL_MANDAT_ABSENT=1 (eteint par defaut).
+# Plafond par nuit : APP_RELIRE_DETAIL_MANDAT_ABSENT_PLAFOND (50) -- 5 annonces au 02/11.
+def load_annonce_ids_detail_sans_mandat(conn, actives: set, plafond: int) -> list[str]:
+    rows = conn.execute(
+        """
+        SELECT a.hektor_annonce_id
+        FROM hektor_annonce a
+        LEFT JOIN hektor_annonce_detail d ON d.hektor_annonce_id = a.hektor_annonce_id
+        WHERE COALESCE(a.archive, '0') = '0'
+          AND TRIM(COALESCE(a.no_mandat, '')) <> ''
+          AND NOT EXISTS (
+                SELECT 1
+                FROM json_each(CASE WHEN json_valid(d.mandats_json) AND json_type(d.mandats_json) = 'array'
+                                    THEN d.mandats_json ELSE '[]' END) je
+                WHERE TRIM(COALESCE(json_extract(je.value, '$.numero'), '')) = TRIM(a.no_mandat)
+          )
+        ORDER BY CAST(a.hektor_annonce_id AS INTEGER) DESC
+        """
+    ).fetchall()
+    ids = [str(row[0]).strip() for row in rows if str(row[0] or "").strip() in actives]
+    return ids[:plafond]
+
+
 def upsert_annonce_state(conn, *, annonce_id: str, listing_variant: str, date_maj: Optional[str]) -> None:
     now_iso = now_utc_iso()
     conn.execute(
@@ -1761,6 +1798,14 @@ def main() -> int:
                 detail_ids = sorted(active_annonce_ids)
             else:
                 detail_ids = sorted(changed_annonce_ids)
+                # 02/11/2026 -- le mandat saisi apres coup : voir load_annonce_ids_detail_sans_mandat.
+                if (os.environ.get("APP_RELIRE_DETAIL_MANDAT_ABSENT") or "0").strip() == "1":
+                    plafond = int((os.environ.get("APP_RELIRE_DETAIL_MANDAT_ABSENT_PLAFOND") or "50").strip() or 50)
+                    sans_mandat = load_annonce_ids_detail_sans_mandat(conn, active_annonce_ids, plafond)
+                    ajoutes = [aid for aid in sans_mandat if aid not in changed_annonce_ids]
+                    detail_ids = sorted(set(detail_ids) | set(ajoutes))
+                    print(f"[mandat absent du detail] {len(sans_mandat)} annonce(s), {len(ajoutes)} relue(s) en plus"
+                          f" (plafond {plafond}) : {', '.join(ajoutes[:20])}")
 
         if "contacts" in args.resources:
             changed_contact_ids: set[str] = set()
