@@ -628,7 +628,13 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
                   # le mecanisme serait installe A MOITIE.
                   # ⓘ TEXT, comme les autres : SQLite ne type pas, et l'uuid
                   #   descend en texte de PostgREST.
-                  "app_dossier_uuid", "app_dossier_numero"):
+                  "app_dossier_uuid", "app_dossier_numero",
+                  # ⭐ L'ANNULATION (10/11/2026). MEME PATRON, et les colonnes
+                  # sont POSEES CHEZ SUPABASE DEPUIS CE JOUR -- dans cet ordre,
+                  # jamais l'inverse : une colonne locale que Supabase n'a pas
+                  # est reclamee pour rien a la redescente (c'est l'etat ou
+                  # dort app_dossier_uuid depuis le 09/11).
+                  "date_annulation_app", "motif_annulation_app"):
         if neuve not in colonnes:
             con.execute(f"ALTER TABLE {LEDGER_TABLE} ADD COLUMN {neuve} TEXT")
             con.commit()
@@ -2553,6 +2559,14 @@ COLONNES_QUE_LE_PUSH_N_ENVOIE_PAS = (
     # ⛔ UN SEUL EMETTEUR, ET C'EST SUPABASE (C3) : app_poser_etiquettes_dossier,
     #    apres le calcul des groupes (C2). Ni le clic ni le push n'en posent.
     "app_dossier_uuid", "app_dossier_numero",
+    # ⭐ L'ANNULATION (10/11/2026) -- liste B de A18, posee chez Supabase le
+    # meme jour. Elle entre ici AVANT tout remplissage, et pour la raison
+    # ecrite juste en dessous : le 07/09, un `--push` a EFFACE une annulation
+    # faite une heure plus tot, en poussant un miroir local perime. Une DATE
+    # d'annulation subirait exactement le meme sort.
+    # ⛔ ET `motif_annulation_app` N'A AUCUNE AUTRE SOURCE : ni le classeur ni
+    #    Hektor ne portent la raison d'une annulation. Efface = perdu.
+    "date_annulation_app", "motif_annulation_app",
 )
 
 
