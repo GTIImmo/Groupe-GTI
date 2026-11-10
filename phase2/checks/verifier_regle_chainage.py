@@ -69,9 +69,11 @@ def lire_registre() -> list[dict]:
     #   ordonne sur la première proposition depuis le 16/09 ; ce contrôle doit lire
     #   la même chose. Le prix est une charge plus lourde (22 320 propositions sur
     #   le parc) -- acceptable pour un contrôle qui se lance à la main.
+    # ⚠ `montant` AJOUTE LE 10/11 : le controle ③ ne pouvait pas distinguer une
+    #   date fausse chez Hektor d'un vrai melange sans comparer les montants.
     champs = ("app_affaire_id,app_chaine_id,hektor_annonce_id,kind,state,"
               "hektor_affaire_id,present_in_hektor,date,hektor_acquereur_id,"
-              "propositions_json")
+              "propositions_json,montant")
     lignes, page = [], 0
     while True:
         q = urllib.parse.urlencode({
@@ -304,7 +306,38 @@ def main() -> int:
         return _date_de_tri(m.get("kind"), m.get("date"),
                             m.get("propositions_json")) or ""
 
-    apres_fermeture = []
+    # ⭐⭐ DEUX CHOSES TRES DIFFERENTES SE RESSEMBLENT ICI -- separees le 10/11.
+    #   Jusqu'a la regle C, tout bloc date apres la vente de sa chaine voulait dire
+    #   qu'une chaine CLOSE avait recu quelque chose : un defaut de regroupement.
+    #   La regle C (10/11) rattache DELIBEREMENT une vente a son compromis sans
+    #   regarder l'ordre des dates, parce que chez Hektor la vente est souvent
+    #   saisie apres coup et datee n'importe quand. Les 5 premiers cas mesures le
+    #   prouvent : MEME ACHETEUR ET MEME MONTANT AU CENTIME (LAGRENEE 16 000,
+    #   BRUNON 190 000, JEAN PIERRE 71 500, MENDOZA 32 000, CHAMBON 92 000), et
+    #   pour deux d'entre eux le classeur porte l'offre et le compromis SUR LA
+    #   MEME LIGNE (258 et 315). Deux affaires distinctes n'ont pas le meme
+    #   montant exact : c'est une seule affaire, et c'est LA DATE DE LA VENTE
+    #   QUI EST FAUSSE chez Hektor (les cinq n'ont meme pas d'etat).
+    # ⛔ ON NE LES FAIT PAS TAIRE -- on les compte sous leur VRAI nom. Le controle
+    #   gagne un detecteur de dates abimees ; il ne perd pas sa vigilance sur le
+    #   regroupement, qui reste a seuil 0 et seul a faire tomber le code de sortie.
+    def _montant(m: dict) -> float | None:
+        try:
+            return round(float(str(m.get("montant")).strip()), 2)
+        except Exception:                                           # noqa: BLE001
+            return None
+
+    def _une_seule_affaire(a: dict, b: dict) -> bool:
+        """Meme acheteur ET meme montant : la date ment, le regroupement non."""
+        ma, mb = _montant(a), _montant(b)
+        if ma is None or mb is None or ma != mb:
+            return False
+        qa = str(a.get("hektor_acquereur_id") or "").strip()
+        qb = str(b.get("hektor_acquereur_id") or "").strip()
+        return bool(qa) and qa == qb
+
+    apres_fermeture = []        # le vrai defaut : une chaine close a recu
+    dates_douteuses = []        # meme affaire, date de vente fausse chez Hektor
     for cle, membres in chaines.items():
         vente = next((m for m in membres if str(m.get("kind")) == "vente"), None)
         if not vente or not _place(vente):
@@ -313,11 +346,23 @@ def main() -> int:
             if m is vente or not _place(m):
                 continue
             if _place(m) > _place(vente):
-                apres_fermeture.append((cle, vente, m))
+                if _une_seule_affaire(vente, m):
+                    dates_douteuses.append((cle, vente, m))
+                else:
+                    apres_fermeture.append((cle, vente, m))
     print("--- ③ EMPIRIQUE : un bloc daté APRÈS la vente qui ferme sa chaîne ---")
     print(f"   cas trouvés {len(apres_fermeture)}"
           + ("   <<< une chaîne close a reçu quelque chose" if apres_fermeture
              else "   (aucun : « une chaîne fermée ne reçoit plus jamais rien » tient)"))
+    print(f"   dont ECARTES, meme acheteur ET meme montant : {len(dates_douteuses)}"
+          + ("   (aucun)" if not dates_douteuses
+             else "   -> UNE SEULE AFFAIRE, la DATE DE LA VENTE est fausse chez Hektor"))
+    for cle, v, m in dates_douteuses[:10]:
+        print(f"      annonce {cle[0]} dossier {cle[1]} : vente du {_place(v)}"
+              f" PUIS {m['kind']} du {_place(m)} -- acheteur {v.get('hektor_acquereur_id')},"
+              f" {_montant(v)} des deux cotes")
+    if dates_douteuses:
+        print("      ⬜ A CORRIGER CHEZ HEKTOR : une vente ne precede pas son compromis.")
     for cle, v, m in apres_fermeture[:10]:
         # ⚠ on affiche la date de PLACE, celle qui a servi à juger -- sinon le
         #   message raconterait autre chose que la mesure (c'est ce qui rendait
