@@ -622,3 +622,102 @@ répartition. Il est **sorti du chemin critique** et attend trois nuits propres.
 **Simulation** *(scratchpad, non versionnée)* : `audit_final_chainage.py` — elle rejoue
 quatre états *(actuel, vente seule, vente + point 4 large, **la règle retenue**)* et
 contrôle les invariants à chaque fois. Aucune écriture.
+
+---
+
+## 10. ✅ LE CHANTIER EST EN SERVICE — journée du 10/11/2026
+
+Transfert reçu de la conversation « Anomalies chaînage Hektor transactions », qui avait
+**mesuré** les règles sans écrire une ligne. Tout le code de cette section est du 10/11.
+
+### 10.1 Les trois règles de recollement — `8ee4950`, `fc95494`, `40bb18d`, `21c2ab4`
+
+```
+APP_CHAINAGE_VENTE_SEULE            C  une vente seule rejoint son compromis ACTIF
+                                       au meme nom -- ordre des dates IGNORE
+APP_CHAINAGE_OFFRE_ACCEPTEE_SEULE   B  une offre acceptee seule rejoint son compromis
+                                       au meme nom, 0 a 31 jours APRES lui
+APP_CHAINAGE_COMPROMIS_ANNULE_SEUL  A  un compromis ANNULE sans date rejoint l'unique
+                                       offre acceptee seule du bien
+```
+
+⭐ **La fenêtre de 31 jours de la règle B est MESURÉE, pas choisie** : les écarts des 15 cas
+vont de 1 à 31 jours, et le suivant est à **132**. Elle se pose dans ce trou de cent jours,
+et elle n'y est pas sensible (28, 31 ou 60 donnent les mêmes 15).
+
+**Témoin inverse d'abord** : interrupteurs éteints, le rejeu de la vraie fonction sur une
+copie en mémoire rend **31 145 chaînes identiques à la production sur 31 145**.
+
+### 10.2 ✅ EN SERVICE, et ce qui a été mesuré après
+
+```
+.env     APP_CHAINAGE_SANS_DATE 1 -> 2, plus les trois ci-dessus
+         ⛔ .env N'EST PAS SOUS GIT : c'est la SEULE trace de la mise en service
+dossiers vivants        12 117 -> 12 094
+transactions deplacees      38   (15 du cran 2 + 23 des trois regles)
+transactions perdues         0 . dossiers coupes 0 . fusionnes 33
+invariants              0 dossier a deux ventes . 0 a deux compromis vivants
+Supabase                concorde avec le local : 31 145 lignes, 12 107 chaines
+```
+
+### 10.3 ⭐ Les 33 fusions, jugées par le gel du classeur
+
+16 tombent sur **une seule** ligne du Sheet (il confirme « une affaire »), 16 sur aucune,
+**1 en réunit deux** — le bien 41481. ⚠ Et l'examen de ce cas a renversé une conclusion :
+le classeur n'avait pas dédoublé une affaire, **c'est le gel qui porte un faux lien**. Les
+lignes 3863 (50 000) et 3935 (55 000) sont **deux tentatives distinctes de DEBARD**, et le
+prix tranche. ➡ **La règle « 1 ligne du classeur = 1 dossier » n'a donc AUCUNE exception**,
+contrairement à ce que j'avais annoncé.
+
+### 10.4 Le contrôle ⑥ de `verifier_regle_chainage.py`
+
+Les cinq contrôles existants jugent la **fermeture** d'un dossier ; les trois règles ne
+ferment rien — elles changent **à quel dossier** une transaction appartient. Aucun des cinq
+ne les voyait passer. ⑥ nomme l'état des interrupteurs, vérifie les deux invariants, et
+porte un **témoin positif** (13 dossiers à plusieurs offres) — un zéro ne se croit pas sans lui.
+
+### 10.5 ⚠ Et le contrôle ③ a trouvé CINQ DATES FAUSSES CHEZ HEKTOR
+
+```
+14486  LAGRENEE      16 000   vente datee 13/03/2024, compromis 15/10/2024
+28073  BRUNON       190 000   vente datee 16/01/2008, compromis 18/10/2008
+28952  JEAN PIERRE   71 500   vente datee 23/04/2017, compromis 08/06/2017
+48458  MENDOZA       32 000   vente datee 13/07/2017, compromis 21/09/2017
+54715  CHAMBON       92 000   vente datee 28/01/2024, compromis 12/11/2024
+```
+
+Une vente ne précède pas son compromis de sept mois. **Même acheteur et même montant au
+centime** dans les cinq ; pour 7122 et 28145 le classeur porte l'offre et le compromis **sur
+la même ligne**. ⭐ Le recollement est juste : ce sont **les dates de ces cinq ventes qui
+sont fausses chez Hektor**, et aucune n'a d'état. ⑥ les écarte désormais sous leur vrai nom
+et les imprime à chaque passage. ⬜ **Rien n'a été corrigé chez Hektor.**
+
+### 10.6 La table de contrôle refaite — ce que le chaînage a évité
+
+```
+                                ce matin   apres
+dossiers a examiner                 725      692
+REFUSER l'offre                     531      526
+ANNULER le compromis                  7        7
+```
+
+⭐ **33 dossiers sont sortis de la table** — ils n'étaient pas des anomalies, juste des
+affaires coupées en deux. Dont **cinq offres qu'on allait refuser à tort** (biens 8890,
+11820, 30678, 41481, 59136 — la dernière rejoignant une **vente**) et **un compromis qu'on
+allait annuler à tort** (28952). Sans le recollement, six gestes faux partaient chez Hektor.
+
+### 10.7 ⬜ Ce qui reste, et qui attend une décision de Frédéric
+
+```
+LA CASCADE des 661    « une transaction annulee entraine ses maillons » -- la regle
+                      n'est ECRITE NULLE PART et la RPC n'en fait AUCUNE.
+                      661 dossiers ont un compromis annule et une offre « acceptee ».
+                      ⛔ Les 8 658 « vente + offre acceptee » sont NORMAUX : une offre
+                        qui aboutit reste acceptee. La cascade ne vise que ce qui est MORT.
+LES 523 REFUS         le script est eprouve. ~26 min depuis la garde `sans_resynchro`.
+LES 13 VENTES         bloquees : CREER une transaction n'a qu'un chemin,
+                      app_change_annonce_status_optimistic, et il REFUSE les archives.
+```
+
+⚠ **Et `app_chainage_photo_20261110`** (la photo d'avant, 31 145 lignes, clé primaire)
+reste chez Supabase et descend chaque nuit — à supprimer quand elle aura fini de servir.
