@@ -96,7 +96,21 @@
 .av3 .ra.rappro { position: relative; }
 .av3 .ra.rappro:hover { border-color: #0f766e; color: #0f766e; background: #e6efee; }
 .av3 .ra-badge { position: absolute; top: -6px; right: -6px; min-width: 16px; height: 16px; padding: 0 4px; box-sizing: border-box; border-radius: 99px; background: #c5005f; color: #fff; border: 2px solid #fff; font-size: 9px; font-weight: 800; line-height: 12px; letter-spacing: -.01em; font-variant-numeric: tabular-nums; text-align: center; }
-.av3 .av3-actions .lightweight-row-action { justify-self: start; }
+/* Bouton des lignes légères (vendus, clos, archives, brouillons) : la tuile 34px du 23/06
+   (c0c7d2d, layout-overrides.css ~6489). Ces règles-là visent `td > .row-actions` ; ici le
+   bouton vit sous `.av3-actions`, elles ne le trouvaient plus depuis la liste V2 (03/11) :
+   il retombait sur l'ancien bouton à libellé de styles.css, 132px et icône à 110px. */
+.av3 .av3-actions .lightweight-row-action { justify-self: start; display: grid; place-items: center; width: 34px; min-width: 34px; height: 34px; min-height: 34px; padding: 0; gap: 0; box-sizing: border-box; border-radius: 10px; border: 1.5px solid #cfd3d4; background: #f1f2f3; color: #5c6163; box-shadow: none; cursor: pointer; transition: border-color .15s ease, background .15s ease, color .15s ease, transform .15s ease, box-shadow .15s ease; }
+.av3 .av3-actions .lightweight-row-action svg { width: 19px; height: 19px; display: block; }
+.av3 .av3-actions .lightweight-row-action:hover { transform: translateY(-1px); }
+.av3 .av3-actions .lightweight-row-action:focus-visible { outline: 3px solid rgba(15, 76, 92, .16); outline-offset: 2px; }
+/* Teintes par état, comme layout-overrides : charger = ambre, ouvrir = vert, brouillon = bleu. */
+.av3 .av3-actions .lightweight-row-action[data-kind="import"] { border-color: rgba(182, 106, 22, .34); background: #fdf3e7; color: #b6680a; }
+.av3 .av3-actions .lightweight-row-action[data-kind="import"]:hover { border-color: #b6680a; background: #fbe9d2; box-shadow: 0 6px 14px -8px rgba(182, 106, 22, .6); }
+.av3 .av3-actions .lightweight-row-action[data-kind="ready"] { border-color: rgba(31, 138, 91, .34); background: #ecf7f1; color: #1f8a5b; }
+.av3 .av3-actions .lightweight-row-action[data-kind="ready"]:hover { border-color: #1f8a5b; background: #ddf0e6; box-shadow: 0 6px 14px -8px rgba(31, 138, 91, .6); }
+.av3 .av3-actions .lightweight-row-action[data-kind="brouillon"] { border-color: rgba(47, 111, 138, .34); background: #e6eff3; color: #2f6f8a; }
+.av3 .av3-actions .lightweight-row-action[data-kind="brouillon"]:hover { border-color: #2f6f8a; background: #d6e7ee; box-shadow: 0 6px 14px -8px rgba(47, 111, 138, .6); }
 .panel-grid.av3 .av3-actions > .av3-slot.row-actions { display: contents !important; }
 
 /* Bouton Action : « le sceau de suivi » (03/11, 2e dessin). Une demande administrative part a la
