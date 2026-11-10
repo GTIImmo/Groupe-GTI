@@ -211,6 +211,15 @@ async function main() {
           // ⛔ SANS LUI, restaurerEtatAffaire() NE PEUT RIEN REMETTRE si Hektor refuse.
           etat_avant: offre.state,
           etat_apres: "refused",
+          // ⭐⭐ PAS DE RELECTURE INDIVIDUELLE (10/11/2026). Mesure : le geste prend
+          //   16,6 s, sa resynchro 26,7 s. Sur 524 refus, les relectures ajoutent
+          //   4 h 27 et TRENTE FOIS le trafic d'une journee normale (18 resynchros),
+          //   pour une information que le run de nuit relit en un seul passage.
+          //   Le worker lit ce drapeau dans enqueueRefreshConsoleDataJobBestEffort
+          //   et l'ecrit au journal : une relecture sautee n'est jamais silencieuse.
+          // ⛔ IL N'EST POSE QUE PAR CE SCRIPT. Aucun geste humain ne le porte, donc
+          //   aucun clic ne perd sa relecture.
+          sans_resynchro: true,
           // La trace de QUI a decide, et SUR QUELLE SOURCE. Un menage de masse sans
           // cette trace est indefendable six mois plus tard.
           origine: "enqueue_refus_offres_mortes_lot",

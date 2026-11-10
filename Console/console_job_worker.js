@@ -1891,7 +1891,38 @@ async function enqueueRefreshConsoleDataJob(parentJob, hektorAnnonceId, options 
   };
 }
 
+// ⭐⭐ LE RATTRAPAGE DE MASSE N'A PAS BESOIN DE 500 RELECTURES  (10/11/2026)
+//
+// POURQUOI CETTE GARDE EXISTE. Chaque geste pose sa propre resynchro, et c'est
+// JUSTE pour un clic humain : celui qui vient de cliquer veut voir le resultat
+// tout de suite. C'est ABSURDE pour un menage de fond -- mesure du 10/11 :
+//     le geste lui-meme          16,6 s   (4 gestes mesures)
+//     sa resynchro               26,7 s   (17 resynchros mesurees)
+//     -> 524 refus d'offres a rattraper = 2 h 46 de gestes + 4 h 27 de relectures
+//     -> et 524 relectures la ou la journee en compte 18 : TRENTE FOIS le trafic
+// Le run de nuit relit tout de toute facon, EN UN SEUL PASSAGE. Les 524 relectures
+// individuelles ne servent donc a personne : elles ne font que brûler le quota
+// Hektor (13 000 a 17 000 par periode, dont la nuit prend deja ~4 500).
+//
+// ⛔ ELLE NE S'ALLUME QUE SI LA CHARGE LE DIT, EXPRESSEMENT. Sans
+//   `sans_resynchro: true` dans le payload du travail, le comportement est
+//   EXACTEMENT celui d'avant -- aucun geste humain n'est touche, puisque aucun
+//   n'a jamais ce drapeau. C'est la seule facon de toucher une fonction appelee
+//   par dix handlers sans ecraser leur raisonnement.
+// ⚠ ET ON LE DIT AU JOURNAL. Une relecture sautee en silence serait un trou dans
+//   la piste : on veut pouvoir repondre, demain, « pourquoi cette annonce n'a pas
+//   ete relue ».
 async function enqueueRefreshConsoleDataJobBestEffort(parentJob, hektorAnnonceId, options = {}) {
+  const charge = (parentJob && parentJob.payload_json) || {};
+  if (charge.sans_resynchro === true) {
+    await logJob(parentJob.id, "sync_queue", "done",
+      "Resynchro NON posee : la charge porte sans_resynchro (rattrapage de masse)", {
+        hektor_annonce_id: String(hektorAnnonceId || ""),
+        origine: charge.origine || null,
+      });
+    return { status: "skipped", reason: "sans_resynchro",
+             hektor_annonce_id: String(hektorAnnonceId || "") };
+  }
   try {
     return await enqueueRefreshConsoleDataJob(parentJob, hektorAnnonceId, options);
   } catch (error) {
