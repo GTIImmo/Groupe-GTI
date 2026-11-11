@@ -44,6 +44,28 @@ const TABLE_DEFAUT = path.resolve(
   "TABLE_DE_CONTROLE_REGISTRE_2026-11-10_APRES_CHAINAGE.csv");
 
 const ETATS_OFFRE_MORTS = new Set(["refused", "refusee"]);
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ⛔ LES DOSSIERS QU'ON N'ENFILE PAS -- PAR DECISION, PAS PAR OUBLI   11/11/2026
+// ═══════════════════════════════════════════════════════════════════════════════
+// ⚠ UNE EXCLUSION SE DECLARE. Un dossier retire en silence d'une liste de 1 158
+//   est un dossier que personne ne retrouvera, et la raison du retrait sera perdue
+//   avec la conversation qui l'a decidee. Regle du projet, payee le 14/10.
+// Chaque entree porte : le dossier, le bien, et POURQUOI.
+const DOSSIERS_EXCLUS = new Map([
+  [3699, {
+    bien: 8494,
+    raison: "Garage VS046 au Puy-en-Velay (6 800 EUR). Sa VENTE du 21/03/2025 "
+          + "(aff 3701, Hektor n° 8683) a ete SUPPRIMEE chez Hektor apres le "
+          + "18/09/2026, et le premier compromis (aff 3698) apres le 07/09. Nous "
+          + "les gardons par le delete-never, mais le chainage ne voit QUE ce qui "
+          + "est encore chez Hektor : il ne reste donc qu'une offre acceptee et un "
+          + "compromis actif, ce qui fait croire a une affaire en cours. "
+          + "⛔ TANT QU'ON NE SAIT PAS si cette vente a ete supprimee EXPRES, tout "
+          + "geste risque d'effacer la trace d'une affaire reelle. "
+          + "Decision de Frederic, 11/11/2026.",
+  }],
+]);
 const ETATS_COMPROMIS_MORTS = new Set(["cancelled", "annule"]);
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -74,6 +96,13 @@ const ENVOYER = process.argv.includes("--envoyer");
 const PLAFOND = Number(arg("--limite", PLAFOND_DEFAUT));
 const CIBLES = String(arg("--dossiers", "")).split(",").map((x) => x.trim()).filter(Boolean);
 const CHEMIN_TABLE = arg("--table", TABLE_DEFAUT);
+// La source de la liste : « table » (le classeur tranche) ou « cascade »
+// (le dossier se contredit tout seul). Voir le bloc 1 pour la mesure des deux.
+const SOURCE = String(arg("--source", "table")).toLowerCase();
+if (!["table", "cascade"].includes(SOURCE)) {
+  console.error(`--source doit valoir « table » ou « cascade » (recu : ${SOURCE})`);
+  process.exit(1);
+}
 
 async function rest(pathname, options = {}) {
   if (!SUPABASE_URL || !KEY) throw new Error("SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY absents");
@@ -112,17 +141,77 @@ async function main() {
                       : "EN BLANC -- rien ne sera ecrit (ajouter --envoyer pour de vrai)");
   console.log("═".repeat(78));
 
-  // ── 1. LA DECISION, telle qu'elle a ete tracee ───────────────────────────────
-  const table = lireTable(CHEMIN_TABLE);
-  let dossiers = table
-    .filter((r) => (r.proposition || "").startsWith("REFUSER"))
-    .map((r) => ({ dossier: Number(r.dossier), bien: r.bien, source: r.source }));
+  // ── 1. LA DECISION -- DEUX SOURCES, ET ELLES NE SE RECOUVRENT PAS ───────────
+  //
+  // ⭐⭐ POURQUOI DEUX SOURCES, mesure le 11/11 sur les 9 970 offres « acceptees »
+  //   vivantes du registre :
+  //       8 659  leur dossier est VENDU          ⛔ NORMAL, on n'y touche jamais :
+  //                                                une offre qui aboutit RESTE acceptee
+  //         102  compromis encore VIVANT         ⛔ affaire EN COURS
+  //         661  compromis ANNULE                -> source « cascade »
+  //         548  offre SEULE, sans compromis     -> source « table »
+  //   Les deux dernieres s'excluent PAR CONSTRUCTION : un dossier a un compromis
+  //   ou il n'en a pas. ZERO recouvrement, donc aucun geste en double.
+  //
+  // ⚠ ET ELLES NE SE DECIDENT PAS DE LA MEME FACON :
+  //   . « table »   une SOURCE EXTERIEURE tranche (le classeur, puis le fichier
+  //                 Netty, puis le statut du bien). On lui obeit, y compris quand
+  //                 elle dit GARDER -- d'ou 526 retenues sur 548.
+  //   . « cascade » AUCUN juge n'est necessaire : le dossier se contredit TOUT
+  //                 SEUL. Son compromis est annule, donc l'affaire a echoue, donc
+  //                 l'offre ne peut pas etre restee « acceptee ». C'est de la
+  //                 coherence interne, pas un arbitrage.
+  //
+  // ⚠ LA SOURCE « cascade » EST LE RATTRAPAGE DU PASSE. La regle posee en base le
+  //   11/11 (app_geste_affaire_optimistic) traite l'AVENIR : elle se declenche
+  //   quand on annule un compromis. Elle ne repassera jamais sur ces 661, dont le
+  //   compromis a ete annule il y a parfois quinze ans.
+  let dossiers;
+  if (SOURCE === "cascade") {
+    const lignes = [];
+    let apres = 0;
+    for (;;) {
+      const page = await rest("app_affaire_ledger?select=app_affaire_id,app_chaine_id,kind,state,"
+        + "hektor_annonce_id,hektor_affaire_id,present_in_hektor"
+        + "&app_chaine_id=not.is.null"
+        + `&app_affaire_id=gt.${apres}&order=app_affaire_id.asc&limit=1000`);
+      if (!page.length) break;
+      lignes.push(...page);
+      apres = page[page.length - 1].app_affaire_id;
+    }
+    const parChaine = new Map();
+    for (const t of lignes) {
+      if (!vivante(t)) continue;
+      if (!parChaine.has(t.app_chaine_id)) parChaine.set(t.app_chaine_id, []);
+      parChaine.get(t.app_chaine_id).push(t);
+    }
+    dossiers = [];
+    for (const [chaine, membres] of parChaine) {
+      const cpAnnule = membres.some((t) => t.kind === "compromis"
+        && ETATS_COMPROMIS_MORTS.has(String(t.state || "").toLowerCase()));
+      const cpVivant = membres.some((t) => t.kind === "compromis"
+        && !ETATS_COMPROMIS_MORTS.has(String(t.state || "").toLowerCase()));
+      const vente = membres.some((t) => t.kind === "vente");
+      const offreAcceptee = membres.some((t) => t.kind === "offre"
+        && ["accepted", "acceptee"].includes(String(t.state || "").toLowerCase()));
+      if (cpAnnule && !cpVivant && !vente && offreAcceptee) {
+        const bien = String((membres.find((t) => t.hektor_annonce_id) || {}).hektor_annonce_id || "");
+        dossiers.push({ dossier: chaine, bien, source: "coherence : compromis annule" });
+      }
+    }
+    console.log(`source             : CASCADE (coherence du dossier, pas de CSV)`);
+  } else {
+    const table = lireTable(CHEMIN_TABLE);
+    dossiers = table
+      .filter((r) => (r.proposition || "").startsWith("REFUSER"))
+      .map((r) => ({ dossier: Number(r.dossier), bien: r.bien, source: r.source }));
+    console.log(`source             : table de controle -- ${path.basename(CHEMIN_TABLE)}`);
+  }
   if (CIBLES.length) {
     dossiers = dossiers.filter((d) => CIBLES.includes(String(d.dossier)));
     console.log(`cibles demandees a la main : ${CIBLES.join(", ")}`);
   }
-  console.log(`table de controle  : ${path.basename(CHEMIN_TABLE)}`);
-  console.log(`dossiers « REFUSER l'offre » : ${dossiers.length}`);
+  console.log(`dossiers a traiter : ${dossiers.length}`);
   if (!dossiers.length) { console.log("rien a faire."); return 0; }
 
   // ── 2. LE REGISTRE, pour ces dossiers seulement ──────────────────────────────
@@ -168,6 +257,14 @@ async function main() {
   };
 
   for (const d of dossiers) {
+    // ⛔ L'EXCLUSION DECLAREE PASSE AVANT TOUT, et elle se DIT a chaque passage :
+    //   une liste d'exclusions muette redevient un oubli au bout de six mois.
+    const exclu = DOSSIERS_EXCLUS.get(d.dossier);
+    if (exclu) {
+      ecarter("EXCLU PAR DECISION",
+        `dossier ${d.dossier} (bien ${exclu.bien}) -- ${exclu.raison}`);
+      continue;
+    }
     const membres = (parDossier.get(d.dossier) || []).filter(vivante);
     if (!membres.length) { ecarter("dossier introuvable au registre"); continue; }
 
@@ -222,7 +319,11 @@ async function main() {
           sans_resynchro: true,
           // La trace de QUI a decide, et SUR QUELLE SOURCE. Un menage de masse sans
           // cette trace est indefendable six mois plus tard.
-          origine: "enqueue_refus_offres_mortes_lot",
+          // La trace dit AUSSI par quelle source il est passe : dans six mois,
+          // « pourquoi cette offre a-t-elle ete refusee ? » doit avoir une reponse.
+          origine: SOURCE === "cascade"
+            ? "rattrapage_cascade_annulation"
+            : "enqueue_refus_offres_mortes_lot",
           decide_par: d.source,
           table_de_controle: path.basename(CHEMIN_TABLE),
         },
