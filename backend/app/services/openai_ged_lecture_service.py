@@ -29,6 +29,7 @@ MAX_PAGES_HD = 6
 MAX_IMAGE_HD_OCTETS = 1_600_000
 MAX_TEXTE = 20000
 MAX_TEXTE_LONG = 40000  # le titre : 9 pages en médiane, jusqu'à 40 (mesuré le 12/11)
+MAX_TEXTE_COMPROMIS = 80000  # 124 000 car. en médiane ; prêt et honoraires lus avant 80 000 (31/32, 39/40 ; §12.15)
 MAX_PERSONNES = 12
 
 _ETAT = {"type": "string", "enum": ["lu", "incertain", "non_vu"]}
@@ -88,7 +89,8 @@ FICHES: dict[str, dict[str, Any]] = {
 
 # ── Lot 2 ─────────────────────────────────────────────────────────────────────
 OUI_NON = ["oui", "non"]
-QUALITES = ["proprietaire", "usufruitier", "nu_proprietaire", "indivisaire", "heritier", "donataire", "redevable", "autre"]
+QUALITES = ["proprietaire", "usufruitier", "nu_proprietaire", "indivisaire", "heritier", "donataire", "redevable", "vendeur",
+            "acquereur", "autre"]
 DROITS = ["pleine_propriete", "usufruit", "nue_propriete", "indivision", "non_precise"]
 _EXCEPTION_NOMS = ("personnes : EXCEPTION à la règle commune -- recopie ICI, et nulle part ailleurs, le nom et les prénoms "
                    "de chaque personne tels qu'imprimés (sans « M. », « Mme »), avec sa qualité. Rien d'autre sur elles : "
@@ -168,9 +170,79 @@ FICHES.update({
     "copro.appel_fonds": _CHARGES_COPRO,
     "copro.arrete_charges": _CHARGES_COPRO,
 })
-# Pages lues en haute définition quand il n'y a pas de texte (le navigateur les choisit ; même liste dans
-# gedClassementIa.ts) : le titre a ses parties et sa désignation dans les premières pages d'un acte de 9 à 40 pages.
-PAGES_HD = {"justif.titre": MAX_PAGES_HD}
+
+# ── Lot 3 (§12.15) : la vente ──────────────────────────────────────────────────
+_SIGNE = ("Les signatures sont souvent sur les DERNIÈRES pages, montrées en image après le texte : compte-les là. "
+          "JAMAIS le montant d'un prêt, son taux, sa durée, la banque, l'apport ni le plan de financement.")
+FICHES.update({
+    "transaction.offre": {
+        "version": 1,
+        "consigne": "C'est une offre d'achat (proposition d'acquisition) et, s'il y en a une, la réponse du vendeur. "
+                    "montant_offert : le prix proposé ; base_prix : « fai » s'il s'entend frais d'agence (honoraires) "
+                    "inclus, « net_vendeur » s'il est net vendeur. date_offre ; validite_jusquau ou validite_jours. "
+                    "condition_pret : oui si l'offre est faite sous condition d'obtenir un prêt. acceptation_vendeur : "
+                    "acceptee, refusee, contre_proposition, ou non_signee si la case du vendeur est vide ; "
+                    "date_acceptation. signatures_acquereurs_nb, signatures_vendeurs_nb : les signatures VISIBLES. "
+                    "reference_bien : le numéro de mandat ou l'adresse du bien. " + _EXCEPTION_NOMS + " Ici : les "
+                    "acquéreurs (qualité acquereur) ; ni leur adresse, ni leur téléphone, ni leur courriel. " + _SIGNE,
+        "champs": {"montant_offert": ("num", None), "base_prix": ("txt", ["fai", "net_vendeur"]),
+                   "date_offre": ("date", None), "validite_jusquau": ("date", None), "validite_jours": ("num", None),
+                   "condition_pret": ("txt", OUI_NON),
+                   "acceptation_vendeur": ("txt", ["acceptee", "refusee", "contre_proposition", "non_signee"]),
+                   "date_acceptation": ("date", None), "signatures_acquereurs_nb": ("num", None),
+                   "signatures_vendeurs_nb": ("num", None), "reference_bien": ("txt", None)},
+        "listes": [("personnes", {"nom": ("nom", None), "prenoms": ("nom", None), "qualite": ("txt", QUALITES)})],
+    },
+    "transaction.avant_contrat": {
+        "version": 1,
+        "texte_max": MAX_TEXTE_COMPROMIS,
+        "consigne": "C'est un compromis ou une promesse de vente. date_signature : la date à laquelle il est signé ; "
+                    "forme : ssp_agence s'il est signé sous seing privé (à l'agence), notaire s'il est reçu par un "
+                    "notaire. prix : le prix de vente ; prix_net_vendeur ; honoraires : la rémunération de l'agence ; "
+                    "charge_honoraires : qui la paie (vendeur, acquereur, les_deux). mobilier : le prix du mobilier s'il "
+                    "est cité. condition_pret (oui, non, renonciation) et date_limite_pret : la date limite d'obtention "
+                    "du prêt. date_reiteration : la date limite de signature de l'acte authentique. sequestre (montant) "
+                    "et sequestre_depositaire (notaire, agence). notaire_vendeur, notaire_acquereur : les études. "
+                    "reference_bien : le numéro de mandat cité. signatures_vendeurs_nb, signatures_acquereurs_nb : les "
+                    "signatures VISIBLES. " + _EXCEPTION_NOMS + " Ici : les VENDEURS (qualité vendeur) et les "
+                    "ACQUÉREURS (qualité acquereur). " + _SIGNE,
+        "champs": {"date_signature": ("date", None), "forme": ("txt", ["ssp_agence", "notaire"]),
+                   "nature": ("txt", ["compromis", "promesse_unilaterale"]), "prix": ("num", None),
+                   "prix_net_vendeur": ("num", None), "honoraires": ("num", None),
+                   "charge_honoraires": ("txt", ["vendeur", "acquereur", "les_deux"]), "mobilier": ("num", None),
+                   "condition_pret": ("txt", ["oui", "non", "renonciation"]), "date_limite_pret": ("date", None),
+                   "date_reiteration": ("date", None), "sequestre": ("num", None),
+                   "sequestre_depositaire": ("txt", ["notaire", "agence"]), "notaire_vendeur": ("txt", None),
+                   "notaire_acquereur": ("txt", None), "reference_bien": ("txt", None),
+                   "signatures_vendeurs_nb": ("num", None), "signatures_acquereurs_nb": ("num", None)},
+        "listes": [("personnes", {"nom": ("nom", None), "prenoms": ("nom", None), "qualite": ("txt", QUALITES)})],
+    },
+    "copro.pv_ag": {
+        "version": 1,
+        "texte_max": MAX_TEXTE_LONG,
+        "consigne": "C'est un procès-verbal ou une convocation d'assemblée générale de copropriété. type_piece : pv ou "
+                    "convocation (une convocation n'a pas de résolution votée). date_ag ; nature_ag (ordinaire, "
+                    "extraordinaire). syndic_nom : seulement si le syndic est une société ; syndic_type. "
+                    "budget_vote : le budget prévisionnel voté ; cotisation_fonds_travaux_pct. procedure : seulement si le PV "
+                    "mentionne un mandataire ad hoc, une administration provisoire ou un plan de sauvegarde du SYNDICAT "
+                    "(un litige contre un copropriétaire n'en est pas une) ; sinon non_vu — un PV ne prouve pas l'absence. travaux : chaque travail VOTÉ (pas seulement proposé), "
+                    "son objet en quelques mots, son montant pour tout l'immeuble, les dates du premier et du dernier "
+                    "appel de fonds. JAMAIS : la feuille de présence, un nom de copropriétaire, un débiteur, un vote "
+                    "nominatif, un contentieux contre une personne.",
+        "champs": {"type_piece": ("txt", ["pv", "convocation", "autre"]), "date_ag": ("date", None),
+                   "nature_ag": ("txt", ["ordinaire", "extraordinaire"]), "syndic_nom": ("txt", None),
+                   "syndic_type": ("txt", ["professionnel", "benevole", "cooperatif"]), "budget_vote": ("num", None),
+                   "cotisation_fonds_travaux_pct": ("num", None),
+                   "procedure": ("txt", ["mandataire_ad_hoc", "administration_provisoire", "plan_sauvegarde"])},
+        "listes": [("travaux", {"objet": ("txt", None), "montant_immeuble": ("num", None),
+                                "premier_appel": ("date", None), "dernier_appel": ("date", None)})],
+    },
+})
+# Pages lues en haute définition (le navigateur les choisit ; même réglage dans gedClassementIa.ts) : le titre a ses
+# parties et sa désignation dans les premières pages ; un compromis scanné : les 4 premières et les 2 dernières
+# (signatures) ; un compromis en texte envoie AUSSI ses 2 dernières pages en image, une offre sa dernière.
+PAGES_HD = {"justif.titre": MAX_PAGES_HD, "copro.pv_ag": MAX_PAGES_HD, "transaction.avant_contrat": MAX_PAGES_HD}
+FIN_EN_IMAGE = {"transaction.avant_contrat": 2, "transaction.offre": 1}
 
 _CONSIGNE_COMMUNE = (
     "Tu lis un document d'une agence immobilière française pour en relever quelques valeurs. Rends UNIQUEMENT les champs "
@@ -331,7 +403,7 @@ class OpenAIGedLectureService:
         usage = corps.get("usage") or {}
         etat = "pas_ce_type" if not ce_type else ("lu" if any(v["etat"] != "non_vu" for v in valeurs) else "incomplet")
         return {"fiche": f"{code}/{fiche['version']}", "model": model, "etat": etat, "valeurs": valeurs, "usage": usage,
-                "costUsd": cout_usd(model, usage), "pagesLues": [int(p.get("numero") or 0) for p in pages], "parTexte": not pages}
+                "costUsd": cout_usd(model, usage), "pagesLues": [int(p.get("numero") or 0) for p in pages], "parTexte": bool(texte.strip())}
 
     def enregistrer(self, classement: dict[str, Any], resultat: dict[str, Any], user_id: str | None) -> str:
         ligne = {"classement_id": classement["id"], "hektor_annonce_id": classement["hektor_annonce_id"],

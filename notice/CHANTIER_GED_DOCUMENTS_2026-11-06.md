@@ -25,8 +25,8 @@
 | 4 | l'IA classe avant l'envoi (type, nom, découpage) | ✅ en production, cran admin (§12.9) |
 | 5 | les 13 règles sans IA (« À regarder ») | ✅ en production, cran admin (§12.10) |
 | 6 lot 1 | lecture : état des risques, DPE, dossier de diagnostics | ✅ en production (`c631a6d`), **essai réel fait le 12/11** (§12.14) |
-| 6 lot 2 | lecture : **taxe foncière, titre de propriété, fiche synthétique, charges de copro** — avec les NOMS | ✅ en production (`0466c7c`), **essai réel fait le 12/11** : 5/5 lus, 0 fuite, 0 doublon (§12.14) ; affichage après rechargement (« Lu par l'IA ») écrit, ⏳ push |
-| 6 lot 3 | lecture : offre d'achat, compromis, PV d'AG | ⬜ |
+| 6 lot 2 | lecture : **taxe foncière, titre de propriété, fiche synthétique, charges de copro** — avec les NOMS | ✅ en production (`0466c7c`), **essai réel fait le 12/11** : 5/5 lus, 0 fuite, 0 doublon (§12.14) ; affichage après rechargement (« Lu par l'IA ») en production (`49dab5d`), vu sur 62774 |
+| 6 lot 3 | lecture : offre d'achat, compromis, PV d'AG | ✅ écrit et contrôlé (banc 26/26, 0 fuite) ; ⏳ patch PV, push, essai réel (§12.15) |
 | 6 lot 4 | lecture : mandat déposé à la main, avenant, acte, facture, petits diagnostics, surfaces, règlement | ⬜ |
 | 7 | comparateurs et règles avec lecture (titre ↔ mandants, taxe ↔ fiche, copro…) | ⬜ |
 | 8 | propositions (« remplir », un clic par case) | ⬜ |
@@ -1259,4 +1259,62 @@ CHAQUE document lu avec son résumé, quel que soit son moment (`RecuManque.tsx`
 change). Banc d'écran local (lectures factices : état des risques, DPE, taxe, titre) : la ligne se déplie et montre
 « Taxe fonciere 2026.pdf — Lu : taxe 2026 · 1 234 € · FIRMINY · 1 redevable, 1 usufruitier » et « Titre de
 propriete.pdf — Lu : acte de vente · du 04/03/2019 · 2 propriétaires · lot 12 », aucun nom. Essais : `test_ged_lecture.cjs`
-26 VERT, Reçu / Manque 29, règles 44, `npm run build` vert. ⏳ commit + push sur accord.
+26 VERT, Reçu / Manque 29, règles 44, `npm run build` vert. ✅ « Oui » puis « Pousse » : commit `49dab5d`, poussé avec
+`c6f79e9` et `7af2b99` (autre session : deux scripts d'essai du chaînage, aucun code d'app, dits AVANT, accord donné).
+**VU EN PRODUCTION sur 62774** (Chrome, après rechargement) : « ▾ Lu par l'IA : 5 documents » montre les 5 résumés.
+
+### 12.15 Le morceau 6, lot 3 — l'offre d'achat, le compromis, le PV d'AG (audit du 12/11 soir, rien codé)
+**Audit (lecture seule)** — fiches : étude C §3.1 (offre) et §3.2 (compromis), étude D §3.1 (PV d'AG). Types en base :
+`transaction.offre` et `transaction.avant_contrat` « lue », NON sensibles ; **`copro.pv_ag` encore « classer »** (même
+cas que la taxe) ; `transaction.financement` reste une pièce des personnes (morceau 9), jamais lue ici.
+- **La forme des vrais fichiers** (mesure du §12.14) : offre = 1 page, 45 scans sur 50 ; compromis = 39 pages, 34 textes
+  sur 50, mises en page toutes différentes ; PV d'AG = 12 pages (p90 34), moitié scans.
+- **Où sont les valeurs d'un compromis** (script de lecture seule sur les 40 compromis à couche texte les plus récents,
+  n'imprime que des nombres, `position_valeurs_compromis.py`) : texte total **124 000 caractères** en médiane (p90 162 000) ;
+  1re mention du prix ≤ 29 000 (40/40), de la réitération ≤ 36 000 (40/40), de la condition de prêt médiane 35 000, p90
+  51 000, max 84 000 (32/40 la citent), des honoraires p90 63 000 (40/40). → **80 000 caractères** couvrent le prix, la
+  réitération, 31 conditions de prêt sur 32 et 39 honoraires sur 40 ; les 20 000 du lot 1 en perdraient la moitié.
+  Les signatures sont à la FIN → il faut aussi l'IMAGE des deux dernières pages, même quand il y a du texte.
+- **Ce que ça demande de neuf** : un envoi « texte ET images des dernières pages » (le lot 1 et le lot 2 envoient l'un OU
+  l'autre) ; pour un compromis scanné, les 4 premières pages et les 2 dernières en image (6, le plafond) — les valeurs du
+  milieu d'un scan de 40 pages resteront « non vues » (dit, pas caché).
+- **Fiche offre** : montant, base (frais d'agence inclus / net vendeur), date de l'offre, validité, condition de prêt
+  (oui / non — JAMAIS montant, apport, banque), réponse du vendeur (acceptée / refusée / contre-proposition / non signée)
+  et sa date, nombre de signatures, n° de mandat ou adresse du bien ; **personnes = les acquéreurs** (nom, prénoms).
+- **Fiche compromis** : date de signature, forme (en agence / chez le notaire), nature (compromis / promesse), prix, net
+  vendeur, honoraires, qui les paie, mobilier, condition de prêt et sa date limite (JAMAIS montant, taux, banque),
+  réitération au plus tard, séquestre et dépositaire, études notariales, n° de mandat ; **personnes = vendeurs et
+  acquéreurs** (qualité « vendeur » / « acquéreur »).
+- **Fiche PV d'AG** : PV ou convocation, date, ordinaire / extraordinaire, syndic (société seulement), budget voté,
+  cotisation au fonds de travaux, procédure (mandataire ad hoc, administration provisoire, plan de sauvegarde) ; liste des
+  **travaux votés** (objet, montant pour l'immeuble, dates du 1er et du dernier appel). **AUCUN nom** : ni copropriétaires,
+  ni feuille de présence, ni débiteurs, ni votes nominatifs.
+- **Ce que ça pourrait casser ailleurs** : rien pour les lots 1 et 2 (réglages par type, témoins dans les essais) ; la base
+  ne change pas, sauf l'étiquette de `copro.pv_ag` (« classer » → « lue », patch facultatif comme la taxe) ; coût d'un
+  compromis ≈ 20 000 jetons de texte + 2 images ≈ 0,003 $.
+- **Essais** : hors ligne, puis banc réel sur une offre scannée, un compromis long FICTIF (valeurs placées au milieu,
+  signatures en dernière page) et un PV FICTIF (feuille de présence et débiteur nommé qui NE doivent PAS sortir) ; puis
+  essai réel sur 62774, sur accord.
+✅ **« Vas-y » (12/11 soir) — LOT 3 ÉCRIT ET CONTRÔLÉ, RIEN POSÉ NI POUSSÉ :**
+- Serveur : 3 fiches (`transaction.offre`, `transaction.avant_contrat` — 80 000 caractères —, `copro.pv_ag` — 40 000 —) ;
+  qualités « vendeur » / « acquéreur » ; consigne commune aux deux pièces de vente : signatures sur les DERNIÈRES pages
+  montrées en image, JAMAIS le prêt (montant, taux, durée, banque, apport). PV : aucune personne ; ⭐ **« aucune
+  procédure » ne PEUT PAS se lire sur un PV** (le banc l'a vu déduire « aucune » d'un PV muet : retiré des réponses
+  possibles, un PV ne prouve pas l'absence — étude D, COPRO-5). `par_texte` vaut désormais « du texte a été envoyé »
+  (vrai aussi quand des images l'accompagnent).
+- Écran : `pagesAImager()` (avec texte : les dernières pages si le type les veut ; scan : les premières, et les
+  dernières à la place des suivantes) — compromis 80 000 car. + 2 dernières pages, scanné 1-4 + 2 dernières ; offre :
+  sa dernière page en image même avec du texte ; PV comme le titre ; résumés « Lu : … » (parties COMPTÉES, jamais nommées).
+- **Banc réel, 3 documents FICTIFS** : offre scannée 7/7 (FAI, validité, prêt oui, acceptée et sa date, l'acquéreur) ;
+  **compromis de 45 pages, 82 000 caractères, date du prêt placée à 37 000** : 13/13 (dont la date limite du prêt, le
+  séquestre chez le notaire, 1 signature du vendeur et 2 des acquéreurs LUES SUR L'IMAGE), vendeur et 2 acquéreurs ;
+  PV 6/6 + les travaux VOTÉS seulement (le ravalement, pas la toiture rejetée), procédure « non vue » ; **0 fuite** sur 19
+  mots interdits (naissances, adresse, téléphone, montant du prêt, banque, taux, apport, régime, feuille de présence,
+  copropriétaire qui vote contre, débiteur nommé et sa dette) ; **0,0035 $ les trois** (le compromis : 22 700 jetons,
+  0,0025 $).
+- Contrôles : `test_ged_lire.py` **48 VERT** ; `test_ged_lecture.cjs` **34 VERT** (dont 3 témoins « lots 1 et 2
+  inchangés ») ; classement 25, Reçu / Manque 29, règles 44, dépôt 17, les 4 essais de la signature ; `npm run build` vert.
+- Base : rien d'obligatoire ; patch facultatif `patch_ged_m6_lot3_pv_lu_2026-11-12.sql` (+ `_INVERSE`) : `copro.pv_ag`
+  « classer » → « lue ».
+✅ **« Oui tout » (12/11 soir)** : patch du PV **POSÉ** (`copro.pv_ag` → « lue », contrôle vert) ; commit et push du lot 3.
+⏳ Reste : l'essai réel sur 62774 (une offre, un compromis, un PV fictifs).

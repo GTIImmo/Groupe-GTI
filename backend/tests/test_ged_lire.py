@@ -33,15 +33,21 @@ def strict_partout(s):
 
 
 print("1) les fiches")
-voir(set(lec.FICHES) == {"diag.erp", "diag.dpe", "diag.dossier", "justif.taxe", "justif.titre", "copro.carnet", "copro.appel_fonds", "copro.arrete_charges"},
-     "lots 1 et 2 : diagnostics, taxe foncière, titre, fiche synthétique, charges de copro")
+voir(set(lec.FICHES) == {"diag.erp", "diag.dpe", "diag.dossier", "justif.taxe", "justif.titre", "copro.carnet", "copro.appel_fonds", "copro.arrete_charges",
+                         "transaction.offre", "transaction.avant_contrat", "copro.pv_ag"},
+     "lots 1 à 3 : diagnostics, taxe, titre, copro, offre, compromis, PV d'AG")
 voir(all(strict_partout(lec.schema(f)) for f in lec.FICHES.values()), "schéma STRICT partout : tous les champs obligatoires, aucun champ en plus")
 interdits = ("naissance", "iban", "fiscal", "identite", "secu", "nom_", "prenom", "adresse_perso", "civil", "profession")
 voir(not any(i in c for f in lec.FICHES.values() for c in lec.schema(f)["properties"] for i in interdits), "aucun champ de la fiche ne demande une donnée de personne")
 lot1 = ("diag.erp", "diag.dpe", "diag.dossier")
 voir(not any("personnes" in lec.schema(lec.FICHES[c])["properties"] for c in lot1), "TÉMOIN : le lot 1 ne lit toujours aucun nom")
 avec_noms = {c for c, f in lec.FICHES.items() if "personnes" in lec.schema(f)["properties"]}
-voir(avec_noms == {"justif.taxe", "justif.titre"}, "les noms : seulement la taxe foncière et le titre")
+voir(avec_noms == {"justif.taxe", "justif.titre", "transaction.offre", "transaction.avant_contrat"}, "les noms : taxe, titre, offre, compromis — jamais le PV d'AG ni les diagnostics")
+voir("aucune" not in lec.FICHES["copro.pv_ag"]["champs"]["procedure"][1], "PV d'AG : « aucune procédure » ne peut pas se lire (un PV ne prouve pas l'absence)")
+voir("feuille de présence" in lec.FICHES["copro.pv_ag"]["consigne"] and "personnes" not in lec.schema(lec.FICHES["copro.pv_ag"])["properties"], "PV d'AG : aucune personne, la feuille de présence interdite")
+for c in ("transaction.offre", "transaction.avant_contrat"):
+    voir("JAMAIS le montant d'un prêt" in lec.FICHES[c]["consigne"] and not any(k for k in lec.FICHES[c]["champs"] if "banque" in k or "apport" in k or k.startswith("montant_pret")), f"{c} : jamais le prêt (montant, banque, apport)")
+voir(lec.FICHES["transaction.avant_contrat"]["texte_max"] == 80000 and lec.FIN_EN_IMAGE == {"transaction.avant_contrat": 2, "transaction.offre": 1}, "compromis : 80 000 caractères + 2 dernières pages en image ; offre : la dernière")
 for c in avec_noms:
     item = lec.schema(lec.FICHES[c])["properties"]["personnes"]["items"]["properties"]
     voir(set(item) <= {"nom", "prenoms", "qualite", "droits", "quote_part", "page"}, f"{c} : une personne = nom, prénoms, qualité (droits) — rien d'autre")
@@ -156,6 +162,11 @@ voir(len(parti["input"][0]["content"][0]["text"]) > 30000 and parti["store"] is 
 voir("EXCEPTION" in parti["instructions"] and "personnes" in parti["text"]["format"]["schema"]["properties"], "titre : consigne et schéma avec la liste des personnes")
 s0.lire({"type_code": "diag.erp"}, {"texte": long_texte, "nbPages": 30})
 voir(len(parti["input"][0]["content"][0]["text"]) < 20200 and "EXCEPTION" not in parti["instructions"], "TÉMOIN : l'état des risques garde 20 000 caractères et aucune exception aux noms")
+img = "data:image/jpeg;base64," + "A" * 40
+r = s0.lire({"type_code": "transaction.avant_contrat"}, {"texte": long_texte * 2, "nbPages": 40, "pages": [{"numero": 39, "image": img}, {"numero": 40, "image": img}]})
+contenu = parti["input"][0]["content"]
+voir(len(contenu[0]["text"]) > 70000 and sum(1 for c in contenu if c["type"] == "input_image") == 2 and r["parTexte"] is True and r["pagesLues"] == [39, 40],
+     "compromis : le TEXTE (80 000) ET les 2 dernières pages en image partent ensemble ; la lecture le dit")
 lec.requests.post = appel_interdit
 
 print("3) les refus AVANT tout appel")

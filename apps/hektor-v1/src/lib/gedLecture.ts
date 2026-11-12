@@ -9,13 +9,14 @@ import { hasSupabaseEnv, supabase } from './supabase'
 export const FICHES_LUES = new Set([
   'diag.erp', 'diag.dpe', 'diag.dossier',
   'justif.taxe', 'justif.titre', 'copro.carnet', 'copro.appel_fonds', 'copro.arrete_charges',
+  'transaction.offre', 'transaction.avant_contrat', 'copro.pv_ag',
 ])
 
 const QUALITE: Record<string, [string, string]> = {
   proprietaire: ['propriétaire', 'propriétaires'], usufruitier: ['usufruitier', 'usufruitiers'],
   nu_proprietaire: ['nu-propriétaire', 'nus-propriétaires'], indivisaire: ['indivisaire', 'indivisaires'],
   heritier: ['héritier', 'héritiers'], donataire: ['donataire', 'donataires'], redevable: ['redevable', 'redevables'],
-  autre: ['autre personne', 'autres personnes'],
+  vendeur: ['vendeur', 'vendeurs'], acquereur: ['acquéreur', 'acquéreurs'], autre: ['autre personne', 'autres personnes'],
 }
 const NATURE_ACTE: Record<string, string> = {
   vente: 'acte de vente', donation: 'donation', donation_partage: 'donation-partage', attestation_succession: 'attestation après décès',
@@ -106,6 +107,31 @@ export function resumeLecture(l: Pick<LectureDocument, 'typeCode' | 'etat' | 'va
     if (v('appel_travaux')) morceaux.push(`travaux appelés ${euros(v('appel_travaux') as string)}`)
     const lots = l.valeurs.filter((x) => x.cle === 'lots.numero' && x.etat !== 'non_vu' && x.valeur).map((x) => x.valeur as string)
     if (lots.length) morceaux.push(`lot${lots.length > 1 ? 's' : ''} ${lots.join(', ')}`)
+    if (v('syndic_nom')) morceaux.push(`syndic ${v('syndic_nom')}`)
+  } else if (l.typeCode === 'transaction.offre') {
+    if (v('montant_offert')) morceaux.push(`offre ${euros(v('montant_offert') as string)}${v('base_prix') === 'net_vendeur' ? ' net vendeur' : v('base_prix') === 'fai' ? ' FAI' : ''}`)
+    if (v('date_offre')) morceaux.push(`du ${v('date_offre')}`)
+    const reponse: Record<string, string> = { acceptee: 'acceptée', refusee: 'refusée', contre_proposition: 'contre-proposition', non_signee: 'réponse du vendeur non signée' }
+    const r = v('acceptation_vendeur')
+    if (r) morceaux.push(`${reponse[r.replace(' (?)', '')] ?? r}${v('date_acceptation') ? ` le ${v('date_acceptation')}` : ''}`)
+    if (v('condition_pret') === 'oui') morceaux.push('sous condition de prêt')
+    const p = personnesLues(l.valeurs)
+    if (p) morceaux.push(p)
+  } else if (l.typeCode === 'transaction.avant_contrat') {
+    if (v('date_signature')) morceaux.push(`signé le ${v('date_signature')}`)
+    if (v('prix')) morceaux.push(euros(v('prix') as string))
+    if (v('honoraires')) morceaux.push(`honoraires ${euros(v('honoraires') as string)}${v('charge_honoraires') ? ` (${(v('charge_honoraires') as string).replace('les_deux', 'les deux').replace('acquereur', 'acquéreur')})` : ''}`)
+    if (v('date_limite_pret')) morceaux.push(`prêt avant le ${v('date_limite_pret')}`)
+    if (v('date_reiteration')) morceaux.push(`acte au plus tard le ${v('date_reiteration')}`)
+    const p = personnesLues(l.valeurs)
+    if (p) morceaux.push(p)
+  } else if (l.typeCode === 'copro.pv_ag') {
+    if (v('type_piece') === 'convocation') morceaux.push('convocation')
+    if (v('date_ag')) morceaux.push(`AG du ${v('date_ag')}`)
+    if (v('budget_vote')) morceaux.push(`budget ${euros(v('budget_vote') as string)}`)
+    const travaux = l.valeurs.filter((x) => x.cle === 'travaux.objet' && x.etat !== 'non_vu' && x.valeur).map((x) => x.valeur as string)
+    if (travaux.length) morceaux.push(`travaux votés : ${travaux.join(', ')}`)
+    if (v('procedure') && v('procedure') !== 'aucune') morceaux.push(`⚠ procédure : ${(v('procedure') as string).replace(/_/g, ' ')}`)
     if (v('syndic_nom')) morceaux.push(`syndic ${v('syndic_nom')}`)
   }
   if (!morceaux.length) return "L'IA n'a rien pu relever : la lecture est incomplète."

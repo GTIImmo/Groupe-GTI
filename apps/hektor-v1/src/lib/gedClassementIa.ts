@@ -177,8 +177,22 @@ const LECTURE_COTE_HD = 1600
 const LECTURE_TEXTE_MAX = 20000
 // Lot 2 (§12.14) : le titre de propriété (9 pages en médiane, 42 scans sur 50) a ses parties et sa désignation dans les
 // premières pages -> 6 pages en image, 40 000 caractères en texte. Même réglage côté serveur (PAGES_HD, texte_max).
-const PAGES_HD_PAR_TYPE: Record<string, number> = { 'justif.titre': 6 }
-const TEXTE_MAX_PAR_TYPE: Record<string, number> = { 'justif.titre': 40000 }
+// Lot 3 (§12.15) : un compromis (124 000 caractères en médiane) a son prêt et ses honoraires avant 80 000, et ses
+// SIGNATURES à la fin -> 80 000 caractères ET ses 2 dernières pages en image ; scanné : les 4 premières et les 2 dernières.
+// Une offre (1 page, presque toujours scannée) : sa dernière page en image même avec du texte. PV d'AG : comme le titre.
+const PAGES_HD_PAR_TYPE: Record<string, number> = { 'justif.titre': 6, 'copro.pv_ag': 6, 'transaction.avant_contrat': 6 }
+const TEXTE_MAX_PAR_TYPE: Record<string, number> = { 'justif.titre': 40000, 'copro.pv_ag': 40000, 'transaction.avant_contrat': 80000 }
+const FIN_EN_IMAGE_PAR_TYPE: Record<string, number> = { 'transaction.avant_contrat': 2, 'transaction.offre': 1 }
+
+// Les pages à mettre en image (numéros à partir de 1). Avec du texte : seulement les dernières, si le type les veut
+// (signatures). Sans texte (scan) : les premières, et, si le type le veut, les dernières à la place des suivantes.
+export function pagesAImager(nbPages: number, pagesHd: number, fin: number, avecTexte: boolean): number[] {
+  const toutes = Array.from({ length: nbPages }, (_, i) => i + 1)
+  if (avecTexte) return fin > 0 ? toutes.slice(-Math.min(fin, nbPages)) : []
+  if (nbPages <= pagesHd) return toutes
+  if (fin <= 0) return toutes.slice(0, pagesHd)
+  return [...toutes.slice(0, pagesHd - fin), ...toutes.slice(-fin)]
+}
 
 export type PreparationLecture =
   | { lisible: false; raison: string }
@@ -196,6 +210,7 @@ async function imageHd(source: CanvasImageSource & { width: number; height: numb
 export async function preparerLecture(file: File, typeCode?: string): Promise<PreparationLecture> {
   const pagesHd = (typeCode && PAGES_HD_PAR_TYPE[typeCode]) || LECTURE_PAGES_HD
   const texteMax = (typeCode && TEXTE_MAX_PAR_TYPE[typeCode]) || LECTURE_TEXTE_MAX
+  const fin = (typeCode && FIN_EN_IMAGE_PAR_TYPE[typeCode]) || 0
   if (nomDitRib(file.name)) return { lisible: false, raison: 'RIB : jamais envoyé à l\'IA.' }
   if (/^image\/(jpeg|png|webp)$/.test(file.type)) {
     return { lisible: true, nbPages: 1, pages: [{ numero: 1, image: await imageHd(await createImageBitmap(file)) }], texte: '' }
@@ -212,12 +227,10 @@ export async function preparerLecture(file: File, typeCode?: string): Promise<Pr
     }
     if (texteDitRib(textes.join('\n'))) return { lisible: false, raison: 'Un IBAN est dans le texte : jamais envoyé à l\'IA.' }
     const premieres = textes.slice(0, Math.min(3, nbPages))
-    if (premieres.length && premieres.every((t) => t.split(' ').filter(Boolean).length >= 30)) {
-      const texte = textes.map((t, i) => `--- page ${i + 1} ---\n${t}`).join('\n').slice(0, texteMax)
-      return { lisible: true, nbPages, pages: [], texte }
-    }
+    const avecTexte = premieres.length > 0 && premieres.every((t) => t.split(' ').filter(Boolean).length >= 30)
+    const texte = avecTexte ? textes.map((t, i) => `--- page ${i + 1} ---\n${t}`).join('\n').slice(0, texteMax) : ''
     const pages: Array<{ numero: number; image: string }> = []
-    for (let n = 1; n <= Math.min(nbPages, pagesHd); n += 1) {
+    for (const n of pagesAImager(nbPages, pagesHd, fin, avecTexte)) {
       const page = await doc.getPage(n)
       const base = page.getViewport({ scale: 1 })
       const vue = page.getViewport({ scale: LECTURE_COTE_HD / Math.max(base.width, base.height) })
@@ -229,7 +242,7 @@ export async function preparerLecture(file: File, typeCode?: string): Promise<Pr
       await page.render({ canvasContext: ctx, viewport: vue }).promise
       pages.push({ numero: n, image: canvas.toDataURL('image/jpeg', 0.82) })
     }
-    return { lisible: true, nbPages, pages, texte: '' }
+    return { lisible: true, nbPages, pages, texte }
   } finally {
     void doc.destroy()
   }
