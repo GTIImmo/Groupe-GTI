@@ -78,13 +78,22 @@ const DOSSIERS = new Map([
   [21817, "bien 43476 -- montant 510 EUR et aucun acquereur : une location, ou une fiche d'essai"],
   [2993,  "bien 7494 MAURIN -- compromis « actif » depuis 2014, bien clos"],
   [14669, "bien 29955 DEFOUR -- compromis « actif » depuis 2016, bien clos"],
+  // ⭐ AJOUTE LE 12/11 EN FIN DE MATINEE, SUR SA DECISION, apres le premier lot :
+  //   « il faut aussi refuser cette offre dossier 14137 : LEJEUNE sur une annonce
+  //   archivee ». Il l'avait d'abord mis a « laisser », puis l'a repris.
+  // ⚠ CE QUE CA NE REGLE PAS, et il faut le savoir : le classeur dit « Vente
+  //   reglee » sur cette ligne, et AUCUNE vente n'existe -- ni chez nous ni chez
+  //   Hektor. Refuser l'offre ferme la fiche, mais la VENTE MANQUANTE reste un
+  //   sujet a part, inscrit au plan du chantier classeur.
+  [14137, "bien 28668 LEJEUNE -- offre acceptee de 2019 sur une annonce archivee. "
+        + "⚠ le classeur dit « Vente reglee » et aucune vente n'existe : la vente "
+        + "manquante reste un sujet a part"],
 ]);
 
 // ⛔ CE QU'IL A DIT DE LAISSER -- et la raison, pour que personne ne le rouvre
 const LAISSES = new Map([
-  [14137, "bien 28668 LEJEUNE -- le classeur dit « Vente reglee » et AUCUNE vente n'existe, "
-        + "ni chez nous ni chez Hektor. C'est une vente manquante, pas un dossier a fermer. "
-        + "Et creer une vente sur une archive est refuse par decision."],
+  // ⚠ 14137 ETAIT ICI LE MATIN DU 12/11. Frederic l'a deplace dans la liste des
+  //   fermetures en fin de matinee -- voir sa raison la-bas.
   [3699,  "bien 8494 MACHABERT -- le garage VS046 : sa vente a ete SUPPRIMEE chez Hektor. "
         + "Deja exclu des gestes par decision le 11/11."],
 ]);
