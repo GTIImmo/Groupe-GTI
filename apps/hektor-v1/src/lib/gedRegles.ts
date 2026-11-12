@@ -21,6 +21,7 @@ export type FaitsRegles = FaitsDuBien & {
 // Un document, avec la date de son dépôt et l'état de signature électronique que l'écran sait déjà lire
 // (etatFiableDuDocument : 'signed', 'pending', 'to_send'…, null pour un PDF sans état -- papier ou scan). `modele` : un
 // document généré par le modèle de Hektor (source 'hektor_console_modele') n'est PAS un mandat papier signé.
+// `date` : le jour du dépôt AU PLUS TARD (deposeAuPlusTard), en « AAAA-MM-JJ ».
 export type DocumentRegle = { nom: string; typeCode: string | null; date: string | null; signature: string | null; modele?: boolean }
 export type AffaireRegle = { kind: string; state: string | null; date: string | null; dateActe: string | null }
 
@@ -51,6 +52,30 @@ export function lireDate(v: string | null | undefined): Date | null {
   else if ((m = /^(\d{2})\/(\d{2})\/(\d{4})/.exec(s))) d = new Date(Date.UTC(Number(m[3]), Number(m[2]) - 1, Number(m[1])))
   if (!d || Number.isNaN(d.getTime()) || d.getUTCFullYear() < 1980) return null
   return d
+}
+
+// ⚠ LA DATE DE DÉPÔT D'UN DOCUMENT VENU DE HEKTOR N'EST PAS CONNUE CHEZ NOUS (mesuré le 12/11) : `created_at_hektor` est
+// vide, et `created_at` est le jour où NOTRE ligne est née -- 163 000 lignes recréées en octobre (défaut du domaine des
+// documents). Le repère qui reste : le numéro que Hektor donne au document (`hektor_uploaded_document_id`), qui ne fait que
+// croître. CALAGE = [numéro, jour] : « ce jour-là, les numéros vus chez nous allaient jusqu'à N » (maximum cumulé par jour
+// de `created_at`, relevé le 12/11). Un numéro inférieur ou égal à N a donc été déposé AU PLUS TARD ce jour-là.
+// ⚠ Trous connus : rien entre le 19/05 et le 26/06 (démarrage), ni entre le 20/08 et le 05/10 (bannissement d'IP).
+const CALAGE: Array<[number, string]> = [
+  [573572, '2026-05-19'], [710579, '2026-06-26'], [711053, '2026-07-03'], [711659, '2026-07-22'], [712015, '2026-07-30'],
+  [712285, '2026-08-05'], [712625, '2026-08-20'], [714530, '2026-10-05'], [715016, '2026-10-16'], [715251, '2026-10-23'],
+  [715552, '2026-10-30'], [715831, '2026-11-07'], [716003, '2026-11-12'],
+]
+
+// Le jour où un document a été déposé AU PLUS TARD : la plus petite des bornes connues (dates de nos lignes, borne
+// donnée par son numéro Hektor). Au-delà du dernier calage, seules nos dates comptent (la synchro ne recrée plus).
+export function deposeAuPlusTard(numeroHektor: number | null, dates: Array<string | null | undefined>): Date | null {
+  const bornes = dates.map((x) => lireDate(x)).filter((x): x is Date => Boolean(x))
+  if (numeroHektor != null && Number.isFinite(numeroHektor)) {
+    const point = CALAGE.find(([n]) => numeroHektor <= n)
+    const jour = point ? lireDate(point[1]) : null
+    if (jour) bornes.push(jour)
+  }
+  return bornes.length ? new Date(Math.min(...bornes.map((x) => x.getTime()))) : null
 }
 
 const jjmmaaaa = (d: Date) => `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')}/${d.getUTCFullYear()}`
@@ -94,14 +119,20 @@ export function reglesSansIa(faits: FaitsRegles, documents: DocumentRegle[], aff
     }
   }
 
-  // N4 -- l'état des risques DÉPOSÉ il y a plus de 6 mois (date du dépôt, pas de l'état). Au compromis : une simple
-  // information tant que la question n° 5 de l'étude n'est pas tranchée (le notaire le refait-il ?).
+  // N4 -- l'état des risques DÉPOSÉ il y a plus de 6 mois (date du dépôt, pas de l'état). Une ALERTE à l'offre comme au
+  // compromis : c'est l'agence qui l'annexe au compromis, « comme les autres diagnostics » (Frédéric, 12/11, question n° 5).
+  // La date de référence : la signature du compromis (le plus récent encore vivant), sinon aujourd'hui (à l'offre, le
+  // compromis est à venir). La date d'un document est un « au plus tard » (deposeAuPlusTard) : la règle ne sonne que si
+  // même cette borne a plus de 6 mois -- elle peut se taire à tort, jamais crier à tort.
   if (moment === 'offre' || moment === 'compromis') {
     const erp = deType('diag.erp', 'diag.dossier').map((d) => lireDate(d.date)).filter((x): x is Date => Boolean(x))
+    const signatures = moment === 'compromis' ? affaires.filter((a) => a.kind === 'compromis' && vivante(a)).map((a) => lireDate(a.date)).filter((x): x is Date => Boolean(x)) : []
+    const reference = signatures.length ? new Date(Math.max(...signatures.map((x) => x.getTime()))) : aujourdhui
     if (erp.length) {
       const dernier = new Date(Math.max(...erp.map((x) => x.getTime())))
-      if (aujourdhui.getTime() - dernier.getTime() > 183 * JOUR) {
-        alertes.push({ code: 'N4', niveau: moment === 'offre' ? 'alerte' : 'info', texte: `État des risques déposé le ${jjmmaaaa(dernier)} : plus de 6 mois`, pourquoi: 'il doit avoir moins de 6 mois à la signature (date du dépôt, pas de l\'état)', typeADeposer: 'diag.erp' })
+      if (reference.getTime() - dernier.getTime() > 183 * JOUR) {
+        const quand = signatures.length ? `au compromis du ${jjmmaaaa(reference)}` : 'aujourd\'hui'
+        alertes.push({ code: 'N4', niveau: 'alerte', texte: `État des risques déposé au plus tard le ${jjmmaaaa(dernier)} : plus de 6 mois ${quand}`, pourquoi: 'il doit avoir moins de 6 mois à la signature (date du dépôt, pas de l\'état)', typeADeposer: 'diag.erp' })
       }
     }
   }

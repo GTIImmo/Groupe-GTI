@@ -982,4 +982,17 @@ allumé en `admin` sur accord. Rien n'écrit, rien ne part chez Hektor.
   téléphone 375 px sans débordement, mais le bloc fait 1 142 px dans le pire cas).
 - Non fait : N13 sur un autre bien (index `sha256` à poser avec l'accord de la session signature) ; N12 « vente sans
   facture » (un bien vendu sort de `app_dossier_current`).
-⏳ Reste, sur accord : commit et push ; allumer `ged_propositions` en `admin`.
+✅ **« Oui, les trois » (12/11)** : commit `8509638` POUSSÉ ; `ged_propositions` **allumé en `admin` à 15:29** (les 4 admins
+actifs). Éteindre : `update public.app_setting set value = 'off', updated_at = now() where key = 'ged_propositions';`
+⏳ Reste : Frédéric juge les lignes « À regarder » sur ses biens (vrai / faux / déjà su).
+✅ **QUESTION N° 5 TRANCHÉE (12/11)** : « C'EST NOUS, COMME LES AUTRES DIAGNOSTICS » → l'agence annexe l'état des risques au
+compromis : N4 est une **ALERTE** au compromis comme à l'offre, comparée à la date de SIGNATURE du compromis (aujourd'hui à
+l'offre).
+⚠⚠ **EN LE FAISANT, LA MESURE A TROUVÉ QUE N4 NE POUVAIT JAMAIS SONNER** : la date d'un document venu de Hektor n'est pas
+connue chez nous — `created_at_hektor` est vide sur les 94 états des risques des biens sous compromis, et `created_at` est le
+jour où NOTRE ligne est née (86 en octobre 2026 : les lignes recréées par le défaut du domaine). Les essais passaient, la
+règle était muette. **Corrigé** : `deposeAuPlusTard()` prend la plus petite borne entre nos dates et le numéro Hektor du
+document (`hektor_uploaded_document_id`, croissant) calé sur 13 points relevés le 12/11 (maximum cumulé par jour ; trous
+connus 19/05→26/06 et 20/08→05/10). La règle ne sonne que si même la borne a plus de 6 mois : elle peut se taire à tort,
+jamais crier à tort. ⚠ **Conséquence mesurée : aucune ligne N4 avant le 18/11/2026** (nos données commencent le 19/05) ; la
+vraie date de l'état viendra de sa lecture (morceau 6, L2). Essais 44 VERT ; mesure : 218 biens sur 723 avec une ligne.

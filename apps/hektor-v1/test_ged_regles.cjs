@@ -43,9 +43,18 @@ voir(!sonne(reglesSansIa(fiche({ ...baisse, prixChangeLe: '2025-12-01' }), [mand
 console.log('③ N4 l\'état des risques de plus de 6 mois')
 const offre = fiche({ statut: 'Sous offre' })
 voir(sonne(reglesSansIa(offre, [mandatSigne, doc('ERP.pdf', { date: '2026-03-01' })], [], AUJ), 'N4')[0]?.niveau === 'alerte', 'sous offre, ERP déposé en mars : alerte')
-voir(sonne(reglesSansIa(fiche({ statut: 'Sous compromis' }), [mandatSigne, doc('ERP.pdf', { date: '2026-03-01' })], [], AUJ), 'N4')[0]?.niveau === 'info', 'sous compromis : simple information (question n° 5 ouverte)')
+voir(sonne(reglesSansIa(fiche({ statut: 'Sous compromis' }), [mandatSigne, doc('ERP.pdf', { date: '2026-03-01' })], [], AUJ), 'N4')[0]?.niveau === 'alerte', 'sous compromis : alerte aussi (l\'agence l\'annexe, décision du 12/11)')
 voir(!sonne(reglesSansIa(offre, [mandatSigne, doc('ERP.pdf', { date: '2026-10-01' })], [], AUJ), 'N4').length, 'TÉMOIN : ERP récent : se tait')
 voir(!sonne(reglesSansIa(fiche({}), [mandatSigne, doc('ERP.pdf', { date: '2026-03-01' })], [], AUJ), 'N4').length, 'TÉMOIN : bien seulement actif : se tait')
+
+const { deposeAuPlusTard } = m.exports
+const iso = (d) => d && d.toISOString().slice(0, 10)
+voir(iso(deposeAuPlusTard(562383, ['2026-10-15T20:57:44Z'])) === '2026-05-19', 'un numéro Hektor ancien l\'emporte sur une ligne recréée en octobre : au plus tard le 19/05')
+voir(iso(deposeAuPlusTard(711500, [null, '2026-10-15T09:00:00Z'])) === '2026-07-22', 'un numéro de juillet : au plus tard le 22/07')
+voir(iso(deposeAuPlusTard(999999, ['2026-11-20T09:00:00Z'])) === '2026-11-20' && deposeAuPlusTard(null, [null]) === null, 'au-delà du calage, notre date ; rien du tout, pas de date')
+const cpSigne = [{ kind: 'compromis', state: 'active', date: '2026-07-01', dateActe: null }]
+voir(sonne(reglesSansIa(fiche({ statut: 'Sous compromis' }), [mandatSigne, doc('ERP.pdf', { date: '2025-11-01' })], cpSigne, AUJ), 'N4')[0]?.texte.includes('compromis du 01/07/2026'), 'au compromis : on compare à la date de SIGNATURE du compromis')
+voir(!sonne(reglesSansIa(fiche({ statut: 'Sous compromis' }), [mandatSigne, doc('ERP.pdf', { date: '2026-03-01' })], cpSigne, AUJ), 'N4').length, 'TÉMOIN : ERP de mars, compromis de juillet : moins de 6 mois à la signature, se tait')
 
 console.log('④ N5 le DPE')
 voir(sonne(reglesSansIa(fiche({ dpeDate: '2019-04-01' }), [mandatSigne], [], AUJ), 'N5').length === 1, 'DPE de 2019 : plus valable depuis le 31/12/2024')

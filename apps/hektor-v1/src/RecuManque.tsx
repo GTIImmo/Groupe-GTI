@@ -9,7 +9,7 @@ import { loadAffairesForDossier } from './lib/api'
 import { etatFiableDuDocument } from './lib/etatSignatureMandat'
 import { loadGedClassements, useGedPropositions } from './lib/ged'
 import { LIBELLE_MOMENT, recuManque, type LignePiece } from './lib/gedPieces'
-import { LIBELLE_A_DEPOSER, reglesSansIa, type AffaireRegle, type Alerte, type FaitsRegles } from './lib/gedRegles'
+import { deposeAuPlusTard, LIBELLE_A_DEPOSER, reglesSansIa, type AffaireRegle, type Alerte, type FaitsRegles } from './lib/gedRegles'
 import type { ConsoleDocument } from './types'
 import './RecuManque.css'
 
@@ -17,6 +17,13 @@ const NIVEAU: Record<LignePiece['niveau'], string> = {
   obligatoire: 'obligatoire',
   bonne_pratique: 'bonne pratique',
   selon_le_cas: 'selon le cas',
+}
+
+// Le jour du dépôt AU PLUS TARD d'un document (gedRegles : nos dates et le numéro Hektor), en « AAAA-MM-JJ ».
+function depose(d: ConsoleDocument): string | null {
+  const brut = (d.metadata_json as { hektor_uploaded_document_id?: unknown } | null)?.hektor_uploaded_document_id
+  const numero = brut != null && /^\d+$/.test(String(brut)) ? Number(brut) : null
+  return deposeAuPlusTard(numero, [d.created_at_hektor, d.created_at])?.toISOString().slice(0, 10) ?? null
 }
 
 const NIVEAU_ALERTE: Record<Alerte['niveau'], string> = { alerte: 'à vérifier', piece: 'pièce non trouvée', info: 'pour information' }
@@ -60,7 +67,7 @@ export function RecuManque({
     if (!regles || affaires === null) return []
     const docs = documents
       .filter((d) => d.present_in_hektor !== false)
-      .map((d) => ({ nom: d.document_name, typeCode: classements.get(d.id) ?? null, date: d.created_at_hektor ?? d.created_at ?? null, signature: etatFiableDuDocument(d)?.status ?? null, modele: d.source === 'hektor_console_modele' }))
+      .map((d) => ({ nom: d.document_name, typeCode: classements.get(d.id) ?? null, date: depose(d), signature: etatFiableDuDocument(d)?.status ?? null, modele: d.source === 'hektor_console_modele' }))
     return reglesSansIa(faits, docs, affaires, new Date())
   }, [regles, affaires, faits, documents, classements])
 
