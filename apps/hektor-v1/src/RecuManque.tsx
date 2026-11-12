@@ -46,6 +46,7 @@ export function RecuManque({
   const [ouvrirPrecedents, setOuvrirPrecedents] = useState(false)
   // ce qui manque d'abord ; les pièces reçues se replient sur une ligne (écran bas : 665 px)
   const [ouvrirRecues, setOuvrirRecues] = useState(false)
+  const [ouvrirLus, setOuvrirLus] = useState(false)
   const nbDocuments = documents.length
 
   useEffect(() => {
@@ -82,6 +83,12 @@ export function RecuManque({
     return m
   }, [documents, lectures])
   const avecLecture = (nom: string) => (resumeParNom.has(nom) ? `${nom} — ${resumeParNom.get(nom)}` : nom)
+
+  // TOUT ce que l'IA a lu, quel que soit le moment de la pièce : la liste ci-dessous ne montre que le moment en cours
+  // (essai réel du 12/11 : la taxe, le titre et la copro lus restaient invisibles après rechargement, §12.14).
+  const lus = useMemo(() => documents
+    .filter((d) => d.present_in_hektor !== false && lectures.has(d.id))
+    .map((d) => ({ id: d.id, nom: d.document_name, resume: resumeLecture(lectures.get(d.id) as LectureDocument) })), [documents, lectures])
 
   const resultat = useMemo(() => recuManque(
     faits,
@@ -153,6 +160,24 @@ export function RecuManque({
             {`${ouvrirRecues ? '▾' : '▸'} ${resultat.recues} pièce${resultat.recues > 1 ? 's' : ''} reçue${resultat.recues > 1 ? 's' : ''}`}
           </button>
           {ouvrirRecues ? <div className="gm-liste">{resultat.pieces.filter((l) => l.etat === 'recu').map(ligne)}</div> : null}
+        </div>
+      ) : null}
+      {lus.length ? (
+        <div className="gm-avant">
+          <button type="button" className="gm-avant-b" onClick={() => setOuvrirLus((v) => !v)} aria-expanded={ouvrirLus}>
+            {`${ouvrirLus ? '▾' : '▸'} Lu par l'IA : ${lus.length} document${lus.length > 1 ? 's' : ''}`}
+          </button>
+          {ouvrirLus ? (
+            <div className="gm-liste">
+              {lus.map((l) => (
+                <div key={l.id} className="gm-l is-recu">
+                  <span className="gm-ic is-recu" aria-hidden="true">✓</span>
+                  <span className="gm-t">{l.nom}<small>{l.resume}</small></span>
+                  <span className="gm-d" />
+                </div>
+              ))}
+            </div>
+          ) : null}
         </div>
       ) : null}
       {manquantesAvant ? (

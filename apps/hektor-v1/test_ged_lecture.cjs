@@ -68,6 +68,8 @@ voir(/l\.lecture\?\.etat === 'lecture'\)\) return/.test(depot), 'une lecture à 
 const prep = ia.slice(ia.indexOf('export async function preparerLecture'), ia.indexOf('export type ResultatLecture'))
 voir(prep.indexOf('nomDitRib(file.name)') < prep.indexOf('imageHd(') && prep.indexOf('texteDitRib(') < prep.indexOf('page.render('), 'la garde RIB passe avant toute image')
 voir(!/\.insert\(|\.upsert\(|\.update\(|\.rpc\(/.test(lect) && !/app_ged_lecture[^\n]*insert/.test(depot), 'l\'écran n\'écrit jamais une lecture (le serveur seul)')
+const rm = fs.readFileSync(path.join(__dirname, 'src/RecuManque.tsx'), 'utf8')
+voir(/Lu par l'IA : \$\{lus\.length\}/.test(rm) && /\.filter\(\(d\) => d\.present_in_hektor !== false && lectures\.has\(d\.id\)\)/.test(rm), 'après rechargement : TOUT ce qui a été lu se retrouve (« Lu par l\'IA »), quel que soit le moment de la pièce')
 
 console.log(ko ? `\n${ko} ROUGE, ${ok} VERT` : `\nTOUT EST VERT (${ok})`)
 process.exit(ko ? 1 : 0)

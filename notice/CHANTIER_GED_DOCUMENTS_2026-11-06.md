@@ -24,8 +24,8 @@
 | 3 | « Reçu / Manque » par moment du dossier | ✅ en production, cran admin (§12.8) |
 | 4 | l'IA classe avant l'envoi (type, nom, découpage) | ✅ en production, cran admin (§12.9) |
 | 5 | les 13 règles sans IA (« À regarder ») | ✅ en production, cran admin (§12.10) |
-| 6 lot 1 | lecture : état des risques, DPE, dossier de diagnostics | ✅ en production (`c631a6d`) ; ⏳ **essai réel à faire** (§12.11) |
-| 6 lot 2 | lecture : **taxe foncière, titre de propriété, fiche synthétique, charges de copro** — avec les NOMS | ✅ écrit et contrôlé (banc 25/25, 0 fuite) ; ⏳ commit, push, essai réel (§12.14) |
+| 6 lot 1 | lecture : état des risques, DPE, dossier de diagnostics | ✅ en production (`c631a6d`), **essai réel fait le 12/11** (§12.14) |
+| 6 lot 2 | lecture : **taxe foncière, titre de propriété, fiche synthétique, charges de copro** — avec les NOMS | ✅ en production (`0466c7c`), **essai réel fait le 12/11** : 5/5 lus, 0 fuite, 0 doublon (§12.14) ; affichage après rechargement (« Lu par l'IA ») écrit, ⏳ push |
 | 6 lot 3 | lecture : offre d'achat, compromis, PV d'AG | ⬜ |
 | 6 lot 4 | lecture : mandat déposé à la main, avenant, acte, facture, petits diagnostics, surfaces, règlement | ⬜ |
 | 7 | comparateurs et règles avec lecture (titre ↔ mandants, taxe ↔ fiche, copro…) | ⬜ |
@@ -1222,5 +1222,41 @@ jour le plan de ce chantier » → le §0 en tête de cette note porte désormai
 - Contrôles : `test_ged_lire.py` **38 VERT** (dont ce qui part vraiment vers l'IA, appel simulé, et 3 témoins « le lot 1
   ne change pas ») ; `test_ged_classer.py` 28 ; `test_ged_lecture.cjs` **25 VERT** ; règles 44, Reçu / Manque 29, dépôt 17,
   classement 25, les 4 essais de la signature verts ; `npm run build` vert.
-✅ **« Oui avec patch taxe » (12/11 soir)** : patch de la taxe **POSÉ** (`justif.taxe` → « lue », contrôle vert) ; commit et
-push du lot 2. ⏳ Reste : l'essai réel des lots 1 et 2 sur 62774 avec des documents fictifs.
+✅ **« Oui avec patch taxe » (12/11 soir)** : patch de la taxe **POSÉ** (`justif.taxe` → « lue », contrôle vert) ; commit
+`0466c7c`. La relecture avant le push a trouvé `f3ef0de` (autre session : un script d'essai du chaînage, `phase2/sync/`,
+aucun code d'app) SOUS le mien → dit à Frédéric, qui a répondu « vas-y » → **les deux POUSSÉS** (`ee13b7c..0466c7c`, SHA
+exact). Render (`/health` = `0466c7c`, `/ged/lire` sans jeton → 401) et Vercel (le paquet sert `justif.titre`) à jour.
+✅ **ESSAI RÉEL DES LOTS 1 ET 2 — « Fais essai » (12/11, 19:20-19:25)**, Chrome de Frédéric, cran admin, bien d'essai
+**62774** (⚠ il est « Clos » depuis l'essai du 21/10 : la fiche est en lecture seule, mais l'onglet Documents dépose quand
+même). Worker vérifié AVANT : les 4 services ont démarré le 10/11 18:47, après l'anti-doublon `3c32daa` du 06/11.
+- 5 documents FICTIFS (fabriqués par `essai_reel/fabriquer_scans.py` et `fabriquer_textes.cjs`, bloc-notes de la session) :
+  état des risques (texte), taxe foncière (scan 2 p.), titre (scan 3 p.), fiche synthétique (texte), appel de fonds (scan).
+- **Classement (morceau 4)** : 5 sur 5 « le nom et l'IA sont d'accord ».
+- **Envoi chez Hektor** : 5 travaux `done` (18:21:21 → 18:23:16 UTC), numéros Hektor **716030 à 716034**, consécutifs,
+  **aucun doublon** (le bien passe de 18 à 23 documents).
+- **Lecture (morceau 6)** : la file a lu les 5, une à une, juste après l'envoi ; les résumés s'affichent dans la fenêtre :
+  « établi le 02/09/2026 · Firminy » ; « taxe 2026 · 1 234 € · FIRMINY · 1 redevable, 1 usufruitier » ; « acte de vente ·
+  du 04/03/2019 · 2 propriétaires · FIRMINY · lots 12, 31 » ; « 48 lots dont 20 principaux · syndic SYNDIC EXEMPLE LOIRE
+  SAS · aucune procédure · établie le 30/06/2026 » ; « provision 420 € (trimestre) · travaux appelés 1 200 € · lots 12, 31
+  · syndic … ». **Aucun nom à l'écran.**
+- **En base** : 5 `app_ged_lecture` (état « lu » ; texte pour les 2 PDF texte, pages 1-2 / 1-3 / 1 pour les scans) ;
+  valeurs justes (contenance « 4 a 50 ca » → 450 m², tantièmes, quote-part « moitié ») ; **0 fuite** (le seul mot attrapé
+  par mon filtre était l'immatriculation attendue « AB1234567 ») ; journal des agents : 5 lectures, **aucun nom** ;
+  **coût total classement + lecture : 0,0041 $**.
+- **Après rechargement** : « Mise en vente : 1 pièce sur 4 » (l'état des risques compte, son résumé « Lu : établi le
+  02/09/2026 » à côté) ; et une règle du morceau 5 a parlé d'elle-même : « Case copropriété à NON, mais 2 pièces de
+  copropriété au dossier » (vrai : 62774 n'est pas en copro).
+- ⚠ **Trouvé** : après rechargement, les lectures de la taxe, du titre et des pièces de copro ne se VOIENT nulle part
+  — « Reçu / Manque » ne montre que le moment en cours (ici la mise en vente) et, des moments précédents, les seules
+  pièces obligatoires manquantes ; la taxe et le titre (moment « mandat », bonne pratique) et la copro (bien sans copro)
+  n'y apparaissent pas. Les valeurs sont en base ; c'est l'affichage qui manque → à traiter au morceau 7 (les règles les
+  utiliseront) et à l'habillage (aperçu du document, cartes E5).
+- Les 5 documents fictifs restent sur 62774 (chez nous et chez Hektor) ; les retirer = un geste « Supprimer » par
+  document, sur accord.
+✅ **« Règle d'abord » (12/11 soir) — L'AFFICHAGE DES LECTURES APRÈS RECHARGEMENT, ÉCRIT, RIEN POUSSÉ** : dans « Reçu /
+Manque », une ligne repliée **« ▸ Lu par l'IA : N documents »** (sous les pièces reçues, au style actuel du bloc) liste
+CHAQUE document lu avec son résumé, quel que soit son moment (`RecuManque.tsx`, additif : aucune ligne existante ne
+change). Banc d'écran local (lectures factices : état des risques, DPE, taxe, titre) : la ligne se déplie et montre
+« Taxe fonciere 2026.pdf — Lu : taxe 2026 · 1 234 € · FIRMINY · 1 redevable, 1 usufruitier » et « Titre de
+propriete.pdf — Lu : acte de vente · du 04/03/2019 · 2 propriétaires · lot 12 », aucun nom. Essais : `test_ged_lecture.cjs`
+26 VERT, Reçu / Manque 29, règles 44, `npm run build` vert. ⏳ commit + push sur accord.
