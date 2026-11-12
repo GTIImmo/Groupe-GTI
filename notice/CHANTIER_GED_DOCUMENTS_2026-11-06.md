@@ -661,7 +661,7 @@ Hektor quand ils existent, sinon les demander une fois.
 > Travail fait en LECTURE SEULE (équipe d'agents, puis étude d'experts). Page de référence, maquettes comprises :
 > https://claude.ai/artifact/WEHAruTgvuctKN74N8Rt6r (version 10). Rapports complets (hors dépôt) : bloc-notes de la
 > session, dossier `ged_equipe/` (1 à 6) et `ged_equipe/etude/` (A à D par famille, **E_synthese_catalogue.md = la
-> référence du catalogue**). ⭐ Le 12/11 au soir, « on peut reprendre » : le morceau 1 commence (§12.6).
+> référence du catalogue**). ⭐ Le 12/11, « on peut reprendre » : le morceau 1 commence (§12.6).
 
 ### 12.1 Le cadre (décisions de Frédéric du 12/11)
 - **Seuls les documents déposés DANS L'APP sont lus.** Pas de lecture du soir des documents arrivés par la console Hektor
@@ -726,7 +726,7 @@ coordination** ; point d'arrêt resserré ≈ 35 / 42. **Coût IA** (≈ 1 150 d
 les essais. Avant le 1er document réel : contrat de sous-traitance avec le fournisseur d'IA et `store:false`. Avant les
 négociateurs : analyse d'impact, registre des traitements, clause au mandat.
 
-### 12.6 Le morceau 1 — la base (ouvert le 12/11 au soir)
+### 12.6 Le morceau 1 — la base (ouvert le 12/11)
 **Audit (12/11, lecture seule)** : aucune table ni réglage `ged` en base ; `app_console_document.id` est un uuid, une
 seule clé étrangère pointe vers elle (`app_signature_request`, ON DELETE SET NULL) ; une table neuve donne PAR DÉFAUT
 tous les droits à `authenticated` (`pg_default_acl`) → chaque rôle se nomme dans les `revoke` ; patron suivi :
@@ -743,14 +743,14 @@ fabriquée à partir du patch, qui lève une erreur volontaire : rien n'est gard
   pas `app_console_document` : la session signature sera prévenue au morceau 2 (le panneau des documents).
 - Pas encore les tables de lecture, de valeurs et de propositions (morceaux 6 à 9) ; aucune fonction ; rien à l'écran.
 - Effet ailleurs : la descente de 07:45 recopiera les 4 tables (66 lignes + vides).
-✅ **POSÉ EN PRODUCTION le 12/11 au soir, avec l'accord de Frédéric (« Oui, vas-y »)** :
+✅ **POSÉ EN PRODUCTION le 12/11, avec l'accord de Frédéric (« Oui, vas-y »)** :
 - répétition d'abord : **12 VERT, 0 ROUGE**, puis vérifié que rien n'était resté (0 table `app_ged_*`, 0 réglage) ;
 - patch posé, puis les 12 contrôles relus en production : **12 VERT** ;
 - ⭐ témoin inverse (en rôle `authenticated`, transaction annulée) : lecture du classement **REFUSÉE**, écriture dans la
   nomenclature **REFUSÉE**.
 Les 3 interrupteurs sont éteints ; rien ne lit encore ces tables. Commité et poussé (`7db04f9`, accord de Frédéric).
 
-### 12.7 Le morceau 2 — la fenêtre de dépôt (audit du 12/11 au soir, rien codé)
+### 12.7 Le morceau 2 — la fenêtre de dépôt (audit du 12/11, rien codé)
 **Audit** :
 - `ConsoleDocumentsPanel` (`App.tsx:11831`), monté 3 fois (`33593` cockpit v21, `37246` fiche classique, `41326`
   téléphone) ; le formulaire `uploadForm` (`12152-12225`) est partagé par les deux habillages (`12365`, `12461`) : un
@@ -779,7 +779,7 @@ Les 3 interrupteurs sont éteints ; rien ne lit encore ces tables. Commité et p
     dans le panneau ; ne toucher qu'à `uploadForm`) ;
   - ne jamais écrire `metadata_json.signature`, `signed_document`, `remplace`, `signataires_du_pdf` ;
   - ⚠ `App.tsx` et `lib/api.ts` portent des changements NON commités d'une autre session : stager par blocs.
-✅ **« Vas-y, morceau 2 » (12/11 au soir). ÉCRIT ET CONTRÔLÉ HORS LIGNE, PAS ENCORE EN SERVICE :**
+✅ **« Vas-y, morceau 2 » (12/11). ÉCRIT ET CONTRÔLÉ HORS LIGNE, PAS ENCORE EN SERVICE :**
 - `apps/hektor-v1/src/lib/gedTypeParNom.ts` : les règles du nom, FABRIQUÉES à partir du Python (script du bloc-notes
   `ged_m1/gen_type_par_nom.py` ; corriger les règles en Python puis refabriquer). ⭐ Témoin : **193 629 noms sur 193 629
   classés à l'identique** par les deux versions ; témoin inverse : une règle abîmée → 7 235 écarts (la comparaison voit).
@@ -798,8 +798,23 @@ Les 3 interrupteurs sont éteints ; rien ne lit encore ces tables. Commité et p
   la session signature **verts** ; écran vu sur une page d'essai à données fictives (bureau 1280 × 665 et téléphone) :
   conflit de nom refusé, nom muet → type obligatoire puis nom « DPE 12-11-2026 », `.odt` refusé, pièce d'identité en
   privé forcé, 3 photos → 1 PDF.
-✅ **« Oui, les trois » (12/11 au soir)** : `patch_ged_m2_classer` **POSÉ EN PRODUCTION**, contrôles relus **7 VERT**
+✅ **« Oui, les trois » (12/11)** : `patch_ged_m2_classer` **POSÉ EN PRODUCTION**, contrôles relus **7 VERT**
 (colonne, fonction SECURITY DEFINER, anon refusé, authenticated autorisé, classement vide, une seule clé étrangère vers
 `app_console_document`, interrupteur `ged_depot_multiple` toujours `off`) ; commité et poussé.
-⏳ Reste, chacun avec l'accord de Frédéric : passer `ged_depot_multiple` à `admin` · essai réel sur le bien d'essai 62774
-(chaque fichier une seule fois chez Hektor, classement chez nous) · essai sur son vrai téléphone.
+✅ **ALLUMÉ le 12/11 à 12:26 (« Oui, allume admin »)** : `ged_depot_multiple = 'admin'` ; `ged_lecture_ia` et
+`ged_propositions` restent `off`. ⚠ Le cran « admin » montre la fenêtre aux **4 admins actifs**, pas à Frédéric seul
+(même règle que `signature_youtrust`). Les négociateurs gardent le formulaire d'aujourd'hui.
+ÉTEINDRE : `update public.app_setting set value = 'off', updated_at = now() where key = 'ged_depot_multiple';`
+✅ **ESSAI RÉEL du 12/11 (Frédéric, bien d'essai 62774, 12:34) : 3 documents d'un coup** — 2 images de pièce
+d'identité et 1 PDF d'offre. Mesuré :
+- 3 travaux `upload_document_to_hektor`, tous `done` **au premier essai** (`attempt_count` 1), 40 s à 1 min 15 l'un après
+  l'autre ; 3 numéros Hektor posés, `envoi_hektor_statut = envoye` ;
+- **aucun doublon** : pour chaque document, 1 seule ligne par nom, par empreinte et par numéro Hektor ;
+- 3 classements, chacun avec son rattachement au bien et sa ligne de journal ; les 3 types proposés par le nom ont été
+  gardés (`justif.identite` × 2, `transaction.offre`) ; les 3 en privé ;
+- ⭐ l'empreinte calculée par le navigateur = celle du serveur (3 sur 3) : le repérage des doublons au dépôt marchera ;
+- ⭐ `app_console_document.document_type` vaut déjà « document » sur les 3 : la synchro a réécrit le type, comme mesuré le
+  06/11 — le classement vit bien à part ;
+- les 15 autres documents du bien n'ont été touchés que par la resynchro habituelle d'après dépôt ; le marqueur de
+  signature « to_send » posé sur le nouveau PDF vient de cette même synchro (tous les PDF du bien l'ont), pas de la GED.
+⏳ Pas encore essayé : un nom muet, la photo de plusieurs pages, le vrai téléphone.
