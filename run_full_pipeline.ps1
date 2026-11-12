@@ -845,7 +845,10 @@ if (-not $SkipHektorDiagContacts -and $HektorDiagContactsLimit -gt 0) {
         "--delay-seconds", $hektorDiagContactsDelayArg,
         "--batch-size", [string]$HektorDiagContactsBatchSize,
         "--batch-pause-seconds", [string]$HektorDiagContactsBatchPauseSeconds,
-        "--refresh-session-on-expired"
+        "--refresh-session-on-expired",
+        # 12/11/2026 : une ligne de comptes au lieu de ~1 940 lignes de detail (le detail reste dans hektor.sqlite).
+        # Ce detail remplissait la memoire de la console : les etapes suivantes perdaient leur compte rendu.
+        "--resume"
     )
     $diagContactsOk = $false
     Invoke-OptionalStepWithRetry -Label "hektor syndic et diagnostiqueur" -Arguments $hektorDiagContactsArgs `

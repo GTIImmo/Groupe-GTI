@@ -551,7 +551,39 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--batch-pause-seconds", type=int, default=30)
     parser.add_argument("--refresh-session-on-expired", action="store_true")
     parser.add_argument("--env-file", type=Path, default=DEFAULT_ENV_FILE)
+    # 12/11/2026 : le run de nuit passe --resume. Le detail (une entree par annonce, ~1 940 lignes) remplissait
+    # la memoire de la console du run, et toutes les etapes suivantes perdaient leur compte rendu au journal.
+    # Le detail reste dans hektor.sqlite (store_result) ; sans --resume, la sortie est celle d'avant.
+    parser.add_argument("--resume", action="store_true", help="une ligne de comptes au lieu du detail par annonce")
     return parser.parse_args()
+
+
+def resumer(summary: dict[str, Any]) -> dict[str, Any]:
+    """Les memes informations en comptes : rien de ce qui sert a agir (erreurs, refus 403) n'est retire."""
+    extraits = summary.get("extracted") or []
+    erreurs = summary.get("errors") or []
+    statuts: dict[str, int] = {}
+    for item in extraits:
+        statut = str(item.get("status"))
+        statuts[statut] = statuts.get(statut, 0) + 1
+    resume = {key: value for key, value in summary.items() if key not in ("candidates", "extracted", "errors", "storage_state")}
+    resume["extracted"] = len(extraits)
+    resume["statuts"] = statuts
+    resume["avec_syndic"] = sum(1 for item in extraits if item.get("syndic"))
+    resume["avec_diagnostiqueur"] = sum(1 for item in extraits if item.get("diagnostiqueur"))
+    resume["errors"] = len(erreurs)
+    if erreurs:
+        # Les cinq premieres en entier, et chaque message distinct une fois : de quoi agir sans 100 lignes.
+        resume["errors_premieres"] = erreurs[:5]
+        resume["errors_messages"] = sorted({str(item.get("error"))[:300] for item in erreurs})
+    return resume
+
+
+def imprimer(summary: dict[str, Any], resume: bool) -> None:
+    if resume:
+        print(json.dumps(resumer(summary), ensure_ascii=True, separators=(",", ":")))
+    else:
+        print(json.dumps(summary, ensure_ascii=True, indent=2))
 
 
 def main() -> None:
@@ -596,7 +628,7 @@ def main() -> None:
     }
 
     if args.dry_run or not candidates:
-        print(json.dumps(summary, ensure_ascii=True, indent=2))
+        imprimer(summary, args.resume)
         return
 
     if not args.skip_job_check:
@@ -645,7 +677,7 @@ def main() -> None:
                     store_result(con, row, result, storage_state)
                 summary["stopped_on_403"] = {"batch": ids, "error": error_text}
                 summary["elapsed_ms"] = int((time.perf_counter() - started) * 1000)
-                print(json.dumps(summary, ensure_ascii=True, indent=2))
+                imprimer(summary, args.resume)
                 raise SystemExit(3) from exc
             except Exception as exc:
                 error_text = str(exc)
@@ -665,7 +697,7 @@ def main() -> None:
         con.close()
 
     summary["elapsed_ms"] = int((time.perf_counter() - started) * 1000)
-    print(json.dumps(summary, ensure_ascii=True, indent=2))
+    imprimer(summary, args.resume)
 
 
 if __name__ == "__main__":

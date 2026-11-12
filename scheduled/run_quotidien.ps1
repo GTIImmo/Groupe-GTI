@@ -29,6 +29,20 @@ if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir -Forc
 $stamp = Get-Date -Format "yyyy-MM-dd_HH-mm-ss"
 $log = Join-Path $logDir "quotidien_$stamp.log"
 Start-Transcript -Path $log -Append | Out-Null
+# Correctif 2026-11-12 : LA MEMOIRE DE LA CONSOLE. La transcription ne recopie la sortie
+# des scripts Python/Node qu'en relisant la memoire d'ecran de la console : 3000 lignes
+# par defaut. Pleine, elle ne recopie plus RIEN, sans erreur. Jusqu'au 04/11 un run
+# faisait ~1900 lignes ; depuis le 05/11 l'etape "syndic et diagnostiqueur" en ajoute
+# ~1940 et la limite tombait a la ligne 3005 : 44 etapes sur 65 sans compte rendu, et
+# l'alerte qui lit la fin du journal aveugle. Reproduit hors run le 12/11 (3000 : perdu,
+# 32766 : garde). 32766 = le maximum de Windows. Refus = on le dit, le run continue.
+try {
+    $consoleBrute = $Host.UI.RawUI
+    $consoleBrute.BufferSize = New-Object System.Management.Automation.Host.Size($consoleBrute.BufferSize.Width, 32766)
+    Write-Output "Memoire de la console : $($consoleBrute.BufferSize.Height) lignes"
+} catch {
+    Write-Output "ATTENTION memoire de la console non agrandie ($_) : au-dela de ~3000 lignes, les sorties des etapes manqueront au journal"
+}
 $runFailed = $false
 try {
     Write-Output "=== Run quotidien demarre $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ==="
