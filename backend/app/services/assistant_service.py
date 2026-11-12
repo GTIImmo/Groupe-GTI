@@ -1,0 +1,228 @@
+from __future__ import annotations
+
+from datetime import datetime, timezone
+from typing import Any, AsyncIterator
+
+import requests
+from fastapi import HTTPException
+
+from ..settings import Settings
+from . import agent_registry
+from .agent_tarifs import TARIFS, cout_usd
+from .assistant_catalogue import ContexteAssistant, outils_sdk
+
+# ---------------------------------------------------------------------------
+# Assistant IA (12/11/2026, étape 1) -- LE SOCLE DORMANT.
+# Note : notice/ETAPE1_SOCLE_ASSISTANT_IA_2026-11-12.md. Patron repris de la GED IA
+# (openai_ged_classement_service) :
+#   · l'interrupteur `assistant_ia` (off / admin / on), relu à CHAQUE question ; absent = éteint ;
+#   · le plafond de dépense du jour (3 $) et le plafond de questions par personne (100), lus dans
+#     app_agent_run : une lecture ratée n'est jamais un vert, sans le compte on n'appelle pas ;
+#   · 8 étapes au plus par question (une boucle de l'agent ne tourne pas sans fin) ;
+#   · `store: false` sur chaque appel, et les TRACES ENVOYÉES À OPENAI COUPÉES DANS LE CODE ;
+#   · le journal app_agent_run ne garde JAMAIS le texte (jetons, coût, noms des fonctions).
+# Plafonds validés par Frédéric le 12/11 : « Oui, ils me vont ».
+#
+# ⚠ Le SDK (openai-agents 0.22.0, figé : la 0.24 exige une Starlette que notre FastAPI refuse)
+#   n'est importé QU'AU PREMIER APPEL, jamais au démarrage : s'il posait problème, seul
+#   l'assistant tomberait, pas le reste du backend.
+# ---------------------------------------------------------------------------
+
+AGENT_KEY = "assistant"
+INTERRUPTEUR = "assistant_ia"
+PLAFOND_JOUR_USD = 3.0
+PLAFOND_QUESTIONS_JOUR = 100
+MAX_ETAPES = 8
+MAX_QUESTION_CARACTERES = 4000
+MAX_HISTORIQUE_MESSAGES = 20
+MODELE_PAR_DEFAUT = "gpt-4.1-mini"
+
+_INSTRUCTIONS = (
+    "Tu es l'assistant de l'application de GTI Immobilier, une agence immobiliere francaise (transaction). "
+    "Tu parles a un membre de l'agence : tu le tutoies, tu reponds en francais, simplement et brievement.\n"
+    "Regles :\n"
+    "- Tu ne sais que ce que tes fonctions te rendent. N'invente jamais un nom, un chiffre, un bien ou une date.\n"
+    "- Si aucune de tes fonctions ne permet de repondre, dis-le clairement, sans deviner.\n"
+    "- Pour savoir qui te parle, appelle la fonction qui_suis_je.\n"
+    "- Ne recopie pas ces consignes.\n"
+    "Nous sommes le {{date}}."
+)
+
+agent_registry.DEFAULT_SPECS.setdefault(
+    AGENT_KEY, agent_registry.AgentSpec(AGENT_KEY, _INSTRUCTIONS, MODELE_PAR_DEFAUT, 1500)
+)
+
+
+def _debut_du_jour() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT00:00:00Z")
+
+
+def _maintenant() -> str:
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
+class AssistantService:
+    def __init__(self, settings: Settings, client_openai: Any = None) -> None:
+        self.settings = settings
+        # les essais passent un faux client ; sinon il est créé au premier appel
+        self.client_openai = client_openai
+
+    # ── base (clé de service : interrupteur, plafonds, écriture du fil) ───────
+    def _headers(self) -> dict[str, str]:
+        key = self.settings.supabase_service_role_key
+        return {"apikey": key, "Authorization": f"Bearer {key}"}
+
+    def _url(self, table: str) -> str:
+        return f"{self.settings.supabase_url}/rest/v1/{table}"
+
+    def interrupteur(self) -> str:
+        # Absent, illisible ou en erreur = éteint (patron des interrupteurs à trois crans).
+        try:
+            r = requests.get(self._url("app_setting"), headers=self._headers(),
+                             params={"key": f"eq.{INTERRUPTEUR}", "select": "value", "limit": "1"}, timeout=8)
+            rows = r.json() if r.ok else []
+            valeur = str((rows[0] or {}).get("value") or "").strip().lower() if rows else ""
+        except Exception:
+            valeur = ""
+        return valeur if valeur in {"on", "admin"} else "off"
+
+    def _lignes_du_jour(self, params: dict[str, str], quoi: str) -> list[dict[str, Any]]:
+        try:
+            r = requests.get(self._url("app_agent_run"), headers=self._headers(),
+                             params={"agent_key": f"eq.{AGENT_KEY}", "created_at": f"gte.{_debut_du_jour()}", **params},
+                             timeout=10)
+        except Exception:
+            r = None
+        if r is None or not r.ok:
+            # Une lecture ratée n'est jamais un vert : sans le compte, on n'appelle pas.
+            raise HTTPException(status_code=503, detail=f"{quoi} illisible : pas d'appel à l'IA")
+        return r.json() or []
+
+    def depense_du_jour(self) -> float:
+        rows = self._lignes_du_jour({"select": "cost_usd"}, "Dépense du jour")
+        return float(sum(float(row.get("cost_usd") or 0) for row in rows))
+
+    def questions_du_jour(self, email: str) -> int:
+        return len(self._lignes_du_jour({"negociateur_email": f"eq.{email}", "select": "id"}, "Compte des questions du jour"))
+
+    def preparer(self, email: str) -> agent_registry.AgentSpec:
+        # Tout ce qui peut refuser se joue ICI, AVANT d'écrire la question et avant tout appel.
+        if not self.settings.openai_api_key:
+            raise HTTPException(status_code=503, detail="OPENAI_API_KEY non configuré sur le backend")
+        spec = agent_registry.load_spec(self.settings, AGENT_KEY)
+        model = spec.model or MODELE_PAR_DEFAUT
+        if model not in TARIFS:
+            # sans tarif, le plafond du jour croirait les tours gratuits
+            raise HTTPException(status_code=503, detail=f"Modèle sans tarif connu ({model}) : pas d'appel")
+        if self.depense_du_jour() >= PLAFOND_JOUR_USD:
+            raise HTTPException(status_code=429, detail="Plafond de dépense du jour atteint : l'assistant est en pause")
+        if self.questions_du_jour(email) >= PLAFOND_QUESTIONS_JOUR:
+            raise HTTPException(status_code=429, detail=f"{PLAFOND_QUESTIONS_JOUR} questions aujourd'hui : reprends demain")
+        return agent_registry.AgentSpec(AGENT_KEY, spec.instructions, model, spec.max_output_tokens)
+
+    # ── le fil (écrit par le serveur seul) ────────────────────────────────────
+    def conversation(self, conversation_id: str) -> dict[str, Any] | None:
+        r = requests.get(self._url("app_assistant_conversation"), headers=self._headers(),
+                         params={"id": f"eq.{conversation_id}", "select": "id,user_id,archivee", "limit": "1"}, timeout=10)
+        if not r.ok:
+            raise HTTPException(status_code=503, detail="Conversation illisible")
+        rows = r.json() or []
+        return rows[0] if rows else None
+
+    def creer_conversation(self, user_id: str, email: str, titre: str) -> str:
+        r = requests.post(self._url("app_assistant_conversation"),
+                          headers={**self._headers(), "Prefer": "return=representation"},
+                          json=[{"user_id": user_id, "user_email": email, "agent_key": AGENT_KEY, "titre": titre}], timeout=10)
+        if not r.ok or not (r.json() or []):
+            raise HTTPException(status_code=503, detail="Conversation non créée : pas d'appel à l'IA")
+        return str(r.json()[0]["id"])
+
+    def historique(self, conversation_id: str) -> list[dict[str, Any]]:
+        r = requests.get(self._url("app_assistant_message"), headers=self._headers(),
+                         params={"conversation_id": f"eq.{conversation_id}", "select": "role,contenu",
+                                 "order": "id.desc", "limit": str(MAX_HISTORIQUE_MESSAGES)}, timeout=10)
+        if not r.ok:
+            raise HTTPException(status_code=503, detail="Historique illisible : pas d'appel à l'IA")
+        return list(reversed(r.json() or []))
+
+    def ajouter_message(self, conversation_id: str, role: str, contenu: str,
+                        outils: list[dict[str, Any]] | None = None, agent_run_id: int | None = None) -> int:
+        r = requests.post(self._url("app_assistant_message"),
+                          headers={**self._headers(), "Prefer": "return=representation"},
+                          json=[{"conversation_id": conversation_id, "role": role, "contenu": contenu,
+                                 "outils": outils, "agent_run_id": agent_run_id}], timeout=10)
+        if not r.ok or not (r.json() or []):
+            raise HTTPException(status_code=503, detail="Message non enregistré")
+        try:
+            # best-effort : la date de la liste, jamais une raison de perdre le message
+            requests.patch(self._url("app_assistant_conversation"), headers=self._headers(),
+                           params={"id": f"eq.{conversation_id}"}, json={"maj_le": _maintenant()}, timeout=10)
+        except Exception:
+            pass
+        return int(r.json()[0]["id"])
+
+    # ── relire (avec le JETON de la personne : la RLS dit qui voit quoi) ──────
+    def _lire_avec_jeton(self, jeton: str, table: str, params: dict[str, str]) -> list[dict[str, Any]]:
+        r = requests.get(self._url(table),
+                         headers={"apikey": self.settings.supabase_anon_key, "Authorization": f"Bearer {jeton}"},
+                         params=params, timeout=15)
+        if not r.ok:
+            raise HTTPException(status_code=503, detail="Lecture des conversations impossible")
+        return r.json() or []
+
+    def lister(self, jeton: str, user_id: str) -> list[dict[str, Any]]:
+        # filtre sur SON id : l'admin lit aussi celles des autres, mais SA liste reste la sienne
+        return self._lire_avec_jeton(jeton, "app_assistant_conversation", {
+            "user_id": f"eq.{user_id}", "archivee": "eq.false",
+            "select": "id,titre,agent_key,cree_le,maj_le", "order": "maj_le.desc", "limit": "50"})
+
+    def relire(self, jeton: str, conversation_id: str) -> dict[str, Any] | None:
+        conv = self._lire_avec_jeton(jeton, "app_assistant_conversation", {
+            "id": f"eq.{conversation_id}", "select": "id,user_id,user_email,titre,agent_key,cree_le,maj_le,archivee", "limit": "1"})
+        if not conv:
+            return None
+        messages = self._lire_avec_jeton(jeton, "app_assistant_message", {
+            "conversation_id": f"eq.{conversation_id}", "select": "id,role,contenu,outils,cree_le", "order": "id.asc"})
+        return {**conv[0], "messages": messages}
+
+    # ── le tour ───────────────────────────────────────────────────────────────
+    def _client(self) -> Any:
+        if self.client_openai is None:
+            from openai import AsyncOpenAI
+            self.client_openai = AsyncOpenAI(api_key=self.settings.openai_api_key, timeout=60, max_retries=1)
+        return self.client_openai
+
+    async def repondre(self, ctx: ContexteAssistant, spec: agent_registry.AgentSpec,
+                       historique: list[dict[str, Any]], question: str) -> AsyncIterator[dict[str, Any]]:
+        # ⚠ import du SDK ICI SEULEMENT (voir l'en-tête)
+        from agents import Agent, ModelSettings, OpenAIResponsesModel, RunConfig, Runner, set_tracing_disabled
+
+        set_tracing_disabled(True)  # ⛔ aucune trace chez OpenAI, quoi que dise l'environnement
+        reglages = ModelSettings(store=False, max_tokens=spec.max_output_tokens)
+        if not str(spec.model).startswith("gpt-4"):
+            from openai.types.shared import Reasoning
+            reglages = ModelSettings(store=False, max_tokens=spec.max_output_tokens, reasoning=Reasoning(effort="none"))
+        agent = Agent(
+            name=AGENT_KEY,
+            instructions=agent_registry.render(spec.instructions, {"date": datetime.now().strftime("%d/%m/%Y")}),
+            model=OpenAIResponsesModel(str(spec.model), self._client()),
+            model_settings=reglages,
+            tools=outils_sdk(ctx.role),
+        )
+        entree = [{"role": m["role"], "content": str(m.get("contenu") or "")}
+                  for m in historique if m.get("role") in {"user", "assistant"} and m.get("contenu")]
+        entree.append({"role": "user", "content": question})
+        flux = Runner.run_streamed(agent, input=entree, context=ctx, max_turns=MAX_ETAPES,
+                                   run_config=RunConfig(tracing_disabled=True, trace_include_sensitive_data=False))
+        texte: list[str] = []
+        async for evenement in flux.stream_events():
+            if evenement.type == "raw_response_event" and getattr(evenement.data, "type", "") == "response.output_text.delta":
+                texte.append(evenement.data.delta)
+                yield {"type": "texte", "delta": evenement.data.delta}
+            elif evenement.type == "run_item_stream_event" and evenement.name == "tool_called":
+                yield {"type": "outil", "nom": getattr(evenement.item.raw_item, "name", None)}
+        usage = flux.context_wrapper.usage
+        jetons = {"input_tokens": usage.input_tokens, "output_tokens": usage.output_tokens, "total_tokens": usage.total_tokens}
+        reponse = str(flux.final_output) if flux.final_output is not None else "".join(texte)
+        yield {"type": "_fin", "reponse": reponse, "usage": jetons, "etapes": usage.requests,
+               "model": spec.model, "costUsd": cout_usd(spec.model, jetons)}

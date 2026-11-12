@@ -15,6 +15,7 @@ logger = logging.getLogger("gti.backend")
 from .routers.admin_users import router as admin_users_router
 from .routers.annonces import router as annonces_router
 from .routers.appointments import router as appointments_router
+from .routers.assistant import router as assistant_router
 from .routers.dvf import router as dvf_router
 from .routers.emails import router as emails_router
 from .routers.geo import router as geo_router
@@ -115,6 +116,7 @@ def health() -> dict[str, object]:
 app.include_router(admin_users_router)
 app.include_router(annonces_router)
 app.include_router(appointments_router)
+app.include_router(assistant_router)
 app.include_router(dvf_router)
 app.include_router(emails_router)
 app.include_router(geo_router)

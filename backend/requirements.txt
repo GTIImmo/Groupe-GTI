@@ -4,3 +4,4 @@ requests==2.32.4
 email-validator==2.2.0
 google-auth>=2.40.0,<3.0.0
 psycopg2-binary==2.9.12  # scripts/ingest_dvf.py (COPY via pooler)
+openai-agents==0.22.0  # assistant IA : FIGEE, des la 0.22.3 elle exige starlette>=1.3.1, refusee par fastapi 0.116
