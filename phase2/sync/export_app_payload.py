@@ -407,7 +407,13 @@ SELECT
     END AS mandants_texte,
     CASE WHEN detail_statut_name IS NOT NULL THEN 1 ELSE 0 END AS has_local_detail,
     NULL AS local_detail_updated_at,
-    photo_url_listing
+    photo_url_listing,
+    -- 12/11/2026 : la diffusion d'un vendu. Hektor en diffusait encore 60 (Etreproprio,
+    -- Paper, Superimmo) et l'app n'en savait rien : l'index posait « aucun portail » en dur.
+    -- Meme calcul que les actives (broadcast_agg de view_generale, depuis
+    -- hektor_annonce_broadcast_state). Lot A du plan « diffusion des vendus ».
+    nb_portails_actifs,
+    portails_resume
 FROM app_view_generale
 WHERE COALESCE(archive, '0') = '0'
   AND COALESCE(detail_statut_name, statut_annonce, '') IN ('Vendu', 'Clos')

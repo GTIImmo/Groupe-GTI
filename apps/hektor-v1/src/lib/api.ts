@@ -2674,6 +2674,9 @@ type LightweightAnnonceIndexRow = {
   // G.15-d : les index d'archive / historique / brouillon sont des TABLES, aucune vue ne
   // les recouvre -- c'est donc ici, a la normalisation, que nos adresses doivent gagner.
   photo_url_listing_app?: string | null
+  // 12/11/2026 : la diffusion d'un vendu (index historique seulement ; absente des autres).
+  nb_portails_actifs?: number | null
+  portails_resume?: string | null
 }
 
 type LightweightDetailCacheRow = {
@@ -2771,9 +2774,10 @@ function lightweightIndexRowToDossier(row: LightweightAnnonceIndexRow): Dossier 
     images_preview_json: null,
     archive: row.archive ?? '1',
     diffusable: row.diffusable ?? null,
-    nb_portails_actifs: 0,
+    // 12/11/2026 : un vendu peut rester diffuse chez Hektor (60 au 12/11) ; l'index le porte.
+    nb_portails_actifs: Number(row.nb_portails_actifs ?? 0) || 0,
     has_diffusion_error: false,
-    portails_resume: null,
+    portails_resume: row.portails_resume ?? null,
     offre_id: null,
     offre_state: null,
     offre_last_proposition_type: null,
@@ -5146,7 +5150,7 @@ export async function loadDossiersPage({
   const requestType = normalizeFilterValue(filters.requestType)
   const canUseLightweightIndexes = !requestScope && !requestType && canUseLightweightAnnonceIndexesForFilters(filters)
   const archiveIndexSelect = 'hektor_annonce_id,app_archive_id,numero_dossier,numero_mandat,titre_bien,ville,code_postal,date_maj,type_bien,prix,commercial_id,commercial_nom,negociateur_email,agence_nom,statut_annonce,archive,diffusable,mandat_type,mandat_date_debut,mandat_date_fin,mandat_montant,mandants_texte,has_local_detail,local_detail_updated_at,photo_url_listing,photo_url_listing_app,commerce_sous_type,commerce_famille,commerce_activite'
-  const historicalIndexSelect = 'hektor_annonce_id,app_historical_id,numero_dossier,numero_mandat,titre_bien,ville,code_postal,date_maj,type_bien,prix,commercial_id,commercial_nom,negociateur_email,agence_nom,statut_annonce,archive,diffusable,mandat_type,mandat_date_debut,mandat_date_fin,mandat_montant,mandants_texte,has_local_detail,local_detail_updated_at,photo_url_listing,photo_url_listing_app,commerce_sous_type,commerce_famille,commerce_activite'
+  const historicalIndexSelect = 'hektor_annonce_id,app_historical_id,numero_dossier,numero_mandat,titre_bien,ville,code_postal,date_maj,type_bien,prix,commercial_id,commercial_nom,negociateur_email,agence_nom,statut_annonce,archive,diffusable,mandat_type,mandat_date_debut,mandat_date_fin,mandat_montant,mandants_texte,has_local_detail,local_detail_updated_at,photo_url_listing,photo_url_listing_app,commerce_sous_type,commerce_famille,commerce_activite,nb_portails_actifs,portails_resume'
   const brouillonIndexSelect = 'hektor_annonce_id,app_brouillon_id,numero_dossier,numero_mandat,titre_bien,ville,code_postal,date_maj,type_bien,prix,commercial_id,commercial_nom,negociateur_email,agence_nom,statut_annonce,archive,diffusable,mandat_type,mandat_date_debut,mandat_date_fin,mandat_montant,mandants_texte,has_local_detail,local_detail_updated_at,photo_url_listing,photo_url_listing_app'
   if (filters.archive === brouillonFilterValue) {
     if (!canUseLightweightIndexes) {

@@ -933,12 +933,53 @@ def build_current_historical_index_rows(rows: list[dict[str, object]]) -> list[d
             "has_local_detail": normalize_bool(normalized.get("has_local_detail")),
             "local_detail_updated_at": normalize_timestamp(normalized.get("local_detail_updated_at")),
             "photo_url_listing": normalized.get("photo_url_listing"),
+            # 12/11/2026 : la diffusion d'un vendu (voir SQL_HISTORICAL_ANNONCE_INDEX_BASE).
+            # ⚠ Toujours presentes, meme vides : un upsert ne touche que les colonnes envoyees,
+            #   un vendu retire de tous les portails garderait sinon son ancienne liste.
+            "nb_portails_actifs": int(normalize_numeric(normalized.get("nb_portails_actifs")) or 0),
+            "portails_resume": normalized.get("portails_resume") or None,
         }
         current_row["search_text"] = build_search_text(current_row)
         current_row["source_updated_at"] = current_row["date_maj"] or current_row["local_detail_updated_at"]
         current_row["source_hash"] = stable_upload_hash(current_row)
         current_by_id[current_row["hektor_annonce_id"]] = current_row
     return list(current_by_id.values())
+
+
+COLONNES_INDEX_VENDUS_RECENTES = ("nb_portails_actifs", "portails_resume")
+
+
+def adapter_index_vendus_au_schema(
+    client: "SupabaseRestClient",
+    rows: list[dict[str, object]],
+) -> list[dict[str, object]]:
+    """Retire de l'index des vendus les colonnes que le cloud ne connait pas ENCORE.
+
+    Meme filet que `adapter_registre_au_schema` : le patch SQL d'abord, le code ensuite ;
+    ceci empeche seulement l'index ENTIER de tomber la nuit ou les deux se croisent.
+    ⚠ L'EMPREINTE EST RECALCULEE sans ces colonnes. Gardee avec, elle serait stockee
+      la-haut, et la nuit d'apres (patch passe) les lignes paraitraient inchangees :
+      les portails ne monteraient jamais.
+    """
+    if not rows:
+        return rows
+    manquantes = [
+        c for c in COLONNES_INDEX_VENDUS_RECENTES
+        if c in rows[0] and not client.colonne_disponible("app_historical_annonce_index_current", c)
+    ]
+    if not manquantes:
+        return rows
+    print(
+        "[index des vendus] colonnes absentes du cloud, RETIREES de ce push : %s"
+        "  -- le patch SQL n'est pas encore passe." % ", ".join(manquantes),
+        file=sys.stderr,
+    )
+    adaptees = []
+    for row in rows:
+        ligne = {k: v for k, v in row.items() if k not in manquantes and k != "source_hash"}
+        ligne["source_hash"] = stable_upload_hash(ligne)
+        adaptees.append(ligne)
+    return adaptees
 
 
 def build_current_brouillon_index_rows(rows: list[dict[str, object]]) -> list[dict[str, object]]:
@@ -1484,6 +1525,7 @@ def main() -> None:
     historical_table_available = client.table_available("app_historical_annonce_index_current")
     current_archive_index_rows = build_current_archive_index_rows(build_archive_annonce_index(limit=None)) if archive_table_available else []
     current_historical_index_rows = build_current_historical_index_rows(build_historical_annonce_index(limit=None)) if historical_table_available else []
+    current_historical_index_rows = adapter_index_vendus_au_schema(client, current_historical_index_rows)
     brouillon_table_available = client.table_available("app_brouillon_annonce_index_current")
     current_brouillon_index_rows = (
         build_current_brouillon_index_rows(build_brouillon_annonce_index(limit=None))

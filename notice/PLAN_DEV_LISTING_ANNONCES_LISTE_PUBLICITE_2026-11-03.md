@@ -382,3 +382,15 @@ numéros de passerelles (0c) et les droits (4).
 - **Controle (vrai code, copie en memoire, base reelle en lecture seule)** : allume -> garde-fou OK (79 pages), total 1 551, table 1 601 lignes du 05/11 -> **1 551 lignes du jour**, par portail BI 296 · LB 265 · Paper 347 · EP 347 · SI 296, **0 en trop / 0 manquante** face a Hektor, tout `exported`. Temoins : ancien code allume = le REFUS exact des journaux ; interrupteur eteint = identique avant/apres (et vide la table : il doit rester allume).
 - Le correctif du 04/11 (etat dans la cle de l'envoi) est, lui, efficace : 0 fausse erreur dans Supabase.
 - Reste : une alerte du moniteur sur ce refus ; les 60 ventes encore diffusees par Hektor sur Paper / Etreproprio (sujet Hektor).
+
+## 12/11 -- DEMANDE : GERER LA DIFFUSION DES VENDUS dans la vue Publicite (audit, RIEN code)
+
+- **Demande de Frederic** : sur l'index « Vendus », vue Publicite : voir les portails, COCHER et DECOCHER, le suivre dans le listing ; console de diffusion du listing aussi ; pas besoin de la fiche.
+- **Mesure** : 60 vendus encore diffuses selon Hektor (Etreproprio 60, Paper 60, Superimmo 9 ; 56 de Firminy). Hektor relu (ListPasserelles 21224, lecture) : etreproprio 19 + paper 20 actifs.
+- **Pourquoi l'app ne peut pas aujourd'hui** :
+  1. Donnees : `app_historical_annonce_index_current` n'a AUCUNE colonne de portails ; `lightweightIndexRowToDossier` (api.ts ~2762) met `portails_resume: null` en dur ; l'envoi de nuit ne pousse la diffusion que des annonces actives.
+  2. Ecran : `bandePub` (App.tsx ~28117) remplace les cases par « Fiche importee » pour toute ligne legere.
+  3. Serveur : `/hektor-diffusion/apply` charge le dossier dans `app_dossiers_current` (`_load_dossier`, hektor_bridge.py l. 98) et les cibles par `app_dossier_id` ; le droit du nego lit `app_dossier_current` -> un vendu = « Annonce introuvable ». La ligne vendue porte `app_historical_id` (ex. 1348286), sans cible ni detail.
+  4. Hektor : l'ordre lui-meme (`_apply_portal_change`) ne demande que n° d'annonce + n° de passerelle -> reutilisable tel quel.
+- **Plan propose** : A donnees (2 colonnes portails sur l'index vendus, remplies la nuit depuis `hektor_annonce_broadcast_state`) ; B serveur (geste par n° d'annonce Hektor pour un vendu, memes droits que lot 4, report dans l'index vendus) ; C ecran (cases au lieu de la bande pour un vendu, console) ; D essai reel sur un des 60, aller-retour, Hektor relu.
+- **12/11 -- LOT A FAIT** : patch `supabase/patch_index_vendus_portails_2026-11-12.sql` APPLIQUE (accord de Frederic) ; export (`SQL_HISTORICAL_ANNONCE_INDEX_BASE` + `nb_portails_actifs`, `portails_resume` de app_view_generale), envoi (`build_current_historical_index_rows`, filet `adapter_index_vendus_au_schema` qui recalcule l'empreinte), ecran (`api.ts` lit les 2 colonnes). Epreuve hors ligne : 8 967 vendus/clos, 60 avec portails (EP 60, Paper 60, SI 9) ; sans patch 8 967/8 967 empreintes identiques ; avec patch, 8 967 lignes renvoyees UNE fois la 1re nuit. Ecran non vu en local (connexion requise). Restent B (serveur), C (cases), D (essai reel).

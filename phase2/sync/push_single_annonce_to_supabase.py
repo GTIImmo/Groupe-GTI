@@ -34,6 +34,7 @@ from phase2.sync.push_upgrade_to_supabase import (  # noqa: E402
     build_current_historical_index_rows,
     build_current_mandat_register_rows,
     adapter_registre_au_schema,
+    adapter_index_vendus_au_schema,
     build_current_work_items,
     load_env_file,
     normalize_broadcast_rows,
@@ -630,6 +631,7 @@ def reconcile_lightweight_indexes(client: SupabaseRestClient, con: sqlite3.Conne
     target_id = int(hektor_annonce_id)
     archive_rows = [row for row in archive_rows if int(row["hektor_annonce_id"]) == target_id]
     historical_rows = [row for row in historical_rows if int(row["hektor_annonce_id"]) == target_id]
+    historical_rows = adapter_index_vendus_au_schema(client, historical_rows)
 
     if archive_table_available:
         client.delete_rows_by_ids(path="app_archive_annonce_index_current", column="hektor_annonce_id", ids=[target_id])
