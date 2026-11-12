@@ -367,7 +367,7 @@ export function DepotDocuments({
     if (!ligne.jobId) return
     modifierEtat(ligne.id, { lecture: { etat: 'lecture' } })
     try {
-      const prep = await preparerLecture(ligne.file)
+      const prep = await preparerLecture(ligne.file, ligne.type)
       if (!prep.lisible) { modifierEtat(ligne.id, { lecture: { etat: 'erreur', raison: prep.raison } }); return }
       const r = await lireValeursParIa(ligne.jobId, prep, ligne.file.name)
       modifierEtat(ligne.id, { lecture: { etat: 'fait', resume: resumeLecture({ typeCode: ligne.type, etat: r.etat, valeurs: r.valeurs }) } })

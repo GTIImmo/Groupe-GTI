@@ -4,8 +4,36 @@
 // Note du chantier : notice/CHANTIER_GED_DOCUMENTS_2026-11-06.md §12.11.
 import { hasSupabaseEnv, supabase } from './supabase'
 
-// Lot 1 : les fiches 1 à 3 de l'étude. Les autres types attendent leur lot.
-export const FICHES_LUES = new Set(['diag.erp', 'diag.dpe', 'diag.dossier'])
+// Lot 1 : les fiches 1 à 3 de l'étude. Lot 2 (§12.14) : les justificatifs du mandat et de la mise en vente. Les autres
+// types attendent leur lot. Même liste que FICHES côté serveur (openai_ged_lecture_service.py).
+export const FICHES_LUES = new Set([
+  'diag.erp', 'diag.dpe', 'diag.dossier',
+  'justif.taxe', 'justif.titre', 'copro.carnet', 'copro.appel_fonds', 'copro.arrete_charges',
+])
+
+const QUALITE: Record<string, [string, string]> = {
+  proprietaire: ['propriétaire', 'propriétaires'], usufruitier: ['usufruitier', 'usufruitiers'],
+  nu_proprietaire: ['nu-propriétaire', 'nus-propriétaires'], indivisaire: ['indivisaire', 'indivisaires'],
+  heritier: ['héritier', 'héritiers'], donataire: ['donataire', 'donataires'], redevable: ['redevable', 'redevables'],
+  autre: ['autre personne', 'autres personnes'],
+}
+const NATURE_ACTE: Record<string, string> = {
+  vente: 'acte de vente', donation: 'donation', donation_partage: 'donation-partage', attestation_succession: 'attestation après décès',
+  notoriete: 'notoriété', partage: 'partage', adjudication: 'adjudication', echange: 'échange', autre: 'acte',
+}
+const euros = (x: string) => `${x.replace(/^\d+/, (n) => n.replace(/\B(?=(\d{3})+(?!\d))/g, ' '))} €`
+
+// Les personnes lues, COMPTÉES par qualité (« 2 redevables, 1 usufruitier ») : le résumé ne montre jamais un nom.
+export function personnesLues(valeurs: ValeurLue[]): string | null {
+  const rangs = new Set(valeurs.filter((x) => x.cle === 'personnes.nom' && x.etat !== 'non_vu' && x.valeur).map((x) => x.rang))
+  if (!rangs.size) return null
+  const parQualite = new Map<string, number>()
+  for (const r of rangs) {
+    const q = valeurs.find((x) => x.cle === 'personnes.qualite' && x.rang === r && x.etat !== 'non_vu')?.valeur ?? 'autre'
+    parQualite.set(q, (parQualite.get(q) ?? 0) + 1)
+  }
+  return [...parQualite].map(([q, n]) => `${n} ${(QUALITE[q] ?? QUALITE.autre)[n > 1 ? 1 : 0]}`).join(', ')
+}
 
 export type ValeurLue = {
   cle: string
@@ -46,6 +74,39 @@ export function resumeLecture(l: Pick<LectureDocument, 'typeCode' | 'etat' | 'va
     const noms = l.valeurs.filter((x) => x.cle === 'diagnostics.diagnostic' && x.etat !== 'non_vu' && x.valeur).map((x) => x.valeur as string)
     if (noms.length) morceaux.push(`${noms.length} diagnostic${noms.length > 1 ? 's' : ''} (${noms.join(', ')})`)
     if (v('dpe_classe_energie')) morceaux.push(`DPE ${v('dpe_classe_energie')}`)
+  } else if (l.typeCode === 'justif.taxe') {
+    if (v('annee_imposition')) morceaux.push(`taxe ${v('annee_imposition')}`)
+    if (v('montant_total')) morceaux.push(euros(v('montant_total') as string))
+    if (v('commune')) morceaux.push(v('commune') as string)
+    const p = personnesLues(l.valeurs)
+    if (p) morceaux.push(p)
+    if (v('plusieurs_biens') === 'oui') morceaux.push('l\'avis porte plusieurs biens')
+  } else if (l.typeCode === 'justif.titre') {
+    const nature = v('nature_acte')
+    if (nature) morceaux.push(NATURE_ACTE[nature.replace(' (?)', '')] ?? nature)
+    if (v('date_acte')) morceaux.push(`du ${v('date_acte')}`)
+    const p = personnesLues(l.valeurs)
+    if (p) morceaux.push(p)
+    if (v('commune')) morceaux.push(v('commune') as string)
+    const lots = l.valeurs.filter((x) => x.cle === 'lots.numero' && x.etat !== 'non_vu' && x.valeur).map((x) => x.valeur as string)
+    if (lots.length) morceaux.push(`lot${lots.length > 1 ? 's' : ''} ${lots.join(', ')}`)
+    if (v('extrait_partiel') === 'oui') morceaux.push('extrait partiel')
+  } else if (l.typeCode === 'copro.carnet') {
+    if (v('sous_type') === 'carnet_entretien') morceaux.push('carnet d\'entretien (rien à relever)')
+    if (v('nb_lots_total')) morceaux.push(`${v('nb_lots_total')} lots${v('nb_lots_principaux') ? ` dont ${v('nb_lots_principaux')} principaux` : ''}`)
+    if (v('syndic_nom')) morceaux.push(`syndic ${v('syndic_nom')}`)
+    else if (v('syndic_type') === 'benevole') morceaux.push('syndic bénévole')
+    if (v('procedure') && v('procedure') !== 'aucune') morceaux.push(`⚠ procédure : ${(v('procedure') as string).replace(/_/g, ' ')}`)
+    if (v('procedure') === 'aucune') morceaux.push('aucune procédure')
+    if (v('date_etablissement')) morceaux.push(`établie le ${v('date_etablissement')}`)
+  } else if (l.typeCode === 'copro.appel_fonds' || l.typeCode === 'copro.arrete_charges') {
+    if (v('charges_courantes_lot')) morceaux.push(`charges du lot ${euros(v('charges_courantes_lot') as string)} sur l'exercice`)
+    if (v('budget_annuel_lot')) morceaux.push(`budget du lot ${euros(v('budget_annuel_lot') as string)} par an`)
+    else if (v('provision_budget')) morceaux.push(`provision ${euros(v('provision_budget') as string)}${v('periode') ? ` (${v('periode')})` : ''}`)
+    if (v('appel_travaux')) morceaux.push(`travaux appelés ${euros(v('appel_travaux') as string)}`)
+    const lots = l.valeurs.filter((x) => x.cle === 'lots.numero' && x.etat !== 'non_vu' && x.valeur).map((x) => x.valeur as string)
+    if (lots.length) morceaux.push(`lot${lots.length > 1 ? 's' : ''} ${lots.join(', ')}`)
+    if (v('syndic_nom')) morceaux.push(`syndic ${v('syndic_nom')}`)
   }
   if (!morceaux.length) return "L'IA n'a rien pu relever : la lecture est incomplète."
   return `Lu : ${morceaux.join(' · ')}.`
@@ -54,7 +115,8 @@ export function resumeLecture(l: Pick<LectureDocument, 'typeCode' | 'etat' | 'va
 // La date de l'état lue (« établie le ») d'un document, en AAAA-MM-JJ, si elle a été vue (lu ou incertain).
 export function dateEtatLue(l: LectureDocument | undefined): string | null {
   if (!l || l.etat === 'pas_ce_type') return null
-  const cle = l.typeCode === 'diag.dossier' ? null : 'date_etablissement'
+  // seulement les diagnostics : une taxe ou une fiche synthétique a aussi une « date d'établissement »
+  const cle = l.typeCode === 'diag.erp' || l.typeCode === 'diag.dpe' ? 'date_etablissement' : null
   const v = cle ? l.valeurs.find((x) => x.cle === cle && x.rang === 0 && x.etat !== 'non_vu') : null
   return v?.valeur_date ?? null
 }

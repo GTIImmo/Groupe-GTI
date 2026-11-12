@@ -29,6 +29,21 @@ voir(resumeLecture(ddt) === 'Lu : 2 diagnostics (amiante, plomb) · DPE E.', 'do
 voir(resumeLecture({ typeCode: 'diag.erp', etat: 'pas_ce_type', valeurs: [] }).includes('pas ce type'), 'l\'IA dit « pas ce type » : on le dit')
 voir(resumeLecture({ typeCode: 'diag.erp', etat: 'incomplet', valeurs: [] }).includes('rien pu relever'), 'rien de lu : on le dit, sans inventer')
 
+console.log('①bis le lot 2 : jamais un nom dans le résumé')
+const P = (rang, nom, qualite) => [v('personnes.nom', { valeur: nom }, 'lu', rang), v('personnes.prenoms', { valeur: 'Claire' }, 'lu', rang), v('personnes.qualite', { valeur: qualite }, 'lu', rang)]
+const taxe = { typeCode: 'justif.taxe', etat: 'lu', valeurs: [v('annee_imposition', { valeur_num: 2026 }), v('montant_total', { valeur_num: 1234 }), v('commune', { valeur: 'Firminy' }), ...P(0, 'MARTIN', 'redevable'), ...P(1, 'DURAND', 'redevable'), ...P(2, 'PETIT', 'usufruitier')] }
+const rt = resumeLecture(taxe)
+voir(rt === 'Lu : taxe 2026 · 1 234 € · Firminy · 2 redevables, 1 usufruitier.', 'taxe foncière : année, montant, commune, personnes COMPTÉES')
+voir(!/MARTIN|DURAND|PETIT|Claire/.test(rt), 'aucun nom ni prénom dans le résumé de la taxe')
+const titre = { typeCode: 'justif.titre', etat: 'lu', valeurs: [v('nature_acte', { valeur: 'attestation_succession' }), v('date_acte', { valeur_date: '2019-03-04' }), ...P(0, 'MARTIN', 'heritier'), ...P(1, 'MARTIN', 'heritier'), v('commune', { valeur: 'Firminy' }), v('lots.numero', { valeur: '12' }, 'lu', 0), v('lots.numero', { valeur: '31' }, 'lu', 1)] }
+const rti = resumeLecture(titre)
+voir(rti === 'Lu : attestation après décès · du 04/03/2019 · 2 héritiers · Firminy · lots 12, 31.', 'titre : nature, date, héritiers comptés, commune, lots')
+voir(!/MARTIN|Claire/.test(rti), 'aucun nom dans le résumé du titre')
+voir(resumeLecture({ typeCode: 'copro.carnet', etat: 'lu', valeurs: [v('nb_lots_total', { valeur_num: 48 }), v('nb_lots_principaux', { valeur_num: 20 }), v('syndic_nom', { valeur: 'Foncia Loire' }), v('procedure', { valeur: 'administration_provisoire' })] }) === 'Lu : 48 lots dont 20 principaux · syndic Foncia Loire · ⚠ procédure : administration provisoire.', 'fiche synthétique : lots, syndic, la procédure en avant')
+voir(resumeLecture({ typeCode: 'copro.appel_fonds', etat: 'lu', valeurs: [v('provision_budget', { valeur_num: 420 }), v('periode', { valeur: 'trimestre' }), v('lots.numero', { valeur: '12' }, 'lu', 0)] }) === 'Lu : provision 420 € (trimestre) · lot 12.', 'appel de fonds : la provision et sa période, le lot')
+const taxeAvecDate = { ...taxe, valeurs: [...taxe.valeurs, v('date_etablissement', { valeur_date: '2026-08-31' })] }
+voir(dateEtatLue(taxeAvecDate) === null, 'TÉMOIN : la date d\'une taxe ne passe jamais pour la date d\'un état des risques')
+
 console.log('② la date lue fait foi')
 const erpVieux = { typeCode: 'diag.erp', etat: 'lu', valeurs: [v('date_etablissement', { valeur_date: '2025-12-01' })] }
 voir(dateEtatLue(erpVieux) === '2025-12-01' && dateEtatLue({ ...erpVieux, etat: 'pas_ce_type' }) === null, 'la date de l\'état ; rien si ce n\'est pas ce type')
@@ -43,7 +58,11 @@ console.log('③ le branchement')
 const depot = fs.readFileSync(path.join(__dirname, 'src/DepotDocuments.tsx'), 'utf8')
 const ia = fs.readFileSync(path.join(__dirname, 'src/lib/gedClassementIa.ts'), 'utf8')
 const lect = fs.readFileSync(path.join(__dirname, 'src/lib/gedLecture.ts'), 'utf8')
-voir(JSON.stringify([...FICHES_LUES].sort()) === '["diag.dossier","diag.dpe","diag.erp"]', 'lot 1 : trois types lus')
+voir(JSON.stringify([...FICHES_LUES].sort()) === '["copro.appel_fonds","copro.arrete_charges","copro.carnet","diag.dossier","diag.dpe","diag.erp","justif.taxe","justif.titre"]', 'lots 1 et 2 : huit types lus')
+const srv = fs.readFileSync(path.join(__dirname, '../../backend/app/services/openai_ged_lecture_service.py'), 'utf8')
+voir([...FICHES_LUES].every((c) => srv.includes(`"${c}"`)), 'chaque type lu à l\'écran a sa fiche au serveur')
+voir(/PAGES_HD_PAR_TYPE: Record<string, number> = \{ 'justif\.titre': 6 \}/.test(ia) && /preparerLecture\(ligne\.file, ligne\.type\)/.test(depot), 'le titre : 6 pages en image, le type est passé à la préparation')
+voir(/\.slice\(0, texteMax\)/.test(ia) && /Math\.min\(nbPages, pagesHd\)/.test(ia), 'le texte et les pages suivent le réglage du type (les autres gardent 20 000 et 4)')
 voir(/lectureIa && FICHES_LUES\.has\(ligne\.type\) \? \{ etat: 'attente' \} : null/.test(depot), 'une lecture n\'est demandée que si l\'interrupteur est allumé et que le type a une fiche')
 voir(/l\.lecture\?\.etat === 'lecture'\)\) return/.test(depot), 'une lecture à la fois')
 const prep = ia.slice(ia.indexOf('export async function preparerLecture'), ia.indexOf('export type ResultatLecture'))

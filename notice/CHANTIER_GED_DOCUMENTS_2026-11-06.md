@@ -10,6 +10,35 @@
 > Méthode : audit → explication (« ce que ça pourrait casser ») → « vas-y » → code additif derrière un interrupteur →
 > contrôle → documents. **Ce §1 est l'audit ; rien n'est codé.**
 
+## 0. LE PLAN DU CHANTIER — L'ÉTAT AU PRÉSENT (réécrit le 12/11 soir ; se RÉÉCRIT, ne s'empile pas)
+> Le détail et le pourquoi de chaque morceau sont au §12. Ici : où on en est, et ce qui reste, dans l'ordre.
+> Cadre (§12.1) : outil d'ajout de documents DANS L'APP seulement, essayé par Frédéric seul (interrupteurs à trois crans
+> réglés sur « admin »), run de nuit et worker non touchés, chaque document part chez Hektor par le chemin existant.
+
+**Ordre décidé par Frédéric le 12/11 soir : finir TOUT le code et les essais, PUIS l'habillage (§12.12).**
+
+| morceau | contenu | état |
+|---|---|---|
+| 1 | la base (types, classements, interrupteurs) | ✅ en production (§12.6) |
+| 2 | la fenêtre de dépôt (plusieurs fichiers, type, nom, visibilité) | ✅ en production, cran admin (§12.7) |
+| 3 | « Reçu / Manque » par moment du dossier | ✅ en production, cran admin (§12.8) |
+| 4 | l'IA classe avant l'envoi (type, nom, découpage) | ✅ en production, cran admin (§12.9) |
+| 5 | les 13 règles sans IA (« À regarder ») | ✅ en production, cran admin (§12.10) |
+| 6 lot 1 | lecture : état des risques, DPE, dossier de diagnostics | ✅ en production (`c631a6d`) ; ⏳ **essai réel à faire** (§12.11) |
+| 6 lot 2 | lecture : **taxe foncière, titre de propriété, fiche synthétique, charges de copro** — avec les NOMS | ✅ écrit et contrôlé (banc 25/25, 0 fuite) ; ⏳ commit, push, essai réel (§12.14) |
+| 6 lot 3 | lecture : offre d'achat, compromis, PV d'AG | ⬜ |
+| 6 lot 4 | lecture : mandat déposé à la main, avenant, acte, facture, petits diagnostics, surfaces, règlement | ⬜ |
+| 7 | comparateurs et règles avec lecture (titre ↔ mandants, taxe ↔ fiche, copro…) | ⬜ |
+| 8 | propositions (« remplir », un clic par case) | ⬜ |
+| 9 | pièces des personnes (identité — le justificatif le plus déposé —, état civil, financement) | ⬜ ; l'avancer = décision de Frédéric |
+| 10 | mesure (vrai / faux / déjà su, 2 semaines) | ⬜ |
+| habillage | suivre la maquette E0-E6 à l'écran (fenêtre modale, aperçu, cartes) | ⬜ APRÈS le code (§12.12) |
+
+**Avant les négociateurs (cran « on »)** : le contrat de sous-traitance (DPA) avec le fournisseur d'IA — décision du
+12/11 : « à la fin du dev » —, l'analyse d'impact, le registre des traitements (avec les NOMS lus depuis le lot 2), la
+clause au mandat.
+**Fermé, à ne pas re-proposer** : lire les ~193 000 documents déjà en base (le stock) ; le RIB n'est JAMAIS lu.
+
 ## 1. AUDIT (06/11) — ce que la base contient
 
 - **`app_console_document`** : **193 392 documents** sur 25 987 annonces (médiane 4 par bien, 10 % en ont plus de 18,
@@ -1052,3 +1081,146 @@ commune `3_analyste_ia_rgpd.md` §2 (`$defs` stricts `txt` / `num` / `date` / `p
 - ⚠ Non vu : la file des lectures dans la vraie fenêtre de dépôt (le banc ne simule pas l'envoi) — premier vrai essai.
 ⏳ Ordre des gestes, sur accord : 1. POSER le patch (avant le serveur : sinon la lecture paierait l'appel puis échouerait
 à l'écriture) ; 2. commit ; 3. push ; 4. essai réel sur un document fictif déposé sur 62774.
+✅ **« Oui, les trois » (12/11)** : patch m6 **POSÉ** (contrôle : 2 tables, RLS, SELECT seul pour authenticated, 0 droit
+anon, 2 règles de lecture, 0 ligne) ; commit `c631a6d` **POUSSÉ** ; Render a redémarré dessus à 15:56, `/ged/lire` sans
+jeton → 401. ⚠ **Le push a emporté `1942d3f`** (étiquettes, AUTRE session : une note et 2 fichiers SQL déjà posés, aucun
+code d'app), commité SOUS le mien : relecture et push étaient dans la même commande. Frédéric prévenu.
+⏳ Reste : l'essai réel (un état des risques fictif déposé sur 62774).
+
+### 12.12 ⚠ L'ÉCRAN NE SUIT PAS LA MAQUETTE (remarque de Frédéric, 12/11 soir) — audit, rien codé
+Frédéric : « le rendu design graphique et visuel de la modale n'est pas identique à la maquette du chantier ». **Il a
+raison.** Maquette de référence : https://claude.ai/artifact/WEHAruTgvuctKN74N8Rt6r (version 10), écrans E0 à E6.
+Comparaison faite écran par écran (maquette servie en local, captures) :
+- **E0, l'onglet Documents** : maquette = UN bouton « Déposer des documents » dans l'en-tête du panneau ; « Reçu /
+  manque » en lignes serrées (coche verte ou cercle vide, cadenas pour les pièces des personnes, « Manque : glisse le
+  fichier ici » sur fond hachuré, on peut y DÉPOSER un fichier). Construit : le bloc en cartes avec bordures pointillées,
+  « Non trouvée : déposer », les reçues repliées.
+- **E1 / E1-bis / E2 / E3 / E4, la fenêtre de dépôt** : maquette = une **FENÊTRE (modale)** à en-tête sombre (« Déposer des
+  documents », le bien, pastilles « Mise en vente », « Mandat 1234 », croix), grande zone de dépôt, ligne « Il manque pour
+  la mise en vente : … » ; puis une **liste à gauche** (vignette, nom modifiable, type en pastille-menu, nom du fichier et
+  pages, cadenas de visibilité, pastille d'état « Prêt » / « À vérifier » / « Déjà là » / « Non envoyé ») et un **aperçu à
+  droite** (la page, « page 1 / 12 », « Ouvrir en grand », fichier, type, d'où vient le type, visibilité) ; compteurs
+  (« 9 fichiers · 6 prêts · 2 à vérifier · 1 déjà dans ce dossier »), filtres « Tous / À vérifier », « + Ajouter » ; pied
+  « Fermer » + « Envoyer N documents » ; les cas particuliers (E3) dans la même liste, l'explication et les gestes dans
+  l'aperçu ; fermer avant d'envoyer (E4) = une bande DANS la fenêtre (« Envoyer maintenant » / « Fermer sans envoyer »).
+  Construit : un bloc DANS le panneau, des lignes de champs (nom, menu de type, Privé / Public, état), sans aperçu, sans
+  compteurs ni filtres, et un avertissement du navigateur au lieu de la bande.
+- **E5, « À vérifier » après l'envoi** : maquette = des cartes étiquetées (« Remplir », « Alerte ») avec leurs gestes.
+  Construit : « À regarder » (morceau 5) en lignes du bloc Reçu / Manque. ⚠ La maquette n'a pas d'écran pour les règles
+  sans IA : elles iraient dans ce bloc E5, avec l'étiquette « Alerte ».
+**Cause** : j'ai codé les morceaux 2 à 6 sur le FONCTIONNEMENT de la maquette en gardant le style des formulaires du
+panneau, sans la rouvrir pour l'habillage. ⛔ Leçon : une maquette validée se suit À L'ÉCRAN, pas seulement dans le texte.
+**Proposition** : refaire l'habillage SANS changer ce que fait l'outil (mêmes gestes, mêmes données, mêmes interrupteurs) :
+la fenêtre modale E1-E4 (avec l'aperçu de page par la bibliothèque PDF déjà chargée), le bloc E0, et « À regarder » au
+format des cartes E5. Les places de l'IA (type proposé, « Lu : … », « Séparer ») vont dans l'aperçu (« D'où vient le type :
+l'IA », la lecture sous l'état). Environ 2 jours.
+✅ **Décision de Frédéric (12/11 soir) : « On peut finir les codes et tests avant de faire l'habillage. »** L'habillage
+passe APRÈS les morceaux 6 (lots 2 à 4) à 10 ; il reprendra ce §12.12 tel quel, maquette rouverte écran par écran. En
+attendant, chaque morceau garde le style actuel du bloc, sans en inventer un troisième.
+
+### 12.13 Le morceau 6, lot 2 — le compromis et le mandat (audit du 12/11 soir, rien codé)
+**Audit (lecture seule)** — fiches 4 et 5 du catalogue (`E_synthese_catalogue.md` §5) ; mandat : `3_analyste_ia_rgpd.md`
+§2.5 corrigé par l'étude A ; compromis : étude C §3.2. Types en base : `mandat.vente` et `transaction.avant_contrat`,
+tous deux NON sensibles (vérifié).
+- **Ce que le lot 1 ne sait pas faire et que le lot 2 exige** :
+  1. **Des NOMS.** La consigne commune dit « ne recopie jamais un nom de personne » ; les fiches 4 et 5 lisent les
+     mandants, vendeurs et acquéreurs (nom, prénoms, qualité, page — jamais naissance, adresse, régime, état civil), pour
+     que le morceau 7 reconnaisse les parties (CPV-6 : un mandant absent des vendeurs). → l'interdit devient « sauf dans
+     la liste des parties de la fiche ».
+  2. **Les DERNIÈRES pages et une IMAGE même quand il y a du texte.** Signatures et date en dernière page ; cases cochées à
+     la main (exclusif / simple ; qui paie les honoraires — les deux cases peuvent être cochées : `les_deux`) invisibles
+     dans la couche texte. Le lot 1 envoie le texte seul OU les 4 premières pages. → pour ces deux types : tout le texte
+     ET les images de la page 1, de la page des honoraires (trouvée dans le texte) et des deux dernières (5 au plus,
+     sous le plafond serveur de 6).
+  3. **Un texte plus long.** Un compromis fait 20 à 40 pages ; 20 000 caractères s'arrêtent avant la date limite du prêt.
+     → 80 000 caractères pour ces deux fiches seulement (≈ 20 000 jetons, ≈ 0,002 $ ; non mesuré sur un vrai compromis).
+- **Fiche 5, mandat** : numéro (chiffres seuls) + `numero_present`, type (exclusif / simple / semi_exclusif / autre),
+  dates de signature / début / fin, durée, tacite reconduction, prix de présentation, net vendeur, honoraires € et %,
+  `charge_honoraires` (vendeur / acquéreur / les_deux), commune, désignation courte, `signataire_represente` (oui / non,
+  JAMAIS pourquoi), signatures des mandants (nombre), du mandataire (oui / non / illisible), date signée, signature
+  électronique (oui / non), formulaire de rétractation ; liste `parties` (mandants).
+- **Fiche 4, compromis** : date de signature, forme (en agence / chez le notaire), nature (compromis / promesse), prix,
+  net vendeur, honoraires, qui les paie, mobilier, condition de prêt + date limite (JAMAIS montant, taux, banque),
+  réitération au plus tard, séquestre et dépositaire, notaires (études : des professionnels), n° de mandat cité,
+  signatures ; liste `parties` (vendeurs, acquéreurs).
+- **Rien ne se compare ni ne s'écrit ici** (morceaux 7 et 8) ; le résumé « Lu : » ne montre pas les noms (« 2 vendeurs,
+  1 acquéreur »).
+- **Ce que ça pourrait casser ailleurs** : la consigne commune et le choix des pages ne changent QUE pour ces deux types
+  (le lot 1 garde exactement son envoi, essais à l'appui) ; la base ne change pas (les noms vont dans `app_ged_valeur`,
+  au périmètre du bien, comme les autres valeurs) ; aucune table de la signature n'est touchée. ⚠ Les noms des parties
+  sont des données personnelles : déjà dans nos contacts, mais une copie de plus → au registre des traitements avec le
+  DPA, à la fin du dev.
+- **Essais** : hors ligne (schéma, normalisation, choix des pages, lot 1 inchangé) ; banc réel sur un mandat et un
+  compromis FICTIFS (une case cochée à la main, signatures en dernière page, vraies valeurs connues) ; puis l'essai réel
+  du lot 1 et du lot 2 ensemble sur 62774, sur accord.
+⛔ **REMPLACÉ par le §12.14** (Frédéric, 12/11 soir : le mandat est édité par l'app, donc pas le plus utile ; les NOMS
+sont obligatoires ; d'abord les justificatifs du mandat et de la mise en vente — titre, taxe foncière, copropriété).
+
+### 12.14 L'ordre des lots revu sur les VRAIS documents (analyse du 12/11 soir, lecture seule, rien codé)
+Demande de Frédéric : « analyse mes documents ; plus utile de savoir constituer les justificatifs du mandat puis ceux de la
+mise en vente, beaucoup de vérifications avec les champs de l'annonce et des mandants ; compromis et offres intéressants,
+les offres quasi similaires, les compromis de mises en page différentes ; tous les documents de copropriété, et surtout
+titre de propriété et taxe foncière ». **Les noms sont obligatoires** (sans eux, pas de vérification avec les mandants).
+- **Le mandat** : seuls les mandats passent par la signature de l'app (`app_signature_request.document_kind` = `mandat`,
+  3 demandes, dernière le 06/11) ; un mandat récent est un PDF texte de 12 pages (46 / 50) : il sort de l'app → dernier lot.
+- **Le rythme réel** (noms des documents déposés chez Hektor du 20/08 au 12/11, numéros Hektor ≥ 712 625, ≈ 2,8 mois) :
+  pièces d'identité 300, offres 120, mandats 112, compromis 84, taxe foncière 63, titres 36, PV d'AG 26, état civil 22,
+  charges de copro 20, règlement 8, carnet / DTG 6, fiche synthétique 4.
+- **La forme** (script de lecture seule sur les 50 PDF les plus récents de chaque famille, au disque du serveur
+  `HektorConsoleDocuments`, n'imprime que des nombres ; « ressemblance » = mots communs de la page 1, mesurable sur les
+  seuls PDF à couche texte) :
+  · **titre** : 9 pages (p90 40), **42 scans sur 50** (+ 1 338 photos JPG au total) ; ressemblance 0,12 ;
+  · **taxe foncière** : 2 pages, 29 scans sur 50 ; ressemblance 0,45 (l'avis officiel, mise en page stable) ;
+  · **fiche synthétique** : 2 pages, 19 textes sur 21 ; ressemblance 0,69 (formulaire réglementaire) ;
+  · **charges de copro** : 1 page, 31 textes sur 50 ; ressemblance 0,14 (chaque syndic la sienne) ;
+  · **PV d'AG** : 12 pages (p90 34), moitié scans ; ressemblance 0,15 ;
+  · **règlement / EDD** : 34 pages (p90 65), 26 scans sur 29 ;
+  · **compromis** : 39 pages (p90 54), 34 textes sur 50 ; ressemblance 0,26, **1 % de paires proches** → confirme
+    Frédéric : des mises en page très différentes ;
+  · **offre** : 1 page, **45 scans sur 50** (+ 1 435 photos) → la ressemblance ne se mesure pas sur un scan : « quasi
+    similaires » n'est ni confirmé ni démenti ; ce qui est sûr : une page, presque toujours scannée ou photographiée.
+- **Ce que ça change à la technique** : la lecture doit savoir lire des NOMS (liste « personnes » : nom, prénoms, qualité,
+  droits — jamais naissance ni adresse) et des SCANS de plusieurs pages (le titre : les 6 premières pages en haute
+  définition, où sont les parties et la désignation ; l'origine de propriété, plus loin, n'est pas lue).
+- **Les vérifications servies au morceau 7** (étude A §6-7, D §4) : titre ↔ mandants (chaque propriétaire doit être
+  mandant ; 39 biens à 3 propriétaires ou plus sans titre), commune du titre ; taxe : montant ↔ case `TAXE_FONCIERE`
+  (97 biens vides avec un avis, 166 comparables), redevables ↔ mandants, commune, avis ancien ; copro : nombre de lots,
+  charges (26 biens en copro sans charges), procédure, numéros de lot (57 vides), syndic à relier (73 sans syndic).
+**Proposition (ordre de valeur)** :
+- **Lot 2 — justificatifs du mandat et de la mise en vente** : taxe foncière, titre de propriété, fiche synthétique,
+  charges de copro (appel de fonds / arrêté), avec les noms.
+- **Lot 3 — la vente** : offre d'achat (une page scannée), compromis (texte long, mises en page variées), PV d'AG.
+- **Lot 4 — le reste** : mandat déposé à la main, avenant, acte, facture, petits diagnostics, surfaces, règlement.
+- ⚠ **La pièce d'identité est le justificatif le PLUS déposé (300 en 2,8 mois)**, mais c'est une pièce des personnes
+  (morceau 9, registre anti-blanchiment, DPA) : elle ne rentre pas dans ces lots ; l'avancer est une décision de Frédéric.
+✅ **« Oui vas-y » (12/11 soir)** : le lot 2 = taxe foncière, titre, fiche synthétique, charges de copro. Et « mets à
+jour le plan de ce chantier » → le §0 en tête de cette note porte désormais l'état au présent.
+✅ **LOT 2 ÉCRIT ET CONTRÔLÉ (12/11 soir), RIEN POSÉ NI POUSSÉ :**
+- Serveur (`openai_ged_lecture_service.py`) : 4 fiches neuves — `justif.taxe` (année, montant total, ordures ménagères,
+  somme à payer, commune et adresse DES BIENS, plusieurs biens ; redevables), `justif.titre` (nature et date de l'acte,
+  étude, décès, commune, adresse, contenance, extrait partiel ; nouveaux propriétaires avec droits et quote-part ; lots et
+  tantièmes), `copro.carnet` (fiche synthétique : immatriculation, lots, syndic société, budget, fonds de travaux,
+  procédure, plan de sauvegarde), une fiche commune à `copro.appel_fonds` et `copro.arrete_charges` (provision, budget du
+  lot, charges réelles, fonds de travaux, travaux appelés, lots, syndic ; JAMAIS le copropriétaire destinataire). Une fiche
+  porte désormais PLUSIEURS listes. **Les noms** : liste `personnes` (nom, prénoms, qualité, + droits / quote-part pour le
+  titre) sur la taxe et le titre SEULEMENT ; la consigne commune garde l'interdit « sauf dans la liste personnes quand la
+  fiche la demande ». Gardes ajoutées : un « nom » avec un chiffre ou une arobase est jeté ; **un numéro de 9 chiffres ou
+  plus (fiscal, de rôle) n'est gardé dans AUCUN champ**, même espacé ; 12 personnes au plus. Le titre : 40 000 caractères
+  de texte et 6 pages en image (les autres types gardent 20 000 et 4).
+- Écran : `gedLecture.ts` (8 types lus ; résumés « Lu : … » qui COMPTENT les personnes — « 2 redevables, 1 usufruitier » —
+  sans jamais un nom ; la date d'une taxe ne peut plus passer pour celle d'un état des risques) ; `gedClassementIa.ts`
+  (pages et texte réglés par type) ; `DepotDocuments.tsx` (le type est passé à la préparation, une ligne).
+- Base : RIEN d'obligatoire (les valeurs vont dans `app_ged_valeur`). ⚠ Seule retouche proposée : la colonne
+  `app_ged_type.lecture` dit encore « classer » pour la taxe (étiquette sans effet) → `patch_ged_m6_lot2_taxe_lue_2026-11-12.sql`
+  (+ `_INVERSE`), à poser sur accord, ou pas.
+- **Banc réel, 4 documents FICTIFS** (taxe scannée 2 pages, titre scanné 3 pages, fiche synthétique en texte, appel de
+  fonds scanné) : **25 valeurs sur 25**, noms et qualités justes (le vendeur et l'ancien propriétaire de l'origine NON
+  relevés ; un nom lu « FICTIF née ESSAI » : le morceau 7 devra savoir lire « née ») ; **0 fuite** sur 12 mots interdits
+  (dates de naissance, ville et adresse du destinataire, numéro fiscal, référence d'avis, solde débiteur, régime, profession,
+  copropriétaire de l'appel) ; 3,4 à 7 s ; **0,0028 $ les quatre**. Lot 1 rejoué : 12 sur 12 (« Saint-Étienne » avec son
+  accent).
+- Contrôles : `test_ged_lire.py` **38 VERT** (dont ce qui part vraiment vers l'IA, appel simulé, et 3 témoins « le lot 1
+  ne change pas ») ; `test_ged_classer.py` 28 ; `test_ged_lecture.cjs` **25 VERT** ; règles 44, Reçu / Manque 29, dépôt 17,
+  classement 25, les 4 essais de la signature verts ; `npm run build` vert.
+✅ **« Oui avec patch taxe » (12/11 soir)** : patch de la taxe **POSÉ** (`justif.taxe` → « lue », contrôle vert) ; commit et
+push du lot 2. ⏳ Reste : l'essai réel des lots 1 et 2 sur 62774 avec des documents fictifs.

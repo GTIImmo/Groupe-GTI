@@ -19,12 +19,17 @@ from .openai_listing_sheet_service import _extract_output_text
 # etat lu / incertain / non_vu (« non_vu » = pas dans ce qu'on lui a montré, JAMAIS « absent du document »).
 # Schéma STRICT : le modèle ne peut rendre QUE les champs de la fiche (ni date de naissance, ni numéro de pièce, ni IBAN).
 # Lot 1 : l'état des risques, le DPE, le dossier de diagnostics (catalogue : E_synthese_catalogue.md §5, fiches 1 à 3).
+# Lot 2 (§12.14) : la taxe foncière, le titre de propriété, la fiche synthétique, les charges de copropriété. Les deux
+# premiers lisent des NOMS (liste « personnes » : nom, prénoms, qualité -- jamais naissance, adresse ni état civil) :
+# c'est ce qui permettra de les comparer aux mandants (morceau 7).
 # ---------------------------------------------------------------------------
 
 AGENT_KEY = "ged_lecture"
 MAX_PAGES_HD = 6
 MAX_IMAGE_HD_OCTETS = 1_600_000
 MAX_TEXTE = 20000
+MAX_TEXTE_LONG = 40000  # le titre : 9 pages en médiane, jusqu'à 40 (mesuré le 12/11)
+MAX_PERSONNES = 12
 
 _ETAT = {"type": "string", "enum": ["lu", "incertain", "non_vu"]}
 
@@ -35,6 +40,8 @@ def _champ(sorte: str, enum: list[str] | None = None) -> dict[str, Any]:
         v = {"type": ["string", "null"], "enum": [*enum, None]}
     if sorte == "date":
         v["description"] = "AAAA-MM-JJ"
+    if sorte == "nom":
+        v["description"] = "tel qu'imprimé, sans titre de civilité"
     return {"type": "object", "additionalProperties": False, "required": ["v", "page", "etat"],
             "properties": {"v": v, "page": {"type": ["integer", "null"]}, "etat": _ETAT}}
 
@@ -43,7 +50,7 @@ CLASSES = ["A", "B", "C", "D", "E", "F", "G"]
 DIAGNOSTICS = ["dpe", "erp", "amiante", "plomb", "termites", "electricite", "gaz", "surface", "assainissement",
                "merule", "audit", "autre"]
 
-# Une fiche : version (dans le nom enregistré), consigne propre, champs simples, et au plus une liste.
+# Une fiche : version (dans le nom enregistré), consigne propre, champs simples, des listes ; « texte_max » si long.
 FICHES: dict[str, dict[str, Any]] = {
     "diag.erp": {
         "version": 1,
@@ -74,18 +81,105 @@ FICHES: dict[str, dict[str, Any]] = {
                     "dpe_*. commune : celle du bien.",
         "champs": {"commune": ("txt", None), "dpe_classe_energie": ("txt", CLASSES), "dpe_classe_ges": ("txt", CLASSES),
                    "dpe_conso_ep": ("num", None), "dpe_emissions": ("num", None), "dpe_date": ("date", None)},
-        "liste": ("diagnostics", {"diagnostic": ("txt", DIAGNOSTICS), "date_rapport": ("date", None),
-                                  "conclusion": ("txt", None)}),
+        "listes": [("diagnostics", {"diagnostic": ("txt", DIAGNOSTICS), "date_rapport": ("date", None),
+                                    "conclusion": ("txt", None)})],
     },
 }
+
+# ── Lot 2 ─────────────────────────────────────────────────────────────────────
+OUI_NON = ["oui", "non"]
+QUALITES = ["proprietaire", "usufruitier", "nu_proprietaire", "indivisaire", "heritier", "donataire", "redevable", "autre"]
+DROITS = ["pleine_propriete", "usufruit", "nue_propriete", "indivision", "non_precise"]
+_EXCEPTION_NOMS = ("personnes : EXCEPTION à la règle commune -- recopie ICI, et nulle part ailleurs, le nom et les prénoms "
+                   "de chaque personne tels qu'imprimés (sans « M. », « Mme »), avec sa qualité. Rien d'autre sur elles : "
+                   "ni date ou lieu de naissance, ni adresse, ni profession, ni situation de famille.")
+_LOTS = ("lots", {"numero": ("txt", None), "nature": ("txt", None)})
+_CHARGES_COPRO = {
+    "version": 1,
+    "consigne": "C'est un document de charges de copropriété : appel de fonds, budget prévisionnel ou arrêté / "
+                "décompte de charges. sous_type : lequel. periode : celle de l'appel. provision_budget : la part "
+                "« budget prévisionnel / charges courantes » de CE document (pas le fonds de travaux, pas les travaux). "
+                "budget_annuel_lot : le budget annuel du lot s'il est imprimé. charges_courantes_lot : pour un arrêté, "
+                "le total des charges réelles du lot sur l'exercice. cotisation_fonds_travaux, appel_travaux et "
+                "objet_travaux : s'ils sont appelés. lots : les numéros de lots concernés et leur nature (appartement, "
+                "cave, parking…). syndic_nom : seulement si le syndic est une société. JAMAIS le nom ni l'adresse du "
+                "copropriétaire destinataire, ni le solde, ni les impayés, ni les relances.",
+    "champs": {"sous_type": ("txt", ["appel_de_fonds", "budget", "arrete_de_charges", "autre"]),
+               "date_document": ("date", None), "periode": ("txt", ["mois", "trimestre", "semestre", "annuel", "autre"]),
+               "exercice_debut": ("date", None), "exercice_fin": ("date", None), "provision_budget": ("num", None),
+               "budget_annuel_lot": ("num", None), "charges_courantes_lot": ("num", None),
+               "cotisation_fonds_travaux": ("num", None), "appel_travaux": ("num", None), "objet_travaux": ("txt", None),
+               "syndic_nom": ("txt", None)},
+    "listes": [_LOTS],
+}
+FICHES.update({
+    "justif.taxe": {
+        "version": 1,
+        "consigne": "C'est un avis de taxe foncière. annee_imposition : l'année de l'impôt. montant_total : le montant "
+                    "total de l'impôt (« montant de votre impôt », total des cotisations) -- PAS la somme restant à "
+                    "payer, qui va dans somme_a_payer. dont_teom : la taxe d'enlèvement des ordures ménagères. commune "
+                    "et adresse_biens : celles DES BIENS imposés, jamais l'adresse du destinataire. plusieurs_biens : "
+                    "oui si l'avis porte plusieurs locaux ou propriétés. " + _EXCEPTION_NOMS + " Ici : chaque "
+                    "redevable, qualité redevable, usufruitier ou nu_proprietaire. JAMAIS de numéro fiscal, de "
+                    "référence d'avis ni de numéro de rôle.",
+        "champs": {"annee_imposition": ("num", None), "date_etablissement": ("date", None), "montant_total": ("num", None),
+                   "dont_teom": ("num", None), "somme_a_payer": ("num", None), "commune": ("txt", None),
+                   "adresse_biens": ("txt", None), "plusieurs_biens": ("txt", OUI_NON)},
+        "listes": [("personnes", {"nom": ("nom", None), "prenoms": ("nom", None), "qualite": ("txt", QUALITES)})],
+    },
+    "justif.titre": {
+        "version": 1,
+        "texte_max": MAX_TEXTE_LONG,
+        "consigne": "C'est un titre de propriété : acte de vente, donation, partage, attestation de propriété après "
+                    "décès, notoriété… nature_acte et date_acte : celles de CET acte. etude_notariale : l'étude ou le "
+                    "notaire (un professionnel). " + _EXCEPTION_NOMS + " Ici : les personnes qui DEVIENNENT "
+                    "propriétaires par cet acte (acquéreurs, donataires, attributaires, héritiers), JAMAIS les vendeurs "
+                    "ni les propriétaires antérieurs cités dans l'origine de propriété ; droits : pleine propriété, "
+                    "usufruit, nue-propriété, indivision ; quote_part si imprimée (« moitié », « 1/2 »). "
+                    "deces_mentionne : oui si l'acte constate un décès (succession). commune, adresse_ou_lieudit, "
+                    "contenance_totale_m2 : du bien vendu. lots : les numéros de lots de copropriété et leurs "
+                    "tantièmes. extrait_partiel : oui si seules quelques pages de l'acte sont présentes.",
+        "champs": {"nature_acte": ("txt", ["vente", "donation", "donation_partage", "attestation_succession", "notoriete",
+                                           "partage", "adjudication", "echange", "autre"]),
+                   "date_acte": ("date", None), "etude_notariale": ("txt", None), "deces_mentionne": ("txt", OUI_NON),
+                   "commune": ("txt", None), "adresse_ou_lieudit": ("txt", None), "contenance_totale_m2": ("num", None),
+                   "extrait_partiel": ("txt", OUI_NON)},
+        "listes": [("personnes", {"nom": ("nom", None), "prenoms": ("nom", None), "qualite": ("txt", QUALITES),
+                                  "droits": ("txt", DROITS), "quote_part": ("txt", None)}),
+                   ("lots", {"numero": ("txt", None), "tantiemes": ("txt", None)})],
+    },
+    "copro.carnet": {
+        "version": 1,
+        "consigne": "C'est une fiche synthétique de copropriété ou un carnet d'entretien. sous_type : lequel ; pour un "
+                    "carnet d'entretien, laisse tout le reste non_vu. Les montants sont ceux de l'IMMEUBLE. "
+                    "immatriculation : le numéro du registre des copropriétés. nb_lots_total : tous les lots ; "
+                    "nb_lots_principaux : habitation, bureaux, commerces. syndic_nom : seulement si le syndic est une "
+                    "société ; un syndic bénévole (une personne) : syndic_nom non_vu et syndic_type = benevole. "
+                    "procedure : « aucune » seulement si la fiche l'écrit ; mandataire ad hoc, administration "
+                    "provisoire si elle le dit. plan_sauvegarde : oui ou non s'il est écrit.",
+        "champs": {"sous_type": ("txt", ["fiche_synthetique", "carnet_entretien", "autre"]),
+                   "date_etablissement": ("date", None), "immatriculation": ("txt", None), "nb_lots_total": ("num", None),
+                   "nb_lots_principaux": ("num", None), "syndic_nom": ("txt", None),
+                   "syndic_type": ("txt", ["professionnel", "benevole", "cooperatif"]),
+                   "budget_previsionnel": ("num", None), "fonds_travaux_solde": ("num", None),
+                   "procedure": ("txt", ["aucune", "mandataire_ad_hoc", "administration_provisoire", "autre"]),
+                   "plan_sauvegarde": ("txt", OUI_NON), "commune": ("txt", None)},
+    },
+    "copro.appel_fonds": _CHARGES_COPRO,
+    "copro.arrete_charges": _CHARGES_COPRO,
+})
+# Pages lues en haute définition quand il n'y a pas de texte (le navigateur les choisit ; même liste dans
+# gedClassementIa.ts) : le titre a ses parties et sa désignation dans les premières pages d'un acte de 9 à 40 pages.
+PAGES_HD = {"justif.titre": MAX_PAGES_HD}
 
 _CONSIGNE_COMMUNE = (
     "Tu lis un document d'une agence immobilière française pour en relever quelques valeurs. Rends UNIQUEMENT les champs "
     "demandés. Pour chaque champ : v = la valeur (dates en AAAA-MM-JJ, nombres sans unité avec un point décimal), "
     "page = la page où tu l'as lue, etat = « lu » si tu l'as lue nettement, « incertain » si tu hésites (écriture, "
     "scan pâle, jour et mois ambigus), « non_vu » si elle n'est pas dans ce qu'on te montre (v = null). N'invente rien. "
-    "ce_type : faux si ce document n'est manifestement pas du type annoncé. Ne recopie jamais un nom de personne, une "
-    "date de naissance, une adresse personnelle, un numéro fiscal ou bancaire.\n"
+    "ce_type : faux si ce document n'est manifestement pas du type annoncé. Ne recopie jamais un nom de personne (sauf "
+    "dans la liste « personnes » quand la fiche la demande), une date de naissance, une adresse personnelle, un numéro "
+    "fiscal ou bancaire.\n"
 )
 
 agent_registry.DEFAULT_SPECS.setdefault(AGENT_KEY, agent_registry.AgentSpec(AGENT_KEY, _CONSIGNE_COMMUNE, "gpt-6-luna", 1800))
@@ -95,8 +189,7 @@ def schema(fiche: dict[str, Any]) -> dict[str, Any]:
     props: dict[str, Any] = {"ce_type": {"type": "boolean"}}
     for cle, (sorte, enum) in fiche["champs"].items():
         props[cle] = _champ(sorte, enum)
-    if fiche.get("liste"):
-        nom, champs = fiche["liste"]
+    for nom, champs in fiche.get("listes", []):
         props[nom] = {"type": "array", "items": {
             "type": "object", "additionalProperties": False, "required": [*champs.keys(), "page"],
             "properties": {**{c: _champ(s, e) for c, (s, e) in champs.items()}, "page": {"type": ["integer", "null"]}},
@@ -115,6 +208,12 @@ def _valeur(sorte: str, enum: list[str] | None, brut: Any) -> tuple[str | None, 
         except (TypeError, ValueError):
             return None, None, None
     texte = re.sub(r"\s+", " ", str(brut)).strip()[:200]
+    # ⛔ un long numéro (fiscal, de rôle, de sécurité sociale…) n'est jamais gardé, quel que soit le champ
+    if re.search(r"\d{9,}", re.sub(r"[\s.\-]", "", texte)):
+        return None, None, None
+    if sorte == "nom":
+        # un nom : des lettres ; un chiffre ou une arobase trahit une adresse, une date, un numéro
+        return (None, None, None) if re.search(r"[\d@]", texte) or len(texte) > 80 else (texte or None, None, None)
     if sorte == "date":
         return (None, None, texte) if re.fullmatch(r"(19[5-9]\d|20\d\d)-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])", texte) else (None, None, None)
     if enum and texte not in enum:
@@ -138,9 +237,8 @@ def normaliser(brut: Any, fiche: dict[str, Any], nb_pages: int) -> tuple[bool, l
 
     for cle, (sorte, enum) in fiche["champs"].items():
         ajouter(cle, 0, sorte, enum, brut.get(cle))
-    if fiche.get("liste"):
-        nom, champs = fiche["liste"]
-        for rang, item in enumerate((brut.get(nom) or [])[:30]):
+    for nom, champs in fiche.get("listes", []):
+        for rang, item in enumerate((brut.get(nom) or [])[:MAX_PERSONNES if nom == "personnes" else 30]):
             if isinstance(item, dict):
                 for c, (s, e) in champs.items():
                     ajouter(f"{nom}.{c}", rang, s, e, item.get(c))
@@ -185,7 +283,7 @@ class OpenAIGedLectureService:
         if self.type_sensible(code):
             raise HTTPException(status_code=422, detail="Pièce des personnes : lue plus tard (morceau 9)")
         nom = str(payload.get("nomFichier") or classement.get("document_name") or "")
-        texte = str(payload.get("texte") or "")[:MAX_TEXTE]
+        texte = str(payload.get("texte") or "")[:fiche.get("texte_max", MAX_TEXTE)]
         pages = payload.get("pages") or []
         nb_pages = int(payload.get("nbPages") or len(pages) or 1)
         if nom_dit_rib(nom) or texte_porte_un_rib(texte):
