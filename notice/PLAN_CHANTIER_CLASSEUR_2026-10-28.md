@@ -222,6 +222,48 @@ PYTHON     ✅ le chainage . l'apparieur . le rapport du gel
 WORKERS    ✅ ils n'ont PAS de lecteur -- ils envoient ce que la modale leur donne
 ```
 
+### ✅ PROUVÉ À L'ÉCRAN, ET B EST FAIT — *12/11 au soir*
+
+**Le registre des transactions, ouvert dans le navigateur :**
+
+```
+« 494 dossiers · 2026 »        <- exactement les 494 mesurés en base (contre 1 684)
+291 vendus + 88 compromis + 41 acceptees + 6 proposees + 10 annules + 58 refusees
+                              = 494, les compteurs s'additionnent
+```
+
+⚠ **Et les 5 offres en tête de liste sont exactement les 5 sans recours**
+(24256, 20169, 16330, 16255, 9557) — celles dont Hektor dit `0000-00-00`. Elles sont
+les **seules** à rester au 11/11, comme la mesure l'annonçait. ➜ Elles font partie des
+**12 à trancher par Frédéric**.
+
+#### ✅ B — L'ÉTIQUETTE POSÉE AU CLIC
+
+```
+app_poser_etiquette_du_dossier(p_chaine)   pose + propagation, UN SEUL dossier
+la modale l'appelle apres son INSERT       avec un FILET : si la pose echoue,
+                                           LE GESTE DE L'UTILISATEUR PASSE QUAND MEME
+```
+
+⛔⛔ **Elle ne FUSIONNE ni ne SCINDE jamais** : un clic ne doit pas pouvoir réunir deux
+dossiers, une fusion étant irréversible pour l'étiquette absorbée. Fusion et scission
+sont des conséquences d'un **recalcul**, et le recalcul n'a lieu que la nuit.
+
+⭐ **Aucune règle dupliquée** : l'année vient du lecteur unique, le rang du **même
+compteur que la nuit** — donc aucune série parallèle.
+
+```
+EPREUVE, en transactions ANNULEES sur le dossier 3676
+  propagation  on retire l'etiquette de la vente -> les 4 la retrouvent (D2025-0254)
+  pose         on denude tout le groupe -> un numero neuf D2025-0438, 0 nue,
+               1 ligne au journal « AU CLIC », compteur 2025 : 437 -> 438
+  apres rollback : tout intact, compteur revenu a 437, 0 ligne « AU CLIC »
+```
+
+⚠ **CE QUI N'EST PAS ENCORE PROUVÉ** : personne n'a fait le geste **depuis l'écran**.
+L'épreuve appelle la fonction directement. Au premier changement de statut réel, vérifier
+que la ligne neuve porte son étiquette à la seconde, et que le journal dit « AU CLIC ».
+
 ### ✅ LES 4 ESSAIS DU CHAÎNAGE SONT VERTS — *12/11 au soir*
 
 Ils criaient ROUGE à chaque passage depuis des semaines, et **aucun ne parlait du code**.

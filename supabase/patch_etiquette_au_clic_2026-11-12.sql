@@ -1,0 +1,87 @@
+-- ═══════════════════════════════════════════════════════════════════════════
+-- B — L'ÉTIQUETTE DE DOSSIER POSÉE AU CLIC                       12/11/2026
+-- ═══════════════════════════════════════════════════════════════════════════
+-- ✅ COLLÉ EN PRODUCTION LE 12/11/2026, en deux migrations :
+--      etiquette_du_dossier_au_clic_2026_11_12
+--      modale_pose_l_etiquette_au_clic_2026_11_12
+--
+-- ⚠ CE FICHIER EST UNE TRACE, pas le patch à coller : les deux migrations sont
+--   posées. Il existe pour que le dépôt dise la vérité sur ce qui tourne.
+--
+-- ═══════════════════════════════════════════════════════════════════════════
+-- POURQUOI — la question de Frédéric, le 12/11
+-- ═══════════════════════════════════════════════════════════════════════════
+-- *« si le geste est fait dans l'apps, ajout modification de transaction, est-ce
+--   prévu ? Est-ce que le mécanisme prévoit la création de nouvelles étiquettes
+--   pour les futurs dossiers ? »*
+--
+-- AUDIT DES GESTES (12/11) : UNE SEULE porte crée une transaction chez Supabase,
+-- `app_change_annonce_status_optimistic` — la modale « Changer le statut ». Cinq
+-- autres en MODIFIENT, aucune n'en SUPPRIME. Et aucune des six ne connaissait
+-- l'étiquette.
+--
+-- ⭐ MAIS LA MODALE FAISAIT DÉJÀ LE PLUS DUR : elle pose `app_chaine_id` « dès
+--   maintenant » (via app_chaine_pour). Il ne manquait que l'étiquette — donc la
+--   transaction attendait la nuit.
+--
+-- ⚠ CE N'ÉTAIT PAS GRAVE AUJOURD'HUI (personne ne lit l'étiquette) mais ÇA LE
+--   DEVENAIT À L'ÉTAPE 5.2 : l'app y écrira dans le classeur PAR L'UUID, et une
+--   transaction née le matin n'aurait pas pu y être écrite avant le lendemain.
+--
+-- ═══════════════════════════════════════════════════════════════════════════
+-- CE QUE LA POSE AU CLIC NE FAIT PAS — et c'est le plus important
+-- ═══════════════════════════════════════════════════════════════════════════
+-- `app_poser_etiquette_du_dossier(p_chaine)` ne fait QUE deux gestes :
+--       pose         le groupe n'a aucune étiquette -> il en reçoit une neuve
+--       propagation  le groupe en a une -> la transaction nue la reçoit
+--
+-- ⛔⛔ ELLE NE FUSIONNE NI NE SCINDE JAMAIS. Un clic d'utilisateur ne doit pas
+--   pouvoir réunir deux dossiers : une fusion est IRRÉVERSIBLE pour l'étiquette
+--   absorbée, qui ne vit plus que dans le journal. Fusion et scission sont des
+--   conséquences d'un RECALCUL des groupes, et le recalcul n'a lieu que la nuit.
+--
+-- ⭐ ET ELLE NE DUPLIQUE AUCUNE RÈGLE : l'année vient de
+--   `app_dossier_annee_ouverture` (le lecteur unique, réparé le même jour) et le
+--   format de `app_dossier_numero_format`. Le rang est pris au MÊME compteur que
+--   la nuit — donc aucune série parallèle, ce que le projet s'interdit depuis le
+--   début (« un seul frappeur à la fois »).
+--   ⚠ C'est la faute que ce chantier a payée le matin même : deux calculateurs
+--     d'année, un seul réparé, 697 numéros faux.
+--
+-- ⚠ ET ELLE EST BORNÉE À UN DOSSIER : appeler la pose de nuit sur un clic
+--   coûterait 318 ms et balaierait 11 441 dossiers pour un seul.
+--
+-- ═══════════════════════════════════════════════════════════════════════════
+-- LE FILET, OBLIGATOIRE PARCE QUE C'EST UN GESTE D'UTILISATEUR
+-- ═══════════════════════════════════════════════════════════════════════════
+-- L'appel dans la modale est entouré d'un `exception when others` qui écrit un
+-- NOTICE et laisse passer. **Si la pose échoue, le geste ne doit pas échouer** :
+-- une étiquette manquante se rattrape la nuit ; une modale qui refuse un
+-- changement de statut est une panne pour le négociateur.
+-- Même règle que `poser_les_etiquettes_de_dossier` dans le run et que R2.
+--
+-- ⭐ POSÉ PAR SQL DYNAMIQUE : la modale fait 449 lignes, et en recopier le corps
+--   pour y ajouter trois lignes serait l'occasion exacte d'une faute de recopie.
+--   On prend sa définition actuelle, on insère à UNE ancre vérifiée unique, on la
+--   rejoue. La migration refuse d'écrire si l'ancre n'est pas trouvée une seule
+--   fois, et elle ne fait rien si l'appel est déjà là (rejouable sans risque).
+--
+-- ═══════════════════════════════════════════════════════════════════════════
+-- L'ÉPREUVE — dans des transactions ANNULÉES, sur un dossier réel
+-- ═══════════════════════════════════════════════════════════════════════════
+--   ① la modale appelle la pose                              true
+--      le filet est là                                       true
+--      authenticated peut l'appeler / anon non                true / false
+--      la pose de NUIT est intacte (1 seule signature)        1
+--   ② PROPAGATION : on retire l'étiquette de la vente 3679 du dossier 3676,
+--      on appelle la pose ciblée -> les 4 transactions portent D2025-0254
+--   ③ POSE : on dénude TOUT le dossier 3676 -> un seul numéro neuf (D2025-0438),
+--      0 transaction nue, 1 ligne au journal marquée « AU CLIC », et le compteur
+--      2025 passe de 437 à 438 — LE MÊME compteur que la nuit
+--   ④ APRÈS ROLLBACK : dossier 3676 intact (D2025-0254), compteur revenu à 437,
+--      0 ligne « AU CLIC » au journal, registre à 31 151 / 11 441
+--
+-- ⚠ CE QUI N'EST PAS ENCORE PROUVÉ, ET IL FAUT LE DIRE : personne n'a fait le
+--   geste DEPUIS L'ÉCRAN. L'épreuve ci-dessus appelle la fonction directement.
+--   Le jour où un négociateur change un statut, il faudra vérifier que la ligne
+--   neuve porte son étiquette à la seconde — et que le journal porte « AU CLIC ».
