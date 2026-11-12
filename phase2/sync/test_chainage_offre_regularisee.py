@@ -103,6 +103,14 @@ ok(c[101] == c[110] if al.chainage_offre_proposee_actif() else True,
 # ⭐ CHAQUE BLOC EST CONDITIONNEL A SON INTERRUPTEUR, comme celui du § 2.8 : le
 #   test doit rester vert interrupteurs eteints, c'est-a-dire en production.
 
+# ⭐ 12/11/2026 : LA REGLE D, posee a la demande de Frederic -- « un acheteur +
+#   un bien = un dossier ». Elle passe OUTRE la fenetre de 31 jours de la regle B
+#   et outre l'etat ANNULE d'un compromis : si c'est le MEME acheteur sur le MEME
+#   bien, c'est UNE affaire.
+#   ⚠ ELLE EST LUE ICI, AVANT LA REGLE B, parce que le premier temoin qui en depend
+#     est celui de la fenetre de 31 jours -- ma premiere version la lisait 4 blocs
+#     plus bas et l'essai tombait sur un NameError.
+d_actif = al.chainage_meme_acheteur_actif()
 b_actif = al.chainage_offre_acceptee_seule_actif()
 print("REGLE B — l'offre acceptee datee APRES le compromis, AU MEME NOM")
 c = chaines([(101, "offre", "accepted", "2026-10-26", "A1"),
@@ -114,7 +122,12 @@ ok((c[101] == c[110]) if b_actif else (c[101] != c[110]),
 print("REGLE B, TEMOIN INVERSE — hors de la fenetre de 31 jours")
 c = chaines([(101, "offre", "accepted", "2027-02-21", "A1"),
              (110, "compromis", "active", "2026-10-12", "A1")])
-ok(c[101] != c[110], "132 jours : PAS rattachee, meme au meme nom")
+# ⚠ MEME ACHETEUR (A1 des deux cotes) : depuis la REGLE D, la fenetre de 31 jours
+#   ne decide plus seule. D eteinte -> 132 jours les separent ; D allumee -> le
+#   MEME acheteur sur le MEME bien les reunit, et c'est voulu.
+ok((c[101] == c[110]) if d_actif else (c[101] != c[110]),
+   "132 jours au MEME nom : reunis par la regle D" if d_actif
+   else "132 jours : PAS rattachee, meme au meme nom")
 
 print("REGLE B, TEMOIN INVERSE — dans la fenetre mais NOM DIFFERENT")
 c = chaines([(101, "offre", "accepted", "2026-10-26", "A1"),
@@ -132,7 +145,33 @@ ok((c[101] == c[110]) if c_actif else (c[101] != c[110]),
 print("REGLE C, TEMOIN INVERSE — le compromis est ANNULE")
 c = chaines([(101, "compromis", "cancelled", "2026-10-12", "A1"),
              (110, "vente", "sold", "2026-09-01", "A1")])
-ok(c[101] != c[110], "un compromis annule ne capte pas la vente")
+# ⚠ MEME ACHETEUR (A1 des deux cotes). C'est LE CAS QUE FREDERIC A TRANCHE le
+#   12/11 sur les dossiers 10753 et 10798 : un compromis annule puis une vente,
+#   au MEME nom, c'est UNE SEULE affaire -- l'acheteur a fini par acheter.
+#   D eteinte -> l'etat mort ferme le dossier (regle d'avant) ;
+#   D allumee -> ils sont reunis.
+ok((c[101] == c[110]) if d_actif else (c[101] != c[110]),
+   "compromis annule + vente au MEME nom : reunis par la regle D" if d_actif
+   else "un compromis annule ne capte pas la vente")
+
+print("REGLE D, TEMOIN INVERSE — deux acheteurs sur le meme bien")
+# ⛔ LE TEMOIN QUI MANQUAIT, et c'est le plus important de la regle D : elle ne
+#   doit JAMAIS reunir deux acheteurs differents. Sans lui, le defaut du 12/11 au
+#   matin (l'ordre de lecture decidait, et les montants avaient ete croises sur le
+#   bien 1801) serait repasse sans bruit.
+c = chaines([(101, "compromis", "cancelled", "2026-10-12", "A1"),
+             (110, "vente", "sold", "2026-09-01", "B1")])
+ok(c[101] != c[110], "deux acheteurs : la regle D ne les reunit PAS")
+
+print("REGLE D, TEMOIN INVERSE — un acheteur, DEUX ventes")
+# ⚠ L'AUTRE GARDE de la regle D, trouvee a blanc le 12/11 : un acheteur qui porte
+#   PLUSIEURS ventes sur le meme bien est ECARTE EN ENTIER -- sinon l'ordre de
+#   lecture choisit, et il avait croise les montants.
+c = chaines([(101, "offre", "accepted", "2026-09-01", "A1"),
+             (110, "vente", "sold", "2026-10-01", "A1"),
+             (120, "vente", "sold", "2026-10-02", "A1")])
+ok(len({c[101], c[110], c[120]}) > 1,
+   "un acheteur a DEUX ventes : la regle D s'abstient")
 
 print("REGLE C, TEMOIN INVERSE — nom different")
 c = chaines([(101, "compromis", "active", "2026-10-12", "A1"),
