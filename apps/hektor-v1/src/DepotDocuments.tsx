@@ -72,7 +72,7 @@ async function photosEnPdf(photos: File[]): Promise<File> {
 }
 
 export function DepotDocuments({
-  dossier, documents, peutEnvoyer, onJobCreated, onTermine, formulaireClassique,
+  dossier, documents, peutEnvoyer, onJobCreated, onTermine, formulaireClassique, typeAttendu, onTypeAttenduUtilise,
 }: {
   dossier: Dossier
   documents: ConsoleDocument[]
@@ -80,6 +80,9 @@ export function DepotDocuments({
   onJobCreated?: (job: ConsoleJob) => void
   onTermine?: () => void
   formulaireClassique: ReactNode
+  // GED morceau 3 : une pièce « non trouvée » cliquée dans « Reçu / Manque » -- le prochain fichier prend ce type
+  typeAttendu?: { code: string; libelle: string } | null
+  onTypeAttenduUtilise?: () => void
 }) {
   const [types, setTypes] = useState<GedType[] | null>(null)
   const [erreurTypes, setErreurTypes] = useState<string | null>(null)
@@ -157,11 +160,13 @@ export function DepotDocuments({
       const propose = typeParNom(file.name)
       const sha256 = await empreinteFichier(file).catch(() => null)
       const doublon = sha256 ? documents.find((d) => d.sha256 === sha256) ?? null : null
-      const type = propose.code ?? ''
+      const attendu = typeAttendu && parCode.has(typeAttendu.code) ? typeAttendu.code : null
+      const type = attendu ?? propose.code ?? ''
+      const muet = propose.force === 'muet' || propose.force === 'reste'
       nouvelles.push({
         id: crypto.randomUUID(),
         file,
-        nom: racine(file.name).replace(/[_]+/g, ' ').trim(),
+        nom: attendu && muet ? `${parCode.get(attendu)?.libelle ?? 'Document'} ${aujourdhui()}` : racine(file.name).replace(/[_]+/g, ' ').trim(),
         nomTouche: false,
         type,
         typePropose: propose.code,
@@ -177,6 +182,7 @@ export function DepotDocuments({
       })
     }
     setLignes((avant) => verifier([...avant, ...nouvelles]))
+    if (typeAttendu && nouvelles.length) onTypeAttenduUtilise?.()
   }
 
   function modifier(id: string, patch: Partial<Ligne>) {
@@ -284,6 +290,13 @@ export function DepotDocuments({
         <strong>Ajouter des documents</strong>
         <small>Chaque document part chez Hektor, un après l'autre, une fois son type et son nom vérifiés.</small>
       </div>
+
+      {typeAttendu ? (
+        <div className="ged-depot-pages">
+          <span>{`Prochain fichier : ${typeAttendu.libelle}`}</span>
+          <button className="ghost-button" type="button" onClick={() => onTypeAttenduUtilise?.()}>Annuler</button>
+        </div>
+      ) : null}
 
       <div
         className={`ged-depot-zone${survol ? ' is-survol' : ''}`}

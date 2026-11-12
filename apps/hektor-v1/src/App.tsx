@@ -298,7 +298,10 @@ import SuiviSignatairesYoutrust from './SuiviSignatairesYoutrust'
 import { PiecesSignatureFenetre, useSignaturePreuves } from './PiecesSignature'
 // GED morceau 2 (12/11/2026) : la fenêtre de dépôt, derrière l'interrupteur ged_depot_multiple (note GED §12.7).
 import { DepotDocuments } from './DepotDocuments'
-import { useGedDepotMultiple } from './lib/ged'
+import { useGedDepotMultiple, useGedRecuManque } from './lib/ged'
+// GED morceau 3 (12/11/2026) : le bloc « Reçu / Manque », derrière l'interrupteur ged_recu_manque (note GED §12.8).
+import { RecuManque } from './RecuManque'
+import type { FaitsDuBien } from './lib/gedPieces'
 import { piecesDeSignature } from './lib/piecesSignature'
 import EnvoiSignatureYoutrust, { EVENEMENT_CORRIGER_MANDAT, type DemandeCorrectionMandat, type OngletCorrection } from './EnvoiSignatureYoutrust'
 import type { FicheDuJourPdf } from './lib/ecartsFichePdf'
@@ -11837,6 +11840,26 @@ Le mandat passera à l'état « Signé ». À ne faire qu'une fois le PDF signé
   )
 }
 
+// GED morceau 3 (12/11/2026) : les faits de la fiche dont dépendent les pièces « selon le cas » (lib/gedPieces.ts).
+// null = la fiche ne le dit pas (la pièce est alors « selon le cas », jamais « non trouvée »).
+function faitsGedDuBien(dossier: Dossier, detail: DossierDetailPayload | null): FaitsDuBien {
+  const lire = (nom: string) => (detail ? String(rawWizardDetailField(detail, nom) ?? '').trim() : '')
+  const nombre = (v: string) => { const x = Number(v.replace(',', '.')); return Number.isFinite(x) && x > 0 ? x : null }
+  const copro = lire('copropriete').toUpperCase()
+  const nonConcerne = lire('dpe_non_concerne').toUpperCase()
+  return {
+    statut: dossier.statut_annonce ?? null,
+    numeroMandat: dossier.numero_mandat ?? null,
+    typeBien: dossier.type_bien != null ? String(dossier.type_bien) : null,
+    copropriete: copro === 'OUI' ? true : copro === 'NON' ? false : null,
+    anneeConstruction: nombre(lire('ANNEE_CONS')),
+    assainissement: lire('ASSAINISSEMENT') || null,
+    dpeConso: nombre(lire('dpe_cons')),
+    dpeGes: nombre(lire('dpe_ges')),
+    dpeNonConcerne: ['1', 'OUI', 'TRUE', 'ON'].includes(nonConcerne),
+  }
+}
+
 function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJobCreated, onMissingNegotiator, onDocumentsChanged, ficheDuMandat }: { dossier: Dossier; compact?: boolean; skin?: 'classic' | 'v21'; onJobCreated?: (job: ConsoleJob) => void; onMissingNegotiator?: MissingNegotiatorHandler; onDocumentsChanged?: () => void; ficheDuMandat?: { detail: DossierDetailPayload; contacts: DetailContact[]; address: string } | null }) {
   const [documents, setDocuments] = useState<ConsoleDocument[]>([])
   // Skin « v21 » (cockpit) : filtre + tiroir d'ajout. Non utilises en skin classique.
@@ -11854,6 +11877,10 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
   const [piecesDoc, setPiecesDoc] = useState<ConsoleDocument | null>(null)
   // GED morceau 2 : cran « admin » = Frédéric seul ; éteint = le formulaire d'aujourd'hui, inchangé.
   const gedDepot = useGedDepotMultiple()
+  // GED morceau 3 : « Reçu / Manque » ; une pièce non trouvée ouvre la fenêtre de dépôt avec son type déjà choisi.
+  const gedRecuManque = useGedRecuManque()
+  const [typeAttendu, setTypeAttendu] = useState<{ code: string; libelle: string } | null>(null)
+  const faitsDuBien = useMemo(() => faitsGedDuBien(dossier, ficheDuMandat?.detail ?? null), [dossier, ficheDuMandat])
   // A.2 lot 6b P5 : « Corriger le mandat » depuis la fenetre ouverte ici -> l'editeur du meme bien s'ouvre (s'il est monte).
   const demanderCorrection = (document: ConsoleDocument, onglet: OngletCorrection) => {
     const detail: DemandeCorrectionMandat = { app_dossier_id: dossier.app_dossier_id, document, onglet, pris: false }
@@ -12244,8 +12271,22 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
       onJobCreated={onJobCreated}
       onTermine={() => { window.setTimeout(() => void refreshDocuments(true), 1500); onDocumentsChanged?.() }}
       formulaireClassique={uploadForm}
+      typeAttendu={typeAttendu}
+      onTypeAttenduUtilise={() => setTypeAttendu(null)}
     />
   ) : uploadForm
+  const blocRecuManque = gedRecuManque ? (
+    <RecuManque
+      hektorAnnonceId={dossier.hektor_annonce_id}
+      documents={documents}
+      faits={faitsDuBien}
+      onDeposer={gedDepot ? (code, libelle) => {
+        setTypeAttendu({ code, libelle })
+        setUploadOpen(true)
+        window.setTimeout(() => window.document.querySelector('.ged-depot')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 60)
+      } : undefined}
+    />
+  ) : null
 
   // Actions par ligne — PARTAGEES entre les deux skins (zero perte de fonction).
   const docRowActions = (document: ConsoleDocument) => {
@@ -12385,6 +12426,7 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
 
         {message ? <p className="console-documents-message">{message}</p> : null}
         {error ? <p className="console-documents-error">{error}</p> : null}
+        {blocRecuManque}
         {uploadOpen ? <div className="fa-ck-docup">{formulaireAjout}</div> : null}
 
         {cntAll > 0 ? (
@@ -12481,6 +12523,7 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
         {message ? <p className="console-documents-message">{message}</p> : null}
         {error ? <p className="console-documents-error">{error}</p> : null}
 
+        {blocRecuManque}
         {formulaireAjout}
 
         {loading ? <p className="empty-state">Chargement des documents Console...</p> : null}

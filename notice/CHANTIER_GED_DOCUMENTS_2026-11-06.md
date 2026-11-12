@@ -818,3 +818,45 @@ d'identité et 1 PDF d'offre. Mesuré :
 - les 15 autres documents du bien n'ont été touchés que par la resynchro habituelle d'après dépôt ; le marqueur de
   signature « to_send » posé sur le nouveau PDF vient de cette même synchro (tous les PDF du bien l'ont), pas de la GED.
 ⏳ Pas encore essayé : un nom muet, la photo de plusieurs pages, le vrai téléphone.
+
+### 12.8 Le morceau 3 — « Reçu / Manque » (audit du 12/11, rien codé)
+**Audit** :
+- Les pièces par moment : §11.3 (6 moments validés le 06/11, étiquettes obligatoire / bonne pratique / si…), durées §11.4.
+  §11.6 points 2-4 encore ouverts (ce qui bloque, trace de l'état des risques remis aux visiteurs, faits des conditions).
+- Le moment en cours, mesuré sur les 714 biens en cours : Actif 579 (dont 164 sans numéro de mandat), Sous offre 43,
+  Sous compromis 92 ; un bien vendu n'est plus dans `app_dossier_current` (le moment « vente » n'est pas atteignable ici).
+- Les faits des conditions, remplis sur les biens en cours : copropriété « oui » 114 ; année de construction
+  (`diagnostiques_json.ANNEE_CONS`) 301 sur 714 (42 %) ; assainissement (`equipements_json.ASSAINISSEMENT`) 211 ; dates
+  de diagnostics gaz / termites / assainissement presque jamais (0 à 4).
+- Le code qui existe : `FicheNotaire.tsx:94` (`PIECES_DU_DOSSIER`, 11 pièces par motifs, sa propre copie des règles) ;
+  motifs de refus de Pauline (`App.tsx:7092`, `refusalReasonOptions`) ; `DemandeDocument.tsx` (demander au syndic,
+  commander un diagnostic) monté à `App.tsx:48818`. Maquette de l'onglet : écran E0 (bloc « Reçu / manque » au-dessus de
+  la liste existante, laissée telle quelle ; « Manque : glisse le fichier ici »).
+- Lecture des classements : `app_ged_classement` n'est lisible par personne aujourd'hui (RLS sans politique) → il faut
+  une politique de lecture (même périmètre que `app_console_document`).
+⏳ Attend le « vas-y » de Frédéric.
+✅ **« Vas-y, morceau 3 » (12/11). ÉCRIT ET CONTRÔLÉ HORS LIGNE, PAS ENCORE EN SERVICE :**
+- `apps/hektor-v1/src/lib/gedPieces.ts` (fonction pure) : les pièces par moment (§11.3), le moment en cours (pas de
+  n° de mandat → prise de mandat ; actif avec mandat → mise en vente et visites ; sous offre → offre ; sous compromis →
+  compromis), les conditions (copropriété, année < 1997 / < 1949, bâti de plus de 15 ans, maison classée E/F/G avec la
+  classe recalculée, assainissement non collectif, terrain / garage sans diagnostics, case « DPE non concerné ») ; une
+  condition que la fiche ne dit pas → « selon le cas », jamais « non trouvé », et non comptée. Reconnaissance : le type
+  décidé (classement GED) d'abord, sinon le NOM (`gedTypeParNom`, « sûr » ou « probable ») ; un dossier de diagnostics
+  compte pour les diagnostics, « dans un dossier ». Moments précédents : seules leurs pièces OBLIGATOIRES non trouvées.
+- `src/RecuManque.tsx` + `.css` : le bloc ; ce qui manque d'abord, les reçues repliées sur une ligne ; cliquer une pièce
+  non trouvée ouvre la fenêtre de dépôt avec ce type choisi (bandeau « Prochain fichier : … »).
+- `src/lib/ged.ts` : `useGedRecuManque`, `loadGedClassements` (lecture ratée = les noms suffisent).
+- `src/DepotDocuments.tsx` : `typeAttendu` (le prochain fichier prend ce type ; nom muet → « <type> <date> »).
+- `App.tsx` (+44 / −1, `ConsoleDocumentsPanel` et une fonction `faitsGedDuBien` qui lit la fiche par
+  `rawWizardDetailField`) : `blocRecuManque` monté au-dessus du dépôt dans les deux habillages.
+- `supabase/patch_ged_m3_recu_manque_2026-11-12.sql` (+ `_INVERSE`, + `_REPETITION`) : lecture de `app_ged_classement`
+  au périmètre des documents (lecteur global, ou biens du portefeuille), SELECT seul pour authenticated, interrupteur
+  `ged_recu_manque = off`. **Répétition : 5 OK, 0 KO** (admin voit les 3 classements, un négociateur 0 = ce qu'il doit
+  voir, écriture directe refusée) ; rien n'est resté. ⚠ Pas de témoin positif côté négociateur (aucun n'a encore de
+  classement sur ses biens). **PAS POSÉ.**
+- Contrôles : `npm run build` vert ; `test_ged_recu_manque.cjs` **29 VERT** ; `test_ged_depot.cjs` 17 VERT ; les 5 essais
+  de la signature verts ; écran vu sur une page d'essai à données fictives (bureau 1280 × 665 : bloc de 349 px ;
+  téléphone 375 : rien ne déborde ; clic sur une pièce → type pré-choisi).
+✅ **« Oui, les quatre » (12/11)** : patch m3 **POSÉ EN PRODUCTION**, contrôles relus **5 VERT** ; commité, poussé ;
+`ged_recu_manque` allumé en `admin` (les 4 admins actifs). ⏳ Reste : le voir sur de vrais biens (un actif, un sous offre,
+un sous compromis) et juger la liste avec Frédéric.

@@ -96,6 +96,37 @@ export function useGedDepotMultiple(): boolean {
   return actif
 }
 
+// GED morceau 3 : le bloc « Reçu / Manque » a son propre interrupteur (même règle à trois crans).
+export function useGedRecuManque(): boolean {
+  const [actif, setActif] = useState(false)
+  useEffect(() => {
+    let annule = false
+    void loadInterrupteurTroisCrans('ged_recu_manque').then((v) => { if (!annule) setActif(v) })
+    return () => { annule = true }
+  }, [])
+  return actif
+}
+
+// Les types DÉCIDÉS des documents déposés avec l'outil, pour un bien (lecture : patch_ged_m3_recu_manque, même
+// périmètre que les documents). Clé : la ligne du document chez nous. Une lecture ratée rend une liste vide :
+// les documents retombent alors sur leur nom, rien ne casse.
+export async function loadGedClassements(hektorAnnonceId: string | number): Promise<Map<string, string>> {
+  const types = new Map<string, string>()
+  if (!hasSupabaseEnv || !supabase) return types
+  try {
+    const { data, error } = await supabase
+      .from('app_ged_classement')
+      .select('app_console_document_id,type_code')
+      .eq('hektor_annonce_id', String(hektorAnnonceId))
+      .not('app_console_document_id', 'is', null)
+    if (error) return types
+    for (const r of (data ?? []) as Array<{ app_console_document_id: string; type_code: string }>) types.set(r.app_console_document_id, r.type_code)
+  } catch {
+    // lecture ratée : les noms suffisent
+  }
+  return types
+}
+
 // L'empreinte du fichier, la même que celle que le worker pose sur notre ligne (sha256 du contenu).
 export async function empreinteFichier(file: Blob): Promise<string> {
   const tampon = await file.arrayBuffer()

@@ -1,0 +1,39 @@
+/* GED (12/11/2026, morceau 3) : le bloc « Reçu / Manque » de l'onglet Documents. */
+.gm { display: grid; gap: 8px; min-width: 0; margin-bottom: 10px; padding: 10px 12px; border: 1px solid rgba(34, 35, 35, 0.1); border-radius: 8px; background: #ffffff; }
+.gm-h { display: grid; gap: 2px; }
+.gm-h h4 { margin: 0; color: var(--gti-final-ink); font-size: 13px; line-height: 1.25; }
+.gm-h span { color: #747a7a; font-size: 11px; font-weight: 700; }
+.gm-liste { display: grid; gap: 4px; }
+.gm-l {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: #fafafa;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+button.gm-l { cursor: pointer; }
+button.gm-l.is-non_trouve { border-color: rgba(197, 0, 95, 0.25); border-style: dashed; background: #ffffff; }
+button.gm-l:hover, button.gm-l:focus-visible { border-color: var(--gti-final-magenta); outline: none; }
+.gm-ic { display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; font-size: 12px; font-weight: 900; }
+.gm-ic.is-recu { background: #e6f3ec; color: #1f5e41; }
+.gm-ic.is-non_trouve { border: 1.5px dashed rgba(197, 0, 95, 0.55); }
+.gm-ic.is-selon_le_cas { background: #eceeef; color: #5c6163; }
+.gm-t { min-width: 0; color: var(--gti-final-ink); font-size: 12px; font-weight: 800; line-height: 1.25; }
+.gm-t small { display: block; color: #747a7a; font-size: 10.5px; font-weight: 700; }
+.gm-prive { margin-left: 6px; padding: 0 5px; border-radius: 4px; background: #eceeef; color: #5c6163; font-size: 10px; font-weight: 800; }
+.gm-d { min-width: 0; overflow: hidden; color: #5c6163; font-size: 11.5px; text-overflow: ellipsis; white-space: nowrap; }
+.gm-l.is-non_trouve .gm-d { color: var(--gti-final-magenta); font-weight: 800; }
+.gm-avant-b { padding: 4px 0; border: 0; background: none; color: #5c6163; font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; }
+.gm-avant-t { margin: 4px 0 0; color: #747a7a; font-size: 11px; font-weight: 800; }
+@media (max-width: 760px) {
+  .gm-l { grid-template-columns: 22px minmax(0, 1fr); }
+  .gm-d { grid-column: 2; white-space: normal; }
+}
