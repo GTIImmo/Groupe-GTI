@@ -334,7 +334,8 @@ Colonnes : code (le contrat, stable) · libellé (modifiable) · nombre · dont 
   « bilan_charges », « charges annuelles »). Les 853 « charges » sans précision sont proposées en `copro.arrete_charges`
   *à confirmer* : sur 11 lues, 7 étaient des dépenses réelles et 4 des appels de fonds. Global après la scission :
   sûr 75,8 %, probable 10,3 %, non reconnu 16 288.
-- ⏳ Points 1 à 7 : en attente. Le code (GED-2 et suite) attend son « vas-y », pièce par pièce.
+- ✅ **Points 1 à 7 TRANCHÉS le 12/11, un par un** → voir §12.3. ⚠ Le point 5 change le périmètre : **les documents
+  déjà en base ne sont pas traités** (pas de classement du stock, GED-3 abandonné).
 
 ## 7. LE GAIN DE TEMPS — conseil du 06/11 (question de Frédéric : « je n'ai vu ni maquette ni gain de temps, hormis un classement »)
 
@@ -654,3 +655,98 @@ Hektor quand ils existent, sinon les demander une fois.
 - Restent « à vérifier » sur texte (non tranchés par cette validation) : vigilance anti-blanchiment pour l'acquéreur,
   mentions de copropriété dans l'annonce, durée de validité de l'audit énergétique et du diagnostic bruit.
 - Rien n'est codé : GED-2 et la suite attendent toujours un « vas-y » explicite.
+
+## 12. L'OUTIL D'AJOUT DE DOCUMENTS — LA PROPOSITION ARRÊTÉE (11-12/11/2026)
+
+> Travail fait en LECTURE SEULE (équipe d'agents, puis étude d'experts). Page de référence, maquettes comprises :
+> https://claude.ai/artifact/WEHAruTgvuctKN74N8Rt6r (version 10). Rapports complets (hors dépôt) : bloc-notes de la
+> session, dossier `ged_equipe/` (1 à 6) et `ged_equipe/etude/` (A à D par famille, **E_synthese_catalogue.md = la
+> référence du catalogue**). ⭐ Le 12/11 au soir, « on peut reprendre » : le morceau 1 commence (§12.6).
+
+### 12.1 Le cadre (décisions de Frédéric du 12/11)
+- **Seuls les documents déposés DANS L'APP sont lus.** Pas de lecture du soir des documents arrivés par la console Hektor
+  (proposée le 11/11, **refusée** : « uniquement ajout de documents dans l'app »). Ne pas re-proposer.
+- **Développé et essayé par Frédéric SEUL, avant la migration des négociateurs.** Tout derrière des interrupteurs à trois
+  crans (off / admin / on), réglés sur « admin » pendant les essais ; les négociateurs gardent le formulaire d'aujourd'hui.
+- **Le run de nuit et la collecte des mises à jour Hektor NE SONT PAS TOUCHÉS.** Effet indirect seulement : la descente
+  (`phase2/sync/pull_from_supabase.py`) recopie d'elle-même toute table neuve.
+- **Jusqu'à la coupure, chaque document part chez Hektor par le chemin existant** (`createUploadDocumentToHektorJob` →
+  `upload_document_to_hektor`, dépôt différé), une fois son type et son nom validés. Le nom reste définitif (⑦-9).
+- **Le worker n'est pas modifié** : l'anti-doublon du dépôt différé (4 doublons de 59203, 23/10) est écrit depuis le 06/11
+  (G1, commit `3c32daa`, session signature). ⏰ Vérifier qu'il est CHARGÉ (heure des processus) avant le 1er essai.
+- **L'IA classe chaque fichier AVANT l'envoi** (type parmi les 60, nom, découpage en pièces) **et lit les valeurs APRÈS**
+  (PDF et photos). **L'IA extrait, NOTRE CODE compare.** Rien ne s'écrit sans clic. La lecture tourne sur le backend
+  Render (fichier déjà au coffre) : pas de 5ᵉ service Windows.
+- **Les pièces des personnes SONT lues** (« il faut bien récupérer les données sur la carte d'identité, ce n'est pas
+  inutile pour vérifier ou compléter la data ») : identité, état civil, fiche de renseignements, financement.
+- ⛔ **Le RIB est EXCLU de toute lecture** (« NON IL FAUT EXCLURE LES RIB ! ») : jamais envoyé à l'IA. Garde : un nom
+  « RIB » ou un IBAN dans le texte d'un PDF → reconnu chez nous, jamais envoyé ; une photo muette part en basse définition
+  pour le seul classement, et si c'est un RIB rien n'est gardé à part le type.
+- ✅ **Registre anti-blanchiment : OUI** — le numéro, la date et le lieu de délivrance de la pièce d'identité restent CHEZ
+  NOUS (table à accès restreint : admin, managers, négociateur du bien), jamais chez Hektor.
+- **Mesure de protection** : seulement sa nature (tutelle, curatelle, habilitation), le représentant, la date du jugement.
+  Jamais le motif ni la santé.
+- **Pas de choix complète / resserrée d'avance** : morceaux livrés dans l'ordre de valeur ; la resserrée est un point
+  d'arrêt ; décision après 2 semaines de mesure (vrai / faux / déjà su, règle par règle).
+
+### 12.2 Le catalogue (étude d'experts du 12/11, détail dans `E_synthese_catalogue.md`)
+- **23 types lus, 37 « classer seulement »** dont 5 jamais envoyés à l'IA : RIB, comptes d'entreprise, notes internes,
+  courrier, clés. Taxe foncière : classée, pas lue en V1 (pas une mention obligatoire ; seul geste = groupe
+  `mandat_infofi`, prix + honoraires).
+- **7 comparateurs** (nombre, date, personnes, lieu, références, liste, présence) + 2 étapes (normaliser, résoudre la
+  cible). Réponses : égal / proche / différent / incomparable ; seul « différent » alerte.
+- **42 règles V1** : 13 sans IA (N1-N13), 19 avec lecture des documents du bien et des affaires (L1-L19), 10 avec lecture
+  des pièces des personnes (P1-P10, le RIB retiré). Une cinquantaine « plus tard », une vingtaine « jamais ».
+- Mesuré sur les biens en cours : date de naissance remplie pour 167 mandants sur 1 292, situation de famille 72 ;
+  acquéreurs 10 sur 252. Geste existant : `editContactOptimistic` (`api.ts:11643`, accepte `birth_date`, `birth_place`,
+  `marital_status` ; 6 envois `update_hektor_contact` avec date de naissance déjà `done`).
+
+### 12.3 La nomenclature : points 1 à 7 du §6.8 tranchés le 12/11
+1. 14 familles, justificatifs séparés du mandat. 2. Un type par diagnostic (11). 3. Petits types gardés. 4. Familles
+courrier, interne, entreprise, location gardées. 5. ⛔ **« On ne va pas traiter les documents déjà en base »** : rien n'est
+classé, lu ni écrit pour les ~193 000 anciens ; leur NOM sert seulement, à l'affichage, à dire « trouvé » dans « Reçu /
+Manque » et les règles sans IA (« non trouvé », jamais « absent »). 6. Factures d'honoraires NON sensibles. 7. Les 6
+types partenaires gardés.
+
+### 12.4 Ce que l'étude a corrigé (vérifié en base et dans le code)
+- Les groupes de `app_dossier_detail_current.detail_payload_json` sont du JSON **rangé en chaîne** : décoder deux fois,
+  à UN seul endroit, sinon toutes les cases paraissent vides (714/714 mesuré le 12/11).
+- Le groupe `diagnostiques` n'a **jamais** rempli une case vide en modification (le 22/10 sur 63331 = renvoi à
+  l'identique) : épreuve sur 62774 avant tout « remplir » DPE / état des risques.
+- `app_set_mandat_charge_optimistic` **écrase** et **efface sur null** (`patch_charge_honoraires_mandat_2026-11-02.sql`
+  l. 295-311) ; `app_conditions_affaire_ecrire` efface puis repose toute la liste et est réservée managers / admins en
+  base ; le report RNIC (`App.tsx:11603`) écrit le syndic en texte libre ; le cadastre IGN n'est pas une référence.
+
+### 12.5 Le chemin et le coût
+Morceaux : 1 base (2 j) · 2 fenêtre de dépôt (6 j) · 3 « Reçu / Manque » (3 j) · 4 classement par l'IA avant l'envoi
+(4 j) · 5 les 13 règles sans IA (3 j) · 6 les 14 fiches de lecture (7,5 j) · 7 comparateurs et 19 règles (7 j) ·
+8 propositions (5 j) · 9 pièces des personnes (9 j) · 10 mesure (1,5 j). **≈ 48 j de développement, ≈ 57 avec essais et
+coordination** ; point d'arrêt resserré ≈ 35 / 42. **Coût IA** (≈ 1 150 dépôts / mois après migration) : ≈ 1,3 € / mois
+(gpt-6-luna), 2,6 € (gpt-5.6-luna), 4,7 € (gpt-4.1-mini) ; 3 à 10 € au maximum avec marge ; < 0,50 € / mois pendant
+les essais. Avant le 1er document réel : contrat de sous-traitance avec le fournisseur d'IA et `store:false`. Avant les
+négociateurs : analyse d'impact, registre des traitements, clause au mandat.
+
+### 12.6 Le morceau 1 — la base (ouvert le 12/11 au soir)
+**Audit (12/11, lecture seule)** : aucune table ni réglage `ged` en base ; `app_console_document.id` est un uuid, une
+seule clé étrangère pointe vers elle (`app_signature_request`, ON DELETE SET NULL) ; une table neuve donne PAR DÉFAUT
+tous les droits à `authenticated` (`pg_default_acl`) → chaque rôle se nomme dans les `revoke` ; patron suivi :
+`patch_affaire_suivi_2026-11-09.sql` (RLS sans politique = personne n'accède sauf le service_role).
+
+**Le patch écrit, PAS appliqué** : `supabase/patch_ged_m1_base_2026-11-12.sql` (+ `_INVERSE`, + `_REPETITION`
+fabriquée à partir du patch, qui lève une erreur volontaire : rien n'est gardé ; attendu « 12 VERT, 0 ROUGE »).
+- 4 tables : `app_ged_type` (66 codes = 60 types + 6 partenaires ; `lecture` lue 23 / classer / jamais_envoye 5 ;
+  `sensible` 5), `app_ged_classement` (une fiche par document DÉPOSÉ AVEC L'OUTIL), `app_ged_rattachement`,
+  `app_ged_journal` ; 3 interrupteurs `ged_depot_multiple`, `ged_lecture_ia`, `ged_propositions` = `off`.
+- ⭐ **Choix d'audit : AUCUNE clé étrangère vers `app_console_document`** — un simple uuid + une empreinte de secours
+  (annonce, sha256, nom). Raisons : ne pas verrouiller ni modifier la table de la signature, et la synchro supprime /
+  recrée des lignes (une clé `ON DELETE SET NULL` perdrait le lien au premier dédoublonnage). ⇒ le morceau 1 ne touche
+  pas `app_console_document` : la session signature sera prévenue au morceau 2 (le panneau des documents).
+- Pas encore les tables de lecture, de valeurs et de propositions (morceaux 6 à 9) ; aucune fonction ; rien à l'écran.
+- Effet ailleurs : la descente de 07:45 recopiera les 4 tables (66 lignes + vides).
+✅ **POSÉ EN PRODUCTION le 12/11 au soir, avec l'accord de Frédéric (« Oui, vas-y »)** :
+- répétition d'abord : **12 VERT, 0 ROUGE**, puis vérifié que rien n'était resté (0 table `app_ged_*`, 0 réglage) ;
+- patch posé, puis les 12 contrôles relus en production : **12 VERT** ;
+- ⭐ témoin inverse (en rôle `authenticated`, transaction annulée) : lecture du classement **REFUSÉE**, écriture dans la
+  nomenclature **REFUSÉE**.
+Les 3 interrupteurs sont éteints ; rien ne lit encore ces tables. ➡ Suivant : **morceau 2, la fenêtre de dépôt**
+(prévenir la session signature avant la première ligne, `ConsoleDocumentsPanel` étant son panneau).
