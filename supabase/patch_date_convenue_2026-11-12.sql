@@ -169,3 +169,30 @@
 --   ⭐ Les 191 + 48 + 10 sont des transactions MORTES ou des coquilles : sans
 --     effet. ⚠ MAIS 13 compromis ACTIFS et 5 offres VIVANTES sans date faussent
 --     les délais. Mettre une date est une DÉCISION : à lui.
+--   ⭐ LE 267 EST VÉRIFIÉ DEUX FOIS (question de Frédéric, 12/11 au soir) : même
+--     compte en incluant la chaîne vide, et l'arithmétique se referme —
+--     267 = 173 transactions dans un dossier daté par ailleurs + 94 dans un
+--     dossier dont AUCUNE transaction n'a de jour.
+--
+-- ═══════════════════════════════════════════════════════════════════════════
+-- ⭐⭐ CE QUE SA QUESTION A FAIT TOMBER — L'ASYMÉTRIE JOUR / ANNÉE, ASSUMÉE
+-- ═══════════════════════════════════════════════════════════════════════════
+-- 94 dossiers n'ont aucune date de transaction, mais SEULEMENT 6 portent une
+-- étiquette `D0000`. Les 88 autres en ont une vraie, et ce n'est PAS un défaut :
+-- `app_dossier_annee_ouverture` a un REPLI ÉCRIT sur l'année du MANDAT du bien,
+-- puis `0000` en dernier recours. Répartition mesurée des 94 :
+--        D0000  6 . 2017 1 . 2018 2 . 2019 4 . 2020 9 . 2021 8 . 2023 7 .
+--        2024 28 . 2025 29        (6 + 88 = 94)
+--
+-- ⛔ LA QUESTION QUE ÇA POSE, ET LA RÉPONSE : pourquoi ne pas donner AU JOUR le
+--   même repli sur le mandat ? Il aurait daté les 5 offres tout seul — 4 d'entre
+--   elles ont justement `mandat_debut` pour source.
+--   ➡ PARCE QU'IL AURAIT AUSSI DATÉ LES 262 AUTRES, EN SILENCE. Le début d'un
+--     mandat n'EST PAS la date d'une offre : c'est une approximation. Sur 5 cas
+--     examinés un par un et tracés avec leur motif, c'est une décision assumée ;
+--     sur 262 cas en silence, c'est de la FABRICATION DE DONNÉES — et c'est très
+--     exactement la faute « un repli fabrique une date qui glisse ».
+--   ⭐ L'ASYMÉTRIE EST DONC VOULUE : l'ANNÉE D'OUVERTURE d'un dossier peut
+--     légitimement venir de son mandat (c'est bien l'année où le dossier s'est
+--     ouvert) ; le JOUR d'une transaction, non — il n'y a pas de bonne réponse
+--     approchée à « quand cette offre a-t-elle été faite ».
