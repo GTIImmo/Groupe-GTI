@@ -109,13 +109,27 @@ refus fait à la main chez Hektor et le nôtre. **NON MESURÉ, c'est une hypoth�
 ### ÉTAPE 2 — l'étiquette de dossier *(B2/B3 du plan du 29/10)*
 
 ```
-2.1 ⬜              ecrire la REPETITION qui manque au patch
-2.2 ⬜              la pose A BLANC -> le compte attendu est 12 174
-2.3 ⬜ ACCORD       coller patch_etiquette_dossier_2026-11-09.sql, INVERSE sous la main
-2.4 ⬜ ACCORD       B3 le remplissage + la sentinelle de la nuit suivante
-⭐ le format est deja valide (« Oui » aux deux, 09/11) : D2026-0431 + un UUID
-⭐ le code local est PRET : les 2 colonnes sont deja dans
-  COLONNES_QUE_LE_PUSH_N_ENVOIE_PAS (affaire_ledger.py l. 2561)
+2.1 ✅ FAIT 12/11   la REPETITION ecrite AVANT le collage -- 12 controles, 3 temoins
+                    inverses (..._REPETITION.sql, commit cc537ce)
+2.2 ✅ FAIT 12/11   la pose A BLANC : 11 441 dossiers, 0 ligne ecrite
+2.3 ✅ POSE 12/11   deux migrations : etiquette_dossier_objets_2026_11_12 et
+                    etiquette_dossier_pose_et_droits_2026_11_12
+                    les 12 controles joues apres le collage : TOUS VERTS
+2.4 ✅ B3 FAIT 12/11  le remplissage, en 4 lots (50 d'essai, puis 3 000, 4 000, le reste)
+                    31 151 / 31 151 transactions etiquetees -- 0 sans etiquette
+                    11 441 dossiers = 11 441 uuid = 11 441 numeros (bijection)
+                    invariants 0/0 . journal 11 441 poses, somme 31 151
+                    compteur : 25 annees, somme des rangs 11 441
+                    ⭐ les 6 dossiers muets (D0000-xxxx) sont TOUS MORTS -- les
+                      fermetures du matin ont solde les 2 qui comptaient encore
+2.5 ⬜ A FAIRE      ⛔⛔ BRANCHER LA POSE DANS LE RUN DE NUIT (B4) + la sentinelle.
+                    RIEN NE L'APPELLE AUJOURD'HUI : la nuit recalcule les groupes,
+                    et sans appel apres, une transaction neuve reste SANS etiquette
+                    et une fusion de groupes garde DEUX etiquettes. C2 du 29/10 :
+                    l'appel vient APRES le calcul des groupes, jamais pendant.
+⭐ le format est valide (« Oui » aux deux, 09/11) : D2026-0431 + un UUID
+⭐ le code local etait PRET avant la pose : les 2 colonnes sont dans
+  COLONNES_QUE_LE_PUSH_N_ENVOIE_PAS (affaire_ledger.py l. 2561) -- condition C1
 ```
 
 ### ÉTAPE 3 — le rapatriement *(P1.4)*
