@@ -8,6 +8,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { loadAffairesForDossier } from './lib/api'
 import { etatFiableDuDocument } from './lib/etatSignatureMandat'
 import { loadGedClassements, useGedPropositions } from './lib/ged'
+import { dateEtatLue, loadGedLectures, resumeLecture, type LectureDocument } from './lib/gedLecture'
 import { LIBELLE_MOMENT, recuManque, type LignePiece } from './lib/gedPieces'
 import { deposeAuPlusTard, LIBELLE_A_DEPOSER, reglesSansIa, type AffaireRegle, type Alerte, type FaitsRegles } from './lib/gedRegles'
 import type { ConsoleDocument } from './types'
@@ -40,6 +41,8 @@ export function RecuManque({
   const regles = useGedPropositions()
   const [affaires, setAffaires] = useState<AffaireRegle[] | null>(null)
   const [classements, setClassements] = useState<Map<string, string>>(() => new Map())
+  // morceau 6 : ce que l'IA a lu dans les documents déposés avec l'outil (la plus récente lecture par document)
+  const [lectures, setLectures] = useState<Map<string, LectureDocument>>(() => new Map())
   const [ouvrirPrecedents, setOuvrirPrecedents] = useState(false)
   // ce qui manque d'abord ; les pièces reçues se replient sur une ligne (écran bas : 665 px)
   const [ouvrirRecues, setOuvrirRecues] = useState(false)
@@ -48,6 +51,7 @@ export function RecuManque({
   useEffect(() => {
     let annule = false
     void loadGedClassements(hektorAnnonceId).then((m) => { if (!annule) setClassements(m) })
+    void loadGedLectures(hektorAnnonceId).then((m) => { if (!annule) setLectures(m) })
     return () => { annule = true }
     // relu quand la liste des documents change (un dépôt vient d'arriver)
   }, [hektorAnnonceId, nbDocuments])
@@ -67,9 +71,17 @@ export function RecuManque({
     if (!regles || affaires === null) return []
     const docs = documents
       .filter((d) => d.present_in_hektor !== false)
-      .map((d) => ({ nom: d.document_name, typeCode: classements.get(d.id) ?? null, date: depose(d), signature: etatFiableDuDocument(d)?.status ?? null, modele: d.source === 'hektor_console_modele' }))
+      .map((d) => ({ nom: d.document_name, typeCode: classements.get(d.id) ?? null, date: depose(d), signature: etatFiableDuDocument(d)?.status ?? null, modele: d.source === 'hektor_console_modele', dateEtat: dateEtatLue(lectures.get(d.id)) }))
     return reglesSansIa(faits, docs, affaires, new Date())
-  }, [regles, affaires, faits, documents, classements])
+  }, [regles, affaires, faits, documents, classements, lectures])
+
+  // le résumé de la lecture, à côté du nom d'un document reçu (« DPE 2024.pdf — Lu : énergie D… »)
+  const resumeParNom = useMemo(() => {
+    const m = new Map<string, string>()
+    for (const d of documents) { const l = lectures.get(d.id); if (l) m.set(d.document_name, resumeLecture(l)) }
+    return m
+  }, [documents, lectures])
+  const avecLecture = (nom: string) => (resumeParNom.has(nom) ? `${nom} — ${resumeParNom.get(nom)}` : nom)
 
   const resultat = useMemo(() => recuManque(
     faits,
@@ -88,9 +100,9 @@ export function RecuManque({
           {l.sensible ? <span className="gm-prive" title="Toujours privé">privé</span> : null}
           <small>{NIVEAU[l.niveau]}{l.pourquoi ? ` : ${l.pourquoi}` : ''}</small>
         </span>
-        <span className="gm-d">
+        <span className="gm-d" title={recu ? l.documents.map(avecLecture).join('\n') : undefined}>
           {recu
-            ? `${l.dansUnDossier ? 'Dans un dossier de diagnostics : ' : ''}${l.documents.slice(0, 2).join(', ')}${l.documents.length > 2 ? ` (+${l.documents.length - 2})` : ''}`
+            ? `${l.dansUnDossier ? 'Dans un dossier de diagnostics : ' : ''}${l.documents.slice(0, 2).map(avecLecture).join(', ')}${l.documents.length > 2 ? ` (+${l.documents.length - 2})` : ''}`
             : l.etat === 'selon_le_cas'
               ? 'La fiche ne dit pas si elle est due'
               : onDeposer ? 'Non trouvée : déposer' : 'Non trouvée'}

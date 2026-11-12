@@ -21,8 +21,9 @@ export type FaitsRegles = FaitsDuBien & {
 // Un document, avec la date de son dépôt et l'état de signature électronique que l'écran sait déjà lire
 // (etatFiableDuDocument : 'signed', 'pending', 'to_send'…, null pour un PDF sans état -- papier ou scan). `modele` : un
 // document généré par le modèle de Hektor (source 'hektor_console_modele') n'est PAS un mandat papier signé.
-// `date` : le jour du dépôt AU PLUS TARD (deposeAuPlusTard), en « AAAA-MM-JJ ».
-export type DocumentRegle = { nom: string; typeCode: string | null; date: string | null; signature: string | null; modele?: boolean }
+// `date` : le jour du dépôt AU PLUS TARD (deposeAuPlusTard), en « AAAA-MM-JJ ». `dateEtat` (morceau 6) : la date de
+// l'état LUE par l'IA dans le document (« établi le ») ; quand elle existe, c'est elle qui fait foi.
+export type DocumentRegle = { nom: string; typeCode: string | null; date: string | null; signature: string | null; modele?: boolean; dateEtat?: string | null }
 export type AffaireRegle = { kind: string; state: string | null; date: string | null; dateActe: string | null }
 
 export type NiveauAlerte = 'alerte' | 'piece' | 'info'
@@ -125,14 +126,16 @@ export function reglesSansIa(faits: FaitsRegles, documents: DocumentRegle[], aff
   // compromis est à venir). La date d'un document est un « au plus tard » (deposeAuPlusTard) : la règle ne sonne que si
   // même cette borne a plus de 6 mois -- elle peut se taire à tort, jamais crier à tort.
   if (moment === 'offre' || moment === 'compromis') {
-    const erp = deType('diag.erp', 'diag.dossier').map((d) => lireDate(d.date)).filter((x): x is Date => Boolean(x))
+    const erp = deType('diag.erp', 'diag.dossier')
+      .map((d) => (lireDate(d.dateEtat) ? { quand: lireDate(d.dateEtat) as Date, lue: true } : { quand: lireDate(d.date), lue: false }))
+      .filter((x): x is { quand: Date; lue: boolean } => Boolean(x.quand))
     const signatures = moment === 'compromis' ? affaires.filter((a) => a.kind === 'compromis' && vivante(a)).map((a) => lireDate(a.date)).filter((x): x is Date => Boolean(x)) : []
     const reference = signatures.length ? new Date(Math.max(...signatures.map((x) => x.getTime()))) : aujourdhui
     if (erp.length) {
-      const dernier = new Date(Math.max(...erp.map((x) => x.getTime())))
-      if (reference.getTime() - dernier.getTime() > 183 * JOUR) {
+      const dernier = erp.reduce((a, b) => (b.quand > a.quand ? b : a))
+      if (reference.getTime() - dernier.quand.getTime() > 183 * JOUR) {
         const quand = signatures.length ? `au compromis du ${jjmmaaaa(reference)}` : 'aujourd\'hui'
-        alertes.push({ code: 'N4', niveau: 'alerte', texte: `État des risques déposé au plus tard le ${jjmmaaaa(dernier)} : plus de 6 mois ${quand}`, pourquoi: 'il doit avoir moins de 6 mois à la signature (date du dépôt, pas de l\'état)', typeADeposer: 'diag.erp' })
+        alertes.push({ code: 'N4', niveau: 'alerte', texte: `État des risques ${dernier.lue ? 'établi' : 'déposé au plus tard'} le ${jjmmaaaa(dernier.quand)} : plus de 6 mois ${quand}`, pourquoi: dernier.lue ? 'il doit avoir moins de 6 mois à la signature (date lue dans le document)' : 'il doit avoir moins de 6 mois à la signature (date du dépôt, pas de l\'état)', typeADeposer: 'diag.erp' })
       }
     }
   }

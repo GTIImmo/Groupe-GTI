@@ -16,7 +16,8 @@ import {
   empreinteFichier, gedClasser, GED_FAMILLES, GED_TAILLE_MAX, GED_TYPES_ACCEPTES, loadGedTypes, nomEnConflit,
   type GedType,
 } from './lib/ged'
-import { classerParIa, preChoisirTypeIa, preparerPourIa, separerPdf, useGedLectureIa, type ResultatIa } from './lib/gedClassementIa'
+import { classerParIa, lireParIa as lireValeursParIa, preChoisirTypeIa, preparerLecture, preparerPourIa, separerPdf, useGedLectureIa, type ResultatIa } from './lib/gedClassementIa'
+import { FICHES_LUES, resumeLecture } from './lib/gedLecture'
 import { typeParNom } from './lib/gedTypeParNom'
 import type { ConsoleDocument, ConsoleJob, Dossier } from './types'
 import './DepotDocuments.css'
@@ -28,6 +29,12 @@ type EtatIa =
   | { etat: 'lecture' }
   | { etat: 'fait'; r: ResultatIa }
   | { etat: 'non_envoye'; raison: string }
+  | { etat: 'erreur'; raison: string }
+
+type EtatLecture =
+  | { etat: 'attente' }
+  | { etat: 'lecture' }
+  | { etat: 'fait'; resume: string }
   | { etat: 'erreur'; raison: string }
 
 type Ligne = {
@@ -44,6 +51,8 @@ type Ligne = {
   typePropose: string | null
   typeProposePar: 'nom' | 'ia' | null
   ia: EtatIa | null
+  // morceau 6 : la lecture des valeurs APRÈS l'envoi (null = pas de fiche pour ce type, ou interrupteur éteint)
+  lecture: EtatLecture | null
   forceNom: 'sur' | 'probable' | 'muet' | 'reste'
   visibilite: 'private' | 'shared'
   sha256: string | null
@@ -124,7 +133,8 @@ export function DepotDocuments({
 
   // « une saisie ne se perd jamais » : quitter la page avec des fichiers non envoyés demande confirmation
   useEffect(() => {
-    if (!lignes.some((l) => l.etat === 'pret' && l.aEnvoyer)) return
+    // (et, morceau 6, tant qu'une lecture attend : le fichier n'est plus que dans cette page)
+    if (!lignes.some((l) => (l.etat === 'pret' && l.aEnvoyer) || l.lecture?.etat === 'attente' || l.lecture?.etat === 'lecture')) return
     const avant = (e: BeforeUnloadEvent) => { e.preventDefault() }
     window.addEventListener('beforeunload', avant)
     return () => window.removeEventListener('beforeunload', avant)
@@ -140,6 +150,13 @@ export function DepotDocuments({
     if (suivante) void lireParIa(suivante)
     // lireParIa écrit par setLignes (état à jour) : seule la liste déclenche
   }, [lectureIa, types, lignes])
+
+  // Morceau 6 : la file des LECTURES, une à la fois, pour les documents envoyés dont le type a une fiche.
+  useEffect(() => {
+    if (!lectureIa || lignes.some((l) => l.lecture?.etat === 'lecture')) return
+    const suivante = lignes.find((l) => l.lecture?.etat === 'attente' && l.etat === 'envoye' && l.jobId)
+    if (suivante) void lireValeurs(suivante)
+  }, [lectureIa, lignes])
 
   const parCode = useMemo(() => new Map((types ?? []).map((t) => [t.code, t])), [types])
   const familles = useMemo(() => {
@@ -232,6 +249,7 @@ export function DepotDocuments({
       typePropose: propose.code,
       typeProposePar: propose.code ? 'nom' : null,
       ia: null,
+      lecture: null,
       forceNom: propose.force,
       visibilite: 'private',
       sha256,
@@ -335,7 +353,7 @@ export function DepotDocuments({
           typeProposePar: ligne.typePropose ? ligne.typeProposePar : null,
           sha256: ligne.sha256,
         })
-        modifierEtat(ligne.id, { etat: 'envoye', jobId: job.id, message: null })
+        modifierEtat(ligne.id, { etat: 'envoye', jobId: job.id, message: null, lecture: lectureIa && FICHES_LUES.has(ligne.type) ? { etat: 'attente' } : null })
       } catch (e) {
         modifierEtat(ligne.id, { etat: 'classement_echec', jobId: job.id, message: e instanceof Error ? e.message : String(e) })
       }
@@ -344,12 +362,26 @@ export function DepotDocuments({
     onTermine?.()
   }
 
+  // Morceau 6 : lire les valeurs d'un document envoyé (le serveur écrit la lecture ; rien ne s'écrit sur le bien).
+  async function lireValeurs(ligne: Ligne) {
+    if (!ligne.jobId) return
+    modifierEtat(ligne.id, { lecture: { etat: 'lecture' } })
+    try {
+      const prep = await preparerLecture(ligne.file)
+      if (!prep.lisible) { modifierEtat(ligne.id, { lecture: { etat: 'erreur', raison: prep.raison } }); return }
+      const r = await lireValeursParIa(ligne.jobId, prep, ligne.file.name)
+      modifierEtat(ligne.id, { lecture: { etat: 'fait', resume: resumeLecture({ typeCode: ligne.type, etat: r.etat, valeurs: r.valeurs }) } })
+    } catch (e) {
+      modifierEtat(ligne.id, { lecture: { etat: 'erreur', raison: e instanceof Error ? e.message : String(e) } })
+    }
+  }
+
   async function reclasser(ligne: Ligne) {
     if (!ligne.jobId) return
     modifierEtat(ligne.id, { message: null })
     try {
       await gedClasser({ jobId: ligne.jobId, typeCode: ligne.type, typePropose: ligne.typePropose, typeProposePar: ligne.typePropose ? ligne.typeProposePar : null, sha256: ligne.sha256 })
-      modifierEtat(ligne.id, { etat: 'envoye', message: null })
+      modifierEtat(ligne.id, { etat: 'envoye', message: null, lecture: lectureIa && FICHES_LUES.has(ligne.type) ? { etat: 'attente' } : null })
     } catch (e) {
       modifierEtat(ligne.id, { message: e instanceof Error ? e.message : String(e) })
     }
@@ -517,6 +549,12 @@ export function DepotDocuments({
                   {l.etat === 'pret' ? etatIa(l) : null}
                   {l.etat === 'envoi' ? <span>Envoi en cours…</span> : null}
                   {l.etat === 'envoye' ? <span className="ged-depot-ok">Déposé chez nous, envoi chez Hektor en cours. Type enregistré.</span> : null}
+                  {l.etat === 'envoye' && l.lecture ? (
+                    <span className={`ged-depot-ia${l.lecture.etat === 'fait' ? ' is-avis' : ''}`}>
+                      {l.lecture.etat === 'attente' ? 'Lecture des valeurs à suivre…' : l.lecture.etat === 'lecture' ? "L'IA lit les valeurs…" : l.lecture.etat === 'fait' ? l.lecture.resume : `Pas lu (${l.lecture.raison}).`}
+                      {l.lecture.etat === 'erreur' ? <button className="ghost-button" type="button" onClick={() => modifierEtat(l.id, { lecture: { etat: 'attente' } })}>Relire</button> : null}
+                    </span>
+                  ) : null}
                   {l.etat === 'classement_echec' ? (
                     <span className="ged-depot-refus">
                       {`Déposé, mais le type n'a pas été enregistré (${l.message ?? 'erreur'}).`}

@@ -996,3 +996,59 @@ document (`hektor_uploaded_document_id`, croissant) calé sur 13 points relevés
 connus 19/05→26/06 et 20/08→05/10). La règle ne sonne que si même la borne a plus de 6 mois : elle peut se taire à tort,
 jamais crier à tort. ⚠ **Conséquence mesurée : aucune ligne N4 avant le 18/11/2026** (nos données commencent le 19/05) ; la
 vraie date de l'état viendra de sa lecture (morceau 6, L2). Essais 44 VERT ; mesure : 218 biens sur 723 avec une ligne.
+
+### 12.11 Le morceau 6 — les fiches de lecture (audit du 12/11, rien codé)
+**Audit (lecture seule)** — catalogue : `E_synthese_catalogue.md` §3.2 (L1 à L19) et §5 (14 fiches, 19 types lus) ; forme
+commune `3_analyste_ia_rgpd.md` §2 (`$defs` stricts `txt` / `num` / `date` / `personne`, états `lu` / `incertain` /
+`non_vu`, interdits partout : naissance, numéros fiscaux, IBAN, pièce d'identité, adresse personnelle, santé).
+- **Rien n'existe pour garder une valeur lue** : ni table, ni colonne. Il faut un patch de base (deux tables neuves).
+- **Le fichier** : après « Envoyer », il est au coffre (`temp/uploads`, puis sa place définitive par le worker) ; le
+  serveur sait faire une adresse signée (`supabase_storage.create_signed_url`) mais **ne sait pas lire un PDF** (ni PyMuPDF
+  ni pypdfium2 dans `requirements.txt`). Le navigateur, lui, a encore le fichier ET sait le lire (`pdfjs-dist`, morceau 4).
+  ⚠ §12.1 disait « fichier déjà au coffre » : lire depuis le coffre toucherait la place des documents de la session
+  signature (prévenir d'abord) et ajouterait une bibliothèque au serveur.
+- Le classement (morceau 2) est créé à l'envoi et porte le travail : une lecture s'y accroche sans toucher
+  `app_console_document`.
+- Les personnes : les fiches 4 (compromis) et 5 (mandat) lisent des NOMS (vendeurs, acquéreurs, mandants) pour la
+  résolution de la cible ; jamais de date ni de lieu de naissance (schéma strict). DPA : décision du 12/11, à la fin du dev.
+
+**Proposition** :
+- **La lecture part du navigateur, juste après l'envoi** (le fichier y est encore) : texte du PDF quand il suffit, sinon
+  les pages utiles en haute définition, vers une route neuve du serveur `POST /ged/lire` (même portier que `/ged/classer` :
+  jeton, interrupteur `ged_lecture_ia`, plafond du jour, garde RIB, `store:false`), qui vérifie que le classement est bien
+  celui de l'utilisateur, appelle la fiche du type et ÉCRIT la lecture (clé de service). ⚠ Fenêtre fermée avant la
+  lecture = document non lu (un bouton « Lire » viendra si besoin).
+- **Base** : `app_ged_lecture` (une par document lu : classement, type, version de la fiche, modèle, coût, état) et
+  `app_ged_valeur` (clé, valeur, page, état) ; lecture au même périmètre que les classements ; aucune écriture par l'écran.
+- **Livré en 4 lots**, chacun commité et essayé : lot 1 l'état des risques, le DPE et le dossier de diagnostics (fiches
+  1 à 3) + la base + la route + l'affichage « Lu : … » ; lot 2 compromis et mandat ; lot 3 facture, acte, offre, avenant ;
+  lot 4 titre, surfaces, petits diagnostics, copropriété, fin de mandat, annulation. Chaque lot a son jeu de documents
+  FICTIFS de référence (valeurs attendues connues) passé au vrai modèle.
+- Rien ne se compare ni ne s'écrit sur le bien ici (morceaux 7 et 8) ; seule exception utile tout de suite : la date LUE
+  de l'état des risques remplace la date de dépôt « au plus tard » dans la règle N4.
+✅ **« Vas-y, lot 1 » (12/11). ÉCRIT ET CONTRÔLÉ, RIEN POSÉ NI POUSSÉ :**
+- Base : `supabase/patch_ged_m6_lecture_2026-11-12.sql` (+ `_INVERSE`, + `_REPETITION`) — `app_ged_lecture`, `app_ged_valeur`,
+  lecture au périmètre des classements, aucune écriture par l'écran. **Répétition : 7 OK, 0 KO**, rien n'est resté (⚠ pas
+  de témoin positif côté négociateur : 0 attendu, 0 vu).
+- Serveur : `backend/app/services/openai_ged_lecture_service.py` (fiches `diag.erp`, `diag.dpe`, `diag.dossier`, schéma
+  STRICT construit depuis la fiche, `ce_type` → « pas ce type », valeur hors forme jetée, page hors document effacée,
+  pièce des personnes refusée jusqu'au morceau 9, garde RIB, `detail: high`, 6 pages au plus) ; route `POST /ged/lire`
+  (`routers/ged.py` : même portier, le classement doit être celui de l'utilisateur — `decide_par` —, écrit la lecture et
+  ses valeurs par la clé de service, coût au journal des agents) ; le plafond de 2 $ / jour compte classement ET lecture.
+- Navigateur : `lib/gedClassementIa.ts` (`preparerLecture` : texte seul si les 3 premières pages ont ≥ 30 mots, sinon 4
+  pages à 1 600 px ; garde RIB avant toute image ; `lireParIa`) ; `lib/gedLecture.ts` (types lus, résumé « Lu : … »,
+  date de l'état, `loadGedLectures`) ; `DepotDocuments.tsx` (après l'envoi, une lecture à la fois, « L'IA lit les
+  valeurs… » puis le résumé, « Relire » sur échec ; quitter la page pendant une lecture demande confirmation) ;
+  `RecuManque.tsx` (le résumé à côté des pièces reçues ; la date LUE de l'état des risques fait foi dans N4).
+- **Banc réel, 3 documents fictifs** : ERP en texte (date de l'état et non de l'arrêté de 2019, commune, INSEE), DPE
+  scanné (numéro ADEME, 2 dates, classe, consommation, émissions), dossier de diagnostics (5 diagnostics, dates,
+  conclusions, DPE E) : **12 valeurs sur 12** (« Saint-Étienne » rendu avec son accent) ; 3,7 à 5,6 s ;
+  **0,0009 $ les trois**.
+- Contrôles : `backend/tests/test_ged_lire.py` **17 VERT** + `test_ged_classer.py` 28 ; témoin inverse (sans le contrôle
+  du propriétaire, l'essai tombe) ; `test_ged_lecture.cjs` **15 VERT** ; règles 44, Reçu / Manque 29, dépôt 17,
+  classement 25 et les 5 essais de la signature verts ; `npm run build` vert ; le serveur s'importe (`/ged/lire` monté) ;
+  écran vu sur une page d'essai (« ERP 2026.pdf — Lu : établi le 01/12/2025 · Saint-Étienne. » ; N4 « établi le
+  01/12/2025 : plus de 6 mois au compromis du 01/07/2026 »).
+- ⚠ Non vu : la file des lectures dans la vraie fenêtre de dépôt (le banc ne simule pas l'envoi) — premier vrai essai.
+⏳ Ordre des gestes, sur accord : 1. POSER le patch (avant le serveur : sinon la lecture paierait l'appel puis échouerait
+à l'écriture) ; 2. commit ; 3. push ; 4. essai réel sur un document fictif déposé sur 62774.

@@ -158,7 +158,8 @@ class OpenAIGedClassementService:
         r = requests.get(
             f"{self.settings.supabase_url}/rest/v1/app_agent_run",
             headers=self._headers(),
-            params={"agent_key": f"eq.{AGENT_KEY}", "created_at": f"gte.{debut}", "select": "cost_usd"},
+            # le plafond compte le classement ET la lecture (morceau 6) : une seule enveloppe par jour
+            params={"agent_key": "in.(ged_classement,ged_lecture)", "created_at": f"gte.{debut}", "select": "cost_usd"},
             timeout=10,
         )
         if not r.ok:

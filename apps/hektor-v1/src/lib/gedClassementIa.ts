@@ -169,6 +169,83 @@ export async function classerParIa(prep: Extract<Preparation, { envoyable: true 
   return corps as ResultatIa
 }
 
+// ── morceau 6 : la LECTURE des valeurs, juste après l'envoi (le fichier est encore dans le navigateur) ─────────────
+// Texte d'abord : si les premières pages portent une vraie couche texte (≥ 30 mots chacune), on envoie le texte seul ;
+// sinon les premières pages en haute définition (1 600 px), 4 au plus. ⛔ La garde RIB repasse avant tout envoi.
+export const LECTURE_PAGES_HD = 4
+const LECTURE_COTE_HD = 1600
+const LECTURE_TEXTE_MAX = 20000
+
+export type PreparationLecture =
+  | { lisible: false; raison: string }
+  | { lisible: true; nbPages: number; pages: Array<{ numero: number; image: string }>; texte: string }
+
+async function imageHd(source: CanvasImageSource & { width: number; height: number }): Promise<string> {
+  const echelle = Math.min(1, LECTURE_COTE_HD / Math.max(source.width, source.height))
+  const canvas = document.createElement('canvas')
+  canvas.width = Math.max(1, Math.round(source.width * echelle))
+  canvas.height = Math.max(1, Math.round(source.height * echelle))
+  canvas.getContext('2d')?.drawImage(source, 0, 0, canvas.width, canvas.height)
+  return canvas.toDataURL('image/jpeg', 0.82)
+}
+
+export async function preparerLecture(file: File): Promise<PreparationLecture> {
+  if (nomDitRib(file.name)) return { lisible: false, raison: 'RIB : jamais envoyé à l\'IA.' }
+  if (/^image\/(jpeg|png|webp)$/.test(file.type)) {
+    return { lisible: true, nbPages: 1, pages: [{ numero: 1, image: await imageHd(await createImageBitmap(file)) }], texte: '' }
+  }
+  if (file.type !== 'application/pdf') return { lisible: false, raison: 'Format non lu par l\'IA.' }
+  const pdfjs = await chargerPdfjs()
+  const doc = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise
+  try {
+    const nbPages = doc.numPages
+    const textes: string[] = []
+    for (let n = 1; n <= Math.min(nbPages, IA_PAGES_TEXTE_GARDE); n += 1) {
+      const contenu = await (await doc.getPage(n)).getTextContent()
+      textes.push(contenu.items.map((it) => ('str' in it ? it.str : '')).join(' ').replace(/\s+/g, ' ').trim())
+    }
+    if (texteDitRib(textes.join('\n'))) return { lisible: false, raison: 'Un IBAN est dans le texte : jamais envoyé à l\'IA.' }
+    const premieres = textes.slice(0, Math.min(3, nbPages))
+    if (premieres.length && premieres.every((t) => t.split(' ').filter(Boolean).length >= 30)) {
+      const texte = textes.map((t, i) => `--- page ${i + 1} ---\n${t}`).join('\n').slice(0, LECTURE_TEXTE_MAX)
+      return { lisible: true, nbPages, pages: [], texte }
+    }
+    const pages: Array<{ numero: number; image: string }> = []
+    for (let n = 1; n <= Math.min(nbPages, LECTURE_PAGES_HD); n += 1) {
+      const page = await doc.getPage(n)
+      const base = page.getViewport({ scale: 1 })
+      const vue = page.getViewport({ scale: LECTURE_COTE_HD / Math.max(base.width, base.height) })
+      const canvas = document.createElement('canvas')
+      canvas.width = Math.max(1, Math.round(vue.width))
+      canvas.height = Math.max(1, Math.round(vue.height))
+      const ctx = canvas.getContext('2d')
+      if (!ctx) continue
+      await page.render({ canvasContext: ctx, viewport: vue }).promise
+      pages.push({ numero: n, image: canvas.toDataURL('image/jpeg', 0.82) })
+    }
+    return { lisible: true, nbPages, pages, texte: '' }
+  } finally {
+    void doc.destroy()
+  }
+}
+
+export type ResultatLecture = { lectureId: string; fiche: string; etat: 'lu' | 'incomplet' | 'pas_ce_type'; valeurs: import('./gedLecture').ValeurLue[] }
+
+export async function lireParIa(jobId: string, prep: Extract<PreparationLecture, { lisible: true }>, nomFichier: string): Promise<ResultatLecture> {
+  if (!backendApiBaseUrl) throw new Error('Serveur non configuré')
+  if (!hasSupabaseEnv || !supabase) throw new Error('Session absente')
+  const jeton = (await supabase.auth.getSession()).data.session?.access_token
+  if (!jeton) throw new Error('Session absente')
+  const reponse = await fetch(`${backendApiBaseUrl}/ged/lire`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${jeton}` },
+    body: JSON.stringify({ jobId, nomFichier, nbPages: prep.nbPages, pages: prep.pages, texte: prep.texte || null }),
+  })
+  const corps = await reponse.json().catch(() => ({}))
+  if (!reponse.ok || corps?.ok !== true) throw new Error(typeof corps?.detail === 'string' ? corps.detail : `erreur ${reponse.status}`)
+  return corps as ResultatLecture
+}
+
 // Découpe un PDF en plusieurs fichiers, une pièce par fichier (pdf-lib, déjà chargé pour « Faire un PDF »).
 export async function separerPdf(file: File, pieces: ResultatIa['pieces'], nomPiece: (i: number) => string): Promise<File[]> {
   const { PDFDocument } = await import('pdf-lib')
