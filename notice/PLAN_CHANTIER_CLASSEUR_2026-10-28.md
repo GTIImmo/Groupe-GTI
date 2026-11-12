@@ -157,11 +157,26 @@ refus fait à la main chez Hektor et le nôtre. **NON MESURÉ, c'est une hypoth�
                     compteur : 25 annees, somme des rangs 11 441
                     ⭐ les 6 dossiers muets (D0000-xxxx) sont TOUS MORTS -- les
                       fermetures du matin ont solde les 2 qui comptaient encore
-2.5 ⬜ A FAIRE      ⛔⛔ BRANCHER LA POSE DANS LE RUN DE NUIT (B4) + la sentinelle.
-                    RIEN NE L'APPELLE AUJOURD'HUI : la nuit recalcule les groupes,
-                    et sans appel apres, une transaction neuve reste SANS etiquette
-                    et une fusion de groupes garde DEUX etiquettes. C2 du 29/10 :
-                    l'appel vient APRES le calcul des groupes, jamais pendant.
+2.5 ✅ FAIT 12/11   B4 : LA POSE EST BRANCHEE DANS LE RUN DE NUIT **ET ALLUMEE**
+                    (`APP_ETIQUETTE_DOSSIER=1` dans `.env`, hors git ; sauvegarde
+                    `env_avant_etiquette_2026-11-12.bak`). L'appel est a
+                    `affaire_ledger.py` l. 2772, ENTRE `rpc/app_attribuer_chaines_affaire`
+                    (l. 2761) et la redescente (l. 2777) -- donc APRES le calcul des
+                    groupes, comme C2 du 29/10 l'exige.
+                    ⭐ AVEC UN FILET : si la pose echoue, LE RUN CONTINUE. Une
+                      etiquette manquante se rattrape la nuit suivante ; un run
+                      interrompu coute la nuit entiere.
+                    ⭐ ET UNE ALERTE : SEUIL_FUSIONS_QUI_INQUIETE = 10 -- une fusion
+                      est DEFINITIVE pour l'etiquette absorbee, qui ne vit plus que
+                      dans le journal.
+                    essai hors ligne : phase2/checks/test_etiquette_dans_le_run.py
+                    32 controles verts, client FAUX, aucune connexion
+⏰ 2.5bis A CONTROLER DEMAIN MATIN (13/11) -- premiere nuit de B4. Chercher dans le
+                    compte rendu du run :
+                      [affaire_ledger] etiquettes : pose N . propagation N .
+                                                    fusion N . scission N
+                    ⛔ Si la ligne MANQUE, l'interrupteur n'a pas ete lu.
+                    ⛔ Si les FUSIONS depassent 10, le run le crie -- regarder.
 ⭐ le format est valide (« Oui » aux deux, 09/11) : D2026-0431 + un UUID
 ⭐ le code local etait PRET avant la pose : les 2 colonnes sont dans
   COLONNES_QUE_LE_PUSH_N_ENVOIE_PAS (affaire_ledger.py l. 2561) -- condition C1
@@ -214,9 +229,10 @@ EN BASE    ✅ app_registre_dossiers . la pose . l'annee d'ouverture
               ⛔ Mon audit l'avait signale A TORT -- ma requete cherchait
                 « order by … date » et a crie sur « order by app_affaire_id ».
                 Un detecteur qui crie n'est pas une preuve : il faut lire le corps.
-           ⬜ app_notaire_fiche (affiche la date d'offre ; ses delais sont intacts)
+           ✅ app_notaire_fiche -- migration notaire_fiche_date_offre_reelle_2026_11_12
 AU FRONT   ✅ les 2 tris . la ligne Date . la tuile . le PREREMPLISSAGE
-           ⬜ App.tsx 32618 . 32735 . 32311 (le cockpit)
+           ✅ le cockpit, le resume et le tri des dossiers d'un bien (App.tsx 32321 .
+              32634 . 32753) -- ils passent tous par `dateDeRangement`
 PYTHON     ✅ le chainage . l'apparieur . le rapport du gel
            ⚠ export_app_payload.py et transactions_annonce_from_api.py : non mesures
 WORKERS    ✅ ils n'ont PAS de lecteur -- ils envoient ce que la modale leur donne
@@ -336,6 +352,41 @@ sans filtre, leur dossier tombait en `D0000`. **14 régressions évitées.**
                     de D0000-0001 a D2026-0371 (etait D2026-0550)
                     ⭐ CHRONOLOGIE 100,00 % : 0 desordre sur 11 323 comparaisons
                     sauvegarde : app_etiquette_avant_repose_20261112 (31 151 l.)
+2.8 ✅ POSE 12/11   LA DATE DECIDEE pour les 5 offres sans date NULLE PART, en
+                    quatre migrations : date_convenue_des_transactions .
+                    les_appelants_passent_l_id_v2 .
+                    date_convenue_prime_sur_la_colonne . date_convenue_reliee_au_registre
+                    + 5 greffes dans api.ts (le front recalculait la regle en TS, et
+                      le PREREMPLISSAGE de la modale part CHEZ HEKTOR)
+                    9557 -> 11/12/2017 . 16255 -> 11/07/2022 . 16330 -> 08/04/2021
+                    20169 -> 01/03/2024 . 24256 -> 25/02/2022
+                    ⭐ SOURCE MESUREE, pas devinee : contact 0,95 (mediane 11 j) ;
+                      identifiants 0,19 / 0,14 / 0,01 ECARTES -- Hektor recycle ses
+                      numeros (prouve sur le mandat 16705, porte par DEUX biens)
+                    ⛔ MON ERREUR, trouvee par la mesure en une minute : la date
+                      decidee etait APRES la colonne `date` dans le coalesce. Or
+                      `date` n'est pas vide : elle porte le 11/11 faux. Le repli ne
+                      jouait JAMAIS. Ordre juste : journal -> DECIDEE -> `date`.
+                    temoin inverse : compromis 10 653 -> 0 bouge . offre 11 218 -> 5
+                      bougent . vente 9 280 -> 0 bouge
+                    trace : supabase/patch_date_convenue_2026-11-12.sql
+2.9 ✅ POSE 12/11   LA REPOSE N°2 -- les 5 dossiers ayant change d'annee, leur
+                    etiquette D2026-0367..0371 etait devenue fausse et l'invariant
+                    valait 5 : le controle aurait CRIE chaque jour.
+                    migration etiquette_repose2_apres_dates_decidees_2026_11_12
+                    l'annee qui ment 5 -> 0 . 1 486 dossiers renumerotes (4 010
+                    transactions) . bijection 11 441 = 11 441 . 0 desordre chrono
+                    plage D2026-0371 -> D2026-0366
+                    ⭐⭐ LES 5 PORTENT EXACTEMENT LES NUMEROS QUE LA SIMULATION EN
+                      LECTURE SEULE AVAIT ANNONCES : D2017-0564 . D2022-0335 .
+                      D2021-0217 . D2024-0072 . D2022-0098 -- des rangs au MILIEU
+                      de leur annee, donc chronologiquement justes
+                    ⚠⚠ PIEGE EVITE DE JUSTESSE : le patch de 2.7 cree ses copies en
+                      `create table if not exists`. Le relancer n'aurait RIEN
+                      sauvegarde et j'aurais detruit en croyant etre couvert. D'ou
+                      des tables PROPRES : app_etiquette_avant_repose2_20261112
+                      ⭐ LECON : un patch idempotent n'est pas rejouable.
+                    trace : supabase/patch_etiquette_repose2_2026-11-12.sql
 ```
 
 ⛔⛔ **ET LE TÉMOIN INVERSE DE MA PROPRE RÉPÉTITION A TROUVÉ UN DÉFAUT DANS MA PREMIÈRE
