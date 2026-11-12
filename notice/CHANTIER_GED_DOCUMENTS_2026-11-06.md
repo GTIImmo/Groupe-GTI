@@ -748,5 +748,58 @@ fabriquée à partir du patch, qui lève une erreur volontaire : rien n'est gard
 - patch posé, puis les 12 contrôles relus en production : **12 VERT** ;
 - ⭐ témoin inverse (en rôle `authenticated`, transaction annulée) : lecture du classement **REFUSÉE**, écriture dans la
   nomenclature **REFUSÉE**.
-Les 3 interrupteurs sont éteints ; rien ne lit encore ces tables. ➡ Suivant : **morceau 2, la fenêtre de dépôt**
-(prévenir la session signature avant la première ligne, `ConsoleDocumentsPanel` étant son panneau).
+Les 3 interrupteurs sont éteints ; rien ne lit encore ces tables. Commité et poussé (`7db04f9`, accord de Frédéric).
+
+### 12.7 Le morceau 2 — la fenêtre de dépôt (audit du 12/11 au soir, rien codé)
+**Audit** :
+- `ConsoleDocumentsPanel` (`App.tsx:11831`), monté 3 fois (`33593` cockpit v21, `37246` fiche classique, `41326`
+  téléphone) ; le formulaire `uploadForm` (`12152-12225`) est partagé par les deux habillages (`12365`, `12461`) : un
+  seul fichier (`files?.[0]`), libellé, privé / public, type en liste figée de 10.
+- L'envoi `createUploadDocumentToHektorJob` (`api.ts:9106`) : travail → coffre `temp/uploads/` → ligne chez nous
+  (`app_console_creer_document_optimistic`) → relecture du travail, qui porte alors `app_document_id`.
+- Mesuré sur 30 jours : 14 envois par l'app, tous `done`, 2 personnes, 12 avec la ligne chez nous, 3 avec un type,
+  durée médiane 21,6 s.
+- L'anti-doublon G1 (`3c32daa`, 06/11) est CHARGÉ : les 4 services worker ont démarré le 10/11 à 18:47
+  (`Win32_Process.CreationDate`).
+- Interrupteur à trois crans : patron `loadSignatureYoutrustActive` (`api.ts:9295`, 'admin' = admin actif seul).
+- Règles de classement par le nom : `phase2/checks/ged1_mesure_nomenclature.py:95-182` (≈ 80 motifs, la première qui
+  gagne, « sûr » / « probable », détection des noms muets) → à porter UNE fois en TypeScript, pour le dépôt ET pour
+  « Reçu / Manque » (morceau 3).
+- Aucune bibliothèque PDF dans le front (`package.json`).
+- Session signature prévenue le 12/11 (message : ce qui est posé, la ligne prévue dans son panneau, deux questions).
+  **Sa réponse (12/11)** : rien en cours ni prévu sur `ConsoleDocumentsPanel` ni sur `createUploadDocumentToHektorJob`
+  (la bascule Youtrust n'est faite que de réglages). Un document déposé par l'outil ne gêne pas la signature s'il passe
+  par le chemin existant (marquage manuscrit, fenêtre « Faire signer », cockpit inchangés). À respecter :
+  - ⚠ **LES NOMS** : au réessai d'un dépôt, le worker ADOPTE le document Hektor « du même nom qu'aucune autre ligne ne
+    réclame » avec un rapprochement LARGE (égal, ou l'un CONTIENT l'autre : `documentNonReclame`,
+    `console_job_worker.js` ~10019). ⇒ la fenêtre doit refuser ou suffixer un nom qui contient, ou est contenu dans, celui
+    d'un autre document du bien (déjà là ou du même lot) ; envoi un par un ;
+  - relancer après la modification : `test_choix_signature.cjs`, `test_pieces_signature.cjs`,
+    `test_suivi_signataires.cjs`, `test_code_par_email.cjs`, `test_etat_signature_mandat.cjs` (ils comptent les montages
+    dans le panneau ; ne toucher qu'à `uploadForm`) ;
+  - ne jamais écrire `metadata_json.signature`, `signed_document`, `remplace`, `signataires_du_pdf` ;
+  - ⚠ `App.tsx` et `lib/api.ts` portent des changements NON commités d'une autre session : stager par blocs.
+✅ **« Vas-y, morceau 2 » (12/11 au soir). ÉCRIT ET CONTRÔLÉ HORS LIGNE, PAS ENCORE EN SERVICE :**
+- `apps/hektor-v1/src/lib/gedTypeParNom.ts` : les règles du nom, FABRIQUÉES à partir du Python (script du bloc-notes
+  `ged_m1/gen_type_par_nom.py` ; corriger les règles en Python puis refabriquer). ⭐ Témoin : **193 629 noms sur 193 629
+  classés à l'identique** par les deux versions ; témoin inverse : une règle abîmée → 7 235 écarts (la comparaison voit).
+  Le fichier des noms a été effacé aussitôt.
+- `src/lib/ged.ts` (lecture des types, `gedClasser`, interrupteur à trois crans `useGedDepotMultiple`, empreinte, règle
+  des noms `nomEnConflit`) ; `src/DepotDocuments.tsx` + `.css` (la fenêtre) ; `pdf-lib@1.17.1` (chargé seulement pour
+  assembler des photos).
+- `App.tsx` : +19 / −2, dans `ConsoleDocumentsPanel` seulement — `formulaireAjout = gedDepot ? <DepotDocuments …> :
+  uploadForm`, monté aux deux endroits où l'était `uploadForm` ; le formulaire d'aujourd'hui reste le secours.
+- `supabase/patch_ged_m2_classer_2026-11-12.sql` (+ `_INVERSE`, + `_REPETITION` fabriquée par `ged_m1/gen_ged_m2_repetition.py`) :
+  colonne `app_console_job_id` + fonction `app_ged_classer` (gardes : utilisateur actif, SON travail d'envoi, type actif ;
+  annonce et document lus dans le travail ; idempotente). **Répétition jouée : 12 OK, 0 KO** (dont : le dépôt d'un autre
+  refusé, type inconnu refusé, rappel sans écriture, `app_console_document` intacte) ; vérifié ensuite que rien n'est resté.
+  **PAS POSÉ** (accord à demander).
+- Contrôles : `npm run build` vert ; `test_ged_depot.cjs` **17 VERT** (noms, type proposé, branchement) ; les 5 essais de
+  la session signature **verts** ; écran vu sur une page d'essai à données fictives (bureau 1280 × 665 et téléphone) :
+  conflit de nom refusé, nom muet → type obligatoire puis nom « DPE 12-11-2026 », `.odt` refusé, pièce d'identité en
+  privé forcé, 3 photos → 1 PDF.
+✅ **« Oui, les trois » (12/11 au soir)** : `patch_ged_m2_classer` **POSÉ EN PRODUCTION**, contrôles relus **7 VERT**
+(colonne, fonction SECURITY DEFINER, anon refusé, authenticated autorisé, classement vide, une seule clé étrangère vers
+`app_console_document`, interrupteur `ged_depot_multiple` toujours `off`) ; commité et poussé.
+⏳ Reste, chacun avec l'accord de Frédéric : passer `ged_depot_multiple` à `admin` · essai réel sur le bien d'essai 62774
+(chaque fichier une seule fois chez Hektor, classement chez nous) · essai sur son vrai téléphone.

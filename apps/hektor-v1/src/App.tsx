@@ -296,6 +296,9 @@ import './ajout-conjoint.css'
 import SuiviSignatairesYoutrust from './SuiviSignatairesYoutrust'
 // A.2 P8-4 (06/11/2026) : ouvrir l'original et les preuves d'un document signe (interrupteur `signature_preuves`).
 import { PiecesSignatureFenetre, useSignaturePreuves } from './PiecesSignature'
+// GED morceau 2 (12/11/2026) : la fenêtre de dépôt, derrière l'interrupteur ged_depot_multiple (note GED §12.7).
+import { DepotDocuments } from './DepotDocuments'
+import { useGedDepotMultiple } from './lib/ged'
 import { piecesDeSignature } from './lib/piecesSignature'
 import EnvoiSignatureYoutrust, { EVENEMENT_CORRIGER_MANDAT, type DemandeCorrectionMandat, type OngletCorrection } from './EnvoiSignatureYoutrust'
 import type { FicheDuJourPdf } from './lib/ecartsFichePdf'
@@ -11849,6 +11852,8 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
   // A.2 P8-4 : « Preuves » (original + preuves au coffre), derriere l'interrupteur `signature_preuves`.
   const preuvesActives = useSignaturePreuves()
   const [piecesDoc, setPiecesDoc] = useState<ConsoleDocument | null>(null)
+  // GED morceau 2 : cran « admin » = Frédéric seul ; éteint = le formulaire d'aujourd'hui, inchangé.
+  const gedDepot = useGedDepotMultiple()
   // A.2 lot 6b P5 : « Corriger le mandat » depuis la fenetre ouverte ici -> l'editeur du meme bien s'ouvre (s'il est monte).
   const demanderCorrection = (document: ConsoleDocument, onglet: OngletCorrection) => {
     const detail: DemandeCorrectionMandat = { app_dossier_id: dossier.app_dossier_id, document, onglet, pris: false }
@@ -12229,6 +12234,18 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
       </button>
     </form>
   )
+  // GED morceau 2 (12/11/2026) : la fenêtre de dépôt REMPLACE le formulaire quand l'interrupteur est allumé pour
+  // l'utilisateur ; elle garde le formulaire d'aujourd'hui en secours si la liste des types ne se lit pas.
+  const formulaireAjout = gedDepot ? (
+    <DepotDocuments
+      dossier={dossier}
+      documents={documents}
+      peutEnvoyer={() => { if (hasHektorNegotiator(dossier)) return true; onMissingNegotiator?.(dossier); return false }}
+      onJobCreated={onJobCreated}
+      onTermine={() => { window.setTimeout(() => void refreshDocuments(true), 1500); onDocumentsChanged?.() }}
+      formulaireClassique={uploadForm}
+    />
+  ) : uploadForm
 
   // Actions par ligne — PARTAGEES entre les deux skins (zero perte de fonction).
   const docRowActions = (document: ConsoleDocument) => {
@@ -12368,7 +12385,7 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
 
         {message ? <p className="console-documents-message">{message}</p> : null}
         {error ? <p className="console-documents-error">{error}</p> : null}
-        {uploadOpen ? <div className="fa-ck-docup">{uploadForm}</div> : null}
+        {uploadOpen ? <div className="fa-ck-docup">{formulaireAjout}</div> : null}
 
         {cntAll > 0 ? (
           <div className="fa-ck-histofilt fa-ck-docfilt">
@@ -12464,7 +12481,7 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
         {message ? <p className="console-documents-message">{message}</p> : null}
         {error ? <p className="console-documents-error">{error}</p> : null}
 
-        {uploadForm}
+        {formulaireAjout}
 
         {loading ? <p className="empty-state">Chargement des documents Console...</p> : null}
         {!loading && documents.length === 0 ? <p className="empty-state">Aucun document Console indexe pour ce dossier.</p> : null}

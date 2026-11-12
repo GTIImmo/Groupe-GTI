@@ -1,0 +1,88 @@
+/* GED (12/11/2026, morceau 2) : la fenêtre de dépôt. Reprend les couleurs du panneau des documents. */
+.ged-depot {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid rgba(34, 35, 35, 0.1);
+  border-radius: 8px;
+  background: linear-gradient(180deg, #ffffff 0%, #fafafa 100%);
+}
+.ged-depot-tete strong { display: block; color: var(--gti-final-ink); font-size: 13px; line-height: 1.2; }
+.ged-depot-tete small { display: block; margin-top: 2px; color: #747a7a; font-size: 11px; font-weight: 750; line-height: 1.25; }
+
+.ged-depot-zone {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 10px;
+  border: 1.5px dashed rgba(34, 35, 35, 0.22);
+  border-radius: 8px;
+  color: #5c6163;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+}
+.ged-depot-zone.is-survol { border-color: var(--gti-final-magenta); background: rgba(197, 0, 95, 0.05); }
+.ged-depot-zone label.ghost-button { position: relative; overflow: hidden; cursor: pointer; }
+.ged-depot-zone input[type='file'] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+
+.ged-depot-pages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(197, 0, 95, 0.06);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ged-depot-liste { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.ged-depot-ligne {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) minmax(170px, 1.2fr) minmax(170px, 1.2fr) auto;
+  gap: 8px 10px;
+  align-items: end;
+  padding: 8px 10px;
+  border: 1px solid rgba(34, 35, 35, 0.1);
+  border-radius: 8px;
+  background: #ffffff;
+}
+.ged-depot-ligne.is-ecartee { opacity: 0.6; }
+.ged-depot-ligne.is-envoye { border-color: rgba(31, 94, 65, 0.35); }
+.ged-depot-ligne.is-echec,
+.ged-depot-ligne.is-classement_echec { border-color: rgba(197, 0, 95, 0.35); }
+.ged-depot-fichier { display: grid; min-width: 0; align-self: center; }
+.ged-depot-fichier-nom { overflow: hidden; color: var(--gti-final-ink); font-size: 12px; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
+.ged-depot-fichier small { color: #747a7a; font-size: 11px; }
+.ged-depot-champ { display: grid; gap: 4px; min-width: 0; }
+.ged-depot-champ > span { color: #747a7a; font-size: 10px; font-weight: 850; text-transform: uppercase; }
+.ged-depot-champ input,
+.ged-depot-champ select { width: 100%; min-width: 0; min-height: 32px; box-sizing: border-box; }
+.ged-depot-etat {
+  display: flex;
+  flex-wrap: wrap;
+  grid-column: 1 / -1;
+  gap: 6px 10px;
+  align-items: center;
+  font-size: 12px;
+}
+.ged-depot-etat:empty { display: none; }
+.ged-depot-retirer { margin-left: auto; }
+.ged-depot-doublon { display: inline-flex; gap: 6px; align-items: center; color: #7a4a0e; font-weight: 700; }
+.ged-depot-refus { color: var(--gti-final-magenta); font-weight: 700; }
+.ged-depot-refus .ghost-button { margin-left: 8px; }
+.ged-depot-ok { color: #1f5e41; font-weight: 700; }
+.ged-depot-note { margin: 0; color: #747a7a; font-size: 12px; }
+.ged-depot-alerte { margin: 0; padding: 8px 10px; border-radius: 8px; background: rgba(197, 0, 95, 0.08); color: var(--gti-final-magenta); font-size: 12px; font-weight: 700; }
+.ged-depot-pied { display: flex; gap: 10px; align-items: center; justify-content: space-between; font-size: 12px; }
+
+@media (max-width: 760px) {
+  .ged-depot-ligne { grid-template-columns: 1fr; }
+  .ged-depot-pied { flex-direction: column; align-items: stretch; }
+  .ged-depot-pied .button-primary { width: 100%; }
+}
