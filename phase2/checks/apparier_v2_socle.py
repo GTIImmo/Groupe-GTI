@@ -125,6 +125,16 @@ MOTS_VIDES = {
     "indivision", "succession", "hoirie", "consorts", "cts",
     "et", "ou", "de", "du", "des", "la", "le", "les", "aux",
     "ep", "epouse", "epoux", "veuve", "vve", "nee", "ne",
+    # ⛔ AJOUTES LE 13/11 APRES AVOIR REGARDE DES LIGNES REELLES. Le classeur est
+    #   saisi a la main et porte des mots de LIAISON et de STRUCTURE qui ne
+    #   designent personne : « Societe GRAIL Jo-nathan », « Ind. TOINET »,
+    #   « SCI CNAV representee par son gerant Nicolas Aboulin ».
+    #   ⭐ Ils ne faisaient pas que du bruit : ils FAISAIENT ECHOUER l intersection
+    #     de ma famille « identite » -- 1 160 lignes classees a tort
+    #     « aucun bien porte ces noms ».
+    "ind", "societe", "ste", "representee", "represente", "gerant",
+    "gerante", "par", "son", "sa", "ses", "pour", "compte",
+    "nan", "none", "null", "vide", "inconnu", "inconnue",
 }
 
 
