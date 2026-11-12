@@ -375,6 +375,54 @@ def first_non_empty(*values: Any) -> str | None:
     return None
 
 
+def date_de_la_premiere_proposition(blob: Any) -> str | None:
+    """LA DATE A LAQUELLE UNE OFFRE A ETE FAITE : sa PREMIERE proposition. 12/11/2026
+
+    ⛔ POURQUOI. Chez Hektor, `offre_event_date` porte le DERNIER EVENEMENT d'une
+      offre -- son nom le dit. Un refus l'ecrase. Mon lot du 11/11 au soir
+      (1 185 offres refusees) a donc date du 11/11/2026 des offres qui vont de
+      2002 a 2026 : mesure sur app_contact_relation_current, 1 179 relations
+      « offre » sur 11 190 portaient le 11/11.
+      ➡ La fiche de ces 1 179 contacts annoncait une offre faite hier.
+
+    ⭐ C'EST LE 5e LECTEUR QU'ON ALIGNE, ET LE DERNIER :
+          le chainage de nuit   `_date_de_tri`, affaire_ledger.py
+          l'apparieur           `dates_des_propositions`, apparier_classeur.py
+          le rapport du gel     `premiere_proposition`, rapport_gel_*.py
+          l'ecran et la base    `dateOffreFaite` (api.ts) et
+                                `app_dossier_jour_date_transaction` (Supabase)
+          la relation contact   ici
+
+    ⭐ ELLE SE BRANCHE DEVANT LA CASCADE QUI EXISTE DEJA : `premiere_date_exploitable`
+      est variadique et refuse deja les « 0000 » et l'heure de lecture (02/11). On
+      lui passe donc cette date EN PREMIER, et son dernier repli reste le meme.
+      Aucune regle n'est dupliquee, aucun comportement n'est retire.
+
+    ⚠ Le REFUS est volontairement exclu : il est deja porte par `offre_event_date`.
+    ⚠ Une forme inconnue rend None, JAMAIS une exception -- la cascade retombe
+      alors exactement sur le comportement d'avant.
+    """
+    if not blob:
+        return None
+    charge = blob
+    if isinstance(blob, (str, bytes)):
+        try:
+            charge = json.loads(blob)
+        except (TypeError, ValueError):
+            return None
+    gens = charge if isinstance(charge, list) else [charge] if isinstance(charge, dict) else []
+    jours: list[str] = []
+    for e in gens:
+        if not isinstance(e, dict):
+            continue
+        if str(e.get("type") or "").strip().lower() not in ("proposition", "accepte"):
+            continue
+        jour = clean_text(e.get("date"))
+        if jour:
+            jours.append(jour)
+    return min(jours) if jours else None
+
+
 def premiere_date_exploitable(*values: Any) -> str | None:
     """LA PREMIERE VRAIE DATE, ou rien -- JAMAIS l'heure de notre lecture. 02/11/2026
 
@@ -1385,7 +1433,9 @@ def load_relations(
         for row in hektor_conn.execute(
             f"""
             SELECT hektor_offre_id, hektor_annonce_id, hektor_mandat_id, hektor_acquereur_id,
-                   offre_state, offre_event_date, raw_date, raw_montant, acquereur_json, synced_at
+                   offre_state, offre_event_date, raw_date, raw_montant, acquereur_json, synced_at,
+                   -- ⭐ 12/11 : le JOURNAL de l'offre, pour sa vraie date.
+                   propositions_json
             FROM hektor_offre
             {offre_where}
             """,
@@ -1403,7 +1453,12 @@ def load_relations(
                 transaction_id=clean_text(row["hektor_offre_id"]),
                 transaction_state=clean_text(row["offre_state"]),
                 # ⛔ 02/11 : `synced_at` RETIRE -- voir premiere_date_exploitable.
-                transaction_date=premiere_date_exploitable(row["offre_event_date"], row["raw_date"]),
+                # ⭐ 12/11 : la PREMIERE PROPOSITION d'abord -- `offre_event_date`
+                #   porte le DERNIER mouvement, qu'un refus ecrase. Les deux replis
+                #   d'avant restent en place, dans le meme ordre.
+                transaction_date=premiere_date_exploitable(
+                    date_de_la_premiere_proposition(row["propositions_json"]),
+                    row["offre_event_date"], row["raw_date"]),
                 transaction_amount=clean_text(row["raw_montant"]),
                 last_seen_at=clean_text(row["synced_at"]) or None,
             )
