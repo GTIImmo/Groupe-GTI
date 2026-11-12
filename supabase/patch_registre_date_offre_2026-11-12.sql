@@ -78,15 +78,56 @@
 --      froid. **Une mesure de performance faite une seule fois ne vaut rien.**
 --
 -- ═══════════════════════════════════════════════════════════════════════════
--- CE QUI RESTE, ET QUI EST MESURÉ MAIS PAS CORRIGÉ
+-- LE PILOTAGE — ✅ CORRIGÉ LE 12/11 AU SOIR, deux migrations de plus
 -- ═══════════════════════════════════════════════════════════════════════════
---   app_pilotage_affaires_plus      trie par date  ⬜
---   app_pilotage_acquereurs         trie par date  ⬜
---   app_notaire_fiche               trie par date  ⬜
---   app_attribuer_chaines_affaire   trie par date  ⚠ C'EST LE CHAÎNAGE côté
---       Supabase, et il rattache les transactions arrivées sans dossier. S'il
---       s'appuie sur une date déplacée, il peut GROUPER DE TRAVERS.
---       ⛔ NON MESURÉ -- à regarder avant de toucher quoi que ce soit d'autre.
+--      pilotage_acquereurs_date_offre_reelle_2026_11_12
+--      pilotage_affaires_plus_date_offre_reelle_2026_11_12
+--
+-- ⛔ CE N'ÉTAIT PAS UN AFFICHAGE, C'ÉTAIENT DES STATISTIQUES.
+--   app_pilotage_affaires_plus datait les offres sur `l.date` et s'en servait pour
+--   le FILTRE PAR ANNÉE **et** pour le délai « mandat -> offre » :
+--       offres comptees sur 2025-2026   1 869  ->  702
+--       delai MOYEN mandat -> offre     2 148 jours  ->  181 jours
+--                                       (5,9 ANS)        (6 mois)
+--   ⚠ Un indicateur de performance commerciale faux d'un facteur 12.
+--
+--   app_pilotage_acquereurs calculait « première offre » puis un délai MÉDIAN
+--   création du contact -> première offre, avec un seuil à 30 jours :
+--       1 408 acquereurs changent de premiere offre
+--         524 paraissaient l'avoir faite le 11/11/2026
+--
+-- ⭐ MÉTHODE, et elle compte : « substr(l.date, 1, 10) as d » apparaît TROIS fois
+--   (offre, compromis, vente) et « between p_annee - 1 and p_annee » DEUX fois.
+--   Un replace() global aurait touché le compromis et la vente, dont la date est
+--   STABLE et JUSTE. On a donc remplacé la CTE des offres **par sa position**,
+--   repérée par ses deux voisines, avec trois gardes : chaque borne doit être
+--   UNIQUE, elles doivent être dans le bon ordre, et le bloc délimité doit
+--   contenir « l.kind = offre » -- sinon la migration refuse d'écrire.
+--   TÉMOINS APRÈS : 3 appels au lecteur dans la CTE des offres, et 2 occurrences
+--   de la forme brute INTACTES (compromis et vente).
+--
+-- ⚠ ET UN RESTE, SIGNALÉ, NON TRAITÉ : après correction, le pire délai
+--   mandat -> offre est encore de 3 257 jours. Autre cause (mandats recyclés,
+--   dates Hektor fausses), autre sujet.
+--
+-- ═══════════════════════════════════════════════════════════════════════════
+-- ⭐⭐ LE CHAÎNAGE EST SAIN — MESURÉ, ET MON AUDIT L'AVAIT SIGNALÉ À TORT
+-- ═══════════════════════════════════════════════════════════════════════════
+--   app_attribuer_chaines_affaire  trie par app_affaire_id, AUCUNE date
+--   app_chaine_pour (les DEUX signatures)  groupe sur l'annonce, l'acquéreur et
+--       l'ÉTAT des transactions (vente, compromis vivant, offre vivante/acceptée).
+--       AUCUNE DATE NULLE PART.
+--   ⛔ Ma requête d'audit cherchait « order by … date » et a crié sur un
+--     « order by app_affaire_id ». **Un détecteur qui crie n'est pas une preuve :
+--     il faut lire le corps.** Le groupement ne peut pas être faussé par une date.
+--
+-- ═══════════════════════════════════════════════════════════════════════════
+-- CE QUI RESTE, MESURÉ MAIS PAS CORRIGÉ
+-- ═══════════════════════════════════════════════════════════════════════════
+--   app_notaire_fiche               affiche la date d'offre  ⬜
+--       (ses délais portent sur compromis/vente, donc intacts)
+--   App.tsx 32618 . 32735 . 32311   le cockpit, au front  ⬜
+--   export_app_payload.py et transactions_annonce_from_api.py  ⚠ NON MESURÉS
 --   App.tsx 32618 . 32735 . 32311   le cockpit, au front  ⬜
 --
 -- ⚠ ET LE CONTRÔLE DE CETTE FONCTION NE PEUT PAS SE FAIRE EN service_role :

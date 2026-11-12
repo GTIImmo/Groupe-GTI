@@ -205,10 +205,16 @@ la contamination se propager. **Corrigé le 12/11.**
 
 ```
 EN BASE    ✅ app_registre_dossiers . la pose . l'annee d'ouverture
-           ⬜ app_pilotage_affaires_plus . app_pilotage_acquereurs . app_notaire_fiche
-           ⚠ app_attribuer_chaines_affaire -- LE CHAINAGE cote Supabase, trie par
-             date : s'il s'appuie sur une date deplacee il peut GROUPER DE TRAVERS.
-             ⛔ NON MESURE -- a regarder AVANT tout le reste.
+           ✅ app_pilotage_acquereurs    1 408 acquereurs, dont 524 au 11/11
+           ✅ app_pilotage_affaires_plus 1 869 -> 702 offres sur 2025-2026, et le
+              delai moyen mandat->offre passe de 2 148 jours (5,9 ANS) a 181 jours
+           ⭐⭐ LE CHAINAGE EST SAIN, MESURE : app_attribuer_chaines_affaire trie
+              par app_affaire_id, et app_chaine_pour (les 2 signatures) groupe sur
+              l'annonce, l'acquereur et l'ETAT. AUCUNE date nulle part.
+              ⛔ Mon audit l'avait signale A TORT -- ma requete cherchait
+                « order by … date » et a crie sur « order by app_affaire_id ».
+                Un detecteur qui crie n'est pas une preuve : il faut lire le corps.
+           ⬜ app_notaire_fiche (affiche la date d'offre ; ses delais sont intacts)
 AU FRONT   ✅ les 2 tris . la ligne Date . la tuile . le PREREMPLISSAGE
            ⬜ App.tsx 32618 . 32735 . 32311 (le cockpit)
 PYTHON     ✅ le chainage . l'apparieur . le rapport du gel
