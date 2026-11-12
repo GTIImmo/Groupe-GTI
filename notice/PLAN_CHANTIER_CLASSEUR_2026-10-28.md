@@ -167,6 +167,55 @@ refus fait à la main chez Hektor et le nôtre. **NON MESURÉ, c'est une hypoth�
   COLONNES_QUE_LE_PUSH_N_ENVOIE_PAS (affaire_ledger.py l. 2561) -- condition C1
 ```
 
+### ⛔⛔ LE DÉFAUT QUE FRÉDÉRIC A TROUVÉ LE 12/11 AU SOIR — *ma correction était incomplète*
+
+> *« pourquoi les offres du 11/11 sont toujours visibles dans le registre des
+> transactions ? et le pilotage forcément »*
+
+Il avait raison. J'avais corrigé les **deux écrans de détail** et conclu trop vite. Le
+registre passe par une fonction **EN BASE**, `app_registre_dossiers`, que je n'avais pas
+vue — et **le filtre par année s'appuyait sur la date faussée**.
+
+```
+MESURE AVANT, sur les 11 424 dossiers du registre
+  « date du dernier evenement » fausse        1 277
+  CLASSES EN 2026 A TORT                     1 190   <- la plus ancienne : 2006
+  date d'offre fausse                        1 412
+APRES (3 migrations collees le 12/11)
+  dossiers en 2026       1 684  ->  494      1 190 retrouvent leur annee
+  dossiers au 11/11/2026 1 185  ->    5      les 5 sans aucun recours
+  offres sans date         786  ->   85      701 retrouvent une date
+```
+
+⭐ **Et la cascade qu'il a dictée est en service** : journal → compromis → vente.
+**56 offres sur 68** retrouvent une date. ⛔ Les crans 4 (le classeur) et 5 (le mandat)
+ne sont **pas** dans la fonction : le mandat ne donne qu'une **année**, et on n'invente
+jamais un jour. Sans réponse, l'écran affiche « — ».
+
+#### ⛔ ET LE POINT LE PLUS GRAVE, QUE J'AVAIS ÉCARTÉ LE MATIN
+
+Le préremplissage de la modale (`App.tsx:19260`) lisait `affaire.date` brut. Or ce champ
+**part chez Hektor** (`console_job_worker.js:15769`, `body.set("dateOffre", tx.date)`).
+
+➡ **Ouvrir puis enregistrer une de ces offres écrivait le 11/11/2026 chez Hektor.**
+J'avais écarté ce point « par prudence » : c'était l'inverse, ne pas le toucher laissait
+la contamination se propager. **Corrigé le 12/11.**
+
+#### LES QUATRE COUCHES AUDITÉES, ET CE QUI RESTE
+
+```
+EN BASE    ✅ app_registre_dossiers . la pose . l'annee d'ouverture
+           ⬜ app_pilotage_affaires_plus . app_pilotage_acquereurs . app_notaire_fiche
+           ⚠ app_attribuer_chaines_affaire -- LE CHAINAGE cote Supabase, trie par
+             date : s'il s'appuie sur une date deplacee il peut GROUPER DE TRAVERS.
+             ⛔ NON MESURE -- a regarder AVANT tout le reste.
+AU FRONT   ✅ les 2 tris . la ligne Date . la tuile . le PREREMPLISSAGE
+           ⬜ App.tsx 32618 . 32735 . 32311 (le cockpit)
+PYTHON     ✅ le chainage . l'apparieur . le rapport du gel
+           ⚠ export_app_payload.py et transactions_annonce_from_api.py : non mesures
+WORKERS    ✅ ils n'ont PAS de lecteur -- ils envoient ce que la modale leur donne
+```
+
 ### ⚠⚠ LES TROIS TROUVAILLES DE L'APRÈS-MIDI DU 12/11 — *mesurées, pas supposées*
 
 #### ① L'ANNÉE DES ÉTIQUETTES EST FAUSSE POUR 708 DOSSIERS *(le même défaut)*

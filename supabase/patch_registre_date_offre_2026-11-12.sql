@@ -1,0 +1,98 @@
+-- ═══════════════════════════════════════════════════════════════════════════
+-- LE REGISTRE DES TRANSACTIONS : LA DATE RÉELLE D'UNE OFFRE      12/11/2026
+-- ═══════════════════════════════════════════════════════════════════════════
+-- ✅ COLLÉ EN PRODUCTION LE 12/11/2026, en trois migrations, dans cet ordre :
+--      registre_dossiers_date_offre_reelle_2026_11_12
+--      lecteur_date_en_jsonb_2026_11_12
+--      appelants_du_lecteur_en_jsonb_2026_11_12
+--
+-- ⚠ CE FICHIER EST UNE TRACE, pas le patch à coller : les trois migrations sont
+--   déjà posées. Il existe pour que le dépôt dise la vérité sur ce qui tourne, et
+--   pour que la prochaine personne sache POURQUOI.
+--
+-- ═══════════════════════════════════════════════════════════════════════════
+-- CE QUI A ÉTÉ CORRIGÉ, ET C'EST FRÉDÉRIC QUI L'A TROUVÉ
+-- ═══════════════════════════════════════════════════════════════════════════
+-- *« pourquoi les offres du 11/11 sont toujours visibles dans le registre des
+--   transactions ? et le pilotage forcément »* -- et il avait raison : ma
+--   correction du matin ne touchait que les DEUX écrans de détail (la fiche d'un
+--   bien, le parcours d'un dossier). Le registre, lui, passe par cette fonction,
+--   EN BASE, que je n'avais pas vue.
+--
+--   MESURE AVANT, sur les 11 424 dossiers du registre :
+--       « date du dernier événement » fausse           1 277
+--       CLASSÉS EN 2026 À TORT                         1 190
+--       date d'offre fausse                            1 412
+--
+--   ⚠ ET CE N'ÉTAIT PAS QU'UN AFFICHAGE : le filtre final est
+--       where p_annee is null or left(ch.date_dernier_evenement, 4) = p_annee::text
+--     Choisir « 2026 » rendait 1 190 affaires qui n'y avaient rien à faire, dont
+--     la plus ancienne remontait à 2006.
+--
+--   MESURE APRÈS (la même agrégation, sans le filtre de droits) :
+--       dossiers en 2026        1 684  ->  494       (1 190 retrouvent leur année)
+--       dossiers au 11/11/2026  1 185  ->    5       (les 5 sans aucun recours)
+--       offres sans date          786  ->   85       (701 retrouvent une date)
+--
+-- ═══════════════════════════════════════════════════════════════════════════
+-- LA CASCADE, DEMANDÉE PAR FRÉDÉRIC LE 12/11
+-- ═══════════════════════════════════════════════════════════════════════════
+-- *« Si une offre d'achat n'a jamais eu de date il faut reprendre celle du
+--   compromis ou chercher dans le classeur »*
+--
+--       1. le JOURNAL de l'offre (sa première proposition)   ✅ en service
+--       2. le COMPROMIS du même dossier                      ✅ 55 offres sauvées
+--       3. la VENTE du même dossier                          ✅  1 offre sauvée
+--       4. le CLASSEUR, par le bien                          ⬜ à la main, 12 cas
+--       5. le MANDAT du bien                                 ⛔ ANNÉE seulement
+--
+-- ⛔ LE CRAN 5 N'EST PAS DANS CETTE FONCTION, ET C'EST DÉLIBÉRÉ : le mandat ne
+--   donne qu'une année probable (il se trompe environ une fois sur trois). Il sert
+--   à l'étiquette de dossier, jamais à une date affichée.
+-- ⛔ ET ON N'INVENTE RIEN AU-DELÀ : sans réponse, la date reste NULLE et l'écran
+--   affiche « — ». Afficher une date fausse est pire que n'en afficher aucune --
+--   c'est précisément ce qui a fait perdre une journée.
+--
+-- ═══════════════════════════════════════════════════════════════════════════
+-- DEUX DÉFAUTS QUE MES PROPRES MESURES ONT TROUVÉS DANS CE PATCH
+-- ═══════════════════════════════════════════════════════════════════════════
+-- ① LE LECTEUR LEVAIT. Écrit en SQL pur, il échouait sur un `propositions_json`
+--    non-JSON (« invalid input syntax for type json ») : une seule valeur abîmée
+--    aurait fait tomber toute la pose. Je l'ai d'abord entouré d'un bloc
+--    `exception` en plpgsql.
+--    ⭐⭐ PUIS LA BONNE RÉPONSE : la colonne EST de type JSONB. En prenant du JSONB
+--      en paramètre, il n'y a plus de conversion -- donc plus rien à protéger, et
+--      on revient au SQL pur, qui s'inline. **Le typage vaut mieux qu'un filet :
+--      j'avais protégé un cast au lieu de le supprimer.**
+--    ⛔ Et les anciennes signatures (text) ont été SUPPRIMÉES : deux fonctions du
+--      même nom finissent par diverger -- la faute des « deux portes » que ce
+--      chantier a payée le matin même (deux calculateurs d'année, un seul réparé,
+--      697 numéros faux).
+--
+-- ② J'AI FAILLI ANNONCER UNE RÉGRESSION QUI N'EXISTE PAS. Mes premières mesures
+--    donnaient 473 ms sans le lecteur et 1 677 ms avec -- une régression de 3,5×
+--    sur un écran quotidien. En répétant quatre fois :
+--        avec le lecteur : 99 . 72 . 75 . 67 ms
+--        sans le lecteur : 73 . 79 . 73 . 74 ms
+--    ⛔ AUCUNE DIFFÉRENCE. Les trois premières mesures étaient du bruit de cache
+--      froid. **Une mesure de performance faite une seule fois ne vaut rien.**
+--
+-- ═══════════════════════════════════════════════════════════════════════════
+-- CE QUI RESTE, ET QUI EST MESURÉ MAIS PAS CORRIGÉ
+-- ═══════════════════════════════════════════════════════════════════════════
+--   app_pilotage_affaires_plus      trie par date  ⬜
+--   app_pilotage_acquereurs         trie par date  ⬜
+--   app_notaire_fiche               trie par date  ⬜
+--   app_attribuer_chaines_affaire   trie par date  ⚠ C'EST LE CHAÎNAGE côté
+--       Supabase, et il rattache les transactions arrivées sans dossier. S'il
+--       s'appuie sur une date déplacée, il peut GROUPER DE TRAVERS.
+--       ⛔ NON MESURÉ -- à regarder avant de toucher quoi que ce soit d'autre.
+--   App.tsx 32618 . 32735 . 32311   le cockpit, au front  ⬜
+--
+-- ⚠ ET LE CONTRÔLE DE CETTE FONCTION NE PEUT PAS SE FAIRE EN service_role :
+--   elle filtre par le périmètre de l'utilisateur (is_app_global_reader(),
+--   app_mes_biens_portefeuille(), app_mes_chaines_nommees()). Appelée par
+--   `postgres`, elle rend ZÉRO ligne -- et c'est son travail, pas un défaut.
+--   Le contrôle se fait en rejouant son agrégation sans le filtre de droits.
+--   ⛔ Un zéro ne se croit pas sans témoin positif : ici le témoin est
+--     is_app_global_reader() = false et 0 bien au portefeuille.

@@ -19257,7 +19257,19 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       return duCarnet || texte(replis)
     }
 
-    const date = valeur('date', affaire.date).slice(0, 10)
+    // ⭐⭐ 12/11/2026 : LA DATE EFFECTIVE, ET C'EST LE POINT LE PLUS SENSIBLE.
+    //
+    //   Ce champ PREREMPLIT la modale, et ce que la modale contient PART CHEZ
+    //   HEKTOR (console_job_worker.js l. 15769 : body.set("dateOffre", tx.date)).
+    //   Avec `affaire.date` brut, ouvrir puis enregistrer une des 1 185 offres
+    //   refusees le 11/11 ECRIVAIT le 11/11/2026 chez Hektor -- la date fausse
+    //   devenait definitive.
+    //
+    //   ⛔ J'AVAIS ECARTE CE POINT LE MATIN DU 12/11, en croyant que le toucher
+    //     risquait d'envoyer une date modifiee. C'ETAIT L'INVERSE : ne pas le
+    //     toucher laissait la contamination partir chez Hektor au premier
+    //     enregistrement. Le carnet garde la priorite, comme avant.
+    const date = valeur('date', dateDeRangement(affaire) || affaire.date).slice(0, 10)
     const dateActe = valeur('date_acte', affaire.date_acte).slice(0, 10)
     const montant = valeur('montant', affaire.montant)
     if (montant) {
