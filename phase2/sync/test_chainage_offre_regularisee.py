@@ -26,6 +26,19 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 import affaire_ledger as al  # noqa: E402
 
+# ⛔ L'ENCODAGE DE LA CONSOLE, ET CE DEFAUT A COUTE UN DIAGNOSTIC (12/11/2026).
+#   Cet essai ecrit « ⛔ » et « OK ». Sur la console Windows (cp1252), le premier
+#   « ⛔ » levait UnicodeEncodeError -- l'essai s'arretait AVANT d'avoir dit ce qui
+#   n'allait pas, et il paraissait CASSE alors qu'il avait simplement trouve deux
+#   echecs. Il a fallu PYTHONIOENCODING=utf-8 pour le voir.
+#   ⚠ Un essai qui ne peut pas AFFICHER son resultat ne vaut rien : son silence se
+#     confond avec une panne. Meme patron que les autres scripts du projet
+#     (apparier_classeur.py, apres_run_*.py).
+try:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+except Exception:                                                   # noqa: BLE001
+    pass
+
 echecs = 0
 
 
