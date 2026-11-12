@@ -222,6 +222,39 @@ PYTHON     ✅ le chainage . l'apparieur . le rapport du gel
 WORKERS    ✅ ils n'ont PAS de lecteur -- ils envoient ce que la modale leur donne
 ```
 
+### ✅ LES 4 ESSAIS DU CHAÎNAGE SONT VERTS — *12/11 au soir*
+
+Ils criaient ROUGE à chaque passage depuis des semaines, et **aucun ne parlait du code**.
+
+```
+① l'invariant « bloc date APRES la vente »   11 cas LEGITIMES (offres saisies apres
+   coup) presentes comme « ce qui ne doit JAMAIS arriver » -> socle tolere, cri des
+   qu'il BOUGE, dans les deux sens . le nombre reste AFFICHE
+② les references de compte du 20/10          12 702 / 12 278 / 12 159 / 12 149 avec
+   une tolerance de 30, alors que 4 regles ont REUNI 727 dossiers depuis
+   -> reetalonnees AVEC la liste des regles sous lesquelles elles valent
+   ⭐⭐ + LES RELATIONS, le seul juge qui ne se demode pas : une regle qui REUNIT ne
+      peut pas AUGMENTER le nombre de dossiers
+      V2 eteinte 11 485 -> V2 11 438 -> cran 1 11 438 -> cran 2 11 428
+③ le cran des sans-date IMPOSE a 1           la production est au cran 2
+   -> on lit `.env` . ⚠ un setdefault NE SUFFIT PAS (la variable y est chargee PLUS TARD)
+```
+
+⛔⛔ **ET DEUX PIÈGES DE MESURE QUI VALENT POUR TOUT LE PROJET :**
+
+```
+la base LOCALE porte les chaines du DERNIER RUN -- tout ce qui est pose dans la
+   journee n'y est PAS encore. Releve : le dossier 3676 etait encore COUPE EN DEUX
+   en local alors que la regle D l'avait reuni chez Supabase, et les 19 offres
+   reacceptees y etaient encore « refused ». Un ecart local/Supabase est un RETARD.
+⭐⭐ CE QUI COMPTE N'EST PAS LE NUMERO MAIS LE GROUPE : 1 187 numeros differents
+   mais 2 854 GROUPES differents. Pour juger un chainage on compare les PARTITIONS
+   (qui est avec qui), JAMAIS les numeros.
+```
+
+**État : six essais, six verts** — `offre_regularisee` · `vente_ferme` · `v2` (4 sens
++ 3 relations) · `offre_proposee` · `dirty_guards` · `etiquette_dans_le_run`.
+
 ### ⚠⚠ LES TROIS TROUVAILLES DE L'APRÈS-MIDI DU 12/11 — *mesurées, pas supposées*
 
 #### ① L'ANNÉE DES ÉTIQUETTES EST FAUSSE POUR 708 DOSSIERS *(le même défaut)*
