@@ -244,6 +244,46 @@ def date_de_chez_nous(v) -> date | None:
         return None
 
 
+def premiere_proposition(blob) -> date | None:
+    """La date de la PREMIERE PROPOSITION d'une offre, lue dans son journal.
+
+    ⛔ POURQUOI, mesure du 12/11/2026 (decouverte 11 de ce rapport). Pour une
+      OFFRE, la colonne `date` porte le DERNIER MOUVEMENT, pas la proposition :
+      nos 1 185 refus du 11/11 ont deplace la date de 1 185 offres au 11/11/2026.
+      Releve sur l'offre 14112 -- proposition 25/03/2021, acceptation 25/03/2021,
+      refus 11/11/2026 -- et `date` porte le refus.
+      SANS CETTE LECTURE, le rapport annonce 536 ecarts sur « Offre Achat » qui
+      n'en sont pas (mesure du 12/11 sur les 4 462 offres gelees, dont 306 dus a
+      nos propres refus de la veille).
+    ⭐ C'est la MEME reparation que celle de apparier_classeur.py
+      (dates_des_propositions, 12/11) et que fait deja le chainage. On aligne le
+      troisieme lecteur.
+    ⚠ Le REFUS est volontairement exclu : il est deja porte par `date`.
+    ⚠ Une forme inconnue rend None, jamais une exception -- le rapport retombe
+      alors sur `date`, c'est-a-dire sur le comportement d'avant.
+    """
+    import json
+    if not blob:
+        return None
+    charge = blob
+    if isinstance(blob, str):
+        try:
+            charge = json.loads(blob)
+        except (TypeError, ValueError):
+            return None
+    gens = charge if isinstance(charge, list) else [charge] if isinstance(charge, dict) else []
+    jours = []
+    for e in gens:
+        if not isinstance(e, dict):
+            continue
+        if str(e.get("type") or "").strip().lower() not in ("proposition", "accepte"):
+            continue
+        d = date_de_chez_nous(e.get("date"))
+        if d is not None:
+            jours.append(d)
+    return min(jours) if jours else None
+
+
 # ───────────────────────────────── les noms
 MOTS_DE_FORME = {"MME", "MLLE", "MONSIEUR", "MADAME", "SCI", "SARL", "SAS", "INDIVISION",
                  "CONSORTS", "HOIRIE", "SUCCESSION", "VEUVE", "EPOUX", "EPOUSE"}
@@ -438,6 +478,8 @@ def main() -> int:
                     "app_affaire_id,app_chaine_id,kind,state,numero_mandat,montant,date,date_acte,"
                     "honoraires_entree,honoraires_sortie,commission_agence,charge_commission_app,"
                     "acquereurs_json,mandants_json,notaire_acquereur_nom,notaire_mandant_nom,"
+                    # ⭐ 12/11 : le JOURNAL de l'offre -- voir premiere_proposition()
+                    "propositions_json,"
                     "hektor_annonce_id", "app_affaire_id.asc")
     rep = lire_tout(cl, "app_affaire_repartition",
                     "app_chaine_id,cote,rang,hektor_user_id,nom_au_moment,pourcentage,origine",
@@ -577,6 +619,15 @@ def main() -> int:
             dc = date_du_classeur(case(l, champ_c))
             t = parr.get(role)
             dn = date_de_chez_nous(t.get(cle)) if t else None
+            # ⭐ REPARATION « propositions » (12/11/2026) : pour l'OFFRE, `date`
+            #   est le DERNIER MOUVEMENT. On prend la PREMIERE PROPOSITION quand
+            #   le journal en porte une, et on le DIT -- sinon la reparation
+            #   serait muette et on ne saurait pas si elle a servi.
+            if t and role == "offre" and cle == "date":
+                dp = premiere_proposition(t.get("propositions_json"))
+                if dp is not None and dp != dn:
+                    notes["Offre Achat : date lue dans le JOURNAL, pas dans `date`"] += 1
+                    dn = dp
             egal = dc is not None and dn is not None and abs((dc - dn).days) <= 3
             pose(nom_sortie, dc, dn, verdict(dc, dn, egal))
 

@@ -248,6 +248,12 @@ import {
   type HektorCompositionPieceInput,
   type MandantContactSearchOption,
   type OwnerAnnonceSearchOption,
+  // ⭐ 12/11/2026 : la date EFFECTIVE d'une offre -- sa premiere proposition, pas
+  //   son dernier mouvement. Elle vivait ICI depuis le 05/11 mais ne servait qu'a
+  //   la regularisation ; elle habite api.ts maintenant, a cote du type et des
+  //   requetes, et c'est de la-bas que viennent AUSSI les deux rangements.
+  dateOffreFaite,
+  dateDeRangement,
 } from './lib/api'
 import type { CadreDeVie, CadastreData, CadastreParcelle, DvfComparablesResult, DossierEstimation, BdnbData, DpeData, PatrimoineData, LoyerData, CoproRnieData, InseeProfil } from './lib/api'
 import { getCurrentSession, googleWorkspaceDomain, hasSupabaseEnv, isGoogleWorkspaceEmail, signInWithGoogleWorkspace, signInWithPassword, signOut, supabase, updatePassword } from './lib/supabase'
@@ -24225,7 +24231,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                                 ? { v: `jusqu'au ${formatDate(a.date_fin_retractation)}`, app: false, cle: 'jours_retractation' }
                                 : champ('jours_retractation')],
                             ['Séquestre', argent(champ('sequestre', a.sequestre))],
-                            ['Date', jour(champ('date', a.date))],
+                            // ⭐ 12/11 : pour une OFFRE, la date lue est celle de sa PREMIERE PROPOSITION.
+                            //   `a.date` porte le dernier mouvement -- un refus l'ecrase.
+                            ['Date', jour(champ('date', dateDeRangement(a) || a.date))],
                             ["Date d'acte", jour(champ('date_acte', a.date_acte))],
                             // R1 (22/10) : la ligne ne lisait QUE le carnet, donc restait vide
                             // pour toute transaction nee chez Hektor, alors que le registre porte
@@ -24259,7 +24267,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                                   <span className="sca-g">{GENRE[a.kind] ?? a.kind}</span>
                                   <span className="sca-e">{etatLabel(a.kind, a.state)}</span>
                                   <span className="sca-m">{a.montant != null && String(a.montant).trim() ? formatPrice(a.montant) : '—'}</span>
-                                  <span className="sca-d">{a.date ? formatDate(a.date) : '—'}</span>
+                                  {/* ⭐ 12/11 : la date EFFECTIVE (premiere proposition pour une offre) */}
+                                  <span className="sca-d">{dateDeRangement(a) || a.date
+                                    ? formatDate(dateDeRangement(a) || String(a.date)) : '—'}</span>
                                   <span className="sca-a">{acq || '—'}</span>
                                   <span className="sca-t">
                                     {/* 2.2 (04/09) : QUAND PLUSIEURS VIVENT, ON OFFRE LE CHOIX.
@@ -31880,25 +31890,6 @@ function offreEcarteeSurBienEngage(
   if (!affaireEstVivante(affaire)) return false
   if (AFFAIRE_ETATS_ACCEPTES.has(String(affaire.state ?? '').trim().toLowerCase())) return false
   return !offreVerrouilleeParSonDossier(lignes, affaire)
-}
-
-/** 05/11/2026 -- LA DATE A LAQUELLE UNE OFFRE A ETE FAITE : sa PREMIERE proposition, comme la nuit
- *  (`_date_de_tri`, phase2/sync/affaire_ledger.py). La colonne `date` porte le DERNIER evenement (un refus,
- *  une acceptation) : s'en servir rangerait l'offre apres le compromis qu'elle a precede. Rend « AAAA-MM-JJ »,
- *  ou '' si rien d'utilisable. */
-function dateOffreFaite(a: AffaireLedgerRow): string {
-  const utile = (v: unknown) => {
-    const d = String(v ?? '').trim()
-    return /^\d{4}-\d{2}-\d{2}/.test(d) && !d.startsWith('0000') ? d.slice(0, 10) : ''
-  }
-  let dates: string[] = []
-  try {
-    const brut = typeof a.propositions_json === 'string' ? JSON.parse(a.propositions_json) : a.propositions_json
-    if (Array.isArray(brut)) {
-      dates = brut.map((p) => String((p as { date?: unknown } | null)?.date ?? '').trim()).filter(Boolean)
-    }
-  } catch { dates = [] }
-  return (dates.length ? utile([...dates].sort()[0]) : '') || utile(a.date)
 }
 
 /** 05/11/2026 -- L'OFFRE OUBLIEE QUI SE REGULARISE (option 1, notice/AUDIT_REFONTE_MODALE_STATUT_2026-11-05.md §13-14).

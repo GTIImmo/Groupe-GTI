@@ -1991,6 +1991,75 @@ export async function loadAffaireChampsApp(appAffaireIds: number[]): Promise<Map
   return carnet
 }
 
+/** 12/11/2026 -- LA DATE A LAQUELLE UNE OFFRE A ETE FAITE : sa PREMIERE proposition.
+ *
+ *  ⛔ POURQUOI. La colonne `date` d'une OFFRE porte son DERNIER mouvement, pas sa
+ *    proposition : Hektor y inscrit l'evenement le plus recent. Nos 1 185 refus du
+ *    11/11/2026 ont donc date de ce jour-la 1 185 offres dont la vraie date s'etale
+ *    de 2006 a 2026 (1 180 d'entre elles portent cette vraie date dans leur journal,
+ *    5 n'en ont aucune). Releve sur l'offre 3678 : proposee et acceptee le
+ *    14/08/2025, refusee le 11/11/2026 -- et `date` porte le refus.
+ *
+ *  ⭐ CE N'EST PAS LA PREMIERE FOIS, ET C'EST LE 4e LECTEUR QU'ON ALIGNE :
+ *      le chainage de nuit   `_date_de_tri`, phase2/sync/affaire_ledger.py l. 1517
+ *      l'apparieur           `dates_des_propositions`, apparier_classeur.py  (12/11)
+ *      le rapport du gel     `premiere_proposition`, rapport_gel_tous_les_champs.py (12/11)
+ *      l'ECRAN               ici
+ *
+ *  ⚠ ELLE ETAIT DEJA ECRITE DANS App.tsx LE 05/11, mais elle ne servait qu'a la
+ *    REGULARISATION d'une offre oubliee. Elle vit ici desormais -- a cote du type et
+ *    des requetes -- et App.tsx l'importe : UNE SEULE definition, aucun doublon.
+ *
+ *  ⛔ ON NE CORRIGE PAS LA COLONNE `date`. Le run la relit chez Hektor a chaque nuit
+ *    (R2_CHAMP_VERS_COLONNE, affaire_ledger.py l. 1661) et la protection est
+ *    NOMMEMENT refusee pour ce couple (R2_JUGES_SUR_LE_REGISTRE, l. 1671) : R3 a
+ *    besoin de comparer notre valeur a celle de Hektor. On corrige les LECTEURS.
+ *
+ *  Rend « AAAA-MM-JJ », ou '' si rien d'utilisable. Pour tout autre genre que
+ *  l'offre, rend `date` telle quelle : chez le compromis et la vente, elle ne bouge pas.
+ */
+export function dateOffreFaite(a: AffaireLedgerRow): string {
+  const utile = (v: unknown) => {
+    const d = String(v ?? '').trim()
+    return /^\d{4}-\d{2}-\d{2}/.test(d) && !d.startsWith('0000') ? d.slice(0, 10) : ''
+  }
+  let dates: string[] = []
+  try {
+    const brut = typeof a.propositions_json === 'string' ? JSON.parse(a.propositions_json) : a.propositions_json
+    if (Array.isArray(brut)) {
+      dates = brut.map((p) => String((p as { date?: unknown } | null)?.date ?? '').trim()).filter(Boolean)
+    }
+  } catch { dates = [] }
+  return (dates.length ? utile([...dates].sort()[0]) : '') || utile(a.date)
+}
+
+/** La date qui sert a RANGER une transaction : celle de l'offre pour une offre,
+ *  `date` pour les autres. ⚠ Une offre sans rien d'utilisable rend '' et part en
+ *  queue dans les deux sens -- on ne devine pas une place. */
+export function dateDeRangement(a: AffaireLedgerRow): string {
+  return String(a.kind ?? '').toLowerCase() === 'offre' ? dateOffreFaite(a) : String(a.date ?? '').slice(0, 10)
+}
+
+/** Ranger des transactions sur leur date EFFECTIVE.
+ *  ⚠ L'ORDRE DOIT ETRE REFAISABLE : a date egale, c'est le numero de transaction
+ *    qui departage, dans le meme sens -- sinon deux affichages de la meme liste
+ *    pourraient differer. Le tri de Postgres reste en place : il donne une base
+ *    stable, et celui-ci ne corrige que les offres.
+ */
+export function rangerParDateEffective(rows: AffaireLedgerRow[], croissant: boolean): AffaireLedgerRow[] {
+  const sens = croissant ? 1 : -1
+  return [...rows].sort((x, y) => {
+    const dx = dateDeRangement(x)
+    const dy = dateDeRangement(y)
+    if (dx !== dy) {
+      if (!dx) return 1          // sans date : toujours en queue
+      if (!dy) return -1
+      return dx < dy ? -sens : sens
+    }
+    return (Number(x.app_affaire_id) - Number(y.app_affaire_id)) * sens
+  })
+}
+
 /** Toutes les affaires d'un bien — offres, compromis, ventes — la plus récente d'abord. */
 export async function loadAffairesForDossier(appDossierId: number): Promise<AffaireLedgerRow[]> {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
@@ -2001,7 +2070,9 @@ export async function loadAffairesForDossier(appDossierId: number): Promise<Affa
     .order('date', { ascending: false })
     .order('app_affaire_id', { ascending: false })
   if (error) throw new Error(error.message)
-  return (data ?? []) as unknown as AffaireLedgerRow[]
+  // ⭐ 12/11 : on RANGE sur la date effective -- une offre refusee hier remontait
+  //   en tete, au-dessus de la vente qu'elle a precedee. Voir dateOffreFaite().
+  return rangerParDateEffective((data ?? []) as unknown as AffaireLedgerRow[], false)
 }
 
 /** ─── LA COMMISSION SAISIE CHEZ NOUS, DES L'OFFRE (lot 1, 16/10/2026) ───
@@ -9460,7 +9531,9 @@ export async function loadDossierDeLaChaine(chaineId: number): Promise<DossierDe
     .order('date', { ascending: true })
     .order('app_affaire_id', { ascending: true })
   if (error) throw new Error(error.message)
-  const lignes = (data ?? []) as unknown as AffaireLedgerRow[]
+  // ⭐ 12/11 : meme raison, dans l'autre sens -- l'offre s'affichait APRES la vente
+  //   dans le parcours du dossier. Voir dateOffreFaite().
+  const lignes = rangerParDateEffective((data ?? []) as unknown as AffaireLedgerRow[], true)
   const ids = lignes.map((ligne) => Number(ligne.app_affaire_id)).filter((id) => Number.isFinite(id))
   const lireParties = async (): Promise<AffairePartieRow[]> => {
     if (!ids.length) return []
