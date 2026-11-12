@@ -178,6 +178,8 @@ export type AnnonceV2CellsProps = {
   canEdit: boolean
   onEdit: () => void
   onOpen: () => void
+  /** 12/11/2026 (vendus) : l'antenne devient un bouton qui ouvre la console de diffusion. Absente = antenne muette, comme avant. */
+  onAntenne?: () => void
 }
 
 type BienPrixProps = Pick<AnnonceV2CellsProps, 'item' | 'photoUrl' | 'typeLabel' | 'negoName' | 'transactionLabel'>
@@ -296,6 +298,8 @@ export function AnnonceCarteMobile(p: {
     cases: Record<string, { etat: EtatCase; titre: string }>
     onToggle: (portalKey: string) => void
   }
+  /** 12/11/2026 (vendus) : l'antenne ouvre la console de diffusion. Absente = antenne muette. */
+  onAntenne?: () => void
 }) {
   const { item } = p
   const nbPhotos = Math.max(nombrePhotos(item), p.photoUrl ? 1 : 0)
@@ -386,10 +390,18 @@ export function AnnonceCarteMobile(p: {
           </span>
           {aUnMandat && item.mandat_type ? <span className={`av3-mtype${/exclu/i.test(item.mandat_type) ? ' excl' : ''}`}>{item.mandat_type.charAt(0) + item.mandat_type.slice(1).toLowerCase()}</span> : null}
           {periode ? <span className={`av3-reste ${periode.etat}`}>{periode.texte}</span> : null}
-          <span className={`av3-antenne av3m-antenne ${antenne}`} role="img" aria-label={!diffusable ? 'Pas diffusable' : portails > 0 ? `En ligne sur ${portails} portail${portails > 1 ? 's' : ''}` : 'Diffusable, sur aucun portail'}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true"><path d={ICONE.antenne} />{antenne === 'non' ? <path d="M4 4l16 16" strokeWidth={2.4} /> : null}</svg>
-            {antenne === 'enligne' ? <span className="nb">{portails}</span> : null}
-          </span>
+          {(() => {
+            const etiquette = !diffusable ? 'Pas diffusable' : portails > 0 ? `En ligne sur ${portails} portail${portails > 1 ? 's' : ''}` : 'Diffusable, sur aucun portail'
+            const dedans = (
+              <>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true"><path d={ICONE.antenne} />{antenne === 'non' ? <path d="M4 4l16 16" strokeWidth={2.4} /> : null}</svg>
+                {antenne === 'enligne' ? <span className="nb">{portails}</span> : null}
+              </>
+            )
+            return p.onAntenne
+              ? <button type="button" className={`av3-antenne av3m-antenne ${antenne} cliquable`} aria-label={`${etiquette} — ouvrir la console de diffusion`} onClick={(event) => { event.stopPropagation(); p.onAntenne?.() }}>{dedans}</button>
+              : <span className={`av3-antenne av3m-antenne ${antenne}`} role="img" aria-label={etiquette}>{dedans}</span>
+          })()}
         </div>
         <span className="av3m-nego"><span className={`av3-ini${nego ? '' : ' vide'}`} aria-hidden="true">{nego ? initiales(nego) : '—'}</span>{nego ?? 'Non affecté'}</span>
         {p.extra}
@@ -447,14 +459,22 @@ export function AnnonceV2Cells(p: AnnonceV2CellsProps) {
       </td>
       <td>
         <div className="av3-dif">
-          <span className={`av3-antenne ${antenne}`} title={antenneTitre} aria-label={antenneTitre} role="img">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true">
-              <path d={ICONE.antenne} />
-              {antenne === 'non' ? <path d="M4 4l16 16" strokeWidth={2.4} /> : null}
-            </svg>
-            {antenne === 'enligne' ? <span className="nb">{portails}</span> : null}
-            {enErreur ? <span className="err" /> : null}
-          </span>
+          {(() => {
+            const dedans = (
+              <>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true">
+                  <path d={ICONE.antenne} />
+                  {antenne === 'non' ? <path d="M4 4l16 16" strokeWidth={2.4} /> : null}
+                </svg>
+                {antenne === 'enligne' ? <span className="nb">{portails}</span> : null}
+                {enErreur ? <span className="err" /> : null}
+              </>
+            )
+            // 12/11/2026 (vendus) : avec `onAntenne`, l'antenne ouvre la console de diffusion.
+            return p.onAntenne
+              ? <button type="button" className={`av3-antenne ${antenne} cliquable`} title={`${antenneTitre} — ouvrir la console de diffusion`} aria-label={`${antenneTitre} — ouvrir la console de diffusion`} onClick={(event) => { event.stopPropagation(); p.onAntenne?.() }}>{dedans}</button>
+              : <span className={`av3-antenne ${antenne}`} title={antenneTitre} aria-label={antenneTitre} role="img">{dedans}</span>
+          })()}
         </div>
       </td>
       <td className="av3-r">

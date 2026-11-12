@@ -8233,11 +8233,23 @@ export async function previewDefaultDiffusionTargets(input: { appDossierId: numb
     return loadViaLocalDevApi()
   }
 
-  const { data: dossier, error: dossierError } = await supabase
+  const { data: active, error: dossierError } = await supabase
     .from('app_dossiers_current')
     .select('app_dossier_id,hektor_annonce_id,agence_nom')
     .eq('app_dossier_id', input.appDossierId)
     .maybeSingle()
+  let dossier: { app_dossier_id: number; hektor_annonce_id: number | string; agence_nom: string | null } | null = active
+  // 12/11/2026 (lot C « diffusion des vendus ») : un vendu n'est plus dans app_dossiers_current ;
+  // son numero dans l'app est app_historical_id. Sans ce repli, Bien'ici et Leboncoin (numero
+  // de passerelle propre a l'agence) restaient impossibles a cocher sur un vendu.
+  if (!dossierError && !dossier) {
+    const { data: vendu } = await supabase
+      .from('app_historical_annonce_index_current')
+      .select('app_historical_id,hektor_annonce_id,agence_nom')
+      .eq('app_historical_id', input.appDossierId)
+      .maybeSingle()
+    if (vendu) dossier = { app_dossier_id: Number(vendu.app_historical_id), hektor_annonce_id: vendu.hektor_annonce_id, agence_nom: vendu.agence_nom }
+  }
 
   if (dossierError || !dossier) {
     throw new Error(dossierError?.message ?? 'Unable to load dossier for diffusion preview')

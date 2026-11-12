@@ -84,6 +84,10 @@
 .av3 .av3-antenne.non { background: #f4f5f6; border-color: #e2e5e6; color: #9da0a0; }
 .av3 .av3-antenne .nb { position: absolute; top: -6px; right: -6px; min-width: 16px; height: 16px; padding: 0 4px; box-sizing: border-box; border-radius: 99px; background: #2f7d59; color: #fff; border: 2px solid #fff; font-size: 9px; font-weight: 800; line-height: 12px; text-align: center; }
 .av3 .av3-antenne .err { position: absolute; bottom: -3px; right: -3px; width: 11px; height: 11px; border-radius: 9px; background: #b66a16; border: 2px solid #fff; }
+/* 12/11/2026 (vendus) : l'antenne-bouton garde l'aspect de l'antenne ; seuls le curseur et le survol changent. */
+.av3 button.av3-antenne.cliquable { padding: 0; margin: 0; min-width: 0; min-height: 0; box-sizing: border-box; font: inherit; box-shadow: none; cursor: pointer; transition: transform .15s ease, box-shadow .15s ease; }
+.av3 button.av3-antenne.cliquable:hover { transform: translateY(-1px); box-shadow: 0 6px 14px -8px rgba(47, 125, 89, .7); }
+.av3 button.av3-antenne.cliquable:focus-visible { outline: 3px solid rgba(15, 76, 92, .16); outline-offset: 2px; }
 
 /* Actions : mêmes boutons que l'annuaire Contacts */
 .av3 .av3-actions { display: grid; grid-template-columns: 116px repeat(3, 34px); gap: 6px; justify-content: end; align-items: center; }

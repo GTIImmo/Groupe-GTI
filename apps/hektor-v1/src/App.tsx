@@ -488,6 +488,12 @@ function isArchivedAnnonceRecord(item: Pick<Dossier, 'archive'> | Pick<MandatRec
   return item?.archive === '1'
 }
 
+// 12/11/2026 (lot C « diffusion des vendus ») : un vendu (ni archive ni brouillon) que Hektor tient
+// pour diffusable. Lui seul se coche dans la vue Publicite et ouvre la console par son antenne.
+function estVenduDiffusable(item: MandatRecord | null | undefined): boolean {
+  return Boolean(item && isHistoricalLightweightRecord(item) && !isBrouillonRecord(item) && String(item.diffusable ?? '').trim() === '1')
+}
+
 function isHistoricalLightweightRecord(item: Pick<Dossier, 'archive' | 'statut_annonce'> | Pick<MandatRecord, 'archive' | 'statut_annonce'> | null | undefined) {
   return Boolean(item && item.archive !== '1' && isHistoricalListingStatus(item.statut_annonce))
 }
@@ -21175,7 +21181,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       setDossiers((current) => current.map((item) => item.app_dossier_id === diffusionModalMandat.app_dossier_id ? { ...item, validation_diffusion_state: validationValue, diffusable: diffusableValue, portails_resume: persistedPortalsResume, nb_portails_actifs: uniquePortalKeys(persistedPortalsResume.split(',')).length } : item))
       setMandats((current) => current.map((item) => item.app_dossier_id === diffusionModalMandat.app_dossier_id ? { ...item, validation_diffusion_state: validationValue, diffusable: diffusableValue, portails_resume: persistedPortalsResume, nb_portails_actifs: uniquePortalKeys(persistedPortalsResume.split(',')).length } : item))
       setSelectedDossier((current) => current && current.app_dossier_id === diffusionModalMandat.app_dossier_id ? { ...current, validation_diffusion_state: validationValue, diffusable: diffusableValue, portails_resume: persistedPortalsResume, nb_portails_actifs: uniquePortalKeys(persistedPortalsResume.split(',')).length } : current)
-      const refreshedBroadcasts = await loadMandatBroadcasts(diffusionModalMandat.app_dossier_id).catch(() => null)
+      // ⚠ Un vendu n'a pas de lignes de diffusion des actives : la relecture rendrait une liste VIDE et
+      //   effacerait les portails qu'on vient d'envoyer. Pour lui, le report ci-dessus fait foi (lot C, 12/11).
+      const refreshedBroadcasts = estVenduDiffusable(diffusionModalMandat) ? null : await loadMandatBroadcasts(diffusionModalMandat.app_dossier_id).catch(() => null)
       if (refreshedBroadcasts) {
         setMandatBroadcasts(refreshedBroadcasts)
         const refreshedPortalsResume = buildPortalsResume(refreshedBroadcasts.map((item) => item.passerelle_key))
@@ -21479,10 +21487,30 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     () => (diffusionModalRequest ? diffusionRequestEvents.filter((item) => String(item.diffusion_request_id) === String(diffusionModalRequest.id)) : []),
     [diffusionModalRequest, diffusionRequestEvents],
   )
-  const diffusionModalBroadcasts = useMemo(
-    () => (diffusionModalMandatId != null && selectedMandatId === diffusionModalMandatId ? mandatBroadcasts : []),
-    [diffusionModalMandatId, selectedMandatId, mandatBroadcasts],
-  )
+  // 12/11/2026 (lot C « diffusion des vendus ») : un vendu n'a pas de lignes dans
+  // app_mandat_broadcasts_current (actives seulement) ; ce qui est en ligne vient de SON index
+  // (portails_resume, lot A). On en fait des lignes « en ligne » pour la console.
+  const diffusionModalEstVendu = estVenduDiffusable(diffusionModalMandat)
+  const diffusionModalBroadcasts = useMemo((): MandatBroadcast[] => {
+    if (diffusionModalMandatId == null) return []
+    if (diffusionModalEstVendu && diffusionModalMandat) {
+      return portailsDeLaLigne(diffusionModalMandat.portails_resume).map((cle) => ({
+        app_dossier_id: diffusionModalMandat.app_dossier_id,
+        hektor_annonce_id: Number(diffusionModalMandat.hektor_annonce_id),
+        passerelle_key: cle,
+        commercial_key: '',
+        commercial_id: null,
+        commercial_nom: null,
+        commercial_prenom: null,
+        current_state: 'broadcasted',
+        export_status: 'exported',
+        is_success: true,
+        is_error: false,
+        refreshed_at: null,
+      }))
+    }
+    return selectedMandatId === diffusionModalMandatId ? mandatBroadcasts : []
+  }, [diffusionModalMandatId, diffusionModalEstVendu, diffusionModalMandat, selectedMandatId, mandatBroadcasts])
   const diffusionPortalRows = useMemo(() => {
     const grouped = new Map<string, { portalKey: string; hektorBroadcastId: string; observedEnabled: boolean; hasError: boolean; details: string[] }>()
     for (const target of diffusionTargets) {
@@ -21565,7 +21593,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         // 03/11 : une case de la vue Publicite enregistre UNE seule cible ; la fenetre complete donc avec
         // les cibles de l'agence qui MANQUENT (avant : seulement quand il n'y en avait aucune).
         const clesPresentes = new Set(rows.map((item) => item.portal_key ?? ''))
-        if (diffusionModalMandat && isValidationApproved(diffusionModalMandat.validation_diffusion_state)) {
+        // Un vendu n'a pas d'etat de validation dans son index : diffusable chez Hektor suffit (lot C, 12/11).
+        if (diffusionModalMandat && (isValidationApproved(diffusionModalMandat.validation_diffusion_state) || estVenduDiffusable(diffusionModalMandat))) {
           const preview = await previewDefaultDiffusionTargets({ appDossierId: diffusionModalMandatId }).catch(() => null)
           const previewTargets = (preview?.targets ?? []).filter((item) => !clesPresentes.has(item.portal_key ?? ''))
           if (previewTargets.length > 0) {
@@ -25901,6 +25930,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             onOpenDetailPage={openDossierDetailPage}
             onOpenLightweightDetail={openLightweightDetailImport}
             onOpenRequestModal={openRequestModal}
+            onOpenDiffusionModal={openDiffusionModal}
             vignetteV2={APP_ANNONCES_LISTE_V2}
             requests={diffusionRequests}
             currentUserName={profile?.display_name ?? profile?.email ?? null}
@@ -28075,7 +28105,8 @@ function usePubliciteAnnonces(p: {
       const resume = buildPortalsResume(suivant)
       setResumeLocal((c) => ({ ...c, [id]: resume }))
       const avant = enLigne.includes(portalKey)
-      if (avant !== publier) {
+      // Les cartes de presence comptent les annonces ACTIVES : un vendu n'y entre pas.
+      if (avant !== publier && !isHistoricalLightweightRecord(item)) {
         setPresence((pr) => pr ? { ...pr, enLigne: { ...pr.enLigne, [portalKey]: Math.max(0, (pr.enLigne[portalKey] ?? 0) + (publier ? 1 : -1)) } } : pr)
       }
       if (enErreur) {
@@ -28116,6 +28147,11 @@ function usePubliciteAnnonces(p: {
   }
   const bandePub = (item: MandatRecord, isLightweight: boolean): null | { texte: string; bouton?: { label: string; onClick: () => void; attente?: boolean } } => {
     if (item.is_provisional) return { texte: 'En création…' }
+    // 12/11/2026 (lot C « diffusion des vendus ») : un VENDU se coche et se decoche comme une active
+    // (Hektor en diffusait encore 60) ; le serveur l'accepte depuis le lot B. Meme regle : diffusable.
+    if (isLightweight && isHistoricalLightweightRecord(item) && !isBrouillonRecord(item)) {
+      return String(item.diffusable ?? '').trim() === '1' ? null : { texte: 'Vendu, pas diffusable chez Hektor.' }
+    }
     if (isLightweight) return { texte: 'Fiche importée : ouvrir pour la compléter.' }
     if (!String(item.numero_mandat ?? '').trim()) return { texte: "Pas de mandat : le créer d'abord." }
     if (String(item.diffusable ?? '').trim() === '1') return null
@@ -28451,6 +28487,7 @@ function MandatsScreen(props: {
                           rapproBadge={avBadge}
                           rapproTotal={avCount?.n_total ?? 0}
                           onRappro={() => props.onOpenRapprochement?.(item)}
+                          onAntenne={estVenduDiffusable(item) ? () => props.onOpenDiffusionModal(item.app_dossier_id) : undefined}
                           canEdit={!isLightweight && !item.is_provisional}
                           onEdit={() => {
                             demanderRubriqueAOuverture('lebien')
@@ -41584,6 +41621,8 @@ function MobileMandatCards(props: {
   presenceScope?: DataScope | null
   filtrePresence?: string | null
   onFiltrePresence?: (cle: string | null) => void
+  /** 12/11/2026 (vendus) : l'antenne d'un vendu diffusable ouvre la console de diffusion */
+  onOpenDiffusionModal?: (id: number) => void
 }) {
   const title = props.mode === 'estimation' ? 'Estimations' : 'Annonces actives'
   // ⚠ AVANT tout return (lecon de la page blanche du 27/10) : le meme crochet que le bureau.
@@ -41671,6 +41710,7 @@ function MobileMandatCards(props: {
               onAction={!isLightweight ? () => props.onOpenRequestModal(item.app_dossier_id, 'nego') : undefined}
               primaryLabel={primaryLabel}
               onOpen={ouvrir}
+              onAntenne={props.onOpenDiffusionModal && estVenduDiffusable(item) ? () => props.onOpenDiffusionModal?.(item.app_dossier_id) : undefined}
               pub={pub.vuePub ? {
                 bande: pub.bandePub(item, isLightweight),
                 cases: pub.casesDeLaLigne(item),
