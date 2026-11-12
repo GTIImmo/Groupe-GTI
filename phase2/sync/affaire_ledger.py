@@ -1200,6 +1200,26 @@ def chainage_sans_date_niveau() -> int:
         return 0
 
 
+def etiquette_dossier_actif() -> bool:
+    """B4 (12/11/2026) : LA POSE DES ETIQUETTES DANS LE RUN DE NUIT.
+
+        APP_ETIQUETTE_DOSSIER=1    le run appelle app_poser_etiquettes_dossier
+        (absent ou 0)              la nuit se passe EXACTEMENT comme avant
+
+    POURQUOI IL FAUT L'ALLUMER, ET VITE. Les 11 441 etiquettes sont justes au soir
+      du 12/11, et RIEN ne les entretient. Des la nuit prochaine, sans cet appel :
+          une transaction NEUVE       reste SANS etiquette
+          deux groupes qui FUSIONNENT gardent DEUX etiquettes
+          un groupe qui se COUPE      garde une etiquette sur deux groupes
+
+    POURQUOI UN INTERRUPTEUR QUAND MEME : le retour arriere doit etre gratuit. A 0,
+      la nuit suivante se passe comme avant -- il n'y a rien a migrer, donc rien a
+      defaire. Meme patron que APP_CHAINAGE_V2 et APP_AFFAIRE_R2_ATTENTE.
+    """
+    chainage_v2_actif()                      # il charge `.env` une fois pour tous
+    return (os.environ.get("APP_ETIQUETTE_DOSSIER") or "0").strip() == "1"
+
+
 def chainage_v2_actif() -> bool:
     """L'interrupteur de la regle V2, lu APRES `.env`. Voir le bloc au-dessus."""
     global _ENV_DEJA_CHARGE
@@ -2634,6 +2654,84 @@ def recalculer_les_chaines(con: sqlite3.Connection) -> dict[str, int]:
     return resultat
 
 
+# LE SEUIL EST BAS EXPRES : une seule fusion est normale, dix veulent dire que le
+#   chainage a change d'avis sur dix dossiers en une nuit -- et ca se regarde.
+#   Il ne BLOQUE rien : il fait parler le journal. Un seuil qui bloque la nuit
+#   ferait plus de mal que le defaut qu'il surveille.
+SEUIL_FUSIONS_QUI_INQUIETE = 10
+
+
+def poser_les_etiquettes_de_dossier(client) -> dict:
+    """B4 -- L'ETIQUETTE DE DOSSIER, POSEE PAR LE RUN.          12/11/2026
+
+    CE QU'ELLE FAIT, ET RIEN DE PLUS : un appel a la RPC
+      `app_poser_etiquettes_dossier`, qui rend ses QUATRE gestes.
+          pose          un groupe sans aucune etiquette en recoit une neuve
+          propagation   une transaction nue dans un groupe deja etiquete
+          fusion        deux etiquettes dans un groupe -> on garde la plus ancienne
+          scission      une etiquette sur deux groupes -> l'autre part en recoit une neuve
+
+    OU, DANS LE RUN, ET POURQUOI LA. Elle est appelee par
+      `redescendre_ce_que_l_app_possede`, APRES `rpc/app_attribuer_chaines_affaire`
+      et AVANT la redescente des colonnes :
+          . APRES les chaines, parce qu'une etiquette se pose sur un GROUPE -- c'est
+            la condition C2 du 29/10, « apres le calcul des groupes, jamais pendant »,
+            posee apres la lecon du 05/09 (9 000 dossiers coupes en deux) ;
+          . AVANT la redescente, parce que c'est elle qui emporte en local
+            app_dossier_uuid et app_dossier_numero (ils sont dans
+            COLONNES_QUE_LE_PUSH_N_ENVOIE_PAS depuis le 09/11).
+
+    ELLE NE LEVE JAMAIS. Une etiquette manquante est un desagrement ; une nuit
+      coupee est une panne. Un echec est DIT, chiffre, et le run CONTINUE. Meme
+      regle que `respecter_l_attente` (R2).
+
+    LE GARDE-FOU DES FUSIONS. Une fusion est IRREVERSIBLE pour l'etiquette absorbee
+      (elle ne vit plus que dans le journal). Un matin ou le chainage a beaucoup
+      bouge, on doit le voir TOUT DE SUITE, pas trois semaines apres : au-dela du
+      seuil, la ligne est criee.
+
+    Mesure du 12/11, sur 11 441 dossiers : 318 ms. Les droits sont ceux de la RPC
+    voisine, qui tourne deja dans ce meme run avec la meme cle.
+    """
+    if not etiquette_dossier_actif():
+        return {"actif": False}
+    try:
+        gestes = client._request(method="POST", path="rpc/app_poser_etiquettes_dossier")
+    except Exception as souci:                                      # noqa: BLE001
+        # ON LE DIT, ET LE RUN CONTINUE. Un journal muet ne se distingue pas d'un
+        #   mecanisme absent -- lecon payee le 20/10.
+        print(f"[affaire_ledger] ETIQUETTES : la pose a echoue ({souci!r}) -- le run "
+              f"CONTINUE, mais des dossiers restent sans etiquette. A regarder ce matin.")
+        return {"actif": True, "echec": str(souci)[:200]}
+
+    # La RPC rend une table (geste, dossiers, lignes). On ne suppose pas sa forme :
+    # une forme inconnue est DITE, pas devinee.
+    resultat: dict = {}
+    if isinstance(gestes, list):
+        for ligne in gestes:
+            if isinstance(ligne, dict) and ligne.get("geste"):
+                resultat[str(ligne["geste"])] = int(ligne.get("dossiers") or 0)
+                resultat[str(ligne["geste"]) + "_lignes"] = int(ligne.get("lignes") or 0)
+    if not resultat:
+        print(f"[affaire_ledger] ETIQUETTES : compte rendu illisible "
+              f"({str(gestes)[:200]}) -- le run CONTINUE.")
+        return {"actif": True, "compte_rendu_illisible": True}
+
+    bouge = sum(v for k, v in resultat.items() if not str(k).endswith("_lignes"))
+    if bouge:
+        print("[affaire_ledger] etiquettes : "
+              + " . ".join(f"{g} {resultat.get(g, 0)}"
+                           for g in ("pose", "propagation", "fusion", "scission")))
+    # LE CRI DES FUSIONS -- voir la docstring.
+    if resultat.get("fusion", 0) >= SEUIL_FUSIONS_QUI_INQUIETE:
+        print(f"[affaire_ledger] ATTENTION ETIQUETTES : {resultat['fusion']} FUSION(S) "
+              f"cette nuit (seuil {SEUIL_FUSIONS_QUI_INQUIETE}). Une fusion est "
+              f"definitive pour l'etiquette absorbee -- elle ne vit plus que dans "
+              f"app_dossier_etiquette_journal. Verifier ce qui a bouge dans le chainage.")
+    resultat["actif"] = True
+    return resultat
+
+
 def redescendre_ce_que_l_app_possede(client, con: sqlite3.Connection) -> dict[str, int]:
     """1.1 -- LE DOSSIER D'AFFAIRE : un numero par (annonce, acquereur).
 
@@ -2666,6 +2764,12 @@ def redescendre_ce_que_l_app_possede(client, con: sqlite3.Connection) -> dict[st
     posees = int(posees or 0)
     if posees:
         print(f"[affaire_ledger] {posees} affaire(s) rattachee(s) a un dossier d'affaire")
+
+    # ─── B4 (12/11/2026) : L'ETIQUETTE DE DOSSIER, ICI ET NULLE PART AILLEURS ───
+    # APRES les chaines (une etiquette se pose sur un GROUPE -- condition C2 du
+    # 29/10) et AVANT la redescente (c'est elle qui emporte les deux colonnes en
+    # local). Eteinte par defaut : APP_ETIQUETTE_DOSSIER=1 pour qu'elle joue.
+    etiquettes = poser_les_etiquettes_de_dossier(client)
 
     # On redescend TOUT ce que l'app possede -- la chaine et les champs de classe A.
     # Le local ne s'en sert pas pour ecrire ; il les garde pour que la sauvegarde de
@@ -2716,7 +2820,8 @@ def redescendre_ce_que_l_app_possede(client, con: sqlite3.Connection) -> dict[st
               f"--refresh les ajoutera. Le run CONTINUE.")
         colonnes = [c for c in colonnes if c in ici]
     if not colonnes:
-        return {"chainees_par_supabase": posees, "lignes_redescendues": 0,
+        return {"chainees_par_supabase": posees, "etiquettes": etiquettes,
+                "lignes_redescendues": 0,
                 "colonnes_redescendues": 0, "locales_sans_chaine": con.execute(
                     f"SELECT COUNT(*) FROM {LEDGER_TABLE} WHERE app_chaine_id IS NULL"
                 ).fetchone()[0]}
@@ -2731,7 +2836,8 @@ def redescendre_ce_que_l_app_possede(client, con: sqlite3.Connection) -> dict[st
     con.commit()
     manquantes = con.execute(
         f"SELECT COUNT(*) FROM {LEDGER_TABLE} WHERE app_chaine_id IS NULL").fetchone()[0]
-    return {"chainees_par_supabase": posees, "lignes_redescendues": len(valeurs),
+    return {"chainees_par_supabase": posees, "etiquettes": etiquettes,
+            "lignes_redescendues": len(valeurs),
             "colonnes_redescendues": len(colonnes), "locales_sans_chaine": manquantes}
 
 
