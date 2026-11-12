@@ -131,6 +131,23 @@ def passerelles_v2_actif() -> bool:
     return (os.environ.get("APP_PASSERELLES_V2") or "0").strip() == "1"
 
 
+# 12/11/2026 -- LA DIFFUSION ETAIT DE NOUVEAU FIGEE, DEPUIS LE 06/11 (7 nuits, sans alerte).
+# `raw_api_response` garde UNE ligne par page, mise a jour en place. Quand la liste de Hektor
+# RETRECIT (81 pages le 05/11, 80 le 06/11, 78 le 12/11), les dernieres pages des vieilles nuits
+# ne sont plus jamais remplacees : elles se melangeaient au passage frais, le garde-fou v2
+# refusait (« pages de 3 passages differents ») et `broadcast_bilan_pages` lisait le `total`
+# perime de la vieille page 81 (1 601 au lieu de 1 551). On ne lit donc QUE le dernier passage.
+# ⚠ Le dernier passage se reconnait a `fetched_at`, PAS a `id` : une page relue garde son id
+#   d'origine, la vieille page 81 du 05/11 a un id plus grand que toutes celles du 12/11.
+# Interrupteur eteint (APP_PASSERELLES_V2 != 1) : toutes les pages, comme avant.
+def broadcast_pages_dernier_passage(conn: sqlite3.Connection) -> list[sqlite3.Row]:
+    lignes = list(fetch_latest_raw_payloads(conn, "list_broadcasts"))
+    if not lignes or not passerelles_v2_actif():
+        return lignes
+    dernier = max(lignes, key=lambda ligne: (ligne["fetched_at"] or "", ligne["id"]))["run_id"]
+    return [ligne for ligne in lignes if ligne["run_id"] == dernier]
+
+
 def broadcast_reponse_complete_v2(conn: sqlite3.Connection) -> tuple[bool, str]:
     """La reponse PAGINEE fait-elle autorite ? (pendant v2 de broadcast_reponse_complete)
 
@@ -141,7 +158,7 @@ def broadcast_reponse_complete_v2(conn: sqlite3.Connection) -> tuple[bool, str]:
       deux nuits melangees) ; pages contigues ; la DERNIERE n'annonce pas de suite ; au moins
       une passerelle. Le compte des diffusions contre `metadata.total` est fait a cote.
     """
-    lignes = list(fetch_latest_raw_payloads(conn, "list_broadcasts"))
+    lignes = list(broadcast_pages_dernier_passage(conn))
     if not lignes:
         return False, "aucune page"
     runs = {ligne["run_id"] for ligne in lignes}
@@ -172,7 +189,7 @@ def broadcast_bilan_pages(conn: sqlite3.Connection) -> Dict[str, Any]:
     pages = 0
     total = None
     page_suivante = None
-    for ligne in fetch_latest_raw_payloads(conn, "list_broadcasts"):
+    for ligne in broadcast_pages_dernier_passage(conn):
         pages += 1
         try:
             meta = (json.loads(ligne["payload_json"]) or {}).get("metadata") or {}
@@ -196,7 +213,7 @@ def iter_broadcast_platforms(conn: sqlite3.Connection) -> list[Dict[str, Any]]:
     BROADCAST_BILAN.clear()
     items = list(
         iter_listing_items(
-            fetch_latest_raw_payloads(conn, "list_broadcasts"),
+            broadcast_pages_dernier_passage(conn),
             wrapper_key=BROADCAST_WRAPPER_KEY,
             bilan=BROADCAST_BILAN,
         )
@@ -227,7 +244,7 @@ def broadcast_reponse_complete(conn: sqlite3.Connection) -> bool:
       · il reste AU MOINS UNE passerelle -- une reponse vide ne doit jamais
         pouvoir vider la table.
     """
-    lignes = list(fetch_latest_raw_payloads(conn, "list_broadcasts"))
+    lignes = list(broadcast_pages_dernier_passage(conn))
     if not lignes:
         return False
     for ligne in lignes:
