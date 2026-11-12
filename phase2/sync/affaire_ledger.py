@@ -1385,6 +1385,106 @@ def chainage_compromis_annule_seul_actif() -> bool:
     return os.environ.get("APP_CHAINAGE_COMPROMIS_ANNULE_SEUL", "0") == "1"
 
 
+def chainage_rattachement_manuel_actif() -> bool:
+    """LES RATTACHEMENTS DECIDES A LA MAIN (12/11/2026).
+
+        APP_CHAINAGE_RATTACHEMENT_MANUEL=1   le fichier est lu
+        (absent ou 0)                        comportement d'avant, A L'IDENTIQUE
+
+    ⭐ LA PIECE QUI MANQUAIT AU PROJET, et l'audit du 10/11 l'avait nommee sans
+      la construire : « la decision du 04/09 interdit de les regler par une
+      regle : il faudrait un rattachement manuel, qui n'existe pas aujourd'hui ».
+    Le chainage refait TOUS les dossiers chaque nuit : une fusion posee a la main
+    en base serait effacee au run suivant. Le fichier est la seule memoire qui
+    survit au recalcul -- et comme il est dans git, la trace est le commit.
+
+    ⛔ IL NE DEVINE RIEN. Chaque ligne a ete tranchee par Frederic, un dossier a
+      la fois, sur l'ecran du tableau du 12/11.
+    """
+    chainage_v2_actif()                      # il charge `.env` une fois pour tous
+    return os.environ.get("APP_CHAINAGE_RATTACHEMENT_MANUEL", "0") == "1"
+
+
+FICHIER_RATTACHEMENTS = Path(__file__).resolve().parent / "rattachements_manuels.csv"
+
+
+def lire_rattachements_manuels() -> list[tuple[int, int, int, str]]:
+    """Le fichier -> [(transaction, cible, bien attendu, pourquoi)]. Jamais d'exception.
+
+    ⚠ UN FICHIER ILLISIBLE NE DOIT PAS ARRETER LE RUN : on rend une liste vide et
+      le chainage se comporte comme si l'interrupteur etait eteint. Le run de nuit
+      porte les mandats, les annonces et les contacts ; il ne tombe pas pour une
+      ligne de CSV mal tapee.
+    """
+    sorties: list[tuple[int, int, int, str]] = []
+    try:
+        texte = FICHIER_RATTACHEMENTS.read_text(encoding="utf-8-sig")
+    except OSError:
+        return sorties
+    for brut in texte.splitlines():
+        ligne = brut.strip()
+        if not ligne or ligne.startswith("#"):
+            continue
+        parts = [p.strip() for p in ligne.split(";")]
+        if len(parts) < 3:
+            continue
+        try:
+            source, cible, bien = int(parts[0]), int(parts[1]), int(parts[2])
+        except ValueError:
+            continue
+        pourquoi = parts[4] if len(parts) > 4 else ""
+        sorties.append((source, cible, bien, pourquoi))
+    return sorties
+
+
+def chainage_meme_acheteur_actif() -> bool:
+    """REGLE D -- UN MEME ACHETEUR SUR UN MEME BIEN = UN SEUL DOSSIER (12/11/2026).
+
+        APP_CHAINAGE_MEME_ACHETEUR=1   la regle joue
+        (absent ou 0)                  comportement d'avant, A L'IDENTIQUE
+
+    Demandee par Frederic le 12/11 : « un acheteur + un bien = une affaire. Un
+    compromis annule est une ETAPE de l'affaire, pas une autre affaire. »
+
+    ─── CE QUI COUPAIT, ET POURQUOI ──────────────────────────────────────────
+    La boucle datee ne cherche une cible que parmi les chaines ENCORE OUVERTES,
+    et un etat mort FERME la chaine (offre refusee, compromis annule). Donc la
+    deuxieme tentative du MEME acheteur ne retrouve jamais la premiere.
+    Releve du 12/11 sur le bien 22867 -- un seul acheteur, FAYARD, trois dossiers :
+        10751  compromis ANNULE 12/09/2008   ouvre, puis son etat ferme
+        10752  compromis ACTIF  12/11/2008   ouvre un 2e dossier, la vente le rejoint
+        10753  deux offres SANS DATE         le § 2.9 voit DEUX cibles a son nom
+                                             -> abstention, elles restent seules
+    ⭐ C'est Frederic qui l'a vu sur son ecran, pas un controle.
+
+    ─── CE QUE LA REGLE FAIT, ET OU ──────────────────────────────────────────
+    En DERNIER, apres les regles A, B et C -- elle ramasse ce qu'elles laissent.
+    Elle reunit deux chaines du MEME bien qui PARTAGENT UN ACQUEREUR. Rien
+    d'autre : ni date, ni montant, ni etat n'entrent dans la decision, parce
+    qu'un acheteur et un bien suffisent a nommer une affaire.
+    La chaine qui garde ses membres est celle du PLUS PETIT app_affaire_id,
+    comme la numerotation finale le fera de toute facon.
+
+    ⛔ SES DEUX GARDES, ET ELLES VIENNENT DES INVARIANTS DU PROJET :
+      . jamais DEUX VENTES dans un dossier ;
+      . jamais DEUX COMPROMIS VIVANTS dans un dossier.
+      Quand la reunion en produirait une, ON S'ABSTIENT et on le DIT. Ces cas
+      sont eux-memes des anomalies (deux ventes au meme acheteur sur un meme
+      bien n'existe pas dans la vraie vie) : ils se regardent un par un.
+    ⚠ UNE CHAINE SANS ACQUEREUR LISIBLE NE SE REUNIT JAMAIS -- il n'y a rien a
+      comparer, et deviner serait pire. Mesure du 12/11 : la vente 29301 du bien
+      22824 n'a aucun acquereur chez Hektor, donc l'offre de MME BONNIER reste
+      seule. C'est voulu, et c'est NOMME dans le journal.
+
+    GAIN MESURE LE 12/11, AVANT d'ecrire la regle (sur hektor_acquereur_id) :
+        715 regroupements . 796 dossiers en moins (12 174 -> ~11 378)
+        700 sur 715 sans aucun conflit   (97,9 %)
+          8 avec deux ventes . 10 avec deux compromis vivants -> abstentions
+    """
+    chainage_v2_actif()                      # il charge `.env` une fois pour tous
+    return os.environ.get("APP_CHAINAGE_MEME_ACHETEUR", "0") == "1"
+
+
 # REGLE B : l'ecart maximal, en jours, entre un compromis et l'offre acceptee
 # qu'on lui rattache. MESURE le 10/11 -- voir chainage_offre_acceptee_seule_actif.
 FENETRE_OFFRE_REGULARISEE_JOURS = 31
@@ -1843,6 +1943,18 @@ def recalculer_les_chaines(con: sqlite3.Connection) -> dict[str, int]:
     regle_vente_seule = chainage_vente_seule_actif()                     # C (10/11)
     regle_offre_acceptee_seule = chainage_offre_acceptee_seule_actif()   # B (10/11)
     regle_compromis_annule_seul = chainage_compromis_annule_seul_actif() # A (10/11)
+    regle_meme_acheteur = chainage_meme_acheteur_actif()                 # D (12/11)
+    # LES RATTACHEMENTS A LA MAIN (12/11) : ranges PAR BIEN une fois pour toutes,
+    # pour que la boucle n'ouvre pas le fichier a chaque annonce.
+    # ⚠ LA CLE EST UN TEXTE, comme celle de `par_annonce` (normalize_text).
+    #   Premier essai a blanc : indexee par un ENTIER, elle ne trouvait jamais rien
+    #   et les 6 rattachements etaient ignores EN SILENCE. Le fichier etait lu, la
+    #   boucle tournait, et le compte rendu disait « 6 lignes » -- seul le temoin
+    #   « sont-ils reunis ? » l'a vu.
+    rattachements_par_bien: dict[str, list[tuple[int, int, int, str]]] = {}
+    if chainage_rattachement_manuel_actif():
+        for _r in lire_rattachements_manuels():
+            rattachements_par_bien.setdefault(str(_r[2]), []).append(_r)
     lignes = list(con.execute(f"""
         SELECT app_affaire_id, hektor_annonce_id, kind, state, date, acquereurs_json,
                propositions_json
@@ -2371,6 +2483,112 @@ def recalculer_les_chaines(con: sqlite3.Connection) -> dict[str, int]:
                     else:
                         signale("[A] aucune offre acceptee seule -- reste seul")
 
+            # --- REGLE D : UN MEME ACHETEUR, UN MEME BIEN = UN SEUL DOSSIER ----
+            #     Elle joue EN DERNIER : elle ramasse ce que A, B et C laissent.
+            #     Voir chainage_meme_acheteur_actif pour le pourquoi et les gardes.
+            if regle_meme_acheteur:
+                def compromis_vivants(chaine: dict) -> int:
+                    return sum(1 for m in membres_de(chaine)
+                               if m[1] == "compromis" and m[2] not in ETATS_COMPROMIS_MORTS)
+
+                def acqs_reels(chaine: dict) -> set:
+                    """Les acquereurs de TOUTES les transactions du dossier.
+
+                    ⚠ DEFAUT TROUVE A BLANC LE 12/11, et il n'est pas dans cette regle :
+                      la branche vente de la boucle datee ajoute la vente aux membres
+                      SANS ajouter son acquereur a `chaine["acquereurs"]`. Un dossier
+                      dont la vente porte un autre nom que le compromis -- 1 562 cas
+                      mesures -- ne declare donc pas ce nom.
+                      Releve : bien 48353, l'offre acceptee de CLAUDET restait seule
+                      alors que LA VENTE DE CLAUDET etait dans le dossier d'a cote.
+                    ⭐ On lit donc les membres, jamais le champ de la chaine.
+                    """
+                    noms = set()
+                    for m in membres_de(chaine):
+                        noms |= m[4]
+                    return noms
+
+                # ⛔ PLUSIEURS VENTES AU MEME NOM : ON S'ABSTIENT SUR TOUT CE NOM.
+                #   Defaut trouve a blanc le 12/11 sur le bien 1801 (BABY ROUINET,
+                #   4 compromis et 2 ventes) : la garde « jamais deux ventes »
+                #   empechait bien le dossier a deux ventes, mais l'ORDRE DE
+                #   PARCOURS decidait seul quelle vente allait ou -- et il les a
+                #   CROISEES, le compromis a 60 000 recevant la vente a 59 000.
+                #   Une garde qui laisse un resultat arbitraire ne protege rien.
+                ventes_par_nom: dict[str, int] = {}
+                for chaine in toutes:
+                    for m in membres_de(chaine):
+                        if m[1] != "vente":
+                            continue
+                        for nom in m[4]:
+                            ventes_par_nom[nom] = ventes_par_nom.get(nom, 0) + 1
+                noms_ambigus = {n for n, k in ventes_par_nom.items() if k > 1}
+                if noms_ambigus:
+                    signale("[D] plusieurs ventes au meme nom -- ce nom est ecarte")
+
+                # ⚠ `absorber` retire la source de `toutes` PENDANT qu'on cherche :
+                #   on reprend donc le balayage a zero apres chaque reunion, au lieu
+                #   d'iterer sur une liste qui change sous nos pieds.
+                encore = True
+                while encore:
+                    encore = False
+                    for a in toutes:
+                        na = acqs_reels(a) - noms_ambigus
+                        if not a["membres"] or not na:
+                            continue
+                        for b in toutes:
+                            nb = acqs_reels(b) - noms_ambigus
+                            if b is a or not b["membres"] or not nb:
+                                continue
+                            if not (na & nb):
+                                continue
+                            if a["a_une_vente"] and b["a_une_vente"]:
+                                signale("[D] deux ventes au meme nom -- abstention")
+                                continue
+                            if compromis_vivants(a) and compromis_vivants(b):
+                                signale("[D] deux compromis vivants au meme nom -- abstention")
+                                continue
+                            # la cible garde le plus petit numero, comme la
+                            # numerotation finale le ferait de toute facon.
+                            cible, source = ((a, b) if min(a["membres"]) < min(b["membres"])
+                                             else (b, a))
+                            absorber(source, cible)
+                            signale("[D] meme acheteur, meme bien -- dossiers reunis")
+                            encore = True
+                            break
+                        if encore:
+                            break
+
+            # --- LES RATTACHEMENTS DECIDES A LA MAIN ---------------------------
+            #     EN DERNIER, apres toutes les regles : une decision humaine ne se
+            #     discute pas, mais elle ne doit pas empecher une regle de faire son
+            #     travail avant -- sinon on ne saurait plus ce que les regles valent.
+            #     Voir chainage_rattachement_manuel_actif et le fichier
+            #     phase2/sync/rattachements_manuels.csv.
+            for source_id, cible_id, bien_attendu, _pourquoi in rattachements_par_bien.get(
+                    str(annonce), []):
+                if str(bien_attendu) != str(annonce):
+                    signale("[M] rattachement manuel : le bien ne correspond pas")
+                    continue
+                place = {m: c for c in toutes for m in c["membres"]}
+                ch_source, ch_cible = place.get(source_id), place.get(cible_id)
+                if ch_source is None or ch_cible is None:
+                    # ⚠ Une transaction disparue de chez Hektor sort du registre :
+                    #   la decision devient sans objet, et on le DIT plutot que de
+                    #   l'oublier en silence.
+                    signale("[M] rattachement manuel : transaction introuvable")
+                    continue
+                if ch_source is ch_cible:
+                    signale("[M] rattachement manuel deja obtenu par une regle")
+                    continue
+                if ch_source["a_une_vente"] and ch_cible["a_une_vente"]:
+                    # On applique quand meme -- c'est une decision -- mais on le
+                    # crie, parce que « jamais deux ventes » est un invariant du
+                    # projet et que le controle de nuit doit le voir.
+                    signale("[M] ⚠ rattachement manuel : DEUX VENTES dans le dossier")
+                absorber(ch_source, ch_cible)
+                signale("[M] rattachement decide a la main")
+
         # ⚠ ON NUMEROTE A LA FIN, ET C'EST INDISPENSABLE. Le numero d'une chaine est
         # le plus petit app_affaire_id de ses membres -- or une transaction au numero
         # plus bas peut la rejoindre APRES coup. Numeroter au fil de l'eau laissait
@@ -2396,7 +2614,10 @@ def recalculer_les_chaines(con: sqlite3.Connection) -> dict[str, int]:
                 "chainage_offre_sans_date": offre_sans_date,
                 "chainage_vente_seule": regle_vente_seule,
                 "chainage_offre_acceptee_seule": regle_offre_acceptee_seule,
-                "chainage_compromis_annule_seul": regle_compromis_annule_seul}
+                "chainage_compromis_annule_seul": regle_compromis_annule_seul,
+                "chainage_meme_acheteur": regle_meme_acheteur,
+                "chainage_rattachements_manuels": sum(
+                    len(v) for v in rattachements_par_bien.values())}
     resultat.update(anomalies)
     print(f"[ledger] chainage : {resultat['chaines']} chaines "
           f"({'V2 -- replis actifs' if v2 else 'regle d avant, V2 eteinte'}"
@@ -2406,7 +2627,10 @@ def recalculer_les_chaines(con: sqlite3.Connection) -> dict[str, int]:
           f"{' + offre sans date (2.9)' if offre_sans_date else ''}"
           f"{' + vente seule (C)' if regle_vente_seule else ''}"
           f"{' + offre acceptee seule (B)' if regle_offre_acceptee_seule else ''}"
-          f"{' + compromis annule seul (A)' if regle_compromis_annule_seul else ''})")
+          f"{' + compromis annule seul (A)' if regle_compromis_annule_seul else ''}"
+          f"{' + meme acheteur (D)' if regle_meme_acheteur else ''}"
+          f"{(' + %d rattachement(s) a la main' % resultat['chainage_rattachements_manuels'])
+             if resultat['chainage_rattachements_manuels'] else ''})")
     return resultat
 
 

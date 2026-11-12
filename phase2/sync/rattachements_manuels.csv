@@ -1,0 +1,41 @@
+﻿# LES RATTACHEMENTS DECIDES A LA MAIN -- le chainage ne peut pas les deviner
+#
+# ⛔⛔ CE FICHIER EST UNE DECISION, PAS UNE DONNEE. Chaque ligne a ete tranchee par
+#   Frederic, sur un ecran, un dossier a la fois. On n'en ajoute JAMAIS une sans lui.
+#
+# POURQUOI IL EXISTE. L'audit du 10/11 l'avait nomme sans le construire : « la
+#   decision du 04/09 interdit de les regler par une regle : il faudrait un
+#   rattachement manuel, qui n'existe pas aujourd'hui ». Le chainage refait TOUS
+#   les dossiers chaque nuit, donc une fusion faite a la main en base serait
+#   effacee au run suivant. Ce fichier est la seule memoire qui survit au recalcul.
+#
+# ⭐ ON POINTE DES TRANSACTIONS, JAMAIS UN NUMERO DE DOSSIER. Regle du 28/10 :
+#   « un numero de chaine ne doit jamais servir de point d'accrochage, il bouge »
+#   (mesure : 35 dossiers par semaine). Les deux colonnes portent donc des
+#   app_affaire_id, qui ne changent jamais.
+#
+# LECTURE : phase2/sync/affaire_ledger.py, apres les regles A, B, C et D, derriere
+#   l'interrupteur APP_CHAINAGE_RATTACHEMENT_MANUEL=1.
+# CONTROLE : une ligne dont une transaction est introuvable, ou dont les deux
+#   transactions ne sont pas sur le MEME BIEN, est REFUSEE et ecrite au journal.
+#
+# transaction ; rejoint la transaction ; bien ; decide le ; pourquoi
+#
+# ─── 12/11/2026 -- les 4 biens ou l'acheteur a DEUX ventes ───────────────────
+# La regle D s'abstient volontairement sur ces biens (l'ordre de lecture
+# decidait seul, et a l'essai il avait CROISE les montants). Le montant ou la
+# date d'acte, eux, apparient sans ambiguite.
+878;30224;1801;2026-11-12;BABY ROUINET -- le compromis a 59 000 EUR et la vente 30224 a 59 000 EUR (l'autre vente vaut 60 000)
+875;30227;1801;2026-11-12;BABY ROUINET -- le compromis a 60 000 EUR et la vente 30227 a 60 000 EUR
+19328;29514;40206;2026-11-12;LIONS -- acte prevu le 06/08/2008, vente du 25/07/2008 (les deux compromis valent 36 500, seule la date departage)
+19329;29515;40206;2026-11-12;LIONS -- acte prevu le 11/09/2008, vente du 24/09/2008
+#
+# ─── 12/11/2026 -- la vente n'a AUCUN acquereur chez Hektor ──────────────────
+10723;29301;22824;2026-11-12;MME BONNIER -- la vente 29301 ne porte aucun acquereur chez Hektor, il n'y a aucun nom a comparer
+#
+# ─── 12/11/2026 -- le MEME acheteur sous DEUX numeros de contact ─────────────
+# Mesure du 12/11 : 26 paires dans tout le registre portent le meme NOM avec deux
+# numeros d'acquereur differents -- des doublons de contact chez Hektor. La regle D
+# compare les NUMEROS, jamais les noms (un nom de famille partage est un couple ou
+# un homonyme dans 109 cas mesures), donc ces cas se tranchent un par un.
+19904;19903;41189;2026-11-12;SERIE -- l'offre porte l'acquereur 206630 et le compromis+vente le 340762 : meme nom, deux fiches Hektor
