@@ -131,10 +131,29 @@ compromis  dossier      bien    statut du bien       chez Hektor  le dossier ent
 
 Le dossier porte **déjà sa vente**. Le compromis « actif » est un état que Hektor n'a
 jamais refermé après l'acte. L'affaire est complète, la date de la vente est là, le
-registre et le pilotage sont justes. ⭐ C'est exactement ce que l'audit du 10/11
-appelait *« 9 actifs sur un bien VENDU : le compromis de la vente, coupé de son
-dossier faute de date »* — et **le remède existe déjà, codé et éteint** :
-`APP_CHAINAGE_SANS_DATE=2` (le § 2.7), mesuré à « +10 ». La production est au cran 1.
+registre et le pilotage sont justes.
+
+⛔⛔ **ET J'AI ÉCRIT ICI UNE PHRASE FAUSSE, CORRIGÉE LE MÊME SOIR.** J'avais écrit que
+le remède `APP_CHAINAGE_SANS_DATE=2` était « codé et ÉTEINT, la production au cran 1 ».
+**C'est FAUX : il est allumé.** `.env` ligne 64 porte `APP_CHAINAGE_SANS_DATE=2`,
+depuis le 10/11 (avec les quatre règles de chaînage). J'avais recopié le *« la
+production est réglée sur 1 »* de l'audit du 10/11 **sans vérifier la valeur du jour**.
+⭐ *Leçon : une phrase d'un audit de la semaine dernière est une mesure PÉRIMÉE, pas un
+état. On relit l'interrupteur, on ne cite pas la note.*
+
+⭐⭐ **ET LE CRAN 2 A FAIT EXACTEMENT CE QUI ÉTAIT PRÉDIT** — mesuré ce soir :
+
+```
+13 compromis ACTIFS sans date
+      8  RECOLLES a leur VENTE
+      2  RECOLLES a une offre
+   = 10  recolles           <- exactement le « +10 » annonce le 10/11
+      3  encore SEULS       = exactement les 3 EFFACES chez Hektor
+```
+
+Les 3 qui restent seuls sont les trois de la famille B : effacés chez Hektor, donc
+**sans aucune cible possible** — ce n'est pas un échec de la règle, c'est son domaine.
+➡ **Il n'y a RIEN à allumer, et rien à faire pour la famille A.**
 
 ### ⚠ LA FAMILLE B — 3 compromis effacés chez Hektor
 
@@ -164,8 +183,9 @@ seul vrai mouvement depuis le 10/11, et il va dans le bon sens.
 ```
 267 transactions sans date   CONNU, STABLE, DOCUMENTE depuis le 02/11. Pas moi.
 239 sur 267                  transactions MORTES ou coquilles exclues -> rien a faire
-  8 compromis actifs         le dossier porte deja sa VENTE -> residu, remede code et
-                             ETEINT (APP_CHAINAGE_SANS_DATE=2, mesure a « +10 »)
+  8 compromis actifs         le dossier porte deja sa VENTE -> residu d'etat chez
+                             Hektor, DEJA RECOLLE par le cran 2 (en service depuis
+                             le 10/11) -> rien a faire
   5 offres vivantes          dossier COMPLET (compromis + vente), bien vendu/clos
                              -> rien a faire
 ```
@@ -183,8 +203,40 @@ bien  8494   affiche « Sous offre »       compromis 3699 ACTIF chez Hektor
 pas une règle à écrire : trois lignes ne justifient pas un mécanisme.
 
 ⬜ **RIEN N'EST DÉCIDÉ, ET RIEN N'A ÉTÉ ÉCRIT NULLE PART POUR CET AUDIT** (lecture
-seule de bout en bout). Les deux questions qui restent à Frédéric :
-1. regarde-t-on les 3 biens vivants à la main chez Hektor ?
-2. passe-t-on `APP_CHAINAGE_SANS_DATE` au cran 2 ? Il recollerait les 8 compromis de
-   la famille A à leur vente. ⚠ Mesuré à « +10 » le 10/11 — donc à remesurer avant,
-   les quatre règles de chaînage ayant été allumées depuis.
+seule de bout en bout). **Il ne reste QU'UNE question** à Frédéric :
+
+> **regarde-t-on les 3 biens vivants à la main chez Hektor ?** (40318, 58979, 8494)
+
+⛔ Ma seconde question — « passe-t-on au cran 2 ? » — **était sans objet** : le cran 2
+tourne depuis le 10/11 et a déjà recollé 10 des 13 compromis. Voir l'encadré de la
+famille A.
+
+---
+
+## 7. LES TROIS CRANS DU CHAÎNAGE SANS DATE — pour mémoire
+
+`APP_CHAINAGE_SANS_DATE`, dans `.env`, lu par `chainage_sans_date_niveau()`
+(`phase2/sync/affaire_ledger.py:1161`). Il répond à une seule question : *que fait-on
+d'une transaction dont la date est inexploitable, alors que la règle de chaînage
+travaille dans l'ordre des dates ?*
+
+```
+0 (ou absent)  RIEN. Chacune reste SEULE dans son dossier.
+1              § 2.6 -- les compromis ANNULES rejoignent, PAR LE NOM de l'acheteur,
+               l'unique chaine du bien qui porte une offre a ce nom.        117
+               ⚠ restreint aux ANNULES par decision de Frederic du 20/10
+               ⚠ et il REFUSE une cible qui porte deja une vente
+2              § 2.6 + § 2.7 -- aussi les compromis ACTIFS, et la cible PEUT
+               porter une vente : c'est justement la qu'ils vont, parce que
+               compromis -> vente est la sequence normale du metier.        +10
+```
+
+⭐ **Un seul interrupteur à deux crans, et c'est délibéré** : le cran 1 doit rester
+exactement ce qui tournait, pour que le témoin inverse garde un sens. Redescendre à 1
+ramène l'état d'avant sans rien casser.
+
+⭐ **La garde qui ne bouge jamais, aux deux crans** : « une chaîne, UN SEUL compromis ».
+C'est elle qui empêche d'empiler deux compromis sur la même affaire.
+
+⚠ **Une valeur illisible vaut ÉTEINT, et le run le DIT** (`APP_CHAINAGE_SANS_DATE
+illisible -- traite comme 0`) : elle ne passe jamais pour un 1 par accident.
