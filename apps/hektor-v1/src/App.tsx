@@ -307,7 +307,7 @@ import { DepotDocuments } from './DepotDocuments'
 import { useGedDepotMultiple, useGedRecuManque } from './lib/ged'
 // GED morceau 3 (12/11/2026) : le bloc « Reçu / Manque », derrière l'interrupteur ged_recu_manque (note GED §12.8).
 import { RecuManque } from './RecuManque'
-import type { FaitsDuBien } from './lib/gedPieces'
+import type { FaitsRegles } from './lib/gedRegles'
 import { piecesDeSignature } from './lib/piecesSignature'
 import EnvoiSignatureYoutrust, { EVENEMENT_CORRIGER_MANDAT, type DemandeCorrectionMandat, type OngletCorrection } from './EnvoiSignatureYoutrust'
 import type { FicheDuJourPdf } from './lib/ecartsFichePdf'
@@ -11848,7 +11848,8 @@ Le mandat passera à l'état « Signé ». À ne faire qu'une fois le PDF signé
 
 // GED morceau 3 (12/11/2026) : les faits de la fiche dont dépendent les pièces « selon le cas » (lib/gedPieces.ts).
 // null = la fiche ne le dit pas (la pièce est alors « selon le cas », jamais « non trouvée »).
-function faitsGedDuBien(dossier: Dossier, detail: DossierDetailPayload | null): FaitsDuBien {
+// GED morceau 5 : les faits servent aussi aux règles sans IA (FaitsRegles = FaitsDuBien + diffusion, DPE, copro, prix, mandat).
+function faitsGedDuBien(dossier: Dossier, detail: DossierDetailPayload | null): FaitsRegles {
   const lire = (nom: string) => (detail ? String(rawWizardDetailField(detail, nom) ?? '').trim() : '')
   const nombre = (v: string) => { const x = Number(v.replace(',', '.')); return Number.isFinite(x) && x > 0 ? x : null }
   const copro = lire('copropriete').toUpperCase()
@@ -11863,6 +11864,16 @@ function faitsGedDuBien(dossier: Dossier, detail: DossierDetailPayload | null): 
     dpeConso: nombre(lire('dpe_cons')),
     dpeGes: nombre(lire('dpe_ges')),
     dpeNonConcerne: ['1', 'OUI', 'TRUE', 'ON'].includes(nonConcerne),
+    diffusable: String(dossier.diffusable ?? '') === '1',
+    dpeDate: lire('dpe_date') || null,
+    nbLots: nombre(lire('copropriete_nb_lot')),
+    // la mention de l'annonce est la quote-part annuelle (copropriete_quote_part) ; CHARGES vaut 0 sur 684 fiches sur 714
+    charges: nombre(lire('copropriete_quote_part')) ?? nombre(lire('CHARGES')),
+    prixAncien: dossier.price_change_last_old_value != null ? nombre(String(dossier.price_change_last_old_value)) : null,
+    prixNouveau: dossier.price_change_last_new_value != null ? nombre(String(dossier.price_change_last_new_value)) : null,
+    prixChangeLe: dossier.price_change_last_detected_at ?? null,
+    mandatDebut: dossier.mandat_date_debut ?? null,
+    mandatFin: dossier.mandat_date_fin ?? null,
   }
 }
 
@@ -12284,6 +12295,7 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
   const blocRecuManque = gedRecuManque ? (
     <RecuManque
       hektorAnnonceId={dossier.hektor_annonce_id}
+      appDossierId={dossier.app_dossier_id}
       documents={documents}
       faits={faitsDuBien}
       onDeposer={gedDepot ? (code, libelle) => {

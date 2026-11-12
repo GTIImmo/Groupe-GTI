@@ -107,6 +107,17 @@ export function useGedRecuManque(): boolean {
   return actif
 }
 
+// GED morceau 5 : les règles sans IA (« À regarder » dans « Reçu / Manque ») ont leur interrupteur, déjà posé au morceau 1.
+export function useGedPropositions(): boolean {
+  const [actif, setActif] = useState(false)
+  useEffect(() => {
+    let annule = false
+    void loadInterrupteurTroisCrans('ged_propositions').then((v) => { if (!annule) setActif(v) })
+    return () => { annule = true }
+  }, [])
+  return actif
+}
+
 // Les types DÉCIDÉS des documents déposés avec l'outil, pour un bien (lecture : patch_ged_m3_recu_manque, même
 // périmètre que les documents). Clé : la ligne du document chez nous. Une lecture ratée rend une liste vide :
 // les documents retombent alors sur leur nom, rien ne casse.

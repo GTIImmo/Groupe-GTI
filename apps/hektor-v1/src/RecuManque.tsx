@@ -3,9 +3,13 @@
 // On SIGNALE, on ne bloque rien. Une pièce non trouvée se dépose d'un clic, son type déjà choisi.
 // Les anciens documents comptent par leur NOM (décision du 12/11 : le stock n'est pas classé) ; ceux déposés avec
 // l'outil comptent par le type que l'utilisateur leur a donné.
+// ⭐ Morceau 5 (§12.10) : sous « À regarder », les règles sans IA (lib/gedRegles.ts), derrière `ged_propositions`.
 import { useEffect, useMemo, useState } from 'react'
-import { loadGedClassements } from './lib/ged'
-import { LIBELLE_MOMENT, recuManque, type FaitsDuBien, type LignePiece } from './lib/gedPieces'
+import { loadAffairesForDossier } from './lib/api'
+import { etatFiableDuDocument } from './lib/etatSignatureMandat'
+import { loadGedClassements, useGedPropositions } from './lib/ged'
+import { LIBELLE_MOMENT, recuManque, type LignePiece } from './lib/gedPieces'
+import { LIBELLE_A_DEPOSER, reglesSansIa, type AffaireRegle, type Alerte, type FaitsRegles } from './lib/gedRegles'
 import type { ConsoleDocument } from './types'
 import './RecuManque.css'
 
@@ -15,14 +19,19 @@ const NIVEAU: Record<LignePiece['niveau'], string> = {
   selon_le_cas: 'selon le cas',
 }
 
+const NIVEAU_ALERTE: Record<Alerte['niveau'], string> = { alerte: 'à vérifier', piece: 'pièce non trouvée', info: 'pour information' }
+
 export function RecuManque({
-  hektorAnnonceId, documents, faits, onDeposer,
+  hektorAnnonceId, appDossierId, documents, faits, onDeposer,
 }: {
   hektorAnnonceId: string | number
+  appDossierId?: number
   documents: ConsoleDocument[]
-  faits: FaitsDuBien
+  faits: FaitsRegles
   onDeposer?: (typeCode: string, libelle: string) => void
 }) {
+  const regles = useGedPropositions()
+  const [affaires, setAffaires] = useState<AffaireRegle[] | null>(null)
   const [classements, setClassements] = useState<Map<string, string>>(() => new Map())
   const [ouvrirPrecedents, setOuvrirPrecedents] = useState(false)
   // ce qui manque d'abord ; les pièces reçues se replient sur une ligne (écran bas : 665 px)
@@ -35,6 +44,25 @@ export function RecuManque({
     return () => { annule = true }
     // relu quand la liste des documents change (un dépôt vient d'arriver)
   }, [hektorAnnonceId, nbDocuments])
+
+  // Les transactions du bien (registre), lues seulement si les règles sont allumées. Une lecture ratée : les règles
+  // qui en ont besoin se taisent (null), jamais « aucune transaction ».
+  useEffect(() => {
+    if (!regles || !appDossierId) return
+    let annule = false
+    loadAffairesForDossier(appDossierId)
+      .then((rows) => { if (!annule) setAffaires(rows.map((a) => ({ kind: String(a.kind), state: a.state ?? null, date: a.date ?? null, dateActe: a.date_acte ?? null }))) })
+      .catch(() => { if (!annule) setAffaires(null) })
+    return () => { annule = true }
+  }, [regles, appDossierId])
+
+  const alertes = useMemo(() => {
+    if (!regles || affaires === null) return []
+    const docs = documents
+      .filter((d) => d.present_in_hektor !== false)
+      .map((d) => ({ nom: d.document_name, typeCode: classements.get(d.id) ?? null, date: d.created_at_hektor ?? d.created_at ?? null, signature: etatFiableDuDocument(d)?.status ?? null, modele: d.source === 'hektor_console_modele' }))
+    return reglesSansIa(faits, docs, affaires, new Date())
+  }, [regles, affaires, faits, documents, classements])
 
   const resultat = useMemo(() => recuManque(
     faits,
@@ -80,6 +108,25 @@ export function RecuManque({
         <h4>{`${LIBELLE_MOMENT[resultat.moment]} : ${resultat.recues} pièce${resultat.recues > 1 ? 's' : ''} sur ${resultat.attendues}`}</h4>
         <span>Reçu / manque, d'après le type de chaque document (son nom pour les anciens)</span>
       </div>
+      {alertes.length ? (
+        <div className="gm-liste">
+          <p className="gm-avant-t">{`À regarder (${alertes.length})`}</p>
+          {alertes.map((a, i) => {
+            const contenu = (
+              <>
+                <span className={`gm-ic is-${a.niveau === 'info' ? 'selon_le_cas' : 'non_trouve'}`} aria-hidden="true">{a.niveau === 'info' ? 'i' : '!'}</span>
+                <span className="gm-t">{a.texte}<small>{`${NIVEAU_ALERTE[a.niveau]} : ${a.pourquoi}`}</small></span>
+                <span className="gm-d">{a.typeADeposer && onDeposer ? 'Déposer la pièce' : ''}</span>
+              </>
+            )
+            return a.typeADeposer && onDeposer ? (
+              <button key={`${a.code}-${i}`} type="button" className="gm-l is-non_trouve" onClick={() => onDeposer(a.typeADeposer as string, LIBELLE_A_DEPOSER[a.typeADeposer as string] ?? a.texte)} aria-label={`Déposer : ${a.texte}`}>{contenu}</button>
+            ) : (
+              <div key={`${a.code}-${i}`} className={`gm-l is-${a.niveau === 'info' ? 'selon_le_cas' : 'non_trouve'}`}>{contenu}</div>
+            )
+          })}
+        </div>
+      ) : null}
       <div className="gm-liste">{resultat.pieces.filter((l) => l.etat !== 'recu').map(ligne)}</div>
       {resultat.recues ? (
         <div className="gm-avant">

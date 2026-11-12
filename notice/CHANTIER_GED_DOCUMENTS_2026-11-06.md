@@ -920,5 +920,66 @@ un sous compromis) et juger la liste avec Frédéric.
   faux relevé portant un IBAN n'a fait AUCUNE demande** (« Un IBAN est dans le texte : jamais envoyé à l'IA », type RIB,
   privé imposé) ; photo muette → type et nom pré-choisis ; « DPE mars 2024 » (nom sûr) garde DPE, l'avis de l'IA se
   montre ; « Séparer en 2 fichiers » → 3 pages + 1 page, deux lignes typées. Téléphone 375 px : rien ne déborde.
-- ⏳ Reste, chacun sur accord : pousser (Render et Vercel se redéploient ; vérifier `/health` après) ; accepter le DPA
-  d'OpenAI (Frédéric) ; allumer `ged_lecture_ia` en `admin` ; premier essai réel sur des documents fictifs.
+✅ **« Oui, commite et pousse » (12/11)** : commit `a61db50` POUSSÉ ; Render a redémarré dessus à 14:51 (`/health` rend
+`a61db50`), `/ged/classer` sans jeton répond 401 (la route existe et refuse).
+✅ **DÉCISION DE FRÉDÉRIC (12/11)** : « je suis le seul à l'utiliser, on fera le DPA à la fin du dev » → `ged_lecture_ia`
+**ALLUMÉ en `admin` le 12/11 à 14:58** (⚠ cran admin = les 4 admins actifs). ⛔ Le DPA d'OpenAI reste OBLIGATOIRE avant
+l'arrivée des négociateurs (cran `on`). Éteindre : `update public.app_setting set value = 'off', updated_at = now() where key
+= 'ged_lecture_ia';`
+
+### 12.10 Le morceau 5 — les 13 règles sans IA (audit du 12/11, rien codé)
+**Audit (lecture seule)** — catalogue : `E_synthese_catalogue.md` §3.1 (N1 à N13).
+- ⭐ **Cinq règles sont DÉJÀ couvertes par « Reçu / Manque »** (morceau 3, `gedPieces.ts`) : N1a mandat non trouvé, N3
+  pièce d'identité, N4 état des risques non trouvé, N6 audit (maison E/F/G), N7 pièces de copro du compromis. Les recoder
+  ferait deux fois la même ligne à l'écran.
+- **Restent les croisements**, et leurs sources existent toutes, sans patch de base :
+  N1b signature seulement en attente sur un bien diffusable (`app_signature_request.status`, lecture déjà faite par
+  l'écran, `api.ts:10392`) ; N1c sous offre / compromis sans mandat signé (statut × pièce) ; N2 baisse de prix ≥ 3 % après
+  le début du mandat sans avenant (`app_dossier_current.price_change_last_*` × `mandat_date_debut` : **99 baisses
+  mesurées le 12/11**, le journal ne commence que le 20/06) ; N4 état des risques déposé il y a plus de 6 mois
+  (`created_at_hektor` / `created_at` du document : la date du DÉPÔT, pas de l'état) ; N5 DPE échu sur la fiche (calcul
+  pur, `dpe_date` de la fiche décodée deux fois) ou bien bâti diffusé sans DPE ; N8 case copropriété à NON avec des pièces
+  de copro au dossier (alerte seulement, jamais remplir) ; N9 lots ou charges vides sur un bien en copro ; N10 un document
+  d'offre / compromis / acte sans la transaction au registre (`app_affaire_ledger`, lecture déjà faite par l'écran) ;
+  N11 offre ou compromis daté après la fin du mandat (« selon le cas » si la tacite reconduction n'est pas lisible) ;
+  N12 date d'acte prévue passée sans acte au dossier.
+- ⚠ **N13 « déjà déposé sur un AUTRE bien »** : pas d'index sur `app_console_document.sha256`, une recherche = **630 ms
+  de lecture complète** (193 632 lignes, mesuré). Le même bien est déjà couvert (morceau 2). L'index se pose
+  `CONCURRENTLY`, mais sur la table de la session signature : son accord d'abord.
+- ⚠ N12 « vente de plus de 30 jours sans facture » : un bien vendu sort de `app_dossier_current` ; non mesuré par quel
+  chemin sa fiche s'ouvre — à vérifier avant de la promettre.
+- Décision de l'étude encore ouverte : **n° 5, l'état des risques du compromis est-il refait par le notaire ?** Si oui,
+  N4 au compromis devient une simple information (77 compromis sur 92 sonneraient sinon).
+
+**Proposition** : une fonction pure `lib/gedRegles.ts` (comme `gedPieces.ts`, essais hors ligne), affichée dans le bloc
+« Reçu / Manque » sous un titre « À regarder », une ligne par règle qui sonne, toujours « non trouvé », jamais
+« absent » ; derrière l'interrupteur déjà posé `ged_propositions` (sa description couvre « alerte, pièce manquante »),
+allumé en `admin` sur accord. Rien n'écrit, rien ne part chez Hektor.
+⏳ Attend le « vas-y » de Frédéric et la réponse à la question n° 5.
+✅ **« Vas-y, morceau 5 » (12/11). ÉCRIT ET CONTRÔLÉ, PAS POUSSÉ, `ged_propositions` reste éteint :**
+- `src/lib/gedRegles.ts` (fonction pure) : N1b, N1c, N2, N4 (âge), N5 (échu / diffusé sans DPE), N8, N9 (lots, quote-part),
+  N10 (offre ; compromis ou acte), N11 (une ligne par sorte), N12. Les dates vides de Hektor (`0000-00-00`) et la date zéro
+  (`1970-01-01`) ne sont pas des dates. Validité du DPE : avant 2018 → 31/12/2022, jusqu'au 30/06/2021 → 31/12/2024, puis
+  10 ans. ⚠ **Question n° 5 non tranchée : N4 au compromis est posé en simple INFORMATION** (alerte à l'offre) — à
+  changer d'un mot si Frédéric répond « non, le notaire ne le refait pas ».
+- `RecuManque.tsx` : section « À regarder (N) » au-dessus des pièces, alertes d'abord, informations à la fin ; une ligne
+  qui a une pièce à déposer ouvre la fenêtre de dépôt avec ce type ; registre lu par `loadAffairesForDossier` (lecture
+  ratée = les règles se taisent) ; état de signature par `etatFiableDuDocument` ; un document `hektor_console_modele` n'est
+  PAS un mandat papier signé. `lib/ged.ts` : `useGedPropositions`. `App.tsx` : `faitsGedDuBien` rend `FaitsRegles`
+  (+ diffusion, date du DPE, lots, quote-part, prix, dates du mandat) et le bloc reçoit `appDossierId`.
+- ⭐ **Deux règles mentaient, vues par la mesure, pas par les essais** : (1) les charges — `CHARGES` vaut 0 sur 684 fiches
+  sur 714, la mention de l'annonce est la **quote-part annuelle** (`copropriete_quote_part`, remplie sur 87 copros sur
+  114) : 88 → **26** (le chiffre de l'étude) ; (2) un modèle de mandat généré par Hektor faisait taire « sans mandat
+  signé » comme un papier.
+- **Mesure sur les 714 biens en cours** (lecture seule, mêmes fonctions que l'écran) : N1b 1 · N1c 10 · N2 21 · N5 échu 3,
+  diffusé sans DPE 15 · N8 12 · N9 lots 7, quote-part 26 · N10 offre 11, compromis / acte 104 (⚠ sur des biens actifs :
+  presque toujours l'acte de la vente PRÉCÉDENTE, donc le titre de propriété — information seulement) · N11 16 · N12 14 ·
+  N4 au compromis non compté (information). **209 biens sur 714 ont au moins une ligne, 3 au plus.** N1b sonne peu :
+  sur 24 biens diffusés avec une signature en attente, 17 ont aussi un mandat signé et 5 un PDF papier.
+- Contrôles : `test_ged_regles.cjs` **39 VERT** (chaque règle a son témoin qui se tait) ; témoin inverse (avenant ignoré
+  → 2 ROUGE) ; `npm run build` vert ; GED 29 / 17 / 25 et les 5 essais de la signature verts ; écran vu sur une page
+  d'essai (6 lignes, clic « Baisse de prix » → dépôt d'un « Avenant au mandat » ; le mot « absent » n'apparaît pas ;
+  téléphone 375 px sans débordement, mais le bloc fait 1 142 px dans le pire cas).
+- Non fait : N13 sur un autre bien (index `sha256` à poser avec l'accord de la session signature) ; N12 « vente sans
+  facture » (un bien vendu sort de `app_dossier_current`).
+⏳ Reste, sur accord : commit et push ; allumer `ged_propositions` en `admin`.
