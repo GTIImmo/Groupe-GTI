@@ -1610,6 +1610,14 @@ export type AffaireLedgerRow = {
    *  meme personne : c'est elle qui evite « X et X » dans la rubrique. */
   taux_honoraires?: string | null
   app_contact_id?: string | number | null
+  /** ⭐ 12/11/2026 : LA DATE DECIDEE POUR CETTE TRANSACTION, s'il y en a une.
+   *  Elle ne vient PAS du registre : elle est greffee apres lecture par
+   *  greffinerLesDatesConvenues(). Absente la plupart du temps -- c'est une
+   *  decision humaine, rare, posee pour reparer une date que Hektor ne porte pas.
+   *  ⚠ NE JAMAIS l'ajouter au registre comme colonne : le run de nuit le pousse
+   *    avec `SELECT *` et l'ecraserait a NULL sur les 31 151 lignes (meme raison
+   *    que la table a part des notaires, plus bas). */
+  date_convenue_app?: string | null
 }
 
 const affaireLedgerSelect =
@@ -2030,7 +2038,21 @@ export function dateOffreFaite(a: AffaireLedgerRow): string {
       dates = brut.map((p) => String((p as { date?: unknown } | null)?.date ?? '').trim()).filter(Boolean)
     }
   } catch { dates = [] }
-  return (dates.length ? utile([...dates].sort()[0]) : '') || utile(a.date)
+  // ⭐⭐ 12/11/2026 : TROIS SOURCES, DANS CET ORDRE EXACT -- et c'est le MEME que
+  //   celui de app_dossier_jour_date_transaction en base. ⛔ Les deux ne doivent
+  //   JAMAIS diverger : c'est une regle ecrite deux fois, et le matin du 12/11 une
+  //   regle ecrite deux fois dont une seule etait reparee a coute 697 annees
+  //   d'etiquette fausses.
+  //      ① le JOURNAL de l'offre -- la vraie proposition, la verite de Hektor
+  //      ② la date DECIDEE       -- tracee en base, avec sa source et son pourquoi
+  //      ③ la colonne `date`     -- le DERNIER MOUVEMENT : pour une offre, c'est
+  //                                 la source la MOINS fiable (un refus d'hier y
+  //                                 ecrit la date d'hier)
+  //   ⭐ La decidee cede des que le journal arrive : rien a defaire le jour ou
+  //     Hektor rendra enfin une proposition datee.
+  return (dates.length ? utile([...dates].sort()[0]) : '')
+    || utile(a.date_convenue_app)
+    || utile(a.date)
 }
 
 /** La date qui sert a RANGER une transaction : celle de l'offre pour une offre,
@@ -2060,6 +2082,57 @@ export function rangerParDateEffective(rows: AffaireLedgerRow[], croissant: bool
   })
 }
 
+/** ─── LES DATES DECIDEES, GREFFEES SUR LES LIGNES LUES (12/11/2026) ───
+ *
+ *  POURQUOI. Chez Hektor, la colonne `date` d'une OFFRE porte son DERNIER
+ *  MOUVEMENT, pas sa proposition. Quelques offres n'ont de date NULLE PART : ni
+ *  dans leur journal, ni au classeur, ni au Sheet. Pour celles-la, et seulement
+ *  celles-la, une date est DECIDEE a la main et tracee en base
+ *  (`app_affaire_date_convenue`, avec sa source et son pourquoi).
+ *
+ *  ⭐ POURQUOI UNE LECTURE A PART, et pas une colonne du registre : le run de nuit
+ *    pousse le registre avec `SELECT *` -- une colonne que le serveur local ne
+ *    remplit pas y serait ecrasee a NULL. C'est le patron deja tranche pour les
+ *    notaires de la console (voir AffaireConsoleRow).
+ *
+ *  ⭐ POURQUOI UNE GREFFE SUR LA LIGNE, et pas une Map passee aux appelants : la
+ *    date est lue par `dateOffreFaite(a)`, une fonction PURE sur une ligne,
+ *    appelee en ONZE endroits de l'ecran -- dont le PREREMPLISSAGE de la modale,
+ *    dont la valeur part CHEZ HEKTOR. En posant la valeur sur la ligne, les onze
+ *    sont corriges d'un coup, sans en toucher un seul.
+ *
+ *  ⚠ JAMAIS D'EXCEPTION. Une lecture ratee rend les lignes INCHANGEES : l'ecran
+ *    retombe exactement sur son comportement d'avant. Une date decidee qui manque
+ *    est un affichage imparfait ; une fiche qui ne s'ouvre plus est une panne.
+ */
+async function greffinerLesDatesConvenues(lignes: AffaireLedgerRow[]): Promise<AffaireLedgerRow[]> {
+  if (!lignes.length || !supabase) return lignes
+  // ⭐ On ne demande que pour les OFFRES : c'est le seul genre dont `date` bouge.
+  const ids = Array.from(new Set(lignes
+    .filter((l) => String(l.kind ?? '').toLowerCase() === 'offre')
+    .map((l) => Number(l.app_affaire_id))
+    .filter((id) => Number.isFinite(id))))
+  if (!ids.length) return lignes
+  try {
+    const { data, error } = await supabase
+      .from('app_affaire_date_convenue')
+      .select('app_affaire_id,jour')
+      .in('app_affaire_id', ids)
+    if (error || !data) return lignes
+    const parId = new Map<number, string>()
+    for (const d of data as unknown as Array<{ app_affaire_id: number; jour: string }>) {
+      if (d && d.jour) parId.set(Number(d.app_affaire_id), String(d.jour))
+    }
+    if (!parId.size) return lignes
+    return lignes.map((l) => {
+      const jour = parId.get(Number(l.app_affaire_id))
+      return jour ? { ...l, date_convenue_app: jour } : l
+    })
+  } catch {
+    return lignes
+  }
+}
+
 /** Toutes les affaires d'un bien — offres, compromis, ventes — la plus récente d'abord. */
 export async function loadAffairesForDossier(appDossierId: number): Promise<AffaireLedgerRow[]> {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
@@ -2072,7 +2145,10 @@ export async function loadAffairesForDossier(appDossierId: number): Promise<Affa
   if (error) throw new Error(error.message)
   // ⭐ 12/11 : on RANGE sur la date effective -- une offre refusee hier remontait
   //   en tete, au-dessus de la vente qu'elle a precedee. Voir dateOffreFaite().
-  return rangerParDateEffective((data ?? []) as unknown as AffaireLedgerRow[], false)
+  //   ⚠ LA GREFFE PASSE AVANT LE RANGEMENT : le tri lit la date effective, donc
+  //     il lui faut la date decidee deja posee sur la ligne.
+  const greffees = await greffinerLesDatesConvenues((data ?? []) as unknown as AffaireLedgerRow[])
+  return rangerParDateEffective(greffees, false)
 }
 
 /** ─── LA COMMISSION SAISIE CHEZ NOUS, DES L'OFFRE (lot 1, 16/10/2026) ───
@@ -9533,7 +9609,9 @@ export async function loadDossierDeLaChaine(chaineId: number): Promise<DossierDe
   if (error) throw new Error(error.message)
   // ⭐ 12/11 : meme raison, dans l'autre sens -- l'offre s'affichait APRES la vente
   //   dans le parcours du dossier. Voir dateOffreFaite().
-  const lignes = rangerParDateEffective((data ?? []) as unknown as AffaireLedgerRow[], true)
+  //   ⚠ LA GREFFE PASSE AVANT LE RANGEMENT (meme raison que loadAffairesForDossier).
+  const greffeesChaine = await greffinerLesDatesConvenues((data ?? []) as unknown as AffaireLedgerRow[])
+  const lignes = rangerParDateEffective(greffeesChaine, true)
   const ids = lignes.map((ligne) => Number(ligne.app_affaire_id)).filter((id) => Number.isFinite(id))
   const lireParties = async (): Promise<AffairePartieRow[]> => {
     if (!ids.length) return []

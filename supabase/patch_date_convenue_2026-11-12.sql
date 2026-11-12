@@ -1,0 +1,171 @@
+-- ═══════════════════════════════════════════════════════════════════════════
+-- LA DATE CONVENUE — une date DÉCIDÉE pour une offre qui n'en a nulle part
+--                                                                 12/11/2026
+-- ═══════════════════════════════════════════════════════════════════════════
+-- ✅ EN PRODUCTION LE 12/11/2026, en quatre migrations, dans cet ordre :
+--      ① date_convenue_des_transactions_2026_11_12      la table, ses droits, sa RLS
+--      ② les_appelants_passent_l_id_v2_2026_11_12       les 6 appelants du lecteur
+--      ③ date_convenue_prime_sur_la_colonne_2026_11_12  ⛔ L'ORDRE, corrigé
+--      ④ date_convenue_reliee_au_registre_2026_11_12    la clé étrangère
+--
+-- ⚠ CE FICHIER EST UNE TRACE, pas un patch à coller. Il existe pour que le dépôt
+--   dise la vérité sur ce qui tourne.
+--
+-- ═══════════════════════════════════════════════════════════════════════════
+-- LA DEMANDE, DANS SES MOTS
+-- ═══════════════════════════════════════════════════════════════════════════
+-- *« Non il faut leur mettre une date as tu une idee ? »* puis
+-- *« Vas y met une date sur les 5 mais audit pour pas te tromper dans la methode »*
+--
+-- CINQ OFFRES N'AVAIENT DE DATE NULLE PART — mesuré sur SIX sources : l'API de
+-- Hektor, notre miroir, le registre, le classeur (par le mandat ET par la ville,
+-- accents normalisés), le Sheet, le gel. Aucune ne la portait.
+--      offre 9557   bien 19870  mandat 11780  Champdieu  170 000 €
+--      offre 16255  bien 33593  (aucun mandat chez nous)  Roiffieux   65 000 €
+--      offre 16330  bien 33969  mandat 13489  Annonay     96 000 €
+--      offre 20169  bien 41559  mandat 16705  Beaulieu   150 000 €
+--      offre 24256  bien 47955  mandat 14338  Allègre    152 000 €
+--
+-- ═══════════════════════════════════════════════════════════════════════════
+-- LA MÉTHODE — ce qui a été ÉPROUVÉ avant de choisir la source
+-- ═══════════════════════════════════════════════════════════════════════════
+-- ⭐ ON NE DEVINE PAS UNE DATE : on prend la source la MIEUX CORRÉLÉE, mesurée
+--   sur les offres qui, elles, ont une vraie date de proposition.
+--      source testée              corrélation avec la vraie date d'offre
+--      ─────────────────────────────────────────────────────────────────
+--      identifiant de l'offre              0,19   ⛔ écartée
+--      identifiant du bien                 0,14   ⛔ écartée
+--      identifiant de l'annonce            0,01   ⛔ écartée
+--      date de CRÉATION DU CONTACT         0,95   ⭐ médiane 11 jours d'écart
+--      début du mandat / enregistrement    retenu quand il existe
+--
+-- ⛔ LES IDENTIFIANTS SONT ÉCARTÉS, ET C'EST MESURÉ : Hektor RECYCLE ses numéros
+--   (prouvé le 12/11 sur le mandat 16705, porté par DEUX biens). Un numéro ne dit
+--   donc pas une date.
+--
+-- LA SOURCE RETENUE POUR CHACUNE, et elle est écrite dans la ligne :
+--      9557, 16330, 20169, 24256   `mandat_debut`         le mandat du bien
+--      16255                       `annonce_enregistree`  aucun mandat chez nous
+--
+-- ⭐ CHAQUE LIGNE PORTE SON `source` ET SON `pourquoi`. Une date décidée sans son
+--   motif serait indiscernable d'une date de Hektor dans six mois.
+--
+-- ═══════════════════════════════════════════════════════════════════════════
+-- ⛔ POURQUOI PAS LE CARNET `app_affaire_champ_app` — l'audit l'a disqualifié
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Le carnet est le mécanisme normal du projet pour « ce que l'app détient ».
+-- Il a été écarté, et c'est une décision mesurée, pas un oubli :
+--   . `date` est dans `CARNET_VERS_REGISTRE` du worker ;
+--   . le carnet est un mécanisme de SURVEILLANCE D'ARRIVÉE chez Hektor : R3
+--     compare notre valeur à celle de Hektor et rend « conflit » quand elles
+--     diffèrent ;
+--   . or elles DIFFÉRERONT POUR TOUJOURS — Hektor ne portera jamais cette date.
+--   ⛔ Un conflit permanent fait sortir le contrôle EN ERREUR À CHAQUE PASSAGE.
+--     Et une alarme qui sonne tous les jours ne protège plus de rien.
+--
+-- ⛔ ET PAS UNE COLONNE DU REGISTRE NON PLUS : le run de nuit pousse
+--   `app_affaire_ledger` avec `SELECT *` — une colonne que le serveur local ne
+--   sait pas remplir y serait écrasée à NULL sur les 31 151 lignes d'un coup.
+--   ⭐ C'est la raison, déjà écrite dans api.ts, pour laquelle les notaires de la
+--     console vivent eux aussi dans une table à part. On reprend un patron
+--     éprouvé au lieu d'en inventer un.
+--
+-- ═══════════════════════════════════════════════════════════════════════════
+-- ⛔⛔ L'ERREUR DE CONCEPTION, TROUVÉE PAR LA MESURE DANS LA MINUTE
+-- ═══════════════════════════════════════════════════════════════════════════
+-- La première version plaçait la date décidée en TROISIÈME position du coalesce,
+-- APRÈS la colonne `date`. Le contrôle a montré que les cinq offres rendaient
+-- TOUJOURS 2026-11-11 : la colonne `date` n'est pas vide — elle porte justement
+-- le 11/11/2026 faussé par mon propre refus. Le coalesce s'arrêtait avant.
+--
+-- ⭐ LE BON ORDRE, et il se raisonne par la FIABILITÉ de chaque source :
+--      ① le JOURNAL de l'offre   sa première proposition — la vérité de Hektor
+--      ② la date DÉCIDÉE         une décision humaine, tracée, avec sa source
+--      ③ la colonne `date`       le DERNIER MOUVEMENT : pour une offre, la source
+--                                la MOINS fiable des trois
+--
+-- ⭐⭐ ET C'EST CE QUI REND LE DISPOSITIF RÉVERSIBLE SANS AUCUN GESTE : la décision
+--   cède dès que la donnée arrive. Si Hektor rend un jour une proposition datée,
+--   le cran ① reprend la main tout seul et la date décidée s'efface d'elle-même.
+--
+-- ═══════════════════════════════════════════════════════════════════════════
+-- LA CLÉ ÉTRANGÈRE, ET POURQUOI « on delete cascade »
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Le worker SUPPRIME de vraies lignes du registre quand un utilisateur supprime
+-- une transaction depuis l'app (console_job_worker.js l. 24814).
+--   . « restrict » ferait ÉCHOUER ce geste — une modale qui refuse est une panne ;
+--   . « cascade » est juste au fond : plus de transaction, plus de date à lui
+--     donner. ⭐ Et la trace ne se perd pas : ce geste écrit `app_affaire_supprimee`
+--     AVANT d'effacer (l. 24795).
+-- ⚠ RISQUE RÉSIDUEL, DÉCLARÉ : supprimer une transaction efface sa date décidée
+--   sans la redemander. Très faible (ce geste ne frappe que des transactions nées
+--   dans l'app, jamais une offre Hektor de 2017) mais il existe.
+--
+-- ═══════════════════════════════════════════════════════════════════════════
+-- L'ÉPREUVE — avec son témoin inverse à chaque fois
+-- ═══════════════════════════════════════════════════════════════════════════
+--   ① LES CINQ JOUENT
+--        9557  -> 2017-12-11   16255 -> 2022-07-11   16330 -> 2021-04-08
+--        20169 -> 2024-03-01   24256 -> 2022-02-25
+--   ② TÉMOIN INVERSE SUR TOUT LE REGISTRE — le lecteur AVEC l'identifiant contre
+--      le même lecteur SANS (donc incapable d'atteindre la table) :
+--        compromis  10 653 lignes   0 ont bougé
+--        offre      11 218 lignes   5 ont bougé   ⭐ exactement les cinq
+--        vente       9 280 lignes   0 ont bougé
+--   ③ LE REGISTRE : 5 chaînes quittent 2026 pour 2017 / 2021 / 2022 / 2024.
+--      L'année 2026 passe de 494 à 489 dossiers. Aucune autre chaîne ne bouge.
+--   ④ LES DROITS, mesurés en se mettant à la place de chacun :
+--        authenticated   voit les 5    ⭐ témoin positif
+--        anon            REFUSÉ        « permission denied »
+--
+-- ═══════════════════════════════════════════════════════════════════════════
+-- ⛔ CE QUI N'EST PAS BRANCHÉ, ET C'EST DÉLIBÉRÉ — règle du projet : exclure, le DIRE
+-- ═══════════════════════════════════════════════════════════════════════════
+-- TROIS LECTEURS PYTHON calculent la même règle et ne connaissent PAS la table :
+--      phase2/checks/rapport_gel_tous_les_champs.py:247   premiere_proposition()
+--      phase2/contacts/build_contacts_layer.py:378        date_de_la_premiere_proposition()
+--      phase2/checks/apparier_classeur.py:239             dates_des_propositions()
+-- CONSÉQUENCE EXACTE DE CHACUN, mesurée :
+--   . le rapport du gel NE CRIE PAS — il compare le classeur à nous ligne par
+--     ligne et rend un verdict ; ce n'est pas une alerte à seuil. Et le classeur
+--     ne connaît aucune des cinq (mesuré : ni par le mandat, ni par la ville) ;
+--   . la relation contact donnera au contact de ces 5 offres une « première
+--     relation » au 11/11/2026 au lieu de sa vraie année — 5 contacts ;
+--   . l'apparieur ratera au plus 5 appariements de classeur.
+-- ⭐ AUCUN des trois ne produit une date que l'utilisateur lit comme la date d'une
+--   affaire : les ÉCRANS, le REGISTRE et le PILOTAGE sont réparés, eux.
+-- ⬜ CE QUI FERAIT CHANGER D'AVIS : la table dépassant ~50 lignes, ou l'un des
+--   trois se mettant à crier. Les brancher coûterait 3 lectures SQL de plus dans
+--   le run de nuit, pour 5 lignes sur 31 151.
+--
+-- ═══════════════════════════════════════════════════════════════════════════
+-- ⏰ CE QUI RESTE, ET QUI DEMANDE SON ACCORD
+-- ═══════════════════════════════════════════════════════════════════════════
+-- ⬜ LA REPOSE DES ÉTIQUETTES. Les 5 dossiers changent d'année, donc leur
+--   étiquette `D2026-0367` à `D2026-0371` est devenue fausse. L'invariant
+--   « l'année de l'étiquette = l'année d'ouverture » vaut 5 au lieu de 0, et le
+--   contrôle CRIERAIT chaque jour.
+--   SIMULATION EXACTE (en lecture seule, avec la formule de la pose au mot près) :
+--        dossiers                                  11 441
+--        numéros qui changeraient                   1 486
+--        changeraient d'année                           5
+--        D2026-0367 -> D2017-0564    D2026-0368 -> D2022-0335
+--        D2026-0369 -> D2021-0217    D2026-0370 -> D2024-0072
+--        D2026-0371 -> D2022-0098
+--   ⭐ REPOSER VAUT MIEUX QUE RATTRAPER, et l'argument est déjà écrit dans
+--     patch_etiquette_annee_2026-11-12_REPOSE.sql : un rattrapage donnerait aux
+--     cinq le DERNIER rang de leur année (hors d'ordre, pour toujours) et
+--     laisserait 5 trous dans 2026. La repose les met à leur vraie place
+--     chronologique — les rangs ci-dessus sont au MILIEU de leur année.
+--   ⭐ Et c'est gratuit tant que les UUID ne sont pas partis dans la colonne
+--     `affair_uuid` du classeur (étape 5.2) : rien ne lit l'étiquette, mesuré.
+--     APRÈS, « un numéro ne se perd jamais » l'interdira.
+--
+-- ⚠ CE QUE LA MESURE A TROUVÉ EN PASSANT, nommé et non traité : 267 transactions
+--   n'ont AUCUNE date utilisable, et ce ne sont pas que des offres.
+--        compromis annulés   191      offres sans état (coquilles)   48
+--        compromis ACTIFS     13      offres refusées                10
+--        offres proposées      3      offres acceptées                2
+--   ⭐ Les 191 + 48 + 10 sont des transactions MORTES ou des coquilles : sans
+--     effet. ⚠ MAIS 13 compromis ACTIFS et 5 offres VIVANTES sans date faussent
+--     les délais. Mettre une date est une DÉCISION : à lui.
