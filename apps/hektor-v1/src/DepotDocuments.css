@@ -86,3 +86,7 @@
   .ged-depot-pied { flex-direction: column; align-items: stretch; }
   .ged-depot-pied .button-primary { width: 100%; }
 }
+
+/* GED morceau 4 : ce que l'IA propose, sous la ligne (elle ne change jamais un type choisi). */
+.ged-depot-ia { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center; color: #5c6163; font-weight: 700; }
+.ged-depot-ia.is-avis { color: #1d4f7a; }

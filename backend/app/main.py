@@ -19,6 +19,7 @@ from .routers.dvf import router as dvf_router
 from .routers.emails import router as emails_router
 from .routers.geo import router as geo_router
 from .routers.espace import router as espace_router
+from .routers.ged import router as ged_router
 from .routers.google_workspace import router as google_workspace_router
 from .routers.hektor_diffusion import router as hektor_diffusion_router
 from .routers.notifications import router as notifications_router
@@ -118,6 +119,7 @@ app.include_router(dvf_router)
 app.include_router(emails_router)
 app.include_router(geo_router)
 app.include_router(espace_router)
+app.include_router(ged_router)
 app.include_router(google_workspace_router)
 app.include_router(hektor_diffusion_router)
 app.include_router(notifications_router)

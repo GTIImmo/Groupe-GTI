@@ -6,17 +6,29 @@
 //   chemin d'aujourd'hui : chez nous d'abord, Hektor ensuite). Puis app_ged_classer enregistre son type CHEZ NOUS.
 //   Un classement raté n'empêche jamais un dépôt : la ligne le dit et propose de reclasser.
 // Note du chantier : notice/CHANTIER_GED_DOCUMENTS_2026-11-06.md §12.7.
+// ⭐ MORCEAU 4 (§12.9) : derrière `ged_lecture_ia`, l'IA PROPOSE le type de chaque fichier avant l'envoi, un fichier
+//   après l'autre (lib/gedClassementIa.ts : vignettes basse définition, garde RIB dans le navigateur). Elle pré-choisit
+//   seulement quand le nom ne disait rien de sûr et que personne n'a choisi ; sinon elle se montre (« Prendre ce type »).
+//   Un PDF qui réunit plusieurs pièces peut être séparé d'un clic. On peut envoyer sans attendre l'IA.
 import { useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode } from 'react'
 import { createUploadDocumentToHektorJob } from './lib/api'
 import {
   empreinteFichier, gedClasser, GED_FAMILLES, GED_TAILLE_MAX, GED_TYPES_ACCEPTES, loadGedTypes, nomEnConflit,
   type GedType,
 } from './lib/ged'
+import { classerParIa, preChoisirTypeIa, preparerPourIa, separerPdf, useGedLectureIa, type ResultatIa } from './lib/gedClassementIa'
 import { typeParNom } from './lib/gedTypeParNom'
 import type { ConsoleDocument, ConsoleJob, Dossier } from './types'
 import './DepotDocuments.css'
 
 type EtatLigne = 'pret' | 'envoi' | 'envoye' | 'classement_echec' | 'echec'
+
+// Où en est l'IA pour une ligne : null = pas encore demandée (ou interrupteur éteint).
+type EtatIa =
+  | { etat: 'lecture' }
+  | { etat: 'fait'; r: ResultatIa }
+  | { etat: 'non_envoye'; raison: string }
+  | { etat: 'erreur'; raison: string }
 
 type Ligne = {
   id: string
@@ -24,7 +36,14 @@ type Ligne = {
   nom: string
   nomTouche: boolean
   type: string
+  typeTouche: boolean
+  typeAttenduPose: boolean
+  // le type déduit du NOM (pour l'étiquette) ; typePropose / typeProposePar = ce qui est enregistré avec le classement
+  // (la proposition de l'IA si elle a répondu, sinon celle du nom), pour mesurer plus tard qui avait raison
+  typeNom: string | null
   typePropose: string | null
+  typeProposePar: 'nom' | 'ia' | null
+  ia: EtatIa | null
   forceNom: 'sur' | 'probable' | 'muet' | 'reste'
   visibilite: 'private' | 'shared'
   sha256: string | null
@@ -111,6 +130,17 @@ export function DepotDocuments({
     return () => window.removeEventListener('beforeunload', avant)
   }, [lignes])
 
+  const lectureIa = useGedLectureIa()
+
+  // La file de l'IA : UNE ligne à la fois, dans l'ordre du dépôt ; une ligne déjà envoyée n'est plus demandée.
+  useEffect(() => {
+    if (!lectureIa || !types) return
+    if (lignes.some((l) => l.ia?.etat === 'lecture')) return
+    const suivante = lignes.find((l) => l.ia === null && l.etat === 'pret')
+    if (suivante) void lireParIa(suivante)
+    // lireParIa écrit par setLignes (état à jour) : seule la liste déclenche
+  }, [lectureIa, types, lignes])
+
   const parCode = useMemo(() => new Map((types ?? []).map((t) => [t.code, t])), [types])
   const familles = useMemo(() => {
     const groupes = new Map<string, GedType[]>()
@@ -147,6 +177,91 @@ export function DepotDocuments({
     return { ...l, refus }
   })
 
+  // Choisir un type sur une ligne : un nom muet prend le nom proposé (ou le type et la date) tant que l'utilisateur ne
+  // l'a pas écrit lui-même ; une pièce des personnes part TOUJOURS en privé.
+  function avecType(l: Ligne, code: string, nomPropose?: string | null): Ligne {
+    const suivante = { ...l, type: code }
+    if (code && !l.nomTouche && (l.forceNom === 'muet' || l.forceNom === 'reste')) {
+      suivante.nom = nomPropose?.trim() || `${parCode.get(code)?.libelle ?? 'Document'} ${aujourdhui()}`
+    }
+    if (code && parCode.get(code)?.sensible) suivante.visibilite = 'private'
+    return suivante
+  }
+
+  async function lireParIa(ligne: Ligne) {
+    modifierEtat(ligne.id, { ia: { etat: 'lecture' } })
+    try {
+      const prep = await preparerPourIa(ligne.file, parCode.get(ligne.type)?.lecture === 'jamais_envoye')
+      if (!prep.envoyable) {
+        setLignes((avant) => verifier(avant.map((l) => {
+          if (l.id !== ligne.id) return l
+          const base: Ligne = { ...l, ia: { etat: 'non_envoye', raison: prep.raison } }
+          // un IBAN trouvé chez nous vaut un RIB reconnu : pré-choisi si personne n'a choisi
+          return prep.rib && l.etat === 'pret' && !l.typeTouche && !l.typeAttenduPose && parCode.has('justif.rib') ? avecType(base, 'justif.rib') : base
+        })))
+        return
+      }
+      const r = await classerParIa(prep, ligne.file.name, dossier.hektor_annonce_id)
+      setLignes((avant) => verifier(avant.map((l) => {
+        if (l.id !== ligne.id) return l
+        const base: Ligne = { ...l, ia: { etat: 'fait', r } }
+        if (l.etat !== 'pret' || !parCode.has(r.typeCode)) return base
+        const enregistre: Ligne = { ...base, typePropose: r.typeCode, typeProposePar: 'ia' }
+        return preChoisirTypeIa({ forceNom: l.forceNom, typeTouche: l.typeTouche, typeAttendu: l.typeAttenduPose }, r)
+          ? avecType(enregistre, r.typeCode, r.nomPropose)
+          : enregistre
+      })))
+    } catch (e) {
+      modifierEtat(ligne.id, { ia: { etat: 'erreur', raison: e instanceof Error ? e.message : String(e) } })
+    }
+  }
+
+  async function ligneNeuve(file: File): Promise<Ligne> {
+    const propose = typeParNom(file.name)
+    const sha256 = await empreinteFichier(file).catch(() => null)
+    const doublon = sha256 ? documents.find((d) => d.sha256 === sha256) ?? null : null
+    return {
+      id: crypto.randomUUID(),
+      file,
+      nom: racine(file.name).replace(/[_]+/g, ' ').trim(),
+      nomTouche: false,
+      type: propose.code ?? '',
+      typeTouche: false,
+      typeAttenduPose: false,
+      typeNom: propose.code,
+      typePropose: propose.code,
+      typeProposePar: propose.code ? 'nom' : null,
+      ia: null,
+      forceNom: propose.force,
+      visibilite: 'private',
+      sha256,
+      doublonDe: doublon ? doublon.document_name : null,
+      aEnvoyer: !doublon,
+      refus: null,
+      etat: 'pret',
+      message: null,
+      jobId: null,
+    }
+  }
+
+  // Un PDF qui réunit plusieurs pièces (dit par l'IA) devient autant de fichiers, un clic, à la place de l'original.
+  async function separer(ligne: Ligne, r: ResultatIa) {
+    setMessage(null)
+    try {
+      const fichiers = await separerPdf(ligne.file, r.pieces, (i) => `${racine(ligne.file.name)} - partie ${i + 1}`)
+      const nouvelles: Ligne[] = []
+      for (const [i, file] of fichiers.entries()) {
+        const code = r.pieces[i].typeCode
+        const neuve = await ligneNeuve(file)
+        const muette: Ligne = { ...neuve, forceNom: 'muet', typeNom: null, typePropose: code, typeProposePar: 'ia', ia: { etat: 'fait', r: { ...r, typeCode: code, nomPropose: null, pieces: [] } } }
+        nouvelles.push(avecType(muette, code))
+      }
+      setLignes((avant) => verifier(avant.flatMap((l) => (l.id === ligne.id ? nouvelles : [l]))))
+    } catch (e) {
+      setMessage(`Le fichier n'a pas pu être séparé : ${e instanceof Error ? e.message : String(e)}`)
+    }
+  }
+
   async function ajouterFichiers(fichiers: File[]) {
     setMessage(null)
     const nouvelles: Ligne[] = []
@@ -157,29 +272,9 @@ export function DepotDocuments({
         const jpeg = await versJpeg(file)
         if (jpeg) file = new File([jpeg], `${racine(file.name)}.jpg`, { type: 'image/jpeg' })
       }
-      const propose = typeParNom(file.name)
-      const sha256 = await empreinteFichier(file).catch(() => null)
-      const doublon = sha256 ? documents.find((d) => d.sha256 === sha256) ?? null : null
+      const neuve = await ligneNeuve(file)
       const attendu = typeAttendu && parCode.has(typeAttendu.code) ? typeAttendu.code : null
-      const type = attendu ?? propose.code ?? ''
-      const muet = propose.force === 'muet' || propose.force === 'reste'
-      nouvelles.push({
-        id: crypto.randomUUID(),
-        file,
-        nom: attendu && muet ? `${parCode.get(attendu)?.libelle ?? 'Document'} ${aujourdhui()}` : racine(file.name).replace(/[_]+/g, ' ').trim(),
-        nomTouche: false,
-        type,
-        typePropose: propose.code,
-        forceNom: propose.force,
-        visibilite: 'private',
-        sha256,
-        doublonDe: doublon ? doublon.document_name : null,
-        aEnvoyer: !doublon,
-        refus: null,
-        etat: 'pret',
-        message: null,
-        jobId: null,
-      })
+      nouvelles.push(attendu ? { ...avecType(neuve, attendu), typeAttenduPose: true } : avecType(neuve, neuve.type))
     }
     setLignes((avant) => verifier([...avant, ...nouvelles]))
     if (typeAttendu && nouvelles.length) onTypeAttenduUtilise?.()
@@ -189,13 +284,8 @@ export function DepotDocuments({
     setLignes((avant) => verifier(avant.map((l) => {
       if (l.id !== id) return l
       const suivante = { ...l, ...patch }
-      // un nom muet prend le nom du type choisi et la date, tant que l'utilisateur ne l'a pas écrit lui-même
-      if (patch.type !== undefined && !l.nomTouche && (l.forceNom === 'muet' || l.forceNom === 'reste') && patch.type) {
-        suivante.nom = `${parCode.get(patch.type)?.libelle ?? 'Document'} ${aujourdhui()}`
-      }
-      // une pièce des personnes part TOUJOURS en privé
-      if (suivante.type && parCode.get(suivante.type)?.sensible) suivante.visibilite = 'private'
-      return suivante
+      // un type choisi : le nom muet suit, la pièce des personnes reste privée (avecType)
+      return patch.type !== undefined ? avecType(suivante, patch.type) : suivante
     })))
   }
 
@@ -242,7 +332,7 @@ export function DepotDocuments({
           jobId: job.id,
           typeCode: ligne.type,
           typePropose: ligne.typePropose,
-          typeProposePar: ligne.typePropose ? 'nom' : null,
+          typeProposePar: ligne.typePropose ? ligne.typeProposePar : null,
           sha256: ligne.sha256,
         })
         modifierEtat(ligne.id, { etat: 'envoye', jobId: job.id, message: null })
@@ -258,7 +348,7 @@ export function DepotDocuments({
     if (!ligne.jobId) return
     modifierEtat(ligne.id, { message: null })
     try {
-      await gedClasser({ jobId: ligne.jobId, typeCode: ligne.type, typePropose: ligne.typePropose, typeProposePar: ligne.typePropose ? 'nom' : null, sha256: ligne.sha256 })
+      await gedClasser({ jobId: ligne.jobId, typeCode: ligne.type, typePropose: ligne.typePropose, typeProposePar: ligne.typePropose ? ligne.typeProposePar : null, sha256: ligne.sha256 })
       modifierEtat(ligne.id, { etat: 'envoye', message: null })
     } catch (e) {
       modifierEtat(ligne.id, { message: e instanceof Error ? e.message : String(e) })
@@ -278,6 +368,51 @@ export function DepotDocuments({
     setSurvol(false)
     const fichiers = Array.from(e.dataTransfer.files ?? [])
     if (fichiers.length) void ajouterFichiers(fichiers)
+  }
+
+  function etiquetteType(l: Ligne): string {
+    if (!l.type) return 'Type'
+    const parIa = l.ia?.etat === 'fait' && l.ia.r.typeCode === l.type
+    const parNom = l.typeNom === l.type
+    if (parIa && parNom) return "Type (le nom et l'IA sont d'accord)"
+    if (parIa) return "Type (proposé par l'IA, à vérifier)"
+    if (parNom) return `Type (proposé d'après le nom${l.forceNom === 'probable' ? ', à confirmer' : ''})`
+    return 'Type'
+  }
+
+  // Ce que l'IA a dit, sous la ligne : elle ne change jamais un type choisi, elle le montre.
+  function etatIa(l: Ligne): ReactNode {
+    const ia = l.ia
+    if (!ia) return null
+    if (ia.etat === 'lecture') return <span className="ged-depot-ia">L'IA lit le type…</span>
+    if (ia.etat === 'non_envoye') return <span className="ged-depot-ia">{ia.raison}</span>
+    if (ia.etat === 'erreur') {
+      return (
+        <span className="ged-depot-ia">
+          {`L'IA n'a pas répondu (${ia.raison}) : choisis le type.`}
+          <button className="ghost-button" type="button" onClick={() => modifierEtat(l.id, { ia: null })}>Redemander</button>
+        </span>
+      )
+    }
+    const r = ia.r
+    const libelle = parCode.get(r.typeCode)?.libelle ?? r.typeCode
+    return (
+      <>
+        {!r.lisible ? <span className="ged-depot-ia">L'IA n'a pas pu reconnaître ce document : choisis le type.</span> : null}
+        {r.lisible && r.typeCode !== l.type ? (
+          <span className="ged-depot-ia is-avis">
+            {`L'IA pense : ${libelle} (confiance ${r.confiance}).`}
+            <button className="ghost-button" type="button" onClick={() => modifier(l.id, { type: r.typeCode, typeTouche: true })}>Prendre ce type</button>
+          </span>
+        ) : null}
+        {r.pieces.length >= 2 && l.file.type === 'application/pdf' ? (
+          <span className="ged-depot-ia is-avis">
+            {`Ce fichier réunit ${r.pieces.length} pièces : ${r.pieces.map((p) => `${parCode.get(p.typeCode)?.libelle ?? p.typeCode} (p. ${p.pageDebut}${p.pageFin > p.pageDebut ? ` à ${p.pageFin}` : ''})`).join(', ')}.`}
+            <button className="ghost-button" type="button" disabled={envoiEnCours} onClick={() => void separer(l, r)}>{`Séparer en ${r.pieces.length} fichiers`}</button>
+          </span>
+        ) : null}
+      </>
+    )
   }
 
   const prets = lignes.filter((l) => l.etat === 'pret' && l.aEnvoyer && !l.refus).length
@@ -354,8 +489,8 @@ export function DepotDocuments({
                   <input value={l.nom} disabled={fige} onChange={(e) => modifier(l.id, { nom: e.target.value, nomTouche: true })} />
                 </label>
                 <label className="ged-depot-champ">
-                  <span>{l.typePropose && l.type === l.typePropose ? `Type (proposé d'après le nom${l.forceNom === 'probable' ? ', à confirmer' : ''})` : 'Type'}</span>
-                  <select value={l.type} disabled={fige || !types} onChange={(e) => modifier(l.id, { type: e.target.value })}>
+                  <span>{etiquetteType(l)}</span>
+                  <select value={l.type} disabled={fige || !types} onChange={(e) => modifier(l.id, { type: e.target.value, typeTouche: true })}>
                     <option value="">{l.forceNom === 'muet' ? 'Nom muet : choisis le type' : 'Choisis le type'}</option>
                     {familles.map(([famille, liste]) => (
                       <optgroup key={famille} label={GED_FAMILLES[famille] ?? famille}>
@@ -379,6 +514,7 @@ export function DepotDocuments({
                     </label>
                   ) : null}
                   {l.etat === 'pret' && l.aEnvoyer && l.refus ? <span className="ged-depot-refus">{l.refus}</span> : null}
+                  {l.etat === 'pret' ? etatIa(l) : null}
                   {l.etat === 'envoi' ? <span>Envoi en cours…</span> : null}
                   {l.etat === 'envoye' ? <span className="ged-depot-ok">Déposé chez nous, envoi chez Hektor en cours. Type enregistré.</span> : null}
                   {l.etat === 'classement_echec' ? (

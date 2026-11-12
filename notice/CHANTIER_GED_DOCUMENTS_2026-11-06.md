@@ -860,3 +860,65 @@ d'identité et 1 PDF d'offre. Mesuré :
 ✅ **« Oui, les quatre » (12/11)** : patch m3 **POSÉ EN PRODUCTION**, contrôles relus **5 VERT** ; commité, poussé ;
 `ged_recu_manque` allumé en `admin` (les 4 admins actifs). ⏳ Reste : le voir sur de vrais biens (un actif, un sous offre,
 un sous compromis) et juger la liste avec Frédéric.
+
+### 12.9 Le morceau 4 — l'IA classe avant l'envoi (audit du 12/11, rien codé)
+**Audit (lecture seule)** :
+- L'interrupteur existe déjà : `ged_lecture_ia` (posé par le morceau 1, éteint), sa description dit « le classement par
+  l'IA avant l'envoi et la lecture des valeurs après ». **Aucun patch de base n'est nécessaire** : `app_ged_classement`
+  porte déjà `type_propose` / `type_propose_par` (contrainte `'ia' | 'nom'`), `app_ged_classer` les accepte, et
+  `app_agent_run` (journal des agents, 16 lignes `redacteur`, dernière le 23/07, 0,011 $ en tout) reçoit tokens et coût.
+- Le backend Render appelle déjà OpenAI : `openai_listing_sheet_service.py` (`/v1/responses`, image en `input_image`,
+  schéma non strict, **sans `store:false`**, sans relevé d'usage), registre `agent_registry.py` (fiche en code, surchargée
+  par `app_agent_prompt`), modèle par défaut `OPENAI_VISION_MODEL` = `gpt-4.1-mini`. La route `/annonces/scan-fiche`
+  vérifie le jeton et le rôle (`load_profile`).
+- Le navigateur n'a **aucun lecteur de PDF** : `pdf-lib` assemble mais ne dessine pas une page et ne lit pas son texte.
+  Le backend non plus (`requirements.txt` : ni PyMuPDF ni pypdf).
+- La fenêtre de dépôt (`DepotDocuments.tsx`) propose le type par le nom (`typeParNom`) et l'enregistre avec
+  `typeProposePar: 'nom'` ; doc, xls, zip et txt passent aussi par elle.
+
+**Proposition** :
+- Tout se décide DANS LE NAVIGATEUR avant qu'un octet sorte : `pdfjs-dist` (chargé à la demande) dessine des vignettes
+  basse définition (512 px, au plus 12 pages : les 8 premières et les 4 dernières) et lit la couche texte.
+  ⛔ Garde RIB chez nous : nom « RIB », type choisi `justif.rib` ou un des 5 types `jamais_envoye`, ou un IBAN /
+  « relevé d'identité bancaire » dans le texte → AUCUN envoi. Doc, xls, zip, txt : jamais envoyés (le nom seul).
+- Le backend (route neuve `POST /ged/classer`, fichier neuf) revérifie : jeton, admin actif si l'interrupteur est sur
+  « admin », interrupteur allumé, **refus si le texte reçu porte un IBAN** (deuxième verrou), plafond de 2 $ par jour.
+  Appel `store:false`, schéma STRICT : type parmi les 60 codes, confiance, nom proposé (jamais un nom de personne), pièces
+  (plages de pages et type), pièce sensible oui / non. Ni la fiche du bien ni le nom du mandant ne partent. Journal :
+  une ligne `app_agent_run` `ged_classement` (tokens, coût, type et confiance ; aucune valeur lue).
+- À l'écran : « Lecture du type… » sur la ligne ; nom muet ou type seulement probable → le type de l'IA est pré-choisi,
+  marqué « proposé par l'IA, à vérifier » ; nom sûr et IA en désaccord → la proposition s'affiche, rien ne change sans
+  clic ; confiance basse → proposée, pas pré-choisie. Si l'IA dit RIB : seul le type est gardé. Plusieurs pièces dans un
+  PDF → « Séparer en N fichiers » (pdf-lib, déjà chargé), un clic. L'envoi reste possible sans attendre l'IA.
+- Retour arrière : `ged_lecture_ia = off` (plus aucun appel) ; le code se retire par `git revert`.
+- ⚠ Avant le 1er document réel : contrat de sous-traitance (DPA) d'OpenAI accepté par Frédéric ; le premier essai se fait
+  sur des documents FICTIFS (un faux DPE, un faux RIB dont on prouve qu'il ne part pas).
+✅ **« Vas-y, morceau 4 » (12/11). ÉCRIT ET CONTRÔLÉ, PAS ENCORE EN SERVICE (rien poussé, interrupteur éteint) :**
+- Serveur (Render) : `backend/app/services/ged_garde_rib.py` (2e verrou : IBAN à clé de contrôle vérifiée, « relevé
+  d'identité bancaire », nom « RIB » / « IBAN ») ; `backend/app/services/openai_ged_classement_service.py` (fiche d'agent
+  `ged_classement` ajoutée au registre, modèle `gpt-6-luna` sans raisonnement, `store:false`, images `detail: low` refusées
+  au-delà de 400 Ko, schéma STRICT dont le type ne sort que de `app_ged_type`, plafond de 2 $ par jour lu dans
+  `app_agent_run` — une lecture ratée de la dépense = pas d'appel ; un RIB vu par l'IA ne garde que son type ; un nom
+  proposé portant un long numéro ou un @ est jeté) ; `backend/app/routers/ged.py` (`POST /ged/classer` : jeton, admin
+  actif au cran « admin », interrupteur relu à chaque appel ; journal `app_agent_run` avec type, confiance et coût, SANS
+  le nom proposé ni la remarque) ; `main.py` +2 lignes.
+- Navigateur : `pdfjs-dist` 4.10.38 (chargé à la demande, morceau à part de 335 Ko) ; `src/lib/gedClassementIa.ts`
+  (vignettes 512 px des pages 1-8 et des 4 dernières, garde RIB sur le texte de TOUTES les pages jusqu'à 150 avant toute
+  vignette, extrait de 6 000 caractères, appel au serveur, séparation d'un PDF par pdf-lib, `useGedLectureIa`) ;
+  `DepotDocuments.tsx` (file une ligne à la fois ; pré-choix seulement si le nom n'est pas sûr, que personne n'a choisi et
+  que l'IA ne devine pas ; sinon « L'IA pense : … [Prendre ce type] » ; « Séparer en N fichiers » ; « Redemander » sur
+  erreur ; le classement retient `type_propose_par = 'ia'` quand l'IA a répondu) ; `.css` +3 lignes.
+- Contrôles : `backend/tests/test_ged_classer.py` **28 VERT** (aucun appel réseau) ; `test_ged_classement_ia.cjs`
+  **25 VERT** (mêmes exemples RIB que le serveur) ; témoins inverses : sans le 2e verrou l'essai serveur tombe, garde du
+  navigateur cassée → 4 ROUGE ; `npm run build` vert ; `test_ged_depot` 17, `test_ged_recu_manque` 29 et les 5 essais de
+  la signature verts ; le serveur complet s'importe (`/ged/classer` monté). ⚠ `tests/test_rapprochement_email.py` était
+  déjà rouge (« Voir ce bien » absent du HTML, fichier du 27/09, sans lien) — noté, pas touché.
+- **Banc réel sur 2 documents ENTIÈREMENT FICTIFS** (service appelé directement, rien écrit en base) : photo muette d'un
+  DPE → `diag.dpe`, confiance haute, 5,6 s ; scan de 4 pages → compromis + état des risques p. 4 vus comme 2 pièces,
+  3,9 s ; **0,0006 $ les deux** (≈ 2 300 à 3 000 jetons lus, surtout la liste des 66 types).
+- Écran vu sur une page d'essai (serveur simulé qui NOTE chaque demande) : 4 fichiers fictifs déposés → 3 demandes, **le
+  faux relevé portant un IBAN n'a fait AUCUNE demande** (« Un IBAN est dans le texte : jamais envoyé à l'IA », type RIB,
+  privé imposé) ; photo muette → type et nom pré-choisis ; « DPE mars 2024 » (nom sûr) garde DPE, l'avis de l'IA se
+  montre ; « Séparer en 2 fichiers » → 3 pages + 1 page, deux lignes typées. Téléphone 375 px : rien ne déborde.
+- ⏳ Reste, chacun sur accord : pousser (Render et Vercel se redéploient ; vérifier `/health` après) ; accepter le DPA
+  d'OpenAI (Frédéric) ; allumer `ged_lecture_ia` en `admin` ; premier essai réel sur des documents fictifs.
