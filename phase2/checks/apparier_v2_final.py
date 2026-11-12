@@ -332,10 +332,49 @@ def main() -> int:
     liens, refuses = [], []
     for score, num, genre, aff, pourquoi in propositions:
         if aff in pris:
-            refuses.append((num, genre, aff, pris[aff], score, pourquoi))
+            refuses.append((score, num, genre, aff, pris[aff], pourquoi))
             continue
         pris[aff] = num
         liens.append([num, genre, aff, score, pourquoi])
+
+    # ⭐⭐ LA SECONDE CHANCE -- ajoutee le 13/11 apres MESURE.
+    #   Mon exclusion etait GLOUTONNE ET DEFINITIVE : la ligne perdante ne
+    #   recuperait rien. Or la mesure contre le gel l a dit sans ambiguite --
+    #   sur les 210 liens que le gel avait et moi pas, 152 (72 %) etaient sur
+    #   LE MEME BIEN : il ne me manquait QUE le lien de ce role.
+    #   ⭐ Une ligne qui perd une transaction doit pouvoir prendre UNE AUTRE
+    #     transaction DU MEME GENRE DANS LE MEME BIEN, si elle est libre.
+    #   ⚠ On repasse PLUSIEURS FOIS : liberer une transaction peut en liberer
+    #     d autres en cascade. On s arrete des qu un tour n ajoute rien.
+    rattrapes = 0
+    for tour in range(4):
+        gagnes = 0
+        for score, num, genre, aff, par_qui, pourquoi in list(refuses):
+            b_ligne = retenus[num][0]
+            if b_ligne is None:
+                continue
+            libres = [x for x in par_bien[b_ligne]
+                      if x["kind"] == genre and x["app_affaire_id"] not in pris]
+            if not libres:
+                continue
+            # ⭐ on prend la plus PROCHE de ce que le classeur dit : la date du
+            #   genre d abord, puis le nom, puis la plus ancienne -- jamais au hasard.
+            d = retenus[num][3].get("dates", {}).get(genre, "")
+            mots_l = retenus[num][3].get("mots", set())
+            def rang(x):
+                return (0 if (d and jour(x.get("date")) == d) else 1,
+                        0 if (mots_l & noms_tx.get(x["app_affaire_id"], set())) else 1,
+                        x["app_affaire_id"])
+            choisi = sorted(libres, key=rang)[0]
+            pris[choisi["app_affaire_id"]] = num
+            liens.append([num, genre, choisi["app_affaire_id"], score,
+                          "2e chance (tour %d)" % (tour + 1)])
+            refuses.remove((score, num, genre, aff, par_qui, pourquoi))
+            gagnes += 1
+        rattrapes += gagnes
+        if not gagnes:
+            break
+    print("   ⭐ seconde chance       : %d liens rattrapes" % rattrapes)
     print("   liens retenus          : %d" % len(liens))
     print("   refuses par l'exclusion: %d  (la transaction etait deja prise par"
           " une ligne mieux notee)" % len(refuses))
