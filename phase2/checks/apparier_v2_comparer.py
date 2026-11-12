@@ -43,9 +43,23 @@ try:
 except Exception:                                                   # noqa: BLE001
     pass
 
-V1 = RACINE / "notice" / ("APPARIEMENT_CLASSEUR_2026-11-12_avancement-dates-"
-                          "exclusivite-noms-ordre-plafond-preuves-prix-propositions-"
-                          "rattrapage-recherche-unicite-veto.csv")
+# ⛔⛔ CORRIGE LE 13/11 SUR LA QUESTION DE FREDERIC : « quel v1 ? mon calcul du
+#   regel n'est pas a sa v1, il a ete optimise depuis non ? » -- IL AVAIT RAISON.
+#   Je comparais le CSV du 12/11 a 09:48 alors que le CODE avait ete modifie le
+#   12/11 a 11:59 (commit 518b08b, « regle D »). Je confrontais donc ma methode a
+#   un resultat PERIME DE DEUX HEURES.
+#   ⭐ On prend desormais LE PLUS RECENT, automatiquement, et on l'AFFICHE.
+#   ⭐ Et « la v1 » est un mauvais nom : c'est L'APPARIEUR ACTUEL. On l'appelle
+#     « apparieur » dans tout le fichier.
+def _dernier_csv_apparieur():
+    cands = sorted((RACINE / "notice").glob("APPARIEMENT_CLASSEUR_*.csv"),
+                   key=lambda p: p.stat().st_mtime, reverse=True)
+    if not cands:
+        raise SystemExit("aucun CSV d'appariement dans notice/")
+    return cands[0]
+
+
+V1 = _dernier_csv_apparieur()
 V2 = RACINE / "notice" / "APPARIEUR_V2_ACCORD_2026-11-13.csv"
 SORTIE = RACINE / "notice" / "APPARIEUR_V2_vs_V1_2026-11-13.csv"
 
@@ -91,7 +105,11 @@ def main() -> int:
                 "confiance": (r.get(kc) or "").strip(),
                 "cle": (r.get(k) or "").strip(),
             }
-    print("v1 : %d lignes lues" % len(v1))
+    import datetime
+    print("APPARIEUR : %s" % V1.name)
+    print("           modifie le %s -- %d lignes lues"
+          % (datetime.datetime.fromtimestamp(V1.stat().st_mtime).strftime("%d/%m/%Y %H:%M"),
+             len(v1)))
 
     # ── la v2 ───────────────────────────────────────────────────────────────
     v2: dict = {}
