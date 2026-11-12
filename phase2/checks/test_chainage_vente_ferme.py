@@ -96,6 +96,49 @@ def main() -> int:
 
     ok = True
 
+    # ═══════════════════════════════════════════════════════════════════════════
+    # ⚠⚠ DEUX DECISIONS DU PROJET SE RENCONTRENT ICI -- 12/11/2026
+    # ═══════════════════════════════════════════════════════════════════════════
+    # 08/09/2026, cet essai : « une vente ferme toujours » -- une vente EN TETE se
+    #   SEPARE de l'offre et du compromis qui la suivent, pour que le bien
+    #   redevienne « engage » au sens de la modale. Attendu : DEUX dossiers.
+    # 12/11/2026, REGLE D (demandee par Frederic) : « un acheteur + un bien = UN
+    #   dossier ». Attendu : UN SEUL dossier.
+    #
+    # ⭐ CE QUE LA MESURE DU 12/11 A TRANCHE, et elle donne raison a la regle D :
+    #     dossiers portant une vente                          9 280
+    #     dont la vente est datee AVANT leur offre                 8   (0,09 %)
+    #   Et en les regardant un par un, L'ANOMALIE N'EST PAS LA VENTE : dans la
+    #   moitie des cas l'ordre compromis -> vente est CORRECT, et c'est l'OFFRE qui
+    #   est datee apres -- parce qu'elle a ete SAISIE APRES COUP, pour completer le
+    #   dossier. C'est le sujet de l'essai voisin (test_chainage_offre_regularisee).
+    #   ➡ Les separer fabriquerait DEUX dossiers pour UNE SEULE vente.
+    #     La regle du 08/09 servait 8 dossiers ; la regle D en reunit 727.
+    #
+    # ⛔ ON N'EFFACE PAS LE RAISONNEMENT DU 08/09 POUR AUTANT : l'essai lit
+    #   l'interrupteur et verifie LES DEUX comportements. Le jour ou la regle D est
+    #   eteinte, l'attendu du 08/09 redevient celui qui est mesure.
+    #   (Meme forme que test_chainage_offre_regularisee et test_chainage_v2.)
+    # ⛔ ET LE LEVIER N'EST PAS CELUI QUE J'AI CRU D'ABORD (12/11, mesure) :
+    #   j'avais ecrit « c'est la regle D ». FAUX. Les DEUX regles reunissent ces
+    #   trois transactions, CHACUNE INDEPENDAMMENT :
+    #       regle C (vente seule)      rattache la vente au compromis actif du meme nom
+    #       regle D (meme acheteur)    reunit tout ce qui porte le meme acheteur
+    #   Mesure :  D eteinte + C allumee -> 1 dossier
+    #             C eteinte + D allumee -> 1 dossier
+    #             LES DEUX eteintes     -> 2 dossiers, l'attendu du 08/09
+    #   ➡ La condition est donc « C OU D », et la lire sur une seule des deux
+    #     aurait rendu cet essai faux dans un cas sur deux.
+    import phase2.sync.affaire_ledger as _al
+    c_actif = _al.chainage_vente_seule_actif()
+    d_actif = _al.chainage_meme_acheteur_actif()
+    reunies = c_actif or d_actif
+    print("regle C (vente seule) : %s . regle D (meme acheteur) : %s"
+          % ("allumee" if c_actif else "eteinte", "allumee" if d_actif else "eteinte"))
+    print("-> " + ("elles REUNISSENT : un seul dossier attendu"
+                   if reunies else "aucune des deux : le comportement du 08/09"))
+    print("")
+
     def verdict(nom: str, attendu, obtenu):
         nonlocal ok
         bon = attendu == obtenu
@@ -108,11 +151,25 @@ def main() -> int:
             etat = "OUVERT" if ouvert(membres) else "terminé"
             detail = " · ".join(f"{k}" for _, k, _ in membres)
             print(f"   dossier {chaine:<6} {etat:<8} {detail}")
-        verdict("deux dossiers au lieu d'un", 2, len(res[annonce]))
-        verdict("un dossier OUVERT (le bien redevient « engagé »)",
-                1, sum(1 for m in res[annonce].values() if ouvert(m)))
-        verdict("la vente est SEULE dans le sien",
-                True, any(len(m) == 1 and m[0][1] == "vente" for m in res[annonce].values()))
+        if reunies:
+            # La regle C ou D reunit : UN dossier, ferme par sa vente, et la vente n'y
+            # est pas seule. C'est l'etat voulu depuis le 12/11.
+            verdict("UN SEUL dossier (reuni par la regle C ou D)",
+                    1, len(res[annonce]))
+            verdict("aucun dossier OUVERT (la vente le ferme)",
+                    0, sum(1 for m in res[annonce].values() if ouvert(m)))
+            verdict("la vente N'EST PAS seule (elle a rejoint son compromis)",
+                    False, any(len(m) == 1 and m[0][1] == "vente"
+                               for m in res[annonce].values()))
+        else:
+            # ⭐ L'ATTENDU DU 08/09, CONSERVE MOT POUR MOT : il redevient le juge
+            #   des que la regle D est eteinte.
+            verdict("deux dossiers au lieu d'un", 2, len(res[annonce]))
+            verdict("un dossier OUVERT (le bien redevient « engagé »)",
+                    1, sum(1 for m in res[annonce].values() if ouvert(m)))
+            verdict("la vente est SEULE dans le sien",
+                    True, any(len(m) == 1 and m[0][1] == "vente"
+                              for m in res[annonce].values()))
         print("")
 
     print("=== témoin : une chaîne NORMALE offre → compromis → vente ===")
