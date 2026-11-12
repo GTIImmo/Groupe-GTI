@@ -122,12 +122,37 @@
 --     il faut lire le corps.** Le groupement ne peut pas être faussé par une date.
 --
 -- ═══════════════════════════════════════════════════════════════════════════
--- CE QUI RESTE, MESURÉ MAIS PAS CORRIGÉ
+-- ✅ LA FICHE NOTAIRE AUSSI — notaire_fiche_date_offre_reelle_2026_11_12
 -- ═══════════════════════════════════════════════════════════════════════════
---   app_notaire_fiche               affiche la date d'offre  ⬜
---       (ses délais portent sur compromis/vente, donc intacts)
---   App.tsx 32618 . 32735 . 32311   le cockpit, au front  ⬜
---   export_app_payload.py et transactions_annonce_from_api.py  ⚠ NON MESURÉS
+-- Son SELECT rendait `l.date` brut, et cette colonne sert à l'AFFICHAGE **et** au
+-- tri des dossiers (ORDER BY d.date DESC) : une offre refusée hier remontait en tête.
+--
+-- ⭐⭐ ET C'EST LE CAS LE PLUS SIMPLE DES QUATRE, parce que le lecteur est
+--   TRANSPARENT pour tout ce qui n'est pas une offre : pour un compromis ou une
+--   vente il rend `date` telle quelle. On a donc pu remplacer la colonne SANS
+--   distinguer les genres -- contrairement au pilotage, où trois blocs partageaient
+--   la même forme et où il a fallu couper par position.
+-- ⚠ Son délai médian compromis -> vente était juste et reste juste : il porte sur
+--   des compromis et des ventes, dont la date ne bouge pas.
+--
+-- ═══════════════════════════════════════════════════════════════════════════
+-- ✅ LA COUCHE « BASE » EST COMPLÈTE — contrôle du 12/11 au soir
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Les QUATRE fonctions qui datent une transaction passent toutes par le lecteur
+-- unique, et aucune ne reste sur `date` brut :
+--       app_registre_dossiers . app_pilotage_affaires_plus
+--       app_notaire_fiche     . app_dossier_annee_ouverture
+--   (+ app_pilotage_acquereurs, qui n'apparaît plus dans le balayage parce que sa
+--    forme a changé -- c'est le signe qu'elle est corrigée, pas qu'elle manque.)
+-- ⭐ Témoin positif : le balayage liste 4 fonctions et les 4 sont à `true`. Un
+--   résultat vide aurait voulu dire « ma requête ne trouve rien », pas « tout va bien ».
+--
+-- ═══════════════════════════════════════════════════════════════════════════
+-- CE QUI RESTE
+-- ═══════════════════════════════════════════════════════════════════════════
+--   ✅ le COCKPIT au front est corrigé le 12/11 (3 points : le tri des dossiers
+--      d'un bien, le résumé du parcours, la fiche cockpit)
+--   ⚠ export_app_payload.py et transactions_annonce_from_api.py : NON MESURÉS
 --   App.tsx 32618 . 32735 . 32311   le cockpit, au front  ⬜
 --
 -- ⚠ ET LE CONTRÔLE DE CETTE FONCTION NE PEUT PAS SE FAIRE EN service_role :

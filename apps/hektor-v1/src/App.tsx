@@ -32315,7 +32315,10 @@ function grouperAffairesParChaine(rows: AffaireLedgerRow[]): ChaineAffaire[] {
     let date = ''
     for (const l of lignes) {
       rang = Math.max(rang, AFFAIRE_RANG[String(l.kind)] ?? 0)
-      const d = String(l.date ?? '').trim()
+      // ⭐ 12/11/2026 : la date EFFECTIVE. Pour une offre, `l.date` porte son
+      //   DERNIER mouvement -- un refus la faisait passer pour la plus recente,
+      //   et le dossier remontait en tete du bien a tort.
+      const d = String(dateDeRangement(l) || l.date || '').trim()
       if (d > date) date = d
     }
     out.push({ chaine, lignes, rang, date })
@@ -32627,7 +32630,8 @@ function ckAffaireDepuisChaine(
     offre: o ? {
       montant: affairePrix(o.montant),
       net: '',
-      date: o.date ? formatDate(o.date) : '',
+      // ⭐ 12/11/2026 : la date EFFECTIVE de l'offre (sa premiere proposition).
+      date: dateDeRangement(o) || o.date ? formatDate(dateDeRangement(o) || String(o.date)) : '',
       // 18/09 (D4) : lue au registre -- elle etait vide EN DUR.
       validite: String(o.jours_validite ?? '').trim() ? `${String(o.jours_validite).trim()} jours` : '',
       etat: affaireEtatLabel('offre', o.state),
@@ -32744,7 +32748,9 @@ function ckDetailDepuisRegistre(
     return null
   }
   return {
-    offre: o ? { id: t(o.hektor_affaire_id), state: t(o.state), montant: t(o.montant), date: t(o.date),
+    // ⭐ 12/11/2026 : la date EFFECTIVE de l'offre, pas son dernier mouvement.
+    offre: o ? { id: t(o.hektor_affaire_id), state: t(o.state), montant: t(o.montant),
+      date: dateDeRangement(o) || t(o.date),
       acquereur: premier(affaireAcquereursParties(o)) } : null,
     compromis: cp ? { id: t(cp.hektor_affaire_id), state: t(cp.state), date_start: t(cp.date), date_acte: t(cp.date_acte),
       sequestre: t(cp.sequestre), prix_net: t(cp.prix_net_vendeur), prix_public: t(cp.montant),
