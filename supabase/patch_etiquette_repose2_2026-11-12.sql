@@ -1,0 +1,99 @@
+-- ═══════════════════════════════════════════════════════════════════════════
+-- LA REPOSE N°2 DES ÉTIQUETTES — après les 5 dates décidées      12/11/2026
+-- ═══════════════════════════════════════════════════════════════════════════
+-- ✅ EN PRODUCTION LE 12/11/2026, migration
+--    `etiquette_repose2_apres_dates_decidees_2026_11_12`, avec l'accord de Frédéric.
+--
+-- ⚠ CE FICHIER EST UNE TRACE, pas un patch à coller : la migration est posée.
+--
+-- ═══════════════════════════════════════════════════════════════════════════
+-- POURQUOI
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Les 5 offres datées le même soir (`patch_date_convenue_2026-11-12.sql`) ont fait
+-- changer d'année leur dossier. Leur étiquette `D2026-0367` à `D2026-0371` était
+-- donc devenue fausse, et l'invariant « l'année de l'étiquette = l'année
+-- d'ouverture » valait **5** au lieu de 0 : le contrôle aurait **crié chaque jour**.
+--
+-- ⭐ REPOSER PLUTÔT QUE RATTRAPER — l'argument est celui déjà écrit le matin dans
+--   `patch_etiquette_annee_2026-11-12_REPOSE.sql` : un rattrapage donnerait aux cinq
+--   le DERNIER rang de leur année (hors d'ordre, pour toujours) et laisserait 5 trous
+--   dans 2026. La repose les met à leur vraie place chronologique.
+-- ⭐ Et c'est GRATUIT tant que l'UUID n'est pas parti dans la colonne `affair_uuid`
+--   du classeur (étape 5.2) : rien ne lit l'étiquette — mesuré le matin même (grep à
+--   zéro, aucune clé étrangère, aucune vue). APRÈS, « un numéro ne se perd jamais »
+--   l'interdira.
+--
+-- ⚠⚠ LE PIÈGE QUI A FAILLI ME COÛTER LA SAUVEGARDE : le patch du matin crée ses
+--   copies en `create table if not exists`. **Le relancer tel quel n'aurait RIEN
+--   sauvegardé** — ses tables existaient déjà, et j'aurais détruit en croyant être
+--   couvert. Cette repose a donc ses PROPRES tables :
+--       app_etiquette_avant_repose2_20261112
+--       app_etiquette_compteur_avant_repose2_20261112
+--       app_etiquette_journal_avant_repose2_20261112
+--   ⭐ *Leçon : un patch idempotent n'est pas rejouable. `if not exists` protège la
+--     PREMIÈRE copie, et c'est exactement ce qui trahit la seconde.*
+--
+-- ═══════════════════════════════════════════════════════════════════════════
+-- LES DEUX GARDE-FOUS, AVANT TOUTE DESTRUCTION
+-- ═══════════════════════════════════════════════════════════════════════════
+--   ① la copie est vérifiée AU COMPTE avant d'effacer (31 151 lignes, 31 151
+--      étiquetées) — si quelqu'un est passé entre-temps, on s'arrête ;
+--   ② ⭐ LA DATE DÉCIDÉE DOIT JOUER : le lecteur doit rendre `c.jour` pour les 5.
+--      Si l'ordre du coalesce n'était pas corrigé, on reposerait **les mêmes numéros
+--      faux** — un patch qui ne vérifie pas son prédécesseur travaille pour rien,
+--      en silence.
+--
+-- ═══════════════════════════════════════════════════════════════════════════
+-- LE RÉSULTAT — mesuré, et conforme à la simulation AU NUMÉRO PRÈS
+-- ═══════════════════════════════════════════════════════════════════════════
+--                                   AVANT              APRÈS
+--   l'année qui ment                    5                  0      ⭐
+--   dossiers étiquetés             11 441             11 441
+--   étiquettes (uuid distincts)    11 441             11 441      bijection
+--   transactions étiquetées        31 151             31 151
+--   plage         D0000-0001 .. D2026-0371   D0000-0001 .. D2026-0366
+--   somme des compteurs            11 441             11 441
+--   journal                        11 441 lignes      11 441 lignes
+--
+--   dossiers renumérotés            1 486    ⭐ EXACTEMENT la simulation
+--   transactions renumérotées       4 010    = 1 486 × 2,70 par dossier
+--
+-- ⭐⭐ LE TÉMOIN LE PLUS FORT : les cinq portent EXACTEMENT les numéros que la
+--   simulation en lecture seule avait annoncés, avant d'écrire une seule ligne :
+--       9557  -> D2017-0564        16255 -> D2022-0335
+--       16330 -> D2021-0217        20169 -> D2024-0072
+--       24256 -> D2022-0098
+--   Des rangs au MILIEU de leur année — donc chronologiquement justes, là où un
+--   rattrapage leur aurait donné le dernier rang.
+--
+-- ═══════════════════════════════════════════════════════════════════════════
+-- LES CONTRÔLES, TOUS DANS LA MÊME TRANSACTION
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Si l'un casse, TOUT est annulé — c'est la seule façon de ne jamais laisser le
+-- registre à moitié réétiqueté.
+--   . la repose a posé au moins un dossier (un zéro ne se croit pas sans témoin) ;
+--   . propagation / fusion / scission ont vu 0 dossier (preuve que la remise à zéro
+--     a bien eu lieu) ;
+--   . autant de lignes étiquetées que de transactions chaînées ;
+--   . 0 groupe à plusieurs étiquettes · 0 étiquette sur plusieurs groupes ·
+--     0 transaction chaînée sans étiquette · bijection dossiers = étiquettes ;
+--   . 0 année qui ment, sur un dénominateur non nul ;
+--   . ⭐ 0 désordre chronologique : dans une année, un rang plus grand n'est jamais
+--     antérieur à un rang plus petit. C'est le juge du « reposer vaut mieux que
+--     rattraper » — un rattrapage l'aurait cassé sur 5 dossiers.
+--
+-- ⛔ ET UNE FAUTE DE MESURE À NE PLUS REFAIRE, payée le même soir : comparer l'année
+--   avec `'D' || annee::text` donne « D0 » pour l'année 0, alors que le format est
+--   « D0000 ». Ce raccourci m'a fait annoncer **11** écarts là où il y en avait **5**.
+--   ➡ On compare au FORMAT officiel (`to_char(annee,'FM0000')`, ou mieux
+--     `app_dossier_numero_format`), jamais à une concaténation improvisée.
+--
+-- ═══════════════════════════════════════════════════════════════════════════
+-- RETOUR ARRIÈRE
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Les trois tables `..._avant_repose2_20261112` portent l'état exact d'avant, au
+-- champ près (uuid ET numéro). Un retour consiste à les recopier dans
+-- `app_affaire_ledger`, `app_dossier_numero_compteur` et
+-- `app_dossier_etiquette_journal`.
+-- ⚠ Et il ne se ferait que sur décision de Frédéric — comme la suppression des
+--   sauvegardes, qui ne s'efface jamais depuis un patch.
