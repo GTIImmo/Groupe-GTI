@@ -492,6 +492,15 @@ class SupabaseAdminService:
             "Unable to load app_dossier_current",
         )
         if not rows:
+            # 12/11/2026 (lot B « diffusion des vendus ») : un VENDU encore diffuse par Hektor.
+            # Meme regle que pour une active : diffusable = '1', et SON perimetre (la fonction
+            # d'acces ci-dessous connait deja l'index des vendus).
+            rows = self._rest_rows(
+                "app_historical_annonce_index_current",
+                {"select": "app_historical_id,hektor_annonce_id,diffusable", "app_historical_id": f"eq.{int(app_dossier_id)}", "limit": "1"},
+                "Unable to load app_historical_annonce_index_current",
+            )
+        if not rows:
             raise HTTPException(status_code=404, detail="Annonce introuvable")
         if str(rows[0].get("diffusable") or "").strip() != "1":
             raise HTTPException(status_code=403, detail="Annonce pas encore diffusable : la Direction doit la valider et cocher Diffusable")

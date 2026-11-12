@@ -102,6 +102,77 @@ class HektorBridgeService:
             {"app_dossier_id": f"eq.{app_dossier_id}"},
         )
 
+    def _load_dossier_ou_vendu(self, app_dossier_id: int) -> dict[str, Any]:
+        """L'annonce active, sinon le VENDU de meme numero (12/11/2026, lot B « diffusion des vendus »).
+
+        Un vendu n'est plus dans app_dossiers_current mais Hektor peut le diffuser encore
+        (60 au 12/11 : Etreproprio, Paper, Superimmo). Son numero dans l'app est
+        `app_historical_id`, de la meme famille que `app_dossier_id` et sans chevauchement
+        (mesure du 12/11) : les cibles de diffusion s'y rangent donc telles quelles.
+        Reserve a l'envoi des portails -- les autres gestes (validation, diffusable,
+        acceptation) gardent `_load_dossier`, qui refuse un vendu.
+        """
+        try:
+            return self._load_dossier(app_dossier_id)
+        except HTTPException as error:
+            if error.status_code != 404:
+                raise
+        vendu = self._supabase_select_single(
+            "app_historical_annonce_index_current",
+            "app_historical_id,hektor_annonce_id,numero_dossier,agence_nom",
+            {"app_historical_id": f"eq.{app_dossier_id}"},
+        )
+        return {
+            "app_dossier_id": int(vendu["app_historical_id"]),
+            "hektor_annonce_id": vendu.get("hektor_annonce_id"),
+            "numero_dossier": vendu.get("numero_dossier"),
+            "validation_diffusion_state": None,
+            "agence_nom": vendu.get("agence_nom"),
+            "est_vendu": True,
+        }
+
+    def _persist_state_vendu(
+        self,
+        app_dossier_id: int,
+        portails_resume: str | None,
+        nb_portails_actifs: int | None,
+    ) -> dict[str, Any]:
+        """Le report d'un clic de portail sur un VENDU : seulement ses portails, dans l'index des vendus.
+
+        ⚠ Ni validation ni « diffusable » : un vendu n'en recoit jamais d'ici. Pas de verrou
+          de diffusion non plus (il protege la relecture d'une annonce ACTIVE) : la nuit relit
+          les portails chez Hektor et les recrit, c'est elle qui fait foi.
+        """
+        payload: dict[str, Any] = {}
+        if portails_resume is not None:
+            payload["portails_resume"] = portails_resume or None
+        if nb_portails_actifs is not None:
+            payload["nb_portails_actifs"] = int(nb_portails_actifs)
+        if payload:
+            rows = self._supabase_patch_rows(
+                "app_historical_annonce_index_current",
+                payload,
+                {"app_historical_id": f"eq.{app_dossier_id}"},
+            )
+            if not rows:
+                raise HTTPException(status_code=404, detail="Annonce introuvable (ni active ni vendue)")
+            row = rows[0]
+        else:
+            row = self._supabase_select_single(
+                "app_historical_annonce_index_current",
+                "app_historical_id,portails_resume,nb_portails_actifs",
+                {"app_historical_id": f"eq.{app_dossier_id}"},
+            )
+        return {
+            "app_dossier_id": app_dossier_id,
+            "validation_diffusion_state": None,
+            "diffusable": None,
+            "portails_resume": row.get("portails_resume"),
+            "nb_portails_actifs": row.get("nb_portails_actifs"),
+            "refreshed_at": None,
+            "est_vendu": True,
+        }
+
     def persist_state(
         self,
         app_dossier_id: int,
@@ -128,7 +199,8 @@ class HektorBridgeService:
             {"app_dossier_id": f"eq.{app_dossier_id}"},
         )
         if not rows:
-            raise HTTPException(status_code=404, detail="app_dossier_current introuvable")
+            # 12/11/2026 : pas une annonce active -> peut-etre un vendu (lot B).
+            return self._persist_state_vendu(app_dossier_id, portails_resume, nb_portails_actifs)
         row = rows[0]
         # Verrou diffusion : protège la valeur optimiste (diffusable/validation) contre le
         # revert du read-through tant qu'Hektor n'a pas rattrapé. Levé AUTOMATIQUEMENT par
@@ -866,7 +938,10 @@ class HektorBridgeService:
         }
 
     def apply(self, app_dossier_id: int, dry_run: bool, ensure_diffusable: bool, requested_by: str | None = None) -> dict[str, Any]:
-        dossier = self._load_dossier(app_dossier_id)
+        dossier = self._load_dossier_ou_vendu(app_dossier_id)
+        if dossier.get("est_vendu"):
+            # Un vendu : on coche / decoche ses portails, on ne touche JAMAIS a « diffusable ».
+            ensure_diffusable = False
         return self._run_apply(dossier, requested_by, dry_run, ensure_diffusable, False)
 
     def accept(self, app_dossier_id: int, dry_run: bool, requested_by: str | None = None) -> dict[str, Any]:
