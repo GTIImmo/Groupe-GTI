@@ -195,13 +195,34 @@ numéro est public et « un numéro ne se perd jamais » l'interdit.
 sans filtre, leur dossier tombait en `D0000`. **14 régressions évitées.**
 
 ```
-2.6 ⬜ ACCORD      supabase/patch_etiquette_annee_2026-11-12_LECTEURS.sql
-                   (n'ecrit AUCUNE donnee -- deux CREATE OR REPLACE)
-2.7 ⬜ ACCORD      supabase/patch_etiquette_annee_2026-11-12_REPOSE.sql
-                   sauvegarde datee + remise a zero + repose + 4 invariants
-                   DANS LA MEME TRANSACTION (si un casse, tout est annule)
-                   ⛔ LA REPETITION ET L'INVERSE S'ECRIVENT AVANT LE COLLAGE
+2.6 ✅ COLLE 12/11  les LECTEURS, en trois migrations :
+                    etiquette_annee_lecteur_unique_2026_11_12
+                    etiquette_annee_lecteur_durci_2026_11_12
+                    etiquette_pose_passe_par_le_lecteur_2026_11_12
+2.7 ✅ COLLE 12/11  la REPOSE : etiquette_annee_repose_2026_11_12
+                    697 numeros mentaient -> 0 . dont 648 « 2026 » -> 0
+                    31 151 etiquettes . invariants 0/0/0 . bijection 11 441
+                    compteur 11 441 . journal somme 31 151 . format 0 mal forme
+                    de D0000-0001 a D2026-0371 (etait D2026-0550)
+                    ⭐ CHRONOLOGIE 100,00 % : 0 desordre sur 11 323 comparaisons
+                    sauvegarde : app_etiquette_avant_repose_20261112 (31 151 l.)
 ```
+
+⛔⛔ **ET LE TÉMOIN INVERSE DE MA PROPRE RÉPÉTITION A TROUVÉ UN DÉFAUT DANS MA PREMIÈRE
+VERSION DU LECTEUR.** Écrit en SQL pur, il **levait** sur un `propositions_json` qui n'est
+pas du JSON (*« invalid input syntax for type json »*) au lieu de retomber sur `date` :
+**une seule valeur abîmée aurait fait tomber la pose entière.**
+
+```
+le risque est THEORIQUE -- la colonne est de type JSONB, la base ne peut pas
+   contenir du non-JSON. MAIS la fonction prend du `text`.
+corrige quand meme : plpgsql + bloc exception, 5 lignes
+eprouve sur : JSON illisible . tableau de texte . JSON tronque -> repli sur `date`
+les 10 temoins sont verts, dont les TROIS qui faisaient lever
+```
+
+⭐ **C'est exactement à quoi sert une répétition écrite avant le collage.** Sans elle,
+le défaut dormait jusqu'au jour où une ligne aurait été abîmée.
 
 #### ② LES 33 LIGNES À CHEVAL : L'ÉNIGME EST RÉSOLUE
 
@@ -225,12 +246,38 @@ dont 417 avec deux acheteurs DIFFÉRENTS.** Une règle sans la garde du nom aura
 
 #### ③ 20 OFFRES REFUSÉES À TORT PAR MON LOT DU 11/11
 
+⛔⛔ **ET MA PREMIÈRE QUALIFICATION ÉTAIT FAUSSE — corrigée le 12/11 après mesure.**
+J'avais écrit *« 517 offres refusées à tort, dont 496 l'histoire de Hektor depuis 2007 »*.
+**C'est faux, et c'eût été grave de le laisser écrit** : quelqu'un serait allé « réparer »
+500 lignes justes dans six mois.
+
 ```
-offres refusees portant le nom de CELUI QUI A ACHETE        517
-  dont posees par MON lot du 11/11                           20   <- a nous
-  dont ANTERIEURES                                          496   <- deja la
-  reparties regulierement de 2007 a 2026, 10 a 25 par an
+offres refusees dont l'acheteur a FINALEMENT achete        220
+  leur refus est AVANT ou LE JOUR de la vente              218   ⭐ l'ordre d'une NEGOCIATION
+  apres la vente                                             1
+  sans refus a leur journal                                  1
+  ACCEPTEES puis refusees -- la seule vraie anomalie          2
 ```
+
+⭐ **« Même acheteur » ne veut pas dire « erreur ».** Une offre refusée n'empêche pas le
+même acheteur d'acheter ensuite : il offre 180 000, c'est refusé, on négocie, il revient à
+195 000 et la vente se fait. **L'offre à 180 000 reste refusée, et c'est juste.** Les 218
+refus antérieurs à la vente le prouvent.
+
+⭐ **La vraie anomalie est « ACCEPTÉE puis refusée alors que l'affaire a abouti »**, et il
+n'y en a que **2** :
+
+```
+offre 11147  HUGON, bien 23353 . acceptee 19/01/2026, refusee 11/03/2026, vendue 27/03/2026
+             ⭐ le refus N'EST PAS DE NOUS (11 mars) : geste humain 16 jours avant la
+               vente, l'affaire a ete refaite. RIEN A CORRIGER.
+offre 14420  BELLAVIA . refusee le 11/11/2026 PAR MOI -> le seul cas restant, et il
+             est a nous (c'est celle qui est LAISSEE de cote plus bas)
+```
+
+➡ **Il n'y a pas 500 anomalies chez Hektor. Il y en avait 20, toutes de mon fait, dont
+19 sont réparées.** ⚠ Ce qui ne change rien à l'erreur de méthode : j'ai agi en masse sur
+un chaînage que je savais incomplet.
 
 ⭐ **Le script avait la BONNE garde** (`cpAnnule && !cpVivant && !vente && offreAcceptee`).
 ⛔ **L'erreur est une erreur d'ORDRE, et elle est à moi** : j'ai refusé sur un chaînage
@@ -249,7 +296,9 @@ incomplet. Le chaînage d'abord, le geste ensuite.**
                       APRES sa vente (20/11/2009 contre 25/07/2008) -- deux defauts
                       se superposent, on ne repare pas deux choses d'un geste.
                       TEMOIN INVERSE : elle est bien restee « refused ».
-                    ⛔ ET LES ~220 AUTRES DE HEKTOR N'ONT PAS BOUGE (exclusion declaree)
+                    ⛔ ET LES 219 AUTRES N'ONT PAS BOUGE -- et c'est JUSTE : ce sont des
+                      NEGOCIATIONS NORMALES (refus AVANT la vente), pas des defauts.
+                      Voir la correction de ma qualification au § ③ ci-dessus.
 
 ⭐⭐ **L'ESSAI SUR UNE SEULE A TROUVE UN TROU, ET C'EST POUR CA QU'ON LE FAIT.**
 Le travail finissait `done`, avec `verbe: GET` et `reponse_hektor: 1`, la relecture de

@@ -1,6 +1,12 @@
 -- ═══════════════════════════════════════════════════════════════════════════
 -- L'ANNÉE DE L'ÉTIQUETTE : LES DEUX LECTEURS, RÉPARÉS          12/11/2026
 -- ═══════════════════════════════════════════════════════════════════════════
+-- ✅ COLLÉ EN PRODUCTION LE 12/11/2026, en trois migrations :
+--      etiquette_annee_lecteur_unique_2026_11_12
+--      etiquette_annee_lecteur_durci_2026_11_12          <- le bloc exception
+--      etiquette_pose_passe_par_le_lecteur_2026_11_12
+--    Les 10 témoins de la répétition sont verts, dont les trois qui faisaient lever.
+--
 -- ⭐ CE FICHIER N'ÉCRIT AUCUNE DONNÉE. Il ne remplace que des fonctions.
 --    Les étiquettes déjà posées ne bougent pas d'une ligne. La repose est un
 --    second fichier, à part : patch_etiquette_annee_2026-11-12_REPOSE.sql
@@ -49,40 +55,55 @@ begin;
 create or replace function public.app_dossier_annee_date_transaction(
   p_kind text, p_date text, p_propositions text)
 returns text
-language sql
+language plpgsql
 immutable
 as $fn$
-  -- L'ANNÉE D'UNE TRANSACTION, VUE CORRECTEMENT.
-  --   une OFFRE  -> l'année de sa PREMIÈRE PROPOSITION (ou acceptation) ;
-  --                 à défaut seulement, `date`.
-  --   les autres -> `date`, qui chez elles ne bouge pas.
-  --
-  -- ⛔ LES DATES « 0000 » SONT ÉCARTÉES DES DEUX CÔTÉS. Défaut trouvé à blanc le
-  --   12/11 : 14 offres portent une proposition datée 0000-00-00 ; sans ce
-  --   filtre, leur dossier tombait en D0000 alors que `date` portait une vraie
-  --   année. La réparation aurait fabriqué 14 régressions.
-  --
-  -- ⚠ `propositions_json` est PARFOIS UN OBJET SEUL, pas un tableau. Le même
-  --   piège a faussé une de mes mesures le 12/11 : 472 paires lues « sans nom »
-  --   alors que 417 portaient deux acquéreurs différents. Les deux formes sont
-  --   donc traitées ici, et une forme inconnue rend NULL -- jamais une erreur.
-  --
-  -- ⚠ Le REFUS est volontairement exclu : il est déjà porté par `date`, et
-  --   l'ajouter n'apporterait aucune date neuve.
-  select coalesce(
-    case when lower(coalesce(p_kind, '')) = 'offre' then
-      (select min(left(e->>'date', 4))
-         from jsonb_array_elements(
-                case jsonb_typeof(coalesce(p_propositions, 'null')::jsonb)
-                  when 'array'  then p_propositions::jsonb
-                  when 'object' then jsonb_build_array(p_propositions::jsonb)
-                  else '[]'::jsonb end) e
-        where lower(coalesce(e->>'type', '')) in ('proposition', 'accepte')
-          and (e->>'date') ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}'
-          and (e->>'date') not like '0000%')
-    end,
+-- L'ANNÉE D'UNE TRANSACTION, VUE CORRECTEMENT.
+--   une OFFRE  -> l'année de sa PREMIÈRE PROPOSITION (ou acceptation) ;
+--                 à défaut seulement, `date`.
+--   les autres -> `date`, qui chez elles ne bouge pas.
+--
+-- ⛔ LES DATES « 0000 » SONT ÉCARTÉES DES DEUX CÔTÉS. Défaut trouvé à blanc le
+--   12/11 : 14 offres portent une proposition datée 0000-00-00 ; sans ce filtre,
+--   leur dossier tombait en D0000 alors que `date` portait une vraie année.
+--
+-- ⚠ `propositions_json` est PARFOIS UN OBJET SEUL, pas un tableau. Le même piège
+--   a faussé une de mes mesures le 12/11 : 472 paires lues « sans nom » alors que
+--   417 portaient deux acquéreurs différents.
+--
+-- ⛔⛔ ET POURQUOI plpgsql AVEC UN BLOC EXCEPTION, alors que la première version
+--   était du SQL pur : LE TÉMOIN INVERSE DE MA PROPRE RÉPÉTITION L'A ATTRAPÉE.
+--   Un `p_propositions` qui n'est pas du JSON faisait LEVER la fonction
+--   (« invalid input syntax for type json ») au lieu de retomber sur `date` --
+--   donc UNE SEULE valeur abîmée aurait fait tomber la pose ENTIÈRE.
+--   ⚠ Le risque est THÉORIQUE aujourd'hui, et je le dis : la colonne
+--     app_affaire_ledger.propositions_json est de type JSONB, la base ne PEUT PAS
+--     contenir du non-JSON. Mais la fonction prend du `text` : n'importe quel
+--     appelant futur peut lui en passer. Le filet coûte cinq lignes.
+--   Éprouvé sur : JSON illisible, tableau de texte, JSON tronqué -> `date`.
+declare v_an text;
+begin
+  if lower(coalesce(p_kind, '')) = 'offre' then
+    begin
+      select min(left(e->>'date', 4)) into v_an
+        from jsonb_array_elements(
+               case jsonb_typeof(coalesce(p_propositions, 'null')::jsonb)
+                 when 'array'  then p_propositions::jsonb
+                 when 'object' then jsonb_build_array(p_propositions::jsonb)
+                 else '[]'::jsonb end) e
+       where lower(coalesce(e->>'type', '')) in ('proposition', 'accepte')
+         and (e->>'date') ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}'
+         and (e->>'date') not like '0000%';
+    exception when others then
+      -- UNE LECTURE RATÉE N'EST PAS UNE RÉPONSE : on retombe sur `date`,
+      -- c'est-à-dire sur le comportement d'avant ce patch.
+      v_an := null;
+    end;
+  end if;
+  return coalesce(v_an,
     case when p_date ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}' and p_date not like '0000%'
          then left(p_date, 4) end);
+end;
 $fn$;
 
 -- LE JOUR, pour la même raison : c'est lui qui décide de l'ORDRE des rangs.
@@ -90,23 +111,30 @@ $fn$;
 create or replace function public.app_dossier_jour_date_transaction(
   p_kind text, p_date text, p_propositions text)
 returns text
-language sql
+language plpgsql
 immutable
 as $fn$
-  select coalesce(
-    case when lower(coalesce(p_kind, '')) = 'offre' then
-      (select min(left(e->>'date', 10))
-         from jsonb_array_elements(
-                case jsonb_typeof(coalesce(p_propositions, 'null')::jsonb)
-                  when 'array'  then p_propositions::jsonb
-                  when 'object' then jsonb_build_array(p_propositions::jsonb)
-                  else '[]'::jsonb end) e
-        where lower(coalesce(e->>'type', '')) in ('proposition', 'accepte')
-          and (e->>'date') ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}'
-          and (e->>'date') not like '0000%')
-    end,
+declare v_jour text;
+begin
+  if lower(coalesce(p_kind, '')) = 'offre' then
+    begin
+      select min(left(e->>'date', 10)) into v_jour
+        from jsonb_array_elements(
+               case jsonb_typeof(coalesce(p_propositions, 'null')::jsonb)
+                 when 'array'  then p_propositions::jsonb
+                 when 'object' then jsonb_build_array(p_propositions::jsonb)
+                 else '[]'::jsonb end) e
+       where lower(coalesce(e->>'type', '')) in ('proposition', 'accepte')
+         and (e->>'date') ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}'
+         and (e->>'date') not like '0000%';
+    exception when others then
+      v_jour := null;
+    end;
+  end if;
+  return coalesce(v_jour,
     case when p_date ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}' and p_date not like '0000%'
          then left(p_date, 10) end);
+end;
 $fn$;
 
 -- ⛔ LES DROITS : un CREATE OR REPLACE naît avec « execute » pour authenticated,

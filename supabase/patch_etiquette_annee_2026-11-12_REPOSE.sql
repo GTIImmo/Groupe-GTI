@@ -1,6 +1,16 @@
 -- ═══════════════════════════════════════════════════════════════════════════
 -- LA REPOSE DES ÉTIQUETTES, AVEC LA BONNE ANNÉE                 12/11/2026
 -- ═══════════════════════════════════════════════════════════════════════════
+-- ✅ COLLÉ EN PRODUCTION LE 12/11/2026 (migration etiquette_annee_repose_2026_11_12)
+--    RESULTAT, les 5 controles de l'etat ⓒ :
+--      numeros dont l'annee mentait        697 -> 0      (dont 648 « 2026 » -> 0)
+--      etiquettes posees                31 151          temoin positif
+--      invariants                          0 / 0 / 0
+--      compteur 11 441 = dossiers 11 441 . journal somme 31 151
+--      format : 0 mal forme, de D0000-0001 a D2026-0371 (etait D2026-0550)
+--      ⭐ CHRONOLOGIE : 0 desordre sur 11 323 comparaisons -- 100,00 %
+--      sauvegarde : 31 151 lignes . 31 151 uuid changes . 29 881 numeros changes
+--
 -- ⛔⛔ CE FICHIER ÉCRIT, ET IL EFFACE AVANT D'ÉCRIRE. Il ne se colle qu'avec
 --     l'accord de Frédéric, et SEULEMENT APRÈS
 --     patch_etiquette_annee_2026-11-12_LECTEURS.sql (il refuse sinon).
