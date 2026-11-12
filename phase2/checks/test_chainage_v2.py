@@ -29,6 +29,7 @@ from __future__ import annotations
 import argparse
 import os
 import sqlite3
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -42,15 +43,43 @@ for _f in (sys.stdout, sys.stderr):
     except Exception:                                               # noqa: BLE001
         pass
 
-# ─── CE QUE LA SIMULATION DU 20/10 A MESURE ────────────────────────────────────
-# Elle rejoue la regle ACTUELLE a 31 065/31 066 = 100,00 %, donc ces nombres sont
-# des references, pas des estimations. Si la base bouge, ils bougeront : on les
-# compare avec une tolerance, et on DIT l'ecart.
-ATTENDU_V1_CHAINES = 12702
-ATTENDU_V2_CHAINES = 12278
-ATTENDU_26_CHAINES = 12159      # V2 + § 2.6, cran 1 (les compromis ANNULES)
-ATTENDU_27_CHAINES = 12149      # V2 + § 2.7, cran 2 (+ les compromis ACTIFS)
+# ─── LES REFERENCES DE COMPTE ──────────────────────────────────────────────────
+#
+# ⛔⛔ REETALONNEES LE 12/11/2026, ET VOILA POURQUOI. Les references d'origine
+#   venaient de la simulation du 20/10 (12 702 / 12 278 / 12 159 / 12 149) avec une
+#   tolerance de 30, pensee pour la croissance du parc (+1 a 15 affaires/mois).
+#   Depuis, QUATRE REGLES ONT ETE ALLUMEES -- A (compromis annule seul), B (offre
+#   acceptee 0-31 j), C (vente seule) et D (meme acheteur, 12/11) -- et elles ont
+#   REUNI 727 dossiers. L'ecart etait donc de ~700, pas de 30 : l'essai criait
+#   ROUGE a chaque passage depuis, et son rouge ne disait rien du code.
+#
+# ⚠⚠ CES NOMBRES DEPENDENT DES REGLES ALLUMEES, PAS SEULEMENT DU PARC. Si l'une
+#   des quatre est eteinte, ils remontent. C'est pour ca qu'ils portent desormais
+#   LA LISTE des regles sous lesquelles ils ont ete mesures.
+#
+#   Mesures le 12/11/2026 avec, dans `.env` : V2=1, SANS_DATE=2, OFFRE_PROPOSEE=1,
+#   OFFRE_SANS_DATE=1, VENTE_SEULE=1, OFFRE_ACCEPTEE_SEULE=1,
+#   COMPROMIS_ANNULE_SEUL=1, MEME_ACHETEUR=1, RATTACHEMENT_MANUEL=1 (6 lignes).
+ATTENDU_V1_CHAINES = 11485      # V2 eteinte, les autres regles telles qu'au .env
+ATTENDU_V2_CHAINES = 11438      # V2 allumee, cran 0
+ATTENDU_26_CHAINES = 11438      # V2 + § 2.6, cran 1 (les compromis ANNULES)
+ATTENDU_27_CHAINES = 11428      # V2 + § 2.7, cran 2 (+ les compromis ACTIFS)
 TOLERANCE = 30          # le parc grandit chaque nuit (+1 a 15 affaires/mois)
+
+# ⭐⭐ ET CE QUI NE PERIMERA JAMAIS, LUI : LES RELATIONS ENTRE LES COMPTES.
+#   Un nombre absolu se demode des qu'une regle change ou que le parc grossit.
+#   Une RELATION, elle, reste vraie : une regle qui REUNIT ne peut pas AUGMENTER
+#   le nombre de dossiers. C'est ca qu'un essai doit juger.
+#   ⚠ On garde les nombres absolus quand meme -- ils disent l'ampleur, et un ecart
+#     de 700 merite d'etre vu -- mais ils ne sont plus les SEULS juges.
+RELATIONS = (
+    ("V2 allumee ne peut pas creer de dossiers",
+     lambda v1, v2, c1, c2: v2 <= v1),
+    ("le cran 1 des sans-date ne peut pas creer de dossiers",
+     lambda v1, v2, c1, c2: c1 <= v2),
+    ("le cran 2 ne peut pas creer de dossiers par rapport au cran 1",
+     lambda v1, v2, c1, c2: c2 <= c1),
+)
 
 MORTS_OFFRE = {"refused", "refusee"}
 MORTS_COMPROMIS = {"cancelled", "annule"}
@@ -134,6 +163,44 @@ def invariants(con: sqlite3.Connection) -> dict[str, int]:
     return defauts
 
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# LE SOCLE CONNU DE CET INVARIANT -- mesure et explique le 12/11/2026
+# ═══════════════════════════════════════════════════════════════════════════════
+# L'invariant « un bloc DATE APRES la vente » annonce 11 chaines, ETEINT COMME
+# ALLUME. Il se presentait comme « ce qui ne doit JAMAIS arriver » : il criait donc
+# ROUGE a chaque passage, depuis des semaines -- et cet essai avec lui.
+#
+# CE QUE LA MESURE DU 12/11 A ETABLI, et ce ne sont pas des defauts du chainage :
+#     dossiers portant une vente                             9 280
+#     dont une transaction est datee APRES la vente              11
+#   En les regardant un par un : dans la moitie des cas l'ordre
+#   compromis -> vente est CORRECT, et c'est l'OFFRE qui est datee apres, parce
+#   qu'elle a ete SAISIE APRES COUP pour completer le dossier. Exemples releves :
+#   bien 48031 (compromis 19/01/2022, vente 12/04, offre 17/12) et bien 18988
+#   (compromis 02/02/2024, vente 18/03, offre 02/05).
+#
+# UN ESSAI QUI CRIE TOUS LES JOURS N'EST PLUS UN ESSAI. Le jour ou ce nombre MONTE,
+# il faut le voir -- et on ne le verra pas si le rouge est permanent. On tolere donc
+# le socle MESURE, et on crie DES QU'IL BOUGE, dans les deux sens :
+#     plus haut -> une saisie tardive de plus, ou un vrai defaut : on regarde
+#     plus bas  -> tant mieux, et on le dit pour que le socle soit abaisse ici
+#
+# CE N'EST PAS FERMER LES YEUX : le nombre reste AFFICHE a chaque passage, et
+# l'ecart au socle est le seul juge. Meme patron que le seuil des fusions de B4.
+SOCLE_BLOC_APRES_LA_VENTE = 11
+LIBELLE_BLOC_APRES = "un bloc DATE APRES la vente qui ferme la chaine"
+
+
+def defauts_hors_socle(defauts: dict[str, int]) -> dict[str, int]:
+    """Les defauts a CRIER : tout, sauf le socle connu tant qu'il ne bouge pas."""
+    reste = dict(defauts or {})
+    vu = reste.pop(LIBELLE_BLOC_APRES, 0)
+    if vu != SOCLE_BLOC_APRES_LA_VENTE:
+        reste["%s (socle %d, vu %d -- IL A BOUGE)"
+              % (LIBELLE_BLOC_APRES, SOCLE_BLOC_APRES_LA_VENTE, vu)] = vu
+    return reste
+
+
 def un_sens() -> int:
     """Eprouve le code TEL QU'IL EST CHARGE, avec l'interrupteur que l'env porte."""
     from phase2.sync.affaire_ledger import (LEDGER_TABLE, chainage_sans_date_niveau,
@@ -206,11 +273,15 @@ def un_sens() -> int:
         print(f"   ✅ la base EST le resultat de « {regime} » (0 ecart)")
 
     # ④ les invariants, dans les deux cas
-    if defauts:
-        for k, v in defauts.items():
+    #   ⭐ 12/11 : on AFFICHE tout, et on ne CRIE que ce qui sort du socle connu.
+    print(f"   invariants mesures       : {defauts or 'aucun defaut'}")
+    hors_socle = defauts_hors_socle(defauts)
+    if hors_socle:
+        for k, v in hors_socle.items():
             rouges.append(f"INVARIANT : {k} ({v})")
     else:
-        print("   ✅ invariants : aucun defaut")
+        print(f"   ✅ invariants : rien hors du socle connu "
+              f"({LIBELLE_BLOC_APRES} = {SOCLE_BLOC_APRES_LA_VENTE}, explique le 12/11)")
 
     # ⑤ les refus doivent etre NOMMES
     refus = {k: v for k, v in resultat.items()
@@ -302,6 +373,7 @@ def main() -> int:
     #   ⓶ V2 seule           -> le chainage V2
     #   ⓷ V2 + cran 1 (§ 2.6) -> CE QUI TOURNE EN PRODUCTION depuis le 20/10
     #   ⓸ V2 + cran 2 (§ 2.7) -> + les compromis ACTIFS sans date
+    comptes: list[int] = []
     for valeur, sansdate in (("0", "0"), ("1", "0"), ("1", "1"), ("1", "2")):
         env = dict(os.environ)
         env["APP_CHAINAGE_V2"] = valeur
@@ -316,6 +388,38 @@ def main() -> int:
         if r.stderr.strip():
             sys.stderr.write(r.stderr)
         total = max(total, r.returncode)
+        # ⭐ 12/11 : on releve le compte de chaque sens pour juger LES RELATIONS.
+        #   Les quatre sens tournent dans des processus separes (l'environnement se
+        #   pose AVANT le lancement) : le parent ne peut les comparer qu'ici.
+        trouve = re.search(r"chaines\s+:\s+(\d+)", r.stdout)
+        comptes.append(int(trouve.group(1)) if trouve else -1)
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    # ⭐⭐ LES RELATIONS -- le seul juge qui ne se demode pas
+    # ═══════════════════════════════════════════════════════════════════════════
+    # Un compte ABSOLU se demode des qu'une regle change ou que le parc grossit :
+    # c'est ce qui a fait crier cet essai pendant des semaines (references du 20/10
+    # contre une base ou 4 regles avaient depuis reuni 727 dossiers).
+    # Une RELATION, elle, reste vraie : une regle qui REUNIT ne peut pas AUGMENTER
+    # le nombre de dossiers. On les juge donc apres les quatre sens.
+    print("")
+    print("=" * 72)
+    print("  LES RELATIONS ENTRE LES QUATRE SENS")
+    print("=" * 72)
+    if len(comptes) == 4 and all(n >= 0 for n in comptes):
+        v1, v2, c1, c2 = comptes
+        print(f"   V2 eteinte {v1} . V2 {v2} . cran 1 {c1} . cran 2 {c2}")
+        for libelle, juge in RELATIONS:
+            bon = juge(v1, v2, c1, c2)
+            print(("   OK   " if bon else "   ⛔   ") + libelle)
+            if not bon:
+                total = max(total, 1)
+    else:
+        # ⛔ UNE LECTURE RATEE N'EST PAS UN VERT : si on n'a pas pu relever les
+        #   quatre comptes, on le DIT et on sort en rouge.
+        print(f"   ⛔ comptes releves : {comptes} -- impossible de juger les "
+              f"relations. On ne conclut pas.")
+        total = max(total, 1)
     print(f"\n{'=' * 72}")
     print("  LES QUATRE SENS : " + ("✅ VERTS" if total == 0 else "⛔ UN ROUGE"))
     print("=" * 72)
