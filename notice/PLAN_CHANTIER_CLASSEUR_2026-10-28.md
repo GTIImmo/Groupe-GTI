@@ -78,10 +78,33 @@ c'est-à-dire de redéplacer la date. **On corrige les LECTEURS.**
 l'apparieur                        ✅ REPARE le 12/11 -- reparation « propositions »
 le chainage                        ✅ deja bon
 l'historique de l'offre a l'ecran  ✅ bon (il lit propositions_json)
-rapport_gel_tous_les_champs.py     ⬜ MEME DEFAUT, l. 572 ("Offre Achat","offre","date")
-la date affichee sur la ligne      ⚠ non verifie
-« derniere date » de l'avancement  ⚠ une offre refusee hier parait RECENTE
+rapport_gel_tous_les_champs.py     ✅ REPARE le 12/11 -- 536 faux ecarts evites
+la date affichee sur la ligne      ✅ REPARE le 12/11 (commit 541f1be)
+« derniere date » de l'avancement  ✅ REPARE le 12/11 -- meme commit
 ```
+
+⭐⭐ **LES QUATRE LECTEURS SONT ALIGNES depuis le 12/11** — commit `541f1be`, non pousse
+a l'heure ou ceci est ecrit :
+
+```
+le chainage de nuit   _date_de_tri              affaire_ledger.py l. 1517 . deja juste
+l'apparieur           dates_des_propositions    apparier_classeur.py . 12/11
+le rapport du gel     premiere_proposition      rapport_gel_*.py . 12/11
+l'ECRAN               dateOffreFaite            api.ts . 12/11
+MESURE : 1 435 offres retrouvent leur vraie date, dans 1 430 dossiers
+         dont 1 180 par nos refus . 255 l'avaient DEJA avant nous
+         la plus ancienne retrouvee : 18/09/2006
+```
+
+⭐ **UNE SEULE DEFINITION** : `dateOffreFaite` existait dans `App.tsx` depuis le
+**05/11** mais ne servait qu'a la REGULARISATION d'une offre oubliee. Elle a demenage
+dans `api.ts`, a cote du type et des requetes. *(Lecon n° 15 : chercher si le projet a
+deja tranche -- j'allais ecrire une fonction qui existait.)*
+
+⛔ **ET LA COLONNE NE SE CORRIGE PAS, c'est prouve par le code** : le run la relit chez
+Hektor a chaque nuit (`R2_CHAMP_VERS_COLONNE`, `affaire_ledger.py` l. 1661) et la
+protection est **nommement refusee** pour ce couple (`R2_JUGES_SUR_LE_REGISTRE`, l. 1671),
+parce que R3 doit pouvoir comparer notre valeur a celle de Hektor.
 
 ⚠ **Et le phénomène n'est pas né hier** : 263 offres l'avaient déjà. En revanche
 **1 061 offres refusées ont leur date intacte** — il y a donc une différence entre un
@@ -96,9 +119,21 @@ refus fait à la main chez Hektor et le nôtre. **NON MESURÉ, c'est une hypoth�
                     sure 4 569 . bonne 11 . a valider 111 . aucune 95
                     temoins : 0 ligne perdue . 17 des 20 regressions revenues
                     ⭐ et 3 des 5 cibles changees S'ALIGNENT SUR LE GEL
-1.2 ⬜              reparer rapport_gel_tous_les_champs.py (meme defaut)
-1.3 ⬜              regarder 2dfa6ef3 (seule divergence avec le gel) et les
-                    3 lignes restantes : 8Q3LHGZ4 . I847SPN3 . UTLG66LE
+1.2 ✅ FAIT 12/11   rapport_gel_tous_les_champs.py repare (premiere_proposition)
+                    AMPLEUR MESUREE : 536 offres gelees avaient leur date deplacee
+                    (306 par nos refus) -> le rapport annoncait 536 FAUX ecarts
+                    sur « Offre Achat ». C'ETAIT UN PREREQUIS DE 3.1.
+                    temoins : cas reel 14112 -> 2021-03-25 . refus seul -> None
+                              8 formes degradees, aucune exception
+1.3 ✅ FAIT 12/11   LA « SEULE DIVERGENCE » N'EXISTE PAS : pour 2dfa6ef3,
+                    l'apparieur dit la chaine 30656 et le gel la transaction
+                    30692 -- QUI EST DANS LA CHAINE 30656. Je comparais un
+                    dossier a une transaction. La reserve tombe.
+                    8Q3LHGZ4  2 pistes = SERRA et CHEVALIER, deux acheteurs du
+                              bien 16831 -> le CLASSEUR melange deux affaires
+                    I847SPN3  3 chaines ; le gel pointe le dossier 3699 (celui
+                              laisse parmi les 38 impossibles)
+                    UTLG66LE  3 chaines ; cause mesuree : sa date est 0000-00-00
 1.4 ⬜ FREDERIC     trancher les 2 « a valider » : 6a259cce . ME6S0TR9
 1.5 ⬜ ACCORD       le RE-GEL ADDITIF des gains -- 3 lignes neuves sures
                     (4790/4791/4792) + Z3DYDC4X, + les 2 ci-dessus s'il dit oui
@@ -130,6 +165,117 @@ refus fait à la main chez Hektor et le nôtre. **NON MESURÉ, c'est une hypoth�
 ⭐ le format est valide (« Oui » aux deux, 09/11) : D2026-0431 + un UUID
 ⭐ le code local etait PRET avant la pose : les 2 colonnes sont dans
   COLONNES_QUE_LE_PUSH_N_ENVOIE_PAS (affaire_ledger.py l. 2561) -- condition C1
+```
+
+### ⚠⚠ LES TROIS TROUVAILLES DE L'APRÈS-MIDI DU 12/11 — *mesurées, pas supposées*
+
+#### ① L'ANNÉE DES ÉTIQUETTES EST FAUSSE POUR 708 DOSSIERS *(le même défaut)*
+
+La pose de 11:00 a daté chaque dossier sur `min(date)`. Donc la date d'une offre
+refusée a daté son dossier.
+
+```
+dossiers dates                                11 347
+dont l'annee est FAUSSE                          708   (6,2 %)
+dont etiquetes « 2026 » a tort                   653
+part des dossiers « 2026 » qui sont faux   653/1 019   (64 %)
+l'annee vraie s'etale de 2006 a 2025
+```
+
+⛔ **DEUX lecteurs d'année existaient, aucun n'avait été réparé** — `app_dossier_annee_ouverture`
+**et** la CTE « groupes » DANS la fonction de pose. *C'est elle qui a posé les 653.*
+*(« Élargir un seuil : chercher ses jumeaux ».)*
+
+⭐⭐ **ET LA FENÊTRE SE FERME** : rien ne lit l'étiquette — `grep` sur `apps/ backend/
+Console/ scheduled/` rend **zéro**, 0 clé étrangère, 0 vue, 0 autre fonction. Reposer est
+donc gratuit **tant que les UUID ne sont pas partis dans le classeur (5.2)**. Après, le
+numéro est public et « un numéro ne se perd jamais » l'interdit.
+
+⚠ **Un piège trouvé à blanc** : 14 offres portent une proposition datée `0000-00-00` ;
+sans filtre, leur dossier tombait en `D0000`. **14 régressions évitées.**
+
+```
+2.6 ⬜ ACCORD      supabase/patch_etiquette_annee_2026-11-12_LECTEURS.sql
+                   (n'ecrit AUCUNE donnee -- deux CREATE OR REPLACE)
+2.7 ⬜ ACCORD      supabase/patch_etiquette_annee_2026-11-12_REPOSE.sql
+                   sauvegarde datee + remise a zero + repose + 4 invariants
+                   DANS LA MEME TRANSACTION (si un casse, tout est annule)
+                   ⛔ LA REPETITION ET L'INVERSE S'ECRIVENT AVANT LE COLLAGE
+```
+
+#### ② LES 33 LIGNES À CHEVAL : L'ÉNIGME EST RÉSOLUE
+
+Elles ont **toutes la même forme** — *offre refusée + compromis annulé, même bien* :
+
+```
+23 lignes   deux ACHETEURS DIFFERENTS -> LE CLASSEUR melange deux affaires sur
+            une ligne. LE CHAINAGE A RAISON, il n'y a rien a corriger chez nous.
+ 5 lignes   MEME acheteur -> le chainage a rate : reunissables
+            8SZDU4F5 . BHMANOK7 . H3SQXY47 . U258U4CX . WUQ5445T
+ 5 lignes   un nom manque -> a mesurer
+            26283bf9 . 566d1a48 . 600f4e1c . 7PBRZJD8 . CA2XNF38
+```
+
+⛔ **ET PAS DE RÈGLE AUTOMATIQUE.** Portée mesurée sur tout le registre : **472 paires,
+dont 417 avec deux acheteurs DIFFÉRENTS.** Une règle sans la garde du nom aurait fusionné
+417 affaires d'acheteurs concurrents. *La décision du 04/09 était juste.*
+
+⚠ **Et ma première mesure disait « 472 sans acquéreur »** : `acquereurs_json` est
+**parfois un OBJET, parfois un TABLEAU**. Une lecture ratée n'est jamais un vert.
+
+#### ③ 20 OFFRES REFUSÉES À TORT PAR MON LOT DU 11/11
+
+```
+offres refusees portant le nom de CELUI QUI A ACHETE        517
+  dont posees par MON lot du 11/11                           20   <- a nous
+  dont ANTERIEURES                                          496   <- deja la
+  reparties regulierement de 2007 a 2026, 10 a 25 par an
+```
+
+⭐ **Le script avait la BONNE garde** (`cpAnnule && !cpVivant && !vente && offreAcceptee`).
+⛔ **L'erreur est une erreur d'ORDRE, et elle est à moi** : j'ai refusé sur un chaînage
+incomplet, puis j'ai corrigé le chaînage **le lendemain**. Hier soir l'offre 3678 était
+seule ; la règle D l'a réunie ce matin aux trois autres transactions de DEFOUR, révélant
+que le refus était faux.
+
+➡ **LEÇON : ne jamais poser un geste de masse chez Hektor sur un chaînage qu'on sait
+incomplet. Le chaînage d'abord, le geste ensuite.**
+
+```
+1.7 ✅ FAIT 12/11   19 offres remises « acceptee » CHEZ HEKTOR ET CHEZ NOUS
+                    Console/enqueue_reaccepter_offres_refusees_a_tort.js
+                    18 travaux done, 0 erreur . 19/19 « accepted », 0 « refused »
+                    ⛔ 1 LAISSEE, DECLAREE : l'offre 14420, dont l'offre est datee
+                      APRES sa vente (20/11/2009 contre 25/07/2008) -- deux defauts
+                      se superposent, on ne repare pas deux choses d'un geste.
+                      TEMOIN INVERSE : elle est bien restee « refused ».
+                    ⛔ ET LES ~220 AUTRES DE HEKTOR N'ONT PAS BOUGE (exclusion declaree)
+
+⭐⭐ **L'ESSAI SUR UNE SEULE A TROUVE UN TROU, ET C'EST POUR CA QU'ON LE FAIT.**
+Le travail finissait `done`, avec `verbe: GET` et `reponse_hektor: 1`, la relecture de
+la fiche tournait -- **et notre registre disait toujours « refused », le journal de
+l'offre n'avait aucun 4e evenement.** A ce stade je ne POUVAIS PAS dire si Hektor avait
+bascule.
+
+```
+la cause   le refresh_console_data relit L'ANNONCE, pas les TRANSACTIONS
+           (elles ont leur propre listing, list_offres, relu LA NUIT)
+le remede  phase2/sync/transaction_etat_from_api.py -- porte 2, ecrite le 16/09
+           pour cette raison exacte : « une verification qui ne depend pas de
+           l'ordre des choses ». Sur 9886 : « etat: accepte ».
+```
+
+⛔ **La seconde passe lit maintenant l'etat CHEZ HEKTOR, offre par offre, et n'ecrit
+chez nous que si Hektor dit « accepte ».** Une lecture ratee n'ecrit rien et compte
+comme un echec. *Sans l'essai sur une seule, j'aurais pose 19 etats sans preuve.*
+
+⚠ **A VOIR DEMAIN MATIN** : la colonne `date` de ces 19 offres passera au 12/11 (le run
+relira leur journal, qui porte maintenant l'acceptation). **Sans effet a l'ecran** depuis
+le commit 541f1be -- c'est exactement ce qu'il devait proteger.
+
+⚠ **ET UN SUJET A PART, TROUVE EN PASSANT** : 7 de ces dossiers portent **a la fois une
+vente et un compromis encore « actif »**. Un compromis ne devrait pas rester actif apres
+la vente. Non traite, pas mesure en ampleur.
 ```
 
 ### ÉTAPE 3 — le rapatriement *(P1.4)*
