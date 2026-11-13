@@ -16,6 +16,11 @@ export type FaitsRegles = FaitsDuBien & {
   prixChangeLe: string | null
   mandatDebut: string | null
   mandatFin: string | null
+  // morceau 7 (gedReglesLues.ts) : ce que la fiche porte, face à ce que l'IA a lu dans les documents
+  ville?: string | null
+  taxeFonciere?: string | null
+  carrez?: string | null
+  statutSyndicat?: string | null
 }
 
 // Un document, avec la date de son dépôt et l'état de signature électronique que l'écran sait déjà lire

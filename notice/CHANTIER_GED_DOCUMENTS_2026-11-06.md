@@ -1417,3 +1417,76 @@ la nuit du 12 au 13/11 ; sa fiche « index léger » refuse le dépôt (« Désa
 - Après rechargement : **« ▸ Lu par l'IA : 8 documents »**, chaque résumé sans un nom ; « Prise de mandat : 1 pièce
   sur 5 » (le mandat déposé compte) ; la règle du morceau 5 dit « un compromis ou un acte est au dossier, aucun au
   registre ». Les 8 documents fictifs restent sur 63331 (chez nous et chez Hektor).
+
+### 12.17 Le morceau 7 — comparer ce qui est lu à ce que nous avons (audit du 13/11, lecture seule, rien codé)
+« Oui » (13/11) au morceau 7. Catalogue : `E_synthese_catalogue.md` §2 (7 comparateurs, 2 étapes) et §3.2 (L1 à L19) ;
+plus les vérifications des justificatifs ajoutées au §12.14 (taxe, titre).
+
+**Audit limité au DOCUMENT LU comparé à la fiche, aux mandants et aux deux registres. Aucun geste n'est créé :**
+
+| | créer | modifier | supprimer / archiver | lire / remonter |
+|---|---|---|---|---|
+| annonce (fiche) | — | — (« remplir » = morceau 8) | — | lu : prix, net vendeur, taxe, Carrez, surface, commune, copropriété, DPE, dates du mandat |
+| contact | — | — | — | lu : les mandants / propriétaires du bien (`ficheDuMandat.contacts`) |
+| recherche | — | — | — | non concernée |
+| relation (mandant, propriétaire, acquéreur) | — | — | — | lue (rôle du lien) ; ⚠ acquéreurs rangés « mandant » depuis juillet |
+| transaction (offre, compromis, vente) | — | — | — | lu : registre `app_affaire_ledger` (déjà chargé par « À regarder ») |
+| mandat | — | — (⛔ jamais modifier ni prolonger) | — | lu : numéro, dates (la fiche) ; charge (carnet du registre) |
+| document / photo | — | — | — | lu : les valeurs lues (`app_ged_valeur`, déjà chargées) |
+| RDV / visite | — | — | — | non concerné |
+
+- **Ce qui existe et se réutilise** : la forme du morceau 5 — fonction PURE `lib/gedRegles.ts` (une `Alerte` = code,
+  niveau, texte, pourquoi, pièce à déposer), affichée sous « À regarder » dans `RecuManque.tsx`, derrière
+  `ged_propositions` (cran admin, allumé le 12/11). `RecuManque` charge DÉJÀ les lectures (`loadGedLectures`) et le
+  registre des transactions (`loadAffairesForDossier`). `faitsGedDuBien` (`App.tsx:11852`) lit la fiche par
+  `rawWizardDetailField` (le double décodage des groupes y est fait une fois). La présence (C7) = `gedPieces.ts`.
+- **Ce qui manque à l'écran pour comparer** : les MANDANTS du bien (`ficheDuMandat.contacts`, déjà dans le panneau, pas
+  passés à « Reçu / Manque ») ; des champs de la fiche pas encore lus : `TAXE_FONCIERE`, `prix`, `PRIXNETVENDEUR`
+  (groupe `mandat_infofi`), `SURF_CARREZ`, `surfappart` (`ag_interieur`), la commune et le code postal (`localite`),
+  `copropriete_statut_syndicat` ; du registre, déjà rendus mais pas gardés : montant, net vendeur, honoraires,
+  mandants et acquéreurs (`mandants_json`, `acquereurs_json`).
+- **Mesures (lecture seule, 13 567 fiches en base)** : taxe foncière remplie sur 1 935 ; Carrez remplie sur **85 biens en
+  copropriété sur 737** (L15 ne pourra comparer que là) ; surface `surfappart` 10 479 ; commune 13 567 ; groupe
+  honoraires 1 510. ⭐ Les noms lus sont des noms d'USAGE : « Mme FICTIF Jeanne née ESSAI » est lu FICTIF / Jeanne (essai
+  du 13/11) — la comparaison aux mandants se fait sur le nom d'usage, la « née » n'est pas gardée.
+- **Pièges connus, à tenir dans le code** : une fiche de couple = DEUX personnes (mémoire « contacts muets, fiches de
+  couple ») ; des acquéreurs rangés « mandant » depuis juillet → seul « une personne LUE inconnue de la fiche » alerte,
+  jamais l'inverse ; « incomparable » (vide, non vu, incertain, unité inconnue) ne sonne JAMAIS ; les tolérances dans UNE
+  table ; la date de référence = le registre (compromis vivant), jamais `compromis_date_start`.
+- **Rien n'écrit** : ni la fiche, ni Hektor, ni le worker, ni le run de nuit ; pas de patch de base si l'interrupteur
+  `ged_propositions` est réutilisé.
+**Proposition — trois sous-lots, chacun commité et essayé** (ordre de valeur de Frédéric, §12.14 : les justificatifs d'abord) :
+- **7a — le socle et les justificatifs du bien** : `lib/gedComparer.ts` (normaliser, nombre, date et validités, lieu,
+  liste, références, personnes) ; règles : titre et taxe ↔ mandants (L11 partiel), taxe ↔ fiche (montant, commune, avis
+  de plus d'un an), document d'un autre bien (L13, commune lue ≠ commune du bien), validités des diagnostics (L2 : ERP,
+  DPE, électricité, gaz, assainissement, termites, plomb), DPE lu ≠ fiche (L6), Carrez (L15), copropriété (L16 lots et
+  charges, L17 procédure).
+- **7b — le mandat** : termes (L12), avenant (L14), prix de signature (L4), charge des honoraires (L1, conflit
+  seulement), signatures papier (L10), fin de mandat (L18), vendeurs du compromis ↔ mandants (fin de L11).
+- **7c — les transactions** : le résolveur de la ligne visée, transaction lue ↔ registre (L7), facture (L8),
+  honoraires (L9), annulation (L19).
+Choix par défaut annoncés et non contredits : une alerte sur une personne AFFICHE son nom ; même interrupteur
+`ged_propositions` (pas de patch de base).
+✅ **« Oui vas y » (13/11) : SOUS-LOT 7a ÉCRIT ET CONTRÔLÉ, RIEN POUSSÉ :**
+- `src/lib/gedComparer.ts` (socle pur) : normaliser (accents, « Saint » = « St », « 0 » de Hektor = vide), C1 nombre
+  (tolérances dans UNE table `TOLERANCES`), annualiser, C2 validités (électricité, gaz, assainissement non collectif
+  3 ans ; termites 6 mois ; plomb 1 an au-dessus du seuil, sans limite sinon), C4 commune (égal / proche / différent /
+  incomparable, sans table des communes nouvelles → « à vérifier »), C3 personnes (nom et prénom, particules ignorées,
+  nom et prénom inversés et fiche de couple « M. et Mme X » = proche ; seul « aucun mot retrouvé » = différent). Seules
+  les valeurs lues NETTEMENT comparent (« incertain » se tait).
+- `src/lib/gedReglesLues.ts` (règles pures) : **L13** commune lue ≠ commune du bien ; **L11** propriétaires du titre et
+  redevables de la taxe absents des mandants (avec leur nom ; un vendeur cité au titre ne compte pas ; fiche sans
+  mandant = silence) ; **T1** taxe lue ≠ fiche (± 2 % ou 5 €), fiche vide = information, avis de plusieurs biens =
+  silence ; **T2** avis de plus d'un an ; **L2** validités à la signature du compromis (date du REGISTRE), alerte sous
+  offre / compromis, information avant ; **L6** DPE lu ≠ fiche (± 1, classe recalculée) ; **L15** Carrez mesurée plus
+  petite de plus de 5 % ; **L16** lots (le total OU les principaux) et charges annualisées (± 10 % ou 120 €) ; **L17**
+  procédure de copropriété lue (et « la fiche dit le contraire »). L'état des risques reste N4, le DPE de la fiche N5.
+- Branchement : `gedRegles.ts` (4 champs facultatifs de plus dans `FaitsRegles`) ; `App.tsx` (`faitsGedDuBien` lit
+  `TAXE_FONCIERE`, `SURF_CARREZ`, `copropriete_statut_syndicat`, la ville ; `personnesGedDuBien` : une ligne par
+  personne, un couple fusionné compte ses `members`) ; `RecuManque.tsx` (les deux familles de règles dans « À
+  regarder », même ordre, même interrupteur).
+- **Contrôles** : `test_ged_regles_lues.cjs` **45 VERT** (chaque règle a son témoin qui se tait) ; **témoin inverse** :
+  sans la prudence sur les couples, 3 essais tombent ; règles 44, Reçu / Manque 29, lecture 49, dépôt 19, classement 25
+  verts ; `npm run build` vert. **Banc d'écran local** (données fictives, `ged_m7_vue`) : 9 lignes « À regarder » dont 5
+  du 7a, justes ; le redevable « ESSAI » trouvé dans « M. et Mme ESSAI » se tait ; 375 px sans débordement.
+- ⚠ Non vu en réel : sur un vrai bien, les lignes dépendent des documents LUS par l'outil (63331 et 62774 seulement).

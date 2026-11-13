@@ -11874,7 +11874,20 @@ function faitsGedDuBien(dossier: Dossier, detail: DossierDetailPayload | null): 
     prixChangeLe: dossier.price_change_last_detected_at ?? null,
     mandatDebut: dossier.mandat_date_debut ?? null,
     mandatFin: dossier.mandat_date_fin ?? null,
+    // GED morceau 7 : la commune du bien, la taxe foncière, la Carrez, le statut du syndicat (comparés à ce qui est lu)
+    ville: String(dossier.ville ?? '').trim() || null,
+    taxeFonciere: lire('TAXE_FONCIERE') || null,
+    carrez: lire('SURF_CARREZ') || null,
+    statutSyndicat: lire('copropriete_statut_syndicat') || null,
   }
+}
+
+// GED morceau 7 : les PERSONNES du bien (mandants, propriétaires), une par personne -- une fiche de couple fusionnée
+// compte pour ses deux membres. Comparées aux noms lus dans le titre et l'avis de taxe (gedReglesLues.ts, L11).
+function personnesGedDuBien(contacts: DetailContact[] | null | undefined): Array<{ nom: string; prenom: string }> {
+  return (contacts ?? []).flatMap((c) => (c.members?.length ? c.members : [c]))
+    .map((p) => ({ nom: (p.lastName || p.name || '').trim(), prenom: (p.firstName || '').trim() }))
+    .filter((p) => p.nom || p.prenom)
 }
 
 function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJobCreated, onMissingNegotiator, onDocumentsChanged, ficheDuMandat }: { dossier: Dossier; compact?: boolean; skin?: 'classic' | 'v21'; onJobCreated?: (job: ConsoleJob) => void; onMissingNegotiator?: MissingNegotiatorHandler; onDocumentsChanged?: () => void; ficheDuMandat?: { detail: DossierDetailPayload; contacts: DetailContact[]; address: string } | null }) {
@@ -11898,6 +11911,7 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
   const gedRecuManque = useGedRecuManque()
   const [typeAttendu, setTypeAttendu] = useState<{ code: string; libelle: string } | null>(null)
   const faitsDuBien = useMemo(() => faitsGedDuBien(dossier, ficheDuMandat?.detail ?? null), [dossier, ficheDuMandat])
+  const personnesDuBien = useMemo(() => personnesGedDuBien(ficheDuMandat?.contacts), [ficheDuMandat])
   // A.2 lot 6b P5 : « Corriger le mandat » depuis la fenetre ouverte ici -> l'editeur du meme bien s'ouvre (s'il est monte).
   const demanderCorrection = (document: ConsoleDocument, onglet: OngletCorrection) => {
     const detail: DemandeCorrectionMandat = { app_dossier_id: dossier.app_dossier_id, document, onglet, pris: false }
@@ -12298,6 +12312,7 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
       appDossierId={dossier.app_dossier_id}
       documents={documents}
       faits={faitsDuBien}
+      personnesDuBien={personnesDuBien}
       onDeposer={gedDepot ? (code, libelle) => {
         setTypeAttendu({ code, libelle })
         setUploadOpen(true)

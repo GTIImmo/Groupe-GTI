@@ -1,0 +1,95 @@
+// GED morceau 7, sous-lot 7a (13/11/2026) : essais hors ligne des comparaisons et des règles avec lecture.
+//   node test_ged_regles_lues.cjs
+// ① le socle (gedComparer.ts) ; ② chaque règle sonne sur son cas ET son témoin se tait ; ③ le branchement : à l'écran,
+// au même endroit que les règles sans IA, rien n'écrit.
+const fs = require('fs')
+const path = require('path')
+const esbuild = require('esbuild')
+
+let ok = 0, ko = 0
+const voir = (vrai, libelle) => { if (vrai) { ok++; console.log('  VERT  ' + libelle) } else { ko++; console.log('  ROUGE ' + libelle) } }
+const charger = (f) => {
+  const code = esbuild.buildSync({ entryPoints: [path.join(__dirname, f)], bundle: true, write: false, format: 'cjs', platform: 'node', external: ['./supabase'] }).outputFiles[0].text
+  const m = { exports: {} }
+  new Function('module', 'exports', 'require', code)(m, m.exports, (n) => (n === './supabase' ? { hasSupabaseEnv: false, supabase: null } : require(n)))
+  return m.exports
+}
+const C = charger('src/lib/gedComparer.ts')
+const { reglesLues } = charger('src/lib/gedReglesLues.ts')
+const v = (cle, x, etat = 'lu', rang = 0) => ({ cle, rang, valeur: null, valeur_num: null, valeur_date: null, page: 1, etat, ...x })
+const P = (rang, nom, prenoms, qualite) => [v('personnes.nom', { valeur: nom }, 'lu', rang), v('personnes.prenoms', { valeur: prenoms }, 'lu', rang), v('personnes.qualite', { valeur: qualite }, 'lu', rang)]
+const doc = (nom, typeCode, valeurs, etat = 'lu') => ({ nom, lecture: { typeCode, etat, luLe: null, valeurs } })
+const AUJ = new Date(Date.UTC(2026, 10, 13))
+const FICHE = { statut: 'Actif', numeroMandat: '18836', typeBien: '1', copropriete: true, anneeConstruction: 1960, assainissement: null, dpeConso: 210, dpeGes: 45, dpeNonConcerne: false, diffusable: true, dpeDate: '2025-01-15', nbLots: 48, charges: 1200, prixAncien: null, prixNouveau: null, prixChangeLe: null, mandatDebut: '2026-03-02', mandatFin: null, ville: 'Saint-Étienne', taxeFonciere: '1234', carrez: '64.35', statutSyndicat: null }
+const BIEN = [{ nom: 'FICTIF', prenom: 'Marc' }, { nom: 'FICTIF', prenom: 'Jeanne' }]
+const codes = (al) => al.map((a) => `${a.code}/${a.niveau}`)
+const R = (docs, opts = {}) => reglesLues({ ...FICHE, ...(opts.fiche || {}) }, docs, opts.bien ?? BIEN, opts.affaires ?? [], AUJ)
+
+console.log('① le socle')
+voir(C.normaliserTexte('Saint-Étienne') === 'ST ETIENNE' && C.normaliserTexte("L'Hôpital-sous-Rochefort") === 'L HOPITAL SOUS ROCHEFORT', 'normaliser : accents, tirets, « Saint » = « St »')
+voir(C.comparerCommune('SAINT-ETIENNE', 'Saint-Étienne') === 'egal' && C.comparerCommune('FIRMINY CEDEX', 'Firminy') === 'proche' && C.comparerCommune('42700 Firminy', 'Firminy') === 'egal', 'commune : même ville sous trois écritures')
+voir(C.comparerCommune('Lyon', 'Firminy') === 'different' && C.comparerCommune(null, 'Firminy') === 'incomparable' && C.comparerCommune('Lyon', '') === 'incomparable', 'commune : différente ; vide = incomparable')
+voir(C.comparerNombre(1240, 1234, C.TOLERANCES.taxe) === 'proche' && C.comparerNombre(1400, 1234, C.TOLERANCES.taxe) === 'different' && C.comparerNombre(null, 1234, C.TOLERANCES.taxe) === 'incomparable', 'nombre : dans la tolérance, hors tolérance, vide')
+voir(C.lireNombre('1 234,50') === 1234.5 && C.lireNombre('0') === null && C.lireNombre('') === null, 'un « 0 » de Hektor est une case vide')
+voir(C.annualiser(300, 'trimestre') === 1200 && C.annualiser(300, 'autre') === null && C.annualiser(300, null) === null, 'annualiser : période connue seulement')
+const d0 = new Date(Date.UTC(2023, 0, 10))
+voir(C.finDeValidite('diag.electricite', d0, null).toISOString().slice(0, 10) === '2026-01-10' && C.finDeValidite('diag.termites', d0, null).toISOString().slice(0, 10) === '2023-07-10', 'validités : électricité 3 ans, termites 6 mois')
+voir(C.finDeValidite('diag.plomb', d0, 'au_dessus_du_seuil').toISOString().slice(0, 10) === '2024-01-10' && C.finDeValidite('diag.plomb', d0, 'absence') === null && C.finDeValidite('diag.amiante', d0, 'presence') === null, 'plomb : 1 an au-dessus du seuil, sans limite sinon ; amiante sans limite')
+voir(C.personneSurLaFiche({ nom: 'FICTIF', prenoms: 'Marc', qualite: 'proprietaire' }, BIEN) === 'egal', 'personne : nom et prénom retrouvés')
+voir(C.personneSurLaFiche({ nom: 'FICTIF', prenoms: 'Julie', qualite: 'proprietaire' }, [{ nom: 'M. et Mme FICTIF', prenom: '' }]) === 'proche', 'personne : fiche de couple « M. et Mme FICTIF » -> proche, jamais inconnu')
+voir(C.personneSurLaFiche({ nom: 'Marc', prenoms: 'FICTIF', qualite: null }, BIEN) === 'proche', 'personne : nom et prénom inversés -> proche')
+voir(C.personneSurLaFiche({ nom: 'DURAND', prenoms: 'Paul', qualite: null }, BIEN) === 'different' && C.personneSurLaFiche({ nom: 'DURAND', prenoms: 'Paul', qualite: null }, []) === 'incomparable', 'personne : inconnue ; fiche sans personne = incomparable')
+voir(C.personneSurLaFiche({ nom: 'DE LA FONTAINE', prenoms: 'Anne', qualite: null }, [{ nom: 'Fontaine', prenom: 'Anne' }]) === 'egal', 'personne : particules ignorées')
+
+console.log('② les règles, chacune avec son témoin')
+voir(codes(R([doc('ERP.pdf', 'diag.erp', [v('commune', { valeur: 'Lyon' })])])).join() === 'L13/alerte', 'L13 : commune lue ≠ commune du bien -> « document d\'un autre bien ? »')
+voir(R([doc('ERP.pdf', 'diag.erp', [v('commune', { valeur: 'SAINT ETIENNE' })])]).length === 0 && R([doc('ERP.pdf', 'diag.erp', [v('commune', { valeur: 'Lyon' }, 'incertain')])]).length === 0, 'TÉMOIN L13 : même commune autrement écrite, ou commune incertaine : se tait')
+const titre = (personnes) => doc('Titre.pdf', 'justif.titre', personnes)
+const l11 = R([titre([...P(0, 'FICTIF', 'Marc', 'proprietaire'), ...P(1, 'DURAND', 'Julie', 'proprietaire')])])
+voir(codes(l11).join() === 'L11/alerte' && l11[0].texte.startsWith('Julie DURAND (propriétaire au titre)'), 'L11 : un propriétaire du titre inconnu de la fiche sonne, avec son nom')
+voir(R([titre([...P(0, 'FICTIF', 'Marc', 'proprietaire'), ...P(1, 'FICTIF', 'Jeanne', 'proprietaire')])]).length === 0, 'TÉMOIN L11 : les deux propriétaires sont les mandants : se tait')
+voir(R([titre(P(0, 'DURAND', 'Julie', 'vendeur'))]).length === 0, 'TÉMOIN L11 : un vendeur cité dans le titre (ancien propriétaire) ne compte pas')
+voir(R([titre(P(0, 'DURAND', 'Julie', 'proprietaire'))], { bien: [] }).length === 0, 'TÉMOIN L11 : fiche sans mandant : se tait (incomparable)')
+voir(R([titre(P(0, 'FICTIF', 'Julie', 'heritier'))], { bien: [{ nom: 'M. et Mme FICTIF', prenom: '' }] }).length === 0, 'TÉMOIN L11 : fiche de couple au même nom : se tait')
+const taxeDe = (vals) => doc('Taxe.pdf', 'justif.taxe', [v('annee_imposition', { valeur_num: 2026 }), ...vals])
+voir(codes(R([taxeDe([v('montant_total', { valeur_num: 1400 }), ...P(0, 'DURAND', 'Paul', 'redevable')])])).sort().join() === 'L11/alerte,T1/alerte', 'taxe : montant ≠ fiche ET un redevable inconnu -> deux lignes')
+voir(R([taxeDe([v('montant_total', { valeur_num: 1250 })])]).length === 0, 'TÉMOIN taxe : 1 250 € pour 1 234 € (moins de 2 %) : se tait')
+voir(R([taxeDe([v('montant_total', { valeur_num: 3000 }), v('plusieurs_biens', { valeur: 'oui' })])]).length === 0, 'TÉMOIN taxe : un avis de plusieurs biens ne se compare pas')
+voir(codes(R([taxeDe([v('montant_total', { valeur_num: 1400 })])], { fiche: { taxeFonciere: '0' } })).join() === 'T1/info', 'taxe : fiche vide -> information (le remplir est le morceau 8)')
+voir(codes(R([doc('Taxe 2023.pdf', 'justif.taxe', [v('annee_imposition', { valeur_num: 2023 }), v('montant_total', { valeur_num: 1234 })])])).join() === 'T2/info', 'taxe : avis de 2023 -> « demander le dernier »')
+const elec = (date, statut) => R([doc('Elec.pdf', 'diag.electricite', [v('date_etablissement', { valeur_date: date }), v('resultat', { valeur: 'anomalies' })])], { fiche: { statut } })
+voir(codes(elec('2022-05-01', 'Sous compromis')).join() === 'L2/alerte' && codes(elec('2022-05-01', 'Actif')).join() === 'L2/info', 'L2 : électricité de 2022 périmée -> alerte sous compromis, information en vente')
+voir(elec('2025-05-01', 'Sous compromis').length === 0, 'TÉMOIN L2 : électricité de 2025 : se tait')
+const compromis = [{ kind: 'compromis', state: 'active', date: '2026-01-05', dateActe: null }]
+const termites = (statut, affaires) => R([doc('Termites.pdf', 'diag.termites', [v('date_etablissement', { valeur_date: '2025-12-20' })])], { fiche: { statut }, affaires })
+voir(termites('Sous compromis', compromis).length === 0 && codes(termites('Actif', [])).join() === 'L2/info', 'L2 : termites du 20/12/2025 : valable au compromis du 05/01/2026 (date du REGISTRE), périmé aujourd\'hui')
+voir(codes(termites('Sous compromis', [])).join() === 'L2/alerte', 'L2 : sous compromis sans date au registre : aujourd\'hui sert de référence')
+voir(R([doc('Plomb.pdf', 'diag.plomb', [v('date_etablissement', { valeur_date: '2010-01-01' }), v('resultat', { valeur: 'absence' })])]).length === 0, 'TÉMOIN L2 : plomb sans plomb : sans limite, se tait')
+voir(R([doc('Assainissement.pdf', 'diag.assainissement', [v('date_controle', { valeur_date: '2015-01-01' }), v('type', { valeur: 'collectif' })])]).length === 0, 'TÉMOIN L2 : tout-à-l\'égout : pas de contrôle à refaire')
+const dpeDe = (vals) => R([doc('DPE.pdf', 'diag.dpe', [v('date_etablissement', { valeur_date: '2025-01-15' }), ...vals])])
+voir(codes(dpeDe([v('conso_ep', { valeur_num: 250 }), v('emissions', { valeur_num: 45 })])).join() === 'L6/alerte', 'L6 : consommation lue ≠ fiche')
+voir(dpeDe([v('conso_ep', { valeur_num: 211 }), v('emissions', { valeur_num: 44 })]).length === 0 && dpeDe([v('conso_ep', { valeur_num: 250 }, 'incertain')]).length === 0, 'TÉMOIN L6 : à ± 1 près, ou lu incertain : se tait')
+const carrez = (m2) => R([doc('Carrez.pdf', 'diag.surface', [v('surface_carrez', { valeur_num: m2 })])])
+voir(codes(carrez(60)).join() === 'L15/alerte', 'L15 : 60 m² mesurés pour 64,35 sur la fiche (−7 %)')
+voir(carrez(63).length === 0 && carrez(70).length === 0, 'TÉMOIN L15 : −2 % se tait ; une surface PLUS grande ne sonne pas (sens unique)')
+const carnet = (total, principaux) => R([doc('Fiche synthetique.pdf', 'copro.carnet', [v('sous_type', { valeur: 'fiche_synthetique' }), v('nb_lots_total', { valeur_num: total }), v('nb_lots_principaux', { valeur_num: principaux })])])
+voir(codes(carnet(60, 30)).join() === 'L16/alerte', 'L16 : 48 lots sur la fiche, 60 lus')
+voir(carnet(48, 20).length === 0 && carnet(120, 48).length === 0, 'TÉMOIN L16 : la fiche porte le total OU les lots principaux : se tait')
+const appel = (montant, periode) => R([doc('Appel.pdf', 'copro.appel_fonds', [v('provision_budget', { valeur_num: montant }), v('periode', { valeur: periode })])])
+voir(codes(appel(500, 'trimestre')).join() === 'L16/alerte', 'L16 : 500 € par trimestre = 2 000 €/an pour 1 200 € sur la fiche')
+voir(appel(310, 'trimestre').length === 0 && appel(500, 'autre').length === 0, 'TÉMOIN L16 : 1 240 €/an (moins de 10 %) se tait ; période inconnue se tait')
+const proc = R([doc('Fiche synthetique.pdf', 'copro.carnet', [v('sous_type', { valeur: 'fiche_synthetique' }), v('procedure', { valeur: 'administration_provisoire' })])], { fiche: { statutSyndicat: 'NOTPROCESS' } })
+voir(codes(proc).join() === 'L17/alerte' && proc[0].texte.includes('la fiche dit « pas de procédure »'), 'L17 : administration provisoire lue, la fiche dit l\'inverse')
+voir(R([doc('Fiche synthetique.pdf', 'copro.carnet', [v('procedure', { valeur: 'aucune' })])]).length === 0, 'TÉMOIN L17 : « aucune procédure » se tait')
+voir(R([doc('Taxe.pdf', 'justif.taxe', [v('montant_total', { valeur_num: 9999 }), v('commune', { valeur: 'Lyon' })], 'pas_ce_type')]).length === 0, 'TÉMOIN : un document que l\'IA dit « pas ce type » ne compare RIEN')
+
+console.log('③ le branchement')
+const rm = fs.readFileSync(path.join(__dirname, 'src/RecuManque.tsx'), 'utf8')
+const app = fs.readFileSync(path.join(__dirname, 'src/App.tsx'), 'utf8')
+const regles = fs.readFileSync(path.join(__dirname, 'src/lib/gedReglesLues.ts'), 'utf8') + fs.readFileSync(path.join(__dirname, 'src/lib/gedComparer.ts'), 'utf8')
+voir(/\.\.\.reglesSansIa\(faits, docs, affaires, new Date\(\)\), \.\.\.reglesLues\(faits, docsLus, personnesDuBien, affaires, new Date\(\)\)/.test(rm) && /if \(!regles \|\| affaires === null\) return \[\]/.test(rm), 'à l\'écran : avec les règles sans IA, derrière le même interrupteur, registre lu d\'abord')
+voir(/personnesDuBien=\{personnesDuBien\}/.test(app) && /c\.members\?\.length \? c\.members : \[c\]/.test(app), 'les personnes du bien viennent de la fiche, un couple fusionné compte ses deux membres')
+voir(!/supabase|fetch\(|\.insert\(|\.update\(|\.rpc\(|Optimistic/.test(regles), 'les règles et le socle ne lisent ni n\'écrivent rien (fonctions pures)')
+
+console.log(ko ? `\n${ko} ROUGE, ${ok} VERT` : `\nTOUT EST VERT (${ok})`)
+process.exit(ko ? 1 : 0)

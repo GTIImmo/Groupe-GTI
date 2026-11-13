@@ -4,6 +4,7 @@
 // Les anciens documents comptent par leur NOM (décision du 12/11 : le stock n'est pas classé) ; ceux déposés avec
 // l'outil comptent par le type que l'utilisateur leur a donné.
 // ⭐ Morceau 5 (§12.10) : sous « À regarder », les règles sans IA (lib/gedRegles.ts), derrière `ged_propositions`.
+// ⭐ Morceau 7 (§12.17) : au même endroit, ce que l'IA a lu comparé à la fiche et aux mandants (lib/gedReglesLues.ts).
 import { useEffect, useMemo, useState } from 'react'
 import { loadAffairesForDossier } from './lib/api'
 import { etatFiableDuDocument } from './lib/etatSignatureMandat'
@@ -11,6 +12,8 @@ import { loadGedClassements, useGedPropositions } from './lib/ged'
 import { dateEtatLue, loadGedLectures, resumeLecture, type LectureDocument } from './lib/gedLecture'
 import { LIBELLE_MOMENT, recuManque, type LignePiece } from './lib/gedPieces'
 import { deposeAuPlusTard, LIBELLE_A_DEPOSER, reglesSansIa, type AffaireRegle, type Alerte, type FaitsRegles } from './lib/gedRegles'
+import type { PersonneDuBien } from './lib/gedComparer'
+import { reglesLues } from './lib/gedReglesLues'
 import type { ConsoleDocument } from './types'
 import './RecuManque.css'
 
@@ -30,12 +33,14 @@ function depose(d: ConsoleDocument): string | null {
 const NIVEAU_ALERTE: Record<Alerte['niveau'], string> = { alerte: 'à vérifier', piece: 'pièce non trouvée', info: 'pour information' }
 
 export function RecuManque({
-  hektorAnnonceId, appDossierId, documents, faits, onDeposer,
+  hektorAnnonceId, appDossierId, documents, faits, personnesDuBien = [], onDeposer,
 }: {
   hektorAnnonceId: string | number
   appDossierId?: number
   documents: ConsoleDocument[]
   faits: FaitsRegles
+  // morceau 7 : les mandants / propriétaires de la fiche, une ligne par personne (un couple = deux)
+  personnesDuBien?: PersonneDuBien[]
   onDeposer?: (typeCode: string, libelle: string) => void
 }) {
   const regles = useGedPropositions()
@@ -73,8 +78,14 @@ export function RecuManque({
     const docs = documents
       .filter((d) => d.present_in_hektor !== false)
       .map((d) => ({ nom: d.document_name, typeCode: classements.get(d.id) ?? null, date: depose(d), signature: etatFiableDuDocument(d)?.status ?? null, modele: d.source === 'hektor_console_modele', dateEtat: dateEtatLue(lectures.get(d.id)) }))
-    return reglesSansIa(faits, docs, affaires, new Date())
-  }, [regles, affaires, faits, documents, classements, lectures])
+    // morceau 7 : ce que l'IA a lu, comparé à la fiche et aux mandants ; même ordre (alertes, pièces, informations)
+    const docsLus = documents
+      .filter((d) => d.present_in_hektor !== false && lectures.has(d.id))
+      .map((d) => ({ nom: d.document_name, lecture: lectures.get(d.id) as LectureDocument }))
+    const ordre: Record<Alerte['niveau'], number> = { alerte: 0, piece: 1, info: 2 }
+    return [...reglesSansIa(faits, docs, affaires, new Date()), ...reglesLues(faits, docsLus, personnesDuBien, affaires, new Date())]
+      .sort((a, b) => ordre[a.niveau] - ordre[b.niveau])
+  }, [regles, affaires, faits, documents, classements, lectures, personnesDuBien])
 
   // le résumé de la lecture, à côté du nom d'un document reçu (« DPE 2024.pdf — Lu : énergie D… »)
   const resumeParNom = useMemo(() => {
