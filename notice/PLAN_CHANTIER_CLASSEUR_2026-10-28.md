@@ -319,8 +319,19 @@ C ⬜ ACCORD   LES GAINS « v2 seul » -- ✅ INSTRUITS LE 13/11, LISTE PRETE ET
                 ete mesures sur les liens que LES DEUX methodes ont trouves. Ici
                 le gel ne les a pas. L'echelle reste le meilleur indicateur
                 disponible, ce n'est pas une garantie.
-D ⬜ FREDERIC LE TABLEAU DES 175 LIGNES A TRANCHER, deja ecrit, colonne DECISION
-              VIDE : notice/TABLEAU_DECISION_APPARIEMENT_2026-11-13.csv
+D ✅ CLOS LE 13/11 -- AUCUN GESTE A FAIRE. Mesure ligne a ligne contre le gel :
+```
+                recommande GARDER LE GEL (109) : 109 ont un lien . 0 n'en ont pas
+                recommande NON LIE        (66) :   0 ont un lien . 66 n'en ont pas
+```
+              ⭐⭐ Le gel est DEJA exactement dans l'etat recommande, pour les
+                175 lignes SANS EXCEPTION. Le tableau ne decrivait pas un travail
+                a faire : il decrivait un etat, et cet etat est le bon.
+              ⬜ Ce qui reste n'est PAS une validation mais une INSTRUCTION, si
+                Frederic la veut : les 29 « A VOIR » sont les seules non liees
+                ou v2 propose quelque chose. Les 37 autres (34 « a reprendre a
+                la main » + 3 doublons) n'ont de candidat chez personne.
+              Source : notice/TABLEAU_DECISION_APPARIEMENT_2026-11-13.csv
                 54 « les deux, faiblement »      -> recommande GEL (accord)
                 43 « meme bien, autre transaction » -> recommande GEL (bien sur)
                 29 « v2 seul, faiblement »       -> A VOIR ou laisser NON LIE
