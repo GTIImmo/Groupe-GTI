@@ -927,6 +927,70 @@ la vente. Non traite, pas mesure en ampleur.
      exclusions (meilleursagents 17, GTI 6, DENOPCE 1/2 1).
    ⚠ NON VERIFIE : les 30 dossiers « notre nom est etranger aux deux », a ecarter.
 
+## ✅✅ 3.1sexies LE LOT 1 EST POSÉ EN PRODUCTION — **13/11 au soir, accord de Frédéric**
+
+   L'outil : `phase2/checks/rapatrier_repartition_classeur.py` (lecture seule,
+   dépose un patch avec `--sql`), commité et poussé — `6eec3ab`.
+   Le patch joué : `supabase/patch_repartition_classeur_2026-11-13.sql`.
+
+```
+     app_affaire_repartition   16 136  ->  17 890 lignes
+        9 100 posees « classeur_reconstitue » sur 4 439 chaines
+        7 346 anciennes retirees -> app_affaire_repartition_avant_classeur_20261113
+        16 136 - 7 346 + 9 100 = 17 890       l'arithmetique boucle
+        cotes faux 0 . saisies humaines 20 INTACTES
+        a PLUSIEURS personnes 605 chaines     (nous n'en connaissions que 19)
+```
+
+   ⭐⭐⭐ **LA REGLE DE DECOMPOSITION**, mesuree sur les 4 702 lignes rattachees :
+     le classeur ne donne qu'un TOTAL par personne, notre table range par COTE.
+```
+     ENTREE 50 % + SORTIE 50 % = 100 %        4 696 lignes sur 4 702
+     celui qui a le plus (toujours >= 50) prend l'ENTREE, pour 50
+     son excedent au-dessus de 50 va sur la SORTIE
+     tous les autres vont entierement sur la SORTIE
+```
+     ⚠ Les 409 cas « 50/50 » sont ambigus et c'est INOFFENSIF : les totaux par
+       personne sont identiques dans les deux sens. D'ou l'origine
+       `classeur_reconstitue`, qui ne doit JAMAIS passer pour une saisie.
+
+   ⭐⭐⭐ **LES REGLES D'ECRITURE DU CLASSEUR, DITES PAR FREDERIC LE 13/11** —
+     le nom SEUL designe toujours la meme personne ; un prenom ou une initiale
+     ecrits gagnent sur la regle :
+```
+     « CHAMPAGNAC » seul  = Joel (238)       sinon « Julie CHAMPAGNAC » (153)
+     « REYNAUD » avec E   = Corinne (115)    « RAYNAUD » avec A = Nicolas (75)
+     « MARTINEZ » seul    = Pierrick (56)    sinon « Stephanie MARTINEZ » (55)
+     « BOUCHET » seul     = Nicolas (70)     sinon « Mickael BOUCHET » (193)
+```
+   ⛔⛔ **ELLES PASSENT AVANT TOUT INDICE TIRE DE LA BASE.** Sans elles, l'indice
+     « quelqu'un de ce nom est deja pose sur cette chaine » envoyait **69 lignes
+     sur Nicolas REYNAUD (196)** au lieu de Corinne. ⭐ *Une trace dans une base
+     n'est pas une regle d'ecriture.* TEMOIN INVERSE apres la pose : **zero ligne
+     sur 196**, et Joel CHAMPAGNAC 389 / Julie 19 / Corinne 108 / Nicolas RAYNAUD
+     76 / Pierrick MARTINEZ 185 / Stephanie 105 / Nicolas BOUCHET 276.
+
+   ⭐⭐ **LES 205 « CONFLITS » N'EN ETAIENT PAS 205.** Mesure faite AVANT de les
+     soumettre a Frederic : **173 paires disent exactement la meme chose** (on
+     compare la decomposition RESOLUE — personne + cote + part —, pas le texte
+     des cases). Le script les absorbe. Restent **32 vraies divergences**, dans
+     `notice/A5_CONFLITS_CLASSEUR_A_TRANCHER_2026-11-13.csv`.
+     ➡ LECON : *avant de faire trancher une pile, mesurer combien de cas se
+       tranchent seuls.*
+
+   ✅ LE PREALABLE DES 13 ANCIENS EST REMPLI (9001-9013, poses dans
+     `data/hektor.sqlite` qui n'est jamais purgee).
+     ⏰ **A CONTROLER APRES LE RUN DE NUIT : ils doivent survivre a la purge.**
+
+   ⬜ CE QUI RESTE DU LOT 1, sans urgence :
+```
+     87  lignes jamais rattachees par le gel     (connu depuis le 02/11)
+     32  vraies divergences                      A TRANCHER
+     24  apporteur (meilleursagents, GTI) avec une part
+      2  « BEKCER » absent de tout annuaire -- les 2 affaires sont MORTES
+      2  un total a 50 . personne n'atteint 50 %
+```
+
 3.2 ⬜              fermer la reserve des 413 ecarts contre 211 du rapport (lot 3)
 3.2bis ⬜ ACCORD    LA CHARGE DE COMMISSION -- la proposition A11 du 03/11, intacte :
                     ① POSER LES 955 DU CLASSEUR (~2 h) -- ILS FONT FOI
