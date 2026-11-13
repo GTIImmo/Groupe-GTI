@@ -10,7 +10,8 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from ..auth import get_authenticated_user, require_request_user
-from ..services.assistant_catalogue import ContexteAssistant
+from ..services.assistant_catalogue import ContexteAssistant, Refus
+from ..services.assistant_gestes import GESTES
 from ..services.assistant_service import AGENT_KEY, MAX_QUESTION_CARACTERES, AssistantService
 from ..services.supabase_admin import SupabaseAdminService
 from ..settings import Settings, get_settings
@@ -81,7 +82,8 @@ def assistant_message(
     service.ajouter_message(conversation_id, "user", question)
 
     ctx = ContexteAssistant(settings=settings, user_id=str(user.id), email=email,
-                            role=str(profile.get("role") or ""), jeton=_jeton(authorization))
+                            role=str(profile.get("role") or ""), jeton=_jeton(authorization),
+                            conversation_id=conversation_id, nom=profile.get("display_name") or None)
     durees = {"preparation": round((time.monotonic() - t0) * 1000)}
     return StreamingResponse(_flux(service, admin_service, ctx, spec, conversation_id, historique, question, t0, durees),
                              media_type="application/x-ndjson")
@@ -191,3 +193,87 @@ def assistant_conversation(
     if not conversation:
         raise HTTPException(status_code=404, detail="Conversation introuvable")
     return {"ok": True, "conversation": conversation}
+
+
+# ── étape 3 (13/11/2026) : les cartes de validation ──────────────────────────
+# ⛔ Le geste ne s'exécute QU'ICI, au clic de la personne qui l'a demandé, une seule fois, avant expiration, avec
+#   SON jeton, par la même écriture que l'écran (assistant_gestes). Notes : notice/ETAPE3_*_2026-11-13.md.
+def _carte_a_moi(service: AssistantService, action_id: str, user_id: str) -> dict[str, Any]:
+    if len(action_id) != 36:
+        raise HTTPException(status_code=404, detail="Carte introuvable")
+    carte = service.carte(action_id)
+    if not carte or str(carte.get("user_id") or "") != user_id:
+        # même l'admin, qui relit les cartes des autres, ne valide pas à leur place
+        raise HTTPException(status_code=404, detail="Carte introuvable")
+    return carte
+
+
+def _pourquoi_pas(carte: dict[str, Any]) -> str:
+    etat = carte.get("etat")
+    if etat == "proposee":
+        return "Carte expirée (30 minutes) : redemande-la à l'assistant. Rien n'a été fait."
+    return {"executee": "Cette carte a déjà été validée.", "en_cours": "Cette carte est déjà en cours.",
+            "refusee": "Cette carte a été refusée.", "echec": "Cette carte a déjà échoué.",
+            "expiree": "Carte expirée : redemande-la à l'assistant."}.get(str(etat), "Carte indisponible.")
+
+
+@router.post("/actions/{action_id}/valider")
+def assistant_valider(
+    action_id: str,
+    authorization: str | None = Depends(require_request_user),
+    settings: Settings = Depends(get_settings),
+    admin_service: SupabaseAdminService = Depends(get_admin_service),
+    service: AssistantService = Depends(get_assistant_service),
+):
+    user, profile = _ouvrir(settings, authorization, admin_service, service)
+    carte = _carte_a_moi(service, action_id, str(user.id))
+    geste = GESTES.get(str(carte.get("geste") or ""))
+    role = str(profile.get("role") or "")
+    if not geste or role not in geste.roles:
+        raise HTTPException(status_code=403, detail="Ce geste n'est pas ouvert à ton rôle")
+    if not service.prendre_carte(action_id, str(user.id), "en_cours"):
+        if carte.get("etat") == "proposee":
+            service.terminer_carte(action_id, "expiree", {"raison": "clic après expiration"})
+        raise HTTPException(status_code=409, detail=_pourquoi_pas(carte))
+    ctx = ContexteAssistant(settings=settings, user_id=str(user.id), email=(user.email or "").strip().lower(), role=role,
+                            jeton=_jeton(authorization), conversation_id=carte.get("conversation_id"),
+                            nom=profile.get("display_name") or None)
+    try:
+        resultat = geste.executer(ctx, dict(carte.get("parametres") or {}))
+    except Refus as exc:
+        service.terminer_carte(action_id, "echec", {"raison": str(exc)})
+        return {"ok": False, "etat": "echec", "detail": f"Non fait : {exc}"}
+    except Exception as exc:  # noqa: BLE001 -- la personne reçoit une phrase ; le détail va au journal de la carte
+        service.terminer_carte(action_id, "echec", {"raison": f"{type(exc).__name__}"})
+        return {"ok": False, "etat": "echec", "detail": "Non fait : l'écriture n'a pas abouti."}
+    service.terminer_carte(action_id, "executee", resultat)
+    return {"ok": True, "etat": "executee", "resultat": resultat}
+
+
+@router.post("/actions/{action_id}/refuser")
+def assistant_refuser(
+    action_id: str,
+    authorization: str | None = Depends(require_request_user),
+    settings: Settings = Depends(get_settings),
+    admin_service: SupabaseAdminService = Depends(get_admin_service),
+    service: AssistantService = Depends(get_assistant_service),
+):
+    user, _profile = _ouvrir(settings, authorization, admin_service, service)
+    carte = _carte_a_moi(service, action_id, str(user.id))
+    if not service.prendre_carte(action_id, str(user.id), "refusee"):
+        raise HTTPException(status_code=409, detail=_pourquoi_pas(carte))
+    return {"ok": True, "etat": "refusee"}
+
+
+@router.get("/conversations/{conversation_id}/actions")
+def assistant_cartes(
+    conversation_id: str,
+    authorization: str | None = Depends(require_request_user),
+    settings: Settings = Depends(get_settings),
+    admin_service: SupabaseAdminService = Depends(get_admin_service),
+    service: AssistantService = Depends(get_assistant_service),
+):
+    _ouvrir(settings, authorization, admin_service, service)
+    if len(conversation_id) != 36:
+        raise HTTPException(status_code=404, detail="Conversation introuvable")
+    return {"ok": True, "actions": service.lister_cartes(_jeton(authorization), conversation_id)}

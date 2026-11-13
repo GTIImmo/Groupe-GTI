@@ -246,14 +246,15 @@ OBJETS: tuple[Objet, ...] = (
     Objet(
         "relances", "app_relance_rapprochement",
         "Les relances à faire (rappeler un acquéreur, relancer après une visite…).",
-        (C("label", "texte", "intitulé"), C("sub", "texte", "détail"),
+        (C("id", "nombre", "numéro de la relance (pour proposer_statut_relance)"),
+         C("label", "texte", "intitulé"), C("sub", "texte", "détail"),
          C("type", "texte", "type de relance", _memes("relance", "contact")),
          C("due_date", "date", "échéance"),
          C("status", "texte", "état", (("a_faire", "à faire"), ("fait", "faite"), ("reporte", "reportée"))),
          C("negociateur_email", "texte", "à qui elle revient"),
          C("hektor_contact_id", "texte", "contact"), C("app_dossier_id", "nombre", "bien"),
          C("contact_search_key", "texte", "recherche"), C("created_at", "date", "créée le")),
-        ("label", "due_date", "status", "hektor_contact_id", "app_dossier_id", "negociateur_email"),
+        ("id", "label", "due_date", "status", "hektor_contact_id", "app_dossier_id", "negociateur_email"),
         "due_date",
     ),
     Objet(
@@ -313,7 +314,8 @@ OBJETS: tuple[Objet, ...] = (
     Objet(
         "demandes", "app_diffusion_requests_current",
         "Les demandes envoyées aux admins : diffusion, baisse de prix, annulation, corrections.",
-        (C("request_type", "texte", "type de demande",
+        (C("id", "texte", "identifiant de la demande"),
+         C("request_type", "texte", "type de demande",
            (("demande_diffusion", "diffusion"), ("demande_baisse_prix", "baisse de prix"),
             ("demande_annulation_mandat", "annulation de mandat"))),
          C("request_status", "texte", "état", (("pending", "en attente"), ("accepted", "acceptée"), ("refused", "refusée"))),
@@ -322,7 +324,7 @@ OBJETS: tuple[Objet, ...] = (
          C("request_comment", "texte", "commentaire"), C("refusal_reason", "texte", "motif de refus"),
          C("numero_dossier", "texte", "dossier"), C("titre_bien", "texte", "bien"), C("commercial_nom", "texte", "négociateur"),
          C("app_dossier_id", "nombre", "identifiant du bien"), C("follow_up_needed", "booleen", "suivi nécessaire")),
-        ("request_type", "request_status", "titre_bien", "requested_by_name", "requested_at"),
+        ("id", "request_type", "request_status", "titre_bien", "requested_by_name", "requested_at"),
         "requested_at",
     ),
     Objet(

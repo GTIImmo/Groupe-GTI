@@ -27,6 +27,11 @@ class ContexteAssistant:
     jeton: str
     # les fonctions appelées pendant le tour (nom, paramètres, erreur) : pour le fil et le journal
     appels: list[dict[str, Any]] = field(default_factory=list)
+    # étape 3 (13/11/2026) : la conversation, le nom affiché (libellé d'une demande, comme l'écran) et les
+    # cartes proposées pendant le tour (envoyées à l'écran dans le flux)
+    conversation_id: str | None = None
+    nom: str | None = None
+    cartes: list[dict[str, Any]] = field(default_factory=list)
 
 
 class LectureRefusee(Exception):

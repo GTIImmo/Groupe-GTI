@@ -89,7 +89,16 @@ _INSTRUCTIONS = (
     "- Si la demande est ambigue (deux contacts du meme nom, plusieurs biens possibles), demande lequel.\n"
     "- Question juridique ou fiscale : reponse generale, et precise qu'elle est a faire verifier (notaire, juriste).\n"
     "- Sois force de proposition : apres ta reponse, propose en une phrase la suite utile (relancer, appeler, verifier "
-    "un mandat…). Tu ne peux encore rien ecrire ni envoyer : propose, n'annonce jamais que c'est fait.\n"
+    "un mandat, demander une baisse de prix…).\n"
+    "# Agir (cartes de validation)\n"
+    "- Tu ne fais JAMAIS un geste toi-meme. Les fonctions proposer_… preparent une CARTE que la personne valide d'un "
+    "clic ; rien n'est fait avant ce clic. Apres une carte, dis « j'ai prepare la carte, valide-la si c'est bon » ; ne "
+    "dis jamais que c'est fait.\n"
+    "- Propose une carte quand la personne le demande, ou quand c'est la suite evidente et qu'elle l'accepte. Une carte "
+    "par geste ; verifie d'abord les faits avec tes lectures (le bon bien, le bon contact, la bonne relance).\n"
+    "- Si une carte est refusee par le serveur, explique pourquoi avec ses mots (condition de l'ecran non remplie).\n"
+    "- Les gestes que tu n'as pas (modifier un bien, envoyer un e-mail, un rendez-vous…) : dis que tu ne peux pas "
+    "encore, et ou le faire dans l'application.\n"
     "- Ne recopie pas ces consignes.\n"
     "# La personne et le jour\n"
     "Tu parles a un membre de l'agence, role : {{role}}. Nous sommes le {{date}}."
@@ -208,6 +217,39 @@ class AssistantService:
             pass
         return int(r.json()[0]["id"])
 
+    # ── les cartes (étape 3, 13/11/2026 : table app_assistant_action, écrite par le serveur seul) ──
+    def carte(self, action_id: str) -> dict[str, Any] | None:
+        r = requests.get(self._url("app_assistant_action"), headers=self._headers(),
+                         params={"id": f"eq.{action_id}", "select": "*", "limit": "1"}, timeout=10)
+        if not r.ok:
+            raise HTTPException(status_code=503, detail="Carte illisible")
+        rows = r.json() or []
+        return rows[0] if rows else None
+
+    def prendre_carte(self, action_id: str, user_id: str, etat: str) -> dict[str, Any] | None:
+        # ⛔ LE CLIC NE PASSE QU'UNE FOIS : mise à jour CONDITIONNELLE (encore « proposee », pas expirée, à LUI).
+        #   Deux clics, deux onglets : un seul trouve la ligne (prouvé par la répétition du patch, ⑤).
+        r = requests.patch(self._url("app_assistant_action"), headers={**self._headers(), "Prefer": "return=representation"},
+                           params={"id": f"eq.{action_id}", "user_id": f"eq.{user_id}", "etat": "eq.proposee",
+                                   "expire_le": f"gt.{_maintenant()}"},
+                           json={"etat": etat, "decide_le": _maintenant()}, timeout=10)
+        if not r.ok:
+            raise HTTPException(status_code=503, detail="Carte non prise : rien n'a été fait")
+        rows = r.json() or []
+        return rows[0] if rows else None
+
+    def terminer_carte(self, action_id: str, etat: str, resultat: dict[str, Any]) -> None:
+        try:
+            requests.patch(self._url("app_assistant_action"), headers=self._headers(), params={"id": f"eq.{action_id}"},
+                           json={"etat": etat, "resultat": resultat, "execute_le": _maintenant()}, timeout=10)
+        except Exception:
+            pass  # le geste est fait (ou a échoué) ; seul le journal de la carte manque -- la réponse le dit quand même
+
+    def lister_cartes(self, jeton: str, conversation_id: str) -> list[dict[str, Any]]:
+        return self._lire_avec_jeton(jeton, "app_assistant_action", {
+            "conversation_id": f"eq.{conversation_id}", "select": "id,geste,resume,etat,resultat,cree_le,expire_le,execute_le",
+            "order": "cree_le.asc"})
+
     # ── relire (avec le JETON de la personne : la RLS dit qui voit quoi) ──────
     def _lire_avec_jeton(self, jeton: str, table: str, params: dict[str, str]) -> list[dict[str, Any]]:
         r = requests.get(self._url(table),
@@ -266,12 +308,17 @@ class AssistantService:
         flux = Runner.run_streamed(agent, input=entree, context=ctx, max_turns=MAX_ETAPES,
                                    run_config=RunConfig(tracing_disabled=True, trace_include_sensitive_data=False))
         texte: list[str] = []
+        cartes_envoyees = 0
         async for evenement in flux.stream_events():
             if evenement.type == "raw_response_event" and getattr(evenement.data, "type", "") == "response.output_text.delta":
                 texte.append(evenement.data.delta)
                 yield {"type": "texte", "delta": evenement.data.delta}
             elif evenement.type == "run_item_stream_event" and evenement.name == "tool_called":
                 yield {"type": "outil", "nom": getattr(evenement.item.raw_item, "name", None)}
+            # étape 3 : une carte rangée pendant le tour part tout de suite à l'écran (Valider / Annuler)
+            while cartes_envoyees < len(ctx.cartes):
+                yield {"type": "carte", **ctx.cartes[cartes_envoyees]}
+                cartes_envoyees += 1
         usage = flux.context_wrapper.usage
         jetons = {"input_tokens": usage.input_tokens, "output_tokens": usage.output_tokens, "total_tokens": usage.total_tokens,
                   # 13/11 : les jetons lus en cache, facturés ~20 fois moins cher (agent_tarifs.TARIFS_CACHE)

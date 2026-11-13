@@ -8,6 +8,7 @@ import requests
 
 # Les définitions communes vivent dans assistant_contexte (12/11/2026) ; elles restent importables d'ici.
 from .assistant_contexte import TOUS_LES_ROLES, ContexteAssistant, Fonction, LectureRefusee, Refus  # noqa: F401
+from .assistant_gestes import FONCTIONS_GESTES
 from .assistant_lecteur import FONCTIONS_LECTURE
 
 # ---------------------------------------------------------------------------
@@ -74,6 +75,8 @@ CATALOGUE: tuple[Fonction, ...] = (
 
 # Étape 2 (12/11/2026) : les lectures (décrire, chercher, compter + 3 fonctions métier).
 CATALOGUE = CATALOGUE + FONCTIONS_LECTURE
+# Étape 3 (13/11/2026) : les gestes, qui ne font que PROPOSER une carte (assistant_gestes).
+CATALOGUE = CATALOGUE + FONCTIONS_GESTES
 
 
 def fonctions_du_role(role: str) -> list[Fonction]:

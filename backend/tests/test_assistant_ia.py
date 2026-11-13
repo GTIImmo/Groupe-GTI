@@ -166,7 +166,8 @@ class SansCle(Settings):
 voir(refuse(lambda: svc.AssistantService(SansCle()).preparer(EMAIL), 503), "sans clé OpenAI : refus 503")
 
 print("3) le catalogue et ses droits")
-TOUTES = ["qui_suis_je", "decrire", "chercher", "compter", "fiches_biens", "notes_transaction", "agenda"]  # étape 2 (12/11)
+TOUTES = ["qui_suis_je", "decrire", "chercher", "compter", "fiches_biens", "notes_transaction", "agenda",  # étape 2 (12/11)
+          "proposer_demande_direction", "proposer_creer_relance", "proposer_statut_relance"]  # étape 3 (13/11)
 voir([f.nom for f in cat.fonctions_du_role("commercial")] == TOUTES, "un négociateur a la fonction témoin et les 6 lectures de l'étape 2")
 voir(cat.fonctions_du_role("inconnu") == [], "un rôle inconnu n'a aucune fonction")
 voir(not any("utilisateur" in f.nom or "user" in f.nom for f in cat.CATALOGUE), "aucune gestion des utilisateurs (Q5 du 29/10)")
