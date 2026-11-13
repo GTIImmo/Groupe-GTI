@@ -29,7 +29,7 @@
 | 6 lot 3 | lecture : offre d'achat, compromis, PV d'AG | ✅ en production (`6b26c07`), **essai réel fait le 12/11** : 3/3 lus, compromis texte + pages 44-45 en image, 0 fuite (§12.15) |
 | 6 lot 4 | lecture : mandat déposé à la main, avenant, fin de mandat, acte, annulation, facture, petits diagnostics, assainissement, surfaces, règlement | ✅ **écrit et contrôlé le 13/11** (80 + 49 VERT, banc 64/64, 0 fuite), patch d'étiquette posé (14/14 « lue »), poussé (`7c4e3fb`) ; **essai réel fait le 13/11 sur 63331** : 8/8 envoyés et lus, 0 fuite ; ⚠ « Note honoraires » classée « notes internes » par la règle du nom (§12.16) |
 | 7 | comparateurs et règles avec lecture (titre ↔ mandants, taxe ↔ fiche, copro…) | ✅ **écrit et poussé le 13/11** : 7a (`81be8ad`, socle + justificatifs et diagnostics du bien), 7b (`973592c`, le mandat), 7c (les transactions, résolveur) ; 84 VERT ; **pas encore regardé sur un vrai bien** (§12.17) |
-| 8 | propositions (« remplir », un clic par case) | ⬜ |
+| 8 | propositions (« remplir », un clic par case) | ✅ **écrit, posé et poussé le 13/11** (`9320c02`, 27 VERT, patch m8 6/6), interrupteur `ged_remplir` **allumé en admin le 13/11 à 14:42** ; **épreuve d'écriture sur 63331 faite dans les deux sens, prouvée en base** (Hektor accepte `dpe_date`, date d'ERP, nb de lots, quote-part ; rien d'autre ne bouge ; copropriété reste OUI) — §12.18 |
 | 9 | pièces des personnes (identité — le justificatif le plus déposé —, état civil, financement) | ⬜ ; l'avancer = décision de Frédéric |
 | 10 | mesure (vrai / faux / déjà su, 2 semaines) | ⬜ |
 | habillage | suivre la maquette E0-E6 à l'écran (fenêtre modale, aperçu, cartes) | ⬜ APRÈS le code (§12.12) |
@@ -1603,6 +1603,32 @@ et 7) ; `2_developpeur.md` §3 (un « remplir » n'appelle QUE le geste existant
   le clic appelle le geste avec le bon champ et la bonne valeur ; console sans erreur.
 ✅ **« Vas y » (13/11) : patch m8 POSÉ — 6 contrôles VERTS** (table et RLS ; aucune écriture directe ; porte SECURITY
 DEFINER fermée à anon ; `ged_remplir` **off** ; table vide) ; le code commité et poussé dans le même geste.
-- ⏳ **Reste, chacun sur accord** : les **épreuves sur 63331** (toutes ses cases sont
-  remplies : changer `dpe_date`, la date d'ERP, puis la quote-part et le nombre de lots, vérifier chez Hektor et la case
-  copropriété restée OUI, puis remettre) ; allumer `ged_remplir` en admin.
+✅ **« Oui epreuve » (13/11) : ÉPREUVE D'ÉCRITURE SUR 63331, par l'ÉCRAN du bien (modification en place,
+« Enregistrer »), dans le Chrome de Frédéric :**
+- Avant (base) : `dpe_date` et `diag_risques_nat_tech_date` 2026-09-10, `copropriete_nb_lot` 24,
+  `copropriete_quote_part` 120, `copropriete` OUI (+ tous les champs des deux groupes relevés).
+- **ALLER, PROUVÉ EN BASE** : file `app_annonce_pending` = exactement les 4 champs (11/09, 11/09, 25, 121), départ
+  différé de 10 min ; travail `update_hektor_annonce_fields` **done** à 12:51:28, groupes **diagnostiques** (dpe_date,
+  diag_risques_nat_tech_date) ET **copropriete** (copro_lots → copropriete_nb_lot, copro_quote_part →
+  copropriete_quote_part) : « mise à jour effectuée » chacun ; relecture `refresh_console_data` synced 12:51:57 ; la
+  fiche RELUE de Hektor porte les 4 nouvelles valeurs, **TOUS les autres champs des deux groupes inchangés,
+  `copropriete` reste OUI** ; vue des écarts du contrôle au retour : vide. ⭐ **C'est la première preuve que Hektor
+  accepte `dpe_date` et la date d'ERP EN MODIFICATION** (l'étude disait : jamais fait).
+- **RETOUR (remise des valeurs d'origine)** : file = exactement les 4 valeurs d'origine, départ ~13:07 ; l'écran montre
+  ensuite 2026-09-10, 2026-09-10, 24, 120, copropriété Oui, « Hektor · à jour », aucune modification en attente.
+  ✅ **PROUVÉ EN BASE (13/11, plus tard)** — le connecteur Supabase restant en panne, lecture par le chemin de secours
+  du projet (`node Console/apply_sql_patch.js`, par le pooler, mesure enveloppée dans un `raise exception` : rien
+  écrit ; la lecture directe par la clé de service, refusée par l'outil, n'a PAS été retentée) : travail
+  `update_hektor_annonce_fields` **done** (créé 13:08:00, fini 13:08:25, `skipped_fields` vide, groupe diagnostiques
+  mis à jour), relecture `refresh_console_data` **synced** à 13:09:00 ; fiche RELUE de Hektor : `dpe_date` et
+  `diag_risques_nat_tech_date` 2026-09-10, `copropriete_nb_lot` 24, `copropriete_quote_part` 120, `copropriete` OUI,
+  et les autres champs des deux groupes identiques à l'état d'avant (lot 12, fonds travaux 3 500, syndicat ALERTE,
+  DPE 210/45, coûts 900-1 300…) ; file d'attente **0** ; écarts du contrôle au retour **0**.
+  ➡ **L'ÉPREUVE EST COMPLÈTE DANS LES DEUX SENS.**
+✅ **« Oui » (13/11) : `ged_remplir` ALLUMÉ EN ADMIN à 14:42:41 UTC** — connecteur Supabase en panne, posé par
+`node Console/apply_sql_patch.js` (transaction gardée : 1 ligne, valeur relue « admin », sinon arrêt) puis relu à part.
+⚠ Une première tentative par le connecteur avait rendu une erreur 500 : relue AVANT de reposer, elle n'avait rien écrit.
+Les 5 interrupteurs GED sont désormais en « admin ». Retour arrière :
+`update public.app_setting set value='off', updated_at=now() where key='ged_remplir';`
+⚠ **Pas encore VU à l'écran en service** : 63331 a toutes ses cases remplies, il n'y a donc rien à y proposer ; la
+première proposition réelle viendra d'un bien qui a un document lu ET une case vide.
