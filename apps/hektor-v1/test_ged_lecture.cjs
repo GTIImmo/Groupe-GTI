@@ -1,4 +1,4 @@
-// GED morceau 6, lot 1 (12/11/2026) : essais hors ligne de la lecture côté écran.  node test_ged_lecture.cjs
+// GED morceau 6, lots 1 à 4 (12-13/11/2026) : essais hors ligne de la lecture côté écran.  node test_ged_lecture.cjs
 // ① le résumé d'une lecture ; ② la date lue fait foi dans la règle des 6 mois ; ③ le branchement : file une à une,
 // seuls les types qui ont une fiche, garde RIB avant toute image, l'écran n'écrit jamais une lecture.
 const fs = require('fs')
@@ -48,6 +48,23 @@ voir(!/MARTIN|DURAND|Claire/.test(rc), 'aucun nom dans le résumé du compromis'
 const off = resumeLecture({ typeCode: 'transaction.offre', etat: 'lu', valeurs: [v('montant_offert', { valeur_num: 180000 }), v('base_prix', { valeur: 'fai' }), v('date_offre', { valeur_date: '2026-09-20' }), v('acceptation_vendeur', { valeur: 'acceptee' }), v('date_acceptation', { valeur_date: '2026-09-22' }), v('condition_pret', { valeur: 'oui' }), ...P(0, 'DURAND', 'acquereur')] })
 voir(off === 'Lu : offre 180 000 € FAI · du 20/09/2026 · acceptée le 22/09/2026 · sous condition de prêt · 1 acquéreur.' && !/DURAND/.test(off), 'offre : montant et base, date, réponse du vendeur, prêt, acquéreur compté')
 voir(resumeLecture({ typeCode: 'copro.pv_ag', etat: 'lu', valeurs: [v('date_ag', { valeur_date: '2026-05-12' }), v('budget_vote', { valeur_num: 85000 }), v('travaux.objet', { valeur: 'ravalement' }, 'lu', 0), v('travaux.objet', { valeur: 'toiture' }, 'lu', 1)] }) === 'Lu : AG du 12/05/2026 · budget 85 000 € · travaux votés : ravalement, toiture.', 'PV d\'AG : date, budget, travaux votés')
+
+console.log('①ter le lot 4 : jamais un nom dans le résumé')
+const man = resumeLecture({ typeCode: 'mandat.vente', etat: 'lu', valeurs: [v('numero_mandat', { valeur: '18836' }), v('nature', { valeur: 'exclusif' }), v('date_signature', { valeur_date: '2026-03-02' }), v('prix', { valeur_num: 189000 }), v('honoraires', { valeur_num: 9000 }), v('charge_honoraires', { valeur: 'acquereur' }), ...P(0, 'MARTIN', 'mandant'), ...P(1, 'MARTIN', 'mandant')] })
+voir(man === 'Lu : mandat 18836 · exclusif · signé le 02/03/2026 · 189 000 € · honoraires 9 000 € (acquéreur) · 2 mandants.' && !/MARTIN|Claire/.test(man), 'mandat : numéro, nature, date, prix, honoraires et qui paie, mandants COMPTÉS')
+const ave = resumeLecture({ typeCode: 'mandat.avenant', etat: 'lu', valeurs: [v('date_avenant', { valeur_date: '2026-10-01' }), v('numero_mandat', { valeur: '18836' }), v('objet', { valeur: 'baisse_prix' }), v('nouveau_prix', { valeur_num: 175000 }), ...P(0, 'MARTIN', 'mandant')] })
+voir(ave === 'Lu : avenant du 01/10/2026 · au mandat 18836 · baisse de prix · nouveau prix 175 000 € · 1 mandant.' && !/MARTIN/.test(ave), 'avenant : date, mandat, objet, nouveau prix, mandant compté')
+voir(resumeLecture({ typeCode: 'mandat.fin', etat: 'lu', valeurs: [v('numero_mandat', { valeur: '18836' }), v('a_l_initiative_de', { valeur: 'mandant' }), v('date_effet', { valeur_date: '2026-11-30' }), v('motif', { valeur: 'vendu_ailleurs' })] }) === "Lu : fin du mandat 18836 · à l'initiative du mandant · le 30/11/2026 · vendu par ailleurs.", 'fin de mandat : qui, quand, pourquoi (liste fermée)')
+const act = resumeLecture({ typeCode: 'transaction.acte', etat: 'lu', valeurs: [v('nature', { valeur: 'attestation' }), v('date_vente', { valeur_date: '2027-01-12' }), v('prix', { valeur_num: 185000 }), v('etude_notariale', { valeur: 'Étude Notairefictif' }), ...P(0, 'MARTIN', 'vendeur'), ...P(1, 'DURAND', 'acquereur')] })
+voir(act === 'Lu : attestation de vente · vente du 12/01/2027 · 185 000 € · Étude Notairefictif · 1 vendeur, 1 acquéreur.' && !/MARTIN|DURAND/.test(act), 'acte : nature, date de la VENTE, prix, notaire, parties comptées')
+voir(resumeLecture({ typeCode: 'transaction.annulation', etat: 'lu', valeurs: [v('nature', { valeur: 'refus_pret' }), v('date_document', { valeur_date: '2026-11-20' }), v('a_l_initiative_de', { valeur: 'acquereur' }), v('sequestre_restitue', { valeur: 'oui' })] }) === "Lu : refus de prêt · du 20/11/2026 · à l'initiative de l'acquéreur · séquestre restitué.", 'annulation : nature, date, qui, séquestre')
+voir(resumeLecture({ typeCode: 'facture.honoraires', etat: 'lu', valeurs: [v('numero_facture', { valeur: 'F-2026-118' }), v('date_facture', { valeur_date: '2027-01-12' }), v('montant_ttc', { valeur_num: 9000 }), v('payeur', { valeur: 'vendeur' })] }) === 'Lu : facture F-2026-118 · du 12/01/2027 · 9 000 € TTC · payée par le vendeur.', 'facture : numéro, date, montant, qui paie (une qualité)')
+voir(resumeLecture({ typeCode: 'diag.electricite', etat: 'lu', valeurs: [v('resultat', { valeur: 'anomalies' }), v('date_etablissement', { valeur_date: '2026-02-03' })] }) === 'Lu : anomalies · établi le 03/02/2026.' && resumeLecture({ typeCode: 'diag.amiante', etat: 'lu', valeurs: [v('resultat', { valeur: 'presence' })] }) === 'Lu : ⚠ présence.', 'petits diagnostics : le résultat d\'abord, puis la date')
+voir(resumeLecture({ typeCode: 'diag.assainissement', etat: 'lu', valeurs: [v('type', { valeur: 'non_collectif' }), v('conformite', { valeur: 'travaux_obligatoires' }), v('delai_travaux_mois', { valeur_num: 12 }), v('date_controle', { valeur_date: '2024-06-14' })] }) === 'Lu : assainissement individuel · ⚠ travaux obligatoires · travaux sous 12 mois · contrôle du 14/06/2024.', 'assainissement : type, conformité, délai, date')
+voir(resumeLecture({ typeCode: 'diag.surface', etat: 'lu', valeurs: [v('surface_carrez', { valeur_num: 64.35 }), v('lots.numero', { valeur: '12' }, 'lu', 0), v('date_mesurage', { valeur_date: '2026-02-03' })] }) === 'Lu : Carrez 64,35 m² · lot 12 · mesuré le 03/02/2026.', 'surfaces : Carrez, lot, date')
+voir(resumeLecture({ typeCode: 'copro.reglement', etat: 'lu', valeurs: [v('sous_type', { valeur: 'reglement_et_edd' }), v('date_acte', { valeur_date: '1975-04-18' }), v('nb_lots', { valeur_num: 48 }), v('destination', { valeur: 'mixte' }), v('modificatifs_mentionnes', { valeur: 'oui' })] }) === 'Lu : règlement et état descriptif · du 18/04/1975 · 48 lots · destination : habitation et activités · modificatifs cités.', 'règlement : nature, date, lots, destination, modificatifs')
+const elecDate = { typeCode: 'diag.electricite', etat: 'lu', valeurs: [v('date_etablissement', { valeur_date: '2026-02-03' })] }
+voir(dateEtatLue(elecDate) === null, 'TÉMOIN : la date d\'un diagnostic électricité ne passe jamais pour celle d\'un état des risques (règle des 6 mois inchangée)')
 const taxeAvecDate ={ ...taxe, valeurs: [...taxe.valeurs, v('date_etablissement', { valeur_date: '2026-08-31' })] }
 voir(dateEtatLue(taxeAvecDate) === null, 'TÉMOIN : la date d\'une taxe ne passe jamais pour la date d\'un état des risques')
 
@@ -65,7 +82,8 @@ console.log('③ le branchement')
 const depot = fs.readFileSync(path.join(__dirname, 'src/DepotDocuments.tsx'), 'utf8')
 const ia = fs.readFileSync(path.join(__dirname, 'src/lib/gedClassementIa.ts'), 'utf8')
 const lect = fs.readFileSync(path.join(__dirname, 'src/lib/gedLecture.ts'), 'utf8')
-voir(JSON.stringify([...FICHES_LUES].sort()) === '["copro.appel_fonds","copro.arrete_charges","copro.carnet","copro.pv_ag","diag.dossier","diag.dpe","diag.erp","justif.taxe","justif.titre","transaction.avant_contrat","transaction.offre"]', 'lots 1 à 3 : onze types lus')
+voir(FICHES_LUES.size === 25 &&['copro.pv_ag', 'transaction.offre', 'mandat.avenant', 'diag.surface', 'facture.honoraires', 'copro.reglement'].every((c) => FICHES_LUES.has(c)), 'lots 1 à 4 : vingt-cinq types lus')
+voir(!FICHES_LUES.has('justif.rib') && !FICHES_LUES.has('justif.identite') && !FICHES_LUES.has('transaction.financement') && !FICHES_LUES.has('bien.entretien'), 'TÉMOIN : ni le RIB, ni les pièces des personnes, ni les factures d\'énergie (entretien)')
 const { pagesAImager } = (() => {
   const code = esbuild.buildSync({ entryPoints: [path.join(__dirname, 'src/lib/gedClassementIa.ts')], bundle: true, write: false, format: 'cjs', platform: 'node',
     external: ['react', './supabase', './ged', 'pdfjs-dist', 'pdfjs-dist/*', 'pdf-lib'], define: { 'import.meta.env': '{}' } }).outputFiles[0].text
@@ -75,11 +93,22 @@ const { pagesAImager } = (() => {
 })()
 voir(JSON.stringify(pagesAImager(40, 6, 2, true)) === '[39,40]' && JSON.stringify(pagesAImager(40, 6, 2, false)) === '[1,2,3,4,39,40]', 'compromis : en texte, les 2 dernières pages en image ; scanné, les 4 premières et les 2 dernières')
 voir(JSON.stringify(pagesAImager(1, 4, 1, true)) === '[1]' && JSON.stringify(pagesAImager(3, 6, 2, false)) === '[1,2,3]', 'offre d\'une page : sa page en image même avec du texte ; un petit scan : toutes ses pages')
+voir(JSON.stringify(pagesAImager(12, 6, 2, true)) === '[11,12]' && JSON.stringify(pagesAImager(1, 4, 1, false)) === '[1]' && JSON.stringify(pagesAImager(5, 4, 1, false)) === '[1,2,3,5]', 'lot 4 : mandat en texte = ses 2 pages de signatures ; avenant scanné de 5 pages = les 3 premières et la dernière')
 voir(JSON.stringify(pagesAImager(12, 4, 0, true)) === '[]' && JSON.stringify(pagesAImager(12, 4, 0, false)) === '[1,2,3,4]' && JSON.stringify(pagesAImager(30, 6, 0, false)) === '[1,2,3,4,5,6]', 'TÉMOIN : lots 1 et 2 inchangés (texte seul ; scan = les premières pages)')
-voir(/FIN_EN_IMAGE_PAR_TYPE: Record<string, number> = \{ 'transaction\.avant_contrat': 2, 'transaction\.offre': 1 \}/.test(ia) && /'transaction\.avant_contrat': 80000/.test(ia), 'même réglage qu\'au serveur (80 000 caractères, pages de fin)')
 const srv = fs.readFileSync(path.join(__dirname, '../../backend/app/services/openai_ged_lecture_service.py'), 'utf8')
+// même réglage qu'au serveur : chaque table lue dans les DEUX sources, comparée clé par clé (lot 4 : 13/11)
+const table = (src, debut, motif) => {
+  const i = src.indexOf(debut)
+  const bloc = i < 0 ? '' : src.slice(i, src.indexOf('}', i))
+  return JSON.stringify([...bloc.matchAll(motif)].map((m) => [m[1], m[2] === 'MAX_PAGES_HD' ? 6 : Number(m[2])]).sort())
+}
+const front = (nom) => table(ia, `${nom}: Record<string, number> = {`, /'([\w.]+)': (\d+)/g)
+const serveur = (nom) => table(srv, `\n${nom} = {`, /"([\w.]+)": (\w+)/g)
+voir(front('FIN_EN_IMAGE_PAR_TYPE') === serveur('FIN_EN_IMAGE') && front('FIN_EN_IMAGE_PAR_TYPE').includes('mandat.avenant'), 'les pages de FIN en image : même table à l\'écran et au serveur (lot 4 compris)')
+voir(front('PAGES_HD_PAR_TYPE') === serveur('PAGES_HD') && front('PAGES_HD_PAR_TYPE').includes('copro.reglement'), 'les pages en haute définition : même table à l\'écran et au serveur')
+voir(/'transaction\.avant_contrat': 80000/.test(ia) && /'mandat\.vente': 40000/.test(ia) && /'transaction\.acte': 40000/.test(ia) && /'copro\.reglement': 40000/.test(ia), 'le texte long : compromis 80 000 ; mandat, acte, règlement 40 000 (comme texte_max au serveur)')
 voir([...FICHES_LUES].every((c) => srv.includes(`"${c}"`)), 'chaque type lu à l\'écran a sa fiche au serveur')
-voir(/PAGES_HD_PAR_TYPE: Record<string, number> = \{ 'justif\.titre': 6,/.test(ia) && /preparerLecture\(ligne\.file, ligne\.type\)/.test(depot), 'le titre : 6 pages en image, le type est passé à la préparation')
+voir(/'justif\.titre': 6,/.test(ia) && /preparerLecture\(ligne\.file, ligne\.type\)/.test(depot), 'le titre : 6 pages en image, le type est passé à la préparation')
 voir(/\.slice\(0, texteMax\)/.test(ia) && /for \(const n of pagesAImager\(nbPages, pagesHd, fin, avecTexte\)\)/.test(ia) && /LECTURE_TEXTE_MAX = 20000/.test(ia) && /LECTURE_PAGES_HD = 4/.test(ia), 'le texte et les pages suivent le réglage du type (les autres gardent 20 000 et 4)')
 voir(/lectureIa && FICHES_LUES\.has\(ligne\.type\) \? \{ etat: 'attente' \} : null/.test(depot), 'une lecture n\'est demandée que si l\'interrupteur est allumé et que le type a une fiche')
 voir(/l\.lecture\?\.etat === 'lecture'\)\) return/.test(depot), 'une lecture à la fois')

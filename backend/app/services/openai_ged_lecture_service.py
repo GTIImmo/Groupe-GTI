@@ -22,6 +22,8 @@ from .openai_listing_sheet_service import _extract_output_text
 # Lot 2 (§12.14) : la taxe foncière, le titre de propriété, la fiche synthétique, les charges de copropriété. Les deux
 # premiers lisent des NOMS (liste « personnes » : nom, prénoms, qualité -- jamais naissance, adresse ni état civil) :
 # c'est ce qui permettra de les comparer aux mandants (morceau 7).
+# Lot 3 (§12.15) : l'offre, le compromis, le PV d'AG. Lot 4 (§12.16) : le mandat déposé à la main, l'avenant, la fin de
+# mandat, l'acte, l'annulation, la facture d'honoraires, les petits diagnostics, les surfaces, le règlement.
 # ---------------------------------------------------------------------------
 
 AGENT_KEY = "ged_lecture"
@@ -90,7 +92,7 @@ FICHES: dict[str, dict[str, Any]] = {
 # ── Lot 2 ─────────────────────────────────────────────────────────────────────
 OUI_NON = ["oui", "non"]
 QUALITES = ["proprietaire", "usufruitier", "nu_proprietaire", "indivisaire", "heritier", "donataire", "redevable", "vendeur",
-            "acquereur", "autre"]
+            "acquereur", "mandant", "autre"]
 DROITS = ["pleine_propriete", "usufruit", "nue_propriete", "indivision", "non_precise"]
 _EXCEPTION_NOMS = ("personnes : EXCEPTION à la règle commune -- recopie ICI, et nulle part ailleurs, le nom et les prénoms "
                    "de chaque personne tels qu'imprimés (sans « M. », « Mme »), avec sa qualité. Rien d'autre sur elles : "
@@ -172,8 +174,9 @@ FICHES.update({
 })
 
 # ── Lot 3 (§12.15) : la vente ──────────────────────────────────────────────────
-_SIGNE = ("Les signatures sont souvent sur les DERNIÈRES pages, montrées en image après le texte : compte-les là. "
-          "JAMAIS le montant d'un prêt, son taux, sa durée, la banque, l'apport ni le plan de financement.")
+_SIGNATURES_FIN = "Les signatures sont souvent sur les DERNIÈRES pages, montrées en image après le texte : compte-les là. "
+_PRET = "JAMAIS le montant d'un prêt, son taux, sa durée, la banque, l'apport ni le plan de financement."
+_SIGNE = _SIGNATURES_FIN + _PRET
 FICHES.update({
     "transaction.offre": {
         "version": 1,
@@ -238,11 +241,185 @@ FICHES.update({
                                 "premier_appel": ("date", None), "dernier_appel": ("date", None)})],
     },
 })
+
+# ── Lot 4 (§12.16) : le reste ─────────────────────────────────────────────────
+# Le mandat n'est lu que DÉPOSÉ À LA MAIN (celui que l'app fait signer ne passe pas par l'outil de dépôt). Les noms : les
+# mandants (mandat, avenant, fin), les vendeurs et acquéreurs (acte, annulation). Les diagnostics, la facture et le
+# règlement : AUCUN nom. Lire un avenant ou une fin de mandat ne touche jamais au mandat.
+_MANDANTS = _EXCEPTION_NOMS + " Ici : chaque MANDANT (qualité mandant) ; jamais le négociateur ni l'agence. "
+_PERSONNES = [("personnes", {"nom": ("nom", None), "prenoms": ("nom", None), "qualite": ("txt", QUALITES)})]
+_HONORAIRES = ["vendeur", "acquereur", "les_deux"]
+_NATURE_MANDAT = ["exclusif", "simple", "semi_exclusif", "autre"]
+_SANS_PROPRIETAIRE = "JAMAIS le nom ni l'adresse du propriétaire ou du donneur d'ordre."
+
+
+def _rapport(sujet: str, resultats: list[str], consigne_resultat: str) -> dict[str, Any]:
+    # un petit diagnostic : sa date, son résultat, sa conclusion ; la validité se calcule au morceau 7
+    return {
+        "version": 1,
+        "consigne": f"C'est un rapport de diagnostic {sujet}. date_etablissement : la date du rapport (à défaut, celle de "
+                    f"la visite) ; date_validite : seulement si elle est imprimée. resultat : {consigne_resultat} "
+                    "conclusion : la conclusion du rapport en quelques mots. diagnostiqueur_societe : la société, pas la "
+                    "personne. commune : celle du bien. " + _SANS_PROPRIETAIRE,
+        "champs": {"date_etablissement": ("date", None), "date_validite": ("date", None), "resultat": ("txt", resultats),
+                   "conclusion": ("txt", None), "diagnostiqueur_societe": ("txt", None), "commune": ("txt", None)},
+    }
+
+
+_ANOMALIES = ["sans_anomalie", "anomalies", "danger_grave"]
+FICHES.update({
+    "mandat.vente": {
+        "version": 1,
+        "texte_max": MAX_TEXTE_LONG,
+        "consigne": "C'est un mandat de vente signé. numero_mandat : son numéro (registre des mandats). date_signature. "
+                    "nature : exclusif, simple, semi_exclusif (ou co-exclusif). duree_mois : la durée initiale en mois ; "
+                    "date_fin si elle est imprimée. prix : le prix de présentation ; prix_net_vendeur ; honoraires (le "
+                    "montant) et honoraires_pct (le pourcentage) ; charge_honoraires : qui les paie. commune : celle DU "
+                    "BIEN. signatures_mandants_nb : les signatures VISIBLES des mandants ; signature_agence : oui si "
+                    "l'agence a signé. " + _MANDANTS + _SIGNATURES_FIN,
+        "champs": {"numero_mandat": ("txt", None), "date_signature": ("date", None), "nature": ("txt", _NATURE_MANDAT),
+                   "duree_mois": ("num", None), "date_fin": ("date", None), "prix": ("num", None),
+                   "prix_net_vendeur": ("num", None), "honoraires": ("num", None), "honoraires_pct": ("num", None),
+                   "charge_honoraires": ("txt", _HONORAIRES), "commune": ("txt", None),
+                   "signatures_mandants_nb": ("num", None), "signature_agence": ("txt", OUI_NON)},
+        "listes": _PERSONNES,
+    },
+    "mandat.avenant": {
+        "version": 1,
+        "consigne": "C'est un avenant à un mandat de vente. numero_mandat : celui du mandat modifié. date_avenant. objet : "
+                    "ce que l'avenant change d'abord (baisse_prix, hausse_prix, honoraires, duree, exclusivite, autre). "
+                    "ancien_prix s'il est rappelé ; nouveau_prix, nouveau_net_vendeur, nouveaux_honoraires, "
+                    "nouveaux_honoraires_pct, charge_honoraires, nouvelle_date_fin, nouvelle_nature : seulement ce que "
+                    "l'avenant fixe. signatures_mandants_nb : les signatures VISIBLES des mandants ; signature_agence. "
+                    + _MANDANTS + _SIGNATURES_FIN,
+        "champs": {"numero_mandat": ("txt", None), "date_avenant": ("date", None),
+                   "objet": ("txt", ["baisse_prix", "hausse_prix", "honoraires", "duree", "exclusivite", "autre"]),
+                   "ancien_prix": ("num", None), "nouveau_prix": ("num", None), "nouveau_net_vendeur": ("num", None),
+                   "nouveaux_honoraires": ("num", None), "nouveaux_honoraires_pct": ("num", None),
+                   "charge_honoraires": ("txt", _HONORAIRES), "nouvelle_date_fin": ("date", None),
+                   "nouvelle_nature": ("txt", _NATURE_MANDAT), "signatures_mandants_nb": ("num", None),
+                   "signature_agence": ("txt", OUI_NON)},
+        "listes": _PERSONNES,
+    },
+    "mandat.fin": {
+        "version": 1,
+        "consigne": "C'est la fin d'un mandat : résiliation, dénonciation, ou courrier qui y met fin. numero_mandat. "
+                    "date_courrier ; date_effet : la date à laquelle le mandat prend fin, si elle est écrite. "
+                    "a_l_initiative_de : mandant ou agence. motif : vendu_ailleurs, retrait_vente (le bien n'est plus à "
+                    "vendre), autre_agence, autre ; non_vu s'il n'est pas donné. Une raison personnelle (santé, "
+                    "séparation, décès, argent) : autre, sans la recopier. signatures_mandants_nb. " + _MANDANTS
+                    + _SIGNATURES_FIN,
+        "champs": {"numero_mandat": ("txt", None), "date_courrier": ("date", None), "date_effet": ("date", None),
+                   "a_l_initiative_de": ("txt", ["mandant", "agence"]),
+                   "motif": ("txt", ["vendu_ailleurs", "retrait_vente", "autre_agence", "autre"]),
+                   "signatures_mandants_nb": ("num", None)},
+        "listes": _PERSONNES,
+    },
+    "transaction.acte": {
+        "version": 1,
+        "texte_max": MAX_TEXTE_LONG,
+        "consigne": "C'est un acte authentique de vente ou une attestation de vente établie par le notaire (ce_type : vrai "
+                    "pour une attestation de vente ou d'acquisition, même courte, même si elle cite le financement). nature : "
+                    "acte_authentique, attestation, autre. date_vente : le jour où la vente a été signée chez le "
+                    "notaire (PAS la date d'envoi de l'attestation, qui va dans date_document). prix : le prix de vente ; "
+                    "mobilier : s'il est distingué. etude_notariale : l'étude ou le notaire qui a reçu l'acte. commune : "
+                    "celle du bien vendu. lots : les numéros de lots de copropriété vendus. extrait_partiel : oui si "
+                    "seules quelques pages de l'acte sont présentes. " + _EXCEPTION_NOMS + " Ici : les VENDEURS (qualité "
+                    "vendeur) et les ACQUÉREURS (qualité acquereur) ; ni leur régime matrimonial. JAMAIS le prêt (montant, "
+                    "banque, taux) ni le financement.",
+        "champs": {"nature": ("txt", ["acte_authentique", "attestation", "autre"]), "date_vente": ("date", None),
+                   "date_document": ("date", None), "prix": ("num", None), "mobilier": ("num", None),
+                   "etude_notariale": ("txt", None), "commune": ("txt", None), "extrait_partiel": ("txt", OUI_NON)},
+        "listes": [*_PERSONNES, ("lots", {"numero": ("txt", None)})],
+    },
+    "transaction.annulation": {
+        "version": 1,
+        "consigne": "C'est l'annulation d'une vente : rétractation de l'acquéreur, refus de prêt, accord des parties, "
+                    "caducité, désistement. nature : retractation, refus_pret, accord_amiable, caducite, desistement, "
+                    "autre. date_document ; date_compromis : celle du compromis annulé s'il est rappelé. "
+                    "a_l_initiative_de : acquereur, vendeur, les_deux. sequestre_restitue : oui ou non s'il est écrit ; "
+                    "montant_sequestre. " + _EXCEPTION_NOMS + " Ici : les vendeurs (vendeur) et les acquéreurs "
+                    "(acquereur). Une raison personnelle n'est jamais recopiée. " + _PRET,
+        "champs": {"nature": ("txt", ["retractation", "refus_pret", "accord_amiable", "caducite", "desistement", "autre"]),
+                   "date_document": ("date", None), "date_compromis": ("date", None),
+                   "a_l_initiative_de": ("txt", ["acquereur", "vendeur", "les_deux"]),
+                   "sequestre_restitue": ("txt", OUI_NON), "montant_sequestre": ("num", None)},
+        "listes": _PERSONNES,
+    },
+    "facture.honoraires": {
+        "version": 1,
+        "consigne": "C'est une facture ou une note d'honoraires de L'AGENCE immobilière. ce_type : faux si c'est la facture "
+                    "d'un fournisseur (énergie, eau, travaux, diagnostiqueur, artisan…). numero_facture, date_facture, "
+                    "montant_ht, montant_tva, montant_ttc. objet : vente, location, estimation, autre. reference_bien : "
+                    "le numéro de mandat, à défaut la commune du bien. payeur : la QUALITÉ de celui qui paie (vendeur, "
+                    "acquereur, autre), jamais son nom ni son adresse.",
+        "champs": {"numero_facture": ("txt", None), "date_facture": ("date", None), "montant_ht": ("num", None),
+                   "montant_tva": ("num", None), "montant_ttc": ("num", None),
+                   "objet": ("txt", ["vente", "location", "estimation", "autre"]), "reference_bien": ("txt", None),
+                   "payeur": ("txt", ["vendeur", "acquereur", "autre"])},
+    },
+    "diag.electricite": _rapport("de l'installation intérieure d'ÉLECTRICITÉ", _ANOMALIES,
+                                 "sans_anomalie si le rapport n'en relève aucune, anomalies s'il en relève, danger_grave "
+                                 "s'il signale un danger grave et immédiat."),
+    "diag.gaz": _rapport("de l'installation intérieure de GAZ", _ANOMALIES,
+                         "sans_anomalie si aucune ; anomalies pour des anomalies A1 ou A2 ; danger_grave pour un danger "
+                         "grave et immédiat (DGI) ou une alimentation coupée."),
+    "diag.amiante": _rapport("AMIANTE (repérage avant vente)", ["absence", "presence"],
+                             "presence si au moins un matériau ou produit contenant de l'amiante est repéré, absence s'il "
+                             "n'en est repéré aucun."),
+    "diag.plomb": _rapport("PLOMB (constat de risque d'exposition, CREP)", ["absence", "sous_le_seuil", "au_dessus_du_seuil"],
+                           "absence si aucun revêtement ne contient de plomb, sous_le_seuil si du plomb est trouvé sous "
+                           "1 mg/cm², au_dessus_du_seuil s'il y en a au-dessus."),
+    "diag.termites": _rapport("TERMITES (état parasitaire)", ["absence", "presence"],
+                              "presence si des indices d'infestation de termites sont relevés, absence sinon."),
+    "diag.assainissement": {
+        "version": 1,
+        "consigne": "C'est un document d'assainissement : rapport de contrôle du SPANC (non collectif) ou attestation de "
+                    "raccordement au réseau (collectif). type : collectif ou non_collectif. date_controle : la date de "
+                    "la visite ou du rapport. conformite : conforme ; non_conforme (sans travaux obligatoires) ; "
+                    "travaux_obligatoires (non conforme AVEC travaux imposés sous un délai ou dans l'année de la vente) ; "
+                    "absence_installation ; raccorde (attestation de raccordement). delai_travaux_mois s'il est écrit. "
+                    "organisme : le SPANC ou la société, pas la personne. commune. " + _SANS_PROPRIETAIRE,
+        "champs": {"type": ("txt", ["collectif", "non_collectif"]), "date_controle": ("date", None),
+                   "conformite": ("txt", ["conforme", "non_conforme", "travaux_obligatoires", "absence_installation", "raccorde"]),
+                   "delai_travaux_mois": ("num", None), "organisme": ("txt", None), "commune": ("txt", None)},
+    },
+    "diag.surface": {
+        "version": 1,
+        "consigne": "C'est un certificat de mesurage : surface Carrez (lot de copropriété) et / ou surface habitable. "
+                    "date_mesurage. surface_carrez et surface_habitable en m², telles qu'imprimées ; surface_hors_carrez : "
+                    "le total des surfaces non comptées (moins de 1,80 m, annexes) s'il est donné. lots : les numéros des "
+                    "lots mesurés. diagnostiqueur_societe : la société. commune. " + _SANS_PROPRIETAIRE,
+        "champs": {"date_mesurage": ("date", None), "surface_carrez": ("num", None), "surface_habitable": ("num", None),
+                   "surface_hors_carrez": ("num", None), "diagnostiqueur_societe": ("txt", None), "commune": ("txt", None)},
+        "listes": [("lots", {"numero": ("txt", None)})],
+    },
+    "copro.reglement": {
+        "version": 1,
+        "texte_max": MAX_TEXTE_LONG,
+        "consigne": "C'est un règlement de copropriété, un état descriptif de division (EDD) ou un modificatif. sous_type. "
+                    "date_acte : la date de l'acte ; etude_notariale. commune et adresse_immeuble : celles de l'IMMEUBLE. "
+                    "nb_lots : le nombre total de lots s'il est écrit. destination : la clause de destination de "
+                    "l'immeuble (habitation, mixte s'il admet aussi des activités professionnelles ou commerciales, "
+                    "autre). modificatifs_mentionnes : oui si des modificatifs postérieurs sont cités. lots : les numéros "
+                    "de lots et leurs tantièmes, seulement si l'état descriptif est dans ce qu'on te montre. JAMAIS le "
+                    "nom d'un copropriétaire ni du requérant.",
+        "champs": {"sous_type": ("txt", ["reglement", "edd", "reglement_et_edd", "modificatif"]),
+                   "date_acte": ("date", None), "etude_notariale": ("txt", None), "commune": ("txt", None),
+                   "adresse_immeuble": ("txt", None), "nb_lots": ("num", None),
+                   "destination": ("txt", ["habitation", "mixte", "autre"]), "modificatifs_mentionnes": ("txt", OUI_NON)},
+        "listes": [("lots", {"numero": ("txt", None), "tantiemes": ("txt", None)})],
+    },
+})
 # Pages lues en haute définition (le navigateur les choisit ; même réglage dans gedClassementIa.ts) : le titre a ses
 # parties et sa désignation dans les premières pages ; un compromis scanné : les 4 premières et les 2 dernières
 # (signatures) ; un compromis en texte envoie AUSSI ses 2 dernières pages en image, une offre sa dernière.
-PAGES_HD = {"justif.titre": MAX_PAGES_HD, "copro.pv_ag": MAX_PAGES_HD, "transaction.avant_contrat": MAX_PAGES_HD}
-FIN_EN_IMAGE = {"transaction.avant_contrat": 2, "transaction.offre": 1}
+# Lot 4 : le mandat comme le compromis ; l'avenant et la fin de mandat : leur dernière page (signatures) ;
+# l'acte (attestation : 4 pages, 41 scans sur 50) et le règlement (37 pages) : 6 pages.
+PAGES_HD = {"justif.titre": MAX_PAGES_HD, "copro.pv_ag": MAX_PAGES_HD, "transaction.avant_contrat": MAX_PAGES_HD,
+            "mandat.vente": MAX_PAGES_HD, "transaction.acte": MAX_PAGES_HD, "copro.reglement": MAX_PAGES_HD}
+FIN_EN_IMAGE = {"transaction.avant_contrat": 2, "transaction.offre": 1, "mandat.vente": 2, "mandat.avenant": 1,
+                "mandat.fin": 1}
 
 _CONSIGNE_COMMUNE = (
     "Tu lis un document d'une agence immobilière française pour en relever quelques valeurs. Rends UNIQUEMENT les champs "

@@ -180,9 +180,18 @@ const LECTURE_TEXTE_MAX = 20000
 // Lot 3 (§12.15) : un compromis (124 000 caractères en médiane) a son prêt et ses honoraires avant 80 000, et ses
 // SIGNATURES à la fin -> 80 000 caractères ET ses 2 dernières pages en image ; scanné : les 4 premières et les 2 dernières.
 // Une offre (1 page, presque toujours scannée) : sa dernière page en image même avec du texte. PV d'AG : comme le titre.
-const PAGES_HD_PAR_TYPE: Record<string, number> = { 'justif.titre': 6, 'copro.pv_ag': 6, 'transaction.avant_contrat': 6 }
-const TEXTE_MAX_PAR_TYPE: Record<string, number> = { 'justif.titre': 40000, 'copro.pv_ag': 40000, 'transaction.avant_contrat': 80000 }
-const FIN_EN_IMAGE_PAR_TYPE: Record<string, number> = { 'transaction.avant_contrat': 2, 'transaction.offre': 1 }
+// Lot 4 (§12.16) : le mandat (12 pages) comme le compromis, 40 000 caractères ; l'avenant et la fin de mandat (1 page) :
+// la dernière en image ; l'acte (attestation de 4 pages, 41 scans sur 50) et le règlement (37 pages) : comme le titre.
+const PAGES_HD_PAR_TYPE: Record<string, number> = {
+  'justif.titre': 6, 'copro.pv_ag': 6, 'transaction.avant_contrat': 6, 'mandat.vente': 6, 'transaction.acte': 6, 'copro.reglement': 6,
+}
+const TEXTE_MAX_PAR_TYPE: Record<string, number> = {
+  'justif.titre': 40000, 'copro.pv_ag': 40000, 'transaction.avant_contrat': 80000, 'mandat.vente': 40000, 'transaction.acte': 40000,
+  'copro.reglement': 40000,
+}
+const FIN_EN_IMAGE_PAR_TYPE: Record<string, number> = {
+  'transaction.avant_contrat': 2, 'transaction.offre': 1, 'mandat.vente': 2, 'mandat.avenant': 1, 'mandat.fin': 1,
+}
 
 // Les pages à mettre en image (numéros à partir de 1). Avec du texte : seulement les dernières, si le type les veut
 // (signatures). Sans texte (scan) : les premières, et, si le type le veut, les dernières à la place des suivantes.

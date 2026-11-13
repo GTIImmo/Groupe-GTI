@@ -26,8 +26,8 @@
 | 5 | les 13 règles sans IA (« À regarder ») | ✅ en production, cran admin (§12.10) |
 | 6 lot 1 | lecture : état des risques, DPE, dossier de diagnostics | ✅ en production (`c631a6d`), **essai réel fait le 12/11** (§12.14) |
 | 6 lot 2 | lecture : **taxe foncière, titre de propriété, fiche synthétique, charges de copro** — avec les NOMS | ✅ en production (`0466c7c`), **essai réel fait le 12/11** : 5/5 lus, 0 fuite, 0 doublon (§12.14) ; affichage après rechargement (« Lu par l'IA ») en production (`49dab5d`), vu sur 62774 |
-| 6 lot 3 | lecture : offre d'achat, compromis, PV d'AG | ✅ écrit et contrôlé (banc 26/26, 0 fuite) ; ⏳ patch PV, push, essai réel (§12.15) |
-| 6 lot 4 | lecture : mandat déposé à la main, avenant, acte, facture, petits diagnostics, surfaces, règlement | ⬜ |
+| 6 lot 3 | lecture : offre d'achat, compromis, PV d'AG | ✅ en production (`6b26c07`), **essai réel fait le 12/11** : 3/3 lus, compromis texte + pages 44-45 en image, 0 fuite (§12.15) |
+| 6 lot 4 | lecture : mandat déposé à la main, avenant, fin de mandat, acte, annulation, facture, petits diagnostics, assainissement, surfaces, règlement | ✅ **écrit et contrôlé le 13/11** (80 + 49 VERT, banc 64/64, 0 fuite), patch d'étiquette posé (14/14 « lue »), poussé le 13/11 ; essai réel à faire (§12.16) |
 | 7 | comparateurs et règles avec lecture (titre ↔ mandants, taxe ↔ fiche, copro…) | ⬜ |
 | 8 | propositions (« remplir », un clic par case) | ⬜ |
 | 9 | pièces des personnes (identité — le justificatif le plus déposé —, état civil, financement) | ⬜ ; l'avancer = décision de Frédéric |
@@ -1316,5 +1316,78 @@ cas que la taxe) ; `transaction.financement` reste une pièce des personnes (mor
   inchangés ») ; classement 25, Reçu / Manque 29, règles 44, dépôt 17, les 4 essais de la signature ; `npm run build` vert.
 - Base : rien d'obligatoire ; patch facultatif `patch_ged_m6_lot3_pv_lu_2026-11-12.sql` (+ `_INVERSE`) : `copro.pv_ag`
   « classer » → « lue ».
-✅ **« Oui tout » (12/11 soir)** : patch du PV **POSÉ** (`copro.pv_ag` → « lue », contrôle vert) ; commit et push du lot 3.
-⏳ Reste : l'essai réel sur 62774 (une offre, un compromis, un PV fictifs).
+✅ **« Oui tout » (12/11 soir)** : patch du PV **POSÉ** (`copro.pv_ag` → « lue », contrôle vert) ; commit `6b26c07` poussé SEUL
+(`2326641..6b26c07`) ; Render (`/health`) et Vercel à jour, `/ged/lire` sans jeton → 401.
+✅ **ESSAI RÉEL DU LOT 3 — « Vas y test » (12/11, ~21:50)**, Chrome de Frédéric, 62774 : 3 documents FICTIFS
+(`essai_reel/fabriquer_offre_scan.py`, `fabriquer_lot3.cjs`) — une offre scannée signée, un **compromis PDF texte de 45
+pages** (date du prêt en page 20, signatures DESSINÉES sur les pages 44 et 45), un PV texte (feuille de présence, vote
+nominatif, débiteur, toiture rejetée).
+- Classement 3/3 « le nom et l'IA sont d'accord » ; envoi chez Hektor 3 `done`, numéros **716035 à 716037** (26 documents
+  sur le bien, aucun doublon).
+- ⭐ **Le navigateur a envoyé le compromis EXACTEMENT comme prévu** : `par_texte` vrai ET `pages_lues` = [44, 45] (le
+  texte + les 2 dernières pages en image), 21 812 jetons, 0,0026 $. Valeurs toutes justes, chacune à sa page : prix,
+  net vendeur, honoraires et charge (p. 3), réitération et notaires (p. 13), séquestre (p. 14), **prêt et sa date (p. 20)**,
+  **1 signature du vendeur (p. 44) et 2 des acquéreurs (p. 45) lues sur l'image**, vendeur et 2 acquéreurs.
+- Offre (scan, page 1 en image) : « offre 180 000 € FAI · du 20/09/2026 · acceptée le 22/09/2026 · sous condition de
+  prêt · 1 acquéreur » ; PV (texte seul) : « AG du 12/05/2026 · budget 85 000 € · travaux votés : Ravalement de façade ·
+  syndic … » — la toiture rejetée n'y est pas.
+- **0 fuite** (naissances, adresse, téléphone, banque, montant du prêt, apport, taux, régime, feuille de présence,
+  débiteur et sa dette, toiture) ; coût des 3 lectures 0,0037 $.
+- Après rechargement : « ▸ Lu par l'IA : 8 documents » (les 5 du lot 2 + les 3 du lot 3) ; la règle copro dit maintenant
+  « 3 pièces de copropriété ». Les 8 documents fictifs restent sur 62774 (chez nous et chez Hektor).
+
+### 12.16 Le morceau 6, lot 4 — le reste (audit du 13/11, lecture seule, rien codé)
+« Oui lot 4 » (13/11). Mesures, même méthode qu'au §12.14 : le rythme = noms des documents déposés chez Hektor depuis le
+20/08 (numéro Hektor ≥ 712 625, ≈ 2,8 mois) ; la forme = les 50 PDF les plus récents de chaque famille au disque du
+serveur, script `forme_lot4.py` (scratchpad), qui n'imprime que des nombres.
+- **Mandat** : 106 déposés (81 biens), mais **12 pages et 46 textes sur 50** → ce sont les mandats sortis du modèle ;
+  4 scans sur 50 seulement. Confirme Frédéric : le lire ne sert que pour un mandat signé à la main et déposé.
+- **Avenant** : **72** (53 biens), 1 page (p90 5), **25 scans purs sur 50**, 20 textes. Le plus fréquent du lot.
+- **Fin de mandat** : 7, 1 page, 40 scans sur 50. **Annulation de vente** : 9. (Types déjà marqués « lue » en base,
+  hors de la liste du lot 4 : à trancher par Frédéric.)
+- **Acte / attestation de vente** : 21 (9 biens), **4 pages** en médiane (l'attestation du notaire ; p90 31), 41 scans.
+- **Factures** : 80 (31 biens), 2 pages, 42 scans — ⚠ **les noms disent EDF, granulés, sinistre** : des factures
+  d'énergie ou de travaux, PAS des notes d'honoraires GTI. Lire `facture.honoraires` ne servirait presque jamais.
+- **Petits diagnostics** (texte surtout) : électricité 8 (7 pages, 35 textes), gaz 9 (9 pages), amiante 16 (21 pages,
+  42 textes), plomb 13 (17 pages), termites 0 récents (8 pages). La conclusion est en synthèse au début du rapport.
+- **Assainissement** : 25 (23 biens), 5 pages, **30 scans**, et **55 % de paires très proches** (les formulaires du
+  SPANC se ressemblent).
+- **Surfaces** : 15, **1 page**, 36 scans sur 50.
+- **Règlement / EDD** : 8, **37 pages** (p90 74), 36 scans : en 6 pages on lit la date, l'étude, l'immeuble, pas
+  l'état descriptif ni le lot du bien.
+- L'écran : `dateEtatLue` ne sert qu'à l'état des risques (règle de 6 mois du morceau 5) → le lot 4 ne la touche pas ;
+  les validités des petits diagnostics vont au morceau 7.
+- Vérifié dans le code : seule la fenêtre de dépôt (`DepotDocuments.tsx`) demande une lecture → le mandat que l'app fait
+  signer n'est JAMAIS lu ; seul un mandat déposé à la main l'est.
+✅ **« Avec » (13/11)** : le lot 4 COMPLET, facture et règlement compris, plus la fin de mandat et l'annulation.
+✅ **LOT 4 ÉCRIT ET CONTRÔLÉ (13/11), RIEN POSÉ NI POUSSÉ :**
+- Serveur (`openai_ged_lecture_service.py`) : 14 fiches neuves (25 en tout). `mandat.vente` (numéro, date, nature,
+  durée, prix, net vendeur, honoraires et % et qui paie, commune, signatures ; les MANDANTS), `mandat.avenant` (objet,
+  ancien et nouveau prix, nouveaux honoraires, nouvelle fin, signatures ; mandants), `mandat.fin` (dates du courrier et
+  d'effet, à l'initiative de qui, motif dans une LISTE FERMÉE — une raison personnelle devient « autre », jamais
+  recopiée ; mandants), `transaction.acte` (nature, date de la VENTE ≠ date de l'attestation, prix, mobilier, étude,
+  commune, lots ; vendeurs et acquéreurs ; jamais le prêt), `transaction.annulation` (nature, dates, qui, séquestre ;
+  jamais le prêt ni la raison personnelle), `facture.honoraires` (numéro, date, HT / TVA / TTC, objet, payeur = une
+  QUALITÉ ; une facture de fournisseur est dite « pas ce type »), une fiche commune aux rapports électricité, gaz,
+  amiante, plomb, termites (date, validité imprimée, RÉSULTAT dans une liste fermée, conclusion, société, commune),
+  `diag.assainissement` (type, contrôle, conformité, délai), `diag.surface` (Carrez, habitable, hors Carrez, lots),
+  `copro.reglement` (nature, date, étude, immeuble, nombre de lots, destination, modificatifs, lots et tantièmes).
+  Qualité « mandant » ajoutée. Les diagnostics, la facture et le règlement ne lisent AUCUN nom (consigne : jamais le
+  propriétaire ni le donneur d'ordre). Pages : mandat 6 + 40 000 car. + ses 2 dernières en image ; avenant et fin de
+  mandat : la dernière en image ; acte et règlement : 6 pages, 40 000 car.
+- Écran : `gedLecture.ts` (25 types lus ; résumés sans nom — « avenant du … · au mandat 18836 · baisse de prix ·
+  nouveau prix 175 000 € · 1 mandant ») ; `gedClassementIa.ts` (les trois tables de réglage).
+- Base : RIEN d'obligatoire. Étiquette : `patch_ged_m6_lot4_types_lus_2026-11-13.sql` (+ `_INVERSE`) — amiante, plomb,
+  termites, règlement passent de « classer » à « lue » (les 10 autres types du lot l'étaient déjà).
+- **Essais hors ligne** : serveur 80 VERT (48 avant) ; écran 49 VERT (34 avant) — dont, nouveau, les tables de pages
+  lues DANS LES DEUX SOURCES et comparées clé par clé (un écart écran / serveur ne passe plus) ; `npm run build` vert.
+- **Banc réel, 15 documents FICTIFS** (avenant, mandat de 3 pages et fin de mandat scannés, attestation de vente
+  scannée, rétractation, note d'honoraires, les 5 rapports, SPANC et Carrez scannés, règlement) : **64 valeurs sur 64**,
+  **0 fuite** sur 20 mots interdits (naissances, adresses, téléphone, prêt, banque, régime, « divorce », « perte
+  d'emploi », propriétaire, opérateurs, promoteur, cadastre) ; le **témoin** — une facture EDF déposée en « facture
+  d'honoraires » — est dit « pas ce type ». Coût 0,006 $.
+  ⚠ Ce que le banc a attrapé : (a) une attestation de vente dite « pas ce type » 1 fois sur 3 → consigne précisée
+  (« vrai pour une attestation, même courte, même si elle cite le financement ») → 6 sur 6 ; (b) une « fuite » qui
+  n'en était pas une : le mot témoin « Ailleurs » (rue fictive) se retrouvait dans le motif « vendu_ailleurs ».
+✅ **« Oui tout » (13/11)** : patch d'étiquette POSÉ (contrôle : les 14 types du lot 4 sont « lue ») ; le lot 4 commité
+et poussé seul. Reste : l'essai réel sur 62774.
