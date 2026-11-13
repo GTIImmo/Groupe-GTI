@@ -70,9 +70,18 @@ def reset(**kw):
     appels.clear()
     etat.clear()
     etat.update({"bien": [dict(BIEN)],
-                 "demandes": [], "contact": [{"hektor_contact_id": "606202", "display_name": "M. DURAND"}],
+                 "demandes": [], "contact": [{"hektor_contact_id": "606202", "display_name": "M. DURAND",
+                                              "phone_primary": "0601020304", "email": "durand@exemple.fr",
+                                              "commentaires": None, "archive": False, "active_search_count": 2}],
                  "relance": [{"id": 9, "label": "Rappeler", "due_date": "2026-11-20", "status": "a_faire"}],
-                 "refus_demande": False})
+                 "refus_demande": False,
+                 "recherche": [{"contact_search_key": "606202:0", "hektor_contact_id": "606202", "search_index": 1,
+                                "archive": False, "is_active": True}],
+                 "notifs": [{"id": 1, "type": "nouveau_rapprochement", "title": "a", "read_at": None, "negociateur_email": EMAIL},
+                            {"id": 2, "type": "mandat_echu", "title": "b", "read_at": None, "negociateur_email": EMAIL},
+                            {"id": 3, "type": "nouveau_rapprochement", "title": "c", "read_at": None,
+                             "negociateur_email": "collegue@gti-immobilier.fr"}],
+                 "affaire": [{"app_affaire_id": 501}], "note": [{"texte": "Acquéreurs pressés"}]})
     etat.update(kw)
 
 
@@ -88,6 +97,21 @@ def faux(methode, url, headers=None, params=None, json=None, timeout=None, **_):
             return Reponse(etat["contact"])
         if chemin == "app_relance_rapprochement":
             return Reponse(etat["relance"])
+        if chemin == "app_contact_searches_current":
+            return Reponse(etat["recherche"])
+        if chemin == "app_notification":
+            p_ = params or {}
+            lignes = [n for n in etat["notifs"] if n["negociateur_email"] == p_.get("negociateur_email", "")[3:]]
+            if p_.get("id"):
+                voulus = p_["id"][4:-1].split(",")
+                lignes = [n for n in lignes if str(n["id"]) in voulus]
+            if p_.get("type"):
+                lignes = [n for n in lignes if n["type"] == p_["type"][3:]]
+            return Reponse([n for n in lignes if n["read_at"] is None])
+        if chemin == "app_affaire_ledger":
+            return Reponse(etat["affaire"])
+        if chemin == "app_affaire_note":
+            return Reponse(etat["note"])
     if methode == "POST":
         if chemin == "app_assistant_action":
             return Reponse([{"id": "a" * 36, "expire_le": "2026-11-13T12:00:00+00:00"}])
@@ -99,6 +123,15 @@ def faux(methode, url, headers=None, params=None, json=None, timeout=None, **_):
             return Reponse([{"id": "e"}])
         if chemin == "rpc/app_create_relance_for_contact":
             return Reponse([{"id": 12, "due_date": json["p_due_date"]}])
+        if chemin == "rpc/app_mark_notification_read":
+            for n in etat["notifs"]:
+                if n["id"] == json["p_id"]:
+                    n["read_at"] = "maintenant"
+            return Reponse(None, status=204)
+        if chemin in {"rpc/app_record_proposition", "rpc/app_set_bien_statut", "rpc/app_console_archiver_contact_optimistic",
+                      "rpc/app_console_create_delete_contact_search_job", "rpc/app_affaire_note_ecrire",
+                      "rpc/app_edit_contact_optimistic"}:
+            return Reponse({"ok": True})
         if chemin == "rpc/app_relance_set_status":
             etat["relance"] = [{**etat["relance"][0], "status": json["p_status"]}]
             return Reponse(None, status=204)
@@ -246,8 +279,82 @@ reset(relance=[{"id": 9, "label": "Rappeler", "due_date": None, "status": "fait"
 r, s = cliquer(c)
 voir(r["ok"] is False and r["etat"] == "echec" and "faite entre-temps" in r["detail"], "le monde a changé avant le clic : échec dit en clair")
 
-print("6) aucune fonction de geste ne fait autre chose que proposer")
-voir(all(f.nom.startswith("proposer_") for f in ges.FONCTIONS_GESTES) and len(ges.FONCTIONS_GESTES) == 3,
-     "3 gestes, tous « proposer_ » : le modèle n'a AUCUNE fonction qui exécute")
+print("6) LOT 2a : chez nous seulement")
+reset()
+resume, pp = ges.preparer_proposition(nouveau_ctx(), {"contact_search_key": "606202:0", "hektor_annonce_id": 63289, "note": "intéressé"})
+voir("TÉLÉPHONE" in resume and "M. DURAND" in resume and "relance de suivi" in resume, "le résumé dit le canal, l'acquéreur et la relance posée")
+appels.clear()
+ges.executer_proposition(nouveau_ctx(), pp)
+rpc = next(a for a in appels if a["chemin"] == "rpc/app_record_proposition")
+voir(rpc["corps"]["p_channel"] == "telephone" and rpc["corps"]["p_nego"] == EMAIL and rpc["corps"]["p_dossier_id"] == 77,
+     "téléphone seulement ; le négociateur posé par le SERVEUR ; le bien par son identifiant")
+voir([a["chemin"] for a in appels][:2] == ["app_contact_searches_current", "app_dossiers_current"],
+     "la recherche et le bien sont RELUS avec le jeton avant la fonction sans contrôle")
+reset(recherche=[])
+voir(refuse(lambda: ges.preparer_proposition(nouveau_ctx(), {"contact_search_key": "x", "hektor_annonce_id": 63289}), "peux voir"),
+     "une recherche invisible : refusée")
+reset()
+_, ps = ges.preparer_statut_bien(nouveau_ctx(), {"contact_search_key": "606202:0", "hektor_annonce_id": 63289, "statut": "retabli", "motif": "x"})
+appels.clear()
+ges.executer_statut_bien(nouveau_ctx(), ps)
+rpc = next(a for a in appels if a["chemin"] == "rpc/app_set_bien_statut")
+voir(rpc["corps"]["p_status"] == "jamais_vu" and rpc["corps"]["p_reason"] is None, "rétablir = « jamais vu », comme l'écran, sans motif")
+voir(refuse(lambda: ges.preparer_statut_bien(nouveau_ctx(), {"contact_search_key": "606202:0", "hektor_annonce_id": 63289, "statut": "offre"}),
+            "ecarte"), "un statut hors liste (ex. offre) : refusé")
+reset()
+resume, pn = ges.preparer_notifications(nouveau_ctx(), {"notification_ids": "", "type": "nouveau_rapprochement"})
+voir(pn["notification_ids"] == [1] and "1 de tes notifications" in resume,
+     "par type : seulement les SIENNES (celle du collègue, même type, n'est pas prise)")
+r = ges.executer_notifications(nouveau_ctx(), {"notification_ids": [1, 3]})
+voir(r["marquees"] == 1 and etat["notifs"][2]["read_at"] is None,
+     "TÉMOIN : même si on glisse le numéro d'un collègue dans la carte, il n'est PAS marqué (re-vérifié au clic)")
+voir(refuse(lambda: ges.preparer_notifications(nouveau_ctx(), {"notification_ids": "abc", "type": ""}), "nombres"),
+     "des numéros illisibles : refusés")
+reset()
+resume, pt = ges.preparer_note(nouveau_ctx("manager"), {"app_affaire_id": 501, "texte": "Signature le 2 décembre"})
+voir("REMPLACE la note actuelle" in resume and "Acquéreurs pressés" in resume, "la carte montre l'ancienne note qu'elle remplace")
+voir(next(f for f in ges.FONCTIONS_GESTES if f.nom == "proposer_note_transaction").roles == ges.DIRECTION,
+     "la note de transaction est réservée à la direction, comme l'écran")
+voir(refuse(lambda: ges.preparer_note(nouveau_ctx(), {"app_affaire_id": "x", "texte": "t"}), "app_affaire_id"), "une transaction illisible : refusée")
+reset(affaire=[])
+voir(refuse(lambda: ges.preparer_note(nouveau_ctx("admin"), {"app_affaire_id": 9, "texte": "t"}), "peux voir")
+     and not any(a["chemin"] == "app_affaire_note" for a in appels),
+     "transaction invisible : refusée, et la note (lisible par tous) n'est JAMAIS lue avant elle")
+
+print("7) LOT 2b : vers Hektor")
+reset()
+resume, pc = ges.preparer_modif_contact(nouveau_ctx(), {"hektor_contact_id": "606202", "telephone": "0611223344",
+                                                        "email": "durand@exemple.fr", "commentaire": ""})
+voir(pc["champs"] == {"phone": "0611223344"} and "0601020304" in resume and "0611223344" in resume,
+     "seul le champ qui CHANGE part (l'e-mail identique n'est pas renvoyé) ; la carte montre avant -> après")
+appels.clear()
+ges.executer_modif_contact(nouveau_ctx(), pc)
+rpc = next(a for a in appels if a["chemin"] == "rpc/app_edit_contact_optimistic")
+voir(rpc["corps"]["edit_fields"] == {"phone": "0611223344"} and rpc["entetes"]["Authorization"] == "Bearer " + JETON,
+     "la fonction de l'écran (elle contrôle l'appelant), avec le jeton, champs changés seulement")
+voir(refuse(lambda: ges.preparer_modif_contact(nouveau_ctx(), {"hektor_contact_id": "606202", "telephone": "0601020304", "email": "",
+                                                               "commentaire": ""}), "Rien ne change"), "rien ne change : pas de carte")
+voir(refuse(lambda: ges.preparer_modif_contact(nouveau_ctx(), {"hektor_contact_id": "606202", "telephone": "", "email": "pas-un-mail",
+                                                               "commentaire": ""}), "adresse e-mail"), "un e-mail illisible : refusé")
+voir("address" not in {c[1] for c in ges._CHAMPS_CONTACT}, "l'adresse n'est PAS modifiable par l'assistant (identifiants de commune)")
+resume, pa = ges.preparer_archivage_contact(nouveau_ctx(), {"hektor_contact_id": "606202", "archiver": True})
+voir("2 recherche(s) active(s) seront archivées aussi" in resume, "archiver prévient que ses recherches partent avec")
+voir(refuse(lambda: ges.preparer_archivage_contact(nouveau_ctx(), {"hektor_contact_id": "606202", "archiver": False}), "pas archivé"),
+     "réactiver un contact actif : refusé")
+resume, pr = ges.preparer_archivage_recherche(nouveau_ctx(), {"contact_search_key": "606202:0"})
+voir("recherche n° 2" in resume, "le rang de la recherche est dit (index 1 = la 2e)")
+appels.clear()
+ges.executer_archivage_recherche(nouveau_ctx(), pr)
+rpc = next(a for a in appels if a["chemin"] == "rpc/app_console_create_delete_contact_search_job")
+voir(rpc["corps"]["search_index"] == 1 and rpc["corps"]["target_contact_id"] == "606202", "le rang est RELU au clic et envoyé")
+reset(recherche=[{"contact_search_key": "606202:0", "hektor_contact_id": "606202", "search_index": 1, "archive": True, "is_active": False}])
+voir(refuse(lambda: ges.preparer_archivage_recherche(nouveau_ctx(), {"contact_search_key": "606202:0"}), "déjà archivée"),
+     "une recherche déjà archivée : refusée")
+
+print("8) aucune fonction de geste ne fait autre chose que proposer")
+voir(all(f.nom.startswith("proposer_") for f in ges.FONCTIONS_GESTES) and len(ges.FONCTIONS_GESTES) == 10,
+     "10 gestes, tous « proposer_ » : le modèle n'a AUCUNE fonction qui exécute")
+voir([f.nom for f in cat.fonctions_du_role("commercial") if f.nom == "proposer_note_transaction"] == [],
+     "un commercial n'a PAS la note de transaction (double verrou : non proposée, et refusée au clic)")
 
 print(f"\n{ok} contrôles verts")

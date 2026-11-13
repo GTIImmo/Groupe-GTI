@@ -167,7 +167,9 @@ voir(refuse(lambda: svc.AssistantService(SansCle()).preparer(EMAIL), 503), "sans
 
 print("3) le catalogue et ses droits")
 TOUTES = ["qui_suis_je", "decrire", "chercher", "compter", "fiches_biens", "notes_transaction", "agenda",  # étape 2 (12/11)
-          "proposer_demande_direction", "proposer_creer_relance", "proposer_statut_relance"]  # étape 3 (13/11)
+          "proposer_demande_direction", "proposer_creer_relance", "proposer_statut_relance",  # étape 3 lot 1 (13/11)
+          "proposer_bien_propose", "proposer_statut_bien", "proposer_notifications_lues", "proposer_modifier_contact",
+          "proposer_archiver_contact", "proposer_archiver_recherche"]  # lot 2 (13/11) ; la note = direction
 voir([f.nom for f in cat.fonctions_du_role("commercial")] == TOUTES, "un négociateur a la fonction témoin et les 6 lectures de l'étape 2")
 voir(cat.fonctions_du_role("inconnu") == [], "un rôle inconnu n'a aucune fonction")
 voir(not any("utilisateur" in f.nom or "user" in f.nom for f in cat.CATALOGUE), "aucune gestion des utilisateurs (Q5 du 29/10)")
@@ -330,7 +332,9 @@ voir(all(c.get("store") is False for c in corps_openai), "store:false sur CHAQUE
 tout_openai = json.dumps(corps_openai, ensure_ascii=False)
 voir(JETON not in tout_openai and EMAIL not in tout_openai and USER_ID not in tout_openai and "cle-" not in tout_openai,
      "ni le jeton, ni l'e-mail, ni l'identifiant, ni une clé ne partent chez OpenAI")
-voir([t.get("name") for t in corps_openai[0].get("tools", [])] == TOUTES, "le modèle ne voit que les fonctions du rôle")
+voir([t.get("name") for t in corps_openai[0].get("tools", [])] == [f.nom for f in cat.fonctions_du_role(etat["role"])]
+     and ("proposer_note_transaction" in [t.get("name") for t in corps_openai[0].get("tools", [])]) == (etat["role"] in {"admin", "manager"}),
+     "le modèle ne voit que les fonctions du rôle (la note de transaction : direction seulement)")
 voir(corps_openai[0]["model"] == "gpt-6.1-terra" and corps_openai[0].get("max_output_tokens") == 1500, "gpt-6.1-terra, 1 500 jetons de sortie")
 voir((corps_openai[0].get("reasoning") or {}).get("effort") == "low", "réflexion « low » (13/11)")
 voir("egal « moi »" in str(corps_openai[0].get("instructions")) and "role : admin" in str(corps_openai[0].get("instructions")),

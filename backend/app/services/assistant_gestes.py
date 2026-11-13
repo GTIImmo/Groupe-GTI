@@ -249,6 +249,235 @@ def executer_statut_relance(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[s
     return {"relance_id": apres["id"], "statut": apres.get("status"), "echeance": apres.get("due_date")}
 
 
+# ── LOT 2a (13/11/2026) : chez nous seulement ────────────────────────────────
+DIRECTION = frozenset({"admin", "manager"})
+
+
+def _recherche(ctx: ContexteAssistant, cle: Any) -> dict[str, Any]:
+    cle = str(cle or "").strip()
+    if not cle:
+        raise Refus("Donne la clé de la recherche (contact_search_key, objet recherches).")
+    lignes = _lire(ctx, "app_contact_searches_current", {"contact_search_key": f"eq.{cle}", "limit": "1",
+                                                         "select": "contact_search_key,hektor_contact_id,search_index,archive,is_active"})
+    if not lignes:
+        raise Refus(f"La recherche {cle} n'est pas parmi celles que tu peux voir.")
+    return lignes[0]
+
+
+def _acquereur(ctx: ContexteAssistant, recherche: dict[str, Any]) -> str:
+    try:
+        return str(_contact(ctx, recherche["hektor_contact_id"]).get("display_name") or recherche["hektor_contact_id"])
+    except Refus:
+        return str(recherche["hektor_contact_id"])
+
+
+# Écran : RapprochementMandat.tsx:365 (« propose ») -- seul le canal TÉLÉPHONE enregistre directement ; l'e-mail
+# s'enregistre APRÈS l'envoi et la visite APRÈS le rendez-vous (lot 3).
+def preparer_proposition(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    recherche = _recherche(ctx, p.get("contact_search_key"))
+    bien = _bien(ctx, p.get("hektor_annonce_id"))
+    note = str(p.get("note") or "").strip()[:500]
+    resume = f"Noter que l'annonce {bien['hektor_annonce_id']} « {bien.get('titre_bien') or ''} » a été proposée par TÉLÉPHONE à " \
+             f"{_acquereur(ctx, recherche)} (le bien passe « proposé » pour cette recherche, une relance de suivi est posée)"
+    if note:
+        resume += f". Note : {note}"
+    return resume, {"contact_search_key": recherche["contact_search_key"], "hektor_annonce_id": int(bien["hektor_annonce_id"]),
+                    "note": note}
+
+
+def executer_proposition(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[str, Any]:
+    recherche = _recherche(ctx, p.get("contact_search_key"))  # re-vérifié AU CLIC (fonction de la base sans contrôle)
+    bien = _bien(ctx, p.get("hektor_annonce_id"))
+    _ecrire(ctx, "POST", "rpc/app_record_proposition", {
+        "p_search_key": recherche["contact_search_key"], "p_dossier_id": bien["app_dossier_id"], "p_channel": "telephone",
+        "p_note": p.get("note") or None, "p_nego": ctx.email, "p_gmail_message_id": None, "p_gmail_thread_id": None})
+    return {"contact_search_key": recherche["contact_search_key"], "app_dossier_id": bien["app_dossier_id"], "canal": "telephone"}
+
+
+# Écran : RapprochementMandat.tsx:374 / 381 -- écarter, ou rétablir (« jamais_vu » efface le statut).
+def preparer_statut_bien(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    statut = str(p.get("statut") or "").strip()
+    if statut not in {"ecarte", "retabli"}:
+        raise Refus("Statut : ecarte, ou retabli (le bien redevient « jamais vu » pour cette recherche).")
+    recherche = _recherche(ctx, p.get("contact_search_key"))
+    bien = _bien(ctx, p.get("hektor_annonce_id"))
+    motif = str(p.get("motif") or "").strip()[:300]
+    verbe = "Écarter" if statut == "ecarte" else "Rétablir"
+    resume = f"{verbe} l'annonce {bien['hektor_annonce_id']} « {bien.get('titre_bien') or ''} » pour la recherche de " \
+             f"{_acquereur(ctx, recherche)}"
+    if motif and statut == "ecarte":
+        resume += f". Motif : {motif}"
+    return resume, {"contact_search_key": recherche["contact_search_key"], "hektor_annonce_id": int(bien["hektor_annonce_id"]),
+                    "statut": statut, "motif": motif}
+
+
+def executer_statut_bien(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[str, Any]:
+    recherche = _recherche(ctx, p.get("contact_search_key"))  # re-vérifié AU CLIC (fonction de la base sans contrôle)
+    bien = _bien(ctx, p.get("hektor_annonce_id"))
+    statut_base = "ecarte" if p.get("statut") == "ecarte" else "jamais_vu"
+    _ecrire(ctx, "POST", "rpc/app_set_bien_statut", {
+        "p_search_key": recherche["contact_search_key"], "p_dossier_id": bien["app_dossier_id"], "p_status": statut_base,
+        "p_reason": (p.get("motif") or None) if statut_base == "ecarte" else None, "p_nego": ctx.email})
+    return {"contact_search_key": recherche["contact_search_key"], "app_dossier_id": bien["app_dossier_id"], "statut": statut_base}
+
+
+# Notifications : la fonction de la base (app_mark_notification_read) marque n'importe laquelle -- l'assistant ne
+# marque que celles de la PERSONNE (même filtre que l'écran, App.tsx:26315), relues avec le jeton.
+MAX_NOTIFICATIONS = 500
+
+
+def _mes_notifications(ctx: ContexteAssistant, ids: list[int], genre: str) -> list[dict[str, Any]]:
+    params = {"negociateur_email": f"eq.{ctx.email}", "read_at": "is.null", "select": "id,type,title",
+              "order": "id.asc", "limit": str(MAX_NOTIFICATIONS)}
+    if ids:
+        params["id"] = f"in.({','.join(str(i) for i in ids)})"
+    if genre:
+        params["type"] = f"eq.{genre}"
+    return _lire(ctx, "app_notification", params)
+
+
+def preparer_notifications(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    morceaux = [x.strip() for x in str(p.get("notification_ids") or "").split("|") if x.strip()]
+    if any(not x.isdigit() for x in morceaux):
+        raise Refus("Les numéros de notification sont des nombres séparés par | (ou laisse vide).")
+    ids = [int(x) for x in morceaux][:MAX_NOTIFICATIONS]
+    genre = str(p.get("type") or "").strip()
+    lignes = _mes_notifications(ctx, ids, genre)
+    if not lignes:
+        raise Refus("Aucune notification non lue à toi ne correspond.")
+    quoi = f"« {genre} »" if genre else ("choisies" if ids else "non lues")
+    return f"Marquer comme lues {len(lignes)} de tes notifications {quoi}", \
+        {"notification_ids": [int(x["id"]) for x in lignes]}
+
+
+def executer_notifications(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[str, Any]:
+    ids = [int(x) for x in (p.get("notification_ids") or [])][:MAX_NOTIFICATIONS]
+    miennes = _mes_notifications(ctx, ids, "") if ids else []  # re-vérifié AU CLIC : seulement les siennes, encore non lues
+    for ligne in miennes:
+        _ecrire(ctx, "POST", "rpc/app_mark_notification_read", {"p_id": int(ligne["id"])})
+    return {"marquees": len(miennes), "deja_lues_ou_absentes": len(ids) - len(miennes)}
+
+
+# Note de transaction : la fonction de la base contrôle (direction + accès au dossier) et REMPLACE la note.
+def _note_actuelle(ctx: ContexteAssistant, affaire_id: int) -> str | None:
+    if not _lire(ctx, "app_affaire_ledger", {"app_affaire_id": f"eq.{affaire_id}", "select": "app_affaire_id", "limit": "1"}):
+        raise Refus(f"La transaction {affaire_id} n'est pas parmi celles que tu peux voir.")
+    # ⚠ app_affaire_note est lisible par tous : lue SEULEMENT après la transaction (règle de l'étape 2)
+    notes = _lire(ctx, "app_affaire_note", {"app_affaire_id": f"eq.{affaire_id}", "select": "texte", "limit": "1"})
+    return (notes[0].get("texte") if notes else None) or None
+
+
+def preparer_note(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    try:
+        affaire = int(p.get("app_affaire_id"))
+    except (TypeError, ValueError):
+        raise Refus("Donne l'app_affaire_id de la transaction (objet transactions).") from None
+    texte = str(p.get("texte") or "").strip()[:4000]
+    if not texte:
+        raise Refus("Donne le texte de la note.")
+    avant = _note_actuelle(ctx, affaire)
+    resume = f"Écrire la note de la transaction {affaire} : « {texte} »"
+    resume += f" — ⚠ elle REMPLACE la note actuelle : « {avant[:300]} »" if avant else " (pas de note aujourd'hui)"
+    return resume, {"app_affaire_id": affaire, "texte": texte}
+
+
+def executer_note(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[str, Any]:
+    _note_actuelle(ctx, int(p["app_affaire_id"]))
+    r = _ecrire(ctx, "POST", "rpc/app_affaire_note_ecrire", {"target_affaire_id": int(p["app_affaire_id"]), "texte": p["texte"]})
+    if not (r or {}).get("ok"):
+        raise Refus("la note n'a pas été écrite (la base n'a pas confirmé)")
+    return {"app_affaire_id": int(p["app_affaire_id"])}
+
+
+# ── LOT 2b (13/11/2026) : vers Hektor (la base écrit chez nous à l'instant, le worker recopie chez Hektor) ──
+# Modifier un contact : app_edit_contact_optimistic contrôle l'appelant et accepte une modification PARTIELLE.
+# ⚠ L'écran envoie toujours la fiche complète ; l'assistant n'envoie QUE les champs changés (téléphone, e-mail,
+#   commentaire) -- chemin à éprouver en réel sur un contact d'essai avant de s'en servir (note étape 3 §7).
+# ⛔ Pas l'adresse ni la ville : leur envoi à Hektor dépend des identifiants de commune (leçon du 22/10).
+_CHAMPS_CONTACT = (("telephone", "phone", "phone_primary", "téléphone"), ("email", "email", "email", "e-mail"),
+                   ("commentaire", "comments", "commentaires", "commentaire"))
+
+
+def _fiche_contact(ctx: ContexteAssistant, numero: Any) -> dict[str, Any]:
+    numero = str(numero or "").strip()
+    if not numero.isdigit():
+        raise Refus("Donne le numéro du contact (hektor_contact_id, objet contacts).")
+    lignes = _lire(ctx, "app_contacts_current", {"hektor_contact_id": f"eq.{numero}", "limit": "1",
+                                                 "select": "hektor_contact_id,display_name,phone_primary,email,commentaires,"
+                                                           "archive,active_search_count"})
+    if not lignes:
+        raise Refus(f"Le contact {numero} n'est pas parmi ceux que tu peux voir.")
+    return lignes[0]
+
+
+def preparer_modif_contact(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    fiche = _fiche_contact(ctx, p.get("hektor_contact_id"))
+    changements: dict[str, str] = {}
+    lignes = []
+    for cle, champ, colonne, libelle in _CHAMPS_CONTACT:
+        nouveau = str(p.get(cle) or "").strip()
+        if nouveau and nouveau != str(fiche.get(colonne) or "").strip():
+            if cle == "email" and not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", nouveau):
+                raise Refus(f"« {nouveau} » n'est pas une adresse e-mail.")
+            changements[champ] = nouveau[:2000]
+            lignes.append(f"{libelle} : « {fiche.get(colonne) or 'vide'} » → « {nouveau[:200]} »")
+    if not changements:
+        raise Refus("Rien ne change : donne au moins un téléphone, un e-mail ou un commentaire différent de la fiche.")
+    return f"Modifier {fiche.get('display_name') or fiche['hektor_contact_id']} — " + " ; ".join(lignes) + \
+        " (écrit chez nous tout de suite, recopié chez Hektor ensuite)", \
+        {"hektor_contact_id": fiche["hektor_contact_id"], "champs": changements}
+
+
+def executer_modif_contact(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[str, Any]:
+    _fiche_contact(ctx, p.get("hektor_contact_id"))
+    champs = {k: v for k, v in dict(p.get("champs") or {}).items() if k in {c[1] for c in _CHAMPS_CONTACT}}
+    if not champs:
+        raise Refus("aucun champ à modifier")
+    r = _ecrire(ctx, "POST", "rpc/app_edit_contact_optimistic",
+                {"target_contact_id": p["hektor_contact_id"], "edit_fields": champs, "debounce_seconds": 600})
+    return {"hektor_contact_id": p["hektor_contact_id"], "champs": sorted(champs), "reponse": r}
+
+
+def preparer_archivage_contact(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    fiche = _fiche_contact(ctx, p.get("hektor_contact_id"))
+    archiver = bool(p.get("archiver"))
+    if bool(fiche.get("archive")) == archiver:
+        raise Refus("Ce contact est déjà archivé." if archiver else "Ce contact n'est pas archivé.")
+    nom = fiche.get("display_name") or fiche["hektor_contact_id"]
+    if archiver:
+        n = int(fiche.get("active_search_count") or 0)
+        resume = f"Archiver {nom}" + (f" — ⚠ ses {n} recherche(s) active(s) seront archivées aussi (règle de Hektor)" if n else "")
+    else:
+        resume = f"Réactiver {nom} — ⚠ ses recherches archivées ne reviennent PAS d'elles-mêmes"
+    return resume, {"hektor_contact_id": fiche["hektor_contact_id"], "archiver": archiver}
+
+
+def executer_archivage_contact(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[str, Any]:
+    _ecrire(ctx, "POST", "rpc/app_console_archiver_contact_optimistic",
+            {"p_hektor_contact_id": p["hektor_contact_id"], "p_archive": bool(p["archiver"])})
+    return {"hektor_contact_id": p["hektor_contact_id"], "archive": bool(p["archiver"])}
+
+
+def preparer_archivage_recherche(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    recherche = _recherche(ctx, p.get("contact_search_key"))
+    if recherche.get("archive") is True:
+        raise Refus("Cette recherche est déjà archivée.")
+    if recherche.get("search_index") is None:
+        raise Refus("Cette recherche n'a pas de rang chez Hektor : l'écran ne peut pas l'archiver non plus.")
+    return f"Archiver la recherche de {_acquereur(ctx, recherche)} (recherche n° {int(recherche['search_index']) + 1})", \
+        {"contact_search_key": recherche["contact_search_key"]}
+
+
+def executer_archivage_recherche(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[str, Any]:
+    recherche = _recherche(ctx, p.get("contact_search_key"))  # le rang est RELU au clic (il peut bouger)
+    if recherche.get("archive") is True:
+        raise Refus("cette recherche a été archivée entre-temps")
+    _ecrire(ctx, "POST", "rpc/app_console_create_delete_contact_search_job", {
+        "target_contact_id": recherche["hektor_contact_id"], "search_index": int(recherche["search_index"]),
+        "target_critere_id": None, "job_priority": 14})
+    return {"contact_search_key": recherche["contact_search_key"]}
+
+
 # ── le catalogue des gestes ───────────────────────────────────────────────────
 class Geste:
     def __init__(self, nom: str, description: str, roles: frozenset[str], parametres: dict[str, Any],
@@ -288,6 +517,55 @@ GESTES: dict[str, Geste] = {g.nom: g for g in (
           _schema({"relance_id": {"type": "integer", "description": "colonne id de relances"},
                    "statut": {"type": "string", "enum": ["fait", "reporte"]}}),
           preparer_statut_relance, executer_statut_relance),
+    # lot 2a
+    Geste("bien_propose",
+          "Prépare l'enregistrement d'un bien PROPOSÉ PAR TÉLÉPHONE à un acquéreur (une recherche) : le bien passe « proposé » "
+          "et une relance de suivi est posée. (L'e-mail et la visite ne sont pas encore ouverts.)",
+          TOUS_LES_ROLES,
+          _schema({"contact_search_key": {"type": "string", "description": "clé de la recherche (recherches, rapprochements)"},
+                   "hektor_annonce_id": {"type": "integer", "description": "numéro de l'annonce"},
+                   "note": {"type": "string", "description": "ce qui a été dit, ou vide"}}),
+          preparer_proposition, executer_proposition),
+    Geste("statut_bien",
+          "Prépare : ÉCARTER un bien pour la recherche d'un acquéreur (avec un motif), ou le RÉTABLIR.",
+          TOUS_LES_ROLES,
+          _schema({"contact_search_key": {"type": "string", "description": "clé de la recherche"},
+                   "hektor_annonce_id": {"type": "integer", "description": "numéro de l'annonce"},
+                   "statut": {"type": "string", "enum": ["ecarte", "retabli"]},
+                   "motif": {"type": "string", "description": "pourquoi il est écarté, ou vide"}}),
+          preparer_statut_bien, executer_statut_bien),
+    Geste("notifications_lues",
+          "Prépare : marquer comme lues des notifications DE LA PERSONNE (des numéros, ou toutes celles d'un type, ou toutes).",
+          TOUS_LES_ROLES,
+          _schema({"notification_ids": {"type": "string", "description": "numéros séparés par |, ou vide"},
+                   "type": {"type": "string", "description": "un type de notification, ou vide"}}),
+          preparer_notifications, executer_notifications),
+    Geste("note_transaction",
+          "Prépare la NOTE d'une transaction (direction seulement, comme l'écran). ⚠ Elle REMPLACE la note existante.",
+          DIRECTION,
+          _schema({"app_affaire_id": {"type": "integer", "description": "identifiant de la transaction (transactions)"},
+                   "texte": {"type": "string", "description": "le texte complet de la note"}}),
+          preparer_note, executer_note),
+    # lot 2b
+    Geste("modifier_contact",
+          "Prépare la modification d'un contact : téléphone, e-mail, commentaire (vide = inchangé). Pas l'adresse.",
+          TOUS_LES_ROLES,
+          _schema({"hektor_contact_id": {"type": "string", "description": "numéro du contact"},
+                   "telephone": {"type": "string", "description": "nouveau téléphone, ou vide"},
+                   "email": {"type": "string", "description": "nouvel e-mail, ou vide"},
+                   "commentaire": {"type": "string", "description": "nouveau commentaire COMPLET, ou vide"}}),
+          preparer_modif_contact, executer_modif_contact),
+    Geste("archiver_contact",
+          "Prépare l'ARCHIVAGE d'un contact (archiver = true) ou sa RÉACTIVATION (archiver = false).",
+          TOUS_LES_ROLES,
+          _schema({"hektor_contact_id": {"type": "string", "description": "numéro du contact"},
+                   "archiver": {"type": "boolean"}}),
+          preparer_archivage_contact, executer_archivage_contact),
+    Geste("archiver_recherche",
+          "Prépare l'ARCHIVAGE d'une recherche d'acquéreur (ce que l'écran appelle « supprimer »).",
+          TOUS_LES_ROLES,
+          _schema({"contact_search_key": {"type": "string", "description": "clé de la recherche"}}),
+          preparer_archivage_recherche, executer_archivage_recherche),
 )}
 
 

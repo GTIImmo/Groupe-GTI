@@ -97,3 +97,44 @@ Avancer **par petits lots**, chacun prouvé en réel avant le suivant :
 ⚠ La relance n° 20 reste en base (faite) sur le contact d'essai : c'est la trace de l'essai.
 ⏳ Pas encore éprouvé en réel : une demande à la direction (il faut un bien vivant à mandat validé, choisi par lui).
 
+## 7. Audit du lot 2 (13/11, sur « Lot2 ») — rien codé
+
+**Le périmètre** (catalogue §5) : rapprochements, recherches, contacts, notes, notifications.
+
+**Mesuré en base** : propositions de biens **15 en tout** (4 en 90 jours ; e-mail 13, visite 1, rdv 1) ; statuts bien ↔ acquéreur : proposé 11, écarté 2 ; notes de transaction 9 ; notifications lues en 30 jours : 36 (2 101 non lues). → des gestes qui existent mais servent peu : l'assistant peut les rendre faciles.
+
+**Les écritures de l'écran, lues** :
+- **Proposer un bien à un acquéreur** : `app_record_proposition(recherche, bien, canal, note, nego…)` — ⚠ SANS contrôle de l'appelant. Elle écrit la proposition, le statut bien ↔ acquéreur (« proposé », ou « visite » pour les canaux visite / virtuelle) ET pose une relance de suivi s'il n'y en a pas déjà une.
+- **Écarter / rétablir un bien pour une recherche** : `app_set_bien_statut(recherche, bien, statut, motif, nego)` — ⚠ SANS contrôle. Statuts : jamais_vu (efface), propose, visite, ecarte, offre.
+- **Marquer une notification lue** : `app_mark_notification_read(id)` — ⚠ SANS contrôle : n'importe qui peut marquer lue celle d'un autre.
+- **Note de transaction** : `app_affaire_note_ecrire(affaire, texte)` — contrôle l'appelant ; à l'écran, par la modale des transactions (direction).
+- **Modifier un contact** : `app_edit_contact_optimistic(contact, champs, délai)` — contrôle l'appelant (`forbidden_update_contact`), accepte une modification PARTIELLE (seuls les champs donnés), écrit chez nous tout de suite, puis Hektor après le délai (travail `update_hektor_contact`). L'écran envoie toujours le formulaire complet. ⚠ La correction du téléphone qui s'AJOUTAIT chez Hektor est réglée depuis le 05/11 (interrupteur `contact_coordonnees_remplacer`).
+- **Archiver / réactiver un contact** : `app_console_archiver_contact_optimistic` — contrôle, phrase de refus en français ; archive aussi ses recherches.
+- **Archiver une recherche** (« supprimer » à l'écran) : `app_console_create_delete_contact_search_job` — contrôle.
+- **Créer un contact**, **créer / modifier une recherche** : formulaires longs (identité complète, doublons ; critères, villes, types, budgets) — à part.
+- **E-mail de rapprochement** : route `/emails/rapprochement/send`, à blanc par défaut — c'est un e-mail : il va avec le lot 3.
+
+**Ce que je propose** :
+- **2a — chez nous seulement** (aucun envoi à Hektor) : proposer un bien à un acquéreur (téléphone, visite, rendez-vous, e-mail déjà envoyé), écarter / rétablir un bien, marquer MES notifications lues (une, ou toutes celles d'un type), écrire une note de transaction (direction). Pour les 3 fonctions sans contrôle : la recherche, le bien et la notification relus avec le jeton AVANT ; le négociateur posé par le serveur ; une notification ne se marque que si elle est à la personne.
+- **2b — vers Hektor** : modifier les coordonnées d'un contact (téléphone, e-mail, adresse, commentaire), archiver / réactiver un contact, archiver une recherche. ⚠ L'écran envoie toujours le formulaire complet ; l'assistant n'enverrait QUE les champs changés (la fonction de la base l'accepte) — chemin jamais emprunté à l'écran : **essai réel sur un contact d'essai obligatoire** avant de l'ouvrir.
+- **2c — plus tard** : créer un contact, créer / modifier une recherche (formulaires longs, à reprendre champ par champ).
+
+## 8. Lot 2 codé le 13/11 (« Les deux » = 2a et 2b), en local, rien en ligne
+
+**2a — chez nous seulement** :
+- `bien_propose` : bien proposé PAR TÉLÉPHONE à une recherche (`app_record_proposition`, canal `telephone` seulement — l'e-mail et la visite s'enregistrent après leur envoi / leur rendez-vous, lot 3). Le bien passe « proposé » et une relance de suivi est posée (c'est la fonction de la base qui le fait).
+- `statut_bien` : écarter (avec motif) ou rétablir (= « jamais vu », comme l'écran).
+- `notifications_lues` : des numéros, un type, ou toutes — **seulement les siennes**, relues au clic (un numéro de collègue glissé dans la carte n'est pas marqué : témoin vert).
+- `note_transaction` : **direction seulement** (comme l'écran ; double verrou) ; la carte montre l'ANCIENNE note, parce que la fonction de la base la REMPLACE.
+- Les trois fonctions sans contrôle (proposition, statut, notification) : l'objet est relu avec le jeton avant, le négociateur posé par le serveur.
+
+**2b — vers Hektor** :
+- `modifier_contact` : téléphone, e-mail, commentaire — **seuls les champs qui changent partent** (la fonction de la base l'accepte ; l'écran, lui, envoie toujours la fiche entière : chemin à éprouver sur un contact d'essai). La carte montre avant → après. ⛔ Pas l'adresse ni la ville (identifiants de commune, leçon du 22/10).
+- `archiver_contact` : archiver (prévient que ses recherches actives partent avec) ou réactiver (prévient que ses recherches ne reviennent pas).
+- `archiver_recherche` : le rang de la recherche est relu au clic (le défaut « la 2e vise la 1re » est corrigé et éprouvé depuis le 29/10).
+
+**Objets** : `notifications` gagne sa colonne `id`. **Consignes** : la liste des gestes ouverts, et ce qu'il ne peut pas encore faire.
+**Essais** : `test_assistant_gestes.py` **60 verts** (dont les témoins inverses : notification d'un collègue, note invisible jamais lue avant sa transaction, commercial sans la note) ; 59 + 71 ; GED 28 + 80.
+
+**Pour la preuve réelle (avec son accord)** : sur le contact d'essai M. AVOIR TEST4 — modifier son téléphone puis le remettre (vérifier chez Hektor qu'il REMPLACE et n'ajoute pas), archiver puis réactiver ; une recherche d'essai à archiver ; proposer / écarter un bien d'essai ; marquer une de ses notifications lue.
+
