@@ -230,4 +230,8 @@ Avancer **par petits lots**, chacun prouvé en réel avant le suivant :
 1. ⛔ **L'aperçu envoyait au modèle les LIENS de l'e-mail** (« Voir ce bien », « Affiner », « Se désinscrire ») : ils portent une **clé d'accès à l'espace du client** (`/espace/<jeton>`, sans connexion, ~1 an). Une fois, pour le contact d'essai 10354488 seulement. → les liens sont remplacés par « [lien] ».
 2. **« Envoie-moi un e-mail » était impossible** sans écrire son adresse dans la question — donc chez OpenAI, contre la règle de l'étape 1. → destinataire « moi » : la carte dit « toi », l'adresse est posée par le serveur au clic.
 
-**Reste** : mettre ces 2 correctifs en ligne (accord), puis l'e-mail interne réel « à moi ».
+**Correctifs en ligne à 16:28** (`e2f5861`, son « Oui, vas-y » ; seul ce commit poussé, celui de la GED au-dessus laissé à son auteur) :
+- **Aperçu refait** sur AVOIR TEST4 / 63330 : « Voir ce bien », « Affinez », « Se désinscrire » → `[lien]` ; plus aucun `/espace/` dans ce que voit le modèle.
+- **E-mail interne « à moi »** : carte « e-mail interne à toi » (son adresse n'apparaît pas) ; **avant le clic, 0 envoi** au journal Google ; validée → envoyé (journal `gmail.send` : réel, de sa boîte à sa boîte, domaine gti-immobilier.fr, 1 destinataire, 0 pièce jointe, `related_entity_type: assistant`, message Gmail `1a1d5878b108077b`). ⚠ La réception dans sa boîte n'est pas vue par moi (Gmail a accepté l'envoi).
+
+➡ **Le lot 3 (3a + 3b) est prouvé en entier.** Restent hors de l'assistant (lot 3c) : tout envoi vers un client, l'espace client, le bon de visite en PDF. Les 3 défauts existants de l'écran (§10) restent à sa décision.
