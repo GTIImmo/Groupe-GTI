@@ -138,3 +138,21 @@ Avancer **par petits lots**, chacun prouvé en réel avant le suivant :
 
 **Pour la preuve réelle (avec son accord)** : sur le contact d'essai M. AVOIR TEST4 — modifier son téléphone puis le remettre (vérifier chez Hektor qu'il REMPLACE et n'ajoute pas), archiver puis réactiver ; une recherche d'essai à archiver ; proposer / écarter un bien d'essai ; marquer une de ses notifications lue.
 
+## 9. La preuve réelle du lot 2 (13/11, 12:15-12:43, son « Vas y »), contact d'essai M. AVOIR TEST4
+
+**En ligne à 12:14** (`ec64384`). Tout passe par la conversation et les cartes, avec sa session.
+
+**2a — chez nous, prouvé** :
+- « Note que l'annonce 63330 a été proposée par téléphone à M. AVOIR TEST4… » → carte → validée : proposition enregistrée (téléphone, note « essai assistant », négociateur = Frédéric), le bien « proposé », et **la relance de suivi n° 21** posée par la base (à faire au 18/11).
+- « Écarte l'annonce 63330, motif : essai terminé » → carte → validée : statut « écarté » avec son motif.
+- « Marque comme lue ma notification 11370698 » → carte → validée : lue.
+
+**2b — vers Hektor** :
+- **Archiver la recherche** du contact d'essai → fait chez Hektor en 11 s, relu : cadenas ouvert → fermé.
+- **Archiver puis réactiver la fiche** → les deux faits chez Hektor (10 s et 14 s), « Modification archivage ok ». ⚠ La carte d'archivage annonçait encore « 1 recherche active » alors qu'elle venait d'être archivée : le compteur de la fiche n'était pas encore relu (sans conséquence ici).
+- ⛔ **Le téléphone a ÉCHOUÉ d'abord** : travail `update_hektor_contact` en erreur « Nom contact requis » (12:28, puis une 2e tentative automatique à 12:34). **Cause** : le worker exige le NOM à chaque modification (`normalizeHektorContactPayload`, `requireName`), même inchangé ; l'écran l'envoie toujours, l'assistant ne l'envoyait pas. C'était le risque noté à l'audit (« chemin jamais emprunté »). **Effets** : la fiche chez nous portait le nouveau numéro, pas Hektor ; 2 notifications d'échec (et leurs e-mails d'alerte admin).
+- **Réparé à 12:42** avec sa session, par la fonction de l'écran : le nom ACTUEL (« TEST4 », inchangé) ajouté à la modification en attente (la base fusionne, remet le compteur à zéro). **Nouvel envoi à 12:43 : fait en 11 s**, « coordonnées remplacées ». **Relu depuis Hektor** : téléphone 06 00 00 00 01 seul (pas de 2e ligne), prénom, civilité, e-mail inchangés, plus rien en attente.
+- **Corrigé dans le code (en local, `assistant_gestes.py`)** : chaque modification envoie aussi le nom actuel ; un contact sans nom → rien n'est lancé. Témoin ajouté : **61 essais verts**.
+
+**Reste** : mettre ce correctif en ligne (accord), puis un dernier essai « remplacer un numéro existant » (06 …01 → 06 …02) pour prouver qu'il remplace et n'ajoute pas. ⚠ Traces d'essai laissées sur le contact d'essai : relance n° 21 (à faire), recherche archivée, téléphone 06 00 00 00 01.
+

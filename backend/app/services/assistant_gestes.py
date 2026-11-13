@@ -403,7 +403,7 @@ def _fiche_contact(ctx: ContexteAssistant, numero: Any) -> dict[str, Any]:
     if not numero.isdigit():
         raise Refus("Donne le numéro du contact (hektor_contact_id, objet contacts).")
     lignes = _lire(ctx, "app_contacts_current", {"hektor_contact_id": f"eq.{numero}", "limit": "1",
-                                                 "select": "hektor_contact_id,display_name,phone_primary,email,commentaires,"
+                                                 "select": "hektor_contact_id,display_name,nom,phone_primary,email,commentaires,"
                                                            "archive,active_search_count"})
     if not lignes:
         raise Refus(f"Le contact {numero} n'est pas parmi ceux que tu peux voir.")
@@ -429,10 +429,17 @@ def preparer_modif_contact(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[s
 
 
 def executer_modif_contact(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[str, Any]:
-    _fiche_contact(ctx, p.get("hektor_contact_id"))
+    fiche = _fiche_contact(ctx, p.get("hektor_contact_id"))
     champs = {k: v for k, v in dict(p.get("champs") or {}).items() if k in {c[1] for c in _CHAMPS_CONTACT}}
     if not champs:
         raise Refus("aucun champ à modifier")
+    # ⚠ Prouvé en réel le 13/11 (travail 7f12ad3a, « Nom contact requis ») : le worker EXIGE le nom à chaque
+    #   modification, même inchangé (normalizeHektorContactPayload requireName). Il relit la fiche Hektor et ne
+    #   change que les champs reçus : renvoyer le nom ACTUEL ne modifie rien. Sans nom connu : on ne lance rien.
+    nom = str(fiche.get("nom") or "").strip()
+    if not nom:
+        raise Refus("ce contact n'a pas de nom chez nous : Hektor refuserait la modification")
+    champs = {"last_name": nom, **champs}
     r = _ecrire(ctx, "POST", "rpc/app_edit_contact_optimistic",
                 {"target_contact_id": p["hektor_contact_id"], "edit_fields": champs, "debounce_seconds": 600})
     return {"hektor_contact_id": p["hektor_contact_id"], "champs": sorted(champs), "reponse": r}

@@ -71,7 +71,7 @@ def reset(**kw):
     etat.clear()
     etat.update({"bien": [dict(BIEN)],
                  "demandes": [], "contact": [{"hektor_contact_id": "606202", "display_name": "M. DURAND",
-                                              "phone_primary": "0601020304", "email": "durand@exemple.fr",
+                                              "nom": "DURAND", "phone_primary": "0601020304", "email": "durand@exemple.fr",
                                               "commentaires": None, "archive": False, "active_search_count": 2}],
                  "relance": [{"id": 9, "label": "Rappeler", "due_date": "2026-11-20", "status": "a_faire"}],
                  "refus_demande": False,
@@ -330,8 +330,14 @@ voir(pc["champs"] == {"phone": "0611223344"} and "0601020304" in resume and "061
 appels.clear()
 ges.executer_modif_contact(nouveau_ctx(), pc)
 rpc = next(a for a in appels if a["chemin"] == "rpc/app_edit_contact_optimistic")
-voir(rpc["corps"]["edit_fields"] == {"phone": "0611223344"} and rpc["entetes"]["Authorization"] == "Bearer " + JETON,
-     "la fonction de l'écran (elle contrôle l'appelant), avec le jeton, champs changés seulement")
+voir(rpc["corps"]["edit_fields"] == {"last_name": "DURAND", "phone": "0611223344"} and rpc["entetes"]["Authorization"] == "Bearer " + JETON,
+     "la fonction de l'écran, avec le jeton : le champ changé + le NOM ACTUEL (le worker l'exige, prouvé en réel le 13/11)")
+reset(contact=[{"hektor_contact_id": "606202", "display_name": "?", "nom": None, "phone_primary": None, "email": None,
+                "commentaires": None, "archive": False, "active_search_count": 0}])
+voir(refuse(lambda: ges.executer_modif_contact(nouveau_ctx(), {"hektor_contact_id": "606202", "champs": {"phone": "06"}}), "pas de nom")
+     and not any(a["chemin"] == "rpc/app_edit_contact_optimistic" for a in appels),
+     "un contact sans nom : rien n'est lancé (Hektor refuserait, et la fiche resterait fausse chez nous)")
+reset()
 voir(refuse(lambda: ges.preparer_modif_contact(nouveau_ctx(), {"hektor_contact_id": "606202", "telephone": "0601020304", "email": "",
                                                                "commentaire": ""}), "Rien ne change"), "rien ne change : pas de carte")
 voir(refuse(lambda: ges.preparer_modif_contact(nouveau_ctx(), {"hektor_contact_id": "606202", "telephone": "", "email": "pas-un-mail",
