@@ -133,6 +133,17 @@ voir(lec.traduire_filtres(biens, [{"colonne": "negociateur_email", "operateur": 
      == [("negociateur_email", f"eq.{EMAIL}")], "« mes … » : « moi » devient l'adresse de la personne, posée par NOTRE serveur")
 voir(refuse(lambda: lec.traduire_filtres(biens, [{"colonne": "negociateur_email", "operateur": "egal", "valeur": "moi"}]),
             "ne connais pas"), "sans e-mail connu, « moi » est refusé (jamais un filtre vide)")
+contacts_ = obj.PAR_NOM["contacts"]
+voir(lec.traduire_filtres(contacts_, [{"colonne": "nom", "operateur": "egal", "valeur": "Durand"}]) == [("nom", "ilike.Durand")],
+     "A (13/11) : un nom se compare SANS les majuscules (« Durand » trouve aussi les ~80 « DURAND »)")
+voir(lec.traduire_filtres(contacts_, [{"colonne": "ville", "operateur": "different", "valeur": "*Fir%miny"}]) == [("ville", "not.ilike.Firminy")],
+     "A : « différent » aussi, et les jokers glissés par le modèle sont retirés")
+voir(lec.traduire_filtres(contacts_, [{"colonne": "hektor_contact_id", "operateur": "egal", "valeur": "606202"}]) == [("hektor_contact_id", "eq.606202")]
+     and lec.traduire_filtres(contacts_, [{"colonne": "email", "operateur": "egal", "valeur": "a@b.fr"}]) == [("email", "eq.a@b.fr")]
+     and lec.traduire_filtres(biens, [{"colonne": "numero_mandat", "operateur": "egal", "valeur": "18836"}]) == [("numero_mandat", "eq.18836")],
+     "A : TÉMOIN -- un identifiant (numéro, e-mail) reste en égalité stricte (indexée)")
+voir(refuse(lambda: lec.traduire_filtres(contacts_, [{"colonne": "nom", "operateur": "egal", "valeur": "**"}]), "est_vide"),
+     "A : une valeur vide est refusée (jamais « ilike. » qui ne filtrerait rien de sensé)")
 consignes = obj.liste_pour_consignes()
 voir("mandat_type (texte)" in consignes and "exclusif [EXCLUSIF]" in consignes and "en attente [pending]" in consignes
      and "Maison [1]" in consignes, "les consignes portent les colonnes ET leurs valeurs exactes")
@@ -152,7 +163,7 @@ voir(a["entetes"]["Authorization"] == "Bearer " + JETON and a["entetes"]["apikey
 voir("cle-de-service" not in json.dumps(appels), "et jamais avec la clé de service")
 voir(a["entetes"]["Prefer"] == "count=exact" and r["total"] == 37, "le total exact vient de la base (37), pas des lignes rendues")
 voir(a["entetes"]["Range"] == f"0-{lec.MAX_LIGNES_RENDUES - 1}", f"une limite de 500 est ramenée à {lec.MAX_LIGNES_RENDUES}")
-voir(("ville", "eq.Unieux") in a["params"] and ("order", "app_dossier_id.desc.nullslast") in a["params"], "filtre et tri par défaut")
+voir(("ville", "ilike.Unieux") in a["params"] and ("order", "app_dossier_id.desc.nullslast") in a["params"], "filtre et tri par défaut")
 voir(dict(a["params"])["select"].split(",") == list(biens.par_defaut), "colonnes par défaut")
 voir(len(r["lignes"][0]["titre_bien"]) == lec.MAX_CARACTERES_VALEUR + 1, "une valeur trop longue est coupée")
 lec.chercher(ctx, {"objet": "notifications", "filtres": [], "colonnes": [], "tri": "", "ordre": "desc", "limite": 5})

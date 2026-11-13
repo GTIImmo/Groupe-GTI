@@ -149,6 +149,7 @@ def _ligne_journal(ctx: ContexteAssistant, spec: Any, conversation_id: str, ques
             "question_caracteres": len(question),
             "reponse_caracteres": len((fin or {}).get("reponse") or ""),
             "durees_ms": durees or {},
+            "jetons_en_cache": usage.get("cached_tokens"),
         },
     }
     if error_text:

@@ -128,6 +128,11 @@ voir(cout_usd("modele-inconnu", {"input_tokens": 1, "output_tokens": 1}) is None
 spec = s.preparer(EMAIL)
 voir(spec.model == "gpt-6.1-terra" and spec.max_output_tokens == 1500, "fiche par défaut : gpt-6.1-terra (décision du 13/11), 1 500 jetons de sortie")
 voir(cout_usd("gpt-6.1-terra", {"input_tokens": 1000, "output_tokens": 1000}) == 0.006, "tarif gpt-6.1-terra : 1 000 + 1 000 jetons = 0,006 $")
+voir(cout_usd("gpt-6.1-terra", {"input_tokens": 10000, "output_tokens": 0, "cached_tokens": 8000}) == 0.0024,
+     "B (13/11) : 8 000 jetons en cache sur 10 000 = 2 000 × 1 $/M + 8 000 × 0,05 $/M = 0,0024 $")
+voir(cout_usd("gpt-6.1-terra", {"input_tokens": 10000, "output_tokens": 0, "cached_tokens": None}) == 0.01
+     and cout_usd("gpt-6.1-terra", {"input_tokens": 10000, "output_tokens": 0, "cached_tokens": 99999}) == 0.01,
+     "B : TÉMOIN -- cache inconnu ou incohérent = prix plein, jamais moins cher que vrai")
 
 
 def refuse(fonction, code):

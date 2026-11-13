@@ -22,9 +22,25 @@ TARIFS: dict[str, tuple[float, float]] = {
 }
 
 
+# Prix des jetons d'entrée LUS EN CACHE chez OpenAI (13/11/2026, grille officielle). Les consignes de l'assistant
+# (~7 500 jetons) repartent à chaque étape : sans ce prix, le coût affiché était ~3 fois trop haut, et le plafond
+# du jour aurait coupé l'assistant vers 135 questions par jour pour toute l'agence.
+TARIFS_CACHE: dict[str, float] = {
+    "gpt-6.1-terra": 0.05 / 1_000_000,
+    "gpt-6-luna": 0.01 / 1_000_000,
+    "gpt-5.6-luna": 0.02 / 1_000_000,
+    "gpt-4.1-mini": 0.10 / 1_000_000,
+}
+
+
 def cout_usd(model: str | None, usage: dict[str, Any]) -> float | None:
     tarif = TARIFS.get(str(model or ""))
     entree, sortie = usage.get("input_tokens"), usage.get("output_tokens")
     if not tarif or not isinstance(entree, (int, float)) or not isinstance(sortie, (int, float)):
         return None
-    return round(entree * tarif[0] + sortie * tarif[1], 6)
+    # jetons en cache inconnus, illisibles ou incohérents = 0 : on paie alors le prix plein (jamais moins cher que vrai)
+    cache = usage.get("cached_tokens")
+    prix_cache = TARIFS_CACHE.get(str(model or ""))
+    if not isinstance(cache, (int, float)) or prix_cache is None or not 0 <= cache <= entree:
+        cache = 0
+    return round((entree - cache) * tarif[0] + cache * (prix_cache or 0) + sortie * tarif[1], 6)

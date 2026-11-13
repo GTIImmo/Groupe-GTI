@@ -270,7 +270,9 @@ class AssistantService:
             elif evenement.type == "run_item_stream_event" and evenement.name == "tool_called":
                 yield {"type": "outil", "nom": getattr(evenement.item.raw_item, "name", None)}
         usage = flux.context_wrapper.usage
-        jetons = {"input_tokens": usage.input_tokens, "output_tokens": usage.output_tokens, "total_tokens": usage.total_tokens}
+        jetons = {"input_tokens": usage.input_tokens, "output_tokens": usage.output_tokens, "total_tokens": usage.total_tokens,
+                  # 13/11 : les jetons lus en cache, facturés ~20 fois moins cher (agent_tarifs.TARIFS_CACHE)
+                  "cached_tokens": getattr(getattr(usage, "input_tokens_details", None), "cached_tokens", None)}
         reponse = str(flux.final_output) if flux.final_output is not None else "".join(texte)
         yield {"type": "_fin", "reponse": reponse, "usage": jetons, "etapes": usage.requests,
                "model": spec.model, "costUsd": cout_usd(spec.model, jetons)}

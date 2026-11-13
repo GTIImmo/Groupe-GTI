@@ -130,6 +130,8 @@ def _filtre_liste(nom: str, valeurs: list[str], *, exclure: bool = False) -> tup
 
 
 MOI = "moi"
+# colonnes texte qui sont des IDENTIFIANTS : égalité stricte (rapide, indexée), jamais « sans les majuscules »
+_IDENTIFIANT = re.compile(r"(_id|_key|email|^numero_|code_postal)$|^numero_")
 
 
 def traduire_filtres(objet: Objet, filtres: list[dict[str, Any]], moi: str | None = None) -> list[tuple[str, str]]:
@@ -174,6 +176,14 @@ def traduire_filtres(objet: Objet, filtres: list[dict[str, Any]], moi: str | Non
         elif op == "json_contient":
             v = str(brut or "").strip()
             params.append((colonne.nom, "cs." + json.dumps([v], ensure_ascii=False)))
+        elif op in {"egal", "different"} and colonne.type == "texte" and not _IDENTIFIANT.search(colonne.nom):
+            # 13/11 : un texte libre (nom, prénom, ville…) se compare SANS les majuscules -- « Durand » ne trouvait
+            # que 4 fiches sur ~80, presque toutes écrites « DURAND ». ilike sans joker = égalité sans la casse.
+            # Les identifiants (numéros, clés, e-mails) restent en égalité stricte : elle garde l'index.
+            v = re.sub(r"[*%]", "", str(brut or "")).strip()
+            if not v:
+                raise Refus(f"Valeur vide pour « {op} » (colonne {colonne.nom}) : pour une case vide, utilise est_vide.")
+            params.append((colonne.nom, f"{'not.ilike' if op == 'different' else 'ilike'}.{v}"))
         else:
             v = _valeur(colonne.type, brut, colonne.nom)
             code = {"egal": "eq", "different": "neq"}.get(op) or _COMPARAISONS[op]
