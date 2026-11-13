@@ -773,8 +773,170 @@ la vente. Non traite, pas mesure en ampleur.
    ⬜ A trancher : garder le marqueur comme simple signal (il reste vrai que les
      noms varient dans la chaine), mais ne plus en faire un critere d'exclusion.
    Lie : [[contacts-muets-fiches-de-couple]]
-3.2 ⬜              fermer les 2 reserves : 413 ecarts contre 211 du rapport (lot 3)
-                    et charge_commission, 23 480 valeurs
+⛔⛔ 3.1ter LE RAPPORT A UN CHAMP FAUX -- TROUVE PAR FREDERIC LE 13/11
+
+   Sa question : « attention, la charge de commission est remplie dans l'app, non ? »
+   ⭐ IL AVAIT RAISON, et c'etait deja ecrit dans la memoire du projet :
+     « La charge des honoraires n'a JAMAIS eu besoin d'etre rattrapee depuis un
+      classeur : Hektor nous la livre en clair, chaque nuit. »
+```
+     data/hektor.sqlite -> hektor_annonce_detail -> honoraires_json -> « charge »
+     62 571 lignes « vendeur » . 19 352 « acheteur » . JAMAIS de vide
+```
+   LE DEFAUT : le rapport lit `charge_commission_app` (colonne du registre que
+   l'APP remplit, et que personne n'a jamais remplie). Il annonce donc
+   « 950 au classeur seul + 3 752 vides » -- un trou qui N'EXISTE PAS.
+
+   ⭐⭐ AUDIT DES 21 CHAMPS, FAIT LE 13/11 -- UN SEUL EST FAUX :
+```
+     Mandat, Prix, Commission, dates, Etat, Acquereur, Vendeur, Notaire
+        -> app_affaire_ledger                    ✅ bonne source
+     Negociateurs 1/2/3 -> repartition + fiches   ✅
+     Agence, Ville, Nature -> app_mandat_register_current  ✅
+     Vente Reglee, Numero de facture -> AUCUNE source : on ne les a pas ✅ juste
+     Charge Commission -> charge_commission_app   ⛔ LE SEUL FAUX
+```
+   ⚠ ET LA PORTEE EST PLUS LARGE QUE CE CHAMP : le rapport ne lit QUE six
+     sources -- le gel, le registre des transactions, la repartition, le registre
+     des mandats, les alias et les fiches negociateur. **Il ne lit NI l'annonce
+     (`app_dossier_current`) NI son detail (`hektor_annonce_detail`).** Tout champ
+     dont la donnee vit la sera declare « vide chez nous » A TORT.
+
+   ⛔⛔⛔ ET J'EN AI TIRE UNE CONCLUSION FAUSSE, QUE FREDERIC A ARRETEE :
+     j'ai ecrit « le vrai sujet est de faire remonter la charge de Hektor, pas de
+     la rapatrier du classeur » et « retirer Charge Commission du perimetre ».
+     **C'EST L'INVERSE DE LA DECISION DEJA PRISE**, et elle tient sur TROIS
+     audits que je n'avais pas ouverts : A8 (02/11), A10 et A11 (03/11).
+
+   ✅ CE QUE A11 A ETABLI, PAR LA MESURE (juge_charge_classeur_contre_hektor) :
+```
+     comparables 380 : classeur vendeur 363 . classeur acquereur 17
+     HEKTOR juste                 368   96,84 %
+     « TOUJOURS VENDEUR » juste   363   95,53 %   <- LE TEMOIN INVERSE
+     gain reel de Hektor                +1,32 point seulement
+     HEKTOR MUET sur              552 / 956 lignes renseignees = 57,7 %
+```
+   ⛔ **HEKTOR N'EST PAS UNE VALEUR DE REFERENCE POUR LA CHARGE.** Il est muet
+     plus d'une fois sur deux, et repondre « vendeur » a tout le monde ferait
+     95,5 %. ⭐ Son seul usage reel : quand il DIT « acquereur », il a raison
+     77,8 % du temps -- un signal fort sur la CLASSE RARE, en SIGNALEMENT.
+
+   ➡ **LE CLASSEUR FAIT FOI SUR CE CHAMP.** Le rapport n'est donc PAS faux ici :
+     ses « 950 au classeur seul » sont EXACTEMENT ce qu'il faut rapatrier.
+     ⚠ Ce qui reste vrai de mon audit : `charge_commission_app` est la case que
+       l'app remplit, et elle est vide -- c'est bien la cible de l'ecriture,
+       pas une erreur de lecture.
+
+⛔⛔ 3.1quater LE RAPPORT NE COUVRE PAS TES CHOIX -- AUDIT DU 13/11
+
+   ⭐ LA SOURCE DE VERITE DES 38 CHOIX EST **L'ARTEFACT DE FREDERIC** :
+     https://claude.ai/artifact/JFtYqskwiwgWANvgT8nk4S  (collection `choix`)
+     ⚠ Le fichier notice/DECISIONS_CHAMP_PAR_CHAMP_CLASSEUR_2026-11-02.md est
+       PERIME sur deux colonnes : il compte 7 « les vides », l'artefact 5 --
+       **AB (Acquereur) et AD (Vendeur) sont passes de « vides » a RIEN** le
+       09/11 a 13:13. L'artefact fait foi, il est plus recent.
+     ⛔ Et notice/A13_DECISIONS_COLONNE_PAR_COLONNE.md se declare lui-meme
+       SUBORDONNE : il ignore 7 decisions du 02/11. NE PAS s'en servir.
+
+   LES 38 CHOIX, AU 13/11 :
+```
+     TOUT (16)      I J K L M N Q V Y Z AA F G AH AI AJ
+     LES VIDES (5)  C Mandat . P Commission TTC . S Offre . T Compromis . W Vente fixee
+     COMPARER (1)   AF Prix
+     RIEN (16)      A B D E H O R U X AB AC AD AE AG AK AL
+```
+
+   ⛔ CROISEMENT AVEC LE RAPPORT : sur les 22 colonnes ou l'on AGIT,
+     **13 sont mesurees, 9 NE LE SONT PAS**. Et les 9 ne se valent pas :
+
+   **A. TROIS VRAIES LACUNES -- LES POURCENTAGES (J, L, N), decides « tout »**
+```
+     ils touchent LA PAIE
+     la somme des trois fait EXACTEMENT 100 dans 4 768 cas sur 4 780
+     en face, 96 % de nos chiffres sont un CALCUL PAR DEFAUT
+     ⭐ et le rapport CHARGE DEJA la colonne `pourcentage` de
+       app_affaire_repartition -- il ne la COMPARE jamais
+     ⚠ piege de format : N porte « 12,5 » AVEC UNE VIRGULE
+```
+     ➡ A AJOUTER AU RAPPORT : 3 champs, la donnee est deja chargee.
+
+   **B. SIX CHAMPS QUI N'EXISTENT PAS ENCORE CHEZ NOUS** (F, G, Z, AH, AI, AJ)
+     Decides « tout, SI ON CREE LE CHAMP ». Normal qu'ils ne soient pas
+     mesures : il n'y a rien en face. ➡ RIEN a corriger dans le rapport.
+
+   **C. ET UN DEFAUT DE SOURCE, DEJA PROUVE : Q (Charge Commission)**
+     Le rapport lit sur l'AFFAIRE (`charge_commission_app`), la donnee vit sur
+     le MANDAT. ⭐⭐ ET LE TRAVAIL EST FAIT DEPUIS LE 04/11 : **23 474 valeurs
+     posees, dont 837 du classeur** (note de Frederic dans l'artefact).
+     ⛔ Le rapport reclame donc un travail ACCOMPLI. ➡ A CORRIGER.
+
+   ➡ **LE RAPPORT A QUATRE CORRECTIONS** : 3 ajouts (pourcentages) + 1 source
+     (charge). Les 13 autres colonnes mesurees lisent au BON endroit (verifie
+     une par une le 13/11 : registre des transactions, repartition, registre
+     des mandats -- voir 3.1ter).
+
+## ⭐⭐ 3.1quinquies LE LOT 1 -- NEGOCIATEURS ET POURCENTAGES, MESURE LE 13/11
+
+   ✅ DECISION CONFIRMEE PAR FREDERIC LE 13/11 : **ON PREND TOUT DU CLASSEUR**,
+     sans exception -- y compris le seul vrai desaccord (bien 1993).
+
+   LE VOLUME EXACT, apres l'ajout des 3 pourcentages au rapport :
+```
+     Negociateur 1    396 ecarts +  171 classeur seul  =    567
+     Negociateur 2    378        +   51                =    429
+     Negociateur 3     10        +    1                =     11
+     Pourcentage 1    570        +  797                =  1 367
+     Pourcentage 2      5        +  656                =    661
+     Pourcentage 3      0        +   14                =     14
+                                              TOTAL    =  3 049 cases
+```
+   ⚠ NEGOCIATEURS ET POURCENTAGES VONT ENSEMBLE : poser un negociateur 2 sans
+     sa part n'a aucun sens, et poser une part sans la personne non plus. C'est
+     UN SEUL geste sur app_affaire_repartition.
+
+   ⭐⭐ CE QUE LE CLASSEUR SAIT ET QUE NOUS IGNORONS, mesure du 13/11 :
+```
+     affaires a PLUSIEURS commerciaux   classeur 652   nous 19
+     affaires a TROIS commerciaux       classeur  13   nous  0
+     affaires SANS aucune repartition   chez nous 893
+```
+   ⚠ Et la verification demandee par Frederic a evite 3 faux : 642 lignes du
+     classeur portent deux noms, mais 3 repetent LE MEME -- donc 639 a deux
+     noms distincts, pas 642.
+
+   ⭐ LE CROISEMENT DES 13 AFFAIRES « nos parts ne font pas 100 » LE CONFIRME :
+```
+     11 / 13  le classeur APPORTE ce qui manque (le 2e nego, ou la part entiere)
+              et NOS chiffres sont des MORCEAUX JUSTES du sien :
+              50 = la part exacte de COUDERT . 75 = celle de FLANDIN
+      1 / 13  un vrai desaccord : bien 1993 (classeur FORLICO 75 + PEREIRA 25,
+              nous PEREIRA 87,5) -> le classeur gagne, par decision
+      2 / 13  repartition VIDE chez nous (biens 47347 et 62527)
+```
+
+   ⛔⛔ LE PREALABLE OBLIGATOIRE, ET IL N'EST PAS REMPLI : **13 ANCIENS
+     NEGOCIATEURS A CREER** dans l'annuaire. Tant qu'ils n'existent pas, leurs
+     24 lignes restent « hors perimetre » et ne seront pas rapatriees :
+```
+     ABED 6 . ALLEMAND 4 . BERTRAND 3 . AGRAIN 2 . BRUNON 1 . EXBRAYAT 1
+     COMMERE 1 . LEFAURE 1 . PETROSINO 1 . LAUGIER 1 . ADAMO 1 . BALIQUE 1
+     FRANCHINI Marjorie 1
+```
+   ✅ Les trois autres prealables du 02/11 sont remplis : les alias (GIRAUD ->
+     Aline VALETTE 159 fois, ALVES MENDES -> Lucie DECHANDON 118) et les
+     exclusions (meilleursagents 17, GTI 6, DENOPCE 1/2 1).
+   ⚠ NON VERIFIE : les 30 dossiers « notre nom est etranger aux deux », a ecarter.
+
+3.2 ⬜              fermer la reserve des 413 ecarts contre 211 du rapport (lot 3)
+3.2bis ⬜ ACCORD    LA CHARGE DE COMMISSION -- la proposition A11 du 03/11, intacte :
+                    ① POSER LES 955 DU CLASSEUR (~2 h) -- ILS FONT FOI
+                    ② l'ecran montre la valeur AVEC sa source (~1/2 j)
+                    ③ le preremplissage : SAISIE > CLASSEUR > « Hektor dit
+                       acquereur » > defaut vendeur (~1/2 j)
+                    ④ les etiquettes (~2 h, une a reconfirmer)
+                    ⑤ Hektor en SIGNALEMENT seulement (~2 h)
+                    ⛔ A LIRE AVANT TOUTE REPRISE : A8, A10, A11 et le rapport
+                      du juge (JUGE_CHARGE_CLASSEUR_HEKTOR_2026-11-03.md)
 3.3 ⬜ ACCORD       les 7 colonnes qui ONT une case : P S T W AB AD (+ AF comparer)
 3.4 ⬜ ACCORD       Y le reglement et AA la facture -> app_affaire_champ_app,
                     sur la transaction de role 'vente'
