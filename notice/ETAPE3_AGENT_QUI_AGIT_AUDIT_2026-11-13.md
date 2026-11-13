@@ -266,3 +266,18 @@ Avancer **par petits lots**, chacun prouvé en réel avant le suivant :
 - **4b — la diffusion d'un bien diffusable** : ajouter / retirer un portail (même route et mêmes gardes que l'écran ; « diffusable » reste à la direction). C'est « la mise en ligne d'un bien si diffusable » de son exemple.
 - **4c — pas par l'assistant pour l'instant** : numéro de mandat (officiel, irréversible), document de mandat et avenant (rendu par le navigateur), tout ce qui **part vers un signataire** (envoyer, relancer, annuler), « signé à la main », supprimer une photo.
 - ⚠ **À éprouver avant d'ouvrir** : comme le contact (« Nom contact requis »), le worker de l'annonce peut exiger des champs qu'on n'envoie pas — essai réel sur un bien d'essai (62774 ou 63330) obligatoire.
+
+## 14. Relance « sans recherche » : deux alertes orange, et le correctif (13/11, posé à 17:19 avec son « Oui »)
+
+**Signalé** par la session « Run 20h-23h-3h-5h et descente » : la relance d'essai n° 20 (lot 1, contact 10354488) allumait **deux** sondes orange — `data.orphelins_recherche` et `data.recherche_orphelin_bloque`.
+
+**La cause — deux morceaux pensés séparément** :
+- `app_create_relance_for_contact` pose la clé **`contact:<n° du contact>`** quand aucune recherche n'est choisie. C'est le choix PAR DÉFAUT de l'écran (« Relance du contact (sans recherche) », fiche contact) — et celui de l'assistant. La n° 20 est la seule de ce genre à ce jour.
+- Le ménage des orphelins (`app_sweep_search_orphans`, 20/08) et ses deux sondes ne connaissaient pas cette forme : une relance « sans recherche » passait pour une **recherche disparue**. Les deux sondes regardent le même problème à deux moments (orphelin / orphelin non rattachable) : une relance = deux alertes.
+- ⚠ Pire que l'alerte : le ménage l'aurait **raccrochée à tort** à la seule recherche du contact (ici archivée) le lendemain à 7 h ; avec 0 ou plusieurs recherches, elle serait restée orange pour toujours.
+
+**Le correctif** (`supabase/patch_relance_sans_recherche_menage_sondes_2026-11-13.sql`) : le ménage (4 rattachements) et les deux sondes **ignorent les clés `contact:%`**. Rien d'autre ne change ; aucune relance n'est modifiée.
+- Répétition à blanc : **7 OK / 0 KO** — dont le témoin inverse (la relance 21 détachée exprès est toujours vue, et le **vrai ménage** la raccroche ; la 20 est laissée).
+- Retour arrière répété : **3 OK / 0 KO** (empreinte du ménage retrouvée `f39dc33f…`).
+- Posé à 17:19:32 : gardes et vérifications vertes ; les deux sondes rendent **0**, la 20 garde `contact:10354488`, le ménage porte ses 4 gardes.
+- ⚠ Le rouge du moniteur n'est PAS concerné : ce sont les deux anciens échecs « Nom contact requis » (lot 2), à trancher dans Santé.
