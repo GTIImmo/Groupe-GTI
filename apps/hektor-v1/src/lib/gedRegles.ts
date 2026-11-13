@@ -21,6 +21,11 @@ export type FaitsRegles = FaitsDuBien & {
   taxeFonciere?: string | null
   carrez?: string | null
   statutSyndicat?: string | null
+  // morceau 7b : le prix affiché, le type du mandat (SIMPLE, EXCLUSIF, ACCORD) ; la charge des honoraires du REGISTRE
+  // des mandats (`undefined` = pas encore lue : la règle se tait ; `null` = lue et vide)
+  prix?: number | null
+  mandatType?: string | null
+  chargeRegistre?: string | null
 }
 
 // Un document, avec la date de son dépôt et l'état de signature électronique que l'écran sait déjà lire

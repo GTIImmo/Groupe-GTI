@@ -90,6 +90,30 @@ export function comparerCommune(lue: string | null, duBien: string | null): Verd
   return mots(a).includes(mots(b)) || mots(b).includes(mots(a)) ? 'proche' : 'different'
 }
 
+// ── C5 : références ───────────────────────────────────────────────────────────
+// Un numéro de mandat comparé par ses CHIFFRES, sans les zéros de tête (« n° 018836 », « 18836/2026 » -> la suite
+// la plus longue). Pas de chiffres d'un côté -> incomparable.
+export function comparerNumero(lu: string | null | undefined, base: string | null | undefined): Verdict {
+  const suite = (s: string | null | undefined) => (String(s ?? '').match(/\d+/g) ?? []).reduce((a, b) => (b.length > a.length ? b : a), '').replace(/^0+/, '')
+  const a = suite(lu)
+  const b = suite(base)
+  if (!a || !b) return 'incomparable'
+  return a === b ? 'egal' : 'different'
+}
+
+// C6 : une valeur de liste fermée, avec ses synonymes (le type du mandat de la fiche, la charge des honoraires).
+const SYNONYMES: Record<string, string> = {
+  EXCLUSIF: 'exclusif', SIMPLE: 'simple', 'SEMI EXCLUSIF': 'semi_exclusif', 'CO EXCLUSIF': 'semi_exclusif',
+  VENDEUR: 'vendeur', MANDANT: 'vendeur', ACQUEREUR: 'acquereur', ACHETEUR: 'acquereur', 'LES DEUX': 'les_deux',
+}
+export function comparerListe(lu: string | null | undefined, base: string | null | undefined): Verdict {
+  const sens = (s: string | null | undefined) => { const n = normaliserTexte(s); return SYNONYMES[n] ?? (n ? n.toLowerCase().replace(/ /g, '_') : '') }
+  const a = sens(lu)
+  const b = sens(base)
+  if (!a || !b) return 'incomparable'
+  return a === b ? 'egal' : 'different'
+}
+
 // ── C3 : personnes ────────────────────────────────────────────────────────────
 export type PersonneDuBien = { nom: string; prenom: string }
 export type PersonneLue = { nom: string; prenoms: string; qualite: string | null }

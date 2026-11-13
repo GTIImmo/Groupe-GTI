@@ -6,7 +6,7 @@
 // ⭐ Morceau 5 (§12.10) : sous « À regarder », les règles sans IA (lib/gedRegles.ts), derrière `ged_propositions`.
 // ⭐ Morceau 7 (§12.17) : au même endroit, ce que l'IA a lu comparé à la fiche et aux mandants (lib/gedReglesLues.ts).
 import { useEffect, useMemo, useState } from 'react'
-import { loadAffairesForDossier } from './lib/api'
+import { loadAffairesForDossier, loadRegisterCycleAffaires } from './lib/api'
 import { etatFiableDuDocument } from './lib/etatSignatureMandat'
 import { loadGedClassements, useGedPropositions } from './lib/ged'
 import { dateEtatLue, loadGedLectures, resumeLecture, type LectureDocument } from './lib/gedLecture'
@@ -73,6 +73,24 @@ export function RecuManque({
     return () => { annule = true }
   }, [regles, appDossierId])
 
+  // morceau 7b : qui paie les honoraires, au REGISTRE des mandats (la vue que l'écran lit déjà pour la clôture). Lecture
+  // ratée ou pas encore faite = `undefined` : la règle L1 se tait ; lue et vide = `null`.
+  const [chargeRegistre, setChargeRegistre] = useState<string | null | undefined>(undefined)
+  const numeroMandat = String(faits.numeroMandat ?? '').trim()
+  useEffect(() => {
+    setChargeRegistre(undefined)
+    if (!regles || !numeroMandat) return
+    let annule = false
+    loadRegisterCycleAffaires(hektorAnnonceId)
+      .then((rows) => {
+        if (annule) return
+        const ligne = rows.find((r) => String(r.numero_mandat ?? '').trim() === numeroMandat)
+        setChargeRegistre(ligne ? (String(ligne.mandat_charge_honoraires_app ?? '').trim() || null) : undefined)
+      })
+      .catch(() => { if (!annule) setChargeRegistre(undefined) })
+    return () => { annule = true }
+  }, [regles, hektorAnnonceId, numeroMandat])
+
   const alertes = useMemo(() => {
     if (!regles || affaires === null) return []
     const docs = documents
@@ -83,9 +101,9 @@ export function RecuManque({
       .filter((d) => d.present_in_hektor !== false && lectures.has(d.id))
       .map((d) => ({ nom: d.document_name, lecture: lectures.get(d.id) as LectureDocument }))
     const ordre: Record<Alerte['niveau'], number> = { alerte: 0, piece: 1, info: 2 }
-    return [...reglesSansIa(faits, docs, affaires, new Date()), ...reglesLues(faits, docsLus, personnesDuBien, affaires, new Date())]
+    return [...reglesSansIa(faits, docs, affaires, new Date()), ...reglesLues({ ...faits, chargeRegistre }, docsLus, personnesDuBien, affaires, new Date())]
       .sort((a, b) => ordre[a.niveau] - ordre[b.niveau])
-  }, [regles, affaires, faits, documents, classements, lectures, personnesDuBien])
+  }, [regles, affaires, faits, documents, classements, lectures, personnesDuBien, chargeRegistre])
 
   // le résumé de la lecture, à côté du nom d'un document reçu (« DPE 2024.pdf — Lu : énergie D… »)
   const resumeParNom = useMemo(() => {

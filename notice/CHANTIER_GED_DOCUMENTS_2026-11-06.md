@@ -28,7 +28,7 @@
 | 6 lot 2 | lecture : **taxe foncière, titre de propriété, fiche synthétique, charges de copro** — avec les NOMS | ✅ en production (`0466c7c`), **essai réel fait le 12/11** : 5/5 lus, 0 fuite, 0 doublon (§12.14) ; affichage après rechargement (« Lu par l'IA ») en production (`49dab5d`), vu sur 62774 |
 | 6 lot 3 | lecture : offre d'achat, compromis, PV d'AG | ✅ en production (`6b26c07`), **essai réel fait le 12/11** : 3/3 lus, compromis texte + pages 44-45 en image, 0 fuite (§12.15) |
 | 6 lot 4 | lecture : mandat déposé à la main, avenant, fin de mandat, acte, annulation, facture, petits diagnostics, assainissement, surfaces, règlement | ✅ **écrit et contrôlé le 13/11** (80 + 49 VERT, banc 64/64, 0 fuite), patch d'étiquette posé (14/14 « lue »), poussé (`7c4e3fb`) ; **essai réel fait le 13/11 sur 63331** : 8/8 envoyés et lus, 0 fuite ; ⚠ « Note honoraires » classée « notes internes » par la règle du nom (§12.16) |
-| 7 | comparateurs et règles avec lecture (titre ↔ mandants, taxe ↔ fiche, copro…) | ⬜ |
+| 7 | comparateurs et règles avec lecture (titre ↔ mandants, taxe ↔ fiche, copro…) | 🔧 **7a en production** (`81be8ad`, 13/11 : socle + justificatifs et diagnostics du bien, 45 VERT) ; 7b (mandat) et 7c (transactions) à faire (§12.17) |
 | 8 | propositions (« remplir », un clic par case) | ⬜ |
 | 9 | pièces des personnes (identité — le justificatif le plus déposé —, état civil, financement) | ⬜ ; l'avancer = décision de Frédéric |
 | 10 | mesure (vrai / faux / déjà su, 2 semaines) | ⬜ |
@@ -1490,3 +1490,27 @@ Choix par défaut annoncés et non contredits : une alerte sur une personne AFFI
   verts ; `npm run build` vert. **Banc d'écran local** (données fictives, `ged_m7_vue`) : 9 lignes « À regarder » dont 5
   du 7a, justes ; le redevable « ESSAI » trouvé dans « M. et Mme ESSAI » se tait ; 375 px sans débordement.
 - ⚠ Non vu en réel : sur un vrai bien, les lignes dépendent des documents LUS par l'outil (63331 et 62774 seulement).
+✅ **7a POUSSÉ (13/11, `81be8ad`, avec `e2ecc56` et `d655c1f` d'une autre session — le second touche
+`push_contacts_to_supabase.py` du run de nuit —, accord « Pousse ») ; Vercel le sert.**
+✅ **« Oui, 7b » (13/11) : SOUS-LOT 7b ÉCRIT ET CONTRÔLÉ, RIEN POUSSÉ.** Sources mesurées : la charge des honoraires au
+REGISTRE des mandats (`app_registre_mandats_current.mandat_charge_honoraires_app` : vendeur 23 342, acquéreur 131, vide
+1 119 — la vue que l'écran lit déjà pour la clôture) ; le type du mandat sur la fiche (`mandat_type` : SIMPLE 365,
+EXCLUSIF 254, ACCORD 62).
+- `gedComparer.ts` : C5 `comparerNumero` (les chiffres, zéros de tête ignorés), C6 `comparerListe` (synonymes : Hektor
+  dit « acheteur »).
+- `gedReglesLues.ts` : **L12** termes du mandat lu (numéro ; type, hors « ACCORD » ; date de signature = début du
+  mandat à 1 jour près) — ⭐ un mandat lu sous un AUTRE numéro (l'ancien mandat du bien) donne UNE ligne et rien d'autre
+  n'est comparé ; **L14** dernier avenant (son numéro ; le prix qu'il fixe ≠ prix affiché, sauf si le prix a encore bougé
+  APRÈS l'avenant : c'est N2) ; **L4** prix de signature ≠ prix affiché sans avenant lu qui l'explique (information) ;
+  **L1** qui paie, lu (l'avenant fait foi sur le mandat) face au registre — registre pas lu = silence, vide =
+  information, « les deux » = information ; **L10** moins de signatures que de mandants LUS DANS LE MÊME DOCUMENT (jamais la
+  fiche : elle peut porter des acquéreurs rangés « mandant »), agence non signataire ; **L18** fin du mandat EN COURS au
+  dossier, bien encore diffusé ; **L11 étendu** aux mandants lus (mandat, avenant) et aux vendeurs du compromis (une
+  qualité non lue au compromis se tait : ce pourrait être un acquéreur). ⛔ Rien ne modifie ni ne prolonge un mandat.
+- Branchement : `FaitsRegles` (+ `prix`, `mandatType`, `chargeRegistre`) ; `App.tsx` lit le prix et le type ;
+  `RecuManque.tsx` lit la charge au registre (`loadRegisterCycleAffaires`, lecture ratée = `undefined` = silence).
+- **Contrôles** : `test_ged_regles_lues.cjs` **66 VERT** (21 de plus) ; **témoin inverse** : sans la garde « autre
+  numéro », l'essai de l'ancien mandat tombe — ⚠ il ne tombait pas au premier essai (une ligne sortait par un autre
+  chemin) : essai durci jusqu'à ce qu'il tombe ; l'essai L1 a trouvé une faute (« de le vendeur ») corrigée ; règles 44,
+  Reçu / Manque 29, lecture 49, dépôt 19, classement 25 ; build vert. **Banc d'écran local** : 12 lignes, dont les 7 du
+  mandat, justes ; N1c et N2 se taisent d'eux-mêmes (un mandat papier et un avenant sont au dossier).
