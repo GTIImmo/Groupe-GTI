@@ -83,7 +83,7 @@
 
 - **L'installation sur Render** : 22 paquets nouveaux. Mesuré : un seul paquet existant bouge (`websockets`, utilisé par uvicorn). Risque faible, et un build raté ne coupe pas le service.
 - **Le démarrage du backend** : écarté par le chargement à la demande (pièce 1). Le nom du module du SDK (`agents`) n'entre en conflit avec rien chez nous (vérifié).
-- **L'écran Santé** : il montre les 500 dernières lignes du journal des agents sur 7 jours. Dormant, l'assistant n'en écrit aucune. **Mais à l'usage** (6 personnes × 30 questions par jour ≈ 1 260 lignes par semaine), ses lignes **pousseraient hors de l'écran** celles du rédacteur et de la GED. À traiter **avant l'étape 2** : filtrer l'écran ou grouper par agent. Je le note, je ne le change pas ici.
+- **L'écran Santé** : il montre les 500 dernières lignes du journal des agents sur 7 jours. Dormant, l'assistant n'en écrit aucune. **Mais à l'usage** (6 personnes × 30 questions par jour ≈ 1 260 lignes par semaine), ses lignes **pousseraient hors de l'écran** celles du rédacteur et de la GED. À traiter **avant l'étape 2** : filtrer l'écran ou grouper par agent. Je le note, je ne le change pas ici. ⏸ **Reporté par Frédéric le 12/11 : « On verra plus tard pour santé d'abord il faut finir le chantier »** — ce n'est donc plus un préalable à l'étape 2.
 - **Le plafond du jour de la GED** : il ne compte que ses propres lignes (`agent_key = ged_classement`), il ne voit pas celles de l'assistant. Vérifié dans son code.
 - **Le report des numéros de dossier** (`push_single_annonce_to_supabase.py`) : les lignes de l'assistant n'ont pas de dossier, il les ignore.
 - **Les 38 fonctions sans contrôle** : l'étape 1 n'en appelle aucune (décision du 29/10 : l'agent les contourne).
@@ -114,7 +114,7 @@
 
 **Ce qui n'est PAS prouvé** : l'installation sur Render (seulement simulée), le flux à travers le proxy de Render, et le vrai modèle. C'est la preuve en réel du §5.
 
-**Les gestes qui restent, chacun avec ton accord** : ① ~~coller le patch SQL puis la répétition~~ ✅ FAIT le 12/11 (voir ci-dessous) ; ② commiter et pousser (Render redéploie ; `/health` doit rendre le commit, `/assistant/message` doit répondre 403) ; ③ passer `assistant_ia` à `admin` et poser « qui suis-je ? » depuis la console du navigateur ; ④ le témoin inverse avec un compte commercial.
+**Les gestes qui restent, chacun avec ton accord** : ① ~~coller le patch SQL puis la répétition~~ ✅ FAIT le 12/11 (voir ci-dessous) ; ② ~~commiter et pousser~~ ✅ FAIT le 12/11 (`d3ff4b3`, voir ci-dessous) ; ③ ~~passer `assistant_ia` à `admin` et poser « qui suis-je ? »~~ ✅ FAIT le 12/11 (voir ci-dessous) ; ④ le témoin inverse avec un compte commercial.
 
 **✅ La base est posée le 12/11**, par moi, avec l'accord de Frédéric (« Vas y collé le toi meme tu as mon accord »).
 - ⚠ **Ordre réel : la répétition AVANT le patch.** Sa garde refuse de tourner si les tables existent déjà (« deja pose ») : la note disait « le patch puis la répétition », c'était l'inverse.
@@ -127,3 +127,40 @@
   - fiche `assistant` en `gpt-4.1-mini`, 1 500 jetons, consignes vides (le défaut en code s'applique) ;
   - les 3 autres fiches sont intactes, 0 conversation, `ged_lecture_ia` toujours à `admin`.
 - **Sans effet tant que le code n'est pas en ligne** : aucun code déployé ne lit ces tables ni cette clé.
+
+**✅ En ligne le 12/11 à 18:37** — commit `d3ff4b3`, poussé avec l'accord de Frédéric (« Oui »). Le stage contenait mes 13 fichiers et rien d'autre (`App.tsx`, modifié par une autre session, est resté hors du commit).
+- `/health` rend `d3ff4b3d914e`, démarré à 17:37:22 UTC : **le build est passé, donc les 22 paquets se sont installés** sur Render.
+- L'API publiée compte 70 routes, dont les 3 de l'assistant. Sans jeton : 401 ; avec un faux jeton : 401 ; la liste sans jeton : 401. La route voisine `/ged/classer` répond comme avant (401).
+- ⚠ **PAS ENCORE PROUVÉ** :
+  - le **403** avec un vrai jeton tant que l'interrupteur est `off` (il faut une session connectée : je n'en ai pas, et je n'entre pas de mot de passe) ;
+  - le **chargement du SDK** sur Render : il n'a lieu qu'à la première vraie question.
+
+  Les deux se prouvent au premier geste de la preuve en réel (§5) : poser la question interrupteur `off` → 403, puis `admin` → la réponse.
+
+**✅ LA PREUVE EN RÉEL, le 12/11 à 17:58-17:59 UTC** — faite par moi dans le Chrome de Frédéric, avec sa session, et son accord (« Fais le toi meme tu as mon accord et controle », puis « La session chrome »). Le navigateur intégré n'avait pas de session ; aucun mot de passe n'a été saisi.
+
+1. **Interrupteur `off`, vrai jeton → 403** « Assistant IA éteint pour ce compte ». Mesuré juste après : 0 conversation, 0 message, 0 ligne `assistant` au journal.
+2. **Interrupteur passé à `admin`** à 17:58:57.
+3. **« qui suis-je ? » → 200, `application/x-ndjson`, 19 morceaux.** Réponse : « Tu es Frederic Gerphagnon, admin dans l'agence GTI Immobilier. Que puis-je faire pour toi ? »
+   - L'agent a appelé `qui_suis_je`. Le nom vient donc de la base, lue avec le jeton.
+   - ⭐ **Le SDK s'est chargé sur Render** : c'était le premier vrai appel, et il a marché.
+   - Le flux arrive vraiment mot à mot à travers Render (mots espacés de 5 à 20 ms).
+4. **En base, mesuré** :
+   - 1 conversation (titre « qui suis-je ? », à son e-mail) ;
+   - 2 messages : la question, puis la réponse avec ses `outils` et le lien vers le journal ;
+   - 1 ligne au journal (`app_agent_run`, n° 17) : `proposed`, gpt-4.1-mini, 469 + 42 jetons, 2 étapes, `fonctions = [qui_suis_je]` ;
+   - **0 ligne du journal ne contient la question ou le nom**.
+5. **Relecture par l'API avec sa session** : la liste rend SA seule conversation, la conversation se relit avec ses 2 messages, un identifiant inconnu rend 404.
+
+**Le temps** : 5,2 s avant `debut`, 13,5 s avant l'appel de la fonction, 15,4 s pour le premier mot, 17,6 s pour `fin`.
+- `debut` arrive après l'identité, le profil, l'interrupteur, les deux plafonds, la conversation et la question : 6 à 7 allers-retours vers Supabase, en série.
+- La suite comprend le premier chargement du SDK.
+- À remesurer sur une 2e question, à chaud, avant l'écran (étape 4).
+
+**Le coût** : 0,000255 $ calculé, **0,00026 $ en base**. La colonne `cost_usd` est en `numeric(10,5)` et arrondit à 5 décimales. L'écart est au plus 0,000005 $ par tour, négligeable devant le plafond de 3 $ ; la colonne est existante, je n'y touche pas.
+
+**⚠ Ce qui reste NON prouvé**
+- **« Rien dans les traces d'OpenAI »** : je n'ai pas accès au tableau de bord d'OpenAI. La coupure est dans le code (deux fois), et l'essai hors ligne le prouve avec son témoin inverse. Il reste à regarder la page des traces du projet OpenAI : elle doit être vide pour cette heure-là.
+- **Le témoin inverse avec un compte commercial** : impossible tant que l'interrupteur est à `admin` (un commercial reçoit 403, c'est voulu). Il se fera quand on passera à `on`, ou à l'étape 2.
+
+**État laissé** : `assistant_ia = admin` — ✅ **décision de Frédéric le 12/11 : « Laisse pour admin »**. Les **4 comptes admins actifs** (mesuré) peuvent donc poser une question par l'API ; aucun écran ne la montre encore. Pour éteindre : `update public.app_setting set value = 'off', updated_at = now() where key = 'assistant_ia';`

@@ -160,7 +160,8 @@ class SansCle(Settings):
 voir(refuse(lambda: svc.AssistantService(SansCle()).preparer(EMAIL), 503), "sans clé OpenAI : refus 503")
 
 print("3) le catalogue et ses droits")
-voir([f.nom for f in cat.fonctions_du_role("commercial")] == ["qui_suis_je"], "un négociateur a la fonction témoin")
+TOUTES = ["qui_suis_je", "decrire", "chercher", "compter", "fiches_biens", "notes_transaction", "agenda"]  # étape 2 (12/11)
+voir([f.nom for f in cat.fonctions_du_role("commercial")] == TOUTES, "un négociateur a la fonction témoin et les 6 lectures de l'étape 2")
 voir(cat.fonctions_du_role("inconnu") == [], "un rôle inconnu n'a aucune fonction")
 voir(not any("utilisateur" in f.nom or "user" in f.nom for f in cat.CATALOGUE), "aucune gestion des utilisateurs (Q5 du 29/10)")
 ctx = cat.ContexteAssistant(Settings(), USER_ID, EMAIL, "commercial", JETON)
@@ -322,7 +323,7 @@ voir(all(c.get("store") is False for c in corps_openai), "store:false sur CHAQUE
 tout_openai = json.dumps(corps_openai, ensure_ascii=False)
 voir(JETON not in tout_openai and EMAIL not in tout_openai and USER_ID not in tout_openai and "cle-" not in tout_openai,
      "ni le jeton, ni l'e-mail, ni l'identifiant, ni une clé ne partent chez OpenAI")
-voir([t.get("name") for t in corps_openai[0].get("tools", [])] == ["qui_suis_je"], "le modèle ne voit que les fonctions du rôle")
+voir([t.get("name") for t in corps_openai[0].get("tools", [])] == TOUTES, "le modèle ne voit que les fonctions du rôle")
 voir(corps_openai[0]["model"] == "gpt-4.1-mini" and corps_openai[0].get("max_output_tokens") == 1500, "gpt-4.1-mini, 1 500 jetons de sortie")
 import agents.tracing as tr  # noqa: E402
 tr.get_trace_provider().force_flush()
@@ -337,6 +338,9 @@ voir(len(run) == 1 and run[0]["status"] == "proposed" and run[0]["proposal_json"
      and run[0]["input_tokens"] == 300 and run[0]["output_tokens"] == 30, "une ligne de journal : jetons des deux appels cumulés")
 voir(run[0]["cost_usd"] == cout_usd("gpt-4.1-mini", {"input_tokens": 300, "output_tokens": 30}) and run[0]["proposal_json"]["etapes"] == 2,
      "le coût du tour et ses 2 étapes")
+durees = run[0]["proposal_json"]["durees_ms"]
+voir(set(durees) == {"preparation", "premier_mot", "total"} and durees["preparation"] <= durees["premier_mot"] <= durees["total"],
+     "étape 2 : les durées du tour (préparation ≤ premier mot ≤ total) vont au journal")
 voir("qui suis-je" not in json.dumps(run, ensure_ascii=False) and "Pauline" not in json.dumps(run, ensure_ascii=False),
      "le journal ne porte ni la question ni la réponse")
 lecture = [a for a in appels if a[1].endswith("/app_user_profile") and a[2].get("apikey") == "cle-publique"]

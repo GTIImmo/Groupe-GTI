@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import time
 from typing import Any, AsyncIterator
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -57,6 +58,7 @@ def assistant_message(
     admin_service: SupabaseAdminService = Depends(get_admin_service),
     service: AssistantService = Depends(get_assistant_service),
 ):
+    t0 = time.monotonic()  # étape 2 : les durées du tour vont au journal (sans texte)
     user, profile = _ouvrir(settings, authorization, admin_service, service)
     email = (user.email or "").strip().lower()
     if not email:
@@ -80,12 +82,14 @@ def assistant_message(
 
     ctx = ContexteAssistant(settings=settings, user_id=str(user.id), email=email,
                             role=str(profile.get("role") or ""), jeton=_jeton(authorization))
-    return StreamingResponse(_flux(service, admin_service, ctx, spec, conversation_id, historique, question),
+    durees = {"preparation": round((time.monotonic() - t0) * 1000)}
+    return StreamingResponse(_flux(service, admin_service, ctx, spec, conversation_id, historique, question, t0, durees),
                              media_type="application/x-ndjson")
 
 
 async def _flux(service: AssistantService, admin_service: SupabaseAdminService, ctx: ContexteAssistant, spec: Any,
-                conversation_id: str, historique: list[dict[str, Any]], question: str) -> AsyncIterator[str]:
+                conversation_id: str, historique: list[dict[str, Any]], question: str,
+                t0: float, durees: dict[str, int]) -> AsyncIterator[str]:
     def ligne(evenement: dict[str, Any]) -> str:
         return json.dumps(evenement, ensure_ascii=False) + "\n"
 
@@ -96,10 +100,13 @@ async def _flux(service: AssistantService, admin_service: SupabaseAdminService, 
             if evenement["type"] == "_fin":
                 fin = evenement
             else:
+                if evenement["type"] == "texte" and "premier_mot" not in durees:
+                    durees["premier_mot"] = round((time.monotonic() - t0) * 1000)
                 yield ligne(evenement)
     except BaseException as exc:  # noqa: BLE001 -- y compris l'onglet fermé en cours de route (annulation)
         nom = type(exc).__name__
-        _tracer(admin_service, _ligne_journal(ctx, spec, conversation_id, question, None, status="error",
+        durees["total"] = round((time.monotonic() - t0) * 1000)
+        _tracer(admin_service, _ligne_journal(ctx, spec, conversation_id, question, None, durees, status="error",
                                               error_text=nom if nom in {"CancelledError", "GeneratorExit"} else f"{nom}: {exc}"[:2000]))
         if isinstance(exc, (asyncio.CancelledError, GeneratorExit, KeyboardInterrupt, SystemExit)):
             raise
@@ -108,8 +115,9 @@ async def _flux(service: AssistantService, admin_service: SupabaseAdminService, 
         yield ligne({"type": "erreur", "detail": detail})
         return
 
+    durees["total"] = round((time.monotonic() - t0) * 1000)
     run_id = await asyncio.to_thread(_tracer, admin_service,
-                                     _ligne_journal(ctx, spec, conversation_id, question, fin, status="proposed"))
+                                     _ligne_journal(ctx, spec, conversation_id, question, fin, durees, status="proposed"))
     try:
         message_id = await asyncio.to_thread(service.ajouter_message, conversation_id, "assistant", fin["reponse"],
                                              ctx.appels or None, run_id)
@@ -120,7 +128,8 @@ async def _flux(service: AssistantService, admin_service: SupabaseAdminService, 
 
 
 def _ligne_journal(ctx: ContexteAssistant, spec: Any, conversation_id: str, question: str,
-                   fin: dict[str, Any] | None, *, status: str, error_text: str | None = None) -> dict[str, Any]:
+                   fin: dict[str, Any] | None, durees: dict[str, int] | None = None, *, status: str,
+                   error_text: str | None = None) -> dict[str, Any]:
     # ⛔ JAMAIS le texte : ni la question, ni la réponse, ni les paramètres des fonctions (ils sont dans le fil).
     usage = (fin or {}).get("usage") or {}
     ligne: dict[str, Any] = {
@@ -139,6 +148,7 @@ def _ligne_journal(ctx: ContexteAssistant, spec: Any, conversation_id: str, ques
             "etapes": (fin or {}).get("etapes"),
             "question_caracteres": len(question),
             "reponse_caracteres": len((fin or {}).get("reponse") or ""),
+            "durees_ms": durees or {},
         },
     }
     if error_text:

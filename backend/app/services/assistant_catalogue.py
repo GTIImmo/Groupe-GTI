@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import asyncio
 import json
-from dataclasses import dataclass, field
-from typing import Any, Callable
+from typing import Any
 
 import requests
 
-from ..settings import Settings
+# Les définitions communes vivent dans assistant_contexte (12/11/2026) ; elles restent importables d'ici.
+from .assistant_contexte import TOUS_LES_ROLES, ContexteAssistant, Fonction, LectureRefusee, Refus  # noqa: F401
+from .assistant_lecteur import FONCTIONS_LECTURE
 
 # ---------------------------------------------------------------------------
 # Assistant IA (12/11/2026, étape 1) -- LE CATALOGUE DES FONCTIONS ET LEURS DROITS.
@@ -22,26 +23,9 @@ from ..settings import Settings
 #   si elle était appelée quand même, elle refuse.
 # ⛔ La gestion des utilisateurs n'entrera JAMAIS dans ce catalogue (Q5 du 29/10).
 #
-# Étape 1 : UNE seule fonction témoin, « qui suis-je », pour prouver la plomberie. Les vraies
-# lectures viennent à l'étape 2.
+# Étape 1 : la fonction témoin « qui suis-je ». Étape 2 (12/11/2026) : les lectures de
+# assistant_lecteur, sur la liste fermée d'assistant_objets.
 # ---------------------------------------------------------------------------
-
-TOUS_LES_ROLES = frozenset({"admin", "manager", "commercial"})
-
-
-@dataclass
-class ContexteAssistant:
-    settings: Settings
-    user_id: str
-    email: str | None
-    role: str
-    jeton: str
-    # les fonctions appelées pendant le tour (nom, paramètres, erreur) : pour le fil et le journal
-    appels: list[dict[str, Any]] = field(default_factory=list)
-
-
-class LectureRefusee(Exception):
-    pass
 
 
 def lire_avec_jeton(ctx: ContexteAssistant, table: str, params: dict[str, str]) -> list[dict[str, Any]]:
@@ -54,15 +38,6 @@ def lire_avec_jeton(ctx: ContexteAssistant, table: str, params: dict[str, str]) 
     if not response.ok:
         raise LectureRefusee(f"lecture de {table} impossible ({response.status_code})")
     return response.json() or []
-
-
-@dataclass(frozen=True)
-class Fonction:
-    nom: str
-    description: str
-    roles: frozenset[str]
-    parametres: dict[str, Any]
-    executer: Callable[[ContexteAssistant, dict[str, Any]], Any]
 
 
 def qui_suis_je(ctx: ContexteAssistant, _params: dict[str, Any]) -> dict[str, Any]:
@@ -97,6 +72,9 @@ CATALOGUE: tuple[Fonction, ...] = (
     ),
 )
 
+# Étape 2 (12/11/2026) : les lectures (décrire, chercher, compter + 3 fonctions métier).
+CATALOGUE = CATALOGUE + FONCTIONS_LECTURE
+
 
 def fonctions_du_role(role: str) -> list[Fonction]:
     return [f for f in CATALOGUE if role in f.roles]
@@ -115,6 +93,9 @@ async def appeler(ctx: ContexteAssistant, fonction: Fonction, arguments: str) ->
     try:
         # les lectures sont bloquantes (requests) : hors de la boucle, pour ne pas figer les autres flux
         resultat = await asyncio.to_thread(fonction.executer, ctx, params)
+    except Refus as exc:
+        trace["erreur"] = "refus"
+        return f"Refusé : {exc}"
     except Exception as exc:  # noqa: BLE001 -- le modèle reçoit une phrase, pas une trace
         trace["erreur"] = type(exc).__name__
         return "Erreur : la lecture n'a pas abouti. Dis-le simplement, n'invente rien."
