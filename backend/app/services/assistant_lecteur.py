@@ -234,7 +234,9 @@ def chercher(ctx: ContexteAssistant, params: dict[str, Any]) -> dict[str, Any]:
     _colonne(objet, tri)
     ordre = "asc" if params.get("ordre") == "asc" else "desc"
     limite = max(1, min(int(params.get("limite") or LIMITE_PAR_DEFAUT), MAX_LIGNES_RENDUES))
-    requete = [("select", ",".join(dict.fromkeys(colonnes))), *filtres, *objet.filtres_imposes(ctx.email),
+    # 13/11 : la colonne de TRI est toujours lue -- sur une fonction (dossiers), l'API refuse de trier par une colonne
+    # qu'on ne lui demande pas (42703 « column record.x does not exist »)
+    requete = [("select", ",".join(dict.fromkeys([*colonnes, tri]))), *filtres, *objet.filtres_imposes(ctx.email),
                ("order", f"{tri}.{ordre}.nullslast")]
     lignes, total = _lire(ctx, objet.source, requete, compter=True, debut=0, fin=limite - 1)
     resultat = {"objet": objet.nom, "total": total, "rendues": len(lignes),
@@ -257,7 +259,8 @@ def compter(ctx: ContexteAssistant, params: dict[str, Any]) -> dict[str, Any]:
         _, total = _lire(ctx, objet.source, [("select", objet.cle), *filtres], compter=True, debut=0, fin=0)
         return {"objet": objet.nom, "total": total, **({"attention": _ZERO} if total == 0 and params.get("filtres") else {})}
     # regrouper ou sommer : on lit les lignes (colonnes utiles seulement), page par page, jusqu'au plafond
-    colonnes = ",".join(dict.fromkeys([c for c in (groupe, somme) if c] or [objet.cle]))
+    # la clé est toujours lue : elle sert au tri des pages (même raison que dans chercher, 13/11)
+    colonnes = ",".join(dict.fromkeys([*(c for c in (groupe, somme) if c), objet.cle]))
     lues: list[dict[str, Any]] = []
     total = None
     while len(lues) < PLAFOND_LIGNES_CALCUL:

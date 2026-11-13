@@ -197,6 +197,20 @@ voir(("etape", "eq.vendu") in a["params"] and ("negociateur_email", f"eq.{EMAIL}
 voir(r["total"] == 292 and r["lignes"][0]["type_bien"] == "Maison", "le total exact, et le code du type traduit")
 voir(refuse(lambda: lec.traduire_filtres(dos, [{"colonne": "etape", "operateur": "egal", "valeur": "signée"}]), "Valeurs possibles"),
      "une étape inconnue est refusée avec la liste")
+def comme_l_api(p, h):
+    # l'API refuse de trier une fonction par une colonne non demandée (vu en réel le 13/11 : 42703)
+    d = dict(p)
+    if d.get("order", "").split(".")[0] not in d.get("select", "").split(","):
+        return Reponse({"code": "42703"}, status=400)
+    return Reponse([{"negociateur_email": "a@gti.fr", "honoraires": 1000.0, "app_chaine_id": 1},
+                    {"negociateur_email": "a@gti.fr", "honoraires": 500.0, "app_chaine_id": 2}], plage="0-1/2")
+regles["app_registre_dossiers"] = comme_l_api
+g = lec.compter(ctx, {"objet": "dossiers", "filtres": [{"colonne": "etape", "operateur": "egal", "valeur": "vendu"}],
+                      "regrouper_par": "negociateur_email", "somme_de": "honoraires"})
+voir(g["groupes"] == [{"valeur": "a@gti.fr", "nombre": 2, "somme": 1500.0}],
+     "regrouper par négociateur + somme des honoraires sur dossiers (la clé de tri est lue avec)")
+r = lec.chercher(ctx, {"objet": "dossiers", "filtres": [], "colonnes": ["negociateur_email"], "tri": "date_vente", "ordre": "desc", "limite": 5})
+voir("date_vente" in dict(appels[-1]["params"])["select"].split(","), "chercher : la colonne de tri est toujours demandée")
 essais = []
 def froid(p, h):
     essais.append(1)

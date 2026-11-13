@@ -257,3 +257,9 @@ Restent aussi : le témoin avec un compte commercial (personne à nommer).
 - `assistant_lecteur.py` : **une seule nouvelle tentative** quand la base dépasse son délai de 8 s (code 57014) — le registre met 8,4 s au premier appel à froid.
 - Consignes : ventes, compromis, honoraires, « par négociateur », « mes … » → `dossiers` ; le négociateur est celui du bien, à dire dans la réponse ; `transactions` reste le détail étape par étape.
 - Essais : **69 + 59 verts** (dont : lu avec le jeton, « moi », montant comparable, étape inconnue refusée, délai dépassé une fois → repasse, deux fois → échec dit en clair) ; GED **28 + 80**.
+
+**C en ligne le 13/11 à 10:06** (`41a2dfc`, son « Oui, pousse »). Preuve en réel, 3 questions :
+- « Combien de compromis sont en cours ? » → **95**, exact en base (registre, étape compromis).
+- ⛔ « Ventes par négociateur cette année » et « honoraires des ventes 2026 » → **la lecture a échoué**, et l'assistant l'a **dit** (« la lecture des dossiers n'a pas abouti ») au lieu d'inventer. **Cause, reproduite en réel** : sur une fonction, l'API refuse de trier par une colonne qu'on ne lui demande pas (`42703 column record.app_chaine_id does not exist`) ; le compte simple marchait parce qu'il demandait justement la clé. Mes essais ne l'avaient pas vu : le faux serveur acceptait tout.
+- **Corrigé (en local)** : la colonne de tri est toujours demandée (chercher et compter). Le faux serveur des essais refuse maintenant comme l'API. Essais **71 + 59 verts**.
+- Chiffres de référence calculés en base pour la prochaine preuve : ventes 2026 par négociateur du bien (durand@ 35, arnaud.valla@ 19, ribbes@ 18, gentes@ 16, coudert@ 16… 2 sans négociateur), **292 ventes, 2 207 298 € d'honoraires**.
