@@ -105,6 +105,9 @@ from phase2.sync.push_upgrade_to_supabase import (  # noqa: E402
     load_env_files,
 )
 from phase2.contacts import regle_acheteur_proprietaire  # noqa: E402
+# 13/11/2026 : le garde-fou du retrait de masse, ecrit UNE fois et partage avec
+# le registre des mandats. Voir phase2/sync/garde_retrait_de_masse.py.
+from phase2.sync import garde_retrait_de_masse  # noqa: E402
 
 import os  # noqa: E402
 
@@ -477,6 +480,20 @@ def refresh(con: sqlite3.Connection, full: bool = True) -> dict:
                 " WHERE present_in_hektor = 1")
             if (int(r["app_contact_id"]), str(r["hektor_annonce_id"])) not in vus
         ]
+        # ⛔ LE GARDE-FOU, 13/11/2026 -- ICI, ET PAS AILLEURS : la liste est
+        #   calculee, RIEN n'est encore ecrit. Il leve avant le premier UPDATE.
+        #   La garde `if full and vus_ce_run` au-dessus ne protege que du silence
+        #   TOTAL ; celle-ci attrape la lecture PARTIELLE (un seul objet rendu sur
+        #   132 937 passait la premiere et marquait tout le reste absent).
+        # ⚠ Toutes les relations marquees portent aujourd'hui un numero de contact
+        #   Hektor (62 sur 62, mesure du 13/11) : aucune n'est nee dans l'app. Si
+        #   cela change un jour, ne compter ici que les vraies disparitions --
+        #   voir le piege des mandats dans garde_retrait_de_masse.py.
+        garde_retrait_de_masse.verifier(
+            "relations", len(a_marquer),
+            total_vivants=con.execute(
+                "SELECT COUNT(*) FROM app_relation WHERE present_in_hektor = 1"
+            ).fetchone()[0])
         if a_marquer:
             con.executemany(
                 "UPDATE app_relation SET present_in_hektor = 0,"

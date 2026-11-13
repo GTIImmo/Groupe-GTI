@@ -81,6 +81,10 @@ from phase2.sync.push_upgrade_to_supabase import (  # noqa: E402
 
 import os  # noqa: E402
 
+# 13/11/2026 : le garde-fou du retrait de masse, ecrit UNE fois et partage avec
+# le registre des relations. Voir phase2/sync/garde_retrait_de_masse.py.
+from phase2.sync import garde_retrait_de_masse  # noqa: E402
+
 PHASE2_DB = ROOT / "phase2" / "phase2.sqlite"
 HEKTOR_DB = ROOT / "data" / "hektor.sqlite"
 
@@ -910,6 +914,28 @@ def refresh(con: sqlite3.Connection, full: bool = True) -> dict:
         con.execute("CREATE TEMP TABLE IF NOT EXISTS _vus(a TEXT, n TEXT)")
         con.execute("DELETE FROM _vus")
         con.executemany("INSERT INTO _vus(a, n) VALUES (?, ?)", vus_ce_run)
+        # ⛔⛔ LE GARDE-FOU, 13/11/2026 -- ET IL NE COMPTE PAS A L'AVEUGLE.
+        #   On compte d'abord, on decide, on ecrit ensuite : rien n'est encore
+        #   modifie a cet instant.
+        #   ⚠ `hektor_mandat_id IS NOT NULL` EST LE POINT. Sur 568 mandats
+        #     marques absents le 13/11, UN SEUL avait vraiment disparu de Hektor.
+        #     Les 567 autres viennent du REGISTRE LEGAL 2014-2024 et de MODELO :
+        #     ils n'ont jamais ete chez Hektor, ils naissent avec le drapeau a
+        #     false, et ils sont tous entres la meme nuit (28/10 a 14:57).
+        #     Un plafond qui les compterait aurait REFUSE cet import legitime.
+        _a_retirer = con.execute(
+            "SELECT COUNT(*) FROM app_mandat"
+            " WHERE present_in_hektor = 1"
+            "   AND hektor_mandat_id IS NOT NULL"
+            "   AND NOT EXISTS (SELECT 1 FROM _vus v"
+            "                    WHERE v.a = app_mandat.hektor_annonce_id"
+            "                      AND v.n = app_mandat.numero_mandat)"
+        ).fetchone()[0]
+        garde_retrait_de_masse.verifier(
+            "mandats", _a_retirer,
+            total_vivants=con.execute(
+                "SELECT COUNT(*) FROM app_mandat WHERE present_in_hektor = 1"
+            ).fetchone()[0])
         cur = con.execute(
             "UPDATE app_mandat SET present_in_hektor = 0"
             " WHERE present_in_hektor = 1"

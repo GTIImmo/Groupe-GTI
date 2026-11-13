@@ -584,6 +584,24 @@ registre des agences, le chantier de l'autre session.**
 5.1 ⬜ FREDERIC     V1 lire les Apps Script du classeur (10 min) -- BLOQUE P4
 5.2 ⬜ ACCORD       ecrire nos UUID dans la colonne affair_uuid du Sheet
                     ⭐ LE GEL SERT ICI, UNE FOIS -- puis il dort
+                    ⛔⛔ RESERVE POSEE LE 13/11, A LIRE AVANT D'OUVRIR 5.2 :
+                    L'EXPORT DOIT IGNORER LES CHAINES ENTIEREMENT MORTES.
+                      14 chaines (16 transactions) portent un numero de dossier
+                      alors qu'AUCUNE de leurs transactions ne compte encore
+                      (Hektor les a supprimees -- les 18, toutes confirmees une
+                      par une par identifiant le 13/11, avec temoin positif).
+                      Biens : 1970, 8494, 35467, 39607, 39684, 40318, 40519,
+                              43437, 49584, 58979, 61534, 62049, 62097
+                      Le filtre : public.app_affaire_compte_encore(
+                                    hektor_affaire_id, present_in_hektor)
+                      -> n'exporter que les chaines qui ont AU MOINS une
+                         transaction qui compte encore.
+                    ⚠ ET NE RIEN RETIRER EN BASE : l'etiquette est posee sur une
+                      CHAINE entiere, et 2 chaines sont MIXTES (2 transactions
+                      mortes + 5 VIVANTES, biens 47146 et 58932). Retirer
+                      l'etiquette des mortes casserait le numero de 5
+                      transactions valides. « Un numero ne se perd jamais » :
+                      on FILTRE A LA LECTURE, on n'efface pas.
 5.3 ⬜ ACCORD       P4 le routeur : l'app ecrit dans le classeur, par l'uuid
 ```
 
