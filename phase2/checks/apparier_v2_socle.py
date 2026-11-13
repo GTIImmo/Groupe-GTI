@@ -94,6 +94,17 @@ def somme(t):
     return int(round(v)) if v else None
 
 
+# ⭐ LES MOIS FRANCAIS, par leurs QUATRE premieres lettres sans accent : c est
+#   suffisant pour les distinguer tous, et ca absorbe les abreviations du classeur
+#   (« fevr », « sept », « dec. », « aout »).
+_MOIS = {
+    "janv": 1, "jan": 1, "fevr": 2, "fev": 2, "mars": 3, "mar": 3,
+    "avri": 4, "avr": 4, "mai": 5, "juin": 6, "juil": 7, "aout": 8,
+    "sept": 9, "sep": 9, "octo": 10, "oct": 10, "nove": 11, "nov": 11,
+    "dece": 12, "dec": 12,
+}
+
+
 def jour(t) -> str:
     """Une date en AAAA-MM-JJ, ou ''. ⚠ `0000-00-00` et `1990-01-01` sont les
     deux SENTINELLES de Hektor : elles ne valent pas une date."""
@@ -114,6 +125,30 @@ def jour(t) -> str:
             return "%s-%02d-%02d" % (a, int(mo), int(j))
         except ValueError:
             return ""
+    # ⭐⭐⭐ LE FORMAT FRANCAIS LITTERAL -- ajoute le 13/11, et c'est LE DEFAUT LE
+    #   PLUS RENTABLE DE TOUT CE TRAVAIL. Le classeur est saisi a la main et ecrit
+    #   « 9 aout25 », « 24 fevrier25 », « 12 decembre25 », « 1 decembre25 » : jour,
+    #   mois EN FRANCAIS, annee sur deux chiffres, SOUVENT SANS ESPACE avant l annee.
+    #   ⛔ MESURE AVANT CORRECTION : je perdais 13 677 dates sur 31 037 -- 44,1 %.
+    #     C est ce qui faisait taire ma famille « dates » 744 + 648 fois (« moins de
+    #     2 dates », « aucun bien n a 2 dates »).
+    #   ⭐ Trouve en relisant MON PROPRE TABLEAU : la ligne 566 annoncait « 2 dates
+    #     lisibles » alors que le classeur en portait QUATRE.
+    mm = re.match(r"^(\d{1,2})\s*([A-Za-zÀ-ɏ]{3,12})\.?\s*(\d{2,4})\s*$", s)
+    if mm:
+        j, mois, a = mm.groups()
+        n = _MOIS.get(pur(mois)[:4])
+        if n:
+            a = ("20" + a) if len(a) == 2 else a
+            if a not in {"0000", "1990"}:
+                # ⛔ ON VALIDE CONTRE LE CALENDRIER REEL : sans ca, « 32 janvier25 »
+                #   rendait « 2025-01-32 ». Une date impossible est pire qu une date
+                #   absente -- elle se compare, et elle ne tombe jamais juste.
+                try:
+                    import datetime
+                    return datetime.date(int(a), n, int(j)).isoformat()
+                except (ValueError, TypeError):
+                    return ""
     return ""
 
 

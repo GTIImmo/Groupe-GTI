@@ -1,571 +1,483 @@
 ﻿ligne;ID Unique;role;transaction GEL;transaction v2;confiance gel;etage gel;familles v2;quelles familles;comment v2 a choisi;bien du gel;bien de la v2;cas
-3423;SHN6RKDI;compromis;26613;26615;sûre;2 mandat + acquéreur + exclusivité;3;mandat+vendeur+equipe;2e chance (tour 1);52166;52166;DIVERGENT
-3229;0FFZI3NF;offre;18063;26255;sûre;1 mandat seul;2;acquereur+dates;seule du genre;38358;51140;DIVERGENT
-48;BWEF58JV;compromis;7068;7067;sûre;2 mandat + acquéreur;5;mandat+acquereur+vendeur+lieu+equipe;AMBIGU (2 candidats);14383;14383;DIVERGENT
-2597;ANHQ1PK7;compromis;12012;12011;sûre;2 mandat + acquéreur;1;mandat;AMBIGU (3 candidats);24781;24781;DIVERGENT
-4718;a8aaeb2b;compromis;998;999;à valider;9 sans mandat (acquéreur + vendeur) + exclusivité;3;acquereur+vendeur+equipe;2e chance (tour 1);1970;1970;DIVERGENT
-3518;DAMOO7OU;offre;23995;23996;sûre;3 mandat + date;3;mandat+lieu+equipe;par le nom;47557;47557;DIVERGENT
-144;UY443H27;compromis;4269;4267;sûre;3 mandat + date;5;mandat+acquereur+vendeur+dates+lieu;AMBIGU (3 candidats);9483;9483;DIVERGENT
-1192;5VZDGQC3;compromis;29004;15059;sûre;3 mandat + date;4;mandat+dates+lieu+equipe;AMBIGU (2 candidats);31045;31045;DIVERGENT
-4393;c0a73edd;vente;28613;28616;bonne;10 acquéreur + date + montant (mandat différent);3;acquereur+vendeur+dates;seule du genre;59133;59136;DIVERGENT
-3961;OXQSBZ9V;compromis;17427;17428;sûre;5 mandat + vendeur;1;mandat;2e chance (tour 1);37184;37184;DIVERGENT
-4754;5a956cad;offre;30776;30684;bonne;6 mandat + prix;5;mandat+acquereur+vendeur+lieu+equipe;AMBIGU (2 candidats);62905;62905;DIVERGENT
-3830;B3G8RM6O;compromis;7685;7686;sûre;2 mandat + acquéreur;2;mandat+lieu;2e chance (tour 1);15606;15606;DIVERGENT
-1932;AYIHPHF5;compromis;14111;14109;sûre;2 mandat + acquéreur;1;mandat;date exacte;28653;28653;DIVERGENT
-3615;8SZDU4F5;compromis;19070;19069;sûre;3 mandat + date;5;mandat+acquereur+vendeur+lieu+equipe;AMBIGU (2 candidats);39745;39745;DIVERGENT
-2970;5ELT15Q7;compromis;14148;14147;sûre;3 mandat + date;1;mandat;AMBIGU (2 candidats);28677;28677;DIVERGENT
-4762;45225170;offre;1001361;30712;sûre;1 mandat seul;4;mandat+acquereur+vendeur+lieu;AMBIGU (3 candidats);61672;61672;DIVERGENT
-1435;JI5UQDSB;compromis;7686;7685;sûre;2 mandat + acquéreur;2;mandat+lieu;AMBIGU (2 candidats);15606;15606;DIVERGENT
-4032;0V3UQ41Y;compromis;26034;26033;sûre;4 mandat + avancement;3;mandat+vendeur+lieu;AMBIGU (2 candidats);50400;50400;DIVERGENT
-196;ZLY1CLKF;compromis;2167;2166;sûre;2 mandat + acquéreur;4;mandat+acquereur+vendeur+equipe;AMBIGU (2 candidats);5620;5620;DIVERGENT
-123;G8YSAI5Z;vente;1000250;1000249;bonne;7 mandat + négociateur;5;mandat+acquereur+vendeur+dates+equipe;AMBIGU (2 candidats);50119;50119;DIVERGENT
-4625;c6c8bc29;offre;28763;28762;sûre;2 mandat + acquéreur;4;mandat+acquereur+vendeur+equipe;AMBIGU (2 candidats);59610;59610;DIVERGENT
-3946;GYGF5F1X;compromis;4669;4670;sûre;3 mandat + date;1;mandat;2e chance (tour 1);10043;10043;DIVERGENT
-4113;9UO5NUN6;offre;11958;11959;sûre;5 mandat + vendeur;3;mandat+dates+equipe;date exacte;24733;24733;DIVERGENT
-3390;A6H4MA4O;offre;15211;14609;sûre;1 mandat seul;2;vendeur+dates;seule du genre;31561;29784;DIVERGENT
-3907;E169MKW5;offre;22217;22216;sûre;2 mandat + acquéreur;3;mandat+vendeur+lieu;AMBIGU (2 candidats);44567;44567;DIVERGENT
-3867;NSSF8LGG;compromis;260;258;sûre;2 mandat + acquéreur;3;mandat+lieu+equipe;2e chance (tour 1);822;822;DIVERGENT
-3477;427UDDSF;offre;3648;3649;sûre;3 mandat + date;3;mandat+lieu+equipe;par le nom;8395;8395;DIVERGENT
-3446;1W9FJJLB;compromis;2166;2167;sûre;5 mandat + vendeur;3;mandat+dates+equipe;2e chance (tour 1);5620;5620;DIVERGENT
-4744;2dfa6ef3;offre;30692;30656;sûre;4 mandat + avancement;3;mandat+lieu+equipe;AMBIGU (2 candidats);62802;62802;DIVERGENT
-4486;87eb399e;compromis;999;998;sûre;4 mandat + avancement;5;mandat+acquereur+vendeur+dates+equipe;AMBIGU (2 candidats);1970;1970;DIVERGENT
-3370;HFXW07KA;compromis;23085;21632;sûre;1 mandat seul;3;acquereur+vendeur+dates;seule du genre;45946;43179;DIVERGENT
-4026;2TF9PZVJ;compromis;16182;16183;sûre;2 mandat + acquéreur;1;mandat;2e chance (tour 1);33437;33437;DIVERGENT
-933;8FXDZW12;offre;4390;4387;sûre;2 mandat + acquéreur;1;mandat;AMBIGU (4 candidats);9629;9629;DIVERGENT
-3229;0FFZI3NF;vente;18064;26256;sûre;1 mandat seul;2;acquereur+dates;seule du genre;38358;51140;DIVERGENT
-4510;0bc98552;offre;21806;21805;sûre;4 mandat + avancement;5;mandat+acquereur+vendeur+dates+lieu;AMBIGU (2 candidats);43437;43437;DIVERGENT
-2062;M8QJWMBM;compromis;17423;17422;sûre;2 mandat + acquéreur;2;mandat+dates;AMBIGU (2 candidats);37172;37172;DIVERGENT
-4391;045ecde7;offre;28559;28558;sûre;1 mandat seul;6;mandat+acquereur+vendeur+dates+lieu+equipe;AMBIGU (2 candidats);58932;58932;DIVERGENT
-4331;3250892d;compromis;25700;25699;sûre;4 mandat + avancement;6;mandat+acquereur+vendeur+dates+lieu+equipe;AMBIGU (2 candidats);49584;49584;DIVERGENT
-513;YPNDHILU;compromis;1060;1059;sûre;2 mandat + acquéreur;2;mandat+equipe;AMBIGU (2 candidats);2208;2208;DIVERGENT
-3826;JL6I6JDG;offre;4633;4763;bonne;10 acquéreur + date + montant (mandat différent);1;lieu;seule du genre;9965;10195;DIVERGENT
-4049;39USDYL2;compromis;17422;17423;sûre;3 mandat + date;2;mandat+lieu;2e chance (tour 1);37172;37172;DIVERGENT
-3531;NTOMOIK6;compromis;9979;9981;sûre;2 mandat + acquéreur;3;mandat+lieu+equipe;2e chance (tour 1);21253;21253;DIVERGENT
-238;HOPCBVKM;compromis;11;10;bonne;6 mandat + prix;6;mandat+acquereur+vendeur+dates+lieu+equipe;AMBIGU (2 candidats);36;36;DIVERGENT
-4393;c0a73edd;compromis;28611;28614;bonne;10 acquéreur + date + montant (mandat différent);3;acquereur+vendeur+dates;seule du genre;59133;59136;DIVERGENT
-3961;OXQSBZ9V;offre;17430;17431;sûre;5 mandat + vendeur;1;mandat;par le nom;37184;37184;DIVERGENT
-3991;NEFHS7JI;compromis;26395;26394;sûre;4 mandat + avancement;1;mandat;AMBIGU (2 candidats);51640;51640;DIVERGENT
-430;GQCBSQNY;vente;27142;27141;sûre;4 mandat + avancement;4;mandat+acquereur+dates+lieu;AMBIGU (2 candidats);53342;53342;DIVERGENT
-544;F6XBD2IU;compromis;1161;1160;sûre;3 mandat + date;5;mandat+acquereur+dates+lieu+equipe;AMBIGU (2 candidats);2629;2629;DIVERGENT
-3988;3W10AEIK;offre;4747;4748;sûre;5 mandat + vendeur;3;mandat+dates+lieu;date exacte;10165;10165;DIVERGENT
-3128;KTZJRCR2;compromis;16144;16143;sûre;4 mandat + avancement;2;mandat+equipe;AMBIGU (2 candidats);33255;33255;DIVERGENT
-2842;JCDBTLN1;offre;12039;12038;sûre;3 mandat + date;2;mandat+dates;AMBIGU (2 candidats);24802;24802;DIVERGENT
-1542;ZMQZSE9Q;compromis;4670;4669;sûre;2 mandat + acquéreur;1;mandat;AMBIGU (2 candidats);10043;10043;DIVERGENT
-3390;A6H4MA4O;vente;15212;14610;sûre;1 mandat seul;2;vendeur+dates;seule du genre;31561;29784;DIVERGENT
-18;7C1ZQYFL;compromis;30;29;sûre;2 mandat + acquéreur;4;mandat+acquereur+vendeur+equipe;AMBIGU (2 candidats);61;61;DIVERGENT
-3619;RAIL6A59;offre;14936;14937;sûre;2 mandat + acquéreur;4;mandat+vendeur+lieu+equipe;2e chance (tour 1);30698;30698;DIVERGENT
-3169;QL70KV8I;compromis;12567;12566;sûre;2 mandat + acquéreur;2;mandat+acquereur;AMBIGU (2 candidats);26131;26131;DIVERGENT
-3958;E9GL6MUS;offre;11415;11414;sûre;5 mandat + vendeur;3;mandat+dates+lieu;date exacte;24119;24119;DIVERGENT
-3370;HFXW07KA;offre;23086;21633;sûre;1 mandat seul;3;acquereur+vendeur+dates;seule du genre;45946;43179;DIVERGENT
-4513;6095c819;compromis;28809;28808;sûre;4 mandat + avancement;5;mandat+acquereur+vendeur+dates+equipe;AMBIGU (2 candidats);61534;61534;DIVERGENT
-3229;0FFZI3NF;compromis;18062;26254;sûre;1 mandat seul;2;acquereur+dates;seule du genre;38358;51140;DIVERGENT
-2055;V467T6XQ;compromis;11496;11495;sûre;2 mandat + acquéreur;3;mandat+dates+lieu;AMBIGU (2 candidats);24194;24194;DIVERGENT
-3492;V0IAZOO7;compromis;9981;9979;sûre;2 mandat + acquéreur;3;mandat+lieu+equipe;AMBIGU (3 candidats);21253;21253;DIVERGENT
-4615;0be40a45;offre;28918;28917;sûre;2 mandat + acquéreur;5;mandat+acquereur+vendeur+dates+equipe;AMBIGU (2 candidats);62097;62097;DIVERGENT
 3496;9HLRYNLE;compromis;19069;19070;sûre;2 mandat + acquéreur;3;mandat+lieu+equipe;2e chance (tour 1);39745;39745;DIVERGENT
-541;3X3UPF1Q;compromis;4509;4508;sûre;2 mandat + acquéreur;3;mandat+vendeur+lieu;AMBIGU (3 candidats);9780;9780;DIVERGENT
-3544;AHKQI7MX;compromis;1059;1060;sûre;3 mandat + date;2;mandat+equipe;2e chance (tour 1);2208;2208;DIVERGENT
-4576;14fdb07f;compromis;27285;27284;sûre;2 mandat + acquéreur;5;mandat+acquereur+vendeur+lieu+equipe;AMBIGU (2 candidats);53512;53512;DIVERGENT
-4137;M986YBYT;compromis;11495;11496;sûre;2 mandat + acquéreur;1;mandat;2e chance (tour 1);24194;24194;DIVERGENT
-712;AN4BWR9Q;offre;14937;14936;sûre;3 mandat + date;5;mandat+vendeur+dates+lieu+equipe;AMBIGU (2 candidats);30698;30698;DIVERGENT
-529;GWAP2ROG;compromis;19620;19619;sûre;3 mandat + date;4;mandat+dates+lieu+equipe;AMBIGU (2 candidats);40684;40684;DIVERGENT
-4674;fa06e4e5;offre;28931;28930;sûre;2 mandat + acquéreur;3;mandat+acquereur+lieu;date exacte;62311;62311;DIVERGENT
-2086;Z2FX1C7S;compromis;26033;26034;sûre;2 mandat + acquéreur;2;mandat+lieu;2e chance (tour 1);50400;50400;DIVERGENT
-4393;c0a73edd;offre;28612;28615;bonne;10 acquéreur + date + montant (mandat différent);3;acquereur+vendeur+dates;seule du genre;59133;59136;DIVERGENT
+3229;0FFZI3NF;compromis;18062;26254;sûre;1 mandat seul;2;acquereur+dates;seule du genre;38358;51140;DIVERGENT
+3492;V0IAZOO7;compromis;9981;9979;sûre;2 mandat + acquéreur;3;mandat+lieu+equipe;AMBIGU (3 candidats);21253;21253;DIVERGENT
 1758;KT0601S6;offre;24291;24290;sûre;2 mandat + acquéreur;4;mandat+vendeur+dates+equipe;AMBIGU (2 candidats);47989;47989;DIVERGENT
-4586;545cf27f;offre;28762;28763;sûre;2 mandat + acquéreur;4;mandat+acquereur+vendeur+equipe;2e chance (tour 1);59610;59610;DIVERGENT
-3962;VEP1DVQ4;offre;7780;7781;sûre;5 mandat + vendeur;3;mandat+dates+lieu;date exacte;15722;15722;DIVERGENT
-3430;MIO9L8C9;compromis;7067;7068;sûre;2 mandat + acquéreur;2;mandat+equipe;2e chance (tour 1);14383;14383;DIVERGENT
-4330;dfb32f2b;compromis;19544;19543;sûre;4 mandat + avancement;5;mandat+acquereur+vendeur+lieu+equipe;AMBIGU (2 candidats);40519;40519;DIVERGENT
-3991;NEFHS7JI;offre;26397;26396;sûre;4 mandat + avancement;1;mandat;AMBIGU (2 candidats);51640;51640;DIVERGENT
-3153;6VBX4YLW;compromis;7963;7962;sûre;2 mandat + acquéreur;3;mandat+acquereur+dates;AMBIGU (2 candidats);16006;16006;DIVERGENT
-117;W331X302;compromis;27284;27285;sûre;2 mandat + acquéreur;5;mandat+acquereur+vendeur+lieu+equipe;2e chance (tour 1);53512;53512;DIVERGENT
-3993;Z4D3CCMF;offre;22216;22217;sûre;2 mandat + acquéreur + exclusivité;3;mandat+vendeur+lieu;2e chance (tour 1);44567;44567;DIVERGENT
-3654;TZPT6V9Y;compromis;4508;4509;sûre;3 mandat + date;2;mandat+lieu;2e chance (tour 1);9780;9780;DIVERGENT
-3540;FLPUUSY3;offre;1876;1877;sûre;3 mandat + date;1;mandat;par le nom;5262;5262;DIVERGENT
+4674;fa06e4e5;offre;28931;28930;sûre;2 mandat + acquéreur;3;mandat+acquereur+lieu;date exacte;62311;62311;DIVERGENT
+4576;14fdb07f;compromis;27285;27284;sûre;2 mandat + acquéreur;5;mandat+acquereur+vendeur+lieu+equipe;AMBIGU (2 candidats);53512;53512;DIVERGENT
 3390;A6H4MA4O;compromis;15210;14608;sûre;1 mandat seul;2;vendeur+dates;seule du genre;31561;29784;DIVERGENT
-3414;WW88Z2AC;compromis;26615;26613;bonne;6 mandat + prix;3;mandat+vendeur+equipe;AMBIGU (3 candidats);52166;52166;DIVERGENT
-1140;9CQ325R6;compromis;24158;24157;sûre;4 mandat + avancement;3;mandat+dates+equipe;AMBIGU (2 candidats);47815;47815;DIVERGENT
-1524;INRQQSKA;compromis;16183;16182;sûre;2 mandat + acquéreur;2;mandat+equipe;AMBIGU (2 candidats);33437;33437;DIVERGENT
+4330;dfb32f2b;compromis;19544;19543;sûre;4 mandat + avancement;5;mandat+acquereur+vendeur+lieu+equipe;AMBIGU (2 candidats);40519;40519;DIVERGENT
+3531;NTOMOIK6;compromis;9979;9981;sûre;2 mandat + acquéreur;3;mandat+lieu+equipe;2e chance (tour 1);21253;21253;DIVERGENT
+3229;0FFZI3NF;offre;18063;26255;sûre;1 mandat seul;2;acquereur+dates;seule du genre;38358;51140;DIVERGENT
+4393;c0a73edd;offre;28612;28615;bonne;10 acquéreur + date + montant (mandat différent);3;acquereur+vendeur+dates;seule du genre;59133;59136;DIVERGENT
+2842;JCDBTLN1;offre;12039;12038;sûre;3 mandat + date;2;mandat+dates;AMBIGU (2 candidats);24802;24802;DIVERGENT
+3390;A6H4MA4O;offre;15211;14609;sûre;1 mandat seul;2;vendeur+dates;seule du genre;31561;29784;DIVERGENT
+3962;VEP1DVQ4;offre;7780;7781;sûre;5 mandat + vendeur;3;mandat+dates+lieu;date exacte;15722;15722;DIVERGENT
 3370;HFXW07KA;vente;23087;21634;sûre;1 mandat seul;3;acquereur+vendeur+dates;seule du genre;45946;43179;DIVERGENT
-933;8FXDZW12;compromis;4386;4385;sûre;2 mandat + acquéreur;1;mandat;AMBIGU (2 candidats);9629;9629;DIVERGENT
+4744;2dfa6ef3;offre;30692;30656;sûre;4 mandat + avancement;3;mandat+lieu+equipe;AMBIGU (2 candidats);62802;62802;DIVERGENT
+3988;3W10AEIK;offre;4747;4748;sûre;5 mandat + vendeur;3;mandat+dates+lieu;date exacte;10165;10165;DIVERGENT
+117;W331X302;compromis;27284;27285;sûre;2 mandat + acquéreur;5;mandat+acquereur+vendeur+lieu+equipe;2e chance (tour 1);53512;53512;DIVERGENT
 4510;0bc98552;compromis;21804;21803;sûre;4 mandat + avancement;5;mandat+acquereur+vendeur+dates+lieu;AMBIGU (2 candidats);43437;43437;DIVERGENT
-2139;ESVJUR12;compromis;24650;24649;sûre;3 mandat + date;2;mandat+equipe;AMBIGU (2 candidats);48370;48370;DIVERGENT
-3378;5H70KQZA;vente;;14228;;;1;dates;seule du genre;;28918;MOI SEUL
-4105;0IS41BM1;vente;;24515;;;3;mandat+dates+equipe;seule du genre;;48249;MOI SEUL
-3939;YKSL5L2U;compromis;;19690;;;5;mandat+vendeur+dates+lieu+equipe;date exacte;;40792;MOI SEUL
-67;I847SPN3;vente;;3701;;;5;mandat+acquereur+vendeur+lieu+equipe;seule du genre;;8494;MOI SEUL
-3969;XCAUACUJ;compromis;;20492;;;4;mandat+dates+lieu+equipe;date exacte;;41833;MOI SEUL
-3990;Z3DYDC4X;compromis;;14111;;;2;mandat+dates;date exacte;;28653;MOI SEUL
-1003;AOPBUAOJ;offre;;126;;;3;mandat+lieu+equipe;seule du genre;;378;MOI SEUL
-3498;O1099YC0;vente;;6342;;;4;mandat+acquereur+lieu+equipe;seule du genre;;12246;MOI SEUL
-3719;7PTB8Z3M;compromis;;2533;;;4;mandat+dates+lieu+equipe;date exacte;;6184;MOI SEUL
-3860;6NOJ686I;offre;;11657;;;4;mandat+dates+lieu+equipe;date exacte;;24479;MOI SEUL
-3826;JL6I6JDG;compromis;;4762;;;1;lieu;seule du genre;;10195;MOI SEUL
-1974;978V88C7;offre;;24466;;;5;mandat+acquereur+dates+lieu+equipe;seule du genre;;48169;MOI SEUL
-3989;I0K9TUCT;compromis;;26023;;;2;mandat+lieu;AMBIGU (2 candidats);;50356;MOI SEUL
-3439;7NI4WKV5;compromis;;22;;;4;mandat+vendeur+dates+lieu;date exacte;;53;MOI SEUL
-1282;RF9KYWSY;compromis;;24380;;;5;mandat+acquereur+dates+lieu+equipe;seule du genre;;48093;MOI SEUL
-4131;UTLG66LE;offre;;5055;;;1;mandat;par le nom;;10527;MOI SEUL
-4016;L2B2WGCF;compromis;;14110;;;1;mandat;2e chance (tour 1);;28653;MOI SEUL
-286;9Q0FHAKK;offre;;3648;;;2;vendeur+dates;par le nom;;8395;MOI SEUL
-3461;Q3KTCMVB;compromis;;14939;;;3;mandat+lieu+equipe;AMBIGU (2 candidats);;30717;MOI SEUL
+2597;ANHQ1PK7;compromis;12012;12011;sûre;2 mandat + acquéreur;2;mandat+dates;AMBIGU (3 candidats);24781;24781;DIVERGENT
+3731;JAW5U9OF;offre;17026;17025;sûre;4 mandat + avancement;3;mandat+dates+lieu;2e chance (tour 1);36165;36165;DIVERGENT
+4486;87eb399e;compromis;999;998;sûre;4 mandat + avancement;5;mandat+acquereur+vendeur+dates+equipe;AMBIGU (2 candidats);1970;1970;DIVERGENT
+4510;0bc98552;offre;21806;21805;sûre;4 mandat + avancement;5;mandat+acquereur+vendeur+dates+lieu;AMBIGU (2 candidats);43437;43437;DIVERGENT
+4113;9UO5NUN6;offre;11958;11959;sûre;5 mandat + vendeur;3;mandat+dates+equipe;date exacte;24733;24733;DIVERGENT
+3991;NEFHS7JI;compromis;26395;26394;sûre;4 mandat + avancement;1;mandat;AMBIGU (2 candidats);51640;51640;DIVERGENT
+48;BWEF58JV;compromis;7068;7067;sûre;2 mandat + acquéreur;5;mandat+acquereur+vendeur+lieu+equipe;AMBIGU (2 candidats);14383;14383;DIVERGENT
+4762;45225170;offre;1001361;30712;sûre;1 mandat seul;4;mandat+acquereur+vendeur+lieu;AMBIGU (3 candidats);61672;61672;DIVERGENT
+238;HOPCBVKM;compromis;11;10;bonne;6 mandat + prix;6;mandat+acquereur+vendeur+dates+lieu+equipe;AMBIGU (2 candidats);36;36;DIVERGENT
+3991;NEFHS7JI;offre;26397;26396;sûre;4 mandat + avancement;1;mandat;AMBIGU (2 candidats);51640;51640;DIVERGENT
+4393;c0a73edd;vente;28613;28616;bonne;10 acquéreur + date + montant (mandat différent);3;acquereur+vendeur+dates;seule du genre;59133;59136;DIVERGENT
+3826;JL6I6JDG;offre;4633;4763;bonne;10 acquéreur + date + montant (mandat différent);1;lieu;seule du genre;9965;10195;DIVERGENT
+18;7C1ZQYFL;compromis;30;29;sûre;2 mandat + acquéreur;4;mandat+acquereur+vendeur+equipe;AMBIGU (2 candidats);61;61;DIVERGENT
+4625;c6c8bc29;offre;28763;28762;sûre;2 mandat + acquéreur;5;mandat+acquereur+vendeur+dates+equipe;AMBIGU (2 candidats);59610;59610;DIVERGENT
+3946;GYGF5F1X;compromis;4669;4670;sûre;3 mandat + date;1;mandat;2e chance (tour 1);10043;10043;DIVERGENT
+4331;3250892d;compromis;25700;25699;sûre;4 mandat + avancement;6;mandat+acquereur+vendeur+dates+lieu+equipe;AMBIGU (2 candidats);49584;49584;DIVERGENT
+3370;HFXW07KA;compromis;23085;21632;sûre;1 mandat seul;3;acquereur+vendeur+dates;seule du genre;45946;43179;DIVERGENT
+3540;FLPUUSY3;offre;1876;1877;sûre;3 mandat + date;2;mandat+dates;date exacte;5262;5262;DIVERGENT
+123;G8YSAI5Z;vente;1000250;1000249;bonne;7 mandat + négociateur;5;mandat+acquereur+vendeur+dates+equipe;AMBIGU (2 candidats);50119;50119;DIVERGENT
+3477;427UDDSF;offre;3648;3649;sûre;3 mandat + date;4;mandat+dates+lieu+equipe;date exacte;8395;8395;DIVERGENT
+4513;6095c819;compromis;28809;28808;sûre;4 mandat + avancement;5;mandat+acquereur+vendeur+dates+equipe;AMBIGU (2 candidats);61534;61534;DIVERGENT
+3229;0FFZI3NF;vente;18064;26256;sûre;1 mandat seul;2;acquereur+dates;seule du genre;38358;51140;DIVERGENT
+4586;545cf27f;offre;28762;28763;sûre;2 mandat + acquéreur;4;mandat+acquereur+vendeur+equipe;2e chance (tour 1);59610;59610;DIVERGENT
+3390;A6H4MA4O;vente;15212;14610;sûre;1 mandat seul;2;vendeur+dates;seule du genre;31561;29784;DIVERGENT
+1932;AYIHPHF5;compromis;14111;14109;sûre;2 mandat + acquéreur;2;mandat+dates;date exacte;28653;28653;DIVERGENT
+4718;a8aaeb2b;compromis;998;999;à valider;9 sans mandat (acquéreur + vendeur) + exclusivité;3;acquereur+vendeur+equipe;2e chance (tour 1);1970;1970;DIVERGENT
+3430;MIO9L8C9;compromis;7067;7068;sûre;2 mandat + acquéreur;2;mandat+equipe;2e chance (tour 1);14383;14383;DIVERGENT
+1542;ZMQZSE9Q;compromis;4670;4669;sûre;2 mandat + acquéreur;2;mandat+dates;AMBIGU (2 candidats);10043;10043;DIVERGENT
+4393;c0a73edd;compromis;28611;28614;bonne;10 acquéreur + date + montant (mandat différent);3;acquereur+vendeur+dates;seule du genre;59133;59136;DIVERGENT
+3615;8SZDU4F5;compromis;19070;19069;sûre;3 mandat + date;5;mandat+acquereur+vendeur+lieu+equipe;AMBIGU (2 candidats);39745;39745;DIVERGENT
+3867;NSSF8LGG;compromis;260;258;sûre;2 mandat + acquéreur;3;mandat+lieu+equipe;2e chance (tour 1);822;822;DIVERGENT
+3370;HFXW07KA;offre;23086;21633;sûre;1 mandat seul;3;acquereur+vendeur+dates;seule du genre;45946;43179;DIVERGENT
+4391;045ecde7;offre;28559;28558;sûre;1 mandat seul;6;mandat+acquereur+vendeur+dates+lieu+equipe;AMBIGU (2 candidats);58932;58932;DIVERGENT
+3961;OXQSBZ9V;offre;17430;17431;sûre;5 mandat + vendeur;1;mandat;date exacte;37184;37184;DIVERGENT
+4615;0be40a45;offre;28918;28917;sûre;2 mandat + acquéreur;5;mandat+acquereur+vendeur+dates+equipe;AMBIGU (2 candidats);62097;62097;DIVERGENT
+4754;5a956cad;offre;30776;30684;bonne;6 mandat + prix;5;mandat+acquereur+vendeur+lieu+equipe;AMBIGU (2 candidats);62905;62905;DIVERGENT
+1140;9CQ325R6;compromis;24158;24157;sûre;4 mandat + avancement;3;mandat+dates+equipe;AMBIGU (2 candidats);47815;47815;DIVERGENT
+3958;E9GL6MUS;offre;11415;11414;sûre;5 mandat + vendeur;3;mandat+dates+lieu;date exacte;24119;24119;DIVERGENT
+3518;DAMOO7OU;offre;23995;23996;sûre;3 mandat + date;4;mandat+dates+lieu+equipe;date exacte;47557;47557;DIVERGENT
+3797;U39MLAJD;compromis;;15059;;;4;mandat+dates+lieu+equipe;date exacte;;31045;MOI SEUL
+3323;2U5QPKRC;compromis;;17769;;;1;dates;seule du genre;;37875;MOI SEUL
+1902;EGR8KXOL;vente;;6559;;;4;mandat+dates+lieu+equipe;seule du genre;;12728;MOI SEUL
+1857;ZETH4WI9;offre;;24372;;;3;dates+lieu+equipe;seule du genre;;48085;MOI SEUL
+4745;bbbaae80;compromis;;30791;;;5;mandat+acquereur+vendeur+lieu+equipe;date exacte;;61844;MOI SEUL
+1492;VVGMC0QW;offre;;24342;;;3;dates+lieu+equipe;seule du genre;;48031;MOI SEUL
+1140;9CQ325R6;offre;;24160;;;3;mandat+dates+equipe;date exacte;;47815;MOI SEUL
+4184;4b0f1b1c;offre;;29024;;;5;mandat+acquereur+vendeur+lieu+equipe;seule du genre;;42976;MOI SEUL
+3378;5H70KQZA;offre;;14227;;;1;dates;date exacte;;28918;MOI SEUL
+2589;ASQO7HID;offre;;17505;;;3;mandat+dates+equipe;par le nom;;37344;MOI SEUL
+4126;Z6P7KE5R;compromis;;1335;;;1;mandat;2e chance (tour 1);;3481;MOI SEUL
+4037;DN5U3GER;compromis;;7450;;;2;mandat+lieu;2e chance (tour 1);;15087;MOI SEUL
+123;G8YSAI5Z;compromis;;1000132;;;5;mandat+acquereur+vendeur+dates+equipe;AMBIGU (2 candidats);;50119;MOI SEUL
+67;I847SPN3;compromis;;3698;;;5;mandat+acquereur+vendeur+lieu+equipe;AMBIGU (2 candidats);;8494;MOI SEUL
+2780;91IHSGNC;offre;;4782;;;2;vendeur+dates;seule du genre;;10229;MOI SEUL
+3991;NEFHS7JI;vente;;26398;;;1;mandat;seule du genre;;51640;MOI SEUL
+3938;61OW86CS;offre;;19130;;;3;mandat+lieu+equipe;seule du genre;;39836;MOI SEUL
+3627;5H9BOKWJ;compromis;;2507;;;3;mandat+dates+equipe;date exacte;;6151;MOI SEUL
+2559;QXDW8EQA;vente;;1029;;;1;dates;seule du genre;;2070;MOI SEUL
 3813;73FOXX2A;compromis;;16841;;;4;mandat+vendeur+dates+equipe;date exacte;;35681;MOI SEUL
-4094;QALNGM20;vente;;24498;;;4;mandat+dates+lieu+equipe;seule du genre;;48235;MOI SEUL
-2138;XH5KZ9LI;compromis;;24588;;;3;mandat+dates+lieu;seule du genre;;48311;MOI SEUL
-3574;9FP3UICY;compromis;;4268;;;2;mandat+acquereur;2e chance (tour 1);;9483;MOI SEUL
-3576;MAB7DN65;compromis;;7646;;;4;mandat+acquereur+dates+lieu;date exacte;;15517;MOI SEUL
-3756;TQYCQNY4;compromis;;3719;;;3;mandat+dates+equipe;date exacte;;8544;MOI SEUL
-2665;I3TFR2KG;offre;;24619;;;2;dates+equipe;seule du genre;;48340;MOI SEUL
+3483;LNWLBVKG;compromis;;17203;;;3;mandat+acquereur+lieu;2e chance (tour 1);;36471;MOI SEUL
+4067;CITFQGOB;compromis;;16378;;;3;mandat+acquereur+equipe;2e chance (tour 1);;34066;MOI SEUL
+4484;14853166;offre;;4201;;;4;mandat+acquereur+vendeur+dates;seule du genre;;9371;MOI SEUL
+4695;d77d9ae1;compromis;;30780;;;4;mandat+acquereur+vendeur+dates;seule du genre;;11854;MOI SEUL
+4790;d7cbb8fa;offre;;30806;;;3;mandat+acquereur+equipe;seule du genre;;63231;MOI SEUL
+4794;c6e5299a;offre;;30816;;;4;mandat+acquereur+lieu+equipe;seule du genre;;58958;MOI SEUL
+3697;LKBO1TOH;compromis;;4289;;;2;mandat+dates;date exacte;;9510;MOI SEUL
+3574;9FP3UICY;compromis;;4267;;;2;mandat+acquereur;AMBIGU (3 candidats);;9483;MOI SEUL
+3999;HHQZC2QP;compromis;;4649;;;1;mandat;AMBIGU (3 candidats);;9993;MOI SEUL
+2774;J6RGX0CQ;compromis;;4928;;;1;dates;seule du genre;;10395;MOI SEUL
+4126;Z6P7KE5R;offre;;1337;;;1;mandat;date exacte;;3481;MOI SEUL
+4437;1cf326f1;offre;;8883;;;6;mandat+acquereur+vendeur+dates+lieu+equipe;seule du genre;;17640;MOI SEUL
+4190;45545ae2;offre;;19567;;;6;mandat+acquereur+vendeur+dates+lieu+equipe;seule du genre;;40590;MOI SEUL
+2272;6LM8A6QK;offre;;11760;;;3;mandat+dates+lieu;seule du genre;;24544;MOI SEUL
 238;HOPCBVKM;vente;;13;;;6;mandat+acquereur+vendeur+dates+lieu+equipe;seule du genre;;36;MOI SEUL
-3670;JBMVVF98;vente;;27341;;;5;mandat+vendeur+dates+lieu+equipe;seule du genre;;53560;MOI SEUL
+3498;O1099YC0;vente;;6342;;;4;mandat+acquereur+lieu+equipe;seule du genre;;12246;MOI SEUL
+4119;ZZ5WKMWM;compromis;;11204;;;1;mandat;AMBIGU (2 candidats);;23562;MOI SEUL
+829;33O2BWCL;vente;;4296;;;3;vendeur+dates+lieu;seule du genre;;9522;MOI SEUL
+3736;S3J2JV0O;compromis;;200;;;4;mandat+dates+lieu+equipe;date exacte;;557;MOI SEUL
+3743;YQG8CN5T;compromis;;19576;;;3;mandat+lieu+equipe;2e chance (tour 1);;40600;MOI SEUL
+3874;KOYNCSYB;compromis;;22087;;;4;mandat+dates+lieu+equipe;date exacte;;44308;MOI SEUL
+692;7IHI7YTJ;compromis;;4234;;;2;dates+lieu;seule du genre;;9412;MOI SEUL
+4067;CITFQGOB;offre;;16383;;;3;mandat+acquereur+equipe;date exacte;;34066;MOI SEUL
+4370;05e8ddb5;offre;;14928;;;5;mandat+acquereur+vendeur+lieu+equipe;seule du genre;;30678;MOI SEUL
+3713;U0GQ3KTO;compromis;;4385;;;1;mandat;AMBIGU (2 candidats);;9629;MOI SEUL
+2485;EJN79TJ1;compromis;;27712;;;2;dates+equipe;seule du genre;;53953;MOI SEUL
+3856;T2GZOY5O;compromis;;20073;;;4;mandat+dates+lieu+equipe;date exacte;;41467;MOI SEUL
+579;72GQRHVB;vente;;6393;;;2;vendeur+dates;seule du genre;;12311;MOI SEUL
+4487;306641a4;offre;;28685;;;6;mandat+acquereur+vendeur+dates+lieu+equipe;seule du genre;;59338;MOI SEUL
+4625;c6c8bc29;vente;;30819;;;5;mandat+acquereur+vendeur+dates+equipe;seule du genre;;59610;MOI SEUL
+4157;F5GA770R;compromis;;27679;;;3;mandat+dates+equipe;date exacte;;53940;MOI SEUL
+589;6FQO29C8;vente;;19133;;;1;dates;seule du genre;;39845;MOI SEUL
+453;PVRG1SNH;compromis;;1868;;;3;vendeur+dates+equipe;seule du genre;;5255;MOI SEUL
+2774;J6RGX0CQ;offre;;4929;;;1;dates;seule du genre;;10395;MOI SEUL
+3900;RGCEC677;vente;;4546;;;4;mandat+acquereur+vendeur+lieu;seule du genre;;9877;MOI SEUL
+4552;c67855b1;compromis;;25846;;;3;acquereur+vendeur+equipe;seule du genre;;49852;MOI SEUL
+3661;JYOLFY1A;compromis;;19074;;;3;mandat+dates+lieu;date exacte;;39752;MOI SEUL
+3263;CS38OO8R;compromis;;27984;;;1;dates;seule du genre;;54400;MOI SEUL
+2914;ESMCO1NC;vente;;6590;;;1;dates;seule du genre;;12837;MOI SEUL
+2138;XH5KZ9LI;compromis;;24588;;;3;mandat+dates+lieu;seule du genre;;48311;MOI SEUL
+3328;JL8GV7RQ;vente;;15170;;;1;dates;seule du genre;;31290;MOI SEUL
+3911;JRN2I7TM;compromis;;27445;;;4;mandat+dates+lieu+equipe;date exacte;;53678;MOI SEUL
+4001;MEWRMGTU;vente;;24415;;;5;mandat+acquereur+dates+lieu+equipe;seule du genre;;48113;MOI SEUL
+328;DXSH7AWE;compromis;;2171;;;3;vendeur+dates+equipe;seule du genre;;5622;MOI SEUL
+1003;AOPBUAOJ;offre;;126;;;4;mandat+dates+lieu+equipe;seule du genre;;378;MOI SEUL
+4105;0IS41BM1;compromis;;24512;;;3;mandat+dates+equipe;date exacte;;48249;MOI SEUL
+210;NRZVKH85;compromis;;22979;;;5;mandat+vendeur+dates+lieu+equipe;seule du genre;;45672;MOI SEUL
+692;7IHI7YTJ;offre;;4235;;;2;dates+lieu;seule du genre;;9412;MOI SEUL
+388;H2JZ0S63;vente;;25720;;;4;acquereur+dates+lieu+equipe;seule du genre;;49662;MOI SEUL
+3480;8GIIDS5T;compromis;;21;;;4;mandat+dates+lieu+equipe;date exacte;;53;MOI SEUL
+3628;MCMUXOFP;compromis;;7546;;;3;mandat+dates+lieu;date exacte;;15338;MOI SEUL
+2485;EJN79TJ1;offre;;27713;;;2;dates+equipe;seule du genre;;53953;MOI SEUL
+4469;a8b6c8cc;offre;;14045;;;5;mandat+acquereur+dates+lieu+equipe;seule du genre;;28542;MOI SEUL
+3383;MQ6H8TVQ;compromis;;26695;;;1;dates;seule du genre;;52460;MOI SEUL
+2809;58I5AO17;compromis;;7908;;;1;dates;seule du genre;;15898;MOI SEUL
+4085;UBISDN7Z;compromis;;11182;;;3;mandat+dates+lieu;date exacte;;23543;MOI SEUL
+3829;87QOXR64;compromis;;17427;;;2;mandat+dates;date exacte;;37184;MOI SEUL
+4125;YAML8MHS;vente;;1232;;;3;mandat+acquereur+dates;seule du genre;;3029;MOI SEUL
+4166;1W2O0DSU;compromis;;28341;;;4;mandat+acquereur+vendeur+equipe;seule du genre;;55091;MOI SEUL
+3970;Q602VZJX;compromis;;6555;;;4;mandat+dates+lieu+equipe;2e chance (tour 1);;12728;MOI SEUL
+535;A07EC3DH;offre;;1876;;;3;mandat+dates+equipe;par le nom;;5262;MOI SEUL
+1841;H6CTRVR6;offre;;11415;;;3;mandat+dates+lieu;par le nom;;24119;MOI SEUL
+4472;0176b44e;offre;;28799;;;5;mandat+acquereur+vendeur+dates+equipe;seule du genre;;61509;MOI SEUL
+4604;f0ec39fc;vente;;30782;;;3;vendeur+dates+equipe;seule du genre;;61615;MOI SEUL
+4552;c67855b1;offre;;25847;;;3;acquereur+vendeur+equipe;seule du genre;;49852;MOI SEUL
+2440;DG9TK2GF;offre;;22175;;;3;mandat+acquereur+dates;seule du genre;;44447;MOI SEUL
+4749;34932f4e;compromis;;30789;;;5;mandat+acquereur+vendeur+dates+lieu;seule du genre;;62576;MOI SEUL
+3263;CS38OO8R;offre;;27986;;;1;dates;date exacte;;54400;MOI SEUL
+3884;ULFVA1AQ;compromis;;11579;;;1;mandat;2e chance (tour 1);;24390;MOI SEUL
+328;DXSH7AWE;offre;;2172;;;3;vendeur+dates+equipe;seule du genre;;5622;MOI SEUL
+4145;9706WM9J;vente;;25153;;;1;mandat;seule du genre;;48948;MOI SEUL
+3651;3LMG7EXA;offre;;17290;;;3;mandat+dates+lieu;date exacte;;36755;MOI SEUL
+77;1QJA9DBN;offre;;9291;;;5;mandat+vendeur+dates+lieu+equipe;seule du genre;;18412;MOI SEUL
+210;NRZVKH85;offre;;22981;;;5;mandat+vendeur+dates+lieu+equipe;date exacte;;45672;MOI SEUL
+3512;NSRISB3C;compromis;;4268;;;1;mandat;2e chance (tour 1);;9483;MOI SEUL
+3625;AA797XO0;compromis;;19619;;;3;mandat+lieu+equipe;AMBIGU (2 candidats);;40684;MOI SEUL
+2809;58I5AO17;offre;;7909;;;1;dates;seule du genre;;15898;MOI SEUL
+4343;2c2566d7;offre;;23802;;;4;mandat+acquereur+vendeur+equipe;seule du genre;;47174;MOI SEUL
+2110;KO6QPUV7;compromis;;16197;;;2;mandat+equipe;seule du genre;;33458;MOI SEUL
+4504;38f13b81;offre;;28738;;;5;mandat+acquereur+vendeur+dates+equipe;seule du genre;;59520;MOI SEUL
+3477;427UDDSF;vente;;3650;;;4;mandat+dates+lieu+equipe;seule du genre;;8395;MOI SEUL
+4111;O9IYE0F0;compromis;;11791;;;4;mandat+dates+lieu+equipe;date exacte;;24563;MOI SEUL
+173;TR42PT5H;compromis;;27195;;;4;mandat+acquereur+vendeur+lieu;seule du genre;;53398;MOI SEUL
+3175;8ATXF2EZ;vente;;19154;;;1;dates;seule du genre;;39879;MOI SEUL
+1974;978V88C7;offre;;24466;;;5;mandat+acquereur+dates+lieu+equipe;seule du genre;;48169;MOI SEUL
+2239;LWZL8V5M;offre;;20673;;;2;mandat+lieu;seule du genre;;42025;MOI SEUL
+3781;80MU6MMO;compromis;;19104;;;3;mandat+dates+lieu;date exacte;;39789;MOI SEUL
+4763;945146a0;compromis;;30793;;;5;mandat+acquereur+vendeur+lieu+equipe;seule du genre;;43442;MOI SEUL
+123;G8YSAI5Z;offre;;1000050;;;5;mandat+acquereur+vendeur+dates+equipe;seule du genre;;50119;MOI SEUL
+2665;I3TFR2KG;vente;;24620;;;2;dates+equipe;seule du genre;;48340;MOI SEUL
+4682;3b5db3cc;vente;;30812;;;6;mandat+acquereur+vendeur+dates+lieu+equipe;seule du genre;;59641;MOI SEUL
+3663;FWCFAN6O;compromis;;4370;;;2;mandat+dates;date exacte;;9608;MOI SEUL
+3640;LHQY0K8G;vente;;27186;;;4;mandat+acquereur+lieu+equipe;seule du genre;;53392;MOI SEUL
+3716;M1OIXLBA;vente;;26075;;;4;mandat+acquereur+dates+lieu;seule du genre;;50581;MOI SEUL
+3886;2FBR2M9U;compromis;;1101;;;5;mandat+vendeur+dates+lieu+equipe;date exacte;;2393;MOI SEUL
+3576;MAB7DN65;compromis;;7646;;;4;mandat+acquereur+dates+lieu;date exacte;;15517;MOI SEUL
+258;WJ8NY16C;vente;;7126;;;5;mandat+acquereur+vendeur+dates+equipe;seule du genre;;14486;MOI SEUL
+4542;f0d731fa;vente;;30781;;;5;mandat+vendeur+dates+lieu+equipe;seule du genre;;61739;MOI SEUL
+4131;UTLG66LE;offre;;5055;;;1;mandat;par le nom;;10527;MOI SEUL
+566;DHXRAK9O;vente;;9372;;;1;dates;seule du genre;;18799;MOI SEUL
+4793;fbf9799a;offre;;30817;;;3;mandat+acquereur+equipe;seule du genre;;62349;MOI SEUL
+3552;7JXLR3JQ;vente;;14251;;;1;mandat;seule du genre;;28953;MOI SEUL
+1080;X2714E92;offre;;17026;;;3;mandat+acquereur+lieu;par le nom;;36165;MOI SEUL
 4660;f85babee;vente;;30799;;;6;mandat+acquereur+vendeur+dates+lieu+equipe;seule du genre;;61922;MOI SEUL
-4027;43YX9GLG;vente;;4136;;;4;mandat+vendeur+dates+lieu;seule du genre;;9247;MOI SEUL
+3518;DAMOO7OU;vente;;23997;;;4;mandat+dates+lieu+equipe;seule du genre;;47557;MOI SEUL
+4098;UL12H3AQ;compromis;;24593;;;3;mandat+acquereur+equipe;seule du genre;;48315;MOI SEUL
+4028;T9F26E45;offre;;17151;;;3;mandat+lieu+equipe;par le nom;;36339;MOI SEUL
+4152;Z0J8K6WT;compromis;;26848;;;2;mandat+equipe;AMBIGU (2 candidats);;52754;MOI SEUL
+3936;13KBCS85;offre;;11670;;;3;mandat+lieu+equipe;2e chance (tour 1);;24484;MOI SEUL
+3865;6U5DQQ4J;compromis;;24450;;;5;mandat+vendeur+dates+lieu+equipe;date exacte;;48154;MOI SEUL
+2559;QXDW8EQA;compromis;;1027;;;1;dates;seule du genre;;2070;MOI SEUL
+4119;ZZ5WKMWM;offre;;11206;;;1;mandat;AMBIGU (2 candidats);;23562;MOI SEUL
+3956;XC761R8Z;compromis;;4496;;;3;mandat+vendeur+lieu;2e chance (tour 1);;9769;MOI SEUL
+3910;VMWFLLW4;compromis;;23050;;;3;mandat+dates+lieu;date exacte;;45891;MOI SEUL
+4060;BEI93QZ2;vente;;24447;;;4;mandat+dates+lieu+equipe;seule du genre;;48149;MOI SEUL
+453;PVRG1SNH;offre;;1869;;;3;vendeur+dates+equipe;seule du genre;;5255;MOI SEUL
+3960;YV95DVKD;compromis;;26027;;;3;mandat+dates+lieu;date exacte;;50368;MOI SEUL
+1932;AYIHPHF5;vente;;14115;;;2;mandat+dates;seule du genre;;28653;MOI SEUL
+3912;ZGNIYS1Z;compromis;;16342;;;4;mandat+dates+lieu+equipe;date exacte;;34007;MOI SEUL
+3748;KKN1YUZJ;compromis;;15914;;;3;mandat+lieu+equipe;seule du genre;;32732;MOI SEUL
+3893;N8M7RKTN;compromis;;24331;;;2;mandat+equipe;2e chance (tour 1);;48019;MOI SEUL
+4020;RP4HBTQN;compromis;;26154;;;3;mandat+dates+lieu;date exacte;;50759;MOI SEUL
+4282;693b76ff;offre;;25710;;;4;mandat+acquereur+vendeur+equipe;AMBIGU (2 candidats);;49624;MOI SEUL
+3914;0EMKY4ZS;compromis;;4621;;;2;mandat+lieu;AMBIGU (2 candidats);;9961;MOI SEUL
+4638;4509f3a1;compromis;;1000003;;;4;mandat+acquereur+vendeur+equipe;seule du genre;;58930;MOI SEUL
+3841;8NZ6V6XB;compromis;;11558;;;2;mandat+acquereur;date exacte;;24368;MOI SEUL
+3498;O1099YC0;compromis;;6340;;;4;mandat+acquereur+lieu+equipe;seule du genre;;12246;MOI SEUL
+4505;bdb548a3;compromis;;21551;;;5;mandat+acquereur+vendeur+dates+lieu;seule du genre;;43091;MOI SEUL
+1508;JNI5UWIA;offre;;2589;;;3;mandat+dates+lieu;seule du genre;;6366;MOI SEUL
+3826;JL6I6JDG;compromis;;4762;;;1;lieu;seule du genre;;10195;MOI SEUL
+301;MDOXOBIC;vente;;2165;;;2;dates+equipe;seule du genre;;5619;MOI SEUL
+4765;7b00046c;compromis;;30811;;;4;mandat+acquereur+vendeur+equipe;seule du genre;;62891;MOI SEUL
+3951;NOPYBDHI;offre;;23415;;;3;mandat+dates+lieu;date exacte;;46475;MOI SEUL
+829;33O2BWCL;compromis;;4294;;;3;vendeur+dates+lieu;seule du genre;;9522;MOI SEUL
+4458;cd3303c8;compromis;;28660;;;5;mandat+acquereur+vendeur+dates+equipe;seule du genre;;59272;MOI SEUL
+3383;MQ6H8TVQ;offre;;26696;;;1;dates;date exacte;;52460;MOI SEUL
+579;72GQRHVB;compromis;;6391;;;2;vendeur+dates;seule du genre;;12311;MOI SEUL
+383;XR6SJG85;compromis;;27094;;;5;mandat+acquereur+dates+lieu+equipe;seule du genre;;53256;MOI SEUL
+589;6FQO29C8;compromis;;19131;;;1;dates;seule du genre;;39845;MOI SEUL
+3940;D7CZQBZG;vente;;24410;;;3;mandat+dates+equipe;seule du genre;;48112;MOI SEUL
+3989;I0K9TUCT;compromis;;26023;;;2;mandat+lieu;AMBIGU (2 candidats);;50356;MOI SEUL
+3482;N62LJIBY;offre;;11358;;;4;mandat+dates+lieu+equipe;date exacte;;24059;MOI SEUL
+2914;ESMCO1NC;compromis;;6588;;;1;dates;seule du genre;;12837;MOI SEUL
+3918;VYNGKCR0;compromis;;11708;;;3;mandat+lieu+equipe;AMBIGU (2 candidats);;24510;MOI SEUL
+3328;JL8GV7RQ;compromis;;15169;;;1;dates;seule du genre;;31290;MOI SEUL
+3655;676XP6GN;compromis;;20309;;;4;mandat+dates+lieu+equipe;date exacte;;41724;MOI SEUL
+4066;N9J2533O;compromis;;4651;;;1;mandat;2e chance (tour 1);;9993;MOI SEUL
+238;HOPCBVKM;offre;;12;;;6;mandat+acquereur+vendeur+dates+lieu+equipe;seule du genre;;36;MOI SEUL
+4471;b9dd4eeb;offre;;28802;;;4;mandat+acquereur+vendeur+equipe;seule du genre;;61512;MOI SEUL
+3498;O1099YC0;offre;;6341;;;4;mandat+acquereur+lieu+equipe;seule du genre;;12246;MOI SEUL
 4505;bdb548a3;offre;;21552;;;5;mandat+acquereur+vendeur+dates+lieu;seule du genre;;43091;MOI SEUL
 4455;f90b0418;offre;;19050;;;2;acquereur+vendeur;seule du genre;;39684;MOI SEUL
-692;7IHI7YTJ;compromis;;4234;;;2;dates+lieu;seule du genre;;9412;MOI SEUL
-3686;VHZ88PLB;compromis;;4510;;;3;mandat+vendeur+dates;date exacte;;9780;MOI SEUL
-4622;c5e267b6;vente;;30800;;;5;mandat+acquereur+vendeur+dates+lieu;seule du genre;;61783;MOI SEUL
-3263;CS38OO8R;offre;;27986;;;1;dates;date exacte;;54400;MOI SEUL
-3508;EO8MXFE9;compromis;;20264;;;2;mandat+dates;date exacte;;41699;MOI SEUL
-4145;9706WM9J;compromis;;25151;;;1;mandat;seule du genre;;48948;MOI SEUL
-579;72GQRHVB;compromis;;6391;;;2;vendeur+dates;seule du genre;;12311;MOI SEUL
-3603;3ID282Y1;compromis;;17434;;;4;mandat+vendeur+dates+equipe;date exacte;;37192;MOI SEUL
-829;33O2BWCL;vente;;4296;;;3;vendeur+dates+lieu;seule du genre;;9522;MOI SEUL
-4684;aad89f34;compromis;;30810;;;4;mandat+acquereur+vendeur+equipe;seule du genre;;61746;MOI SEUL
-3797;U39MLAJD;compromis;;29004;;;3;mandat+lieu+equipe;2e chance (tour 1);;31045;MOI SEUL
-2559;QXDW8EQA;offre;;1028;;;1;dates;seule du genre;;2070;MOI SEUL
-3748;KKN1YUZJ;compromis;;15914;;;3;mandat+lieu+equipe;seule du genre;;32732;MOI SEUL
-388;H2JZ0S63;vente;;25720;;;4;acquereur+dates+lieu+equipe;seule du genre;;49662;MOI SEUL
-3552;7JXLR3JQ;vente;;14251;;;1;mandat;seule du genre;;28953;MOI SEUL
-3894;RAQTPG0M;vente;;4599;;;4;mandat+vendeur+dates+lieu;seule du genre;;9946;MOI SEUL
-4638;4509f3a1;compromis;;1000003;;;4;mandat+acquereur+vendeur+equipe;seule du genre;;58930;MOI SEUL
-258;WJ8NY16C;vente;;7126;;;5;mandat+acquereur+vendeur+dates+equipe;seule du genre;;14486;MOI SEUL
-2774;J6RGX0CQ;compromis;;26373;;;1;mandat;seule du genre;;51589;MOI SEUL
-3910;VMWFLLW4;vente;;23055;;;3;mandat+dates+lieu;seule du genre;;45891;MOI SEUL
-4751;ce56c77b;compromis;;30805;;;5;mandat+acquereur+vendeur+lieu+equipe;seule du genre;;59040;MOI SEUL
-2485;EJN79TJ1;offre;;27713;;;2;dates+equipe;seule du genre;;53953;MOI SEUL
-4080;3XMY2OG3;compromis;;17147;;;2;mandat+equipe;AMBIGU (3 candidats);;36339;MOI SEUL
-4606;774aa002;compromis;;11138;;;5;mandat+acquereur+vendeur+lieu+equipe;seule du genre;;23319;MOI SEUL
-4142;R7NU9NPM;compromis;;19814;;;2;mandat+equipe;AMBIGU (3 candidats);;40977;MOI SEUL
-3817;4PW2L3MG;offre;;24454;;;3;mandat+lieu+equipe;date exacte;;48154;MOI SEUL
-4671;c340b94b;compromis;;30787;;;4;mandat+acquereur+vendeur+equipe;seule du genre;;61962;MOI SEUL
-4098;UL12H3AQ;compromis;;24593;;;3;mandat+acquereur+equipe;seule du genre;;48315;MOI SEUL
-3498;O1099YC0;compromis;;6340;;;4;mandat+acquereur+lieu+equipe;seule du genre;;12246;MOI SEUL
-3690;G41FTEZ8;compromis;;4329;;;3;mandat+dates+lieu;date exacte;;9556;MOI SEUL
-3951;NOPYBDHI;offre;;23415;;;3;mandat+dates+lieu;date exacte;;46475;MOI SEUL
-4126;Z6P7KE5R;offre;;1337;;;1;mandat;par le nom;;3481;MOI SEUL
-453;PVRG1SNH;offre;;1869;;;3;vendeur+dates+equipe;seule du genre;;5255;MOI SEUL
-3936;13KBCS85;offre;;11670;;;3;mandat+lieu+equipe;2e chance (tour 1);;24484;MOI SEUL
-3856;T2GZOY5O;compromis;;20073;;;4;mandat+dates+lieu+equipe;date exacte;;41467;MOI SEUL
-3795;8RWTD0YX;offre;;4390;;;1;mandat;2e chance (tour 1);;9629;MOI SEUL
-4152;Z0J8K6WT;compromis;;26848;;;2;mandat+equipe;AMBIGU (2 candidats);;52754;MOI SEUL
-4713;db0d5e8d;compromis;;30798;;;4;mandat+acquereur+vendeur+equipe;seule du genre;;49399;MOI SEUL
-4343;2c2566d7;offre;;23802;;;4;mandat+acquereur+vendeur+equipe;seule du genre;;47174;MOI SEUL
-173;TR42PT5H;compromis;;27195;;;4;mandat+acquereur+vendeur+lieu;seule du genre;;53398;MOI SEUL
-3763;9WQ204HP;compromis;;4480;;;3;mandat+vendeur+dates;date exacte;;9748;MOI SEUL
-3893;N8M7RKTN;compromis;;24331;;;2;mandat+equipe;2e chance (tour 1);;48019;MOI SEUL
-4756;bd0e986f;compromis;;30788;;;5;mandat+acquereur+vendeur+lieu+equipe;seule du genre;;62126;MOI SEUL
-3703;XCK96Z01;compromis;;177;;;4;mandat+vendeur+lieu+equipe;2e chance (tour 1);;500;MOI SEUL
-21;LPBAZ1D4;vente;;14009;;;5;mandat+acquereur+vendeur+lieu+equipe;seule du genre;;28422;MOI SEUL
-3713;U0GQ3KTO;compromis;;4386;;;1;mandat;2e chance (tour 1);;9629;MOI SEUL
-3613;7HDK9XOG;vente;;121;;;4;mandat+dates+lieu+equipe;seule du genre;;376;MOI SEUL
-3663;FWCFAN6O;compromis;;4370;;;2;mandat+dates;date exacte;;9608;MOI SEUL
-4487;306641a4;offre;;28685;;;6;mandat+acquereur+vendeur+dates+lieu+equipe;seule du genre;;59338;MOI SEUL
-4370;05e8ddb5;offre;;14928;;;5;mandat+acquereur+vendeur+lieu+equipe;seule du genre;;30678;MOI SEUL
-3863;ZW7MKTWH;compromis;;20088;;;3;mandat+lieu+equipe;seule du genre;;41481;MOI SEUL
-2780;91IHSGNC;offre;;4782;;;1;vendeur;seule du genre;;10229;MOI SEUL
-3765;4D2J48XD;vente;;22021;;;3;mandat+dates+lieu;seule du genre;;44198;MOI SEUL
-3483;LNWLBVKG;vente;;17207;;;3;mandat+acquereur+lieu;seule du genre;;36471;MOI SEUL
-4282;693b76ff;offre;;25710;;;4;mandat+acquereur+vendeur+equipe;AMBIGU (2 candidats);;49624;MOI SEUL
-3655;676XP6GN;compromis;;20309;;;4;mandat+dates+lieu+equipe;date exacte;;41724;MOI SEUL
-1546;S8BKB6FL;vente;;4414;;;1;dates;seule du genre;;9663;MOI SEUL
-2107;M4FNSOPF;compromis;;16407;;;3;mandat+acquereur+lieu;seule du genre;;34259;MOI SEUL
-3914;0EMKY4ZS;compromis;;4621;;;2;mandat+lieu;AMBIGU (2 candidats);;9961;MOI SEUL
-2297;PT1ZTCIQ;offre;;22172;;;2;mandat+equipe;seule du genre;;44439;MOI SEUL
-1866;2SCBZXMH;offre;;7780;;;3;mandat+dates+lieu;par le nom;;15722;MOI SEUL
-3728;2IK4EYXH;vente;;19098;;;4;mandat+dates+lieu+equipe;seule du genre;;39776;MOI SEUL
-3938;61OW86CS;offre;;19130;;;3;mandat+lieu+equipe;seule du genre;;39836;MOI SEUL
-1857;ZETH4WI9;offre;;24372;;;3;dates+lieu+equipe;seule du genre;;48085;MOI SEUL
-3977;QMIXZW44;compromis;;8457;;;1;mandat;seule du genre;;17067;MOI SEUL
-4068;SC55F4MV;compromis;;9496;;;4;mandat+dates+lieu+equipe;date exacte;;19192;MOI SEUL
-4111;O9IYE0F0;compromis;;11791;;;4;mandat+dates+lieu+equipe;date exacte;;24563;MOI SEUL
-4657;d57e7da9;vente;;30807;;;5;mandat+acquereur+vendeur+dates+equipe;seule du genre;;59193;MOI SEUL
-3910;VMWFLLW4;compromis;;23050;;;3;mandat+dates+lieu;date exacte;;45891;MOI SEUL
-1140;9CQ325R6;offre;;24160;;;3;mandat+dates+equipe;date exacte;;47815;MOI SEUL
-2914;ESMCO1NC;compromis;;6588;;;1;dates;seule du genre;;12837;MOI SEUL
-4460;e9260960;offre;;11147;;;6;mandat+acquereur+vendeur+dates+lieu+equipe;seule du genre;;23353;MOI SEUL
-3487;G88ISQKI;compromis;;26605;;;4;mandat+vendeur+dates+equipe;date exacte;;52143;MOI SEUL
-2440;DG9TK2GF;offre;;22175;;;2;mandat+acquereur;seule du genre;;44447;MOI SEUL
-3841;8NZ6V6XB;compromis;;11558;;;2;mandat+acquereur;date exacte;;24368;MOI SEUL
-4117;4G2UHO35;compromis;;19815;;;2;mandat+equipe;2e chance (tour 1);;40977;MOI SEUL
-4061;ULA087KO;compromis;;24650;;;2;mandat+equipe;2e chance (tour 1);;48370;MOI SEUL
-4025;9JHY3CPQ;vente;;17528;;;4;mandat+dates+lieu+equipe;seule du genre;;37402;MOI SEUL
-2173;TMS863YQ;vente;;17451;;;3;acquereur+dates+lieu;seule du genre;;37210;MOI SEUL
-1011;5GZVT548;vente;;17324;;;4;mandat+acquereur+vendeur+lieu;seule du genre;;36794;MOI SEUL
-2809;58I5AO17;vente;;7910;;;1;dates;seule du genre;;15898;MOI SEUL
-3706;EKP87GSO;vente;;16302;;;3;mandat+dates+equipe;seule du genre;;33822;MOI SEUL
-4067;CITFQGOB;compromis;;16378;;;3;mandat+acquereur+equipe;2e chance (tour 1);;34066;MOI SEUL
-1508;JNI5UWIA;offre;;2589;;;2;mandat+lieu;seule du genre;;6366;MOI SEUL
-4765;7b00046c;compromis;;30811;;;4;mandat+acquereur+vendeur+equipe;seule du genre;;62891;MOI SEUL
-3911;JRN2I7TM;compromis;;27445;;;4;mandat+dates+lieu+equipe;date exacte;;53678;MOI SEUL
-3781;80MU6MMO;compromis;;19104;;;3;mandat+dates+lieu;date exacte;;39789;MOI SEUL
-328;DXSH7AWE;offre;;2172;;;3;vendeur+dates+equipe;seule du genre;;5622;MOI SEUL
-210;NRZVKH85;offre;;22981;;;5;mandat+vendeur+dates+lieu+equipe;date exacte;;45672;MOI SEUL
-4484;14853166;offre;;4201;;;4;mandat+acquereur+vendeur+dates;seule du genre;;9371;MOI SEUL
-3991;NEFHS7JI;vente;;26398;;;1;mandat;seule du genre;;51640;MOI SEUL
-3984;YMS20ZIS;vente;;27535;;;4;mandat+acquereur+lieu+equipe;seule du genre;;53766;MOI SEUL
-4604;f0ec39fc;offre;;28842;;;3;vendeur+dates+equipe;seule du genre;;61615;MOI SEUL
-3378;5H70KQZA;compromis;;14224;;;1;dates;date exacte;;28918;MOI SEUL
-2696;50LQ2VSA;offre;;24631;;;3;mandat+dates+equipe;date exacte;;48353;MOI SEUL
-3970;Q602VZJX;compromis;;6555;;;4;mandat+dates+lieu+equipe;2e chance (tour 1);;12728;MOI SEUL
-4190;45545ae2;offre;;19567;;;6;mandat+acquereur+vendeur+dates+lieu+equipe;seule du genre;;40590;MOI SEUL
-4105;0IS41BM1;compromis;;24512;;;3;mandat+dates+equipe;date exacte;;48249;MOI SEUL
-67;I847SPN3;compromis;;3698;;;5;mandat+acquereur+vendeur+lieu+equipe;AMBIGU (2 candidats);;8494;MOI SEUL
-3886;2FBR2M9U;compromis;;1101;;;5;mandat+vendeur+dates+lieu+equipe;date exacte;;2393;MOI SEUL
-3927;PPIM4947;offre;;24291;;;3;mandat+vendeur+equipe;2e chance (tour 1);;47989;MOI SEUL
-3483;LNWLBVKG;compromis;;17203;;;3;mandat+acquereur+lieu;2e chance (tour 1);;36471;MOI SEUL
-3884;ULFVA1AQ;compromis;;11579;;;1;mandat;2e chance (tour 1);;24390;MOI SEUL
-3990;Z3DYDC4X;offre;;14113;;;2;mandat+dates;date exacte;;28653;MOI SEUL
-1546;S8BKB6FL;compromis;;4412;;;1;dates;seule du genre;;9663;MOI SEUL
-3684;3QTVTPV1;vente;;4304;;;4;mandat+vendeur+dates+lieu;seule du genre;;9525;MOI SEUL
-1555;HM8X1IG6;compromis;;4470;;;2;mandat+dates;seule du genre;;9742;MOI SEUL
-1131;717OUUED;offre;;11597;;;3;mandat+acquereur+equipe;par le nom;;24410;MOI SEUL
-3935;5QE9107L;offre;;20090;;;3;mandat+lieu+equipe;2e chance (tour 1);;41481;MOI SEUL
-4718;a8aaeb2b;offre;;1000;;;3;acquereur+vendeur+equipe;2e chance (tour 1);;1970;MOI SEUL
-4153;XVRCFWCK;vente;;17654;;;3;mandat+vendeur+dates;seule du genre;;37634;MOI SEUL
-4682;3b5db3cc;vente;;30812;;;6;mandat+acquereur+vendeur+dates+lieu+equipe;seule du genre;;59641;MOI SEUL
-4457;959b7669;compromis;;28568;;;5;mandat+acquereur+vendeur+lieu+equipe;seule du genre;;58979;MOI SEUL
-3328;JL8GV7RQ;vente;;15170;;;1;dates;seule du genre;;31290;MOI SEUL
-4552;c67855b1;compromis;;25846;;;3;acquereur+vendeur+equipe;seule du genre;;49852;MOI SEUL
-4060;BEI93QZ2;vente;;24447;;;4;mandat+dates+lieu+equipe;seule du genre;;48149;MOI SEUL
-3722;I3R03A11;offre;;19458;;;2;mandat+lieu;2e chance (tour 1);;40378;MOI SEUL
-4792;c67ccc6a;offre;;30808;;;3;mandat+acquereur+equipe;seule du genre;;47132;MOI SEUL
-3953;3THZJOOG;compromis;;4720;;;2;mandat+lieu;AMBIGU (2 candidats);;10129;MOI SEUL
-4069;J1G6YYWL;vente;;24507;;;4;mandat+dates+lieu+equipe;seule du genre;;48241;MOI SEUL
-3865;6U5DQQ4J;compromis;;24450;;;5;mandat+vendeur+dates+lieu+equipe;date exacte;;48154;MOI SEUL
-4437;1cf326f1;offre;;8883;;;6;mandat+acquereur+vendeur+dates+lieu+equipe;seule du genre;;17640;MOI SEUL
-4028;T9F26E45;offre;;17151;;;3;mandat+lieu+equipe;par le nom;;36339;MOI SEUL
-3175;8ATXF2EZ;vente;;19154;;;1;dates;seule du genre;;39879;MOI SEUL
-3263;CS38OO8R;vente;;27987;;;1;dates;seule du genre;;54400;MOI SEUL
-2559;QXDW8EQA;vente;;1029;;;1;dates;seule du genre;;2070;MOI SEUL
-3874;KOYNCSYB;compromis;;22087;;;3;mandat+lieu+equipe;date exacte;;44308;MOI SEUL
-3640;LHQY0K8G;vente;;27186;;;4;mandat+acquereur+lieu+equipe;seule du genre;;53392;MOI SEUL
-2388;3S4ZWOFK;offre;;11958;;;3;mandat+dates+equipe;par le nom;;24733;MOI SEUL
-2908;6QDR3G7V;offre;;17721;;;2;mandat+dates;seule du genre;;37801;MOI SEUL
-692;7IHI7YTJ;offre;;4235;;;2;dates+lieu;seule du genre;;9412;MOI SEUL
-3968;RX6J289Y;compromis;;16377;;;3;mandat+acquereur+equipe;AMBIGU (3 candidats);;34066;MOI SEUL
-3614;G1TVNXJ5;compromis;;1161;;;4;mandat+dates+lieu+equipe;2e chance (tour 1);;2629;MOI SEUL
-3502;644UYQNA;compromis;;19612;;;3;mandat+lieu+equipe;date exacte;;40679;MOI SEUL
-4358;a5cb141f;offre;;6172;;;4;mandat+acquereur+vendeur+lieu;seule du genre;;11820;MOI SEUL
-829;33O2BWCL;compromis;;4294;;;3;vendeur+dates+lieu;seule du genre;;9522;MOI SEUL
-1516;W79RISV0;compromis;;23475;;;3;mandat+acquereur+lieu;seule du genre;;46585;MOI SEUL
-4145;9706WM9J;offre;;25152;;;1;mandat;seule du genre;;48948;MOI SEUL
-579;72GQRHVB;offre;;6392;;;2;vendeur+dates;seule du genre;;12311;MOI SEUL
-4790;d7cbb8fa;offre;;30806;;;3;mandat+acquereur+equipe;seule du genre;;63231;MOI SEUL
-388;H2JZ0S63;compromis;;25718;;;4;acquereur+dates+lieu+equipe;seule du genre;;49662;MOI SEUL
-3552;7JXLR3JQ;compromis;;14249;;;1;mandat;seule du genre;;28953;MOI SEUL
-3738;GUUVDY2S;compromis;;29005;;;2;mandat+equipe;date exacte;;24410;MOI SEUL
-3984;YMS20ZIS;compromis;;27532;;;4;mandat+acquereur+lieu+equipe;seule du genre;;53766;MOI SEUL
-2521;ZR13FV3K;offre;;16421;;;2;mandat+equipe;seule du genre;;34296;MOI SEUL
-3954;ZV3QRSJG;compromis;;17131;;;2;mandat+lieu;AMBIGU (3 candidats);;36320;MOI SEUL
-3664;HORVRQ6N;compromis;;20301;;;4;mandat+dates+lieu+equipe;date exacte;;41721;MOI SEUL
-2110;KO6QPUV7;compromis;;16197;;;2;mandat+equipe;seule du genre;;33458;MOI SEUL
-2239;LWZL8V5M;vente;;20674;;;2;mandat+lieu;seule du genre;;42025;MOI SEUL
-2774;J6RGX0CQ;offre;;26374;;;1;mandat;seule du genre;;51589;MOI SEUL
-4791;b7439331;offre;;30809;;;2;mandat+acquereur;seule du genre;;63299;MOI SEUL
-3661;JYOLFY1A;compromis;;19074;;;3;mandat+dates+lieu;date exacte;;39752;MOI SEUL
-4343;2c2566d7;vente;;30813;;;4;mandat+acquereur+vendeur+equipe;seule du genre;;47174;MOI SEUL
-4119;ZZ5WKMWM;compromis;;11204;;;1;mandat;AMBIGU (2 candidats);;23562;MOI SEUL
-3681;R90OQT16;compromis;;7605;;;2;mandat+lieu;2e chance (tour 1);;15449;MOI SEUL
-4471;b9dd4eeb;offre;;28802;;;4;mandat+acquereur+vendeur+equipe;seule du genre;;61512;MOI SEUL
-4098;UL12H3AQ;offre;;24594;;;3;mandat+acquereur+equipe;seule du genre;;48315;MOI SEUL
-3498;O1099YC0;offre;;6341;;;4;mandat+acquereur+lieu+equipe;seule du genre;;12246;MOI SEUL
-2789;NKDC0I1M;offre;;27741;;;2;acquereur+equipe;seule du genre;;53984;MOI SEUL
-4695;d77d9ae1;compromis;;30780;;;4;mandat+acquereur+vendeur+dates;seule du genre;;11854;MOI SEUL
-4154;UWNRN6F2;compromis;;24564;;;3;mandat+dates+equipe;date exacte;;48297;MOI SEUL
-1841;H6CTRVR6;offre;;11415;;;3;mandat+dates+lieu;par le nom;;24119;MOI SEUL
-3328;JL8GV7RQ;compromis;;15169;;;1;dates;seule du genre;;31290;MOI SEUL
-315;HPNJ32UM;vente;;28147;;;5;mandat+acquereur+vendeur+lieu+equipe;seule du genre;;54715;MOI SEUL
-4458;cd3303c8;compromis;;28660;;;5;mandat+acquereur+vendeur+dates+equipe;seule du genre;;59272;MOI SEUL
-4051;Q23M98IX;compromis;;24499;;;5;mandat+vendeur+dates+lieu+equipe;date exacte;;48239;MOI SEUL
-4060;BEI93QZ2;compromis;;24443;;;4;mandat+dates+lieu+equipe;date exacte;;48149;MOI SEUL
-3912;ZGNIYS1Z;vente;;16346;;;4;mandat+dates+lieu+equipe;seule du genre;;34007;MOI SEUL
-3731;JAW5U9OF;vente;;17027;;;3;mandat+dates+lieu;seule du genre;;36165;MOI SEUL
-3175;8ATXF2EZ;compromis;;19152;;;1;dates;seule du genre;;39879;MOI SEUL
-123;G8YSAI5Z;compromis;;1000132;;;5;mandat+acquereur+vendeur+dates+equipe;AMBIGU (2 candidats);;50119;MOI SEUL
-2589;ASQO7HID;offre;;17505;;;3;mandat+dates+equipe;par le nom;;37344;MOI SEUL
-3613;7HDK9XOG;compromis;;117;;;4;mandat+dates+lieu+equipe;date exacte;;376;MOI SEUL
-286;9Q0FHAKK;vente;;3650;;;2;vendeur+dates;seule du genre;;8395;MOI SEUL
-3640;LHQY0K8G;compromis;;27183;;;4;mandat+acquereur+lieu+equipe;seule du genre;;53392;MOI SEUL
-2272;6LM8A6QK;offre;;11760;;;2;mandat+lieu;seule du genre;;24544;MOI SEUL
-4504;38f13b81;offre;;28738;;;5;mandat+acquereur+vendeur+dates+equipe;seule du genre;;59520;MOI SEUL
-2665;I3TFR2KG;vente;;24620;;;2;dates+equipe;seule du genre;;48340;MOI SEUL
-3480;8GIIDS5T;compromis;;21;;;4;mandat+dates+lieu+equipe;date exacte;;53;MOI SEUL
-383;XR6SJG85;compromis;;27094;;;5;mandat+acquereur+dates+lieu+equipe;seule du genre;;53256;MOI SEUL
-4085;UBISDN7Z;compromis;;11182;;;2;mandat+lieu;2e chance (tour 1);;23543;MOI SEUL
-3940;D7CZQBZG;vente;;24410;;;3;mandat+dates+equipe;seule du genre;;48112;MOI SEUL
-3977;QMIXZW44;offre;;8458;;;1;mandat;seule du genre;;17067;MOI SEUL
-3660;H75WKJ6X;vente;;24125;;;4;mandat+dates+lieu+equipe;seule du genre;;47776;MOI SEUL
-4089;UAER0F0F;compromis;;7903;;;2;mandat+lieu;2e chance (tour 1);;15881;MOI SEUL
-4763;945146a0;compromis;;30793;;;5;mandat+acquereur+vendeur+lieu+equipe;seule du genre;;43442;MOI SEUL
-3446;1W9FJJLB;offre;;2169;;;3;mandat+dates+equipe;date exacte;;5620;MOI SEUL
-2914;ESMCO1NC;offre;;6589;;;1;dates;seule du genre;;12837;MOI SEUL
-2173;TMS863YQ;compromis;;17449;;;3;acquereur+dates+lieu;seule du genre;;37210;MOI SEUL
-4117;4G2UHO35;offre;;19819;;;2;mandat+equipe;AMBIGU (4 candidats);;40977;MOI SEUL
-3617;W5YQIW28;vente;;20307;;;2;mandat+lieu;seule du genre;;41722;MOI SEUL
-2809;58I5AO17;compromis;;7908;;;1;dates;seule du genre;;15898;MOI SEUL
-4066;N9J2533O;compromis;;4651;;;1;mandat;2e chance (tour 1);;9993;MOI SEUL
-3512;NSRISB3C;compromis;;4269;;;1;mandat;2e chance (tour 1);;9483;MOI SEUL
-3636;HEQZW1KO;compromis;;4277;;;2;mandat+lieu;AMBIGU (2 candidats);;9491;MOI SEUL
-4067;CITFQGOB;offre;;16383;;;3;mandat+acquereur+equipe;2e chance (tour 1);;34066;MOI SEUL
-2485;EJN79TJ1;vente;;27714;;;2;dates+equipe;seule du genre;;53953;MOI SEUL
-3810;515RUEN3;offre;;17430;;;1;mandat;2e chance (tour 1);;37184;MOI SEUL
-4039;HBZQXR67;compromis;;11729;;;3;mandat+dates+lieu;date exacte;;24528;MOI SEUL
-4284;c08ff7cb;offre;;3678;;;6;mandat+acquereur+vendeur+dates+lieu+equipe;seule du genre;;8454;MOI SEUL
-3912;ZGNIYS1Z;compromis;;16342;;;4;mandat+dates+lieu+equipe;date exacte;;34007;MOI SEUL
-3645;T0WL4QE7;offre;;25879;;;2;mandat+dates;date exacte;;49924;MOI SEUL
-3990;Z3DYDC4X;vente;;14115;;;2;mandat+dates;seule du genre;;28653;MOI SEUL
-453;PVRG1SNH;vente;;1870;;;3;vendeur+dates+equipe;seule du genre;;5255;MOI SEUL
-3521;CW4IYXO2;offre;;26;;;3;mandat+lieu+equipe;par le nom;;53;MOI SEUL
-545;IX6FX4TX;offre;;9452;;;4;mandat+vendeur+lieu+equipe;seule du genre;;18988;MOI SEUL
-4077;FS22QU5G;vente;;16364;;;2;mandat+equipe;seule du genre;;34048;MOI SEUL
-3627;5H9BOKWJ;compromis;;2507;;;3;mandat+dates+equipe;date exacte;;6151;MOI SEUL
-3378;5H70KQZA;offre;;14227;;;1;dates;date exacte;;28918;MOI SEUL
-3736;S3J2JV0O;compromis;;200;;;3;mandat+lieu+equipe;2e chance (tour 1);;557;MOI SEUL
-3605;2HOL5ISX;vente;;27142;;;2;mandat+lieu;2e chance (tour 1);;53342;MOI SEUL
-1492;VVGMC0QW;offre;;24342;;;3;dates+lieu+equipe;seule du genre;;48031;MOI SEUL
-3439;7NI4WKV5;vente;;28;;;4;mandat+vendeur+dates+lieu;seule du genre;;53;MOI SEUL
-286;9Q0FHAKK;compromis;;3647;;;2;vendeur+dates;date exacte;;8395;MOI SEUL
-3743;YQG8CN5T;compromis;;19576;;;3;mandat+lieu+equipe;2e chance (tour 1);;40600;MOI SEUL
-1943;0GV2LNV2;offre;;4747;;;3;mandat+dates+lieu;par le nom;;10165;MOI SEUL
-1902;EGR8KXOL;vente;;6559;;;4;mandat+dates+lieu+equipe;seule du genre;;12728;MOI SEUL
-3864;S3HOG6UL;compromis;;17387;;;3;mandat+dates+lieu;date exacte;;37032;MOI SEUL
-1546;S8BKB6FL;offre;;4413;;;1;dates;seule du genre;;9663;MOI SEUL
-2665;I3TFR2KG;compromis;;24618;;;2;dates+equipe;seule du genre;;48340;MOI SEUL
-4153;XVRCFWCK;compromis;;17651;;;3;mandat+vendeur+dates;date exacte;;37634;MOI SEUL
-3756;TQYCQNY4;vente;;3723;;;3;mandat+dates+equipe;seule du genre;;8544;MOI SEUL
-3625;AA797XO0;compromis;;19620;;;3;mandat+lieu+equipe;2e chance (tour 1);;40684;MOI SEUL
-3649;SWSN80FQ;compromis;;14813;;;2;mandat+equipe;date exacte;;30376;MOI SEUL
-4020;RP4HBTQN;compromis;;26154;;;3;mandat+dates+lieu;date exacte;;50759;MOI SEUL
-4552;c67855b1;offre;;25847;;;3;acquereur+vendeur+equipe;seule du genre;;49852;MOI SEUL
-4091;JTC1I5LJ;vente;;2645;;;3;mandat+dates+equipe;seule du genre;;6585;MOI SEUL
-3940;D7CZQBZG;compromis;;24406;;;3;mandat+dates+equipe;date exacte;;48112;MOI SEUL
-2780;91IHSGNC;vente;;4783;;;1;vendeur;seule du genre;;10229;MOI SEUL
-4745;bbbaae80;compromis;;30791;;;5;mandat+acquereur+vendeur+lieu+equipe;date exacte;;61844;MOI SEUL
-4754;5a956cad;compromis;;30790;;;5;mandat+acquereur+vendeur+lieu+equipe;seule du genre;;62905;MOI SEUL
-4505;bdb548a3;compromis;;21551;;;5;mandat+acquereur+vendeur+dates+lieu;seule du genre;;43091;MOI SEUL
-3482;N62LJIBY;offre;;11358;;;4;mandat+dates+lieu+equipe;date exacte;;24059;MOI SEUL
-3263;CS38OO8R;compromis;;27984;;;1;dates;seule du genre;;54400;MOI SEUL
-692;7IHI7YTJ;vente;;4236;;;2;dates+lieu;seule du genre;;9412;MOI SEUL
-4469;a8b6c8cc;offre;;14045;;;5;mandat+acquereur+dates+lieu+equipe;seule du genre;;28542;MOI SEUL
-189;B8UXUHU4;offre;;3582;;;4;mandat+acquereur+vendeur+equipe;seule du genre;;8315;MOI SEUL
-4145;9706WM9J;vente;;25153;;;1;mandat;seule du genre;;48948;MOI SEUL
-238;HOPCBVKM;offre;;12;;;6;mandat+acquereur+vendeur+dates+lieu+equipe;seule du genre;;36;MOI SEUL
-2559;QXDW8EQA;compromis;;1027;;;1;dates;seule du genre;;2070;MOI SEUL
-4113;9UO5NUN6;vente;;11960;;;3;mandat+dates+equipe;seule du genre;;24733;MOI SEUL
-3999;HHQZC2QP;compromis;;4649;;;1;mandat;AMBIGU (3 candidats);;9993;MOI SEUL
-1857;ZETH4WI9;vente;;24373;;;3;dates+lieu+equipe;seule du genre;;48085;MOI SEUL
-3628;MCMUXOFP;compromis;;7546;;;3;mandat+dates+lieu;date exacte;;15338;MOI SEUL
-2774;J6RGX0CQ;vente;;26375;;;1;mandat;seule du genre;;51589;MOI SEUL
-2485;EJN79TJ1;compromis;;27712;;;2;dates+equipe;seule du genre;;53953;MOI SEUL
-4037;DN5U3GER;compromis;;7450;;;2;mandat+lieu;2e chance (tour 1);;15087;MOI SEUL
+3719;7PTB8Z3M;compromis;;2533;;;4;mandat+dates+lieu+equipe;date exacte;;6184;MOI SEUL
+3133;SXJDHXKF;offre;;8018;;;3;mandat+acquereur+dates;seule du genre;;16073;MOI SEUL
 829;33O2BWCL;offre;;4295;;;3;vendeur+dates+lieu;seule du genre;;9522;MOI SEUL
-2809;58I5AO17;offre;;7909;;;1;dates;seule du genre;;15898;MOI SEUL
-3609;LH0W9C1A;vente;;7563;;;3;mandat+dates+lieu;seule du genre;;15356;MOI SEUL
-77;1QJA9DBN;offre;;9291;;;5;mandat+vendeur+dates+lieu+equipe;seule du genre;;18412;MOI SEUL
-388;H2JZ0S63;offre;;25719;;;4;acquereur+dates+lieu+equipe;seule du genre;;49662;MOI SEUL
-3552;7JXLR3JQ;offre;;14250;;;1;mandat;seule du genre;;28953;MOI SEUL
-4126;Z6P7KE5R;compromis;;1335;;;1;mandat;2e chance (tour 1);;3481;MOI SEUL
-4766;9ec1e1a6;compromis;;30795;;;4;mandat+acquereur+vendeur+equipe;seule du genre;;61958;MOI SEUL
-453;PVRG1SNH;compromis;;1868;;;3;vendeur+dates+equipe;seule du genre;;5255;MOI SEUL
 3523;AVXWIZTU;compromis;;14913;;;3;mandat+lieu+equipe;2e chance (tour 1);;30637;MOI SEUL
-4048;XDV1X78X;compromis;;4797;;;1;mandat;2e chance (tour 1);;10254;MOI SEUL
-3133;SXJDHXKF;offre;;8018;;;1;mandat;seule du genre;;16073;MOI SEUL
-4628;63b1e2fd;vente;;30783;;;5;mandat+acquereur+dates+lieu+equipe;seule du genre;;32674;MOI SEUL
-3922;LQ1AVB07;vente;;24323;;;4;mandat+dates+lieu+equipe;seule du genre;;48013;MOI SEUL
-3832;P252U1JH;compromis;;4126;;;3;mandat+vendeur+lieu;2e chance (tour 1);;9232;MOI SEUL
-3842;60CLRO51;offre;;17389;;;2;mandat+lieu;2e chance (tour 1);;37032;MOI SEUL
-3872;0V00SLEU;compromis;;1000151;;;3;mandat+lieu+equipe;2e chance (tour 1);;52937;MOI SEUL
-4119;ZZ5WKMWM;offre;;11206;;;1;mandat;AMBIGU (2 candidats);;23562;MOI SEUL
-4090;1X9W3VUF;compromis;;24598;;;4;mandat+dates+lieu+equipe;date exacte;;48321;MOI SEUL
-328;DXSH7AWE;vente;;2173;;;3;vendeur+dates+equipe;seule du genre;;5622;MOI SEUL
-3956;XC761R8Z;compromis;;4496;;;3;mandat+vendeur+lieu;2e chance (tour 1);;9769;MOI SEUL
-210;NRZVKH85;vente;;22983;;;5;mandat+vendeur+dates+lieu+equipe;date exacte;;45672;MOI SEUL
-3918;VYNGKCR0;compromis;;11708;;;3;mandat+lieu+equipe;AMBIGU (2 candidats);;24510;MOI SEUL
-4032;0V3UQ41Y;vente;;26037;;;3;mandat+vendeur+lieu;seule du genre;;50400;MOI SEUL
-4604;f0ec39fc;vente;;30782;;;3;vendeur+dates+equipe;seule du genre;;61615;MOI SEUL
-3829;87QOXR64;compromis;;17427;;;1;mandat;AMBIGU (2 candidats);;37184;MOI SEUL
-457;TRJ5Y59U;offre;;23995;;;4;mandat+dates+lieu+equipe;AMBIGU (2 candidats);;47557;MOI SEUL
-535;A07EC3DH;offre;;1876;;;3;mandat+dates+equipe;par le nom;;5262;MOI SEUL
-3858;6M6HGWYD;compromis;;19464;;;2;mandat+lieu;AMBIGU (2 candidats);;40403;MOI SEUL
-3704;LM6YKKZP;vente;;16035;;;4;mandat+dates+lieu+equipe;seule du genre;;32960;MOI SEUL
-2780;91IHSGNC;compromis;;4781;;;1;vendeur;seule du genre;;10229;MOI SEUL
-3616;3G4R6TEI;vente;;27160;;;4;mandat+acquereur+lieu+equipe;seule du genre;;53359;MOI SEUL
-3731;JAW5U9OF;compromis;;17024;;;3;mandat+dates+lieu;seule du genre;;36165;MOI SEUL
-3538;FUDJ9CJC;compromis;;20277;;;3;mandat+lieu+equipe;date exacte;;41705;MOI SEUL
-4166;1W2O0DSU;compromis;;28341;;;4;mandat+acquereur+vendeur+equipe;seule du genre;;55091;MOI SEUL
-3900;RGCEC677;vente;;4546;;;4;mandat+acquereur+vendeur+lieu;seule du genre;;9877;MOI SEUL
-4123;MDTBQXVO;compromis;;27661;;;2;mandat+equipe;2e chance (tour 1);;53924;MOI SEUL
-3175;8ATXF2EZ;offre;;19153;;;1;dates;seule du genre;;39879;MOI SEUL
-3455;HRC324JH;compromis;;2210;;;4;mandat+vendeur+lieu+equipe;AMBIGU (2 candidats);;5689;MOI SEUL
-123;G8YSAI5Z;offre;;1000050;;;5;mandat+acquereur+vendeur+dates+equipe;seule du genre;;50119;MOI SEUL
-4542;f0d731fa;vente;;30781;;;5;mandat+vendeur+dates+lieu+equipe;seule du genre;;61739;MOI SEUL
-1896;GM8VDVK2;offre;;21599;;;4;mandat+dates+lieu+equipe;date exacte;;43126;MOI SEUL
-1857;ZETH4WI9;compromis;;24371;;;3;dates+lieu+equipe;seule du genre;;48085;MOI SEUL
-3768;3WBNBNY4;compromis;;19737;;;3;mandat+lieu+equipe;2e chance (tour 1);;40855;MOI SEUL
-3716;M1OIXLBA;vente;;26075;;;4;mandat+acquereur+dates+lieu;seule du genre;;50581;MOI SEUL
-4757;91b51c1b;compromis;;30794;;;5;mandat+acquereur+vendeur+lieu+equipe;seule du genre;;62371;MOI SEUL
-3651;3LMG7EXA;offre;;17290;;;2;mandat+lieu;AMBIGU (3 candidats);;36755;MOI SEUL
-3576;MAB7DN65;vente;;7651;;;4;mandat+acquereur+dates+lieu;seule du genre;;15517;MOI SEUL
-2914;ESMCO1NC;vente;;6590;;;1;dates;seule du genre;;12837;MOI SEUL
-3960;YV95DVKD;compromis;;26027;;;3;mandat+dates+lieu;date exacte;;50368;MOI SEUL
-4472;0176b44e;offre;;28799;;;5;mandat+acquereur+vendeur+dates+equipe;seule du genre;;61509;MOI SEUL
-3828;DHG4SD0N;compromis;;20408;;;4;mandat+vendeur+lieu+equipe;date exacte;;41797;MOI SEUL
-430;GQCBSQNY;offre;;27137;;;4;mandat+acquereur+dates+lieu;date exacte;;53342;MOI SEUL
-3660;H75WKJ6X;compromis;;24122;;;4;mandat+dates+lieu+equipe;date exacte;;47776;MOI SEUL
-1080;X2714E92;offre;;17025;;;3;mandat+acquereur+lieu;2e chance (tour 1);;36165;MOI SEUL
-3686;VHZ88PLB;vente;;4514;;;3;mandat+vendeur+dates;seule du genre;;9780;MOI SEUL
-2239;LWZL8V5M;offre;;20673;;;2;mandat+lieu;seule du genre;;42025;MOI SEUL
-4749;34932f4e;compromis;;30789;;;5;mandat+acquereur+vendeur+dates+lieu;seule du genre;;62576;MOI SEUL
-579;72GQRHVB;vente;;6393;;;2;vendeur+dates;seule du genre;;12311;MOI SEUL
-3530;IEYXREWQ;compromis;;27135;;;3;mandat+lieu+equipe;2e chance (tour 1);;53342;MOI SEUL
-3926;R2U574AC;compromis;;19711;;;3;mandat+lieu+equipe;seule du genre;;40811;MOI SEUL
-328;DXSH7AWE;compromis;;2171;;;3;vendeur+dates+equipe;seule du genre;;5622;MOI SEUL
-4499;b2334671;offre;;28636;;;5;mandat+acquereur+vendeur+dates+equipe;seule du genre;;59183;MOI SEUL
-210;NRZVKH85;compromis;;22979;;;5;mandat+vendeur+dates+lieu+equipe;seule du genre;;45672;MOI SEUL
-2173;TMS863YQ;offre;;17450;;;3;acquereur+dates+lieu;seule du genre;;37210;MOI SEUL
-4157;F5GA770R;compromis;;27679;;;2;mandat+equipe;date exacte;;53940;MOI SEUL
-3633;UIM5TBKS;compromis;;21965;;;3;mandat+vendeur+lieu;date exacte;;44033;MOI SEUL
+388;H2JZ0S63;compromis;;25718;;;4;acquereur+dates+lieu+equipe;seule du genre;;49662;MOI SEUL
+3660;H75WKJ6X;vente;;24125;;;4;mandat+dates+lieu+equipe;seule du genre;;47776;MOI SEUL
+3614;G1TVNXJ5;compromis;;1160;;;4;mandat+dates+lieu+equipe;date exacte;;2629;MOI SEUL
+3738;GUUVDY2S;compromis;;29005;;;3;mandat+dates+equipe;date exacte;;24410;MOI SEUL
+1282;RF9KYWSY;compromis;;24380;;;5;mandat+acquereur+dates+lieu+equipe;seule du genre;;48093;MOI SEUL
+3864;S3HOG6UL;compromis;;17387;;;3;mandat+dates+lieu;date exacte;;37032;MOI SEUL
+589;6FQO29C8;offre;;19132;;;1;dates;seule du genre;;39845;MOI SEUL
+3953;3THZJOOG;compromis;;4720;;;2;mandat+lieu;AMBIGU (2 candidats);;10129;MOI SEUL
+2173;TMS863YQ;vente;;17451;;;3;acquereur+dates+lieu;seule du genre;;37210;MOI SEUL
+4460;e9260960;offre;;11147;;;6;mandat+acquereur+vendeur+dates+lieu+equipe;seule du genre;;23353;MOI SEUL
+4684;aad89f34;compromis;;30810;;;4;mandat+acquereur+vendeur+equipe;seule du genre;;61746;MOI SEUL
 4604;f0ec39fc;compromis;;28841;;;3;vendeur+dates+equipe;seule du genre;;61615;MOI SEUL
-3697;LKBO1TOH;compromis;;4289;;;1;mandat;2e chance (tour 1);;9510;MOI SEUL
-2853;Y9A2L3X4;vente;11998;;à valider;9 sans mandat (acquéreur + vendeur);0;ABSTENTION : aucune famille de temoins;;24774;;LE GEL SEUL
-2735;58CC6P6T;compromis;27568;;sûre;9 sans mandat (acquéreur + vendeur) · acquéreur unique dans tout le registre;0;ABSTENTION : aucune famille de temoins;;53824;;LE GEL SEUL
-2343;1HFA7NUI;vente;24515;;sûre;3 mandat + date;3;mandat+lieu+equipe;;48249;;LE GEL SEUL
-2260;LOS49HGM;vente;4574;;à valider;9 sans mandat (acquéreur + vendeur) + exclusivité;0;ABSTENTION : aucune famille de temoins;;9917;;LE GEL SEUL
-3935;5QE9107L;compromis;20088;;sûre;5 mandat + vendeur;3;mandat+lieu+equipe;;41481;;LE GEL SEUL
-488;D5KU9GNT;vente;7651;;sûre;2 mandat + acquéreur;4;mandat+dates+lieu+equipe;;15517;;LE GEL SEUL
-227;53ZS73KW;compromis;21551;;sûre;4 mandat + avancement;3;mandat+vendeur+lieu;;43091;;LE GEL SEUL
-2949;ZTRJRM6C;vente;7894;;sûre;9 sans mandat (acquéreur + vendeur) · acquéreur unique dans tout le registre;0;ABSTENTION : aucune famille de temoins;;15869;;LE GEL SEUL
-4770;d66a35e4;offre;30741;;sûre;1 mandat seul;3;acquereur+lieu+equipe;;58970;;LE GEL SEUL
-4130;CRWGXG9R;offre;6204;;bonne;10 acquéreur + date (mandat différent) + exclusivité;0;ABSTENTION : aucune famille de temoins;;11927;;LE GEL SEUL
-648;6JKPVWX1;vente;27160;;sûre;2 mandat + acquéreur;4;mandat+dates+lieu+equipe;;53359;;LE GEL SEUL
-2053;H1KYESMD;vente;4136;;sûre;2 mandat + acquéreur;3;mandat+dates+lieu;;9247;;LE GEL SEUL
-3689;FJS4IJGZ;compromis;14813;;sûre;2 mandat + acquéreur;2;mandat+equipe;;30376;;LE GEL SEUL
-3632;V3FO5NDA;vente;19133;;à valider;9 sans mandat (acquéreur + vendeur);0;tous les candidats elimines par le veto;;39845;;LE GEL SEUL
-4064;7N8A20H5;offre;24594;;sûre;2 mandat + acquéreur;2;mandat+equipe;;48315;;LE GEL SEUL
-380;08GV8OMZ;compromis;6340;;sûre;2 mandat + acquéreur;4;mandat+dates+lieu+equipe;;12246;;LE GEL SEUL
-3501;1JGNAII6;compromis;26827;;sûre;0 mandat de recherche + acquéreur;0;tous les candidats elimines par le veto;;52727;;LE GEL SEUL
-1158;CEOL50VM;vente;22021;;sûre;2 mandat + acquéreur;2;mandat+lieu;;44198;;LE GEL SEUL
-1735;SCYKLY77;vente;24323;;sûre;2 mandat + acquéreur;3;mandat+lieu+equipe;;48013;;LE GEL SEUL
-3301;9JCIQYZX;compromis;17913;;à valider;9 sans mandat (acquéreur + vendeur);0;ABSTENTION : aucune famille de temoins;;38099;;LE GEL SEUL
-2853;Y9A2L3X4;compromis;11996;;à valider;9 sans mandat (acquéreur + vendeur);0;ABSTENTION : aucune famille de temoins;;24774;;LE GEL SEUL
-2095;1290IIOC;vente;16364;;sûre;4 mandat + avancement;3;mandat+lieu+equipe;;34048;;LE GEL SEUL
-1539;5IMC8F4X;compromis;27532;;à valider;9 sans mandat (acquéreur + vendeur);4;vendeur+dates+lieu+equipe;;53766;;LE GEL SEUL
-2260;LOS49HGM;compromis;4572;;à valider;9 sans mandat (acquéreur + vendeur) + exclusivité;0;ABSTENTION : aucune famille de temoins;;9917;;LE GEL SEUL
-3818;IAYQ5OG2;compromis;22444;;à valider;9 sans mandat (acquéreur + vendeur) + exclusivité;2;mandat+acquereur;;45081;;LE GEL SEUL
-179;FKKR2XG5;vente;28;;sûre;4 mandat + avancement;5;mandat+vendeur+dates+lieu+equipe;;53;;LE GEL SEUL
-995;DWKNZ4M4;offre;6456;;à valider;9 sans mandat (acquéreur + vendeur);0;ABSTENTION : aucune famille de temoins;;12440;;LE GEL SEUL
-932;YJ2Z9R1O;vente;16302;;sûre;2 mandat + acquéreur;2;mandat+equipe;;33822;;LE GEL SEUL
-931;C85K8ZLH;vente;4304;;sûre;2 mandat + acquéreur;3;mandat+dates+lieu;;9525;;LE GEL SEUL
-3785;3308P0UX;compromis;4480;;sûre;4 mandat + avancement;2;mandat+vendeur;;9748;;LE GEL SEUL
-796;E85URD1T;vente;27341;;sûre;2 mandat + acquéreur;5;mandat+vendeur+dates+lieu+equipe;;53560;;LE GEL SEUL
-3996;YATQOEPB;compromis;16342;;sûre;4 mandat + avancement;3;mandat+lieu+equipe;;34007;;LE GEL SEUL
-3597;0YFLJL5W;compromis;9899;;à valider;9 sans mandat (acquéreur + vendeur) + exclusivité;1;mandat;;20944;;LE GEL SEUL
-3847;WJ3KA32F;offre;10730;;à valider;9 sans mandat (acquéreur + vendeur) + exclusivité;2;mandat+lieu;;22828;;LE GEL SEUL
-4225;1cc703d9;vente;14009;;sûre;2 mandat + acquéreur;4;mandat+acquereur+vendeur+equipe;;28422;;LE GEL SEUL
-699;PCZDI8P1;vente;7563;;sûre;2 mandat + acquéreur;3;mandat+vendeur+lieu;;15356;;LE GEL SEUL
-4666;af8d7986;offre;25710;;sûre;2 mandat + acquéreur;4;mandat+acquereur+vendeur+equipe;;49624;;LE GEL SEUL
-3887;O6R10ZQA;compromis;20073;;sûre;2 mandat + acquéreur + exclusivité;4;mandat+dates+lieu+equipe;;41467;;LE GEL SEUL
-1034;H2GKG338;vente;19098;;sûre;2 mandat + acquéreur;4;mandat+dates+lieu+equipe;;39776;;LE GEL SEUL
-3464;1ESJE28Q;compromis;12952;;à valider;9 sans mandat (acquéreur + vendeur);0;ABSTENTION : aucune famille de temoins;;26801;;LE GEL SEUL
-3608;TCB4ZNQO;offre;6436;;à valider;9 sans mandat (acquéreur + vendeur);0;tous les candidats elimines par le veto;;12414;;LE GEL SEUL
-1080;X2714E92;vente;17027;;sûre;4 mandat + avancement;3;mandat+acquereur+lieu;;36165;;LE GEL SEUL
-3898;5N9K5ENX;compromis;19464;;sûre;5 mandat + vendeur;2;mandat+lieu;;40403;;LE GEL SEUL
-565;P0YMQODU;vente;121;;sûre;3 mandat + date;3;mandat+dates+lieu;;376;;LE GEL SEUL
-4005;SBH4QWDW;compromis;23050;;sûre;4 mandat + avancement;2;mandat+lieu;;45891;;LE GEL SEUL
-2786;JPNCDKO1;vente;27644;;à valider;9 sans mandat (acquéreur + vendeur) + exclusivité;1;mandat;;53894;;LE GEL SEUL
-793;Q63BAWAV;compromis;27183;;sûre;2 mandat + acquéreur;3;mandat+dates+lieu;;53392;;LE GEL SEUL
-2735;58CC6P6T;offre;27569;;sûre;9 sans mandat (acquéreur + vendeur) · acquéreur unique dans tout le registre;0;ABSTENTION : aucune famille de temoins;;53824;;LE GEL SEUL
-541;3X3UPF1Q;vente;4514;;sûre;2 mandat + acquéreur;3;mandat+vendeur+lieu;;9780;;LE GEL SEUL
-3522;Y51UMZHY;offre;19277;;à valider;9 sans mandat (acquéreur + vendeur);0;tous les candidats elimines par le veto;;40137;;LE GEL SEUL
-3985;H78FD3YN;compromis;27445;;sûre;2 mandat + acquéreur;3;mandat+lieu+equipe;;53678;;LE GEL SEUL
-2949;ZTRJRM6C;compromis;7892;;sûre;9 sans mandat (acquéreur + vendeur) · acquéreur unique dans tout le registre;0;ABSTENTION : aucune famille de temoins;;15869;;LE GEL SEUL
-4568;2b6075b1;offre;28733;;sûre;1 mandat seul;0;ABSTENTION : aucune famille de temoins;;59498;;LE GEL SEUL
-227;53ZS73KW;offre;21552;;sûre;4 mandat + avancement;3;mandat+vendeur+lieu;;43091;;LE GEL SEUL
-4100;E9XL0N5B;compromis;9907;;à valider;9 sans mandat (acquéreur + vendeur) + exclusivité;4;mandat+acquereur+dates+equipe;;21037;;LE GEL SEUL
-3632;V3FO5NDA;compromis;19131;;à valider;9 sans mandat (acquéreur + vendeur);0;tous les candidats elimines par le veto;;39845;;LE GEL SEUL
-2086;Z2FX1C7S;vente;26037;;sûre;2 mandat + acquéreur;2;mandat+lieu;;50400;;LE GEL SEUL
-2118;45PERG6S;vente;24447;;sûre;3 mandat + date;3;mandat+lieu+equipe;;48149;;LE GEL SEUL
-380;08GV8OMZ;offre;6341;;sûre;2 mandat + acquéreur;4;mandat+dates+lieu+equipe;;12246;;LE GEL SEUL
-3501;1JGNAII6;offre;26829;;sûre;0 mandat de recherche + acquéreur;0;tous les candidats elimines par le veto;;52727;;LE GEL SEUL
-2278;A5Y59R7M;vente;2645;;sûre;2 mandat + acquéreur;3;mandat+lieu+equipe;;6585;;LE GEL SEUL
-1379;Z0BDVNBZ;vente;4546;;sûre;2 mandat + acquéreur;4;mandat+vendeur+dates+lieu;;9877;;LE GEL SEUL
-4095;NYEXY2LL;compromis;21616;;à valider;9 sans mandat (acquéreur + vendeur);0;tous les candidats elimines par le veto;;43138;;LE GEL SEUL
-4647;62da86ce;offre;16223;;sûre;1 mandat seul;1;dates;;33517;;LE GEL SEUL
-275;OBBBCH0X;vente;17207;;sûre;2 mandat + acquéreur;3;mandat+dates+lieu;;36471;;LE GEL SEUL
-845;305KAY9W;vente;24125;;sûre;3 mandat + date;4;mandat+dates+lieu+equipe;;47776;;LE GEL SEUL
-3301;9JCIQYZX;offre;17914;;à valider;9 sans mandat (acquéreur + vendeur);0;ABSTENTION : aucune famille de temoins;;38099;;LE GEL SEUL
-3842;60CLRO51;compromis;17387;;sûre;5 mandat + vendeur;2;mandat+lieu;;37032;;LE GEL SEUL
-2853;Y9A2L3X4;offre;11997;;à valider;9 sans mandat (acquéreur + vendeur);0;ABSTENTION : aucune famille de temoins;;24774;;LE GEL SEUL
-995;DWKNZ4M4;vente;6457;;à valider;9 sans mandat (acquéreur + vendeur);0;ABSTENTION : aucune famille de temoins;;12440;;LE GEL SEUL
-1017;ZOJDHHL9;vente;3723;;sûre;3 mandat + date;2;mandat+equipe;;8544;;LE GEL SEUL
-925;UHVX3QH1;vente;16035;;sûre;2 mandat + acquéreur;3;mandat+lieu+equipe;;32960;;LE GEL SEUL
-2260;LOS49HGM;offre;4573;;à valider;9 sans mandat (acquéreur + vendeur) + exclusivité;0;ABSTENTION : aucune famille de temoins;;9917;;LE GEL SEUL
-3818;IAYQ5OG2;offre;22446;;à valider;9 sans mandat (acquéreur + vendeur) + exclusivité;2;mandat+acquereur;;45081;;LE GEL SEUL
-3997;JEK94D31;compromis;1000148;;à valider;9 sans mandat (acquéreur + vendeur);0;ABSTENTION : aucune famille de temoins;;43787;;LE GEL SEUL
-4075;VMSFVBJS;compromis;28299;;à valider;9 sans mandat (acquéreur + vendeur) + exclusivité;1;mandat;;54993;;LE GEL SEUL
-593;QLT8OW7M;vente;20307;;sûre;2 mandat + acquéreur;2;mandat+lieu;;41722;;LE GEL SEUL
-4670;df0ce30c;offre;23802;;sûre;0 mandat de recherche + acquéreur;3;acquereur+vendeur+equipe;;47174;;LE GEL SEUL
-3597;0YFLJL5W;offre;9900;;à valider;9 sans mandat (acquéreur + vendeur) + exclusivité;1;mandat;;20944;;LE GEL SEUL
-4114;0OO1BEZD;compromis;24588;;sûre;3 mandat + date;2;mandat+equipe;;48311;;LE GEL SEUL
-1631;5SPO8UO2;vente;4599;;sûre;2 mandat + acquéreur;3;mandat+dates+lieu;;9946;;LE GEL SEUL
-3656;P8Z5MBIG;compromis;6459;;sûre;0 mandat de recherche + acquéreur;0;tous les candidats elimines par le veto;;12443;;LE GEL SEUL
-3464;1ESJE28Q;offre;12953;;à valider;9 sans mandat (acquéreur + vendeur);0;ABSTENTION : aucune famille de temoins;;26801;;LE GEL SEUL
-1080;X2714E92;compromis;17024;;sûre;4 mandat + avancement;3;mandat+acquereur+lieu;;36165;;LE GEL SEUL
-4124;LBNR7IMC;compromis;8948;;à valider;9 sans mandat (acquéreur + vendeur);0;ABSTENTION : aucune famille de temoins;;17787;;LE GEL SEUL
-4668;739a0db1;compromis;27195;;sûre;1 mandat seul;3;mandat+acquereur+vendeur;;53398;;LE GEL SEUL
-2786;JPNCDKO1;compromis;27642;;à valider;9 sans mandat (acquéreur + vendeur) + exclusivité;1;mandat;;53894;;LE GEL SEUL
-3579;8Q3LHGZ4;compromis;8321;;à valider;9 sans mandat (acquéreur + vendeur);0;ABSTENTION : aucune famille de temoins;;16831;;LE GEL SEUL
-2735;58CC6P6T;vente;27570;;sûre;9 sans mandat (acquéreur + vendeur) · acquéreur unique dans tout le registre;0;ABSTENTION : aucune famille de temoins;;53824;;LE GEL SEUL
-4058;PJ7OXF0X;offre;4790;;bonne;10 acquéreur + date (mandat différent) + exclusivité;1;mandat;;10251;;LE GEL SEUL
-1024;YLAVM0I7;vente;26075;;sûre;2 mandat + acquéreur;2;mandat+lieu;;50581;;LE GEL SEUL
-2949;ZTRJRM6C;offre;7893;;sûre;9 sans mandat (acquéreur + vendeur) · acquéreur unique dans tout le registre;0;ABSTENTION : aucune famille de temoins;;15869;;LE GEL SEUL
-4100;E9XL0N5B;offre;9908;;à valider;9 sans mandat (acquéreur + vendeur) + exclusivité;4;mandat+acquereur+dates+equipe;;21037;;LE GEL SEUL
-4064;7N8A20H5;compromis;24593;;sûre;2 mandat + acquéreur;2;mandat+equipe;;48315;;LE GEL SEUL
-3978;KBW3J7DF;compromis;1000151;;sûre;4 mandat + avancement;3;mandat+lieu+equipe;;52937;;LE GEL SEUL
-2388;3S4ZWOFK;vente;11960;;sûre;4 mandat + avancement;3;mandat+dates+equipe;;24733;;LE GEL SEUL
+3538;FUDJ9CJC;compromis;;20277;;;4;mandat+dates+lieu+equipe;date exacte;;41705;MOI SEUL
+189;B8UXUHU4;offre;;3582;;;5;mandat+acquereur+vendeur+dates+equipe;seule du genre;;8315;MOI SEUL
+4080;3XMY2OG3;compromis;;17147;;;3;mandat+dates+equipe;date exacte;;36339;MOI SEUL
+4657;d57e7da9;vente;;30807;;;5;mandat+acquereur+vendeur+dates+equipe;seule du genre;;59193;MOI SEUL
+692;7IHI7YTJ;vente;;4236;;;2;dates+lieu;seule du genre;;9412;MOI SEUL
+2914;ESMCO1NC;offre;;6589;;;1;dates;seule du genre;;12837;MOI SEUL
+3990;Z3DYDC4X;compromis;;14111;;;2;mandat+dates;date exacte;;28653;MOI SEUL
+3530;IEYXREWQ;vente;;27141;;;3;mandat+lieu+equipe;AMBIGU (2 candidats);;53342;MOI SEUL
+1546;S8BKB6FL;vente;;4414;;;1;dates;seule du genre;;9663;MOI SEUL
+4145;9706WM9J;compromis;;25151;;;1;mandat;seule du genre;;48948;MOI SEUL
+1896;GM8VDVK2;offre;;21599;;;4;mandat+dates+lieu+equipe;date exacte;;43126;MOI SEUL
+1857;ZETH4WI9;vente;;24373;;;3;dates+lieu+equipe;seule du genre;;48085;MOI SEUL
+4051;Q23M98IX;compromis;;24499;;;5;mandat+vendeur+dates+lieu+equipe;date exacte;;48239;MOI SEUL
+3378;5H70KQZA;vente;;14228;;;1;dates;seule du genre;;28918;MOI SEUL
+4457;959b7669;compromis;;28568;;;5;mandat+acquereur+vendeur+lieu+equipe;seule du genre;;58979;MOI SEUL
+388;H2JZ0S63;offre;;25719;;;4;acquereur+dates+lieu+equipe;seule du genre;;49662;MOI SEUL
+4606;774aa002;compromis;;11138;;;5;mandat+acquereur+vendeur+lieu+equipe;seule du genre;;23319;MOI SEUL
+3842;60CLRO51;offre;;17389;;;2;mandat+lieu;date exacte;;37032;MOI SEUL
+2297;PT1ZTCIQ;offre;;22172;;;3;mandat+dates+equipe;seule du genre;;44439;MOI SEUL
+2780;91IHSGNC;vente;;4783;;;2;vendeur+dates;seule du genre;;10229;MOI SEUL
+4604;f0ec39fc;offre;;28842;;;3;vendeur+dates+equipe;seule du genre;;61615;MOI SEUL
+3455;HRC324JH;compromis;;2210;;;5;mandat+vendeur+dates+lieu+equipe;date exacte;;5689;MOI SEUL
+2388;3S4ZWOFK;offre;;11958;;;3;mandat+dates+equipe;par le nom;;24733;MOI SEUL
+1011;5GZVT548;vente;;17324;;;5;mandat+acquereur+vendeur+dates+lieu;seule du genre;;36794;MOI SEUL
+4098;UL12H3AQ;offre;;24594;;;3;mandat+acquereur+equipe;seule du genre;;48315;MOI SEUL
+3636;HEQZW1KO;compromis;;4277;;;3;mandat+dates+lieu;date exacte;;9491;MOI SEUL
+3722;I3R03A11;offre;;19458;;;2;mandat+lieu;2e chance (tour 1);;40378;MOI SEUL
+3175;8ATXF2EZ;compromis;;19152;;;1;dates;seule du genre;;39879;MOI SEUL
+4225;1cc703d9;offre;;14008;;;5;mandat+acquereur+vendeur+dates+equipe;seule du genre;;28422;MOI SEUL
+3954;ZV3QRSJG;compromis;;17131;;;2;mandat+lieu;AMBIGU (3 candidats);;36320;MOI SEUL
+1943;0GV2LNV2;offre;;4747;;;3;mandat+dates+lieu;par le nom;;10165;MOI SEUL
+3487;G88ISQKI;compromis;;26605;;;4;mandat+vendeur+dates+equipe;date exacte;;52143;MOI SEUL
+457;TRJ5Y59U;offre;;23995;;;4;mandat+dates+lieu+equipe;AMBIGU (2 candidats);;47557;MOI SEUL
+3446;1W9FJJLB;offre;;2169;;;3;mandat+dates+equipe;date exacte;;5620;MOI SEUL
+4068;SC55F4MV;compromis;;9496;;;4;mandat+dates+lieu+equipe;date exacte;;19192;MOI SEUL
+3439;7NI4WKV5;compromis;;22;;;4;mandat+vendeur+dates+lieu;date exacte;;53;MOI SEUL
+4145;9706WM9J;offre;;25152;;;1;mandat;seule du genre;;48948;MOI SEUL
+3323;2U5QPKRC;vente;;17770;;;1;dates;seule du genre;;37875;MOI SEUL
+545;IX6FX4TX;offre;;9452;;;5;mandat+vendeur+dates+lieu+equipe;seule du genre;;18988;MOI SEUL
+2665;I3TFR2KG;compromis;;24618;;;2;dates+equipe;seule du genre;;48340;MOI SEUL
+3640;LHQY0K8G;compromis;;27183;;;4;mandat+acquereur+lieu+equipe;seule du genre;;53392;MOI SEUL
+3926;R2U574AC;compromis;;19711;;;3;mandat+lieu+equipe;seule du genre;;40811;MOI SEUL
+2559;QXDW8EQA;offre;;1028;;;1;dates;seule du genre;;2070;MOI SEUL
+4358;a5cb141f;offre;;6172;;;4;mandat+acquereur+vendeur+lieu;seule du genre;;11820;MOI SEUL
+3935;5QE9107L;offre;;20090;;;3;mandat+lieu+equipe;date exacte;;41481;MOI SEUL
+4123;MDTBQXVO;compromis;;27661;;;3;mandat+dates+equipe;date exacte;;53924;MOI SEUL
+315;HPNJ32UM;vente;;28147;;;5;mandat+acquereur+vendeur+lieu+equipe;seule du genre;;54715;MOI SEUL
+2908;6QDR3G7V;offre;;17721;;;2;mandat+dates;seule du genre;;37801;MOI SEUL
+2239;LWZL8V5M;vente;;20674;;;2;mandat+lieu;seule du genre;;42025;MOI SEUL
+566;DHXRAK9O;compromis;;9370;;;1;dates;seule du genre;;18799;MOI SEUL
+3613;7HDK9XOG;compromis;;117;;;4;mandat+dates+lieu+equipe;date exacte;;376;MOI SEUL
+430;GQCBSQNY;offre;;27137;;;4;mandat+acquereur+dates+lieu;date exacte;;53342;MOI SEUL
+67;I847SPN3;vente;;3701;;;5;mandat+acquereur+vendeur+lieu+equipe;seule du genre;;8494;MOI SEUL
+3552;7JXLR3JQ;compromis;;14249;;;1;mandat;seule du genre;;28953;MOI SEUL
+3502;644UYQNA;compromis;;19612;;;4;mandat+dates+lieu+equipe;date exacte;;40679;MOI SEUL
+4117;4G2UHO35;compromis;;19814;;;2;mandat+equipe;AMBIGU (3 candidats);;40977;MOI SEUL
+3756;TQYCQNY4;compromis;;3719;;;3;mandat+dates+equipe;date exacte;;8544;MOI SEUL
+3817;4PW2L3MG;offre;;24454;;;3;mandat+lieu+equipe;date exacte;;48154;MOI SEUL
+4499;b2334671;offre;;28636;;;5;mandat+acquereur+vendeur+dates+equipe;seule du genre;;59183;MOI SEUL
+3175;8ATXF2EZ;offre;;19153;;;1;dates;seule du genre;;39879;MOI SEUL
+1516;W79RISV0;compromis;;23475;;;4;mandat+acquereur+dates+lieu;seule du genre;;46585;MOI SEUL
+3860;6NOJ686I;offre;;11657;;;4;mandat+dates+lieu+equipe;date exacte;;24479;MOI SEUL
+286;9Q0FHAKK;compromis;;3647;;;2;vendeur+dates;date exacte;;8395;MOI SEUL
+3795;8RWTD0YX;offre;;4387;;;1;mandat;date exacte;;9629;MOI SEUL
+2521;ZR13FV3K;offre;;16421;;;3;mandat+dates+equipe;seule du genre;;34296;MOI SEUL
+2774;J6RGX0CQ;vente;;4930;;;1;dates;seule du genre;;10395;MOI SEUL
+3603;3ID282Y1;compromis;;17434;;;4;mandat+vendeur+dates+equipe;date exacte;;37192;MOI SEUL
+3828;DHG4SD0N;compromis;;20408;;;5;mandat+vendeur+dates+lieu+equipe;date exacte;;41797;MOI SEUL
+4090;1X9W3VUF;compromis;;24598;;;4;mandat+dates+lieu+equipe;date exacte;;48321;MOI SEUL
+4697;ce63cee9;compromis;;30818;;;3;mandat+vendeur+equipe;seule du genre;;62049;MOI SEUL
+579;72GQRHVB;offre;;6392;;;2;vendeur+dates;seule du genre;;12311;MOI SEUL
+4060;BEI93QZ2;compromis;;24443;;;4;mandat+dates+lieu+equipe;date exacte;;48149;MOI SEUL
+3552;7JXLR3JQ;offre;;14250;;;1;mandat;seule du genre;;28953;MOI SEUL
+3768;3WBNBNY4;compromis;;19737;;;3;mandat+lieu+equipe;2e chance (tour 1);;40855;MOI SEUL
+3645;T0WL4QE7;offre;;25879;;;2;mandat+dates;date exacte;;49924;MOI SEUL
+4117;4G2UHO35;offre;;19819;;;2;mandat+equipe;date exacte;;40977;MOI SEUL
+3703;XCK96Z01;compromis;;177;;;4;mandat+vendeur+lieu+equipe;2e chance (tour 1);;500;MOI SEUL
+4713;db0d5e8d;compromis;;30798;;;4;mandat+acquereur+vendeur+equipe;seule du genre;;49399;MOI SEUL
+2485;EJN79TJ1;vente;;27714;;;2;dates+equipe;seule du genre;;53953;MOI SEUL
+2789;NKDC0I1M;offre;;27741;;;3;acquereur+dates+equipe;seule du genre;;53984;MOI SEUL
+286;9Q0FHAKK;offre;;3648;;;2;vendeur+dates;par le nom;;8395;MOI SEUL
+3664;HORVRQ6N;compromis;;20301;;;4;mandat+dates+lieu+equipe;date exacte;;41721;MOI SEUL
+3832;P252U1JH;compromis;;4126;;;3;mandat+vendeur+lieu;2e chance (tour 1);;9232;MOI SEUL
+453;PVRG1SNH;vente;;1870;;;3;vendeur+dates+equipe;seule du genre;;5255;MOI SEUL
+4154;UWNRN6F2;compromis;;24564;;;3;mandat+dates+equipe;date exacte;;48297;MOI SEUL
+4048;XDV1X78X;compromis;;4797;;;1;mandat;2e chance (tour 1);;10254;MOI SEUL
+4751;ce56c77b;compromis;;30805;;;5;mandat+acquereur+vendeur+lieu+equipe;seule du genre;;59040;MOI SEUL
+301;MDOXOBIC;compromis;;2163;;;2;dates+equipe;seule du genre;;5619;MOI SEUL
+4089;UAER0F0F;compromis;;7903;;;2;mandat+lieu;2e chance (tour 1);;15881;MOI SEUL
+3263;CS38OO8R;vente;;27987;;;1;dates;seule du genre;;54400;MOI SEUL
+4791;b7439331;offre;;30809;;;2;mandat+acquereur;seule du genre;;63299;MOI SEUL
+4153;XVRCFWCK;compromis;;17651;;;3;mandat+vendeur+dates;date exacte;;37634;MOI SEUL
+328;DXSH7AWE;vente;;2173;;;3;vendeur+dates+equipe;seule du genre;;5622;MOI SEUL
+3681;R90OQT16;compromis;;7605;;;2;mandat+lieu;2e chance (tour 1);;15449;MOI SEUL
+3977;QMIXZW44;compromis;;8457;;;1;mandat;seule du genre;;17067;MOI SEUL
+4628;63b1e2fd;vente;;30783;;;5;mandat+acquereur+dates+lieu+equipe;seule du genre;;32674;MOI SEUL
+3940;D7CZQBZG;compromis;;24406;;;3;mandat+dates+equipe;date exacte;;48112;MOI SEUL
+210;NRZVKH85;vente;;22983;;;5;mandat+vendeur+dates+lieu+equipe;date exacte;;45672;MOI SEUL
+4077;FS22QU5G;vente;;16364;;;2;mandat+equipe;seule du genre;;34048;MOI SEUL
+3383;MQ6H8TVQ;vente;;26698;;;1;dates;seule du genre;;52460;MOI SEUL
+2809;58I5AO17;vente;;7910;;;1;dates;seule du genre;;15898;MOI SEUL
+3990;Z3DYDC4X;offre;;14113;;;2;mandat+dates;date exacte;;28653;MOI SEUL
+3763;9WQ204HP;compromis;;4480;;;3;mandat+vendeur+dates;date exacte;;9748;MOI SEUL
+4343;2c2566d7;vente;;30813;;;4;mandat+acquereur+vendeur+equipe;seule du genre;;47174;MOI SEUL
+4061;ULA087KO;compromis;;24649;;;2;mandat+equipe;AMBIGU (2 candidats);;48370;MOI SEUL
+4671;c340b94b;compromis;;30787;;;4;mandat+acquereur+vendeur+equipe;seule du genre;;61962;MOI SEUL
+4766;9ec1e1a6;compromis;;30795;;;4;mandat+acquereur+vendeur+equipe;seule du genre;;61958;MOI SEUL
+4754;5a956cad;compromis;;30790;;;5;mandat+acquereur+vendeur+lieu+equipe;seule du genre;;62905;MOI SEUL
+4795;7543e4fb;offre;;30815;;;3;mandat+acquereur+lieu;seule du genre;;63140;MOI SEUL
+4792;c67ccc6a;offre;;30808;;;3;mandat+acquereur+equipe;seule du genre;;47132;MOI SEUL
+3810;515RUEN3;compromis;;17428;;;1;mandat;date exacte;;37184;MOI SEUL
+301;MDOXOBIC;offre;;2164;;;2;dates+equipe;seule du genre;;5619;MOI SEUL
+4039;HBZQXR67;compromis;;11729;;;3;mandat+dates+lieu;date exacte;;24528;MOI SEUL
+3690;G41FTEZ8;compromis;;4329;;;3;mandat+dates+lieu;date exacte;;9556;MOI SEUL
+3660;H75WKJ6X;compromis;;24122;;;4;mandat+dates+lieu+equipe;date exacte;;47776;MOI SEUL
+4718;a8aaeb2b;offre;;1000;;;3;acquereur+vendeur+equipe;2e chance (tour 1);;1970;MOI SEUL
+3927;PPIM4947;offre;;24291;;;3;mandat+vendeur+equipe;2e chance (tour 1);;47989;MOI SEUL
+3568;JRE23R1G;compromis;;27135;;;3;mandat+lieu+equipe;2e chance (tour 1);;53342;MOI SEUL
+3633;UIM5TBKS;compromis;;21965;;;4;mandat+vendeur+dates+lieu;date exacte;;44033;MOI SEUL
+2107;M4FNSOPF;compromis;;16407;;;4;mandat+acquereur+dates+lieu;seule du genre;;34259;MOI SEUL
+3977;QMIXZW44;offre;;8458;;;1;mandat;seule du genre;;17067;MOI SEUL
+3649;SWSN80FQ;compromis;;14813;;;3;mandat+dates+equipe;date exacte;;30376;MOI SEUL
+4622;c5e267b6;vente;;30800;;;5;mandat+acquereur+vendeur+dates+lieu;seule du genre;;61783;MOI SEUL
+2173;TMS863YQ;compromis;;17449;;;3;acquereur+dates+lieu;seule du genre;;37210;MOI SEUL
+3530;IEYXREWQ;compromis;;27134;;;3;mandat+lieu+equipe;2e chance (tour 1);;53342;MOI SEUL
+1546;S8BKB6FL;compromis;;4412;;;1;dates;seule du genre;;9663;MOI SEUL
+4284;c08ff7cb;offre;;3678;;;6;mandat+acquereur+vendeur+dates+lieu+equipe;seule du genre;;8454;MOI SEUL
+4756;bd0e986f;compromis;;30788;;;5;mandat+acquereur+vendeur+lieu+equipe;seule du genre;;62126;MOI SEUL
+3508;EO8MXFE9;compromis;;20264;;;2;mandat+dates;date exacte;;41699;MOI SEUL
+2665;I3TFR2KG;offre;;24619;;;2;dates+equipe;seule du genre;;48340;MOI SEUL
+1857;ZETH4WI9;compromis;;24371;;;3;dates+lieu+equipe;seule du genre;;48085;MOI SEUL
+3810;515RUEN3;offre;;17430;;;1;mandat;2e chance (tour 1);;37184;MOI SEUL
+1131;717OUUED;offre;;11597;;;4;mandat+acquereur+dates+equipe;par le nom;;24410;MOI SEUL
+4016;L2B2WGCF;compromis;;14110;;;1;mandat;2e chance (tour 1);;28653;MOI SEUL
+3378;5H70KQZA;compromis;;14224;;;1;dates;date exacte;;28918;MOI SEUL
+1555;HM8X1IG6;compromis;;4470;;;2;mandat+dates;seule du genre;;9742;MOI SEUL
+3575;ZE9WZW22;compromis;;14939;;;4;mandat+dates+lieu+equipe;date exacte;;30717;MOI SEUL
+4757;91b51c1b;compromis;;30794;;;5;mandat+acquereur+vendeur+lieu+equipe;seule du genre;;62371;MOI SEUL
+4113;9UO5NUN6;vente;;11960;;;3;mandat+dates+equipe;seule du genre;;24733;MOI SEUL
+566;DHXRAK9O;offre;;9371;;;1;dates;seule du genre;;18799;MOI SEUL
+2173;TMS863YQ;offre;;17450;;;3;acquereur+dates+lieu;seule du genre;;37210;MOI SEUL
+3686;VHZ88PLB;compromis;;4510;;;3;mandat+vendeur+dates;date exacte;;9780;MOI SEUL
+3968;RX6J289Y;compromis;;16377;;;3;mandat+acquereur+equipe;AMBIGU (3 candidats);;34066;MOI SEUL
+2780;91IHSGNC;compromis;;4781;;;2;vendeur+dates;seule du genre;;10229;MOI SEUL
+3521;CW4IYXO2;offre;;26;;;3;mandat+lieu+equipe;date exacte;;53;MOI SEUL
+3939;YKSL5L2U;compromis;;19690;;;5;mandat+vendeur+dates+lieu+equipe;date exacte;;40792;MOI SEUL
+3858;6M6HGWYD;compromis;;19464;;;2;mandat+lieu;AMBIGU (2 candidats);;40403;MOI SEUL
+3969;XCAUACUJ;compromis;;20492;;;4;mandat+dates+lieu+equipe;date exacte;;41833;MOI SEUL
+4142;R7NU9NPM;compromis;;19815;;;2;mandat+equipe;2e chance (tour 1);;40977;MOI SEUL
+3576;MAB7DN65;vente;;7651;;;4;mandat+acquereur+dates+lieu;seule du genre;;15517;MOI SEUL
+2696;50LQ2VSA;offre;;24631;;;3;mandat+dates+equipe;date exacte;;48353;MOI SEUL
+1866;2SCBZXMH;offre;;7780;;;3;mandat+dates+lieu;par le nom;;15722;MOI SEUL
+1546;S8BKB6FL;offre;;4413;;;1;dates;seule du genre;;9663;MOI SEUL
 380;08GV8OMZ;vente;6342;;sûre;2 mandat + acquéreur;4;mandat+dates+lieu+equipe;;12246;;LE GEL SEUL
-3632;V3FO5NDA;offre;19132;;à valider;9 sans mandat (acquéreur + vendeur);0;tous les candidats elimines par le veto;;39845;;LE GEL SEUL
-4252;721e650c;offre;3678;;sûre;3 mandat + date;4;mandat+vendeur+lieu+equipe;;8454;;LE GEL SEUL
-1103;7P1JJ2PP;vente;24410;;à valider;9 sans mandat (acquéreur + vendeur);2;dates+equipe;;48112;;LE GEL SEUL
-2486;GHLNXYFK;vente;17654;;sûre;3 mandat + date;3;mandat+dates+equipe;;37634;;LE GEL SEUL
-3301;9JCIQYZX;vente;17916;;à valider;9 sans mandat (acquéreur + vendeur);0;ABSTENTION : aucune famille de temoins;;38099;;LE GEL SEUL
-3959;E6RLLKMN;compromis;1101;;sûre;2 mandat + acquéreur;4;mandat+vendeur+lieu+equipe;;2393;;LE GEL SEUL
-4732;481c32c8;offre;29020;;sûre;1 mandat seul;2;acquereur+equipe;;62975;;LE GEL SEUL
-3817;4PW2L3MG;compromis;24450;;sûre;5 mandat + vendeur;3;mandat+lieu+equipe;;48154;;LE GEL SEUL
-2023;K491Z8WX;vente;24507;;sûre;2 mandat + acquéreur;3;mandat+lieu+equipe;;48241;;LE GEL SEUL
-1539;5IMC8F4X;vente;27535;;à valider;9 sans mandat (acquéreur + vendeur);4;vendeur+dates+lieu+equipe;;53766;;LE GEL SEUL
-4095;NYEXY2LL;offre;21618;;à valider;9 sans mandat (acquéreur + vendeur);0;tous les candidats elimines par le veto;;43138;;LE GEL SEUL
-3795;8RWTD0YX;compromis;4385;;sûre;5 mandat + vendeur;1;mandat;;9629;;LE GEL SEUL
-995;DWKNZ4M4;compromis;6455;;à valider;9 sans mandat (acquéreur + vendeur);0;ABSTENTION : aucune famille de temoins;;12440;;LE GEL SEUL
-3493;LNQFN038;compromis;15914;;sûre;2 mandat + acquéreur;3;mandat+lieu+equipe;;32732;;LE GEL SEUL
-2078;ODJRIJGW;vente;17528;;sûre;2 mandat + acquéreur;3;mandat+lieu+equipe;;37402;;LE GEL SEUL
-3997;JEK94D31;offre;1000116;;à valider;9 sans mandat (acquéreur + vendeur);0;ABSTENTION : aucune famille de temoins;;43787;;LE GEL SEUL
-4675;44a4c19f;compromis;1000003;;sûre;2 mandat + acquéreur;4;acquereur+vendeur+lieu+equipe;;58930;;LE GEL SEUL
+4735;70598d90;offre;29024;;sûre;2 mandat + acquéreur;5;mandat+acquereur+vendeur+lieu+equipe;;42976;;LE GEL SEUL
+488;D5KU9GNT;vente;7651;;sûre;2 mandat + acquéreur;4;mandat+dates+lieu+equipe;;15517;;LE GEL SEUL
 3899;FVLMAQ63;compromis;23475;;sûre;3 mandat + date;2;mandat+lieu;;46585;;LE GEL SEUL
-4075;VMSFVBJS;offre;28300;;à valider;9 sans mandat (acquéreur + vendeur) + exclusivité;1;mandat;;54993;;LE GEL SEUL
-4044;5SNKH1QQ;offre;4578;;sûre;9 sans mandat (acquéreur + vendeur) + exclusivité · acquéreur unique dans tout le registre;1;mandat;;9925;;LE GEL SEUL
-3938;61OW86CS;compromis;4496;;sûre;5 mandat + vendeur;3;mandat+lieu+equipe;;9769;;LE GEL SEUL
-3608;TCB4ZNQO;compromis;6433;;à valider;9 sans mandat (acquéreur + vendeur);0;tous les candidats elimines par le veto;;12414;;LE GEL SEUL
-4096;2FOH8HE4;compromis;4649;;sûre;3 mandat + date;1;mandat;;9993;;LE GEL SEUL
-1691;5494P9OV;vente;16346;;sûre;2 mandat + acquéreur;4;mandat+vendeur+lieu+equipe;;34007;;LE GEL SEUL
-3656;P8Z5MBIG;offre;6461;;sûre;0 mandat de recherche + acquéreur;0;tous les candidats elimines par le veto;;12443;;LE GEL SEUL
-2288;E2ZYGRTL;vente;24498;;sûre;2 mandat + acquéreur;3;mandat+lieu+equipe;;48235;;LE GEL SEUL
-3561;E1WD68ZB;compromis;20264;;sûre;3 mandat + date;1;mandat;;41699;;LE GEL SEUL
-4124;LBNR7IMC;offre;8949;;à valider;9 sans mandat (acquéreur + vendeur);0;ABSTENTION : aucune famille de temoins;;17787;;LE GEL SEUL
-793;Q63BAWAV;vente;27186;;sûre;2 mandat + acquéreur;3;mandat+dates+lieu;;53392;;LE GEL SEUL
-1707;DBRDHEGH;vente;23055;;sûre;2 mandat + acquéreur;2;mandat+lieu;;45891;;LE GEL SEUL
-2786;JPNCDKO1;offre;27643;;à valider;9 sans mandat (acquéreur + vendeur) + exclusivité;1;mandat;;53894;;LE GEL SEUL
 3579;8Q3LHGZ4;offre;8322;;à valider;9 sans mandat (acquéreur + vendeur);0;ABSTENTION : aucune famille de temoins;;16831;;LE GEL SEUL
+2095;1290IIOC;vente;16364;;sûre;4 mandat + avancement;3;mandat+lieu+equipe;;34048;;LE GEL SEUL
+4252;721e650c;offre;3678;;sûre;3 mandat + date;4;mandat+vendeur+lieu+equipe;;8454;;LE GEL SEUL
+4096;2FOH8HE4;compromis;4649;;sûre;3 mandat + date;1;mandat;;9993;;LE GEL SEUL
+4675;44a4c19f;compromis;1000003;;sûre;2 mandat + acquéreur;4;acquereur+vendeur+lieu+equipe;;58930;;LE GEL SEUL
+3689;FJS4IJGZ;compromis;14813;;sûre;2 mandat + acquéreur;2;mandat+equipe;;30376;;LE GEL SEUL
+4095;NYEXY2LL;compromis;21616;;à valider;9 sans mandat (acquéreur + vendeur);0;tous les candidats elimines par le veto;;43138;;LE GEL SEUL
+4100;E9XL0N5B;compromis;9907;;à valider;9 sans mandat (acquéreur + vendeur) + exclusivité;4;mandat+acquereur+dates+equipe;;21037;;LE GEL SEUL
+2388;3S4ZWOFK;vente;11960;;sûre;4 mandat + avancement;3;mandat+dates+equipe;;24733;;LE GEL SEUL
+227;53ZS73KW;compromis;21551;;sûre;4 mandat + avancement;3;mandat+vendeur+lieu;;43091;;LE GEL SEUL
+457;TRJ5Y59U;vente;23997;;sûre;4 mandat + avancement;4;mandat+dates+lieu+equipe;;47557;;LE GEL SEUL
+4095;NYEXY2LL;offre;21618;;à valider;9 sans mandat (acquéreur + vendeur);0;tous les candidats elimines par le veto;;43138;;LE GEL SEUL
+4668;739a0db1;compromis;27195;;sûre;1 mandat seul;3;mandat+acquereur+vendeur;;53398;;LE GEL SEUL
+4100;E9XL0N5B;offre;9908;;à valider;9 sans mandat (acquéreur + vendeur) + exclusivité;4;mandat+acquereur+dates+equipe;;21037;;LE GEL SEUL
+3887;O6R10ZQA;compromis;20073;;sûre;2 mandat + acquéreur + exclusivité;4;mandat+dates+lieu+equipe;;41467;;LE GEL SEUL
+227;53ZS73KW;offre;21552;;sûre;4 mandat + avancement;3;mandat+vendeur+lieu;;43091;;LE GEL SEUL
+4666;af8d7986;offre;25710;;sûre;2 mandat + acquéreur;4;mandat+acquereur+vendeur+equipe;;49624;;LE GEL SEUL
+1103;7P1JJ2PP;vente;24410;;à valider;9 sans mandat (acquéreur + vendeur);2;dates+equipe;;48112;;LE GEL SEUL
+3561;E1WD68ZB;compromis;20264;;sûre;3 mandat + date;1;mandat;;41699;;LE GEL SEUL
+4114;0OO1BEZD;compromis;24588;;sûre;3 mandat + date;2;mandat+equipe;;48311;;LE GEL SEUL
+3501;1JGNAII6;compromis;26827;;sûre;0 mandat de recherche + acquéreur;0;tous les candidats elimines par le veto;;52727;;LE GEL SEUL
+4770;d66a35e4;offre;30741;;sûre;1 mandat seul;3;acquereur+lieu+equipe;;58970;;LE GEL SEUL
+3996;YATQOEPB;compromis;16342;;sûre;4 mandat + avancement;3;mandat+lieu+equipe;;34007;;LE GEL SEUL
+793;Q63BAWAV;vente;27186;;sûre;2 mandat + acquéreur;3;mandat+dates+lieu;;53392;;LE GEL SEUL
+380;08GV8OMZ;compromis;6340;;sûre;2 mandat + acquéreur;4;mandat+dates+lieu+equipe;;12246;;LE GEL SEUL
+3898;5N9K5ENX;compromis;19464;;sûre;5 mandat + vendeur;2;mandat+lieu;;40403;;LE GEL SEUL
+3847;WJ3KA32F;offre;10730;;à valider;9 sans mandat (acquéreur + vendeur) + exclusivité;2;mandat+lieu;;22828;;LE GEL SEUL
+4124;LBNR7IMC;compromis;8948;;à valider;9 sans mandat (acquéreur + vendeur);0;ABSTENTION : aucune famille de temoins;;17787;;LE GEL SEUL
+3632;V3FO5NDA;vente;19133;;à valider;9 sans mandat (acquéreur + vendeur);0;tous les candidats elimines par le veto;;39845;;LE GEL SEUL
+3501;1JGNAII6;offre;26829;;sûre;0 mandat de recherche + acquéreur;0;tous les candidats elimines par le veto;;52727;;LE GEL SEUL
+4124;LBNR7IMC;offre;8949;;à valider;9 sans mandat (acquéreur + vendeur);0;ABSTENTION : aucune famille de temoins;;17787;;LE GEL SEUL
+3605;2HOL5ISX;compromis;27134;;sûre;3 mandat + date;2;mandat+lieu;;53342;;LE GEL SEUL
+3985;H78FD3YN;compromis;27445;;sûre;2 mandat + acquéreur;3;mandat+lieu+equipe;;53678;;LE GEL SEUL
+2118;45PERG6S;vente;24447;;sûre;3 mandat + date;4;mandat+dates+lieu+equipe;;48149;;LE GEL SEUL
+1951;7TXZXESY;vente;24415;;sûre;2 mandat + acquéreur;4;mandat+dates+lieu+equipe;;48113;;LE GEL SEUL
 3998;TND2I31B;compromis;4621;;sûre;3 mandat + date;2;mandat+lieu;;9961;;LE GEL SEUL
+3464;1ESJE28Q;compromis;12952;;à valider;9 sans mandat (acquéreur + vendeur);0;ABSTENTION : aucune famille de temoins;;26801;;LE GEL SEUL
+2115;T47ZI6GS;vente;22150;;à valider;9 sans mandat (acquéreur + vendeur) + exclusivité;3;mandat+dates+equipe;;44400;;LE GEL SEUL
+3608;TCB4ZNQO;compromis;6433;;à valider;9 sans mandat (acquéreur + vendeur);0;tous les candidats elimines par le veto;;12414;;LE GEL SEUL
+4130;CRWGXG9R;offre;6204;;bonne;10 acquéreur + date (mandat différent) + exclusivité;0;ABSTENTION : aucune famille de temoins;;11927;;LE GEL SEUL
+3842;60CLRO51;compromis;17387;;sûre;5 mandat + vendeur;2;mandat+lieu;;37032;;LE GEL SEUL
+3464;1ESJE28Q;offre;12953;;à valider;9 sans mandat (acquéreur + vendeur);0;ABSTENTION : aucune famille de temoins;;26801;;LE GEL SEUL
+3608;TCB4ZNQO;offre;6436;;à valider;9 sans mandat (acquéreur + vendeur);0;tous les candidats elimines par le veto;;12414;;LE GEL SEUL
+4044;5SNKH1QQ;offre;4578;;sûre;9 sans mandat (acquéreur + vendeur) + exclusivité · acquéreur unique dans tout le registre;1;mandat;;9925;;LE GEL SEUL
+845;305KAY9W;vente;24125;;sûre;3 mandat + date;4;mandat+dates+lieu+equipe;;47776;;LE GEL SEUL
+3522;Y51UMZHY;offre;19277;;à valider;9 sans mandat (acquéreur + vendeur);0;tous les candidats elimines par le veto;;40137;;LE GEL SEUL
+380;08GV8OMZ;offre;6341;;sûre;2 mandat + acquéreur;4;mandat+dates+lieu+equipe;;12246;;LE GEL SEUL
+3817;4PW2L3MG;compromis;24450;;sûre;5 mandat + vendeur;3;mandat+lieu+equipe;;48154;;LE GEL SEUL
+3795;8RWTD0YX;compromis;4385;;sûre;5 mandat + vendeur;1;mandat;;9629;;LE GEL SEUL
+3959;E6RLLKMN;compromis;1101;;sûre;2 mandat + acquéreur;4;mandat+vendeur+lieu+equipe;;2393;;LE GEL SEUL
+3656;P8Z5MBIG;compromis;6459;;sûre;0 mandat de recherche + acquéreur;0;tous les candidats elimines par le veto;;12443;;LE GEL SEUL
+3818;IAYQ5OG2;compromis;22444;;à valider;9 sans mandat (acquéreur + vendeur) + exclusivité;2;mandat+acquereur;;45081;;LE GEL SEUL
+21;LPBAZ1D4;offre;14008;;sûre;2 mandat + acquéreur;5;mandat+acquereur+vendeur+lieu+equipe;;28422;;LE GEL SEUL
+793;Q63BAWAV;compromis;27183;;sûre;2 mandat + acquéreur;3;mandat+dates+lieu;;53392;;LE GEL SEUL
+3493;LNQFN038;compromis;15914;;sûre;2 mandat + acquéreur;3;mandat+lieu+equipe;;32732;;LE GEL SEUL
+3632;V3FO5NDA;compromis;19131;;à valider;9 sans mandat (acquéreur + vendeur);0;tous les candidats elimines par le veto;;39845;;LE GEL SEUL
+3656;P8Z5MBIG;offre;6461;;sûre;0 mandat de recherche + acquéreur;0;tous les candidats elimines par le veto;;12443;;LE GEL SEUL
+4064;7N8A20H5;compromis;24593;;sûre;2 mandat + acquéreur;2;mandat+equipe;;48315;;LE GEL SEUL
+3785;3308P0UX;compromis;4480;;sûre;4 mandat + avancement;2;mandat+vendeur;;9748;;LE GEL SEUL
+3818;IAYQ5OG2;offre;22446;;à valider;9 sans mandat (acquéreur + vendeur) + exclusivité;2;mandat+acquereur;;45081;;LE GEL SEUL
+1379;Z0BDVNBZ;vente;4546;;sûre;2 mandat + acquéreur;4;mandat+vendeur+dates+lieu;;9877;;LE GEL SEUL
+3938;61OW86CS;compromis;4496;;sûre;5 mandat + vendeur;3;mandat+lieu+equipe;;9769;;LE GEL SEUL
+4647;62da86ce;offre;16223;;sûre;1 mandat seul;1;dates;;33517;;LE GEL SEUL
+4670;df0ce30c;offre;23802;;sûre;0 mandat de recherche + acquéreur;3;acquereur+vendeur+equipe;;47174;;LE GEL SEUL
+4732;481c32c8;offre;29020;;sûre;1 mandat seul;2;acquereur+equipe;;62975;;LE GEL SEUL
+3632;V3FO5NDA;offre;19132;;à valider;9 sans mandat (acquéreur + vendeur);0;tous les candidats elimines par le veto;;39845;;LE GEL SEUL
+4058;PJ7OXF0X;offre;4790;;bonne;10 acquéreur + date (mandat différent) + exclusivité;1;mandat;;10251;;LE GEL SEUL
+4064;7N8A20H5;offre;24594;;sûre;2 mandat + acquéreur;2;mandat+equipe;;48315;;LE GEL SEUL
+4075;VMSFVBJS;compromis;28299;;à valider;9 sans mandat (acquéreur + vendeur) + exclusivité;1;mandat;;54993;;LE GEL SEUL
+3961;OXQSBZ9V;compromis;17427;;sûre;5 mandat + vendeur;1;mandat;;37184;;LE GEL SEUL
+2115;T47ZI6GS;compromis;22149;;à valider;9 sans mandat (acquéreur + vendeur) + exclusivité;3;mandat+dates+equipe;;44400;;LE GEL SEUL
+4075;VMSFVBJS;offre;28300;;à valider;9 sans mandat (acquéreur + vendeur) + exclusivité;1;mandat;;54993;;LE GEL SEUL
+4568;2b6075b1;offre;28733;;sûre;1 mandat seul;0;ABSTENTION : aucune famille de temoins;;59498;;LE GEL SEUL
+1024;YLAVM0I7;vente;26075;;sûre;2 mandat + acquéreur;3;mandat+dates+lieu;;50581;;LE GEL SEUL
+4005;SBH4QWDW;compromis;23050;;sûre;4 mandat + avancement;2;mandat+lieu;;45891;;LE GEL SEUL
+3997;JEK94D31;compromis;1000148;;à valider;9 sans mandat (acquéreur + vendeur);0;ABSTENTION : aucune famille de temoins;;43787;;LE GEL SEUL
+2414;DCFLWTF3;vente;1232;;sûre;2 mandat + acquéreur;3;mandat+dates+lieu;;3029;;LE GEL SEUL
+3997;JEK94D31;offre;1000116;;à valider;9 sans mandat (acquéreur + vendeur);0;ABSTENTION : aucune famille de temoins;;43787;;LE GEL SEUL
+3579;8Q3LHGZ4;compromis;8321;;à valider;9 sans mandat (acquéreur + vendeur);0;ABSTENTION : aucune famille de temoins;;16831;;LE GEL SEUL
