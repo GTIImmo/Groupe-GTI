@@ -30,6 +30,11 @@ voir(typeParNom('Avenant au mandat 18836.pdf').code === 'mandat.avenant', '« av
 voir(typeParNom('DPE amiante plomb.pdf').code === 'diag.dossier', 'deux diagnostics ou plus = dossier de diagnostics')
 voir(typeParNom('IMG_20261104_0912.jpg').force === 'muet', 'une photo nommée par l\'appareil est muette')
 voir(typeParNom('RIB.pdf').code === 'justif.rib', 'le RIB est reconnu par son nom (jamais envoyé à l\'IA)')
+// 13/11 (essai réel du lot 4) : « Note honoraires GTI », sans « d' », tombait dans les notes internes -- un type jamais
+// envoyé à l'IA, qui ne pouvait donc pas rattraper.
+voir(['Note honoraires GTI.pdf', "Note d'honoraires.pdf", 'Notes honoraire vente.pdf'].every((n) => typeParNom(n).code === 'facture.honoraires'), 'une note d\'honoraires, avec ou sans « d\' », est une facture d\'honoraires')
+voir(typeParNom('Notes visite.pdf').code === 'interne.notes' && typeParNom('Accord honoraires mandat.pdf').code === 'mandat.honoraires' && typeParNom('Baisse d honoraires.pdf').code === 'mandat.honoraires',
+  'TÉMOIN : une note sans honoraires reste une note interne ; un accord ou une baisse d\'honoraires reste au mandat')
 
 console.log('③ le branchement dans le panneau')
 const app = fs.readFileSync(path.join(__dirname, 'src/App.tsx'), 'utf8')

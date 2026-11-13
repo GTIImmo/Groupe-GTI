@@ -61,7 +61,7 @@ const REGLES: Array<[string, string, 'sur' | 'probable']> = [
   ["diag.dossier", "^(dossier )?sci .*dossier|^dossier sci", "probable"],
   ["justif.societe", "\\bsci\\b|infos? (societe|sas|sarl)", "probable"],
   ["justif.rib", "\\brib\\b|identite bancaire", "sur"],
-  ["facture.honoraires", "^20\\d\\d \\d\\d? \\d\\d? facture|\\bggti\\d*|facture gti|facture.*estimation|\\bgti\\d{6,}|\\bfct\\b|\\best\\s?\\d+\\b|note d honoraires|\\bavoir\\b|\\bavr\\b", "sur"],
+  ["facture.honoraires", "^20\\d\\d \\d\\d? \\d\\d? facture|\\bggti\\d*|facture gti|facture.*estimation|\\bgti\\d{6,}|\\bfct\\b|\\best\\s?\\d+\\b|\\bnotes? (d )?honoraires?\\b|\\bavoir\\b|\\bavr\\b", "sur"],
   ["estimation.avis", "avis (de )?valeur|estimation|\\bestim\\b|evaluation|^rapport \\d+ \\d+|\\bacm\\b|etude de marche|comparatif", "sur"],
   ["facture.autre", "factures?|\\bfac\\d*\\b", "probable"],
   ["facture.devis", "devis|travaux", "probable"],

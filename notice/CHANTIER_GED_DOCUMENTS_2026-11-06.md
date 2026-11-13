@@ -27,7 +27,7 @@
 | 6 lot 1 | lecture : état des risques, DPE, dossier de diagnostics | ✅ en production (`c631a6d`), **essai réel fait le 12/11** (§12.14) |
 | 6 lot 2 | lecture : **taxe foncière, titre de propriété, fiche synthétique, charges de copro** — avec les NOMS | ✅ en production (`0466c7c`), **essai réel fait le 12/11** : 5/5 lus, 0 fuite, 0 doublon (§12.14) ; affichage après rechargement (« Lu par l'IA ») en production (`49dab5d`), vu sur 62774 |
 | 6 lot 3 | lecture : offre d'achat, compromis, PV d'AG | ✅ en production (`6b26c07`), **essai réel fait le 12/11** : 3/3 lus, compromis texte + pages 44-45 en image, 0 fuite (§12.15) |
-| 6 lot 4 | lecture : mandat déposé à la main, avenant, fin de mandat, acte, annulation, facture, petits diagnostics, assainissement, surfaces, règlement | ✅ **écrit et contrôlé le 13/11** (80 + 49 VERT, banc 64/64, 0 fuite), patch d'étiquette posé (14/14 « lue »), poussé le 13/11 ; essai réel à faire (§12.16) |
+| 6 lot 4 | lecture : mandat déposé à la main, avenant, fin de mandat, acte, annulation, facture, petits diagnostics, assainissement, surfaces, règlement | ✅ **écrit et contrôlé le 13/11** (80 + 49 VERT, banc 64/64, 0 fuite), patch d'étiquette posé (14/14 « lue »), poussé (`7c4e3fb`) ; **essai réel fait le 13/11 sur 63331** : 8/8 envoyés et lus, 0 fuite ; ⚠ « Note honoraires » classée « notes internes » par la règle du nom (§12.16) |
 | 7 | comparateurs et règles avec lecture (titre ↔ mandants, taxe ↔ fiche, copro…) | ⬜ |
 | 8 | propositions (« remplir », un clic par case) | ⬜ |
 | 9 | pièces des personnes (identité — le justificatif le plus déposé —, état civil, financement) | ⬜ ; l'avancer = décision de Frédéric |
@@ -1390,4 +1390,30 @@ serveur, script `forme_lot4.py` (scratchpad), qui n'imprime que des nombres.
   (« vrai pour une attestation, même courte, même si elle cite le financement ») → 6 sur 6 ; (b) une « fuite » qui
   n'en était pas une : le mot témoin « Ailleurs » (rue fictive) se retrouvait dans le motif « vendu_ailleurs ».
 ✅ **« Oui tout » (13/11)** : patch d'étiquette POSÉ (contrôle : les 14 types du lot 4 sont « lue ») ; le lot 4 commité
-et poussé seul. Reste : l'essai réel sur 62774.
+et poussé (`7c4e3fb`, avec deux commits d'une autre session, accord « Pousse ») ; Render et Vercel le servent.
+✅ **ESSAI RÉEL DU LOT 4 (13/11), sur le bien d'essai 63331** (n° 10000009, « ESSAI 8A3 PIECE 3 - ne pas diffuser »,
+statut Estimation, choisi par Frédéric) — ⚠ **62774 ne prend plus de documents** : clos, il a quitté les biens courants
+la nuit du 12 au 13/11 ; sa fiche « index léger » refuse le dépôt (« Désarchivez ou réintégrez le bien »).
+- 8 documents FICTIFS déposés par l'écran, dans Chrome (avenant, mandat de 3 pages, attestation de vente, SPANC et
+  Carrez SCANNÉS ; rapport électricité, note d'honoraires, règlement EN TEXTE).
+- **Classement : 7 sur 8 justes d'emblée (le nom et l'IA d'accord).** ⚠ **La note d'honoraires a été proposée en
+  « Notes, suivi interne »** : la règle du nom (`gedTypeParNom.ts`) attend « note d honoraires » ; « Note honoraires GTI »
+  (sans « d' ») tombe sur `\bnotes?\b` → `interne.notes`, type « jamais envoyé » à l'IA, donc l'IA ne peut pas
+  rattraper. Corrigé à la main pour l'essai. ✅ **Corrigé dans le code le 13/11 (« Oui, corrige »)** : dans la SOURCE
+  `phase2/checks/ged1_mesure_nomenclature.py`, « note d honoraires » devient `\bnotes? (d )?honoraires?\b`, puis
+  `gedTypeParNom.ts` refabriqué (une ligne change). Mesure avant : 3 noms réels de plus reconnus, 0 pris à une autre
+  règle. Témoins : « Notes visite » reste une note interne, « Accord honoraires mandat » et « Baisse d honoraires »
+  restent au mandat. Tests dépôt 19 VERT, lecture 49, classement 25, build vert. ⚠ La source Python n'avait JAMAIS été
+  commitée (fichier non suivi depuis le 12/11).
+- **Envoi chez Hektor : 8 sur 8 `done`**, numéros 716062-716064, 716066, 716067, 716069, 716071, 716075 ; le bien porte
+  exactement 8 documents (aucun doublon).
+- **Lectures : 8 sur 8, toutes justes, chacune avec sa page** : avenant (scan, page 1 en image ; 2 mandants), mandat
+  (scan, pages 1-3 ; numéro, exclusif, prix, net vendeur, honoraires 5 % à la charge de l'acquéreur, durée, **2
+  signatures de mandants et celle de l'agence lues page 3**), attestation (date de la VENTE 12/01/2027 ≠ date de
+  l'attestation 20/01/2027 ; 2 vendeurs, 2 acquéreurs), électricité (texte ; anomalies), SPANC (travaux obligatoires
+  sous 12 mois), Carrez (64,35 m², lot 12), facture (HT / TVA / TTC, payeur vendeur, mandat 18836), règlement (texte ;
+  48 lots, destination mixte, lots et tantièmes, modificatif).
+- **0 fuite** sur 18 mots interdits, vérifiée en base. Coût des 8 lectures : 0,0038 $.
+- Après rechargement : **« ▸ Lu par l'IA : 8 documents »**, chaque résumé sans un nom ; « Prise de mandat : 1 pièce
+  sur 5 » (le mandat déposé compte) ; la règle du morceau 5 dit « un compromis ou un acte est au dossier, aucun au
+  registre ». Les 8 documents fictifs restent sur 63331 (chez nous et chez Hektor).
