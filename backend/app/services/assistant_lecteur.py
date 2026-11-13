@@ -3,12 +3,13 @@ from __future__ import annotations
 import html
 import json
 import re
+import unicodedata
 from typing import Any
 
 import requests
 
 from .assistant_contexte import TOUS_LES_ROLES, ContexteAssistant, Fonction, LectureRefusee, Refus
-from .assistant_objets import OBJETS, PAR_NOM, Objet
+from .assistant_objets import OBJETS, PAR_NOM, Colonne, Objet, _valeurs_lisibles
 
 # ---------------------------------------------------------------------------
 # Assistant IA (12/11/2026, étape 2) -- LE LECTEUR : décrire, chercher, compter.
@@ -100,7 +101,38 @@ def _quoter(v: str) -> str:
     return '"' + v.replace("\\", "\\\\").replace('"', '\\"') + '"'
 
 
-def traduire_filtres(objet: Objet, filtres: list[dict[str, Any]]) -> list[tuple[str, str]]:
+def _norme(texte: Any) -> str:
+    # comparer sans casse, sans accents, sans espaces en trop (« exclusif » = « EXCLUSIF », « Échu » = « echu »)
+    sans_accents = unicodedata.normalize("NFKD", str(texte or "")).encode("ascii", "ignore").decode("ascii")
+    return " ".join(sans_accents.lower().replace("_", " ").split())
+
+
+def _stockees(colonne: Colonne, demande: str, *, partiel: str | None = None) -> list[str]:
+    # 13/11 : la valeur DITE par le modèle -> la ou les valeurs STOCKÉES (par la valeur ou son libellé).
+    # ⛔ Rien ne correspond = REFUS avec la liste : jamais un filtre sur une valeur qui n'existe pas (zéro muet).
+    cible = _norme(demande)
+    if partiel == "contient":
+        trouvees = [v for v, l in colonne.valeurs if cible and (cible in _norme(v) or cible in _norme(l))]
+    elif partiel == "commence_par":
+        trouvees = [v for v, l in colonne.valeurs if cible and (_norme(v).startswith(cible) or _norme(l).startswith(cible))]
+    else:
+        trouvees = [v for v, l in colonne.valeurs if cible in {_norme(v), _norme(l)}]
+    if not trouvees:
+        raise Refus(f"La valeur « {demande} » n'existe pas dans {colonne.nom}. Valeurs possibles : "
+                    f"{_valeurs_lisibles(colonne)}. Choisis-en une ; si aucune ne convient, dis-le sans conclure « aucun ».")
+    return list(dict.fromkeys(trouvees))
+
+
+def _filtre_liste(nom: str, valeurs: list[str], *, exclure: bool = False) -> tuple[str, str]:
+    if len(valeurs) == 1:
+        return (nom, f"{'neq' if exclure else 'eq'}.{valeurs[0]}")
+    return (nom, f"{'not.in' if exclure else 'in'}.(" + ",".join(_quoter(v) for v in valeurs[:60]) + ")")
+
+
+MOI = "moi"
+
+
+def traduire_filtres(objet: Objet, filtres: list[dict[str, Any]], moi: str | None = None) -> list[tuple[str, str]]:
     params: list[tuple[str, str]] = []
     for f in filtres or []:
         colonne = _colonne(objet, f.get("colonne"))
@@ -109,10 +141,26 @@ def traduire_filtres(objet: Objet, filtres: list[dict[str, Any]]) -> list[tuple[
             raise Refus(f"Opérateur « {op} » impossible sur {colonne.nom} ({colonne.type}). "
                         f"Possibles : {', '.join(sorted(_PERMIS[colonne.type]))}.")
         brut = f.get("valeur")
+        if colonne.nom == "negociateur_email" and _norme(brut) == MOI:
+            # 13/11 : « mes … » -> le modèle écrit « moi », NOTRE serveur met l'adresse. Elle ne part jamais chez
+            # OpenAI (règle de l'étape 1) et le modèle ne peut plus en fabriquer une (il en a inventé 5 le 13/11).
+            if not moi:
+                raise Refus("Je ne connais pas l'e-mail de la personne : je ne peux pas filtrer sur « moi ».")
+            brut = moi
         if op == "est_vide":
             params.append((colonne.nom, "is.null"))
         elif op == "n_est_pas_vide":
             params.append((colonne.nom, "not.is.null"))
+        elif colonne.valeurs and op in {"egal", "different", "parmi", "contient", "commence_par"}:
+            # colonne à liste : on filtre sur la ou les valeurs STOCKÉES, jamais sur le mot du modèle
+            if op == "parmi":
+                morceaux = [x for x in str(brut or "").split("|") if x.strip()]
+                if not morceaux:
+                    raise Refus(f"« parmi » demande des valeurs séparées par | (colonne {colonne.nom}).")
+                valeurs = list(dict.fromkeys(v for m in morceaux for v in _stockees(colonne, m)))
+            else:
+                valeurs = _stockees(colonne, str(brut or ""), partiel=op if op in {"contient", "commence_par"} else None)
+            params.append(_filtre_liste(colonne.nom, valeurs, exclure=op == "different"))
         elif op == "parmi":
             valeurs = [_valeur(colonne.type, x, colonne.nom) for x in str(brut or "").split("|") if x.strip()]
             if not valeurs:
@@ -141,18 +189,33 @@ def _court(valeur: Any) -> Any:
     return valeur
 
 
+def _lisible(objet: Objet, nom: str, valeur: Any) -> Any:
+    # un CODE (type_bien « 1 », offre_type « 0 »…) part au modèle avec son libellé : « Maison », pas « 1 »
+    colonne = objet.colonne(nom)
+    if colonne and colonne.valeurs and isinstance(valeur, (str, int)) and str(valeur).isdigit():
+        return next((l for v, l in colonne.valeurs if v == str(valeur)), valeur)
+    return _court(valeur)
+
+
+# 13/11 : un zéro ne se croit pas sans vérification (5 fausses réponses sur 30 étaient des zéros crus)
+_ZERO = ("0 ligne avec ces filtres. Avant de répondre « aucun », vérifie : la bonne colonne ? la bonne valeur ? "
+         "le bon objet (un bien absent de biens peut être dans biens_historique ou biens_archives) ? un nom propre "
+         "peut s'écrire autrement (essaie contient). Si tu réponds « aucun », dis avec quels filtres.")
+
+
 # ── les trois gestes génériques ───────────────────────────────────────────────
 def decrire(ctx: ContexteAssistant, params: dict[str, Any]) -> dict[str, Any]:
     objet = _objet(params.get("objet"))
     return {"objet": objet.nom, "description": objet.description,
-            "colonnes": [{"nom": c.nom, "type": c.type, "sens": c.description} for c in objet.colonnes],
+            "colonnes": [{"nom": c.nom, "type": c.type, "sens": c.description,
+                          **({"valeurs": _valeurs_lisibles(c)} if c.valeurs else {})} for c in objet.colonnes],
             "colonnes_par_defaut": list(objet.par_defaut)}
 
 
 def chercher(ctx: ContexteAssistant, params: dict[str, Any]) -> dict[str, Any]:
     objet = _objet(params.get("objet"))
     colonnes = [_colonne(objet, c).nom for c in (params.get("colonnes") or [])] or list(objet.par_defaut)
-    filtres = traduire_filtres(objet, params.get("filtres") or [])
+    filtres = traduire_filtres(objet, params.get("filtres") or [], moi=ctx.email)
     tri = str(params.get("tri") or "").strip() or objet.cle
     _colonne(objet, tri)
     ordre = "asc" if params.get("ordre") == "asc" else "desc"
@@ -160,13 +223,16 @@ def chercher(ctx: ContexteAssistant, params: dict[str, Any]) -> dict[str, Any]:
     requete = [("select", ",".join(dict.fromkeys(colonnes))), *filtres, *objet.filtres_imposes(ctx.email),
                ("order", f"{tri}.{ordre}.nullslast")]
     lignes, total = _lire(ctx, objet.source, requete, compter=True, debut=0, fin=limite - 1)
-    return {"objet": objet.nom, "total": total, "rendues": len(lignes),
-            "lignes": [{k: _court(v) for k, v in ligne.items()} for ligne in lignes]}
+    resultat = {"objet": objet.nom, "total": total, "rendues": len(lignes),
+                "lignes": [{k: _lisible(objet, k, v) for k, v in ligne.items()} for ligne in lignes]}
+    if total == 0 and filtres:
+        resultat["attention"] = _ZERO
+    return resultat
 
 
 def compter(ctx: ContexteAssistant, params: dict[str, Any]) -> dict[str, Any]:
     objet = _objet(params.get("objet"))
-    filtres = traduire_filtres(objet, params.get("filtres") or []) + objet.filtres_imposes(ctx.email)
+    filtres = traduire_filtres(objet, params.get("filtres") or [], moi=ctx.email) + objet.filtres_imposes(ctx.email)
     groupe = str(params.get("regrouper_par") or "").strip()
     somme = str(params.get("somme_de") or "").strip()
     if groupe:
@@ -175,7 +241,7 @@ def compter(ctx: ContexteAssistant, params: dict[str, Any]) -> dict[str, Any]:
         raise Refus(f"La somme ne se fait que sur une colonne nombre ({somme} n'en est pas une).")
     if not groupe and not somme:
         _, total = _lire(ctx, objet.source, [("select", objet.cle), *filtres], compter=True, debut=0, fin=0)
-        return {"objet": objet.nom, "total": total}
+        return {"objet": objet.nom, "total": total, **({"attention": _ZERO} if total == 0 and params.get("filtres") else {})}
     # regrouper ou sommer : on lit les lignes (colonnes utiles seulement), page par page, jusqu'au plafond
     colonnes = ",".join(dict.fromkeys([c for c in (groupe, somme) if c] or [objet.cle]))
     lues: list[dict[str, Any]] = []
@@ -193,10 +259,14 @@ def compter(ctx: ContexteAssistant, params: dict[str, Any]) -> dict[str, Any]:
         g["nombre"] += 1
         if somme and isinstance(ligne.get(somme), (int, float)):
             g["somme"] += float(ligne[somme])
-    resultat = sorted(({"valeur": k, "nombre": int(v["nombre"]), **({"somme": round(v["somme"], 2)} if somme else {})}
+    resultat = sorted(({"valeur": _lisible(objet, groupe, k) if groupe else k, "nombre": int(v["nombre"]),
+                        **({"somme": round(v["somme"], 2)} if somme else {})}
                        for k, v in groupes.items()), key=lambda x: -x["nombre"])
-    return {"objet": objet.nom, "total": total, "lignes_lues": len(lues),
-            "tronque": total is not None and len(lues) < total, "groupes": resultat[:MAX_LIGNES_RENDUES]}
+    sortie = {"objet": objet.nom, "total": total, "lignes_lues": len(lues),
+              "tronque": total is not None and len(lues) < total, "groupes": resultat[:MAX_LIGNES_RENDUES]}
+    if total == 0 and params.get("filtres"):
+        sortie["attention"] = _ZERO
+    return sortie
 
 
 # ── les fonctions métier ──────────────────────────────────────────────────────

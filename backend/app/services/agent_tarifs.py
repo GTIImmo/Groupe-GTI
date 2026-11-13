@@ -14,6 +14,8 @@ from typing import Any
 # ---------------------------------------------------------------------------
 
 TARIFS: dict[str, tuple[float, float]] = {
+    # 13/11/2026 : le modèle de l'assistant (décision de Frédéric) ; prix de la grille officielle relue ce jour-là
+    "gpt-6.1-terra": (1.00 / 1_000_000, 5.00 / 1_000_000),
     "gpt-6-luna": (0.10 / 1_000_000, 0.50 / 1_000_000),
     "gpt-5.6-luna": (0.20 / 1_000_000, 1.20 / 1_000_000),
     "gpt-4.1-mini": (0.40 / 1_000_000, 1.60 / 1_000_000),

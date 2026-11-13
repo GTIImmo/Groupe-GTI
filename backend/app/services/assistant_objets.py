@@ -20,6 +20,16 @@ from typing import Callable
 # ⚠ Plusieurs montants et bornes sont stockés en TEXTE (prix des recherches, montant des
 #   transactions) : ils ne se comparent PAS (« 90000 » > « 200000 » en texte). Typés `texte` ici,
 #   donc seulement égal / parmi / vide. À corriger un jour par des vues typées (base).
+#
+# ⭐ LES VALEURS DES COLONNES À LISTE (13/11/2026, après la preuve des 30 questions : 5 réponses
+#   fausses parce que le modèle DEVINAIT les valeurs -- « exclusif » au lieu de « EXCLUSIF »,
+#   « en attente » au lieu de « pending », « Maison » alors que type_bien est un CODE « 1 »).
+#   Chaque colonne à liste porte ses valeurs (valeur stockée, libellé), MESURÉES en base le 13/11
+#   (`select col, count(*) group by col`) et, pour les codes, reprises des tables de l'écran
+#   (App.tsx draftAnnoncePropertyGroups + hektorPropertyTypeLabelsHorsWizard, FAMILLES_OFFRE,
+#   ContactSearchFields DEFAULT_OFFER_OPTIONS). Le lecteur traduit ce que dit le modèle vers la
+#   valeur stockée, et REFUSE une valeur inconnue au lieu de rendre un zéro muet.
+#   ⚠ Une valeur NOUVELLE en base serait refusée jusqu'à son ajout ici : le refus le dit en clair.
 # ---------------------------------------------------------------------------
 
 
@@ -28,6 +38,8 @@ class Colonne:
     nom: str
     type: str
     description: str
+    # (valeur stockée, libellé) ; vide = colonne libre
+    valeurs: tuple[tuple[str, str], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -45,29 +57,66 @@ class Objet:
         return next((c for c in self.colonnes if c.nom == nom), None)
 
 
-def C(nom: str, type_: str, description: str) -> Colonne:
-    return Colonne(nom, type_, description)
+def C(nom: str, type_: str, description: str, valeurs: tuple[tuple[str, str], ...] = ()) -> Colonne:
+    return Colonne(nom, type_, description, valeurs)
 
 
-_BIEN_COMMUNES = (
-    C("numero_dossier", "texte", "numéro de dossier de l'agence"),
-    C("numero_mandat", "texte", "numéro du mandat"),
-    C("titre_bien", "texte", "titre de l'annonce"),
-    C("type_bien", "texte", "Maison, Appartement, Terrain…"),
-    C("ville", "texte", "commune du bien"),
-    C("code_postal", "texte", "code postal"),
-    C("prix", "nombre", "prix affiché en euros"),
-    C("statut_annonce", "texte", "Actif, Sous offre, Sous compromis, Vendu, Clos, Estimation…"),
-    C("offre_type", "texte", "vente ou location"),
-    C("commercial_nom", "texte", "négociateur du bien"),
-    C("negociateur_email", "texte", "e-mail du négociateur"),
-    C("agence_nom", "texte", "agence"),
-    C("mandat_type", "texte", "simple, exclusif…"),
-    C("mandat_date_debut", "date", "début du mandat"),
-    C("mandat_date_fin", "date", "fin du mandat"),
-    C("mandat_montant", "nombre", "prix du mandat en euros"),
-    C("mandants_texte", "texte", "noms des mandants"),
+def _memes(*valeurs: str) -> tuple[tuple[str, str], ...]:
+    return tuple((v, v) for v in valeurs)
+
+
+# type_bien est un CODE Hektor (idtype). Libellés de l'écran (App.tsx, groupes de création + hors
+# formulaire). ⚠ Valables pour offre_type 0 (vente) ; en immobilier professionnel (10) les mêmes
+# codes ont un autre sens (App.tsx:10195). Le registre des mandats porte aussi quelques libellés en clair.
+_TYPES_BIEN = (
+    ("1", "Maison"), ("39", "Maison de village"), ("38", "Maison de ville"), ("25", "Villa"), ("22", "Propriété"),
+    ("30", "Ferme"), ("10", "Mas"), ("11", "Bastide"), ("28", "Château"), ("27", "Rez de villa"), ("49", "Viager maison"),
+    ("2", "Appartement"), ("4", "Studio"), ("18", "Duplex"), ("41", "Triplex"), ("31", "Loft"), ("26", "Rez de jardin"),
+    ("50", "Viager appartement"),
+    ("5", "Terrain"), ("43", "Terrain à bâtir"), ("44", "Terrain agricole"), ("45", "Terrain de loisir"),
+    ("17", "Chalet"), ("15", "Garage"), ("16", "Parking"), ("21", "Immeuble"), ("23", "Commerce"), ("29", "Cave"),
+    ("24", "Cabanon"), ("7", "Viager"), ("20", "Autre"),
 )
+_TYPES_BIEN_EN_CLAIR = _memes(
+    "Maison", "Maison / Villa / Mas", "Maison / Appartement / Studio", "Maison / Appartement", "Maison / Terrain",
+    "Maison / Immeuble", "Appartement / Studio / Duplex", "Terrain / Terrain à batir / Terrain agricole",
+    "Garage / Parking / Chalet")
+_OFFRE_TYPE = (("0", "Vente"), ("10", "Immobilier professionnel"), ("6", "Neuf"))
+_MANDAT_TYPE = (("SIMPLE", "simple"), ("EXCLUSIF", "exclusif"), ("ACCORD", "accord"),
+                *_memes("Vente de fonds de commerce", "Mandat de recherche",
+                        "Mandat de recherche exclusif en cas de demarchage",
+                        "Mandat de recherche non exclusif en cas de demarchage", "Mandat de recherche d'un terrain"))
+# ⚠ deux écritures d'une même agence selon la table (espaces en fin, casse) : le lecteur les prend toutes
+_AGENCES = _memes(
+    "Groupe GTI Saint-Etienne", "Groupe GTI Montbrison", "Groupe GTI COURPIERE", "Groupe Gti Le Puy en Velay",
+    "Groupe GTI ANNONAY", "Groupe GTI Firminy", "Groupe GTI Tence", "Groupe GTI Craponne-sur-Arzon",
+    "Groupe GTI Saint-Bonnet-le-Château", "Groupe GTI Ambert   ", "Groupe GTI Ambert", "Groupe GTI Issoire",
+    "Groupe GTI Saint-Just-Saint-Rambert", "Groupe GTI Monistrol sur Loire", "Groupe GTI Dunières", "Groupe GTI BRIOUDE",
+    "Groupe GTI Yssingeaux", "Groupe GTI Saint-Didier-en-Velay", "Agences supprimée", "Compte formation")
+_OUI_NON = (("1", "oui"), ("0", "non"))
+
+
+def _bien_communes(statuts: tuple[str, ...], types_en_clair: bool = False) -> tuple[Colonne, ...]:
+    return (
+        C("numero_dossier", "texte", "numéro de dossier de l'agence"),
+        C("numero_mandat", "texte", "numéro du mandat"),
+        C("titre_bien", "texte", "titre de l'annonce"),
+        C("type_bien", "texte", "type du bien (CODE : filtre avec le libellé, ex. Maison)",
+          _TYPES_BIEN + (_TYPES_BIEN_EN_CLAIR if types_en_clair else ())),
+        C("ville", "texte", "commune du bien"),
+        C("code_postal", "texte", "code postal"),
+        C("prix", "nombre", "prix affiché en euros"),
+        C("statut_annonce", "texte", "statut de l'annonce", _memes(*statuts)),
+        C("offre_type", "texte", "famille d'offre (CODE)", _OFFRE_TYPE),
+        C("commercial_nom", "texte", "négociateur du bien"),
+        C("negociateur_email", "texte", "e-mail du négociateur"),
+        C("agence_nom", "texte", "agence", _AGENCES),
+        C("mandat_type", "texte", "type de mandat", _MANDAT_TYPE),
+        C("mandat_date_debut", "date", "début du mandat"),
+        C("mandat_date_fin", "date", "fin du mandat"),
+        C("mandat_montant", "nombre", "prix du mandat en euros"),
+        C("mandants_texte", "texte", "noms des mandants"),
+    )
 
 OBJETS: tuple[Objet, ...] = (
     Objet(
@@ -76,15 +125,17 @@ OBJETS: tuple[Objet, ...] = (
         "« Estimation » : précise-le si tu les comptes. Les vendus/clos sont dans biens_historique.",
         (C("app_dossier_id", "nombre", "identifiant du bien dans l'app (clé)"),
          C("hektor_annonce_id", "nombre", "numéro de l'annonce (celui qu'on cite, ex. 63330)"),
-         *_BIEN_COMMUNES,
-         C("archive", "texte", "'1' = archivé, '0' = non"),
-         C("diffusable", "texte", "'1' = diffusable sur les portails"),
-         C("validation_diffusion_state", "texte", "état de la validation de diffusion"),
+         *_bien_communes(("Actif", "Sous offre", "Sous compromis", "Estimation")),
+         C("archive", "texte", "archivé", _OUI_NON),
+         C("diffusable", "texte", "diffusable sur les portails", _OUI_NON),
+         C("validation_diffusion_state", "texte", "validation de la diffusion",
+           (("a_controler", "à contrôler"), ("valide", "validée"))),
          C("nb_portails_actifs", "nombre", "nombre de portails où l'annonce est diffusée"),
          C("portails_resume", "texte", "portails de diffusion"),
          C("has_diffusion_error", "booleen", "erreur de diffusion"),
-         C("offre_state", "texte", "état de l'offre en cours"),
-         C("compromis_state", "texte", "état du compromis en cours"),
+         C("offre_state", "texte", "état de l'offre en cours",
+           (("proposed", "proposée"), ("accepted", "acceptée"), ("refused", "refusée"))),
+         C("compromis_state", "texte", "état du compromis en cours", (("active", "en cours"), ("cancelled", "annulé"))),
          C("photo_url_listing", "texte", "photo de couverture ; vide = pas de photo"),
          C("date_enregistrement_annonce", "date", "date de création de l'annonce"),
          C("date_relance_prevue", "date", "prochaine relance prévue"),
@@ -97,7 +148,7 @@ OBJETS: tuple[Objet, ...] = (
     Objet(
         "biens_historique", "app_historical_annonce_index_current",
         "Les biens VENDUS ou CLOS (historique).",
-        (C("hektor_annonce_id", "nombre", "numéro de l'annonce"), *_BIEN_COMMUNES,
+        (C("hektor_annonce_id", "nombre", "numéro de l'annonce"), *_bien_communes(("Vendu", "Clos")),
          C("date_maj", "date", "dernière mise à jour")),
         ("hektor_annonce_id", "titre_bien", "ville", "prix", "statut_annonce", "commercial_nom", "date_maj"),
         "hektor_annonce_id",
@@ -105,7 +156,8 @@ OBJETS: tuple[Objet, ...] = (
     Objet(
         "biens_archives", "app_archive_annonce_index_current",
         "Les biens ARCHIVÉS.",
-        (C("hektor_annonce_id", "nombre", "numéro de l'annonce"), *_BIEN_COMMUNES,
+        (C("hektor_annonce_id", "nombre", "numéro de l'annonce"),
+         *_bien_communes(("Clos", "Vendu", "Actif", "Estimation", "Sous offre")),
          C("date_maj", "date", "dernière mise à jour")),
         ("hektor_annonce_id", "titre_bien", "ville", "prix", "statut_annonce", "commercial_nom", "date_maj"),
         "hektor_annonce_id",
@@ -115,11 +167,13 @@ OBJETS: tuple[Objet, ...] = (
         "Le registre des mandats, avec le statut calculé EXACTEMENT comme l'écran (statut_mandat, etat_mandat).",
         (C("app_dossier_id", "nombre", "identifiant du bien"),
          C("hektor_annonce_id", "nombre", "numéro de l'annonce"),
-         *_BIEN_COMMUNES,
+         *_bien_communes(("Clos", "Vendu", "Actif", "Estimation", "Sous compromis", "Sous offre", "Recherche active",
+                          "Sans recherche", "Contact inconnu", "Recherche archivée"), types_en_clair=True),
          C("mandat_date_cloture", "date", "date de clôture du mandat"),
-         C("statut_mandat", "texte", "Actif, Vendu, Clos ou Échu (calcul de l'écran)"),
-         C("etat_mandat", "texte", "En cours ou Annulé (calcul de l'écran)"),
-         C("register_source_kind", "texte", "'recherche' = mandat de recherche (le pilotage les exclut)")),
+         C("statut_mandat", "texte", "statut du mandat (calcul de l'écran)", _memes("Actif", "Vendu", "Clos", "Échu")),
+         C("etat_mandat", "texte", "état (calcul de l'écran)", _memes("En cours", "Annulé")),
+         C("register_source_kind", "texte", "origine ; 'recherche' = mandat de recherche (le pilotage les exclut)",
+           _memes("actif", "historique", "recherche"))),
         ("numero_mandat", "hektor_annonce_id", "titre_bien", "mandat_type", "mandat_date_fin", "statut_mandat", "commercial_nom"),
         "numero_mandat",
     ),
@@ -132,7 +186,7 @@ OBJETS: tuple[Objet, ...] = (
          C("email", "texte", "e-mail"), C("phone_primary", "texte", "téléphone"), C("phone_secondary", "texte", "2e téléphone"),
          C("ville", "texte", "ville"), C("code_postal", "texte", "code postal"),
          C("commercial_nom", "texte", "négociateur qui suit le contact"), C("negociateur_email", "texte", "son e-mail"),
-         C("agence_nom", "texte", "agence"),
+         C("agence_nom", "texte", "agence", _AGENCES),
          C("archive", "booleen", "contact archivé"),
          C("date_enregistrement", "date", "date de création"), C("date_maj", "date", "dernière mise à jour"),
          C("relation_roles_json", "json", "rôles : liste parmi mandant, proprietaire, acquereur…"),
@@ -149,7 +203,9 @@ OBJETS: tuple[Objet, ...] = (
         (C("contact_search_key", "texte", "clé de la recherche"),
          C("hektor_contact_id", "texte", "numéro du contact"),
          C("is_active", "booleen", "recherche active"), C("archive", "booleen", "recherche archivée"),
-         C("offre", "texte", "vente ou location"),
+         C("offre", "texte", "type de projet (CODE)",
+           (("0", "Achat / Vente"), ("2", "Location"), ("8", "Saisonnier"), ("10", "Immobilier professionnel"),
+            ("11", "code 11 (non documenté)"))),
          C("villes_json", "json", "villes recherchées"), C("types_json", "json", "types de bien recherchés"),
          C("criteres_json", "json", "autres critères"),
          C("prix_min", "texte", "budget minimum (texte : ne se compare pas)"), C("prix_max", "texte", "budget maximum (texte)"),
@@ -164,8 +220,13 @@ OBJETS: tuple[Objet, ...] = (
         (C("hektor_contact_id", "texte", "numéro du contact"),
          C("app_dossier_id", "nombre", "identifiant du bien"), C("hektor_annonce_id", "texte", "numéro de l'annonce"),
          C("numero_dossier", "texte", "numéro de dossier"), C("titre_bien", "texte", "titre du bien"),
-         C("role_contact", "texte", "mandant, proprietaire, acquereur…"),
-         C("transaction_type", "texte", "offre, compromis, vente"), C("transaction_state", "texte", "état"),
+         C("role_contact", "texte", "rôle du contact sur ce bien",
+           _memes("mandant", "proprietaire", "acquereur_offre", "acquereur_compromis", "acquereur_vente",
+                  "notaire_vendeur", "notaire_acquereur")),
+         C("transaction_type", "texte", "étape", _memes("offre", "compromis", "vente")),
+         C("transaction_state", "texte", "état",
+           (("proposed", "offre proposée"), ("accepted", "offre acceptée"), ("refused", "offre refusée"),
+            ("active", "compromis en cours"), ("cancelled", "annulé"), ("vente", "vente"))),
          C("transaction_date", "date", "date"), C("transaction_amount", "texte", "montant (texte)"),
          C("is_active_annonce", "booleen", "le bien est encore vivant"),
          C("proprietaire_depuis", "date", "propriétaire depuis")),
@@ -185,8 +246,10 @@ OBJETS: tuple[Objet, ...] = (
     Objet(
         "relances", "app_relance_rapprochement",
         "Les relances à faire (rappeler un acquéreur, relancer après une visite…).",
-        (C("label", "texte", "intitulé"), C("sub", "texte", "détail"), C("type", "texte", "type de relance"),
-         C("due_date", "date", "échéance"), C("status", "texte", "a_faire, fait, reporte…"),
+        (C("label", "texte", "intitulé"), C("sub", "texte", "détail"),
+         C("type", "texte", "type de relance", _memes("relance", "contact")),
+         C("due_date", "date", "échéance"),
+         C("status", "texte", "état", (("a_faire", "à faire"), ("fait", "faite"), ("reporte", "reportée"))),
          C("negociateur_email", "texte", "à qui elle revient"),
          C("hektor_contact_id", "texte", "contact"), C("app_dossier_id", "nombre", "bien"),
          C("contact_search_key", "texte", "recherche"), C("created_at", "date", "créée le")),
@@ -199,7 +262,10 @@ OBJETS: tuple[Objet, ...] = (
         "Les notes et conditions se lisent avec la fonction notes_transaction.",
         (C("app_affaire_id", "nombre", "identifiant de la transaction (pour notes_transaction)"),
          C("app_dossier_id", "nombre", "identifiant du bien"), C("hektor_annonce_id", "nombre", "numéro de l'annonce"),
-         C("kind", "texte", "offre, compromis ou vente"), C("state", "texte", "état (en cours, acceptée, refusée, annulée…)"),
+         C("kind", "texte", "étape", _memes("offre", "compromis", "vente")),
+         C("state", "texte", "état ; VIDE pour une vente",
+           (("proposed", "offre proposée"), ("accepted", "offre acceptée"), ("refused", "offre refusée"),
+            ("active", "compromis en cours"), ("cancelled", "compromis annulé"))),
          C("montant", "texte", "montant en euros (texte : ne se compare pas)"),
          C("date", "date", "date enregistrée de l'étape"), C("date_acte", "date", "date de l'acte"),
          C("date_fin_retractation", "date", "fin du délai de rétractation"),
@@ -214,7 +280,10 @@ OBJETS: tuple[Objet, ...] = (
     Objet(
         "demandes", "app_diffusion_requests_current",
         "Les demandes envoyées aux admins : diffusion, baisse de prix, annulation, corrections.",
-        (C("request_type", "texte", "type de demande"), C("request_status", "texte", "état"),
+        (C("request_type", "texte", "type de demande",
+           (("demande_diffusion", "diffusion"), ("demande_baisse_prix", "baisse de prix"),
+            ("demande_annulation_mandat", "annulation de mandat"))),
+         C("request_status", "texte", "état", (("pending", "en attente"), ("accepted", "acceptée"), ("refused", "refusée"))),
          C("requested_by_name", "texte", "demandée par"), C("requested_at", "date", "demandée le"),
          C("processed_by_name", "texte", "traitée par"), C("processed_at", "date", "traitée le"),
          C("request_comment", "texte", "commentaire"), C("refusal_reason", "texte", "motif de refus"),
@@ -235,7 +304,10 @@ OBJETS: tuple[Objet, ...] = (
     Objet(
         "notifications", "app_notification",
         "TES notifications (et seulement les tiennes).",
-        (C("type", "texte", "type"), C("title", "texte", "titre"), C("body", "texte", "texte"),
+        (C("type", "texte", "type",
+           _memes("nouveau_rapprochement", "mandat_echu", "job_echec", "contact_conflit_ecriture", "recherche_conflit_ecriture",
+                  "signature_a_contresigner", "signature_signee", "demande_visite", "estimation_consultee")),
+         C("title", "texte", "titre"), C("body", "texte", "texte"),
          C("app_dossier_id", "nombre", "bien concerné"), C("read_at", "date", "lue le (vide = non lue)"),
          C("created_at", "date", "créée le")),
         ("title", "body", "created_at", "read_at"),
@@ -247,7 +319,8 @@ OBJETS: tuple[Objet, ...] = (
         "L'annuaire des négociateurs et collaborateurs.",
         (C("display_name", "texte", "nom"), C("prenom", "texte", "prénom"), C("nom", "texte", "nom de famille"),
          C("email", "texte", "e-mail"), C("tel", "texte", "téléphone"), C("portable", "texte", "portable"),
-         C("user_type", "texte", "NEGO = négociateur"), C("site", "texte", "agence")),
+         C("user_type", "texte", "fonction", (("NEGO", "négociateur"), ("AGENCE", "compte d'agence"), ("SECRETAIRE", "secrétaire"))),
+         C("site", "texte", "site")),
         ("display_name", "email", "portable", "site"),
         "display_name",
     ),
@@ -256,5 +329,21 @@ OBJETS: tuple[Objet, ...] = (
 PAR_NOM = {o.nom: o for o in OBJETS}
 
 
+def _valeurs_lisibles(colonne: Colonne) -> str:
+    return " | ".join(v if v == l else f"{l} [{v}]" for v, l in colonne.valeurs)
+
+
 def liste_pour_consignes() -> str:
-    return "\n".join(f"- {o.nom} : {o.description}" for o in OBJETS)
+    # Les colonnes ET leurs valeurs sont dans les consignes (13/11) : le modèle ne devine plus un nom
+    # de colonne (19 réponses sur 30 commençaient par un appel refusé) ni une valeur.
+    # ⚠ Texte IDENTIQUE d'un appel à l'autre : il est en tête des consignes, OpenAI le met en cache.
+    blocs = []
+    for o in OBJETS:
+        lignes = [f"## {o.nom} : {o.description}"]
+        for c in o.colonnes:
+            ligne = f"  - {c.nom} ({c.type}) : {c.description}"
+            if c.valeurs:
+                ligne += f" ; valeurs : {_valeurs_lisibles(c)}"
+            lignes.append(ligne)
+        blocs.append("\n".join(lignes))
+    return "\n".join(blocs)

@@ -103,8 +103,39 @@ voir(lec.traduire_filtres(biens, [{"colonne": "mandat_date_fin", "operateur": "i
      "date < 2026-11-30 (texte AAAA-MM-JJ, comparable dans l'ordre)")
 voir(lec.traduire_filtres(biens, [{"colonne": "ville", "operateur": "contient", "valeur": "*Fir%miny*"}]) == [("ville", "ilike.*Firminy*")],
      "« contient » : les jokers glissés par le modèle sont retirés")
-voir(lec.traduire_filtres(biens, [{"colonne": "statut_annonce", "operateur": "parmi", "valeur": 'Actif|Sous offre|a",b)'}])
-     == [("statut_annonce", 'in.("Actif","Sous offre","a\\",b)")')], "« parmi » : chaque valeur entre guillemets, guillemets échappés")
+voir(lec.traduire_filtres(biens, [{"colonne": "ville", "operateur": "parmi", "valeur": 'Firminy|Unieux|a",b)'}])
+     == [("ville", 'in.("Firminy","Unieux","a\\",b)")')], "« parmi » : chaque valeur entre guillemets, guillemets échappés")
+voir(refuse(lambda: lec.traduire_filtres(biens, [{"colonne": "statut_annonce", "operateur": "parmi", "valeur": 'Actif|a",b)'}]),
+            "n'existe pas"), "colonne à liste : une valeur hors liste (même glissée dans « parmi ») est refusée")
+
+print("2 bis) les colonnes à liste (13/11 : 5 fausses réponses sur 30 venaient d'une valeur devinée)")
+mandats, trans, dem = obj.PAR_NOM["mandats"], obj.PAR_NOM["transactions"], obj.PAR_NOM["demandes"]
+voir(lec.traduire_filtres(mandats, [{"colonne": "mandat_type", "operateur": "egal", "valeur": "exclusif"}])
+     == [("mandat_type", "eq.EXCLUSIF")], "Q13 : « exclusif » → EXCLUSIF (la base écrit en majuscules)")
+voir(lec.traduire_filtres(dem, [{"colonne": "request_status", "operateur": "egal", "valeur": "en attente"}])
+     == [("request_status", "eq.pending")], "Q22 : « en attente » → pending (par le libellé)")
+voir(lec.traduire_filtres(trans, [{"colonne": "state", "operateur": "egal", "valeur": "offre acceptée"}])
+     == [("state", "eq.accepted")], "« offre acceptée » → accepted (accents et casse ignorés)")
+voir(refuse(lambda: lec.traduire_filtres(trans, [{"colonne": "state", "operateur": "egal", "valeur": "Vente signée"}]),
+            "Valeurs possibles"), "Q18 : « Vente signée » n'existe pas → REFUS avec la liste, pas un zéro muet")
+voir(lec.traduire_filtres(biens, [{"colonne": "type_bien", "operateur": "egal", "valeur": "Maison"}])
+     == [("type_bien", "eq.1")], "type_bien est un CODE : « Maison » → 1")
+maisons = dict(lec.traduire_filtres(biens, [{"colonne": "type_bien", "operateur": "contient", "valeur": "maison"}]))["type_bien"]
+voir(maisons.startswith("in.(") and all(f'"{c}"' in maisons for c in ("1", "39", "38", "49")) and '"2"' not in maisons,
+     "« contient maison » → toutes les sortes de maisons (1, 39, 38, 49), pas l'appartement")
+voir(lec.traduire_filtres(mandats, [{"colonne": "statut_mandat", "operateur": "different", "valeur": "echu"}])
+     == [("statut_mandat", "neq.Échu")], "« echu » → Échu, et « différent » reste une exclusion")
+ambert = dict(lec.traduire_filtres(biens, [{"colonne": "agence_nom", "operateur": "egal", "valeur": "groupe gti ambert"}]))["agence_nom"]
+voir(ambert == 'in.("Groupe GTI Ambert   ","Groupe GTI Ambert")', "une agence écrite de deux façons selon la table : les deux sont prises")
+voir(lec._lisible(biens, "type_bien", "1") == "Maison" and lec._lisible(biens, "offre_type", "0") == "Vente"
+     and lec._lisible(biens, "ville", "Firminy") == "Firminy", "un code part au modèle avec son libellé (1 → Maison)")
+voir(lec.traduire_filtres(biens, [{"colonne": "negociateur_email", "operateur": "egal", "valeur": "Moi"}], moi=EMAIL)
+     == [("negociateur_email", f"eq.{EMAIL}")], "« mes … » : « moi » devient l'adresse de la personne, posée par NOTRE serveur")
+voir(refuse(lambda: lec.traduire_filtres(biens, [{"colonne": "negociateur_email", "operateur": "egal", "valeur": "moi"}]),
+            "ne connais pas"), "sans e-mail connu, « moi » est refusé (jamais un filtre vide)")
+consignes = obj.liste_pour_consignes()
+voir("mandat_type (texte)" in consignes and "exclusif [EXCLUSIF]" in consignes and "en attente [pending]" in consignes
+     and "Maison [1]" in consignes, "les consignes portent les colonnes ET leurs valeurs exactes")
 voir(lec.traduire_filtres(obj.PAR_NOM["contacts"], [{"colonne": "relation_roles_json", "operateur": "json_contient", "valeur": "mandant"}])
      == [("relation_roles_json", 'cs.["mandant"]')], "rôle « mandant » dans la liste des rôles")
 voir(lec.traduire_filtres(obj.PAR_NOM["contacts"], [{"colonne": "archive", "operateur": "egal", "valeur": "non"}]) == [("archive", "eq.false")],
@@ -131,6 +162,13 @@ voir(("or", "(couple_role.is.null,couple_role.neq.menage_resolu)") in params_de(
 regles["app_v_mandat_statut"] = lambda p, h: Reponse({"message": "not found"}, status=404)
 voir(refuse(lambda: lec.chercher(ctx, {"objet": "mandats"}), "pas encore disponible"),
      "la vue des mandats pas encore posée : refus en clair, pas une panne")
+
+regles["app_dossiers_current"] = lambda p, h: Reponse([], plage="*/0")
+r0 = lec.chercher(ctx, {"objet": "biens", "filtres": [{"colonne": "ville", "operateur": "egal", "valeur": "Nulle-part"}],
+                        "colonnes": [], "tri": "", "ordre": "desc", "limite": 5})
+voir(r0["total"] == 0 and "Avant de répondre « aucun »" in r0.get("attention", ""), "un zéro part avec son avertissement (13/11)")
+r1 = lec.chercher(ctx, {"objet": "biens", "filtres": [], "colonnes": [], "tri": "", "ordre": "desc", "limite": 5})
+voir("attention" not in r1, "TÉMOIN : sans filtre, pas d'avertissement")
 
 print("4) compter : total, regroupement, plafond")
 regles["app_relance_rapprochement"] = lambda p, h: Reponse([], plage="*/12")
@@ -197,7 +235,8 @@ trace_ctx = cat.ContexteAssistant(Settings(), "u-1", EMAIL, "commercial", JETON)
 chercher = next(f for f in cat.CATALOGUE if f.nom == "chercher")
 texte = asyncio.run(cat.appeler(trace_ctx, chercher, json.dumps({"objet": "salaires"})))
 voir(texte.startswith("Refusé : Objet inconnu") and trace_ctx.appels[0]["erreur"] == "refus", "un refus part au modèle tel quel, et se trace")
-consignes = svc.agent_registry.render(svc._INSTRUCTIONS, {"date": "12/11/2026", "objets": obj.liste_pour_consignes()})
+consignes = svc.agent_registry.render(svc._INSTRUCTIONS, {"date": "12/11/2026", "objets": obj.liste_pour_consignes(),
+                                                         "role": "commercial"})
 voir(all(o.nom in consignes for o in obj.OBJETS) and "{{" not in consignes, "les consignes listent les 14 objets, rien n'est laissé en gabarit")
 voir(len(obj.OBJETS) == 14, "14 objets dans la liste fermée")
 

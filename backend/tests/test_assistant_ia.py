@@ -126,7 +126,8 @@ print("2) les plafonds, AVANT tout appel")
 voir(cout_usd("gpt-4.1-mini", {"input_tokens": 1000, "output_tokens": 1000}) == 0.002, "tarif gpt-4.1-mini : 1 000 + 1 000 jetons = 0,002 $")
 voir(cout_usd("modele-inconnu", {"input_tokens": 1, "output_tokens": 1}) is None, "modèle inconnu : coût inconnu, jamais zéro")
 spec = s.preparer(EMAIL)
-voir(spec.model == "gpt-4.1-mini" and spec.max_output_tokens == 1500, "fiche par défaut : gpt-4.1-mini, 1 500 jetons de sortie")
+voir(spec.model == "gpt-6.1-terra" and spec.max_output_tokens == 1500, "fiche par défaut : gpt-6.1-terra (décision du 13/11), 1 500 jetons de sortie")
+voir(cout_usd("gpt-6.1-terra", {"input_tokens": 1000, "output_tokens": 1000}) == 0.006, "tarif gpt-6.1-terra : 1 000 + 1 000 jetons = 0,006 $")
 
 
 def refuse(fonction, code):
@@ -142,14 +143,14 @@ voir(refuse(lambda: s.preparer(EMAIL), 429), "3 $ dépensés aujourd'hui : refus
 etat["depense"], etat["questions"] = 2.99, 100
 voir(refuse(lambda: s.preparer(EMAIL), 429), "100 questions aujourd'hui : refus 429")
 etat["questions"] = 99
-voir(s.preparer(EMAIL).model == "gpt-4.1-mini", "TÉMOIN : 2,99 $ et 99 questions passent")
+voir(s.preparer(EMAIL).model == "gpt-6.1-terra", "TÉMOIN : 2,99 $ et 99 questions passent")
 etat["run_illisible"] = True
 voir(refuse(lambda: s.preparer(EMAIL), 503), "journal illisible : refus 503, une lecture ratée n'est jamais un vert")
 etat["run_illisible"], etat["depense"], etat["questions"] = False, 0.0, 0
 agent_registry.DEFAULT_SPECS["assistant"] = agent_registry.AgentSpec("assistant", "x", "gpt-9-inconnu", 100)
 agent_registry._CACHE.clear()
 voir(refuse(lambda: s.preparer(EMAIL), 503), "un modèle sans tarif n'est pas appelé")
-agent_registry.DEFAULT_SPECS["assistant"] = agent_registry.AgentSpec("assistant", svc._INSTRUCTIONS, "gpt-4.1-mini", 1500)
+agent_registry.DEFAULT_SPECS["assistant"] = agent_registry.AgentSpec("assistant", svc._INSTRUCTIONS, svc.MODELE_PAR_DEFAUT, 1500)
 agent_registry._CACHE.clear()
 
 
@@ -324,7 +325,10 @@ tout_openai = json.dumps(corps_openai, ensure_ascii=False)
 voir(JETON not in tout_openai and EMAIL not in tout_openai and USER_ID not in tout_openai and "cle-" not in tout_openai,
      "ni le jeton, ni l'e-mail, ni l'identifiant, ni une clé ne partent chez OpenAI")
 voir([t.get("name") for t in corps_openai[0].get("tools", [])] == TOUTES, "le modèle ne voit que les fonctions du rôle")
-voir(corps_openai[0]["model"] == "gpt-4.1-mini" and corps_openai[0].get("max_output_tokens") == 1500, "gpt-4.1-mini, 1 500 jetons de sortie")
+voir(corps_openai[0]["model"] == "gpt-6.1-terra" and corps_openai[0].get("max_output_tokens") == 1500, "gpt-6.1-terra, 1 500 jetons de sortie")
+voir((corps_openai[0].get("reasoning") or {}).get("effort") == "low", "réflexion « low » (13/11)")
+voir("egal « moi »" in str(corps_openai[0].get("instructions")) and "role : admin" in str(corps_openai[0].get("instructions")),
+     "« mes … » = « moi » (13/11 : il inventait l'adresse), et le rôle est dans les consignes")
 import agents.tracing as tr  # noqa: E402
 tr.get_trace_provider().force_flush()
 voir(not envois_httpx, "aucune trace envoyée chez OpenAI (rien n'est parti, même après vidage)")
@@ -336,7 +340,7 @@ voir(messages[1]["contenu"] == "Tu es Pauline Martin, admin." and messages[1]["o
 run = [a[4][0] for a in posts if a[1].endswith("/app_agent_run")]
 voir(len(run) == 1 and run[0]["status"] == "proposed" and run[0]["proposal_json"]["fonctions"] == ["qui_suis_je"]
      and run[0]["input_tokens"] == 300 and run[0]["output_tokens"] == 30, "une ligne de journal : jetons des deux appels cumulés")
-voir(run[0]["cost_usd"] == cout_usd("gpt-4.1-mini", {"input_tokens": 300, "output_tokens": 30}) and run[0]["proposal_json"]["etapes"] == 2,
+voir(run[0]["cost_usd"] == cout_usd("gpt-6.1-terra", {"input_tokens": 300, "output_tokens": 30}) and run[0]["proposal_json"]["etapes"] == 2,
      "le coût du tour et ses 2 étapes")
 durees = run[0]["proposal_json"]["durees_ms"]
 voir(set(durees) == {"preparation", "premier_mot", "total"} and durees["preparation"] <= durees["premier_mot"] <= durees["total"],
