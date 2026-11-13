@@ -4,6 +4,41 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 // ⛔⛔ EN BLANC PAR DÉFAUT. Sans --envoyer, ce script LIT, VÉRIFIE et n'écrit RIEN.
 //
+// ═══════════════════════════════════════════════════════════════════════════════
+// ⛔⛔⛔ NE PAS LE RELANCER SANS AVOIR LU CECI — SON EFFET DE BORD, MESURÉ LE 13/11
+// ═══════════════════════════════════════════════════════════════════════════════
+// ACCEPTER UNE OFFRE CHEZ HEKTOR FAIT REDESCENDRE LE STATUT DU BIEN À
+// « SOUS OFFRE » — même si ce bien est VENDU depuis des années.
+//
+// MESURE DU 13/11, avec son témoin :
+//     bien 39333  vendu en 2007  ->  « Sous offre »   touché par ce script
+//     bien  5550  vendu en 2009  ->  « Sous offre »   touché
+//     bien 11161  vendu en 2015  ->  « Sous offre »   touché
+//     bien 36732  vendu en 2023  ->  « VENDU »        NON touché  ⭐ LE TÉMOIN
+//   Quinze biens vendus portent aujourd'hui « Sous offre » à cause de ce script.
+//
+// ⭐ CE QUI N'A PAS ÉTÉ CASSÉ, et c'est mesuré aussi : aucun n'est reparti en
+//   diffusion (14 « non_diffusable », 1 « diffusable_non_visible »). Le dégât est
+//   INTERNE — un affichage faux — pas une fuite publique.
+//
+// ⛔⛔ ET LA RÉPARATION NAÏVE EST PIRE QUE LE MAL. Deux pièges mesurés :
+//   1) remettre « Vendu » par change_hektor_annonce_status CRÉERAIT UNE VENTE :
+//      HEKTOR_STATUS_CONFIG.sold porte transactionMode « createVente » ;
+//   2) et app_statut_redescente_calcule() rend « ACTIF » pour ces quinze biens --
+//      or « Actif » porte diffusable = 1, donc ON LES REPUBLIERAIT.
+//   ⭐ LE SEUL CHEMIN SÛR est redescendreStatutHektor() avec statut_apres fourni
+//     EXPLICITEMENT (« Vendu ») : un unique upval&champ=status, sans transaction
+//     et sans toucher diffusable.
+//
+// ⭐⭐ LA LEÇON, ET ELLE A ÉTÉ PAYÉE TROIS FOIS EN TROIS JOURS :
+//     11/11  refuser une offre   -> a déplacé 1 185 DATES
+//     12/11  refuser une offre   -> a FABRIQUÉ 8 dates là où il n'y en avait pas
+//     12/11  accepter une offre  -> a remis 15 biens vendus « Sous offre »
+//   UN GESTE NE TOUCHE JAMAIS LE SEUL CHAMP QU'ON VISE. Avant d'en relancer un
+//   sur des milliers de lignes : lire ce que le worker envoie, ET mesurer ce que
+//   Hektor écrit en retour — pas seulement le champ qu'on croit modifier.
+// ═══════════════════════════════════════════════════════════════════════════════
+//
 //   node Console/enqueue_reaccepter_offres_refusees_a_tort.js              <- en blanc
 //   node Console/enqueue_reaccepter_offres_refusees_a_tort.js --offres 3678  <- l'essai
 //   node Console/enqueue_reaccepter_offres_refusees_a_tort.js --envoyer

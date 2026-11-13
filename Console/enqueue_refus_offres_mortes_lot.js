@@ -17,6 +17,33 @@
 //
 // ⛔⛔ EN BLANC PAR DEFAUT. Sans --envoyer, ce script COMPTE et n'ecrit RIEN.
 //
+// ═══════════════════════════════════════════════════════════════════════════════
+// ⚠⚠ SON EFFET DE BORD, MESURE LES 11, 12 ET 13/11 -- A LIRE AVANT DE LE RELANCER
+// ═══════════════════════════════════════════════════════════════════════════════
+// REFUSER UNE OFFRE NE CHANGE PAS QUE SON ETAT : Hektor ecrit l'horodatage du
+// refus dans la colonne "date" de l'offre, ET ajoute une entree « refus » a son
+// journal (propositions_json).
+//
+// CE QUE CA A COUTE :
+//   . le 11/11, 1 185 offres ont vu leur date passer au 11/11/2026 ;
+//   . sept lecteurs s'en servaient -- le registre classait 1 190 dossiers en 2026
+//     a tort, et le pilotage annoncait un delai mandat->offre de 2 148 jours ;
+//   . le 12/11 a 12:07, un second lot a refait le coup sur 8 offres qui n'avaient
+//     AUCUNE date : le refus leur en a FABRIQUE une.
+//   ⛔ Les deux fois, c'est Frederic qui l'a vu, pas un controle.
+//
+// ⭐ CE N'EST PLUS GRAVE AUJOURD'HUI, et c'est structurel : depuis le 13/11, le
+//   lecteur app_dossier_jour_date_transaction REFUSE la colonne "date" d'une
+//   offre des que son journal porte des entrees. Un refus ne peut donc plus
+//   fabriquer de date. ⭐ Et la sentinelle le verifie :
+//        .venv\Scripts\python.exe phase2\checks\controle_date_offre.py
+//
+// ⭐⭐ MAIS LA LECON RESTE, ET ELLE VAUT POUR TOUT GESTE DE MASSE :
+//   UN GESTE NE TOUCHE JAMAIS QU'UN SEUL CHAMP. Avant d'en relancer un sur des
+//   milliers de lignes, LIRE ce que le worker envoie et MESURER ce que Hektor
+//   ecrit en retour -- pas seulement le champ qu'on vise.
+// ═══════════════════════════════════════════════════════════════════════════════
+//
 //   node Console/enqueue_refus_offres_mortes_lot.js                    <- en blanc
 //   node Console/enqueue_refus_offres_mortes_lot.js --dossiers 20,366  <- l'essai
 //   node Console/enqueue_refus_offres_mortes_lot.js --envoyer --limite 25
