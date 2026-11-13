@@ -528,6 +528,12 @@ def main() -> int:
     CHAMPS = ["Mandat", "Prix", "Commission TTC", "Charge Commission", "Offre Achat",
               "Compromis", "Vente Prevue", "Vente Fixee", "Etat Actuel", "Acquereur",
               "Vendeur", "Notaire", "Negociateur 1", "Negociateur 2", "Negociateur 3",
+              # ⭐ 13/11 : LES TROIS POURCENTAGES. Ils manquaient, et ils portent LA PAIE.
+              #   Frederic les a decides « TOUT » le 02/11 (colonnes J, L, N de son
+              #   artefact des 38 choix) -- on ne pouvait donc meme pas mesurer ce
+              #   qu'il y avait a poser. La donnee etait DEJA chargee ci-dessus
+              #   (app_affaire_repartition.pourcentage) : elle n'etait jamais comparee.
+              "Pourcentage 1", "Pourcentage 2", "Pourcentage 3",
               "Agence", "Ville", "Nature", "Vente Reglee", "Numero de facture",
               "product_ref"]
     synthese: dict[str, Counter] = {c: Counter() for c in CHAMPS}
@@ -703,6 +709,70 @@ def main() -> int:
             cm = mots_du_nom(brut)
             pose(nom_sortie, brut, " ".join(sorted(nos_mots)) or None,
                  verdict(brut, nos_mots or None, bool(cm & nos_mots)))
+
+        # ── ⑧ bis LES TROIS POURCENTAGES -- 13/11/2026
+        #
+        # POURQUOI ILS ARRIVENT SI TARD : le rapport chargeait deja la colonne
+        # `pourcentage` de app_affaire_repartition (voir la requete plus haut) mais
+        # ne la comparait JAMAIS. Resultat : les trois colonnes que Frederic a
+        # decidees « TOUT » le 02/11 -- et qui portent LA PAIE -- n'etaient pas
+        # mesurables. On ne savait pas combien de cases il y avait a poser.
+        #
+        # ⚠ LE PIEGE DE FORMAT, nomme par Frederic : la colonne N porte « 12,5 »
+        #   AVEC UNE VIRGULE. `nombre()` la convertit deja ; on ne compare donc
+        #   jamais deux chaines, toujours deux nombres.
+        #
+        # ⚠⚠ CE QUE CETTE COMPARAISON NE PROUVE PAS, et il faut le dire : le RANG
+        #   du classeur (1, 2, 3) et le `rang` de notre repartition ne sont pas
+        #   garantis identiques -- rien ne dit que le « Negociateur 2 » du classeur
+        #   est celui que nous rangeons en 2e. Un ecart de pourcentage peut donc
+        #   etre un ecart D'ORDRE, pas de valeur. C'est pourquoi on affiche AUSSI
+        #   nos pourcentages dans l'ordre, pour que l'oeil tranche.
+        #   ⭐ Et la mesure du 13/11 explique pourquoi l'ecart sera gros : le
+        #     classeur connait 652 affaires a plusieurs commerciaux, nous 19.
+        #     Quand on n'en connait qu'un, son pourcentage vaut 100 par defaut.
+        # ⛔⛔ LA FORMULE JUSTE, ET ELLE N'EST PAS CELLE QU'ON CROIT -- 13/11.
+        #   NOTRE REPARTITION EST PAR COTE, PAS PAR NEGOCIATEUR :
+        #       cote « entree » 8 070 lignes . cote « sortie » 8 066
+        #       pourcentage 50.000 -> 16 004 fois sur ~16 136
+        #   C'est la regle du metier : la moitie a qui RENTRE le mandat, la
+        #   moitie a qui VEND. Le classeur, lui, donne la part de CHAQUE
+        #   NEGOCIATEUR dans l'affaire.
+        #   ⭐ Donc un negociateur qui a rentre ET vendu touche 50 + 50 = 100 --
+        #     ce que le classeur ecrit. IL FAUT SOMMER PAR PERSONNE.
+        #   ⚠ Ma premiere version lisait UNE ligne par `rang` : elle rendait 50
+        #     partout et annoncait 3 546 ecarts dont 3 279 « classeur 100 contre
+        #     nous 50 ». C'etait un artefact de lecture, pas un ecart reel.
+        somme: dict[str, float] = defaultdict(float)
+        for r in nos_lignes:
+            p = nombre(r.get("pourcentage"))
+            if p is None:
+                continue
+            qui = str(r.get("hektor_user_id") or "").strip() \
+                or " ".join(sorted(mots_du_nom(r.get("nom_au_moment"))))
+            if qui:
+                somme[qui] += p
+        # du plus gros au plus petit : le classeur range ainsi (1 = le principal)
+        ordre = sorted(somme.items(), key=lambda kv: (-kv[1], kv[0]))
+        nos_parts: dict[int, float] = {i + 1: v for i, (_, v) in enumerate(ordre)}
+        tous_les_notres = " ".join(
+            ("%g" % nos_parts[k]) for k in sorted(nos_parts)) or None
+        for rang, champ_c in ((1, "Pourcentage 1"), (2, "Pourcentage 2"), (3, "Pourcentage 3")):
+            nom_sortie = "Pourcentage %d" % rang
+            c_p = nombre(case(l, champ_c))
+            n_p = nos_parts.get(rang)
+            if c_p is None and n_p is None:
+                pose(nom_sortie, "", "", VIDES)
+                continue
+            egal = (c_p is not None and n_p is not None and abs(c_p - n_p) < 0.01)
+            pose(nom_sortie,
+                 ("%g" % c_p) if c_p is not None else "",
+                 (("%g" % n_p) if n_p is not None else "")
+                 + (("  (nos parts : %s)" % tous_les_notres)
+                    if tous_les_notres and not egal else ""),
+                 verdict(c_p, n_p, egal))
+        if nos_parts and abs(sum(nos_parts.values()) - 100.0) > 0.01:
+            notes["Pourcentage : NOS parts ne font pas 100"] += 1
 
         # ── ⑨ LE BIEN : agence et ville, AVEC tolerance aux fautes de frappe
         for champ_c, cle in (("Agence", "agence_nom"), ("Ville", "ville")):
