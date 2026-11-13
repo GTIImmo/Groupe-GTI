@@ -2,12 +2,19 @@ from __future__ import annotations
 
 import json
 import re
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import Any, Callable
+from zoneinfo import ZoneInfo
 
 import requests
+from fastapi import HTTPException
 
+from ..auth import AuthenticatedUser
 from .assistant_contexte import TOUS_LES_ROLES, ContexteAssistant, Fonction, LectureRefusee, Refus
+from .google_calendar_event_link_service import GoogleCalendarEventLinkService
+from .google_workspace_service import GoogleWorkspaceService
+from .rapprochement_email import RapprochementEmailService
+from .supabase_admin import SupabaseAdminService
 
 # ---------------------------------------------------------------------------
 # Assistant IA (13/11/2026, étape 3, lot 1) -- LES GESTES, PAR CARTE DE VALIDATION.
@@ -485,6 +492,420 @@ def executer_archivage_recherche(ctx: ContexteAssistant, p: dict[str, Any]) -> d
     return {"contact_search_key": recherche["contact_search_key"]}
 
 
+# ── LOT 3a (13/11/2026) : l'agenda Google DE LA PERSONNE, sans invitation ──────
+# Note : notice/ETAPE3_AGENT_QUI_AGIT_AUDIT_2026-11-13.md §10-11.
+# ⛔ Toujours SON agenda (jamais celui d'un collègue, même pour la direction) ; la garde est celle de l'écran
+#   (assert_calendar_subject_allowed : compte Google relié).
+# ⛔ Jamais d'invité ni de notification (sendUpdates « none ») : l'écran, lui, envoie TOUJOURS de vraies invitations
+#   Google à tous les invités (App.tsx:39262) -- l'envoi vers un client est le lot 3c, pas ouvert.
+# ⛔ Déplacer ou supprimer : seulement un RDV posé par l'app (il a sa ligne dans app_google_calendar_event_link,
+#   comme à l'écran) ET sans aucun invité -- le changer en silence toucherait l'agenda de quelqu'un d'autre.
+# ⚠ Supprimer un RDV de visite ne remet PAS le bien à « jamais vu » (l'écran le fait, App.tsx:25347, et efface ainsi
+#   un « proposé » d'avant : défaut n° 3 de l'audit) -- la carte le dit.
+TYPES_RDV = {"visite": "Visite", "estimation": "Estimation", "mandat": "Mandat", "compromis": "Compromis",
+             "relance": "Relance", "agence": "Agence", "autre": "Rendez-vous"}
+PARIS = ZoneInfo("Europe/Paris")
+_JOURS = ("lun.", "mar.", "mer.", "jeu.", "ven.", "sam.", "dim.")
+_UUID = re.compile(r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")
+MAX_JOURS_AGENDA = 31
+
+
+def _personne(ctx: ContexteAssistant) -> tuple[str, AuthenticatedUser]:
+    email = (ctx.email or "").strip().lower()
+    if not email:
+        raise Refus("Ton compte n'a pas d'adresse : pas d'agenda ni de boîte Google.")
+    return email, AuthenticatedUser(id=ctx.user_id, email=email)
+
+
+def _mon_agenda(ctx: ContexteAssistant) -> str:
+    email, user = _personne(ctx)
+    try:
+        SupabaseAdminService(ctx.settings).assert_calendar_subject_allowed(user, email)
+    except HTTPException as exc:
+        raise Refus(f"Ton agenda Google n'est pas ouvert à l'application ({exc.detail}).") from None
+    return email
+
+
+def _google(appel: Callable[[], dict[str, Any]], quoi: str) -> dict[str, Any]:
+    # Google répond ok / pas ok ; une erreur de saisie (ValueError) ou de jeton (RuntimeError) devient une phrase
+    try:
+        r = appel()
+    except ValueError as exc:
+        raise Refus(f"{quoi} : {exc}") from None
+    except RuntimeError:
+        raise Refus(f"{quoi} : Google n'a pas pu être joint.") from None
+    if not r.get("ok"):
+        raise Refus(f"{quoi} : Google a refusé ({r.get('statusCode')}).")
+    return r
+
+
+def _quand(instant: datetime) -> str:
+    local = instant.astimezone(PARIS)
+    return f"{_JOURS[local.weekday()]} {local.strftime('%d/%m/%Y %H:%M')}"
+
+
+def _instant(texte: Any) -> datetime:
+    brut = str(texte or "").strip().replace(" ", "T")
+    if len(brut) < 16:
+        raise Refus("Donne la date ET l'heure, au format AAAA-MM-JJTHH:MM (heure de Paris).")
+    try:
+        valeur = datetime.fromisoformat(brut)
+    except ValueError:
+        raise Refus("Donne la date ET l'heure, au format AAAA-MM-JJTHH:MM (heure de Paris).") from None
+    return valeur if valeur.tzinfo else valeur.replace(tzinfo=PARIS)
+
+
+def _jour(texte: Any, defaut: datetime) -> tuple[datetime, bool]:
+    brut = str(texte or "").strip().replace(" ", "T")
+    if not brut:
+        return defaut, False
+    try:
+        valeur = datetime.fromisoformat(brut)
+    except ValueError:
+        raise Refus("Une date s'écrit AAAA-MM-JJ, ou AAAA-MM-JJTHH:MM.") from None
+    return (valeur if valeur.tzinfo else valeur.replace(tzinfo=PARIS)), len(brut) <= 10
+
+
+def lire_mon_agenda(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[str, Any]:
+    email = _mon_agenda(ctx)
+    aujourdhui = datetime.now(PARIS).replace(hour=0, minute=0, second=0, microsecond=0)
+    debut, _ = _jour(p.get("debut"), aujourdhui)
+    fin, jour_seul = _jour(p.get("fin"), debut + timedelta(days=1))
+    if jour_seul:
+        fin += timedelta(days=1)  # « jusqu'au 20/11 » = le 20/11 compris
+    if fin <= debut:
+        raise Refus("La fin doit venir après le début.")
+    if fin - debut > timedelta(days=MAX_JOURS_AGENDA):
+        raise Refus(f"Au plus {MAX_JOURS_AGENDA} jours à la fois.")
+    r = _google(lambda: GoogleWorkspaceService(ctx.settings).list_calendar_events(
+        subject_email=email, time_min=debut.isoformat(), time_max=fin.isoformat(), max_results=50), "Lecture de ton agenda")
+    evenements = [e for e in r.get("events") or [] if isinstance(e, dict) and e.get("status") != "cancelled"]
+    ids = [str(e.get("id")) for e in evenements if e.get("id")]
+    liens: dict[str, dict[str, Any]] = {}
+    if ids:
+        for ligne in _lire(ctx, "app_google_calendar_event_link", {
+                "google_calendar_email": f"eq.{email}", "status": "eq.active",
+                "google_event_id": "in.(" + ",".join('"' + i.replace('"', "") + '"' for i in ids) + ")",
+                "select": "id,google_event_id,event_type,hektor_annonce_id,hektor_contact_id"}):
+            liens[str(ligne.get("google_event_id"))] = ligne
+    domaine = "@" + ctx.settings.google_workspace_domain
+    rdv = []
+    for e in evenements:
+        debut_e, fin_e = e.get("start") or {}, e.get("end") or {}
+        journee = "dateTime" not in debut_e
+        invites = [a for a in e.get("attendees") or [] if isinstance(a, dict) and not a.get("self")]
+        lien = liens.get(str(e.get("id"))) or {}
+        ligne = {
+            "debut": _quand(datetime.fromisoformat(debut_e["dateTime"])) if not journee else f"{debut_e.get('date')} (journée)",
+            "fin": datetime.fromisoformat(fin_e["dateTime"]).astimezone(PARIS).strftime("%H:%M") if not journee else None,
+            "titre": str(e.get("summary") or "(sans titre)")[:200],
+            "lieu": str(e.get("location") or "")[:200] or None,
+            # ⛔ jamais les adresses des invités ni de l'organisateur : seulement combien
+            "invites": len(invites),
+            "invites_exterieurs": sum(1 for a in invites if not str(a.get("email") or "").lower().endswith(domaine)),
+            "rdv_app": lien.get("id"),
+        }
+        if lien:
+            ligne.update({"type": lien.get("event_type"), "hektor_annonce_id": lien.get("hektor_annonce_id"),
+                          "hektor_contact_id": lien.get("hektor_contact_id")})
+        rdv.append(ligne)
+    return {"periode": f"du {_quand(debut)} au {_quand(fin)}", "nombre": len(rdv), "rendez_vous": rdv,
+            "suite_non_lue": bool(r.get("hasMore")),
+            "a_savoir": "rdv_app = numéro du RDV posé par l'application : seuls ceux-là, et sans invités, peuvent être "
+                        "déplacés ou supprimés par l'assistant."}
+
+
+def _liens_rdv(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[dict | None, dict | None, dict | None]:
+    annonce = str(p.get("hektor_annonce_id") or "").strip()
+    bien = _bien(ctx, annonce) if annonce and annonce != "0" else None
+    numero = str(p.get("hektor_contact_id") or "").strip()
+    contact = _contact(ctx, numero) if numero else None
+    cle = str(p.get("contact_search_key") or "").strip()
+    recherche = _recherche(ctx, cle) if cle else None
+    if recherche:
+        if contact and str(contact["hektor_contact_id"]) != str(recherche["hektor_contact_id"]):
+            raise Refus("Cette recherche n'est pas celle de ce contact.")
+        contact = contact or _contact(ctx, recherche["hektor_contact_id"])
+    return bien, contact, recherche
+
+
+def _duree(valeur: Any) -> timedelta:
+    try:
+        minutes = int(valeur)
+    except (TypeError, ValueError):
+        minutes = 0
+    if not 5 <= minutes <= 600:
+        raise Refus("Donne la durée en minutes (entre 5 et 600).")
+    return timedelta(minutes=minutes)
+
+
+def preparer_rdv(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    email = _mon_agenda(ctx)
+    genre = str(p.get("type") or "").strip()
+    if genre not in TYPES_RDV:
+        raise Refus("Type : " + ", ".join(TYPES_RDV) + ".")
+    titre = str(p.get("titre") or "").strip()[:240]
+    if not titre:
+        raise Refus("Donne le titre du rendez-vous.")
+    debut = _instant(p.get("debut"))
+    if debut < datetime.now(timezone.utc):
+        raise Refus("Ce créneau est déjà passé.")
+    fin = debut + _duree(p.get("duree_minutes"))
+    bien, contact, recherche = _liens_rdv(ctx, p)
+    if genre == "visite" and recherche and not bien:
+        raise Refus("Pour une visite liée à une recherche, donne aussi le numéro d'annonce du bien visité.")
+    lieu = str(p.get("lieu") or "").strip()[:500]
+    note = str(p.get("note") or "").strip()[:2000]
+    resume = f"Créer dans TON agenda : {TYPES_RDV[genre]} « {titre} » — {_quand(debut)} → {fin.astimezone(PARIS):%H:%M}"
+    if lieu:
+        resume += f", {lieu}"
+    if bien:
+        resume += f" ; bien : annonce {bien['hektor_annonce_id']} « {bien.get('titre_bien') or ''} »"
+    if contact:
+        resume += f" ; contact : {contact.get('display_name') or contact['hektor_contact_id']}"
+    resume += ". Aucune invitation n'est envoyée : personne d'autre n'est prévenu."
+    if genre == "visite" and recherche and bien:
+        resume += " Le bien passe « visite » pour cette recherche (comme l'écran)."
+    try:
+        dispo = GoogleWorkspaceService(ctx.settings).check_calendar_availability(
+            subject_email=email, start_at=debut.isoformat(), end_at=fin.isoformat(),
+            requested_by=ctx.user_id, requested_by_email=email)
+        if dispo.get("ok") and int(dispo.get("busyCount") or 0):
+            resume += f" ⚠ Tu es déjà pris sur ce créneau ({dispo['busyCount']} occupation(s))."
+    except Exception:  # noqa: BLE001 -- la disponibilité n'est qu'une indication
+        resume += " (Disponibilité non vérifiée.)"
+    return resume, {"type": genre, "titre": titre, "debut": debut.isoformat(), "fin": fin.isoformat(), "lieu": lieu,
+                    "note": note, "hektor_annonce_id": int(bien["hektor_annonce_id"]) if bien else None,
+                    "hektor_contact_id": str(contact["hektor_contact_id"]) if contact else None,
+                    "contact_search_key": recherche["contact_search_key"] if recherche else None}
+
+
+def executer_rdv(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[str, Any]:
+    email = _mon_agenda(ctx)  # re-vérifié AU CLIC
+    genre = str(p.get("type") or "")
+    if genre not in TYPES_RDV:
+        raise Refus("type de rendez-vous inconnu")
+    debut, fin = datetime.fromisoformat(p["debut"]), datetime.fromisoformat(p["fin"])
+    if debut < datetime.now(timezone.utc):
+        raise Refus("ce créneau est passé entre-temps")
+    bien, contact, recherche = _liens_rdv(ctx, p)
+    r = _google(lambda: GoogleWorkspaceService(ctx.settings).create_calendar_event(
+        subject_email=email, summary=p["titre"], start_at=debut.isoformat(), end_at=fin.isoformat(),
+        description=p.get("note") or None, location=p.get("lieu") or None, attendees=[], send_updates="none",
+        dry_run=False, requested_by=ctx.user_id, requested_by_email=email), "Création du rendez-vous")
+    evenement = r.get("event") if isinstance(r.get("event"), dict) else {}
+    try:
+        lien = GoogleCalendarEventLinkService(ctx.settings).create_link(
+            event_type=genre, related_entity_type="annonce" if bien else ("contact" if contact else "other"),
+            related_entity_id=str(bien["hektor_annonce_id"]) if bien else (str(contact["hektor_contact_id"]) if contact else None),
+            app_dossier_id=bien["app_dossier_id"] if bien else None,
+            hektor_annonce_id=int(bien["hektor_annonce_id"]) if bien else None,
+            hektor_contact_id=str(contact["hektor_contact_id"]) if contact else None,
+            calendar_email=email, google_event_id=str(r.get("eventId") or ""), google_html_link=r.get("htmlLink"),
+            summary=p["titre"], location=p.get("lieu") or None,
+            starts_at=str((evenement.get("start") or {}).get("dateTime") or debut.isoformat()),
+            ends_at=str((evenement.get("end") or {}).get("dateTime") or fin.isoformat()), attendees=[],
+            metadata_json={"source": "assistant", "send_updates": "none", "has_description": bool(p.get("note")),
+                           **({"contact_search_key": recherche["contact_search_key"]} if recherche else {})},
+            created_by=ctx.user_id, created_by_email=email)
+    except Exception:  # noqa: BLE001 -- le RDV EXISTE chez Google : on le dit, on ne prétend pas l'inverse
+        lien = None
+    statut_visite = None
+    if genre == "visite" and recherche and bien:
+        try:  # = onCreated de l'écran (App.tsx:25538), au mieux comme lui
+            _ecrire(ctx, "POST", "rpc/app_set_bien_statut", {
+                "p_search_key": recherche["contact_search_key"], "p_dossier_id": bien["app_dossier_id"],
+                "p_status": "visite", "p_reason": None, "p_nego": email})
+            statut_visite = True
+        except Refus:
+            statut_visite = False
+    return {"rdv_app": (lien or {}).get("id"), "dans_google": True, "relie_a_l_app": bool(lien),
+            "debut": _quand(debut), "statut_visite": statut_visite}
+
+
+def _mon_rdv(ctx: ContexteAssistant, rdv_id: Any) -> tuple[str, dict[str, Any]]:
+    email = _mon_agenda(ctx)
+    numero = str(rdv_id or "").strip()
+    if not _UUID.fullmatch(numero):
+        raise Refus("Donne le numéro du rendez-vous (rdv_app, rendu par la lecture de l'agenda).")
+    lignes = _lire(ctx, "app_google_calendar_event_link", {
+        "id": f"eq.{numero}", "limit": "1",
+        "select": "id,google_calendar_email,google_event_id,event_type,summary,location,starts_at,ends_at,attendees_json,"
+                  "status,metadata_json"})
+    if not lignes:
+        raise Refus("Ce rendez-vous n'est pas parmi ceux que tu peux voir.")
+    rdv = lignes[0]
+    if rdv.get("status") != "active":
+        raise Refus("Ce rendez-vous a déjà été supprimé.")
+    if str(rdv.get("google_calendar_email") or "").lower() != email:
+        raise Refus("Ce rendez-vous est dans l'agenda d'un collègue : l'assistant ne touche qu'à TON agenda.")
+    if [a for a in rdv.get("attendees_json") or [] if str(a or "").strip()]:
+        raise Refus("Ce rendez-vous a des invités : le changer les toucherait sans les prévenir. Fais-le depuis l'écran.")
+    return email, rdv
+
+
+def preparer_deplacer_rdv(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    _, rdv = _mon_rdv(ctx, p.get("rdv_id"))
+    avant_debut, avant_fin = datetime.fromisoformat(rdv["starts_at"]), datetime.fromisoformat(rdv["ends_at"])
+    debut = _instant(p.get("debut")) if str(p.get("debut") or "").strip() else avant_debut
+    fin = debut + (_duree(p.get("duree_minutes")) if int(p.get("duree_minutes") or 0) else avant_fin - avant_debut)
+    titre = str(p.get("titre") or "").strip()[:240] or str(rdv.get("summary") or "")
+    lieu = str(p.get("lieu") or "").strip()[:500] or str(rdv.get("location") or "")
+    if (debut, fin, titre, lieu) == (avant_debut, avant_fin, rdv.get("summary") or "", rdv.get("location") or ""):
+        raise Refus("Rien ne change : donne un nouvel horaire, une durée, un titre ou un lieu.")
+    if debut < datetime.now(timezone.utc):
+        raise Refus("Ce créneau est déjà passé.")
+    morceaux = []
+    if (debut, fin) != (avant_debut, avant_fin):
+        morceaux.append(f"{_quand(avant_debut)} → {_quand(debut)}–{fin.astimezone(PARIS):%H:%M}")
+    if titre != (rdv.get("summary") or ""):
+        morceaux.append(f"titre « {titre} »")
+    if lieu != (rdv.get("location") or ""):
+        morceaux.append(f"lieu « {lieu} »")
+    return f"Modifier dans TON agenda « {rdv.get('summary') or ''} » : " + " ; ".join(morceaux) + \
+        ". Personne n'est prévenu (pas d'invité).", \
+        {"rdv_id": rdv["id"], "debut": debut.isoformat(), "fin": fin.isoformat(), "titre": titre, "lieu": lieu}
+
+
+def executer_deplacer_rdv(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[str, Any]:
+    email, rdv = _mon_rdv(ctx, p.get("rdv_id"))  # re-vérifié AU CLIC (un invité a pu être ajouté depuis l'écran)
+    debut, fin = datetime.fromisoformat(p["debut"]), datetime.fromisoformat(p["fin"])
+    _google(lambda: GoogleWorkspaceService(ctx.settings).update_calendar_event(
+        subject_email=email, event_id=str(rdv["google_event_id"]), summary=p.get("titre") or None,
+        start_at=debut.isoformat(), end_at=fin.isoformat(), description=None, location=p.get("lieu") or None,
+        attendees=None, send_updates="none", dry_run=False, requested_by=ctx.user_id, requested_by_email=email),
+        "Modification du rendez-vous")
+    try:
+        GoogleCalendarEventLinkService(ctx.settings).update_link(
+            link_id=rdv["id"], updated_by=ctx.user_id, updated_by_email=email, summary=p.get("titre") or None,
+            location=p.get("lieu") or None, starts_at=debut.isoformat(), ends_at=fin.isoformat(),
+            metadata_patch={**(rdv.get("metadata_json") or {}), "last_send_updates": "none", "modifie_par": "assistant"})
+        relie = True
+    except Exception:  # noqa: BLE001 -- Google est à jour ; seule notre copie est en retard : on le dit
+        relie = False
+    return {"rdv_app": rdv["id"], "debut": _quand(debut), "copie_app_a_jour": relie}
+
+
+def preparer_supprimer_rdv(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    _, rdv = _mon_rdv(ctx, p.get("rdv_id"))
+    resume = f"Supprimer de TON agenda « {rdv.get('summary') or ''} » du {_quand(datetime.fromisoformat(rdv['starts_at']))}. " \
+             "Personne n'est prévenu (pas d'invité)."
+    if rdv.get("event_type") == "visite" and (rdv.get("metadata_json") or {}).get("contact_search_key"):
+        resume += " ⚠ Le bien reste « visite » pour la recherche : l'assistant ne le remet pas à « jamais vu » " \
+                  "(l'écran le fait, et efface ainsi un « proposé » d'avant). Rétablis ou écarte le bien si besoin."
+    return resume, {"rdv_id": rdv["id"]}
+
+
+def executer_supprimer_rdv(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[str, Any]:
+    email, rdv = _mon_rdv(ctx, p.get("rdv_id"))  # re-vérifié AU CLIC
+    _google(lambda: GoogleWorkspaceService(ctx.settings).delete_calendar_event(
+        subject_email=email, event_id=str(rdv["google_event_id"]), send_updates="none",
+        requested_by=ctx.user_id, requested_by_email=email), "Suppression du rendez-vous")
+    try:
+        GoogleCalendarEventLinkService(ctx.settings).mark_deleted(link_id=rdv["id"], updated_by=ctx.user_id,
+                                                                  updated_by_email=email)
+        relie = True
+    except Exception:  # noqa: BLE001
+        relie = False
+    return {"rdv_app": rdv["id"], "supprime_de_google": True, "copie_app_a_jour": relie}
+
+
+# ── LOT 3b (13/11/2026) : les e-mails, EN INTERNE seulement ───────────────────
+# ⛔ L'e-mail libre de l'écran part en réel hors de tout interrupteur (route /google-workspace/gmail/send, dryRun
+#   False par défaut) : l'assistant, lui, n'envoie QU'À DES ADRESSES DU DOMAINE (vérifié à la carte ET au clic),
+#   sans pièce jointe, depuis la boîte de la personne (même garde que l'écran : assert_gmail_subject_allowed).
+# ⛔ Le rapprochement n'est qu'un APERÇU (une lecture) : rien ne part, rien n'est enregistré.
+MAX_DESTINATAIRES = 10
+MAX_TEXTE_EMAIL = 3000
+_ADRESSE = re.compile(r"[^@\s|,;]+@[^@\s|,;]+\.[^@\s|,;]+")
+
+
+def _ma_boite(ctx: ContexteAssistant) -> str:
+    email, user = _personne(ctx)
+    try:
+        SupabaseAdminService(ctx.settings).assert_gmail_subject_allowed(user, email)
+    except HTTPException as exc:
+        raise Refus(f"Ta boîte Gmail n'est pas ouverte à l'application ({exc.detail}).") from None
+    return email
+
+
+def _destinataires_internes(ctx: ContexteAssistant, brut: Any) -> list[str]:
+    domaine = "@" + ctx.settings.google_workspace_domain
+    morceaux = [x.strip().lower() for x in re.split(r"[|,;\s]+", str(brut or "")) if x.strip()]
+    if not morceaux:
+        raise Refus("Donne au moins un destinataire.")
+    for adresse in morceaux:
+        if not _ADRESSE.fullmatch(adresse):
+            raise Refus(f"« {adresse} » n'est pas une adresse e-mail.")
+        if not adresse.endswith(domaine):
+            raise Refus(f"L'assistant n'envoie qu'EN INTERNE : « {adresse} » n'est pas une adresse {domaine}.")
+    uniques = list(dict.fromkeys(morceaux))
+    if len(uniques) > MAX_DESTINATAIRES:
+        raise Refus(f"Au plus {MAX_DESTINATAIRES} destinataires.")
+    return uniques
+
+
+def _contenu_email(p: dict[str, Any]) -> tuple[str, str]:
+    objet = str(p.get("objet") or "").strip()
+    texte = str(p.get("texte") or "").strip()
+    if not objet or len(objet) > 240:
+        raise Refus("Donne un objet (240 caractères au plus).")
+    if not texte or len(texte) > MAX_TEXTE_EMAIL:
+        raise Refus(f"Donne le texte ({MAX_TEXTE_EMAIL} caractères au plus : la carte le montre EN ENTIER).")
+    return objet, texte
+
+
+def preparer_email_interne(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    _ma_boite(ctx)
+    dest = _destinataires_internes(ctx, p.get("destinataires"))
+    objet, texte = _contenu_email(p)
+    return f"Envoyer depuis TA boîte un e-mail interne à {', '.join(dest)} — objet « {objet} » — texte :\n{texte}", \
+        {"destinataires": dest, "objet": objet, "texte": texte}
+
+
+def executer_email_interne(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[str, Any]:
+    email = _ma_boite(ctx)  # re-vérifié AU CLIC
+    dest = _destinataires_internes(ctx, "|".join(p.get("destinataires") or []))
+    objet, texte = _contenu_email(p)
+    r = _google(lambda: GoogleWorkspaceService(ctx.settings).send_gmail_message(
+        subject_email=email, to=dest, subject=objet, body_text=texte, from_name=ctx.nom or "GTI Immobilier",
+        attachments=None, dry_run=False, requested_by=ctx.user_id, requested_by_email=email,
+        related_entity_type="assistant", related_entity_id=ctx.conversation_id), "Envoi de l'e-mail")
+    return {"envoye": True, "destinataires": len(dest), "message_id": r.get("messageId")}
+
+
+MAX_BIENS_APERCU = 10
+
+
+def apercu_rapprochement(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[str, Any]:
+    recherche = _recherche(ctx, p.get("contact_search_key"))
+    morceaux = [x.strip() for x in re.split(r"[|,;\s]+", str(p.get("annonces") or "")) if x.strip()]
+    if not morceaux or any(not x.isdigit() for x in morceaux):
+        raise Refus("Donne les numéros d'annonce, séparés par |.")
+    if len(morceaux) > MAX_BIENS_APERCU:
+        raise Refus(f"Au plus {MAX_BIENS_APERCU} biens dans un aperçu.")
+    biens = [_bien(ctx, x) for x in dict.fromkeys(morceaux)]  # chaque bien lu avec le jeton AVANT le rendu
+    fiche = (_lire(ctx, "app_contacts_current", {"hektor_contact_id": f"eq.{recherche['hektor_contact_id']}", "limit": "1",
+                                                 "select": "display_name,prenom,civilite,email"}) or [{}])[0]
+    try:
+        rendu = RapprochementEmailService(ctx.settings).render_preview(
+            annonce_ids=[int(b["hektor_annonce_id"]) for b in biens], variante="pull", prenom=fiche.get("prenom"),
+            civilite=fiche.get("civilite"), criteres=None, custom_intro=str(p.get("mot") or "").strip()[:1500] or None,
+            hektor_contact_id=str(recherche["hektor_contact_id"]))
+    except HTTPException as exc:
+        raise Refus(f"Aperçu impossible ({exc.detail}).") from None
+
+    def masque(texte: Any) -> str:
+        # ⛔ aucune adresse e-mail ne part au modèle (ni celle de la personne, ni celle du client)
+        return _ADRESSE.sub("[adresse]", str(texte or ""))
+
+    return {"apercu": True, "rien_n_est_parti": True, "destinataire": fiche.get("display_name"),
+            "client_a_une_adresse": bool(str(fiche.get("email") or "").strip()), "objet": masque(rendu.get("subject")),
+            "texte": masque(rendu.get("text"))[:5000],
+            "a_dire": "C'est un APERÇU : rien n'est envoyé ni enregistré. L'envoi au client ne se fait pas par "
+                      "l'assistant ; il se fait depuis l'écran du rapprochement."}
+
+
 # ── le catalogue des gestes ───────────────────────────────────────────────────
 class Geste:
     def __init__(self, nom: str, description: str, roles: frozenset[str], parametres: dict[str, Any],
@@ -573,6 +994,46 @@ GESTES: dict[str, Geste] = {g.nom: g for g in (
           TOUS_LES_ROLES,
           _schema({"contact_search_key": {"type": "string", "description": "clé de la recherche"}}),
           preparer_archivage_recherche, executer_archivage_recherche),
+    # lot 3a
+    Geste("creer_rdv",
+          "Prépare un RENDEZ-VOUS dans l'agenda Google DE LA PERSONNE (jamais celui d'un collègue), SANS invité ni "
+          "invitation, relié si possible à un bien, un contact, une recherche. Une visite liée à une recherche met le bien "
+          "« visite » (comme l'écran).",
+          TOUS_LES_ROLES,
+          _schema({"type": {"type": "string", "enum": list(TYPES_RDV)},
+                   "titre": {"type": "string", "description": "ex. « Visite T3 Firminy — M. DURAND »"},
+                   "debut": {"type": "string", "description": "AAAA-MM-JJTHH:MM, heure de Paris"},
+                   "duree_minutes": {"type": "integer", "description": "entre 5 et 600"},
+                   "lieu": {"type": "string", "description": "adresse, ou vide"},
+                   "hektor_annonce_id": {"type": "string", "description": "numéro d'annonce lié, ou vide"},
+                   "hektor_contact_id": {"type": "string", "description": "numéro du contact lié, ou vide"},
+                   "contact_search_key": {"type": "string", "description": "clé de la recherche (visite), ou vide"},
+                   "note": {"type": "string", "description": "description du rendez-vous, ou vide"}}),
+          preparer_rdv, executer_rdv),
+    Geste("deplacer_rdv",
+          "Prépare la modification d'un rendez-vous POSÉ PAR L'APPLICATION dans l'agenda de la personne (rdv_app rendu par "
+          "lire_mon_agenda) et SANS invité : nouvel horaire, durée, titre ou lieu (vide / 0 = inchangé).",
+          TOUS_LES_ROLES,
+          _schema({"rdv_id": {"type": "string", "description": "rdv_app"},
+                   "debut": {"type": "string", "description": "AAAA-MM-JJTHH:MM, ou vide"},
+                   "duree_minutes": {"type": "integer", "description": "0 = durée inchangée"},
+                   "titre": {"type": "string", "description": "nouveau titre, ou vide"},
+                   "lieu": {"type": "string", "description": "nouveau lieu, ou vide"}}),
+          preparer_deplacer_rdv, executer_deplacer_rdv),
+    Geste("supprimer_rdv",
+          "Prépare la suppression d'un rendez-vous POSÉ PAR L'APPLICATION dans l'agenda de la personne, SANS invité.",
+          TOUS_LES_ROLES,
+          _schema({"rdv_id": {"type": "string", "description": "rdv_app"}}),
+          preparer_supprimer_rdv, executer_supprimer_rdv),
+    # lot 3b
+    Geste("email_interne",
+          "Prépare un E-MAIL INTERNE envoyé depuis la boîte de la personne, SEULEMENT à des adresses @gti-immobilier.fr "
+          "(collègues), sans pièce jointe. Jamais à un client.",
+          TOUS_LES_ROLES,
+          _schema({"destinataires": {"type": "string", "description": "adresses @gti-immobilier.fr séparées par |"},
+                   "objet": {"type": "string"},
+                   "texte": {"type": "string", "description": "le texte COMPLET (3000 caractères au plus)"}}),
+          preparer_email_interne, executer_email_interne),
 )}
 
 
@@ -609,4 +1070,24 @@ FONCTIONS_GESTES: tuple[Fonction, ...] = tuple(
     Fonction(f"proposer_{g.nom}", g.description + " Rien n'est fait : une carte est proposée, la personne valide d'un clic.",
              g.roles, g.parametres, _proposer(g))
     for g in GESTES.values()
+)
+
+
+# ── lot 3 : les LECTURES (pas de carte : rien n'est écrit) ─────────────────────
+FONCTIONS_LECTURE_LOT3: tuple[Fonction, ...] = (
+    Fonction("lire_mon_agenda",
+             "Lit les rendez-vous de l'agenda Google DE LA PERSONNE entre deux dates (31 jours au plus) : heure, titre, lieu, "
+             "nombre d'invités, et rdv_app pour ceux posés par l'application.",
+             TOUS_LES_ROLES,
+             _schema({"debut": {"type": "string", "description": "AAAA-MM-JJ ou AAAA-MM-JJTHH:MM ; vide = aujourd'hui"},
+                      "fin": {"type": "string", "description": "AAAA-MM-JJ (jour compris) ; vide = 24 h après le début"}}),
+             lire_mon_agenda),
+    Fonction("apercu_rapprochement",
+             "Montre le texte de l'e-mail de rapprochement qui partirait à un acquéreur pour des biens : un APERÇU, rien "
+             "n'est envoyé.",
+             TOUS_LES_ROLES,
+             _schema({"contact_search_key": {"type": "string", "description": "clé de la recherche de l'acquéreur"},
+                      "annonces": {"type": "string", "description": "numéros d'annonce séparés par |"},
+                      "mot": {"type": "string", "description": "mot personnel du négociateur en intro, ou vide"}}),
+             apercu_rapprochement),
 )

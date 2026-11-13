@@ -357,9 +357,256 @@ reset(recherche=[{"contact_search_key": "606202:0", "hektor_contact_id": "606202
 voir(refuse(lambda: ges.preparer_archivage_recherche(nouveau_ctx(), {"contact_search_key": "606202:0"}), "déjà archivée"),
      "une recherche déjà archivée : refusée")
 
-print("8) aucune fonction de geste ne fait autre chose que proposer")
-voir(all(f.nom.startswith("proposer_") for f in ges.FONCTIONS_GESTES) and len(ges.FONCTIONS_GESTES) == 10,
-     "10 gestes, tous « proposer_ » : le modèle n'a AUCUNE fonction qui exécute")
+print("8) LOT 3a : l'agenda DE LA PERSONNE, sans invitation")
+from datetime import datetime, timedelta  # noqa: E402
+from zoneinfo import ZoneInfo  # noqa: E402
+
+google = []  # chaque appel à Google (faux)
+
+
+class FauxAdmin:
+    def __init__(self, settings):
+        pass
+
+    def _garde(self, user, sujet, quoi):
+        google.append({"quoi": quoi, "user": user.id, "sujet": sujet})
+        if etat.get("google_refuse"):
+            raise HTTPException(status_code=403, detail="Agenda Google non autorise pour cet utilisateur")
+        return {"role": "commercial"}
+
+    def assert_calendar_subject_allowed(self, user, sujet):
+        return self._garde(user, sujet, "garde_agenda")
+
+    def assert_gmail_subject_allowed(self, user, sujet):
+        return self._garde(user, sujet, "garde_gmail")
+
+
+class FauxGoogle:
+    def __init__(self, settings):
+        pass
+
+    def list_calendar_events(self, **k):
+        google.append({"quoi": "lister", **k})
+        return {"ok": True, "events": etat.get("evenements", []), "hasMore": False}
+
+    def check_calendar_availability(self, **k):
+        google.append({"quoi": "dispo", **k})
+        return {"ok": True, "busyCount": etat.get("occupe", 0)}
+
+    def create_calendar_event(self, **k):
+        google.append({"quoi": "creer", **k})
+        return {"ok": True, "eventId": "g123", "htmlLink": "https://calendar", "event": {
+            "start": {"dateTime": k["start_at"]}, "end": {"dateTime": k["end_at"]}}}
+
+    def update_calendar_event(self, **k):
+        google.append({"quoi": "modifier", **k})
+        return {"ok": True}
+
+    def delete_calendar_event(self, **k):
+        google.append({"quoi": "supprimer", **k})
+        return {"ok": True}
+
+    def send_gmail_message(self, **k):
+        google.append({"quoi": "envoyer", **k})
+        return {"ok": True, "messageId": "m1"}
+
+
+class FauxLiens:
+    def __init__(self, settings):
+        pass
+
+    def create_link(self, **k):
+        google.append({"quoi": "lien_creer", **k})
+        return {"id": "b" * 8 + "-bbbb-bbbb-bbbb-" + "b" * 12}
+
+    def update_link(self, **k):
+        google.append({"quoi": "lien_modifier", **k})
+        return {}
+
+    def mark_deleted(self, **k):
+        google.append({"quoi": "lien_supprimer", **k})
+        return {}
+
+
+class FauxRendu:
+    def __init__(self, settings):
+        pass
+
+    def render_preview(self, **k):
+        google.append({"quoi": "rendu", **k})
+        return {"subject": "Des biens pour vous", "text": "Bonjour Monsieur,\nvotre conseiller : paul@gti-immobilier.fr\n"
+                                                          "écrire à durand@exemple.fr"}
+
+
+ges.SupabaseAdminService, ges.GoogleWorkspaceService = FauxAdmin, FauxGoogle
+ges.GoogleCalendarEventLinkService, ges.RapprochementEmailService = FauxLiens, FauxRendu
+Settings.google_workspace_domain = "gti-immobilier.fr"
+_faux_avant = faux
+
+
+def faux_lot3(methode, url, **kw):
+    if methode == "GET" and url.endswith("/rest/v1/app_google_calendar_event_link"):
+        appels.append({"methode": "GET", "chemin": "app_google_calendar_event_link", "entetes": dict(kw.get("headers") or {}),
+                       "params": dict(kw.get("params") or {}), "corps": None})
+        return Reponse(etat.get("liens", []))
+    return _faux_avant(methode, url, **kw)
+
+
+requests.get = lambda url, **kw: faux_lot3("GET", url, **kw)
+requests.post = lambda url, **kw: faux_lot3("POST", url, **kw)
+requests.patch = lambda url, **kw: faux_lot3("PATCH", url, **kw)
+requests.request = lambda methode, url, **kw: faux_lot3(methode, url, **kw)
+
+LIEN = "b" * 8 + "-bbbb-bbbb-bbbb-" + "b" * 12
+reset(evenements=[
+    {"id": "g1", "summary": "Visite 63289", "start": {"dateTime": "2026-11-20T10:00:00+01:00"},
+     "end": {"dateTime": "2026-11-20T11:00:00+01:00"}, "location": "La Chaise-Dieu",
+     "attendees": [{"email": EMAIL, "self": True}, {"email": "client@gmail.com"}, {"email": "pauline@gti-immobilier.fr"}]},
+    {"id": "g2", "summary": "annulé", "status": "cancelled", "start": {"dateTime": "2026-11-20T12:00:00+01:00"},
+     "end": {"dateTime": "2026-11-20T13:00:00+01:00"}},
+    {"id": "g3", "summary": "Salon", "start": {"date": "2026-11-21"}, "end": {"date": "2026-11-22"}}],
+    liens=[{"id": LIEN, "google_event_id": "g1", "event_type": "visite", "hektor_annonce_id": 63289, "hektor_contact_id": "606202"}])
+google.clear()
+r = ges.lire_mon_agenda(nouveau_ctx(), {"debut": "2026-11-20", "fin": "2026-11-21"})
+lister = next(g for g in google if g["quoi"] == "lister")
+voir(lister["subject_email"] == EMAIL and google[0]["quoi"] == "garde_agenda" and google[0]["sujet"] == EMAIL,
+     "TOUJOURS l'agenda de la personne, derrière la garde de l'écran (compte Google relié)")
+voir(r["nombre"] == 2 and [x["titre"] for x in r["rendez_vous"]] == ["Visite 63289", "Salon"],
+     "un rendez-vous annulé est retiré ; une journée entière est gardée")
+voir(r["rendez_vous"][0]["invites"] == 2 and r["rendez_vous"][0]["invites_exterieurs"] == 1 and r["rendez_vous"][0]["rdv_app"] == LIEN,
+     "le nombre d'invités (et d'extérieurs), et le numéro du RDV posé par l'app")
+texte = json.dumps(r, ensure_ascii=False)
+voir(EMAIL not in texte and "client@gmail.com" not in texte and "pauline@" not in texte,
+     "⛔ AUCUNE adresse ne part au modèle (ni la sienne, ni celles des invités)")
+lien_lu = next(a for a in appels if a["chemin"] == "app_google_calendar_event_link")
+voir(lien_lu["entetes"]["Authorization"] == "Bearer " + JETON, "les liens de l'app sont lus avec le JETON")
+voir(refuse(lambda: ges.lire_mon_agenda(nouveau_ctx(), {"debut": "2026-11-01", "fin": "2026-12-31"}), "31 jours"),
+     "plus de 31 jours à la fois : refusé")
+reset(google_refuse=True)
+voir(refuse(lambda: ges.lire_mon_agenda(nouveau_ctx(), {"debut": "", "fin": ""}), "pas ouvert"),
+     "un agenda Google non relié : refusé en clair")
+
+PARIS = ZoneInfo("Europe/Paris")
+demain = (datetime.now(PARIS) + timedelta(days=2)).strftime("%Y-%m-%dT10:00")
+reset(occupe=1)
+google.clear()
+resume, pr = ges.preparer_rdv(nouveau_ctx(), {"type": "visite", "titre": "Visite Maison — M. DURAND", "debut": demain,
+                                              "duree_minutes": 60, "lieu": "", "hektor_annonce_id": "63289", "hektor_contact_id": "",
+                                              "contact_search_key": "606202:0", "note": ""})
+voir("TON agenda" in resume and "Aucune invitation" in resume and "M. DURAND" in resume and "« visite »" in resume,
+     "la carte dit : ton agenda, aucune invitation, le contact, et le bien qui passe « visite »")
+voir("déjà pris" in resume, "un créneau occupé est signalé sur la carte (sans bloquer)")
+voir(not [g for g in google if g["quoi"] == "creer"] and not ecritures_metier(), "PROPOSER ne crée rien chez Google ni chez nous")
+voir(pr["hektor_contact_id"] == "606202", "le contact est déduit de la recherche")
+reset()
+voir(refuse(lambda: ges.preparer_rdv(nouveau_ctx(), {"type": "visite", "titre": "V", "debut": demain, "duree_minutes": 60, "lieu": "",
+                                                     "hektor_annonce_id": "", "hektor_contact_id": "", "contact_search_key": "606202:0",
+                                                     "note": ""}), "numéro d'annonce"),
+     "une visite liée à une recherche sans le bien : refusée")
+voir(refuse(lambda: ges.preparer_rdv(nouveau_ctx(), {"type": "autre", "titre": "V", "debut": "2020-01-01T10:00", "duree_minutes": 60,
+                                                     "lieu": "", "hektor_annonce_id": "", "hektor_contact_id": "",
+                                                     "contact_search_key": "", "note": ""}), "passé"),
+     "un créneau passé : refusé")
+voir(refuse(lambda: ges.preparer_rdv(nouveau_ctx(), {"type": "autre", "titre": "V", "debut": "2026-11-20", "duree_minutes": 60,
+                                                     "lieu": "", "hektor_annonce_id": "", "hektor_contact_id": "",
+                                                     "contact_search_key": "", "note": ""}), "l'heure"),
+     "une date sans heure : refusée")
+reset()
+google.clear()
+appels.clear()
+res = ges.executer_rdv(nouveau_ctx(), pr)
+creer = next(g for g in google if g["quoi"] == "creer")
+voir(creer["subject_email"] == EMAIL and creer["attendees"] == [] and creer["send_updates"] == "none" and creer["dry_run"] is False,
+     "au CLIC : dans SON agenda, AUCUN invité, AUCUNE notification (sendUpdates none)")
+lien = next(g for g in google if g["quoi"] == "lien_creer")
+voir(lien["calendar_email"] == EMAIL and lien["event_type"] == "visite" and lien["app_dossier_id"] == 77
+     and lien["metadata_json"]["source"] == "assistant" and lien["metadata_json"]["contact_search_key"] == "606202:0",
+     "le RDV est relié à l'app comme à l'écran (bien, contact, recherche), marqué « assistant »")
+statut = next(a for a in appels if a["chemin"] == "rpc/app_set_bien_statut")
+voir(statut["corps"]["p_status"] == "visite" and statut["entetes"]["Authorization"] == "Bearer " + JETON and res["statut_visite"] is True,
+     "une visite met le bien « visite » pour la recherche, avec le jeton (= onCreated de l'écran)")
+voir(res["rdv_app"] == LIEN and EMAIL not in json.dumps(res), "le résultat donne le numéro du RDV, jamais l'adresse")
+
+reset(liens=[{"id": LIEN, "google_calendar_email": "pauline@gti-immobilier.fr", "google_event_id": "g1", "event_type": "visite",
+              "summary": "V", "location": None, "starts_at": "2026-11-20T09:00:00+00:00", "ends_at": "2026-11-20T10:00:00+00:00",
+              "attendees_json": [], "status": "active", "metadata_json": {}}])
+voir(refuse(lambda: ges.preparer_supprimer_rdv(nouveau_ctx(), {"rdv_id": LIEN}), "collègue"),
+     "le RDV d'un collègue (même visible par la direction) : refusé")
+UN_RDV = {"id": LIEN, "google_calendar_email": EMAIL, "google_event_id": "g1", "event_type": "visite", "summary": "Visite 63289",
+          "location": None, "starts_at": "2099-11-20T09:00:00+00:00", "ends_at": "2099-11-20T10:00:00+00:00", "attendees_json": [],
+          "status": "active", "metadata_json": {"contact_search_key": "606202:0"}}
+reset(liens=[{**UN_RDV, "attendees_json": ["client@gmail.com"]}])
+voir(refuse(lambda: ges.preparer_deplacer_rdv(nouveau_ctx(), {"rdv_id": LIEN, "debut": "2099-11-21T10:00", "duree_minutes": 0,
+                                                              "titre": "", "lieu": ""}), "invités"),
+     "un RDV avec des invités : refusé (le changer les toucherait sans les prévenir)")
+reset(liens=[{**UN_RDV, "status": "deleted"}])
+voir(refuse(lambda: ges.preparer_supprimer_rdv(nouveau_ctx(), {"rdv_id": LIEN}), "déjà été supprimé"), "un RDV déjà supprimé : refusé")
+voir(refuse(lambda: ges.preparer_supprimer_rdv(nouveau_ctx(), {"rdv_id": "pas-un-numero"}), "rdv_app"), "un numéro illisible : refusé")
+reset(liens=[dict(UN_RDV)])
+resume, pd = ges.preparer_deplacer_rdv(nouveau_ctx(), {"rdv_id": LIEN, "debut": "2099-11-21T10:00", "duree_minutes": 0, "titre": "",
+                                                       "lieu": ""})
+voir("→" in resume and "11:00" in resume and "Personne n'est prévenu" in resume,
+     "déplacer : avant → après, la durée gardée (1 h), personne n'est prévenu")
+google.clear()
+ges.executer_deplacer_rdv(nouveau_ctx(), pd)
+modif = next(g for g in google if g["quoi"] == "modifier")
+voir(modif["send_updates"] == "none" and modif["attendees"] is None and modif["subject_email"] == EMAIL
+     and any(g["quoi"] == "lien_modifier" for g in google), "au clic : Google modifié sans notification, et notre copie suivie")
+voir(refuse(lambda: ges.preparer_deplacer_rdv(nouveau_ctx(), {"rdv_id": LIEN, "debut": "", "duree_minutes": 0, "titre": "",
+                                                              "lieu": ""}), "Rien ne change"), "rien ne change : pas de carte")
+resume, ps = ges.preparer_supprimer_rdv(nouveau_ctx(), {"rdv_id": LIEN})
+voir("reste « visite »" in resume, "supprimer une visite : la carte dit que le bien n'est PAS remis à « jamais vu »")
+google.clear()
+appels.clear()
+ges.executer_supprimer_rdv(nouveau_ctx(), ps)
+voir(next(g for g in google if g["quoi"] == "supprimer")["send_updates"] == "none" and any(g["quoi"] == "lien_supprimer" for g in google)
+     and not [a for a in appels if a["chemin"] == "rpc/app_set_bien_statut"],
+     "au clic : supprimé sans notification, lien marqué supprimé, et le statut du bien NON touché (défaut n° 3 évité)")
+reset(liens=[{**UN_RDV, "attendees_json": ["client@gmail.com"]}])
+google.clear()
+voir(refuse(lambda: ges.executer_supprimer_rdv(nouveau_ctx(), ps), "invités") and not [g for g in google if g["quoi"] == "supprimer"],
+     "TÉMOIN : un invité ajouté depuis l'écran entre la carte et le clic -> refusé au clic, rien supprimé")
+
+print("9) LOT 3b : les e-mails EN INTERNE seulement, et l'aperçu du rapprochement")
+reset()
+voir(refuse(lambda: ges.preparer_email_interne(nouveau_ctx(), {"destinataires": "client@gmail.com", "objet": "o", "texte": "t"}),
+            "EN INTERNE"), "un destinataire hors du domaine : refusé")
+voir(refuse(lambda: ges.preparer_email_interne(nouveau_ctx(), {"destinataires": "pauline@gti-immobilier.fr|x@gti-immobilier.fr.pirate.com",
+                                                               "objet": "o", "texte": "t"}), "EN INTERNE"),
+     "un faux domaine glissé parmi des vrais : refusé")
+voir(refuse(lambda: ges.preparer_email_interne(nouveau_ctx(), {"destinataires": "pauline@gti-immobilier.fr", "objet": "o",
+                                                               "texte": "x" * 3001}), "3000"), "un texte trop long (la carte doit tout montrer) : refusé")
+google.clear()
+resume, pm = ges.preparer_email_interne(nouveau_ctx(), {"destinataires": "Pauline@gti-immobilier.fr ; julien@gti-immobilier.fr",
+                                                        "objet": "Visite jeudi", "texte": "Bonjour,\nje fais la visite jeudi.\nPaul"})
+voir(pm["destinataires"] == ["pauline@gti-immobilier.fr", "julien@gti-immobilier.fr"] and "je fais la visite jeudi" in resume,
+     "la carte montre les destinataires ET le texte entier")
+voir(not [g for g in google if g["quoi"] == "envoyer"], "PROPOSER n'envoie rien")
+google.clear()
+ges.executer_email_interne(nouveau_ctx(), pm)
+envoi = next(g for g in google if g["quoi"] == "envoyer")
+voir(envoi["subject_email"] == EMAIL and envoi["to"] == pm["destinataires"] and not envoi["attachments"] and envoi["dry_run"] is False
+     and google[0]["quoi"] == "garde_gmail", "au clic : depuis SA boîte (garde de l'écran), sans pièce jointe")
+google.clear()
+voir(refuse(lambda: ges.executer_email_interne(nouveau_ctx(), {**pm, "destinataires": ["client@gmail.com"]}), "EN INTERNE")
+     and not [g for g in google if g["quoi"] == "envoyer"], "TÉMOIN : une carte trafiquée vers l'extérieur est refusée AU CLIC")
+reset()
+google.clear()
+appels.clear()
+r = ges.apercu_rapprochement(nouveau_ctx(), {"contact_search_key": "606202:0", "annonces": "63289", "mot": ""})
+voir(r["rien_n_est_parti"] and not [g for g in google if g["quoi"] == "envoyer"] and not ecritures_metier(),
+     "l'aperçu n'envoie rien et n'écrit rien")
+voir("@" not in r["texte"] and "[adresse]" in r["texte"], "⛔ aucune adresse e-mail dans l'aperçu (ni la sienne, ni celle du client)")
+voir(next(a for a in appels if a["chemin"] == "app_dossiers_current")["entetes"]["Authorization"] == "Bearer " + JETON,
+     "chaque bien est lu avec le JETON avant le rendu")
+reset(bien=[])
+voir(refuse(lambda: ges.apercu_rapprochement(nouveau_ctx(), {"contact_search_key": "606202:0", "annonces": "63289", "mot": ""}),
+            "biens vivants"), "un bien invisible : pas d'aperçu")
+
+print("10) aucune fonction de geste ne fait autre chose que proposer")
+voir(all(f.nom.startswith("proposer_") for f in ges.FONCTIONS_GESTES) and len(ges.FONCTIONS_GESTES) == 14,
+     "14 gestes, tous « proposer_ » : le modèle n'a AUCUNE fonction qui exécute")
+voir(not any(f.nom.startswith("proposer_") for f in ges.FONCTIONS_LECTURE_LOT3), "les 2 lectures du lot 3 ne proposent rien")
 voir([f.nom for f in cat.fonctions_du_role("commercial") if f.nom == "proposer_note_transaction"] == [],
      "un commercial n'a PAS la note de transaction (double verrou : non proposée, et refusée au clic)")
 

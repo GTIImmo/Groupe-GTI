@@ -194,3 +194,23 @@ Avancer **par petits lots**, chacun prouvé en réel avant le suivant :
 - **3a — l'agenda, dans SON agenda, sans invitation extérieure** : lire son agenda (« qu'est-ce que j'ai jeudi ? », créneaux libres) ; créer / déplacer / supprimer un RDV relié à un bien et un contact, **invitations coupées** (`sendUpdates: none`) ; un RDV de visite pose « visite » comme l'écran. Jamais l'agenda d'un collègue.
 - **3b — les e-mails, en interne d'abord** : un e-mail libre **seulement vers une adresse @gti-immobilier.fr** (le serveur refuse le reste) ; le rapprochement **à blanc seulement** (l'assistant montre le texte qui partirait, rien ne part).
 - **3c — plus tard** : envoyer vers un client (invitation, e-mail, rapprochement réel), confirmer un créneau de l'espace client, et le bon de visite en PDF (à construire côté serveur).
+
+## 11. Lot 3 codé le 13/11 (« A et b » = 3a et 3b), en local, rien en ligne
+
+**3a — l'agenda Google DE LA PERSONNE, sans invitation** :
+- `lire_mon_agenda` (lecture, sans carte) : tout son agenda Google entre deux dates (31 jours au plus) — heure, titre, lieu, nombre d'invités (et d'extérieurs), et `rdv_app` pour ceux posés par l'app. ⛔ Aucune adresse ne part au modèle (ni la sienne, ni celles des invités). Lecture ajoutée au service Google (`list_calendar_events`, portée `calendar.events` déjà accordée) ; ⚠ sans ligne au journal Google : sa contrainte ne connaît pas la lecture et le journal avale ses refus en silence.
+- `creer_rdv` : dans SON agenda (garde de l'écran : compte Google relié), **aucun invité, aucune notification** (`sendUpdates: none`), relié à l'app comme à l'écran (bien, contact, recherche ; marqué « assistant ») ; une visite liée à une recherche met le bien « visite » (= l'écran). La carte signale un créneau déjà pris. Créneau passé ou date sans heure : refusé.
+- `deplacer_rdv` / `supprimer_rdv` : seulement un RDV **posé par l'app**, **dans son agenda**, **sans aucun invité** (re-vérifié au clic : un invité ajouté depuis l'écran entre-temps → refusé). Sans notification.
+- ⚠ **Choix à valider par lui** : supprimer un RDV de visite **ne remet pas** le bien à « jamais vu » (l'écran le fait, et efface ainsi un « proposé » d'avant : défaut n° 3) ; la carte le dit.
+
+**3b — les e-mails EN INTERNE** :
+- `email_interne` : depuis SA boîte (garde de l'écran), **seulement vers des adresses @gti-immobilier.fr** (vérifié à la carte ET au clic : une carte trafiquée vers l'extérieur est refusée au clic), sans pièce jointe, 10 destinataires et 3 000 caractères au plus — **la carte montre le texte en entier**.
+- `apercu_rapprochement` (lecture, sans carte) : le texte de l'e-mail de rapprochement qui partirait ; **rien n'est envoyé ni enregistré**, chaque bien est lu avec le jeton, les adresses e-mail sont masquées.
+
+**Au passage** :
+- La date donnée à l'assistant porte le **jour de la semaine**, à l'heure de Paris (« vendredi 13/11/2026 ») : « jeudi », « demain » ne se devinent plus.
+- ⛔ **Correctif de l'étape 2** : la lecture `agenda` envoyait au modèle l'adresse de l'agenda — donc parfois **celle de la personne**, contre la règle de l'étape 1. Remplacée par « le tien » (un collègue garde la sienne) ; chaque RDV porte aussi son `rdv_app`.
+
+**Essais** : `test_assistant_gestes.py` **101 verts** (dont les témoins : agenda d'un collègue, RDV avec invités, invité ajouté avant le clic, faux domaine, carte trafiquée, aucune adresse vers le modèle) ; `test_assistant_ia.py` 59 ; `test_assistant_lecteur.py` 73 ; GED 28 + 80. L'application entière se charge.
+
+**Pour la preuve réelle (avec son accord)** : dans SON agenda — créer un RDV d'essai, le déplacer, le supprimer ; un e-mail interne à lui-même ; un aperçu de rapprochement (contact d'essai AVOIR TEST4, annonce 63330).

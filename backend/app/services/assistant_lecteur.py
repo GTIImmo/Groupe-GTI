@@ -366,9 +366,19 @@ def agenda(ctx: ContexteAssistant, params: dict[str, Any]) -> dict[str, Any]:
         admin_service=SupabaseAdminService(ctx.settings), link_service=GoogleCalendarEventLinkService(ctx.settings),
     )
     garder = ("event_type", "summary", "starts_at", "ends_at", "status", "location", "app_dossier_id", "hektor_annonce_id",
-              "hektor_contact_id", "google_calendar_email")
-    evenements = [{k: _court(e.get(k)) for k in garder if e.get(k) not in (None, "")}
-                  for e in reponse.get("events") or [] if str(e.get("status") or "") != "deleted"]  # comme l'écran
+              "hektor_contact_id")
+    moi = (ctx.email or "").strip().lower()
+    evenements = []
+    for e in reponse.get("events") or []:
+        if str(e.get("status") or "") == "deleted":  # comme l'écran
+            continue
+        ligne = {k: _court(e.get(k)) for k in garder if e.get(k) not in (None, "")}
+        # ⛔ 13/11 (lot 3) : l'adresse de l'agenda partait au modèle -- ce peut être celle de la personne (règle de
+        #   l'étape 1 : son e-mail ne part JAMAIS chez OpenAI). « le tien » à la place ; un collègue garde son adresse.
+        agenda_de = str(e.get("google_calendar_email") or "").strip().lower()
+        ligne["agenda"] = "le tien" if agenda_de == moi else agenda_de
+        ligne["rdv_app"] = e.get("id")  # le numéro que deplacer_rdv / supprimer_rdv attendent
+        evenements.append(ligne)
     return {"evenements": evenements, "nombre": len(evenements)}
 
 

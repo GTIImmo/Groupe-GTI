@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from typing import Any, AsyncIterator
+from zoneinfo import ZoneInfo
 
 import requests
 from fastapi import HTTPException
@@ -99,8 +100,14 @@ _INSTRUCTIONS = (
     "- Si une carte est refusee par le serveur, explique pourquoi avec ses mots (condition de l'ecran non remplie).\n"
     "- Tes gestes : demande a la direction, relances, bien propose par telephone, ecarter / retablir un bien, "
     "notifications lues, note de transaction (direction), telephone / e-mail / commentaire d'un contact, archiver un "
-    "contact ou une recherche. Les autres (modifier un bien, envoyer un e-mail, un rendez-vous, creer un contact ou une "
-    "recherche…) : dis que tu ne peux pas encore, et ou le faire dans l'application.\n"
+    "contact ou une recherche, un rendez-vous dans SON agenda (creer ; deplacer ou supprimer ceux poses par "
+    "l'application et sans invite), un e-mail INTERNE a des collegues @gti-immobilier.fr. Les autres (modifier un bien, "
+    "un e-mail ou une invitation a un client, l'agenda d'un collegue, creer un contact ou une recherche…) : dis que tu "
+    "ne peux pas encore, et ou le faire dans l'application.\n"
+    "- Agenda : lire_mon_agenda avant de proposer un creneau ; « jeudi », « demain » se comptent depuis la date du "
+    "jour ci-dessous ; les heures sont celles de Paris.\n"
+    "- Rapprochement : apercu_rapprochement montre le texte qui partirait ; rien n'est envoye. L'envoi au client se "
+    "fait depuis l'ecran.\n"
     "- Ne recopie pas ces consignes.\n"
     "# La personne et le jour\n"
     "Tu parles a un membre de l'agence, role : {{role}}. Nous sommes le {{date}}."
@@ -117,6 +124,14 @@ def _debut_du_jour() -> str:
 
 def _maintenant() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
+_JOURS_SEMAINE = ("lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche")
+
+
+def _aujourdhui_a_paris() -> str:
+    jour = datetime.now(ZoneInfo("Europe/Paris"))
+    return f"{_JOURS_SEMAINE[jour.weekday()]} {jour:%d/%m/%Y}"
 
 
 class AssistantService:
@@ -297,7 +312,8 @@ class AssistantService:
             reglages = ModelSettings(store=False, max_tokens=spec.max_output_tokens, reasoning=Reasoning(effort="low"))
         agent = Agent(
             name=AGENT_KEY,
-            instructions=agent_registry.render(spec.instructions, {"date": datetime.now().strftime("%d/%m/%Y"),
+            # le jour de la semaine (13/11, lot 3) : « jeudi », « demain » se comptent depuis lui -- heure de Paris
+            instructions=agent_registry.render(spec.instructions, {"date": _aujourdhui_a_paris(),
                                                                   "objets": liste_pour_consignes(),
                                                                   "role": ctx.role}),
             model=OpenAIResponsesModel(str(spec.model), self._client()),

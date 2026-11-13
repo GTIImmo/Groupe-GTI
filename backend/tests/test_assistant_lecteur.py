@@ -286,6 +286,19 @@ voir(vu["authorization"] == "Bearer " + JETON and vu["calendarEmail"] is None an
      "l'agenda passe par la route de l'écran, avec le jeton : sa garde décide de l'agenda lu")
 voir(r["nombre"] == 1 and r["evenements"][0]["summary"] == "Visite 63330", "les rendez-vous supprimés sont retirés, comme l'écran")
 
+
+def fausse_route_2(**k):
+    return {"ok": True, "events": [{"id": "l1", "summary": "a moi", "google_calendar_email": EMAIL.upper(), "status": "active"},
+                                   {"id": "l2", "summary": "a elle", "google_calendar_email": "pauline@gti-immobilier.fr",
+                                    "status": "active"}]}
+
+
+gw.list_google_calendar_event_links = fausse_route_2
+r = lec.agenda(ctx, {"debut": "2026-11-13", "fin": "2026-11-14", "app_dossier_id": 0, "hektor_contact_id": ""})
+voir(EMAIL not in json.dumps(r).lower() and r["evenements"][0]["agenda"] == "le tien" and r["evenements"][1]["agenda"] == "pauline@gti-immobilier.fr",
+     "⛔ 13/11 : SON adresse ne part plus au modèle (« le tien ») ; un collègue garde la sienne")
+voir([e["rdv_app"] for e in r["evenements"]] == ["l1", "l2"], "chaque RDV porte son numéro (rdv_app), pour le déplacer ou le supprimer")
+
 print("6) le modèle reçoit un refus en clair")
 trace_ctx = cat.ContexteAssistant(Settings(), "u-1", EMAIL, "commercial", JETON)
 chercher = next(f for f in cat.CATALOGUE if f.nom == "chercher")

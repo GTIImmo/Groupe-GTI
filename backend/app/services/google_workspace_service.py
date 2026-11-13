@@ -264,6 +264,47 @@ class GoogleWorkspaceService:
             "busy": busy_slots,
         }
 
+    def list_calendar_events(
+        self,
+        *,
+        subject_email: str,
+        time_min: str,
+        time_max: str,
+        max_results: int = 50,
+    ) -> dict[str, Any]:
+        # Assistant IA (13/11/2026, lot 3a) : lire les rendez-vous d'un agenda (lecture seule, même portée que la
+        # création : calendar.events). Rien n'est écrit chez Google.
+        # ⚠ Pas de ligne dans app_google_workspace_action_log : sa contrainte (action_type_check) ne connaît pas la
+        #   lecture, et _log_action avale le refus en silence -- on n'écrit pas une ligne qui serait toujours perdue.
+        clean_subject = self._validate_workspace_email(subject_email)
+        start = self._parse_datetime(time_min, default_timezone=ZoneInfo(DEFAULT_CALENDAR_TIMEZONE))
+        end = self._parse_datetime(time_max, default_timezone=ZoneInfo(DEFAULT_CALENDAR_TIMEZONE))
+        if end <= start:
+            raise ValueError("time_max doit etre posterieur a time_min")
+        access_token = self._delegated_access_token(subject_email=clean_subject, scopes=[CALENDAR_EVENTS_SCOPE])
+        response = requests.get(
+            "https://www.googleapis.com/calendar/v3/calendars/primary/events",
+            headers={"Authorization": f"Bearer {access_token}"},
+            params={
+                "timeMin": start.isoformat().replace("+00:00", "Z"),
+                "timeMax": end.isoformat().replace("+00:00", "Z"),
+                "singleEvents": "true",
+                "orderBy": "startTime",
+                "maxResults": str(max(1, min(int(max_results), 100))),
+                "timeZone": DEFAULT_CALENDAR_TIMEZONE,
+            },
+            timeout=30,
+        )
+        try:
+            payload = response.json()
+        except ValueError:
+            payload = {"raw": response.text[:500]}
+        if response.status_code >= 400:
+            return {"ok": False, "statusCode": response.status_code, "subjectEmail": clean_subject,
+                    "error": self._safe_error_message(payload)}
+        items = payload.get("items") if isinstance(payload.get("items"), list) else []
+        return {"ok": True, "subjectEmail": clean_subject, "events": items, "hasMore": bool(payload.get("nextPageToken"))}
+
     def send_gmail_message(
         self,
         *,
