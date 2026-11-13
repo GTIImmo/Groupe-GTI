@@ -88,3 +88,12 @@ Avancer **par petits lots**, chacun prouvé en réel avant le suivant :
 - Contrôle en réel (lecture seule) : « Quelles relances sont en retard ? » → les 3 relances de franck…, exact ; **0 carte proposée** (aucun geste demandé) — l'assistant ne propose pas de lui-même un geste qu'on ne lui demande pas.
 - ⏳ **Pas encore éprouvé** : une carte proposée puis validée en réel. Il faut une cible choisie par Frédéric (un contact d'essai pour une relance ; un bien VIVANT, mandat validé, pour une demande — le 62774 est clos).
 
+**✅ PREMIÈRE CARTE PROUVÉE EN RÉEL le 13/11 à 11:19-11:20** (son « Vas y », contact d'essai M. AVOIR TEST4, n° 10354488, sa session Chrome) :
+1. « Crée une relance pour M. AVOIR TEST4… pour le 20 novembre » → **une carte** (« Créer une relance pour M. AVOIR TEST4 le 20/11/2026 : … ») et l'assistant dit « j'ai préparé la carte, valide-la » — pas « c'est fait ». **Vérifié en base AVANT le clic : aucune relance créée**, la carte « proposée ».
+2. **Clic « Valider »** → relance **n° 20** créée (à faire, 20/11, attribuée à frederic.gerphagnon@ — l'e-mail posé par le serveur). **Second clic → 409 « Cette carte a déjà été validée »**, rien refait.
+3. « Reporte la relance 20 » → carte → **« Annuler »** → carte refusée ; un clic « Valider » ensuite → 409 « Cette carte a été refusée ». **La relance n'a pas bougé** (toujours à faire au 20/11).
+4. « Marque la relance 20 comme faite » → carte → **« Valider »** → relance 20 **faite** (relue après l'écriture).
+5. Le journal des cartes : 3 lignes — exécutée, refusée, exécutée — avec qui, quoi, les heures de proposition, de décision et d'exécution.
+⚠ La relance n° 20 reste en base (faite) sur le contact d'essai : c'est la trace de l'essai.
+⏳ Pas encore éprouvé en réel : une demande à la direction (il faut un bien vivant à mandat validé, choisi par lui).
+
