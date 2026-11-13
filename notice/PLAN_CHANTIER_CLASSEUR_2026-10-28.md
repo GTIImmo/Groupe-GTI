@@ -733,7 +733,46 @@ la vente. Non traite, pas mesure en ampleur.
 ### ÉTAPE 3 — le rapatriement *(P1.4)*
 
 ```
-3.1 ⬜              refaire le rapport des ecarts avec l'apparieur repare
+3.1 ✅ FAIT 13/11   rapport refait AVEC LE GEL A JOUR (12 595 liens apres le
+                    re-gel additif). 4 702 lignes rattachees (contre 4 688),
+                    87 non rattachees.
+                    Sorties : notice/A4_RAPPORT_GEL_TOUS_LES_CHAMPS_2026-11-13.csv
+                              notice/A4_RAPPORT_GEL_ECARTS_SEULS_2026-11-13.csv (3 898)
+
+⛔⛔ 3.1bis LA DECOUVERTE ⑦ (« chainage douteux ») NE PREDIT RIEN -- MESURE 13/11
+
+   Le rapport annonce « 1 809 transactions portent un nom etranger a leur
+   chaine » contre 219 au 29/10, soit HUIT FOIS PLUS. Ce n'est pas une
+   degradation : le chainage reunit beaucoup plus depuis les regles du 10-12/11
+   (la regle D a reuni 727 dossiers), donc il y a bien plus de chaines a
+   plusieurs membres -- 10 109 chaines portant 29 824 transactions.
+   Ces 1 809 transactions se concentrent sur 407 LIGNES du classeur, dont
+   406 « Vente reglee » et 403 portant les TROIS roles.
+
+   ⭐⭐⭐ ET CE SONT SURTOUT DES COUPLES. Exemples relus :
+```
+     classeur GATTET Mathilde ROURE Jimmy  nous GATTET JIMMY MATHILDE ROURE
+     classeur COUDOUR Valerie              nous COUDOUR GENILLON RENE VALERIE
+     classeur CHAUTARD Pauline             nous CHAUTARD CHEROUGE PAULINE SYLVAIN
+```
+   Le classeur nomme un acheteur, nous portons le menage complet. Dans la
+   chaine, l'offre porte le nom de l'un et le compromis celui de l'autre : le
+   test les declare « etrangers » alors que c'est LE MEME FOYER.
+
+   ⛔ LA MESURE QUI TRANCHE -- comparer les deux populations, pas juste compter :
+```
+     lignes DOUTEUSES (407) : 395 acquereurs identiques = 97,1 %
+     lignes saines  (4 295) : 4 166 identiques          = 97,0 %
+```
+   LE MEME TAUX. Le marqueur ne distingue rien.
+
+   ➡ **NE PAS SAUTER CES 407 LIGNES** a la mise en conformite : on en ecarterait
+     395 parfaitement bonnes pour rien. La consigne « la mise en conformite doit
+     les SAUTER » de la decouverte ⑦ est a REVOIR -- elle a pu etre juste au
+     29/10 sur 219 lignes, elle ne l'est plus avec le chainage actuel.
+   ⬜ A trancher : garder le marqueur comme simple signal (il reste vrai que les
+     noms varient dans la chaine), mais ne plus en faire un critere d'exclusion.
+   Lie : [[contacts-muets-fiches-de-couple]]
 3.2 ⬜              fermer les 2 reserves : 413 ecarts contre 211 du rapport (lot 3)
                     et charge_commission, 23 480 valeurs
 3.3 ⬜ ACCORD       les 7 colonnes qui ONT une case : P S T W AB AD (+ AF comparer)
