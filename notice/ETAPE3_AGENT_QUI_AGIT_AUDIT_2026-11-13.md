@@ -154,5 +154,13 @@ Avancer **par petits lots**, chacun prouvé en réel avant le suivant :
 - **Réparé à 12:42** avec sa session, par la fonction de l'écran : le nom ACTUEL (« TEST4 », inchangé) ajouté à la modification en attente (la base fusionne, remet le compteur à zéro). **Nouvel envoi à 12:43 : fait en 11 s**, « coordonnées remplacées ». **Relu depuis Hektor** : téléphone 06 00 00 00 01 seul (pas de 2e ligne), prénom, civilité, e-mail inchangés, plus rien en attente.
 - **Corrigé dans le code (en local, `assistant_gestes.py`)** : chaque modification envoie aussi le nom actuel ; un contact sans nom → rien n'est lancé. Témoin ajouté : **61 essais verts**.
 
-**Reste** : mettre ce correctif en ligne (accord), puis un dernier essai « remplacer un numéro existant » (06 …01 → 06 …02) pour prouver qu'il remplace et n'ajoute pas. ⚠ Traces d'essai laissées sur le contact d'essai : relance n° 21 (à faire), recherche archivée, téléphone 06 00 00 00 01.
+**Le correctif est en ligne** : `fa868f9` a été poussé par l'autre session avec ses propres commits (`05904b9`, 14:33). `/health` rendait `05904b9`, qui le contient.
+
+**Remplacer un numéro existant — PROUVÉ le 13/11 (son « Vas y »)** :
+- « Mets le téléphone 06 00 00 00 02 sur la fiche de M. AVOIR TEST4 (contact 10354488), à la place de l'actuel. » → carte « téléphone : « 06 00 00 00 01 » → « 06 00 00 00 02 » » → validée à 15:29:01. Retour : `champs = [last_name, phone]` (**le nom part bien**).
+- Envoi en attente : `push_fields = {phone, last_name: TEST4}`, départ à +10 min.
+- Travail `update_hektor_contact` 211ca381 : posé à 15:40:00, **fait en 18 s**, `status: updated`, `coordonnees: remplacees`, `telephone: 06 00 00 00 02`, `telephone_secondaire: null`.
+- Relecture depuis Hektor (travail f0ae139c, `synced`, 15:40:41) : `phone_primary = 06 00 00 00 02`, `phone_secondary` vide, e-mail inchangé, rien en attente. **Remplacé, pas ajouté.**
+
+➡ **Le lot 2 est prouvé en entier.** ⚠ Traces d'essai laissées sur le contact d'essai : relance n° 21 (à faire), recherche archivée, téléphone 06 00 00 00 02.
 
