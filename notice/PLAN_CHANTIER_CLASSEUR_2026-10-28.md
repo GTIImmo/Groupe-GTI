@@ -134,10 +134,50 @@ refus fait à la main chez Hektor et le nôtre. **NON MESURÉ, c'est une hypoth�
                     I847SPN3  3 chaines ; le gel pointe le dossier 3699 (celui
                               laisse parmi les 38 impossibles)
                     UTLG66LE  3 chaines ; cause mesuree : sa date est 0000-00-00
-1.4 ⬜ FREDERIC     trancher les 2 « a valider » : 6a259cce . ME6S0TR9
-1.5 ⬜ ACCORD       le RE-GEL ADDITIF des gains -- 3 lignes neuves sures
-                    (4790/4791/4792) + Z3DYDC4X, + les 2 ci-dessus s'il dit oui
+1.4 ✅ MESURE 13/11  LES 2 « a valider » SONT INSTRUITES, et la reponse est LA MEME
+                    pour les deux : LE BIEN EST JUSTE, MAIS LA TRANSACTION QUE LE
+                    CLASSEUR DECRIT N'EXISTE PAS CHEZ HEKTOR.
+                      ME6S0TR9 (ligne 3406) -> bien 42976, mandat 17260, Yssingeaux
+                        classeur : TROY Pierre, 240 000, offre 06/11/2024,
+                        compromis 06/01/2025, annulee 25/04/2025
+                        Hektor : les transactions du bien sont a GIBERT puis PEPIER
+                        ⚠ l'apparieur la rattachait a la chaine 24256 PAR LE NOM
+                          « TROY » (rachel TROY, bien 47955, mandat 14338, 152 000) :
+                          deux personnes, rien d'autre ne concorde. Il se trompe,
+                          et sa confiance « a valider » etait juste.
+                      6a259cce (ligne 4372) -> bien 11729, mandat 18040, Ambert
+                        classeur : RIVOLLIER Remi, 160 350, offre 28/10/2025,
+                        ANNULEE 30/10/2025 (« pas le financement »)
+                        Hektor : le MEME JOUR, offre de VALENTIN CHANTELOUP au MEME
+                        PRIX (160 350), qui aboutit a la vente du 03/04/2026
+                        ⭐ le prix est EXACTEMENT egal et les vendeurs concordent :
+                          le bien est certain, mais l'offre Rivollier n'a jamais ete
+                          enregistree chez Hektor.
+                    ⬜ LA DECISION RESTE A FREDERIC : on ne gele RIEN (le gel accroche
+                      des TRANSACTIONS, pas des biens), ou on cree les transactions
+                      manquantes chez Hektor.
+1.5 ⬜ ACCORD       le RE-GEL ADDITIF des gains -- LISTE CONFIRMEE A JOUR le 13/11,
+                    apres relance de l'apparieur ET avec le chainage de la regle D :
+                      « sure »      3990 Z3DYDC4X -> 14111 . 4790 d7cbb8fa -> 30806
+                                    4791 b7439331 -> 30809 . 4792 c67ccc6a -> 30808
+                      « a valider » 3406 ME6S0TR9 . 4372 6a259cce  (voir 1.4)
                     ⛔ ADDITIF : on ne retouche aucun des 12 422 liens
+⭐⭐ 1.5bis ✅ MESURE 13/11 -- LE CHAINAGE N'A RIEN CASSE DANS LE GEL, et c'est
+                    desormais MESURE SUR SUPABASE (chainage a jour, regle D incluse),
+                    pas seulement affirme :
+                      liens du gel                              12 422
+                      dont la TRANSACTION a disparu                  0
+                      dont la transaction est HORS CHAINE            0
+                      lignes dont les liens pointent 2 BIENS         0   ⭐
+                      lignes eclatees sur 2 CHAINES                 32
+                    ⭐ Les 32 sont sur LE MEME BIEN, deux chaines : c'est le chainage
+                      qui coupe le dossier, pas le gel qui se trompe. C'est la famille
+                      des « lignes a cheval » (33 le 12/11), deja expliquee.
+                    ⭐ Et la sentinelle app_v_classeur_lien_casse n'en compte que 5,
+                      tous « ABSENTE_CHEZ_HEKTOR » -- donc VOULUS (le carnet est a
+                      nous), et vus pour la derniere fois en septembre/octobre.
+                    ➡ IL N'Y A DONC PAS A REFAIRE TOURNER LE GEL. Ce qui etait prevu,
+                      c'est le RE-GEL ADDITIF de 1.5, et sa liste est inchangee.
 1.6 ⬜              git : apparier_classeur.py n'est PAS suivi, ni les notes
 ```
 
