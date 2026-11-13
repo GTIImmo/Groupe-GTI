@@ -30,7 +30,7 @@
 | 6 lot 4 | lecture : mandat déposé à la main, avenant, fin de mandat, acte, annulation, facture, petits diagnostics, assainissement, surfaces, règlement | ✅ **écrit et contrôlé le 13/11** (80 + 49 VERT, banc 64/64, 0 fuite), patch d'étiquette posé (14/14 « lue »), poussé (`7c4e3fb`) ; **essai réel fait le 13/11 sur 63331** : 8/8 envoyés et lus, 0 fuite ; ⚠ « Note honoraires » classée « notes internes » par la règle du nom (§12.16) |
 | 7 | comparateurs et règles avec lecture (titre ↔ mandants, taxe ↔ fiche, copro…) | ✅ **écrit et poussé le 13/11** : 7a (`81be8ad`, socle + justificatifs et diagnostics du bien), 7b (`973592c`, le mandat), 7c (les transactions, résolveur) ; 84 VERT ; **pas encore regardé sur un vrai bien** (§12.17) |
 | 8 | propositions (« remplir », un clic par case) | ✅ **écrit, posé et poussé le 13/11** (`9320c02`, 27 VERT, patch m8 6/6), interrupteur `ged_remplir` **allumé en admin le 13/11 à 14:42** ; **épreuve d'écriture sur 63331 faite dans les deux sens, prouvée en base** (Hektor accepte `dpe_date`, date d'ERP, nb de lots, quote-part ; rien d'autre ne bouge ; copropriété reste OUI) — §12.18 |
-| 9 | pièces des personnes (identité — le justificatif le plus déposé —, état civil, financement) | 🔧 **ouvert le 13/11** (audit §12.19, choix « B » : registre à part) ; **9a écrit, contrôlé, patch POSÉ (7/7 VERT) et poussé le 13/11** (interrupteur `ged_lecture_personnes` **off**) ; essai réel à faire ; 9b, 9c, 9d à venir |
+| 9 | pièces des personnes (identité — le justificatif le plus déposé —, état civil, financement) | 🔧 **ouvert le 13/11** (audit §12.19, choix « B » : registre à part) ; **9a en production le 13/11** (patch 7/7, `71a1afb`), interrupteur `ged_lecture_personnes` **admin** depuis 15:17 ; **essai réel fait** : 3/3 lus, 0 fuite, registre juste ; ⚠ date de naissance des cartes non gardée → correctif fiche v2 écrit, NON poussé ; 9b, 9c, 9d à venir |
 | 10 | mesure (vrai / faux / déjà su, 2 semaines) | ⬜ |
 | habillage | suivre la maquette E0-E6 à l'écran (fenêtre modale, aperçu, cartes) | ⬜ APRÈS le code (§12.12) |
 
@@ -1689,3 +1689,25 @@ part non exposée, non descendue, conservation 5 ans).
 toujours en panne) ; ses **7 contrôles VERTS**, relus à part (table et RLS ; aucun droit des rôles de l'app ; schéma
 fermé à anon et authenticated ; écriture par la clé de service seule ; lecture authenticated, pas anon ;
 `ged_lecture_personnes` **off** ; registre vide). Code commité et poussé dans le même geste.
+✅ **« Oui, allume et essaie » (13/11)** : `ged_lecture_personnes` → **admin** à 15:17:55 UTC (apply_sql_patch.js,
+transaction gardée, relu). **ESSAI RÉEL SUR 63331, par l'écran, dans le Chrome de Frédéric**, 3 pièces ENTIÈREMENT
+FICTIVES marquées « SPÉCIMEN - FICTIF » (scratchpad `ged_m9/fabriquer_pieces_specimen.py`) : une carte nouveau
+modèle (photo, ligne codée fictive), une ancienne carte recto + verso en PDF scanné (adresse et taille au verso), une
+fiche de renseignements de deux vendeurs (téléphone, e-mail, profession, nationalité écrits).
+- Type proposé : « le nom et l'IA sont d'accord » pour les 3. Envoyés chez Hektor : 3 `upload_document_to_hektor`
+  **done** (15:20:42, 15:21:09, 15:21:23), relecture done 15:22:01.
+- **3 lectures « lu »** (gpt-6-luna, 0,0013 $ en tout). Écran : « carte d'identité valable jusqu'au 03/03/2033 »,
+  « … jusqu'au 13/06/2022 », « fiche de renseignements · du 01/10/2026 · 2 vendeurs » ; après rechargement « Lu par
+  l'IA : 11 documents », « Prise de mandat : 2 pièces sur 5 » (la pièce d'identité est trouvée).
+- **Valeurs** : nature (ancien / nouveau modèle justes), nom, nom d'usage, prénoms, lieu de naissance, fin de validité ;
+  la fiche : les 2 vendeurs complets (naissance, adresse, CP, ville, « marié », communauté légale).
+- **Registre `ged_prive`** : ancienne carte = numéro EX0612300175, délivrée le 2012-06-14, PRÉFECTURE DE LA LOIRE ;
+  nouvelle carte = numéro X4RTBPFW4 (sa date de délivrance n'est pas imprimée : rien) ; effacement 2031-11-13.
+- **0 FUITE**, mesurée sur toutes les valeurs du bien : aucun numéro ni délivrance dans `app_ged_valeur`, ni ligne
+  codée, ni téléphone, e-mail, profession, nationalité, taille ; pas l'adresse du verso de la carte.
+- ⚠ **TROUVÉ : la date de naissance des 2 CARTES n'est pas gardée** (celle de la fiche de renseignements, si). Cause
+  (déduite, pas mesurée : le serveur ne garde pas la réponse brute) : la consigne v1 disait « tels qu'imprimés » et le
+  champ `naissance` n'annonçait pas son format → « 02 04 1938 », rejeté par la normalisation. Preuve indirecte : la fin
+  de validité, imprimée pareil sur la même carte mais annoncée AAAA-MM-JJ, est passée. **Correctif écrit, NON
+  poussé** : fiche `justif.identite` **v2** (format AAAA-MM-JJ annoncé pour `naissance`, dit dans la consigne ; nom
+  d'usage sans « ép. ») ; essais 37 + 80 + 59 VERTS. À éprouver par un nouveau dépôt après le push.

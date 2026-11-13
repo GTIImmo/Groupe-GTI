@@ -43,7 +43,7 @@ def _champ(sorte: str, enum: list[str] | None = None) -> dict[str, Any]:
     v: dict[str, Any] = {"type": ["number", "null"]} if sorte == "num" else {"type": ["string", "null"]}
     if enum:
         v = {"type": ["string", "null"], "enum": [*enum, None]}
-    if sorte == "date":
+    if sorte in ("date", "naissance"):
         v["description"] = "AAAA-MM-JJ"
     if sorte == "nom":
         v["description"] = "tel qu'imprimé, sans titre de civilité"
@@ -423,13 +423,16 @@ REGIMES = ["communaute_legale", "separation_de_biens", "communaute_universelle",
 NATURES_PIECE = ["cni_ancien_modele", "cni_nouveau_modele", "passeport", "titre_sejour", "permis_conduire", "autre"]
 FICHES_PERSONNES: dict[str, dict[str, Any]] = {
     "justif.identite": {
-        "version": 1,
+        # version 2 (essai réel du 13/11) : la v1 disait « tels qu'imprimés » pour la date de naissance -> « 02 04 1938 »,
+        # rejeté ; les dates sont maintenant demandées en AAAA-MM-JJ, et le nom d'usage sans « ép. ».
+        "version": 2,
         "consigne": "C'est une pièce d'identité. Un fichier peut porter le recto, le verso ou les deux, et parfois les "
                     "pièces de PLUSIEURS personnes : une entrée de « pieces » par pièce (le recto et le verso d'une même "
                     "pièce = UNE entrée). EXCEPTION à la règle commune, pour CETTE pièce seulement : recopie, tels "
-                    "qu'imprimés, le nom de naissance (nom), le nom d'usage s'il est imprimé (« épouse », « veuve », « nom "
-                    "d'usage »), les prénoms, la date de naissance, le lieu de naissance (la commune, et le département ou "
-                    "le pays s'il est imprimé), le numéro du DOCUMENT (pas la ligne codée du bas), la date de délivrance, "
+                    "qu'imprimés, le nom de naissance (nom), le nom d'usage s'il est imprimé (sans « épouse », « ép. » ni "
+                    "« veuve » devant) et les prénoms ; la date de naissance (en AAAA-MM-JJ, même imprimée « 02 04 1938 » "
+                    "ou « 02.04.1938 »), le lieu de naissance (la commune, et le département ou "
+                    "le pays s'il est imprimé), le numéro du DOCUMENT (pas la ligne codée du bas), la date de délivrance (AAAA-MM-JJ), "
                     "l'autorité qui l'a délivrée (préfecture, mairie, consulat…) et la date de fin de validité imprimée "
                     "(« valable jusqu'au », « date d'expiration »). nature : cni_ancien_modele pour la carte plastifiée "
                     "cartonnée d'avant 2021, cni_nouveau_modele pour la carte au format carte bancaire (2021 et après). "

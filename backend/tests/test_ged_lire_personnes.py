@@ -49,6 +49,11 @@ pers = lec.schema(lec.FICHES_PERSONNES["transaction.renseignements"])["propertie
 jamais_r = ("telephone", "email", "profession", "nationalite", "revenu", "banque", "iban", "compte", "fiscal", "secu", "enfant", "sante")
 voir(not any(j in c for c in pers for j in jamais_r), "fiche de renseignements : jamais téléphone, e-mail, profession, revenus, banque, enfants, santé")
 voir(lec.PRIVES == {"pieces.numero", "pieces.date_delivrance", "pieces.autorite_delivrance"}, "le registre : numéro, date et autorité de délivrance")
+voir(piece["date_naissance"]["properties"]["v"].get("description") == "AAAA-MM-JJ"
+     and pers["date_naissance"]["properties"]["v"].get("description") == "AAAA-MM-JJ",
+     "ESSAI RÉEL du 13/11 : la date de naissance annonce son format AAAA-MM-JJ (sans lui, « 02 04 1938 » était rejeté)")
+voir("02 04 1938" in lec.FICHES_PERSONNES["justif.identite"]["consigne"] and lec.FICHES_PERSONNES["justif.identite"]["version"] == 2,
+     "la consigne dit de remettre une date imprimée « 02 04 1938 » en AAAA-MM-JJ (fiche v2)")
 voir("EXCEPTION" in lec.FICHES_PERSONNES["justif.identite"]["consigne"] and "MRZ" in lec.FICHES_PERSONNES["justif.identite"]["consigne"],
      "la consigne dit l'exception, et interdit la ligne codée")
 
