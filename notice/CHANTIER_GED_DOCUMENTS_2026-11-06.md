@@ -30,7 +30,7 @@
 | 6 lot 4 | lecture : mandat déposé à la main, avenant, fin de mandat, acte, annulation, facture, petits diagnostics, assainissement, surfaces, règlement | ✅ **écrit et contrôlé le 13/11** (80 + 49 VERT, banc 64/64, 0 fuite), patch d'étiquette posé (14/14 « lue »), poussé (`7c4e3fb`) ; **essai réel fait le 13/11 sur 63331** : 8/8 envoyés et lus, 0 fuite ; ⚠ « Note honoraires » classée « notes internes » par la règle du nom (§12.16) |
 | 7 | comparateurs et règles avec lecture (titre ↔ mandants, taxe ↔ fiche, copro…) | ✅ **écrit et poussé le 13/11** : 7a (`81be8ad`, socle + justificatifs et diagnostics du bien), 7b (`973592c`, le mandat), 7c (les transactions, résolveur) ; 84 VERT ; **pas encore regardé sur un vrai bien** (§12.17) |
 | 8 | propositions (« remplir », un clic par case) | ✅ **écrit, posé et poussé le 13/11** (`9320c02`, 27 VERT, patch m8 6/6), interrupteur `ged_remplir` **allumé en admin le 13/11 à 14:42** ; **épreuve d'écriture sur 63331 faite dans les deux sens, prouvée en base** (Hektor accepte `dpe_date`, date d'ERP, nb de lots, quote-part ; rien d'autre ne bouge ; copropriété reste OUI) — §12.18 |
-| 9 | pièces des personnes (identité — le justificatif le plus déposé —, état civil, financement) | 🔧 **ouvert le 13/11** (audit §12.19, choix « B » : registre à part) ; **9a en production le 13/11** (patch 7/7, `71a1afb`), interrupteur `ged_lecture_personnes` **admin** depuis 15:17 ; **essai réel fait** : 3/3 lus, 0 fuite, registre juste ; ⚠ date de naissance des cartes non gardée → correctif fiche v2 écrit, NON poussé ; 9b, 9c, 9d à venir |
+| 9 | pièces des personnes (identité — le justificatif le plus déposé —, état civil, financement) | 🔧 **ouvert le 13/11** (audit §12.19, choix « B » : registre à part) ; **9a en production le 13/11** (patch 7/7, `71a1afb`), interrupteur `ged_lecture_personnes` **admin** depuis 15:17 ; **essai réel fait** : 3/3 lus, 0 fuite, registre juste ; date de naissance des cartes : corrigée (fiche v2, `bc16ffe`) et **prouvée par un 2e dépôt** ; 9b, 9c, 9d à venir |
 | 10 | mesure (vrai / faux / déjà su, 2 semaines) | ⬜ |
 | habillage | suivre la maquette E0-E6 à l'écran (fenêtre modale, aperçu, cartes) | ⬜ APRÈS le code (§12.12) |
 
@@ -1711,3 +1711,14 @@ fiche de renseignements de deux vendeurs (téléphone, e-mail, profession, natio
   de validité, imprimée pareil sur la même carte mais annoncée AAAA-MM-JJ, est passée. **Correctif écrit, NON
   poussé** : fiche `justif.identite` **v2** (format AAAA-MM-JJ annoncé pour `naissance`, dit dans la consigne ; nom
   d'usage sans « ép. ») ; essais 37 + 80 + 59 VERTS. À éprouver par un nouveau dépôt après le push.
+✅ **« Oui, pousse et refais » puis « Ok vas y » (13/11)** : le push de `bc16ffe` a trouvé `origin/main` déjà plus loin —
+une autre session avait poussé jusqu'à `685d775`, AVEC `bc16ffe` et son `e2f5861` dessous ; rien à pousser de plus.
+Render sur `fb50639` (contient `bc16ffe`) à 15:36. **2e dépôt sur 63331** : ⭐ le garde-fou anti-doublon a REFUSÉ les
+mêmes fichiers renommés (« Déjà dans ce dossier (…) : l'envoyer quand même ») ; refaits avec un contenu différent
+(mention « ESSAI 2 », `ged_m9/fabriquer_pieces_specimen_essai2.py`), noms « ESSAI2 Piece identite SPECIMEN … ».
+- 2 lectures `justif.identite/2` « lu » ; envois chez Hektor done 16:02:39 et 16:02:52.
+- ✅ **Date de naissance GARDÉE** : 1938-04-02 et 1960-05-12. ✅ Nom d'usage « ESSAI » (sans « ép. »). Registre : les
+  mêmes valeurs que le 1er dépôt. **0 fuite.**
+- ⚠ **La nature de la carte neuve est lue « ancien modèle »** (juste au 1er dépôt) : ma fausse carte n'a pas le dessin
+  d'une vraie, l'IA hésite. Sans effet sur la règle de validité de 9b : le bonus de 15 ans ne concerne que les cartes
+  dont la fin imprimée tombe entre 2014 et 2023, et celle-ci finit en 2033. À regarder sur de vraies pièces (mesure).
