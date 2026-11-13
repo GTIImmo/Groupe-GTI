@@ -232,3 +232,8 @@ Et vérifiés aussi : Unieux (1 appartement + 1 immeuble en vente sous 250 000 �
 - B. **Compter les jetons en cache** dans le coût du journal et du plafond (sinon le plafond coupe trop tôt).
 - C. **Le négociateur sur les transactions**, par le bien (une vue dans la base, comme le statut des mandats) — touche la base, accord nécessaire.
 Restent aussi : le témoin avec un compte commercial (personne à nommer).
+
+**✅ A et B EN LIGNE le 13/11 à 09:23** (`1e0c20a`, son « Vas y » ; le push précédent avait été bloqué faute d'accord explicite). Vérifié en réel avec sa session :
+- **A** : « Combien de contacts s'appellent Durand ? » → **82**, exact en base (82 fiches, fiches de ménage masquées comme à l'écran) — contre 4 trouvées avant.
+- **B** : le journal note maintenant les jetons en cache : **~7 550 sur ~15 300** par question (la moitié). La même question Q13 coûte **0,0099 $** affichés, contre 0,0171 $ avant B. Le plafond de 3 $/jour laisse donc **~300 questions par jour** pour l'agence, au lieu de ~135.
+- Reste **C** (le négociateur sur les transactions, par une vue dans la base) : non commencé, il touche la base.
