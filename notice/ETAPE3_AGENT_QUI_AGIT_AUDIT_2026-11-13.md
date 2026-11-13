@@ -164,3 +164,33 @@ Avancer **par petits lots**, chacun prouvé en réel avant le suivant :
 
 ➡ **Le lot 2 est prouvé en entier.** ⚠ Traces d'essai laissées sur le contact d'essai : relance n° 21 (à faire), recherche archivée, téléphone 06 00 00 00 02.
 
+## 10. Audit du lot 3 (13/11, sur « Enchaine ») — rien codé
+
+**Périmètre** (catalogue §5) : agenda et visites, espace client, e-mails, bon de visite. Lecture du code (écran, serveur, base) et mesure en base. ⚠ Audit limité à ces gestes ; les autres objets ne sont pas mesurés ici.
+
+**Mesuré en base — des gestes qui dorment** :
+- Rendez-vous créés par l'app : 16 en tout, **0 en 90 jours** (le dernier le 19/06). Suppressions 5, modification 1. 6 comptes Google reliés.
+- Disponibilités lues (freebusy) : 21 en 90 jours.
+- E-mail libre (Gmail) : 70 envois réels en tout, **2 en 90 jours** (le dernier le 12/10).
+- E-mails de rapprochement / estimation (`app_email_envoi`) : 84, presque tous de juin-juillet ; le dernier le 12/10.
+- Espace client : **3 demandes de visite** en tout (juin-juillet), **0 message**. Demandes de RDV publiques : 0.
+- Propositions de biens : 16 (lot 2).
+
+**Ce que fait l'écran, geste par geste** :
+- **Rendez-vous** (créer / modifier / supprimer) : route du serveur `/google-workspace/calendar/events`. Le serveur écrit dans **Google Agenda** par délégation de domaine, puis garde le lien dans `app_google_calendar_event_link` (clé de service ; suppression douce). Garde côté serveur (`assert_calendar_subject_allowed`) : un commercial n'écrit que dans SON agenda ; admin et manager dans celui de n'importe qui. ⚠ L'écran envoie **toujours** `sendUpdates: all` : Google envoie **de vraies invitations** à tous les invités, acquéreurs compris, **sans aucun interrupteur**. Pas d'écriture chez Hektor.
+- **Visite** : le RDV de visite, une fois créé, pose « visite » sur le bien pour la recherche (`app_set_bien_statut`) ; supprimer le RDV remet « jamais vu » (⚠ efface aussi un « proposé » d'avant).
+- **Espace client** : la demande du client crée la ligne, une notification et deux e-mails. Le négociateur **confirme ou propose des créneaux sur une page à lien** (`/visite/{jeton}`, sans connexion, 21 jours), **pas dans l'app** ; confirmer crée le RDV Google avec le client invité. Pas d'annulation. Ces pages suivent l'interrupteur `EMAIL_REAL_SEND_ENABLED`.
+- **E-mail libre** : route `/google-workspace/gmail/send`, depuis la boîte de la personne, modèles et jusqu'à 10 pièces jointes. ⚠ **Réel par défaut** (`dryRun = False`), **hors interrupteur, sans désinscription, sans plafond**.
+- **E-mails de rapprochement et d'estimation** : routes `/emails/…/send`, à blanc par défaut ; réel seulement si `dry_run = false` **et** `EMAIL_REAL_SEND_ENABLED`, désinscription respectée, plafond du jour (80), journal `app_email_envoi`. L'estimation pose aussi un travail `generate_estimation_pdf` (archivé chez Hektor).
+- **Bon de visite** : une page HTML construite à l'écran, imprimée par le navigateur. **Pas de PDF, rien n'est enregistré.**
+
+**Trouvé en passant — défauts qui existent déjà, NON corrigés (à lui de dire)** :
+1. Rapprochement et estimation : l'**expéditeur** (`sender_email`) vient du navigateur et **n'est pas contrôlé** — tout compte connecté peut envoyer « au nom » d'un autre négociateur (vérifié : `emails.py:218-230`).
+2. Pièces jointes de l'e-mail libre : téléchargées depuis **n'importe quelle adresse** par le serveur, sans liste d'hôtes autorisés.
+3. Supprimer un RDV de visite remet le bien à « jamais vu », même s'il avait été proposé avant.
+⚠ Non mesuré : la valeur actuelle de `EMAIL_REAL_SEND_ENABLED` sur Render.
+
+**Ce que je propose** :
+- **3a — l'agenda, dans SON agenda, sans invitation extérieure** : lire son agenda (« qu'est-ce que j'ai jeudi ? », créneaux libres) ; créer / déplacer / supprimer un RDV relié à un bien et un contact, **invitations coupées** (`sendUpdates: none`) ; un RDV de visite pose « visite » comme l'écran. Jamais l'agenda d'un collègue.
+- **3b — les e-mails, en interne d'abord** : un e-mail libre **seulement vers une adresse @gti-immobilier.fr** (le serveur refuse le reste) ; le rapprochement **à blanc seulement** (l'assistant montre le texte qui partirait, rien ne part).
+- **3c — plus tard** : envoyer vers un client (invitation, e-mail, rapprochement réel), confirmer un créneau de l'espace client, et le bon de visite en PDF (à construire côté serveur).
