@@ -82,3 +82,9 @@ Avancer **par petits lots**, chacun prouvé en réel avant le suivant :
 
 **Pour mettre en service** (chaque geste avec son accord) : poser le patch, pousser le code, puis prouver en réel : une relance créée puis marquée faite sur un contact d'essai ; une demande de baisse de prix sur un bien d'essai (62774 ou celui qu'il choisit), que Pauline / lui pourra refuser ensuite.
 
+**✅ POSÉ ET EN LIGNE le 13/11** (son « Vas y ») :
+- Table posée à ~11:14 : « PATCH PASSÉ » ; contrôlée à part : vide, 1 règle de lecture, l'écran lit mais n'écrit pas, la clé publique ne lit rien, le serveur écrit.
+- Code en ligne à 11:16 (`7dcb6d4`, `/health` le rend) ; les 4 routes répondent 401 sans jeton.
+- Contrôle en réel (lecture seule) : « Quelles relances sont en retard ? » → les 3 relances de franck…, exact ; **0 carte proposée** (aucun geste demandé) — l'assistant ne propose pas de lui-même un geste qu'on ne lui demande pas.
+- ⏳ **Pas encore éprouvé** : une carte proposée puis validée en réel. Il faut une cible choisie par Frédéric (un contact d'essai pour une relance ; un bien VIVANT, mandat validé, pour une demande — le 62774 est clos).
+
