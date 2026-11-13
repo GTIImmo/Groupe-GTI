@@ -5,10 +5,13 @@
 // l'outil comptent par le type que l'utilisateur leur a donné.
 // ⭐ Morceau 5 (§12.10) : sous « À regarder », les règles sans IA (lib/gedRegles.ts), derrière `ged_propositions`.
 // ⭐ Morceau 7 (§12.17) : au même endroit, ce que l'IA a lu comparé à la fiche et aux mandants (lib/gedReglesLues.ts).
+// ⭐ Morceau 8 (§12.18) : « À remplir », une case VIDE et la valeur lue (lib/gedRemplir.ts), derrière `ged_remplir` ;
+//   « Remplir la fiche » appelle l'écran du bien (onRemplir), « Ignorer » garde la décision. Rien sans clic.
 import { useEffect, useMemo, useState } from 'react'
 import { loadAffairesForDossier, loadRegisterCycleAffaires } from './lib/api'
 import { etatFiableDuDocument } from './lib/etatSignatureMandat'
-import { loadGedClassements, useGedPropositions } from './lib/ged'
+import { compterConditionsStrict, gedDecider, loadGedClassements, loadGedDecisions, useGedPropositions, useGedRemplir } from './lib/ged'
+import { propositionsRemplir, type FaitsRemplir, type PropositionRemplir } from './lib/gedRemplir'
 import { dateEtatLue, loadGedLectures, resumeLecture, type LectureDocument } from './lib/gedLecture'
 import { LIBELLE_MOMENT, recuManque, type LignePiece } from './lib/gedPieces'
 import { deposeAuPlusTard, LIBELLE_A_DEPOSER, reglesSansIa, type AffaireRegle, type Alerte, type FaitsRegles } from './lib/gedRegles'
@@ -36,12 +39,15 @@ const NIVEAU_ALERTE: Record<Alerte['niveau'], string> = { alerte: 'à vérifier'
 const euros = (v: string | number | null | undefined) => { const x = Number(v); return v != null && v !== '' && Number.isFinite(x) && x > 0 ? x : null }
 
 export function RecuManque({
-  hektorAnnonceId, appDossierId, documents, faits, personnesDuBien = [], onDeposer,
+  hektorAnnonceId, appDossierId, documents, faits, personnesDuBien = [], onDeposer, onRemplir,
 }: {
   hektorAnnonceId: string | number
   appDossierId?: number
   documents: ConsoleDocument[]
-  faits: FaitsRegles
+  faits: FaitsRegles & Partial<Pick<FaitsRemplir, 'quotePart' | 'erpDate'>>
+  // morceau 8 : écrire UNE proposition (l'écran du bien relit la case, appelle le geste existant, garde la décision) ;
+  // rend le message à afficher. Sans lui, les propositions ne se montrent pas.
+  onRemplir?: (p: PropositionRemplir) => Promise<string>
   // morceau 7 : les mandants / propriétaires de la fiche, une ligne par personne (un couple = deux)
   personnesDuBien?: PersonneDuBien[]
   onDeposer?: (typeCode: string, libelle: string) => void
@@ -72,7 +78,7 @@ export function RecuManque({
     let annule = false
     loadAffairesForDossier(appDossierId)
       .then((rows) => { if (!annule) setAffaires(rows.filter((a) => a.present_in_hektor !== false).map((a) => ({
-        kind: String(a.kind), state: a.state ?? null, date: a.date ?? null, dateActe: a.date_acte ?? null,
+        kind: String(a.kind), state: a.state ?? null, date: a.date ?? null, dateActe: a.date_acte ?? null, id: Number(a.app_affaire_id),
         // morceau 7c : de quoi comparer une transaction lue (montant en euros ; acquéreurs : un objet seul ou une liste)
         montant: euros(a.montant), prixNetVendeur: euros(a.prix_net_vendeur), honorairesEntree: euros(a.honoraires_entree), honorairesSortie: euros(a.honoraires_sortie),
         acquereurs: (Array.isArray(a.acquereurs_json) ? a.acquereurs_json : a.acquereurs_json ? [a.acquereurs_json] : [])
@@ -114,6 +120,55 @@ export function RecuManque({
     return [...reglesSansIa(faits, docs, affaires, new Date()), ...reglesLues({ ...faits, chargeRegistre }, docsLus, personnesDuBien, affaires, new Date())]
       .sort((a, b) => ordre[a.niveau] - ordre[b.niveau])
   }, [regles, affaires, faits, documents, classements, lectures, personnesDuBien, chargeRegistre])
+
+  // ── morceau 8 : les propositions « remplir », derrière `ged_remplir` (il ÉCRIT) ──────────────────────────────
+  // Les décisions déjà prises et le nombre de conditions des compromis vivants sont relus à chaque fois ; une lecture
+  // ratée (null) -> AUCUNE proposition (jamais reproposer, jamais croire une liste vide).
+  const remplir = useGedRemplir()
+  // la PRÉSENCE du geste (la fonction change à chaque rendu de la fiche : elle ne doit pas relancer les lectures)
+  const peutRemplir = Boolean(onRemplir)
+  const [decisions, setDecisions] = useState<Set<string> | null>(null)
+  const [conditions, setConditions] = useState<Map<number, number> | null>(null)
+  const [enCours, setEnCours] = useState<string | null>(null)
+  const [messageRemplir, setMessageRemplir] = useState<string | null>(null)
+  const [relire, setRelire] = useState(0)
+  useEffect(() => {
+    if (!remplir || !peutRemplir) return
+    let annule = false
+    void loadGedDecisions(hektorAnnonceId).then((d) => { if (!annule) setDecisions(d) })
+    return () => { annule = true }
+  }, [remplir, peutRemplir, hektorAnnonceId, relire])
+  const idsCompromis = useMemo(() => (affaires ?? []).filter((a) => a.kind === 'compromis' && a.id != null).map((a) => a.id as number).join(','), [affaires])
+  useEffect(() => {
+    if (!remplir || !peutRemplir) return
+    let annule = false
+    compterConditionsStrict(idsCompromis ? idsCompromis.split(',').map(Number) : [])
+      .then((m) => { if (!annule) setConditions(m) })
+      .catch(() => { if (!annule) setConditions(null) })
+    return () => { annule = true }
+  }, [remplir, peutRemplir, idsCompromis, relire])
+  const propositions = useMemo(() => {
+    if (!remplir || !peutRemplir || !decisions || !conditions || affaires === null) return []
+    const docsLus = documents
+      .filter((d) => d.present_in_hektor !== false && lectures.has(d.id))
+      .map((d) => ({ nom: d.document_name, lecture: lectures.get(d.id) as LectureDocument }))
+    return propositionsRemplir({ ...faits, chargeRegistre }, docsLus, affaires, decisions, conditions)
+  }, [remplir, peutRemplir, decisions, conditions, affaires, documents, lectures, faits, chargeRegistre])
+  const agir = async (p: PropositionRemplir, geste: 'remplir' | 'ignorer') => {
+    if (enCours || !onRemplir) return
+    setEnCours(p.cle); setMessageRemplir(null)
+    try {
+      if (geste === 'remplir') setMessageRemplir(await onRemplir(p))
+      else {
+        await gedDecider({ hektorAnnonceId, lectureId: p.lectureId, cle: p.cle, champ: p.champ, valeur: p.valeur, decision: 'ignoree' })
+        setMessageRemplir(`Ignoré : ${p.texte}.`)
+      }
+    } catch (e) {
+      setMessageRemplir(e instanceof Error ? e.message : 'Rien n\'a été écrit.')
+    } finally {
+      setEnCours(null); setRelire((n) => n + 1)
+    }
+  }
 
   // le résumé de la lecture, à côté du nom d'un document reçu (« DPE 2024.pdf — Lu : énergie D… »)
   const resumeParNom = useMemo(() => {
@@ -173,6 +228,23 @@ export function RecuManque({
         <h4>{`${LIBELLE_MOMENT[resultat.moment]} : ${resultat.recues} pièce${resultat.recues > 1 ? 's' : ''} sur ${resultat.attendues}`}</h4>
         <span>Reçu / manque, d'après le type de chaque document (son nom pour les anciens)</span>
       </div>
+      {propositions.length || messageRemplir ? (
+        <div className="gm-liste">
+          <p className="gm-avant-t">{`À remplir (${propositions.length})`}</p>
+          {messageRemplir ? <p className="gm-avant-t" role="status">{messageRemplir}</p> : null}
+          {propositions.map((p) => (
+            <div key={`${p.cle}|${p.valeur}`} className="gm-l is-selon_le_cas">
+              <span className="gm-ic is-selon_le_cas" aria-hidden="true">+</span>
+              <span className="gm-t">{p.texte}<small>{`case vide : lu dans ${p.source}`}</small></span>
+              <span className="gm-d">
+                <button type="button" className="gm-avant-b" disabled={enCours !== null} onClick={() => void agir(p, 'remplir')}>{enCours === p.cle ? 'Écriture…' : 'Remplir la fiche'}</button>
+                {' '}
+                <button type="button" className="gm-avant-b" disabled={enCours !== null} onClick={() => void agir(p, 'ignorer')}>Ignorer</button>
+              </span>
+            </div>
+          ))}
+        </div>
+      ) : null}
       {alertes.length ? (
         <div className="gm-liste">
           <p className="gm-avant-t">{`À regarder (${alertes.length})`}</p>

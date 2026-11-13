@@ -66,7 +66,8 @@ export type ValeurLue = {
   page: number | null
   etat: 'lu' | 'incertain' | 'non_vu'
 }
-export type LectureDocument = { typeCode: string; etat: 'lu' | 'incomplet' | 'pas_ce_type'; luLe: string | null; valeurs: ValeurLue[] }
+// `id` (morceau 8) : la lecture d'où vient une valeur proposée à « remplir » (gardée avec la décision)
+export type LectureDocument = { id?: string; typeCode: string; etat: 'lu' | 'incomplet' | 'pas_ce_type'; luLe: string | null; valeurs: ValeurLue[] }
 
 const jjmmaaaa = (iso: string) => { const [a, m, j] = iso.slice(0, 10).split('-'); return `${j}/${m}/${a}` }
 
@@ -238,15 +239,15 @@ export async function loadGedLectures(hektorAnnonceId: string | number): Promise
   try {
     const { data, error } = await supabase
       .from('app_ged_classement')
-      .select('app_console_document_id, app_ged_lecture(type_code, etat, lu_le, app_ged_valeur(cle, rang, valeur, valeur_num, valeur_date, page, etat))')
+      .select('app_console_document_id, app_ged_lecture(id, type_code, etat, lu_le, app_ged_valeur(cle, rang, valeur, valeur_num, valeur_date, page, etat))')
       .eq('hektor_annonce_id', String(hektorAnnonceId))
       .not('app_console_document_id', 'is', null)
     if (error) return parDocument
-    type Ligne = { app_console_document_id: string; app_ged_lecture: Array<{ type_code: string; etat: LectureDocument['etat']; lu_le: string | null; app_ged_valeur: ValeurLue[] }> | null }
+    type Ligne = { app_console_document_id: string; app_ged_lecture: Array<{ id: string; type_code: string; etat: LectureDocument['etat']; lu_le: string | null; app_ged_valeur: ValeurLue[] }> | null }
     for (const r of (data ?? []) as unknown as Ligne[]) {
       const lectures = [...(r.app_ged_lecture ?? [])].sort((a, b) => String(b.lu_le).localeCompare(String(a.lu_le)))
       const l = lectures[0]
-      if (l) parDocument.set(r.app_console_document_id, { typeCode: l.type_code, etat: l.etat, luLe: l.lu_le, valeurs: l.app_ged_valeur ?? [] })
+      if (l) parDocument.set(r.app_console_document_id, { id: l.id, typeCode: l.type_code, etat: l.etat, luLe: l.lu_le, valeurs: l.app_ged_valeur ?? [] })
     }
   } catch {
     // lecture ratée : rien ne casse

@@ -36,6 +36,8 @@ export type FaitsRegles = FaitsDuBien & {
 export type DocumentRegle = { nom: string; typeCode: string | null; date: string | null; signature: string | null; modele?: boolean; dateEtat?: string | null }
 export type AffaireRegle = {
   kind: string; state: string | null; date: string | null; dateActe: string | null
+  // morceau 8 : la transaction elle-même (la condition « Obtention Crédit » s'y écrit)
+  id?: number
   // morceau 7c : ce que le registre porte, pour comparer une transaction LUE (montants en euros ; acquéreurs : nom, prénom)
   montant?: number | null
   prixNetVendeur?: number | null

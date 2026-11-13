@@ -1534,3 +1534,75 @@ offres 1 901 (montant rempli, jamais de net), ventes 645 (montant et honoraires,
   première ligne venue fait tomber 2 essais ; règles 44, Reçu / Manque 29, lecture 49, dépôt 19, classement 25 ; build
   vert ; banc d'écran local (13 lignes, dont « Compromis : prix 190 000 € lu, 185 000 € au registre ; net vendeur… »),
   console sans erreur. ⚠ `tsc --noEmit` lancé une fois par réflexe (contraire à la page d'entrée) : sans effet, rien écrit.
+✅ **7c POUSSÉ (13/11, `a580c9e`, seul) ; Vercel le sert. LE MORCEAU 7 EST COMPLET.**
+
+### 12.18 Le morceau 8 — proposer de REMPLIR la fiche depuis un document lu (audit du 13/11, lecture seule, rien codé)
+« Ok suis le plan » (13/11). Sources : `E_synthese_catalogue.md` §1.2, §3.2 (L1, L3, L5, L16), §6.1, §7 (questions 1 à 4
+et 7) ; `2_developpeur.md` §3 (un « remplir » n'appelle QUE le geste existant), §4.5 (table des propositions), §5.4-5.5.
+
+**Audit limité à l'ÉCRITURE d'une valeur lue sur la fiche, au registre des mandats et aux conditions d'une affaire :**
+
+| | créer | modifier | supprimer / archiver | lire / remonter |
+|---|---|---|---|---|
+| annonce (fiche) | — | ⚠ une case VIDE seulement, par `editAnnonceOptimistic` → `app_edit_annonce_optimistic` → travail `update_hektor_annonce_fields` → Hektor (contrôle au retour existant) | — | relue juste avant d'écrire |
+| contact | — | — | — | non concerné |
+| recherche | — | — | — | non concernée |
+| relation | — | — | — | non concernée |
+| transaction (affaire) | — | condition « Obtention crédit » par `ecrireAffaireConditions` (chez nous seulement, aucun travail Hektor) — ⚠ la fonction EFFACE puis repose la liste, réservée managers / admins | — | liste relue juste avant |
+| mandat | — | charge des honoraires au REGISTRE par `ecrireMandatCharge` (chez nous ; garde l'auteur) — ⚠ ÉCRASE et EFFACE sur vide ; ⛔ aucun autre champ du mandat | — | registre relu juste avant |
+| document / photo | — | — | — | les lectures (déjà là) |
+| RDV / visite | — | — | — | non concerné |
+
+- **Les trois gestes existent et ne sont PAS modifiés** : on les appelle seulement, et seulement pour une case vide,
+  relue au dernier moment (la lecture de la fiche décode les groupes une fois : `rawWizardDetailField`).
+- **Ce qui n'existe pas** : garder la DÉCISION (« rempli », « ignoré ») — sans elle, une proposition ignorée revient à
+  chaque ouverture, et on ne sait pas qui a rempli quoi → une petite table neuve (patch de base). Et un interrupteur
+  propre : c'est la première fois que l'outil ÉCRIT chez Hektor.
+- **⛔ Ce qu'on n'écrit PAS** : la taxe foncière (groupe `mandat_infofi`, qui renvoie AUSSI prix, honoraires, charges) ;
+  tout champ du mandat (décision ⑦-7) ; l'adresse, les mandants (alertes seulement) ; jamais par-dessus une valeur.
+- **Mesures** : les lectures en base ne concernent que les deux biens d'essai (62774 : 8, 63331 : 8) → **aucune
+  proposition réelle tant que les négociateurs n'utilisent pas l'outil** ; la valeur du morceau 8 est pour après.
+  Historique du travail Hektor sur ces champs : 6 travaux, tous sur 63331 le 22/10 (dont 1 en erreur) et 1 en août.
+- **Les épreuves avant d'allumer** (études : « remplir une case VIDE par une modification » n'a jamais été prouvé pour
+  `dpe_date` et la date d'ERP ; le groupe copropriété a 2 écritures de quote-part) : 62774 ne prend plus rien (sorti des
+  biens courants). **63331 et 63330 ont TOUTES leurs cases remplies** (DPE, dates, copropriété) : l'épreuve sera donc
+  « changer puis remettre » une valeur sur 63331 (bien d'essai, Estimation, jamais diffusé) — même chemin d'écriture.
+**Proposition (V1 = les 4 « remplir » de l'étude)** :
+- **P1 DPE et état des risques** : `dpe_cons`, `dpe_ges`, `dpe_date`, date de l'ERP — après l'épreuve diagnostics.
+- **P2 copropriété** : nombre de lots, quote-part annuelle — après l'épreuve copropriété (la case copropriété doit
+  rester OUI ; la garde du worker existe).
+- **P3 charge des honoraires** au registre des mandats, si la case est vide (jamais sur l'affaire).
+- **P4 condition « Obtention crédit »** avec la date limite du prêt lue au compromis, si la liste est vide.
+- Affichage : sous « À regarder », une ligne « à remplir » avec la valeur, la page du document, et deux boutons
+  « Remplir la fiche » / « Ignorer » ; rien ne s'écrit sans le clic ; « tout remplir » n'existe pas.
+- Base : `app_ged_decision` (la proposition, la décision, qui, quand, ce qui a été envoyé) + interrupteur
+  `ged_remplir` (off / admin / on), posé ÉTEINT ; patch, inverse et répétition.
+✅ **« Vas y » (13/11) : MORCEAU 8 ÉCRIT ET CONTRÔLÉ, RIEN POSÉ NI POUSSÉ, AUCUNE ÉPREUVE FAITE :**
+- Base : `supabase/patch_ged_m8_remplir_2026-11-13.sql` (+ `_INVERSE`, + `_REPETITION` qui se termine par un
+  rollback) — `app_ged_decision` (journal : ni mise à jour ni effacement), `app_ged_decider()` (SECURITY DEFINER : compte
+  actif, interrupteur pour l'appelant, périmètre du bien, auteur = `auth.uid()`), `ged_remplir` posé **off**. Le journal
+  GED existant (`app_ged_journal`) n'est PAS touché (sa contrainte d'objet reste).
+- `src/lib/gedRemplir.ts` (pur) : P1 DPE (consommation, émissions, date) et date de l'ERP ; P2 lots et quote-part
+  annuelle — seulement sur un bien MARQUÉ copropriété ; P3 charge au registre (lu et vide ; « les deux » et un autre
+  mandat : rien) ; P4 « Obtention Crédit » sur LA transaction du compromis lu (résolveur), liste comptée vide. Une
+  valeur « incertaine » ne se propose pas ; une décision prise ne revient pas (une autre valeur lue, si). `caseVide` :
+  « 0 », « 0000-00-00 », la date zéro.
+- `src/lib/ged.ts` : `useGedRemplir`, `loadGedDecisions` (lecture ratée -> null -> AUCUNE proposition),
+  `gedDecider`, **`compterConditionsStrict`** — ⚠ trouvé à l'écriture : `loadAffairesConditions` rend une carte VIDE sur
+  erreur ; s'en servir pour « liste vide » aurait pu EFFACER des conditions existantes (la fonction efface puis repose).
+- `src/App.tsx` : `remplirDepuisDocument` — fiche RELUE fraîche (`loadDossierDetail` + `detailPayload`) juste avant,
+  case pleine -> rien écrit + décision « echec » ; copropriété : seulement si encore OUI ; puis `editAnnonceOptimistic`
+  (le geste de « Reporter dans la fiche », inchangé) ; charge : la ligne du registre relue (sans elle, rien), jamais une
+  charge vide ; condition : comptée strictement juste avant ; la décision « remplie » gardée APRÈS le geste réussi.
+- `src/RecuManque.tsx` : « À remplir (N) » au-dessus de « À regarder », « Remplir la fiche » / « Ignorer », un clic par
+  proposition ; ⚠ trouvé : la fonction passée change à chaque rendu — les lectures dépendent de sa PRÉSENCE seulement.
+- **Contrôles** : `test_ged_remplir.cjs` **27 VERT** ; **témoin inverse** : sans la garde « case déjà remplie », l'essai
+  tombe (⚠ le premier essai était faussé : Python sous Windows avait réécrit `App.tsx` en fins de ligne CRLF ; refait
+  avec `newline=''`, exactement 1 ROUGE) ; tous les essais GED verts (84, 44, 29, 49, 19, 25) ; build vert (`tsc -b`).
+  **Banc d'écran local** : « À remplir (1) — État des risques : établi le 01/12/2025 — lu dans ERP 2026.pdf, page 1 » ;
+  le clic appelle le geste avec le bon champ et la bonne valeur ; console sans erreur.
+✅ **« Vas y » (13/11) : patch m8 POSÉ — 6 contrôles VERTS** (table et RLS ; aucune écriture directe ; porte SECURITY
+DEFINER fermée à anon ; `ged_remplir` **off** ; table vide) ; le code commité et poussé dans le même geste.
+- ⏳ **Reste, chacun sur accord** : les **épreuves sur 63331** (toutes ses cases sont
+  remplies : changer `dpe_date`, la date d'ERP, puis la quote-part et le nombre de lots, vérifier chez Hektor et la case
+  copropriété restée OUI, puis remettre) ; allumer `ged_remplir` en admin.

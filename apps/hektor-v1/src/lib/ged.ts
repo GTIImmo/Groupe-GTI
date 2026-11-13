@@ -118,6 +118,73 @@ export function useGedPropositions(): boolean {
   return actif
 }
 
+// GED morceau 8 : proposer de REMPLIR la fiche depuis un document lu -- son propre interrupteur (il écrit).
+export function useGedRemplir(): boolean {
+  const [actif, setActif] = useState(false)
+  useEffect(() => {
+    let annule = false
+    void loadInterrupteurTroisCrans('ged_remplir').then((v) => { if (!annule) setActif(v) })
+    return () => { annule = true }
+  }, [])
+  return actif
+}
+
+// Les décisions déjà prises sur ce bien (« remplie », « ignoree »), en clés « cle|valeur » : elles ne reviennent pas.
+// ⚠ Lecture ratée -> null (pas un ensemble vide) : l'écran ne propose alors RIEN, plutôt que de reproposer.
+export async function loadGedDecisions(hektorAnnonceId: string | number): Promise<Set<string> | null> {
+  if (!hasSupabaseEnv || !supabase) return null
+  try {
+    const { data, error } = await supabase
+      .from('app_ged_decision')
+      .select('cle,valeur,decision')
+      .eq('hektor_annonce_id', String(hektorAnnonceId))
+    if (error) return null
+    return new Set(((data ?? []) as Array<{ cle: string; valeur: string; decision: string }>)
+      .filter((d) => d.decision === 'remplie' || d.decision === 'ignoree')
+      .map((d) => `${d.cle}|${d.valeur}`))
+  } catch {
+    return null
+  }
+}
+
+// Garder une décision (app_ged_decider : compte actif, interrupteur, périmètre ; l'auteur est l'appelant).
+export async function gedDecider(input: {
+  hektorAnnonceId: string | number
+  lectureId: string | null
+  cle: string
+  champ: string
+  valeur: string
+  decision: 'remplie' | 'ignoree' | 'echec'
+  detail?: Record<string, unknown> | null
+}): Promise<void> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Base non configurée')
+  const { error } = await supabase.rpc('app_ged_decider', {
+    p_hektor_annonce_id: String(input.hektorAnnonceId),
+    p_lecture_id: input.lectureId,
+    p_cle: input.cle,
+    p_champ: input.champ,
+    p_valeur: input.valeur,
+    p_decision: input.decision,
+    p_detail: input.detail ?? null,
+  })
+  if (error) throw new Error(error.message)
+}
+
+// Le NOMBRE de conditions de chaque transaction, lu STRICTEMENT : une erreur LÈVE (jamais une carte vide).
+// ⚠ C'est la garde de P4 : app_conditions_affaire_ecrire EFFACE puis repose la liste ; si une lecture ratée passait
+//   pour « aucune condition », on effacerait celles qui existent. (loadAffairesConditions, api.ts, rend une carte vide
+//   sur erreur : elle ne convient pas ici.)
+export async function compterConditionsStrict(appAffaireIds: number[]): Promise<Map<number, number>> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Base non configurée')
+  const ids = Array.from(new Set(appAffaireIds.filter((id) => Number.isFinite(id))))
+  const compte = new Map<number, number>(ids.map((id) => [id, 0]))
+  if (!ids.length) return compte
+  const { data, error } = await supabase.from('app_affaire_condition').select('app_affaire_id').in('app_affaire_id', ids)
+  if (error) throw new Error(error.message)
+  for (const r of (data ?? []) as Array<{ app_affaire_id: number }>) compte.set(Number(r.app_affaire_id), (compte.get(Number(r.app_affaire_id)) ?? 0) + 1)
+  return compte
+}
+
 // Les types DÉCIDÉS des documents déposés avec l'outil, pour un bien (lecture : patch_ged_m3_recu_manque, même
 // périmètre que les documents). Clé : la ligne du document chez nous. Une lecture ratée rend une liste vide :
 // les documents retombent alors sur leur nom, rien ne casse.

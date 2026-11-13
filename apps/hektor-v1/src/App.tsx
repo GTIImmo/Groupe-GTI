@@ -304,10 +304,10 @@ import SuiviSignatairesYoutrust from './SuiviSignatairesYoutrust'
 import { PiecesSignatureFenetre, useSignaturePreuves } from './PiecesSignature'
 // GED morceau 2 (12/11/2026) : la fenêtre de dépôt, derrière l'interrupteur ged_depot_multiple (note GED §12.7).
 import { DepotDocuments } from './DepotDocuments'
-import { useGedDepotMultiple, useGedRecuManque } from './lib/ged'
+import { compterConditionsStrict, gedDecider, useGedDepotMultiple, useGedRecuManque } from './lib/ged'
 // GED morceau 3 (12/11/2026) : le bloc « Reçu / Manque », derrière l'interrupteur ged_recu_manque (note GED §12.8).
 import { RecuManque } from './RecuManque'
-import type { FaitsRegles } from './lib/gedRegles'
+import { caseVide, type FaitsRemplir, type PropositionRemplir } from './lib/gedRemplir'
 import { piecesDeSignature } from './lib/piecesSignature'
 import EnvoiSignatureYoutrust, { EVENEMENT_CORRIGER_MANDAT, type DemandeCorrectionMandat, type OngletCorrection } from './EnvoiSignatureYoutrust'
 import type { FicheDuJourPdf } from './lib/ecartsFichePdf'
@@ -11849,7 +11849,7 @@ Le mandat passera à l'état « Signé ». À ne faire qu'une fois le PDF signé
 // GED morceau 3 (12/11/2026) : les faits de la fiche dont dépendent les pièces « selon le cas » (lib/gedPieces.ts).
 // null = la fiche ne le dit pas (la pièce est alors « selon le cas », jamais « non trouvée »).
 // GED morceau 5 : les faits servent aussi aux règles sans IA (FaitsRegles = FaitsDuBien + diffusion, DPE, copro, prix, mandat).
-function faitsGedDuBien(dossier: Dossier, detail: DossierDetailPayload | null): FaitsRegles {
+function faitsGedDuBien(dossier: Dossier, detail: DossierDetailPayload | null): FaitsRemplir {
   const lire = (nom: string) => (detail ? String(rawWizardDetailField(detail, nom) ?? '').trim() : '')
   const nombre = (v: string) => { const x = Number(v.replace(',', '.')); return Number.isFinite(x) && x > 0 ? x : null }
   const copro = lire('copropriete').toUpperCase()
@@ -11882,6 +11882,9 @@ function faitsGedDuBien(dossier: Dossier, detail: DossierDetailPayload | null): 
     // GED morceau 7b : le prix affiché et le type du mandat (comparés au mandat et à l'avenant lus)
     prix: dossier.prix != null ? nombre(String(dossier.prix)) : null,
     mandatType: dossier.mandat_type ?? null,
+    // GED morceau 8 : les cases que « remplir » peut proposer (valeurs brutes : vide = null)
+    quotePart: nombre(lire('copropriete_quote_part')),
+    erpDate: lire('diag_risques_nat_tech_date') || null,
   }
 }
 
@@ -11915,6 +11918,47 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
   const [typeAttendu, setTypeAttendu] = useState<{ code: string; libelle: string } | null>(null)
   const faitsDuBien = useMemo(() => faitsGedDuBien(dossier, ficheDuMandat?.detail ?? null), [dossier, ficheDuMandat])
   const personnesDuBien = useMemo(() => personnesGedDuBien(ficheDuMandat?.contacts), [ficheDuMandat])
+  // GED morceau 8 : écrire UNE proposition « remplir ». On RELIT juste avant (la fiche fraîche, la ligne du registre,
+  // les conditions comptées strictement) : si la case n'est plus vide, RIEN n'est écrit et la décision dit « echec ».
+  // Puis le geste EXISTANT, inchangé (même chemin que « Reporter dans la fiche »). La décision garde qui et quoi.
+  const remplirDepuisDocument = async (p: PropositionRemplir): Promise<string> => {
+    const garder = (decision: 'remplie' | 'echec', detail: Record<string, unknown>) =>
+      gedDecider({ hektorAnnonceId: dossier.hektor_annonce_id, lectureId: p.lectureId, cle: p.cle, champ: p.champ, valeur: p.valeur, decision, detail })
+    const refus = async (motif: string, texte: string, detail: Record<string, unknown> = {}) => { await garder('echec', { motif, ...detail }); return `Rien écrit : ${texte}` }
+    if (p.geste === 'fiche') {
+      const frais = await loadDossierDetail(dossier.app_dossier_id, { sansResumeRdv: true })
+      if (!frais) throw new Error('Fiche introuvable : rien n\'a été écrit.')
+      const fiche = detailPayload(frais)
+      const actuelle = rawWizardDetailField(fiche, p.champ)
+      if (!caseVide(actuelle)) return refus('case_deja_remplie', `la case porte déjà « ${actuelle} ».`, { valeur_fiche: actuelle })
+      if (p.champ.startsWith('copropriete_') && !/oui/i.test(rawWizardDetailField(fiche, 'copropriete'))) return refus('pas_en_copropriete', 'le bien n\'est plus marqué copropriété.')
+      await editAnnonceOptimistic({ dossier: { app_dossier_id: dossier.app_dossier_id, hektor_annonce_id: dossier.hektor_annonce_id }, fields: { [p.champ]: p.valeur } })
+      if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('hektor:annonce-updated', { detail: { app_dossier_id: dossier.app_dossier_id } }))
+      await garder('remplie', { geste: 'editAnnonceOptimistic', champs: { [p.champ]: p.valeur } })
+      return `Envoyé : ${p.texte}. La fiche part chez Hektor par le chemin habituel (contrôle au retour).`
+    }
+    if (p.geste === 'charge') {
+      const numero = String(dossier.numero_mandat ?? '').trim()
+      const ligne = (await loadRegisterCycleAffaires(dossier.hektor_annonce_id)).find((r) => String(r.numero_mandat ?? '').trim() === numero)
+      // la lecture du registre rend une liste vide sur erreur : sans SA ligne, on n'écrit pas
+      if (!numero || !ligne) return refus('registre_illisible', 'la ligne du mandat au registre n\'a pas pu être relue.')
+      const actuelle = String(ligne.mandat_charge_honoraires_app ?? '').trim()
+      if (actuelle) return refus('case_deja_remplie', `le registre dit déjà « ${actuelle} ».`, { valeur_registre: actuelle })
+      // ⚠ jamais une charge vide : la fonction EFFACERAIT la ligne du carnet
+      const res = await ecrireMandatCharge({ hektorAnnonceId: dossier.hektor_annonce_id, numeroMandat: numero, charge: p.valeur === 'vendeur' ? 'mandant' : 'acquereur' })
+      if (!res.ok) return refus('refus_du_registre', `le registre a refusé (${res.erreur ?? 'refus'}).`)
+      await garder('remplie', { geste: 'ecrireMandatCharge', numero_mandat: numero, charge: res.charge ?? p.valeur })
+      return `Enregistré : ${p.texte}.`
+    }
+    // condition : la liste doit être VIDE, comptée strictement (une erreur LÈVE : rien n'est écrit)
+    const id = p.affaireId as number
+    const compte = (await compterConditionsStrict([id])).get(id)
+    if (compte !== 0) return refus('liste_non_vide', `la transaction a déjà ${compte ?? '?'} condition(s).`, { conditions: compte ?? null })
+    const credit = (await loadConditionCatalogue()).find((c) => c.libelle.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase() === 'obtention credit')
+    await ecrireAffaireConditions(id, [{ rang: 1, libelle: credit?.libelle ?? 'Obtention Crédit', date_echeance: p.valeur, etat: 'attente', catalogue_id: credit?.id ?? null }])
+    await garder('remplie', { geste: 'ecrireAffaireConditions', app_affaire_id: id, date_echeance: p.valeur })
+    return `Enregistré : ${p.texte}.`
+  }
   // A.2 lot 6b P5 : « Corriger le mandat » depuis la fenetre ouverte ici -> l'editeur du meme bien s'ouvre (s'il est monte).
   const demanderCorrection = (document: ConsoleDocument, onglet: OngletCorrection) => {
     const detail: DemandeCorrectionMandat = { app_dossier_id: dossier.app_dossier_id, document, onglet, pris: false }
@@ -12316,6 +12360,7 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
       documents={documents}
       faits={faitsDuBien}
       personnesDuBien={personnesDuBien}
+      onRemplir={remplirDepuisDocument}
       onDeposer={gedDepot ? (code, libelle) => {
         setTypeAttendu({ code, libelle })
         setUploadOpen(true)
