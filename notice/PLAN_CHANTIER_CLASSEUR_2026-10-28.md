@@ -178,8 +178,163 @@ refus fait à la main chez Hektor et le nôtre. **NON MESURÉ, c'est une hypoth�
                       nous), et vus pour la derniere fois en septembre/octobre.
                     ➡ IL N'Y A DONC PAS A REFAIRE TOURNER LE GEL. Ce qui etait prevu,
                       c'est le RE-GEL ADDITIF de 1.5, et sa liste est inchangee.
-1.6 ⬜              git : apparier_classeur.py n'est PAS suivi, ni les notes
+1.6 ✅ FAIT         git : apparier_classeur.py, les 14 apparier_v2_*.py, le rapport
+                    A19 et le tableau des 175 sont TOUS SUIVIS (verifie le 13/11)
 ```
+
+### ⭐⭐⭐ 1.7 — LE SECOND APPARIEMENT (v2), ET CE QU'IL APPORTE AU RE-GEL
+
+> **C'est le travail que Frederic a demande la nuit du 12 au 13/11** : *« reprends
+> ligne par ligne le classeur et cherche toi-meme les transactions correspondantes
+> SANS utiliser la regle du gel […] ensuite fais-moi un rapport comparatif »*, afin
+> d'**ameliorer le re-gel avec**. Rapport complet :
+> `notice/A19_APPARIEUR_V2_CONTRE_LE_GEL_2026-11-13.md`.
+> ⛔ **Cette section manquait au plan** : le 13/11 au matin, les dates d'offre du
+> 11/11 ont pris toute la journee et le plan n'a pas ete mis a jour. C'est repare ici.
+
+**La methode est VRAIMENT independante** : six familles de temoins (mandat, acquereur,
+vendeur, dates par genre, lieu, equipe), chacune appariant seule, puis resolution
+globale -- contre une cascade de 10 etages entrant par le mandat. ⭐ Le mandat **manque
+sur 24,9 %** des transactions : une methode qui entre par lui est aveugle sur un quart
+du registre. Et la sortie porte **le meme triplet que le gel**
+`(ligne, role, app_affaire_id)` : la comparaison est exacte, sans traduction.
+
+```
+LE GEL  12 417 liens / 4 688 lignes      V2  12 635 liens / 4 692 lignes
+   identiques 12 195 (95,5 %) . gel seul 130 . v2 seul 348 . divergents 92
+L'ECHELLE EST CALIBREE (c'est elle qui rend la liste fiable) :
+   6 familles 808 liens -> le gel confirme 99,6 %   . 5 -> 99,2 %
+   4 -> 99,7 % . 3 -> 99,2 % . 2 -> 99,2 %
+   1 famille : 91-96 %, signalee FAIBLE . 0 : 67,7 %, on ne dit RIEN
+```
+
+#### ✅✅ LE RE-GEL ADDITIF EST POSE -- 13/11/2026, 190 gestes, TOUS LES CONTROLES VERTS
+
+```
+AVANT  12 422 liens          APRES  12 595 liens   (= 12 422 - 4 + 177)
+  A  9 anciens liens retires, 9 nouveaux poses   (anciens restants : 0)
+  B  4 liens retires (lignes 3818 et 4100)       (restants : 0)
+  C  177 liens ajoutes                            (poses : 177)
+INVARIANTS : transaction sur 2 lignes = 0 . liens orphelins = 0
+SAUVEGARDE : public.app_classeur_lien_avant_regel_20261113 (12 422, intacte)
+PATCH      : supabase/patch_regel_additif_2026-11-13.sql
+```
+
+⚠ **Le lot B fait 4 LIENS, pas 2** : ce sont 2 LIGNES (3818, 4100) qui en portent
+2 chacune. J'ai annonce 2 puis 188 au total -- le vrai total est **190**.
+
+⛔⛔ **DEUX INCIDENTS PENDANT LA POSE, ET CE QUI LES A RATTRAPES :**
+
+```
+1. LE CONNECTEUR MCP SUPABASE EST TOMBE en pleine pose a blanc (7 echecs,
+   meme list_projects). ⭐ Il est tombe APRES la sauvegarde et AVANT toute
+   ecriture : rien n'etait a moitie fait.
+   ➡ LE CHEMIN DE SECOURS EXISTE DEJA DANS LE PROJET : `node
+     Console/apply_sql_patch.js <fichier.sql>` (passe par le POOLER, masque le
+     mot de passe). ⚠ Il N'AFFICHE PAS les resultats d'un select : pour LIRE,
+     envelopper la mesure dans un `raise exception` -- rien n'est ecrit et le
+     message remonte.
+2. `preuves` EST UN SMALLINT, pas un texte (c'est le NOMBRE de preuves). Mon
+   premier patch y mettait une phrase -> « invalid input syntax for type
+   smallint ». ⭐⭐ LA TRANSACTION A TOUT ANNULE : verifie juste apres,
+   gel=12 422, lot A 9/9 intacts, lot B 4 intacts. RIEN n'avait ete ecrit.
+   ➡ C'est pour v2 le NOMBRE DE FAMILLES (3 a 6), et il y est desormais.
+```
+
+#### CE QUE V2 APPORTE CONCRETEMENT AU RE-GEL — quatre gains, tous mesures
+
+```
+A ⬜ ACCORD   3 LIENS FAUX DANS LE GEL -- ✅ CONTRE-AUDITES LE 13/11, depuis le
+              CLASSEUR RELU EN DIRECT (pas depuis le rapport A19). Les trois
+              passent par l'etage « 1 mandat seul ». Pour chacun : DEUX NOMS ET
+              TROIS DATES AU JOUR EXACT du cote de v2.
+                3229 0FFZI3NF  classeur LOTI SUD EST/DESSAGNE 06-10-17 . 20-10-17 . 3 dec 18
+                               v2  51140 memes noms, 2017-10-06 . 2017-10-20 . 2018-12-03
+                               gel 38358 PASQUIER/JODRILLAT, dates 2016 (18 mois d'ecart)
+                3370 HFXW07KA  classeur GRANGE JOAQUIM/SERVANTON REYNEBEAU 24-05 . 06-07 . 19 fev 19
+                               v2  43179 JOAQUIM Tiffany/REYNEBEAU, 2018-05-24 . 2018-07-06 . 2019-02-19
+                               gel 45946 GRILLET, 2018-04-21 . 2018-05-26 . 2019-03-22
+                3390 A6H4MA4O  classeur SCAFIDI/ROUGERON CHERBUT 26-03-18 . 26-04-18 . 23-07-18
+                               v2  29784 SCAFIDI Laetitia/ROUGERON ET CHERBUT, dates identiques
+                               gel 31561 2018-04-06 . 2018-06-06 . 2018-12-19
+              ⚠ C'est le SEUL point qui RETOUCHE des liens existants : tout le
+                reste du re-gel est additif. A trancher expressement.
+              ⛔ LA CAUSE N'EST PAS ETABLIE, et il ne faut pas en inventer une.
+                J'avais ecrit « mandat RECYCLE par Hektor » : MESURE, C'EST FAUX --
+                chacun des 6 numeros de mandat en jeu (604, 11870, 2568, 11292,
+                2945, 11244) n'est porte que par UN SEUL bien du registre.
+                J'ai ensuite soupconne l'ancien CRM (les 3 lignes portent un lien
+                `sphere.rodacom.fr`, contre `neosphere.immo` pour le temoin 3826) :
+                1 826 lignes sur 4 789 en viennent -- mais l'etage « 1 mandat seul »
+                couvre 2 977 lignes et v2 en confirme 95,5 %. Une cause generale
+                ferait bien plus de degats. ➡ ON NE SAIT PAS, et ce n'est pas
+                genant : v2 a compare TOUTES les lignes, et il n'y a que 5
+                divergences sur le bien. La couverture est faite.
+B ⬜ ACCORD   6 GROUPES DE DOUBLONS DU CLASSEUR (12 lignes) -- ✅ RELUS DANS LE
+              CLASSEUR LE 13/11 : memes mandat, acquereur et DATE D'OFFRE.
+                1397 Vente reglee / 3818 Annulee   mandat 13695  ROMEO CLEMENT
+                2193 Vente reglee / 4059 Annulee   mandat 13236  NIZIER GUILLARD
+                2346 Vente reglee / 4100 Annulee   mandat  3968  BASSET BASTET
+                2449 Vente reglee / 4121 Annulee   mandat  3813  CARRIOT
+                3785 Annulee      / 3796 Annulee   mandat  4273  VIALLARD
+                3856 Annulee      / 3887 Annulee   mandat  4369  PAOLONE
+              ⚠ ET ILS NE SONT PAS TOUS IDENTIQUES, contrairement a ce que le
+                rapport laissait croire : 2346/4100 ont des commissions
+                DIFFERENTES (9 400 contre 10 400), 1397/3818 des dates de
+                compromis differentes (28/03/2022 contre 24 fevrier 22).
+              ⛔⛔ ET LA MESURE DU 13/11 REDUIT B DE 6 LIGNES A 2 LIENS. J'avais
+                ecrit « 6 lignes ne devraient porter aucun lien, le gel leur en a
+                donne ». FAUX. Mesure : AUCUNE paire ne partage une transaction,
+                et TROIS doublons n'ont DEJA aucun lien -- le gel les a ecartes
+                tout seul (4059, 4121, 3796).
+                   3818 -> bien 45081  (sa jumelle 1397 -> 9705)   A EXAMINER
+                   4100 -> bien 21037  (sa jumelle 2346 -> 48145)  A EXAMINER
+                   3887 -> bien 41467  = LE MEME BIEN que 3856, autre transaction
+                                       -> plausible (deux offres successives),
+                                          NE RIEN FAIRE
+                ➡ RESTE 2 LIENS A JUGER, pas 6 lignes a retirer.
+C ⬜ ACCORD   LES GAINS « v2 seul » -- ✅ INSTRUITS LE 13/11, LISTE PRETE ET
+              CONTROLEE. Source : notice/RAPPORT_V2_CONTRE_GEL_2026-11-13.csv
+              ⚠ Le rapport A19 annoncait 348 : LE FICHIER EN CONTIENT 341.
+                C'est le fichier qui fait foi (il EST la sortie de la mesure).
+```
+                341 liens « v2 seul »
+                  >= 3 familles independantes          225
+                      transaction LIBRE                177   ➡ A GELER
+                      transaction DEJA PRISE ailleurs   48   ⛔ A EXAMINER
+                  1 a 2 familles                       116   ➡ LAISSER
+```
+              LES DEUX CONTROLES DE SECURITE, FAITS :
+                ① la transaction est-elle deja liee a une AUTRE ligne ?
+                   -> 48 oui sur 225. Les geler ferait appartenir une
+                      transaction a DEUX lignes du classeur. On les ecarte.
+                ② le couple (ligne, role) a-t-il deja un lien ?
+                   -> 0 sur 225. Temoin inverse fait : (3229,'offre'),
+                      (3370,'compromis'), (3390,'vente') repondent bien
+                      « DEJA GELE », et une ligne libre repond « libre ».
+                ③ temoin : les 225 transactions existent bien au registre (225/225)
+              REPARTITION DES 225 : compromis 113 . offre 76 . vente 36,
+              sur 193 lignes du classeur. Familles : 6->9 . 5->47 . 4->70 . 3->99
+              ⚠ ET L'ECHELLE NE SE TRANSPOSE PAS TELLE QUELLE : les 99,2 % ont
+                ete mesures sur les liens que LES DEUX methodes ont trouves. Ici
+                le gel ne les a pas. L'echelle reste le meilleur indicateur
+                disponible, ce n'est pas une garantie.
+D ⬜ FREDERIC LE TABLEAU DES 175 LIGNES A TRANCHER, deja ecrit, colonne DECISION
+              VIDE : notice/TABLEAU_DECISION_APPARIEMENT_2026-11-13.csv
+                54 « les deux, faiblement »      -> recommande GEL (accord)
+                43 « meme bien, autre transaction » -> recommande GEL (bien sur)
+                29 « v2 seul, faiblement »       -> A VOIR ou laisser NON LIE
+                19 « personne ne trouve rien »   -> NON LIE
+                15 « bien trouve, aucune transaction libre » -> NON LIE
+                12 « le gel seul, faiblement »   -> GARDER LE GEL
+                 3 « doublon du classeur »       -> NON LIE
+```
+
+⭐ **1 cas n'appartient a personne** : ligne 4393, deux lots d'une meme operation
+(biens 59133 et 59136, numeros consecutifs, meme compromis au meme jour). Aucune
+methode ne tranchera -- c'est une decision, meme famille que les lignes « a cheval ».
+⭐ **Et 1 cas ou v2 se trompe et le gel a raison** : ligne 3826 JL6I6JDG -> le gel
+(10195). V2 l'avait lui-meme signale « une seule famille » : l'echelle a joue son role.
 
 ### ÉTAPE 2 — l'étiquette de dossier *(B2/B3 du plan du 29/10)*
 
@@ -211,12 +366,28 @@ refus fait à la main chez Hektor et le nôtre. **NON MESURÉ, c'est une hypoth�
                       dans le journal.
                     essai hors ligne : phase2/checks/test_etiquette_dans_le_run.py
                     32 controles verts, client FAUX, aucune connexion
-⏰ 2.5bis A CONTROLER DEMAIN MATIN (13/11) -- premiere nuit de B4. Chercher dans le
-                    compte rendu du run :
-                      [affaire_ledger] etiquettes : pose N . propagation N .
-                                                    fusion N . scission N
-                    ⛔ Si la ligne MANQUE, l'interrupteur n'a pas ete lu.
-                    ⛔ Si les FUSIONS depassent 10, le run le crie -- regarder.
+✅ 2.5bis CONTROLE FAIT LE 13/11 -- LA PREMIERE NUIT DE B4 A TOURNE SEULE.
+                    Mesure dans le journal (app_dossier_etiquette_journal), 13/11 05:22 :
+                      pose         4 dossiers .  5 transactions (annee 2026)
+                      propagation  1 dossier  .  1 transaction
+                      fusion       5 dossiers .  8 transactions
+                      scission     2 dossiers .  2 transactions
+                    ETAT APRES : 31 157 / 31 157 etiquetees . 0 sans etiquette
+                                 11 442 uuid = 11 442 numeros (bijection tenue)
+                    ⭐ Les 5 fusions sont SOUS le seuil d'alerte (10) : le run n'a
+                      rien crie, et c'etait juste.
+
+⚠⚠ 2.6 ⬜ A SAVOIR -- UN NUMERO DE DOSSIER PEUT MOURIR, ET C'EST MESURE.
+                    Les 5 fusions de la 1re nuit ont absorbe 5 numeros, qui ne
+                    vivent plus que dans le journal (0 ligne restante sur chacun) :
+                      D2006-0088 -> D2006-0083 . D2020-0178 -> D2020-0214
+                      D2024-0007 -> D2023-0541 . D2025-0131 -> D2024-0316
+                      D2025-0075 -> D2025-0035
+                    ⚠ UNE SEULE NUIT NE SUFFIT PAS A JUGER LE RYTHME : ce peut
+                      etre un rattrapage de premiere nuit ou le regime normal.
+                      ➡ RELEVER quelques nuits AVANT d'en tirer quoi que ce soit.
+                    ⭐ Sans consequence aujourd'hui (l'etiquette n'est lue par
+                      personne). A reprendre AVANT 5.2, pas avant.
 ⭐ le format est valide (« Oui » aux deux, 09/11) : D2026-0431 + un UUID
 ⭐ le code local etait PRET avant la pose : les 2 colonnes sont dans
   COLONNES_QUE_LE_PUSH_N_ENVOIE_PAS (affaire_ledger.py l. 2561) -- condition C1
