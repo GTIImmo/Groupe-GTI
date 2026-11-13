@@ -34,7 +34,15 @@ export type FaitsRegles = FaitsDuBien & {
 // `date` : le jour du dépôt AU PLUS TARD (deposeAuPlusTard), en « AAAA-MM-JJ ». `dateEtat` (morceau 6) : la date de
 // l'état LUE par l'IA dans le document (« établi le ») ; quand elle existe, c'est elle qui fait foi.
 export type DocumentRegle = { nom: string; typeCode: string | null; date: string | null; signature: string | null; modele?: boolean; dateEtat?: string | null }
-export type AffaireRegle = { kind: string; state: string | null; date: string | null; dateActe: string | null }
+export type AffaireRegle = {
+  kind: string; state: string | null; date: string | null; dateActe: string | null
+  // morceau 7c : ce que le registre porte, pour comparer une transaction LUE (montants en euros ; acquéreurs : nom, prénom)
+  montant?: number | null
+  prixNetVendeur?: number | null
+  honorairesEntree?: number | null
+  honorairesSortie?: number | null
+  acquereurs?: Array<{ nom: string; prenom: string }>
+}
 
 export type NiveauAlerte = 'alerte' | 'piece' | 'info'
 export type Alerte = { code: string; niveau: NiveauAlerte; texte: string; pourquoi: string; typeADeposer?: string }

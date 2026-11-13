@@ -5,9 +5,11 @@
 // Catalogue : E_synthese_catalogue.md §3.2 (L2, L6, L11, L13, L15, L16, L17) et note du chantier §12.14, §12.17.
 // Sous-lot 7b (13/11) : le mandat -- L1 charge, L4 prix de signature, L10 signatures papier, L12 termes, L14 avenant,
 // L18 fin de mandat, et L11 étendu aux mandants lus et aux vendeurs du compromis.
+// Sous-lot 7c (13/11) : les transactions -- L7 offre, compromis et acte face à LEUR ligne du registre (resoudreCible),
+// L8 facture, L9 honoraires (équations, au-dessus du mandat), L19 annulation d'un compromis encore actif.
 import {
-  annualiser, comparerCommune, comparerListe, comparerNombre, comparerNumero, dateLue, finDeValidite, lireDateIso, lireNombre, nombreLu,
-  personnesLuesDe, personneSurLaFiche, texteLu, TOLERANCES, type PersonneDuBien,
+  annualiser, comparerCommune, comparerListe, comparerNombre, comparerNumero, dateLue, finDeValidite, joursEntre, lireDateIso, lireNombre,
+  nombreLu, personnesLuesDe, personneSurLaFiche, resoudreCible, texteLu, TOLERANCES, type PersonneDuBien,
 } from './gedComparer'
 import type { LectureDocument } from './gedLecture'
 import { classeDpe, momentDuDossier } from './gedPieces'
@@ -265,6 +267,97 @@ export function reglesLues(faits: FaitsRegles, docs: DocumentLu[], personnesDuBi
     const effet = lireDateIso(dateLue(fin.lecture.valeurs, 'date_effet'))
     if (!effet || effet <= aujourdhui) {
       alertes.push({ code: 'L18', niveau: 'alerte', texte: `Fin du mandat n° ${faits.numeroMandat}${effet ? ` au ${jjmmaaaa(effet)}` : ''} au dossier, le bien est encore diffusé`, pourquoi: 'sans mandat, le bien ne se diffuse plus' })
+    }
+  }
+
+  // ── 7c : les transactions ───────────────────────────────────────────────────
+  // Chaque document lu est comparé à SA ligne du registre (resoudreCible) ; pas de ligne sûre -> silence.
+  const deGenre = (...genres: string[]) => affaires.filter((a) => genres.includes(a.kind))
+  const acquereursLus = (d: DocumentLu) => personnesLuesDe(d.lecture).filter((p) => p.qualite === 'acquereur')
+  const ecartEuros = (lu: number | null, base: number | null | undefined, quoi: string) =>
+    comparerNombre(lu, base ?? null, TOLERANCES.euros) === 'different' ? `${quoi} ${euros(lu as number)} lu, ${euros(base as number)} au registre` : null
+
+  // L7 -- l'offre lue face à son offre au registre (le montant, s'il s'entend frais d'agence inclus ou sans base lue).
+  const offre = plusRecent(lus, ['transaction.offre'], 'date_offre')
+  if (offre) {
+    const v = offre.lecture.valeurs
+    const ligne = resoudreCible(deGenre('offre'), { acquereurs: acquereursLus(offre), date: dateLue(v, 'date_offre'), montant: nombreLu(v, 'montant_offert') })
+    const ecart = ligne && texteLu(v, 'base_prix') !== 'net_vendeur' ? ecartEuros(nombreLu(v, 'montant_offert'), ligne.montant, 'montant') : null
+    if (ecart) alertes.push({ code: 'L7', niveau: 'alerte', texte: `Offre${ligne?.date ? ` du ${jjmmaaaa(lireDateIso(ligne.date) as Date)}` : ''} : ${ecart}`, pourquoi: 'le registre ne porte pas le montant signé' })
+  }
+
+  // L7 -- le compromis lu face à son compromis au registre : prix, net vendeur, honoraires, date de signature.
+  const cpv = plusRecent(lus, ['transaction.avant_contrat'], 'date_signature')
+  if (cpv) {
+    const v = cpv.lecture.valeurs
+    const ligne = resoudreCible(deGenre('compromis'), { acquereurs: acquereursLus(cpv), date: dateLue(v, 'date_signature'), montant: nombreLu(v, 'prix') })
+    if (ligne) {
+      const ecarts = [
+        ecartEuros(nombreLu(v, 'prix'), ligne.montant, 'prix'),
+        ecartEuros(nombreLu(v, 'prix_net_vendeur'), ligne.prixNetVendeur, 'net vendeur'),
+        ecartEuros(nombreLu(v, 'honoraires'), ligne.honorairesEntree != null || ligne.honorairesSortie != null ? (ligne.honorairesEntree ?? 0) + (ligne.honorairesSortie ?? 0) : null, 'honoraires'),
+      ].filter(Boolean) as string[]
+      const signe = lireDateIso(dateLue(v, 'date_signature'))
+      const registre = lireDateIso(ligne.date)
+      if (signe && registre && Math.abs(joursEntre(signe, registre)) > 1) ecarts.push(`signé le ${jjmmaaaa(signe)}, le ${jjmmaaaa(registre)} au registre`)
+      if (ecarts.length) alertes.push({ code: 'L7', niveau: 'alerte', texte: `Compromis : ${ecarts.join(' ; ')}`, pourquoi: 'le registre ne dit pas ce que dit le compromis signé' })
+    }
+  }
+
+  // L7 -- l'acte lu face à la vente au registre : la date de la VENTE et le prix.
+  const acte = plusRecent(lus, ['transaction.acte'], 'date_vente')
+  if (acte) {
+    const v = acte.lecture.valeurs
+    const ligne = resoudreCible(deGenre('vente'), { acquereurs: acquereursLus(acte), date: dateLue(v, 'date_vente'), montant: nombreLu(v, 'prix') })
+    if (ligne) {
+      const ecarts = [ecartEuros(nombreLu(v, 'prix'), ligne.montant, 'prix')].filter(Boolean) as string[]
+      const vente = lireDateIso(dateLue(v, 'date_vente'))
+      const registre = lireDateIso(ligne.date)
+      if (vente && registre && Math.abs(joursEntre(vente, registre)) > 1) ecarts.push(`vendu le ${jjmmaaaa(vente)}, le ${jjmmaaaa(registre)} au registre`)
+      if (ecarts.length) alertes.push({ code: 'L7', niveau: 'alerte', texte: `Acte : ${ecarts.join(' ; ')}`, pourquoi: 'le registre ne dit pas ce que dit l\'acte' })
+    }
+  }
+
+  // L8 -- la facture d'honoraires (TTC) face aux honoraires de la vente au registre (entrée + sortie).
+  const facture = plusRecent(lus, ['facture.honoraires'], 'date_facture')
+  if (facture && texteLu(facture.lecture.valeurs, 'objet') !== 'location') {
+    const ttc = nombreLu(facture.lecture.valeurs, 'montant_ttc')
+    const ventes = deGenre('vente').map((a) => ({ ...a, montant: (a.honorairesEntree ?? 0) + (a.honorairesSortie ?? 0) || null }))
+    const ligne = resoudreCible(ventes, { date: dateLue(facture.lecture.valeurs, 'date_facture'), montant: ttc })
+    if (ligne && comparerNombre(ttc, ligne.montant ?? null, TOLERANCES.euros) === 'different') {
+      alertes.push({ code: 'L8', niveau: 'alerte', texte: `Facture ${texteLu(facture.lecture.valeurs, 'numero_facture') ?? ''} : ${euros(ttc as number)} TTC, honoraires de la vente ${euros(ligne.montant as number)} au registre`.replace('Facture  :', 'Facture :'), pourquoi: 'un partage avec une autre agence ? sinon, une erreur de facture ou de registre' })
+    }
+  }
+
+  // L9 -- les honoraires : l'équation du mandat et du compromis (prix = net vendeur + honoraires), et des honoraires
+  // du compromis ou de la facture AU-DESSUS de ceux du mandat (jamais en dessous : une remise est permise).
+  for (const [d, quoi] of [[mandat && memeNumero(mandat) ? mandat : null, 'Mandat'], [cpv, 'Compromis']] as const) {
+    if (!d) continue
+    const v = d.lecture.valeurs
+    const prix = nombreLu(v, 'prix')
+    const net = nombreLu(v, 'prix_net_vendeur')
+    const hono = nombreLu(v, 'honoraires')
+    if (prix != null && net != null && hono != null && comparerNombre(prix, net + hono, TOLERANCES.euros) === 'different') {
+      alertes.push({ code: 'L9', niveau: 'alerte', texte: `${quoi} lu : prix ${euros(prix)} ≠ net vendeur ${euros(net)} + honoraires ${euros(hono)}`, pourquoi: 'le prix doit être le net vendeur plus les honoraires' })
+    }
+  }
+  const honorairesMandat = (avenant && memeNumero(avenant) ? nombreLu(avenant.lecture.valeurs, 'nouveaux_honoraires') : null)
+    ?? (mandat && memeNumero(mandat) ? nombreLu(mandat.lecture.valeurs, 'honoraires') : null)
+  if (honorairesMandat != null) {
+    for (const [hono, quoi] of [[cpv ? nombreLu(cpv.lecture.valeurs, 'honoraires') : null, 'au compromis'], [facture ? nombreLu(facture.lecture.valeurs, 'montant_ttc') : null, 'à la facture']] as const) {
+      if (hono != null && hono > honorairesMandat + TOLERANCES.euros.absolue) {
+        alertes.push({ code: 'L9', niveau: 'alerte', texte: `Honoraires ${quoi} ${euros(hono)}, au-dessus du mandat (${euros(honorairesMandat)})`, pourquoi: 'loi Hoguet : pas d\'honoraires au-delà de ceux du mandat' })
+      }
+    }
+  }
+
+  // L19 -- une annulation lue alors que son compromis est encore ACTIF au registre. On dit les gestes, on ne les fait pas.
+  const annulation = plusRecent(lus, ['transaction.annulation'], 'date_document')
+  if (annulation) {
+    const ligne = resoudreCible(deGenre('compromis'), { acquereurs: acquereursLus(annulation), date: dateLue(annulation.lecture.valeurs, 'date_compromis') })
+    if (ligne && vivante(ligne)) {
+      const quand = lireDateIso(dateLue(annulation.lecture.valeurs, 'date_document'))
+      alertes.push({ code: 'L19', niveau: 'alerte', texte: `Annulation${quand ? ` du ${jjmmaaaa(quand)}` : ''} au dossier, le compromis${ligne.date ? ` du ${jjmmaaaa(lireDateIso(ligne.date) as Date)}` : ''} est encore actif au registre`, pourquoi: 'annuler le compromis d\'abord, puis refuser l\'offre' })
     }
   }
 

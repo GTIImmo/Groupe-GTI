@@ -28,7 +28,7 @@
 | 6 lot 2 | lecture : **taxe foncière, titre de propriété, fiche synthétique, charges de copro** — avec les NOMS | ✅ en production (`0466c7c`), **essai réel fait le 12/11** : 5/5 lus, 0 fuite, 0 doublon (§12.14) ; affichage après rechargement (« Lu par l'IA ») en production (`49dab5d`), vu sur 62774 |
 | 6 lot 3 | lecture : offre d'achat, compromis, PV d'AG | ✅ en production (`6b26c07`), **essai réel fait le 12/11** : 3/3 lus, compromis texte + pages 44-45 en image, 0 fuite (§12.15) |
 | 6 lot 4 | lecture : mandat déposé à la main, avenant, fin de mandat, acte, annulation, facture, petits diagnostics, assainissement, surfaces, règlement | ✅ **écrit et contrôlé le 13/11** (80 + 49 VERT, banc 64/64, 0 fuite), patch d'étiquette posé (14/14 « lue »), poussé (`7c4e3fb`) ; **essai réel fait le 13/11 sur 63331** : 8/8 envoyés et lus, 0 fuite ; ⚠ « Note honoraires » classée « notes internes » par la règle du nom (§12.16) |
-| 7 | comparateurs et règles avec lecture (titre ↔ mandants, taxe ↔ fiche, copro…) | 🔧 **7a en production** (`81be8ad`, 13/11 : socle + justificatifs et diagnostics du bien, 45 VERT) ; 7b (mandat) et 7c (transactions) à faire (§12.17) |
+| 7 | comparateurs et règles avec lecture (titre ↔ mandants, taxe ↔ fiche, copro…) | ✅ **écrit et poussé le 13/11** : 7a (`81be8ad`, socle + justificatifs et diagnostics du bien), 7b (`973592c`, le mandat), 7c (les transactions, résolveur) ; 84 VERT ; **pas encore regardé sur un vrai bien** (§12.17) |
 | 8 | propositions (« remplir », un clic par case) | ⬜ |
 | 9 | pièces des personnes (identité — le justificatif le plus déposé —, état civil, financement) | ⬜ ; l'avancer = décision de Frédéric |
 | 10 | mesure (vrai / faux / déjà su, 2 semaines) | ⬜ |
@@ -1514,3 +1514,23 @@ EXCLUSIF 254, ACCORD 62).
   chemin) : essai durci jusqu'à ce qu'il tombe ; l'essai L1 a trouvé une faute (« de le vendeur ») corrigée ; règles 44,
   Reçu / Manque 29, lecture 49, dépôt 19, classement 25 ; build vert. **Banc d'écran local** : 12 lignes, dont les 7 du
   mandat, justes ; N1c et N2 se taisent d'eux-mêmes (un mandat papier et un avenant sont au dossier).
+✅ **7b POUSSÉ (13/11, `973592c`, avec `f782658` d'une autre session — notes seulement —, accord « Pousse ») ; Vercel le sert.**
+✅ **« Oui, 7c » (13/11) : SOUS-LOT 7c ÉCRIT ET CONTRÔLÉ, RIEN POUSSÉ.** Registre mesuré (lignes depuis 2025) : compromis
+698 (montant, net vendeur, honoraires d'entrée et de sortie tous remplis ; **prix = net + entrée + sortie pour 679**),
+offres 1 901 (montant rempli, jamais de net), ventes 645 (montant et honoraires, pas de net) ; acquéreurs en
+`acquereurs_json` (un OBJET pour une offre, une LISTE pour un couple : `nom`, `prenom`).
+- `gedComparer.ts` : **`resoudreCible`** — la ligne visée par un document lu : par les acquéreurs (nom retrouvé), puis la
+  date (± 15 j), puis le montant (± 1 %) ; une ligne seule se prend ; **zéro ou plusieurs à la fin -> rien, silence**
+  (jamais comparer à la mauvaise ligne). Pour une offre, le nom passe avant la date (la date d'une offre refusée est celle
+  du refus).
+- `gedReglesLues.ts` : **L7** offre (montant, sauf base « net vendeur »), compromis (prix, net vendeur, honoraires entrée
+  + sortie, date de signature à 1 jour : UNE ligne qui dit tout), acte (date de la VENTE, prix) face à LEUR ligne ; **L8**
+  facture TTC ≠ honoraires de la vente (« un partage avec une autre agence ? ») ; **L9** équation prix = net +
+  honoraires (mandat, compromis) et honoraires du compromis ou de la facture AU-DESSUS du mandat (ou du dernier avenant ;
+  en dessous = une remise, silence) ; **L19** annulation lue d'un compromis encore actif au registre (« annuler le
+  compromis d'abord, puis refuser l'offre » : dit, jamais fait).
+- `RecuManque.tsx` : le registre garde montant, net vendeur, honoraires, acquéreurs ; lignes absentes de Hektor écartées.
+- **Contrôles** : `test_ged_regles_lues.cjs` **84 VERT** (18 de plus) ; **témoin inverse** : un résolveur qui prend la
+  première ligne venue fait tomber 2 essais ; règles 44, Reçu / Manque 29, lecture 49, dépôt 19, classement 25 ; build
+  vert ; banc d'écran local (13 lignes, dont « Compromis : prix 190 000 € lu, 185 000 € au registre ; net vendeur… »),
+  console sans erreur. ⚠ `tsc --noEmit` lancé une fois par réflexe (contraire à la page d'entrée) : sans effet, rien écrit.

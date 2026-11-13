@@ -114,6 +114,30 @@ export function comparerListe(lu: string | null | undefined, base: string | null
   return a === b ? 'egal' : 'different'
 }
 
+// ── Étape 1 : résoudre la cible (7c) ─────────────────────────────────────────
+// LA ligne du registre que vise un document lu, parmi celles du bon genre : d'abord par les ACQUÉREURS (un nom lu
+// retrouvé), puis par la DATE (± 15 jours), puis par le MONTANT (± 1 %), et une ligne seule se prend telle quelle.
+// Zéro ou plusieurs candidates à la fin -> null : la règle se tait (jamais « comparer à la mauvaise ligne »).
+// ⚠ La date d'une offre REFUSÉE est celle du refus (mémoire du 12/11) : pour une offre, le nom passe avant la date.
+export type CandidateAffaire = { date?: string | null; montant?: number | null; acquereurs?: PersonneDuBien[] }
+export function resoudreCible<T extends CandidateAffaire>(candidates: T[], indices: { acquereurs?: PersonneLue[]; date?: string | null; montant?: number | null }): T | null {
+  let reste = candidates
+  if (reste.length > 1 && indices.acquereurs?.length) {
+    const parNom = reste.filter((c) => (indices.acquereurs as PersonneLue[]).some((p) => ['egal', 'proche'].includes(personneSurLaFiche(p, c.acquereurs ?? []))))
+    if (parNom.length) reste = parNom
+  }
+  const date = lireDateIso(indices.date)
+  if (reste.length > 1 && date) {
+    const parDate = reste.filter((c) => { const d = lireDateIso(c.date); return d && Math.abs(joursEntre(d, date)) <= 15 })
+    if (parDate.length) reste = parDate
+  }
+  if (reste.length > 1 && indices.montant != null) {
+    const parMontant = reste.filter((c) => c.montant != null && comparerNombre(indices.montant as number, c.montant, { absolue: 1, relative: 0.01 }) !== 'different')
+    if (parMontant.length) reste = parMontant
+  }
+  return reste.length === 1 ? reste[0] : null
+}
+
 // ── C3 : personnes ────────────────────────────────────────────────────────────
 export type PersonneDuBien = { nom: string; prenom: string }
 export type PersonneLue = { nom: string; prenoms: string; qualite: string | null }

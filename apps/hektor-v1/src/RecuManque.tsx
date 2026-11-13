@@ -32,6 +32,9 @@ function depose(d: ConsoleDocument): string | null {
 
 const NIVEAU_ALERTE: Record<Alerte['niveau'], string> = { alerte: 'à vérifier', piece: 'pièce non trouvée', info: 'pour information' }
 
+// Un montant du registre (en euros, texte ou nombre) ; vide ou zéro -> null.
+const euros = (v: string | number | null | undefined) => { const x = Number(v); return v != null && v !== '' && Number.isFinite(x) && x > 0 ? x : null }
+
 export function RecuManque({
   hektorAnnonceId, appDossierId, documents, faits, personnesDuBien = [], onDeposer,
 }: {
@@ -68,7 +71,14 @@ export function RecuManque({
     if (!regles || !appDossierId) return
     let annule = false
     loadAffairesForDossier(appDossierId)
-      .then((rows) => { if (!annule) setAffaires(rows.map((a) => ({ kind: String(a.kind), state: a.state ?? null, date: a.date ?? null, dateActe: a.date_acte ?? null }))) })
+      .then((rows) => { if (!annule) setAffaires(rows.filter((a) => a.present_in_hektor !== false).map((a) => ({
+        kind: String(a.kind), state: a.state ?? null, date: a.date ?? null, dateActe: a.date_acte ?? null,
+        // morceau 7c : de quoi comparer une transaction lue (montant en euros ; acquéreurs : un objet seul ou une liste)
+        montant: euros(a.montant), prixNetVendeur: euros(a.prix_net_vendeur), honorairesEntree: euros(a.honoraires_entree), honorairesSortie: euros(a.honoraires_sortie),
+        acquereurs: (Array.isArray(a.acquereurs_json) ? a.acquereurs_json : a.acquereurs_json ? [a.acquereurs_json] : [])
+          .map((p) => ({ nom: String((p as { nom?: unknown })?.nom ?? '').trim(), prenom: String((p as { prenom?: unknown })?.prenom ?? '').trim() }))
+          .filter((p) => p.nom || p.prenom),
+      }))) })
       .catch(() => { if (!annule) setAffaires(null) })
     return () => { annule = true }
   }, [regles, appDossierId])
