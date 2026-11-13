@@ -400,6 +400,85 @@ def mark_deleted_rows(db_path: Path, stale_by_table: dict[str, list[str]]) -> No
         conn.close()
 
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# LE PLAFOND DE SUPPRESSION                                        13/11/2026
+# ═══════════════════════════════════════════════════════════════════════════════
+# Frederic, 13/11 : « il y a un risque, propose-moi aussi un correctif ».
+#
+# CE QUI MANQUAIT, ET SEULEMENT CA. Les ANNONCES refusent depuis longtemps de
+# supprimer en masse (`push_upgrade_to_supabase.py` l. 1481 : au-dela de
+# `--max-stale-deletes`, RuntimeError « Safety stop », et le run s'arrete). Les
+# CONTACTS, leurs RELATIONS et leurs RECHERCHES n'avaient aucun equivalent : une
+# nuit ou Hektor rend mal sa liste pouvait en retirer un nombre illimite, sans
+# plafond, sans arret et SANS ALERTE. C'est le silence qui est le defaut.
+#
+# ⚠ ET LE RISQUE N'EST PAS THEORIQUE -- deux pics mesures sur 34 nuits de journaux :
+#     14/10   28 recherches   l'incident documente (4 022 lignes orphelines)
+#     28/10   58 relations    la nuit de la panne Hektor du 27-28/10
+#
+# LES PLAFONDS, CALIBRES SUR CES 34 NUITS (14/10 -> 13/11), PAS AU DOIGT MOUILLE :
+#
+#     table                          maximum observe   plafond pose
+#     app_contact_current                     1              50
+#     app_contact_search_current             28             200
+#     app_contact_relation_current           58             300
+#
+# ⭐ LA MARGE EST LARGE EXPRES. Le but n'est pas d'attraper une nuit a 60 -- c'est
+#   d'attraper une nuit a 5 000. Un plafond serre ferait echouer le run pour rien,
+#   et le projet a deja paye cette lecon : un garde-fou qui crie tous les jours
+#   n'est plus un garde-fou, c'est un bruit qu'on apprend a ignorer.
+#   Les 34 nuits mesurees passent TOUTES sous ces plafonds : en regime normal, ce
+#   code ne change strictement rien.
+#
+# ⭐⭐ ET LES TROIS TABLES NE PESENT PAS PAREIL -- c'est pour ca qu'elles ont des
+#   plafonds distincts et non un seuil global :
+#     app_contact_current            Supabase est le SEUL exemplaire d'un contact
+#                                    ne dans l'app (voir le commentaire C-4 plus bas)
+#     app_contact_search_current     la ligne se regenere, mais sa perte laisse des
+#                                    ORPHELINS -- 4 022 lignes le 14/10
+#     app_contact_relation_current   projection : le registre app_relation la couvre
+#
+# ⚠ LE SEUL FAUX POSITIF ATTENDU est un ELARGISSEMENT DE PERIMETRE voulu
+#   (`--contacts-scope`), qui fait legitimement sortir beaucoup de lignes d'un
+#   coup. C'est exactement le cas ou l'on passe `--allow-stale-deletes`, comme on
+#   le fait deja pour les annonces.
+PLAFONDS_SUPPRESSION = {
+    "app_contact_current": 50,
+    "app_contact_search_current": 200,
+    "app_contact_relation_current": 300,
+}
+
+
+def verifier_plafonds_de_suppression(a_supprimer: dict[str, list], args) -> None:
+    """Leve RuntimeError AVANT la premiere suppression si un plafond est franchi.
+
+    ⚠ L'ORDRE EST LE POINT : on compte les TROIS tables d'abord, on decide, puis
+      seulement on supprime. Verifier au fil de l'eau laisserait passer la
+      premiere table avant de refuser la seconde -- un arret a moitie, qui est
+      pire que pas d'arret du tout parce qu'il laisse la base dans un etat qu'on
+      n'a pas choisi.
+    """
+    if getattr(args, "allow_stale_deletes", False):
+        return
+    franchis = []
+    for table, cles in sorted(a_supprimer.items()):
+        plafond = PLAFONDS_SUPPRESSION.get(table)
+        if plafond is not None and len(cles) > plafond:
+            franchis.append(f"{table} : {len(cles)} > {plafond}")
+    if not franchis:
+        return
+    # ON LE DIT AVANT DE LEVER : le message de l'exception peut etre tronque dans
+    # le compte rendu du run, cette ligne-la ne l'est pas.
+    print("[push contacts] ARRET DE SECURITE : suppression de masse refusee -- "
+          + " . ".join(franchis))
+    raise RuntimeError(
+        "Arret de securite : le push refuse de supprimer en masse ("
+        + " ; ".join(franchis)
+        + "). AUCUNE ligne n'a ete supprimee. Si c'est voulu (elargissement de "
+          "perimetre), relancer avec --allow-stale-deletes apres avoir regarde."
+    )
+
+
 class SupabaseRestClient:
     def __init__(self, *, base_url: str, service_role_key: str, timeout: int = 300, max_retries: int = 4) -> None:
         self.base_url = base_url.rstrip("/")
@@ -547,6 +626,12 @@ def parse_args() -> argparse.Namespace:
         help="Pousse uniquement un ou plusieurs contacts Hektor (valeurs separees par virgule acceptees).",
     )
     parser.add_argument("--skip-stats", action="store_true", help="Ne pousse pas le snapshot de statistiques globales contacts.")
+    # 13/11/2026 -- meme nom et meme sens que pour les annonces
+    # (push_upgrade_to_supabase.py), pour qu'on n'ait qu'une chose a retenir.
+    parser.add_argument("--allow-stale-deletes", action="store_true",
+                        help="Autorise une suppression de masse au-dela des plafonds "
+                             "(PLAFONDS_SUPPRESSION). ETEINT par defaut : a n'utiliser "
+                             "qu'apres avoir regarde POURQUOI il y en a autant.")
     return parser.parse_args()
 
 
@@ -1036,6 +1121,12 @@ def main() -> int:
     # Branche BULK (run de nuit) : inchangee. Elle ne supprime que les lignes disparues de
     # la couche locale (stale), calculees a partir de l'etat de push -> pas de "vidage".
     if not contact_ids:
+        # 13/11/2026 : EN TROIS TEMPS -- on prepare, on verifie le plafond, puis on
+        # supprime. Le decoupage ne change RIEN au calcul : les memes cles sont
+        # retirees, dans le meme ordre. Il n'ajoute qu'un point d'arret, et il le
+        # place AVANT la premiere suppression (voir verifier_plafonds_de_suppression).
+        a_supprimer: dict[str, list[str]] = {}
+        colonne_de: dict[str, str] = {}
         for table, stale_row_keys in stale_by_table.items():
             column = key_column(table)
             if column is None:
@@ -1051,7 +1142,14 @@ def main() -> int:
                 stale_row_keys = [k for k in stale_row_keys if not est_ne_dans_l_app(k)]
                 if not stale_row_keys:
                     continue
-            deleted_results[table] = client.delete_rows_by_key(table, column, stale_row_keys, args.batch_size)
+            a_supprimer[table] = stale_row_keys
+            colonne_de[table] = column
+        # ⚠ ON COMPTE APRES le filtre C-4, jamais avant : sinon le plafond jugerait
+        #   des lignes qu'on n'allait de toute facon pas supprimer.
+        verifier_plafonds_de_suppression(a_supprimer, args)
+        for table, stale_row_keys in a_supprimer.items():
+            deleted_results[table] = client.delete_rows_by_key(
+                table, colonne_de[table], stale_row_keys, args.batch_size)
             deleted_state[table] = stale_row_keys
 
     # Correctif 2026-08-18 (filet) : on REPOSE D'ABORD, on supprime ENSUITE.
@@ -1085,6 +1183,11 @@ def main() -> int:
             cid for cid in contact_ids
             if str(cid) not in present_contact_ids and str(cid) not in dirty_contact_ids
         ]
+        # 13/11/2026 : la branche ciblee passe elle aussi EN TROIS TEMPS. On range
+        # ici ce qu'on supprimerait ; le plafond tranche plus bas, avant le premier
+        # appel qui detruit quoi que ce soit.
+        cible_a_supprimer: dict[str, list] = {}
+        colonne_cible: dict[str, str] = {}
         if to_delete:
             # ── C-4, 23/09/2026 : LE GARDE-FOU ETAIT ECRIT, TESTE, ET MORT ────
             # `delete_contacts_except_dirty` existait depuis le 21/09 et n'etait
@@ -1095,9 +1198,9 @@ def main() -> int:
             # rafraichi AVANT que Hektor le connaisse n'est pas dans la repose
             # (le miroir ne l'a jamais vu) et n'est pas « dirty ». Il tombait
             # donc dans `to_delete` -- et Supabase est son SEUL exemplaire.
-            deleted_results["app_contact_current"] = delete_contacts_except_dirty(
-                client, to_delete, dirty_contact_ids, args.batch_size
-            )
+            # ⭐ Elle reste le verrou NOMINATIF (qui), le plafond est le verrou
+            #   QUANTITATIF (combien) : les deux ne se remplacent pas.
+            cible_a_supprimer["app_contact_current"] = to_delete
 
         # Relations et recherches : au lieu de supprimer toutes les lignes de ces contacts,
         # on ne supprime que les cles PRESENTES dans Supabase et ABSENTES de la repose --
@@ -1141,7 +1244,19 @@ def main() -> int:
                         continue
                 stale_keys.append(key)
             if stale_keys:
-                deleted_results[table] = client.delete_rows_by_key(table, col, stale_keys, args.batch_size)
+                cible_a_supprimer[table] = stale_keys
+                colonne_cible[table] = col
+        # ⚠ LE POINT D'ARRET : les trois tables sont comptees, RIEN n'est encore
+        #   supprime. Si un plafond est franchi, on leve et la base est intacte.
+        verifier_plafonds_de_suppression(cible_a_supprimer, args)
+        for table, cles in cible_a_supprimer.items():
+            if table == "app_contact_current":
+                deleted_results[table] = delete_contacts_except_dirty(
+                    client, cles, dirty_contact_ids, args.batch_size
+                )
+            else:
+                deleted_results[table] = client.delete_rows_by_key(
+                    table, colonne_cible[table], cles, args.batch_size)
     if contact_stats is not None:
         results[CONTACT_STATS_TABLE] = client.upsert_rows(CONTACT_STATS_TABLE, [contact_stats], 1)
     if deleted_state:
