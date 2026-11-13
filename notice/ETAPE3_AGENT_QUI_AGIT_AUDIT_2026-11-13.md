@@ -235,3 +235,34 @@ Avancer **par petits lots**, chacun prouvé en réel avant le suivant :
 - **E-mail interne « à moi »** : carte « e-mail interne à toi » (son adresse n'apparaît pas) ; **avant le clic, 0 envoi** au journal Google ; validée → envoyé (journal `gmail.send` : réel, de sa boîte à sa boîte, domaine gti-immobilier.fr, 1 destinataire, 0 pièce jointe, `related_entity_type: assistant`, message Gmail `1a1d5878b108077b`). ⚠ La réception dans sa boîte n'est pas vue par moi (Gmail a accepté l'envoi).
 
 ➡ **Le lot 3 (3a + 3b) est prouvé en entier.** Restent hors de l'assistant (lot 3c) : tout envoi vers un client, l'espace client, le bon de visite en PDF. Les 3 défauts existants de l'écran (§10) restent à sa décision.
+
+## 13. Audit du lot 4 (13/11, sur « Ok enchaine ») — rien codé
+
+**Périmètre** (catalogue §5) : annonce (champs, brouillon, photos sans fichier, rédacteur), mandat (numéro, document, avenant), signature (envoyer, relancer, annuler, signé à la main), diffusion (portails). ⚠ Audit limité à ces gestes ; la clôture du mandat (déjà couverte) et les transactions (lot 5) ne sont pas mesurées ici.
+
+**Mesuré en base (90 jours)** — presque tout est fait par Frédéric (et un compte d'essai CODEX) :
+- statut d'annonce 166 · champs d'annonce 28 · création de brouillon 21 · photos : couverture / ordre 9, masquer 4, supprimer 1 · ajout de photo 44 · activer un brouillon 1 ;
+- numéro de mandat auto 2 · document de mandat 2 ;
+- Youtrust : envoyer 4, relancer 2, annuler 2 · ImmoSign : annuler 2 ;
+- diffusion : **aucun travail en file** — elle passe par une route directe du serveur ; 94 choix de portails en table, le dernier aujourd'hui.
+
+**Ce que fait l'écran** :
+- **Champs du bien** : `app_edit_annonce_optimistic` (contrôle l'appelant) → chez nous à l'instant, chez Hektor après 10 min (`update_hektor_annonce_fields`). **Le prix est refusé au négociateur** (`prix_sur_demande` → demande de baisse) ; admin et manager peuvent. Réversible (ressaisir).
+- **Activer un brouillon** : travail `exit_hektor_draft_annonce` (le négociateur sur ses biens) → chez Hektor `etatAnnonce=1`, sans toucher « diffusable ». Pas de geste inverse dans l'app.
+- **Photos sans fichier** : couverture, masquer / afficher, réordonner → fonctions qui contrôlent l'appelant, réversibles. **Supprimer** : irréversible.
+- **Rédacteur** : propose un titre et un texte (OpenAI), n'écrit rien ; c'est la personne qui les reporte.
+- **Numéro de mandat** : réservation officielle chez Hektor (Protexa), **irréversible**.
+- **Document de mandat / avenant** : le HTML est **rendu par le navigateur**, puis déposé chez Hektor ; irréversible (« corriger » le remplace).
+- **Signatures** : Youtrust envoyer / relancer → **e-mails et SMS aux signataires** ; ImmoSign relancer → e-mails ; annuler ; « signé à la main » (sans geste inverse).
+- **Diffusion** : choisir / cocher un portail → la route `/hektor-diffusion/apply` écrit **directement chez Hektor** (publication sur les portails) ; le négociateur ne peut que sur un bien **déjà diffusable** et le sien ; passer « diffusable » = direction seulement. Réversible (retirer le portail).
+
+**Trouvé en passant — défauts qui existent déjà, NON corrigés (à lui de dire)** :
+1. ⛔ `app_diffusion_target` (les portails choisis) : **tout compte actif peut écrire, modifier, supprimer les choix de N'IMPORTE QUEL bien** (règles `is_app_user_active()` seulement, vérifié en base). Le vrai contrôle n'a lieu qu'à l'envoi (`/apply`).
+2. `app_edit_annonce_optimistic` accepte **n'importe quel champ** (pas de liste fermée) ; seul le prix est bloqué, et seulement au négociateur.
+3. Le rédacteur ne vérifie pas que le bien est celui de la personne (il n'écrit rien, mais lit le bien).
+
+**Ce que je propose** :
+- **4a — le bien, chez Hektor, réversible** : modifier des champs d'une **liste fermée** (titre, texte, surfaces, pièces, chambres, terrain, étage, charges, DPE/GES… — **prix exclu pour tous** : il passe par la demande de baisse du lot 1) ; photos **couverture, masquer / afficher, réordonner** (pas supprimer) ; **activer un brouillon** (comme l'écran, sur ses biens) ; le **rédacteur** propose un texte, qu'une carte « modifier le texte » reporte.
+- **4b — la diffusion d'un bien diffusable** : ajouter / retirer un portail (même route et mêmes gardes que l'écran ; « diffusable » reste à la direction). C'est « la mise en ligne d'un bien si diffusable » de son exemple.
+- **4c — pas par l'assistant pour l'instant** : numéro de mandat (officiel, irréversible), document de mandat et avenant (rendu par le navigateur), tout ce qui **part vers un signataire** (envoyer, relancer, annuler), « signé à la main », supprimer une photo.
+- ⚠ **À éprouver avant d'ouvrir** : comme le contact (« Nom contact requis »), le worker de l'annonce peut exiger des champs qu'on n'envoie pas — essai réel sur un bien d'essai (62774 ou 63330) obligatoire.
