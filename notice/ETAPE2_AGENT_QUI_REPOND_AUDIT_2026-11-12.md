@@ -237,3 +237,23 @@ Restent aussi : le témoin avec un compte commercial (personne à nommer).
 - **A** : « Combien de contacts s'appellent Durand ? » → **82**, exact en base (82 fiches, fiches de ménage masquées comme à l'écran) — contre 4 trouvées avant.
 - **B** : le journal note maintenant les jetons en cache : **~7 550 sur ~15 300** par question (la moitié). La même question Q13 coûte **0,0099 $** affichés, contre 0,0171 $ avant B. Le plafond de 3 $/jour laisse donc **~300 questions par jour** pour l'agence, au lieu de ~135.
 - Reste **C** (le négociateur sur les transactions, par une vue dans la base) : non commencé, il touche la base.
+
+## 13. Audit de C (13/11) — le négociateur des transactions
+
+**Ce que j'ai trouvé** : il n'y a rien à créer dans la base. Le **registre des transactions** de l'écran existe déjà depuis le 31/10 : la fonction `app_registre_dossiers(p_annee)` (`patch_registre_dossiers_droits_2026-10-31.sql`, type `RegistreDossierRow`, api.ts). **Une ligne par dossier** (la chaîne offre → compromis → vente), avec l'étape (vendu, compromis, compromis annulé, offre acceptée / proposée / refusée), les 4 dates (offre au jour réel, compromis, acte prévu, vente), le **montant et les honoraires en vrais nombres** (comparables, en euros), l'acquéreur, la ville, le type, l'agence, **le négociateur** (`negociateur_email`, celui du bien, lu dans le registre des mandats) et `je_suis_nomme`.
+- **Les droits sont ceux de l'écran** (la fonction contrôle l'appelant) : un admin voit tout, un négociateur ses biens + les dossiers où il est nommé dans la répartition. Mesuré : Frédéric (admin) 11 428 dossiers ; Emmanuelle PEREIRA (commerciale) **26**, dont 1 d'un collègue où elle est nommée.
+- **Mesures** : 2026 = 492 dossiers dont **292 vendus** (le même chiffre que l'assistant ce matin), 29 négociateurs, **3 sans négociateur**. Toutes années : 11 428 dossiers, dont **5 456 sans négociateur** (les anciens dossiers absents du registre des mandats). Ventes 2026 par négociateur, en tête : durand@ 35, arnaud.valla@ 19, ribbes@ 18, gentes@ 16, coudert@ 16.
+- **Temps** : ~2,4 s à chaud (admin), ~0,9 s (commerciale) ; ⚠ **8,4 s au premier appel à froid**, juste au-dessus du délai de 8 s de l'API : une première question peut échouer une fois.
+
+**Ce que je propose** : ajouter un 15e objet, **`dossiers`** (le registre des transactions), lu par cette fonction avec le jeton de la personne. Côté code seulement (le lecteur apprend à lire une fonction de la base) ; **aucune écriture en base**. « Ventes par négociateur », « mes compromis », « les honoraires de l'année » deviennent possibles.
+
+**⚠ La question pour Frédéric** : « le négociateur d'une vente » = **le négociateur du bien** (ce que fait le registre de l'écran). Ce n'est pas forcément **celui qui touche les honoraires** (la répartition entrée / sortie, `app_affaire_repartition`, que l'assistant ne lit pas — table « lisible par tous », jamais seule). Je propose de répondre avec le négociateur du bien, comme l'écran, et de le dire dans la réponse.
+
+**✅ Décision de Frédéric le 13/11** : à « le négociateur d'une vente = celui du bien, comme l'écran, et je code C ? », il répond **« Oui, vas-y »**.
+
+**C codé le 13/11 (en local)** :
+- `assistant_objets.py` : 15e objet **`dossiers`**, source `rpc/app_registre_dossiers` (la fonction de l'écran, lue avec le jeton ; elle contrôle l'appelant). Étapes en liste fermée, montants et honoraires en nombres (comparables), négociateur du bien, `je_suis_nomme`.
+- Vérifié avant de coder, en réel avec sa session : l'API filtre, trie, **compte** (`0-2/292`) et découpe en pages le résultat de la fonction, en 3,5 s.
+- `assistant_lecteur.py` : **une seule nouvelle tentative** quand la base dépasse son délai de 8 s (code 57014) — le registre met 8,4 s au premier appel à froid.
+- Consignes : ventes, compromis, honoraires, « par négociateur », « mes … » → `dossiers` ; le négociateur est celui du bien, à dire dans la réponse ; `transactions` reste le détail étape par étape.
+- Essais : **69 + 59 verts** (dont : lu avec le jeton, « moi », montant comparable, étape inconnue refusée, délai dépassé une fois → repasse, deux fois → échec dit en clair) ; GED **28 + 80**.

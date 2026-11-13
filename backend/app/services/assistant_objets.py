@@ -277,6 +277,39 @@ OBJETS: tuple[Objet, ...] = (
         ("app_affaire_id", "hektor_annonce_id", "kind", "state", "montant", "date"),
         "date",
     ),
+    # C (13/11/2026) : LE REGISTRE DES TRANSACTIONS de l'écran (fonction app_registre_dossiers, 31/10), lu tel quel
+    # avec le jeton : il contrôle l'appelant (admin = tout ; négociateur = ses biens + les dossiers où il est nommé).
+    # Décision de Frédéric le 13/11 (« Oui, vas-y ») : le négociateur d'un dossier = CELUI DU BIEN, comme l'écran,
+    # pas forcément celui qui touche les honoraires (la répartition n'est pas lue). Audit : note ETAPE2 §13.
+    Objet(
+        "dossiers", "rpc/app_registre_dossiers",
+        "Le registre des transactions : UNE LIGNE PAR DOSSIER (offre -> compromis -> vente), avec l'étape, les dates, "
+        "les montants et honoraires en NOMBRES et le négociateur du bien. Pour compter ou additionner des ventes, "
+        "compromis, honoraires par négociateur ou par période. Les dossiers anciens n'ont souvent pas de négociateur.",
+        (C("app_chaine_id", "nombre", "identifiant du dossier (clé)"),
+         C("app_dossier_id", "nombre", "identifiant du bien"), C("hektor_annonce_id", "nombre", "numéro de l'annonce"),
+         C("etape", "texte", "où en est le dossier",
+           (("vendu", "vendu"), ("compromis", "compromis en cours"), ("compromis_annule", "compromis annulé"),
+            ("offre_acceptee", "offre acceptée"), ("offre_proposee", "offre proposée"), ("offre_refusee", "offre refusée"))),
+         C("date_offre", "date", "date de l'offre (jour réel)"), C("date_compromis", "date", "date du compromis"),
+         C("date_acte_prevue", "date", "date de l'acte prévue"), C("date_vente", "date", "date de la vente"),
+         C("date_dernier_evenement", "date", "dernier événement du dossier"),
+         C("montant", "nombre", "prix en euros"), C("honoraires", "nombre", "honoraires en euros"),
+         C("honoraires_entree", "nombre", "honoraires côté entrée (mandat)"),
+         C("honoraires_sortie", "nombre", "honoraires côté sortie (vente)"),
+         C("acquereur_nom", "texte", "acquéreur"), C("hektor_acquereur_id", "texte", "numéro de l'acquéreur"),
+         C("numero_mandat", "texte", "numéro du mandat"), C("ville", "texte", "commune"), C("code_postal", "texte", "code postal"),
+         C("type_bien", "texte", "type du bien (CODE : filtre avec le libellé, ex. Maison)", _TYPES_BIEN + _TYPES_BIEN_EN_CLAIR),
+         C("agence_nom", "texte", "agence", _AGENCES),
+         C("negociateur_email", "texte", "négociateur du BIEN (pas forcément celui qui touche les honoraires)"),
+         C("statut_annonce", "texte", "statut de l'annonce",
+           _memes("Clos", "Vendu", "Actif", "Estimation", "Sous compromis", "Sous offre", "Recherche active",
+                  "Sans recherche", "Contact inconnu", "Recherche archivée")),
+         C("nb_transactions", "nombre", "nombre d'étapes enregistrées"),
+         C("je_suis_nomme", "booleen", "la personne est nommée dans la répartition de ce dossier")),
+        ("app_chaine_id", "hektor_annonce_id", "etape", "date_vente", "montant", "honoraires", "negociateur_email", "ville"),
+        "app_chaine_id",
+    ),
     Objet(
         "demandes", "app_diffusion_requests_current",
         "Les demandes envoyées aux admins : diffusion, baisse de prix, annulation, corrections.",

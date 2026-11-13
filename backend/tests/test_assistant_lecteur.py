@@ -47,9 +47,10 @@ ctx = cat.ContexteAssistant(Settings(), "u-1", EMAIL, "commercial", JETON)
 
 
 class Reponse:
-    def __init__(self, data, status=200, plage=None):
+    def __init__(self, data, status=200, plage=None, texte=""):
         self.status_code, self._data, self.ok = status, data, status < 400
         self.headers = {"Content-Range": plage} if plage else {}
+        self.text = texte
 
     def json(self):
         return self._data
@@ -181,6 +182,36 @@ voir(r0["total"] == 0 and "Avant de répondre « aucun »" in r0.get("attention"
 r1 = lec.chercher(ctx, {"objet": "biens", "filtres": [], "colonnes": [], "tri": "", "ordre": "desc", "limite": 5})
 voir("attention" not in r1, "TÉMOIN : sans filtre, pas d'avertissement")
 
+print("3 bis) C (13/11) : dossiers = le registre des transactions de l'écran, par sa fonction")
+dos = obj.PAR_NOM["dossiers"]
+voir(dos.source == "rpc/app_registre_dossiers", "dossiers est lu par la fonction de l'écran (elle contrôle l'appelant)")
+regles["app_registre_dossiers"] = lambda p, h: Reponse([{"app_chaine_id": 1, "type_bien": "1", "montant": 31000.0}], plage="0-0/292")
+r = lec.chercher(ctx, {"objet": "dossiers", "filtres": [{"colonne": "etape", "operateur": "egal", "valeur": "vendu"},
+                                                       {"colonne": "negociateur_email", "operateur": "egal", "valeur": "moi"},
+                                                       {"colonne": "montant", "operateur": "superieur", "valeur": "100000"}],
+                       "colonnes": ["app_chaine_id", "type_bien", "montant"], "tri": "", "ordre": "desc", "limite": 5})
+a = appels[-1]
+voir(a["source"] == "app_registre_dossiers" and a["entetes"]["Authorization"] == "Bearer " + JETON, "lu avec le JETON de la personne")
+voir(("etape", "eq.vendu") in a["params"] and ("negociateur_email", f"eq.{EMAIL}") in a["params"]
+     and ("montant", "gt.100000") in a["params"], "étape, « moi » et un montant COMPARABLE (ici, de vrais nombres)")
+voir(r["total"] == 292 and r["lignes"][0]["type_bien"] == "Maison", "le total exact, et le code du type traduit")
+voir(refuse(lambda: lec.traduire_filtres(dos, [{"colonne": "etape", "operateur": "egal", "valeur": "signée"}]), "Valeurs possibles"),
+     "une étape inconnue est refusée avec la liste")
+essais = []
+def froid(p, h):
+    essais.append(1)
+    return Reponse({}, status=500, texte='{"code":"57014"}') if len(essais) == 1 else Reponse([], plage="*/7")
+regles["app_registre_dossiers"] = froid
+voir(lec.compter(ctx, {"objet": "dossiers", "filtres": []})["total"] == 7 and len(essais) == 2,
+     "délai dépassé au premier appel à froid (57014) : UNE nouvelle tentative, et elle passe")
+regles["app_registre_dossiers"] = lambda p, h: Reponse({}, status=500, texte='{"code":"57014"}')
+n_avant = len(appels)
+try:
+    lec.compter(ctx, {"objet": "dossiers", "filtres": []}); passe = True
+except cat.LectureRefusee:
+    passe = False
+voir(not passe and len(appels) - n_avant == 2, "TÉMOIN : deux délais dépassés = échec dit en clair, jamais une boucle")
+
 print("4) compter : total, regroupement, plafond")
 regles["app_relance_rapprochement"] = lambda p, h: Reponse([], plage="*/12")
 voir(lec.compter(ctx, {"objet": "relances", "filtres": [], "regrouper_par": "", "somme_de": ""}) == {"objet": "relances", "total": 12},
@@ -248,7 +279,7 @@ texte = asyncio.run(cat.appeler(trace_ctx, chercher, json.dumps({"objet": "salai
 voir(texte.startswith("Refusé : Objet inconnu") and trace_ctx.appels[0]["erreur"] == "refus", "un refus part au modèle tel quel, et se trace")
 consignes = svc.agent_registry.render(svc._INSTRUCTIONS, {"date": "12/11/2026", "objets": obj.liste_pour_consignes(),
                                                          "role": "commercial"})
-voir(all(o.nom in consignes for o in obj.OBJETS) and "{{" not in consignes, "les consignes listent les 14 objets, rien n'est laissé en gabarit")
-voir(len(obj.OBJETS) == 14, "14 objets dans la liste fermée")
+voir(all(o.nom in consignes for o in obj.OBJETS) and "{{" not in consignes, "les consignes listent les 15 objets, rien n'est laissé en gabarit")
+voir(len(obj.OBJETS) == 15, "15 objets dans la liste fermée (13/11 : + dossiers, le registre des transactions)")
 
 print(f"\n{ok} contrôles verts")

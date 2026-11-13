@@ -53,6 +53,10 @@ def _lire(ctx: ContexteAssistant, source: str, params: list[tuple[str, str]], *,
         entetes["Range-Unit"] = "items"
         entetes["Range"] = f"{debut}-{fin}"
     r = requests.get(f"{ctx.settings.supabase_url}/rest/v1/{source}", headers=entetes, params=params, timeout=15)
+    if r.status_code == 500 and "57014" in r.text:
+        # 13/11 : délai de la base dépassé (8 s). Le registre des transactions met 8,4 s au premier appel à froid,
+        # puis ~2,4 s : UNE seule nouvelle tentative, jamais une boucle.
+        r = requests.get(f"{ctx.settings.supabase_url}/rest/v1/{source}", headers=entetes, params=params, timeout=15)
     if r.status_code == 404:
         raise Refus(f"Cet objet n'est pas encore disponible dans la base ({source}).")
     if not r.ok and r.status_code != 416:
