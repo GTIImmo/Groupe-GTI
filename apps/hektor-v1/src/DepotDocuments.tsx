@@ -14,10 +14,10 @@ import { useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode } 
 import { createUploadDocumentToHektorJob } from './lib/api'
 import {
   empreinteFichier, gedClasser, GED_FAMILLES, GED_TAILLE_MAX, GED_TYPES_ACCEPTES, loadGedTypes, nomEnConflit,
-  type GedType,
+  useGedLecturePersonnes, type GedType,
 } from './lib/ged'
 import { classerParIa, lireParIa as lireValeursParIa, preChoisirTypeIa, preparerLecture, preparerPourIa, separerPdf, useGedLectureIa, type ResultatIa } from './lib/gedClassementIa'
-import { FICHES_LUES, resumeLecture } from './lib/gedLecture'
+import { FICHES_LUES, FICHES_PERSONNES_LUES, resumeLecture } from './lib/gedLecture'
 import { typeParNom } from './lib/gedTypeParNom'
 import type { ConsoleDocument, ConsoleJob, Dossier } from './types'
 import './DepotDocuments.css'
@@ -141,6 +141,9 @@ export function DepotDocuments({
   }, [lignes])
 
   const lectureIa = useGedLectureIa()
+  // Morceau 9 (9a) : une pièce des personnes n'est lue que si SON interrupteur est ouvert (le serveur le revérifie)
+  const lecturePersonnes = useGedLecturePersonnes()
+  const typeLu = (code: string) => FICHES_LUES.has(code) || (lecturePersonnes && FICHES_PERSONNES_LUES.has(code))
 
   // La file de l'IA : UNE ligne à la fois, dans l'ordre du dépôt ; une ligne déjà envoyée n'est plus demandée.
   useEffect(() => {
@@ -353,7 +356,7 @@ export function DepotDocuments({
           typeProposePar: ligne.typePropose ? ligne.typeProposePar : null,
           sha256: ligne.sha256,
         })
-        modifierEtat(ligne.id, { etat: 'envoye', jobId: job.id, message: null, lecture: lectureIa && FICHES_LUES.has(ligne.type) ? { etat: 'attente' } : null })
+        modifierEtat(ligne.id, { etat: 'envoye', jobId: job.id, message: null, lecture: lectureIa && typeLu(ligne.type) ? { etat: 'attente' } : null })
       } catch (e) {
         modifierEtat(ligne.id, { etat: 'classement_echec', jobId: job.id, message: e instanceof Error ? e.message : String(e) })
       }
@@ -381,7 +384,7 @@ export function DepotDocuments({
     modifierEtat(ligne.id, { message: null })
     try {
       await gedClasser({ jobId: ligne.jobId, typeCode: ligne.type, typePropose: ligne.typePropose, typeProposePar: ligne.typePropose ? ligne.typeProposePar : null, sha256: ligne.sha256 })
-      modifierEtat(ligne.id, { etat: 'envoye', message: null, lecture: lectureIa && FICHES_LUES.has(ligne.type) ? { etat: 'attente' } : null })
+      modifierEtat(ligne.id, { etat: 'envoye', message: null, lecture: lectureIa && typeLu(ligne.type) ? { etat: 'attente' } : null })
     } catch (e) {
       modifierEtat(ligne.id, { message: e instanceof Error ? e.message : String(e) })
     }

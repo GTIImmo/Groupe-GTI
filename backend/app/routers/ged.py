@@ -4,8 +4,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from ..auth import get_authenticated_user, require_request_user
-from ..services.openai_ged_classement_service import AGENT_KEY, MAX_PAGES, OpenAIGedClassementService
-from ..services.openai_ged_lecture_service import AGENT_KEY as AGENT_LECTURE, MAX_PAGES_HD, OpenAIGedLectureService
+from ..services.openai_ged_classement_service import AGENT_KEY, INTERRUPTEUR_PERSONNES, MAX_PAGES, OpenAIGedClassementService
+from ..services.openai_ged_lecture_service import AGENT_KEY as AGENT_LECTURE, FICHES_PERSONNES, MAX_PAGES_HD, OpenAIGedLectureService
 from ..services.supabase_admin import SupabaseAdminService
 from ..settings import Settings, get_settings
 
@@ -137,8 +137,12 @@ def ged_lire(
         raise HTTPException(status_code=403, detail="Ce document a été classé par quelqu'un d'autre")
     email = (user.email or "").strip().lower() or None
     annonce = _hektor_annonce_id(classement.get("hektor_annonce_id"))
+    # morceau 9 : une pièce des personnes ne se lit que si SON interrupteur est ouvert pour ce compte
+    personnes = False
+    if classement.get("type_code") in FICHES_PERSONNES:
+        personnes = autorise(service.portier.interrupteur(INTERRUPTEUR_PERSONNES), str(profile.get("role") or ""), profile.get("is_active") is True)
     try:
-        resultat = service.lire(classement, payload.model_dump())
+        resultat = service.lire(classement, payload.model_dump(), personnes=personnes)
     except HTTPException as exc:
         if exc.status_code == 502:
             _tracer(admin_service, {"agent_key": AGENT_LECTURE, "hektor_annonce_id": annonce, "negociateur_email": email,

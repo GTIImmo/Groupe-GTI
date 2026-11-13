@@ -110,13 +110,37 @@ voir(/'transaction\.avant_contrat': 80000/.test(ia) && /'mandat\.vente': 40000/.
 voir([...FICHES_LUES].every((c) => srv.includes(`"${c}"`)), 'chaque type lu à l\'écran a sa fiche au serveur')
 voir(/'justif\.titre': 6,/.test(ia) && /preparerLecture\(ligne\.file, ligne\.type\)/.test(depot), 'le titre : 6 pages en image, le type est passé à la préparation')
 voir(/\.slice\(0, texteMax\)/.test(ia) && /for \(const n of pagesAImager\(nbPages, pagesHd, fin, avecTexte\)\)/.test(ia) && /LECTURE_TEXTE_MAX = 20000/.test(ia) && /LECTURE_PAGES_HD = 4/.test(ia), 'le texte et les pages suivent le réglage du type (les autres gardent 20 000 et 4)')
-voir(/lectureIa && FICHES_LUES\.has\(ligne\.type\) \? \{ etat: 'attente' \} : null/.test(depot), 'une lecture n\'est demandée que si l\'interrupteur est allumé et que le type a une fiche')
+voir((depot.match(/lectureIa && typeLu\(ligne\.type\) \? \{ etat: 'attente' \} : null/g) ?? []).length === 2 && !/lectureIa && FICHES_LUES\.has\(ligne\.type\)/.test(depot), 'une lecture n\'est demandée que si l\'interrupteur est allumé et que le type a une fiche (les deux endroits)')
 voir(/l\.lecture\?\.etat === 'lecture'\)\) return/.test(depot), 'une lecture à la fois')
 const prep = ia.slice(ia.indexOf('export async function preparerLecture'), ia.indexOf('export type ResultatLecture'))
 voir(prep.indexOf('nomDitRib(file.name)') < prep.indexOf('imageHd(') && prep.indexOf('texteDitRib(') < prep.indexOf('page.render('), 'la garde RIB passe avant toute image')
 voir(!/\.insert\(|\.upsert\(|\.update\(|\.rpc\(/.test(lect) && !/app_ged_lecture[^\n]*insert/.test(depot), 'l\'écran n\'écrit jamais une lecture (le serveur seul)')
 const rm = fs.readFileSync(path.join(__dirname, 'src/RecuManque.tsx'), 'utf8')
 voir(/Lu par l'IA : \$\{lus\.length\}/.test(rm) && /\.filter\(\(d\) => d\.present_in_hektor !== false && lectures\.has\(d\.id\)\)/.test(rm), 'après rechargement : TOUT ce qui a été lu se retrouve (« Lu par l\'IA »), quel que soit le moment de la pièce')
+
+console.log('④ morceau 9, lot 9a : les pièces des personnes')
+const { FICHES_PERSONNES_LUES } = charger('src/lib/gedLecture.ts')
+voir(FICHES_PERSONNES_LUES.size === 2 && FICHES_PERSONNES_LUES.has('justif.identite') && FICHES_PERSONNES_LUES.has('transaction.renseignements') && FICHES_LUES.size === 25,
+  'deux types À PART (identité, fiche de renseignements) ; les 25 types lus ne bougent pas')
+voir(!FICHES_PERSONNES_LUES.has('justif.rib') && !FICHES_PERSONNES_LUES.has('transaction.financement') && !FICHES_PERSONNES_LUES.has('justif.etat_civil'),
+  'TÉMOIN : ni le RIB, ni le financement, ni l\'état civil (9d)')
+const fp = srv.slice(srv.indexOf('FICHES_PERSONNES: dict'), srv.indexOf('PRIVES = '))
+voir([...FICHES_PERSONNES_LUES].every((c) => fp.includes(`"${c}": {`)), 'chaque pièce lue à l\'écran a sa fiche au serveur, dans FICHES_PERSONNES')
+voir(/const typeLu = \(code: string\) => FICHES_LUES\.has\(code\) \|\| \(lecturePersonnes && FICHES_PERSONNES_LUES\.has\(code\)\)/.test(depot) && /useGedLecturePersonnes\(\)/.test(depot),
+  'une pièce des personnes n\'est demandée que si SON interrupteur est ouvert')
+const ged = fs.readFileSync(path.join(__dirname, 'src/lib/ged.ts'), 'utf8')
+voir(/loadInterrupteurTroisCrans\('ged_lecture_personnes'\)/.test(ged), 'l\'interrupteur ged_lecture_personnes, à trois crans')
+const Pc = (rang, x) => [v('pieces.nature', { valeur: x.nature }, 'lu', rang), v('pieces.nom', { valeur: 'SPECIMEN' }, 'lu', rang), v('pieces.prenoms', { valeur: 'Jeanne' }, 'lu', rang),
+  v('pieces.date_naissance', { valeur_date: '1938-04-02' }, 'lu', rang), v('pieces.date_fin_validite', { valeur_date: x.fin }, x.etat ?? 'lu', rang)]
+const cni = resumeLecture({ typeCode: 'justif.identite', etat: 'lu', valeurs: [...Pc(0, { nature: 'cni_nouveau_modele', fin: '2033-03-03' })] })
+voir(cni === "Lu : carte d'identité valable jusqu'au 03/03/2033.", 'pièce d\'identité : la nature et la fin de validité')
+voir(!/SPECIMEN|Jeanne|1938|02\/04/.test(cni), 'aucun nom, prénom ni date de naissance dans le résumé')
+const deux = resumeLecture({ typeCode: 'justif.identite', etat: 'lu', valeurs: [...Pc(0, { nature: 'cni_ancien_modele', fin: '2022-06-13' }), ...Pc(1, { nature: 'passeport', fin: '2030-01-01', etat: 'incertain' })] })
+voir(deux === "Lu : 2 pièces · carte d'identité valable jusqu'au 13/06/2022 · passeport valable jusqu'au 01/01/2030 (?).", 'deux pièces dans un fichier : comptées, une par une, l\'incertain marqué')
+const rens = resumeLecture({ typeCode: 'transaction.renseignements', etat: 'lu', valeurs: [v('date_document', { valeur_date: '2026-10-01' }), ...P(0, 'MARTIN', 'vendeur'), ...P(1, 'MARTIN', 'vendeur'),
+  v('personnes.adresse', { valeur: '3 rue des Essais' }, 'lu', 0), v('personnes.date_naissance', { valeur_date: '1950-01-01' }, 'lu', 0)] })
+voir(rens === 'Lu : fiche de renseignements · du 01/10/2026 · 2 vendeurs.' && !/MARTIN|Claire|Essais|1950/.test(rens), 'fiche de renseignements : la date, les personnes COMPTÉES ; ni nom, ni adresse, ni naissance')
+voir(![lect, depot, rm, ged].some((t) => /pieces\.(numero|date_delivrance|autorite_delivrance)|ged_prive|app_ged_piece_privee/.test(t)), 'l\'écran ne connaît ni le numéro ni la délivrance de la pièce (registre ged_prive)')
 
 console.log(ko ? `\n${ko} ROUGE, ${ok} VERT` : `\nTOUT EST VERT (${ok})`)
 process.exit(ko ? 1 : 0)

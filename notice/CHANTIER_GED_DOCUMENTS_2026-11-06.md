@@ -30,7 +30,7 @@
 | 6 lot 4 | lecture : mandat déposé à la main, avenant, fin de mandat, acte, annulation, facture, petits diagnostics, assainissement, surfaces, règlement | ✅ **écrit et contrôlé le 13/11** (80 + 49 VERT, banc 64/64, 0 fuite), patch d'étiquette posé (14/14 « lue »), poussé (`7c4e3fb`) ; **essai réel fait le 13/11 sur 63331** : 8/8 envoyés et lus, 0 fuite ; ⚠ « Note honoraires » classée « notes internes » par la règle du nom (§12.16) |
 | 7 | comparateurs et règles avec lecture (titre ↔ mandants, taxe ↔ fiche, copro…) | ✅ **écrit et poussé le 13/11** : 7a (`81be8ad`, socle + justificatifs et diagnostics du bien), 7b (`973592c`, le mandat), 7c (les transactions, résolveur) ; 84 VERT ; **pas encore regardé sur un vrai bien** (§12.17) |
 | 8 | propositions (« remplir », un clic par case) | ✅ **écrit, posé et poussé le 13/11** (`9320c02`, 27 VERT, patch m8 6/6), interrupteur `ged_remplir` **allumé en admin le 13/11 à 14:42** ; **épreuve d'écriture sur 63331 faite dans les deux sens, prouvée en base** (Hektor accepte `dpe_date`, date d'ERP, nb de lots, quote-part ; rien d'autre ne bouge ; copropriété reste OUI) — §12.18 |
-| 9 | pièces des personnes (identité — le justificatif le plus déposé —, état civil, financement) | ⬜ ; l'avancer = décision de Frédéric |
+| 9 | pièces des personnes (identité — le justificatif le plus déposé —, état civil, financement) | 🔧 **ouvert le 13/11** (audit §12.19, choix « B » : registre à part) ; **9a écrit, contrôlé, patch POSÉ (7/7 VERT) et poussé le 13/11** (interrupteur `ged_lecture_personnes` **off**) ; essai réel à faire ; 9b, 9c, 9d à venir |
 | 10 | mesure (vrai / faux / déjà su, 2 semaines) | ⬜ |
 | habillage | suivre la maquette E0-E6 à l'écran (fenêtre modale, aperçu, cartes) | ⬜ APRÈS le code (§12.12) |
 
@@ -1632,3 +1632,60 @@ Les 5 interrupteurs GED sont désormais en « admin ». Retour arrière :
 `update public.app_setting set value='off', updated_at=now() where key='ged_remplir';`
 ⚠ **Pas encore VU à l'écran en service** : 63331 a toutes ses cases remplies, il n'y a donc rien à y proposer ; la
 première proposition réelle viendra d'un bien qui a un document lu ET une case vide.
+
+### 12.19 Le morceau 9 — les pièces des personnes (audit du 13/11, lecture seule, rien codé)
+**Ce qui existe (code et base, mesuré le 13/11)** :
+- `app_ged_type` : `justif.identite`, `justif.etat_civil`, `transaction.financement`, `transaction.renseignements` sont
+  déjà « lue » et `sensible` ; `justif.rib` « jamais_envoye ». La SEULE porte fermée est le serveur :
+  `openai_ged_lecture_service.py` refuse tout type sensible (« lue plus tard (morceau 9) ») ; côté écran, `FICHES_LUES`
+  ne les contient pas. La garde RIB (nom « RIB » ou IBAN valide dans le texte) reste en amont, inchangée.
+- La lecture ne part QUE de la fenêtre de dépôt (fichier local) : un document déjà déposé ne peut pas être lu après
+  coup. Les 2 pièces d'identité déposées le 12/11 sur 62774 (« CNI DAUBORD RECTO / VERSO ») ne seront donc jamais lues.
+- Droits : `app_ged_lecture` et `app_ged_valeur` se lisent par « périmètre » = admin, manager, lecture (0 compte actif)
+  OU biens du portefeuille. Comptes actifs : 4 admins, 2 commerciaux. `loadGedLectures` charge TOUTES les valeurs d'un
+  bien à chaque ouverture des documents.
+- ⚠ La descente de nuit (`phase2/sync/pull_from_supabase.py`) découvre les tables par la spec PostgREST et recopie
+  toute table neuve du schéma public sur le serveur local : une table de pièces d'identité y serait recopiée.
+- Fiche contact : `editContactOptimistic` → `app_edit_contact_optimistic` → `update_hektor_contact` ; la charge porte
+  `birth_date`, `birth_place`, `marital_status`, l'adresse, mais renvoie la fiche ENTIÈRE (nom, téléphones…). Le
+  conjoint d'une fiche de couple (bloc `_m2`) n'a PAS de date de naissance dans la charge : la remplir demanderait de
+  toucher au worker.
+**Découpage proposé** : 9a lire la pièce d'identité et la fiche de renseignements (sans rien écrire, interrupteur
+neuf) ; 9b les règles P4 nom différent, P5 pièce périmée (cartes 2004-2013 : 15 ans), P6 une pièce par personne ;
+9c remplir la fiche contact P1-P3 (après épreuve sur un contact fictif, personnes seules d'abord) ; 9d état civil et
+financement, P7-P10. Décision attendue : où vivent le numéro, la date et le lieu de délivrance (même table, ou table à
+part non exposée, non descendue, conservation 5 ans).
+
+**✅ « B » puis « Vas y » (13/11) : LOT 9a ÉCRIT ET CONTRÔLÉ HORS LIGNE — RIEN POSÉ, RIEN POUSSÉ.**
+- **Serveur** (`openai_ged_lecture_service.py`) : `FICHES_PERSONNES` à part de `FICHES` (les 25 types ne bougent pas) —
+  `justif.identite` (liste `pieces` : nature, nom, nom d'usage, prénoms, date et lieu de naissance, numéro, date et
+  autorité de délivrance, fin de validité ; JAMAIS adresse, sexe, taille, nationalité, signature, ligne codée) et
+  `transaction.renseignements` (liste `personnes` : qualité, noms, prénoms, naissance, adresse, situation de famille,
+  régime ; JAMAIS téléphone, e-mail, profession, revenus, banque, enfants, santé). Sortes neuves : `naissance` (dates
+  dès 1900, les autres dates gardent 1950) et `piece` (le numéro, seule exception à la règle des longs numéros).
+  `PRIVES` (numéro, date et autorité de délivrance) sort de la liste DANS `lire()` : jamais dans `app_ged_valeur`,
+  jamais dans la réponse ; `enregistrer()` l'envoie à `app_ged_piece_privee_ecrire` AVANT les valeurs (échec → 503,
+  les valeurs ne partent pas). La porte : sans l'interrupteur → 422 « lecture fermée » ; l'état civil et le
+  financement restent refusés ; la garde RIB est inchangée et passe aussi sur la fiche de renseignements.
+- **Route** (`routers/ged.py`) : l'interrupteur `ged_lecture_personnes` n'est lu QUE pour ces deux types, compte par
+  compte (même règle à trois crans) ; `interrupteur(cle)` du portier prend la clé en paramètre (défaut inchangé).
+- **Base** : `supabase/patch_ged_m9a_pieces_personnes_2026-11-13.sql` (+ `_INVERSE`, + `_REPETITION`) — schéma
+  `ged_prive` (non exposé par l'API, donc ni lisible par l'app ni recopié par la descente), table `piece_identite`
+  (clés limitées aux 3, effacement à 5 ans), écriture par la clé de service seule, lecture admin / manager actif /
+  portefeuille (pas le rôle « lecture »), interrupteur posé éteint. **Répétition jouée le 13/11 : 6/6 VERT** (dont un
+  témoin positif : 3 valeurs écrites, effacement à +5 ans ; un état des risques refusé), annulée ; relu après : rien
+  n'est resté (0 schéma, 0 fonction, 0 interrupteur, 0 lecture d'essai).
+- **Écran** : `FICHES_PERSONNES_LUES` (gedLecture.ts), `useGedLecturePersonnes` (ged.ts), `typeLu()` aux deux endroits
+  du dépôt (DepotDocuments.tsx) ; résumés « Lu : carte d'identité valable jusqu'au … » / « fiche de renseignements · du …
+  · 2 vendeurs » — ⚠ SANS nom (la règle de tous les résumés depuis le lot 2), ni naissance, ni adresse ; l'écran ne
+  connaît pas le registre.
+- **Essais** : serveur 80 + **35** (`tests/test_ged_lire_personnes.py`) + classer 28 ; écran lecture **59** (dont 10 neufs),
+  dépôt 19, règles 44 + 84, Reçu/Manque 29, remplir 27, classement 25 ; **build vert**. Témoins inverses : sans le filtre
+  `PRIVES` → ROUGE « la réponse ne porte ni le numéro ni la délivrance » ; sans l'interrupteur à l'écran → ROUGE.
+- ⏳ **Ordre, chacun sur accord** : poser le patch → commit et push (Render, Vercel) → `ged_lecture_personnes` en admin →
+  essai réel sur 63331 avec de FAUSSES pièces « SPÉCIMEN » fabriquées (jamais une vraie ; les CNI DAUBORD de 62774 ne
+  peuvent pas être lues).
+✅ **« Oui, pose et pousse » (13/11)** : patch m9a POSÉ par `node Console/apply_sql_patch.js` (connecteur Supabase
+toujours en panne) ; ses **7 contrôles VERTS**, relus à part (table et RLS ; aucun droit des rôles de l'app ; schéma
+fermé à anon et authenticated ; écriture par la clé de service seule ; lecture authenticated, pas anon ;
+`ged_lecture_personnes` **off** ; registre vide). Code commité et poussé dans le même geste.

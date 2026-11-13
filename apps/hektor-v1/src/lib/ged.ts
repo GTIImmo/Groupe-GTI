@@ -129,6 +129,17 @@ export function useGedRemplir(): boolean {
   return actif
 }
 
+// GED morceau 9 (lot 9a) : LIRE les pièces des personnes (identité, fiche de renseignements) -- son propre interrupteur.
+export function useGedLecturePersonnes(): boolean {
+  const [actif, setActif] = useState(false)
+  useEffect(() => {
+    let annule = false
+    void loadInterrupteurTroisCrans('ged_lecture_personnes').then((v) => { if (!annule) setActif(v) })
+    return () => { annule = true }
+  }, [])
+  return actif
+}
+
 // Les décisions déjà prises sur ce bien (« remplie », « ignoree »), en clés « cle|valeur » : elles ne reviennent pas.
 // ⚠ Lecture ratée -> null (pas un ensemble vide) : l'écran ne propose alors RIEN, plutôt que de reproposer.
 export async function loadGedDecisions(hektorAnnonceId: string | number): Promise<Set<string> | null> {

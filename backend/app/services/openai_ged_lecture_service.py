@@ -24,6 +24,8 @@ from .openai_listing_sheet_service import _extract_output_text
 # c'est ce qui permettra de les comparer aux mandants (morceau 7).
 # Lot 3 (§12.15) : l'offre, le compromis, le PV d'AG. Lot 4 (§12.16) : le mandat déposé à la main, l'avenant, la fin de
 # mandat, l'acte, l'annulation, la facture d'honoraires, les petits diagnostics, les surfaces, le règlement.
+# Morceau 9, lot 9a (§12.19) : la pièce d'identité et la fiche de renseignements, À PART (FICHES_PERSONNES), derrière
+# l'interrupteur ged_lecture_personnes ; seule exception à la règle des noms et des naissances ci-dessus.
 # ---------------------------------------------------------------------------
 
 AGENT_KEY = "ged_lecture"
@@ -411,6 +413,55 @@ FICHES.update({
         "listes": [("lots", {"numero": ("txt", None), "tantiemes": ("txt", None)})],
     },
 })
+
+# Morceau 9, lot 9a (§12.19) -- LES PIÈCES DES PERSONNES, à part de FICHES : elles ne sont lues QUE si l'interrupteur
+# `ged_lecture_personnes` est ouvert pour l'appelant (route /ged/lire). L'état civil et le financement restent fermés
+# (9d) ; le RIB n'est JAMAIS lu. ⛔ Le numéro de la pièce, sa date et son autorité de délivrance (PRIVES) ne vont ni
+# dans app_ged_valeur ni dans la réponse : seulement dans ged_prive (registre anti-blanchiment, 5 ans).
+SITUATIONS = ["celibataire", "marie", "pacse", "divorce", "veuf", "separe", "concubinage", "autre"]
+REGIMES = ["communaute_legale", "separation_de_biens", "communaute_universelle", "participation_aux_acquets", "autre"]
+NATURES_PIECE = ["cni_ancien_modele", "cni_nouveau_modele", "passeport", "titre_sejour", "permis_conduire", "autre"]
+FICHES_PERSONNES: dict[str, dict[str, Any]] = {
+    "justif.identite": {
+        "version": 1,
+        "consigne": "C'est une pièce d'identité. Un fichier peut porter le recto, le verso ou les deux, et parfois les "
+                    "pièces de PLUSIEURS personnes : une entrée de « pieces » par pièce (le recto et le verso d'une même "
+                    "pièce = UNE entrée). EXCEPTION à la règle commune, pour CETTE pièce seulement : recopie, tels "
+                    "qu'imprimés, le nom de naissance (nom), le nom d'usage s'il est imprimé (« épouse », « veuve », « nom "
+                    "d'usage »), les prénoms, la date de naissance, le lieu de naissance (la commune, et le département ou "
+                    "le pays s'il est imprimé), le numéro du DOCUMENT (pas la ligne codée du bas), la date de délivrance, "
+                    "l'autorité qui l'a délivrée (préfecture, mairie, consulat…) et la date de fin de validité imprimée "
+                    "(« valable jusqu'au », « date d'expiration »). nature : cni_ancien_modele pour la carte plastifiée "
+                    "cartonnée d'avant 2021, cni_nouveau_modele pour la carte au format carte bancaire (2021 et après). "
+                    "JAMAIS : l'adresse, la taille, le sexe, la nationalité, la signature, la description de la photo, "
+                    "ni la ligne codée (MRZ). Une valeur cachée par un reflet ou coupée : « incertain » ou « non_vu ».",
+        "champs": {},
+        "listes": [("pieces", {"nature": ("txt", NATURES_PIECE), "nom": ("nom", None), "nom_usage": ("nom", None),
+                               "prenoms": ("nom", None), "date_naissance": ("naissance", None),
+                               "lieu_naissance": ("txt", None), "numero": ("piece", None),
+                               "date_delivrance": ("date", None), "autorite_delivrance": ("txt", None),
+                               "date_fin_validite": ("date", None)})],
+    },
+    "transaction.renseignements": {
+        "version": 1,
+        "consigne": "C'est une fiche de renseignements (l'état civil des vendeurs ou des acquéreurs, remplie pour "
+                    "l'agence ou le notaire). date_document : la date de la fiche si elle est écrite. EXCEPTION à la règle "
+                    "commune, pour CETTE fiche seulement : pour chaque personne, recopie sa qualité (vendeur, acquereur, "
+                    "autre), son nom de naissance (nom), son nom d'usage s'il est écrit, ses prénoms, sa date et son lieu "
+                    "de naissance, son adresse (rue, code postal, ville) et sa situation de famille, avec le régime "
+                    "matrimonial s'il est écrit. JAMAIS : le téléphone, l'e-mail, la profession, la nationalité, les "
+                    "revenus, la banque ni un numéro de compte, un numéro fiscal ou de sécurité sociale, les enfants, ni "
+                    "rien qui touche à la santé.",
+        "champs": {"date_document": ("date", None)},
+        "listes": [("personnes", {"qualite": ("txt", QUALITES), "nom": ("nom", None), "nom_usage": ("nom", None),
+                                  "prenoms": ("nom", None), "date_naissance": ("naissance", None),
+                                  "lieu_naissance": ("txt", None), "adresse": ("txt", None), "code_postal": ("txt", None),
+                                  "ville": ("txt", None), "situation_famille": ("txt", SITUATIONS),
+                                  "regime_matrimonial": ("txt", REGIMES)})],
+    },
+}
+PRIVES = {"pieces.numero", "pieces.date_delivrance", "pieces.autorite_delivrance"}
+
 # Pages lues en haute définition (le navigateur les choisit ; même réglage dans gedClassementIa.ts) : le titre a ses
 # parties et sa désignation dans les premières pages ; un compromis scanné : les 4 premières et les 2 dernières
 # (signatures) ; un compromis en texte envoie AUSSI ses 2 dernières pages en image, une offre sa dernière.
@@ -457,14 +508,21 @@ def _valeur(sorte: str, enum: list[str] | None, brut: Any) -> tuple[str | None, 
         except (TypeError, ValueError):
             return None, None, None
     texte = re.sub(r"\s+", " ", str(brut)).strip()[:200]
+    if sorte == "piece":
+        # morceau 9 : le numéro d'une pièce d'identité -- seule exception à la règle ci-dessous, et il ne va QUE dans
+        # ged_prive (PRIVES) : jamais dans app_ged_valeur, jamais dans la réponse à l'écran
+        numero = re.sub(r"[\s.\-]", "", texte).upper()
+        return (numero, None, None) if re.fullmatch(r"[A-Z0-9]{6,20}", numero) else (None, None, None)
     # ⛔ un long numéro (fiscal, de rôle, de sécurité sociale…) n'est jamais gardé, quel que soit le champ
     if re.search(r"\d{9,}", re.sub(r"[\s.\-]", "", texte)):
         return None, None, None
     if sorte == "nom":
         # un nom : des lettres ; un chiffre ou une arobase trahit une adresse, une date, un numéro
         return (None, None, None) if re.search(r"[\d@]", texte) or len(texte) > 80 else (texte or None, None, None)
-    if sorte == "date":
-        return (None, None, texte) if re.fullmatch(r"(19[5-9]\d|20\d\d)-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])", texte) else (None, None, None)
+    if sorte in ("date", "naissance"):
+        # une date de naissance (morceau 9) peut être d'avant 1950 ; les autres dates du dossier, non
+        annee = r"(19\d\d|20\d\d)" if sorte == "naissance" else r"(19[5-9]\d|20\d\d)"
+        return (None, None, texte) if re.fullmatch(annee + r"-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])", texte) else (None, None, None)
     if enum and texte not in enum:
         return None, None, None
     return texte or None, None, None
@@ -487,7 +545,7 @@ def normaliser(brut: Any, fiche: dict[str, Any], nb_pages: int) -> tuple[bool, l
     for cle, (sorte, enum) in fiche["champs"].items():
         ajouter(cle, 0, sorte, enum, brut.get(cle))
     for nom, champs in fiche.get("listes", []):
-        for rang, item in enumerate((brut.get(nom) or [])[:MAX_PERSONNES if nom == "personnes" else 30]):
+        for rang, item in enumerate((brut.get(nom) or [])[:MAX_PERSONNES if nom in ("personnes", "pieces") else 30]):
             if isinstance(item, dict):
                 for c, (s, e) in champs.items():
                     ajouter(f"{nom}.{c}", rang, s, e, item.get(c))
@@ -522,14 +580,17 @@ class OpenAIGedLectureService:
     def type_sensible(self, code: str) -> bool:
         return any(t.get("code") == code and t.get("sensible") for t in self.portier.types())
 
-    def lire(self, classement: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
+    def lire(self, classement: dict[str, Any], payload: dict[str, Any], personnes: bool = False) -> dict[str, Any]:
+        # `personnes` : l'interrupteur ged_lecture_personnes est ouvert pour l'appelant (décidé par la route)
         if not self.settings.openai_api_key:
             raise HTTPException(status_code=503, detail="OPENAI_API_KEY non configure sur le backend")
         code = str(classement.get("type_code") or "")
-        fiche = FICHES.get(code)
+        if code in FICHES_PERSONNES and not personnes:
+            raise HTTPException(status_code=422, detail="Pièce des personnes : lecture fermée pour ce compte")
+        fiche = FICHES_PERSONNES.get(code) if code in FICHES_PERSONNES else FICHES.get(code)
         if not fiche:
             raise HTTPException(status_code=422, detail="Pas de fiche de lecture pour ce type")
-        if self.type_sensible(code):
+        if code not in FICHES_PERSONNES and self.type_sensible(code):
             raise HTTPException(status_code=422, detail="Pièce des personnes : lue plus tard (morceau 9)")
         nom = str(payload.get("nomFichier") or classement.get("document_name") or "")
         texte = str(payload.get("texte") or "")[:fiche.get("texte_max", MAX_TEXTE)]
@@ -576,11 +637,15 @@ class OpenAIGedLectureService:
             brut = json.loads(_extract_output_text(corps))
         except json.JSONDecodeError as exc:
             raise HTTPException(status_code=502, detail="Réponse de lecture non JSON") from exc
-        ce_type, valeurs = normaliser(brut, fiche, nb_pages)
+        ce_type, toutes = normaliser(brut, fiche, nb_pages)
+        # ⛔ les valeurs PRIVÉES (numéro de la pièce…) sortent ICI de la liste : elles ne vont qu'à enregistrer() -> ged_prive
+        valeurs = [v for v in toutes if v["cle"] not in PRIVES]
+        prives = [v for v in toutes if v["cle"] in PRIVES and v["etat"] != "non_vu"] if ce_type else []
         usage = corps.get("usage") or {}
-        etat = "pas_ce_type" if not ce_type else ("lu" if any(v["etat"] != "non_vu" for v in valeurs) else "incomplet")
-        return {"fiche": f"{code}/{fiche['version']}", "model": model, "etat": etat, "valeurs": valeurs, "usage": usage,
-                "costUsd": cout_usd(model, usage), "pagesLues": [int(p.get("numero") or 0) for p in pages], "parTexte": bool(texte.strip())}
+        etat = "pas_ce_type" if not ce_type else ("lu" if any(v["etat"] != "non_vu" for v in toutes) else "incomplet")
+        return {"fiche": f"{code}/{fiche['version']}", "model": model, "etat": etat, "valeurs": valeurs, "prives": prives,
+                "usage": usage, "costUsd": cout_usd(model, usage), "pagesLues": [int(p.get("numero") or 0) for p in pages],
+                "parTexte": bool(texte.strip())}
 
     def enregistrer(self, classement: dict[str, Any], resultat: dict[str, Any], user_id: str | None) -> str:
         ligne = {"classement_id": classement["id"], "hektor_annonce_id": classement["hektor_annonce_id"],
@@ -593,6 +658,13 @@ class OpenAIGedLectureService:
         if not r.ok:
             raise HTTPException(status_code=503, detail="Lecture non enregistrée")
         lecture_id = r.json()[0]["id"]
+        prives = resultat.get("prives") or []
+        if prives:
+            # morceau 9 : le registre anti-blanchiment, par la seule porte (fonction réservée à la clé de service)
+            r = requests.post(f"{self.settings.supabase_url}/rest/v1/rpc/app_ged_piece_privee_ecrire", headers=self._headers(),
+                              json={"p_lecture_id": lecture_id, "p_lignes": prives}, timeout=15)
+            if not r.ok:
+                raise HTTPException(status_code=503, detail="Pièce d'identité : registre non enregistré")
         lignes = [{**v, "lecture_id": lecture_id} for v in resultat["valeurs"]]
         if lignes:
             r = requests.post(f"{self.settings.supabase_url}/rest/v1/app_ged_valeur", headers=self._headers(), json=lignes, timeout=15)

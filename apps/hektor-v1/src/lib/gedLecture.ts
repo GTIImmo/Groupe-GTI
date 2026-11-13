@@ -14,6 +14,14 @@ export const FICHES_LUES = new Set([
   'diag.electricite', 'diag.gaz', 'diag.amiante', 'diag.plomb', 'diag.termites', 'diag.assainissement', 'diag.surface',
   'copro.reglement',
 ])
+// Morceau 9, lot 9a (§12.19) : les pièces des personnes, À PART -- lues seulement si l'interrupteur
+// `ged_lecture_personnes` est ouvert (même liste que FICHES_PERSONNES au serveur). Le numéro de la pièce n'arrive JAMAIS
+// à l'écran : il va au registre à part, côté serveur. L'état civil et le financement restent fermés (9d) ; le RIB n'est jamais lu.
+export const FICHES_PERSONNES_LUES = new Set(['justif.identite', 'transaction.renseignements'])
+const NATURE_PIECE: Record<string, string> = {
+  cni_ancien_modele: "carte d'identité", cni_nouveau_modele: "carte d'identité", passeport: 'passeport',
+  titre_sejour: 'titre de séjour', permis_conduire: 'permis de conduire', autre: "pièce d'identité",
+}
 
 const QUALITE: Record<string, [string, string]> = {
   proprietaire: ['propriétaire', 'propriétaires'], usufruitier: ['usufruitier', 'usufruitiers'],
@@ -211,6 +219,22 @@ export function resumeLecture(l: Pick<LectureDocument, 'typeCode' | 'etat' | 'va
     const lots = l.valeurs.filter((x) => x.cle === 'lots.numero' && x.etat !== 'non_vu' && x.valeur).map((x) => x.valeur as string)
     if (lots.length) morceaux.push(`lot${lots.length > 1 ? 's' : ''} ${lots.join(', ')}`)
     if (v('date_mesurage')) morceaux.push(`mesuré le ${v('date_mesurage')}`)
+  } else if (l.typeCode === 'justif.identite') {
+    // une entrée par pièce (rang) : la nature et la fin de validité -- jamais un nom (même règle que les autres résumés)
+    const rangs = [...new Set(l.valeurs.filter((x) => x.cle.startsWith('pieces.') && x.etat !== 'non_vu').map((x) => x.rang))].sort((a, b) => a - b)
+    const pieces = rangs.map((r) => {
+      const de = (cle: string) => l.valeurs.find((x) => x.cle === cle && x.rang === r && x.etat !== 'non_vu')
+      const nature = de('pieces.nature')?.valeur?.replace(' (?)', '')
+      const fin = de('pieces.date_fin_validite')
+      return `${NATURE_PIECE[nature ?? 'autre'] ?? NATURE_PIECE.autre}${fin?.valeur_date ? ` valable jusqu'au ${jjmmaaaa(fin.valeur_date)}${fin.etat === 'incertain' ? ' (?)' : ''}` : ''}`
+    })
+    if (pieces.length > 1) morceaux.push(`${pieces.length} pièces`)
+    morceaux.push(...pieces)
+  } else if (l.typeCode === 'transaction.renseignements') {
+    morceaux.push('fiche de renseignements')
+    if (v('date_document')) morceaux.push(`du ${v('date_document')}`)
+    const p = personnesLues(l.valeurs)
+    if (p) morceaux.push(p)
   } else if (l.typeCode === 'copro.reglement') {
     if (v('sous_type')) morceaux.push(mot(v('sous_type')) as string)
     if (v('date_acte')) morceaux.push(`du ${v('date_acte')}`)

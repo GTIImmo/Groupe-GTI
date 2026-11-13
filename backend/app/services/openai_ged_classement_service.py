@@ -29,6 +29,7 @@ from .openai_listing_sheet_service import _extract_output_text
 
 AGENT_KEY = "ged_classement"
 INTERRUPTEUR = "ged_lecture_ia"
+INTERRUPTEUR_PERSONNES = "ged_lecture_personnes"  # morceau 9 : lire les pièces des personnes (off / admin / on)
 MAX_PAGES = 12
 MAX_VIGNETTE_OCTETS = 400 * 1024
 MAX_TEXTE_CARACTERES = 6000
@@ -119,13 +120,13 @@ class OpenAIGedClassementService:
         key = self.settings.supabase_service_role_key
         return {"apikey": key, "Authorization": f"Bearer {key}"}
 
-    def interrupteur(self) -> str:
+    def interrupteur(self, cle: str = INTERRUPTEUR) -> str:
         # Absent, illisible ou en erreur = eteint (patron des interrupteurs a trois crans).
         try:
             r = requests.get(
                 f"{self.settings.supabase_url}/rest/v1/app_setting",
                 headers=self._headers(),
-                params={"key": f"eq.{INTERRUPTEUR}", "select": "value", "limit": "1"},
+                params={"key": f"eq.{cle}", "select": "value", "limit": "1"},
                 timeout=8,
             )
             rows = r.json() if r.ok else []
