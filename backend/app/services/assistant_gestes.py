@@ -818,6 +818,7 @@ def executer_supprimer_rdv(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[st
 MAX_DESTINATAIRES = 10
 MAX_TEXTE_EMAIL = 3000
 _ADRESSE = re.compile(r"[^@\s|,;]+@[^@\s|,;]+\.[^@\s|,;]+")
+_LIEN = re.compile(r"https?://[^\s)\]>\"']+")
 
 
 def _ma_boite(ctx: ContexteAssistant) -> str:
@@ -829,12 +830,17 @@ def _ma_boite(ctx: ContexteAssistant) -> str:
     return email
 
 
+MOI = "moi"  # = la personne elle-même ; son adresse est posée par le SERVEUR, au clic (règle de l'étape 1)
+
+
 def _destinataires_internes(ctx: ContexteAssistant, brut: Any) -> list[str]:
     domaine = "@" + ctx.settings.google_workspace_domain
     morceaux = [x.strip().lower() for x in re.split(r"[|,;\s]+", str(brut or "")) if x.strip()]
     if not morceaux:
         raise Refus("Donne au moins un destinataire.")
     for adresse in morceaux:
+        if adresse == MOI:
+            continue
         if not _ADRESSE.fullmatch(adresse):
             raise Refus(f"« {adresse} » n'est pas une adresse e-mail.")
         if not adresse.endswith(domaine):
@@ -859,13 +865,15 @@ def preparer_email_interne(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[s
     _ma_boite(ctx)
     dest = _destinataires_internes(ctx, p.get("destinataires"))
     objet, texte = _contenu_email(p)
-    return f"Envoyer depuis TA boîte un e-mail interne à {', '.join(dest)} — objet « {objet} » — texte :\n{texte}", \
+    qui = ", ".join("toi" if d == MOI else d for d in dest)
+    return f"Envoyer depuis TA boîte un e-mail interne à {qui} — objet « {objet} » — texte :\n{texte}", \
         {"destinataires": dest, "objet": objet, "texte": texte}
 
 
 def executer_email_interne(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[str, Any]:
     email = _ma_boite(ctx)  # re-vérifié AU CLIC
-    dest = _destinataires_internes(ctx, "|".join(p.get("destinataires") or []))
+    dest = list(dict.fromkeys(email if d == MOI else d
+                              for d in _destinataires_internes(ctx, "|".join(p.get("destinataires") or []))))
     objet, texte = _contenu_email(p)
     r = _google(lambda: GoogleWorkspaceService(ctx.settings).send_gmail_message(
         subject_email=email, to=dest, subject=objet, body_text=texte, from_name=ctx.nom or "GTI Immobilier",
@@ -897,7 +905,9 @@ def apercu_rapprochement(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[str,
 
     def masque(texte: Any) -> str:
         # ⛔ aucune adresse e-mail ne part au modèle (ni celle de la personne, ni celle du client)
-        return _ADRESSE.sub("[adresse]", str(texte or ""))
+        # ⛔ ni aucun LIEN : « Voir ce bien », « Affiner », « Se désinscrire » portent une clé d'accès à l'espace du
+        #   client (/espace/<jeton>, sans connexion) -- trouvé en réel le 13/11 sur l'aperçu de 10354488
+        return _ADRESSE.sub("[adresse]", _LIEN.sub("[lien]", str(texte or "")))
 
     return {"apercu": True, "rien_n_est_parti": True, "destinataire": fiche.get("display_name"),
             "client_a_une_adresse": bool(str(fiche.get("email") or "").strip()), "objet": masque(rendu.get("subject")),
@@ -1030,7 +1040,8 @@ GESTES: dict[str, Geste] = {g.nom: g for g in (
           "Prépare un E-MAIL INTERNE envoyé depuis la boîte de la personne, SEULEMENT à des adresses @gti-immobilier.fr "
           "(collègues), sans pièce jointe. Jamais à un client.",
           TOUS_LES_ROLES,
-          _schema({"destinataires": {"type": "string", "description": "adresses @gti-immobilier.fr séparées par |"},
+          _schema({"destinataires": {"type": "string", "description": "adresses @gti-immobilier.fr séparées par | ; "
+                                                                      "« moi » = la personne elle-même"},
                    "objet": {"type": "string"},
                    "texte": {"type": "string", "description": "le texte COMPLET (3000 caractères au plus)"}}),
           preparer_email_interne, executer_email_interne),

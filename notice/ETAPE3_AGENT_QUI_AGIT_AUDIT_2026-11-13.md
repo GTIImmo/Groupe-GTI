@@ -214,3 +214,20 @@ Avancer **par petits lots**, chacun prouvé en réel avant le suivant :
 **Essais** : `test_assistant_gestes.py` **101 verts** (dont les témoins : agenda d'un collègue, RDV avec invités, invité ajouté avant le clic, faux domaine, carte trafiquée, aucune adresse vers le modèle) ; `test_assistant_ia.py` 59 ; `test_assistant_lecteur.py` 73 ; GED 28 + 80. L'application entière se charge.
 
 **Pour la preuve réelle (avec son accord)** : dans SON agenda — créer un RDV d'essai, le déplacer, le supprimer ; un e-mail interne à lui-même ; un aperçu de rapprochement (contact d'essai AVOIR TEST4, annonce 63330).
+
+## 12. La preuve réelle du lot 3 (13/11, 16:14-16:30, son « Oui, vas-y »)
+
+**En ligne à 16:14** (`eab475d`). Conversation avec sa session ; écrit dans SON agenda Google.
+
+- **Lire l'agenda** : « lundi prochain » → aucun RDV ; ⭐ témoin positif « du 2 au 13 novembre » → **12 RDV**, les vrais de son agenda (titres et heures justes).
+- **Créer** : « ESSAI ASSISTANT - à supprimer », lundi 16/11 07:00-07:15 → carte juste ; **avant le clic, rien** (0 lien, 0 création au journal Google) ; validée → créé chez Google, journal `calendar.event.create` avec `send_updates: none` et **0 invité**, lien app `2f70c06f…` (source « assistant »).
+- **Déplacer** à 07:30 → carte « 07:00 → 07:30–07:45, personne n'est prévenu » → validée → **relu depuis Google** : 07:30-07:45, aucun invité.
+- **Supprimer** → validée → **relu depuis Google** : il n'y est plus ; **second clic refusé (409)**.
+- **E-mail vers l'extérieur** (jean.dupont@gmail.com) : l'assistant refuse de lui-même, **aucune carte**.
+- **Aperçu du rapprochement** (AVOIR TEST4, annonce 63330) : le texte rendu, adresses masquées, rien envoyé.
+
+**Deux défauts trouvés par la preuve, corrigés en local (104 essais verts)** :
+1. ⛔ **L'aperçu envoyait au modèle les LIENS de l'e-mail** (« Voir ce bien », « Affiner », « Se désinscrire ») : ils portent une **clé d'accès à l'espace du client** (`/espace/<jeton>`, sans connexion, ~1 an). Une fois, pour le contact d'essai 10354488 seulement. → les liens sont remplacés par « [lien] ».
+2. **« Envoie-moi un e-mail » était impossible** sans écrire son adresse dans la question — donc chez OpenAI, contre la règle de l'étape 1. → destinataire « moi » : la carte dit « toi », l'adresse est posée par le serveur au clic.
+
+**Reste** : mettre ces 2 correctifs en ligne (accord), puis l'e-mail interne réel « à moi ».

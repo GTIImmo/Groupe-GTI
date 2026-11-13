@@ -435,7 +435,8 @@ class FauxRendu:
     def render_preview(self, **k):
         google.append({"quoi": "rendu", **k})
         return {"subject": "Des biens pour vous", "text": "Bonjour Monsieur,\nvotre conseiller : paul@gti-immobilier.fr\n"
-                                                          "écrire à durand@exemple.fr"}
+                                                          "écrire à durand@exemple.fr\n[Voir ce bien](https://gti-backend"
+                                                          ".onrender.com/espace/eyJhIjoiZXNwYyJ9.cle_secrete)"}
 
 
 ges.SupabaseAdminService, ges.GoogleWorkspaceService = FauxAdmin, FauxGoogle
@@ -597,11 +598,21 @@ r = ges.apercu_rapprochement(nouveau_ctx(), {"contact_search_key": "606202:0", "
 voir(r["rien_n_est_parti"] and not [g for g in google if g["quoi"] == "envoyer"] and not ecritures_metier(),
      "l'aperçu n'envoie rien et n'écrit rien")
 voir("@" not in r["texte"] and "[adresse]" in r["texte"], "⛔ aucune adresse e-mail dans l'aperçu (ni la sienne, ni celle du client)")
+voir("cle_secrete" not in r["texte"] and "/espace/" not in r["texte"] and "[Voir ce bien]([lien])" in r["texte"],
+     "⛔ aucun LIEN non plus : ils portent une clé d'accès à l'espace du client (trouvé en réel le 13/11)")
 voir(next(a for a in appels if a["chemin"] == "app_dossiers_current")["entetes"]["Authorization"] == "Bearer " + JETON,
      "chaque bien est lu avec le JETON avant le rendu")
 reset(bien=[])
 voir(refuse(lambda: ges.apercu_rapprochement(nouveau_ctx(), {"contact_search_key": "606202:0", "annonces": "63289", "mot": ""}),
             "biens vivants"), "un bien invisible : pas d'aperçu")
+
+reset()
+resume, pm = ges.preparer_email_interne(nouveau_ctx(), {"destinataires": "moi", "objet": "Récap", "texte": "Mes visites."})
+voir(pm["destinataires"] == ["moi"] and "à toi" in resume and EMAIL not in resume,
+     "« moi » : la carte dit « toi », et SON adresse ne part pas au modèle (règle de l'étape 1)")
+google.clear()
+ges.executer_email_interne(nouveau_ctx(), pm)
+voir(next(g for g in google if g["quoi"] == "envoyer")["to"] == [EMAIL], "au clic, « moi » devient SON adresse, posée par le serveur")
 
 print("10) aucune fonction de geste ne fait autre chose que proposer")
 voir(all(f.nom.startswith("proposer_") for f in ges.FONCTIONS_GESTES) and len(ges.FONCTIONS_GESTES) == 14,
