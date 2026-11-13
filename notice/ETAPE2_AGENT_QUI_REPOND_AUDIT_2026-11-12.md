@@ -207,3 +207,28 @@ Rejouer ensuite les mêmes 30 questions, et ajouter un témoin : un compte comme
 
 **Le patch du modèle** : `supabase/patch_assistant_ia_modele_terra_2026-11-13.sql` (+ `_INVERSE`), **à poser APRÈS la mise en ligne** (l'ancien code refuse un modèle sans tarif).
 ⛔ **INCIDENT du 13/11 à 08:39** : en voulant le « jouer à blanc », je l'ai **posé pour de vrai** (le fichier porte son propre `commit;`, que le script de répétition ne pouvait pas annuler). La fiche est passée sur terra alors que le code en ligne ne le connaissait pas. **Remise par l'inverse 12 s plus tard** (08:39:35 → 08:39:47), **0 question posée entre-temps**. Le script de répétition refuse désormais tout fichier qui contient un `commit`.
+
+## 12. La seconde preuve du 13/11 — les mêmes 30 questions avec terra et les correctifs
+
+**En ligne le 13/11 à 09:10** (`bc421e9`, poussé sur son « Oui, pousse les 5 » ; les 4 commits des autres sessions étaient déjà partis entre-temps). Fiche posée sur `gpt-6.1-terra` à 09:10:30, **après** le déploiement cette fois. Mêmes 30 questions, même méthode, chaque chiffre vérifié en base.
+
+**Résultat : plus aucune réponse fausse.** Les 5 fausses du matin sont justes :
+- Q13 : « 25 mandats, dont **11 exclusifs** », plus 13 simples et 1 accord, mandats de recherche exclus — **exact**.
+- Q18 : « **292 ventes** signées depuis le 1er janvier » — **exact**.
+- Q22 : « **1 demande** attend depuis plus de 2 jours », avec son dossier (VA6482) — **exact**.
+- Q4 : « le 63330 » trouvé comme **annonce** (l'estimation d'essai 8A2B), aucun rapprochement.
+- Q9 : « le 62774 est **clos, pas vendu** », avec ses deux offres refusées et son compromis annulé.
+Et vérifiés aussi : Unieux (1 appartement + 1 immeuble en vente sous 250 000 €), tes 12 fiches toutes en Estimation, **11 nouveaux acquéreurs** cette semaine, 16 notifications, 3 relances en retard de Franck. « Mes … » passe partout par « moi » (plus aucune adresse inventée). Il demande lequel pour Martin, Robert, Pierre, Durand ; il dit « je n'y ai pas accès » pour les e-mails ouverts, les factures et DVF ; la réponse juridique renvoie au notaire.
+
+**Les chiffres** : 30 réponses, 0 erreur, **1 seul** appel refusé (contre 19 sur 30 le matin). Durée médiane **10,2 s** (24 s au plus ; 8,7 s le matin). Coût **affiché 0,67 $** (2,2 centimes par question), parce que les consignes pèsent ~7 500 jetons et repartent à chaque étape. ⚠ **Ce coût affiché est trop haut** : OpenAI facture les consignes répétées (cache) 20 fois moins cher sur terra, et notre journal ne compte pas encore les jetons en cache (le SDK les donne : `usage.input_tokens_details.cached_tokens`). Estimation du coût réel : ~0,2 $ pour les 30, **non vérifié**. ⚠ Conséquence : le plafond de 3 $/jour se déclencherait vers **135 questions par jour pour tout le monde**, alors que le vrai coût en permettrait bien plus.
+
+**⚠ Les faiblesses restantes (pas de réponse fausse, mais incomplètes)** :
+1. **Les noms tiennent compte des majuscules** : « Durand » ne trouve que les 4 fiches écrites « Durand », alors que la base en compte **~80**, presque toutes en « DURAND ». Même défaut pour toute recherche « égal » sur un texte libre (nom, prénom, ville…).
+2. **Les transactions n'ont pas de négociateur** (le registre ne porte aucune colonne de négociateur) : « ventes par négociateur » (Q18) et « mes compromis » (Q15) ne se répartissent pas. Il le dit honnêtement au lieu d'inventer.
+3. Le coût affiché (ci-dessus).
+
+**Les correctifs proposés (NON codés, attendent son « vas-y »)** :
+- A. « égal » sur un texte libre **sans tenir compte des majuscules** (sauf les identifiants : numéros, clés, e-mails).
+- B. **Compter les jetons en cache** dans le coût du journal et du plafond (sinon le plafond coupe trop tôt).
+- C. **Le négociateur sur les transactions**, par le bien (une vue dans la base, comme le statut des mandats) — touche la base, accord nécessaire.
+Restent aussi : le témoin avec un compte commercial (personne à nommer).
