@@ -263,3 +263,10 @@ Restent aussi : le témoin avec un compte commercial (personne à nommer).
 - ⛔ « Ventes par négociateur cette année » et « honoraires des ventes 2026 » → **la lecture a échoué**, et l'assistant l'a **dit** (« la lecture des dossiers n'a pas abouti ») au lieu d'inventer. **Cause, reproduite en réel** : sur une fonction, l'API refuse de trier par une colonne qu'on ne lui demande pas (`42703 column record.app_chaine_id does not exist`) ; le compte simple marchait parce qu'il demandait justement la clé. Mes essais ne l'avaient pas vu : le faux serveur acceptait tout.
 - **Corrigé (en local)** : la colonne de tri est toujours demandée (chercher et compter). Le faux serveur des essais refuse maintenant comme l'API. Essais **71 + 59 verts**.
 - Chiffres de référence calculés en base pour la prochaine preuve : ventes 2026 par négociateur du bien (durand@ 35, arnaud.valla@ 19, ribbes@ 18, gentes@ 16, coudert@ 16… 2 sans négociateur), **292 ventes, 2 207 298 € d'honoraires**.
+
+**✅ C PROUVÉ EN RÉEL le 13/11 à 10:12** (`75de676`, son « Oui, pousse ») :
+- « Ventes par négociateur cette année » → **292 ventes, la liste par négociateur IDENTIQUE à la base, à l'unité** (Durand 35, Arnaud Valla 19, Ribbes 18, Gentes 16, Coudert 16… Berger 1, 2 non renseignées), avec l'avertissement voulu : « le négociateur du bien, qui n'est pas forcément celui qui a signé la vente ou perçu les honoraires ». Il a pris les noms dans l'annuaire ; 3 adresses n'y sont pas (Gonzalez, Valette, Berger) et il l'a signalé.
+- « Honoraires de l'agence en 2026 sur les ventes » → **2 207 298 € pour 292 ventes**, exact.
+- 23 s pour la première (deux lectures et l'annuaire), 11,6 s pour la seconde ; ~1 à 1,4 centime chacune.
+
+**L'étape 2, où elle en est** : 15 objets lisibles, 0 réponse fausse sur les 30 questions témoins, les ventes et honoraires par négociateur justes. Reste **le témoin avec un compte commercial** (deux commerciaux actifs : `pereira@`, `legrand@` ; il faut que la personne se connecte elle-même — je ne me connecte jamais à la place de quelqu'un).
