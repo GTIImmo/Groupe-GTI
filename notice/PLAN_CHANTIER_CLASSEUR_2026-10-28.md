@@ -1061,6 +1061,63 @@ la vente. Non traite, pas mesure en ampleur.
       2  un total a 50 . personne n'atteint 50 %
 ```
 
+## ✅✅✅ 3.1nonies LE CHIFFRE AJOUTÉ DEVANT — **règle de Frédéric du 14/11, et les 39 lignes VALIDÉES**
+
+   ⭐⭐⭐ **LA RÈGLE D'ÉCRITURE, DANS SES MOTS (14/11)** : *« certains numéros de
+     mandat sur les lignes du Sheet avaient un chiffre qui avait été ajouté devant
+     le numéro de son mandat, car une autre ligne du registre existe déjà avec ce
+     numéro, donc l'utilisateur ajoutait un chiffre devant. »*
+```
+     LA FORME EST MESUREE, pas supposee : des trois formes possibles, seule
+     « retirer UN chiffre DEVANT » retrouve un mandat du bien reellement
+     trouve (3 fois). « Deux chiffres devant » : 0. « Un chiffre a la fin » : 0.
+```
+   ⛔⛔ **MAIS ELLE NE SE GENERALISE PAS EN REGLE DE CALCUL**, et le temoin inverse
+     dit pourquoi : un nombre de **4 chiffres** pris AU HASARD existe deja dans
+     notre annuaire de mandats dans **95 %** des cas (2 000 tirages, 14/11).
+     « Le de-prefixe existe » ne prouve donc RIEN seul.
+     `3 chiffres 100 % . 4 chiffres 95 % . 5 chiffres 8,8 %` — seul
+     **218611 -> 18611** est concluant par les chiffres.
+   ⛔ Et **25 des 33 lignes portent « NON TROUVE »** dans leur colonne Ville :
+     leur auteur ne savait deja pas de quel bien il parlait.
+     ⚠ **Au passage, 1 398 lignes du classeur (29 %) portent « NON TROUVE »
+       quelque part** — 1 387 en Ville, 66 en Prix, 6 en Mandat.
+
+   ✅✅ **LES 39 LIGNES SONT VALIDÉES PAR FRÉDÉRIC, le 14/11** — 6 une par une dans
+     la page, puis « ils sont tous juste », puis « je valide les 7 ».
+     ➡ **RIEN A CORRIGER EN BASE** : la repartition posee le 13/11 sur ces
+       dossiers est JUSTE. Le sujet est clos sans aucune ecriture corrective.
+     ⚠ **Les 7 dernieres reposent sur SON jugement, pas sur une mesure** : nous
+       n'avons pas les deux noms de notre cote. Qui relira doit le savoir.
+       `16097 CHARVOLIN VALLENTIN . 16231 DELAUNAY . 18967 SCI ROYALE .
+        21963 STAUFFER . 54111 ANDRE . 92560 (sans acheteur) . « NON TROUVE » SCI MADEVA`
+
+   ⭐⭐⭐ **LA LEÇON, ET ELLE M'A COUTE 32 RELECTURES INUTILES.** J'ai declare ces
+     39 lignes « incertaines » parce que le gel les avait rattachees **par les
+     noms**, et que revérifier les noms me semblait circulaire. **C'etait la
+     mauvaise frontiere** :
+```
+     CIRCULAIRE      je compare une valeur QUE J'AI ECRITE a la source dont
+                     je l'ai tiree      (la charge, le matin du 14/11)
+     PAS CIRCULAIRE  la donnee vient d'ailleurs -- meme si elle a servi a
+                     choisir            (les noms, qui viennent de Hektor)
+```
+     ⭐ **La mesure qui tranchait existait : LA FORCE DE L'INDICE.** Verifier qu'une
+       cle est UNIQUE n'est pas repeter la cle.
+```
+     12 395 couples (acheteur, vendeur) distincts dans le registre
+     32 des 39 lignes : LEUR COUPLE NE DESIGNE QU'UN SEUL DOSSIER -> certain
+      7 : nous n'avons pas les deux noms -> la, vraiment, il faut un humain
+```
+     ➡ *Avant d'appeler un rattachement « incertain », mesurer combien de cibles
+       l'indice laisse possibles. Et ne demander a l'humain que ce que la mesure
+       ne peut pas donner.* **Frederic l'a vu avant moi** : « ils sont tous juste,
+       pourquoi tu doutais, a cause du mandat ? »
+
+   La page de relecture : <https://claude.ai/artifact/S7dZk15yuciuByzYXq8uva>
+   (39 verdicts enregistres), et le document
+   `notice/A6_BIENS_INCERTAINS_A_RELIRE_2026-11-14.md`.
+
 ## ⚠⚠ 3.1octies CE QUE LA POSE CHANGE POUR **LE CALCUL** — *mesuré le 14/11*
 
    **Question de Frédéric : « le calcul a-t-il été réactualisé ? »** Trois réponses,
