@@ -1061,6 +1061,58 @@ la vente. Non traite, pas mesure en ampleur.
       2  un total a 50 . personne n'atteint 50 %
 ```
 
+## ⚠⚠ 3.1octies CE QUE LA POSE CHANGE POUR **LE CALCUL** — *mesuré le 14/11*
+
+   **Question de Frédéric : « le calcul a-t-il été réactualisé ? »** Trois réponses,
+   parce qu'il y a trois calculs, et ils ne se comportent pas pareil.
+
+   ✅ **① LE CALCUL AFFICHÉ (pilotage, fiches) EST DÉJÀ À JOUR, SANS RIEN FAIRE.**
+     `pilotage.ts:148` et `api.ts` (4 endroits) lisent `app_affaire_repartition`
+     **en direct**, et il n'existe **AUCUNE vue matérialisée** dans tout
+     `supabase/`. Le calcul se refait **à chaque ouverture de l'écran** : les
+     9 165 lignes comptent dès la seconde où elles sont posées. Rien à relancer.
+
+   ✅ **② LE CALCUL DU RUN TOURNE, ET IL A RESPECTÉ NOS LIGNES.**
+     `phase2/sync/repartition_commission.py` (run de nuit,
+     `run_full_pipeline.ps1:1357`) écrit bien dans cette table — mais il passe
+     par la RPC `app_repartition_absorber`, **qui porte la garde** :
+```sql
+     if exists (select 1 from app_affaire_repartition r
+                 where r.app_chaine_id = v_chaine
+                   and coalesce(r.origine,'') not like 'hektor%')
+     then v_protege := v_protege + 1; continue; end if;
+```
+     ⭐ **Elle protège TOUTE origine qui ne commence pas par « hektor »** — donc
+       `classeur_reconstitue` comme `saisie`. Par **conception**, pas par chance.
+     ⭐ **Et le témoin réel existe** : le run du 14/11 (06:31, donc AVANT la pose
+       des 30) a vu les 9 100 lignes du 13/11 et n'a écrit que **2 lignes**.
+       `hektor_partage_suppose` porte bien une écriture du 14/11 : le calcul
+       tourne et met à jour les 8 715 lignes dont il a la charge.
+
+   ⚠⚠ **③ MAIS LA CONTREPARTIE EST RÉELLE : CE QUI EST PROTÉGÉ N'EST PLUS
+     RECALCULÉ.** Les chaînes que nous possédons sont désormais **SAUTÉES** par
+     le calcul du run — leur répartition est **FIGÉE sur le classeur**. Si Hektor
+     change les honoraires d'une de ces affaires, **notre répartition ne suivra
+     pas**.
+```
+     chaines PROTEGEES (origine non-hektor)       4 477   = 50,7 %
+     chaines que le run peut encore recalculer    4 359
+     DONT, parmi les 4 477 :
+        3 720  ont une VENTE          -> closes, rien ne bougera jamais
+           96  COMPROMIS ENCORE ACTIF -> VIVANTES : LE SEUL VRAI ENJEU
+          661  ni vente ni compromis actif (offres tombees, anciennes)
+```
+   ⬜ **RÉSERVE NOMMÉE, et elle se chiffre à 96, pas à 4 477 ni à 0** : ces 96
+     chaînes ont un compromis actif et une répartition figée. ⭐ *C'est le genre
+     de chiffre qui rend une inquiétude actionnable* — surveiller 96 chaînes est
+     faisable, « surveiller la moitié du registre » ne l'est pas.
+     ➡ À trancher par Frédéric : **une sentinelle** qui crie si Hektor change les
+       honoraires d'une de ces 96, ou **rien** (le classeur fait foi, point).
+   ⛔ **Ce n'est PAS un défaut : c'est la décision du 02/11 (« LE CLASSEUR FAIT
+     FOI ») qui s'applique.** On a échangé « suivre Hektor » contre « le classeur
+     fait foi » sur ces chaînes. Il faut juste que ce soit **su**, et non découvert
+     dans six mois.
+
 ## ✅✅ 3.2 LA RESERVE DES 413 ECARTS EST FERMEE — **14/11, et elle cachait un defaut**
 
    ⛔ **J'ALLAIS LA COCHER SUR LA FOI D'UNE NOTE. Frédéric a demande un VRAI
