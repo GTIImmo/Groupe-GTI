@@ -233,6 +233,61 @@ def date_du_classeur(v) -> date | None:
     return None
 
 
+#: Les mois ecrits en clair dans le classeur, sans accent et en minuscules.
+MOIS_EN_CLAIR = {
+    "janvier": 1, "fevrier": 2, "mars": 3, "avril": 4, "mai": 5, "juin": 6,
+    "juillet": 7, "aout": 8, "septembre": 9, "octobre": 10, "novembre": 11,
+    "decembre": 12,
+}
+
+
+def sans_accent(s: str) -> str:
+    for a, b in zip("àâäéèêëîïôöùûüç", "aaaeeeeiioouuuc"):
+        s = s.replace(a, b)
+    return s
+
+
+def date_du_classeur_tolerante(v) -> date | None:
+    """⭐⭐ COMME date_du_classeur, PLUS les dates ECRITES EN CLAIR.
+
+    ⛔⛔ LE DEFAUT QU'ELLE REPARE, mesure du 14/11/2026 : le classeur ecrit une
+      date sur DEUX formes -- « 05/12/2023 » mais aussi « 5 decembre23 ». La
+      fonction d'origine ne lit que la premiere et rend None sur la seconde :
+
+        Offre Achat   968 cases sur 4 755 PERDUES (20 %)
+        Compromis     745 . Vente Prevue 824 . Vente Fixee 768 . Vente Reglee 794
+
+      Consequence a l'ecran : le rapport rangeait 924 lignes en « nous seuls »
+      -- « nous avons une date, le classeur rien » -- alors que le classeur EN
+      PORTE UNE. Il ne comparait que 3 570 lignes au lieu de 4 494.
+
+    ⚠ ELLE EST ADDITIVE : tout ce que date_du_classeur lit, elle le lit pareil
+      (eprouve le 14/11 sur les deux formats, plus un temoin inverse : le
+      31 fevrier, le 5 brumaire et « 32/13/2024 » restent refuses).
+
+    ✅ BRANCHEE LE 14/11 sur ses DEUX appelants -- l'annee du prix (le ② du
+      rapport) et les quatre dates (le ④) -- avec l'accord de Frederic.
+      Le rapatriement du classeur s'en sert aussi pour departager deux lignes
+      par leur dernier mouvement.
+    ⛔ date_du_classeur() reste en place et n'est plus appelee nulle part :
+      elle est LE COEUR de celle-ci, qui l'essaie d'abord.
+    """
+    d = date_du_classeur(v)
+    if d is not None:
+        return d
+    t = sans_accent(str(v or "").strip().lower())
+    m = re.match(r"^(\d{1,2})\s*([a-z]+)\s*(\d{2,4})$", t)
+    if not m or m.group(2) not in MOIS_EN_CLAIR:
+        return None
+    jour_, mois = int(m.group(1)), MOIS_EN_CLAIR[m.group(2)]
+    an = int(m.group(3))
+    an = an + 2000 if an < 100 else an
+    try:
+        return date(an, mois, jour_)
+    except ValueError:
+        return None
+
+
 def date_de_chez_nous(v) -> date | None:
     """aaaa-mm-jj[THH:MM:SS...] (le format du registre) -> un objet date."""
     t = str(v or "").strip()
@@ -486,7 +541,7 @@ def main() -> int:
                     "app_chaine_id.asc,cote.asc,rang.asc")
     reg = lire_tout(cl, "app_mandat_register_current",
                     "hektor_annonce_id,numero_mandat,numero_dossier,ville,type_bien,"
-                    "agence_nom,commercial_nom",
+                    "agence_nom,commercial_nom,mandat_charge_honoraires_app",
                     "hektor_annonce_id.asc,numero_mandat.asc")
     print("gel : %d liens · registre : %d transactions · repartition : %d · mandats : %d"
           % (len(liens), len(led), len(rep), len(reg)))
@@ -579,8 +634,9 @@ def main() -> int:
         c_brut = case(l, "Prix")
         annee = None
         for champ_date in ("Vente Fixee", "Vente Prevue", "Compromis", "Offre Achat"):
-            d = date_du_classeur(case(l, {"Vente Fixee": "Vente Fixée", "Vente Prevue": "Vente Prévue",
-                                          "Compromis": "Compromis", "Offre Achat": "Offre Achat"}[champ_date]))
+            d = date_du_classeur_tolerante(
+                case(l, {"Vente Fixee": "Vente Fixée", "Vente Prevue": "Vente Prévue",
+                         "Compromis": "Compromis", "Offre Achat": "Offre Achat"}[champ_date]))
             if d:
                 annee = d.year
                 break
@@ -610,11 +666,20 @@ def main() -> int:
         if n_com is not None:
             notes["Commission lue par : " + voie] += 1
 
-        pose("Charge Commission", case(l, "Charge Commission"),
-             la_plus_avancee.get("charge_commission_app"),
-             verdict(case(l, "Charge Commission"), la_plus_avancee.get("charge_commission_app"),
+        # ⛔⛔ LA CASE LUE ETAIT LA MAUVAISE -- reserve du 09/11, corrigee le 14/11.
+        #   Le rapport lisait `charge_commission_app` du LEDGER : 7 lignes
+        #   remplies sur 31 157, donc il annoncait « 933 charges a prendre »
+        #   alors que LE REGISTRE DES MANDATS en porte 23 473 sur 24 596.
+        #   La charge des honoraires est une donnee DU MANDAT, pas de la
+        #   transaction -- c'est la case du mandat qui fait foi.
+        # ⭐ Le vocabulaire concorde des deux cotes (mesure du 14/11) : le
+        #   registre dit « vendeur » / « acquereur », le classeur « Vendeur » /
+        #   « Acquereur ». La comparaison sur les trois premieres lettres tient.
+        n_charge = mandat_reg.get("mandat_charge_honoraires_app")
+        pose("Charge Commission", case(l, "Charge Commission"), n_charge,
+             verdict(case(l, "Charge Commission"), n_charge,
                      str(case(l, "Charge Commission")).lower()[:3]
-                     == str(la_plus_avancee.get("charge_commission_app") or "").lower()[:3]))
+                     == str(n_charge or "").lower()[:3]))
 
         # ── ④ LES QUATRE DATES, chacune sur SA transaction
         for champ_c, role, cle in (("Offre Achat", "offre", "date"),
@@ -622,7 +687,7 @@ def main() -> int:
                                    ("Vente Prévue", "compromis", "date_acte"),
                                    ("Vente Fixée", "vente", "date")):
             nom_sortie = champ_c.replace("Prévue", "Prevue").replace("Fixée", "Fixee")
-            dc = date_du_classeur(case(l, champ_c))
+            dc = date_du_classeur_tolerante(case(l, champ_c))
             t = parr.get(role)
             dn = date_de_chez_nous(t.get(cle)) if t else None
             # ⭐ REPARATION « propositions » (12/11/2026) : pour l'OFFRE, `date`

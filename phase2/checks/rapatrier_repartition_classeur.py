@@ -88,6 +88,7 @@ from rapport_gel_tous_les_champs import (  # noqa: E402
     charger_alias,
     charger_classeur,
     client,
+    date_du_classeur_tolerante,
     lire_tout,
     mots_du_nom,
     nombre,
@@ -103,7 +104,10 @@ def alias() -> dict:
     return RAP.ALIAS_NEGOCIATEUR
 
 ORIGINE = "classeur_reconstitue"
-ECRIT_PAR = "rapatriement classeur 13/11/2026"
+#: ⚠ La trace porte LE JOUR DU GESTE, jamais une date figee : elle sert a
+#:   retrouver quel passage a pose une ligne (le lot 1 est du 13/11, les
+#:   divergences tranchees du 14/11).
+ECRIT_PAR = "rapatriement classeur " + date.today().strftime("%d/%m/%Y")
 INTOUCHABLE = "saisie"
 
 #: ⭐⭐⭐ LES LEVEES D'AMBIGUITE, DITES PAR FREDERIC LE 13/11 -- ce sont des
@@ -138,6 +142,49 @@ LEVEES_D_AMBIGUITE = {
 
 
 # ----------------------------------------------------------- l'annuaire
+
+#: Les quatre cases qui racontent la VIE d'une ligne du classeur. La plus
+#: tardive des quatre est son « dernier mouvement ».
+#: ⚠ « Vente Prevue » et « Signee » sont volontairement ABSENTES : la premiere
+#:   est une PREVISION (elle peut etre posterieure a tout le reste sans qu'il
+#:   se soit rien passe), la seconde n'est pas une date.
+CASES_DU_MOUVEMENT = ("Offre Achat", "Compromis", "Vente Réglée", "Annulée")
+
+
+def dernier_mouvement(ligne, idx: dict):
+    """La date la PLUS TARDIVE de la ligne, ou None si aucune n'est lisible.
+
+    ⭐⭐⭐ C'EST LA REGLE QUI DEPARTAGE DEUX LIGNES SUR LA MEME CHAINE, et elle
+      a ete MESUREE avant d'etre codee (14/11/2026) :
+
+        LA LIGNE DONT LE DERNIER MOUVEMENT EST LE PLUS RECENT PORTE LA
+        REPARTITION DE LA CHAINE.
+
+    ⭐ POURQUOI ELLE EST JUSTE, et ce n'est pas une convention commode : les
+      « conflits » n'en sont pas. Ce sont DEUX AFFAIRES SUCCESSIVES SUR LE MEME
+      BIEN -- meme mandat, acquereurs differents. Une offre ou un compromis
+      TOMBE, puis la vente qui a ABOUTI. Celle qui est tombee n'a jamais
+      encaisse de commission : il n'y a rien a y repartir.
+
+        chaine 117, mandat 15323
+          A  LEGRAND=50 + FORLICO=50   Vente reglee 21/03/2024  acq. DEBRAY
+          B  FORLICO=100               Annulee      23/07/2023  acq. LANGLADE
+
+    ⭐⭐ LE TEMOIN : j'ai eprouve DEUX formulations -- « celle qui a abouti » et
+      « la plus recente ». Elles donnent le MEME gagnant 29 fois sur 29,
+      ZERO desaccord. Les 4 cas restants sont des biens qui ne se sont JAMAIS
+      vendus (plusieurs tentatives, toutes annulees) : la, seule la date
+      tranche, et « celle qui a abouti » ne dit rien. D'ou UNE SEULE regle.
+
+    ⛔ ELLE A BESOIN DU PARSEUR TOLERANT : le classeur ecrit « 5 decembre23 »
+      autant que « 05/12/2023 », et les cas mesures en portaient. Avec le
+      parseur d'origine la regle serait restee muette sur une ligne sur cinq.
+    """
+    dates = [date_du_classeur_tolerante(ligne[idx[c]])
+             for c in CASES_DU_MOUVEMENT if c in idx]
+    dates = [d for d in dates if d is not None]
+    return max(dates) if dates else None
+
 
 def charger_annuaire(cl) -> dict:
     """Range l'annuaire par NOM DE FAMILLE -> liste de personnes.
@@ -332,6 +379,9 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--sql", action="store_true",
                     help="depose aussi le patch SQL a relire (il n'est PAS joue)")
+    ap.add_argument("--seulement-changees", action="store_true",
+                    help="le patch ne touche QUE les chaines dont la repartition"
+                         " en base DIFFERE de ce qu'on va poser")
     args = ap.parse_args()
 
     cl = client()
@@ -468,29 +518,11 @@ def main() -> int:
         #   repartition sont la meme chose, et c'est la repartition qu'on ecrit.
         signature = tuple((c, r, resolus[n]["hektor_user_id"], pct)
                           for c, r, n, pct in cotes)
-        if chaine in vu_chaine:
-            if chaine in ecartees:
-                notes["REFUS : chaine deja ecartee pour divergence"] += 1
-                refus.append({"ID Unique": iu, "chaine": chaine, "etape": "conflit",
-                              "motif": "chaine deja ecartee (divergence)",
-                              "classeur": ""})
-            elif a_poser.get(chaine, {}).get("signature") == signature:
-                notes["doublon du classeur : les deux lignes disent LA MEME CHOSE"] += 1
-                a_poser[chaine]["doublons"].append(iu)
-            else:
-                notes["REFUS : deux lignes du classeur sur la meme chaine"] += 1
-                refus.append({"ID Unique": iu, "chaine": chaine, "etape": "conflit",
-                              "motif": "deja vue par la ligne " + vu_chaine[chaine],
-                              "classeur": ""})
-                a_poser.pop(chaine, None)
-                ecartees.add(chaine)
-            continue
-        vu_chaine[chaine] = iu
-
         avant = {str(r.get("origine") or "(vide)") for r in anciennes}
-        a_poser[chaine] = {
+        entree = {
             "id_unique": iu, "dossier": int(dossier),
             "signature": signature, "doublons": [],
+            "quand": dernier_mouvement(l, idx),
             "avant": "+".join(sorted(avant)) if avant else "AUCUNE",
             "avant_n": len(anciennes),
             "lignes": [(cote, rang, resolus[nom]["hektor_user_id"],
@@ -498,6 +530,77 @@ def main() -> int:
                         nom, resolus[nom].get("comment", ""))
                        for cote, rang, nom, pct in cotes],
         }
+
+        if chaine in vu_chaine:
+            garde = a_poser.get(chaine)
+            if garde is not None and garde["signature"] == signature:
+                notes["doublon du classeur : les deux lignes disent LA MEME CHOSE"] += 1
+                garde["doublons"].append(iu)
+            elif garde is None:
+                # La chaine a deja ete retiree faute de pouvoir departager ses
+                # lignes. Une troisieme ne la sauve pas : on refuse tout le lot.
+                notes["REFUS : chaine deja ecartee, dates indepartageables"] += 1
+                refus.append({"ID Unique": iu, "chaine": chaine, "etape": "conflit",
+                              "motif": "chaine deja ecartee (indepartageable)",
+                              "classeur": ""})
+            elif entree["quand"] is None or garde["quand"] is None \
+                    or entree["quand"] == garde["quand"]:
+                # ⛔ LE SEUL CAS QUI RESTE UN REFUS : sans date lisible des deux
+                #   cotes, ou a dates EGALES, la regle ne dit rien. On ne devine
+                #   pas -- on retire la chaine et on la nomme.
+                notes["REFUS : divergence aux dates INDEPARTAGEABLES"] += 1
+                refus.append({"ID Unique": iu, "chaine": chaine, "etape": "conflit",
+                              "motif": "divergence, dates indepartageables (l autre : %s)"
+                                       % vu_chaine[chaine], "classeur": ""})
+                a_poser.pop(chaine, None)
+                ecartees.add(chaine)
+            elif entree["quand"] > garde["quand"]:
+                notes["divergence TRANCHEE : la ligne la plus recente gagne"] += 1
+                entree["doublons"] = garde["doublons"]
+                a_poser[chaine] = entree
+                vu_chaine[chaine] = iu
+            else:
+                notes["divergence TRANCHEE : la ligne la plus recente gagne"] += 1
+            continue
+
+        vu_chaine[chaine] = iu
+        a_poser[chaine] = entree
+
+    # ⭐⭐ « ADDITIF ET CHIRURGICAL, JAMAIS DE REMPLACEMENT MASSIF » -- la regle
+    #   du projet, appliquee au patch. Sans ce filtre, un second passage rejoue
+    #   les 4 439 chaines deja posees pour en ajouter 30 : un delete + insert de
+    #   9 100 lignes pour 65 de neuves.
+    # ⭐ La MESURE du 14/11 a prouve que c'est sans danger de les laisser de
+    #   cote : entre le 13 et le 14, sur les chaines communes, 0 a change et
+    #   0 n'a disparu. Mais on ne s'appuie pas sur cette mesure -- on COMPARE
+    #   chaine par chaine, ici, a chaque passage.
+    if args.seulement_changees:
+        # ⛔ L'ORIGINE FAIT PARTIE DE LA SIGNATURE, et l'oublier m'a coute un
+        #   premier filtre trop large : 8 chaines ou Hektor avait DEJA devine la
+        #   bonne repartition en sortaient du patch, et gardaient l'etiquette
+        #   « hektor_partage_suppose » alors que LE CLASSEUR FAIT FOI. Meme
+        #   valeur, mais une provenance moins sure -- et c'est la provenance
+        #   qu'on lit a l'ecran et dans les audits.
+        def signature_en_base(ch: str) -> tuple:
+            return tuple(sorted(
+                (str(r.get("cote") or ""), int(r.get("rang") or 0),
+                 str(r.get("hektor_user_id") or ""), float(r.get("pourcentage") or 0),
+                 str(r.get("origine") or ""))
+                for r in deja.get(ch, [])))
+
+        def signature_voulue(v: dict) -> tuple:
+            return tuple(sorted(
+                (str(cote), int(rang), str(uid), float(pct), ORIGINE)
+                for cote, rang, uid, _nom, pct, _n, _c in v["lignes"]))
+
+        inchangees = [ch for ch, v in a_poser.items()
+                      if signature_en_base(ch) == signature_voulue(v)]
+        for ch in inchangees:
+            a_poser.pop(ch)
+        print()
+        print("  ⭐ PATCH CHIRURGICAL : %d chaine(s) sont DEJA EXACTEMENT ainsi en"
+              % len(inchangees))
+        print("     base -- elles sortent du patch, qui ne touchera que les autres.")
 
     # ------------------------------------------------ le compte rendu
     print()
@@ -519,12 +622,21 @@ def main() -> int:
         print("  ⭐ %d ligne(s) du classeur sont des DOUBLONS INOFFENSIFS : une autre"
               % dbl)
         print("     ligne vise la meme chaine et donne LA MEME repartition.")
+    tranchees = sum(n for k, n in notes.items() if k.startswith("divergence TRANCHEE"))
+    if tranchees:
+        print("  ⭐⭐ %d ligne(s) DIVERGENTES ont ete TRANCHEES par la regle du"
+              % tranchees)
+        print("     DERNIER MOUVEMENT : la plus recente porte la repartition, celle")
+        print("     qui est tombee n'a jamais encaisse de commission.")
     print()
     print("  CE QUI EST REFUSE -- et pourquoi")
     print("  " + "-" * 68)
     for k, n in notes.most_common():
-        if k.startswith("doublon du classeur"):
-            continue       # ⚠ ce n'est PAS un refus : il est compte au-dessus
+        # ⚠ CE NE SONT PAS DES REFUS, et les melanger ici a deja trompe la
+        #   lecture : les doublons et les divergences tranchees sont comptes
+        #   au-dessus, et la ligne « total refuse » ne les porte pas non plus.
+        if k.startswith("doublon du classeur") or k.startswith("divergence TRANCHEE"):
+            continue
         print("     %-58s %5d" % (k[:58], n))
     print("  total refuse : %d ligne(s) du classeur" % len(refus))
 
@@ -619,11 +731,15 @@ def ecrire_le_patch(a_poser: dict, cases: int) -> Path:
         A(ligne + ("," if i < len(vals) - 1 else ";"))
     A("")
     A("-- (4) LES CONTROLES, DANS LA MEME TRANSACTION : un faux et tout est annule.")
+    A("-- ⛔⛔ ILS SONT BORNES AUX CHAINES DE CE PATCH, et c'est un defaut trouve")
+    A("--   le 14/11 en relisant un patch CHIRURGICAL : compte sur toute la table,")
+    A("--   « n <> %d » voyait les 9 100 lignes deja posees la veille et le patch" % cases)
+    A("--   echouait a coup sur. Un controle doit juger SA part, pas la table.")
     A("do $$")
     A("declare n int; m int;")
     A("begin")
     A("  select count(*) into n from public.app_affaire_repartition")
-    A("   where origine = '%s';" % ORIGINE)
+    A("   where origine = '%s' and app_chaine_id in (%s);" % (ORIGINE, chaines))
     A("  if n <> %d then" % cases)
     A("    raise exception 'ARRET : % lignes posees au lieu de " + str(cases) + "', n;")
     A("  end if;")
@@ -631,7 +747,8 @@ def ecrire_le_patch(a_poser: dict, cases: int) -> Path:
     A("  select count(*) into m from (")
     A("    select app_chaine_id, cote, sum(pourcentage) as s")
     A("      from public.app_affaire_repartition")
-    A("     where origine = '%s' group by 1, 2) q" % ORIGINE)
+    A("     where origine = '%s' and app_chaine_id in (%s)" % (ORIGINE, chaines))
+    A("     group by 1, 2) q")
     A("   where abs(s - 50) > 0.01;")
     A("  if m > 0 then")
     A("    raise exception 'ARRET : % cote(s) ne font pas 50', m;")
@@ -641,11 +758,18 @@ def ecrire_le_patch(a_poser: dict, cases: int) -> Path:
     A("")
     A("commit;")
     A("")
-    A("-- RETOUR ARRIERE :")
+    A("-- RETOUR ARRIERE -- ⛔⛔ IL NE JUGE QUE SA PART.")
+    A("--   Le premier jet disait « delete where origine = '%s' » TOUT COURT :" % ORIGINE)
+    A("--   joue apres un patch chirurgical, il aurait efface LES 9 100 LIGNES")
+    A("--   d'un lot precedent pour n'en remettre que %d chaine(s)." % len(a_poser))
     A("--   begin;")
-    A("--   delete from public.app_affaire_repartition where origine = '%s';" % ORIGINE)
-    A("--   insert into public.app_affaire_repartition select * from public.%s;" % sauve)
+    A("--   delete from public.app_affaire_repartition")
+    A("--    where app_chaine_id in (%s);" % chaines)
+    A("--   insert into public.app_affaire_repartition")
+    A("--     select * from public.%s;" % sauve)
     A("--   commit;")
+    A("--   ⚠ La sauvegarde ne porte QUE ces chaines : apres ce retour arriere,")
+    A("--     elles retrouvent EXACTEMENT leur etat d'avant, et rien d'autre ne bouge.")
     chemin.write_text("\n".join(out) + "\n", encoding="utf-8")
     return chemin
 

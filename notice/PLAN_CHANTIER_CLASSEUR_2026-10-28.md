@@ -980,20 +980,168 @@ la vente. Non traite, pas mesure en ampleur.
 
    ✅ LE PREALABLE DES 13 ANCIENS EST REMPLI (9001-9013, poses dans
      `data/hektor.sqlite` qui n'est jamais purgee).
-     ⏰ **A CONTROLER APRES LE RUN DE NUIT : ils doivent survivre a la purge.**
+     ✅ **ILS ONT SURVECU A LA PURGE** — controle du 14/11 au matin : les 13 sont
+       dans `app_hektor_negotiator_agency_directory`, tous `is_active = false`,
+       `active_source = local_hektor_negociateur_inactive`. Le dispositif tient.
+
+## ✅✅✅ 3.1septies LES 30 DERNIERES CHAINES SONT POSEES — **14/11, accord de Frédéric**
+
+   ⭐⭐⭐ **LES « 32 DIVERGENCES » NE DEMANDAIENT PAS 32 ARBITRAGES : UNE REGLE.**
+     En les regardant une par une, la cause saute aux yeux — ce ne sont PAS deux
+     saisies contradictoires du meme fait, mais **DEUX AFFAIRES SUCCESSIVES SUR LE
+     MEME BIEN** : meme mandat, acquereurs differents, une offre ou un compromis
+     TOMBE puis la vente qui a ABOUTI.
+```
+     chaine 117, mandat 15323
+       A  LEGRAND=50 + FORLICO=50   Vente reglee 21/03/2024   acq. DEBRAY
+       B  FORLICO=100               Annulee      23/07/2023   acq. LANGLADE
+     B n'a JAMAIS encaisse de commission : il n'y a rien a y repartir.
+```
+   ⭐⭐ **LA REGLE, ET ELLE EST UNIQUE** :
+```
+     LA LIGNE DU CLASSEUR DONT LE DERNIER MOUVEMENT EST LE PLUS RECENT
+     PORTE LA REPARTITION DE LA CHAINE.
+```
+     ⭐ **Le temoin qui l'a validee** : j'ai eprouve DEUX formulations — « celle
+       qui a abouti » et « la plus recente ». Elles donnent le MEME gagnant
+       **29 fois sur 29, zero desaccord**. Les 4 restantes sont des biens qui ne
+       se sont JAMAIS vendus (plusieurs tentatives, toutes annulees) : la, « celle
+       qui a abouti » ne dit rien et seule la date tranche. D'ou UNE SEULE regle.
+     ⚠ Elle reste MUETTE (donc refus) si les deux dates sont illisibles ou egales.
+     ⛔ **ELLE A BESOIN DU PARSEUR TOLERANT** (voir 3.2) : les cas mesures
+       portaient des dates « 5 decembre23 », que l'ancien parseur rendait `None`.
+
+```
+     patch joue : supabase/patch_repartition_classeur_2026-11-14.sql
+     17 890 -> 17 905 lignes . classeur_reconstitue 9 100 -> 9 165
+     chaines 4 439 -> 4 469 (+30) . saisies humaines 20 INTACTES
+     0 cote faux sur 8 938 couples chaine/cote
+     sauvegarde : app_affaire_repartition_avant_classeur_20261114 (50 l. / 25 ch.)
+     ce qu'on a remplace : 24 « hektor_partage_suppose » . 1 « hektor » . 5 RIEN
+```
+   ⭐⭐ **LE PATCH EST CHIRURGICAL** (option neuve `--seulement-changees`) : il
+     COMPARE chaine par chaine ce qu'on veut poser a ce qui est en base, et sort
+     du patch tout ce qui est deja ainsi. **4 439 chaines sont sorties**, le patch
+     n'a touche que 30. Sans ca, un second passage rejouait un delete + insert de
+     9 100 lignes pour 65 de neuves.
+     ⛔ **L'ORIGINE FAIT PARTIE DE LA SIGNATURE**, et l'oublier m'a donne un
+       premier filtre trop large : 8 chaines ou Hektor avait DEJA devine la bonne
+       repartition en sortaient, et gardaient l'etiquette `hektor_partage_suppose`
+       alors que LE CLASSEUR FAIT FOI. Meme valeur, provenance moins sure.
+
+   ⛔⛔ **DEUX DEFAUTS GRAVES TROUVES EN RELISANT LE PATCH AVANT DE LE JOUER** :
+```
+     ① le controle (4) comptait TOUTE la table : « n <> 65 » voyait les 9 165
+       lignes posees la veille -> le patch ECHOUAIT A COUP SUR.
+     ② LE RETOUR ARRIERE ETAIT DESTRUCTEUR : « delete where origine =
+       'classeur_reconstitue' » TOUT COURT aurait efface LES 9 100 LIGNES DU
+       LOT 1 pour n'en remettre que 30 chaines.
+```
+     ➡ Les deux sont desormais **bornes aux chaines du patch**. ⭐ *Un controle,
+       comme un retour arriere, ne juge que SA part — jamais la table.*
+
+   ⭐ **TEMOIN** : la chaine **23802** est la SEULE ou la regle designe l'autre
+     ligne que celle retenue la veille (A annulee 02/10/2025 / B VENDUE
+     10/11/2026). En base elle porte NICOLAS RAYNAUD 50/50, et le **temoin
+     inverse** tient : **zero occurrence de JOURGET** sur cette chaine.
+
+   ⛔ **« BEKCER » : EXCLUSION DELIBEREE, decidee par Frédéric le 14/11.**
+     On ne pose rien et on ne cree PAS « BEKCER » dans l'annuaire : si c'est une
+     inversion de lettres, le creer figerait la faute pour toujours.
+     ⭐ Et l'enjeu avait fondu a la mesure : des 2 lignes, la chaine **16869 est
+       DEJA SERVIE** par une autre ligne du classeur (SABRINA BLACHIER 50/50) ;
+       ne reste que la **16882**, affaire **annulee en janvier 2020**, aucune
+       commission encaissee. Aucun `BECKER` nulle part dans l'annuaire.
 
    ⬜ CE QUI RESTE DU LOT 1, sans urgence :
 ```
      87  lignes jamais rattachees par le gel     (connu depuis le 02/11)
-     32  vraies divergences                      A TRANCHER
      24  apporteur (meilleursagents, GTI) avec une part
-      2  « BEKCER » absent de tout annuaire -- les 2 affaires sont MORTES
+      1  « BEKCER » -- EXCLUSION DECLAREE ci-dessus
       2  un total a 50 . personne n'atteint 50 %
 ```
 
-3.2 ⬜              fermer la reserve des 413 ecarts contre 211 du rapport (lot 3)
-3.2bis ⬜ ACCORD    LA CHARGE DE COMMISSION -- la proposition A11 du 03/11, intacte :
-                    ① POSER LES 955 DU CLASSEUR (~2 h) -- ILS FONT FOI
+## ✅✅ 3.2 LA RESERVE DES 413 ECARTS EST FERMEE — **14/11, et elle cachait un defaut**
+
+   ⛔ **J'ALLAIS LA COCHER SUR LA FOI D'UNE NOTE. Frédéric a demande un VRAI
+     audit, et il avait raison** : la note du 09/11 la declarait levee en faisant
+     `413 - 211 = 202` puis « ca recoupe mes 265 a moins de sept jours ».
+     **202 n'est pas 265** — c'etait une deduction qui ne bouclait pas.
+
+   ✅ **LA MESURE, elle, boucle a l'unite** (14/11, sur le perimetre du rapport) :
+```
+     LARGE    (tout ecart non nul)   228
+     TOLERANT (ecart > 3 jours)      104
+     absorbes par la tolerance       124  =  228 - 104     EXACT
+     la tolerance est bien dans le code : abs((dc - dn).days) <= 3
+```
+   ⚠ **ET LES DEUX CHIFFRES D'ORIGINE ETAIENT PERIMES** : la reparation
+     « propositions » du 12/11 (lire la PREMIERE PROPOSITION et non le dernier
+     mouvement) a servi **549 fois**. Les 413 et 211 avaient ete mesures AVANT,
+     sur une date fausse de notre cote.
+
+   ⛔⛔ **LE DEFAUT QUE L'AUDIT A TROUVE, et il etait plus grave que la reserve :
+     LE RAPPORT NE LISAIT PAS UNE DATE DU CLASSEUR SUR CINQ.**
+```
+     le classeur ecrit « 05/12/2023 » MAIS AUSSI « 5 decembre23 »
+     date_du_classeur() ne lisait que la premiere forme -> None sur l'autre
+        Offre Achat   968 cases PERDUES sur 4 755  (20 %)
+        Compromis 745 . Vente Prevue 824 . Vente Fixee 768 . Vente Reglee 794
+     A L'ECRAN : 940 lignes rangees en « nous seuls » -- « nous avons une date,
+        le classeur rien » -- alors que 924 D'ENTRE ELLES EN PORTENT UNE.
+        Il ne comparait que 3 570 lignes au lieu de 4 494.
+```
+   ✅ **CORRIGE LE 14/11** : `date_du_classeur_tolerante()` essaie l'ancien parseur
+     PUIS les mois ecrits en clair. Elle est **additive** (eprouvee sur les deux
+     formats) avec son **temoin inverse** (le 31 fevrier, le 5 brumaire et
+     « 32/13/2024 » restent refuses), et branchee sur **ses 2 appelants**, les
+     seuls (regle des jumeaux appliquee : `date_du_classeur` n'avait pas d'autre
+     lecteur dans tout le depot).
+```
+     L'EFFET MESURE, avant -> apres :
+        Offre Achat   nous seuls  940 -> 16   identique 3 466 -> 4 366
+                      ECART 104 -> 128 = le decompte tolerant predit, A L'UNITE
+        Compromis     nous seuls  790 -> 65
+        Vente Fixee   nous seuls  770 -> 7
+        Vente Prevue  nous seuls 1 011 -> 201
+```
+   ⚠ **CE QUE L'AUDIT A AUSSI DEMENTI** : l'argument qui fermait la reserve au
+     09/11 — « les vrais ecarts sont tous sur des affaires annulees » — est FAUX.
+     Sur les **26 ecarts a plus d'un mois, 15 sont des VENTES REGLEES**, 9
+     annulees. ⭐ Et **trois sont des decalages d'ANNEE EXACTS** (un de 7 305
+     jours = vingt ans pile : classeur 2022-01-31, nous 2002-01-31 ; deux de
+     366 jours) : des fautes de saisie, pas des desaccords de date.
+   ⬜ **RESERVE NEUVE, nommee, NON bloquante pour ce qui est pose** : ces 26
+     ecarts restent a regarder AVANT de poser le lot 3 (les dates). Les 3
+     decalages d'annee se corrigent a l'unite.
+   ⚠ L'apparieur (`apparier_classeur.py`) n'a PAS le meme defaut dans le meme
+     sens — il convertit NOS dates vers le format du classeur et compare en
+     texte — mais il perd l'indice de date sur ces lignes. Mesure : ca n'explique
+     que **8 des 87 non rattachees** (9,2 % contre 2,4 % chez les rattachees).
+     **Un facteur mineur, PAS la cause des 87.**
+
+   ✅ **ET LA RESERVE 1 DU 09/11 EST CORRIGEE DU MEME COUP** : le rapport lisait
+     `charge_commission_app` du LEDGER (7 lignes remplies sur 31 157) au lieu de
+     `mandat_charge_honoraires_app` du REGISTRE DES MANDATS (23 473 / 24 596).
+     La charge est une donnee DU MANDAT, pas de la transaction.
+
+3.2bis ⬜ ACCORD    LA CHARGE DE COMMISSION -- ⭐⭐⭐ **ELLE A CHANGE DE TAILLE LE
+                    14/11 : 53 LIGNES, PAS 955.** La correction de la case lue
+                    ci-dessus a rendu la mesure possible, et le classeur et le
+                    registre des mandats sont DEJA D'ACCORD :
+```
+                    identique      897        <- rien a faire
+                    classeur seul   51        <- a POSER (26 Acquereur, 25 Vendeur)
+                    ECART            2        <- a redresser, le classeur fait foi
+                      KBZR2ND6 mandat 17217  classeur=Acquereur nous=vendeur
+                                             VENTE REGLEE -> le seul a enjeu
+                      JEK94D31 mandat 24247  classeur=Vendeur   nous=acquereur
+                                             annulee -> sans enjeu financier
+                    ⭐ Le vocabulaire CONCORDE : « vendeur »/« acquereur » des
+                      deux cotes (mesure du 14/11) -- le piege ① du 02/11 tombe.
+```
+                    La proposition A11 du 03/11, pour le reste :
+                    ① POSER LES 53 DU CLASSEUR (~1/2 h) -- ILS FONT FOI
                     ② l'ecran montre la valeur AVEC sa source (~1/2 j)
                     ③ le preremplissage : SAISIE > CLASSEUR > « Hektor dit
                        acquereur » > defaut vendeur (~1/2 j)
