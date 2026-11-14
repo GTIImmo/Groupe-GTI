@@ -1748,3 +1748,22 @@ mêmes fichiers renommés (« Déjà dans ce dossier (…) : l'envoyer quand mê
   carte de Jeanne (fin imprimée 2022, prolongée 2027) se tait. Console sans erreur.
 - ✅ « Oui » (14/11) : commité et poussé (Vercel). ⏳ Reste à le regarder sur 63331 (attendu : les pièces SPECIMEN / FICTIF face à la
   fiche du bien d'essai).
+
+**👁 9b REGARDÉ EN RÉEL sur 63331 (14/11, Chrome de Frédéric, lecture seule, console sans erreur).** « À regarder (10) »
+dont 5 lignes de 9b ; le mandant de la fiche est « Mandant ESSAI 8A C1 », les pièces sont celles des 2 essais (Marc FICTIF,
+Jeanne SPECIMEN, chacune déposée deux fois).
+- **P4 alerte** : « La pièce d'identité de Marc FICTIF n'est ni à un mandant ni à un acquéreur du bien » — JUSTE (il n'est
+  pas sur la fiche), mais **affichée DEUX FOIS** (une par dépôt).
+- **P4 information** : « La pièce dit « Jeanne, Marie SPECIMEN (nom d'usage ESSAI) », la fiche « Mandant ESSAI 8A C1 » » —
+  **DEUX FOIS aussi** (la 1re lecture porte encore « ép. ESSAI », fiche v1). Le « proche » vient du nom d'usage ESSAI de la
+  fausse carte, qui croise le nom du mandant d'essai : artefact des données d'essai, la règle fait ce qu'elle dit.
+- **P5** : muette, et c'est JUSTE (ancienne carte de Jeanne finie en 2022 → prolongée 2027 ; cartes neuves → 2033).
+- **P6** : « Pièce d'identité de Mandant ESSAI 8A C1 : non trouvée parmi les pièces lues » — JUSTE selon la règle (un
+  « proche » ne couvre pas une fiche qui a un prénom).
+- ⚠ **DÉFAUT VU : une ligne PAR PIÈCE, pas par personne.** La même personne déposée deux fois (ou CNI + passeport, cas
+  réel courant) répète la même ligne. → **« Oui regroupe » (14/11) : CODÉ** — P4 regroupée par personne (verdict + nom
+  normalisé de la pièce + personne de la fiche), une seule ligne suivie de « (N pièces) ». Essais **35 VERT** (+3, dont
+  2 témoins inverses : sans le regroupement → 2 ROUGE) ; tous les autres GED verts ; build vert. **Poussé le 14/11 sur « Oui ».**
+  ⚠ Même famille, NON TOUCHÉE (à trancher) : P5 juge aussi pièce par pièce — un passeport périmé sonne même si la
+  personne a une carte valide au dossier, et une carte périmée déposée deux fois sonne deux fois. ⚠ Et P4 redit en partie la ligne déjà existante « Marc FICTIF (mandant au mandat) n'est pas
+  parmi les mandants du bien » (règle du mandat lu, morceau 7) : deux angles différents, à garder ou fondre — à trancher.

@@ -59,6 +59,14 @@ voir(codes(a).length === 0, 'TÉMOIN : la pièce d\'un acquéreur (offre vivante
 a = R([cni('CNI acq.pdf', { nom: 'ACHETEUR', prenoms: 'Luc', fin: '2033-01-01' }), cni('CNI.pdf', MARC, JEANNE)], { affaires: [{ kind: 'offre', state: 'refused', date: '2026-10-01', dateActe: null, acquereurs: [{ nom: 'ACHETEUR', prenom: 'Luc' }] }] })
 voir(codes(a).join() === 'P4/alerte', 'l\'acquéreur d\'une offre REFUSÉE n\'est plus du bien : sa pièce sonne')
 voir(R([cni('CNI X.pdf', { nom: 'DURAND', prenoms: 'Paul', fin: '2033-01-01' })], { bien: [] }).length === 0, 'TÉMOIN : fiche sans personne : on se tait (et P6 n\'a personne à attendre)')
+// une ligne PAR PERSONNE (vu en réel sur 63331 le 14/11 : la même personne déposée deux fois répétait la ligne)
+const PAUL = { nom: 'DURAND', prenoms: 'Paul', fin: '2033-01-01' }
+a = R([cni('CNI Paul.pdf', PAUL), cni('CNI Paul ESSAI 2.pdf', PAUL), cni('Passeport Paul.pdf', { ...PAUL, nature: 'passeport' }), cni('CNI.pdf', MARC, JEANNE)])
+voir(codes(a).join() === 'P4/alerte' && /Paul DURAND n'est ni à un mandant ni à un acquéreur du bien \(3 pièces\)$/.test(a[0].texte), 'P4 : trois pièces de la même inconnue -> UNE ligne, « (3 pièces) »')
+a = R([cni('CNI X.pdf', PAUL), cni('CNI Y.pdf', { nom: 'MARTIN', prenoms: 'Léa', fin: '2033-01-01' }), cni('CNI.pdf', MARC, JEANNE)])
+voir(codes(a).join() === 'P4/alerte,P4/alerte' && a.every((x) => !/pièces\)/.test(x.texte)), 'TÉMOIN : deux inconnus différents -> deux lignes, sans compte')
+a = R([cni('CNI.pdf', MARC, JEANNE), cni('CNI 2.pdf', MARC, { ...JEANNE, usage: 'ép. FICTIF' })], { bien: [{ nom: 'FICTIF', prenom: '' }, { nom: 'FICTIF', prenom: 'Jeanne' }] })
+voir(codes(a).join() === 'P4/info' && /la fiche « FICTIF » \(2 pièces\)$/.test(a[0].texte), 'P4 : l\'information « écrit autrement » aussi, une seule ligne pour deux dépôts')
 
 console.log('③ P5 la validité au jour de la signature')
 const vieux = { ...MARC, nature: 'passeport', fin: '2025-12-31' }

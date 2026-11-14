@@ -79,13 +79,24 @@ export function reglesPersonnes(faits: FaitsRegles, docs: DocumentLu[], personne
   const tous = [...personnesDuBien, ...acquereurs]
 
   // P4 -- le nom : la pièce d'une personne inconnue (alerte) ; une écriture différente (information, rien ne s'écrit).
+  // UNE LIGNE PAR PERSONNE, pas par pièce : la même carte déposée deux fois, ou carte + passeport, ne répète pas la ligne
+  // (vu en réel sur 63331 le 14/11) ; le nombre de pièces est dit à la fin.
+  const groupesP4 = new Map<string, { p: PieceLue; verdict: Verdict; qui: PersonneDuBien | null; n: number }>()
   for (const p of pieces) {
     const { verdict, qui } = correspondance(p, tous)
+    if (verdict !== 'different' && !(verdict === 'proche' && qui)) continue
+    const cle = `${verdict}|${normaliserTexte(nomDe(p))}|${qui ? normaliserTexte(nomFiche(qui)) : ''}`
+    const g = groupesP4.get(cle)
+    if (g) g.n++
+    else groupesP4.set(cle, { p, verdict, qui, n: 1 })
+  }
+  for (const { p, verdict, qui, n } of groupesP4.values()) {
+    const combien = n > 1 ? ` (${n} pièces)` : ''
     const surPiece = `${p.prenoms} ${p.nom}${p.nomUsage ? ` (nom d'usage ${p.nomUsage})` : ''}`
     if (verdict === 'different') {
-      alertes.push({ code: 'P4', niveau: 'alerte', texte: `La pièce d'identité de ${nomDe(p)} n'est ni à un mandant ni à un acquéreur du bien`, pourquoi: 'document d\'une autre affaire, ou fiche incomplète' })
-    } else if (verdict === 'proche' && qui) {
-      alertes.push({ code: 'P4', niveau: 'info', texte: `La pièce dit « ${surPiece} », la fiche « ${nomFiche(qui)} »`, pourquoi: 'nom ou prénom écrit autrement (rien n\'est corrigé seul)' })
+      alertes.push({ code: 'P4', niveau: 'alerte', texte: `La pièce d'identité de ${nomDe(p)} n'est ni à un mandant ni à un acquéreur du bien${combien}`, pourquoi: 'document d\'une autre affaire, ou fiche incomplète' })
+    } else if (qui) {
+      alertes.push({ code: 'P4', niveau: 'info', texte: `La pièce dit « ${surPiece} », la fiche « ${nomFiche(qui)} »${combien}`, pourquoi: 'nom ou prénom écrit autrement (rien n\'est corrigé seul)' })
     }
   }
 
