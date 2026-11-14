@@ -281,3 +281,36 @@ Avancer **par petits lots**, chacun prouvé en réel avant le suivant :
 - Retour arrière répété : **3 OK / 0 KO** (empreinte du ménage retrouvée `f39dc33f…`).
 - Posé à 17:19:32 : gardes et vérifications vertes ; les deux sondes rendent **0**, la 20 garde `contact:10354488`, le ménage porte ses 4 gardes.
 - ⚠ Le rouge du moniteur n'est PAS concerné : ce sont les deux anciens échecs « Nom contact requis » (lot 2), à trancher dans Santé.
+
+## 15. Lot 4 : sa décision (14/11) et le plan précis — rien codé
+
+**Sa décision, ses mots** : « 4a et 4b ». 4c reste hors de l'assistant.
+
+**Ce que la lecture du code a établi** :
+- Champs du bien : `app_edit_annonce_optimistic` (contrôle l'appelant par `app_console_can_request_job`) traduit 30 noms d'écran vers les cases Hektor (`v_traduction`, 08/11) ; chez nous à l'instant, chez Hektor 10 min après par le worker. Le prix est refusé au négociateur.
+- Photos : `app_console_photo_couverture_optimistic`, `app_console_photo_visibilite_optimistic`, `app_console_photos_reordonner_optimistic` ; galerie lue dans `app_console_photo` (`present_in_hektor = true`).
+- Brouillon : travail `exit_hektor_draft_annonce` posé dans `app_console_job`, comme l'écran.
+- Diffusion : l'écran efface puis réécrit les choix du bien (`app_diffusion_target`), puis `/hektor-diffusion/apply` → `assert_can_apply_portals` (négociateur : bien diffusable et le sien) → `bridge.apply`, qui envoie TOUTE la liste du bien. ⚠ *Corrigé le 14/11 : **5 portails**, pas 2* — Leboncoin et Bien'ici (numéro de passerelle propre à l'agence, `app_diffusion_agency_target`, 17 agences) + Paper, Etreproprio, Superimmo (numéros communs 20, 19, 21, `PORTAIL_ID_COMMUN`, AnnoncesListeV2.tsx:522). J'avais compté la seule table des agences. **39 biens** ont des choix dans l'app, sur **434 diffusables**.
+- ⛔ **CORRIGÉ le 14/11 sur l'objection de Frédéric (« la diffusion sur les portails fonctionne ») — il avait raison.** J'avais conclu sur le serveur seul (`_run_apply` : sans choix, liste de l'agence « désactivé ») sans lire l'écran. L'écran ne passe JAMAIS par là : il enregistre toujours avant d'envoyer. (1) La fenêtre de diffusion part de l'**état réel observé chez Hektor** (`observedEnabled`, App.tsx ~21686 / 21787) : la liste envoyée = la réalité + le changement. (2) La case de la vue Publicité (`basculerPortail`, App.tsx ~28233) enregistre **UNE SEULE cible** puis envoie : un seul ordre part, l'autre portail n'est pas touché (commentaire en place). Mesure : 94 lignes de choix, **toutes** `console_diffusion` (écran), **0** `console_seed` : le repli « désactivé » du serveur n'a jamais tourné.
+
+**Le plan** :
+- 4a — lectures : « les photos d'un bien » (numéro court, ordre, visible, couverture ; aucune adresse) et « les portails d'un bien ».
+- 4a — cartes : modifier des champs d'une **liste fermée** (titre, texte, surfaces, pièces, chambres, niveaux, terrain, garage, salles d'eau, WC, parkings, terrasses, année, DPE/GES, cuisine, exposition, vue, états, copropriété) avec l'avant → après sur la carte ; **exclus** : prix, prix net vendeur, honoraires, adresse, commune, code postal, numéro de mandat, coordonnées, jardin, piscine. Brouillons refusés (décision ⑦-10 ③). Le rédacteur maison propose titre + texte, une carte les reporte. Couverture, masquer / afficher (jamais la dernière visible), déplacer une photo. Activer un brouillon (même règle que l'écran, pas de retour arrière).
+- 4b — cartes : ajouter / retirer Bien'ici ou Leboncoin sur un bien diffusable, même garde que l'écran, jamais « diffusable ». Au clic : **exactement le geste de la case de la vue Publicité** — une seule cible enregistrée, puis `apply` ; un seul ordre part chez Hektor.
+- Aucun patch SQL. Retirer un geste = retirer une ligne de `GESTES`.
+- Preuve : essais hors ligne, puis en réel sur 62774 (champ modifié puis remis, photos aller-retour) ; diffusion et brouillon sur des biens qu'il choisit.
+- ✅ « Oui » de Frédéric le 14/11 → codé (§16).
+
+## 16. Lot 4 codé (14/11, sur son « Oui ») — pas encore poussé ni éprouvé en réel
+
+**Dans `assistant_gestes.py`** — 6 cartes et 3 lectures, toutes par le geste de l'écran, avec le jeton de la personne :
+- `modifier_bien` : liste fermée de 23 champs (`CHAMPS_BIEN`) → `app_edit_annonce_optimistic` (10 min avant Hektor). Exclus : prix, prix net vendeur, honoraires, adresse, commune, code postal, mandat, et les champs à liste de choix de Hektor (cuisine, exposition, vue, états : l'assistant n'en connaît pas les codes). La carte montre l'avant (calque de l'app, puis la fiche) et l'après. Un brouillon est refusé avec la phrase « active-le d'abord ».
+- `rediger_annonce` (lecture) : le rédacteur maison (`OpenAIListingWriterService.generate`, sans photo), assemblé comme l'écran (accroche, texte, « Points forts »), tracé dans `app_agent_run` ; rien n'est écrit. ⚠ À l'écran, le rédacteur n'existe qu'à la CRÉATION ; ici il sert aussi un bien existant — c'est le même service, la carte `modifier_bien` reporte titre + texte.
+- Photos : `lire_photos_bien`, `couverture_photo`, `visibilite_photo` (jamais la dernière visible, re-compté au clic), `deplacer_photo` (envoie l'ordre COMPLET des visibles, relu au clic : la fonction l'exige). Un `ok: false` de la base devient un refus.
+- `activer_brouillon` : le travail `exit_hektor_draft_annonce` posé comme l'écran, sur `app_brouillon_id` ; refusé sans statut.
+- 4b `portail` + `lire_portails_bien` : 5 portails ; bien vivant et diffusable ; au clic : `assert_can_apply_portals` (jeton) AVANT toute écriture → une seule cible (efface + écrit, comme `saveDiffusionTargets`) → `bridge.apply(dry_run=False, ensure_diffusable=False)` → résumé reporté (`persist_state`) seulement si Hektor n'a pas refusé.
+- Consignes de l'assistant mises à jour (`assistant_service.py`, « # Agir »).
+
+**Contrôle hors ligne** : `test_assistant_gestes.py` **146 verts** (104 → +42, dont 8 témoins : prix trafiqué refusé au clic, dernière photo devenue seule au clic, garde qui refuse → aucune écriture, refus de Hektor → rien de reporté…), `test_assistant_ia.py` **59 verts** (SDK réel), `test_assistant_lecteur.py` 73 verts, le serveur se charge.
+
+**Pas fait** : aucune preuve en réel. ⚠ 62774 n'est plus un bien vivant (mandat clos par l'essai ⑦-3a du 21/10) : le bien d'essai vivant est **63330** (Estimation, pas diffusable). Diffusion et brouillon : sur des biens qu'il choisit.

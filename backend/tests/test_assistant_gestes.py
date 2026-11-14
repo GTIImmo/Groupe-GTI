@@ -614,10 +614,232 @@ google.clear()
 ges.executer_email_interne(nouveau_ctx(), pm)
 voir(next(g for g in google if g["quoi"] == "envoyer")["to"] == [EMAIL], "au clic, « moi » devient SON adresse, posée par le serveur")
 
+print("9bis) LOT 4a : le bien -- champs en liste fermée, rédacteur, photos, brouillon")
+import types  # noqa: E402
+
+pont, redac = [], []  # chaque appel au pont Hektor et au rédacteur (faux)
+
+
+class FauxAdmin4(FauxAdmin):
+    def assert_can_apply_portals(self, user, authorization, app_dossier_id):
+        pont.append({"quoi": "garde", "user": user.id, "auth": authorization, "dossier": app_dossier_id})
+        if etat.get("portail_refuse"):
+            raise HTTPException(status_code=403, detail="Annonce pas encore diffusable")
+        return {"role": "commercial"}, False
+
+    def insert_agent_run(self, row):
+        redac.append({"quoi": "trace", **row})
+        return 1
+
+
+class FauxPont:
+    def __init__(self, settings):
+        pass
+
+    def _load_agency_targets(self, agence):
+        pont.append({"quoi": "agence", "agence": agence})
+        return [{"portal_key": "bienicidirect", "hektor_broadcast_id": "77"}, {"portal_key": "leboncoinDirect", "hektor_broadcast_id": "78"}]
+
+    def apply(self, app_dossier_id, dry_run, ensure_diffusable, requested_by=None):
+        pont.append({"quoi": "apply", "dossier": app_dossier_id, "dry_run": dry_run, "ensure": ensure_diffusable})
+        return {"failed": etat.get("apply_echecs", [])}
+
+    def persist_state(self, app_dossier_id, **k):
+        pont.append({"quoi": "report", "dossier": app_dossier_id, **k})
+        return {}
+
+
+class FauxRedacteur:
+    def __init__(self, settings):
+        pass
+
+    def generate(self, faits, photo_urls=None, custom_intro=None):
+        redac.append({"quoi": "generer", "faits": faits, "photos": photo_urls, "consigne": custom_intro})
+        return {"title": "Maison de caractère", "accroche": "Au calme.", "description": "Belle maison.",
+                "highlights": ["Jardin", "Garage"], "model": "m", "usage": {"input_tokens": 1, "output_tokens": 2}}
+
+
+ges.SupabaseAdminService = FauxAdmin4
+sys.modules["app.services.hektor_bridge"] = types.SimpleNamespace(HektorBridgeService=FauxPont)
+sys.modules["app.services.openai_listing_writer_service"] = types.SimpleNamespace(OpenAIListingWriterService=FauxRedacteur)
+_faux_lot3 = faux_lot3
+
+
+def faux_lot4(methode, url, **kw):
+    chemin = url.split("/rest/v1/", 1)[1]
+    enregistrer = lambda: appels.append({"methode": methode, "chemin": chemin, "entetes": dict(kw.get("headers") or {}),  # noqa: E731
+                                         "params": dict(kw.get("params") or {}), "corps": kw.get("json")})
+    if methode == "GET" and chemin in {"app_brouillon_annonce_index_current", "app_dossier_detail_current", "app_console_photo"}:
+        enregistrer()
+        if chemin == "app_dossier_detail_current":
+            return Reponse([{"detail_payload_json": json.dumps(etat.get("fiche", {}))}])
+        return Reponse(etat.get({"app_brouillon_annonce_index_current": "brouillons", "app_console_photo": "photos"}[chemin], []))
+    if methode == "POST" and chemin in {"rpc/app_edit_annonce_optimistic", "rpc/app_console_photo_couverture_optimistic",
+                                        "rpc/app_console_photo_visibilite_optimistic", "rpc/app_console_photos_reordonner_optimistic"}:
+        enregistrer()
+        return Reponse(etat.get("rep_rpc", {"ok": True, "job_id": "j1"}))
+    if chemin in {"app_console_job", "app_diffusion_target"} and methode in {"POST", "DELETE"}:
+        enregistrer()
+        return Reponse([{"id": "job1"}]) if methode == "POST" else Reponse(None, status=204)
+    return _faux_lot3(methode, url, **kw)
+
+
+requests.get = lambda url, **kw: faux_lot4("GET", url, **kw)
+requests.post = lambda url, **kw: faux_lot4("POST", url, **kw)
+requests.patch = lambda url, **kw: faux_lot4("PATCH", url, **kw)
+requests.request = lambda methode, url, **kw: faux_lot4(methode, url, **kw)
+
+VIDE = {cle: "" for cle in ges.CHAMPS_BIEN}
+reset(fiche={"texte_principal_titre": "Maison ancienne", "nb_pieces": "4", "app_optimistic_overlay": {"NB_CHAMBRES": "3"}})
+resume, pm = ges.preparer_modifier_bien(nouveau_ctx(), {**VIDE, "hektor_annonce_id": 63289, "title": "Maison de caractère",
+                                                        "roomCount": "5", "bedroomCount": "4"})
+voir(pm["champs"] == {"title": "Maison de caractère", "roomCount": "5", "bedroomCount": "4"},
+     "seuls les champs donnés partent (vide = inchangé)")
+voir("« Maison ancienne » → « Maison de caractère »" in resume and "« 4 » → « 5 »" in resume and "« 3 » → « 4 »" in resume,
+     "la carte montre l'AVANT (calque de l'app d'abord, puis la fiche) et l'APRÈS")
+voir(not ecritures_metier(), "PROPOSER n'écrit rien")
+voir(refuse(lambda: ges.preparer_modifier_bien(nouveau_ctx(), {**VIDE, "hektor_annonce_id": 63289, "price": "99000"}), "prix"),
+     "⛔ le PRIX n'est pas dans la liste : rien à modifier, et la phrase renvoie à la demande de baisse")
+voir(refuse(lambda: ges.preparer_modifier_bien(nouveau_ctx(), {**VIDE, "hektor_annonce_id": 63289, "roomCount": "cinq"}), "entier"),
+     "un nombre de pièces en lettres : refusé")
+voir(refuse(lambda: ges.preparer_modifier_bien(nouveau_ctx(), {**VIDE, "hektor_annonce_id": 63289, "constructionYear": "3000"}), "année"),
+     "une année impossible : refusée")
+voir(ges.preparer_modifier_bien(nouveau_ctx(), {**VIDE, "hektor_annonce_id": 63289, "surface": "92,5"})[1]["champs"] == {"surface": "92.5"},
+     "une surface à virgule devient un nombre à point")
+reset(bien=[], brouillons=[{"hektor_annonce_id": 63500}])
+voir(refuse(lambda: ges.preparer_modifier_bien(nouveau_ctx(), {**VIDE, "hektor_annonce_id": 63500, "title": "x"}), "BROUILLON"),
+     "⛔ un brouillon ne se modifie pas : la phrase dit de l'activer (décision ⑦-10 ③)")
+reset()
+appels.clear()
+ges.executer_modifier_bien(nouveau_ctx(), pm)
+rpc = next(a for a in appels if a["chemin"] == "rpc/app_edit_annonce_optimistic")
+voir(rpc["entetes"]["Authorization"] == "Bearer " + JETON and rpc["corps"] == {"target_dossier_id": 77, "edit_fields": pm["champs"],
+                                                                              "debounce_seconds": 600},
+     "au clic : la fonction de l'écran, avec SON jeton, 10 min avant Hektor")
+voir(refuse(lambda: ges.executer_modifier_bien(nouveau_ctx(), {"hektor_annonce_id": 63289, "champs": {"price": "1"}}), "aucun champ"),
+     "TÉMOIN : une carte trafiquée avec le prix est refusée AU CLIC")
+
+redac.clear()
+appels.clear()
+reset(fiche={"surface_habitable_detail": "120", "nb_pieces": "5"})
+r = ges.rediger_annonce(nouveau_ctx(), {"hektor_annonce_id": 63289, "consigne": "le jardin"})
+gen = next(x for x in redac if x["quoi"] == "generer")
+voir(r["rien_n_est_ecrit"] and r["titre"] == "Maison de caractère" and "Points forts :\n- Jardin" in r["texte"]
+     and r["texte"].startswith("Au calme."), "le rédacteur PROPOSE titre + texte, assemblés comme l'écran (accroche, texte, points forts)")
+voir(not ecritures_metier() and gen["consigne"] == "le jardin" and gen["photos"] == [] and gen["faits"]["surface"] == "120",
+     "rien n'est écrit sur l'annonce ; les faits viennent de la fiche, sans photo")
+voir("@" not in json.dumps(gen["faits"]), "⛔ aucune adresse e-mail dans ce qui part au rédacteur")
+voir(any(x["quoi"] == "trace" and x["agent_key"] == "redacteur" for x in redac), "la même trace que l'écran (app_agent_run)")
+
+PHOTOS = [{"hektor_photo_id": "A", "visible": True, "sort_order": 1}, {"hektor_photo_id": "B", "visible": True, "sort_order": 2},
+          {"hektor_photo_id": "C", "visible": True, "sort_order": 3}, {"hektor_photo_id": "D", "visible": False, "sort_order": 4}]
+reset(photos=[dict(x) for x in PHOTOS])
+r = ges.lire_photos_bien(nouveau_ctx(), {"hektor_annonce_id": 63289})
+voir([(x["photo"], x["rang"], x["couverture"]) for x in r["photos"]] == [("A", 1, True), ("B", 2, False), ("C", 3, False), ("D", None, False)]
+     and r["masquees"] == 1, "la galerie : rang des visibles, la 1re est la couverture, la masquée sans rang")
+voir(next(a for a in appels if a["chemin"] == "app_console_photo")["params"]["present_in_hektor"] == "is.true",
+     "seulement les photos encore chez Hektor (comme l'écran)")
+voir(refuse(lambda: ges.preparer_couverture(nouveau_ctx(), {"hektor_annonce_id": 63289, "photo": "A"}), "déjà"), "déjà en couverture : refusé")
+voir(refuse(lambda: ges.preparer_couverture(nouveau_ctx(), {"hektor_annonce_id": 63289, "photo": "D"}), "masquée"), "une masquée en couverture : refusé")
+voir(refuse(lambda: ges.preparer_couverture(nouveau_ctx(), {"hektor_annonce_id": 63289, "photo": "Z"}), "pas sur cette annonce"),
+     "une photo d'une autre annonce : refusée")
+appels.clear()
+ges.executer_couverture(nouveau_ctx(), ges.preparer_couverture(nouveau_ctx(), {"hektor_annonce_id": 63289, "photo": "B"})[1])
+rpc = next(a for a in appels if a["chemin"] == "rpc/app_console_photo_couverture_optimistic")
+voir(rpc["corps"] == {"p_app_dossier_id": 77, "p_hektor_annonce_id": "63289", "p_hektor_photo_id": "B"}
+     and rpc["entetes"]["Authorization"] == "Bearer " + JETON, "couverture : la fonction de l'écran, avec SON jeton")
+reset(photos=[dict(PHOTOS[0]), dict(PHOTOS[3])])
+voir(refuse(lambda: ges.preparer_visibilite_photo(nouveau_ctx(), {"hektor_annonce_id": 63289, "photo": "A", "visible": False}), "dernière"),
+     "⛔ masquer la DERNIÈRE photo visible : refusé")
+_, pv = ges.preparer_visibilite_photo(nouveau_ctx(), {"hektor_annonce_id": 63289, "photo": "D", "visible": True})
+reset(photos=[dict(x) for x in PHOTOS])
+_, pm_ = ges.preparer_visibilite_photo(nouveau_ctx(), {"hektor_annonce_id": 63289, "photo": "A", "visible": False})
+reset(photos=[dict(PHOTOS[0]), dict(PHOTOS[3])])
+appels.clear()
+voir(refuse(lambda: ges.executer_visibilite_photo(nouveau_ctx(), pm_), "dernière")
+     and not [a for a in appels if a["chemin"].startswith("rpc/")], "TÉMOIN : devenue la dernière entre la carte et le clic -> refusé AU CLIC")
+appels.clear()
+ges.executer_visibilite_photo(nouveau_ctx(), pv)
+voir(next(a for a in appels if a["chemin"] == "rpc/app_console_photo_visibilite_optimistic")["corps"]["p_visible"] is True,
+     "afficher : la fonction de l'écran")
+reset(photos=[dict(x) for x in PHOTOS])
+resume, pd = ges.preparer_deplacer_photo(nouveau_ctx(), {"hektor_annonce_id": 63289, "photo": "C", "rang": 1})
+voir("COUVERTURE" in resume, "placer au rang 1 : la carte prévient qu'elle devient la couverture")
+voir(refuse(lambda: ges.preparer_deplacer_photo(nouveau_ctx(), {"hektor_annonce_id": 63289, "photo": "C", "rang": 4}), "entre 1 et 3"),
+     "un rang au-delà des visibles : refusé")
+appels.clear()
+ges.executer_deplacer_photo(nouveau_ctx(), pd)
+voir(next(a for a in appels if a["chemin"] == "rpc/app_console_photos_reordonner_optimistic")["corps"]["p_ordre"] == ["C", "A", "B"],
+     "au clic : l'ordre COMPLET des visibles, relu au clic (la fonction l'exige)")
+reset(photos=[dict(x) for x in PHOTOS], rep_rpc={"ok": False, "erreur": "droits_insuffisants"})
+voir(refuse(lambda: ges.executer_deplacer_photo(nouveau_ctx(), pd), "droits"), "un refus de la base (ok = false) devient un refus, jamais un succès")
+
+reset(bien=[], brouillons=[{"hektor_annonce_id": 63500, "app_brouillon_id": 7589119, "numero_dossier": "V9", "titre_bien": "T3",
+                            "statut_annonce": "Actif"}])
+resume, pb = ges.preparer_activer_brouillon(nouveau_ctx(), {"hektor_annonce_id": 63500})
+voir("« Actif »" in resume and "Pas de retour" in resume and not ecritures_metier(),
+     "la carte dit le catalogue d'arrivée et l'absence de retour arrière ; rien d'écrit")
+appels.clear()
+ges.executer_activer_brouillon(nouveau_ctx(), pb)
+job = next(a for a in appels if a["chemin"] == "app_console_job")
+voir(job["entetes"]["Authorization"] == "Bearer " + JETON and job["corps"]["job_type"] == "exit_hektor_draft_annonce"
+     and job["corps"]["app_dossier_id"] == 7589119 and job["corps"]["requested_by"] == UID,
+     "au clic : le travail de l'écran, avec SON jeton, sur NOTRE numéro de brouillon (la base juge les droits)")
+reset(bien=[], brouillons=[{"hektor_annonce_id": 63501, "app_brouillon_id": 1, "statut_annonce": ""}])
+voir(refuse(lambda: ges.preparer_activer_brouillon(nouveau_ctx(), {"hektor_annonce_id": 63501}), "aucun statut"),
+     "un brouillon sans statut : rien à activer (règle de l'écran)")
+
+print("9ter) LOT 4b : UN portail, sur un bien diffusable -- le geste de la case de la vue Publicité")
+BIEN_DIF = {**BIEN, "agence_nom": "Firminy", "diffusable": "1", "portails_resume": "leboncoinDirect", "nb_portails_actifs": 1}
+reset(bien=[dict(BIEN_DIF)])
+r = ges.lire_portails_bien(nouveau_ctx(), {"hektor_annonce_id": 63289})
+voir(r["diffusable"] and [x["portail"] for x in r["portails"] if x["en_ligne"]] == ["leboncoinDirect"] and len(r["portails"]) == 5,
+     "les 5 portails de la vue Publicité, et ce qui est en ligne")
+voir(refuse(lambda: ges.preparer_portail(nouveau_ctx(), {"hektor_annonce_id": 63289, "portail": "leboncoinDirect", "publier": True}),
+            "déjà en ligne"), "publier un portail déjà en ligne : refusé")
+reset(bien=[{**BIEN_DIF, "diffusable": "0"}])
+voir(refuse(lambda: ges.preparer_portail(nouveau_ctx(), {"hektor_annonce_id": 63289, "portail": "paper", "publier": True}),
+            "pas encore diffusable"), "⛔ un bien pas diffusable : refusé (c'est la direction)")
+reset(bien=[dict(BIEN_DIF)])
+resume, pp = ges.preparer_portail(nouveau_ctx(), {"hektor_annonce_id": 63289, "portail": "bienicidirect", "publier": True})
+voir("Bien'ici" in resume and "ne bougent pas" in resume and not ecritures_metier() and not pont,
+     "la carte dit le portail, et que les autres ne bougent pas ; rien d'écrit, Hektor pas appelé")
+appels.clear()
+pont.clear()
+ges.executer_portail(nouveau_ctx(), pp)
+voir(pont[0]["quoi"] == "garde" and pont[0]["auth"] == "Bearer " + JETON and pont[0]["dossier"] == 77,
+     "au clic : la garde de la route /apply, jugée avec SON jeton, AVANT toute écriture")
+cibles = [a for a in appels if a["chemin"] == "app_diffusion_target"]
+voir([a["methode"] for a in cibles] == ["DELETE", "POST"] and len(cibles[1]["corps"]) == 1
+     and cibles[1]["corps"][0]["hektor_broadcast_id"] == "77" and cibles[1]["corps"][0]["target_state"] == "enabled"
+     and all(a["entetes"]["Authorization"] == "Bearer " + JETON for a in cibles),
+     "⭐ UNE SEULE cible enregistrée (comme la case de la vue Publicité), numéro de passerelle de l'agence")
+app = next(x for x in pont if x["quoi"] == "apply")
+voir(app["dry_run"] is False and app["ensure"] is False, "⛔ l'envoi ne touche JAMAIS « diffusable »")
+voir(next(x for x in pont if x["quoi"] == "report")["portails_resume"] == "leboncoinDirect, bienicidirect",
+     "Hektor a confirmé : le résumé est reporté (Leboncoin reste, Bien'ici s'ajoute)")
+pont.clear()
+appels.clear()
+_, pp2 = ges.preparer_portail(nouveau_ctx(), {"hektor_annonce_id": 63289, "portail": "paper", "publier": True})
+ges.executer_portail(nouveau_ctx(), pp2)
+voir(not [x for x in pont if x["quoi"] == "agence"]
+     and next(a for a in appels if a["methode"] == "POST" and a["chemin"] == "app_diffusion_target")["corps"][0]["hektor_broadcast_id"] == "20",
+     "Paper : le numéro commun à toutes les agences (20), sans lire l'agence")
+reset(bien=[dict(BIEN_DIF)], portail_refuse=True)
+pont.clear()
+appels.clear()
+voir(refuse(lambda: ges.executer_portail(nouveau_ctx(), pp), "refusé") and not [a for a in appels if a["chemin"] == "app_diffusion_target"]
+     and not [x for x in pont if x["quoi"] == "apply"], "TÉMOIN : la garde refuse -> aucune écriture, rien envoyé")
+reset(bien=[dict(BIEN_DIF)], apply_echecs=[{"action": "add", "error": "passerelle fermée"}])
+pont.clear()
+voir(refuse(lambda: ges.executer_portail(nouveau_ctx(), pp), "passerelle fermée") and not [x for x in pont if x["quoi"] == "report"],
+     "Hektor refuse : on le DIT, et le résumé n'est pas reporté")
+
 print("10) aucune fonction de geste ne fait autre chose que proposer")
-voir(all(f.nom.startswith("proposer_") for f in ges.FONCTIONS_GESTES) and len(ges.FONCTIONS_GESTES) == 14,
-     "14 gestes, tous « proposer_ » : le modèle n'a AUCUNE fonction qui exécute")
+voir(all(f.nom.startswith("proposer_") for f in ges.FONCTIONS_GESTES) and len(ges.FONCTIONS_GESTES) == 20,
+     "20 gestes, tous « proposer_ » : le modèle n'a AUCUNE fonction qui exécute")
 voir(not any(f.nom.startswith("proposer_") for f in ges.FONCTIONS_LECTURE_LOT3), "les 2 lectures du lot 3 ne proposent rien")
+voir(not any(f.nom.startswith("proposer_") for f in ges.FONCTIONS_LECTURE_LOT4), "les 3 lectures du lot 4 ne proposent rien")
 voir([f.nom for f in cat.fonctions_du_role("commercial") if f.nom == "proposer_note_transaction"] == [],
      "un commercial n'a PAS la note de transaction (double verrou : non proposée, et refusée au clic)")
 
