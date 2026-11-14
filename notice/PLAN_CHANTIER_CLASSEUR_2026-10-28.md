@@ -1126,12 +1126,11 @@ la vente. Non traite, pas mesure en ampleur.
      La charge est une donnee DU MANDAT, pas de la transaction.
 
 3.2bis ⬜ ACCORD    LA CHARGE DE COMMISSION -- ⭐⭐⭐ **ELLE A CHANGE DE TAILLE LE
-                    14/11 : 53 LIGNES, PAS 955.** La correction de la case lue
-                    ci-dessus a rendu la mesure possible, et le classeur et le
-                    registre des mandats sont DEJA D'ACCORD :
+                    14/11 : 46 LIGNES, PAS 955.** La correction de la case lue
+                    ci-dessus a rendu la mesure possible :
 ```
-                    identique      897        <- rien a faire
-                    classeur seul   51        <- a POSER (26 Acquereur, 25 Vendeur)
+                    identique      904        <- rien a faire
+                    classeur seul   44        <- a POSER
                     ECART            2        <- a redresser, le classeur fait foi
                       KBZR2ND6 mandat 17217  classeur=Acquereur nous=vendeur
                                              VENTE REGLEE -> le seul a enjeu
@@ -1140,8 +1139,37 @@ la vente. Non traite, pas mesure en ampleur.
                     ⭐ Le vocabulaire CONCORDE : « vendeur »/« acquereur » des
                       deux cotes (mesure du 14/11) -- le piege ① du 02/11 tombe.
 ```
+   ⛔⛔⛔ **ET LE « 904 IDENTIQUE » NE PROUVE RIEN : IL EST CIRCULAIRE.** J'ai
+     failli en conclure que le classeur et Hektor etaient d'accord a 99,8 %.
+     ⭐ **Ce qui m'a arrete : un accord ne passe pas de 96,8 % (le juge du 03/11)
+       a 99,8 % sans raison.** La mesure de la provenance, au carnet du mandat :
+```
+     origine de NOTRE valeur, sur les 897 « identique » du 1er jet
+        classeur        874     <- LE CLASSEUR COMPARE A LUI-MEME
+        hektor           11     <- le seul vrai accord INDEPENDANT
+        pas au carnet    12
+     (le carnet en tout : hektor 22 637 . classeur 837 . mandat_app 1)
+```
+     ⛔ **Cause : `patch_charge_classeur_2026-11-04.sql` a DEJA pose 837 charges
+       du classeur le 04/11.** Comparer le classeur a notre base, c'est donc le
+       comparer en partie a lui-meme.
+     ➡ ⭐⭐ **LE JUGE DU 03/11 RESTE LA SEULE MESURE VALABLE** de l'accord
+       classeur <-> Hektor : **368 / 380 comparables = 96,8 %**, parce qu'il
+       lisait Hektor **directement**. Ne pas le remplacer par un chiffre tire
+       de notre base.
+
+   ⛔ **UN NUMERO DE MANDAT N'IDENTIFIE PAS UN MANDAT** (mesure du 14/11) :
+     24 596 mandats pour **18 287 numeros distincts**, **4 142 numeros en
+     doublon**, jusqu'a **10 exemplaires** pour le seul 10249. Le rapport ne
+     retient donc une charge par numero que si TOUS les exemplaires qui en
+     portent une sont **d'accord** -- sinon il ne rend rien et le compte :
+     **33 numeros recycles aux charges divergentes**, a regarder avant de poser.
+   ⚠ Et l'index par annonce du rapport (`setdefault`) masquait **94 mandats**
+     (56 annonces en portent plusieurs) : 7 lignes etaient annoncees
+     « classeur seul » a tort, 15 « les deux vides ». Corrige le 14/11.
+
                     La proposition A11 du 03/11, pour le reste :
-                    ① POSER LES 53 DU CLASSEUR (~1/2 h) -- ILS FONT FOI
+                    ① POSER LES 46 DU CLASSEUR (~1/2 h) -- ILS FONT FOI
                     ② l'ecran montre la valeur AVEC sa source (~1/2 j)
                     ③ le preremplissage : SAISIE > CLASSEUR > « Hektor dit
                        acquereur » > defaut vendeur (~1/2 j)

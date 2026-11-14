@@ -556,6 +556,37 @@ def main() -> int:
     par_annonce: dict[str, dict] = {}
     for x in reg:
         par_annonce.setdefault(str(x.get("hektor_annonce_id") or ""), x)
+    # ⛔ POURQUOI UN SECOND INDEX, PAR NUMERO DE MANDAT (14/11) : le setdefault
+    #   ci-dessus ne garde QUE LE PREMIER mandat d'une annonce, et 56 annonces
+    #   en portent plusieurs -- 94 mandats sont donc invisibles par ce chemin.
+    # ⭐ Pour la CHARGE, qui est une donnee DU MANDAT, le classeur donne le
+    #   numero de mandat lui-meme (4 525 concordent sur 4 702) : c'est le lien
+    #   le plus direct, et il recupere 22 lignes que l'annonce manquait (7
+    #   annoncees « classeur seul » a tort, 15 « les deux vides »).
+    # ⚠ Ca ne contredit PAS le « le lien passe par L'ANNONCE » de A11 § 1.5 :
+    #   celui-la parle des TRANSACTIONS (offre/compromis/vente), qui ne portent
+    #   hektor_mandat_id que 2,6 % du temps. Ici on cherche un MANDAT.
+    #
+    # ⛔⛔ MAIS UN NUMERO DE MANDAT N'IDENTIFIE PAS UN MANDAT, mesure du 14/11 :
+    #     24 596 mandats pour 18 287 numeros distincts -- 4 142 numeros en
+    #     DOUBLON, jusqu'a 10 exemplaires pour le seul numero 10249.
+    #     (C'est le recyclage des identifiants deja connu du projet.)
+    #   On ne peut donc pas prendre « le premier » ni « le dernier » : on ne
+    #   retient une charge que si TOUS les exemplaires qui en portent une sont
+    #   D'ACCORD. Sinon on ne rend RIEN, et on le COMPTE -- mieux vaut une case
+    #   vide qu'une valeur tiree au sort sur une donnee d'argent.
+    charges_par_numero: dict[str, set] = defaultdict(set)
+    for x in reg:
+        v = str(x.get("mandat_charge_honoraires_app") or "").strip()
+        if v:
+            charges_par_numero[str(x.get("numero_mandat") or "").strip()].add(v)
+    charge_du_numero: dict[str, str] = {}
+    numeros_divergents = 0
+    for num, vues in charges_par_numero.items():
+        if len(vues) == 1:
+            charge_du_numero[num] = next(iter(vues))
+        else:
+            numeros_divergents += 1
 
     # ⭐ LE CHAINAGE DOUTEUX (decouverte ⑦) : une transaction dont le nom
     #   d'acquereur est etranger a TOUTES ses voisines de chaine.
@@ -594,6 +625,9 @@ def main() -> int:
     synthese: dict[str, Counter] = {c: Counter() for c in CHAMPS}
     detail: list[dict] = []
     notes = Counter()
+    if numeros_divergents:
+        # compte plus haut : `notes` n'existe pas encore quand on indexe le registre
+        notes["Charge : numero de mandat RECYCLE aux charges DIVERGENTES"] = numeros_divergents
 
     for l in lignes:
         iu = case(l, "ID Unique")
@@ -675,7 +709,9 @@ def main() -> int:
         # ⭐ Le vocabulaire concorde des deux cotes (mesure du 14/11) : le
         #   registre dit « vendeur » / « acquereur », le classeur « Vendeur » /
         #   « Acquereur ». La comparaison sur les trois premieres lettres tient.
-        n_charge = mandat_reg.get("mandat_charge_honoraires_app")
+        # ⭐ LE NUMERO DE MANDAT DU CLASSEUR D'ABORD, l'annonce en repli.
+        n_charge = (charge_du_numero.get(str(case(l, "Mandat")).strip())
+                    or mandat_reg.get("mandat_charge_honoraires_app"))
         pose("Charge Commission", case(l, "Charge Commission"), n_charge,
              verdict(case(l, "Charge Commission"), n_charge,
                      str(case(l, "Charge Commission")).lower()[:3]
