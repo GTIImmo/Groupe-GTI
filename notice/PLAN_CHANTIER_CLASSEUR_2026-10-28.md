@@ -1317,13 +1317,161 @@ la vente. Non traite, pas mesure en ampleur.
                     ⑤ Hektor en SIGNALEMENT seulement (~2 h)
                     ⛔ A LIRE AVANT TOUTE REPRISE : A8, A10, A11 et le rapport
                       du juge (JUGE_CHARGE_CLASSEUR_HEKTOR_2026-11-03.md)
-3.3 ⬜ ACCORD       les 7 colonnes qui ONT une case : P S T W AB AD (+ AF comparer)
+3.3 ⬜ ACCORD       les colonnes qui ONT une case -- ⭐⭐ AUDITEE LE 14/11, et le
+                    perimetre comme le volume etaient FAUX : ce n'est pas
+                    « 7 colonnes, 605 valeurs » mais **4 colonnes, 12 dates et
+                    303 commissions**. Voir la section 3.3 plus bas.
+3.3bis ⬜ FREDERIC  ⛔ **V « Vente Prevue » est decidee « TOUT » et n'est dans
+                    AUCUNE tache** -- trou du plan trouve le 14/11. 2 303 ecarts,
+                    le plus gros conflit des 38. Voir la section 3.3.
 3.4 ⬜ ACCORD       Y le reglement et AA la facture -> app_affaire_champ_app,
                     sur la transaction de role 'vente'
                     ⚠ MESURER D'ABORD les 1 062 lignes sans role 'vente'
 3.5 ⬜ FREDERIC     le carnet des 5 colonnes de dossier (F G AH AI AJ), cle id_unique
                     + la case du numero de mandat (C, « les vides », ~9 utiles)
 ```
+
+## ⭐⭐⭐ 3.3 LES COLONNES QUI ONT UNE CASE — **AUDIT DU 14/11, LE VOLUME TOMBE DE 605 À 315**
+
+> Mesure rejouable : `python -X utf8 phase2/checks/audit_33_colonnes_qui_ont_une_case.py`
+> **Lecture seule de bout en bout.** Il lit le rapport du gel du jour et la base.
+
+### ⛔ ① LE PÉRIMÈTRE DU PLAN ÉTAIT PÉRIMÉ — 4 colonnes, pas 7
+
+La ligne du plan disait *« les 7 colonnes qui ONT une case : P S T W AB AD
+(+ AF comparer) »*. La **source de vérité est l'artefact des 38 choix**, relu le
+14/11 — et il dit, depuis le **09/11 à 13:13** :
+
+```
+   P Commission TTC   vides        S Offre Achat   vides
+   T Compromis        vides        W Vente Fixee   vides
+   AF Prix            comparer
+   AB Acquereur       RIEN   <- sorti du perimetre le 09/11
+   AD Vendeur         RIEN   <- sorti du perimetre le 09/11
+```
+
+➡ **3.3 porte QUATRE colonnes à poser et UNE à comparer.**
+
+### ⛔⛔⛔ ② « classeur seul » NE VEUT PAS DIRE « une case vide à remplir »
+
+**C'est la trouvaille de l'audit, et elle divise le travail par vingt-quatre.**
+Le rapport cherche la date de l'offre sur la transaction **offre reliée par le
+gel**. Quand cette transaction n'existe pas, il rend « classeur seul » — ce qui se
+lit *« il nous manque la donnée »* alors que, le plus souvent, **il nous manque la
+transaction entière**. Trois choses très différentes sous un seul mot :
+
+```
+                        annonce   A case vide   B existe dans   E aucune
+                        au        a remplir     la chaine       transaction
+                        rapport                 (gel muet)      de ce role
+   S Offre Achat          178          4            30             144
+   T Compromis             75          8             5              62
+   W Vente Fixee           38          0             3              35
+                         ----        ---           ---             ---
+                          291         12            38             241
+```
+
+- **A — 12 dates, et elles seules, sont une case à remplir.** C'est le vrai volume.
+- **B — 38 lignes où le rapport se trompe** : nous avons la transaction ET sa date,
+  le gel ne l'a simplement pas reliée à cette ligne. **5 disent la même date**
+  (rien à faire), **31 une autre date** → ⬜ réserve, à regarder au fond.
+  ⚠ Et **8 de ces 31 portent chez nous le 11 ou le 12/11/2026** : c'est la *date du
+  refus* posée par notre propre chaînage ces jours-là. Voir la mémoire
+  `date-offre-refusee-est-la-date-du-refus`.
+- **E — 241 lignes n'ont AUCUNE transaction de ce rôle**, et ce n'est pas un trou
+  au hasard : la chaîne existe, elle s'arrête ailleurs.
+
+```
+   S les 144 sans offre        : la chaine porte compromis 87 . compromis+vente 53 . vente 4
+   T les  62 sans compromis    : la chaine porte offre 60 ; au classeur, 35 « Annulee »
+                                 et 23 « Compromis en attente » (une date PREVUE)
+   W les  35 sans vente        : 26 ont une DATE D ACTE au compromis, DIFFERENTE
+                                 5 la meme . 2 sans date d acte . 2 sans compromis
+```
+
+➡ ⛔ **Poser ces 241 dates voudrait dire CRÉER 241 transactions** dans notre
+registre des affaires. Ce n'est plus « remplir un vide » : c'est inventer une
+offre, un compromis ou une vente que Hektor n'a jamais portés. **Hors de la
+décision « les vides ».** À trancher à part, s'il le veut.
+
+### ③ P COMMISSION TTC — 279 vrais vides, 1 886 204 €
+
+```
+   314 annoncees « classeur seul »
+      279   vrai vide : aucune transaction de la chaine ne porte de commission
+       22   une VOISINE porte LA MEME -> le rapport se trompe
+       13   une voisine en porte une DIFFERENTE
+   par annee : 2026 77 (539 070 EUR) . 2022 50 . 2021 51 . 2023 40 . 2020 33 . 2024 17
+```
+
+⚠⚠ **ET LE ZÉRO EST UN VIDE DÉGUISÉ** — *un zéro ne se croit pas sans témoin
+positif.* **24 lignes de plus** sont rangées « ECART » alors que **nous portons 0**
+(217 250 € au classeur). Un 0 n'est pas une saisie, c'est une absence : le compte
+des « vides » les rate. ➡ **Mon avis : les traiter comme des vides** → **303**
+commissions, et non 279.
+
+### ④ AF PRIX — on ne pose RIEN
+
+`comparer` : 3 780 hors périmètre (avant 2025, le classeur portait un prix
+d'annonce), **760 identiques, 161 écarts** à lui montrer. Aucune écriture.
+
+### ⛔⛔ ⑤ LA CASE EXISTE, MAIS LE ROBINET EST FERMÉ — *le point de forme à trancher*
+
+La table d'accueil existe et est éprouvée : **`app_affaire_champ_app`**, et sa
+carte `CARNET_VERS_REGISTRE` (`console_job_worker.js:16813`) accepte déjà
+**`date`**, **`date_acte`** et **`honoraires_entree`** — exactement nos champs.
+
+⛔ **Mais ce que l'app y écrit n'est reposé par personne aujourd'hui :**
+
+```
+   phase2/identite/appliquer_contrat_affaire.py  -- « AUJOURD'HUI CETTE ETAPE NE
+       FAIT RIEN, et c'est voulu : la machinerie existe et attend »
+   phase2/identite/contrat_autorite.py:180       -- CHAMPS_APP_AFFAIRE = ()   VIDE
+   et l'etape n'est PAS dans le run de nuit (0 appel dans scheduled/)
+```
+
+Et `affaire_ledger.py` **rafraîchit le registre depuis le miroir à chaque run** :
+une valeur écrite au carnet et non reposée serait **invisible le lendemain**.
+
+➡ **Trois chemins, et c'est sa décision :**
+
+```
+   A  le chemin PREVU PAR LA CONCEPTION : ecrire au carnet, allumer
+      CHAMPS_APP_AFFAIRE sur les 3 champs, mettre l'etape au run.
+      ⚠ C'est le PENDANT de CHAMPS_APP_ANNONCE, qui reste ETEINT par decision
+        du 13/10 -- donc une decision de meme poids.
+   B  le chemin DU LOT 1 : ecrire dans la table du registre avec une origine, et
+      une garde du run (comme `not like 'hektor%'` sur la repartition, et comme
+      `notaires_origine = 'saisie'` qui fige deja une ligne, affaire_ledger.py:235).
+      ⚠ Touche le coeur de la synchro des affaires, champ par champ.
+   C  ne rien poser : garder le classeur comme source consultable sur ces colonnes.
+```
+
+⭐ **Pour la charge (3.2bis) la question ne s'était pas posée** : elle passe par
+`app_mandat_champ_app` **et** la RPC `app_reposer_charge_mandat_app`, qui existe et
+tourne. Côté **affaire**, cette RPC n'a pas d'équivalent.
+
+### ⛔ ⑥ RÉSERVE NOMMÉE — V « Vente Prévue » N'EST DANS AUCUNE TÂCHE
+
+Trou du plan trouvé le 14/11. L'artefact la décide **« tout »** ; le plan d'action
+ne la cite nulle part (ni 3.3, ni 3.4, ni 3.5). Et c'est **le plus gros conflit
+des 38** :
+
+```
+   V Vente Prevue : ECART 2 303 . identique 1 682 . les deux vides 495
+                    nous seuls 201 . classeur seul 21
+```
+
+⭐ **Et l'appariement du rapport est le BON, c'est mesuré** : notre
+`compromis.date_acte` colle à **V Vente Prévue 1 445 fois** contre **W Vente Fixée
+147 fois**. Les deux colonnes du classeur sont bien **deux notions** — elles
+diffèrent dans **3 087 cas sur 3 696** où les deux sont remplies : la prévision,
+puis la date fixée. **Nous n'avons qu'une case pour les deux.**
+
+⬜ **À trancher par lui** : « tout » sur V signifierait **écraser 2 303 de nos
+dates d'acte** par une date que le classeur lui-même dit prévisionnelle. Le
+document du 02/11 le notait déjà : *« il est NORMAL : une date prévisionnelle
+bouge »*. **Je ne poserais pas V sans l'entendre.**
 
 ⛔⛔ **CE QU'IL NE FAUT PAS FAIRE, ET J'ALLAIS LE FAIRE** : créer la table
 `app_affaire_suivi`. Mon propre audit du 09/11 l'avait déjà déclarée **inutile**
