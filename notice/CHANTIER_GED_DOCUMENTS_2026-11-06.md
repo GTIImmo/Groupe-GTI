@@ -30,7 +30,7 @@
 | 6 lot 4 | lecture : mandat déposé à la main, avenant, fin de mandat, acte, annulation, facture, petits diagnostics, assainissement, surfaces, règlement | ✅ **écrit et contrôlé le 13/11** (80 + 49 VERT, banc 64/64, 0 fuite), patch d'étiquette posé (14/14 « lue »), poussé (`7c4e3fb`) ; **essai réel fait le 13/11 sur 63331** : 8/8 envoyés et lus, 0 fuite ; ⚠ « Note honoraires » classée « notes internes » par la règle du nom (§12.16) |
 | 7 | comparateurs et règles avec lecture (titre ↔ mandants, taxe ↔ fiche, copro…) | ✅ **écrit et poussé le 13/11** : 7a (`81be8ad`, socle + justificatifs et diagnostics du bien), 7b (`973592c`, le mandat), 7c (les transactions, résolveur) ; 84 VERT ; **pas encore regardé sur un vrai bien** (§12.17) |
 | 8 | propositions (« remplir », un clic par case) | ✅ **écrit, posé et poussé le 13/11** (`9320c02`, 27 VERT, patch m8 6/6), interrupteur `ged_remplir` **allumé en admin le 13/11 à 14:42** ; **épreuve d'écriture sur 63331 faite dans les deux sens, prouvée en base** (Hektor accepte `dpe_date`, date d'ERP, nb de lots, quote-part ; rien d'autre ne bouge ; copropriété reste OUI) — §12.18 |
-| 9 | pièces des personnes (identité — le justificatif le plus déposé —, état civil, financement) | 🔧 **ouvert le 13/11** (audit §12.19, choix « B » : registre à part) ; **9a en production le 13/11** (patch 7/7, `71a1afb`), interrupteur `ged_lecture_personnes` **admin** depuis 15:17 ; **essai réel fait** : 3/3 lus, 0 fuite, registre juste ; date de naissance des cartes : corrigée (fiche v2, `bc16ffe`) et **prouvée par un 2e dépôt** ; 9b, 9c, 9d à venir |
+| 9 | pièces des personnes (identité — le justificatif le plus déposé —, état civil, financement) | 🔧 **ouvert le 13/11** (audit §12.19, choix « B » : registre à part) ; **9a en production le 13/11** (patch 7/7, `71a1afb`), interrupteur `ged_lecture_personnes` **admin** depuis 15:17 ; **essai réel fait** : 3/3 lus, 0 fuite, registre juste ; date de naissance des cartes : corrigée (fiche v2, `bc16ffe`) et **prouvée par un 2e dépôt** ; **9b écrit, contrôlé et poussé le 14/11** (règles P4 nom, P5 périmée, P6 une pièce par personne ; 32 VERT), pas encore regardé sur 63331 ; 9c, 9d à venir |
 | 10 | mesure (vrai / faux / déjà su, 2 semaines) | ⬜ |
 | habillage | suivre la maquette E0-E6 à l'écran (fenêtre modale, aperçu, cartes) | ⬜ APRÈS le code (§12.12) |
 
@@ -1722,3 +1722,29 @@ mêmes fichiers renommés (« Déjà dans ce dossier (…) : l'envoyer quand mê
 - ⚠ **La nature de la carte neuve est lue « ancien modèle »** (juste au 1er dépôt) : ma fausse carte n'a pas le dessin
   d'une vraie, l'IA hésite. Sans effet sur la règle de validité de 9b : le bonus de 15 ans ne concerne que les cartes
   dont la fin imprimée tombe entre 2014 et 2023, et celle-ci finit en 2033. À regarder sur de vraies pièces (mesure).
+
+**✅ « Vas y » (13/11) : LOT 9b ÉCRIT ET CONTRÔLÉ HORS LIGNE — RIEN POUSSÉ, rien en base.** Frédéric n'a pas tranché
+« garder / remplacer » la ligne « Pièce d'identité de chaque mandant » : ma recommandation est appliquée, elle RESTE
+(elle reconnaît les anciens documents par leur nom) et P6 s'ajoute.
+- `src/lib/gedReglesPersonnes.ts` (pur) : `piecesLuesDe` (une entrée par pièce, nom lu NETTEMENT), `finEffective`,
+  `reglesPersonnes` ; branché dans `RecuManque.tsx` avec les autres règles (même tri, même interrupteur
+  `ged_propositions`). Ne connaît pas le registre (numéro, délivrance).
+  - **P4 le nom** : chaque pièce face aux mandants de la fiche ET aux acquéreurs des offres et compromis VIVANTS, par le
+    nom de naissance OU d'usage : inconnue → alerte ; écrite autrement (prénom absent, couple) → information.
+  - **P5 la validité** : référence = le compromis vivant le plus récent, sinon la signature du mandat LUE, sinon le début
+    du mandat de la fiche, sinon aujourd'hui. Carte d'identité dont la fin imprimée tombe du 02/01/2014 au 31/12/2023 :
+    +5 ans (délivrée 2004-2013), sauf mineur à la délivrance (naissance lue) — le « modèle » lu ne décide PAS (l'IA l'a
+    mal lu au 2e essai). Passeport, titre de séjour, permis : la date imprimée. Périmée à la référence → alerte ; valide
+    au mandat mais périmée aujourd'hui avant tout compromis → information.
+  - **P6 une pièce par personne** : chaque mandant, et chaque acquéreur d'un compromis vivant ; ne parle que si une
+    pièce au moins a été LUE sur le bien ; « couverte » = nom ET prénom (le nom seul ne suffit que si la fiche n'a pas
+    de prénom).
+- **Essais** : `test_ged_regles_personnes.cjs` **32 VERT** ; tous les autres GED verts (59, 84, 44, 29, 27, 19, 25) ;
+  build vert. ⭐ Les essais ont trouvé 2 défauts avant toute mise en ligne : « le passeport… était périméE » (accord), et
+  P6 qui tenait Jeanne FICTIF pour couverte par la pièce de Marc FICTIF (le nom seul). Témoin inverse : sans la
+  prolongation → 4 ROUGE.
+- **Banc d'écran** (`scratchpad/ged_m9_vue`, launch « ged-banc-m9 », hors ligne) : « À regarder (3) » = la pièce de Paul
+  DURAND (inconnu), le passeport de Marc FICTIF périmé au mandat du 02/03/2026, la pièce de Luc ABSENT non trouvée ; la
+  carte de Jeanne (fin imprimée 2022, prolongée 2027) se tait. Console sans erreur.
+- ✅ « Oui » (14/11) : commité et poussé (Vercel). ⏳ Reste à le regarder sur 63331 (attendu : les pièces SPECIMEN / FICTIF face à la
+  fiche du bien d'essai).
