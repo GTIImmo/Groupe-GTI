@@ -1776,3 +1776,62 @@ avec « (N pièces, aucune valable) ». Même règle pour l'information « péri
 personne : prénom + nom de la pièce, normalisés (comme P4). Essais **38 VERT** (+3) ; témoin inverse (une ligne par
 pièce) → **3 ROUGE** ; tous les autres GED verts ; build vert. Sur 63331 rien ne doit changer (toutes les pièces y sont
 valables).
+
+**🔎 AUDIT DU LOT 9c (14/11, lecture seule, rien codé) — remplir la fiche contact depuis les pièces.**
+Ce que P1-P3 veulent dire ici (aucun document ne les définissait : déduit du découpage du 13/11 et des 3 cases que le
+geste contact sait écrire) : **P1 date de naissance**, **P2 lieu de naissance** (pièce d'identité OU fiche de
+renseignements), **P3 situation de famille** (fiche de renseignements seule). Jamais l'adresse, jamais le régime.
+- **Le geste existe et accepte un envoi PARTIEL** : `app_edit_contact_optimistic` (empreinte `eb93494b`) n'écrit chez nous
+  que les clés reçues (`birth_date`, `birth_place`, `marital_status` y sont), pose la bannette `app_contact_pending`
+  (anti-écrasement par `_date_maj`) ; `app_contact_enqueue_due_pushes` enfile `update_hektor_contact` avec ces seules clés.
+- ⚠ **Le worker EXIGE le nom** (`normalizeHektorContactPayload`, `requireName`) : un envoi « date de naissance seule »
+  ÉCHOUERAIT. Il faut joindre le nom ACTUEL, inchangé. Le wrapper écran `editContactOptimistic` l'exige déjà.
+- Le worker relit le formulaire de Hektor et ne remplace QUE les champs envoyés (`dateNaissance` en JJ-MM-AAAA par
+  `normalizeOptionalFrenchDate`, `lieuNaissance`, `marital_status`) ; un couple est relu comme couple (bloc `_m2`).
+- ⚠ **D-4 (déjà noté au chantier partenaires)** : chaque modification ajoute `_email_rgpd=1` sauf `send_rgpd_email: false`.
+  Le geste de 9c l'enverra à `false` (la clé n'a pas de colonne : elle part dans la charge seulement).
+- ⚠ **Le contrôle au retour (8a5, `contact_retour_controle` ON) NE JUGE PAS ces 3 champs** : `app_contact_champs_modif`
+  ne connaît que nom, prénom, civilité, e-mail, 2 téléphones, adresse, CP, ville, commentaires. Sans patch, un remplissage
+  n'a de fin visible que par la relecture de la fiche.
+- Codes Hektor mesurés (`app_contact_current`) : `married` 43, `single` 28, `widower` 15, `divorced` 8, `civil_union` 3
+  — 94 859 vides. Traduction : marie, celibataire, veuf, divorce, pacse ; **separe, concubinage, autre → rien**.
+- L'écran ne connaît des mandants que nom et prénom (`personnesGedDuBien`, `DetailContact` sans naissance) : il faudra
+  relire `app_contact_current` (3 cases + `nature_fiche`) pour proposer, et RELIRE au clic (case vide), comme le morceau 8.
+- Contact d'épreuve tout trouvé : **20000009 « Mandant ESSAI 8A C1 »**, mandant de 63331, personne seule, 3 cases vides.
+
+**✅ LOT 9c CODÉ (14/11, après le « oui » de Frédéric : SANS le patch du contrôle au retour) — rien poussé, rien posé.**
+Décision du 14/11 : on ne lie pas 9c à l'extension du contrôle au retour. Ce contrôle ne juge DÉJÀ pas ces 3 cases pour la
+fenêtre « Modifier » (trou ancien, de tout le chemin contact) ; l'étendre touche TOUTES les modifications de contact, et
+le risque de fausses alertes (lieu réécrit par Hektor) n'est pas mesuré. ➡ **Morceau à part, plus tard** : une répétition
+sans écrire sur les modifications récentes, compter les écarts, puis poser (accord) ou d'abord une comparaison tolérante.
+- **Les clés** (pour ne pas les confondre avec P1-P4 du bien) : `C1.birth_date.<contact>`, `C2.birth_place.<contact>`,
+  `C3.marital_status.<contact>`. Même table `app_ged_decision`, même interrupteur `ged_remplir` (admin).
+- **`src/lib/gedRemplirContact.ts`** (pur, neuf) : `propositionsContact(contacts, personnesDuBien, docs, decisions, aujourdhui)`.
+  Sources : `justif.identite` (liste `pieces`) et `transaction.renseignements` (liste `personnes`), valeurs `lu` seulement.
+  Rattachement STRICT : nom de naissance OU d'usage ÉGAL (sans casse, accents ni ponctuation) ET premier prénom égal — pas
+  le verdict « egal » de `personneSurLaFiche`, trop large ici (un mot du nom suffit) ; et une SEULE personne du bien qui
+  les porte. Personne seule seulement. Date : AAAA-MM-JJ réelle, après 1900, avant aujourd'hui. Deux pièces qui
+  disent deux valeurs : rien (une situation sans code Hektor compte comme une voix et contredit).
+- **`src/lib/ged.ts`** : `loadContactsEtatCivil(ids)` relit `app_contacts_current` (la VUE : même périmètre que
+  l'annuaire) ; erreur → `null` → aucune proposition contact.
+- **`src/RecuManque.tsx`** : prop `contactsDuBien` ; relecture de l'état civil à chaque tour (`relire`) ; les propositions
+  contact s'ajoutent à « À remplir » ; bouton « Remplir la fiche du contact ».
+- **`src/App.tsx`** : `contactsGedDuBien` (numéro = `sourceId`, `seul` = pas de membres ni de `refCouple`) et la branche
+  `contact` de `remplirDepuisDocument` : relit le contact → personne seule active → case encore vide (`caseVide` pour la
+  date) → nom présent → `editContactOptimistic({ lastName: nom ACTUEL, personType, sendRgpdEmail: false, <le champ> })`
+  → `hektor:contact-updated` → décision « remplie ». Sinon décision « echec » avec son motif, et RIEN d'écrit.
+- **Vérifié avant de coder, ce que l'envoi partiel ne casse pas** : la charge porte aussi `contact_kind` (« acquereur » par
+  défaut de `hContactPayload`) et `person_type`, mais (a) `app_edit_contact_optimistic` n'en fait rien (aucune colonne),
+  (b) le worker en modification ne pose NI `qualification` NI `statut` (seulement à la création : `applyHektorContactIdentityValues`),
+  (c) `app_contact_champs_modif` ne juge que le nom, joint inchangé → aucune fausse alerte au retour. Aucune recherche
+  n'est créée en modification. L'e-mail RGPD est coupé.
+- **Essais** : `node test_ged_remplir_contact.cjs` → **40 verts, 0 rouge** (témoins inverses compris ; l'essai « rien
+  d'autre n'est envoyé » a lui-même été éprouvé : il voit un téléphone glissé dans l'appel). Les essais voisins restent
+  verts : remplir 27, règles personnes 38, règles lues 84, règles 44. `npm run build` vert.
+- ⚠ **Trouvé en passant, NON traité (hors périmètre)** : des `birth_place` de `app_contact_current` portent du texte de
+  COMMENTAIRE (« …Recontacter le 28 février…]]> ») — un défaut de lecture XML côté synchro. 9c n'y écrit pas (case non
+  vide = rien). Non compté.
+- **Reste, sur accord** : pousser ; puis l'**épreuve réelle** sur 63331 / contact 20000009 avec une pièce SPÉCIMEN
+  fabriquée à son nom (C1 et C2 par la pièce d'identité ; C3 demande une fiche de renseignements SPÉCIMEN) ; vérifier
+  chez nous à l'instant, puis chez Hektor après le passage du worker (≈ 10 min de délai d'envoi), la valeur exacte.
+  Retour arrière : `ged_remplir` → off ; une valeur écrite se vide à la main par la fenêtre « Modifier ».

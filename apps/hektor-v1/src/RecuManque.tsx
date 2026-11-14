@@ -7,11 +7,14 @@
 // ⭐ Morceau 7 (§12.17) : au même endroit, ce que l'IA a lu comparé à la fiche et aux mandants (lib/gedReglesLues.ts).
 // ⭐ Morceau 8 (§12.18) : « À remplir », une case VIDE et la valeur lue (lib/gedRemplir.ts), derrière `ged_remplir` ;
 //   « Remplir la fiche » appelle l'écran du bien (onRemplir), « Ignorer » garde la décision. Rien sans clic.
+// ⭐ Morceau 9, lot 9c : au même endroit, la date, le lieu de naissance et la situation de famille d'un mandant
+//   (lib/gedRemplirContact.ts), lus sur ses pièces, pour SA fiche contact relue (loadContactsEtatCivil).
 import { useEffect, useMemo, useState } from 'react'
 import { loadAffairesForDossier, loadRegisterCycleAffaires } from './lib/api'
 import { etatFiableDuDocument } from './lib/etatSignatureMandat'
-import { compterConditionsStrict, gedDecider, loadGedClassements, loadGedDecisions, useGedPropositions, useGedRemplir } from './lib/ged'
+import { compterConditionsStrict, gedDecider, loadContactsEtatCivil, loadGedClassements, loadGedDecisions, useGedPropositions, useGedRemplir, type EtatCivilLu } from './lib/ged'
 import { propositionsRemplir, type FaitsRemplir, type PropositionRemplir } from './lib/gedRemplir'
+import { propositionsContact } from './lib/gedRemplirContact'
 import { dateEtatLue, loadGedLectures, resumeLecture, type LectureDocument } from './lib/gedLecture'
 import { reglesPersonnes } from './lib/gedReglesPersonnes'
 import { LIBELLE_MOMENT, recuManque, type LignePiece } from './lib/gedPieces'
@@ -40,7 +43,7 @@ const NIVEAU_ALERTE: Record<Alerte['niveau'], string> = { alerte: 'à vérifier'
 const euros = (v: string | number | null | undefined) => { const x = Number(v); return v != null && v !== '' && Number.isFinite(x) && x > 0 ? x : null }
 
 export function RecuManque({
-  hektorAnnonceId, appDossierId, documents, faits, personnesDuBien = [], onDeposer, onRemplir,
+  hektorAnnonceId, appDossierId, documents, faits, personnesDuBien = [], contactsDuBien = [], onDeposer, onRemplir,
 }: {
   hektorAnnonceId: string | number
   appDossierId?: number
@@ -51,6 +54,8 @@ export function RecuManque({
   onRemplir?: (p: PropositionRemplir) => Promise<string>
   // morceau 7 : les mandants / propriétaires de la fiche, une ligne par personne (un couple = deux)
   personnesDuBien?: PersonneDuBien[]
+  // lot 9c : les contacts de la fiche par leur numéro ; `seul` = ni fiche fusionnée de couple, ni référence de couple
+  contactsDuBien?: Array<{ id: string; seul: boolean }>
   onDeposer?: (typeCode: string, libelle: string) => void
 }) {
   const regles = useGedPropositions()
@@ -150,13 +155,31 @@ export function RecuManque({
       .catch(() => { if (!annule) setConditions(null) })
     return () => { annule = true }
   }, [remplir, peutRemplir, idsCompromis, relire])
+  // lot 9c : l'état civil des contacts du bien, relu à chaque fois (lecture ratée -> null -> aucune proposition contact)
+  const idsContacts = useMemo(() => contactsDuBien.map((c) => c.id).join(','), [contactsDuBien])
+  const [etatCivil, setEtatCivil] = useState<Map<string, EtatCivilLu> | null>(null)
+  useEffect(() => {
+    if (!remplir || !peutRemplir) return
+    let annule = false
+    void loadContactsEtatCivil(idsContacts ? idsContacts.split(',') : []).then((m) => { if (!annule) setEtatCivil(m) })
+    return () => { annule = true }
+  }, [remplir, peutRemplir, idsContacts, relire])
   const propositions = useMemo(() => {
     if (!remplir || !peutRemplir || !decisions || !conditions || affaires === null) return []
     const docsLus = documents
       .filter((d) => d.present_in_hektor !== false && lectures.has(d.id))
       .map((d) => ({ nom: d.document_name, lecture: lectures.get(d.id) as LectureDocument }))
-    return propositionsRemplir({ ...faits, chargeRegistre }, docsLus, affaires, decisions, conditions)
-  }, [remplir, peutRemplir, decisions, conditions, affaires, documents, lectures, faits, chargeRegistre])
+    const contacts = etatCivil ? contactsDuBien.flatMap((c) => {
+      const r = etatCivil.get(c.id)
+      return r && r.archive !== true ? [{
+        contactId: c.id, nom: r.nom ?? '', prenom: r.prenom ?? '',
+        personneSeule: c.seul && r.nature_fiche === 'personne_seule' && !r.couple_role,
+        naissance: r.birth_date, lieu: r.birth_place, situation: r.marital_status,
+      }] : []
+    }) : []
+    return [...propositionsRemplir({ ...faits, chargeRegistre }, docsLus, affaires, decisions, conditions),
+      ...propositionsContact(contacts, personnesDuBien, docsLus, decisions, new Date())]
+  }, [remplir, peutRemplir, decisions, conditions, affaires, documents, lectures, faits, chargeRegistre, etatCivil, contactsDuBien, personnesDuBien])
   const agir = async (p: PropositionRemplir, geste: 'remplir' | 'ignorer') => {
     if (enCours || !onRemplir) return
     setEnCours(p.cle); setMessageRemplir(null)
@@ -240,7 +263,7 @@ export function RecuManque({
               <span className="gm-ic is-selon_le_cas" aria-hidden="true">+</span>
               <span className="gm-t">{p.texte}<small>{`case vide : lu dans ${p.source}`}</small></span>
               <span className="gm-d">
-                <button type="button" className="gm-avant-b" disabled={enCours !== null} onClick={() => void agir(p, 'remplir')}>{enCours === p.cle ? 'Écriture…' : 'Remplir la fiche'}</button>
+                <button type="button" className="gm-avant-b" disabled={enCours !== null} onClick={() => void agir(p, 'remplir')}>{enCours === p.cle ? 'Écriture…' : p.geste === 'contact' ? 'Remplir la fiche du contact' : 'Remplir la fiche'}</button>
                 {' '}
                 <button type="button" className="gm-avant-b" disabled={enCours !== null} onClick={() => void agir(p, 'ignorer')}>Ignorer</button>
               </span>

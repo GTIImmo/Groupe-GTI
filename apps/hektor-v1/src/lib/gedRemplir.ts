@@ -8,8 +8,9 @@ import type { AffaireRegle, FaitsRegles } from './gedRegles'
 import type { DocumentLu } from './gedReglesLues'
 
 // fiche : la case de la fiche (nom Hektor), par editAnnonceOptimistic ; charge : le registre des mandats, par
-// ecrireMandatCharge ; condition : la liste des conditions d'une transaction, par ecrireAffaireConditions.
-export type GesteRemplir = 'fiche' | 'charge' | 'condition'
+// ecrireMandatCharge ; condition : la liste des conditions d'une transaction, par ecrireAffaireConditions ;
+// contact (lot 9c) : une case de la fiche d'un mandant, par editContactOptimistic (gedRemplirContact.ts).
+export type GesteRemplir = 'fiche' | 'charge' | 'condition' | 'contact'
 export type PropositionRemplir = {
   cle: string                // la proposition : « P1.dpe_cons »… (avec la valeur, c'est la clé d'une décision)
   geste: GesteRemplir
@@ -19,6 +20,7 @@ export type PropositionRemplir = {
   source: string             // le document et sa page
   lectureId: string | null
   affaireId?: number         // condition : la transaction visée
+  contactId?: string         // contact : le contact visé (notre numéro, clé de app_contact_current)
 }
 
 // Faits de la fiche utiles ici en plus de ceux des règles (valeurs BRUTES : null = case vide).

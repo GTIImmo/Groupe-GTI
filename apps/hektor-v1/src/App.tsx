@@ -304,7 +304,7 @@ import SuiviSignatairesYoutrust from './SuiviSignatairesYoutrust'
 import { PiecesSignatureFenetre, useSignaturePreuves } from './PiecesSignature'
 // GED morceau 2 (12/11/2026) : la fenêtre de dépôt, derrière l'interrupteur ged_depot_multiple (note GED §12.7).
 import { DepotDocuments } from './DepotDocuments'
-import { compterConditionsStrict, gedDecider, useGedDepotMultiple, useGedRecuManque } from './lib/ged'
+import { compterConditionsStrict, gedDecider, loadContactsEtatCivil, useGedDepotMultiple, useGedRecuManque } from './lib/ged'
 // GED morceau 3 (12/11/2026) : le bloc « Reçu / Manque », derrière l'interrupteur ged_recu_manque (note GED §12.8).
 import { RecuManque } from './RecuManque'
 import { caseVide, type FaitsRemplir, type PropositionRemplir } from './lib/gedRemplir'
@@ -11896,6 +11896,14 @@ function personnesGedDuBien(contacts: DetailContact[] | null | undefined): Array
     .filter((p) => p.nom || p.prenom)
 }
 
+// GED lot 9c : les contacts de la fiche par leur NUMÉRO (celui de app_contact_current), pour remplir leur état civil.
+// `seul` : ni une fiche fusionnée de couple à l'écran, ni une référence de couple -- la fiche relue doit le confirmer.
+function contactsGedDuBien(contacts: DetailContact[] | null | undefined): Array<{ id: string; seul: boolean }> {
+  return (contacts ?? [])
+    .map((c) => ({ id: String(c.sourceId ?? '').trim(), seul: !c.members?.length && !String(c.refCouple ?? '').trim() }))
+    .filter((c) => /^\d+$/.test(c.id))
+}
+
 function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJobCreated, onMissingNegotiator, onDocumentsChanged, ficheDuMandat }: { dossier: Dossier; compact?: boolean; skin?: 'classic' | 'v21'; onJobCreated?: (job: ConsoleJob) => void; onMissingNegotiator?: MissingNegotiatorHandler; onDocumentsChanged?: () => void; ficheDuMandat?: { detail: DossierDetailPayload; contacts: DetailContact[]; address: string } | null }) {
   const [documents, setDocuments] = useState<ConsoleDocument[]>([])
   // Skin « v21 » (cockpit) : filtre + tiroir d'ajout. Non utilises en skin classique.
@@ -11918,6 +11926,7 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
   const [typeAttendu, setTypeAttendu] = useState<{ code: string; libelle: string } | null>(null)
   const faitsDuBien = useMemo(() => faitsGedDuBien(dossier, ficheDuMandat?.detail ?? null), [dossier, ficheDuMandat])
   const personnesDuBien = useMemo(() => personnesGedDuBien(ficheDuMandat?.contacts), [ficheDuMandat])
+  const contactsDuBien = useMemo(() => contactsGedDuBien(ficheDuMandat?.contacts), [ficheDuMandat])
   // GED morceau 8 : écrire UNE proposition « remplir ». On RELIT juste avant (la fiche fraîche, la ligne du registre,
   // les conditions comptées strictement) : si la case n'est plus vide, RIEN n'est écrit et la décision dit « echec ».
   // Puis le geste EXISTANT, inchangé (même chemin que « Reporter dans la fiche »). La décision garde qui et quoi.
@@ -11936,6 +11945,26 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
       if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('hektor:annonce-updated', { detail: { app_dossier_id: dossier.app_dossier_id } }))
       await garder('remplie', { geste: 'editAnnonceOptimistic', champs: { [p.champ]: p.valeur } })
       return `Envoyé : ${p.texte}. La fiche part chez Hektor par le chemin habituel (contrôle au retour).`
+    }
+    // lot 9c : une case de la fiche d'un MANDANT. On RELIT le contact : personne seule active, case encore vide, sinon
+    // RIEN. Le geste existant exige le nom : on joint le nom ACTUEL, inchangé (le worker n'écrit chez Hektor que les
+    // champs envoyés, et une modification ne touche ni à la qualification ni au statut du contact). L'e-mail RGPD est
+    // coupé EXPRÈS (défaut D-4 : sans précaution, chaque modification le demande à Hektor).
+    if (p.geste === 'contact') {
+      const id = String(p.contactId ?? '').trim()
+      if (!['birth_date', 'birth_place', 'marital_status'].includes(p.champ)) return refus('champ_inconnu', `le champ « ${p.champ} » ne se remplit pas d'ici.`)
+      const relu = /^\d+$/.test(id) ? (await loadContactsEtatCivil([id]))?.get(id) : undefined
+      if (!relu) return refus('contact_illisible', "la fiche du contact n'a pas pu être relue.")
+      if (relu.archive === true || relu.nature_fiche !== 'personne_seule' || relu.couple_role) return refus('pas_personne_seule', "le contact n'est plus une personne seule active.", { nature_fiche: relu.nature_fiche, couple_role: relu.couple_role })
+      const actuelle = p.champ === 'birth_date' ? relu.birth_date : p.champ === 'birth_place' ? relu.birth_place : relu.marital_status
+      if (p.champ === 'birth_date' ? !caseVide(actuelle) : String(actuelle ?? '').trim()) return refus('case_deja_remplie', `la fiche du contact porte déjà « ${actuelle} ».`, { valeur_fiche: actuelle })
+      const nom = String(relu.nom ?? '').trim()
+      if (!nom) return refus('contact_sans_nom', "le contact n'a pas de nom : le geste le refuserait.")
+      const champ = p.champ === 'birth_date' ? { birthDate: p.valeur } : p.champ === 'birth_place' ? { birthPlace: p.valeur } : { maritalStatus: p.valeur }
+      await editContactOptimistic({ contactId: id, contact: { lastName: nom, personType: 'personne_seule', sendRgpdEmail: false, ...champ } })
+      if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('hektor:contact-updated', { detail: { hektor_contact_id: id } }))
+      await garder('remplie', { geste: 'editContactOptimistic', hektor_contact_id: id, champs: { [p.champ]: p.valeur }, email_rgpd: false })
+      return `Envoyé : ${p.texte}. La fiche du contact part chez Hektor par le chemin habituel.`
     }
     if (p.geste === 'charge') {
       const numero = String(dossier.numero_mandat ?? '').trim()
@@ -12360,6 +12389,7 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
       documents={documents}
       faits={faitsDuBien}
       personnesDuBien={personnesDuBien}
+      contactsDuBien={contactsDuBien}
       onRemplir={remplirDepuisDocument}
       onDeposer={gedDepot ? (code, libelle) => {
         setTypeAttendu({ code, libelle })

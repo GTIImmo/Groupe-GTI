@@ -158,6 +158,29 @@ export async function loadGedDecisions(hektorAnnonceId: string | number): Promis
   }
 }
 
+// GED lot 9c (14/11) : l'état civil des contacts du bien, RELU dans la vue des contacts (même périmètre que l'annuaire).
+// ⚠ Lecture ratée -> null : l'écran ne propose alors RIEN (jamais croire une case vide qu'on n'a pas lue). Un numéro
+//   absent de la réponse = contact inconnu chez nous : il n'est pas dans la carte, donc rien ne se propose pour lui.
+export type EtatCivilLu = {
+  hektor_contact_id: string; nom: string | null; prenom: string | null; birth_date: string | null
+  birth_place: string | null; marital_status: string | null; nature_fiche: string | null; couple_role: string | null; archive: boolean | null
+}
+export async function loadContactsEtatCivil(ids: string[]): Promise<Map<string, EtatCivilLu> | null> {
+  if (!hasSupabaseEnv || !supabase) return null
+  const numeros = [...new Set(ids.map((x) => String(x ?? '').trim()).filter((x) => /^\d+$/.test(x)))]
+  if (!numeros.length) return new Map()
+  try {
+    const { data, error } = await supabase
+      .from('app_contacts_current')
+      .select('hektor_contact_id,nom,prenom,birth_date,birth_place,marital_status,nature_fiche,couple_role,archive')
+      .in('hektor_contact_id', numeros)
+    if (error) return null
+    return new Map(((data ?? []) as EtatCivilLu[]).map((r) => [String(r.hektor_contact_id), r]))
+  } catch {
+    return null
+  }
+}
+
 // Garder une décision (app_ged_decider : compte actif, interrupteur, périmètre ; l'auteur est l'appelant).
 export async function gedDecider(input: {
   hektorAnnonceId: string | number
