@@ -1177,12 +1177,43 @@ la vente. Non traite, pas mesure en ampleur.
      `mandat_charge_honoraires_app` du REGISTRE DES MANDATS (23 473 / 24 596).
      La charge est une donnee DU MANDAT, pas de la transaction.
 
-3.2bis ⬜ ACCORD    LA CHARGE DE COMMISSION -- ⭐⭐⭐ **ELLE A CHANGE DE TAILLE LE
-                    14/11 : 46 LIGNES, PAS 955.** La correction de la case lue
-                    ci-dessus a rendu la mesure possible :
+3.2bis ⬜ ACCORD    LA CHARGE DE COMMISSION -- ⭐⭐⭐ **16 LIGNES A POSER, PAS 955.**
+
+   ⛔ **ET MON PREMIER CHIFFRE DU 14/11 (« 46 ») ETAIT FAUX** : je l'avais deduit
+     du rapport du gel au lieu de relancer **le script qui existe deja**,
+     `phase2/checks/poser_charge_classeur_2026-11-04.py` -- lequel porte ses
+     gardes et la notion de CONFIANCE DU LIEN. ⭐ *Lecon 15 du projet : chercher
+     si le projet a DEJA tranche avant de proposer une forme.* Son verdict :
+```
+     classeur : 971 renseignees (955 au 03/11 -- il a grossi), 0 refusee
+     A POSER en 1re passe (confiance « sure ») : 16   (15 vendeur, 1 acquereur)
+     ecartees :
+        898  le carnet porte DEJA une valeur -- ON N'ECRASE PAS
+         25  lien HORS 1re passe (« a valider » / « bonne »)  -> LOT 2, sa decision
+         21  la ligne n'est pas reliee par le gel
+          4  EXCLU PAR DECISION (classeur contradictoire)
+          4  l'affaire ne cite ni annonce ni mandat
+          3  le mandat n'est pas au registre
+     temoins : VENDEUR annonce 47132 / mandat 18874 . ACQUEREUR 49852 / 17823
+     temoin INVERSE : lignes VIDES au classeur qui seraient posees = 0
+```
+     Patch pret, **NON JOUE** : `supabase/patch_charge_classeur_2026-11-14_DONNEES.sql`
+     (16 `insert ... on conflict do nothing`, puis la repose du reflet).
+
+   ⛔⛔ **UN PIEGE OU JE SUIS TOMBE, ET QUI EST CORRIGE** : les deux sorties du
+     script etaient **figees au « 2026-11-04 »**. Une simple relecture -- le
+     script ne fait QUE mesurer -- a donc **ECRASE LE PATCH DU 04/11**, celui qui
+     a ete REELLEMENT JOUE (commit `658a14e`), par un patch de 16 lignes.
+     ✅ Restaure par `git restore`, et les sorties portent desormais **le jour de
+       la passe**. ⭐ *Une trace historique ne se regenere pas : elle se garde.*
+
+   La mesure du rapport du gel, qui reste utile pour l'ECART :
 ```
                     identique      904        <- rien a faire
-                    classeur seul   44        <- a POSER
+                    classeur seul   44        <- ⚠ PAS « 44 a poser » : le script
+                                                 n'en retient que 16 (1re passe),
+                                                 le reste est ecarte pour une
+                                                 RAISON NOMMEE (voir ci-dessus)
                     ECART            2        <- a redresser, le classeur fait foi
                       KBZR2ND6 mandat 17217  classeur=Acquereur nous=vendeur
                                              VENTE REGLEE -> le seul a enjeu

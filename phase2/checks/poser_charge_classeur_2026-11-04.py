@@ -46,6 +46,7 @@ import io
 import os
 import sys
 from collections import defaultdict
+from datetime import date
 from pathlib import Path
 
 RACINE = Path(__file__).resolve().parents[2]
@@ -54,8 +55,16 @@ sys.path.insert(0, str(RACINE / "phase2" / "checks"))
 
 from rapport_gel_tous_les_champs import charger_classeur, client, lire_tout  # noqa: E402
 
-SORTIE_RAPPORT = RACINE / "notice" / "POSE_CHARGE_CLASSEUR_2026-11-04.md"
-SORTIE_SQL = RACINE / "supabase" / "patch_charge_classeur_2026-11-04_DONNEES.sql"
+# ⛔⛔ LES SORTIES PORTENT LE JOUR DE LA RELANCE, PAS LA DATE DU SCRIPT -- et
+#   c'est un piege ou je suis tombe le 14/11/2026 : les deux noms etaient FIGES
+#   au « 2026-11-04 », si bien qu'une simple relecture (le script ne fait que
+#   MESURER) a ECRASE LE PATCH DU 04/11 -- celui qui a ete REELLEMENT JOUE, et
+#   qui est commite dans 658a14e -- par un patch de 16 lignes du 14/11.
+#   ⭐ Une trace historique ne se regenere pas : elle se garde. Restaure par
+#     `git restore`, puis le nom a ete date du jour.
+_JOUR = date.today().isoformat()
+SORTIE_RAPPORT = RACINE / "notice" / ("POSE_CHARGE_CLASSEUR_%s.md" % _JOUR)
+SORTIE_SQL = RACINE / "supabase" / ("patch_charge_classeur_%s_DONNEES.sql" % _JOUR)
 
 COLONNE = "Charge Commission"
 CLE = "ID Unique"
@@ -280,7 +289,10 @@ def main() -> int:
     q = lambda s: "'" + str(s).replace("'", "''") + "'"
     sql = []
     sql.append("-- =====================================================================")
-    sql.append("-- LES DONNEES DE L ETAPE (1) : LA CHARGE, DEPUIS LE CLASSEUR -- 04/11/2026")
+    # le titre porte LE JOUR DE LA PASSE : la premiere est du 04/11, les
+    # suivantes posent ce que le classeur a gagne depuis.
+    sql.append("-- LES DONNEES DE L ETAPE (1) : LA CHARGE, DEPUIS LE CLASSEUR"
+               " -- passe du %s" % date.today().strftime("%d/%m/%Y"))
     sql.append("-- =====================================================================")
     sql.append("-- Genere par phase2/checks/poser_charge_classeur_2026-11-04.py")
     sql.append("-- %d lignes : %d vendeur, %d acquereur" % (len(a_poser), nb_v, nb_a))
@@ -320,7 +332,8 @@ def main() -> int:
 
     # ── LE RAPPORT ────────────────────────────────────────────────────────────
     r = []
-    r.append("# LA CHARGE DEPUIS LE CLASSEUR -- etape (1) posee le 04/11/2026")
+    r.append("# LA CHARGE DEPUIS LE CLASSEUR -- etape (1), passe du %s"
+             % date.today().strftime("%d/%m/%Y"))
     r.append("")
     r.append("Ses deux decisions du 04/11 : **go** sur la pose, et **oui**, la valeur du")
     r.append("classeur **fait foi** -- donc elle va au carnet avec `origine = 'classeur'`.")
