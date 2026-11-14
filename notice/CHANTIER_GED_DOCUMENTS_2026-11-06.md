@@ -1763,7 +1763,16 @@ Jeanne SPECIMEN, chacune déposée deux fois).
 - ⚠ **DÉFAUT VU : une ligne PAR PIÈCE, pas par personne.** La même personne déposée deux fois (ou CNI + passeport, cas
   réel courant) répète la même ligne. → **« Oui regroupe » (14/11) : CODÉ** — P4 regroupée par personne (verdict + nom
   normalisé de la pièce + personne de la fiche), une seule ligne suivie de « (N pièces) ». Essais **35 VERT** (+3, dont
-  2 témoins inverses : sans le regroupement → 2 ROUGE) ; tous les autres GED verts ; build vert. **Poussé le 14/11 sur « Oui ».**
+  2 témoins inverses : sans le regroupement → 2 ROUGE) ; tous les autres GED verts ; build vert. **Poussé le 14/11 sur « Oui » (`661240e`) et VU sur 63331** : « À regarder » passe de 10 à 8 —
+  « …Marc FICTIF n'est ni à un mandant ni à un acquéreur du bien (2 pièces) » et l'information sur Jeanne « (2 pièces) ».
   ⚠ Même famille, NON TOUCHÉE (à trancher) : P5 juge aussi pièce par pièce — un passeport périmé sonne même si la
   personne a une carte valide au dossier, et une carte périmée déposée deux fois sonne deux fois. ⚠ Et P4 redit en partie la ligne déjà existante « Marc FICTIF (mandant au mandat) n'est pas
   parmi les mandants du bien » (règle du mandat lu, morceau 7) : deux angles différents, à garder ou fondre — à trancher.
+
+**✅ « P5 aussi » (14/11) : P5 JUGÉE PAR PERSONNE — écrit, contrôlé et poussé le 14/11.** Une personne est en règle si UNE de
+ses pièces est valable à la date de référence : un vieux passeport périmé se tait à côté d'une carte valable ; la même
+pièce périmée déposée deux fois ne sonne qu'une fois. Quand aucune ne vaut, c'est la pièce qui va LE PLUS LOIN qui parle,
+avec « (N pièces, aucune valable) ». Même règle pour l'information « périmée depuis » (avant compromis). Clé de la
+personne : prénom + nom de la pièce, normalisés (comme P4). Essais **38 VERT** (+3) ; témoin inverse (une ligne par
+pièce) → **3 ROUGE** ; tous les autres GED verts ; build vert. Sur 63331 rien ne doit changer (toutes les pièces y sont
+valables).

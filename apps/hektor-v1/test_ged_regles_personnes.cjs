@@ -86,6 +86,13 @@ a = R([cni('CNI.pdf', { ...MARC, nature: 'cni_ancien_modele', fin: '2022-06-13' 
 voir(codes(a).length === 0, 'TÉMOIN : carte de 2012 « finie » en 2022 mais prolongée à 2027 : silence')
 a = R([cni('CNI.pdf', { ...MARC, nature: 'cni_ancien_modele', fin: '2016-01-01' }), cni('CNI J.pdf', JEANNE)])
 voir(codes(a).join() === 'P5/alerte' && /^La carte d'identité de Marc FICTIF était périmée/.test(a[0].texte) && /carte prolongée de 5 ans/.test(a[0].texte), 'P5 : même prolongée (2021), périmée au mandat -> alerte, et le texte dit la prolongation')
+// par PERSONNE (14/11) : une pièce valable suffit ; la même pièce périmée déposée deux fois ne sonne qu'une fois
+a = R([cni('Passeport.pdf', vieux), cni('CNI M.pdf', MARC), cni('CNI J.pdf', JEANNE)])
+voir(codes(a).length === 0, 'TÉMOIN : un vieux passeport périmé À CÔTÉ d\'une carte valable : silence')
+a = R([cni('Passeport.pdf', vieux), cni('Passeport ESSAI 2.pdf', vieux), cni('CNI J.pdf', JEANNE)])
+voir(codes(a).join() === 'P5/alerte' && /\(2 pièces, aucune valable\)$/.test(a[0].texte), 'P5 : le même passeport périmé déposé deux fois -> UNE alerte « (2 pièces, aucune valable) »')
+a = R([cni('Passeport.pdf', vieux), cni('CNI.pdf', { ...MARC, nature: 'cni_ancien_modele', fin: '2016-01-01' }), cni('CNI J.pdf', JEANNE)])
+voir(codes(a).join() === 'P5/alerte' && /^Le passeport de Marc FICTIF/.test(a[0].texte) && /31\/12\/2025/.test(a[0].texte), 'P5 : deux pièces périmées -> la ligne cite celle qui va le plus loin (passeport 2025 > carte prolongée 2021)')
 
 console.log('④ P6 une pièce par personne')
 a = R([cni('CNI M.pdf', MARC)])

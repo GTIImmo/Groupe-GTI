@@ -109,14 +109,25 @@ export function reglesPersonnes(faits: FaitsRegles, docs: DocumentLu[], personne
     ? { date: new Date(Math.max(...compromis.map((x) => x.getTime()))), quand: 'au compromis' }
     : signatureMandat ? { date: signatureMandat, quand: 'à la signature du mandat' } : { date: aujourdhui, quand: 'aujourd\'hui' }
   const avantCompromis = !compromis.length && momentDuDossier(faits) !== 'compromis'
+  // PAR PERSONNE, pas par pièce (14/11) : une personne est en règle si UNE de ses pièces l'est -- un vieux passeport périmé
+  // ne sonne pas à côté d'une carte valide ; la même carte déposée deux fois ne sonne qu'une fois. C'est la pièce qui va
+  // le plus loin qui parle, et le nombre de pièces est dit à la fin.
+  const parPersonne = new Map<string, { p: PieceLue; fin: { date: Date; prolongee: boolean }; n: number }>()
   for (const p of pieces) {
     const fin = finEffective(p)
     if (!fin) continue
+    const cle = normaliserTexte(nomDe(p))
+    const g = parPersonne.get(cle)
+    if (!g) parPersonne.set(cle, { p, fin, n: 1 })
+    else parPersonne.set(cle, fin.date > g.fin.date ? { p, fin, n: g.n + 1 } : { ...g, n: g.n + 1 })
+  }
+  for (const { p, fin, n } of parPersonne.values()) {
+    const combien = n > 1 ? ` (${n} pièces, aucune valable)` : ''
     const jusque = `valable jusqu'au ${jjmmaaaa(fin.date)}${fin.prolongee ? ' (carte prolongée de 5 ans)' : ''}${p.finIncertaine ? ' (date lue avec doute)' : ''}`
     if (fin.date < reference.date) {
-      alertes.push({ code: 'P5', niveau: 'alerte', texte: `${laPiece(p)} de ${nomDe(p)} était ${perime(p)} ${reference.quand} du ${jjmmaaaa(reference.date)} (${jusque})`, pourquoi: 'une pièce en cours de validité est exigée (lutte anti-blanchiment)', typeADeposer: 'justif.identite' })
+      alertes.push({ code: 'P5', niveau: 'alerte', texte: `${laPiece(p)} de ${nomDe(p)} était ${perime(p)} ${reference.quand} du ${jjmmaaaa(reference.date)} (${jusque})${combien}`, pourquoi: 'une pièce en cours de validité est exigée (lutte anti-blanchiment)', typeADeposer: 'justif.identite' })
     } else if (avantCompromis && fin.date < aujourdhui) {
-      alertes.push({ code: 'P5', niveau: 'info', texte: `${laPiece(p)} de ${nomDe(p)} est ${perime(p)} depuis le ${jjmmaaaa(fin.date)}`, pourquoi: 'en demander une à jour avant le compromis', typeADeposer: 'justif.identite' })
+      alertes.push({ code: 'P5', niveau: 'info', texte: `${laPiece(p)} de ${nomDe(p)} est ${perime(p)} depuis le ${jjmmaaaa(fin.date)}${combien}`, pourquoi: 'en demander une à jour avant le compromis', typeADeposer: 'justif.identite' })
     }
   }
 
