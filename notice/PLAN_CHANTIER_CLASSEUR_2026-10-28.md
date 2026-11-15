@@ -843,6 +843,80 @@ PIECE 5  26bis, la recopie vers le registre local                -> GARDEE, a pa
 *« elle n'en aura JAMAIS »* (assume, declare). Deux lecteurs seulement en ont besoin :
 **le filet du worker** (qui ecrit une erreur) et **la sentinelle** (seuil 0).
 
+### ✅⭐⭐ LES PIECES 1 ET 2 SONT POSEES EN PRODUCTION — 15/11/2026, ET PROUVEES
+
+**Go de Frederic, puis pose par `node Console/apply_sql_patch.js`** (passage par le POOLER,
+l'hote direct n'a plus d'IPv4). Trois fichiers, convention du projet :
+
+```
+supabase/patch_transaction_origine_2026-11-15.sql             POSE
+supabase/patch_transaction_origine_2026-11-15_REPETITION.sql  JOUE, 8 controles
+supabase/patch_transaction_origine_2026-11-15_INVERSE.sql     ecrit, NON joue
+```
+
+**LA MESURE, faite a part du script — « appliquee » ne dit que « rien n'a leve » :**
+
+```
+   colonne          text / nullable                                        OK
+   commentaire      pose, il contient « classeur »                         OK
+   vue              7 colonnes, memes noms, meme ordre                     OK
+   conditions       hektor_affaire_id IS NULL AND transaction_origine IS NULL   OK
+   droits           postgres, service_role  (ni anon ni authenticated)     OK
+   lignes marquees  0 -- le patch n a marque personne                      OK
+   plage app        toujours surveillee (1 ligne : l essai A2)             OK
+   TEMOIN INVERSE   avant=1  marquee=0  demarquee=1  -> basculement VRAI   OK
+                    (joue dans un bloc qui leve : TOUT est annule, et
+                     verifie apres : 0 ligne marquee, sentinelle a 1)
+```
+
+⭐ **L'essai A2 (ligne 1001424) a servi de cobaye**, reel et isole, sur un bien mort depuis
+2006. ⛔ **IL DOIT RESTER EN PLACE** jusqu'a la fin des pieces 3 et 4 : sans lui, le controle
+du temoin inverse n'est plus mesurable.
+
+### ⛔⛔ CE QUE LA MESURE A TROUVE, ET QUI N'ETAIT PAS AU PLAN : LE PUSH FAIT `SELECT *`
+
+`ledger_rows_for_push` (`phase2/sync/affaire_ledger.py:2932`) lit **`SELECT * FROM` la table
+LOCALE** et envoie tout, moins `COLONNES_QUE_LE_PUSH_N_ENVOIE_PAS` (l. 2875).
+
+⭐ **Donc la pose chez Supabase seule est SURE** : tant que la colonne n'existe pas en local,
+le push ne peut pas l'ecraser. ⚠⚠ **Mais le jour de 26bis**, la colonne locale devra entrer
+dans cette liste **AVANT TOUT REMPLISSAGE** — meme patron que l'etiquette de dossier (09/11) et
+l'annulation (10/11), et meme raison : **le 07/09, un `--push` a EFFACE une annulation faite une
+heure plus tot**.
+
+⭐ **ET L'ORDRE EST ECRIT DANS LE CODE** (`affaire_ledger.py`, l. 632-637) : *« POSEES CHEZ
+SUPABASE DEPUIS CE JOUR -- dans cet ordre, jamais l'inverse : une colonne locale que Supabase
+n'a pas est reclamee pour rien a la redescente »*. C'est fait dans le bon sens.
+
+**LE PATRON COMPLET A DONC TROIS GESTES**, et seul le premier est fait :
+
+```
+   a) le patch Supabase                                   ✅ FAIT le 15/11
+   b) la colonne dans COLONNES_QUE_LE_PUSH_N_ENVOIE_PAS   ⬜ au moment de 26bis
+   c) la colonne dans la liste locale `for neuve in (...)` ⬜ au moment de 26bis
+```
+
+⚠ **ET UNE DETTE NEUVE** : une fois l'essai A2 recopie en local par 26bis,
+`patch_essai_a2_plage_app_2026-11-15_INVERSE.sql` ne suffit plus — il ne nettoie que le cote
+Supabase. Il devra nettoyer **les deux cotes**.
+
+### ⬜ CE QUI RESTE, DANS L'ORDRE CONTRAINT
+
+```
+ 3  LE FILET DU WORKER  &transaction_origine=is.null dans poserNumerosManquants
+                        (console_job_worker.js:24109)
+                        ⚠ epreuve HORS LIGNE (Console/test_seconde_preuve.js)
+                        ⚠ mise en service FILE VIDE (0 pending ET 0 running) + les 4 services
+                        ⚠ UNE AUTRE SESSION MODIFIE CE FICHIER -> a coordonner
+ 4  26bis-TRANSACTIONS  recopie app_affaire_ledger__sb -> app_affaire_ledger par app_affaire_id
+                        ⚠ les trois gestes du patron (b et c ci-dessus)
+                        ⚠ elle ecrit dans la base du run -> HORS RUN
+                        ⭐ et elle doit venir AVANT les 241, sinon les controles sont aveugles
+ 5  retirer l essai A2  seulement apres 3 et 4
+ 6  LES 241             marquees `classeur` DES L'INSERT, jamais apres
+```
+
+
 
 
 
