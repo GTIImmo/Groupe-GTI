@@ -950,23 +950,40 @@ risque de fausse identite ne concerne que les lignes du classeur **rattachees a 
 acquereur connu de Hektor** — a mesurer au moment des 241, mais la piece 3 le ferme pour
 tous les cas d'un coup.
 
-### ⏰ CE QUI RESTE POUR METTRE LA PIECE 3 EN SERVICE
+### ✅ LA PIECE 3 EST EN SERVICE -- 15/11/2026 14:22, REDEMARRAGE PAR FREDERIC
 
 ```
-   le code est SUR LE DISQUE -- les 4 services tournent sur l ANCIEN
-   critere du projet : REDEMARRER SEULEMENT FILE VIDE (0 pending ET 0 running)
-   mesure du 15/11 : la file est VIDE -> le critere est rempli
-   ⚠ LES 4 SERVICES, pas un seul (ils partagent console_job_worker.js)
+   LA PREUVE EST L HEURE DE NAISSANCE DES PROCESSUS, jamais l absence d erreur :
+     code console_job_worker.js   15/11 13:05:56
+     Actions      pid 22984   ne a 14:22:14   -> APRES le code
+     Admin        pid 19496   ne a 14:22:14   -> APRES le code
+     Documents    pid 21636   ne a 14:22:15   -> APRES le code
+     SyncLight    pid 21952   ne a 14:22:16   -> APRES le code
+   LES 4, pas un seul : ils partagent le fichier.
+
+   ET LE CODE CHARGE EST BIEN CELUI-LA -- deux controles de plus :
+     `transaction_origine=is.null` present l. 24126 du fichier sur disque
+     l arbre de travail est PROPRE sur ce fichier = identique au commit 70e947d
+     (l autre session n y a pas touche depuis : son dernier passage est 3d30082, 12:56)
+
+   FILE VIDE AU MOMENT DU GESTE (critere du projet) : 0 pending, 0 running,
+   avec TEMOIN POSITIF -- la meme requete voit un travail `done` a 14:19:20.
+   Les 4 services sont Running, pid stables, journaux de demarrage sans erreur.
+
+   ⚠ LE PREMIER REDEMARRAGE DE FREDERIC (13:01:46-48) ETAIT ARRIVE 4 MINUTES
+     TROP TOT -- avant le code de 13:05:56. Seule la mesure de l heure des
+     processus l a vu. C est exactement le piege du 20/10 (Admin au lieu de
+     Documents), et c est pour ca que le projet exige LA PREUVE DU SUCCES.
 ```
 
 
 ### ⬜ CE QUI RESTE, DANS L'ORDRE CONTRAINT
 
 ```
- 3  LE FILET DU WORKER  ✅ ECRIT ET EPROUVE le 15/11 -- il reste LE REDEMARRAGE
-                        (console_job_worker.js, dans poserNumerosManquants)
+ 3  LE FILET DU WORKER  ✅✅ EN SERVICE le 15/11 a 14:22 (commit 70e947d)
+                        les 4 processus nes APRES le code -- preuve par leur heure
                         16/16 verts dans Console/test_seconde_preuve.js, dont 3 neufs
-                        ⭐ l autre session a POUSSE : le fichier etait libre
+                        ⭐ c est la DERNIERE piece avant 26bis : plus rien ne bloque 4
  4  26bis-TRANSACTIONS  recopie app_affaire_ledger__sb -> app_affaire_ledger par app_affaire_id
                         ⚠ les trois gestes du patron (b et c ci-dessus)
                         ⚠ elle ecrit dans la base du run -> HORS RUN
