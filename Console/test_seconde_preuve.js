@@ -53,14 +53,23 @@ if (manquants.length) { console.log("\n⛔ Une piece manque : on s'arrete."); pr
 
 const JOB = { id: "essai" };
 
-function monter({ orphelines = [], api = {}, connus = {}, erreurSupabase = false, eteint = false } = {}) {
+function monter({ orphelines = [], api = {}, connus = {}, erreurSupabase = false, eteint = false,
+                  filtrer = false } = {}) {
   const appelsApi = [];
   const poses = [];
   const journal = [];
+  const urls = [];
   const contexte = {
     console, JSON, Set, Map, Array, String, Number,
-    supabaseRequest: async () => {
+    supabaseRequest: async (url) => {
+      urls.push(String(url || ""));
       if (erreurSupabase) throw new Error("HTTP 503 simule");
+      // `filtrer` imite PostgREST : il n'honore les filtres QUE s'ils sont dans l'URL.
+      // C'est ce qui rend le temoin inverse de C.19-d mesurable bout en bout.
+      if (filtrer && /transaction_origine=is\.null/.test(String(url || ""))) {
+        return orphelines.filter((l) => l.transaction_origine === null
+                                     || l.transaction_origine === undefined);
+      }
       return orphelines;
     },
     lireTransactionsParApi: async (job, annonce, genre) => {
@@ -79,7 +88,7 @@ function monter({ orphelines = [], api = {}, connus = {}, erreurSupabase = false
   const interrupteur = eteint ? morceaux.interrupteur.replace("= true", "= false") : morceaux.interrupteur;
   vm.runInContext([interrupteur, morceaux.acquereurs, morceaux.poser,
     "this.poser = poserNumerosManquants;"].join("\n"), contexte);
-  return { contexte, appelsApi, poses, journal };
+  return { contexte, appelsApi, poses, journal, urls };
 }
 
 const ORPHELINE_50128 = { app_affaire_id: 1001368, kind: "compromis", hektor_acquereur_id: "605946", date: "2026-10-22" };
@@ -165,6 +174,41 @@ const DETAIL_50128 = { prixPublique: "130000.00", acquereurs: [{ id: "605946", n
     const r = await m.contexte.poser(JOB, "24113");
     controle("(13) TEMOIN INVERSE : interrupteur a false -> rien n'est lu, rien n'est pose",
       r.status === "eteint" && m.poses.length === 0 && m.appelsApi.length === 0, JSON.stringify({ r }));
+  }
+
+  // ─── C.19-d (15/11/2026) : LE FILET IGNORE LES TRANSACTIONS DU CLASSEUR ───
+  // Elles n'auront JAMAIS de numero Hektor. Sans ce filtre, chaque relecture d'une
+  // annonce qui en porte une ecrit un `error` au journal Console, et le moniteur
+  // compte les erreurs Console.
+  const MARQUEE = { ...ORPHELINE_50128, app_affaire_id: 1001500, transaction_origine: "classeur" };
+  {
+    const m = monter({ orphelines: [ORPHELINE_50128], api: { compromis: { 50128: DETAIL_50128 } },
+                       connus: { compromis: [] } });
+    await m.contexte.poser(JOB, "24113");
+    controle("(14) la requete du filet porte `transaction_origine=is.null`",
+      m.urls.length >= 1 && /[?&]transaction_origine=is\.null(&|$)/.test(m.urls[0]),
+      JSON.stringify({ url: m.urls[0] }));
+  }
+  {
+    // Le faux Supabase honore le filtre : une ligne marquee ne doit pas revenir.
+    const m = monter({ orphelines: [MARQUEE], api: { compromis: { 50128: DETAIL_50128 } },
+                       connus: { compromis: [] }, filtrer: true });
+    const r = await m.contexte.poser(JOB, "24113");
+    controle("(15) une transaction MARQUEE classeur n'est pas lue, et rien n'est ecrit au journal",
+      r.status === "rien_a_faire" && m.poses.length === 0 && m.appelsApi.length === 0
+      && !m.journal.some((j) => j.status === "error"),
+      JSON.stringify({ r, poses: m.poses, journal: m.journal }));
+  }
+  {
+    // TEMOIN INVERSE DU TEMOIN : la MEME ligne, SANS la marque, est bien traitee.
+    // Sans ce controle, un (15) vert pourrait n'etre qu'un filtre qui rejette tout.
+    const m = monter({ orphelines: [{ ...MARQUEE, transaction_origine: null }],
+                       api: { compromis: { 50128: DETAIL_50128 } },
+                       connus: { compromis: [] }, filtrer: true });
+    const r = await m.contexte.poser(JOB, "24113");
+    controle("(16) TEMOIN INVERSE : la MEME ligne SANS la marque -> 50128 pose sur 1001500",
+      m.poses.length === 1 && m.poses[0][0] === 1001500 && m.poses[0][1] === "50128" && r.poses === 1,
+      JSON.stringify({ r, poses: m.poses }));
   }
 
   console.log(echecs.length ? `\n⛔ ${echecs.length} controle(s) en echec.` : "\n✅ Tous les controles sont verts.");

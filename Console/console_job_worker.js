@@ -24114,7 +24114,16 @@ async function poserNumerosManquants(job, annonceId) {
     const orphelines = await supabaseRequest(
       "app_affaire_ledger?select=app_affaire_id,kind,hektor_acquereur_id,date"
       + `&hektor_annonce_id=eq.${encodeURIComponent(annonce)}`
-      + "&hektor_affaire_id=is.null&present_in_hektor=is.false&app_affaire_id=gte.1000000",
+      + "&hektor_affaire_id=is.null&present_in_hektor=is.false&app_affaire_id=gte.1000000"
+      // ⭐ C.19-d (15/11/2026) : on ne cherche pas de numero a une transaction qui
+      //   n'en aura JAMAIS. `transaction_origine` renseigne = reprise de l'historique
+      //   depuis le classeur : elle n'est jamais allee chez Hektor et n'y sera pas
+      //   creee. Sans ce filtre, chaque relecture d'une annonce qui en porte une
+      //   ecrirait un `error` au journal Console (poses !== bilan.length, l. ~24160),
+      //   et le moniteur compte les erreurs Console -- « un essai qui crie tous les
+      //   jours n'est plus un essai ». Temoin reel du defaut : 22/10 21:49, annonce
+      //   24113, ligne 1001375, « 0 candidat », statut error.
+      + "&transaction_origine=is.null",
       { method: "GET" });
     if (!Array.isArray(orphelines) || !orphelines.length) return { status: "rien_a_faire" };
 

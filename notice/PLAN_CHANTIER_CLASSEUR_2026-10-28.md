@@ -900,14 +900,73 @@ n'a pas est reclamee pour rien a la redescente »*. C'est fait dans le bon sens.
 `patch_essai_a2_plage_app_2026-11-15_INVERSE.sql` ne suffit plus — il ne nettoie que le cote
 Supabase. Il devra nettoyer **les deux cotes**.
 
+### ✅⭐⭐ LA PIECE 3 EST ECRITE ET EPROUVEE HORS LIGNE — 15/11/2026
+
+**Une ligne dans la requete du filet** (`poserNumerosManquants`, `console_job_worker.js`) :
+`&transaction_origine=is.null`. Le filet ne cherche plus de numero a une transaction qui
+n'en aura jamais.
+
+**AVANT de toucher au code, DEUX mesures — et la premiere pouvait tout arreter :**
+
+```
+   PostgREST voit-il la colonne ? Le patch est passe en SQL DIRECT par le POOLER,
+   donc son cache de schema pouvait l ignorer -- et la requete du filet serait
+   partie en HTTP 400. MESURE (lecture seule, par l API REST) :
+     select transaction_origine      -> HTTP 200
+     le filtre exact du filet        -> HTTP 200, et il rend UNE ligne : 1001424
+     temoin : lignes marquees        -> HTTP 200, liste VIDE (0 marquee)
+   Le cache etait a jour. Rien a recharger.
+
+   L essai hors ligne etait-il vert AVANT ? 13/13. C est la reference.
+```
+
+**APRES : 16/16, dont trois controles neufs** (`Console/test_seconde_preuve.js`) :
+
+```
+   (14) la requete du filet porte `transaction_origine=is.null`
+   (15) une transaction MARQUEE classeur n est pas lue, et RIEN n est ecrit au journal
+   (16) TEMOIN INVERSE : la MEME ligne SANS la marque -> le numero est pose
+```
+
+⭐⭐ **ET LE TEMOIN DU TEMOIN A ETE FAIT** : sur une COPIE du worker, dans le bac a sable,
+filtre retire — (14) et (15) **rougissent**, (16) reste vert. Donc le filtre mord vraiment,
+et il ne rejette pas tout.
+
+### ⛔⛔ CE QUE CE TEMOIN A REVELE, ET QUI N'ETAIT PAS AU PLAN
+
+Le risque nomme jusqu'ici etait *« un `error` au journal Console a chaque relecture »*.
+**Il est pire que ca.** Sans le filtre, le controle (15) ne donne pas une erreur : il donne
+`resultat: "numero_pose"`, `hektor_affaire_id: "50128"` sur la ligne 1001500.
+
+⛔ **LE FILET AURAIT COLLE A UNE TRANSACTION DU CLASSEUR LE NUMERO D'UNE TRANSACTION
+HEKTOR EXISTANTE** — des lors qu'un seul candidat chez Hektor porte le meme genre et le
+meme acquereur. Ce n'est plus du bruit dans un journal, c'est **une fausse identite posee
+en base**, et la regle du projet (« un numero ne se perd jamais ») serait violee dans
+l'autre sens : un numero attribue DEUX fois.
+
+⚠ **Volume** : il faut que la ligne du classeur porte un `hektor_acquereur_id`. Sans
+acquereur, le filet s'abstient (`sans_acquereur`) et se contente d'ecrire l'erreur. Donc le
+risque de fausse identite ne concerne que les lignes du classeur **rattachees a un
+acquereur connu de Hektor** — a mesurer au moment des 241, mais la piece 3 le ferme pour
+tous les cas d'un coup.
+
+### ⏰ CE QUI RESTE POUR METTRE LA PIECE 3 EN SERVICE
+
+```
+   le code est SUR LE DISQUE -- les 4 services tournent sur l ANCIEN
+   critere du projet : REDEMARRER SEULEMENT FILE VIDE (0 pending ET 0 running)
+   mesure du 15/11 : la file est VIDE -> le critere est rempli
+   ⚠ LES 4 SERVICES, pas un seul (ils partagent console_job_worker.js)
+```
+
+
 ### ⬜ CE QUI RESTE, DANS L'ORDRE CONTRAINT
 
 ```
- 3  LE FILET DU WORKER  &transaction_origine=is.null dans poserNumerosManquants
-                        (console_job_worker.js:24109)
-                        ⚠ epreuve HORS LIGNE (Console/test_seconde_preuve.js)
-                        ⚠ mise en service FILE VIDE (0 pending ET 0 running) + les 4 services
-                        ⚠ UNE AUTRE SESSION MODIFIE CE FICHIER -> a coordonner
+ 3  LE FILET DU WORKER  ✅ ECRIT ET EPROUVE le 15/11 -- il reste LE REDEMARRAGE
+                        (console_job_worker.js, dans poserNumerosManquants)
+                        16/16 verts dans Console/test_seconde_preuve.js, dont 3 neufs
+                        ⭐ l autre session a POUSSE : le fichier etait libre
  4  26bis-TRANSACTIONS  recopie app_affaire_ledger__sb -> app_affaire_ledger par app_affaire_id
                         ⚠ les trois gestes du patron (b et c ci-dessus)
                         ⚠ elle ecrit dans la base du run -> HORS RUN
