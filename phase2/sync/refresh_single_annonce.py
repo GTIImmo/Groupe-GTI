@@ -534,6 +534,10 @@ def main() -> int:
                     "run_id": run_id,
                     "hektor_annonce_id": annonce_id,
                     "diffusable": ((detail_payload.get("data") or {}).get("keyData") or {}).get("diffusable"),
+                    # 14/11 : la date LUE ICI, que le worker compare a celle d'apres l'extraction
+                    # console (runCreatedAnnonceImmediateSync). Placee avant la liste des portails :
+                    # le worker tronque ce qu'il lit (previewSize).
+                    "date_maj": key_data.get("datemaj"),
                     "enabled_portals": enabled_portals,
                 },
                 ensure_ascii=False,

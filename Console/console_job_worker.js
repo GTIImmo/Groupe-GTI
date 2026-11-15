@@ -4143,16 +4143,75 @@ async function runTargetedConsoleMissingFields(job, hektorAnnonceId, reason) {
   }
 }
 
+// ⭐ 14/11/2026 -- LA DATE DE LA FICHE DOIT ETRE CELLE DES VALEURS QU'ELLE PORTE.
+//   Preuve du 14/11 sur 63330 : la relecture lit la date chez Hektor (16:12:08), PUIS
+//   l'extraction console ci-dessous la fait bouger chez Hektor (16:12:27, sans rien
+//   sauvegarder, aucun autre travail dans la fenetre). La fiche se reconstruisait avec la
+//   date d'AVANT : une saisie faite ensuite partait avec une photo deja en retard, et le
+//   garde-fou anti-ecrasement (handleUpdateHektorAnnonceFields) la bloquait en conflit.
+//   5i (notreGesteDEtatDepuisLaSaisie) ne peut pas le voir : notre travail a fini AVANT
+//   la saisie. Mesure : ~1 bien sur 12 (7 sur 84) ; pourquoi ceux-la, NON TROUVE.
+//   Remede : relire la date apres l'extraction ; si elle a bouge, relire la fiche une
+//   seconde fois -- date ET valeurs lues ensemble. On ne corrige PAS la date seule : un
+//   humain qui modifie dans Hektor pendant ces ~40 s serait cache au garde-fou.
+//   Ne touche ni le garde-fou, ni 5i, ni la nuit. Interrupteur app_setting
+//   `annonce_relire_date_apres_extraction`, ETEINT par defaut (lecture ratee = eteint).
+//   Note : notice/ETAPE3_AGENT_QUI_AGIT_AUDIT_2026-11-13.md §18-19.
+async function relireSiLaDateABougePendantLExtraction(job, id, relecture) {
+  if (!(await interrupteurAppSetting("annonce_relire_date_apres_extraction"))) return null;
+  const lue = parseJsonOutput(relecture && relecture.stdout, {});
+  const dateLue = lue && lue.date_maj ? String(lue.date_maj) : null;
+  if (!dateLue) {
+    await logJob(job.id, "date_apres_extraction", "done", "Date de la relecture inconnue : pas de comparaison", {
+      hektor_annonce_id: id,
+    });
+    return null;
+  }
+  const dateApres = await fetchAnnonceDateMajFromApi(job, id, "date_apres_extraction");
+  if (!dateApres || dateApres === dateLue) {
+    await logJob(job.id, "date_apres_extraction", "done",
+      dateApres ? "Date inchangee par l'extraction" : "Date d'apres l'extraction illisible : la fiche garde la relecture",
+      { hektor_annonce_id: id, date_lue: dateLue, date_apres_extraction: dateApres });
+    return null;
+  }
+  await logJob(job.id, "date_apres_extraction", "running",
+    "La date a bouge chez Hektor pendant notre extraction : seconde relecture de la fiche",
+    { hektor_annonce_id: id, date_lue: dateLue, date_apres_extraction: dateApres });
+  let seconde;
+  try {
+    seconde = await runImmediateAnnonceSyncStep(job, id, {
+      label: "refresh_single_annonce_apres_extraction",
+      args: ["phase2/sync/refresh_single_annonce.py", "--id-annonce", id],
+      timeoutMs: 120000,
+    });
+  } catch (error) {
+    // Jamais bloquant : la premiere relecture reste en place (le script annule tout sur
+    // erreur), comme avant ce correctif. La saisie suivante risque seulement le conflit.
+    await logJob(job.id, "date_apres_extraction", "error", "Seconde relecture impossible : la fiche garde la premiere", {
+      hektor_annonce_id: id, date_lue: dateLue, date_apres_extraction: dateApres,
+      error: error && error.message ? error.message : String(error),
+    });
+    return null;
+  }
+  const relue = parseJsonOutput(seconde.stdout, {});
+  await logJob(job.id, "date_apres_extraction", "done", "Fiche relue apres l'extraction", {
+    hektor_annonce_id: id, date_lue: dateLue, date_apres_extraction: dateApres,
+    date_seconde_relecture: relue && relue.date_maj ? String(relue.date_maj) : null,
+  });
+  return seconde;
+}
+
 async function runCreatedAnnonceImmediateSync(job, hektorAnnonceId, options = {}) {
   const id = String(hektorAnnonceId || "").trim();
   if (!id) return { status: "skipped", reason: "missing_hektor_annonce_id" };
 
   const completed = [];
-  completed.push(await runImmediateAnnonceSyncStep(job, id, {
+  const relecture = await runImmediateAnnonceSyncStep(job, id, {
     label: "refresh_single_annonce",
     args: ["phase2/sync/refresh_single_annonce.py", "--id-annonce", id],
     timeoutMs: 120000,
-  }));
+  });
+  completed.push(relecture);
 
   // C.15 (28/08/2026) -- LE BLOC COMMERCIAL, TOUT DE SUITE.
   //
@@ -4194,6 +4253,8 @@ async function runCreatedAnnonceImmediateSync(job, hektorAnnonceId, options = {}
   } else {
     const consoleSummary = await runTargetedConsoleMissingFields(job, id, "refresh_console_data");
     completed.push({ step: "console_missing_fields_targeted", summary: consoleSummary });
+    const relue = await relireSiLaDateABougePendantLExtraction(job, id, relecture);
+    if (relue) completed.push(relue);
   }
   completed.push(await runImmediateAnnonceSyncStep(job, id, {
     label: "phase2_push_single_annonce_direct",

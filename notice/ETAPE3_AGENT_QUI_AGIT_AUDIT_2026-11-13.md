@@ -314,3 +314,70 @@ Avancer **par petits lots**, chacun prouvé en réel avant le suivant :
 **Contrôle hors ligne** : `test_assistant_gestes.py` **146 verts** (104 → +42, dont 8 témoins : prix trafiqué refusé au clic, dernière photo devenue seule au clic, garde qui refuse → aucune écriture, refus de Hektor → rien de reporté…), `test_assistant_ia.py` **59 verts** (SDK réel), `test_assistant_lecteur.py` 73 verts, le serveur se charge.
 
 **Pas fait** : aucune preuve en réel. ⚠ 62774 n'est plus un bien vivant (mandat clos par l'essai ⑦-3a du 21/10) : le bien d'essai vivant est **63330** (Estimation, pas diffusable). Diffusion et brouillon : sur des biens qu'il choisit.
+
+## 17. Preuve réelle du lot 4 (14/11, 15:00-15:40 UTC, son « Oui ») — un aller réussi, un retour BLOQUÉ par un défaut EXISTANT du worker
+
+Par son Chrome et sa session (questions envoyées à `/assistant/message`, cartes validées par `/actions/<id>/valider`), comme au lot 3.
+
+**Changement annoncé avant de commencer** : le nombre de NIVEAUX est vide sur 63330 → impossible de le « remettre » (la carte ignore une valeur vide). Pris à la place : le nombre de PIÈCES (5). Et **63330 n'a AUCUNE photo** → l'aller-retour photo n'a pas pu se faire.
+
+- **Aller 5 → 6** : carte « pièces : « 5 » → « 6 » » (l'avant lu sur la fiche) ; avant le clic, rien (fiche 5, aucun calque, aucun travail) ; clic 15:01:39 → calque `nbpieces 6` + ligne `app_annonce_pending` (envoi à 15:11:39) ; travail `update_hektor_annonce_fields` 15:12:00-08, Hektor : « mise à jour effectuée » ; relecture 15:12:59 → **la fiche relue depuis Hektor dit 6**, calque parti, 0 écart au contrôle de retour. ✅
+- **Retour 6 → 5** : carte « « 6 » → « 5 » » (l'avant relu depuis Hektor) ; clic 15:14:23 → calque 5 ; **second clic sur la même carte : 409 « déjà validée »** ✅. ⛔ **Mais le travail de 15:25:00 a fini `held_conflict` « bien modifié dans Hektor depuis l'édition »** : la saisie est GARDÉE (`conflict: true`, cause `hektor_plus_recent`), rien n'est parti. **État laissé : Hektor = 6, l'app affiche 5** (calque) — bien d'essai « ne pas diffuser », sans conséquence.
+- **Photo, refus** (sans écriture) : sur 63146 (bien d'essai, UNE seule photo visible), « masque la couverture » → l'assistant lit les photos puis refuse de lui-même (« c'est la dernière photo visible »), **aucune carte**. ✅
+
+**⛔ LE DÉFAUT (existant, PAS dans l'assistant — l'écran passe par la même porte)** : le garde-fou anti-écrasement (`console_job_worker.js` ~13612) compare la date de modif Hektor à celle de la photo prise à la saisie. `base_date_maj` = 16:12:08 (relue après NOTRE envoi), `fresh_date_maj` = **16:12:27** (heure de Paris). Entre les deux, le seul passage chez Hektor est la **relecture qui suit notre propre envoi** : l'« extraction console ciblée » (15:12:22-45 UTC, `Console/extract_hektor_missing_fields.js`, qui ouvre chaque groupe en mode **`editer`** puis `consulter`). ⚠ Très probable, **pas prouvé** que c'est elle qui fait bouger la date. Conséquence : **une deuxième modification de champs sur le même bien, avant que la nuit relise la fiche, est prise pour un conflit**. C'est la même famille que **5i (08/10)**, corrigée alors pour les seuls GESTES D'ÉTAT (`notreGesteDEtatDepuisLaSaisie`) : notre propre relecture n'est pas reconnue.
+Mesure : 16 passages du garde-fou dans l'histoire, 4 bloqués, **un seul avec un écart court (< 2 min) : celui d'aujourd'hui** ; 23 envois de saisie en 30 jours. Rare à l'écran — mais l'assistant rend la deuxième modification facile.
+
+**Pas fait** : le retour à 5 chez Hektor ; l'aller-retour photo (63330 sans photo) ; diffusion et brouillon (biens à choisir par lui). ⬜ À décider par lui : que faire du défaut, et de 63330 (la nuit relira la fiche : 6, date 16:12:27).
+
+## 18. Audit du faux conflit (14/11, sur son « Oui ») — la date de base était DÉJÀ PÉRIMÉE au moment du clic
+
+*Audit limité à la MODIFICATION DES CHAMPS D'UNE ANNONCE (file `app_annonce_pending`). Le garde-fou jumeau des CONTACTS (`console_job_worker.js` ~20686) n'est pas mesuré. Lecture seule : rien écrit, ni en base ni chez Hektor.*
+
+**Le déroulé de 63330, à la seconde (heure UTC ; Hektor est en heure de Paris, +1 h)** :
+- 15:12:07 notre envoi « Sauvegarde groupe ag_interieur » → Hektor date la fiche **16:12:08** ;
+- 15:12:17-20 notre relecture `refresh_single_annonce` lit l'API : date 16:12:08 → c'est elle qui part dans la fiche, donc dans la future photo de base ;
+- 15:12:22-45 notre **extraction console** (`sync_console_missing_fields.py` → `extract_hektor_missing_fields.js`, qui OUVRE la page du bien et lit 10 groupes en mode `editer` puis `consulter`, **sans aucune sauvegarde**) ; Hektor date la fiche **16:12:27**, soit 5 s après son début. **Aucun autre travail** ne touchait le bien dans cette fenêtre (journal entier relu) ;
+- 15:12:45-59 la reconstruction de la fiche reprend la date LUE AVANT (16:12:08) ;
+- 15:14:23 le clic du retour : la photo de base prend 16:12:08 — **déjà fausse de 19 s** ;
+- 15:25:10 le garde-fou lit 16:12:27 > 16:12:08 → `held_conflict`.
+
+⭐ **Pourquoi le correctif 5i ne pouvait pas le voir** : il cherche un de NOS gestes **fini APRÈS la saisie** (`finished_at > dirty_at`). Ici notre relecture a fini à 15:12:59, AVANT la saisie de 15:14:23. Ce n'est pas « Hektor a bougé depuis la saisie » : c'est **« la date que nous tenions était déjà en retard »**.
+
+**L'extraction fait-elle toujours bouger la date ? NON — environ 1 fois sur 12.** Mesure : la nuit relit CHAQUE soir la date de la liste Hektor (`data/hektor.sqlite`, `sync_annonce_state.date_maj`, vue à 03:18 UTC le 14/11). Sur **84 biens** passés par une extraction et dont la date est connue, **7** ont leur date qui tombe PENDANT une extraction (63330 +5 s ; 50119, 5262, 8454 +5-6 s ; 40, 1122 +7 s ; 62966 +10 s ; 24113 juste après la fin). Les autres gardent la date de notre propre sauvegarde, antérieure à l'extraction (63289, 63131, 63146, 62323, 61398, 63261 vus un par un). ⚠ **Pourquoi certains biens et pas d'autres : NON TROUVÉ.** Une lecture qui fait bouger la date chez Hektor reste une question ouverte (piste à ne pas supposer : le mode `editer` du secteur, cf. la mémoire « sauver le secteur remet la copropriété à zéro »).
+
+**Les blocages depuis le correctif 5i (08/10)** : 4.
+- 63330 (14/11) : ce défaut.
+- 63331 (22/10, 09:55) : même famille, AUTRE porte — un de NOS envois directs (`update_hektor_annonce_fields` hors file, « Sauvegarde groupe copropriete » 09:32:10-12, journée d'essai de la garde copropriété) a daté la fiche 11:32:13 ; ce type n'est pas dans la liste 5i (exprès : il peut toucher les mêmes champs).
+- 63331 (22/10, 05:27) et 59578 (19/10) : **aucun travail à nous** dans la fenêtre du saut → vrais changements extérieurs ou non expliqués ; pas ce défaut.
+Avant le 08/10 : 7 blocages (alors soldés en silence), 4 lectures en 403, 1 passage « notre geste d'état ».
+
+**Ce que le bouton existant permet** : `app_annonce_pending_resolve` (admin) ne renvoie rien chez Hektor — « refait » et « abandon » suppriment la saisie et l'écrivent au journal des résolutions. Une nouvelle saisie aujourd'hui reprendrait la même date périmée et serait bloquée à nouveau ; **après la relecture de nuit** (la liste dira 16:12:27 ≠ 16:12:08 → le détail est relu), une saisie passera.
+
+**Les correctifs possibles** (aucun codé) :
+- **A — relire la date APRÈS l'extraction** (dans `runCreatedAnnonceImmediateSync`, seulement quand l'extraction a tourné) : un appel `AnnonceById` (déjà utilisé par le garde-fou) ; si la date a bougé pendant notre propre relecture, on rejoue `refresh_single_annonce` avant la reconstruction de la fiche → la fiche porte la date ET les valeurs lues ensemble. Coût : +1 appel par relecture complète (~4 par jour en moyenne depuis juin : 642 extractions), +1 relecture dans ~8 % des cas. Ne touche ni le garde-fou, ni 5i, ni la nuit. **Recommandé.**
+- B — relire la date à la toute fin et corriger seulement la date de la fiche : moins cher, mais **cache** un humain qui modifierait dans Hektor pendant ces ~40 s (la date dirait « vu » sans que les valeurs aient été lues). Écarté.
+- C — dans le garde-fou, reconnaître un saut tombant pendant notre extraction : il faut comparer l'heure de Hektor à la nôtre, **ce que le commentaire de 5i interdit par écrit**. Écarté.
+- D — comparer champ par champ (la valeur chez Hektor = la valeur de la photo de base ?) : la vraie règle anti-écrasement, mais la photo de base ne porte une valeur que pour ~10 champs (prix, ville, CP, mandat, surface, pièces, chambres, terrain, garage, coordonnées) ; titre, texte, niveaux… resteraient en conflit. Plus gros, à garder pour plus tard.
+- 63331 / envoi direct hors file : non traité (rare, jour d'essai), noté.
+
+✅ **« Vas-y » de Frédéric le 15/11 → A codé (§19).**
+
+## 19. Correctif A codé (15/11, sur son « Vas-y ») — DORMANT, pas poussé, pas redémarré
+
+**Deux fichiers, rien d'autre :**
+- `phase2/sync/refresh_single_annonce.py` : la sortie JSON porte en plus `date_maj` (la date que la relecture vient de lire, la même `keyData.datemaj` qu'elle range dans `hektor_annonce`). Placée avant la liste des portails, parce que le worker tronque ce qu'il lit (`previewSize` 1 800). Additif : les deux autres lecteurs de cette sortie (`vite.config.js` en local, le worker) l'ignorent ou la passent telle quelle.
+- `Console/console_job_worker.js` : `relireSiLaDateABougePendantLExtraction`, appelée dans `runCreatedAnnonceImmediateSync` **juste après l'extraction console, et seulement quand elle a tourné** (pas en relecture légère). Elle relit la date par AnnonceById (`fetchAnnonceDateMajFromApi`) ; si elle diffère de celle de la relecture, elle rejoue `refresh_single_annonce` **avant** la remontée vers Supabase — date ET valeurs lues ensemble. Tout est écrit au journal du travail, étape `date_apres_extraction` (date lue, date d'après, date de la seconde relecture).
+
+**Jamais bloquant** : interrupteur éteint, date illisible, sortie sans date, seconde relecture en erreur → la fiche garde la première relecture, **exactement comme avant**.
+
+**Interrupteur** : réglage `annonce_relire_date_apres_extraction` dans `app_setting`, **ÉTEINT** (la ligne n'existe pas : absent = éteint). L'allumer = une écriture en base de production. L'éteindre suffit pour revenir en arrière, **sans redémarrage** (lu à chaque relecture).
+
+**Ce qu'il ne touche pas** : le garde-fou anti-écrasement, 5i, la nuit, la relecture légère, les reconstructions de fiches archivées / historiques (elles appellent l'extraction par un autre chemin, `rebuildDetailCacheFromLocal`, et ne servent pas de photo de base à une saisie).
+
+**Ce que ça coûte une fois allumé** : 1 lecture Hektor de plus par relecture complète (~4 par jour : 642 extractions depuis le 08/06), plus une relecture de fiche dans ~8 % des cas. Rien chez Hektor n'est écrit.
+
+**Contrôle hors ligne** : `node --check` et `py_compile` verts ; essai qui joue **la vraie fonction** extraite du worker avec des faux (scratchpad `essai_date_apres_extraction.js`) : **7 verts** — interrupteur éteint (aucun appel Hektor), date inchangée (1 appel, pas de seconde relecture), le cas 63330 (seconde relecture, sa date au journal), API illisible, seconde relecture en erreur (non bloquant, journal `error`), sortie sans date, sortie tronquée. Taille réelle de la sortie de la relecture : **221 caractères au plus** sur 592 journaux de 30 jours (limite 1 800).
+
+**Pas fait, attend ses accords un par un** : pousser ; redémarrer les 4 services, file vide (0 pending, 0 running) ; allumer le réglage ; la preuve réelle (une saisie puis une seconde sur le même bien, avant la nuit — sur un bien qu'il choisit ; 63330 conviendrait, Hektor y dit 6).
+⚠ Non prouvé tant que la preuve réelle n'est pas faite : que la seconde relecture ne fasse pas, elle, bouger la date (elle ne passe que par l'API, pas par la console — attendu, pas mesuré). Le journal le dira (`date_seconde_relecture` = `date_apres_extraction`).
