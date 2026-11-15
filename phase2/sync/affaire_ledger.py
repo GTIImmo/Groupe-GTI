@@ -634,7 +634,17 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
                   # jamais l'inverse : une colonne locale que Supabase n'a pas
                   # est reclamee pour rien a la redescente (c'est l'etat ou
                   # dort app_dossier_uuid depuis le 09/11).
-                  "date_annulation_app", "motif_annulation_app"):
+                  "date_annulation_app", "motif_annulation_app",
+                  # ⭐ L'ORIGINE D'UNE TRANSACTION (15/11/2026, C.19-d).
+                  # MEME PATRON, et la colonne est POSEE CHEZ SUPABASE DEPUIS
+                  # CE MATIN -- dans cet ordre, jamais l'inverse. Elle dit
+                  # D'OU VIENT la ligne, et ce que ca implique : « classeur »
+                  # = une reprise de l'historique qui n'ira JAMAIS chez
+                  # Hektor, donc ni la sentinelle ni le filet du worker n'ont
+                  # a lui chercher un numero. Le local ne l'ECRIT jamais : il
+                  # la RECOIT a la redescente, pour que la sauvegarde de nuit
+                  # emporte aussi cette connaissance.
+                  "transaction_origine"):
         if neuve not in colonnes:
             con.execute(f"ALTER TABLE {LEDGER_TABLE} ADD COLUMN {neuve} TEXT")
             con.commit()
@@ -2732,6 +2742,221 @@ def poser_les_etiquettes_de_dossier(client) -> dict:
     return resultat
 
 
+# ─── 26bis-TRANSACTIONS : LA PORTE D'ENTREE DU REGISTRE LOCAL (15/11/2026) ───
+#
+# ⛔ LE GARDE-FOU CHIFFRE. Le travail connu est de 242 lignes : les 241 du classeur
+#   et l'essai A2. Au-dela de ce plafond on REFUSE, et on le dit. Une recopie de
+#   masse qu'on n'a pas voulue, c'est un registre local qu'on ne sait plus relire --
+#   et comme le push le renvoie ensuite chez Supabase, l'erreur ne resterait pas
+#   locale. Relever ce plafond est une DECISION, pas un reglage.
+PLAFOND_RECOPIE_APP_SEULE = 500
+DOUBLURE_LEDGER = f"{LEDGER_TABLE}__sb"
+
+
+def recopie_app_seule_active() -> bool:
+    """26bis-TRANSACTIONS (15/11/2026) : LA PORTE D'ENTREE DU REGISTRE LOCAL.
+
+        APP_RECOPIE_APP_SEULE=1    le run recopie dans le registre LOCAL les
+                                   transactions que Hektor ne rendra jamais
+        (absent ou 0)              la nuit se passe EXACTEMENT comme avant
+
+    POURQUOI ELLE EXISTE. Le registre local fait UPDATE, jamais INSERT : une
+      transaction nee dans l'app n'y entre QU'UNE FOIS RETROUVEE CHEZ HEKTOR
+      (tache 26bis-TRANSACTIONS, ecrite le 29/08, jamais faite). Et la redescente
+      des colonnes de classe A est elle aussi un `UPDATE ... WHERE app_affaire_id
+      = ?` : devant une ligne qu'elle ne connait pas, elle ne fait RIEN -- et sans
+      rien dire. Les 241 transactions du classeur, qui n'auront JAMAIS de numero
+      Hektor, resteraient donc chez Supabase et JAMAIS sur la machine : invisibles
+      aux controles locaux, et ABSENTES DE LA SAUVEGARDE DE NUIT.
+
+    ⭐ ET LE SENS N'EST PAS NEGOCIABLE -- SUPABASE D'ABORD, LA MACHINE ENSUITE.
+      Le frappeur des numeros de la plage app est Supabase : voir la docstring de
+      `redescendre_ce_que_l_app_possede`, ou une premiere version frappait en local
+      depuis le MAX() de la table et « aurait redemarre a 1 pendant que Supabase en
+      etait a 13 347 ». Creer ces lignes en local reviendrait a tenir DEUX series
+      de numeros pour une meme chose -- la faute que le projet s'interdit depuis le
+      debut.
+
+    POURQUOI UN INTERRUPTEUR QUAND MEME : le retour arriere doit etre gratuit. A 0,
+      la nuit se passe exactement comme avant. Meme patron que APP_ETIQUETTE_DOSSIER
+      et APP_CHAINAGE_V2.
+    """
+    chainage_v2_actif()                      # il charge `.env` une fois pour tous
+    return (os.environ.get("APP_RECOPIE_APP_SEULE") or "0").strip() == "1"
+
+
+def recopier_ce_que_hektor_ne_rendra_jamais(con: sqlite3.Connection) -> dict:
+    """26bis-TRANSACTIONS : la doublure -> le registre LOCAL, par app_affaire_id.
+
+    AUCUN APPEL RESEAU, ET AUCUNE ECRITURE CHEZ SUPABASE. La doublure
+    app_affaire_ledger__sb est deja en local -- le pipeline la descend JUSTE AVANT
+    le push. On lit donc une image fraiche du serveur sans lui parler.
+
+    QUI ENTRE : la plage app (app_affaire_id >= PLAGE_RESERVEE_APP) ET sans numero
+      Hektor ET pas deja en local. C'est mot pour mot le perimetre du plan : « les
+      lignes app seule qui n'ont pas de numero Hektor ».
+      ⚠ ON NE REGARDE PAS `transaction_origine`. L'essai A2 n'est pas marque, et
+        c'est le SEUL cobaye du mecanisme. La marque dit d'ou vient une ligne, elle
+        ne decide pas qui a le droit d'entrer.
+
+    CE QU'ELLES DEVIENNENT ENSUITE EST DEJA EN PLACE -- mesure du 15/11, rien a
+    ajouter :
+      . `refresh_ledger` est delete-never : les lignes non revues sont CONSERVEES ;
+      . le marquage `present_in_hektor=0` a pour PREMIERE garde
+        `app_affaire_id < PLAGE_RESERVEE_APP` -- la plage app n'est pas marquee ;
+      . le seul DELETE local EXIGE un numero Hektor et refuse de viser « au numero
+        d'app » ;
+      . le push se resout sur la CLE PRIMAIRE `app_affaire_id` (des deux cotes), et
+        l'index unique Hektor est PARTIEL (`WHERE hektor_affaire_id IS NOT NULL`) :
+        une ligne sans numero ne peut pas entrer en collision, ni ici ni la-haut.
+
+    ⚠ ON NE COPIE QUE LES COLONNES COMMUNES, et c'est un FILET D'ORDRE, pas une
+      precaution de style. La doublure est RECREEE chaque nuit (DROP puis CREATE
+      d'apres un `select=*` chez Supabase), donc elle peut porter une colonne que
+      le local n'a pas encore -- et l'inverse est vrai aussi, le temps qu'un patch
+      soit colle. Sans l'intersection, l'INSERT tomberait sur « no such column » et
+      ferait chuter l'etape entiere. Meme raison que les deux filets d'ordre de
+      `redescendre_ce_que_l_app_possede`.
+
+    ⚠ ET ON EXIGE LES COLONNES « NOT NULL », LUES DANS LE DDL LOCAL -- pas
+      devinees. Elles sont trois (app_affaire_id, kind, present_in_hektor), les
+      memes ici et chez Supabase (mesure du 15/11). Une ligne de la doublure qui
+      en laisse une vide serait refusee par SQLite et FERAIT TOMBER L'ETAPE DU
+      RUN : on l'ecarte avant, on la compte et on la nomme. « Une ligne ne doit
+      plus arreter le run entier » (01-02/09).
+      ⛔ ET ON NE COMBLE PAS LE VIDE AVEC LA VALEUR PAR DEFAUT DU DDL : celle de
+         `present_in_hektor` vaut 1, « presente chez Hektor » -- juste pour une
+         ligne venue de Hektor, MENSONGE pour une ligne du classeur. Mieux vaut
+         une ligne ecartee et DITE qu'une ligne entree avec une valeur inventee.
+      ⭐ CE DEFAUT A ETE TROUVE PAR LE TEMOIN DU TEMOIN, pas par l'epreuve : les
+         30 controles etaient verts, et l'INSERT levait quand meme des que
+         `present_in_hektor` manquait. Un essai vert du premier coup se soupconne.
+    """
+    resume: dict = {"actif": True, "candidates": 0, "recopiees": 0}
+    if not con.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
+                       (DOUBLURE_LEDGER,)).fetchone():
+        print(f"[affaire_ledger] 26bis : pas de doublure {DOUBLURE_LEDGER} -- rien a "
+              f"recopier, le run CONTINUE.")
+        resume["doublure_absente"] = True
+        return resume
+
+    ici = [r[1] for r in con.execute(f"PRAGMA table_info({LEDGER_TABLE})")]
+    la_bas = {r[1] for r in con.execute(f"PRAGMA table_info({DOUBLURE_LEDGER})")}
+    colonnes = [c for c in ici if c in la_bas]
+    absentes = [c for c in ici if c not in la_bas]
+    if absentes:
+        print(f"[affaire_ledger] 26bis : colonne(s) que la doublure n'a pas encore, "
+              f"non recopiee(s) : {', '.join(absentes)} -- la prochaine descente les "
+              f"apportera. Le run CONTINUE.")
+    # LES COLONNES QUE SQLite REFUSERA VIDES, LUES DANS LE DDL -- pas devinees.
+    obligatoires = [r[1] for r in con.execute(f"PRAGMA table_info({LEDGER_TABLE})")
+                    if r[3] and r[1] in colonnes]
+    # ⛔⛔ ET `app_affaire_id` A LA MAIN, PARCE QUE LE PRAGMA NE LE DIT PAS. SQLite
+    #   ne marque pas « notnull » une colonne INTEGER PRIMARY KEY : c'est un alias
+    #   de rowid. Une ligne arrivant SANS numero ne serait donc pas refusee -- SQLite
+    #   lui en INVENTERAIT un (le rowid suivant). Un numero frappe en local, c'est
+    #   DEUX SERIES pour une meme chose : la faute que le projet s'interdit depuis le
+    #   debut, et celle contre laquelle tout le reste de cette fonction est ecrit.
+    #   ⭐ Trouve par l'epreuve le 15/11 : le controle « ce sont les trois attendues »
+    #     rougissait en ne rendant que kind et present_in_hektor.
+    if "app_affaire_id" not in obligatoires:
+        obligatoires.insert(0, "app_affaire_id")
+    if "app_affaire_id" not in colonnes or "kind" not in colonnes:
+        print("[affaire_ledger] 26bis : la doublure n'a pas app_affaire_id ou kind -- "
+              "on ne recopie rien a l'aveugle.")
+        resume["sans_identifiant"] = True
+        return resume
+    resume["colonnes_obligatoires"] = obligatoires
+
+    # ⚠ NOT EXISTS, PAS `NOT IN` : un seul app_affaire_id NULL dans la sous-requete
+    #   et `NOT IN` rend NULL pour TOUTE ligne -- la recopie ne ferait plus rien, en
+    #   silence. Le piege est connu ; on ne le pose pas.
+    #
+    # LE PERIMETRE, en deux morceaux : `vise` dit QUI nous interesse, `complete` dit
+    # laquelle est RECOPIABLE. La difference entre les deux, ce sont les ecartees --
+    # et on les COMPTE au lieu de laisser SQLite faire tomber l'etape.
+    vise = (f" FROM {DOUBLURE_LEDGER} AS s"
+            f" WHERE CAST(s.app_affaire_id AS INTEGER) >= {PLAGE_RESERVEE_APP}"
+            f"   AND (s.hektor_affaire_id IS NULL"
+            f"        OR TRIM(CAST(s.hektor_affaire_id AS TEXT)) = '')"
+            f"   AND NOT EXISTS (SELECT 1 FROM {LEDGER_TABLE} AS l"
+            f"                    WHERE l.app_affaire_id = s.app_affaire_id)")
+    complete = "".join(
+        f' AND s."{c}" IS NOT NULL'
+        + (f' AND TRIM(CAST(s."{c}" AS TEXT)) <> \'\''
+           if c in ("kind", "app_affaire_id") else "")
+        for c in obligatoires)
+    depuis = vise + complete
+
+    # ⭐ LE TEMOIN, AVANT : combien de lignes de la plage app sans numero le registre
+    #   local porte-t-il deja ? Un zero ne se croit pas sans temoin positif.
+    avant = con.execute(
+        f"SELECT COUNT(*) FROM {LEDGER_TABLE}"
+        f" WHERE CAST(app_affaire_id AS INTEGER) >= {PLAGE_RESERVEE_APP}"
+        f"   AND (hektor_affaire_id IS NULL"
+        f"        OR TRIM(CAST(hektor_affaire_id AS TEXT)) = '')").fetchone()[0]
+    resume["plage_sans_numero_avant"] = avant
+
+    # LES ECARTEES : visees, mais une colonne obligatoire vide. On les NOMME.
+    ecartees = [r[0] for r in con.execute(
+        "SELECT s.app_affaire_id" + vise
+        + " AND NOT (1=1" + complete + ")"
+        + " ORDER BY s.app_affaire_id")]
+    if ecartees:
+        resume["ecartees_colonne_obligatoire_vide"] = [int(c) for c in ecartees]
+        print(f"[affaire_ledger] 26bis : {len(ecartees)} ligne(s) de la plage app "
+              f"ECARTEE(S) -- une colonne que le registre local exige "
+              f"({', '.join(obligatoires)}) est vide dans la doublure : "
+              f"{', '.join(str(c) for c in ecartees[:10])}"
+              f"{' ...' if len(ecartees) > 10 else ''}. Le run CONTINUE. A regarder : "
+              f"chez Supabase ces colonnes sont NOT NULL, donc un vide ici veut dire "
+              f"que la descente a abime la ligne.")
+
+    cles = [r[0] for r in con.execute("SELECT s.app_affaire_id" + depuis
+                                      + " ORDER BY s.app_affaire_id")]
+    resume["candidates"] = len(cles)
+    if not cles:
+        return resume
+
+    # ⛔ LE REFUS CHIFFRE -- il ecrit, il ne se tait pas.
+    if len(cles) > PLAFOND_RECOPIE_APP_SEULE:
+        resume["refus_plafond"] = len(cles)
+        print(f"[affaire_ledger] 26bis REFUSE : {len(cles)} ligne(s) a recopier, plafond "
+              f"{PLAFOND_RECOPIE_APP_SEULE}. RIEN n'a ete recopie. Ce n'est pas une "
+              f"erreur de la nuit : c'est un volume que personne n'a decide.")
+        return resume
+
+    quoted = ", ".join('"%s"' % c for c in colonnes)
+    lues = ", ".join('s."%s"' % c for c in colonnes)
+    curseur = con.execute(f"INSERT INTO {LEDGER_TABLE} ({quoted}) SELECT {lues}" + depuis)
+    con.commit()
+    resume["recopiees"] = curseur.rowcount or 0
+    resume["colonnes_recopiees"] = len(colonnes)
+    resume["cles"] = [int(c) for c in cles]
+
+    # ⭐ LE TEMOIN, APRES : l'ecart doit valoir exactement le nombre de lignes posees.
+    apres = con.execute(
+        f"SELECT COUNT(*) FROM {LEDGER_TABLE}"
+        f" WHERE CAST(app_affaire_id AS INTEGER) >= {PLAGE_RESERVEE_APP}"
+        f"   AND (hektor_affaire_id IS NULL"
+        f"        OR TRIM(CAST(hektor_affaire_id AS TEXT)) = '')").fetchone()[0]
+    resume["plage_sans_numero_apres"] = apres
+    if apres - avant != resume["recopiees"]:
+        # ⛔ ON NE CORRIGE PAS, ON CRIE. Un compte qui ne boucle pas veut dire que
+        #   quelqu'un d'autre a ecrit dans la table pendant ce geste.
+        print(f"[affaire_ledger] 26bis INCOHERENT : {resume['recopiees']} ligne(s) "
+              f"posee(s) mais le temoin passe de {avant} a {apres}. Quelqu'un d'autre "
+              f"ecrit dans {LEDGER_TABLE} en meme temps -- a regarder AVANT la suite.")
+        resume["temoin_incoherent"] = True
+
+    montrees = ", ".join(str(c) for c in cles[:10])
+    print(f"[affaire_ledger] 26bis : {resume['recopiees']} transaction(s) que Hektor ne "
+          f"rendra jamais sont entrees dans le registre local "
+          f"({resume['colonnes_recopiees']} colonnes) -- "
+          f"{montrees}{' ...' if len(cles) > 10 else ''}")
+    return resume
+
+
 def redescendre_ce_que_l_app_possede(client, con: sqlite3.Connection) -> dict[str, int]:
     """1.1 -- LE DOSSIER D'AFFAIRE : un numero par (annonce, acquereur).
 
@@ -2897,6 +3122,19 @@ COLONNES_QUE_LE_PUSH_N_ENVOIE_PAS = (
     # ⛔ ET `motif_annulation_app` N'A AUCUNE AUTRE SOURCE : ni le classeur ni
     #    Hektor ne portent la raison d'une annulation. Efface = perdu.
     "date_annulation_app", "motif_annulation_app",
+    # ⭐ L'ORIGINE D'UNE TRANSACTION (15/11/2026) -- C.19-d, posee chez
+    # Supabase le matin meme. Elle entre ici AVANT TOUT REMPLISSAGE, et ce
+    # n'est pas une precaution de principe : la lecon du 07/09 est juste en
+    # dessous.
+    # ⛔ UN SEUL EMETTEUR, ET C'EST SUPABASE : la marque est ecrite par
+    #    l'INSERT qui pose les lignes du classeur, dans la MEME instruction
+    #    que la ligne -- il n'existe donc aucune fenetre ou une ligne vivrait
+    #    la-haut sans sa marque. Si le push l'envoyait, un miroir local qui ne
+    #    la connait pas encore l'effacerait. Et une ligne du classeur
+    #    DEMARQUEE, ce n'est pas seulement la sentinelle qui crie : c'est le
+    #    filet du worker qui lui colle le numero d'une transaction Hektor
+    #    EXISTANTE (mesure du 15/11, piece 3).
+    "transaction_origine",
 )
 
 
@@ -3186,6 +3424,15 @@ def main() -> None:
                           "cles_ecartees": [f"{a}/{k}/{h}" for a, k, h, _, _ in ecartees]}
         # APRES le push, jamais avant : les lignes nouvelles doivent d'abord exister
         # chez Supabase pour qu'il puisse leur poser une chaine.
+        # ⭐ 26bis-TRANSACTIONS, A CETTE PLACE EXACTEMENT (15/11/2026) :
+        #   . APRES le push -> les lignes qui entrent ici ne repartent PAS chez
+        #     Supabase cette nuit. Le premier passage n'ecrit rien la-haut.
+        #   . AVANT la redescente -> elle passe aussitot sur les lignes neuves
+        #     et y pose les colonnes de classe A par LE CHEMIN NORMAL. Un seul
+        #     chemin pour la marque, pas deux.
+        result["recopie_app_seule"] = (
+            recopier_ce_que_hektor_ne_rendra_jamais(con)
+            if recopie_app_seule_active() else {"actif": False})
         result["chaines"] = redescendre_ce_que_l_app_possede(client, con)
     con.close()
     print(json.dumps(result, ensure_ascii=True, indent=2))

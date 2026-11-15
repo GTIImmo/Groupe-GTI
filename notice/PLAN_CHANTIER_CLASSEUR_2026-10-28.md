@@ -977,6 +977,110 @@ tous les cas d'un coup.
 ```
 
 
+### ✅⭐⭐ LA PIECE 4 (26bis-TRANSACTIONS) EST ECRITE ET EPROUVEE — 15/11/2026
+
+**L'AUDIT A CHANGE L'ENONCE.** Mesure du 15/11, lecture seule :
+
+```
+   registre LOCAL   plage app : 340 lignes, TOUTES avec numero Hektor, 0 sans
+   doublure __sb    plage app : 341 lignes, dont 1 SANS numero
+   a recopier       1 SEULE LIGNE -- et c'est l'essai A2 (1001424)
+   hors plage sans numero : 0 des deux cotes (temoin : 31 157 lignes communes)
+```
+
+Ce n'est donc pas « recopier 341 lignes » : les 340 sont deja en local parce que le run
+les **adopte** des que Hektor leur donne un numero (`UPDATE, jamais INSERT`). Ce qui reste
+dehors, c'est **ce qui n'aura jamais de numero** : 1 ligne aujourd'hui, **242** apres
+l'insert des 241.
+
+### ⛔ LE TROU QUE J'AVAIS MANQUE, ET QUI JUSTIFIE TOUTE LA PIECE
+
+**La redescente des colonnes de classe A est un `UPDATE ... WHERE app_affaire_id = ?`.**
+Elle ne cree JAMAIS une ligne : devant une transaction que le local ne connait pas, elle
+touche zero ligne, **en silence**. Marquer les 241 chez Supabase ne les aurait donc jamais
+fait descendre. Il fallait bien un INSERT -- et c'est tout ce qu'est 26bis.
+
+### ⭐ LE SENS, ET POURQUOI IL N'EST PAS NEGOCIABLE
+
+**Supabase d'abord, la machine ensuite.** Trois raisons independantes, chacune suffisante :
+
+```
+   1. LE FRAPPEUR DES NUMEROS DE LA PLAGE APP EST SUPABASE, et le projet s'est
+      explicitement interdit de frapper en local : une premiere version prenait le
+      MAX() de la table locale et « aurait redemarre a 1 pendant que Supabase en
+      etait a 13 347 ». Un numero hors plage perdrait TOUTES les protections.
+   2. LE CLASSEUR SE POSE DEJA CHEZ SUPABASE -- les deux scripts qui existent
+      (rapatrier_repartition_classeur.py, poser_charge_classeur_2026-11-04.py)
+      fabriquent du `insert into public....`. Le projet a tranche par la pratique.
+   3. UN SEUL EMETTEUR : la marque est ecrite dans la MEME instruction que la ligne,
+      donc aucune fenetre ou une ligne vivrait la-haut sans sa marque -- et dans
+      cette fenetre, le filet du worker lui collerait un numero Hektor FAUX.
+```
+
+### ⭐ CE QUI PROTEGE DEJA CES LIGNES, SANS RIEN AJOUTER (mesure du 15/11)
+
+```
+   refresh_ledger est DELETE-NEVER : une ligne non revue est marquee, pas supprimee
+   le marquage present_in_hektor=0 a pour PREMIERE garde app_affaire_id < PLAGE
+      -> la plage app n'est pas marquee, EN LOCAL AUSSI
+   le seul DELETE local EXIGE un numero Hektor (« on ne supprime pas a l'aveugle »)
+   le push se resout sur la CLE PRIMAIRE app_affaire_id, des deux cotes
+   l'index unique Hektor est PARTIEL (WHERE hektor_affaire_id IS NOT NULL) :
+      une ligne sans numero ne peut pas entrer en collision, ni ici ni la-haut
+   la doublure est RECREEE chaque nuit (DROP + CREATE d'apres un select=* chez
+      Supabase) -> elle recevra `transaction_origine` toute seule
+```
+
+### CE QUI A ETE POSE
+
+```
+   (b) transaction_origine dans COLONNES_QUE_LE_PUSH_N_ENVOIE_PAS   ✅
+   (c) transaction_origine dans la liste locale `for neuve in (...)` ✅
+   recopie_app_seule_active()                  l'interrupteur, ETEINT par defaut
+   recopier_ce_que_hektor_ne_rendra_jamais()   la recopie, AUCUN appel reseau
+   l'appel : APRES le push (le 1er passage n'ecrit rien chez Supabase)
+             AVANT la redescente (un seul chemin pour les colonnes de classe A)
+   PLAFOND_RECOPIE_APP_SEULE = 500 -- au-dela, REFUS ecrit, rien n'entre
+   phase2/sync/test_recopie_app_seule.py              39/39 verts
+   phase2/checks/retour_arriere_recopie_app_seule.py  A BLANC par defaut
+```
+
+### ⛔⛔ ET LES EPREUVES ONT TROUVE DEUX DEFAUTS REELS, DONT UN GRAVE
+
+```
+   1. present_in_hektor est NOT NULL en local : un vide dans la doublure faisait
+      LEVER l'INSERT -- donc TOMBER L'ETAPE DU RUN. Trouve par le TEMOIN DU TEMOIN,
+      pas par l'epreuve (les 30 controles etaient verts).
+      -> corrige : les colonnes NOT NULL sont LUES dans le DDL, une ligne incomplete
+         est ECARTEE, COMPTEE et NOMMEE, et le run continue.
+      ⛔ ET ON NE COMBLE PAS avec le defaut du DDL : il vaut 1, « presente chez
+        Hektor » -- un MENSONGE pour une ligne du classeur.
+   2. ⛔⛔ SQLite NE MARQUE PAS « notnull » UNE COLONNE INTEGER PRIMARY KEY (c'est un
+      alias de rowid). Sans garde posee A LA MAIN, une ligne sans numero n'etait pas
+      refusee : SQLite lui en INVENTAIT un. Le temoin l'a prouve -- une transaction
+      est entree sous le numero **1**. C'etait une SECONDE SERIE de numeros frappee
+      en local, exactement la faute contre laquelle toute cette piece est ecrite.
+```
+
+### ⏰ CE QUI RESTE POUR LA METTRE EN SERVICE
+
+```
+   1. ALLUMER : APP_RECOPIE_APP_SEULE=1 dans .env (HORS GIT) -> accord de Frederic
+   2. la nuit suivante fait tout dans l'ordre, sans rien lancer a part :
+        refresh cree la colonne locale . push . LA RECOPIE . la redescente
+   3. JUGER : le compte rendu porte `recopie_app_seule` -- recopiees 1, cles
+      [1001424], le temoin passe de 0 a 1, et AUCUNE ecartee
+   4. retour arriere : python -X utf8 phase2/checks/retour_arriere_recopie_app_seule.py
+      (a blanc d'abord ; il sauvegarde la base et JUGE SA PART)
+```
+
+⚠ **ET LE RISQUE QUI RESTE, A SURVEILLER AU MOMENT DES 241** : l'upsert du push
+**remplace** la ligne chez Supabase. Toute colonne posee la-haut APRES la recopie, et qui
+n'est pas dans la liste interdite, serait effacee a la nuit suivante (lecon du 07/09). Si
+un script du classeur doit encore enrichir ces lignes (honoraires, repartition, avis), ces
+colonnes-la doivent entrer dans la liste **avant** d'etre remplies.
+
+
 ### ⬜ CE QUI RESTE, DANS L'ORDRE CONTRAINT
 
 ```
@@ -984,10 +1088,11 @@ tous les cas d'un coup.
                         les 4 processus nes APRES le code -- preuve par leur heure
                         16/16 verts dans Console/test_seconde_preuve.js, dont 3 neufs
                         ⭐ c est la DERNIERE piece avant 26bis : plus rien ne bloque 4
- 4  26bis-TRANSACTIONS  recopie app_affaire_ledger__sb -> app_affaire_ledger par app_affaire_id
-                        ⚠ les trois gestes du patron (b et c ci-dessus)
-                        ⚠ elle ecrit dans la base du run -> HORS RUN
-                        ⭐ et elle doit venir AVANT les 241, sinon les controles sont aveugles
+ 4  26bis-TRANSACTIONS  ✅ ECRITE ET EPROUVEE le 15/11 (39/39) -- INTERRUPTEUR ETEINT
+                        APP_RECOPIE_APP_SEULE=1 dans .env pour qu'elle joue
+                        ✅ les gestes (b) et (c) du patron sont POSES avec elle
+                        ⭐ elle tourne DANS le run, apres le push : rien a lancer a part
+                        ⏰ reste a l'ALLUMER (accord de Frederic) et a juger la nuit
  5  retirer l essai A2  seulement apres 3 et 4
  6  LES 241             marquees `classeur` DES L'INSERT, jamais apres
 ```
