@@ -313,6 +313,134 @@ un ancien avaient donc un ecart de pourcentage **independant** de leur mise a l'
 (4 783 le 09/11) contre un plafond de `A1:AL6000` -> **il reste 1 211 lignes**.
 Voir A3.
 
+### ⭐⭐⭐ LES 48 ECARTS DE `Pourcentage 1` — MESURE DU 15/11, ET CE N'EST PAS CE QUE JE CROYAIS
+
+**Mesures rejouables** : `scratchpad/mesure_pourcentages.py` · `verif_633.py` · `origine_48.py`
+(lecture seule, aucune ecriture).
+
+**⛔ D'ABORD, UNE FAUSSE ALARME QUE J'AI MOI-MEME FABRIQUEE ET RETIREE.** J'avais
+annonce « 633 lignes declarees identiques ont des parts differentes ». **C'etait mon
+parsing** : sur les 4 646 lignes « identique », **ZERO** ne porte la parenthese
+« nos parts : ... » -- cette colonne ne contient que notre valeur **du rang 1**. Je
+comparais donc 2 parts du classeur a UNE SEULE des notres. Le rapport, lui, compare
+les rangs 2 et 3 dans **leurs propres colonnes**. Les 633 n'existent pas.
+⭐ *La verification a attrape l'erreur avant qu'elle n'entre au plan. C'est la lecon
+du 14/11 : un chiffre qui surprend se verifie DANS LA METHODE avant d'etre cru.*
+
+**LE LOT 1 EST-IL PASSE SUR CES 48 LIGNES ?**
+
+```
+   A  POSEE par le lot 1 (origine classeur_reconstitue)   28
+   C  JAMAIS posee (origine hektor_partage_suppose)       20
+```
+
+**⭐⭐ ET LE CAS D'ECOLE TRANCHE LA NATURE DU DESACCORD. Ligne `2DUPM26R` :**
+
+```
+   LE CLASSEUR DIT   Negociateur 1 = JORAND, 100 %        (une seule personne)
+   NOUS DISONS       entree  SANDRINE DELAVAUD   50 %     (elle a RENTRE le bien)
+                     sortie  FREDERIQUE JORAND   50 %     (elle a VENDU)
+   et l origine de NOS DEUX LIGNES est « classeur_reconstitue »
+```
+
+➡ **LE CLASSEUR ET NOUS NE DECRIVONS PAS LA MEME CHOSE.** Le classeur repond
+« qui touche la commission, et combien » ; notre table repond « qui a rentre et qui
+a vendu ». **Meme famille exactement que la decision sur l'AGENCE du 09/11** : *« le
+classeur enregistre QUI A VENDU, nous enregistrons OU LE BIEN EST PARQUE. Aucune des
+deux n'est fausse. »*
+
+**⚠⚠ MAIS UN POINT SERIEUX RESTE, ET JE NE LE TRANCHE PAS :** nos deux lignes
+portent l'origine **`classeur_reconstitue`** alors que **le classeur ne nomme pas
+DELAVAUD**. L'etiquette d'origine dit donc « ca vient du classeur » pour une
+repartition que le classeur n'enonce pas telle quelle -- elle est **deduite** par la
+regle 50 % entree / 50 % sortie. ⛔ **Une etiquette d'origine qui recouvre une
+deduction, c'est la porte de l'accord circulaire** (lecon du 14/11 : 874 des 897
+« accords » de la charge etaient le classeur contre lui-meme).
+
+⬜ **LA PROCHAINE MESURE, ET ELLE EST PRECISE** : lire
+`phase2/checks/rapatrier_repartition_classeur.py` pour etablir **quelle regle** il
+applique, et **si une origine distincte** (par exemple `classeur_deduit`) devrait
+separer ce que le classeur DIT de ce que nous en DEDUISONS.
+⚠ Tant que ce n'est pas fait, **ne pas compter ces 28 lignes comme un ecart a
+corriger** : ce sont peut-etre deux lectures legitimes.
+
+⬜ **ET LES 20 AUTRES** (`hektor_partage_suppose`, jamais posees) : savoir si elles
+sont restees hors de la 1re passe par confiance du lien, ou si elles ont ete
+ecartees pour une autre raison.
+
+```
+la forme des 48, comparees par ENSEMBLE de parts :
+    6  MEMES parts, ordre different          -> faux ecart de position
+   42  MEME SOMME (100), decoupage different -> la question de nature ci-dessus
+    0  somme differente                      -> AUCUN ecart arithmetique
+```
+⭐ **Aucune des 48 ne presente d'erreur de somme.** Les parts bouclent toujours.
+
+### ⏰⏰ A2 EST POSEE LE 15/11 — **LA MESURE QUI COMPTE EST CELLE DE DEMAIN MATIN**
+
+```
+patch   : supabase/patch_essai_a2_plage_app_2026-11-15.sql           JOUE le 15/11
+inverse : supabase/patch_essai_a2_plage_app_2026-11-15_INVERSE.sql   pret, NON joue
+controles : ..._REPETITION.sql  (lecture seule, 7 points)
+pose par  : node Console/apply_sql_patch.js -> via le pooler aws-1-eu-west-2
+```
+
+**LA LIGNE D'ESSAI : `app_affaire_id = 1001424`**, offre `refused` du 2006-04-01,
+sur l'annonce **28351** / chaine **14001** / dossier **D2006-0007**, avec
+**`hektor_affaire_id = NULL` et `present_in_hektor = false`** — c'est tout le sujet.
+
+**LA CIBLE A ETE CHOISIE PAR LA MESURE** : vendue en 2006, **hors du parc vivant**
+(0 ligne dans `app_dossier_current`), **sans aucune offre** — donc elle reproduit
+exactement le cas des 144 offres manquantes — et **absente du classeur** (0 lien),
+donc l'essai ne fausse aucune mesure du chantier.
+
+**LES 6 CONTROLES DE LA POSE, TOUS VERTS, avec leur temoin d'AVANT :**
+
+```
+                                              avant      apres
+   la ligne d essai                              -      1001424 . NUL . false  ✅
+   la plage app (>= 1 000 000)                 340          341               ✅
+      dont SANS numero Hektor                    0            1               ✅
+   parties de la chaine (declencheur AFTER INSERT) 8          8               ✅ rien cree
+   transactions de la chaine 14001               2            3               ✅
+   les 2 transactions d origine (20217, 6544)    2            2               ✅ intactes
+   etiquettes de la chaine                       1            1  D2006-0007   ✅ pas de 2e
+```
+
+⭐ Le declencheur des parties n'a **rien** cree, comme prevu : la ligne n'a ni
+`acquereurs_json` ni `mandants_json`.
+⭐ La chaine porte maintenant `compromis/active | offre/refused | vente/-` : l'offre
+**refusee** n'a declenche aucune des 4 regles de chainage, comme voulu.
+
+### ⏰ CE QU'IL FAUT MESURER DEMAIN MATIN, APRES 07:45
+
+Le run tourne a **05:00** (fin 07:03-07:34) et **la descente a 07:45**. L'essai doit
+survivre AUX DEUX. ⚠ Et il faut regarder **LES DEUX BASES** : la ligne a ete posee
+dans **Supabase seulement** ; `app_affaire_ledger` est « serveur maitre » (la descente
+ne la cree pas), mais le run ecrit le SQLite local et un push existe.
+
+```
+   LA COMMANDE : rejouer supabase/patch_essai_a2_plage_app_2026-11-15_REPETITION.sql
+   PUIS, en local (lecture seule) :
+     python -X utf8 -c "import sqlite3;con=sqlite3.connect('file:phase2/phase2.sqlite?mode=ro',uri=True);print(con.execute('SELECT app_affaire_id,kind,hektor_affaire_id,present_in_hektor FROM app_affaire_ledger WHERE app_affaire_id=1001424').fetchall())"
+```
+
+```
+   ✅ SI la ligne 1001424 est INTACTE dans Supabase (341 lignes, 1 sans numero) :
+      le temoin positif existe enfin -> LES 241 TRANSACTIONS DU CLASSEUR PEUVENT
+      ETRE CREEES CHEZ NOUS (lot B de 3.3). C'est le deblocage.
+   ⛔ SI elle a DISPARU : les protections lues dans le code ne suffisent pas, et il
+      faut trouver QUI l'a retiree avant d'ecrire une seule des 241. Chercher dans
+      cet ordre : le journal du run, le push (`--push` seul ?), la descente.
+   ⚠ SI elle est intacte dans Supabase mais ABSENTE en local : ce n'est pas un echec
+      -- le registre est serveur maitre -- mais il faut le DIRE, car le lot B devra
+      alors etre pose cote Supabase, jamais cote SQLite.
+```
+
+⛔ **NE PAS LAISSER CETTE LIGNE EN PLACE INDEFINIMENT** : son `payload_json` porte
+`a_supprimer_apres_mesure`. Une fois la mesure faite, jouer l'INVERSE.
+*« Un essai qui crie tous les jours n'est plus un essai. »*
+
 ### PHASE B — LES EMPLACEMENTS ET LES GARDIENS
 
 ```
