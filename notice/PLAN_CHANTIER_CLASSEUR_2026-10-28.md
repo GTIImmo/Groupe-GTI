@@ -1145,7 +1145,68 @@ code 1 a cause de **DEUX TABLES DE GEL DU 13/11** qu'elle n'a pas pu recopier en
 dans la liste des doublures descendues, elle n'est PAS dans les deux echecs. La recopie
 de 26bis trouvera donc une doublure a jour (mesure : 341 lignes, dont A2 sans numero).
 
-⚠ **CE QUE LE ROUGE COUTE QUAND MEME** : tant qu'il sonne, la sonde dit « 1 anomalie »
+✅⭐⭐ **LA CAUSE EST TROUVEE ET LE CORRECTIF EST POSE — 15/11, 20/20.** Ce n'est pas un
+hasard sur deux tables, c'est **mecanique**, et le tort est de moi : une table creee par
+`CREATE TABLE ... AS SELECT` **n'a aucune cle primaire**. Mesure chez Supabase :
+
+```
+   app_classeur_lien_avant_regel_20261113       AUCUNE cle   1re colonne ligne_classeur
+                                                12 422 lignes pour 4 688 valeurs
+   app_affaire_repartition_avant_classeur_...   AUCUNE cle   1re colonne app_chaine_id
+                                                 7 346 lignes pour 3 673 valeurs
+   app_affaire_ledger                           cle app_affaire_id  -> elle descend juste
+```
+
+`pull_from_supabase.py` l. 301 : `cle = cles[0] if cles else colonnes[0]`. Sans cle
+primaire, le parcours se fait donc **sur la premiere colonne**, qui se repete, avec un
+`gt` STRICT -- la frontiere d'une page tombe au milieu d'une valeur et **ce qui reste de
+cette valeur est saute**. C'est le defaut du 15/09, a l'identique, par une autre porte.
+
+⚠ **ET LE RATTRAPAGE EXISTANT NE POUVAIT PAS LES SAUVER** : il ne joue que sous
+`RELECTURE_ENTIERE_MAX = 5 000`. 7 346 et 12 422 sont **au-dessus**, d'ou l'erreur levee.
+
+**LE CORRECTIF, DEUX LIGNES** (`phase2/sync/pull_from_supabase.py`) : le parcours par rang
+d'emblee **aussi quand il n'y a AUCUNE cle**, exactement comme pour une cle composite --
+`composite = (not cles) or len(cles) > 1`, et `ordre_cle = list(cles) if cles else
+list(columns)`. Le journal le **dit** desormais (« AUCUNE cle primaire -- ordre sur ses
+N colonnes ») au lieu d'annoncer « cle composite ».
+
+⭐ **MESURE AVANT DE L'ETENDRE**, parce que l'offset n'a ici aucun index a suivre :
+**36 tables sans cle primaire, 109 201 lignes en tout**, la plus grosse a 31 151 lignes
+(32 pages) et au plus 26 colonnes. Negligeable a ces volumes.
+⛔ **ET ON NE RETIRE PAS CES GELS** pour faire taire l'alarme : une sauvegarde datee avant
+un geste destructif est une regle du projet. Le tort etait de les creer SANS cle primaire.
+
+**L'EPREUVE** : `phase2/sync/test_descente_sans_cle_primaire.py`, **20/20**, sans reseau --
+un faux lecteur qui imite PostgREST (`gt` pour la valeur, `offset` + ordre total pour le
+rang). Elle porte les deux temoins inverses, et « on ne casse rien » pour une cle simple
+et pour une cle composite.
+
+⛔⛔ **DEUX FOIS MON CRITERE ETAIT FAUX, ET JE LE DIS** :
+```
+   1. LES TROIS TEMOINS INVERSES ETAIENT VERTS A TORT a la premiere ecriture : avec
+      4 lignes par valeur et des pages de 100, chaque page tombait PILE sur une
+      frontiere de valeur -- le parcours par valeur ne sautait rien. Il faut que la
+      taille de page NE SOIT PAS un multiple des lignes par valeur (3 et 100).
+   2. J'ATTENDAIS UNE COPIE REFUSEE sous le plafond. C'est le code qui avait raison :
+      le rattrapage joue et SAUVE la table (« 1178/1200 -- relecture par rang »). Donc
+      sous 5 000 on ne perdait rien, on payait une SECONDE LECTURE COMPLETE chaque
+      nuit, en silence. C'est ca que le correctif economise ; la vraie perte etait
+      au-dela du plafond.
+```
+
+⭐ **AUCUN EFFET SUR LA NUIT QUI VIENT** : la descente passe a 07:45, soit APRES le run
+de 05:00. La recopie de 26bis travaillera donc sur la doublure descendue **aujourd'hui a
+07:11** -- celle ou `app_affaire_ledger` est passee sans encombre. Rien a redemarrer : la
+descente est une tache planifiee, elle prend le fichier tel quel.
+
+⚠ **SIGNALE, HORS PERIMETRE** : `phase2/checks/test_un_seul_verrou.py` est **rouge, et il
+l'etait DEJA avant ce correctif** -- mesure par restauration de la version HEAD puis
+relance (code 1 avant, code 1 apres, md5 du fichier verifie identique apres remise en
+place). Son seul echec est son propre temoin historique : « la version d'avant visait un
+AUTRE fichier -- elle visait deja le bon ». Un essai qui crie sur son passe.
+
+⚠ **CE QUE LE ROUGE COUTAIT** : tant qu'il sonne, la sonde dit « 1 anomalie »
 chaque jour et **un VRAI echec de descente ne se verrait plus** -- c'est exactement le
 defaut contre lequel le code de sortie a ete pose (commentaire de `run_descente.ps1` :
 « un exit 0 menteur avait cache 18 jours de lots en echec »). A traiter : soit comprendre

@@ -544,10 +544,36 @@ def copy_table(conn: sqlite3.Connection, reader: SupabaseReader, distant: str,
     #
     # ⚠ ET LE CONTROLE DE COMPLETUDE RESTE LE JUGE. Si ce parcours se trompait
     #   lui aussi, la table serait REFUSEE, pas posee a moitie.
-    composite = bool(cles) and len(cles or []) > 1
+    # ⭐ ET LE MEME REMEDE QUAND IL N'Y A AUCUNE CLE PRIMAIRE.        15/11/2026
+    #
+    #   La descente sortait en code 1 sur deux tables de GEL du chantier classeur :
+    #   7 344 lignes lues sur 7 346, et 12 413 sur 12 422. Cause : une table creee
+    #   par recopie (CREATE TABLE ... AS SELECT) n'a PAS de cle primaire, et le
+    #   `cle = cles[0] if cles else colonnes[0]` d'au-dessus prend alors LA PREMIERE
+    #   COLONNE -- qui se repete (4 688 valeurs distinctes pour 12 422 lignes). Le
+    #   parcours par valeur saute donc ce qui reste de la valeur coupee au bord d'une
+    #   page. C'est le defaut du 15/09 a l'identique, par une autre porte.
+    #
+    #   ⚠ MESURE AVANT DE L'ETENDRE, parce que l'offset n'a ici AUCUN index a
+    #     suivre (c'est tout l'argument du paragraphe au-dessus) : 36 tables sans
+    #     cle primaire, 109 201 lignes en tout, la plus grosse a 31 151 lignes --
+    #     32 pages -- et au plus 26 colonnes. Le balayage sequentiel que cela coute
+    #     est negligeable a ces volumes, et l'URL d'ordre reste courte.
+    #   ⛔ ET ON NE RETIRE PAS CES GELS POUR FAIRE TAIRE L'ALARME : une sauvegarde
+    #     datee avant un geste destructif est une regle du projet, pas un dechet.
+    #     Le tort etait de les creer SANS cle primaire, pas de les garder.
+    composite = (not cles) or len(cles) > 1
     if composite:
-        ordre_cle = list(cles or [])
-        print(f"        {distant} : cle composite ({'+'.join(ordre_cle)}) -- parcours par rang")
+        # SANS cle primaire, l'ordre total se prend sur TOUTES les colonnes : deux
+        # lignes egales sur tout sont interchangeables, donc « les 1 000 suivantes »
+        # ne peut plus rien omettre. C'est mot pour mot le cas que page_par_rang
+        # documente deja (« vue sans cle primaire dont la premiere colonne se repete »).
+        ordre_cle = list(cles) if cles else list(columns)
+        if cles:
+            quoi = "cle composite (%s)" % "+".join(ordre_cle)
+        else:
+            quoi = "AUCUNE cle primaire -- ordre sur ses %d colonnes" % len(ordre_cle)
+        print(f"        {distant} : {quoi} -- parcours par rang")
         rang = 0
         while True:
             while True:
