@@ -1062,6 +1062,28 @@ fait descendre. Il fallait bien un INSERT -- et c'est tout ce qu'est 26bis.
       en local, exactement la faute contre laquelle toute cette piece est ecrite.
 ```
 
+### ✅⭐ ET L'ESSAI SUR LES VRAIES DONNEES EST FAIT — 15/11, 15/15, SANS RIEN TOUCHER
+
+`phase2/checks/essai_reel_sur_copie_26bis.py`. La base reelle est ouverte en
+**`mode=ro` + `query_only`** et recopiee dans une base NEUVE batie avec le **vrai DDL**
+(contraintes et index compris) ; tout se passe dans un fichier temporaire. **LE CRITERE
+EST ECRIT DANS LE FICHIER, AVANT le resultat** — sinon on juge apres coup.
+
+```
+   PASSAGE 1  l etat d AUJOURD HUI (49 colonnes, personne n a la marque)
+              1 recopiee = 1001424 . 0 ecartee . temoin 0 -> 1 . genre et
+              annonce suivis (offre / 28351)
+   PASSAGE 2  l etat de LA NUIT PROCHAINE (50 colonnes, la marque est la)
+              1 recopiee . la colonne entre . les 3 obligatoires sont lues
+   PASSAGE 3  LA NUIT D APRES : 0 recopiee, 0 candidate, aucun doublon
+   ET DANS LES TROIS : 340 de la plage AVEC numero + 30 817 hors plage,
+              INCHANGES. C est le controle qui compte le plus.
+```
+
+⚠ Une imprecision de mon critere, dite : au passage 1 j attendais que le code SIGNALE la
+colonne manquante. Il ne le fait pas, et c est juste — le message ne sort que si le LOCAL
+a une colonne que la doublure n a pas. Ici personne ne l a : il n y a rien a signaler.
+
 ### ⏰ CE QUI RESTE POUR LA METTRE EN SERVICE
 
 ```
