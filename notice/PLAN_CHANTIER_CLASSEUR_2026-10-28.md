@@ -441,6 +441,93 @@ ne la cree pas), mais le run ecrit le SQLite local et un push existe.
 `a_supprimer_apres_mesure`. Une fois la mesure faite, jouer l'INVERSE.
 *« Un essai qui crie tous les jours n'est plus un essai. »*
 
+### ✅⭐⭐⭐ A2 EST MESUREE LE 15/11 A 07:58 — **LA LIGNE A SURVECU, LE TEMOIN EST POSITIF**
+
+⚠ **Ma note disait « demain matin » : c'etait FAUX, la nuit etait DEJA passee.**
+L'essai a ete pose a **00:35:39**, et les deux epreuves ont eu lieu la nuit meme : le run
+**a 04:00** (pas 05:00) et la descente **a 06:45** (pas 07:45), terminee a **07:11:32**.
+Les horaires que je recopiais etaient perimes ; ceux-ci sont lus dans `logs/scheduled/`
+(`quotidien_2026-11-15_04-00-02.log`, `descente_2026-11-15_06-45-02.log`).
+
+```
+                                          a la pose   apres le run ET la descente
+   la ligne 1001424 chez Supabase              1                1      OK INTACTE
+      last_seen_at                        00:35:39         00:35:39    OK PAS TOUCHEE
+      numero Hektor / present_in_hektor   NUL / false     NUL / false  OK
+   la plage app (>= 1 000 000)                341              341     OK
+      dont SANS numero Hektor                    1                1    OK
+   les 2 transactions d origine (20217,6544)    2                2     OK INTACTES
+   la chaine 14001                              3                3     compromis/active|offre/refused|vente/-
+   parties de la chaine                         8                8     OK rien cree
+   etiquettes de la chaine                      1                1     D2006-0007
+```
+
+⭐⭐⭐ **LE TEMOIN POSITIF, ET C'EST LUI QUI FAIT LA PREUVE** : **339 des 341 lignes de la
+plage app ont ete REVUES cette nuit** (`last_seen_at` au 15/11, le plus recent a
+**05:15:05**). Le run a donc bien **traverse la plage app** — il ne l'a pas ignoree — et
+il a **conserve** la seule ligne sans numero Hektor. *Un zero ne se croit pas sans temoin
+positif* : ici le positif existe.
+
+⚠ La 2e ligne non revue est **1001361** (offre `proposed` #33098, vue pour la derniere
+fois le **26/10**, soit il y a 20 jours, `present_in_hektor = true`). Elle survit aussi.
+Second temoin, gratuit : une ligne de la plage app non revue depuis 3 semaines **reste**.
+
+### ⛔⛔ ET LA MESURE A CORRIGE UNE ERREUR QUE J'AVAIS ECRITE : LE LOCAL EST LE MAITRE
+
+```
+   local  phase2.sqlite  : 31 157 lignes . 0 sans numero Hektor . 1001424 ABSENTE
+   Supabase              : 31 158 lignes . 1 sans numero Hektor . 1001424 PRESENTE
+   l ecart est de 1, EXACTEMENT notre ligne -- aucune autre divergence
+```
+
+⛔ **J'avais ecrit « `app_affaire_ledger` est serveur maitre »**, en m'appuyant sur
+`registre_depuis_console.py:23` (« creee par la descente : NON »). **Le code dit le
+contraire**, et il le dit en toutes lettres — `pull_from_supabase.py:29` :
+
+> « app_affaire_ledger, app_diffusion_target, [...] **-> le LOCAL en est le maitre,
+> Supabase la copie. Les descendre serait a l'envers.** »
+
+Les deux commentaires parlent de deux choses : la descente **ne recree pas** la table
+(vrai), **et** le flux normal va **du local vers Supabase** (vrai aussi). Le FAIT mesure :
+
+```
+   le flux         : local -> Supabase, par UPSERT (registre_depuis_console.py:408,
+                     « app_affaire_ledger?on_conflict=app_affaire_id »)
+   -> un UPSERT AJOUTE et MET A JOUR : il n efface JAMAIS ce qu il ne connait pas.
+      C est POUR CA que la ligne a survecu. Ce n est pas une bienveillance du run,
+      c est LA FORME DE L ECRITURE.
+   rien ne redescend : la descente REFUSE d ecrire une table qu elle n a pas creee
+                     (garde-fou `sb_pull_state`)
+```
+
+⭐⭐ **CE QUE CA CHANGE POUR LE LOT B (les 241 transactions), ET C EST A TRANCHER PAR
+FREDERIC** — je ne choisis pas :
+
+```
+   POSEES DANS SUPABASE SEULEMENT (ce que l essai vient de prouver faisable) :
+     OK  elles survivent au run et a la descente, indefiniment
+     OK  l APP les voit (le front lit Supabase)
+     NON MAIS tout le LOCAL les ignore : les scripts de nuit, les rapports, les
+         sentinelles et les mesures du chantier lisent phase2.sqlite
+     !!  dont `export_app_payload.py:2383` qui lit justement
+         « app_affaire_ledger WHERE present_in_hektor = 0 » EN LOCAL -- notre cas exact
+   POSEES DANS LE LOCAL, puis montees par le push :
+     OK  elles sont dans le maitre, donc vues par TOUT LE MONDE
+     !!  mais c est une ecriture dans la base du run, pas dans une copie
+   POSEES DANS LES DEUX :
+     !!  deux ecritures a tenir d accord, et un retour arriere a deux endroits
+```
+
+⏰ **LA MESURE QUI MANQUE, ET ELLE EST GRATUITE** : avant de retirer l'essai, regarder si
+**l'app affiche** la ligne 1001424 dans le registre des transactions du dossier
+**D2006-0007**. C'est la reponse a « une transaction sans numero Hektor est-elle
+utilisable ? », et elle ne coute aucune ecriture.
+
+⛔ **L'INVERSE N'EST PAS JOUE** : `..._INVERSE.sql` attend. Le retrait est une ecriture en
+production, donc il attend l'accord de Frederic — et il vaut mieux l'attendre apres la
+mesure de l'ecran ci-dessus.
+
+
 ### PHASE B — LES EMPLACEMENTS ET LES GARDIENS
 
 ```
