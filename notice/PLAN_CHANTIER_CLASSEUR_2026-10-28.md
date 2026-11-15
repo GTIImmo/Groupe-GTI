@@ -1084,10 +1084,23 @@ EST ECRIT DANS LE FICHIER, AVANT le resultat** — sinon on juge apres coup.
 colonne manquante. Il ne le fait pas, et c est juste — le message ne sort que si le LOCAL
 a une colonne que la doublure n a pas. Ici personne ne l a : il n y a rien a signaler.
 
-### ⏰ CE QUI RESTE POUR LA METTRE EN SERVICE
+### ✅ ELLE EST ALLUMEE -- 15/11/2026 a 17:46, SUR SON « GO »
 
 ```
-   1. ALLUMER : APP_RECOPIE_APP_SEULE=1 dans .env (HORS GIT) -> accord de Frederic
+   1. ✅ ALLUME : APP_RECOPIE_APP_SEULE=1 pose en fin de .env (HORS GIT), avec
+      son bloc de commentaire (pourquoi, retour arriere, quoi juger au matin).
+      Sauvegarde datee AVANT : .env.avant_recopie_app_seule_20261115_174624
+      (13 227 octets, md5 875f0ab05959d83e3f4be66ff0c8bdcb -- identique a
+       l'original, et le debut du fichier est INTACT apres l'ajout).
+      Fins de ligne : 0 CRLF avant, 0 CRLF apres -- le fichier est en LF seuls.
+      ⭐ LE CODE LE LIT, DANS LES DEUX SENS : recopie_app_seule_active() rend
+        True ; la meme fonction avec la valeur a 0 rend False ; rebranchee, True.
+      ⭐ Et l'epreuve reste a 39/39 AVEC l'interrupteur allume dans .env
+        (le controle 16c juge justement « elle ne tourne QUE si allume »).
+      ⭐⭐ L'ETAT DE DEPART EST MESURE ET ECRIT, pour que demain se juge contre
+        un chiffre et non contre un souvenir :
+            a retirer 0  .  plage AVEC numero 340  .  hors plage 30 817
+        Demain matin, ce doit etre  1  .  340  .  30 817  -- et rien d'autre.
    2. la nuit suivante fait tout dans l'ordre, sans rien lancer a part :
         refresh cree la colonne locale . push . LA RECOPIE . la redescente
    3. JUGER : le compte rendu porte `recopie_app_seule` -- recopiees 1, cles
@@ -1102,6 +1115,69 @@ n'est pas dans la liste interdite, serait effacee a la nuit suivante (lecon du 0
 un script du classeur doit encore enrichir ces lignes (honoraires, repartition, avis), ces
 colonnes-la doivent entrer dans la liste **avant** d'etre remplies.
 
+
+### ⚠⚠ LES ALERTES DU MONITEUR, LUES LE 15/11 A 17:00 — ET UN DEFAUT TROUVE
+
+Releve de 16:48, **83 lignes mesurees, 76 vertes**. Les sept autres, nommees :
+
+```
+   CRITICAL 3, MAIS UNE SEULE CAUSE
+     scheduledtasks:gti_descente   « GTI Descente : dernier resultat 1 »
+     scheduledtasks                l'agregat  « 11 suivies, 1 en anomalie »
+     monitor.summary               le resume
+   WARNING 3
+     data.transaction_disparue           1 -- offre . 28351 . 2006-04-01
+     data.affaire_sans_numero_hektor     1
+     data.negociateur_registre_signal   13 changements de la nuit du 14/11
+```
+
+**LE ROUGE EST A NOUS, ET C'EST DU CHANTIER CLASSEUR.** La descente du 15/11 sort en
+code 1 a cause de **DEUX TABLES DE GEL DU 13/11** qu'elle n'a pas pu recopier en entier :
+
+```
+   app_affaire_repartition_avant_classeur_20261113   7 344 lues / 7 346 attendues   (-2)
+   app_classeur_lien_avant_regel_20261113           12 413 lues / 12 422 attendues   (-9)
+   -> « l'ancienne copie est conservee » : le code est prudent, rien n'est abime
+   -> 1 453 680 lignes descendues dans 194 tables sur 196 : TOUT LE RESTE EST PASSE
+```
+
+⭐ **ET LA TABLE VITALE POUR LA NUIT EST PASSEE** : `app_affaire_ledger -> __sb` figure
+dans la liste des doublures descendues, elle n'est PAS dans les deux echecs. La recopie
+de 26bis trouvera donc une doublure a jour (mesure : 341 lignes, dont A2 sans numero).
+
+⚠ **CE QUE LE ROUGE COUTE QUAND MEME** : tant qu'il sonne, la sonde dit « 1 anomalie »
+chaque jour et **un VRAI echec de descente ne se verrait plus** -- c'est exactement le
+defaut contre lequel le code de sortie a ete pose (commentaire de `run_descente.ps1` :
+« un exit 0 menteur avait cache 18 jours de lots en echec »). A traiter : soit comprendre
+les 2 et 9 lignes manquantes, soit **retirer ces deux gels** -- ce sont des echafaudages
+du 13/11, et le chantier dit deja que le gel EST un echafaudage.
+
+**LES ORANGE : DEUX SUR TROIS SONT NOTRE COBAYE.** Mesure sur la doublure (miroir de
+Supabase) : la ligne qui declenche `data.transaction_disparue` est **1001424, l'essai A2**
+-- `offre`, annonce `28351`, `present_in_hektor = 0`, `last_seen_at` de cette nuit. Et
+`data.affaire_sans_numero_hektor` est la **meme ligne** vue par un autre lecteur. Le
+troisieme orange (registre des negociateurs) n'a rien a voir avec ce chantier.
+
+### ⛔⛔ LE DEFAUT, ET IL EST DE MOI : J'AI GARDE UNE PORTE SUR DEUX
+
+```
+   data.affaire_sans_numero_hektor  lit la VUE app_affaires_sans_numero_hektor
+                                    -> la garde transaction_origine Y EST (patch du 15/11)
+   data.transaction_disparue        lit la TABLE app_affaire_ledger EN DIRECT, par
+                                    present_in_hektor=is.false + last_seen_at>=48h
+                                    -> AUCUNE garde sur transaction_origine
+```
+
+⭐⭐ **C'est la lecon du projet qui mord : « une exclusion a part doit etre appelee par
+CHAQUE porte ».** Je croyais la plage app a l'abri (le marquage `present_in_hektor=0` a
+pour premiere garde `app_affaire_id < PLAGE_RESERVEE_APP`). **La mesure dit le contraire
+pour cette ligne** : A2 est dans la plage app ET porte `present_in_hektor = 0`. Je ne sais
+pas encore par quel chemin -- mais le fait est la, et il suffit.
+
+⚠ **CONSEQUENCE CHIFFREE** : si les 241 entrent avec `present_in_hektor = 0` comme A2,
+cette sentinelle criera **241 fois**, chaque nuit, pendant 48 h de fenetre glissante.
+⛔ **A TRAITER AVANT LES 241** -- pas avant cette nuit : A2 crie deja, un de plus ou de
+moins ne change rien, et la nuit qui vient ne pose aucune des 241.
 
 ### ⬜ CE QUI RESTE, DANS L'ORDRE CONTRAINT
 
