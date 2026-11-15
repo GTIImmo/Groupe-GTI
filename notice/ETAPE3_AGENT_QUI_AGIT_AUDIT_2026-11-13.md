@@ -379,5 +379,58 @@ Avant le 08/10 : 7 blocages (alors soldés en silence), 4 lectures en 403, 1 pas
 
 **Contrôle hors ligne** : `node --check` et `py_compile` verts ; essai qui joue **la vraie fonction** extraite du worker avec des faux (scratchpad `essai_date_apres_extraction.js`) : **7 verts** — interrupteur éteint (aucun appel Hektor), date inchangée (1 appel, pas de seconde relecture), le cas 63330 (seconde relecture, sa date au journal), API illisible, seconde relecture en erreur (non bloquant, journal `error`), sortie sans date, sortie tronquée. Taille réelle de la sortie de la relecture : **221 caractères au plus** sur 592 journaux de 30 jours (limite 1 800).
 
-**Pas fait, attend ses accords un par un** : pousser ; redémarrer les 4 services, file vide (0 pending, 0 running) ; allumer le réglage ; la preuve réelle (une saisie puis une seconde sur le même bien, avant la nuit — sur un bien qu'il choisit ; 63330 conviendrait, Hektor y dit 6).
+✅ **Poussé le 15/11 à 12:57 (`3d30082`, sur son « commit pousse »)**, avec dessous 5 commits du classeur d'une autre session (notes, un contrôle, des patchs SQL non appliqués), poussés sur son « Pousse ». Le worker n'avait reçu AUCUN autre changement depuis le démarrage des processus (10/11 18:47). ⚠ Ma tentative de redémarrage a été REFUSÉE par Windows (droits) et n'a rien arrêté : **le redémarrage, c'est lui** (mémoire worker-services-multiples-restart). ✅ **Redémarré par lui le 15/11, file vide** (0 en attente, 0 en cours, témoin 1 056 finis en 24 h) : **les 4 processus datent de 13:01:46-48**, après le fichier (15/11 00:11:37) — preuve par `CreationDate`, pas par l'annonce ; les 4 journaux disent `worker started`, **0 erreur depuis**. Le correctif tourne donc, ÉTEINT. 
+
+**Pas fait, attend ses accords un par un** : redémarrer les 4 services, file vide (0 pending, 0 running) ; allumer le réglage ; la preuve réelle (une saisie puis une seconde sur le même bien, avant la nuit — sur un bien qu'il choisit ; 63330 conviendrait, Hektor y dit 6).
 ⚠ Non prouvé tant que la preuve réelle n'est pas faite : que la seconde relecture ne fasse pas, elle, bouger la date (elle ne passe que par l'API, pas par la console — attendu, pas mesuré). Le journal le dira (`date_seconde_relecture` = `date_apres_extraction`).
+
+## 20. Correctif A allumé et éprouvé en réel (15/11, sur son « Fais le toi même ») — il tourne et ne gêne rien ; sa RÉPARATION n'a pas encore été vue
+
+- **Réglage allumé** : `app_setting.annonce_relire_date_apres_extraction = on`, écrit à 13:17:04 UTC (une ligne, refus prévu si la clé existait).
+- **Saisie en conflit d'hier effacée par l'écran** : bouton « Abandonner cette saisie » du bandeau rouge (rubrique « Le Bien », admin seul) → 0 saisie, archivée (`app_pending_resolution` n° 2073), pastille « Hektor · à jour ».
+- ⚠ **TROUVAILLE (pas traitée)** : l'abandon NE REMET PAS les valeurs de Hektor dans la fiche (`app_annonce_pending_resolve` archive puis supprime, rien d'autre). Et tant que la saisie était en conflit, les relectures (la nuit à 04:25, celle d'ouverture à 13:19) ont **gardé la valeur de la saisie (5) à l'écran** alors que Hektor disait 6 — le texte au négociateur dit pourtant « c'est cette version-là [Hektor] qui est affichée ». La carte de l'assistant a donc proposé « 5 » → « 5 » ; **non validée**. La fiche ne se corrige qu'à la relecture COMPLÈTE suivante. À décider par lui.
+- **Changement de valeurs annoncé** (à cause de ce qui précède) : 6 → **4**, puis 4 → **6** (au lieu de 6 → 5 → 6). Bien d'essai « ne pas diffuser ».
+- **Envoi 1 (4 pièces)** : carte « 5 » → « 4 », validée 13:22:53 ; travail 13:33:03-14 « mise à jour effectuée » ; relecture 13:33:17-59 ; **étape `date_apres_extraction` au journal : « Date inchangée par l'extraction » (14:33:13 avant et après)**.
+- **Envoi 2 (6 pièces), celui qui était bloqué hier** : carte « 4 » → « 6 » (l'avant relu chez Hektor), validée 13:34:58, base 14:33:13 ; travail 13:45:02-11 **`updated`, aucun conflit**, « mise à jour effectuée » ; relecture 13:45:20-59, **« Date inchangée » (14:45:11)**. État final : **Hektor 6, fiche 6, date 14:45:11, 0 saisie**. ✅
+
+**Ce que ça prouve** : le correctif est en service (l'étape s'écrit au journal), il ne coûte qu'une lecture quand la date ne bouge pas, et il ne gêne rien ; une seconde modification juste après la première passe.
+⛔ **Ce que ça NE prouve PAS** : sa réparation. Les deux extractions d'aujourd'hui n'ont PAS fait bouger la date — alors que celle d'hier, sur le même bien, l'avait fait (16:12:08 → 16:12:27). La seconde relecture ne s'est donc jamais déclenchée. ⚠ Et l'hypothèse « c'est l'extraction qui fait bouger la date » s'affaiblit : 2 extractions sur 2 aujourd'hui sans effet ; la cause du saut d'hier reste NON trouvée (la mesure 7 sur 84 tient, l'explication non).
+⏳ **À surveiller** : la première ligne `date_apres_extraction` « La date a bougé … seconde relecture » au journal, et que `date_seconde_relecture` = `date_apres_extraction`. Requête : `select created_at, payload_preview from app_console_job_log where step='date_apres_extraction' and message like 'La date a bouge%'`.
+
+## 21. Fin de la preuve réelle du lot 4 (15/11, 19:34-19:51 UTC, ses « 1 oui / 2 oui ») — photos et diffusion PROUVÉES ; ⭐ et le correctif A a RÉPARÉ pour la première fois
+
+Par son Chrome et sa session, comme au §17. File du worker vide au départ.
+
+**Photos, sur 24935** (mandants « caroline TEST 1 | Franck TEST1 », Estimation, non diffusable). Départ : 4 visibles, ordre 125159 (couverture), 480673, 480826, 480827.
+- Masquer 480827 : carte validée 19:34:46 ; **second clic 409** ✅ ; travail 19:34:47-35:12 `done`, le worker relit les deux galeries chez Hektor : 3 visibles, 1 masquée. ✅
+- Réafficher 480827 : 19:36:08-32 `done`, 4 visibles, 0 masquée. ✅
+- Déplacer 480827 au rang 2 : 19:37:18-31 `done` → 125159, 480827, 480673, 480826 ; puis au rang 4 : 19:38:58-39:07 → ordre d'origine. ✅
+- Couverture 480673 : 19:40:28-37 → 480673, 125159, … ; puis 125159 : 19:42:35-40 → **ordre d'origine**. ✅
+- État final : **identique au départ** (4 visibles, même ordre). 0 travail en attente.
+- ⚠ Vu, pas traité : (a) 3 fois sur 6, « boîte publique NON rafraîchie » (`app_photos_remplir_adresses_app` coupée par la limite de durée de la base) — la nuit la remet ; sans effet ici (bien non diffusable). (b) `photo_url_listing` de 24935 est devenue VIDE après les relectures (2 biens sur 13 552 dans ce cas : 24935 et 63330, tous deux relus aujourd'hui) ; l'écran affiche d'abord `photo_url_listing_app` (api.ts:2918), qui est remplie → rien de visible. Cause non cherchée.
+
+**Diffusion, sur 62963** (« TEST C15 entrepot depuis l app - a supprimer », mandant « Sophie TEST MANDANT 25-08 », diffusable, Actif, 0 portail). Portail choisi par lui : **Paper** (n° commun 20).
+- Ajouter : carte « PUBLIER … sur Paper — les autres portails ne bougent pas », validée 19:44:12 → `en_ligne_apres: [paper]`. **Témoin chez Hektor, lu à part** (`DetailedBroadcastList` v2, les 79 pages, 1 568 lignes sur 1 568) : 62963 sur `paper`, `exportStatus: pending`. ✅
+- Retirer : validée 19:50:27 → `en_ligne_apres: []`. Relu chez Hektor : **1 567 lignes sur 1 567, 62963 absent de toute passerelle**. ✅
+- État final : diffusable 1 et statut Actif inchangés, 0 portail. Seule trace : une ligne `app_diffusion_target` paper `disabled` (il n'y en avait aucune au départ) — c'est ce que fait l'écran (`saveDiffusionTargets`).
+- Script du témoin (lecture seule) : scratchpad `annonce_sur_passerelles.py`.
+
+**Brouillon** : sa décision, ses mots (15/11) : « geste du brouillon pas nécessaire, uniquement ajout annonce ou estimation cela suffit ». Non éprouvé, rien changé dans le code — ✅ précisé le 15/11 : « B » = retirer seulement la carte (§22).
+
+⭐⭐ **Le correctif A a réparé (§19-20)** : relecture de 19:35 sur 24935 (après le masquage) — date lue 20:35:00, **date d'après l'extraction 20:35:33** → « La date a bougé … seconde relecture » → `date_seconde_relecture` = 20:35:33. La seconde relecture ne fait donc PAS bouger la date à son tour (la réserve du §19 tombe). Les 6 autres relectures de la soirée : « Date inchangée ». Mesure du jour : 1 saut sur 9 extractions (63330 ×2, 24935 ×7).
+
+➡ **Le lot 4 (4a + 4b) est prouvé en entier**, sauf l'activation d'un brouillon (décision ci-dessus).
+
+## 22. La carte « activer un brouillon » RETIRÉE de l'assistant (15/11, sa réponse « B ») — en local, pas poussé
+
+**Sa décision** : parmi A (retirer + ajouter « créer une annonce / une estimation »), B (retirer seulement), C (ne rien changer), il a répondu **« B »**. Rien n'est ajouté.
+
+**Ce qui change (4 fichiers, rien d'autre)** :
+- `backend/app/services/assistant_gestes.py` : `_brouillon`, `preparer_activer_brouillon`, `executer_activer_brouillon` et l'entrée `Geste("activer_brouillon")` retirés (un commentaire daté reste à leur place) ; le refus « c'est un BROUILLON » ne renvoie plus à la carte, il dit que l'activation se fait depuis sa fiche dans l'application.
+- `backend/app/services/assistant_service.py` : dans les consignes, « activer un brouillon » passe de la liste de SES gestes à celle de ce qu'il ne peut pas faire.
+- `backend/tests/test_assistant_gestes.py` et `test_assistant_ia.py` : l'essai d'activation devient un contrôle d'ABSENCE ; 20 → 19 gestes.
+
+**Ce que ça pourrait casser ailleurs** : rien à l'écran (le geste de l'écran, `handleExitDraftAnnonce`, n'est pas touché). Aucune carte de ce type n'a jamais été proposée (mesuré : 0 dans `app_assistant_action`) ; une carte d'un geste disparu est de toute façon refusée au clic (403, `GESTES.get` dans la route `valider`).
+
+**Contrôle hors ligne** : 144 + 59 + 73 verts, 0 rouge. Témoin inverse : le contrôle d'absence, joué sur la version d'avant (`git archive HEAD`), est ROUGE (20 gestes). ✅
+**Pas fait, attend son accord** : commit et push (Render se redéploie seul) ; il n'y a rien à redémarrer (pas de worker).

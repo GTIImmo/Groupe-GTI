@@ -951,7 +951,7 @@ def _hors_catalogue(ctx: ContexteAssistant, numero: str) -> None:
     if _lire(ctx, "app_brouillon_annonce_index_current", {"hektor_annonce_id": f"eq.{numero}", "limit": "1",
                                                           "select": "hektor_annonce_id"}):
         raise Refus(f"L'annonce {numero} est un BROUILLON : elle ne se modifie pas tant qu'elle n'est pas activée "
-                    "(proposer_activer_brouillon).")
+                    "(l'activer se fait depuis sa fiche dans l'application, pas par l'assistant).")
 
 
 def _bien_vivant(ctx: ContexteAssistant, hektor_annonce_id: Any) -> dict[str, Any]:
@@ -1198,41 +1198,8 @@ def executer_deplacer_photo(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[s
     return {"app_dossier_id": bien["app_dossier_id"], "photo": p["photo"], "rang": int(p["rang"]), "job_id": r.get("job_id")}
 
 
-# Activer un brouillon = handleExitDraftAnnonce (App.tsx:17147) -> createExitHektorDraftAnnonceJob (api.ts:10688).
-# Le statut ne bouge pas, « diffusable » non plus ; la base juge (admin, manager, ou le négociateur sur SES biens).
-def _brouillon(ctx: ContexteAssistant, hektor_annonce_id: Any) -> dict[str, Any]:
-    numero = str(hektor_annonce_id or "").strip()
-    if not numero.isdigit():
-        raise Refus("Donne le numéro d'annonce du brouillon.")
-    lignes = _lire(ctx, "app_brouillon_annonce_index_current", {
-        "hektor_annonce_id": f"eq.{numero}", "limit": "1",
-        "select": "hektor_annonce_id,app_brouillon_id,numero_dossier,titre_bien,statut_annonce"})
-    if not lignes:
-        raise Refus(f"L'annonce {numero} n'est pas parmi les brouillons que tu peux voir.")
-    return lignes[0]
-
-
-def preparer_activer_brouillon(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[str, dict[str, Any]]:
-    b = _brouillon(ctx, p.get("hektor_annonce_id"))
-    statut = str(b.get("statut_annonce") or "").strip()
-    if not statut:
-        raise Refus("Ce brouillon n'a aucun statut : il n'y a rien à activer. Il faut terminer la saisie dans Hektor.")
-    return (f"ACTIVER le brouillon {b['hektor_annonce_id']} « {b.get('titre_bien') or ''} » : il rejoint le catalogue "
-            f"« {statut} », sans être diffusé. ⚠ Pas de retour en arrière depuis l'application.",
-            {"hektor_annonce_id": int(b["hektor_annonce_id"])})
-
-
-def executer_activer_brouillon(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[str, Any]:
-    b = _brouillon(ctx, p.get("hektor_annonce_id"))  # encore un brouillon AU CLIC
-    if not str(b.get("statut_annonce") or "").strip():
-        raise Refus("ce brouillon n'a plus de statut")
-    lignes = _ecrire(ctx, "POST", "app_console_job", {
-        "job_type": "exit_hektor_draft_annonce", "app_dossier_id": b["app_brouillon_id"],
-        "hektor_annonce_id": str(b["hektor_annonce_id"]),
-        "payload_json": {"numero_dossier": b.get("numero_dossier"), "titre_bien": b.get("titre_bien"),
-                         "statut_annonce": b.get("statut_annonce"), "source": "assistant"},
-        "priority": 20, "requested_by": ctx.user_id})
-    return {"hektor_annonce_id": b["hektor_annonce_id"], "job_id": (lignes or [{}])[0].get("id")}
+# ⛔ Activer un brouillon : RETIRÉ de l'assistant le 15/11/2026 (décision de Frédéric, « B » : « geste du brouillon
+#   pas nécessaire »). Le geste reste à l'écran (handleExitDraftAnnonce, App.tsx:17147). Note ETAPE3 §22.
 
 
 # ── LOT 4b (14/11/2026) : un portail, sur un bien DIFFUSABLE ───────────────────
@@ -1484,12 +1451,6 @@ GESTES: dict[str, Geste] = {g.nom: g for g in (
                    "photo": {"type": "string", "description": "numéro de la photo"},
                    "rang": {"type": "integer", "description": "nouvelle place, à partir de 1"}}),
           preparer_deplacer_photo, executer_deplacer_photo),
-    Geste("activer_brouillon",
-          "Prépare l'ACTIVATION d'un brouillon : il rejoint le catalogue de son statut, sans être diffusé. Pas de retour "
-          "en arrière depuis l'application.",
-          TOUS_LES_ROLES,
-          _schema({"hektor_annonce_id": {"type": "integer", "description": "numéro d'annonce du brouillon"}}),
-          preparer_activer_brouillon, executer_activer_brouillon),
     # lot 4b
     Geste("portail",
           "Prépare : PUBLIER (publier = true) ou RETIRER (publier = false) une annonce DIFFUSABLE sur UN portail. Les autres "

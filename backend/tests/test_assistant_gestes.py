@@ -774,20 +774,9 @@ voir(next(a for a in appels if a["chemin"] == "rpc/app_console_photos_reordonner
 reset(photos=[dict(x) for x in PHOTOS], rep_rpc={"ok": False, "erreur": "droits_insuffisants"})
 voir(refuse(lambda: ges.executer_deplacer_photo(nouveau_ctx(), pd), "droits"), "un refus de la base (ok = false) devient un refus, jamais un succès")
 
-reset(bien=[], brouillons=[{"hektor_annonce_id": 63500, "app_brouillon_id": 7589119, "numero_dossier": "V9", "titre_bien": "T3",
-                            "statut_annonce": "Actif"}])
-resume, pb = ges.preparer_activer_brouillon(nouveau_ctx(), {"hektor_annonce_id": 63500})
-voir("« Actif »" in resume and "Pas de retour" in resume and not ecritures_metier(),
-     "la carte dit le catalogue d'arrivée et l'absence de retour arrière ; rien d'écrit")
-appels.clear()
-ges.executer_activer_brouillon(nouveau_ctx(), pb)
-job = next(a for a in appels if a["chemin"] == "app_console_job")
-voir(job["entetes"]["Authorization"] == "Bearer " + JETON and job["corps"]["job_type"] == "exit_hektor_draft_annonce"
-     and job["corps"]["app_dossier_id"] == 7589119 and job["corps"]["requested_by"] == UID,
-     "au clic : le travail de l'écran, avec SON jeton, sur NOTRE numéro de brouillon (la base juge les droits)")
-reset(bien=[], brouillons=[{"hektor_annonce_id": 63501, "app_brouillon_id": 1, "statut_annonce": ""}])
-voir(refuse(lambda: ges.preparer_activer_brouillon(nouveau_ctx(), {"hektor_annonce_id": 63501}), "aucun statut"),
-     "un brouillon sans statut : rien à activer (règle de l'écran)")
+voir("activer_brouillon" not in ges.GESTES and not hasattr(ges, "preparer_activer_brouillon")
+     and not any("exit_hektor_draft_annonce" in str(g) for g in ges.GESTES.values()),
+     "⛔ activer un brouillon : RETIRÉ de l'assistant le 15/11 (décision « B ») -- aucune carte ne peut le proposer")
 
 print("9ter) LOT 4b : UN portail, sur un bien diffusable -- le geste de la case de la vue Publicité")
 BIEN_DIF = {**BIEN, "agence_nom": "Firminy", "diffusable": "1", "portails_resume": "leboncoinDirect", "nb_portails_actifs": 1}
@@ -836,8 +825,8 @@ voir(refuse(lambda: ges.executer_portail(nouveau_ctx(), pp), "passerelle fermée
      "Hektor refuse : on le DIT, et le résumé n'est pas reporté")
 
 print("10) aucune fonction de geste ne fait autre chose que proposer")
-voir(all(f.nom.startswith("proposer_") for f in ges.FONCTIONS_GESTES) and len(ges.FONCTIONS_GESTES) == 20,
-     "20 gestes, tous « proposer_ » : le modèle n'a AUCUNE fonction qui exécute")
+voir(all(f.nom.startswith("proposer_") for f in ges.FONCTIONS_GESTES) and len(ges.FONCTIONS_GESTES) == 19,
+     "19 gestes (le brouillon retiré le 15/11), tous « proposer_ » : le modèle n'a AUCUNE fonction qui exécute")
 voir(not any(f.nom.startswith("proposer_") for f in ges.FONCTIONS_LECTURE_LOT3), "les 2 lectures du lot 3 ne proposent rien")
 voir(not any(f.nom.startswith("proposer_") for f in ges.FONCTIONS_LECTURE_LOT4), "les 3 lectures du lot 4 ne proposent rien")
 voir([f.nom for f in cat.fonctions_du_role("commercial") if f.nom == "proposer_note_transaction"] == [],

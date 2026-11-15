@@ -172,7 +172,7 @@ TOUTES = ["qui_suis_je", "decrire", "chercher", "compter", "fiches_biens", "note
           "proposer_archiver_contact", "proposer_archiver_recherche",  # lot 2 (13/11) ; la note = direction
           "proposer_creer_rdv", "proposer_deplacer_rdv", "proposer_supprimer_rdv", "proposer_email_interne",  # lot 3 (13/11)
           "proposer_modifier_bien", "proposer_couverture_photo", "proposer_visibilite_photo",  # lot 4 (14/11)
-          "proposer_deplacer_photo", "proposer_activer_brouillon", "proposer_portail",
+          "proposer_deplacer_photo", "proposer_portail",  # activer un brouillon : retiré le 15/11
           "lire_mon_agenda", "apercu_rapprochement", "lire_photos_bien", "lire_portails_bien", "rediger_annonce"]
 voir([f.nom for f in cat.fonctions_du_role("commercial")] == TOUTES, "un négociateur a la fonction témoin et les 6 lectures de l'étape 2")
 voir(cat.fonctions_du_role("inconnu") == [], "un rôle inconnu n'a aucune fonction")
