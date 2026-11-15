@@ -148,11 +148,77 @@ def charger_alias(cl) -> str:
 
 #: ⭐ DE VRAIS ANCIENS NEGOCIATEURS, ABSENTS DE NOTRE REGISTRE (Frederic, 29/10).
 #:   ⛔ NE PAS les traiter comme des erreurs : c'est l'annuaire qui est incomplet.
-ANCIENS_HORS_REGISTRE = {
+ANCIENS_REPLI = {
     "ABED", "ALLEMAND", "BERTRAND", "AGRAIN", "PETROSINO", "BRUNON", "LAUGIER",
     "EXBRAYAT", "COMMERE", "ADAMO", "LEFAURE", "PITIOT", "BALIQUE",
     "FRANCHINI Marjorie",
 }
+
+#: Rempli par charger_anciens_hors_registre() au demarrage. Jamais lu avant.
+ANCIENS_HORS_REGISTRE: set[str] = set(ANCIENS_REPLI)
+
+
+def charger_anciens_hors_registre(cl) -> str:
+    """Ne garde en « hors registre » que les noms VRAIMENT absents de l'annuaire.
+
+    ⛔⛔ POURQUOI, 15/11/2026 -- la question de Frederic : « les negociateurs ont
+      deja ete faits, verifie ! ». Il avait raison. **13 des 14 noms d'ANCIENS_REPLI
+      SONT dans `app_negociateur_personne`** depuis l'etape 1 du registre ; seul
+      PITIOT manque encore. Mais la constante n'avait pas bouge, donc le rapport
+      rangeait leurs **24 lignes en HORS et ne les comparait JAMAIS**, tout en
+      annoncant tranquillement « 24 anciens absents de notre registre » -- en
+      lisant sa propre constante, pas la base.
+      ⭐ Une liste en dur ne se met pas a jour toute seule, et elle MENT EN
+        SILENCE. Meme famille que le libelle fige du worker (21/10).
+      ⛔ Et le script qui POSE, lui, n'a jamais eu cette notion : les 13 ont bien
+        leurs 30 lignes dans app_affaire_repartition. Le defaut etait dans la
+        LECTURE, pas dans le travail.
+
+    ⭐ PERIMETRE VOLONTAIREMENT ETROIT : on ne teste QUE les noms d'ANCIENS_REPLI.
+      Tester tous les noms du classeur contre l'annuaire changerait le verdict de
+      4 702 lignes d'un coup, et rien ne permet d'en predire l'effet.
+
+    ⚠ ON EXIGE LE PATRONYME, pas un mot quelconque : « FRANCHINI Marjorie » ne
+      doit pas etre declaree presente parce qu'une autre Marjorie existe. Le
+      patronyme est le PREMIER mot (la liste est ecrite « NOM » ou « NOM Prenom »).
+
+    Rend une phrase a IMPRIMER, qui NOMME ceux qu'elle a trouves -- la
+    transparence est la garde : un faux positif se voit a la lecture.
+    ⛔ Sur echec, on garde les noms codes et on le DIT.
+    """
+    global ANCIENS_HORS_REGISTRE
+    try:
+        gens = lire_tout(cl, "app_negociateur_personne", "nom,prenom", "nom.asc")
+    except Exception as exc:  # noqa: BLE001
+        ANCIENS_HORS_REGISTRE = set(ANCIENS_REPLI)
+        return ("anciens : LECTURE DE L'ANNUAIRE RATEE (%s) -> REPLI sur les %d noms "
+                "codes. Ce n'est PAS un vert."
+                % (type(exc).__name__, len(ANCIENS_REPLI)))
+    if not gens:
+        ANCIENS_HORS_REGISTRE = set(ANCIENS_REPLI)
+        return ("anciens : l'annuaire est VIDE -> REPLI sur les %d noms codes. "
+                "A verifier." % len(ANCIENS_REPLI))
+
+    par_personne = [mots_du_nom("%s %s" % (g.get("nom") or "", g.get("prenom") or ""))
+                    for g in gens]
+    absents: set[str] = set()
+    presents: list[str] = []
+    for nom in ANCIENS_REPLI:
+        premier = nom.split()[0] if nom.split() else ""
+        patronyme = mots_du_nom(premier)
+        if patronyme and any(patronyme & m for m in par_personne):
+            presents.append(nom)
+        else:
+            absents.add(nom)
+    ANCIENS_HORS_REGISTRE = absents
+    phrase = ("anciens : %d des %d noms codes sont DANS l'annuaire (%d personnes "
+              "lues) -> ils redeviennent COMPARABLES"
+              % (len(presents), len(ANCIENS_REPLI), len(gens)))
+    if presents:
+        phrase += "\n   presents : %s" % ", ".join(sorted(presents))
+    if absents:
+        phrase += "\n   ⛔ VRAIMENT HORS REGISTRE : %s" % ", ".join(sorted(absents))
+    return phrase
 
 #: Ni une personne, ni un negociateur : un apporteur d'affaires.
 PAS_UNE_PERSONNE = {"meilleursagents", "GTI", "DENOPCE 1/2"}
@@ -517,7 +583,8 @@ def verdict(a_classeur, a_nous, egal) -> str:
 
 def main() -> int:
     cl = client()
-    print(charger_alias(cl))   # ⭐ AVANT tout calcul : le rapport s'en sert au ⑧
+    print(charger_alias(cl))
+    print(charger_anciens_hors_registre(cl))   # ⭐ AVANT tout calcul : le rapport s'en sert au ⑧
     entetes, lignes = charger_classeur()
     idx = {n: i for i, n in enumerate(entetes)}
 

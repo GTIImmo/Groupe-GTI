@@ -112,6 +112,290 @@ refus fait à la main chez Hektor et le nôtre. **NON MESURÉ, c'est une hypoth�
 
 ## 📋 LES ÉTAPES
 
+## ⭐⭐⭐ LE PLAN DETAILLE DU 15/11 — **LA LISTE QUI FAIT FOI**
+
+> Ecrit a la demande de Frederic : *« redonne le plan detaille en faisant attention
+> de rien oublier pour le memoriser »*. **Il remplace mes listes des jours
+> precedents**, qui ont oublie quatre taches deja ecrites ailleurs (V, Z, les
+> emplacements, la fenetre du Sheet) et portaient une reserve PERIMEE (les
+> negociateurs, deja faits — c'est lui qui a eu le doute, et il avait raison).
+> ⛔ **LA REGLE, posee par A15 le 09/11 et que je n'avais pas suivie** : avant de
+> mesurer une colonne, lire DANS CET ORDRE les decisions du 02/11, A5, A6 § 3,
+> A4bis, puis ce plan. **Et ne jamais ouvrir un second registre de decisions.**
+
+### ⭐ LES FAITS ETABLIS, A NE PLUS REPERDRE
+
+```
+LA PLAGE APP            app_affaire_id >= 1 000 000, sequence app_affaire_id_app_seq.
+                        « une affaire saisie dans l'app existe avant que Hektor ne la
+                        numerote, ET PARFOIS SANS QU'IL LA NUMEROTE JAMAIS » (20/08).
+                        340 lignes y vivent -- mais TOUTES avec un numero Hektor.
+LA CLASSE A             une colonne que LE PUSH N'ENVOIE JAMAIS (liste dans
+                        affaire_ledger.py, ~l. 2876-2900). Temoins vivants :
+                        jours_validite 358 . taux_honoraires 5.
+⛔ LE CARNET DES         app_affaire_champ_app N'EST PAS UN MAGASIN : c'est une FILE
+   AFFAIRES             D'ENVOI vers Hektor -- « une saisie cherche a le rejoindre et
+                        DISPARAIT une fois arrivee ». NE PAS s'en servir pour garder.
+⭐⭐ TROIS CASES         F  -> app_affaire_condition (+ app_condition_catalogue)
+   EXISTENT DEJA        G  -> app_affaire_note
+                        Z  -> date_annulation_app + motif_annulation_app (10/11, VIDES)
+                        ✅ AUCUNE des trois ne descend ni ne remonte : la nuit ne les
+                          connait pas. Seuls l'app et les patchs y ecrivent.
+                        ⭐ Et HEKTOR NE REND AUCUNE CONDITION SUSPENSIVE : 0 sur 18 589
+                          lignes de app_affaire_console -> aucun conflit possible.
+⛔ 3 TRANSACTIONS       1001388, 1001391, 1001394 ont DISPARU des deux bases, sans
+   DISPARUES            sauvegarde, sans journal, sans trace de qui. Leurs 5 conditions
+                        et 6 notes sont restees ORPHELINES.
+L ETAT DES ECARTS       8 494 au total sur 4 702 lignes rattachees, dont ~5 480 decides
+                        « RIEN » (Nature 1 650, Ville 1 646, Notaire 1 373, Agence 493,
+                        Acquereur 113, Vendeur 64, Etat 71, product_ref 70).
+LES TRANSACTIONS        le Sheet 12 634 dates . nous 12 393 . IL MANQUE 241
+   MANQUANTES           144 offres . 62 compromis . 35 ventes      (98,1 % deja chez nous)
+                        + 10 transactions presentes SANS leur date (4 offres, 6 compromis)
+```
+
+### PHASE A — MESURER. **Rien d'ecrit en base.**
+
+```
+A0 ⬜  RELANCER LE RAPPORT DU GEL -- une commande, et c'est le PREMIER geste.
+       Il remet a jour TOUS les chiffres. ⚠ Pourcentage 1 affiche encore 48 ecarts
+       et Negociateur 1 dix-huit, alors que le lot 1 a ete pose les 13-14/11 : le
+       rapport du 14/11 a pu etre produit AVANT la pose. Tant qu'il n'est pas
+       relance, LE LOT 1 N'EST PAS CLOS A 100 %.
+A1 ⬜  LIRE LE SHEET sur les 8 colonnes que le rapport NE COUVRE PAS :
+       F G Y AA Z AH AI AJ. Le rapport ne porte que 21 colonnes sur 38 -> pour ces
+       huit, je n'ai AUCUN ecart mesure, seulement les comptages du 02/11.
+A2 ⬜  L'ESSAI D'UNE NUIT (= 3.3zero). Une transaction dans la plage app, SANS
+       numero Hektor, sur un bien NON VIVANT. Mesure au matin **sur LES DEUX
+       bases** (Supabase ET phase2.sqlite). ⛔ OBLIGATOIRE : aucune ligne de la
+       plage n'a jamais vecu sans numero Hektor, et 3 ont disparu sans trace.
+A3 ⬜  LA FENETRE DU SHEET : l'apparieur ne lit que `A1:AL6000`. Le classeur en
+       portait 4 783 -> ~1 200 lignes de marge, puis PERTE SILENCIEUSE du bas.
+       Idem pour toute colonne a droite de AL. Ecrit le 31/10, jamais corrige.
+A4 ⬜  L'EFFET DE BORD D'UNE VENTE CREEE : chez nous c'est la vente qui fait
+       passer un dossier a l'etat VENDU. Mesurer ce que deplacent 35 ventes neuves
+       (etat affiche, pilotage, statistiques, chainage) AVANT de les poser.
+       ⭐ Les offres et compromis n'ont pas ce risque.
+A5 ⬜  LES 1 062 LIGNES SANS ROLE 'vente' -- prealable de 3.4 : ou va la valeur
+       de Y / AA quand la transaction qui devrait la porter n'existe pas ?
+A6 ⬜  LES 85 LIGNES NON RATTACHEES : notre base n'en garde que l'identifiant.
+       Contenu inconnu -> jusqu'a ~250 transactions de plus, hors de tous mes
+       chiffres. (= le prealable n0 4 du 29/10, et le point 4 de A15.)
+```
+
+### ✅ A0 FAIT LE 15/11 — LE RAPPORT EST RELANCE, ET IL A TROUVE UN DEFAUT
+
+```
+sortie : notice/A4_RAPPORT_GEL_TOUS_LES_CHAMPS_2026-11-15.csv  (4 702 lignes)
+         notice/A4_RAPPORT_GEL_ECARTS_SEULS_2026-11-15.csv     (3 906 lignes)
+```
+
+**⛔ LES 48 ET 18 ECARTS NE SONT PAS PERIMES.** Je pensais que le rapport du 14/11
+avait pu etre produit avant la pose du lot 1 : **non**. Relance sur les donnees du
+jour, `Pourcentage 1` donne **exactement 48** et `Negociateur 1` **exactement 18**.
+➡ **LE LOT 1 N'EST DONC PAS CLOS A 100 %.**
+
+**⭐ MAIS LES 48 SE DECOMPOSENT, ET UN TIERS N'EN SONT PAS :**
+
+```
+   41  vrai ecart de fond        le classeur dit 75, nous 100
+    5  MEMES valeurs, ORDRE different -> FAUX ECART
+         ex. QP26TS7E : classeur « 25 », nous « 75 » -- et nos parts sont 75 ET 25
+    2  une ligne portant un negociateur de la LISTE EN DUR (ci-dessous)
+```
+
+⚠ **ET LA CAUSE PROBABLE DES 41 EST LA MEME, EN PLUS SUBTILE** : le rapport compare
+`Pourcentage 1` du classeur a **notre premier pourcentage par RANG**, alors que le
+lot 1 a pose par **COTE** (`entree` 4 469 lignes / `sortie` 4 696). Les deux ordres
+n'ont aucune raison de coincider. ⬜ **A MESURER avant de toucher a quoi que ce
+soit : comparer les ENSEMBLES de parts, pas les positions.**
+
+### ⛔⛔ LE DEFAUT NEUF : UNE LISTE DE NOMS ECRITE EN DUR, ET ELLE EST PERIMEE
+
+`phase2/checks/rapport_gel_tous_les_champs.py:151` porte **`ANCIENS_HORS_REGISTRE`**,
+un ensemble FIGE de 14 noms. Le rapport **ne consulte pas l'annuaire** : il range ces
+noms en « HORS », donc leurs lignes ne sont **ni comparees ni rapatriables**.
+
+```
+MESURE DU 15/11, nom par nom, dans app_negociateur_personne :
+   13 des 14 SONT DANS L'ANNUAIRE  -> le script les ecarte A TORT
+      ABED . ALLEMAND . BERTRAND . AGRAIN . PETROSINO . BRUNON . LAUGIER
+      EXBRAYAT . COMMERE . ADAMO . LEFAURE . BALIQUE . FRANCHINI Marjorie
+    1 MANQUE VRAIMENT : **PITIOT** (0 ligne dans l'annuaire)
+```
+
+⭐ **C'est la question de Frederic du 15/11 qui a mis ca au jour** (« les negociateurs
+ont deja ete faits, verifie ! »). Il avait raison : **ils sont faits**. Ce qui n'etait
+pas fait, c'est de **retirer la liste en dur** — et personne ne pouvait le voir, parce
+que le rapport continuait a annoncer « 24 anciens absents de notre registre » en
+lisant sa propre constante.
+
+⬜ **LE CORRECTIF (additif, lecture seule)** : faire lire `app_negociateur_personne`
+au lieu de la constante, et ne garder en « HORS » que ceux qui y manquent vraiment —
+soit PITIOT aujourd'hui. Puis relancer : les 24 lignes redeviennent comparables.
+⚠ Meme famille que le libelle fige du worker (21/10) : **une liste en dur ne se met
+pas a jour toute seule, et elle mentit en silence.**
+
+### ⚠ LES 18 ECARTS DE `Negociateur 1` — NOTRE COTE PORTE L'AGENCE, PAS UNE PERSONNE
+
+```
+   classeur CHANTUREAU   nous FIRMINY GROUPE GROUPEGTI GROUPEGTIFIRMINY
+   classeur ITIM         nous FIRMINY GROUPE GROUPEGTI GROUPEGTIFIRMINY
+   classeur THOMAS       nous ARTHUR ARTHURVIVIER MARTHUR MARTHURVIVIER
+   classeur HERITIER     nous COUDERT NICOLAS NICOLASCOUDERT
+```
+⬜ A instruire : deux cas distincts se melangent — celui ou nous n'avons AUCUNE
+personne (le mandat porte l'agence) et celui ou nous avons une AUTRE personne.
+
+### ✅ LE RESTE EST STABLE — les chiffres de 3.3 sont confirmes au 15/11
+
+```
+Commission TTC    314 « classeur seul »  (= les 303 utiles + 11)
+Offre Achat       178 . Compromis 75 . Vente Fixee 38   -> les 241 inchanges
+Vente Prevue    2 303 ecarts
+Vente Reglee    3 735 . Numero de facture 3 719   -> aucune case chez nous
+Mandat             33 « classeur seul »
+lignes NON RATTACHEES : **87** ⚠ ma mesure en base du 15/11 en comptait 85 --
+   l'ecart de 2 n'est pas explique, a regarder avec A6.
+```
+
+### ✅✅ LE CORRECTIF EST POSE ET MESURE — 15/11, et LE TRAVAIL ETAIT BIEN FAIT
+
+`phase2/checks/rapport_gel_tous_les_champs.py` : la liste figee devient `ANCIENS_REPLI`
+(les candidats a tester + le filet), et `charger_anciens_hors_registre(cl)` lit
+`app_negociateur_personne` au demarrage. **69 lignes ajoutees, 2 modifiees, un seul
+fichier. Aucune donnee touchee.**
+
+**CE QU'IL DIT AU DEMARRAGE** (et il NOMME ses trouvailles, pour qu'un faux positif
+se voie a la lecture) :
+
+```
+anciens : 13 des 14 noms codes sont DANS l'annuaire (198 personnes lues)
+          -> ils redeviennent COMPARABLES
+   presents : ABED, ADAMO, AGRAIN, ALLEMAND, BALIQUE, BERTRAND, BRUNON, COMMERE,
+              EXBRAYAT, FRANCHINI Marjorie, LAUGIER, LEFAURE, PETROSINO
+   ⛔ VRAIMENT HORS REGISTRE : PITIOT
+```
+⭐ Les 13 sont **exactement** ceux que j'avais verifies un par un en SQL : zero faux
+positif. La garde du patronyme a tenu.
+
+**LE MOUVEMENT DES VERDICTS — 24 lignes liberees, et 22 etaient DEJA JUSTES :**
+
+```
+                      avant            apres          mouvement
+   Negociateur 1   4671 ident . 11 HORS   4680 . 1 HORS   +9 identique . +1 ecart
+   Negociateur 2    635 ident . 36 HORS    648 . 23 HORS  +13 identique
+   Negociateur 3     12 ident .  1 HORS     12 .  0 HORS  +1 ecart
+                      -------------------------------------------------
+                      24 lignes liberees -> 22 « identique » . 2 « ECART »
+```
+
+➡ ⭐⭐ **LA REPONSE A LA QUESTION OUVERTE : le rapatriement des anciens negociateurs
+ETAIT BIEN FAIT.** 22 des 24 lignes sont d'accord avec le classeur ; il ne reste que
+**2 vrais ecarts** a instruire. Le rapport nous faisait croire a 24 lignes de travail
+en suspens alors qu'il ne restait que deux cas.
+
+**ET LES 24 QUI RESTENT EN « HORS » SONT LES BONS** : 17 « meilleursagents » + 6
+« GTI » + 1 « DENOPCE 1/2 » = 24, les apporteurs d'affaires qui ne sont pas des
+personnes. Le compte boucle exactement.
+
+**⭐ PITIOT N'A AUCUN EFFET AUJOURD'HUI** : la note « ancien ABSENT de notre registre »
+a **disparu** des notes, donc PITIOT n'apparait sur **aucune** ligne rattachee. Son
+absence de l'annuaire ne coute rien pour l'instant. ⬜ A creer quand meme un jour,
+pour que la liste de repli puisse etre retiree.
+
+**⚠ CE QUI N'A PAS BOUGE : `Pourcentage 1` reste a 48 ecarts.** Les 2 lignes portant
+un ancien avaient donc un ecart de pourcentage **independant** de leur mise a l'ecart.
+➡ La piste de la comparaison PAR POSITION (le classeur par rang, nous par cote
+`entree`/`sortie`) reste la seule explication plausible des 41. **A MESURER.**
+
+**⚠⚠ ET LA FENETRE SE REFERME** : le classeur porte maintenant **4 789 lignes**
+(4 783 le 09/11) contre un plafond de `A1:AL6000` -> **il reste 1 211 lignes**.
+Voir A3.
+
+### PHASE B — LES EMPLACEMENTS ET LES GARDIENS
+
+```
+B1 ⬜  CREER LES 6 COLONNES MANQUANTES (9 = 3 qui existent + 6) :
+         Y Vente Reglee . AA N0 de facture      -> colonnes de CLASSE A
+         AH Avis a envoyer . AI Commentaire Avis . AJ Avis envoye -> table a part,
+            cle id_unique (aucune colonne « avis » n'existe dans TOUTE la base)
+         C numero_mandat_app -> ⛔ PREALABLE DU 29/10 JAMAIS FAIT. `numero_mandat`
+            est de CLASSE C : une ecriture y est EFFACEE au run suivant.
+       ⭐ Les carnets n'ont AUCUNE contrainte CHECK sur le nom d'un champ.
+B2 ⬜  SENTINELLE DES 85 LIGNES NON RATTACHEES -- sinon elles ne recevront jamais
+       rien et personne ne le verra.
+B3 ⬜  SENTINELLE DES CONDITIONS ET NOTES ORPHELINES (5 et 6 aujourd'hui). Le
+       modele existe : `app_v_repartition_orpheline`. A POSER AVANT d'ecrire, sinon
+       le defaut se multiplie par 241.
+```
+
+### PHASE C — POSER, DU PLUS SUR AU PLUS DELICAT
+
+```
+C1 ⬜  3.2bis LA CHARGE : 16 lignes, patch DEJA ECRIT et non joue
+       (patch_charge_classeur_2026-11-14_DONNEES.sql). + LOT 2 : 25 lignes de
+       confiance « a valider »/« bonne » -> SA DECISION (je ne les poserais pas).
+C2 ⬜  3.3 LOT A : 303 commissions (1 886 204 EUR, dont 77 lignes 2026 pour
+       539 070 EUR) + 10 dates de case vide. En CLASSE A. Les 24 « zeros deguises »
+       (217 250 EUR) comptent comme des vides -- un zero n'est pas une saisie.
+C3 ⬜  3.3ter Z : 896 dates d'annulation dans date_annulation_app, DEJA PRETE.
+       En face : 3 705 affaires `cancelled`/`refused` qui ne disent pas QUAND.
+       ⭐ ET LES MOTIFS : F du classeur en porte (retractation 129, pret refuse
+       107) -> motif_annulation_app a une source, contrairement a ce que dit son
+       commentaire dans le code.
+C4 ⬜  F ET G dans leurs cases existantes (apres A1, qui dira le volume) :
+       F -> app_affaire_condition, G -> app_affaire_note, origine « classeur ».
+       ⛔ F et G se reprennent EN BLOC, SANS INTERPRETER -- sa consigne.
+C5 ⬜  3.3 LOT B : **215 creations franches** -- 144 offres + 62 compromis
+       + 9 ventes (5 a la meme date d'acte, 2 sans date, 2 sans compromis).
+       Dans la plage app, sans numero Hektor. APRES A2 et A4.
+C6 ⬜  3.3 LOT C : **26 ventes** dont notre compromis porte DEJA une autre date
+       d'acte. ⛔ C'est un CONFLIT, pas un vide -> SA DECISION.
+C7 ⬜  3.3bis V « Vente Prevue » : 2 303 ecarts + 21, decidee « tout », on ecrase.
+       ⭐ Arbitre INDEPENDANT (notre date de vente, qui vient de Hektor) : le
+       classeur tombe plus pres du reel 1 402 fois contre 714. -> SA DECISION.
+       ⚠ Ne jamais arbitrer V par W : les deux sortent du MEME classeur (accord
+         circulaire -- l'erreur que j'ai faite et rattrapee le 15/11).
+C8 ⬜  3.4 Y ET AA remplis : 3 735 + 3 719 valeurs, les DEUX plus gros postes du
+       chantier, et les deux sans aucune case aujourd'hui. Apres B1 et A5.
+C9 ⬜  3.5 AH AI AJ (apres B1) + C le numero de mandat (33 au classeur, ~9 utiles).
+       ⚠ AH et AJ se contredisent sur 229 lignes -- a reprendre tels quels.
+       ⚠ 33 numeros de mandat sont RECYCLES aux charges divergentes : un numero
+         n'identifie pas un mandat (4 142 doublons).
+C10 ⬜ AF PRIX : 161 ecarts -> on LISTE, on n'ecrit RIEN. Sa decision « comparer ».
+```
+
+### PHASE D — FERMER
+
+```
+D1 ⬜  1.5 LE RE-GEL ADDITIF : 6 lignes (4 « sure », 2 « a valider »). ⭐ Les deux
+       cas de 1.4 sont RESOLUS par l'audit du 15/11 : leurs transactions n'existent
+       pas chez Hektor -> on les cree CHEZ NOUS. ⛔ ADDITIF, on ne retouche aucun
+       des 12 595 liens.
+D2 ⬜  ETAPE 4 : 4.1 la porte sans ecran (une RPC qui APPELLE
+       app_modifier_affaire_optimistic, jamais une copie) . 4.2 une affaire qu'il
+       choisit . 4.3 la reprise complete LA NUIT (~2 a 3 h, arret sur conflit).
+D3 ⬜  ETAPE 5 : **5.1 EST SON GESTE** -- lire les Apps Script du classeur, 10 min,
+       et il BLOQUE P4. Puis 5.2 nos UUID dans la colonne affair_uuid
+       (⛔ en filtrant les 14 chaines entierement mortes, via
+       app_affaire_compte_encore -- et SANS RIEN retirer en base : 2 chaines sont
+       MIXTES) . 5.3 le routeur.
+```
+
+### ⚠ LES RESERVES QUI RESTENT OUVERTES
+
+```
+les 26 ecarts de date a plus d'un mois, dont 15 sur ventes reglees
+Nature 1 650 . Ville 1 646 . Notaire 1 373 . Agence 493  -> « RIEN » par decision
+FRANCHINI Marjorie : dans l'annuaire, mais sa ligne de repartition non posee
+les 12 numeros d'annonce trouves dans la colonne Mandat
+les 31 mandats HEKTOR de vente absents du registre
+les 3 biens encore vivants chez Hektor : 40318, 58979, 8494
+R-A le frein Hektor PARTAGE (4 workers = 4 req/s) -- il a mordu les 27-28/10
+R-B le balayage qui relance une commande morte depuis le carnet
+```
+
 ### ÉTAPE 1 — fermer l'appariement *(P1)*
 
 ```
@@ -914,9 +1198,20 @@ la vente. Non traite, pas mesure en ampleur.
       2 / 13  repartition VIDE chez nous (biens 47347 et 62527)
 ```
 
-   ⛔⛔ LE PREALABLE OBLIGATOIRE, ET IL N'EST PAS REMPLI : **13 ANCIENS
-     NEGOCIATEURS A CREER** dans l'annuaire. Tant qu'ils n'existent pas, leurs
-     24 lignes restent « hors perimetre » et ne seront pas rapatriees :
+   ✅✅ **LE PREALABLE EST REMPLI -- MESURE DU 15/11, APRES LE DOUTE DE FREDERIC
+     (« les negociateurs ont deja ete faits, verifie ! »). IL AVAIT RAISON.**
+     Les **13 sont dans `app_negociateur_personne`** (13/13, FRANCHINI Marjorie
+     comprise), et **12 sur 13 ont deja leurs lignes dans
+     `app_affaire_repartition`** -- 30 lignes posees :
+```
+     ABED 7 . ALLEMAND 4 . BERTRAND 4 . AGRAIN 2 . BRUNON 2 . EXBRAYAT 2
+     COMMERE 2 . LEFAURE 2 . PETROSINO 2 . LAUGIER 1 . ADAMO 1 . BALIQUE 1
+     FRANCHINI Marjorie 0   <- la SEULE sans ligne posee (1 ligne au classeur)
+```
+   ⚠ **CETTE RESERVE ETAIT PERIMEE ET JE L'AI RECOPIEE TELLE QUELLE** dans mon
+     plan du 15/11, sans la recouper avec la base. C'est la meme faute que les
+     quatre trous : **croire le plan au lieu de mesurer**. Le reste de ce bloc
+     garde la liste d'origine, pour l'histoire :
 ```
      ABED 6 . ALLEMAND 4 . BERTRAND 3 . AGRAIN 2 . BRUNON 1 . EXBRAYAT 1
      COMMERE 1 . LEFAURE 1 . PETROSINO 1 . LAUGIER 1 . ADAMO 1 . BALIQUE 1
@@ -1317,16 +1612,150 @@ la vente. Non traite, pas mesure en ampleur.
                     ⑤ Hektor en SIGNALEMENT seulement (~2 h)
                     ⛔ A LIRE AVANT TOUTE REPRISE : A8, A10, A11 et le rapport
                       du juge (JUGE_CHARGE_CLASSEUR_HEKTOR_2026-11-03.md)
-3.3 ⬜ ACCORD       les colonnes qui ONT une case -- ⭐⭐ AUDITEE LE 14/11, et le
-                    perimetre comme le volume etaient FAUX : ce n'est pas
-                    « 7 colonnes, 605 valeurs » mais **4 colonnes, 12 dates et
-                    303 commissions**. Voir la section 3.3 plus bas.
+⭐⭐⭐ 3.0 ⬜ ACCORD  **LES EMPLACEMENTS -- LA TACHE QUI MANQUAIT AU PLAN**, trouvee
+                    le 15/11 par la question de Frederic : *« je ne vois pas quand
+                    ni comment on cree les emplacements pour les colonnes qui
+                    manquent dans l'app »*. ⛔ Le document du 02/11 l'avait DEJA
+                    ecrit (§ 4 bis, « CE QUI BLOQUE ENCORE L'EXECUTION -- NEUF
+                    CHAMPS ») et le plan d'action ne la portait pas.
+                    ⚠ **NEUF champs, pas six.** Et deux FORMES differentes, selon que
+                    la donnee appartient a UNE TRANSACTION ou au DOSSIER :
+```
+   ⛔⛔ **LE COMPTE EXACT, VERIFIE COLONNE PAR COLONNE EN BASE LE 15/11** (ma
+   premiere reponse disait « 4 a creer » : c'etait une FAUTE DE SOUSTRACTION,
+   j'avais oublie Y, AA et Z). **9 = 3 qui ONT DEJA LEUR CASE + 6 A CREER.**
+
+   A. ⭐⭐ **TROIS ONT DEJA LEUR CASE -- RIEN A CREER**
+      Z   Annulee         ->  **date_annulation_app** (+ motif_annulation_app),
+                              posees le 10/11 (liste B de A18) « AVANT tout
+                              remplissage », **VIDES toutes les deux** (0 ligne),
+                              et dans la liste des colonnes QUE LE PUSH N'ENVOIE
+                              JAMAIS -> classe A, deja protegee.
+                              ⚠ En face : 3 705 affaires `cancelled`/`refused`
+                                qui ne disent pas QUAND. Les 896 dates du classeur
+                                entrent sans aucun conflit.
+                              ⛔ ET LE COMMENTAIRE DU CODE EST A NUANCER : il dit
+                                « motif_annulation_app n'a AUCUNE AUTRE SOURCE :
+                                ni le classeur ni Hektor ne portent la raison » --
+                                or **F du classeur porte les motifs** (retractation
+                                129, pret refuse 107, mesure du 02/11).
+      F   En attente de   ->  app_affaire_condition  (voir B)
+      G   COMMENTAIRES    ->  app_affaire_note       (voir B)
+
+   B. COLONNE AU REGISTRE, de CLASSE A -- **A CREER**
+      Y   Vente Reglee       ⚠ 100 % de nos cases vides : VOULU et DECLARE
+                             ⭐ verifie le 15/11 : AUCUNE colonne nulle part
+      AA  N0 de facture      ⚠ idem, AUCUNE colonne nulle part
+      C   numero_mandat_app  ⛔ PREALABLE DU 29/10 JAMAIS FAIT : numero_mandat est
+                             de CLASSE C (relu chaque nuit) -> une ecriture y est
+                             EFFACEE au run suivant. Verifie le 15/11 : la colonne
+                             `numero_mandat_app` N'EXISTE PAS.
+   B. ⭐⭐⭐ **F ET G ONT DEJA LEUR CASE -- RIEN A CREER** (piste de Frederic du
+      15/11 : « F et G ont deja ete etudiees et pourraient remplir les conditions
+      suspensives ». ELLE EST JUSTE, et le plan du Sheet le notait deja :
+      « A VOIR les conditions suspensives (G15) -> En attente de ? »)
+      F   En attente de   ->  **app_affaire_condition** : libelle, jours,
+                              date_echeance, etat, date_levee, note, catalogue_id,
+                              **origine** -- la structure complete EXISTE
+                              ⭐ et HEKTOR N'EN REMPLIT AUCUNE : conditions_suspensives
+                                est vide sur 18 589 lignes de app_affaire_console
+                                -> AUCUN CONFLIT POSSIBLE, comme la charge du mandat
+                              + app_condition_catalogue pour les libelles
+      G   COMMENTAIRES    ->  **app_affaire_note** : 9 lignes, du 23/10 au 02/11
+   C. TABLE A PART, cle id_unique -- **A CREER** (verifie le 15/11 : aucune
+      colonne « avis » n'existe dans TOUTE la base)
+      AH  Avis a envoyer     120 valeurs distinctes, pas une case a cocher
+      AI  Commentaire Avis   392 cases
+      AJ  Avis envoye        des PRENOMS dedans (Marion 190, Nico 59...)
+      ⛔ F et G se reprennent EN BLOC, sans interpreter -- sa consigne
+      ⚠ AH et AJ se contredisent sur 229 lignes -- a reprendre tels quels
+```
+                    ⭐ MESURE DU 15/11 QUI SIMPLIFIE : `app_affaire_champ_app` et
+                    `app_mandat_champ_app` n'ont **AUCUNE contrainte CHECK** sur le
+                    nom du champ -- rien a modifier de ce cote.
+                    ⛔⛔ MAIS LE CARNET DES AFFAIRES N'EST PAS LA BONNE PLACE : c'est
+                    une FILE D'ENVOI vers Hektor (« une saisie cherche a le rejoindre
+                    et DISPARAIT une fois arrivee »). Voir 3.3quater.
+                    ➡ **CETTE TACHE PASSE AVANT 3.3, 3.3ter, 3.4 ET 3.5.** Seule la
+                    commission P peut avancer sans elle : sa case existe deja.
+⛔⛔ 3.0ter ⬜ ACCORD  **DEUX DEFAUTS TROUVES LE 15/11 EN AUDITANT F ET G.**
+```
+   a) 5 CONDITIONS SUSPENSIVES ET 6 NOTES SONT ORPHELINES
+      app_affaire_condition : 5 lignes, 5 ORPHELINES, 0 rattachee
+      app_affaire_note      : 9 lignes, 6 ORPHELINES, 3 rattachees
+      Leurs affaires (1001388, 1001391, 1001394) N'EXISTENT PLUS au registre,
+      ni dans Supabase ni dans le SQLite local. Les conditions sont restees.
+      ➡ RIEN ne nettoie ni ne SIGNALE une condition dont la transaction part.
+        Si on pose 241 transactions + leurs conditions, le defaut se multiplie.
+        Il faut une sentinelle AVANT d'ecrire (meme forme que
+        app_v_repartition_orpheline, qui existe deja pour la repartition).
+
+   b) ⛔⛔ MA RESERVE DU 15/11 N'EST PAS LEVEE, ELLE EST AGGRAVEE
+      J'avais ecrit en 3.3quater que le run ne peut pas effacer une ligne de la
+      plage app. MESURE DU 15/11 :
+         plage app, dans Supabase : 340 lignes, 0 SANS numero Hektor
+         plage app, en LOCAL      : 340 lignes, 0 SANS numero Hektor
+         et 3 lignes de cette plage ONT DISPARU -- sans sauvegarde, sans
+         journal, sans trace de QUI les a retirees
+      ➡ Les protections du code sont reelles (je les ai lues), mais AUCUN TEMOIN
+        POSITIF n'existe : pas une seule ligne de la plage app n'a jamais vecu
+        sans numero Hektor. **L'essai de 3.3zero est donc OBLIGATOIRE**, et il
+        doit mesurer les DEUX bases, locale et Supabase.
+```
+
+⚠⚠ 3.0bis ⬜ ACCORD  **LA FENETRE DE LECTURE DU SHEET, ET ELLE SE REFERME.**
+                    L'apparieur ne lit que `A1:AL6000`. Le classeur portait 4 783
+                    lignes le 09/11 -> **~1 200 lignes de marge**. Le jour du
+                    depassement, **les lignes du bas disparaissent sans un mot**,
+                    comme toute colonne ajoutee a droite de AL. Reserve ecrite le
+                    31/10, jamais corrigee. Deux caracteres a changer, mais un appel
+                    a l'API Google : son accord.
+
+3.3zero ⬜ ACCORD   ⭐⭐⭐ **LE PREALABLE DE 3.3 : L'ESSAI D'UNE NUIT.** Creer UNE
+                    transaction dans la PLAGE APP (>= 1 000 000) SANS numero Hektor,
+                    sur un bien NON VIVANT, et la mesurer au matin. Leve la seule
+                    reserve de l'audit du 15/11 : les 340 lignes de la plage portent
+                    TOUTES un numero Hektor, donc rien ne prouve ENCORE qu'une ligne
+                    sans numero survit a une nuit. Un zero ne se croit pas sans
+                    temoin positif. ➡ Il debloque 3.3, 3.3ter ET une partie de 3.5.
+3.3 ⬜ ACCORD       les colonnes qui ONT une case -- ⭐⭐ AUDITEE LES 14 ET 15/11.
+                    Le perimetre du plan etait perime (4 colonnes, pas 7) et MON
+                    propre perimetre etait faux : j'avais sorti les 241 transactions
+                    a creer, ce qui n'etait PAS la decision de Frederic (rectifie le
+                    15/11). LE VOLUME REEL, mesure sur TOUT le Sheet le 15/11 :
+```
+                      P  Commission TTC    303 valeurs  -> classe A
+                      T S W  les cases vides  10 dates  -> classe A
+                      offres manquantes          144                        compromis manquants         62   > 241 TRANSACTIONS A CREER
+                      ventes manquantes           35  /    (plage app, voir 3.3zero)
+                      AF Prix                    161 ecarts -> on LISTE, on n'ecrit pas
+```
+                    ⚠ LES 3 LOTS NE SE VALENT PAS : les 144 offres et les ~36
+                    compromis annules sont des creations franches ; les 26 ventes
+                    dont le compromis porte DEJA une autre date d'acte sont un
+                    CONFLIT, pas un vide. ➡ Trois lots separes, jamais un seul geste.
+                    ⚠ ET 85 LIGNES DU SHEET NE SONT RATTACHEES A RIEN : hors de tous
+                    ces chiffres, contenu inconnu depuis notre base. A mesurer.
 3.3bis ⬜ FREDERIC  ⛔ **V « Vente Prevue » est decidee « TOUT » et n'est dans
                     AUCUNE tache** -- trou du plan trouve le 14/11. 2 303 ecarts,
                     le plus gros conflit des 38. Voir la section 3.3.
-3.4 ⬜ ACCORD       Y le reglement et AA la facture -> app_affaire_champ_app,
-                    sur la transaction de role 'vente'
-                    ⚠ MESURER D'ABORD les 1 062 lignes sans role 'vente'
+3.3ter ⬜ FREDERIC  ⛔ **Z « Annulee » est decidee « TOUT » et n'est dans
+                    AUCUNE tache** -- second trou du plan, trouve le 14/11 en
+                    repondant a l'etonnement de Frederic (« il n'y a que ca qui
+                    diverge ? »). 896 dates, 100 % lisibles, 2020-2026, et AUCUNE
+                    case en face : sa note de l'artefact dit « Annulee tout avec un
+                    nouveau champ ». Elle fait partie des SIX champs a creer
+                    (F G Z AH AI AJ, voir 3.1quater B) mais la tache 3.5 n'en nomme
+                    que CINQ : Z y manque.
+3.4 ⬜ ACCORD       Y le reglement et AA la facture, sur la transaction de role
+                    'vente'
+                    ⛔ **CORRIGE LE 15/11 : CETTE LIGNE DISAIT `app_affaire_champ_app`,
+                    ET C'ETAIT FAUX DEUX FOIS.** (a) ce carnet est une file d'envoi
+                    vers Hektor, pas un magasin ; (b) le document du 02/11 dit que Y
+                    et AA n'ont **aucun champ en face chez nous** -> il faut d'abord
+                    les CREER (voir 3.0, forme A).
+                    ⚠ MESURER D'ABORD les 1 062 lignes sans role 'vente' : ou va la
+                    valeur quand la transaction qui la porte n'existe pas ?
 3.5 ⬜ FREDERIC     le carnet des 5 colonnes de dossier (F G AH AI AJ), cle id_unique
                     + la case du numero de mandat (C, « les vides », ~9 utiles)
 ```
@@ -1335,6 +1764,101 @@ la vente. Non traite, pas mesure en ampleur.
 
 > Mesure rejouable : `python -X utf8 phase2/checks/audit_33_colonnes_qui_ont_une_case.py`
 > **Lecture seule de bout en bout.** Il lit le rapport du gel du jour et la base.
+
+## ⭐⭐⭐ 3.3quater PEUT-ON CRÉER UNE TRANSACTION ENTIÈRE CHEZ NOUS ? — AUDIT DU 15/11
+
+> **Question de Frédéric, 15/11** : *« Je n'ai juste dit de ne pas faire le geste
+> dans Hektor mais il faut bien remplir offre compromis etc. dans le registre des
+> transactions. Peut-on écrire chez nous comme tu me l'as proposé en classe A et
+> enregistrer des transactions entièrement ? »**
+>
+> ✅ **RÉPONSE : OUI, ET LE MÉCANISME EXISTE DÉJÀ.** Lecture seule du code et de la
+> base, aucune écriture. Cinq mesures, et une réserve nommée.
+
+### ⭐ ① DEUX OUTILS DIFFÉRENTS, POUR DEUX BESOINS DIFFÉRENTS
+
+J'avais confondu les deux. Ils ne servent pas à la même chose :
+
+```
+LA CLASSE A       proteger UNE VALEUR dans une ligne QUI EXISTE
+                  -> les 303 commissions, les 12 dates de case vide
+LA PLAGE APP      creer LA LIGNE ENTIERE, la transaction elle-meme
+                  -> les 241 offres / compromis / ventes absentes
+```
+
+### ⭐⭐ ② LA PLAGE EST DÉJÀ RÉSERVÉE, ET ÇA N'EST PAS UN BRICOLAGE
+
+`phase2/sync/affaire_ledger.py:48` — **`PLAGE_RESERVEE_APP = 1_000_000`** :
+
+```
+  en dessous : les affaires vues chez Hektor, numerotees par le run (a 28 981)
+  au-dessus  : les affaires NEES DANS L'APP, numerotees par la sequence
+               Supabase app_affaire_id_app_seq
+  « Le run ne distribue JAMAIS au-dessus de cette frontiere. »
+```
+
+Et le commentaire d'identité du 20/08 dit la chose en toutes lettres :
+
+> *« Les deux colonnes Hektor deviennent facultatives : une affaire saisie dans
+> l'app existe AVANT que Hektor ne la numérote, **et parfois sans que Hektor la
+> numérote jamais**. »*
+
+**Mesure du 15/11 : 340 lignes vivent déjà au-dessus du million** (148 offres,
+123 compromis, 69 ventes), sur 30 817 dans la plage Hektor.
+
+### ⭐⭐⭐ ③ LE RUN DE NUIT NE PEUT PAS LES EFFACER — QUATRE PROTECTIONS LUES
+
+**a. Le marquage ne les regarde même pas.** La première garde du passage qui met
+`present_in_hektor=0` est littéralement `app_affaire_id < 1 000 000`
+(`affaire_ledger.py:1033`). Une ligne de notre plage n'est pas candidate.
+
+**b. Et de toute façon, ce passage NE SUPPRIME RIEN.** Son propre commentaire :
+*« les lignes non revues ce run passent present_in_hektor=0 (**conservées**) »*
+(l. 584). Le drapeau dit « je ne l'ai pas revue », il n'efface pas.
+
+**c. La seule suppression du fichier EXIGE un numéro Hektor**, et refuse d'agir
+sans lui : *« on ne supprime pas « au numéro d'app » : ce serait viser large »*
+(l. 3080-3094). Une ligne **sans** numéro Hektor est donc **insupprimable par ce
+chemin**, par construction.
+
+**d. Trois signaux de possession s'ajoutent** (l. 1033-1053) : une ligne au carnet,
+un travail `pending`/`running`, et les deux copies du carnet lues en union. Plus
+une règle de méthode déjà posée : *« Une protection muette ne se distingue pas
+d'une protection absente »* — le run **dit** combien il a protégé.
+
+### ⭐ ④ ET RIEN NE PART CHEZ HEKTOR
+
+Le seul mécanisme qui regarde vers Hektor est `poserNumerosManquants`
+(`console_job_worker.js:24048`). Il cherche les lignes
+`hektor_affaire_id=is.null & present_in_hektor=is.false & app_affaire_id=gte.1000000`
+et **LIT** l'API pour voir si Hektor porte déjà la transaction. Il **ne crée
+rien** : si Hektor n'a rien, il ne trouve rien et laisse la ligne tranquille.
+
+### ⚠⚠ ⑤ LA RÉSERVE, ET ELLE EST HONNÊTE : AUCUN TÉMOIN SUR LA DURÉE
+
+**Les 340 lignes de la plage app portent TOUTES un `hektor_affaire_id`.** Donc la
+conception le permet et le code le protège, mais **aucune ligne n'est jamais
+restée sans numéro Hektor sur plusieurs nuits**. Le zero ne se croit pas sans
+témoin positif (leçon du projet).
+
+➡ **CE QUI LÈVE LA RÉSERVE, ET ÇA COÛTE UNE NUIT** : créer **UNE** transaction
+d'essai dans la plage app, sans numéro Hektor, et la mesurer au matin. Si elle est
+intacte, les 241 peuvent y aller. ⚠ À ne PAS prendre un bien vivant.
+
+### ➡ LE VOLUME RÉEL DE 3.3, UNE FOIS LE PÉRIMÈTRE RÉTABLI
+
+```
+P  Commission TTC   « vides »    303 valeurs   -> classe A, ligne existante
+T  Compromis        « vides »      8 cases     -> classe A
+                                 + 62 lignes   -> A CREER (plage app)
+S  Offre Achat      « vides »      4 cases     -> classe A
+                                +144 lignes    -> A CREER (plage app)
+W  Vente Fixee      « vides »      0 case
+                                 + 35 lignes   -> A CREER (plage app)
+AF Prix             « comparer »  161 ecarts   -> AUCUNE ecriture, on LISTE
+                                 ----
+                     315 valeurs + 241 transactions entieres
+```
 
 ### ⛔ ① LE PÉRIMÈTRE DU PLAN ÉTAIT PÉRIMÉ — 4 colonnes, pas 7
 
@@ -1389,10 +1913,18 @@ transaction entière**. Trois choses très différentes sous un seul mot :
                                  5 la meme . 2 sans date d acte . 2 sans compromis
 ```
 
-➡ ⛔ **Poser ces 241 dates voudrait dire CRÉER 241 transactions** dans notre
-registre des affaires. Ce n'est plus « remplir un vide » : c'est inventer une
-offre, un compromis ou une vente que Hektor n'a jamais portés. **Hors de la
-décision « les vides ».** À trancher à part, s'il le veut.
+➡ **Poser ces 241 dates demande de CRÉER 241 transactions** dans notre registre
+des affaires.
+
+⛔⛔ **RECTIFIÉ LE 15/11 — J'AVAIS ÉCRIT ICI « hors de la décision les vides »,
+ET C'ÉTAIT MA DÉCISION, PAS CELLE DE FRÉDÉRIC.** Ses mots du 15/11 :
+*« Non !!!!! J'ai juste dit de ne pas faire le geste dans Hektor mais il faut
+bien remplir offre compromis etc. dans le registre des transactions !!! Tu as
+changé le plan au pire moment. »*
+
+➡ Donc le périmètre est : **on CRÉE les transactions manquantes CHEZ NOUS**, en
+classe A, **sans aucun geste chez Hektor**. Les 241 sont DANS la tâche, pas à
+côté. Faisabilité : voir l'audit profond du 15/11 (section 3.3quater).
 
 ### ③ P COMMISSION TTC — 279 vrais vides, 1 886 204 €
 
