@@ -3430,9 +3430,54 @@ def main() -> None:
         #   . AVANT la redescente -> elle passe aussitot sur les lignes neuves
         #     et y pose les colonnes de classe A par LE CHEMIN NORMAL. Un seul
         #     chemin pour la marque, pas deux.
-        result["recopie_app_seule"] = (
-            recopier_ce_que_hektor_ne_rendra_jamais(con)
-            if recopie_app_seule_active() else {"actif": False})
+        # ⛔⛔ UN GARDE-FOU, PARCE QUE CETTE ETAPE DU RUN EST BLOQUANTE.  15/11/2026
+        #
+        #   `run_full_pipeline.ps1` appelle ce script par `Invoke-Step`, PAS par
+        #   `Invoke-OptionalStep` : si main() leve, TOUT CE QUI SUIT dans le run de
+        #   nuit ne tourne pas. Le precedent est ecrit vingt lignes plus haut dans ce
+        #   meme pipeline : le 02/09, un 409 a cette etape a laisse l'app « 18 h en
+        #   arriere sans que rien ne le dise ».
+        #
+        #   La recopie est du code NEUF et FACULTATIF (derriere un interrupteur). Elle
+        #   ne doit pas pouvoir emporter `redescendre_ce_que_l_app_possede`, qui est
+        #   ancienne, essentielle, et placee juste apres elle. On ECRIT l'echec, on le
+        #   met dans le compte rendu, et le run CONTINUE -- exactement la forme des
+        #   lignes ecartees du push, quelques lignes plus haut.
+        #
+        #   ⭐ LE ROLLBACK EST SUR : la fonction ne fait qu'UN `INSERT ... SELECT` suivi
+        #     d'UN `commit`. Si l'INSERT leve, rien n'est commite et le rollback nettoie.
+        #     Si le commit a deja reussi, les lignes sont completes et justes -- c'est
+        #     alors le temoin d'apres qui a parle, et `deja_entrees` le dit.
+        try:
+            result["recopie_app_seule"] = (
+                recopier_ce_que_hektor_ne_rendra_jamais(con)
+                if recopie_app_seule_active() else {"actif": False})
+        except Exception as exc:                                   # noqa: BLE001
+            con.rollback()
+            deja = con.execute(
+                f"SELECT COUNT(*) FROM {LEDGER_TABLE}"
+                f" WHERE CAST(app_affaire_id AS INTEGER) >= {PLAGE_RESERVEE_APP}"
+                f"   AND (hektor_affaire_id IS NULL"
+                f"        OR TRIM(CAST(hektor_affaire_id AS TEXT)) = '')").fetchone()[0]
+            result["recopie_app_seule"] = {"actif": True, "echec": str(exc),
+                                           "deja_entrees": deja}
+            # ⛔ PAS D'EMOJI DANS CE print, ET C'EST DELIBERE (audit du 15/11) : le
+            #   pipeline lance python SANS `-X utf8` et sans PYTHONUTF8. Si la console
+            #   du planificateur n'est pas en UTF-8, `print` d'un caractere hors
+            #   cp1252 leve UnicodeEncodeError -- DANS LE except, donc le garde-fou
+            #   lui-meme ferait tomber le run qu'il est cense sauver. Un garde-fou ne
+            #   doit pas pouvoir echouer.
+            #   ⚠ La meme question se pose l. ~1643 (un print avec un signe d'alerte),
+            #     mais celui-la est hors du perimetre de ce chantier : signale, pas touche.
+            #   ⚠ ET LE MESSAGE DE L'EXCEPTION NON PLUS : on ne sait pas ce qu'il
+            #     contient (un nom de colonne accentue suffirait). On le ramene a
+            #     l'ASCII AVANT de l'imprimer. Le compte rendu JSON, lui, le garde
+            #     entier -- `json.dumps(..., ensure_ascii=True)` s'en charge.
+            sans_accent = str(exc).encode("ascii", "replace").decode("ascii")
+            print(f"[affaire_ledger] 26bis EN ECHEC : {sans_accent}")
+            print(f"[affaire_ledger]   {deja} ligne(s) de la plage app sans numero sont "
+                  f"dans le registre local. LE RUN CONTINUE : cette etape est bloquante, "
+                  f"et la redescente ne doit pas tomber avec elle (audit du 15/11).")
         result["chaines"] = redescendre_ce_que_l_app_possede(client, con)
     con.close()
     print(json.dumps(result, ensure_ascii=True, indent=2))

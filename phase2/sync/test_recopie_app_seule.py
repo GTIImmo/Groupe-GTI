@@ -239,6 +239,27 @@ juger("16b et AVANT la redescente (un seul chemin pour les colonnes de classe A)
 juger("16c et elle ne tourne QUE si l'interrupteur est allume",
       True, "if recopie_app_seule_active() else" in texte)
 
+# ─── 17. LE GARDE-FOU : UN ECHEC NE DOIT PAS EMPORTER LE RUN ───     15/11/2026
+#
+# ⛔⛔ Trouve par l'audit du 15/11 au soir, APRES l'allumage. `run_full_pipeline.ps1`
+#   appelle ce script par `Invoke-Step`, pas `Invoke-OptionalStep` : une exception
+#   dans main() fait tomber TOUT CE QUI SUIT dans le run de nuit. Le precedent est
+#   ecrit dans le pipeline lui-meme -- le 02/09, un 409 a cette etape a laisse l'app
+#   « 18 h en arriere sans que rien ne le dise ».
+#   La recopie etant du code NEUF et FACULTATIF, elle ne doit pas pouvoir emporter
+#   `redescendre_ce_que_l_app_possede`, qui est ancienne et essentielle.
+i_try = texte.rindex("try:", 0, i_recopie)
+i_except = texte.index("except Exception as exc:", i_recopie)
+juger("17 l'appel est DANS un try", True, i_try < i_recopie < i_except)
+juger("17b l'echec est ECRIT dans le compte rendu", True,
+      '"echec": str(exc)' in texte[i_except:i_except + 900])
+juger("17c un rollback nettoie l'INSERT non commite", True,
+      "con.rollback()" in texte[i_except:i_except + 400])
+juger("17d le compte rendu dit COMBIEN de lignes sont deja entrees", True,
+      '"deja_entrees"' in texte[i_except:i_except + 900])
+juger("17e ⛔ ET LA REDESCENTE EST HORS DU try : le run CONTINUE",
+      True, i_except < i_redescente)
+
 print()
 print("%d/%d verts" % (VERTS, VERTS + len(ROUGES)))
 if ROUGES:

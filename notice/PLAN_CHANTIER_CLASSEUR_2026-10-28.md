@@ -1240,6 +1240,197 @@ cette sentinelle criera **241 fois**, chaque nuit, pendant 48 h de fenetre gliss
 ⛔ **A TRAITER AVANT LES 241** -- pas avant cette nuit : A2 crie deja, un de plus ou de
 moins ne change rien, et la nuit qui vient ne pose aucune des 241.
 
+### ⛔⛔⛔ L'AUDIT DU SOIR (15/11, demande par Frederic) — DEUX DANGERS TROUVES
+
+Il demandait « etre sur que tout se passe bien demain matin ». L'audit, en lecture seule,
+a trouve **deux choses qui pouvaient casser la nuit**, et les deux venaient de MOI.
+
+#### ⛔ DANGER 1 — LA PIECE 4 POUVAIT FAIRE TOMBER LE RUN ENTIER
+
+`run_full_pipeline.ps1` l. 988 appelle `affaire_ledger.py` par **`Invoke-Step`**, pas
+`Invoke-OptionalStep`. Une exception dans `main()` fait donc tomber **tout ce qui suit**
+dans la nuit. Et le precedent est ecrit **vingt lignes au-dessus, dans ce meme fichier** :
+
+```
+   « Le run du 02/09 a plante a l'etape suivante : Supabase REST error 409 -- et TOUT
+     CE QUI SUIT n'a pas tourne, dont le push principal : l'app est restee 18 h en
+     arriere sans que rien ne le dise. »
+```
+
+Ma recopie etait placee **juste avant** `redescendre_ce_que_l_app_possede` (ancienne,
+essentielle) et **sans aucun try**. Du code neuf et facultatif pouvait emporter le reste.
+
+✅ **CORRIGE** : l'appel est entoure d'un `try/except` qui ecrit l'echec, en dit le
+nombre de lignes deja entrees (`deja_entrees`), fait un `rollback` et **laisse le run
+continuer**. ⭐ Le rollback est sur : la fonction ne fait qu'**UN** `INSERT ... SELECT`
+suivi d'**UN** `commit`. 5 controles neufs (17 → 17e), l'epreuve passe de 39 a **44/44**.
+
+#### ⛔⛔ DANGER 2 — MON CORRECTIF DE LA DESCENTE ETAIT DANGEREUX. JE L'AI RETIRE.
+
+J'avais fait partir le parcours **par rang d'emblee des qu'il n'y a pas de cle primaire**.
+C'etait faux, et la mesure le prouve : **les VUES n'ont pas de cle primaire non plus.**
+
+```
+   51 vues existent chez Supabase ; VUES_NON_DESCENDUES n'en connait que 41
+   -> 10 vues nees depuis le 12/10 DESCENDENT ENCORE (confirme par --dry-run :
+      237 exposees, 41 ecartees, 196 a descendre)
+   et parmi elles :
+      app_v_mandat_statut   24 596 lignes . 76 colonnes . 1re colonne UNIQUE
+                            -> elle descend PARFAITEMENT par valeur aujourd'hui
+```
+
+Mon correctif l'aurait fait passer a **25 pages d'offset avec un ORDER BY sur 76
+colonnes, sur une VUE que Postgres recalcule a chaque page**. C'est mot pour mot ce qui a
+mis l'instance par terre le **21/08** (statement timeout), le **15/09** (503 pour toute
+l'agence, 07:30 → 09:15) et le **12/10** (08:44 → 09:00).
+
+✅ **LE BON CORRECTIF, ET IL EST PLUS PETIT** : `RELECTURE_ENTIERE_MAX : 5 000 -> 15 000`.
+Le rattrapage par rang savait **deja** reparer ce defaut ; il ne jouait pas parce que les
+deux gels sont au-dessus de 5 000. Et ce plafond **ne touche que ce qui echoue deja** :
+
+```
+   196 tables descendues . 194 passent . 2 echouent -> 2 SEULES tables concernees
+   une table qui descend bien ne passe JAMAIS par le rattrapage : chemin inchange
+   15 000 couvre les deux gels (12 422 au plus) et laisse app_v_mandat_statut
+      (24 596) HORS D'ATTEINTE -- si elle echouait un jour, elle serait REFUSEE
+      bruyamment au lieu d'etre relue par offset
+```
+
+⭐ **L'epreuve porte desormais cette garde** : son controle 3 verifie qu'une grosse table
+sans cle dont la 1re colonne est unique descend **par valeur et JAMAIS par rang**.
+`test_descente_sans_cle_primaire.py` : **19/19**.
+
+#### ⛔ ET JE CORRIGE MON PROPRE DANGER 2 : IL ETAIT SURESTIME
+
+J'ai ecrit ci-dessus que mon correctif aurait mis `app_v_mandat_statut` sur l'offset. **La
+mesure dit non**, et elle est allee chercher la bonne source -- **ce que POSTGREST declare**,
+pas `pg_index` :
+
+```
+   app_v_mandat_statut   76 col | PK DECLAREE register_row_id | parcours sur register_row_id
+```
+
+PostgREST **lui declare une cle primaire** (une vue simplement modifiable en recoit une).
+Mon correctif ne l'aurait donc **pas** touchee. Les 10 vues qui descendent encore, mesurees
+une a une : **6 ont une PK declaree**, et les **4 qui n'en ont pas sont minuscules** --
+`app_filter_catalog_registre` 93 lignes, `app_v_contact_modif_ecarts` 5,
+`app_v_annonce_modif_ecarts` 0, `app_v_affaire_partie_ecarts` 0. Une seule page chacune :
+aucune pagination profonde, donc aucun risque de 503.
+
+⭐⭐ **MA DECISION RESTE LA MEME, MAIS POUR UNE RAISON PLUS MODESTE** -- et c'est elle qu'il
+faut retenir :
+
+```
+   mon correctif aurait change le chemin de 40 tables/vues sans PK declaree,
+      dont app_etiquette_avant_repose_20261112 : 31 151 lignes, QUI DESCEND BIEN
+      aujourd'hui (sa 1re colonne est unique) -> 32 pages d'offset sur une table
+      SANS INDEX, pour rien.
+   le plafond ne change le chemin de RIEN qui marche : 194 tables sur 196 intactes,
+      exactement les 2 en echec sont visees, et il se defait d'un chiffre.
+```
+
+⚠ **Et il a un bon effet de bord mesure** : ces 4 petites vues sans PK, si elles
+grossissaient au-dela de 1 000 lignes, perdraient des lignes au parcours par valeur. Sous
+15 000, le rattrapage les sauvera -- avant, au-dela de 5 000, elles auraient ete refusees.
+
+⛔ **LA LECON, ET ELLE EST DURE** : j'ai ecrit « mesure avant de l'etendre » dans le
+commentaire de mon propre correctif, et j'avais mesure **la mauvaise chose** (`pg_index` au
+lieu du schema de l'API). Une mesure qui ne regarde pas la source dont le code se sert ne
+mesure rien. ⭐ Le correctif retire restait le mauvais choix, mais je l'ai d'abord condamne
+sur un argument faux -- et un argument faux, meme quand il mene a la bonne decision, ne
+compte pas comme une preuve.
+
+#### ✅ ET UNE ERREUR QUE J'AVAIS ECRITE CE SOIR, CORRIGEE
+
+J'avais dit que la recopie travaillerait sur la doublure descendue a 07:11. **C'est faux** :
+`run_full_pipeline.ps1` l. 979 descend **lui-meme** `app_affaire_ledger` juste avant
+d'appeler le ledger (etape **non bloquante**, posee le 02/09 pour cette raison exacte).
+La recopie verra donc une doublure **fraiche de cette nuit**. C'est mieux, pas pire.
+⭐ Et l'appel est `--refresh --push` : la colonne locale est donc creee **dans le meme
+passage**, avant le push et avant la recopie -- l'etat du « passage 2 » de l'essai.
+
+#### ✅ LES WORKERS : MESURES, ET ILS NE SONT PAS CONCERNES
+
+```
+   les 4 services              Running
+   leurs processus             nes le 15/11 a 14:22:14-16 (Win32_Process.CreationDate)
+   le code du worker           ecrit a 13:05:56  -> ils portent bien la piece 3
+   rien n'a redemarre depuis   (les memes 4 processus)
+   la file                     VIDE : 0 pending, 0 running
+   temoin positif              4 travaux depuis 14:22, tous `done`, 0 erreur
+```
+
+⚠ **Ni la piece 4 ni le correctif de la descente ne touchent le worker** : ce sont deux
+fichiers Python du run. Le seul changement du worker aujourd'hui est la piece 3, **deja en
+service et deja prouvee**. Il n'y a donc **rien a redemarrer** pour demain.
+
+#### ✅ L'ETAT CHEZ SUPABASE, MESURE CE SOIR
+
+```
+   transaction_origine    text, nullable, aucun defaut        0 ligne marquee / 31 158
+   plage app              340 avec numero Hektor  .  1 SANS (le cobaye 1001424)
+   hors plage sans numero 0
+   la vue de la sentinelle app_affaires_sans_numero_hektor CITE transaction_origine,
+      et elle voit 1 ligne -- le cobaye, qui est DEMARQUE expres
+```
+
+#### ✅ LES 7 ESSAIS ROUGES : AUCUN N'EST DE MOI (mesure, pas supposition)
+
+Les 16 essais qui citent `affaire_ledger` ou `pull_from_supabase` ont ete lances **deux
+fois** : avec mes changements, puis avec la version **`f3a4e85`** (avant la piece 4) remise
+en place, puis les miens remis et **l'empreinte md5 verifiee identique** (methode du 15/11
+au matin). 9 sont verts. Les 7 autres sont **exactement dans le meme etat des deux cotes** :
+
+```
+   test_alignement_suppression            avant 1 / apres 1
+   test_mandat_notre_numero_sur_copie     avant 2 / apres 2   (2 = « pas pu mesurer »)
+   test_notaires_notre_numero             avant 1 / apres 1
+   test_personnes_deux_numeros            avant 1 / apres 1
+   test_r2_attente                        avant 1 / apres 1
+   test_un_seul_verrou                    avant 1 / apres 1
+   test_vendeurs_deux_numeros_sur_copie   avant 2 / apres 2
+```
+
+⚠ **Ils criaient donc deja, et ce n'est pas une bonne nouvelle en soi** : c'est la lecon
+« un essai qui crie tous les jours n'est plus un essai ». `test_un_seul_verrou` echoue sur
+son propre temoin historique (« la version d'avant visait un AUTRE fichier -- elle visait
+deja le bon »). Les autres n'ont pas ete ouverts : **hors perimetre**, a reprendre s'il le
+demande. Ce qui compte pour cette nuit : **mes changements n'en ont casse aucun**.
+
+#### ✅ L'ETAT FINAL, EPROUVE
+
+```
+   test_recopie_app_seule.py           44/44   (39 + les 5 du garde-fou)
+   test_descente_sans_cle_primaire.py  19/19   (dont la garde des vues)
+   essai_reel_sur_copie_26bis.py       15/15   sur les VRAIES lignes, en lecture seule
+   fins de ligne                       0 CRLF dans les deux fichiers (ils sont en LF)
+```
+
+#### ⏰ LE PROGRAMME DE LA NUIT, ET CE QU'ON JUGE AU MATIN
+
+```
+   04:00  GTI Quotidien   -> ... -> doublure du ledger (non bloquante, ~87 s)
+                              -> affaire ledger refresh+push (~103 s hier)
+                                   . refresh : cree transaction_origine en local
+                                   . push    : 31 157 lignes hier
+                                   . LA RECOPIE (26bis)  <- le geste neuf
+                                   . redescente des colonnes de classe A
+   06:45  GTI Descente    -> les 196 tables, dont les 2 gels que le plafond repare
+   08:00  GTI Sauvegarde
+```
+
+**Le critere du matin, en deux commandes :**
+
+```
+   python -X utf8 phase2/checks/retour_arriere_recopie_app_seule.py
+      -> doit dire : 1 a retirer . 340 de la plage AVEC numero . 30 817 hors plage
+   et dans le compte rendu du run, cle `recopie_app_seule` :
+      recopiees 1 . cles [1001424] . temoin 0 -> 1 . AUCUNE ecartee
+      ⛔ si la cle porte `echec`, le garde-fou a joue : le run a continue, et
+        `deja_entrees` dit ce qui est entre. RIEN n'est casse, on lit l'erreur.
+   et la descente ne doit PLUS sortir en code 1 (les 2 gels passent par rattrapage)
+```
+
 ### ⬜ CE QUI RESTE, DANS L'ORDRE CONTRAINT
 
 ```

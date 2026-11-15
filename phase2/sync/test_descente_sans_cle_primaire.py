@@ -4,20 +4,22 @@
 
     python -X utf8 phase2/sync/test_descente_sans_cle_primaire.py
 
-CE QU'ON EPROUVE. La descente du 15/11 est sortie en code 1 sur deux tables de GEL
+CE QU'ON EPROUVE. La descente sortait en code 1 depuis le 14/11 sur deux tables de GEL
 du chantier classeur : 7 344 lignes lues sur 7 346, et 12 413 sur 12 422. Une table
-creee par recopie (CREATE TABLE ... AS SELECT) n'a PAS de cle primaire ; le choix de
-la colonne de parcours se rabat alors sur LA PREMIERE COLONNE, qui se repete, et le
-parcours par valeur (« les lignes apres la derniere lue », avec un `gt` STRICT) saute
-ce qui reste de la valeur coupee au bord d'une page.
+creee par `CREATE TABLE ... AS SELECT` n'a AUCUNE cle primaire ; le choix de la colonne
+de parcours se rabat alors sur LA PREMIERE COLONNE, qui se repete, et le parcours par
+valeur -- avec son `gt` STRICT -- saute ce qui reste de la valeur coupee au bord d'une
+page. Le rattrapage par rang savait deja reparer exactement cela : il ne jouait pas,
+parce que ces deux tables sont au-dessus de l'ancien plafond de 5 000.
 
-⚠ ET LE RATTRAPAGE EXISTANT NE POUVAIT PAS LES SAUVER : il ne joue que sous
-  RELECTURE_ENTIERE_MAX = 5 000 lignes. 7 346 et 12 422 sont au-dessus.
+LE CORRECTIF EPROUVE ICI est donc UNIQUEMENT `RELECTURE_ENTIERE_MAX : 5 000 -> 15 000`.
 
-⭐ LE TEMOIN INVERSE EST LE COEUR DE CET ESSAI : la MEME table, lue comme AVANT le
-  correctif (une seule cle qui se repete), doit PERDRE des lignes et faire REFUSER la
-  copie. Sans lui, un essai vert ne prouverait pas que le correctif sert a quelque
-  chose.
+⛔⛔ ET L'ESSAI PORTE AUSSI LA GARDE DE CE QU'IL NE FAUT PAS FAIRE. Partir par rang
+  d'emblee des qu'il n'y a pas de cle primaire paraissait plus propre -- c'est FAUX et
+  dangereux : les VUES n'ont pas de cle primaire non plus. `app_v_mandat_statut` fait
+  24 596 lignes sur 76 colonnes, sa premiere colonne est UNIQUE, et elle descend
+  parfaitement par valeur. Le controle 3 tient cette garde : une telle table ne doit
+  JAMAIS passer par le rang.
 
 Aucun reseau, aucune base reelle : un faux lecteur qui imite PostgREST et une base
 SQLite en memoire.
@@ -78,7 +80,15 @@ class FauxLecteur:
 
 
 def fabriquer(nb_lignes, lignes_par_valeur):
-    """Une table dont la PREMIERE colonne se repete `lignes_par_valeur` fois."""
+    """Une table dont la PREMIERE colonne se repete `lignes_par_valeur` fois.
+
+    ⛔ LA TAILLE DE PAGE NE DOIT PAS ETRE UN MULTIPLE DE `lignes_par_valeur`, sinon
+      chaque page tombe PILE sur une frontiere de valeur et le parcours par valeur ne
+      saute rien -- l'essai serait vert sans rien prouver. C'est arrive a la premiere
+      ecriture de ce fichier : 4 lignes par valeur et des pages de 100, soit 25 valeurs
+      entieres par page, et les trois temoins inverses etaient verts A TORT.
+      `lignes_par_valeur = 1` fabrique une premiere colonne UNIQUE.
+    """
     lignes = []
     for i in range(nb_lignes):
         lignes.append({"app_chaine_id": i // lignes_par_valeur,
@@ -87,10 +97,12 @@ def fabriquer(nb_lignes, lignes_par_valeur):
     return lignes, ["app_chaine_id", "cote", "rang"]
 
 
-def descendre(lignes, colonnes, cles, page=100):
+def descendre(lignes, colonnes, cles, page=100, plafond=None):
     """Joue copy_table sur une base en memoire. Rend ce qui est VRAIMENT pose."""
-    ancienne_page, ancienne_pause = pfs.PAGE_SIZE, pfs.PAUSE_PAGE
+    vieux = (pfs.PAGE_SIZE, pfs.PAUSE_PAGE, pfs.RELECTURE_ENTIERE_MAX)
     pfs.PAGE_SIZE, pfs.PAUSE_PAGE = page, 0          # petites pages, pas d'attente
+    if plafond is not None:
+        pfs.RELECTURE_ENTIERE_MAX = plafond
     try:
         con = sqlite3.connect(":memory:")
         con.execute("CREATE TABLE sb_pull_state (table_name TEXT PRIMARY KEY, "
@@ -111,62 +123,48 @@ def descendre(lignes, colonnes, cles, page=100):
         con.close()
         return total, poses, distincts, lecteur, erreur
     finally:
-        pfs.PAGE_SIZE, pfs.PAUSE_PAGE = ancienne_page, ancienne_pause
+        pfs.PAGE_SIZE, pfs.PAUSE_PAGE, pfs.RELECTURE_ENTIERE_MAX = vieux
 
 
 def main():
-    print("=== 1. AUCUNE CLE PRIMAIRE, 1re colonne repetee -- LE CAS DU 15/11 ===")
-    # ⛔ LA TAILLE DE PAGE NE DOIT PAS ETRE UN MULTIPLE DU NOMBRE DE LIGNES PAR
-    #   VALEUR, sinon chaque page tombe PILE sur une frontiere de valeur et le
-    #   parcours par valeur ne saute rien -- l'essai serait vert sans rien prouver.
-    #   Premiere ecriture de cet essai : 4 lignes par valeur et des pages de 100,
-    #   donc 25 valeurs entieres par page. Les trois temoins inverses etaient verts
-    #   a tort. 3 lignes par valeur pour 100 par page coupe au milieu de la 34e.
-    lignes, colonnes = fabriquer(1200, 3)
-    total, poses, distincts, lecteur, erreur = descendre(lignes, colonnes, cles=[])
-    juger("1  aucune erreur", None, erreur)
-    juger("1b les 1 200 lignes sont posees", 1200, poses)
-    juger("1c et aucune n'est en double", 1200, distincts)
-    juger("1d le parcours est PAR RANG", True, lecteur.appels_rang > 0)
-    juger("1e et jamais par valeur", 0, lecteur.appels_valeur)
+    print("=== 1. LE CAS DU 15/11 : 12 422 lignes, aucune cle, 1re colonne repetee ===")
+    # app_classeur_lien_avant_regel_20261113 : 12 422 lignes pour 4 688 valeurs.
+    gel, colonnes = fabriquer(12422, 3)
+    total, poses, distincts, lecteur, erreur = descendre(gel, colonnes, cles=[], page=1000)
+    juger("1  aucune erreur -- la table n'est plus refusee", None, erreur)
+    juger("1b les 12 422 lignes sont posees", 12422, poses)
+    juger("1c et aucune n'est en double", 12422, distincts)
+    juger("1d le parcours commence PAR VALEUR (chemin inchange)", True,
+          lecteur.appels_valeur > 0)
+    juger("1e puis LE RATTRAPAGE PAR RANG la repare", True, lecteur.appels_rang > 0)
 
     print()
-    print("=== 2. TEMOIN INVERSE : la MEME table lue COMME AVANT le correctif ===")
-    # Avant, sans cle primaire, le code prenait colonnes[0] et passait par valeur.
-    # Une seule cle declaree reproduit exactement ce chemin.
-    total, poses, distincts, lecteur, erreur = descendre(lignes, colonnes,
-                                                         cles=["app_chaine_id"])
-    # ⭐ MON CRITERE ETAIT FAUX ICI, ET C'EST LE CODE QUI AVAIT RAISON. J'attendais
-    #   une copie REFUSEE. Sous RELECTURE_ENTIERE_MAX (5 000), le rattrapage par rang
-    #   joue et SAUVE la table : le journal dit « 1178/1200 -- relecture par rang ».
-    #   Donc sous le plafond on ne perdait rien -- on payait une SECONDE LECTURE
-    #   COMPLETE de la table, chaque nuit, en silence. C'est ca que le correctif
-    #   economise, et c'est au-dela du plafond (controle 3) qu'il evite une vraie perte.
-    juger("2  le parcours est PAR VALEUR", True, lecteur.appels_valeur > 0)
-    juger("2b IL MANQUAIT DES LIGNES -> le rattrapage a du relire la table", True,
-          lecteur.appels_rang > 0)
-    juger("2c sauvee, mais au prix d'une seconde lecture entiere", (1200, None),
-          (poses, erreur))
-
-    print()
-    print("=== 3. AU-DELA DU PLAFOND DE RELECTURE (5 000) : le vrai echec du 15/11 ===")
-    # 3 lignes par valeur, pages de 1 000 : la frontiere coupe une valeur en deux
-    # (voir la note du controle 1). app_affaire_repartition_avant_classeur_20261113
-    # fait 7 346 lignes pour 3 673 valeurs, et elle perdait 2 lignes en vrai.
-    grandes, colonnes3 = fabriquer(7346, 3)
-    total, poses, distincts, lecteur, erreur = descendre(grandes, colonnes3, cles=[],
-                                                         page=1000)
-    juger("3  7 346 lignes passent SANS CLE PRIMAIRE", 7346, poses)
-    juger("3b aucune en double", 7346, distincts)
-    juger("3c une SEULE passe, pas de relecture de rattrapage", True,
-          lecteur.appels_rang <= 9)                # 7 pages pleines + la derniere
-    total, poses, distincts, lecteur, erreur = descendre(grandes, colonnes3,
-                                                         cles=["app_chaine_id"],
-                                                         page=1000)
-    juger("3d TEMOIN INVERSE : avant, elle etait REFUSEE", True,
+    print("=== 2. TEMOIN INVERSE : le MEME gel avec l'ancien plafond de 5 000 ===")
+    total, poses, distincts, lecteur, erreur = descendre(gel, colonnes, cles=[],
+                                                         page=1000, plafond=5000)
+    juger("2  le rattrapage NE JOUE PAS (au-dela du plafond)", 0, lecteur.appels_rang)
+    juger("2b la copie est REFUSEE", True,
           erreur is not None and "incomplete" in (erreur or ""))
-    juger("3e et le rattrapage par rang NE POUVAIT PAS la sauver (> 5 000)",
-          0, lecteur.appels_rang)
+    juger("2c et rien n'a bascule -- l'ancienne copie est conservee", None, total)
+
+    print()
+    print("=== 3. ⛔ LA GARDE : une GROSSE table sans cle dont la 1re colonne est UNIQUE ===")
+    print("    (c'est app_v_mandat_statut : 24 596 lignes, 76 colonnes, une VUE)")
+    vue, colonnes_vue = fabriquer(24596, 1)          # 1 ligne par valeur = colonne unique
+    total, poses, distincts, lecteur, erreur = descendre(vue, colonnes_vue, cles=[],
+                                                         page=1000)
+    juger("3  elle descend ENTIERE", 24596, poses)
+    juger("3b par VALEUR, et JAMAIS par rang", (True, 0),
+          (lecteur.appels_valeur > 0, lecteur.appels_rang))
+    juger("3c aucune erreur", None, erreur)
+    # ⭐ ET SI UNE TELLE TABLE ECHOUAIT UN JOUR : au-dela de 15 000, elle est REFUSEE
+    #   bruyamment, pas relue par offset. C'est ce que le plafond protege.
+    grosse_repetee, _ = fabriquer(24596, 3)
+    total, poses, distincts, lecteur, erreur = descendre(grosse_repetee, colonnes_vue,
+                                                          cles=[], page=1000)
+    juger("3d au-dela de 15 000, une table en echec est REFUSEE, pas relue par offset",
+          (0, True), (lecteur.appels_rang,
+                      erreur is not None and "incomplete" in (erreur or "")))
 
     print()
     print("=== 4. ON NE CASSE RIEN : une vraie cle primaire SIMPLE ET UNIQUE ===")
@@ -179,21 +177,21 @@ def main():
 
     print()
     print("=== 5. ON NE CASSE RIEN : une cle COMPOSITE (correctif du 15/09) ===")
+    petit, colonnes_p = fabriquer(1200, 3)
     total, poses, distincts, lecteur, erreur = descendre(
-        lignes, colonnes, cles=["app_chaine_id", "cote", "rang"])
+        petit, colonnes_p, cles=["app_chaine_id", "cote", "rang"])
     juger("5  les 1 200 lignes sont posees", 1200, poses)
-    juger("5b et le parcours est PAR RANG, comme avant", True,
+    juger("5b et le parcours est PAR RANG d'emblee, comme avant", True,
           lecteur.appels_rang > 0 and lecteur.appels_valeur == 0)
 
     print()
-    print("=== 6. LA CONDITION ELLE-MEME, lue dans le fichier ===")
+    print("=== 6. LE PLAFOND ET LA CONDITION, lus dans le fichier ===")
     src = (RACINE / "phase2" / "sync" / "pull_from_supabase.py").read_text(encoding="utf-8")
-    juger("6  la condition couvre l'absence de cle", True,
-          "composite = (not cles) or len(cles) > 1" in src)
-    juger("6b l'ordre total se prend sur TOUTES les colonnes", True,
-          "ordre_cle = list(cles) if cles else list(columns)" in src)
-    juger("6c et le journal le DIT, au lieu de mentir « cle composite »", True,
-          "AUCUNE cle primaire" in src)
+    juger("6  le plafond est a 15 000", 15000, pfs.RELECTURE_ENTIERE_MAX)
+    juger("6b la condition du parcours par rang est INCHANGEE", True,
+          "composite = bool(cles) and len(cles or []) > 1" in src)
+    juger("6c ⛔ et le piege des VUES est ECRIT dans le fichier", True,
+          "app_v_mandat_statut" in src and "VUES n'ont pas de cle primaire" in src)
 
     print()
     print("%d/%d verts" % (VERTS, VERTS + len(ROUGES)))

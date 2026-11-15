@@ -172,7 +172,39 @@ VUES_NON_DESCENDUES = frozenset({
     "app_v_orphelins_recherche", "app_v_plages_numeros",
     "app_v_plages_trop_proches", "app_work_items_current", "app_workers_current",
 })
-RELECTURE_ENTIERE_MAX = 5000   # au-dela, on ne redemande pas une table en un seul bloc
+# ⭐⭐ LE PLAFOND DU RATTRAPAGE PAR RANG : 5 000 -> 15 000.            15/11/2026
+#
+# POURQUOI ON LE MONTE. La descente sortait en code 1 depuis le 14/11 sur deux
+# tables de GEL du chantier classeur -- 7 344 lignes lues sur 7 346, et 12 413 sur
+# 12 422. Une table creee par `CREATE TABLE ... AS SELECT` n'a AUCUNE cle primaire ;
+# le choix de la colonne de parcours (l. ~301) se rabat alors sur LA PREMIERE
+# COLONNE, qui se repete (4 688 valeurs pour 12 422 lignes), et le parcours par
+# valeur avec son `gt` STRICT saute ce qui reste de la valeur coupee au bord d'une
+# page. Le rattrapage par rang savait deja reparer exactement ca -- il ne jouait pas,
+# parce que ces deux tables sont AU-DESSUS de 5 000.
+#
+# ⛔⛔ CE QU'IL NE FAUT SURTOUT PAS FAIRE, ET QUE J'AI ESSAYE : partir par rang
+#   D'EMBLEE des qu'il n'y a pas de cle primaire. Les VUES n'ont pas de cle primaire
+#   non plus. Mesure du 15/11 : 51 vues existent, VUES_NON_DESCENDUES n'en connait
+#   que 41 -- les 10 nees depuis le 12/10 descendent encore, dont
+#   `app_v_mandat_statut` : 24 596 lignes, 76 colonnes, et sa premiere colonne
+#   `register_row_id` est UNIQUE. Elle descend donc PARFAITEMENT aujourd'hui par
+#   valeur. Partir par rang l'aurait fait passer a 25 pages d'offset avec un ORDER BY
+#   sur 76 colonnes, sur une VUE que Postgres recalcule a chaque page -- c'est mot
+#   pour mot ce qui a mis l'instance par terre le 21/08 (statement timeout), le 15/09
+#   (503 pour toute l'agence de 07:30 a 09:15) et le 12/10 (08:44-09:00).
+#
+# ⭐ CE PLAFOND-CI NE TOUCHE QUE CE QUI ECHOUE DEJA. Une table qui descend bien ne
+#   passe jamais par le rattrapage : son chemin ne change pas d'un octet. Aujourd'hui
+#   cela vise EXACTEMENT les deux tables de gel, et rien d'autre.
+#
+# POURQUOI 15 000 ET PAS PLUS. Le plafond est la pour proteger les VUES calculees,
+# ou l'offset coute cher. 15 000 couvre les deux gels (12 422 au plus) avec de la
+# marge, et laisse `app_v_mandat_statut` (24 596) HORS D'ATTEINTE : si elle echouait
+# un jour, elle serait refusee -- bruyamment -- au lieu d'etre relue par offset.
+# ⚠ Le jour ou un gel depassera 15 000 lignes, le vrai remede sera de lui DONNER
+#   une cle primaire a la creation, pas de remonter ce chiffre encore une fois.
+RELECTURE_ENTIERE_MAX = 15000  # au-dela, on ne redemande pas une table en un seul bloc
 
 
 def load_env_file(path: Path) -> None:
@@ -544,36 +576,10 @@ def copy_table(conn: sqlite3.Connection, reader: SupabaseReader, distant: str,
     #
     # ⚠ ET LE CONTROLE DE COMPLETUDE RESTE LE JUGE. Si ce parcours se trompait
     #   lui aussi, la table serait REFUSEE, pas posee a moitie.
-    # ⭐ ET LE MEME REMEDE QUAND IL N'Y A AUCUNE CLE PRIMAIRE.        15/11/2026
-    #
-    #   La descente sortait en code 1 sur deux tables de GEL du chantier classeur :
-    #   7 344 lignes lues sur 7 346, et 12 413 sur 12 422. Cause : une table creee
-    #   par recopie (CREATE TABLE ... AS SELECT) n'a PAS de cle primaire, et le
-    #   `cle = cles[0] if cles else colonnes[0]` d'au-dessus prend alors LA PREMIERE
-    #   COLONNE -- qui se repete (4 688 valeurs distinctes pour 12 422 lignes). Le
-    #   parcours par valeur saute donc ce qui reste de la valeur coupee au bord d'une
-    #   page. C'est le defaut du 15/09 a l'identique, par une autre porte.
-    #
-    #   ⚠ MESURE AVANT DE L'ETENDRE, parce que l'offset n'a ici AUCUN index a
-    #     suivre (c'est tout l'argument du paragraphe au-dessus) : 36 tables sans
-    #     cle primaire, 109 201 lignes en tout, la plus grosse a 31 151 lignes --
-    #     32 pages -- et au plus 26 colonnes. Le balayage sequentiel que cela coute
-    #     est negligeable a ces volumes, et l'URL d'ordre reste courte.
-    #   ⛔ ET ON NE RETIRE PAS CES GELS POUR FAIRE TAIRE L'ALARME : une sauvegarde
-    #     datee avant un geste destructif est une regle du projet, pas un dechet.
-    #     Le tort etait de les creer SANS cle primaire, pas de les garder.
-    composite = (not cles) or len(cles) > 1
+    composite = bool(cles) and len(cles or []) > 1
     if composite:
-        # SANS cle primaire, l'ordre total se prend sur TOUTES les colonnes : deux
-        # lignes egales sur tout sont interchangeables, donc « les 1 000 suivantes »
-        # ne peut plus rien omettre. C'est mot pour mot le cas que page_par_rang
-        # documente deja (« vue sans cle primaire dont la premiere colonne se repete »).
-        ordre_cle = list(cles) if cles else list(columns)
-        if cles:
-            quoi = "cle composite (%s)" % "+".join(ordre_cle)
-        else:
-            quoi = "AUCUNE cle primaire -- ordre sur ses %d colonnes" % len(ordre_cle)
-        print(f"        {distant} : {quoi} -- parcours par rang")
+        ordre_cle = list(cles or [])
+        print(f"        {distant} : cle composite ({'+'.join(ordre_cle)}) -- parcours par rang")
         rang = 0
         while True:
             while True:
