@@ -527,6 +527,326 @@ utilisable ? », et elle ne coute aucune ecriture.
 production, donc il attend l'accord de Frederic — et il vaut mieux l'attendre apres la
 mesure de l'ecran ci-dessus.
 
+### ⭐⭐⭐ ET LA VRAIE REPONSE : L'APP FAIT EXACTEMENT CE QUE L'ESSAI A FAIT
+
+**Question de Frederic (15/11) : « quelle difference avec une ecriture faite dans l'app
+sur les transactions ? »** — mesuree dans la fonction du serveur, pas deduite.
+**Reponse : AUCUNE DIFFERENCE DE NATURE.**
+
+Une transaction creee depuis l'app (modale « Changer le statut » → Offre / Compromis /
+Vendu) passe par **`app_change_annonce_status_optimistic`**, et cette fonction est **LA
+SEULE de tout le serveur qui INSERE dans `app_affaire_ledger`** (verifie par expression
+reguliere sur les 100+ fonctions : `insert into (public\.)?app_affaire_ledger`).
+
+Ce qu'elle ecrit, lignes 163-195, **avec ses propres commentaires** :
+
+```
+v_affaire_id := nextval('public.app_affaire_id_app_seq');   -- LA PLAGE APP
+insert into public.app_affaire_ledger (...) values (
+   v_affaire_id, ...,
+   null,            -- « Hektor ne la connait pas encore : LA CASE RESTE VIDE »
+   ...,
+   'en_cours',
+   now(), now(),
+   false);          -- « DELETE-NEVER : LE RUN DE NUIT LA CONSERVERA »
+```
+
+⭐⭐⭐ **Donc chaque clic de l'app cree deja une ligne : plage app, SANS numero Hektor,
+`present_in_hektor = false`.** C'est mot pour mot l'etat de notre ligne 1001424. L'essai
+A2 n'a pas invente un chemin exotique : il a **refait a la main le geste normal de l'app**,
+et il a prouve pour la premiere fois l'intention que le code ecrivait depuis le debut
+(« delete-never »).
+
+**LES DEUX SEULES DIFFERENCES, et elles sont precises :**
+
+```
+1. L APP POSE EN PLUS UN TRAVAIL POUR LE WORKER (app_console_job) :
+      -> Hektor cree la transaction, rend son numero, le run le pose sur la ligne
+      -> la ligne descend alors en local, et l etat « sans numero » etait TRANSITOIRE
+   NOTRE LIGNE n a demande aucun numero : son etat « sans numero » est DEFINITIF.
+   C est exactement ce que Frederic a demande (« il faut pas tout creer dans hektor »).
+2. L app ecrit aussi la file d envoi (app_affaire_champ_app), l etiquette du dossier,
+   les parties, et l etat 'en_cours' (notre essai : 'refused', expres -- une offre
+   refusee ne declenche aucune des 4 regles de chainage).
+```
+
+⭐⭐ **CE QUE CA CHANGE POUR LE LOT B** : ecrire les 241 **sur le serveur** n'est pas un
+detour, **c'est le chemin par lequel l'app ecrit TOUTES ses transactions**. Les 340 lignes
+de la plage app sont nees ainsi. Elles ne sont en local que parce que Hektor leur a donne
+un numero ensuite.
+
+⚠ **La reserve du matin reste vraie, mais elle change de nature** : « les outils locaux
+ne les verront pas » est l'etat NORMAL de toute transaction nee dans l'app entre le clic
+et le retour de Hektor. Pour les 241, cet etat serait **definitif** au lieu d'etre
+transitoire. C'est **ca** le seul vrai sujet, et il se formule simplement : **quels outils
+doivent voir les 241 ?** Si la reponse est « l'app, et les mesures du chantier », il faut
+les deux copies ou un lecteur qui lit le serveur.
+
+⛔ **ET UNE FAUTE DE MESURE A SIGNALER** : ma premiere requete cherchait
+`insert into app_affaire_ledger` et a rendu **zero** — le code ecrit
+`insert into public.app_affaire_ledger`. J'ai failli conclure « l'app ne cree jamais de
+transaction », ce qui est faux. *Un zero ne se croit pas sans temoin positif* : ici le
+zero venait de mon motif, pas de la base.
+
+### ⭐⭐⭐ « POURQUOI ON NE DESCEND PAS AU SERVEUR, SANS NUMERO HEKTOR ? » — ON LE FAIT DEJA
+
+**Question de Frederic (15/11)**, et elle vise juste : *« pourquoi on ne descend pas au
+serveur comme le worker mais sans numero Hektor ? Et trouver comment ne pas faire sonner
+les sentinelles. »*
+
+⭐⭐⭐ **LA DONNEE EST DEJA SUR LE SERVEUR LOCAL.** La descente l'a descendue ce matin
+dans **`app_affaire_ledger__sb`** — la *doublure*, l'image du serveur :
+
+```
+   app_affaire_ledger__sb (local)  : 31 158 lignes . 1 SANS numero Hektor
+   et NOTRE LIGNE y est, entiere   : 1001424 . offre . refused . chaine 14001 .
+                                     dossier 1355930 . present_in_hektor 0
+   plage app dans la doublure      : 341  (contre 340 dans le registre local)
+```
+
+**IL NE MANQUE QU'UNE MARCHE : la recopie de la doublure vers `app_affaire_ledger`.**
+Le run fait **UPDATE, jamais INSERT** — il *adopte* une ligne de l'app quand Hektor la
+lui rend, il ne la *cree* jamais de son propre chef.
+
+⭐⭐ **ET CE N'EST PAS UN OUBLI : LA TACHE EST DEJA ECRITE, ET NON FAITE.**
+`notice/LISTE_TACHES_A_COCHER_2026-08-29.md`, chapitre C.19-d (l. ~767) :
+
+> `[ ] 26bis-TRANSACTIONS   une transaction nee dans l'app n'est au registre LOCAL`
+> `         qu'une fois retrouvee chez Hektor (UPDATE, jamais INSERT)`
+
+C'est **mot pour mot** la question de Frederic. Le dessein est celui des doublures
+(`affaire_ledger.py` l. 1021) : *« DETECTER N'EST PAS RESOUDRE [...] L'ecart n'invente pas
+d'alarme : il tombe dans le journal de 07:30 (comparer_doublures.py), colonne « app
+seule », qui couvre DEJA app_affaire_ledger__sb. »*
+
+**ET LE JOURNAL A FAIT EXACTEMENT CA CE MATIN** (`app_doublure_journal`, lecture seule) :
+
+```
+   releve_le    doublure                 accord   hektor_seul   app_seule
+   2026-11-15   app_affaire_ledger__sb   31 157        0            1     <- NOTRE LIGNE
+   2026-11-14   app_affaire_ledger__sb   31 157        0            0
+   2026-11-13   app_affaire_ledger__sb   31 157        0            0
+```
+
+Les DEUX mecanismes d'adoption lisent la doublure (`affaire_ledger.py` l. 749 et 762) :
+par **triplet** (annonce, genre, numero Hektor) pour les lignes QUI ont un numero, et par
+**(annonce, genre, acquereur Hektor)** pour celles **SANS** numero — mais cette seconde
+voie **exige un `hektor_acquereur_id`**, et elle ne sert qu'a FUSIONNER le jour ou Hektor
+connait l'affaire. Elle ne fait pas descendre une ligne qui n'ira jamais chez Hektor.
+
+### ⛔⛔ LES SENTINELLES : UNE SEULE EST CONCERNEE, ELLE A LEVE LA MAIN CE MATIN
+
+```
+   la vue      app_affaires_sans_numero_hektor
+               = SELECT ... FROM app_affaire_ledger WHERE hektor_affaire_id IS NULL
+               -> elle rend 1 ligne aujourd hui : LA NOTRE
+   la regle    data.affaire_sans_numero_hektor   (monitoring/check_gti_health.py:494-500)
+               rule "absolute" . max 0           -> DEPASSE des la premiere ligne
+   la gravite  AUCUNE `severity` declaree -> defaut `warning` (l. 1888)
+               et SEULS LES CRITICAL ENVOIENT -> AUCUNE ALERTE N EST PARTIE
+   le passage  GTI Health Monitor, 15/11 a 06:48:55, resultat 0 . suivant 08:48
+```
+
+⭐⭐⭐ **ET LA REPONSE A « COMMENT NE PAS LA FAIRE SONNER » EST ECRITE DANS LE CODE
+DEPUIS LE 28/08**, juste au-dessus de la regle :
+
+> *« NB : ce seuil de 0 devra etre revu **quand C.19 etape 4 permettra a l'app de creer
+> une transaction sans passer par Hektor** — ce jour-la, ces lignes seront normales. »*
+
+Il n'y a donc **rien a inventer** : le projet avait prevu l'evenement et nomme le remede.
+
+### ⭐ LES DEUX TRAVAUX QUI EN DECOULENT — ADDITIFS, A TRANCHER PAR FREDERIC
+
+```
+(a) 26bis-TRANSACTIONS : le run RECOPIE de la doublure vers le registre local les
+    lignes « app seule » qui n ont pas de numero Hektor. Elles sont deja protegees
+    une fois la-bas : le marquage commence par « app_affaire_id < PLAGE_RESERVEE_APP »
+    et le seul DELETE EXIGE un numero Hektor. Rien d autre a garder.
+    -> les outils locaux (apparieur, rapports, mesures du chantier) les verraient
+(b) LA SENTINELLE, avec son TEMOIN INVERSE : ne plus compter comme anomalie une ligne
+    DE LA PLAGE APP (>= 1 000 000) sans numero Hektor, et GARDER le seuil 0 pour les
+    autres -- une ligne venue de Hektor sans numero reste une anomalie.
+    Temoin d aujourd hui : 1 ligne sans numero, et elle est DANS la plage app ;
+    0 hors plage. La sentinelle continuerait donc de proteger ce qu elle protegeait.
+```
+
+⛔ **Ce sont des propositions de code : rien n'est ecrit sans son « go ».**
+
+### ⛔⛔⛔ AUDIT DU 15/11 — « L'ID HEKTOR RESTE OBLIGATOIRE TANT QUE LA COUPURE N'A PAS EU LIEU »
+
+**Consigne de Frederic**, en trois points : *« tant que la coupure n'a pas eu lieu avec
+Hektor il faut que les gestes dans l'app soient envoyes chez Hektor pour avoir son id
+Hektor necessaire aux modifications. Donc nos ecritures ne seront pas modifiables dans
+Hektor, il faudra le prevoir. Et il faut garder une securite : si une transaction est
+ajoutee dans l'app, il faut toujours qu'elle ait son id Hektor. »*
+
+⛔⛔ **ET IL A ARRETE UNE PROPOSITION FAUSSE DE MA PART.** Ce matin je proposais
+« ne plus compter comme anomalie une ligne DE LA PLAGE APP sans numero Hektor ». C'etait
+**trop large** : ca aurait eteint la garde pour **tous** les gestes vivants de l'app, donc
+aussi pour celui qui aurait **echoue** a partir chez Hektor. La garde doit distinguer
+**l'INTENTION**, pas la plage.
+
+#### POINT 1 — « les gestes doivent partir chez Hektor » : C'EST TENU, ET MESURE
+
+```
+   les 340 lignes de la plage app : 340 ONT leur numero Hektor, soit 100 %
+   TROIS pieces le garantissent, toutes mesurees dans le code :
+     a) le RPC pose le travail worker des le clic (app_console_job)
+     b) le worker cree chez Hektor et pose le numero
+     c) LE FILET : poserNumerosManquants (console_job_worker.js:24109), appele a
+        CHAQUE relecture d annonce (l. 4431), ALLUME EN DUR
+        (SECONDE_PREUVE_RELECTURE = true, l. 24089)
+```
+
+Le filet cible **exactement nos futures lignes** :
+`hektor_affaire_id=is.null & present_in_hektor=is.false & app_affaire_id=gte.1000000`.
+Il lit Hektor, et pose le numero **seulement** s'il trouve **un seul** candidat par
+l'acquereur. Abstention declaree sinon (`sans_acquereur`, `plusieurs_lignes_orphelines`,
+`N_candidat(s)`). Il ne devine jamais.
+
+#### POINT 2 — « nos ecritures ne seront pas modifiables » : DEJA PREVU, DEJA EN PLACE
+
+```
+   app_modifier_affaire_optimistic (l. 31-39)  « ON NE MODIFIE QUE CE QUE HEKTOR CONNAIT »
+     -> sans numero        : raise « modification_sans_numero_hektor »
+     -> present_in_hektor false : raise « modification_transaction_effacee »
+   app_geste_affaire_optimistic (l. 109-112)   « PAS DE GESTE SANS NUMERO HEKTOR » (P3, 27/10)
+     -> raise « sans_numero_hektor: le geste ne peut pas partir »
+   l ECRAN le dit deja     App.tsx:24444 et ModaleStatutV2.tsx:941 :
+                           « nee dans l app, sans numero Hektor »
+                           App.tsx:20027 : le message du refus
+```
+
+⭐ **Donc les 241 seraient en LECTURE SEULE dans l'app, sans qu'on ait rien a ecrire.**
+
+⚠⚠ **MAIS UN DEFAUT PRECIS** : pour les 241, c'est le **second** verrou qui mordra
+(`present_in_hektor is false`), et **son message est FAUX** — *« Hektor ne la rend plus »*
+alors qu'elle **n'y a jamais ete**. Un negociateur y lira une perte de donnee.
+
+#### POINT 3 — « garder la securite » : elle existe, et il ne faut PAS l'eteindre
+
+```
+   data.affaire_sans_numero_hektor . vue app_affaires_sans_numero_hektor . seuil 0
+   gravite : warning (aucune severity declaree) -> n ENVOIE PAS, mais leve la main
+```
+
+### ⛔⛔ LE RISQUE QUE L'AUDIT A TROUVE, ET QUI N'ETAIT NULLE PART AU PLAN
+
+**`poserNumerosManquants` ECRIT UN `error` AU JOURNAL CONSOLE** quand il ne peut pas poser
+le numero (`poses === bilan.length ? "done" : "error"`, l. 24159).
+
+**TEMOIN REEL, mesure dans `app_console_job_log`** — une seule trace depuis l'origine :
+
+```
+   2026-10-22 21:49 . step hektor_transaction_seconde_preuve . status ERROR
+   « Seconde preuve : 0 numero(s) pose(s) sur 1 transaction(s) nee(s) dans l app sans numero »
+   annonce 24113 . app_affaire_id 1001375 . compromis . abstention . « 0_candidat(s) »
+```
+
+⛔ **Avec les 241, chaque geste du worker sur une annonce qui en porte une ecrirait une
+erreur Console** — et le moniteur compte les erreurs Console (orange 48 h, meme tranchee).
+C'est *« un essai qui crie tous les jours »*, en production.
+⭐ **Volume reel : seulement 3 des biens concernes sont VIVANTS** (40318, 58979, 8494).
+Le risque est donc **faible en volume mais certain**, et il se repete a chaque geste.
+
+### ⭐⭐⭐ LA SOLUTION PROPOSEE — DECLARER L'EXCLUSION, JAMAIS ETEINDRE LA GARDE
+
+La regle du projet existe deja : *« Exclure : le DECLARER »* et *« une exclusion a part
+doit etre appelee par CHAQUE porte »*. On ne touche donc a aucun seuil : **on marque**.
+
+```
+PIECE 1  LA MARQUE -- colonne `transaction_origine` sur app_affaire_ledger
+         (l idiome existe deja : mandat_origine, notaires_origine)
+         valeur 'classeur' pour les 241 . NULL pour tout le reste
+         ⚠ POSEE DANS LE MEME INSERT, jamais apres : la fenetre entre les deux
+           serait un faux positif, et le projet a deja paye ca ailleurs.
+
+PIECE 2  LA SENTINELLE, AVEC SON TEMOIN INVERSE -- la vue ne compte plus les
+         lignes marquees 'classeur', et GARDE LE SEUIL 0 POUR TOUT LE RESTE,
+         plage app comprise. Un geste vivant sans numero leve TOUJOURS la main.
+         TEMOIN : aujourd hui la vue rend 1 (notre essai, NON marque) ; apres la
+         marque elle rendrait 0 ; en retirant la marque, 1 revient.
+
+PIECE 3  LE FILET DU WORKER -- poserNumerosManquants ajoute
+         `&transaction_origine=is.null` a sa requete : il ne cherche plus de numero
+         pour une ligne qui n en aura jamais -> plus d `error` au journal, et le
+         compte `poses === bilan.length` redevient juste.
+
+PIECE 4  LE MESSAGE DE L ECRAN -- pour une ligne marquee, dire LA VERITE :
+         « reprise de l historique : elle n existe pas chez Hektor et n y sera pas
+         creee » au lieu de « Hektor ne la rend plus ». Et l etiquette
+         « nee dans l app, sans numero Hektor » devient « reprise du classeur ».
+         ⚠ C est la correction du defaut du POINT 2.
+
+PIECE 5  26bis-TRANSACTIONS -- la recopie de la doublure vers le registre LOCAL,
+         pour que l apparieur, les rapports et les mesures du chantier les voient.
+         A part : elle ne depend pas des 4 autres.
+```
+
+**L'ORDRE EST CONTRAINT** : la piece 1 **avant toute ecriture des 241**, puis 2, 3, 4.
+La piece 5 peut venir avant ou apres.
+
+⚠ **CE QUE JE NE TRANCHE PAS, ET QUI EST A LUI** : faut-il laisser
+`present_in_hektor = false` sur les 241 ? C'est ce que fait l'app a chaque clic, donc
+c'est coherent. Mais aujourd'hui ce `false` veut dire « Hektor ne la rend plus » (une
+disparition), alors que pour les 241 il voudrait dire « elle n'y a jamais ete ».
+⭐ **La marque leve l'ambiguite sans toucher a la colonne** — c'est pour ca que je
+propose une marque plutot que de bricoler `present_in_hektor`, qui est lu partout.
+
+⛔ **Rien n'est ecrit sans son « go ».**
+
+### ⛔⛔ RECTIFICATION DU 15/11 — LE « DEFAUT DU POINT 2 » ETAIT FAUX, ET L'ECRAN SAIT DEJA
+
+**Frederic a demande d'expliquer plus simplement. En reverifiant, DEUX de mes affirmations
+tombent — toutes deux dans le bon sens : le projet avait deja tranche.**
+
+**1) L'ORDRE DES TESTS. J'avais dit que le message « Hektor ne la rend plus » sortirait
+pour les 241. C'est FAUX** : dans `app_modifier_affaire_optimistic`, le test du **numero**
+est a la ligne **32**, celui de `present_in_hektor` a la ligne **36**. Le premier gagne.
+Une ligne sans numero recoit donc :
+
+> *« modification_sans_numero_hektor : cette transaction n'existe pas encore chez Hektor »*
+
+C'est **le bon message**. Il reste une nuance de MOT, pas un defaut : « pas **encore** »
+suppose une attente, alors qu'une reprise du classeur n'ira jamais chez Hektor.
+
+**2) L'ECRAN NE DIRA PAS « plus dans Hektor »**, et c'est deja code. La condition est
+**`present_in_hektor === false && numero`** (App.tsx:32904 et 41380) : **il faut un
+NUMERO** pour afficher cette mention. Et juste a cote, App.tsx:24444 /
+ModaleStatutV2.tsx:941 affichent l'autre etiquette, exclusive :
+
+```
+   AVEC un numero + present_in_hektor false  ->  « plus dans Hektor »   (une disparition)
+   SANS numero                               ->  « nee dans l app, sans numero Hektor »
+```
+
+⭐⭐⭐ **LE COUPLE « PAS DE NUMERO + present_in_hektor false » EST DEJA LE LANGAGE DU
+PROJET** pour dire « nee chez nous, jamais chez Hektor ». Il n'y a donc **rien a inventer
+pour l'affichage**, et surtout **rien a changer sur `present_in_hektor`** — colonne lue
+**575 fois dans 150 fichiers** (mesure du 15/11). Y toucher serait un risque enorme pour
+un gain nul.
+
+### ⭐ LA PROPOSITION SE SIMPLIFIE DONC BEAUCOUP
+
+```
+PIECE 1  la marque `transaction_origine = 'classeur'`            -> GARDEE
+PIECE 2  la sentinelle n en tient pas compte, seuil 0 ailleurs   -> GARDEE
+PIECE 3  le filet du worker ignore les lignes marquees           -> GARDEE (le vrai risque)
+PIECE 4  le message de l ecran                                   -> REDUITE a un MOT :
+         « n existe pas encore chez Hektor » -> « n existe pas chez Hektor »
+         pour une ligne marquee. Cosmetique, pas bloquant.
+PIECE 5  26bis, la recopie vers le registre local                -> GARDEE, a part
+```
+
+⭐⭐ **LA MARQUE NE SERT PLUS QU'A UNE SEULE CHOSE, ET C'EST LA BONNE** : distinguer
+*« elle ATTEND son numero »* (anormal si ca dure — la securite de Frederic) de
+*« elle n'en aura JAMAIS »* (assume, declare). Deux lecteurs seulement en ont besoin :
+**le filet du worker** (qui ecrit une erreur) et **la sentinelle** (seuil 0).
+
+
+
+
+
 
 ### PHASE B — LES EMPLACEMENTS ET LES GARDIENS
 
