@@ -2513,6 +2513,91 @@ l'etat d'une autre transaction) ; ce balayage-ci, fait avec le critere « compro
 trouve un 7e qui se declenche sur `state` ET sur l'ABSENCE de numero. **Chaque famille
 demande son propre balayage, et il se fait AVANT de generer le patch.**
 
+### ✅⭐⭐ C8 EST FAIT -- LES DEUX PLUS GROS POSTES, POSES LE 16/11
+
+#### LA CIBLE EST LA VENTE, ET LA MESURE EST D'UNE NETTETE PARFAITE
+
+```
+   lignes du classeur reliees a UNE vente       3 735
+   lignes reliees a PLUSIEURS ventes                0   ⭐ AUCUNE ambiguite
+```
+
+C'est logique : « vente reglee » date le REGLEMENT d'une vente, et une facture suit
+une vente. Ni l'offre ni le compromis ne portent cela. **Zero cas a trancher** -- le
+lot le plus propre du chantier.
+
+#### LE TRI DES 3 802 LIGNES
+
+```
+   ✅ 3 730  UNE vente, rien de pose  -> POSEES (Y 3 729 . AA 3 671)
+   ⚠      0  plusieurs ventes
+   ⚠     72  aucune vente chez nous   -> emportent Y 27 . AA 70
+   ·      0  deja pose
+   partition  3 802 = 3 802
+```
+
+#### ⭐⭐⭐ LE PIEGE DE Y EST DESARME, ET SANS PARSEUR
+
+Le classeur ecrit ses dates sous DEUX formes, et ce defaut a coute **924 lignes en
+silence le 14/11**. Mesure de ce lot : **2 962 dates `jj/mm/aaaa` et 794 TEXTES**
+(« 29 decembre23 »).
+
+⭐ **CE PATCH N'EN PERD AUCUNE, PARCE QU'IL NE CONVERTIT RIEN** : la colonne est en
+TEXT (decision de A1) et on pose le **BRUT**. Le parseur tolerant sert a LIRE et a
+COMPARER, pas a POSER.
+
+**La preuve, apres la pose** :
+```
+   Y au format jj/mm/aaaa         2 938   sur 2 962 au classeur
+   Y en TEXTE                       791   sur 794
+```
+Et l'ecart s'explique a l'unite : les 72 lignes hors de portee emportaient 24 dates et
+3 textes. **2 962 - 24 = 2 938 . 794 - 3 = 791.**
+
+⛔ **IL RESTE DONC LA LECTURE TOLERANTE**, et c'est le commentaire de la colonne qui
+l'exige : « Lecture tolerante : charge de C8 ». ➡ Un SECOND geste, une fonction de
+lecture qui normalise quand elle peut. On a pose d'abord ce qui ne se perd pas.
+
+#### ✅ LES ONZE CONTROLES
+
+```
+   vente_reglee_app             3 729 = 3 729
+   numero_facture_app           3 671 = 3 671
+   hors-type (pas une vente)        0 = 0
+   numeros de facture distincts 3 665   (quasi uniques, comme A1 le disait)
+   la sauvegarde porte le lot   3 730 = 3 730
+   la sauvegarde est FERMEE         0 = 0
+   VOISINES : 450 dates . 2 588 avis . 195 du classeur -- tous justes
+```
+
+#### ⭐⭐⭐ ET LA LECON DU SOIR EST DEJA APPLIQUEE : LA SAUVEGARDE NAIT FERMEE
+
+`app_affaire_avant_c8_20261116` est la **PREMIERE sauvegarde du projet a naitre
+fermee** : le patch fait suivre son `create table ... as` d'un
+`revoke all ... from authenticated, anon`.
+
+⛔⛔ **POURQUOI, et c'est la mesure du 16/11 au soir** : une sauvegarde creee par
+`create table ... as select` **herite du droit par defaut du schema ET NAIT SANS RLS**.
+Resultat mesure : **18 sauvegardes du projet** etaient REELLEMENT ouvertes a
+`authenticated`, TRUNCATE comprise -- et elles portent **les memes donnees** que les
+tables protegees (31 151 etiquettes, 7 346 repartitions, 841 lignes de charge...).
+
+```
+   189 tables du schema public
+   188 portent un droit pour authenticated
+   ⛔  18 REELLEMENT ouvertes : droit ET pas de RLS  -> TOUTES des sauvegardes
+   ⚠  15 droit + RLS sans politique : fermees en pratique
+   ✅ 126 le regime normal du projet
+        0 table pour anon   ⭐ l'acquis du chantier ①
+```
+
+⭐ **AUCUNE TABLE EN SERVICE N'EST OUVERTE** : les 126 tables que l'app utilise ont
+bien RLS plus une politique. Ce qui est ouvert, ce sont les **photos d'avant**.
+⬜ **FREDERIC, 16/11 : « Non enchaine »** -- les 18 existantes ne sont PAS fermees, par
+sa decision. Le patron, lui, est change : toute nouvelle sauvegarde nait fermee.
+
+---
+
 ### ⭐⭐⭐ LE MECANISME D'ENSEMBLE -- app, serveur, Sheet et Hektor (16/11)
 
 Ecrit a sa demande : « explique moi le mecanisme je veux bien comprendre [...] dans le
@@ -3386,7 +3471,11 @@ C7 ⬜  3.3bis V « Vente Prevue » : 2 303 ecarts + 21, decidee « tout », on 
        classeur tombe plus pres du reel 1 402 fois contre 714. -> SA DECISION.
        ⚠ Ne jamais arbitrer V par W : les deux sortent du MEME classeur (accord
          circulaire -- l'erreur que j'ai faite et rattrapee le 15/11).
-C8 ⬜  3.4 Y ET AA : **3 756 + 3 741** valeurs (A1 du 16/11 ; le plan disait
+C8 ✅⬜ FAIT LE 16/11 -- **3 729 dates de reglement + 3 671 numeros de
+       facture** poses sur leur VENTE, 11 controles justes. ⛔ RESTE LA LECTURE
+       TOLERANTE (2e geste : une fonction, le brut est pose et rien n'est perdu)
+       et 72 lignes hors de portee (Y 27 . AA 70) que le re-gel rattrapera.
+       3.4 Y ET AA : **3 756 + 3 741** valeurs (A1 du 16/11 ; le plan disait
        3 735 + 3 719), les DEUX plus gros postes du
        chantier, et les deux sans aucune case aujourd'hui. Apres B1 et A5.
 C9 ✅⬜ 1re MOITIE FAITE LE 16/11 -- **2 588 lignes d'avis posees** dans
