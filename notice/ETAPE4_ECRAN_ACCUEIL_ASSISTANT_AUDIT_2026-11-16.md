@@ -268,3 +268,31 @@ n'était pas le sien. Tout l'écran est passé en « asi- » (0 collision mesur�
 
 **Pas encore vérifié** : le vrai serveur (le flux réel de Render, une vraie carte) — c'est la preuve en ligne, chez lui
 seul. Pas fait au lot 2 (prévu au lot 3) : les liens vers les fiches, la relecture de l'écran après « Valider ».
+
+## 15. Lot 2 — EN LIGNE et PROUVÉ chez lui (16/11, « Oui les deux »)
+
+**Le commit** : mes 6 fichiers, mis au stage puis laissés ~10 s le temps d'un build, sont partis dans le commit de la session
+GED (`7e6bf40`, « GED morceau 10 ») — un commit emporte TOUT l'index. Rien n'était poussé. Sur « Oui, sépare » : remis en
+deux commits, `fa24105` (GED, sa note seule, son message et son auteur) puis `4f620fe` (le lot 2) ; **arbre final identique
+octet pour octet** (`737395fe…` des deux côtés) ; poussés ensemble. Leçon en mémoire : `git add` et `git commit` dans la
+MÊME commande, les contrôles avant.
+
+**La preuve, dans son Chrome, sur https://groupe-gti.vercel.app (interrupteur : lui seul)** :
+- l'accueil s'affiche (« Bonjour Frederic… », À traiter : la demande en attente du 02/06 avec « Ouvrir Suivi ») ;
+- question de lecture « Qu'est-ce que j'ai dans mon agenda lundi ? » → le VRAI flux de Render : « Je réfléchis… »,
+  la trace « Agenda lu », la réponse en gras, le bouton Arrêter pendant le flux ;
+- « Crée une relance pour demain pour le contact d'essai 10354641… » → la carte « Relance, à valider avant 13:38 » ;
+  ⭐ **le chiffre « 1 » s'est allumé sur la maison du rail** (le témoin positif qui manquait au lot 1) ;
+  Valider → « Validée à 13:09 », sceau, « Relance créée. », et le chiffre s'éteint ;
+  témoin SQL : carte `executee`, `resultat` {relance_id 23, échéance 2026-11-17} ; `app_relance_rapprochement` id 23,
+  contact 10354641, « essai de l'écran de l'assistant », `a_faire`, à son nom ;
+- une seconde carte « essai refus » → Refuser → « Refusée à 13:09 », « Rien n'a été fait. » ; témoin : carte `refusee`,
+  AUCUNE relance « essai refus » en base ;
+- la conversation rouverte depuis l'écran ANNONCES (clic dans le rail) : 3 questions, la carte validée sous la 2e, la
+  refusée sous la 3e — l'historique se reconstruit juste.
+⚠ Reste en production : la relance 23 (contact d'essai CLAUDE TESTCLAUDE, demain), à clore depuis l'écran s'il le veut.
+
+**⚠ Trouvé en ligne, CORRIGÉ en local, PAS ENCORE POUSSÉ** : « 0 recherche à compléter » à l'accueil, contre 737 au
+tableau de bord. Cause : l'écran monte AVANT que le profil soit chargé ; le rôle vaut alors « négociateur », donc la
+lecture ne prenait que SES recherches. Correctif : la portée est `undefined` tant que le profil n'est pas là (l'écran
+attend), puis relue si elle change (`porteeRecherches`, App.tsx et AccueilAssistant.tsx). Build vert.

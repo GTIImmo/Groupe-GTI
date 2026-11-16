@@ -27137,12 +27137,14 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           />
           )
           if (!railAssistant) return tableauDeBord
-          const portee = homeDashboardVariant(profile, isManagerOrAdmin) === 'commercial' ? (sessionEmail ?? null) : null
+          // tant que le profil n'est pas chargé, le rôle est inconnu : l'écran attend (sinon un admin passe pour un négociateur)
+          const portee = !profile ? undefined : homeDashboardVariant(profile, isManagerOrAdmin) === 'commercial' ? (sessionEmail ?? null) : null
           return (
             <AccueilAssistant
               prenom={profile?.first_name?.trim() || (profile?.display_name ?? '').trim().split(/\s+/)[0] || ''}
               chiffres={chiffresAccueilAssistant(mandats, diffusionRequests, mandatStats)}
-              chargerRecherches={() => loadSearchesToComplete(portee).then((lignes) => lignes.length)}
+              chargerRecherches={(p) => loadSearchesToComplete(p).then((lignes) => lignes.length)}
+              porteeRecherches={portee}
               peutOuvrirSuivi={isManagerOrAdmin}
               onOuvrirSuivi={() => openScreen('suivi')}
               tableauDeBord={tableauDeBord}

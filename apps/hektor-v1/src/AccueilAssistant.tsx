@@ -237,7 +237,9 @@ function CarteVue({ carte, onValider, onRefuser }: { carte: CarteEcran; onValide
 export default function AccueilAssistant(props: {
   prenom: string
   chiffres: ChiffresAccueil
-  chargerRecherches: () => Promise<number>
+  chargerRecherches: (portee: string | null) => Promise<number>
+  /** null = toutes (direction), une adresse = les siennes (négociateur), undefined = rôle pas encore connu */
+  porteeRecherches: string | null | undefined
   peutOuvrirSuivi: boolean
   onOuvrirSuivi: () => void
   tableauDeBord: ReactNode
@@ -257,13 +259,18 @@ export default function AccueilAssistant(props: {
   const fil = useRef<HTMLDivElement | null>(null)
   const champRef = useRef<HTMLTextAreaElement | null>(null)
 
-  // une seule lecture à l'arrivée (la même requête que le tableau de bord) ; ratée, la ligne ne s'affiche pas
+  // la même requête que le tableau de bord, une fois le RÔLE connu (porteeRecherches = undefined tant que le profil
+  // n'est pas chargé : avant, un admin passait pour un négociateur et ne voyait que SES recherches, 0 au lieu de 737,
+  // vu en ligne le 16/11) ; relue si la portée change ; ratée, la ligne ne s'affiche pas
   const chargerRecherches = useRef(props.chargerRecherches)
+  const { porteeRecherches } = props
   useEffect(() => {
+    if (porteeRecherches === undefined) return
     let annule = false
-    chargerRecherches.current().then((n) => { if (!annule) setRecherches(n) }).catch(() => undefined)
+    setRecherches(null)
+    chargerRecherches.current(porteeRecherches).then((n) => { if (!annule) setRecherches(n) }).catch(() => undefined)
     return () => { annule = true }
-  }, [])
+  }, [porteeRecherches])
 
   const majDernierTour = useCallback((fn: (t: Tour) => Tour) => {
     setTours((liste) => (liste.length ? [...liste.slice(0, -1), fn(liste[liste.length - 1])] : liste))
