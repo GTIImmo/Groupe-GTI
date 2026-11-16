@@ -2088,3 +2088,26 @@ IA, elles, ont été mesurées sur les 714 biens en cours le 12/11 (§12.10) : 2
 **Ce que ça pourrait casser** : rien d'existant (une table et une fonction NEUVES, des boutons sous un interrupteur déjà
 en « admin »). ⚠ La descente de nuit recopie d'elle-même toute table neuve de `public` sur le serveur local : les TEXTES
 des lignes y partiraient (ils portent des noms, comme `app_ged_valeur`, déjà recopiée).
+
+**✅ « Vas y » (16/11) : MORCEAU 10 ÉCRIT ET CONTRÔLÉ HORS LIGNE — rien poussé, PATCH NON POSÉ.**
+- **10a, la base** : `supabase/patch_ged_m10_jugement_2026-11-16.sql` (+ `_INVERSE`, `_REPETITION` SANS commit, qui finit
+  par rollback). Table `app_ged_jugement` (bien, règle, clé, texte et niveau TELS QU'AFFICHÉS, verdict `vrai / faux /
+  deja_su`, commentaire ≤ 500, qui, quand ; journal, le plus récent fait foi), RLS au périmètre des décisions,
+  `authenticated` en LECTURE seule ; porte `app_ged_juger` (SECURITY DEFINER ; compte actif ; interrupteur
+  `ged_propositions` pour l'appelant ; périmètre ; auteur = `auth.uid()`). AUCUN interrupteur neuf ni touché. 6 contrôles
+  après le commit.
+- **10b, l'écran** : `src/lib/gedMesure.ts` (pure : `cleJugement` = règle + texte normalisé ; une ligne dont le texte change
+  est une AUTRE ligne, à rejuger), `lib/ged.ts` (`loadGedJugements` : le plus récent par ligne, erreur -> null ;
+  `gedJuger`), `RecuManque.tsx` : sous chaque ligne « À regarder », « Cette ligne est : Vrai · Faux · Déjà su », ou « Jugé
+  faux le … · » et les trois boutons pour changer. ⭐ **Tant que le patch n'est pas posé, la lecture échoue -> AUCUN bouton**
+  (on peut pousser l'écran AVANT de poser le patch, sans rien casser). La barre est SOUS la ligne (une ligne « Déposer » est
+  déjà un bouton).
+- **10c, le compte rendu** : `supabase/requete_mesure_ged_m10_2026-11-16.sql` (lecture seule) : ① règle par règle, lignes
+  jugées, biens, vrai / faux / déjà su et leurs parts ; ② les « faux » mot pour mot ; ③ les « remplir » (remplie /
+  ignorée / échec) ; ④ les lectures hors biens d'essai (lu / incomplet / pas ce type, coût). ③ et ④ tournent déjà
+  (③ : les 3 « remplies » de l'épreuve 9c ; ④ : aucune lecture hors essais).
+- **Essais** : `test_ged_mesure.cjs` **22 verts** (clé, fausse base, patch, branchement) ; témoin inverse (clé sans
+  normalisation) -> ROUGE ; les 12 essais GED de l'écran verts ; build vert. ⚠ La RÉPÉTITION SQL n'est PAS jouée (elle
+  touche la base de production, même en rollback) : à coller avant le patch.
+- **Reste, sur accord** : pousser ; coller la RÉPÉTITION (« RÉPÉTITION VERTE ») ; poser le patch (6 contrôles) ; puis juger
+  pendant deux semaines et relancer le compte rendu.

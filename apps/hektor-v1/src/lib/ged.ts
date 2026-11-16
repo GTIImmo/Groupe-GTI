@@ -2,6 +2,7 @@
 // Note du chantier : notice/CHANTIER_GED_DOCUMENTS_2026-11-06.md §12.7. Tables : supabase/patch_ged_m1_base_2026-11-12.sql ;
 // fonction : supabase/patch_ged_m2_classer_2026-11-12.sql. Rien ici n'écrit dans app_console_document ni chez Hektor.
 import { useEffect, useState } from 'react'
+import type { VerdictGed } from './gedMesure'
 import { hasSupabaseEnv, supabase } from './supabase'
 
 export type GedType = {
@@ -215,6 +216,52 @@ export async function gedDecider(input: {
     p_valeur: input.valeur,
     p_decision: input.decision,
     p_detail: input.detail ?? null,
+  })
+  if (error) throw new Error(error.message)
+}
+
+// GED morceau 10 (16/11) : les jugements des lignes « À regarder » d'un bien, le PLUS RÉCENT par ligne (journal).
+// Lecture ratée -- ou table pas encore posée -> null : l'écran ne montre alors PAS les boutons (rien ne se perd).
+export type JugementGed = { verdict: VerdictGed; jugeLe: string }
+export async function loadGedJugements(hektorAnnonceId: string | number): Promise<Map<string, JugementGed> | null> {
+  if (!hasSupabaseEnv || !supabase) return null
+  try {
+    const { data, error } = await supabase
+      .from('app_ged_jugement')
+      .select('cle,verdict,juge_le')
+      .eq('hektor_annonce_id', String(hektorAnnonceId))
+      .order('juge_le', { ascending: false })
+    if (error) return null
+    const carte = new Map<string, JugementGed>()
+    for (const j of (data ?? []) as Array<{ cle: string; verdict: VerdictGed; juge_le: string }>) {
+      if (!carte.has(j.cle)) carte.set(j.cle, { verdict: j.verdict, jugeLe: j.juge_le })
+    }
+    return carte
+  } catch {
+    return null
+  }
+}
+
+// Garder le jugement d'une ligne (app_ged_juger : compte actif, interrupteur ged_propositions, périmètre ; l'auteur est
+// l'appelant). Le texte et le niveau sont gardés TELS QU'AFFICHÉS : c'est ce que l'écran a dit qui est jugé.
+export async function gedJuger(input: {
+  hektorAnnonceId: string | number
+  regle: string
+  cle: string
+  texte: string
+  niveau: 'alerte' | 'piece' | 'info'
+  verdict: VerdictGed
+  commentaire?: string | null
+}): Promise<void> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Base non configurée')
+  const { error } = await supabase.rpc('app_ged_juger', {
+    p_hektor_annonce_id: String(input.hektorAnnonceId),
+    p_regle: input.regle,
+    p_cle: input.cle,
+    p_texte: input.texte,
+    p_niveau: input.niveau,
+    p_verdict: input.verdict,
+    p_commentaire: input.commentaire ?? null,
   })
   if (error) throw new Error(error.message)
 }

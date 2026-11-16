@@ -12,7 +12,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { loadAffairesForDossier, loadRegisterCycleAffaires } from './lib/api'
 import { etatFiableDuDocument } from './lib/etatSignatureMandat'
-import { compterConditionsStrict, gedDecider, loadContactsEtatCivil, loadGedClassements, loadGedDecisions, useGedPropositions, useGedRemplir, type EtatCivilLu } from './lib/ged'
+import { compterConditionsStrict, gedDecider, gedJuger, loadContactsEtatCivil, loadGedClassements, loadGedDecisions, loadGedJugements, useGedPropositions, useGedRemplir, type EtatCivilLu, type JugementGed } from './lib/ged'
+import { cleJugement, LIBELLE_VERDICT, VERDICTS, type VerdictGed } from './lib/gedMesure'
 import { propositionsRemplir, type FaitsRemplir, type PropositionRemplir } from './lib/gedRemplir'
 import { propositionsContact } from './lib/gedRemplirContact'
 import { dateEtatLue, loadGedLectures, resumeLecture, type LectureDocument } from './lib/gedLecture'
@@ -199,6 +200,31 @@ export function RecuManque({
     }
   }
 
+  // ── morceau 10 : JUGER chaque ligne « À regarder » (vrai / faux / déjà su), derrière `ged_propositions`. Lecture
+  // ratée ou table pas encore posée (null) -> pas de boutons. Le jugement le plus récent d'une ligne fait foi.
+  const [jugements, setJugements] = useState<Map<string, JugementGed> | null>(null)
+  const [jugeEnCours, setJugeEnCours] = useState<string | null>(null)
+  const [relireJugements, setRelireJugements] = useState(0)
+  const [messageJuge, setMessageJuge] = useState<string | null>(null)
+  useEffect(() => {
+    if (!regles) return
+    let annule = false
+    void loadGedJugements(hektorAnnonceId).then((m) => { if (!annule) setJugements(m) })
+    return () => { annule = true }
+  }, [regles, hektorAnnonceId, relireJugements])
+  const juger = async (a: Alerte, verdict: VerdictGed) => {
+    const cle = cleJugement(a)
+    if (jugeEnCours) return
+    setJugeEnCours(cle); setMessageJuge(null)
+    try {
+      await gedJuger({ hektorAnnonceId, regle: a.code, cle, texte: a.texte, niveau: a.niveau, verdict })
+    } catch (e) {
+      setMessageJuge(e instanceof Error ? e.message : 'Le jugement n\'a pas été gardé.')
+    } finally {
+      setJugeEnCours(null); setRelireJugements((n) => n + 1)
+    }
+  }
+
   // le résumé de la lecture, à côté du nom d'un document reçu (« DPE 2024.pdf — Lu : énergie D… »)
   const resumeParNom = useMemo(() => {
     const m = new Map<string, string>()
@@ -277,6 +303,7 @@ export function RecuManque({
       {alertes.length ? (
         <div className="gm-liste">
           <p className="gm-avant-t">{`À regarder (${alertes.length})`}</p>
+          {messageJuge ? <p className="gm-avant-t" role="status">{messageJuge}</p> : null}
           {alertes.map((a, i) => {
             const contenu = (
               <>
@@ -285,10 +312,27 @@ export function RecuManque({
                 <span className="gm-d">{a.typeADeposer && onDeposer ? 'Déposer la pièce' : ''}</span>
               </>
             )
-            return a.typeADeposer && onDeposer ? (
-              <button key={`${a.code}-${i}`} type="button" className="gm-l is-non_trouve" onClick={() => onDeposer(a.typeADeposer as string, LIBELLE_A_DEPOSER[a.typeADeposer as string] ?? a.texte)} aria-label={`Déposer : ${a.texte}`}>{contenu}</button>
+            const ligneAlerte = a.typeADeposer && onDeposer ? (
+              <button type="button" className="gm-l is-non_trouve" onClick={() => onDeposer(a.typeADeposer as string, LIBELLE_A_DEPOSER[a.typeADeposer as string] ?? a.texte)} aria-label={`Déposer : ${a.texte}`}>{contenu}</button>
             ) : (
-              <div key={`${a.code}-${i}`} className={`gm-l is-${a.niveau === 'info' ? 'selon_le_cas' : 'non_trouve'}`}>{contenu}</div>
+              <div className={`gm-l is-${a.niveau === 'info' ? 'selon_le_cas' : 'non_trouve'}`}>{contenu}</div>
+            )
+            // morceau 10 : la barre de jugement, SOUS la ligne (une ligne « Déposer » est déjà un bouton)
+            const cle = cleJugement(a)
+            const juge = jugements?.get(cle)
+            return (
+              <div key={`${a.code}-${i}`}>
+                {ligneAlerte}
+                {jugements ? (
+                  <div className="gm-d" role="group" aria-label={`Juger : ${a.texte}`}>
+                    {juge ? <small>{`Jugé ${LIBELLE_VERDICT[juge.verdict]} le ${new Date(juge.jugeLe).toLocaleDateString('fr-FR')} · `}</small> : <small>Cette ligne est : </small>}
+                    {VERDICTS.map((v) => (
+                      <button key={v.code} type="button" className="gm-avant-b" disabled={jugeEnCours !== null} aria-pressed={juge?.verdict === v.code}
+                        onClick={() => void juger(a, v.code)}>{jugeEnCours === cle ? '…' : v.libelle}</button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
             )
           })}
         </div>
