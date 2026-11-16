@@ -1993,3 +1993,10 @@ de principe avec un IBAN fictif en page 3.
   61398 une offre proposée ; 62774 compromis annulé ; le seul compromis vivant à acquéreur « test », annonce 42965, est
   hors parc — vrai client probable, ÉCARTÉ). Les éprouver demanderait une offre puis un compromis d'essai sur 63331
   (écritures chez Hektor, à défaire ensuite) : décision à part.
+
+**✅ « Financement » puis « Vas y » (16/11) : une offre de prêt avec IBAN reste rangée en « Financement » — rien poussé.**
+`DepotDocuments.tsx` (l. 219-223) : le pré-choix « RIB » quand un IBAN est trouvé chez nous NE remplace plus un type
+« Financement » proposé par le NOM du fichier (`financementParNom`). Un nom muet avec un IBAN garde « RIB », comme avant.
+La lecture reste refusée (garde RIB inchangée, à l'écran et au serveur) ; le type reste modifiable à la main.
+Essais `test_ged_regles_financement.cjs` **36 verts** (+4) ; témoin inverse (la condition retirée) -> ROUGE ; `test_ged_depot`
+19 verts ; build vert.

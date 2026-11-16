@@ -216,8 +216,11 @@ export function DepotDocuments({
         setLignes((avant) => verifier(avant.map((l) => {
           if (l.id !== ligne.id) return l
           const base: Ligne = { ...l, ia: { etat: 'non_envoye', raison: prep.raison } }
-          // un IBAN trouvé chez nous vaut un RIB reconnu : pré-choisi si personne n'a choisi
-          return prep.rib && l.etat === 'pret' && !l.typeTouche && !l.typeAttenduPose && parCode.has('justif.rib') ? avecType(base, 'justif.rib') : base
+          // un IBAN trouvé chez nous vaut un RIB reconnu : pré-choisi si personne n'a choisi -- SAUF une pièce de financement
+          // reconnue à son nom (lot 9d, décision du 16/11) : une offre de prêt porte souvent l'IBAN du compte de prélèvement ;
+          // elle reste « Financement », et ne part pas plus à l'IA (la garde RIB refuse toujours l'envoi)
+          const financementParNom = l.type === 'transaction.financement'
+          return prep.rib && l.etat === 'pret' && !l.typeTouche && !l.typeAttenduPose && !financementParNom && parCode.has('justif.rib') ? avecType(base, 'justif.rib') : base
         })))
         return
       }

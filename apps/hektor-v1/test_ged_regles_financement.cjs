@@ -90,5 +90,17 @@ voir(!/editAnnonce|editContact|ecrire|gedDecider/.test(regles), 'on SIGNALE, on 
 voir(/PREMIERE_PAGE_SEULE = new Set\(\['transaction\.financement'\]\)/.test(ia) && /envoyables = uneSeule \? textes\.slice\(0, 1\) : textes/.test(ia), 'l\'écran n\'envoie que la 1re page du financement (texte et image)')
 voir(/texteDitRib\(textes\.join\('\\n'\)\)/.test(ia) && ia.indexOf("texteDitRib(textes.join('\\n'))") < ia.indexOf('const envoyables'), 'la garde RIB lit TOUTES les pages AVANT de couper à la 1re')
 
+// ⑤ (16/11, épreuve réelle) : une offre de prêt qui porte un IBAN restait rangée « RIB » par la fenêtre de dépôt.
+// Décision de Frédéric : elle reste « Financement » quand son NOM le dit ; un nom muet garde le pré-choix RIB.
+console.log('⑤ une offre avec IBAN reste « Financement » (le nom le dit)')
+const { typeParNom } = charger('src/lib/gedTypeParNom.ts')
+const depot = fs.readFileSync(path.join(__dirname, 'src/DepotDocuments.tsx'), 'utf8')
+voir(typeParNom('ESSAI9D Accord de principe SPECIMEN avec IBAN.pdf').code === 'transaction.financement' && typeParNom('Offre de pret CIC.pdf').code === 'transaction.financement',
+  'le nom d\'une offre ou d\'un accord de prêt propose « Financement » (le cas de l\'épreuve du 16/11)')
+voir(/const financementParNom = l\.type === 'transaction\.financement'/.test(depot) && /prep\.rib && l\.etat === 'pret' && !l\.typeTouche && !l\.typeAttenduPose && !financementParNom && parCode\.has\('justif\.rib'\)/.test(depot),
+  'un IBAN trouvé ne remplace PAS « Financement » proposé par le nom')
+voir(typeParNom('scan001.pdf').code === null && /\? avecType\(base, 'justif\.rib'\) : base/.test(depot), 'TÉMOIN : un nom muet avec un IBAN garde le pré-choix « RIB »')
+voir(/if \(nomDitRib\(file\.name\)\)/.test(ia) && /if \(texteDitRib\(textes\.join\('\\n'\)\)\) return \{ lisible: false/.test(ia), 'et la lecture la refuse toujours (garde RIB inchangée)')
+
 console.log(`\n${ok} verts, ${ko} rouges`)
 process.exit(ko ? 1 : 0)
