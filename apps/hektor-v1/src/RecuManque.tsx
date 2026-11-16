@@ -48,7 +48,7 @@ const ORDRE_MOMENTS: MomentDossier[] = ['mandat', 'mise_en_vente', 'offre', 'com
 const euros = (v: string | number | null | undefined) => { const x = Number(v); return v != null && v !== '' && Number.isFinite(x) && x > 0 ? x : null }
 
 export function RecuManque({
-  hektorAnnonceId, appDossierId, documents, faits, personnesDuBien = [], contactsDuBien = [], onDeposer, onRemplir,
+  hektorAnnonceId, appDossierId, documents, faits, personnesDuBien = [], contactsDuBien = [], onDeposer, onRemplir, onResultat,
 }: {
   hektorAnnonceId: string | number
   appDossierId?: number
@@ -62,6 +62,8 @@ export function RecuManque({
   // lot 9c : les contacts de la fiche par leur numéro ; `seul` = ni fiche fusionnée de couple, ni référence de couple
   contactsDuBien?: Array<{ id: string; seul: boolean }>
   onDeposer?: (typeCode: string, libelle: string) => void
+  // habillage H2 : la fenêtre de dépôt montre le moment et les pièces non trouvées, LUES ICI (une seule vérité)
+  onResultat?: (r: { moment: MomentDossier; nonTrouvees: string[] }) => void
 }) {
   const regles = useGedPropositions()
   const [affaires, setAffaires] = useState<AffaireRegle[] | null>(null)
@@ -245,6 +247,9 @@ export function RecuManque({
       .filter((d) => d.present_in_hektor !== false)
       .map((d) => ({ nom: d.document_name, typeCode: classements.get(d.id) ?? null })),
   ), [faits, documents, classements])
+  useEffect(() => {
+    onResultat?.({ moment: resultat.moment, nonTrouvees: resultat.pieces.filter((l) => l.etat === 'non_trouve').map((l) => l.libelle) })
+  }, [resultat, onResultat])
 
   // ── habillage H1 (16/11, maquette https://claude.ai/artifact/S16jkpfnqtPF83xvUdkNtm) : LE DOSSIER. Les moments de la
   // vente en tête, une FEUILLE par pièce attendue (reçue : cochée ; non trouvée : à déposer). Mêmes données, mêmes gestes.

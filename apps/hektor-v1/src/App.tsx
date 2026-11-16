@@ -307,6 +307,7 @@ import SuiviSignatairesYoutrust from './SuiviSignatairesYoutrust'
 import { PiecesSignatureFenetre, useSignaturePreuves } from './PiecesSignature'
 // GED morceau 2 (12/11/2026) : la fenêtre de dépôt, derrière l'interrupteur ged_depot_multiple (note GED §12.7).
 import { DepotDocuments } from './DepotDocuments'
+import type { MomentDossier } from './lib/gedPieces'
 import { compterConditionsStrict, gedDecider, loadContactsEtatCivil, useGedDepotMultiple, useGedRecuManque } from './lib/ged'
 // GED morceau 3 (12/11/2026) : le bloc « Reçu / Manque », derrière l'interrupteur ged_recu_manque (note GED §12.8).
 import { RecuManque } from './RecuManque'
@@ -11927,6 +11928,8 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
   // GED morceau 3 : « Reçu / Manque » ; une pièce non trouvée ouvre la fenêtre de dépôt avec son type déjà choisi.
   const gedRecuManque = useGedRecuManque()
   const [typeAttendu, setTypeAttendu] = useState<{ code: string; libelle: string } | null>(null)
+  // habillage H2 : le moment et les pièces non trouvées, lus par « Le dossier », montrés dans la fenêtre de dépôt
+  const [contexteDepot, setContexteDepot] = useState<{ moment: MomentDossier; nonTrouvees: string[] } | null>(null)
   const faitsDuBien = useMemo(() => faitsGedDuBien(dossier, ficheDuMandat?.detail ?? null), [dossier, ficheDuMandat])
   const personnesDuBien = useMemo(() => personnesGedDuBien(ficheDuMandat?.contacts), [ficheDuMandat])
   const contactsDuBien = useMemo(() => contactsGedDuBien(ficheDuMandat?.contacts), [ficheDuMandat])
@@ -12374,6 +12377,8 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
   )
   // GED morceau 2 (12/11/2026) : la fenêtre de dépôt REMPLACE le formulaire quand l'interrupteur est allumé pour
   // l'utilisateur ; elle garde le formulaire d'aujourd'hui en secours si la liste des types ne se lit pas.
+  // Habillage H2 (16/11) : en skin cockpit, `onFermer` ouvre la fenêtre AU-DESSUS du bien ; en skin classique, elle reste
+  // posée dans le panneau, comme avant.
   const formulaireAjout = gedDepot ? (
     <DepotDocuments
       dossier={dossier}
@@ -12384,6 +12389,8 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
       formulaireClassique={uploadForm}
       typeAttendu={typeAttendu}
       onTypeAttenduUtilise={() => setTypeAttendu(null)}
+      onFermer={skin === 'v21' ? () => setUploadOpen(false) : undefined}
+      contexte={contexteDepot}
     />
   ) : uploadForm
   const blocRecuManque = gedRecuManque ? (
@@ -12395,6 +12402,7 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
       personnesDuBien={personnesDuBien}
       contactsDuBien={contactsDuBien}
       onRemplir={remplirDepuisDocument}
+      onResultat={setContexteDepot}
       onDeposer={gedDepot ? (code, libelle) => {
         setTypeAttendu({ code, libelle })
         setUploadOpen(true)
@@ -12542,7 +12550,7 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
         {message ? <p className="console-documents-message">{message}</p> : null}
         {error ? <p className="console-documents-error">{error}</p> : null}
         {blocRecuManque}
-        {uploadOpen ? <div className="fa-ck-docup">{formulaireAjout}</div> : null}
+        {uploadOpen ? (gedDepot ? formulaireAjout : <div className="fa-ck-docup">{formulaireAjout}</div>) : null}
 
         {cntAll > 0 ? (
           <div className="fa-ck-histofilt fa-ck-docfilt">

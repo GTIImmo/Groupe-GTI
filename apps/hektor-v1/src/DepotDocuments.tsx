@@ -10,14 +10,19 @@
 //   après l'autre (lib/gedClassementIa.ts : vignettes basse définition, garde RIB dans le navigateur). Elle pré-choisit
 //   seulement quand le nom ne disait rien de sûr et que personne n'a choisi ; sinon elle se montre (« Prendre ce type »).
 //   Un PDF qui réunit plusieurs pièces peut être séparé d'un clic. On peut envoyer sans attendre l'IA.
+// ⭐ HABILLAGE H2 (16/11, maquette https://claude.ai/artifact/S16jkpfnqtPF83xvUdkNtm, planche « Dépôt ») : une FENÊTRE
+//   au-dessus du bien (en-tête sombre, zone de dépôt, liste + aperçu de la page 1, pied). Mêmes données, mêmes gestes,
+//   même envoi. Fermer avec des fichiers non partis ne les perd plus en silence : une bande demande d'abord.
 import { useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { createUploadDocumentToHektorJob } from './lib/api'
 import {
   empreinteFichier, gedClasser, GED_FAMILLES, GED_TAILLE_MAX, GED_TYPES_ACCEPTES, loadGedTypes, nomEnConflit,
   useGedLecturePersonnes, type GedType,
 } from './lib/ged'
-import { classerParIa, lireParIa as lireValeursParIa, preChoisirTypeIa, preparerLecture, preparerPourIa, separerPdf, useGedLectureIa, type ResultatIa } from './lib/gedClassementIa'
+import { apercuPremierePage, classerParIa, lireParIa as lireValeursParIa, preChoisirTypeIa, preparerLecture, preparerPourIa, separerPdf, useGedLectureIa, type ResultatIa } from './lib/gedClassementIa'
 import { FICHES_LUES, FICHES_PERSONNES_LUES, resumeLecture } from './lib/gedLecture'
+import { LIBELLE_MOMENT, type MomentDossier } from './lib/gedPieces'
 import { typeParNom } from './lib/gedTypeParNom'
 import type { ConsoleDocument, ConsoleJob, Dossier } from './types'
 import './DepotDocuments.css'
@@ -101,6 +106,7 @@ async function photosEnPdf(photos: File[]): Promise<File> {
 
 export function DepotDocuments({
   dossier, documents, peutEnvoyer, onJobCreated, onTermine, formulaireClassique, typeAttendu, onTypeAttenduUtilise,
+  onFermer, contexte,
 }: {
   dossier: Dossier
   documents: ConsoleDocument[]
@@ -111,6 +117,10 @@ export function DepotDocuments({
   // GED morceau 3 : une pièce « non trouvée » cliquée dans « Reçu / Manque » -- le prochain fichier prend ce type
   typeAttendu?: { code: string; libelle: string } | null
   onTypeAttenduUtilise?: () => void
+  // H2 : présent = la fenêtre s'ouvre AU-DESSUS de la page et sait se fermer ; absent = posée dans le panneau, comme avant
+  onFermer?: () => void
+  // H2 : le moment de la vente et les pièces non trouvées, tels que « Le dossier » les a lus (null = bloc éteint)
+  contexte?: { moment: MomentDossier; nonTrouvees: string[] } | null
 }) {
   const [types, setTypes] = useState<GedType[] | null>(null)
   const [erreurTypes, setErreurTypes] = useState<string | null>(null)
@@ -122,6 +132,12 @@ export function DepotDocuments({
   const [message, setMessage] = useState<string | null>(null)
   const versionInput = useRef(0)
   const [, forcer] = useState(0)
+  // H2 : la ligne dont l'aperçu est montré, les pages 1 déjà dessinées, la bande « pas partis », le lot en cours d'envoi
+  const [choisi, setChoisi] = useState<string | null>(null)
+  const [apercus, setApercus] = useState<Record<string, { image: string; nbPages: number } | 'aucun' | 'lecture'>>({})
+  const [bande, setBande] = useState(false)
+  const [lot, setLot] = useState<string[]>([])
+  const fenetreRef = useRef<HTMLElement | null>(null)
 
   useEffect(() => {
     let annule = false
@@ -168,12 +184,86 @@ export function DepotDocuments({
     return [...groupes.entries()]
   }, [types])
 
+  // ── H2 : l'aperçu montre la ligne choisie, sinon la première « à vérifier », sinon la première. La page 1 est dessinée
+  // une fois par fichier, à la demande (jamais tout le lot d'un coup).
+  const avisIa = (l: Ligne) => l.ia?.etat === 'fait' && l.ia.r.lisible && l.ia.r.typeCode !== l.type
+  const selection = lignes.find((l) => l.id === choisi) ?? lignes.find((l) => l.etat === 'pret' && avisIa(l)) ?? lignes[0] ?? null
+  const idSelection = selection?.id ?? null
+  useEffect(() => {
+    if (!idSelection || apercus[idSelection]) return
+    const ligne = lignes.find((l) => l.id === idSelection)
+    if (!ligne) return
+    setApercus((a) => ({ ...a, [idSelection]: 'lecture' }))
+    apercuPremierePage(ligne.file)
+      .then((r) => setApercus((a) => ({ ...a, [idSelection]: r ?? 'aucun' })))
+      .catch(() => setApercus((a) => ({ ...a, [idSelection]: 'aucun' })))
+  }, [idSelection, apercus, lignes])
+
+  // ── H2 : la fenêtre au-dessus de la page. Ouverte : la page derrière ne défile plus, le clavier est dans la fenêtre ;
+  // fermée : tout revient comme avant.
+  const modale = Boolean(onFermer)
+  useEffect(() => {
+    if (!modale) return
+    const avant = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    const defilement = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    fenetreRef.current?.focus()
+    return () => { document.body.style.overflow = defilement; avant?.focus() }
+  }, [modale])
+
+  // « une saisie ne se perd jamais » : fermer avec des fichiers non partis, un envoi ou une lecture en cours demande
+  // d'abord (la même règle que pour quitter la page, plus haut)
+  const nonPartis = lignes.filter((l) => l.etat === 'pret' && l.aEnvoyer).length
+  const lecturesEnCours = lignes.filter((l) => l.lecture?.etat === 'attente' || l.lecture?.etat === 'lecture').length
+  function demanderFermer() {
+    if (!onFermer) return
+    if (envoiEnCours || nonPartis || lecturesEnCours) setBande(true)
+    else onFermer()
+  }
+
+  const idTitre = `dd-t-${dossier.app_dossier_id}`
+  const coque = (contenu: ReactNode, pied: ReactNode) => {
+    const fenetre = (
+      <section
+        ref={fenetreRef}
+        tabIndex={-1}
+        className={`ged-depot dd${modale ? ' is-modale' : ''}${survol ? ' is-survol' : ''}`}
+        role={modale ? 'dialog' : undefined}
+        aria-modal={modale || undefined}
+        aria-labelledby={idTitre}
+        onKeyDown={(e) => { if (modale && e.key === 'Escape') { e.stopPropagation(); demanderFermer() } }}
+        onDragOver={(e) => { e.preventDefault(); setSurvol(true) }}
+        onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setSurvol(false) }}
+        onDrop={deposer}
+      >
+        <header className="dd-hd">
+          <div className="dd-hd-t">
+            <p>{`${[dossier.titre_bien, dossier.ville].filter(Boolean).join(', ')}, réf. ${dossier.hektor_annonce_id}`}</p>
+            <h2 id={idTitre}>Déposer des documents</h2>
+          </div>
+          {contexte ? <span className="dd-hd-pil">{LIBELLE_MOMENT[contexte.moment]}</span> : null}
+          {dossier.numero_mandat ? <span className="dd-hd-pil">{`Mandat ${dossier.numero_mandat}`}</span> : null}
+          {modale ? (
+            <button type="button" className="dd-hd-x" aria-label="Fermer" onClick={demanderFermer}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+            </button>
+          ) : null}
+        </header>
+        <div className="dd-c">{contenu}</div>
+        {pied}
+        {survol ? <div className="dd-lache" aria-hidden="true"><span>Lâche les fichiers ici</span></div> : null}
+      </section>
+    )
+    return modale ? createPortal(<div className="dd-voile">{fenetre}</div>, document.body) : fenetre
+  }
+
   if (erreurTypes) {
-    return (
-      <div className="ged-depot">
+    return coque(
+      <>
         <p className="ged-depot-alerte">{`La nouvelle fenêtre de dépôt n'a pas pu lire la liste des types (${erreurTypes}). Le formulaire habituel reste disponible :`}</p>
         {formulaireClassique}
-      </div>
+      </>,
+      modale ? <footer className="dd-pied"><span className="dd-pied-t" /><button type="button" className="dd-b2" onClick={() => onFermer?.()}>Fermer</button></footer> : null,
     )
   }
 
@@ -333,6 +423,7 @@ export function DepotDocuments({
     if (!peutEnvoyer()) return
     setEnvoiEnCours(true)
     setMessage(null)
+    setLot(aPartir.map((l) => l.id))
     // un fichier APRÈS l'autre, jamais en parallèle (réponse de la session signature, 12/11)
     for (const ligne of aPartir) {
       modifierEtat(ligne.id, { etat: 'envoi', message: null })
@@ -401,193 +492,343 @@ export function DepotDocuments({
     setLignes((avant) => verifier(avant.filter((l) => l.id !== id)))
   }
 
-  function deposer(e: DragEvent<HTMLDivElement>) {
+  function deposer(e: DragEvent<HTMLElement>) {
     e.preventDefault()
     setSurvol(false)
+    if (erreurTypes) return
     const fichiers = Array.from(e.dataTransfer.files ?? [])
     if (fichiers.length) void ajouterFichiers(fichiers)
   }
 
-  function etiquetteType(l: Ligne): string {
-    if (!l.type) return 'Type'
+  // D'où vient le type de la ligne, en clair (l'IA ne change jamais un type choisi : elle le montre).
+  function sourceType(l: Ligne): string {
+    if (!l.type) return l.forceNom === 'muet' ? 'le nom ne dit rien : choisis le type' : 'choisis le type'
     const parIa = l.ia?.etat === 'fait' && l.ia.r.typeCode === l.type
     const parNom = l.typeNom === l.type
-    if (parIa && parNom) return "Type (le nom et l'IA sont d'accord)"
-    if (parIa) return "Type (proposé par l'IA, à vérifier)"
-    if (parNom) return `Type (proposé d'après le nom${l.forceNom === 'probable' ? ', à confirmer' : ''})`
-    return 'Type'
+    if (parIa && parNom) return "le nom et l'IA sont d'accord"
+    if (l.typeTouche) return 'choisi par toi'
+    if (l.typeAttenduPose) return 'la pièce demandée dans « Le dossier »'
+    if (parIa) return "proposé par l'IA, à vérifier"
+    if (parNom) return `reconnu par le nom${l.forceNom === 'probable' ? ', à confirmer' : ''}`
+    return ''
   }
 
-  // Ce que l'IA a dit, sous la ligne : elle ne change jamais un type choisi, elle le montre.
+  // Ce que l'IA a dit, sous la ligne. L'avis (« Prendre ce type ») et la raison d'un non-envoi vivent dans l'aperçu ;
+  // au téléphone, où l'aperçu est loin, ils restent aussi sur la ligne (dd-seul-tel).
   function etatIa(l: Ligne): ReactNode {
     const ia = l.ia
-    if (!ia) return null
-    if (ia.etat === 'lecture') return <span className="ged-depot-ia">L'IA lit le type…</span>
-    if (ia.etat === 'non_envoye') return <span className="ged-depot-ia">{ia.raison}</span>
+    if (!ia || ia.etat === 'lecture') return null
+    if (ia.etat === 'non_envoye') return <span className="ged-depot-ia dd-seul-tel">{ia.raison}</span>
     if (ia.etat === 'erreur') {
       return (
         <span className="ged-depot-ia">
           {`L'IA n'a pas répondu (${ia.raison}) : choisis le type.`}
-          <button className="ghost-button" type="button" onClick={() => modifierEtat(l.id, { ia: null })}>Redemander</button>
+          <button className="dd-lien" type="button" onClick={() => modifierEtat(l.id, { ia: null })}>Redemander</button>
         </span>
       )
     }
     const r = ia.r
-    const libelle = parCode.get(r.typeCode)?.libelle ?? r.typeCode
     return (
       <>
         {!r.lisible ? <span className="ged-depot-ia">L'IA n'a pas pu reconnaître ce document : choisis le type.</span> : null}
-        {r.lisible && r.typeCode !== l.type ? (
-          <span className="ged-depot-ia is-avis">
-            {`L'IA pense : ${libelle} (confiance ${r.confiance}).`}
-            <button className="ghost-button" type="button" onClick={() => modifier(l.id, { type: r.typeCode, typeTouche: true })}>Prendre ce type</button>
-          </span>
-        ) : null}
+        {avisIa(l) ? <span className="ged-depot-ia is-avis dd-seul-tel">{avisTexte(l, r)}</span> : null}
         {r.pieces.length >= 2 && l.file.type === 'application/pdf' ? (
           <span className="ged-depot-ia is-avis">
             {`Ce fichier réunit ${r.pieces.length} pièces : ${r.pieces.map((p) => `${parCode.get(p.typeCode)?.libelle ?? p.typeCode} (p. ${p.pageDebut}${p.pageFin > p.pageDebut ? ` à ${p.pageFin}` : ''})`).join(', ')}.`}
-            <button className="ghost-button" type="button" disabled={envoiEnCours} onClick={() => void separer(l, r)}>{`Séparer en ${r.pieces.length} fichiers`}</button>
+            <button className="dd-lien" type="button" disabled={envoiEnCours} onClick={() => void separer(l, r)}>{`Séparer en ${r.pieces.length} fichiers`}</button>
           </span>
         ) : null}
       </>
     )
   }
 
+  function avisTexte(l: Ligne, r: ResultatIa): ReactNode {
+    return (
+      <>
+        {`L'IA pense : ${parCode.get(r.typeCode)?.libelle ?? r.typeCode} (confiance ${r.confiance}).`}
+        <button className="dd-lien" type="button" onClick={() => modifier(l.id, { type: r.typeCode, typeTouche: true })}>Prendre ce type</button>
+      </>
+    )
+  }
+
+  // La pastille d'état de la ligne : un mot, la suite est dite dessous.
+  function etatLigne(l: Ligne): { cle: string; texte: string } {
+    if (l.etat === 'envoi') return { cle: 'envoi', texte: 'Envoi…' }
+    if (l.etat === 'envoye') return { cle: 'envoye', texte: 'Déposé, part chez Hektor' }
+    if (l.etat === 'classement_echec') return { cle: 'echec', texte: 'Type non enregistré' }
+    if (l.etat === 'echec') return { cle: 'echec', texte: 'Pas envoyé' }
+    if (!l.aEnvoyer) return { cle: 'deja', texte: 'Déjà dans ce dossier' }
+    if (l.refus) return { cle: 'corriger', texte: 'À corriger' }
+    if (l.ia?.etat === 'lecture') return { cle: 'lecture', texte: 'Lecture…' }
+    if (avisIa(l)) return { cle: 'verif', texte: 'À vérifier' }
+    return { cle: 'pret', texte: 'Prêt' }
+  }
+
   const prets = lignes.filter((l) => l.etat === 'pret' && l.aEnvoyer && !l.refus).length
   const bloques = lignes.filter((l) => l.etat === 'pret' && l.aEnvoyer && l.refus).length
+  const aVerifier = lignes.filter((l) => l.etat === 'pret' && l.aEnvoyer && !l.refus && avisIa(l)).length
+  const dejaLa = lignes.filter((l) => l.etat === 'pret' && !l.aEnvoyer).length
+  const iaLit = lignes.some((l) => l.ia?.etat === 'lecture')
   const nouvelleVersion = () => { versionInput.current += 1; forcer((n) => n + 1) }
 
-  return (
-    <div className="ged-depot">
-      <div className="ged-depot-tete">
-        <strong>Ajouter des documents</strong>
-        <small>Chaque document part chez Hektor, un après l'autre, une fois son type et son nom vérifiés.</small>
-      </div>
+  const choisirFichiers = (classe: string) => (
+    <label className={classe}>
+      Choisir des fichiers
+      <input
+        key={`f-${versionInput.current}`}
+        type="file"
+        multiple
+        onChange={(e) => { const f = Array.from(e.target.files ?? []); nouvelleVersion(); if (f.length) void ajouterFichiers(f) }}
+      />
+    </label>
+  )
+  const photographier = (classe: string) => (
+    <label className={`${classe} ged-depot-camera`}>
+      Photographier une page
+      <input
+        key={`c-${versionInput.current}`}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        onChange={(e) => { const f = Array.from(e.target.files ?? []); nouvelleVersion(); if (f.length) setPages((p) => [...p, ...f]) }}
+      />
+    </label>
+  )
 
+  const cadenas = (ouvert: boolean) => (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2" /><path d={ouvert ? 'M8 11V7a4 4 0 0 1 7.5-2' : 'M8 11V7a4 4 0 0 1 8 0v4'} /></svg>
+  )
+
+  const ligneVue = (l: Ligne, i: number) => {
+    const t = l.type ? parCode.get(l.type) : undefined
+    const fige = l.etat !== 'pret'
+    const etat = etatLigne(l)
+    const a = apercus[l.id]
+    const nbPages = typeof a === 'object' ? a.nbPages : null
+    const ton = !l.type ? 'vide' : avisIa(l) || (l.ia?.etat === 'fait' && l.ia.r.typeCode === l.type && l.typeNom !== l.type && !l.typeTouche) ? 'verif' : 'ok'
+    const prive = l.visibilite === 'private'
+    const source = sourceType(l)
+    return (
+      <li
+        key={l.id}
+        className={`ged-depot-ligne dd-l is-${l.etat} is-e-${etat.cle}${l.aEnvoyer ? '' : ' is-ecartee'}${selection?.id === l.id ? ' is-choisi' : ''}`}
+        style={{ animationDelay: `${Math.min(i, 8) * 90}ms` }}
+        onClick={() => setChoisi(l.id)}
+        onFocusCapture={() => setChoisi(l.id)}
+      >
+        <button type="button" className="dd-vign" aria-label={`Voir l'aperçu de ${l.file.name}`} aria-pressed={selection?.id === l.id}>
+          <span /><span /><span /><span />
+        </button>
+        <div className="dd-corps">
+          <label className="dd-nom">
+            <span className="dd-sr">Nom chez Hektor</span>
+            <input value={l.nom} disabled={fige} onChange={(e) => modifier(l.id, { nom: e.target.value, nomTouche: true })} />
+          </label>
+          <span className="dd-fic" title={l.file.name}>{`${l.file.name}, ${taille(l.file.size)}${nbPages ? `, ${nbPages} page${nbPages > 1 ? 's' : ''}` : ''}`}</span>
+          <div className="dd-type">
+            <label className={`dd-pil is-${ton}`}>
+              <span className="dd-sr">Type</span>
+              <select value={l.type} disabled={fige || !types} onChange={(e) => modifier(l.id, { type: e.target.value, typeTouche: true })}>
+                <option value="">{l.forceNom === 'muet' ? 'Nom muet : choisis le type' : 'Choisis le type'}</option>
+                {familles.map(([famille, liste]) => (
+                  <optgroup key={famille} label={GED_FAMILLES[famille] ?? famille}>
+                    {liste.map((x) => <option key={x.code} value={x.code}>{x.libelle}</option>)}
+                  </optgroup>
+                ))}
+              </select>
+            </label>
+            {l.etat === 'pret' && l.ia?.etat === 'lecture'
+              ? <span className="dd-lit">L'IA lit le type…</span>
+              : source ? <span key={`${l.type}|${source}`} className="dd-src">{source}</span> : null}
+          </div>
+          <div className="ged-depot-etat dd-dit">
+            {l.etat === 'pret' && l.aEnvoyer && l.refus ? <span className="ged-depot-refus">{l.refus}</span> : null}
+            {l.etat === 'pret' ? etatIa(l) : null}
+            {l.etat === 'envoye' ? <span className="ged-depot-ok">Déposé chez nous, envoi chez Hektor en cours. Type enregistré.</span> : null}
+            {l.etat === 'envoye' && l.lecture ? (
+              <span className={`ged-depot-ia${l.lecture.etat === 'fait' ? ' is-avis' : ''}${l.lecture.etat === 'lecture' ? ' dd-lit' : ''}`}>
+                {l.lecture.etat === 'attente' ? 'Lecture des valeurs à suivre…' : l.lecture.etat === 'lecture' ? "L'IA lit les valeurs…" : l.lecture.etat === 'fait' ? l.lecture.resume : `Pas lu (${l.lecture.raison}).`}
+                {l.lecture.etat === 'erreur' ? <button className="dd-lien" type="button" onClick={() => modifierEtat(l.id, { lecture: { etat: 'attente' } })}>Relire</button> : null}
+              </span>
+            ) : null}
+            {l.etat === 'classement_echec' ? (
+              <span className="ged-depot-refus">
+                {`Déposé, mais le type n'a pas été enregistré (${l.message ?? 'erreur'}).`}
+                <button className="dd-lien" type="button" onClick={() => void reclasser(l)}>Réessayer</button>
+              </span>
+            ) : null}
+            {l.etat === 'echec' ? <span className="ged-depot-refus">{`Pas envoyé : ${l.message ?? 'erreur'}. Le fichier reste ici.`}</span> : null}
+          </div>
+        </div>
+        <button
+          type="button"
+          className={`dd-vis${t?.sensible ? ' is-verrou' : prive ? '' : ' is-public'}`}
+          disabled={fige || Boolean(t?.sensible)}
+          aria-label={t?.sensible ? 'Toujours privé : une pièce des personnes reste privée' : prive ? 'Privé : cliquer pour rendre public' : 'Public : cliquer pour rendre privé'}
+          title={t?.sensible ? 'Une pièce des personnes reste toujours privée' : undefined}
+          onClick={() => modifier(l.id, { visibilite: prive ? 'shared' : 'private' })}
+        >
+          {cadenas(!prive)}
+          <small>{prive ? 'Privé' : 'Public'}</small>
+        </button>
+        <div className="dd-etat">
+          <span className={`dd-badge is-${etat.cle}`}>{etat.texte}</span>
+          {l.etat === 'envoi' ? <span className="dd-barre" aria-hidden="true"><span /></span> : null}
+          {l.etat === 'pret' && l.doublonDe ? (
+            <label className="ged-depot-doublon dd-doublon" title={`Déjà dans ce dossier : « ${l.doublonDe} »`}>
+              <input type="checkbox" checked={l.aEnvoyer} onChange={(e) => modifier(l.id, { aEnvoyer: e.target.checked })} />
+              {`Déjà dans ce dossier (« ${l.doublonDe} ») : l'envoyer quand même`}
+            </label>
+          ) : null}
+          {l.etat === 'pret' || l.etat === 'echec' ? (
+            <button className="dd-lien ged-depot-retirer" type="button" onClick={(e) => { e.stopPropagation(); retirer(l.id) }} disabled={envoiEnCours}>Retirer</button>
+          ) : null}
+        </div>
+      </li>
+    )
+  }
+
+  // L'aperçu de la ligne choisie : sa page 1, d'où vient son type, et ce que l'IA en dit.
+  const apercuVue = (l: Ligne) => {
+    const t = l.type ? parCode.get(l.type) : undefined
+    const a = apercus[l.id]
+    const ia = l.ia
+    return (
+      <aside className="dd-ap" aria-label="Aperçu">
+        <b className="dd-ap-nom">{`${l.nom.trim() || racine(l.file.name)}${extension(l.file.name)}`}</b>
+        <div className="dd-ap-h">
+          <div className="dd-page" key={l.id}>
+            {typeof a === 'object'
+              ? <img src={a.image} alt={`Page 1 de ${l.file.name}`} />
+              : a === 'aucun'
+                ? <span className="dd-page-ext">{extension(l.file.name).slice(1).toUpperCase() || 'Fichier'}</span>
+                : <span className="dd-page-lit" aria-label="Aperçu en préparation" />}
+          </div>
+          <dl>
+            <div><dt>Type</dt><dd>{t?.libelle ?? 'Pas encore choisi'}</dd></div>
+            <div><dt>D'où vient le type</dt><dd>{l.ia?.etat === 'lecture' ? "L'IA lit le type…" : sourceType(l) || '—'}</dd></div>
+            <div><dt>Visibilité</dt><dd>{t?.sensible ? 'Toujours privé' : l.visibilite === 'private' ? 'Privé' : 'Public'}</dd></div>
+            <div><dt>Page</dt><dd>{typeof a === 'object' ? `1 / ${a.nbPages}` : '—'}</dd></div>
+            <div><dt>Taille</dt><dd>{taille(l.file.size)}</dd></div>
+          </dl>
+        </div>
+        {l.etat === 'pret' && ia?.etat === 'fait' && avisIa(l) ? <p className="dd-ap-avis">{avisTexte(l, ia.r)}</p> : null}
+        {l.etat === 'pret' && ia?.etat === 'non_envoye' ? <p className="dd-ap-rib">{ia.raison}</p> : null}
+      </aside>
+    )
+  }
+
+  // Le texte du pied : où en est le lot, en une phrase.
+  const faitsDuLot = lignes.filter((l) => lot.includes(l.id) && l.etat !== 'pret' && l.etat !== 'envoi').length
+  const piedTexte = envoiEnCours
+    ? `Envoi, un fichier après l'autre (${faitsDuLot} sur ${lot.length})…`
+    : !lignes.length
+      ? (lectureIa ? "Le type de chaque fichier est proposé par son nom puis par l'IA ; tu le vérifies avant l'envoi." : "Le type de chaque fichier est proposé par son nom ; tu le vérifies avant l'envoi.")
+      : bloques
+        ? `${bloques} fichier${bloques > 1 ? 's' : ''} à corriger avant l'envoi.`
+        : iaLit
+          ? "L'IA lit le type de chaque fichier… Tu peux envoyer sans attendre."
+          : prets
+            ? "Rien n'est parti. Vérifie les types, puis envoie."
+            : lecturesEnCours
+              ? "Déposés chez nous, ils partent chez Hektor. L'IA lit leurs valeurs."
+              : 'Déposés chez nous, ils partent chez Hektor.'
+
+  const piedNormal = (
+    <footer className="dd-pied">
+      <p className={`dd-pied-t${bloques && !envoiEnCours ? ' is-refus' : ''}`} role="status">{piedTexte}</p>
+      {modale ? <button type="button" className="dd-b2" onClick={demanderFermer}>Fermer</button> : null}
+      <button className="dd-b1" type="button" disabled={!prets || envoiEnCours || !types} onClick={() => void envoyer()}>
+        {envoiEnCours ? 'Envoi…' : prets ? `Envoyer ${prets} document${prets > 1 ? 's' : ''}` : 'Rien à envoyer'}
+      </button>
+    </footer>
+  )
+  const s = (n: number) => (n > 1 ? 's' : '')
+  const piedBande = envoiEnCours ? (
+    <footer className="dd-pied dd-bande" role="alert">
+      <p className="dd-pied-t"><b>L'envoi n'est pas fini.</b> Attendre la fin avant de fermer ?</p>
+      <button type="button" className="dd-b2" onClick={() => onFermer?.()}>Fermer quand même</button>
+      <button type="button" className="dd-b1" onClick={() => setBande(false)}>Attendre</button>
+    </footer>
+  ) : nonPartis ? (
+    <footer className="dd-pied dd-bande" role="alert">
+      <p className="dd-pied-t"><b>{`${nonPartis} document${s(nonPartis)} ne ${nonPartis > 1 ? 'sont' : 'est'} pas parti${s(nonPartis)}.`}</b>{prets ? ' Les envoyer avant de fermer ?' : ' Ils sont à corriger avant l\'envoi.'}</p>
+      <button type="button" className="dd-b2" onClick={() => onFermer?.()}>Fermer sans envoyer</button>
+      {prets
+        ? <button type="button" className="dd-b1" disabled={!types} onClick={() => { setBande(false); void envoyer() }}>Envoyer maintenant</button>
+        : <button type="button" className="dd-b1" onClick={() => setBande(false)}>Revenir</button>}
+    </footer>
+  ) : (
+    <footer className="dd-pied dd-bande" role="alert">
+      <p className="dd-pied-t"><b>{`L'IA lit encore ${lecturesEnCours} document${s(lecturesEnCours)}.`}</b> Ils sont déposés ; fermer arrête leur lecture.</p>
+      <button type="button" className="dd-b2" onClick={() => onFermer?.()}>Fermer quand même</button>
+      <button type="button" className="dd-b1" onClick={() => setBande(false)}>Attendre</button>
+    </footer>
+  )
+  const bandeUtile = bande && (envoiEnCours || nonPartis > 0 || lecturesEnCours > 0)
+
+  return coque(
+    <>
       {typeAttendu ? (
-        <div className="ged-depot-pages">
+        <div className="dd-attendu">
           <span>{`Prochain fichier : ${typeAttendu.libelle}`}</span>
-          <button className="ghost-button" type="button" onClick={() => onTypeAttenduUtilise?.()}>Annuler</button>
+          <button className="dd-lien" type="button" onClick={() => onTypeAttenduUtilise?.()}>Annuler</button>
         </div>
       ) : null}
 
-      <div
-        className={`ged-depot-zone${survol ? ' is-survol' : ''}`}
-        onDragOver={(e) => { e.preventDefault(); setSurvol(true) }}
-        onDragLeave={() => setSurvol(false)}
-        onDrop={deposer}
-      >
-        <span>Glisse les fichiers ici, ou</span>
-        <label className="ghost-button">
-          Choisir des fichiers
-          <input
-            key={`f-${versionInput.current}`}
-            type="file"
-            multiple
-            onChange={(e) => { const f = Array.from(e.target.files ?? []); nouvelleVersion(); if (f.length) void ajouterFichiers(f) }}
-          />
-        </label>
-        <label className="ghost-button ged-depot-camera">
-          Photographier une page
-          <input
-            key={`c-${versionInput.current}`}
-            type="file"
-            accept="image/*"
-            capture="environment"
-            onChange={(e) => { const f = Array.from(e.target.files ?? []); nouvelleVersion(); if (f.length) setPages((p) => [...p, ...f]) }}
-          />
-        </label>
-      </div>
-
       {pages.length ? (
-        <div className="ged-depot-pages">
+        <div className="dd-attendu dd-pages">
           <span>{`${pages.length} page${pages.length > 1 ? 's' : ''} photographiée${pages.length > 1 ? 's' : ''} : elles formeront un seul document.`}</span>
-          <button className="ghost-button button-primary" type="button" disabled={assemblage} onClick={() => void assemblerPages()}>
+          <button className="dd-b1 is-petit" type="button" disabled={assemblage} onClick={() => void assemblerPages()}>
             {assemblage ? 'Assemblage…' : `Faire un PDF de ${pages.length} page${pages.length > 1 ? 's' : ''}`}
           </button>
-          <button className="ghost-button" type="button" disabled={assemblage} onClick={() => setPages([])}>Annuler les photos</button>
+          <button className="dd-lien" type="button" disabled={assemblage} onClick={() => setPages([])}>Annuler les photos</button>
         </div>
       ) : null}
 
       {types === null ? <p className="ged-depot-note">Chargement des types…</p> : null}
-
-      {lignes.length ? (
-        <ul className="ged-depot-liste">
-          {lignes.map((l) => {
-            const t = l.type ? parCode.get(l.type) : undefined
-            const fige = l.etat !== 'pret'
-            return (
-              <li key={l.id} className={`ged-depot-ligne is-${l.etat}${l.aEnvoyer ? '' : ' is-ecartee'}`}>
-                <div className="ged-depot-fichier">
-                  <span className="ged-depot-fichier-nom" title={l.file.name}>{l.file.name}</span>
-                  <small>{taille(l.file.size)}</small>
-                </div>
-                <label className="ged-depot-champ">
-                  <span>Nom chez Hektor</span>
-                  <input value={l.nom} disabled={fige} onChange={(e) => modifier(l.id, { nom: e.target.value, nomTouche: true })} />
-                </label>
-                <label className="ged-depot-champ">
-                  <span>{etiquetteType(l)}</span>
-                  <select value={l.type} disabled={fige || !types} onChange={(e) => modifier(l.id, { type: e.target.value, typeTouche: true })}>
-                    <option value="">{l.forceNom === 'muet' ? 'Nom muet : choisis le type' : 'Choisis le type'}</option>
-                    {familles.map(([famille, liste]) => (
-                      <optgroup key={famille} label={GED_FAMILLES[famille] ?? famille}>
-                        {liste.map((x) => <option key={x.code} value={x.code}>{x.libelle}</option>)}
-                      </optgroup>
-                    ))}
-                  </select>
-                </label>
-                <div className="ged-depot-champ">
-                  <span>Visibilité</span>
-                  <div className="console-segmented-control">
-                    <button type="button" className={l.visibilite === 'private' ? 'is-active' : ''} disabled={fige} onClick={() => modifier(l.id, { visibilite: 'private' })}>Privé</button>
-                    <button type="button" className={l.visibilite === 'shared' ? 'is-active' : ''} disabled={fige || Boolean(t?.sensible)} title={t?.sensible ? 'Une pièce des personnes reste toujours privée' : undefined} onClick={() => modifier(l.id, { visibilite: 'shared' })}>Public</button>
-                  </div>
-                </div>
-                <div className="ged-depot-etat">
-                  {l.etat === 'pret' && l.doublonDe ? (
-                    <label className="ged-depot-doublon">
-                      <input type="checkbox" checked={l.aEnvoyer} onChange={(e) => modifier(l.id, { aEnvoyer: e.target.checked })} />
-                      {`Déjà dans ce dossier (« ${l.doublonDe} ») : l'envoyer quand même`}
-                    </label>
-                  ) : null}
-                  {l.etat === 'pret' && l.aEnvoyer && l.refus ? <span className="ged-depot-refus">{l.refus}</span> : null}
-                  {l.etat === 'pret' ? etatIa(l) : null}
-                  {l.etat === 'envoi' ? <span>Envoi en cours…</span> : null}
-                  {l.etat === 'envoye' ? <span className="ged-depot-ok">Déposé chez nous, envoi chez Hektor en cours. Type enregistré.</span> : null}
-                  {l.etat === 'envoye' && l.lecture ? (
-                    <span className={`ged-depot-ia${l.lecture.etat === 'fait' ? ' is-avis' : ''}`}>
-                      {l.lecture.etat === 'attente' ? 'Lecture des valeurs à suivre…' : l.lecture.etat === 'lecture' ? "L'IA lit les valeurs…" : l.lecture.etat === 'fait' ? l.lecture.resume : `Pas lu (${l.lecture.raison}).`}
-                      {l.lecture.etat === 'erreur' ? <button className="ghost-button" type="button" onClick={() => modifierEtat(l.id, { lecture: { etat: 'attente' } })}>Relire</button> : null}
-                    </span>
-                  ) : null}
-                  {l.etat === 'classement_echec' ? (
-                    <span className="ged-depot-refus">
-                      {`Déposé, mais le type n'a pas été enregistré (${l.message ?? 'erreur'}).`}
-                      <button className="ghost-button" type="button" onClick={() => void reclasser(l)}>Réessayer</button>
-                    </span>
-                  ) : null}
-                  {l.etat === 'echec' ? <span className="ged-depot-refus">{`Pas envoyé : ${l.message ?? 'erreur'}. Le fichier reste ici.`}</span> : null}
-                  {l.etat === 'pret' || l.etat === 'echec' ? (
-                    <button className="ghost-button ged-depot-retirer" type="button" onClick={() => retirer(l.id)} disabled={envoiEnCours}>Retirer</button>
-                  ) : null}
-                </div>
-              </li>
-            )
-          })}
-        </ul>
-      ) : (
-        <p className="ged-depot-note">Aucun fichier pour l'instant. Au téléphone, « Photographier une page » autant de fois que de pages.</p>
-      )}
-
       {message ? <p className="ged-depot-alerte">{message}</p> : null}
 
-      <div className="ged-depot-pied">
-        {bloques ? <span className="ged-depot-refus">{`${bloques} fichier${bloques > 1 ? 's' : ''} à corriger avant l'envoi.`}</span> : <span />}
-        <button className="ghost-button button-primary" type="button" disabled={!prets || envoiEnCours || !types} onClick={() => void envoyer()}>
-          {envoiEnCours ? 'Envoi…' : prets ? `Envoyer ${prets} document${prets > 1 ? 's' : ''}` : 'Rien à envoyer'}
-        </button>
-      </div>
-    </div>
+      {lignes.length ? (
+        <>
+          <div className="dd-compte">
+            <b>{`${lignes.length} fichier${s(lignes.length)}`}</b>
+            {prets - aVerifier > 0 ? <span className="dd-badge is-pret">{`${prets - aVerifier} prêt${s(prets - aVerifier)}`}</span> : null}
+            {aVerifier ? <span className="dd-badge is-verif">{`${aVerifier} à vérifier`}</span> : null}
+            {bloques ? <span className="dd-badge is-corriger">{`${bloques} à corriger`}</span> : null}
+            {dejaLa ? <span className="dd-badge is-deja">{`${dejaLa} déjà dans ce dossier`}</span> : null}
+            <span className="dd-esp" />
+            {choisirFichiers('dd-b2 is-petit')}
+            {photographier('dd-b2 is-petit')}
+          </div>
+          <div className="dd-grille">
+            <ul className="ged-depot-liste dd-liste">{lignes.map(ligneVue)}</ul>
+            {selection ? apercuVue(selection) : null}
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="ged-depot-zone dd-zone">
+            <span className="dd-zone-ic" aria-hidden="true">
+              <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 15V4" /><path d="M7 9l5-5 5 5" /><path d="M5 15v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3" /></svg>
+            </span>
+            <strong>Glisse les fichiers ici</strong>
+            <span>PDF ou photos, un seul ou tout un lot. Rien ne part avant ton clic sur « Envoyer ».</span>
+            <span className="dd-zone-b">
+              {choisirFichiers('dd-b1')}
+              {photographier('dd-b2')}
+            </span>
+            <small>Au téléphone, « Photographier une page » autant de fois que de pages.</small>
+          </div>
+          {contexte?.nonTrouvees.length ? (
+            <p className="dd-nontrouvees">
+              {`Non trouvées pour « ${LIBELLE_MOMENT[contexte.moment]} » :`}
+              {contexte.nonTrouvees.map((n) => <span key={n}>{n}</span>)}
+            </p>
+          ) : null}
+        </>
+      )}
+    </>,
+    bandeUtile ? piedBande : piedNormal,
   )
 }

@@ -84,9 +84,9 @@ function canvasEnJpeg(canvas: HTMLCanvasElement): string {
   return canvas.toDataURL('image/jpeg', 0.7)
 }
 
-async function vignetteImage(file: Blob): Promise<string> {
+async function vignetteImage(file: Blob, cote = IA_COTE_VIGNETTE): Promise<string> {
   const bitmap = await createImageBitmap(file)
-  const echelle = Math.min(1, IA_COTE_VIGNETTE / Math.max(bitmap.width, bitmap.height))
+  const echelle = Math.min(1, cote / Math.max(bitmap.width, bitmap.height))
   const canvas = document.createElement('canvas')
   canvas.width = Math.max(1, Math.round(bitmap.width * echelle))
   canvas.height = Math.max(1, Math.round(bitmap.height * echelle))
@@ -295,6 +295,29 @@ export async function separerPdf(file: File, pieces: ResultatIa['pieces'], nomPi
     fichiers.push(new File([octets.slice().buffer as ArrayBuffer], `${nomPiece(i)}.pdf`, { type: 'application/pdf' }))
   }
   return fichiers
+}
+
+// Habillage H2 (16/11) : l'APERÇU de la fenêtre de dépôt -- la page 1 dessinée DANS LE NAVIGATEUR, pour l'œil de
+// l'utilisateur seulement. Rien ne part : ni au serveur, ni à l'IA (un RIB s'affiche, il ne se lit pas).
+export async function apercuPremierePage(file: File, cote = 640): Promise<{ image: string; nbPages: number } | null> {
+  if (/^image\/(jpeg|png|webp|gif)$/.test(file.type)) return { image: await vignetteImage(file, cote), nbPages: 1 }
+  if (file.type !== 'application/pdf') return null
+  const pdfjs = await chargerPdfjs()
+  const doc = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise
+  try {
+    const page = await doc.getPage(1)
+    const base = page.getViewport({ scale: 1 })
+    const vue = page.getViewport({ scale: cote / Math.max(base.width, base.height) })
+    const canvas = document.createElement('canvas')
+    canvas.width = Math.max(1, Math.round(vue.width))
+    canvas.height = Math.max(1, Math.round(vue.height))
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return null
+    await page.render({ canvasContext: ctx, viewport: vue }).promise
+    return { image: canvasEnJpeg(canvas), nbPages: doc.numPages }
+  } finally {
+    void doc.destroy()
+  }
 }
 
 export function useGedLectureIa(): boolean {

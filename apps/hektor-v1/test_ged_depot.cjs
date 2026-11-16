@@ -47,5 +47,23 @@ voir(/createUploadDocumentToHektorJob\(\{/.test(depot), 'l\'envoi passe par le c
 voir(!/metadata_json|signed_document|storage_path/.test(depot), 'la fenêtre ne touche à aucun marqueur de la signature')
 voir(/for \(const ligne of aPartir\)[\s\S]{0,200}await createUploadDocumentToHektorJob/.test(depot), 'un fichier après l\'autre (jamais en parallèle)')
 
+// habillage H2 (16/11) : la fenêtre au-dessus du bien
+voir(/onFermer=\{skin === 'v21' \? \(\) => setUploadOpen\(false\) : undefined\}/.test(app), 'H2 : la fenêtre ne se pose au-dessus du bien qu\'en skin cockpit ; le classique la garde dans le panneau')
+voir(/function demanderFermer\(\) \{[\s\S]{0,80}if \(envoiEnCours \|\| nonPartis \|\| lecturesEnCours\) setBande\(true\)\s*else onFermer\(\)/.test(depot),
+  'H2 : fermer avec un fichier non parti, un envoi ou une lecture en cours DEMANDE d\'abord (une saisie ne se perd jamais)')
+voir(/const nonPartis = lignes\.filter\(\(l\) => l\.etat === 'pret' && l\.aEnvoyer\)/.test(depot) && /if \(!lignes\.some\(\(l\) => \(l\.etat === 'pret' && l\.aEnvoyer\) \|\| l\.lecture\?\.etat === 'attente' \|\| l\.lecture\?\.etat === 'lecture'\)\) return/.test(depot),
+  'H2 : la bande et l\'avertissement du navigateur comptent les mêmes fichiers')
+voir((depot.match(/onClick=\{demanderFermer\}/g) || []).length === 2 && /e\.key === 'Escape'\) \{ e\.stopPropagation\(\); demanderFermer\(\)/.test(depot),
+  'H2 : la croix, « Fermer » et Échap passent TOUS par la garde')
+voir(!/\.dd-voile[^}]*onMouseDown|className="dd-voile" onClick/.test(depot), 'TÉMOIN : un clic à côté de la fenêtre ne la ferme pas')
+const ia = fs.readFileSync(path.join(__dirname, 'src/lib/gedClassementIa.ts'), 'utf8')
+const apercu = ia.slice(ia.indexOf('export async function apercuPremierePage'), ia.indexOf('export function useGedLectureIa'))
+voir(apercu.length > 200 && !/fetch\(|backendApiBaseUrl|supabase/.test(apercu), 'H2 : l\'aperçu dessine la page 1 DANS le navigateur, rien ne part (ni serveur, ni IA)')
+voir(!/apercuPremierePage|apercus\[/.test(depot.slice(depot.indexOf('async function lireParIa'), depot.indexOf('async function ligneNeuve'))), 'TÉMOIN : l\'aperçu n\'entre pas dans ce qui part à l\'IA')
+const rm = fs.readFileSync(path.join(__dirname, 'src/RecuManque.tsx'), 'utf8')
+voir(/onResultat\?\.\(\{ moment: resultat\.moment, nonTrouvees: resultat\.pieces\.filter\(\(l\) => l\.etat === 'non_trouve'\)\.map\(\(l\) => l\.libelle\) \}\)/.test(rm) && /onResultat=\{setContexteDepot\}/.test(app),
+  'H2 : les pièces non trouvées de la fenêtre sont celles du « Dossier » (une seule lecture)')
+voir(!/\babsente?s?\b|\bmanque\b/i.test(depot.slice(depot.indexOf('// D\'où vient le type'))), 'TÉMOIN : le rendu dit « non trouvée », jamais « absente » ni « manque »')
+
 console.log(ko ? `\n${ko} ROUGE, ${ok} VERT` : `\nTOUT EST VERT (${ok})`)
 process.exit(ko ? 1 : 0)

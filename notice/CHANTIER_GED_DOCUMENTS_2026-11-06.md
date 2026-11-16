@@ -2156,4 +2156,35 @@ contre capture se fera en production sur 63331 après le push. Reste : H2 la fen
 console propre -- conforme à la maquette. ⚠ **TÉLÉPHONE (390 px, mesuré dans un cadre de la même page, retiré après)** :
 le bloc DÉBORDAIT de 87 px (« Mise en vente et visites » sur une ligne, grille du bloc à la taille de son contenu, cartes en
 colonnes de 300 px minimum). Corrigé : bloc en `minmax(0, 1fr)`, moments 2 par ligne avec retour à la ligne, colonnes des
-cartes `min(300px, 100%)` -> débordement 0. Essais GED verts, build vert ; commit local À POUSSER.
+cartes `min(300px, 100%)` -> débordement 0. Essais GED verts, build vert ; commit local À POUSSER. *(Poussé : en ligne à
+`e8ae253`, vu au téléphone.)*
+
+**✅ « Oui, H2 » (16/11) : HABILLAGE H2 (la fenêtre de dépôt) ÉCRIT — rien poussé.** Même logique, mêmes données, mêmes
+gestes, même envoi (un fichier après l'autre, `createUploadDocumentToHektorJob` puis `app_ged_classer`, inchangés). Ce qui
+change à l'écran, d'après la planche « Dépôt » de la maquette :
+- **une FENÊTRE au-dessus du bien** en skin cockpit (`onFermer` présent ; portail sur `document.body`, voile, la page
+  derrière ne défile plus, le clavier va dans la fenêtre). En skin classique, elle reste posée dans le panneau, comme avant.
+  Interrupteur éteint : le formulaire d'aujourd'hui, inchangé (l'essai `test_ged_depot` le garde).
+- **en-tête sombre** (bien, réf., « Déposer des documents », pastilles du moment et du mandat, croix) ;
+- **vide** : une grande zone (icône qui flotte, « Choisir des fichiers », « Photographier une page ») et, sous elle, les
+  pièces **non trouvées** du moment, LUES PAR « Le dossier » (`RecuManque` rend son résultat par `onResultat` : une seule
+  lecture, aucune requête neuve). Glisser des fichiers marche sur TOUTE la fenêtre (« Lâche les fichiers ici ») ;
+- **pleine** : le compte (prêts, à vérifier, à corriger, déjà dans ce dossier), la LISTE (vignette, nom éditable, fichier
+  et taille, le type en pastille-menu, « L'IA lit le type… » qui scintille, d'où vient le type écrit lettre à lettre, le
+  cadenas Privé / Public, une pastille d'état, la barre d'envoi) et l'**APERÇU** de la ligne choisie : la PAGE 1 dessinée
+  DANS LE NAVIGATEUR (`apercuPremierePage`, pdf.js déjà chargé, rien ne part ni au serveur ni à l'IA), le type, d'où il
+  vient, la visibilité, la page 1 / N, et les deux bandes : l'avis de l'IA avec « Prendre ce type », la raison d'un
+  non-envoi (RIB). Choisie par défaut : la première ligne « à vérifier ». Au téléphone (aperçu sous la liste), l'avis et la
+  raison restent AUSSI sur la ligne ;
+- **fermer** : la croix, « Fermer » et Échap passent tous par une GARDE -- un fichier non parti, un envoi ou une lecture en
+  cours fait monter une bande (« N documents ne sont pas partis. Les envoyer avant de fermer ? » · « Fermer sans envoyer »
+  / « Envoyer maintenant »). ⭐ Avant H2, le bouton « Fermer » du panneau DÉMONTAIT la fenêtre sans rien demander : les
+  fichiers non partis étaient perdus en silence (l'avertissement du navigateur ne joue qu'en quittant la page). Un clic à
+  côté de la fenêtre ne la ferme pas (témoin).
+Fichiers : `DepotDocuments.tsx` (rendu réécrit ; `etiquetteType` devient `sourceType`), `DepotDocuments.css` (styles
+`dd-*` ajoutés, les anciens restent ; animations coupées par « moins de mouvement » ; plein écran sous 760 px),
+`lib/gedClassementIa.ts` (`apercuPremierePage`), `RecuManque.tsx` (`onResultat`), `App.tsx` (`contexteDepot`, la fenêtre
+montée sans le cadre `fa-ck-docup`). Essais : `test_ged_depot` 19 -> 28 (garde de fermeture et son TÉMOIN INVERSE --
+retirer « fichier non parti » de la garde la fait rougir --, aperçu qui ne part nulle part, pièces non trouvées venues du
+« Dossier », vocabulaire « non trouvée ») ; les 12 essais GED verts ; build vert. ⚠ PAS VU : la capture contre capture se
+fera en production sur 63331 après le push (bureau et téléphone). Reste : H3 après l'envoi, H4 téléphone.
