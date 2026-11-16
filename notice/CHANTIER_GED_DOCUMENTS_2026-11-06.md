@@ -1871,3 +1871,25 @@ célibataire). Avant le dépôt : aucune proposition contact (point de départ).
 - **Reste, sur accord** : pousser, puis REJOUER l'épreuve sur 63331 (les 2 pièces « ESSAI CONTACT » déjà lues resservent,
   rien à redéposer) : 3 propositions attendues (14/07/1955, « ROANNE (42) », « célibataire »), 3 clics, contrôle chez nous
   (`scratchpad/ged_m9c/controle_epreuve_9c.sql`) puis chez Hektor sur 605947. Sur 63331 restent 4 pièces SPÉCIMEN de plus.
+
+**✅✅ 9c ÉPROUVÉ EN RÉEL DE BOUT EN BOUT (16/11) — « Oui pousse et rejoue ».** `a3539e9` poussé SEUL (relu juste avant :
+seul au-dessus d'`origin/main`), Vercel prêt. Sur 63331, dans le Chrome de Frédéric :
+- **« À remplir (3) »** apparaît : « Mandant ESSAI CONTACT : date de naissance 14/07/1955 », « … lieu de naissance ROANNE
+  (42) », « … situation de famille « célibataire » », source « ESSAI9C2 Fiche de renseignements… page 1 ». ⭐ Témoins
+  vivants : rien pour Marc FICTIF ni Jeanne SPECIMEN (pas des contacts du bien), rien depuis les 2 pièces « ESSAI 8A C1 »
+  (nom illisible). Console sans erreur.
+- **3 clics** (07:51:49, 07:52:02, 07:52:17 UTC), chacun « Envoyé : … part chez Hektor par le chemin habituel », puis
+  « À remplir (0) ». **Chez nous à l'instant** : `birth_date 1955-07-14`, `birth_place ROANNE (42)`, `marital_status
+  single` ; 3 décisions `remplie` sous NOTRE numéro (`C1.birth_date.20000009`…), le détail porte `numero_hektor 605947`
+  et `email_rgpd false` ; bannette : `last_name` inchangé + les 3 champs (+ `contact_kind`/`person_type`, sans effet).
+- ⚠ La bannette porte `send_rgpd_email: "false"` en TEXTE : vérifié, le worker le lit comme non
+  (`console_job_worker.js` l. 19587 accepte `false`, `"false"`, `"0"`). Aucun e-mail RGPD.
+- **Chez Hektor** : `update_hektor_contact` done 08:03:18 sur **605947** (`date_naissance 14-07-1955`, `lieu_naissance
+  ROANNE (42)`, `statut_matrimonial single`) ; relecture `refresh_console_contact_data` done 08:03:34 (détail Hektor relu
+  08:03:24). **Après la relecture DEPUIS HEKTOR**, notre fiche porte toujours les 3 valeurs : Hektor les a gardées. Rien
+  d'autre n'a bougé (prénom, e-mail, adresse, CP, ville intacts ; « coordonnées remplacées » du compte rendu = la logique
+  des téléphones, aucun envoyé, aucun avant ni après) ; type toujours `mandant` / `proprietaire` ; contrôle au retour
+  (`app_v_contact_modif_ecarts`) : **aucun écart**.
+- **Reste sur 63331** : 4 pièces SPÉCIMEN de plus ; le contact d'essai 20000009 s'appelle désormais « ESSAI CONTACT »
+  et porte l'état civil fictif. Pour revenir : `ged_remplir` -> off ; les valeurs se vident par la fenêtre « Modifier ».
+- ⚠ Toujours NON mesuré : `idCode 1` / `idVille 1` de la commune au renommage (compte rendu du 1er geste).
