@@ -12,11 +12,30 @@ A BLANC PAR DEFAUT -- meme patron que Console/menage_coffre_documents.js. Un ges
 destructif ne part pas sur une faute de frappe.
 
 ⚠ IL NE TOUCHE QUE LE LOCAL. Les lignes vivent aussi chez Supabase, ou elles sont
-  nees : c'est leur place, et le serveur fait foi pour elles. Si on veut aussi les
-  retirer la-haut, c'est un AUTRE geste, et il se fait avec son propre patch SQL.
-  ⛔ ET DANS CET ORDRE : le local d'abord. Un local vide avec Supabase rempli, c'est
-    l'etat d'avant la piece 4 -- connu, mesure, sans danger. L'inverse laisserait le
-    push recreer en ligne ce qu'on vient d'effacer.
+  nees : c'est leur place, et le serveur fait foi pour elles. Les retirer la-haut est
+  un AUTRE geste, avec son propre patch SQL
+  (supabase/patch_essai_a2_plage_app_2026-11-15_INVERSE.sql).
+
+⛔⛔ ET CETTE NOTE A ETE CORRIGEE LE 16/11 -- SON ARGUMENT AVAIT PERIME EN UNE NUIT.
+  Elle disait : « le local d'abord ; un local vide avec Supabase rempli, c'est l'etat
+  d'avant la piece 4, connu, mesure, sans danger ». C'etait vrai le 15/11, quand
+  l'interrupteur `APP_RECOPIE_APP_SEULE` etait ETEINT. Il est ALLUME depuis le 15/11 a
+  17:46, et cet etat n'est plus stable :
+
+      `recopier_ce_que_hektor_ne_rendra_jamais` (affaire_ledger.py:2796) fait entrer
+      « la plage app ET sans numero Hektor ET PAS DEJA EN LOCAL ». Une ligne retiree
+      d'ici mais encore chez Supabase descend dans la doublure au run suivant, et la
+      recopie LA RECREE. Le retrait local SEUL ne tient donc pas une nuit.
+
+  ⭐ CE QUI COMPTE N'EST PLUS L'ORDRE, C'EST LA FENETRE : les DEUX gestes doivent se
+    faire avant le prochain run (04:00), et on controle apres. L'ordre reste « local
+    d'abord » -- les deux sens reviennent au meme etat plein si l'on est interrompu
+    (ici la recopie recree, dans l'autre sens le push remonte), donc on garde l'ordre
+    ecrit plutot que d'en changer pour rien.
+  ⚠ ET LA DOUBLURE LOCALE `app_affaire_ledger__sb` GARDE LA LIGNE jusqu'a la
+    prochaine descente : ne pas relancer `affaire_ledger.py` a la main entre les deux
+    gestes, sinon la recopie la relit et la repose. Le run, lui, rafraichit la
+    doublure JUSTE AVANT la recopie, donc il ne la recreera pas.
 
 ⚠ ET IL JUGE SA PART (lecon 31) : apres le geste, il verifie qu'il ne reste AUCUNE
   ligne de la plage sans numero, ET que les voisines sont intactes -- la plage AVEC

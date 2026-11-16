@@ -1036,12 +1036,15 @@ fait descendre. Il fallait bien un INSERT -- et c'est tout ce qu'est 26bis.
 ```
    (b) transaction_origine dans COLONNES_QUE_LE_PUSH_N_ENVOIE_PAS   ✅
    (c) transaction_origine dans la liste locale `for neuve in (...)` ✅
-   recopie_app_seule_active()                  l'interrupteur, ETEINT par defaut
+   recopie_app_seule_active()                  l'interrupteur -- ETEINT par defaut
+      ⚠ relu le 16/11 : le CODE est a 0 par defaut, mais `.env` le porte a 1
+        depuis le 15/11 a 17:46. Ce bloc decrit la POSE, pas l'etat du jour.
    recopier_ce_que_hektor_ne_rendra_jamais()   la recopie, AUCUN appel reseau
    l'appel : APRES le push (le 1er passage n'ecrit rien chez Supabase)
              AVANT la redescente (un seul chemin pour les colonnes de classe A)
    PLAFOND_RECOPIE_APP_SEULE = 500 -- au-dela, REFUS ecrit, rien n'entre
-   phase2/sync/test_recopie_app_seule.py              39/39 verts
+   phase2/sync/test_recopie_app_seule.py              39/39 verts a la POSE
+      (44/44 depuis le garde-fou du 15/11 au soir -- voir plus bas)
    phase2/checks/retour_arriere_recopie_app_seule.py  A BLANC par defaut
 ```
 
@@ -1402,7 +1405,23 @@ demande. Ce qui compte pour cette nuit : **mes changements n'en ont casse aucun*
 ```
    test_recopie_app_seule.py           44/44   (39 + les 5 du garde-fou)
    test_descente_sans_cle_primaire.py  19/19   (dont la garde des vues)
-   essai_reel_sur_copie_26bis.py       15/15   sur les VRAIES lignes, en lecture seule
+   essai_reel_sur_copie_26bis.py       15/15   A LA POSE, sur les VRAIES lignes
+      ⛔⛔ RELU LE 16/11 : IL SORT EN CODE 1 DEPUIS LA 1re NUIT, ET C'EST NORMAL.
+        Il juge « 1 recopiee, cles [1001424] » -- mais la recopie n'admet que ce qui
+        n'est PAS DEJA EN LOCAL (affaire_ledger.py:2796). La ligne y est depuis le
+        16/11 a 06:17, donc l'essai obtient 0 et tombe ensuite sur un KeyError.
+        ⭐ SON ROUGE EST DONC LA PREUVE QUE LA NUIT A MARCHE : il n'y a plus rien a
+          recopier. Mesure : la version de HEAD sort deja en code 1, le rouge n'a
+          pas ete introduit par une edition.
+        ⭐ ET PERSONNE NE L'APPELLE : ni le run, ni le moniteur, ni une tache --
+          il ne crie donc nulle part tout seul. Pas d'urgence.
+        ⏰ A TRANCHER PAR FREDERIC, et je ne choisis pas :
+           A  le laisser, avec cette note datee                    (cout zero)
+           B  lui apprendre la nuit passee : s'il voit la ligne deja en local, il
+              le DIT et juge l'inverse (« 0 recopiee, resultat attendu »)  <- je
+              recommande B, parce que les 241 demanderont de re-eprouver sur les
+              vraies donnees
+           C  le retirer -- on perd l'epreuve sur les vraies lignes
    fins de ligne                       0 CRLF dans les deux fichiers (ils sont en LF)
 ```
 
@@ -1668,6 +1687,95 @@ surveille pas. Voir [[deux-portes-meme-table-seuils-divergents]].
 ⭐ **Et le worker n'a pas ete touche** : c'est lui qui avait raison. Aucun service a
 redemarrer.
 
+### ✅✅✅ 5 -- LE COBAYE EST RETIRE DES DEUX COTES (16/11, 08:57-08:58)
+
+⛔⛔ **ET L'AUDIT DES NOTES, DEMANDE PAR FREDERIC, A SAUVE LE GESTE.** Sa phrase :
+« audit de nouveau car nous avons peut-etre laisse des notes erronees sur ce sujet,
+nous avons change plusieurs fois, il faut etre sur ». **Six notes periment**, dont une
+qui changeait le geste :
+
+```
+   1  l'ORDRE du retrait          l'argument etait mort depuis l'allumage de 26bis
+   2  « ETEINT par defaut »       vrai pour le code, faux pour le .env
+   3  « 39/39 » (x2)              on est a 44/44
+   4  « l'etat d'AUJOURD'HUI »    designait l'etat de la VEILLE
+   5  « essai_reel 15/15 »        il sortait en code 1 depuis la 1re nuit
+```
+
+⭐⭐ **LA NOTE QUI COMPTAIT** : le script disait « le local d'abord ; un local vide avec
+Supabase rempli, c'est l'etat d'avant la piece 4, connu, mesure, sans danger ».
+**C'etait vrai le 15/11, quand l'interrupteur etait eteint.** Depuis le 15/11 a 17:46 il
+est allume, et `recopier_ce_que_hektor_ne_rendra_jamais` admet « la plage app ET sans
+numero ET PAS DEJA EN LOCAL » : **une ligne retiree du local mais encore chez Supabase
+est RECREEE au run suivant.** Le retrait local seul ne tient donc pas une nuit. Ce qui
+compte n'est pas l'ordre mais **LA FENETRE** : les deux gestes avant le run de 04:00.
+
+⭐ **DEUX FAUSSES ALARMES LEVEES PAR LA MESURE** : « SUPABASE D'ABORD »
+(`affaire_ledger.py:2772`) ne contredit pas « le local d'abord » -- l'un parle de la
+**creation** (Supabase frappe les numeros), l'autre du **retrait**. Et il ne reste
+**aucune** trace de l'ancien critere de garde : les seules occurrences sont dans
+l'essai, qui verifie justement leur absence.
+
+#### LES DEUX GESTES, ET LEURS PREUVES
+
+```
+   GESTE 1  le LOCAL, 08:57:39
+      sauvegarde datee : phase2_avant_retour_26bis_20261116_085739.sqlite
+      1 retiree . 0 restante . voisines INTACTES (340 + 30 817)
+   GESTE 2  SUPABASE, 08:58 -- patch_essai_a2_plage_app_2026-11-15_INVERSE.sql
+      joue DEPUIS LE FICHIER (node Console/apply_sql_patch.js) pour qu'aucune
+      recopie a la main ne puisse introduire une faute
+      ⚠ l'hote direct est injoignable (l'IPv4 y a ete retiree) -> le repli par le
+        POOLER a joue tout seul : aws-1-eu-west-2.pooler.supabase.com
+```
+
+#### ✅ LE CONTROLE, ET PAS SEULEMENT L'ABSENCE D'ERREUR
+
+```
+   chez Supabase            avant        apres
+     lignes marquees essai     1            0      OK
+     la ligne 1001424          1            0      OK
+     les 2 origines du dossier 2            2      OK INTACTES (20217, 6544)
+     la plage app            341          340      OK
+     dont sans numero          1            0      OK
+     le registre total     31 158       31 157     OK
+   en local
+     a retirer                 1            0      OK
+     voisines                340 + 30 817          OK PAS BOUGE
+     le dossier 28351     compromis 20217 + vente 6544  OK
+   LES DEUX SENTINELLES
+     data.transaction_disparue        -> 0   (avec la garde posee en 4bis)
+     data.affaire_sans_numero_hektor  -> 0   (la VUE)
+```
+
+⚠ **LA DOUBLURE LOCALE GARDE ENCORE LA LIGNE** (31 158), et c'est ATTENDU : elle est
+l'image du serveur de cette nuit. **Risque ecarte par le code** (`pull_from_supabase.py`
+l. 755-757) : la descente ecrit dans une table temporaire, verifie que la copie est
+complete, puis **DROP l'ancienne et renomme** -- la doublure est donc REMPLACEE EN
+ENTIER demain a 06:45, et le run la rafraichit **avant** la recopie (06:15 puis 06:16).
+⛔ Seul interdit d'ici la : **ne pas lancer `affaire_ledger.py` a la main**, il relirait
+la doublure et reposerait la ligne.
+
+#### ✅ L'ESSAI SUR LES VRAIES DONNEES EST REECRIT -- choix « B » de Frederic
+
+Il **sortait en code 1 depuis la 1re nuit**, et son echec etait **la preuve que la nuit
+avait marche** : il attendait « 1 recopiee » alors qu'il n'y avait plus rien a recopier.
+Mesure : la version de HEAD sortait **deja** en 1 -- le rouge n'etait pas une
+regression. Et personne ne l'appelle (ni run, ni moniteur), donc il ne criait nulle part.
+
+⭐⭐ **LA FORME JUSTE NE DECRIT PAS UN ETAT, ELLE LE FABRIQUE.** Il MESURE son etat de
+depart (passage 0), puis **retire de SA COPIE** les candidates pour recreer « l'instant
+d'avant la recopie ». Il est donc vrai n'importe quel jour, et **il servira tel quel
+pour les 241**. **18/18 verts.**
+
+⭐ **ET SES DEUX CHEMINS SONT EPROUVES**, pas supposes : avec un candidat, 18/18 ; sans
+candidat (fabrique dans une copie), il **sort en 0**, DIT « rien a eprouver », renvoie a
+`test_recopie_app_seule.py` et **ne pretend aucun vert**. Demain, apres la descente, il
+se taira proprement au lieu de crier.
+
+**Le retour en arriere** : la sauvegarde datee pour le local, et
+`patch_essai_a2_plage_app_2026-11-15.sql` pour Supabase.
+
 ### ⬜ CE QUI RESTE, DANS L'ORDRE CONTRAINT
 
 ```
@@ -1695,7 +1803,15 @@ redemarrer.
                            (et j'avais note l'inverse). `is.null` seul partout :
                            LES TROIS PORTES SONT ALIGNEES, plus de divergence.
                          ⭐ rien a redemarrer, 3 rouges voisins PREEXISTANTS mesures
- 5  retirer l essai A2  seulement apres 3, 4 et 4bis
+ 5  retirer l essai A2  ✅✅✅ FAIT LE 16/11 a 08:57-08:58, LES DEUX COTES
+                        local : 1 retiree, voisines intactes, sauvegarde datee
+                        Supabase : 0 marquee, 341->340, 31 158->31 157, les 2
+                          transactions d origine du dossier INTACTES
+                        ⭐ LES DEUX SENTINELLES VOIENT 0
+                        ⭐ l'audit des notes a sauve le geste : l'ordre reposait
+                          sur un argument mort depuis l'allumage de 26bis
+                        ⚠ la doublure garde la ligne jusqu'a la descente de
+                          demain -- NE PAS lancer affaire_ledger.py a la main
  6  LES 241             marquees `classeur` DES L'INSERT, jamais apres
 ```
 
