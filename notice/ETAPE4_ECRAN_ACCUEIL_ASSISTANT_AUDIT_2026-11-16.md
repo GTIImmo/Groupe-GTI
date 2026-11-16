@@ -794,3 +794,213 @@ Consignes à jour. Écran : titres et fins des deux cartes.
 signature finie, charge du travail, témoin « a signé entre la carte et le clic → rien envoyé ») ; témoin inverse (la règle
 `notified` retirée → rouge). Build vert. **Pas éprouvé en réel** : AUCUNE signature n'est en cours (3 demandes en tout,
 dernière le 06/11) ; une preuve demande d'abord un envoi de test, sur sa décision.
+
+## 34. ⭐ AUDIT : TOUS les gestes de l'app sont-ils accessibles à l'assistant ? (16/11, sa demande avant le lot 5)
+
+**Périmètre et méthode** : recensé depuis le CODE, pas seulement depuis le catalogue du 13/11 — toutes les fonctions
+d'écriture du front (`lib/api.ts`, `lib/ged.ts`, `lib/pilotage.ts`, et les appels directs des écrans : partenaires,
+affaires apportées, syndic…), soit ~125 fonctions, dont une partie TECHNIQUE (relectures, synchronisations, aperçus,
+lignes provisoires, ouverture d'un document) qui n'est pas un geste de la personne. Restent **76 gestes métier** (certaines
+lignes en regroupent plusieurs proches), croisés avec les 29 gestes de l'assistant. Légende : FAIT · ÉCRAN (la carte ouvrira
+la fenêtre de l'écran, lot 6) · NON (décision écrite) · PAS FAIT (jamais décidé ni codé).
+
+**demandes**
+- Demander validation / baisse de prix / annulation de mandat — FAIT
+- Corriger une demande renvoyée — NON (décision)
+- Traiter une demande (accepter / refuser, vérifications Hektor, e-mail de décision) [DIR] — ÉCRAN (lot 6)
+**diffusion**
+- Publier / retirer UN portail — FAIT
+- Choisir PLUSIEURS portails et appliquer d'un coup — PAS FAIT
+- Basculer « Validation » chez Hektor [DIR] — PAS FAIT
+- Basculer « Diffusable » chez Hektor [DIR] — PAS FAIT
+**annonce**
+- Créer une annonce ou une estimation — ÉCRAN (lot 6)
+- Remplir une annonce depuis la photo d'une fiche papier (scan) — PAS FAIT
+- Modifier les champs (23, liste fermée, prix exclu) — FAIT
+- Rédiger titre et texte (rédacteur) — FAIT
+- Changer le statut : offre / compromis / vente — ÉCRAN (lot 6)
+- Changer le statut : Actif, Estimation, Vendu, Clos (hors transactions) [DIR] — PAS FAIT
+- Archiver une annonce [DIR] — PAS FAIT
+- Désarchiver une annonce — PAS FAIT
+- Supprimer une annonce [DIR] — PAS FAIT
+- Réaffecter le négociateur [DIR] — PAS FAIT
+- Activer un brouillon — NON (décision)
+**photos**
+- Couverture, masquer / afficher, déplacer — FAIT
+- Ajouter une photo (un fichier) — PAS FAIT
+- Supprimer une photo — NON (décision)
+**estimation**
+- Saisir les éléments de l'estimation (source, comparables, rédaction IA) — ÉCRAN (lot 6)
+- Générer l'avis de valeur PDF — ÉCRAN (lot 6)
+- Envoyer l'e-mail d'estimation au client — PAS FAIT
+**documents**
+- Générer le plan cadastral — PAS FAIT
+- Déposer un document (un fichier) — PAS FAIT
+- Supprimer un document — PAS FAIT
+- GED : classer, décider, juger une pièce — PAS FAIT
+**mandat**
+- Générer le numéro de mandat — FAIT
+- Éditer le document de mandat / l'avenant — ÉCRAN (lot 6)
+- Clôturer par la demande d'annulation — FAIT
+- Corriger une date de clôture [DIR] — PAS FAIT
+- Écrire la charge des honoraires (qui paie) — PAS FAIT
+- Modifier ou prolonger un mandat — NON (décision)
+**signature**
+- Envoyer en signature (Youtrust) — ÉCRAN (lot 6)
+- Relancer un signataire (Youtrust) — FAIT
+- Annuler la signature (Youtrust) — FAIT
+- Relancer / annuler (ImmoSign, ancien prestataire) — PAS FAIT
+- Marquer « signé à la main » — PAS FAIT
+**mandants**
+- Rattacher un mandant à un bien — PAS FAIT
+- Retirer un mandant d'un bien — PAS FAIT
+- Créer un mandant — PAS FAIT
+- Modifier un mandant (dont son e-mail / portable pour la signature) — PAS FAIT
+**transactions**
+- Accepter / refuser une offre, annuler un compromis [DIR] — FAIT
+- Note de transaction [DIR] — FAIT
+- Créer une offre / un compromis / une vente [DIR] — ÉCRAN (lot 6)
+- Modifier les champs d'une transaction [DIR] — PAS FAIT
+- Conditions suspensives [DIR] — PAS FAIT
+- Commission [DIR] — PAS FAIT
+- Répartition des honoraires [DIR] — PAS FAIT
+- Supprimer un compromis ou une vente [DIR] — PAS FAIT
+- Trancher un écart (carnet, personnes) [ADMIN] — PAS FAIT
+**contacts**
+- Créer un contact (avec sa 1re recherche) — FAIT
+- Modifier téléphone / e-mail / commentaire — FAIT
+- Modifier l'adresse d'un contact existant — PAS FAIT
+- Archiver / réactiver — FAIT
+- Ajouter / modifier un conjoint — PAS FAIT
+- Supprimer un contact [DIR] — PAS FAIT
+**recherches**
+- Créer, modifier, archiver une recherche — FAIT
+- Supprimer une recherche — PAS FAIT
+**rapprochement**
+- Bien proposé par téléphone, écarter / rétablir — FAIT
+- E-mail de rapprochement (aperçu puis envoi réel) — FAIT
+**relances**
+- Créer, faite, reportée — FAIT
+**agenda**
+- Rendez-vous dans SON agenda : créer, déplacer, supprimer — FAIT
+- Rendez-vous avec le client invité — FAIT
+- L'agenda d'un collègue [DIR] — PAS FAIT
+- Bon de visite — ÉCRAN (lot 6)
+**emails**
+- E-mail interne aux collègues — FAIT
+- E-mail au client (sans pièce jointe) — FAIT
+- Pièces jointes (documents, photos) — PAS FAIT
+**espace**
+- Espace client : confirmer un créneau, répondre — NON (décision)
+**partenaires**
+- Syndic / diagnostiqueur d'un bien, métier, apporteur / courtier, notaire — PAS FAIT
+**notifications**
+- Marquer lues — FAIT
+**sante**
+- Alertes : prendre en charge, résoudre ; « j'ai refait » / abandonner un geste [ADMIN] — PAS FAIT
+**matterport**
+- En ligne, privé, archiver, réactiver — PAS FAIT
+**utilisateurs**
+- Gérer les utilisateurs — NON (décision)
+
+**Compte** : 23 FAIT · 9 ÉCRAN (lot 6) · 6 NON · **38 PAS FAIT** (sur 76).
+
+**Les « PAS FAIT », rangés par ce qu'il faudrait** :
+- **Cartes directes possibles** (une fonction de la base ou une route du serveur existe et contrôle déjà) : réaffecter le
+  négociateur, archiver / désarchiver une annonce, statut Actif / Estimation (⚠ Clos = les DEUX PORTES, chantier à part),
+  Validation et Diffusable [DIR], plusieurs portails d'un coup, ajouter / modifier un conjoint, l'adresse d'un contact
+  (communes vérifiées), supprimer une recherche, rattacher / retirer / créer / modifier un mandant, « signé à la main »,
+  les champs, conditions, commission et répartition d'une transaction [DIR], corriger une date de clôture [DIR], la charge
+  des honoraires, le plan cadastral, supprimer un document, l'e-mail d'estimation, l'agenda d'un collègue [DIR], les
+  partenaires, les alertes de Santé [ADMIN], ImmoSign.
+- **Demandent un FICHIER** (une photo, un document, une fiche papier, une pièce jointe) : impossible tant que la
+  conversation ne reçoit pas de pièce jointe — un chantier à part (« déposer un fichier dans la conversation »).
+- **Suppressions définitives** [DIR] (annonce, contact, compromis, vente) : le catalogue du 13/11 les mettait « plus
+  tard » ; à décider une par une.
+- **GED** (classer, décider, juger) : le chantier de la session GED, en cours — à voir avec elle.
+- **Matterport** : l'API est hors service depuis le 03/11.
+
+**Réponse à sa question** : NON, tous les gestes ne sont pas accessibles aujourd'hui — 23 le sont, 9 le seront par les
+fenêtres (lot 6), 6 sont fermés par décision, 38 restent à décider. Ordre proposé : les cartes directes « sûres » par
+famille (mandants, conjoint et adresse, annonce : négociateur / archivage / statut simple, transactions : champs et
+conditions, documents simples), puis le lot 6 (fenêtres), puis le lot 5 (téléphone) — OU le lot 5 d'abord : SA décision.
+
+## 35. Cartes directes, familles 1 à 3 (mandants, contacts, annonce) : AUDIT (16/11, sur « Carte directe »), rien codé
+
+**Périmètre** : les fonctions de la base de ces gestes (définition lue en base le 16/11), leurs règles de droits
+(`app_console_can_request_job` / `app_console_can_request_contact_job`), et ce que l'écran envoie. Pas mesuré : le volume.
+**Règles de droits relues** (`app_console_can_request_job`) : archiver et changer le statut = admin / manager SEULEMENT ;
+réaffecter le négociateur = admin / manager (absent de la liste du négociateur) ; rattacher / retirer / créer / modifier un
+mandant, désarchiver = le négociateur sur SES biens.
+
+**Famille 1 — mandants**
+- rattacher un contact EXISTANT comme mandant : `app_link_mandant_optimistic` (contrôle de la base) ;
+- retirer un mandant : `app_unlink_mandant_optimistic` (contrôle ; la base REFUSE si le mandat est numéroté) ;
+- créer un mandant / modifier son e-mail ou portable : `app_create_mandant_contact_optimistic`,
+  `app_update_mandant_contact_optimistic` — ⛔ **trouvé : ces deux fonctions NE CONTRÔLENT PAS l'appelant** (aucun appel
+  de règle de droits dans leur définition ; le catalogue du 13/11 le signalait déjà pour « modifier »). Défaut EXISTANT,
+  aussi vrai pour l'écran. La carte vérifierait le bien avec le jeton de la personne (elle ne le voit que si elle y a
+  droit), mais le vrai remède est dans la base : ajouter le même contrôle que les autres (patch, son accord).
+**Famille 2 — contacts**
+- l'adresse d'un contact existant : `app_edit_contact_optimistic` (contrôle) avec adresse / code postal / ville, la ville
+  vérifiée dans les communes du code postal (comme la création, lot 2c) — sinon Hektor garde l'ancienne (leçon du 22/10) ;
+- ajouter un conjoint (deux contacts existants) : `app_ajouter_conjoint_optimistic` (contrôle) ; ⚠ le chantier des
+  couples (fiches de couple, conjoints muets) est délicat : seulement « rattacher un conjoint existant », pas le modifier ;
+- supprimer une recherche : ⛔ NON proposé — défaut CONNU « supprimer la 2e recherche vise la première » (index) ;
+  l'archivage existe déjà (carte FAITE).
+**Famille 3 — annonce** (direction)
+- réaffecter le négociateur : `app_assign_negotiator_optimistic` (contrôle ; numéro Hektor du négociateur, pris dans
+  l'annuaire) ;
+- archiver / désarchiver : `app_archive_annonce_optimistic`, `app_restore_annonce_optimistic` (contrôle ; « déjà
+  archivée » refusé par la base) ;
+- statut Actif ↔ Estimation : `app_change_annonce_status_optimistic` (contrôle) ; ⚠ passer « Actif » REMET « diffusable »
+  à 1 chez Hektor (mémoire « Le geste Actif remet diffusable à 1 ») : la carte le DIT ; « Clos » exclu (les deux portes),
+  « Vendu » et les transactions passent par la fenêtre (lot 6).
+**À trancher par lui** : (1) le contrôle manquant des deux fonctions « mandant » — patch de la base d'abord (recommandé),
+ou cartes avec le seul contrôle de lecture ; (2) le reste tel que proposé.
+
+## 36. Cartes directes, familles 1 à 3 : CODÉES (16/11, sur « Vas y »), testées hors ligne — pas encore en ligne
+
+**Périmètre** : `assistant_gestes.py` (8 cartes), `assistant_service.py` (consignes), `AccueilAssistant.tsx` (titres et
+phrases de fin), tests `test_assistant_gestes.py` §14 et `test_assistant_ia.py`. Rien n'est écrit en base ni chez Hektor.
+
+**⛔ CORRECTION DU §35 — le contrôle des deux fonctions « mandant » EXISTE.** Le §35 disait que
+`app_create_mandant_contact_optimistic` et `app_update_mandant_contact_optimistic` ne contrôlent pas l'appelant. C'est
+FAUX : je n'avais lu que la fonction du dessus. Chacune appelle d'abord sa fonction interne
+(`app_console_create_mandant_contact_job` / `app_console_create_update_mandant_contact_job`, relues en base le 16/11), qui
+vérifie `app_console_can_request_job('create_hektor_mandant_contact' | 'update_hektor_mandant_contact', …)` et lève
+`forbidden_…` ; l'appel est HORS de tout bloc d'exception, donc un refus annule toute la fonction avant la moindre
+écriture. **Aucun patch n'est nécessaire.** (Le catalogue du 13/11 portait la même lecture incomplète pour « modifier ».)
+Conséquence : les cartes « créer un mandant » et « modifier l'e-mail / le portable d'un mandant » ne sont plus bloquées —
+elles ne sont PAS codées (pas dans le « Vas y »), à décider par lui.
+
+**Les 8 cartes** (chacune appelle LA fonction de la base de l'écran avec le jeton de la personne ; gardes de l'écran
+refaites à la carte ET au clic) :
+- `rattacher_mandant` (tous) — `app_link_mandant_optimistic`, NOTRE numéro de contact (comme le sélecteur ; le worker
+  traduit) ; refusé : contact archivé, fiche de ménage, contact d'un autre négociateur que celui du bien (le sélecteur ne
+  montre que les siens), déjà mandant/propriétaire, bien sans négociateur ;
+- `retirer_mandant` (tous) — `app_unlink_mandant_optimistic`, le numéro **HEKTOR** (`hektor_target_id`, celui que
+  `degroupproprio` exige) ; refusé : mandat numéroté (avec le numéro), pas mandant du bien, contact sans numéro Hektor ;
+  le refus `mandat_numerote_N` de la base est traduit en clair ;
+- `adresse_contact` (tous) — `app_edit_contact_optimistic` {nom actuel, adresse, code postal, ville} ; la ville est
+  vérifiée dans les communes du code postal et remplacée par le nom OFFICIEL (le worker la traduit en identifiants Hektor,
+  `applyContactLocalityIds` ; mal écrite, elle partirait en texte seul et se perdrait) ;
+- `ajouter_conjoint` (tous) — `app_ajouter_conjoint_optimistic`, deux fiches EXISTANTES, personnes seules ; interrupteur
+  `contacts_couples_ajout` respecté ; la base refuse sans lever (ok = false) : la raison est dite en clair ;
+- `reaffecter_negociateur` (direction) — `app_assign_negotiator_optimistic`, négociateurs du REGISTRE actifs chez Hektor
+  (le menu de l'écran) ; deux fiches du même nom : l'agence départage ; charge identique à l'écran ;
+- `archiver_annonce` (direction) — `app_archive_annonce_optimistic`, les 9 causes de la modale (le motif principal en
+  découle), précision obligatoire pour « autre », prix et confrère seulement pour « vendu » ;
+- `desarchiver_annonce` (tous) — `app_restore_annonce_optimistic` sur le numéro de l'index des archives ;
+- `activer_estimation` (direction) — `app_change_annonce_status_optimistic` cible `active`, SEULEMENT depuis Estimation ;
+  la carte dit que Hektor rend le bien diffusable. ⚠ **Il n'existe aucune cible « Estimation »** (ni ici ni à l'écran) :
+  Actif → Estimation ne se fait pas.
+- Garde « une action Hektor déjà en cours sur l'annonce » (celle de l'écran) pour l'archivage, le désarchivage et le statut.
+- Limite : négociateur, archivage et statut seulement sur les biens VIVANTS (un vendu / clos passe par sa fiche).
+
+**Contrôles** : `test_assistant_gestes` **288 verts** (dont §14 : 44 nouveaux, 4 témoins « le monde a changé entre la carte
+et le clic -> refusé, RIEN envoyé ») ; **témoin inverse du test** : deux sabotages volontaires du code (envoyer notre
+numéro au retrait ; retirer la garde « action en cours ») font virer la suite au ROUGE, puis code remis et 288 verts ;
+`test_assistant_ia` 61 verts (avec le SDK) ; `test_assistant_lecteur` 73 verts ; `npm run build` vert. 37 gestes.
+**Pas encore fait** : la mise en ligne (push, son accord) et la preuve en réel (une carte proposée, refusée « sans
+valider », sur un bien d'essai).

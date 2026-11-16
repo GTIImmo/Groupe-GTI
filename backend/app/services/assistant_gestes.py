@@ -2201,6 +2201,441 @@ def executer_annulation_signature(ctx: ContexteAssistant, p: dict[str, Any]) -> 
     return {"document_id": document["id"], **_poser_travail_youtrust(ctx, "youtrust_cancel_signature", document, demande["id"])}
 
 
+# ── Étape 4 (16/11/2026, audit §35) : CARTES DIRECTES — mandants, contacts, annonce ──────────────────────────────
+# Note : notice/ETAPE4_ECRAN_ACCUEIL_ASSISTANT_AUDIT_2026-11-16.md §35-36. Chaque carte appelle LA fonction de la base de
+# l'écran (définitions relues en base le 16/11), avec le jeton de la personne : c'est la base qui tranche les droits
+# (app_console_can_request_job / _contact_job). Les gardes de l'écran sont refaites ICI, à la carte ET au clic.
+# ⛔ Deux numéros de contact (mémoire « detailcontact sourceId ») : NOTRE numéro pour l'app, le numéro HEKTOR
+#   (hektor_target_id) pour ce qui part chez Hektor. Retirer un mandant exige le numéro Hektor (degroupproprio) ;
+#   rattacher prend le nôtre, comme le sélecteur de l'écran (le worker traduit, cibleHektorContact).
+# ⛔ Seulement les biens VIVANTS (app_dossiers_current) pour le négociateur, l'archivage et le statut ; un vendu ou un
+#   clos passe par sa fiche. Désarchiver lit l'index des archives.
+# ⛔ Créer un mandant / modifier son e-mail ou portable : PAS ICI tant que leurs deux fonctions ne contrôlent pas
+#   l'appelant (patch de la base préparé, à son accord).
+TYPES_GESTE_ANNONCE = ("delete_hektor_annonce", "archive_hektor_annonce", "restore_hektor_annonce",
+                       "change_hektor_annonce_status")  # = activeAdminAnnonceJobIds de l'écran (App.tsx ~15450)
+CAUSES_ARCHIVAGE = {  # la modale « Archiver l'annonce » (App.tsx ~23330) : cause -> (motif principal, libellé)
+    "agence": ("choiceVendu", "Vendu par l'agence"),
+    "confrere": ("choiceVendu", "Vendu par un confrère"),
+    "proprietaire": ("choiceVendu", "Vendu par le propriétaire"),
+    "concurence": ("choiceAutre", "Parti à la concurrence"),
+    "vendre_seule": ("choiceAutre", "Le propriétaire vend seul"),
+    "annuler_vente": ("choiceAutre", "Vente annulée"),
+    "non_renouvele": ("choiceAutre", "Mandat non renouvelé"),
+    "mandat_non_obtenu": ("choiceAutre", "Mandat non obtenu"),
+    "autre": ("choiceAutre", "Autre"),
+}
+RAISONS_CONJOINT = {  # = raisonAjoutConjoint (lib/coupleAffichage.ts)
+    "cran_ferme": "ce geste n'est pas encore ouvert",
+    "meme_fiche": "on ne peut pas choisir la même fiche comme conjoint",
+    "conjoint_introuvable": "la fiche choisie est introuvable",
+    "personne_archivee": "cette fiche est archivée : réactive-la d'abord",
+    "conjoint_archive": "la fiche choisie est archivée",
+    "notaire": "une fiche notaire n'est jamais un couple",
+    "personne_pas_seule": "cette fiche n'est pas une personne seule",
+    "conjoint_pas_seul": "la fiche choisie n'est pas une personne seule (case vide, conjoint d'un autre…)",
+    "personne_deja_en_couple": "cette personne a déjà un conjoint",
+    "conjoint_deja_en_couple": "la fiche choisie a déjà un conjoint",
+    "personne_sans_numero_hektor": "cette fiche n'est pas encore créée chez Hektor : réessaie dans une minute",
+    "conjoint_sans_numero_hektor": "la fiche choisie n'est pas connue de Hektor",
+    "deja_en_cours": "un ajout de conjoint est déjà en cours pour ces fiches",
+}
+_PAS_SEULE = ("case_conjoint_vide", "case_vide_orpheline", "conjoint", "conjoint_sans_prenom")
+
+
+def _ecrire_traduit(ctx: ContexteAssistant, chemin: str, corps: Any, traductions: tuple[tuple[str, str], ...]) -> Any:
+    """La base refuse avec un code (« mandat_numerote_18912 ») : on le dit en clair, comme l'écran, jamais on ne le tait."""
+    try:
+        return _ecrire(ctx, "POST", chemin, corps)
+    except Refus as refus:
+        for motif, phrase in traductions:
+            trouve = re.search(motif, str(refus))
+            if trouve:
+                raise Refus(phrase.format(*trouve.groups())) from refus
+        raise
+
+
+def _contact_choisi(ctx: ContexteAssistant, numero: Any) -> dict[str, Any]:
+    numero = str(numero or "").strip()
+    if not numero.isdigit():
+        raise Refus("Donne le numéro du contact (hektor_contact_id, objet contacts).")
+    lignes = _lire(ctx, "app_contacts_current", {
+        "hektor_contact_id": f"eq.{numero}", "limit": "1",
+        "select": "hektor_contact_id,hektor_target_id,display_name,nom,archive,negociateur_email,commercial_nom,couple_role,"
+                  "nature_fiche,couple_json,hektor_couple_contact_id,relation_roles_json,adresse,code_postal,ville"})
+    if not lignes:
+        raise Refus(f"Le contact {numero} n'est pas parmi ceux que tu peux voir.")
+    return lignes[0]
+
+
+def _nom_contact(fiche: dict[str, Any]) -> str:
+    return str(fiche.get("display_name") or "").strip() or f"contact {fiche['hektor_contact_id']}"
+
+
+def _tete_bien(ctx: ContexteAssistant, bien: dict[str, Any], colonnes: str) -> dict[str, Any]:
+    return (_lire(ctx, "app_dossiers_current", {"app_dossier_id": f"eq.{bien['app_dossier_id']}", "limit": "1",
+                                               "select": colonnes}) or [{}])[0]
+
+
+def _exiger_negociateur(ctx: ContexteAssistant, bien: dict[str, Any]) -> dict[str, Any]:
+    # = hasHektorNegotiator de l'écran : sans négociateur, le worker ne saurait pas sous quelle identité écrire
+    tete = _tete_bien(ctx, bien, "negociateur_email,commercial_id,commercial_nom,statut_annonce,archive,diffusable,"
+                                 "numero_dossier,numero_mandat,offre_id,offre_state,compromis_id,compromis_state,vente_id,"
+                                 "titre_bien")
+    if not str(tete.get("negociateur_email") or "").strip() and not str(tete.get("commercial_id") or "").strip():
+        raise Refus(f"L'annonce {bien['hektor_annonce_id']} n'a pas de négociateur : il faut d'abord en affecter un.")
+    return tete
+
+
+def _aucune_action_en_cours(ctx: ContexteAssistant, hektor_annonce_id: Any) -> None:
+    if _lire(ctx, "app_console_job", {"hektor_annonce_id": f"eq.{hektor_annonce_id}", "status": "in.(pending,running)",
+                                      "job_type": f"in.({','.join(TYPES_GESTE_ANNONCE)})", "select": "id", "limit": "1"}):
+        raise Refus(f"Une action Hektor est déjà en cours sur l'annonce {hektor_annonce_id} : attends la fin du traitement.")
+
+
+def _mandants_du_bien(ctx: ContexteAssistant, bien: dict[str, Any]) -> set[str]:
+    relations = _lire(ctx, "app_contact_relations_current", {
+        "hektor_annonce_id": f"eq.{bien['hektor_annonce_id']}", "role_contact": "in.(mandant,proprietaire)",
+        "select": "hektor_contact_id", "limit": "50"})
+    return {str(r.get("hektor_contact_id") or "").strip() for r in relations} - {""}
+
+
+# — rattacher un contact EXISTANT comme mandant (écran : handleLink, App.tsx ~3376 ; app_link_mandant_optimistic) —
+def _controler_rattachement(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
+    bien = _bien_vivant(ctx, p.get("hektor_annonce_id"))
+    tete = _exiger_negociateur(ctx, bien)
+    fiche = _contact_choisi(ctx, p.get("hektor_contact_id"))
+    if str(fiche.get("archive") or "").strip().lower() in {"1", "true"}:
+        raise Refus(f"{_nom_contact(fiche)} est archivé : l'écran ne propose que des contacts actifs.")
+    if fiche.get("couple_role") == "menage_resolu":
+        raise Refus("C'est la fiche du MÉNAGE : rattache l'une des deux personnes (une personne, une ligne).")
+    nego_bien = str(tete.get("negociateur_email") or "").strip().lower()
+    if nego_bien and str(fiche.get("negociateur_email") or "").strip().lower() != nego_bien:
+        raise Refus(f"Comme à l'écran, seuls les contacts du négociateur du bien ({tete.get('commercial_nom') or 'son négociateur'})"
+                    f" se rattachent : {_nom_contact(fiche)} est suivi par {fiche.get('commercial_nom') or 'un autre négociateur'}.")
+    if str(fiche["hektor_contact_id"]) in _mandants_du_bien(ctx, bien):
+        raise Refus(f"{_nom_contact(fiche)} est déjà mandant (ou propriétaire) de l'annonce {bien['hektor_annonce_id']}.")
+    return bien, fiche
+
+
+def preparer_rattacher_mandant(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    bien, fiche = _controler_rattachement(ctx, p)
+    return (f"Rattacher {_nom_contact(fiche)} comme MANDANT de l'annonce {bien['hektor_annonce_id']} « {bien.get('titre_bien') or ''} »"
+            " (chez nous tout de suite, recopié chez Hektor ensuite). ⚠ Une fois le mandat numéroté, un mandant ne se retire plus.",
+            {"hektor_annonce_id": int(bien["hektor_annonce_id"]), "hektor_contact_id": str(fiche["hektor_contact_id"])})
+
+
+def executer_rattacher_mandant(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[str, Any]:
+    bien, fiche = _controler_rattachement(ctx, p)  # re-vérifié AU CLIC
+    travail = _ecrire_traduit(ctx, "rpc/app_link_mandant_optimistic", {
+        "target_app_dossier_id": bien["app_dossier_id"], "target_hektor_annonce_id": str(bien["hektor_annonce_id"]),
+        "target_contact_id": str(fiche["hektor_contact_id"]), "contact_label": _nom_contact(fiche), "job_priority": 18},
+        (("forbidden_link_mandant", "Tu n'as pas les droits sur ce bien chez Hektor."),)) or {}
+    return {"app_dossier_id": bien["app_dossier_id"], "travail": travail.get("id"), "statut": travail.get("status")}
+
+
+# — retirer un mandant (écran : bouton « Retirer » du bloc des mandants, App.tsx ~3686 ; app_unlink_mandant_optimistic) —
+TRADUCTIONS_RETRAIT = (
+    (r"mandat_numerote_(\S+?)\)?$", "Retrait impossible : le mandat n° {0} a été généré pour ce bien. Un mandant ne peut plus "
+                                    "être retiré une fois le mandat numéroté."),
+    (r"forbidden_unlink", "Retrait impossible : tu n'as pas les droits sur ce bien chez Hektor."),
+    (r"lien_introuvable_ou_deja_retire", "Ce mandant est déjà retiré, ou le lien n'existe pas."),
+    (r"contact_introuvable", "Ce contact n'a pas été retrouvé dans l'application."),
+)
+
+
+def _controler_retrait(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
+    bien = _bien_vivant(ctx, p.get("hektor_annonce_id"))
+    if str(bien.get("numero_mandat") or "").strip():
+        raise Refus(f"Retrait impossible : le mandat n° {bien['numero_mandat']} a été généré pour ce bien. Un mandant ne peut "
+                    "plus être retiré une fois le mandat numéroté.")
+    fiche = _contact_choisi(ctx, p.get("hektor_contact_id"))
+    if str(fiche["hektor_contact_id"]) not in _mandants_du_bien(ctx, bien):
+        raise Refus(f"{_nom_contact(fiche)} n'est pas mandant de l'annonce {bien['hektor_annonce_id']}.")
+    if not str(fiche.get("hektor_target_id") or "").strip().isdigit():
+        raise Refus(f"{_nom_contact(fiche)} n'a pas encore de numéro chez Hektor : le retrait ne peut pas lui être envoyé.")
+    return bien, fiche
+
+
+def preparer_retirer_mandant(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    bien, fiche = _controler_retrait(ctx, p)
+    return (f"Retirer {_nom_contact(fiche)} des mandants de l'annonce {bien['hektor_annonce_id']} « {bien.get('titre_bien') or ''} »"
+            " (il disparaît tout de suite ; Hektor est prévenu, et s'il refuse, le lien réapparaît).",
+            {"hektor_annonce_id": int(bien["hektor_annonce_id"]), "hektor_contact_id": str(fiche["hektor_contact_id"])})
+
+
+def executer_retirer_mandant(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[str, Any]:
+    bien, fiche = _controler_retrait(ctx, p)
+    travail = _ecrire_traduit(ctx, "rpc/app_unlink_mandant_optimistic", {
+        "target_app_dossier_id": bien["app_dossier_id"], "target_hektor_annonce_id": str(bien["hektor_annonce_id"]),
+        # ⛔ le numéro HEKTOR : c'est lui que degroupproprio exige (la base traduit vers le nôtre pour app_relation)
+        "target_contact_id": str(fiche["hektor_target_id"]).strip(), "job_priority": 18}, TRADUCTIONS_RETRAIT) or {}
+    return {"app_dossier_id": bien["app_dossier_id"], "travail": travail.get("id"), "statut": travail.get("status")}
+
+
+# — l'adresse d'un contact (app_edit_contact_optimistic ; la ville VÉRIFIÉE dans les communes du code postal, sinon Hektor
+#   ne la garde pas : le worker la traduit en identifiants, applyContactLocalityIds, et une ville mal écrite part en
+#   texte seul et se perd — leçon du 22/10) —
+def _adresse_voulue(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[dict[str, Any], dict[str, str], list[str], bool]:
+    fiche = _contact_choisi(ctx, p.get("hektor_contact_id"))
+    if not str(fiche.get("nom") or "").strip():
+        raise Refus("Ce contact n'a pas de nom chez nous : Hektor refuserait la modification.")
+    cp, ville, verifiee = _commune(p.get("code_postal"), p.get("ville"))
+    rue = str(p.get("adresse") or "").strip()
+    if len(rue) > 300:
+        raise Refus("L'adresse dépasse 300 caractères.")
+    champs = {"postal_code": cp, "city": ville}
+    if rue:
+        champs["address"] = rue
+    actuel = {"address": str(fiche.get("adresse") or "").strip(), "postal_code": str(fiche.get("code_postal") or "").strip(),
+              "city": str(fiche.get("ville") or "").strip()}
+    if all(actuel[k] == v for k, v in champs.items()):
+        raise Refus("Rien ne change : c'est déjà l'adresse de la fiche.")
+    avant = ", ".join(x for x in (actuel["address"], f"{actuel['postal_code']} {actuel['city']}".strip()) if x) or "vide"
+    apres = ", ".join(x for x in (champs.get("address", actuel["address"]), f"{cp} {ville}") if x)
+    return fiche, champs, [avant, apres], verifiee
+
+
+def preparer_adresse_contact(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    fiche, champs, (avant, apres), verifiee = _adresse_voulue(ctx, p)
+    return (f"Changer l'adresse de {_nom_contact(fiche)} : « {avant} » → « {apres} »"
+            + ("" if verifiee else " (⚠ commune non vérifiée : service des communes injoignable)")
+            + " (chez nous tout de suite, recopiée chez Hektor environ 10 minutes après)",
+            {"hektor_contact_id": str(fiche["hektor_contact_id"]), "adresse": champs.get("address", ""),
+             "code_postal": champs["postal_code"], "ville": champs["city"]})
+
+
+def executer_adresse_contact(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[str, Any]:
+    fiche, champs, _textes, _verifiee = _adresse_voulue(ctx, p)
+    # le nom ACTUEL avec, comme la carte « modifier un contact » (le worker l'exige à chaque modification)
+    champs = {"last_name": str(fiche["nom"]).strip(), **champs}
+    r = _ecrire(ctx, "POST", "rpc/app_edit_contact_optimistic",
+                {"target_contact_id": str(fiche["hektor_contact_id"]), "edit_fields": champs, "debounce_seconds": 600})
+    return {"hektor_contact_id": str(fiche["hektor_contact_id"]), "champs": sorted(champs), "reponse": r}
+
+
+# — rattacher un CONJOINT existant à une personne seule (écran : « Ajouter un conjoint », App.tsx ~44750 ;
+#   app_ajouter_conjoint_optimistic, qui refait toutes ces gardes et refuse SANS lever : ok = false + raison) —
+def _seule(fiche: dict[str, Any]) -> bool:
+    couple = fiche.get("couple_json") if isinstance(fiche.get("couple_json"), dict) else {}
+    paire = str(fiche.get("hektor_couple_contact_id") or "").strip()
+    return (str(couple.get("etat") or "aucun") == "aucun" and paire in {"", str(fiche["hektor_contact_id"])}
+            and fiche.get("nature_fiche") not in _PAS_SEULE)
+
+
+def _controler_conjoint(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
+    cran = _lire(ctx, "app_setting", {"key": "eq.contacts_couples_ajout", "select": "value", "limit": "1"})
+    valeur = str((cran or [{}])[0].get("value") or "off").strip().lower()
+    if valeur not in {"on", "true", "1", "yes", "admin"} or (valeur == "admin" and ctx.role != "admin"):
+        raise Refus("L'ajout d'un conjoint n'est pas encore ouvert.")
+    personne = _contact_choisi(ctx, p.get("hektor_contact_id"))
+    conjoint = _contact_choisi(ctx, p.get("conjoint_contact_id"))
+    if personne["hektor_contact_id"] == conjoint["hektor_contact_id"]:
+        raise Refus("On ne peut pas choisir la même fiche comme conjoint.")
+    for fiche, qui in ((personne, "personne"), (conjoint, "conjoint")):
+        if str(fiche.get("archive") or "").strip().lower() in {"1", "true"}:
+            raise Refus(f"{_nom_contact(fiche)} est archivé.")
+        if fiche.get("nature_fiche") == "notaire" or "notaire_" in str(fiche.get("relation_roles_json") or ""):
+            raise Refus("Une fiche notaire n'est jamais un couple.")
+        if not _seule(fiche):
+            raise Refus(f"{_nom_contact(fiche)} n'est pas une personne seule (déjà en couple, ou case de conjoint) : "
+                        "les couples existants se travaillent sur la fiche.")
+    return personne, conjoint
+
+
+def preparer_ajouter_conjoint(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    personne, conjoint = _controler_conjoint(ctx, p)
+    return (f"Faire de {_nom_contact(conjoint)} le CONJOINT de {_nom_contact(personne)} : les deux fiches forment un couple "
+            f"chez nous tout de suite, Hektor les relie ensuite ; {_nom_contact(conjoint)} est aussi rattaché aux biens dont "
+            f"{_nom_contact(personne)} est propriétaire (là où tu as les droits). ⚠ Le défaire se fait sur la fiche, pas ici.",
+            {"hektor_contact_id": str(personne["hektor_contact_id"]), "conjoint_contact_id": str(conjoint["hektor_contact_id"])})
+
+
+def executer_ajouter_conjoint(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[str, Any]:
+    personne, conjoint = _controler_conjoint(ctx, p)
+    r = _ecrire_traduit(ctx, "rpc/app_ajouter_conjoint_optimistic", {
+        "target_contact_id": str(personne["hektor_contact_id"]), "conjoint_contact_id": str(conjoint["hektor_contact_id"])},
+        ((r"forbidden_link_conjoint", "Tu n'as pas les droits sur l'une de ces deux fiches."),)) or {}
+    if not r.get("ok"):
+        raison = str(r.get("raison") or "")
+        raise Refus(RAISONS_CONJOINT.get(raison, f"refusé ({raison or 'sans raison'})"))
+    return {"hektor_contact_id": str(personne["hektor_contact_id"]), "travail": r.get("job_id"), "biens": r.get("biens")}
+
+
+# — réaffecter le négociateur d'un bien [direction] (écran : handleAssignHektorNegotiator, App.tsx ~19153 ; les
+#   négociateurs du menu = le REGISTRE, fiches actives chez Hektor, loadHektorNegotiatorOptions, lib/api.ts ~6625) —
+def _negociateur_choisi(ctx: ContexteAssistant, nom: Any, agence: Any = "", numero: Any = "") -> dict[str, Any]:
+    fiches = [f for f in _lire(ctx, "app_negociateur_fiche", {
+        "sorte": "eq.fiche_negociateur", "actif_chez_hektor": "is.true", "limit": "1000",
+        "select": "hektor_negociateur_id,hektor_user_id,hektor_agence_id,agence_id_user,agence_nom,nom_vu,email_vu"})
+        if str(f.get("hektor_user_id") or "").strip().isdigit()]
+    if str(numero or "").strip():
+        trouves = [f for f in fiches if str(f.get("hektor_negociateur_id") or "") == str(numero).strip()]
+        if not trouves:
+            raise Refus("ce négociateur n'est plus actif chez Hektor")
+        return trouves[0]
+    cherche, lieu = _simple(nom), _simple(agence)
+    if not cherche:
+        raise Refus("Donne le nom du négociateur à qui confier le bien.")
+    trouves = [f for f in fiches if cherche in _simple(f.get("nom_vu")) and (not lieu or lieu in _simple(f.get("agence_nom")))]
+    if not trouves:
+        raise Refus(f"Aucun négociateur ACTIF chez Hektor ne correspond à « {nom} »" + (f" à l'agence « {agence} »" if lieu else "")
+                    + ".")
+    if len(trouves) > 1:
+        raise Refus("Plusieurs fiches correspondent : " + " ; ".join(f"{f.get('nom_vu')} ({f.get('agence_nom') or 'sans agence'})"
+                                                                     for f in trouves[:10])
+                    + ". Redemande avec le nom complet et l'agence.")
+    return trouves[0]
+
+
+def _controler_negociateur(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
+    bien = _bien_vivant(ctx, p.get("hektor_annonce_id"))
+    nego = _negociateur_choisi(ctx, p.get("negociateur"), p.get("agence"), p.get("hektor_negociateur_id"))
+    tete = _tete_bien(ctx, bien, "negociateur_email,commercial_nom")
+    if str(nego.get("email_vu") or "").strip().lower() and \
+            str(nego.get("email_vu") or "").strip().lower() == str(tete.get("negociateur_email") or "").strip().lower():
+        raise Refus(f"{nego.get('nom_vu')} est déjà le négociateur de l'annonce {bien['hektor_annonce_id']}.")
+    return bien, nego, tete
+
+
+def preparer_reaffecter_negociateur(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    bien, nego, tete = _controler_negociateur(ctx, {**p, "hektor_negociateur_id": ""})
+    return (f"Confier l'annonce {bien['hektor_annonce_id']} « {bien.get('titre_bien') or ''} » à {nego.get('nom_vu')} "
+            f"({nego.get('agence_nom') or 'sans agence'}) — aujourd'hui : {tete.get('commercial_nom') or 'aucun négociateur'}. "
+            "Le bien change de portefeuille chez nous tout de suite (ce que chacun voit), Hektor suit ensuite.",
+            {"hektor_annonce_id": int(bien["hektor_annonce_id"]), "hektor_negociateur_id": str(nego["hektor_negociateur_id"])})
+
+
+def executer_reaffecter_negociateur(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[str, Any]:
+    bien, nego, _tete = _controler_negociateur(ctx, p)  # le négociateur est RELU par son numéro : toujours actif ?
+    r = _ecrire(ctx, "POST", "rpc/app_assign_negotiator_optimistic", {
+        "target_dossier_id": bien["app_dossier_id"], "target_user_id": str(nego["hektor_user_id"]).strip(),
+        # la même charge que l'écran (createAssignHektorAnnonceNegotiatorJob, lib/api.ts ~12725)
+        "job_payload": {"target_hektor_user_label": nego.get("nom_vu"), "target_hektor_user_email": nego.get("email_vu"),
+                        "target_hektor_negociateur_id": nego.get("hektor_negociateur_id"),
+                        "target_hektor_agence_id": nego.get("hektor_agence_id"),
+                        "target_agency_id_user": nego.get("agence_id_user"), "target_agency_label": nego.get("agence_nom")},
+        "job_priority": 9}) or {}
+    return {"app_dossier_id": bien["app_dossier_id"], "travail": r.get("job_id")}
+
+
+# — archiver [direction] / désarchiver un bien (écran : handleArchiveHektorAnnonce, App.tsx ~18714 ; désarchiver :
+#   app_restore_annonce_optimistic, ouvert au négociateur sur SES biens) —
+def _controler_archivage(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[dict[str, Any], dict[str, str], str]:
+    bien = _bien_vivant(ctx, p.get("hektor_annonce_id"))
+    cause = str(p.get("cause") or "").strip()
+    if cause not in CAUSES_ARCHIVAGE:
+        raise Refus("Donne la cause de l'archivage : " + " ; ".join(f"{k} ({v[1]})" for k, v in CAUSES_ARCHIVAGE.items()) + ".")
+    principal, libelle = CAUSES_ARCHIVAGE[cause]
+    precision = str(p.get("precision") or "").strip()[:500]
+    if cause == "autre" and not precision:
+        raise Refus("Avec la cause « autre », la précision est obligatoire (elle part chez Hektor).")
+    vendu = principal == "choiceVendu"
+    prix = re.sub(r"\s", "", str(p.get("prix") or "")) if vendu else ""
+    if prix and not prix.isdigit():
+        raise Refus("Le prix de vente est un nombre entier d'euros, ou vide.")
+    confrere = str(p.get("confrere") or "").strip()[:200] if vendu else ""
+    tete = _tete_bien(ctx, bien, "archive")
+    if str(tete.get("archive") or "").strip() == "1":
+        raise Refus(f"L'annonce {bien['hektor_annonce_id']} est déjà en cours d'archivage.")
+    _aucune_action_en_cours(ctx, bien["hektor_annonce_id"])
+    motif = " — ".join(x for x in ("Vendu" if vendu else "Autre motif", libelle, precision,
+                                    f"prix {_euros(prix)}" if prix else "", f"confrère {confrere}" if confrere else "") if x)
+    return bien, {"archive_main_choice": principal, "archive_sub_choice": cause, "archive_other_text": precision or None,
+                  "archive_price": prix or None, "archive_confrere": confrere or None}, motif
+
+
+def preparer_archiver_annonce(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    bien, charge, motif = _controler_archivage(ctx, p)
+    return (f"ARCHIVER l'annonce {bien['hektor_annonce_id']} « {bien.get('titre_bien') or ''} » — motif : {motif}. Hektor "
+            "archive le bien et COUPE SA DIFFUSION ; il sort des biens vivants (il se désarchive ensuite).",
+            {"hektor_annonce_id": int(bien["hektor_annonce_id"]), "cause": charge["archive_sub_choice"],
+             "precision": charge["archive_other_text"] or "", "prix": charge["archive_price"] or "",
+             "confrere": charge["archive_confrere"] or ""})
+
+
+def executer_archiver_annonce(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[str, Any]:
+    bien, charge, _motif = _controler_archivage(ctx, p)
+    r = _ecrire_traduit(ctx, "rpc/app_archive_annonce_optimistic",
+                        {"target_dossier_id": bien["app_dossier_id"], "job_payload": charge, "job_priority": 8},
+                        (("forbidden_archive", "Archiver un bien est réservé à la direction."),
+                         ("annonce_deja_archivee", "Cette annonce est déjà archivée."))) or {}
+    return {"app_dossier_id": bien["app_dossier_id"], "travail": r.get("job_id")}
+
+
+def _archive(ctx: ContexteAssistant, hektor_annonce_id: Any) -> dict[str, Any]:
+    numero = str(hektor_annonce_id or "").strip()
+    if not numero.isdigit():
+        raise Refus("Donne le numéro d'annonce du bien (ex. 63289).")
+    lignes = _lire(ctx, "app_archive_annonce_index_current", {"hektor_annonce_id": f"eq.{numero}", "limit": "1",
+                                                               "select": "app_archive_id,hektor_annonce_id,titre_bien"})
+    if not lignes:
+        if _lire(ctx, "app_dossiers_current", {"hektor_annonce_id": f"eq.{numero}", "select": "app_dossier_id", "limit": "1"}):
+            raise Refus(f"L'annonce {numero} n'est pas archivée.")
+        raise Refus(f"L'annonce {numero} n'est pas parmi les biens archivés que tu peux voir.")
+    _aucune_action_en_cours(ctx, numero)
+    return lignes[0]
+
+
+def preparer_desarchiver_annonce(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    archive = _archive(ctx, p.get("hektor_annonce_id"))
+    return (f"DÉSARCHIVER l'annonce {archive['hektor_annonce_id']} « {archive.get('titre_bien') or ''} » : Hektor la remet "
+            "en vie, et elle revient parmi les biens vivants à la relecture (quelques minutes).",
+            {"hektor_annonce_id": int(archive["hektor_annonce_id"])})
+
+
+def executer_desarchiver_annonce(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[str, Any]:
+    archive = _archive(ctx, p.get("hektor_annonce_id"))
+    r = _ecrire_traduit(ctx, "rpc/app_restore_annonce_optimistic",
+                        {"target_dossier_id": archive["app_archive_id"], "job_payload": {}, "job_priority": 8},
+                        (("forbidden_restore", "Tu n'as pas les droits sur ce bien chez Hektor."),)) or {}
+    return {"app_dossier_id": archive["app_archive_id"], "travail": r.get("job_id")}
+
+
+# — passer une ESTIMATION en ACTIF [direction] (la modale « Faire évoluer le statut », cible 'active' ; App.tsx ~20191).
+#   ⚠ Hektor remet « diffusable » à 1 (mémoire « Le geste Actif remet diffusable à 1 ») : la carte le DIT.
+#   Seul ce passage est ouvert : il n'existe AUCUNE cible « Estimation » (ni ici ni à l'écran), Clos relève des « deux
+#   portes », offre / compromis / vente passent par la fenêtre de l'écran. —
+def _controler_activation(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
+    bien = _bien_vivant(ctx, p.get("hektor_annonce_id"))
+    tete = _exiger_negociateur(ctx, bien)
+    if "estimation" not in str(tete.get("statut_annonce") or "").lower():
+        raise Refus(f"L'annonce {bien['hektor_annonce_id']} est « {tete.get('statut_annonce') or 'sans statut'} » : seul le passage "
+                    "Estimation → Actif se fait ici (offre, compromis, vente : la fenêtre de statut de l'écran).")
+    _aucune_action_en_cours(ctx, bien["hektor_annonce_id"])
+    return bien, tete
+
+
+def preparer_activer_estimation(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    bien, _tete = _controler_activation(ctx, p)
+    return (f"Passer l'annonce {bien['hektor_annonce_id']} « {bien.get('titre_bien') or ''} » d'ESTIMATION à ACTIF. ⚠ Hektor la "
+            "rend DIFFUSABLE en même temps (elle peut partir sur les portails). Le retour en Estimation n'existe pas, ni ici ni "
+            "à l'écran.", {"hektor_annonce_id": int(bien["hektor_annonce_id"])})
+
+
+def executer_activer_estimation(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[str, Any]:
+    bien, tete = _controler_activation(ctx, p)
+    # la charge de l'écran (createChangeHektorAnnonceStatusJob, lib/api.ts ~12590) pour la cible « Actif » : le dossier,
+    # la date du jour (la modale la pose à l'ouverture), tout le reste vide
+    charge: dict[str, Any] = {cle: tete.get(cle) for cle in ("numero_dossier", "numero_mandat", "offre_id", "offre_state",
+                                                             "compromis_id", "compromis_state", "vente_id", "titre_bien",
+                                                             "negociateur_email")}
+    charge.update({"target_status": "active", "transaction_date": datetime.now(PARIS).date().isoformat(),
+                   "apres_vente": "actif"})
+    for cle in ("amount", "sale_price", "signature_date", "validity_days", "retraction_days", "selected_mandat",
+                "buyer_contact_id", "buyer_contact_ids", "buyer_notary_id", "acquereurs_affirmes", "mandant_contact_ids",
+                "seller_notary_id", "buyer_notary_nom", "seller_notary_nom", "notaires_affirmes", "buyer_fees",
+                "buyer_fees_rate", "seller_fees", "net_seller_price", "sequestration", "close_reason", "close_state",
+                "close_etat", "close_raison", "close_date", "close_mandat_on_sale", "close_price", "reprendre_transaction",
+                "champs_touches"):
+        charge[cle] = None
+    r = _ecrire_traduit(ctx, "rpc/app_change_annonce_status_optimistic",
+                        {"target_dossier_id": bien["app_dossier_id"], "target_status": "active", "job_payload": charge,
+                         "job_priority": 7},
+                        (("forbidden_change_status", "Changer le statut d'un bien est réservé à la direction."),)) or {}
+    return {"app_dossier_id": bien["app_dossier_id"], "travail": r.get("job_id")}
+
+
 # ── le catalogue des gestes ───────────────────────────────────────────────────
 class Geste:
     def __init__(self, nom: str, description: str, roles: frozenset[str], parametres: dict[str, Any],
@@ -2410,6 +2845,65 @@ GESTES: dict[str, Geste] = {g.nom: g for g in (
           _schema({"hektor_annonce_id": {"type": "string", "description": "numéro d'annonce"},
                    "document": {"type": "string", "description": "un morceau du nom du document, vide = le seul en cours"}}),
           preparer_annulation_signature, executer_annulation_signature),
+    # étape 4 (16/11, audit §35) : les cartes directes — mandants, contacts, annonce
+    Geste("rattacher_mandant",
+          "Prépare le RATTACHEMENT d'un contact EXISTANT comme mandant d'une annonce vivante (un contact actif du "
+          "négociateur du bien, comme le sélecteur de l'écran). Créer un NOUVEAU mandant n'est pas offert ici.",
+          TOUS_LES_ROLES,
+          _schema({"hektor_annonce_id": {"type": "string", "description": "numéro d'annonce"},
+                   "hektor_contact_id": {"type": "string", "description": "numéro du contact (objet contacts)"}}),
+          preparer_rattacher_mandant, executer_rattacher_mandant),
+    Geste("retirer_mandant",
+          "Prépare le RETRAIT d'un mandant d'une annonce vivante. Impossible si le numéro de mandat a été généré.",
+          TOUS_LES_ROLES,
+          _schema({"hektor_annonce_id": {"type": "string", "description": "numéro d'annonce"},
+                   "hektor_contact_id": {"type": "string", "description": "numéro du contact (objet contacts)"}}),
+          preparer_retirer_mandant, executer_retirer_mandant),
+    Geste("adresse_contact",
+          "Prépare le changement d'ADRESSE d'un contact existant : code postal ET ville obligatoires (la ville est vérifiée "
+          "dans les communes du code postal), rue facultative (vide = rue inchangée).",
+          TOUS_LES_ROLES,
+          _schema({"hektor_contact_id": {"type": "string", "description": "numéro du contact"},
+                   "adresse": {"type": "string", "description": "rue, ou vide"},
+                   "code_postal": {"type": "string", "description": "5 chiffres"},
+                   "ville": {"type": "string", "description": "commune de ce code postal"}}),
+          preparer_adresse_contact, executer_adresse_contact),
+    Geste("ajouter_conjoint",
+          "Prépare : faire d'une fiche EXISTANTE le conjoint d'une personne seule (deux personnes seules, non archivées). "
+          "Créer le conjoint, modifier ou défaire un couple ne se fait pas ici.",
+          TOUS_LES_ROLES,
+          _schema({"hektor_contact_id": {"type": "string", "description": "numéro de la personne"},
+                   "conjoint_contact_id": {"type": "string", "description": "numéro de la fiche du conjoint"}}),
+          preparer_ajouter_conjoint, executer_ajouter_conjoint),
+    Geste("reaffecter_negociateur",
+          "Prépare la RÉAFFECTATION d'une annonce vivante à un autre négociateur (actif chez Hektor) : le bien change de "
+          "portefeuille. Réservé à la direction.",
+          DIRECTION,
+          _schema({"hektor_annonce_id": {"type": "string", "description": "numéro d'annonce"},
+                   "negociateur": {"type": "string", "description": "nom (ou morceau du nom) du négociateur"},
+                   "agence": {"type": "string", "description": "son agence s'il a plusieurs fiches, sinon vide"}}),
+          preparer_reaffecter_negociateur, executer_reaffecter_negociateur),
+    Geste("archiver_annonce",
+          "Prépare l'ARCHIVAGE d'une annonce vivante, avec sa cause (comme la modale de l'écran) : Hektor coupe sa diffusion. "
+          "Réservé à la direction.",
+          DIRECTION,
+          _schema({"hektor_annonce_id": {"type": "string", "description": "numéro d'annonce"},
+                   "cause": {"type": "string", "enum": list(CAUSES_ARCHIVAGE)},
+                   "precision": {"type": "string", "description": "obligatoire si cause = autre, sinon vide"},
+                   "prix": {"type": "string", "description": "vendu seulement : prix en euros si connu, sinon vide"},
+                   "confrere": {"type": "string", "description": "vendu par un confrère : son nom si connu, sinon vide"}}),
+          preparer_archiver_annonce, executer_archiver_annonce),
+    Geste("desarchiver_annonce",
+          "Prépare le DÉSARCHIVAGE d'une annonce archivée : elle revient parmi les biens vivants.",
+          TOUS_LES_ROLES,
+          _schema({"hektor_annonce_id": {"type": "string", "description": "numéro d'annonce"}}),
+          preparer_desarchiver_annonce, executer_desarchiver_annonce),
+    Geste("activer_estimation",
+          "Prépare le passage d'une annonce en ESTIMATION au statut ACTIF (Hektor la rend diffusable en même temps). Seul ce "
+          "changement de statut est offert ici. Réservé à la direction.",
+          DIRECTION,
+          _schema({"hektor_annonce_id": {"type": "string", "description": "numéro d'annonce"}}),
+          preparer_activer_estimation, executer_activer_estimation),
     Geste("couverture_photo",
           "Prépare : mettre une photo VISIBLE en couverture d'une annonce (numéros donnés par lire_photos_bien).",
           TOUS_LES_ROLES,

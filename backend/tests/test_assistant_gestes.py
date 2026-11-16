@@ -1172,9 +1172,9 @@ print("  (au clic, la route refuse aussi un rôle hors de geste.roles : DIRECTIO
 voir(ges.GESTES["transaction"].roles == ges.DIRECTION, "la carte est déclarée DIRECTION : la route de validation la refuse à un négociateur")
 
 print("10) aucune fonction de geste ne fait autre chose que proposer")
-voir(all(f.nom.startswith("proposer_") for f in ges.FONCTIONS_GESTES) and len(ges.FONCTIONS_GESTES) == 29,
-     "29 gestes (le brouillon retiré le 15/11, 3 du lot 2c, 3 du lot 3c, 1 de la vague C, le numéro de mandat, la relance "
-     "et l'annulation d'une signature le 16/11), "
+voir(all(f.nom.startswith("proposer_") for f in ges.FONCTIONS_GESTES) and len(ges.FONCTIONS_GESTES) == 37,
+     "37 gestes (le brouillon retiré le 15/11, 3 du lot 2c, 3 du lot 3c, 1 de la vague C, le numéro de mandat, la relance "
+     "et l'annulation d'une signature le 16/11, puis les 8 cartes directes de l'audit §35), "
      "tous « proposer_ » : le "
      "modèle n'a AUCUNE fonction qui exécute")
 voir(not any(f.nom.startswith("proposer_") for f in ges.FONCTIONS_LECTURE_LOT3), "les 2 lectures du lot 3 ne proposent rien")
@@ -1385,5 +1385,282 @@ etat13["cran"] = "on"
 voir(ges.preparer_relance_signature(nouveau_ctx("commercial"), R13)[1]["provider_signer_id"] == "s2",
      "interrupteur `on` : ouvert à tous les rôles, comme l'écran")
 etat13.pop("cran")
+
+print("14) LES CARTES DIRECTES (16/11, audit §35) : mandants, adresse, conjoint, négociateur, archivage, statut")
+etat14 = {}
+appels14 = []
+C14 = {  # NOTRE numéro (>= 10 000 000) et le numéro HEKTOR (hektor_target_id) sont TOUJOURS différents
+    "10354641": {"hektor_contact_id": "10354641", "hektor_target_id": "605717", "display_name": "Mme CLAUDE TESTCLAUDE",
+                 "nom": "TESTCLAUDE", "archive": False, "negociateur_email": "pereira@gti-immobilier.fr",
+                 "commercial_nom": "PEREIRA", "couple_role": None, "nature_fiche": "personne_seule", "couple_json": None,
+                 "hektor_couple_contact_id": None, "relation_roles_json": ["acquereur"], "adresse": "1 rue Haute",
+                 "code_postal": "42000", "ville": "Saint-Étienne"},
+    "10354642": {"hektor_contact_id": "10354642", "hektor_target_id": "605718", "display_name": "M. JEAN TESTJEAN",
+                 "nom": "TESTJEAN", "archive": False, "negociateur_email": "pereira@gti-immobilier.fr",
+                 "commercial_nom": "PEREIRA", "couple_role": None, "nature_fiche": "personne_seule", "couple_json": None,
+                 "hektor_couple_contact_id": None, "relation_roles_json": [], "adresse": None, "code_postal": None,
+                 "ville": None},
+}
+B14 = {"app_dossier_id": 10000006, "hektor_annonce_id": 63330, "numero_dossier": "VA9", "numero_mandat": None,
+       "titre_bien": "ESSAI 8A2B", "commercial_nom": "PEREIRA", "validation_diffusion_state": "", "statut_annonce": "Estimation",
+       "prix": 100000}
+T14 = {"negociateur_email": "pereira@gti-immobilier.fr", "commercial_id": "45", "commercial_nom": "PEREIRA",
+       "statut_annonce": "Estimation", "archive": "0", "diffusable": "0", "numero_dossier": "VA9", "numero_mandat": None,
+       "offre_id": None, "offre_state": None, "compromis_id": None, "compromis_state": None, "vente_id": None,
+       "titre_bien": "ESSAI 8A2B"}
+NEGOS14 = [{"hektor_negociateur_id": "114", "hektor_user_id": "201", "hektor_agence_id": "7", "agence_id_user": "70",
+            "agence_nom": "GTI Firminy", "nom_vu": "Delphine BLANCHARD", "email_vu": "delphine@gti-immobilier.fr"},
+           {"hektor_negociateur_id": "45", "hektor_user_id": "202", "hektor_agence_id": "8", "agence_id_user": "80",
+            "agence_nom": "GTI Yssingeaux", "nom_vu": "Delphine BLANCHARD", "email_vu": "delphine@gti-immobilier.fr"},
+           {"hektor_negociateur_id": "12", "hektor_user_id": "203", "hektor_agence_id": "7", "agence_id_user": "70",
+            "agence_nom": "GTI Firminy", "nom_vu": "Paulo PEREIRA", "email_vu": "pereira@gti-immobilier.fr"}]
+
+
+def faux14(methode, url, **kw):
+    params = dict(kw.get("params") or {})
+    if "geo.api.gouv.fr" in url:
+        return Reponse([{"nom": "Firminy"}] if params.get("codePostal") == "42700" else [{"nom": "Saint-Étienne"}])
+    chemin = url.split("/rest/v1/", 1)[1]
+    appels14.append({"methode": methode, "chemin": chemin, "entetes": dict(kw.get("headers") or {}), "params": params,
+                     "corps": kw.get("json")})
+    if methode == "GET" and chemin == "app_dossiers_current":
+        if "app_dossier_id" in params:
+            return Reponse([{**T14, **etat14.get("tete", {})}])
+        return Reponse([] if etat14.get("sans_bien") else [{**B14, **etat14.get("bien", {})}])
+    if methode == "GET" and chemin == "app_contacts_current":
+        numero = params["hektor_contact_id"].split(".", 1)[1]
+        return Reponse([{**C14[numero], **etat14.get("contact", {}).get(numero, {})}] if numero in C14 else [])
+    if methode == "GET" and chemin == "app_contact_relations_current":
+        return Reponse([{"hektor_contact_id": x} for x in etat14.get("mandants", ["10354641"])])
+    if methode == "GET" and chemin == "app_setting":
+        return Reponse([{"value": etat14.get("cran", "on")}])
+    if methode == "GET" and chemin == "app_negociateur_fiche":
+        return Reponse(etat14.get("negos", NEGOS14))
+    if methode == "GET" and chemin == "app_console_job":
+        return Reponse(etat14.get("en_cours", []))
+    if methode == "GET" and chemin == "app_archive_annonce_index_current":
+        return Reponse(etat14.get("archives", []))
+    if methode == "GET":
+        return Reponse([])
+    if chemin.startswith("rpc/"):
+        if chemin in etat14.get("refus", {}):
+            return Reponse({"message": etat14["refus"][chemin]}, status=400)
+        return Reponse(etat14.get("reponses", {}).get(chemin, {"id": "travail-14", "status": "pending", "job_id": "travail-14",
+                                                                "ok": True}))
+    return Reponse(None, status=500)
+
+
+requests.get = lambda url, **kw: faux14("GET", url, **kw)
+requests.post = lambda url, **kw: faux14("POST", url, **kw)
+requests.request = lambda methode, url, **kw: faux14(methode, url, **kw)
+
+
+def ecrits14():
+    return [a for a in appels14 if a["methode"] != "GET"]
+
+
+def rpc14(nom):
+    return [a for a in appels14 if a["chemin"] == f"rpc/{nom}"]
+
+
+# 14a — rattacher un mandant existant
+RM = {"hektor_annonce_id": "63330", "hektor_contact_id": "10354642"}
+appels14.clear()
+resume_rm, p_rm = ges.preparer_rattacher_mandant(nouveau_ctx(), RM)
+voir("M. JEAN TESTJEAN" in resume_rm and "MANDANT" in resume_rm and "ne se retire plus" in resume_rm and not ecrits14()
+     and p_rm == {"hektor_annonce_id": 63330, "hektor_contact_id": "10354642"},
+     "rattacher : la carte nomme le contact et prévient (un mandat numéroté fige les mandants) ; PROPOSER n'écrit rien")
+voir(refuse(lambda: ges.preparer_rattacher_mandant(nouveau_ctx(), {**RM, "hektor_contact_id": "10354641"}), "déjà mandant"),
+     "⛔ un contact déjà mandant (ou propriétaire) du bien : refusé")
+etat14["contact"] = {"10354642": {"negociateur_email": "autre@gti-immobilier.fr", "commercial_nom": "AUTRE"}}
+voir(refuse(lambda: ges.preparer_rattacher_mandant(nouveau_ctx(), RM), "négociateur du bien"),
+     "⛔ un contact d'un autre négociateur : refusé, comme le sélecteur de l'écran (ses contacts seulement)")
+etat14["contact"] = {"10354642": {"archive": True}}
+voir(refuse(lambda: ges.preparer_rattacher_mandant(nouveau_ctx(), RM), "archivé"), "⛔ un contact archivé : refusé")
+etat14["contact"] = {"10354642": {"couple_role": "menage_resolu"}}
+voir(refuse(lambda: ges.preparer_rattacher_mandant(nouveau_ctx(), RM), "MÉNAGE"), "⛔ la fiche du ménage : refusée (une personne)")
+etat14.pop("contact")
+etat14["tete"] = {"negociateur_email": "", "commercial_id": ""}
+voir(refuse(lambda: ges.preparer_rattacher_mandant(nouveau_ctx(), RM), "pas de négociateur"),
+     "⛔ un bien sans négociateur : refusé (le worker ne saurait pas sous quelle identité écrire)")
+etat14.pop("tete")
+appels14.clear()
+r_rm = ges.executer_rattacher_mandant(nouveau_ctx(), p_rm)
+c = rpc14("app_link_mandant_optimistic")
+voir(len(c) == 1 and c[0]["entetes"].get("Authorization") == f"Bearer {JETON}"
+     and c[0]["corps"] == {"target_app_dossier_id": 10000006, "target_hektor_annonce_id": "63330", "target_contact_id": "10354642",
+                           "contact_label": "M. JEAN TESTJEAN", "job_priority": 18} and r_rm["travail"] == "travail-14",
+     "au CLIC : la fonction de l'écran, avec le JETON, NOTRE numéro (comme le sélecteur ; le worker traduit), le libellé, priorité 18")
+appels14.clear()
+etat14["mandants"] = ["10354641", "10354642"]
+voir(refuse(lambda: ges.executer_rattacher_mandant(nouveau_ctx(), p_rm), "déjà mandant") and not ecrits14(),
+     "TÉMOIN : rattaché entre la carte et le clic (par l'écran) -> refusé, RIEN envoyé (pas de doublon)")
+etat14.pop("mandants")
+
+# 14b — retirer un mandant
+RT = {"hektor_annonce_id": "63330", "hektor_contact_id": "10354641"}
+appels14.clear()
+resume_rt, p_rt = ges.preparer_retirer_mandant(nouveau_ctx(), RT)
+voir("Retirer Mme CLAUDE TESTCLAUDE" in resume_rt and "réapparaît" in resume_rt and not ecrits14(),
+     "retirer : la carte dit que le lien disparaît tout de suite et revient si Hektor refuse ; rien écrit")
+voir(refuse(lambda: ges.preparer_retirer_mandant(nouveau_ctx(), {**RT, "hektor_contact_id": "10354642"}), "n'est pas mandant"),
+     "⛔ un contact qui n'est pas mandant du bien : refusé")
+etat14["bien"] = {"numero_mandat": "18912"}
+voir(refuse(lambda: ges.preparer_retirer_mandant(nouveau_ctx(), RT), "mandat n° 18912"),
+     "⛔ LA RÈGLE DE FRÉDÉRIC : mandat numéroté -> refusé, AVEC le numéro (un refus s'explique)")
+etat14.pop("bien")
+appels14.clear()
+ges.executer_retirer_mandant(nouveau_ctx(), p_rt)
+c = rpc14("app_unlink_mandant_optimistic")
+voir(len(c) == 1 and c[0]["corps"]["target_contact_id"] == "605717" and c[0]["corps"]["target_contact_id"] != "10354641"
+     and c[0]["entetes"].get("Authorization") == f"Bearer {JETON}",
+     "⛔ au CLIC : le numéro HEKTOR (605717, celui que degroupproprio exige), JAMAIS le nôtre (10354641)")
+etat14["refus"] = {"rpc/app_unlink_mandant_optimistic": "mandat_numerote_19001"}
+voir(refuse(lambda: ges.executer_retirer_mandant(nouveau_ctx(), p_rt), "le mandat n° 19001 a été généré"),
+     "la base refuse « mandat_numerote_19001 » (numéro paru entre-temps dans app_mandat) : traduit en clair, numéro compris")
+etat14.pop("refus")
+etat14["contact"] = {"10354641": {"hektor_target_id": None}}
+voir(refuse(lambda: ges.preparer_retirer_mandant(nouveau_ctx(), RT), "pas encore de numéro chez Hektor"),
+     "⛔ un contact sans numéro Hektor : refusé (le retrait ne peut pas lui être envoyé)")
+etat14.pop("contact")
+
+# 14c — l'adresse d'un contact
+AD = {"hektor_contact_id": "10354641", "adresse": "3 place du Breuil", "code_postal": "42700", "ville": "firminy"}
+appels14.clear()
+resume_ad, p_ad = ges.preparer_adresse_contact(nouveau_ctx(), AD)
+voir("« 1 rue Haute, 42000 Saint-Étienne » → « 3 place du Breuil, 42700 Firminy »" in resume_ad and not ecrits14()
+     and p_ad["ville"] == "Firminy",
+     "l'adresse : avant → après, la ville écrite par la personne (« firminy ») remplacée par la commune OFFICIELLE")
+voir(refuse(lambda: ges.preparer_adresse_contact(nouveau_ctx(), {**AD, "ville": "Unieux"}), "n'est pas une commune du 42700"),
+     "⛔ une ville hors du code postal : refusée, avec les communes du code postal (sinon Hektor la perd)")
+voir(refuse(lambda: ges.preparer_adresse_contact(nouveau_ctx(), {**AD, "code_postal": ""}), "code postal"),
+     "⛔ sans code postal : refusé")
+voir(refuse(lambda: ges.preparer_adresse_contact(nouveau_ctx(), {"hektor_contact_id": "10354641", "adresse": "",
+                                                                  "code_postal": "42000", "ville": "Saint-Étienne"}), "Rien ne change"),
+     "⛔ la même adresse : refusée (rien ne change)")
+appels14.clear()
+ges.executer_adresse_contact(nouveau_ctx(), p_ad)
+c = rpc14("app_edit_contact_optimistic")
+voir(len(c) == 1 and c[0]["corps"]["edit_fields"] == {"last_name": "TESTCLAUDE", "address": "3 place du Breuil",
+                                                       "postal_code": "42700", "city": "Firminy"}
+     and c[0]["corps"]["target_contact_id"] == "10354641" and c[0]["corps"]["debounce_seconds"] == 600,
+     "au CLIC : la modification de contact de l'écran, le NOM actuel avec (le worker l'exige), la commune officielle")
+
+# 14d — ajouter un conjoint existant
+CJ = {"hektor_contact_id": "10354641", "conjoint_contact_id": "10354642"}
+appels14.clear()
+resume_cj, p_cj = ges.preparer_ajouter_conjoint(nouveau_ctx(), CJ)
+voir("M. JEAN TESTJEAN le CONJOINT de Mme CLAUDE TESTCLAUDE" in resume_cj and "biens" in resume_cj and not ecrits14(),
+     "le conjoint : la carte dit le couple ET le rattachement aux biens de la personne ; rien écrit")
+voir(refuse(lambda: ges.preparer_ajouter_conjoint(nouveau_ctx(), {**CJ, "conjoint_contact_id": "10354641"}), "même fiche"),
+     "⛔ la même fiche : refusée")
+etat14["contact"] = {"10354642": {"couple_json": {"etat": "nomme"}}}
+voir(refuse(lambda: ges.preparer_ajouter_conjoint(nouveau_ctx(), CJ), "pas une personne seule"),
+     "⛔ une fiche déjà en couple : refusée (les couples existants se travaillent sur la fiche)")
+etat14["contact"] = {"10354642": {"nature_fiche": "notaire"}}
+voir(refuse(lambda: ges.preparer_ajouter_conjoint(nouveau_ctx(), CJ), "notaire"), "⛔ une fiche notaire : refusée")
+etat14.pop("contact")
+etat14["cran"] = "admin"
+voir(refuse(lambda: ges.preparer_ajouter_conjoint(nouveau_ctx("commercial"), CJ), "pas encore ouvert")
+     and ges.preparer_ajouter_conjoint(nouveau_ctx("admin"), CJ)[1] == p_cj,
+     "interrupteur `contacts_couples_ajout` = admin : refusé au négociateur, ouvert à l'admin (comme la base)")
+etat14.pop("cran")
+appels14.clear()
+r_cj = ges.executer_ajouter_conjoint(nouveau_ctx(), p_cj)
+c = rpc14("app_ajouter_conjoint_optimistic")
+voir(len(c) == 1 and c[0]["corps"] == {"target_contact_id": "10354641", "conjoint_contact_id": "10354642"}
+     and r_cj["travail"] == "travail-14",
+     "au CLIC : la fonction de l'écran, NOS deux numéros")
+etat14["reponses"] = {"rpc/app_ajouter_conjoint_optimistic": {"ok": False, "raison": "deja_en_cours"}}
+voir(refuse(lambda: ges.executer_ajouter_conjoint(nouveau_ctx(), p_cj), "déjà en cours"),
+     "la base refuse SANS lever (ok = false) : la raison est dite en clair, jamais un succès")
+etat14.pop("reponses")
+
+# 14e — réaffecter le négociateur [direction]
+NG = {"hektor_annonce_id": "63330", "negociateur": "blanchard", "agence": ""}
+voir(ges.GESTES["reaffecter_negociateur"].roles == ges.DIRECTION and ges.GESTES["archiver_annonce"].roles == ges.DIRECTION
+     and ges.GESTES["activer_estimation"].roles == ges.DIRECTION,
+     "réaffecter, archiver, passer en Actif : DIRECTION (la règle de la base : absents de la liste du négociateur)")
+voir(refuse(lambda: ges.preparer_reaffecter_negociateur(nouveau_ctx("admin"), NG), "Plusieurs fiches"),
+     "deux fiches du même nom (deux agences) : la carte demande laquelle")
+appels14.clear()
+resume_ng, p_ng = ges.preparer_reaffecter_negociateur(nouveau_ctx("admin"), {**NG, "agence": "yssingeaux"})
+voir("Delphine BLANCHARD (GTI Yssingeaux)" in resume_ng and "PEREIRA" in resume_ng and "@" not in resume_ng
+     and p_ng["hektor_negociateur_id"] == "45" and not ecrits14(),
+     "l'agence départage ; la carte dit l'ancien et le nouveau, sans aucune adresse e-mail")
+voir(refuse(lambda: ges.preparer_reaffecter_negociateur(nouveau_ctx("admin"), {**NG, "negociateur": "pereira"}), "déjà le négociateur"),
+     "⛔ le négociateur actuel : refusé")
+voir(refuse(lambda: ges.preparer_reaffecter_negociateur(nouveau_ctx("admin"), {**NG, "negociateur": "inconnu"}), "ACTIF"),
+     "⛔ un nom qui n'est pas un négociateur actif chez Hektor : refusé")
+appels14.clear()
+ges.executer_reaffecter_negociateur(nouveau_ctx("admin"), p_ng)
+c = rpc14("app_assign_negotiator_optimistic")
+voir(len(c) == 1 and c[0]["corps"]["target_user_id"] == "202" and c[0]["corps"]["job_priority"] == 9
+     and c[0]["corps"]["job_payload"] == {"target_hektor_user_label": "Delphine BLANCHARD",
+                                          "target_hektor_user_email": "delphine@gti-immobilier.fr",
+                                          "target_hektor_negociateur_id": "45", "target_hektor_agence_id": "8",
+                                          "target_agency_id_user": "80", "target_agency_label": "GTI Yssingeaux"},
+     "au CLIC : le compte Hektor (hektor_user_id) et la charge EXACTE de l'écran")
+appels14.clear()
+etat14["negos"] = NEGOS14[:1] + NEGOS14[2:]
+voir(refuse(lambda: ges.executer_reaffecter_negociateur(nouveau_ctx("admin"), p_ng), "plus actif") and not ecrits14(),
+     "TÉMOIN : la fiche n'est plus active chez Hektor au clic -> refusé, RIEN envoyé")
+etat14.pop("negos")
+
+# 14f — archiver [direction] / désarchiver
+AR = {"hektor_annonce_id": "63330", "cause": "confrere", "precision": "", "prix": "180 000", "confrere": "Agence du Pilat"}
+appels14.clear()
+resume_ar, p_ar = ges.preparer_archiver_annonce(nouveau_ctx("admin"), AR)
+voir("ARCHIVER" in resume_ar and "Vendu par un confrère" in resume_ar and "180 000 €" in resume_ar and "COUPE SA DIFFUSION" in resume_ar
+     and not ecrits14(), "archiver : la cause, le prix, et la diffusion coupée sont dits ; rien écrit")
+voir(refuse(lambda: ges.preparer_archiver_annonce(nouveau_ctx("admin"), {**AR, "cause": "fatigue"}), "cause")
+     and refuse(lambda: ges.preparer_archiver_annonce(nouveau_ctx("admin"), {**AR, "cause": "autre"}), "précision est obligatoire"),
+     "⛔ une cause hors de la modale, « autre » sans précision : refusés (comme l'écran)")
+etat14["en_cours"] = [{"id": "j"}]
+voir(refuse(lambda: ges.preparer_archiver_annonce(nouveau_ctx("admin"), AR), "déjà en cours"),
+     "⛔ une action Hektor déjà en cours sur l'annonce : refusé (la garde de l'écran)")
+etat14.pop("en_cours")
+appels14.clear()
+ges.executer_archiver_annonce(nouveau_ctx("admin"), p_ar)
+c = rpc14("app_archive_annonce_optimistic")
+voir(len(c) == 1 and c[0]["corps"] == {"target_dossier_id": 10000006, "job_priority": 8, "job_payload": {
+        "archive_main_choice": "choiceVendu", "archive_sub_choice": "confrere", "archive_other_text": None,
+        "archive_price": "180000", "archive_confrere": "Agence du Pilat"}},
+     "au CLIC : la charge EXACTE de la modale (motif principal déduit de la cause)")
+_, p_ar2 = ges.preparer_archiver_annonce(nouveau_ctx("admin"), {**AR, "cause": "non_renouvele"})
+voir(p_ar2["prix"] == "" and p_ar2["confrere"] == "", "un motif « autre » : le prix et le confrère ne partent pas")
+voir(refuse(lambda: ges.preparer_desarchiver_annonce(nouveau_ctx(), {"hektor_annonce_id": "63330"}), "n'est pas archivée"),
+     "désarchiver un bien vivant : « n'est pas archivée »")
+etat14["archives"] = [{"app_archive_id": 1352134, "hektor_annonce_id": 24935, "titre_bien": "Maison archivée"}]
+appels14.clear()
+resume_da, p_da = ges.preparer_desarchiver_annonce(nouveau_ctx(), {"hektor_annonce_id": "24935"})
+ges.executer_desarchiver_annonce(nouveau_ctx(), p_da)
+c = rpc14("app_restore_annonce_optimistic")
+voir("DÉSARCHIVER" in resume_da and len(c) == 1 and c[0]["corps"] == {"target_dossier_id": 1352134, "job_payload": {}, "job_priority": 8},
+     "désarchiver : le numéro de l'INDEX DES ARCHIVES (notre app_dossier_id renommé), charge vide, comme l'écran")
+etat14.pop("archives")
+
+# 14g — Estimation -> Actif [direction]
+appels14.clear()
+resume_ac, p_ac = ges.preparer_activer_estimation(nouveau_ctx("admin"), {"hektor_annonce_id": "63330"})
+voir("ESTIMATION à ACTIF" in resume_ac and "DIFFUSABLE" in resume_ac and "n'existe pas" in resume_ac and not ecrits14(),
+     "Estimation -> Actif : la carte DIT que Hektor la rend diffusable, et que le retour n'existe pas")
+etat14["tete"] = {"statut_annonce": "Actif"}
+voir(refuse(lambda: ges.preparer_activer_estimation(nouveau_ctx("admin"), {"hektor_annonce_id": "63330"}), "seul le passage"),
+     "⛔ un bien déjà Actif (ou sous offre…) : refusé, seul Estimation -> Actif est offert")
+etat14.pop("tete")
+appels14.clear()
+ges.executer_activer_estimation(nouveau_ctx("admin"), p_ac)
+c = rpc14("app_change_annonce_status_optimistic")
+charge = c[0]["corps"]["job_payload"] if c else {}
+voir(len(c) == 1 and c[0]["corps"]["target_status"] == "active" and charge["target_status"] == "active"
+     and charge["numero_dossier"] == "VA9" and charge["apres_vente"] == "actif" and charge["amount"] is None
+     and charge["buyer_contact_id"] is None and charge["close_date"] is None and len(charge["transaction_date"]) == 10,
+     "au CLIC : la fonction de l'écran, cible « active », la charge de la modale (dossier, date du jour, le reste vide)")
+appels14.clear()
+etat14["tete"] = {"statut_annonce": "Actif"}
+voir(refuse(lambda: ges.executer_activer_estimation(nouveau_ctx("admin"), p_ac), "seul le passage") and not ecrits14(),
+     "TÉMOIN : passé en Actif entre la carte et le clic -> refusé, RIEN envoyé")
+etat14.pop("tete")
 
 print(f"\n{ok} contrôles verts")
