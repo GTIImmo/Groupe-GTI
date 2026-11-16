@@ -2250,3 +2250,30 @@ d'autre n'est écrit, rien ne part à l'IA. Un fichier pas encore au coffre le d
 « Remplir la fiche » qui écrit referme l'aperçu pour que la valeur vole dans le panneau. Essai `test_ged_remplir`
 32 -> 35. ⚠ La session signature n'a PAS été prévenue : je n'ai pas son numéro dans les sessions liées ; le chemin est
 celui d'« Ouvrir », inchangé, et ne touche ni `metadata_json.signature` ni `storage_path`.
+**✅ H3 EN LIGNE (16/11, « Pousse vas y » : `722315c` + `cc1c19f`, Vercel READY) — ⚠ PAS ENCORE VU.** Sur 63331, le
+bloc ne porte AUCUNE proposition « À remplir » (mesuré en lecture : ses 23 lectures sont des pièces des personnes, les 3
+décisions sont les C1-C3 du contact d'essai, déjà remplies) : le panneau reste caché, comme voulu, donc rien de H3 ne
+s'affiche. 62774 n'est plus dans `app_dossiers_current`, 61398 n'a aucune lecture. Pour voir la carte, le panneau,
+l'aperçu et le vol, il faut une proposition vivante -- donc un DÉPÔT réel (une pièce SPECIMEN dont la case est vide),
+qui écrit chez Hektor : à décider par Frédéric.
+⚠ Mesuré avant tout geste : sur 63331, les 6 cases sont PLEINES (DPE 210 / 45 du 10/09/2026, état des risques du
+10/09/2026, 24 lots, 120 €) -- un faux DPE n'y aurait fait naître AUCUNE proposition. Frédéric a choisi **63147 (ESSAI C9
+bis)**, cases DPE vides. **✅ ESSAI RÉEL DU 16/11, VU** : « DPE SPECIMEN essai 2026.pdf » (PDF fabriqué dans la page,
+marqué SPECIMEN : 212 kWh, 46 kg, établi le 14/03/2026) déposé par la fenêtre -- type « DPE », « le nom et l'IA sont
+d'accord », aperçu de la page ; envoyé : « Déposé, part chez Hektor », puis « Lu : énergie D, climat E · 212 kWh/m²/an ·
+établi le 14/03/2026… ». Fiche rechargée : **« À remplir (3) »** (consommation, émissions, date ; chacune « Fiche :
+vide · lu dans DPE SPECIMEN essai 2026.pdf, page 1 ») et **« La fiche du bien »** (4 cases « vide », pas de lignes de
+copropriété : le bien n'en est pas une) -- conforme à la planche. **« Voir le document »** : la page 1 servie par le
+coffre et dessinée dans le panneau, croix pour revenir ; console propre. **Téléphone (cadre 390 px, retiré)** : 3 cartes,
+puis le panneau, 0 débordement. ⛔ **« Remplir la fiche » NON cliqué** (hors de l'accord) : le vol et la ligne repliée
+ne sont pas encore vus. Le faux DPE RESTE sur 63147 (et chez Hektor) avec ses 3 propositions ouvertes. ⚠ Remarque : au
+téléphone, l'aperçu s'ouvre à la place du panneau, donc SOUS les cartes -- il n'est pas ramené à l'écran.
+**✅ « Remplir la fiche » CLIQUÉ (16/11, « Oui ») sur la consommation de 63147** : la carte se replie en ligne verte
+cochée (« Envoyé : DPE : consommation 212 kWh/m²/an. La fiche part chez Hektor par le chemin habituel… »), « À remplir
+(2) », la case affiche 212 kWh/m²/an. Écriture vérifiée en base : décision `remplie` P1.dpe_cons = 212 (geste
+`editAnnonceOptimistic`) ; la fiche chez nous porte 212 ; la demande attend dans `app_annonce_pending` (`dpe_cons: 212`,
+départ 10 min après, le chemin de toute modification de fiche). ⚠ **Le vol n'a PAS été vu** : le Chrome de cette machine
+demande « moins de mouvement » -- le vol est coupé EXPRÈS (c'est la règle). ⚠ **Et l'essai a trouvé un défaut** : sous ce
+réglage, la case remplie redevenait GRISE (l'allumage n'était porté que par l'animation). Corrigé : la case remplie d'ici
+garde un fond vert fixe (`RecuManque.css`) -- éprouvé en injectant la règle dans la production (fond 230, 243, 236), puis
+retirée. Build vert, essais verts ; commit local À POUSSER.

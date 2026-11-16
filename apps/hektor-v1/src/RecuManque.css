@@ -157,7 +157,8 @@ button.gm2-f:hover, button.gm2-f:focus-visible { border-color: #c5005f; outline:
 .gm2-fiche dt { color: #5c6163; font-size: 12.5px; }
 .gm2-fiche dd { display: flex; align-items: center; min-height: 36px; margin: 0; padding: 4px 10px; border-radius: 10px; background: #f6f7f8; color: #1f2121; font-size: 13px; font-weight: 700; overflow-wrap: anywhere; }
 .gm2-fiche dd.is-vide { background: #ffffff; box-shadow: inset 0 0 0 1.5px #d3a2ba; color: #8c0044; font-style: italic; font-weight: 600; }
-.gm2-fiche dd.is-allume { animation: gm2-allume 1100ms ease-out 600ms both; }
+/* une case remplie d'ici RESTE verte, animation ou non (essai du 16/11 : sous « moins de mouvement », elle redevenait grise) */
+.gm2-fiche dd.is-allume { background: #e6f3ec; color: #1f6b45; animation: gm2-allume 1100ms ease-out 600ms both; }
 .gm2-large { grid-column: 1 / -1; }
 .gm2-vol { position: fixed; z-index: 4500; display: flex; align-items: center; height: 32px; padding: 0 12px; border-radius: 9px; background: #c5005f; color: #ffffff; font-family: 'Hanken Grotesk', 'Segoe UI', system-ui, sans-serif; font-size: 13px; font-weight: 800; white-space: nowrap; box-shadow: 0 12px 24px -8px rgba(197, 0, 95, 0.7); pointer-events: none; animation: gm2-vole 720ms cubic-bezier(0.5, 0, 0.2, 1) both; }
 @media (prefers-reduced-motion: reduce) { .gm2-vol { display: none; } }

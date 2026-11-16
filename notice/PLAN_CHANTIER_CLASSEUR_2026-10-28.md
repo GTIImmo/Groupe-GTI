@@ -2513,6 +2513,130 @@ l'etat d'une autre transaction) ; ce balayage-ci, fait avec le critere « compro
 trouve un 7e qui se declenche sur `state` ET sur l'ABSENCE de numero. **Chaque famille
 demande son propre balayage, et il se fait AVANT de generer le patch.**
 
+### ⭐⭐⭐ LE MECANISME D'ENSEMBLE -- app, serveur, Sheet et Hektor (16/11)
+
+Ecrit a sa demande : « explique moi le mecanisme je veux bien comprendre [...] dans le
+chantier on avait deja tout vu ». **Il avait raison : tout etait deja ecrit**, aux
+etapes 4 et 5. Ce bloc ne decide rien, il rassemble.
+
+```
+   AUJOURD HUI -- ON RAPATRIE, ET ON DEVINE
+     le Sheet ---(le GEL : appariement par noms + dates + prix)---> notre base
+     Hektor ----(le run de nuit)----------------------------------> notre base
+     notre base --(la descente 07:45)----------------------------> le serveur local
+
+   ETAPE 5.2 -- ON ECRIT NOTRE IDENTIFIANT DANS LE SHEET
+     notre base --(app_dossier_uuid)-----------------------------> colonne A du Sheet
+     ⭐ a partir de la, CHAQUE LIGNE DU CLASSEUR PORTE NOTRE NUMERO
+
+   ETAPE 5.3 -- PLUS BESOIN DE DEVINER
+     l app ------(par l UUID, directement)-----------------------> le Sheet
+     ⛔ LE GEL NE SERT PLUS : « il sert ici, UNE FOIS -- puis il DORT »
+```
+
+⭐⭐⭐ **ET C'EST POURQUOI L'ETIQUETTE VIT SUR CHAQUE TRANSACTION, ET NON DANS UNE
+TABLE PAR DOSSIER.** Son role n'est pas d'etre un point d'accrochage interne : c'est
+d'etre **la clef partagee avec le Sheet**, celle qu'on ecrira dans sa colonne A et qui
+remplacera l'appariement pour toujours. Un dossier d'affaire n'est pas un objet chez
+nous, c'est un REGROUPEMENT ; ce qui est stable, c'est l'etiquette.
+
+⚠ **SA QUESTION ETAIT JUSTE, ET LA REPONSE EST MESUREE** : « nous n'avons aucune base
+avec une ligne par etiquette ??? » -- exact, et au 16/11 **PERSONNE** ne portait
+`app_dossier_uuid` a part `app_affaire_ledger`. L'etiquette etait posee partout et
+**utilisee par rien**. La table des avis est la **premiere** a s'en servir.
+
+#### ✅⭐⭐ LE VERROU DES QUATRE TABLES -- POSE LE 16/11
+
+Son ordre : « il faut aussi faire ce verrou », puis « Les quatre ».
+
+⛔⛔ **JE VENAIS SIGNALER UN OUBLI, L'AUDIT EN A TROUVE TROIS AUTRES, PLUS GRAVES** :
+
+```
+   table                     RLS          politiques   authenticated
+   app_classeur_lien         DESACTIVEE        0        TOUT, TRUNCATE comprise
+   app_classeur_ligne_id     DESACTIVEE        0        TOUT
+   app_charge_exclusion      DESACTIVEE        0        TOUT
+   app_classeur_avis         active            0        TOUT
+```
+
+⭐ **LA DIFFERENCE EST CAPITALE** : sans RLS il n'y a aucun gardien, donc le droit
+suffit. Les trois premieres etaient **reellement ouvertes** -- n'importe quel compte de
+l'app pouvait lire, modifier ou **VIDER** le gel (12 595 liens) et le pont (4 773
+identites), **le socle du chantier**. `app_classeur_avis`, elle, a RLS active sans
+politique : fermee en pratique. **Mon oubli etait le MOINS grave des quatre.**
+
+⛔⛔⛔ **ET LA FAUTE EST DEJA DANS LA MEMOIRE DU PROJET** sous le nom « `revoke all
+from public` NE FERME PAS `authenticated` ». Mon patch B1 faisait
+`revoke ... from public` et je l'ai cru suffisant. **Je l'ai refaite le lendemain de
+l'avoir notee.**
+
+```
+   6 controles apres la pose :
+     droits restants pour authenticated/anon      0 = 0
+     service_role lit toujours les 4              4 = 4   <- le run ne tombe pas
+     les 4 voisines du registre intactes          4 = 4
+     donnees intactes : gel 12 595 . pont 4 773 . avis 2 588
+```
+
+⭐ **AUCUN RISQUE FONCTIONNEL, ET C'EST MESURE** : aucune des quatre n'est citee dans
+`apps/` ni `backend/`. Seuls les scripts du chantier les lisent, par la CLE DE SERVICE.
+
+#### ✅⭐⭐ L'ETIQUETTE SUR LA TABLE DES AVIS -- POSEE LE 16/11
+
+Son choix, apres que je lui ai propose de tout mettre en colonnes du registre :
+**« Table avec etiquettes »**.
+
+⛔⛔ **ET L'ACCROCHAGE EST L'ETIQUETTE, JAMAIS LE NUMERO DE CHAINE** -- regle du
+28/10 : *« un numero de chaine ne doit JAMAIS servir de point d'accrochage, il
+bouge »*. Ce n'est pas theorique : **6 chaines ont bouge** depuis le 12/11 (journal des
+etiquettes). `app_dossier_uuid`, elle, ne bouge jamais. Un avis accroche par
+l'etiquette survit a une FUSION de dossiers ; par la chaine, il se perdrait en silence.
+
+```
+   avis au total                        2 588 = 2 588
+   etiquettes posees                    2 560 = 2 560
+   laissees vides ET COMPTEES              28 = 28   (20 a cheval + 8 sans lien)
+   UUID sans numero court                   0 = 0
+   etiquettes ORPHELINES                    0 = 0
+   l index de jointure existe               1 = 1
+   TOUJOURS fermee a authenticated          0 = 0   <- le front ne la voit pas
+   ⭐ ESSAI DE JOINTURE REELLE : 7 356 lignes . 2 556 dossiers atteints
+```
+
+⭐ **L'essai de jointure est le temoin qui compte** : ce n'est pas une colonne posee en
+esperant qu'elle serve, elle sert. Et la table reste **fermee au front**, exactement ce
+qu'il a demande : « dans l'apps et le serveur mais pas visibles tout de suite dans le
+front ».
+
+⚠ **UN DEFAUT, REJETE AVANT LE COMMIT** : `min(uuid)` n'existe pas en PostgreSQL. Le
+patch etant dans `begin/commit`, **rien n'a ete ecrit** -- verifie : 0 colonne ajoutee,
+2 588 avis intacts. Corrige en `(array_agg(distinct ...))[1]`.
+
+#### ⚠ UNE DETTE QUE L'AUDIT REVELE, NON CORRIGEE
+
+Trois tables s'accrochent par `app_chaine_id`, donc portent le risque que la regle du
+28/10 decrit : `app_affaire_note` (204), `app_affaire_condition` (5),
+`app_affaire_repartition` (17 905). Rien n'a casse jusqu'ici, mais **si un dossier
+fusionne, leurs liens peuvent se perdre en silence**. ⬜ A trancher a part.
+
+#### LES DECISIONS DE FREDERIC, 16/11 AU SOIR
+
+```
+   Y   « Vente Reglee »       VISIBLE dans la vue transaction
+   C   « Mandat »             NE PAS RAPATRIER DU TOUT
+   AH AI AJ  les avis         en base et au serveur, PAS visibles au front,
+                              dans une TABLE accrochee par l ETIQUETTE
+   le verrou                  LES QUATRE tables
+   AA  « Numero de facture »  ⬜ PAS ENCORE TRANCHE
+```
+
+⭐ **ET L'AUDIT QU'IL A DEMANDE SUR « REGLEE » CONFIRME SA LECTURE** : il n'y a
+**qu'une seule** colonne « reglee » au classeur, `Y Vente Reglee`. `AA Numero de
+facture` est une colonne DIFFERENTE, qui ne parle pas de reglement -- ma question les
+presentait comme allant ensemble, ce qui etait trompeur.
+
+---
+
 ### ✅⭐⭐ C9 PREMIERE MOITIE FAITE -- 2 588 LIGNES D'AVIS POSEES LE 16/11
 
 #### ⭐⭐⭐ POURQUOI ELLE EST PASSEE EN PREMIER, ET CE N'EST PAS « parce qu'elle etait facile »
