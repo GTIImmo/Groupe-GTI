@@ -2081,6 +2081,126 @@ def executer_numero_mandat(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[st
     return {"app_dossier_id": bien["app_dossier_id"], "travail": travail.get("id"), "statut": travail.get("status")}
 
 
+# ── Étape 4 (16/11/2026) : RELANCER UN SIGNATAIRE et ANNULER LA SIGNATURE (Youtrust) ─────────────────────────────
+# Écran : SuiviSignatairesYoutrust.tsx + lib/suiviSignataires.ts (les règles de Youtrust, pour ne poser AUCUN travail
+# qu'il refuserait) : relancer = demande `ongoing` ET signataire `notified` ; annuler = demande `ongoing` ou `approval`.
+# Les gestes n'existent que si l'interrupteur `signature_youtrust` le permet (`on` = tous ; `admin` = les admins) — le
+# worker le revérifie (exigerInterrupteurYoutrust). Le travail est celui de l'écran (`poserTravailYoutrust`,
+# lib/api.ts ~10478), posé avec le jeton de la personne. ⛔ L'e-mail d'un signataire ne figure JAMAIS dans la carte : le
+# résumé repart au modèle. ImmoSign (l'ancien prestataire) n'est pas ouvert ici. L'ENVOI passe par la fenêtre de l'écran.
+DEMANDE_SIGNATURE_EN_COURS = ("ongoing", "approval")
+
+
+def _youtrust_ouvert(ctx: ContexteAssistant) -> None:
+    lignes = _lire(ctx, "app_setting", {"key": "eq.signature_youtrust", "select": "value", "limit": "1"})
+    cran = str((lignes or [{}])[0].get("value") or "").strip().lower()
+    if cran in {"on", "true", "1", "yes"} or (cran == "admin" and ctx.role == "admin"):
+        return
+    raise Refus("La signature Youtrust n'est pas ouverte à ton compte : relance et annulation se font depuis la fiche du bien.")
+
+
+def _nom_signataire(s: dict[str, Any]) -> str:
+    return " ".join(str(s.get(c) or "").strip() for c in ("prenom", "nom") if str(s.get(c) or "").strip()) or "le signataire"
+
+
+def _signatures_en_cours(ctx: ContexteAssistant, hektor_annonce_id: Any, document: Any = "") -> list[tuple[dict[str, Any], dict[str, Any]]]:
+    """(document, demande) des signatures Youtrust EN COURS du bien ; `document` (un morceau de son nom) départage."""
+    _youtrust_ouvert(ctx)
+    bien = _bien_vivant(ctx, hektor_annonce_id)
+    documents = _lire(ctx, "app_console_document", {"app_dossier_id": f"eq.{bien['app_dossier_id']}",
+                                                    "select": "id,app_dossier_id,hektor_annonce_id,document_name,metadata_json",
+                                                    "limit": "200"})
+    trouves: list[tuple[dict[str, Any], dict[str, Any]]] = []
+    for d in documents:
+        sig = ((d.get("metadata_json") or {}) if isinstance(d.get("metadata_json"), dict) else {}).get("signature") or {}
+        if sig.get("provider") != "youtrust" or not sig.get("signature_request_id"):
+            continue
+        demande = (_lire(ctx, "app_signature_request", {"id": f"eq.{sig['signature_request_id']}", "limit": "1",
+                                                         "select": "id,status,signers"}) or [None])[0]
+        if demande and str(demande.get("status") or "") in DEMANDE_SIGNATURE_EN_COURS:
+            trouves.append((d, demande))
+    filtre = str(document or "").strip().lower()
+    if filtre:
+        trouves = [(d, dm) for d, dm in trouves if filtre in str(d.get("document_name") or "").lower()]
+    if not trouves:
+        raise Refus(f"Aucune signature Youtrust en cours sur l'annonce {bien['hektor_annonce_id']}"
+                    + (f" pour « {document} »" if filtre else "") + ".")
+    if len(trouves) > 1:
+        raise Refus("Plusieurs signatures sont en cours sur ce bien : précise le document ("
+                    + " ; ".join(str(d.get("document_name") or "") for d, _ in trouves) + ").")
+    return trouves
+
+
+def _signataire_a_relancer(demande: dict[str, Any], qui: Any) -> dict[str, Any]:
+    signers = demande.get("signers") if isinstance(demande.get("signers"), list) else []
+    relancables = [s for s in signers if str(demande.get("status") or "") == "ongoing"
+                   and s.get("status") == "notified" and s.get("provider_signer_id")]
+    filtre = str(qui or "").strip().lower()
+    if filtre:
+        relancables = [s for s in relancables if filtre in _nom_signataire(s).lower()]
+    if not relancables:
+        raise Refus("Personne à relancer : Youtrust ne relance qu'un signataire invité qui n'a pas encore signé, dans une "
+                    "signature en cours" + (f" (aucun ne correspond à « {qui} »)" if filtre else "") + ".")
+    if len(relancables) > 1:
+        raise Refus("Plusieurs signataires attendent : précise lequel (" + ", ".join(_nom_signataire(s) for s in relancables) + ").")
+    return relancables[0]
+
+
+def _poser_travail_youtrust(ctx: ContexteAssistant, type_travail: str, document: dict[str, Any], demande_id: str,
+                            signataire_id: str | None = None) -> dict[str, Any]:
+    corps = {"job_type": type_travail, "app_dossier_id": document["app_dossier_id"],
+             "hektor_annonce_id": str(document["hektor_annonce_id"]), "priority": 24, "requested_by": ctx.user_id,
+             "payload_json": {"signature_request_id": demande_id, "app_console_document_id": document["id"],
+                              "document_name": document.get("document_name"),
+                              **({"provider_signer_id": signataire_id} if signataire_id else {})}}
+    r = _ecrire(ctx, "POST", "app_console_job", corps)
+    travail = (r or [{}])[0] if isinstance(r, list) else (r or {})
+    return {"travail": travail.get("id"), "statut": travail.get("status")}
+
+
+def preparer_relance_signature(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    document, demande = _signatures_en_cours(ctx, p.get("hektor_annonce_id"), p.get("document"))[0]
+    s = _signataire_a_relancer(demande, p.get("signataire"))
+    return (f"Relancer la signature de « {document.get('document_name')} » (annonce {document['hektor_annonce_id']}) : "
+            f"Youtrust renvoie le lien de signature à {_nom_signataire(s)} (un e-mail part chez lui).",
+            {"hektor_annonce_id": int(document["hektor_annonce_id"]), "document_id": document["id"],
+             "signature_request_id": demande["id"], "provider_signer_id": s["provider_signer_id"]})
+
+
+def executer_relance_signature(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[str, Any]:
+    # re-vérifié AU CLIC : interrupteur, demande toujours en cours, le MÊME signataire toujours à relancer
+    trouves = [(d, dm) for d, dm in _signatures_en_cours(ctx, p.get("hektor_annonce_id"))
+               if d["id"] == p.get("document_id") and dm["id"] == p.get("signature_request_id")]
+    if not trouves:
+        raise Refus("cette signature n'est plus en cours")
+    document, demande = trouves[0]
+    if not any(s.get("provider_signer_id") == p.get("provider_signer_id") and s.get("status") == "notified"
+               for s in (demande.get("signers") or [])) or demande.get("status") != "ongoing":
+        raise Refus("ce signataire n'est plus à relancer (il a signé, ou la signature a changé)")
+    return {"document_id": document["id"], **_poser_travail_youtrust(ctx, "youtrust_remind_signer", document,
+                                                                    demande["id"], str(p["provider_signer_id"]))}
+
+
+def preparer_annulation_signature(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    document, demande = _signatures_en_cours(ctx, p.get("hektor_annonce_id"), p.get("document"))[0]
+    signers = demande.get("signers") if isinstance(demande.get("signers"), list) else []
+    signes = sum(1 for s in signers if s.get("status") == "signed")
+    return (f"Annuler la signature électronique en cours de « {document.get('document_name')} » (annonce "
+            f"{document['hektor_annonce_id']}, {signes} signature{'s' if signes > 1 else ''} sur {len(signers)}) : les "
+            "signataires ne pourront plus signer ce lien ; le document redevient « à signer » (à renvoyer, ou à signer à la main).",
+            {"hektor_annonce_id": int(document["hektor_annonce_id"]), "document_id": document["id"],
+             "signature_request_id": demande["id"]})
+
+
+def executer_annulation_signature(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[str, Any]:
+    trouves = [(d, dm) for d, dm in _signatures_en_cours(ctx, p.get("hektor_annonce_id"))
+               if d["id"] == p.get("document_id") and dm["id"] == p.get("signature_request_id")]
+    if not trouves:
+        raise Refus("cette signature n'est plus en cours (déjà signée, annulée ou expirée)")
+    document, demande = trouves[0]
+    return {"document_id": document["id"], **_poser_travail_youtrust(ctx, "youtrust_cancel_signature", document, demande["id"])}
+
+
 # ── le catalogue des gestes ───────────────────────────────────────────────────
 class Geste:
     def __init__(self, nom: str, description: str, roles: frozenset[str], parametres: dict[str, Any],
@@ -2274,6 +2394,22 @@ GESTES: dict[str, Geste] = {g.nom: g for g in (
                    "duree_mois": {"type": "string", "description": "1 à 120, vide = 12"},
                    "tacite_reconduction": {"type": "string", "description": "oui ou non, vide = oui"}}),
           preparer_numero_mandat, executer_numero_mandat),
+    # étape 4 (16/11) : la signature Youtrust en cours (l'ENVOI passe par la fenêtre de l'écran)
+    Geste("relance_signature",
+          "Prépare la RELANCE d'un signataire d'une signature Youtrust EN COURS sur un bien : Youtrust lui renvoie le lien "
+          "(un e-mail part). Seulement un signataire invité qui n'a pas encore signé. Si l'interrupteur Youtrust le permet.",
+          TOUS_LES_ROLES,
+          _schema({"hektor_annonce_id": {"type": "string", "description": "numéro d'annonce"},
+                   "document": {"type": "string", "description": "un morceau du nom du document, vide = le seul en cours"},
+                   "signataire": {"type": "string", "description": "un morceau de son nom, vide = le seul à relancer"}}),
+          preparer_relance_signature, executer_relance_signature),
+    Geste("annulation_signature",
+          "Prépare l'ANNULATION d'une signature Youtrust EN COURS sur un bien : les signataires ne pourront plus signer ce "
+          "lien, le document redevient « à signer ». Si l'interrupteur Youtrust le permet.",
+          TOUS_LES_ROLES,
+          _schema({"hektor_annonce_id": {"type": "string", "description": "numéro d'annonce"},
+                   "document": {"type": "string", "description": "un morceau du nom du document, vide = le seul en cours"}}),
+          preparer_annulation_signature, executer_annulation_signature),
     Geste("couverture_photo",
           "Prépare : mettre une photo VISIBLE en couverture d'une annonce (numéros donnés par lire_photos_bien).",
           TOUS_LES_ROLES,

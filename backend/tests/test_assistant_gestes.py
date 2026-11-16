@@ -1172,8 +1172,9 @@ print("  (au clic, la route refuse aussi un rôle hors de geste.roles : DIRECTIO
 voir(ges.GESTES["transaction"].roles == ges.DIRECTION, "la carte est déclarée DIRECTION : la route de validation la refuse à un négociateur")
 
 print("10) aucune fonction de geste ne fait autre chose que proposer")
-voir(all(f.nom.startswith("proposer_") for f in ges.FONCTIONS_GESTES) and len(ges.FONCTIONS_GESTES) == 27,
-     "27 gestes (le brouillon retiré le 15/11, 3 du lot 2c, 3 du lot 3c, 1 de la vague C, le numéro de mandat le 16/11), "
+voir(all(f.nom.startswith("proposer_") for f in ges.FONCTIONS_GESTES) and len(ges.FONCTIONS_GESTES) == 29,
+     "29 gestes (le brouillon retiré le 15/11, 3 du lot 2c, 3 du lot 3c, 1 de la vague C, le numéro de mandat, la relance "
+     "et l'annulation d'une signature le 16/11), "
      "tous « proposer_ » : le "
      "modèle n'a AUCUNE fonction qui exécute")
 voir(not any(f.nom.startswith("proposer_") for f in ges.FONCTIONS_LECTURE_LOT3), "les 2 lectures du lot 3 ne proposent rien")
@@ -1299,5 +1300,90 @@ voir(refuse(lambda: ges.executer_numero_mandat(nouveau_ctx(), {**p12, "date_debu
 etat12.pop("bien")
 voir(ges.GESTES["numero_mandat"].roles == frozenset({"admin", "manager", "commercial"}),
      "ouvert à tous les rôles, comme l'écran : la base contrôle le bien de la personne (app_console_can_request_job)")
+
+print("13) LA SIGNATURE YOUTRUST EN COURS (16/11) : relancer un signataire, annuler -- les règles de lib/suiviSignataires")
+etat13 = {}
+appels13 = []
+SIGNERS = [{"prenom": "Pauline", "nom": "GIRINON", "role": "mandant", "email": "pauline@client.fr", "status": "signed",
+            "provider_signer_id": "s1"},
+           {"prenom": "Delphine", "nom": "TEST GTI", "role": "mandant", "email": "delphine@client.fr", "status": "notified",
+            "provider_signer_id": "s2"},
+           {"prenom": "Frédéric", "nom": "GERPHAGNON", "role": "mandataire", "email": "f@gti-immobilier.fr",
+            "status": "initiated", "provider_signer_id": "s3"}]
+
+
+def faux13(methode, url, **kw):
+    chemin = url.split("/rest/v1/", 1)[1]
+    appels13.append({"methode": methode, "chemin": chemin, "entetes": dict(kw.get("headers") or {}), "corps": kw.get("json")})
+    if methode == "GET" and chemin == "app_setting":
+        return Reponse([{"value": etat13.get("cran", "admin")}])
+    if methode == "GET" and chemin == "app_dossiers_current":
+        return Reponse([{"app_dossier_id": 1387336, "hektor_annonce_id": 61398, "numero_mandat": "18420", "titre_bien": "x"}])
+    if methode == "GET" and chemin == "app_console_document":
+        return Reponse(etat13.get("documents", [
+            {"id": "doc-1", "app_dossier_id": 1387336, "hektor_annonce_id": "61398", "document_name": "Mandat de vente - 18420.pdf",
+             "metadata_json": {"signature": {"provider": "youtrust", "signature_request_id": "dem-1", "status": "pending"}}},
+            {"id": "doc-0", "app_dossier_id": 1387336, "hektor_annonce_id": "61398", "document_name": "Ancien.pdf",
+             "metadata_json": {"signature": {"provider": "immosign"}}}]))
+    if methode == "GET" and chemin == "app_signature_request":
+        return Reponse([{"id": "dem-1", "status": etat13.get("statut", "ongoing"), "signers": etat13.get("signers", SIGNERS)}])
+    if methode == "GET":
+        return Reponse([])
+    if methode == "POST" and chemin == "app_console_job":
+        return Reponse([{"id": "job-yt", "status": "pending"}])
+    return Reponse(None, status=500)
+
+
+requests.get = lambda url, **kw: faux13("GET", url, **kw)
+requests.post = lambda url, **kw: faux13("POST", url, **kw)
+requests.request = lambda methode, url, **kw: faux13(methode, url, **kw)
+R13 = {"hektor_annonce_id": "61398", "document": "", "signataire": ""}
+voir(refuse(lambda: ges.preparer_relance_signature(nouveau_ctx("commercial"), R13), "pas ouverte"),
+     "⛔ interrupteur `signature_youtrust` = admin : un négociateur est refusé (comme l'écran, où les boutons n'existent pas)")
+resume13, p13 = ges.preparer_relance_signature(nouveau_ctx("admin"), R13)
+voir("Delphine TEST GTI" in resume13 and "@" not in resume13 and p13["provider_signer_id"] == "s2"
+     and p13["signature_request_id"] == "dem-1" and p13["document_id"] == "doc-1",
+     "la relance vise LE signataire invité qui n'a pas signé (pas celle qui a signé, pas le mandataire « pas son tour ») ; "
+     "son e-mail n'est JAMAIS dans la carte (le résumé repart au modèle)")
+voir(not [a for a in appels13 if a["methode"] != "GET"], "PROPOSER n'écrit rien")
+etat13["signers"] = [dict(SIGNERS[1]), {**SIGNERS[0], "status": "notified"}]
+voir(refuse(lambda: ges.preparer_relance_signature(nouveau_ctx("admin"), R13), "précise lequel")
+     and ges.preparer_relance_signature(nouveau_ctx("admin"), {**R13, "signataire": "girinon"})[1]["provider_signer_id"] == "s1",
+     "deux personnes attendent : la carte demande laquelle ; un morceau du nom départage")
+etat13.pop("signers")
+etat13["statut"] = "approval"
+voir(refuse(lambda: ges.preparer_relance_signature(nouveau_ctx("admin"), R13), "Personne à relancer")
+     and "Annuler la signature" in ges.preparer_annulation_signature(nouveau_ctx("admin"), {"hektor_annonce_id": "61398", "document": ""})[0],
+     "une demande en `approval` : PAS de relance (Youtrust la refuserait), mais l'annulation, oui")
+etat13["statut"] = "done"
+voir(refuse(lambda: ges.preparer_annulation_signature(nouveau_ctx("admin"), {"hektor_annonce_id": "61398", "document": ""}), "Aucune signature"),
+     "une signature finie (signée) : rien à annuler")
+etat13.pop("statut")
+appels13.clear()
+r13 = ges.executer_relance_signature(nouveau_ctx("admin"), p13)
+poses = [a for a in appels13 if a["methode"] == "POST"]
+voir(len(poses) == 1 and poses[0]["chemin"] == "app_console_job" and poses[0]["entetes"].get("Authorization") == f"Bearer {JETON}"
+     and poses[0]["corps"]["job_type"] == "youtrust_remind_signer" and poses[0]["corps"]["requested_by"] == UID
+     and poses[0]["corps"]["payload_json"] == {"signature_request_id": "dem-1", "app_console_document_id": "doc-1",
+                                                "document_name": "Mandat de vente - 18420.pdf", "provider_signer_id": "s2"}
+     and r13["travail"] == "job-yt",
+     "au CLIC : le travail de l'écran (poserTravailYoutrust), avec le JETON et la personne comme demandeur")
+appels13.clear()
+etat13["signers"] = [{**SIGNERS[1], "status": "signed"}]
+voir(refuse(lambda: ges.executer_relance_signature(nouveau_ctx("admin"), p13), "plus à relancer")
+     and not [a for a in appels13 if a["methode"] == "POST"],
+     "TÉMOIN : le signataire a signé entre la carte et le clic -> refusé, RIEN envoyé")
+etat13.pop("signers")
+appels13.clear()
+_, pa13 = ges.preparer_annulation_signature(nouveau_ctx("admin"), {"hektor_annonce_id": "61398", "document": "18420"})
+ra13 = ges.executer_annulation_signature(nouveau_ctx("admin"), pa13)
+poses = [a for a in appels13 if a["methode"] == "POST"]
+voir(len(poses) == 1 and poses[0]["corps"]["job_type"] == "youtrust_cancel_signature"
+     and "provider_signer_id" not in poses[0]["corps"]["payload_json"] and ra13["travail"] == "job-yt",
+     "annuler : le travail d'annulation de l'écran, sur la DEMANDE (pas un signataire)")
+etat13["cran"] = "on"
+voir(ges.preparer_relance_signature(nouveau_ctx("commercial"), R13)[1]["provider_signer_id"] == "s2",
+     "interrupteur `on` : ouvert à tous les rôles, comme l'écran")
+etat13.pop("cran")
 
 print(f"\n{ok} contrôles verts")

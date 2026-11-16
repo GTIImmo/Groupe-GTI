@@ -736,3 +736,61 @@ créer une annonce, avis de valeur). Écran : titre « Numéro de mandat (irrév
 « mandant » : elle aurait refusé TOUS les biens. Elle prend maintenant les deux rôles, comme `ROLES_MANDANT` du push.
 **Essais** : 234 + 61 + 73 verts ; témoin inverse (garde « déjà un numéro » retirée → rouge). Build vert.
 **Pas éprouvé en réel** : le clic réserve un VRAI numéro officiel, irréversible — sa décision (bien et moment).
+
+## 31. Carte « numéro de mandat » — EN LIGNE (`5d730d0`) et PROUVÉE SANS VALIDER (16/11, « Oui sans valider »)
+
+Les commits GED dessous avaient été poussés par leur session : seul `5d730d0` est parti. Render `/health` = 5d730d0f4328,
+Vercel servi. Dans son Chrome : « Prépare la carte pour générer le numéro de mandat du bien d'essai 62965 (mandat de vente,
+à partir d'aujourd'hui, 12 mois). C'est un essai : je vais la refuser. » → la carte « Numéro de mandat (irréversible) » :
+« Générer le NUMÉRO DE MANDAT officiel de l'annonce 62965 « TEST C13 cloture mandat - a supprimer » — Mandat de vente, à
+partir du 16/11/2026, 12 mois, avec tacite reconduction ; mandant(s) : Mme. CLAUDE TESTCLAUDE. ⚠ … cela NE SE DÉFAIT
+PAS. » + « Ouvrir l'annonce 62965 » ; le « 1 » sur la maison du rail. ⭐ Le mandant a été trouvé en rôle
+« proprietaire » (la correction du §30 a servi). Le modèle a lui-même redit que c'est irréversible.
+**Refuser** (jamais Valider) → « Refusée à 17:57 », le « 1 » s'éteint. Témoins en base : la carte `refusee`, sans
+résultat ; **0 travail `create_hektor_mandat_auto_number`** depuis 24 h (témoin positif : la même requête en trouve 3 sur
+120 jours, le dernier le 28/08) ; 62965 toujours SANS numéro. Rien réservé chez Hektor, rien écrit en production.
+Le clic « Valider » réel reste à faire le jour d'un vrai mandat, sur sa décision.
+
+## 32. Cartes « signature » (envoyer, relancer, annuler) : AUDIT (16/11, sur « Vas y »), rien codé
+
+**Périmètre** : l'envoi Youtrust, la relance et l'annulation (Youtrust et ImmoSign), dans `lib/api.ts` (~10250-10545),
+`SuiviSignatairesYoutrust.tsx`, `lib/suiviSignataires.ts`, et la base. Pas mesuré : « signé à la main ».
+**Ce que fait l'écran**
+- **Envoyer (Youtrust)** — la FENÊTRE D'ENVOI (A.2 lot 6b) : les signataires viennent de la « photo » du PDF
+  (`metadata_json.signataires_du_pdf`, valide / problèmes / repères attendus), la personne corrige au plus l'e-mail et le
+  portable d'un rang, accepte des écarts, choisit le code du mandataire ; puis le travail `youtrust_send_signature`.
+- **Relancer UN signataire (Youtrust)** — `youtrust_remind_signer` (demande + signataire), seulement si la demande est
+  `ongoing` ET le signataire `notified` (`lib/suiviSignataires.ts`) ; confirmation « Renvoyer le lien de signature à X ».
+- **Annuler la signature (Youtrust)** — `youtrust_cancel_signature`, demande `ongoing` ou `approval` ; le document redevient
+  « à signer ». Les gestes Youtrust ne s'affichent que si l'interrupteur `signature_youtrust` est allumé — **aujourd'hui
+  `admin`** — et le worker les refuse sinon.
+- **ImmoSign** (l'ancien prestataire) : relance `relance_signature`, annulation `cancel_signature_procedure`.
+**Mesuré** : `app_signature_request` = **3 demandes en tout** (2 annulées, 1 signée), la dernière le 06/11 ; en 90 jours :
+4 envois, 2 relances, 2 annulations Youtrust (tous des essais du 05-06/11), 2 annulations ImmoSign, **0 relance ImmoSign** ;
+**aucune demande en cours aujourd'hui**.
+**Le plan proposé**
+- ENVOYER → **par la fenêtre de l'écran** (lot 6) : elle porte la photo du PDF, les corrections et les écarts.
+- RELANCER et ANNULER (Youtrust) → **cartes directes** : mêmes règles (`ongoing` + `notified` ; `ongoing` / `approval`),
+  MÊME interrupteur (`signature_youtrust`, donc admins seuls aujourd'hui), mêmes travaux, la carte NOMME le signataire et
+  le document. ⚠ Ça part chez le signataire (e-mail Youtrust).
+- ImmoSign : laissé (ancien prestataire, 0 relance en 90 jours).
+**Comment on prouvera** : il n'y a AUCUNE demande en cours ; une preuve en réel demande d'abord un envoi de test (un
+document d'essai, signataire à adresse interne), sur sa décision. Sinon : essais hors ligne seulement, preuve plus tard.
+
+## 33. Cartes « relancer un signataire » et « annuler la signature » (Youtrust) : CODÉES (16/11, « on finit les cartes »)
+
+Il a d'abord demandé « pourquoi la nouvelle vue n'est pas sur téléphone ? » : c'est le lot 5 (affichage téléphone à part,
+`MobileLayout`, planches 7-9 bis), pas encore fait ; il a choisi de finir d'abord les cartes.
+**Serveur** (`assistant_gestes.py`, `relance_signature` et `annulation_signature`, tous les rôles SOUS l'interrupteur) :
+`signature_youtrust` relu à chaque carte et au clic (`on` = tous ; `admin` = les admins ; aujourd'hui `admin`) ; les
+signatures Youtrust EN COURS du bien (documents dont `metadata_json.signature.provider = youtrust`, demande
+`app_signature_request` en `ongoing` / `approval`), un morceau du nom du document départage ; relancer = le seul signataire
+`notified` d'une demande `ongoing` (un morceau du nom départage) ; annuler = la demande. Au clic : tout est relu (même
+document, même demande, même signataire encore `notified`), puis le travail de l'écran (`youtrust_remind_signer` /
+`youtrust_cancel_signature`, charge de `poserTravailYoutrust`) avec le jeton de la personne. ⛔ L'e-mail d'un signataire
+n'est JAMAIS dans la carte (le résumé repart au modèle). ImmoSign non ouvert ; l'ENVOI passe par la fenêtre (lot 6).
+Consignes à jour. Écran : titres et fins des deux cartes.
+**Essais** : 244 + 61 + 73 verts (section 13 : interrupteur, choix du signataire, `approval` = annuler mais pas relancer,
+signature finie, charge du travail, témoin « a signé entre la carte et le clic → rien envoyé ») ; témoin inverse (la règle
+`notified` retirée → rouge). Build vert. **Pas éprouvé en réel** : AUCUNE signature n'est en cours (3 demandes en tout,
+dernière le 06/11) ; une preuve demande d'abord un envoi de test, sur sa décision.

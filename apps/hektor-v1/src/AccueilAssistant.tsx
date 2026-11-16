@@ -65,6 +65,8 @@ const GESTES: Record<string, { titre: string; fait: (r: Record<string, unknown>)
   rdv_client: { titre: 'Rendez-vous client', fait: () => 'Rendez-vous posé.' },
   modifier_bien: { titre: 'Bien', fait: () => 'Bien modifié.' },
   numero_mandat: { titre: 'Numéro de mandat (irréversible)', fait: () => 'Numéro demandé à Hektor.', suite: "Il apparaît sur la fiche dès que Hektor l'a réservé." },
+  relance_signature: { titre: 'Relance de signature', fait: () => 'Relance demandée à Youtrust.', suite: 'Le signataire reçoit à nouveau son lien par e-mail.' },
+  annulation_signature: { titre: 'Annuler la signature', fait: () => 'Annulation demandée.', suite: 'Le document redevient « à signer » dans quelques secondes.' },
   couverture_photo: { titre: 'Photos', fait: () => 'Couverture changée.' },
   visibilite_photo: { titre: 'Photos', fait: (r) => (r.visible === true ? 'Photo affichée.' : r.visible === false ? 'Photo masquée.' : 'Photo mise à jour.') },
   deplacer_photo: { titre: 'Photos', fait: () => 'Photo déplacée.' },
