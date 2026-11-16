@@ -269,6 +269,10 @@ export function RecuManque({
     if (!d) return
     const page = pageDe(p)
     setApercu({ cle: p.cle, nom: d.document_name, page, vue: 'lecture' })
+    // au téléphone, l'aperçu s'ouvre SOUS les cartes : on l'amène à l'écran (au bureau, à côté, rien ne bouge)
+    window.requestAnimationFrame(() => document.querySelector('.gm2-apercu')?.scrollIntoView({
+      block: 'nearest', behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+    }))
     try {
       const url = await createConsoleDocumentSignedUrl(d)
       const reponse = await fetch(url)

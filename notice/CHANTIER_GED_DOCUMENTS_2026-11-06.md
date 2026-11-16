@@ -2287,3 +2287,6 @@ de `ac886a6`, et `a7b2dec` porte son message sans ses fichiers. Rien n'a été d
 publié). Le correctif « case verte » est donc EN LIGNE (Vercel READY sur `a7b2dec`) et vu : règle servie, 212 kWh/m²/an
 désormais lu sur la fiche, 2 cartes restantes sur 63147. Leçon : l'index se relit SEUL, puis on commite dans un
 second temps.
+**Remarque du téléphone CORRIGÉE (16/11, « as-tu corrigé ») — rien poussé** : à l'ouverture, l'aperçu est amené à
+l'écran (`scrollIntoView` « au plus près » : au bureau, où il est à côté de la carte, rien ne bouge ; sans glissé sous
+« moins de mouvement »). Build et essais verts. À voir au téléphone après le push.
