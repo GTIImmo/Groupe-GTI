@@ -2258,6 +2258,74 @@ C'etait faux**, et c'est la mesure en base qui l'a dit : les 16 lignes portent l
 geste. Un plan de 234 000 caracteres qui n'est pas coche fait perdre l'etat du chantier,
 et c'est exactement ce qui s'est passe entre le 14 et le 16/11.
 
+### ⛔⛔⛔ ARRET AVANT LES COMPROMIS ANNULES -- UN 6e LECTEUR, ET IL ECRIT CHEZ HEKTOR
+
+**16/11, en enchainant sur la famille suivante.** Les 38 compromis « Annulee » du
+classeur etaient prets a etre poses : la regle [A] du chainage ne les vise pas (elle
+n'itere que sur `sans_date_du_bien`, et les notres portent la date du classeur), et
+l'ecran ne change pas d'etat sur un compromis (`mandatStatutForRegister` ne lit que
+`vente_id`, les statuts clos/vendu et la cloture).
+
+⛔⛔ **MAIS `Console/enqueue_refus_offres_mortes_lot.js` SELECTIONNE LES DOSSIERS SUR
+« COMPROMIS ANNULE » (l. 217 et 226), ET IL N'A AUCUNE GARDE `transaction_origine`.**
+
+```
+   ce que ce script fait : il REFUSE DES OFFRES CHEZ HEKTOR
+   sa source « coherence : compromis annule » retient un dossier des qu'il porte
+     un compromis annule et une offre encore acceptee
+   -> poser 38 compromis annules venus du CLASSEUR, puis relancer ce script, ferait
+      refuser 38 offres CHEZ HEKTOR a cause d'une reprise d'historique
+```
+
+⭐⭐ **C'EST LE 6e LECTEUR DE LA FAMILLE, ET LE PLUS GRAVE DE TOUS.** L'audit du matin
+en avait trouve cinq (la sentinelle, le cockpit, le filet du worker, l'app, les gestes
+de masse) et les avait juges proteges ou corriges. **Celui-ci a ete manque**, et pour une
+raison precise : je cherchais les lecteurs de `present_in_hektor = false`, alors que
+celui-la se declenche sur `state = 'cancelled'` D'UN COMPROMIS. Un critere different,
+donc invisible a ma recherche.
+
+```
+   les autres lecteurs      CRIENT (une alarme) ou AFFICHENT (une phrase fausse)
+   celui-ci                 ECRIT CHEZ HEKTOR
+```
+
+⚠ **ET CE SCRIPT A DEJA FAIT UN DEGAT** : les 20 offres refusees a tort le 11/11
+viennent de lui (« geste de masse sur un chainage incomplet »).
+
+#### L'ETAT MESURE, ET CE QUI RASSURE MALGRE TOUT
+
+```
+   le script est-il PLANIFIE ?        NON -- aucun .ps1 du projet, aucune tache GTI
+                                      -> c'est un geste A LA MAIN, donc rien ne part tout seul
+   declencheurs sur app_affaire_ledger  3, tous pour le calcul des parties
+                                      -> AUCUNE cascade automatique en base
+   dossiers DEJA « compromis annule + offre acceptee »   348
+   offres acceptees concernees                            348
+```
+
+⭐ Donc le danger n'est pas immediat : rien ne se declenche tout seul. **C'est un effet
+de bord DIFFERE** -- il attend qu'un humain relance le lot.
+
+#### ⏰ CE QUI DOIT ETRE FAIT AVANT DE POSER UN SEUL COMPROMIS ANNULE
+
+```
+   poser la garde `transaction_origine` sur enqueue_refus_offres_mortes_lot.js,
+   exactement comme les 5 autres lecteurs : un compromis annule venu du classeur
+   ne doit JAMAIS faire refuser une offre chez Hektor.
+```
+
+⛔ **ET LES 96 OFFRES DEJA POSEES NE SONT PAS CONCERNEES** : elles sont des OFFRES
+`refused`, pas des compromis annules. Le script les ignore (il cherche des offres
+`accepted` a refuser, et une offre refusee n'est pas sa cible). Mesure du 16/11 : les
+11 controles du lot sont restes justes.
+
+⭐ **LA LECON, ET ELLE EST GENERALE** : une famille de lecteurs ne se balaie pas par UN
+critere. J'avais cherche `present_in_hektor`, et le 6e lecteur se declenche sur l'ETAT
+d'une autre transaction de la chaine. **Avant chaque nouvelle famille, il faut refaire
+le balayage AVEC LE CRITERE DE CETTE FAMILLE** -- ici `state = 'cancelled'` pour un
+compromis, `state = 'accepted'` pour une offre « Vente reglee », et l'existence d'une
+vente pour les 39 ventes.
+
 ### ⬜ CE QUI RESTE, DANS L'ORDRE CONTRAINT
 
 ```

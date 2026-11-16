@@ -199,7 +199,7 @@ async function main() {
     let apres = 0;
     for (;;) {
       const page = await rest("app_affaire_ledger?select=app_affaire_id,app_chaine_id,kind,state,"
-        + "hektor_annonce_id,hektor_affaire_id,present_in_hektor"
+        + "hektor_annonce_id,hektor_affaire_id,present_in_hektor,transaction_origine"
         + "&app_chaine_id=not.is.null"
         + `&app_affaire_id=gt.${apres}&order=app_affaire_id.asc&limit=1000`);
       if (!page.length) break;
@@ -209,6 +209,26 @@ async function main() {
     const parChaine = new Map();
     for (const t of lignes) {
       if (!vivante(t)) continue;
+      // ⛔⛔ LA GARDE DE L'ORIGINE -- C.19-d, 16/11/2026. CE SCRIPT ECRIT CHEZ HEKTOR.
+      //   Une transaction REPRISE DU CLASSEUR n'a jamais existe chez Hektor : elle ne
+      //   doit donc ni declencher un refus, ni en etre la cible.
+      //   ⛔ SANS CETTE LIGNE, poser les compromis « Annulee » du classeur suffirait a
+      //     faire refuser, A LA PROCHAINE RELANCE DU LOT, les offres acceptees de leurs
+      //     dossiers -- CHEZ HEKTOR, sur la foi d'une reprise d'historique. Et poser
+      //     plus tard les offres « Vente reglee » (state 'accepted') les rendrait
+      //     elles-memes CIBLES d'un refus chez Hektor, ou elles n'existent pas.
+      //   ⚠ `vivante(t)` ne protege PAS : elle ecarte « porte un numero ET absente de
+      //     Hektor », or nos lignes n'ont PAS de numero -- elles passent donc pour
+      //     vivantes. Mesure du 16/11.
+      //   ⭐ C'est le 6e lecteur de la famille `transaction_origine`, et LE SEUL QUI
+      //     ECRIT CHEZ HEKTOR. Les cinq autres crient ou affichent : la sentinelle
+      //     data.transaction_disparue, la vue app_affaires_sans_numero_hektor, le filet
+      //     poserNumerosManquants, l'ecran, et le filet du cockpit
+      //     (export_app_payload.py). Il avait ete manque le matin du 16/11 parce que le
+      //     balayage cherchait `present_in_hektor`, alors que celui-ci se declenche sur
+      //     l'ETAT d'une autre transaction de la chaine.
+      //   ⚠ Et ce script a deja fait un degat : les 20 offres refusees a tort le 11/11.
+      if (String(t.transaction_origine || "").trim() !== "") continue;
       if (!parChaine.has(t.app_chaine_id)) parChaine.set(t.app_chaine_id, []);
       parChaine.get(t.app_chaine_id).push(t);
     }

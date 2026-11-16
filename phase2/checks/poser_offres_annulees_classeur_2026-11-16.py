@@ -78,9 +78,52 @@ import check_gti_health as cgh                                      # noqa: E402
 
 RAPPORT = RACINE / "notice" / "A4_RAPPORT_GEL_TOUS_LES_CHAMPS_2026-11-16.csv"
 SORTIE = RACINE / "supabase"
-BASE = "patch_offres_annulees_classeur_2026-11-16"
 MARQUE = "classeur"
 LOT_API = 60
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# LES FAMILLES. Une par (role, etat au classeur) -- le decoupage de Frederic du
+# 16/11 : on pose famille par famille, et on juge une nuit entre chaque.
+#   `state` est choisi pour ce qu'il DECLENCHE, jamais par analogie :
+#     offre 'refused'      -> aucune des 4 regles de chainage (eprouve, essai A2)
+#     compromis 'cancelled'-> la regle [A] ne vise que les compromis SANS DATE
+#                             (affaire_ledger.py, « for ... in sans_date_du_bien »),
+#                             et les notres portent la date du classeur
+# ═══════════════════════════════════════════════════════════════════════════════
+# ⛔⛔ `lot` EST LE LIBELLE ECRIT DANS payload_json.classeur_lot, ET IL NE DOIT
+#   JAMAIS CHANGER UNE FOIS LE LOT POSE : c'est par lui que l'INVERSE retrouve
+#   ses lignes. Celui des offres annulees est « offres annulees » AVEC UNE ESPACE,
+#   parce que c'est ce que le patch joue le 16/11 a ecrit dans les 96 lignes.
+#   Le parametrer sur la cle (« offres-annulees », avec un tiret) aurait rendu le
+#   retour arriere AVEUGLE -- defaut attrape avant d'ecrire, le 16/11.
+FAMILLES = {
+    "offres-annulees": {
+        "colonne": "Offre Achat", "role": "offre", "etat": "Annulée",
+        "state": "refused", "base": "patch_offres_annulees_classeur_2026-11-16",
+        "lot": "offres annulees",
+        "pourquoi": "aucune des 4 regles de chainage ne se declenche"},
+    "compromis-annules": {
+        "colonne": "Compromis", "role": "compromis", "etat": "Annulée",
+        "state": "cancelled", "base": "patch_compromis_annules_classeur_2026-11-16",
+        "lot": "compromis annules",
+        "pourquoi": "la regle [A] ne vise que les compromis SANS DATE"},
+    "compromis-en-attente": {
+        "colonne": "Compromis", "role": "compromis", "etat": "Compromis en attente",
+        "state": "active", "base": "patch_compromis_en_attente_classeur_2026-11-16",
+        "lot": "compromis en attente",
+        "pourquoi": "aucune regle ne vise un compromis actif"},
+}
+FAMILLE = (sys.argv[1] if len(sys.argv) > 1 else "offres-annulees")
+if FAMILLE not in FAMILLES:
+    raise SystemExit("⛔ famille inconnue : %s\n   au choix : %s"
+                     % (FAMILLE, ", ".join(FAMILLES)))
+F_COLONNE = FAMILLES[FAMILLE]["colonne"]
+F_ROLE = FAMILLES[FAMILLE]["role"]
+F_ETAT = FAMILLES[FAMILLE]["etat"]
+F_STATE = FAMILLES[FAMILLE]["state"]
+F_LOT = FAMILLES[FAMILLE]["lot"]
+F_POURQUOI = FAMILLES[FAMILLE]["pourquoi"]
+BASE = FAMILLES[FAMILLE]["base"]
 
 
 def client():
@@ -126,23 +169,23 @@ def main() -> int:
     etape = Counter()
     cibles = []
     for l in lignes:
-        if not (l.get("v_Offre Achat") or "").strip().lower().startswith("classeur seul"):
+        if not (l.get("v_" + F_COLONNE) or "").strip().lower().startswith("classeur seul"):
             continue
-        etape["① le classeur a une date d'offre, nous rien"] += 1
-        if "offre" in (l.get("roles geles") or "").lower():
-            etape["   ecartee : une offre est DEJA reliee a cette ligne"] += 1
+        etape["① le classeur a une date, nous rien"] += 1
+        if F_ROLE in (l.get("roles geles") or "").lower():
+            etape["   ecartee : un %s est DEJA relie a cette ligne" % F_ROLE] += 1
             continue
-        etape["② et le role « offre » manque vraiment"] += 1
-        if (l.get("c_Etat Actuel") or "").strip() != "Annulée":
-            etape["   ecartee : l'etat du classeur n'est pas « Annulee »"] += 1
+        etape["② et le role « %s » manque vraiment" % F_ROLE] += 1
+        if (l.get("c_Etat Actuel") or "").strip() != F_ETAT:
+            etape["   ecartee : l'etat du classeur n'est pas « %s »" % F_ETAT] += 1
             continue
-        etape["③ etat « Annulee » -> state 'refused', aucune regle de chainage"] += 1
+        etape["③ etat « %s » -> state '%s' : %s" % (F_ETAT, F_STATE, F_POURQUOI)] += 1
         if (l.get("chainage douteux") or "").strip().lower() not in ("", "0", "non", "false"):
             etape["   ecartee : chainage DOUTEUX (decouverte 7 du rapport)"] += 1
             continue
         etape["④ et le chainage n'est pas douteux"] += 1
         cibles.append({"id_unique": l["ID Unique"],
-                       "date": (l.get("c_Offre Achat") or "").strip(),
+                       "date": (l.get("c_" + F_COLONNE) or "").strip(),
                        "acquereur": (l.get("c_Acquereur") or "").strip(),
                        "mandat": (l.get("Mandat classeur") or "").strip()})
 
@@ -194,7 +237,7 @@ def main() -> int:
                      % (len(ch), len(an))] += 1
             continue
         if not c["date"]:
-            ecartees["pas de date d'offre au classeur"] += 1
+            ecartees["pas de date au classeur"] += 1
             continue
         c.update(chaine=ch.pop(), annonce=an.pop(),
                  dossier=(do.pop() if len(do) == 1 else None),
@@ -244,7 +287,7 @@ def main() -> int:
                     "app_chaine_id", [c["chaine"] for c in pretes])
     dates_par_chaine: dict[str, set[str]] = {}
     for r in deja:
-        if str(r.get("kind")) == "offre":
+        if str(r.get("kind")) == F_ROLE:
             dates_par_chaine.setdefault(str(r["app_chaine_id"]), set()).add(
                 str(r.get("date") or "")[:10])
     avant, ecartees_date = len(pretes), []
@@ -356,13 +399,13 @@ posees as (
     transaction_origine,
     payload_json, first_seen_at, last_seen_at)
   select nextval('app_affaire_id_app_seq'), d.chaine, d.dossier,
-         'offre', 'refused', d.dt,
+         '%(role)s', '%(state)s', d.dt,
          d.annonce, null, false,
          d.dossier_uuid, d.dossier_numero,
          '%(marque)s',
          jsonb_build_object(
            'classeur_id_unique', d.id_unique,
-           'classeur_lot', 'C5 lot B -- offres annulees',
+           'classeur_lot', 'C5 lot B -- %(lot)s',
            'classeur_pose_le', '2026-11-16',
            'etat_au_classeur', 'Annulee'),
          now(), now()
@@ -396,7 +439,7 @@ begin
 
   select count(*) into sans_marque from app_affaire_ledger
    where transaction_origine = '%(marque)s'
-     and (kind <> 'offre' or state <> 'refused' or present_in_hektor
+     and (kind <> '%(role)s' or state <> '%(state)s' or present_in_hektor
           or hektor_affaire_id is not null or app_chaine_id is null);
   if sans_marque <> 0 then
     raise exception 'ARRET : %%s ligne(s) posees ne respectent pas la forme attendue', sans_marque;
@@ -429,7 +472,8 @@ select kind, state, present_in_hektor, transaction_origine,
 
 commit;
 """ % {"n": len(pretes), "valeurs": ",\n".join(valeurs), "notes": ",\n".join(notes),
-       "marque": MARQUE, "base": BASE}
+       "marque": MARQUE, "base": BASE, "role": F_ROLE, "state": F_STATE,
+       "famille": FAMILLE, "lot": F_LOT, "etat": F_ETAT, "pourquoi": F_POURQUOI}
 
     inverse = """-- ════════════════════════════════════════════════════════════════════════════
 -- RETOUR ARRIERE DES %(n)d OFFRES « ANNULEE » DU CLASSEUR -- 16/11/2026
@@ -449,18 +493,18 @@ begin;
 select count(*) as a_retirer
   from app_affaire_ledger
  where transaction_origine = '%(marque)s'
-   and (payload_json ->> 'classeur_lot') = 'C5 lot B -- offres annulees';
+   and (payload_json ->> 'classeur_lot') = 'C5 lot B -- %(lot)s';
 
 -- ── les notes d'abord (elles pointent les lignes)
 delete from app_affaire_note
  where origine = '%(marque)s'
    and app_affaire_id in (select app_affaire_id from app_affaire_ledger
                            where transaction_origine = '%(marque)s'
-                             and (payload_json ->> 'classeur_lot') = 'C5 lot B -- offres annulees');
+                             and (payload_json ->> 'classeur_lot') = 'C5 lot B -- %(lot)s');
 
 delete from app_affaire_ledger
  where transaction_origine = '%(marque)s'
-   and (payload_json ->> 'classeur_lot') = 'C5 lot B -- offres annulees';
+   and (payload_json ->> 'classeur_lot') = 'C5 lot B -- %(lot)s';
 
 -- ── LES CONTROLES DU RETOUR ARRIERE
 do $$
@@ -470,7 +514,7 @@ declare
   hors_plage integer;
 begin
   select count(*) into reste from app_affaire_ledger
-   where (payload_json ->> 'classeur_lot') = 'C5 lot B -- offres annulees';
+   where (payload_json ->> 'classeur_lot') = 'C5 lot B -- %(lot)s';
   if reste <> 0 then
     raise exception 'ARRET : il reste %%s ligne(s) du lot -- le retour est INCOMPLET', reste;
   end if;
@@ -491,7 +535,7 @@ begin
 end $$;
 
 commit;
-""" % {"n": len(pretes), "marque": MARQUE}
+""" % {"n": len(pretes), "marque": MARQUE, "famille": FAMILLE, "lot": F_LOT}
 
     repetition = """-- ════════════════════════════════════════════════════════════════════════════
 -- CONTROLES DES %(n)d OFFRES « ANNULEE » -- 16/11/2026 . A REJOUER QUAND ON VEUT
@@ -502,9 +546,9 @@ commit;
 select 'posees' as controle, count(*) as valeur, '%(n)d attendues' as attendu
   from app_affaire_ledger where transaction_origine = '%(marque)s'
 union all
-select 'toutes en offre/refused', count(*), '%(n)d'
+select 'toutes en %(role)s/%(state)s', count(*), '%(n)d'
   from app_affaire_ledger
- where transaction_origine = '%(marque)s' and kind = 'offre' and state = 'refused'
+ where transaction_origine = '%(marque)s' and kind = '%(role)s' and state = '%(state)s'
 union all
 select 'toutes sans numero Hektor', count(*), '%(n)d'
   from app_affaire_ledger
@@ -547,7 +591,8 @@ union all
 select 'ce que voit data.affaire_sans_numero_hektor', count(*), '0'
   from app_affaires_sans_numero_hektor
 order by 1;
-""" % {"n": len(pretes), "marque": MARQUE}
+""" % {"n": len(pretes), "marque": MARQUE, "role": F_ROLE, "state": F_STATE,
+       "famille": FAMILLE, "lot": F_LOT}
 
     (SORTIE / (BASE + ".sql")).write_text(patch, encoding="utf-8")
     (SORTIE / (BASE + "_INVERSE.sql")).write_text(inverse, encoding="utf-8")
