@@ -151,31 +151,54 @@ L ETAT DES ECARTS       8 494 au total sur 4 702 lignes rattachees, dont ~5 480 
                         Acquereur 113, Vendeur 64, Etat 71, product_ref 70).
 LES TRANSACTIONS        le Sheet 12 634 dates . nous 12 393 . IL MANQUE 241
    MANQUANTES           144 offres . 62 compromis . 35 ventes      (98,1 % deja chez nous)
+   ⛔⛔ ET « 241 » N'EST PAS UN NOMBRE DE CREATIONS — note du 16/11, apres avoir
+      dit « les 241 » toute une journee comme s'il s'agissait d'un seul lot :
+        C5 lot B  215 creations franches  144 offres + 62 compromis + 9 ventes
+        C6 lot C   26 ventes  dont NOTRE compromis porte DEJA une autre date
+                   d acte -> ⛔ C'EST UN CONFLIT, PAS UN VIDE -> SA DECISION
+      215 + 26 = 241. Le total est juste, le mot « creations » ne l'est pas.
+   ⚠ ET LE DECOUPAGE SUR est donne par A4 lui-meme : « les offres et compromis
+      n'ont pas ce risque » -> 144 + 62 = 206 posables apres A2 (fait), et les
+      9 ventes du lot B attendent A4 (l'effet de bord d'une vente creee).
+   ⛔⛔ ET CETTE NOTE-CI ETAIT FAUSSE, retiree le 16/11 : j'avais ecrit « ce
+      comptage date du 31/10, a remesurer ». NON -- le plan dit lui-meme, plus bas,
+      « ✅ LE RESTE EST STABLE : les chiffres de 3.3 sont CONFIRMES AU 15/11 ».
+      Les 241 (144 + 62 + 35) sont donc a jour. J'ai fabrique une peremption qui
+      n'existait pas, et c'est exactement ce que Frederic a senti en disant
+      « tu dois te melanger ».
                         + 10 transactions presentes SANS leur date (4 offres, 6 compromis)
 ```
 
 ### PHASE A — MESURER. **Rien d'ecrit en base.**
 
 ```
-A0 ⬜  RELANCER LE RAPPORT DU GEL -- une commande, et c'est le PREMIER geste.
-       Il remet a jour TOUS les chiffres. ⚠ Pourcentage 1 affiche encore 48 ecarts
-       et Negociateur 1 dix-huit, alors que le lot 1 a ete pose les 13-14/11 : le
-       rapport du 14/11 a pu etre produit AVANT la pose. Tant qu'il n'est pas
-       relance, LE LOT 1 N'EST PAS CLOS A 100 %.
+A0 ✅  RELANCER LE RAPPORT DU GEL -- FAIT LE 16/11, voir « A0 EST FAIT ».
+       ⭐ IL A FAIT EXACTEMENT SON TRAVAIL : les « 241 » venaient du rapport du
+       13/11, pris PENDANT la pose du lot 1. Le chiffre a jour est 281
+       (174 offres + 68 compromis + 39 ventes), STABLE depuis 3 jours.
+       ⛔ ET LES 48 ECARTS DE Pourcentage 1 SONT CONFIRMES : le soupcon etait
+       juste dans l'autre sens -- le rapport n'etait pas premature, les ecarts
+       sont REELS. LE LOT 1 N'EST DONC PAS CLOS A 100 %.
+       ⚠ le lancer avec `-X utf8`, sinon il tombe (UnicodeEncodeError l. 587).
 A1 ⬜  LIRE LE SHEET sur les 8 colonnes que le rapport NE COUVRE PAS :
        F G Y AA Z AH AI AJ. Le rapport ne porte que 21 colonnes sur 38 -> pour ces
        huit, je n'ai AUCUN ecart mesure, seulement les comptages du 02/11.
-A2 ⬜  L'ESSAI D'UNE NUIT (= 3.3zero). Une transaction dans la plage app, SANS
+A2 ✅  FAIT -- pose le 15/11, JUGE le 16/11 au matin (1 . 340 . 30 817, voir
+       « LE VERDICT DU MATIN »). C'est lui qui a debloque tout le reste.
+       L'ESSAI D'UNE NUIT (= 3.3zero). Une transaction dans la plage app, SANS
        numero Hektor, sur un bien NON VIVANT. Mesure au matin **sur LES DEUX
        bases** (Supabase ET phase2.sqlite). ⛔ OBLIGATOIRE : aucune ligne de la
        plage n'a jamais vecu sans numero Hektor, et 3 ont disparu sans trace.
 A3 ⬜  LA FENETRE DU SHEET : l'apparieur ne lit que `A1:AL6000`. Le classeur en
        portait 4 783 -> ~1 200 lignes de marge, puis PERTE SILENCIEUSE du bas.
        Idem pour toute colonne a droite de AL. Ecrit le 31/10, jamais corrige.
-A4 ⬜  L'EFFET DE BORD D'UNE VENTE CREEE : chez nous c'est la vente qui fait
-       passer un dossier a l'etat VENDU. Mesurer ce que deplacent 35 ventes neuves
-       (etat affiche, pilotage, statistiques, chainage) AVANT de les poser.
-       ⭐ Les offres et compromis n'ont pas ce risque.
+A4 ✅  L'EFFET DE BORD D'UNE VENTE CREEE -- FAIT LE 16/11, voir « A4 EST FAIT ».
+       LE MECANISME : App.tsx:8321, `vente_id` SUFFIT a afficher « Vendu ».
+       L'AMPLEUR : vivier 967 lignes / 856 annonces, dont 706 deja hors du parc
+       (aucun effet) et 150 VIVANTES -- dont 111 affichees « Actif ».
+       ⛔ CONCLUSION : les ventes NE SE POSENT PAS EN MASSE. Les lister, poser
+       celles dont le bien est hors du parc, soumettre les autres une par une.
+       ⭐ Les offres et compromis n'ont pas ce risque -> les 206 restent posables.
 A5 ⬜  LES 1 062 LIGNES SANS ROLE 'vente' -- prealable de 3.4 : ou va la valeur
        de Y / AA quand la transaction qui devrait la porter n'existe pas ?
 A6 ⬜  LES 85 LIGNES NON RATTACHEES : notre base n'en garde que l'identifiant.
@@ -723,6 +746,12 @@ l'acquereur. Abstention declaree sinon (`sans_acquereur`, `plusieurs_lignes_orph
 (`present_in_hektor is false`), et **son message est FAUX** — *« Hektor ne la rend plus »*
 alors qu'elle **n'y a jamais ete**. Un negociateur y lira une perte de donnee.
 
+⛔⛔ **CE PARAGRAPHE EST FAUX, ET IL EST DEMOLI PLUS BAS** — voir « RECTIFICATION DU
+15/11 — LE "DEFAUT DU POINT 2" ETAIT FAUX, ET L'ECRAN SAIT DEJA ». Le test du **numero**
+passe AVANT celui de `present_in_hektor`, donc le message rendu est le BON ; et l'ecran
+exige **un numero** pour afficher « plus dans Hektor ». Le renvoi est pose le 16/11 :
+les deux textes cohabitaient, et qui lisait celui-ci sans lire l'autre croyait au defaut.
+
 #### POINT 3 — « garder la securite » : elle existe, et il ne faut PAS l'eteindre
 
 ```
@@ -785,6 +814,12 @@ PIECE 5  26bis-TRANSACTIONS -- la recopie de la doublure vers le registre LOCAL,
 
 **L'ORDRE EST CONTRAINT** : la piece 1 **avant toute ecriture des 241**, puis 2, 3, 4.
 La piece 5 peut venir avant ou apres.
+
+⚠ **RELU LE 16/11 : CETTE PHRASE EST ANTERIEURE A LA SIMPLIFICATION.** La piece 4 est
+devenue **« cosmetique, pas bloquant »** (voir « LA PROPOSITION SE SIMPLIFIE DONC
+BEAUCOUP » : elle se reduit a UN MOT, « n'existe pas *encore* chez Hektor » ->
+« n'existe pas chez Hektor »). L'ordre reellement contraint est donc **1, 2, 3 avant
+toute ecriture**, et les pieces 1-2-3 sont POSEES depuis le 15/11.
 
 ⚠ **CE QUE JE NE TRANCHE PAS, ET QUI EST A LUI** : faut-il laisser
 `present_in_hektor = false` sur les 241 ? C'est ce que fait l'app a chaque clic, donc
@@ -978,6 +1013,22 @@ tous les cas d'un coup.
 
 
 ### ✅⭐⭐ LA PIECE 4 (26bis-TRANSACTIONS) EST ECRITE ET EPROUVEE — 15/11/2026
+
+⛔⛔ **ATTENTION, NUMEROTATION — note posee le 16/11, et ON NE RENUMEROTE PAS.** Dans la
+liste des cinq pieces (« LA SOLUTION PROPOSEE — DECLARER L'EXCLUSION »), **26bis est la
+PIECE 5**, et la **PIECE 4** est *le message de l'ecran*. Cette section et celles qui
+suivent l'appellent « la piece 4 » — c'est le nom sous lequel elle a ete travaillee les
+15 et 16/11, et il est garde parce que le code, la memoire et les messages de commit y
+renvoient. **Quand on lit « la piece 4 » apres cette ligne, il s'agit de 26bis.**
+⭐ L'ETAT REEL DES CINQ, mesure le 16/11 :
+
+```
+   1 la marque                 POSEE 15/11      3 le filet du worker   POSE 15/11
+   2 la sentinelle (la vue)     POSEE 15/11      5 26bis, la recopie    POSEE 15-16/11
+   4 le message de l ecran      ⏰ RESTE -- « cosmetique, pas bloquant » : un seul MOT,
+     « n existe pas ENCORE chez Hektor » -> « n existe pas chez Hektor », et seulement
+     pour une ligne marquee. A TRANCHER PAR FREDERIC, rien ne l'attend.
+```
 
 **L'AUDIT A CHANGE L'ENONCE.** Mesure du 15/11, lecture seule :
 
@@ -1776,6 +1827,437 @@ se taira proprement au lieu de crier.
 **Le retour en arriere** : la sauvegarde datee pour le local, et
 `patch_essai_a2_plage_app_2026-11-15.sql` pour Supabase.
 
+### ✅⭐⭐ A4 EST FAIT -- L'EFFET DE BORD D'UNE VENTE CREEE (16/11, lecture seule)
+
+**Son enonce** : « chez nous c'est la vente qui fait passer un dossier a l'etat VENDU.
+Mesurer ce que deplacent 35 ventes neuves (etat affiche, pilotage, statistiques,
+chainage) AVANT de les poser. ⭐ Les offres et compromis n'ont pas ce risque. »
+
+#### 1. LE MECANISME : UNE SEULE LIGNE DE CODE, ET ELLE NE REGARDE RIEN D'AUTRE
+
+```
+   App.tsx:8321   if (item.vente_id || status.includes('vendu') || ...) return 'Vendu'
+```
+
+⛔ **`vente_id` SUFFIT.** Pas besoin d'un statut Hektor, pas besoin d'une date : la
+seule EXISTENCE d'une ligne `kind='vente'` fait afficher « Vendu ». C'est exactement le
+risque que A4 devait nommer, et il est **structurel**, pas conditionnel.
+
+#### 2. LES LECTEURS, LES QUATRE DIMENSIONS
+
+```
+   etat affiche    App.tsx:8321 (MandatStatutValue) + la vue app_v_mandat_statut
+                   App.tsx:433 « Vendu ou Clos » = historique
+                   audit_annonce_detail_coverage.py:23 HISTORICAL_STATUSES
+   pilotage        patch_pilotage_par_nego_2026-11-04 . patch_pilotage_limites_
+                   2026-11-03 . patch_pilotage_acquereurs_affaires_2026-11-03
+   statistiques    portees par ces memes vues de pilotage
+   chainage        une vente REJOINT la chaine de son compromis quand il existe,
+                   sinon elle en cree une (regle C « vente seule », V2)
+   + CINQ VUES lisent une vente : app_annonces_current . app_dossiers_current
+     app_contact_relations_current . app_registre_mandats_current . app_v_mandat_statut
+```
+
+#### 3. L'AMPLEUR, MESUREE -- ET C'EST LA QUE A4 TRANCHE
+
+⚠ **LE VIVIER N'EST PAS LES 35** : on ne peut pas lister les 35 ventes manquantes sans
+le Sheet. On mesure donc le MAJORANT -- toutes les lignes du classeur qui n'ont pas de
+vente chez nous -- et les 35 en sont un sous-ensemble.
+
+```
+   lignes du classeur liees                         4 702
+     dont elles ont DEJA une vente                  3 735
+     dont SANS vente chez nous                        967   <- le vivier
+          avec un compromis 656 . offre seule 311
+   annonces concernees                                856
+     deja HORS du parc vivant                         706   <- aucun effet de bord
+     ENCORE VIVANTES                                  150   <- tout le risque est la
+          et AUCUNE n'a de vente (c'est coherent :
+          un bien vivant n'est pas vendu)
+```
+
+⛔⛔ **CE QUE CES 150 AFFICHENT AUJOURD'HUI, et qui changerait** :
+
+```
+   Actif            111   <- EN VENTE AUJOURD'HUI
+   Echu              31
+   (aucun statut)     5
+   Clos               5
+```
+
+⭐ **ET LE DETAIL DE CE QUE PORTE CHAQUE LIGNE** (⚠ ici l'unite est LA LIGNE DU
+CLASSEUR, pas l'annonce : 124 lignes pour 111 annonces « Actif », car une annonce peut
+porter plusieurs lignes -- ne pas additionner les deux tableaux) :
+
+```
+   bien « Actif »  + la ligne a un COMPROMIS chez nous      70 lignes
+   bien « Actif »  + la ligne n a qu une OFFRE              54 lignes
+   bien « Echu »   + compromis 29 . offre seule 11
+   bien « Clos »   + compromis  5 . offre seule  1
+```
+
+#### ⛔⛔ LA CONCLUSION DE A4 : LES VENTES NE SE POSENT PAS EN MASSE
+
+Une vente posee sur un bien affiche **« Actif »** le fait sortir du parc actif, des
+listes de biens a vendre et du pilotage -- d'un seul coup, sans qu'aucun humain l'ait
+decide. Et deux lectures opposees sont possibles pour chacune :
+
+```
+   SOIT le classeur a raison -> le bien EST vendu, notre base est EN RETARD, et poser
+        la vente est une CORRECTION precieuse
+   SOIT le lien est FAUX     -> on abime un bien VIVANT, et personne ne le verra
+```
+
+⛔ **On ne peut pas trancher sans regarder ligne par ligne.** C'est la reponse de A4 :
+les 9 ventes du lot B (et les 26 du lot C) **ne sont pas posables en masse**. Il faut
+les LISTER, puis ne poser que celles dont le bien est deja hors du parc vivant, et
+soumettre les autres a Frederic une par une.
+
+⭐⭐ **ET A4 CONFIRME LE DECOUPAGE** : les **144 offres + 62 compromis = 206** n'ont
+aucun de ces lecteurs -- aucune de ces vues ne bascule sur une offre ou un compromis.
+Elles restent posables des que le comptage aura ete remesure.
+
+#### ⛔⛔ ET J'AI PRESENTE UN MAJORANT COMME SI C'ETAIT L'EFFET -- corrige le 16/11
+
+**Mon tort, dit simplement** : j'ai annonce « 111 biens Actif basculeraient », alors que
+**les ventes manquantes ne sont que 35 EN TOUT**. Mon 111 est un majorant **trois fois
+plus grand que la population entiere** : il compte TOUTES les lignes du classeur sans
+vente chez nous, que le Sheet en porte une date ou pas. C'etait alarmiste et faux comme
+prevision.
+
+```
+   ce que j ai mesure (le vivier)     967 lignes . 856 annonces . 150 vivantes . 111 « Actif »
+   ce dont on parle vraiment           35 ventes au total (9 en C5 + 26 en C6)
+   -> L EFFET REEL est donc entre 0 et 35 annonces, et au plus 35 - (celles deja
+      hors du parc). Le 111 ne borne rien d utile : il est plus grand que 35.
+```
+
+⭐ **CE QUE LA MESURE GARDE DE VALABLE, et c'est l'essentiel de A4** :
+  . LE MECANISME est prouve -- `vente_id` seul suffit a afficher « Vendu » ;
+  . les LECTEURS sont nommes (etat, 3 vues de pilotage, 5 vues `current`, chainage) ;
+  . et le risque EXISTE bel et bien, puisque **82 % du vivier est deja hors du parc
+    vivant** (706 / 856) mais **18 % ne l'est pas** -- donc une vente du classeur PEUT
+    tomber sur un bien vivant, et il faut le verifier ligne par ligne.
+  ⛔ La conclusion de A4 ne change pas : **on ne pose pas les ventes en masse.** Ce qui
+    change, c'est l'ampleur annoncee : au plus 35, pas 111.
+
+⏰ **CE QUI RESTE A MESURER, ET QUI DEMANDE LE SHEET** : lesquelles des 35 ventes
+touchent un bien encore « Actif ». C'est un comptage exact, pas un majorant.
+
+### ✅⭐⭐⭐ A0 EST FAIT -- 16/11, ET IL EXPLIQUE L'ECART SUR LES 241
+
+**Frederic : « pourquoi tu reviens sur le plan ? s'il y a une difference, mesure,
+analyse, audite et explique-moi ».** Il a raison : je n'avais pas a douter du plan, mais
+a executer A0, qui dit lui-meme « il remet a jour TOUS les chiffres ». C'est fait, et
+l'explication est nette.
+
+#### LA MESURE : LE MEME COMPTAGE, SUR TOUS LES RAPPORTS DU GEL
+
+```
+   date        lignes    « classeur seul »          A CREER (le role manque)
+                        offre  compro  vente      offre  compro  vente  TOTAL
+   29/10        4680      188    106     32        188     99     32    319
+   09/11        4679      178    113     39        178    106     39    323
+   13/11        4702      151     66     37        147     58     37    242   <- LES « 241 »
+   14/11        4702      178     75     38        174     67     38    279
+   15/11        4702      178     75     38        174     67     38    279
+   16/11        4702      178     76     39        174     68     39    281   <- AUJOURD HUI
+```
+
+#### ✅ 1. LE PLAN ET MOI MESURONS LA MEME CHOSE -- aucun desaccord de methode
+
+Le plan ecrit « Offre Achat 178 . Compromis 75 . Vente Fixee 38 ». C'est **exactement**
+la ligne du 14/11 et du 15/11. La mesure du plan est donc juste, et la mienne aussi :
+nous lisons le meme rapport, le meme champ.
+
+#### ⭐⭐ 2. LES « 241 » VIENNENT DU RAPPORT DU 13/11 -- un etat TRANSITOIRE
+
+Mon comptage sur le rapport du 13/11 rend **242**, a une unite des 241 annonces. Or le
+rapport du 13/11 a ete produit **a 16:28, PENDANT la pose du lot 1** (posee les 13 et
+14/11). C'est donc une photo prise au milieu du geste.
+
+⭐ **ET LE PLAN LE SOUPCONNAIT DEJA**, c'est ecrit dans A0 lui-meme : *« Pourcentage 1
+affiche encore 48 ecarts et Negociateur 1 dix-huit, alors que le lot 1 a ete pose les
+13-14/11 : le rapport du 14/11 a pu etre produit AVANT la pose. Tant qu'il n'est pas
+relance, LE LOT 1 N'EST PAS CLOS A 100 %. »* **A0 existait exactement pour ca.**
+
+#### ✅ 3. LE CHIFFRE EST STABLE DEPUIS TROIS JOURS -> IL EST FIABLE
+
+279 le 14/11, 279 le 15/11, **281 le 16/11**. Deux de plus en deux jours, et le classeur
+a gagne 6 lignes dans le meme temps. Ce n'est pas un chiffre qui derive : c'est un
+chiffre vivant, et **281 est celui d'aujourd'hui**.
+
+```
+   LE CHIFFRE A JOUR, 16/11/2026
+      174 offres + 68 compromis + 39 ventes = 281 transactions a creer
+      dont 2 a SAUTER pour chainage douteux (1 offre, 1 vente) -> 279 nettes
+      et le decoupage de A4 tient toujours :
+         174 offres + 68 compromis = 242 posables (aucun lecteur risque)
+          39 ventes                = a regarder une par une (effet « VENDU »)
+```
+
+⚠ **LE LOT B / LOT C RESTE A REDECOUPER** : les « 215 + 26 » de C5/C6 ont ete etablis
+sur le rapport du 13/11. Le tri fin (« 9 ventes : 5 a la meme date d'acte, 2 sans date,
+2 sans compromis ») doit etre refait sur les 39 ventes d'aujourd'hui. **C'est le seul
+travail qui reste avant d'ecrire**, et il est en lecture seule.
+
+#### ⛔⛔ 4. UNE QUESTION OUVERTE, DECLAREE ET NON TRANCHEE
+
+Entre le 13/11 (242) et le 14/11 (279), le nombre a creer a **monte de 37**, alors qu'on
+venait de POSER le lot 1. Poser devrait faire BAISSER les manques, pas les augmenter.
+Trois pistes, aucune mesuree :
+
+```
+   a  le rapport du 13/11 est pris AU MILIEU de la pose -> ses 242 sont incomplets
+   b  les 20 offres refusees a tort le 11/11 et le chainage corrige le 12/11 ont
+      deplace des dates d'offre (« la date d'une offre refusee EST la date du refus »)
+   c  le re-gel additif du 13/11 a rattache 23 lignes de plus (4 679 -> 4 702)
+```
+
+⚠ Cette question ne bloque pas les offres et compromis, mais elle doit etre tranchee
+avant de toucher aux ventes.
+
+#### ✅ 5. CE QUE A0 CONFIRME PAR AILLEURS
+
+```
+   Pourcentage 1   48 ecarts   -> CONFIRMES : le lot 1 n'est PAS clos a 100 %
+   Negociateur 1   19 ecarts   (le plan en annoncait 18)
+   lignes NON RATTACHEES  87   -> identique au plan ✅
+   anciens negociateurs    13 des 14 sont DESORMAIS dans l'annuaire ;
+                           ⛔ seul PITIOT reste vraiment hors registre
+```
+
+⚠ **ET UNE RESERVE D'OUTILLAGE** : `rapport_gel_tous_les_champs.py` **tombe** si on le
+lance sans `-X utf8` (`UnicodeEncodeError` sur un ⛔ a la l. 587). C'est le meme defaut
+que celui retire du garde-fou de 26bis le 15/11. Il faut le lancer ainsi :
+
+```
+   .venv\Scripts\python.exe -X utf8 phase2\checks\rapport_gel_tous_les_champs.py
+```
+
+### ✅⭐⭐ LE TRI FIN DU LOT B / LOT C EST REFAIT -- 16/11, lecture seule
+
+**La regle est celle du plan**, pas une invention : LOT C = « notre compromis porte DEJA
+une AUTRE date d'acte -> c'est un CONFLIT, pas un vide -> sa decision » ; LOT B = le
+reste, en trois familles (meme date d'acte, sans date, sans compromis).
+
+⛔⛔ **ET CE TRI A ETE RETIRE LE 16/11 : IL COMPARAIT DEUX CHOSES DIFFERENTES.**
+Frederic : *« la date prevue et la date de vente fixee ce n'est pas la meme chose,
+pourquoi tu dis cela ??? »*. Il a raison, et **le code du rapport le prouve**
+(`rapport_gel_tous_les_champs.py` l. 788-791) : chaque date du classeur est comparee
+**A SA PROPRE TRANSACTION** --
+
+```
+   « Offre Achat »   <->  notre OFFRE      . date
+   « Compromis »     <->  notre COMPROMIS  . date
+   « Vente Prevue »  <->  notre COMPROMIS  . date_acte   (la date PREVUE a l acte)
+   « Vente Fixee »   <->  notre VENTE      . date        (la vente REELLE)
+```
+
+Mon tri mettait « Vente Fixee » (la vente reelle du classeur) en face de « notre date
+d'acte PREVUE au compromis ». Ces deux dates n'ont aucune raison d'etre egales : un acte
+se signe rarement le jour prevu. **Les « 33 conflits » n'existaient donc pas** -- c'etait
+un artefact de ma comparaison, pas un etat de la base.
+
+```
+   CE QUI RESTE VRAI, ET MESURE : les 39 ventes a creer
+      le classeur porte une date de vente, et NOUS N AVONS PAS DE VENTE   39
+      dont le role « vente » manque vraiment au gel                       39
+      dont 1 porte un chainage DOUTEUX -> a sauter                         1
+   ⛔ ET LE DECOUPAGE LOT B / LOT C RESTE A ETABLIR : je ne sais pas reconstituer
+     la regle qui a produit « 9 + 26 » le 13/11, et je ne la devine pas. Les trois
+     familles du LOT B, elles, se mesurent sans ambiguite :
+        sans compromis chez nous            2   (le plan en annoncait 2 -- IDENTIQUE)
+        notre compromis SANS date d acte    5   (3 « les deux vides » + 2 « classeur seul »)
+        notre compromis AVEC une date d acte 32
+```
+
+⭐⭐ **LE TEMOIN QUI VALIDE LA GRILLE** : « sans compromis » vaut **2** au plan et **2**
+aujourd'hui. La regle de tri est donc bien celle-la -- ce ne sont pas les criteres qui
+ont change, ce sont les donnees.
+
+⚠ **ET LA NOUVELLE EST MAUVAISE DANS LE BON SENS** : il y a **PLUS de conflits** (33 au
+lieu de 26) et **MOINS de ventes creables** (6 au lieu de 9). Le travail d'ecriture est
+plus petit, mais la part qui demande un arbitrage humain a grossi.
+
+#### ⛔⛔ L'OBSERVATION CI-DESSOUS EST CELLE QUI AURAIT DU M'ARRETER AVANT D'ECRIRE
+
+Les ecarts des 33 conflits vont de **2 jours a 7 mois** :
+
+```
+   84c91bb8  mandat 18060   classeur 2026-11-17   nous 2026-11-15    2 jours
+   c67855b1  mandat 18491   classeur 2026-12-21   nous 2026-12-31   10 jours
+   a75aef8c  mandat 17158   classeur 2026-10-26   nous 2026-08-28    2 mois
+   AYIHPHF5  mandat 13168   classeur 2022-02-28   nous 2021-07-06    7 mois
+   a2b6e193  mandat 17712   classeur 2026-11-20   nous 2026-06-06    5 mois + DOUTEUX
+```
+
+⚠ **ET LES DEUX DATES NE SONT PAS DE MEME NATURE.** « Vente Fixee » du classeur est la
+date **REELLE** de la vente ; notre « Vente Prevue » est la date d'acte **PREVUE au
+compromis** (`compromis.date_acte`, = « Signature acte auth. PREVU le » chez Hektor). Un
+acte signe 2 ou 10 jours apres la date prevue n'est donc **pas un conflit** : c'est la
+vie normale d'un dossier. Un ecart de 7 mois, lui, en est probablement un.
+
+⛔⛔ **J'AI ECRIT CETTE OBSERVATION, PUIS J'AI QUAND MEME PUBLIE LES 33 CONFLITS.**
+C'est la faute, et elle est de methode : j'avais sous les yeux la raison pour laquelle
+ma comparaison n'avait pas de sens -- « les deux dates ne sont pas de meme nature » -- et
+j'ai presente le resultat comme un etat de la base. **Quand une mesure contredit la
+nature de ce qu'elle compare, c'est la mesure qu'il faut jeter, pas nuancer.**
+⭐ Il n'y a donc **aucune tolerance a decider** : la question n'existait pas.
+
+#### ✅ LES 6 VENTES DU LOT B, NOMMEES (elles sont creables en l'etat)
+
+```
+   meme date d acte    d77d9ae1  mandat 18077  2026-11-27 = 2026-11-27
+   sans date d acte    LWZL8V5M  mandat 3277   2020-10-29
+                       1W2O0DSU  mandat 17593  2025-12-22
+                       a5cb141f  mandat 17888  2026-01-13
+   sans compromis      b6ddee9b  mandat 18698  2026-12-04
+                       90e99ae5  mandat 18673  2026-11-25
+```
+
+#### ⛔⛔ ET MON ERREUR, PAYEE PUIS ATTRAPEE -- la decouverte 5 du rapport, en vrai
+
+Ma premiere version du tri convertissait `c_Vente Fixee` de jj/mm/aaaa vers aaaa-mm-jj.
+**Or le rapport normalise DEJA ses colonnes** : elles sont toutes en aaaa-mm-jj. Ma
+conversion rendait donc `None`, la condition de conflit ne pouvait jamais etre vraie, et
+**les 39 ventes tombaient TOUTES dans « meme date »** -- 0 conflit, ce qui aurait ete une
+tres bonne nouvelle, et parfaitement fausse.
+
+⭐ **C'est mot pour mot le piege que le rapport annonce lui-meme** (sa decouverte 5 :
+« melanger les deux conversions donne un signal MUET qui passe pour un signal VERT »).
+⭐⭐ **Et ce n'est pas mon temoin de conversion qui l'a attrape** -- il verifiait seulement
+que les deux fonctions ne se confondent pas -- **c'est l'AFFICHAGE DU DETAIL** : voir
+« meme date » en face de « classeur 2022-02-28 / nous 2021-07-06 » ne laissait aucun
+doute. ⛔ Un comptage ne se croit pas sans un echantillon lisible a cote.
+
+### ✅⭐⭐ AUDIT DES 63 OFFRES ORPHELINES DU GEL -- 16/11, lecture seule
+
+**Frederic : « fais d'abord les 63 orphelines, ca merite sa propre tache ».** Il a eu
+raison deux fois : la mesure a trouve un cas que je ne connaissais pas, et elle a
+prouve que le lot des 96 est indemne.
+
+#### POURQUOI LE GEL « SE TROMPE » : IL NE SE TROMPE PAS, IL EST INCOMPLET
+
+L'audit de `60CLRO51` donne le mecanisme. Chaine 17387, annonce 37032, mandat 13739,
+**et le MEME acquereur (NICOUD, id 322158) sur toutes les transactions** :
+
+```
+   compromis cancelled  2021-11-03   -> ligne 60CLRO51   (la tentative ANNULEE)
+   compromis active     2022-02-04   -> ligne TFK7BD9K   (celle qui a ABOUTI)
+   offre     refused    2021-12-13   -> AUCUN LIEN       ⛔
+   offre     accepted   2022-01-10   -> ligne TFK7BD9K
+   vente                2022-05-14   -> ligne TFK7BD9K
+```
+
+Le classeur porte **DEUX lignes pour ce dossier**. Le gel a correctement donne le
+compromis annule a l'une et tout le reste a l'autre -- mais il a laisse **l'offre
+refusee orpheline**, alors qu'elle appartient visiblement a la tentative annulee : sa
+date, 2021-12-13, est **exactement** celle que le classeur porte pour `60CLRO51`.
+
+⭐⭐ **ET L'ENSEIGNEMENT VAUT POUR TOUT LE CHANTIER** : comparer les NOMS d'acquereur ne
+protege de rien ici, puisqu'ils sont identiques sur toute la chaine. **C'est la DATE qui
+departage** -- c'est pour ca que la garde du patch des 96 est « une offre existe deja a
+la meme date », et non « la chaine porte deja une offre ».
+
+#### LA MESURE : CE QUE LES ORPHELINES RECOUVRENT VRAIMENT
+
+```
+   offres sur des chaines que le classeur connait          4 583
+   reliees au classeur                                     4 520   (98,6 %)
+   ORPHELINES                                                 63   (1,4 %)
+      refused 55 . accepted 7 . proposed 1 (sans date)
+      ⭐ TOUTES portent un numero Hektor, AUCUNE ne vient du classeur
+   mesurables (chaine nette)                                  56
+
+   et ce qu'elles recouvrent :
+      49  aucune ligne du classeur ne reclame d'offre sur cette chaine -> SANS OBJET
+       2  ⛔ MEME DATE  -> c'est un LIEN manquant, PAS une donnee manquante
+       3  ⚠ a moins d'un mois (3, 15, 26 jours) -> probablement des offres DISTINCTES
+       2  une ligne reclame une offre, mais a une autre date
+```
+
+⛔⛔ **J'AVAIS DIT « UN DEFAUT DU GEL, PAS UN ACCIDENT » -- C'ETAIT ALARMISTE.** Sur
+56 orphelines mesurables, **49 n'ont aucune consequence** : aucune ligne du classeur ne
+reclame d'offre sur leur chaine. Le vrai sujet se reduit a **2 liens manquants** et
+3 cas a regarder.
+
+#### LES 5 CAS, NOMMES
+
+```
+   ligne       mandat   date classeur   notre offre                 ecart   etat classeur
+   60CLRO51    13739    2021-12-13      2021-12-13 refused  n°17389   0 j   Annulee
+   6QDR3G7V     2959    2019-03-06      2019-03-06 accepted n°17721   0 j   Vente reglee
+   LWZL8V5M     3277    2020-08-08      2020-08-05 accepted n°20673   3 j   Vente reglee
+   3S4ZWOFK    12864    2020-06-12      2020-05-28 refused  n°11959  15 j   Vente reglee
+   TRJ5Y59U    16628    2024-03-25      2024-02-28 refused  n°23996  26 j   Vente reglee
+```
+
+#### ✅ LE LOT DES 96 EST INDEMNE -- et ca valide le decoupage par etat
+
+```
+   4 des 5 cas sont en « Vente reglee »  -> HORS du lot (famille non traitee)
+   1 est en « Annulee » (60CLRO51)       -> MA GARDE L A ECARTE
+```
+
+⭐⭐ **Les cas delicats se concentrent dans la famille « Vente reglee »**, celle qu'on a
+justement mise de cote. Le decoupage par etat, decide pour une raison de CHAINAGE, se
+revele juste pour une seconde raison qu'on n'avait pas vue.
+
+⚠ **ET C'EST UN AVERTISSEMENT POUR LA SUITE** : le jour ou l'on traitera les 69 offres
+« Vente reglee », **4 des 5 liens manquants y seront**. La garde « meme date » y sera
+donc beaucoup plus sollicitee, et il faudra regarder les ecarts de 3 a 26 jours un par un.
+
+⏰ **LA TACHE QUI RESTE, A PART** : relier les 2 offres a date exacte (`60CLRO51` ->
+offre 17389, `6QDR3G7V` -> offre 17721) a leur ligne du classeur. ⛔ C'est un geste sur
+le GEL, donc il releve de D1 (le re-gel additif), et D1 dit « ADDITIF, on ne retouche
+aucun des 12 595 liens ». Deux liens a AJOUTER, aucun a modifier.
+
+### ⛔⛔⛔ AUDIT DE SITUATION DU 16/11 -- POURQUOI CE CHANTIER N'AVANCE PAS
+
+**Frederic : « fais moi un audit de la situation, je comprends pas, ce chantier est
+pourtant documente ».** La mesure donne la reponse, et elle est dure.
+
+```
+   LE PLAN        234 489 caracteres, 4 298 lignes
+   LES TACHES     23 au total  ->  2 cochees, 21 a faire
+   phase A  mesurer         7 taches
+   phase B  emplacements    3 taches, 0 posee
+   phase C  POSER          10 taches, UNE SEULE a pose quelque chose
+   phase D  fermer          3 taches, 0 posee
+```
+
+#### LA CAUSE N'EST PAS QUE RIEN N'EST FAIT -- C'EST QUE LE PLAN NE LE DIT PAS
+
+```
+   A2  l essai d une nuit     FAIT le 15/11, juge le 16   -> etait marque ⬜
+   C1  la charge, 16 lignes   POSEE le 14/11 a 06:42      -> etait marquee ⬜
+       « patch DEJA ECRIT et non joue » -- faux depuis deux jours
+```
+
+⛔ **J'ai moi-meme annonce a Frederic que la charge « attendait depuis deux jours ».
+C'etait faux**, et c'est la mesure en base qui l'a dit : les 16 lignes portent les
+`ecrit_par` exacts du patch, horodatees au 14/11 a 06:42.
+
+#### L'ETAT REEL DE LA PHASE C, MESURE EN BASE LE 16/11
+
+```
+   C1  la charge                   853 lignes origine 'classeur'      ✅ POSEE
+   C5  lot B, 1re famille           96 offres marquees 'classeur'     ✅ POSEES le 16/11
+   C2  lot A : 303 commissions       0
+   C3  Z : 896 dates d annulation    0
+   C4  F et G                        0 du classeur
+   C6  lot C : 26 ventes             0
+   C9  le numero de mandat           0
+   C7 / C8 / C10                     non mesurees ici
+```
+
+#### ⭐ LA REGLE DE METHODE QUI EN DECOULE, ET QUE FREDERIC A VALIDEE
+
+**Un geste pose, puis TROIS LIGNES au plan** -- pas trois pages d'audit avant chaque
+geste. Un plan de 234 000 caracteres qui n'est pas coche fait perdre l'etat du chantier,
+et c'est exactement ce qui s'est passe entre le 14 et le 16/11.
+
 ### ⬜ CE QUI RESTE, DANS L'ORDRE CONTRAINT
 
 ```
@@ -1841,9 +2323,13 @@ B3 ⬜  SENTINELLE DES CONDITIONS ET NOTES ORPHELINES (5 et 6 aujourd'hui). Le
 ### PHASE C — POSER, DU PLUS SUR AU PLUS DELICAT
 
 ```
-C1 ⬜  3.2bis LA CHARGE : 16 lignes, patch DEJA ECRIT et non joue
-       (patch_charge_classeur_2026-11-14_DONNEES.sql). + LOT 2 : 25 lignes de
-       confiance « a valider »/« bonne » -> SA DECISION (je ne les poserais pas).
+C1 ✅  3.2bis LA CHARGE -- POSEE. Mesure en base le 16/11 : les 16 lignes sont
+       ECRITES, le 14/11 a 06:42, avec les `ecrit_par` exacts du patch
+       (classeur:c67ccc6a ...). La table porte 853 lignes origine 'classeur'.
+       ⛔⛔ ET LE PLAN LA DISAIT « non jouee » PENDANT DEUX JOURS -- c'est la cause
+         de la confusion du 16/11 : on ne savait plus ce qui etait fait.
+       ⏰ RESTE LE LOT 2 : 25 lignes de confiance « a valider »/« bonne »
+         -> SA DECISION (je ne les poserais pas).
 C2 ⬜  3.3 LOT A : 303 commissions (1 886 204 EUR, dont 77 lignes 2026 pour
        539 070 EUR) + 10 dates de case vide. En CLASSE A. Les 24 « zeros deguises »
        (217 250 EUR) comptent comme des vides -- un zero n'est pas une saisie.
@@ -1855,11 +2341,35 @@ C3 ⬜  3.3ter Z : 896 dates d'annulation dans date_annulation_app, DEJA PRETE.
 C4 ⬜  F ET G dans leurs cases existantes (apres A1, qui dira le volume) :
        F -> app_affaire_condition, G -> app_affaire_note, origine « classeur ».
        ⛔ F et G se reprennent EN BLOC, SANS INTERPRETER -- sa consigne.
-C5 ⬜  3.3 LOT B : **215 creations franches** -- 144 offres + 62 compromis
-       + 9 ventes (5 a la meme date d'acte, 2 sans date, 2 sans compromis).
-       Dans la plage app, sans numero Hektor. APRES A2 et A4.
+C5 🔧 EN COURS -- ✅ LES 96 PREMIERES OFFRES SONT POSEES LE 16/11.
+       11 controles justes : 96 en offre/refused, sans numero, dans la plage app,
+       toutes rattachees a une chaine, 96 notes, **0 partie creee** (le temoin de
+       la decision « l'acquereur va en note »), voisines 340 + 30 817 INTACTES,
+       et LES DEUX SENTINELLES A 0 -- les gardes du matin ont enfin leur temoin
+       positif. Patch : supabase/patch_offres_annulees_classeur_2026-11-16.sql
+       (+ _INVERSE, + _REPETITION). Generateur :
+       phase2/checks/poser_offres_annulees_classeur_2026-11-16.py
+       ⏰ RESTE DANS C5 : 69 offres « Vente reglee » + 2 autres etats, 68 compromis,
+         6 ventes. ⚠ et 4 des 5 liens manquants du gel sont dans « Vente reglee ».
+       3.3 LOT B -- CHIFFRES REFAITS LE 16/11 (voir « LE TRI FIN ... REFAIT ») :
+       **174 offres + 68 compromis + 6 ventes = 248**, dans la plage app, sans
+       numero Hektor. A2 ✅ et A4 ✅ sont faits.
+       ⚠ les anciens « 215 (144+62+9) » venaient du rapport du 13/11, pris
+         PENDANT la pose du lot 1 -- voir « A0 EST FAIT ».
+       ⭐ les 242 offres+compromis n'ont AUCUN lecteur risque (A4) -- c'est la
+         partie SURE du lot.
+       ⛔ LE NOMBRE DE VENTES CREABLES N'EST PLUS ETABLI : mon tri du 16/11
+         comparait deux dates de nature differente (voir C6). Les 39 ventes
+         restent a decouper, et seules 2 familles sont sures : 2 « sans
+         compromis » et 5 « notre compromis sans date d'acte ».
 C6 ⬜  3.3 LOT C : **26 ventes** dont notre compromis porte DEJA une autre date
        d'acte. ⛔ C'est un CONFLIT, pas un vide -> SA DECISION.
+       ⛔⛔ LE CHIFFRE DU PLAN EST CONSERVE : mon « 33 » du 16/11 etait FAUX, il
+         comparait la date de vente du classeur a notre date d'acte PREVUE --
+         deux choses differentes (sa correction, et le code du rapport le
+         confirme, l. 788-791). Voir « LE TRI FIN ... REFAIT ».
+       ⏰ LA REGLE EXACTE DES « 26 » RESTE A RETROUVER : je ne sais pas la
+         reconstituer sur le rapport du jour, et je ne la devine pas.
 C7 ⬜  3.3bis V « Vente Prevue » : 2 303 ecarts + 21, decidee « tout », on ecrase.
        ⭐ Arbitre INDEPENDANT (notre date de vente, qui vient de Hektor) : le
        classeur tombe plus pres du reel 1 402 fois contre 714. -> SA DECISION.
