@@ -1893,3 +1893,47 @@ seul au-dessus d'`origin/main`), Vercel prêt. Sur 63331, dans le Chrome de Fré
 - **Reste sur 63331** : 4 pièces SPÉCIMEN de plus ; le contact d'essai 20000009 s'appelle désormais « ESSAI CONTACT »
   et porte l'état civil fictif. Pour revenir : `ged_remplir` -> off ; les valeurs se vident par la fenêtre « Modifier ».
 - ⚠ Toujours NON mesuré : `idCode 1` / `idVille 1` de la commune au renommage (compte rendu du 1er geste).
+
+**🔎 AUDIT DU LOT 9d (16/11, « A », lecture seule, rien codé, rien écrit) — l'état civil et le financement.**
+Audit limité aux documents `justif.etat_civil` et `transaction.financement` ; objets touchés : document (lire), contact,
+transaction et mandat (lire seulement) ; aucun geste chez Hektor dans la proposition de base.
+- **P7-P10 n'étaient écrits NULLE PART** (note, catalogue E, rapports A-D) : le découpage du 13/11 dit seulement « 9d état
+  civil et financement, P7-P10 ». Ce qui suit est une PROPOSITION, à trancher.
+- **Le cadre est celui du 12/11 (§12.1)**, qui DÉPASSE les « plus tard / jamais » des experts (EC-1, EC-2, FIN-2, REN-2,
+  ID-3) : les pièces des personnes SONT lues, état civil et financement compris ; mesure de protection : sa nature, le
+  représentant, la date du jugement, JAMAIS le motif ni la santé ; RIB jamais. Restent « jamais » sans décision contraire :
+  montant, taux, durée, banque, apport, assurance du prêt (santé), revenus ; les enfants d'un livret.
+- **Code** : `app_ged_type` a déjà les deux types en `lecture = lue`, `sensible = true` ; le serveur les refuse (422 « lue
+  plus tard (morceau 9) », `openai_ged_lecture_service.py` l. 596) car ils ne sont pas dans `FICHES_PERSONNES` ; l'écran
+  les connaît déjà comme pièces attendues (`gedPieces.ts` l. 79, 93, 108) et par le nom (`gedTypeParNom.ts`). La règle
+  FIN-1 du catalogue V1 (J-7 avant la date limite du prêt sans pièce de financement) n'est PAS codée. Pages envoyées par
+  défaut : 4 en image + un extrait de texte (`LECTURE_PAGES_HD`, `texte_max`) — ⚠ une offre de prêt porte l'assurance
+  (santé) plus loin : il faudra n'envoyer QUE la 1re page pour ce type (à vérifier : que l'extrait de texte suit bien les
+  mêmes pages).
+- **Mesure (par le NOM, approchée, tout le stock `app_console_document`)** : financement **4 490 documents / 2 782 biens,
+  357 ces 30 jours** (offre de prêt 1 173, accord 883, simulation 527, refus 200) ; état civil **995 / 688 biens, 73 ces
+  30 jours** (protection — tutelle, curatelle, habilitation — 264, jugement ou ordonnance 285, décès 196, livret 149,
+  divorce 94, contrat de mariage ou PACS 92). Dans la GED (dépôts de l'app) : 0 hors essais (tout est en « admin »).
+- **Proposition** :
+  - **P7 — le prêt à la date limite** (financement ↔ compromis lu). Lire : nature (`offre_de_pret`, `accord_de_principe`,
+    `refus`, `simulation`, `autre`), date du document, emprunteurs (noms). Dire : date limite passée sans offre ni accord
+    lu avant elle → alerte ; un REFUS lu → alerte (« la condition suspensive peut jouer ») ; une simulation seule → info
+    (« une simulation n'est pas un accord ») ; + FIN-1 (J-7 sans aucune pièce de financement), sans lecture.
+  - **P8 — l'emprunteur est l'acquéreur** : emprunteurs lus ↔ acquéreurs du compromis vivant (comparateur `personnes`) ;
+    inconnu → alerte « pièce d'une autre affaire ».
+  - **P9 — le conjoint** (C. civ. 215 al. 3, logement de la famille) : lire sur livret / acte de mariage / contrat / PACS
+    (et la fiche de renseignements déjà lue) : nature, date, les deux époux ou partenaires ; jamais les enfants. Dire : un
+    mandant marié dont le conjoint n'est ni mandant ni signataire du mandat lu → alerte « consentement du conjoint à
+    vérifier » (« à vérifier » : on ne sait pas si c'est le logement de la famille).
+  - **P10 — la capacité et le décès** : lire sur jugement / ordonnance / acte de décès : nature de la mesure (tutelle,
+    curatelle, sauvegarde, habilitation familiale), personne protégée, représentant, date du jugement ; décès : personne,
+    date. JAMAIS le motif, la santé, un certificat médical. Dire : personne protégée mandante sans son représentant parmi
+    les signataires du mandat lu → alerte ; tutelle → info « autorisation du juge à prévoir » ; mandant décédé avant la
+    signature → alerte « succession : ce sont les héritiers qui signent ».
+- **À trancher par Frédéric** : (1) P7-P10 tels quels, ou une partie ; (2) les valeurs de PROTECTION dans `app_ged_valeur`
+  (visibles du négociateur du bien, comme le reste) ou au registre à part `ged_prive` (recommandé : santé indirecte,
+  art. 9) ; (3) la situation de famille lue sur un livret ou un acte de mariage nourrit-elle aussi C3 (9c) — recommandé
+  plus tard ; (4) l'ordre : financement d'abord (flux 5 fois plus fort, règle la plus utile), état civil ensuite.
+- **Ce que ça pourrait casser** : rien d'existant (types neufs dans `FICHES_PERSONNES`, derrière `ged_lecture_personnes`
+  en « admin ») ; risque RGPD si la 1re page ne suffit pas et qu'on élargit ; un « décès » ou une « protection » mal lus
+  crieraient fort : niveau « à vérifier », jamais un blocage.
