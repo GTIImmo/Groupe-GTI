@@ -2277,3 +2277,13 @@ demande « moins de mouvement » -- le vol est coupé EXPRÈS (c'est la règle).
 réglage, la case remplie redevenait GRISE (l'allumage n'était porté que par l'animation). Corrigé : la case remplie d'ici
 garde un fond vert fixe (`RecuManque.css`) -- éprouvé en injectant la règle dans la production (fond 230, 243, 236), puis
 retirée. Build vert, essais verts ; commit local À POUSSER.
+⛔ **INCIDENT DE COMMIT (16/11), ma faute** : mon commit `ac886a6` (ce correctif + la note) a EMBARQUÉ 5 fichiers que la
+session classeur avait déjà mis dans l'index (`PLAN_CHANTIER_CLASSEUR_2026-10-28.md`, `patch_c9_avis_etiquette_2026-11-16`
+et `patch_verrou_tables_classeur_2026-11-16`, avec leurs inverses) -- j'avais relu l'index DANS LA MÊME COMMANDE que le
+commit, sans m'arrêter. Avant que je puisse défaire mon commit, la session classeur a commité PAR-DESSUS (`a7b2dec`,
+VIDE : ses fichiers étaient déjà dans le mien) et POUSSÉ. ➡ Tout est publié, contenu INTACT ; seule l'étiquette de
+l'historique est fausse : le travail du classeur (verrou des 4 tables, étiquette des avis) est classé sous le message
+de `ac886a6`, et `a7b2dec` porte son message sans ses fichiers. Rien n'a été défait (on ne réécrit pas un historique
+publié). Le correctif « case verte » est donc EN LIGNE (Vercel READY sur `a7b2dec`) et vu : règle servie, 212 kWh/m²/an
+désormais lu sur la fiche, 2 cartes restantes sur 63147. Leçon : l'index se relit SEUL, puis on commite dans un
+second temps.
