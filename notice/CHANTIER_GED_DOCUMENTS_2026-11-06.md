@@ -2290,3 +2290,7 @@ second temps.
 **Remarque du téléphone CORRIGÉE (16/11, « as-tu corrigé ») — rien poussé** : à l'ouverture, l'aperçu est amené à
 l'écran (`scrollIntoView` « au plus près » : au bureau, où il est à côté de la carte, rien ne bouge ; sans glissé sous
 « moins de mouvement »). Build et essais verts. À voir au téléphone après le push.
+✅ **Poussé (`102c389`, Vercel READY) et VU sur 63147** : téléphone (cadre 390 px, retiré) -- panneau hors de l'écran
+avant le clic (à 1 174 px pour un cadre de 776), l'aperçu ramené à l'écran après (338 -> 773 px), page dessinée ; bureau
+-- le bloc ne bouge pas (128 px avant et après), l'aperçu s'affiche à côté. ➡ **H3 EST FINI.** Reste H4 (téléphone :
+photographier recto puis verso).
