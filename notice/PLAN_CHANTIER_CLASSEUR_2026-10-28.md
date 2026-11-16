@@ -3419,7 +3419,28 @@ C3bis ⬜ LES MOTIFS D'ANNULATION -- LA SECONDE MOITIE DE C3, PAS FAITE.
        ⛔ MAIS F EST MIXTE (A1 : 3 099 cellules -- des « V », des pastilles,
          et 810 textes seulement) -> ELLE DEPEND DONC DE C4, qui tranche F.
        ⚠ NE PAS la cocher avec C3 : Z est faite, les motifs ne le sont pas.
-C4 ⬜  F ET G dans leurs cases existantes (apres A1, qui dira le volume) :
+C4 ⬜  ⭐⭐⭐ **F EST DECODEE LE 16/11** -- voir
+       `notice/C4_LE_DECODAGE_DE_LA_COLONNE_F_2026-11-16.md`.
+       ⛔ CE DECODAGE N'ETAIT ECRIT NULLE PART : ni dans les 160 notes, ni au
+         plan, ni au journal, ni en memoire. « ODP » n'apparaissait dans AUCUN
+         document du chantier. Frederic a du me corriger DEUX FOIS.
+       LA STRUCTURE REELLE d'une ligne « en cours », regulière :
+         `<date> ADP<date> ODP<date> DB<date> Me <notaire> [montant duree]`
+         -> UN ECHEANCIER DE CONDITIONS SUSPENSIVES, pas une note libre.
+       LE TEST QUI SEPARE LES DEUX FAMILLES : l'abreviation est-elle suivie
+         d'une DATE ?  DB 66/66 = 100 % . OPC 100 % . ODP 82 % . ADP 59 % .
+         DPC 55 % -- contre Me 168, PA 112, pb 92, BV 66, SRU 34 : JAMAIS.
+       ✅ CONFIRME PAR LUI : ODP = offre de pret.
+       ⬜ A CONFIRMER : ADP, DB, DPC, OPC, BVok, PA, CI, AVNT, dossOk.
+       LA LECTURE JUSTE EST TRIPLE : 708 MOTIFS (affaire annulee) ->
+         motif_annulation_app . 86 CONDITIONS EN ATTENTE (affaire en cours)
+         -> app_affaire_condition . 82 remarques d'apres-vente -> note.
+       ⭐ 357 des 708 motifs tombent sur les 450 dates posees par C3 :
+         le « quand » et le « pourquoi » enfin reunis.
+       ⛔ ET LE CATALOGUE DES CLAUSES N'EXISTE NULLE PART : ni au classeur
+         (F donne la PIECE et sa date, jamais un libelle de clause), ni chez
+         Hektor (0 condition sur 18 589). Il devra etre ECRIT A LA MAIN.
+       F ET G dans leurs cases existantes (apres A1, qui dira le volume) :
        F -> app_affaire_condition, G -> app_affaire_note, origine « classeur ».
        ⛔ F et G se reprennent EN BLOC, SANS INTERPRETER -- sa consigne.
 C5 🔧 EN COURS -- ✅ **195 TRANSACTIONS POSEES LE 16/11**, par famille :
