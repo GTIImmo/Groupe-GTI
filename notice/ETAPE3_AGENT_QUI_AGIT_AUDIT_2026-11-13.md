@@ -484,3 +484,36 @@ Trois cartes dans `backend/app/services/assistant_gestes.py` (section « LOT 2c 
 - Essais : 175 + 59 + 73 verts ; 3 témoins inverses ROUGES (commune non vérifiée, doublons non cherchés, compte d'un autre).
 - ⏳ Reste : pousser (son accord), puis la preuve réelle sur un contact d'essai (son accord) : créer un contact d'essai
   avec une recherche, ajouter une recherche, en modifier une, relire chez Hektor ; archiver le contact d'essai à la fin.
+
+## 25. La preuve réelle du lot 2c (16/11, 07:55-08:16 UTC, son « Oui, vas-y ») — PROUVÉ, et une erreur de MA carte trouvée
+
+En ligne : `2953ee5` (Render `/health` à 07:55:30). Par son Chrome et sa session, conversation + cartes. File vide au départ.
+- **Créer un contact avec sa recherche** : carte « Créer le contact M. Lot2c ESSAI ASSISTANT, acquéreur — e-mail — 42700
+  Firminy — avec sa recherche — achat : Maison — Firminy (42700) — jusqu'à 200 000 € — à ton nom ; sans e-mail RGPD ».
+  Validée → travail 82c73ac3 fait en 16 s chez Hektor : **606361**, notre numéro **20000049**, à son nom. **Second clic
+  409.** Relu chez Hektor (ContactById) : civilité M., **localité Firminy 42700 gardée**.
+  ⚠ Le fil de la réponse a été coupé par MON outil (attente de 45 s du navigateur) : journal n° 175 « CancelledError »,
+  la carte était déjà rangée, rien de perdu. Les essais suivants lancent la demande sans l'attendre.
+- **Ajouter une recherche** (Appartement, 43000 Le Puy-en-Velay, 150 000 €, 3 pièces) : travail 004ea471 fait en 18 s,
+  critère Hektor **471988**, ligne provisoire reliée. Relecture : les **2 recherches** chez nous (la 1re = Maison Firminy
+  200 000 €, venue avec le contact).
+  ⚠ La 2e porte « Le Puy-en-Velay 43000 » ET « Le Puy-en-Velay » sans code : forme NORMALE de Hektor (1 641 recherches
+  ainsi), pas de nous.
+- **Modifier une recherche** (budget max 200 000 → 220 000 €) : chez nous à l'instant (220 000). ⛔ **MA CARTE DISAIT
+  « Hektor suit 10 min après » : FAUX.** Une recherche modifiée ne repart plus chez Hektor depuis le **24/08 (C.3, « fermer
+  la porte sortante des recherches »)** : `app_edit_search_optimistic` pose `push_search = null`, la ligne
+  `app_search_pending` n'est jamais enfilée. C'est le comportement voulu, IDENTIQUE à l'écran (le commentaire du front,
+  « push Hektor débouncé », est périmé). J'avais lu le commentaire au lieu de la fonction. **Corrigé en local** : la carte
+  dit « une recherche modifiée reste chez nous, elle ne repart plus chez Hektor depuis le 24/08, comme à l'écran » ;
+  témoin ajouté (176 + 59 + 73 verts). La ligne `app_search_pending` (push_search vide) de 20000049 a disparu au plus tard à
+  l'archivage (relu à 08:16 : 0 ligne) ; jamais enfilée vers Hektor.
+- **Doublon, en réel** : « crée Mme Test DOUBLON, même e-mail » → **aucune carte**, la fiche 20000049 montrée, l'assistant
+  demande confirmation. ✅
+- **Commune fausse** (« 42700 Saint-Étienne ») : aucune carte — mais c'est le MODÈLE qui l'a vue, avant d'appeler le
+  garde-fou du serveur (éprouvé, lui, dans les essais seulement).
+- **Fin** : contact archivé par une carte → travail 538248a8 fait en 9 s, « Modification archivage ok », relu chez Hektor
+  `archive = 1` (ses 2 recherches archivées avec lui, la carte l'annonçait).
+- ⚠ **Trouvé, pas à nous** : la 1re relecture du contact (61ef257b, 07:57:24) a échoué « attempt to write a readonly
+  database » sur `phase2.sqlite` — première fois en 20 jours ; à la même minute une autre session jouait un patch sur la
+  base (`patch_essai_a2_plage_app_2026-11-15_INVERSE.sql`). La relecture suivante (08:00) est passée. Non creusé.
+➡ **Lot 2c PROUVÉ.** Reste à pousser la correction du texte de la carte (son accord).

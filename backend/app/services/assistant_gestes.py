@@ -1712,8 +1712,11 @@ def preparer_modifier_recherche(ctx: ContexteAssistant, p: dict[str, Any]) -> tu
     if not changements:
         raise Refus("Rien ne change : donne au moins un critère différent de la recherche actuelle.")
     nom = _acquereur(ctx, r)
+    # ⚠ Prouvé en réel le 16/11 : une recherche MODIFIÉE ne repart plus chez Hektor (décision C.3 du 24/08, « fermer la
+    #   porte sortante des recherches » : app_edit_search_optimistic pose push_search = null) -- comme à l'écran.
     return f"Modifier la recherche n° {int(r['search_index']) + 1} de {nom} — " + " ; ".join(changements) + \
-        " (écrit chez nous tout de suite, rapprochements recalculés ; Hektor suit 10 min après)", \
+        " (écrit chez nous tout de suite, rapprochements recalculés ; une recherche modifiée reste chez nous, elle ne " \
+        "repart plus chez Hektor depuis le 24/08, comme à l'écran)", \
         {"contact_search_key": r["contact_search_key"], "avant": avant, "apres": apres, "rayon_km": rayon,
          "libelles": _libelles_types(apres["types"], connus)}
 

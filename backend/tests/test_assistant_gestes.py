@@ -948,6 +948,8 @@ reset(recherche=[dict(RECH)])
 resume, pm2 = ges.preparer_modifier_recherche(nouveau_ctx(), {**VIDE_M, "contact_search_key": "606202:1", "budget_max": "280000"})
 voir("budget max : 250 000 € → 280 000 €" in resume and "recherche n° 2 de M. DURAND" in resume and not ecritures_metier(),
      "la carte montre l'AVANT et l'APRÈS du seul critère donné")
+voir("ne repart plus chez Hektor" in resume and "10 min" not in resume,
+     "⛔ la carte ne promet PAS d'envoi à Hektor : une recherche modifiée reste chez nous (C.3 du 24/08, prouvé le 16/11)")
 voir(refuse(lambda: ges.preparer_modifier_recherche(nouveau_ctx(), {**VIDE_M, "contact_search_key": "606202:1", "budget_max": "250000"}),
             "Rien ne change"), "rien ne change : refusé")
 voir(refuse(lambda: ges.preparer_modifier_recherche(nouveau_ctx(), {**VIDE_M, "contact_search_key": "606202:1", "rayon_km": "50"}),
