@@ -324,7 +324,7 @@ export function RecuManque({
               <div key={`${a.code}-${i}`}>
                 {ligneAlerte}
                 {jugements ? (
-                  <div className="gm-d" role="group" aria-label={`Juger : ${a.texte}`}>
+                  <div className="gm-d" role="group" aria-label={`Juger : ${a.texte}`} style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'baseline', margin: '2px 0 8px 12px' }}>
                     {juge ? <small>{`Jugé ${LIBELLE_VERDICT[juge.verdict]} le ${new Date(juge.jugeLe).toLocaleDateString('fr-FR')} · `}</small> : <small>Cette ligne est : </small>}
                     {VERDICTS.map((v) => (
                       <button key={v.code} type="button" className="gm-avant-b" disabled={jugeEnCours !== null} aria-pressed={juge?.verdict === v.code}

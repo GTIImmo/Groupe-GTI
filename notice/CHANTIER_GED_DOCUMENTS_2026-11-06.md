@@ -2111,3 +2111,14 @@ des lignes y partiraient (ils portent des noms, comme `app_ged_valeur`, déjà r
   touche la base de production, même en rollback) : à coller avant le patch.
 - **Reste, sur accord** : pousser ; coller la RÉPÉTITION (« RÉPÉTITION VERTE ») ; poser le patch (6 contrôles) ; puis juger
   pendant deux semaines et relancer le compte rendu.
+
+**✅ MORCEAU 10 EN LIGNE ET POSÉ (16/11, « Oui pousse » puis « Oui vas y »).** `d4ca8fe` poussé seul, Vercel prêt ; VU sur 63331
+AVANT le patch : aucun bouton, 10 lignes intactes, console propre (l'ordre « écran d'abord » tient). **Répétition jouée**
+(connecteur, transaction terminée par rollback) : 5 contrôles verts, `app_ged_jugement` ABSENTE après. **Patch posé**
+(le fichier, de `begin` à `commit`, mot pour mot) : **6 contrôles VERTS** (table et RLS ; authenticated lecture seule ;
+anon rien ; porte SECURITY DEFINER fermée à anon ; `ged_propositions` toujours « admin » ; table vide). **VU après** :
+« Cette ligne est : Vrai · Faux · Déjà su » sous les 10 lignes de 63331, console propre. ⚠ Les trois boutons étaient
+COLLÉS (« VraiFauxDéjà su ») : espacés (flex, écart 10 px), essai 22 verts, build vert -- commit local, À POUSSER.
+Retour arrière : `supabase/patch_ged_m10_jugement_2026-11-16_INVERSE.sql`. Compte rendu :
+`supabase/requete_mesure_ged_m10_2026-11-16.sql`. ⏰ **La mesure commence : deux semaines, jusqu'au 30/11/2026.**
+⚠ Les lignes des biens d'ESSAI (63331, 62774, 61398) ne doivent pas être jugées, ou alors être écartées du compte rendu.
