@@ -37,10 +37,11 @@ def L(v, etat="lu", page=1):
 
 
 print("1) les fiches")
-voir(set(lec.FICHES_PERSONNES) == {"justif.identite", "transaction.renseignements"}, "deux fiches : la pièce d'identité et la fiche de renseignements")
+voir(set(lec.FICHES_PERSONNES) == {"justif.identite", "transaction.renseignements", "transaction.financement"},
+     "trois fiches : la pièce d'identité, la fiche de renseignements et (lot 9d, 16/11) le financement")
 voir(not set(lec.FICHES_PERSONNES) & set(lec.FICHES), "elles vivent À PART de FICHES (les 25 types lus ne bougent pas)")
-voir(not {"justif.etat_civil", "transaction.financement", "justif.rib"} & (set(lec.FICHES) | set(lec.FICHES_PERSONNES)),
-     "l'état civil et le financement restent fermés (9d) ; le RIB n'a aucune fiche")
+voir(not {"justif.etat_civil", "justif.rib"} & (set(lec.FICHES) | set(lec.FICHES_PERSONNES)),
+     "l'état civil reste fermé (9d) ; le RIB n'a aucune fiche")
 voir(all(strict_partout(lec.schema(f)) for f in lec.FICHES_PERSONNES.values()), "schéma STRICT : tous les champs obligatoires, aucun en plus")
 piece = lec.schema(lec.FICHES_PERSONNES["justif.identite"])["properties"]["pieces"]["items"]["properties"]
 jamais = ("adresse", "nationalite", "sexe", "taille", "mrz", "signature", "photo", "telephone", "email", "profession")
@@ -138,8 +139,7 @@ for code, charge, libelle in [
         voir(False, libelle)
     except HTTPException as e:
         voir(e.status_code == 422 and "fermée" in str(e.detail), libelle)
-for code, libelle in [("transaction.financement", "le financement reste fermé MÊME avec l'interrupteur"),
-                      ("justif.etat_civil", "l'état civil reste fermé MÊME avec l'interrupteur")]:
+for code, libelle in [("justif.etat_civil", "l'état civil reste fermé MÊME avec l'interrupteur")]:
     try:
         s.lire({"type_code": code}, {"texte": "x"}, personnes=True)
         voir(False, libelle)
@@ -150,13 +150,13 @@ try:
     voir(False, "rib")
 except HTTPException as e:
     voir(e.status_code == 422 and "bancaire" in str(e.detail), "un IBAN dans une fiche de renseignements : jamais envoyé (garde RIB inchangée)")
-lec.FICHES["transaction.financement"] = lec.FICHES["diag.erp"]
+lec.FICHES["justif.etat_civil"] = lec.FICHES["diag.erp"]
 try:
-    s.lire({"type_code": "transaction.financement"}, {"texte": "x"}, personnes=True)
+    s.lire({"type_code": "justif.etat_civil"}, {"texte": "x"}, personnes=True)
     voir(False, "sensible")
 except HTTPException as e:
-    voir(e.status_code == 422 and "morceau 9" in str(e.detail), "TÉMOIN : un type sensible hors des deux fiches reste refusé, même avec une fiche")
-del lec.FICHES["transaction.financement"]
+    voir(e.status_code == 422 and "morceau 9" in str(e.detail), "TÉMOIN : un type sensible hors des fiches des personnes reste refusé, même avec une fiche")
+del lec.FICHES["justif.etat_civil"]
 
 print("4) ce qui part, ce qui revient")
 lec.requests.post = capter

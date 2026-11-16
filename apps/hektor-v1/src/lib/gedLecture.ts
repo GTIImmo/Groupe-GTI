@@ -16,8 +16,12 @@ export const FICHES_LUES = new Set([
 ])
 // Morceau 9, lot 9a (§12.19) : les pièces des personnes, À PART -- lues seulement si l'interrupteur
 // `ged_lecture_personnes` est ouvert (même liste que FICHES_PERSONNES au serveur). Le numéro de la pièce n'arrive JAMAIS
-// à l'écran : il va au registre à part, côté serveur. L'état civil et le financement restent fermés (9d) ; le RIB n'est jamais lu.
-export const FICHES_PERSONNES_LUES = new Set(['justif.identite', 'transaction.renseignements'])
+// à l'écran : il va au registre à part, côté serveur. Lot 9d (16/11) : le financement, sa 1re page seule (nature, date,
+// emprunteurs). L'état civil reste fermé ; le RIB n'est jamais lu.
+export const FICHES_PERSONNES_LUES = new Set(['justif.identite', 'transaction.renseignements', 'transaction.financement'])
+const NATURE_FINANCEMENT: Record<string, string> = {
+  offre_de_pret: 'offre de prêt', accord_de_principe: 'accord de prêt', refus: 'refus de prêt', simulation: 'simulation', autre: 'pièce de financement',
+}
 const NATURE_PIECE: Record<string, string> = {
   cni_ancien_modele: "carte d'identité", cni_nouveau_modele: "carte d'identité", passeport: 'passeport',
   titre_sejour: 'titre de séjour', permis_conduire: 'permis de conduire', autre: "pièce d'identité",
@@ -235,6 +239,13 @@ export function resumeLecture(l: Pick<LectureDocument, 'typeCode' | 'etat' | 'va
     if (v('date_document')) morceaux.push(`du ${v('date_document')}`)
     const p = personnesLues(l.valeurs)
     if (p) morceaux.push(p)
+  } else if (l.typeCode === 'transaction.financement') {
+    // lot 9d : la nature, la date, le NOMBRE d'emprunteurs -- jamais un nom (même règle que les autres résumés)
+    const nature = v('nature')?.replace(' (?)', '')
+    morceaux.push(NATURE_FINANCEMENT[nature ?? 'autre'] ?? NATURE_FINANCEMENT.autre)
+    if (v('date_document')) morceaux.push(`du ${v('date_document')}`)
+    const n = new Set(l.valeurs.filter((x) => x.cle === 'personnes.nom' && x.etat !== 'non_vu' && x.valeur).map((x) => x.rang)).size
+    if (n) morceaux.push(`${n} emprunteur${n > 1 ? 's' : ''}`)
   } else if (l.typeCode === 'copro.reglement') {
     if (v('sous_type')) morceaux.push(mot(v('sous_type')) as string)
     if (v('date_acte')) morceaux.push(`du ${v('date_acte')}`)

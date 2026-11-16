@@ -111,7 +111,7 @@ voir(codes(a).join() === 'P4/info', 'TÉMOIN : une fiche sans prénom est couver
 console.log('⑤ le branchement')
 const rm = fs.readFileSync(path.join(__dirname, 'src/RecuManque.tsx'), 'utf8')
 const lib = fs.readFileSync(path.join(__dirname, 'src/lib/gedReglesPersonnes.ts'), 'utf8')
-voir(/\.\.\.reglesPersonnes\(faits, docsLus, personnesDuBien, affaires, new Date\(\)\)\]/.test(rm), 'branché dans « Reçu / Manque », avec les autres règles (même tri, même interrupteur)')
+voir(/\.\.\.reglesPersonnes\(faits, docsLus, personnesDuBien, affaires, new Date\(\)\)[,\]]/.test(rm), 'branché dans « Reçu / Manque », avec les autres règles (même tri, même interrupteur)')
 voir(!/supabase|\.rpc\(|\.insert\(|\.update\(|fetch\(/.test(lib), 'la règle n\'écrit rien et ne lit rien elle-même (fonction pure)')
 voir(!/pieces\.(numero|date_delivrance|autorite_delivrance)/.test(lib), 'la règle ne connaît pas le registre (numéro, délivrance)')
 const pieces = fs.readFileSync(path.join(__dirname, 'src/lib/gedPieces.ts'), 'utf8')

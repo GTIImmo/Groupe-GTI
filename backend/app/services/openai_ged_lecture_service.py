@@ -415,8 +415,8 @@ FICHES.update({
 })
 
 # Morceau 9, lot 9a (§12.19) -- LES PIÈCES DES PERSONNES, à part de FICHES : elles ne sont lues QUE si l'interrupteur
-# `ged_lecture_personnes` est ouvert pour l'appelant (route /ged/lire). L'état civil et le financement restent fermés
-# (9d) ; le RIB n'est JAMAIS lu. ⛔ Le numéro de la pièce, sa date et son autorité de délivrance (PRIVES) ne vont ni
+# `ged_lecture_personnes` est ouvert pour l'appelant (route /ged/lire). Le financement s'y ajoute au lot 9d (16/11) ;
+# l'état civil reste fermé ; le RIB n'est JAMAIS lu. ⛔ Le numéro de la pièce, sa date et son autorité de délivrance (PRIVES) ne vont ni
 # dans app_ged_valeur ni dans la réponse : seulement dans ged_prive (registre anti-blanchiment, 5 ans).
 SITUATIONS = ["celibataire", "marie", "pacse", "divorce", "veuf", "separe", "concubinage", "autre"]
 REGIMES = ["communaute_legale", "separation_de_biens", "communaute_universelle", "participation_aux_acquets", "autre"]
@@ -461,6 +461,28 @@ FICHES_PERSONNES: dict[str, dict[str, Any]] = {
                                   "lieu_naissance": ("txt", None), "adresse": ("txt", None), "code_postal": ("txt", None),
                                   "ville": ("txt", None), "situation_famille": ("txt", SITUATIONS),
                                   "regime_matrimonial": ("txt", REGIMES)})],
+    },
+    # Lot 9d (16/11, audit §12.19 suite) : le financement -- sa NATURE, sa DATE et les EMPRUNTEURS, rien d'autre (règles P7 le
+    # prêt à la date limite, P8 l'emprunteur est l'acquéreur). ⛔ LA PREMIÈRE PAGE SEULE (`premiere_page_seule`) : une offre
+    # de prêt porte plus loin l'assurance emprunteur (santé, RGPD art. 9), les revenus, l'IBAN. Jamais montant, taux,
+    # durée, banque, apport (décision du 12/11 et rapport C §3.3).
+    "transaction.financement": {
+        "version": 1,
+        "premiere_page_seule": True,
+        "texte_max": 6000,
+        "consigne": "C'est une pièce de financement d'un achat immobilier. On ne te montre que sa PREMIÈRE page. nature : "
+                    "offre_de_pret (l'offre de prêt émise par la banque), accord_de_principe (accord de principe, accord "
+                    "de prêt ou attestation de financement), refus (refus de prêt), simulation (simulation, étude ou plan "
+                    "de financement, sans accord de la banque), autre. date_document : la date d'émission de l'offre, de "
+                    "l'accord ou du refus (pas une date de naissance). EXCEPTION à la règle commune, pour CETTE pièce "
+                    "seulement : dans « personnes », recopie le nom de naissance, le nom d'usage s'il est écrit et les "
+                    "prénoms de chaque emprunteur, avec sa qualité (emprunteur, co_emprunteur, caution, autre). JAMAIS : "
+                    "le montant, le taux, la durée, les mensualités, le coût, la banque ou le courtier, l'apport, les "
+                    "revenus, l'assurance ni rien qui touche à la santé, un numéro de compte ou de prêt, une adresse.",
+        "champs": {"nature": ("txt", ["offre_de_pret", "accord_de_principe", "refus", "simulation", "autre"]),
+                   "date_document": ("date", None)},
+        "listes": [("personnes", {"qualite": ("txt", ["emprunteur", "co_emprunteur", "caution", "autre"]),
+                                  "nom": ("nom", None), "nom_usage": ("nom", None), "prenoms": ("nom", None)})],
     },
 }
 PRIVES = {"pieces.numero", "pieces.date_delivrance", "pieces.autorite_delivrance"}
@@ -601,6 +623,12 @@ class OpenAIGedLectureService:
         nb_pages = int(payload.get("nbPages") or len(pages) or 1)
         if nom_dit_rib(nom) or texte_porte_un_rib(texte):
             raise HTTPException(status_code=422, detail="Relevé d'identité bancaire : jamais envoyé à l'IA")
+        if fiche.get("premiere_page_seule"):
+            # lot 9d : l'écran n'envoie déjà que la 1re page ; le serveur le REDIT (ceinture et bretelles) -- tout texte
+            # au-delà du repère de la page 2, et toute image d'une autre page, sont retirés AVANT l'envoi à l'IA (la garde
+            # RIB, elle, a regardé tout ce qui est arrivé)
+            texte = texte.split("--- page 2 ---")[0]
+            pages = [p for p in pages if int(p.get("numero") or 0) == 1]
         if not pages and not texte.strip():
             raise HTTPException(status_code=400, detail="Rien à lire")
         if len(pages) > MAX_PAGES_HD:

@@ -186,12 +186,17 @@ const PAGES_HD_PAR_TYPE: Record<string, number> = {
   'justif.titre': 6, 'copro.pv_ag': 6, 'transaction.avant_contrat': 6, 'mandat.vente': 6, 'transaction.acte': 6, 'copro.reglement': 6,
 }
 const TEXTE_MAX_PAR_TYPE: Record<string, number> = {
+  'transaction.financement': 6000,
   'justif.titre': 40000, 'copro.pv_ag': 40000, 'transaction.avant_contrat': 80000, 'mandat.vente': 40000, 'transaction.acte': 40000,
   'copro.reglement': 40000,
 }
 const FIN_EN_IMAGE_PAR_TYPE: Record<string, number> = {
   'transaction.avant_contrat': 2, 'transaction.offre': 1, 'mandat.vente': 2, 'mandat.avenant': 1, 'mandat.fin': 1,
 }
+// Lot 9d (16/11) : le financement, sa PREMIÈRE PAGE SEULE, en image comme en texte -- une offre de prêt porte plus loin
+// l'assurance emprunteur (santé), les revenus, l'IBAN. Le serveur le redit (`premiere_page_seule`). La garde RIB, elle,
+// lit toujours le texte de TOUTES les pages avant de décider.
+export const PREMIERE_PAGE_SEULE = new Set(['transaction.financement'])
 
 // Les pages à mettre en image (numéros à partir de 1). Avec du texte : seulement les dernières, si le type les veut
 // (signatures). Sans texte (scan) : les premières, et, si le type le veut, les dernières à la place des suivantes.
@@ -235,11 +240,13 @@ export async function preparerLecture(file: File, typeCode?: string): Promise<Pr
       textes.push(contenu.items.map((it) => ('str' in it ? it.str : '')).join(' ').replace(/\s+/g, ' ').trim())
     }
     if (texteDitRib(textes.join('\n'))) return { lisible: false, raison: 'Un IBAN est dans le texte : jamais envoyé à l\'IA.' }
-    const premieres = textes.slice(0, Math.min(3, nbPages))
+    const uneSeule = Boolean(typeCode && PREMIERE_PAGE_SEULE.has(typeCode))
+    const envoyables = uneSeule ? textes.slice(0, 1) : textes
+    const premieres = envoyables.slice(0, Math.min(3, nbPages))
     const avecTexte = premieres.length > 0 && premieres.every((t) => t.split(' ').filter(Boolean).length >= 30)
-    const texte = avecTexte ? textes.map((t, i) => `--- page ${i + 1} ---\n${t}`).join('\n').slice(0, texteMax) : ''
+    const texte = avecTexte ? envoyables.map((t, i) => `--- page ${i + 1} ---\n${t}`).join('\n').slice(0, texteMax) : ''
     const pages: Array<{ numero: number; image: string }> = []
-    for (const n of pagesAImager(nbPages, pagesHd, fin, avecTexte)) {
+    for (const n of pagesAImager(uneSeule ? Math.min(1, nbPages) : nbPages, pagesHd, fin, avecTexte)) {
       const page = await doc.getPage(n)
       const base = page.getViewport({ scale: 1 })
       const vue = page.getViewport({ scale: LECTURE_COTE_HD / Math.max(base.width, base.height) })

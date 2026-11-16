@@ -109,7 +109,7 @@ voir(front('PAGES_HD_PAR_TYPE') === serveur('PAGES_HD') && front('PAGES_HD_PAR_T
 voir(/'transaction\.avant_contrat': 80000/.test(ia) && /'mandat\.vente': 40000/.test(ia) && /'transaction\.acte': 40000/.test(ia) && /'copro\.reglement': 40000/.test(ia), 'le texte long : compromis 80 000 ; mandat, acte, règlement 40 000 (comme texte_max au serveur)')
 voir([...FICHES_LUES].every((c) => srv.includes(`"${c}"`)), 'chaque type lu à l\'écran a sa fiche au serveur')
 voir(/'justif\.titre': 6,/.test(ia) && /preparerLecture\(ligne\.file, ligne\.type\)/.test(depot), 'le titre : 6 pages en image, le type est passé à la préparation')
-voir(/\.slice\(0, texteMax\)/.test(ia) && /for \(const n of pagesAImager\(nbPages, pagesHd, fin, avecTexte\)\)/.test(ia) && /LECTURE_TEXTE_MAX = 20000/.test(ia) && /LECTURE_PAGES_HD = 4/.test(ia), 'le texte et les pages suivent le réglage du type (les autres gardent 20 000 et 4)')
+voir(/\.slice\(0, texteMax\)/.test(ia) && /for \(const n of pagesAImager\(uneSeule \? Math\.min\(1, nbPages\) : nbPages, pagesHd, fin, avecTexte\)\)/.test(ia) && /LECTURE_TEXTE_MAX = 20000/.test(ia) && /LECTURE_PAGES_HD = 4/.test(ia), 'le texte et les pages suivent le réglage du type (les autres gardent 20 000 et 4)')
 voir((depot.match(/lectureIa && typeLu\(ligne\.type\) \? \{ etat: 'attente' \} : null/g) ?? []).length === 2 && !/lectureIa && FICHES_LUES\.has\(ligne\.type\)/.test(depot), 'une lecture n\'est demandée que si l\'interrupteur est allumé et que le type a une fiche (les deux endroits)')
 voir(/l\.lecture\?\.etat === 'lecture'\)\) return/.test(depot), 'une lecture à la fois')
 const prep = ia.slice(ia.indexOf('export async function preparerLecture'), ia.indexOf('export type ResultatLecture'))
@@ -120,10 +120,10 @@ voir(/Lu par l'IA : \$\{lus\.length\}/.test(rm) && /\.filter\(\(d\) => d\.presen
 
 console.log('④ morceau 9, lot 9a : les pièces des personnes')
 const { FICHES_PERSONNES_LUES } = charger('src/lib/gedLecture.ts')
-voir(FICHES_PERSONNES_LUES.size === 2 && FICHES_PERSONNES_LUES.has('justif.identite') && FICHES_PERSONNES_LUES.has('transaction.renseignements') && FICHES_LUES.size === 25,
-  'deux types À PART (identité, fiche de renseignements) ; les 25 types lus ne bougent pas')
-voir(!FICHES_PERSONNES_LUES.has('justif.rib') && !FICHES_PERSONNES_LUES.has('transaction.financement') && !FICHES_PERSONNES_LUES.has('justif.etat_civil'),
-  'TÉMOIN : ni le RIB, ni le financement, ni l\'état civil (9d)')
+voir(FICHES_PERSONNES_LUES.size === 3 && FICHES_PERSONNES_LUES.has('justif.identite') && FICHES_PERSONNES_LUES.has('transaction.renseignements') && FICHES_PERSONNES_LUES.has('transaction.financement') && FICHES_LUES.size === 25,
+  'trois types À PART (identité, fiche de renseignements, et le financement au lot 9d) ; les 25 types lus ne bougent pas')
+voir(!FICHES_PERSONNES_LUES.has('justif.rib') && !FICHES_PERSONNES_LUES.has('justif.etat_civil'),
+  'TÉMOIN : ni le RIB, ni l\'état civil (9d)')
 const fp = srv.slice(srv.indexOf('FICHES_PERSONNES: dict'), srv.indexOf('PRIVES = '))
 voir([...FICHES_PERSONNES_LUES].every((c) => fp.includes(`"${c}": {`)), 'chaque pièce lue à l\'écran a sa fiche au serveur, dans FICHES_PERSONNES')
 voir(/const typeLu = \(code: string\) => FICHES_LUES\.has\(code\) \|\| \(lecturePersonnes && FICHES_PERSONNES_LUES\.has\(code\)\)/.test(depot) && /useGedLecturePersonnes\(\)/.test(depot),

@@ -1937,3 +1937,34 @@ transaction et mandat (lire seulement) ; aucun geste chez Hektor dans la proposi
 - **Ce que ça pourrait casser** : rien d'existant (types neufs dans `FICHES_PERSONNES`, derrière `ged_lecture_personnes`
   en « admin ») ; risque RGPD si la 1re page ne suffit pas et qu'on élargit ; un « décès » ou une « protection » mal lus
   crieraient fort : niveau « à vérifier », jamais un blocage.
+
+**✅ « Oui, financement » (16/11) : LOT 9d-1 (LE FINANCEMENT, P7 et P8) ÉCRIT ET CONTRÔLÉ HORS LIGNE — rien poussé, rien posé.**
+Pas de patch SQL : `transaction.financement` est déjà `lue` et `sensible` dans `app_ged_type` ; il manquait la fiche au
+serveur. Tout reste derrière `ged_lecture_personnes` (lecture) et `ged_propositions` (règles), en « admin ».
+- **Serveur** (`openai_ged_lecture_service.py`) : fiche `transaction.financement` v1 DANS `FICHES_PERSONNES` — `nature`
+  (`offre_de_pret`, `accord_de_principe`, `refus`, `simulation`, `autre`), `date_document`, liste `personnes` (qualité
+  emprunteur / co_emprunteur / caution / autre, nom, nom d'usage, prénoms). JAMAIS montant, taux, durée, mensualités,
+  coût, banque ou courtier, apport, revenus, assurance, santé, compte, adresse. ⛔ `premiere_page_seule` : le serveur
+  REDIT la 1re page (texte coupé au repère « --- page 2 --- », images des autres pages retirées) APRÈS la garde RIB, qui
+  regarde tout ce qui arrive ; `texte_max` 6 000.
+- **Écran** : `FICHES_PERSONNES_LUES` + financement ; `gedClassementIa.ts` `PREMIERE_PAGE_SEULE` (texte et image de la
+  page 1 seulement ; la garde RIB lit toujours toutes les pages AVANT) ; résumé « offre de prêt · du … · 2 emprunteurs »
+  (jamais un nom).
+- **Règles** `src/lib/gedReglesFinancement.ts` (pure), branchées dans `RecuManque` avec les autres. Rien sans compromis
+  VIVANT. Le compromis lu le plus récent avec `condition_pret = oui`, rattaché à UNE ligne (`resoudreCible`), donne la
+  date limite.
+  - **P7** : refus lu -> alerte ; limite dans 7 jours ou passée sans AUCUNE pièce de financement (type ou NOM d'un ancien
+    document) -> pièce à déposer / alerte (FIN-1) ; limite passée, pièces lues sans offre ni accord -> alerte (information
+    si une pièce non lue est au dossier) ; accord daté APRÈS la limite -> information (prorogation ?) ; accord sans date
+    lue -> silence ; seule une simulation (limite à venir) -> information.
+  - **P8** : une pièce dont AUCUN emprunteur n'est acquéreur (registre + compromis lu) -> alerte, une ligne par groupe
+    d'emprunteurs ; aucun acquéreur connu -> silence.
+- **Essais** : `test_ged_regles_financement.cjs` **32 verts** ; `backend/tests/test_ged_lire_financement.py` **19 verts**
+  (`PYTHONIOENCODING=utf-8`). **Témoins inverses** : la coupe à la 1re page retirée du serveur -> ROUGE (l'assurance et le
+  montant partaient) ; la garde « compromis vivant » retirée -> ROUGE (un refus sur un compromis annulé sonnait) ; restaurés
+  -> verts. Essais adaptés (le financement n'est plus « fermé » ; leurs témoins passent à l'état civil, toujours fermé) :
+  lire 80, lire personnes 36, lecture 59, règles personnes 38 ; voisins verts (remplir contact 48, remplir 27, règles lues
+  84, règles 44, classer 28). `npm run build` vert.
+- **Reste, sur accord** : pousser (Render pour le serveur, Vercel pour l'écran), puis l'épreuve réelle sur un bien d'essai
+  avec un compromis vivant : une fausse offre de prêt SPÉCIMEN de PLUSIEURS pages (une page « assurance » en 2) pour
+  prouver que seule la 1re part. ⚠ Une offre en PDF texte qui porte un IBAN est refusée en bloc par la garde RIB : voulu.

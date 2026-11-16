@@ -138,7 +138,8 @@ class Settings:
 
 class Portier:
     def types(self):
-        return [{"code": "diag.erp", "sensible": False}, {"code": "transaction.financement", "sensible": True}]
+        return [{"code": "diag.erp", "sensible": False}, {"code": "transaction.financement", "sensible": True},
+                {"code": "justif.etat_civil", "sensible": True}]
 
     def depense_du_jour(self):
         return 0.0
@@ -204,7 +205,7 @@ lec.requests.post = appel_interdit
 
 print("3) les refus AVANT tout appel")
 for classement, charge, attendu, libelle in [
-    ({"type_code": "transaction.financement"}, {"texte": "offre de prêt"}, 422, "type sans fiche (et pièce des personnes) : refusé"),
+    ({"type_code": "justif.etat_civil"}, {"texte": "livret de famille"}, 422, "type sans fiche (et pièce des personnes) : refusé"),
     ({"type_code": "diag.erp", "document_name": "RIB.pdf"}, {"texte": "x"}, 422, "nom RIB : refusé"),
     ({"type_code": "diag.erp"}, {"texte": "IBAN FR76 3000 6000 0112 3456 7890 189"}, 422, "IBAN dans le texte : refusé"),
     ({"type_code": "diag.erp"}, {}, 400, "rien à lire : refusé"),
@@ -214,13 +215,13 @@ for classement, charge, attendu, libelle in [
         voir(False, libelle)
     except HTTPException as e:
         voir(e.status_code == attendu, f"{libelle} ({e.status_code})")
-lec.FICHES["transaction.financement"] = lec.FICHES["diag.erp"]
+lec.FICHES["justif.etat_civil"] = lec.FICHES["diag.erp"]
 try:
-    s.lire({"type_code": "transaction.financement"}, {"texte": "x"})
+    s.lire({"type_code": "justif.etat_civil"}, {"texte": "x"})
     voir(False, "sensible")
 except HTTPException as e:
     voir(e.status_code == 422 and "personnes" in str(e.detail), "une pièce des personnes, même avec une fiche, attend le morceau 9")
-del lec.FICHES["transaction.financement"]
+del lec.FICHES["justif.etat_civil"]
 
 print("4) la route")
 
