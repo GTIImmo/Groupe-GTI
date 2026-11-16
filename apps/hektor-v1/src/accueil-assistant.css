@@ -156,6 +156,12 @@
 /* dans le fil, un blocage s'aligne sur la colonne des réponses (30 px de marque + 12 px) */
 .asi-thread-in > .asi-msg { margin-left: 42px; }
 
+/* ---------- lot 3 : les liens vers les fiches (bleu canard = ouvrir, règle de la maquette) ---------- */
+.asi-obj { display: inline; padding: 0; margin: 0; border: 0; background: none; font: inherit; font-weight: 600; color: var(--asi-canard); border-bottom: 1px solid rgba(23, 105, 122, 0.35); cursor: pointer; line-height: inherit; text-align: left; }
+.asi-obj:hover { color: #0f4f5c; border-bottom-color: currentColor; }
+.asi-obj:focus-visible { outline: 2px solid var(--asi-magenta); outline-offset: 2px; border-radius: 3px; }
+.asi-c-liens { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 12.5px; }
+
 @keyframes asi-tourne { to { transform: rotate(360deg); } }
 @keyframes asi-clign { 50% { opacity: 0; } }
 @keyframes asi-trace { from { stroke-dashoffset: 64; } to { stroke-dashoffset: 0; } }

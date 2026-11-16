@@ -11,6 +11,7 @@ from ..settings import Settings
 from . import agent_registry
 from .agent_tarifs import TARIFS, cout_usd
 from .assistant_catalogue import ContexteAssistant, outils_sdk
+from .assistant_gestes import cibles_carte
 from .assistant_objets import liste_pour_consignes
 
 # ---------------------------------------------------------------------------
@@ -88,6 +89,11 @@ _INSTRUCTIONS = (
     "- Les droits sont ceux de la personne : si une lecture est refusee, dis que tu n'y as pas acces, sans contourner.\n"
     "- Dis d'ou vient un chiffre (quel objet, quels filtres, combien de lignes). Si un calcul est « tronque », dis-le.\n"
     "- Si la demande est ambigue (deux contacts du meme nom, plusieurs biens possibles), demande lequel.\n"
+    # étape 4, lot 3 (16/11/2026) : l'écran fait de ces deux formes un lien qui ouvre la fiche ; tout le reste reste du texte
+    "- Un bien ou un contact que tes lectures t'ont rendu s'ecrit comme un lien, pour que la personne ouvre sa fiche d'un "
+    "clic : [l'annonce 63330](annonce:63330) avec le NUMERO D'ANNONCE (hektor_annonce_id), [M. MARTIN](contact:10012345) "
+    "avec le numero du contact (hektor_contact_id). Seulement avec un numero que tu as lu, jamais invente ; sinon le texte "
+    "seul. Aucune autre sorte de lien.\n"
     "- Question juridique ou fiscale : reponse generale, et precise qu'elle est a faire verifier (notaire, juriste).\n"
     "- Sois force de proposition : apres ta reponse, propose en une phrase la suite utile (relancer, appeler, verifier "
     "un mandat, demander une baisse de prix…).\n"
@@ -277,9 +283,14 @@ class AssistantService:
             pass  # le geste est fait (ou a échoué) ; seul le journal de la carte manque -- la réponse le dit quand même
 
     def lister_cartes(self, jeton: str, conversation_id: str) -> list[dict[str, Any]]:
-        return self._lire_avec_jeton(jeton, "app_assistant_action", {
-            "conversation_id": f"eq.{conversation_id}", "select": "id,geste,resume,etat,resultat,cree_le,expire_le,execute_le",
+        # étape 4, lot 3 : les paramètres sont lus pour en tirer la cible de la carte (le lien « Ouvrir la fiche »), puis
+        # RETIRÉS de la réponse : l'écran n'a pas à recevoir le texte d'un e-mail ou des critères qu'il n'affiche pas.
+        lignes = self._lire_avec_jeton(jeton, "app_assistant_action", {
+            "conversation_id": f"eq.{conversation_id}",
+            "select": "id,geste,resume,etat,resultat,cree_le,expire_le,execute_le,parametres",
             "order": "cree_le.asc"})
+        return [{**{k: v for k, v in ligne.items() if k != "parametres"}, "cibles": cibles_carte(ligne.get("parametres"))}
+                for ligne in lignes]
 
     # ── relire (avec le JETON de la personne : la RLS dit qui voit quoi) ──────
     def _lire_avec_jeton(self, jeton: str, table: str, params: dict[str, str]) -> list[dict[str, Any]]:

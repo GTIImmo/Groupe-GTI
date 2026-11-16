@@ -2275,9 +2275,28 @@ def ranger_carte(ctx: ContexteAssistant, geste: Geste, resume: str, parametres: 
     if not r.ok or not (r.json() or []):
         raise LectureRefusee(f"carte non rangée ({r.status_code})")
     ligne = r.json()[0]
-    carte = {"id": ligne["id"], "geste": geste.nom, "resume": resume, "expire_le": ligne.get("expire_le")}
+    carte = {"id": ligne["id"], "geste": geste.nom, "resume": resume, "expire_le": ligne.get("expire_le"),
+             "cibles": cibles_carte(parametres)}
     ctx.cartes.append(carte)
     return carte
+
+
+# Étape 4, lot 3 (16/11/2026) : sur quoi porte la carte, pour le lien « Ouvrir la fiche » de l'écran. Lu dans les
+# paramètres que le SERVEUR a préparés (jamais dans le texte du modèle), et rien d'autre ne sort (ni le texte d'un e-mail,
+# ni des critères). Le contact d'abord (une relance, un rendez-vous client portent sur la personne), puis le bien : par
+# son numéro d'annonce s'il en a un, sinon par son app_dossier_id.
+def cibles_carte(parametres: dict[str, Any] | None) -> list[dict[str, str]]:
+    p = parametres or {}
+    cibles: list[dict[str, str]] = []
+    contact = str(p.get("hektor_contact_id") or "").strip()
+    if contact:
+        cibles.append({"type": "contact", "id": contact})
+    annonce = str(p.get("hektor_annonce_id") or "").strip()
+    if annonce and annonce != "0":
+        cibles.append({"type": "annonce", "numero": annonce})
+    elif str(p.get("app_dossier_id") or "").strip():
+        cibles.append({"type": "bien", "id": str(p["app_dossier_id"]).strip()})
+    return cibles
 
 
 def _proposer(geste: Geste) -> Callable[[ContexteAssistant, dict[str, Any]], dict[str, Any]]:

@@ -1180,4 +1180,37 @@ voir(not any(f.nom.startswith("proposer_") for f in ges.FONCTIONS_LECTURE_LOT4),
 voir([f.nom for f in cat.fonctions_du_role("commercial") if f.nom == "proposer_note_transaction"] == [],
      "un commercial n'a PAS la note de transaction (double verrou : non proposée, et refusée au clic)")
 
+print("11) ÉTAPE 4 LOT 3 : la cible d'une carte (le lien « Ouvrir la fiche » de l'écran)")
+voir(ges.cibles_carte({"hektor_contact_id": "10354641", "app_dossier_id": 61398, "libelle": "x", "echeance": "2026-11-17"})
+     == [{"type": "contact", "id": "10354641"}, {"type": "bien", "id": "61398"}],
+     "une relance : le contact d'abord, puis le bien par son app_dossier_id (pas de numéro d'annonce)")
+voir(ges.cibles_carte({"hektor_annonce_id": 63330, "champs": {"pieces": 6}}) == [{"type": "annonce", "numero": "63330"}],
+     "un bien modifié : le numéro d'annonce ; les champs ne sortent pas")
+voir(ges.cibles_carte({"hektor_annonce_id": 0, "app_dossier_id": 10000006}) == [{"type": "bien", "id": "10000006"}],
+     "un numéro d'annonce à 0 (bien né dans l'app) : repli sur l'app_dossier_id")
+voir(ges.cibles_carte({"hektor_contact_id": "10354641", "objet": "Bonjour", "texte": "secret du courriel"})
+     == [{"type": "contact", "id": "10354641"}], "un e-mail au client : le contact seul, JAMAIS l'objet ni le texte")
+voir(ges.cibles_carte({"destinataires": ["a@gti-immobilier.fr"], "texte": "x"}) == [] and ges.cibles_carte({"app_affaire_id": 5, "geste": "accepte"}) == []
+     and ges.cibles_carte(None) == [], "e-mail interne, transaction, rien : aucune cible (pas de lien inventé)")
+_post = requests.post
+requests.post = lambda url, **kw: type("R", (), {"ok": True, "status_code": 201, "json": lambda self: [{"id": "c-lot3", "expire_le": "2026-11-16T13:00:00Z"}]})()
+_ctx3 = cat.ContexteAssistant(settings=Settings(), user_id=UID, email="moi@gti-immobilier.fr", role="admin", jeton="jeton", conversation_id="conv")
+_carte = ges.ranger_carte(_ctx3, ges.GESTES["modifier_bien"], "résumé", {"hektor_annonce_id": 63330, "champs": {"pieces": 6}})
+requests.post = _post
+voir(_carte["cibles"] == [{"type": "annonce", "numero": "63330"}] and _ctx3.cartes[-1]["cibles"] == _carte["cibles"],
+     "la carte rangée porte sa cible, et c'est elle qui part dans le flux (ctx.cartes)")
+from app.services.assistant_service import AssistantService  # noqa: E402
+_get = requests.get
+_vu = {}
+def _faux_get(url, **kw):
+    _vu.update(kw.get("params") or {})
+    return type("R", (), {"ok": True, "json": lambda self: [{"id": "c1", "geste": "email_client", "resume": "r", "etat": "proposee",
+                                                              "parametres": {"hektor_contact_id": "10354641", "texte": "secret du courriel"}}]})()
+requests.get = _faux_get
+_relues = AssistantService(Settings()).lister_cartes("jeton", "conv")
+requests.get = _get
+voir("parametres" in _vu.get("select", "") and _relues == [{"id": "c1", "geste": "email_client", "resume": "r", "etat": "proposee",
+     "cibles": [{"type": "contact", "id": "10354641"}]}],
+     "relire les cartes : la cible est jointe, les paramètres (le texte de l'e-mail) ne sortent PAS")
+
 print(f"\n{ok} contrôles verts")

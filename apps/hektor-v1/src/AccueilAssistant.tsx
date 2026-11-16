@@ -1,7 +1,7 @@
-import { Fragment, useCallback, useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
+import { Fragment, createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import {
   RefusAssistant, listerConversations, poserQuestion, refuserCarte, relireConversation, validerCarte,
-  type CarteAssistant, type ConversationAssistant, type EvenementFlux,
+  type CarteAssistant, type CibleCarte, type ConversationAssistant, type EvenementFlux,
 } from './lib/assistant'
 import { EVENEMENT_ASSISTANT_OUVRIR, prendreDemandeConversation, signalerChangementAssistant } from './RailAssistant'
 import './accueil-assistant.css'
@@ -38,6 +38,7 @@ type Tour = {
 }
 type Blocage = { genre: 'info' | 'pause' | 'ko' | 'net'; titre: string; sous?: string; renvoyer?: string }
 type Mode = { type: 'accueil' } | { type: 'conversation' } | { type: 'toutes' }
+const CONVERSATION_GARDEE = 'gti_assistant_conversation'
 
 // Les gestes : l'en-tête de la carte et la phrase de fin (le serveur ne rend que des numéros).
 const GESTES: Record<string, { titre: string; fait: (r: Record<string, unknown>) => string; suite?: string }> = {
@@ -110,10 +111,43 @@ const quandConversation = (iso?: string) => {
 const pluriel = (n: number, un: string, plusieurs: string) => (n > 1 ? plusieurs : un)
 const estExpiree = (c: CarteAssistant) => c.etat === 'expiree' || (c.etat === 'proposee' && !!c.expire_le && new Date(c.expire_le).getTime() < Date.now())
 
-// ── le texte d'une réponse : paragraphes, gras, listes. Rien d'autre, et jamais de HTML injecté. ──
-function EnLigne({ texte }: { texte: string }) {
+// ── Lot 3 (16/11/2026) : les liens vers les fiches. Les consignes demandent au modèle d'écrire un bien ou un contact
+//   LU sous la forme [texte](annonce:NUMERO_HEKTOR) ou [texte](contact:NUMERO) ; seules ces deux formes deviennent un
+//   lien, tout le reste reste du texte. Repli pour l'historique et les oublis : « annonce 24935 », « bien d'essai
+//   **62965** », « l'annonce n° 63330 » (4 à 6 chiffres) ouvrent l'annonce. Un contact cité par son seul nom n'a pas de lien.
+type Liens = { annonce: (numero: string) => void; bien: (id: string) => void; contact: (id: string) => void }
+const LiensContexte = createContext<Liens | null>(null)
+const UN_LIEN = /(\[[^\]\n]{1,160}\]\((?:annonce|contact):[0-9]{1,12}\))/g
+const LE_LIEN = /^\[([^\]\n]{1,160})\]\((annonce|contact):([0-9]{1,12})\)$/
+const REPLI_ANNONCE = /\b((?:annonces?|biens?)(?:\s+d['’]essai)?\s+(?:n°\s?)?)(\*\*)?(\d{4,6})\2(?![\d,.]\d)/gi
+
+function avecLiensDeRepli(texte: string) {
+  return texte.split(UN_LIEN).map((m, i) => (i % 2 ? m : m.replace(REPLI_ANNONCE, (_tout, debut: string, _gras, numero: string) => `[${debut}${numero}](annonce:${numero})`))).join('')
+}
+
+function Gras({ texte }: { texte: string }) {
   const morceaux = texte.split(/(\*\*[^*]+\*\*)/g)
   return <>{morceaux.map((m, i) => (m.startsWith('**') && m.endsWith('**') && m.length > 4 ? <strong key={i}>{m.slice(2, -2)}</strong> : <Fragment key={i}>{m}</Fragment>))}</>
+}
+
+// ── le texte d'une réponse : paragraphes, gras, listes, liens. Rien d'autre, et jamais de HTML injecté. ──
+function EnLigne({ texte }: { texte: string }) {
+  const liens = useContext(LiensContexte)
+  return (
+    <>
+      {avecLiensDeRepli(texte).split(UN_LIEN).map((m, i) => {
+        const lien = i % 2 ? LE_LIEN.exec(m) : null
+        if (!lien) return <Gras key={i} texte={m} />
+        const libelle = lien[1].replace(/\*\*/g, '')
+        const [genre, numero] = [lien[2], lien[3]]
+        if (!liens) return <Fragment key={i}>{libelle}</Fragment>
+        return (
+          <button key={i} type="button" className="asi-obj" title={genre === 'annonce' ? `Ouvrir l'annonce ${numero}` : `Ouvrir la fiche du contact ${numero}`}
+            onClick={() => (genre === 'annonce' ? liens.annonce(numero) : liens.contact(numero))}>{libelle}</button>
+        )
+      })}
+    </>
+  )
 }
 
 function TexteReponse({ source, curseur }: { source: string; curseur: boolean }) {
@@ -181,6 +215,22 @@ function blocageDepuis(erreur: unknown, question: string): Blocage {
   return { genre: 'net', titre: "Le serveur de l'assistant ne répond pas.", sous: "Ta question n'est peut-être pas partie. Renvoie-la quand le réseau revient.", renvoyer: question }
 }
 
+// Lot 3 : « Ouvrir la fiche » sous le résumé d'une carte, d'après la cible que le SERVEUR a tirée de ses paramètres.
+function LiensCarte({ cibles }: { cibles?: CibleCarte[] }) {
+  const liens = useContext(LiensContexte)
+  if (!liens || !cibles?.length) return null
+  return (
+    <div className="asi-c-liens">
+      {cibles.map((c) => (
+        <button key={`${c.type}-${c.type === 'annonce' ? c.numero : c.id}`} type="button" className="asi-obj"
+          onClick={() => (c.type === 'contact' ? liens.contact(c.id) : c.type === 'annonce' ? liens.annonce(c.numero) : liens.bien(c.id))}>
+          {c.type === 'contact' ? 'Ouvrir le contact' : c.type === 'annonce' ? `Ouvrir l'annonce ${c.numero}` : 'Ouvrir le bien'}
+        </button>
+      ))}
+    </div>
+  )
+}
+
 function CarteVue({ carte, onValider, onRefuser }: { carte: CarteEcran; onValider: () => void; onRefuser: () => void }) {
   const geste = GESTES[carte.geste]
   const titre = geste?.titre ?? 'Geste à valider'
@@ -189,7 +239,7 @@ function CarteVue({ carte, onValider, onRefuser }: { carte: CarteEcran; onValide
     return (
       <div className="asi-carte">
         <div className="asi-c-h"><PictoHorloge />{titre}{carte.expire_le ? <span className="asi-till">à valider avant {heure(carte.expire_le)}</span> : null}</div>
-        <div className="asi-c-b"><p className="asi-resume">{carte.resume}</p></div>
+        <div className="asi-c-b"><p className="asi-resume">{carte.resume}</p><LiensCarte cibles={carte.cibles} /></div>
         {carte.detail ? <div className="asi-c-end is-ko">{carte.detail}</div> : null}
         <div className="asi-c-f">
           <button className="asi-b is-main" type="button" onClick={onValider}>Valider</button>
@@ -203,7 +253,7 @@ function CarteVue({ carte, onValider, onRefuser }: { carte: CarteEcran; onValide
     return (
       <div className="asi-carte is-cours" aria-busy="true">
         <div className="asi-c-h"><PictoTourne />En cours</div>
-        <div className="asi-c-b"><p className="asi-resume">{carte.resume}</p></div>
+        <div className="asi-c-b"><p className="asi-resume">{carte.resume}</p><LiensCarte cibles={carte.cibles} /></div>
       </div>
     )
   }
@@ -211,7 +261,7 @@ function CarteVue({ carte, onValider, onRefuser }: { carte: CarteEcran; onValide
     return (
       <div className="asi-carte is-faite">
         <div className="asi-c-h"><Sceau coche />Validée{carte.execute_le ? ` à ${heure(carte.execute_le)}` : ''}</div>
-        <div className="asi-c-b"><p className="asi-resume">{carte.resume}</p></div>
+        <div className="asi-c-b"><p className="asi-resume">{carte.resume}</p><LiensCarte cibles={carte.cibles} /></div>
         <div className="asi-c-end"><b>{geste ? geste.fait(carte.resultat ?? {}) : 'Fait.'}</b>{geste?.suite ? <span>{geste.suite}</span> : null}</div>
       </div>
     )
@@ -220,7 +270,7 @@ function CarteVue({ carte, onValider, onRefuser }: { carte: CarteEcran; onValide
     return (
       <div className="asi-carte is-ko">
         <div className="asi-c-h">Non faite</div>
-        <div className="asi-c-b"><p className="asi-resume">{carte.resume}</p></div>
+        <div className="asi-c-b"><p className="asi-resume">{carte.resume}</p><LiensCarte cibles={carte.cibles} /></div>
         <div className="asi-c-end is-ko">{carte.detail || String((carte.resultat as { raison?: string } | null)?.raison ?? '') || "Non fait : l'écriture n'a pas abouti."}</div>
       </div>
     )
@@ -228,7 +278,7 @@ function CarteVue({ carte, onValider, onRefuser }: { carte: CarteEcran; onValide
   return (
     <div className="asi-carte is-passee">
       <div className="asi-c-h">{carte.etat === 'refusee' ? `Refusée${carte.execute_le ? ` à ${heure(carte.execute_le)}` : ''}` : 'Expirée'}</div>
-      <div className="asi-c-b"><p className="asi-resume">{carte.resume}</p></div>
+      <div className="asi-c-b"><p className="asi-resume">{carte.resume}</p><LiensCarte cibles={carte.cibles} /></div>
       <div className="asi-c-end"><span>{carte.etat === 'refusee' ? "Rien n'a été fait." : carte.detail || "Carte expirée : redemande-la à l'assistant."}</span></div>
     </div>
   )
@@ -243,6 +293,12 @@ export default function AccueilAssistant(props: {
   peutOuvrirSuivi: boolean
   onOuvrirSuivi: () => void
   tableauDeBord: ReactNode
+  // lot 3 : les portes de l'app (fiche d'une annonce par son numéro Hektor ou par l'app_dossier_id, fiche d'un contact)
+  onOuvrirAnnonce: (numeroHektor: string) => void
+  onOuvrirBien: (appDossierId: string) => void
+  onOuvrirContact: (hektorContactId: string) => void
+  // lot 3 : après une carte validée, l'app se relit comme après un geste fait à la main (et à la fin du travail Hektor)
+  onGesteFait: (travail: string | null) => void
 }) {
   const [vue, setVue] = useState<'assistant' | 'tableau'>('assistant')
   const [mode, setMode] = useState<Mode>({ type: 'accueil' })
@@ -272,6 +328,25 @@ export default function AccueilAssistant(props: {
     return () => { annule = true }
   }, [porteeRecherches])
 
+  // les portes de l'app, lues au moment du clic (une fonction neuve à chaque rendu d'App ne relance rien)
+  const portes = useRef(props)
+  portes.current = props
+  const liens = useMemo<Liens>(() => ({
+    annonce: (n) => portes.current.onOuvrirAnnonce(n),
+    bien: (id) => portes.current.onOuvrirBien(id),
+    contact: (id) => portes.current.onOuvrirContact(id),
+  }), [])
+
+  // lot 3 : la conversation ouverte est gardée pour l'onglet. Un contact s'ouvre dans l'écran Contacts (l'Accueil est
+  // alors démonté) : au retour (précédent du navigateur, F5), la conversation se rouvre au lieu d'un accueil vide.
+  // Un clic sur « Accueil » dans le rail, lui, demande toujours une nouvelle conversation.
+  const garderConversation = (id: string | null) => {
+    try {
+      if (id) window.sessionStorage.setItem(CONVERSATION_GARDEE, id)
+      else window.sessionStorage.removeItem(CONVERSATION_GARDEE)
+    } catch { /* stockage indisponible : on perd seulement le retour */ }
+  }
+
   const majDernierTour = useCallback((fn: (t: Tour) => Tour) => {
     setTours((liste) => (liste.length ? [...liste.slice(0, -1), fn(liste[liste.length - 1])] : liste))
   }, [])
@@ -281,6 +356,7 @@ export default function AccueilAssistant(props: {
   const nouvelle = useCallback(() => {
     arreter()
     conversationId.current = null
+    garderConversation(null)
     setTours([])
     setTitre('')
     setBlocage(null)
@@ -297,6 +373,7 @@ export default function AccueilAssistant(props: {
     setTours([])
     setChargement(true)
     conversationId.current = id
+    garderConversation(id)
     try {
       const { conversation, messages, cartes } = await relireConversation(id)
       if (conversationId.current !== id) return
@@ -321,6 +398,8 @@ export default function AccueilAssistant(props: {
       // une question sans réponse enregistrée : la réponse a été coupée ou n'a pas été enregistrée
       setTours(lus.map((t) => (t.etat === 'coupe' && !t.texte ? { ...t, detail: 'Pas de réponse enregistrée pour cette question.' } : t)))
     } catch (erreur) {
+      // une conversation gardée qui ne se relit plus (supprimée, d'un autre compte) n'est plus gardée
+      if (erreur instanceof RefusAssistant && erreur.statut === 404) garderConversation(null)
       setBlocage({ ...blocageDepuis(erreur, ''), renvoyer: undefined })
     } finally {
       setChargement(false)
@@ -351,6 +430,11 @@ export default function AccueilAssistant(props: {
   useEffect(() => {
     const demande = prendreDemandeConversation()
     if (demande) appliquer(demande.conversationId)
+    else {
+      let gardee: string | null = null
+      try { gardee = window.sessionStorage.getItem(CONVERSATION_GARDEE) } catch { /* stockage indisponible */ }
+      if (gardee) appliquer(gardee)
+    }
     const ecouter = (e: Event) => {
       prendreDemandeConversation()
       appliquer((e as CustomEvent<{ conversationId: string | null }>).detail?.conversationId ?? null)
@@ -359,7 +443,8 @@ export default function AccueilAssistant(props: {
     return () => window.removeEventListener(EVENEMENT_ASSISTANT_OUVRIR, ecouter)
   }, [appliquer])
 
-  useEffect(() => () => controleur.current?.abort(), [])
+  // ⚠ Pas d'arrêt du flux quand l'écran se démonte (lot 3) : ouvrir un contact pendant une réponse la coupait, et le
+  //   serveur ne l'enregistrait pas. La lecture continue ; le serveur enregistre la réponse ; au retour, elle est relue.
 
   // le fil suit la réponse, sauf si la personne est remontée lire plus haut
   useEffect(() => {
@@ -384,10 +469,10 @@ export default function AccueilAssistant(props: {
     controleur.current = c
     setEnCours(true)
     const surEvenement = (e: EvenementFlux) => {
-      if (e.type === 'debut') conversationId.current = e.conversationId
+      if (e.type === 'debut') { conversationId.current = e.conversationId; garderConversation(e.conversationId) }
       else if (e.type === 'texte') majDernierTour((t) => ({ ...t, texte: t.texte + e.delta }))
       else if (e.type === 'outil') majDernierTour((t) => ({ ...t, traces: [...t.traces.map((x) => ({ ...x, fini: true })), { nom: e.nom, fini: false }] }))
-      else if (e.type === 'carte') majDernierTour((t) => ({ ...t, cartes: [...t.cartes, { id: e.id, geste: e.geste, resume: e.resume, expire_le: e.expire_le, etat: 'proposee' }] }))
+      else if (e.type === 'carte') majDernierTour((t) => ({ ...t, cartes: [...t.cartes, { id: e.id, geste: e.geste, resume: e.resume, expire_le: e.expire_le, cibles: e.cibles, etat: 'proposee' }] }))
       else if (e.type === 'fin') majDernierTour((t) => ({ ...t, etat: 'fini', enregistre: e.enregistre, traces: t.traces.map((x) => ({ ...x, fini: true })) }))
       else if (e.type === 'erreur') majDernierTour((t) => ({ ...t, etat: 'erreur', detail: e.detail, traces: t.traces.map((x) => ({ ...x, fini: true })) }))
     }
@@ -430,6 +515,12 @@ export default function AccueilAssistant(props: {
       const r = geste === 'valider' ? await validerCarte(carte.id) : await refuserCarte(carte.id)
       const maintenant = new Date().toISOString()
       majCarte(carte.id, (c) => ({ ...c, etat: r.etat, execute_le: maintenant, resultat: r.resultat ?? c.resultat, detail: r.ok ? undefined : r.detail }))
+      if (r.ok && r.etat === 'executee') {
+        // le numéro du travail Hektor que le geste a posé, s'il en a posé un (travail : transaction, contact, recherche… ;
+        // job_id : photos) -> l'app se relit tout de suite, puis à la fin du travail
+        const travail = r.resultat?.travail ?? r.resultat?.job_id
+        portes.current.onGesteFait(travail ? String(travail) : null)
+      }
     } catch (erreur) {
       const d = erreur instanceof Error ? erreur.message : "Non fait : l'écriture n'a pas abouti."
       if (erreur instanceof RefusAssistant && erreur.statut === 409) {
@@ -592,6 +683,7 @@ export default function AccueilAssistant(props: {
   }
 
   return (
+    <LiensContexte.Provider value={liens}>
     <div className="asi">
       <div className="asi-ctop">
         <h1 title={titre}>{titre || 'Conversation'}</h1>
@@ -641,5 +733,6 @@ export default function AccueilAssistant(props: {
         <p className="asi-warn">L'assistant peut se tromper : vérifie sur la fiche avant de valider.</p>
       </div>
     </div>
+    </LiensContexte.Provider>
   )
 }

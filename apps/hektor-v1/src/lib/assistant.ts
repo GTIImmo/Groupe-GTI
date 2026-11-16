@@ -15,6 +15,9 @@ import { hasSupabaseEnv, supabase } from './supabase'
 
 export type EtatCarte = 'proposee' | 'en_cours' | 'executee' | 'refusee' | 'echec' | 'expiree'
 
+/** Lot 3 : sur quoi porte la carte (tiré par le serveur de SES paramètres) -> le lien « Ouvrir la fiche ». */
+export type CibleCarte = { type: 'contact'; id: string } | { type: 'annonce'; numero: string } | { type: 'bien'; id: string }
+
 export type CarteAssistant = {
   id: string
   geste: string
@@ -24,6 +27,7 @@ export type CarteAssistant = {
   cree_le?: string | null
   execute_le?: string | null
   resultat?: Record<string, unknown> | null
+  cibles?: CibleCarte[]
 }
 
 export type ConversationAssistant = { id: string; titre: string; cree_le?: string; maj_le?: string }
@@ -33,7 +37,7 @@ export type EvenementFlux =
   | { type: 'debut'; conversationId: string }
   | { type: 'texte'; delta: string }
   | { type: 'outil'; nom: string | null }
-  | { type: 'carte'; id: string; geste: string; resume: string; expire_le?: string | null }
+  | { type: 'carte'; id: string; geste: string; resume: string; expire_le?: string | null; cibles?: CibleCarte[] }
   | { type: 'fin'; messageId: number | null; enregistre: boolean }
   | { type: 'erreur'; detail: string }
 
@@ -143,7 +147,7 @@ export async function relireConversation(id: string): Promise<{ conversation: Co
 export type ReponseCarte = { ok: boolean; etat: EtatCarte; detail?: string; resultat?: Record<string, unknown> }
 
 export async function validerCarte(id: string): Promise<ReponseCarte> {
-  if (MAQUETTE) return attendre(900).then(() => ({ ok: true, etat: 'executee' as const, resultat: {} }))
+  if (MAQUETTE) return attendre(900).then(() => ({ ok: true, etat: 'executee' as const, resultat: { relance_id: 1 } }))
   return appeler<ReponseCarte>(`/assistant/actions/${encodeURIComponent(id)}/valider`, 'POST')
 }
 
@@ -176,12 +180,13 @@ function conversationExemple(id: string) {
     { id: 1, role: 'user', contenu: conversation.titre, cree_le: '2026-11-17T10:12:00Z' },
     {
       id: 2, role: 'assistant', cree_le: '2026-11-17T10:12:30Z',
-      contenu: "C'est l'**annonce 63289**, en exclusivité chez Marion BILLIG DURAND. Son mandat est validé : la baisse passe par une demande à la direction. La voici, prête à partir.",
+      contenu: "C'est l'[annonce 63289](annonce:63289), en exclusivité chez Marion BILLIG DURAND. Son mandat est validé : la baisse passe par une demande à la direction. La voici, prête à partir.",
     },
   ]
   const cartes: CarteAssistant[] = [{
     id: 'carte-exemple-1', geste: 'demande_direction', etat: 'proposee', cree_le: '2026-11-17T10:12:20Z', expire_le: dans30min,
     resume: "Demander une baisse de prix — annonce 63289 « Grande maison de maitre de 131m² env avec dépendances », nouveau prix 149 000 € (aujourd'hui 154 500 €)",
+    cibles: [{ type: 'annonce', numero: '63289' }],
   }]
   return Promise.resolve({ conversation, messages, cartes })
 }
@@ -198,8 +203,8 @@ async function fauxFlux(question: string, conversationId: string | null, surEven
     return true
   }
   const texte = q.includes('carte') || q.includes('relance')
-    ? "Je prépare la relance pour **vendredi 20 novembre**. La voici, à valider :"
-    : "Voici ce que je trouve :\n\n- **3 annonces** sans aucun portail ;\n- la plus ancienne date du 02/06.\n\nTu veux que je les liste ?"
+    ? "Je prépare la relance de [M. AVOIR TEST4](contact:10354641) pour **vendredi 20 novembre**. La voici, à valider :"
+    : "Voici ce que je trouve :\n\n- **3 annonces** sans aucun portail, dont l'[annonce 44506](annonce:44506) ;\n- la plus ancienne est le bien **62965**, depuis le 02/06.\n\nTu veux que je les liste ?"
   for (const mot of texte.split(/(?<= )/)) {
     if (signal.aborted) return false
     surEvenement({ type: 'texte', delta: mot })
@@ -212,6 +217,7 @@ async function fauxFlux(question: string, conversationId: string | null, surEven
       type: 'carte', id: `carte-${Date.now()}`, geste: 'creer_relance',
       resume: 'Créer une relance pour M. AVOIR TEST4 le 20/11/2026 : Rappeler pour la visite',
       expire_le: new Date(Date.now() + 30 * 60_000).toISOString(),
+      cibles: [{ type: 'contact', id: '10354641' }, { type: 'bien', id: '7801' }],
     })
   }
   await attendre(200, signal)

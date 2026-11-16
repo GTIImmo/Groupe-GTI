@@ -296,3 +296,100 @@ MÊME commande, les contrôles avant.
 tableau de bord. Cause : l'écran monte AVANT que le profil soit chargé ; le rôle vaut alors « négociateur », donc la
 lecture ne prenait que SES recherches. Correctif : la portée est `undefined` tant que le profil n'est pas là (l'écran
 attend), puis relue si elle change (`porteeRecherches`, App.tsx et AccueilAssistant.tsx). Build vert.
+✅ **Correctif poussé (`e7620f6`) et vu en ligne le 16/11** : l'accueil affiche « 737 Recherches à compléter », comme le
+tableau de bord, sous « 1 Demande en attente » ; « Rien d'autre : 0 mandat qui expire, 0 diffusion bloquée, 0
+synchronisation en erreur ». ➡ **Lot 2 CLOS.** Suivant : lot 3 (liens vers les fiches, relecture après « Valider »,
+retour à la conversation), sur son « vas-y ».
+
+## 16. Lot 3 — relier l'écran : AUDIT (16/11, sur « Oui vas y »), rien codé
+
+**Périmètre** : `App.tsx` (adresse, ouverture d'une fiche, relecture après un geste, fil de navigation, bouton Retour),
+les consignes de l'assistant (`assistant_service.py`), les 123 réponses en base, les travaux posés par l'assistant.
+Pas mesuré : le téléphone (lot 5).
+
+**1. La relecture après « Valider »** — le mécanisme EXISTE (App.tsx ~14505) : `signalerGeste()` émet
+`hektor:geste-fait`, App relit ses données et relaie aux rubriques de la fiche ; `relireQuandLeTravailFinit(job)` attend
+la fin d'un travail Hektor (relu toutes les 3 s, 2 min au plus) puis relit. L'écran de l'assistant ne l'appelle pas.
+Mesuré : les gestes qui posent un travail rendent son numéro dans `resultat.travail` (transaction, créer un contact,
+ajouter une recherche…) ou `resultat.job_id` (photos) ; ces travaux portent `requested_by` = SON identifiant
+(2 vérifiés : `change_hektor_offre_status`, `create_hektor_contact`) → ils entrent bien dans « Mes actions envoyées à
+Hektor ». ➡ À faire : après une carte validée, `signalerGeste()` tout de suite, et `relireQuandLeTravailFinit` si un
+numéro de travail revient.
+
+**2. Les liens vers les fiches** — l'adresse n'ouvre que l'annonce (`?annonce=` = **app_dossier_id**) et le contact
+(`?contact=` = notre numéro). Portes existantes : `openDossierDetailPage(app_dossier_id)`, `openContactDirectory(id)`.
+⚠ L'assistant, lui, cite le **numéro d'annonce Hektor** (consignes : « l'annonce 63330 » = hektor_annonce_id) : il faut
+le traduire en app_dossier_id (listes en mémoire, sinon une lecture de `app_dossier_current`).
+Mesure des 123 réponses enregistrées : **23 citent un bien par son numéro** (« bien 62965 », « annonce **24935** »,
+« bien d'essai **62965** » : formes variées, parfois en gras), **1 seule cite un contact par son numéro** (les contacts
+sont cités par leur NOM), 0 mandat. Deux façons de faire :
+- A — l'écran REPÈRE les formes « annonce / bien + numéro » dans le texte : rien côté serveur, marche sur l'historique,
+  mais ne trouve jamais un contact cité par son nom, et peut se tromper de forme ;
+- B — les consignes demandent au modèle d'écrire chaque objet sous une forme fixe, `[CLAUDE TESTCLAUDE](contact:10354641)`,
+  `[annonce 63289](annonce:63289)` ; l'écran en fait un lien bleu canard : sûr, contacts compris, mais une ligne de
+  consignes (serveur, Render) et seulement pour les nouvelles réponses. ⭐ Recommandé : **B, avec A en repli pour
+  l'historique et les oublis** (seulement « annonce / bien + numéro »).
+- Et les **cartes** : leur résumé est écrit par le serveur. Le serveur connaît le bien / le contact de la carte
+  (`parametres`) : il peut joindre une « cible » à la carte (dans le flux et la relecture) → un lien « Ouvrir la fiche »
+  sur la carte. Petit ajout serveur.
+
+**3. Le retour à la conversation** — la fiche s'ouvre PAR-DESSUS l'écran : l'écran de l'assistant est démonté, et
+revient vide à la fermeture. Le bouton Retour de la fiche dit « Aux annonces » (ou « Fiche contact » au retour d'un
+contact, App.tsx ~27423 `backSynthLabel`). ➡ À faire : garder la conversation ouverte pour l'onglet (sessionStorage) et
+la rouvrir au retour, à la même réponse ; le bouton dit « À la conversation » quand la fiche vient de l'assistant. Le
+morceau « ‹ Conversation » dans le FIL de navigation (planche 23) demande un 3e type d'entrée dans le fil (aujourd'hui :
+annonce, contact seulement) : faisable, mais il touche un mécanisme partagé par toutes les fiches.
+
+**4. Les cinq autres objets** (mandat, transaction, recherche, rendez-vous, demande) : AUCUN écran ne sait s'ouvrir sur
+l'un d'eux par un numéro (pas d'entrée dans l'adresse, ni de porte « ouvrir sur ») ; chacun demande une petite porte dans
+un AUTRE écran (registre, registre des transactions, agenda à une date, Suivi sur une demande). ⭐ Recommandé : un
+lot 3b à part, objet par objet.
+
+**Le plan proposé du lot 3 (3a)**
+1. Relecture après « Valider » (front seul).
+2. Liens annonce et contact : consignes B (serveur, + un essai), rendu des liens et repli A (front), la « cible » des
+   cartes (serveur, + essais) et « Ouvrir la fiche » sur la carte.
+3. Retour à la conversation : conversation gardée, bouton « À la conversation » ; le fil de navigation en option.
+
+**Ce que ça pourrait casser ailleurs** : les consignes changent la FORME de toutes les réponses (un lien mal écrit
+s'afficherait tel quel → le rendu ne transforme que les deux formes reconnues, le reste reste du texte) ; la cible ajoutée
+aux cartes ne change ni le geste ni ses contrôles (lecture seule) ; `signalerGeste` relit l'app comme après un geste fait à
+la main (déjà le cas partout) ; le bouton Retour ne change que quand l'écran de l'assistant est allumé ; push du serveur =
+redéploiement Render (file des services à vérifier vide n'est pas concernée : Render seul).
+
+## 17. Lot 3a — CODÉ et CONTRÔLÉ (16/11, sur « Vas y »), rien poussé
+
+**Serveur** (`assistant_gestes.py`, `assistant_service.py`) :
+- `cibles_carte(parametres)` : sur quoi porte une carte, tiré des paramètres que le SERVEUR a préparés — le contact
+  (`hektor_contact_id`) d'abord, puis le bien (numéro d'annonce, sinon app_dossier_id). Joint à la carte du flux
+  (`ranger_carte`) et à la relecture (`lister_cartes`, qui lit `parametres` pour la calculer puis les RETIRE de la réponse :
+  le texte d'un e-mail ou des critères ne sortent pas). Mesuré sur les 24 gestes réels : e-mail interne, transaction,
+  notifications, rendez-vous déplacé / supprimé → aucune cible (pas de lien inventé).
+- Une ligne de consignes : un bien ou un contact LU s'écrit `[l'annonce 63330](annonce:63330)` (numéro d'annonce) ou
+  `[M. MARTIN](contact:10012345)` ; seulement avec un numéro lu ; aucune autre sorte de lien. (Exemples fictifs.)
+- Essais : 218 verts (+7, section 11), 60 (+1 : la consigne), 73. **Témoin inverse** : retirer le filtre des paramètres →
+  rouge « les paramètres (le texte de l'e-mail) ne sortent PAS », puis vert une fois rétabli.
+
+**Écran** (`AccueilAssistant.tsx`, `lib/assistant.ts`, `accueil-assistant.css`, `App.tsx`) :
+- les deux formes deviennent un lien bleu canard ; REPLI pour l'historique : « annonce / bien (d'essai) (n°) **NNNN** »
+  (4 à 6 chiffres) ; tout le reste reste du texte ;
+- « Ouvrir le contact / l'annonce N / le bien » sous chaque carte qui a une cible ;
+- l'annonce : numéro Hektor → app_dossier_id (listes en mémoire, sinon `loadDossierByHektorAnnonceId`), fiche ouverte
+  PAR-DESSUS l'Accueil (la conversation reste montée), bouton **« Retour · À la conversation »** ; introuvable parmi les
+  vivants → la liste des annonces étendue aux archives sur ce numéro ; le contact → l'écran Contacts (comme partout) ;
+- après une carte validée : `signalerGeste()` (l'app se relit comme après un geste à la main), et
+  `relireQuandLeTravailFinit` quand le geste a posé un travail Hektor (`resultat.travail` ou `job_id`) ;
+- la conversation est gardée pour l'onglet (sessionStorage `gti_assistant_conversation`) : au retour par « précédent »
+  ou F5, elle se rouvre ; un clic sur « Accueil » dans le rail en ouvre toujours une nouvelle ; une conversation qui ne se
+  relit plus (404) est oubliée ;
+- le flux n'est PLUS coupé quand l'écran se démonte (ouvrir un contact pendant une réponse la perdait) ;
+- au passage, le titre du bouton Retour de la fiche suit son libellé (il disait « Retour aux annonces » même pour
+  « Fiche contact » — défaut d'avant, une ligne).
+
+**Contrôlé dans l'aperçu (Chrome, mode maquette)** : lien écrit et lien de repli dans une réponse ; un numéro absent
+→ liste étendue aux archives ; « précédent » → la conversation se rouvre ; « Ouvrir le bien » d'une carte → la fiche
+par-dessus, « Retour · À la conversation » → la conversation intacte (2 questions) ; Valider → 1 signal
+`hektor:geste-fait` et 1 `assistant:change`. Build vert.
+
+**Pas encore fait / vérifié** : en ligne (le vrai modèle écrit-il bien la forme ?) ; le morceau « ‹ Conversation » du
+fil de navigation (option) ; les cinq autres objets (lot 3b).

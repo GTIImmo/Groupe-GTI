@@ -15960,6 +15960,21 @@ export default function App() {
     if (screen !== ecran) openScreen(ecran)
     openDossierDetailPage(annonce.app_dossier_id)
   }
+  // Lot 3 de l'assistant (16/11/2026) : un lien « annonce 63289 » d'une réponse porte le NUMÉRO HEKTOR. Il devient
+  // l'app_dossier_id (listes en mémoire, sinon une lecture) et la fiche s'ouvre par-dessus l'Accueil, comme depuis Santé.
+  // Introuvable parmi les biens vivants (vendu, clos, archivé) : la liste des annonces étendue aux archives, sur ce numéro.
+  async function assistantOuvrirAnnonce(numero: string) {
+    const enMemoire = [...mandats, ...dossiers].find((d) => String(d.hektor_annonce_id ?? '') === numero)
+    let appDossierId: number | null = enMemoire?.app_dossier_id ?? null
+    if (appDossierId == null) {
+      try { appDossierId = (await loadDossierByHektorAnnonceId(numero))?.app_dossier_id ?? null } catch { appDossierId = null }
+    }
+    if (appDossierId == null) { rechercheVoirTout('horsCatalogue', numero); return }
+    setDossierReturnContactId(null)
+    setAnnonceContactId(null)
+    setFicheDepuisAssistant(true)
+    openDossierDetailPage(appDossierId)
+  }
   function rechercheOuvrirHorsCatalogue(annonce: Dossier) {
     setDossierReturnContactId(null)
     setAnnonceContactId(null)
@@ -22000,6 +22015,10 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   //   (RailAssistant.tsx ; maquette validée, planches 20-22). Éteint = le rail d'aujourd'hui, à l'identique.
   const railAssistant = useAccueilAssistant(Boolean(session), sessionEmail, isAdmin) && MENU_NET && APP_BIENVU_ENABLED
   const railConversations = useConversationsRail(railAssistant, session?.user.id ?? null)
+  // Lot 3 (16/11/2026) : une fiche d'annonce ouverte DEPUIS l'assistant s'ouvre par-dessus l'Accueil (la conversation reste
+  // montée dessous) ; son bouton Retour dit alors « À la conversation ». Oublié dès que la fiche se ferme.
+  const [ficheDepuisAssistant, setFicheDepuisAssistant] = useState(false)
+  useEffect(() => { if (!detailOpen) setFicheDepuisAssistant(false) }, [detailOpen])
   useEffect(() => {
     if (screen === 'suivi' && !isManagerOrAdmin) setScreen('mandats')
     if (screen === 'sante' && !isAdmin) setScreen('mandats')
@@ -27148,6 +27167,10 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               peutOuvrirSuivi={isManagerOrAdmin}
               onOuvrirSuivi={() => openScreen('suivi')}
               tableauDeBord={tableauDeBord}
+              onOuvrirAnnonce={(numero) => void assistantOuvrirAnnonce(numero)}
+              onOuvrirBien={(id) => { if (Number(id) > 0) { setDossierReturnContactId(null); setAnnonceContactId(null); setFicheDepuisAssistant(true); openDossierDetailPage(Number(id)) } }}
+              onOuvrirContact={(id) => openContactDirectory(id)}
+              onGesteFait={(travail) => { signalerGeste(); if (travail) relireQuandLeTravailFinit({ id: travail }) }}
             />
           )
         })() : screen === 'agenda' ? (
@@ -27420,7 +27443,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 detailLoading={detailLoading}
                 eyebrow={detailEyebrowForScreen(screen)}
                 backLabel="Fermer"
-                backSynthLabel={dossierReturnContactId ? 'Fiche contact' : undefined}
+                backSynthLabel={dossierReturnContactId ? 'Fiche contact' : ficheDepuisAssistant ? 'À la conversation' : undefined}
                 onBack={closeDossierDetailPage}
                 detailVariant={detailVariantForScreen(screen)}
                 allowMarkValidation={(screen === 'suivi' || screen === 'mandats') && isManagerOrAdmin}
@@ -34751,7 +34774,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
             className={`fa-ck-rail-brand${activeTab !== 'synthese' ? ' is-inrub' : ''}`}
             data-fiche-retour
             onClick={() => { if (activeTab !== 'synthese') setActiveTab('synthese'); else props.onBack() }}
-            title={activeTab !== 'synthese' ? 'Retour au cockpit du dossier' : 'Retour aux annonces'}
+            title={activeTab !== 'synthese' ? 'Retour au cockpit du dossier' : (props.backSynthLabel ? `Retour · ${props.backSynthLabel}` : 'Retour aux annonces')}
             data-tip={activeTab !== 'synthese' ? 'Retour au cockpit' : (props.backSynthLabel ? `Retour · ${props.backSynthLabel}` : 'Retour aux annonces')}
           >
             <span className="fa-ck-rb-mark" aria-hidden="true">

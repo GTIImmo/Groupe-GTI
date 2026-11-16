@@ -345,6 +345,9 @@ voir(corps_openai[0]["model"] == "gpt-6.1-terra" and corps_openai[0].get("max_ou
 voir((corps_openai[0].get("reasoning") or {}).get("effort") == "low", "réflexion « low » (13/11)")
 voir("egal « moi »" in str(corps_openai[0].get("instructions")) and "role : admin" in str(corps_openai[0].get("instructions")),
      "« mes … » = « moi » (13/11 : il inventait l'adresse), et le rôle est dans les consignes")
+voir("(annonce:63330)" in str(corps_openai[0].get("instructions")) and "(contact:10012345)" in str(corps_openai[0].get("instructions"))
+     and "jamais invente" in str(corps_openai[0].get("instructions")),
+     "étape 4 lot 3 : les consignes demandent les deux formes de lien (annonce, contact), jamais un numéro inventé")
 import agents.tracing as tr  # noqa: E402
 tr.get_trace_provider().force_flush()
 voir(not envois_httpx, "aucune trace envoyée chez OpenAI (rien n'est parti, même après vidage)")
