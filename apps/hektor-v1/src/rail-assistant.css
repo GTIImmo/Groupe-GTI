@@ -1,0 +1,101 @@
+/* ============================================================
+   Étape 4 de l'assistant IA, lot 1 (17/11/2026) -- LE RAIL DE L'ASSISTANT.
+   Maquette VALIDÉE le 17/11 (planches 20, 21, 22, 18 ; mesures de bienvu-v2.css de la toile).
+   La classe .rail-assistant n'est posée sur .app-shell que si l'interrupteur `accueil_assistant` est allumé
+   pour la personne ET que le menu net (.menu-net) l'est : sans elle, aucune règle de ce fichier ne s'applique.
+   Un cran de plus que menu-lateral-net.css (.rail-assistant) : passe devant lui quel que soit l'ordre de chargement.
+   ============================================================ */
+:root {
+  /* Accueil -- la maison (décision 8 de la maquette ; aujourd'hui la courbe, la même que Transactions) */
+  --ra-maison: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 10.5 12 4l9 6.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z'/%3E%3C/svg%3E");
+}
+
+/* ---------- la recherche : « Rechercher ou demander », 40 px ---------- */
+.app-shell.app-shell-modern.menu-net.rail-assistant .side-rail .screen-nav .nav-search { height: 40px; min-height: 40px; margin: 0 0 6px; }
+
+/* ---------- les entrées : 34 px au lieu de 36 (budget mesuré : 647 px sur 665 pour un admin) ---------- */
+.app-shell.app-shell-modern.menu-net.rail-assistant .side-rail .screen-nav .nav-button { height: 34px !important; min-height: 34px !important; }
+.app-shell.app-shell-modern.menu-net.rail-assistant .side-rail .screen-nav .nav-button[title="Accueil"] {
+  --rn-i: var(--ra-maison);
+  display: flex !important; align-items: center !important; gap: 8px;
+}
+
+/* ---------- « 1 à valider » sur l'Accueil ---------- */
+.app-shell.app-shell-modern.menu-net.rail-assistant .ra-wait {
+  margin-left: auto; height: 20px; padding: 0 7px; border-radius: 99px; background: var(--bv-magenta, #c5005f);
+  color: #fff; font: 700 11px/20px var(--bv-font-ui, 'Inter', system-ui, sans-serif); white-space: nowrap;
+}
+
+/* ---------- les conversations, branches de l'Accueil ---------- */
+.app-shell.app-shell-modern.menu-net.rail-assistant .ra-accueil { position: relative; display: flex; flex-direction: column; flex: 0 0 auto; }
+.app-shell.app-shell-modern.menu-net.rail-assistant .ra-kids { flex: none; display: flex; flex-direction: column; margin: 0 0 4px; }
+.app-shell.app-shell-modern.menu-net.rail-assistant .ra-kid {
+  position: relative; display: flex; align-items: center; gap: 8px; height: 28px; padding: 0 8px 0 40px;
+  border: 0; border-radius: 7px; background: transparent; color: rgba(255, 255, 255, 0.62);
+  font: 500 12.5px/1.2 var(--bv-font-ui, 'Inter', system-ui, sans-serif); text-align: left; cursor: pointer;
+}
+.app-shell.app-shell-modern.menu-net.rail-assistant .ra-kid::before {
+  content: ''; position: absolute; left: 20px; top: 0; bottom: 0; width: 1px; background: rgba(255, 255, 255, 0.14);
+}
+.app-shell.app-shell-modern.menu-net.rail-assistant .ra-kid:last-child::before { bottom: 50%; }
+.app-shell.app-shell-modern.menu-net.rail-assistant .ra-kid::after {
+  content: ''; position: absolute; left: 20px; top: 50%; width: 11px; height: 1px; background: rgba(255, 255, 255, 0.14);
+}
+.app-shell.app-shell-modern.menu-net.rail-assistant .ra-kid:hover,
+.app-shell.app-shell-modern.menu-net.rail-assistant .ra-kid:focus-visible { background: rgba(255, 255, 255, 0.05); color: #fff; outline: none; }
+.app-shell.app-shell-modern.menu-net.rail-assistant .ra-kid .t { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.app-shell.app-shell-modern.menu-net.rail-assistant .ra-kid-more { color: rgba(255, 255, 255, 0.45); }
+.app-shell.app-shell-modern.menu-net.rail-assistant .ra-dot {
+  flex: 0 0 auto; width: 7px; height: 7px; border-radius: 50%; background: var(--bv-magenta, #c5005f);
+}
+/* rail ouvert : pas de titre ni de « Nouvelle conversation » (un clic sur Accueil en ouvre une) */
+.app-shell.app-shell-modern.menu-net.rail-assistant .ra-bulle-titre,
+.app-shell.app-shell-modern.menu-net.rail-assistant .ra-kid-new { display: none; }
+
+/* ---------- les traits : sous les conversations, et un trait fin entre les biens et les contacts ---------- */
+.app-shell.app-shell-modern.menu-net.rail-assistant .ra-sep { flex: none; height: 1px; background: rgba(255, 255, 255, 0.08); margin: 7px 10px 6px; }
+.app-shell.app-shell-modern.menu-net.rail-assistant .ra-thin { flex: none; height: 1px; margin: 6px 12px 7px 40px; background: rgba(255, 255, 255, 0.07); }
+
+/* ---------- le menu du compte : « Administration » (Santé, Utilisateurs) ---------- */
+.app-shell.app-shell-modern.menu-net.rail-assistant .rn-pop .ra-pop-sec {
+  margin: 6px 10px 4px; font: 700 10.5px/1.2 var(--bv-font-ui, 'Inter', system-ui, sans-serif);
+  letter-spacing: 0.09em; text-transform: uppercase; color: rgba(255, 255, 255, 0.42);
+}
+
+/* ---------- la cloche : un point au lieu de « 9+ » (le magenta reste à ce qui attend ton geste) ---------- */
+.app-shell.app-shell-modern.menu-net.rail-assistant .rn-actions .gti-notif-badge {
+  top: 6px !important; right: 7px !important; min-width: 7px !important; width: 7px !important; height: 7px !important;
+  padding: 0 !important; border-radius: 50% !important; font-size: 0 !important; line-height: 0 !important;
+  background: #e8eaec !important; box-shadow: 0 0 0 2px #1d1e20 !important;
+}
+
+/* ---------- replié : le chiffre sur la maison, les conversations en bulle au survol ---------- */
+.app-shell.app-shell-modern.menu-net.rail-assistant.is-sidebar-collapsed .ra-accueil { align-items: center; }
+.app-shell.app-shell-modern.menu-net.rail-assistant.is-sidebar-collapsed .ra-wait {
+  position: absolute; top: 2px; right: 1px; min-width: 16px; height: 16px; margin: 0; padding: 0 4px;
+  font: 700 10px/16px var(--bv-font-ui, 'Inter', system-ui, sans-serif); text-align: center; box-shadow: 0 0 0 2px #1d1e20;
+}
+.app-shell.app-shell-modern.menu-net.rail-assistant.is-sidebar-collapsed .ra-wait-t { display: none; }
+.app-shell.app-shell-modern.menu-net.rail-assistant.is-sidebar-collapsed .ra-sep { width: 24px; margin: 6px auto 7px; }
+.app-shell.app-shell-modern.menu-net.rail-assistant.is-sidebar-collapsed .ra-thin { width: 24px; margin: 5px auto 6px; }
+.app-shell.app-shell-modern.menu-net.rail-assistant.is-sidebar-collapsed .ra-kids {
+  display: none; position: absolute; left: calc(100% + 12px); top: -6px; z-index: 1350; width: 268px; margin: 0;
+  padding: 6px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.08); background: #2b2c2f;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+}
+/* un pont invisible entre la maison et la bulle : la souris peut y passer sans la refermer */
+.app-shell.app-shell-modern.menu-net.rail-assistant.is-sidebar-collapsed .ra-kids::after {
+  content: ''; position: absolute; top: 0; bottom: 0; left: -14px; width: 14px;
+}
+.app-shell.app-shell-modern.menu-net.rail-assistant.is-sidebar-collapsed .ra-accueil:hover .ra-kids,
+.app-shell.app-shell-modern.menu-net.rail-assistant.is-sidebar-collapsed .ra-accueil:focus-within .ra-kids { display: flex; }
+.app-shell.app-shell-modern.menu-net.rail-assistant.is-sidebar-collapsed .ra-bulle-titre {
+  display: block; padding: 6px 10px 4px; font: 700 10.5px/1.2 var(--bv-font-ui, 'Inter', system-ui, sans-serif);
+  letter-spacing: 0.09em; text-transform: uppercase; color: rgba(255, 255, 255, 0.42);
+}
+.app-shell.app-shell-modern.menu-net.rail-assistant.is-sidebar-collapsed .ra-kid { padding: 0 10px; height: 32px; }
+.app-shell.app-shell-modern.menu-net.rail-assistant.is-sidebar-collapsed .ra-kid::before,
+.app-shell.app-shell-modern.menu-net.rail-assistant.is-sidebar-collapsed .ra-kid::after { display: none; }
+.app-shell.app-shell-modern.menu-net.rail-assistant.is-sidebar-collapsed .ra-kid-new { display: flex; color: #fff; font-weight: 600; }
+/* la bulle remplace l'infobulle « Accueil » de la maison */
+.app-shell.app-shell-modern.menu-net.rail-assistant.is-sidebar-collapsed .side-rail .screen-nav .nav-button[title="Accueil"]:hover::after { display: none !important; }

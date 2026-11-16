@@ -284,6 +284,7 @@ import RegistreTransactionsScreen, { type GesteDuRegistre } from './RegistreTran
 import { cleNom } from './lib/pilotage'
 import PilotageScreen from './PilotageScreen'
 import RegistreUtilisateurs, { type RuPreRemplissage } from './RegistreUtilisateurs'
+import { BranchesAccueil, ouvrirConversation, useAccueilAssistant, useConversationsRail } from './RailAssistant'
 import { bvBoot } from './lib/bienvuBoot'
 import { APP_BIENVU_ENABLED } from './lib/bienvuFlag'
 import { BienvuLogin } from './BienvuLogin'
@@ -21994,6 +21995,10 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   }, [session])
   const registreTransactionsVisible =
     registreTransactionsCran === 'admin' ? isAdmin : ['on', 'true', '1', 'yes'].includes(registreTransactionsCran ?? '')
+  // Étape 4 de l'assistant, lot 1 (17/11/2026) : le rail de l'assistant, derrière l'interrupteur `accueil_assistant`
+  //   (RailAssistant.tsx ; maquette validée, planches 20-22). Éteint = le rail d'aujourd'hui, à l'identique.
+  const railAssistant = useAccueilAssistant(Boolean(session), sessionEmail, isAdmin) && MENU_NET && APP_BIENVU_ENABLED
+  const railConversations = useConversationsRail(railAssistant, session?.user.id ?? null)
   useEffect(() => {
     if (screen === 'suivi' && !isManagerOrAdmin) setScreen('mandats')
     if (screen === 'sante' && !isAdmin) setScreen('mandats')
@@ -26312,7 +26317,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     <FilNavigationContext.Provider value={contexteFilNavigation}>
     <TravauxContext.Provider value={contexteTravaux}>
     <DesktopLayout>
-    <div className={`app-shell app-shell-modern app-screen-${screen} ${sidebarCollapsed ? 'is-sidebar-collapsed' : ''}${MENU_NET && APP_BIENVU_ENABLED ? ' menu-net' : ''}`}>
+    <div className={`app-shell app-shell-modern app-screen-${screen} ${sidebarCollapsed ? 'is-sidebar-collapsed' : ''}${MENU_NET && APP_BIENVU_ENABLED ? ' menu-net' : ''}${railAssistant ? ' rail-assistant' : ''}`}>
       <header className={`side-rail ${mobileMenuOpen ? 'is-mobile-menu-open' : ''}`}>
         <button
           className="mobile-nav-toggle"
@@ -26361,28 +26366,55 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             <button
               className="nav-search"
               type="button"
-              aria-label="Rechercher partout"
+              aria-label={railAssistant ? "Rechercher partout ou demander à l'assistant" : 'Rechercher partout'}
               aria-keyshortcuts="/"
               title="Rechercher partout   ( / )"
               onClick={() => setRechercheGlobaleOuverte(true)}
             >
               <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="6.5" stroke="currentColor" strokeWidth={2.2} /><path d="m20 20-4-4" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" /></svg>
-              <span>Rechercher</span>
+              <span>{railAssistant ? 'Rechercher ou demander' : 'Rechercher'}</span>
               <kbd aria-hidden="true">/</kbd>
             </button>
           ) : null}
-          {MENU_NET && APP_BIENVU_ENABLED ? <span className="rn-label">Travail</span> : null}
-          <button className={`nav-button ${screen === 'accueil' ? 'is-active' : ''}`} type="button" title="Accueil" onClick={() => openScreen('accueil')}>Accueil</button>
+          {MENU_NET && APP_BIENVU_ENABLED && !railAssistant ? <span className="rn-label">Travail</span> : null}
+          {railAssistant ? (
+            // Étape 4, lot 1 : l'Accueil EST l'assistant ; ses 3 dernières conversations en branches, le chiffre des cartes à
+            //   valider ; replié, la même liste en bulle au survol (rail-assistant.css).
+            <div className="ra-accueil">
+              <button className={`nav-button ${screen === 'accueil' ? 'is-active' : ''}`} type="button" title="Accueil" onClick={() => { openScreen('accueil'); ouvrirConversation(null) }}>
+                Accueil
+                {railConversations.enAttente > 0 ? (
+                  <span className="ra-wait" aria-label={`${railConversations.enAttente} à valider`}><span className="ra-wait-n">{railConversations.enAttente}</span><span className="ra-wait-t"> à valider</span></span>
+                ) : null}
+              </button>
+              <BranchesAccueil conversations={railConversations.conversations} onOuvrir={(id) => { openScreen('accueil'); ouvrirConversation(id) }} />
+            </div>
+          ) : (
+            <button className={`nav-button ${screen === 'accueil' ? 'is-active' : ''}`} type="button" title="Accueil" onClick={() => openScreen('accueil')}>Accueil</button>
+          )}
+          {railAssistant ? <span className="ra-sep" aria-hidden="true" /> : null}
           <button className={`nav-button ${screen === 'mandats' ? 'is-active' : ''}`} type="button" title="Annonces" onClick={() => openScreen('mandats')}>Annonces</button>
           <button className={`nav-button ${screen === 'estimations' ? 'is-active' : ''}`} type="button" title="Estimations" onClick={() => openScreen('estimations')}>Estimations</button>
           <button className={`nav-button ${screen === 'registre' ? 'is-active' : ''}`} type="button" title="Mandats" onClick={() => openScreen('registre')}>Mandats</button>
           {registreTransactionsVisible ? <button className={`nav-button ${screen === 'transactions' ? 'is-active' : ''}`} type="button" title="Transactions" onClick={() => openScreen('transactions')}>Transactions</button> : null}
+          {railAssistant ? <span className="ra-thin" aria-hidden="true" /> : null}
           <button className={`nav-button nav-button-contacts ${screen === 'contacts' ? 'is-active' : ''}`} type="button" title="Contacts" onClick={() => openScreen('contacts')}>Contacts</button>
           <button className={`nav-button ${screen === 'agenda' ? 'is-active' : ''}`} type="button" title="Agenda" onClick={() => openScreen('agenda')}>Agenda</button>
-          {MENU_NET && APP_BIENVU_ENABLED && isManagerOrAdmin ? <span className="rn-label">Pilotage</span> : null}
-          {isAdmin ? <button className={`nav-button ${screen === 'pilotage' ? 'is-active' : ''}`} type="button" title="Pilotage" onClick={() => openScreen('pilotage')}>Pilotage</button> : null}
-          {isManagerOrAdmin ? <button className={`nav-button ${screen === 'suivi' ? 'is-active' : ''}`} type="button" title="Suivi" onClick={() => openScreen('suivi')}>Suivi</button> : null}
-          {isAdmin ? <button className={`nav-button ${screen === 'sante' ? 'is-active' : ''}`} type="button" title="Santé système" onClick={() => openScreen('sante')}>Santé</button> : null}
+          {railAssistant ? (
+            // Étape 4, lot 1 (décision du 17/11) : Suivi puis Pilotage, lignes ordinaires sous Agenda ; Santé rejoint
+            //   Utilisateurs dans le menu du compte.
+            <>
+              {isManagerOrAdmin ? <button className={`nav-button ${screen === 'suivi' ? 'is-active' : ''}`} type="button" title="Suivi" onClick={() => openScreen('suivi')}>Suivi</button> : null}
+              {isAdmin ? <button className={`nav-button ${screen === 'pilotage' ? 'is-active' : ''}`} type="button" title="Pilotage" onClick={() => openScreen('pilotage')}>Pilotage</button> : null}
+            </>
+          ) : (
+            <>
+              {MENU_NET && APP_BIENVU_ENABLED && isManagerOrAdmin ? <span className="rn-label">Pilotage</span> : null}
+              {isAdmin ? <button className={`nav-button ${screen === 'pilotage' ? 'is-active' : ''}`} type="button" title="Pilotage" onClick={() => openScreen('pilotage')}>Pilotage</button> : null}
+              {isManagerOrAdmin ? <button className={`nav-button ${screen === 'suivi' ? 'is-active' : ''}`} type="button" title="Suivi" onClick={() => openScreen('suivi')}>Suivi</button> : null}
+              {isAdmin ? <button className={`nav-button ${screen === 'sante' ? 'is-active' : ''}`} type="button" title="Santé système" onClick={() => openScreen('sante')}>Santé</button> : null}
+            </>
+          )}
         </nav>
         <div className="header-user-stack">
           {MENU_NET && APP_BIENVU_ENABLED ? (
@@ -26412,6 +26444,15 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 <>
                   <span className="rn-pop-fond" aria-hidden="true" onClick={() => setMenuCompteOuvert(false)} />
                   <div className="rn-pop" role="menu" aria-label="Mon compte">
+                    {railAssistant && isAdmin ? (
+                      <>
+                        <p className="ra-pop-sec">Administration</p>
+                        <button type="button" role="menuitem" onClick={() => { setMenuCompteOuvert(false); openScreen('sante') }}>
+                          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M19.5 12.6 12 20l-7.5-7.4A4.6 4.6 0 0 1 12 6.4a4.6 4.6 0 0 1 7.5 6.2z" stroke="currentColor" strokeWidth={2} strokeLinejoin="round" /><path d="M3 12.5h4.2l1.6-2.6 2.4 5 1.7-2.4H21" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" /></svg>
+                          Santé
+                        </button>
+                      </>
+                    ) : null}
                     {isAdmin ? (
                       <button type="button" role="menuitem" onClick={() => { setMenuCompteOuvert(false); void openUserTool() }}>
                         <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="9" cy="8.5" r="3.2" stroke="currentColor" strokeWidth={2} /><path d="M3.5 19a5.5 5.5 0 0 1 11 0M15.5 5.6a3.2 3.2 0 0 1 0 5.8M17.5 14.2a5.5 5.5 0 0 1 3 4.8" stroke="currentColor" strokeWidth={2} strokeLinecap="round" /></svg>

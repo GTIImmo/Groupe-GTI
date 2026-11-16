@@ -116,3 +116,66 @@ composants, 5 téléphone accueil. Restent 6 et 7 (téléphone).
 ⭐ **17/11, ses mots : « Donne cette étape à un chantier annexe pour permettre d'avancer sur le chantier de base et
 bien garder en mémoire le plan de base »** → session « maquette-accueil-ia » (design et ergonomie expert), qui écrit
 sa propre note `notice/ETAPE4_MAQUETTE_ACCUEIL_DESIGN_2026-11-17.md`. Aucun code de l'écran avant son choix et son « vas-y ».
+
+## 11. Le plan de code de l'étape 4 (17/11, sur « Attaque étape 4 ») — proposé, rien codé
+
+Référence : la maquette VALIDÉE (« Je valide », 17/11) — `notice/ETAPE4_MAQUETTE_ACCUEIL_DESIGN_2026-11-17.md` §5 sexies,
+planches de la toile https://claude.ai/artifact/8fQVty1R8QvSZ4oo5op3rx (version 19). Chaque lot se suit capture contre
+capture (règle du 12/11), sur bureau 1280 × 665, téléphone 390 et tablette 768, thème bienvu.
+
+**Un seul interrupteur, lu au démarrage** (comme `registre_transactions_ecran`) : `accueil_assistant` = off / une liste
+de comptes / admin / on. Éteint = l'application d'aujourd'hui, à l'identique. Le serveur garde en plus sa propre garde
+(`assistant_ia`, aujourd'hui `admin`).
+
+- **Lot 1 — le rail (bureau)** : Rechercher ou demander ; Accueil (maison) avec « 1 à valider » et ses 3 conversations +
+  « Toutes » ; Annonces, Estimations, Mandats, Transactions ; trait fin ; Contacts, Agenda ; Suivi puis Pilotage (admins) ;
+  pied : menu du compte (Santé, Utilisateurs, Déconnexion), compteur des actions Hektor, cloche avec un point. Replié :
+  chiffre sur la maison, bulle au survol. `App.tsx` (le rail) + une feuille de style à part.
+- **Lot 2 — l'écran de l'assistant** (fichier à part `AccueilAssistant.tsx`) : l'accueil (question, champ, phrase de
+  garde, « À traiter » et « Demande-lui par exemple »), la conversation en flux (« je lis… », Arrêter), les cartes
+  Valider / Refuser et leurs fins (le sceau), « Tableau de bord » à un clic, les phrases de blocage, « Renvoyer ».
+  Serveur : le nombre de cartes à valider par conversation (le point / le chiffre du rail).
+- **Lot 3 — relier l'écran** : la relecture après « Valider », les liens vers les fiches (annonce, contact, mandat,
+  transaction, recherche, rendez-vous, demande), le retour à la conversation.
+- **Lot 4 — Rechercher ou demander** (la ligne « Demander à l'assistant » dans la fenêtre d'aujourd'hui) et « Citer un
+  bien ou un contact ».
+- **Lot 5 — le téléphone** : le menu ☰ (conversations sous l'Accueil, Santé au pied) et « Reprendre ».
+- **Lot 6 — les gestes par l'écran** (§32 de la note de l'étape 3) : la carte qui ouvre la fenêtre de l'écran déjà
+  remplie (créer une offre / un compromis / une vente, traiter une demande).
+
+**Ce que ça pourrait casser ailleurs** : le rail est sur TOUS les écrans (un défaut se voit partout) → derrière
+l'interrupteur, éteint par défaut ; `App.tsx` est partagé avec la session GED → petits lots, commités vite, rien d'autre
+dans le stage ; le téléphone a un rendu séparé (`MobileLayout`) → contrôlé à chaque lot ; retour arrière = interrupteur
+à off (sans redéploiement).
+
+## 12. Lot 1 — le rail : CODÉ et CONTRÔLÉ dans l'aperçu (17/11, sur « Moi seul »), rien poussé
+
+**Fichiers** : `apps/hektor-v1/src/RailAssistant.tsx` (neuf : l'interrupteur, la lecture des 3 dernières conversations et
+des cartes en attente, les branches de l'Accueil), `apps/hektor-v1/src/rail-assistant.css` (neuf, tout sous
+`.app-shell.app-shell-modern.menu-net.rail-assistant`), `App.tsx` (le bloc du rail, la classe, le menu du compte),
+`lib/api.ts` (le mode maquette connaît `accueil_assistant`). `npm run build` vert.
+
+**L'interrupteur** : `app_setting.accueil_assistant` — absent / off = le rail d'aujourd'hui À L'IDENTIQUE (aucune règle de
+la feuille ne s'applique sans la classe) ; une liste d'adresses ; `admin` ; `on`. Décision du 17/11 : « Moi seul » →
+la valeur sera son adresse seule. ⛔ La ligne n'existe pas encore en production (écriture en base : son accord).
+
+**Lecture des conversations** : avec la session de la personne, filtrée sur SON user_id (un admin relit celles des autres
+dans Santé, pas dans son rail). Une lecture ratée garde l'affichage d'avant (pas de zéro inventé). Relue toutes les 60 s et
+sur l'évènement `assistant:change` (que le lot 2 émettra).
+
+**Contrôlé dans l'aperçu (mode maquette, 1280 × 665)** :
+- rail ouvert, admin : Rechercher ou demander ; Accueil (maison) + « 1 à valider » ; 3 conversations, point magenta sur
+  celle qui attend ; Toutes les conversations ; Annonces, Estimations, Mandats, Transactions ; trait fin ; Contacts, Agenda,
+  Suivi, Pilotage. Tient en 665 px sans défiler. **Mêmes entrées, même ordre, mêmes textes que la planche 20.**
+- rail replié : le chiffre sur la maison ; la bulle « Assistant / Nouvelle conversation / 3 conversations / Toutes » —
+  ⚠ vue par le CLAVIER (focus), le survol simulé par l'outil ne déclenche pas `:hover` ; c'est la même règle CSS.
+- menu du compte, admin : « Administration » → Santé, Utilisateurs (puis Se déconnecter en production) ; Santé s'ouvre.
+- négociateur (profil maquette passé en `commercial` le temps de la mesure, remis ensuite) : Accueil commercial, ni Suivi,
+  ni Pilotage ; rail 526 px sans défiler.
+- téléphone 375 et tablette 768 : aucun élément du rail de l'assistant (MobileLayout inchangé).
+- console : seules les erreurs 500 de `/api/hektor-diffusion` du mode maquette sans serveur (sans rapport).
+
+**Ce qui n'est pas encore là (lots suivants)** : cliquer une conversation ouvre l'Accueil et émet `assistant:ouvrir`, que
+personne n'écoute encore (lot 2) ; l'Accueil reste le tableau de bord d'aujourd'hui jusqu'au lot 2.
+
+**Retour arrière** : `accueil_assistant` à off (sans redéploiement), ou revenir sur le commit.

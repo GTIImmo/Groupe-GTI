@@ -655,3 +655,47 @@ de l'écran (handleGesteHektor) : accepter / refuser une OFFRE, annuler un COMPR
   en surveillant les effets de bord connus (dates, statut du bien, `diffusable`).
 - Restent à auditer : créer / modifier une offre, un compromis, une vente (le formulaire) ; traiter une demande à la
   direction.
+
+## 31. La preuve réelle de la vague C (16/11, 09:29-09:32 UTC, son « Oui vas y ») — PROUVÉ ; un reste connu de Hektor
+
+En ligne : `ecd2b25` (Render 09:29:15 ; poussé avec `f259555` de la session GED, une note, sur son « Pousse »).
+Bien d'essai **62965** « TEST C13 cloture mandat - a supprimer » (mandant : son contact d'essai CLAUDE TESTCLAUDE).
+Témoin d'avant, lu chez Hektor : offre **33120** (79 000 €) « refus », proposée le 26/10 ; annonce **Actif**, diffusable 0,
+0 portail ; datemaj 26/10 19:50. File vide.
+- L'assistant ne voit pas le numéro Hektor dans ses lectures : il a trouvé l'offre de 79 000 € (1001409) et a DEMANDÉ
+  confirmation avant toute carte. ✅
+- **Accepter** : carte « Accepter l'offre n° 33120 (annonce 62965, 79 000 €) … » → validée : `refused → accepted`,
+  travail 1bce2433 fait en 6 s ; **second clic 409**. Relu chez Hektor : offre « accepte », annonce « Sous offre »,
+  diffusable **0** (inchangé), date de l'offre **inchangée**.
+- **Refuser** (retour) : validée → `accepted → refused`, travail 45e7f5f9 fait en 7 s. Relu chez Hektor : offre « refus »,
+  date toujours le 26/10.
+- ⚠ **Reste** : le bien est resté **« Sous offre »** chez Hektor et chez nous (il était « Actif »). Comportement CONNU de
+  Hektor, mesuré sur ce même bien le 26/10 (mémoire `hektor-offres-concurrentes-et-statut-apres-refus`) : refuser la
+  dernière offre ne fait pas redescendre le statut — l'écran fait pareil. Le remettre « Actif » = « Envoyer vers Actif »,
+  qui remet diffusable = 1 (puis « Pilotage diffusion : Désactiver ») : NON fait, à sa décision.
+- Effets de bord surveillés : diffusable 0 tout du long, 0 portail, dates des offres intactes, 0 cascade.
+➡ **Vague C PROUVÉE** (accepter, refuser). « Annuler un compromis » : non éprouvé en réel (pas de compromis d'essai
+  vivant) ; couvert par les essais.
+- **Remis en état le 16/11 (09:36-09:39 UTC, sa réponse « remets actif et désactive »)** : par L'ÉCRAN, fenêtre
+  « Changer le statut » → Actif (« L'affaire est tombée : remets le bien en vente », l'écran prévient que la diffusion est
+  rallumée) → travail 675e0a7a fait, `statut_hektor_apres: 2`, et chez Hektor **diffusable = 1** (attendu) ; puis la
+  diffusion désactivée par les deux appels de l'écran (`/hektor-diffusion/diffusable` false puis `/persist-state`),
+  observé 0. Relu chez Hektor : **Actif, diffusable 0**, offre 33120 « refus » au 26/10 ; chez nous pareil, 0 portail,
+  file vide. ⛔ J'avais écrit que la nouvelle fiche n'affichait plus le bouton : FAUX (corrigé sur sa question « tu l'as trouvé ? »). Il est dans le menu « ⋯ » de l'en-tête de la fiche → « Pilotage » → fenêtre « Pilotage de l'annonce » (App.tsx:34626), et dans la partie publicité de la fiche, sous « Validation du mandat », bouton « Activer / désactiver » (App.tsx:35545). Je ne l'ai pas trouvé à l'écran et suis passé par les deux appels du serveur que ce bouton fait.
+
+## 32. Audit des deux derniers gestes de la direction (16/11, sur « on reprend le chantier ») — lu dans le CODE de l'écran, rien codé
+
+**Créer ou modifier une offre, un compromis, une vente** (`handleChangeHektorAnnonceStatus`, App.tsx:20118, ~300 lignes) :
+l'écran contrôle (bien vendu / clos / en estimation fermé aux transactions, pas de nouvelle offre sur un bien engagé,
+montant, prix de vente, motif de clôture, négociateur présent, pas de travail déjà en cours), puis enchaîne LUI-MÊME
+plusieurs écritures après le travail principal (`createChangeHektorAnnonceStatusJob`) : la date de clôture du mandat
+(`setMandatClotureApp`), la répartition de commission (`saveRepartition`), la commission et sa charge
+(`ecrireAffaireCommission`, avec la règle du 02/11 sur la charge à la création), les conditions suspensives… ; il désigne
+lui-même l'affaire à modifier (« la base ne peut pas choisir entre les sept offres d'un même bien »).
+**Traiter une demande à la direction** (`handleUpdateDiffusionRequest`, App.tsx:20522) : l'acceptation d'une annulation
+enchaîne dans l'écran : la demande, diffusable à 0, validation à 0, l'état noté, le travail de clôture (« A5 ») avec la
+date fixée, la date de clôture chez nous, l'e-mail de décision au négociateur ; la baisse de prix a sa propre suite.
+⇒ **Pour ces deux-là, la logique vit bien DANS L'ÉCRAN** (contrairement aux 5 gestes du §29 bis). Les refaire côté serveur
+créerait une deuxième porte. **Proposition** : ils passent par l'écran de l'assistant (étape 4) — la carte ouvre la
+fenêtre de l'écran déjà remplie et c'est l'écran qui fait le geste ; ou un chantier à part pour descendre cette logique
+dans le serveur. ➡ **Côté serveur, l'étape 3 est finie** ; il reste le témoin commercial (reporté par lui le 13/11).
