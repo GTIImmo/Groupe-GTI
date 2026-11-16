@@ -2241,3 +2241,12 @@ numéro de sa lecture (donc le document) et la page. ⚠ Mais le seul chemin d'o
 `last_accessed_at` ET `updated_at` du document), et la règle demande de prévenir la session signature avant de toucher
 `app_console_document` / le coffre. À trancher : passer par l'ouverture d'aujourd'hui (même effet qu'un clic sur
 « Ouvrir »), ou lire le fichier sans cette écriture.
+✅ **Tranché par Frédéric (16/11) : « Comme Ouvrir ». ÉCRIT — rien poussé.** Chaque carte « À remplir » dont la lecture
+retrouve son document porte « Voir le document » : l'aperçu prend la place de « La fiche du bien » (croix pour revenir),
+avec la PAGE OÙ LA VALEUR A ÉTÉ LUE (lue dans la source « …, page N »), dessinée dans le navigateur par pdf.js
+(`apercuPremierePage` apprend un numéro de page ; hors du document -> la dernière). Le fichier vient de
+`createConsoleDocumentSignedUrl`, l'ouverture d'aujourd'hui, avec son écriture de la date de consultation -- rien
+d'autre n'est écrit, rien ne part à l'IA. Un fichier pas encore au coffre le dit (« Préparer » dans la liste). Un
+« Remplir la fiche » qui écrit referme l'aperçu pour que la valeur vole dans le panneau. Essai `test_ged_remplir`
+32 -> 35. ⚠ La session signature n'a PAS été prévenue : je n'ai pas son numéro dans les sessions liées ; le chemin est
+celui d'« Ouvrir », inchangé, et ne touche ni `metadata_json.signature` ni `storage_path`.

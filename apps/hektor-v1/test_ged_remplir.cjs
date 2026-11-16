@@ -76,7 +76,7 @@ const rmH3 = fs.readFileSync(path.join(__dirname, 'src/RecuManque.tsx'), 'utf8')
 const agirH3 = rmH3.slice(rmH3.indexOf('const agir = async'), rmH3.indexOf('function envoler'))
 voir(/const message = await onRemplir\(p\)/.test(agirH3) && /await gedDecider\(\{ hektorAnnonceId, lectureId: p\.lectureId, cle: p\.cle, champ: p\.champ, valeur: p\.valeur, decision: 'ignoree' \}\)/.test(agirH3),
   'H3 : le geste et la décision « ignorée » passent par les MÊMES portes qu\'avant (rien de neuf n\'écrit)')
-voir(/const ecrit = \/\^\(Envoyé\|Enregistré\)\/\.test\(message\)/.test(agirH3) && /if \(ecrit && p\.geste === 'fiche'\) envoler\(p, depart\)/.test(agirH3)
+voir(/const ecrit = \/\^\(Envoyé\|Enregistré\)\/\.test\(message\)/.test(agirH3) && /if \(ecrit && p\.geste === 'fiche'\) \{ setApercu\(null\); [^\n]*envoler\(p, depart\)/.test(agirH3) && (agirH3.match(/envoler\(/g) || []).length === 1
   && /return `Envoyé : \$\{p\.texte\}/.test(app) && /return `Enregistré : \$\{p\.texte\}/.test(app) && /return `Rien écrit : \$\{texte\}`/.test(app),
   'H3 : une case ne s\'allume que si le geste a ÉCRIT (« Envoyé » / « Enregistré ») ; un « Rien écrit » se replie sans rien allumer')
 const casesH3 = rmH3.slice(rmH3.indexOf('const CASES_FICHE'), rmH3.indexOf('// Un montant du registre'))
@@ -84,6 +84,12 @@ voir(casesH3.length > 200 && !/load|supabase|rpc|fetch/i.test(casesH3) && !/load
   'H3 : « La fiche du bien » ne lit RIEN de neuf : les faits de la fiche, et ce qu\'on vient d\'y écrire')
 voir(/window\.matchMedia\?\.\('\(prefers-reduced-motion: reduce\)'\)\.matches\) return/.test(rmH3), 'H3 : moins de mouvement demandé -> pas de vol, la case s\'allume seulement')
 voir(!/tout remplir/i.test(rmH3) && !/absent/i.test(rmH3.replace(/^\/\/.*$/gm, '')), 'TÉMOIN : toujours un clic par proposition, et jamais « absent »')
+const voirH3 = rmH3.slice(rmH3.indexOf('async function voirDocument'), rmH3.indexOf('// H3 : les cases de « La fiche du bien »'))
+voir(/await createConsoleDocumentSignedUrl\(d\)/.test(voirH3) && /apercuPremierePage\(fichier, 720, page \?\? 1\)/.test(voirH3),
+  'H3 : « Voir le document » passe par l\'ouverture d\'AUJOURD\'HUI (décision du 16/11 : « comme Ouvrir ») et dessine la page lue')
+voir(!/lireParIa|classerParIa|preparerLecture|backendApiBaseUrl|\.rpc\(|\.insert\(|\.update\(/.test(voirH3),
+  'TÉMOIN : l\'aperçu n\'envoie le document ni à l\'IA ni au serveur de lecture, et n\'écrit rien d\'autre que ce qu\'« Ouvrir » écrit')
+voir(/lectures\.get\(d\.id\)\?\.id === p\.lectureId/.test(rmH3) && /\{documentDe\(p\) \? \(/.test(rmH3), 'H3 : le bouton n\'existe que si le document de la lecture est retrouvé')
 
 console.log(ko ? `\n${ko} ROUGE, ${ok} VERT` : `\nTOUT EST VERT (${ok})`)
 process.exit(ko ? 1 : 0)

@@ -161,3 +161,13 @@ button.gm2-f:hover, button.gm2-f:focus-visible { border-color: #c5005f; outline:
 .gm2-large { grid-column: 1 / -1; }
 .gm2-vol { position: fixed; z-index: 4500; display: flex; align-items: center; height: 32px; padding: 0 12px; border-radius: 9px; background: #c5005f; color: #ffffff; font-family: 'Hanken Grotesk', 'Segoe UI', system-ui, sans-serif; font-size: 13px; font-weight: 800; white-space: nowrap; box-shadow: 0 12px 24px -8px rgba(197, 0, 95, 0.7); pointer-events: none; animation: gm2-vole 720ms cubic-bezier(0.5, 0, 0.2, 1) both; }
 @media (prefers-reduced-motion: reduce) { .gm2-vol { display: none; } }
+/* H3 : l'aperçu du document d'où vient une proposition, à la page lue (à la place du panneau, le temps de regarder) */
+.gm2-apercu { gap: 10px; animation: gm2-glisse 380ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.gm2-ap-t { display: flex; align-items: flex-start; gap: 8px; }
+.gm2-ap-t .gm2-bt { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.gm2-ap-x { flex: none; display: grid; place-items: center; width: 36px; height: 36px; border: 0; border-radius: 10px; background: #eef0f1; color: #1f2121; cursor: pointer; }
+.gm2-ap-x:hover { background: #e2e5e6; }
+.gm2-ap-page { display: block; width: 100%; max-height: 520px; object-fit: contain; border-radius: 6px; background: #ffffff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 0 0 1px #e1e3e4; }
+.gm2-ap-page.is-lit { height: 320px; background: linear-gradient(90deg, #f3f4f5 0, #fbeef4 40%, #f3f4f5 80%); background-size: 400px 100%; animation: gm2-lit 1.2s linear infinite; }
+@keyframes gm2-lit { 0% { background-position: -200px 0; } 100% { background-position: 200px 0; } }
+.gm2-voir { margin-left: auto; }

@@ -299,13 +299,15 @@ export async function separerPdf(file: File, pieces: ResultatIa['pieces'], nomPi
 
 // Habillage H2 (16/11) : l'APERÇU de la fenêtre de dépôt -- la page 1 dessinée DANS LE NAVIGATEUR, pour l'œil de
 // l'utilisateur seulement. Rien ne part : ni au serveur, ni à l'IA (un RIB s'affiche, il ne se lit pas).
-export async function apercuPremierePage(file: File, cote = 640): Promise<{ image: string; nbPages: number } | null> {
-  if (/^image\/(jpeg|png|webp|gif)$/.test(file.type)) return { image: await vignetteImage(file, cote), nbPages: 1 }
+// H3 (16/11) : `numero` dessine une AUTRE page (celle où l'IA a lu la valeur) ; hors du document -> la dernière.
+export async function apercuPremierePage(file: Blob, cote = 640, numero = 1): Promise<{ image: string; nbPages: number; page: number } | null> {
+  if (/^image\/(jpeg|png|webp|gif)$/.test(file.type)) return { image: await vignetteImage(file, cote), nbPages: 1, page: 1 }
   if (file.type !== 'application/pdf') return null
   const pdfjs = await chargerPdfjs()
   const doc = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise
   try {
-    const page = await doc.getPage(1)
+    const n = Math.min(Math.max(1, Math.floor(numero) || 1), doc.numPages)
+    const page = await doc.getPage(n)
     const base = page.getViewport({ scale: 1 })
     const vue = page.getViewport({ scale: cote / Math.max(base.width, base.height) })
     const canvas = document.createElement('canvas')
@@ -314,7 +316,7 @@ export async function apercuPremierePage(file: File, cote = 640): Promise<{ imag
     const ctx = canvas.getContext('2d')
     if (!ctx) return null
     await page.render({ canvasContext: ctx, viewport: vue }).promise
-    return { image: canvasEnJpeg(canvas), nbPages: doc.numPages }
+    return { image: canvasEnJpeg(canvas), nbPages: doc.numPages, page: n }
   } finally {
     void doc.destroy()
   }

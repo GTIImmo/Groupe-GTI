@@ -11,7 +11,8 @@
 //   (lib/gedRemplirContact.ts), lus sur ses pièces, pour SA fiche contact relue (loadContactsEtatCivil).
 import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
-import { loadAffairesForDossier, loadRegisterCycleAffaires } from './lib/api'
+import { createConsoleDocumentSignedUrl, loadAffairesForDossier, loadRegisterCycleAffaires } from './lib/api'
+import { apercuPremierePage } from './lib/gedClassementIa'
 import { etatFiableDuDocument } from './lib/etatSignatureMandat'
 import { compterConditionsStrict, gedDecider, gedJuger, loadContactsEtatCivil, loadGedClassements, loadGedDecisions, loadGedJugements, useGedPropositions, useGedRemplir, type EtatCivilLu, type JugementGed } from './lib/ged'
 import { cleJugement, LIBELLE_VERDICT, VERDICTS, type VerdictGed } from './lib/gedMesure'
@@ -176,6 +177,8 @@ export function RecuManque({
   const [faites, setFaites] = useState<Faite[]>([])
   const [envoyees, setEnvoyees] = useState<Record<string, string>>({})
   const [vol, setVol] = useState<{ valeur: string; x: number; y: number; dx: number; dy: number } | null>(null)
+  // H3 : l'aperçu du document d'où vient une proposition, à la page lue (décision du 16/11 : « comme Ouvrir »)
+  const [apercu, setApercu] = useState<{ cle: string; nom: string; page: number | null; vue: 'lecture' | { image: string; nbPages: number; page: number } | { erreur: string } } | null>(null)
   const [relire, setRelire] = useState(0)
   useEffect(() => {
     if (!remplir || !peutRemplir) return
@@ -228,7 +231,8 @@ export function RecuManque({
         // le geste rend « Envoyé… » / « Enregistré… » quand il a écrit, « Rien écrit… » quand la relecture a refusé
         const ecrit = /^(Envoyé|Enregistré)/.test(message)
         faite = { cle: p.cle, message, sort: ecrit ? 'rempli' : 'refus' }
-        if (ecrit && p.geste === 'fiche') envoler(p, depart)
+        // l'aperçu ouvert cède la place à « La fiche du bien » : la valeur y vole au rendu suivant
+        if (ecrit && p.geste === 'fiche') { setApercu(null); window.requestAnimationFrame(() => window.requestAnimationFrame(() => envoler(p, depart))) }
       } else {
         await gedDecider({ hektorAnnonceId, lectureId: p.lectureId, cle: p.cle, champ: p.champ, valeur: p.valeur, decision: 'ignoree' })
         faite = { cle: p.cle, message: `Ignorée : ${p.texte}. Elle ne reviendra pas.`, sort: 'ignore' }
@@ -254,6 +258,32 @@ export function RecuManque({
     window.setTimeout(() => setVol(null), 760)
   }
 
+  // H3 : le document d'où vient une proposition (par le numéro de sa lecture) et la page où la valeur a été lue
+  const documentDe = (p: PropositionRemplir) => (p.lectureId ? documents.find((d) => lectures.get(d.id)?.id === p.lectureId) ?? null : null)
+  const pageDe = (p: PropositionRemplir) => { const m = /, page (\d+)$/.exec(p.source); return m ? Number(m[1]) : null }
+  // Décision de Frédéric (16/11) : l'aperçu passe par l'ouverture d'AUJOURD'HUI (createConsoleDocumentSignedUrl) -- le même
+  // effet qu'un clic sur « Ouvrir », date de consultation comprise. Le fichier est dessiné DANS LE NAVIGATEUR (pdf.js),
+  // rien ne part à l'IA ni au serveur de lecture. Un fichier pas encore au coffre se dit, il ne se cherche pas ailleurs.
+  async function voirDocument(p: PropositionRemplir) {
+    const d = documentDe(p)
+    if (!d) return
+    const page = pageDe(p)
+    setApercu({ cle: p.cle, nom: d.document_name, page, vue: 'lecture' })
+    try {
+      const url = await createConsoleDocumentSignedUrl(d)
+      const reponse = await fetch(url)
+      if (!reponse.ok) throw new Error(`le coffre a répondu ${reponse.status}`)
+      const brut = await reponse.blob()
+      const fichier = brut.type ? brut : new Blob([brut], { type: d.mime_type ?? '' })
+      const vue = await apercuPremierePage(fichier, 720, page ?? 1)
+      setApercu((a) => (a?.cle === p.cle ? { ...a, vue: vue ?? { erreur: 'ce format ne se dessine pas ici : ouvre-le depuis la liste.' } } : a))
+    } catch (e) {
+      const raison = e instanceof Error ? e.message : String(e)
+      const texte = /non disponible dans le cloud/i.test(raison) ? 'le fichier n\'est pas encore au coffre : « Préparer » dans la liste des documents.' : raison
+      setApercu((a) => (a?.cle === p.cle ? { ...a, vue: { erreur: texte } } : a))
+    }
+  }
+
   // H3 : les cases de « La fiche du bien » -- les cases de copropriété seulement pour un bien en copropriété (ou quand une
   // proposition les vise) ; le panneau ne se montre que s'il y a une case à remplir d'ici, ou une case venant d'être remplie.
   const casesFiche = CASES_FICHE
@@ -262,7 +292,7 @@ export function RecuManque({
       const surLaFiche = caseEnClair(c.champ, c.lire(faits))
       return { ...c, valeur: surLaFiche ?? envoyees[c.champ] ?? null, allume: Boolean(envoyees[c.champ]) }
     })
-  const ficheVisible = propositions.some((p) => p.geste === 'fiche') || Object.keys(envoyees).length > 0
+  const ficheVisible = propositions.some((p) => p.geste === 'fiche') || Object.keys(envoyees).length > 0 || apercu !== null
 
   // ── morceau 10 : JUGER chaque ligne « À regarder » (vrai / faux / déjà su), derrière `ged_propositions`. Lecture
   // ratée ou table pas encore posée (null) -> pas de boutons. Le jugement le plus récent d'une ligne fait foi.
@@ -415,12 +445,28 @@ export function RecuManque({
                   <div className="gm2-gestes">
                     <button type="button" className="gm2-b1" disabled={enCours !== null} onClick={(e) => void agir(p, 'remplir', e.currentTarget)}>{enCours === p.cle ? 'Écriture…' : p.geste === 'contact' ? 'Remplir la fiche du contact' : 'Remplir la fiche'}</button>
                     <button type="button" className="gm2-lien" disabled={enCours !== null} onClick={() => void agir(p, 'ignorer')}>Ignorer</button>
+                    {documentDe(p) ? (
+                      <button type="button" className="gm2-lien gm2-voir" aria-pressed={apercu?.cle === p.cle} onClick={() => void voirDocument(p)}>Voir le document</button>
+                    ) : null}
                   </div>
                 </div>
               ))}
             </div>
           ) : null}
-          {ficheVisible ? (
+          {apercu ? (
+            <div className="gm2-bloc gm2-fiche gm2-apercu" key={apercu.cle}>
+              <div className="gm2-ap-t">
+                <p className="gm2-bt">{`Le document : ${apercu.nom}${typeof apercu.vue === 'object' && 'page' in apercu.vue ? `, page ${apercu.vue.page}` : apercu.page ? `, page ${apercu.page}` : ''}`}</p>
+                <button type="button" className="gm2-ap-x" aria-label="Fermer l'aperçu du document" onClick={() => setApercu(null)}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+                </button>
+              </div>
+              {apercu.vue === 'lecture' ? <span className="gm2-ap-page is-lit" aria-label="Aperçu en préparation" /> : null}
+              {typeof apercu.vue === 'object' && 'image' in apercu.vue ? <img className="gm2-ap-page" src={apercu.vue.image} alt={`Page ${apercu.vue.page} de ${apercu.nom}`} /> : null}
+              {typeof apercu.vue === 'object' && 'erreur' in apercu.vue ? <p className="gm2-faite is-refus">{`Pas d'aperçu : ${apercu.vue.erreur}`}</p> : null}
+              <small className="gm2-src">{typeof apercu.vue === 'object' && 'nbPages' in apercu.vue ? `Page ${apercu.vue.page} sur ${apercu.vue.nbPages}, celle où la valeur a été lue. ` : ''}Rien ne s'écrit sans ton clic.</small>
+            </div>
+          ) : ficheVisible ? (
             <div className="gm2-bloc gm2-fiche">
               <p className="gm2-bt">La fiche du bien</p>
               <small className="gm2-src">Les cases que les documents savent remplir.</small>
