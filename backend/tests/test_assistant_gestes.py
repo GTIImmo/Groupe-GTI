@@ -1092,10 +1092,89 @@ ges.executer_rdv(nouveau_ctx(), prd)
 voir(next(g for g in google if g["quoi"] == "creer")["attendees"] == [] and next(g for g in google if g["quoi"] == "creer")["send_updates"] == "none",
      "TÉMOIN : le rendez-vous du lot 3a, lui, reste SANS invité ni notification")
 
+print("9sexies) VAGUE C : la DIRECTION sur une transaction -- la fonction de la base de l'écran")
+_faux_2c = faux_lot2c
+
+
+def faux_vague_c(methode, url, **kw):
+    chemin = url.split("/rest/v1/", 1)[1] if "/rest/v1/" in url else ""
+    p_ = kw.get("params") or {}
+    if methode == "GET" and chemin == "app_affaire_ledger" and "kind" in str(p_.get("select")):
+        appels.append({"methode": "GET", "chemin": chemin, "params": dict(p_), "entetes": dict(kw.get("headers") or {}), "corps": None})
+        lignes = etat.get("affaires", [])
+        if "app_affaire_id" in p_ and str(p_["app_affaire_id"]).startswith("eq."):
+            return Reponse([l for l in lignes if str(l["app_affaire_id"]) == p_["app_affaire_id"][3:]])
+        chaine = str(p_.get("app_chaine_id", ""))[3:]
+        exclu = str(p_.get("app_affaire_id", ""))[4:]
+        return Reponse([l for l in lignes if str(l.get("app_chaine_id")) == chaine and str(l["app_affaire_id"]) != exclu])
+    if methode == "POST" and chemin == "rpc/app_geste_affaire_optimistic":
+        appels.append({"methode": "POST", "chemin": chemin, "params": {}, "entetes": dict(kw.get("headers") or {}), "corps": kw.get("json")})
+        return Reponse(etat.get("rep_geste") or {"ok": True, "job_id": "j-c", "etat_avant": "proposed", "etat_apres": "accepted",
+                                                 "offres_refusees_en_cascade": 0})
+    return _faux_2c(methode, url, **kw)
+
+
+requests.get = lambda url, **kw: faux_vague_c("GET", url, **kw)
+requests.post = lambda url, **kw: faux_vague_c("POST", url, **kw)
+requests.patch = lambda url, **kw: faux_vague_c("PATCH", url, **kw)
+requests.request = lambda methode, url, **kw: faux_vague_c(methode, url, **kw)
+
+OFFRE = {"app_affaire_id": 701, "kind": "offre", "state": "proposed", "hektor_affaire_id": 33100, "hektor_annonce_id": 63289,
+         "app_dossier_id": 77, "app_chaine_id": 9, "montant": 150000, "date": "2026-11-10", "present_in_hektor": True}
+COMPROMIS = {"app_affaire_id": 702, "kind": "compromis", "state": "active", "hektor_affaire_id": 50200, "hektor_annonce_id": 63289,
+             "app_dossier_id": 77, "app_chaine_id": 9, "montant": 150000, "date": "2026-11-12", "present_in_hektor": True}
+VENTE = {"app_affaire_id": 703, "kind": "vente", "state": None, "hektor_affaire_id": 60300, "hektor_annonce_id": 63289,
+         "app_dossier_id": 77, "app_chaine_id": 9, "montant": 150000, "date": "2026-11-14", "present_in_hektor": True}
+noms_commercial = [f.nom for f in cat.fonctions_du_role("commercial")]
+voir("proposer_transaction" not in noms_commercial and "proposer_transaction" in [f.nom for f in cat.fonctions_du_role("manager")]
+     and "proposer_transaction" in [f.nom for f in cat.fonctions_du_role("admin")],
+     "⛔ DROITS : un négociateur n'a PAS la carte ; la direction (admin, manager) l'a -- comme l'écran et la base")
+reset(affaires=[dict(OFFRE)])
+resume, pt = ges.preparer_transaction(nouveau_ctx("admin"), {"app_affaire_id": 701, "geste": "accepter"})
+voir("Accepter l'offre n° 33100" in resume and "150 000 €" in resume and "l'état d'avant est remis" in resume and not ecritures_metier(),
+     "la carte : quel geste, quelle offre, le montant, et que Hektor peut refuser ; PROPOSER n'écrit rien")
+voir(refuse(lambda: ges.preparer_transaction(nouveau_ctx("admin"), {"app_affaire_id": 701, "geste": "annuler"}), "compromis"),
+     "un geste qui ne va pas avec le type (annuler une offre) : refusé")
+voir(refuse(lambda: ges.preparer_transaction(nouveau_ctx("admin"), {"app_affaire_id": 701, "geste": "supprimer"}), "à l'écran"),
+     "⛔ supprimer : pas ouvert à l'assistant (décision « sans »)")
+reset(affaires=[{**OFFRE, "state": "accepted"}])
+voir(refuse(lambda: ges.preparer_transaction(nouveau_ctx("admin"), {"app_affaire_id": 701, "geste": "accepter"}), "déjà"),
+     "déjà dans cet état : refusé")
+reset(affaires=[{**OFFRE, "hektor_affaire_id": None}])
+voir(refuse(lambda: ges.preparer_transaction(nouveau_ctx("admin"), {"app_affaire_id": 701, "geste": "refuser"}), "numéro Hektor"),
+     "sans numéro Hektor : refusé (comme l'écran)")
+reset(affaires=[dict(OFFRE), dict(COMPROMIS)])
+voir(refuse(lambda: ges.preparer_transaction(nouveau_ctx("admin"), {"app_affaire_id": 701, "geste": "refuser"}), "compromis en cours"),
+     "⛔ une offre verrouillée par son compromis en cours : refusé, avec la raison (règle du 16/09)")
+reset(affaires=[dict(OFFRE), {**COMPROMIS, "state": "cancelled"}])
+voir(ges.preparer_transaction(nouveau_ctx("admin"), {"app_affaire_id": 701, "geste": "refuser"})[1]["geste"] == "refuser",
+     "le compromis annulé ne verrouille plus l'offre")
+reset(affaires=[dict(COMPROMIS), dict(VENTE)])
+voir(refuse(lambda: ges.preparer_transaction(nouveau_ctx("admin"), {"app_affaire_id": 702, "geste": "annuler"}), "supprimer la vente"),
+     "⛔ un compromis verrouillé par sa vente : refusé (décision du 23/10)")
+reset(affaires=[dict(COMPROMIS), {**VENTE, "present_in_hektor": False}])
+resume, pa = ges.preparer_transaction(nouveau_ctx("admin"), {"app_affaire_id": 702, "geste": "annuler"})
+voir("cascade" in resume, "une vente supprimée chez Hektor ne verrouille plus ; la carte prévient de la cascade sur l'offre")
+reset(affaires=[dict(OFFRE)])
+appels.clear()
+r = ges.executer_transaction(nouveau_ctx("admin"), pt)
+rpc = next(a for a in appels if a["chemin"] == "rpc/app_geste_affaire_optimistic")
+voir(rpc["corps"] == {"target_affaire_id": 701, "geste": "accepte", "job_priority": 7} and rpc["entetes"]["Authorization"] == "Bearer " + JETON
+     and r["travail"] == "j-c", "au clic : LA fonction de l'écran (même verbe, même priorité), avec SON jeton")
+reset(affaires=[dict(OFFRE)], rep_geste={"ok": True, "deja_dans_cet_etat": True})
+voir(refuse(lambda: ges.executer_transaction(nouveau_ctx("admin"), pt), "déjà"), "la base dit « déjà dans cet état » : on le DIT, pas de faux succès")
+reset(affaires=[])
+appels.clear()
+voir(refuse(lambda: ges.executer_transaction(nouveau_ctx("admin"), pt), "pas parmi")
+     and not [a for a in appels if a["chemin"] == "rpc/app_geste_affaire_optimistic"],
+     "TÉMOIN : la transaction devenue invisible (droits) entre la carte et le clic -> refusé, rien envoyé")
+print("  (au clic, la route refuse aussi un rôle hors de geste.roles : DIRECTION pour cette carte)")
+voir(ges.GESTES["transaction"].roles == ges.DIRECTION, "la carte est déclarée DIRECTION : la route de validation la refuse à un négociateur")
+
 print("10) aucune fonction de geste ne fait autre chose que proposer")
-voir(all(f.nom.startswith("proposer_") for f in ges.FONCTIONS_GESTES) and len(ges.FONCTIONS_GESTES) == 25,
-     "25 gestes (le brouillon retiré le 15/11, 3 du lot 2c, 3 du lot 3c le 16/11), tous « proposer_ » : le modèle n'a AUCUNE "
-     "fonction qui exécute")
+voir(all(f.nom.startswith("proposer_") for f in ges.FONCTIONS_GESTES) and len(ges.FONCTIONS_GESTES) == 26,
+     "26 gestes (le brouillon retiré le 15/11, 3 du lot 2c, 3 du lot 3c, 1 de la vague C le 16/11), tous « proposer_ » : le "
+     "modèle n'a AUCUNE fonction qui exécute")
 voir(not any(f.nom.startswith("proposer_") for f in ges.FONCTIONS_LECTURE_LOT3), "les 2 lectures du lot 3 ne proposent rien")
 voir(not any(f.nom.startswith("proposer_") for f in ges.FONCTIONS_LECTURE_LOT4), "les 3 lectures du lot 4 ne proposent rien")
 voir([f.nom for f in cat.fonctions_du_role("commercial") if f.nom == "proposer_note_transaction"] == [],

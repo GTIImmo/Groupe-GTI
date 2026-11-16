@@ -570,3 +570,88 @@ Trois cartes vers le client dans `backend/app/services/assistant_gestes.py` (sec
 - Consignes du modèle mises à jour. Essais : 197 + 59 + 73 verts ; 3 témoins inverses ROUGES (désinscription,
   adresse visible du modèle, expéditeur de repli).
 - ⏳ Reste : pousser (son accord), puis la preuve réelle sur un contact d'essai à l'adresse INTERNE (son accord).
+
+## 28. La preuve réelle du lot 3c (16/11, 08:47-08:55 UTC, son « Oui, vas-y ») — PROUVÉ, avec une limite sur l'invitation
+
+En ligne : `bf47572` (Render 08:47:13 ; poussé avec `251b784` de la session GED, sur son « Oui, les deux »). Son Chrome,
+sa session. Client d'essai : le contact EXISTANT **Mme CLAUDE TESTCLAUDE (10354641)**, dont l'e-mail est SA propre adresse
+(non désinscrit, recherche active 344a6bbc… Firminy) — aucun contact créé, rien ne sort du domaine.
+- **E-mail au client** : carte « … à Mme. CLAUDE TESTCLAUDE (à l'adresse de sa fiche) … ⚠ Il part VRAIMENT » (aucune
+  adresse dans la carte) → validée : envoyé, Gmail `1a1e38ad473abc7a`. **Second clic 409.**
+- **Rapprochement réel** (bien d'essai 24935, mot « Essai de l'assistant… ») : l'assistant montre d'abord l'APERÇU (rien
+  envoyé), puis la carte → validée : 1 e-mail, `app_email_envoi` 251823d4 **dry_run = false, statut envoyé**, expéditeur
+  = **sa boîte** (le négociateur de 24935 n'a pas de boîte @gti → repli = la personne, posé par le serveur), et 24935
+  **« proposé » par e-mail** pour cette recherche. ⚠ La signature de l'e-mail est celle du négociateur du bien (Franck
+  GERPHAGNON), comme à l'écran. ⚠ Le modèle a pris la référence affichée sous le bien (11964) pour une anomalie.
+- **Rendez-vous avec le client invité** : 1re carte à 17:30 signalée « déjà pris » (non validée, laissée expirer) ;
+  2e à 20:30 → validée : RDV dans son agenda, lien `fcb15084…` : 1 invité, `send_updates: all`, source assistant.
+  Puis « supprime-le » → **refusé** (RDV avec invité : depuis l'écran). ✅
+  ⚠ **LIMITE** : l'invité EST l'organisateur (même adresse) ; Google le traite comme « soi » (la lecture de l'agenda
+  compte 0 invité) et n'envoie sans doute AUCUN e-mail d'invitation. L'envoi d'une invitation à un vrai tiers n'est donc
+  PAS prouvé (il faudrait un contact d'essai à une AUTRE adresse interne).
+- Restes de l'essai : le RDV « Essai assistant 3c — invitation » le **18/11 à 20:30** dans son agenda (à supprimer depuis
+  l'écran) ; 24935 « proposé » pour la recherche de CLAUDE TESTCLAUDE ; 2 e-mails d'essai dans sa boîte.
+➡ **Lot 3c PROUVÉ** pour l'e-mail et le rapprochement ; l'invitation est posée et gardée, son e-mail au tiers non vu.
+
+## 29. Audit de la vague C (16/11, sur « Oui, vague C ») — les gestes de la DIRECTION sur les transactions — rien codé
+
+> Audit limité aux gestes [DIR] du catalogue (§3 et §5 de `ETAPE3_CATALOGUE_COMPLET_DES_ACTIONS_2026-11-13.md`) :
+> statut de l'annonce, offre / compromis / vente, archiver / supprimer une annonce, traiter les demandes à la direction.
+
+**Mesuré (90 jours, `app_console_job`, par auteur)** :
+- changer le statut d'une annonce : 102 par Frédéric, 60 sans auteur (scripts), 4 compte d'essai ; 4 échecs ;
+- état d'une offre (accepter / refuser) : 25 par Frédéric, **1 228 sans auteur** (les gestes de masse du chaînage, 11-12/11) ;
+- annuler un compromis 9 (+17 scripts), supprimer un compromis 16, supprimer une vente 10, supprimer une annonce 13,
+  archiver une annonce 2 — **tous par Frédéric** ;
+- **aucun** par Pauline ni par un manager ; les demandes à la direction n'ont jamais été traitées que pour des essais.
+⇒ Ces gestes sont aujourd'hui des CORRECTIONS faites par Frédéric, pas un travail quotidien.
+
+**Ce que le code et les leçons disent** :
+- La cascade offre → compromis → vente vit dans **UNE fonction de l'écran**, `handleGesteHektor` (App.tsx ~19832,
+  mémoire `modale-statut-porte-les-cinq-gestes`) : « toute cascade entre transactions se code LÀ, et nulle part ailleurs ».
+- L'acceptation d'une demande à la direction enchaîne elle aussi ses gestes DANS L'ÉCRAN (chaînage « A5 », App.tsx ~17834).
+- Effets de bord déjà payés : « Actif » et « supprimer une vente » remettent `diffusable = 1` ; refuser / accepter une offre
+  a déplacé 1 185 dates, en a fabriqué 8, a remis 15 biens vendus « Sous offre » (11-12/11) ; modifier une offre acceptée
+  est refusé en silence par Hektor ; l'ordre compte (annuler le compromis avant de refuser l'offre).
+⇒ **Refaire ces gestes côté serveur pour l'assistant créerait une DEUXIÈME porte** (le défaut des « deux portes » du
+  mandat) : deux chemins pour la même cascade, qui finiraient par diverger.
+
+**Proposition** :
+- **C-1 (recommandé)** : l'assistant ne les EXÉCUTE pas. Il lit, explique et prépare ; sa carte OUVRE la fenêtre de l'écran
+  déjà remplie (« Changer le statut », « Accepter l'offre », « Traiter la demande »), et c'est l'écran qui fait le geste,
+  par sa fonction unique. Ça dépend de l'écran de l'assistant (étape 4) : la vague C rejoint l'étape 4.
+- **C-2** : un premier pas sans cascade, côté serveur : archiver / désarchiver une annonce (2 en 90 jours).
+- **C-3** : déplacer la cascade de l'écran vers le serveur, pour que l'écran ET l'assistant l'appellent : un vrai chantier,
+  avec des risques sur des gestes en production.
+
+### 29 bis. ⛔ CORRECTION du §29 (16/11, sur sa question « pourquoi cette question, comment fait l'assistant pour les autres gestes ? »)
+
+**J'avais tort.** Les 5 gestes sur une transaction (refuser / accepter une offre, annuler un compromis, supprimer un
+compromis ou une vente) ne vivent PAS dans l'écran : `handleGesteHektor` (App.tsx:20021) n'ajoute que les confirmations,
+puis appelle UNE fonction de la base, **`app_geste_affaire_optimistic`**, qui porte TOUTES les règles : direction
+seulement (`is_app_manager_or_admin`), le geste doit aller avec le type de l'affaire, l'offre verrouillée par son
+compromis, le compromis verrouillé par sa vente, pas de geste sans numéro Hektor, l'état posé chez nous à l'instant avec
+l'état d'avant, la cascade de l'annulation (compromis annulé → son offre), le travail pour Hektor, `confirmer` exigé pour
+supprimer. ⇒ **C'est exactement le schéma des autres gestes de l'assistant** (la fonction de la base de l'écran, avec le
+jeton de la personne, conditions revérifiées au clic). Il n'y a PAS de deuxième porte à craindre pour ces 5 gestes.
+J'avais lu la mémoire (« la cascade se code LÀ ») sans lire la fonction qu'elle désigne.
+Restent à auditer à part : créer / modifier une offre, un compromis, une vente (le formulaire de la modale, beaucoup de
+champs) ; traiter une demande à la direction (l'enchaînement « A5 » de l'écran, App.tsx ~17834, à vérifier).
+
+## 30. Vague C codée (16/11, sa réponse « Oui sans » + « l'assistant doit évidemment respecter les droits des utilisateurs en fonction de leur statut admin / négociateur ») — en local, pas poussé, pas éprouvé
+
+Une carte **transaction** dans `assistant_gestes.py` (section « VAGUE C ») → `app_geste_affaire_optimistic`, LA fonction
+de l'écran (handleGesteHektor) : accepter / refuser une OFFRE, annuler un COMPROMIS. **Sans les suppressions.**
+- **Droits** : déclarée **DIRECTION** (admin, manager) : un négociateur n'a pas la fonction (le modèle ne peut même pas la
+  proposer), la route de validation refuse son rôle, et la base exige `is_app_manager_or_admin` + l'accès au dossier.
+  Rappel de sa règle (plan, décision 5 du 29/10) : l'assistant n'a que les fonctions des écrans du rôle ; les transactions
+  ne sont lues que dans le périmètre de la personne (la base).
+- Avant la carte, relu avec le jeton : le type va avec le geste ; pas déjà dans cet état ; numéro Hektor présent ; offre
+  verrouillée par un compromis vivant ou une vente ; compromis verrouillé par sa vente. La carte prévient de la cascade
+  (l'offre acceptée du dossier peut être refusée avec le compromis). La base rejuge tout au clic.
+- Consignes du modèle : « tu ne proposes JAMAIS un geste que le rôle de la personne n'a pas à l'écran ».
+- Essais : 211 + 59 + 73 verts ; 2 témoins inverses ROUGES (droits ouverts à tous, verrou retiré).
+- ⏳ Reste : pousser, puis la preuve réelle (son accord) sur une transaction d'ESSAI (bien d'essai, par ses mandants),
+  en surveillant les effets de bord connus (dates, statut du bien, `diffusable`).
+- Restent à auditer : créer / modifier une offre, un compromis, une vente (le formulaire) ; traiter une demande à la
+  direction.

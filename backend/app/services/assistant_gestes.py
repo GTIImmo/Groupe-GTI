@@ -400,6 +400,100 @@ def executer_note(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[str, Any]:
     return {"app_affaire_id": int(p["app_affaire_id"])}
 
 
+# ── VAGUE C (16/11/2026) : les gestes de la DIRECTION sur une transaction ─────────
+# Note : notice/ETAPE3_AGENT_QUI_AGIT_AUDIT_2026-11-13.md §29 bis-30. Décision « Oui sans » (sans les suppressions).
+# ⛔ La MÊME fonction de la base que l'écran (handleGesteHektor, App.tsx:20021 → app_geste_affaire_optimistic) : elle
+#   porte TOUTES les règles (direction seulement, accès au dossier, geste qui va avec le type, offre verrouillée par son
+#   compromis, compromis verrouillé par sa vente, numéro Hektor exigé, cascade de l'annulation). Pas de deuxième porte.
+# ⛔ DROITS : direction seulement (admin, manager), comme l'écran et la base ; un négociateur n'a pas la fonction.
+# ⛔ Les suppressions (compromis, vente) ne sont PAS ouvertes : irréversibles, réservées aux essais et corrections.
+# Les verrous sont relus ici AVANT la carte pour dire pourquoi ; la base les rejuge au clic.
+GESTES_TRANSACTION = {"accepter": ("accepte", "offre", "Accepter l'offre"),
+                      "refuser": ("refus", "offre", "Refuser l'offre"),
+                      "annuler": ("annuler", "compromis", "Annuler le compromis")}
+_VIVANTE = "present_in_hektor"
+
+
+def _affaire(ctx: ContexteAssistant, numero: Any) -> dict[str, Any]:
+    try:
+        affaire = int(numero)
+    except (TypeError, ValueError):
+        raise Refus("Donne l'app_affaire_id de la transaction (objet transactions ou dossiers).") from None
+    lignes = _lire(ctx, "app_affaire_ledger", {"app_affaire_id": f"eq.{affaire}", "limit": "1",
+                                               "select": "app_affaire_id,kind,state,hektor_affaire_id,hektor_annonce_id,"
+                                                         "app_dossier_id,app_chaine_id,montant,date," + _VIVANTE})
+    if not lignes:
+        raise Refus(f"La transaction {affaire} n'est pas parmi celles que tu peux voir.")
+    return lignes[0]
+
+
+def _morte(ligne: dict[str, Any]) -> bool:  # = « supprimée chez Hektor » dans la fonction de la base
+    return bool(str(ligne.get("hektor_affaire_id") or "").strip()) and ligne.get(_VIVANTE) is False
+
+
+def _verrou(ctx: ContexteAssistant, a: dict[str, Any]) -> str | None:
+    if not a.get("app_chaine_id"):
+        return None
+    autres = [l for l in _lire(ctx, "app_affaire_ledger", {
+        "app_chaine_id": f"eq.{a['app_chaine_id']}", "app_affaire_id": f"neq.{a['app_affaire_id']}",
+        "select": "kind,state,hektor_affaire_id," + _VIVANTE}) if not _morte(l)]
+    if a["kind"] == "offre":
+        for l in sorted(autres, key=lambda x: 0 if x.get("kind") == "vente" else 1):
+            if l.get("kind") == "vente" or (l.get("kind") == "compromis"
+                                            and str(l.get("state") or "").lower() not in ("cancelled", "annule")):
+                quoi = "une vente" if l["kind"] == "vente" else "un compromis en cours"
+                return f"ce dossier porte {quoi} (n° {l.get('hektor_affaire_id') or '?'}) : lève-le d'abord avant de revenir " \
+                       "sur l'offre (règle de la base)."
+    if a["kind"] == "compromis":
+        vente = next((l for l in autres if l.get("kind") == "vente"), None)
+        if vente:
+            return f"ce dossier porte une vente (n° {vente.get('hektor_affaire_id') or '?'}) : après la vente tout est " \
+                   "verrouillé ; il faut d'abord supprimer la vente, depuis l'écran."
+    return None
+
+
+def preparer_transaction(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    choix = str(p.get("geste") or "").strip()
+    if choix not in GESTES_TRANSACTION:
+        raise Refus("Geste : accepter ou refuser (une offre), annuler (un compromis). Les suppressions se font à l'écran.")
+    geste, genre, libelle = GESTES_TRANSACTION[choix]
+    a = _affaire(ctx, p.get("app_affaire_id"))
+    if a.get("kind") != genre:
+        raise Refus(f"« {choix} » va avec {('une ' if genre == 'offre' else 'un ')}{genre}, et la transaction "
+                    f"{a['app_affaire_id']} est {('une ' if a.get('kind') in ('offre', 'vente') else 'un ')}{a.get('kind')}.")
+    if _morte(a):
+        raise Refus("Cette transaction a été supprimée chez Hektor.")
+    if not str(a.get("hektor_affaire_id") or "").strip():
+        raise Refus("Cette transaction n'a pas encore de numéro Hektor : le geste ne peut pas partir (comme à l'écran).")
+    cible = {"accepte": "accepted", "refus": "refused", "annuler": "cancelled"}[geste]
+    if str(a.get("state") or "") == cible:
+        raise Refus("Cette transaction est déjà dans cet état : rien à faire.")
+    verrou = _verrou(ctx, a)
+    if verrou:
+        raise Refus(verrou[0].upper() + verrou[1:])
+    montant = f", {_euros(a['montant'])}" if a.get("montant") else ""
+    resume = f"{libelle} n° {a['hektor_affaire_id']} (annonce {a.get('hektor_annonce_id')}{montant}) — écrit chez nous tout de " \
+             "suite, puis chez Hektor ; si Hektor refuse, l'état d'avant est remis."
+    if geste == "annuler":
+        resume += " ⚠ L'offre acceptée de ce même dossier peut être refusée avec lui (cascade de la base)."
+    return resume, {"app_affaire_id": int(a["app_affaire_id"]), "geste": choix}
+
+
+def executer_transaction(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[str, Any]:
+    choix = str(p.get("geste") or "")
+    if choix not in GESTES_TRANSACTION:
+        raise Refus("geste inconnu")
+    a = _affaire(ctx, p.get("app_affaire_id"))  # re-lue AU CLIC ; la base rejuge droits et verrous
+    r = _ecrire(ctx, "POST", "rpc/app_geste_affaire_optimistic",
+                {"target_affaire_id": int(a["app_affaire_id"]), "geste": GESTES_TRANSACTION[choix][0], "job_priority": 7}) or {}
+    if r.get("deja_dans_cet_etat"):
+        raise Refus("la transaction était déjà dans cet état : rien n'a été envoyé")
+    if not r.get("ok"):
+        raise Refus("la base n'a pas confirmé le geste")
+    return {"app_affaire_id": int(a["app_affaire_id"]), "etat_avant": r.get("etat_avant"), "etat_apres": r.get("etat_apres"),
+            "travail": r.get("job_id"), "offres_refusees_en_cascade": r.get("offres_refusees_en_cascade")}
+
+
 # ── LOT 2b (13/11/2026) : vers Hektor (la base écrit chez nous à l'instant, le worker recopie chez Hektor) ──
 # Modifier un contact : app_edit_contact_optimistic contrôle l'appelant et accepte une modification PARTIELLE.
 # ⚠ L'écran envoie toujours la fiche complète ; l'assistant n'envoie QUE les champs changés (téléphone, e-mail,
@@ -1958,6 +2052,15 @@ GESTES: dict[str, Geste] = {g.nom: g for g in (
           _schema({"app_affaire_id": {"type": "integer", "description": "identifiant de la transaction (transactions)"},
                    "texte": {"type": "string", "description": "le texte complet de la note"}}),
           preparer_note, executer_note),
+    # vague C (direction)
+    Geste("transaction",
+          "Prépare un geste de la DIRECTION sur une transaction : accepter ou refuser une OFFRE, annuler un COMPROMIS. Les "
+          "règles de l'écran s'appliquent (offre verrouillée par son compromis, compromis verrouillé par sa vente). Pas de "
+          "suppression : elle se fait à l'écran.",
+          DIRECTION,
+          _schema({"app_affaire_id": {"type": "integer", "description": "identifiant de la transaction (transactions)"},
+                   "geste": {"type": "string", "enum": list(GESTES_TRANSACTION)}}),
+          preparer_transaction, executer_transaction),
     # lot 2b
     Geste("modifier_contact",
           "Prépare la modification d'un contact : téléphone, e-mail, commentaire (vide = inchangé). Pas l'adresse.",
