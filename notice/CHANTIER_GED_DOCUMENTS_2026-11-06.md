@@ -2150,3 +2150,10 @@ SONT les feuilles. `RecuManque.css` : styles `gm2-*` ajoutés (les anciens reste
 mouvement », 2 colonnes de feuilles sous 760 px. Essais GED tous verts (1 adapté : `test_ged_mesure` vérifie que la barre est
 à côté du bouton « Déposer », jamais dedans) ; build vert. ⚠ PAS VU : le bloc dépend des interrupteurs en base ; la capture
 contre capture se fera en production sur 63331 après le push. Reste : H2 la fenêtre de dépôt, H3 après l'envoi, H4 téléphone.
+
+**✅ H1 EN LIGNE (16/11, « Oui, les trois » : `c77ca7e`, `a2812ba` de l'autre session, `b5f390c`) ET VU sur 63331** : bureau
+838 px, 4 moments, 5 feuilles (3 reçues, 2 non trouvées), 10 cartes « À regarder » avec leurs jugements, aucun débordement,
+console propre -- conforme à la maquette. ⚠ **TÉLÉPHONE (390 px, mesuré dans un cadre de la même page, retiré après)** :
+le bloc DÉBORDAIT de 87 px (« Mise en vente et visites » sur une ligne, grille du bloc à la taille de son contenu, cartes en
+colonnes de 300 px minimum). Corrigé : bloc en `minmax(0, 1fr)`, moments 2 par ligne avec retour à la ligne, colonnes des
+cartes `min(300px, 100%)` -> débordement 0. Essais GED verts, build vert ; commit local À POUSSER.

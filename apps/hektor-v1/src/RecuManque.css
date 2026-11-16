@@ -41,7 +41,7 @@ button.gm-l:hover, button.gm-l:focus-visible { border-color: var(--gti-final-mag
 /* ── habillage H1 (16/11) : LE DOSSIER, d'après la maquette retravaillée (https://claude.ai/artifact/S16jkpfnqtPF83xvUdkNtm).
    Les moments de la vente, une feuille par pièce attendue, les cartes « À remplir » et « À regarder ». Toutes les
    animations se coupent si l'ordinateur demande « moins de mouvement ». */
-.gm2 { gap: 14px; padding: 16px 18px 18px; border: 0; border-radius: 18px; box-shadow: 0 0 0 1px #e2e5e6; font-family: 'Hanken Grotesk', 'Segoe UI', system-ui, sans-serif; }
+.gm2 { grid-template-columns: minmax(0, 1fr); gap: 14px; padding: 16px 18px 18px; border: 0; border-radius: 18px; box-shadow: 0 0 0 1px #e2e5e6; font-family: 'Hanken Grotesk', 'Segoe UI', system-ui, sans-serif; }
 .gm2 * { box-sizing: border-box; }
 .gm2-h h4 { margin: 0; font-family: 'Plus Jakarta Sans', 'Hanken Grotesk', sans-serif; font-size: 18px; font-weight: 800; letter-spacing: -0.02em; color: #1f2121; }
 .gm2-h span { display: block; margin-top: 2px; color: #5c6163; font-size: 12.5px; font-weight: 500; }
@@ -83,7 +83,7 @@ button.gm2-f:hover, button.gm2-f:focus-visible { border-color: #c5005f; outline:
 .gm2-f.is-non_trouve .gm2-fd { color: #8c0044; font-weight: 700; }
 .gm2-fq { color: #5c6163; font-size: 11.5px; line-height: 1.25; }
 
-.gm2-col2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+.gm2-col2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap: 14px; }
 .gm2-bloc { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .gm2-bt { margin: 0; font-family: 'Plus Jakarta Sans', 'Hanken Grotesk', sans-serif; font-size: 15px; font-weight: 800; color: #1f2121; }
 .gm2-msg { margin: 0; padding: 9px 12px; border-radius: 12px; background: #e6f3ec; color: #1f6b45; font-size: 13px; font-weight: 600; }
@@ -126,4 +126,12 @@ button.gm2-f:hover, button.gm2-f:focus-visible { border-color: #c5005f; outline:
 @keyframes gm2-glisse { from { opacity: 0; transform: translateX(14px); } to { opacity: 1; transform: none; } }
 @keyframes gm2-pop { 0% { transform: scale(1); } 40% { transform: scale(1.12); } 100% { transform: scale(1); } }
 @media (prefers-reduced-motion: reduce) { .gm2 *, .gm2 *::before, .gm2 *::after { animation: none !important; transition: none !important; } }
-@media (max-width: 760px) { .gm2-m { flex-basis: 45%; } .gm2-m::after { display: none; } .gm2-feuilles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 760px) {
+  /* téléphone (mesuré le 16/11 à 390 px : « Mise en vente et visites » sur une ligne faisait déborder le bloc de 87 px) */
+  .gm2-moments { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+  .gm2-m::after { display: none; }
+  .gm2-mb { width: 100%; padding-right: 8px; }
+  .gm2-mt b { white-space: normal; }
+  .gm2-feuilles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .gm2-juge { flex-wrap: wrap; }
+}
