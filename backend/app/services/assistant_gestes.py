@@ -1984,6 +1984,103 @@ def executer_modifier_recherche(ctx: ContexteAssistant, p: dict[str, Any]) -> di
     return {"contact_search_key": r["contact_search_key"], "search_index": int(r["search_index"])}
 
 
+# ── Étape 4 (16/11/2026) : GÉNÉRER LE NUMÉRO DE MANDAT (écran : HektorMandatNumberForm, App.tsx ~3920) ──────────
+# Le numéro est une RÉSERVATION OFFICIELLE chez Hektor (Protexa) : il ne se défait pas. La fonction de la base
+# `app_console_create_mandat_auto_number_job` contrôle les droits de la personne sur le bien
+# (`app_console_can_request_job`) ; les autres gardes de l'écran sont refaites ICI, à la carte ET au clic : pas de numéro
+# déjà présent (l'écran a un mode « nouveau mandat » à part, NON ouvert ici), au moins un mandant, un négociateur sur le
+# bien. Les mandants ne sont pas passés : le worker les retrouve lui-même sur le bien (il le fait déjà quand la liste est
+# vide) — la carte les NOMME seulement. Seul le « Mandat de vente » et ses sous-types de l'écran sont ouverts ici.
+SOUS_TYPES_MANDAT_VENTE = (
+    "Mandat de vente",
+    "Mandat de vente exclusif sans demarchage",
+    "Mandat de vente exclusif en cas de demarchage",
+    "Mandat de vente non exclusif sans demarchage",
+    "Mandat de vente non exclusif en cas de demarchage",
+    "Vente par lots",
+    "Vente de terrain",
+    "Vente en etat futur d'achevement (VEFA)",
+    "Cession de Parts Sociales de SARL ou SCI",
+    "Vente de fonds de commerce",
+    "Vente de murs et fonds de commerce",
+    "Mandat de vente semi-exclusif",
+)
+
+
+def _bien_pour_mandat(ctx: ContexteAssistant, hektor_annonce_id: Any) -> tuple[dict[str, Any], list[str], str | None]:
+    bien = _bien_vivant(ctx, hektor_annonce_id)
+    if str(bien.get("numero_mandat") or "").strip():
+        raise Refus(f"L'annonce {bien['hektor_annonce_id']} a déjà le mandat {bien['numero_mandat']} : un NOUVEAU mandat "
+                    "sur un bien qui en a déjà un se fait depuis sa fiche (« Ajouter un nouveau mandat »).")
+    tete = (_lire(ctx, "app_dossiers_current", {"app_dossier_id": f"eq.{bien['app_dossier_id']}", "limit": "1",
+                                               "select": "negociateur_email,commercial_id"}) or [{}])[0]
+    if not str(tete.get("negociateur_email") or "").strip() and not str(tete.get("commercial_id") or "").strip():
+        raise Refus(f"L'annonce {bien['hektor_annonce_id']} n'a pas de négociateur : choisis-le sur sa fiche avant le numéro.")
+    relations = _lire(ctx, "app_contact_relations_current", {
+        # ⚠ sur un bien SANS numéro, les vendeurs portent le rôle « proprietaire » (« mandant » n'existe qu'une fois le
+        # mandat numéroté — mesuré le 08/10) : les deux comptent, comme ROLES_MANDANT du push (export_app_payload.py)
+        "hektor_annonce_id": f"eq.{bien['hektor_annonce_id']}", "role_contact": "in.(mandant,proprietaire)",
+        "select": "hektor_contact_id", "limit": "20"})
+    ids = sorted({str(r.get("hektor_contact_id") or "").strip() for r in relations} - {""})
+    if not ids:
+        raise Refus(f"L'annonce {bien['hektor_annonce_id']} n'a aucun mandant : ajoute-le sur sa fiche avant de générer le "
+                    "numéro (comme à l'écran).")
+    fiches = _lire(ctx, "app_contacts_current", {"hektor_contact_id": f"in.({','.join(ids)})", "select": "display_name",
+                                                 "limit": "20"})
+    noms = [str(f.get("display_name") or "").strip() for f in fiches if str(f.get("display_name") or "").strip()]
+    return bien, noms or [f"contact {i}" for i in ids], str(tete.get("negociateur_email") or "").strip() or None
+
+
+def _date_debut(brute: Any) -> date:
+    texte = str(brute or "").strip()
+    if not texte:
+        return datetime.now(PARIS).date()
+    try:
+        jour = date.fromisoformat(texte)
+    except ValueError:
+        raise Refus("La date de début s'écrit AAAA-MM-JJ (ex. 2026-11-16).")
+    if abs((jour - datetime.now(PARIS).date()).days) > 366:
+        raise Refus("La date de début doit être à moins d'un an d'aujourd'hui.")
+    return jour
+
+
+def preparer_numero_mandat(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    bien, noms, _nego = _bien_pour_mandat(ctx, p.get("hektor_annonce_id"))
+    sous_type = str(p.get("sous_type") or "").strip() or "Mandat de vente"
+    if sous_type not in SOUS_TYPES_MANDAT_VENTE:
+        raise Refus("Sous-type de mandat inconnu. Au choix : " + " ; ".join(SOUS_TYPES_MANDAT_VENTE) + ".")
+    debut = _date_debut(p.get("date_debut"))
+    duree = str(p.get("duree_mois") or "").strip() or "12"
+    if not duree.isdigit() or not 1 <= int(duree) <= 120:
+        raise Refus("La durée est un nombre de mois, de 1 à 120.")
+    tacite = str(p.get("tacite_reconduction") or "oui").strip().lower() not in {"non", "0", "false", "no"}
+    resume = (f"Générer le NUMÉRO DE MANDAT officiel de l'annonce {bien['hektor_annonce_id']} « {bien.get('titre_bien') or ''} » "
+              f"— {sous_type}, à partir du {debut.strftime('%d/%m/%Y')}, {duree} mois, "
+              f"{'avec' if tacite else 'sans'} tacite reconduction ; mandant(s) : {', '.join(noms)}. "
+              "⚠ Hektor réserve le prochain numéro et une ligne est créée au registre des mandats : cela NE SE DÉFAIT PAS.")
+    return resume, {"hektor_annonce_id": int(bien["hektor_annonce_id"]), "sous_type": sous_type,
+                    "date_debut": debut.isoformat(), "duree_mois": duree, "tacite": tacite}
+
+
+def executer_numero_mandat(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[str, Any]:
+    bien, _noms, negociateur = _bien_pour_mandat(ctx, p.get("hektor_annonce_id"))  # re-vérifié AU CLIC : toujours sans numéro, etc.
+    sous_type = str(p.get("sous_type") or "Mandat de vente")
+    if sous_type not in SOUS_TYPES_MANDAT_VENTE:
+        raise Refus("sous-type de mandat inconnu")
+    debut = date.fromisoformat(str(p.get("date_debut")))
+    travail = _ecrire(ctx, "POST", "rpc/app_console_create_mandat_auto_number_job", {
+        "target_app_dossier_id": bien["app_dossier_id"],
+        "target_hektor_annonce_id": str(bien["hektor_annonce_id"]),
+        # la même charge que l'écran (createHektorMandatAutoNumberJob, lib/api.ts ~12272), mandants laissés au worker
+        "mandat_payload": {"type_mandat": "Mandat de vente", "sub_type_mandat": sous_type,
+                           "date_debut": debut.strftime("%d/%m/%Y"), "duree_mandat": str(p.get("duree_mois") or "12"),
+                           "tacite_reconduction": "1" if p.get("tacite", True) else "0", "mandant_contact_ids": [],
+                           "hektor_user_email": negociateur},
+        "job_priority": 12})
+    travail = travail or {}
+    return {"app_dossier_id": bien["app_dossier_id"], "travail": travail.get("id"), "statut": travail.get("status")}
+
+
 # ── le catalogue des gestes ───────────────────────────────────────────────────
 class Geste:
     def __init__(self, nom: str, description: str, roles: frozenset[str], parametres: dict[str, Any],
@@ -2165,6 +2262,18 @@ GESTES: dict[str, Geste] = {g.nom: g for g in (
                    **{cle: {"type": "string", "description": f"{libelle} ; vide = inchangé"}
                       for cle, (libelle, _genre) in CHAMPS_BIEN.items()}}),
           preparer_modifier_bien, executer_modifier_bien),
+    # étape 4 (16/11) : le numéro de mandat, réservation OFFICIELLE et irréversible chez Hektor
+    Geste("numero_mandat",
+          "Prépare la GÉNÉRATION DU NUMÉRO DE MANDAT officiel d'une annonce vivante qui n'en a pas encore, avec au moins un "
+          "mandant et un négociateur (mêmes conditions que l'écran). Mandat de vente seulement. IRRÉVERSIBLE : Hektor réserve "
+          "le prochain numéro. N'édite PAS le document de mandat et n'envoie rien en signature.",
+          TOUS_LES_ROLES,
+          _schema({"hektor_annonce_id": {"type": "string", "description": "numéro d'annonce"},
+                   "sous_type": {"type": "string", "description": "sous-type de mandat de vente (vide = « Mandat de vente »)"},
+                   "date_debut": {"type": "string", "description": "AAAA-MM-JJ, vide = aujourd'hui"},
+                   "duree_mois": {"type": "string", "description": "1 à 120, vide = 12"},
+                   "tacite_reconduction": {"type": "string", "description": "oui ou non, vide = oui"}}),
+          preparer_numero_mandat, executer_numero_mandat),
     Geste("couverture_photo",
           "Prépare : mettre une photo VISIBLE en couverture d'une annonce (numéros donnés par lire_photos_bien).",
           TOUS_LES_ROLES,

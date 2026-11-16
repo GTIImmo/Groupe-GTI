@@ -1172,8 +1172,9 @@ print("  (au clic, la route refuse aussi un rôle hors de geste.roles : DIRECTIO
 voir(ges.GESTES["transaction"].roles == ges.DIRECTION, "la carte est déclarée DIRECTION : la route de validation la refuse à un négociateur")
 
 print("10) aucune fonction de geste ne fait autre chose que proposer")
-voir(all(f.nom.startswith("proposer_") for f in ges.FONCTIONS_GESTES) and len(ges.FONCTIONS_GESTES) == 26,
-     "26 gestes (le brouillon retiré le 15/11, 3 du lot 2c, 3 du lot 3c, 1 de la vague C le 16/11), tous « proposer_ » : le "
+voir(all(f.nom.startswith("proposer_") for f in ges.FONCTIONS_GESTES) and len(ges.FONCTIONS_GESTES) == 27,
+     "27 gestes (le brouillon retiré le 15/11, 3 du lot 2c, 3 du lot 3c, 1 de la vague C, le numéro de mandat le 16/11), "
+     "tous « proposer_ » : le "
      "modèle n'a AUCUNE fonction qui exécute")
 voir(not any(f.nom.startswith("proposer_") for f in ges.FONCTIONS_LECTURE_LOT3), "les 2 lectures du lot 3 ne proposent rien")
 voir(not any(f.nom.startswith("proposer_") for f in ges.FONCTIONS_LECTURE_LOT4), "les 3 lectures du lot 4 ne proposent rien")
@@ -1226,5 +1227,77 @@ requests.get = _get
 voir("parametres" in _vu.get("select", "") and _relues == [{"id": "c1", "geste": "email_client", "resume": "r", "etat": "proposee",
      "cibles": [{"type": "contact", "id": "10354641"}]}],
      "relire les cartes : la cible est jointe, les paramètres (le texte de l'e-mail) ne sortent PAS")
+
+print("12) LE NUMÉRO DE MANDAT (16/11) : les gardes de l'écran, la carte qui dit « ne se défait pas », la fonction de la base")
+etat12 = {}
+appels12 = []
+
+
+def faux12(methode, url, **kw):
+    chemin = url.split("/rest/v1/", 1)[1]
+    appels12.append({"methode": methode, "chemin": chemin, "entetes": dict(kw.get("headers") or {}),
+                     "params": dict(kw.get("params") or {}), "corps": kw.get("json")})
+    if methode == "GET" and chemin == "app_dossiers_current":
+        if "negociateur_email" in str((kw.get("params") or {}).get("select")):
+            return Reponse([{"negociateur_email": etat12.get("nego", "pereira@gti-immobilier.fr"), "commercial_id": None}])
+        return Reponse(etat12.get("bien", [{"app_dossier_id": 10000006, "hektor_annonce_id": 63330, "numero_mandat": None,
+                                             "titre_bien": "ESSAI 8A2B", "statut_annonce": "Estimation"}]))
+    if methode == "GET" and chemin == "app_contact_relations_current":
+        return Reponse(etat12.get("mandants", [{"hektor_contact_id": "10354641"}]))
+    if methode == "GET" and chemin == "app_contacts_current":
+        return Reponse([{"display_name": "Mme CLAUDE TESTCLAUDE"}])
+    if methode == "GET":
+        return Reponse([])
+    if chemin == "rpc/app_console_create_mandat_auto_number_job":
+        return Reponse({"id": "travail-mandat", "status": "pending"})
+    return Reponse(None, status=500)
+
+
+requests.get = lambda url, **kw: faux12("GET", url, **kw)
+requests.post = lambda url, **kw: faux12("POST", url, **kw)
+requests.request = lambda methode, url, **kw: faux12(methode, url, **kw)
+P12 = {"hektor_annonce_id": "63330", "sous_type": "", "date_debut": "", "duree_mois": "", "tacite_reconduction": ""}
+resume12, p12 = ges.preparer_numero_mandat(nouveau_ctx(), P12)
+voir("NE SE DÉFAIT PAS" in resume12 and "Mme CLAUDE TESTCLAUDE" in resume12 and "12 mois" in resume12 and "avec tacite" in resume12,
+     "la carte dit l'irréversible, NOMME les mandants, et les valeurs par défaut de l'écran (12 mois, tacite reconduction)")
+voir(p12["sous_type"] == "Mandat de vente" and p12["duree_mois"] == "12" and p12["tacite"] is True,
+     "vide = Mandat de vente, 12 mois, tacite : comme l'écran")
+voir(not [a for a in appels12 if a["methode"] != "GET"], "PROPOSER n'écrit rien (que des lectures)")
+voir([a["params"].get("role_contact") for a in appels12 if a["chemin"] == "app_contact_relations_current"] == ["in.(mandant,proprietaire)"],
+     "les vendeurs d'un bien SANS numéro sont « proprietaire » (« mandant » = déjà numéroté) : les deux rôles comptent")
+etat12["bien"] = [{"app_dossier_id": 1352134, "hektor_annonce_id": 24935, "numero_mandat": "11964", "titre_bien": "x"}]
+voir(refuse(lambda: ges.preparer_numero_mandat(nouveau_ctx(), {**P12, "hektor_annonce_id": "24935"}), "déjà le mandat 11964"),
+     "⛔ un bien qui A DÉJÀ un numéro : refusé (le « nouveau mandat » reste à l'écran)")
+etat12.pop("bien")
+etat12["mandants"] = []
+voir(refuse(lambda: ges.preparer_numero_mandat(nouveau_ctx(), P12), "aucun mandant"), "⛔ sans mandant : refusé, comme l'écran")
+etat12.pop("mandants")
+etat12["nego"] = ""
+voir(refuse(lambda: ges.preparer_numero_mandat(nouveau_ctx(), P12), "négociateur"), "⛔ sans négociateur : refusé, comme l'écran")
+etat12.pop("nego")
+voir(refuse(lambda: ges.preparer_numero_mandat(nouveau_ctx(), {**P12, "sous_type": "Mandat de location-bailleur"}), "Sous-type")
+     and refuse(lambda: ges.preparer_numero_mandat(nouveau_ctx(), {**P12, "duree_mois": "200"}), "durée")
+     and refuse(lambda: ges.preparer_numero_mandat(nouveau_ctx(), {**P12, "date_debut": "16/11/2026"}), "AAAA-MM-JJ"),
+     "un sous-type hors mandat de vente, une durée de 200 mois, une date mal écrite : refusés")
+appels12.clear()
+r12 = ges.executer_numero_mandat(nouveau_ctx(), {**p12, "date_debut": "2026-11-16"})
+rpc12 = [a for a in appels12 if a["chemin"] == "rpc/app_console_create_mandat_auto_number_job"]
+voir(len(rpc12) == 1 and rpc12[0]["entetes"].get("Authorization") == f"Bearer {JETON}"
+     and rpc12[0]["corps"]["target_app_dossier_id"] == 10000006 and rpc12[0]["corps"]["target_hektor_annonce_id"] == "63330"
+     and rpc12[0]["corps"]["mandat_payload"]["date_debut"] == "16/11/2026"
+     and rpc12[0]["corps"]["mandat_payload"]["sub_type_mandat"] == "Mandat de vente"
+     and rpc12[0]["corps"]["mandat_payload"]["mandant_contact_ids"] == []
+     and rpc12[0]["corps"]["mandat_payload"]["hektor_user_email"] == "pereira@gti-immobilier.fr"
+     and r12["travail"] == "travail-mandat",
+     "au CLIC : la fonction de la base de l'écran, avec le JETON de la personne, la date en JJ/MM/AAAA, les mandants laissés "
+     "au worker, le négociateur du bien ; le numéro du travail revient (l'écran se relit à sa fin)")
+appels12.clear()
+etat12["bien"] = [{"app_dossier_id": 10000006, "hektor_annonce_id": 63330, "numero_mandat": "19001", "titre_bien": "x"}]
+voir(refuse(lambda: ges.executer_numero_mandat(nouveau_ctx(), {**p12, "date_debut": "2026-11-16"}), "déjà le mandat 19001")
+     and not [a for a in appels12 if a["methode"] != "GET"],
+     "TÉMOIN : un numéro apparu entre la carte et le clic -> refusé, RIEN envoyé (pas de second numéro officiel)")
+etat12.pop("bien")
+voir(ges.GESTES["numero_mandat"].roles == frozenset({"admin", "manager", "commercial"}),
+     "ouvert à tous les rôles, comme l'écran : la base contrôle le bien de la personne (app_console_can_request_job)")
 
 print(f"\n{ok} contrôles verts")

@@ -675,3 +675,64 @@ gardée ne se rouvre plus que si l'écran n'en a pas déjà une.
 réponse ; « Citer » → la fenêtre en mode citer, ↵ → « Prépare une relance pour l'annonce 21 » dans le champ, rien envoyé ;
 la recherche normale reste « Rechercher partout » ; au format téléphone (375 px) : pas de ligne « Demander », pied
 d'aujourd'hui. Build vert. **Pas encore vérifié** : en ligne.
+
+## 28. Carte « créer une annonce ou une estimation » : AUDIT FIN (16/11, sur « Oui enchaîne »), rien codé
+
+Lot 4 commité en local `0286cdb` ; PAS poussé : deux commits d'autres sessions sont dessous (`8af44f1` classeur,
+`c0f09fa` GED) — sa décision.
+
+**Ce que fait la fenêtre de création de l'écran** (`handleCreateDraftAnnonce`, App.tsx ~18446) — 4 étapes, et elle exige :
+l'AGENCE ; le NÉGOCIATEUR Hektor (`idUser` + `hektorNegociateurId` + libellé + e-mail ; un négociateur ne peut choisir
+que lui-même) ; la NATURE (`draftAnnonceTypeId` → un PROFIL de règles : surface habitable / terrain / garage, pièces,
+chambres, niveaux, jardin et piscine, exposition, vue — `draftAnnonceTypeProfile`) et la variante immo pro (idType 23 +
+sous-type) ; adresse / CP / ville ; prix ; les champs « avancés » de la nature ; la composition des pièces ; les PHOTOS
+(des fichiers) ; un mandant initial (existant, ou nouveau : nom + e-mail au minimum). Tout part en noms de cases Hektor
+(`hektor_wizard_fields`). Mesuré : **21 créations en 90 jours, 2 en erreur**, la dernière le 08/11.
+
+**Deux façons de faire**
+- A — **carte directe** : le serveur refait un SOUS-ENSEMBLE de la fenêtre (liste fermée de natures avec leurs règles,
+  négociateur = la personne ou un nom de l'annuaire pour la direction, adresse vérifiée comme pour un contact, prix,
+  surface, pièces, chambres, terrain, mandant existant) puis appelle `app_create_annonce_job_optimistic`. ⚠ Cela RECOPIE les
+  règles par nature côté serveur : deux portes sur la même création, qui peuvent diverger (leçon déjà payée) ; ni photos,
+  ni composition, ni champs avancés.
+- B — **par la fenêtre de l'écran** (lot 6) : la carte ouvre « Nouvelle annonce / estimation » DÉJÀ REMPLIE de ce que
+  l'assistant a compris (nature, adresse, prix, surfaces, mandant…) ; la personne complète (photos, mandant, composition)
+  et clique « Créer » : les MÊMES règles, la même validation, rien de recopié.
+⭐ **Recommandé : B** — je reviens sur ma recommandation du §26 (« carte directe ») après avoir lu la fenêtre : la création
+est trop liée aux règles par nature et aux fichiers pour être refaite sans risque côté serveur.
+Les cartes directes qui restent : 3 (numéro de mandat) et 5 (signature) ; 2, 4, le bon de visite et la création (B) vont
+au lot 6.
+
+## 29. Lot 4 — EN LIGNE et PROUVÉ chez lui (16/11, « Oui les trois »)
+
+Les deux commits d'autres sessions avaient été poussés par elles entre-temps : seul `0286cdb` restait, poussé. Vercel
+servi. Dans son Chrome, en lecture seule :
+- écran Annonces → « Rechercher partout » → « Chaise-Dieu » : la ligne « Demander à l'assistant … Ctrl ↵ » en tête, puis
+  15 résultats — la planche 5 à l'identique ; clic → l'Accueil, NOUVELLE conversation « Chaise-Dieu », le vrai modèle
+  répond (il demande une précision : « les biens en vente, les mandats ou autre chose ? ») ;
+- Nouvelle conversation → « Citer un bien ou un contact » → la fenêtre « Citer… » → « 63330 » → la fiche « ESSAI 8A2B
+  TOUS CHAMPS » → le champ contient « l'annonce 63330 », RIEN envoyé ; l'accueil a son bouton « Citer » (planche 1).
+Rien écrit en production. ➡ **Lot 4 CLOS.**
+**En attente de lui** : la création d'une annonce / estimation par la fenêtre de l'écran (B, recommandé, §28) ou en
+carte directe ; puis les cartes directes « numéro de mandat » et « signature ».
+✅ **Tranché le 16/11 (« Par la fenêtre »)** : créer une annonce / une estimation passera par la FENÊTRE de l'écran, déjà
+remplie (lot 6), pas par une carte directe.
+
+## 30. Carte « numéro de mandat » : CODÉE (16/11, sur « enchaîne les cartes »), rien poussé
+
+**Audit fin** : l'écran (`HektorMandatNumberForm`, App.tsx ~3920) exige : pas de numéro déjà présent (sauf son mode « nouveau
+mandat », à part), au moins un mandant, un négociateur ; il demande une confirmation (« action officielle, non annulable ») ;
+puis `createHektorMandatAutoNumberJob` → `app_console_create_mandat_auto_number_job` (contrôle des droits par
+`app_console_can_request_job`), travail `create_hektor_mandat_auto_number` → le worker réserve le numéro chez Hektor
+(Protexa) et retrouve LUI-MÊME les mandants du bien si la liste est vide (worker ~19182).
+**La carte** (`assistant_gestes.py`, `numero_mandat`, tous les rôles) : à la carte ET au clic, les gardes de l'écran
+(numéro absent, mandant, négociateur) ; Mandat de vente et ses 12 sous-types seulement ; date de début (défaut aujourd'hui),
+durée 1-120 mois (défaut 12), tacite reconduction (défaut oui) ; le résumé NOMME les mandants et dit « NE SE DÉFAIT PAS » ;
+au clic, la même fonction de la base avec le jeton de la personne, la même charge que l'écran (mandants laissés au worker,
+négociateur du bien). Consignes à jour (et la liste de ce qu'il ne fait pas : document de mandat, avenant, nouveau mandat,
+créer une annonce, avis de valeur). Écran : titre « Numéro de mandat (irréversible) », fin « Numéro demandé à Hektor ».
+⛔ **Trouvé en mesurant (le mien), corrigé AVANT tout essai réel** : un bien SANS numéro porte ses vendeurs en
+« proprietaire », jamais en « mandant » (mesuré le 08/10 : « mandant » = déjà numéroté). Ma garde ne cherchait que
+« mandant » : elle aurait refusé TOUS les biens. Elle prend maintenant les deux rôles, comme `ROLES_MANDANT` du push.
+**Essais** : 234 + 61 + 73 verts ; témoin inverse (garde « déjà un numéro » retirée → rouge). Build vert.
+**Pas éprouvé en réel** : le clic réserve un VRAI numéro officiel, irréversible — sa décision (bien et moment).
