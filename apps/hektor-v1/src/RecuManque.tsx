@@ -20,7 +20,7 @@ import { dateEtatLue, loadGedLectures, resumeLecture, type LectureDocument } fro
 import { reglesPersonnes } from './lib/gedReglesPersonnes'
 import { reglesFinancement } from './lib/gedReglesFinancement'
 import { reglesEtatCivil } from './lib/gedReglesEtatCivil'
-import { LIBELLE_MOMENT, recuManque, type LignePiece } from './lib/gedPieces'
+import { LIBELLE_MOMENT, recuManque, type LignePiece, type MomentDossier } from './lib/gedPieces'
 import { deposeAuPlusTard, LIBELLE_A_DEPOSER, reglesSansIa, type AffaireRegle, type Alerte, type FaitsRegles } from './lib/gedRegles'
 import type { PersonneDuBien } from './lib/gedComparer'
 import { reglesLues } from './lib/gedReglesLues'
@@ -41,6 +41,8 @@ function depose(d: ConsoleDocument): string | null {
 }
 
 const NIVEAU_ALERTE: Record<Alerte['niveau'], string> = { alerte: 'à vérifier', piece: 'pièce non trouvée', info: 'pour information' }
+// habillage H1 : les moments de la vente, dans l'ordre (le même que gedPieces.ts)
+const ORDRE_MOMENTS: MomentDossier[] = ['mandat', 'mise_en_vente', 'offre', 'compromis']
 
 // Un montant du registre (en euros, texte ou nombre) ; vide ou zéro -> null.
 const euros = (v: string | number | null | undefined) => { const x = Number(v); return v != null && v !== '' && Number.isFinite(x) && x > 0 ? x : null }
@@ -66,9 +68,7 @@ export function RecuManque({
   const [classements, setClassements] = useState<Map<string, string>>(() => new Map())
   // morceau 6 : ce que l'IA a lu dans les documents déposés avec l'outil (la plus récente lecture par document)
   const [lectures, setLectures] = useState<Map<string, LectureDocument>>(() => new Map())
-  const [ouvrirPrecedents, setOuvrirPrecedents] = useState(false)
-  // ce qui manque d'abord ; les pièces reçues se replient sur une ligne (écran bas : 665 px)
-  const [ouvrirRecues, setOuvrirRecues] = useState(false)
+  // habillage H1 (16/11) : les pièces reçues sont des feuilles cochées, les moments précédents se choisissent en tête
   const [ouvrirLus, setOuvrirLus] = useState(false)
   const nbDocuments = documents.length
 
@@ -246,135 +246,152 @@ export function RecuManque({
       .map((d) => ({ nom: d.document_name, typeCode: classements.get(d.id) ?? null })),
   ), [faits, documents, classements])
 
-  const ligne = (l: LignePiece) => {
+  // ── habillage H1 (16/11, maquette https://claude.ai/artifact/S16jkpfnqtPF83xvUdkNtm) : LE DOSSIER. Les moments de la
+  // vente en tête, une FEUILLE par pièce attendue (reçue : cochée ; non trouvée : à déposer). Mêmes données, mêmes gestes.
+  const [momentVu, setMomentVu] = useState<MomentDossier | null>(null)
+  const momentCourant = resultat.moment
+  const indexCourant = ORDRE_MOMENTS.indexOf(momentCourant)
+  const precedent = momentVu ? resultat.precedents.find((p) => p.moment === momentVu) ?? null : null
+  const feuillesVues = precedent ? precedent.manquantes : resultat.pieces
+
+  const feuille = (l: LignePiece, i: number) => {
     const recu = l.etat === 'recu'
+    const delai = { animationDelay: `${i * 70}ms` } as const
+    const titre = (
+      <span className="gm2-fn">
+        {l.libelle}
+        {l.sensible ? <svg className="gm2-cad" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" role="img" aria-label="toujours privé"><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg> : null}
+      </span>
+    )
+    if (recu) {
+      return (
+        <div key={l.cle} className="gm2-f is-recu" style={delai} title={l.documents.map(avecLecture).join('\n')}>
+          <span className="gm2-niveau" aria-hidden="true" style={{ animationDelay: `${220 + i * 70}ms` }} />
+          <span className="gm2-ic is-recu" aria-hidden="true">
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path style={{ animationDelay: `${300 + i * 70}ms` }} d="M3.5 8.5l3 3 6-7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+          </span>
+          {titre}
+          <span className="gm2-fd">{`${l.dansUnDossier ? 'Dans un dossier de diagnostics : ' : ''}${l.documents.slice(0, 2).map(avecLecture).join(', ')}${l.documents.length > 2 ? ` (+${l.documents.length - 2})` : ''}`}</span>
+        </div>
+      )
+    }
+    const cas = l.etat === 'selon_le_cas'
     const contenu = (
       <>
-        <span className={`gm-ic is-${l.etat}`} aria-hidden="true">{recu ? '✓' : l.etat === 'selon_le_cas' ? '?' : ''}</span>
-        <span className="gm-t">
-          {l.libelle}
-          {l.sensible ? <span className="gm-prive" title="Toujours privé">privé</span> : null}
-          <small>{NIVEAU[l.niveau]}{l.pourquoi ? ` : ${l.pourquoi}` : ''}</small>
-        </span>
-        <span className="gm-d" title={recu ? l.documents.map(avecLecture).join('\n') : undefined}>
-          {recu
-            ? `${l.dansUnDossier ? 'Dans un dossier de diagnostics : ' : ''}${l.documents.slice(0, 2).map(avecLecture).join(', ')}${l.documents.length > 2 ? ` (+${l.documents.length - 2})` : ''}`
-            : l.etat === 'selon_le_cas'
-              ? 'La fiche ne dit pas si elle est due'
-              : onDeposer ? 'Non trouvée : déposer' : 'Non trouvée'}
-        </span>
+        <span className={`gm2-ic is-${l.etat}`} aria-hidden="true">{cas ? '?' : '+'}</span>
+        {titre}
+        <span className="gm2-fd">{cas ? 'La fiche ne dit pas si elle est due' : onDeposer ? 'Non trouvée : déposer' : 'Non trouvée'}</span>
+        <small className="gm2-fq">{NIVEAU[l.niveau]}{l.pourquoi ? ` : ${l.pourquoi}` : ''}</small>
       </>
     )
-    if (!recu && onDeposer) {
+    if (onDeposer) {
       return (
-        <button key={l.cle} type="button" className={`gm-l is-${l.etat}`} onClick={() => onDeposer(l.typeADeposer, l.libelle)} aria-label={`Déposer : ${l.libelle}`}>
+        <button key={l.cle} type="button" className={`gm2-f is-${l.etat}`} style={delai} onClick={() => onDeposer(l.typeADeposer, l.libelle)} aria-label={`Déposer : ${l.libelle}`}>
           {contenu}
         </button>
       )
     }
-    return <div key={l.cle} className={`gm-l is-${l.etat}`}>{contenu}</div>
+    return <div key={l.cle} className={`gm2-f is-${l.etat}`} style={delai}>{contenu}</div>
   }
 
-  const manquantesAvant = resultat.precedents.reduce((n, p) => n + p.manquantes.length, 0)
+  const ETIQUETTE: Record<Alerte['niveau'], string> = { alerte: 'Alerte', piece: 'Pièce', info: 'Info' }
 
   return (
-    <section className="gm" aria-label="Reçu / manque">
-      <div className="gm-h">
-        <h4>{`${LIBELLE_MOMENT[resultat.moment]} : ${resultat.recues} pièce${resultat.recues > 1 ? 's' : ''} sur ${resultat.attendues}`}</h4>
-        <span>Reçu / manque, d'après le type de chaque document (son nom pour les anciens)</span>
+    <section className="gm gm2" aria-label="Reçu / manque">
+      <div className="gm2-h">
+        <h4>Le dossier</h4>
+        <span>Reçu / manque, d'après le type de chaque document (son nom pour les anciens). Une pièce arrive, sa feuille se remplit.</span>
       </div>
-      {propositions.length || messageRemplir ? (
-        <div className="gm-liste">
-          <p className="gm-avant-t">{`À remplir (${propositions.length})`}</p>
-          {messageRemplir ? <p className="gm-avant-t" role="status">{messageRemplir}</p> : null}
-          {propositions.map((p) => (
-            <div key={`${p.cle}|${p.valeur}`} className="gm-l is-selon_le_cas">
-              <span className="gm-ic is-selon_le_cas" aria-hidden="true">+</span>
-              <span className="gm-t">{p.texte}<small>{`case vide : lu dans ${p.source}`}</small></span>
-              <span className="gm-d">
-                <button type="button" className="gm-avant-b" disabled={enCours !== null} onClick={() => void agir(p, 'remplir')}>{enCours === p.cle ? 'Écriture…' : p.geste === 'contact' ? 'Remplir la fiche du contact' : 'Remplir la fiche'}</button>
-                {' '}
-                <button type="button" className="gm-avant-b" disabled={enCours !== null} onClick={() => void agir(p, 'ignorer')}>Ignorer</button>
-              </span>
-            </div>
-          ))}
-        </div>
-      ) : null}
-      {alertes.length ? (
-        <div className="gm-liste">
-          <p className="gm-avant-t">{`À regarder (${alertes.length})`}</p>
-          {messageJuge ? <p className="gm-avant-t" role="status">{messageJuge}</p> : null}
-          {alertes.map((a, i) => {
-            const contenu = (
-              <>
-                <span className={`gm-ic is-${a.niveau === 'info' ? 'selon_le_cas' : 'non_trouve'}`} aria-hidden="true">{a.niveau === 'info' ? 'i' : '!'}</span>
-                <span className="gm-t">{a.texte}<small>{`${NIVEAU_ALERTE[a.niveau]} : ${a.pourquoi}`}</small></span>
-                <span className="gm-d">{a.typeADeposer && onDeposer ? 'Déposer la pièce' : ''}</span>
-              </>
-            )
-            const ligneAlerte = a.typeADeposer && onDeposer ? (
-              <button type="button" className="gm-l is-non_trouve" onClick={() => onDeposer(a.typeADeposer as string, LIBELLE_A_DEPOSER[a.typeADeposer as string] ?? a.texte)} aria-label={`Déposer : ${a.texte}`}>{contenu}</button>
-            ) : (
-              <div className={`gm-l is-${a.niveau === 'info' ? 'selon_le_cas' : 'non_trouve'}`}>{contenu}</div>
-            )
-            // morceau 10 : la barre de jugement, SOUS la ligne (une ligne « Déposer » est déjà un bouton)
-            const cle = cleJugement(a)
-            const juge = jugements?.get(cle)
-            return (
-              <div key={`${a.code}-${i}`}>
-                {ligneAlerte}
-                {jugements ? (
-                  <div className="gm-d" role="group" aria-label={`Juger : ${a.texte}`} style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'baseline', margin: '2px 0 8px 12px' }}>
-                    {juge ? <small>{`Jugé ${LIBELLE_VERDICT[juge.verdict]} le ${new Date(juge.jugeLe).toLocaleDateString('fr-FR')} · `}</small> : <small>Cette ligne est : </small>}
-                    {VERDICTS.map((v) => (
-                      <button key={v.code} type="button" className="gm-avant-b" disabled={jugeEnCours !== null} aria-pressed={juge?.verdict === v.code}
-                        onClick={() => void juger(a, v.code)}>{jugeEnCours === cle ? '…' : v.libelle}</button>
-                    ))}
+
+      <ol className="gm2-moments" aria-label="Les moments de la vente">
+        {ORDRE_MOMENTS.map((m, i) => {
+          const passe = i < indexCourant
+          const courant = i === indexCourant
+          const manquantes = resultat.precedents.find((p) => p.moment === m)?.manquantes.length ?? 0
+          const vu = momentVu ? momentVu === m : courant
+          const ouvrable = courant || (passe && manquantes > 0)
+          const compte = courant
+            ? `${resultat.recues} pièce${resultat.recues > 1 ? 's' : ''} sur ${resultat.attendues}`
+            : passe ? (manquantes ? `${manquantes} non trouvée${manquantes > 1 ? 's' : ''}` : 'complet') : 'à venir'
+          return (
+            <li key={m} className={`gm2-m${passe ? ' is-passe' : ''}${courant ? ' is-courant' : ''}`}>
+              <button type="button" className="gm2-mb" aria-pressed={vu} disabled={!ouvrable} onClick={() => setMomentVu(courant ? null : m)}>
+                <span className={`gm2-mp${passe && !manquantes ? ' is-fait' : ''}`} aria-hidden="true">{passe && !manquantes ? '✓' : String(i + 1)}</span>
+                <span className="gm2-mt"><b>{LIBELLE_MOMENT[m]}</b><small>{compte}</small></span>
+              </button>
+            </li>
+          )
+        })}
+      </ol>
+
+      {precedent ? <p className="gm2-note" role="status">{`${LIBELLE_MOMENT[precedent.moment]} : les pièces obligatoires non trouvées.`}</p> : null}
+      <div className="gm2-feuilles" key={momentVu ?? 'courant'}>{feuillesVues.map(feuille)}</div>
+
+      {propositions.length || messageRemplir || alertes.length ? (
+        <div className="gm2-col2">
+          {propositions.length || messageRemplir ? (
+            <div className="gm2-bloc">
+              <p className="gm2-bt">{`À remplir (${propositions.length})`}</p>
+              {messageRemplir ? <p className="gm2-msg" role="status">{messageRemplir}</p> : null}
+              {propositions.map((p, i) => (
+                <div key={`${p.cle}|${p.valeur}`} className="gm2-carte" style={{ animationDelay: `${i * 80}ms` }}>
+                  <div className="gm2-c1"><span className="gm2-et is-remplir">Remplir</span><b>{p.texte}</b></div>
+                  <small className="gm2-src">{`case vide : lu dans ${p.source}`}</small>
+                  <div className="gm2-gestes">
+                    <button type="button" className="gm2-b1" disabled={enCours !== null} onClick={() => void agir(p, 'remplir')}>{enCours === p.cle ? 'Écriture…' : p.geste === 'contact' ? 'Remplir la fiche du contact' : 'Remplir la fiche'}</button>
+                    <button type="button" className="gm2-lien" disabled={enCours !== null} onClick={() => void agir(p, 'ignorer')}>Ignorer</button>
                   </div>
-                ) : null}
-              </div>
-            )
-          })}
-        </div>
-      ) : null}
-      <div className="gm-liste">{resultat.pieces.filter((l) => l.etat !== 'recu').map(ligne)}</div>
-      {resultat.recues ? (
-        <div className="gm-avant">
-          <button type="button" className="gm-avant-b" onClick={() => setOuvrirRecues((v) => !v)} aria-expanded={ouvrirRecues}>
-            {`${ouvrirRecues ? '▾' : '▸'} ${resultat.recues} pièce${resultat.recues > 1 ? 's' : ''} reçue${resultat.recues > 1 ? 's' : ''}`}
-          </button>
-          {ouvrirRecues ? <div className="gm-liste">{resultat.pieces.filter((l) => l.etat === 'recu').map(ligne)}</div> : null}
-        </div>
-      ) : null}
-      {lus.length ? (
-        <div className="gm-avant">
-          <button type="button" className="gm-avant-b" onClick={() => setOuvrirLus((v) => !v)} aria-expanded={ouvrirLus}>
-            {`${ouvrirLus ? '▾' : '▸'} Lu par l'IA : ${lus.length} document${lus.length > 1 ? 's' : ''}`}
-          </button>
-          {ouvrirLus ? (
-            <div className="gm-liste">
-              {lus.map((l) => (
-                <div key={l.id} className="gm-l is-recu">
-                  <span className="gm-ic is-recu" aria-hidden="true">✓</span>
-                  <span className="gm-t">{l.nom}<small>{l.resume}</small></span>
-                  <span className="gm-d" />
                 </div>
               ))}
             </div>
           ) : null}
+          {alertes.length ? (
+            <div className="gm2-bloc">
+              <p className="gm2-bt">{`À regarder (${alertes.length})`}</p>
+              {messageJuge ? <p className="gm2-msg" role="status">{messageJuge}</p> : null}
+              {alertes.map((a, i) => {
+                // morceau 10 : la carte porte son geste « Déposer » ET la barre de jugement (plus de ligne-bouton)
+                const cle = cleJugement(a)
+                const juge = jugements?.get(cle)
+                return (
+                  <div key={`${a.code}-${i}`} className="gm2-carte" style={{ animationDelay: `${120 + i * 80}ms` }}>
+                    <div className="gm2-c1"><span className={`gm2-et is-${a.niveau}`}>{ETIQUETTE[a.niveau]}</span><b>{a.texte}</b></div>
+                    <small className="gm2-src">{`${NIVEAU_ALERTE[a.niveau]} : ${a.pourquoi}`}</small>
+                    <div className="gm2-gestes">
+                      {a.typeADeposer && onDeposer ? (
+                        <button type="button" className="gm2-b2" onClick={() => onDeposer(a.typeADeposer as string, LIBELLE_A_DEPOSER[a.typeADeposer as string] ?? a.texte)} aria-label={`Déposer : ${a.texte}`}>Déposer la pièce</button>
+                      ) : null}
+                      <span className="gm2-esp" />
+                      {jugements ? (
+                        <div className="gm2-juge" role="group" aria-label={`Juger : ${a.texte}`}>
+                          <small>{juge ? `Jugé ${LIBELLE_VERDICT[juge.verdict]} le ${new Date(juge.jugeLe).toLocaleDateString('fr-FR')}` : 'Cette ligne est'}</small>
+                          <span className="gm2-seg">
+                            {VERDICTS.map((v) => (
+                              <button key={v.code} type="button" className={`gm2-v is-${v.code}${juge?.verdict === v.code ? ' is-pris' : ''}`} disabled={jugeEnCours !== null} aria-pressed={juge?.verdict === v.code}
+                                onClick={() => void juger(a, v.code)}>{jugeEnCours === cle ? '…' : v.libelle}</button>
+                            ))}
+                          </span>
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          ) : null}
         </div>
       ) : null}
-      {manquantesAvant ? (
-        <div className="gm-avant">
-          <button type="button" className="gm-avant-b" onClick={() => setOuvrirPrecedents((v) => !v)} aria-expanded={ouvrirPrecedents}>
-            {`${ouvrirPrecedents ? '▾' : '▸'} Moments précédents : ${manquantesAvant} pièce${manquantesAvant > 1 ? 's' : ''} obligatoire${manquantesAvant > 1 ? 's' : ''} non trouvée${manquantesAvant > 1 ? 's' : ''}`}
+
+      {lus.length ? (
+        <div className="gm2-lus">
+          <button type="button" className="gm2-pil" onClick={() => setOuvrirLus((v) => !v)} aria-expanded={ouvrirLus}>
+            {`Lu par l'IA : ${lus.length} document${lus.length > 1 ? 's' : ''}`}
           </button>
-          {ouvrirPrecedents ? resultat.precedents.map((p) => (
-            <div key={p.moment} className="gm-liste">
-              <p className="gm-avant-t">{LIBELLE_MOMENT[p.moment]}</p>
-              {p.manquantes.map(ligne)}
-            </div>
-          )) : null}
+          {ouvrirLus ? (
+            <ul className="gm2-lus-l">
+              {lus.map((l) => <li key={l.id}><b>{l.nom}</b> <span>{l.resume}</span></li>)}
+            </ul>
+          ) : null}
         </div>
       ) : null}
     </section>

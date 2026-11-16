@@ -69,8 +69,10 @@ const ged = construire('src/lib/ged.ts', { hasSupabaseEnv: true, supabase: fauss
   voir(/if \(!regles\) return[\s\S]{0,120}loadGedJugements\(hektorAnnonceId\)/.test(rm), 'les jugements ne se lisent que si les lignes « À regarder » sont ouvertes (ged_propositions)')
   voir(/\{jugements \? \(/.test(rm) && /role="group" aria-label=\{`Juger : \$\{a\.texte\}`\}/.test(rm), 'les boutons n\'existent que si la lecture a réussi')
   voir(/const cle = cleJugement\(a\)[\s\S]{0,200}gedJuger\(\{ hektorAnnonceId, regle: a\.code, cle, texte: a\.texte, niveau: a\.niveau, verdict \}\)/.test(rm), 'le jugement garde la règle, la clé, le texte et le niveau TELS QU\'AFFICHÉS')
-  const bloc = rm.slice(rm.indexOf('const ligneAlerte'), rm.indexOf('})}', rm.indexOf('const ligneAlerte')))
-  voir(/\{ligneAlerte\}\s*\{jugements \?/.test(bloc), 'la barre de jugement est SOUS la ligne, jamais dans le bouton « Déposer »')
+  // habillage H1 (16/11) : la ligne n'est plus un bouton ; « Déposer la pièce » est un bouton de la carte, la barre sa voisine
+  const bloc = rm.slice(rm.indexOf('{alertes.map((a, i) => {'), rm.indexOf('gm2-lus'))
+  voir(/>Déposer la pièce<\/button>[\s\S]*className="gm2-juge" role="group"/.test(bloc) && !/<button[^>]*>[^<]*<div className="gm2-juge"/.test(bloc),
+    'la barre de jugement est À CÔTÉ du bouton « Déposer », jamais dedans')
   voir(!/gedJuger|loadGedJugements/.test(fs.readFileSync(path.join(__dirname, 'src/lib/gedRegles.ts'), 'utf8')), 'TÉMOIN : les règles elles-mêmes ne savent rien des jugements (on mesure, on ne change pas les règles)')
 
   console.log(`\n${ok} verts, ${ko} rouges`)

@@ -2136,3 +2136,17 @@ Raisonnement métier MESURÉ (par le numéro Hektor du document, pas `created_at
 1 042 documents en 31 jours sur 212 biens ; 301 dépôts, **2 fichiers en médiane**, 45 au plus ; 21 % de photos ; 8 % de
 noms muets ; **40 % de noms qu'aucune règle ne reconnaît** -> le TYPE est le cœur du travail. Mêmes gestes qu'aujourd'hui,
 aucune fonction ajoutée ; animations coupées par « moins de mouvement ». ⏳ Attend l'avis de Frédéric avant tout code.
+
+**✅ « Oui, on code » (16/11) : HABILLAGE H1 (le bloc de l'onglet) ÉCRIT — rien poussé.** `RecuManque.tsx` : même logique,
+mêmes données, mêmes gestes ; seul le RENDU change, d'après la maquette retravaillée. En tête « Le dossier » : les 4
+moments (mandat, mise en vente, offre, compromis) en pastilles reliées -- passé complet coché, passé incomplet « N non
+trouvées » (cliquable : ses pièces obligatoires non trouvées remplacent les feuilles ; c'était le repli « Moments
+précédents »), courant « R pièces sur A », à venir grisé. Puis UNE FEUILLE par pièce : reçue = cochée (coche tracée, barre
+verte qui se remplit, coin plié, la liste des documents au survol) ; non trouvée = hachurée, bouton « Non trouvée :
+déposer » (⛔ jamais « absente » ni « manque », décision du 12/11 sur les noms muets) ; selon le cas = grisée. « À remplir »
+et « À regarder » en CARTES côte à côte (étiquettes Remplir / Alerte / Pièce / Info ; « Déposer la pièce » devient un bouton
+DE la carte, la barre Vrai · Faux · Déjà su sa voisine). « Lu par l'IA » en pastille. Les reçues ne se replient plus : elles
+SONT les feuilles. `RecuManque.css` : styles `gm2-*` ajoutés (les anciens restent), animations coupées par « moins de
+mouvement », 2 colonnes de feuilles sous 760 px. Essais GED tous verts (1 adapté : `test_ged_mesure` vérifie que la barre est
+à côté du bouton « Déposer », jamais dedans) ; build vert. ⚠ PAS VU : le bloc dépend des interrupteurs en base ; la capture
+contre capture se fera en production sur 63331 après le push. Reste : H2 la fenêtre de dépôt, H3 après l'envoi, H4 téléphone.
