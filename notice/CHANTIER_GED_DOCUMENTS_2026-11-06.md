@@ -2063,3 +2063,28 @@ Au passage, texte seulement : le « pourquoi » de P9 et de la protection ne red
 « à vérifier : »).
 Essais `test_ged_regles_etat_civil.cjs` **28 verts** (+5, dont 3 témoins : nom mixte, acte de vente / notarié / notoriété,
 livret) ; témoin inverse (l'ancien fichier) -> ROUGE ; les 11 essais GED de l'écran verts ; build vert.
+
+### 12.20 Le morceau 10 — la mesure (audit du 16/11, lecture seule, rien codé)
+**Ce qu'il doit faire** (§12.1, l. 34, l. 1016) : Frédéric juge chaque ligne « À regarder » de ses vrais biens -- **vrai /
+faux / déjà su** -- pendant 2 semaines ; puis décision RÈGLE PAR RÈGLE (garder, resserrer, retirer) ; la « resserrée » est
+un point d'arrêt possible.
+**Ce qui existe (mesuré)** : RIEN pour juger une ligne. `app_ged_decision` ne garde que les propositions « remplir »
+(contrainte `remplie / ignoree / echec`, porte `app_ged_decider` derrière `ged_remplir`) : **3 lignes** (l'épreuve 9c).
+`app_ged_journal` : classements et rattachements (35). Une ligne « À regarder » (`Alerte` : code, niveau, texte,
+pourquoi) n'a PAS d'identifiant : elle est recalculée à chaque ouverture, dans le navigateur.
+⚠ **Aucune mesure automatique des règles lues n'est possible sur les vrais biens** : il n'y a de lectures QUE sur les biens
+d'essai (tout le GED est en « admin » ; les dépôts des négociateurs passent par l'ancien formulaire). Les 13 règles SANS
+IA, elles, ont été mesurées sur les 714 biens en cours le 12/11 (§12.10) : 209 biens ont une ligne au moins.
+**Découpage proposé** :
+- **10a, la base** (patch SQL, À POSER sur accord) : table `app_ged_jugement` (bien, code de la règle, CLÉ de la ligne =
+  code + texte normalisé, texte, niveau, verdict `vrai / faux / deja_su`, commentaire facultatif, qui, quand ; journal :
+  le plus récent fait foi) ; porte `app_ged_juger` (compte actif, interrupteur `ged_propositions` pour l'appelant,
+  périmètre du bien) ; lecture par le même périmètre que les décisions.
+- **10b, l'écran** : trois petits boutons sur chaque ligne « À regarder » (Vrai · Faux · Déjà su), le verdict affiché et
+  modifiable ; même interrupteur `ged_propositions` (admin) : les négociateurs ne voient rien.
+- **10c, le compte rendu** : une requête (lecture seule) qui donne, règle par règle, le nombre de lignes jugées et la part
+  vrai / faux / déjà su ; avec les « remplir » (remplie / ignorée / échec) et les lectures (lu / incomplet / pas ce type,
+  coût). À relancer au bout des 2 semaines.
+**Ce que ça pourrait casser** : rien d'existant (une table et une fonction NEUVES, des boutons sous un interrupteur déjà
+en « admin »). ⚠ La descente de nuit recopie d'elle-même toute table neuve de `public` sur le serveur local : les TEXTES
+des lignes y partiraient (ils portent des noms, comme `app_ged_valeur`, déjà recopiée).
