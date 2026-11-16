@@ -508,3 +508,170 @@ pas du lien.
 d'App et l'écran le relit à son montage (même risque pour la chaîne du registre). **Corrigé** : le point de départ
 s'oublie dès qu'on quitte l'écran visé (App.tsx, effet sur `screen`). Vérifié en maquette : lien → 18/11, puis Contacts,
 puis Agenda par le rail → la date par défaut de l'écran (17/11), plus le 18. Build vert. Rien écrit en production.
+✅ `e8ae253` poussé avec `b936e9d` (GED, dessous, sur « Oui, les deux ») ; Vercel READY sur e8ae253. ➡ **Lot 3b CLOS.**
+Restent : 4 (Citer un bien, Rechercher ou demander), 5 (téléphone), 6 (gestes par l'écran) ; options : le fil
+« ‹ Conversation » ; la consigne des liens pas suivie à chaque fois (agenda listé sans `rdv:` une fois sur deux).
+
+## 23. Lot 4 — Citer un bien ou un contact, Rechercher ou demander : AUDIT (16/11, sur « Lot 4, Citer »), rien codé
+
+**Périmètre** : la planche 5 (« Rechercher partout » avec « Demander à l'assistant »), la planche 1 (le bouton « Citer un
+bien ou un contact » du champ), `RechercheGlobale.tsx` (365 lignes) et son branchement dans App (une seule fenêtre, ouverte
+par le rail, le « / », et les boutons de recherche du tableau de bord et du téléphone). Pas de serveur.
+
+**Ce que le code dit** : la fenêtre « Rechercher partout » cherche dès 3 caractères dans les annonces (vivantes et
+archives), les contacts et les mandats ; ↑ ↓ pour choisir, ↵ pour OUVRIR la fiche (props `onOuvrirAnnonce`,
+`onOuvrirContact`, `onOuvrirMandat`…). Elle sert à TOUS, sur tous les écrans, téléphone compris (bouton de recherche du
+`MobileLayout`).
+
+**Le plan proposé**
+1. « Demander à l'assistant » (planche 5) : une ligne en tête des résultats dès qu'un mot est tapé — « « Chaise-Dieu » :
+   il cherche, compte, ou prépare un geste à valider » — et Ctrl ↵. Clic : la fenêtre se ferme, l'Accueil s'ouvre sur une
+   NOUVELLE conversation, et la question part. Seulement si l'écran de l'assistant est allumé pour la personne ET au
+   bureau (le téléphone n'a pas encore l'écran de l'assistant : lot 5).
+2. « Citer un bien ou un contact » (planche 1) : un bouton dans le champ de l'assistant qui ouvre LA MÊME fenêtre en mode
+   « citer » (titre « Citer un bien ou un contact », ↵ « citer ») : choisir une fiche INSÈRE dans la question
+   « l'annonce 63289 », « Mme CLAUDE TESTCLAUDE (contact 10354641) » ou « le mandat 18787 » — les formes que les consignes
+   font déjà comprendre au modèle ; rien n'est envoyé tout seul.
+3. `RechercheGlobale` reçoit deux propriétés optionnelles (`onDemander`, `mode`) ; absentes = la fenêtre d'aujourd'hui,
+   à l'identique.
+
+**À trancher par lui** : « Demander à l'assistant » envoie-t-il la question TOUT DE SUITE (planche 5, recommandé) ou
+seulement la met-il dans le champ ?
+
+**Ce que ça pourrait casser ailleurs** : la fenêtre de recherche est celle de tout le monde — ses deux ajouts ne jouent
+que si on les lui donne ; Ctrl ↵ n'existe que quand la ligne « Demander » est là ; le téléphone ne reçoit pas la ligne.
+
+**⚠ Trouvé en passant (sa question du 16/11 : « est-ce normal que l'assistant ne peut pas faire un bon de visite ? »)** :
+c'est une DÉCISION écrite, mais mon plan de l'étape 4 (§11) l'a OUBLIÉE. Le bon de visite n'existe qu'à l'écran : une page
+HTML construite dans le navigateur et imprimée (`visitVoucherHtml` / `openVisitVoucherPrint`, App.tsx ~45710), sans PDF
+ni rien d'enregistré côté serveur. L'audit du lot 3c (note de l'étape 3, §26 option E) avait dit : « le bouton qui ouvre
+le bon de visite de l'écran arrivera avec l'écran (étape 4) ; un PDF fabriqué par le worker serait un nouveau type de
+travail (à décider) ». Les consignes le disent au modèle (« le bon de visite : dis que tu ne peux pas encore »).
+➡ À remettre au plan : soit A, une carte « Bon de visite » qui ouvre le bon de l'écran (même modèle, impression) après un
+rendez-vous de visite — avec le lot 6 (gestes par l'écran) ; soit B, un vrai PDF fabriqué côté serveur, joignable à un
+e-mail (plus lourd, nouveau type de travail).
+
+## 24. Bon de visite, estimation, mandat : ce que l'assistant ne fait pas, et pourquoi (16/11, ses questions)
+
+Ses mots : « Mais le bon de visite existe déjà je veux juste réutiliser la fonction ; et faire une estimation ou faire un
+mandat, l'assistant ne sait pas faire ? »
+- **Bon de visite** : ✅ **tranché = A**, réutiliser la fonction de l'écran (`openVisitVoucherPrint`, même modèle,
+  impression), pas de PDF serveur.
+- **Estimation (créer une annonce)** : NON aujourd'hui, par décision du 15/11 (note de l'étape 3, §22) : parmi A (retirer
+  la carte « activer un brouillon » + AJOUTER « créer une annonce / une estimation »), B (retirer seulement), C, il a
+  répondu « B » — rien n'a été ajouté. (Ses mots ce jour-là : « uniquement ajout annonce ou estimation cela suffit ».)
+- **Mandat** : NON aujourd'hui, par le plan de l'étape 3 (§13, « 4c — pas par l'assistant pour l'instant ») : le numéro de
+  mandat est officiel et irréversible, le document de mandat et l'avenant sont rendus par le navigateur, et l'envoi en
+  signature part vers un signataire.
+➡ Les trois ont la même forme : des gestes que l'ÉCRAN orchestre (fenêtre, document rendu par le navigateur). Proposé :
+les mettre au **lot 6** (« gestes par l'écran ») — la carte de l'assistant ouvre la fenêtre de l'écran DÉJÀ REMPLIE
+(création d'une estimation ; éditeur du mandat du bien ; bon de visite après un rendez-vous), la personne relit et valide
+DANS la fenêtre, comme aujourd'hui. Rien ne s'écrit sans elle, les gardes de l'écran restent les mêmes.
+
+## 25. ⛔ CORRECTION du §24 — l'inventaire, GESTE PAR GESTE, de ce que l'assistant fait (16/11)
+
+Ses mots : « ajouter une annonce ou ajouter une estimation, ce n'est pas la même chose que générer l'estimation PDF ;
+c'est comme générer le numéro de mandat, ce n'est pas la même chose qu'éditer le document et même l'envoyer en
+signature. On a pourtant fait un audit des gestes de mon app : l'assistant, c'est faire quoi ? »
+⛔ Mon §24 MÉLANGEAIT des gestes distincts (créer la fiche ≠ générer l'avis de valeur ; numéro de mandat ≠ document ≠
+signature). Le voici refait, geste par geste, sur le catalogue de l'audit
+(`notice/ETAPE3_CATALOGUE_COMPLET_DES_ACTIONS_2026-11-13.md` §1-3) croisé avec le CODE (`assistant_gestes.py` : 26 gestes ;
+`assistant_lecteur.py` + 5 lectures). Légende : FAIT (en ligne, prouvé) · NON (décision, citée) · PAS FAIT (jamais
+décidé ni codé) · ÉCRAN (le geste est orchestré par l'écran : carte qui ouvre sa fenêtre remplie, lot 6).
+
+**Demandes à la direction** : demander validation / baisse / annulation = FAIT · corriger une demande renvoyée = NON (la
+base le réserve à la direction, même à l'écran) · traiter (accepter / refuser) [DIR] = ÉCRAN.
+**Diffusion** : publier / retirer UN portail = FAIT · « Validation » et « Diffusable » [DIR] = PAS FAIT.
+**Annonce** : CRÉER une annonce ou une estimation (la fiche) = PAS FAIT (la carte « activer un brouillon » a été retirée le
+15/11 sur « B » ; l'AJOUT de la création n'avait pas été retenu ce jour-là) · modifier les champs (23, liste fermée, prix
+exclu) = FAIT · rédiger titre et texte = FAIT (proposition) · activer un brouillon = NON (15/11) · statut offre /
+compromis / vente = ÉCRAN · Vendu, Clos, archiver, désarchiver, supprimer, réaffecter le négociateur = PAS FAIT.
+**Photos** : couverture, masquer / afficher, déplacer = FAIT · synchroniser = PAS FAIT · supprimer = NON (lot 4c) · ajouter
+(un fichier) = PAS FAIT.
+**Documents** : GÉNÉRER l'avis de valeur PDF (l'estimation) = PAS FAIT · plan cadastral = PAS FAIT · préparer / ouvrir /
+supprimer = PAS FAIT · déposer (un fichier) = PAS FAIT.
+**Mandat** : GÉNÉRER LE NUMÉRO = PAS FAIT (laissé « pour l'instant », lot 4c : officiel, irréversible) · ÉDITER le document /
+l'avenant = PAS FAIT (lot 4c ; rendu par le navigateur → ÉCRAN) · ENVOYER en signature, relancer, annuler, « signé à la
+main » = PAS FAIT (lot 4c) · clôture par la demande d'annulation = FAIT · corriger une date de clôture [DIR] = PAS FAIT ·
+modifier / prolonger = NON (⑦-7).
+**Mandants** : rattacher, créer, modifier, retirer = PAS FAIT.
+**Transactions** [DIR] : accepter / refuser une offre, annuler un compromis = FAIT · note de transaction = FAIT · créer
+une offre / un compromis / une vente = ÉCRAN · supprimer un compromis ou une vente, commission, répartition, conditions =
+PAS FAIT.
+**Contacts** : créer (avec sa 1re recherche) = FAIT · modifier téléphone / e-mail / commentaire = FAIT · archiver /
+réactiver = FAIT · ajouter un conjoint, supprimer = PAS FAIT.
+**Recherches** : créer, modifier, archiver = FAIT.
+**Rapprochements** : bien proposé par téléphone, écarter / rétablir = FAIT · e-mail de rapprochement (aperçu puis envoi
+réel) = FAIT.
+**Relances** : créer, faite, reportée = FAIT.
+**Agenda** : créer dans SON agenda, déplacer / supprimer ceux posés par l'app sans invité = FAIT · rendez-vous avec le
+client invité = FAIT · l'agenda d'un collègue = PAS FAIT · BON DE VISITE = ÉCRAN (tranché « A » : réutiliser
+`openVisitVoucherPrint`).
+**E-mails** : interne (collègues) = FAIT · au client (adresse de sa fiche, sans pièce jointe) = FAIT · pièces jointes,
+e-mail d'estimation = PAS FAIT.
+**Espace client** (confirmer un créneau) = NON pour l'instant (lot 3c option D, 3 demandes en tout).
+**Partenaires, Santé, Matterport** = PAS FAIT. **Notifications** : marquer lues = FAIT. **Utilisateurs** = NON (29/10).
+**Lectures** (ce qu'il sait lire) : 15 objets (biens, historique, archives, mandats, contacts, recherches, relations,
+rapprochements, relances, transactions, dossiers, demandes, documents, notifications, négociateurs), les fiches des
+biens, les notes de transaction, son agenda, les photos et les portails d'un bien, l'aperçu d'un rapprochement.
+
+**En résumé** : l'assistant fait **26 gestes** (dont 3 réservés à la direction) ; quelques-uns sont **fermés par
+décision** (cités ci-dessus) ; les « ÉCRAN » vont au lot 6 ; tout le reste n'a **jamais été décidé** — dont ceux qu'il cite : créer
+une annonce / une estimation, générer l'avis de valeur PDF, générer le numéro de mandat, éditer le document de mandat,
+l'envoyer en signature.
+
+## 26. Annonce et mandat, geste par geste : AUDIT (16/11, sur « Annonce et mandat »), rien codé
+
+**Périmètre** : créer une annonce / une estimation, générer l'avis de valeur PDF, générer le numéro de mandat, éditer le
+document de mandat / l'avenant, l'envoyer en signature (relancer, annuler). Lu dans `lib/api.ts`, le worker
+(`Console/console_job_worker.js`) et la base. Pas mesuré : « signé à la main », les mandants, le cadastre.
+
+1. **Créer une annonce ou une estimation (la fiche)** — l'écran appelle `app_create_annonce_job_optimistic(p_token,
+   p_fields, draft_payload, draft_priority)` (lib/api.ts ~13072) : la ligne provisoire chez nous À L'INSTANT et le travail de
+   création chez Hektor, dans UNE transaction ; `creation_status` = estimation ou actif ; la charge (~60 champs) est
+   construite dans `createHektorDraftAnnonceJob`. ➡ **Faisable en CARTE DIRECTE** (même fonction, avec le jeton de la
+   personne) : type, famille d'offre, adresse / CP / commune, prix, surface, pièces, négociateur, mandant initial ; le reste
+   vide (complété ensuite à l'écran ou par la carte « modifier le bien »). Réversible (supprimer = direction). ⚠ À éprouver
+   avant d'ouvrir (le worker de création exige des champs — « Nom contact requis », l'orpheline après `ajoutebien`).
+2. **Générer l'avis de valeur PDF** — travail `generate_estimation_pdf` (worker), dont la charge est ASSEMBLÉE PAR
+   L'ÉCRAN : valeurs basse / estimée / haute, état, points forts et de vigilance, charges, comparables DVF, cadre de vie
+   (carte IGN, commodités, risques), cadastre, argumentaire (lib/api.ts ~9340). ➡ **Par l'ÉCRAN** : la carte ouvre l'éditeur
+   de l'avis de valeur du bien, prérempli de ce que l'assistant sait (valeurs, commentaire) ; la personne relit et génère.
+3. **Générer le numéro de mandat** — `app_console_create_mandat_auto_number_job(target_app_dossier_id,
+   target_hektor_annonce_id, mandat_payload, job_priority)` (lib/api.ts ~12272) : type / sous-type, date de début, durée
+   (12 par défaut), tacite reconduction, mandants, négociateur → réservation officielle chez Hektor (Protexa),
+   **IRRÉVERSIBLE**. ➡ **Faisable en CARTE DIRECTE** (même fonction), la carte disant en clair « numéro officiel, ne se défait
+   pas » ; mêmes conditions que l'écran (à relire au code de l'écran avant de coder).
+4. **Éditer le document de mandat / l'avenant** — travail `generate_mandat_document` ; le worker EXIGE le HTML rendu
+   côté écran (« payload_json.html requis (HTML du mandat rendu cote front) », worker ~9310). ➡ **Par l'ÉCRAN** : la carte
+   ouvre l'éditeur du mandat du bien.
+5. **Envoyer en signature, relancer, annuler** — travaux `youtrust_send_signature` (le numéro du document + corrections
+   d'e-mail / portable par rang), `relance_signature`, `cancel_signature_procedure` (lib/api.ts ~10290-10534). ➡ **Faisable
+   en CARTES DIRECTES** (mêmes travaux), MAIS ça part VERS LES SIGNATAIRES (e-mails, SMS) : même prudence que le lot 3c
+   (preuve sur un document d'essai à adresse interne).
+
+**À trancher par lui** : l'ordre ; et pour 1, 3 et 5 : carte directe (recommandé) ou, comme 2 et 4, par la fenêtre de
+l'écran. Ces gestes complètent l'ÉTAPE 3 (serveur) pour 1, 3, 5 et le LOT 6 de l'étape 4 (écran) pour 2 et 4 ; le bon de
+visite (A) rejoint le lot 6.
+
+## 27. Lot 4 — CODÉ et CONTRÔLÉ (16/11, sur « Je suis ta reco pour le lot 4 et ensuite enchaîne les cartes »), rien poussé
+
+Tranché : « Demander à l'assistant » ENVOIE la question tout de suite (planche 5).
+- `RechercheGlobale.tsx` (fins de ligne Windows gardées) : deux propriétés OPTIONNELLES — `onDemander` (la ligne « Demander
+  à l'assistant » en tête dès qu'un mot est tapé, Ctrl ↵, pied « Ctrl ↵ demander à l'assistant ») et `onCiter` (mode
+  « citer » : titre « Citer un bien ou un contact », ↵ « citer », choisir = insérer « l'annonce N », « NOM (contact N) »,
+  « le mandat N », ou « le bien « titre » » sans numéro Hektor) ; absentes = la fenêtre d'aujourd'hui. Style dans
+  `recherche-globale.css`.
+- `RailAssistant.tsx` : `demanderAssistant` (la question GARDÉE jusqu'à ce que l'Accueil soit monté) et `citerDansAssistant`.
+- `AccueilAssistant.tsx` : le champ de l'accueil suit la planche 1 (le champ, puis « Citer un bien ou un contact » à gauche
+  et l'envoi à droite ; pas dans le champ de la conversation, comme la planche 3) ; la question venue de la recherche ouvre
+  une NOUVELLE conversation et part ; la citation s'ajoute au champ sans rien envoyer.
+- `App.tsx` : `onDemander` seulement si l'écran de l'assistant est allumé ET au bureau (`responsiveExperience.isDesktop`) ;
+  `onCiter` seulement quand la fenêtre est ouverte par le bouton « Citer ».
+⛔ **Trouvé en contrôlant (le mien), corrigé** : la question partait, puis la conversation GARDÉE (sessionStorage) était
+rouverte par-dessus et la coupait — l'effet de démarrage, rejoué par le mode strict de React, la retrouvait. Une conversation
+gardée ne se rouvre plus que si l'écran n'en a pas déjà une.
+**Contrôlé (maquette)** : planche 5 à l'identique ; Ctrl ↵ depuis Annonces → Accueil, conversation « Chaise-Dieu »,
+réponse ; « Citer » → la fenêtre en mode citer, ↵ → « Prépare une relance pour l'annonce 21 » dans le champ, rien envoyé ;
+la recherche normale reste « Rechercher partout » ; au format téléphone (375 px) : pas de ligne « Demander », pied
+d'aujourd'hui. Build vert. **Pas encore vérifié** : en ligne.

@@ -3,7 +3,10 @@ import {
   RefusAssistant, listerConversations, poserQuestion, refuserCarte, relireConversation, validerCarte,
   type CarteAssistant, type CibleCarte, type ConversationAssistant, type EvenementFlux,
 } from './lib/assistant'
-import { EVENEMENT_ASSISTANT_OUVRIR, prendreDemandeConversation, signalerChangementAssistant } from './RailAssistant'
+import {
+  EVENEMENT_ASSISTANT_CITER, EVENEMENT_ASSISTANT_DEMANDER, EVENEMENT_ASSISTANT_OUVRIR,
+  prendreDemandeConversation, prendreQuestionEnAttente, signalerChangementAssistant,
+} from './RailAssistant'
 import './accueil-assistant.css'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -332,6 +335,8 @@ export default function AccueilAssistant(props: {
   onOuvrirContact: (hektorContactId: string) => void
   // lot 3 : après une carte validée, l'app se relit comme après un geste fait à la main (et à la fin du travail Hektor)
   onGesteFait: (travail: string | null) => void
+  // lot 4 : « Citer un bien ou un contact » ouvre la recherche globale en mode « citer »
+  onCiter: () => void
   // lot 3b : les cinq autres portes (registre des mandats, registre des transactions, fiche du contact d'une recherche,
   // agenda à un jour, demande : Suivi pour la direction, la fiche du bien sinon)
   onOuvrirMandat: (numero: string) => void
@@ -473,9 +478,14 @@ export default function AccueilAssistant(props: {
 
   // le rail : la demande gardée au clic (l'Accueil n'était peut-être pas monté), puis les clics suivants
   useEffect(() => {
+    // lot 4 : une question posée depuis la recherche globale passe AVANT tout (nouvelle conversation, question envoyée)
+    const question = prendreQuestionEnAttente()
     const demande = prendreDemandeConversation()
-    if (demande) appliquer(demande.conversationId)
-    else {
+    if (question) { nouvelle(); void envoyerRef.current(question) }
+    else if (demande) appliquer(demande.conversationId)
+    // la conversation gardée ne se rouvre que si l'écran n'en a pas déjà une : sinon un second passage de cet effet (le
+    // mode strict de React le rejoue) rouvrait par-dessus la conversation que la question venait de créer, et la coupait
+    else if (!conversationId.current) {
       let gardee: string | null = null
       try { gardee = window.sessionStorage.getItem(CONVERSATION_GARDEE) } catch { /* stockage indisponible */ }
       if (gardee) appliquer(gardee)
@@ -484,9 +494,26 @@ export default function AccueilAssistant(props: {
       prendreDemandeConversation()
       appliquer((e as CustomEvent<{ conversationId: string | null }>).detail?.conversationId ?? null)
     }
+    const surQuestion = () => {
+      const q = prendreQuestionEnAttente()
+      if (q) { nouvelle(); void envoyerRef.current(q) }
+    }
+    // lot 4 : « Citer » -- le texte choisi s'ajoute à la question en cours, sans rien envoyer
+    const surCitation = (e: Event) => {
+      const texte = String((e as CustomEvent<{ texte?: string }>).detail?.texte ?? '').trim()
+      if (!texte) return
+      setChamp((avant) => `${avant.trimEnd()}${avant.trim() ? ' ' : ''}${texte} `)
+      window.setTimeout(() => champRef.current?.focus(), 0)
+    }
     window.addEventListener(EVENEMENT_ASSISTANT_OUVRIR, ecouter)
-    return () => window.removeEventListener(EVENEMENT_ASSISTANT_OUVRIR, ecouter)
-  }, [appliquer])
+    window.addEventListener(EVENEMENT_ASSISTANT_DEMANDER, surQuestion)
+    window.addEventListener(EVENEMENT_ASSISTANT_CITER, surCitation)
+    return () => {
+      window.removeEventListener(EVENEMENT_ASSISTANT_OUVRIR, ecouter)
+      window.removeEventListener(EVENEMENT_ASSISTANT_DEMANDER, surQuestion)
+      window.removeEventListener(EVENEMENT_ASSISTANT_CITER, surCitation)
+    }
+  }, [appliquer, nouvelle])
 
   // ⚠ Pas d'arrêt du flux quand l'écran se démonte (lot 3) : ouvrir un contact pendant une réponse la coupait, et le
   //   serveur ne l'enregistrait pas. La lecture continue ; le serveur enregistre la réponse ; au retour, elle est relue.
@@ -544,6 +571,9 @@ export default function AccueilAssistant(props: {
       signalerChangementAssistant()
     }
   }, [enCours, mode.type, majDernierTour])
+  // lot 4 : la question venue de la recherche est posée depuis un effet ; il lui faut la DERNIÈRE version d'envoyer
+  const envoyerRef = useRef(envoyer)
+  envoyerRef.current = envoyer
 
   // si la question refusée était la première, on revient à l'accueil plutôt qu'à un fil vide
   useEffect(() => {
@@ -635,25 +665,47 @@ export default function AccueilAssistant(props: {
   if (c.erreurs > 0) lignes.push({ cle: 'erreurs', n: c.erreurs, titre: pluriel(c.erreurs, 'Synchronisation en erreur', 'Synchronisations en erreur'), sous: 'À corriger', action: 'Voir', onClick: versTableau })
   else zeros.push('0 synchronisation en erreur')
 
-  const champSaisie = (accueil: boolean) => (
+  const boutonEnvoi = enCours ? (
+    <button className="asi-go is-stop" type="submit" aria-label="Arrêter la réponse"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="2" fill="currentColor" /></svg></button>
+  ) : (
+    <button className="asi-go" type="submit" aria-label="Envoyer" disabled={pause || !champ.trim()}><Picto epais={2.3}><path d="M12 19V5M6 11l6-6 6 6" /></Picto></button>
+  )
+
+  const champSaisie = (accueil: boolean) => accueil ? (
+    // planche 1 : le champ en haut, puis « Citer un bien ou un contact » à gauche et l'envoi à droite (lot 4)
+    <form className="asi-ask" onSubmit={(e) => { e.preventDefault(); if (enCours) arreter(); else void envoyer(champ) }}>
+      <textarea
+        ref={champRef}
+        rows={2}
+        value={champ}
+        disabled={pause}
+        onChange={(e) => setChamp(e.target.value)}
+        onKeyDown={onTouche}
+        aria-label="Ta question ou ta demande"
+        placeholder={pause ? "L'assistant reprend demain." : 'Demande un chiffre, une liste, ou un geste à préparer…'}
+        autoFocus
+      />
+      <div className="asi-ask-row">
+        <button className="asi-tool" type="button" onClick={() => portes.current.onCiter()} disabled={pause}>
+          <Picto><circle cx="12" cy="12" r="3.5" /><path d="M15.5 12v1.5a2.5 2.5 0 0 0 5 0V12a8.5 8.5 0 1 0-3.3 6.7" /></Picto>Citer un bien ou un contact
+        </button>
+        {boutonEnvoi}
+      </div>
+    </form>
+  ) : (
     <form className="asi-ask" onSubmit={(e) => { e.preventDefault(); if (enCours) arreter(); else void envoyer(champ) }}>
       <div className="asi-ask-row">
         <textarea
           ref={champRef}
-          rows={accueil ? 2 : 1}
+          rows={1}
           value={champ}
           disabled={pause}
           onChange={(e) => setChamp(e.target.value)}
           onKeyDown={onTouche}
-          aria-label={accueil ? 'Ta question ou ta demande' : 'Ta réponse'}
-          placeholder={pause ? "L'assistant reprend demain." : accueil ? 'Demande un chiffre, une liste, ou un geste à préparer…' : 'Réponds ou demande autre chose…'}
-          autoFocus={accueil}
+          aria-label="Ta réponse"
+          placeholder={pause ? "L'assistant reprend demain." : 'Réponds ou demande autre chose…'}
         />
-        {enCours ? (
-          <button className="asi-go is-stop" type="submit" aria-label="Arrêter la réponse"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="2" fill="currentColor" /></svg></button>
-        ) : (
-          <button className="asi-go" type="submit" aria-label="Envoyer" disabled={pause || !champ.trim()}><Picto epais={2.3}><path d="M12 19V5M6 11l6-6 6 6" /></Picto></button>
-        )}
+        {boutonEnvoi}
       </div>
     </form>
   )

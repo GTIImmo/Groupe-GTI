@@ -42,6 +42,11 @@
 .asi-ask textarea::placeholder { color: var(--asi-subtle); }
 .asi-ask textarea:disabled { cursor: not-allowed; }
 .asi-ask-row { display: flex; align-items: flex-end; gap: 6px; }
+.asi-tool { height: 32px; padding: 0 11px; border-radius: 9px; border: 1px dashed var(--asi-line-2); background: transparent; font: 500 12.5px/1 var(--asi-ui); color: var(--asi-mute); display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.asi-tool svg { width: 14px; height: 14px; }
+.asi-tool:hover { color: var(--asi-ink); border-color: #aab0b2; }
+.asi-tool:focus-visible { outline: 2px solid var(--asi-magenta); outline-offset: 2px; }
+.asi-tool:disabled { opacity: 0.5; cursor: default; }
 .asi-go { margin-left: auto; width: 40px; height: 40px; border-radius: 50%; border: 0; background: var(--asi-magenta); color: #fff; display: grid; place-items: center; flex: none; cursor: pointer; }
 .asi-go svg { width: 18px; height: 18px; }
 .asi-go:hover { background: var(--asi-framboise); }

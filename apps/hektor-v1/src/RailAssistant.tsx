@@ -123,6 +123,28 @@ export function prendreDemandeConversation(): { conversationId: string | null } 
   return demande
 }
 
+// Lot 4 (16/11/2026) : « Demander à l'assistant » depuis la recherche globale. Même principe que la conversation
+// demandée : la question est GARDÉE (l'Accueil n'est peut-être pas monté), et l'Accueil la pose en arrivant.
+export const EVENEMENT_ASSISTANT_DEMANDER = 'assistant:demander'   // detail : { question: string }
+let questionEnAttente: string | null = null
+
+export function demanderAssistant(question: string) {
+  questionEnAttente = question
+  window.dispatchEvent(new CustomEvent(EVENEMENT_ASSISTANT_DEMANDER, { detail: { question } }))
+}
+
+export function prendreQuestionEnAttente(): string | null {
+  const question = questionEnAttente
+  questionEnAttente = null
+  return question
+}
+
+// Lot 4 : « Citer un bien ou un contact » -- le texte choisi dans la recherche s'ajoute à la question en cours.
+export const EVENEMENT_ASSISTANT_CITER = 'assistant:citer'   // detail : { texte: string }
+export function citerDansAssistant(texte: string) {
+  window.dispatchEvent(new CustomEvent(EVENEMENT_ASSISTANT_CITER, { detail: { texte } }))
+}
+
 export function signalerChangementAssistant() {
   window.dispatchEvent(new Event(EVENEMENT_ASSISTANT_CHANGE))
 }

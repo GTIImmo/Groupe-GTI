@@ -284,7 +284,7 @@ import RegistreTransactionsScreen, { type GesteDuRegistre } from './RegistreTran
 import { cleNom } from './lib/pilotage'
 import PilotageScreen from './PilotageScreen'
 import RegistreUtilisateurs, { type RuPreRemplissage } from './RegistreUtilisateurs'
-import { BranchesAccueil, ouvrirConversation, useAccueilAssistant, useConversationsRail } from './RailAssistant'
+import { BranchesAccueil, citerDansAssistant, demanderAssistant, ouvrirConversation, useAccueilAssistant, useConversationsRail } from './RailAssistant'
 import AccueilAssistant, { type ChiffresAccueil } from './AccueilAssistant'
 import { contactDeLaRecherche, transactionPourLien } from './lib/assistant'
 import { bvBoot } from './lib/bienvuBoot'
@@ -22074,6 +22074,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   // Lot 3 (16/11/2026) : une fiche d'annonce ouverte DEPUIS l'assistant s'ouvre par-dessus l'Accueil (la conversation reste
   // montée dessous) ; son bouton Retour dit alors « À la conversation ». Oublié dès que la fiche se ferme.
   const [ficheDepuisAssistant, setFicheDepuisAssistant] = useState(false)
+  // Lot 4 : la recherche globale ouverte par « Citer un bien ou un contact » (choisir = citer, pas ouvrir)
+  const [rechercheCiter, setRechercheCiter] = useState(false)
   // Lot 3b : le point de départ donné par un lien de l'assistant au registre des transactions et à l'agenda (un jeton
   // neuf à chaque clic). Absent = ces écrans comme avant.
   const [assistantTransaction, setAssistantTransaction] = useState<{ chaine: number; annee: number | null; jeton: number } | null>(null)
@@ -25724,7 +25726,11 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       ouverte={rechercheGlobaleOuverte}
       filtresDeBase={defaultFiltersForScreen('mandats')}
       scope={perimetreReseau ? undefined : dataScope}
-      onFermer={() => setRechercheGlobaleOuverte(false)}
+      onFermer={() => { setRechercheGlobaleOuverte(false); setRechercheCiter(false) }}
+      // Étape 4 de l'assistant, lot 4 : « Demander à l'assistant » (écran de l'assistant allumé, au bureau seulement : le
+      // téléphone n'a pas encore cet écran) et le mode « citer » ouvert par le bouton du champ de l'assistant.
+      onDemander={railAssistant && responsiveExperience.isDesktop ? (terme) => { if (screen !== 'accueil') openScreen('accueil'); demanderAssistant(terme) } : undefined}
+      onCiter={rechercheCiter ? citerDansAssistant : undefined}
       onOuvrirAnnonce={rechercheOuvrirAnnonce}
       onOuvrirHorsCatalogue={rechercheOuvrirHorsCatalogue}
       onOuvrirContact={(contactId) => showContactInDirectory(contactId)}
@@ -27243,6 +27249,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               onOuvrirDemande={(ref) => void assistantOuvrirDemande(ref)}
               onOuvrirContact={(id) => openContactDirectory(id)}
               onGesteFait={(travail) => { signalerGeste(); if (travail) relireQuandLeTravailFinit({ id: travail }) }}
+              onCiter={() => { setRechercheCiter(true); setRechercheGlobaleOuverte(true) }}
             />
           )
         })() : screen === 'agenda' ? (

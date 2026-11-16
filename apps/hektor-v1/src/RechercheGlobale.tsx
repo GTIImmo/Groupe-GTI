@@ -127,7 +127,14 @@ export default function RechercheGlobale(props: {
   onOuvrirContact: (contactId: string) => void
   onOuvrirMandat: (mandat: MandatRecord) => void
   onVoirTout: (groupe: GroupeRecherche, terme: string) => void
+  // Étape 4 de l'assistant, lot 4 (16/11/2026) -- deux ajouts OPTIONNELS ; absents = la fenêtre d'aujourd'hui, à l'identique.
+  // « Demander à l'assistant » (planche 5) : une ligne en tête dès qu'un mot est tapé, et Ctrl ↵ ; la question part.
+  onDemander?: (terme: string) => void
+  // « Citer un bien ou un contact » (planche 1) : la même fenêtre, mais choisir une fiche la CITE dans la question de
+  // l'assistant (le texte que le modèle comprend : « l'annonce 63289 », « M. X (contact 10354641) », « le mandat 18787 »).
+  onCiter?: (texte: string) => void
 }) {
+  const modeCiter = Boolean(props.onCiter)
   const [saisie, setSaisie] = useState(derniereRecherche.saisie)
   const [resultat, setResultat] = useState<RechercheGlobaleResultat | null>(derniereRecherche.resultat)
   const [chargement, setChargement] = useState(false)
@@ -198,8 +205,19 @@ export default function RechercheGlobale(props: {
 
   if (!props.ouverte) return null
 
+  const texteCite = (e: Element) => {
+    if (e.groupe === 'contacts') {
+      const nom = String(e.contact.display_name ?? '').trim()
+      return nom ? `${nom} (contact ${e.contact.hektor_contact_id})` : `le contact ${e.contact.hektor_contact_id}`
+    }
+    if (e.groupe === 'mandats') return `le mandat ${e.mandat.numero_mandat ?? ''}`.trim()
+    const numero = String(e.annonce.hektor_annonce_id ?? '').trim()
+    return numero && numero !== '0' ? `l'annonce ${numero}` : `le bien « ${String(e.annonce.titre_bien ?? '').trim() || 'sans titre'} »`
+  }
+
   const ouvrir = (e: Element) => {
     props.onFermer()
+    if (props.onCiter) { props.onCiter(texteCite(e)); return }
     if (e.groupe === 'annonces') props.onOuvrirAnnonce(e.annonce)
     else if (e.groupe === 'horsCatalogue') props.onOuvrirHorsCatalogue(e.annonce)
     else if (e.groupe === 'contacts') props.onOuvrirContact(String(e.contact.hektor_contact_id))
@@ -208,6 +226,12 @@ export default function RechercheGlobale(props: {
 
   const surTouche = (event: React.KeyboardEvent) => {
     if (event.key === 'Escape') { event.preventDefault(); props.onFermer(); return }
+    if (event.key === 'Enter' && (event.ctrlKey || event.metaKey) && props.onDemander && !modeCiter && saisie.trim()) {
+      event.preventDefault()
+      props.onFermer()
+      props.onDemander(saisie.trim())
+      return
+    }
     if (event.key === 'ArrowDown') { event.preventDefault(); setActif((i) => Math.min(i + 1, Math.max(elements.length - 1, 0))); return }
     if (event.key === 'ArrowUp') { event.preventDefault(); setActif((i) => Math.max(i - 1, 0)); return }
     if (event.key === 'Enter' && elements[actif]) { event.preventDefault(); ouvrir(elements[actif]) }
@@ -263,10 +287,10 @@ export default function RechercheGlobale(props: {
 
   return (
     <div className="rg-fond" onMouseDown={(event) => { if (event.target === event.currentTarget) props.onFermer() }}>
-      <div className="rg-fenetre" role="dialog" aria-modal="true" aria-label="Rechercher partout" onKeyDown={surTouche}>
+      <div className="rg-fenetre" role="dialog" aria-modal="true" aria-label={modeCiter ? 'Citer un bien ou un contact' : 'Rechercher partout'} onKeyDown={surTouche}>
         <header className="rg-tete">
           <div className="rg-tete-ligne">
-            <p className="rg-surtitre">Rechercher partout</p>
+            <p className="rg-surtitre">{modeCiter ? 'Citer un bien ou un contact' : 'Rechercher partout'}</p>
             <button type="button" className="rg-fermer" onClick={props.onFermer} aria-label="Fermer">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
             </button>
@@ -278,7 +302,7 @@ export default function RechercheGlobale(props: {
               value={saisie}
               onChange={(event) => setSaisie(event.target.value)}
               placeholder="Un nom, un numéro, une adresse, un téléphone…"
-              aria-label="Rechercher partout"
+              aria-label={modeCiter ? 'Citer un bien ou un contact' : 'Rechercher partout'}
             />
             {saisie ? <button type="button" className="rg-effacer" onClick={() => { setSaisie(''); champRef.current?.focus() }}>Effacer</button> : null}
           </label>
@@ -286,6 +310,15 @@ export default function RechercheGlobale(props: {
         </header>
 
         <div className="rg-resultats" ref={listeRef}>
+          {props.onDemander && !modeCiter && terme ? (
+            <button type="button" className="rg-demander" onClick={() => { props.onFermer(); props.onDemander?.(terme) }}>
+              <span className="rg-demander-mk" aria-hidden="true">
+                <svg viewBox="11.76 7.51 76.49 84.97"><path d="M50.00 24.49L79.76 54.24L88.24 45.76L50.00 7.51L11.76 45.76L20.24 54.24Z" fill="#fff" /><path d="M44.00 92.49L76.24 60.24L67.76 51.76L44.00 75.51L32.24 63.76L23.76 72.24Z" fill="#C5005F" /></svg>
+              </span>
+              <span className="rg-demander-t"><b>Demander à l'assistant</b><span>« {terme} » : il cherche, compte, ou prépare un geste à valider</span></span>
+              <kbd>Ctrl ↵</kbd>
+            </button>
+          ) : null}
           {!termeOk ? (
             <div className="rg-vide">
               <strong>Retrouver un bien ou un client, d'une seule frappe</strong>
@@ -354,7 +387,11 @@ export default function RechercheGlobale(props: {
         </div>
 
         <footer className="rg-pied">
-          {[['↑', '↓', 'choisir'], ['↵', '', 'ouvrir'], ['Échap', '', 'fermer'], ['/', '', 'rouvrir de partout']].map(([a, b, l]) => (
+          {(modeCiter
+            ? [['↑', '↓', 'choisir'], ['↵', '', 'citer'], ['Échap', '', 'fermer']]
+            : props.onDemander
+              ? [['↑', '↓', 'choisir'], ['↵', '', 'ouvrir'], ['Ctrl ↵', '', "demander à l'assistant"], ['Échap', '', 'fermer']]
+              : [['↑', '↓', 'choisir'], ['↵', '', 'ouvrir'], ['Échap', '', 'fermer'], ['/', '', 'rouvrir de partout']]).map(([a, b, l]) => (
             <span key={l}><kbd>{a}</kbd>{b ? <kbd>{b}</kbd> : null}{l}</span>
           ))}
         </footer>
