@@ -752,7 +752,7 @@ export function DepotDocuments({
     </footer>
   ) : nonPartis ? (
     <footer className="dd-pied dd-bande" role="alert">
-      <p className="dd-pied-t"><b>{`${nonPartis} document${s(nonPartis)} ne ${nonPartis > 1 ? 'sont' : 'est'} pas parti${s(nonPartis)}.`}</b>{prets ? ' Les envoyer avant de fermer ?' : ' Ils sont à corriger avant l\'envoi.'}</p>
+      <p className="dd-pied-t"><b>{nonPartis > 1 ? `${nonPartis} documents ne sont pas partis.` : '1 document n\'est pas parti.'}</b>{prets ? (nonPartis > 1 ? ' Les envoyer avant de fermer ?' : ' L\'envoyer avant de fermer ?') : (nonPartis > 1 ? ' Ils sont à corriger avant l\'envoi.' : ' Il est à corriger avant l\'envoi.')}</p>
       <button type="button" className="dd-b2" onClick={() => onFermer?.()}>Fermer sans envoyer</button>
       {prets
         ? <button type="button" className="dd-b1" disabled={!types} onClick={() => { setBande(false); void envoyer() }}>Envoyer maintenant</button>
@@ -760,7 +760,7 @@ export function DepotDocuments({
     </footer>
   ) : (
     <footer className="dd-pied dd-bande" role="alert">
-      <p className="dd-pied-t"><b>{`L'IA lit encore ${lecturesEnCours} document${s(lecturesEnCours)}.`}</b> Ils sont déposés ; fermer arrête leur lecture.</p>
+      <p className="dd-pied-t"><b>{`L'IA lit encore ${lecturesEnCours} document${s(lecturesEnCours)}.`}</b>{lecturesEnCours > 1 ? ' Ils sont déposés ; fermer arrête leur lecture.' : ' Il est déposé ; fermer arrête sa lecture.'}</p>
       <button type="button" className="dd-b2" onClick={() => onFermer?.()}>Fermer quand même</button>
       <button type="button" className="dd-b1" onClick={() => setBande(false)}>Attendre</button>
     </footer>

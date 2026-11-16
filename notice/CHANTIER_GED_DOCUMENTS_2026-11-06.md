@@ -2204,3 +2204,11 @@ conteneur, seuil 720 px) ; vignette masquée en étroit, état sur sa ligne, plu
 texte du pied sur sa ligne et boutons dessous. ⭐ Éprouvé AVANT le commit en injectant ces règles dans le cadre de la
 production : 170 px pour le nom, « Envoyer 2 documents » en entier, 0 débordement. Essais verts, build vert ; commit local
 À POUSSER.
+
+**✅ Correctif téléphone EN LIGNE (16/11, `7c69804`, Vercel READY) ET REVU sans injection** : au téléphone, les mêmes
+mesures que l'essai (règle `@container` servie par la production, 170 px, bouton entier, ni défilement interne ni
+débordement) ; au bureau, la fenêtre garde ses deux colonnes (706 + 360 px), la vignette et les pastilles. Échap fait
+monter la bande. ⚠ **Et la revue a trouvé une faute** : avec UN fichier, la bande disait « 1 document **ne est** pas
+parti » (le gabarit ne savait pas élider). Corrigé : « 1 document n'est pas parti. L'envoyer avant de fermer ? », et de
+même « Il est déposé ; fermer arrête sa lecture ». Essai `test_ged_depot` 28 -> 29 (le contrôle aurait rougi sur
+l'ancienne phrase) ; build vert ; commit local À POUSSER. Toujours 24 documents sur 63331 : rien n'est parti.

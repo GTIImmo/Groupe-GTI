@@ -64,6 +64,9 @@ const rm = fs.readFileSync(path.join(__dirname, 'src/RecuManque.tsx'), 'utf8')
 voir(/onResultat\?\.\(\{ moment: resultat\.moment, nonTrouvees: resultat\.pieces\.filter\(\(l\) => l\.etat === 'non_trouve'\)\.map\(\(l\) => l\.libelle\) \}\)/.test(rm) && /onResultat=\{setContexteDepot\}/.test(app),
   'H2 : les pièces non trouvées de la fenêtre sont celles du « Dossier » (une seule lecture)')
 voir(!/\babsente?s?\b|\bmanque\b/i.test(depot.slice(depot.indexOf('// D\'où vient le type'))), 'TÉMOIN : le rendu dit « non trouvée », jamais « absente » ni « manque »')
+// vu en production le 16/11 : « 1 document ne est pas parti » (le gabarit ne savait pas élider)
+voir(!/\bne \$\{|\bne est\b/.test(depot) && /'1 document n\\'est pas parti\.'/.test(depot) && /' L\\'envoyer avant de fermer \?'/.test(depot),
+  'H2 : la bande parle français au singulier (« n\'est pas parti », « L\'envoyer »)')
 
 console.log(ko ? `\n${ko} ROUGE, ${ok} VERT` : `\nTOUT EST VERT (${ok})`)
 process.exit(ko ? 1 : 0)
