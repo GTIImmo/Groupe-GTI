@@ -2513,6 +2513,77 @@ l'etat d'une autre transaction) ; ce balayage-ci, fait avec le critere « compro
 trouve un 7e qui se declenche sur `state` ET sur l'ABSENCE de numero. **Chaque famille
 demande son propre balayage, et il se fait AVANT de generer le patch.**
 
+### ✅⭐⭐ C9 PREMIERE MOITIE FAITE -- 2 588 LIGNES D'AVIS POSEES LE 16/11
+
+#### ⭐⭐⭐ POURQUOI ELLE EST PASSEE EN PREMIER, ET CE N'EST PAS « parce qu'elle etait facile »
+
+`app_classeur_avis` a pour clef **`id_unique` -- LA LIGNE DU CLASSEUR, PAS LA
+TRANSACTION** -- et **aucune clef etrangere** vers le pont (mesure du 16/11 au soir :
+une seule contrainte, `PRIMARY KEY (id_unique)`). Trois consequences :
+
+```
+   . elle NE DEPEND PAS DU GEL : un re-gel ne peut pas la deplacer
+   . donc elle n a AUCUN TROU : les lignes sans lien entrent comme les autres
+   . et la table etait VIERGE : aucun conflit possible
+```
+
+⭐ **LE TEMOIN QUI LE PROUVE** : **8 lignes posees n'ont AUCUN LIEN dans le gel**.
+Ce sont 8 avis que C8 et C4, qui passent par une transaction, **perdront**. C'est
+exactement la raison de l'ordre : *ce qui ne depend de rien passe d'abord.*
+
+#### CE QUI EST POSE, ET LES COMPTES TOMBENT SUR A1 A L'UNITE
+
+```
+   2 588 lignes du classeur
+      avis_a_envoyer     2 266   A1 annoncait 2 266
+      commentaire_avis     392   392
+      avis_envoye        2 405   2 405
+   0 doublon d id_unique . 0 ligne sans identifiant
+```
+
+**LES VALEURS SONT BRUTES, ET C'EST LA DECISION DU PLAN** -- 120, 72 et 69 valeurs
+distinctes : c'est un vocabulaire humain, pas une enumeration. Normaliser
+« oui / OUI / non / NON / pas acq. » serait INTERPRETER, et une interpretation ne se
+defait pas.
+
+```
+   AH  « oui » 1 830 . « non » 129 . « NON » 112 . « pas acq. » 18 . « OUI » 8
+   AI  « ok » 195 . « 1 » 115 . « oui » 5 . « Claire s'en occupe » 4
+   AJ  « ok » 1 700 . « X » 219 . « Marion » 192 . « Nico » 59 . « Claire » 24
+```
+
+#### ✅ LES TREIZE CONTROLES, JOUES APRES LE COLLAGE
+
+```
+   lignes posees                           2 588 = 2 588
+   avis_a_envoyer / commentaire / envoye    2 266 . 392 . 2 405  ✓ tous les trois
+   aucune ligne entierement vide                0 = 0
+   toutes portent la marque du lot              0 = 0
+   origine = classeur partout                   0 = 0
+   posees SANS identite dans le pont            0 = 0 (les 18 absentes n ont pas d avis)
+   posees SANS AUCUN LIEN dans le gel           8 = 8 (ce que C8 perdra)
+   valeurs distinctes AH / AJ               120 . 69  ✓ A1
+   VOISINES les 450 dates de C3               450 = 450
+   VOISINES les 195 du classeur               195 = 195
+```
+
+#### ⛔ UN DEFAUT DE MA PROPRE REPETITION, ATTRAPE AVANT DE COLLER
+
+Elle annoncait « **doit etre > 0** » pour les deux controles hors-pont. La mesure rend
+**0** (les 18 absentes de A6 ne portent aucun avis) et **8**. ➡ **Un controle qui
+attend une valeur FAUSSE est pire qu'aucun controle : il rougit pour rien, et on
+apprend a ignorer ses rouges.** Corrige avec les deux chiffres mesures, et la date de
+la mesure ecrite a cote.
+
+#### ⚠ L'AUTRE MOITIE DE C9 N'EST PAS FAITE, ET C'EST VOULU
+
+`C` (le numero de mandat) se pose dans `numero_mandat_app`, **sur une TRANSACTION** --
+donc elle **depend du gel**, et les 33 numeros du classeur sont **RECYCLES a charges
+divergentes** (commentaire de la colonne 53). Elle attend le re-gel. Ne pas melanger
+les deux moities, ni cocher C9 en entier.
+
+---
+
 ### ✅⭐⭐⭐ AUDIT DES GESTES RESTANTS ET L'ORDRE LOGIQUE -- 16/11 AU SOIR
 
 Demande par Frederic : « il faut faire ces gestes mais aussi mettre d'abord a jour le
@@ -3194,7 +3265,10 @@ C7 ⬜  3.3bis V « Vente Prevue » : 2 303 ecarts + 21, decidee « tout », on 
 C8 ⬜  3.4 Y ET AA : **3 756 + 3 741** valeurs (A1 du 16/11 ; le plan disait
        3 735 + 3 719), les DEUX plus gros postes du
        chantier, et les deux sans aucune case aujourd'hui. Apres B1 et A5.
-C9 ⬜  3.5 AH AI AJ (apres B1) + C le numero de mandat (33 au classeur, ~9 utiles).
+C9 ✅⬜ 1re MOITIE FAITE LE 16/11 -- **2 588 lignes d'avis posees** dans
+       app_classeur_avis (2 266 AH . 392 AI . 2 405 AJ), 13 controles justes.
+       ⛔ RESTE `C` le numero de mandat (33 au classeur, ~9 utiles) : elle se
+         pose sur une TRANSACTION, donc elle DEPEND DU GEL -> apres le re-gel.
        ⚠ AH et AJ se contredisent sur 229 lignes -- a reprendre tels quels.
        ⚠ 33 numeros de mandat sont RECYCLES aux charges divergentes : un numero
          n'identifie pas un mandat (4 142 doublons).
