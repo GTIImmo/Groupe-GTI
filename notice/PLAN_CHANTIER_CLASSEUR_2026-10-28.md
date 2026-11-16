@@ -180,16 +180,27 @@ A0 ✅  RELANCER LE RAPPORT DU GEL -- FAIT LE 16/11, voir « A0 EST FAIT ».
        juste dans l'autre sens -- le rapport n'etait pas premature, les ecarts
        sont REELS. LE LOT 1 N'EST DONC PAS CLOS A 100 %.
        ⚠ le lancer avec `-X utf8`, sinon il tombe (UnicodeEncodeError l. 587).
-A1 ⬜  LIRE LE SHEET sur les 8 colonnes que le rapport NE COUVRE PAS :
-       F G Y AA Z AH AI AJ. Le rapport ne porte que 21 colonnes sur 38 -> pour ces
-       huit, je n'ai AUCUN ecart mesure, seulement les comptages du 02/11.
+A1 ✅  FAIT LE 16/11 -- voir « A1 EST FAIT ». Les huit sont lues et pesees.
+       ✅ Z propre : 896 valeurs, 896 DATES -> C3 peut etre construite.
+       ⚠ Y porte le defaut des DEUX FORMATS : 794 textes sur 3 756 (21 %,
+         « une sur cinq ») -> la meme tolerance qu'au 14/11 AVANT C8.
+       ⚠ F est MIXTE : 1 536 « V », 753 emojis, 810 textes (les motifs reels)
+         -> « reprendre en bloc » emporterait les pastilles. SA DECISION.
+       ⚠ AH casse melangee (oui/OUI/non/NON) . AJ porte des PRENOMS.
+       ⭐ et la contradiction AH/AJ s'explique : « a envoyer » vs « envoye »,
+         deux etapes et non deux versions.
 A2 ✅  FAIT -- pose le 15/11, JUGE le 16/11 au matin (1 . 340 . 30 817, voir
        « LE VERDICT DU MATIN »). C'est lui qui a debloque tout le reste.
        L'ESSAI D'UNE NUIT (= 3.3zero). Une transaction dans la plage app, SANS
        numero Hektor, sur un bien NON VIVANT. Mesure au matin **sur LES DEUX
        bases** (Supabase ET phase2.sqlite). ⛔ OBLIGATOIRE : aucune ligne de la
        plage n'a jamais vecu sans numero Hektor, et 3 ont disparu sans trace.
-A3 ⬜  LA FENETRE DU SHEET : l'apparieur ne lit que `A1:AL6000`. Le classeur en
+A3 ✅  MESUREE LE 16/11 PAR A1 : le Sheet porte 4 790 lignes et 38 colonnes lues,
+       donc 1 210 de marge sous 6000, et AL est bien la derniere colonne.
+       ⚠ MAIS L AUDIT DU SOIR A TROUVE AUTRE CHOSE : 4 790 au Sheet contre
+         4 773 dans app_classeur_ligne_id -> 17 LIGNES ABSENTES de notre base.
+         Ce n'est pas la fenetre, c'est la table. Voir A6.
+       LA FENETRE DU SHEET : l'apparieur ne lit que `A1:AL6000`. Le classeur en
        portait 4 783 -> ~1 200 lignes de marge, puis PERTE SILENCIEUSE du bas.
        Idem pour toute colonne a droite de AL. Ecrit le 31/10, jamais corrige.
 A4 ✅  L'EFFET DE BORD D'UNE VENTE CREEE -- FAIT LE 16/11, voir « A4 EST FAIT ».
@@ -199,9 +210,15 @@ A4 ✅  L'EFFET DE BORD D'UNE VENTE CREEE -- FAIT LE 16/11, voir « A4 EST FAIT 
        ⛔ CONCLUSION : les ventes NE SE POSENT PAS EN MASSE. Les lister, poser
        celles dont le bien est hors du parc, soumettre les autres une par une.
        ⭐ Les offres et compromis n'ont pas ce risque -> les 206 restent posables.
-A5 ⬜  LES 1 062 LIGNES SANS ROLE 'vente' -- prealable de 3.4 : ou va la valeur
+A5 ⬜  MESURE DU 16/11 : **967**, et non 1 062 -- dont **311 sans vente NI
+       compromis**. Le chiffre du plan datait d'un etat anterieur.
+       LES LIGNES SANS ROLE 'vente' -- prealable de 3.4 : ou va la valeur
        de Y / AA quand la transaction qui devrait la porter n'existe pas ?
-A6 ⬜  LES 85 LIGNES NON RATTACHEES : notre base n'en garde que l'identifiant.
+A6 ⬜  MESURE DU 16/11 : **85 non rattachees CONFIRMEES**, + **17 ABSENTES** de
+       app_classeur_ligne_id (4 773 en base contre 4 790 au Sheet) = **102**.
+       ⛔ Les 17 n'etaient nulle part au plan. Et le rapport du gel compte 87
+         non rattachees la ou la base en compte 85 : ecart de 2, non explique.
+       LES LIGNES NON RATTACHEES : notre base n'en garde que l'identifiant.
        Contenu inconnu -> jusqu'a ~250 transactions de plus, hors de tous mes
        chiffres. (= le prealable n0 4 du 29/10, et le point 4 de A15.)
 ```
@@ -2326,6 +2343,308 @@ le balayage AVEC LE CRITERE DE CETTE FAMILLE** -- ici `state = 'cancelled'` pour
 compromis, `state = 'accepted'` pour une offre « Vente reglee », et l'existence d'une
 vente pour les 39 ventes.
 
+### ✅⭐⭐ A1 EST FAIT -- LES HUIT COLONNES NON COUVERTES (16/11, lecture seule)
+
+`phase2/checks/a1_lire_les_huit_colonnes_2026-11-16.py` -- aucun ecrit en base, un
+seul fichier produit : `notice/A1_LES_HUIT_COLONNES_2026-11-16.csv`.
+⭐ **Pourquoi A1 maintenant** : les 96 offres venaient d'etre posees et n'avaient pas
+encore vecu une nuit. Poser autre chose avant leur premiere epreuve aurait double la
+surface sans savoir si la premiere moitie tient. A1 n'ecrit rien, et il debloque
+**quatre taches** de la phase C a la fois.
+
+```
+   lettre  libelle                      rempli / 4 790   formes
+   Z       Annulee                         896  (19 %)   DATE a 100 %
+   F       En attente de                 3 099  (65 %)   texte, mais MIXTE (voir plus bas)
+   G       COMMENTAIRES                  4 131  (86 %)   texte, 2 613 distinctes
+   Y       Vente Reglee                  3 756  (78 %)   2 962 dates + 794 TEXTE
+   AA      Numero de facture             3 741  (78 %)   3 735 distinctes
+   AH      Avis a envoyer (oui / non)    2 266  (47 %)   120 distinctes
+   AI      Commentaire Avis                392   (8 %)   dont 115 valent « 1 »
+   AJ      Avis envoye                   2 405  (50 %)   « ok » 1 700, puis des PRENOMS
+```
+
+#### ✅ Z EST PROPRE -- C3 PEUT ETRE CONSTRUITE
+
+**896 valeurs, et 896 sont des dates.** Le plan annoncait 896 : confirme a l'unite,
+et sans une seule forme douteuse. C'est la colonne la plus simple du chantier.
+
+#### ⚠⚠ Y PORTE LE DEFAUT DES DEUX FORMATS -- et dans la proportion connue
+
+```
+   2 962 dates lisibles  +  794 TEXTE  =  3 756
+   exemples du texte : « 29 decembre23 » . « 8 decembre23 »
+   794 / 3 756 = 21 %  -> « une sur cinq perdue en silence »
+```
+
+⭐⭐ **C'est MOT POUR MOT le defaut deja paye sur une autre colonne** le 14/11 (« 5
+decembre23 rendait None, donc 940 lignes "nous seuls" dont 924 avaient une date »).
+⛔ **Il faut donc la MEME tolerance de lecture pour Y avant de toucher a C8**, sinon on
+perdra 794 valeurs en silence -- et C8 est l'un des deux plus gros postes du chantier.
+
+#### ⚠ F EST UNE COLONNE A TROIS USAGES MELANGES -- a trancher par Frederic
+
+Le plan dit « F et G se reprennent EN BLOC, SANS INTERPRETER -- sa consigne ». La
+mesure montre ce que « en bloc » emporterait :
+
+```
+   « V » tout seul                        1 536  (50 %)  un marqueur de suivi
+   contient un EMOJI                        753  (24 %)  🟢 🔴 💰 🅿 -- des pastilles
+   texte, hors V et hors emoji              810  (26 %)  LES MOTIFS REELS
+```
+
+⭐ **ET LES MOTIFS SONT BIEN LA, le plan avait raison** -- j'ai verifie avant d'affirmer
+le contraire :
+
+```
+   refus (toutes formes)   149      « refus pret » 31 . « refus de pret » 24
+   pret / prêt             109      SRU 12 . « trop de travaux » 5
+   retractation (+accent)   92      « retractation ecrite » 12 . « retractation SRU » 10
+   financement              23      « a change d avis » 3
+```
+
+⏰ **LA QUESTION POUR LUI** : reprendre F « en bloc » mettrait aussi 1 536 « V » et
+753 pastilles dans `app_affaire_condition`. Faut-il tout reprendre, ou seulement les
+810 valeurs textuelles ? ⛔ Je ne tranche pas : c'est sa consigne qui est en jeu.
+
+#### ⚠ AH / AI / AJ : un suivi d'envoi d'avis, avec des prenoms
+
+```
+   AH  « oui » 1 830 . « non » 129 . « NON » 112 . « OUI » 8  -> CASSE MELANGEE
+       et « pas acq. » 18, « pas vend. » 8 -> ce ne sont pas des oui/non
+   AJ  « ok » 1 700 . « X » 219 . puis Marion 192, Nico 59, Claire 24  -> des PERSONNES
+   AI  392 valeurs, dont 115 valent « 1 » et 195 « ok »
+```
+
+⚠ Avant C9, il faudra decider ce qu'on garde : un booleen normalise, ou le texte brut
+avec son prenom. ⛔ Et la contradiction annoncee entre AH et AJ sur 229 lignes s'explique
+simplement -- AH dit « a envoyer », AJ dit « envoye » : ce sont deux etapes, pas deux
+versions de la meme information.
+
+### ⛔⛔⛔ AUDIT APPROFONDI DE C5 (16/11) -- LE 7e LECTEUR DECIDE DU DECOUPAGE
+
+**Frederic : « pourquoi on saute des etapes, on a juste fait les offres refused 96 ?
+refais un audit » puis « approfondis, ne t'arrete pas a une note, verifie ».** Il avait
+raison deux fois : je m'etais disperse sur A1 au lieu de finir le lot B, et mon premier
+tableau disait « RIEN ne bloque les compromis » -- **c'etait leger**.
+
+#### LA MESURE : 18 FONCTIONS ET 4 VUES REAGISSENT A UN COMPROMIS
+
+Le balayage avec LE CRITERE DE CETTE FAMILLE (et non `present_in_hektor`, celui des
+offres) en trouve beaucoup plus que les cinq du matin :
+
+```
+   app_statut_redescente_calcule   app_mandat_etat          app_statut_rang
+   app_change_annonce_status_...   app_pilotage_stock       app_pilotage_acquereurs
+   app_pilotage_affaires_plus      app_registre_dossiers    app_cockpit_activite
+   app_get_dossier_timeline        app_chaine_pour          app_geste_affaire_...
+   app_notaire_fiche               ... + 4 vues « current » et app_v_mandat_statut
+   ⛔ ET AUCUNE N'A LA GARDE `transaction_origine`.
+```
+
+#### ⛔⛔ LE 7e LECTEUR : `app_statut_redescente_calcule` -- ET SON NOM DIT TOUT
+
+```
+   SI une VENTE    + compte_encore()                     -> « Vendu »
+   SI un COMPROMIS + compte_encore() + state IN (active, en_cours) -> « Sous compromis »
+   SI une OFFRE    + compte_encore() + state <> 'refused' -> « Sous offre »
+   SINON                                                  -> « Actif »
+```
+
+⭐⭐ **TOUT REPOSE SUR `app_affaire_compte_encore`, ET ELLE DIT CECI** :
+
+```
+   ignoree_le IS NULL  ET  ( numero VIDE  OU  present_in_hektor = true )
+   -> « NUMERO VIDE » REND VRAI
+   TEMOINS mesures le 16/11 :
+      compte_encore(null,   false) = TRUE   <- NOS lignes comptent
+      compte_encore('4320', false) = FALSE  <- une ligne Hektor supprimee, non
+```
+
+⭐ **Et c'est son DESSEIN** : une transaction nee dans l'app, en attente de son numero,
+doit compter. ⛔ Mais une reprise du classeur n'attend aucun numero -- et une offre
+acceptee de 2019 ne doit pas faire passer un bien a « Sous offre » aujourd'hui.
+
+⚠ **CE N'EST PAS AUTOMATIQUE** : la fonction est appelee par des RPC de GESTE
+(`patch_supprimer_compromis_2026-09-07.sql:123`,
+`patch_offre_verrouillee_2026-09-16.sql:159`), qui calculent `statut_apres` et le font
+redescendre. Tant que personne ne touche au dossier, rien ne part. **C'est un effet de
+bord differe, comme celui du 6e lecteur.**
+
+#### ✅ LES 96 DEJA POSEES SONT INDEMNES, ET C'EST MESURE
+
+```
+   93 dossiers touches par les 96
+   leur statut redescendu AUJOURD HUI : « Actif . Sous compromis . Vendu »
+   -> ce sont les statuts qu ils avaient DEJA, dus a leurs propres transactions
+   ⭐ POURQUOI : la 3e condition exige `state <> 'refused'`, et les 96 sont REFUSED
+```
+
+#### ⭐⭐⭐ LE DECOUPAGE REEL DE C5, ET IL EST PLUS FIN QUE PREVU
+
+```
+   SANS RISQUE -- l etat les exclut des trois conditions
+      96  offres « Annulee »            -> refused     ✅ POSEES le 16/11
+      38  compromis « Annulee »         -> cancelled   ✅ POSABLES : la condition
+          exige active/en_cours, donc un compromis ANNULE n est pas vu
+          (+ la garde du 6e lecteur, posee le 16/11, couvre le lot de refus)
+
+   ⛔ A GARDER AVANT DE POSER -- ils changeraient le statut redescendu
+      24  compromis « Compromis en attente » -> active  -> « Sous compromis »
+       6  compromis (Vente reglee 4, fixee 1, prevue 1) -> active -> idem
+      70  offres (Vente reglee 69, prevue 1)  -> accepted -> « Sous offre »
+          ⚠ et 4 des 5 liens manquants du gel sont dans « Vente reglee »
+
+   ⛔ TA DECISION (A4)
+      39  ventes -> effet « VENDU », une par une
+```
+
+⏰ **CE QU'IL FAUT POSER SUR `app_statut_redescente_calcule`** : la meme garde que les
+six autres -- une ligne marquee `classeur` ne doit entrer dans aucune des trois
+conditions. ⛔ C'est une fonction de PRODUCTION lue par plusieurs RPC : elle se modifie
+par patch, avec son inverse et sa repetition.
+
+⭐ **LA LECON SE CONFIRME, ET ELLE EST MAINTENANT PAYEE DEUX FOIS** : le balayage du
+matin avait cherche `present_in_hektor` et manque le 6e lecteur (qui se declenche sur
+l'etat d'une autre transaction) ; ce balayage-ci, fait avec le critere « compromis », en
+trouve un 7e qui se declenche sur `state` ET sur l'ABSENCE de numero. **Chaque famille
+demande son propre balayage, et il se fait AVANT de generer le patch.**
+
+### ✅⭐⭐⭐ L'ETAT DU CHANTIER AU 16/11/2026 AU SOIR -- TOUT EST MESURE
+
+**Demande de Frederic** : « beaucoup de choses ont ete faites ou notees sans mettre a
+jour ce plan -- il faut un travail minutieux ». ⛔ **Aucun chiffre de cette section ne
+vient d'un souvenir** : tout a ete mesure en base ou lu dans le code le 16/11 au soir.
+
+#### ① CE QUI EST POSE EN BASE, MESURE
+
+```
+   C1  la charge, origine 'classeur'                853 lignes   (dont les 16 du 14/11)
+   C5  transactions reprises du classeur            195 lignes
+         C5 lot B -- offres annulees                  96
+         C5 lot B -- compromis annules                35
+         C5 lot B -- offres vente reglee              64
+   leurs notes (app_affaire_note, origine classeur) 195
+   parties creees par ces 195                         0   ⭐ la decision « l acquereur
+                                                           va en note » tient
+   B1  les colonnes neuves                          3 + une table de 7 colonnes
+         vente_reglee_app . numero_facture_app . numero_mandat_app  (toutes TEXT)
+         app_classeur_avis (cle id_unique, RLS active, aucun droit public)
+   C2 C3 C4 C8 C9  posees                             0   (rien, et c'est exact)
+   D1  liens du gel                              12 595   INCHANGES
+```
+
+#### ② LES SEPT GARDES DE LA FAMILLE `transaction_origine` -- TOUTES VERIFIEES
+
+Le chantier a trouve **sept** lecteurs qui reagissent a « cette transaction n'est pas
+chez Hektor ». Etat mesure le 16/11 au soir, un par un :
+
+```
+   1  vue app_affaires_sans_numero_hektor        GARDE   (crie)
+   2  sentinelle data.transaction_disparue       GARDE   (crie)
+   3  filet du worker poserNumerosManquants      GARDE   (ecrirait un numero FAUX)
+   4  l ecran                                    SANS OBJET : il exige un numero
+   5  filet du cockpit export_app_payload.py     GARDE   (affichait « plus dans Hektor »)
+   6  enqueue_refus_offres_mortes_lot.js         GARDE   ⛔ IL ECRIT CHEZ HEKTOR
+   7  fonction app_statut_redescente_calcule     GARDE   ⛔ ELLE REDESCEND UN STATUT
+```
+
+⭐⭐ **ET LA LECON EST PAYEE DEUX FOIS** : le 6e a ete manque le matin parce que le
+balayage cherchait `present_in_hektor`, alors qu'il se declenche sur l'ETAT d'une autre
+transaction ; le 7e a ete trouve en balayant avec le critere « compromis ». **Chaque
+famille demande son propre balayage, et il se fait AVANT de generer le patch.**
+
+#### ③ ⭐⭐⭐ LA REGLE DU CHANTIER, VALIDEE PAR FREDERIC LE 16/11
+
+> **« On ne reprend que ce que Hektor ne rendra plus : le bien est SORTI du parc vivant,
+> OU la date a plus d'un an. Et JAMAIS une date dans le futur. »**
+
+Elle est nee de l'arret des 24 compromis « en attente » : bien **Actif**, offre acceptee
+d'aout-septembre venue de Hektor, et un compromis annonce du 13/11 au 10/12 -- dont des
+dates **dans le futur**. Le classeur servait la de carnet de rendez-vous, pas d'archive.
+
+⭐ **ET LE CROISEMENT QUI LA JUSTIFIE EST SANS AMBIGUITE** (139 lignes restantes) :
+
+```
+   statut du bien   futur  <3 mois  3-12 m  1-3 ans  >3 ans   TOTAL
+   Actif               38        9       0        0       0      47
+   Echu                 6        3       0        0       0       9
+   Clos                 1        1       1        0       0       3
+   Vendu                1        1       7       33      36      78
+```
+
+**Aucun bien « Actif » ne porte une date de plus de trois mois.** Les deux populations
+ne se melangent pas : « Vendu » = l'historique, « Actif » = le present.
+
+#### ④ LES ECARTS QUE L AUDIT A TROUVES ENTRE LE PLAN ET LA BASE
+
+```
+   A5   le plan annonce 1 062 lignes sans role 'vente'   ->   MESURE : 967
+   A6   le plan annonce 85 lignes non rattachees         ->   MESURE : 85  ✅
+        (le rapport du gel en compte 87 -- ecart de 2, non explique)
+   ⛔⛔ ET UNE TROUVAILLE QUI N ETAIT NULLE PART : le Sheet porte 4 790 lignes
+      (A1 du 16/11) et notre table app_classeur_ligne_id en porte 4 773.
+      -> 17 LIGNES DU CLASSEUR SONT ABSENTES DE NOTRE BASE, en plus des
+         85 non rattachees. A6 porte donc sur 102 lignes, pas 85.
+```
+
+#### ⑤ ⚠ DEUX RESERVES NEUVES, A NE PAS PERDRE
+
+**a) LES 195 NOTES ET C4 VONT SE MELANGER.** Les notes d'acquereur posees par C5
+utilisent `origine = 'classeur'` -- **exactement ce que C4 prevoit** pour les 4 131
+commentaires de la colonne G. Elles sont aujourd'hui distinguables par leur texte
+(« Acquereur au classeur : ... », 195 sur 195 verifie), mais c'est **fragile**.
+⏰ Avant C4 : decider comment on les separe (un champ, ou une origine distincte).
+
+**b) LES 5 VENTES DU RESTE N ONT PAS ETE MESUREES « UNE PAR UNE ».** A4 a trouve DEUX
+chemins vers « Vendu » : le statut redescendu (garde posee) **et l'ecran**
+(`App.tsx:8321`, `vente_id`) -- que la garde NE couvre PAS. J'ai affirme que les 5 biens
+sont deja affiches « Vendu » donc sans effet : **c'est probable, ce n'est pas mesure**.
+⛔ A4 disait « une par une ». A faire avant de poser une seule vente.
+
+#### ⑥ CE QUI RESTE, AVEC SON ETAT REEL
+
+```
+   PRET, ET SANS RISQUE CONNU
+      C3   896 dates d annulation  -- Z est propre (896 dates sur 896, A1)
+      10 lignes anciennes du lot B -- 2018 a mars 2026, biens Vendu/Clos
+           5 ventes (⚠ reserve b) . 4 compromis . 1 offre
+   DEBLOQUE MAIS A CONSTRUIRE
+      C8   Y et AA  -- B1 est posee. ⚠ la tolerance des DEUX FORMATS est
+           OBLIGATOIRE : 794 textes sur 3 756 (21 %), le defaut du 14/11
+      C9   AH AI AJ -- la table existe. ⚠ valeurs BRUTES, AH a 120 formes
+   A MESURER D ABORD
+      A5   967 lignes sans role vente, dont 311 sans vente NI compromis
+           -> prealable de C8 : ou va la valeur quand la transaction manque ?
+      A6   85 non rattachees + 17 absentes = 102 lignes au contenu inconnu
+           -> jusqu'a ~250 transactions HORS de tous les chiffres du chantier
+   SA DECISION
+      C6   26 ventes en conflit de date d acte
+      C7   2 303 ecarts « Vente Prevue » -- il avait dit « tout », a confirmer
+      C4   F : « en bloc » emporterait 1 536 « V » et 753 pastilles
+      C10  AF Prix : on liste, on n ecrit rien
+      D3   5.1 EST SON GESTE : lire les Apps Script, 10 minutes
+   SON GESTE DANS HEKTOR
+      14 lignes a verifier a la main -- notice/A_VERIFIER_DANS_HEKTOR_2026-11-16.csv
+         (13 dont la date est PASSEE, + la vente du 05/11 des 11 anciennes)
+         ⭐ les 46 autres n ont RIEN a verifier : leur date est dans le futur
+   LAISSE VOLONTAIREMENT
+      59 lignes  -- affaires EN COURS, Hektor les rendra tout seul
+```
+
+#### ⑦ CE QUI N A PAS ETE JUGE : LA NUIT DES 195
+
+⛔ **Les 195 transactions n'ont pas encore vecu un seul run.** Le critere du matin :
+
+```
+   le compte rendu du run, cle `recopie_app_seule` :  recopiees 195
+   le retour arriere joue a blanc :
+      a retirer 195 . plage AVEC numero 340 . hors plage 30 817
+   le moniteur : data.transaction_disparue 0 . data.affaire_sans_numero_hektor 0
+   GTI Descente en code 0
+   ⭐ ET LE CHAINAGE : 0 statut deplace (mesure ce soir, a reverifier au matin)
+```
+
 ### ⬜ CE QUI RESTE, DANS L'ORDRE CONTRAINT
 
 ```
@@ -2374,7 +2693,16 @@ vente pour les 39 ventes.
 ### PHASE B — LES EMPLACEMENTS ET LES GARDIENS
 
 ```
-B1 ⬜  CREER LES 6 COLONNES MANQUANTES (9 = 3 qui existent + 6) :
+B1 ✅  POSEE LE 16/11 -- migration b1_colonnes_classeur_2026_11_16, 11 controles
+       justes. vente_reglee_app . numero_facture_app . numero_mandat_app (TEXT)
+       + app_classeur_avis (7 colonnes, cle id_unique, RLS active, 0 droit public).
+       ⭐ Y EST EN **TEXT** ET C EST UNE DECISION DE A1 : 794 non-dates sur 3 756
+         (21 %) -- une colonne `date` les perdrait a l'insertion, en silence.
+       ⭐ numero_mandat (classe C) et transaction_origine INTACTS, registre non touche.
+       ➡ C8 ET C9 SONT DEBLOQUEES.
+       Fichiers : supabase/patch_b1_colonnes_classeur_2026-11-16.sql (+ INVERSE,
+       + REPETITION). ⛔ L'INVERSE REFUSE DE SE JOUER si une valeur a ete posee.
+       L ENONCE D ORIGINE : CREER LES 6 COLONNES MANQUANTES (9 = 3 qui existent + 6) :
          Y Vente Reglee . AA N0 de facture      -> colonnes de CLASSE A
          AH Avis a envoyer . AI Commentaire Avis . AJ Avis envoye -> table a part,
             cle id_unique (aucune colonne « avis » n'existe dans TOUTE la base)
@@ -2409,7 +2737,22 @@ C3 ⬜  3.3ter Z : 896 dates d'annulation dans date_annulation_app, DEJA PRETE.
 C4 ⬜  F ET G dans leurs cases existantes (apres A1, qui dira le volume) :
        F -> app_affaire_condition, G -> app_affaire_note, origine « classeur ».
        ⛔ F et G se reprennent EN BLOC, SANS INTERPRETER -- sa consigne.
-C5 🔧 EN COURS -- ✅ LES 96 PREMIERES OFFRES SONT POSEES LE 16/11.
+C5 🔧 EN COURS -- ✅ **195 TRANSACTIONS POSEES LE 16/11**, par famille :
+        96 offres « Annulee »      -> state 'refused'   (lot « offres annulees »)
+        35 compromis « Annulee »   -> 'cancelled'       (lot « compromis annules »)
+        64 offres « Vente reglee » -> 'accepted'        (lot « offres vente reglee »)
+      Chaque lot a son patch, son INVERSE et sa REPETITION, et 10 controles justes.
+      ⭐ 0 PARTIE CREEE sur les 195, et 0 STATUT DEPLACE (mesure ce soir).
+      ⭐ LES GARDES ONT MORDU : 16 doublons evites au total (meme date), dont
+        60CLRO51 et 6QDR3G7V -- les deux liens manquants du gel trouves le 16/11.
+      ⛔ ARRETS VOLONTAIRES : 24 compromis « en attente » (affaires EN COURS,
+        dates dans le futur) et 33 ventes « Vente fixee » -> voir LA REGLE.
+      ⏰ RESTENT 10 lignes anciennes (5 ventes, 4 compromis, 1 offre), 2018 a
+        mars 2026, sur des biens Vendu/Clos -- apres la mesure « une par une »
+        des 5 ventes (reserve b de l'etat du soir).
+      Generateur : phase2/checks/poser_offres_annulees_classeur_2026-11-16.py
+        (parametre par FAMILLE ; relance pour une famille deja posee, il REFUSE).
+      L ENONCE D ORIGINE : LES 96 PREMIERES OFFRES SONT POSEES LE 16/11.
        11 controles justes : 96 en offre/refused, sans numero, dans la plage app,
        toutes rattachees a une chaine, 96 notes, **0 partie creee** (le temoin de
        la decision « l'acquereur va en note »), voisines 340 + 30 817 INTACTES,

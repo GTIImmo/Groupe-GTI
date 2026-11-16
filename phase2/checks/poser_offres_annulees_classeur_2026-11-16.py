@@ -112,6 +112,18 @@ FAMILLES = {
         "state": "active", "base": "patch_compromis_en_attente_classeur_2026-11-16",
         "lot": "compromis en attente",
         "pourquoi": "aucune regle ne vise un compromis actif"},
+    # ⛔⛔ CELLE-CI EXIGE LA GARDE ⑥ (voir plus bas) : une offre 'accepted' est
+    #   visee par la REGLE [B] du chainage (« offre acceptee seule -> compromis
+    #   0..31 j avant »), MAIS seulement si sa chaine ne contient QUE des offres
+    #   (`any(m[1] != "offre")` l'ecarte sinon, affaire_ledger.py:2455).
+    #   Mesure du 16/11 : 95,9 % des chaines de biens vendus portent deja un
+    #   compromis ou une vente -- mais 166 n'ont QUE des offres. La garde ⑥ les
+    #   ecarte, plutot que de parier sur la fenetre de 31 jours.
+    "offres-vente-reglee": {
+        "colonne": "Offre Achat", "role": "offre", "etat": "Vente réglée",
+        "state": "accepted", "base": "patch_offres_vente_reglee_classeur_2026-11-16",
+        "lot": "offres vente reglee", "exige_chaine_mixte": True,
+        "pourquoi": "la regle [B] est ecartee des que la chaine n est pas QUE des offres"},
 }
 FAMILLE = (sys.argv[1] if len(sys.argv) > 1 else "offres-annulees")
 if FAMILLE not in FAMILLES:
@@ -123,6 +135,7 @@ F_ETAT = FAMILLES[FAMILLE]["etat"]
 F_STATE = FAMILLES[FAMILLE]["state"]
 F_LOT = FAMILLES[FAMILLE]["lot"]
 F_POURQUOI = FAMILLES[FAMILLE]["pourquoi"]
+F_CHAINE_MIXTE = FAMILLES[FAMILLE].get("exige_chaine_mixte", False)
 BASE = FAMILLES[FAMILLE]["base"]
 
 
@@ -306,6 +319,33 @@ def main() -> int:
               % (c["id_unique"], c["mandat"], c["date"]))
     print()
 
+    # ── ⑥ LA GARDE DE LA REGLE [B] : la chaine doit porter AUTRE CHOSE qu une offre
+    # ⛔⛔ POURQUOI. Une offre 'accepted' est visee par [B] (« offre acceptee seule
+    #   -> son compromis 0..31 j avant », affaire_ledger.py:2450). Mais sa PREMIERE
+    #   condition ecarte toute chaine qui ne contient pas QUE des offres :
+    #   `if not mb or any(m[1] != "offre" for m in mb): continue`.
+    #   ➡ Si la chaine porte deja un compromis ou une vente, [B] ne la regarde pas.
+    #   Mesure du 16/11 : 3 839 chaines de biens vendus sur 4 005 (95,9 %) sont dans
+    #   ce cas -- mais 166 n'ont QUE des offres. On les ECARTE plutot que de parier
+    #   sur la fenetre de 31 jours, qui tiendrait probablement (nos dates ont plus
+    #   d'un an) mais que rien ne garantit ligne par ligne.
+    if F_CHAINE_MIXTE and pretes:
+        membres = par_lots(cl, "app_affaire_ledger", "app_chaine_id,kind",
+                           "app_chaine_id", [c["chaine"] for c in pretes])
+        mixtes = {str(r["app_chaine_id"]) for r in membres
+                  if str(r.get("kind")) in ("compromis", "vente")}
+        avant6 = len(pretes)
+        ecartees6 = [c for c in pretes if str(c["chaine"]) not in mixtes]
+        pretes = [c for c in pretes if str(c["chaine"]) in mixtes]
+        print("=== ⑥ LA CHAINE PORTE-T-ELLE AUTRE CHOSE QU UNE OFFRE ? (regle [B]) ===")
+        print("   ecartees (chaine QUE des offres -> [B] la viserait) : %d   ->  RESTENT %d"
+              % (avant6 - len(pretes), len(pretes)))
+        for c in ecartees6[:10]:
+            print("     %-10s mandat %-8s chaine %s" % (c["id_unique"], c["mandat"], c["chaine"]))
+        if len(ecartees6) > 10:
+            print("     ... et %d autres" % (len(ecartees6) - 10))
+        print()
+
     if not pretes:
         print("⛔ aucune ligne ne passe toutes les gardes -- rien n'est genere.")
         return 1
@@ -371,9 +411,15 @@ begin
     raise exception 'ARRET : la colonne transaction_origine manque -- poser la piece 1 d abord';
   end if;
 
-  select count(*) into deja from app_affaire_ledger where transaction_origine = 'classeur';
+  -- ⛔⛔ LA GARDE VISE **CE LOT**, PAS TOUTE LA MARQUE. Sa premiere version
+  --   refusait de jouer des qu une ligne portait transaction_origine = classeur
+  --   -- juste pour le PREMIER lot, et FAUSSE pour tous les suivants : les
+  --   96 offres annulees du 16/11 auraient bloque les compromis. Corrige le 16/11.
+  select count(*) into deja from app_affaire_ledger
+   where transaction_origine = '%(marque)s'
+     and (payload_json ->> 'classeur_lot') = 'C5 lot B -- %(lot)s';
   if deja <> 0 then
-    raise exception 'ARRET : %%s ligne(s) sont deja marquees classeur -- ce patch est le PREMIER, il ne doit pas etre rejoue', deja;
+    raise exception 'ARRET : %%s ligne(s) de CE LOT existent deja -- il ne doit pas etre rejoue', deja;
   end if;
 
   if not exists (select 1 from pg_class where relname = 'app_affaire_id_app_seq') then
@@ -427,9 +473,11 @@ declare
   avec_numero integer;
   avec_parties integer;
 begin
-  select count(*) into posees from app_affaire_ledger where transaction_origine = '%(marque)s';
+  select count(*) into posees from app_affaire_ledger
+   where transaction_origine = '%(marque)s'
+     and (payload_json ->> 'classeur_lot') = 'C5 lot B -- %(lot)s';
   if posees <> %(n)d then
-    raise exception 'ARRET : %%s ligne(s) marquees classeur au lieu de %(n)d', posees;
+    raise exception 'ARRET : %%s ligne(s) de ce lot au lieu de %(n)d', posees;
   end if;
 
   select count(*) into notees from app_affaire_note where origine = '%(marque)s';
@@ -439,6 +487,7 @@ begin
 
   select count(*) into sans_marque from app_affaire_ledger
    where transaction_origine = '%(marque)s'
+     and (payload_json ->> 'classeur_lot') = 'C5 lot B -- %(lot)s'
      and (kind <> '%(role)s' or state <> '%(state)s' or present_in_hektor
           or hektor_affaire_id is not null or app_chaine_id is null);
   if sans_marque <> 0 then
@@ -446,7 +495,9 @@ begin
   end if;
 
   select count(*) into avec_numero from app_affaire_ledger
-   where transaction_origine = '%(marque)s' and app_affaire_id < 1000000;
+   where transaction_origine = '%(marque)s'
+     and (payload_json ->> 'classeur_lot') = 'C5 lot B -- %(lot)s'
+     and app_affaire_id < 1000000;
   if avec_numero <> 0 then
     raise exception 'ARRET : %%s ligne(s) hors de la plage app (>= 1 000 000)', avec_numero;
   end if;
@@ -455,7 +506,8 @@ begin
   --   avoir cree AUCUNE partie pour ces lignes.
   select count(*) into avec_parties from app_affaire_partie p
     join app_affaire_ledger l on l.app_affaire_id = p.app_affaire_id
-   where l.transaction_origine = '%(marque)s';
+   where l.transaction_origine = '%(marque)s'
+     and (l.payload_json ->> 'classeur_lot') = 'C5 lot B -- %(lot)s';
   if avec_parties <> 0 then
     raise exception 'ARRET : %%s partie(s) creees alors qu aucun acquereur n a ete pose', avec_parties;
   end if;
