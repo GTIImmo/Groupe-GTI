@@ -1431,6 +1431,103 @@ demande. Ce qui compte pour cette nuit : **mes changements n'en ont casse aucun*
    et la descente ne doit PLUS sortir en code 1 (les 2 gels passent par rattrapage)
 ```
 
+### ✅✅✅ LE VERDICT DU MATIN — 16/11/2026, LES TROIS CRITERES SONT TENUS
+
+**1. LE RUN** — demarre 04:00:01, termine **06:42:12**, `Pipeline finished successfully`,
+code **0**. Toutes les etapes en DONE, aucune en FAIL.
+
+**2. LA RECOPIE (26bis)** — le journal, a 06:17 :
+
+```
+   26bis : 1 transaction(s) que Hektor ne rendra jamais sont entrees dans le
+           registre local (50 colonnes) -- 1001424
+```
+
+et son compte rendu, critere par critere :
+
+```
+   "actif": true          <- l'interrupteur est bien lu
+   "candidates": 1, "recopiees": 1, "cles": [1001424]
+   "plage_sans_numero_avant": 0  ->  "..._apres": 1      <- le temoin a bascule
+   "colonnes_recopiees": 50
+   "rows_ecartees": 0,  "cles_ecartees": []               <- aucune ecartee
+```
+
+⭐ **La cle `echec` n'apparait pas** : le garde-fou pose la veille au soir n'a pas eu a
+jouer. Et aucun `UnicodeEncodeError` dans tout le journal.
+
+**3. LE RETOUR ARRIERE, joue a blanc** — il rend **exactement** les trois chiffres ecrits
+la veille AVANT la nuit :
+
+```
+   a retirer (plage app, sans numero Hektor) : 1
+      1001424
+   VOISINES a ne pas toucher : 340 de la plage AVEC numero, 30817 hors plage
+```
+
+⭐⭐ **Les voisines n'ont pas bouge d'une ligne.** La recopie n'a touche que sa cible, et
+le geste inverse est pret (a blanc par defaut, sauvegarde datee avant d'ecrire).
+
+#### ✅ ET LA DESCENTE EST SORTIE EN CODE 0 (07:11:37) — le correctif a mordu
+
+Le journal montre le mecanisme exactement comme l'essai l'avait predit :
+
+```
+   app_affaire_repartition_avant_classeur_20261113 : 7344/7346 -- relecture par rang
+   [  4/196] app_affaire_repartition_avant_classeur_20261113     7346 lignes
+   app_classeur_lien_avant_regel_20261113 : 12413/12422 -- relecture par rang
+   [  8/196] app_classeur_lien_avant_regel_20261113            12422 lignes
+```
+
+Le parcours par valeur ramene les **memes** 7 344 que la veille, **puis** le rattrapage
+par rang complete. **196 tables, 0 en echec.**
+
+⭐ **LE TEMOIN DE NON-REGRESSION EST DANS LE JOURNAL DE LA VEILLE** : une 3e table passe
+aussi par le rattrapage (`app_securite_droits_avant_20261008`, 1 000/2 546) -- et elle y
+**etait deja le 15/11**, parce qu'elle est sous l'ANCIEN plafond. Le plafond releve n'a
+donc touche **que les 2 tables visees** : **194/196 intactes**, comme annonce.
+
+**Le moniteur de 06:48** ecrit de lui-meme `Retour a la normale : gti_descente` et
+`GTI monitor summary: 0 critical, 3 warning, 0 unknown` (son `etat_precedent` etait
+`critical`). ⚠ Ce releve est tombe PENDANT la descente, il ne juge donc pas son code de
+sortie : **la preuve est la mesure directe du code 0 a 07:11:37**. Le releve de **08:48**
+sera la confirmation avec la tache terminee.
+
+#### ⭐⭐ UN RISQUE QUE J'AVAIS SIGNALE LA VEILLE ETAIT DEJA COUVERT PAR LE CODE
+
+J'avais ecrit qu'il fallait surveiller ceci : l'upsert du push **remplace** la ligne, donc
+la marque `transaction_origine` posee chez Supabase pourrait etre effacee la nuit suivante.
+**C'est faux, et je ne l'avais pas mesure avant de l'ecrire.**
+
+La colonne est dans `COLONNES_QUE_LE_PUSH_N_ENVOIE_PAS` (`affaire_ledger.py:3137`), avec
+ce commentaire deja ecrit le 15/11 : « ⛔ UN SEUL EMETTEUR, ET C'EST SUPABASE ». Et la
+redescente redescend **exactement cette meme liste** (`colonnes =
+list(COLONNES_QUE_LE_PUSH_N_ENVOIE_PAS)`, l. 3002). La marque est donc protegee **dans les
+deux sens** : le push ne peut pas l'effacer, la redescente la ramene.
+
+⚠ **Et la colonne est vide sur les 31 158 lignes locales : c'est l'etat NORMAL**, pas un
+defaut. Le local ne l'ecrit jamais, il la **recoit**, et aucune ligne n'est encore marquee
+la-haut. Le cobaye A2 n'est volontairement **pas** marque -- c'est ecrit noir sur blanc a
+`affaire_ledger.py:2798` : « la marque dit d'ou vient une ligne, elle ne decide pas qui a
+le droit d'entrer ».
+
+#### ⚠ LES 3 ORANGE DU MONITEUR, ET AUCUN N'A AUGMENTE
+
+```
+   data.transaction_disparue        1  -- offre . 28351 . 2006-04-01   <- LE COBAYE A2
+   data.affaire_sans_numero_hektor  1                                  <- LE COBAYE A2
+   data.negociateur_registre_signal 13 -- 2026-11-14 . personne        <- AUTRE SUJET
+```
+
+Les deux premieres sont **le meme cobaye vu par deux lecteurs differents** : elles sont la
+expres et s'eteindront quand on le retirera. La troisieme ne concerne pas ce chantier.
+
+⛔⛔ **MAIS LA 1re N'A AUCUNE GARDE, ET C'EST LE PROCHAIN GESTE.**
+`data.affaire_sans_numero_hektor` lit la **VUE** `app_affaires_sans_numero_hektor`, ou la
+garde `transaction_origine` est posee. `data.transaction_disparue` lit la **TABLE en
+direct** (`present_in_hektor=is.false` + `last_seen_at>=48h`) et n'a **rien**. Avec les
+241, elle crierait **241 fois par nuit**. A reparer **AVANT** de poser les 241.
+
 ### ⬜ CE QUI RESTE, DANS L'ORDRE CONTRAINT
 
 ```
@@ -1438,12 +1535,18 @@ demande. Ce qui compte pour cette nuit : **mes changements n'en ont casse aucun*
                         les 4 processus nes APRES le code -- preuve par leur heure
                         16/16 verts dans Console/test_seconde_preuve.js, dont 3 neufs
                         ⭐ c est la DERNIERE piece avant 26bis : plus rien ne bloque 4
- 4  26bis-TRANSACTIONS  ✅ ECRITE ET EPROUVEE le 15/11 (39/39) -- INTERRUPTEUR ETEINT
-                        APP_RECOPIE_APP_SEULE=1 dans .env pour qu'elle joue
-                        ✅ les gestes (b) et (c) du patron sont POSES avec elle
-                        ⭐ elle tourne DANS le run, apres le push : rien a lancer a part
-                        ⏰ reste a l'ALLUMER (accord de Frederic) et a juger la nuit
- 5  retirer l essai A2  seulement apres 3 et 4
+ 4  26bis-TRANSACTIONS  ✅✅✅ FAITE, ALLUMEE ET JUGEE EN REEL -- PLUS RIEN A FAIRE ICI
+                        44/44 hors ligne . allumee le 15/11 a 17:46 . jugee le 16/11
+                        au matin : recopiees 1, temoin 0->1, 0 ecartee, aucun `echec`
+                        retour arriere : 1 . 340 . 30 817, EXACTEMENT comme predit
+                        ⭐ la marque est protegee dans les deux sens (le push ne
+                          l'envoie pas, la redescente la ramene) -- mesure le 16/11
+ 4bis LA GARDE DE LA 2e ⛔⛔ LE PROCHAIN GESTE, ET IL PASSE AVANT LES 241
+     SENTINELLE         `data.transaction_disparue` lit la TABLE en direct, SANS garde
+                        `transaction_origine` -- avec les 241 elle crierait 241 fois
+                        par nuit. Sa soeur `data.affaire_sans_numero_hektor` a la
+                        garde (elle lit la VUE) : c'est le patron a recopier.
+ 5  retirer l essai A2  seulement apres 3, 4 et 4bis
  6  LES 241             marquees `classeur` DES L'INSERT, jamais apres
 ```
 
