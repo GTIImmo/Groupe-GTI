@@ -166,22 +166,34 @@ function EnLigne({ texte }: { texte: string }) {
   )
 }
 
+// Lot 3b (16/11) : lu LIGNE PAR LIGNE, parce que le vrai modèle écrit « Transactions : » puis ses « - » SANS ligne vide, et
+// des titres « ### » (vus en ligne) : une liste commence à sa première puce, un titre est une ligne en gras.
+type GroupeTexte = { genre: 'p' | 'ul' | 'ol' | 'titre'; lignes: string[] }
 function TexteReponse({ source, curseur }: { source: string; curseur: boolean }) {
-  const blocs = source.replace(/\r/g, '').split(/\n{2,}/).filter((b) => b.trim())
+  const groupes: GroupeTexte[] = []
+  let courant: GroupeTexte | null = null
+  for (const brute of source.replace(/\r/g, '').split('\n')) {
+    const l = brute.trim()
+    if (!l) { courant = null; continue }
+    const titre = /^#{1,6}\s+(.+)$/.exec(l)
+    if (titre) { groupes.push({ genre: 'titre', lignes: [titre[1]] }); courant = null; continue }
+    const puce = /^[-*•]\s+(.+)$/.exec(l)
+    const numero = /^\d+[.)]\s+(.+)$/.exec(l)
+    const genre: GroupeTexte['genre'] = puce ? 'ul' : numero ? 'ol' : 'p'
+    if (!courant || courant.genre !== genre) { courant = { genre, lignes: [] }; groupes.push(courant) }
+    courant.lignes.push(puce ? puce[1] : numero ? numero[1] : l)
+  }
   const fin = curseur ? <span className="asi-curseur" aria-hidden="true" /> : null
-  if (!blocs.length) return curseur ? <p>{fin}</p> : null
+  if (!groupes.length) return curseur ? <p>{fin}</p> : null
   return (
     <>
-      {blocs.map((bloc, i) => {
-        const dernier = i === blocs.length - 1
-        const lignes = bloc.split('\n').filter((l) => l.trim())
-        if (lignes.every((l) => /^\s*[-*•]\s+/.test(l))) {
-          return <ul key={i}>{lignes.map((l, j) => <li key={j}><EnLigne texte={l.replace(/^\s*[-*•]\s+/, '')} />{dernier && j === lignes.length - 1 ? fin : null}</li>)}</ul>
-        }
-        if (lignes.every((l) => /^\s*\d+[.)]\s+/.test(l))) {
-          return <ol key={i}>{lignes.map((l, j) => <li key={j}><EnLigne texte={l.replace(/^\s*\d+[.)]\s+/, '')} />{dernier && j === lignes.length - 1 ? fin : null}</li>)}</ol>
-        }
-        return <p key={i}>{lignes.map((l, j) => <Fragment key={j}>{j ? <br /> : null}<EnLigne texte={l} /></Fragment>)}{dernier ? fin : null}</p>
+      {groupes.map((g, i) => {
+        const dernier = i === groupes.length - 1
+        const curseurIci = (j: number) => (dernier && j === g.lignes.length - 1 ? fin : null)
+        if (g.genre === 'titre') return <p key={i} className="asi-titre"><EnLigne texte={g.lignes[0].replace(/\*\*/g, '')} />{curseurIci(0)}</p>
+        if (g.genre === 'ul') return <ul key={i}>{g.lignes.map((l, j) => <li key={j}><EnLigne texte={l} />{curseurIci(j)}</li>)}</ul>
+        if (g.genre === 'ol') return <ol key={i}>{g.lignes.map((l, j) => <li key={j}><EnLigne texte={l} />{curseurIci(j)}</li>)}</ol>
+        return <p key={i}>{g.lignes.map((l, j) => <Fragment key={j}>{j ? <br /> : null}<EnLigne texte={l} /></Fragment>)}{dernier ? fin : null}</p>
       })}
     </>
   )

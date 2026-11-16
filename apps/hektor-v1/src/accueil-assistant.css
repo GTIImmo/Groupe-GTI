@@ -93,6 +93,7 @@
 .asi-texte p, .asi-texte ul, .asi-texte ol { margin: 0; }
 .asi-texte ul, .asi-texte ol { padding-left: 20px; display: flex; flex-direction: column; gap: 3px; }
 .asi-texte strong { font-weight: 700; }
+.asi-texte .asi-titre { font-weight: 700; font-size: 15px; margin-top: 4px; }
 .asi-trace { display: flex; flex-wrap: wrap; gap: 6px; }
 .asi-tr { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500; line-height: 18px; color: var(--asi-ok); background: var(--asi-ok-soft); border-radius: 99px; padding: 2px 9px 2px 7px; }
 .asi-tr svg { width: 12px; height: 12px; }

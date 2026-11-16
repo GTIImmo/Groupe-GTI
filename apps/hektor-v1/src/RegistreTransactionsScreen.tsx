@@ -31,9 +31,10 @@ type RegistreTransactionsScreenProps = {
   fenetreOuverte?: boolean
   onOuvrirContact?: (contactId: string) => void
   /** Étape 4 de l'assistant, lot 3b (16/11/2026) : un lien « transaction » d'une réponse. La liste ne montre que CETTE
-   *  chaîne et ouvre sa fiche, toutes années confondues, sans toucher aux filtres gardés ; un filtre changé, une recherche
-   *  tapée ou « Tout voir » la retire. `jeton` change à chaque lien (deux clics sur le même lien rouvrent). Absent = rien. */
-  chaineDepart?: { chaine: number; jeton: number } | null
+   *  chaîne et ouvre sa fiche, lue dans SON année (`annee` = celle de son dernier évènement ; lire toutes les années
+   *  dépasse le délai de la base), sans toucher aux filtres gardés ; un filtre changé, une recherche tapée ou « Tout voir »
+   *  la retire. `jeton` change à chaque lien (deux clics sur le même lien rouvrent). Absent = rien. */
+  chaineDepart?: { chaine: number; annee: number | null; jeton: number } | null
 }
 
 const ETAPES: Array<{ cle: RegistreEtape; libelle: string }> = [
@@ -1281,15 +1282,19 @@ export default function RegistreTransactionsScreen({ isAdmin, libelleTypeBien, o
   // Lot 3b de l'assistant : la chaîne demandée par un lien. Les filtres gardés ne sont PAS modifiés : ils sont seulement
   // ignorés tant qu'elle est là. Un filtre changé la retire (cet effet est déclaré AVANT celui qui la pose).
   const [chaineSeule, setChaineSeule] = useState<number | null>(null)
+  const [chaineAnnee, setChaineAnnee] = useState<number | null>(null)
   const chaineOuverte = useRef<number | null>(null)
   useEffect(() => { setChaineSeule(null) }, [annee, mois, etape, seulementNomme, agence, nego])
   useEffect(() => {
     if (!chaineDepart) return
     chaineOuverte.current = null
     setRecherche('')
+    setChaineAnnee(chaineDepart.annee)
     setChaineSeule(chaineDepart.chaine)
   }, [chaineDepart?.jeton]) // eslint-disable-line react-hooks/exhaustive-deps
-  const anneeLue = chaineSeule != null ? null : annee
+  // l'année de la chaîne (connue), sinon l'année gardée : JAMAIS toutes les années d'un coup pour un lien
+  const anneeLue = chaineSeule != null ? (chaineAnnee ?? annee) : annee
+  const chaineIntrouvable = chaineSeule != null && !chargement && !erreur && !lignes.some((l) => l.app_chaine_id === chaineSeule)
 
   // À la fermeture de la fenêtre de statut ouverte depuis la fiche : on relit la fiche et la liste.
   useEffect(() => {
@@ -1688,7 +1693,7 @@ export default function RegistreTransactionsScreen({ isAdmin, libelleTypeBien, o
           </label>
           {chaineSeule != null ? (
             <span className="rt-chaine-seule">
-              Une transaction, ouverte depuis l'assistant
+              {chaineIntrouvable ? `Transaction introuvable dans le registre ${anneeLue ?? ''}` : "Une transaction, ouverte depuis l'assistant"}
               <button type="button" onClick={() => setChaineSeule(null)}>Tout voir</button>
             </span>
           ) : null}

@@ -15991,7 +15991,7 @@ export default function App() {
   async function assistantOuvrirTransaction(appAffaireId: string) {
     const lue = await transactionPourLien(appAffaireId).catch(() => null)
     if (lue?.chaine != null && registreTransactionsVisible) {
-      setAssistantTransaction({ chaine: lue.chaine, jeton: Date.now() })
+      setAssistantTransaction({ chaine: lue.chaine, annee: lue.annee, jeton: Date.now() })
       if (screen !== 'transactions') openScreen('transactions')
       return
     }
@@ -22068,7 +22068,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   const [ficheDepuisAssistant, setFicheDepuisAssistant] = useState(false)
   // Lot 3b : le point de départ donné par un lien de l'assistant au registre des transactions et à l'agenda (un jeton
   // neuf à chaque clic). Absent = ces écrans comme avant.
-  const [assistantTransaction, setAssistantTransaction] = useState<{ chaine: number; jeton: number } | null>(null)
+  const [assistantTransaction, setAssistantTransaction] = useState<{ chaine: number; annee: number | null; jeton: number } | null>(null)
   const [assistantJourAgenda, setAssistantJourAgenda] = useState<{ date: string; jeton: number } | null>(null)
   useEffect(() => { if (!detailOpen) setFicheDepuisAssistant(false) }, [detailOpen])
   useEffect(() => {

@@ -149,14 +149,26 @@ export async function relireConversation(id: string): Promise<{ conversation: Co
 }
 
 // ── Lot 3b : deux lectures pour les liens (avec la session de la personne : la RLS dit ce qu'elle voit) ──
-/** Une transaction (app_affaire_id) -> sa chaîne, pour le registre des transactions. Rien de lisible = null. */
-export async function transactionPourLien(appAffaireId: string): Promise<{ chaine: number | null; appDossierId: number | null } | null> {
-  if (MAQUETTE) return { chaine: 1, appDossierId: 7801 }
+/** Une transaction (app_affaire_id) -> sa chaîne, pour le registre des transactions. Rien de lisible = null.
+ *  `annee` = l'année du DERNIER évènement de la chaîne : c'est elle que le registre lit (app_registre_dossiers filtre
+ *  left(date_dernier_evenement, 4) = p_annee). ⚠ Lire toutes les années d'un coup dépasse le délai de la base
+ *  (« statement timeout », vu en ligne le 16/11) : on ne lit que la bonne. */
+export async function transactionPourLien(appAffaireId: string): Promise<{ chaine: number | null; appDossierId: number | null; annee: number | null } | null> {
+  if (MAQUETTE) return { chaine: 1, appDossierId: 7801, annee: 2026 }
   const { data, error } = await supabase!.from('app_affaire_ledger').select('app_chaine_id, app_dossier_id')
     .eq('app_affaire_id', Number(appAffaireId)).limit(1).maybeSingle()
   if (error || !data) return null
   const ligne = data as { app_chaine_id: number | null; app_dossier_id: number | null }
-  return { chaine: ligne.app_chaine_id ?? null, appDossierId: ligne.app_dossier_id ?? null }
+  let annee: number | null = null
+  if (ligne.app_chaine_id != null) {
+    const { data: chaine } = await supabase!.from('app_affaire_ledger').select('date, date_acte, date_annulation_app')
+      .eq('app_chaine_id', ligne.app_chaine_id).limit(50)
+    const dates = ((chaine ?? []) as Array<Record<string, string | null>>)
+      .flatMap((l) => [l.date, l.date_acte, l.date_annulation_app])
+      .map((d) => String(d ?? '').slice(0, 10)).filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d) && !d.startsWith('0000')).sort()
+    annee = dates.length ? Number(dates[dates.length - 1].slice(0, 4)) : null
+  }
+  return { chaine: ligne.app_chaine_id ?? null, appDossierId: ligne.app_dossier_id ?? null, annee }
 }
 
 /** Une recherche (contact_search_key) -> le contact qui la porte. */

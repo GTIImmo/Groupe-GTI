@@ -470,3 +470,23 @@ bannière part ; recherche → Contacts ; rendez-vous → agenda au 2026-11-18 ;
 ⚠ Noté : sous la bannière, l'en-tête du registre affiche encore la période gardée (« 2026 ») alors qu'elle est ignorée.
 
 **Pas encore vérifié** : en ligne (le vrai modèle écrit-il ces formes ? la fiche d'une vraie chaîne s'ouvre-t-elle ?).
+
+## 21. Lot 3b — EN LIGNE (`c633b10`), preuve PARTIELLE chez lui : deux défauts trouvés, corrigés en local, PAS poussés
+
+`c633b10` poussé (seul dans la liste relue) ; Render `/health` = c633b100b417, Vercel servi.
+Question de lecture : « Sur le bien d'essai 62965 : quel est son mandat, et quelles transactions a-t-il ? Et qu'ai-je dans
+mon agenda mercredi 18 novembre ? » → le vrai modèle a écrit **les liens de transaction** (« Offre de 79 000 € »,
+« Offre de 80 000 € ») et le lien du bien ; **pas de lien de mandat** (le bien n'a pas de numéro de mandat — juste) ; **pas
+de lien de rendez-vous** (il a listé l'agenda sans la forme `rdv:` : la consigne n'est pas suivie à chaque fois).
+⛔ **Défaut 1 (le mien)** : clic sur « Offre de 79 000 € » → le registre des transactions affiche « Les dossiers n'ont pas
+pu être chargés » ; console : `canceling statement due to statement timeout`. J'avais fait lire TOUTES les années pour
+ignorer la période ; la base coupe. **Corrigé** : `transactionPourLien` rend l'année du DERNIER évènement de la chaîne
+(c'est elle que `app_registre_dossiers` filtre : `left(date_dernier_evenement, 4) = p_annee`) et le registre ne lit que
+celle-là ; si la ligne n'y est pas : « Transaction introuvable dans le registre AAAA » (vu en maquette).
+⚠ **Trouvé, PAS à moi, non touché** : le choix « Toutes les années » du registre fait la même lecture (4 paquets de
+1 000 en parallèle, `p_annee` vide) : il dépasse très probablement le délai pour tout le monde. Non vérifié à l'écran (ça
+changerait sa période gardée). À traiter à part.
+⛔ **Défaut 2 (affichage)** : le vrai modèle écrit des titres « ### … » et une liste « - … » juste sous une phrase, sans
+ligne vide → affichés bruts. **Corrigé** : la réponse est lue ligne par ligne (un titre = une ligne en gras, une liste
+commence à sa première puce). Build vert.
+Reste à prouver après le push : la fiche d'une vraie chaîne qui s'ouvre, et les liens recherche / rendez-vous / demande en vrai.
