@@ -415,8 +415,8 @@ FICHES.update({
 })
 
 # Morceau 9, lot 9a (§12.19) -- LES PIÈCES DES PERSONNES, à part de FICHES : elles ne sont lues QUE si l'interrupteur
-# `ged_lecture_personnes` est ouvert pour l'appelant (route /ged/lire). Le financement s'y ajoute au lot 9d (16/11) ;
-# l'état civil reste fermé ; le RIB n'est JAMAIS lu. ⛔ Le numéro de la pièce, sa date et son autorité de délivrance (PRIVES) ne vont ni
+# `ged_lecture_personnes` est ouvert pour l'appelant (route /ged/lire). Le financement (9d-1) et l'état civil (9d-2)
+# s'y ajoutent le 16/11, leur première page seule ; le RIB n'est JAMAIS lu. ⛔ Le numéro de la pièce, sa date et son autorité de délivrance (PRIVES) ne vont ni
 # dans app_ged_valeur ni dans la réponse : seulement dans ged_prive (registre anti-blanchiment, 5 ans).
 SITUATIONS = ["celibataire", "marie", "pacse", "divorce", "veuf", "separe", "concubinage", "autre"]
 REGIMES = ["communaute_legale", "separation_de_biens", "communaute_universelle", "participation_aux_acquets", "autre"]
@@ -484,8 +484,34 @@ FICHES_PERSONNES: dict[str, dict[str, Any]] = {
         "listes": [("personnes", {"qualite": ("txt", ["emprunteur", "co_emprunteur", "caution", "autre"]),
                                   "nom": ("nom", None), "nom_usage": ("nom", None), "prenoms": ("nom", None)})],
     },
+    # Lot 9d-2 (16/11) : l'état civil -- la NATURE de la pièce, la DATE de l'acte, et les ÉPOUX, PARTENAIRES ou le DÉFUNT
+    # (règles P9 le conjoint, P10 le décès et la protection). ⛔ La première page seule. ⛔ Une mesure de PROTECTION : sa
+    # nature SEULE (`nature_seule`) -- le serveur jette tout le reste, même si l'IA l'a rendu (santé, RGPD art. 9). Jamais
+    # les enfants, les parents, les témoins, une adresse, une cause de décès, le motif d'un jugement.
+    "justif.etat_civil": {
+        "version": 1,
+        "premiere_page_seule": True,
+        "texte_max": 6000,
+        "nature_seule": ["protection"],
+        "consigne": "C'est une pièce d'état civil ou de capacité. On ne te montre que sa PREMIÈRE page. nature : "
+                    "acte_mariage (acte ou extrait d'acte de mariage), livret_famille, contrat_mariage, pacs (convention "
+                    "ou attestation de PACS), divorce (jugement ou acte de divorce), acte_deces, protection (jugement ou "
+                    "ordonnance de tutelle, curatelle, sauvegarde de justice, habilitation familiale, mandat de protection "
+                    "future), autre. date_acte : la date du mariage, du PACS, du divorce ou du décès (jamais une date de "
+                    "naissance). EXCEPTION à la règle commune, pour CETTE pièce seulement : dans « personnes », recopie le "
+                    "nom de naissance, le nom d'usage s'il est écrit et les prénoms des ÉPOUX, des PARTENAIRES ou du DÉFUNT, "
+                    "avec sa qualité (epoux, partenaire, defunt, autre). Pour une mesure de PROTECTION : nature = protection "
+                    "et RIEN d'autre (ni nom, ni date, ni personne). JAMAIS : les enfants, les parents, les témoins, "
+                    "l'officier d'état civil, une adresse, une profession, une cause de décès, le motif d'un jugement, un "
+                    "certificat médical ni rien qui touche à la santé.",
+        "champs": {"nature": ("txt", ["acte_mariage", "livret_famille", "contrat_mariage", "pacs", "divorce", "acte_deces",
+                                      "protection", "autre"]),
+                   "date_acte": ("naissance", None)},
+        "listes": [("personnes", {"qualite": ("txt", ["epoux", "partenaire", "defunt", "autre"]),
+                                  "nom": ("nom", None), "nom_usage": ("nom", None), "prenoms": ("nom", None)})],
+    },
 }
-PRIVES = {"pieces.numero", "pieces.date_delivrance", "pieces.autorite_delivrance"}
+PRIVES ={"pieces.numero", "pieces.date_delivrance", "pieces.autorite_delivrance"}
 
 # Pages lues en haute définition (le navigateur les choisit ; même réglage dans gedClassementIa.ts) : le titre a ses
 # parties et sa désignation dans les premières pages ; un compromis scanné : les 4 premières et les 2 dernières
@@ -669,6 +695,10 @@ class OpenAIGedLectureService:
         except json.JSONDecodeError as exc:
             raise HTTPException(status_code=502, detail="Réponse de lecture non JSON") from exc
         ce_type, toutes = normaliser(brut, fiche, nb_pages)
+        if any(v["cle"] == "nature" and v["valeur"] in fiche.get("nature_seule", []) for v in toutes):
+            # lot 9d-2 : une mesure de protection -> SA NATURE SEULE est gardée ; noms, dates, personnes sont jetés ICI,
+            # même si l'IA les a rendus malgré la consigne (rien n'arrive en base ni à l'écran)
+            toutes = [v for v in toutes if v["cle"] == "nature"]
         # ⛔ les valeurs PRIVÉES (numéro de la pièce…) sortent ICI de la liste : elles ne vont qu'à enregistrer() -> ged_prive
         valeurs = [v for v in toutes if v["cle"] not in PRIVES]
         prives = [v for v in toutes if v["cle"] in PRIVES and v["etat"] != "non_vu"] if ce_type else []

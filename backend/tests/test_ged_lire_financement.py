@@ -48,7 +48,7 @@ jamais = ("montant", "taux", "duree", "mensualit", "cout", "banque", "courtier",
 voir(not any(j in tout for j in jamais), "TÉMOIN : jamais montant, taux, durée, banque, apport, revenus, assurance, compte, adresse")
 voir(fiche.get("premiere_page_seule") is True and fiche.get("texte_max", 99999) <= 6000, "la première page seule, 6 000 caractères au plus")
 voir(all(m in fiche["consigne"] for m in ("PREMIÈRE", "JAMAIS", "assurance", "santé", "montant", "taux")), "la consigne le dit aussi")
-voir("justif.etat_civil" not in lec.FICHES_PERSONNES and "justif.etat_civil" not in lec.FICHES, "TÉMOIN : l'état civil reste fermé")
+voir("justif.rib" not in lec.FICHES_PERSONNES and "justif.rib" not in lec.FICHES, "TÉMOIN : le RIB n'a toujours aucune fiche")
 
 print("2) la normalisation")
 _, vals = lec.normaliser({"ce_type": True, "nature": L("offre_de_pret"), "date_document": L("2026-10-02"),

@@ -18,6 +18,7 @@ import { propositionsContact } from './lib/gedRemplirContact'
 import { dateEtatLue, loadGedLectures, resumeLecture, type LectureDocument } from './lib/gedLecture'
 import { reglesPersonnes } from './lib/gedReglesPersonnes'
 import { reglesFinancement } from './lib/gedReglesFinancement'
+import { reglesEtatCivil } from './lib/gedReglesEtatCivil'
 import { LIBELLE_MOMENT, recuManque, type LignePiece } from './lib/gedPieces'
 import { deposeAuPlusTard, LIBELLE_A_DEPOSER, reglesSansIa, type AffaireRegle, type Alerte, type FaitsRegles } from './lib/gedRegles'
 import type { PersonneDuBien } from './lib/gedComparer'
@@ -126,7 +127,7 @@ export function RecuManque({
     const ordre: Record<Alerte['niveau'], number> = { alerte: 0, piece: 1, info: 2 }
     // morceau 9 (9b) : les pièces d'identité LUES -- le nom, la validité au jour de la signature, une pièce par personne
     return [...reglesSansIa(faits, docs, affaires, new Date()), ...reglesLues({ ...faits, chargeRegistre }, docsLus, personnesDuBien, affaires, new Date()),
-      ...reglesPersonnes(faits, docsLus, personnesDuBien, affaires, new Date()), ...reglesFinancement(docs, docsLus, affaires, new Date())]
+      ...reglesPersonnes(faits, docsLus, personnesDuBien, affaires, new Date()), ...reglesFinancement(docs, docsLus, affaires, new Date()), ...reglesEtatCivil(docsLus, personnesDuBien)]
       .sort((a, b) => ordre[a.niveau] - ordre[b.niveau])
   }, [regles, affaires, faits, documents, classements, lectures, personnesDuBien, chargeRegistre])
 

@@ -87,7 +87,7 @@ const clesLues = [...lecturePiece.matchAll(/(?:texteLu|dateLue|nombreLu)\([^,]+,
 voir(clesLues === 'date_document,nature' && /personnesLuesDe\(d\.lecture\)/.test(lecturePiece) && !/nombreLu/.test(lecturePiece),
   'TÉMOIN : de la pièce de financement, on ne lit que la nature, la date et les emprunteurs -- aucun nombre')
 voir(!/editAnnonce|editContact|ecrire|gedDecider/.test(regles), 'on SIGNALE, on n\'écrit rien')
-voir(/PREMIERE_PAGE_SEULE = new Set\(\['transaction\.financement'\]\)/.test(ia) && /envoyables = uneSeule \? textes\.slice\(0, 1\) : textes/.test(ia), 'l\'écran n\'envoie que la 1re page du financement (texte et image)')
+voir(/PREMIERE_PAGE_SEULE = new Set\(\['transaction\.financement'[,\]]/.test(ia) && /envoyables = uneSeule \? textes\.slice\(0, 1\) : textes/.test(ia), 'l\'écran n\'envoie que la 1re page du financement (texte et image)')
 voir(/texteDitRib\(textes\.join\('\\n'\)\)/.test(ia) && ia.indexOf("texteDitRib(textes.join('\\n'))") < ia.indexOf('const envoyables'), 'la garde RIB lit TOUTES les pages AVANT de couper à la 1re')
 
 // ⑤ (16/11, épreuve réelle) : une offre de prêt qui porte un IBAN restait rangée « RIB » par la fenêtre de dépôt.

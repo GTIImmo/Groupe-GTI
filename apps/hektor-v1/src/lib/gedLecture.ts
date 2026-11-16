@@ -16,9 +16,14 @@ export const FICHES_LUES = new Set([
 ])
 // Morceau 9, lot 9a (§12.19) : les pièces des personnes, À PART -- lues seulement si l'interrupteur
 // `ged_lecture_personnes` est ouvert (même liste que FICHES_PERSONNES au serveur). Le numéro de la pièce n'arrive JAMAIS
-// à l'écran : il va au registre à part, côté serveur. Lot 9d (16/11) : le financement, sa 1re page seule (nature, date,
-// emprunteurs). L'état civil reste fermé ; le RIB n'est jamais lu.
-export const FICHES_PERSONNES_LUES = new Set(['justif.identite', 'transaction.renseignements', 'transaction.financement'])
+// à l'écran : il va au registre à part, côté serveur. Lot 9d (16/11) : le financement (nature, date, emprunteurs) et
+// l'état civil (nature, date, époux ou défunt ; une mesure de protection : sa nature SEULE), leur 1re page seule. Le RIB
+// n'est jamais lu.
+export const FICHES_PERSONNES_LUES = new Set(['justif.identite', 'transaction.renseignements', 'transaction.financement', 'justif.etat_civil'])
+const NATURE_ETAT_CIVIL: Record<string, string> = {
+  acte_mariage: 'acte de mariage', livret_famille: 'livret de famille', contrat_mariage: 'contrat de mariage', pacs: 'PACS',
+  divorce: 'divorce', acte_deces: 'acte de décès', protection: 'mesure de protection (rien d\'autre n\'est lu)', autre: "pièce d'état civil",
+}
 const NATURE_FINANCEMENT: Record<string, string> = {
   offre_de_pret: 'offre de prêt', accord_de_principe: 'accord de prêt', refus: 'refus de prêt', simulation: 'simulation', autre: 'pièce de financement',
 }
@@ -246,6 +251,15 @@ export function resumeLecture(l: Pick<LectureDocument, 'typeCode' | 'etat' | 'va
     if (v('date_document')) morceaux.push(`du ${v('date_document')}`)
     const n = new Set(l.valeurs.filter((x) => x.cle === 'personnes.nom' && x.etat !== 'non_vu' && x.valeur).map((x) => x.rang)).size
     if (n) morceaux.push(`${n} emprunteur${n > 1 ? 's' : ''}`)
+  } else if (l.typeCode === 'justif.etat_civil') {
+    // lot 9d-2 : la nature, la date, le NOMBRE de personnes -- jamais un nom ; une protection : sa nature seule
+    const nature = v('nature')?.replace(' (?)', '')
+    morceaux.push(NATURE_ETAT_CIVIL[nature ?? 'autre'] ?? NATURE_ETAT_CIVIL.autre)
+    if (nature !== 'protection') {
+      if (v('date_acte')) morceaux.push(`du ${v('date_acte')}`)
+      const n = new Set(l.valeurs.filter((x) => x.cle === 'personnes.nom' && x.etat !== 'non_vu' && x.valeur).map((x) => x.rang)).size
+      if (n) morceaux.push(`${n} personne${n > 1 ? 's' : ''}`)
+    }
   } else if (l.typeCode === 'copro.reglement') {
     if (v('sous_type')) morceaux.push(mot(v('sous_type')) as string)
     if (v('date_acte')) morceaux.push(`du ${v('date_acte')}`)

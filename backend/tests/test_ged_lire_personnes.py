@@ -37,11 +37,10 @@ def L(v, etat="lu", page=1):
 
 
 print("1) les fiches")
-voir(set(lec.FICHES_PERSONNES) == {"justif.identite", "transaction.renseignements", "transaction.financement"},
-     "trois fiches : la pièce d'identité, la fiche de renseignements et (lot 9d, 16/11) le financement")
+voir(set(lec.FICHES_PERSONNES) == {"justif.identite", "transaction.renseignements", "transaction.financement", "justif.etat_civil"},
+     "quatre fiches : la pièce d'identité, la fiche de renseignements et (lot 9d, 16/11) le financement et l'état civil")
 voir(not set(lec.FICHES_PERSONNES) & set(lec.FICHES), "elles vivent À PART de FICHES (les 25 types lus ne bougent pas)")
-voir(not {"justif.etat_civil", "justif.rib"} & (set(lec.FICHES) | set(lec.FICHES_PERSONNES)),
-     "l'état civil reste fermé (9d) ; le RIB n'a aucune fiche")
+voir("justif.rib" not in (set(lec.FICHES) | set(lec.FICHES_PERSONNES)), "le RIB n'a aucune fiche")
 voir(all(strict_partout(lec.schema(f)) for f in lec.FICHES_PERSONNES.values()), "schéma STRICT : tous les champs obligatoires, aucun en plus")
 piece = lec.schema(lec.FICHES_PERSONNES["justif.identite"])["properties"]["pieces"]["items"]["properties"]
 jamais = ("adresse", "nationalite", "sexe", "taille", "mrz", "signature", "photo", "telephone", "email", "profession")
@@ -91,7 +90,7 @@ class Portier:
     cran = "admin"
 
     def types(self):
-        return [{"code": c, "sensible": True} for c in ("justif.identite", "transaction.renseignements", "transaction.financement", "justif.etat_civil")] + \
+        return [{"code": c, "sensible": True} for c in ("justif.identite", "transaction.renseignements", "transaction.financement", "justif.etat_civil", "justif.rib")] + \
                [{"code": c, "sensible": False} for c in lec.FICHES]
 
     def depense_du_jour(self):
@@ -139,7 +138,7 @@ for code, charge, libelle in [
         voir(False, libelle)
     except HTTPException as e:
         voir(e.status_code == 422 and "fermée" in str(e.detail), libelle)
-for code, libelle in [("justif.etat_civil", "l'état civil reste fermé MÊME avec l'interrupteur")]:
+for code, libelle in [("justif.rib", "le RIB reste fermé MÊME avec l'interrupteur")]:
     try:
         s.lire({"type_code": code}, {"texte": "x"}, personnes=True)
         voir(False, libelle)
@@ -150,13 +149,13 @@ try:
     voir(False, "rib")
 except HTTPException as e:
     voir(e.status_code == 422 and "bancaire" in str(e.detail), "un IBAN dans une fiche de renseignements : jamais envoyé (garde RIB inchangée)")
-lec.FICHES["justif.etat_civil"] = lec.FICHES["diag.erp"]
+lec.FICHES["justif.rib"] = lec.FICHES["diag.erp"]
 try:
-    s.lire({"type_code": "justif.etat_civil"}, {"texte": "x"}, personnes=True)
+    s.lire({"type_code": "justif.rib"}, {"texte": "x"}, personnes=True)
     voir(False, "sensible")
 except HTTPException as e:
     voir(e.status_code == 422 and "morceau 9" in str(e.detail), "TÉMOIN : un type sensible hors des fiches des personnes reste refusé, même avec une fiche")
-del lec.FICHES["justif.etat_civil"]
+del lec.FICHES["justif.rib"]
 
 print("4) ce qui part, ce qui revient")
 lec.requests.post = capter

@@ -2000,3 +2000,30 @@ de principe avec un IBAN fictif en page 3.
 La lecture reste refusée (garde RIB inchangée, à l'écran et au serveur) ; le type reste modifiable à la main.
 Essais `test_ged_regles_financement.cjs` **36 verts** (+4) ; témoin inverse (la condition retirée) -> ROUGE ; `test_ged_depot`
 19 verts ; build vert.
+
+**✅ « Ok on y vas » (16/11) : LOT 9d-2 (L'ÉTAT CIVIL, P9 et P10) ÉCRIT ET CONTRÔLÉ HORS LIGNE — rien poussé, rien posé.**
+Recommandations du 16/11 appliquées (financement d'abord, fait ; la situation de famille d'un livret ne remplit PAS la
+fiche contact). ⭐ **SIMPLIFICATION sur la protection** : au lieu de ranger son détail au registre à part, on n'en garde
+QUE LA NATURE (ni personne, ni date, ni représentant) -- P10 peut déjà alerter avec ça. Donc PAS de patch SQL, rien de
+sensible à ranger à part ; la décision du 12/11 (« sa nature, le représentant, la date ») est respectée en MOINS. Si
+Frédéric veut le représentant et la date, ce sera un lot à part, avec le registre `ged_prive` et un patch.
+- **Serveur** : fiche `justif.etat_civil` v1 dans `FICHES_PERSONNES` — `nature` (acte_mariage, livret_famille,
+  contrat_mariage, pacs, divorce, acte_deces, protection, autre), `date_acte` (dès 1900), `personnes` (epoux, partenaire,
+  defunt, autre ; nom, nom d'usage, prénoms). JAMAIS enfants, parents, témoins, officier, adresse, profession, cause de
+  décès, motif, certificat médical, santé. `premiere_page_seule` ; `nature_seule: ["protection"]` : le serveur JETTE tout
+  sauf la nature d'une mesure de protection, même lue avec doute, même si l'IA a rendu des noms.
+- **Écran** : `FICHES_PERSONNES_LUES` + état civil ; `PREMIERE_PAGE_SEULE` + état civil ; résumé « acte de mariage · du … ·
+  2 personnes » ou « mesure de protection (rien d'autre n'est lu) ».
+- **Règles** `src/lib/gedReglesEtatCivil.ts` (pure), branchées dans `RecuManque`. Au dossier = la fiche + les mandants du
+  mandat lu. **P9** : un mandant MARIÉ (acte, livret ou contrat) dont l'époux n'est ni sur la fiche ni signataire -> alerte
+  « consentement du conjoint (art. 215) -- à vérifier » ; se tait sur un divorce lu, un décès du conjoint, un PACS (215 ne
+  vaut que pour des époux), une fiche sans prénom ; une ligne par couple. **P10** : un mandant décédé -> alerte « un mandat
+  prend fin au décès du mandant (art. 2003) » ; une mesure de protection au dossier -> alerte « vérifier qui signe (tuteur,
+  curateur, juge) », sans nom.
+- **Essais** : `test_ged_regles_etat_civil.cjs` **23 verts** ; `backend/tests/test_ged_lire_etat_civil.py` **16 verts**.
+  **Témoins inverses** : la garde « nature seule » retirée -> ROUGE (le nom et la date d'une protection passaient) ; le
+  silence sur divorce retiré -> ROUGE ; restaurés -> verts. Essais adaptés (leurs témoins « fermé » passent au RIB) : lire 81,
+  lire personnes 36, lire financement 19, lecture 59, règles financement 36 ; voisins verts ; `npm run build` vert.
+- **Reste, sur accord** : pousser (Render + Vercel), puis une épreuve sur 63331 avec un faux acte de mariage (le conjoint
+  absent de la fiche -> P9 doit parler), un faux acte de décès au nom du mandant d'essai (P10) et un faux jugement de
+  tutelle dont la page 1 porte un nom et une date (seule la nature doit rester).

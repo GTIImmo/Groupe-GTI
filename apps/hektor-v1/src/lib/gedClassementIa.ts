@@ -186,7 +186,7 @@ const PAGES_HD_PAR_TYPE: Record<string, number> = {
   'justif.titre': 6, 'copro.pv_ag': 6, 'transaction.avant_contrat': 6, 'mandat.vente': 6, 'transaction.acte': 6, 'copro.reglement': 6,
 }
 const TEXTE_MAX_PAR_TYPE: Record<string, number> = {
-  'transaction.financement': 6000,
+  'transaction.financement': 6000, 'justif.etat_civil': 6000,
   'justif.titre': 40000, 'copro.pv_ag': 40000, 'transaction.avant_contrat': 80000, 'mandat.vente': 40000, 'transaction.acte': 40000,
   'copro.reglement': 40000,
 }
@@ -196,7 +196,8 @@ const FIN_EN_IMAGE_PAR_TYPE: Record<string, number> = {
 // Lot 9d (16/11) : le financement, sa PREMIÈRE PAGE SEULE, en image comme en texte -- une offre de prêt porte plus loin
 // l'assurance emprunteur (santé), les revenus, l'IBAN. Le serveur le redit (`premiere_page_seule`). La garde RIB, elle,
 // lit toujours le texte de TOUTES les pages avant de décider.
-export const PREMIERE_PAGE_SEULE = new Set(['transaction.financement'])
+// Lot 9d-2 : l'état civil aussi (un jugement de protection porte plus loin ses motifs et le certificat médical).
+export const PREMIERE_PAGE_SEULE = new Set(['transaction.financement', 'justif.etat_civil'])
 
 // Les pages à mettre en image (numéros à partir de 1). Avec du texte : seulement les dernières, si le type les veut
 // (signatures). Sans texte (scan) : les premières, et, si le type le veut, les dernières à la place des suivantes.

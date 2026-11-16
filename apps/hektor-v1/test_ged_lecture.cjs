@@ -120,10 +120,9 @@ voir(/Lu par l'IA : \$\{lus\.length\}/.test(rm) && /\.filter\(\(d\) => d\.presen
 
 console.log('④ morceau 9, lot 9a : les pièces des personnes')
 const { FICHES_PERSONNES_LUES } = charger('src/lib/gedLecture.ts')
-voir(FICHES_PERSONNES_LUES.size === 3 && FICHES_PERSONNES_LUES.has('justif.identite') && FICHES_PERSONNES_LUES.has('transaction.renseignements') && FICHES_PERSONNES_LUES.has('transaction.financement') && FICHES_LUES.size === 25,
-  'trois types À PART (identité, fiche de renseignements, et le financement au lot 9d) ; les 25 types lus ne bougent pas')
-voir(!FICHES_PERSONNES_LUES.has('justif.rib') && !FICHES_PERSONNES_LUES.has('justif.etat_civil'),
-  'TÉMOIN : ni le RIB, ni l\'état civil (9d)')
+voir(FICHES_PERSONNES_LUES.size === 4 && ['justif.identite', 'transaction.renseignements', 'transaction.financement', 'justif.etat_civil'].every((c) => FICHES_PERSONNES_LUES.has(c)) && FICHES_LUES.size === 25,
+  'quatre types À PART (identité, fiche de renseignements, et au lot 9d le financement et l\'état civil) ; les 25 types lus ne bougent pas')
+voir(!FICHES_PERSONNES_LUES.has('justif.rib'), 'TÉMOIN : jamais le RIB')
 const fp = srv.slice(srv.indexOf('FICHES_PERSONNES: dict'), srv.indexOf('PRIVES = '))
 voir([...FICHES_PERSONNES_LUES].every((c) => fp.includes(`"${c}": {`)), 'chaque pièce lue à l\'écran a sa fiche au serveur, dans FICHES_PERSONNES')
 voir(/const typeLu = \(code: string\) => FICHES_LUES\.has\(code\) \|\| \(lecturePersonnes && FICHES_PERSONNES_LUES\.has\(code\)\)/.test(depot) && /useGedLecturePersonnes\(\)/.test(depot),
