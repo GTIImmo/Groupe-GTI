@@ -11953,7 +11953,8 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
     if (p.geste === 'contact') {
       const id = String(p.contactId ?? '').trim()
       if (!['birth_date', 'birth_place', 'marital_status'].includes(p.champ)) return refus('champ_inconnu', `le champ « ${p.champ} » ne se remplit pas d'ici.`)
-      const relu = /^\d+$/.test(id) ? (await loadContactsEtatCivil([id]))?.get(id) : undefined
+      // `id` est NOTRE numéro (la proposition le porte) : la relecture et l'écriture se font par lui, jamais par celui de Hektor
+      const relu = /^\d+$/.test(id) ? (await loadContactsEtatCivil([id], 'app'))?.get(id) : undefined
       if (!relu) return refus('contact_illisible', "la fiche du contact n'a pas pu être relue.")
       if (relu.archive === true || relu.nature_fiche !== 'personne_seule' || relu.couple_role) return refus('pas_personne_seule', "le contact n'est plus une personne seule active.", { nature_fiche: relu.nature_fiche, couple_role: relu.couple_role })
       const actuelle = p.champ === 'birth_date' ? relu.birth_date : p.champ === 'birth_place' ? relu.birth_place : relu.marital_status
@@ -11963,7 +11964,7 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
       const champ = p.champ === 'birth_date' ? { birthDate: p.valeur } : p.champ === 'birth_place' ? { birthPlace: p.valeur } : { maritalStatus: p.valeur }
       await editContactOptimistic({ contactId: id, contact: { lastName: nom, personType: 'personne_seule', sendRgpdEmail: false, ...champ } })
       if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('hektor:contact-updated', { detail: { hektor_contact_id: id } }))
-      await garder('remplie', { geste: 'editContactOptimistic', hektor_contact_id: id, champs: { [p.champ]: p.valeur }, email_rgpd: false })
+      await garder('remplie', { geste: 'editContactOptimistic', hektor_contact_id: id, numero_hektor: relu.hektor_target_id, champs: { [p.champ]: p.valeur }, email_rgpd: false })
       return `Envoyé : ${p.texte}. La fiche du contact part chez Hektor par le chemin habituel.`
     }
     if (p.geste === 'charge') {

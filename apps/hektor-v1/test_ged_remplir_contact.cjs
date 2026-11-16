@@ -75,7 +75,7 @@ const app = fs.readFileSync(path.join(__dirname, 'src/App.tsx'), 'utf8')
 const debut = app.indexOf("if (p.geste === 'contact') {")
 const geste = debut >= 0 ? app.slice(debut, app.indexOf("if (p.geste === 'charge')", debut)) : ''
 voir(geste.length > 0, 'le geste « contact » est dans remplirDepuisDocument, avant le registre')
-voir(/loadContactsEtatCivil\(\[id\]\)/.test(geste) && geste.indexOf('loadContactsEtatCivil') < geste.indexOf('editContactOptimistic'), 'il RELIT le contact avant d\'écrire')
+voir(/loadContactsEtatCivil\(\[id\], 'app'\)/.test(geste) && geste.indexOf('loadContactsEtatCivil') < geste.indexOf('editContactOptimistic'), 'il RELIT le contact avant d\'écrire, par NOTRE numéro')
 voir(/case_deja_remplie/.test(geste) && /caseVide\(actuelle\)/.test(geste), 'jamais par-dessus : la case relue doit être vide')
 voir(/nature_fiche !== 'personne_seule'/.test(geste) && /couple_role/.test(geste) && /archive === true/.test(geste), 'personne seule active, relue')
 voir(/lastName: nom/.test(geste) && /contact_sans_nom/.test(geste), 'le nom ACTUEL est joint (le worker l\'exige)')
@@ -87,6 +87,41 @@ const recu = fs.readFileSync(path.join(__dirname, 'src/RecuManque.tsx'), 'utf8')
 voir(/etatCivil \? contactsDuBien/.test(recu) && /propositionsContact\(contacts, personnesDuBien, docsLus, decisions/.test(recu), 'l\'écran : une lecture ratée (null) -> aucune proposition contact')
 const ged = fs.readFileSync(path.join(__dirname, 'src/lib/ged.ts'), 'utf8')
 voir(/from\('app_contacts_current'\)/.test(ged) && /if \(error\) return null/.test(ged.slice(ged.indexOf('loadContactsEtatCivil'))), 'la relecture passe par la vue des contacts (même périmètre), et une erreur rend null')
+voir(/loadContactsEtatCivil\(idsContacts \? idsContacts\.split\(','\) : \[\], 'hektor'\)/.test(recu), 'l\'écran lit par le numéro HEKTOR des contacts du bien (le pont)')
+voir(/contactId: String\(r\.hektor_contact_id\)/.test(recu) && !/contactId: c\.id/.test(recu), 'TÉMOIN : la proposition porte NOTRE numéro, jamais celui de l\'écran')
 
-console.log(`\n${ok} verts, ${ko} rouges`)
-process.exit(ko ? 1 : 0)
+// ⑤ (16/11) LES DEUX NUMÉROS, trouvés par l'épreuve réelle : l'écran donne le numéro HEKTOR (605947), notre clé est le
+// nôtre (20000009) ; 0 égaux sur 94 956. La lecture est rejouée contre une fausse base qui garde les deux colonnes.
+console.log('⑤ les deux numéros : la lecture de l\'état civil contre une fausse base')
+const BASE = [
+  { hektor_contact_id: '20000009', hektor_target_id: '605947', nom: 'ESSAI CONTACT', prenom: 'Mandant', birth_date: null, birth_place: null, marital_status: null, nature_fiche: 'personne_seule', couple_role: null, archive: false },
+  { hektor_contact_id: '10000101', hektor_target_id: '700001', nom: 'DOUBLE', prenom: 'Un', birth_date: null, birth_place: null, marital_status: null, nature_fiche: 'personne_seule', couple_role: null, archive: false },
+  { hektor_contact_id: '10000102', hektor_target_id: '700001', nom: 'DOUBLE', prenom: 'Deux', birth_date: null, birth_place: null, marital_status: null, nature_fiche: 'personne_seule', couple_role: null, archive: false },
+]
+const colonnesLues = []
+let enPanne = false
+const fausseBase = { from: (table) => ({ select: () => ({ in: async (col, vals) => {
+  colonnesLues.push(`${table}.${col}`)
+  return enPanne ? { data: null, error: { message: 'panne' } } : { data: BASE.filter((r) => vals.includes(String(r[col]))), error: null }
+} }) }) }
+const chargerAvecBase = (f) => {
+  const code = esbuild.buildSync({ entryPoints: [path.join(__dirname, f)], bundle: true, write: false, format: 'cjs', platform: 'node', external: ['./supabase', 'react'] }).outputFiles[0].text
+  const m = { exports: {} }
+  new Function('module', 'exports', 'require', code)(m, m.exports, (n) => (n === './supabase' ? { hasSupabaseEnv: true, supabase: fausseBase } : n === 'react' ? { useEffect() {}, useState: (x) => [x, () => {}] } : require(n)))
+  return m.exports
+}
+const { loadContactsEtatCivil } = chargerAvecBase('src/lib/ged.ts')
+;(async () => {
+  const parHektor = await loadContactsEtatCivil(['605947'], 'hektor')
+  voir(parHektor?.get('605947')?.hektor_contact_id === '20000009' && colonnesLues.at(-1) === 'app_contacts_current.hektor_target_id', 'le numéro HEKTOR de l\'écran retrouve NOTRE fiche (par hektor_target_id)')
+  voir((await loadContactsEtatCivil(['605947'], 'app'))?.size === 0, 'TÉMOIN (le défaut du 14/11) : le numéro Hektor cherché comme le nôtre ne trouve RIEN')
+  const parApp = await loadContactsEtatCivil(['20000009'], 'app')
+  voir(parApp?.get('20000009')?.nom === 'ESSAI CONTACT' && colonnesLues.at(-1) === 'app_contacts_current.hektor_contact_id', 'la relecture au clic, par NOTRE numéro, retrouve la fiche')
+  voir((await loadContactsEtatCivil(['20000009'], 'hektor'))?.size === 0, 'TÉMOIN : notre numéro n\'est jamais pris pour un numéro Hektor')
+  voir((await loadContactsEtatCivil(['700001', '605947'], 'hektor'))?.has('700001') === false, 'TÉMOIN : un numéro Hektor porté par deux fiches est ambigu -> absent')
+  enPanne = true
+  voir((await loadContactsEtatCivil(['605947'], 'hektor')) === null, 'TÉMOIN : une lecture en panne rend null (donc aucune proposition)')
+  enPanne = false
+  console.log(`\n${ok} verts, ${ko} rouges`)
+  process.exit(ko ? 1 : 0)
+})()

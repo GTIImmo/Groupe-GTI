@@ -161,21 +161,36 @@ export async function loadGedDecisions(hektorAnnonceId: string | number): Promis
 // GED lot 9c (14/11) : l'état civil des contacts du bien, RELU dans la vue des contacts (même périmètre que l'annuaire).
 // ⚠ Lecture ratée -> null : l'écran ne propose alors RIEN (jamais croire une case vide qu'on n'a pas lue). Un numéro
 //   absent de la réponse = contact inconnu chez nous : il n'est pas dans la carte, donc rien ne se propose pour lui.
+// ⛔ DEUX NUMÉROS (16/11, trouvé par l'épreuve réelle : 0 égaux sur 94 956) : les contacts d'un bien à l'écran portent
+//   le numéro HEKTOR (`DetailContact.sourceId`) ; chez nous la clé est NOTRE numéro (`hektor_contact_id`, malgré son
+//   nom), et le numéro Hektor est dans `hektor_target_id`. Règle de Frédéric : le numéro Hektor pour parler à Hektor,
+//   le nôtre pour l'app. `par: 'hektor'` ne sert que de PONT (écran -> notre fiche) ; tout le reste se fait par 'app'.
+//   Un numéro Hektor porté par deux fiches (aucune au 16/11) est ambigu : il n'est pas dans la carte.
 export type EtatCivilLu = {
-  hektor_contact_id: string; nom: string | null; prenom: string | null; birth_date: string | null
+  hektor_contact_id: string; hektor_target_id: string | null; nom: string | null; prenom: string | null; birth_date: string | null
   birth_place: string | null; marital_status: string | null; nature_fiche: string | null; couple_role: string | null; archive: boolean | null
 }
-export async function loadContactsEtatCivil(ids: string[]): Promise<Map<string, EtatCivilLu> | null> {
+export async function loadContactsEtatCivil(ids: string[], par: 'hektor' | 'app'): Promise<Map<string, EtatCivilLu> | null> {
   if (!hasSupabaseEnv || !supabase) return null
   const numeros = [...new Set(ids.map((x) => String(x ?? '').trim()).filter((x) => /^\d+$/.test(x)))]
   if (!numeros.length) return new Map()
+  const colonne = par === 'hektor' ? 'hektor_target_id' : 'hektor_contact_id'
   try {
     const { data, error } = await supabase
       .from('app_contacts_current')
-      .select('hektor_contact_id,nom,prenom,birth_date,birth_place,marital_status,nature_fiche,couple_role,archive')
-      .in('hektor_contact_id', numeros)
+      .select('hektor_contact_id,hektor_target_id,nom,prenom,birth_date,birth_place,marital_status,nature_fiche,couple_role,archive')
+      .in(colonne, numeros)
     if (error) return null
-    return new Map(((data ?? []) as EtatCivilLu[]).map((r) => [String(r.hektor_contact_id), r]))
+    const carte = new Map<string, EtatCivilLu>()
+    const ambigus = new Set<string>()
+    for (const r of (data ?? []) as EtatCivilLu[]) {
+      const cle = String(r[colonne] ?? '').trim()
+      if (!cle) continue
+      if (carte.has(cle)) ambigus.add(cle)
+      carte.set(cle, r)
+    }
+    for (const cle of ambigus) carte.delete(cle)
+    return carte
   } catch {
     return null
   }

@@ -1835,3 +1835,39 @@ sans écrire sur les modifications récentes, compter les écarts, puis poser (a
   fabriquée à son nom (C1 et C2 par la pièce d'identité ; C3 demande une fiche de renseignements SPÉCIMEN) ; vérifier
   chez nous à l'instant, puis chez Hektor après le passage du worker (≈ 10 min de délai d'envoi), la valeur exacte.
   Retour arrière : `ged_remplir` → off ; une valeur écrite se vide à la main par la fenêtre « Modifier ».
+
+**✅ 9c POUSSÉ (15/11, `77509ae` seul ; Vercel prêt). ⚠ ÉPREUVE RÉELLE DU 16/11 : ELLE A TROUVÉ UN DÉFAUT — 9c était MUET.**
+« Oui lance la » (16/11), sur 63331 dans le Chrome de Frédéric. Pièces fabriquées : `scratchpad/ged_m9c/fabriquer_pieces_specimen_9c*.py`
+(carte nouveau modèle + fiche de renseignements d'un vendeur, « SPÉCIMEN - FICTIF », naissance 14/07/1955 à ROANNE (42),
+célibataire). Avant le dépôt : aucune proposition contact (point de départ).
+- **1er dépôt** (07:16 UTC, envois Hektor done) : date, lieu, prénom, « celibataire » lus, MAIS le nom « ESSAI 8A C1 » est
+  « non vu » sur les deux pièces : la lecture REFUSE tout nom qui porte un chiffre (`openai_ged_lecture_service.py` l. 524,
+  garde-fou voulu : un chiffre trahit une adresse, une date, un numéro). Juste pour un vrai client : NON TOUCHÉ. Le défaut
+  était le nom du contact d'essai.
+- **« Oui » (16/11) : le contact 20000009 RENOMMÉ « ESSAI CONTACT »** par la fenêtre « Modifier » (travail
+  `update_hektor_mandant_contact` done en 15 s chez Hektor, fiche 605947, rien resté en attente). ⚠ Vu, NON mesuré : le
+  compte rendu donne à la commune `idCode 1`, `idVille 1`. **2e dépôt** (07:20) : nom « ESSAI CONTACT » lu sur les deux
+  pièces, mêmes valeurs. La ligne P6 « Pièce d'identité de Mandant ESSAI 8A C1 : non trouvée » DISPARAÎT (la pièce est
+  reconnue). Mais **aucune section « À remplir »**.
+- ⛔ **LA CAUSE — DEUX NUMÉROS** : les contacts d'un bien à l'écran portent le numéro HEKTOR (`DetailContact.sourceId`,
+  605947) ; `app_contact_current.hektor_contact_id` est NOTRE numéro (20000009, ≥ 10 000 003) — **0 égaux sur 94 956** ;
+  le numéro Hektor est dans `hektor_target_id` (rempli partout, UNIQUE, ≤ 606 355). 9c lisait par `hektor_contact_id`
+  avec le numéro Hektor : AUCUNE ligne, pour AUCUN contact. Inerte (plages disjointes : jamais le mauvais contact), mais
+  muet. J'avais écrit le 14/11 que `sourceId` était la clé de `app_contact_current` : FAUX, et les essais hors ligne ne
+  pouvaient pas le voir (ils testent la fonction pure, pas la jointure).
+- **RÈGLE DE FRÉDÉRIC (16/11)** : « ID Hektor pour communiquer avec Hektor, worker etc. ; et notre ID app pour notre app ».
+
+**✅ « Vas y » (16/11) : 9c CORRIGÉ — rien poussé.**
+- `src/lib/ged.ts` : `loadContactsEtatCivil(ids, par: 'hektor' | 'app')` — `'hektor'` lit par `hektor_target_id` (le PONT
+  écran -> notre fiche), `'app'` par `hektor_contact_id` ; la carte est rangée par la colonne lue ; un numéro Hektor porté
+  par deux fiches (aucun au 16/11) est ambigu et sort de la carte.
+- `src/RecuManque.tsx` : l'écran lit par `'hektor'` ; la proposition porte NOTRE numéro (`String(r.hektor_contact_id)`),
+  donc la clé de décision aussi (`C1.birth_date.20000009`). Aucune décision C* n'existait : rien à migrer.
+- `src/App.tsx` (branche `contact` de `remplirDepuisDocument`) : relecture au clic par `'app'` (notre numéro), écriture
+  `editContactOptimistic` par notre numéro comme ses autres appelants ; la décision garde aussi `numero_hektor`.
+- **Essais** `test_ged_remplir_contact.cjs` : **48 verts, 0 rouge** (+8, dont un bloc ⑤ qui rejoue la lecture contre une
+  fausse base aux deux colonnes). **Témoin inverse** (l'ancienne colonne remise) -> **2 ROUGES**, puis restauré -> 48.
+  Voisins verts : remplir 27, règles personnes 38, règles lues 84, règles 44. `npm run build` vert.
+- **Reste, sur accord** : pousser, puis REJOUER l'épreuve sur 63331 (les 2 pièces « ESSAI CONTACT » déjà lues resservent,
+  rien à redéposer) : 3 propositions attendues (14/07/1955, « ROANNE (42) », « célibataire »), 3 clics, contrôle chez nous
+  (`scratchpad/ged_m9c/controle_epreuve_9c.sql`) puis chez Hektor sur 605947. Sur 63331 restent 4 pièces SPÉCIMEN de plus.

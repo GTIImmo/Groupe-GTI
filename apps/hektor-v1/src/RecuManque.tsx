@@ -155,13 +155,14 @@ export function RecuManque({
       .catch(() => { if (!annule) setConditions(null) })
     return () => { annule = true }
   }, [remplir, peutRemplir, idsCompromis, relire])
-  // lot 9c : l'état civil des contacts du bien, relu à chaque fois (lecture ratée -> null -> aucune proposition contact)
+  // lot 9c : l'état civil des contacts du bien, relu à chaque fois (lecture ratée -> null -> aucune proposition contact).
+  // L'écran donne le numéro HEKTOR (pont) ; la proposition porte NOTRE numéro (règle du 16/11 : le nôtre pour l'app).
   const idsContacts = useMemo(() => contactsDuBien.map((c) => c.id).join(','), [contactsDuBien])
   const [etatCivil, setEtatCivil] = useState<Map<string, EtatCivilLu> | null>(null)
   useEffect(() => {
     if (!remplir || !peutRemplir) return
     let annule = false
-    void loadContactsEtatCivil(idsContacts ? idsContacts.split(',') : []).then((m) => { if (!annule) setEtatCivil(m) })
+    void loadContactsEtatCivil(idsContacts ? idsContacts.split(',') : [], 'hektor').then((m) => { if (!annule) setEtatCivil(m) })
     return () => { annule = true }
   }, [remplir, peutRemplir, idsContacts, relire])
   const propositions = useMemo(() => {
@@ -172,7 +173,7 @@ export function RecuManque({
     const contacts = etatCivil ? contactsDuBien.flatMap((c) => {
       const r = etatCivil.get(c.id)
       return r && r.archive !== true ? [{
-        contactId: c.id, nom: r.nom ?? '', prenom: r.prenom ?? '',
+        contactId: String(r.hektor_contact_id), nom: r.nom ?? '', prenom: r.prenom ?? '',
         personneSeule: c.seul && r.nature_fiche === 'personne_seule' && !r.couple_role,
         naissance: r.birth_date, lieu: r.birth_place, situation: r.marital_status,
       }] : []
