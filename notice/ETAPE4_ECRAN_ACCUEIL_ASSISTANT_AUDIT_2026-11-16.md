@@ -490,3 +490,21 @@ changerait sa période gardée). À traiter à part.
 ligne vide → affichés bruts. **Corrigé** : la réponse est lue ligne par ligne (un titre = une ligne en gras, une liste
 commence à sa première puce). Build vert.
 Reste à prouver après le push : la fiche d'une vraie chaîne qui s'ouvre, et les liens recherche / rendez-vous / demande en vrai.
+
+## 22. Lot 3b — la preuve FINIE chez lui (16/11), un 3e défaut trouvé et corrigé en local
+
+`a2812ba` (année de la chaîne ; titres et listes) est parti avec les commits GED (`c77ca7e` dessous, poussés par la
+session GED avec son `b5f390c` au-dessus, sur son « Oui, les deux »). Vercel servi. Dans son Chrome, en lecture seule :
+- la conversation 62965 rouverte : titres en gras, offres et agenda EN LISTES (le rendu ligne à ligne marche sur le vrai
+  texte) ; « Offre de 79 000 € » → le registre des transactions ouvre **la fiche de la chaîne 1001409** (« Offre refusée ·
+  26/10/2026 · 79 000 € », acquéreur M. Cinquieme ESSAI 8 CINQ) — plus de délai dépassé ;
+- « Trois choses, avec leurs liens : mon rendez-vous « Essai assistant 3c », la recherche du contact 10354641, et la
+  demande à la direction en attente » → le vrai modèle a écrit les TROIS formes (`rdv:`, `recherche:`, `demande:`) et le
+  contact ; clics : agenda au **2026-11-18** ; recherche → fiche du contact **10354641** ; demande → **Suivi**, fiche
+  `annonce=1068399` (VA6482, la demande du 02/06).
+⚠ L'agenda affiche « Agenda non chargé » — IDENTIQUE quand on l'ouvre par le rail : comportement de l'écran (Actualiser),
+pas du lien.
+⛔ **Défaut 3 (le mien)** : rouvert ensuite par le rail, l'agenda restait au 18/11 — le jour du lien restait en mémoire
+d'App et l'écran le relit à son montage (même risque pour la chaîne du registre). **Corrigé** : le point de départ
+s'oublie dès qu'on quitte l'écran visé (App.tsx, effet sur `screen`). Vérifié en maquette : lien → 18/11, puis Contacts,
+puis Agenda par le rail → la date par défaut de l'écran (17/11), plus le 18. Build vert. Rien écrit en production.

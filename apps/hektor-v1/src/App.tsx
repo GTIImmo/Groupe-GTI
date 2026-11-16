@@ -22070,6 +22070,12 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   // neuf à chaque clic). Absent = ces écrans comme avant.
   const [assistantTransaction, setAssistantTransaction] = useState<{ chaine: number; annee: number | null; jeton: number } | null>(null)
   const [assistantJourAgenda, setAssistantJourAgenda] = useState<{ date: string; jeton: number } | null>(null)
+  // ⚠ Vu en ligne le 16/11 : gardé après le lien, le jour revenait à CHAQUE ouverture suivante de l'agenda (l'écran le lit
+  //   à son montage). Le point de départ s'oublie donc dès qu'on quitte l'écran qu'il visait.
+  useEffect(() => {
+    if (screen !== 'agenda') setAssistantJourAgenda(null)
+    if (screen !== 'transactions') setAssistantTransaction(null)
+  }, [screen])
   useEffect(() => { if (!detailOpen) setFicheDepuisAssistant(false) }, [detailOpen])
   useEffect(() => {
     if (screen === 'suivi' && !isManagerOrAdmin) setScreen('mandats')
