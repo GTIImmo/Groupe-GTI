@@ -2510,6 +2510,297 @@ l'etat d'une autre transaction) ; ce balayage-ci, fait avec le critere « compro
 trouve un 7e qui se declenche sur `state` ET sur l'ABSENCE de numero. **Chaque famille
 demande son propre balayage, et il se fait AVANT de generer le patch.**
 
+### ✅⭐⭐⭐ C3 EST FAIT -- 450 DATES D'ANNULATION POSEES LE 16/11
+
+**LA REGLE, DE FREDERIC** : « La date d'annulation dans le Sheet represente la date
+d'annulation du **COMPROMIS**. » Perimetre arrete par lui le meme jour : **450**.
+Patch colle par moi, avec son accord explicite (« colle toi meme », « tu as mon accord »),
+via `node Console/apply_sql_patch.js` -- le pooler, l'hote direct n'ayant plus d'IPv4.
+
+#### ⭐⭐⭐ SA REGLE A FAIT DISPARAITRE TOUTE L'AMBIGUITE, ET C'EST LA PREUVE QU'ELLE EST JUSTE
+
+Mon tri d'avant acceptait « toute transaction morte » -- compromis annule OU offre
+refusee. Il rendait **446 lignes a plusieurs cibles**, que j'allais lui demander de
+trancher une par une. Avec sa regle :
+
+```
+   AVANT (ma regle a moi)        APRES (la sienne)
+   252 nettes                    450 nettes
+   446 A TRANCHER                  0        ⭐ toutes resolues
+```
+
+**Une regle juste supprime les cas douteux ; elle ne les deplace pas.**
+
+⭐⭐ **ET L'AUDIT LUI A DONNE UNE SECONDE RAISON, QUE JE N'AVAIS PAS VUE** : pour une
+offre refusee, `date` porte **DEJA** la date du refus (regle du 12/11) ; pour une vente,
+il n'y a pas d'annulation (0 des 9 281 ventes n'a d'etat : une vente DISPARAIT). **Le
+compromis est le SEUL cas ou `date` porte la signature et ou la date d'annulation n'a
+nulle part ou aller.** Une colonne, un geste, aucun doublon.
+
+#### LE TRI DES 896, ET LA PARTITION BOUCLE
+
+```
+   ✅ 450  un seul compromis annule, date coherente  -> POSEES
+       107  date anterieure au compromis               -> laissees
+       272  aucun compromis, seulement une offre       -> hors de sa regle
+        63  aucun lien dans le gel
+         4  un compromis, mais `active`
+         0  plusieurs compromis annules . 0 deja datee . 0 date future
+   partition  896 = 896
+   par annee  2020 68 . 2021 81 . 2022 66 . 2023 78 . 2024 62 . 2025 73 . 2026 22
+```
+
+#### ✅ LES DOUZE CONTROLES, JOUES SANS LA LISTE DU PATCH
+
+Volontairement independants : des controles qui reprennent la liste du patch ne font
+que repeter ce que le patch croit.
+
+```
+   dates d annulation posees                   450 = 450
+   toutes sur un COMPROMIS (hors-type)           0 = 0
+   toutes sur un compromis ANNULE                0 = 0
+   aucune mal formee ni future                   0 = 0
+   aucune ANTERIEURE a la date du compromis      0 = 0
+   annees distinctes couvertes                     7 = 7
+   la sauvegarde datee                         450 = 450
+   VOISINES transactions au total           31 352 = 31 352
+   VOISINES compromis annules                1 425 = 1 425
+   VOISINES aucun motif pose par erreur          0 = 0
+   VOISINES les 195 du classeur intactes       195 = 195
+   VOISINES etiquettes toujours 1 pour 1      true = true
+```
+
+#### ⛔⛔ CE QUE L'AUDIT A TROUVE SUR LES 107, ET CE N'EST PAS NOUS
+
+J'ai d'abord cru que notre date etait fausse (le geste de masse du 11/11). **Mesure :
+non.** Nos deux dates de compromis sont IDENTIQUES dans **82 cas sur 86**.
+
+```
+   83  le classeur est INCOHERENT AVEC LUI-MEME (annulation < son propre compromis)
+         dont 77 ou l annulation tombe ENTRE son offre et son compromis
+   21  le classeur n a PAS de date de compromis
+    3  le classeur est coherent, c est NOTRE date qui diverge
+```
+
+⭐ L'explication la plus probable, **non tranchee** : la colonne « Compromis » du
+classeur porterait une date **PREVUE** (le rendez-vous), l'affaire etant morte avant.
+⛔ C'est du metier : **je ne le tranche pas**. Les 21 ont ete proposees en plus (471) et
+Frederic a repondu **450**.
+
+#### ⛔⛔ LA RESERVE QUE C3 REVELE, ET ELLE EST IMPORTANTE
+
+**L'APP NE DEMANDE AUCUNE DATE QUAND ON ANNULE.** Mesure de bout en bout :
+
+```
+   l ecran     gesteAffaireOptimistic(app_affaire_id, 'annuler')     3 parametres
+   la RPC      app_geste_affaire_optimistic(target_affaire_id, geste, job_priority)
+   son corps   ecrit date_annulation_app  ⛔ NON . motif_annulation_app ⛔ NON
+```
+
+➡ **L'historique est juste, le PRESENT est muet** : des la premiere annulation faite
+dans l'app, la colonne commence a vieillir. Frederic, 16/11 : « il faut pour etre
+logique ajouter une date lors de l'annulation d'une transaction dans l'apps dans le
+front etc... mais pas dans hektor ».
+
+⭐ **ET CE SERA SIMPLE, PARCE QUE LA BASE EST PRETE** -- trois pieces :
+
+```
+   1  la base   la RPC gagne DEUX parametres a defaut NULL (date, motif) : additif,
+                les appels existants continuent ; elle les ecrit dans le MEME UPDATE
+                que l etat, et NE LES MET PAS dans la charge du travail
+   2  l appel   gesteAffaireOptimistic gagne deux arguments optionnels
+   3  l ecran   le champ sur la seule branche « annuler le compromis »
+```
+
+⚠ **RIEN NE PARTIRA CHEZ HEKTOR, PAR CONSTRUCTION** : la charge du travail ne porte
+que `hektor_annonce_id`, `numero_dossier`, `titre_bien`, `app_affaire_id`, `etat_avant`,
+`geste` et l'id Hektor -- **aucune date** (lu dans la RPC). Et la colonne est dans
+`COLONNES_QUE_LE_PUSH_N_ENVOIE_PAS` depuis le 10/11.
+
+⛔⛔ **LA SEULE VRAIE DIFFICULTE N'EST PAS TECHNIQUE** : la modale a ete **REFONDUE** --
+`ModaleStatutV2.tsx` est EN PRODUCTION depuis le 06/11 derriere
+`VITE_APP_STATUT_V2_ENABLED`. Il y a donc **DEUX blocs** et un outil de parite a 35/35
+(`apps/hektor-v1/test_statut_v2_empreintes.cjs`). Ajouter un champ = le mettre dans le
+bon composant (ou les deux, ou declarer l'ecart) et relancer l'outil AVANT et APRES.
+Plus l'index git partage avec l'autre session sur `App.tsx`.
+
+#### ⭐ L'AUDIT DE LA CASCADE, DEMANDE PAR FREDERIC
+
+Sa question : « dans mon projet la date d'annulation du dossier est liee a l'annulation
+d'une transaction, donc audite le fait que les 3 transactions vont etre annulees plus
+tard ». Mesure :
+
+```
+   cascade_annulation_compromis = 'on'  (app_setting), dans app_geste_affaire_optimistic
+   -> declenchee par L ECRAN seulement ; AUCUN declencheur de cascade sur la table,
+      donc UN PATCH SQL NE LA REVEILLE PAS
+   elle passe l offre `accepted` de la chaine a `refused` + un travail chez Hektor
+   ⛔ ELLE N ECRIT AUCUNE DATE D ANNULATION
+
+   1 373 chaines portent un compromis annule
+   dont 1 125 portent AUSSI une offre refusee (82 %)
+   dont   349 une offre encore ACCEPTEE -> la cascade les refusera plus tard
+   dont   362 une VENTE -> la cascade ne touche pas ces chaines
+   TOTAL 1 145 offres refusees dans ces chaines, toutes sans date
+```
+
+✅ **Frederic a tranche : « ce n'est pas un probleme »** -- la date reste celle du
+compromis, et les offres refusees n'en ont pas besoin (leur `date` EST leur refus).
+
+#### ⚠ LES DEUX DEFAUTS DE MES PROPRES SCRIPTS, ATTRAPES AVANT DE POSER
+
+```
+1  `lire_classeur` rend un TUPLE (entetes, lignes), chaque ligne etant un COUPLE
+   (rang, cellules) -- PAS une grille. Ma 1re version a lu « 1 ligne de corps »,
+   rendu DES ZEROS PARTOUT et SORTI EN CODE 0.
+   ➡ deux gardes posees : un PLANCHER de lignes lues (3 000) et un TEMOIN POSITIF
+     sur Z (700 minimum, A1 en comptait 896). Une lecture ratee n'est jamais un vert.
+2  `dates_des_propositions` rend du **jj/mm/aaaa** : `sorted()` sur ces chaines NE
+   TRIE PAS dans le temps. On convertit d'abord, puis on prend le minimum.
+```
+
+#### ⏰ A JUGER DEMAIN MATIN, EN PLUS DES CINQ POINTS DES 195
+
+```
+   les 450 dates doivent etre EN LOCAL apres la descente
+     -> `date_annulation_app` est bien dans la liste des colonnes que le local
+        CREE et RECOIT a la redescente (affaire_ledger.py l. 637), donc la
+        sauvegarde de nuit l emportera
+   et toujours 450 chez Supabase (le push ne l envoie pas : l. 3124)
+```
+
+Fichiers : `supabase/patch_c3_dates_annulation_2026-11-16.sql` (+ `_INVERSE`,
+`_REPETITION`) · mesures `phase2/checks/c3_mesurer_les_dates_annulation_2026-11-16.py`,
+`c3_pourquoi_107_anterieures_2026-11-16.py`, `c3_generer_patch_dates_annulation_2026-11-16.py`
+· rapports `notice/C3_OU_SE_POSENT_LES_DATES_ANNULATION_2026-11-16.csv` et
+`notice/C3_LES_107_ANTERIEURES_2026-11-16.csv`.
+
+---
+
+### ✅⭐⭐⭐ AUDIT DE L'ID UNIQUE DU REGISTRE -- 16/11, DEMANDE PAR FREDERIC
+
+**SA QUESTION, EN DEUX TEMPS** : d'abord « le registre des affaires va se trier par
+id affaires uniquement au gel, tu es sur ? », puis -- apres une premiere reponse
+incomplete de ma part -- « il y a quelque chose qui cloche, nous avons ajoute meme je
+crois DEUX COLONNES dans le registre des transactions chez nous pour mettre un ID
+Unique. Retrouve ce chantier, ce n'est pas juste un gel. AUDIT ».
+
+⛔⛔ **IL AVAIT RAISON, ET MON BALAYAGE ETAIT FAUTIF** : j'avais cherche les colonnes
+par QUATRE MOTIFS QUE J'AVAIS CHOISIS (classeur, chaine, origine, payload) -- une
+colonne nommee `app_dossier_uuid` ne pouvait pas en sortir. C'est, le meme jour, la
+troisieme fois que la lecon mord : **une famille ne se balaie pas par un critere qu'on
+choisit ; on liste TOUT, puis on trie.**
+
+#### LES DEUX COLONNES EXISTENT, ET C'EST L'ETIQUETTE DE DOSSIER (posee le 09/11)
+
+```
+   48  app_dossier_uuid     uuid   l etiquette LONGUE
+   49  app_dossier_numero   text   l etiquette COURTE (forme D2026-0431)
+```
+
+⭐⭐⭐ **ET LE COMMENTAIRE DE LA 48 PORTE TOUT LE SUJET** : « posee par Supabase
+seulement, jamais par le push ni par le clic. Toutes les transactions d'un meme
+dossier la partagent. **C'est elle qui va dans la colonne `affair_uuid` du
+classeur.** Elle ne bouge JAMAIS une fois posee. »
+
+#### ELLE EST POSEE PARTOUT, ET L'UNICITE EST PARFAITE
+
+```
+   transactions au total                      31 352
+   avec etiquette (uuid ET numero)            31 352     <- toutes
+   sans etiquette                                  0
+   LES 195 DU CLASSEUR : avec etiquette       195 / 195
+   LES 195 : sans                                  0
+
+   chaines distinctes                         11 444
+   etiquettes distinctes                      11 444     ⭐ UN POUR UN, EXACTEMENT
+   chaines portant PLUSIEURS etiquettes            0
+   etiquettes couvrant PLUSIEURS chaines           0
+   numero court en double sur deux dossiers        0
+```
+
+⚠ **ET UNE ERREUR DE CLE QUE J'AI FAITE, PUIS CORRIGEE DANS LA MINUTE** : groupe par
+`app_dossier_id` (= L'ANNONCE), le controle rendait **607 dossiers a plusieurs
+etiquettes** et j'ai failli crier. La bonne cle est `app_chaine_id` (le dossier
+d'affaire) : les 607 sont des BIENS a deux acquereurs successifs, donc deux dossiers
+d'affaire, donc deux etiquettes -- **le dessein, pas un defaut**. Temoin : annonce
+54771, 5 transactions, 2 chaines, 2 etiquettes.
+
+#### ⭐ LES 195 N'ONT CREE AUCUNE ETIQUETTE NEUVE -- ELLES ONT HERITE
+
+195 sur 195 portent **exactement** l'etiquette de leurs voisines du meme dossier ;
+0 divergente ; 0 dossier ou elles seraient seules. Et ce n'est pas le run qui l'a
+posee : **c'est le patch**, qui recopie l'etiquette du dossier (lignes 235-247 et 444
+de `poser_offres_annulees_classeur_2026-11-16.py`). Verifie dans le script, pas
+suppose. Trois temoins :
+
+```
+   1001425  annonce 54771  offre refused  08/05/2025  D2025-0432  classeur S13Z3PIN
+   1001426  annonce 41672  offre refused  25/04/2025  D2025-0169  classeur 1P6VET6U
+   1001427  annonce 42981  offre refused  30/04/2025  D2025-0186  classeur 7Q6O044E
+```
+
+#### ✅ LE MECANISME EST BRANCHE AU RUN -- ET LA MEMOIRE DISAIT LE CONTRAIRE
+
+```
+   .env ligne 213                APP_ETIQUETTE_DOSSIER=1
+   affaire_ledger.py l. 2709     rpc/app_poser_etiquettes_dossier
+   affaire_ledger.py l. 1216     « APP_ETIQUETTE_DOSSIER=1 le run appelle ... »
+```
+
+⛔ La fiche memoire `etiquette-dossier-posee-mais-pas-branchee` etait **PERIMEE**,
+chiffre compris (31 151 contre 31 352). Corrigee le 16/11.
+
+#### ⛔⛔ LA REPONSE A SA QUESTION : OUI, LE GEL EST LE SEUL PONT -- ET C'EST SA DECISION
+
+La place existe dans le classeur : **colonne A, `affair_uuid`, vide sur 4 778 lignes**
+(une seule cellule remplie, un « E » ligne 77), et A4bis l'appelle « une place qui
+nous attend ». Mais :
+
+```
+A  | affair_uuid | ON NE TOUCHE PAS. Laissee vide volontairement.
+   | decide le 05/11/2026 par Frederic : « Pour l'instant on la laisse vide
+   |   c'est a l'etape B pour l'instant on ecrit rien dans le classeur »
+   | motif : le pont existe deja par « ID Unique » ;
+   |   UN SECOND PONT SERAIT UNE OCCASION DE DIVERGENCE
+   | ⛔ NE PAS la remplir « parce qu'elle est vide »
+```
+
+Et **D2** recommandait : « oui, mais APRES V1, et en phase B. Le lien vit d'abord
+CHEZ NOUS. » → **ce n'est donc pas un trou, c'est un choix date**, et le second pont
+est pret des deux cotes mais deliberement debranche.
+
+⚠ **UN CHIFFRE A RECONCILIER** : A13 parlait de **12 413** liens geles, la base en
+compte **12 595** (+182). C'est l'effet du re-gel additif du 13/11, pas une anomalie.
+
+#### ⚠ CE QUE SA QUESTION A FAIT DECOUVRIR : `payload_json` N'EST PAS PROTEGEE
+
+`transaction_origine` figure dans `COLONNES_QUE_LE_PUSH_N_ENVOIE_PAS` ;
+**`payload_json` NON** -- et c'est elle qui porte `classeur_id_unique`, la marque des
+195. J'ai suivi la chaine entiere plutot que de supposer :
+
+```
+   la descente refait la doublure __sb par un select=*   -> la marque DESCEND
+   26bis copie LES COLONNES COMMUNES                     -> payload_json TEXT existe
+                                                            en local (l. 263) : elle ENTRE
+   le push renvoie payload_json depuis le local          -> IDENTIQUE, rien n est perdu
+```
+
+⭐ **ELLE SURVIT** -- mais parce que la colonne existe des deux cotes, **pas** parce
+qu'une garde la protege. ➡ d'ou le **6e point a juger demain matin**, gratuit :
+*les 195 portent-elles toujours leur `classeur_id_unique` apres la nuit ?*
+
+#### ⛔ ET UNE TROUVAILLE QUI N'EST PAS DE CE CHANTIER -- RANGEE AILLEURS
+
+En balayant les lecteurs de C3 j'ai trouve un desaccord entre `assistant.ts`
+(`transactionPourLien`, lot 3b du 16/11) et le registre sur l'annee d'une chaine :
+**1 814 chaines sur 11 383 (15,9 %)**, dont 608 par `date_acte` et 1 206 par le jour
+vrai de l'offre (partition propre). **FREDERIC, 16/11 : « cela n'a rien a voir c'est
+un autre chantier. »** ➡ ecrit dans `notice/PROJET_ASSISTANT_IA_RESERVES.md`,
+**non traite ici**, deux decisions en attente.
+
+---
+
 ### ✅⭐⭐⭐ L'ETAT DU CHANTIER AU 16/11/2026 AU SOIR -- TOUT EST MESURE
 
 **Demande de Frederic** : « beaucoup de choses ont ete faites ou notees sans mettre a
@@ -2729,6 +3020,13 @@ C1 ✅  3.2bis LA CHARGE -- POSEE. Mesure en base le 16/11 : les 16 lignes sont
 C2 ⬜  3.3 LOT A : 303 commissions (1 886 204 EUR, dont 77 lignes 2026 pour
        539 070 EUR) + 10 dates de case vide. En CLASSE A. Les 24 « zeros deguises »
        (217 250 EUR) comptent comme des vides -- un zero n'est pas une saisie.
+C3 ✅✅ FAIT LE 16/11 -- 450 DATES POSEES, 12 controles justes. BALAYAGE DE SES LECTEURS FAIT (16/11) : en base, AUCUNE vue, AUCUNE fonction,
+   AUCUN declencheur ne lit `date_annulation_app` ni `motif_annulation_app`.
+   Les deux seuls lecteurs sont dans l'ASSISTANT (assistant_objets.py:276 et
+   assistant.ts:164) -- autre chantier. ⚠ En face : 3 836 affaires annulees sans
+   date (1 425 compromis cancelled + 2 411 offres refused), dont 1 296 RELIEES au
+   gel, donc atteignables par Z. date_annulation_app et motif_annulation_app sont
+   VIDES sur toute la table (0 et 0).
 C3 ⬜  3.3ter Z : 896 dates d'annulation dans date_annulation_app, DEJA PRETE.
        En face : 3 705 affaires `cancelled`/`refused` qui ne disent pas QUAND.
        ⭐ ET LES MOTIFS : F du classeur en porte (retractation 129, pret refuse
