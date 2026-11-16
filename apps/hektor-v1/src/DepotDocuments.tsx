@@ -138,6 +138,10 @@ export function DepotDocuments({
   const [bande, setBande] = useState(false)
   const [lot, setLot] = useState<string[]>([])
   const fenetreRef = useRef<HTMLElement | null>(null)
+  // H4 : les vignettes des pages photographiées -- des adresses LOCALES (rien ne part), rendues dès que les photos
+  // sont assemblées ou annulées
+  const vignettesPages = useMemo(() => pages.map((f) => URL.createObjectURL(f)), [pages])
+  useEffect(() => () => vignettesPages.forEach((u) => URL.revokeObjectURL(u)), [vignettesPages])
 
   useEffect(() => {
     let annule = false
@@ -582,9 +586,9 @@ export function DepotDocuments({
       />
     </label>
   )
-  const photographier = (classe: string) => (
+  const photographier = (classe: string, libelle = 'Photographier une page') => (
     <label className={`${classe} ged-depot-camera`}>
-      Photographier une page
+      {libelle}
       <input
         key={`c-${versionInput.current}`}
         type="file"
@@ -784,6 +788,44 @@ export function DepotDocuments({
           </button>
           <button className="dd-lien" type="button" disabled={assemblage} onClick={() => setPages([])}>Annuler les photos</button>
         </div>
+      ) : null}
+
+      {/* H4 (16/11, planche « Téléphone ») : au téléphone, les pages photographiées montent dans un panneau du bas -- les
+          vraies vignettes, l'éclair au retour de l'appareil, « Ajouter une page (le verso) ». Mêmes gestes que la bande
+          ci-dessus (masquée sous 760 px) : l'appareil photo du téléphone, « Faire un PDF », « Annuler les photos ». */}
+      {pages.length ? createPortal(
+        <div className="dd-feuille-voile">
+          <section className="dd-feuille" role="dialog" aria-modal="true" aria-labelledby={`${idTitre}-photo`}>
+            <span className="dd-feuille-poignee" aria-hidden="true" />
+            <header className="dd-hd dd-feuille-hd">
+              <div className="dd-hd-t">
+                <p>{dossier.titre_bien}</p>
+                <h2 id={`${idTitre}-photo`}>Photographier une page</h2>
+              </div>
+            </header>
+            <div className="dd-feuille-c">
+              <p className="dd-feuille-t">{`${pages.length} page${s(pages.length)} : un seul document`}</p>
+              <div className="dd-vignettes">
+                {vignettesPages.map((u, i) => (
+                  <span key={u} className="dd-vp">
+                    <img src={u} alt={`Page ${i + 1}`} onError={(e) => { e.currentTarget.style.visibility = 'hidden' }} />
+                    <b>{i + 1}</b>
+                  </span>
+                ))}
+              </div>
+              <p className="dd-feuille-note">Le recto, puis le verso : chaque photo devient une page du même PDF.</p>
+            </div>
+            <footer className="dd-feuille-pied">
+              {photographier('dd-b2', 'Ajouter une page (le verso)')}
+              <button className="dd-b1" type="button" disabled={assemblage} onClick={() => void assemblerPages()}>
+                {assemblage ? 'Assemblage…' : `Faire un PDF de ${pages.length} page${s(pages.length)}`}
+              </button>
+              <button className="dd-lien" type="button" disabled={assemblage} onClick={() => setPages([])}>Annuler les photos</button>
+            </footer>
+            <span key={pages.length} className="dd-flash" aria-hidden="true" />
+          </section>
+        </div>,
+        document.body,
       ) : null}
 
       {types === null ? <p className="ged-depot-note">Chargement des types…</p> : null}

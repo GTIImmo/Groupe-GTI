@@ -64,6 +64,13 @@ const rm = fs.readFileSync(path.join(__dirname, 'src/RecuManque.tsx'), 'utf8')
 voir(/onResultat\?\.\(\{ moment: resultat\.moment, nonTrouvees: resultat\.pieces\.filter\(\(l\) => l\.etat === 'non_trouve'\)\.map\(\(l\) => l\.libelle\) \}\)/.test(rm) && /onResultat=\{setContexteDepot\}/.test(app),
   'H2 : les pièces non trouvées de la fenêtre sont celles du « Dossier » (une seule lecture)')
 voir(!/\babsente?s?\b|\bmanque\b/i.test(depot.slice(depot.indexOf('// D\'où vient le type'))), 'TÉMOIN : le rendu dit « non trouvée », jamais « absente » ni « manque »')
+// habillage H4 (16/11) : au téléphone, les pages photographiées montent dans un panneau du bas
+const feuille = depot.slice(depot.indexOf('{pages.length ? createPortal('), depot.indexOf('{types === null ?'))
+voir(feuille.length > 300 && /onClick=\{\(\) => void assemblerPages\(\)\}/.test(feuille) && /onClick=\{\(\) => setPages\(\[\]\)\}/.test(feuille) && /photographier\('dd-b2', 'Ajouter une page \(le verso\)'\)/.test(feuille),
+  'H4 : le panneau du téléphone garde LES MÊMES gestes (l\'appareil photo du téléphone, « Faire un PDF », « Annuler les photos »)')
+voir(!/getUserMedia|mediaDevices|fetch\(|\.rpc\(|createUpload/.test(feuille + depot.slice(depot.indexOf('const vignettesPages'), depot.indexOf('const vignettesPages') + 400)),
+  'TÉMOIN : pas de viseur dans l\'app (décision du 16/11 : « A » seul), et les vignettes ne partent nulle part')
+voir(/useEffect\(\(\) => \(\) => vignettesPages\.forEach\(\(u\) => URL\.revokeObjectURL\(u\)\), \[vignettesPages\]\)/.test(depot), 'H4 : les adresses locales des vignettes sont rendues (pas de fuite de mémoire)')
 // vu en production le 16/11 : « 1 document ne est pas parti » (le gabarit ne savait pas élider)
 voir(!/\bne \$\{|\bne est\b/.test(depot) && /'1 document n\\'est pas parti\.'/.test(depot) && /' L\\'envoyer avant de fermer \?'/.test(depot),
   'H2 : la bande parle français au singulier (« n\'est pas parti », « L\'envoyer »)')

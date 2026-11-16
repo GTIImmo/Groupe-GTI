@@ -2294,3 +2294,14 @@ l'écran (`scrollIntoView` « au plus près » : au bureau, où il est à côté
 avant le clic (à 1 174 px pour un cadre de 776), l'aperçu ramené à l'écran après (338 -> 773 px), page dessinée ; bureau
 -- le bloc ne bouge pas (128 px avant et après), l'aperçu s'affiche à côté. ➡ **H3 EST FINI.** Reste H4 (téléphone :
 photographier recto puis verso).
+
+**H4 (le téléphone) : la planche mêlait l'habillage du geste photo et un VISEUR DANS L'APP (caméra en direct, détection
+de la page) -- une fonction neuve (accès caméra du navigateur, détection d'image, iPhone/Android). Frédéric (16/11) :
+« Oui A » -- l'habillage seul, PAS de viseur.** ✅ **ÉCRIT — rien poussé** (`DepotDocuments.tsx/.css`) : au téléphone
+(sous 760 px), dès la première photo, les pages montent dans un PANNEAU DU BAS (poignée, en-tête sombre « Photographier
+une page »), avec les VRAIES vignettes numérotées qui tombent à leur place, l'éclair blanc au retour de l'appareil,
+« N pages : un seul document », et les MÊMES gestes : « Ajouter une page (le verso) » (l'appareil photo du téléphone,
+comme aujourd'hui), « Faire un PDF de N pages », « Annuler les photos ». Au-delà de 760 px, rien ne change (la bande de la
+fenêtre). Les vignettes sont des adresses locales, rendues après usage. Essai `test_ged_depot` 29 -> 32 (mêmes gestes ;
+TÉMOIN : ni viseur ni envoi) ; les 12 essais GED verts, build vert. ⚠ PAS VU : à éprouver après le push dans le cadre de
+390 px, avec une photo glissée dans la page seulement (rien n'est envoyé sans « Faire un PDF » puis « Envoyer »).

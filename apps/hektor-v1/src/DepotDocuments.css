@@ -265,3 +265,37 @@
 @media (prefers-reduced-motion: reduce) {
   .dd-voile, .dd, .dd *, .dd *::before, .dd *::after { animation: none !important; transition: none !important; }
 }
+
+/* ── Habillage H4 (16/11, planche « Téléphone ») : les pages photographiées montent dans un panneau du bas, au
+   téléphone seulement (au-delà de 760 px, la bande « N pages photographiées » de la fenêtre reste la seule). */
+@keyframes dd-monte { from { transform: translateY(100%); } to { transform: none; } }
+@keyframes dd-tombe { from { opacity: 0; transform: translateY(-40px) scale(1.25) rotate(-4deg); } to { opacity: 1; transform: none; } }
+@keyframes dd-eclair { 0% { opacity: 0.95; } 100% { opacity: 0; } }
+.dd-feuille-voile { display: none; }
+@media (max-width: 760px) {
+  .dd-pages { display: none; }
+  .dd-feuille-voile { position: fixed; inset: 0; z-index: 3100; display: flex; align-items: flex-end; background: rgba(31, 33, 33, 0.55); animation: dd-voile 200ms ease-out both; }
+}
+.dd-feuille { position: relative; display: flex; flex-direction: column; width: 100%; max-height: 94dvh; overflow: hidden; border-radius: 24px 24px 0 0; background: #f7f8f8; color: #1f2121; font-family: 'Hanken Grotesk', 'Segoe UI', system-ui, sans-serif; font-size: 15px; line-height: 1.4; animation: dd-monte 420ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.dd-feuille *, .dd-feuille *::before, .dd-feuille *::after { box-sizing: border-box; }
+.dd-feuille button, .dd-feuille input { font: inherit; }
+.dd-feuille :focus-visible { outline: 3px solid rgba(197, 0, 95, 0.55); outline-offset: 2px; }
+.dd-feuille-poignee { position: absolute; top: 7px; left: 50%; z-index: 1; width: 42px; height: 5px; margin-left: -21px; border-radius: 9px; background: rgba(255, 255, 255, 0.35); }
+.dd-hd.dd-feuille-hd { padding: 18px 18px 10px; }
+.dd-feuille-hd h2 { font-size: 17px; }
+.dd-feuille-c { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; overflow: auto; }
+.dd-feuille-t { margin: 0; font-size: 13.5px; font-weight: 700; }
+.dd-vignettes { display: flex; flex-wrap: wrap; gap: 10px; }
+.dd-vp { position: relative; display: block; width: 72px; height: 96px; overflow: hidden; border-radius: 8px; background: #f1efe9; box-shadow: 0 0 0 1px #e1e3e4; animation: dd-tombe 460ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.dd-vp img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.dd-vp b { position: absolute; right: 4px; bottom: 4px; padding: 0 5px; border-radius: 6px; background: rgba(255, 255, 255, 0.9); color: #3a3d3e; font-size: 11px; }
+.dd-feuille-note { margin: 0; color: #5c6163; font-size: 13px; }
+.dd-feuille-pied { flex: none; display: flex; flex-direction: column; gap: 8px; padding: 10px 16px 26px; border-top: 1px solid #e7e9ea; background: #ffffff; }
+.dd-feuille-pied .dd-b1, .dd-feuille-pied .dd-b2 { width: 100%; min-height: 52px; border-radius: 14px; font-size: 16px; font-weight: 800; }
+.dd-feuille-pied label.dd-b2 > input[type='file'] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.dd-feuille-pied .dd-lien { align-self: center; padding: 6px 0; color: #5c6163; font-size: 14px; }
+.dd-flash { position: absolute; inset: 0; z-index: 2; background: #ffffff; pointer-events: none; animation: dd-eclair 420ms ease-out both; }
+@media (prefers-reduced-motion: reduce) {
+  .dd-feuille-voile, .dd-feuille, .dd-feuille * { animation: none !important; transition: none !important; }
+  .dd-flash { display: none; }
+}
