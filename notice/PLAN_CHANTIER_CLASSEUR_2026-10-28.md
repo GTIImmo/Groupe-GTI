@@ -195,7 +195,8 @@ A2 ✅  FAIT -- pose le 15/11, JUGE le 16/11 au matin (1 . 340 . 30 817, voir
        numero Hektor, sur un bien NON VIVANT. Mesure au matin **sur LES DEUX
        bases** (Supabase ET phase2.sqlite). ⛔ OBLIGATOIRE : aucune ligne de la
        plage n'a jamais vecu sans numero Hektor, et 3 ont disparu sans trace.
-A3 ✅  MESUREE LE 16/11 PAR A1 : le Sheet porte 4 790 lignes et 38 colonnes lues,
+A3 ✅  MESUREE LE 16/11 : le Sheet porte **4 791** lignes au soir (4 790 le matin,
+       4 789 la veille -- il GROSSIT d une a deux lignes par jour) et 38 colonnes lues,
        donc 1 210 de marge sous 6000, et AL est bien la derniere colonne.
        ⚠ MAIS L AUDIT DU SOIR A TROUVE AUTRE CHOSE : 4 790 au Sheet contre
          4 773 dans app_classeur_ligne_id -> 17 LIGNES ABSENTES de notre base.
@@ -214,7 +215,9 @@ A5 ⬜  MESURE DU 16/11 : **967**, et non 1 062 -- dont **311 sans vente NI
        compromis**. Le chiffre du plan datait d'un etat anterieur.
        LES LIGNES SANS ROLE 'vente' -- prealable de 3.4 : ou va la valeur
        de Y / AA quand la transaction qui devrait la porter n'existe pas ?
-A6 ⬜  MESURE DU 16/11 : **85 non rattachees CONFIRMEES**, + **17 ABSENTES** de
+A6 ⬜  MESURE DU 16/11 AU SOIR : **85 non rattachees** + **18 ABSENTES** (4 773 en
+       base contre 4 791 au Sheet -- c'etait 17, le Sheet a gagne une ligne dans la
+       journee). Ancienne mesure : **17 ABSENTES** de
        app_classeur_ligne_id (4 773 en base contre 4 790 au Sheet) = **102**.
        ⛔ Les 17 n'etaient nulle part au plan. Et le rapport du gel compte 87
          non rattachees la ou la base en compte 85 : ecart de 2, non explique.
@@ -2510,6 +2513,108 @@ l'etat d'une autre transaction) ; ce balayage-ci, fait avec le critere « compro
 trouve un 7e qui se declenche sur `state` ET sur l'ABSENCE de numero. **Chaque famille
 demande son propre balayage, et il se fait AVANT de generer le patch.**
 
+### ✅⭐⭐⭐ AUDIT DES GESTES RESTANTS ET L'ORDRE LOGIQUE -- 16/11 AU SOIR
+
+Demande par Frederic : « il faut faire ces gestes mais aussi mettre d'abord a jour le
+plan du chantier et faire un audit des gestes restants de maniere logique ».
+**Chaque chiffre ci-dessous est mesure en base ce soir, aucun ne vient d'un souvenir.**
+
+#### L'ETAT REEL DE CHAQUE CASE CIBLE
+
+```
+   C3   date_annulation_app          450 / 31 352   ✅ POSEE le 16/11
+   C3bis motif_annulation_app          0            ⬜ sa source est F -> depend de C4
+   C8   vente_reglee_app (Y)           0            ⬜ 3 756 au classeur, DONT 794 NON-DATES
+   C8   numero_facture_app (AA)        0            ⬜ 3 741 au classeur
+   C9   app_classeur_avis (AH AI AJ)   0            ⬜ table VIERGE, creee par B1
+   C9   numero_mandat_app (C)          0            ⬜ 33 recycles au classeur
+   C4   app_affaire_condition (F)      5            ⬜ 3 099 cellules MIXTES au classeur
+   C4   app_affaire_note (G)         204            ⬜ 4 131 commentaires au classeur
+   C1   app_mandat_champ_app         853 origine 'classeur'  ✅ POSEE le 14/11, confirmee
+   C5   transaction_origine          195            ✅ POSEES le 16/11
+   D1   app_classeur_lien         12 595            (le gel ; A13 disait 12 413, +182 au re-gel)
+   A6   app_classeur_ligne_id      4 773 / 4 791 au Sheet -> **18 ABSENTES**
+```
+
+⚠ **UN FAUX ECART QUE J'AI FABRIQUE PUIS CORRIGE DANS LA MINUTE** : j'ai d'abord mesure
+C1 sur `charge_commission_app` (7 lignes) et failli crier a l'ecart avec les 16 du plan.
+**La charge ne vit pas la** : elle est dans `app_mandat_champ_app`, 853 lignes
+`origine = 'classeur'` -- exactement ce que le plan dit. **Mesurer la mauvaise colonne
+fabrique une alerte, pas une mesure.**
+
+#### ⛔⛔ LA TROUVAILLE DE CET AUDIT, ET ELLE DECIDE D'UN ORDRE
+
+`app_affaire_note` porte **195 lignes `origine = 'classeur'`** : ce sont les notes
+d'acquereur posees avec les 195 transactions, le 16/11. Et **C4 doit y poser les 4 131
+commentaires de G avec la MEME valeur d'origine.**
+
+➡ **Sans origine distincte, les deux lots deviennent indiscernables** -- et un retour
+arriere sur l'un emporterait l'autre. C'etait une reserve declaree hier « distinguables
+par leur texte, mais fragile » ; elle est maintenant **chiffree**.
+⭐ **LE PREALABLE DE C4** : poser les commentaires de G sous une origine propre
+(`classeur:G`), ou marquer les 195 avant. **A trancher AVANT C4, jamais apres.**
+
+#### ⭐⭐⭐ L'ORDRE LOGIQUE, ET SON CRITERE
+
+Le critere n'est pas « du plus facile au plus dur ». C'est : **ce qui dit ce que les
+autres ne verront pas passe d'abord ; ce qui a un prealable non tranche passe en
+dernier.**
+
+```
+①  A6   LES 18 LIGNES ABSENTES ET LES 85 NON RATTACHEES
+       Lecture seule, gratuit. ⭐⭐ ET C'EST LUI QUI DOIT OUVRIR : il dit ce que
+       C8 et C9 NE VERRONT PAS. Rapatrier d'abord, puis decouvrir que 18 lignes
+       du Sheet n'ont jamais eu de place chez nous, c'est rapatrier avec un trou
+       et ne le savoir qu'apres.
+
+②  C9   AH AI AJ -> app_classeur_avis, et C -> numero_mandat_app
+       Table VIERGE (0 ligne), colonnes vierges, valeurs BRUTES, aucun piege de
+       format connu. Le meme patron que C3, qui vient de marcher.
+       ⚠ les 33 numeros de mandat du classeur sont RECYCLES a charges divergentes
+         (commentaire de la colonne 53) -> ne pas les traiter en bloc.
+
+③  C8   Y ET AA -- les deux plus gros postes
+       ⛔⛔ LE PIEGE EST CONNU ET MESURE : Y porte 794 NON-DATES sur 3 756 (21 %),
+         du genre « 29 decembre23 ». C'est exactement ce qui a fait perdre 924
+         lignes EN SILENCE le 14/11. `date_du_classeur_tolerante` est OBLIGATOIRE,
+         et la colonne est en TEXT pour cette raison precise (decision de A1).
+
+④  A5   967 lignes sans role vente, dont 311 sans vente NI compromis
+       Lecture seule. Elle eclaire ce qui reste vraiment hors de portee.
+
+⑤  C4   F ET G -- mais SON PREALABLE D'ABORD (l'origine distincte, ci-dessus),
+       et sa decision sur F (« en bloc » emporterait 1 536 « V » et 753 pastilles).
+       ➡ C3bis (les motifs) EN DEPEND : elle ne peut pas passer avant.
+
+⑥  B2 B3  LES DEUX SENTINELLES -- apres A6 et C4, parce qu'une sentinelle qui
+       surveille un perimetre encore mouvant crie pour rien.
+
+⑦  SES DECISIONS, aucune prise : C2 (303 commissions) · C6 (26 ventes en conflit)
+       · C7 (2 303 ecarts « Vente Prevue », decidee « tout », on ecrase) · C10 (AF
+       prix : on LISTE, on n'ecrit rien) · le reste de C5 (10 anciennes + 24
+       compromis « en attente » + 33 ventes « Vente fixee », arrets volontaires).
+
+⑧  LES DEVELOPPEMENTS : la SAISIE DE LA DATE A L'ANNULATION (nee de C3 ce soir,
+       demandee par lui) · D2 (la porte sans ecran) · D1 (le re-gel additif, 6 lignes).
+
+⑨  SON GESTE : D3 / 5.1 -- lire les Apps Script du classeur (verrou V1), 10 min.
+       Et les 14 lignes a verifier a la main dans Hektor
+       (notice/A_VERIFIER_DANS_HEKTOR_2026-11-16.csv, les 3 plus anciennes d'abord).
+```
+
+#### ⚠ LES DEUX DEFAUTS DU PLAN QUE CET AUDIT A CORRIGES
+
+```
+1  DEUX lignes C3 cohabitaient : la mienne, cochee, et l'ancienne restee ⬜.
+   ⭐ Et ce n'etait pas qu'un doublon : l'ancienne portait LES MOTIFS, que C3
+     n'a PAS faits. Elle devient C3bis, et elle reste ouverte.
+2  A6 annonçait 17 absentes ; elles sont 18 (4 773 contre 4 791). Le Sheet a
+   gagne une ligne dans la journee -- d'ou la regle : un ecart avec le Sheet se
+   REMESURE le jour ou on l'utilise, il ne se recopie pas.
+```
+
+---
+
 ### ✅⭐⭐⭐ C3 EST FAIT -- 450 DATES D'ANNULATION POSEES LE 16/11
 
 **LA REGLE, DE FREDERIC** : « La date d'annulation dans le Sheet represente la date
@@ -3027,11 +3132,13 @@ C3 ✅✅ FAIT LE 16/11 -- 450 DATES POSEES, 12 controles justes. BALAYAGE DE SE
    date (1 425 compromis cancelled + 2 411 offres refused), dont 1 296 RELIEES au
    gel, donc atteignables par Z. date_annulation_app et motif_annulation_app sont
    VIDES sur toute la table (0 et 0).
-C3 ⬜  3.3ter Z : 896 dates d'annulation dans date_annulation_app, DEJA PRETE.
-       En face : 3 705 affaires `cancelled`/`refused` qui ne disent pas QUAND.
-       ⭐ ET LES MOTIFS : F du classeur en porte (retractation 129, pret refuse
-       107) -> motif_annulation_app a une source, contrairement a ce que dit son
-       commentaire dans le code.
+C3bis ⬜ LES MOTIFS D'ANNULATION -- LA SECONDE MOITIE DE C3, PAS FAITE.
+       `motif_annulation_app` = 0 sur 31 352 (mesure du 16/11 au soir).
+       ⭐ SA SOURCE EST F, et le commentaire du code se trompe en disant
+         qu'elle n'en a aucune (retractation 129, pret refuse 107).
+       ⛔ MAIS F EST MIXTE (A1 : 3 099 cellules -- des « V », des pastilles,
+         et 810 textes seulement) -> ELLE DEPEND DONC DE C4, qui tranche F.
+       ⚠ NE PAS la cocher avec C3 : Z est faite, les motifs ne le sont pas.
 C4 ⬜  F ET G dans leurs cases existantes (apres A1, qui dira le volume) :
        F -> app_affaire_condition, G -> app_affaire_note, origine « classeur ».
        ⛔ F et G se reprennent EN BLOC, SANS INTERPRETER -- sa consigne.
@@ -3084,7 +3191,8 @@ C7 ⬜  3.3bis V « Vente Prevue » : 2 303 ecarts + 21, decidee « tout », on 
        classeur tombe plus pres du reel 1 402 fois contre 714. -> SA DECISION.
        ⚠ Ne jamais arbitrer V par W : les deux sortent du MEME classeur (accord
          circulaire -- l'erreur que j'ai faite et rattrapee le 15/11).
-C8 ⬜  3.4 Y ET AA remplis : 3 735 + 3 719 valeurs, les DEUX plus gros postes du
+C8 ⬜  3.4 Y ET AA : **3 756 + 3 741** valeurs (A1 du 16/11 ; le plan disait
+       3 735 + 3 719), les DEUX plus gros postes du
        chantier, et les deux sans aucune case aujourd'hui. Apres B1 et A5.
 C9 ⬜  3.5 AH AI AJ (apres B1) + C le numero de mandat (33 au classeur, ~9 utiles).
        ⚠ AH et AJ se contredisent sur 229 lignes -- a reprendre tels quels.
