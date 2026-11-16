@@ -433,4 +433,54 @@ Par son Chrome et sa session, comme au §17. File du worker vide au départ.
 **Ce que ça pourrait casser ailleurs** : rien à l'écran (le geste de l'écran, `handleExitDraftAnnonce`, n'est pas touché). Aucune carte de ce type n'a jamais été proposée (mesuré : 0 dans `app_assistant_action`) ; une carte d'un geste disparu est de toute façon refusée au clic (403, `GESTES.get` dans la route `valider`).
 
 **Contrôle hors ligne** : 144 + 59 + 73 verts, 0 rouge. Témoin inverse : le contrôle d'absence, joué sur la version d'avant (`git archive HEAD`), est ROUGE (20 gestes). ✅
-**Pas fait, attend son accord** : commit et push (Render se redéploie seul) ; il n'y a rien à redémarrer (pas de worker).
+✅ **EN LIGNE le 15/11** (son « Oui ») : commit `4e8acd0`, poussé seul (rien d'une autre session dessous) ; Render le rend à 20:41 UTC (`/health` → `4e8acd0354a2`). Rien à redémarrer (pas de worker).
+
+## 23. Audit du lot 2c (17/11, sur « finissons l'étape 3 les gestes laissés de côté ») — rien codé
+
+> Audit LIMITÉ à deux objets : le CONTACT (créer) et la RECHERCHE (créer, modifier). Les autres objets ne sont pas
+> mesurés ici (3c et vague C viendront après).
+
+**Créer un contact — ce que fait l'écran** (`App.tsx` ~43472, modale « Nouveau contact », `createHektorContactJob`,
+`api.ts:11745`) :
+- deux étapes : l'identité, puis selon le genre une RECHERCHE (acquéreur) ou un BIEN (propriétaire : rattacher une annonce) ;
+- contrôles : nom (raison sociale + forme juridique pour une société ; nom du conjoint pour un couple), e-mail OU
+  téléphone, le compte du négociateur qui portera le contact ; pour la recherche : un type, une commune, un budget max ;
+- DOUBLONS : `findContactDuplicateCandidates` (même e-mail, ou même téléphone) ; s'il en trouve, l'écran les montre et
+  il faut cliquer « Continuer malgré doublon » ;
+- base : `app_create_contact_optimistic` CONTRÔLE l'appelant (`app_console_can_request_contact_job`, refus
+  `forbidden_create_contact`) ; la fiche est écrite chez nous à l'instant avec NOTRE numéro (≥ 20 000 000), le worker
+  la crée chez Hektor puis enchaîne la recherche (`contact_next_step`) ou le lien au bien.
+- Usage 90 j : 37 créations (36 Frédéric, 1 Franck) ; 6 avec une recherche, 16 avec un bien, 9 partenaires, 4 couples.
+
+**Créer une recherche** (`ContactSearchModal.tsx:91` → `app_create_search_optimistic`) : ligne provisoire + travail
+pour Hektor ; contrôles type, commune, budget max. ⚠ Une recherche née chez nous n'a sa vraie clé qu'après Hektor et la
+descente de nuit (mémoire `creer-une-recherche-passe-par-hektor`) : elle n'entre dans les rapprochements qu'ensuite.
+Usage 90 j : 4 ajouts (Frédéric).
+**Modifier une recherche** (`ContactSearchModal.tsx:71` → `app_edit_search_optimistic`) : écrit chez nous à l'instant
+(rapprochement recalculé), Hektor suit 10 min après ; budget, communes, types, surfaces, rayon (0-40 km). Le ciblage
+de la 2e recherche est réparé depuis le 27/10 (`319e1e4`).
+
+**Pièges connus à respecter** : la commune (sans identifiants de commune résolus, Hektor perd ville et code postal —
+leçon du 22/10) ; les partenaires se CHOISISSENT dans le catalogue avec leur métier (décision du 06/11) ; un doublon
+ne se crée pas en silence.
+
+**Proposition** : 3 cartes — créer un contact (personne seule ou couple, acquéreur ou propriétaire ; avec, au choix,
+sa première recherche), ajouter une recherche à un contact, modifier une recherche. Le doublon est cherché AVANT la
+carte et affiché dessus. Hors 2c : sociétés et partenaires (catalogue), rattacher un bien au propriétaire (vague B).
+
+## 24. Lot 2c codé (17/11, sur son « Vas y ») — en local, pas poussé, pas éprouvé en réel
+
+Trois cartes dans `backend/app/services/assistant_gestes.py` (section « LOT 2c »), mêmes fonctions de la base que l'écran :
+- **creer_contact** → `app_create_contact_optimistic` : personne seule ou couple, acquéreur ou propriétaire, avec (acquéreur)
+  sa première recherche (`contact_next_step`, forme de `contactSearchValueToInput`). Le compte = l'e-mail de la personne,
+  posé au CLIC par le serveur (prouvé possible le 03/11, travail 8809f207). E-mail RGPD : demandé, dit sur la carte.
+- **ajouter_recherche** → `app_create_search_optimistic` (ligne provisoire dans les formes de l'écran + travail).
+- **modifier_recherche** → `app_edit_search_optimistic` : seuls les critères donnés changent ; TOUT le reste relu et
+  renvoyé (types, surfaces, équipements, DPE, marge) ; refusé au clic si la recherche a changé depuis la carte.
+  ⚠ Écart voulu : l'écran remplace un prix vide par 120 000 / 250 000 ; l'assistant garde le vide.
+- Garde-fous : commune vérifiée contre son code postal (geo.api.gouv.fr, le service de l'écran ; en panne = la carte le
+  dit) ; doublons (même e-mail / téléphone) montrés AVANT la carte et re-cherchés au clic ; ni société ni partenaire.
+- Consignes du modèle mises à jour (`assistant_service.py`).
+- Essais : 175 + 59 + 73 verts ; 3 témoins inverses ROUGES (commune non vérifiée, doublons non cherchés, compte d'un autre).
+- ⏳ Reste : pousser (son accord), puis la preuve réelle sur un contact d'essai (son accord) : créer un contact d'essai
+  avec une recherche, ajouter une recherche, en modifier une, relire chez Hektor ; archiver le contact d'essai à la fin.

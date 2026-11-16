@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import re
+import unicodedata
+import uuid
 from datetime import date, datetime, timedelta, timezone
 from typing import Any, Callable
 from zoneinfo import ZoneInfo
@@ -1290,6 +1292,446 @@ def executer_portail(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[str, Any
             "resume_reporte": reporte}
 
 
+# ── LOT 2c (17/11/2026) : créer un contact, ajouter une recherche, modifier une recherche ──
+# Note : notice/ETAPE3_AGENT_QUI_AGIT_AUDIT_2026-11-13.md §23-24. Les MÊMES fonctions de la base que l'écran :
+#   app_create_contact_optimistic (modale « Nouveau contact », App.tsx:43554 → api.ts:11774), qui contrôle l'appelant ;
+#   app_create_search_optimistic (ContactSearchModal.tsx:91 → api.ts:11077) ; app_edit_search_optimistic
+#   (ContactSearchModal.tsx:71 → api.ts:11145).
+# ⛔ LA COMMUNE : sans commune reconnue, Hektor perd la ville et le code postal (leçon du 22/10). On exige un code
+#   postal et une ville qui en fait partie, vérifiée au service de l'écran (geo.api.gouv.fr, fetchCommunesForPostalCode,
+#   api.ts:5010). Service en panne : on ne bloque pas (l'écran non plus) et la carte le dit.
+# ⛔ UN DOUBLON NE SE CRÉE PAS EN SILENCE : même recherche que l'écran (findContactDuplicateCandidates, api.ts:11927 :
+#   même e-mail ou même téléphone) ; s'il en trouve, il faut redemander avec doublon_accepte (le « Continuer malgré
+#   doublon » de l'écran), et la carte le dit.
+# ⛔ Le contact naît au nom de la personne qui parle (son e-mail, posé par le serveur ; prouvé le 03/11 : travail
+#   8809f207 créé chez Hektor avec ce seul e-mail). Pas de société ni de partenaire (le catalogue des métiers, décision
+#   du 06/11), pas de rattachement à un bien (geste de l'annonce).
+# ⚠ Une recherche créée n'entre dans les rapprochements qu'après Hektor et la descente de nuit (mémoire du 16/10).
+TYPES_RECHERCHE = {
+    "1": "Maison", "2": "Appartement", "4": "Studio", "18": "Duplex", "39": "Maison de village", "25": "Villa",
+    "5": "Terrain", "21": "Immeuble", "43": "Terrain à bâtir", "44": "Terrain agricole", "45": "Terrain de loisir",
+    "22": "Propriété", "10": "Mas", "11": "Bastide", "30": "Ferme", "28": "Château", "17": "Chalet", "31": "Loft",
+    "41": "Triplex", "27": "Rez-de-villa", "26": "Rez-de-jardin", "16": "Parking", "15": "Garage", "29": "Cave",
+    "24": "Cabanon", "20": "Autre",
+}  # = TYPE_MAIN + TYPE_MORE de ContactSearchFields.tsx
+OFFRES_RECHERCHE = {"achat": "0", "location": "2"}  # DEFAULT_OFFER_OPTIONS de l'écran (vente / location)
+CIVILITES = {"": None, "m.": "M.", "mme": "Mme."}   # les deux formes qu'envoie l'écran
+GENRES_CONTACT = {"acquereur": "acquéreur", "proprietaire": "propriétaire"}
+# critères relus pour qu'une modification ne perde rien de ce que l'écran garde (contactSearchValueFromSearch)
+EQUIPEMENTS_RECHERCHE = {
+    "garage_parking": "ITEM_GARAGE_PARKING", "terrasse": "ITEM_TERRASSE", "balcon": "ITEM_BALCON",
+    "piscine": "ITEM_PISCINE", "ascenseur": "ITEM_ASCENSEUR", "cheminee": "ITEM_CHEMINEE", "cave": "ITEM_CAVE",
+    "double_vitrage": "ITEM_DOUBLE_VITRAGE", "plain_pied": "ITEM_PLAIN_PIED", "grenier_comble": "ITEM_GRENIER_COMBLE",
+    "acces_handi": "ITEM_ACCES_HANDI", "terrain_constructible": "ITEM_TERRAIN_CONSTRUCTIBLE",
+    "terrain_arbore": "ITEM_TERRAIN_ARBORE", "terrain_piscinable": "ITEM_TERRAIN_PISCINABLE",
+    "terrain_viabilise": "ITEM_TERRAIN_VIABILISE",
+}
+_EMAIL = re.compile(r"[^@\s]+@[^@\s]+\.[^@\s]+")
+
+
+def _simple(texte: Any) -> str:
+    sans = unicodedata.normalize("NFKD", str(texte or "")).encode("ascii", "ignore").decode()
+    return re.sub(r"\s+", " ", re.sub(r"[-'’]", " ", sans)).strip().lower()
+
+
+def _communes_du_code_postal(cp: str) -> list[str] | None:
+    """Les communes d'un code postal (le service de l'écran). None = service injoignable."""
+    try:
+        r = requests.get("https://geo.api.gouv.fr/communes", params={"codePostal": cp, "fields": "nom", "format": "json"},
+                         timeout=6)
+        if not r.ok:
+            return None
+        return [str(ligne.get("nom") or "").strip() for ligne in (r.json() or []) if ligne.get("nom")]
+    except (requests.RequestException, ValueError):
+        return None
+
+
+def _commune(cp: Any, ville: Any) -> list[Any]:
+    """[code postal, ville telle que Hektor la connaît, vérifiée ?]"""
+    cp = re.sub(r"\s", "", str(cp or ""))
+    ville = str(ville or "").strip()
+    if not re.fullmatch(r"\d{5}", cp) or not ville:
+        raise Refus("Donne le code postal (5 chiffres) ET la ville : sans les deux, Hektor perd la ville.")
+    noms = _communes_du_code_postal(cp)
+    if noms is None:
+        return [cp, ville, False]
+    if not noms:
+        raise Refus(f"Le code postal {cp} ne correspond à aucune commune.")
+    for nom in noms:
+        if _simple(nom) == _simple(ville):
+            return [cp, nom, True]
+    raise Refus(f"{ville} n'est pas une commune du {cp} (communes du {cp} : {', '.join(noms[:12])}). "
+                "Hektor perdrait la ville : redemande avec la bonne.")
+
+
+def _communes(texte: Any) -> list[list[Any]]:
+    morceaux = [m.strip() for m in str(texte or "").split("|") if m.strip()]
+    if not morceaux:
+        raise Refus("Donne au moins une commune, « code postal ville », séparées par | (ex. 42700 Firminy).")
+    if len(morceaux) > 10:
+        raise Refus("10 communes au plus.")
+    lieux: list[list[Any]] = []
+    for morceau in morceaux:
+        cp = re.search(r"\d{5}", morceau)
+        if not cp:
+            raise Refus(f"« {morceau} » : il manque le code postal.")
+        lieux.append(_commune(cp.group(0), (morceau[:cp.start()] + " " + morceau[cp.end():]).replace(",", " ")))
+    return lieux
+
+
+def _types(texte: Any) -> list[str]:
+    par_libelle = {_simple(libelle): code for code, libelle in TYPES_RECHERCHE.items()}
+    codes: list[str] = []
+    for morceau in (m.strip() for m in str(texte or "").split("|")):
+        if not morceau:
+            continue
+        code = morceau if morceau in TYPES_RECHERCHE else par_libelle.get(_simple(morceau))
+        if not code:
+            raise Refus(f"Type de bien inconnu : « {morceau} ». Possibles : {', '.join(TYPES_RECHERCHE.values())}.")
+        if code not in codes:
+            codes.append(code)
+    if not codes:
+        raise Refus("Donne au moins un type de bien (ex. Maison|Appartement).")
+    return codes
+
+
+def _entier(valeur: Any, quoi: str, maxi: int = 100_000_000) -> int | None:
+    texte = re.sub(r"[\s €]", "", str(valeur or ""))
+    if not texte:
+        return None
+    if not texte.isdigit():
+        raise Refus(f"{quoi} : un nombre entier, sans texte (reçu « {valeur} »).")
+    nombre = int(texte)
+    if nombre > maxi:
+        raise Refus(f"{quoi} : {nombre} paraît faux.")
+    return nombre or None
+
+
+def _criteres(p: dict[str, Any]) -> dict[str, Any]:
+    """Les critères d'une NOUVELLE recherche, avec les garde-fous de l'écran (un type, une commune, un budget max)."""
+    offre = OFFRES_RECHERCHE.get(str(p.get("offre") or "achat").strip().lower())
+    if offre is None:
+        raise Refus("Offre : achat ou location.")
+    budget_min, budget_max = _entier(p.get("budget_min"), "Budget minimum"), _entier(p.get("budget_max"), "Budget maximum")
+    if not budget_max:
+        raise Refus("Donne le budget maximum : l'écran l'exige aussi.")
+    if budget_min and budget_min > budget_max:
+        raise Refus("Le budget minimum dépasse le maximum.")
+    return {"offre": offre, "types": _types(p.get("types")), "lieux": _communes(p.get("communes")),
+            "budget_min": budget_min, "budget_max": budget_max,
+            "surface_min": _entier(p.get("surface_min"), "Surface minimum", 100_000),
+            "terrain_min": _entier(p.get("terrain_min"), "Terrain minimum", 10_000_000),
+            "pieces_min": _entier(p.get("pieces_min"), "Pièces minimum", 50),
+            "chambres_min": _entier(p.get("chambres_min"), "Chambres minimum", 50),
+            "salles_de_bain_min": None, "dpe": None, "marge": None, "equipements": []}
+
+
+def _recherche_pour_hektor(c: dict[str, Any]) -> dict[str, Any]:
+    """La recherche dans la forme de l'écran (contactSearchValueToInput, puis hContactSearchPayload, api.ts:10933)."""
+    def texte(nombre: Any) -> str | None:
+        return str(nombre) if nombre else None
+    return {"kind": "search_criteria", "enabled": True, "offerCode": c["offre"], "propertyTypeIds": list(c["types"]),
+            "city": None, "postalCode": None,
+            "localities": [{"city": ville, "postalCode": cp} for cp, ville, _ in c["lieux"]],
+            "priceMin": str(c.get("budget_min") or 0), "priceMax": str(c["budget_max"]), "priceMargin": c.get("marge") or None,
+            "surfaceMin": texte(c.get("surface_min")), "landSurfaceMin": texte(c.get("terrain_min")),
+            "roomsMin": texte(c.get("pieces_min")), "bedroomsMin": texte(c.get("chambres_min")),
+            "bathroomsMin": texte(c.get("salles_de_bain_min")), "dpeLetter": c.get("dpe") or None,
+            "equipments": list(c.get("equipements") or []), "particulariteIds": []}
+
+
+def _libelles_types(codes: list[str], connus: dict[str, str] | None = None) -> list[str]:
+    connus = connus or {}
+    return [TYPES_RECHERCHE.get(code) or connus.get(code) or code for code in codes]
+
+
+def _dire_criteres(c: dict[str, Any], connus: dict[str, str] | None = None) -> str:
+    morceaux = [("achat" if c["offre"] == "0" else "location") + " : " + ", ".join(_libelles_types(c["types"], connus)),
+                ", ".join(f"{ville} ({cp})" for cp, ville, _ in c["lieux"])]
+    budget = f"jusqu'à {_euros(c['budget_max'])}" if c.get("budget_max") else "sans budget"
+    if c.get("budget_min"):
+        budget += f" (dès {_euros(c['budget_min'])})"
+    morceaux.append(budget)
+    for cle, unite in (("surface_min", " m² min"), ("terrain_min", " m² de terrain min"), ("pieces_min", " pièces min"),
+                       ("chambres_min", " chambres min")):
+        if c.get(cle):
+            morceaux.append(f"{c[cle]}{unite}")
+    if any(not verifiee for _, _, verifiee in c["lieux"]):
+        morceaux.append("⚠ commune non vérifiée (service des communes injoignable)")
+    return " — ".join(morceaux)
+
+
+def _telephone(valeur: Any) -> str:
+    brut = str(valeur or "").strip()
+    chiffres = re.sub(r"[^\d+]", "", brut)
+    if brut and len(re.sub(r"\D", "", chiffres)) < 9:
+        raise Refus(f"« {brut} » n'est pas un numéro de téléphone.")
+    return chiffres
+
+
+def _filtre(valeur: str) -> str:  # escapePostgrestFilterValue (api.ts)
+    return '"' + valeur.replace("\\", "\\\\").replace('"', '\\"') + '"'
+
+
+def _doublons(ctx: ContexteAssistant, email: str, telephone: str) -> list[dict[str, Any]]:
+    filtres = ([f"email.ilike.{_filtre(email)}"] if email else []) + \
+        ([f"phone_primary.eq.{_filtre(telephone)}", f"phone_secondary.eq.{_filtre(telephone)}"] if telephone else [])
+    if not filtres:
+        return []
+    return _lire(ctx, "app_contacts_current", {"or": "(" + ",".join(filtres) + ")", "limit": "6",
+                                               "select": "hektor_contact_id,display_name,archive",
+                                               "order": "archive.asc,linked_annonce_count.desc"})
+
+
+def _dire_doublons(lignes: list[dict[str, Any]]) -> str:
+    return " ; ".join(f"{d.get('display_name') or 'sans nom'} (n° {d['hektor_contact_id']}"
+                      f"{', archivé' if d.get('archive') else ''})" for d in lignes)
+
+
+def preparer_creer_contact(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    genre = str(p.get("genre") or "").strip().lower()
+    if genre not in GENRES_CONTACT:
+        raise Refus("Genre : acquereur ou proprietaire (les sociétés et les partenaires se créent dans l'application).")
+    nom = str(p.get("nom") or "").strip()[:120]
+    if not nom:
+        raise Refus("Donne le nom du contact.")
+    prenom = str(p.get("prenom") or "").strip()[:120]
+    civilite_brute = _simple(p.get("civilite")).replace(" ", "")
+    if civilite_brute not in CIVILITES:
+        raise Refus("Civilité : M., Mme, ou vide.")
+    email = str(p.get("email") or "").strip()[:200]
+    if email and not _EMAIL.fullmatch(email):
+        raise Refus(f"« {email} » n'est pas une adresse e-mail.")
+    telephone = _telephone(p.get("telephone"))
+    if not email and not telephone:
+        raise Refus("Donne un téléphone ou un e-mail : l'écran exige un moyen de joindre le contact.")
+    conjoint_nom = str(p.get("conjoint_nom") or "").strip()[:120]
+    conjoint_prenom = str(p.get("conjoint_prenom") or "").strip()[:120]
+    if conjoint_prenom and not conjoint_nom:
+        raise Refus("Donne aussi le nom du conjoint (il peut être le même).")
+    lieu = _commune(p.get("code_postal"), p.get("ville")) if (p.get("code_postal") or p.get("ville")) else None
+    adresse = str(p.get("adresse") or "").strip()[:300]
+    if adresse and not lieu:
+        raise Refus("Une adresse sans code postal ni ville serait perdue chez Hektor : donne-les aussi.")
+    recherche = None
+    if p.get("avec_recherche"):
+        if genre != "acquereur":
+            raise Refus("Une recherche se pose sur un acquéreur.")
+        recherche = _criteres(p)
+    candidats = _doublons(ctx, email, telephone)
+    if candidats and not p.get("doublon_accepte"):
+        raise Refus(f"Fiche(s) déjà présente(s) avec ce téléphone ou cet e-mail : {_dire_doublons(candidats)}. Si c'est bien "
+                    "une autre personne, redemande avec doublon_accepte = true ; sinon, sers-toi de la fiche existante.")
+    civilite = CIVILITES[civilite_brute]
+    qui = " ".join(x for x in (civilite, prenom, nom.upper()) if x)
+    lignes = [f"Créer le contact {qui}, {GENRES_CONTACT[genre]}"
+              + (f", en couple avec {' '.join(x for x in (conjoint_prenom, conjoint_nom.upper()) if x)}" if conjoint_nom else "")]
+    lignes.append(", ".join(x for x in (f"tél. {telephone}" if telephone else "", email) if x))
+    if lieu:
+        lignes.append(", ".join(x for x in (adresse, f"{lieu[0]} {lieu[1]}") if x)
+                      + ("" if lieu[2] else " (⚠ commune non vérifiée)"))
+    if recherche:
+        lignes.append("avec sa recherche — " + _dire_criteres(recherche))
+    lignes.append("à ton nom ; " + ("Hektor enverra au contact l'e-mail de consentement RGPD" if p.get("email_rgpd")
+                                    else "sans e-mail RGPD"))
+    if candidats:
+        lignes.append(f"⚠ doublon possible, accepté : {_dire_doublons(candidats)}")
+    lignes.append("écrit chez nous tout de suite avec un numéro de l'app, recopié chez Hektor ensuite")
+    contact = {"civilite": civilite, "last_name": nom, "first_name": prenom or None, "company_name": None, "sociale": None,
+               "spouse_last_name": conjoint_nom or None, "spouse_first_name": conjoint_prenom or None,
+               "email": email or None, "phone": telephone or None, "phone_secondary": None,
+               "address": adresse or None, "postal_code": lieu[0] if lieu else None, "city": lieu[1] if lieu else None,
+               "contact_kind": genre, "person_type": "couple" if conjoint_nom else "personne_seule",
+               "comments": str(p.get("commentaire") or "").strip()[:2000] or None,
+               "send_rgpd_email": bool(p.get("email_rgpd")),
+               "contact_next_step": _recherche_pour_hektor(recherche) if recherche else None}
+    return " — ".join(lignes), {"contact": contact, "doublon_accepte": bool(candidats)}
+
+
+def executer_creer_contact(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[str, Any]:
+    contact = dict(p.get("contact") or {})
+    if not contact.get("last_name") or not (contact.get("email") or contact.get("phone")):
+        raise Refus("carte incomplète")
+    if not p.get("doublon_accepte"):  # re-vérifié AU CLIC : une fiche a pu naître depuis la carte
+        candidats = _doublons(ctx, str(contact.get("email") or ""), str(contact.get("phone") or ""))
+        if candidats:
+            raise Refus(f"une fiche avec ce téléphone ou cet e-mail est apparue depuis la carte : {_dire_doublons(candidats)}")
+    # ⛔ le compte qui porte le contact = la personne qui parle, posé ICI par le serveur
+    contact.update({"hektor_user_email": ctx.email, "target_hektor_user_email": ctx.email})
+    travail = _ecrire(ctx, "POST", "rpc/app_create_contact_optimistic", {"contact_payload": contact, "job_priority": 18}) or {}
+    if isinstance(travail, list):
+        travail = travail[0] if travail else {}
+    return {"travail": travail.get("id"), "statut": travail.get("status"),
+            "avec_recherche": bool(contact.get("contact_next_step"))}
+
+
+def _fiche_pour_recherche(ctx: ContexteAssistant, numero: Any) -> dict[str, Any]:
+    numero = str(numero or "").strip()
+    if not numero.isdigit():
+        raise Refus("Donne le numéro du contact (hektor_contact_id, objet contacts).")
+    lignes = _lire(ctx, "app_contacts_current", {"hektor_contact_id": f"eq.{numero}", "limit": "1",
+                                                 "select": "hektor_contact_id,display_name,archive,ville,code_postal"})
+    if not lignes:
+        raise Refus(f"Le contact {numero} n'est pas parmi ceux que tu peux voir.")
+    if lignes[0].get("archive"):
+        raise Refus("Ce contact est archivé : réactive-le d'abord (ses recherches ne reviennent pas seules).")
+    return lignes[0]
+
+
+def preparer_ajouter_recherche(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    fiche = _fiche_pour_recherche(ctx, p.get("hektor_contact_id"))
+    criteres = _criteres(p)
+    return f"Ajouter une recherche à {fiche.get('display_name') or fiche['hektor_contact_id']} — {_dire_criteres(criteres)} " \
+           "(créée chez Hektor ; elle entre dans les rapprochements après la nuit)", \
+        {"hektor_contact_id": fiche["hektor_contact_id"], "criteres": criteres}
+
+
+def executer_ajouter_recherche(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[str, Any]:
+    fiche = _fiche_pour_recherche(ctx, p.get("hektor_contact_id"))  # re-vérifié AU CLIC
+    c = dict(p.get("criteres") or {})
+    recherche = _recherche_pour_hektor(c)
+
+    def texte(nombre: Any) -> str | None:
+        return str(nombre) if nombre else None
+    # la ligne provisoire, dans les formes de app_contact_search_current (api.ts:11047)
+    champs = {"offre": c["offre"], "villes_json": [f"{cp} {ville}" for cp, ville, _ in c["lieux"]],
+              "types_json": {libelle: "1" for libelle in _libelles_types(c["types"])}, "criteres_json": [],
+              "prix_min": texte(c.get("budget_min")), "prix_max": texte(c.get("budget_max")),
+              "surface_min": texte(c.get("surface_min")), "surface_max": None,
+              "pieces_min": texte(c.get("pieces_min")), "pieces_max": None,
+              "chambre_min": texte(c.get("chambres_min")), "chambre_max": None,
+              "surface_terrain_min": texte(c.get("terrain_min")), "surface_terrain_max": None}
+    contexte = {k: v for k, v in (("city", fiche.get("ville")), ("postal_code", fiche.get("code_postal"))) if v}
+    travail = _ecrire(ctx, "POST", "rpc/app_create_search_optimistic", {
+        "p_token": str(uuid.uuid4()), "p_fields": champs, "target_contact_id": str(fiche["hektor_contact_id"]),
+        "search_payload": {**contexte, "search": recherche}, "job_priority": 17}) or {}
+    if isinstance(travail, list):
+        travail = travail[0] if travail else {}
+    return {"hektor_contact_id": fiche["hektor_contact_id"], "travail": travail.get("id"), "statut": travail.get("status")}
+
+
+def _json(valeur: Any) -> Any:
+    if isinstance(valeur, str):
+        try:
+            return json.loads(valeur)
+        except ValueError:
+            return None
+    return valeur
+
+
+def _recherche_complete(ctx: ContexteAssistant, cle: Any) -> dict[str, Any]:
+    cle = str(cle or "").strip()
+    if not cle:
+        raise Refus("Donne la clé de la recherche (contact_search_key, objet recherches).")
+    lignes = _lire(ctx, "app_contact_searches_current", {
+        "contact_search_key": f"eq.{cle}", "limit": "1",
+        "select": "contact_search_key,hektor_contact_id,search_index,archive,is_active,offre,villes_json,types_json,"
+                  "criteres_json,prix_min,prix_max,surface_min,surface_terrain_min,pieces_min,chambre_min"})
+    if not lignes:
+        raise Refus(f"La recherche {cle} n'est pas parmi celles que tu peux voir.")
+    recherche = lignes[0]
+    if recherche.get("archive") is True:
+        raise Refus("Cette recherche est archivée.")
+    if recherche.get("search_index") is None:
+        raise Refus("Cette recherche n'a pas encore de rang chez Hektor (créée récemment ?) : l'écran ne peut pas la "
+                    "modifier non plus avant la nuit.")
+    return recherche
+
+
+def _criteres_actuels(r: dict[str, Any]) -> tuple[dict[str, Any], dict[str, str]]:
+    """Les critères tels que l'écran les relit (contactSearchValueFromSearch, ContactSearchFields.tsx:144).
+    ⚠ Écart VOULU : l'écran remplace un prix vide par 120 000 / 250 000 ; ici un vide reste vide."""
+    criteres = {}
+    for item in (_json(r.get("criteres_json")) or []):
+        if isinstance(item, dict) and item.get("cle"):
+            criteres[str(item["cle"])] = "" if item.get("valeur") is None else str(item["valeur"])
+    lieux = []
+    for entree in (_json(r.get("villes_json")) or []):
+        texte = str(entree or "")
+        cp = re.search(r"\d{4,5}", texte)
+        ville = re.sub(r"[·,]", "", re.sub(r"\d{4,5}", "", texte)).strip()
+        if ville or cp:
+            lieux.append([cp.group(0) if cp else "", ville, True])
+    types = _json(r.get("types_json"))
+    connus = {str(k): str(v) for k, v in types.items()} if isinstance(types, dict) else {}
+    codes = list(connus) if connus else [str(t) for t in (types or [])]
+
+    def nombre(valeur: Any) -> int | None:
+        chiffres = re.sub(r"[^\d]", "", str(valeur or "").split(".")[0])
+        return int(chiffres) if chiffres and int(chiffres) > 0 else None
+    return {"offre": str(r.get("offre") or "0"), "types": codes, "lieux": lieux,
+            "budget_min": nombre(r.get("prix_min")), "budget_max": nombre(r.get("prix_max")),
+            "surface_min": nombre(r.get("surface_min")), "terrain_min": nombre(r.get("surface_terrain_min")),
+            "pieces_min": nombre(r.get("pieces_min")), "chambres_min": nombre(r.get("chambre_min")),
+            "salles_de_bain_min": nombre(criteres.get("ITEM_SDB_SDE_MIN")), "dpe": criteres.get("ITEM_DPE_CONS_LETTER") or None,
+            "marge": criteres.get("ITEM_PRIX_MARGE") or None,
+            "equipements": [code for code, item in EQUIPEMENTS_RECHERCHE.items()
+                            if re.fullmatch(r"1|oui|true", criteres.get(item, ""), re.I)]}, connus
+
+
+def preparer_modifier_recherche(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    r = _recherche_complete(ctx, p.get("contact_search_key"))
+    avant, connus = _criteres_actuels(r)
+    apres = json.loads(json.dumps(avant))
+    changements = []
+    if str(p.get("types") or "").strip():
+        apres["types"] = _types(p.get("types"))
+    if str(p.get("communes") or "").strip():
+        apres["lieux"] = _communes(p.get("communes"))
+    for cle, quoi, maxi in (("budget_min", "Budget minimum", 100_000_000), ("budget_max", "Budget maximum", 100_000_000),
+                            ("surface_min", "Surface minimum", 100_000), ("terrain_min", "Terrain minimum", 10_000_000),
+                            ("pieces_min", "Pièces minimum", 50), ("chambres_min", "Chambres minimum", 50)):
+        if str(p.get(cle) or "").strip():
+            apres[cle] = _entier(p.get(cle), quoi, maxi)
+    brut_rayon = re.sub(r"\s|km", "", str(p.get("rayon_km") or "").lower())
+    rayon = None
+    if brut_rayon:
+        if not brut_rayon.isdigit() or int(brut_rayon) > 40:
+            raise Refus("Rayon : de 0 à 40 km (le curseur de l'écran).")
+        rayon = int(brut_rayon)
+    if not apres.get("budget_max"):
+        raise Refus("Cette recherche n'a pas de budget maximum : donne-le (l'écran l'exige).")
+    if apres.get("budget_min") and apres["budget_min"] > apres["budget_max"]:
+        raise Refus("Le budget minimum dépasse le maximum.")
+    if not apres["types"] or not apres["lieux"]:
+        raise Refus("Une recherche garde au moins un type et une commune.")
+    if apres["types"] != avant["types"]:
+        changements.append(f"types : {', '.join(_libelles_types(avant['types'], connus)) or 'aucun'} → "
+                           f"{', '.join(_libelles_types(apres['types'], connus))}")
+    if [lieu[:2] for lieu in apres["lieux"]] != [lieu[:2] for lieu in avant["lieux"]]:
+        changements.append(f"communes : {', '.join(f'{v} ({c})' for c, v, _ in avant['lieux']) or 'aucune'} → "
+                           f"{', '.join(f'{v} ({c})' for c, v, _ in apres['lieux'])}")
+    for cle, libelle in (("budget_min", "budget min"), ("budget_max", "budget max"), ("surface_min", "surface min"),
+                         ("terrain_min", "terrain min"), ("pieces_min", "pièces min"), ("chambres_min", "chambres min")):
+        if apres.get(cle) != avant.get(cle):
+            def dire(v: Any, euros: bool = cle.startswith("budget")) -> str:
+                return "vide" if not v else (_euros(v) if euros else str(v))
+            changements.append(f"{libelle} : {dire(avant.get(cle))} → {dire(apres.get(cle))}")
+    if rayon is not None:
+        changements.append(f"rayon autour des communes : {rayon} km")
+    if not changements:
+        raise Refus("Rien ne change : donne au moins un critère différent de la recherche actuelle.")
+    nom = _acquereur(ctx, r)
+    return f"Modifier la recherche n° {int(r['search_index']) + 1} de {nom} — " + " ; ".join(changements) + \
+        " (écrit chez nous tout de suite, rapprochements recalculés ; Hektor suit 10 min après)", \
+        {"contact_search_key": r["contact_search_key"], "avant": avant, "apres": apres, "rayon_km": rayon,
+         "libelles": _libelles_types(apres["types"], connus)}
+
+
+def executer_modifier_recherche(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[str, Any]:
+    r = _recherche_complete(ctx, p.get("contact_search_key"))  # le rang est RELU au clic (il peut bouger)
+    actuel, _ = _criteres_actuels(r)
+    if json.loads(json.dumps(actuel)) != p.get("avant"):
+        raise Refus("la recherche a changé depuis la carte : redemande la modification")
+    corps: dict[str, Any] = {"search": _recherche_pour_hektor(p["apres"]), "search_index": int(r["search_index"]),
+                             "type_labels": list(p.get("libelles") or [])}
+    if p.get("rayon_km") is not None:
+        corps["rayon_km"] = str(int(p["rayon_km"]))
+    _ecrire(ctx, "POST", "rpc/app_edit_search_optimistic",
+            {"target_contact_id": str(r["hektor_contact_id"]), "search_payload": corps, "debounce_seconds": 600})
+    return {"contact_search_key": r["contact_search_key"], "search_index": int(r["search_index"])}
+
+
 # ── le catalogue des gestes ───────────────────────────────────────────────────
 class Geste:
     def __init__(self, nom: str, description: str, roles: frozenset[str], parametres: dict[str, Any],
@@ -1460,6 +1902,69 @@ GESTES: dict[str, Geste] = {g.nom: g for g in (
                    "portail": {"type": "string", "enum": list(PORTAILS)},
                    "publier": {"type": "boolean"}}),
           preparer_portail, executer_portail),
+    # lot 2c
+    Geste("creer_contact",
+          "Prépare la CRÉATION d'un contact (personne seule ou couple), acquéreur ou propriétaire, au nom de la personne qui "
+          "parle ; avec, pour un acquéreur, sa première recherche si avec_recherche. Pas de société ni de partenaire. Les "
+          "doublons (même téléphone ou e-mail) sont cherchés avant : s'il y en a, montre-les et ne redemande avec "
+          "doublon_accepte = true que si la personne confirme que c'est quelqu'un d'autre.",
+          TOUS_LES_ROLES,
+          _schema({"genre": {"type": "string", "enum": list(GENRES_CONTACT)},
+                   "civilite": {"type": "string", "enum": ["", "M.", "Mme"]},
+                   "nom": {"type": "string"}, "prenom": {"type": "string", "description": "ou vide"},
+                   "telephone": {"type": "string", "description": "ou vide (téléphone OU e-mail obligatoire)"},
+                   "email": {"type": "string", "description": "ou vide"},
+                   "conjoint_nom": {"type": "string", "description": "couple seulement, sinon vide"},
+                   "conjoint_prenom": {"type": "string", "description": "couple seulement, sinon vide"},
+                   "adresse": {"type": "string", "description": "rue, ou vide"},
+                   "code_postal": {"type": "string", "description": "5 chiffres, ou vide"},
+                   "ville": {"type": "string", "description": "commune de ce code postal, ou vide"},
+                   "commentaire": {"type": "string", "description": "ou vide"},
+                   "email_rgpd": {"type": "boolean",
+                                  "description": "true = Hektor envoie au contact l'e-mail de consentement RGPD (choix par "
+                                                 "défaut de l'écran) ; demande-le à la personne si elle ne l'a pas dit"},
+                   "doublon_accepte": {"type": "boolean", "description": "false, sauf confirmation de la personne"},
+                   "avec_recherche": {"type": "boolean", "description": "acquéreur : poser aussi sa recherche"},
+                   "offre": {"type": "string", "description": "recherche : achat (défaut) ou location ; sinon vide"},
+                   "types": {"type": "string", "description": "recherche : types séparés par | (Maison|Appartement)"},
+                   "communes": {"type": "string", "description": "recherche : « code postal ville » séparés par |"},
+                   "budget_min": {"type": "string", "description": "recherche : euros, ou vide"},
+                   "budget_max": {"type": "string", "description": "recherche : euros (obligatoire si recherche)"},
+                   "surface_min": {"type": "string", "description": "m², ou vide"},
+                   "terrain_min": {"type": "string", "description": "m², ou vide"},
+                   "pieces_min": {"type": "string", "description": "ou vide"},
+                   "chambres_min": {"type": "string", "description": "ou vide"}}),
+          preparer_creer_contact, executer_creer_contact),
+    Geste("ajouter_recherche",
+          "Prépare l'AJOUT d'une recherche d'acquéreur à un contact existant : au moins un type, une commune, un budget "
+          "maximum (comme l'écran). Elle n'entre dans les rapprochements qu'après la nuit.",
+          TOUS_LES_ROLES,
+          _schema({"hektor_contact_id": {"type": "string", "description": "numéro du contact"},
+                   "offre": {"type": "string", "description": "achat (défaut) ou location"},
+                   "types": {"type": "string", "description": "types séparés par | (Maison|Appartement)"},
+                   "communes": {"type": "string", "description": "« code postal ville » séparés par | (42700 Firminy)"},
+                   "budget_min": {"type": "string", "description": "euros, ou vide"},
+                   "budget_max": {"type": "string", "description": "euros"},
+                   "surface_min": {"type": "string", "description": "m², ou vide"},
+                   "terrain_min": {"type": "string", "description": "m², ou vide"},
+                   "pieces_min": {"type": "string", "description": "ou vide"},
+                   "chambres_min": {"type": "string", "description": "ou vide"}}),
+          preparer_ajouter_recherche, executer_ajouter_recherche),
+    Geste("modifier_recherche",
+          "Prépare la MODIFICATION d'une recherche active : seuls les critères donnés changent (vide = inchangé). Communes "
+          "et types : la liste COMPLÈTE voulue. Écrit tout de suite, rapprochements recalculés.",
+          TOUS_LES_ROLES,
+          _schema({"contact_search_key": {"type": "string", "description": "clé de la recherche"},
+                   "types": {"type": "string", "description": "liste complète séparée par |, ou vide"},
+                   "communes": {"type": "string", "description": "liste complète « code postal ville » séparée par |, ou vide"},
+                   "budget_min": {"type": "string", "description": "euros, ou vide"},
+                   "budget_max": {"type": "string", "description": "euros, ou vide"},
+                   "surface_min": {"type": "string", "description": "m², ou vide"},
+                   "terrain_min": {"type": "string", "description": "m², ou vide"},
+                   "pieces_min": {"type": "string", "description": "ou vide"},
+                   "chambres_min": {"type": "string", "description": "ou vide"},
+                   "rayon_km": {"type": "string", "description": "0 à 40, ou vide"}}),
+          preparer_modifier_recherche, executer_modifier_recherche),
 )}
 
 

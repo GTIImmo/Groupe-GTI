@@ -824,9 +824,155 @@ pont.clear()
 voir(refuse(lambda: ges.executer_portail(nouveau_ctx(), pp), "passerelle fermée") and not [x for x in pont if x["quoi"] == "report"],
      "Hektor refuse : on le DIT, et le résumé n'est pas reporté")
 
+print("9quater) LOT 2c : créer un contact, ajouter / modifier une recherche -- les fonctions de l'écran")
+_faux_lot4 = faux_lot4
+COMMUNES_API = {"42700": ["Firminy"], "43000": ["Le Puy-en-Velay", "Aiguilhe", "Espaly-Saint-Marcel"]}
+
+
+def faux_lot2c(methode, url, **kw):
+    if "geo.api.gouv.fr" in url:
+        appels.append({"methode": methode, "chemin": "geo", "params": dict(kw.get("params") or {}), "entetes": {}, "corps": None})
+        if etat.get("geo_panne"):
+            raise requests.ConnectionError("injoignable")
+        return Reponse([{"nom": n} for n in COMMUNES_API.get(kw["params"]["codePostal"], [])])
+    chemin = url.split("/rest/v1/", 1)[1]
+    if methode == "GET" and chemin == "app_contacts_current" and "or" in (kw.get("params") or {}):
+        appels.append({"methode": methode, "chemin": "doublons", "params": dict(kw["params"]), "entetes": dict(kw.get("headers") or {}),
+                       "corps": None})
+        return Reponse(etat.get("doublons", []))
+    if methode == "POST" and chemin in {"rpc/app_create_contact_optimistic", "rpc/app_create_search_optimistic",
+                                        "rpc/app_edit_search_optimistic"}:
+        appels.append({"methode": methode, "chemin": chemin, "entetes": dict(kw.get("headers") or {}), "params": {},
+                       "corps": kw.get("json")})
+        return Reponse({"ok": True} if "edit" in chemin else {"id": "job-2c", "status": "pending"})
+    return _faux_lot4(methode, url, **kw)
+
+
+requests.get = lambda url, **kw: faux_lot2c("GET", url, **kw)
+requests.post = lambda url, **kw: faux_lot2c("POST", url, **kw)
+requests.patch = lambda url, **kw: faux_lot2c("PATCH", url, **kw)
+requests.request = lambda methode, url, **kw: faux_lot2c(methode, url, **kw)
+
+VIDE_C = {cle: "" for cle in ges.GESTES["creer_contact"].parametres["properties"]}
+NOUVEAU = {**VIDE_C, "genre": "acquereur", "civilite": "M.", "nom": "Essai", "prenom": "Jean", "telephone": "06 11 22 33 44",
+           "email": "", "code_postal": "42700", "ville": "firminy", "email_rgpd": False, "doublon_accepte": False,
+           "avec_recherche": True, "types": "Maison|appartement", "communes": "42700 Firminy|43000 le puy en velay",
+           "budget_min": "150000", "budget_max": "250 000 €", "pieces_min": "4"}
+reset(doublons=[])
+resume, pc = ges.preparer_creer_contact(nouveau_ctx(), NOUVEAU)
+contact = pc["contact"]
+voir(not ecritures_metier() and "M. Jean ESSAI, acquéreur" in resume and "à ton nom" in resume and "sans e-mail RGPD" in resume,
+     "PROPOSER n'écrit rien ; la carte dit qui, le genre, à qui il appartiendra, et l'e-mail RGPD")
+voir(contact["phone"] == "0611223344" and contact["city"] == "Firminy" and contact["postal_code"] == "42700"
+     and contact["contact_kind"] == "acquereur" and contact["person_type"] == "personne_seule" and contact["civilite"] == "M.",
+     "la fiche dans la forme de l'écran : téléphone nettoyé, commune ÉCRITE COMME HEKTOR LA CONNAÎT (firminy → Firminy)")
+suite = contact["contact_next_step"]
+voir(suite["propertyTypeIds"] == ["1", "2"] and suite["priceMax"] == "250000" and suite["priceMin"] == "150000"
+     and suite["roomsMin"] == "4" and suite["localities"] == [{"city": "Firminy", "postalCode": "42700"},
+                                                             {"city": "Le Puy-en-Velay", "postalCode": "43000"}],
+     "sa recherche suit, dans la forme de l'écran (types en codes, communes vérifiées, budget en chiffres)")
+voir("hektor_user_email" not in contact, "⛔ le compte qui portera le contact n'est PAS dans la carte : posé au clic par le serveur")
+doublon_appel = next(a for a in appels if a["chemin"] == "doublons")
+voir(doublon_appel["params"]["or"] == '(phone_primary.eq."0611223344",phone_secondary.eq."0611223344")'
+     and doublon_appel["entetes"]["Authorization"] == "Bearer " + JETON, "les doublons cherchés comme l'écran (même téléphone), avec SON jeton")
+
+reset(doublons=[{"hektor_contact_id": "601", "display_name": "M. ESSAI Jean", "archive": False}])
+voir(refuse(lambda: ges.preparer_creer_contact(nouveau_ctx(), NOUVEAU), "déjà présente"), "⛔ un doublon trouvé : pas de carte, il est montré")
+resume, pd2 = ges.preparer_creer_contact(nouveau_ctx(), {**NOUVEAU, "doublon_accepte": True})
+voir("doublon possible, accepté : M. ESSAI Jean (n° 601)" in resume and pd2["doublon_accepte"],
+     "redemandé avec l'accord : la carte garde le doublon sous les yeux (« Continuer malgré doublon » de l'écran)")
+reset(doublons=[])
+voir(refuse(lambda: ges.preparer_creer_contact(nouveau_ctx(), {**NOUVEAU, "communes": "42700 Saint-Étienne"}), "Firminy"),
+     "⛔ une commune qui n'est pas du code postal : refusée, avec les communes du code postal (sinon Hektor perd la ville)")
+voir(refuse(lambda: ges.preparer_creer_contact(nouveau_ctx(), {**NOUVEAU, "code_postal": "", "ville": "", "adresse": "3 rue Haute"}),
+            "perdue"), "une adresse sans code postal ni ville : refusée")
+voir(refuse(lambda: ges.preparer_creer_contact(nouveau_ctx(), {**NOUVEAU, "telephone": "", "email": ""}), "téléphone ou un e-mail"),
+     "ni téléphone ni e-mail : refusé (comme l'écran)")
+voir(refuse(lambda: ges.preparer_creer_contact(nouveau_ctx(), {**NOUVEAU, "genre": "proprietaire"}), "acquéreur"),
+     "une recherche sur un propriétaire : refusée")
+voir(refuse(lambda: ges.preparer_creer_contact(nouveau_ctx(), {**NOUVEAU, "genre": "partenaire"}), "partenaires"),
+     "⛔ un partenaire : refusé (le catalogue des métiers, décision du 06/11)")
+voir(refuse(lambda: ges.preparer_creer_contact(nouveau_ctx(), {**NOUVEAU, "budget_max": ""}), "budget maximum"),
+     "une recherche sans budget maximum : refusée (comme l'écran)")
+voir(refuse(lambda: ges.preparer_creer_contact(nouveau_ctx(), {**NOUVEAU, "types": "Yourte"}), "Type de bien inconnu"),
+     "un type de bien inconnu : refusé, avec la liste")
+reset(doublons=[], geo_panne=True)
+resume, _ = ges.preparer_creer_contact(nouveau_ctx(), NOUVEAU)
+voir("commune non vérifiée" in resume, "service des communes en panne : on ne bloque pas (l'écran non plus), la carte le DIT")
+
+reset(doublons=[])
+appels.clear()
+r = ges.executer_creer_contact(nouveau_ctx(), {**pc, "contact": {**pc["contact"], "hektor_user_email": "autre@gti-immobilier.fr"}})
+rpc = next(a for a in appels if a["chemin"] == "rpc/app_create_contact_optimistic")
+voir(rpc["entetes"]["Authorization"] == "Bearer " + JETON and rpc["corps"]["job_priority"] == 18
+     and rpc["corps"]["contact_payload"]["last_name"] == "Essai", "au clic : la fonction de l'écran, avec SON jeton, priorité de l'écran")
+voir(rpc["corps"]["contact_payload"]["hektor_user_email"] == EMAIL and rpc["corps"]["contact_payload"]["target_hektor_user_email"] == EMAIL,
+     "TÉMOIN : une carte trafiquée avec le compte d'un autre -> le serveur remet celui de la personne")
+voir(r["travail"] == "job-2c" and r["avec_recherche"], "le numéro du travail revient (et la recherche suit)")
+reset(doublons=[{"hektor_contact_id": "602", "display_name": "J. ESSAI", "archive": False}])
+appels.clear()
+voir(refuse(lambda: ges.executer_creer_contact(nouveau_ctx(), pc), "apparue") and not [a for a in appels if a["chemin"].startswith("rpc/")],
+     "TÉMOIN : un doublon né entre la carte et le clic -> refusé AU CLIC, rien envoyé")
+
+VIDE_R = {cle: "" for cle in ges.GESTES["ajouter_recherche"].parametres["properties"]}
+reset(contact=[{"hektor_contact_id": "606202", "display_name": "M. DURAND", "archive": False, "ville": "Firminy", "code_postal": "42700"}])
+voir(refuse(lambda: ges.preparer_ajouter_recherche(nouveau_ctx(), {**VIDE_R, "hektor_contact_id": "606202", "types": "Maison",
+                                                                    "communes": "42700 Firminy"}), "budget maximum"),
+     "ajouter une recherche sans budget maximum : refusé")
+resume, pr = ges.preparer_ajouter_recherche(nouveau_ctx(), {**VIDE_R, "hektor_contact_id": "606202", "types": "Maison",
+                                                            "communes": "42700 Firminy", "budget_max": "200000", "surface_min": "90"})
+voir(not ecritures_metier() and "après la nuit" in resume and "Firminy (42700)" in resume and "90 m² min" in resume,
+     "la carte dit les critères, et que la recherche n'entre dans les rapprochements qu'après la nuit")
+appels.clear()
+ges.executer_ajouter_recherche(nouveau_ctx(), pr)
+rpc = next(a for a in appels if a["chemin"] == "rpc/app_create_search_optimistic")
+c = rpc["corps"]
+voir(c["p_fields"]["villes_json"] == ["42700 Firminy"] and c["p_fields"]["types_json"] == {"Maison": "1"}
+     and c["p_fields"]["prix_max"] == "200000" and c["p_fields"]["surface_min"] == "90",
+     "la ligne provisoire dans les formes de l'écran (types en libellés, villes « code ville »)")
+voir(c["search_payload"]["search"]["propertyTypeIds"] == ["1"] and c["search_payload"]["city"] == "Firminy"
+     and c["target_contact_id"] == "606202" and c["job_priority"] == 17 and len(c["p_token"]) == 36
+     and rpc["entetes"]["Authorization"] == "Bearer " + JETON, "le travail : la recherche, le contexte du contact, un jeton, SON jeton")
+reset(contact=[{"hektor_contact_id": "606202", "display_name": "M. DURAND", "archive": True}])
+voir(refuse(lambda: ges.preparer_ajouter_recherche(nouveau_ctx(), {**VIDE_R, "hektor_contact_id": "606202", "types": "Maison",
+                                                                    "communes": "42700 Firminy", "budget_max": "1"}), "archivé"),
+     "un contact archivé : refusé (réactiver d'abord)")
+
+VIDE_M = {cle: "" for cle in ges.GESTES["modifier_recherche"].parametres["properties"]}
+RECH = {"contact_search_key": "606202:1", "hektor_contact_id": "606202", "search_index": 1, "archive": False, "is_active": True,
+        "offre": "0", "villes_json": ["Firminy 42700"], "types_json": {"1": "Maison", "49": "viager maison"},
+        "criteres_json": [{"cle": "ITEM_TERRASSE", "valeur": "1"}, {"cle": "ITEM_DPE_CONS_LETTER", "valeur": "C"}],
+        "prix_min": "150000", "prix_max": "250000", "surface_min": "80", "surface_terrain_min": None, "pieces_min": "4",
+        "chambre_min": None}
+reset(recherche=[dict(RECH)])
+resume, pm2 = ges.preparer_modifier_recherche(nouveau_ctx(), {**VIDE_M, "contact_search_key": "606202:1", "budget_max": "280000"})
+voir("budget max : 250 000 € → 280 000 €" in resume and "recherche n° 2 de M. DURAND" in resume and not ecritures_metier(),
+     "la carte montre l'AVANT et l'APRÈS du seul critère donné")
+voir(refuse(lambda: ges.preparer_modifier_recherche(nouveau_ctx(), {**VIDE_M, "contact_search_key": "606202:1", "budget_max": "250000"}),
+            "Rien ne change"), "rien ne change : refusé")
+voir(refuse(lambda: ges.preparer_modifier_recherche(nouveau_ctx(), {**VIDE_M, "contact_search_key": "606202:1", "rayon_km": "50"}),
+            "40"), "un rayon au-delà de 40 km : refusé (le curseur de l'écran)")
+appels.clear()
+ges.executer_modifier_recherche(nouveau_ctx(), pm2)
+rpc = next(a for a in appels if a["chemin"] == "rpc/app_edit_search_optimistic")
+s = rpc["corps"]["search_payload"]
+voir(s["search"]["priceMax"] == "280000" and s["search"]["priceMin"] == "150000" and s["search"]["surfaceMin"] == "80"
+     and s["search"]["equipments"] == ["terrasse"] and s["search"]["dpeLetter"] == "C" and s["search"]["propertyTypeIds"] == ["1", "49"],
+     "⭐ le RESTE de la recherche est renvoyé tel quel (types, surface, terrasse, DPE) : rien ne se perd")
+voir(s["search_index"] == 1 and s["type_labels"] == ["Maison", "viager maison"] and "rayon_km" not in s
+     and rpc["corps"]["debounce_seconds"] == 600 and rpc["corps"]["target_contact_id"] == "606202",
+     "le rang relu, les libellés des types (même ceux que l'écran ne connaît pas), pas de rayon si non demandé, Hektor 10 min après")
+reset(recherche=[{**RECH, "prix_max": "260000"}])
+appels.clear()
+voir(refuse(lambda: ges.executer_modifier_recherche(nouveau_ctx(), pm2), "a changé") and not [a for a in appels if a["chemin"].startswith("rpc/")],
+     "TÉMOIN : la recherche modifiée par quelqu'un d'autre entre la carte et le clic -> refusé, rien n'est écrasé")
+reset(recherche=[{**RECH, "archive": True}])
+voir(refuse(lambda: ges.preparer_modifier_recherche(nouveau_ctx(), {**VIDE_M, "contact_search_key": "606202:1", "budget_max": "1"}), "archivée"),
+     "une recherche archivée : refusée")
+
 print("10) aucune fonction de geste ne fait autre chose que proposer")
-voir(all(f.nom.startswith("proposer_") for f in ges.FONCTIONS_GESTES) and len(ges.FONCTIONS_GESTES) == 19,
-     "19 gestes (le brouillon retiré le 15/11), tous « proposer_ » : le modèle n'a AUCUNE fonction qui exécute")
+voir(all(f.nom.startswith("proposer_") for f in ges.FONCTIONS_GESTES) and len(ges.FONCTIONS_GESTES) == 22,
+     "22 gestes (le brouillon retiré le 15/11, 3 du lot 2c le 17/11), tous « proposer_ » : le modèle n'a AUCUNE fonction qui exécute")
 voir(not any(f.nom.startswith("proposer_") for f in ges.FONCTIONS_LECTURE_LOT3), "les 2 lectures du lot 3 ne proposent rien")
 voir(not any(f.nom.startswith("proposer_") for f in ges.FONCTIONS_LECTURE_LOT4), "les 3 lectures du lot 4 ne proposent rien")
 voir([f.nom for f in cat.fonctions_du_role("commercial") if f.nom == "proposer_note_transaction"] == [],
