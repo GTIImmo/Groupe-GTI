@@ -2188,3 +2188,19 @@ montée sans le cadre `fa-ck-docup`). Essais : `test_ged_depot` 19 -> 28 (garde 
 retirer « fichier non parti » de la garde la fait rougir --, aperçu qui ne part nulle part, pièces non trouvées venues du
 « Dossier », vocabulaire « non trouvée ») ; les 12 essais GED verts ; build vert. ⚠ PAS VU : la capture contre capture se
 fera en production sur 63331 après le push (bureau et téléphone). Reste : H3 après l'envoi, H4 téléphone.
+
+**✅ H2 EN LIGNE (16/11, « Oui, pousse » : `5a89b1b`, Vercel READY) ET VU sur 63331, SANS RIEN ENVOYER** : deux faux fichiers
+glissés dans la page seulement (« RIB SPECIMEN essai.pdf », que son nom tient loin de l'IA, et un texte que l'IA ne lit
+pas : aucun appel au serveur). Bureau : fenêtre au-dessus du bien conforme à la planche (en-tête, pastille « Prise de
+mandat » -- pas de pastille de mandat, 63331 n'en a pas --, pièces non trouvées « Titre de propriété » et « Taxe
+foncière », les mêmes que « Le dossier ») ; liste + aperçu (page 1 dessinée, « 1 / 2 », « Toujours privé », bande « Ce
+type ne part jamais à l'IA ») ; la croix fait monter la bande « 2 documents ne sont pas partis » ; « Fermer sans envoyer »
+ferme, rend le défilement de la page, console propre, **toujours 24 documents**. ⚠ **TÉLÉPHONE (cadre de 390 px, retiré
+après)** : le téléphone prend la skin CLASSIQUE, la fenêtre y est posée dans le panneau, **278 px** de large. Aucun
+débordement, MAIS la ligne était écrasée (95 px pour le nom : « RIB SF », le type réduit à « R.. »), une barre de
+défilement DANS la fenêtre, et le bouton d'envoi tronqué (« r 2 doc »). Cause : mes règles « étroites » jugeaient la
+largeur de l'ÉCRAN, pas celle de la fenêtre. Corrigé : les règles passent en `@container` (la fenêtre est son propre
+conteneur, seuil 720 px) ; vignette masquée en étroit, état sur sa ligne, plus de défilement interne posé dans le panneau,
+texte du pied sur sa ligne et boutons dessous. ⭐ Éprouvé AVANT le commit en injectant ces règles dans le cadre de la
+production : 170 px pour le nom, « Envoyer 2 documents » en entier, 0 débordement. Essais verts, build vert ; commit local
+À POUSSER.

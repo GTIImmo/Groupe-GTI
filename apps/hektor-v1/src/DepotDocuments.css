@@ -227,23 +227,37 @@
 .dd-bande .dd-pied-t { color: #5e3a0b; font-size: 13.5px; }
 .dd-bande .dd-b2 { color: #5e3a0b; box-shadow: inset 0 0 0 1px #e0c38f; }
 
+/* Posée dans le panneau (skin classique, celui du téléphone), la fenêtre ne défile pas en elle-même : c'est la page. */
+.ged-depot.dd { container-type: inline-size; }
+.ged-depot.dd:not(.is-modale) .dd-c { overflow: visible; }
+
+/* L'écran étroit : la fenêtre prend tout l'écran. */
 @media (max-width: 760px) {
   .dd-voile { padding: 0; }
   .ged-depot.dd.is-modale { width: 100%; height: 100dvh; border-radius: 0; }
+}
+
+/* La fenêtre étroite -- jugée sur SA largeur, pas sur celle de l'écran : au téléphone elle est posée dans un panneau de
+   ~280 px (mesure du 16/11 : la règle sur l'écran laissait 95 px au nom, « RIB SF », le type réduit à « R.. »). */
+@container (max-width: 720px) {
   .dd-hd { padding-left: 16px; }
   .dd-hd-pil { display: none; }
   .dd-c { padding: 12px; }
   .ged-depot-zone.dd-zone { min-height: 240px; }
   .dd-grille { display: flex; flex-direction: column; }
+  .ged-depot.dd:not(.is-modale) .dd-grille { max-height: none; }
   .ged-depot-liste.dd-liste { overflow: visible; }
-  .ged-depot-ligne.dd-l { flex-wrap: wrap; }
-  .dd-corps { flex-basis: calc(100% - 124px); }
-  .dd-etat { width: 100%; flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: flex-start; padding-left: 52px; text-align: left; }
+  .ged-depot-ligne.dd-l { flex-wrap: wrap; padding: 10px 12px; }
+  .dd-vign { display: none; }
+  .dd-corps { flex: 1 1 0; }
+  .dd-etat { width: 100%; flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: flex-start; text-align: left; }
   .dd-seul-tel { display: inline-flex !important; }
   .dd-ap { overflow: visible; }
+  .dd-ap-h { flex-wrap: wrap; }
   .dd-page { width: 110px; height: 156px; }
   .dd-pied { padding: 10px 12px; }
-  .dd-pied .dd-b1, .dd-pied .dd-b2 { flex: 1; }
+  .dd-pied-t { flex-basis: 100%; min-width: 0; }
+  .dd-pied .dd-b1, .dd-pied .dd-b2 { flex: 1 1 auto; }
 }
 
 @media (prefers-reduced-motion: reduce) {
