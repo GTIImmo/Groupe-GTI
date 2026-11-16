@@ -286,6 +286,7 @@ import PilotageScreen from './PilotageScreen'
 import RegistreUtilisateurs, { type RuPreRemplissage } from './RegistreUtilisateurs'
 import { BranchesAccueil, ouvrirConversation, useAccueilAssistant, useConversationsRail } from './RailAssistant'
 import AccueilAssistant, { type ChiffresAccueil } from './AccueilAssistant'
+import { contactDeLaRecherche, transactionPourLien } from './lib/assistant'
 import { bvBoot } from './lib/bienvuBoot'
 import { APP_BIENVU_ENABLED } from './lib/bienvuFlag'
 import { BienvuLogin } from './BienvuLogin'
@@ -15963,17 +15964,64 @@ export default function App() {
   // Lot 3 de l'assistant (16/11/2026) : un lien « annonce 63289 » d'une réponse porte le NUMÉRO HEKTOR. Il devient
   // l'app_dossier_id (listes en mémoire, sinon une lecture) et la fiche s'ouvre par-dessus l'Accueil, comme depuis Santé.
   // Introuvable parmi les biens vivants (vendu, clos, archivé) : la liste des annonces étendue aux archives, sur ce numéro.
-  async function assistantOuvrirAnnonce(numero: string) {
+  async function appDossierIdDeLAnnonce(numero: string): Promise<number | null> {
     const enMemoire = [...mandats, ...dossiers].find((d) => String(d.hektor_annonce_id ?? '') === numero)
-    let appDossierId: number | null = enMemoire?.app_dossier_id ?? null
-    if (appDossierId == null) {
-      try { appDossierId = (await loadDossierByHektorAnnonceId(numero))?.app_dossier_id ?? null } catch { appDossierId = null }
-    }
-    if (appDossierId == null) { rechercheVoirTout('horsCatalogue', numero); return }
+    if (enMemoire?.app_dossier_id != null) return enMemoire.app_dossier_id
+    try { return (await loadDossierByHektorAnnonceId(numero))?.app_dossier_id ?? null } catch { return null }
+  }
+  function assistantOuvrirFiche(appDossierId: number) {
     setDossierReturnContactId(null)
     setAnnonceContactId(null)
     setFicheDepuisAssistant(true)
     openDossierDetailPage(appDossierId)
+  }
+  async function assistantOuvrirAnnonce(numero: string) {
+    const appDossierId = await appDossierIdDeLAnnonce(numero)
+    if (appDossierId == null) { rechercheVoirTout('horsCatalogue', numero); return }
+    assistantOuvrirFiche(appDossierId)
+  }
+  // Lot 3b (16/11/2026) : les cinq autres objets, par les portes de l'app.
+  // Mandat : le registre filtré sur le numéro (comme la recherche globale ; un numéro peut couvrir plusieurs mandats).
+  function assistantOuvrirMandat(numero: string) {
+    if (screen !== 'registre') openScreen('registre')
+    setFilters((current) => ({ ...current, query: numero }))
+    setMandatPage(1)
+  }
+  // Transaction : sa chaîne dans le registre des transactions (s'il est ouvert à la personne), sinon la fiche du bien.
+  async function assistantOuvrirTransaction(appAffaireId: string) {
+    const lue = await transactionPourLien(appAffaireId).catch(() => null)
+    if (lue?.chaine != null && registreTransactionsVisible) {
+      setAssistantTransaction({ chaine: lue.chaine, jeton: Date.now() })
+      if (screen !== 'transactions') openScreen('transactions')
+      return
+    }
+    if (lue?.appDossierId != null) { assistantOuvrirFiche(lue.appDossierId); return }
+    setErrorMessage("Cette transaction n'est pas lisible depuis ton compte.")
+  }
+  // Recherche : la fiche du contact qui la porte.
+  async function assistantOuvrirRecherche(cle: string) {
+    const contact = await contactDeLaRecherche(cle).catch(() => null)
+    if (contact) openContactDirectory(contact)
+    else setErrorMessage("Cette recherche n'est pas lisible depuis ton compte.")
+  }
+  // Rendez-vous : l'agenda, ce jour-là.
+  function assistantOuvrirRdv(jour: string) {
+    setAssistantJourAgenda({ date: jour, jeton: Date.now() })
+    if (screen !== 'agenda') openScreen('agenda')
+  }
+  // Demande : la direction la traite dans Suivi (la fiche du bien en mode suivi) ; un négociateur voit la fiche du bien.
+  async function assistantOuvrirDemande(ref: { appDossierId?: string; numero?: string }) {
+    const appDossierId = ref.appDossierId && Number(ref.appDossierId) > 0 ? Number(ref.appDossierId)
+      : ref.numero ? await appDossierIdDeLAnnonce(ref.numero) : null
+    if (appDossierId == null) { if (ref.numero) rechercheVoirTout('horsCatalogue', ref.numero); return }
+    if (isManagerOrAdmin) {
+      setDossierReturnContactId(null)
+      setAnnonceContactId(null)
+      if (screen !== 'suivi') openScreen('suivi')
+      openDossierDetailPage(appDossierId)
+      return
+    }
+    assistantOuvrirFiche(appDossierId)
   }
   function rechercheOuvrirHorsCatalogue(annonce: Dossier) {
     setDossierReturnContactId(null)
@@ -22018,6 +22066,10 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   // Lot 3 (16/11/2026) : une fiche d'annonce ouverte DEPUIS l'assistant s'ouvre par-dessus l'Accueil (la conversation reste
   // montée dessous) ; son bouton Retour dit alors « À la conversation ». Oublié dès que la fiche se ferme.
   const [ficheDepuisAssistant, setFicheDepuisAssistant] = useState(false)
+  // Lot 3b : le point de départ donné par un lien de l'assistant au registre des transactions et à l'agenda (un jeton
+  // neuf à chaque clic). Absent = ces écrans comme avant.
+  const [assistantTransaction, setAssistantTransaction] = useState<{ chaine: number; jeton: number } | null>(null)
+  const [assistantJourAgenda, setAssistantJourAgenda] = useState<{ date: string; jeton: number } | null>(null)
   useEffect(() => { if (!detailOpen) setFicheDepuisAssistant(false) }, [detailOpen])
   useEffect(() => {
     if (screen === 'suivi' && !isManagerOrAdmin) setScreen('mandats')
@@ -26113,6 +26165,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           />
         ) : screen === 'agenda' ? (
           <GoogleAgendaGlobalScreen
+            dateDepart={assistantJourAgenda}
             defaultCalendarEmail={contactHektorUserEmail}
             userLabel={resolvedUserNegotiatorContext?.commercial_nom || profile?.display_name || 'Utilisateur'}
             hektorNegotiators={hektorNegotiators}
@@ -26227,7 +26280,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         ) : screen === 'pilotage' && isAdmin ? (
           <PilotageScreen />
         ) : screen === 'transactions' ? (
-          <RegistreTransactionsScreen isAdmin={isAdmin} libelleTypeBien={propertyTypeLabel} onOuvrirBien={(ligne) => void ouvrirBienDuRegistre(ligne)} onGeste={isManagerOrAdmin ? (ligne, geste) => void ouvrirGesteDuRegistre(ligne, geste) : undefined} fenetreOuverte={statusChangeTarget != null} onOuvrirContact={openContactDirectory} />
+          <RegistreTransactionsScreen isAdmin={isAdmin} libelleTypeBien={propertyTypeLabel} onOuvrirBien={(ligne) => void ouvrirBienDuRegistre(ligne)} onGeste={isManagerOrAdmin ? (ligne, geste) => void ouvrirGesteDuRegistre(ligne, geste) : undefined} fenetreOuverte={statusChangeTarget != null} onOuvrirContact={openContactDirectory} chaineDepart={assistantTransaction} />
         ) : screen === 'registre' ? (
           <MobileRegisterCards
             mandats={screenMandats}
@@ -27168,13 +27221,19 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               onOuvrirSuivi={() => openScreen('suivi')}
               tableauDeBord={tableauDeBord}
               onOuvrirAnnonce={(numero) => void assistantOuvrirAnnonce(numero)}
-              onOuvrirBien={(id) => { if (Number(id) > 0) { setDossierReturnContactId(null); setAnnonceContactId(null); setFicheDepuisAssistant(true); openDossierDetailPage(Number(id)) } }}
+              onOuvrirBien={(id) => { if (Number(id) > 0) assistantOuvrirFiche(Number(id)) }}
+              onOuvrirMandat={assistantOuvrirMandat}
+              onOuvrirTransaction={(id) => void assistantOuvrirTransaction(id)}
+              onOuvrirRecherche={(cle) => void assistantOuvrirRecherche(cle)}
+              onOuvrirRdv={assistantOuvrirRdv}
+              onOuvrirDemande={(ref) => void assistantOuvrirDemande(ref)}
               onOuvrirContact={(id) => openContactDirectory(id)}
               onGesteFait={(travail) => { signalerGeste(); if (travail) relireQuandLeTravailFinit({ id: travail }) }}
             />
           )
         })() : screen === 'agenda' ? (
           <GoogleAgendaGlobalScreen
+            dateDepart={assistantJourAgenda}
             defaultCalendarEmail={contactHektorUserEmail}
             userLabel={resolvedUserNegotiatorContext?.commercial_nom || profile?.display_name || 'Utilisateur'}
             hektorNegotiators={hektorNegotiators}
@@ -27379,7 +27438,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         ) : screen === 'pilotage' && isAdmin ? (
           <PilotageScreen />
         ) : screen === 'transactions' ? (
-          <RegistreTransactionsScreen isAdmin={isAdmin} libelleTypeBien={propertyTypeLabel} onOuvrirBien={(ligne) => void ouvrirBienDuRegistre(ligne)} onGeste={isManagerOrAdmin ? (ligne, geste) => void ouvrirGesteDuRegistre(ligne, geste) : undefined} fenetreOuverte={statusChangeTarget != null} onOuvrirContact={openContactDirectory} />
+          <RegistreTransactionsScreen isAdmin={isAdmin} libelleTypeBien={propertyTypeLabel} onOuvrirBien={(ligne) => void ouvrirBienDuRegistre(ligne)} onGeste={isManagerOrAdmin ? (ligne, geste) => void ouvrirGesteDuRegistre(ligne, geste) : undefined} fenetreOuverte={statusChangeTarget != null} onOuvrirContact={openContactDirectory} chaineDepart={assistantTransaction} />
         ) : (
           <SuiviMandatsScreenV2
             isAdmin={isManagerOrAdmin}
@@ -38653,6 +38712,9 @@ function GoogleAgendaGlobalScreen(props: {
   onOpenDossier?: (appDossierId: number) => void
   onOpenContact?: (contactId: string) => void
   onHektorActionJobCreated?: (job: ConsoleJob) => void
+  // Étape 4 de l'assistant, lot 3b (16/11/2026) : un lien « rendez-vous » d'une réponse ouvre l'agenda CE JOUR-LÀ (AAAA-MM-JJ).
+  // `jeton` change à chaque lien. Absent = la date d'aujourd'hui, comme avant.
+  dateDepart?: { date: string; jeton: number } | null
 }) {
   const canSelectTeam = props.profileRole === 'admin' || props.profileRole === 'manager'
   const defaultEmail = normalizeEmail(props.defaultCalendarEmail)
@@ -38663,8 +38725,12 @@ function GoogleAgendaGlobalScreen(props: {
     userLabel: props.userLabel,
   }), [canSelectTeam, defaultEmail, props.hektorNegotiators, props.userLabel])
   const [calendarEmail, setCalendarEmail] = useState(defaultEmail)
-  const [agendaDate, setAgendaDate] = useState(dateInputFromDateTimeLocal(defaultGoogleAgendaStartValue()))
+  const [agendaDate, setAgendaDate] = useState(() => (props.dateDepart && /^\d{4}-\d{2}-\d{2}$/.test(props.dateDepart.date) ? props.dateDepart.date : dateInputFromDateTimeLocal(defaultGoogleAgendaStartValue())))
   const [agendaMode, setAgendaMode] = useState<GoogleAgendaViewMode>('day')
+  useEffect(() => {
+    const voulu = props.dateDepart?.date
+    if (voulu && /^\d{4}-\d{2}-\d{2}$/.test(voulu)) { setAgendaDate(voulu); setAgendaMode('day') }
+  }, [props.dateDepart?.jeton]) // eslint-disable-line react-hooks/exhaustive-deps
   const [availability, setAvailability] = useState<GoogleCalendarAvailability | null>(null)
   const [linkedEvents, setLinkedEvents] = useState<GoogleCalendarEventLink[]>([])
   const [loading, setLoading] = useState(false)

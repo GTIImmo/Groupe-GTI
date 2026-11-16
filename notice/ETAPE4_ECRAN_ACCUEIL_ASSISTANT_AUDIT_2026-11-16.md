@@ -393,3 +393,80 @@ par-dessus, « Retour · À la conversation » → la conversation intacte (2 qu
 
 **Pas encore fait / vérifié** : en ligne (le vrai modèle écrit-il bien la forme ?) ; le morceau « ‹ Conversation » du
 fil de navigation (option) ; les cinq autres objets (lot 3b).
+
+## 18. Lot 3a — EN LIGNE et PROUVÉ chez lui (16/11, « Oui les deux »), lecture seule
+
+`fc8933b` poussé (seul dans la liste relue) ; Render `/health` = fc8933b9a40c, Vercel servi. Dans son Chrome :
+- « Où en est le bien d'essai 63330 ? Et qui est son mandant ? » → le VRAI modèle a écrit le lien : « bien d'essai 63330 »
+  en bleu (« Ouvrir l'annonce 63330 ») ; clic → le numéro Hektor 63330 traduit en **app_dossier_id 10000006** (« ESSAI
+  8A2B TOUS CHAMPS »), fiche par-dessus l'Accueil, bouton **« Retour · À la conversation »** → retour, la conversation
+  intacte ;
+- l'ancienne conversation « Sur l'annonce 24935, masque la photo… » (lot 4, avant les liens) : **4 liens de repli** dans le
+  texte (annonce 24935, 62963) et **8 « Ouvrir l'annonce … »** sous les cartes relues — la cible vient du serveur ;
+- « Pose un rendez-vous … CLAUDE TESTCLAUDE » : « Ouvrir le contact » → la fiche 10354641 dans l'écran Contacts (on y voit
+  la relance du lot 2) ; « précédent » du navigateur → la conversation se rouvre (2 questions).
+⚠ Constaté : depuis un contact, il faut **deux** « précédent » (l'ouverture d'un contact pose la liste des contacts PUIS
+la fiche dans l'historique — comportement d'avant, de `showContactInDirectory`). Rien écrit en production pendant la preuve.
+➡ **Lot 3a CLOS.** Restent : le fil « ‹ Conversation » (option), le lot 3b (mandat, transaction, recherche, RDV, demande),
+puis 4 (Citer un bien, Rechercher ou demander), 5 (téléphone), 6 (gestes par l'écran).
+
+## 19. Lot 3b — les cinq autres objets : AUDIT (16/11, sur « Lot 3b, les 5 objets »), rien codé
+
+**Périmètre** : ce que l'assistant LIT de chaque objet (`assistant_objets.py`), les paramètres de ses cartes (mesurés
+en base au §17), et la porte de chaque écran dans `App.tsx` / `RegistreTransactionsScreen.tsx`. Pas mesuré : téléphone.
+
+| objet | ce que l'assistant connaît | la porte qui existe | ce qui manque |
+|---|---|---|---|
+| mandat | `numero_mandat` (+ app_dossier_id, hektor_annonce_id) | le registre filtré sur un numéro (`rechercheOuvrirMandat`, recherche globale) | rien : même geste, sans la ligne exacte |
+| transaction | `app_affaire_id` (+ app_dossier_id, hektor_annonce_id, app_chaine_id) | le registre des transactions cherche déjà par numéro d'annonce et par chaîne | une recherche DE DÉPART (prop) — la recherche y est interne, et la période gardée peut cacher la ligne |
+| recherche | `contact_search_key` (+ hektor_contact_id) | la fiche du contact (ses recherches en tête) | la clé → le contact (une lecture) |
+| rendez-vous | sa date (lue par `lire_mon_agenda`) | l'agenda | une DATE DE DÉPART (prop) — la date y est interne |
+| demande | `id`, `app_dossier_id` | direction : Suivi + la fiche du bien en mode « suivi » ; négociateur : la fiche du bien | rien |
+
+**Mesures** : 25 145 lignes de mandats pour **18 836 numéros** (tous numériques) → un numéro de mandat n'identifie pas un
+mandat (déjà su : 4 142 doublons) ; le lien mène au registre filtré sur ce numéro, qui peut montrer plusieurs lignes.
+Cartes : la transaction porte `app_affaire_id` ; archiver / modifier une recherche, `contact_search_key` ; créer un
+rendez-vous / rendez-vous client, `debut` ; la demande à la direction, `hektor_annonce_id`.
+
+**Le plan proposé**
+1. Serveur : la consigne gagne cinq formes — `(mandat:NUMERO)`, `(transaction:APP_AFFAIRE_ID)`, `(recherche:CLE)`,
+   `(rdv:AAAA-MM-JJ)`, `(demande:APP_DOSSIER_ID)` — toujours « seulement un numéro lu » ; `cibles_carte` ajoute
+   transaction, recherche, rendez-vous (sa date) et demande ; essais + témoin inverse.
+2. Écran : les cinq formes deviennent des liens ; les portes : mandat → registre filtré ; transaction → registre des
+   transactions sur sa chaîne (la période est ignorée tant que cette recherche de départ est là, SANS toucher à la
+   période gardée par l'écran) ; recherche → la fiche de son contact ;
+   rendez-vous → l'agenda à cette date ; demande → Suivi sur le bien (direction) ou la fiche du bien (négociateur).
+3. Deux ajouts de propriétés dans deux écrans PARTAGÉS : `rechercheDepart` (registre des transactions) et `dateDepart`
+   (agenda), lus seulement quand ils sont donnés.
+
+**Ce que ça pourrait casser ailleurs** : le registre des transactions et l'agenda sont utilisés par tous ; les deux
+propriétés sont absentes partout ailleurs, donc sans effet (comportement d'aujourd'hui) ; la période gardée par
+l'écran n'est pas modifiée (elle est seulement ignorée pour la recherche de départ) ; les consignes changent encore la forme des réponses
+(même garde : seules les formes reconnues deviennent des liens).
+
+## 20. Lot 3b — CODÉ et CONTRÔLÉ (16/11, sur « Vas-y »), rien poussé
+
+**Serveur** : `cibles_carte(parametres, geste)` ajoute la transaction (`app_affaire_id`), la recherche (sa clé, quand le
+contact n'est pas déjà là), le rendez-vous (le JOUR de `debut`, jamais inventé si illisible) et la demande (seulement pour
+`demande_direction`, par le numéro d'annonce) ; la consigne gagne les cinq formes (`mandat:`, `transaction:`,
+`recherche:`, `rdv:`, `demande:`, exemples fictifs). Essais 223 + 61 + 73. **Témoin inverse** : la « demande » posée
+pour tout geste sur un bien → rouge (« un bien modifié… »), puis vert.
+
+**Écrans partagés (propriétés absentes = comme avant)** :
+- `RegistreTransactionsScreen` : `chaineDepart` — la liste ne montre que cette chaîne, toutes années, et ouvre sa fiche ;
+  les filtres gardés ne sont PAS modifiés (seulement ignorés) ; un filtre changé, une recherche tapée ou « Tout voir » la
+  retire ; bannière « Une transaction, ouverte depuis l'assistant · Tout voir » (style ajouté à registre-transactions.css) ;
+- `GoogleAgendaGlobalScreen` : `dateDepart` — l'agenda s'ouvre en vue jour à cette date.
+
+**Écran de l'assistant** : les cinq formes deviennent des liens (une valeur qui n'a pas la forme de son genre reste du
+texte) ; « Ouvrir la transaction / la recherche / l'agenda au JJ/MM / la demande » sous les cartes ; les portes dans App :
+mandat → registre filtré sur le numéro ; transaction → sa chaîne (registre ouvert à la personne) sinon la fiche du bien ;
+recherche → la fiche de son contact ; rendez-vous → l'agenda ce jour-là ; demande → Suivi + fiche (direction), la fiche
+sinon.
+
+**Contrôlé dans l'aperçu (mode maquette)** : mandat → registre, recherche « 18787 » ; transaction → registre des
+transactions avec la bannière (la maquette n'a aucune ligne : la fiche ouverte n'y est PAS vérifiée) ; « Tout voir » → la
+bannière part ; recherche → Contacts ; rendez-vous → agenda au 2026-11-18 ; demande → Suivi, fiche du bien 7801.
+⚠ Noté : sous la bannière, l'en-tête du registre affiche encore la période gardée (« 2026 ») alors qu'elle est ignorée.
+
+**Pas encore vérifié** : en ligne (le vrai modèle écrit-il ces formes ? la fiche d'une vraie chaîne s'ouvre-t-elle ?).

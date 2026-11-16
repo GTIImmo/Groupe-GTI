@@ -348,6 +348,8 @@ voir("egal « moi »" in str(corps_openai[0].get("instructions")) and "role : ad
 voir("(annonce:63330)" in str(corps_openai[0].get("instructions")) and "(contact:10012345)" in str(corps_openai[0].get("instructions"))
      and "jamais invente" in str(corps_openai[0].get("instructions")),
      "étape 4 lot 3 : les consignes demandent les deux formes de lien (annonce, contact), jamais un numéro inventé")
+voir(all(f"({forme}:" in str(corps_openai[0].get("instructions")) for forme in ("mandat", "transaction", "recherche", "rdv", "demande")),
+     "étape 4 lot 3b : et les cinq autres formes (mandat, transaction, recherche, rendez-vous, demande)")
 import agents.tracing as tr  # noqa: E402
 tr.get_trace_provider().force_flush()
 voir(not envois_httpx, "aucune trace envoyée chez OpenAI (rien n'est parti, même après vidage)")

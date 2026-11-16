@@ -30,6 +30,10 @@ type RegistreTransactionsScreenProps = {
   /** Vrai tant que la fenêtre de statut est ouverte : à sa fermeture, la liste et la fiche se relisent. */
   fenetreOuverte?: boolean
   onOuvrirContact?: (contactId: string) => void
+  /** Étape 4 de l'assistant, lot 3b (16/11/2026) : un lien « transaction » d'une réponse. La liste ne montre que CETTE
+   *  chaîne et ouvre sa fiche, toutes années confondues, sans toucher aux filtres gardés ; un filtre changé, une recherche
+   *  tapée ou « Tout voir » la retire. `jeton` change à chaque lien (deux clics sur le même lien rouvrent). Absent = rien. */
+  chaineDepart?: { chaine: number; jeton: number } | null
 }
 
 const ETAPES: Array<{ cle: RegistreEtape; libelle: string }> = [
@@ -1233,7 +1237,7 @@ function SaPart({ honoraires, part }: { honoraires: number; part: number }) {
   return <span title={`sa part : ${entier.format(Math.round(part * 100))} % de ${formatEuros(honoraires)}`}>{formatEuros(honoraires * part)} <span className="rt-mute">· {entier.format(Math.round(part * 100))} %</span></span>
 }
 
-export default function RegistreTransactionsScreen({ isAdmin, libelleTypeBien, onOuvrirBien, onGeste, fenetreOuverte, onOuvrirContact }: RegistreTransactionsScreenProps) {
+export default function RegistreTransactionsScreen({ isAdmin, libelleTypeBien, onOuvrirBien, onGeste, fenetreOuverte, onOuvrirContact, chaineDepart }: RegistreTransactionsScreenProps) {
   // v3.1 : période, mois, filtre d'étape, tri et sens, « Où je suis nommé », agence et négociateur
   // sont gardés dans le navigateur (lecture une seule fois, à l'ouverture). La recherche ne l'est pas.
   const [depart] = useState(lireMemoire)
@@ -1274,6 +1278,19 @@ export default function RegistreTransactionsScreen({ isAdmin, libelleTypeBien, o
     ecrireMemoire({ annee, mois, etape, tri, sens, nomme: seulementNomme, agence, nego })
   }, [annee, mois, etape, tri, sens, seulementNomme, agence, nego])
 
+  // Lot 3b de l'assistant : la chaîne demandée par un lien. Les filtres gardés ne sont PAS modifiés : ils sont seulement
+  // ignorés tant qu'elle est là. Un filtre changé la retire (cet effet est déclaré AVANT celui qui la pose).
+  const [chaineSeule, setChaineSeule] = useState<number | null>(null)
+  const chaineOuverte = useRef<number | null>(null)
+  useEffect(() => { setChaineSeule(null) }, [annee, mois, etape, seulementNomme, agence, nego])
+  useEffect(() => {
+    if (!chaineDepart) return
+    chaineOuverte.current = null
+    setRecherche('')
+    setChaineSeule(chaineDepart.chaine)
+  }, [chaineDepart?.jeton]) // eslint-disable-line react-hooks/exhaustive-deps
+  const anneeLue = chaineSeule != null ? null : annee
+
   // À la fermeture de la fenêtre de statut ouverte depuis la fiche : on relit la fiche et la liste.
   useEffect(() => {
     if (fenetreOuverte) {
@@ -1296,7 +1313,7 @@ export default function RegistreTransactionsScreen({ isAdmin, libelleTypeBien, o
     let annule = false
     setChargement(true)
     setErreur(null)
-    loadRegistreDossiers(annee)
+    loadRegistreDossiers(anneeLue)
       .then((resultat) => {
         if (!annule) setLignes(resultat)
       })
@@ -1313,7 +1330,14 @@ export default function RegistreTransactionsScreen({ isAdmin, libelleTypeBien, o
     return () => {
       annule = true
     }
-  }, [annee, relecture])
+  }, [anneeLue, relecture])
+
+  // la fiche de la chaîne demandée s'ouvre une fois, dès que sa ligne est lue
+  useEffect(() => {
+    if (chaineSeule == null || chaineOuverte.current === chaineSeule) return
+    const ligne = lignes.find((l) => l.app_chaine_id === chaineSeule)
+    if (ligne) { chaineOuverte.current = chaineSeule; setOuverte(ligne) }
+  }, [lignes, chaineSeule])
 
   // v3.1 : le NOM des négociateurs, en une lecture pour les e-mails de la liste (fiche et menu admin).
   useEffect(() => {
@@ -1374,6 +1398,7 @@ export default function RegistreTransactionsScreen({ isAdmin, libelleTypeBien, o
   // compteurs, sous-titre et liste la suivent. ⚠ L'année d'un dossier = left(date_dernier_evenement, 4)
   // (règle de la base) : le mois se filtre donc ici, sur les caractères 6-7 de la même date.
   const lignesBase = useMemo(() => lignes.filter((ligne) => {
+    if (chaineSeule != null) return ligne.app_chaine_id === chaineSeule
     if (moisActif) {
       const date = String(ligne.date_dernier_evenement ?? '').trim()
       if (!date || date.startsWith('0000') || Number(date.slice(5, 7)) !== Number(moisActif)) return false
@@ -1386,7 +1411,7 @@ export default function RegistreTransactionsScreen({ isAdmin, libelleTypeBien, o
       else if (String(ligne.negociateur_email ?? '').trim().toLowerCase() !== negoActif) return false
     }
     return true
-  }), [lignes, moisActif, agenceActive, negoActif, partActive, partDuDossier])
+  }), [lignes, moisActif, agenceActive, negoActif, partActive, partDuDossier, chaineSeule])
 
   const chiffres = useMemo(() => {
     const ventes = lignesBase.filter((ligne) => ligne.etape === 'vendu' && (annee == null || anneeDe(ligne.date_vente) === annee))
@@ -1426,6 +1451,7 @@ export default function RegistreTransactionsScreen({ isAdmin, libelleTypeBien, o
   const filtrees = useMemo(() => {
     const mots = sansAccents(recherche.trim()).split(/\s+/).filter(Boolean)
     const resultat = lignesBase.filter((ligne) => {
+      if (chaineSeule != null) return true
       if (etape === 'en_cours' && !EN_COURS.includes(ligne.etape)) return false
       if (etape === 'offres' && !OFFRES.includes(ligne.etape)) return false
       if (etape && etape !== 'en_cours' && etape !== 'offres' && ligne.etape !== etape) return false
@@ -1440,7 +1466,7 @@ export default function RegistreTransactionsScreen({ isAdmin, libelleTypeBien, o
     })
     return resultat.sort(comparer)
     // `noms` : la recherche trouve aussi le nom du négociateur.
-  }, [lignesBase, etape, recherche, nommeActif, comparer, noms])
+  }, [lignesBase, etape, recherche, nommeActif, comparer, noms, chaineSeule])
 
   const pages = Math.max(1, Math.ceil(filtrees.length / PAR_PAGE))
   const pageCourante = Math.min(page, pages)
@@ -1656,10 +1682,16 @@ export default function RegistreTransactionsScreen({ isAdmin, libelleTypeBien, o
             <input
               type="search"
               value={recherche}
-              onChange={(event) => setRecherche(event.target.value)}
+              onChange={(event) => { setChaineSeule(null); setRecherche(event.target.value) }}
               placeholder="Ville, acquéreur, n° de mandat, de dossier ou d’annonce…"
             />
           </label>
+          {chaineSeule != null ? (
+            <span className="rt-chaine-seule">
+              Une transaction, ouverte depuis l'assistant
+              <button type="button" onClick={() => setChaineSeule(null)}>Tout voir</button>
+            </span>
+          ) : null}
           <label className="rt-tri">
             <span className="rt-cache">Trier</span>
             <Selecteur icone="trier">

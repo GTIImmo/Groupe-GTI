@@ -16,7 +16,11 @@ import { hasSupabaseEnv, supabase } from './supabase'
 export type EtatCarte = 'proposee' | 'en_cours' | 'executee' | 'refusee' | 'echec' | 'expiree'
 
 /** Lot 3 : sur quoi porte la carte (tiré par le serveur de SES paramètres) -> le lien « Ouvrir la fiche ». */
-export type CibleCarte = { type: 'contact'; id: string } | { type: 'annonce'; numero: string } | { type: 'bien'; id: string }
+export type CibleCarte =
+  | { type: 'contact'; id: string } | { type: 'annonce'; numero: string } | { type: 'bien'; id: string }
+  // lot 3b
+  | { type: 'transaction'; id: string } | { type: 'recherche'; cle: string } | { type: 'rdv'; date: string }
+  | { type: 'demande'; numero: string }
 
 export type CarteAssistant = {
   id: string
@@ -144,6 +148,26 @@ export async function relireConversation(id: string): Promise<{ conversation: Co
   return { conversation: conv.conversation, messages: conv.conversation.messages ?? [], cartes: cartes.actions ?? [] }
 }
 
+// ── Lot 3b : deux lectures pour les liens (avec la session de la personne : la RLS dit ce qu'elle voit) ──
+/** Une transaction (app_affaire_id) -> sa chaîne, pour le registre des transactions. Rien de lisible = null. */
+export async function transactionPourLien(appAffaireId: string): Promise<{ chaine: number | null; appDossierId: number | null } | null> {
+  if (MAQUETTE) return { chaine: 1, appDossierId: 7801 }
+  const { data, error } = await supabase!.from('app_affaire_ledger').select('app_chaine_id, app_dossier_id')
+    .eq('app_affaire_id', Number(appAffaireId)).limit(1).maybeSingle()
+  if (error || !data) return null
+  const ligne = data as { app_chaine_id: number | null; app_dossier_id: number | null }
+  return { chaine: ligne.app_chaine_id ?? null, appDossierId: ligne.app_dossier_id ?? null }
+}
+
+/** Une recherche (contact_search_key) -> le contact qui la porte. */
+export async function contactDeLaRecherche(cle: string): Promise<string | null> {
+  if (MAQUETTE) return '10354641'
+  const { data, error } = await supabase!.from('app_contact_searches_current').select('hektor_contact_id')
+    .eq('contact_search_key', cle).limit(1).maybeSingle()
+  if (error || !data) return null
+  return String((data as { hektor_contact_id: string | null }).hektor_contact_id ?? '').trim() || null
+}
+
 export type ReponseCarte = { ok: boolean; etat: EtatCarte; detail?: string; resultat?: Record<string, unknown> }
 
 export async function validerCarte(id: string): Promise<ReponseCarte> {
@@ -204,7 +228,9 @@ async function fauxFlux(question: string, conversationId: string | null, surEven
   }
   const texte = q.includes('carte') || q.includes('relance')
     ? "Je prépare la relance de [M. AVOIR TEST4](contact:10354641) pour **vendredi 20 novembre**. La voici, à valider :"
-    : "Voici ce que je trouve :\n\n- **3 annonces** sans aucun portail, dont l'[annonce 44506](annonce:44506) ;\n- la plus ancienne est le bien **62965**, depuis le 02/06.\n\nTu veux que je les liste ?"
+    : q.includes('objets')
+      ? "Les cinq : le [mandat 18787](mandat:18787), l'[offre du 12/11](transaction:1001409), [sa recherche](recherche:344a6bbc6068564a4e2bd9df), le [rendez-vous du 18/11](rdv:2026-11-18) et la [demande en attente](demande:7801)."
+      : "Voici ce que je trouve :\n\n- **3 annonces** sans aucun portail, dont l'[annonce 44506](annonce:44506) ;\n- la plus ancienne est le bien **62965**, depuis le 02/06.\n\nTu veux que je les liste ?"
   for (const mot of texte.split(/(?<= )/)) {
     if (signal.aborted) return false
     surEvenement({ type: 'texte', delta: mot })

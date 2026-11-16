@@ -115,10 +115,21 @@ const estExpiree = (c: CarteAssistant) => c.etat === 'expiree' || (c.etat === 'p
 //   LU sous la forme [texte](annonce:NUMERO_HEKTOR) ou [texte](contact:NUMERO) ; seules ces deux formes deviennent un
 //   lien, tout le reste reste du texte. Repli pour l'historique et les oublis : « annonce 24935 », « bien d'essai
 //   **62965** », « l'annonce n° 63330 » (4 à 6 chiffres) ouvrent l'annonce. Un contact cité par son seul nom n'a pas de lien.
-type Liens = { annonce: (numero: string) => void; bien: (id: string) => void; contact: (id: string) => void }
+// Lot 3b (16/11/2026) : + mandat (numero_mandat), transaction (app_affaire_id), recherche (contact_search_key), rdv (le
+//   jour, AAAA-MM-JJ) et demande (app_dossier_id du bien). Une valeur qui n'a pas la forme de son genre reste du texte.
+type Liens = {
+  annonce: (numero: string) => void; bien: (id: string) => void; contact: (id: string) => void
+  mandat: (numero: string) => void; transaction: (id: string) => void; recherche: (cle: string) => void
+  rdv: (jour: string) => void; demande: (ref: { appDossierId?: string; numero?: string }) => void
+}
 const LiensContexte = createContext<Liens | null>(null)
-const UN_LIEN = /(\[[^\]\n]{1,160}\]\((?:annonce|contact):[0-9]{1,12}\))/g
-const LE_LIEN = /^\[([^\]\n]{1,160})\]\((annonce|contact):([0-9]{1,12})\)$/
+const UN_LIEN = /(\[[^\]\n]{1,160}\]\((?:annonce|contact|mandat|transaction|recherche|rdv|demande):[0-9A-Za-z-]{1,40}\))/g
+const LE_LIEN = /^\[([^\]\n]{1,160})\]\((annonce|contact|mandat|transaction|recherche|rdv|demande):([0-9A-Za-z-]{1,40})\)$/
+const FORME_VALEUR: Record<string, RegExp> = {
+  annonce: /^\d{1,12}$/, contact: /^\d{1,12}$/, mandat: /^\d{1,12}$/, transaction: /^\d{1,12}$/, demande: /^\d{1,12}$/,
+  recherche: /^[0-9a-f]{6,40}$/i, rdv: /^\d{4}-\d{2}-\d{2}$/,
+}
+const jourLisible = (jour: string) => jour.split('-').reverse().join('/')
 const REPLI_ANNONCE = /\b((?:annonces?|biens?)(?:\s+d['’]essai)?\s+(?:n°\s?)?)(\*\*)?(\d{4,6})\2(?![\d,.]\d)/gi
 
 function avecLiensDeRepli(texte: string) {
@@ -139,12 +150,17 @@ function EnLigne({ texte }: { texte: string }) {
         const lien = i % 2 ? LE_LIEN.exec(m) : null
         if (!lien) return <Gras key={i} texte={m} />
         const libelle = lien[1].replace(/\*\*/g, '')
-        const [genre, numero] = [lien[2], lien[3]]
-        if (!liens) return <Fragment key={i}>{libelle}</Fragment>
-        return (
-          <button key={i} type="button" className="asi-obj" title={genre === 'annonce' ? `Ouvrir l'annonce ${numero}` : `Ouvrir la fiche du contact ${numero}`}
-            onClick={() => (genre === 'annonce' ? liens.annonce(numero) : liens.contact(numero))}>{libelle}</button>
-        )
+        const [genre, valeur] = [lien[2], lien[3]]
+        if (!liens || !FORME_VALEUR[genre]?.test(valeur)) return <Fragment key={i}>{libelle}</Fragment>
+        const [titre, ouvrir]: [string, () => void] =
+          genre === 'annonce' ? [`Ouvrir l'annonce ${valeur}`, () => liens.annonce(valeur)]
+            : genre === 'contact' ? [`Ouvrir la fiche du contact ${valeur}`, () => liens.contact(valeur)]
+              : genre === 'mandat' ? [`Ouvrir le registre sur le mandat ${valeur}`, () => liens.mandat(valeur)]
+                : genre === 'transaction' ? ['Ouvrir la transaction dans le registre des transactions', () => liens.transaction(valeur)]
+                  : genre === 'recherche' ? ['Ouvrir la fiche du contact qui porte cette recherche', () => liens.recherche(valeur)]
+                    : genre === 'rdv' ? [`Ouvrir l'agenda au ${jourLisible(valeur)}`, () => liens.rdv(valeur)]
+                      : ['Ouvrir la demande', () => liens.demande({ appDossierId: valeur })]
+        return <button key={i} type="button" className="asi-obj" title={titre} onClick={ouvrir}>{libelle}</button>
       })}
     </>
   )
@@ -221,12 +237,17 @@ function LiensCarte({ cibles }: { cibles?: CibleCarte[] }) {
   if (!liens || !cibles?.length) return null
   return (
     <div className="asi-c-liens">
-      {cibles.map((c) => (
-        <button key={`${c.type}-${c.type === 'annonce' ? c.numero : c.id}`} type="button" className="asi-obj"
-          onClick={() => (c.type === 'contact' ? liens.contact(c.id) : c.type === 'annonce' ? liens.annonce(c.numero) : liens.bien(c.id))}>
-          {c.type === 'contact' ? 'Ouvrir le contact' : c.type === 'annonce' ? `Ouvrir l'annonce ${c.numero}` : 'Ouvrir le bien'}
-        </button>
-      ))}
+      {cibles.map((c) => {
+        const [libelle, ouvrir]: [string, () => void] =
+          c.type === 'contact' ? ['Ouvrir le contact', () => liens.contact(c.id)]
+            : c.type === 'annonce' ? [`Ouvrir l'annonce ${c.numero}`, () => liens.annonce(c.numero)]
+              : c.type === 'bien' ? ['Ouvrir le bien', () => liens.bien(c.id)]
+                : c.type === 'transaction' ? ['Ouvrir la transaction', () => liens.transaction(c.id)]
+                  : c.type === 'recherche' ? ['Ouvrir la recherche', () => liens.recherche(c.cle)]
+                    : c.type === 'rdv' ? [`Ouvrir l'agenda au ${jourLisible(c.date)}`, () => liens.rdv(c.date)]
+                      : ['Ouvrir la demande', () => liens.demande({ numero: c.numero })]
+        return <button key={`${c.type}-${libelle}`} type="button" className="asi-obj" onClick={ouvrir}>{libelle}</button>
+      })}
     </div>
   )
 }
@@ -299,6 +320,13 @@ export default function AccueilAssistant(props: {
   onOuvrirContact: (hektorContactId: string) => void
   // lot 3 : après une carte validée, l'app se relit comme après un geste fait à la main (et à la fin du travail Hektor)
   onGesteFait: (travail: string | null) => void
+  // lot 3b : les cinq autres portes (registre des mandats, registre des transactions, fiche du contact d'une recherche,
+  // agenda à un jour, demande : Suivi pour la direction, la fiche du bien sinon)
+  onOuvrirMandat: (numero: string) => void
+  onOuvrirTransaction: (appAffaireId: string) => void
+  onOuvrirRecherche: (cle: string) => void
+  onOuvrirRdv: (jour: string) => void
+  onOuvrirDemande: (ref: { appDossierId?: string; numero?: string }) => void
 }) {
   const [vue, setVue] = useState<'assistant' | 'tableau'>('assistant')
   const [mode, setMode] = useState<Mode>({ type: 'accueil' })
@@ -335,6 +363,11 @@ export default function AccueilAssistant(props: {
     annonce: (n) => portes.current.onOuvrirAnnonce(n),
     bien: (id) => portes.current.onOuvrirBien(id),
     contact: (id) => portes.current.onOuvrirContact(id),
+    mandat: (n) => portes.current.onOuvrirMandat(n),
+    transaction: (id) => portes.current.onOuvrirTransaction(id),
+    recherche: (cle) => portes.current.onOuvrirRecherche(cle),
+    rdv: (jour) => portes.current.onOuvrirRdv(jour),
+    demande: (ref) => portes.current.onOuvrirDemande(ref),
   }), [])
 
   // lot 3 : la conversation ouverte est gardée pour l'onglet. Un contact s'ouvre dans l'écran Contacts (l'Accueil est

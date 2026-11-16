@@ -92,8 +92,11 @@ _INSTRUCTIONS = (
     # étape 4, lot 3 (16/11/2026) : l'écran fait de ces deux formes un lien qui ouvre la fiche ; tout le reste reste du texte
     "- Un bien ou un contact que tes lectures t'ont rendu s'ecrit comme un lien, pour que la personne ouvre sa fiche d'un "
     "clic : [l'annonce 63330](annonce:63330) avec le NUMERO D'ANNONCE (hektor_annonce_id), [M. MARTIN](contact:10012345) "
-    "avec le numero du contact (hektor_contact_id). Seulement avec un numero que tu as lu, jamais invente ; sinon le texte "
-    "seul. Aucune autre sorte de lien.\n"
+    "avec le numero du contact (hektor_contact_id). De meme : [le mandat 18787](mandat:18787) (numero_mandat), "
+    "[l'offre du 12/11](transaction:1000123) (app_affaire_id), [sa recherche](recherche:CLE) (contact_search_key), "
+    "[le rendez-vous du 18/11](rdv:2026-11-18) (le jour), [la demande en attente](demande:61000) (app_dossier_id du bien "
+    "de la demande). Seulement avec un numero que tu as lu, jamais invente ; sinon le texte seul. Aucune autre sorte de "
+    "lien.\n"
     "- Question juridique ou fiscale : reponse generale, et precise qu'elle est a faire verifier (notaire, juriste).\n"
     "- Sois force de proposition : apres ta reponse, propose en une phrase la suite utile (relancer, appeler, verifier "
     "un mandat, demander une baisse de prix…).\n"
@@ -289,7 +292,8 @@ class AssistantService:
             "conversation_id": f"eq.{conversation_id}",
             "select": "id,geste,resume,etat,resultat,cree_le,expire_le,execute_le,parametres",
             "order": "cree_le.asc"})
-        return [{**{k: v for k, v in ligne.items() if k != "parametres"}, "cibles": cibles_carte(ligne.get("parametres"))}
+        return [{**{k: v for k, v in ligne.items() if k != "parametres"},
+                 "cibles": cibles_carte(ligne.get("parametres"), ligne.get("geste"))}
                 for ligne in lignes]
 
     # ── relire (avec le JETON de la personne : la RLS dit qui voit quoi) ──────

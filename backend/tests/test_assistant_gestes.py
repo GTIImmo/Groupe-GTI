@@ -1190,8 +1190,22 @@ voir(ges.cibles_carte({"hektor_annonce_id": 0, "app_dossier_id": 10000006}) == [
      "un numéro d'annonce à 0 (bien né dans l'app) : repli sur l'app_dossier_id")
 voir(ges.cibles_carte({"hektor_contact_id": "10354641", "objet": "Bonjour", "texte": "secret du courriel"})
      == [{"type": "contact", "id": "10354641"}], "un e-mail au client : le contact seul, JAMAIS l'objet ni le texte")
-voir(ges.cibles_carte({"destinataires": ["a@gti-immobilier.fr"], "texte": "x"}) == [] and ges.cibles_carte({"app_affaire_id": 5, "geste": "accepte"}) == []
-     and ges.cibles_carte(None) == [], "e-mail interne, transaction, rien : aucune cible (pas de lien inventé)")
+voir(ges.cibles_carte({"destinataires": ["a@gti-immobilier.fr"], "texte": "x"}) == [] and ges.cibles_carte({"notification_ids": [1, 2]}) == []
+     and ges.cibles_carte({"rdv_id": "abc"}) == [] and ges.cibles_carte(None) == [],
+     "e-mail interne, notifications, rendez-vous supprimé (sans date), rien : aucune cible (pas de lien inventé)")
+print("11bis) LOT 3b : transaction, recherche, rendez-vous, demande")
+voir(ges.cibles_carte({"app_affaire_id": 1001409, "geste": "accepte"}, "transaction") == [{"type": "transaction", "id": "1001409"}],
+     "une transaction : son app_affaire_id")
+voir(ges.cibles_carte({"contact_search_key": "344a6bbc6068564a4e2bd9df"}, "archiver_recherche") == [{"type": "recherche", "cle": "344a6bbc6068564a4e2bd9df"}],
+     "une recherche seule : sa clé")
+voir(ges.cibles_carte({"contact_search_key": "k", "hektor_contact_id": "10354641", "hektor_annonce_id": 63330, "debut": "2026-11-18T20:30:00+01:00"}, "rdv_client")
+     == [{"type": "contact", "id": "10354641"}, {"type": "annonce", "numero": "63330"}, {"type": "rdv", "date": "2026-11-18"}],
+     "un rendez-vous client : le contact (pas la recherche en double), le bien, et le JOUR du rendez-vous")
+voir(ges.cibles_carte({"type": "baisse_prix", "hektor_annonce_id": 63289, "nouveau_prix": 149000}, "demande_direction")
+     == [{"type": "annonce", "numero": "63289"}, {"type": "demande", "numero": "63289"}]
+     and ges.cibles_carte({"hektor_annonce_id": 63289}, "modifier_bien") == [{"type": "annonce", "numero": "63289"}],
+     "une demande à la direction : le bien ET la demande ; un autre geste sur le même bien : pas de « demande »")
+voir(ges.cibles_carte({"debut": "demain"}, "deplacer_rdv") == [], "un début illisible : pas de jour inventé")
 _post = requests.post
 requests.post = lambda url, **kw: type("R", (), {"ok": True, "status_code": 201, "json": lambda self: [{"id": "c-lot3", "expire_le": "2026-11-16T13:00:00Z"}]})()
 _ctx3 = cat.ContexteAssistant(settings=Settings(), user_id=UID, email="moi@gti-immobilier.fr", role="admin", jeton="jeton", conversation_id="conv")

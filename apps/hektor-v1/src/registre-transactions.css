@@ -839,3 +839,9 @@ td.rt-num { font-weight: 600; }
   .rt-ecran .sk, .rt-ecran .ld-toit, .rt-ecran .ld-coche { animation: none !important; }
   .rt-ecran .ld-coche { stroke-dashoffset: 0; }
 }
+
+/* Étape 4 de l'assistant, lot 3b (16/11/2026) : la liste réduite à la transaction d'un lien de l'assistant */
+.rt-chaine-seule { display: inline-flex; align-items: center; gap: 8px; padding: 0 4px 0 12px; height: 34px; border-radius: 99px; background: #fdf0f6; color: #8c0044; font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+.rt-chaine-seule button { height: 26px; padding: 0 10px; border: 0; border-radius: 99px; background: #ffffff; color: #17697a; font: inherit; font-weight: 600; cursor: pointer; }
+.rt-chaine-seule button:hover { color: #0f4f5c; }
+.rt-chaine-seule button:focus-visible { outline: 2px solid #c5005f; outline-offset: 1px; }

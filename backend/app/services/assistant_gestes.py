@@ -2276,7 +2276,7 @@ def ranger_carte(ctx: ContexteAssistant, geste: Geste, resume: str, parametres: 
         raise LectureRefusee(f"carte non rangée ({r.status_code})")
     ligne = r.json()[0]
     carte = {"id": ligne["id"], "geste": geste.nom, "resume": resume, "expire_le": ligne.get("expire_le"),
-             "cibles": cibles_carte(parametres)}
+             "cibles": cibles_carte(parametres, geste.nom)}
     ctx.cartes.append(carte)
     return carte
 
@@ -2285,17 +2285,30 @@ def ranger_carte(ctx: ContexteAssistant, geste: Geste, resume: str, parametres: 
 # paramètres que le SERVEUR a préparés (jamais dans le texte du modèle), et rien d'autre ne sort (ni le texte d'un e-mail,
 # ni des critères). Le contact d'abord (une relance, un rendez-vous client portent sur la personne), puis le bien : par
 # son numéro d'annonce s'il en a un, sinon par son app_dossier_id.
-def cibles_carte(parametres: dict[str, Any] | None) -> list[dict[str, str]]:
+# Lot 3b : + la transaction (app_affaire_id), la recherche (sa clé, quand le contact n'est pas déjà là), le rendez-vous
+# (le JOUR de son début, pour l'agenda) et la demande à la direction (par le numéro d'annonce du bien).
+def cibles_carte(parametres: dict[str, Any] | None, geste: str | None = None) -> list[dict[str, str]]:
     p = parametres or {}
     cibles: list[dict[str, str]] = []
     contact = str(p.get("hektor_contact_id") or "").strip()
     if contact:
         cibles.append({"type": "contact", "id": contact})
+    cle = str(p.get("contact_search_key") or "").strip()
+    if cle and not contact:
+        cibles.append({"type": "recherche", "cle": cle})
     annonce = str(p.get("hektor_annonce_id") or "").strip()
     if annonce and annonce != "0":
         cibles.append({"type": "annonce", "numero": annonce})
     elif str(p.get("app_dossier_id") or "").strip():
         cibles.append({"type": "bien", "id": str(p["app_dossier_id"]).strip()})
+    if geste == "demande_direction" and annonce and annonce != "0":
+        cibles.append({"type": "demande", "numero": annonce})
+    affaire = str(p.get("app_affaire_id") or "").strip()
+    if affaire:
+        cibles.append({"type": "transaction", "id": affaire})
+    jour = re.match(r"\d{4}-\d{2}-\d{2}", str(p.get("debut") or ""))
+    if jour:
+        cibles.append({"type": "rdv", "date": jour.group(0)})
     return cibles
 
 
