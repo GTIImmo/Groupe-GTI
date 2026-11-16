@@ -415,8 +415,37 @@ DATA_SENTINELS: list[dict[str, Any]] = [
         "key": "data.transaction_disparue",
         "label": "Transactions disparues de Hektor cette nuit",
         "table": "app_affaire_ledger",
+        # ⭐ C.19-d (16/11/2026) : LA GARDE DE L'ORIGINE. Une reprise de l'historique
+        #   depuis le classeur n'est JAMAIS allee chez Hektor -- elle ne peut donc pas
+        #   en avoir « disparu cette nuit ». Sans ce filtre, les 241 lignes du classeur
+        #   feraient crier cette sentinelle 241 fois PAR NUIT, et « un essai qui crie
+        #   tous les jours n'est plus un essai » : le bruit couvrirait la vraie
+        #   disparition qu'elle existe pour attraper.
+        #   ⭐ MEME CRITERE QUE LE FILET DU WORKER (console_job_worker.js:24124) et que
+        #     la vue de sa soeur `data.affaire_sans_numero_hektor` : on distingue
+        #     L'INTENTION (la marque), jamais la plage de numeros -- arbitrage de
+        #     Frederic du 15/11, ecrit dans patch_transaction_origine_2026-11-15.sql.
+        #   ⛔⛔ ET C'EST `is.null` SEUL, PAS `or=(is.null,eq.)` -- J'AVAIS ECRIT LE
+        #     CONTRAIRE, ET LA CONSEQUENCE A L'ENVERS (corrige le 16/11 sur une
+        #     question de Frederic : « c'est a dire ? »). Une case peut etre sans
+        #     contenu de DEUX facons que la base ne confond pas : NON RENSEIGNEE
+        #     (NULL) ou VIDE (chaine de longueur zero). Si l'insert des 241 posait
+        #     une marque VIDE au lieu de `classeur`, alors `or=(is.null,eq.)` les
+        #     aurait laissees CRIER -- 241 fois par nuit -- tandis que `is.null`
+        #     seul les ECARTE, parce que « vide » n'est pas « non renseignee ».
+        #     Le critere le plus PRUDENT est donc le plus etroit, et c'est celui du
+        #     worker. Les trois portes disent maintenant la meme chose, mot pour mot.
+        #   ⚠ Mesure du 16/11 : 31 158 lignes, toutes NULL, zero chaine vide des deux
+        #     cotes -- donc aujourd'hui ce filtre ne retire RIEN, et le comportement
+        #     est identique a celui d'avant (temoin inverse de l'essai).
+        #   ⛔ ET IL VAUT POUR LES DEUX PORTES SANS RIEN DE PLUS : `_sentinel_sample`
+        #     recopie les `params` de la sentinelle dans l'echantillon (l. 1845), et
+        #     le comptage les passe tels quels (l. 1923). Une exclusion doit etre
+        #     appelee par CHAQUE porte -- ici le moteur s'en charge, mesure avant
+        #     d'ecrire.
         "params": {"present_in_hektor": "is.false",
-                   "last_seen_at": f"gte.{_il_y_a_48h()}"},
+                   "last_seen_at": f"gte.{_il_y_a_48h()}",
+                   "transaction_origine": "is.null"},
         "rule": "absolute",
         "max": 0,
         "sample": {

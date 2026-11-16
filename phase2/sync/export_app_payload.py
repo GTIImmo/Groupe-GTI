@@ -2375,13 +2375,58 @@ def build_mandat_register_rows(
     # dans le ledger app-owned. Les affaires PRESENTES viennent de Hektor live ci-dessus (autorite) ;
     # ici uniquement les disparues, marquees _dropped pour l'affichage ("plus dans Hektor depuis ...").
     # Strategie "Hektor d'abord, ledger en filet" : aucune dependance de fraicheur pour les presentes.
+    # ⭐⭐ C.19-d (16/11/2026) : LA GARDE DE L'ORIGINE, ET C'EST LE LECTEUR LE PLUS GRAVE.
+    #   Une reprise de l'historique depuis le classeur n'est JAMAIS allee chez Hektor.
+    #   Sans ce filtre, chacune des 241 lignes a venir ressortirait ici avec `_dropped`,
+    #   et le cockpit AFFICHERAIT « · plus dans Hektor depuis <date> » avec l'infobulle
+    #   « Vu pour la derniere fois dans Hektor le ... » (App.tsx:31502) -- une phrase
+    #   FAUSSE, montree a l'utilisateur. Ce n'est pas une alarme dans un journal : c'est
+    #   un mensonge a l'ecran. Le plan du chantier l'avait deja repere (section C.19-d,
+    #   « dont export_app_payload.py:2383 ... notre cas exact »).
+    #
+    #   ⚠ LE DEFAUT EST DORMANT AUJOURD'HUI, et seule la mesure le dit : la ligne
+    #     d'essai 1001424 n'a AUCUN acquereur, et `build_affaires_dossiers` saute toute
+    #     ligne sans acquereur. Mesure du 16/11 : 20 lignes `present_in_hektor = 0`,
+    #     dont 19 avec un acquereur -- ces 19 sont de VRAIES disparitions, elles portent
+    #     un numero Hektor, et elles doivent continuer de s'afficher.
+    #
+    #   ⛔ D'OU LA PRESENCE DE COLONNE MESUREE AVANT, et pas seulement le `try` :
+    #     la colonne est creee par `refresh_ledger` (affaire_ledger.py), qui passe plus
+    #     tot dans le run -- mais ce fichier peut etre appele seul sur une base fraiche.
+    #     Si on avait colle le filtre sans verifier, le SELECT aurait leve « no such
+    #     column », le `except` aurait rendu une liste VIDE, et les 19 affichages
+    #     legitimes auraient DISPARU sans un mot. Le patron est celui de la l. 2107 du
+    #     meme fichier.
+    #
+    #   ⭐ L'ORDRE DU RUN EST FAVORABLE, mesure le 16/11 : l'etape du ledger pose la
+    #     marque par sa redescente a 06:18:26, et « push upgrade to supabase » (qui
+    #     importe ce module) part a 06:22:39. La marque est donc la le soir meme.
+    #
+    #   ⛔⛔ LE CRITERE EST `IS NULL` SEUL, ET J'AVAIS D'ABORD ECRIT L'INVERSE.
+    #     Mon premier jet tolerait aussi la chaine vide
+    #     (`IS NULL OR TRIM(...) = ''`), et j'avais note la consequence A L'ENVERS,
+    #     en appelant mon critere « plus etroit » que celui du worker. Corrige le
+    #     16/11 sur une question de Frederic -- « c'est a dire ? ».
+    #     Une case est sans contenu de DEUX facons que la base ne confond pas : NON
+    #     RENSEIGNEE (NULL), ou VIDE (chaine de longueur zero). Si l'insert des 241
+    #     posait une marque VIDE au lieu de `classeur`, tolerer le vide les aurait
+    #     fait AFFICHER « plus dans Hektor » -- 241 phrases fausses -- alors que
+    #     `IS NULL` seul les ECARTE : « vide » n'est pas « non renseignee ».
+    #     Le critere le plus prudent est donc le plus ETROIT, et c'est celui du filet
+    #     du worker (console_job_worker.js:24124, `&transaction_origine=is.null`).
+    #     ⭐ LES TROIS PORTES DISENT MAINTENANT LA MEME CHOSE, mot pour mot : plus
+    #       aucune divergence a surveiller. Voir la memoire
+    #       deux-portes-meme-table-seuils-divergents.
     try:
+        colonnes_ledger = {c[1] for c in con.execute("PRAGMA table_info(app_affaire_ledger)")}
+        garde_origine = (" AND transaction_origine IS NULL"
+                         if "transaction_origine" in colonnes_ledger else "")
         ledger_dropped = fetch_rows(con, """
             SELECT hektor_annonce_id, hektor_mandat_id, kind, hektor_affaire_id AS id, state,
                    hektor_acquereur_id AS acq_id, acquereur_json AS acq_json, montant,
                    date AS dt, date_acte, sequestre, last_seen_at
             FROM app_affaire_ledger WHERE present_in_hektor = 0
-        """)
+        """ + garde_origine)
     except sqlite3.OperationalError:
         ledger_dropped = []  # ledger pas encore cree (env sans backfill)
     for row in ledger_dropped:

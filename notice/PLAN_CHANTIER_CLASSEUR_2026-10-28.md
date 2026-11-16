@@ -1528,6 +1528,146 @@ garde `transaction_origine` est posee. `data.transaction_disparue` lit la **TABL
 direct** (`present_in_hektor=is.false` + `last_seen_at>=48h`) et n'a **rien**. Avec les
 241, elle crierait **241 fois par nuit**. A reparer **AVANT** de poser les 241.
 
+### ✅✅ 4bis -- LA GARDE DE L'ORIGINE EST POSEE SUR LES DEUX LECTEURS (16/11)
+
+**L'AUDIT A BALAYE TOUTE LA FAMILLE, pas seulement la sentinelle** -- lecon 9, « une
+cause structurelle se balaie dans TOUTE sa famille ». Six lecteurs regardent « cette
+transaction n'est pas chez Hektor » :
+
+```
+   DEJA PROTEGES (4), verifies un par un
+     le filet du worker       console_job_worker.js:24124   &transaction_origine=is.null
+     l app, 8 endroits        App.tsx:19884,31829,32242,... exige UN NUMERO EN PLUS
+     3 gestes de masse        enqueue_fermeture_dossiers_impossibles.js:172
+                              enqueue_refus_offres_mortes_lot.js:162
+                              enqueue_reaccepter_offres_refusees_a_tort.js:247
+     le moteur du moniteur    params passes aux DEUX portes (l. 1845 et 1923)
+   SANS GARDE (2) -- ce sont eux
+     A la sentinelle          check_gti_health.py, data.transaction_disparue
+     B le filet du cockpit    export_app_payload.py -- LE PLUS GRAVE
+```
+
+⭐⭐ **CE QUE L'APP DIT D'ELLE-MEME, et qui explique pourquoi elle est sure** :
+`App.tsx:31823` -- « Hektor l'a SUPPRIMEE : elle porte un numero ET
+present_in_hektor = false ». Une ligne **sans** numero est « nee chez nous ». Les 241
+n'auront pas de numero : l'ecran ne les prendra donc jamais pour des suppressions.
+
+#### ⛔⛔ B EST PLUS GRAVE QUE A, ET CE N'EST PAS UNE ALARME
+
+`export_app_payload.py` ressortait toute ligne absente de Hektor avec `_dropped`, et le
+cockpit AFFICHE alors « **· plus dans Hektor depuis \<date\>** », infobulle « Vu pour la
+derniere fois dans Hektor le ... » (`App.tsx:31502`). Pour les 241 c'est **faux** : elles
+n'y ont jamais ete. Ce n'est pas du bruit dans un journal, **c'est une phrase mensongere
+montree a l'utilisateur**.
+
+⭐ Le plan l'avait **deja repere** (« dont export_app_payload.py:2383 ... notre cas
+exact ») : je l'ai redecouvert au lieu de le lire. Lecon 15, une fois de plus.
+
+⚠ **ET LA MESURE A CORRIGE MON ALERTE** : le defaut est **DORMANT** aujourd'hui. La ligne
+d'essai 1001424 n'a **aucun acquereur**, et `build_affaires_dossiers` saute toute ligne
+sans acquereur -- rien ne s'affiche donc a tort. Mesure du 16/11 : **20 lignes** a
+`present_in_hektor = 0`, dont **19 avec un acquereur** -- et ces 19 sont de **VRAIES**
+disparitions, avec numero : elles doivent continuer de s'afficher.
+
+#### ⭐ LE PIEGE QUE LA PRUDENCE A EVITE
+
+`export_app_payload.py` entoure sa lecture d'un `try` qui, sur `OperationalError`, rend
+une liste **VIDE**. Si l'on avait colle le filtre sans verifier la presence de la colonne,
+un appel sur une base fraiche aurait leve « no such column », le `except` aurait vide la
+liste, et **les 19 affichages legitimes auraient disparu sans un mot**. La garde mesure
+donc la colonne avant (`PRAGMA table_info`, patron de la l. 2107 du meme fichier).
+
+⭐ **L'ORDRE DU RUN EST FAVORABLE, mesure** : le ledger pose la marque par sa redescente
+a **06:18:26**, et « push upgrade to supabase » -- qui importe ce module -- part a
+**06:22:39**. La marque est la le soir meme.
+
+#### ✅ L'EPREUVE : `phase2/checks/test_garde_origine_classeur.py`, **22/22**
+
+⭐ **L'essai ne recopie rien** : il EXTRAIT la vraie requete et la vraie garde du fichier
+source par expression reguliere, puis les joue sur une base SQLite en memoire. Il ne peut
+pas rester vert sur une copie perimee.
+
+```
+   1   les 2 lignes MARQUEES `classeur` ne sortent plus
+   1b  exactement QUI sort : le cobaye et la vraie disparition, RIEN D'AUTRE
+   1e  ⛔ une marque VIDE est traitee comme MARQUEE (le choix prudent)
+   1c  ⭐ LA VRAIE DISPARITION HEKTOR (50128) SORT TOUJOURS
+   2   TEMOIN INVERSE : sans la garde, les 2 lignes du classeur RESSORTENT
+   2b  la garde retire exactement 3 lignes (les 2 marquees + la vide)
+   3   ⛔ colonne absente -> la liste n'est PAS videe (les 19 survivent)
+   4   la garde est bien DANS le fichier, et le danger y est ECRIT
+   5   ⛔ la sentinelle : la garde est posee ET les DEUX portes l'heritent
+   6   ⭐⭐ LES TROIS PORTES disent la MEME chose, mot pour mot
+```
+
+#### ✅✅ ET LA PREUVE EN REEL, PARCE QU'UN ESSAI HORS LIGNE NE SUFFISAIT PAS
+
+Un essai hors ligne ne peut pas dire si **PostgREST** accepte `or=(...)` combine aux deux
+autres filtres. S'il le refusait, la sentinelle sortirait en « unknown » -- et **une
+lecture ratee n'est jamais un vert**. Mesure en lecture seule :
+
+```
+   AVEC la garde : 1       SANS la garde : 1      l echantillon repond, 1 ligne
+   -> offre . annonce 28351 . 2006-04-01   (le cobaye, comme avant)
+```
+
+⛔⛔ **MAIS « 1 = 1 » NE SE CROIT PAS SANS TEMOIN POSITIF** : c'est compatible avec « la
+garde marche et ne retire rien » ET avec « PostgREST ignore le parametre ». Quatre
+reglages, sur le critere tel qu'il est maintenant :
+
+```
+   transaction_origine=is.null       -> 1   (la sentinelle telle qu'elle est)
+   transaction_origine=not.is.null   -> 0   TEMOIN POSITIF : on EXIGE une marque
+   kind=eq.zzz                       -> 0   reglee pour exclure
+   kind=eq.offre                     -> 1   reglee pour inclure le cobaye
+```
+
+⭐⭐ **La forme FILTRE donc vraiment.** Le « 1 = 1 » veut bien dire « la garde ne retire
+rien AUJOURD'HUI parce que rien n'est marque » -- 31 158 lignes NULL des deux cotes, zero
+chaine vide.
+
+#### ✅ NON-REGRESSION, ET AUCUN SERVICE A REDEMARRER
+
+Les deux fichiers compilent. Les **9 essais voisins** ont tourne : 5 verts, **3 rouges
+PREEXISTANTS** (mesures en restaurant le code de HEAD, puis en reposant mes versions --
+empreintes md5 identiques au retour : fuseau horaire, libelles d'erreur changes, fonction
+Postgres absente), et 1 qui exigeait un argument `--base` (c'est moi qui l'avais mal
+lance, pas un echec).
+
+⭐ **Rien a redemarrer** : le moniteur est un script relance a chaque passage (toutes les
+2 h), et le payload est relu par le run chaque nuit. **Aucun worker touche.**
+
+**Le retour arriere** : retirer les deux clauses. Aucune ecriture en base, aucun geste
+chez Hektor.
+
+#### ⛔⛔ J'AVAIS ECRIT CETTE RESERVE A L'ENVERS -- CORRIGE SUR SA QUESTION
+
+J'avais note : « le worker emploie un critere plus etroit que le mien, les deux sont
+d'accord aujourd'hui », et j'en avais tire que « si une chaine vide apparaissait, le
+worker chercherait un numero a une ligne du classeur ». **Les deux moities etaient
+fausses.** Frederic a demande « c'est a dire ? », et la relecture a donne ceci :
+
+Une case est sans contenu de **deux** facons que la base ne confond jamais : **NON
+RENSEIGNEE** (personne n'y a rien ecrit) ou **VIDE** (on y a ecrit une chaine de longueur
+zero). Mon premier critere gardait « non renseignee **ou** vide » ; le worker ne traite
+que « non renseignee ».
+
+```
+   si l'insert des 241 posait une marque VIDE au lieu de `classeur` :
+      le worker    -> les ECARTE de son filet   (vide n'est pas non renseignee)  OK
+      ma sentinelle-> les aurait fait CRIER 241 fois par nuit                    MAL
+      mon cockpit  -> aurait affiche 241 phrases FAUSSES                         MAL
+```
+
+⭐ **Donc son critere etait le bon, et le mien le plus PERMISSIF -- pas le plus etroit.**
+Le plus prudent est le plus etroit. **Alignement fait le 16/11** : `is.null` seul aux
+**trois** endroits, et le controle 6 de l'essai le verifie fichier par fichier.
+**Il n'y a plus de divergence a surveiller** -- une divergence se supprime, elle ne se
+surveille pas. Voir [[deux-portes-meme-table-seuils-divergents]].
+
+⭐ **Et le worker n'a pas ete touche** : c'est lui qui avait raison. Aucun service a
+redemarrer.
+
 ### ⬜ CE QUI RESTE, DANS L'ORDRE CONTRAINT
 
 ```
@@ -1541,11 +1681,20 @@ direct** (`present_in_hektor=is.false` + `last_seen_at>=48h`) et n'a **rien**. A
                         retour arriere : 1 . 340 . 30 817, EXACTEMENT comme predit
                         ⭐ la marque est protegee dans les deux sens (le push ne
                           l'envoie pas, la redescente la ramene) -- mesure le 16/11
- 4bis LA GARDE DE LA 2e ⛔⛔ LE PROCHAIN GESTE, ET IL PASSE AVANT LES 241
-     SENTINELLE         `data.transaction_disparue` lit la TABLE en direct, SANS garde
-                        `transaction_origine` -- avec les 241 elle crierait 241 fois
-                        par nuit. Sa soeur `data.affaire_sans_numero_hektor` a la
-                        garde (elle lit la VUE) : c'est le patron a recopier.
+ 4bis LA GARDE DE       ✅✅ POSEE ET EPROUVEE le 16/11 -- 22/22 + preuve en reel
+     L ORIGINE           DEUX lecteurs n'avaient pas la garde, pas un :
+                           A check_gti_health.py  data.transaction_disparue
+                           B export_app_payload.py LE COCKPIT -- plus grave : il
+                             AFFICHAIT « plus dans Hektor depuis ... », une phrase
+                             FAUSSE montree a l'utilisateur
+                         les 4 autres lecteurs de la famille etaient DEJA proteges
+                         ⭐ PostgREST accepte le filtre, et un TEMOIN POSITIF prouve
+                           qu'il mord (`not.is.null` -> 0)
+                         ⛔ ET SA QUESTION A CORRIGE LE CRITERE : je tolerais la
+                           chaine vide, donc j'etais PLUS PERMISSIF que le worker
+                           (et j'avais note l'inverse). `is.null` seul partout :
+                           LES TROIS PORTES SONT ALIGNEES, plus de divergence.
+                         ⭐ rien a redemarrer, 3 rouges voisins PREEXISTANTS mesures
  5  retirer l essai A2  seulement apres 3, 4 et 4bis
  6  LES 241             marquees `classeur` DES L'INSERT, jamais apres
 ```
