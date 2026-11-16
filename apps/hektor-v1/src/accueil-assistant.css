@@ -1,0 +1,167 @@
+/* ============================================================
+   Étape 4 de l'assistant IA, lot 2 (17/11/2026) -- L'ÉCRAN DE L'ASSISTANT (AccueilAssistant.tsx).
+   Maquette VALIDÉE le 17/11 : planches 1, 3, 6, 23 ; mesures et couleurs reprises de bienvu-v2.css de la toile.
+   Tout est préfixé « asi- » : la page a déjà ses .card, .b, .box… et « aa- » est pris par les affaires apportées.
+   Les polices sont celles de l'app (--bv-font-ui, --bv-font-display), comme le reste de bienvu.
+   ============================================================ */
+.asi, .asi-tableau {
+  --asi-magenta: #c5005f; --asi-framboise: #8c0044; --asi-rose-soft: #fdf0f6;
+  --asi-canard: #17697a; --asi-rail: #1d1e20; --asi-ink: #222323; --asi-page: #f6f7f8; --asi-surface: #ffffff;
+  --asi-line: #e2e5e6; --asi-line-2: #cfd3d4; --asi-mute: #5c6163; --asi-subtle: #6f7477;
+  --asi-ok: #2f7d59; --asi-ok-soft: #e8f5ee; --asi-wait: #9a5a12; --asi-wait-soft: #fff3df; --asi-ko: #b94a48; --asi-ko-soft: #fdeceb;
+  --asi-ui: var(--bv-font-ui, 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif);
+  --asi-title: var(--bv-font-display, 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif);
+  --asi-shadow: 0 1px 2px rgba(34, 35, 35, 0.06), 0 8px 24px rgba(34, 35, 35, 0.06);
+  font-family: var(--asi-ui); color: var(--asi-ink);
+}
+/* la page de l'assistant prend toute la zone de contenu (sans le padding de main.content) et ne défile pas :
+   c'est le fil qui défile, le champ reste en bas */
+.asi { margin: -24px -28px; height: 100vh; min-height: 0; display: flex; flex-direction: column; overflow: hidden; background: var(--asi-page); }
+.asi-tableau { display: flex; flex-direction: column; gap: 0; }
+.asi-tableau > .asi-top { margin: -24px -28px 0; }
+.asi svg, .asi-tableau svg { flex: none; }
+
+/* ---------- la tête : la date, la bascule « Assistant | Tableau de bord » ---------- */
+.asi-top { flex: none; height: 56px; display: flex; align-items: center; gap: 12px; padding: 0 28px; }
+.asi-when { font-size: 13px; color: var(--asi-mute); }
+.asi-push { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+.asi-seg { display: inline-flex; padding: 3px; border-radius: 10px; background: #eaecee; gap: 2px; }
+.asi-seg button { border: 0; background: transparent; height: 30px; padding: 0 12px; border-radius: 8px; font: 600 13px/1 var(--asi-ui); color: var(--asi-mute); display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.asi-seg button.is-on { background: var(--asi-surface); color: var(--asi-ink); box-shadow: 0 1px 2px rgba(34, 35, 35, 0.14); }
+.asi-seg button:focus-visible { outline: 2px solid var(--asi-magenta); outline-offset: 1px; }
+.asi-seg svg { width: 14px; height: 14px; color: var(--asi-rail); }
+
+/* ---------- l'accueil (planche 1) ---------- */
+.asi-home { flex: 1; min-height: 0; overflow-y: auto; display: flex; justify-content: center; padding: 30px 32px 18px; }
+.asi-home-in { width: 100%; max-width: 780px; display: flex; flex-direction: column; gap: 16px; }
+.asi-hi { margin: 0; font-family: var(--asi-title); font-weight: 800; font-size: 34px; line-height: 1.1; letter-spacing: -0.028em; color: var(--asi-ink); }
+
+.asi-ask { background: var(--asi-surface); border: 1px solid var(--asi-line-2); border-radius: 22px; box-shadow: var(--asi-shadow); padding: 14px 12px 10px 20px; margin: 0; }
+.asi-ask:focus-within { border-color: var(--asi-magenta); box-shadow: 0 0 0 4px rgba(197, 0, 95, 0.12), var(--asi-shadow); }
+.asi-ask textarea { flex: 1; width: 100%; border: 0; outline: 0; resize: none; background: transparent; font: inherit; font-size: 16px; line-height: 1.5; min-height: 48px; color: var(--asi-ink); padding: 0; box-shadow: none; }
+.asi-ask textarea::placeholder { color: var(--asi-subtle); }
+.asi-ask textarea:disabled { cursor: not-allowed; }
+.asi-ask-row { display: flex; align-items: flex-end; gap: 6px; }
+.asi-go { margin-left: auto; width: 40px; height: 40px; border-radius: 50%; border: 0; background: var(--asi-magenta); color: #fff; display: grid; place-items: center; flex: none; cursor: pointer; }
+.asi-go svg { width: 18px; height: 18px; }
+.asi-go:hover { background: var(--asi-framboise); }
+.asi-go:disabled { background: #e7c3d5; cursor: default; }
+.asi-go.is-stop { background: var(--asi-rail); }
+.asi-go:focus-visible { outline: 2px solid var(--asi-magenta); outline-offset: 2px; }
+.asi-warn { font-size: 12px; color: var(--asi-subtle); margin: -6px 0 0; padding-left: 20px; }
+
+.asi-cols { display: grid; grid-template-columns: minmax(0, 1.12fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.asi-box { background: var(--asi-surface); border: 1px solid var(--asi-line); border-radius: 14px; overflow: hidden; }
+.asi-box-h { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 13px 16px 7px; }
+.asi-box-h h2 { margin: 0; font: 700 14px/1.3 var(--asi-ui); color: var(--asi-ink); }
+.asi-todo { width: 100%; display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 10px 16px; border: 0; border-top: 1px solid var(--asi-line); background: transparent; text-align: left; font: inherit; color: var(--asi-ink); cursor: pointer; }
+.asi-todo:hover { background: #fafbfb; }
+.asi-todo:focus-visible { outline: 2px solid var(--asi-magenta); outline-offset: -2px; }
+.asi-k { font: 800 22px/1 var(--asi-title); text-align: right; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; color: var(--asi-magenta); }
+.asi-todo b { display: block; font-size: 13.5px; font-weight: 600; }
+.asi-todo-s { display: block; font-size: 12px; color: var(--asi-mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.asi-open { font-size: 12.5px; font-weight: 600; color: var(--asi-canard); white-space: nowrap; }
+.asi-calm { display: flex; align-items: center; gap: 8px; padding: 10px 16px 12px; border-top: 1px solid var(--asi-line); font-size: 12.5px; color: var(--asi-mute); }
+.asi-calm svg { width: 15px; height: 15px; color: var(--asi-ok); }
+.asi-ideas { padding: 2px 12px 12px; display: flex; flex-direction: column; gap: 4px; }
+.asi-idea { display: flex; align-items: center; gap: 10px; text-align: left; border: 0; background: transparent; border-radius: 8px; padding: 7px 8px; font: inherit; font-size: 13.5px; color: var(--asi-ink); cursor: pointer; }
+.asi-idea svg { width: 16px; height: 16px; color: var(--asi-subtle); }
+.asi-idea:hover, .asi-idea:focus-visible { background: var(--asi-rose-soft); color: var(--asi-framboise); outline: none; }
+.asi-idea:hover svg, .asi-idea:focus-visible svg { color: var(--asi-magenta); }
+.asi-idea em { margin-left: auto; padding-left: 8px; font-style: normal; font-size: 11.5px; color: var(--asi-subtle); white-space: nowrap; }
+
+/* ---------- la conversation (planche 3) ---------- */
+.asi-ctop { flex: none; height: 56px; display: flex; align-items: center; gap: 12px; padding: 0 28px; border-bottom: 1px solid var(--asi-line); background: rgba(246, 247, 248, 0.92); }
+.asi-ctop h1 { margin: 0; min-width: 0; font: 600 14.5px/1.3 var(--asi-ui); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--asi-ink); }
+.asi-b { height: 36px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--asi-line-2); background: var(--asi-surface); font: 600 13.5px/1 var(--asi-ui); display: inline-flex; align-items: center; gap: 7px; color: var(--asi-ink); white-space: nowrap; cursor: pointer; }
+.asi-b svg { width: 15px; height: 15px; }
+.asi-b:hover { border-color: #a9afb1; }
+.asi-b:focus-visible { outline: 2px solid var(--asi-magenta); outline-offset: 2px; }
+.asi-b.is-main { background: var(--asi-magenta); border-color: var(--asi-magenta); color: #fff; }
+.asi-b.is-main:hover { background: var(--asi-framboise); }
+.asi-b.is-quiet { border-color: transparent; background: transparent; color: var(--asi-mute); }
+.asi-b.is-quiet:hover { background: #eaecee; }
+
+.asi-thread { flex: 1; min-height: 0; overflow-y: auto; display: flex; justify-content: center; padding: 18px 32px 12px; }
+.asi-thread-in { width: 100%; max-width: 740px; display: flex; flex-direction: column; gap: 14px; height: max-content; }
+.asi-me { align-self: flex-end; max-width: 78%; margin: 0; background: #e9ebed; border-radius: 18px 18px 6px 18px; padding: 9px 15px; font-size: 14.5px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.asi-ai { display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 12px; }
+.asi-mk { width: 30px; height: 30px; border-radius: 9px; background: var(--asi-rail); color: #fff; display: grid; place-items: center; }
+.asi-mk svg { width: 17px; height: auto; }
+.asi-ai-b { display: flex; flex-direction: column; gap: 9px; font-size: 14.5px; line-height: 1.55; min-width: 0; }
+.asi-texte { display: flex; flex-direction: column; gap: 8px; overflow-wrap: anywhere; }
+.asi-texte p, .asi-texte ul, .asi-texte ol { margin: 0; }
+.asi-texte ul, .asi-texte ol { padding-left: 20px; display: flex; flex-direction: column; gap: 3px; }
+.asi-texte strong { font-weight: 700; }
+.asi-trace { display: flex; flex-wrap: wrap; gap: 6px; }
+.asi-tr { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500; line-height: 18px; color: var(--asi-ok); background: var(--asi-ok-soft); border-radius: 99px; padding: 2px 9px 2px 7px; }
+.asi-tr svg { width: 12px; height: 12px; }
+.asi-tr.is-live { color: var(--asi-mute); background: transparent; border: 1px dashed var(--asi-line-2); }
+.asi-tr.is-live svg { animation: asi-tourne 1.1s linear infinite; }
+.asi-curseur { display: inline-block; width: 8px; height: 16px; background: var(--asi-ink); border-radius: 2px; vertical-align: -2px; margin-left: 2px; animation: asi-clign 1s steps(2) infinite; }
+.asi-note { margin: 0; font-size: 12.5px; color: var(--asi-subtle); }
+.asi-vide { margin: 8px 0; font-size: 13.5px; color: var(--asi-mute); }
+
+/* ---------- les cartes et leurs fins (planches 3 et 6) ---------- */
+.asi-carte { border: 1px solid var(--asi-line-2); border-radius: 14px; background: var(--asi-surface); box-shadow: 0 1px 2px rgba(34, 35, 35, 0.05); overflow: hidden; }
+.asi-c-h { display: flex; align-items: center; gap: 8px; padding: 9px 14px; font-size: 12.5px; font-weight: 700; color: var(--asi-framboise); background: var(--asi-rose-soft); border-bottom: 1px solid #f6d7e6; }
+.asi-c-h svg { width: 14px; height: 14px; }
+.asi-till { margin-left: auto; font-weight: 500; color: var(--asi-mute); }
+.asi-c-b { padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+.asi-resume { margin: 0; font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
+.asi-c-f { display: flex; gap: 8px; padding: 0 14px 14px; flex-wrap: wrap; align-items: center; }
+.asi-c-f small { font-size: 12px; color: var(--asi-subtle); margin-left: 4px; }
+.asi-c-end { display: block; padding: 0 14px 13px; font-size: 13px; }
+.asi-c-end b { color: var(--asi-ok); margin-right: 6px; }
+.asi-c-end.is-ko { color: var(--asi-ko); }
+.asi-carte.is-faite { border-color: #cfe6d8; }
+.asi-carte.is-faite .asi-c-h { color: var(--asi-ok); background: var(--asi-ok-soft); border-bottom-color: #d4eadc; }
+.asi-carte.is-ko .asi-c-h { color: var(--asi-ko); background: var(--asi-ko-soft); border-bottom-color: #f5d6d5; }
+.asi-carte.is-passee .asi-c-h { color: var(--asi-subtle); background: #f1f2f3; border-bottom-color: var(--asi-line); }
+.asi-carte.is-passee .asi-resume { color: var(--asi-subtle); }
+.asi-carte.is-cours .asi-c-h { color: var(--asi-wait); background: var(--asi-wait-soft); border-bottom-color: #f3dfbf; }
+.asi-carte.is-cours .asi-c-h svg { animation: asi-tourne 1.1s linear infinite; }
+/* le sceau : la coche du logo se trace au moment où la carte est validée (la seule animation, elle répond au clic) */
+.asi-c-h .asi-sceau { width: 18px; height: auto; }
+.asi-sceau .asi-coche { stroke-dasharray: 64; stroke-dashoffset: 0; animation: asi-trace 0.55s ease-out both; }
+
+/* ---------- le champ en bas de la conversation ---------- */
+.asi-dock { flex: none; padding: 10px 32px 12px; display: flex; flex-direction: column; align-items: center; gap: 5px; background: var(--asi-page); }
+.asi-dock .asi-ask { width: 100%; max-width: 740px; padding: 7px 7px 7px 18px; border-radius: 18px; box-sizing: border-box; }
+.asi-dock .asi-ask-row { align-items: center; }
+.asi-dock .asi-ask textarea { min-height: 24px; max-height: 160px; font-size: 15px; }
+.asi-dock .asi-warn { margin: 0; padding: 0; }
+
+/* ---------- « Toutes les conversations » ---------- */
+.asi-liste { background: var(--asi-surface); border: 1px solid var(--asi-line); border-radius: 14px; overflow: hidden; }
+.asi-liste-l { width: 100%; display: flex; align-items: center; gap: 12px; padding: 11px 16px; border: 0; border-top: 1px solid var(--asi-line); background: transparent; text-align: left; font: inherit; font-size: 13.5px; color: var(--asi-ink); cursor: pointer; }
+.asi-liste-l:first-child { border-top: 0; }
+.asi-liste-l:hover { background: #fafbfb; }
+.asi-liste-l:focus-visible { outline: 2px solid var(--asi-magenta); outline-offset: -2px; }
+.asi-liste-t { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.asi-liste-d { flex: none; font-size: 12px; color: var(--asi-subtle); }
+
+/* ---------- les blocages : une phrase, jamais un écran vide (planche 23) ---------- */
+.asi-msg { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 4px 10px; align-items: start; padding: 11px 13px; border-radius: 12px; border: 1px solid var(--asi-line); background: #fff; font-size: 13.5px; line-height: 1.45; }
+.asi-msg svg { width: 18px; height: 18px; margin-top: 1px; color: var(--asi-mute); }
+.asi-msg b { display: block; font-size: 13.5px; }
+.asi-msg-s { grid-column: 2; font-size: 12.5px; color: var(--asi-mute); }
+.asi-msg-act { grid-column: 2; margin-top: 4px; display: flex; gap: 6px; }
+.asi-msg-act .asi-b { height: 32px; font-size: 12.5px; padding: 0 11px; }
+.asi-msg.is-pause { border-color: #f3dfbf; background: var(--asi-wait-soft); }
+.asi-msg.is-pause svg { color: var(--asi-wait); }
+.asi-msg.is-ko { border-color: #f2cfce; background: var(--asi-ko-soft); }
+.asi-msg.is-ko svg { color: var(--asi-ko); }
+.asi-msg.is-net { border-style: dashed; }
+/* dans le fil, un blocage s'aligne sur la colonne des réponses (30 px de marque + 12 px) */
+.asi-thread-in > .asi-msg { margin-left: 42px; }
+
+@keyframes asi-tourne { to { transform: rotate(360deg); } }
+@keyframes asi-clign { 50% { opacity: 0; } }
+@keyframes asi-trace { from { stroke-dashoffset: 64; } to { stroke-dashoffset: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .asi-tr.is-live svg, .asi-carte.is-cours .asi-c-h svg, .asi-curseur, .asi-sceau .asi-coche { animation: none; }
+}
+@media (max-width: 1100px) {
+  .asi-cols { grid-template-columns: minmax(0, 1fr); }
+}

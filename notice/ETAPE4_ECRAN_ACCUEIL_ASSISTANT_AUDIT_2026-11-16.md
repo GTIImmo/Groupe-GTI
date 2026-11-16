@@ -179,3 +179,92 @@ sur l'évènement `assistant:change` (que le lot 2 émettra).
 personne n'écoute encore (lot 2) ; l'Accueil reste le tableau de bord d'aujourd'hui jusqu'au lot 2.
 
 **Retour arrière** : `accueil_assistant` à off (sans redéploiement), ou revenir sur le commit.
+
+**En ligne (17/11)** : commit `1127cde` poussé (avec `4db80ff` de la session classeur, poussé par elle), Vercel prêt.
+Réglage de production `accueil_assistant` = son adresse seule (créé avec son accord, relu). Vu dans son Chrome, en
+lecture seule : la classe `rail-assistant` posée, les 9 entrées dans l'ordre, et ses 3 dernières conversations
+**identiques à la base** (témoin SQL, mêmes titres, même ordre). Aucun « à valider » : la base n'a aucune carte en attente
+(2 cartes « proposées » sont périmées, donc à juste titre non comptées). Le chiffre lui-même n'est vu qu'en mode maquette.
+
+## 13. Lot 2 — l'écran de l'assistant : AUDIT (17/11, sur « Oui »), rien codé
+
+**Périmètre de l'audit** : le front (`App.tsx`, `lib/`), l'API de l'assistant (`backend/app/routers/assistant.py`,
+`assistant_service.py`), les vraies réponses en base, les planches 1, 2, 3, 6 et 23. Pas mesuré : le téléphone (lot 5).
+
+**Ce que le code dit**
+- ⭐ **Aucun écran de l'assistant n'existe dans le front** : zéro appel à `/assistant/` dans `apps/hektor-v1/src`. Les
+  étapes 1 à 3 ont été prouvées par des appels directs à l'API. Le lot 2 écrit donc l'écran EN ENTIER.
+- **Le serveur a déjà tout** (aucune ligne serveur dans ce lot) :
+  `POST /assistant/message` {question, conversationId?} → flux NDJSON : `debut` {conversationId}, `texte` {delta},
+  `outil` {nom}, `carte` {id, geste, resume, expire_le}, puis `fin` {messageId, enregistre} ou `erreur` {detail} ;
+  les refus avant le flux sont de vrais codes (403 éteint, 404 conversation d'un autre, 429 plafonds) ;
+  `GET /assistant/conversations` (50, les miennes) ; `GET /assistant/conversations/{id}` (messages) ;
+  `GET /assistant/conversations/{id}/actions` (cartes et leur état) ; `POST /assistant/actions/{id}/valider|refuser`
+  (409 avec la phrase exacte : expirée, déjà validée… ; un échec revient en 200 `ok:false` « Non fait : … »).
+- Le chiffre « à valider » par conversation : **déjà calculé dans le rail** (lot 1, lecture sous RLS) — pas de serveur.
+- Les réponses réelles portent du **gras `**…**`** et des **paragraphes** (relu en base) → un petit rendu sans
+  `innerHTML` : paragraphes, gras, listes « - » et « 1. ». Rien d'autre.
+- Les traces « Annonce trouvée / Mandat lu » : le serveur n'envoie que le NOM de la fonction (36 noms) → une table de
+  libellés dans le front (« Je lis l'agenda… », puis « Agenda lu »), repli « Recherche faite ».
+- L'Accueil d'aujourd'hui = `HomeDashboardScreen` (App.tsx ~27113) : il devient la vue « Tableau de bord », **rendu tel
+  quel**, derrière la bascule « Assistant | Tableau de bord » de la planche 1.
+- Appel à Render : le modèle de `lib/gedClassementIa.ts` (jeton de session, `VITE_BACKEND_API_URL`), dans un fichier à
+  part `lib/assistant.ts`.
+
+**Le plan du lot 2** (front seul, deux fichiers neufs + quelques lignes d'App.tsx)
+1. `lib/assistant.ts` : les 6 appels, la lecture du flux ligne à ligne, le bouton Arrêter (coupe la lecture).
+2. `AccueilAssistant.tsx` + `accueil-assistant.css` :
+   - l'accueil (planche 1) : date, bascule, « Bonjour Frédéric, on commence par quoi ? », le champ, la phrase de garde,
+     « À traiter » (les MÊMES chiffres que le tableau de bord d'aujourd'hui, seulement ceux qui ne sont pas à zéro, et une
+     ligne « Rien d'autre : … » pour les zéros), « Demande-lui par exemple » (un clic remplit le champ, n'envoie pas) ;
+   - la conversation (planche 3) : la question, les traces, la réponse qui s'écrit, les cartes (planche 6 : attend,
+     en cours, validée avec le sceau, refusée, non faite, expirée), « Rien ne part avant ton clic. » ;
+   - « Toutes les conversations » : la liste des 50 dernières (titre, date, point magenta) — non dessinée, forme simple ;
+   - les blocages (planche 23) : une phrase par cas, « Renvoyer » quand le flux est coupé.
+3. `App.tsx` : si l'interrupteur est allumé pour la personne, l'Accueil rend `AccueilAssistant` (qui garde le tableau
+   de bord à un clic) ; il écoute `assistant:ouvrir` (le rail) et émet `assistant:change` (le rail se relit).
+
+**Hors du lot 2** (déjà prévus) : les liens vers les fiches, la relecture de l'écran après « Valider », le retour à la
+conversation (lot 3) ; « Citer un bien ou un contact » et la ligne dans la recherche (lot 4) ; le téléphone (lot 5).
+⚠ Donc au lot 2, une carte validée fait bien son geste, mais la fiche ouverte ailleurs ne se relit qu'au prochain
+chargement.
+
+**Ce que ça pourrait casser ailleurs**
+- L'Accueil de la personne allumée change : derrière l'interrupteur (toi seul), retour = off sans redéploiement ; le
+  tableau de bord est rendu par le même composant, avec les mêmes données.
+- Chaque question coûte (OpenAI) : les plafonds du serveur restent les gardes (100 questions par jour, budget du jour).
+- Un geste validé écrit pour de vrai (production, Hektor) : c'est déjà le cas par l'API ; l'écran ne fait qu'y donner
+  accès, avec les mêmes contrôles au clic.
+- `App.tsx` partagé avec la session GED : quelques lignes seulement, stage fichier par fichier.
+- Téléphone : `MobileLayout` ne rend pas cet Accueil → inchangé (contrôlé).
+
+**Comment on vérifiera** : dans l'aperçu (mode maquette : un faux flux pour dessiner chaque état, capture contre
+capture avec les planches 1, 3, 6, 23), puis en ligne chez toi : une question de lecture, puis une carte sans
+conséquence (une relance sur un contact d'essai) validée et une refusée.
+
+## 14. Lot 2 — l'écran de l'assistant : CODÉ et CONTRÔLÉ dans l'aperçu (17/11, sur « Vas-y »), rien poussé
+
+**Fichiers** : `lib/assistant.ts` (neuf : les 6 appels, la lecture du flux, le faux flux du mode maquette),
+`AccueilAssistant.tsx` + `accueil-assistant.css` (neufs : l'écran), `RailAssistant.tsx` (la demande du rail GARDÉE jusqu'à
+ce que l'Accueil soit monté, et l'évènement « change »), `App.tsx` (l'Accueil rend l'assistant quand l'interrupteur est
+allumé, le tableau de bord d'aujourd'hui passé tel quel ; `chiffresAccueilAssistant`, les mêmes calculs que le tableau
+de bord). Rendu du téléphone (`MobileLayout`, App.tsx ~26073) NON touché. `npm run build` vert.
+
+⚠ **Trouvé en contrôlant** : le préfixe « aa- » était DÉJÀ celui des affaires apportées (`affaires-apportees.css`,
+17 classes, dont `.aa-texte`, `.aa-liste`, `.aa-note`, `.aa-vide` en commun) : la réponse s'affichait dans un cadre qui
+n'était pas le sien. Tout l'écran est passé en « asi- » (0 collision mesurée). Leçon : chercher un préfixe libre AVANT.
+
+**Contrôlé dans l'aperçu (mode maquette, faux flux, 1280 × 665, Chrome)** :
+- accueil = planche 1 : date, bascule, « Bonjour …, on commence par quoi ? », champ, phrase de garde, « À traiter »
+  (zéros sur une ligne), « Demande-lui par exemple » (un clic remplit le champ sans envoyer) ;
+- une question → la conversation = planche 3 : la question, les traces (« Recherche faite », « Carte préparée »), la
+  réponse en gras et listes, la carte « Relance … à valider avant 12:54 », Valider / Refuser, « Rien ne part avant ton clic » ;
+- Valider → « En cours » (ambre) puis « Validée à 12:27 » avec le sceau et « Relance créée. » (planche 6) ;
+- une conversation rouverte depuis le rail (historique + sa carte) ; Refuser → « Refusée à … », « Rien n'a été fait. » ;
+- coupure → « La connexion s'est coupée… » + Renvoyer ; erreur → « L'assistant n'a pas pu répondre. » ; 429 →
+  « Tu as posé 100 questions aujourd'hui. », champ grisé, la question rendue au champ ; Arrêter → « Réponse arrêtée » ;
+- « Toutes les conversations » (titre et date) ; un clic sur une conversation DEPUIS l'écran Annonces l'ouvre bien ;
+- « Tableau de bord » = l'écran d'aujourd'hui, mêmes chiffres que « À traiter ».
+
+**Pas encore vérifié** : le vrai serveur (le flux réel de Render, une vraie carte) — c'est la preuve en ligne, chez lui
+seul. Pas fait au lot 2 (prévu au lot 3) : les liens vers les fiches, la relecture de l'écran après « Valider ».

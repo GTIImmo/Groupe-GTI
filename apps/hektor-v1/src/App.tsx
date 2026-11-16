@@ -285,6 +285,7 @@ import { cleNom } from './lib/pilotage'
 import PilotageScreen from './PilotageScreen'
 import RegistreUtilisateurs, { type RuPreRemplissage } from './RegistreUtilisateurs'
 import { BranchesAccueil, ouvrirConversation, useAccueilAssistant, useConversationsRail } from './RailAssistant'
+import AccueilAssistant, { type ChiffresAccueil } from './AccueilAssistant'
 import { bvBoot } from './lib/bienvuBoot'
 import { APP_BIENVU_ENABLED } from './lib/bienvuFlag'
 import { BienvuLogin } from './BienvuLogin'
@@ -27109,7 +27110,10 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         {noticeMessage ? <section className="info-banner">{noticeMessage}</section> : null}
         {errorMessage ? <section className="error-banner">{errorMessage}</section> : null}
 
-        {screen === 'accueil' ? (
+        {screen === 'accueil' ? (() => {
+          // Étape 4 de l'assistant IA, lot 2 : interrupteur allumé, l'Accueil EST l'assistant, et ce tableau de bord,
+          // rendu tel quel, reste à un clic (« Tableau de bord »). Éteint : l'Accueil d'aujourd'hui, à l'identique.
+          const tableauDeBord = (
           <HomeDashboardScreen
             variant={homeDashboardVariant(profile, isManagerOrAdmin)}
             profile={profile}
@@ -27131,7 +27135,20 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             negociateurEmail={sessionEmail}
             onOpenContact={openContactDirectory}
           />
-        ) : screen === 'agenda' ? (
+          )
+          if (!railAssistant) return tableauDeBord
+          const portee = homeDashboardVariant(profile, isManagerOrAdmin) === 'commercial' ? (sessionEmail ?? null) : null
+          return (
+            <AccueilAssistant
+              prenom={profile?.first_name?.trim() || (profile?.display_name ?? '').trim().split(/\s+/)[0] || ''}
+              chiffres={chiffresAccueilAssistant(mandats, diffusionRequests, mandatStats)}
+              chargerRecherches={() => loadSearchesToComplete(portee).then((lignes) => lignes.length)}
+              peutOuvrirSuivi={isManagerOrAdmin}
+              onOuvrirSuivi={() => openScreen('suivi')}
+              tableauDeBord={tableauDeBord}
+            />
+          )
+        })() : screen === 'agenda' ? (
           <GoogleAgendaGlobalScreen
             defaultCalendarEmail={contactHektorUserEmail}
             userLabel={resolvedUserNegotiatorContext?.commercial_nom || profile?.display_name || 'Utilisateur'}
@@ -27501,6 +27518,21 @@ type HomeDashboardKpi = {
   tone: HomeDashboardTone
   icon: DetailIconKey
   actionScreen?: Screen
+}
+
+// Étape 4 de l'assistant IA, lot 2 : « À traiter » de l'Accueil de l'assistant. LES MÊMES calculs que le tableau de
+// bord ci-dessous (demandes ouvertes, mandats qui expirent sous 30 jours, diffusions bloquées, synchronisations en
+// erreur), pour que les deux vues disent les mêmes chiffres. Les recherches à compléter sont lues par l'écran.
+function chiffresAccueilAssistant(mandats: MandatRecord[], requests: DiffusionRequest[], mandatStats: MandatStats): ChiffresAccueil {
+  const actifs = mandats.filter(homeIsActiveMandat)
+  const ouvertes = requests.filter(homeRequestIsOpen).sort((a, b) => String(a.requested_at ?? '').localeCompare(String(b.requested_at ?? '')))
+  const premiere = ouvertes[0]
+  return {
+    demandes: { nombre: ouvertes.length, premiere: premiere ? { titre: premiere.titre_bien, depuis: premiere.requested_at ?? null } : undefined },
+    expirants: actifs.filter((item) => homeDateWithinDays(item.mandat_date_fin, 30)).length,
+    bloquees: actifs.filter((item) => !isDiffusableValue(item.diffusable) || !item.nb_portails_actifs).length,
+    erreurs: mandatStats.withErrors || 0,
+  }
 }
 
 function HomeDashboardScreen(props: {

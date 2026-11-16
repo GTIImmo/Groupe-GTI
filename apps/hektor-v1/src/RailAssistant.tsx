@@ -108,8 +108,23 @@ export function useConversationsRail(actif: boolean, userId: string | null | und
   return { conversations, enAttente }
 }
 
+// Lot 2 : le clic part souvent d'un autre écran, quand l'Accueil n'est pas encore monté pour entendre l'évènement.
+// La demande est donc GARDÉE ici, et l'Accueil la prend en arrivant (prendreDemandeConversation).
+let demandeEnAttente: { conversationId: string | null } | null = null
+
 export function ouvrirConversation(conversationId: string | null) {
+  demandeEnAttente = { conversationId }
   window.dispatchEvent(new CustomEvent(EVENEMENT_ASSISTANT_OUVRIR, { detail: { conversationId } }))
+}
+
+export function prendreDemandeConversation(): { conversationId: string | null } | null {
+  const demande = demandeEnAttente
+  demandeEnAttente = null
+  return demande
+}
+
+export function signalerChangementAssistant() {
+  window.dispatchEvent(new Event(EVENEMENT_ASSISTANT_CHANGE))
 }
 
 // Les branches de l'Accueil : les 3 dernières conversations, puis « Toutes les conversations ».
