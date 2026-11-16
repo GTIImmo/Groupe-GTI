@@ -13,9 +13,11 @@ from fastapi import HTTPException
 
 from ..auth import AuthenticatedUser
 from .assistant_contexte import TOUS_LES_ROLES, ContexteAssistant, Fonction, LectureRefusee, Refus
+from .email_tracking import EmailTrackingService
 from .google_calendar_event_link_service import GoogleCalendarEventLinkService
 from .google_workspace_service import GoogleWorkspaceService
 from .rapprochement_email import RapprochementEmailService
+from .rapprochement_sender import RapprochementSender
 from .supabase_admin import SupabaseAdminService
 
 # ---------------------------------------------------------------------------
@@ -683,6 +685,11 @@ def preparer_rdv(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[str, dict[s
 
 
 def executer_rdv(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[str, Any]:
+    return _poser_rdv(ctx, p, invites=[])
+
+
+def _poser_rdv(ctx: ContexteAssistant, p: dict[str, Any], invites: list[str]) -> dict[str, Any]:
+    # invites vide = SON agenda seulement (lot 3a) ; sinon = l'adresse du client, relue au clic (lot 3c)
     email = _mon_agenda(ctx)  # re-vérifié AU CLIC
     genre = str(p.get("type") or "")
     if genre not in TYPES_RDV:
@@ -691,9 +698,10 @@ def executer_rdv(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[str, Any]:
     if debut < datetime.now(timezone.utc):
         raise Refus("ce créneau est passé entre-temps")
     bien, contact, recherche = _liens_rdv(ctx, p)
+    prevenir = "all" if invites else "none"
     r = _google(lambda: GoogleWorkspaceService(ctx.settings).create_calendar_event(
         subject_email=email, summary=p["titre"], start_at=debut.isoformat(), end_at=fin.isoformat(),
-        description=p.get("note") or None, location=p.get("lieu") or None, attendees=[], send_updates="none",
+        description=p.get("note") or None, location=p.get("lieu") or None, attendees=invites, send_updates=prevenir,
         dry_run=False, requested_by=ctx.user_id, requested_by_email=email), "Création du rendez-vous")
     evenement = r.get("event") if isinstance(r.get("event"), dict) else {}
     try:
@@ -706,8 +714,8 @@ def executer_rdv(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[str, Any]:
             calendar_email=email, google_event_id=str(r.get("eventId") or ""), google_html_link=r.get("htmlLink"),
             summary=p["titre"], location=p.get("lieu") or None,
             starts_at=str((evenement.get("start") or {}).get("dateTime") or debut.isoformat()),
-            ends_at=str((evenement.get("end") or {}).get("dateTime") or fin.isoformat()), attendees=[],
-            metadata_json={"source": "assistant", "send_updates": "none", "has_description": bool(p.get("note")),
+            ends_at=str((evenement.get("end") or {}).get("dateTime") or fin.isoformat()), attendees=invites,
+            metadata_json={"source": "assistant", "send_updates": prevenir, "has_description": bool(p.get("note")),
                            **({"contact_search_key": recherche["contact_search_key"]} if recherche else {})},
             created_by=ctx.user_id, created_by_email=email)
     except Exception:  # noqa: BLE001 -- le RDV EXISTE chez Google : on le dit, on ne prétend pas l'inverse
@@ -722,7 +730,7 @@ def executer_rdv(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[str, Any]:
         except Refus:
             statut_visite = False
     return {"rdv_app": (lien or {}).get("id"), "dans_google": True, "relie_a_l_app": bool(lien),
-            "debut": _quand(debut), "statut_visite": statut_visite}
+            "debut": _quand(debut), "statut_visite": statut_visite, "invitation_envoyee": bool(invites)}
 
 
 def _mon_rdv(ctx: ContexteAssistant, rdv_id: Any) -> tuple[str, dict[str, Any]]:
@@ -914,8 +922,155 @@ def apercu_rapprochement(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[str,
     return {"apercu": True, "rien_n_est_parti": True, "destinataire": fiche.get("display_name"),
             "client_a_une_adresse": bool(str(fiche.get("email") or "").strip()), "objet": masque(rendu.get("subject")),
             "texte": masque(rendu.get("text"))[:5000],
-            "a_dire": "C'est un APERÇU : rien n'est envoyé ni enregistré. L'envoi au client ne se fait pas par "
-                      "l'assistant ; il se fait depuis l'écran du rapprochement."}
+            "a_dire": "C'est un APERÇU : rien n'est envoyé ni enregistré. Pour l'envoyer pour de vrai, propose la carte "
+                      "envoyer_rapprochement avec les mêmes biens."}
+
+
+# ── LOT 3c (16/11/2026) : VERS LE CLIENT -- e-mail, rapprochement réel, invitation ──
+# Note : notice/ETAPE3_AGENT_QUI_AGIT_AUDIT_2026-11-13.md §26-27. Décision « Oui, vas-y » du 16/11 (A, B, C ; pas
+#   l'espace client ; le bon de visite viendra avec l'écran).
+# ⛔ Le destinataire est TOUJOURS l'adresse de la fiche d'un contact que la personne voit, relue AU CLIC par le serveur :
+#   jamais une adresse donnée par le modèle. Et l'adresse du client ne part JAMAIS au modèle (ni dans la carte qu'il
+#   relit) : la carte dit « l'adresse de sa fiche ».
+# ⛔ Un contact désinscrit (app_contact_consent, opt_out) ne reçoit rien : refusé à la carte ET au clic.
+# ⛔ Le rapprochement réel passe par LE MÊME point que l'écran côté acquéreur (RapprochementSender.send_grouped,
+#   RechercheAcquereur.tsx:670) : biens jamais proposés seulement, 1 e-mail par négociateur du mandat depuis sa boîte,
+#   plafond du jour, désinscription en 1 clic, suivi ; puis les biens envoyés passent « proposé » par e-mail (comme
+#   l'écran). L'expéditeur de repli est posé par le SERVEUR (l'écran le prend du navigateur : défaut n° 1 du §10).
+# ⛔ Un rendez-vous avec invité envoie une VRAIE invitation Google ; l'assistant ne pourra plus le déplacer ni le
+#   supprimer ensuite (garde de _mon_rdv : un RDV avec invités se change depuis l'écran).
+def _client(ctx: ContexteAssistant, numero: Any) -> dict[str, Any]:
+    numero = str(numero or "").strip()
+    if not numero.isdigit():
+        raise Refus("Donne le numéro du contact (hektor_contact_id, objet contacts).")
+    lignes = _lire(ctx, "app_contacts_current", {"hektor_contact_id": f"eq.{numero}", "limit": "1",
+                                                 "select": "hektor_contact_id,display_name,prenom,civilite,email,archive"})
+    if not lignes:
+        raise Refus(f"Le contact {numero} n'est pas parmi ceux que tu peux voir.")
+    fiche = lignes[0]
+    if fiche.get("archive"):
+        raise Refus("Ce contact est archivé : on n'écrit pas à un contact archivé.")
+    adresse = str(fiche.get("email") or "").strip()
+    if not _ADRESSE.fullmatch(adresse):
+        raise Refus("Ce contact n'a pas d'adresse e-mail valable sur sa fiche : ajoute-la d'abord (carte modifier_contact).")
+    if EmailTrackingService(ctx.settings).is_opted_out(adresse):
+        raise Refus("Ce contact s'est DÉSINSCRIT des e-mails : rien ne lui sera envoyé.")
+    return fiche
+
+
+def _nom_client(fiche: dict[str, Any]) -> str:
+    return str(fiche.get("display_name") or fiche["hektor_contact_id"])
+
+
+def preparer_email_client(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    _ma_boite(ctx)
+    fiche = _client(ctx, p.get("hektor_contact_id"))
+    objet, texte = _contenu_email(p)
+    return f"Envoyer depuis TA boîte un e-mail à {_nom_client(fiche)} (à l'adresse de sa fiche) — objet « {objet} » — " \
+           f"texte :\n{texte}\n⚠ Il part VRAIMENT chez le client.", \
+        {"hektor_contact_id": str(fiche["hektor_contact_id"]), "objet": objet, "texte": texte}
+
+
+def executer_email_client(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[str, Any]:
+    email = _ma_boite(ctx)  # re-vérifié AU CLIC
+    fiche = _client(ctx, p.get("hektor_contact_id"))  # adresse, archive et désinscription RELUES au clic
+    objet, texte = _contenu_email(p)
+    r = _google(lambda: GoogleWorkspaceService(ctx.settings).send_gmail_message(
+        subject_email=email, to=[str(fiche["email"]).strip()], subject=objet, body_text=texte,
+        from_name=ctx.nom or "GTI Immobilier", attachments=None, dry_run=False, requested_by=ctx.user_id,
+        requested_by_email=email, related_entity_type="contact", related_entity_id=str(fiche["hektor_contact_id"])),
+        "Envoi de l'e-mail")
+    return {"envoye": True, "hektor_contact_id": str(fiche["hektor_contact_id"]), "message_id": r.get("messageId")}
+
+
+def _biens_frais(ctx: ContexteAssistant, recherche: dict[str, Any], annonces: Any) -> tuple[list[dict], list[dict]]:
+    morceaux = [x.strip() for x in re.split(r"[|,;\s]+", str(annonces or "")) if x.strip()]
+    if not morceaux or any(not x.isdigit() for x in morceaux):
+        raise Refus("Donne les numéros d'annonce, séparés par |.")
+    if len(morceaux) > MAX_BIENS_APERCU:
+        raise Refus(f"Au plus {MAX_BIENS_APERCU} biens dans un envoi.")
+    biens = [_bien(ctx, x) for x in dict.fromkeys(morceaux)]  # chaque bien lu avec le jeton
+    frais = RapprochementSender(ctx.settings)._fresh_filter(
+        [{"annonce_id": int(b["hektor_annonce_id"]), "dossier_id": int(b["app_dossier_id"])} for b in biens],
+        str(recherche["hektor_contact_id"]))
+    gardes = {f["annonce_id"] for f in frais}
+    return [b for b in biens if int(b["hektor_annonce_id"]) in gardes], \
+        [b for b in biens if int(b["hektor_annonce_id"]) not in gardes]
+
+
+def preparer_envoyer_rapprochement(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    recherche = _recherche(ctx, p.get("contact_search_key"))
+    if recherche.get("archive") is True:
+        raise Refus("Cette recherche est archivée.")
+    fiche = _client(ctx, recherche["hektor_contact_id"])
+    frais, deja = _biens_frais(ctx, recherche, p.get("annonces"))
+    if not frais:
+        raise Refus("Tous ces biens ont déjà été proposés, visités ou écartés pour cet acquéreur : rien de neuf à envoyer.")
+    tracking = EmailTrackingService(ctx.settings)
+    if not ctx.settings.email_real_send_enabled:
+        raise Refus("L'envoi réel des e-mails est coupé sur le serveur : rien ne peut partir.")
+    if tracking.count_real_sends_today() >= int(ctx.settings.email_daily_send_cap):
+        raise Refus("Le plafond d'envois du jour est atteint : réessaie demain.")
+    mot = str(p.get("mot") or "").strip()[:1500]
+    liste = " ; ".join(f"annonce {b['hektor_annonce_id']} « {b.get('titre_bien') or ''} »" for b in frais)
+    resume = f"Envoyer VRAIMENT à {_nom_client(fiche)} (à l'adresse de sa fiche) l'e-mail de rapprochement avec : {liste}. " \
+             "Il part depuis la boîte du négociateur de chaque bien (un e-mail par négociateur), avec le lien de " \
+             "désinscription ; ces biens passeront « proposé » par e-mail."
+    if mot:
+        resume += f" Ton mot en tête : « {mot} »."
+    if deja:
+        resume += " Laissés de côté, déjà vus par lui : " + ", ".join(str(b["hektor_annonce_id"]) for b in deja) + "."
+    return resume, {"contact_search_key": recherche["contact_search_key"],
+                    "annonces": [int(b["hektor_annonce_id"]) for b in frais], "mot": mot}
+
+
+def executer_envoyer_rapprochement(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[str, Any]:
+    recherche = _recherche(ctx, p.get("contact_search_key"))  # re-vérifiée AU CLIC
+    fiche = _client(ctx, recherche["hektor_contact_id"])
+    biens = {int(b["hektor_annonce_id"]): b for b in (_bien(ctx, a) for a in p.get("annonces") or [])}
+    r = RapprochementSender(ctx.settings).send_grouped(
+        recipient_email=str(fiche["email"]).strip(), annonce_ids=list(biens), variante="pull",
+        contact_search_key=recherche["contact_search_key"], hektor_contact_id=str(recherche["hektor_contact_id"]),
+        prenom=fiche.get("prenom"), civilite=fiche.get("civilite"), criteres=None, custom_intro=p.get("mot") or None,
+        dry_run=False, created_by=ctx.user_id,
+        fallback_sender_email=ctx.email)  # ⛔ le repli = la personne, posé par le serveur
+    raison = r.get("skipped") or next((g.get("skipped") for g in r.get("groups") or [] if g.get("skipped")), None)
+    if not r.get("ok"):
+        raise Refus({"opt_out": "le contact s'est désinscrit", "daily_cap": "plafond d'envois du jour atteint",
+                     "no_fresh_bien": "ces biens ont été proposés entre-temps"}.get(str(raison), "l'envoi n'est pas parti"))
+    if r.get("dryRun"):
+        raise Refus("le serveur a envoyé en MODE TEST (envoi réel coupé) : rien n'est parti chez le client")
+    marques = 0
+    for groupe in r.get("groups") or []:
+        if not groupe.get("ok"):
+            continue
+        for annonce in groupe.get("annonceIds") or []:
+            try:  # = propose(sentRefs, 'email') de l'écran : succès seulement
+                _ecrire(ctx, "POST", "rpc/app_record_proposition", {
+                    "p_search_key": recherche["contact_search_key"], "p_dossier_id": biens[int(annonce)]["app_dossier_id"],
+                    "p_channel": "email", "p_note": None, "p_nego": ctx.email,
+                    "p_gmail_message_id": groupe.get("messageId"), "p_gmail_thread_id": None})
+                marques += 1
+            except Refus:
+                pass
+    return {"envoye": True, "emails": r.get("sentCount"), "biens_envoyes": r.get("sentAnnonceIds"),
+            "biens_marques_proposes": marques}
+
+
+def preparer_rdv_client(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    if not str(p.get("hektor_contact_id") or "").strip() and not str(p.get("contact_search_key") or "").strip():
+        raise Refus("Donne le contact à inviter (son numéro, ou la clé de sa recherche).")
+    resume, params = preparer_rdv(ctx, p)
+    fiche = _client(ctx, params["hektor_contact_id"])
+    resume = resume.replace("Aucune invitation n'est envoyée : personne d'autre n'est prévenu.",
+                            f"⚠ Une VRAIE invitation Google part à {_nom_client(fiche)} (à l'adresse de sa fiche) : il la "
+                            "reçoit par e-mail. Ensuite, ce rendez-vous se déplace ou s'annule depuis l'écran.")
+    return resume, params
+
+
+def executer_rdv_client(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[str, Any]:
+    fiche = _client(ctx, p.get("hektor_contact_id"))  # adresse, archive, désinscription RELUES au clic
+    return _poser_rdv(ctx, p, invites=[str(fiche["email"]).strip()])
 
 
 # ── LOT 4a (14/11/2026) : le bien -- champs, rédacteur, photos, brouillon ──────
@@ -1864,6 +2019,38 @@ GESTES: dict[str, Geste] = {g.nom: g for g in (
                    "objet": {"type": "string"},
                    "texte": {"type": "string", "description": "le texte COMPLET (3000 caractères au plus)"}}),
           preparer_email_interne, executer_email_interne),
+    # lot 3c : vers le client
+    Geste("email_client",
+          "Prépare un E-MAIL À UN CLIENT (un contact de la base), envoyé depuis la boîte de la personne, à l'adresse de sa "
+          "fiche (jamais une autre), sans pièce jointe. Refusé si le contact s'est désinscrit. Il part VRAIMENT.",
+          TOUS_LES_ROLES,
+          _schema({"hektor_contact_id": {"type": "string", "description": "numéro du contact"},
+                   "objet": {"type": "string"},
+                   "texte": {"type": "string", "description": "le texte COMPLET (3000 caractères au plus)"}}),
+          preparer_email_client, executer_email_client),
+    Geste("envoyer_rapprochement",
+          "Prépare l'ENVOI RÉEL à un acquéreur de l'e-mail de rapprochement (le même que l'écran) avec des biens : seuls "
+          "ceux jamais proposés partent, depuis la boîte du négociateur de chaque bien ; ils passent ensuite « proposé ». "
+          "Montre d'abord l'aperçu (apercu_rapprochement).",
+          TOUS_LES_ROLES,
+          _schema({"contact_search_key": {"type": "string", "description": "clé de la recherche de l'acquéreur"},
+                   "annonces": {"type": "string", "description": "numéros d'annonce séparés par | (10 au plus)"},
+                   "mot": {"type": "string", "description": "mot personnel en tête, ou vide"}}),
+          preparer_envoyer_rapprochement, executer_envoyer_rapprochement),
+    Geste("rdv_client",
+          "Prépare un RENDEZ-VOUS dans l'agenda de la personne AVEC LE CLIENT INVITÉ : une vraie invitation Google part à "
+          "l'adresse de sa fiche. Une visite liée à une recherche met le bien « visite » (comme l'écran).",
+          TOUS_LES_ROLES,
+          _schema({"type": {"type": "string", "enum": list(TYPES_RDV)},
+                   "titre": {"type": "string", "description": "ex. « Visite T3 Firminy — M. DURAND »"},
+                   "debut": {"type": "string", "description": "AAAA-MM-JJTHH:MM, heure de Paris"},
+                   "duree_minutes": {"type": "integer", "description": "entre 5 et 600"},
+                   "lieu": {"type": "string", "description": "adresse, ou vide"},
+                   "hektor_annonce_id": {"type": "string", "description": "numéro d'annonce lié, ou vide"},
+                   "hektor_contact_id": {"type": "string", "description": "numéro du contact INVITÉ"},
+                   "contact_search_key": {"type": "string", "description": "clé de sa recherche (visite), ou vide"},
+                   "note": {"type": "string", "description": "description, visible du client, ou vide"}}),
+          preparer_rdv_client, executer_rdv_client),
     # lot 4a
     Geste("modifier_bien",
           "Prépare la modification de champs d'une annonce VIVANTE (vide = inchangé) : titre, texte, surfaces, pièces, "

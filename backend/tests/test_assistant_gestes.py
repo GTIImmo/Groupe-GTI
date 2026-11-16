@@ -972,9 +972,130 @@ reset(recherche=[{**RECH, "archive": True}])
 voir(refuse(lambda: ges.preparer_modifier_recherche(nouveau_ctx(), {**VIDE_M, "contact_search_key": "606202:1", "budget_max": "1"}), "archivée"),
      "une recherche archivée : refusée")
 
+print("9quinquies) LOT 3c : VERS LE CLIENT -- e-mail, rapprochement réel, invitation")
+Settings.email_real_send_enabled, Settings.email_daily_send_cap = True, 80
+
+
+class FauxSuivi:
+    def __init__(self, settings):
+        pass
+
+    def is_opted_out(self, adresse):
+        return adresse in etat.get("desinscrits", [])
+
+    def count_real_sends_today(self):
+        return etat.get("envois_jour", 0)
+
+
+class FauxEnvoyeur:
+    def __init__(self, settings):
+        pass
+
+    def _fresh_filter(self, biens, contact):
+        return [b for b in biens if b["annonce_id"] not in etat.get("deja_vus", [])]
+
+    def send_grouped(self, **k):
+        google.append({"quoi": "rapprochement", **k})
+        return etat.get("rep_envoi") or {"ok": True, "dryRun": False, "sentCount": 1, "sentAnnonceIds": k["annonce_ids"],
+                                         "groups": [{"ok": True, "annonceIds": k["annonce_ids"], "messageId": "m9"}]}
+
+
+ges.EmailTrackingService, ges.RapprochementSender = FauxSuivi, FauxEnvoyeur
+CLIENT = "durand@exemple.fr"
+
+reset()
+google.clear()
+resume, pe = ges.preparer_email_client(nouveau_ctx(), {"hektor_contact_id": "606202", "objet": "Votre visite",
+                                                       "texte": "Bonjour,\nje vous confirme la visite.\nPaul"})
+voir("M. DURAND" in resume and "adresse de sa fiche" in resume and "je vous confirme la visite" in resume and "VRAIMENT" in resume,
+     "la carte dit à qui, que c'est l'adresse de sa fiche, le texte entier, et que ça part VRAIMENT")
+voir(CLIENT not in resume and CLIENT not in json.dumps(pe), "⛔ l'adresse du client ne part PAS au modèle (ni dans la carte)")
+voir(not [g for g in google if g["quoi"] == "envoyer"] and not ecritures_metier(), "PROPOSER n'envoie rien")
+reset(desinscrits=[CLIENT])
+voir(refuse(lambda: ges.preparer_email_client(nouveau_ctx(), {"hektor_contact_id": "606202", "objet": "o", "texte": "t"}), "DÉSINSCRIT"),
+     "⛔ un contact désinscrit : refusé")
+reset(contact=[{"hektor_contact_id": "606202", "display_name": "M. DURAND", "email": "", "archive": False}])
+voir(refuse(lambda: ges.preparer_email_client(nouveau_ctx(), {"hektor_contact_id": "606202", "objet": "o", "texte": "t"}), "pas d'adresse"),
+     "un contact sans e-mail : refusé")
+reset(contact=[{"hektor_contact_id": "606202", "display_name": "M. DURAND", "email": CLIENT, "archive": True}])
+voir(refuse(lambda: ges.preparer_email_client(nouveau_ctx(), {"hektor_contact_id": "606202", "objet": "o", "texte": "t"}), "archivé"),
+     "un contact archivé : refusé")
+reset()
+google.clear()
+ges.executer_email_client(nouveau_ctx(), pe)
+envoi = next(g for g in google if g["quoi"] == "envoyer")
+voir(envoi["to"] == [CLIENT] and envoi["subject_email"] == EMAIL and not envoi["attachments"] and envoi["dry_run"] is False
+     and google[0]["quoi"] == "garde_gmail", "au clic : l'adresse RELUE sur la fiche, depuis SA boîte, sans pièce jointe")
+reset(desinscrits=[CLIENT])
+google.clear()
+voir(refuse(lambda: ges.executer_email_client(nouveau_ctx(), pe), "DÉSINSCRIT") and not [g for g in google if g["quoi"] == "envoyer"],
+     "TÉMOIN : désinscrit entre la carte et le clic -> refusé AU CLIC, rien envoyé")
+
+reset()
+resume, pr2 = ges.preparer_envoyer_rapprochement(nouveau_ctx(), {"contact_search_key": "606202:0", "annonces": "63289", "mot": "Je pense à vous"})
+voir("VRAIMENT" in resume and "annonce 63289" in resume and "désinscription" in resume and "« proposé »" in resume
+     and CLIENT not in resume, "la carte : réel, les biens, la désinscription, « proposé » ensuite, et pas l'adresse")
+voir(pr2["annonces"] == [63289] and not [g for g in google if g["quoi"] == "rapprochement"], "PROPOSER n'envoie rien")
+reset(deja_vus=[63289])
+voir(refuse(lambda: ges.preparer_envoyer_rapprochement(nouveau_ctx(), {"contact_search_key": "606202:0", "annonces": "63289", "mot": ""}),
+            "déjà été proposés"), "des biens déjà proposés / vus / écartés : rien de neuf, refusé (comme l'écran)")
+reset(envois_jour=80)
+voir(refuse(lambda: ges.preparer_envoyer_rapprochement(nouveau_ctx(), {"contact_search_key": "606202:0", "annonces": "63289", "mot": ""}),
+            "plafond"), "le plafond du jour atteint : refusé")
+Settings.email_real_send_enabled = False
+reset()
+voir(refuse(lambda: ges.preparer_envoyer_rapprochement(nouveau_ctx(), {"contact_search_key": "606202:0", "annonces": "63289", "mot": ""}),
+            "coupé"), "l'envoi réel coupé sur le serveur : refusé (pas de faux envoi)")
+Settings.email_real_send_enabled = True
+reset()
+google.clear()
+appels.clear()
+r = ges.executer_envoyer_rapprochement(nouveau_ctx(), pr2)
+envoi = next(g for g in google if g["quoi"] == "rapprochement")
+voir(envoi["recipient_email"] == CLIENT and envoi["dry_run"] is False and envoi["variante"] == "pull" and envoi["annonce_ids"] == [63289]
+     and envoi["fallback_sender_email"] == EMAIL and envoi["custom_intro"] == "Je pense à vous",
+     "au clic : le point d'envoi de l'écran (côté acquéreur), adresse relue, repli = la personne posé par le serveur")
+prop = next(a for a in appels if a["chemin"] == "rpc/app_record_proposition")
+voir(prop["corps"]["p_channel"] == "email" and prop["corps"]["p_gmail_message_id"] == "m9" and prop["corps"]["p_dossier_id"] == 77
+     and prop["entetes"]["Authorization"] == "Bearer " + JETON and r["biens_marques_proposes"] == 1,
+     "le bien envoyé passe « proposé » par e-mail, avec SON jeton (= propose(sentRefs, 'email') de l'écran)")
+reset(rep_envoi={"ok": False, "skipped": "opt_out", "groups": []})
+appels.clear()
+voir(refuse(lambda: ges.executer_envoyer_rapprochement(nouveau_ctx(), pr2), "désinscrit")
+     and not [a for a in appels if a["chemin"] == "rpc/app_record_proposition"],
+     "TÉMOIN : le serveur d'envoi refuse (désinscrit) -> on le DIT, aucun bien marqué proposé")
+reset(rep_envoi={"ok": True, "dryRun": True, "groups": [{"ok": True, "annonceIds": [63289], "messageId": None}]})
+appels.clear()
+voir(refuse(lambda: ges.executer_envoyer_rapprochement(nouveau_ctx(), pr2), "MODE TEST")
+     and not [a for a in appels if a["chemin"] == "rpc/app_record_proposition"],
+     "TÉMOIN : un envoi parti en mode test n'est PAS annoncé comme envoyé, rien marqué")
+
+reset()
+google.clear()
+resume, prd = ges.preparer_rdv_client(nouveau_ctx(), {"type": "visite", "titre": "Visite — M. DURAND", "debut": demain,
+                                                      "duree_minutes": 60, "lieu": "", "hektor_annonce_id": "63289",
+                                                      "hektor_contact_id": "606202", "contact_search_key": "", "note": ""})
+voir("VRAIE invitation" in resume and "Aucune invitation" not in resume and CLIENT not in resume and "depuis l'écran" in resume,
+     "la carte dit qu'une VRAIE invitation part, sans l'adresse, et que la suite se fait depuis l'écran")
+voir(refuse(lambda: ges.preparer_rdv_client(nouveau_ctx(), {"type": "autre", "titre": "x", "debut": demain, "duree_minutes": 30, "lieu": "",
+                                                            "hektor_annonce_id": "", "hektor_contact_id": "", "contact_search_key": "",
+                                                            "note": ""}), "contact à inviter"), "sans contact à inviter : refusé")
+google.clear()
+r = ges.executer_rdv_client(nouveau_ctx(), prd)
+creer = next(g for g in google if g["quoi"] == "creer")
+lien = next(g for g in google if g["quoi"] == "lien_creer")
+voir(creer["attendees"] == [CLIENT] and creer["send_updates"] == "all" and creer["subject_email"] == EMAIL
+     and lien["attendees"] == [CLIENT] and lien["metadata_json"]["send_updates"] == "all" and r["invitation_envoyee"],
+     "au clic : dans SON agenda, le client invité (adresse relue), Google le prévient ; notre copie le note")
+google.clear()
+ges.executer_rdv(nouveau_ctx(), prd)
+voir(next(g for g in google if g["quoi"] == "creer")["attendees"] == [] and next(g for g in google if g["quoi"] == "creer")["send_updates"] == "none",
+     "TÉMOIN : le rendez-vous du lot 3a, lui, reste SANS invité ni notification")
+
 print("10) aucune fonction de geste ne fait autre chose que proposer")
-voir(all(f.nom.startswith("proposer_") for f in ges.FONCTIONS_GESTES) and len(ges.FONCTIONS_GESTES) == 22,
-     "22 gestes (le brouillon retiré le 15/11, 3 du lot 2c le 17/11), tous « proposer_ » : le modèle n'a AUCUNE fonction qui exécute")
+voir(all(f.nom.startswith("proposer_") for f in ges.FONCTIONS_GESTES) and len(ges.FONCTIONS_GESTES) == 25,
+     "25 gestes (le brouillon retiré le 15/11, 3 du lot 2c, 3 du lot 3c le 16/11), tous « proposer_ » : le modèle n'a AUCUNE "
+     "fonction qui exécute")
 voir(not any(f.nom.startswith("proposer_") for f in ges.FONCTIONS_LECTURE_LOT3), "les 2 lectures du lot 3 ne proposent rien")
 voir(not any(f.nom.startswith("proposer_") for f in ges.FONCTIONS_LECTURE_LOT4), "les 3 lectures du lot 4 ne proposent rien")
 voir([f.nom for f in cat.fonctions_du_role("commercial") if f.nom == "proposer_note_transaction"] == [],

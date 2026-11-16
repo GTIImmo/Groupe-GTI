@@ -517,3 +517,56 @@ En ligne : `2953ee5` (Render `/health` à 07:55:30). Par son Chrome et sa sessio
   database » sur `phase2.sqlite` — première fois en 20 jours ; à la même minute une autre session jouait un patch sur la
   base (`patch_essai_a2_plage_app_2026-11-15_INVERSE.sql`). La relecture suivante (08:00) est passée. Non creusé.
 ➡ **Lot 2c PROUVÉ.** Reste à pousser la correction du texte de la carte (son accord).
+
+## 26. Audit du lot 3c (16/11, sur « Oui, 3c ») — ce qui part VERS UN CLIENT, et le bon de visite — rien codé
+
+> Audit limité aux gestes vers le client (e-mail, rapprochement, invitation, espace client) et au bon de visite. Il
+> reprend le §10 (13/11) et le remesure.
+
+**Mesuré le 16/11 (lecture seule)** :
+- Envoi réel des e-mails sur le serveur : **ALLUMÉ** (`/emails/rapprochement/stats` : `realSendEnabled: true`, plafond 80/jour,
+  alerte à 50, 0 envoi aujourd'hui). La réserve « non mesuré » du §10 tombe.
+- E-mails de rapprochement et d'estimation (`app_email_envoi`) : 84 en tout, **82 vers une adresse @gti-immobilier.fr** —
+  ce n'étaient que des essais. 2 en 90 jours (le dernier le 12/10). ⇒ **Aucun e-mail de ce type n'est jamais vraiment parti
+  vers des clients.**
+- Rendez-vous avec invités : 9 visites avec invités, toutes en juin ; 0 en 90 jours.
+- Espace client : 3 demandes de visite en tout (juillet), aucune depuis.
+- Bon de visite : une page construite et imprimée par le navigateur (`visitVoucherHtml`, App.tsx:45540), à partir d'un
+  rendez-vous de visite ; rien n'est enregistré, pas de PDF côté serveur. Le worker sait faire des PDF (Playwright,
+  `generate_estimation_pdf`).
+
+**Les défauts du §10 sont toujours là** (rien n'a été corrigé, à lui de dire) : l'expéditeur des e-mails de rapprochement
+vient du navigateur sans contrôle ; les pièces jointes de l'e-mail libre viennent de n'importe quelle adresse ; supprimer
+un rendez-vous de visite efface un « proposé » d'avant. Pour l'assistant, le premier ne joue pas (l'expéditeur sera posé
+par le serveur).
+
+**Proposition** (les cartes montrent le texte COMPLET et le destinataire avant le clic) :
+- **A — e-mail à un client** depuis la boîte de la personne : destinataire = l'e-mail d'un contact de la base qu'elle
+  voit (jamais une adresse libre), refusé si le contact s'est désinscrit, sans pièce jointe ;
+- **B — envoyer un rapprochement pour de vrai** : l'aperçu du §11 devient un envoi réel par la route de l'écran
+  (plafond 80/jour, désinscription, suivi des ouvertures, journal), expéditeur posé par le serveur ;
+- **C — rendez-vous avec le client invité** : une vraie invitation Google à l'e-mail du contact ;
+- **D — l'espace client** (confirmer un créneau) : PAS maintenant (3 demandes en tout, aucune depuis juillet) ;
+- **E — le bon de visite** : après un rendez-vous de visite, le bouton qui ouvre le bon de visite de l'écran (même
+  modèle, imprimable) arrivera avec l'écran (étape 4) ; un PDF fabriqué par le worker serait un nouveau type de travail
+  (à décider).
+- **Preuve** : sur un contact d'essai dont l'e-mail est une adresse INTERNE (décision du 29/10, « Oui, en interne ») ;
+  rien ne sort vers un vrai client avant son accord.
+
+## 27. Lot 3c codé (16/11, sur son « Oui, vas-y ») — en local, pas poussé, pas éprouvé en réel
+
+Trois cartes vers le client dans `backend/app/services/assistant_gestes.py` (section « LOT 3c ») :
+- **email_client** → `send_gmail_message` depuis la boîte de la personne (garde de l'écran), à l'adresse de la FICHE du
+  contact, relue au clic ; sans pièce jointe ; refusé si archivé, sans e-mail ou désinscrit (`app_contact_consent`).
+- **envoyer_rapprochement** → `RapprochementSender.send_grouped`, le point d'envoi de l'écran côté acquéreur
+  (RechercheAcquereur.tsx:670) : biens jamais proposés seulement, 1 e-mail par négociateur du mandat depuis sa boîte,
+  plafond 80/jour, désinscription, suivi ; puis `app_record_proposition` canal e-mail pour chaque bien envoyé (comme
+  l'écran). Repli d'expéditeur = la personne, posé par le serveur (l'écran le prend du navigateur : défaut n° 1).
+  Refusé si l'envoi réel est coupé, plafond atteint, tout déjà vu ; un envoi parti en mode test n'est pas annoncé envoyé.
+- **rdv_client** → le rendez-vous du lot 3a, avec le client INVITÉ (`sendUpdates: all`) : vraie invitation Google ;
+  l'assistant ne pourra plus le déplacer ni le supprimer ensuite (garde des RDV avec invités).
+- ⛔ L'adresse du client ne part jamais au modèle : la carte dit « l'adresse de sa fiche ».
+- Pas fait (décision) : l'espace client ; le bon de visite (avec l'écran, étape 4).
+- Consignes du modèle mises à jour. Essais : 197 + 59 + 73 verts ; 3 témoins inverses ROUGES (désinscription,
+  adresse visible du modèle, expéditeur de repli).
+- ⏳ Reste : pousser (son accord), puis la preuve réelle sur un contact d'essai à l'adresse INTERNE (son accord).
