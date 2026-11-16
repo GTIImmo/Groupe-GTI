@@ -2122,3 +2122,17 @@ COLLÉS (« VraiFauxDéjà su ») : espacés (flex, écart 10 px), essai 22 vert
 Retour arrière : `supabase/patch_ged_m10_jugement_2026-11-16_INVERSE.sql`. Compte rendu :
 `supabase/requete_mesure_ged_m10_2026-11-16.sql`. ⏰ **La mesure commence : deux semaines, jusqu'au 30/11/2026.**
 ⚠ Les lignes des biens d'ESSAI (63331, 62774, 61398) ne doivent pas être jugées, ou alors être écartées du compte rendu.
+
+### 12.21 L'habillage : la maquette RETRAVAILLÉE d'abord (16/11, demande de Frédéric)
+Au moment de coder l'habillage sur la maquette du 12/11 (v10, écrans E0-E6), Frédéric : « il faut retravailler cette
+maquette, j'ai besoin d'une ergonomie adaptée et d'un design moderne graphique avec des animations dynamiques ». RIEN
+n'avait été codé de l'habillage. Nouvelle maquette (toile Design, privée) : **https://claude.ai/artifact/S16jkpfnqtPF83xvUdkNtm**
+-- 4 écrans interactifs : ① l'onglet Documents (élément fort : LE DOSSIER, les moments de la vente et une feuille par pièce
+attendue, qui se remplit et se coche), ② la fenêtre de dépôt (zone, arrivée des fichiers pendant que l'IA lit le type,
+liste + aperçu, « Prendre ce type », Séparer, « Envoyer quand même », RIB jamais envoyé, envoi fichier par fichier, bande
+« Fermer sans envoyer »), ③ après l'envoi (lectures qui arrivent, « Remplir la fiche » : la valeur VOLE vers la case vide
+de la fiche ; « Voir la preuve » ; alertes et Vrai · Faux · Déjà su), ④ le téléphone (photographier recto puis verso).
+Raisonnement métier MESURÉ (par le numéro Hektor du document, pas `created_at`, faussé par les recréations d'octobre) :
+1 042 documents en 31 jours sur 212 biens ; 301 dépôts, **2 fichiers en médiane**, 45 au plus ; 21 % de photos ; 8 % de
+noms muets ; **40 % de noms qu'aucune règle ne reconnaît** -> le TYPE est le cœur du travail. Mêmes gestes qu'aujourd'hui,
+aucune fonction ajoutée ; animations coupées par « moins de mouvement ». ⏳ Attend l'avis de Frédéric avant tout code.
