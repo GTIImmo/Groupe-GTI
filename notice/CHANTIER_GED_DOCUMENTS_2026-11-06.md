@@ -2027,3 +2027,26 @@ Frédéric veut le représentant et la date, ce sera un lot à part, avec le reg
 - **Reste, sur accord** : pousser (Render + Vercel), puis une épreuve sur 63331 avec un faux acte de mariage (le conjoint
   absent de la fiche -> P9 doit parler), un faux acte de décès au nom du mandant d'essai (P10) et un faux jugement de
   tutelle dont la page 1 porte un nom et une date (seule la nature doit rester).
+
+**✅ 9d-2 EN LIGNE (`6da5485`, Render et Vercel) ET ÉPROUVÉ EN RÉEL (16/11, « Oui ») sur 63331, dans le Chrome de Frédéric.**
+Pièces FICTIVES (`scratchpad/ged_m9d/fabriquer_etat_civil_specimen.cjs`, `fabriquer_deces_scan.py`, `fabriquer_mariage_b.cjs`) :
+acte de mariage en texte (« ESSAI CONTACT Mandant » x « SPECIMEN Claire », enfants en page 2), acte de décès SCANNÉ du
+mandant d'essai (héritiers en page 2), jugement de tutelle en texte (nom, date et tuteur en page 1 ; « certificat médical »
+en page 2). 4 envois Hektor done (11:08-11:10 UTC). Coût des 4 lectures : 0,0007 $.
+- **Type** : par le NOM, « Acte de mariage » et « Acte de décès » sont pris pour un TITRE de propriété (« probable » : la
+  règle `acte` du titre passe avant celle de l'état civil, `gedTypeParNom.ts`) ; ⭐ l'IA a corrigé les deux en
+  « État civil » avant l'envoi. ⚠ **TROUVÉ, NON TRAITÉ** : les ANCIENS documents (jamais classés par l'IA) nommés « acte de
+  mariage / de décès / de naissance » comptent donc comme titre de propriété dans « Reçu / Manque ».
+- **Lectures** : décès `pages_lues {1}` (acte_deces, 2026-11-01, défunt ESSAI CONTACT / Mandant) ; mariage par le texte
+  seul ; **tutelle : la nature « protection » SEULE** (ni nom, ni date, ni tuteur). **0 fuite** (aucun enfant, héritier,
+  marqueur, mot de santé), **0 valeur hors page 1**, **0 valeur de protection au-delà de la nature**.
+- ⚠ **1er acte de mariage** : écrit « Epoux : ESSAI CONTACT Mandant » sans étiquettes, l'IA a mis le nom ENTIER dans `nom`
+  sans prénom -> le mandant n'était que « proche » -> **P9 s'est tue** (prudente, voulu). **2e acte** (« Nom : … - Prénoms : … »,
+  comme un vrai acte) : nom et prénom séparés -> **P9 PARLE**.
+- **Écran** : « À regarder » 7 -> 10 : **P9** « Mandant ESSAI CONTACT est marié(e) depuis le 20/06/1987 avec Claire
+  SPECIMEN, qui n'est ni sur la fiche ni signataire du mandat » ; **P10** « …est décédé(e) le 01/11/2026 : un mandat prend
+  fin au décès du mandant » ; **P10** « Une mesure de protection juridique est au dossier ». « Prise de mandat : 3 pièces sur
+  5 » (l'état civil compte). Console sans erreur.
+- Cosmétique, à reprendre : le « pourquoi » de P9 finit par « -- à vérifier » alors que l'écran préfixe déjà « à vérifier : » ;
+  celui de la protection commence par « vérifier qui signe » (« à vérifier : vérifier… »).
+- **Reste sur 63331** : 4 pièces d'état civil SPÉCIMEN ; P9 et P10 y sonneront tant qu'elles y sont (bien d'essai, admin).
