@@ -9,7 +9,8 @@
 //   « Remplir la fiche » appelle l'écran du bien (onRemplir), « Ignorer » garde la décision. Rien sans clic.
 // ⭐ Morceau 9, lot 9c : au même endroit, la date, le lieu de naissance et la situation de famille d'un mandant
 //   (lib/gedRemplirContact.ts), lus sur ses pièces, pour SA fiche contact relue (loadContactsEtatCivil).
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type CSSProperties } from 'react'
+import { createPortal } from 'react-dom'
 import { loadAffairesForDossier, loadRegisterCycleAffaires } from './lib/api'
 import { etatFiableDuDocument } from './lib/etatSignatureMandat'
 import { compterConditionsStrict, gedDecider, gedJuger, loadContactsEtatCivil, loadGedClassements, loadGedDecisions, loadGedJugements, useGedPropositions, useGedRemplir, type EtatCivilLu, type JugementGed } from './lib/ged'
@@ -22,7 +23,7 @@ import { reglesFinancement } from './lib/gedReglesFinancement'
 import { reglesEtatCivil } from './lib/gedReglesEtatCivil'
 import { LIBELLE_MOMENT, recuManque, type LignePiece, type MomentDossier } from './lib/gedPieces'
 import { deposeAuPlusTard, LIBELLE_A_DEPOSER, reglesSansIa, type AffaireRegle, type Alerte, type FaitsRegles } from './lib/gedRegles'
-import type { PersonneDuBien } from './lib/gedComparer'
+import { lireDateIso, type PersonneDuBien } from './lib/gedComparer'
 import { reglesLues } from './lib/gedReglesLues'
 import type { ConsoleDocument } from './types'
 import './RecuManque.css'
@@ -43,6 +44,34 @@ function depose(d: ConsoleDocument): string | null {
 const NIVEAU_ALERTE: Record<Alerte['niveau'], string> = { alerte: 'à vérifier', piece: 'pièce non trouvée', info: 'pour information' }
 // habillage H1 : les moments de la vente, dans l'ordre (le même que gedPieces.ts)
 const ORDRE_MOMENTS: MomentDossier[] = ['mandat', 'mise_en_vente', 'offre', 'compromis']
+
+// ── habillage H3 (16/11, planche « Après l'envoi ») : ce qu'on vient de décider reste À SA PLACE, replié en une ligne ;
+// « La fiche du bien » montre les cases que les documents savent remplir (geste « fiche » de gedRemplir.ts) et leur
+// valeur ACTUELLE, lue dans les faits de la fiche -- rien de neuf n'est lu. Une case remplie d'ici s'allume.
+type Faite = { cle: string; message: string; sort: 'rempli' | 'ignore' | 'refus' | 'erreur' }
+const AVANT: Record<PropositionRemplir['geste'], [string, string]> = {
+  fiche: ['Fiche', 'vide'], contact: ['Fiche du contact', 'vide'], charge: ['Registre des mandats', 'vide'], condition: ['Compromis', 'aucune condition'],
+}
+const jjmmaaaa = (d: Date) => `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')}/${d.getUTCFullYear()}`
+const nombre = (v: string | number) => String(Math.round(Number(v) * 100) / 100).replace('.', ',')
+// une valeur de case, en clair : celle de la fiche (faits) ou celle qu'une proposition vient d'écrire (texte brut)
+function caseEnClair(champ: string, v: string | number | null | undefined): string | null {
+  if (v == null || v === '' || (typeof v === 'number' && !Number.isFinite(v))) return null
+  if (champ === 'dpe_cons') return `${Math.round(Number(v))} kWh/m²/an`
+  if (champ === 'dpe_ges') return `${Math.round(Number(v))} kg CO₂/m²/an`
+  if (champ === 'dpe_date' || champ === 'diag_risques_nat_tech_date') { const d = lireDateIso(String(v)); return d ? jjmmaaaa(d) : null }
+  if (champ === 'copropriete_nb_lot') return `${Math.round(Number(v))} lots`
+  if (champ === 'copropriete_quote_part') return `${nombre(v)} € par an`
+  return String(v)
+}
+const CASES_FICHE: Array<{ champ: string; libelle: string; copro?: boolean; lire: (f: FaitsRegles & Partial<Pick<FaitsRemplir, 'quotePart' | 'erpDate'>>) => string | number | null | undefined }> = [
+  { champ: 'dpe_cons', libelle: 'Consommation d\'énergie', lire: (f) => f.dpeConso },
+  { champ: 'dpe_ges', libelle: 'Émissions', lire: (f) => f.dpeGes },
+  { champ: 'dpe_date', libelle: 'Date du DPE', lire: (f) => f.dpeDate },
+  { champ: 'diag_risques_nat_tech_date', libelle: 'Date de l\'état des risques', lire: (f) => f.erpDate },
+  { champ: 'copropriete_nb_lot', libelle: 'Nombre de lots', copro: true, lire: (f) => f.nbLots },
+  { champ: 'copropriete_quote_part', libelle: 'Charges du lot', copro: true, lire: (f) => f.quotePart },
+]
 
 // Un montant du registre (en euros, texte ou nombre) ; vide ou zéro -> null.
 const euros = (v: string | number | null | undefined) => { const x = Number(v); return v != null && v !== '' && Number.isFinite(x) && x > 0 ? x : null }
@@ -143,7 +172,10 @@ export function RecuManque({
   const [decisions, setDecisions] = useState<Set<string> | null>(null)
   const [conditions, setConditions] = useState<Map<number, number> | null>(null)
   const [enCours, setEnCours] = useState<string | null>(null)
-  const [messageRemplir, setMessageRemplir] = useState<string | null>(null)
+  // H3 : les décisions de cette visite, repliées ; les cases envoyées d'ici (en attendant la fiche relue) ; le vol
+  const [faites, setFaites] = useState<Faite[]>([])
+  const [envoyees, setEnvoyees] = useState<Record<string, string>>({})
+  const [vol, setVol] = useState<{ valeur: string; x: number; y: number; dx: number; dy: number } | null>(null)
   const [relire, setRelire] = useState(0)
   useEffect(() => {
     if (!remplir || !peutRemplir) return
@@ -186,21 +218,51 @@ export function RecuManque({
     return [...propositionsRemplir({ ...faits, chargeRegistre }, docsLus, affaires, decisions, conditions),
       ...propositionsContact(contacts, personnesDuBien, docsLus, decisions, new Date())]
   }, [remplir, peutRemplir, decisions, conditions, affaires, documents, lectures, faits, chargeRegistre, etatCivil, contactsDuBien, personnesDuBien])
-  const agir = async (p: PropositionRemplir, geste: 'remplir' | 'ignorer') => {
+  const agir = async (p: PropositionRemplir, geste: 'remplir' | 'ignorer', depart?: HTMLElement | null) => {
     if (enCours || !onRemplir) return
-    setEnCours(p.cle); setMessageRemplir(null)
+    setEnCours(p.cle)
+    let faite: Faite
     try {
-      if (geste === 'remplir') setMessageRemplir(await onRemplir(p))
-      else {
+      if (geste === 'remplir') {
+        const message = await onRemplir(p)
+        // le geste rend « Envoyé… » / « Enregistré… » quand il a écrit, « Rien écrit… » quand la relecture a refusé
+        const ecrit = /^(Envoyé|Enregistré)/.test(message)
+        faite = { cle: p.cle, message, sort: ecrit ? 'rempli' : 'refus' }
+        if (ecrit && p.geste === 'fiche') envoler(p, depart)
+      } else {
         await gedDecider({ hektorAnnonceId, lectureId: p.lectureId, cle: p.cle, champ: p.champ, valeur: p.valeur, decision: 'ignoree' })
-        setMessageRemplir(`Ignoré : ${p.texte}.`)
+        faite = { cle: p.cle, message: `Ignorée : ${p.texte}. Elle ne reviendra pas.`, sort: 'ignore' }
       }
     } catch (e) {
-      setMessageRemplir(e instanceof Error ? e.message : 'Rien n\'a été écrit.')
+      faite = { cle: p.cle, message: e instanceof Error ? e.message : 'Rien n\'a été écrit.', sort: 'erreur' }
     } finally {
       setEnCours(null); setRelire((n) => n + 1)
     }
+    setFaites((avant) => [...avant.filter((f) => f.cle !== p.cle), faite])
   }
+
+  // H3 : la valeur écrite VOLE du bouton jusqu'à sa case de « La fiche du bien », qui s'allume (sans mouvement si
+  // l'utilisateur l'a demandé : la case s'allume seulement).
+  function envoler(p: PropositionRemplir, depart?: HTMLElement | null) {
+    const affichee = caseEnClair(p.champ, p.valeur) ?? p.valeur
+    setEnvoyees((avant) => ({ ...avant, [p.champ]: affichee }))
+    const cible = document.querySelector(`[data-case="${p.champ}"]`)
+    if (!depart || !cible || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
+    const a = depart.getBoundingClientRect()
+    const b = cible.getBoundingClientRect()
+    setVol({ valeur: affichee, x: b.left + 8, y: b.top + 4, dx: a.left - b.left, dy: a.top - b.top })
+    window.setTimeout(() => setVol(null), 760)
+  }
+
+  // H3 : les cases de « La fiche du bien » -- les cases de copropriété seulement pour un bien en copropriété (ou quand une
+  // proposition les vise) ; le panneau ne se montre que s'il y a une case à remplir d'ici, ou une case venant d'être remplie.
+  const casesFiche = CASES_FICHE
+    .filter((c) => !c.copro || faits.copropriete === true || propositions.some((p) => p.champ === c.champ) || envoyees[c.champ])
+    .map((c) => {
+      const surLaFiche = caseEnClair(c.champ, c.lire(faits))
+      return { ...c, valeur: surLaFiche ?? envoyees[c.champ] ?? null, allume: Boolean(envoyees[c.champ]) }
+    })
+  const ficheVisible = propositions.some((p) => p.geste === 'fiche') || Object.keys(envoyees).length > 0
 
   // ── morceau 10 : JUGER chaque ligne « À regarder » (vrai / faux / déjà su), derrière `ged_propositions`. Lecture
   // ratée ou table pas encore posée (null) -> pas de boutons. Le jugement le plus récent d'une ligne fait foi.
@@ -332,26 +394,49 @@ export function RecuManque({
       {precedent ? <p className="gm2-note" role="status">{`${LIBELLE_MOMENT[precedent.moment]} : les pièces obligatoires non trouvées.`}</p> : null}
       <div className="gm2-feuilles" key={momentVu ?? 'courant'}>{feuillesVues.map(feuille)}</div>
 
-      {propositions.length || messageRemplir || alertes.length ? (
+      {propositions.length || faites.length || alertes.length ? (
         <div className="gm2-col2">
-          {propositions.length || messageRemplir ? (
+          {propositions.length || faites.length ? (
             <div className="gm2-bloc">
               <p className="gm2-bt">{`À remplir (${propositions.length})`}</p>
-              {messageRemplir ? <p className="gm2-msg" role="status">{messageRemplir}</p> : null}
+              {faites.map((f) => (
+                <p key={f.cle} className={`gm2-faite is-${f.sort}`} role="status">
+                  {f.sort === 'rempli' ? <svg className="gm2-coche" width="17" height="17" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg> : null}
+                  <span>{f.message}</span>
+                </p>
+              ))}
               {propositions.map((p, i) => (
-                <div key={`${p.cle}|${p.valeur}`} className="gm2-carte" style={{ animationDelay: `${i * 80}ms` }}>
+                <div key={`${p.cle}|${p.valeur}`} className="gm2-carte gm2-prop" style={{ animationDelay: `${i * 80}ms` }}>
                   <div className="gm2-c1"><span className="gm2-et is-remplir">Remplir</span><b>{p.texte}</b></div>
-                  <small className="gm2-src">{`case vide : lu dans ${p.source}`}</small>
+                  <div className="gm2-pv">
+                    <span>{`${AVANT[p.geste][0]} : `}<i>{AVANT[p.geste][1]}</i></span>
+                    <span>{`lu dans ${p.source}`}</span>
+                  </div>
                   <div className="gm2-gestes">
-                    <button type="button" className="gm2-b1" disabled={enCours !== null} onClick={() => void agir(p, 'remplir')}>{enCours === p.cle ? 'Écriture…' : p.geste === 'contact' ? 'Remplir la fiche du contact' : 'Remplir la fiche'}</button>
+                    <button type="button" className="gm2-b1" disabled={enCours !== null} onClick={(e) => void agir(p, 'remplir', e.currentTarget)}>{enCours === p.cle ? 'Écriture…' : p.geste === 'contact' ? 'Remplir la fiche du contact' : 'Remplir la fiche'}</button>
                     <button type="button" className="gm2-lien" disabled={enCours !== null} onClick={() => void agir(p, 'ignorer')}>Ignorer</button>
                   </div>
                 </div>
               ))}
             </div>
           ) : null}
+          {ficheVisible ? (
+            <div className="gm2-bloc gm2-fiche">
+              <p className="gm2-bt">La fiche du bien</p>
+              <small className="gm2-src">Les cases que les documents savent remplir.</small>
+              <dl>
+                {casesFiche.map((c) => (
+                  <div key={c.champ}>
+                    <dt>{c.libelle}</dt>
+                    <dd data-case={c.champ} className={c.valeur ? (c.allume ? 'is-allume' : '') : 'is-vide'}>{c.valeur ?? 'vide'}</dd>
+                  </div>
+                ))}
+              </dl>
+              <small className="gm2-src">Une case déjà remplie n'est jamais réécrite : la proposition ne vient pas.</small>
+            </div>
+          ) : null}
           {alertes.length ? (
-            <div className="gm2-bloc">
+            <div className={`gm2-bloc${ficheVisible ? ' gm2-large' : ''}`}>
               <p className="gm2-bt">{`À regarder (${alertes.length})`}</p>
               {messageJuge ? <p className="gm2-msg" role="status">{messageJuge}</p> : null}
               {alertes.map((a, i) => {
@@ -398,6 +483,10 @@ export function RecuManque({
             </ul>
           ) : null}
         </div>
+      ) : null}
+      {vol ? createPortal(
+        <span className="gm2-vol" aria-hidden="true" style={{ left: vol.x, top: vol.y, '--dx': `${vol.dx}px`, '--dy': `${vol.dy}px` } as CSSProperties}>{vol.valeur}</span>,
+        document.body,
       ) : null}
     </section>
   )

@@ -2212,3 +2212,32 @@ monter la bande. ⚠ **Et la revue a trouvé une faute** : avec UN fichier, la b
 parti » (le gabarit ne savait pas élider). Corrigé : « 1 document n'est pas parti. L'envoyer avant de fermer ? », et de
 même « Il est déposé ; fermer arrête sa lecture ». Essai `test_ged_depot` 28 -> 29 (le contrôle aurait rougi sur
 l'ancienne phrase) ; build vert ; commit local À POUSSER. Toujours 24 documents sur 63331 : rien n'est parti.
+*(Poussé le 16/11 avec `8af44f1` de la session classeur posé dessous, accord de Frédéric : `c0f09fa`, Vercel READY ; vu en
+production avec un seul faux fichier : « 1 document n'est pas parti. L'envoyer avant de fermer ? ».)* ➡ **H2 EST FINI.**
+
+**H3 (après l'envoi) : la planche mêlait trois choses, Frédéric a tranché (16/11) : « Fais A et B. C pas nécessaire. »**
+A = l'habillage pur, B = le panneau « La fiche du bien », C = « Voir la preuve » (la phrase lue surlignée dans la page :
+il aurait fallu que l'IA rende la citation, un changement du serveur de lecture, et relire le fichier au coffre) --
+**C n'est PAS fait**. **✅ A ET B ÉCRITS — rien poussé** (`RecuManque.tsx`, `RecuManque.css`, une ligne de
+`DepotDocuments.tsx/.css`) :
+- **A** -- la carte « À remplir » dit ce que porte la case AVANT (« Fiche : vide », « Registre des mandats : vide »,
+  « Compromis : aucune condition ») et d'où vient la valeur (« lu dans <document>, page N ») ; après le clic, la décision
+  se REPLIE à sa place en une ligne (verte cochée « Envoyé… », grise « Ignorée… Elle ne reviendra pas. », ambre « Rien
+  écrit… », rose pour une erreur) -- avant, un seul message en tête du bloc, effacé au clic suivant. Dans la fenêtre de
+  dépôt, le résumé de lecture ENTRE à la place du scintillement « L'IA lit les valeurs… ».
+- **B** -- « La fiche du bien », à côté de « À remplir » : les 6 cases que le geste « fiche » sait remplir (consommation,
+  émissions, date du DPE, date de l'état des risques ; nombre de lots et charges du lot pour une copropriété), leur valeur
+  ACTUELLE lue dans les faits de la fiche (rien de neuf n'est lu), « vide » sinon. Visible seulement s'il y a une case à
+  remplir d'ici. Un « Remplir la fiche » qui a ÉCRIT fait voler la valeur du bouton jusqu'à sa case, qui s'allume (sans
+  mouvement si « moins de mouvement » est demandé : la case s'allume seulement). « Rien écrit » n'allume rien.
+Les gestes ne changent pas : `onRemplir` et `gedDecider` tels quels, toujours un clic par proposition. Essais :
+`test_ged_remplir` 27 -> 32 (mêmes portes d'écriture, la case ne s'allume que si le geste a écrit -- TÉMOIN INVERSE :
+allumer sans cette condition fait rougir --, le panneau ne lit rien de neuf, le vol coupé sous « moins de mouvement ») ;
+les 12 essais GED verts, build vert. ⚠ PAS VU à l'écran : il faut une proposition « fiche » vivante sur 63331 pour voir la
+carte, le panneau et le vol ; à regarder après le push.
+⏳ **Question posée à Frédéric** : « peut-on juste montrer un aperçu du bon document ? » -- oui, la proposition garde le
+numéro de sa lecture (donc le document) et la page. ⚠ Mais le seul chemin d'ouverture existant
+(`createConsoleDocumentSignedUrl`) ÉCRIT au passage la date de consultation (`app_console_touch_document` :
+`last_accessed_at` ET `updated_at` du document), et la règle demande de prévenir la session signature avant de toucher
+`app_console_document` / le coffre. À trancher : passer par l'ouverture d'aujourd'hui (même effet qu'un clic sur
+« Ouvrir »), ou lire le fichier sans cette écriture.

@@ -646,7 +646,7 @@ export function DepotDocuments({
             {l.etat === 'pret' ? etatIa(l) : null}
             {l.etat === 'envoye' ? <span className="ged-depot-ok">Déposé chez nous, envoi chez Hektor en cours. Type enregistré.</span> : null}
             {l.etat === 'envoye' && l.lecture ? (
-              <span className={`ged-depot-ia${l.lecture.etat === 'fait' ? ' is-avis' : ''}${l.lecture.etat === 'lecture' ? ' dd-lit' : ''}`}>
+              <span key={l.lecture.etat} className={`ged-depot-ia${l.lecture.etat === 'fait' ? ' is-avis dd-entre' : ''}${l.lecture.etat === 'lecture' ? ' dd-lit' : ''}`}>
                 {l.lecture.etat === 'attente' ? 'Lecture des valeurs à suivre…' : l.lecture.etat === 'lecture' ? "L'IA lit les valeurs…" : l.lecture.etat === 'fait' ? l.lecture.resume : `Pas lu (${l.lecture.raison}).`}
                 {l.lecture.etat === 'erreur' ? <button className="dd-lien" type="button" onClick={() => modifierEtat(l.id, { lecture: { etat: 'attente' } })}>Relire</button> : null}
               </span>

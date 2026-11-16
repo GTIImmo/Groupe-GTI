@@ -71,5 +71,19 @@ const patch = fs.readFileSync(path.join(__dirname, '../../supabase/patch_ged_m8_
 voir(/\('ged_remplir', 'off'/.test(patch) && /security definer/.test(patch) && /auth\.uid\(\)\)\s*returning id/.test(patch) && /revoke all on table public\.app_ged_decision from public, anon, authenticated/.test(patch), 'interrupteur posé ÉTEINT ; porte SECURITY DEFINER ; l\'auteur est l\'appelant ; table fermée en écriture')
 voir(/decision in \('remplie', 'ignoree', 'echec'\)/.test(patch) && !/update public\.app_ged_decision|delete from public\.app_ged_decision/.test(patch), 'trois décisions possibles ; la table est un journal (ni mise à jour ni effacement)')
 
+console.log('④ habillage H3 (16/11) : la carte, la ligne repliée, « La fiche du bien »')
+const rmH3 = fs.readFileSync(path.join(__dirname, 'src/RecuManque.tsx'), 'utf8')
+const agirH3 = rmH3.slice(rmH3.indexOf('const agir = async'), rmH3.indexOf('function envoler'))
+voir(/const message = await onRemplir\(p\)/.test(agirH3) && /await gedDecider\(\{ hektorAnnonceId, lectureId: p\.lectureId, cle: p\.cle, champ: p\.champ, valeur: p\.valeur, decision: 'ignoree' \}\)/.test(agirH3),
+  'H3 : le geste et la décision « ignorée » passent par les MÊMES portes qu\'avant (rien de neuf n\'écrit)')
+voir(/const ecrit = \/\^\(Envoyé\|Enregistré\)\/\.test\(message\)/.test(agirH3) && /if \(ecrit && p\.geste === 'fiche'\) envoler\(p, depart\)/.test(agirH3)
+  && /return `Envoyé : \$\{p\.texte\}/.test(app) && /return `Enregistré : \$\{p\.texte\}/.test(app) && /return `Rien écrit : \$\{texte\}`/.test(app),
+  'H3 : une case ne s\'allume que si le geste a ÉCRIT (« Envoyé » / « Enregistré ») ; un « Rien écrit » se replie sans rien allumer')
+const casesH3 = rmH3.slice(rmH3.indexOf('const CASES_FICHE'), rmH3.indexOf('// Un montant du registre'))
+voir(casesH3.length > 200 && !/load|supabase|rpc|fetch/i.test(casesH3) && !/load|supabase|rpc|fetch/i.test(rmH3.slice(rmH3.indexOf('const casesFiche'), rmH3.indexOf('const ficheVisible'))),
+  'H3 : « La fiche du bien » ne lit RIEN de neuf : les faits de la fiche, et ce qu\'on vient d\'y écrire')
+voir(/window\.matchMedia\?\.\('\(prefers-reduced-motion: reduce\)'\)\.matches\) return/.test(rmH3), 'H3 : moins de mouvement demandé -> pas de vol, la case s\'allume seulement')
+voir(!/tout remplir/i.test(rmH3) && !/absent/i.test(rmH3.replace(/^\/\/.*$/gm, '')), 'TÉMOIN : toujours un clic par proposition, et jamais « absent »')
+
 console.log(ko ? `\n${ko} ROUGE, ${ok} VERT` : `\nTOUT EST VERT (${ok})`)
 process.exit(ko ? 1 : 0)
