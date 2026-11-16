@@ -1968,3 +1968,28 @@ serveur. Tout reste derrière `ged_lecture_personnes` (lecture) et `ged_proposit
 - **Reste, sur accord** : pousser (Render pour le serveur, Vercel pour l'écran), puis l'épreuve réelle sur un bien d'essai
   avec un compromis vivant : une fausse offre de prêt SPÉCIMEN de PLUSIEURS pages (une page « assurance » en 2) pour
   prouver que seule la 1re part. ⚠ Une offre en PDF texte qui porte un IBAN est refusée en bloc par la garde RIB : voulu.
+
+**✅ 9d-1 EN LIGNE ET LA LECTURE ÉPROUVÉE EN RÉEL (16/11, « Vas y »).** `251b784` est parti chez GitHub AVEC `bf47572` (l'autre
+session l'a poussé juste au-dessus ; mon push, arrivé après, a été refusé sans effet) ; Vercel et Render (`/health`) sur
+`bf47572`, qui le contient. Épreuve sur 63331 dans le Chrome de Frédéric, 3 pièces FICTIVES « SPÉCIMEN » fabriquées
+(`scratchpad/ged_m9d/fabriquer_offres_specimen.cjs` et `fabriquer_offre_scan.py`) : une offre de prêt de 3 pages en TEXTE et
+la même SCANNÉE — page 1 nature, date 02/11/2026, emprunteurs SPECIMEN Paul et Lucie ; page 2 « assurance emprunteur,
+questionnaire de santé » (MARQUEUR-SANTE-P2) ; page 3 montant, taux, banque, revenus (MARQUEUR-MONTANT-P3) — et un accord
+de principe avec un IBAN fictif en page 3.
+- Les 3 proposées en « Financement » ; 3 envois Hektor done (09:15:52, 09:16:06, 09:16:23 UTC).
+- **Offre en texte** : lue PAR LE TEXTE SEUL (`par_texte` vrai, aucune image), **1 033 jetons** (la page 1 seule).
+  **Offre scannée** : `pages_lues = {1}`, 3 043 jetons. Les deux : « Lu : offre de prêt · du 02/11/2026 · 2 emprunteurs » ;
+  valeurs `nature offre_de_pret`, `date_document 2026-11-02`, SPECIMEN Paul (emprunteur) et Lucie (co_emprunteur) ;
+  **toutes en page 1, aucune fuite** (ni marqueur, ni montant, ni taux, ni banque, ni santé). Coût 0,0007 $.
+- **Accord avec IBAN** : AUCUNE lecture (garde RIB, toutes les pages lues avant de couper). ⚠ **TROUVÉ, NON TRAITÉ** : la
+  fenêtre de dépôt l'a RANGÉ en « RIB » (`justif.rib`) — règle existante (`DepotDocuments.tsx` l. 220 : un IBAN trouvé
+  chez nous pré-choisit RIB si personne n'a choisi). Conséquence pour 9d : une VRAIE offre de prêt qui porte l'IBAN du
+  compte de prélèvement dans son texte sera rangée en RIB et jamais lue ; le négociateur peut corriger le type (la
+  lecture restera refusée, voulu). À trancher : garder, ou ne pas pré-choisir RIB quand l'IA ou le nom disent
+  « financement ».
+- **Écran** : « À regarder » reste à 7 — P7 et P8 SE TAISENT, comme voulu (63331 n'a aucune transaction). « Lu par l'IA :
+  19 documents ». Console sans erreur.
+- ⚠ **P7 et P8 ne sont PAS éprouvés en réel** : aucun bien d'essai n'a de compromis vivant (63331 aucune transaction ;
+  61398 une offre proposée ; 62774 compromis annulé ; le seul compromis vivant à acquéreur « test », annonce 42965, est
+  hors parc — vrai client probable, ÉCARTÉ). Les éprouver demanderait une offre puis un compromis d'essai sur 63331
+  (écritures chez Hektor, à défaire ensuite) : décision à part.
