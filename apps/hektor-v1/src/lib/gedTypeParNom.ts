@@ -52,6 +52,7 @@ const REGLES: Array<[string, string, 'sur' | 'probable']> = [
   ["urba.etude_sol", "\\bg1\\b|\\bg2\\b|geotechni|etude de sol\\b", "sur"],
   ["bien.plans", "\\bplans?\\d*\\b|croquis|vue aerienne", "probable"],
   ["justif.titre", "titre (de )?propri|titre propri|\\btp\\d*\\b|attestation (de |d )?propri|attest prop|acte (de |d )?propri|attestation immobiliere|releve de propriete|donation|success|devolu|acte d achat|acte achat|attestation (d )?achat|achat terrain|notoriete", "sur"],
+  ["justif.etat_civil", "acte (de |d )?(naissance|deces|mariage)|certificat (de )?deces", "sur"],
   ["justif.titre", "\\btitres?\\d*\\b|propri|partage|\\bacte\\b|copie authentique", "probable"],
   ["justif.taxe", "foncier|\\btf\\d*\\b|avis de taxe|\\btaxes?\\b|impots? locaux", "sur"],
   ["justif.identite", "\\bcni\\b|carte (d )?identit|carte id\\b|\\bci\\b|\\bpi\\b|passeport|pieces? d identite|titre de sejour|identite|permis de conduire|\\bid (recto|verso)\\b", "sur"],

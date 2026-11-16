@@ -2050,3 +2050,16 @@ en page 2). 4 envois Hektor done (11:08-11:10 UTC). Coût des 4 lectures : 0,000
 - Cosmétique, à reprendre : le « pourquoi » de P9 finit par « -- à vérifier » alors que l'écran préfixe déjà « à vérifier : » ;
   celui de la protection commence par « vérifier qui signe » (« à vérifier : vérifier… »).
 - **Reste sur 63331** : 4 pièces d'état civil SPÉCIMEN ; P9 et P10 y sonneront tant qu'elles y sont (bien d'essai, admin).
+
+**✅ « Oui corrige » (16/11) : un acte d'état civil n'est plus pris pour un titre par son NOM — rien poussé.**
+Dans la SOURCE (`phase2/checks/ged1_mesure_nomenclature.py`, comme le 13/11 pour « Note honoraires ») : une règle SÛRE
+`acte (de |d )?(naissance|deces|mariage)|certificat (de )?deces` -> `justif.etat_civil`, placée APRÈS la règle sûre du
+titre et AVANT sa règle probable `acte`. Puis `gedTypeParNom.ts` refabriqué (`scratchpad/ged_m1/gen_type_par_nom.py`) :
+UNE ligne change. Mesure sur le stock : **106 noms** basculent du titre « probable » à l'état civil (« acte de deces 13 »,
+« acte deces papa », « acte mariage », « extrait acte de naissance … ») ; le seul nom mixte, « titre de propriete et acte
+de deces », RESTE titre. Effet : « Reçu / Manque » ne compte plus ces actes comme un titre trouvé ; le dépôt propose
+« État civil ».
+Au passage, texte seulement : le « pourquoi » de P9 et de la protection ne redit plus « vérifier » (l'écran met déjà
+« à vérifier : »).
+Essais `test_ged_regles_etat_civil.cjs` **28 verts** (+5, dont 3 témoins : nom mixte, acte de vente / notarié / notoriété,
+livret) ; témoin inverse (l'ancien fichier) -> ROUGE ; les 11 essais GED de l'écran verts ; build vert.

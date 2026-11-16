@@ -150,6 +150,10 @@ R = [
  # ── justificatifs (pièces du propriétaire, demandées au mandat)
  ("justif.titre", r"titre (de )?propri|titre propri|\btp\d*\b|attestation (de |d )?propri|attest prop|acte (de |d )?propri|attestation immobiliere|releve de propriete"
   r"|donation|success|devolu|acte d achat|acte achat|attestation (d )?achat|achat terrain|notoriete", F),
+ # 16/11 (épreuve réelle du lot 9d-2, 63331) : « Acte de mariage », « Acte de décès » tombaient sur \bacte\b ci-dessous ->
+ # titre « probable ». Les actes d'ÉTAT CIVIL passent AVANT (et « acte deces », « acte mariage » sans « de » aussi) ; un
+ # nom qui dit AUSSI le titre (« titre de propriete et acte de deces ») reste au titre par la règle sûre au-dessus.
+ ("justif.etat_civil", r"acte (de |d )?(naissance|deces|mariage)|certificat (de )?deces", F),
  ("justif.titre", r"\btitres?\d*\b|propri|partage|\bacte\b|copie authentique", P),
  ("justif.taxe", r"foncier|\btf\d*\b|avis de taxe|\btaxes?\b|impots? locaux", F),
  ("justif.identite", r"\bcni\b|carte (d )?identit|carte id\b|\bci\b|\bpi\b|passeport|pieces? d identite|titre de sejour|identite|permis de conduire|\bid (recto|verso)\b", F),

@@ -56,6 +56,20 @@ const prot = R([ec('Jugement.pdf', 'protection', null)])
 voir(codes(prot) === 'P10/alerte' && /Une mesure de protection juridique est au dossier$/.test(textes(prot)), 'une mesure de protection -> alerte, SANS nom ni détail')
 voir(/\(2 pièces\)/.test(textes(R([ec('J1.pdf', 'protection', null), ec('J2.pdf', 'protection', null)]))), 'deux pièces de protection -> une ligne « (2 pièces) »')
 
+voir(!/vérifier/.test(p9[0].pourquoi) && !/vérifier/.test(prot[0].pourquoi), 'l\'explication ne redit pas « vérifier » (l\'écran met déjà « à vérifier : » devant une alerte)')
+
+// ⑤ (16/11, épreuve réelle) : « Acte de mariage », « Acte de décès » étaient pris pour un TITRE par leur nom
+// (\bacte\b « probable »). Corrigé dans la SOURCE (phase2/checks/ged1_mesure_nomenclature.py), fichier refabriqué.
+console.log('⑤ le type par le nom : un acte d\'état civil n\'est pas un titre')
+const { typeParNom } = charger('src/lib/gedTypeParNom.ts')
+const tp = (n) => `${typeParNom(n).code}/${typeParNom(n).force}`
+voir(['Acte de mariage.pdf', 'acte de deces 13.pdf', 'Acte deces papa 001.jpg', 'acte mariage.pdf', 'Extrait acte de naissance Stéphanie.pdf', 'Certificat de décès.pdf'].every((n) => tp(n) === 'justif.etat_civil/sur'),
+  'acte de mariage, de décès (avec ou sans « de »), extrait de naissance, certificat de décès -> état civil, sûr')
+voir(tp('Titre de propriete et acte de deces.pdf') === 'justif.titre/sur', 'TÉMOIN : un nom qui dit AUSSI le titre reste un titre (règle sûre du titre d\'abord)')
+voir(tp('Acte de vente Dupont.pdf') === 'transaction.acte/sur' && tp('Acte notarie.pdf') === 'justif.titre/probable' && tp('Acte de notoriete.pdf') === 'justif.titre/sur',
+  'TÉMOIN : acte de vente, acte notarié, notoriété ne bougent pas')
+voir(tp('Livret de famille.pdf') === 'justif.etat_civil/sur', 'TÉMOIN : le livret de famille reste état civil')
+
 console.log('④ le branchement')
 const rm = fs.readFileSync(path.join(__dirname, 'src/RecuManque.tsx'), 'utf8')
 const regles = fs.readFileSync(path.join(__dirname, 'src/lib/gedReglesEtatCivil.ts'), 'utf8')

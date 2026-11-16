@@ -52,7 +52,7 @@ export function reglesEtatCivil(docs: DocumentLu[], personnesDuBien: PersonneDuB
         const cle = [normaliserTexte(nomDe(a)), normaliserTexte(nomDe(b))].sort().join('|')
         if (vus.has(cle)) continue
         vus.add(cle)
-        alertes.push({ code: 'P9', niveau: 'alerte', texte: `${nomDe(a)} est marié(e)${m.date ? ` depuis le ${jjmmaaaa(m.date)}` : ''} avec ${nomDe(b)}, qui n'est ni sur la fiche ni signataire du mandat`, pourquoi: 'logement de la famille : le conjoint doit consentir à la vente, même s\'il n\'est pas propriétaire (article 215 du Code civil) -- à vérifier' })
+        alertes.push({ code: 'P9', niveau: 'alerte', texte: `${nomDe(a)} est marié(e)${m.date ? ` depuis le ${jjmmaaaa(m.date)}` : ''} avec ${nomDe(b)}, qui n'est ni sur la fiche ni signataire du mandat`, pourquoi: 'logement de la famille : le conjoint doit consentir à la vente, même s\'il n\'est pas propriétaire (article 215 du Code civil)' })
       }
     }
   }
@@ -70,7 +70,7 @@ export function reglesEtatCivil(docs: DocumentLu[], personnesDuBien: PersonneDuB
   // P10 -- une mesure de protection au dossier (on n'en connaît QUE la nature : ni la personne, ni le représentant).
   const protections = lus.filter((e) => e.nature === 'protection').length
   if (protections) {
-    alertes.push({ code: 'P10', niveau: 'alerte', texte: `Une mesure de protection juridique est au dossier${protections > 1 ? ` (${protections} pièces)` : ''}`, pourquoi: 'vérifier qui signe : le tuteur ou le curateur, et l\'autorisation du juge des tutelles pour une tutelle' })
+    alertes.push({ code: 'P10', niveau: 'alerte', texte: `Une mesure de protection juridique est au dossier${protections > 1 ? ` (${protections} pièces)` : ''}`, pourquoi: 'qui signe : le tuteur ou le curateur, avec l\'autorisation du juge des tutelles pour une tutelle' })
   }
   return alertes
 }
