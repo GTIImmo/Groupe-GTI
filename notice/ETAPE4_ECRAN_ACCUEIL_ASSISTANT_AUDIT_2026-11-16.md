@@ -1309,3 +1309,74 @@ photos du bien, même mécanique (dépôt au coffre puis lien signé), et la mê
 **Ce que ça change** : la décision « ajouter une photo / un document : par la fenêtre » (§40) devient « par une carte ».
 **Ce que ça pourrait casser ailleurs** : rien d'existant ; c'est un NOUVEAU chemin d'entrée de fichiers — tailles et types
 à borner comme l'écran (photo : JPEG / PNG / WebP ; scan 12 Mo ; pièce jointe 8 Mo / 18 Mo), et le coffre à purger.
+
+## 51. LE TROMBONE : les règles à respecter (photos, documents, signé à la main, coffre) — ANALYSE (17/11) — rien codé
+
+**Sa consigne** : « le trombone d'abord, mais respecter toutes les règles du serveur et de l'app pour les photos et pour
+les documents, signature à la main = règle particulière ; une analyse avant, pour ne pas faire d'erreur ».
+**Périmètre** : ajout d'une PHOTO et d'un DOCUMENT depuis l'ordinateur, marquage « signé à la main », coffre (dépôt,
+temporaires, purge, droits). Deux analyses en lecture seule (rapports complets, fichier:ligne, dans la conversation du
+17/11), puis vérifications en base par moi. Non mesuré : ce que Hektor fait d'un WebP ; l'orientation EXIF en réel.
+
+### A. Le coffre — ⛔ le point qui change le dessin
+- Règle d'accès `hektor_console_documents_temp_upload` (lue en base) : un utilisateur ne peut déposer QUE sous
+  `temp/uploads/<travail>/` ou `temp/photos/<travail>/`, pour un travail `upload_document_to_hektor` / `upload_hektor_photo`
+  EN ATTENTE qu'il a lui-même créé. ⇒ un trombone qui range les fichiers d'une conversation AVANT toute carte est REFUSÉ
+  avec le jeton de la personne.
+- Types (lus en base) : `hektor-console-documents` = pdf, jpeg, png, webp, doc, docx, xls, xlsx, txt, zip, 50 Mo (un .odt
+  est refusé DÉFINITIVEMENT, 415) ; `gti-photo` (dérivés publics) = jpeg, png, webp, 10 Mo.
+- Ordre imposé à l'écran : le TRAVAIL d'abord, puis le FICHIER, puis NOTRE LIGNE (`app_console_creer_*_optimistic`, qui
+  lit le chemin dans la charge, jamais fourni par le client). Le worker ne réclame le travail que si le fichier existe.
+- Un fichier temporaire peut rester orphelin (bien non vivant) : `nettoyer_temporaires_orphelins.js` (4 gardes, âge 2 jours).
+### B. Photos
+- Droits : `app_console_can_request_job('upload_hektor_photo')` — admin / manager tout ; négociateur sur SES biens.
+- Négociateur obligatoire sur le bien ; le worker REFUSE une annonce archivée ou un brouillon (la reprise de 12:30 la
+  reposerait chaque jour : l'appelant doit filtrer lui-même) ; vendu / clos acceptés si cache de détail (aucune décision).
+- Types : JPEG, PNG, WebP à l'écran ; ⚠ WebP jamais envoyé à Hektor (comportement inconnu). 20 photos par envoi, un travail
+  par photo, une à la fois par annonce (15 à 56 s chacune).
+- Envoi chez Hektor par le navigateur du worker (Playwright) ; il EXIGE de voir la galerie grossir et de trouver le nouvel
+  identifiant. ⚠ Sur le chemin « chez nous d'abord », un refus de Hektor finit en travail `done` avec `envoi_hektor: echec`
+  (le vrai résultat est sur la ligne) ; reprise à 12:30, sans renvoi d'une ligne qui a déjà son numéro.
+- ⚠⚠ La fonction qui pose NOTRE ligne ne reçoit PAS « masquée » (vérifié en base : elle ne parle pas de `visible`) et les
+  dérivés publics sont fabriqués AVANT Hektor : une photo voulue masquée pourrait entrer dans la vitrine au run de nuit
+  si Hektor échoue. Jamais arrivé (0 photo de ce chemin en attente ou en échec), mais réel dans le code.
+- Une photo neuve arrive EN DERNIER (pas de rang), sans légende ; elle entre dans la vitrine au run de nuit.
+### C. Documents
+- Droits : `upload_document_to_hektor`, même règle. Négociateur obligatoire. Panneau masqué sur archive / brouillon.
+- DEUX portes à l'écran : l'ancien formulaire (un fichier, aucune garde) et la FENÊTRE GED (`DepotDocuments.tsx`,
+  cran `ged_depot_multiple` = admin) qui garde : types et 50 Mo, TYPE obligatoire (66 codes `app_ged_type`), NOM sans conflit
+  (le worker adopte au réessai le document « du même nom » : un nom qui en contient un autre ferait adopter le mauvais),
+  DOUBLON par empreinte sha256, types SENSIBLES forcés PRIVÉS (identité, état civil, financement, renseignements ; RIB
+  JAMAIS envoyé), classement `app_ged_classer` après le dépôt (la synchro réécrit le type en « document »).
+- Le libellé est le nom DÉFINITIF chez Hektor (renommer : fermé par décision ⑦-9). Anti-doublon G1 du 06/11 en service.
+- Règle « un seul endroit » (GED §8.3 ter) : les documents se voient et se déposent dans l'onglet Documents du bien.
+### D. Signé à la main — règle PARTICULIÈRE
+- Ce n'est PAS un dépôt : c'est un 2e geste, sur un document DÉJÀ déposé (le scan papier), qui pose dans
+  `metadata_json.signature` « signed / manuscrite / date ». L'écran : mandat ou avenant seulement, pas déjà signé, pas
+  remplacé, avec confirmation « signé À LA MAIN par TOUS les mandants ». La base (patch du 06/11) ne refuse QUE le cas
+  « signature électronique en cours » : le reste n'est gardé que par l'écran.
+- Une fois marqué, le worker le PROTÈGE (règle R1 : synchro, purge des absents, Youtrust, ImmoSign).
+- ⛔ Décision écrite (étape 3, §4c) : « signé à la main : PAS par l'assistant pour l'instant ».
+### E. Défauts EXISTANTS trouvés (hors trombone, à décider par lui)
+1. ⛔ **Un document SIGNÉ peut être SUPPRIMÉ** : le bouton est sur toutes les lignes et le worker
+   (`handleDeleteDocumentFromHektor`, ~10525) ne regarde jamais la signature (vérifié) — contraire à la règle GED §5.3.
+2. La photo voulue masquée qui peut fuir sur la vitrine (B).
+3. La date de « signé à la main » est écrite en AAAA-MM-JJ, le pilotage ne lit que JJ/MM/AAAA.
+4. La base accepte de marquer « signé à la main » un document qui n'est pas un mandat, déjà signé ou remplacé.
+
+### F. Le dessin du trombone qui respecte ces règles (proposé)
+1. **Le dépôt passe par NOTRE SERVEUR** (pas de nouvelle règle du coffre) : la personne joint ses fichiers, le serveur
+   vérifie qui elle est, le TYPE et la TAILLE (les listes du coffre ; .odt refusé tout de suite, avec la raison), calcule
+   l'empreinte, range le fichier sous `temp/assistant/<personne>/<numéro>/` et n'en donne au modèle que le nom, le type,
+   la taille (JAMAIS le contenu). Purge des dépôts non utilisés après 2 jours (le nettoyeur existant, étendu).
+2. **Ajouter une PHOTO** (carte) : les gardes de l'écran ET celles du worker (bien vivant, ni archive ni brouillon,
+   négociateur présent), JPEG / PNG seulement, toujours VISIBLE (masquer ensuite par la carte existante — on évite le
+   défaut B), au clic l'ordre de l'écran : le travail (jeton) -> la copie du fichier à sa place (serveur) -> notre ligne
+   (jeton). La carte dit « envoi en cours » ; le résultat se lit sur la ligne, pas sur le travail.
+3. **Ajouter un DOCUMENT** (carte) : les règles de la FENÊTRE GED, pas de l'ancien formulaire — type obligatoire
+   (nomenclature), nom sans conflit, doublon par empreinte signalé, types sensibles forcés privés, RIB refusé, puis
+   `app_ged_classer` ; même cran que la fenêtre GED (`ged_depot_multiple`, aujourd'hui admin).
+4. **Signé à la main : JAMAIS par l'assistant** (décision écrite) — un mandat signé déposé par le trombone est un dépôt
+   ordinaire ; la carte dit de le marquer sur la fiche du bien.
+5. **Pièces jointes** : un fichier déposé peut partir en pièce jointe (lien signé fabriqué par le serveur) ; « l'ajouter au
+   bien » = la carte 3, proposée à part.
