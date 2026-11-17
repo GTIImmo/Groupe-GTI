@@ -222,7 +222,9 @@ FICHES.update({
                     "la vente d'un autre bien de l'acquéreur ; permis_construire ; urbanisme : un certificat ou des "
                     "renseignements d'urbanisme ; servitudes : l'absence de servitude grave ; hypotheque : un état "
                     "hypothécaire sans inscription supérieure au prix ; autre) et date_limite : la date limite de CETTE "
-                    "condition si elle est écrite. Rien d'autre sur une condition. "
+                    "condition si elle est écrite. Rien d'autre sur une condition. Le droit de préemption (la mairie, la "
+                    "DIA) et l'état hypothécaire sont des conditions GÉNÉRALES du compromis, pas des conditions "
+                    "suspensives particulières : ne les liste PAS dans conditions. "
                     + _EXCEPTION_NOMS + " Ici : les VENDEURS (qualité vendeur) et les "
                     "ACQUÉREURS (qualité acquereur). " + _SIGNE,
         "champs": {"date_signature": ("date", None), "forme": ("txt", ["ssp_agence", "notaire"]),

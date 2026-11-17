@@ -7,7 +7,7 @@
 //   (décision du 16/09). Chaque ligne porte donc sa destination, et l'écran la dit.
 // Note du chantier : notice/CHANTIER_GED_DOCUMENTS_2026-11-06.md §12.28.
 import {
-  comparerNombre, conditionsLuesDe, dateLue, joursEntre, LIBELLE_CONDITION, lireDateIso, natureDuLibelle, nombreLu,
+  comparerNombre, conditionsGeneralesLues, conditionsLuesDe, dateLue, joursEntre, LIBELLE_CONDITION, lireDateIso, natureDuLibelle, nombreLu,
   normaliserTexte, personnesLuesDe, resoudreCible, texteLu, TOLERANCES, type NatureCondition,
 } from './gedComparer'
 import type { AffaireRegle } from './gedRegles'
@@ -39,6 +39,7 @@ export type BilanCompromis = {
   affaireId: number
   dateTransaction: string | null
   conditionsLues: boolean     // false : la liste de la transaction n'a pas pu être lue -> aucune ligne de condition
+  conditionsGenerales: string[] // lues mais NON comparées : conditions générales, pas suspensives (Frédéric, 17/11)
   lignes: LigneBilan[]
 }
 export type CatalogueCondition = { id: string; libelle: string }
@@ -88,17 +89,17 @@ export function bilanCompromis(docs: DocumentLu[], affaires: AffaireRegle[], cat
     const etat: EtatBilan = !base ? 'ajouter' : Math.abs(joursEntre(lu, base)) > 1 ? 'trancher' : 'accord'
     pousser({ cle: 'B.date', libelle: 'Date de signature', destination: 'hektor', etat, lu: jjmmaaaa(signe), valeur: signe.slice(0, 10), transaction: base ? jjmmaaaa(base.toISOString()) : null, page: page('date_signature'), champModale: 'transaction_date', regle: etat === 'trancher' ? 'L7' : null })
   }
-  // la RÉITÉRATION est une date LIMITE (« au plus tard ») : une date d'acte prévue AVANT elle est cohérente (essai réel
-  // du 17/11 sur 18849 : 01/02/2027 au compromis, 23/01/2027 au registre -- ce n'était pas un désaccord).
+  // ⛔ Frédéric (17/11) : la date BUTOIR du compromis (la réitération) et la date PRÉVUE de l'acte dans la transaction
+  //   sont la même date -- identiques, sinon c'est un conflit (dans un sens comme dans l'autre).
   const reiteration = dateLue(v, 'date_reiteration')
   if (reiteration) {
     const base = lireDateIso(ligne.dateActe)
-    const limite = lireDateIso(reiteration) as Date
-    const etat: EtatBilan = !base ? 'ajouter' : joursEntre(limite, base) > 1 ? 'trancher' : 'accord'
+    const butoir = lireDateIso(reiteration) as Date
+    const etat: EtatBilan = !base ? 'ajouter' : Math.abs(joursEntre(butoir, base)) > 1 ? 'trancher' : 'accord'
     pousser({
-      cle: 'B.date_acte', libelle: 'Acte authentique', destination: 'hektor', etat, lu: `au plus tard le ${jjmmaaaa(reiteration)}`, valeur: reiteration.slice(0, 10),
-      transaction: base ? `prévu le ${jjmmaaaa(base.toISOString())}` : null, page: page('date_reiteration'), champModale: 'signature_date',
-      note: etat === 'accord' && base && Math.abs(joursEntre(limite, base)) > 1 ? 'la date prévue est avant la limite du compromis' : etat === 'trancher' ? 'la date prévue dépasse la limite du compromis' : null,
+      cle: 'B.date_acte', libelle: 'Date de l\'acte', destination: 'hektor', etat, lu: `le ${jjmmaaaa(reiteration)}`, valeur: reiteration.slice(0, 10),
+      transaction: base ? `le ${jjmmaaaa(base.toISOString())}` : null, page: page('date_reiteration'), champModale: 'signature_date',
+      note: etat === 'trancher' ? 'la date butoir du compromis et la date prévue de l\'acte doivent être la même' : null,
       regle: etat === 'trancher' ? 'L7' : null,
     })
   }
@@ -111,7 +112,9 @@ export function bilanCompromis(docs: DocumentLu[], affaires: AffaireRegle[], cat
   const conditionsLues = ligne.conditions != null
   if (ligne.conditions) {
     const parNature = new Map(ligne.conditions.map((c) => [natureDuLibelle(c.libelle), c]))
-    const duCatalogue = (nature: NatureCondition) => (catalogue ?? []).find((c) => sansAccent(c.libelle) === sansAccent(LIBELLE_CONDITION[nature]) || (nature !== 'autre' && natureDuLibelle(c.libelle) === nature)) ?? null
+    // la clause du catalogue : le libellé EXACT d'abord (« Obtention du permis de construire »), sinon la même nature
+    const duCatalogue = (nature: NatureCondition) => (catalogue ?? []).find((c) => sansAccent(c.libelle) === sansAccent(LIBELLE_CONDITION[nature]))
+      ?? (nature !== 'autre' ? (catalogue ?? []).find((c) => natureDuLibelle(c.libelle) === nature) : undefined) ?? null
     for (const c of conditionsLuesDe(cpv.lecture)) {
       const suivie = parNature.get(c.nature)
       const cat = duCatalogue(c.nature)
@@ -139,7 +142,8 @@ export function bilanCompromis(docs: DocumentLu[], affaires: AffaireRegle[], cat
       })
     }
   }
-  return { lectureId: cpv.lecture.id ?? null, nom: cpv.nom, luLe: cpv.lecture.luLe, affaireId: ligne.id, dateTransaction: ligne.date ?? null, conditionsLues, lignes }
+  const conditionsGenerales = conditionsGeneralesLues(cpv.lecture).map((n) => LIBELLE_CONDITION[n])
+  return { lectureId: cpv.lecture.id ?? null, nom: cpv.nom, luLe: cpv.lecture.luLe, affaireId: ligne.id, dateTransaction: ligne.date ?? null, conditionsLues, conditionsGenerales, lignes }
 }
 
 // Les conditions de la transaction APRÈS les choix « prendre » (toute la liste : le geste la remplace). On part de la

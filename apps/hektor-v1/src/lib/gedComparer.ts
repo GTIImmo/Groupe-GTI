@@ -153,6 +153,14 @@ export const LIBELLE_CONDITION: Record<NatureCondition, string> = {
   hypotheque: 'État hypothécaire', autre: 'Autre condition',
 }
 const NATURES = new Set(Object.keys(LIBELLE_CONDITION))
+// ⛔ Frédéric (17/11, essai réel sur 18849) : le droit de préemption de la mairie et l'état hypothécaire sont des
+//   conditions GÉNÉRALES du compromis, pas des conditions suspensives particulières : on ne les récupère pas, on ne les
+//   compare pas (elles ne font rien sonner). Une lecture qui les porte encore les garde, elles sont seulement mises à part.
+export const CONDITIONS_GENERALES: ReadonlySet<NatureCondition> = new Set<NatureCondition>(['preemption', 'hypotheque'])
+export function conditionsGeneralesLues(l: Pick<LectureDocument, 'valeurs'>): NatureCondition[] {
+  const vues = l.valeurs.filter((x) => x.cle === 'conditions.nature' && x.etat === 'lu' && CONDITIONS_GENERALES.has(x.valeur as NatureCondition)).map((x) => x.valeur as NatureCondition)
+  return [...new Set(vues)]
+}
 export function conditionsLuesDe(l: Pick<LectureDocument, 'valeurs'>): ConditionLue[] {
   const v = l.valeurs
   const pret = valeurNette(v, 'condition_pret')?.valeur ?? null
@@ -165,6 +173,7 @@ export function conditionsLuesDe(l: Pick<LectureDocument, 'valeurs'>): Condition
   if (!v.some((x) => x.cle.startsWith('conditions.'))) return pret === 'oui' ? [{ nature: 'pret', date: limitePret }] : []
   const sortie: ConditionLue[] = []
   for (const c of lues) {
+    if (CONDITIONS_GENERALES.has(c.nature)) continue
     // un compromis qui dit « pas de prêt » ou « renonciation » ne garde pas une condition de prêt
     if (c.nature === 'pret' && pret !== null && pret !== 'oui') continue
     const date = c.date ?? (c.nature === 'pret' ? limitePret : null)

@@ -139,17 +139,20 @@ const cpv10 = cpvLu([v('date_reiteration', { valeur_date: '2027-01-15' }), v('se
 voir(R7c([cpv10], [cpvReg({ dateActe: '2027-01-15', sequestre: 9250 })]).length === 0, 'TÉMOIN 10a : date d\'acte et séquestre conformes -> rien')
 voir(R7c([cpv10], [cpvReg({ dateActe: '2027-02-20', sequestre: 9250 })])[0]?.texte.includes('acte au plus tard le 15/01/2027, prévu le 20/02/2027 au registre'), '10a : la date d\'acte prévue au registre ≠ la réitération lue -> dit')
 voir(R7c([cpv10], [cpvReg({ dateActe: '2027-01-15', sequestre: 5000 })])[0]?.texte.includes('séquestre'), '10a : séquestre lu ≠ registre -> dit')
-// lot 10c (17/11, essai réel sur 18849 : « au plus tard le 01/02/2027 », prévu le 23/01/2027) : la réitération est une LIMITE
-voir(R7c([cpv10], [cpvReg({ dateActe: '2027-01-05', sequestre: 9250 })]).length === 0, 'TÉMOIN 10c : une date d\'acte prévue AVANT la limite du compromis est cohérente -> rien')
+// ⛔ Frédéric (17/11, 18849) : la date butoir du compromis et la date prévue de l'acte sont LA MÊME date -- avant ou après, conflit
+voir(R7c([cpv10], [cpvReg({ dateActe: '2027-01-05', sequestre: 9250 })])[0]?.texte.includes('prévu le 05/01/2027 au registre'), '10c : une date d\'acte prévue AVANT la date butoir est AUSSI un conflit (elles doivent être identiques)')
 voir(R7c([cpv10], [cpvReg({ dateActe: null, sequestre: null })]).length === 0 && R7c([cpv10], [cpvReg({ dateActe: null, sequestre: 0 })]).length === 0, 'TÉMOIN 10a : une case VIDE au registre ne sonne pas (elle se propose à remplir)')
 // lot 10b (17/11) : L20 -- les conditions suspensives lues (fiche v2) face à celles de LA transaction
 const cv = (n, d, r) => [v('conditions.nature', { valeur: n }, 'lu', r), ...(d ? [v('conditions.date_limite', { valeur_date: d }, 'lu', r)] : [])]
-const cpvC = (pret = 'oui') => cpvLu([v('condition_pret', { valeur: pret }), ...cv('pret', '2026-12-01', 0), ...cv('preemption', null, 1)])
+const cpvC = (pret = 'oui') => cpvLu([v('condition_pret', { valeur: pret }), ...cv('pret', '2026-12-01', 0), ...cv('vente_bien', null, 1)])
 const L20 = (al) => al.filter((a) => a.code === 'L20')
-voir(L20(R7c([cpvC()], [cpvReg({ conditions: [{ libelle: 'Obtention Crédit', date: '2026-12-01' }, { libelle: 'Préemption mairie', date: null }] })])).length === 0, 'TÉMOIN 10b : conditions conformes -> rien')
-voir(L20(R7c([cpvC()], [cpvReg({ conditions: [{ libelle: 'Obtention Crédit', date: '2026-12-01' }] })]))[0]?.texte.includes('non trouvées dans la transaction : Préemption mairie'), '10b : une condition du compromis absente de la transaction -> dite (« non trouvée »)')
-voir(L20(R7c([cpvC()], [cpvReg({ conditions: [{ libelle: 'Obtention Crédit', date: '2026-12-20' }, { libelle: 'Préemption mairie', date: null }] })]))[0]?.texte.includes('jusqu\'au 01/12/2026 au compromis, 20/12/2026 dans la transaction'), '10b : date limite ≠ -> dite')
-voir(L20(R7c([cpvC('renonciation')], [cpvReg({ conditions: [{ libelle: 'Obtention Crédit', date: null }, { libelle: 'Préemption mairie', date: null }] })])).some((a) => a.texte.includes('renonciation à la condition de prêt')), '10b : renonciation au prêt, la transaction suit le crédit -> dit')
+// ⛔ Frédéric (17/11, 18849) : la préemption et l'état hypothécaire sont des conditions GÉNÉRALES -- ni reprises ni comparées
+const cpvGen = cpvLu([v('condition_pret', { valeur: 'oui' }), ...cv('pret', '2026-12-01', 0), ...cv('preemption', null, 1), ...cv('hypotheque', null, 2)])
+voir(L20(R7c([cpvGen], [cpvReg({ conditions: [{ libelle: 'Obtention Crédit', date: '2026-12-01' }] })])).length === 0, 'TÉMOIN 10c : préemption et état hypothécaire lus, absents de la transaction -> rien ne sonne (conditions générales)')
+voir(L20(R7c([cpvC()], [cpvReg({ conditions: [{ libelle: 'Obtention Crédit', date: '2026-12-01' }, { libelle: "Vente d'un bien de l'acquéreur", date: null }] })])).length === 0, 'TÉMOIN 10b : conditions conformes -> rien')
+voir(L20(R7c([cpvC()], [cpvReg({ conditions: [{ libelle: 'Obtention Crédit', date: '2026-12-01' }] })]))[0]?.texte.includes("non trouvées dans la transaction : Vente d'un bien de l'acquéreur"), '10b : une condition du compromis absente de la transaction -> dite (« non trouvée »)')
+voir(L20(R7c([cpvC()], [cpvReg({ conditions: [{ libelle: 'Obtention Crédit', date: '2026-12-20' }, { libelle: "Vente d'un bien de l'acquéreur", date: null }] })]))[0]?.texte.includes('jusqu\'au 01/12/2026 au compromis, 20/12/2026 dans la transaction'), '10b : date limite ≠ -> dite')
+voir(L20(R7c([cpvC('renonciation')], [cpvReg({ conditions: [{ libelle: 'Obtention Crédit', date: null }, { libelle: "Vente d'un bien de l'acquéreur", date: null }] })])).some((a) => a.texte.includes('renonciation à la condition de prêt')), '10b : renonciation au prêt, la transaction suit le crédit -> dit')
 voir(L20(R7c([cpvC()], [cpvReg({ conditions: [] })])).length === 0 && L20(R7c([cpvC()], [cpvReg({ conditions: null })])).length === 0 && L20(R7c([cpvC()], [cpvReg()])).length === 0,
   'TÉMOIN 10b : liste vide (elle se propose), pas lue (null) ou absente -> rien')
 const acteLu = (date, prix) => doc('Attestation.pdf', 'transaction.acte', [v('date_vente', { valeur_date: date }), v('prix', { valeur_num: prix }), ...P(0, 'ESSAI', 'Paul', 'acquereur')])

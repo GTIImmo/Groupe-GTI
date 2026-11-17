@@ -62,6 +62,9 @@ voir(cpv["version"] == 2 and set(cond) == {"nature", "date_limite", "page"} and 
      "compromis v2 : une liste « conditions » -- nature (liste fermée) et date limite, rien d'autre")
 voir(not any(m in " ".join(cond) for m in ("libelle", "texte", "montant", "taux", "banque", "duree")) and lec._PRET in cpv["consigne"],
      "TÉMOIN : aucun texte de condition (une condition de prêt porte montant, taux, banque) ; la consigne les interdit toujours")
+# lot 10c (17/11, Frédéric) : préemption et état hypothécaire sont des conditions GÉNÉRALES -- l'IA ne les liste pas
+voir("conditions GÉNÉRALES du compromis" in cpv["consigne"] and "ne les liste PAS dans conditions" in cpv["consigne"],
+     "compromis : la consigne dit que la préemption et l'état hypothécaire ne sont pas des conditions suspensives")
 for c in avec_noms:
     item = lec.schema(lec.FICHES[c])["properties"]["personnes"]["items"]["properties"]
     voir(set(item) <= {"nom", "prenoms", "qualite", "droits", "quote_part", "page"}, f"{c} : une personne = nom, prénoms, qualité (droits) — rien d'autre")

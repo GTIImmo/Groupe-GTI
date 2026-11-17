@@ -29,7 +29,7 @@ voir(resumeLecture(ddt) === 'Lu : 2 diagnostics (amiante, plomb) · DPE E.', 'do
 voir(resumeLecture({ typeCode: 'diag.erp', etat: 'pas_ce_type', valeurs: [] }).includes('pas ce type'), 'l\'IA dit « pas ce type » : on le dit')
 // lot 10b (17/11) : le résumé d'un compromis cite ses conditions lues (fiche v2) ; une fiche v1 n'en dit rien de plus
 const cpvRes = (vals) => resumeLecture({ typeCode: 'transaction.avant_contrat', etat: 'lu', valeurs: [v('condition_pret', { valeur: 'oui' }), v('date_limite_pret', { valeur_date: '2026-12-01' }), ...vals] })
-voir(cpvRes([v('conditions.nature', { valeur: 'pret' }, 'lu', 0), v('conditions.nature', { valeur: 'preemption' }, 'lu', 1)]).includes('conditions : Obtention Crédit, Préemption mairie') && !cpvRes([]).includes('conditions'), '10b : le résumé du compromis cite ses conditions (v2) ; rien de plus pour une lecture v1')
+voir(cpvRes([v('conditions.nature', { valeur: 'pret' }, 'lu', 0), v('conditions.nature', { valeur: 'vente_bien' }, 'lu', 1), v('conditions.nature', { valeur: 'preemption' }, 'lu', 2)]).includes("conditions : Obtention Crédit, Vente d'un bien de l'acquéreur") && !cpvRes([v('conditions.nature', { valeur: 'preemption' }, 'lu', 0)]).includes('Préemption') && !cpvRes([]).includes('conditions'), '10b : le résumé du compromis cite ses conditions (v2) ; rien de plus pour une lecture v1')
 voir(resumeLecture({ typeCode: 'diag.erp', etat: 'incomplet', valeurs: [] }).includes('rien pu relever'), 'rien de lu : on le dit, sans inventer')
 
 console.log('①bis le lot 2 : jamais un nom dans le résumé')

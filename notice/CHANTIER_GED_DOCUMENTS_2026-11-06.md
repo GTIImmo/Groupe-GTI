@@ -35,7 +35,7 @@
 | habillage | la maquette RETRAVAILLÉE (toile https://claude.ai/artifact/S16jkpfnqtPF83xvUdkNtm) | ✅ **COMPLET le 17/11** : H1 le bloc « Le dossier », H2 la fenêtre de dépôt, H3 l'après-envoi (« La fiche du bien », « Voir le document » ; « Voir la preuve » NON fait, décision), H4 le panneau photo du téléphone (viseur dans l'app NON fait, décision) — tous vus en production (§12.21) |
 | 10a | le compromis lu → SA transaction (date d'acte prévue, séquestre) | ⛔ **REMPLACÉ le 17/11 par 10c** : la date d'acte et le séquestre s'écrivaient « chez nous seulement », alors que ce sont des champs que Hektor connaît (§12.22, §12.28) |
 | 10b | les conditions suspensives du compromis → SA transaction | ✅ en ligne le 17/11 (`cf09297`) ; ses cartes sont reprises par 10c (§12.23) |
-| 10c | « Ce que dit le compromis » : la fenêtre de validation, champ par champ, chacun par SON chemin | ✅ **écrit le 17/11, rien poussé** ; 35 VERT, banc d'essai regardé (ordinateur et téléphone) ; pas encore vu en production (§12.28) |
+| 10c | « Ce que dit le compromis » : la fenêtre de validation, champ par champ, chacun par SON chemin | ✅ **écrit le 17/11, rien poussé** ; 37 VERT, banc d'essai regardé (ordinateur et téléphone) ; pas encore vu en production (§12.28) |
 
 **Reste, au 17/11** : ⏰ le compte rendu de la mesure le 30/11 ; P7/P8 en réel — **mis de côté par Frédéric le 17/11 :
 « trop compliqué pour le moment »** ; les pièces d'essai SPECIMEN restées sur 63331 et 63147 (63147 : un faux DPE, consommation 212 écrite, 2
@@ -2536,12 +2536,26 @@ correction « sans envoyer à Hektor » des valeurs d'une transaction a été RE
 « CORRIGER SANS ENVOYER A HEKTOR A ETE RETIRE ») ; prix, dates, séquestre, net vendeur et honoraires partent par la modale
 « Modifier le compromis » (travail `change_hektor_annonce_status`, `reprendreTransaction`). Seules les conditions
 suspensives sont gardées chez nous (décision du 16/09). Le lot 10a était donc FAUX sur ce point.
-**Deux trouvailles de son essai** :
-- la règle L7 sonnait sur la date d'acte alors que le compromis dit « au plus tard le 01/02/2027 » et le registre
-  « prévu le 23/01/2027 » : c'est COHÉRENT. **La réitération est une LIMITE** : L7 ne sonne plus que si la date prévue la
-  DÉPASSE (témoin ajouté, 94 VERT) ;
-- « État hypothécaire » et « Absence de servitude » ne sont pas au catalogue (6 clauses), mais la modale accepte une
-  **condition libre** : elles s'ajoutent comme telles (je lui avais dit à tort qu'elles ne pouvaient pas l'être).
+**Deux corrections de Frédéric après la première version (17/11, avant toute mise en ligne)** :
+- ⛔ **La date d'acte** : « la date butoir sur le compromis et la date prévue de l'acte sur la transaction sont les mêmes
+  dates ; elles doivent être identiques ; différentes, c'est un conflit ». J'avais d'abord fait de la réitération une
+  LIMITE (une date prévue avant elle passait pour cohérente) : **c'était faux, c'est retiré**. L7 et la fenêtre disent
+  un conflit dès que les deux dates diffèrent (de plus d'un jour), dans un sens comme dans l'autre. Sur 18849 :
+  01/02/2027 au compromis, 23/01/2027 au registre -> **à trancher**.
+- ⛔ **Les conditions générales** : « la préemption de la mairie et l'état hypothécaire ne sont pas des conditions
+  suspensives particulières mais des conditions en général ; pas nécessaire de les récupérer ; l'indiquer pour éviter
+  que cela fasse sonner ». **Et** : « je veux bien sûr qu'il continue à récupérer les conditions suspensives, obtention
+  de prêt, etc. ». Donc : `CONDITIONS_GENERALES` (gedComparer.ts) = préemption, état hypothécaire -- **écartées** de
+  `conditionsLuesDe` (résumé, L20, fenêtre : elles ne sonnent plus) et **dites à part** dans la fenêtre (« Conditions
+  générales du compromis : … ni reprises ni comparées ») ; la consigne de lecture du serveur dit à l'IA de ne pas les
+  lister (fiche inchangée, v2). Le prêt, le permis, la vente d'un bien, l'urbanisme, les servitudes **restent repris**
+  (témoin : un prêt non suivi se propose, avec sa date et sa clause du catalogue).
+  ⏳ **À lui de dire** : « Absence de servitude » est-elle aussi une condition générale ? (elle reste proposée tant
+  qu'il ne l'a pas dit).
+- Au passage : la clause du catalogue se choisit au **libellé exact** d'abord (« Obtention du permis de construire »), à
+  la nature ensuite (sinon « Permis de construire », plus haut dans le catalogue, l'emportait).
+- « État hypothécaire » et « Absence de servitude » ne sont pas au catalogue, mais la modale accepte une **condition
+  libre** (je lui avais dit à tort qu'elles ne pouvaient pas être ajoutées).
 **✅ « Oui vas-y, mais soigne la mise en page, le graphisme et l'ergonomie » -- ÉCRIT, rien poussé** :
 - `lib/gedBilanCompromis.ts` (pur) : le compromis lu face à SA transaction (même résolution que P4), une ligne par champ,
   **chacune avec sa DESTINATION** : « envoyé à Hektor » (prix, date de signature, acte, séquestre, net vendeur, honoraires)
@@ -2566,8 +2580,8 @@ suspensives sont gardées chez nous (décision du 16/09). Le lot 10a était donc
   seulement si la case porte encore la valeur du compromis.
 - **Retiré** : les cartes P4 (gedRemplir.ts) et la porte « chez nous seulement » de la date d'acte et du séquestre
   (remplirDepuisDocument refuse désormais ce geste) -- un seul chemin par champ.
-Essais : `test_ged_bilan.cjs` 35 VERT (le cas réel de 18849 et ses témoins) ; `test_ged_remplir` adapté (38) ;
-`test_ged_regles_lues` 94 ; les 13 essais GED verts, build vert. **Banc d'essai** (la vraie fenêtre, les valeurs de
+Essais : `test_ged_bilan.cjs` 37 VERT (le cas réel de 18849 et ses témoins) ; `test_ged_remplir` adapté (38) ;
+`test_ged_regles_lues` 95, `test_ged_lecture` 62 ; serveur `test_ged_lire` 88 ; les 13 essais GED verts, build vert. **Banc d'essai** (la vraie fenêtre, les valeurs de
 18849, sans base) regardé à l'ordinateur et au téléphone (390 px) : lignes resserrées, plaques côte à côte, page du
 document par-dessus au téléphone.
 ⏳ **À faire après la mise en ligne** : la regarder sur 18849 (ouvrir la fenêtre et la modale, SANS cliquer « Mettre à

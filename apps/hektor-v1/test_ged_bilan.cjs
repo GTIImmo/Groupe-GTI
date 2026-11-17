@@ -24,24 +24,30 @@ const reg = (x = {}) => ({ kind: 'compromis', state: 'active', id: 30770, date: 
   acquereurs: [], sequestre: null, carnetLu: true, conditions: [{ libelle: 'Obtention Crédit', date: '2026-12-31' }], ...x })
 const CATALOGUE = ['Préemption mairie', 'Obtention Crédit', 'Permis de construire', 'Delai de retractation SRU', 'Depot du permis de construire', 'Obtention du permis de construire'].map((libelle, i) => ({ id: `c${i}`, libelle }))
 const L = (b, cle) => b.lignes.find((l) => l.cle === cle)
+const luV = [...lu18849, ...cv('permis_construire', '2027-01-10', 4), ...cv('vente_bien', null, 5)]
 
 console.log('① le bilan')
 const b = bilanCompromis([doc(lu18849)], [reg()], CATALOGUE)
 voir(b && b.affaireId === 30770 && b.lectureId === 'L-1' && b.conditionsLues, '18849 : le compromis lu trouve SA transaction (30770)')
 voir(L(b, 'B.prix').etat === 'accord' && L(b, 'B.date').etat === 'accord' && L(b, 'B.net_vendeur').etat === 'accord' && L(b, 'B.honoraires').etat === 'accord', '18849 : prix, signature, net vendeur, honoraires : d\'accord')
-voir(L(b, 'B.date_acte').etat === 'accord' && /avant la limite/.test(L(b, 'B.date_acte').note) && L(b, 'B.date_acte').lu === 'au plus tard le 01/02/2027' && L(b, 'B.date_acte').transaction === 'prévu le 23/01/2027',
-  '18849 : acte « au plus tard le 01/02/2027 », prévu le 23/01/2027 -> cohérent (la réitération est une LIMITE)')
+voir(L(b, 'B.date_acte').etat === 'trancher' && L(b, 'B.date_acte').lu === 'le 01/02/2027' && L(b, 'B.date_acte').transaction === 'le 23/01/2027' && L(b, 'B.date_acte').regle === 'L7',
+  '⛔ 18849 : date butoir 01/02/2027 au compromis, acte prévu le 23/01/2027 -> CONFLIT (Frédéric : ce sont la même date, elles doivent être identiques)')
+voir(L(bilanCompromis([doc(lu18849)], [reg({ dateActe: '2027-02-01' })], CATALOGUE), 'B.date_acte').etat === 'accord', 'TÉMOIN : la même date des deux côtés -> d\'accord')
 voir(L(b, 'B.sequestre').etat === 'ajouter' && L(b, 'B.sequestre').valeur === '12400' && L(b, 'B.sequestre').lu === '12 400 €' && L(b, 'B.sequestre').page === 9, '18849 : séquestre 12 400 € à ajouter (transaction vide), lu page 9')
 voir(['B.prix', 'B.date', 'B.date_acte', 'B.sequestre', 'B.net_vendeur', 'B.honoraires'].every((c) => L(b, c).destination === 'hektor'), '⛔ prix, dates, séquestre, net, honoraires : « envoyé à Hektor » (Frédéric : « cela dépend des champs »)')
-voir(L(b, 'B.condition.preemption').etat === 'ajouter' && L(b, 'B.condition.preemption').condition.catalogueId === 'c0' && L(b, 'B.condition.preemption').note === null,
-  '18849 : « Préemption mairie » à ajouter, du catalogue')
-voir(L(b, 'B.condition.hypotheque').etat === 'ajouter' && /condition libre/.test(L(b, 'B.condition.hypotheque').note) && L(b, 'B.condition.servitudes').condition.catalogueId === null,
-  '18849 : « État hypothécaire » et « Absence de servitude » à ajouter, en condition LIBRE (hors catalogue -- la modale les accepte)')
+voir(!L(b, 'B.condition.preemption') && !L(b, 'B.condition.hypotheque') && b.conditionsGenerales.join() === 'Préemption mairie,État hypothécaire',
+  '⛔ 18849 : la préemption et l\'état hypothécaire sont des conditions GÉNÉRALES -- ni reprises ni comparées, seulement dites à part')
+voir(L(b, 'B.condition.servitudes').etat === 'ajouter' && /condition libre/.test(L(b, 'B.condition.servitudes').note) && L(b, 'B.condition.servitudes').condition.catalogueId === null,
+  '18849 : « Absence de servitude » à ajouter, en condition LIBRE (hors catalogue -- la modale les accepte)')
 voir(L(b, 'B.condition.pret').etat === 'accord', '18849 : « Obtention Crédit » jusqu\'au 31/12/2026, déjà suivie à la même date -> d\'accord')
+const sansCredit = bilanCompromis([doc(lu18849)], [reg({ conditions: [] })], CATALOGUE)
+voir(L(sansCredit, 'B.condition.pret').etat === 'ajouter' && L(sansCredit, 'B.condition.pret').valeur === '2026-12-31' && L(sansCredit, 'B.condition.pret').condition.catalogueId === 'c1',
+  'TÉMOIN : les conditions SUSPENSIVES restent reprises -- le prêt non suivi se propose, avec sa date et sa clause du catalogue')
 voir(b.lignes.filter((l) => l.condition).every((l) => l.destination === 'nous'), '⛔ les conditions : « gardé chez nous » (décision du 16/09, jamais envoyées à Hektor)')
-voir(L(b, 'B.condition.preemption').regle === 'L20' && L(b, 'B.sequestre').regle === null, 'la ligne « À regarder » liée : L20 pour une condition non trouvée ; aucune pour une case vide')
+const bV = bilanCompromis([doc(luV)], [reg()], CATALOGUE)
+voir(L(bV, 'B.condition.permis_construire').regle === 'L20' && L(bV, 'B.condition.permis_construire').condition.catalogueId === 'c5' && L(bV, 'B.sequestre').regle === null, 'la ligne « À regarder » liée : L20 pour une condition non trouvée ; aucune pour une case vide')
 const tard = bilanCompromis([doc(lu18849)], [reg({ dateActe: '2027-03-15' })], CATALOGUE)
-voir(L(tard, 'B.date_acte').etat === 'trancher' && /dépasse la limite/.test(L(tard, 'B.date_acte').note) && L(tard, 'B.date_acte').champModale === 'signature_date', 'TÉMOIN : une date d\'acte prévue APRÈS la limite -> à trancher (case « date de signature de l\'acte » de la modale)')
+voir(L(tard, 'B.date_acte').etat === 'trancher' && /la même/.test(L(tard, 'B.date_acte').note) && L(tard, 'B.date_acte').champModale === 'signature_date', 'TÉMOIN : une date d\'acte prévue APRÈS la date butoir -> à trancher (case « date de signature de l\'acte » de la modale)')
 const cherPrix = bilanCompromis([doc(lu18849)], [reg({ montant: 129000, sequestre: 5000 })], CATALOGUE)
 voir(L(cherPrix, 'B.prix').etat === 'trancher' && L(cherPrix, 'B.prix').transaction === '129 000 €' && L(cherPrix, 'B.sequestre').etat === 'trancher', 'TÉMOIN : prix et séquestre différents -> à trancher')
 voir(bilanCompromis([doc(lu18849)], [reg(), reg({ id: 30771 })], CATALOGUE) === null, 'TÉMOIN : deux compromis que rien ne départage -> pas de fenêtre (jamais la mauvaise transaction)')
@@ -54,18 +60,18 @@ voir(L(bilanCompromis([doc(lu18849)], [reg({ conditions: [{ libelle: 'Obtention 
 
 console.log('② la liste des conditions après les choix')
 const avant = [{ rang: 1, libelle: 'Obtention Crédit', date_echeance: '2026-12-15', etat: 'levee', date_levee: '2026-11-30', note: 'banque OK', catalogue_id: 'c1', jours: null }]
-const apres = conditionsApres(avant, [L(b, 'B.condition.preemption'), L(b, 'B.condition.hypotheque'), { ...L(b, 'B.condition.pret'), condition: { ...L(b, 'B.condition.pret').condition, date: '2026-12-31' } }])
+const apres = conditionsApres(avant, [L(bV, 'B.condition.permis_construire'), L(bV, 'B.condition.vente_bien'), { ...L(b, 'B.condition.pret'), condition: { ...L(b, 'B.condition.pret').condition, date: '2026-12-31' } }])
 voir(apres.length === 3 && apres[0].etat === 'levee' && apres[0].note === 'banque OK' && apres[0].date_levee === '2026-11-30' && apres[0].date_echeance === '2026-12-31',
   'la condition déjà suivie GARDE son état, sa levée et sa note ; seule sa date change')
-voir(apres[1].libelle === 'Préemption mairie' && apres[1].catalogue_id === 'c0' && apres[1].etat === 'attente' && apres[2].libelle === 'État hypothécaire' && apres[2].catalogue_id === null && apres.map((c) => c.rang).join() === '1,2,3',
+voir(apres[1].libelle === 'Obtention du permis de construire' && apres[1].catalogue_id === 'c5' && apres[1].date_echeance === '2027-01-10' && apres[1].etat === 'attente' && apres[2].libelle === "Vente d'un bien de l'acquéreur" && apres[2].catalogue_id === null && apres.map((c) => c.rang).join() === '1,2,3',
   'les ajoutées arrivent « en attente », du catalogue ou libres, rangs renumérotés')
 voir(conditionsApres(avant, [L(renonce, 'B.condition.pret')]).length === 0 && conditionsApres(avant, []).length === 1, 'retirer enlève la condition de prêt ; aucun choix : la liste reste entière')
 
 console.log('③ la note Vrai / Faux déduite des choix (morceau 10)')
-const alerteL20 = 'Conditions suspensives du compromis non trouvées dans la transaction : Préemption mairie, État hypothécaire, Absence de servitude'
-voir(verdictDesChoix(alerteL20, 'L20', b.lignes, new Map([['B.condition.preemption', 'prendre']])) === 'vrai', 'une condition prise -> l\'alerte avait raison (vrai)')
-voir(verdictDesChoix(alerteL20, 'L20', b.lignes, new Map([['B.condition.preemption', 'garder'], ['B.condition.hypotheque', 'garder'], ['B.condition.servitudes', 'garder']])) === 'faux', 'toutes laissées -> elle a sonné pour rien (faux)')
-voir(verdictDesChoix(alerteL20, 'L20', b.lignes, new Map([['B.condition.preemption', 'garder']])) === null && verdictDesChoix(alerteL20, 'L20', b.lignes, new Map()) === null, 'TÉMOIN : tranché en partie, ou rien -> pas de note')
+const alerteL20 = "Conditions suspensives du compromis non trouvées dans la transaction : Obtention du permis de construire, Vente d'un bien de l'acquéreur, Absence de servitude"
+voir(verdictDesChoix(alerteL20, 'L20', bV.lignes, new Map([['B.condition.permis_construire', 'prendre']])) === 'vrai', 'une condition prise -> l\'alerte avait raison (vrai)')
+voir(verdictDesChoix(alerteL20, 'L20', bV.lignes, new Map([['B.condition.permis_construire', 'garder'], ['B.condition.vente_bien', 'garder'], ['B.condition.servitudes', 'garder']])) === 'faux', 'toutes laissées -> elle a sonné pour rien (faux)')
+voir(verdictDesChoix(alerteL20, 'L20', bV.lignes, new Map([['B.condition.permis_construire', 'garder']])) === null && verdictDesChoix(alerteL20, 'L20', bV.lignes, new Map()) === null, 'TÉMOIN : tranché en partie, ou rien -> pas de note')
 
 console.log('④ le branchement')
 const app = fs.readFileSync(path.join(__dirname, 'src/App.tsx'), 'utf8')

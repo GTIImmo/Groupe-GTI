@@ -304,9 +304,9 @@ export function reglesLues(faits: FaitsRegles, docs: DocumentLu[], personnesDuBi
       // (une case vide se propose à remplir, elle ne sonne pas)
       const reiteration = lireDateIso(dateLue(v, 'date_reiteration'))
       const acte = lireDateIso(ligne.dateActe)
-      // lot 10c (17/11, essai réel sur 18849) : la réitération est une LIMITE -- une date d'acte prévue AVANT elle est
-      // cohérente ; seule une date qui la DÉPASSE se dit
-      if (reiteration && acte && joursEntre(reiteration, acte) > 1) ecarts.push(`acte au plus tard le ${jjmmaaaa(reiteration)}, prévu le ${jjmmaaaa(acte)} au registre`)
+      // ⛔ Frédéric (17/11) : la date butoir du compromis et la date prévue de l'acte dans la transaction sont LA MÊME
+      //   date -- elles doivent être identiques ; différentes, dans un sens comme dans l'autre, c'est un conflit
+      if (reiteration && acte && Math.abs(joursEntre(reiteration, acte)) > 1) ecarts.push(`acte au plus tard le ${jjmmaaaa(reiteration)}, prévu le ${jjmmaaaa(acte)} au registre`)
       if (ligne.sequestre != null && ligne.sequestre > 0) {
         const ecart = ecartEuros(nombreLu(v, 'sequestre'), ligne.sequestre, 'séquestre')
         if (ecart) ecarts.push(ecart)

@@ -254,6 +254,12 @@ export default function BilanCompromis({
             {groupe('À ajouter', 'La transaction est vide sur ces points.', groupes.ajouter, groupes.trancher.length)}
             {groupe('Déjà tranché', null, groupes.tranche, groupes.trancher.length + groupes.ajouter.length)}
             {!bilan.conditionsLues ? <p className="bc-vide">Les conditions suspensives de la transaction n'ont pas pu être lues : elles ne sont pas comparées.</p> : null}
+            {bilan.conditionsGenerales.length ? (
+              <p className="bc-generales">
+                <b>{`Conditions générales du compromis : ${bilan.conditionsGenerales.join(', ')}.`}</b>
+                <span>Ce ne sont pas des conditions suspensives particulières : elles ne sont ni reprises ni comparées.</span>
+              </p>
+            ) : null}
             {groupes.accord.length ? (
               <section className="bc-g is-accord" aria-label="D'accord">
                 <button type="button" className="bc-g-plie" aria-expanded={accordOuvert} onClick={() => setAccordOuvert((v) => !v)}>
