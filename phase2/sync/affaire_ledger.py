@@ -644,7 +644,24 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
                   # a lui chercher un numero. Le local ne l'ECRIT jamais : il
                   # la RECOIT a la redescente, pour que la sauvegarde de nuit
                   # emporte aussi cette connaissance.
-                  "transaction_origine"):
+                  "transaction_origine",
+                  # ⭐ B1 (16/11/2026) : les deux colonnes du classeur, CLASSE A.
+                  # MEME PATRON que le lot 1a et que l'etiquette.
+                  # ⛔⛔ ET B1 LES AVAIT OUBLIEES DANS LES DEUX LISTES -- trouve le
+                  #   17/11 : ni ici, ni dans COLONNES_QUE_LE_PUSH_N_ENVOIE_PAS.
+                  #   Rien n'avait casse, mais PAR ACCIDENT : le push n'envoie que
+                  #   ce que le local a, et le local ne les avait pas. Les deux
+                  #   moities manquantes s'annulaient.
+                  #   ⚠ Et c'est pour ca que ces deux listes se modifient ENSEMBLE :
+                  #     ajouter ici SANS proteger du push ferait, AU PREMIER RUN,
+                  #     creer la colonne vide (refresh, l. 3396) puis la POUSSER
+                  #     (l. 3413, AVANT la redescente l. 3481) -- donc EFFACER chez
+                  #     Supabase les 3 729 reglements et 3 671 factures posees par
+                  #     C8. « LA CAUSE N'EST PAS LE PUSH, C'EST L'ORDRE » (07/09).
+                  # ⚠ `numero_mandat_app` n'y est PAS, et c'est voulu : Frederic a
+                  #   decide le 17/11 de ne pas rapatrier la colonne C du classeur,
+                  #   donc elle reste vide et n'a rien a redescendre.
+                  "vente_reglee_app", "numero_facture_app"):
         if neuve not in colonnes:
             con.execute(f"ALTER TABLE {LEDGER_TABLE} ADD COLUMN {neuve} TEXT")
             con.commit()
@@ -3135,6 +3152,27 @@ COLONNES_QUE_LE_PUSH_N_ENVOIE_PAS = (
     #    filet du worker qui lui colle le numero d'une transaction Hektor
     #    EXISTANTE (mesure du 15/11, piece 3).
     "transaction_origine",
+    # ⭐ B1 (16/11/2026) -- LES DEUX COLONNES DU CLASSEUR, CLASSE A, ajoutees ICI
+    # le 17/11 avec l'accord de Frederic (« uniquement vente_reglee_app ET
+    # numero_facture_app »).
+    #   vente_reglee_app    colonne Y du classeur, 3 729 valeurs posees par C8
+    #   numero_facture_app  colonne AA, 3 671 valeurs
+    #
+    # ⛔⛔ B1 LES AVAIT OUBLIEES DANS LES DEUX LISTES, et rien n'avait casse PAR
+    #   ACCIDENT : le push n'envoie que ce que le LOCAL a, et le local ne les avait
+    #   pas non plus. Les deux moities manquantes s'annulaient. Le jour ou l'une des
+    #   deux serait reparee seule, le push aurait efface 7 400 valeurs en une nuit.
+    #
+    # ⭐ ET CETTE LISTE SERT DEUX FOIS, ce que son nom ne dit pas :
+    #     l. ~3175  elle exclut du PUSH
+    #     l. ~3002  `redescendre_ce_que_l_app_possede` la lit pour savoir QUOI
+    #               RAMENER en local -- c'est donc elle qui REMPLIT ces colonnes
+    #   C'est le registre des colonnes de CLASSE A, pas seulement une exclusion.
+    #
+    # ⚠ `numero_mandat_app` n'y est PAS : decision de Frederic du 17/11 de ne pas
+    #   rapatrier la colonne C du classeur (33 numeros RECYCLES a charges
+    #   divergentes). Elle reste vide, donc elle n'a rien a proteger ni a ramener.
+    "vente_reglee_app", "numero_facture_app",
 )
 
 

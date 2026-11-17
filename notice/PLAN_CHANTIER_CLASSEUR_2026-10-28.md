@@ -2513,6 +2513,96 @@ l'etat d'une autre transaction) ; ce balayage-ci, fait avec le critere « compro
 trouve un 7e qui se declenche sur `state` ET sur l'ABSENCE de numero. **Chaque famille
 demande son propre balayage, et il se fait AVANT de generer le patch.**
 
+### ✅⭐⭐⭐ LE DEFAUT DE B1 EST REPARE -- 17/11, ET IL ETAIT DORMANT
+
+Trouve en analysant le run a sa demande : « il faut analyser le run et la descente pour
+corriger ces erreurs ». **B1 a pose trois colonnes de CLASSE A chez Supabase et les a
+oubliees dans LES DEUX listes de `phase2/sync/affaire_ledger.py`.**
+
+#### ⛔⛔ RIEN N'AVAIT CASSE, MAIS PAR ACCIDENT
+
+Le push n'envoie que ce que **le LOCAL** possede -- et le local ne possedait pas ces
+colonnes non plus. **Les deux moities manquantes s'annulaient.** Le jour ou l'une des
+deux aurait ete reparee SEULE :
+
+```
+   1  refresh_ledger (l. 3396) cree la colonne en local   -> VIDE
+   2  ledger_rows_for_push (l. 3413) l'envoie             -> DU VIDE
+      ⛔ et EFFACE chez Supabase les 3 729 reglements et 3 671 factures de C8
+   3  redescendre_ce_que_l_app_possede (l. 3481) arrive APRES : elle ramene
+      le vide qu'on vient d'ecrire
+```
+
+⭐ « LA CAUSE N'EST PAS LE PUSH, C'EST L'ORDRE » -- lecon du 07/09, ecrite juste
+au-dessus de `ledger_rows_for_push`. ⚠ **Et c'est exactement le remede que j'avais
+propose vingt minutes plus tot**, avant de mesurer l'ordre du run : « ajouter les trois
+colonnes a la liste du local ». Il aurait ouvert la porte.
+
+#### ⭐⭐ L'AUDIT A TROUVE QUE LA LISTE SERT DEUX FOIS
+
+```
+   l. 3175   for interdite in COLONNES_QUE_LE_PUSH_N_ENVOIE_PAS   exclut du PUSH
+   l. 3002   colonnes = list(COLONNES_QUE_LE_PUSH_N_ENVOIE_PAS)   dans la REDESCENTE
+```
+
+Son nom ne le dit pas : c'est **le registre des colonnes de CLASSE A**, et c'est la
+redescente qui les REMPLIT. Avec deux filets d'ordre deja poses le 16/10 (colonne
+absente de Supabase -> non demandee ; absente du local -> non ecrite).
+
+#### CE QUI EST FAIT, ET SEULEMENT CA
+
+```
+   vente_reglee_app     ajoutee aux DEUX listes   (3 729 valeurs)
+   numero_facture_app   ajoutee aux DEUX listes   (3 671 valeurs)
+   numero_mandat_app    ⬜ VOLONTAIREMENT ABSENTE -- sa decision du 17/11 de ne pas
+                        rapatrier la colonne C (33 numeros recycles). Elle reste vide.
+   la clause d'execution posee dans le COMMENTAIRE des deux colonnes en base,
+      la ou B1 l'avait oubliee
+   creees en local 29 -> 31 . protegees 10 -> 12 . symetrie : PARFAITE
+```
+
+#### ⭐⭐⭐ LE REMEDE DE FOND : UN ESSAI, ET SA LECON DE METHODE
+
+`phase2/checks/test_colonnes_classe_a_dans_les_deux_listes.py` -- **4 verts, code 0**.
+
+⚠⚠ **ET VOICI CE QUI A RENDU CET ESSAI DIFFICILE A ECRIRE** : j'ai d'abord voulu
+controler la SYMETRIE des deux listes. **Elle n'aurait RIEN attrape** -- les trois
+colonnes de B1 manquaient dans les DEUX listes, donc SYMETRIQUEMENT.
+➡ **Un controle interne au code ne peut pas voir ce que le code ignore.** Il faut
+comparer **a la BASE**, seule a savoir quelles colonnes de classe A existent vraiment.
+
+✅ **TEMOIN INVERSE FAIT, et il nomme les deux formes du defaut** :
+
+```
+   A  colonne retiree DES DEUX listes    -> code 1, « colonne de classe A OUBLIEE »
+   B  colonne retiree de la BOUCLE seule -> code 1, « protegee jamais creee en local »
+   source RESTAURE a l'octet (207 336) et l'essai redevient code 0
+```
+
+⭐ Et **les absences se DECLARENT** : `ABSENCES_DECLAREES` porte `numero_mandat_app`
+avec SA raison et SA date -- sinon l'essai rougirait pour une decision prise, et on
+apprendrait a ignorer son rouge.
+
+#### ✅ ET LE SECOND « DEFAUT » N'EXISTAIT PAS
+
+J'avais annonce que la table des avis n'etait pas descendue en local. **Faux** : j'avais
+juge AVANT la descente, qui tourne a **06:45** et non 07:45 comme je l'avais dit -- et
+le run de 04:00 tournait encore (`SCHED_S_TASK_RUNNING`, code 267009, que j'ai failli
+prendre pour un echec). Mesure apres 06:45 : `app_classeur_avis` porte bien **2 588
+lignes en local**.
+
+#### ⛔⛔ ET UNE FAUTE D'OUTIL, LA TROISIEME DE LA SEMAINE
+
+Ce bloc a d'abord ete ecrit **par Bash**, qui a interprete les backticks comme des
+substitutions de commandes : tous les noms de fichiers et de fonctions ont ete MANGES,
+les quatre blocs de code ont disparu, et Bash a meme tente d'EXECUTER
+`affaire_ledger.py` comme un script shell. Le fichier source est intact (207 336
+octets, syntaxe verifiee) -- mais le bloc du plan a du etre retire et reecrit.
+➡ **REGLE : tout texte portant des backticks passe par un FICHIER, jamais par Bash.**
+C'est en memoire depuis deux fois ; cette fois-ci est la troisieme.
+
+---
+
 ### ✅⭐⭐ C8 EST FAIT -- LES DEUX PLUS GROS POSTES, POSES LE 16/11
 
 #### LA CIBLE EST LA VENTE, ET LA MESURE EST D'UNE NETTETE PARFAITE
