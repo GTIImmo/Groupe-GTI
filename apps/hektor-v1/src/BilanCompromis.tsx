@@ -6,13 +6,15 @@
 // Le document se montre à la page lue, dessiné dans le navigateur (même chemin que « Voir le document »).
 // Lot 2 (17/11) : la même fenêtre dit « Ce que dit l'offre » (bilan.genre) ; les lignes d'une offre acceptée ou refusée
 // se montrent FIGÉES (raison dite, rien à choisir), et l'offre part toujours par sa modale VISIBLE.
-// Note du chantier : notice/CHANTIER_GED_DOCUMENTS_2026-11-06.md §12.28 et §12.29.
+// Lot 3 (18/11) : la FICHE DU BIEN face à ses documents (DPE, état des risques, copropriété, Carrez) -- « La fiche » au lieu
+// de « La transaction » ; les cases partent par le chemin habituel de la fiche (pas de modale), écrites par l'écran.
+// Note du chantier : notice/CHANTIER_GED_DOCUMENTS_2026-11-06.md §12.28, §12.29 et §12.31.
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { createConsoleDocumentSignedUrl } from './lib/api'
 import { apercuPremierePage } from './lib/gedClassementIa'
 import type { DecisionGed } from './lib/ged'
-import type { BilanCompromis as Bilan, GenreBilan, LigneBilan } from './lib/gedBilanCompromis'
+import { estGenreFiche, type BilanCompromis as Bilan, type GenreBilan, type LigneBilan } from './lib/gedBilanCompromis'
 import type { ConsoleDocument } from './types'
 import './BilanCompromis.css'
 
@@ -48,10 +50,18 @@ export const ENVOI_DIRECT: ReadonlySet<string> = new Set(['transaction_date', 's
 // ⛔ Lot 2 : JAMAIS une ligne d'offre (« O. ») -- le chemin de l'offre construit un corps neuf et renvoie montant, date et
 //   validité préremplis, sans la liste des cases touchées ni le témoin : sa modale s'ouvre visible, toujours.
 export const estEnvoiDirect = (l: LigneBilan) => l.cle.startsWith('B.') && l.champModale != null && ENVOI_DIRECT.has(l.champModale)
-// les mots du document, selon le genre du bilan
-export const MOTS: Record<GenreBilan, { le: string; Le: string; du: string }> = {
-  compromis: { le: 'le compromis', Le: 'Le compromis', du: 'du compromis' },
-  offre: { le: 'l\'offre', Le: 'L\'offre', du: 'de l\'offre' },
+// les mots du document, selon le genre du bilan ; `cible` : ce qu'il corrige (la transaction, ou la fiche du bien)
+type Mots = { le: string; Le: string; du: string; etiquette: string; cible: string; Cible: string }
+const TRANSACTION = { cible: 'la transaction', Cible: 'La transaction' }
+const FICHE = { cible: 'la fiche', Cible: 'La fiche' }
+export const MOTS: Record<GenreBilan, Mots> = {
+  compromis: { le: 'le compromis', Le: 'Le compromis', du: 'du compromis', etiquette: 'Compromis', ...TRANSACTION },
+  offre: { le: 'l\'offre', Le: 'L\'offre', du: 'de l\'offre', etiquette: 'Offre', ...TRANSACTION },
+  dpe: { le: 'le DPE', Le: 'Le DPE', du: 'du DPE', etiquette: 'DPE', ...FICHE },
+  erp: { le: 'l\'état des risques', Le: 'L\'état des risques', du: 'de l\'état des risques', etiquette: 'Risques', ...FICHE },
+  copro_lots: { le: 'la fiche synthétique', Le: 'La fiche synthétique', du: 'de la fiche synthétique', etiquette: 'Copropriété', ...FICHE },
+  copro_charges: { le: 'l\'appel de fonds', Le: 'L\'appel de fonds', du: 'de l\'appel de fonds', etiquette: 'Copropriété', ...FICHE },
+  surface: { le: 'le métré', Le: 'Le métré', du: 'du métré', etiquette: 'Surfaces', ...FICHE },
 }
 
 const jjmm = (iso: string) => new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
@@ -61,7 +71,7 @@ const lu = (iso: string | null) => (iso ? new Date(iso).toLocaleString('fr-FR', 
 function dejaDit(l: LigneBilan, d: DecisionGed): string {
   const quand = jjmm(d.le)
   if (d.decision === 'echec') return `Essai du ${quand} : rien n'a été écrit`
-  if (d.decision === 'ignoree') return l.etat === 'ajouter' ? `Non retenu le ${quand}` : `Transaction gardée le ${quand}`
+  if (d.decision === 'ignoree') return l.etat === 'ajouter' ? `Non retenu le ${quand}` : `${l.champFiche ? 'Fiche' : 'Transaction'} gardée le ${quand}`
   if (l.destination === 'hektor') return `Envoyé à Hektor le ${quand}`
   return l.condition?.retirer ? `Condition retirée le ${quand}` : l.etat === 'ajouter' ? `Ajouté le ${quand}` : `Pris ${MOTS[l.cle.startsWith('O.') ? 'offre' : 'compromis'].du} le ${quand}`
 }
@@ -171,7 +181,9 @@ export default function BilanCompromis({
   const versHektor = choisies.filter((l) => l.destination === 'hektor' && choix.get(l.cle) === 'prendre').length
   // le chemin vers Hektor : les dates et le séquestre partent DIRECTEMENT ; le prix, le net et les honoraires passent par
   // la fenêtre de la transaction (elle vérifie net + honoraires = prix) -- et s'il y en a un, tout passe par elle
-  const parLaFenetre = choisies.some((l) => l.destination === 'hektor' && choix.get(l.cle) === 'prendre' && !estEnvoiDirect(l))
+  // (lot 3 : une case de la fiche n'ouvre aucune fenêtre -- elle part par le chemin habituel de la fiche)
+  const parLaFenetre = choisies.some((l) => l.destination === 'hektor' && choix.get(l.cle) === 'prendre' && !estEnvoiDirect(l) && !l.champFiche)
+  const fiche = estGenreFiche(bilan.genre)
   const chezNous = choisies.filter((l) => l.destination === 'nous' && choix.get(l.cle) === 'prendre').length
   const gardees = choisies.filter((l) => choix.get(l.cle) === 'garder').length
 
@@ -199,13 +211,13 @@ export default function BilanCompromis({
       const pris = cote === 'document' ? c === 'prendre' : c === 'garder'
       const ecarte = c != null && !pris
       const vide = cote === 'transaction' && l.transaction == null
-      const titre = cote === 'document' ? mots.Le : 'La transaction'
+      const titre = cote === 'document' ? mots.Le : mots.Cible
       const aria = cote === 'document'
         ? (l.condition?.retirer ? `${l.libelle} : retirer la condition` : `${l.libelle} : prendre la valeur ${mots.du}, ${l.lu}`)
-        : (vide ? `${l.libelle} : laisser la transaction ${l.condition ? 'sans cette condition' : 'vide'}` : `${l.libelle} : garder la valeur de la transaction, ${valeur}`)
+        : (vide ? `${l.libelle} : laisser ${mots.cible} ${l.condition ? 'sans cette condition' : 'vide'}` : `${l.libelle} : garder la valeur de ${mots.cible}, ${valeur}`)
       // le verbe du geste, dit DANS la plaque (on comprend qu'elle se touche, et ce qu'elle fera)
       const verbe = cote === 'document'
-        ? (l.condition?.retirer ? (pris ? 'retirée' : 'retirer') : l.etat === 'ajouter' ? (pris ? 'ajouté' : 'ajouter') : (pris ? 'correction' : 'corriger le registre'))
+        ? (l.condition?.retirer ? (pris ? 'retirée' : 'retirer') : l.etat === 'ajouter' ? (pris ? 'ajouté' : 'ajouter') : (pris ? 'correction' : fiche ? 'corriger la fiche' : 'corriger le registre'))
         : (pris ? (vide ? 'laissé vide' : 'gardé') : vide ? 'laisser vide' : 'garder')
       const contenu = (
         <>
@@ -276,7 +288,7 @@ export default function BilanCompromis({
             <p>{[bilan.nom, lu(bilan.luLe) ? `lu le ${lu(bilan.luLe)}` : null].filter(Boolean).join(' · ')}</p>
             <h2 id="bc-titre">{`Ce que dit ${mots.le}`}</h2>
           </div>
-          <span className="bc-hd-pil">{`Transaction : ${bilan.genre}${bilan.dateTransaction ? ` du ${jjmm(bilan.dateTransaction)}` : ''}`}</span>
+          <span className="bc-hd-pil">{fiche ? 'La fiche du bien' : `Transaction : ${bilan.genre}${bilan.dateTransaction ? ` du ${jjmm(bilan.dateTransaction)}` : ''}`}</span>
           <button type="button" className="bc-hd-x" aria-label="Fermer" disabled={enCours} onClick={onFermer}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
           </button>
@@ -287,11 +299,11 @@ export default function BilanCompromis({
             <p className="bc-mode">
               {peutModifier
                 ? 'Touche la valeur qui doit rester. Rien ne s\'écrit avant « Enregistrer ».'
-                : 'Lecture seule : seul un responsable modifie une transaction.'}
+                : fiche ? 'Lecture seule : tu ne modifies pas la fiche de ce bien.' : 'Lecture seule : seul un responsable modifie une transaction.'}
             </p>
-            {rienAFaire && !groupes.tranche.length && !groupes.fige.length ? <p className="bc-vide">{`${mots.Le} et la transaction disent la même chose. Rien à trancher.`}</p> : null}
-            {groupe('À trancher', `${mots.Le} et la transaction ne disent pas la même chose. Proposé : corriger le registre avec la valeur ${mots.du} (touche la transaction pour la garder).`, groupes.trancher)}
-            {groupe('À ajouter', 'La transaction est vide sur ces points.', groupes.ajouter, groupes.trancher.length)}
+            {rienAFaire && !groupes.tranche.length && !groupes.fige.length ? <p className="bc-vide">{`${mots.Le} et ${mots.cible} disent la même chose. Rien à trancher.`}</p> : null}
+            {groupe('À trancher', `${mots.Le} et ${mots.cible} ne disent pas la même chose. Proposé : corriger ${fiche ? 'la fiche' : 'le registre'} avec la valeur ${mots.du} (touche ${mots.cible} pour la garder).`, groupes.trancher)}
+            {groupe('À ajouter', `${mots.Cible} est vide sur ces points.`, groupes.ajouter, groupes.trancher.length)}
             {groupe('Déjà tranché', null, groupes.tranche, groupes.trancher.length + groupes.ajouter.length)}
             {groupe('Figé chez Hektor', 'Ces écarts se voient, ils ne se corrigent pas d\'ici.', groupes.fige, groupes.trancher.length + groupes.ajouter.length + groupes.tranche.length)}
             {!bilan.conditionsLues ? <p className="bc-vide">Les conditions suspensives de la transaction n'ont pas pu être lues : elles ne sont pas comparées.</p> : null}
@@ -343,6 +355,7 @@ export default function BilanCompromis({
               {parLaFenetre ? <small>{bilan.genre === 'offre'
                 ? 'La fenêtre de l\'offre s\'ouvre préremplie : elle renvoie à Hektor le montant, la date et la validité, tu vérifies, et c\'est elle qui envoie.'
                 : 'Le prix, le net vendeur ou les honoraires changent : la fenêtre de la transaction s\'ouvre préremplie, tu vérifies, et c\'est elle qui envoie à Hektor.'}</small>
+                : versHektor && fiche ? <small>Écrit sur la fiche tout de suite, puis envoyé à Hektor par le chemin habituel de la fiche (une dizaine de minutes, contrôlé au retour).</small>
                 : versHektor ? <small>Envoyé à Hektor par la fenêtre de la transaction, en arrière-plan : seulement les cases corrigées, le reste ne bouge pas.</small> : null}
             </p>
           )}

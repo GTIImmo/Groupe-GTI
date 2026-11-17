@@ -168,7 +168,7 @@ export type ModaleStatutV2Props = {
   formulaire: FormulaireStatutProps
   // GED lot 10c (17/11) : la modale ouverte depuis « Ce que dit le compromis » -- les valeurs reprises du compromis lu,
   // déjà posées dans les cases ; un bandeau les dit, et dit le bouton qui les envoie (« Mettre à jour le compromis »).
-  depuisDocument?: { nom: string; genre?: 'compromis' | 'offre'; valeurs: string[] } | null
+  depuisDocument?: { nom: string; genre?: string; valeurs: string[] } | null
 }
 
 const ETIQUETTE: Record<string, string> = { conseille: 'Conseillé', actuel: 'Actuel', hors: 'Hors parcours' }

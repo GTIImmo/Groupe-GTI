@@ -2707,3 +2707,53 @@ sur une offre PROPOSÉE vivante. L'essai réel demande une offre proposée et sa
 - ⛔ **L'ACTE DE VENTE : « laisse tomber »** -- ni bilan, ni « créer la vente depuis l'attestation ». **Ne pas relancer.**
 - ⛔ **L'OFFRE PART PAR SA MODALE VISIBLE** -- jamais en arrière-plan (tranché). Ne pas l'ajouter à `ENVOI_DIRECT`.
 ⏳ **Reste** : l'essai réel, sur une offre PROPOSÉE d'un bien vivant avec sa pièce lue (à choisir par Frédéric).
+
+### 12.30 AUDIT du lot 3 -- la fiche du bien face à ses documents (17/11, « On enchaîne », lecture seule, rien codé)
+
+**Aujourd'hui** : les cartes « Remplir » (gedRemplir.ts, P1 à P3) ne remplissent qu'une case VIDE, relue juste avant
+(`remplirDepuisDocument`) ; une case remplie qui diffère sonne seulement dans « À regarder » (L6 DPE, L15 Carrez, L16
+copropriété, L12/L14/L4/L1 mandat). Le lot 3 = ces écarts deviennent « à trancher », la correction proposée avec la valeur
+du document (accord de principe de Frédéric : « à trancher doit proposer de corriger le registre avec la donnée du doc »).
+
+**Les cases, et par où elles partent** (toutes par `editAnnonceOptimistic` -> `app_annonce_pending` -> worker
+`update_hektor_annonce_fields`, ~10 min, contrôle au retour 8a7 -- PAS de modale, l'envoi est déjà en arrière-plan) :
+- DPE : `dpe_cons`, `dpe_ges`, `dpe_date` (L6, tolérance ± 1) -- ⭐ `dpe_cons` prouvé en réel le 16/11 (63147, 17:41 -> 17:52) ;
+- état des risques : `diag_risques_nat_tech_date` ;
+- copropriété (bien MARQUÉ copropriété seulement) : `copropriete_nb_lot`, `copropriete_quote_part` (L16) -- ⚠ le groupe de
+  Hektor qui porte la copropriété est celui que la sauvegarde du SECTEUR remet à zéro : garde du worker active (22/10) ;
+- Carrez : `SURF_CARREZ` (L15, sens unique : seulement plus PETITE de 5 %) -- part dans le groupe « surfaces » du worker
+  (13 champs : surface, pièces, chambres…), jamais éprouvée depuis la GED.
+- ⛔ **le mandat** (n°, prix, honoraires, charge au registre, prix de l'avenant face au prix affiché) : décision ⑦-7
+  (« je ne souhaite pas pouvoir modifier un mandat ») -- montré, jamais corrigé d'ici. Le prix affiché part dans le
+  groupe prix de Hektor, qui renvoie aussi les honoraires : à ne pas ouvrir sans décision.
+
+**Mesure** : 0 document de ces types lu sur un bien réel -- tout est sur les biens d'essai (63147 DPE, 62774 ERP et
+copropriété, 63331 surfaces et mandat). La lecture n'est pas allumée pour le parc (DPA d'abord).
+⚠ **Trouvé en passant** : deux portes, deux seuils sur la même case -- P2 propose de remplir `copropriete_quote_part` si
+ELLE est vide, L16 compare à `quote_part ?? CHARGES`. Une fiche qui porte CHARGES sans quote-part reçoit les deux.
+
+### 12.31 Le lot 3 -- la fiche du bien face à ses documents (18/11, « Oui » au plan du §12.30, mandat seulement montré)
+
+**Fait (rien poussé)** :
+- `lib/gedBilanFiche.ts` (`bilansFiche`) : une fenêtre par document -- « Ce que dit le DPE » (consommation, émissions ± 1,
+  date), « l'état des risques » (date), « la fiche synthétique » (nombre de lots ; la fiche qui porte les lots PRINCIPAUX
+  est d'accord, comme L16), « l'appel de fonds » (charges annuelles du lot, ± 10 %, comparées à `copropriete_quote_part`
+  seule -- la case écrite), « le métré » (Carrez, SENS UNIQUE comme L15). Case vide -> « à ajouter » ; remplie et
+  différente -> « à trancher », la valeur du document proposée (« corriger la fiche »). ⛔ Copropriété : seulement sur un
+  bien marqué copropriété. ⛔ **Le mandat n'a pas de fenêtre** (⑦-7) : ses écarts restent dans « À regarder ».
+- Chaque ligne porte sa case Hektor (`champFiche`) et ce que la fiche portait (`temoin`). L'écriture
+  (`appliquerBilanFiche`, App.tsx) RELIT la fiche, n'écrit que les cases qui portent encore le témoin (et la copropriété
+  encore marquée), en UN `editAnnonceOptimistic` -- le chemin habituel de la fiche (chez nous tout de suite, Hektor par le
+  worker ~10 min, contrôle au retour 8a7), sans modale. Une case changée entre-temps : rien écrit, décision « echec »
+  (`case_changee`), et c'est dit.
+- La fenêtre dit « La fiche » au lieu de « La transaction » ; qui tranche la fiche = qui peut la remplir (les cartes
+  « Remplir »). Les bilans de la fiche ne dépendent pas de la lecture des transactions.
+- ⛔ **Un seul chemin par case** : les cartes « Remplir » P1 (DPE, état des risques) et P2 (copropriété) sont RETIRÉES
+  (la fenêtre propose aussi la case vide). P3 (la charge vide au registre des mandats) reste.
+- La note Vrai / Faux de « À regarder » se déduit des choix pour L6, L15 et L16 aussi (`verdictDesChoix` : toute ligne de
+  la même règle, sauf L20 qui se départage par libellé).
+Essais : `test_ged_bilan` **84 VERT** (18 neufs, section ⑦) ; `test_ged_remplir` 38 VERT (5 essais P1/P2 réécrits : ils
+prouvent que les cartes ne reviennent pas) ; les 13 fichiers GED verts ; build vert.
+⚠ **Pas vu à l'écran, pas éprouvé en réel** : seule la consommation du DPE a été envoyée en réel par ce chemin (16/11,
+63147) ; émissions, dates, copropriété et Carrez jamais. Premier essai proposé sur les biens d'essai (63147 DPE, 62774
+copropriété et état des risques, 63331 métré).

@@ -26,7 +26,8 @@ import { LIBELLE_MOMENT, recuManque, type LignePiece, type MomentDossier } from 
 import { deposeAuPlusTard, LIBELLE_A_DEPOSER, reglesSansIa, type AffaireRegle, type Alerte, type FaitsRegles } from './lib/gedRegles'
 import { lireDateIso, type PersonneDuBien } from './lib/gedComparer'
 import { reglesLues } from './lib/gedReglesLues'
-import { bilansDuDossier, verdictDesChoix, type BilanCompromis as Bilan, type CatalogueCondition, type GenreBilan } from './lib/gedBilanCompromis'
+import { bilansDuDossier, estGenreFiche, verdictDesChoix, type BilanCompromis as Bilan, type CatalogueCondition, type GenreBilan } from './lib/gedBilanCompromis'
+import { bilansFiche } from './lib/gedBilanFiche'
 import BilanCompromis, { MOTS, type ChoixBilan, type ResultatBilan } from './BilanCompromis'
 import type { LigneBilan } from './lib/gedBilanCompromis'
 import type { ConsoleDocument } from './types'
@@ -380,13 +381,18 @@ export function RecuManque({
     return () => { annule = true }
   }, [peutBilan, hektorAnnonceId, relire])
   // lot 2 (17/11) : un bilan par document de transaction lu -- l'offre, puis le compromis
+  // lot 3 (18/11) : puis la fiche du bien face à ses documents (DPE, état des risques, copropriété, Carrez) -- sans attendre
+  // les transactions (une lecture ratée du registre ne les fait pas taire)
   const bilans = useMemo(() => {
-    if (!peutBilan || affaires === null || catalogue === null) return []
+    if (!peutBilan) return []
     const docsLus = documents
       .filter((d) => d.present_in_hektor !== false && lectures.has(d.id))
       .map((d) => ({ nom: d.document_name, lecture: lectures.get(d.id) as LectureDocument }))
-    return bilansDuDossier(docsLus, affaires, catalogue)
-  }, [peutBilan, affaires, catalogue, documents, lectures])
+    const transactions = affaires === null || catalogue === null ? [] : bilansDuDossier(docsLus, affaires, catalogue)
+    return [...transactions, ...bilansFiche(faits, docsLus)]
+  }, [peutBilan, affaires, catalogue, documents, lectures, faits])
+  // qui tranche : la transaction, un responsable ; la fiche, celui qui peut la remplir (les cartes « Remplir »)
+  const peutTrancher = (b: Bilan) => (estGenreFiche(b.genre) ? peutRemplir : peutModifierTransaction)
   // à trancher : ni d'accord, ni déjà décidé, ni figé chez Hektor (une offre acceptée se montre, elle ne réclame rien)
   const aTrancherDe = (b: Bilan) => (journal ? b.lignes.filter((l) => l.etat !== 'accord' && !l.fige && !journal.has(`${l.cle}|${l.valeur}`)) : [])
   const documentDuBilanDe = (b: Bilan) => documents.find((d) => lectures.get(d.id)?.id === b.lectureId) ?? null
@@ -409,12 +415,22 @@ export function RecuManque({
     window.addEventListener('ged:decisions-changees', relu)
     return () => window.removeEventListener('ged:decisions-changees', relu)
   }, [])
+  // la ligne « À regarder » qui dit la même chose qu'un bilan (sa note Vrai / Faux se déduit des choix)
+  const alerteDuBilan = (g: GenreBilan, a: Alerte) => ({
+    compromis: (a.code === 'L7' && a.texte.startsWith('Compromis')) || a.code === 'L20',
+    offre: a.code === 'L7' && a.texte.startsWith('Offre'),
+    dpe: a.code === 'L6',
+    erp: false,
+    copro_lots: a.code === 'L16' && a.texte.startsWith('Copropriété'),
+    copro_charges: a.code === 'L16' && a.texte.startsWith('Charges'),
+    surface: a.code === 'L15',
+  })[g]
   const enregistrerBilan = async (choix: Array<{ ligne: LigneBilan; choix: ChoixBilan }>): Promise<ResultatBilan> => {
     if (!bilan || !onBilan) throw new Error('Rien n\'a été écrit.')
     const r = await onBilan(bilan, choix)
     // la mesure du morceau 10 : un choix vaut la note de la ligne « À regarder » qui disait la même chose
     const carte = new Map(choix.map((c) => [c.ligne.cle, c.choix]))
-    for (const a of alertes.filter((x) => (x.code === 'L7' && x.texte.startsWith(bilan.genre === 'offre' ? 'Offre' : 'Compromis')) || (x.code === 'L20' && bilan.genre === 'compromis'))) {
+    for (const a of alertes.filter((x) => alerteDuBilan(bilan.genre, x))) {
       const verdict = verdictDesChoix(a.texte, a.code, bilan.lignes, carte)
       if (verdict) await gedJuger({ hektorAnnonceId, regle: a.code, cle: cleJugement(a), texte: a.texte, niveau: a.niveau, verdict }).catch(() => undefined)
     }
@@ -534,7 +550,7 @@ export function RecuManque({
               <p className="gm2-bt">{`À remplir (${propositions.length + aTrancher.length})`}</p>
               {cartesBilan.map(({ b, lignes }) => (
                 <div key={b.genre} className="gm2-carte gm2-prop gm2-cpv">
-                  <div className="gm2-c1"><span className="gm2-et is-remplir">{b.genre === 'offre' ? 'Offre' : 'Compromis'}</span><b>{`Ce que dit ${MOTS[b.genre].le} : ${[
+                  <div className="gm2-c1"><span className="gm2-et is-remplir">{MOTS[b.genre].etiquette}</span><b>{`Ce que dit ${MOTS[b.genre].le} : ${[
                     lignes.filter((l) => l.etat === 'trancher').length ? `${lignes.filter((l) => l.etat === 'trancher').length} à trancher` : null,
                     lignes.filter((l) => l.etat === 'ajouter').length ? `${lignes.filter((l) => l.etat === 'ajouter').length} à ajouter` : null,
                   ].filter(Boolean).join(', ')}`}</b></div>
@@ -660,7 +676,7 @@ export function RecuManque({
         document.body,
       ) : null}
       {bilan ? (
-        <BilanCompromis key={bilan.genre} bilan={bilan} decisions={journal} peutModifier={peutModifierTransaction} document={documentDuBilanDe(bilan)}
+        <BilanCompromis key={bilan.genre} bilan={bilan} decisions={journal} peutModifier={peutTrancher(bilan)} document={documentDuBilanDe(bilan)}
           onFermer={() => setBilanOuvert(null)} onEnregistrer={enregistrerBilan} />
       ) : null}
     </section>

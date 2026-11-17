@@ -34,13 +34,21 @@ export type LigneBilan = {
   note: string | null
   champModale: ChampModale | null
   condition: { nature: NatureCondition; libelle: string; date: string | null; catalogueId: string | null; retirer: boolean } | null
-  regle: 'L7' | 'L20' | null  // la ligne « À regarder » qui dit la même chose (la mesure du morceau 10)
+  regle: string | null        // la ligne « À regarder » qui dit la même chose (L7, L20 ; lot 3 : L6, L15, L16)
   // lot 10c (audit) : la valeur de la transaction n'est pas (encore) chez Hektor -- carnet seul, ou envoyée sans retour
   attente: 'jamais_envoye' | 'en_route' | 'echec' | null
   // lot 2 : la transaction ne se modifie pas d'ici (offre acceptée ou refusée) -- la raison, dite ; rien ne se propose
   fige: string | null
+  // lot 3 (18/11) : une case de la FICHE DU BIEN (nom Hektor, par editAnnonceOptimistic) et ce que la fiche portait quand
+  // le bilan a été calculé (null = vide) -- l'écriture relit la case et ne part que si elle le porte encore
+  champFiche: string | null
+  temoin: string | null
 }
-export type GenreBilan = 'compromis' | 'offre'
+// lot 3 (18/11) : les genres de la FICHE DU BIEN -- un par document (le DPE, l'état des risques, la fiche synthétique, l'appel
+// de fonds, le métré)
+export type GenreFiche = 'dpe' | 'erp' | 'copro_lots' | 'copro_charges' | 'surface'
+export type GenreBilan = 'compromis' | 'offre' | GenreFiche
+export const estGenreFiche = (g: GenreBilan): g is GenreFiche => g !== 'compromis' && g !== 'offre'
 export type BilanCompromis = {
   genre: GenreBilan
   lectureId: string | null
@@ -82,8 +90,8 @@ export function bilanCompromis(docs: DocumentLu[], affaires: AffaireRegle[], cat
   if (!ligne || ligne.id == null) return null
   const page = (cle: string) => v.find((x) => x.cle === cle && x.rang === 0)?.page ?? null
   const lignes: LigneBilan[] = []
-  const pousser = (l: Omit<LigneBilan, 'note' | 'champModale' | 'condition' | 'regle' | 'attente' | 'fige'> & Partial<Pick<LigneBilan, 'note' | 'champModale' | 'condition' | 'regle'>>) =>
-    lignes.push({ note: null, champModale: null, condition: null, regle: null, attente: null, fige: null, ...l })
+  const pousser = (l: Omit<LigneBilan, 'note' | 'champModale' | 'condition' | 'regle' | 'attente' | 'fige' | 'champFiche' | 'temoin'> & Partial<Pick<LigneBilan, 'note' | 'champModale' | 'condition' | 'regle'>>) =>
+    lignes.push({ note: null, champModale: null, condition: null, regle: null, attente: null, fige: null, champFiche: null, temoin: null, ...l })
 
   // ── les champs que Hektor connaît : ils partent par la modale « Modifier le compromis » ──
   const euros = (cle: string, libelle: string, lu: number | null, base: number | null, champ: ChampModale | null, note: string | null = null) => {
@@ -194,8 +202,8 @@ export function bilanOffre(docs: DocumentLu[], affaires: AffaireRegle[]): BilanC
   const etatOffre = String(ligne.state ?? '').trim().toLowerCase()
   const fige = etatOffre === 'accepted' ? FIGEE_ACCEPTEE : etatOffre === 'refused' ? FIGEE_REFUSEE : null
   const lignes: LigneBilan[] = []
-  const pousser = (l: Omit<LigneBilan, 'note' | 'condition' | 'regle' | 'attente' | 'fige' | 'destination'> & Partial<Pick<LigneBilan, 'note' | 'regle'>>) =>
-    lignes.push({ note: null, condition: null, regle: null, attente: null, fige: null, destination: 'hektor', ...l })
+  const pousser = (l: Omit<LigneBilan, 'note' | 'condition' | 'regle' | 'attente' | 'fige' | 'destination' | 'champFiche' | 'temoin'> & Partial<Pick<LigneBilan, 'note' | 'regle'>>) =>
+    lignes.push({ note: null, condition: null, regle: null, attente: null, fige: null, champFiche: null, temoin: null, destination: 'hektor', ...l })
 
   const montantLu = nombreLu(v, 'montant_offert')
   if (montantLu != null && montantLu > 0 && texteLu(v, 'base_prix') !== 'net_vendeur') {
@@ -262,7 +270,7 @@ export function conditionsApres(actuelles: ConditionComplete[], prises: LigneBil
 // raison (vrai) ; toutes GARDÉES -> elle a sonné pour rien (faux) ; sinon (rien de tranché) -> pas de note.
 export function verdictDesChoix(alerteTexte: string, code: string, lignes: LigneBilan[], choix: Map<string, 'prendre' | 'garder'>): 'vrai' | 'faux' | null {
   const texte = normaliserTexte(alerteTexte)
-  const liees = lignes.filter((l) => l.regle === code && (code === 'L7' || texte.includes(normaliserTexte(l.libelle)) || texte.includes(normaliserTexte(LIBELLE_CONDITION[l.condition?.nature ?? 'autre']))))
+  const liees = lignes.filter((l) => l.regle === code && (code !== 'L20' || texte.includes(normaliserTexte(l.libelle)) || texte.includes(normaliserTexte(LIBELLE_CONDITION[l.condition?.nature ?? 'autre']))))
   const tranchees = liees.filter((l) => choix.has(l.cle))
   if (!tranchees.length) return null
   if (tranchees.some((l) => choix.get(l.cle) === 'prendre')) return 'vrai'

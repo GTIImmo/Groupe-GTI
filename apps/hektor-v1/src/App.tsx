@@ -314,7 +314,8 @@ import { useDepotAssistant } from './lib/depotAssistant'
 // GED morceau 3 (12/11/2026) : le bloc « Reçu / Manque », derrière l'interrupteur ged_recu_manque (note GED §12.8).
 import { RecuManque } from './RecuManque'
 import { estEnvoiDirect, EVENEMENT_DROITS_TRANSACTION, EVENEMENT_MODIFIER_TRANSACTION, EVENEMENT_RESULTAT_ENVOI, type ResultatEnvoi, type ChoixBilan, type DemandeModifierTransaction, type ResultatBilan } from './BilanCompromis'
-import { conditionsApres, type BilanCompromis as BilanCompromisCalcule, type LigneBilan } from './lib/gedBilanCompromis'
+import { conditionsApres, estGenreFiche, type BilanCompromis as BilanCompromisCalcule, type LigneBilan } from './lib/gedBilanCompromis'
+import { caseInchangee } from './lib/gedBilanFiche'
 import { caseVide, decoderConditions, type FaitsRemplir, type PropositionRemplir } from './lib/gedRemplir'
 import { LIBELLE_CONDITION } from './lib/gedComparer'
 import { piecesDeSignature } from './lib/piecesSignature'
@@ -12034,7 +12035,40 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
     if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent(EVENEMENT_DROITS_TRANSACTION, { detail: d }))
     return d.peut
   }, [])
+  // GED lot 3 (18/11) : « Ce que dit le DPE », l'état des risques, la copropriété, le métré -- les cases de la FICHE DU BIEN,
+  // par le geste EXISTANT de la fiche (editAnnonceOptimistic : chez nous tout de suite, chez Hektor par le worker, contrôle
+  // au retour), en UN envoi, sans modale. On RELIT la fiche juste avant : une case qui ne porte plus ce que la fenêtre a
+  // montré (`temoin`) n'est pas écrite, et c'est dit ; la copropriété exige encore le bien marqué copropriété.
+  const appliquerBilanFiche = async (b: BilanCompromisCalcule, choix: Array<{ ligne: LigneBilan; choix: ChoixBilan }>): Promise<ResultatBilan> => {
+    const noter = (l: LigneBilan, decision: 'remplie' | 'ignoree' | 'echec', detail: Record<string, unknown>) =>
+      gedDecider({ hektorAnnonceId: dossier.hektor_annonce_id, lectureId: b.lectureId, cle: l.cle, champ: l.champFiche ?? l.cle.slice(2), valeur: l.valeur, decision, detail })
+    const dit: string[] = []
+    const gardees = choix.filter((c) => c.choix === 'garder')
+    for (const c of gardees) await noter(c.ligne, 'ignoree', { geste: 'ce_que_dit_le_document', genre: b.genre })
+    if (gardees.length) dit.push(`${gardees.length} laissé${gardees.length > 1 ? 's' : ''} tel${gardees.length > 1 ? 's' : ''} quel${gardees.length > 1 ? 's' : ''}`)
+    const prises = choix.filter((c) => c.choix === 'prendre' && c.ligne.champFiche).map((c) => c.ligne)
+    if (prises.length) {
+      const frais = await loadDossierDetail(dossier.app_dossier_id, { sansResumeRdv: true })
+      if (!frais) throw new Error('La fiche n\'a pas pu être relue : rien n\'a été écrit.')
+      const fiche = detailPayload(frais)
+      const coproOui = /oui/i.test(rawWizardDetailField(fiche, 'copropriete'))
+      const changees = prises.filter((l) => !caseInchangee(rawWizardDetailField(fiche, l.champFiche as string), l.temoin)
+        || ((l.champFiche as string).startsWith('copropriete_') && !coproOui))
+      const ecrites = prises.filter((l) => !changees.includes(l))
+      for (const l of changees) await noter(l, 'echec', { motif: 'case_changee', valeur_fiche: rawWizardDetailField(fiche, l.champFiche as string), copropriete: coproOui })
+      if (ecrites.length) {
+        const fields = Object.fromEntries(ecrites.map((l) => [l.champFiche as string, l.valeur]))
+        await editAnnonceOptimistic({ dossier: { app_dossier_id: dossier.app_dossier_id, hektor_annonce_id: dossier.hektor_annonce_id }, fields })
+        if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('hektor:annonce-updated', { detail: { app_dossier_id: dossier.app_dossier_id } }))
+        for (const l of ecrites) await noter(l, 'remplie', { geste: 'editAnnonceOptimistic', genre: b.genre, champs: fields, avant: l.temoin })
+        dit.push(`envoyé à Hektor : ${ecrites.map((l) => `${l.libelle} ${l.lu}`).join(', ')} (chemin habituel de la fiche, contrôlé au retour)`)
+      }
+      if (changees.length) dit.push(`rien écrit pour ${changees.map((l) => l.libelle).join(', ')} : la case a changé depuis l'ouverture de la fenêtre`)
+    }
+    return { message: `Enregistré : ${dit.join(' ; ')}.`, ferme: false }
+  }
   const appliquerBilan = async (b: BilanCompromisCalcule, choix: Array<{ ligne: LigneBilan; choix: ChoixBilan }>): Promise<ResultatBilan> => {
+    if (estGenreFiche(b.genre)) return appliquerBilanFiche(b, choix)
     const noter = (l: LigneBilan, decision: 'remplie' | 'ignoree', detail: Record<string, unknown>) =>
       gedDecider({ hektorAnnonceId: dossier.hektor_annonce_id, lectureId: b.lectureId, cle: l.cle, champ: l.champModale ?? l.condition?.nature ?? l.cle.slice(2), valeur: l.valeur, decision, detail })
     const ligne = (await loadAffairesForDossier(dossier.app_dossier_id)).find((a) => Number(a.app_affaire_id) === b.affaireId)

@@ -182,5 +182,51 @@ voir(/l\.champModale === 'amount' && depuisDocument\.genre === 'offre'\) \{ setS
   'offre : seul le montant est touché (jamais son prix de vente, relu chez Hektor par le worker) ; la validité a sa case')
 voir(/!l\.fige && !journal\.has/.test(rm) && /groupe\('Figé chez Hektor'/.test(fen), 'une ligne figée ne compte pas « à trancher » sur la carte ; la fenêtre la range à part')
 
+console.log('⑦ la fiche du bien face à ses documents (lot 3, 18/11)')
+const F = (() => {
+  const c = esbuild.buildSync({ entryPoints: [path.join(__dirname, 'src/lib/gedBilanFiche.ts')], bundle: true, write: false, format: 'cjs', platform: 'node' }).outputFiles[0].text
+  const mm = { exports: {} }
+  new Function('module', 'exports', 'require', c)(mm, mm.exports, require)
+  return mm.exports
+})()
+const vf = (cle, x, page = 2) => ({ cle, rang: 0, valeur: null, valeur_num: null, valeur_date: null, page, etat: 'lu', ...x })
+const docF = (nom, typeCode, valeurs, x = {}) => ({ nom, lecture: { id: 'L-' + nom, typeCode, etat: 'lu', luLe: '2026-11-18T08:00:00Z', valeurs, ...x } })
+const FICHE = { copropriete: true, dpeConso: null, dpeGes: null, dpeDate: null, nbLots: null, charges: null, quotePart: null, erpDate: null, carrez: null }
+const dpeF = docF('DPE.pdf', 'diag.dpe', [vf('conso_ep', { valeur_num: 210.4 }), vf('emissions', { valeur_num: 45 }), vf('date_etablissement', { valeur_date: '2026-02-03' })])
+const bF = (faits, docs) => F.bilansFiche({ ...FICHE, ...faits }, docs)
+const vide = bF({}, [dpeF])[0]
+voir(vide.genre === 'dpe' && ['F.dpe_cons', 'F.dpe_ges', 'F.dpe_date'].every((c) => L(vide, c).etat === 'ajouter') && L(vide, 'F.dpe_cons').valeur === '210' && L(vide, 'F.dpe_cons').champFiche === 'dpe_cons' && L(vide, 'F.dpe_cons').temoin === null,
+  'DPE sur une fiche VIDE : trois cases à ajouter (ce que faisait la carte P1), valeur arrondie, sa case Hektor, témoin « vide »')
+const diff = bF({ dpeConso: 180, dpeGes: 45, dpeDate: '2025-01-01' }, [dpeF])[0]
+voir(L(diff, 'F.dpe_cons').etat === 'trancher' && L(diff, 'F.dpe_cons').temoin === '180' && L(diff, 'F.dpe_cons').regle === 'L6' && L(diff, 'F.dpe_ges').etat === 'accord' && L(diff, 'F.dpe_date').etat === 'trancher' && L(diff, 'F.dpe_date').temoin === '2025-01-01',
+  '⭐ Frédéric : une case REMPLIE qui diffère -> à trancher, la valeur du DPE proposée (liée à L6) ; égale -> d\'accord')
+voir(L(bF({ dpeConso: 211, dpeGes: 45, dpeDate: '2026-02-03' }, [dpeF])[0], 'F.dpe_cons').etat === 'accord', 'TÉMOIN : 211 sur la fiche, 210 lu -> d\'accord (± 1, comme L6)')
+voir(L(bF({ dpeDate: '0000-00-00' }, [dpeF])[0], 'F.dpe_date').etat === 'ajouter', 'une date « 0000-00-00 » de Hektor est une case vide')
+voir(bF({}, [dpeF]).every((b) => b.lignes.every((l) => l.destination === 'hektor' && l.champModale === null)), 'chaque case de la fiche : « envoyé à Hektor », sans modale')
+const erpF = docF('ERP.pdf', 'diag.erp', [vf('date_etablissement', { valeur_date: '2026-09-02' })])
+voir(L(bF({}, [erpF])[0], 'F.erp_date').champFiche === 'diag_risques_nat_tech_date' && L(bF({ erpDate: '2026-01-01' }, [erpF])[0], 'F.erp_date').etat === 'trancher', 'état des risques : sa date, vide à ajouter, autre à trancher')
+const carnetF = docF('Fiche synthetique.pdf', 'copro.carnet', [vf('sous_type', { valeur: 'fiche_synthetique' }), vf('nb_lots_total', { valeur_num: 48 }), vf('nb_lots_principaux', { valeur_num: 20 })])
+const appelF = docF('Appel.pdf', 'copro.appel_fonds', [vf('provision_budget', { valeur_num: 300 }), vf('periode', { valeur: 'trimestre' })])
+const co = bF({}, [carnetF, appelF])
+voir(co.map((b) => b.genre).join() === 'copro_lots,copro_charges' && L(co[1], 'F.copropriete_quote_part').valeur === '1200', 'copropriété : nombre de lots et quote-part annuelle (300 € par trimestre = 1 200 €), chacun sa fenêtre')
+voir(L(bF({ nbLots: 20 }, [carnetF])[0], 'F.copropriete_nb_lot').etat === 'accord' && L(bF({ nbLots: 30 }, [carnetF])[0], 'F.copropriete_nb_lot').etat === 'trancher', 'TÉMOIN : la fiche qui porte les lots PRINCIPAUX est d\'accord (comme L16) ; 30 -> à trancher')
+voir(bF({ copropriete: false }, [carnetF, appelF]).length === 0, '⛔ un bien NON marqué copropriété : rien (jamais rien qui ferait passer la case à OUI)')
+voir(L(bF({ quotePart: 1150 }, [appelF])[0], 'F.copropriete_quote_part').etat === 'accord' && L(bF({ quotePart: 2000 }, [appelF])[0], 'F.copropriete_quote_part').etat === 'trancher', 'TÉMOIN : charges ± 10 % -> d\'accord ; 2 000 -> à trancher')
+const surf = docF('Metre.pdf', 'diag.surface', [vf('surface_carrez', { valeur_num: 61.5 }), vf('date_mesurage', { valeur_date: '2026-03-01' })])
+voir(L(bF({ carrez: '70' }, [surf])[0], 'F.surface_carrez').etat === 'trancher' && L(bF({ carrez: '62' }, [surf])[0], 'F.surface_carrez').etat === 'accord' && L(bF({ carrez: '55' }, [surf])[0], 'F.surface_carrez').etat === 'accord',
+  'Carrez SENS UNIQUE (comme L15) : plus petite de plus de 5 % -> à trancher ; un peu plus petite, ou plus grande -> d\'accord')
+voir(L(bF({}, [surf])[0], 'F.surface_carrez').champFiche === 'SURF_CARREZ' && L(bF({}, [surf])[0], 'F.surface_carrez').valeur === '61.5', 'Carrez vide : à ajouter, dans SA case Hektor, à la décimale')
+voir(bF({}, [docF('Mandat.pdf', 'mandat.vente', [vf('prix', { valeur_num: 200000 })])]).length === 0, '⛔ le MANDAT n\'a pas de fenêtre (décision ⑦-7) : ses écarts restent dans « À regarder »')
+voir(F.caseInchangee('180', '180') && F.caseInchangee('180.00', '180') && F.caseInchangee('', null) && F.caseInchangee('0000-00-00', null) && F.caseInchangee('2025-01-01 00:00:00', '2025-01-01')
+  && !F.caseInchangee('190', '180') && !F.caseInchangee('180', null) && !F.caseInchangee('', '180'), 'la case porte-t-elle encore ce que la fenêtre a montré ? (vide = vide, nombres en nombres, dates au jour)')
+const apF = app.slice(app.indexOf('const appliquerBilanFiche = async'), app.indexOf('const appliquerBilan = async'))
+voir(avantDans(apF, 'await loadDossierDetail(', 'await editAnnonceOptimistic(') && /caseInchangee\(rawWizardDetailField\(fiche, l\.champFiche as string\), l\.temoin\)/.test(apF) && /startsWith\('copropriete_'\) && !coproOui/.test(apF),
+  '⛔ l\'écriture RELIT la fiche : une case qui a changé depuis la fenêtre, ou une copropriété démarquée, n\'est pas écrite (et c\'est dit)')
+voir((apF.match(/await editAnnonceOptimistic\(/g) || []).length === 1 && !/createChangeHektorAnnonceStatusJob|EVENEMENT_MODIFIER_TRANSACTION/.test(apF) && /if \(estGenreFiche\(b\.genre\)\) return appliquerBilanFiche\(b, choix\)/.test(app),
+  'la fiche part par SON geste habituel, en UN envoi, sans modale ni travail de transaction')
+voir(/estGenreFiche\(b\.genre\) \? peutRemplir : peutModifierTransaction/.test(rm) && /bilansFiche\(faits, docsLus\)/.test(rm), 'qui tranche la fiche : celui qui peut la remplir ; les bilans de la fiche ne dépendent pas des transactions')
+const remplirSrc = fs.readFileSync(path.join(__dirname, 'src/lib/gedRemplir.ts'), 'utf8')
+voir(!/'P1\.|'P2\./.test(remplirSrc) && /'P3\.charge_honoraires'/.test(remplirSrc), 'un seul chemin par case : les cartes P1 et P2 sont retirées ; P3 (la charge vide au registre) reste')
+
 console.log(ko ? `\n${ko} ROUGE, ${ok} VERT` : `\nTOUT EST VERT (${ok})`)
 process.exit(ko ? 1 : 0)

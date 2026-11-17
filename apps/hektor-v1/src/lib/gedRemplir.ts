@@ -47,38 +47,9 @@ export function propositionsRemplir(faits: FaitsRemplir, docs: DocumentLu[], dec
   const lus = docs.filter((d) => d.lecture.etat === 'lu')
   const ajouter = (p: PropositionRemplir) => { if (!decisions.has(`${p.cle}|${p.valeur}`)) sortie.push(p) }
 
-  // P1 -- le DPE (consommation, émissions, date) et la date de l'état des risques, cases VIDES seulement.
-  const dpe = plusRecent(lus, 'diag.dpe', 'date_etablissement')
-  if (dpe) {
-    const v = dpe.lecture.valeurs
-    const conso = nombreLu(v, 'conso_ep')
-    const ges = nombreLu(v, 'emissions')
-    const date = dateLue(v, 'date_etablissement')
-    if (faits.dpeConso == null && conso != null) ajouter({ cle: 'P1.dpe_cons', geste: 'fiche', champ: 'dpe_cons', valeur: String(Math.round(conso)), texte: `DPE : consommation ${Math.round(conso)} kWh/m²/an`, source: source(dpe, 'conso_ep'), lectureId: dpe.lecture.id ?? null })
-    if (faits.dpeGes == null && ges != null) ajouter({ cle: 'P1.dpe_ges', geste: 'fiche', champ: 'dpe_ges', valeur: String(Math.round(ges)), texte: `DPE : émissions ${Math.round(ges)} kg CO₂/m²/an`, source: source(dpe, 'emissions'), lectureId: dpe.lecture.id ?? null })
-    if (!lireDateIso(faits.dpeDate) && date) ajouter({ cle: 'P1.dpe_date', geste: 'fiche', champ: 'dpe_date', valeur: date, texte: `DPE : établi le ${jjmmaaaa(date)}`, source: source(dpe, 'date_etablissement'), lectureId: dpe.lecture.id ?? null })
-  }
-  const erp = plusRecent(lus, 'diag.erp', 'date_etablissement')
-  const dateErp = erp ? dateLue(erp.lecture.valeurs, 'date_etablissement') : null
-  if (erp && dateErp && !lireDateIso(faits.erpDate)) {
-    ajouter({ cle: 'P1.diag_risques_nat_tech_date', geste: 'fiche', champ: 'diag_risques_nat_tech_date', valeur: dateErp, texte: `État des risques : établi le ${jjmmaaaa(dateErp)}`, source: source(erp, 'date_etablissement'), lectureId: erp.lecture.id ?? null })
-  }
-
-  // P2 -- la copropriété : le nombre de lots (fiche synthétique) et la quote-part annuelle (appel de fonds, arrêté).
-  // Seulement sur un bien MARQUÉ copropriété : jamais rien qui ferait passer la case à OUI.
-  if (faits.copropriete === true) {
-    const carnet = lus.find((x) => x.lecture.typeCode === 'copro.carnet' && texteLu(x.lecture.valeurs, 'sous_type') === 'fiche_synthetique')
-    const total = carnet ? nombreLu(carnet.lecture.valeurs, 'nb_lots_total') : null
-    if (carnet && faits.nbLots == null && total != null) ajouter({ cle: 'P2.copropriete_nb_lot', geste: 'fiche', champ: 'copropriete_nb_lot', valeur: String(Math.round(total)), texte: `Copropriété : ${Math.round(total)} lots`, source: source(carnet, 'nb_lots_total'), lectureId: carnet.lecture.id ?? null })
-    const appels = lus.filter((x) => x.lecture.typeCode === 'copro.appel_fonds' || x.lecture.typeCode === 'copro.arrete_charges')
-    const appel = appels.length ? appels.reduce((a, b) => ((lireDateIso(dateLue(b.lecture.valeurs, 'date_document')) ?? 0) > (lireDateIso(dateLue(a.lecture.valeurs, 'date_document')) ?? 0) ? b : a)) : null
-    if (appel && faits.quotePart == null) {
-      const v = appel.lecture.valeurs
-      const cle = nombreLu(v, 'budget_annuel_lot') != null ? 'budget_annuel_lot' : nombreLu(v, 'charges_courantes_lot') != null ? 'charges_courantes_lot' : 'provision_budget'
-      const annuel = nombreLu(v, 'budget_annuel_lot') ?? nombreLu(v, 'charges_courantes_lot') ?? annualiser(nombreLu(v, 'provision_budget'), texteLu(v, 'periode'))
-      if (annuel != null) ajouter({ cle: 'P2.copropriete_quote_part', geste: 'fiche', champ: 'copropriete_quote_part', valeur: nombreTexte(annuel), texte: `Copropriété : charges du lot ${nombreTexte(annuel).replace('.', ',')} € par an`, source: source(appel, cle), lectureId: appel.lecture.id ?? null })
-    }
-  }
+  // P1 (DPE, date de l'état des risques) et P2 (copropriété : nombre de lots, charges annuelles) -- RETIRÉS le 18/11 (lot 3) :
+  // la fiche du bien face à ses documents passe par la fenêtre « Ce que dit le DPE… » (gedBilanFiche.ts), qui propose la case
+  // VIDE à ajouter ET la case remplie qui diffère à corriger -- un seul chemin par case, jamais deux.
 
   // P3 -- qui paie les honoraires, au REGISTRE des mandats, si sa case est VIDE (lue et vide : `null` ; pas lue :
   // `undefined` -> rien). L'avenant fait foi sur le mandat ; « les deux » ne se remplit pas (un seul payeur au registre).
