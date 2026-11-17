@@ -52,5 +52,19 @@ voir(/IA_COTE_VIGNETTE = 512/.test(lib), 'vignettes de 512 px')
 voir(!/createUploadDocumentToHektorJob|gedClasser\(/.test(depot.slice(depot.indexOf('async function lireParIa'), depot.indexOf('async function ligneNeuve'))), 'l\'IA n\'envoie rien et n\'enregistre rien : elle propose')
 voir(/typeProposePar: ligne\.typePropose \? ligne\.typeProposePar : null/.test(depot), 'le classement retient qui avait proposé (le nom ou l\'IA)')
 
+console.log('⑤ « Chercher les pièces » (17/11) : sur chaque PDF, à la demande')
+const prepD = lib.slice(lib.indexOf('export async function preparerDecoupage'), lib.indexOf('export async function classerParIa'))
+voir(prepD.indexOf('if (nomDitRib(file.name))') >= 0 && prepD.indexOf('texteDitRib(textes.join') < prepD.indexOf('page.render(') && prepD.indexOf('texteDitRib(textes.join') > 0,
+  'découpage : la garde RIB (nom puis TOUT le texte) passe AVANT toute vignette')
+voir(/DECOUPAGE_PAGES_MAX = 40/.test(lib) && /if \(nbPages < 2\) return \{ envoyable: false/.test(prepD) && /IA_COTE_VIGNETTE \//.test(prepD), 'découpage : 40 pages au plus, en vignettes basse définition ; un PDF d\'une page ne part pas')
+voir(/\.\.\.\(decoupage \? \{ decoupage: true \} : \{\}\)/.test(lib) && /decoupage = false\): Promise<ResultatIa>/.test(lib), 'l\'appel ne demande le découpage que si on le dit (le classement d\'aujourd\'hui ne change pas)')
+const chercher = depot.slice(depot.indexOf('async function chercherPieces'), depot.indexOf('// Un PDF qui réunit plusieurs pièces'))
+voir(chercher.length > 200 && /classerParIa\(prep, ligne\.file\.name, dossier\.hektor_annonce_id, true\)/.test(chercher) && !/createUploadDocumentToHektorJob|gedClasser\(|lireValeursParIa|preparerLecture/.test(chercher),
+  'TÉMOIN : chercher les pièces n\'envoie rien chez Hektor, n\'enregistre rien, ne lit aucune valeur')
+voir(/ia: EtatIa = \{ etat: 'fait', r: ancien \? \{ \.\.\.ancien, pieces: r\.pieces \} : r \}/.test(chercher), 'le résultat rejoint l\'avis de l\'IA : seules les pièces changent (le bouton « Séparer » d\'aujourd\'hui)')
+const lien = depot.slice(depot.indexOf('function lienDecoupage'), depot.indexOf('function avisTexte'))
+voir(/if \(!lectureIa \|\| l\.file\.type !== 'application\/pdf'\) return null/.test(lien) && /if \(nb === 1\) return null/.test(lien) && /l\.ia\.r\.pieces\.length >= 2\) return null/.test(lien) && !/12/.test(lien),
+  'le lien : sur CHAQUE PDF (pas seulement au-delà de 12 pages), jamais sur un PDF d\'une page ni quand « Séparer » est déjà là ; interrupteur éteint : rien')
+
 console.log(ko ? `\n${ko} ROUGE, ${ok} VERT` : `\nTOUT EST VERT (${ok})`)
 process.exit(ko ? 1 : 0)

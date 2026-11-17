@@ -2434,3 +2434,25 @@ plafond du type). Essais : `test_ged_lire` 83 -> 87 (18 images partent ; 19 -> 4
 (TÉMOIN INVERSE : écran à 16, serveur à 18 -> deux rouges). Les 12 essais GED et les 5 du serveur verts, build vert.
 ⚠ Coût attendu ≈ 0,005 $ par compromis scanné (18 images ≈ 45 000 jetons), requête ≈ 7 Mo (18 images de 1 600 px).
 ⚠ Pas vu en réel : il faudra un compromis SCANNÉ fictif de ~28 pages (prix p. 8, prêt p. 13) déposé sur un bien d'essai.
+
+### 12.25 « Chercher les pièces » -- le découpage d'un PDF, à la demande (17/11)
+Question de Frédéric : « nous avions prévu une fonctionnalité qui permettait de découper des documents, par exemple un PDF
+de 25 pages avec carte d'identité, taxe foncière… ». Elle existait (morceau 4, « Séparer en N fichiers »), éprouvée sur
+un scan de 4 pages ; mais le classement ne voit, au-delà de 12 pages, que les pages 1-8 et les 4 dernières -> une pièce
+au milieu d'un gros PDF passait inaperçue. Décisions de Frédéric : **à la demande, pas systématique** (« il faut que ce soit
+une fonction pas systématique »), et **le lien sur CHAQUE PDF**, pas seulement au-delà de 12 pages.
+**✅ ÉCRIT (17/11) — rien poussé** :
+- **Écran** : sur la ligne de chaque PDF (pas un PDF d'une page ; pas quand « Séparer » est déjà proposé ; derrière
+  `ged_lecture_ia`), le lien « Chercher les pièces dans les N pages ». Au clic (`preparerDecoupage`) : la garde RIB lit
+  tout le texte d'abord ; puis TOUTES les pages en vignettes basse définition (40 au plus) et les 300 premiers caractères
+  de chaque page. Le résultat rejoint l'avis de l'IA de la ligne -- seules les pièces changent : plusieurs pièces -> le
+  « Séparer en N fichiers » d'aujourd'hui ; une seule -> « Une seule pièce trouvée dans les N pages ». Rien n'est envoyé
+  chez Hektor, rien n'est enregistré, aucune valeur n'est lue.
+- **Serveur** (`openai_ged_classement_service.py`, `routers/ged.py`) : le classement accepte `decoupage: true` -> 40 pages
+  au plus (12 sinon, inchangé), 16 000 caractères de texte, une consigne en plus (« toutes les pages, sans trou ni
+  chevauchement ; les annexes agrafées sont des pièces à part ») ; le journal des agents note `decoupage`.
+Essais : `test_ged_classer` 28 -> 34 (25 pages passent en découpage ; SANS lui, refusées comme avant ; 41 refusées ;
+le classement ordinaire inchangé ; un IBAN refusé avant tout envoi) ; `test_ged_classement_ia` 25 -> 31 (TÉMOIN INVERSE :
+sans la règle « pas sur un PDF d'une page », il rougit). Les 12 essais GED et le serveur verts, build vert.
+⚠ Coût : 40 vignettes basse définition ≈ de l'ordre du dixième de centime par clic. ⚠ Pas vu en réel : un faux dossier
+SPECIMEN de ~25 pages (pièce d'identité, taxe, compromis) à déposer sur 63147.

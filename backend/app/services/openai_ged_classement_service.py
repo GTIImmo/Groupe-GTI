@@ -33,6 +33,17 @@ INTERRUPTEUR_PERSONNES = "ged_lecture_personnes"  # morceau 9 : lire les pièces
 MAX_PAGES = 12
 MAX_VIGNETTE_OCTETS = 400 * 1024
 MAX_TEXTE_CARACTERES = 6000
+# « Chercher les pièces » (17/11, choix de Frédéric : un lien sur CHAQUE PDF, à la demande) : TOUTES les pages en
+# vignettes (40 au plus) et le début du texte de CHAQUE page, pour dire où commence chaque pièce. Rien d'autre ne change.
+MAX_PAGES_DECOUPAGE = 40
+MAX_TEXTE_DECOUPAGE = 16000
+_CONSIGNE_DECOUPAGE = (
+    "\nICI, ON TE DEMANDE SURTOUT LES PIECES : l'utilisateur pense que ce fichier en reunit peut-etre plusieurs. Tu vois "
+    "TOUTES ses pages et le debut du texte de chacune (« --- page N --- »). Cherche ou commence chaque document distinct "
+    "(un titre, un en-tete, un formulaire nouveau, une premiere page) et remplis « pieces » avec TOUTES les pages, de la "
+    "premiere a la derniere, sans trou ni chevauchement. Des annexes AGRAFEES a un compromis ou a un mandat (diagnostics, "
+    "plans, titre) sont des pieces a part. S'il n'y a qu'un document, liste vide."
+)
 PLAFOND_JOUR_USD = 2.0
 _TYPES_TTL_SECONDES = 300.0
 
@@ -172,8 +183,9 @@ class OpenAIGedClassementService:
     def classer(self, payload: dict[str, Any]) -> dict[str, Any]:
         if not self.settings.openai_api_key:
             raise HTTPException(status_code=503, detail="OPENAI_API_KEY non configure sur le backend")
+        decoupage = payload.get("decoupage") is True
         nom = str(payload.get("nomFichier") or "").strip()
-        texte = str(payload.get("texte") or "")[:MAX_TEXTE_CARACTERES]
+        texte = str(payload.get("texte") or "")[:MAX_TEXTE_DECOUPAGE if decoupage else MAX_TEXTE_CARACTERES]
         pages = payload.get("pages") or []
         nb_pages = int(payload.get("nbPages") or len(pages) or 0)
 
@@ -182,8 +194,9 @@ class OpenAIGedClassementService:
             raise HTTPException(status_code=422, detail="Releve d'identite bancaire : jamais envoye a l'IA")
         if not pages and not texte.strip():
             raise HTTPException(status_code=400, detail="Rien a lire : ni page ni texte")
-        if len(pages) > MAX_PAGES:
-            raise HTTPException(status_code=413, detail=f"{MAX_PAGES} pages au plus")
+        plafond = MAX_PAGES_DECOUPAGE if decoupage else MAX_PAGES
+        if len(pages) > plafond:
+            raise HTTPException(status_code=413, detail=f"{plafond} pages au plus")
 
         contenu: list[dict[str, Any]] = []
         for page in pages:
@@ -200,10 +213,10 @@ class OpenAIGedClassementService:
         spec = agent_registry.load_spec(self.settings, AGENT_KEY)
         model = spec.model or "gpt-6-luna"
         liste = "\n".join(f"- {t['code']} : {t.get('libelle') or ''}" for t in types)
-        consigne = agent_registry.render(spec.instructions, {"types": liste})
+        consigne = agent_registry.render(spec.instructions, {"types": liste}) + (_CONSIGNE_DECOUPAGE if decoupage else "")
         entete = f"Nom du fichier : {nom or '(sans nom)'}\nNombre de pages : {nb_pages}"
         if texte.strip():
-            entete += f"\nExtrait du texte :\n{texte}"
+            entete += f"\n{'Debut du texte de chaque page' if decoupage else 'Extrait du texte'} :\n{texte}"
         requete: dict[str, Any] = {
             "model": model,
             "store": False,

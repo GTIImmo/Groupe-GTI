@@ -145,7 +145,46 @@ const backendApiBaseUrl = (
   import.meta.env.VITE_BACKEND_API_URL ?? (import.meta.env.DEV ? 'http://127.0.0.1:8010' : '')
 ).trim().replace(/\/+$/, '')
 
-export async function classerParIa(prep: Extract<Preparation, { envoyable: true }>, nomFichier: string, hektorAnnonceId: string | number | null): Promise<ResultatIa> {
+// « Chercher les pièces » (17/11, choix de Frédéric : un lien sur CHAQUE PDF, à la demande) : TOUTES les pages en
+// vignettes basse définition (40 au plus) et le DÉBUT du texte de chaque page (300 caractères), pour dire où commence
+// chaque pièce. ⛔ La garde RIB lit tout le texte d'abord, comme au classement. Aucune valeur n'est lue ici.
+export const DECOUPAGE_PAGES_MAX = 40
+const DECOUPAGE_DEBUT_PAGE = 300
+export async function preparerDecoupage(file: File): Promise<Preparation> {
+  if (nomDitRib(file.name)) return { envoyable: false, raison: 'RIB : jamais envoyé à l\'IA.', rib: true }
+  if (file.type !== 'application/pdf') return { envoyable: false, raison: 'Seul un PDF se découpe.', rib: false }
+  const pdfjs = await chargerPdfjs()
+  const doc = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise
+  try {
+    const nbPages = doc.numPages
+    if (nbPages < 2) return { envoyable: false, raison: 'Une seule page : rien à découper.', rib: false }
+    const textes: string[] = []
+    for (let n = 1; n <= Math.min(nbPages, IA_PAGES_TEXTE_GARDE); n += 1) {
+      const contenu = await (await doc.getPage(n)).getTextContent()
+      textes.push(contenu.items.map((it) => ('str' in it ? it.str : '')).join(' ').replace(/\s+/g, ' ').trim())
+    }
+    if (texteDitRib(textes.join('\n'))) return { envoyable: false, raison: 'Un IBAN est dans le texte : jamais envoyé à l\'IA.', rib: true }
+    const pages: Array<{ numero: number; image: string }> = []
+    for (let n = 1; n <= Math.min(nbPages, DECOUPAGE_PAGES_MAX); n += 1) {
+      const page = await doc.getPage(n)
+      const base = page.getViewport({ scale: 1 })
+      const vue = page.getViewport({ scale: IA_COTE_VIGNETTE / Math.max(base.width, base.height) })
+      const canvas = document.createElement('canvas')
+      canvas.width = Math.max(1, Math.round(vue.width))
+      canvas.height = Math.max(1, Math.round(vue.height))
+      const ctx = canvas.getContext('2d')
+      if (!ctx) continue
+      await page.render({ canvasContext: ctx, viewport: vue }).promise
+      pages.push({ numero: n, image: canvasEnJpeg(canvas) })
+    }
+    const texte = textes.slice(0, DECOUPAGE_PAGES_MAX).map((t, i) => (t ? `--- page ${i + 1} ---\n${t.slice(0, DECOUPAGE_DEBUT_PAGE)}` : '')).filter(Boolean).join('\n')
+    return { envoyable: true, nbPages, pages, texte }
+  } finally {
+    void doc.destroy()
+  }
+}
+
+export async function classerParIa(prep: Extract<Preparation, { envoyable: true }>, nomFichier: string, hektorAnnonceId: string | number | null, decoupage = false): Promise<ResultatIa> {
   if (!backendApiBaseUrl) throw new Error('Serveur non configuré')
   if (!hasSupabaseEnv || !supabase) throw new Error('Session absente')
   const jeton = (await supabase.auth.getSession()).data.session?.access_token
@@ -159,6 +198,7 @@ export async function classerParIa(prep: Extract<Preparation, { envoyable: true 
       nbPages: prep.nbPages,
       pages: prep.pages,
       texte: prep.texte || null,
+      ...(decoupage ? { decoupage: true } : {}),
     }),
   })
   const corps = await reponse.json().catch(() => ({}))

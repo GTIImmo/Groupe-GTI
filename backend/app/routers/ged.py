@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from ..auth import get_authenticated_user, require_request_user
-from ..services.openai_ged_classement_service import AGENT_KEY, INTERRUPTEUR_PERSONNES, MAX_PAGES, OpenAIGedClassementService
+from ..services.openai_ged_classement_service import AGENT_KEY, INTERRUPTEUR_PERSONNES, MAX_PAGES_DECOUPAGE, OpenAIGedClassementService
 from ..services.openai_ged_lecture_service import AGENT_KEY as AGENT_LECTURE, FICHES_PERSONNES, MAX_PAGES_COMPROMIS_SCAN, OpenAIGedLectureService
 from ..services.supabase_admin import SupabaseAdminService
 from ..settings import Settings, get_settings
@@ -25,8 +25,10 @@ class GedClasserPayload(BaseModel):
     nomFichier: str | None = None
     hektorAnnonceId: str | None = None
     nbPages: int | None = Field(default=None, ge=0)
-    pages: list[GedPage] = Field(default_factory=list, max_length=MAX_PAGES)
+    # « Chercher les pièces » (17/11) : jusqu'à 40 pages ; le service redit le plafond (12 sans découpage)
+    pages: list[GedPage] = Field(default_factory=list, max_length=MAX_PAGES_DECOUPAGE)
     texte: str | None = None
+    decoupage: bool = False
 
 
 class GedLirePayload(BaseModel):
@@ -109,6 +111,7 @@ def ged_classer(
             "pieces": [p.get("typeCode") for p in resultat.get("pieces") or []],
             "sensible": resultat.get("sensible"),
             "pages_envoyees": len(payload.pages),
+            "decoupage": payload.decoupage,
             "nb_pages": payload.nbPages,
             "texte_caracteres": len(payload.texte or ""),
         },
