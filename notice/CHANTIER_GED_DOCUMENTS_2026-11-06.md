@@ -2702,4 +2702,8 @@ acte de vente (date en arrière-plan, prix par la modale visible), premier essai
 Essais : `test_ged_bilan` **66 VERT** (14 neufs, section ⑥) ; les 13 fichiers GED verts ; build vert.
 ⚠ **Pas vu à l'écran, pas éprouvé en réel** : une seule offre lue en base (62774, SPECIMEN, bien hors annonces), aucune
 sur une offre PROPOSÉE vivante. L'essai réel demande une offre proposée et sa pièce lue -- à choisir par Frédéric.
-⏳ **Reste** : sa décision sur l'acte (créer la vente depuis l'attestation ?) ; son accord sur « l'offre visible » ; pousser.
+✅ **DÉCISIONS DE FRÉDÉRIC (17/11)** : « 1. Oui 2 laisse tomber 3. Visible ».
+- **POUSSÉ** (`869e260`, seul commit de la liste, relue juste avant).
+- ⛔ **L'ACTE DE VENTE : « laisse tomber »** -- ni bilan, ni « créer la vente depuis l'attestation ». **Ne pas relancer.**
+- ⛔ **L'OFFRE PART PAR SA MODALE VISIBLE** -- jamais en arrière-plan (tranché). Ne pas l'ajouter à `ENVOI_DIRECT`.
+⏳ **Reste** : l'essai réel, sur une offre PROPOSÉE d'un bien vivant avec sa pièce lue (à choisir par Frédéric).
