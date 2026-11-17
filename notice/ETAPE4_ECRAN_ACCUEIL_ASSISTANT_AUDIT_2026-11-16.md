@@ -1449,3 +1449,16 @@ la file des documents de ce bien ~7 minutes (un travail à la fois par annonce) 
 du worker). La course théorique « réclamation avant notre ligne » (§51 B) est la même qu'à l'écran.
 **Épreuve proposée** : sans valider d'abord ; puis un essai réel sur le bien d'essai 63330 (une photo de test, retirée
 ensuite par la carte « masquer » ou à l'écran).
+
+## 55. La carte AJOUTER UNE PHOTO : CODÉE (17/11, sur « Vas-y ») — pas encore en ligne
+
+`ajouter_photo` (tous les rôles) : `fichiers` = les numéros du trombone (« fichier: » toléré), 1 à 20, RELUS au coffre
+dans SON dossier, JPEG / PNG seulement (un PDF, un WebP refusés en les nommant) ; bien VIVANT avec négociateur. Au clic,
+pour CHAQUE photo, l'ordre de l'écran : le travail `upload_hektor_photo` (jeton ; `visible: true`, la charge de l'écran +
+`source: assistant`) -> `fichiers_service.copier` (copie AU COFFRE du trombone vers `temp/photos/<travail>/`, source forcée
+sous `temp/assistant/`) -> `app_console_creer_photo_optimistic` (jeton, sans faire échouer). Copie ratée : SON travail soldé
+par `app_console_fail_own_pending_job`, les autres partent ; toutes ratées : refus. Le résultat dit « envoi en cours ».
+Consigne : les photos jointes passent par `proposer_ajouter_photo` ; document et pièces jointes « bientôt ».
+**Contrôles** : `test_assistant_gestes` 330 verts (§18 : 12 nouveaux, dont le témoin « fichier retiré entre la carte et le
+clic -> rien posé ») ; témoin inverse : la photo envoyée masquée -> ROUGE, remise -> 330 ; `test_assistant_fichiers` 17
+(la copie refuse une source hors du trombone) ; ia 62, lecteur 73 ; `npm run build` vert. 40 gestes.

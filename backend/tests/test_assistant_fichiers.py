@@ -129,4 +129,17 @@ voir(texte.startswith("\n\n[Fichiers joints par la personne") and f"fichier:{'a'
      and "JAMAIS leur contenu" in texte and af.decrire_pour_le_modele([]) == "",
      "la marque que l'écran sait retirer (separerFichiersJoints) ; rien si aucun fichier")
 
+print("6) la copie au coffre (carte « ajouter une photo ») : seulement DEPUIS le trombone")
+appels.clear()
+voir(refuse(lambda: af.copier(S, "annonces/62963/documents/x/mandat.pdf", "temp/photos/j/x.pdf"), "pas un fichier joint")
+     and refuse(lambda: af.copier(S, f"temp/assistant/{UID}/../../annonces/x.pdf", "temp/photos/j/x.pdf"), "pas un fichier joint")
+     and not appels,
+     "⛔ une source hors de temp/assistant/ (ou qui en remonte) : refusée, le coffre n'est même pas appelé")
+requests.post = lambda url, **kw: (appels.append({"url": url, "corps": kw.get("json")}) or Reponse({"Key": "ok"}))
+af.copier(S, f"temp/assistant/{UID}/{'a' * 32}/facade.jpg", "temp/photos/j1/facade.jpg")
+voir(appels[-1]["url"].endswith("/storage/v1/object/copy") and appels[-1]["corps"] == {
+        "bucketId": "hektor-console-documents", "sourceKey": f"temp/assistant/{UID}/{'a' * 32}/facade.jpg",
+        "destinationKey": "temp/photos/j1/facade.jpg"},
+     "la copie : du trombone vers la place du travail, dans le même coffre")
+
 print(f"\n{ok} contrôles verts")

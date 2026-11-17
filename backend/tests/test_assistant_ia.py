@@ -176,7 +176,7 @@ TOUTES = ["qui_suis_je", "decrire", "chercher", "compter", "fiches_biens", "note
           "proposer_relance_signature", "proposer_annulation_signature",  # la signature Youtrust en cours, 16/11
           "proposer_rattacher_mandant", "proposer_retirer_mandant", "proposer_adresse_contact",  # cartes directes §35, 16/11
           "proposer_ajouter_conjoint", "proposer_desarchiver_annonce",  # (réaffecter, archiver, Estimation -> Actif : direction)
-          "proposer_couverture_photo", "proposer_visibilite_photo",
+          "proposer_ajouter_photo", "proposer_couverture_photo", "proposer_visibilite_photo",
           "proposer_deplacer_photo", "proposer_portail",  # activer un brouillon : retiré le 15/11
           "proposer_creer_contact", "proposer_ajouter_recherche", "proposer_modifier_recherche",  # lot 2c, 17/11
           "lire_mon_agenda", "apercu_rapprochement", "lire_photos_bien", "lire_portails_bien", "rediger_annonce"]

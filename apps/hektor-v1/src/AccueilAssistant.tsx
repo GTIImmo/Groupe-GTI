@@ -83,6 +83,7 @@ const GESTES: Record<string, { titre: string; fait: (r: Record<string, unknown>)
   activer_estimation: { titre: 'Statut du bien', fait: () => 'Passage en Actif demandé.', suite: 'Hektor rend le bien diffusable en même temps.' },
   changer_prix: { titre: 'Prix du bien', fait: () => 'Prix changé.', suite: 'Recopié chez Hektor environ 10 minutes après.' },
   pilotage: { titre: 'Pilotage', fait: () => 'Confirmé par Hektor.', suite: 'Écrit chez Hektor et relu à l’instant.' },
+  ajouter_photo: { titre: 'Photos', fait: (r) => (Array.isArray(r.echecs) && r.echecs.length ? `Envoi en cours (${r.echecs.length} non partie${r.echecs.length > 1 ? 's' : ''}).` : 'Envoi chez Hektor en cours.'), suite: 'Une photo après l’autre ; sur la vitrine après le traitement de nuit.' },
   couverture_photo: { titre: 'Photos', fait: () => 'Couverture changée.' },
   visibilite_photo: { titre: 'Photos', fait: (r) => (r.visible === true ? 'Photo affichée.' : r.visible === false ? 'Photo masquée.' : 'Photo mise à jour.') },
   deplacer_photo: { titre: 'Photos', fait: () => 'Photo déplacée.' },

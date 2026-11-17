@@ -12,6 +12,7 @@ import requests
 from fastapi import HTTPException
 
 from ..auth import AuthenticatedUser
+from . import assistant_fichiers as fichiers_service
 from .assistant_contexte import TOUS_LES_ROLES, ContexteAssistant, Fonction, LectureRefusee, Refus
 from .email_tracking import EmailTrackingService
 from .google_calendar_event_link_service import GoogleCalendarEventLinkService
@@ -1749,6 +1750,87 @@ def executer_pilotage(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[str, An
             "diffusable_vu": vue_diffusable, "etat_reporte": reporte}
 
 
+# ── 17/11 (note étape 4 §54-55) : AJOUTER UNE PHOTO à une annonce, avec des fichiers du TROMBONE ──────────────────
+# = createUploadHektorPhotoJob de l'écran (lib/api.ts ~9156), à l'identique, une photo = un travail : ① le travail
+# `upload_hektor_photo` (jeton de la personne : la règle d'insertion juge les droits) ; ② le fichier à sa place
+# `temp/photos/<travail>/` — COPIÉ au coffre par le serveur depuis le trombone (pas renvoyé de l'ordinateur) ; un échec
+# solde le travail (`app_console_fail_own_pending_job`, comme l'écran) ; ③ notre ligne (`app_console_creer_photo_optimistic`),
+# qui ne fait jamais échouer le dépôt. Les règles : §51 B.
+# ⛔ Toujours VISIBLE (une photo voulue masquée peut fuir sur la vitrine : défaut §51 E.2) ; JPEG / PNG seulement (le WebP
+#   n'a jamais été envoyé à Hektor) ; un bien VIVANT avec un négociateur (le worker refuse archive et brouillon).
+TYPES_PHOTO_CARTE = {"image/jpeg", "image/png"}
+MAX_PHOTOS_CARTE = 20  # = le plafond d'une sélection à l'écran
+
+
+def _fichiers_joints(ctx: ContexteAssistant, texte: Any) -> list[dict[str, Any]]:
+    numeros = [re.sub(r"^fichier:", "", x.strip()) for x in re.split(r"[|,;\s]+", str(texte or "")) if x.strip()]
+    if not numeros:
+        raise Refus("Donne le numéro des fichiers joints (fichier:… dans la question).")
+    if len(dict.fromkeys(numeros)) > MAX_PHOTOS_CARTE:
+        raise Refus(f"{MAX_PHOTOS_CARTE} photos au plus par carte.")
+    joints = []
+    for numero in dict.fromkeys(numeros):
+        try:
+            joints.append(fichiers_service.decrire(ctx.settings, ctx.user_id, numero))  # relu au coffre, SON dossier
+        except fichiers_service.RefusFichier as exc:
+            raise Refus(str(exc)) from None
+    return joints
+
+
+def _controler_photo(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    bien = _bien_vivant(ctx, p.get("hektor_annonce_id"))
+    _exiger_negociateur(ctx, bien)
+    photos = _fichiers_joints(ctx, p.get("fichiers"))
+    autres = [f["nom"] for f in photos if f["type"] not in TYPES_PHOTO_CARTE]
+    if autres:
+        raise Refus("Pas une photo JPEG ou PNG : " + ", ".join(autres) + " (les autres fichiers seront des documents).")
+    return bien, photos
+
+
+def preparer_ajouter_photo(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    bien, photos = _controler_photo(ctx, p)
+    n = len(photos)
+    resume = (f"Ajouter {n} photo{'s' if n > 1 else ''} à l'annonce {bien['hektor_annonce_id']} « {bien.get('titre_bien') or ''} » : "
+              + ", ".join(f"« {f['nom']} »" for f in photos)
+              + f". VISIBLE{'S' if n > 1 else ''}, en dernier dans la galerie ; envoyée{'s' if n > 1 else ''} chez Hektor par le "
+              "worker, une après l'autre (15 à 60 s chacune) ; sur la vitrine après le traitement de nuit. Masquer, mettre en "
+              "couverture ou déplacer : les cartes photo, une fois arrivée" + ("s" if n > 1 else ""))
+    return resume, {"hektor_annonce_id": int(bien["hektor_annonce_id"]), "fichiers": [f["id"] for f in photos]}
+
+
+def executer_ajouter_photo(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[str, Any]:
+    bien, photos = _controler_photo(ctx, {**p, "fichiers": "|".join(p.get("fichiers") or [])})  # re-vérifié AU CLIC
+    travaux: list[str] = []
+    echecs: list[str] = []
+    for f in photos:
+        travail = str(uuid.uuid4())
+        chemin = f"temp/photos/{travail}/{f['nom']}"
+        _ecrire(ctx, "POST", "app_console_job", [{
+            "id": travail, "job_type": "upload_hektor_photo", "app_dossier_id": bien["app_dossier_id"],
+            "hektor_annonce_id": str(bien["hektor_annonce_id"]), "priority": 18, "requested_by": ctx.user_id,
+            "payload_json": {"visible": True, "original_filename": f["nom"], "source_filename": f["nom"], "mime_type": f["type"],
+                             "file_size": f["taille"], "temp_storage_bucket": fichiers_service.CONSOLE_DOCS_BUCKET,
+                             "temp_storage_path": chemin, "source": "assistant"}}])
+        try:
+            fichiers_service.copier(ctx.settings, f["chemin"], chemin)
+        except fichiers_service.RefusFichier as exc:
+            _ecrire(ctx, "POST", "rpc/app_console_fail_own_pending_job", {"target_job_id": travail, "failure_message": str(exc)})
+            echecs.append(f"{f['nom']} ({exc})")
+            continue
+        try:  # comme l'écran : notre ligne ne fait jamais échouer le dépôt (le worker prend alors l'ancien chemin)
+            _ecrire(ctx, "POST", "rpc/app_console_creer_photo_optimistic", {
+                "target_job_id": travail, "target_app_dossier_id": bien["app_dossier_id"],
+                "target_hektor_annonce_id": str(bien["hektor_annonce_id"]), "nom_du_fichier": f["nom"], "legende": None,
+                "taille_octets": f["taille"]})
+        except Refus:
+            pass
+        travaux.append(travail)
+    if not travaux:
+        raise Refus("Aucune photo n'a pu partir : " + " ; ".join(echecs))
+    return {"app_dossier_id": bien["app_dossier_id"], "travail": travaux[-1], "travaux": travaux, "echecs": echecs,
+            "envoi": "en cours"}
+
+
 # ── LOT 2c (17/11/2026) : créer un contact, ajouter une recherche, modifier une recherche ──
 # Note : notice/ETAPE3_AGENT_QUI_AGIT_AUDIT_2026-11-13.md §23-24. Les MÊMES fonctions de la base que l'écran :
 #   app_create_contact_optimistic (modale « Nouveau contact », App.tsx:43554 → api.ts:11774), qui contrôle l'appelant ;
@@ -3124,6 +3206,15 @@ GESTES: dict[str, Geste] = {g.nom: g for g in (
           DIRECTION,
           _schema({"hektor_annonce_id": {"type": "string", "description": "numéro d'annonce"}}),
           preparer_activer_estimation, executer_activer_estimation),
+    # 17/11 (§54-55) : ajouter des photos avec des fichiers du trombone
+    Geste("ajouter_photo",
+          "Prépare l'AJOUT de photos (JPEG ou PNG, 20 au plus) à une annonce vivante, avec des fichiers que la personne a "
+          "JOINTS à sa question (fichier:NUMERO). Toujours visibles, en dernier dans la galerie ; envoyées chez Hektor par le "
+          "worker. Masquer, couverture, déplacer : les autres cartes photo, ensuite.",
+          TOUS_LES_ROLES,
+          _schema({"hektor_annonce_id": {"type": "string", "description": "numéro d'annonce"},
+                   "fichiers": {"type": "string", "description": "numéros des fichiers joints séparés par |"}}),
+          preparer_ajouter_photo, executer_ajouter_photo),
     Geste("couverture_photo",
           "Prépare : mettre une photo VISIBLE en couverture d'une annonce (numéros donnés par lire_photos_bien).",
           TOUS_LES_ROLES,

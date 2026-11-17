@@ -1212,9 +1212,9 @@ print("  (au clic, la route refuse aussi un rôle hors de geste.roles : DIRECTIO
 voir(ges.GESTES["transaction"].roles == ges.DIRECTION, "la carte est déclarée DIRECTION : la route de validation la refuse à un négociateur")
 
 print("10) aucune fonction de geste ne fait autre chose que proposer")
-voir(all(f.nom.startswith("proposer_") for f in ges.FONCTIONS_GESTES) and len(ges.FONCTIONS_GESTES) == 39,
+voir(all(f.nom.startswith("proposer_") for f in ges.FONCTIONS_GESTES) and len(ges.FONCTIONS_GESTES) == 40,
      "37 gestes (le brouillon retiré le 15/11, 3 du lot 2c, 3 du lot 3c, 1 de la vague C, le numéro de mandat, la relance "
-     "et l'annulation d'une signature le 16/11, puis les 8 cartes directes de l'audit §35, le prix et le Pilotage pour la direction le 17/11), "
+     "et l'annulation d'une signature le 16/11, puis les 8 cartes directes de l'audit §35, le prix et le Pilotage pour la direction, et ajouter une photo le 17/11), "
      "tous « proposer_ » : le "
      "modèle n'a AUCUNE fonction qui exécute")
 voir(not any(f.nom.startswith("proposer_") for f in ges.FONCTIONS_LECTURE_LOT3), "les 2 lectures du lot 3 ne proposent rien")
@@ -1862,5 +1862,104 @@ voir(refuse(lambda: ges.executer_pilotage(nouveau_ctx("admin"), p_pi), "déjà d
      "TÉMOIN : validé et diffusable entre la carte et le clic (par l'écran) -> refusé, RIEN chez Hektor")
 etat14.pop("tete")
 etat14.pop("bien")
+
+print("18) AJOUTER UNE PHOTO avec des fichiers du TROMBONE (17/11, §54-55) : le chemin de l'écran, copie au coffre")
+JOINTS = {
+    "a" * 32: {"id": "a" * 32, "nom": "facade.jpg", "type": "image/jpeg", "libelle": "photo JPEG", "taille": 2400000,
+               "chemin": f"temp/assistant/{UID}/{'a' * 32}/facade.jpg"},
+    "b" * 32: {"id": "b" * 32, "nom": "jardin.png", "type": "image/png", "libelle": "image PNG", "taille": 900000,
+               "chemin": f"temp/assistant/{UID}/{'b' * 32}/jardin.png"},
+    "c" * 32: {"id": "c" * 32, "nom": "plan.pdf", "type": "application/pdf", "libelle": "PDF", "taille": 50000,
+               "chemin": f"temp/assistant/{UID}/{'c' * 32}/plan.pdf"},
+    "d" * 32: {"id": "d" * 32, "nom": "vue.webp", "type": "image/webp", "libelle": "image WebP", "taille": 50000,
+               "chemin": f"temp/assistant/{UID}/{'d' * 32}/vue.webp"},
+}
+etat18 = {"copie_refus": set()}
+copies18 = []
+
+
+def faux_decrire(settings, user_id, numero):
+    if user_id != UID or numero not in JOINTS or numero in etat18.get("disparus", set()):
+        raise ges.fichiers_service.RefusFichier("Ce fichier n'est pas (ou plus) dans la conversation : joins-le à nouveau.")
+    return dict(JOINTS[numero])
+
+
+def faux_copier(settings, source, destination):
+    if source in etat18["copie_refus"]:
+        raise ges.fichiers_service.RefusFichier("Le coffre n'a pas copié le fichier (500).")
+    copies18.append((source, destination))
+
+
+ges.fichiers_service.decrire = faux_decrire
+ges.fichiers_service.copier = faux_copier
+
+
+def faux18(methode, url, **kw):
+    if methode == "POST" and url.endswith("/rest/v1/app_console_job"):
+        appels14.append({"methode": "POST", "chemin": "app_console_job", "entetes": dict(kw.get("headers") or {}),
+                         "params": {}, "corps": kw.get("json")})
+        return Reponse(kw.get("json"))
+    return faux15(methode, url, **kw)
+
+
+requests.get = lambda url, **kw: faux18("GET", url, **kw)
+requests.post = lambda url, **kw: faux18("POST", url, **kw)
+requests.request = lambda methode, url, **kw: faux18(methode, url, **kw)
+PH = {"hektor_annonce_id": "63330", "fichiers": f"fichier:{'a' * 32} | {'b' * 32}"}
+voir("proposer_ajouter_photo" in [f.nom for f in cat.fonctions_du_role("commercial")],
+     "la carte est ouverte à tous les rôles (la base juge : le négociateur sur SES biens)")
+appels14.clear()
+resume_ph, p_ph = ges.preparer_ajouter_photo(nouveau_ctx(), PH)
+voir("Ajouter 2 photos à l'annonce 63330" in resume_ph and "« facade.jpg », « jardin.png »" in resume_ph
+     and "VISIBLES" in resume_ph and "en dernier" in resume_ph and "traitement de nuit" in resume_ph and not ecrits14()
+     and p_ph == {"hektor_annonce_id": 63330, "fichiers": ["a" * 32, "b" * 32]},
+     "la carte nomme les photos, dit visibles / en dernier / la nuit ; rien écrit ; « fichier: » toléré")
+voir(refuse(lambda: ges.preparer_ajouter_photo(nouveau_ctx(), {**PH, "fichiers": f"{'a' * 32}|{'c' * 32}"}), "plan.pdf")
+     and refuse(lambda: ges.preparer_ajouter_photo(nouveau_ctx(), {**PH, "fichiers": "d" * 32}), "vue.webp"),
+     "⛔ un PDF ou un WebP : refusés, en les nommant (JPEG / PNG seulement)")
+voir(refuse(lambda: ges.preparer_ajouter_photo(nouveau_ctx(), {**PH, "fichiers": "e" * 32}), "joins-le à nouveau")
+     and refuse(lambda: ges.preparer_ajouter_photo(nouveau_ctx(), {**PH, "fichiers": ""}), "numéro des fichiers"),
+     "⛔ un fichier qui n'est pas (ou plus) dans SON trombone, ou aucun : refusés")
+voir(refuse(lambda: ges.preparer_ajouter_photo(nouveau_ctx(), {**PH, "fichiers": "|".join(f"{i:032x}" for i in range(21))}), "20 photos"),
+     "⛔ plus de 20 photos : refusé (le plafond d'une sélection à l'écran)")
+etat14["tete"] = {"negociateur_email": "", "commercial_id": ""}
+voir(refuse(lambda: ges.preparer_ajouter_photo(nouveau_ctx(), PH), "pas de négociateur"),
+     "⛔ un bien sans négociateur : refusé (le worker ne saurait pas sous quelle identité écrire)")
+etat14.pop("tete")
+appels14.clear()
+copies18.clear()
+r_ph = ges.executer_ajouter_photo(nouveau_ctx(), p_ph)
+travaux = [a for a in appels14 if a["chemin"] == "app_console_job"]
+lignes = rpc14("app_console_creer_photo_optimistic")
+voir(len(travaux) == 2 and all(t["entetes"].get("Authorization") == f"Bearer {JETON}" for t in travaux)
+     and travaux[0]["corps"][0]["job_type"] == "upload_hektor_photo" and travaux[0]["corps"][0]["requested_by"] == UID
+     and travaux[0]["corps"][0]["payload_json"]["visible"] is True
+     and travaux[0]["corps"][0]["payload_json"]["temp_storage_path"] == f"temp/photos/{travaux[0]['corps'][0]['id']}/facade.jpg",
+     "au CLIC : UN travail par photo, avec le JETON (la règle d'insertion juge les droits), VISIBLE, à la place de l'écran")
+voir(copies18 == [(JOINTS["a" * 32]["chemin"], travaux[0]["corps"][0]["payload_json"]["temp_storage_path"]),
+                  (JOINTS["b" * 32]["chemin"], travaux[1]["corps"][0]["payload_json"]["temp_storage_path"])],
+     "le fichier est COPIÉ au coffre du trombone vers la place du travail (pas renvoyé de l'ordinateur)")
+ordre = [a["chemin"] for a in appels14 if a["methode"] == "POST"]
+voir(len(lignes) == 2 and lignes[0]["corps"]["target_job_id"] == travaux[0]["corps"][0]["id"] and lignes[0]["corps"]["legende"] is None
+     and ordre.index("app_console_job") < ordre.index("rpc/app_console_creer_photo_optimistic")
+     and r_ph["travaux"] == [t["corps"][0]["id"] for t in travaux] and r_ph["envoi"] == "en cours",
+     "l'ordre de l'écran : le travail, la copie, PUIS notre ligne ; le résultat dit « envoi en cours »")
+appels14.clear()
+copies18.clear()
+etat18["copie_refus"] = {JOINTS["a" * 32]["chemin"]}
+r_ph2 = ges.executer_ajouter_photo(nouveau_ctx(), p_ph)
+solde = rpc14("app_console_fail_own_pending_job")
+voir(len(solde) == 1 and r_ph2["echecs"] and "facade.jpg" in r_ph2["echecs"][0] and len(r_ph2["travaux"]) == 1
+     and len(rpc14("app_console_creer_photo_optimistic")) == 1,
+     "une copie ratée : SON travail est soldé en échec (comme l'écran), pas de ligne pour elle, l'autre photo part")
+etat18["copie_refus"] = {JOINTS["a" * 32]["chemin"], JOINTS["b" * 32]["chemin"]}
+voir(refuse(lambda: ges.executer_ajouter_photo(nouveau_ctx(), p_ph), "Aucune photo"),
+     "toutes les copies ratées : refusé, jamais un succès")
+etat18["copie_refus"] = set()
+appels14.clear()
+etat18["disparus"] = {"a" * 32}
+voir(refuse(lambda: ges.executer_ajouter_photo(nouveau_ctx(), p_ph), "joins-le à nouveau") and not ecrits14(),
+     "TÉMOIN : un fichier retiré du trombone entre la carte et le clic -> refusé, RIEN posé")
+etat18.pop("disparus")
 
 print(f"\n{ok} contrôles verts")

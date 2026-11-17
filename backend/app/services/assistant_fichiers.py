@@ -152,6 +152,17 @@ def decrire(settings: Settings, user_id: str, numero: str) -> dict[str, Any]:
             "chemin": f"{_dossier(user_id, numero)}/{objet['name']}"}
 
 
+def copier(settings: Settings, source: str, destination: str) -> None:
+    """Copie AU COFFRE (clé du serveur) un fichier du trombone vers la place d'un travail (ex. temp/photos/<travail>/) :
+    le fichier n'est pas renvoyé depuis l'ordinateur. La source doit être sous temp/assistant/ (jamais ailleurs)."""
+    if not str(source).startswith(f"{PREFIXE}/") or ".." in str(source) or ".." in str(destination):
+        raise RefusFichier("Copie refusée : la source n'est pas un fichier joint à l'assistant.")
+    r = requests.post(f"{settings.supabase_url}/storage/v1/object/copy", headers=_headers(settings),
+                      json={"bucketId": CONSOLE_DOCS_BUCKET, "sourceKey": source, "destinationKey": destination}, timeout=30)
+    if not r.ok:
+        raise RefusFichier(f"Le coffre n'a pas copié le fichier ({r.status_code}).")
+
+
 def decrire_pour_le_modele(fichiers: list[dict[str, Any]]) -> str:
     """Ce que le modèle voit des fichiers joints : nom, type, taille -- jamais le contenu."""
     if not fichiers:
