@@ -1581,3 +1581,16 @@ aujourd'hui quand on n'y passe pas de fichiers) ; le dépôt reste le geste de l
   - **NON validée.** Preuve : `notice/preuve_carte_deposer_documents_2026-11-17.jpg`.
 - ⛔ **Reste à éprouver** : le clic « Valider ». La fiche doit s'ouvrir sur Documents, avec la fenêtre GED garnie du
   fichier. Puis « Envoyer » dans la fenêtre, qui ÉCRIT chez Hektor : sur un bien que Frédéric choisit.
+- ✅ **LE CLIC « VALIDER » EST ÉPROUVÉ (17/11, sur « Oui »)** : carte validée sur 63506, sans cliquer « Envoyer ».
+  - La fiche s'est ouverte et la fenêtre **« Déposer des documents » s'est ouverte d'elle-même**, avec
+    « essai-document-assistant.pdf, 1 Ko, 1 page ». L'aperçu de la page était lu par le navigateur.
+  - **Tout l'agent GED a joué**, comme pour un glisser-déposer : « L'IA lit le type… », puis il a proposé le nom
+    « Document d'essai » et pensé « Notes, suivi interne (confiance basse) ». Le document reste « Privé ». Le bouton
+    « Rien à envoyer » reste grisé tant que le type n'est pas choisi.
+  - « Fermer » -> la garde de la GED répond « 1 document n'est pas parti » -> « Fermer sans envoyer ». **La fenêtre ne
+    s'est pas rouverte** : le dépôt a bien été retiré après la prise. Le bien affiche toujours 30 documents.
+  - **En base** : le seul travail sur 63506 est `refresh_console_data` `{light, reason: read_through_open}`, la lecture
+    légère de l'ouverture d'une fiche. **Aucun dépôt, rien chez Hektor.**
+  - Preuve : `notice/preuve_fenetre_ged_depuis_assistant_2026-11-17.jpg`.
+- ⛔ **Reste** : « Envoyer » dans la fenêtre, qui ÉCRIT chez Hektor. Ce n'est plus la carte de l'assistant, c'est le
+  chemin de la GED déjà en production. À faire seulement si Frédéric le veut, sur un bien qu'il choisit.
