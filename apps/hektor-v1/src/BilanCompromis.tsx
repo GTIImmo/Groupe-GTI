@@ -92,7 +92,9 @@ export default function BilanCompromis({
   const [accordOuvert, setAccordOuvert] = useState(false)
   const fenetre = useRef<HTMLElement | null>(null)
 
-  const decisionDe = (l: LigneBilan) => (rouvertes.has(l.cle) ? undefined : decisions?.get(`${l.cle}|${l.valeur}`))
+  // une décision « envoyé » dont l'envoi a ÉCHOUÉ (ou jamais parti) ne compte pas : la ligne redevient à trancher
+  // (essai réel du 17/11 : « Envoyé à Hektor le 17/11 » affiché sous « le dernier envoi a échoué »)
+  const decisionDe = (l: LigneBilan) => (rouvertes.has(l.cle) || l.attente === 'echec' || l.attente === 'jamais_envoye' ? undefined : decisions?.get(`${l.cle}|${l.valeur}`))
   const groupes = useMemo(() => {
     const vivantes = bilan.lignes.filter((l) => l.etat !== 'accord')
     return {

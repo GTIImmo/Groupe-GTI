@@ -143,6 +143,8 @@ voir(/if \(l\.origine === 'saisie_app'\) \{ enAttente\[champ\] = 'jamais_envoye'
   '⛔ la valeur de la transaction est celle de HEKTOR : carnet seul ou dernier envoi RATÉ -> vide ; en route -> la valeur envoyée')
 const rate = bilanCompromis([doc(lu18849)], [reg({ sequestre: null, enAttente: { sequestre: 'echec' } })], CATALOGUE)
 voir(L(rate, 'B.sequestre').etat === 'ajouter' && /a échoué/.test(L(rate, 'B.sequestre').note), 'essai du 17/11 : un envoi raté se DIT et la valeur se propose de nouveau')
+voir(/rouvertes\.has\(l\.cle\) \|\| l\.attente === 'echec' \|\| l\.attente === 'jamais_envoye' \? undefined/.test(fen),
+  'essai réel du 17/11 : une décision « envoyé » dont l\'envoi a ÉCHOUÉ ne range pas la ligne dans « Déjà tranché »')
 voir(/l\.etat === 'trancher' && !decisions\?\.has\(`\$\{l\.cle\}\|\$\{l\.valeur\}`\)\)\.map\(\(l\) => \[l\.cle, 'prendre' as ChoixBilan\]\)/.test(fen) && /'corriger le registre'/.test(fen),
   'Frédéric : « à trancher » arrive PROPOSÉ -- la valeur du document choisie (« corriger le registre ») ; lecture seule : rien de choisi')
 

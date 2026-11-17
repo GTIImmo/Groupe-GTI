@@ -2651,7 +2651,16 @@ Le travail raté est rejoué par la base (5 essais, aucun n'écrit chez Hektor),
   valeur « en route » compte comme absente de Hektor -- « le dernier envoi à Hektor a échoué » -- et se propose de nouveau.
 Essais : `test_ged_bilan` 51 VERT ; les 13 essais GED verts ; build vert. ⚠ L'envoi en arrière-plan n'est PAS encore
 éprouvé en réel : sur 18849, le séquestre, une fois le travail raté abandonné.
-⏳ **Reste** : abandonner le travail raté (après son 5e essai) ; mettre en ligne ; éprouver sur 18849 (le séquestre).
+✅ **EN LIGNE (`e4a2197`, « Pousse les deux ») ET PROUVÉ EN RÉEL le 17/11 à 20:44 sur 18849** : séquestre seul, par la
+fenêtre -> la modale cachée a posé le travail `a6c4a212` avec la charge ENTIÈRE (montant 124 000, acquéreur 10650686,
+`champs_touches` = sequestration seul) -> **« compromis 50139 MODIFIÉ et RELU chez Hektor : sequestre=12400 »**, prix,
+net, date du compromis et date de l'acte INCHANGÉS ; carnet retiré à l'arrivée (0 ligne) ; registre = ce que Hektor a
+retenu (séquestre 12 400) ; la condition suivie intacte ; aucune répartition écrite ; décision notée. La fenêtre a affiché
+« Envoyé à Hektor (Séquestre 12 400 €) pour 18849 ». **Le séquestre de l'essai de Frédéric est donc corrigé chez Hektor.**
+⚠ Vu pendant l'essai, corrigé : une décision « envoyé » dont l'envoi avait ÉCHOUÉ rangeait la ligne dans « Déjà tranché »
+(sous « le dernier envoi a échoué ») -- elle redevient à trancher.
+⏳ **Reste** : abandonner le travail raté `080b32a1` (5 essais épuisés ; le bouton de Santé n'apparaît qu'au prochain
+relevé de surveillance) ; l'extension aux autres gestes (offre, vente) -- audit d'abord.
 ⏳ (ancien) **À faire après la mise en ligne** : la regarder sur 18849 (ouvrir la fenêtre et la modale, SANS cliquer « Mettre à
 jour ») ; **le séquestre 12 400 € de 30770 est au carnet mais PAS chez Hektor** : ouvrir « Modifier » sur ce compromis
 (la case est préremplie depuis le carnet) et « Mettre à jour le compromis » -- c'est son geste à lui.
