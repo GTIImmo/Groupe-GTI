@@ -1233,3 +1233,19 @@ pas (déjà dans l'état voulu : Leboncoin) » — Leboncoin, déjà hors ligne,
 (diffusable 1, aucun portail, `refreshed_at` au 15/11) ; sa ligne de choix inchangée (1, du 15/11 19:50 — la carte
 l'aurait effacée et réécrite) ; 0 choix de portail écrit dans la demi-heure (témoin : 7 sur 7 jours, la même lecture).
 **Pas encore prouvé** : un clic RÉEL (Hektor publie, le résumé est reporté), sur un bien qu'il choisit.
+
+## 47. L'inventaire des gestes REMIS À JOUR après §41-46 (17/11, sa demande)
+
+Changements depuis le §40 : Pilotage (Validation, Diffusable) et plusieurs portails d'un coup passent AVEC CARTE ; ajouter
+une photo et déposer un document passent PAR LA FENÊTRE (sa décision du 17/11). 78 lignes.
+**AVEC CARTE (35)** : les 32 du §40, plus cocher Validation [DIR], cocher Diffusable [DIR], plusieurs portails d'un coup
+(la carte « un portail » élargie). ⚠ Éprouvées SANS VALIDER seulement (pas de clic réel) : les 8 cartes directes du §36,
+le prix, le Pilotage, la Diffusion.
+**PAR LA FENÊTRE, lot 6 (10)** : les 8 du §40, plus ajouter une photo, déposer un document.
+**FERMÉ PAR DÉCISION (7)** : inchangé.
+**SANS CARTE, À DÉCIDER (26)** : supprimer une annonce [DIR] ; créer un mandant, modifier son e-mail / portable ; champs
+d'une transaction, conditions suspensives, commission, répartition [DIR] ; supprimer un compromis ou une vente [DIR] ;
+trancher un écart [ADMIN] ; créer le conjoint, modifier ou défaire un couple ; supprimer un contact [DIR] ; supprimer une
+recherche ; corriger une date de clôture [DIR] ; charge des honoraires ; signé à la main ; ImmoSign ; plan cadastral ;
+supprimer un document ; e-mail d'estimation ; agenda d'un collègue [DIR] ; partenaires ; alertes de Santé [ADMIN] ; GED ;
+Matterport ; scan d'une fiche papier ; pièces jointes.
