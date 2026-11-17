@@ -1249,3 +1249,16 @@ trancher un écart [ADMIN] ; créer le conjoint, modifier ou défaire un couple 
 recherche ; corriger une date de clôture [DIR] ; charge des honoraires ; signé à la main ; ImmoSign ; plan cadastral ;
 supprimer un document ; e-mail d'estimation ; agenda d'un collègue [DIR] ; partenaires ; alertes de Santé [ADMIN] ; GED ;
 Matterport ; scan d'une fiche papier ; pièces jointes.
+
+## 48. « Ceux qui demandent un fichier » : ce qu'ils sont vraiment (17/11, sa question avant le lot 5) — lu dans le code
+
+- **Scan d'une fiche papier** : c'est une ÉTAPE de la fenêtre « Créer une annonce » (`handleDraftAnnonceScanFile`,
+  App.tsx ~18255) — on photographie la fiche (jusqu'à 5 pages, JPEG / PNG / WebP, 12 Mo), la route `/annonces/scan-fiche`
+  la fait lire par l'IA (fiche `scan_fiche`) et PRÉ-REMPLIT le formulaire de création. Il a besoin d'une photo par
+  nature, et la fenêtre sait déjà la prendre -> il suit la création d'annonce : **par la fenêtre (lot 6)**, pas de carte.
+- **Pièces jointes aux e-mails** : ⛔ **MON CLASSEMENT ÉTAIT FAUX** — à l'écran, les pièces jointes ne viennent PAS de
+  l'ordinateur : ce sont les documents (déposés au coffre) et les photos DÉJÀ dans l'application, d'un bien lié au
+  contact (`buildEmailAttachments`, App.tsx ~45259 : lien signé 15 min pour un document, adresse de la photo), 10 au plus,
+  envoyés par la même route Gmail que la carte « e-mail au client » (`attachments`, déjà prévue côté serveur, la carte
+  passe aujourd'hui `None`). **Aucun fichier à recevoir** : une carte est possible — l'e-mail au client avec, au choix,
+  des documents / photos d'un bien du contact, CHAQUE fichier nommé sur la carte (ce qui part chez un client est réel).
