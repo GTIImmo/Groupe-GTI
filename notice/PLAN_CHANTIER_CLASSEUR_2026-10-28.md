@@ -3430,7 +3430,16 @@ C4 ⬜  ⭐⭐⭐ **F EST DECODEE LE 16/11** -- voir
        LE TEST QUI SEPARE LES DEUX FAMILLES : l'abreviation est-elle suivie
          d'une DATE ?  DB 66/66 = 100 % . OPC 100 % . ODP 82 % . ADP 59 % .
          DPC 55 % -- contre Me 168, PA 112, pb 92, BV 66, SRU 34 : JAMAIS.
-       ✅ CONFIRME PAR LUI : ODP = offre de pret.
+       ✅ CONFIRME ET MESURE : ODP = offre de pret (16/11) . ADP = **ATTESTATION
+         DE DEPOT DE PRET** (17/11). ⭐⭐⭐ ADP AVANT ODP 24 FOIS SUR 24, jamais
+         l'inverse, ecart median 31 JOURS -- le MEME JOUR DU MOIS, un mois plus
+         tard : c'est un DELAI CONTRACTUEL. Donc ADP et ODP ne sont PAS deux
+         conditions : ce sont le DEPART et l'ECHEANCE de « Obtention Credit »,
+         deja au catalogue (id 2, jours_defaut 45 -- le classeur montre 31).
+       ⛔ MA MESURE DU 16/11 ETAIT FAUSSE (« 10 dans l'ordre, 14 hors ordre ») :
+         elle melangeait DB et ne gerait pas le passage au 1er janvier.
+       ⬜ DB VA EN NOTE (sa decision du 17/11) : mesuree, elle vaut « Vente
+         Prevue » dans 60 cas sur 65 (92 %) -- nous l'avons deja.
        ⬜ A CONFIRMER : ADP, DB, DPC, OPC, BVok, PA, CI, AVNT, dossOk.
        LA LECTURE JUSTE EST TRIPLE : 708 MOTIFS (affaire annulee) ->
          motif_annulation_app . 86 CONDITIONS EN ATTENTE (affaire en cours)

@@ -98,13 +98,37 @@ butoir » est la lecture naturelle.
 ⛔ **Je ne décode pas seul le vocabulaire d'une agence.** Voici l'état exact :
 
 ```
-CONFIRMÉ PAR FRÉDÉRIC (16/11)
-   ODP    offre de prêt                                     57 fois, 82 % datée
+CONFIRMÉ PAR FRÉDÉRIC ET MESURÉ
+   ODP    offre de prêt                 (16/11)             57 fois, 82 % datée
+   ADP    ATTESTATION DE DÉPÔT DE PRÊT  (17/11)             41 fois, 59 % datée
+
+⭐⭐⭐ **ET LA MESURE DU 17/11 LE PROUVE, 24 FOIS SUR 24** : sur les 24 lignes qui
+portent les deux, **ADP est TOUJOURS avant ODP, jamais l'inverse**, et l'écart médian
+est de **31 jours** — le MÊME JOUR DU MOIS, un mois plus tard :
+
+```
+   ADP 27/11 -> ODP 27/12   (+31 j)      ADP 08/12 -> ODP 08/01   (+31 j)
+   ADP 13/12 -> ODP 13/01   (+31 j)      ADP 30/10 -> ODP 30/11   (+31 j)
+   ADP 15/11 -> ODP 15/12   (+31 j)
+   ADP AVANT ODP, 1 a 45 j   20 (83 %)   46 a 120 j   4 (17 %)
+   ADP le meme jour qu ODP    0           ADP APRES ODP   0  <- JAMAIS
+```
+
+➡ **C'est un DÉLAI CONTRACTUEL** : un mois pour obtenir l'offre après le dépôt du
+dossier. Donc **ADP et ODP ne sont PAS deux conditions** : ce sont le **DÉPART** et
+l'**ÉCHÉANCE** de la même clause « Obtention Crédit », qui existe déjà au catalogue
+(id 2, `jours_defaut` 45 — alors que le classeur montre **31 jours** en pratique).
+
+⛔ **ET MA MESURE DU 16/11 ÉTAIT FAUSSE** : j'avais écrit « 10 lignes dans l'ordre,
+14 hors ordre ». Elle mélangeait DB dans le test et ne gérait pas le passage au
+1ᵉʳ janvier. Corrigée le 17/11.
 
 HYPOTHÈSE À CONFIRMER -- la mesure dit qu'elles portent une date,
 elle ne dit pas ce que les lettres veulent dire
-   ADP    accord de prêt ?                                  41 fois, 59 % datée
-   DB     date butoir ?                                     66 fois, 100 % datée
+   DB     DATE BUTOIR -- ⬜ VA EN NOTE (sa decision du 17/11)  66 fois, 100 % datée
+          ⭐ MESURE : elle vaut « Vente Prevue » (colonne V) dans **60 cas sur
+            65** (92 %). Nous l'avons donc DEJA. 4 divergent, 1 V est vide.
+            ➡ ce n'est pas une condition : c'est l'echeance du compromis.
    DPC    dépôt ou déclaration de permis de construire ?     11 fois, 55 % datée
    OPC    obtention du permis de construire ?                 2 fois, 100 % datée
    PC     permis de construire                               34 fois, 29 % datée
