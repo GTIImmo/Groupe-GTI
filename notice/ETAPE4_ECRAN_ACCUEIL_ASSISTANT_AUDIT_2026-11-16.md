@@ -1119,3 +1119,11 @@ supprimer une recherche (défaut connu : l'index vise la 1re) ; corriger une dat
 honoraires ; signé à la main ; ImmoSign ; plan cadastral ; supprimer un document ; e-mail d'estimation ; agenda d'un
 collègue [DIR] ; partenaires ; alertes de Santé [ADMIN] ; GED (chantier de sa session) ; Matterport (API hors service) ;
 et ceux qui demandent un FICHIER : scan d'une fiche papier, ajouter une photo, déposer un document, pièces jointes.
+
+**⏳ À FAIRE — décidé par Frédéric le 17/11** (sortis de « à décider ») :
+1. **Pilotage** [DIR] : cocher Validation, cocher Diffusable — auditer d'abord l'écriture que fait le Pilotage de la fiche
+   (`handleSetSelectedDossierValidation` / `handleSetSelectedDossierDiffusable`, App.tsx ~26359).
+2. **Diffusion** (choisir plusieurs portails d'un coup) — **UNIQUEMENT si le bien est diffusable** (« voir projet ») : la
+   règle existe déjà (la carte « un portail » et la route /apply de l'écran : négociateur = bien diffusable ET le sien).
+3. **Ajouter une photo** et 4. **Ajouter un document** — ⚠ supposent que la conversation reçoive un FICHIER (aujourd'hui
+   elle n'accepte que du texte) : c'est la première marche, à auditer avec eux.
