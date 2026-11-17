@@ -1286,3 +1286,26 @@ limites ; la carte NOMME chaque fichier (type, taille, « masquée » pour une p
 signés (15 min) et l'adresse des photos, fabriqués par le serveur.
 **Ce que ça pourrait casser ailleurs** : rien d'existant (la carte sans pièce jointe reste identique) ; ce qui part chez
 un client est RÉEL et peut être sensible (un mandat, une pièce d'identité) — d'où chaque fichier nommé sur la carte.
+
+## 50. Sa question : déposer des fichiers DE SON ORDINATEUR dans l'assistant (et dans la fenêtre e-mail) — FAISABILITÉ (17/11)
+
+**Réponse : OUI.** Lu dans le code : l'écran dépose aujourd'hui un fichier en DEUX temps — il le range au coffre
+(`hektor-console-documents`, sous `temp/uploads/<travail>/` ou `temp/photos/<travail>/`, avec le jeton de la personne),
+puis pose le travail (`upload_document_to_hektor`, `upload_hektor_photo`) ; le worker va chercher le fichier à l'adresse
+que porte le travail (`temp_storage_path`, Console/console_job_worker.js ~10140). L'assistant peut faire EXACTEMENT pareil.
+**La brique commune, à faire d'abord : le trombone de la conversation** — glisser ou choisir des fichiers (photos,
+PDF), rangés au coffre sous un dossier temporaire de la conversation AVANT la question ; le modèle ne voit que leur NOM,
+TYPE et TAILLE (jamais le contenu — le contenu ne part pas chez OpenAI) ; un fichier non utilisé est purgé (⚠ déjà 109
+fichiers / 196 Mo dormaient sous `temp/` le 14/10 : la purge est à prévoir dès le départ).
+**Ce qu'elle ouvre** :
+1. ajouter une PHOTO à une annonce (carte -> `upload_hektor_photo`, comme l'écran) ;
+2. ajouter un DOCUMENT à une annonce (carte -> `upload_document_to_hektor`, avec son type et son libellé) ;
+3. les PIÈCES JOINTES d'un e-mail au client : fichiers déposés + documents / photos déjà dans l'app ; et pour un fichier
+   déposé, « l'ajouter aussi au bien » proposé dans la même conversation (une 2e carte, pour garder un geste = un clic) ;
+4. le SCAN d'une fiche papier : les photos déposées passent par le lecteur de l'écran (`/annonces/scan-fiche`) et
+   l'assistant montre les champs lus — la CRÉATION reste à la fenêtre (décision), pré-remplie avec ce scan (lot 6).
+**Et dans la fenêtre e-mail de l'écran** (hors assistant) : un bouton « depuis l'ordinateur » à côté des documents et
+photos du bien, même mécanique (dépôt au coffre puis lien signé), et la même case « ajouter aussi au bien ».
+**Ce que ça change** : la décision « ajouter une photo / un document : par la fenêtre » (§40) devient « par une carte ».
+**Ce que ça pourrait casser ailleurs** : rien d'existant ; c'est un NOUVEAU chemin d'entrée de fichiers — tailles et types
+à borner comme l'écran (photo : JPEG / PNG / WebP ; scan 12 Mo ; pièce jointe 8 Mo / 18 Mo), et le coffre à purger.
