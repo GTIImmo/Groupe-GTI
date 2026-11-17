@@ -1406,3 +1406,20 @@ maquette) le bouton « Joindre », la pastille du fichier et sa croix. **Pas ép
 carte « ajouter un document » (marche 3) enchaînera les DEUX agents de la GED (derrière `ged_lecture_ia`) — la PROPOSITION
 du type avant l'envoi, puis la LECTURE des valeurs (`/ged/lire`) après le dépôt et le classement — avec leurs règles (RIB
 jamais lu, pièces des personnes selon leur interrupteur). À détailler à l'audit de cette carte, avec la session GED.
+
+## 53. LE TROMBONE EN LIGNE ET ÉPROUVÉ EN RÉEL (17/11, sur « Oui, les deux » puis « Oui, essaie »)
+
+- **En ligne** : `b66a64f` poussé (par les autres sessions, avec les leurs) ; Render sert `f3fa65f` qui le contient
+  (`/assistant/fichiers/etat` répond 401 sans jeton, une route inexistante 404 -- témoin) ; Vercel sert le bouton
+  « Joindre ». **Interrupteur** `assistant_fichiers` = **admin**, posé à 14:11 (`supabase/patch_assistant_fichiers_
+  interrupteur_2026-11-17.sql`, qui n'écrase jamais une valeur existante ; `_INVERSE` prêt).
+- **Essai réel** (Chrome de Frédéric, admin, 14:13-14:15) :
+  1. « Joindre » visible ; un fichier texte d'essai de 21 octets passe « prêt » (préparé, envoyé au coffre, RELU) ;
+  2. la question « quel fichier t'ai-je joint, et que contient-il ? » -> « Tu as joint « essai-trombone.txt », un fichier
+     texte de 1 Ko. Je ne peux pas voir son contenu, seulement son nom, son type et sa taille » ; la bulle montre
+     « Fichiers joints : essai-trombone.txt » ;
+  3. au coffre : `temp/assistant/<son compte>/531579c5…/essai-trombone.txt` (21 octets, text/plain) ; en base, la question
+     porte la marque « fichier:531579c5… « essai-trombone.txt » (texte, 1 Ko) » — jamais le contenu ;
+  4. un 2e dépôt retiré par la croix DISPARAÎT du coffre (`dfdb0e53…`), le 1er reste (il sera purgé : 2 jours, mais le
+     nettoyeur se lance À LA MAIN).
+- Observé : un dépôt met ~5 s à passer « prêt » (trois allers-retours : préparer, envoyer, relire) ; l'envoi attend.
