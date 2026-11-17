@@ -1174,3 +1174,13 @@ une demande de validation en cours (à traiter dans Suivi). Consigne : la direct
 **Contrôles** : `test_assistant_gestes` 312 verts (§16 : 13 nouveaux, dont 3 témoins « rien chez Hektor ») ; témoin
 inverse : la vérification de confirmation sabotée -> ROUGE, remise -> 312 ; `test_assistant_ia` 62 ; `test_assistant_lecteur`
 73 ; `npm run build` vert. 39 gestes.
+
+## 43. Épreuve de la carte PILOTAGE, SANS VALIDER (17/11, 10:10, sur « Oui, sans valider ») — PROUVÉE
+
+En production (Render `d6566f2`), Chrome de Frédéric (admin), bien d'essai 63330. ⭐ Le modèle a d'abord DEMANDÉ
+confirmation de lui-même (« le titre indique ne pas diffuser ; le pilotage écrira directement chez Hektor ; veux-tu quand
+même ? ») ; après « c'est un essai », la carte : « Validation NON → OUI ; Diffusable NON → OUI. Écrit DIRECTEMENT chez
+Hektor au clic, puis relu. ⚠ Diffusable OUI : le bien peut repartir sur les portails déjà cochés ». REFUSÉE à 10:10.
+**Base** : la ligne `pilotage` en `refusee`, `execute_le` vide ; 63330 inchangé (`a_controler`, diffusable 0, aucun
+portail) et sa date d'écriture `refreshed_at` toujours au 21/10 — la recopie du clic l'aurait changée (témoin : 7 biens
+écrits sur 24 h, le dernier à 06:26). **Pas encore prouvé** : un clic RÉEL (Hektor confirme), sur un bien qu'il choisit.
