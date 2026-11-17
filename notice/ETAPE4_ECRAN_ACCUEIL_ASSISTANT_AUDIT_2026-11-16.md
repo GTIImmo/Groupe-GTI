@@ -1127,3 +1127,35 @@ et ceux qui demandent un FICHIER : scan d'une fiche papier, ajouter une photo, d
    règle existe déjà (la carte « un portail » et la route /apply de l'écran : négociateur = bien diffusable ET le sien).
 3. **Ajouter une photo** et 4. **Ajouter un document** — ⚠ supposent que la conversation reçoive un FICHIER (aujourd'hui
    elle n'accepte que du texte) : c'est la première marche, à auditer avec eux.
+
+**Précision du 17/11 (Frédéric)** : **ajouter une photo** et **ajouter un document** passent **PAR LA FENÊTRE de l'écran
+(lot 6)** — elle sait déjà choisir le fichier, l'envoyer et le déposer chez Hektor ; une carte supposerait d'abord que la
+conversation reçoive des fichiers. Les cartes photo existantes (couverture, masquer / afficher, déplacer) RESTENT des
+cartes : en ligne, éprouvées, sans fichier. **Ordre : Pilotage, puis Diffusion (si diffusable).**
+
+## 41. PILOTAGE (cocher Validation, cocher Diffusable) : AUDIT (17/11, « Pilotage d'abord ») — rien codé
+
+**Périmètre** : les deux cases du Pilotage de la fiche (écran, serveur, pont Hektor). Pas mesuré : ce que Hektor fait des
+portails déjà cochés quand Diffusable repasse à 1.
+**Ce que fait l'écran** (`handleSetSelectedDossierValidation` / `…Diffusable`, App.tsx ~21481) : manager ou admin, biens
+VIVANTS seulement (un vendu / clos est refusé avec un message). Deux appels au serveur Render :
+- `/hektor-diffusion/validation` -> `HektorBridgeService.set_validation` : PATCH `PropertyValidation` chez Hektor, relit la
+  fiche Hektor avant / après et rend la validation ET le diffusable OBSERVÉS ; ⚠ ne vérifie pas que l'observé = le demandé
+  (seule une erreur de Hektor remonte) ;
+- `/hektor-diffusion/diffusable` -> `set_diffusable` : PATCH Diffuse, relit, et rend une erreur si Hektor ne confirme pas ;
+- puis `/hektor-diffusion/persist-state` : recopie l'OBSERVÉ chez nous (`app_dossier_current`) et pose le verrou de
+  diffusion (la relecture de nuit ne l'écrase pas avant le délai de grâce).
+- Les deux routes : `assert_admin` = rôle admin OU manager, profil actif. **Écriture DIRECTE et SYNCHRONE chez Hektor**,
+  pas de travail du worker (déjà éprouvé pour Diffusable le 16/11 sur 61398, 0 -> 1 -> 0).
+**Mesures** (biens vivants, 17/11) : 13 092 « à contrôler / 0 » ; 432 « validé / 1 » ; 29 « validé / 0 » ; 3 « à
+contrôler / 1 ». Diffusable sans validation est donc RARE mais existe : la carte ne le refuse pas, elle prévient.
+
+**La carte proposée — `pilotage` [DIR]** : sur un bien vivant, Validation (oui / non / inchangé) et Diffusable (oui / non /
+inchangé). Au clic, avec la même garde que la route (`assert_admin`, jugée avec le jeton de la personne) : la validation
+d'abord, puis le diffusable, par le MÊME pont que l'écran ; puis la recopie chez nous de ce que Hektor MONTRE. La carte
+EXIGE que Hektor confirme (validation comprise, ce que l'écran ne fait pas) et dit ce qu'il montre sinon.
+La carte DIT : Diffusable = 1 -> le bien peut repartir sur les portails déjà cochés ; Diffusable = 0 -> il sort de tous les
+portails ; une demande de validation en cours sur le bien -> elle reste à traiter dans Suivi.
+**Ce que ça pourrait casser ailleurs** : rien d'existant n'est modifié (une carte de plus qui appelle le pont de l'écran) ;
+c'est un geste RÉEL chez Hektor au clic (la diffusion publique du bien) — d'où la direction seule et la confirmation exigée.
+**Épreuve proposée** : d'abord « sans valider » ; un essai réel seulement sur un bien qu'il choisit (61398 a déjà servi).
