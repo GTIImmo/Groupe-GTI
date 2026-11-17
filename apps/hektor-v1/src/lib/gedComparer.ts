@@ -145,9 +145,11 @@ export type PersonneDuBien = { nom: string; prenom: string }
 // date_limite_pret). Une nature en double se garde une fois (la première qui porte une date).
 export type NatureCondition = 'pret' | 'preemption' | 'vente_bien' | 'permis_construire' | 'urbanisme' | 'servitudes' | 'hypotheque' | 'autre'
 export type ConditionLue = { nature: NatureCondition; date: string | null }
+// Les libellés du CATALOGUE de l'agence quand il en a un (le geste y prend son numéro) : « Obtention Crédit »,
+// « Préemption mairie », et depuis le 17/11 (catalogue à six) « Obtention du permis de construire ».
 export const LIBELLE_CONDITION: Record<NatureCondition, string> = {
   pret: 'Obtention Crédit', preemption: 'Préemption mairie', vente_bien: 'Vente d\'un bien de l\'acquéreur',
-  permis_construire: 'Obtention d\'un permis de construire', urbanisme: 'Certificat d\'urbanisme', servitudes: 'Absence de servitude',
+  permis_construire: 'Obtention du permis de construire', urbanisme: 'Certificat d\'urbanisme', servitudes: 'Absence de servitude',
   hypotheque: 'État hypothécaire', autre: 'Autre condition',
 }
 const NATURES = new Set(Object.keys(LIBELLE_CONDITION))

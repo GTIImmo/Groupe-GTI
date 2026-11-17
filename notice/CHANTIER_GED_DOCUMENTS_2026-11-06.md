@@ -2480,3 +2480,11 @@ contrôles ; plus aucune trace du lien). Les 12 essais GED et le serveur verts, 
 ⚠ Latence : préparer 40 vignettes prend quelques secondes de plus dans le navigateur ; l'envoi reste possible sans
 attendre l'IA. ⚠ Pas vu en réel : un faux lot SPECIMEN (identité + taxe + titre) et un faux compromis avec annexes, à
 déposer sur 63147 -- le lot doit se proposer à séparer, le compromis jamais.
+✅ **Proposition A EN LIGNE (17/11, poussée par Frédéric ; Render et Vercel sur `f3fa65f`, qui la contient).** Pas vue en
+réel (faux lot SPECIMEN et faux compromis avec annexes à déposer sur 63147).
+⚠ **Trouvé en vérifiant le push** : la session classeur a passé le catalogue des conditions suspensives de 2 à **6**
+clauses (Préemption mairie, Obtention Crédit, Permis de construire, Délai de rétractation SRU, Dépôt du permis de
+construire, Obtention du permis de construire). Le lot 10b écrivait « Obtention d'un permis de construire » -> aucun
+lien au catalogue. ✅ **« Oui, aligne » (17/11)** : libellé aligné sur « Obtention du permis de construire » ; essai
+`test_ged_remplir` 49 -> 51 (les libellés écrits figurent MOT POUR MOT au catalogue ; dépôt et obtention du permis se
+reconnaissent comme permis ; le délai SRU n'est pas une condition lue). Build vert ; commit local À POUSSER.

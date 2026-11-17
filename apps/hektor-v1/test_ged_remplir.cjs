@@ -73,6 +73,12 @@ voir(P([cpvV2([v('condition_pret', { valeur: 'oui' }), ...cv('pret', '2026-12-01
   'TÉMOIN 10b : la transaction a déjà une condition -> rien (le geste remplace toute la liste)')
 voir(P([cpvV2([v('condition_pret', { valeur: 'renonciation' }), ...cv('pret', '2026-12-01', 0), ...cv('vente_bien', null, 1)])], { affaires: regC, conditions: new Map([[77, 0]]) })[0]?.valeur === 'vente_bien@',
   '10b : « renonciation » au prêt -> la condition de prêt ne se propose pas')
+// 17/11 : le catalogue de l'agence passe à six clauses -- les libellés écrits doivent y correspondre MOT POUR MOT
+const { LIBELLE_CONDITION, natureDuLibelle } = charger('src/lib/gedComparer.ts')
+const CATALOGUE_17_11 = ['Préemption mairie', 'Obtention Crédit', 'Permis de construire', 'Delai de retractation SRU', 'Depot du permis de construire', 'Obtention du permis de construire']
+voir(['pret', 'preemption', 'permis_construire'].every((n) => CATALOGUE_17_11.includes(LIBELLE_CONDITION[n])), '10b : prêt, préemption et permis s\'écrivent sous le libellé EXACT du catalogue (catalogue à six du 17/11)')
+voir(natureDuLibelle('Depot du permis de construire') === 'permis_construire' && natureDuLibelle('Permis de construire') === 'permis_construire' && natureDuLibelle('Delai de retractation SRU') === 'autre',
+  '10b : les clauses du catalogue se reconnaissent (dépôt et obtention du permis = permis ; le délai SRU n\'est pas une condition lue)')
 const { decoderConditions } = charger('src/lib/gedRemplir.ts')
 voir(JSON.stringify(decoderConditions('pret@2026-12-01|bidon@|vente_bien@20261|preemption@')) === JSON.stringify([{ nature: 'pret', date: '2026-12-01' }, { nature: 'preemption', date: null }]),
   'TÉMOIN 10b : le décodage rejette une nature inconnue et une date mal formée')
