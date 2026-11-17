@@ -73,3 +73,14 @@ témoin inverse, `npm run build`, puis un essai réel sur un document de TEST si
 - ⏰ **Reste** : le redémarrage des 4 services worker par Frédéric, FILE VIDE (elle l'était à la vérification), pour activer
   le 3e verrou ; puis l'essai réel (bouton absent sur le document signé de 61398).
 
+## 7. ✅ LES TROIS VERROUS EN SERVICE (17/11) — prouvés
+
+- **Worker** : Frédéric a redémarré les 4 services, file vide ; preuve par l'heure des processus : 4 processus Node
+  démarrés à 11:39:38-39, APRÈS le commit du verrou (11:21). Les 4 services `Running`.
+- **Essai réel, en lecture seule** (61398 n'est plus parmi les biens en cours) : fiche du bien EN COURS 63506 « Spécial
+  investisseurs », « Médias & pièces » : le « Mandat 19006 » signé le 16/11 à 13:43 affiche « Signé : ne se supprime
+  pas » à la place du bouton ; tous les documents non signés gardent « Supprimer ». Capture :
+  `notice/preuve_blocage_suppression_signe_2026-11-17.jpg`. Aucun clic d'écriture.
+- Non éprouvé en réel (volontairement, ce serait une suppression) : le refus du worker et de la base sur un travail posé
+  à la main — prouvés hors ligne (17 + 7 contrôles, témoins inverses compris).
+
