@@ -1718,7 +1718,7 @@ Les autres essais sont verts : IA 62, fichiers 17, lecteur 73, GED classer 36, G
   - le journal Gmail (`app_google_workspace_action_log`) porte `gmail.send` `done` avec 3 pièces, 986 114 octets et
     les 3 noms ;
   - le document est marqué lu (`last_accessed_at` à 23:27:13 UTC, 7 s avant l'envoi).
-- ⏳ Non vu par moi : l'e-mail arrivé dans sa boîte (Frédéric le confirme).
+- ✅ Frédéric a CONFIRMÉ le 18/11 : l'e-mail est arrivé dans sa boîte avec ses 3 pièces jointes.
 
 **Ce que ça pourrait casser ailleurs** : rien d'existant. La route Gmail n'est pas modifiée, la fenêtre e-mail de
 l'écran n'est pas touchée, et la carte sans pièce garde exactement le même comportement.
