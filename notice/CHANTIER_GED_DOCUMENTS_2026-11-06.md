@@ -2305,3 +2305,11 @@ comme aujourd'hui), « Faire un PDF de N pages », « Annuler les photos ». Au-
 fenêtre). Les vignettes sont des adresses locales, rendues après usage. Essai `test_ged_depot` 29 -> 32 (mêmes gestes ;
 TÉMOIN : ni viseur ni envoi) ; les 12 essais GED verts, build vert. ⚠ PAS VU : à éprouver après le push dans le cadre de
 390 px, avec une photo glissée dans la page seulement (rien n'est envoyé sans « Faire un PDF » puis « Envoyer »).
+✅ **EN LIGNE (`dbe9f61`, poussé le 17/11 par une autre session avec `b4feb29` de l'assistant posé dessous -- accord de
+Frédéric ; Vercel READY sur `acd5949`) ET VU sur 63147, SANS RIEN ENVOYER** : téléphone (cadre 390 px, retiré) -- deux
+fausses photos SPECIMEN (« RECTO », « VERSO ») glissées dans l'appareil photo : le panneau monte dès la 1re (1 vignette),
+la 2e arrive par « Ajouter une page (le verso) » (2 vignettes, images chargées), « 2 pages : un seul document », les
+3 gestes tiennent dans l'écran (598 à 750 px sur 776), la bande de la fenêtre est masquée, 0 débordement ; « Annuler
+les photos » referme, aucune ligne créée. Bureau (1 280 px) : le panneau reste caché, la bande de la fenêtre s'affiche,
+comme avant. Toujours 1 document sur 63147. ➡ **H4 EST FINI : L'HABILLAGE H1-H4 EST COMPLET.** ⚠ Remarque, d'avant H4 :
+la bande de la fenêtre dit « 1 page photographiée : ELLES formeront un seul document » (pluriel au singulier).
