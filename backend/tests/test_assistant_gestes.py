@@ -1550,6 +1550,10 @@ voir(len(c) == 1 and c[0]["corps"]["edit_fields"] == {"last_name": "TESTCLAUDE",
 CJ = {"hektor_contact_id": "10354641", "conjoint_contact_id": "10354642"}
 appels14.clear()
 resume_cj, p_cj = ges.preparer_ajouter_conjoint(nouveau_ctx(), CJ)
+voir("rattaché" not in resume_cj and "rejoint aussi les biens" in resume_cj
+     and "(le lien disparaît" in resume_rt and "(il disparaît" not in resume_rt,
+     "17/11 : les cartes ne s'accordent plus au masculin (« Mme … est aussi rattaché », « il disparaît » vus en réel) : "
+     "phrases neutres, sans deviner le genre")
 voir("M. JEAN TESTJEAN le CONJOINT de Mme CLAUDE TESTCLAUDE" in resume_cj and "biens" in resume_cj and not ecrits14(),
      "le conjoint : la carte dit le couple ET le rattachement aux biens de la personne ; rien écrit")
 voir(refuse(lambda: ges.preparer_ajouter_conjoint(nouveau_ctx(), {**CJ, "conjoint_contact_id": "10354641"}), "même fiche"),
@@ -1588,7 +1592,7 @@ resume_ng, p_ng = ges.preparer_reaffecter_negociateur(nouveau_ctx("admin"), {**N
 voir("Delphine BLANCHARD (GTI Yssingeaux)" in resume_ng and "PEREIRA" in resume_ng and "@" not in resume_ng
      and p_ng["hektor_negociateur_id"] == "45" and not ecrits14(),
      "l'agence départage ; la carte dit l'ancien et le nouveau, sans aucune adresse e-mail")
-voir(refuse(lambda: ges.preparer_reaffecter_negociateur(nouveau_ctx("admin"), {**NG, "negociateur": "pereira"}), "déjà le négociateur"),
+voir(refuse(lambda: ges.preparer_reaffecter_negociateur(nouveau_ctx("admin"), {**NG, "negociateur": "pereira"}), "déjà confiée à"),
      "⛔ le négociateur actuel : refusé")
 voir(refuse(lambda: ges.preparer_reaffecter_negociateur(nouveau_ctx("admin"), {**NG, "negociateur": "inconnu"}), "ACTIF"),
      "⛔ un nom qui n'est pas un négociateur actif chez Hektor : refusé")

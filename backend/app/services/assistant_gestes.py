@@ -2350,13 +2350,14 @@ def _controler_rattachement(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[
     tete = _exiger_negociateur(ctx, bien)
     fiche = _contact_choisi(ctx, p.get("hektor_contact_id"))
     if str(fiche.get("archive") or "").strip().lower() in {"1", "true"}:
-        raise Refus(f"{_nom_contact(fiche)} est archivé : l'écran ne propose que des contacts actifs.")
+        raise Refus(f"La fiche de {_nom_contact(fiche)} est archivée : l'écran ne propose que des contacts actifs.")
     if fiche.get("couple_role") == "menage_resolu":
         raise Refus("C'est la fiche du MÉNAGE : rattache l'une des deux personnes (une personne, une ligne).")
     nego_bien = str(tete.get("negociateur_email") or "").strip().lower()
     if nego_bien and str(fiche.get("negociateur_email") or "").strip().lower() != nego_bien:
         raise Refus(f"Comme à l'écran, seuls les contacts du négociateur du bien ({tete.get('commercial_nom') or 'son négociateur'})"
-                    f" se rattachent : {_nom_contact(fiche)} est suivi par {fiche.get('commercial_nom') or 'un autre négociateur'}.")
+                    f" se rattachent : la fiche de {_nom_contact(fiche)} est suivie par "
+                    f"{fiche.get('commercial_nom') or 'un autre négociateur'}.")
     if str(fiche["hektor_contact_id"]) in _mandants_du_bien(ctx, bien):
         raise Refus(f"{_nom_contact(fiche)} est déjà mandant (ou propriétaire) de l'annonce {bien['hektor_annonce_id']}.")
     return bien, fiche
@@ -2404,7 +2405,7 @@ def _controler_retrait(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[dict[
 def preparer_retirer_mandant(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[str, dict[str, Any]]:
     bien, fiche = _controler_retrait(ctx, p)
     return (f"Retirer {_nom_contact(fiche)} des mandants de l'annonce {bien['hektor_annonce_id']} « {bien.get('titre_bien') or ''} »"
-            " (il disparaît tout de suite ; Hektor est prévenu, et s'il refuse, le lien réapparaît).",
+            " (le lien disparaît tout de suite ; Hektor est prévenu, et s'il refuse, le lien réapparaît).",
             {"hektor_annonce_id": int(bien["hektor_annonce_id"]), "hektor_contact_id": str(fiche["hektor_contact_id"])})
 
 
@@ -2478,7 +2479,7 @@ def _controler_conjoint(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[dict
         raise Refus("On ne peut pas choisir la même fiche comme conjoint.")
     for fiche, qui in ((personne, "personne"), (conjoint, "conjoint")):
         if str(fiche.get("archive") or "").strip().lower() in {"1", "true"}:
-            raise Refus(f"{_nom_contact(fiche)} est archivé.")
+            raise Refus(f"La fiche de {_nom_contact(fiche)} est archivée.")
         if fiche.get("nature_fiche") == "notaire" or "notaire_" in str(fiche.get("relation_roles_json") or ""):
             raise Refus("Une fiche notaire n'est jamais un couple.")
         if not _seule(fiche):
@@ -2490,7 +2491,7 @@ def _controler_conjoint(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[dict
 def preparer_ajouter_conjoint(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[str, dict[str, Any]]:
     personne, conjoint = _controler_conjoint(ctx, p)
     return (f"Faire de {_nom_contact(conjoint)} le CONJOINT de {_nom_contact(personne)} : les deux fiches forment un couple "
-            f"chez nous tout de suite, Hektor les relie ensuite ; {_nom_contact(conjoint)} est aussi rattaché aux biens dont "
+            f"chez nous tout de suite, Hektor les relie ensuite ; {_nom_contact(conjoint)} rejoint aussi les biens dont "
             f"{_nom_contact(personne)} est propriétaire (là où tu as les droits). ⚠ Le défaire se fait sur la fiche, pas ici.",
             {"hektor_contact_id": str(personne["hektor_contact_id"]), "conjoint_contact_id": str(conjoint["hektor_contact_id"])})
 
@@ -2538,7 +2539,7 @@ def _controler_negociateur(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[d
     tete = _tete_bien(ctx, bien, "negociateur_email,commercial_nom")
     if str(nego.get("email_vu") or "").strip().lower() and \
             str(nego.get("email_vu") or "").strip().lower() == str(tete.get("negociateur_email") or "").strip().lower():
-        raise Refus(f"{nego.get('nom_vu')} est déjà le négociateur de l'annonce {bien['hektor_annonce_id']}.")
+        raise Refus(f"L'annonce {bien['hektor_annonce_id']} est déjà confiée à {nego.get('nom_vu')}.")
     return bien, nego, tete
 
 
