@@ -28,6 +28,10 @@ voir(iban_valide("FR7630006000011234567890189"), "un IBAN francais valide est re
 voir(texte_porte_un_rib("Titulaire : X\nIBAN : FR76 3000 6000 0112 3456 7890 189\nBIC : AGRIFRPP"), "un IBAN en blocs, suivi du BIC")
 voir(texte_porte_un_rib("compte FR7630006000011234567890189 ouvert"), "un IBAN colle")
 voir(texte_porte_un_rib("RELEVÉ D’IDENTITÉ BANCAIRE"), "la phrase « relevé d'identité bancaire », accents et apostrophe courbe")
+# correctif du 17/11 (une promesse de 38 pages classee « RIB ») : MEMES exemples que test_ged_classement_ia.cjs
+voir(not texte_porte_un_rib("… le vendeur remettra au notaire un relevé d’identité bancaire …", 38), "une promesse de 38 pages qui CITE la phrase n'est pas un RIB")
+voir(texte_porte_un_rib("RELEVÉ D’IDENTITÉ BANCAIRE", 1) and texte_porte_un_rib("RELEVÉ D’IDENTITÉ BANCAIRE", 3) and not texte_porte_un_rib("RELEVÉ D’IDENTITÉ BANCAIRE", 4), "la phrase sur 1 à 3 pages : RIB ; dès 4 pages : non")
+voir(texte_porte_un_rib("compte séquestre FR7630006000011234567890189", 38), "TÉMOIN : un VRAI IBAN bloque toujours, même dans 38 pages")
 voir(not texte_porte_un_rib("FR76 3000 6000 0112 3456 7890 188"), "TÉMOIN : une clé de contrôle fausse n'est pas un IBAN")
 voir(not texte_porte_un_rib("Diagnostic de performance énergétique, réf. DP12345678901234, classe D"), "TÉMOIN : un DPE n'est pas un RIB")
 voir(not texte_porte_un_rib(None) and not texte_porte_un_rib(""), "TÉMOIN : pas de texte, pas de RIB")

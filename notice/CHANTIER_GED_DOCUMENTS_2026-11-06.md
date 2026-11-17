@@ -2500,3 +2500,25 @@ celui de la ligne (casse, accents, espaces près), la ligne dit « L'IA propose 
 **« Prendre ce nom »** ; un clic le prend et le nom compte alors comme choisi. Il ne s'applique toujours TOUT SEUL que
 sur un nom muet. Essai `test_ged_classement_ia` 30 -> 33. Build vert. ⏳ Option non tranchée : une règle de nommage
 commune (« Type année, précision ») que l'IA suivrait.
+
+### 12.27 La garde RIB bloquait un compromis qui CITE « relevé d'identité bancaire » (17/11, essai de Frédéric)
+**Le constat** (Frédéric : « j'ai fait un test d'ajout d'une promesse de vente ; l'étape 1 la classe en RIB et ne veut
+pas la faire lire par l'IA, alors que c'est un compromis ») : vérifié EN LOCAL sur son fichier, en n'imprimant que des
+verdicts. 38 pages à couche texte ; le nom dit « compromis » avec certitude ; **aucun IBAN** ; mais la PAGE 13 contient la
+phrase « relevé d'identité bancaire » (une clause, ou la liste des pièces). La garde RIB -- écran ET serveur -- comptait
+cette PHRASE, n'importe où dans le texte, comme un RIB -> rien ne partait à l'IA (classement ni lecture), ET le type
+« compromis » était remplacé par « RIB » (seule exception jusqu'ici : le financement).
+**✅ « Oui, corrige » (17/11) — ÉCRIT, rien poussé** :
+- **La phrase ne compte que sur un document COURT** (3 pages au plus ; un vrai RIB en fait une), à l'écran
+  (`texteDitRib(texte, nbPages)`) et au serveur (`texte_porte_un_rib(texte, nb_pages)`, classement et lecture). **Un vrai
+  numéro IBAN bloque TOUJOURS**, quelle que soit la longueur : la règle « un RIB n'est jamais envoyé à l'IA » est tenue
+  par le numéro. Nombre de pages inconnu : comme avant. (Le nombre de pages vient du navigateur ; un client trafiqué qui
+  l'enflerait resterait arrêté par le numéro IBAN.)
+- **Un type reconnu avec certitude par le nom n'est jamais remplacé par « RIB »** (généralise l'exception du
+  financement) ; un document qui porte un vrai IBAN ne part pas plus à l'IA, il garde seulement son vrai type.
+- Rejoué EN LOCAL sur le fichier de Frédéric : `texteDitRib(texte, 38)` = faux (avant : vrai) ; texte extrait effacé.
+Essais : `test_ged_classement_ia` 33 -> 37, `test_ged_classer` 33 -> 36 (MÊMES exemples des deux côtés ; TÉMOIN : un vrai
+IBAN dans 38 pages bloque toujours) ; `test_ged_regles_financement` : 2 motifs adaptés à la nouvelle signature (ce qu'ils
+gardent ne change pas). Les 12 essais GED et le serveur verts, build vert.
+⏳ **Cas voisin, NON traité (décision à part)** : un compromis qui porte un VRAI IBAN (compte séquestre du notaire) reste
+entièrement bloqué pour l'IA ; on pourrait masquer le numéro dans le texte au lieu de tout refuser.

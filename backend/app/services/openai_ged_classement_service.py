@@ -184,8 +184,8 @@ class OpenAIGedClassementService:
         pages = payload.get("pages") or []
         nb_pages = int(payload.get("nbPages") or len(pages) or 0)
 
-        # ⛔ 2e verrou RIB, AVANT tout appel.
-        if nom_dit_rib(nom) or texte_porte_un_rib(texte):
+        # ⛔ 2e verrou RIB, AVANT tout appel (la phrase ne compte que sur un document court ; le numéro, toujours).
+        if nom_dit_rib(nom) or texte_porte_un_rib(texte, nb_pages or None):
             raise HTTPException(status_code=422, detail="Releve d'identite bancaire : jamais envoye a l'IA")
         if not pages and not texte.strip():
             raise HTTPException(status_code=400, detail="Rien a lire : ni page ni texte")

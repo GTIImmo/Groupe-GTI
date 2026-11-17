@@ -23,6 +23,13 @@ voir(texteDitRib('RELEVÉ D’IDENTITÉ BANCAIRE'), 'la phrase « relevé d\'ide
 voir(!texteDitRib('FR76 3000 6000 0112 3456 7890 188'), 'TÉMOIN : une clé de contrôle fausse n\'est pas un IBAN')
 voir(!texteDitRib('Diagnostic de performance énergétique, réf. DP12345678901234, classe D'), 'TÉMOIN : un DPE n\'est pas un RIB')
 voir(!texteDitRib(null) && !texteDitRib(''), 'TÉMOIN : pas de texte, pas de RIB')
+// correctif du 17/11 (une promesse de 38 pages classée « RIB ») : la PHRASE ne compte que sur un document court
+voir(!texteDitRib('… le vendeur remettra au notaire un relevé d’identité bancaire …', 38), 'une promesse de 38 pages qui CITE « relevé d\'identité bancaire » n\'est pas un RIB')
+voir(texteDitRib('RELEVÉ D’IDENTITÉ BANCAIRE', 1) && texteDitRib('RELEVÉ D’IDENTITÉ BANCAIRE', 3) && !texteDitRib('RELEVÉ D’IDENTITÉ BANCAIRE', 4), 'la phrase sur 1 à 3 pages : RIB ; dès 4 pages : non')
+voir(texteDitRib('compte séquestre FR7630006000011234567890189', 38), 'TÉMOIN : un VRAI IBAN bloque toujours, même dans 38 pages')
+const depotRib = fs.readFileSync(path.join(__dirname, 'src/DepotDocuments.tsx'), 'utf8')
+voir(/const surParNom = l\.forceNom === 'sur' && Boolean\(l\.typeNom\) && l\.type === l\.typeNom/.test(depotRib) && /parCode\.has\('justif\.rib'\) && !surParNom \? avecType\(base, 'justif\.rib'\)/.test(depotRib),
+  'un type reconnu avec CERTITUDE par le nom n\'est jamais remplacé par « RIB » (le document ne part pas plus à l\'IA)')
 voir(nomDitRib('RIB vendeur.pdf') && nomDitRib('rib_dupont.jpg') && nomDitRib('IBAN.png'), 'un nom qui dit RIB ou IBAN')
 voir(nomDitRib('Relevé d\'identité bancaire.pdf'), 'un nom qui dit « identité bancaire »')
 voir(!nomDitRib('Attribution.pdf') && !nomDitRib('Ribeiro compromis.pdf') && !nomDitRib('DPE.pdf'), 'TÉMOIN : « Attribution », « Ribeiro », « DPE » ne disent pas RIB')

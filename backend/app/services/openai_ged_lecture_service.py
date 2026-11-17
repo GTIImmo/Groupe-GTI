@@ -662,7 +662,8 @@ class OpenAIGedLectureService:
         texte = str(payload.get("texte") or "")[:fiche.get("texte_max", MAX_TEXTE)]
         pages = payload.get("pages") or []
         nb_pages = int(payload.get("nbPages") or len(pages) or 1)
-        if nom_dit_rib(nom) or texte_porte_un_rib(texte):
+        # la phrase « relevé d'identité bancaire » ne compte que sur un document court ; un vrai IBAN, toujours (17/11)
+        if nom_dit_rib(nom) or texte_porte_un_rib(texte, nb_pages):
             raise HTTPException(status_code=422, detail="Relevé d'identité bancaire : jamais envoyé à l'IA")
         if fiche.get("premiere_page_seule"):
             # lot 9d : l'écran n'envoie déjà que la 1re page ; le serveur le REDIT (ceinture et bretelles) -- tout texte

@@ -316,7 +316,10 @@ export function DepotDocuments({
           // reconnue à son nom (lot 9d, décision du 16/11) : une offre de prêt porte souvent l'IBAN du compte de prélèvement ;
           // elle reste « Financement », et ne part pas plus à l'IA (la garde RIB refuse toujours l'envoi)
           const financementParNom = l.type === 'transaction.financement'
-          return prep.rib && l.etat === 'pret' && !l.typeTouche && !l.typeAttenduPose && !financementParNom && parCode.has('justif.rib') ? avecType(base, 'justif.rib') : base
+          // 17/11 (une promesse de 38 pages devenue « RIB ») : un type que le NOM reconnaît avec certitude n'est jamais
+          // remplacé par « RIB » -- le document ne part pas plus à l'IA, il garde seulement son vrai type
+          const surParNom = l.forceNom === 'sur' && Boolean(l.typeNom) && l.type === l.typeNom
+          return prep.rib && l.etat === 'pret' && !l.typeTouche && !l.typeAttenduPose && !financementParNom && parCode.has('justif.rib') && !surParNom ? avecType(base, 'justif.rib') : base
         })))
         return
       }

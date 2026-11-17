@@ -50,10 +50,16 @@ export function ibanValide(candidat: string): boolean {
   return reste === 1
 }
 
-export function texteDitRib(texte: string | null | undefined): boolean {
+// Correctif du 17/11 (essai de Frédéric : une PROMESSE de 38 pages classée « RIB » et jamais lue) : la PHRASE « relevé
+// d'identité bancaire » ne dit « RIB » que pour un document COURT (3 pages au plus ; un vrai RIB en fait une) -- un
+// compromis la CITE (une clause, la liste des pièces). Un vrai numéro IBAN, lui, bloque TOUJOURS, quelle que soit la
+// longueur : c'est lui qui protège. Sans nombre de pages connu : comme avant (la phrase suffit).
+export const RIB_PHRASE_PAGES_MAX = 3
+export function texteDitRib(texte: string | null | undefined, nbPages?: number | null): boolean {
   if (!texte) return false
   const plat = sansAccents(texte).toLowerCase().replace(/’/g, "'")
-  if (plat.includes("releve d'identite bancaire") || plat.includes('releve d identite bancaire')) return true
+  const court = nbPages == null || nbPages <= RIB_PHRASE_PAGES_MAX
+  if (court && (plat.includes("releve d'identite bancaire") || plat.includes('releve d identite bancaire'))) return true
   const maj = sansAccents(texte).toUpperCase()
   const debut = /\b[A-Z]{2}\d{2}/g
   let m: RegExpExecArray | null
@@ -125,7 +131,7 @@ export async function preparerPourIa(file: File, typeChoisiJamaisEnvoye: boolean
       textes.push(contenu.items.map((it) => ('str' in it ? it.str : '')).join(' '))
     }
     // ⛔ la garde RIB lit TOUT le texte, pas seulement l'extrait qui partirait
-    if (texteDitRib(textes.join('\n'))) return { envoyable: false, raison: 'Un IBAN est dans le texte : jamais envoyé à l\'IA.', rib: true }
+    if (texteDitRib(textes.join('\n'), nbPages)) return { envoyable: false, raison: 'Un IBAN est dans le texte : jamais envoyé à l\'IA.', rib: true }
     const pages: Array<{ numero: number; image: string }> = []
     for (const n of pagesAEnvoyer(nbPages)) {
       const page = await doc.getPage(n)
@@ -253,7 +259,7 @@ export async function preparerLecture(file: File, typeCode?: string): Promise<Pr
       const contenu = await (await doc.getPage(n)).getTextContent()
       textes.push(contenu.items.map((it) => ('str' in it ? it.str : '')).join(' ').replace(/\s+/g, ' ').trim())
     }
-    if (texteDitRib(textes.join('\n'))) return { lisible: false, raison: 'Un IBAN est dans le texte : jamais envoyé à l\'IA.' }
+    if (texteDitRib(textes.join('\n'), nbPages)) return { lisible: false, raison: 'Un IBAN est dans le texte : jamais envoyé à l\'IA.' }
     const uneSeule = Boolean(typeCode && PREMIERE_PAGE_SEULE.has(typeCode))
     const envoyables = uneSeule ? textes.slice(0, 1) : textes
     const premieres = envoyables.slice(0, Math.min(3, nbPages))

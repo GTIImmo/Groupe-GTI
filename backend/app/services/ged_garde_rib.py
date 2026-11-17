@@ -33,11 +33,18 @@ def iban_valide(candidat: str) -> bool:
     return int(chiffres) % 97 == 1
 
 
-def texte_porte_un_rib(texte: str | None) -> bool:
+# Correctif du 17/11 (une PROMESSE de 38 pages classee « RIB » et jamais lue) : la PHRASE ne dit « RIB » que pour un
+# document COURT (3 pages au plus ; un vrai RIB en fait une) -- un compromis la CITE. Un vrai numero IBAN bloque
+# TOUJOURS. Nombre de pages inconnu : comme avant (la phrase suffit). Meme regle dans le navigateur.
+RIB_PHRASE_PAGES_MAX = 3
+
+
+def texte_porte_un_rib(texte: str | None, nb_pages: int | None = None) -> bool:
     if not texte:
         return False
     plat = _sans_accents(texte).lower().replace("’", "'")
-    if any(p in plat for p in _PHRASES_RIB):
+    court = nb_pages is None or nb_pages <= RIB_PHRASE_PAGES_MAX
+    if court and any(p in plat for p in _PHRASES_RIB):
         return True
     majuscules = _sans_accents(texte).upper()
     for m in _DEBUT_IBAN.finditer(majuscules):
