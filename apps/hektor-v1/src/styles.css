@@ -11850,6 +11850,12 @@ button.metric-card.is-active {
   border-color: rgba(197, 0, 95, 0.42);
   background: rgba(197, 0, 95, 0.08);
 }
+/* 17/11 : à la place du bouton Supprimer, sur un document signé ou en cours de signature */
+.console-document-actions .console-document-delete-bloque {
+  align-self: center;
+  font-size: 12px;
+  color: var(--muted, #6b6b6b);
+}
 
 /* === Documents & signature v2 (relooking, scope .cdocs-v2) === */
 .cdocs-v2 .console-document-row {

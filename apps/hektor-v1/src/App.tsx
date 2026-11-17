@@ -319,7 +319,7 @@ import EnvoiSignatureYoutrust, { EVENEMENT_CORRIGER_MANDAT, type DemandeCorrecti
 import type { FicheDuJourPdf } from './lib/ecartsFichePdf'
 import { ficheDuMandant, mandantsImprimes, mandantsSansPrenomOuNom, situationsDesConjoints, type FicheCouple, type SituationConjoint } from './lib/conjointsDuMandat'
 import { etatSignatureDuMandat } from './lib/etatSignatureMandat'
-import { choixDeSignature } from './lib/choixSignature'
+import { choixDeSignature, documentSignatureEngagee, TEXTE_SIGNE_NE_SE_SUPPRIME_PAS } from './lib/choixSignature'
 // A.2 (06/11/2026) : la fenetre « Faire signer » refaite (maquette validee : habillage + points 1 a 4).
 import ChoixSignatureFenetre from './ChoixSignatureFenetre'
 import RechercheGlobale, { type GroupeRecherche } from './RechercheGlobale'
@@ -12233,6 +12233,10 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
     // Depuis 3e, une trace est écrite AVANT la destruction (qui / quoi / quand), et
     // si elle ne peut pas s'écrire, le worker NE DÉTRUIT PAS. Mais la suppression
     // reste définitive : il n'y a pas de corbeille (décision de Frédéric du 13/10).
+    if (documentSignatureEngagee(document)) {  // 17/11 : le geste refuse aussi, pas seulement le bouton
+      setError(TEXTE_SIGNE_NE_SE_SUPPRIME_PAS)
+      return
+    }
     const confirmed = window.confirm(
       `Supprimer définitivement ce document ?\n\n${document.document_name}\n\n`
       + `Il sera supprimé CHEZ HEKTOR et CHEZ NOUS : le fichier et sa fiche partent, `
@@ -12517,10 +12521,15 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
           </button>
         ) : null}
         </>)}
-        <button className="ghost-button console-document-delete" type="button" onClick={() => void handleDeleteDocument(document)} disabled={deleting || busyDocumentId === document.id}>
-          <span aria-hidden="true"><DetailIcon type="actions" /></span>
-          {deleting ? 'Suppression' : 'Supprimer'}
-        </button>
+        {/* 17/11 : un document signé ou en cours de signature ne se supprime pas (lib/choixSignature) -- la raison à la place du bouton */}
+        {documentSignatureEngagee(document) ? (
+          <span className="console-document-delete-bloque" title={TEXTE_SIGNE_NE_SE_SUPPRIME_PAS}>Signé : ne se supprime pas</span>
+        ) : (
+          <button className="ghost-button console-document-delete" type="button" onClick={() => void handleDeleteDocument(document)} disabled={deleting || busyDocumentId === document.id}>
+            <span aria-hidden="true"><DetailIcon type="actions" /></span>
+            {deleting ? 'Suppression' : 'Supprimer'}
+          </button>
+        )}
       </div>
     )
   }

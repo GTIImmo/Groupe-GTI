@@ -48,3 +48,18 @@ la SYNCHRO (règle R1) : la règle de SUPPRESSION est une autre question, à tra
 (seul l'écran l'insère). **Retour arrière** : le patch inverse retire le garde ; écran et worker se défont par git.
 **Contrôles** : essai du worker hors ligne (scènes signé / en cours / à la main / annulé / à envoyer), répétition SQL avec
 témoin inverse, `npm run build`, puis un essai réel sur un document de TEST signé (refus attendu, rien chez Hektor).
+
+## 5. CODÉ le 17/11 (sur « Vas-y ») — règle retenue : « annulé » et « refusé » restent supprimables
+
+- **Worker** : `documentSignatureEngagee` (exportée) ; `handleDeleteDocumentFromHektor` lit le document AVANT d'ouvrir la
+  session Hektor et refuse `[REFUS D'ETAT] document signe ou en cours de signature` (jamais rejoué). Essai
+  `Console/test_garde_suppression_document_signe.js` : 17 contrôles verts — 6 cas bloqués refusés SANS AUCUN appel
+  (Hektor, coffre, serveur, ligne), 4 cas libres supprimés comme avant (trace AVANT la destruction), et le TÉMOIN INVERSE :
+  le worker d'avant supprimait les 6 cas bloqués. `test_garde_r1_signature.js` reste vert.
+- **Écran** : `documentSignatureEngagee` et `TEXTE_SIGNE_NE_SE_SUPPRIME_PAS` dans `lib/choixSignature.ts` ; sur une ligne
+  engagée, « Signé : ne se supprime pas » à la place du bouton, et `handleDeleteDocument` refuse aussi. `npm run build` vert.
+- **Base** : `supabase/patch_suppression_document_signe_garde_2026-11-17.sql` (+ `_INVERSE`, `_REPETITION` : 7 contrôles,
+  dont le témoin inverse garde coupé, tout annulé par ROLLBACK). **PAS ENCORE APPLIQUÉ** (son accord).
+- **Reste, avec son accord** : appliquer le patch puis la répétition ; pousser ; redémarrer les 4 services worker (lui,
+  file vide) ; essai réel : le bouton absent sur un document signé de test, et un travail posé à la main refusé.
+

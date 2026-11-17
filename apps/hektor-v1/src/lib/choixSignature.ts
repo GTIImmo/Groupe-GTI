@@ -28,6 +28,19 @@ export type ChoixDeSignature = {
 
 type Sig = { provider?: string | null; status?: string | null; procedure_id?: number | string | null }
 
+// 17/11/2026 (notice/BLOCAGE_SUPPRESSION_DOCUMENT_SIGNE_2026-11-17.md) : un document SIGNE ou EN COURS de signature ne se
+// SUPPRIME pas (regle GED §5.3). La MEME regle vit dans le worker (documentSignatureEngagee) et dans la base
+// (app_document_signature_engagee). « A envoyer », « annule », « refuse » restent supprimables.
+const STATUTS_SIGNATURE_EN_COURS = ['pending', 'ongoing', 'approval']
+export const TEXTE_SIGNE_NE_SE_SUPPRIME_PAS = 'Signé ou en cours de signature : ce document ne se supprime pas.'
+export function documentSignatureEngagee(d: { metadata_json?: unknown } | null | undefined): boolean {
+  const md = (d?.metadata_json && typeof d.metadata_json === 'object' ? d.metadata_json : {}) as Record<string, unknown>
+  const sig = (md.signature && typeof md.signature === 'object' ? md.signature : {}) as { status?: unknown; source?: unknown }
+  return Boolean(md.signed_document) || sig.status === 'signed' || sig.source === 'manuscrite'
+    || STATUTS_SIGNATURE_EN_COURS.includes(String(sig.status ?? ''))
+}
+
+
 export const TEXTE_ANNULER_D_ABORD = {
   youtrust: 'Une signature électronique (Youtrust) est en cours sur ce document : annulez-la d’abord (« Annuler la signature », sous la liste des signataires).',
   immosign: 'Une signature Hektor (ImmoSign) est en cours sur ce document : annulez-la d’abord.',

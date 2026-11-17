@@ -5162,6 +5162,19 @@ function signatureSuivieOuSigne(row) {
   return procedure && (sig.status === "pending" || sig.status === "signed" || sig.status === "refused");
 }
 
+// 17/11/2026 (notice/BLOCAGE_SUPPRESSION_DOCUMENT_SIGNE_2026-11-17.md) : un document SIGNE ou EN COURS de signature ne se
+// SUPPRIME pas (regle GED §5.3). Signe = copie signee rapatriee, statut « signed » quel que soit le prestataire, ou marque
+// « a la main » ; en cours = en attente / en cours / en approbation. « A envoyer », « annule », « refuse » restent
+// supprimables : la signature n'a pas eu lieu et n'est plus en cours. ⚠ Ce n'est PAS la regle R1 ci-dessus (la synchro) :
+// la meme regle vit dans la base (app_document_signature_engagee) et dans l'ecran (documentSignatureEngagee).
+const STATUTS_SIGNATURE_EN_COURS = ["pending", "ongoing", "approval"];
+function documentSignatureEngagee(row) {
+  const md = (row && row.metadata_json) || {};
+  const sig = md.signature || {};
+  return Boolean(md.signed_document) || sig.status === "signed" || sig.source === "manuscrite"
+    || STATUTS_SIGNATURE_EN_COURS.includes(sig.status);
+}
+
 async function upsertConsoleDocuments(dossier, entries, job = null) {
   const existingForAdoption = await loadExistingDocuments(String(dossier.hektor_annonce_id));
   // ⭐ AVANT TOUTE ECRITURE : reconnaitre par le chemin ce que le numero ne reconnait
@@ -10525,10 +10538,15 @@ async function handleUploadHektorPhoto(job) {
 async function handleDeleteDocumentFromHektor(job) {
   const payload = safeJsonParse(job.payload_json);
   const dossier = await loadDossier(job);
-  await ensureHektorExecutionContext(job, dossier, payload, { preferRequester: true, preferDossierOwner: true, required: true });
   const documentId = payload.document_id;
   if (!documentId) throw new Error("payload_json.document_id required");
   const document = await loadConsoleDocumentById(documentId);
+  // 17/11 : AVANT tout appel a Hektor (et avant meme d'ouvrir sa session) -- un travail pose avant le garde de la base,
+  // ou par une autre porte, ne detruit jamais un document signe. Refus definitif : il ne se rejoue pas.
+  if (documentSignatureEngagee(document)) {
+    throw new Error(`${MARQUE_REFUS_ETAT} document signe ou en cours de signature : il ne se supprime pas (${document.document_name || documentId})`);
+  }
+  await ensureHektorExecutionContext(job, dossier, payload, { preferRequester: true, preferDossierOwner: true, required: true });
   if (String(document.hektor_annonce_id) !== String(dossier.hektor_annonce_id)) {
     throw new Error(`Document ${documentId} hors annonce ${dossier.hektor_annonce_id}`);
   }
@@ -25788,7 +25806,7 @@ if (require.main === module) {
 }
 
 // Export pour tests/outils (n'affecte pas le service : lancé via `node console_job_worker.js`).
-module.exports = { estimationAvisValeurHtmlPremium, renderHtmlToPdfBuffer, cadastrePlanHtml, extractModeloDocumentEntries, extractDocumentEntries, adoptExistingImmoSignRows, fetchConsoleDocumentEntries, documentContentFingerprint, localPhotoDir, localPhotoPath, safeFilename, storageSafeFilename, extractConsolePhotoEntries,
+module.exports = { documentSignatureEngagee, estimationAvisValeurHtmlPremium, renderHtmlToPdfBuffer, cadastrePlanHtml, extractModeloDocumentEntries, extractDocumentEntries, adoptExistingImmoSignRows, fetchConsoleDocumentEntries, documentContentFingerprint, localPhotoDir, localPhotoPath, safeFilename, storageSafeFilename, extractConsolePhotoEntries,
   // G.11 : exposes pour le script de lot de G.13 (les 74 550 derives) et pour la
   // preuve en reel. genererDerivesPhoto reste DORMANT sans son interrupteur.
   genererDerivesPhoto, cheminDerivePhoto, COFFRE_PHOTO_PUBLIC, CACHE_DERIVE_PHOTO,
