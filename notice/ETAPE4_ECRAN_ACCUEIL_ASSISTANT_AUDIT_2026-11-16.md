@@ -1262,3 +1262,27 @@ Matterport ; scan d'une fiche papier ; pièces jointes.
   envoyés par la même route Gmail que la carte « e-mail au client » (`attachments`, déjà prévue côté serveur, la carte
   passe aujourd'hui `None`). **Aucun fichier à recevoir** : une carte est possible — l'e-mail au client avec, au choix,
   des documents / photos d'un bien du contact, CHAQUE fichier nommé sur la carte (ce qui part chez un client est réel).
+
+## 49. Décision du 17/11 (« Scan fenêtre, PJ carte ») et AUDIT des pièces jointes — rien codé
+
+**Scan d'une fiche papier** -> PAR LA FENÊTRE (avec la création d'annonce, lot 6). Inventaire : 35 avec carte, **11** par
+la fenêtre, 7 par décision, **25** sans carte (le scan quitte « sans carte » ; les pièces jointes y restent jusqu'à leur
+carte).
+**Pièces jointes — ce que fait l'écran** (fenêtre « e-mail » d'un contact, App.tsx ~45160) : il propose les biens LIÉS
+au contact (ses relations), puis pour le bien choisi ses documents (`app_console_document`, SEULEMENT ceux copiés au coffre
+`cloud_available`) et ses photos (`app_console_photo`, présentes chez Hektor, visibles ET masquées) ; 10 au plus ; au
+départ, un LIEN SIGNÉ de 15 min par document (bucket `hektor-console-documents`, avec le jeton de la personne, et
+`app_console_touch_document`) et l'adresse de la photo ; puis la même route Gmail que la carte « e-mail au client ».
+**Côté serveur** (`_download_gmail_attachments`) : il télécharge lui-même chaque pièce — 10 au plus, 8 Mo par fichier,
+18 Mo en tout. ⚠ Il accepte N'IMPORTE QUELLE adresse web : dans la carte, les adresses seront fabriquées par NOTRE
+serveur depuis la base, JAMAIS données par le modèle.
+**Mesure** : 25 356 documents au coffre (5 128 biens) ; 168 532 seulement sur notre serveur (`local_only`) — non
+joignables, ni à l'écran ni par la carte.
+**La carte proposée** : (1) une LECTURE `lire_pieces_jointes(contact)` — les biens du contact, leurs documents joignables
+(nom, type, taille) et leurs photos (rang, visible / masquée), avec un numéro chacun ; (2) la carte « e-mail au client »
+reçoit en plus `pieces_jointes` (ces numéros, ou vide). À la carte ET au clic : chaque pièce doit appartenir à un bien LIÉ
+à ce contact et être lisible avec le jeton de la personne, un document doit être au coffre, 10 au plus, tailles dans les
+limites ; la carte NOMME chaque fichier (type, taille, « masquée » pour une photo masquée). Au clic seulement : les liens
+signés (15 min) et l'adresse des photos, fabriqués par le serveur.
+**Ce que ça pourrait casser ailleurs** : rien d'existant (la carte sans pièce jointe reste identique) ; ce qui part chez
+un client est RÉEL et peut être sensible (un mandat, une pièce d'identité) — d'où chaque fichier nommé sur la carte.
