@@ -73,6 +73,8 @@ const extension = (nom: string) => { const i = nom.lastIndexOf('.'); return i > 
 const racine = (nom: string) => { const i = nom.lastIndexOf('.'); return i > 0 ? nom.slice(0, i) : nom }
 const aujourdhui = () => new Date().toLocaleDateString('fr-FR').replace(/\//g, '-')
 const taille = (o: number) => (o < 1024 * 1024 ? `${Math.max(1, Math.round(o / 1024))} Ko` : `${(o / 1024 / 1024).toFixed(1)} Mo`)
+// deux noms « pareils » à la casse, aux accents et aux espaces près
+const normaliserNom = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[\s_]+/g, ' ').trim()
 
 // Une image que le coffre refuse (HEIC…) est redessinée en JPEG quand le navigateur sait la lire.
 async function versJpeg(file: File, cote = 2400): Promise<Blob | null> {
@@ -532,9 +534,18 @@ export function DepotDocuments({
       )
     }
     const r = ia.r
+    // 17/11 : le NOM que l'IA propose (court, jamais un nom de personne), MONTRÉ quand il diffère du nom de la ligne --
+    // il ne s'applique tout seul que sur un nom muet (avecType) ; ailleurs, un clic. Le nom est définitif une fois envoyé.
+    const nomIa = r.lisible && r.nomPropose && normaliserNom(r.nomPropose) !== normaliserNom(l.nom) ? r.nomPropose : null
     return (
       <>
         {!r.lisible ? <span className="ged-depot-ia">L'IA n'a pas pu reconnaître ce document : choisis le type.</span> : null}
+        {nomIa ? (
+          <span className="ged-depot-ia is-avis">
+            {`L'IA propose le nom « ${nomIa} ».`}
+            <button className="dd-lien" type="button" onClick={() => modifier(l.id, { nom: nomIa, nomTouche: true })}>Prendre ce nom</button>
+          </span>
+        ) : null}
         {avisIa(l) ? <span className="ged-depot-ia is-avis dd-seul-tel">{avisTexte(l, r)}</span> : null}
         {r.pieces.length >= 2 && l.file.type === 'application/pdf' ? (
           <span className="ged-depot-ia is-avis">

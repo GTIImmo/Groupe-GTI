@@ -60,5 +60,13 @@ voir(prepIa.includes('`--- page ${n} ---\\n${t.slice(0, n <= 3 ? IA_TEXTE_PAGE_D
 voir(prepIa.indexOf('texteDitRib(textes.join') < prepIa.indexOf('page.render(') && prepIa.indexOf('texteDitRib(textes.join') > 0, 'TÉMOIN : la garde RIB lit tout le texte AVANT toute vignette')
 voir(!/preparerDecoupage|decoupage|chercherPieces|lienDecoupage|Chercher les pièces/.test(lib + depot), "TÉMOIN : plus de lien « Chercher les pièces » ni de mode à part (remplacé par l'étape 1)")
 
+console.log('⑥ « Prendre ce nom » (17/11)')
+const etatIaSrc = depot.slice(depot.indexOf('function etatIa(l: Ligne)'), depot.indexOf('function avisTexte'))
+voir(/const nomIa = r\.lisible && r\.nomPropose && normaliserNom\(r\.nomPropose\) !== normaliserNom\(l\.nom\) \? r\.nomPropose : null/.test(etatIaSrc),
+  'le nom de l\'IA se MONTRE quand il diffère du nom de la ligne (casse, accents, espaces près)')
+voir(/onClick=\{\(\) => modifier\(l\.id, \{ nom: nomIa, nomTouche: true \}\)\}>Prendre ce nom</.test(etatIaSrc),
+  'un clic le prend, et le nom compte alors comme choisi (plus rien ne l\'écrase)')
+voir(/if \(code && !l\.nomTouche && \(l\.forceNom === 'muet' \|\| l\.forceNom === 'reste'\)\)/.test(depot) && (etatIaSrc.match(/nom: nomIa/g) || []).length === 1 && !/setLignes[\s\S]{0,200}nomIa/.test(etatIaSrc),
+  'TÉMOIN : il ne s\'applique TOUT SEUL que sur un nom muet, jamais sur un nom écrit ou reconnu')
 console.log(ko ? `\n${ko} ROUGE, ${ok} VERT` : `\nTOUT EST VERT (${ok})`)
 process.exit(ko ? 1 : 0)

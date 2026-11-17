@@ -2488,3 +2488,15 @@ construire, Obtention du permis de construire). Le lot 10b écrivait « Obtentio
 lien au catalogue. ✅ **« Oui, aligne » (17/11)** : libellé aligné sur « Obtention du permis de construire » ; essai
 `test_ged_remplir` 49 -> 51 (les libellés écrits figurent MOT POUR MOT au catalogue ; dépôt et obtention du permis se
 reconnaissent comme permis ; le délai SRU n'est pas une condition lue). Build vert ; commit local À POUSSER.
+
+### 12.26 « Prendre ce nom » -- le nom proposé par l'IA, montré (17/11)
+Question de Frédéric : « avait-on prévu que l'IA propose le libellé du document quand il n'est pas conforme ? ». **En
+partie** : l'IA propose un nom court à chaque classement (jamais un nom de personne, d'adresse ni de numéro), mais il ne
+s'appliquait QUE sur un nom de fichier muet ou non reconnu (et sans IA : « <type> <date> ») ; sur un nom reconnu mais pas
+propre (« tf 2.pdf », « DIAGS.pdf »), il était JETÉ, jamais montré. Aucune règle de nommage n'a été fixée (les types
+l'ont été, pas les noms). Le nom est DÉFINITIF une fois envoyé (⑦-9 fermé le 19/10) : c'est avant l'envoi qu'il se
+corrige. **✅ « Oui, ajoute-le » (17/11) — ÉCRIT, rien poussé** (`DepotDocuments.tsx`) : quand le nom de l'IA diffère de
+celui de la ligne (casse, accents, espaces près), la ligne dit « L'IA propose le nom « Taxe foncière 2025 ». » avec
+**« Prendre ce nom »** ; un clic le prend et le nom compte alors comme choisi. Il ne s'applique toujours TOUT SEUL que
+sur un nom muet. Essai `test_ged_classement_ia` 30 -> 33. Build vert. ⏳ Option non tranchée : une règle de nommage
+commune (« Type année, précision ») que l'IA suivrait.
