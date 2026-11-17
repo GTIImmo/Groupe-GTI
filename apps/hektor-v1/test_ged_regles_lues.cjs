@@ -140,6 +140,16 @@ voir(R7c([cpv10], [cpvReg({ dateActe: '2027-01-15', sequestre: 9250 })]).length 
 voir(R7c([cpv10], [cpvReg({ dateActe: '2027-02-20', sequestre: 9250 })])[0]?.texte.includes('acte au plus tard le 15/01/2027, prévu le 20/02/2027 au registre'), '10a : la date d\'acte prévue au registre ≠ la réitération lue -> dit')
 voir(R7c([cpv10], [cpvReg({ dateActe: '2027-01-15', sequestre: 5000 })])[0]?.texte.includes('séquestre'), '10a : séquestre lu ≠ registre -> dit')
 voir(R7c([cpv10], [cpvReg({ dateActe: null, sequestre: null })]).length === 0 && R7c([cpv10], [cpvReg({ dateActe: null, sequestre: 0 })]).length === 0, 'TÉMOIN 10a : une case VIDE au registre ne sonne pas (elle se propose à remplir)')
+// lot 10b (17/11) : L20 -- les conditions suspensives lues (fiche v2) face à celles de LA transaction
+const cv = (n, d, r) => [v('conditions.nature', { valeur: n }, 'lu', r), ...(d ? [v('conditions.date_limite', { valeur_date: d }, 'lu', r)] : [])]
+const cpvC = (pret = 'oui') => cpvLu([v('condition_pret', { valeur: pret }), ...cv('pret', '2026-12-01', 0), ...cv('preemption', null, 1)])
+const L20 = (al) => al.filter((a) => a.code === 'L20')
+voir(L20(R7c([cpvC()], [cpvReg({ conditions: [{ libelle: 'Obtention Crédit', date: '2026-12-01' }, { libelle: 'Préemption mairie', date: null }] })])).length === 0, 'TÉMOIN 10b : conditions conformes -> rien')
+voir(L20(R7c([cpvC()], [cpvReg({ conditions: [{ libelle: 'Obtention Crédit', date: '2026-12-01' }] })]))[0]?.texte.includes('non trouvées dans la transaction : Préemption mairie'), '10b : une condition du compromis absente de la transaction -> dite (« non trouvée »)')
+voir(L20(R7c([cpvC()], [cpvReg({ conditions: [{ libelle: 'Obtention Crédit', date: '2026-12-20' }, { libelle: 'Préemption mairie', date: null }] })]))[0]?.texte.includes('jusqu\'au 01/12/2026 au compromis, 20/12/2026 dans la transaction'), '10b : date limite ≠ -> dite')
+voir(L20(R7c([cpvC('renonciation')], [cpvReg({ conditions: [{ libelle: 'Obtention Crédit', date: null }, { libelle: 'Préemption mairie', date: null }] })])).some((a) => a.texte.includes('renonciation à la condition de prêt')), '10b : renonciation au prêt, la transaction suit le crédit -> dit')
+voir(L20(R7c([cpvC()], [cpvReg({ conditions: [] })])).length === 0 && L20(R7c([cpvC()], [cpvReg({ conditions: null })])).length === 0 && L20(R7c([cpvC()], [cpvReg()])).length === 0,
+  'TÉMOIN 10b : liste vide (elle se propose), pas lue (null) ou absente -> rien')
 const acteLu = (date, prix) => doc('Attestation.pdf', 'transaction.acte', [v('date_vente', { valeur_date: date }), v('prix', { valeur_num: prix }), ...P(0, 'ESSAI', 'Paul', 'acquereur')])
 voir(codes(R7c([acteLu('2027-01-12', 185000)], [A('vente', { date: '2027-01-20', montant: 185000, acquereurs: ESSAI })])).join() === 'L7/alerte', 'L7 acte : vendu le 12/01, le 20/01 au registre')
 voir(R7c([acteLu('2027-01-12', 185000)], [A('vente', { date: '2027-01-12', montant: 185000, acquereurs: ESSAI })]).length === 0 && R7c([acteLu('2027-01-12', 185000)], []).length === 0, 'TÉMOIN L7 acte : conforme ; pas de vente au registre -> silence (N10 le dit déjà)')

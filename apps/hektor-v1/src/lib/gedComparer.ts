@@ -140,6 +140,51 @@ export function resoudreCible<T extends CandidateAffaire>(candidates: T[], indic
 
 // ── C3 : personnes ────────────────────────────────────────────────────────────
 export type PersonneDuBien = { nom: string; prenom: string }
+// ── Lot 10b (17/11) : les CONDITIONS SUSPENSIVES lues dans un compromis (fiche v2 : liste « conditions », la NATURE et la
+// date limite, jamais le texte). Fiche v1 (lue avant) : on retombe sur la seule condition de prêt (condition_pret et
+// date_limite_pret). Une nature en double se garde une fois (la première qui porte une date).
+export type NatureCondition = 'pret' | 'preemption' | 'vente_bien' | 'permis_construire' | 'urbanisme' | 'servitudes' | 'hypotheque' | 'autre'
+export type ConditionLue = { nature: NatureCondition; date: string | null }
+export const LIBELLE_CONDITION: Record<NatureCondition, string> = {
+  pret: 'Obtention Crédit', preemption: 'Préemption mairie', vente_bien: 'Vente d\'un bien de l\'acquéreur',
+  permis_construire: 'Obtention d\'un permis de construire', urbanisme: 'Certificat d\'urbanisme', servitudes: 'Absence de servitude',
+  hypotheque: 'État hypothécaire', autre: 'Autre condition',
+}
+const NATURES = new Set(Object.keys(LIBELLE_CONDITION))
+export function conditionsLuesDe(l: Pick<LectureDocument, 'valeurs'>): ConditionLue[] {
+  const v = l.valeurs
+  const pret = valeurNette(v, 'condition_pret')?.valeur ?? null
+  const limitePret = dateLue(v, 'date_limite_pret')
+  const rangs = [...new Set(v.filter((x) => x.cle === 'conditions.nature' && x.etat === 'lu' && x.valeur && NATURES.has(x.valeur)).map((x) => x.rang))]
+  const lues: ConditionLue[] = rangs.map((r) => ({
+    nature: v.find((x) => x.cle === 'conditions.nature' && x.rang === r)?.valeur as NatureCondition,
+    date: v.find((x) => x.cle === 'conditions.date_limite' && x.rang === r && x.etat === 'lu')?.valeur_date ?? null,
+  }))
+  if (!v.some((x) => x.cle.startsWith('conditions.'))) return pret === 'oui' ? [{ nature: 'pret', date: limitePret }] : []
+  const sortie: ConditionLue[] = []
+  for (const c of lues) {
+    // un compromis qui dit « pas de prêt » ou « renonciation » ne garde pas une condition de prêt
+    if (c.nature === 'pret' && pret !== null && pret !== 'oui') continue
+    const date = c.date ?? (c.nature === 'pret' ? limitePret : null)
+    const deja = sortie.find((s) => s.nature === c.nature)
+    if (!deja) sortie.push({ nature: c.nature, date })
+    else if (!deja.date && date) deja.date = date
+  }
+  return sortie
+}
+// La nature d'une condition DÉJÀ dans une transaction, d'après son libellé (catalogue ou saisie libre).
+export function natureDuLibelle(libelle: string | null | undefined): NatureCondition {
+  const s = normaliserTexte(libelle)
+  if (/CREDIT|PRET/.test(s)) return 'pret'
+  if (/PREEMPTION|DIA\b/.test(s)) return 'preemption'
+  if (/PERMIS/.test(s)) return 'permis_construire'
+  if (/URBANISME/.test(s)) return 'urbanisme'
+  if (/SERVITUDE/.test(s)) return 'servitudes'
+  if (/HYPOTHE/.test(s)) return 'hypotheque'
+  if (/VENTE/.test(s)) return 'vente_bien'
+  return 'autre'
+}
+
 export type PersonneLue = { nom: string; prenoms: string; qualite: string | null }
 
 // Les personnes LUES d'une lecture (liste « personnes »), nettement lues seulement.

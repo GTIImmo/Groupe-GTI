@@ -8,7 +8,7 @@
 // Sous-lot 7c (13/11) : les transactions -- L7 offre, compromis et acte face à LEUR ligne du registre (resoudreCible),
 // L8 facture, L9 honoraires (équations, au-dessus du mandat), L19 annulation d'un compromis encore actif.
 import {
-  annualiser, comparerCommune, comparerListe, comparerNombre, comparerNumero, dateLue, finDeValidite, joursEntre, lireDateIso, lireNombre,
+  annualiser, comparerCommune, conditionsLuesDe, LIBELLE_CONDITION, natureDuLibelle, comparerListe, comparerNombre, comparerNumero, dateLue, finDeValidite, joursEntre, lireDateIso, lireNombre,
   nombreLu, personnesLuesDe, personneSurLaFiche, resoudreCible, texteLu, TOLERANCES, type PersonneDuBien,
 } from './gedComparer'
 import type { LectureDocument } from './gedLecture'
@@ -310,6 +310,27 @@ export function reglesLues(faits: FaitsRegles, docs: DocumentLu[], personnesDuBi
         if (ecart) ecarts.push(ecart)
       }
       if (ecarts.length) alertes.push({ code: 'L7', niveau: 'alerte', texte: `Compromis : ${ecarts.join(' ; ')}`, pourquoi: 'le registre ne dit pas ce que dit le compromis signé' })
+      // L20 (lot 10b, 17/11) -- les conditions suspensives lues face à celles de LA transaction. Seulement quand la liste de
+      // la transaction a été lue SANS erreur et n'est PAS vide (vide : elle se propose à remplir, elle ne sonne pas).
+      if (ligne.conditions && ligne.conditions.length) {
+        const parNature = new Map(ligne.conditions.map((c) => [natureDuLibelle(c.libelle), c]))
+        const lues = conditionsLuesDe(cpv.lecture)
+        const nonTrouvees = lues.filter((c) => !parNature.has(c.nature)).map((c) => LIBELLE_CONDITION[c.nature])
+        if (nonTrouvees.length) alertes.push({ code: 'L20', niveau: 'alerte', texte: `Conditions suspensives du compromis non trouvées dans la transaction : ${nonTrouvees.join(', ')}`, pourquoi: 'la transaction ne suit pas toutes les conditions signées' })
+        for (const c of lues) {
+          const suivie = parNature.get(c.nature)
+          const lu = lireDateIso(c.date)
+          const suivi = lireDateIso(suivie?.date)
+          if (suivie && lu && suivi && Math.abs(joursEntre(lu, suivi)) > 1) {
+            alertes.push({ code: 'L20', niveau: 'alerte', texte: `Condition « ${suivie.libelle} » : jusqu'au ${jjmmaaaa(lu)} au compromis, ${jjmmaaaa(suivi)} dans la transaction`, pourquoi: 'la date suivie n\'est pas celle du compromis signé' })
+          }
+        }
+        const pret = texteLu(v, 'condition_pret')
+        const suiviePret = parNature.get('pret')
+        if ((pret === 'non' || pret === 'renonciation') && suiviePret) {
+          alertes.push({ code: 'L20', niveau: 'alerte', texte: `Le compromis dit ${pret === 'renonciation' ? 'renonciation à la condition de prêt' : 'pas de condition de prêt'}, la transaction suit « ${suiviePret.libelle} »`, pourquoi: 'cette condition est-elle encore due ?' })
+        }
+      }
     }
   }
 

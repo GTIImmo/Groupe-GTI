@@ -299,6 +299,21 @@ export async function lireCarnetAffairesStrict(appAffaireIds: number[]): Promise
   return carnet
 }
 
+// Lot 10b (17/11) : les conditions suspensives des transactions (libellé, date limite), lues STRICTEMENT -- la lecture
+// d'aujourd'hui (loadAffairesConditions) rend une carte vide sur erreur : on dirait « condition non trouvée » à tort.
+export async function lireConditionsAffairesStrict(appAffaireIds: number[]): Promise<Map<number, Array<{ libelle: string; date: string | null }>>> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Base non configurée')
+  const ids = Array.from(new Set(appAffaireIds.filter((id) => Number.isFinite(id))))
+  const sortie = new Map<number, Array<{ libelle: string; date: string | null }>>(ids.map((id) => [id, []]))
+  if (!ids.length) return sortie
+  const { data, error } = await supabase.from('app_affaire_condition').select('app_affaire_id,rang,libelle,date_echeance').in('app_affaire_id', ids).order('rang', { ascending: true })
+  if (error) throw new Error(error.message)
+  for (const r of (data ?? []) as Array<{ app_affaire_id: number; libelle: string | null; date_echeance: string | null }>) {
+    sortie.get(Number(r.app_affaire_id))?.push({ libelle: String(r.libelle ?? ''), date: r.date_echeance ?? null })
+  }
+  return sortie
+}
+
 // Les types DÉCIDÉS des documents déposés avec l'outil, pour un bien (lecture : patch_ged_m3_recu_manque, même
 // périmètre que les documents). Clé : la ligne du document chez nous. Une lecture ratée rend une liste vide :
 // les documents retombent alors sur leur nom, rien ne casse.

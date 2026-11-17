@@ -179,6 +179,9 @@ FICHES.update({
 _SIGNATURES_FIN = "Les signatures sont souvent sur les DERNIÈRES pages, montrées en image après le texte : compte-les là. "
 _PRET = "JAMAIS le montant d'un prêt, son taux, sa durée, la banque, l'apport ni le plan de financement."
 _SIGNE = _SIGNATURES_FIN + _PRET
+# lot 10b (17/11) : la NATURE d'une condition suspensive (liste fermée) -- jamais son texte
+CONDITIONS_SUSPENSIVES = ["pret", "preemption", "vente_bien", "permis_construire", "urbanisme", "servitudes",
+                          "hypotheque", "autre"]
 FICHES.update({
     "transaction.offre": {
         "version": 1,
@@ -198,8 +201,10 @@ FICHES.update({
                    "signatures_vendeurs_nb": ("num", None), "reference_bien": ("txt", None)},
         "listes": [("personnes", {"nom": ("nom", None), "prenoms": ("nom", None), "qualite": ("txt", QUALITES)})],
     },
+    # v2 (17/11, lot 10b) : la liste des CONDITIONS SUSPENSIVES -- leur NATURE (liste fermée) et leur date limite, jamais
+    # leur texte (une condition de prêt porte le montant, le taux, la banque : interdits, voir _PRET).
     "transaction.avant_contrat": {
-        "version": 1,
+        "version": 2,
         "texte_max": MAX_TEXTE_COMPROMIS,
         "consigne": "C'est un compromis ou une promesse de vente. date_signature : la date à laquelle il est signé ; "
                     "forme : ssp_agence s'il est signé sous seing privé (à l'agence), notaire s'il est reçu par un "
@@ -209,7 +214,13 @@ FICHES.update({
                     "du prêt. date_reiteration : la date limite de signature de l'acte authentique. sequestre (montant) "
                     "et sequestre_depositaire (notaire, agence). notaire_vendeur, notaire_acquereur : les études. "
                     "reference_bien : le numéro de mandat cité. signatures_vendeurs_nb, signatures_acquereurs_nb : les "
-                    "signatures VISIBLES. " + _EXCEPTION_NOMS + " Ici : les VENDEURS (qualité vendeur) et les "
+                    "signatures VISIBLES. conditions : CHAQUE condition suspensive, une ligne par condition -- nature "
+                    "(pret : l'obtention d'un prêt ; preemption : le droit de préemption, la mairie, la DIA ; vente_bien : "
+                    "la vente d'un autre bien de l'acquéreur ; permis_construire ; urbanisme : un certificat ou des "
+                    "renseignements d'urbanisme ; servitudes : l'absence de servitude grave ; hypotheque : un état "
+                    "hypothécaire sans inscription supérieure au prix ; autre) et date_limite : la date limite de CETTE "
+                    "condition si elle est écrite. Rien d'autre sur une condition. "
+                    + _EXCEPTION_NOMS + " Ici : les VENDEURS (qualité vendeur) et les "
                     "ACQUÉREURS (qualité acquereur). " + _SIGNE,
         "champs": {"date_signature": ("date", None), "forme": ("txt", ["ssp_agence", "notaire"]),
                    "nature": ("txt", ["compromis", "promesse_unilaterale"]), "prix": ("num", None),
@@ -220,7 +231,8 @@ FICHES.update({
                    "sequestre_depositaire": ("txt", ["notaire", "agence"]), "notaire_vendeur": ("txt", None),
                    "notaire_acquereur": ("txt", None), "reference_bien": ("txt", None),
                    "signatures_vendeurs_nb": ("num", None), "signatures_acquereurs_nb": ("num", None)},
-        "listes": [("personnes", {"nom": ("nom", None), "prenoms": ("nom", None), "qualite": ("txt", QUALITES)})],
+        "listes": [("personnes", {"nom": ("nom", None), "prenoms": ("nom", None), "qualite": ("txt", QUALITES)}),
+                   ("conditions", {"nature": ("txt", CONDITIONS_SUSPENSIVES), "date_limite": ("date", None)})],
     },
     "copro.pv_ag": {
         "version": 1,

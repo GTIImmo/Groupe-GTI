@@ -3,7 +3,7 @@
 // gestes EXISTANTS, appelés par l'écran après avoir RELU la case juste avant (App.tsx, remplirDepuisDocument).
 // ⛔ Jamais par-dessus une valeur. ⛔ Ni la taxe foncière (son groupe Hektor renvoie aussi prix et honoraires), ni un
 //   champ du mandat (décision ⑦-7), ni l'adresse, ni les mandants. Note du chantier §12.18.
-import { annualiser, dateLue, lireDateIso, nombreLu, resoudreCible, texteLu, comparerNumero, personnesLuesDe } from './gedComparer'
+import { annualiser, conditionsLuesDe, dateLue, LIBELLE_CONDITION, lireDateIso, nombreLu, resoudreCible, texteLu, comparerNumero, personnesLuesDe, type ConditionLue } from './gedComparer'
 import type { AffaireRegle, FaitsRegles } from './gedRegles'
 import type { DocumentLu } from './gedReglesLues'
 
@@ -103,10 +103,18 @@ export function propositionsRemplir(
   const ligneCpv = cpv ? resoudreCible(affaires.filter((a) => a.kind === 'compromis' && !['refused', 'cancelled'].includes(String(a.state ?? ''))), {
     acquereurs: personnesLuesDe(cpv.lecture).filter((p) => p.qualite === 'acquereur'), date: dateLue(cpv.lecture.valeurs, 'date_signature'), montant: nombreLu(cpv.lecture.valeurs, 'prix'),
   }) : null
-  if (cpv && texteLu(cpv.lecture.valeurs, 'condition_pret') === 'oui') {
-    const limite = dateLue(cpv.lecture.valeurs, 'date_limite_pret')
-    if (limite && ligneCpv?.id != null && conditionsParAffaire.get(ligneCpv.id) === 0) {
+  // lot 10b (17/11) : TOUTES les conditions suspensives lues (fiche v2), écrites d'un clic si la liste de la transaction
+  // est VIDE (le geste remplace toute la liste : vide = rien à perdre). Une condition de prêt SEULE garde la forme
+  // d'avant (P4.condition_credit, avec sa date) : les décisions déjà prises restent valables.
+  const conditionsLues = cpv ? conditionsLuesDe(cpv.lecture) : []
+  if (cpv && conditionsLues.length && ligneCpv?.id != null && conditionsParAffaire.get(ligneCpv.id) === 0) {
+    const seulPret = conditionsLues.length === 1 && conditionsLues[0].nature === 'pret'
+    if (seulPret && conditionsLues[0].date) {
+      const limite = conditionsLues[0].date
       ajouter({ cle: 'P4.condition_credit', geste: 'condition', champ: 'Obtention Crédit', valeur: limite, texte: `Condition « Obtention Crédit » jusqu'au ${jjmmaaaa(limite)}`, source: source(cpv, 'date_limite_pret'), lectureId: cpv.lecture.id ?? null, affaireId: ligneCpv.id })
+    } else if (!seulPret) {
+      const dites = conditionsLues.map((c) => `${LIBELLE_CONDITION[c.nature]}${c.date ? ` jusqu'au ${jjmmaaaa(c.date)}` : ''}`)
+      ajouter({ cle: 'P4.conditions', geste: 'condition', champ: 'conditions', valeur: encoderConditions(conditionsLues), texte: `Conditions suspensives : ${dites.join(' ; ')}`, source: source(cpv, 'conditions.nature'), lectureId: cpv.lecture.id ?? null, affaireId: ligneCpv.id })
     }
   }
   // P4 (lot 10a, 17/11) -- la date d'acte prévue (la RÉITÉRATION lue) et le séquestre, sur LA transaction du compromis
@@ -125,6 +133,16 @@ export function propositionsRemplir(
   }
 
   return sortie
+}
+
+// Lot 10b : la liste de conditions d'une proposition, en texte (la clé d'une décision est « cle|valeur ») --
+// « nature@date|nature@ » ; le décodage rejette tout ce qui n'est pas une nature connue et une date AAAA-MM-JJ.
+export function encoderConditions(cs: ConditionLue[]): string {
+  return cs.map((c) => `${c.nature}@${c.date ?? ''}`).join('|')
+}
+export function decoderConditions(s: string): ConditionLue[] {
+  return s.split('|').map((m) => m.split('@')).filter(([n, d]) => n in LIBELLE_CONDITION && (!d || /^\d{4}-\d{2}-\d{2}$/.test(d)))
+    .map(([n, d]) => ({ nature: n as ConditionLue['nature'], date: d || null }))
 }
 
 // Une case de la fiche est-elle VIDE ? (Hektor met « 0 » ou « 0000-00-00 » pour rien ; la date zéro 1970 non plus.)

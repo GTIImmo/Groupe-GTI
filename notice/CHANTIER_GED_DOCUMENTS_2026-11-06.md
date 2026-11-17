@@ -33,7 +33,8 @@
 | 9 | pièces des personnes (identité — le justificatif le plus déposé —, état civil, financement) | ✅ **9a** (identité, registre à part) en production et éprouvé ; **9b** (P4-P6) regardé en réel le 14/11 ; **9c** (remplir la fiche d'un mandant) corrigé (les deux numéros) et prouvé le 16/11 ; **9d-1** (financement, P7-P8) lecture éprouvée, ⚠ P7/P8 PAS prouvées en réel (aucun bien d'essai n'a de compromis vivant) ; **9d-2** (état civil, P9-P10) éprouvé le 16/11 (§12.19) |
 | 10 | mesure (vrai / faux / déjà su) | ✅ en production le 16/11 (`d4ca8fe`, table `app_ged_jugement`) ; ⏰ **la mesure court jusqu'au 30/11**, compte rendu par `supabase/requete_mesure_ged_m10_2026-11-16.sql` ; 63331, 62774, 61398 ne se jugent pas (§12.20) |
 | habillage | la maquette RETRAVAILLÉE (toile https://claude.ai/artifact/S16jkpfnqtPF83xvUdkNtm) | ✅ **COMPLET le 17/11** : H1 le bloc « Le dossier », H2 la fenêtre de dépôt, H3 l'après-envoi (« La fiche du bien », « Voir le document » ; « Voir la preuve » NON fait, décision), H4 le panneau photo du téléphone (viseur dans l'app NON fait, décision) — tous vus en production (§12.21) |
-| 10a | le compromis lu → SA transaction (date d'acte prévue, séquestre) | ✅ **écrit le 17/11, rien poussé** (§12.22) |
+| 10a | le compromis lu → SA transaction (date d'acte prévue, séquestre) | ✅ en ligne le 17/11 (`270cbd7`) ; pas vu en réel (aucun compromis au registre sur un bien d'essai) (§12.22) |
+| 10b | les conditions suspensives du compromis → SA transaction | ✅ **écrit le 17/11, rien poussé** (§12.23) |
 
 **Reste, au 17/11** : ⏰ le compte rendu de la mesure le 30/11 ; P7/P8 en réel — **mis de côté par Frédéric le 17/11 :
 « trop compliqué pour le moment »** ; les pièces d'essai SPECIMEN restées sur 63331 et 63147 (63147 : un faux DPE, consommation 212 écrite, 2
@@ -2353,3 +2354,28 @@ Frédéric ; Vercel READY).** Contrôle de non-régression en production : 63147
 5 feuilles, console propre ; 63331 -- les MÊMES 10 lignes « À regarder » qu'avant, console propre (la lecture du carnet
 ne fait rien taire). ⚠ Pas vu en réel : aucun bien d'essai n'a de compromis AU REGISTRE (63331 a un compromis déposé,
 « aucun au registre ») -- le lot ne peut rien y proposer, c'est voulu.
+
+### 12.23 Le lot 10b -- les conditions suspensives du compromis (17/11, « Oui, les conditions »)
+**L'audit** : les conditions d'une transaction sont une donnée de l'APP seule (`app_affaire_condition`, jamais chez
+Hektor -- décision du 16/09) ; le catalogue de l'agence n'a que 2 entrées (« Préemption mairie », « Obtention Crédit ») ;
+5 conditions posées en tout dans la base. L'écriture (`ecrireAffaireConditions`) remplace TOUTE la liste ; la lecture
+d'aujourd'hui (`loadAffairesConditions`) rend une carte VIDE sur erreur.
+⛔ **Confidentialité** : la condition de prêt d'un compromis porte souvent le MONTANT du prêt, son TAUX, sa BANQUE --
+interdits (`_PRET`). On ne lit donc QUE la NATURE de chaque condition (liste fermée : pret, preemption, vente_bien,
+permis_construire, urbanisme, servitudes, hypotheque, autre) et sa DATE LIMITE, jamais son texte.
+**✅ ÉCRIT (17/11) — rien poussé** :
+- **Serveur** (`openai_ged_lecture_service.py`) : la fiche du compromis passe en **v2** avec une liste « conditions »
+  (nature, date limite). `test_ged_lire` 81 -> 83 (TÉMOIN : aucun champ texte, montant, taux, banque).
+- **Lire** (`gedComparer.conditionsLuesDe`) : une nature une fois ; « pas de prêt » / « renonciation » écarte la
+  condition de prêt ; une lecture v1 (avant) retombe sur la seule condition de prêt, comme avant.
+- **Remplir** : si la liste de la transaction est VIDE (comptée strictement), UNE proposition écrit toutes les conditions
+  lues (`P4.conditions`, libellé du catalogue quand il y figure) ; le prêt SEUL garde la forme d'avant
+  (`P4.condition_credit`), les décisions déjà prises restent valables. Le geste décode la liste APRÈS le compte strict.
+- **Comparer** (**L20**) : liste de la transaction lue strictement (`lireConditionsAffairesStrict`) et NON vide --
+  condition du compromis non trouvée dans la transaction ; date limite différente ; « renonciation » / « pas de prêt »
+  alors que la transaction suit le crédit.
+- **Résumé** du dépôt : « … · conditions : Obtention Crédit, Préemption mairie ».
+Essais : `test_ged_remplir` 43 -> 49 (TÉMOIN INVERSE : sans la garde « liste vide », deux contrôles rougissent),
+`test_ged_regles_lues` 88 -> 93, `test_ged_lecture` 59 -> 60 ; les 12 essais GED et les 5 du serveur verts, build vert.
+⚠ Ne vaut que pour les compromis lus APRÈS le déploiement du serveur (Render). ⚠ Pas vu en réel : aucun bien d'essai n'a
+de compromis au registre.

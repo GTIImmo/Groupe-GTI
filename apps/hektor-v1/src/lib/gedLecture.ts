@@ -3,6 +3,7 @@
 // app_ged_valeur, écrites par le serveur seul ; patch_ged_m6_lecture_2026-11-12.sql). L'écran LIT, il n'écrit rien ici.
 // Note du chantier : notice/CHANTIER_GED_DOCUMENTS_2026-11-06.md §12.11.
 import { hasSupabaseEnv, supabase } from './supabase'
+import { conditionsLuesDe, LIBELLE_CONDITION } from './gedComparer'
 
 // Lot 1 : les fiches 1 à 3 de l'étude. Lot 2 (§12.14) : les justificatifs du mandat et de la mise en vente. Lot 3
 // (§12.15) : la vente. Lot 4 (§12.16) : le reste. Même liste que FICHES côté serveur (openai_ged_lecture_service.py).
@@ -162,6 +163,9 @@ export function resumeLecture(l: Pick<LectureDocument, 'typeCode' | 'etat' | 'va
     if (v('honoraires')) morceaux.push(`honoraires ${euros(v('honoraires') as string)}${v('charge_honoraires') ? ` (${(v('charge_honoraires') as string).replace('les_deux', 'les deux').replace('acquereur', 'acquéreur')})` : ''}`)
     if (v('date_limite_pret')) morceaux.push(`prêt avant le ${v('date_limite_pret')}`)
     if (v('date_reiteration')) morceaux.push(`acte au plus tard le ${v('date_reiteration')}`)
+    // lot 10b (17/11) : les conditions suspensives lues (fiche v2), par leur nature
+    const conditions = conditionsLuesDe(l)
+    if (conditions.length && l.valeurs.some((x) => x.cle.startsWith('conditions.'))) morceaux.push(`conditions : ${conditions.map((c) => LIBELLE_CONDITION[c.nature]).join(', ')}`)
     const p = personnesLues(l.valeurs)
     if (p) morceaux.push(p)
   } else if (l.typeCode === 'copro.pv_ag') {

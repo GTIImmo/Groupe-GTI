@@ -14,7 +14,7 @@ import { createPortal } from 'react-dom'
 import { createConsoleDocumentSignedUrl, loadAffairesForDossier, loadRegisterCycleAffaires } from './lib/api'
 import { apercuPremierePage } from './lib/gedClassementIa'
 import { etatFiableDuDocument } from './lib/etatSignatureMandat'
-import { compterConditionsStrict, gedDecider, gedJuger, lireCarnetAffairesStrict, loadContactsEtatCivil, loadGedClassements, loadGedDecisions, loadGedJugements, useGedPropositions, useGedRemplir, type EtatCivilLu, type JugementGed } from './lib/ged'
+import { compterConditionsStrict, gedDecider, gedJuger, lireCarnetAffairesStrict, lireConditionsAffairesStrict, loadContactsEtatCivil, loadGedClassements, loadGedDecisions, loadGedJugements, useGedPropositions, useGedRemplir, type EtatCivilLu, type JugementGed } from './lib/ged'
 import { cleJugement, LIBELLE_VERDICT, VERDICTS, type VerdictGed } from './lib/gedMesure'
 import { propositionsRemplir, type FaitsRemplir, type PropositionRemplir } from './lib/gedRemplir'
 import { propositionsContact } from './lib/gedRemplirContact'
@@ -123,6 +123,7 @@ export function RecuManque({
         // lot 10a (17/11) : le CARNET de l'app (les corrections faites chez nous) GAGNE sur la colonne du registre, que la
         // nuit remet à la valeur de Hektor. Lu strictement : raté -> on compare avec le registre, on ne propose rien.
         const carnet = await lireCarnetAffairesStrict(vivantes.map((a) => Number(a.app_affaire_id))).catch(() => null)
+        const conditions = await lireConditionsAffairesStrict(vivantes.map((a) => Number(a.app_affaire_id))).catch(() => null)
         if (annule) return
         setAffaires(vivantes.map((a) => {
           const c = carnet?.get(Number(a.app_affaire_id)) ?? {}
@@ -134,6 +135,7 @@ export function RecuManque({
               .map((p) => ({ nom: String((p as { nom?: unknown })?.nom ?? '').trim(), prenom: String((p as { prenom?: unknown })?.prenom ?? '').trim() }))
               .filter((p) => p.nom || p.prenom),
             sequestre: euros(c.sequestre || a.sequestre), carnetLu: carnet !== null,
+            conditions: conditions ? (conditions.get(Number(a.app_affaire_id)) ?? []) : null,
           }
         }))
       })

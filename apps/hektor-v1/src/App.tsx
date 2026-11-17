@@ -312,7 +312,8 @@ import type { MomentDossier } from './lib/gedPieces'
 import { compterConditionsStrict, gedDecider, lireCarnetAffairesStrict, loadContactsEtatCivil, useGedDepotMultiple, useGedRecuManque } from './lib/ged'
 // GED morceau 3 (12/11/2026) : le bloc « Reçu / Manque », derrière l'interrupteur ged_recu_manque (note GED §12.8).
 import { RecuManque } from './RecuManque'
-import { caseVide, type FaitsRemplir, type PropositionRemplir } from './lib/gedRemplir'
+import { caseVide, decoderConditions, type FaitsRemplir, type PropositionRemplir } from './lib/gedRemplir'
+import { LIBELLE_CONDITION } from './lib/gedComparer'
 import { piecesDeSignature } from './lib/piecesSignature'
 import EnvoiSignatureYoutrust, { EVENEMENT_CORRIGER_MANDAT, type DemandeCorrectionMandat, type OngletCorrection } from './EnvoiSignatureYoutrust'
 import type { FicheDuJourPdf } from './lib/ecartsFichePdf'
@@ -12008,9 +12009,19 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
     const id = p.affaireId as number
     const compte = (await compterConditionsStrict([id])).get(id)
     if (compte !== 0) return refus('liste_non_vide', `la transaction a déjà ${compte ?? '?'} condition(s).`, { conditions: compte ?? null })
-    const credit = (await loadConditionCatalogue()).find((c) => c.libelle.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase() === 'obtention credit')
-    await ecrireAffaireConditions(id, [{ rang: 1, libelle: credit?.libelle ?? 'Obtention Crédit', date_echeance: p.valeur, etat: 'attente', catalogue_id: credit?.id ?? null }])
-    await garder('remplie', { geste: 'ecrireAffaireConditions', app_affaire_id: id, date_echeance: p.valeur })
+    // lot 10b (17/11) : « P4.conditions » porte TOUTE la liste lue (nature@date) ; « P4.condition_credit », le prêt seul.
+    // Chaque libellé est pris au catalogue de l'agence quand il y figure (sinon le libellé de la nature, saisie libre).
+    const voulues = p.cle === 'P4.conditions' ? decoderConditions(p.valeur) : [{ nature: 'pret' as const, date: p.valeur }]
+    if (!voulues.length) return refus('liste_illisible', 'la liste des conditions lue est illisible.')
+    const catalogue = await loadConditionCatalogue()
+    const sansAccent = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+    const lignesConditions = voulues.map((c, i) => {
+      const libelle = LIBELLE_CONDITION[c.nature]
+      const cat = catalogue.find((x) => sansAccent(x.libelle) === sansAccent(libelle))
+      return { rang: i + 1, libelle: cat?.libelle ?? libelle, date_echeance: c.date, etat: 'attente', catalogue_id: cat?.id ?? null }
+    })
+    await ecrireAffaireConditions(id, lignesConditions)
+    await garder('remplie', { geste: 'ecrireAffaireConditions', app_affaire_id: id, conditions: lignesConditions.map((c) => ({ libelle: c.libelle, date_echeance: c.date_echeance })) })
     return `Enregistré : ${p.texte}.`
   }
   // A.2 lot 6b P5 : « Corriger le mandat » depuis la fenetre ouverte ici -> l'editeur du meme bien s'ouvre (s'il est monte).

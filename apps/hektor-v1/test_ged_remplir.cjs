@@ -60,6 +60,22 @@ voir(P([cpv10], { affaires: reg10({ carnetLu: false }) }).length === 0 && P([cpv
 voir(P([cpv10], { affaires: reg10({ state: 'cancelled' }) }).length === 0 && P([cpv10], { affaires: [...reg10(), ...reg10({ id: 78 })] }).length === 0,
   'TÉMOIN 10a : transaction annulée, ou deux que rien ne départage -> rien')
 voir(!cles(P([cpv10], { affaires: reg10({ date: null }) })).includes('date_signature'), 'TÉMOIN 10a : la date de SIGNATURE ne se remplit jamais (un compromis sans date est souvent non signé)')
+// lot 10b (17/11) : TOUTES les conditions suspensives lues (fiche v2), d'un clic, si la liste de la transaction est vide
+const cv = (n, d, r) => [v('conditions.nature', { valeur: n }, 'lu', r), ...(d ? [v('conditions.date_limite', { valeur_date: d }, 'lu', r)] : [])]
+const cpvV2 = (vals) => doc('Compromis.pdf', 'transaction.avant_contrat', [v('date_signature', { valeur_date: '2026-10-15' }), v('prix', { valeur_num: 185000 }), ...vals])
+const regC = [{ kind: 'compromis', state: 'active', date: '2026-10-15', dateActe: '2027-01-15', id: 77, montant: 185000, acquereurs: [], sequestre: 9250, carnetLu: true }]
+const pC = P([cpvV2([v('condition_pret', { valeur: 'oui' }), ...cv('pret', '2026-12-01', 0), ...cv('preemption', null, 1), ...cv('preemption', '2026-11-30', 2)])], { affaires: regC, conditions: new Map([[77, 0]]) })
+voir(cles(pC) === 'P4.conditions' && pC[0].valeur === 'pret@2026-12-01|preemption@2026-11-30' && pC[0].texte.includes('Obtention Crédit jusqu\'au 01/12/2026') && pC[0].texte.includes('Préemption mairie'),
+  '10b : prêt + préemption (en double) -> UNE proposition, la liste entière, une nature une fois (avec la date trouvée)')
+voir(cles(P([cpvV2([v('condition_pret', { valeur: 'oui' }), ...cv('pret', '2026-12-01', 0)])], { affaires: regC, conditions: new Map([[77, 0]]) })) === 'P4.condition_credit',
+  '10b : le prêt SEUL garde la forme d\'avant (P4.condition_credit) -- les décisions déjà prises restent valables')
+voir(P([cpvV2([v('condition_pret', { valeur: 'oui' }), ...cv('pret', '2026-12-01', 0), ...cv('preemption', null, 1)])], { affaires: regC, conditions: new Map([[77, 1]]) }).length === 0,
+  'TÉMOIN 10b : la transaction a déjà une condition -> rien (le geste remplace toute la liste)')
+voir(P([cpvV2([v('condition_pret', { valeur: 'renonciation' }), ...cv('pret', '2026-12-01', 0), ...cv('vente_bien', null, 1)])], { affaires: regC, conditions: new Map([[77, 0]]) })[0]?.valeur === 'vente_bien@',
+  '10b : « renonciation » au prêt -> la condition de prêt ne se propose pas')
+const { decoderConditions } = charger('src/lib/gedRemplir.ts')
+voir(JSON.stringify(decoderConditions('pret@2026-12-01|bidon@|vente_bien@20261|preemption@')) === JSON.stringify([{ nature: 'pret', date: '2026-12-01' }, { nature: 'preemption', date: null }]),
+  'TÉMOIN 10b : le décodage rejette une nature inconnue et une date mal formée')
 voir(P([dpe], { decisions: new Set(['P1.dpe_cons|210', 'P1.dpe_ges|45', 'P1.dpe_date|2026-02-03']) }).length === 0 && cles(P([dpe], { decisions: new Set(['P1.dpe_cons|199']) })).includes('P1.dpe_cons'), 'une décision prise ne revient pas ; une AUTRE valeur lue, si')
 
 console.log('② les gardes de l\'écriture')
@@ -77,6 +93,9 @@ voir(avAff('await loadAffairesForDossier(', 'await editAffaireOptimistic(') && a
   '10a : la transaction ET son carnet relus (strictement) juste avant ; case pleine -> rien écrit')
 voir(/\['refused', 'cancelled'\]\.includes/.test(fnAff) && /if \(!\['date_acte', 'sequestre'\]\.includes\(p\.champ\)\) return refus/.test(fnAff) && /if \(!res\.ok \|\| res\.champs_retenus !== 1\) return refus/.test(fnAff),
   '10a : transaction close, champ inconnu, correction non retenue -> refus écrit')
+voir(/const voulues = p\.cle === 'P4\.conditions' \? decoderConditions\(p\.valeur\) : \[\{ nature: 'pret' as const, date: p\.valeur \}\]/.test(fn) && /if \(!voulues\.length\) return refus\('liste_illisible'/.test(fn)
+  && avant('await compterConditionsStrict([id])', 'const voulues =') && avant('const lignesConditions =', 'await ecrireAffaireConditions(id, lignesConditions)'),
+  '10b : la liste lue est décodée APRÈS le compte strict (vide exigé) ; illisible -> rien écrit ; le prêt seul comme avant')
 voir(!/createChangeAnnonceStatus|app_modifier_affaire_optimistic|modifierAffaireId/.test(fnAff) && /chez nous ; Hektor n'est pas prévenu/.test(fnAff),
   'TÉMOIN 10a : CHEZ NOUS seulement (décision du 17/11) -- aucun travail vers Hektor')
 const ged = fs.readFileSync(path.join(__dirname, 'src/lib/ged.ts'), 'utf8')

@@ -55,6 +55,13 @@ for c in ("transaction.offre", "transaction.avant_contrat", "transaction.annulat
 voir("JAMAIS le prêt" in lec.FICHES["transaction.acte"]["consigne"] and not any("pret" in k for k in lec.FICHES["transaction.acte"]["champs"]), "transaction.acte : jamais le prêt")
 voir(lec.FICHES["transaction.avant_contrat"]["texte_max"] == 80000 and lec.FIN_EN_IMAGE == {"transaction.avant_contrat": 2, "transaction.offre": 1, "mandat.vente": 2, "mandat.avenant": 1, "mandat.fin": 1},
      "compromis et mandat : 2 dernières pages en image ; offre, avenant, fin de mandat : la dernière")
+# lot 10b (17/11) : les conditions suspensives du compromis -- leur NATURE (liste fermée) et leur date limite, RIEN d'autre
+cpv = lec.FICHES["transaction.avant_contrat"]
+cond = lec.schema(cpv)["properties"].get("conditions", {}).get("items", {}).get("properties", {})
+voir(cpv["version"] == 2 and set(cond) == {"nature", "date_limite", "page"} and "pret" in lec.CONDITIONS_SUSPENSIVES and "autre" in lec.CONDITIONS_SUSPENSIVES,
+     "compromis v2 : une liste « conditions » -- nature (liste fermée) et date limite, rien d'autre")
+voir(not any(m in " ".join(cond) for m in ("libelle", "texte", "montant", "taux", "banque", "duree")) and lec._PRET in cpv["consigne"],
+     "TÉMOIN : aucun texte de condition (une condition de prêt porte montant, taux, banque) ; la consigne les interdit toujours")
 for c in avec_noms:
     item = lec.schema(lec.FICHES[c])["properties"]["personnes"]["items"]["properties"]
     voir(set(item) <= {"nom", "prenoms", "qualite", "droits", "quote_part", "page"}, f"{c} : une personne = nom, prénoms, qualité (droits) — rien d'autre")

@@ -48,6 +48,8 @@ export type AffaireRegle = {
   // et prix y sont alors déjà repris : le carnet gagne). Carnet non lu -> on compare, on ne propose rien.
   sequestre?: number | null
   carnetLu?: boolean
+  // lot 10b (17/11) : ses conditions suspensives (lues strictement ; null = pas lues -> on ne compare pas)
+  conditions?: Array<{ libelle: string; date: string | null }> | null
 }
 
 export type NiveauAlerte = 'alerte' | 'piece' | 'info'
