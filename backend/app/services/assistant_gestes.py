@@ -1524,65 +1524,125 @@ def lire_portails_bien(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[str, A
     return {"annonce": bien["hektor_annonce_id"], "diffusable": str(bien.get("diffusable") or "") == "1",
             "valide": _valide(bien.get("validation_diffusion_state")),
             "portails": [{"portail": k, "nom": n, "en_ligne": k in en_ligne} for k, n in PORTAILS.items()],
-            "a_dire": "Ajouter ou retirer un portail n'est possible que sur un bien diffusable (la direction le rend "
-                      "diffusable : demande_direction type diffusion)."}
+            "a_dire": "Publier ou retirer des portails n'est possible que sur un bien DÉJÀ diffusable (la direction le rend "
+                      "diffusable par le Pilotage ; le négociateur : demande_direction type diffusion)."}
+
+
+# 17/11 (note étape 4 §44-45) : la carte prend une LISTE (« à publier », « à retirer ») = la fenêtre « Diffusion » de
+# l'écran, en n'enregistrant que les portails NOMMÉS (les autres ne bougent pas, comme la case de la vue Publicité).
+# ⛔ Seulement sur un bien DÉJÀ diffusable, pour TOUT LE MONDE (règle de Frédéric du 17/11) : la direction le rend
+#   diffusable par la carte Pilotage ; la carte ne passe jamais ensure_diffusable.
+def _portails_nommes(texte: Any, quoi: str) -> list[str]:
+    cles: list[str] = []
+    for morceau in str(texte or "").split("|"):
+        nom = _simple(morceau).replace(" ", "")  # « Bien'ici », « bienici », « le bon coin »
+        if not nom:
+            continue
+        cle = next((k for k, n in PORTAILS.items() if nom in {_simple(k).replace(" ", ""), _simple(n).replace(" ", "")}),
+                   None)
+        if not cle:
+            raise Refus(f"{quoi} : « {morceau.strip()} » n'est pas un portail ({', '.join(PORTAILS.values())}).")
+        if cle not in cles:
+            cles.append(cle)
+    return cles
+
+
+def _choix_portails(p: dict[str, Any]) -> dict[str, bool]:
+    if "choix" in p:  # la carte préparée
+        choix = {str(k): bool(v) for k, v in dict(p.get("choix") or {}).items()}
+    elif "portail" in p:  # la forme d'avant le 17/11 (un seul portail) : une carte déjà proposée reste valable
+        choix = {str(p.get("portail") or "").strip(): bool(p.get("publier"))}
+    else:
+        a_publier = _portails_nommes(p.get("publier"), "À publier")
+        a_retirer = _portails_nommes(p.get("retirer"), "À retirer")
+        if set(a_publier) & set(a_retirer):
+            raise Refus("Un même portail ne peut pas être à publier ET à retirer.")
+        choix = {**{k: True for k in a_publier}, **{k: False for k in a_retirer}}
+    if not choix:
+        raise Refus("Nomme au moins un portail à publier ou à retirer (" + ", ".join(PORTAILS.values()) + ").")
+    if any(k not in PORTAILS for k in choix):
+        raise Refus("Portail : " + ", ".join(PORTAILS) + ".")
+    return choix
+
+
+def _bien_diffusable(ctx: ContexteAssistant, hektor_annonce_id: Any) -> dict[str, Any]:
+    bien = _bien_diffusion(ctx, hektor_annonce_id)
+    if str(bien.get("diffusable") or "") != "1":
+        raise Refus("Ce bien n'est pas encore diffusable : la direction le rend diffusable (carte Pilotage) ; un "
+                    "négociateur passe par la demande de validation (demande_direction, type diffusion).")
+    return bien
+
+
+def _noms_portails(cles: list[str]) -> str:
+    return ", ".join(PORTAILS.get(k, k) for k in cles) or "aucun"
 
 
 def preparer_portail(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[str, dict[str, Any]]:
-    portail = str(p.get("portail") or "").strip()
-    if portail not in PORTAILS:
-        raise Refus("Portail : " + ", ".join(PORTAILS) + ".")
-    bien = _bien_diffusion(ctx, p.get("hektor_annonce_id"))
-    if str(bien.get("diffusable") or "") != "1":
-        raise Refus("Ce bien n'est pas encore diffusable : la direction doit le valider et cocher Diffusable "
-                    "(demande_direction, type diffusion).")
-    publier = bool(p.get("publier"))
-    if (portail in _en_ligne(bien.get("portails_resume"))) == publier:
-        raise Refus(f"Le bien est déjà {'en ligne' if publier else 'absent'} sur {PORTAILS[portail]}.")
-    verbe = "PUBLIER" if publier else "RETIRER"
-    return (f"{verbe} l'annonce {bien['hektor_annonce_id']} « {bien.get('titre_bien') or ''} » "
-            f"{'sur' if publier else 'de'} {PORTAILS[portail]} — les autres portails ne bougent pas",
-            {"hektor_annonce_id": int(bien["hektor_annonce_id"]), "portail": portail, "publier": publier})
+    choix = _choix_portails(p)
+    bien = _bien_diffusable(ctx, p.get("hektor_annonce_id"))
+    en_ligne = _en_ligne(bien.get("portails_resume"))
+    deja = [k for k, v in choix.items() if (k in en_ligne) == v]
+    choix = {k: v for k, v in choix.items() if k not in deja}
+    if not choix:
+        raise Refus(f"Rien ne change : le bien est déjà {'en ligne sur' if all(k in en_ligne for k in deja) else 'absent de'} "
+                    f"{_noms_portails(deja)}.")
+    apres = [k for k in en_ligne if choix.get(k, True)] + [k for k, v in choix.items() if v and k not in en_ligne]
+    morceaux = [f"PUBLIER sur {_noms_portails([k for k, v in choix.items() if v])}" if any(choix.values()) else "",
+                f"RETIRER de {_noms_portails([k for k, v in choix.items() if not v])}" if not all(choix.values()) else ""]
+    resume = (f"Diffusion de l'annonce {bien['hektor_annonce_id']} « {bien.get('titre_bien') or ''} » : "
+              + " ; ".join(m for m in morceaux if m)
+              + f" — en ligne : {_noms_portails(en_ligne)} → {_noms_portails(apres)} ; les autres portails ne bougent pas")
+    if deja:
+        resume += f" (déjà dans l'état voulu : {_noms_portails(deja)})"
+    return resume, {"hektor_annonce_id": int(bien["hektor_annonce_id"]), "choix": choix}
 
 
 def executer_portail(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[str, Any]:
     from .hektor_bridge import HektorBridgeService
-    portail, publier = p["portail"], bool(p["publier"])
-    bien = _bien_diffusion(ctx, p.get("hektor_annonce_id"))
+    choix = _choix_portails(p)
+    bien = _bien_diffusable(ctx, p.get("hektor_annonce_id"))  # re-vérifié AU CLIC, pour tous les rôles (règle du 17/11)
     _email, user = _personne(ctx)
     try:  # la garde de la route /apply : négociateur = bien diffusable ET le sien (jugé avec SON jeton)
         SupabaseAdminService(ctx.settings).assert_can_apply_portals(user, f"Bearer {ctx.jeton}", bien["app_dossier_id"])
     except HTTPException as exc:
         raise Refus(f"refusé : {exc.detail}") from None
     pont = HektorBridgeService(ctx.settings)
-    numero = PORTAIL_ID_COMMUN.get(portail) or next(
-        (str(t["hektor_broadcast_id"]) for t in pont._load_agency_targets(bien.get("agence_nom"))  # noqa: SLF001
-         if t.get("portal_key") == portail), None)
-    if not numero:
-        raise Refus(f"numéro de passerelle {PORTAILS[portail]} introuvable pour l'agence {bien.get('agence_nom') or ''}")
-    # = saveDiffusionTargets (api.ts:8504) avec UNE cible : on efface les choix du bien, on écrit celui-ci
+    agence: list[dict[str, Any]] | None = None
+    numeros: dict[str, str] = {}
+    for portail in choix:
+        numero = PORTAIL_ID_COMMUN.get(portail)
+        if not numero:
+            if agence is None:
+                agence = pont._load_agency_targets(bien.get("agence_nom"))  # noqa: SLF001
+            numero = next((str(t["hektor_broadcast_id"]) for t in agence if t.get("portal_key") == portail), None)
+        if not numero:
+            raise Refus(f"numéro de passerelle {PORTAILS[portail]} introuvable pour l'agence {bien.get('agence_nom') or ''}")
+        numeros[portail] = numero
+    # = saveDiffusionTargets (api.ts:8504) avec les SEULS portails nommés : on efface les choix du bien, on écrit ceux-ci
+    maintenant = datetime.now(timezone.utc).isoformat()
     _ecrire(ctx, "DELETE", "app_diffusion_target", None, {"app_dossier_id": f"eq.{bien['app_dossier_id']}"})
     _ecrire(ctx, "POST", "app_diffusion_target", [{
         "app_dossier_id": bien["app_dossier_id"], "hektor_annonce_id": int(bien["hektor_annonce_id"]),
-        "hektor_broadcast_id": numero, "portal_key": portail, "target_state": "enabled" if publier else "disabled",
+        "hektor_broadcast_id": numeros[portail], "portal_key": portail, "target_state": "enabled" if publier else "disabled",
         "source_ref": "console_diffusion", "note": "assistant", "requested_by_role": ctx.role,
-        "requested_by_name": ctx.nom or ctx.email, "requested_at": datetime.now(timezone.utc).isoformat()}])
+        "requested_by_name": ctx.nom or ctx.email, "requested_at": maintenant} for portail, publier in choix.items()])
     try:
         r = pont.apply(bien["app_dossier_id"], False, False, ctx.email or ctx.user_id)
     except HTTPException as exc:
         raise Refus(f"Hektor n'a pas pu être joint ({exc.detail})") from None
-    refus = next((f for f in r.get("failed") or [] if f.get("action") in {"add", "remove"}), None)
-    if refus:
-        raise Refus(f"Hektor a refusé : {str(refus.get('error') or '')[:200]}")
+    refus = [f for f in r.get("failed") or [] if f.get("action") in {"add", "remove"}]
+    if refus:  # rien n'est reporté : la relecture de la nuit remettra l'app d'accord avec ce que Hektor a vraiment fait
+        raise Refus("Hektor a refusé : " + " ; ".join(
+            f"{PORTAILS.get(str(f.get('portal_key') or ''), f.get('portal_key') or 'un portail')} "
+            f"({str(f.get('error') or '')[:120]})" for f in refus))
     avant = _en_ligne(bien.get("portails_resume"))
-    apres = [k for k in avant if k != portail] + ([portail] if publier else [])
+    apres = [k for k in avant if choix.get(k, True)] + [k for k, v in choix.items() if v and k not in avant]
     try:  # Hektor a CONFIRMÉ ; si le report rate, la relecture de la nuit remettra l'app d'accord (comme l'écran)
         pont.persist_state(bien["app_dossier_id"], portails_resume=", ".join(apres), nb_portails_actifs=len(apres))
         reporte = True
     except Exception:  # noqa: BLE001
         reporte = False
-    return {"app_dossier_id": bien["app_dossier_id"], "portail": portail, "publie": publier, "en_ligne_apres": apres,
-            "resume_reporte": reporte}
+    return {"app_dossier_id": bien["app_dossier_id"], "choix": choix, "en_ligne_apres": apres, "resume_reporte": reporte}
 
 
 # ── 17/11 (note étape 4 §41-42) : le PILOTAGE de la fiche — cocher Validation, cocher Diffusable [direction] ──────
@@ -3087,12 +3147,14 @@ GESTES: dict[str, Geste] = {g.nom: g for g in (
           preparer_deplacer_photo, executer_deplacer_photo),
     # lot 4b
     Geste("portail",
-          "Prépare : PUBLIER (publier = true) ou RETIRER (publier = false) une annonce DIFFUSABLE sur UN portail. Les autres "
-          "portails ne bougent pas. Rendre un bien diffusable reste à la direction.",
+          "Prépare la DIFFUSION d'une annonce DÉJÀ DIFFUSABLE : la PUBLIER et / ou la RETIRER sur un ou plusieurs portails "
+          "(Leboncoin, Bien'ici, Paper, Etreproprio, Superimmo) en une fois ; les portails non nommés ne bougent pas. Un "
+          "bien pas encore diffusable : la direction le rend diffusable par le Pilotage, le négociateur fait une demande "
+          "de validation.",
           TOUS_LES_ROLES,
           _schema({"hektor_annonce_id": {"type": "integer", "description": "numéro de l'annonce"},
-                   "portail": {"type": "string", "enum": list(PORTAILS)},
-                   "publier": {"type": "boolean"}}),
+                   "publier": {"type": "string", "description": "portails à publier séparés par |, ou vide"},
+                   "retirer": {"type": "string", "description": "portails à retirer séparés par |, ou vide"}}),
           preparer_portail, executer_portail),
     # 17/11 (§41-42) : le Pilotage de la fiche, la DIRECTION seulement (le négociateur : demande de validation)
     Geste("pilotage",

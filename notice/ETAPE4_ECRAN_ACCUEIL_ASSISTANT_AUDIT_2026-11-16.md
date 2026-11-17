@@ -1210,3 +1210,15 @@ portail » devient le cas d'une liste d'un élément) plutôt qu'en écrire une 
 **Ce que ça pourrait casser ailleurs** : rien de neuf — même effacement / réécriture des choix du bien que la carte « un
 portail » et que l'écran ; geste RÉEL chez Hektor au clic (la publicité du bien), d'où la confirmation portail par portail.
 **Épreuve proposée** : sans valider d'abord ; un essai réel sur un bien qu'il choisit.
+
+## 45. La carte DIFFUSION (plusieurs portails) : CODÉE en élargissant la carte « un portail » (17/11, « Vas-y, élargis »)
+
+La carte `portail` prend désormais une liste « à publier » et une liste « à retirer » (noms tolérés : « bienici »,
+« Bien'ici », « le bon coin »…) ; les portails non nommés ne bougent pas ; ce qui est déjà dans l'état voulu est écarté et
+DIT. Au clic : le bien doit être DÉJÀ diffusable POUR TOUS LES RÔLES (règle du 17/11 — la carte ne passe jamais
+`ensure_diffusable`), la garde de la route /apply, les SEULS portails nommés enregistrés (numéro commun ou numéro de
+l'agence, l'agence lue une fois), UN SEUL envoi, un refus de Hektor dit portail par portail (rien reporté alors), sinon le
+résumé reporté. Une carte proposée sous l'ANCIENNE forme (un portail, publier vrai / faux) reste valable au clic.
+**Contrôles** : `test_assistant_gestes` 318 verts (6 nouveaux ; les anciens tests « un portail » passent toujours) ;
+témoin inverse : la vérification « déjà diffusable » au clic sabotée -> ROUGE, remise -> 318 ; `test_assistant_ia` 62 ;
+`test_assistant_lecteur` 73 ; `npm run build` vert. Toujours 39 gestes (élargi, pas ajouté).

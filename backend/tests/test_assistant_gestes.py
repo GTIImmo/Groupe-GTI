@@ -824,6 +824,46 @@ pont.clear()
 voir(refuse(lambda: ges.executer_portail(nouveau_ctx(), pp), "passerelle fermée") and not [x for x in pont if x["quoi"] == "report"],
      "Hektor refuse : on le DIT, et le résumé n'est pas reporté")
 
+print("9ter-bis) 17/11 (§44-45) : PLUSIEURS portails d'un coup, sur un bien DÉJÀ diffusable -- la fenêtre « Diffusion »")
+reset(bien=[{**BIEN_DIF, "portails_resume": "leboncoinDirect, bienicidirect"}])
+pont.clear()
+resume_m, pm = ges.preparer_portail(nouveau_ctx(), {"hektor_annonce_id": 63289, "publier": "Paper | bienici", "retirer": "le bon coin"})
+voir("PUBLIER sur Paper" in resume_m and "RETIRER de Leboncoin" in resume_m
+     and "en ligne : Leboncoin, Bien'ici → Bien'ici, Paper" in resume_m and "déjà dans l'état voulu : Bien'ici" in resume_m
+     and pm == {"hektor_annonce_id": 63289, "choix": {"paper": True, "leboncoinDirect": False}}
+     and not ecritures_metier() and not pont,
+     "une liste : les noms reconnus (« bienici », « le bon coin »), l'avant -> après, ce qui est déjà en place est écarté ; rien d'écrit")
+voir(refuse(lambda: ges.preparer_portail(nouveau_ctx(), {"hektor_annonce_id": 63289, "publier": "Paper", "retirer": "paper"}), "ET à retirer")
+     and refuse(lambda: ges.preparer_portail(nouveau_ctx(), {"hektor_annonce_id": 63289, "publier": "SeLoger", "retirer": ""}), "n'est pas un portail")
+     and refuse(lambda: ges.preparer_portail(nouveau_ctx(), {"hektor_annonce_id": 63289, "publier": "", "retirer": ""}), "au moins un portail")
+     and refuse(lambda: ges.preparer_portail(nouveau_ctx(), {"hektor_annonce_id": 63289, "publier": "leboncoin|bienici", "retirer": ""}), "Rien ne change"),
+     "⛔ le même portail des deux côtés, un portail inconnu, rien de nommé, rien qui change : refusés")
+appels.clear()
+pont.clear()
+r_m = ges.executer_portail(nouveau_ctx(), pm)
+cibles = [a for a in appels if a["chemin"] == "app_diffusion_target"]
+poses = {c["portal_key"]: (c["hektor_broadcast_id"], c["target_state"]) for c in cibles[1]["corps"]} if len(cibles) == 2 else {}
+voir([a["methode"] for a in cibles] == ["DELETE", "POST"] and poses == {"paper": ("20", "enabled"), "leboncoinDirect": ("78", "disabled")}
+     and [x["quoi"] for x in pont].count("apply") == 1 and [x["quoi"] for x in pont].count("agence") == 1,
+     "au CLIC : les SEULS portails nommés enregistrés (Paper numéro commun, Leboncoin numéro de l'agence lu UNE fois), UN SEUL envoi")
+voir(next(x for x in pont if x["quoi"] == "apply")["ensure"] is False
+     and next(x for x in pont if x["quoi"] == "report")["portails_resume"] == "bienicidirect, paper"
+     and r_m["en_ligne_apres"] == ["bienicidirect", "paper"],
+     "⛔ jamais « diffusable » au passage ; le résumé reporté : Bien'ici reste, Leboncoin sort, Paper entre")
+reset(bien=[{**BIEN_DIF, "portails_resume": "leboncoinDirect, bienicidirect"}],
+      apply_echecs=[{"action": "add", "portal_key": "paper", "error": "passerelle fermée"}])
+pont.clear()
+voir(refuse(lambda: ges.executer_portail(nouveau_ctx(), pm), "Paper (passerelle fermée)")
+     and not [x for x in pont if x["quoi"] == "report"],
+     "un refus de Hektor est dit PORTAIL PAR PORTAIL, et rien n'est reporté (la nuit remettra l'app d'accord)")
+reset(bien=[{**BIEN_DIF, "diffusable": "0"}])
+appels.clear()
+pont.clear()
+voir(refuse(lambda: ges.executer_portail(nouveau_ctx("admin"), pm), "pas encore diffusable")
+     and not [a for a in appels if a["chemin"] == "app_diffusion_target"] and not pont,
+     "⛔ TÉMOIN : le bien n'est plus diffusable au clic -> refusé MÊME pour l'admin (sa règle), rien d'écrit, Hektor pas appelé")
+reset(bien=[dict(BIEN_DIF)])
+
 print("9quater) LOT 2c : créer un contact, ajouter / modifier une recherche -- les fonctions de l'écran")
 _faux_lot4 = faux_lot4
 COMMUNES_API = {"42700": ["Firminy"], "43000": ["Le Puy-en-Velay", "Aiguilhe", "Espaly-Saint-Marcel"]}
