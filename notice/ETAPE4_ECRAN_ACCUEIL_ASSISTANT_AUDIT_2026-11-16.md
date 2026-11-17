@@ -1567,3 +1567,17 @@ aujourd'hui quand on n'y passe pas de fichiers) ; le dépôt reste le geste de l
   - `npm run build` vert.
 - ⛔ **Pas encore éprouvé à l'écran.** Le cran `ged_depot_multiple` est à `admin` : seul Frédéric verra la fenêtre
   s'ouvrir.
+
+## 60. La carte DÉPOSER DES DOCUMENTS EN LIGNE, éprouvée « sans valider » (17/11, sur « Oui pousse puis test sans valider »)
+
+- **En ligne** : poussé `2250250..51da332`, avec deux notes d'autres sessions (e37dfcf de la GED, a2273d2 du classeur).
+  Render a servi `51da332` à 20:28:33 ; Vercel servait la carte (`depot_ged` dans le code) à 20:29:42.
+- **Essai dans le Chrome de Frédéric**, avec un PDF d'essai d'une page (622 octets) joint par le trombone :
+  - « Dépose ce document sur l'annonce 62774 » -> **refusé**, et le modèle le dit : 62774 est CLOSE (mon essai de ⑦-3a
+    du 21/10), on ne prépare un dépôt que pour une annonce vivante. C'est un témoin : la garde du bien vivant mord.
+  - « … sur l'annonce 63506 » -> **la carte « Documents » s'affiche** : « Ouvrir la fenêtre de dépôt GED de l'annonce
+    63506 « Spécial investisseurs » avec 1 fichier : « essai-document-assistant.pdf » … rien ne part chez Hektor tant que
+    tu n'as pas cliqué « Envoyer » DANS la fenêtre ». Elle est valable jusqu'à 21:01.
+  - **NON validée.** Preuve : `notice/preuve_carte_deposer_documents_2026-11-17.jpg`.
+- ⛔ **Reste à éprouver** : le clic « Valider ». La fiche doit s'ouvrir sur Documents, avec la fenêtre GED garnie du
+  fichier. Puis « Envoyer » dans la fenêtre, qui ÉCRIT chez Hektor : sur un bien que Frédéric choisit.
