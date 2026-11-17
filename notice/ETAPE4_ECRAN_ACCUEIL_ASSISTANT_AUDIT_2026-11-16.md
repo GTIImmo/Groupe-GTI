@@ -1703,8 +1703,22 @@ fenêtre e-mail de l'écran (bouton « depuis l'ordinateur ») est une étape à
 - coffre qui refuse de signer : refusé ;
 - carte sans pièce : identique à avant.
 Les autres essais sont verts : IA 62, fichiers 17, lecteur 73, GED classer 36, GED lire 88, et le build passe.
-⚠ NON ÉPROUVÉ EN RÉEL : un vrai envoi est un e-mail qui part chez un client, à faire seulement à sa demande et sur un
-contact d'essai de son choix.
+✅ ÉPROUVÉ EN RÉEL le 18/11 à 00:27, sur sa demande (« fais un test sur un contact avec ma boîte mail »). L'essai a
+été fait dans son Chrome, sur le contact d'essai 10354641 (Mme CLAUDE TESTCLAUDE, dont la fiche porte SON adresse) :
+- Les pièces : le plan cadastral du bien 24113 (793 Ko), la 1re photo du bien, et un fichier du trombone nommé
+  « CNI essai.pdf » (le PDF d'essai de 622 octets).
+- L'assistant a DEMANDÉ lequel des trois « Plan cadastral.pdf » prendre, et il a signalé de lui-même le fichier
+  « CNI » comme sensible.
+- La carte nommait les 3 pièces avec leur taille, marquait « ⚠ PIÈCE SENSIBLE » et portait l'avertissement.
+- Après le clic, l'écran a affiché « E-mail envoyé avec 3 pièces jointes. ». Capture :
+  `notice/preuve_email_pieces_jointes_2026-11-18.jpg`.
+- Ce qu'a gardé la base :
+  - la carte est `executee`, et `resultat.pieces_jointes` porte les 3 pièces (le fichier CNI `sensible: true`), sans
+    lien ni adresse ;
+  - le journal Gmail (`app_google_workspace_action_log`) porte `gmail.send` `done` avec 3 pièces, 986 114 octets et
+    les 3 noms ;
+  - le document est marqué lu (`last_accessed_at` à 23:27:13 UTC, 7 s avant l'envoi).
+- ⏳ Non vu par moi : l'e-mail arrivé dans sa boîte (Frédéric le confirme).
 
 **Ce que ça pourrait casser ailleurs** : rien d'existant. La route Gmail n'est pas modifiée, la fenêtre e-mail de
 l'écran n'est pas touchée, et la carte sans pièce garde exactement le même comportement.
