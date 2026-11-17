@@ -1423,3 +1423,29 @@ jamais lu, pièces des personnes selon leur interrupteur). À détailler à l'au
   4. un 2e dépôt retiré par la croix DISPARAÎT du coffre (`dfdb0e53…`), le 1er reste (il sera purgé : 2 jours, mais le
      nettoyeur se lance À LA MAIN).
 - Observé : un dépôt met ~5 s à passer « prêt » (trois allers-retours : préparer, envoyer, relire) ; l'envoi attend.
+
+## 54. La carte AJOUTER UNE PHOTO (avec un fichier du trombone) : AUDIT (17/11, « Oui, la photo ») — rien codé
+
+**Le geste de l'écran** (`createUploadHektorPhotoJob`, lib/api.ts ~9156), relu : ① le travail `upload_hektor_photo`
+(numéro tiré d'avance, charge : visible, nom d'origine, nom nettoyé, type, taille, `temp_storage_bucket`,
+`temp_storage_path = temp/photos/<travail>/<nom>`, priorité 18, demandeur = la personne) ; ② le fichier déposé à ce chemin
+(un échec -> `app_console_fail_own_pending_job(travail, message)`) ; ③ notre ligne
+`app_console_creer_photo_optimistic(travail, dossier, annonce, nom, légende NULL, taille)` — un échec ne fait jamais
+échouer le dépôt. Les règles complètes sont au §51 B (droits, worker, vitrine, défauts).
+**La carte proposée — `ajouter_photo`** (tous les rôles ; la base juge : le négociateur sur SES biens) :
+- un bien VIVANT (ni archive, ni brouillon, ni vendu / clos) avec un négociateur ; 1 à 20 photos du TROMBONE de la
+  personne (relues au coffre), **JPEG ou PNG seulement** (le WebP n'a jamais été envoyé à Hektor ; le GIF est refusé par le
+  coffre) ;
+- toujours **VISIBLE** (on évite le défaut « une photo voulue masquée peut fuir sur la vitrine ») ; masquer, couverture,
+  déplacer : les cartes photo existantes, une fois la photo arrivée ;
+- au CLIC, pour chaque photo, l'ordre de l'écran : le travail (avec le jeton de la personne -> la règle d'insertion juge
+  les droits) -> la COPIE du fichier par le serveur, de `temp/assistant/…` vers `temp/photos/<travail>/` (copie au coffre,
+  sans renvoi depuis l'ordinateur ; un échec -> le travail est soldé en échec, comme l'écran) -> notre ligne (jeton) ;
+- la carte DIT : les noms ; « visible, en DERNIER dans la galerie » ; « envoyée chez Hektor par le worker, une après
+  l'autre (15 à 60 s chacune) » ; « sur la vitrine après le traitement de nuit » ; et au résultat « envoi en cours » (un
+  travail fini ne veut pas dire « chez Hektor » : le vrai résultat est sur la ligne de la photo).
+**Ce que ça pourrait casser ailleurs** : rien d'existant (le chemin de l'écran, à l'identique) ; un lot de 20 photos occupe
+la file des documents de ce bien ~7 minutes (un travail à la fois par annonce) et consomme des appels Hektor (navigateur
+du worker). La course théorique « réclamation avant notre ligne » (§51 B) est la même qu'à l'écran.
+**Épreuve proposée** : sans valider d'abord ; puis un essai réel sur le bien d'essai 63330 (une photo de test, retirée
+ensuite par la carte « masquer » ou à l'écran).
