@@ -338,6 +338,24 @@ export async function lireConditionsAffairesStrict(appAffaireIds: number[]): Pro
   return sortie
 }
 
+// Lot 10c (17/11, audit) : le carnet AVEC son origine et son verdict, lu STRICTEMENT. Il dit ce qui n'est PAS encore
+// chez Hektor : une ligne « saisie_app » (l'ancien chemin « chez nous seulement ») n'est JAMAIS partie ; une ligne de
+// création ou de modification non jugée « arrivée » / « sans objet » est en route (le contrôle R3 la retire à l'arrivée).
+export type LigneCarnet = { valeur: string; origine: string; etat: string }
+export async function lireCarnetDetailStrict(appAffaireIds: number[]): Promise<Map<number, Record<string, LigneCarnet>>> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Base non configurée')
+  const ids = Array.from(new Set(appAffaireIds.filter((id) => Number.isFinite(id))))
+  const carnet = new Map<number, Record<string, LigneCarnet>>(ids.map((id) => [id, {}]))
+  if (!ids.length) return carnet
+  const { data, error } = await supabase.from('app_affaire_champ_app').select('app_affaire_id,champ,valeur_app,origine,etat').in('app_affaire_id', ids)
+  if (error) throw new Error(error.message)
+  for (const r of (data ?? []) as Array<{ app_affaire_id: number; champ: string; valeur_app: string | null; origine: string | null; etat: string | null }>) {
+    const valeur = String(r.valeur_app ?? '').trim()
+    if (valeur) (carnet.get(Number(r.app_affaire_id)) ?? {})[r.champ] = { valeur, origine: String(r.origine ?? ''), etat: String(r.etat ?? '') }
+  }
+  return carnet
+}
+
 // Lot 10c (17/11) : la liste COMPLÈTE des conditions d'UNE transaction (état, levée, note, délai), lue STRICTEMENT --
 // le geste d'écriture remplace toute la liste : une lecture ratée rendue vide EFFACERAIT les conditions suivies.
 export async function lireConditionsCompletesStrict(appAffaireId: number): Promise<ConditionComplete[]> {

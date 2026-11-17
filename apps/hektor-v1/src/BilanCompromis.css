@@ -81,7 +81,7 @@ button.bc-plaque:active:not(:disabled) { transform: scale(0.985); }
 .bc-plaque.is-ecarte { opacity: 0.42; }
 .bc-plaque.is-ecarte b { text-decoration: line-through; text-decoration-thickness: 1.5px; }
 /* le verbe du geste, en bas à droite de la plaque : « prendre », « garder », « laisser vide »… ; coché quand il est pris */
-.bc-verbe { position: absolute; right: 10px; bottom: 8px; display: inline-flex; align-items: center; gap: 3px; padding: 1px 8px; border-radius: 999px; color: var(--bc-gris); font-size: 11.5px; font-weight: 700; opacity: 0; transition: opacity 160ms, background-color 160ms, color 160ms; }
+.bc-verbe { justify-self: end; margin: 3px -4px -3px 0; display: inline-flex; align-items: center; gap: 3px; padding: 1px 8px; border-radius: 999px; color: var(--bc-gris); font-size: 11.5px; font-weight: 700; opacity: 0; transition: opacity 160ms, background-color 160ms, color 160ms; }
 button.bc-plaque:hover .bc-verbe, button.bc-plaque:focus-visible .bc-verbe { opacity: 1; background: rgba(31, 33, 33, 0.06); }
 .bc-plaque.is-pris .bc-verbe { opacity: 1; background: var(--bc-mag); color: #ffffff; }
 .bc-plaque.is-transaction.is-pris .bc-verbe { background: var(--bc-encre); }

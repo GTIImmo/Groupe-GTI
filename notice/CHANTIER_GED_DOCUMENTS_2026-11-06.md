@@ -2585,6 +2585,39 @@ Essais : `test_ged_bilan.cjs` 37 VERT (le cas réel de 18849 et ses témoins) ; 
 `test_ged_regles_lues` 95, `test_ged_lecture` 62 ; serveur `test_ged_lire` 88 ; les 13 essais GED verts, build vert. **Banc d'essai** (la vraie fenêtre, les valeurs de
 18849, sans base) regardé à l'ordinateur et au téléphone (390 px) : lignes resserrées, plaques côte à côte, page du
 document par-dessus au téléphone.
+**AUDIT du 17/11 (« fais un audit quand même pour être sûr de toi ») -- ce qui part chez Hektor, PROUVÉ** :
+- **fiche du bien et fiche d'un contact** : partent seules par les workers (file `app_annonce_pending` /
+  `app_contact_pending`, puis travail `update_hektor_annonce_fields` / `update_hektor_contact`, ~10 min) : DPE de 63147
+  écrit 17:41 -> travail 17:52 « updated » ; contact d'essai écrit 07:52 -> travail 08:03 « updated » ;
+- **gardés chez nous, par décision** : conditions suspensives (aucun lecteur dans le worker ni la synchro) ; charge des
+  honoraires au registre des mandats (chez Hektor elle vit sur le MANDAT : ⑦-7 interdit de le modifier) ;
+- **valeurs d'une transaction** : le CARNET n'est envoyé par PERSONNE (`CHAMPS_APP_AFFAIRE = ()` depuis le 16/09 ; le
+  worker ne lit le carnet que pour le juger -- R3 --, le retirer à l'arrivée, le purger) ; le SEUL chemin vers Hektor est
+  `app_modifier_affaire_optimistic` -> `change_hektor_annonce_status` en reprise, et **depuis le 03/11 seules les cases
+  TOUCHÉES partent** (le worker garde le reste du formulaire de Hektor ; témoin de reprise « modifiée dans Hektor depuis
+  votre saisie ») -- prouvé : séquestre 6 500 envoyé le 23/10, « changed ».
+**⛔ Deux erreurs de ma part, corrigées** : j'avais dit que la modale renvoyait le formulaire ENTIER (faux depuis le
+03/11) ; et que pour 30770 il suffisait d'ouvrir « Modifier » et de valider (faux : la case préremplie depuis le carnet
+n'est pas TOUCHÉE, elle ne serait pas partie). **Défaut trouvé** : la ligne « saisie_app » du lot 10a (30770, 12 400 €)
+n'est jamais jugée par R3 (il ne juge que création et modification) ; la nuit remettra la colonne à la valeur de Hektor
+et le carnet gardera 12 400 en silence -- et la fenêtre, qui comparait au CARNET, aurait dit « d'accord ».
+**✅ LOT 1 (« Lot 1 oui, et à trancher doit proposer de corriger le registre avec la donnée du doc ») -- ÉCRIT, rien poussé** :
+- **on compare à ce que Hektor a** (RecuManque, `lireCarnetDetailStrict`) : la colonne du registre ; une ligne de carnet
+  « saisie_app » = jamais partie -> la case compte comme VIDE (« pas chez Hektor », à ajouter, et la fenêtre le dit) ;
+  une ligne de création / modification pas encore jugée arrivée = en route -> comparée à la valeur envoyée, dite « pas
+  encore confirmée ». Vaut aussi pour L7 (le lot 10a comparait au carnet, en ligne depuis `270cbd7`).
+- **envoi DIRECT** (`envoyerAffaireChampsDirect`, api.ts) de la date de signature, de la date de l'acte et du séquestre :
+  la MÊME porte que « Mettre à jour » (`app_modifier_affaire_optimistic`), la charge ne porte QUE ces cases, nommées
+  touchées. Gardes de la modale AVANT toute écriture : un négociateur Hektor sur l'annonce, aucun geste Hektor en cours
+  (`gesteHektorEnCours`, lu strictement). Le travail est suivi (onJobCreated), la décision notée après sa création.
+  **Prix, net vendeur, honoraires** : par la modale (Hektor ne recalcule pas le net ; elle vérifie net + honoraires =
+  prix) -- et s'il y en a un, TOUT passe par elle (un seul travail).
+- **« À trancher » arrive PROPOSÉ** : la valeur du document est choisie d'avance (« corriger le registre »), on la
+  décoche en touchant la transaction ; rien ne part avant « Enregistrer » ; lecture seule : rien de choisi.
+Essais : `test_ged_bilan` 46 VERT (dont 30770 « jamais parti », le témoin « en route », l'envoi direct et ses gardes) ;
+les 13 essais GED verts ; build vert ; banc d'essai regardé (correction proposée, « pas chez Hektor »).
+⚠ **L'envoi direct n'est PAS encore éprouvé en réel** : sa charge est plus courte que celle de la modale (le worker
+reprend le formulaire de Hektor pour le reste) -- à éprouver sur un bien d'essai avant tout usage sur un vrai bien.
 ⏳ **À faire après la mise en ligne** : la regarder sur 18849 (ouvrir la fenêtre et la modale, SANS cliquer « Mettre à
 jour ») ; **le séquestre 12 400 € de 30770 est au carnet mais PAS chez Hektor** : ouvrir « Modifier » sur ce compromis
 (la case est préremplie depuis le carnet) et « Mettre à jour le compromis » -- c'est son geste à lui.

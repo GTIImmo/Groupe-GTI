@@ -14,7 +14,7 @@ import { createPortal } from 'react-dom'
 import { createConsoleDocumentSignedUrl, loadAffairesForDossier, loadConditionCatalogue, loadRegisterCycleAffaires } from './lib/api'
 import { apercuPremierePage } from './lib/gedClassementIa'
 import { etatFiableDuDocument } from './lib/etatSignatureMandat'
-import { gedDecider, gedJuger, lireCarnetAffairesStrict, lireConditionsAffairesStrict, loadContactsEtatCivil, loadGedClassements, loadGedDecisions, loadGedDecisionsDetail, loadGedJugements, useGedPropositions, useGedRemplir, type DecisionGed, type EtatCivilLu, type JugementGed } from './lib/ged'
+import { gedDecider, gedJuger, lireCarnetDetailStrict, lireConditionsAffairesStrict, loadContactsEtatCivil, loadGedClassements, loadGedDecisions, loadGedDecisionsDetail, loadGedJugements, useGedPropositions, useGedRemplir, type DecisionGed, type EtatCivilLu, type JugementGed } from './lib/ged'
 import { cleJugement, LIBELLE_VERDICT, VERDICTS, type VerdictGed } from './lib/gedMesure'
 import { propositionsRemplir, type FaitsRemplir, type PropositionRemplir } from './lib/gedRemplir'
 import { propositionsContact } from './lib/gedRemplirContact'
@@ -129,21 +129,34 @@ export function RecuManque({
     loadAffairesForDossier(appDossierId)
       .then(async (rows) => {
         const vivantes = rows.filter((a) => a.present_in_hektor !== false)
-        // lot 10a (17/11) : le CARNET de l'app (les corrections faites chez nous) GAGNE sur la colonne du registre, que la
-        // nuit remet à la valeur de Hektor. Lu strictement : raté -> on compare avec le registre, on ne propose rien.
-        const carnet = await lireCarnetAffairesStrict(vivantes.map((a) => Number(a.app_affaire_id))).catch(() => null)
+        // lot 10c (17/11, audit) : on compare à ce que HEKTOR a. La colonne du registre porte sa valeur (relue chaque nuit) ;
+        // le CARNET dit ce qui n'y est pas encore : une ligne « saisie_app » (l'ancien chemin « chez nous seulement », lot
+        // 10a) n'est jamais partie -> la case compte comme VIDE (elle se propose à envoyer) ; une ligne de création ou de
+        // modification pas encore jugée arrivée est EN ROUTE -> on compare à la valeur envoyée. Lu strictement : raté ->
+        // on compare au registre, on ne propose rien.
+        const carnet = await lireCarnetDetailStrict(vivantes.map((a) => Number(a.app_affaire_id))).catch(() => null)
         const conditions = await lireConditionsAffairesStrict(vivantes.map((a) => Number(a.app_affaire_id))).catch(() => null)
         if (annule) return
         setAffaires(vivantes.map((a) => {
           const c = carnet?.get(Number(a.app_affaire_id)) ?? {}
+          const enAttente: Record<string, 'jamais_envoye' | 'en_route'> = {}
+          const chezHektor = (champ: string, registre: string | number | null | undefined): string | number | null => {
+            const l = c[champ]
+            if (!l) return registre ?? null
+            if (l.origine === 'saisie_app') { enAttente[champ] = 'jamais_envoye'; return null }
+            if (!['arrivee', 'sans_objet'].includes(l.etat)) { enAttente[champ] = 'en_route'; return l.valeur }
+            return registre ?? null
+          }
+          const date = chezHektor('date', a.date), dateActe = chezHektor('date_acte', a.date_acte)
+          const montant = chezHektor('montant', a.montant), sequestre = chezHektor('sequestre', a.sequestre), net = chezHektor('prix_net_vendeur', a.prix_net_vendeur)
           return {
-            kind: String(a.kind), state: a.state ?? null, date: c.date || (a.date ?? null), dateActe: c.date_acte || (a.date_acte ?? null), id: Number(a.app_affaire_id),
+            kind: String(a.kind), state: a.state ?? null, date: date == null ? null : String(date), dateActe: dateActe == null ? null : String(dateActe), id: Number(a.app_affaire_id),
             // morceau 7c : de quoi comparer une transaction lue (montant en euros ; acquéreurs : un objet seul ou une liste)
-            montant: euros(c.montant || a.montant), prixNetVendeur: euros(a.prix_net_vendeur), honorairesEntree: euros(a.honoraires_entree), honorairesSortie: euros(a.honoraires_sortie),
+            montant: euros(montant), prixNetVendeur: euros(net), honorairesEntree: euros(a.honoraires_entree), honorairesSortie: euros(a.honoraires_sortie),
             acquereurs: (Array.isArray(a.acquereurs_json) ? a.acquereurs_json : a.acquereurs_json ? [a.acquereurs_json] : [])
               .map((p) => ({ nom: String((p as { nom?: unknown })?.nom ?? '').trim(), prenom: String((p as { prenom?: unknown })?.prenom ?? '').trim() }))
               .filter((p) => p.nom || p.prenom),
-            sequestre: euros(c.sequestre || a.sequestre), carnetLu: carnet !== null,
+            sequestre: euros(sequestre), carnetLu: carnet !== null, enAttente,
             conditions: conditions ? (conditions.get(Number(a.app_affaire_id)) ?? []) : null,
           }
         }))

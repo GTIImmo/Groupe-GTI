@@ -58,6 +58,15 @@ const renonce = bilanCompromis([doc(lu18849.map((x) => (x.cle === 'condition_pre
 voir(L(renonce, 'B.condition.pret').condition.retirer === true && L(renonce, 'B.condition.pret').etat === 'trancher', 'renonciation au prêt, la transaction le suit -> « retirer la condition ? » à trancher')
 voir(L(bilanCompromis([doc(lu18849)], [reg({ conditions: [{ libelle: 'Obtention Crédit', date: '2026-12-15' }] })], CATALOGUE), 'B.condition.pret').etat === 'trancher', 'TÉMOIN : même condition, autre date -> à trancher')
 
+// audit du 17/11 : on compare à ce que HEKTOR a ; ce qui n'y est pas encore se dit
+const jamais = bilanCompromis([doc(lu18849)], [reg({ sequestre: null, enAttente: { sequestre: 'jamais_envoye' } })], CATALOGUE)
+voir(L(jamais, 'B.sequestre').etat === 'ajouter' && L(jamais, 'B.sequestre').attente === 'jamais_envoye' && /jamais partie chez Hektor/.test(L(jamais, 'B.sequestre').note),
+  '⛔ 30770 : le séquestre du carnet seul (ancien chemin 10a) n\'est PAS chez Hektor -> « à ajouter », et la fenêtre le dit')
+const enRoute = bilanCompromis([doc(lu18849)], [reg({ sequestre: 12400, enAttente: { sequestre: 'en_route' } })], CATALOGUE)
+voir(L(enRoute, 'B.sequestre').etat === 'accord' && L(enRoute, 'B.sequestre').attente === 'en_route' && /pas encore confirmée/.test(L(enRoute, 'B.sequestre').note),
+  'TÉMOIN : envoyé, pas encore revenu -> comparé à la valeur envoyée (pas renvoyé d\'office), et dit « pas encore confirmée »')
+voir(L(b, 'B.sequestre').attente === null && L(b, 'B.prix').note === null, 'TÉMOIN : sans carnet en attente, rien n\'est ajouté')
+
 console.log('② la liste des conditions après les choix')
 const avant = [{ rang: 1, libelle: 'Obtention Crédit', date_echeance: '2026-12-15', etat: 'levee', date_levee: '2026-11-30', note: 'banque OK', catalogue_id: 'c1', jours: null }]
 const apres = conditionsApres(avant, [L(bV, 'B.condition.permis_construire'), L(bV, 'B.condition.vente_bien'), { ...L(b, 'B.condition.pret'), condition: { ...L(b, 'B.condition.pret').condition, date: '2026-12-31' } }])
@@ -101,6 +110,23 @@ voir(/envoyé à Hektor/.test(fen) && /gardé chez nous/.test(fen), 'chaque lign
 voir(/const peutBilan = remplir && Boolean\(onBilan\)/.test(rm) && /Date\.now\(\) - new Date\(bilan\.luLe\)\.getTime\(\) < 30 \* 60 \* 1000/.test(rm) && /Revoir ce qu'il dit/.test(rm),
   'derrière `ged_remplir` ; s\'ouvre seule sur une lecture NEUVE (30 min) ; se rouvre par « Revoir ce qu\'il dit »')
 voir(/@media \(prefers-reduced-motion: reduce\)/.test(fs.readFileSync(path.join(__dirname, 'src/BilanCompromis.css'), 'utf8')), 'les animations se coupent si l\'ordinateur demande moins de mouvement')
+
+console.log('⑤ l\'envoi direct (décision du 17/11) et « à trancher » proposé')
+const apiSrc = fs.readFileSync(path.join(__dirname, 'src/lib/api.ts'), 'utf8')
+const env = apiSrc.slice(apiSrc.indexOf('export async function envoyerAffaireChampsDirect'), apiSrc.indexOf('export async function loadConsoleJobsByIds'))
+voir(/supabase\.rpc\('app_modifier_affaire_optimistic'/.test(env) && /reprendre_transaction: true, champs_touches: touches/.test(env) && !/amount|net_seller_price|buyer_fees|seller_fees/.test(env),
+  'envoi direct : la MÊME porte que « Mettre à jour » ; la charge ne porte que les cases envoyées, nommées « touchées » (jamais prix, net, honoraires)')
+voir(/ENVOI_DIRECT: ReadonlySet<string> = new Set\(\['transaction_date', 'signature_date', 'sequestration'\]\)/.test(fen), 'seules la date de signature, la date de l\'acte et le séquestre partent directement')
+voir(avantDans(ap, 'if (!hasHektorNegotiator(dossier)) throw', 'await ecrireAffaireConditions(') && avantDans(ap, 'await gesteHektorEnCours(dossier.hektor_annonce_id)', 'await ecrireAffaireConditions(')
+  && avantDans(ap, 'await gesteHektorEnCours(', 'await envoyerAffaireChampsDirect('),
+  'les gardes de la modale (négociateur Hektor, aucun geste en cours) passent AVANT toute écriture')
+voir(avantDans(ap, 'const job = await envoyerAffaireChampsDirect(', "await noter(c.ligne, 'remplie', { geste: 'envoi_direct_hektor'") && /if \(versHektor\.length && parLaModale\)/.test(ap),
+  'la décision « remplie » est notée APRÈS le travail créé ; prix, net ou honoraires -> TOUT passe par la modale (un seul travail)')
+const rmA = rm.slice(rm.indexOf('const chezHektor = '), rm.indexOf('const date = chezHektor'))
+voir(/if \(l\.origine === 'saisie_app'\) \{ enAttente\[champ\] = 'jamais_envoye'; return null \}/.test(rmA) && /\['arrivee', 'sans_objet'\]\.includes\(l\.etat\)/.test(rmA),
+  '⛔ la valeur de la transaction est celle de HEKTOR : le carnet seul compte comme vide ; une valeur en route se compare telle qu\'envoyée')
+voir(/l\.etat === 'trancher' && !decisions\?\.has\(`\$\{l\.cle\}\|\$\{l\.valeur\}`\)\)\.map\(\(l\) => \[l\.cle, 'prendre' as ChoixBilan\]\)/.test(fen) && /'corriger le registre'/.test(fen),
+  'Frédéric : « à trancher » arrive PROPOSÉ -- la valeur du document choisie (« corriger le registre ») ; lecture seule : rien de choisi')
 
 console.log(ko ? `\n${ko} ROUGE, ${ok} VERT` : `\nTOUT EST VERT (${ok})`)
 process.exit(ko ? 1 : 0)

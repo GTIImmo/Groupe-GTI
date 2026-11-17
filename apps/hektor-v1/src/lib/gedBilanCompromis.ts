@@ -31,6 +31,8 @@ export type LigneBilan = {
   champModale: ChampModale | null
   condition: { nature: NatureCondition; libelle: string; date: string | null; catalogueId: string | null; retirer: boolean } | null
   regle: 'L7' | 'L20' | null  // la ligne « À regarder » qui dit la même chose (la mesure du morceau 10)
+  // lot 10c (audit) : la valeur de la transaction n'est pas (encore) chez Hektor -- carnet seul, ou envoyée sans retour
+  attente: 'jamais_envoye' | 'en_route' | null
 }
 export type BilanCompromis = {
   lectureId: string | null
@@ -72,8 +74,8 @@ export function bilanCompromis(docs: DocumentLu[], affaires: AffaireRegle[], cat
   if (!ligne || ligne.id == null) return null
   const page = (cle: string) => v.find((x) => x.cle === cle && x.rang === 0)?.page ?? null
   const lignes: LigneBilan[] = []
-  const pousser = (l: Omit<LigneBilan, 'note' | 'champModale' | 'condition' | 'regle'> & Partial<Pick<LigneBilan, 'note' | 'champModale' | 'condition' | 'regle'>>) =>
-    lignes.push({ note: null, champModale: null, condition: null, regle: null, ...l })
+  const pousser = (l: Omit<LigneBilan, 'note' | 'champModale' | 'condition' | 'regle' | 'attente'> & Partial<Pick<LigneBilan, 'note' | 'champModale' | 'condition' | 'regle'>>) =>
+    lignes.push({ note: null, champModale: null, condition: null, regle: null, attente: null, ...l })
 
   // ── les champs que Hektor connaît : ils partent par la modale « Modifier le compromis » ──
   const euros = (cle: string, libelle: string, lu: number | null, base: number | null, champ: ChampModale | null, note: string | null = null) => {
@@ -107,6 +109,18 @@ export function bilanCompromis(docs: DocumentLu[], affaires: AffaireRegle[], cat
   euros('B.net_vendeur', 'Net vendeur', nombreLu(v, 'prix_net_vendeur'), montant(ligne.prixNetVendeur), 'net_seller_price')
   const honorairesBase = ligne.honorairesEntree != null || ligne.honorairesSortie != null ? (ligne.honorairesEntree ?? 0) + (ligne.honorairesSortie ?? 0) : null
   euros('B.honoraires', 'Honoraires', nombreLu(v, 'honoraires'), montant(honorairesBase), null, 'à répartir entre honoraires d\'entrée et de sortie dans la transaction')
+
+  // lot 10c (audit du 17/11) : ce qui n'est PAS chez Hektor se DIT. « jamais_envoye » : le carnet seul portait la valeur
+  // (l'ancien chemin « chez nous seulement ») -- la case compte comme vide et se propose à envoyer. « en_route » : envoyée,
+  // pas encore confirmée par le retour de Hektor -- on compare à la valeur envoyée, sans la renvoyer d'office.
+  const CHAMP_CARNET: Record<string, string> = { 'B.prix': 'montant', 'B.date': 'date', 'B.date_acte': 'date_acte', 'B.sequestre': 'sequestre', 'B.net_vendeur': 'prix_net_vendeur' }
+  for (const l of lignes) {
+    const attente = ligne.enAttente?.[CHAMP_CARNET[l.cle] ?? ''] ?? null
+    if (!attente) continue
+    l.attente = attente
+    const dit = attente === 'jamais_envoye' ? 'notre carnet seul la portait : elle n\'est jamais partie chez Hektor' : 'envoyée à Hektor, pas encore confirmée par son retour'
+    l.note = l.note ? `${dit} ; ${l.note}` : dit
+  }
 
   // ── les conditions suspensives : gardées CHEZ NOUS (app_affaire_condition), jamais envoyées à Hektor ──
   const conditionsLues = ligne.conditions != null

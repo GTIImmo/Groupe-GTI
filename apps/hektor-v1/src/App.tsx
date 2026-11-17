@@ -180,6 +180,8 @@ import {
   createCancelSignatureJob,
   markConsoleDocumentSignedManual,
   loadActiveHektorActionJobs,
+  gesteHektorEnCours,
+  envoyerAffaireChampsDirect,
   loadConsoleJobsByIds,
   loadContactRelations,
   ecrireAffaireCommission,
@@ -312,7 +314,7 @@ import type { MomentDossier } from './lib/gedPieces'
 import { compterConditionsStrict, gedDecider, lireCarnetAffairesStrict, lireConditionsCompletesStrict, loadContactsEtatCivil, useGedDepotMultiple, useGedRecuManque } from './lib/ged'
 // GED morceau 3 (12/11/2026) : le bloc « Reçu / Manque », derrière l'interrupteur ged_recu_manque (note GED §12.8).
 import { RecuManque } from './RecuManque'
-import { EVENEMENT_DROITS_TRANSACTION, EVENEMENT_MODIFIER_TRANSACTION, type ChoixBilan, type DemandeModifierTransaction, type ResultatBilan } from './BilanCompromis'
+import { estEnvoiDirect, EVENEMENT_DROITS_TRANSACTION, EVENEMENT_MODIFIER_TRANSACTION, type ChoixBilan, type DemandeModifierTransaction, type ResultatBilan } from './BilanCompromis'
 import { conditionsApres, type BilanCompromis as BilanCompromisCalcule, type LigneBilan } from './lib/gedBilanCompromis'
 import { caseVide, decoderConditions, type FaitsRemplir, type PropositionRemplir } from './lib/gedRemplir'
 import { LIBELLE_CONDITION } from './lib/gedComparer'
@@ -12034,6 +12036,15 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
     if (!ligne || ligne.present_in_hektor === false || ['refused', 'cancelled'].includes(String(ligne.state ?? ''))) {
       throw new Error('La transaction n\'a pas pu être relue, ou elle n\'est plus vivante : rien n\'a été écrit.')
     }
+    // Vers Hektor : les dates et le séquestre partent DIRECTEMENT (décision de Frédéric, 17/11) ; le prix, le net et les
+    // honoraires passent par la modale -- et s'il y en a un, tout passe par elle (un seul travail, jamais deux).
+    const versHektor = choix.filter((c) => c.choix === 'prendre' && c.ligne.destination === 'hektor')
+    const parLaModale = versHektor.some((c) => !estEnvoiDirect(c.ligne))
+    // les gardes de la modale, AVANT toute écriture : un négociateur Hektor sur l'annonce, aucun geste déjà en cours
+    if (versHektor.length && !parLaModale) {
+      if (!hasHektorNegotiator(dossier)) throw new Error('L\'annonce n\'a pas de négociateur Hektor : rien n\'a été écrit ni envoyé.')
+      if (await gesteHektorEnCours(dossier.hektor_annonce_id)) throw new Error('Une action Hektor est déjà en cours pour cette annonce : attends sa fin. Rien n\'a été écrit ni envoyé.')
+    }
     const dit: string[] = []
     const gardees = choix.filter((c) => c.choix === 'garder')
     for (const c of gardees) await noter(c.ligne, 'ignoree', { geste: 'ce_que_dit_le_compromis', app_affaire_id: b.affaireId })
@@ -12046,8 +12057,15 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
       for (const c of conditions) await noter(c.ligne, 'remplie', { geste: 'ecrireAffaireConditions', app_affaire_id: b.affaireId, conditions_avant: avant.length, conditions_apres: apres.length })
       dit.push(`${conditions.length} condition${conditions.length > 1 ? 's' : ''} enregistrée${conditions.length > 1 ? 's' : ''} chez nous`)
     }
-    const versHektor = choix.filter((c) => c.choix === 'prendre' && c.ligne.destination === 'hektor')
-    if (versHektor.length) {
+    if (versHektor.length && !parLaModale) {
+      const champs: Partial<Record<'transaction_date' | 'signature_date' | 'sequestration', string>> = {}
+      for (const c of versHektor) champs[c.ligne.champModale as 'transaction_date' | 'signature_date' | 'sequestration'] = c.ligne.valeur
+      const job = await envoyerAffaireChampsDirect(b.affaireId, champs)
+      onJobCreated?.(job)
+      for (const c of versHektor) await noter(c.ligne, 'remplie', { geste: 'envoi_direct_hektor', app_affaire_id: b.affaireId, job_id: job.id })
+      dit.push(`${versHektor.length} envoyé${versHektor.length > 1 ? 's' : ''} à Hektor : ${versHektor.map((c) => `${c.ligne.libelle} ${c.ligne.lu}`).join(', ')} (le retour de Hektor le confirmera)`)
+    }
+    if (versHektor.length && parLaModale) {
       const demande: DemandeModifierTransaction = {
         app_dossier_id: Number(dossier.app_dossier_id), appAffaireId: b.affaireId, hektorAffaireId: ligne.hektor_affaire_id == null ? null : String(ligne.hektor_affaire_id),
         hektorAnnonceId: String(dossier.hektor_annonce_id), lectureId: b.lectureId, nom: b.nom, lignes: versHektor.map((c) => c.ligne), pris: false,

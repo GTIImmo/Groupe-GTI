@@ -32,6 +32,11 @@ export type DemandeModifierTransaction = {
 }
 // Qui peut modifier une transaction (responsable ou admin) : l'écran principal répond, le panneau demande.
 export const EVENEMENT_DROITS_TRANSACTION = 'ged:droits-transaction'
+// Les champs que Hektor connaît et qui partent DIRECTEMENT (Frédéric, 17/11) : date de signature, date de l'acte,
+// séquestre -- une case seule, rien à recalculer. Le prix, le net vendeur et les honoraires passent par la fenêtre de la
+// transaction (Hektor ne recalcule pas le net : elle vérifie net + honoraires = prix).
+export const ENVOI_DIRECT: ReadonlySet<string> = new Set(['transaction_date', 'signature_date', 'sequestration'])
+export const estEnvoiDirect = (l: LigneBilan) => l.champModale != null && ENVOI_DIRECT.has(l.champModale)
 
 const jjmm = (iso: string) => new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
 const lu = (iso: string | null) => (iso ? new Date(iso).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).replace(' ', ' à ') : null)
@@ -69,7 +74,12 @@ export default function BilanCompromis({
   onFermer: () => void
   onEnregistrer: (choix: Array<{ ligne: LigneBilan; choix: ChoixBilan }>) => Promise<ResultatBilan>
 }) {
-  const [choix, setChoix] = useState<Map<string, ChoixBilan>>(() => new Map())
+  // Frédéric (17/11) : « à trancher doit proposer de corriger le registre avec la donnée du document » -- la valeur du
+  // document arrive CHOISIE sur chaque ligne à trancher (on la décoche en touchant la transaction). Rien ne part avant
+  // « Enregistrer ». Lecture seule : rien n'est choisi.
+  const [choix, setChoix] = useState<Map<string, ChoixBilan>>(() => new Map(peutModifier
+    ? bilan.lignes.filter((l) => l.etat === 'trancher' && !decisions?.has(`${l.cle}|${l.valeur}`)).map((l) => [l.cle, 'prendre' as ChoixBilan])
+    : []))
   const [rouvertes, setRouvertes] = useState<Set<string>>(() => new Set())
   const [enCours, setEnCours] = useState(false)
   const [message, setMessage] = useState<{ texte: string; erreur: boolean } | null>(null)
@@ -133,6 +143,9 @@ export default function BilanCompromis({
   }
   const choisies = bilan.lignes.filter((l) => choix.has(l.cle))
   const versHektor = choisies.filter((l) => l.destination === 'hektor' && choix.get(l.cle) === 'prendre').length
+  // le chemin vers Hektor : les dates et le séquestre partent DIRECTEMENT ; le prix, le net et les honoraires passent par
+  // la fenêtre de la transaction (elle vérifie net + honoraires = prix) -- et s'il y en a un, tout passe par elle
+  const parLaFenetre = choisies.some((l) => l.destination === 'hektor' && choix.get(l.cle) === 'prendre' && !estEnvoiDirect(l))
   const chezNous = choisies.filter((l) => l.destination === 'nous' && choix.get(l.cle) === 'prendre').length
   const gardees = choisies.filter((l) => choix.get(l.cle) === 'garder').length
 
@@ -156,7 +169,7 @@ export default function BilanCompromis({
     const d = decisionDe(l)
     const actif = !d && l.etat !== 'accord'
     const plaque = (cote: 'compromis' | 'transaction') => {
-      const valeur = cote === 'compromis' ? l.lu : (l.transaction ?? (l.condition ? 'non suivie' : 'vide'))
+      const valeur = cote === 'compromis' ? l.lu : (l.transaction ?? (l.condition ? 'non suivie' : l.attente === 'jamais_envoye' ? 'pas chez Hektor' : 'vide'))
       const pris = cote === 'compromis' ? c === 'prendre' : c === 'garder'
       const ecarte = c != null && !pris
       const vide = cote === 'transaction' && l.transaction == null
@@ -166,7 +179,7 @@ export default function BilanCompromis({
         : (vide ? `${l.libelle} : laisser la transaction ${l.condition ? 'sans cette condition' : 'vide'}` : `${l.libelle} : garder la valeur de la transaction, ${valeur}`)
       // le verbe du geste, dit DANS la plaque (on comprend qu'elle se touche, et ce qu'elle fera)
       const verbe = cote === 'compromis'
-        ? (pris ? 'pris' : l.condition?.retirer ? 'retirer' : l.etat === 'ajouter' ? 'ajouter' : 'prendre')
+        ? (l.condition?.retirer ? (pris ? 'retirée' : 'retirer') : l.etat === 'ajouter' ? (pris ? 'ajouté' : 'ajouter') : (pris ? 'correction' : 'corriger le registre'))
         : (pris ? (vide ? 'laissé vide' : 'gardé') : vide ? 'laisser vide' : 'garder')
       const contenu = (
         <>
@@ -221,7 +234,7 @@ export default function BilanCompromis({
   ) : null)
 
   const rienAFaire = !groupes.trancher.length && !groupes.ajouter.length
-  const libelleBouton = enCours ? 'Enregistrement…' : versHektor ? 'Enregistrer et ouvrir la transaction' : 'Enregistrer'
+  const libelleBouton = enCours ? 'Enregistrement…' : parLaFenetre ? 'Enregistrer et ouvrir la transaction' : versHektor ? 'Enregistrer et envoyer à Hektor' : 'Enregistrer'
   const resume = [
     versHektor ? `${versHektor} envoyé${versHektor > 1 ? 's' : ''} à Hektor` : null,
     chezNous ? `${chezNous} gardé${chezNous > 1 ? 's' : ''} chez nous` : null,
@@ -250,7 +263,7 @@ export default function BilanCompromis({
                 : 'Lecture seule : seul un responsable modifie une transaction.'}
             </p>
             {rienAFaire && !groupes.tranche.length ? <p className="bc-vide">Le compromis et la transaction disent la même chose. Rien à trancher.</p> : null}
-            {groupe('À trancher', 'Le compromis et la transaction ne disent pas la même chose.', groupes.trancher)}
+            {groupe('À trancher', 'Le compromis et la transaction ne disent pas la même chose. Proposé : corriger le registre avec la valeur du compromis (touche la transaction pour la garder).', groupes.trancher)}
             {groupe('À ajouter', 'La transaction est vide sur ces points.', groupes.ajouter, groupes.trancher.length)}
             {groupe('Déjà tranché', null, groupes.tranche, groupes.trancher.length + groupes.ajouter.length)}
             {!bilan.conditionsLues ? <p className="bc-vide">Les conditions suspensives de la transaction n'ont pas pu être lues : elles ne sont pas comparées.</p> : null}
@@ -299,7 +312,8 @@ export default function BilanCompromis({
           {message ? <p className={`bc-msg${message.erreur ? ' is-erreur' : ''}`} role="status">{message.texte}</p> : (
             <p className="bc-resume" aria-live="polite">
               {resume || (rienAFaire ? 'Tout est déjà tranché.' : 'Aucun choix pour l\'instant.')}
-              {versHektor ? <small>La fenêtre de la transaction s'ouvre préremplie : tu vérifies, tu valides, et c'est elle qui envoie à Hektor.</small> : null}
+              {parLaFenetre ? <small>Le prix, le net vendeur ou les honoraires changent : la fenêtre de la transaction s'ouvre préremplie, tu vérifies, et c'est elle qui envoie à Hektor.</small>
+                : versHektor ? <small>Envoyé directement à Hektor, seulement les cases corrigées ; le reste de la transaction ne bouge pas.</small> : null}
             </p>
           )}
           <button type="button" className="bc-b2" disabled={enCours} onClick={onFermer}>Fermer</button>

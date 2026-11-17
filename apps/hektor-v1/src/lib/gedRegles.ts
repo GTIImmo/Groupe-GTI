@@ -48,6 +48,10 @@ export type AffaireRegle = {
   // et prix y sont alors déjà repris : le carnet gagne). Carnet non lu -> on compare, on ne propose rien.
   sequestre?: number | null
   carnetLu?: boolean
+  // lot 10c (17/11, audit) : les champs que Hektor connaît dont la valeur n'est PAS encore chez lui -- « jamais_envoye »
+  // (le carnet seul : la valeur affichée n'est pas celle de Hektor, la case compte comme vide) ou « en_route » (envoyé
+  // par la modale ou la fenêtre, pas encore confirmé ; on compare à la valeur envoyée)
+  enAttente?: Record<string, 'jamais_envoye' | 'en_route'>
   // lot 10b (17/11) : ses conditions suspensives (lues strictement ; null = pas lues -> on ne compare pas)
   conditions?: Array<{ libelle: string; date: string | null }> | null
 }

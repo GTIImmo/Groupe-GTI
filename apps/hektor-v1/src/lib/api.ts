@@ -12917,6 +12917,46 @@ export async function loadActiveHektorActionJobs(): Promise<ConsoleJob[]> {
   return (data ?? []) as ConsoleJob[]
 }
 
+// GED lot 10c (17/11) : un geste Hektor est-il DÉJÀ en cours sur cette annonce ? Même garde que la modale de statut
+// (« Une action Hektor est déjà en cours pour cette annonce »), lue STRICTEMENT : une erreur lève, jamais « aucun ».
+export async function gesteHektorEnCours(hektorAnnonceId: string | number): Promise<boolean> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
+  const { data, error } = await supabase
+    .from('app_console_job')
+    .select('id')
+    .in('job_type', hektorActionJobTypes)
+    .in('status', ['pending', 'running'])
+    .eq('hektor_annonce_id', String(hektorAnnonceId))
+    .limit(1)
+  if (error) throw new Error(error.message)
+  return (data ?? []).length > 0
+}
+
+// GED lot 10c (17/11, décision de Frédéric) : ENVOYER À HEKTOR, sans la modale, la date de signature, la date de l'acte
+// ou le séquestre d'une transaction lus dans un document. La MÊME porte que « Mettre à jour » de la modale
+// (app_modifier_affaire_optimistic : elle retrouve la transaction, son numéro Hektor, son genre ; refuse une transaction
+// sans numéro, effacée, ou un compromis verrouillé par sa vente) ; la charge ne porte QUE ces cases, et `champs_touches`
+// les nomme : depuis le 03/11 le worker ne pose que les cases touchées, Hektor garde tout le reste. Le témoin de reprise
+// du worker (« modifiée dans Hektor depuis votre saisie ») s'applique comme pour la modale.
+export async function envoyerAffaireChampsDirect(appAffaireId: number, champs: Partial<Record<'transaction_date' | 'signature_date' | 'sequestration', string>>): Promise<ConsoleJob> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
+  await requireSupabaseUserId()
+  const touches = (Object.keys(champs) as Array<keyof typeof champs>).filter((c) => String(champs[c] ?? '').trim())
+  if (!touches.length) throw new Error('Rien à envoyer.')
+  const payload: Record<string, unknown> = { reprendre_transaction: true, champs_touches: touches }
+  for (const c of touches) payload[c] = String(champs[c]).trim()
+  const { data: created, error: rpcError } = await supabase.rpc('app_modifier_affaire_optimistic', {
+    target_affaire_id: appAffaireId,
+    job_payload: payload,
+    job_priority: 7,
+  })
+  if (rpcError || !created) throwConsoleAdminJobError(rpcError, 'Unable to create Hektor status job')
+  const jobId = (created as { job_id?: string }).job_id
+  const { data, error } = await supabase.from('app_console_job').select('*').eq('id', jobId as string).single()
+  if (error || !data) throwConsoleAdminJobError(error, 'Unable to read the created Hektor status job')
+  return data as ConsoleJob
+}
+
 export async function loadConsoleJobsByIds(ids: string[]): Promise<ConsoleJob[]> {
   if (!hasSupabaseEnv || !supabase || ids.length === 0) return []
   const uniqueIds = Array.from(new Set(ids.filter(Boolean)))
