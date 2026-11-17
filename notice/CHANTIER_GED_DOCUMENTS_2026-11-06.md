@@ -2348,3 +2348,8 @@ Essais : `test_ged_remplir` 35 -> 43 (avec TÉMOIN INVERSE : sans la condition �
 apprendre à la fiche de lecture du serveur à les rapporter (nature + date limite), puis comparer à la liste de la
 transaction / proposer de l'écrire si elle est vide. Ça change le serveur de lecture (Render) et ne vaudra que pour les
 compromis lus APRÈS. Lot suivant, sur accord.
+✅ **10a EN LIGNE (`270cbd7`, poussé le 17/11 par une autre session avec `e97a208` et `9d59fbc` dessous -- accord de
+Frédéric ; Vercel READY).** Contrôle de non-régression en production : 63147 -- « À remplir (2) », « La fiche du bien »,
+5 feuilles, console propre ; 63331 -- les MÊMES 10 lignes « À regarder » qu'avant, console propre (la lecture du carnet
+ne fait rien taire). ⚠ Pas vu en réel : aucun bien d'essai n'a de compromis AU REGISTRE (63331 a un compromis déposé,
+« aucun au registre ») -- le lot ne peut rien y proposer, c'est voulu.
