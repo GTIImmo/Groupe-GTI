@@ -2513,6 +2513,81 @@ l'etat d'une autre transaction) ; ce balayage-ci, fait avec le critere « compro
 trouve un 7e qui se declenche sur `state` ET sur l'ABSENCE de numero. **Chaque famille
 demande son propre balayage, et il se fait AVANT de generer le patch.**
 
+### ✅⭐⭐⭐ C4, 1er PATCH -- 169 MOTIFS D'ANNULATION ET 2 CLAUSES, 17/11
+
+#### ⛔⛔ MA PREMIERE NORMALISATION N'EN ETAIT PAS UNE, ET IL L'A VU A L'OEIL
+
+Il avait tranche : « Les 216 motifs normalises, les 492 phrases uniques partant en
+note ». Ma premiere version prenait **l'ecriture la plus frequente de chaque groupe**
+comme libelle. Resultat :
+
+```
+   « retractation SRU »  12   et   « SRU »              12   <- la MEME chose
+   « annule »             9   et   « annulee »           9   <- le MEME mot
+   « refus pret »        55   et   « 2 refus de pret »   4
+   -> 41 libelles, dont des doublons EVIDENTS. Ce n'etait PAS normalise.
+```
+
+⭐⭐ **GROUPES PAR THEME, les 41 ecritures disent SIX causes** -- et il les a
+validees :
+
+```
+   1  Pret refuse                        70 lignes posees
+   2  Retractation                       61
+   3  Annule sans motif precise          20
+   4  Changement de situation acquereur   9
+   5  Travaux ou etat du bien             7
+   6  Permis refuse                       2
+   -----------------------------------------
+                                        169
+```
+
+⛔ **Et j'avais mal range « refus PC »** dans le pret : un refus de PERMIS n'est pas
+un refus de PRET. Il a son propre motif.
+
+⭐ **ON S'EN EST TENU AUX CLEFS QU'IL A VUES.** Plusieurs des « non classees » y
+entreraient logiquement (`refus financement`, `2refus pret`, `montant travaux trop
+eleve`), mais les ajouter aurait change un compte qu'il avait valide. **36 lignes
+partent donc en note, et le script les NOMME** -- une absence se declare.
+
+#### ✅ CE QUI EST POSE
+
+```
+   le CATALOGUE passe de 2 a 4 clauses :
+      3  Permis de construire       ( 0 j)  rang 3
+      4  Delai de retractation SRU  (10 j)  rang 4   <- le delai legal
+   ⛔ RIEN pour le pret : « Obtention Credit » (id 2, 45 j) EXISTAIT DEJA, et
+     ADP/ODP n'en sont pas deux clauses mais le DEPART et l'ECHEANCE de celle-la
+     (24 fois sur 24, ecart median 31 jours). J'ai failli creer un doublon.
+   169 MOTIFS dans motif_annulation_app, sur LA MEME transaction que leur date
+```
+
+#### ⭐⭐⭐ LE CONTROLE QUI DONNE SON SENS A TOUT LE CHANTIER
+
+```
+   LA DATE *ET* LE MOTIF SUR LA MEME LIGNE :  111
+   motifs sans date (perimetre different)  :   58
+```
+
+**111 affaires disent maintenant QUAND elles sont tombees et POURQUOI.** C'est ce que
+C3 (450 dates, 16/11) et C4 (169 motifs, 17/11) devaient produire ensemble -- et A16 le
+disait des le 09/11 : « nous savons qu'une vente tombe, JAMAIS POURQUOI ».
+
+#### ⚠ DEUX DEFAUTS DE SQL, TOUS DEUX REJETES AVANT LE COMMIT
+
+```
+1  `cross join lateral (select row_number() over ())` -- la colonne n'y est pas
+   visible : « column v.ordre does not exist ». row_number() se met dans le SELECT.
+2  `id` du catalogue est TEXT, NOT NULL, et SANS AUCUN DEFAUT -- ce n'est pas une
+   sequence mais un identifiant choisi a la main ('1', '2'). Il faut le FOURNIR :
+   le maximum numerique + 1, en ne lisant que les ids numeriques.
+```
+
+✅ **Et les deux fois, la verification a montre que RIEN n'avait ete ecrit** :
+catalogue a 2, 0 motif, pas de sauvegarde. Le `begin/commit` du patch a tenu.
+
+---
+
 ### ✅⭐⭐⭐ LE DEFAUT DE B1 EST REPARE -- 17/11, ET IL ETAIT DORMANT
 
 Trouve en analysant le run a sa demande : « il faut analyser le run et la descente pour
@@ -3531,7 +3606,11 @@ C3bis ⬜ LES MOTIFS D'ANNULATION -- LA SECONDE MOITIE DE C3, PAS FAITE.
        ⛔ MAIS F EST MIXTE (A1 : 3 099 cellules -- des « V », des pastilles,
          et 810 textes seulement) -> ELLE DEPEND DONC DE C4, qui tranche F.
        ⚠ NE PAS la cocher avec C3 : Z est faite, les motifs ne le sont pas.
-C4 ⬜  ⭐⭐⭐ **F EST DECODEE LE 16/11** -- voir
+C4 ✅⬜ 1er PATCH FAIT LE 17/11 -- **169 MOTIFS + 2 CLAUSES AU CATALOGUE**,
+       10 controles justes. ⭐⭐⭐ **111 lignes portent desormais LA DATE ET
+       LE MOTIF**, le « quand » et le « pourquoi » reunis.
+       ⛔ RESTENT : les 5 003 NOTES (2e patch) et les 86 CONDITIONS (3e).
+       ⭐⭐⭐ **F EST DECODEE LE 16/11** -- voir
        `notice/C4_LE_DECODAGE_DE_LA_COLONNE_F_2026-11-16.md`.
        ⛔ CE DECODAGE N'ETAIT ECRIT NULLE PART : ni dans les 160 notes, ni au
          plan, ni au journal, ni en memoire. « ODP » n'apparaissait dans AUCUN
