@@ -2379,3 +2379,7 @@ Essais : `test_ged_remplir` 43 -> 49 (TÉMOIN INVERSE : sans la garde « liste v
 `test_ged_regles_lues` 88 -> 93, `test_ged_lecture` 59 -> 60 ; les 12 essais GED et les 5 du serveur verts, build vert.
 ⚠ Ne vaut que pour les compromis lus APRÈS le déploiement du serveur (Render). ⚠ Pas vu en réel : aucun bien d'essai n'a
 de compromis au registre.
+✅ **10b EN LIGNE (17/11, « Oui, pousse » : `cf09297` avec `3ed2e10` et `f68dd6f` de l'assistant dessous ; Vercel READY,
+Render sert `cf09297`).** Non-régression en production : 63147 -- « À remplir (2) » et « La fiche du bien », comme avant ;
+63331 -- les mêmes 10 lignes « À regarder », « Lu par l'IA : 23 documents » ; console propre. ⚠ Pas vu en réel : il
+faudrait un compromis lu APRÈS ce déploiement, sur un bien qui a SA transaction au registre.
