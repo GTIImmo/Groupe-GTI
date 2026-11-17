@@ -2513,6 +2513,124 @@ l'etat d'une autre transaction) ; ce balayage-ci, fait avec le critere « compro
 trouve un 7e qui se declenche sur `state` ET sur l'ABSENCE de numero. **Chaque famille
 demande son propre balayage, et il se fait AVANT de generer le patch.**
 
+### ✅⭐⭐⭐ LE SOIR DU 17/11 -- D1, LES SENTINELLES, ET SES DECISIONS
+
+#### ✅ B2 ET B3 -- LES DEUX SENTINELLES POSEES
+
+```
+   B2  app_v_classeur_ligne_sans_lien . data.classeur_ligne_sans_lien . WARNING
+       85 lignes au depart, 92 apres la table remise a jour, 91 apres le lien pose
+       ⚠ LE SEUIL SUIT LA MESURE, et il doit BAISSER quand un re-gel rattachera
+   B3  app_v_affaire_note_condition_orpheline . CRITICAL . seuil 0 VRAI
+       6 notes + 5 conditions orphelines, TOUTES DECLAREES (`deja_declaree`)
+       ⭐⭐⭐ et la mesure a corrige ce que j'allais ecrire : ce ne sont pas des
+         donnees metier perdues mais des RESTES D'ESSAIS du 23/10, dont l'une
+         porte « a garder pour la preuve » -> ON NE SUPPRIME RIEN
+   ⛔⛔ TEMOIN POSITIF sur B3 : filtre RETOURNE -> 11, en CRITICAL, et elle NOMME
+     chaque ligne. Le 0 venait donc de la base, pas d'un filtre mal lu.
+```
+
+#### ✅⭐⭐ SES DECISIONS DU 17/11 -- LES COLONNES SONT TRANCHEES
+
+```
+   C10 « Prix »       ⛔ ECARTEE. ⭐⭐⭐ ET UNE MESURE L'A TRANCHEE SEULE : 9 280 de
+      nos 9 281 ventes portent DEJA leur montant. Il en manque UNE.
+      ⛔⛔ Et la colonne n'est meme pas un prix : 1 008 de ses 4 726 valeurs sont
+        des DEPARTEMENTS (43, 42, 63) -- elle a CHANGE D'USAGE vers 2021
+        (2019 : 94 % de departements . 2022 : 0,6 %).
+   U / X « Signe » / « Signee »   ⛔ ECARTEES. Le croisement dit ce qu'elles
+      sont : U = le compromis est signe, X = l'acte est signe -- et nous avons
+      deja cette information dans l'etat de nos transactions.
+      ⚠ 68 lignes restent curieuses : ventes reglees SANS compromis signe.
+   AC « Adresse Acquereur »   ⛔ ECARTEE (62 lignes, texte multiligne)
+   AE « Adresse Vendeur »      ⛔ ECARTEE (804 lignes, DEUX formats melanges)
+   AK « Divers »               ⛔ ECARTEE (12 lignes de notes comptables)
+   AA « Numero de facture »    deja rapatriee par C8 -> la question est l'ECRAN
+   ME6S0TR9 et 6a259cce        ⛔ ON NE GELE RIEN
+```
+
+#### ✅ C6 -- MESUREE, ET IL N'Y A PRESQUE RIEN
+
+```
+   3 756 ventes affirmees par le classeur
+      3 728  DEJA chez nous                    99,3 %
+         21  sans aucun lien
+          4  a creer, SANS conflit
+          3  « conflit » de date d'acte -- et AUCUN n'en est un :
+             AYIHPHF5 notre compromis est ANNULE (deux affaires distinctes)
+             df0ce30c et a56ce827 : compromis ACTIFS, leur `date_acte` est une
+               date PREVUE, le classeur donne le REEL -- c'est ce qui a fait
+               ecarter C7 le matin meme. Et HEKTOR LES RENDRA.
+   ⭐ Les ventes posables : S0GH1R74 (24/09/2020, chaine n'ayant qu'une offre
+     refusee) et a5cb141f (17/01/2026) -- ⚠ mais a5cb141f a un compromis ANNULE
+     et une offre REFUSEE dans sa chaine : poser une vente dessus serait
+     incoherent. A REGARDER.
+```
+
+#### ⛔⛔⭐ LES 2 LIENS MAL CIBLES DU GEL -- CORRIGES, ET NEUF « FAUX » N'EN ETAIENT PAS
+
+Sa demande : *« il faut corriger l'erreur du regel et comprendre pourquoi !! »*.
+⚠ Ce n'etait pas le re-gel du 17/11 (mes 195 liens sont deterministes) mais
+**le gel initial du 29/10**. L'audit a balaye **les 12 791 liens** (lecon 9).
+
+```
+   ✅ la date COLLE a l exact                      7 986   62,4 %
+   ecart, mais aucun meilleur candidat             4 504   35,2 %
+   ⛔ un candidat a ECART ZERO existe                  11
+```
+
+⛔⛔ **ET SUR LES 11, NEUF ETAIENT DES FAUX POSITIFS. Corriger en masse aurait
+abime neuf liens justes.**
+
+```
+   ① HUIT = LA CONSEQUENCE DE NOS PROPRES GESTES. Les transactions pointees
+     portent des dates du 11/11 a 19:03-19:30 et du 12/11 a 15:26-15:27 -- des
+     HEURES GROUPEES, donc nos gestes de masse (« la date d'une offre refusee EST
+     la date du refus », 1 435 offres). Le gel pointait LA BONNE offre ; c'est SA
+     DATE qui a change. LE LIEN EST JUSTE, LA DATE NE L'EST PLUS.
+   ② UN = f1aedc01 porte DEUX liens (une offre chacun) : je comparais le moins bon.
+```
+
+⭐⭐ **LES DEUX VRAIS, soit 0,016 % des liens** :
+
+```
+   AYIHPHF5 -> 14111 alors que 14109 colle a ZERO JOUR
+     ⭐ LA LIGNE VOISINE EXPLIQUE TOUT : Z3DYDC4X porte LE MEME MANDAT 13168, le
+       meme terrain, le meme negociateur, le meme prix 113 000 -- et son compromis
+       est du 06/04/2021, ANNULE, acquereur GENOUX. C'est EXACTEMENT 14111.
+     ➡ DEUX AFFAIRES SUCCESSIVES : GENOUX qui tombe, puis BLANC MOURETTE qui
+       achete. L'apparieur a donne a la seconde le compromis de la premiere.
+     ⛔ POURQUOI, ET JE NE LE DEVINE PAS : les TROIS compromis du bien portent
+       GENOUX chez Hektor -- le nom ne departageait pas. Et 14111 est DANS la
+       chaine 14109 : il a pris une transaction de la bonne chaine, pas la bonne.
+   fa06e4e5 -> 28931 (offre du 27/07) alors que le classeur dit le 15/07 et que
+     28930 porte exactement cette date, libre.
+```
+
+✅ **CORRIGES** -- le SEUL geste non additif du chantier (la clef primaire porte
+`app_affaire_id`, donc un deplacement est un DELETE + INSERT). 8 controles.
+⭐⭐⭐ **LA PREUVE** : « date exacte » 7 986 -> **7 989**, « liens faux » 11 -> **0**.
+
+⚠ **IL RESTE 9 « SUSPECTS »** (un candidat colle mieux, mais pas a zero jour) --
+a regarder UN PAR UN, surtout pas en masse : l'audit vient de montrer pourquoi.
+
+#### ⛔⛔ ET DEUX FAUTES A MOI, TOUTES DEUX TROUVEES PAR SES QUESTIONS
+
+**1. MES TROIS SAUVEGARDES DU JOUR ETAIENT OUVERTES** a `authenticated` --
+SELECT, DELETE **et TRUNCATE**. Or le patron avait change LA VEILLE : « toute
+nouvelle sauvegarde NAIT FERMEE ». Trois fois la meme faute, dans le meme
+chantier. ✅ Fermees (public, anon ET authenticated nommement), `service_role`
+garde la lecture -- verifie par un temoin, sinon le retour arriere deviendrait
+impossible.
+
+**2. MON TEMOIN EST DEVENU UN PIEGE ET A FAIT UN FAUX ROUGE.** Il exigeait de
+retrouver AYIHPHF5 parmi les liens faux : juste avant la correction, absurde
+apres -- le script sortait en CODE 2 alors que tout allait bien. **Un faux rouge
+est aussi grave qu'un faux vert.** ➡ Le temoin juste ne verifie pas un CAS mais
+une CAPACITE : la methode mesure-t-elle encore les deux cotes ?
+
+---
+
 ### ✅✅⭐⭐⭐ C4, 3e PATCH -- POSE EN PRODUCTION LE 17/11 A 13:03
 
 ```
@@ -4012,7 +4130,18 @@ C10 ⬜ AF PRIX : 161 ecarts -> on LISTE, on n'ecrit RIEN. Sa decision « compar
 ### PHASE D — FERMER
 
 ```
-D1 ⬜  1.5 LE RE-GEL ADDITIF : 6 lignes (4 « sure », 2 « a valider »). ⭐ Les deux
+D1 ✅✅ FAIT LE 17/11, ET IL ETAIT BIEN PLUS LARGE QUE « 6 LIGNES » :
+       • **195 liens** pour les transactions creees le 16/11, qui N'EN AVAIENT
+         AUCUN -- donc invisibles a toute lecture passant par le gel. ⭐ C'est
+         SA QUESTION (« on a pas deja ajoute les offres 195 ? ») qui l'a revele,
+         et mon audit annoncait 233 manquantes la ou il n'y en avait 42.
+       • **21 lignes** ajoutees a `app_classeur_ligne_id`, PERIMEE (4 773 pour
+         4 794 au Sheet) -- et ma sentinelle B2 sous-comptait a cause d'elle.
+       • **1 lien franc** : b7439331 -> 30809. Le gel passe a 12 792.
+       • **2 liens MAL CIBLES corriges** (AYIHPHF5 et fa06e4e5) + Z3DYDC4X qui
+         recupere le compromis qui est le sien. Voir « LES 2 LIENS MAL CIBLES ».
+       ⛔ SA DECISION DU 17/11 sur ME6S0TR9 et 6a259cce : **ON NE GELE RIEN**.
+       (l'enonce d'origine) 1.5 LE RE-GEL ADDITIF : 6 lignes. ⭐ Les deux
        cas de 1.4 sont RESOLUS par l'audit du 15/11 : leurs transactions n'existent
        pas chez Hektor -> on les cree CHEZ NOUS. ⛔ ADDITIF, on ne retouche aucun
        des 12 595 liens.
