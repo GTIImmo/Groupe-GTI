@@ -281,6 +281,24 @@ export async function compterConditionsStrict(appAffaireIds: number[]): Promise<
   return compte
 }
 
+// Lot 10a (17/11) : le CARNET de l'app des transactions (app_affaire_champ_app : les corrections faites chez nous), lu
+// STRICTEMENT -- une erreur LÈVE. La lecture d'aujourd'hui (loadAffaireChampsApp) rend un carnet VIDE sur erreur : une
+// case déjà remplie chez nous y paraîtrait vide, et on proposerait d'écrire par-dessus.
+export async function lireCarnetAffairesStrict(appAffaireIds: number[]): Promise<Map<number, Record<string, string>>> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Base non configurée')
+  const ids = Array.from(new Set(appAffaireIds.filter((id) => Number.isFinite(id))))
+  const carnet = new Map<number, Record<string, string>>(ids.map((id) => [id, {}]))
+  if (!ids.length) return carnet
+  const { data, error } = await supabase.from('app_affaire_champ_app').select('app_affaire_id,champ,valeur_app').in('app_affaire_id', ids)
+  if (error) throw new Error(error.message)
+  for (const r of (data ?? []) as Array<{ app_affaire_id: number; champ: string; valeur_app: string | null }>) {
+    const ligne = carnet.get(Number(r.app_affaire_id)) ?? {}
+    ligne[String(r.champ)] = String(r.valeur_app ?? '')
+    carnet.set(Number(r.app_affaire_id), ligne)
+  }
+  return carnet
+}
+
 // Les types DÉCIDÉS des documents déposés avec l'outil, pour un bien (lecture : patch_ged_m3_recu_manque, même
 // périmètre que les documents). Clé : la ligne du document chez nous. Une lecture ratée rend une liste vide :
 // les documents retombent alors sur leur nom, rien ne casse.

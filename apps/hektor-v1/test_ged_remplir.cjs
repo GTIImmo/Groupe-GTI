@@ -47,6 +47,19 @@ const p4 = P([cpv], { affaires: reg, conditions: new Map([[77, 0]]) })
 voir(cles(p4) === 'P4.condition_credit' && p4[0].affaireId === 77 && p4[0].valeur === '2026-12-01', 'P4 : la condition « Obtention Crédit » sur LA transaction, liste vide')
 voir(P([cpv], { affaires: reg, conditions: new Map([[77, 2]]) }).length === 0 && P([cpv], { affaires: reg, conditions: new Map() }).length === 0, 'TÉMOIN P4 : la liste a déjà 2 conditions, ou son compte est inconnu -> rien')
 voir(P([cpv], { affaires: [...reg, { ...reg[0], id: 78 }], conditions: new Map([[77, 0], [78, 0]]) }).length === 0, 'TÉMOIN P4 : deux compromis que rien ne départage -> rien (jamais la mauvaise transaction)')
+// lot 10a (17/11) : la date d'acte prévue (la réitération lue) et le séquestre, CHEZ NOUS, sur LA transaction du compromis
+const cpv10 = doc('Compromis.pdf', 'transaction.avant_contrat', [v('date_signature', { valeur_date: '2026-10-15' }), v('prix', { valeur_num: 185000 }), v('date_reiteration', { valeur_date: '2027-01-15' }), v('sequestre', { valeur_num: 9250 })])
+const reg10 = (x = {}) => [{ kind: 'compromis', state: 'active', date: '2026-10-15', dateActe: null, id: 77, montant: 185000, acquereurs: [], sequestre: null, carnetLu: true, ...x }]
+const p10 = P([cpv10], { affaires: reg10() })
+voir(cles(p10) === 'P4.date_acte,P4.sequestre' && p10.every((p) => p.geste === 'affaire' && p.affaireId === 77) && p10.find((p) => p.cle === 'P4.date_acte').valeur === '2027-01-15' && p10.find((p) => p.cle === 'P4.sequestre').valeur === '9250',
+  '10a : date d\'acte et séquestre vides -> deux propositions « transaction », sur LA transaction, valeurs telles que lues')
+voir(P([cpv10], { affaires: reg10({ dateActe: '2027-02-01', sequestre: 9250 }) }).length === 0 && cles(P([cpv10], { affaires: reg10({ dateActe: '0000-00-00' }) })) === 'P4.date_acte,P4.sequestre',
+  'TÉMOIN 10a : déjà remplies -> rien (jamais par-dessus) ; « 0000-00-00 » est vide')
+voir(P([cpv10], { affaires: reg10({ carnetLu: false }) }).length === 0 && P([cpv10], { affaires: reg10({ carnetLu: undefined }) }).length === 0,
+  'TÉMOIN 10a : le carnet de l\'app n\'a pas été lu sans erreur -> rien (une case remplie chez nous paraîtrait vide)')
+voir(P([cpv10], { affaires: reg10({ state: 'cancelled' }) }).length === 0 && P([cpv10], { affaires: [...reg10(), ...reg10({ id: 78 })] }).length === 0,
+  'TÉMOIN 10a : transaction annulée, ou deux que rien ne départage -> rien')
+voir(!cles(P([cpv10], { affaires: reg10({ date: null }) })).includes('date_signature'), 'TÉMOIN 10a : la date de SIGNATURE ne se remplit jamais (un compromis sans date est souvent non signé)')
 voir(P([dpe], { decisions: new Set(['P1.dpe_cons|210', 'P1.dpe_ges|45', 'P1.dpe_date|2026-02-03']) }).length === 0 && cles(P([dpe], { decisions: new Set(['P1.dpe_cons|199']) })).includes('P1.dpe_cons'), 'une décision prise ne revient pas ; une AUTRE valeur lue, si')
 
 console.log('② les gardes de l\'écriture')
@@ -58,6 +71,14 @@ voir(/if \(p\.champ\.startsWith\('copropriete_'\) && !\/oui\/i\.test/.test(fn), 
 voir(avant('loadRegisterCycleAffaires(', 'await ecrireMandatCharge(') && /if \(!numero \|\| !ligne\) return refus/.test(fn) && /charge: p\.valeur === 'vendeur' \? 'mandant' : 'acquereur'/.test(fn), 'charge : la ligne du registre relue (sans elle, rien) ; jamais une charge vide')
 voir(avant('await compterConditionsStrict([id])', 'await ecrireAffaireConditions(') && /if \(compte !== 0\) return refus/.test(fn), 'condition : la liste comptée STRICTEMENT juste avant ; non vide ou inconnue -> rien')
 voir(avant('await editAnnonceOptimistic(', "await garder('remplie'"), 'la décision « remplie » est gardée APRÈS le geste réussi')
+const fnAff = fn.slice(fn.indexOf("if (p.geste === 'affaire') {"), fn.indexOf('// condition : la liste doit être VIDE'))
+const avAff = (a, b) => fnAff.indexOf(a) >= 0 && fnAff.indexOf(b) > fnAff.indexOf(a)
+voir(avAff('await loadAffairesForDossier(', 'await editAffaireOptimistic(') && avAff('await lireCarnetAffairesStrict([idAffaire])', 'await editAffaireOptimistic(') && avAff('if (!caseVide(actuelle)) return refus(', 'await editAffaireOptimistic('),
+  '10a : la transaction ET son carnet relus (strictement) juste avant ; case pleine -> rien écrit')
+voir(/\['refused', 'cancelled'\]\.includes/.test(fnAff) && /if \(!\['date_acte', 'sequestre'\]\.includes\(p\.champ\)\) return refus/.test(fnAff) && /if \(!res\.ok \|\| res\.champs_retenus !== 1\) return refus/.test(fnAff),
+  '10a : transaction close, champ inconnu, correction non retenue -> refus écrit')
+voir(!/createChangeAnnonceStatus|app_modifier_affaire_optimistic|modifierAffaireId/.test(fnAff) && /chez nous ; Hektor n'est pas prévenu/.test(fnAff),
+  'TÉMOIN 10a : CHEZ NOUS seulement (décision du 17/11) -- aucun travail vers Hektor')
 const ged = fs.readFileSync(path.join(__dirname, 'src/lib/ged.ts'), 'utf8')
 const strict = ged.slice(ged.indexOf('export async function compterConditionsStrict'))
 voir(/if \(error\) throw new Error\(error\.message\)/.test(strict.slice(0, 900)) && /if \(error\) return null/.test(ged.slice(ged.indexOf('export async function loadGedDecisions'), ged.indexOf('export async function gedDecider'))), 'lectures : les conditions LÈVENT sur erreur ; les décisions rendent null (rien ne se repropose)')

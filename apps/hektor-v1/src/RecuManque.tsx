@@ -14,7 +14,7 @@ import { createPortal } from 'react-dom'
 import { createConsoleDocumentSignedUrl, loadAffairesForDossier, loadRegisterCycleAffaires } from './lib/api'
 import { apercuPremierePage } from './lib/gedClassementIa'
 import { etatFiableDuDocument } from './lib/etatSignatureMandat'
-import { compterConditionsStrict, gedDecider, gedJuger, loadContactsEtatCivil, loadGedClassements, loadGedDecisions, loadGedJugements, useGedPropositions, useGedRemplir, type EtatCivilLu, type JugementGed } from './lib/ged'
+import { compterConditionsStrict, gedDecider, gedJuger, lireCarnetAffairesStrict, loadContactsEtatCivil, loadGedClassements, loadGedDecisions, loadGedJugements, useGedPropositions, useGedRemplir, type EtatCivilLu, type JugementGed } from './lib/ged'
 import { cleJugement, LIBELLE_VERDICT, VERDICTS, type VerdictGed } from './lib/gedMesure'
 import { propositionsRemplir, type FaitsRemplir, type PropositionRemplir } from './lib/gedRemplir'
 import { propositionsContact } from './lib/gedRemplirContact'
@@ -51,7 +51,7 @@ const ORDRE_MOMENTS: MomentDossier[] = ['mandat', 'mise_en_vente', 'offre', 'com
 // valeur ACTUELLE, lue dans les faits de la fiche -- rien de neuf n'est lu. Une case remplie d'ici s'allume.
 type Faite = { cle: string; message: string; sort: 'rempli' | 'ignore' | 'refus' | 'erreur' }
 const AVANT: Record<PropositionRemplir['geste'], [string, string]> = {
-  fiche: ['Fiche', 'vide'], contact: ['Fiche du contact', 'vide'], charge: ['Registre des mandats', 'vide'], condition: ['Compromis', 'aucune condition'],
+  fiche: ['Fiche', 'vide'], contact: ['Fiche du contact', 'vide'], charge: ['Registre des mandats', 'vide'], condition: ['Compromis', 'aucune condition'], affaire: ['Transaction', 'vide'],
 }
 const jjmmaaaa = (d: Date) => `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')}/${d.getUTCFullYear()}`
 const nombre = (v: string | number) => String(Math.round(Number(v) * 100) / 100).replace('.', ',')
@@ -118,14 +118,25 @@ export function RecuManque({
     if (!regles || !appDossierId) return
     let annule = false
     loadAffairesForDossier(appDossierId)
-      .then((rows) => { if (!annule) setAffaires(rows.filter((a) => a.present_in_hektor !== false).map((a) => ({
-        kind: String(a.kind), state: a.state ?? null, date: a.date ?? null, dateActe: a.date_acte ?? null, id: Number(a.app_affaire_id),
-        // morceau 7c : de quoi comparer une transaction lue (montant en euros ; acquéreurs : un objet seul ou une liste)
-        montant: euros(a.montant), prixNetVendeur: euros(a.prix_net_vendeur), honorairesEntree: euros(a.honoraires_entree), honorairesSortie: euros(a.honoraires_sortie),
-        acquereurs: (Array.isArray(a.acquereurs_json) ? a.acquereurs_json : a.acquereurs_json ? [a.acquereurs_json] : [])
-          .map((p) => ({ nom: String((p as { nom?: unknown })?.nom ?? '').trim(), prenom: String((p as { prenom?: unknown })?.prenom ?? '').trim() }))
-          .filter((p) => p.nom || p.prenom),
-      }))) })
+      .then(async (rows) => {
+        const vivantes = rows.filter((a) => a.present_in_hektor !== false)
+        // lot 10a (17/11) : le CARNET de l'app (les corrections faites chez nous) GAGNE sur la colonne du registre, que la
+        // nuit remet à la valeur de Hektor. Lu strictement : raté -> on compare avec le registre, on ne propose rien.
+        const carnet = await lireCarnetAffairesStrict(vivantes.map((a) => Number(a.app_affaire_id))).catch(() => null)
+        if (annule) return
+        setAffaires(vivantes.map((a) => {
+          const c = carnet?.get(Number(a.app_affaire_id)) ?? {}
+          return {
+            kind: String(a.kind), state: a.state ?? null, date: c.date || (a.date ?? null), dateActe: c.date_acte || (a.date_acte ?? null), id: Number(a.app_affaire_id),
+            // morceau 7c : de quoi comparer une transaction lue (montant en euros ; acquéreurs : un objet seul ou une liste)
+            montant: euros(c.montant || a.montant), prixNetVendeur: euros(a.prix_net_vendeur), honorairesEntree: euros(a.honoraires_entree), honorairesSortie: euros(a.honoraires_sortie),
+            acquereurs: (Array.isArray(a.acquereurs_json) ? a.acquereurs_json : a.acquereurs_json ? [a.acquereurs_json] : [])
+              .map((p) => ({ nom: String((p as { nom?: unknown })?.nom ?? '').trim(), prenom: String((p as { prenom?: unknown })?.prenom ?? '').trim() }))
+              .filter((p) => p.nom || p.prenom),
+            sequestre: euros(c.sequestre || a.sequestre), carnetLu: carnet !== null,
+          }
+        }))
+      })
       .catch(() => { if (!annule) setAffaires(null) })
     return () => { annule = true }
   }, [regles, appDossierId])
@@ -447,7 +458,7 @@ export function RecuManque({
                     <span>{`lu dans ${p.source}`}</span>
                   </div>
                   <div className="gm2-gestes">
-                    <button type="button" className="gm2-b1" disabled={enCours !== null} onClick={(e) => void agir(p, 'remplir', e.currentTarget)}>{enCours === p.cle ? 'Écriture…' : p.geste === 'contact' ? 'Remplir la fiche du contact' : 'Remplir la fiche'}</button>
+                    <button type="button" className="gm2-b1" disabled={enCours !== null} onClick={(e) => void agir(p, 'remplir', e.currentTarget)}>{enCours === p.cle ? 'Écriture…' : p.geste === 'contact' ? 'Remplir la fiche du contact' : p.geste === 'affaire' ? 'Remplir la transaction' : 'Remplir la fiche'}</button>
                     <button type="button" className="gm2-lien" disabled={enCours !== null} onClick={() => void agir(p, 'ignorer')}>Ignorer</button>
                     {documentDe(p) ? (
                       <button type="button" className="gm2-lien gm2-voir" aria-pressed={apercu?.cle === p.cle} onClick={() => void voirDocument(p)}>Voir le document</button>

@@ -134,6 +134,12 @@ const cpvReg = (x = {}) => A('compromis', { date: '2026-10-15', montant: 185000,
 voir(R7c([cpvLu([])], [cpvReg()]).length === 0, 'TÉMOIN L7 compromis : conforme au registre -> rien')
 voir(codes(R7c([cpvLu([])], [cpvReg({ montant: 190000, date: '2026-10-20' })])).join() === 'L7/alerte' && R7c([cpvLu([])], [cpvReg({ montant: 190000, date: '2026-10-20' })])[0].texte.includes('signé le 15/10/2026'), 'L7 compromis : prix et date ≠ registre -> UNE ligne qui dit les deux')
 voir(codes(R7c([cpvLu([v('honoraires', { valeur_num: 9500 }), v('prix', { valeur_num: 185500 })])], [cpvReg({ montant: 185500 })])).join() === 'L7/alerte', 'L7 compromis : honoraires lus ≠ entrée + sortie du registre')
+// lot 10a (17/11) : la date d'acte prévue (réitération lue) et le séquestre, comparés quand LES DEUX existent
+const cpv10 = cpvLu([v('date_reiteration', { valeur_date: '2027-01-15' }), v('sequestre', { valeur_num: 9250 })])
+voir(R7c([cpv10], [cpvReg({ dateActe: '2027-01-15', sequestre: 9250 })]).length === 0, 'TÉMOIN 10a : date d\'acte et séquestre conformes -> rien')
+voir(R7c([cpv10], [cpvReg({ dateActe: '2027-02-20', sequestre: 9250 })])[0]?.texte.includes('acte au plus tard le 15/01/2027, prévu le 20/02/2027 au registre'), '10a : la date d\'acte prévue au registre ≠ la réitération lue -> dit')
+voir(R7c([cpv10], [cpvReg({ dateActe: '2027-01-15', sequestre: 5000 })])[0]?.texte.includes('séquestre'), '10a : séquestre lu ≠ registre -> dit')
+voir(R7c([cpv10], [cpvReg({ dateActe: null, sequestre: null })]).length === 0 && R7c([cpv10], [cpvReg({ dateActe: null, sequestre: 0 })]).length === 0, 'TÉMOIN 10a : une case VIDE au registre ne sonne pas (elle se propose à remplir)')
 const acteLu = (date, prix) => doc('Attestation.pdf', 'transaction.acte', [v('date_vente', { valeur_date: date }), v('prix', { valeur_num: prix }), ...P(0, 'ESSAI', 'Paul', 'acquereur')])
 voir(codes(R7c([acteLu('2027-01-12', 185000)], [A('vente', { date: '2027-01-20', montant: 185000, acquereurs: ESSAI })])).join() === 'L7/alerte', 'L7 acte : vendu le 12/01, le 20/01 au registre')
 voir(R7c([acteLu('2027-01-12', 185000)], [A('vente', { date: '2027-01-12', montant: 185000, acquereurs: ESSAI })]).length === 0 && R7c([acteLu('2027-01-12', 185000)], []).length === 0, 'TÉMOIN L7 acte : conforme ; pas de vente au registre -> silence (N10 le dit déjà)')

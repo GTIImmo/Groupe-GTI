@@ -10,7 +10,7 @@ import type { DocumentLu } from './gedReglesLues'
 // fiche : la case de la fiche (nom Hektor), par editAnnonceOptimistic ; charge : le registre des mandats, par
 // ecrireMandatCharge ; condition : la liste des conditions d'une transaction, par ecrireAffaireConditions ;
 // contact (lot 9c) : une case de la fiche d'un mandant, par editContactOptimistic (gedRemplirContact.ts).
-export type GesteRemplir = 'fiche' | 'charge' | 'condition' | 'contact'
+export type GesteRemplir = 'fiche' | 'charge' | 'condition' | 'contact' | 'affaire'
 export type PropositionRemplir = {
   cle: string                // la proposition : « P1.dpe_cons »… (avec la valeur, c'est la clé d'une décision)
   geste: GesteRemplir
@@ -100,13 +100,27 @@ export function propositionsRemplir(
   // P4 -- la condition « Obtention Crédit » avec la date limite du prêt, sur LA transaction du compromis lu, si sa liste
   // de conditions est VIDE (comptée sans erreur). Le geste remplace toute la liste : vide = rien à perdre.
   const cpv = plusRecent(lus, 'transaction.avant_contrat', 'date_signature')
+  const ligneCpv = cpv ? resoudreCible(affaires.filter((a) => a.kind === 'compromis' && !['refused', 'cancelled'].includes(String(a.state ?? ''))), {
+    acquereurs: personnesLuesDe(cpv.lecture).filter((p) => p.qualite === 'acquereur'), date: dateLue(cpv.lecture.valeurs, 'date_signature'), montant: nombreLu(cpv.lecture.valeurs, 'prix'),
+  }) : null
   if (cpv && texteLu(cpv.lecture.valeurs, 'condition_pret') === 'oui') {
     const limite = dateLue(cpv.lecture.valeurs, 'date_limite_pret')
-    const ligne = resoudreCible(affaires.filter((a) => a.kind === 'compromis' && !['refused', 'cancelled'].includes(String(a.state ?? ''))), {
-      acquereurs: personnesLuesDe(cpv.lecture).filter((p) => p.qualite === 'acquereur'), date: dateLue(cpv.lecture.valeurs, 'date_signature'), montant: nombreLu(cpv.lecture.valeurs, 'prix'),
-    })
-    if (limite && ligne?.id != null && conditionsParAffaire.get(ligne.id) === 0) {
-      ajouter({ cle: 'P4.condition_credit', geste: 'condition', champ: 'Obtention Crédit', valeur: limite, texte: `Condition « Obtention Crédit » jusqu'au ${jjmmaaaa(limite)}`, source: source(cpv, 'date_limite_pret'), lectureId: cpv.lecture.id ?? null, affaireId: ligne.id })
+    if (limite && ligneCpv?.id != null && conditionsParAffaire.get(ligneCpv.id) === 0) {
+      ajouter({ cle: 'P4.condition_credit', geste: 'condition', champ: 'Obtention Crédit', valeur: limite, texte: `Condition « Obtention Crédit » jusqu'au ${jjmmaaaa(limite)}`, source: source(cpv, 'date_limite_pret'), lectureId: cpv.lecture.id ?? null, affaireId: ligneCpv.id })
+    }
+  }
+  // P4 (lot 10a, 17/11) -- la date d'acte prévue (la RÉITÉRATION lue) et le séquestre, sur LA transaction du compromis
+  // lu, si sa case est VIDE -- carnet de l'app compris, lu SANS erreur (sinon rien). Écrit CHEZ NOUS seulement
+  // (décision de Frédéric du 17/11 : Hektor n'est pas prévenu). La date de signature ne se remplit PAS : un compromis
+  // sans date au registre est souvent un compromis non signé ; elle se COMPARE seulement (L7).
+  if (cpv && ligneCpv?.id != null && ligneCpv.carnetLu === true) {
+    const reiteration = dateLue(cpv.lecture.valeurs, 'date_reiteration')
+    if (reiteration && caseVide(ligneCpv.dateActe)) {
+      ajouter({ cle: 'P4.date_acte', geste: 'affaire', champ: 'date_acte', valeur: reiteration, texte: `Compromis : acte authentique au plus tard le ${jjmmaaaa(reiteration)}`, source: source(cpv, 'date_reiteration'), lectureId: cpv.lecture.id ?? null, affaireId: ligneCpv.id })
+    }
+    const sequestre = nombreLu(cpv.lecture.valeurs, 'sequestre')
+    if (sequestre != null && sequestre > 0 && (ligneCpv.sequestre == null || ligneCpv.sequestre <= 0)) {
+      ajouter({ cle: 'P4.sequestre', geste: 'affaire', champ: 'sequestre', valeur: nombreTexte(sequestre), texte: `Compromis : séquestre de ${nombreTexte(sequestre).replace('.', ',')} €`, source: source(cpv, 'sequestre'), lectureId: cpv.lecture.id ?? null, affaireId: ligneCpv.id })
     }
   }
 

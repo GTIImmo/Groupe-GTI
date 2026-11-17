@@ -215,6 +215,7 @@ import {
   hasOffreAchatRefusee,
   hasCompromisEnCours,
   loadAffairesForDossier,
+  editAffaireOptimistic,
   loadAffairesConsole,
   loadAffairesConditions,
   loadConditionCatalogue,
@@ -308,7 +309,7 @@ import { PiecesSignatureFenetre, useSignaturePreuves } from './PiecesSignature'
 // GED morceau 2 (12/11/2026) : la fenêtre de dépôt, derrière l'interrupteur ged_depot_multiple (note GED §12.7).
 import { DepotDocuments } from './DepotDocuments'
 import type { MomentDossier } from './lib/gedPieces'
-import { compterConditionsStrict, gedDecider, loadContactsEtatCivil, useGedDepotMultiple, useGedRecuManque } from './lib/ged'
+import { compterConditionsStrict, gedDecider, lireCarnetAffairesStrict, loadContactsEtatCivil, useGedDepotMultiple, useGedRecuManque } from './lib/ged'
 // GED morceau 3 (12/11/2026) : le bloc « Reçu / Manque », derrière l'interrupteur ged_recu_manque (note GED §12.8).
 import { RecuManque } from './RecuManque'
 import { caseVide, type FaitsRemplir, type PropositionRemplir } from './lib/gedRemplir'
@@ -11985,6 +11986,23 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
       if (!res.ok) return refus('refus_du_registre', `le registre a refusé (${res.erreur ?? 'refus'}).`)
       await garder('remplie', { geste: 'ecrireMandatCharge', numero_mandat: numero, charge: res.charge ?? p.valeur })
       return `Enregistré : ${p.texte}.`
+    }
+    // lot 10a (17/11) : la date d'acte prévue ou le séquestre d'une TRANSACTION, CHEZ NOUS seulement (décision de Frédéric
+    // du 17/11 : le carnet de l'app, Hektor n'est pas prévenu). On RELIT la ligne et le carnet (strictement) : la case
+    // doit être encore vide, la transaction vivante ; sinon RIEN. Puis la porte existante (editAffaireOptimistic).
+    if (p.geste === 'affaire') {
+      const idAffaire = p.affaireId as number
+      if (!['date_acte', 'sequestre'].includes(p.champ)) return refus('champ_inconnu', `le champ « ${p.champ} » ne se remplit pas d'ici.`)
+      const ligne = (await loadAffairesForDossier(dossier.app_dossier_id)).find((a) => Number(a.app_affaire_id) === idAffaire)
+      if (!ligne || ligne.present_in_hektor === false) return refus('transaction_illisible', 'la transaction n\'a pas pu être relue.')
+      if (['refused', 'cancelled'].includes(String(ligne.state ?? ''))) return refus('transaction_close', 'la transaction n\'est plus vivante.')
+      const carnet = (await lireCarnetAffairesStrict([idAffaire])).get(idAffaire) ?? {}
+      const actuelle = carnet[p.champ] || String((p.champ === 'date_acte' ? ligne.date_acte : ligne.sequestre) ?? '')
+      if (!caseVide(actuelle)) return refus('case_deja_remplie', `la transaction porte déjà « ${actuelle} ».`, { valeur: actuelle })
+      const res = await editAffaireOptimistic(idAffaire, { [p.champ]: p.valeur })
+      if (!res.ok || res.champs_retenus !== 1) return refus('refus_du_registre', 'la correction n\'a pas été retenue.')
+      await garder('remplie', { geste: 'editAffaireOptimistic', app_affaire_id: idAffaire, champs: { [p.champ]: p.valeur } })
+      return `Enregistré : ${p.texte} (chez nous ; Hektor n'est pas prévenu).`
     }
     // condition : la liste doit être VIDE, comptée strictement (une erreur LÈVE : rien n'est écrit)
     const id = p.affaireId as number

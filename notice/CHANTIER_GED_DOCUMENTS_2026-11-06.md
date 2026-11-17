@@ -33,9 +33,10 @@
 | 9 | pièces des personnes (identité — le justificatif le plus déposé —, état civil, financement) | ✅ **9a** (identité, registre à part) en production et éprouvé ; **9b** (P4-P6) regardé en réel le 14/11 ; **9c** (remplir la fiche d'un mandant) corrigé (les deux numéros) et prouvé le 16/11 ; **9d-1** (financement, P7-P8) lecture éprouvée, ⚠ P7/P8 PAS prouvées en réel (aucun bien d'essai n'a de compromis vivant) ; **9d-2** (état civil, P9-P10) éprouvé le 16/11 (§12.19) |
 | 10 | mesure (vrai / faux / déjà su) | ✅ en production le 16/11 (`d4ca8fe`, table `app_ged_jugement`) ; ⏰ **la mesure court jusqu'au 30/11**, compte rendu par `supabase/requete_mesure_ged_m10_2026-11-16.sql` ; 63331, 62774, 61398 ne se jugent pas (§12.20) |
 | habillage | la maquette RETRAVAILLÉE (toile https://claude.ai/artifact/S16jkpfnqtPF83xvUdkNtm) | ✅ **COMPLET le 17/11** : H1 le bloc « Le dossier », H2 la fenêtre de dépôt, H3 l'après-envoi (« La fiche du bien », « Voir le document » ; « Voir la preuve » NON fait, décision), H4 le panneau photo du téléphone (viseur dans l'app NON fait, décision) — tous vus en production (§12.21) |
+| 10a | le compromis lu → SA transaction (date d'acte prévue, séquestre) | ✅ **écrit le 17/11, rien poussé** (§12.22) |
 
-**Reste, au 17/11** : ⏰ le compte rendu de la mesure le 30/11 ; P7/P8 en réel (il faudrait un compromis d'essai : à
-décider) ; les pièces d'essai SPECIMEN restées sur 63331 et 63147 (63147 : un faux DPE, consommation 212 écrite, 2
+**Reste, au 17/11** : ⏰ le compte rendu de la mesure le 30/11 ; P7/P8 en réel — **mis de côté par Frédéric le 17/11 :
+« trop compliqué pour le moment »** ; les pièces d'essai SPECIMEN restées sur 63331 et 63147 (63147 : un faux DPE, consommation 212 écrite, 2
 propositions ouvertes) ; puis **les conditions du cran « on »** ci-dessous.
 
 **Avant les négociateurs (cran « on »)** : le contrat de sous-traitance (DPA) avec le fournisseur d'IA — décision du
@@ -2319,3 +2320,31 @@ comme avant. Toujours 1 document sur 63147. ➡ **H4 EST FINI : L'HABILLAGE H1-H
 la bande de la fenêtre dit « 1 page photographiée : ELLES formeront un seul document » (pluriel au singulier).
 ✅ Corrigé (17/11, « Corrige ») : « 1 page photographiée : elle formera un document ; ajoute le verso si besoin. » ;
 le pluriel inchangé. Essai `test_ged_depot` 32 -> 33, build vert.
+
+### 12.22 Le lot 10a -- le compromis lu nourrit SA transaction (17/11)
+Frédéric (17/11), après l'explication de P7/P8 : « non, trop compliqué pour le moment ; il faudrait juste qu'à la lecture
+du compromis, donc à son ajout, les dates soient récupérées -- pour comparer ou remplir les champs dans la transaction
+correspondante, et même les conditions suspensives ». Puis, sur où écrire : **« chez nous seulement »**.
+**L'audit** : la lecture du compromis rapporte déjà `date_signature`, `date_limite_pret`, `date_reiteration` (+ prix, net
+vendeur, honoraires, séquestre, notaires) ; seule la condition de PRÊT est lue (pas les autres conditions). Existait :
+L7 (comparer prix, net vendeur, honoraires, date de signature) et P4 (remplir « Obtention Crédit », liste vide).
+⚠ La porte « chez nous » (`editAffaireOptimistic`) écrit le CARNET de l'app (`app_affaire_champ_app`) et la colonne du
+registre ; la nuit remet la colonne à la valeur de Hektor (`CHAMPS_APP_AFFAIRE` est VIDE) -- le carnet fait donc foi, et
+l'écran le superpose maintenant au registre. ⚠ La lecture d'aujourd'hui du carnet rend VIDE sur erreur : une lecture
+STRICTE a été ajoutée (`lireCarnetAffairesStrict`), sinon une case remplie chez nous aurait paru vide.
+**✅ ÉCRIT (17/11) — rien poussé** :
+- **Remplir, chez nous** (propositions `P4.date_acte`, `P4.sequestre`, geste « transaction », bouton « Remplir la
+  transaction ») : la date d'acte prévue = la réitération lue, le séquestre lu -- seulement sur LA transaction du
+  compromis (résolveur), vivante, case VIDE carnet compris, carnet lu sans erreur. Le geste RELIT la ligne et le carnet
+  (strictement) juste avant, refuse si la case est remplie ou la transaction close, écrit par `editAffaireOptimistic`,
+  garde la décision ; message « Enregistré : … (chez nous ; Hektor n'est pas prévenu) ».
+- **Comparer** (L7) : date d'acte prévue ≠ réitération lue, séquestre ≠ lu -- seulement quand les deux existent (une
+  case vide se propose, elle ne sonne pas).
+- ⛔ **La date de SIGNATURE ne se remplit pas** : un compromis sans date au registre est souvent non signé (audit des 267
+  transactions sans date) ; elle reste comparée.
+Essais : `test_ged_remplir` 35 -> 43 (avec TÉMOIN INVERSE : sans la condition « carnet lu », l'essai rougit),
+`test_ged_regles_lues` 84 -> 88 ; les 12 essais GED verts, build vert.
+⏳ **Pas fait dans ce lot** : les AUTRES conditions suspensives (vente d'un bien, permis, préemption…) -- il faut
+apprendre à la fiche de lecture du serveur à les rapporter (nature + date limite), puis comparer à la liste de la
+transaction / proposer de l'écrire si elle est vide. Ça change le serveur de lecture (Render) et ne vaudra que pour les
+compromis lus APRÈS. Lot suivant, sur accord.

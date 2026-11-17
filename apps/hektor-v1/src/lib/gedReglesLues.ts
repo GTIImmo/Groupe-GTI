@@ -300,6 +300,15 @@ export function reglesLues(faits: FaitsRegles, docs: DocumentLu[], personnesDuBi
       const signe = lireDateIso(dateLue(v, 'date_signature'))
       const registre = lireDateIso(ligne.date)
       if (signe && registre && Math.abs(joursEntre(signe, registre)) > 1) ecarts.push(`signé le ${jjmmaaaa(signe)}, le ${jjmmaaaa(registre)} au registre`)
+      // lot 10a (17/11) : la date d'acte prévue (la réitération lue) et le séquestre -- seulement quand LES DEUX existent
+      // (une case vide se propose à remplir, elle ne sonne pas)
+      const reiteration = lireDateIso(dateLue(v, 'date_reiteration'))
+      const acte = lireDateIso(ligne.dateActe)
+      if (reiteration && acte && Math.abs(joursEntre(reiteration, acte)) > 1) ecarts.push(`acte au plus tard le ${jjmmaaaa(reiteration)}, prévu le ${jjmmaaaa(acte)} au registre`)
+      if (ligne.sequestre != null && ligne.sequestre > 0) {
+        const ecart = ecartEuros(nombreLu(v, 'sequestre'), ligne.sequestre, 'séquestre')
+        if (ecart) ecarts.push(ecart)
+      }
       if (ecarts.length) alertes.push({ code: 'L7', niveau: 'alerte', texte: `Compromis : ${ecarts.join(' ; ')}`, pourquoi: 'le registre ne dit pas ce que dit le compromis signé' })
     }
   }

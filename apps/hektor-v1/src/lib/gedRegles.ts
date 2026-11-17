@@ -44,6 +44,10 @@ export type AffaireRegle = {
   honorairesEntree?: number | null
   honorairesSortie?: number | null
   acquereurs?: Array<{ nom: string; prenom: string }>
+  // lot 10a (17/11) : le séquestre (euros), et si le CARNET de l'app a été lu sans erreur (date d'acte, séquestre, date
+  // et prix y sont alors déjà repris : le carnet gagne). Carnet non lu -> on compare, on ne propose rien.
+  sequestre?: number | null
+  carnetLu?: boolean
 }
 
 export type NiveauAlerte = 'alerte' | 'piece' | 'info'
