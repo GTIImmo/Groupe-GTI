@@ -2513,6 +2513,73 @@ l'etat d'une autre transaction) ; ce balayage-ci, fait avec le critere « compro
 trouve un 7e qui se declenche sur `state` ET sur l'ABSENCE de numero. **Chaque famille
 demande son propre balayage, et il se fait AVANT de generer le patch.**
 
+### ✅⭐⭐ C4, 2e PATCH -- 4 325 NOTES POSEES LE 17/11
+
+Sa consigne, depuis le 31/10 : **« en bloc, tels quels, sans aucune interpretation »**.
+Aucun texte n'est reformule ni resume.
+
+```
+   ce qui a ete LU, par source           5 050 textes
+      G : le commentaire                 4 132
+      F : le texte de l annulation         539   (hors des six motifs)
+      F : le financement                   232
+      F : remarque d apres-vente            82
+      F : la DATE BUTOIR                    65   sa decision du 17/11
+   ce qui est POSE                       4 325 notes, 4 936 textes fusionnes
+      classeur:G                         3 484
+      classeur:F+G                         585   une note qui porte les deux
+      classeur:F                           256
+   ecartees                                  89 sans aucun lien au gel (A6)
+                                              0 parce que la chaine etait prise
+```
+
+#### ⭐⭐⭐ LE PREALABLE DE L'AUDIT DU 16/11 A PAYE, ET VOICI COMMENT
+
+L'audit avait trouve que `app_affaire_note` portait **DEJA 195 lignes
+`origine = 'classeur'`** -- les notes d'acquereur de C5. Si C4 avait utilise la meme
+valeur, **un retour arriere sur l'un aurait emporte l'autre**.
+
+➡ Ce patch pose donc `classeur:F`, `classeur:G` et `classeur:F+G`, **jamais
+`classeur` seul**. Et son INVERSE vise ces trois valeurs : il ne PEUT PAS toucher
+C5. Le controle l'exige a chaque passage : **les 195 de C5 doivent rester a 195**.
+
+#### ⛔⛔ ET LA CLE PRIMAIRE A FAIT ECHOUER MA PREMIERE VERSION
+
+`app_affaire_note` a pour clef primaire **`app_affaire_id` SEUL** : donc **UNE SEULE
+NOTE PAR TRANSACTION**. Je voulais poser F et G separement sur la meme transaction ->
+« duplicate key value violates unique constraint app_affaire_note_pkey ».
+✅ Rejete AVANT le commit, verifie : 195 notes de C5, 0 de C4, rien n'avait bouge.
+
+⭐ **TROIS CONSEQUENCES, TOUTES TRAITEES** :
+
+```
+   1  les textes d une meme ligne sont FUSIONNES en UNE note, chacun PREFIXE de
+      sa source -- rien n est perdu (4 936 textes dans 4 325 notes), rien n est
+      melange, et l ordre est stable pour que deux executions donnent le MEME texte
+   2  on vise une transaction LIBRE de la chaine quand la plus avancee porte deja
+      une note (les 195 de C5, les 9 saisies) -- additif, JAMAIS un ecrasement
+   3  si toute la chaine est prise, on ECARTE et on COMPTE -> **0 cas**, le repli
+      a suffi partout
+```
+
+#### ✅ LES ONZE CONTROLES
+
+```
+   F 256 . G 3 484 . F+G 585          tous justes
+   LES 195 DE C5 INTACTES               195 = 195
+   les 9 saisies de l app                 9 = 9
+   aucune note vide . toutes rattachees a une CHAINE      0 = 0
+   une seule note par transaction : 4 529 notes pour 4 529 transactions
+   VOISINES : 169 motifs . 450 dates . 2 588 avis
+```
+
+⚠ **UN SIGNAL, POSE TEL QUEL PAR SA CONSIGNE** : la note la plus longue fait
+**17 129 caracteres**. C'est une cellule du Sheet qui porte tout un historique
+d'affaire. On ne l'interprete pas, mais il faut savoir qu'elle existe -- un ecran qui
+l'afficherait sans la replier serait illisible.
+
+---
+
 ### ✅⭐⭐⭐ C4, 1er PATCH -- 169 MOTIFS D'ANNULATION ET 2 CLAUSES, 17/11
 
 #### ⛔⛔ MA PREMIERE NORMALISATION N'EN ETAIT PAS UNE, ET IL L'A VU A L'OEIL
@@ -3606,10 +3673,14 @@ C3bis ⬜ LES MOTIFS D'ANNULATION -- LA SECONDE MOITIE DE C3, PAS FAITE.
        ⛔ MAIS F EST MIXTE (A1 : 3 099 cellules -- des « V », des pastilles,
          et 810 textes seulement) -> ELLE DEPEND DONC DE C4, qui tranche F.
        ⚠ NE PAS la cocher avec C3 : Z est faite, les motifs ne le sont pas.
-C4 ✅⬜ 1er PATCH FAIT LE 17/11 -- **169 MOTIFS + 2 CLAUSES AU CATALOGUE**,
-       10 controles justes. ⭐⭐⭐ **111 lignes portent desormais LA DATE ET
-       LE MOTIF**, le « quand » et le « pourquoi » reunis.
-       ⛔ RESTENT : les 5 003 NOTES (2e patch) et les 86 CONDITIONS (3e).
+C4 ✅✅⬜ DEUX PATCHS SUR TROIS FAITS LE 17/11 :
+       1er : **169 MOTIFS + 2 CLAUSES AU CATALOGUE**, 10 controles justes.
+             ⭐⭐⭐ **111 lignes portent LA DATE ET LE MOTIF** -- le « quand »
+             et le « pourquoi » reunis.
+       2e  : **4 325 NOTES** (4 936 textes fusionnes), 11 controles justes.
+             classeur:G 3 484 . classeur:F+G 585 . classeur:F 256
+       ⛔ RESTE LE 3e : les 86 CONDITIONS en attente, dont l'echeance se lit
+         dans les abreviations (ODP15/12, DB30/1) -- un decodage ligne par ligne.
        ⭐⭐⭐ **F EST DECODEE LE 16/11** -- voir
        `notice/C4_LE_DECODAGE_DE_LA_COLONNE_F_2026-11-16.md`.
        ⛔ CE DECODAGE N'ETAIT ECRIT NULLE PART : ni dans les 160 notes, ni au
