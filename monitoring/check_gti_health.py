@@ -747,6 +747,71 @@ DATA_SENTINELS: list[dict[str, Any]] = [
         },
     },
     {
+        # B3 du chantier classeur (17/11/2026) -- LES NOTES ET LES CONDITIONS
+        # ORPHELINES. La soeur jumelle de data.repartition_orpheline, pour les
+        # deux autres tables qui s'accrochent par app_chaine_id.
+        #
+        # CRITICAL, et c'est mesure : une orpheline NEUVE veut dire qu'une
+        # TRANSACTION A DISPARU -- l'incident le plus grave de ce chantier. Le
+        # 23/10, trois transactions se sont evaporees DES DEUX BASES, sans
+        # sauvegarde, sans journal, sans trace de qui. Leurs notes et conditions
+        # sont restees suspendues dans le vide, et personne ne l'a vu pendant
+        # trois semaines.
+        #
+        # ⭐ SEUIL 0 ET IL EST VRAI DES LE PREMIER JOUR, parce que les 11
+        #   orphelines connues sont DECLAREES dans la vue (`deja_declaree`) :
+        #   ce sont les restes des essais du 23/10 sur le dossier 1068399, dont
+        #   l'une porte « a garder pour la preuve ». On ne les a donc PAS
+        #   supprimees -- nettoyer un essai est une decision de Frederic -- et on
+        #   ne les masque pas non plus : la vue les montre avec leur diagnostic.
+        #   « Exclure est une decision, et elle se declare. »
+        #
+        # ⚠ POURQUOI MAINTENANT : a l'etape 4, l'app ecrira elle-meme des notes
+        #   et des conditions. C'est la qu'une orpheline peut naitre sans bruit.
+        #   Le plan le disait depuis le 15/11 : « A POSER AVANT d'ecrire ».
+        "key": "data.affaire_note_condition_orpheline",
+        "severity": "critical",
+        "label": "Notes et conditions accrochees a une transaction disparue",
+        "table": "app_v_affaire_note_condition_orpheline",
+        "params": {"deja_declaree": "is.false"},
+        "rule": "absolute",
+        "max": 0,
+        "sample": {
+            "select": "objet,app_affaire_id,app_chaine_id,origine,apercu,diagnostic",
+            "order": "ecrit_le.desc",
+            "limit": 4,
+        },
+    },
+    {
+        # B2 du chantier classeur (17/11/2026) -- LES LIGNES DU CLASSEUR QUI NE
+        # RECEVRONT JAMAIS RIEN. 85 sur 4 773 n'ont AUCUN lien vers une
+        # transaction : aucune date, aucun motif, aucune note ne les atteindra.
+        #
+        # ⚠ LE SEUIL EST 85, PAS 0, ET C'EST DELIBERE. Un seuil 0 crierait des le
+        #   premier passage pour un fait CONNU -- exactement le defaut reproche le
+        #   17/11 a data.negociateur_registre_signal (« un essai qui crie tous les
+        #   jours n'est plus un essai »). Ce qu'on veut voir est une HAUSSE : une
+        #   ligne qui PERD son lien.
+        # ⏰ ET LE SEUIL DOIT BAISSER : le re-gel additif (D1) va rattacher une
+        #   partie des 85. Quand il sera passe, remesurer et poser le nouveau
+        #   compte ici -- sinon la sentinelle tolere un trou qui s'est referme.
+        #
+        # WARNING et non critical : c'est un ETAT ancien, pas un evenement. Il ne
+        # doit pas envoyer un e-mail chaque matin ; il doit se VOIR au tableau.
+        "key": "data.classeur_ligne_sans_lien",
+        "severity": "warning",
+        "label": "Lignes du classeur qu'aucun lien ne rattache",
+        "table": "app_v_classeur_ligne_sans_lien",
+        "params": {},
+        "rule": "absolute",
+        "max": 85,
+        "sample": {
+            "select": "id_unique,ligne_classeur,diagnostic",
+            "order": "ligne_classeur.asc",
+            "limit": 4,
+        },
+    },
+    {
         "key": "data.annonce_partielle",
         # CRITICAL : un champ ignore au push = divergence app/Hektor invisible.
         "severity": "critical",

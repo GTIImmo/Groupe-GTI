@@ -3789,11 +3789,39 @@ B1 ✅  POSEE LE 16/11 -- migration b1_colonnes_classeur_2026_11_16, 11 controle
          C numero_mandat_app -> ⛔ PREALABLE DU 29/10 JAMAIS FAIT. `numero_mandat`
             est de CLASSE C : une ecriture y est EFFACEE au run suivant.
        ⭐ Les carnets n'ont AUCUNE contrainte CHECK sur le nom d'un champ.
-B2 ⬜  SENTINELLE DES 85 LIGNES NON RATTACHEES -- sinon elles ne recevront jamais
-       rien et personne ne le verra.
-B3 ⬜  SENTINELLE DES CONDITIONS ET NOTES ORPHELINES (5 et 6 aujourd'hui). Le
-       modele existe : `app_v_repartition_orpheline`. A POSER AVANT d'ecrire, sinon
-       le defaut se multiplie par 241.
+B2 ✅  POSEE LE 17/11 -- vue `app_v_classeur_ligne_sans_lien` + la sentinelle
+       `data.classeur_ligne_sans_lien`. **85 lignes sur 4 773** n'ont AUCUN lien :
+       ni date, ni motif, ni note ne les atteindra jamais.
+       ⚠ LE SEUIL EST 85, PAS 0, ET C'EST DELIBERE : un seuil 0 crierait des le
+         premier passage pour un fait CONNU -- le defaut reproche le matin meme a
+         `data.negociateur_registre_signal`. Ce qu'on veut voir est une HAUSSE.
+       ⏰ ET LE SEUIL DOIT BAISSER apres le re-gel (D1), qui va en rattacher une
+         partie -- sinon la sentinelle tolere un trou qui s'est referme.
+       WARNING et non critical : c'est un ETAT ancien, pas un evenement.
+B3 ✅  POSEE LE 17/11 -- vue `app_v_affaire_note_condition_orpheline` + la
+       sentinelle `data.affaire_note_condition_orpheline`, **CRITICAL, seuil 0**.
+       UNE SEULE vue pour les deux objets (colonne `objet`) : deux vues jumelles,
+       c'est deux endroits a corriger le jour ou la regle change.
+       ⭐⭐⭐ ET LA MESURE A CORRIGE CE QUE J'ALLAIS ECRIRE. Les 11 orphelines ne
+         sont pas des donnees metier perdues : ce sont des **restes d'essais du
+         23/10**, tous sur le dossier 1068399, tous `origine = 'saisie'`. Leurs
+         textes le disent : « Essai 3 du 23/10 ... (a nettoyer) » -- et l'une porte
+         **« a garder pour la preuve »**.
+       ⛔ JE NE LES AI DONC PAS SUPPRIMEES : l'une demande expressement d'etre
+         gardee, et nettoyer un essai est une decision de Frederic. On les
+         **DECLARE** (colonne `deja_declaree`, liste figee des 6 transactions) et la
+         sentinelle ne compte que les orphelines NEUVES -- donc seuil 0 VRAI des le
+         premier jour. « Exclure est une decision, et elle se declare. »
+       ⛔⛔ LE TEMOIN POSITIF, et il etait indispensable : un 0 pouvait venir d'un
+         filtre mal interprete par PostgREST. Filtre RETOURNE (`is.true`) -> la
+         sentinelle rend **11, en CRITICAL, et elle NOMME chaque ligne**. Le filtre
+         mord donc dans les deux sens. Source restauree a l'identique apres l'essai.
+       ✅ 9 CONTROLES JUSTES : 85 . 11 . 0 non declarees . 11 declarees . 6 notes +
+         5 conditions . les 11 sur le dossier 1068399 . anon ne lit rien .
+         repartitions orphelines 0 . et LES 80 NOTES + 28 CONDITIONS DU 17/11 INTACTES.
+       ⛔ AUCUNE DONNEE ECRITE : deux vues, deux lignes de code, rien d'autre.
+       Fichiers : supabase/patch_b2_b3_sentinelles_2026-11-17.sql (+ INVERSE,
+       + REPETITION) . monitoring/check_gti_health.py
 ```
 
 ### PHASE C — POSER, DU PLUS SUR AU PLUS DELICAT
