@@ -5,7 +5,11 @@
 //   que Hektor connaît -- ils passent par la modale « Modifier le compromis », qui les ENVOIE à Hektor (la correction
 //   « chez nous seulement » de ces champs a été retirée le 15/09). Les conditions suspensives sont gardées chez nous
 //   (décision du 16/09). Chaque ligne porte donc sa destination, et l'écran la dit.
-// Note du chantier : notice/CHANTIER_GED_DOCUMENTS_2026-11-06.md §12.28.
+// GED lot 2 (17/11, « étends ») : le même bilan pour L'OFFRE lue (bilanOffre) -- montant, date, validité. ⛔ Une offre
+//   ACCEPTÉE est figée chez Hektor (200 + corps vide, mesure du 13/10) et une offre REFUSÉE porte au registre la date du
+//   refus (mémoire du 12/11) : leurs lignes se montrent, rien ne se propose (`fige`). L'acte de vente n'a PAS de bilan :
+//   un bien vendu sort des annonces (0 sur 147 ventes depuis juin), sa fiche n'a pas de panneau des documents.
+// Note du chantier : notice/CHANTIER_GED_DOCUMENTS_2026-11-06.md §12.28 et §12.29.
 import {
   comparerNombre, conditionsGeneralesLues, conditionsLuesDe, dateLue, joursEntre, LIBELLE_CONDITION, lireDateIso, natureDuLibelle, nombreLu,
   normaliserTexte, personnesLuesDe, resoudreCible, texteLu, TOLERANCES, type NatureCondition,
@@ -17,7 +21,7 @@ export type DestinationBilan = 'hektor' | 'nous'
 // trancher : le compromis et la transaction disent deux choses ; ajouter : la transaction est vide ; accord : pareil
 export type EtatBilan = 'trancher' | 'ajouter' | 'accord'
 // la case de la modale « Modifier le compromis » que la valeur préremplit (null : à saisir à la main dans la modale)
-export type ChampModale = 'amount' | 'transaction_date' | 'signature_date' | 'sequestration' | 'net_seller_price'
+export type ChampModale = 'amount' | 'transaction_date' | 'signature_date' | 'sequestration' | 'net_seller_price' | 'validity_days'
 export type LigneBilan = {
   cle: string                 // « B.sequestre », « B.condition.preemption » : avec la valeur, la clé d'une décision
   libelle: string
@@ -33,8 +37,12 @@ export type LigneBilan = {
   regle: 'L7' | 'L20' | null  // la ligne « À regarder » qui dit la même chose (la mesure du morceau 10)
   // lot 10c (audit) : la valeur de la transaction n'est pas (encore) chez Hektor -- carnet seul, ou envoyée sans retour
   attente: 'jamais_envoye' | 'en_route' | 'echec' | null
+  // lot 2 : la transaction ne se modifie pas d'ici (offre acceptée ou refusée) -- la raison, dite ; rien ne se propose
+  fige: string | null
 }
+export type GenreBilan = 'compromis' | 'offre'
 export type BilanCompromis = {
+  genre: GenreBilan
   lectureId: string | null
   nom: string
   luLe: string | null
@@ -74,8 +82,8 @@ export function bilanCompromis(docs: DocumentLu[], affaires: AffaireRegle[], cat
   if (!ligne || ligne.id == null) return null
   const page = (cle: string) => v.find((x) => x.cle === cle && x.rang === 0)?.page ?? null
   const lignes: LigneBilan[] = []
-  const pousser = (l: Omit<LigneBilan, 'note' | 'champModale' | 'condition' | 'regle' | 'attente'> & Partial<Pick<LigneBilan, 'note' | 'champModale' | 'condition' | 'regle'>>) =>
-    lignes.push({ note: null, champModale: null, condition: null, regle: null, attente: null, ...l })
+  const pousser = (l: Omit<LigneBilan, 'note' | 'champModale' | 'condition' | 'regle' | 'attente' | 'fige'> & Partial<Pick<LigneBilan, 'note' | 'champModale' | 'condition' | 'regle'>>) =>
+    lignes.push({ note: null, champModale: null, condition: null, regle: null, attente: null, fige: null, ...l })
 
   // ── les champs que Hektor connaît : ils partent par la modale « Modifier le compromis » ──
   const euros = (cle: string, libelle: string, lu: number | null, base: number | null, champ: ChampModale | null, note: string | null = null) => {
@@ -157,7 +165,81 @@ export function bilanCompromis(docs: DocumentLu[], affaires: AffaireRegle[], cat
     }
   }
   const conditionsGenerales = conditionsGeneralesLues(cpv.lecture).map((n) => LIBELLE_CONDITION[n])
-  return { lectureId: cpv.lecture.id ?? null, nom: cpv.nom, luLe: cpv.lecture.luLe, affaireId: ligne.id, dateTransaction: ligne.date ?? null, conditionsLues, conditionsGenerales, lignes }
+  return { genre: 'compromis', lectureId: cpv.lecture.id ?? null, nom: cpv.nom, luLe: cpv.lecture.luLe, affaireId: ligne.id, dateTransaction: ligne.date ?? null, conditionsLues, conditionsGenerales, lignes }
+}
+
+// ── GED lot 2 (17/11) : « CE QUE DIT L'OFFRE » -- l'offre lue face à SON offre au registre ──
+// Le montant (seulement s'il s'entend frais d'agence inclus, ou sans base lue : comme L7), la date de la PROPOSITION
+// (jamais la colonne `date`, qui porte le dernier mouvement) et la validité en jours. Tout part chez Hektor par la modale
+// « Modifier l'offre », VISIBLE : le chemin de l'offre construit un corps NEUF et renvoie montant, date et validité
+// préremplis, sans la liste des cases touchées ni le témoin du compromis -- on ne le fait pas partir sans être vu.
+const FIGEE_ACCEPTEE = 'offre acceptée : figée chez Hektor, son montant, sa date et sa validité ne se modifient plus (seul son état change)'
+const FIGEE_REFUSEE = 'offre refusée : le registre y porte la date du refus, la modifier la réécrirait -- rien ne se propose'
+export function bilanOffre(docs: DocumentLu[], affaires: AffaireRegle[]): BilanCompromis | null {
+  const lues = docs.filter((d) => d.lecture.typeCode === 'transaction.offre' && d.lecture.etat === 'lu')
+  if (!lues.length) return null
+  const doc = lues.reduce((a, b) => {
+    const da = lireDateIso(dateLue(a.lecture.valeurs, 'date_offre'))
+    const db = lireDateIso(dateLue(b.lecture.valeurs, 'date_offre'))
+    return db && (!da || db > da) ? b : a
+  })
+  const v = doc.lecture.valeurs
+  // départager les offres par la date de la PROPOSITION (celle du registre peut être celle du refus)
+  const offres = affaires.filter((a) => a.kind === 'offre').map((a) => ({ ...a, date: a.dateProposee ?? a.date }))
+  const ligne = resoudreCible(offres, {
+    acquereurs: personnesLuesDe(doc.lecture).filter((p) => p.qualite === 'acquereur'), date: dateLue(v, 'date_offre'), montant: nombreLu(v, 'montant_offert'),
+  })
+  if (!ligne || ligne.id == null) return null
+  const page = (cle: string) => v.find((x) => x.cle === cle && x.rang === 0)?.page ?? null
+  const etatOffre = String(ligne.state ?? '').trim().toLowerCase()
+  const fige = etatOffre === 'accepted' ? FIGEE_ACCEPTEE : etatOffre === 'refused' ? FIGEE_REFUSEE : null
+  const lignes: LigneBilan[] = []
+  const pousser = (l: Omit<LigneBilan, 'note' | 'condition' | 'regle' | 'attente' | 'fige' | 'destination'> & Partial<Pick<LigneBilan, 'note' | 'regle'>>) =>
+    lignes.push({ note: null, condition: null, regle: null, attente: null, fige: null, destination: 'hektor', ...l })
+
+  const montantLu = nombreLu(v, 'montant_offert')
+  if (montantLu != null && montantLu > 0 && texteLu(v, 'base_prix') !== 'net_vendeur') {
+    const base = montant(ligne.montant)
+    const etat: EtatBilan = base == null ? 'ajouter' : comparerNombre(montantLu, base, TOLERANCES.euros) === 'different' ? 'trancher' : 'accord'
+    pousser({ cle: 'O.montant', libelle: 'Montant offert', etat, lu: eurosClair(montantLu), valeur: eurosTexte(montantLu), transaction: base == null ? null : eurosClair(base), page: page('montant_offert'), champModale: 'amount', regle: etat === 'trancher' ? 'L7' : null })
+  }
+  const dateOffre = dateLue(v, 'date_offre')
+  if (dateOffre) {
+    const base = lireDateIso(ligne.date)
+    const lu = lireDateIso(dateOffre) as Date
+    const etat: EtatBilan = !base ? 'ajouter' : Math.abs(joursEntre(lu, base)) > 1 ? 'trancher' : 'accord'
+    pousser({ cle: 'O.date', libelle: 'Date de l\'offre', etat, lu: jjmmaaaa(dateOffre), valeur: dateOffre.slice(0, 10), transaction: base ? jjmmaaaa(base.toISOString()) : null, page: page('date_offre'), champModale: 'transaction_date' })
+  }
+  // la validité en jours : lue telle quelle, sinon déduite de « valable jusqu'au » (de 1 à 365 jours, sinon on ne devine pas)
+  const joursLus = (() => {
+    const n = nombreLu(v, 'validite_jours')
+    if (n != null && n >= 1 && n <= 365) return Math.round(n)
+    const debut = lireDateIso(dateOffre)
+    const fin = lireDateIso(dateLue(v, 'validite_jusquau'))
+    const j = debut && fin ? joursEntre(debut, fin) : null
+    return j != null && j >= 1 && j <= 365 ? j : null
+  })()
+  if (joursLus != null) {
+    const base = ligne.joursValidite != null && ligne.joursValidite > 0 ? ligne.joursValidite : null
+    const etat: EtatBilan = base == null ? 'ajouter' : base !== joursLus ? 'trancher' : 'accord'
+    const clair = (j: number) => `${j} jour${j > 1 ? 's' : ''}`
+    pousser({ cle: 'O.validite', libelle: 'Validité', etat, lu: clair(joursLus), valeur: String(joursLus), transaction: base == null ? null : clair(base), page: page(nombreLu(v, 'validite_jours') != null ? 'validite_jours' : 'validite_jusquau'), champModale: 'validity_days' })
+  }
+  const CHAMP_CARNET: Record<string, string> = { 'O.montant': 'montant', 'O.date': 'date', 'O.validite': 'jours_validite' }
+  for (const l of lignes) {
+    if (fige && l.etat !== 'accord') { l.fige = fige; continue }
+    const attente = ligne.enAttente?.[CHAMP_CARNET[l.cle] ?? ''] ?? null
+    if (!attente) continue
+    l.attente = attente
+    l.note = attente === 'echec' ? 'le dernier envoi à Hektor a échoué : la valeur n\'y est pas' : attente === 'jamais_envoye' ? 'notre carnet seul la portait : elle n\'est jamais partie chez Hektor' : 'envoyée à Hektor, pas encore confirmée par son retour'
+  }
+  return { genre: 'offre', lectureId: doc.lecture.id ?? null, nom: doc.nom, luLe: doc.lecture.luLe, affaireId: ligne.id, dateTransaction: ligne.date ?? null, conditionsLues: true, conditionsGenerales: [], lignes }
+}
+
+// Les bilans d'un dossier, dans l'ordre de la vie d'une vente (l'offre, puis le compromis) ; seuls ceux qui ont un document
+// lu ET leur transaction sûre au registre.
+export function bilansDuDossier(docs: DocumentLu[], affaires: AffaireRegle[], catalogue: CatalogueCondition[] | null): BilanCompromis[] {
+  return [bilanOffre(docs, affaires), bilanCompromis(docs, affaires, catalogue)].filter((b): b is BilanCompromis => b !== null)
 }
 
 // Les conditions de la transaction APRÈS les choix « prendre » (toute la liste : le geste la remplace). On part de la

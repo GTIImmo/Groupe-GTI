@@ -12062,7 +12062,7 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
     }
     if (versHektor.length) {
       const demande: DemandeModifierTransaction = {
-        app_dossier_id: Number(dossier.app_dossier_id), appAffaireId: b.affaireId, hektorAffaireId: ligne.hektor_affaire_id == null ? null : String(ligne.hektor_affaire_id),
+        genre: b.genre, app_dossier_id: Number(dossier.app_dossier_id), appAffaireId: b.affaireId, hektorAffaireId: ligne.hektor_affaire_id == null ? null : String(ligne.hektor_affaire_id),
         hektorAnnonceId: String(dossier.hektor_annonce_id), lectureId: b.lectureId, nom: b.nom, lignes: versHektor.map((c) => c.ligne), arrierePlan: enArrierePlan, pris: false,
       }
       window.dispatchEvent(new CustomEvent(EVENEMENT_MODIFIER_TRANSACTION, { detail: demande }))
@@ -20166,15 +20166,20 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   // même envoi à Hektor. Seul un responsable ou un admin ouvre la modale (openStatusChangeModal le refuse aux autres).
   const [depuisDocument, setDepuisDocument] = useState<DemandeModifierTransaction | null>(null)
   useEffect(() => { if (!statusChangeTarget) setDepuisDocument(null) }, [statusChangeTarget])
+  // lot 2 (17/11) : l'onglet attendu, selon le document lu (offre ou compromis)
+  const statutDuDocument = depuisDocument?.genre === 'offre' ? 'offer' : 'compromise'
   // APRÈS les préremplissages (mêmes déclencheurs, déclaré plus bas : il passe en dernier) -- sinon le carnet relu
   // remettrait la valeur du registre par-dessus celle du compromis.
   useEffect(() => {
-    if (!depuisDocument || statusChangeStatus !== 'compromise') return
+    if (!depuisDocument || statusChangeStatus !== statutDuDocument) return
     const affaire = affaireCourantePourStatut()
     if (!affaire || Number(affaire.app_affaire_id) !== depuisDocument.appAffaireId) return
     const touchees: string[] = []
     for (const l of depuisDocument.lignes) {
-      if (l.champModale === 'amount') { setStatusChangeAmount(l.valeur); setStatusChangeSalePrice(l.valeur); touchees.push('amount', 'sale_price') }
+      // une offre n'a que son montant (son prix de vente est relu sur le formulaire de Hektor par le worker)
+      if (l.champModale === 'amount' && depuisDocument.genre === 'offre') { setStatusChangeAmount(l.valeur); touchees.push('amount') }
+      else if (l.champModale === 'amount') { setStatusChangeAmount(l.valeur); setStatusChangeSalePrice(l.valeur); touchees.push('amount', 'sale_price') }
+      if (l.champModale === 'validity_days') { setStatusChangeValidityDays(l.valeur); touchees.push('validity_days') }
       if (l.champModale === 'transaction_date') { setStatusChangeDate(l.valeur); touchees.push('transaction_date') }
       if (l.champModale === 'signature_date') { setStatusChangeSignatureDate(l.valeur); touchees.push('signature_date') }
       if (l.champModale === 'sequestration') { setStatusChangeSequestration(l.valeur); touchees.push('sequestration') }
@@ -20190,13 +20195,13 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     if (!d) return
     const dansLaCase: Record<string, string> = {
       amount: statusChangeAmount, transaction_date: statusChangeDate, signature_date: statusChangeSignatureDate,
-      sequestration: statusChangeSequestration, net_seller_price: statusChangeNetSellerPrice,
+      sequestration: statusChangeSequestration, net_seller_price: statusChangeNetSellerPrice, validity_days: statusChangeValidityDays,
     }
     const egal = (a: string, b: string) => a.trim() === b.trim() || (Number.isFinite(Number(a)) && Number(a) === Number(b) && a.trim() !== '')
     const notees = d.lignes.filter((l) => !l.champModale || egal(dansLaCase[l.champModale] ?? '', l.valeur))
     void Promise.all(notees.map((l) => gedDecider({
       hektorAnnonceId: d.hektorAnnonceId, lectureId: d.lectureId, cle: l.cle, champ: l.champModale ?? l.cle.slice(2), valeur: l.valeur, decision: 'remplie',
-      detail: { geste: 'modale_modifier_compromis', job_id: jobId, app_affaire_id: d.appAffaireId },
+      detail: { geste: d.genre === 'offre' ? 'modale_modifier_offre' : 'modale_modifier_compromis', job_id: jobId, app_affaire_id: d.appAffaireId },
     })))
       .then(() => window.dispatchEvent(new CustomEvent('ged:decisions-changees')))
       .catch((erreur) => console.warn('[ce que dit le compromis] décision non gardée', erreur))
@@ -20214,7 +20219,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   useEffect(() => { setArrierePlanArme(false); setArrierePlanParti(false) }, [depuisDocument])
   // prête ? (déclaré APRÈS le préremplissage et la pose des valeurs : même rendu, il passe en dernier)
   useEffect(() => {
-    if (!depuisDocument?.arrierePlan || arrierePlanArme || statusChangeStatus !== 'compromise') return
+    if (!depuisDocument?.arrierePlan || arrierePlanArme || statusChangeStatus !== statutDuDocument) return
     const affaire = affaireCourantePourStatut()
     const ids = statusChangeAffaires.map((a) => Number(a.app_affaire_id)).filter((n) => Number.isFinite(n)).join(',')
     if (!affaire || Number(affaire.app_affaire_id) !== depuisDocument.appAffaireId || !ids || carnetChargePour !== ids) return
@@ -20257,7 +20262,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     // les gardes du bouton « Mettre à jour » (handleChangeHektorAnnonceStatus), sans ouvrir de fenêtre
     if (!hasHektorNegotiator(cible)) { finir('L\'annonce n\'a pas de négociateur Hektor : rien n\'est parti.'); return }
     if (activeAdminAnnonceJobIds.has(String(cible.hektor_annonce_id))) { finir('Une action Hektor est déjà en cours pour cette annonce : rien n\'est parti. Réessaie après sa fin.'); return }
-    if (!statusChangeAmount.trim() || !statusChangeSalePrice.trim()) { finir('Le montant de la transaction est inconnu : rien n\'est parti.'); return }
+    if (offreAccepteeFigeeChezHektor(affaireCourantePourStatut())) { finir('Cette offre est acceptée : figée chez Hektor, elle ne se modifie plus. Rien n\'est parti.'); return }
+    if (!statusChangeAmount.trim() || (statusChangeNeedsSalePrice(statusChangeStatus) && !statusChangeSalePrice.trim())) { finir('Le montant de la transaction est inconnu : rien n\'est parti.'); return }
     setStatusChangePending(true)
     try {
       const job = await createChangeHektorAnnonceStatusJob(chargeDeLaModale(true))
@@ -21869,9 +21875,11 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         let cible: Dossier | null = null
         try { cible = await loadDossierDetail(d.app_dossier_id) } catch (erreur) { console.error('[ce que dit le compromis] ouverture', erreur) }
         if (!cible) { setErrorMessage('Le bien n’a pas pu être relu : la fenêtre de la transaction ne s’ouvre pas, rien n’est parti à Hektor.'); return }
-        if (d.hektorAffaireId && !cible.compromis_id) cible = { ...cible, compromis_id: d.hektorAffaireId }
+        // lot 2 : l'onglet et le numéro de la transaction lue (Offre ou Compromis), comme ouvrirGesteDuRegistre
+        const cleNumero = d.genre === 'offre' ? 'offre_id' : 'compromis_id'
+        if (d.hektorAffaireId && !cible[cleNumero]) cible = { ...cible, [cleNumero]: d.hektorAffaireId }
         openStatusChangeModal(cible)
-        setStatusChangeStatus('compromise')
+        setStatusChangeStatus(d.genre === 'offre' ? 'offer' : 'compromise')
         setStatusChangeAffaireChoisie(d.appAffaireId)
         setDepuisDocument(d)
       })()
@@ -23712,7 +23720,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             gardes={{ etatFermeAuxTransactions, bienEngage, dossiersOuvertsDuBien }}
             isValidationApproved={isValidationApproved}
             pastilleStatut={<StatusPill value={statusChangeTarget.statut_annonce} />}
-            depuisDocument={depuisDocument ? { nom: depuisDocument.nom, valeurs: depuisDocument.lignes.map((l) => `${l.libelle} : ${l.lu}`) } : null}
+            depuisDocument={depuisDocument ? { nom: depuisDocument.nom, genre: depuisDocument.genre, valeurs: depuisDocument.lignes.map((l) => `${l.libelle} : ${l.lu}`) } : null}
         formulaire={{
           statusChangeAmount, setStatusChangeAmount, statusChangeSalePrice, setStatusChangeSalePrice,
           statusChangeDate, setStatusChangeDate, statusChangeValidityDays, setStatusChangeValidityDays,
@@ -23761,7 +23769,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               </div>
               <form className="status-change-form" onSubmit={handleChangeHektorAnnonceStatus}>
                 {depuisDocument ? (
-                  <p className="status-change-hint" role="status">{`Repris du compromis lu (${depuisDocument.nom}) : ${depuisDocument.lignes.map((l) => `${l.libelle} ${l.lu}`).join(' · ')}. Vérifie les cases, puis « Mettre à jour » : c'est ce bouton qui envoie à Hektor.`}</p>
+                  <p className="status-change-hint" role="status">{`Repris ${depuisDocument.genre === 'offre' ? 'de l\'offre lue' : 'du compromis lu'} (${depuisDocument.nom}) : ${depuisDocument.lignes.map((l) => `${l.libelle} ${l.lu}`).join(' · ')}. Vérifie les cases, puis « Mettre à jour » : c'est ce bouton qui envoie à Hektor.`}</p>
                 ) : null}
                 <section className="status-change-summary">
                   <div>

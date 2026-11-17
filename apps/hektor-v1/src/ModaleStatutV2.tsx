@@ -168,7 +168,7 @@ export type ModaleStatutV2Props = {
   formulaire: FormulaireStatutProps
   // GED lot 10c (17/11) : la modale ouverte depuis « Ce que dit le compromis » -- les valeurs reprises du compromis lu,
   // déjà posées dans les cases ; un bandeau les dit, et dit le bouton qui les envoie (« Mettre à jour le compromis »).
-  depuisDocument?: { nom: string; valeurs: string[] } | null
+  depuisDocument?: { nom: string; genre?: 'compromis' | 'offre'; valeurs: string[] } | null
 }
 
 const ETIQUETTE: Record<string, string> = { conseille: 'Conseillé', actuel: 'Actuel', hors: 'Hors parcours' }
@@ -1333,7 +1333,7 @@ export default function ModaleStatutV2(props: ModaleStatutV2Props) {
 
         {depuisDocument ? (
           <p className="stv2-bandeau is-info stv2-depuis-doc" role="status">
-            <b>{`Repris du compromis lu (${depuisDocument.nom})`}</b>
+            <b>{`Repris ${depuisDocument.genre === 'offre' ? 'de l\'offre lue' : 'du compromis lu'} (${depuisDocument.nom})`}</b>
             <span>{depuisDocument.valeurs.join(' · ')}</span>
             <span>Les cases sont déjà remplies. Vérifie-les, puis « Mettre à jour le compromis » : c'est ce bouton qui envoie à Hektor.</span>
           </p>

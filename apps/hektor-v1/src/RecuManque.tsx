@@ -11,7 +11,7 @@
 //   (lib/gedRemplirContact.ts), lus sur ses pièces, pour SA fiche contact relue (loadContactsEtatCivil).
 import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
-import { createConsoleDocumentSignedUrl, loadAffairesForDossier, loadConditionCatalogue, loadRegisterCycleAffaires } from './lib/api'
+import { createConsoleDocumentSignedUrl, dateOffreFaite, loadAffairesForDossier, loadConditionCatalogue, loadRegisterCycleAffaires } from './lib/api'
 import { apercuPremierePage } from './lib/gedClassementIa'
 import { etatFiableDuDocument } from './lib/etatSignatureMandat'
 import { gedDecider, gedJuger, lireCarnetDetailStrict, lireConditionsAffairesStrict, lireDernierEnvoiAffairesStrict, loadContactsEtatCivil, loadGedClassements, loadGedDecisions, loadGedDecisionsDetail, loadGedJugements, useGedPropositions, useGedRemplir, type DecisionGed, type EtatCivilLu, type JugementGed } from './lib/ged'
@@ -26,8 +26,8 @@ import { LIBELLE_MOMENT, recuManque, type LignePiece, type MomentDossier } from 
 import { deposeAuPlusTard, LIBELLE_A_DEPOSER, reglesSansIa, type AffaireRegle, type Alerte, type FaitsRegles } from './lib/gedRegles'
 import { lireDateIso, type PersonneDuBien } from './lib/gedComparer'
 import { reglesLues } from './lib/gedReglesLues'
-import { bilanCompromis, verdictDesChoix, type BilanCompromis as Bilan, type CatalogueCondition } from './lib/gedBilanCompromis'
-import BilanCompromis, { type ChoixBilan, type ResultatBilan } from './BilanCompromis'
+import { bilansDuDossier, verdictDesChoix, type BilanCompromis as Bilan, type CatalogueCondition, type GenreBilan } from './lib/gedBilanCompromis'
+import BilanCompromis, { MOTS, type ChoixBilan, type ResultatBilan } from './BilanCompromis'
 import type { LigneBilan } from './lib/gedBilanCompromis'
 import type { ConsoleDocument } from './types'
 import './RecuManque.css'
@@ -156,6 +156,10 @@ export function RecuManque({
           }
           const date = chezHektor('date', a.date), dateActe = chezHektor('date_acte', a.date_acte)
           const montant = chezHektor('montant', a.montant), sequestre = chezHektor('sequestre', a.sequestre), net = chezHektor('prix_net_vendeur', a.prix_net_vendeur)
+          // lot 2 : une offre se compare par la date de sa PROPOSITION (la colonne `date` porte son dernier mouvement) --
+          // sauf si le carnet en dit autre chose (en route : la valeur envoyée ; jamais partie ou ratée : vide)
+          const offre = String(a.kind) === 'offre'
+          const validite = chezHektor('jours_validite', a.jours_validite)
           return {
             kind: String(a.kind), state: a.state ?? null, date: date == null ? null : String(date), dateActe: dateActe == null ? null : String(dateActe), id: Number(a.app_affaire_id),
             // morceau 7c : de quoi comparer une transaction lue (montant en euros ; acquéreurs : un objet seul ou une liste)
@@ -165,6 +169,8 @@ export function RecuManque({
               .filter((p) => p.nom || p.prenom),
             sequestre: euros(sequestre), carnetLu: carnet !== null, enAttente,
             conditions: conditions ? (conditions.get(Number(a.app_affaire_id)) ?? []) : null,
+            dateProposee: offre ? (c.date ? (date == null ? null : String(date)) : dateOffreFaite(a) || null) : null,
+            joursValidite: offre ? euros(validite) : null,
           }
         }))
       })
@@ -360,7 +366,7 @@ export function RecuManque({
   const peutBilan = remplir && Boolean(onBilan)
   const [catalogue, setCatalogue] = useState<CatalogueCondition[] | null>(null)
   const [journal, setJournal] = useState<Map<string, DecisionGed> | null>(null)
-  const [bilanOuvert, setBilanOuvert] = useState(false)
+  const [bilanOuvert, setBilanOuvert] = useState<GenreBilan | null>(null)
   useEffect(() => {
     if (!peutBilan) return
     let annule = false
@@ -373,22 +379,29 @@ export function RecuManque({
     void loadGedDecisionsDetail(hektorAnnonceId).then((j) => { if (!annule) setJournal(j) })
     return () => { annule = true }
   }, [peutBilan, hektorAnnonceId, relire])
-  const bilan = useMemo(() => {
-    if (!peutBilan || affaires === null || catalogue === null) return null
+  // lot 2 (17/11) : un bilan par document de transaction lu -- l'offre, puis le compromis
+  const bilans = useMemo(() => {
+    if (!peutBilan || affaires === null || catalogue === null) return []
     const docsLus = documents
       .filter((d) => d.present_in_hektor !== false && lectures.has(d.id))
       .map((d) => ({ nom: d.document_name, lecture: lectures.get(d.id) as LectureDocument }))
-    return bilanCompromis(docsLus, affaires, catalogue)
+    return bilansDuDossier(docsLus, affaires, catalogue)
   }, [peutBilan, affaires, catalogue, documents, lectures])
-  const aTrancher = bilan && journal ? bilan.lignes.filter((l) => l.etat !== 'accord' && !journal.has(`${l.cle}|${l.valeur}`)) : []
-  const documentDuBilan = bilan ? documents.find((d) => lectures.get(d.id)?.id === bilan.lectureId) ?? null : null
+  // à trancher : ni d'accord, ni déjà décidé, ni figé chez Hektor (une offre acceptée se montre, elle ne réclame rien)
+  const aTrancherDe = (b: Bilan) => (journal ? b.lignes.filter((l) => l.etat !== 'accord' && !l.fige && !journal.has(`${l.cle}|${l.valeur}`)) : [])
+  const documentDuBilanDe = (b: Bilan) => documents.find((d) => lectures.get(d.id)?.id === b.lectureId) ?? null
+  const bilan = bilans.find((b) => b.genre === bilanOuvert) ?? null
+  const cartesBilan = bilans.map((b) => ({ b, lignes: aTrancherDe(b) })).filter((x) => x.lignes.length)
+  const aTrancher = cartesBilan.flatMap((x) => x.lignes)
   // une lecture NEUVE (moins de 30 minutes) avec quelque chose à trancher ouvre la fenêtre d'elle-même, une seule fois
   // par lecture et par navigateur (une commodité : sans mémoire, elle se rouvre, rien ne casse)
-  const cleOuverture = bilan?.lectureId && aTrancher.length && bilan.luLe && Date.now() - new Date(bilan.luLe).getTime() < 30 * 60 * 1000 ? `ged-bilan-vu:${bilan.lectureId}` : null
+  const neuf = bilans.find((b) => b.lectureId && aTrancherDe(b).length && b.luLe && Date.now() - new Date(b.luLe).getTime() < 30 * 60 * 1000) ?? null
+  const cleOuverture = neuf ? `ged-bilan-vu:${neuf.lectureId}` : null
   useEffect(() => {
-    if (!cleOuverture) return
+    if (!cleOuverture || !neuf) return
     try { if (window.localStorage.getItem(cleOuverture)) return; window.localStorage.setItem(cleOuverture, '1') } catch { /* sans mémoire : on ouvre */ }
-    setBilanOuvert(true)
+    setBilanOuvert(neuf.genre)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cleOuverture])
   // la modale « Modifier le compromis » a envoyé : ses lignes sont notées (écran principal) -> on relit journal et registre
   useEffect(() => {
@@ -401,7 +414,7 @@ export function RecuManque({
     const r = await onBilan(bilan, choix)
     // la mesure du morceau 10 : un choix vaut la note de la ligne « À regarder » qui disait la même chose
     const carte = new Map(choix.map((c) => [c.ligne.cle, c.choix]))
-    for (const a of alertes.filter((x) => (x.code === 'L7' && x.texte.startsWith('Compromis')) || x.code === 'L20')) {
+    for (const a of alertes.filter((x) => (x.code === 'L7' && x.texte.startsWith(bilan.genre === 'offre' ? 'Offre' : 'Compromis')) || (x.code === 'L20' && bilan.genre === 'compromis'))) {
       const verdict = verdictDesChoix(a.texte, a.code, bilan.lignes, carte)
       if (verdict) await gedJuger({ hektorAnnonceId, regle: a.code, cle: cleJugement(a), texte: a.texte, niveau: a.niveau, verdict }).catch(() => undefined)
     }
@@ -519,21 +532,21 @@ export function RecuManque({
           {propositions.length || faites.length || aTrancher.length ? (
             <div className="gm2-bloc">
               <p className="gm2-bt">{`À remplir (${propositions.length + aTrancher.length})`}</p>
-              {bilan && aTrancher.length ? (
-                <div className="gm2-carte gm2-prop gm2-cpv">
-                  <div className="gm2-c1"><span className="gm2-et is-remplir">Compromis</span><b>{`Ce que dit le compromis : ${[
-                    aTrancher.filter((l) => l.etat === 'trancher').length ? `${aTrancher.filter((l) => l.etat === 'trancher').length} à trancher` : null,
-                    aTrancher.filter((l) => l.etat === 'ajouter').length ? `${aTrancher.filter((l) => l.etat === 'ajouter').length} à ajouter` : null,
+              {cartesBilan.map(({ b, lignes }) => (
+                <div key={b.genre} className="gm2-carte gm2-prop gm2-cpv">
+                  <div className="gm2-c1"><span className="gm2-et is-remplir">{b.genre === 'offre' ? 'Offre' : 'Compromis'}</span><b>{`Ce que dit ${MOTS[b.genre].le} : ${[
+                    lignes.filter((l) => l.etat === 'trancher').length ? `${lignes.filter((l) => l.etat === 'trancher').length} à trancher` : null,
+                    lignes.filter((l) => l.etat === 'ajouter').length ? `${lignes.filter((l) => l.etat === 'ajouter').length} à ajouter` : null,
                   ].filter(Boolean).join(', ')}`}</b></div>
                   <div className="gm2-pv">
-                    <span>{aTrancher.map((l) => l.libelle).join(' · ')}</span>
-                    <span>{`lu dans ${bilan.nom}`}</span>
+                    <span>{lignes.map((l) => l.libelle).join(' · ')}</span>
+                    <span>{`lu dans ${b.nom}`}</span>
                   </div>
                   <div className="gm2-gestes">
-                    <button type="button" className="gm2-b1" onClick={() => setBilanOuvert(true)}>Voir et trancher</button>
+                    <button type="button" className="gm2-b1" onClick={() => setBilanOuvert(b.genre)}>Voir et trancher</button>
                   </div>
                 </div>
-              ) : null}
+              ))}
               {faites.map((f) => (
                 <p key={f.cle} className={`gm2-faite is-${f.sort}`} role="status">
                   {f.sort === 'rempli' ? <svg className="gm2-coche" width="17" height="17" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg> : null}
@@ -633,7 +646,9 @@ export function RecuManque({
               {lus.map((l) => (
                 <li key={l.id}>
                   <b>{l.nom}</b> <span>{l.resume}</span>
-                  {bilan && documentDuBilan?.id === l.id ? <button type="button" className="gm2-lien gm2-revoir" onClick={() => setBilanOuvert(true)}>Revoir ce qu'il dit</button> : null}
+                  {bilans.filter((b) => documentDuBilanDe(b)?.id === l.id).map((b) => (
+                    <button key={b.genre} type="button" className="gm2-lien gm2-revoir" onClick={() => setBilanOuvert(b.genre)}>Revoir ce qu'il dit</button>
+                  ))}
                 </li>
               ))}
             </ul>
@@ -644,9 +659,9 @@ export function RecuManque({
         <span className="gm2-vol" aria-hidden="true" style={{ left: vol.x, top: vol.y, '--dx': `${vol.dx}px`, '--dy': `${vol.dy}px` } as CSSProperties}>{vol.valeur}</span>,
         document.body,
       ) : null}
-      {bilanOuvert && bilan ? (
-        <BilanCompromis bilan={bilan} decisions={journal} peutModifier={peutModifierTransaction} document={documentDuBilan}
-          onFermer={() => setBilanOuvert(false)} onEnregistrer={enregistrerBilan} />
+      {bilan ? (
+        <BilanCompromis key={bilan.genre} bilan={bilan} decisions={journal} peutModifier={peutModifierTransaction} document={documentDuBilanDe(bilan)}
+          onFermer={() => setBilanOuvert(null)} onEnregistrer={enregistrerBilan} />
       ) : null}
     </section>
   )

@@ -46,7 +46,7 @@
 /* une ligne : le titre (et sa destination), puis les deux plaques face à face */
 .bc-l { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 6px 14px; align-items: center; padding: 10px 12px 10px 16px; border-radius: 14px; background: #ffffff; box-shadow: 0 0 0 1px var(--bc-trait); animation: bc-arrive 360ms cubic-bezier(0.22, 1, 0.36, 1) both; transition: box-shadow 160ms; }
 .bc-l.is-vue { box-shadow: 0 0 0 2px var(--bc-mag); }
-.bc-l.is-tranche, .bc-l.is-accord { background: #fbfbfb; }
+.bc-l.is-tranche, .bc-l.is-accord, .bc-l.is-fige { background: #fbfbfb; }
 .bc-l-t { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
 .bc-l-t b { flex-basis: 100%; }
 .bc-l-t b { font-size: 14.5px; font-weight: 800; }

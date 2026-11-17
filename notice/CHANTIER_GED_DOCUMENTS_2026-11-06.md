@@ -2664,3 +2664,42 @@ relevé de surveillance) ; l'extension aux autres gestes (offre, vente) -- audit
 ⏳ (ancien) **À faire après la mise en ligne** : la regarder sur 18849 (ouvrir la fenêtre et la modale, SANS cliquer « Mettre à
 jour ») ; **le séquestre 12 400 € de 30770 est au carnet mais PAS chez Hektor** : ouvrir « Modifier » sur ce compromis
 (la case est préremplie depuis le carnet) et « Mettre à jour le compromis » -- c'est son geste à lui.
+
+### 12.29 Le lot 2 -- « Ce que dit l'offre » ; l'acte de vente n'a pas de bilan (17/11, « Pousse les deux et étends », puis « Vas-y »)
+
+**Le plan présenté** : offre (montant, date, validité) par la modale en arrière-plan, l'offre acceptée dite « figée » ;
+acte de vente (date en arrière-plan, prix par la modale visible), premier essai sur un bien vendu choisi par Frédéric.
+
+**Ce que l'audit du code et de la base a trouvé en le faisant -- deux écarts au plan, dits ici :**
+
+1. ⛔ **L'ACTE DE VENTE N'EST PAS ATTEIGNABLE** : un bien vendu sort des annonces -- **0 sur 147 ventes depuis juin**
+   sont encore dans `app_dossier_current` (mesure du 17/11). Sa fiche s'ouvre alors en fiche d'index léger, qui n'a **pas
+   de panneau des documents** (« Les documents ne peuvent pas être modifiés depuis une fiche d'index léger ») : la fenêtre
+   ne s'afficherait jamais. **Rien n'est codé pour l'acte.** Le cas réel qui reste : l'attestation du notaire déposée sur
+   un bien encore au COMPROMIS (pas encore de vente au registre) -- ce serait CRÉER la vente (passer en Vendu), un autre
+   geste, à décider par Frédéric.
+2. ⚠ **L'OFFRE NE PART PAS CACHÉE, elle ouvre sa modale VISIBLE** : le chemin de l'offre dans le worker
+   (`submitHektorTransactionStatus`, POST plat) construit un corps NEUF et y met TOUJOURS `montantOffre`, `dateOffre`,
+   `nbJoursValidite` (et les honoraires de sortie) depuis la charge -- **il n'applique ni la liste des cases touchées (B,
+   03/11) ni le témoin du rejeu (B2)**, qui n'existent que dans l'assistant (compromis, vente). Corriger une seule case
+   renvoie donc les autres telles que la modale les a préremplies. Caché, ce serait envoyé sans être vu : la règle retenue
+   est « en arrière-plan seulement là où le worker n'envoie que les cases touchées ». Une ligne suffit à changer d'avis
+   (`estEnvoiDirect`, BilanCompromis.tsx).
+
+**Ce qui est fait (rien poussé) :**
+- `bilanOffre` (lib/gedBilanCompromis.ts) : l'offre lue face à SON offre au registre -- montant (seulement frais d'agence
+  inclus ou sans base lue, comme L7), **date de la PROPOSITION** (`dateOffreFaite`, jamais la colonne `date` qui porte le
+  dernier mouvement -- mémoire du 12/11), validité en jours (lue, ou déduite de « valable jusqu'au », 1 à 365). Départage
+  des offres par la date de proposition. `bilansDuDossier` : l'offre puis le compromis, chacun sa fenêtre.
+- ⛔ **Offre ACCEPTÉE** : figée chez Hektor (200 + corps vide, mesure du 13/10) ; **offre REFUSÉE** : le registre porte la
+  date du refus, la modifier la réécrirait -- leurs écarts se MONTRENT (groupe « Figé chez Hektor », raison dite), rien ne
+  se propose, la carte ne les compte pas « à trancher ». Garde en défense dans l'envoi caché (`offreAccepteeFigeeChezHektor`).
+- La fenêtre dit « Ce que dit l'offre » / « L'offre » ; la modale s'ouvre sur l'onglet **Offre** et LE numéro de l'offre ;
+  seul le **montant** est marqué touché (jamais le prix de vente, relu chez Hektor par le worker) ; la validité a sa case
+  (`validity_days`) ; la décision est notée `modale_modifier_offre` après l'envoi ; la bannière dit « Repris de l'offre lue ».
+- La garde du montant de l'envoi caché ne demande plus le prix de vente que là où le bouton le demande
+  (`statusChangeNeedsSalePrice`).
+Essais : `test_ged_bilan` **66 VERT** (14 neufs, section ⑥) ; les 13 fichiers GED verts ; build vert.
+⚠ **Pas vu à l'écran, pas éprouvé en réel** : une seule offre lue en base (62774, SPECIMEN, bien hors annonces), aucune
+sur une offre PROPOSÉE vivante. L'essai réel demande une offre proposée et sa pièce lue -- à choisir par Frédéric.
+⏳ **Reste** : sa décision sur l'acte (créer la vente depuis l'attestation ?) ; son accord sur « l'offre visible » ; pousser.

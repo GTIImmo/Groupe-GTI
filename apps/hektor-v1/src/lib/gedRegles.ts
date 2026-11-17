@@ -55,6 +55,10 @@ export type AffaireRegle = {
   enAttente?: Record<string, 'jamais_envoye' | 'en_route' | 'echec'>
   // lot 10b (17/11) : ses conditions suspensives (lues strictement ; null = pas lues -> on ne compare pas)
   conditions?: Array<{ libelle: string; date: string | null }> | null
+  // GED lot 2 (17/11) : pour une OFFRE, la date de la PROPOSITION (dateOffreFaite : la colonne `date` porte son dernier
+  // mouvement, un refus ou une acceptation) et sa validité en jours (registre, ou le carnet en route)
+  dateProposee?: string | null
+  joursValidite?: number | null
 }
 
 export type NiveauAlerte = 'alerte' | 'piece' | 'info'

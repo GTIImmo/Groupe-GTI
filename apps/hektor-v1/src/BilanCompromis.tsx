@@ -4,13 +4,15 @@
 // ⛔ Chaque ligne dit OÙ elle va (Frédéric, 17/11 : « cela dépend des champs ») : « envoyé à Hektor » passe par la modale
 //   « Modifier le compromis », préremplie, où l'on valide ; « gardé chez nous » s'écrit ici (les conditions).
 // Le document se montre à la page lue, dessiné dans le navigateur (même chemin que « Voir le document »).
-// Note du chantier : notice/CHANTIER_GED_DOCUMENTS_2026-11-06.md §12.28.
+// Lot 2 (17/11) : la même fenêtre dit « Ce que dit l'offre » (bilan.genre) ; les lignes d'une offre acceptée ou refusée
+// se montrent FIGÉES (raison dite, rien à choisir), et l'offre part toujours par sa modale VISIBLE.
+// Note du chantier : notice/CHANTIER_GED_DOCUMENTS_2026-11-06.md §12.28 et §12.29.
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { createConsoleDocumentSignedUrl } from './lib/api'
 import { apercuPremierePage } from './lib/gedClassementIa'
 import type { DecisionGed } from './lib/ged'
-import type { BilanCompromis as Bilan, LigneBilan } from './lib/gedBilanCompromis'
+import type { BilanCompromis as Bilan, GenreBilan, LigneBilan } from './lib/gedBilanCompromis'
 import type { ConsoleDocument } from './types'
 import './BilanCompromis.css'
 
@@ -21,6 +23,7 @@ export type ResultatBilan = { message: string; ferme: boolean }
 // DEMANDE par un événement (le panneau des documents n'a pas la modale). `pris` dit qu'un écran l'a prise en charge.
 export const EVENEMENT_MODIFIER_TRANSACTION = 'ged:modifier-transaction'
 export type DemandeModifierTransaction = {
+  genre: GenreBilan            // lot 2 : l'onglet de la modale (Offre ou Compromis)
   app_dossier_id: number
   appAffaireId: number
   hektorAffaireId: string | null
@@ -42,7 +45,14 @@ export type ResultatEnvoi = { texte: string; erreur: boolean }
 // séquestre -- une case seule, rien à recalculer. Le prix, le net vendeur et les honoraires passent par la fenêtre de la
 // transaction (Hektor ne recalcule pas le net : elle vérifie net + honoraires = prix).
 export const ENVOI_DIRECT: ReadonlySet<string> = new Set(['transaction_date', 'signature_date', 'sequestration'])
-export const estEnvoiDirect = (l: LigneBilan) => l.champModale != null && ENVOI_DIRECT.has(l.champModale)
+// ⛔ Lot 2 : JAMAIS une ligne d'offre (« O. ») -- le chemin de l'offre construit un corps neuf et renvoie montant, date et
+//   validité préremplis, sans la liste des cases touchées ni le témoin : sa modale s'ouvre visible, toujours.
+export const estEnvoiDirect = (l: LigneBilan) => l.cle.startsWith('B.') && l.champModale != null && ENVOI_DIRECT.has(l.champModale)
+// les mots du document, selon le genre du bilan
+export const MOTS: Record<GenreBilan, { le: string; Le: string; du: string }> = {
+  compromis: { le: 'le compromis', Le: 'Le compromis', du: 'du compromis' },
+  offre: { le: 'l\'offre', Le: 'L\'offre', du: 'de l\'offre' },
+}
 
 const jjmm = (iso: string) => new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
 const lu = (iso: string | null) => (iso ? new Date(iso).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).replace(' ', ' à ') : null)
@@ -53,7 +63,7 @@ function dejaDit(l: LigneBilan, d: DecisionGed): string {
   if (d.decision === 'echec') return `Essai du ${quand} : rien n'a été écrit`
   if (d.decision === 'ignoree') return l.etat === 'ajouter' ? `Non retenu le ${quand}` : `Transaction gardée le ${quand}`
   if (l.destination === 'hektor') return `Envoyé à Hektor le ${quand}`
-  return l.condition?.retirer ? `Condition retirée le ${quand}` : l.etat === 'ajouter' ? `Ajouté le ${quand}` : `Pris du compromis le ${quand}`
+  return l.condition?.retirer ? `Condition retirée le ${quand}` : l.etat === 'ajouter' ? `Ajouté le ${quand}` : `Pris ${MOTS[l.cle.startsWith('O.') ? 'offre' : 'compromis'].du} le ${quand}`
 }
 
 function Destination({ d }: { d: LigneBilan['destination'] }) {
@@ -84,23 +94,25 @@ export default function BilanCompromis({
   // document arrive CHOISIE sur chaque ligne à trancher (on la décoche en touchant la transaction). Rien ne part avant
   // « Enregistrer ». Lecture seule : rien n'est choisi.
   const [choix, setChoix] = useState<Map<string, ChoixBilan>>(() => new Map(peutModifier
-    ? bilan.lignes.filter((l) => l.etat === 'trancher' && !decisions?.has(`${l.cle}|${l.valeur}`)).map((l) => [l.cle, 'prendre' as ChoixBilan])
+    ? bilan.lignes.filter((l) => l.etat === 'trancher' && !l.fige && !decisions?.has(`${l.cle}|${l.valeur}`)).map((l) => [l.cle, 'prendre' as ChoixBilan])
     : []))
   const [rouvertes, setRouvertes] = useState<Set<string>>(() => new Set())
   const [enCours, setEnCours] = useState(false)
   const [message, setMessage] = useState<{ texte: string; erreur: boolean } | null>(null)
   const [accordOuvert, setAccordOuvert] = useState(false)
   const fenetre = useRef<HTMLElement | null>(null)
+  const mots = MOTS[bilan.genre]
 
   // une décision « envoyé » dont l'envoi a ÉCHOUÉ (ou jamais parti) ne compte pas : la ligne redevient à trancher
   // (essai réel du 17/11 : « Envoyé à Hektor le 17/11 » affiché sous « le dernier envoi a échoué »)
   const decisionDe = (l: LigneBilan) => (rouvertes.has(l.cle) || l.attente === 'echec' || l.attente === 'jamais_envoye' ? undefined : decisions?.get(`${l.cle}|${l.valeur}`))
   const groupes = useMemo(() => {
-    const vivantes = bilan.lignes.filter((l) => l.etat !== 'accord')
+    const vivantes = bilan.lignes.filter((l) => l.etat !== 'accord' && !l.fige)
     return {
       trancher: vivantes.filter((l) => l.etat === 'trancher' && !decisionDe(l)),
       ajouter: vivantes.filter((l) => l.etat === 'ajouter' && !decisionDe(l)),
       tranche: vivantes.filter((l) => decisionDe(l)),
+      fige: bilan.lignes.filter((l) => l.etat !== 'accord' && l.fige),
       accord: bilan.lignes.filter((l) => l.etat === 'accord'),
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -181,18 +193,18 @@ export default function BilanCompromis({
   const ligneVue = (l: LigneBilan, i: number) => {
     const c = choix.get(l.cle)
     const d = decisionDe(l)
-    const actif = !d && l.etat !== 'accord'
-    const plaque = (cote: 'compromis' | 'transaction') => {
-      const valeur = cote === 'compromis' ? l.lu : (l.transaction ?? (l.condition ? 'non suivie' : l.attente === 'jamais_envoye' || l.attente === 'echec' ? 'pas chez Hektor' : 'vide'))
-      const pris = cote === 'compromis' ? c === 'prendre' : c === 'garder'
+    const actif = !d && l.etat !== 'accord' && !l.fige
+    const plaque = (cote: 'document' | 'transaction') => {
+      const valeur = cote === 'document' ? l.lu : (l.transaction ?? (l.condition ? 'non suivie' : l.attente === 'jamais_envoye' || l.attente === 'echec' ? 'pas chez Hektor' : 'vide'))
+      const pris = cote === 'document' ? c === 'prendre' : c === 'garder'
       const ecarte = c != null && !pris
       const vide = cote === 'transaction' && l.transaction == null
-      const titre = cote === 'compromis' ? 'Le compromis' : 'La transaction'
-      const aria = cote === 'compromis'
-        ? (l.condition?.retirer ? `${l.libelle} : retirer la condition` : `${l.libelle} : prendre la valeur du compromis, ${l.lu}`)
+      const titre = cote === 'document' ? mots.Le : 'La transaction'
+      const aria = cote === 'document'
+        ? (l.condition?.retirer ? `${l.libelle} : retirer la condition` : `${l.libelle} : prendre la valeur ${mots.du}, ${l.lu}`)
         : (vide ? `${l.libelle} : laisser la transaction ${l.condition ? 'sans cette condition' : 'vide'}` : `${l.libelle} : garder la valeur de la transaction, ${valeur}`)
       // le verbe du geste, dit DANS la plaque (on comprend qu'elle se touche, et ce qu'elle fera)
-      const verbe = cote === 'compromis'
+      const verbe = cote === 'document'
         ? (l.condition?.retirer ? (pris ? 'retirée' : 'retirer') : l.etat === 'ajouter' ? (pris ? 'ajouté' : 'ajouter') : (pris ? 'correction' : 'corriger le registre'))
         : (pris ? (vide ? 'laissé vide' : 'gardé') : vide ? 'laisser vide' : 'garder')
       const contenu = (
@@ -208,14 +220,14 @@ export default function BilanCompromis({
         </>
       )
       return actif && peutModifier ? (
-        <button type="button" className={`bc-plaque is-${cote}${pris ? ' is-pris' : ''}${ecarte ? ' is-ecarte' : ''}`} aria-pressed={pris} aria-label={aria} disabled={enCours} onClick={() => basculer(l, cote === 'compromis' ? 'prendre' : 'garder')}>{contenu}</button>
+        <button type="button" className={`bc-plaque is-${cote}${pris ? ' is-pris' : ''}${ecarte ? ' is-ecarte' : ''}`} aria-pressed={pris} aria-label={aria} disabled={enCours} onClick={() => basculer(l, cote === 'document' ? 'prendre' : 'garder')}>{contenu}</button>
       ) : (
         <div className={`bc-plaque is-${cote} is-fixe`}>{contenu}</div>
       )
     }
-    const signe = l.etat === 'accord' ? '=' : l.etat === 'ajouter' ? '+' : '≠'
+    const signe = l.etat === 'accord' ? '=' : l.fige ? '≠' : l.etat === 'ajouter' ? '+' : '≠'
     return (
-      <li key={l.cle} className={`bc-l is-${l.etat}${d ? ' is-tranche' : ''}${pageVue != null && pageVue === l.page ? ' is-vue' : ''}`} style={{ animationDelay: `${60 + i * 50}ms` }}>
+      <li key={l.cle} className={`bc-l is-${l.etat}${d ? ' is-tranche' : ''}${l.fige ? ' is-fige' : ''}${pageVue != null && pageVue === l.page ? ' is-vue' : ''}`} style={{ animationDelay: `${60 + i * 50}ms` }}>
         <div className="bc-l-t">
           <b>{l.libelle}</b>
           <Destination d={l.destination} />
@@ -224,12 +236,13 @@ export default function BilanCompromis({
           ) : null}
         </div>
         <div className="bc-l-v">
-          {plaque('compromis')}
+          {plaque('document')}
           <span className={`bc-signe is-${l.etat}`} aria-hidden="true">{signe}</span>
           {plaque('transaction')}
         </div>
-        {l.note || d ? (
+        {l.note || d || l.fige ? (
           <p className="bc-l-n">
+            {l.fige ? <span className="bc-deja">{l.fige}</span> : null}
             {d ? <span className="bc-deja">{dejaDit(l, d)}</span> : null}
             {l.note ? <span>{l.note}</span> : null}
             {d && peutModifier ? <button type="button" className="bc-lien" onClick={() => setRouvertes((s) => new Set(s).add(l.cle))}>Changer</button> : null}
@@ -261,9 +274,9 @@ export default function BilanCompromis({
         <header className="bc-hd">
           <div className="bc-hd-t">
             <p>{[bilan.nom, lu(bilan.luLe) ? `lu le ${lu(bilan.luLe)}` : null].filter(Boolean).join(' · ')}</p>
-            <h2 id="bc-titre">Ce que dit le compromis</h2>
+            <h2 id="bc-titre">{`Ce que dit ${mots.le}`}</h2>
           </div>
-          <span className="bc-hd-pil">{`Transaction : compromis${bilan.dateTransaction ? ` du ${jjmm(bilan.dateTransaction)}` : ''}`}</span>
+          <span className="bc-hd-pil">{`Transaction : ${bilan.genre}${bilan.dateTransaction ? ` du ${jjmm(bilan.dateTransaction)}` : ''}`}</span>
           <button type="button" className="bc-hd-x" aria-label="Fermer" disabled={enCours} onClick={onFermer}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
           </button>
@@ -276,10 +289,11 @@ export default function BilanCompromis({
                 ? 'Touche la valeur qui doit rester. Rien ne s\'écrit avant « Enregistrer ».'
                 : 'Lecture seule : seul un responsable modifie une transaction.'}
             </p>
-            {rienAFaire && !groupes.tranche.length ? <p className="bc-vide">Le compromis et la transaction disent la même chose. Rien à trancher.</p> : null}
-            {groupe('À trancher', 'Le compromis et la transaction ne disent pas la même chose. Proposé : corriger le registre avec la valeur du compromis (touche la transaction pour la garder).', groupes.trancher)}
+            {rienAFaire && !groupes.tranche.length && !groupes.fige.length ? <p className="bc-vide">{`${mots.Le} et la transaction disent la même chose. Rien à trancher.`}</p> : null}
+            {groupe('À trancher', `${mots.Le} et la transaction ne disent pas la même chose. Proposé : corriger le registre avec la valeur ${mots.du} (touche la transaction pour la garder).`, groupes.trancher)}
             {groupe('À ajouter', 'La transaction est vide sur ces points.', groupes.ajouter, groupes.trancher.length)}
             {groupe('Déjà tranché', null, groupes.tranche, groupes.trancher.length + groupes.ajouter.length)}
+            {groupe('Figé chez Hektor', 'Ces écarts se voient, ils ne se corrigent pas d\'ici.', groupes.fige, groupes.trancher.length + groupes.ajouter.length + groupes.tranche.length)}
             {!bilan.conditionsLues ? <p className="bc-vide">Les conditions suspensives de la transaction n'ont pas pu être lues : elles ne sont pas comparées.</p> : null}
             {bilan.conditionsGenerales.length ? (
               <p className="bc-generales">
@@ -303,7 +317,7 @@ export default function BilanCompromis({
             {pageVue == null ? (
               <div className="bc-doc-vide">
                 <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" /><path d="M14 3v6h6M8 13h8M8 17h5" /></svg>
-                <p>Le compromis s'affiche ici, à la page où chaque valeur a été lue.</p>
+                <p>{`${mots.Le} s'affiche ici, à la page où chaque valeur a été lue.`}</p>
                 <small>Touche « page » sur une ligne.</small>
               </div>
             ) : (
@@ -315,7 +329,7 @@ export default function BilanCompromis({
                   <b>{`Page ${pageVue}${apercu && typeof apercu === 'object' && 'nbPages' in apercu ? ` sur ${apercu.nbPages}` : ''}`}</b>
                 </div>
                 {apercu === 'lecture' ? <span className="bc-doc-page is-lit" aria-label="Page en préparation" /> : null}
-                {apercu && typeof apercu === 'object' && 'image' in apercu ? <img className="bc-doc-page" src={apercu.image} alt={`Page ${apercu.page} du compromis`} /> : null}
+                {apercu && typeof apercu === 'object' && 'image' in apercu ? <img className="bc-doc-page" src={apercu.image} alt={`Page ${apercu.page} ${mots.du}`} /> : null}
                 {apercu && typeof apercu === 'object' && 'erreur' in apercu ? <p className="bc-doc-err">{`Pas d'aperçu : ${apercu.erreur}`}</p> : null}
               </>
             )}
@@ -326,7 +340,9 @@ export default function BilanCompromis({
           {message ? <p className={`bc-msg${message.erreur ? ' is-erreur' : ''}`} role="status">{message.texte}</p> : (
             <p className="bc-resume" aria-live="polite">
               {resume || (rienAFaire ? 'Tout est déjà tranché.' : 'Aucun choix pour l\'instant.')}
-              {parLaFenetre ? <small>Le prix, le net vendeur ou les honoraires changent : la fenêtre de la transaction s'ouvre préremplie, tu vérifies, et c'est elle qui envoie à Hektor.</small>
+              {parLaFenetre ? <small>{bilan.genre === 'offre'
+                ? 'La fenêtre de l\'offre s\'ouvre préremplie : elle renvoie à Hektor le montant, la date et la validité, tu vérifies, et c\'est elle qui envoie.'
+                : 'Le prix, le net vendeur ou les honoraires changent : la fenêtre de la transaction s\'ouvre préremplie, tu vérifies, et c\'est elle qui envoie à Hektor.'}</small>
                 : versHektor ? <small>Envoyé à Hektor par la fenêtre de la transaction, en arrière-plan : seulement les cases corrigées, le reste ne bouge pas.</small> : null}
             </p>
           )}

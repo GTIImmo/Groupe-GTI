@@ -11,7 +11,7 @@ const voir = (vrai, libelle) => { if (vrai) { ok++; console.log('  VERT  ' + lib
 const code = esbuild.buildSync({ entryPoints: [path.join(__dirname, 'src/lib/gedBilanCompromis.ts')], bundle: true, write: false, format: 'cjs', platform: 'node' }).outputFiles[0].text
 const m = { exports: {} }
 new Function('module', 'exports', 'require', code)(m, m.exports, require)
-const { bilanCompromis, conditionsApres, verdictDesChoix } = m.exports
+const { bilanCompromis, bilanOffre, bilansDuDossier, conditionsApres, verdictDesChoix } = m.exports
 
 const v = (cle, x, rang = 0, page = 9) => ({ cle, rang, valeur: null, valeur_num: null, valeur_date: null, page, etat: 'lu', ...x })
 const cv = (n, d, r) => [v('conditions.nature', { valeur: n }, r, 12), ...(d ? [v('conditions.date_limite', { valeur_date: d }, r, 12)] : [])]
@@ -94,7 +94,7 @@ voir(avantDans(ap, 'await lireConditionsCompletesStrict(b.affaireId)', 'await ec
 voir(!/editAffaireOptimistic|createChangeHektorAnnonceStatusJob/.test(ap) && /window\.dispatchEvent\(new CustomEvent\(EVENEMENT_MODIFIER_TRANSACTION/.test(ap),
   '⛔ champs Hektor : AUCUNE écriture directe (ni carnet seul, ni travail) -- la modale « Modifier le compromis » est demandée')
 const ecoute = app.slice(app.indexOf('const demande = (e: Event) =>'), app.indexOf('window.addEventListener(EVENEMENT_DROITS_TRANSACTION'))
-voir(/if \(!d \|\| !isManagerOrAdmin\) return/.test(ecoute) && /openStatusChangeModal\(cible\)/.test(ecoute) && /setStatusChangeStatus\('compromise'\)/.test(ecoute) && /setStatusChangeAffaireChoisie\(d\.appAffaireId\)/.test(ecoute),
+voir(/if \(!d \|\| !isManagerOrAdmin\) return/.test(ecoute) && /openStatusChangeModal\(cible\)/.test(ecoute) && /setStatusChangeStatus\(d\.genre === 'offre' \? 'offer' : 'compromise'\)/.test(ecoute) && /setStatusChangeAffaireChoisie\(d\.appAffaireId\)/.test(ecoute),
   'la modale EXISTANTE s\'ouvre sur le compromis et LA transaction lue ; seul un responsable ou un admin')
 const prerempli = app.indexOf('    // LES CHAMPS QUE SEUL LE CARNET PORTE.')
 const pose = app.indexOf("if (l.champModale === 'sequestration') { setStatusChangeSequestration(l.valeur)")
@@ -107,7 +107,7 @@ voir(/depuisDocument \? \(/.test(v2) && /« Mettre à jour le compromis » : c'e
 const enr = fen.slice(fen.indexOf('async function enregistrer()'), fen.indexOf('const ligneVue'))
 voir((fen.match(/onEnregistrer\(/g) || []).length === 1 && enr.includes('onEnregistrer('), 'la fenêtre n\'écrit RIEN avant « Enregistrer » (un seul appel, dans enregistrer)')
 voir(/envoyé à Hektor/.test(fen) && /gardé chez nous/.test(fen), 'chaque ligne dit OÙ elle va (les mots de la modale de statut)')
-voir(/const peutBilan = remplir && Boolean\(onBilan\)/.test(rm) && /Date\.now\(\) - new Date\(bilan\.luLe\)\.getTime\(\) < 30 \* 60 \* 1000/.test(rm) && /Revoir ce qu'il dit/.test(rm),
+voir(/const peutBilan = remplir && Boolean\(onBilan\)/.test(rm) && /Date\.now\(\) - new Date\(b\.luLe\)\.getTime\(\) < 30 \* 60 \* 1000/.test(rm) && /Revoir ce qu'il dit/.test(rm),
   'derrière `ged_remplir` ; s\'ouvre seule sur une lecture NEUVE (30 min) ; se rouvre par « Revoir ce qu\'il dit »')
 voir(/@media \(prefers-reduced-motion: reduce\)/.test(fs.readFileSync(path.join(__dirname, 'src/BilanCompromis.css'), 'utf8')), 'les animations se coupent si l\'ordinateur demande moins de mouvement')
 
@@ -126,7 +126,7 @@ voir(/buyerContactId: statusChangeBuyerContactId/.test(charge) && /modifierAffai
 voir(!/saveRepartition|ecrireAffaireCommission|ecrireAffaireConditions|ecrireAffaireNote/.test(ap2),
   '⛔ cachée, elle n\'écrit RIEN d\'autre que le travail (pas de répartition par défaut enregistrée en silence, ni commission, conditions, note)')
 voir(avantDans(ap2, 'if (!hasHektorNegotiator(cible))', 'await createChangeHektorAnnonceStatusJob(') && avantDans(ap2, 'activeAdminAnnonceJobIds.has(', 'await createChangeHektorAnnonceStatusJob(')
-  && avantDans(ap2, "if (!statusChangeAmount.trim() || !statusChangeSalePrice.trim())", 'await createChangeHektorAnnonceStatusJob(')
+  && avantDans(ap2, "if (!statusChangeAmount.trim() || (statusChangeNeedsSalePrice(statusChangeStatus) && !statusChangeSalePrice.trim()))", 'await createChangeHektorAnnonceStatusJob(')
   && avantDans(ap2, 'await createChangeHektorAnnonceStatusJob(', 'noterDepuisDocument('),
   'les gardes du bouton passent AVANT le travail (négociateur, geste en cours, montant) ; la décision est notée APRÈS')
 const pret = app.slice(app.indexOf('// prête ? (déclaré APRÈS'), app.indexOf('// pas prête en 20 secondes'))
@@ -145,8 +145,42 @@ const rate = bilanCompromis([doc(lu18849)], [reg({ sequestre: null, enAttente: {
 voir(L(rate, 'B.sequestre').etat === 'ajouter' && /a échoué/.test(L(rate, 'B.sequestre').note), 'essai du 17/11 : un envoi raté se DIT et la valeur se propose de nouveau')
 voir(/rouvertes\.has\(l\.cle\) \|\| l\.attente === 'echec' \|\| l\.attente === 'jamais_envoye' \? undefined/.test(fen),
   'essai réel du 17/11 : une décision « envoyé » dont l\'envoi a ÉCHOUÉ ne range pas la ligne dans « Déjà tranché »')
-voir(/l\.etat === 'trancher' && !decisions\?\.has\(`\$\{l\.cle\}\|\$\{l\.valeur\}`\)\)\.map\(\(l\) => \[l\.cle, 'prendre' as ChoixBilan\]\)/.test(fen) && /'corriger le registre'/.test(fen),
+voir(/l\.etat === 'trancher' && !l\.fige && !decisions\?\.has\(`\$\{l\.cle\}\|\$\{l\.valeur\}`\)\)\.map\(\(l\) => \[l\.cle, 'prendre' as ChoixBilan\]\)/.test(fen) && /'corriger le registre'/.test(fen),
   'Frédéric : « à trancher » arrive PROPOSÉ -- la valeur du document choisie (« corriger le registre ») ; lecture seule : rien de choisi')
+
+console.log('⑥ « Ce que dit l\'offre » (lot 2, « étends »)')
+const vo = (cle, x, page = 1) => ({ cle, rang: 0, valeur: null, valeur_num: null, valeur_date: null, page, etat: 'lu', ...x })
+const luOffre = [vo('montant_offert', { valeur_num: 150000 }), vo('base_prix', { valeur: 'fai' }), vo('date_offre', { valeur_date: '2026-08-29' }), vo('validite_jusquau', { valeur_date: '2026-09-08' }, 2)]
+const docO = (valeurs, x = {}) => ({ nom: 'Offre achat.pdf', lecture: { id: 'L-O', typeCode: 'transaction.offre', etat: 'lu', luLe: '2026-11-17T20:00:00Z', valeurs, ...x } })
+// la colonne `date` d'une offre porte son DERNIER mouvement (ici le refus du 01/09) ; la proposition est dateProposee
+const regO = (x = {}) => ({ kind: 'offre', state: 'proposed', id: 1000001, date: '2026-09-01', dateProposee: '2026-08-29', montant: 150000, joursValidite: 10, acquereurs: [], ...x })
+const o = bilanOffre([docO(luOffre)], [regO()])
+voir(o && o.genre === 'offre' && o.affaireId === 1000001 && ['O.montant', 'O.date', 'O.validite'].every((c) => L(o, c).etat === 'accord'),
+  'l\'offre lue trouve SON offre ; montant, date de PROPOSITION (pas la date du dernier mouvement) et validité : d\'accord')
+voir(L(o, 'O.validite').lu === '10 jours', 'la validité se déduit de « valable jusqu\'au » (29/08 -> 08/09 = 10 jours)')
+const o2 = bilanOffre([docO(luOffre)], [regO({ montant: 140000, joursValidite: 7, dateProposee: '2026-08-20' })])
+voir(L(o2, 'O.montant').etat === 'trancher' && L(o2, 'O.date').etat === 'trancher' && L(o2, 'O.validite').etat === 'trancher' && o2.lignes.every((l) => l.destination === 'hektor' && !l.fige),
+  'TÉMOIN : offre PROPOSÉE, trois écarts -> à trancher, « envoyé à Hektor »')
+voir(L(o2, 'O.montant').champModale === 'amount' && L(o2, 'O.date').champModale === 'transaction_date' && L(o2, 'O.validite').champModale === 'validity_days', 'chaque ligne nomme SA case de la modale de l\'offre')
+const acc = bilanOffre([docO(luOffre)], [regO({ state: 'accepted', montant: 140000 })])
+voir(L(acc, 'O.montant').fige && /figée chez Hektor/.test(L(acc, 'O.montant').fige) && !L(acc, 'O.date').fige,
+  '⛔ offre ACCEPTÉE : l\'écart se MONTRE, figé (« figée chez Hektor ») -- rien ne se propose ; une ligne d\'accord reste d\'accord')
+const ref = bilanOffre([docO(luOffre)], [regO({ state: 'refused', montant: 140000 })])
+voir(/date du refus/.test(L(ref, 'O.montant').fige), '⛔ offre REFUSÉE : figée aussi (le registre y porte la date du refus, la modifier la réécrirait)')
+voir(!L(bilanOffre([docO(luOffre.map((x) => (x.cle === 'base_prix' ? { ...x, valeur: 'net_vendeur' } : x)))], [regO({ montant: 140000 })]), 'O.montant'),
+  'TÉMOIN : un montant NET VENDEUR ne se compare pas au registre (comme la règle L7)')
+voir(bilanOffre([docO(luOffre)], [regO(), regO({ id: 1000002 })]) === null && bilanOffre([docO(luOffre)], []) === null, 'TÉMOIN : deux offres que rien ne départage, ou pas d\'offre -> pas de fenêtre')
+voir(L(bilanOffre([docO(luOffre)], [regO({ montant: null, enAttente: { montant: 'echec' } })]), 'O.montant').etat === 'ajouter' && /a échoué/.test(L(bilanOffre([docO(luOffre)], [regO({ montant: null, enAttente: { montant: 'echec' } })]), 'O.montant').note),
+  'un envoi raté se dit aussi pour l\'offre')
+const deux = bilansDuDossier([docO(luOffre), doc(lu18849)], [regO(), reg()], CATALOGUE)
+voir(deux.map((x) => x.genre).join() === 'offre,compromis' && bilanCompromis([doc(lu18849)], [reg()], CATALOGUE).genre === 'compromis', 'un dossier : l\'offre puis le compromis, chacun sa fenêtre')
+voir(/l\.cle\.startsWith\('B\.'\) && l\.champModale != null && ENVOI_DIRECT\.has/.test(fen),
+  '⛔ l\'offre ne part JAMAIS cachée : son chemin renvoie montant, date et validité préremplis (corps neuf, sans cases touchées ni témoin)')
+voir(/if \(offreAccepteeFigeeChezHektor\(affaireCourantePourStatut\(\)\)\) \{ finir\(/.test(ap2) && /cleNumero = d\.genre === 'offre' \? 'offre_id' : 'compromis_id'/.test(ecoute),
+  'la modale s\'ouvre sur l\'onglet Offre et LE numéro de l\'offre ; une offre acceptée ne part jamais')
+voir(/l\.champModale === 'amount' && depuisDocument\.genre === 'offre'\) \{ setStatusChangeAmount\(l\.valeur\); touchees\.push\('amount'\) \}/.test(app) && /setStatusChangeValidityDays\(l\.valeur\); touchees\.push\('validity_days'\)/.test(app),
+  'offre : seul le montant est touché (jamais son prix de vente, relu chez Hektor par le worker) ; la validité a sa case')
+voir(/!l\.fige && !journal\.has/.test(rm) && /groupe\('Figé chez Hektor'/.test(fen), 'une ligne figée ne compte pas « à trancher » sur la carte ; la fenêtre la range à part')
 
 console.log(ko ? `\n${ko} ROUGE, ${ok} VERT` : `\nTOUT EST VERT (${ok})`)
 process.exit(ko ? 1 : 0)
