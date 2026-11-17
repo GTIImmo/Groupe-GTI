@@ -2513,6 +2513,117 @@ l'etat d'une autre transaction) ; ce balayage-ci, fait avec le critere « compro
 trouve un 7e qui se declenche sur `state` ET sur l'ABSENCE de numero. **Chaque famille
 demande son propre balayage, et il se fait AVANT de generer le patch.**
 
+### ✅⭐⭐⭐ C4, 3e PATCH -- AUDITE LE 17/11, ET IL N'Y A RIEN A POSER
+
+Le 2e patch annoncait : *« reste le 3e : les 86 CONDITIONS en attente, dont l'echeance
+se lit dans les abreviations »*. **L'audit dit NON, et c'est sa propre regle qui le
+dit.** Aucune ligne de code n'a ete ecrite en base.
+
+#### ⭐⭐⭐ LE VERDICT : 0 SUR 89
+
+```
+   les lignes « en cours » du classeur                  86
+      dont elles portent au moins une abrev datee       40
+      dont AUCUNE abreviation datee                     46
+   les abreviations datees, au total                    89
+      DB 40 . ODP 26 . ADP 18 . DPC 3 . OPC 2
+
+   LES TROIS CONDITIONS DE SA REGLE, toutes exigees :
+      a  l echeance est ANCREE (sinon on ignore l annee)
+      b  elle n est PAS dans le futur
+      c  l affaire est SORTIE du vivant, OU sa date a plus d un an
+
+      ECARTEE  b -- echeance DANS LE FUTUR                    71
+      ECARTEE  a -- echeance indatable                          9
+      ECARTEE  c -- affaire ENCORE VIVANTE et recente           8
+      ECARTEE  DB -- sa decision du 17/11 : elle va en NOTE      1
+      ---------------------------------------------------------------
+      ✅ POSABLES                                               0
+      ✅ et le compte boucle : 89 ecartees + 0 = 89
+```
+
+#### ⛔⛔ UN ZERO NE SE CROIT PAS SANS TEMOIN POSITIF -- EN VOICI TROIS
+
+Un « 0 posable » peut vouloir dire « le filtre refuse tout par un defaut ». On relache
+donc **une seule condition a la fois** et on regarde si le code sait dire OUI :
+
+```
+   sans (b) : on accepte les echeances dans le futur        38  <- il sait dire OUI
+   sans (c) : on accepte les affaires encore vivantes        9
+   sans la reserve DB/DPC/OPC                                1
+```
+
+➡ **Le zero est donc VRAI** : il vient de la regle, pas d'un defaut de mesure.
+
+#### ⭐⭐⭐ POURQUOI, EN UNE PHRASE
+
+**Une affaire « en cours » du classeur est le PRESENT, pas de l'historique.** Chez nous :
+
+```
+   42  ont un compromis ACTIF        <- Hektor les rend encore
+   38  n ont qu une OFFRE, pas de compromis
+    5  ne sont reliees a aucune transaction
+    1  est tombee depuis     <- la SEULE qui passerait... et c est un DB
+```
+
+Et c'est pour ca que 71 echeances sur 89 sont dans le futur : **ce sont les echeances
+d'affaires qui courent**. Les reprendre, ce serait ecrire dans le present que Hektor
+entretient -- exactement ce que sa regle interdit depuis le debut du chantier.
+
+➡ Ces conditions ne relevent donc pas du RAPATRIEMENT, mais du **DEVELOPPEMENT** :
+la saisie des conditions suspensives dans l'app. `app_affaire_condition` porte
+**5 lignes**, toutes `origine = 'saisie'`, toutes **sans `date_echeance`** -- l'ecran
+pose le libelle et les `jours`, jamais la date.
+
+#### ⛔⛔ LE TROU QUE L'AUDIT A TROUVE EN PASSANT : 47 TEXTES NE SONT NULLE PART
+
+Le generateur de notes du 2e patch ne prend `F` que pour les etats **« Annulée »** et
+**« Vente réglée »**, plus la date butoir. **Une ligne « en cours » sans `DB` n'est donc
+partie nulle part** :
+
+```
+   les 86 lignes en cours :
+      parties en note par leur DB               39
+      parties en note par leur colonne G         0   (aucune n a de G)
+      ⛔ NULLE PART, ni note ni condition       47
+```
+
+Et ce ne sont pas des miettes -- c'est **le carnet de bord vivant de l'agence** :
+
+```
+   « 23/11 copie C20/11 Me Latour »            « 20/11 rdv Me Champelovier »
+   « 17/11 att. fonds notaire V »              « 19/11 CI-A  Me Poyet/Chazotte »
+   « 20/11 accord transfert fonds Binga-Hanto »
+   « 28/11 copie C27/11 liée vente 18786 DEGROOTE / IMAW C18/11 »
+   « 19/11 rdv PUA accord du juge habilitation Sauret »
+```
+
+⬜ **A TRANCHER PAR LUI** : les poser en note (`origine = 'classeur:F-en-cours'`,
+additif, sans toucher a une condition), ou ne rien faire parce que c'est le present que
+l'app doit porter. ⚠ Une reserve a dire : ces textes sont un suivi **qui bouge chaque
+semaine**, donc les poser, c'est figer une photo.
+
+#### ⭐⭐ ET LE DECODAGE DE F S'ENRICHIT DE DEUX SIGNES
+
+```
+   C<date>   la date du COMPROMIS prevu -- « copie C20/11 » = copie recue,
+             compromis le 20/11. Elle revient dans 20 des 47 textes.
+   DP<date>  vu dans « 16/12 dDP16/12ADP ODP05/1 DP31/1 31/3 » -- ni DPC ni ODP.
+             ⛔ Mes cinq abreviations ne la connaissaient pas : le decodage du
+             16/11 n'est donc pas complet, et il ne pretend pas l'etre.
+```
+
+#### LE FICHIER
+
+```
+phase2/checks/c4_auditer_les_86_conditions_2026-11-17.py   l'audit, LECTURE SEULE
+notice/C4_LES_86_CONDITIONS_AUDIT_2026-11-17.csv           les 89 abreviations,
+   une par ligne : son etat au classeur, son etat chez nous, son echeance ancree
+   et POURQUOI elle est ancree ainsi
+```
+
+---
+
 ### ✅⭐⭐ C4, 2e PATCH -- 4 325 NOTES POSEES LE 17/11
 
 Sa consigne, depuis le 31/10 : **« en bloc, tels quels, sans aucune interpretation »**.
@@ -3679,8 +3790,11 @@ C4 ✅✅⬜ DEUX PATCHS SUR TROIS FAITS LE 17/11 :
              et le « pourquoi » reunis.
        2e  : **4 325 NOTES** (4 936 textes fusionnes), 11 controles justes.
              classeur:G 3 484 . classeur:F+G 585 . classeur:F 256
-       ⛔ RESTE LE 3e : les 86 CONDITIONS en attente, dont l'echeance se lit
-         dans les abreviations (ODP15/12, DB30/1) -- un decodage ligne par ligne.
+       3e  : ⭐⭐⭐ **AUDITE LE 17/11 -- IL N'Y A RIEN A POSER**, et le temoin
+             positif le prouve. **0 condition posable sur 89** abreviations datees :
+             71 echeances sont DANS LE FUTUR, que sa regle interdit.
+       ⛔⛔ MAIS L'AUDIT A TROUVE UN TROU : **47 textes de F ne sont NULLE PART**
+         (ni note, ni condition) -- a trancher par lui.
        ⭐⭐⭐ **F EST DECODEE LE 16/11** -- voir
        `notice/C4_LE_DECODAGE_DE_LA_COLONNE_F_2026-11-16.md`.
        ⛔ CE DECODAGE N'ETAIT ECRIT NULLE PART : ni dans les 160 notes, ni au

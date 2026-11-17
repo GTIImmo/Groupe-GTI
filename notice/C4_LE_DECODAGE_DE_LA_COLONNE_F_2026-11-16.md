@@ -220,6 +220,74 @@ construire, délai SRU, bon de visite…
 
 ---
 
+## 8. ⭐⭐⭐ LE VERDICT DU 17/11 : LES 86 CONDITIONS NE SE RAPATRIENT PAS
+
+La section 5 annoncait les 86 lignes « en cours » comme destinees a
+`app_affaire_condition`. **L'audit du 17/11 dit NON**, et c'est sa propre regle du
+chantier qui le dit : *« on ne reprend que ce que Hektor ne rendra plus : le bien est
+SORTI du parc vivant, OU la date a plus d'un an. Et JAMAIS une date dans le futur. »*
+
+```
+   89 abreviations datees -> 0 POSABLE
+      71  echeance DANS LE FUTUR          <- sa regle l interdit
+       9  echeance indatable (pas d ancre)
+       8  affaire ENCORE VIVANTE et recente
+       1  un DB, qui va en note par sa decision du 17/11
+```
+
+⛔⛔ **ET LE ZERO EST VRAI, PROUVE PAR TROIS TEMOINS POSITIFS** -- on relache une
+seule condition a la fois pour verifier que le filtre sait dire OUI : sans (b) il laisse
+passer **38**, sans (c) **9**, sans la reserve DB/DPC/OPC **1**.
+
+⭐⭐⭐ **LA RAISON, EN UNE PHRASE** : une affaire « en cours » du classeur est **le
+PRESENT**, pas de l'historique. Chez nous, **42** ont un compromis ACTIF, **38** n'ont
+qu'une offre, **5** ne sont reliees a rien, et **1 seule** est tombee depuis. Les
+echeances sont dans le futur parce qu'elles courent encore.
+
+➡ Ces conditions relevent du **DEVELOPPEMENT** (la saisie dans l'app), pas du
+rapatriement. `app_affaire_condition` porte 5 lignes, toutes `origine = 'saisie'`, et
+**aucune ne porte de `date_echeance`** : l'ecran pose le libelle et les `jours`.
+
+### ⛔⛔ LE TROU TROUVE EN PASSANT : 47 TEXTES NE SONT NULLE PART
+
+Le generateur de notes du 2e patch ne prend `F` que pour les etats **« Annulée »** et
+**« Vente réglée »**, plus la date butoir. Une ligne « en cours » **sans `DB`** n'est
+donc partie nulle part :
+
+```
+   parties en note par leur DB               39
+   parties en note par leur colonne G         0   (aucune de ces 86 n a de G)
+   ⛔ NULLE PART, ni note ni condition       47
+```
+
+Et c'est **le carnet de bord vivant de l'agence** : « 23/11 copie C20/11 Me Latour »,
+« 17/11 att. fonds notaire V », « 20/11 accord transfert fonds Binga-Hanto »,
+« 19/11 rdv PUA accord du juge habilitation Sauret ».
+
+⬜ **A TRANCHER PAR LUI.** ⚠ Reserve a dire : ce suivi **bouge chaque semaine**, donc
+le poser, c'est figer une photo.
+
+### ⭐⭐ DEUX SIGNES QUE LA SECTION 4 NE CONNAISSAIT PAS
+
+```
+   C<date>   la date du COMPROMIS prevu. « copie C20/11 » = copie recue, compromis
+             le 20/11. Elle revient dans 20 des 47 textes orphelins.
+   DP<date>  vu dans « 16/12 dDP16/12ADP ODP05/1 DP31/1 31/3 » -- ni DPC, ni ODP.
+```
+
+⛔ **Mes cinq abreviations datees (ADP, ODP, DPC, OPC, DB) ne les connaissaient pas.**
+Ce decodage n'est donc pas complet, et il ne pretend pas l'etre.
+
+### LE FICHIER DE L'AUDIT
+
+```
+phase2/checks/c4_auditer_les_86_conditions_2026-11-17.py   LECTURE SEULE, 9 mesures
+notice/C4_LES_86_CONDITIONS_AUDIT_2026-11-17.csv           les 89 abreviations, une
+   par ligne : etat au classeur, etat chez nous, echeance ancree, et POURQUOI
+```
+
+---
+
 ## LES FICHIERS DE MESURE
 
 ```

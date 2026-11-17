@@ -1,0 +1,90 @@
+﻿id_unique;etat_classeur;F_brut;abrev;date_brute;app_affaire_id;etat_chez_nous;date_compromis;echeance_ancree;comment;dans_le_futur
+6T7MMTGL;Vente prévue;17/11 rdv VGuyStéph. DB30/10 - CI Philippe, Max et Serge Jay manquantes;DB;30/10;16792;active;2024-07-05;2024-10-30;ancree sur 2024-07-05;non
+14fdb07f;Vente prévue;19/11 rdv Vente DB02/11 Sauret 75KPTZ N. Coudert;DB;02/11;27285;active;2026-06-03;2026-11-02;ancree sur 2026-06-03;non
+a10a87c8;Vente prévue;07/12 10j. ODP16/12 DB15/1 Me Bougon  Antoine;ODP;16/12;30754;active;2026-10-16;2026-12-16;ancree sur 2026-10-16;OUI
+a10a87c8;Vente prévue;07/12 10j. ODP16/12 DB15/1 Me Bougon  Antoine;DB;15/01;30754;active;2026-10-16;2027-01-15;ancree sur 2026-10-16;OUI
+0863800f;Vente prévue;19/11 retard ODP01/10 DB30/10 Me Labidoire;ODP;01/10;28921;active;2026-07-17;2026-10-01;ancree sur 2026-07-17;non
+0863800f;Vente prévue;19/11 retard ODP01/10 DB30/10 Me Labidoire;DB;30/10;28921;active;2026-07-17;2026-10-30;ancree sur 2026-07-17;non
+e9525d76;Vente prévue;23/11 DP voisin DB29/1 Me Bouron;DB;29/01;7106;active;2026-07-27;2027-01-29;ancree sur 2026-07-27;OUI
+97d801e7;Vente prévue;20/11 ODP15/11vousfinancer DB15/12 (avnt) Me Rochette;ODP;15/11;28897;active;2026-07-17;2026-11-15;ancree sur 2026-07-17;non
+97d801e7;Vente prévue;20/11 ODP15/11vousfinancer DB15/12 (avnt) Me Rochette;DB;15/12;28897;active;2026-07-17;2026-12-15;ancree sur 2026-07-17;OUI
+f88d0ca9;Vente prévue;30/11 DPC30/11 OPC01/3 DB15/6 Me BDH / Me Damas  18393 à archiver après vente;DPC;30/11;28944;active;2026-07-31;2026-11-30;ancree sur 2026-07-31;OUI
+f88d0ca9;Vente prévue;30/11 DPC30/11 OPC01/3 DB15/6 Me BDH / Me Damas  18393 à archiver après vente;OPC;01/03;28944;active;2026-07-31;2027-03-01;ancree sur 2026-07-31;OUI
+f88d0ca9;Vente prévue;30/11 DPC30/11 OPC01/3 DB15/6 Me BDH / Me Damas  18393 à archiver après vente;DB;15/06;28944;active;2026-07-31;2027-06-15;ancree sur 2026-07-31;OUI
+0b25afef;Vente prévue;24/11 rdv VenteCI-VODP DB24/12 Lemaître  EM70300;DB;24/12;30688;active;2026-09-24;2026-12-24;ancree sur 2026-09-24;OUI
+1265f087;Vente prévue;20/11 retard dPC30/9 PC31/12 accord eau DB01/3  Me Chazottes-Leconte/Barre;DPC;30/09;28964;active;2026-08-05;2026-09-30;ancree sur 2026-08-05;non
+1265f087;Vente prévue;20/11 retard dPC30/9 PC31/12 accord eau DB01/3  Me Chazottes-Leconte/Barre;DB;01/03;28964;active;2026-08-05;2027-03-01;ancree sur 2026-08-05;OUI
+aad89f34;Vente prévue;08/12ADP08/12 ODP08/01 DB05/02  Me Bérinchy;ADP;08/12;30810;active;2026-11-05;2026-12-08;ancree sur 2026-11-05;OUI
+aad89f34;Vente prévue;08/12ADP08/12 ODP08/01 DB05/02  Me Bérinchy;ODP;08/01;30810;active;2026-11-05;2027-01-08;ancree sur 2026-11-05;OUI
+aad89f34;Vente prévue;08/12ADP08/12 ODP08/01 DB05/02  Me Bérinchy;DB;05/02;30810;active;2026-11-05;2027-02-05;ancree sur 2026-11-05;OUI
+fbafb5ee;Vente prévue;19/11 ADP30/10 PTZ ODP15/12  fact. chaudière  achat17383 DB30/1 Me Labidoire;ADP;30/10;30702;active;2026-09-30;2026-10-30;ancree sur 2026-09-30;non
+fbafb5ee;Vente prévue;19/11 ADP30/10 PTZ ODP15/12  fact. chaudière  achat17383 DB30/1 Me Labidoire;ODP;15/12;30702;active;2026-09-30;2026-12-15;ancree sur 2026-09-30;OUI
+fbafb5ee;Vente prévue;19/11 ADP30/10 PTZ ODP15/12  fact. chaudière  achat17383 DB30/1 Me Labidoire;DB;30/01;30702;active;2026-09-30;2027-01-30;ancree sur 2026-09-30;OUI
+ce63cee9;Vente prévue;19/11 prêt ok ? PUA SAFER DB30/4 PUV SAFER DB30/6 Me Robin;DB;30/04;30818;active;2026-08-12;2027-04-30;ancree sur 2026-08-12;OUI
+ce63cee9;Vente prévue;19/11 prêt ok ? PUA SAFER DB30/4 PUV SAFER DB30/6 Me Robin;DB;30/06;30818;active;2026-08-12;2027-06-30;ancree sur 2026-08-12;OUI
+c9fe7ffa;Vente prévue;20/11 CUb  rdv Vente Me Chassaint DB09/12;DB;09/12;29022;active;2026-09-09;2026-12-09;ancree sur 2026-09-09;OUI
+366126fb;Vente prévue;03/12 ODP5/12  (V)cuve  accord juge contentieux DB05/1 Me Carton;ODP;05/12;30714;active;2026-10-05;2026-12-05;ancree sur 2026-10-05;OUI
+366126fb;Vente prévue;03/12 ODP5/12  (V)cuve  accord juge contentieux DB05/1 Me Carton;DB;05/01;30714;active;2026-10-05;2027-01-05;ancree sur 2026-10-05;OUI
+fb243db5;Vente prévue;23/11 ! ADP15/11 envoi SAFER ODP15/12 DB15/01  MDR bien V330062851;ADP;15/11;30747;active;2026-10-15;2026-11-15;ancree sur 2026-10-15;non
+fb243db5;Vente prévue;23/11 ! ADP15/11 envoi SAFER ODP15/12 DB15/01  MDR bien V330062851;ODP;15/12;30747;active;2026-10-15;2026-12-15;ancree sur 2026-10-15;OUI
+fb243db5;Vente prévue;23/11 ! ADP15/11 envoi SAFER ODP15/12 DB15/01  MDR bien V330062851;DB;15/01;30747;active;2026-10-15;2027-01-15;ancree sur 2026-10-15;OUI
+f6ac3aa5;Vente prévue;01/12 ODP02/12  factures V. DB02/01 Me Goutorbe;ODP;02/12;30721;active;2026-10-02;2026-12-02;ancree sur 2026-10-02;OUI
+f6ac3aa5;Vente prévue;01/12 ODP02/12  factures V. DB02/01 Me Goutorbe;DB;02/01;30721;active;2026-10-02;2027-01-02;ancree sur 2026-10-02;OUI
+db0d5e8d;Vente prévue;02/12 SAFER DB04/2 Me Exbrayat/Giraud-Viallet38;DB;04/02;30798;active;2026-11-04;2027-02-04;ancree sur 2026-11-04;OUI
+1d3bc808;Vente prévue;21/12 formalités DB23/1 M.Sauret/Fay67;DB;23/01;30771;active;2026-10-23;2027-01-23;ancree sur 2026-10-23;OUI
+8bcc3b63;Vente prévue;23/11 rpse agglo retrait DP DB15/12 Me Bouron-Oliver;DB;15/12;30715;active;2026-10-02;2026-12-15;ancree sur 2026-10-02;OUI
+e2951cb3;Vente prévue;15/12 rdv VENTE DB15/1 Me Pailhes;DB;15/01;30755;active;2026-10-15;2027-01-15;ancree sur 2026-10-15;OUI
+039da22e;Vente prévue;14/12 ADP13/12 ODP13/01 DB13/2  Me Bougon / Me Besse;ADP;13/12;;(aucun compromis net);;;pas d ancre (aucune date de compromis chez nous);non
+039da22e;Vente prévue;14/12 ADP13/12 ODP13/01 DB13/2  Me Bougon / Me Besse;ODP;13/01;;(aucun compromis net);;;pas d ancre (aucune date de compromis chez nous);non
+039da22e;Vente prévue;14/12 ADP13/12 ODP13/01 DB13/2  Me Bougon / Me Besse;DB;13/02;;(aucun compromis net);;;pas d ancre (aucune date de compromis chez nous);non
+60c54124;Vente prévue;20/11 ADP19/11 ODP18/01 DB20/02 Me Sanial245K;ADP;19/11;30757;active;2026-10-19;2026-11-19;ancree sur 2026-10-19;OUI
+60c54124;Vente prévue;20/11 ADP19/11 ODP18/01 DB20/02 Me Sanial245K;ODP;18/01;30757;active;2026-10-19;2027-01-18;ancree sur 2026-10-19;OUI
+60c54124;Vente prévue;20/11 ADP19/11 ODP18/01 DB20/02 Me Sanial245K;DB;20/02;30757;active;2026-10-19;2027-02-20;ancree sur 2026-10-19;OUI
+04b5f732;Vente prévue;23/11 7j. ODP30/11 DB29/12 Me Cornu/Lancry;ODP;30/11;30703;active;2026-09-29;2026-11-30;ancree sur 2026-09-29;OUI
+04b5f732;Vente prévue;23/11 7j. ODP30/11 DB29/12 Me Cornu/Lancry;DB;29/12;30703;active;2026-09-29;2026-12-29;ancree sur 2026-09-29;OUI
+2c32d35a;Vente prévue;18/11 ADP09/11 ODP15/12 relogmt-V DB27/3  E. Pereira / départ VL Gonzalez 09sept.;ADP;09/11;30729;active;2026-10-08;2026-11-09;ancree sur 2026-10-08;non
+2c32d35a;Vente prévue;18/11 ADP09/11 ODP15/12 relogmt-V DB27/3  E. Pereira / départ VL Gonzalez 09sept.;ODP;15/12;30729;active;2026-10-08;2026-12-15;ancree sur 2026-10-08;OUI
+2c32d35a;Vente prévue;18/11 ADP09/11 ODP15/12 relogmt-V DB27/3  E. Pereira / départ VL Gonzalez 09sept.;DB;27/03;30729;active;2026-10-08;2027-03-27;ancree sur 2026-10-08;OUI
+02e27bd9;Vente prévue;15/12 dPC15/12 oPC15/3 DB01/7 Latour / Boixadera PC;DPC;15/12;30731;active;2026-10-12;2026-12-15;ancree sur 2026-10-12;OUI
+02e27bd9;Vente prévue;15/12 dPC15/12 oPC15/3 DB01/7 Latour / Boixadera PC;OPC;15/03;30731;active;2026-10-12;2027-03-15;ancree sur 2026-10-12;OUI
+02e27bd9;Vente prévue;15/12 dPC15/12 oPC15/3 DB01/7 Latour / Boixadera PC;DB;01/07;30731;active;2026-10-12;2027-07-01;ancree sur 2026-10-12;OUI
+6332b84e;Vente prévue;27/11 choix bq ODP16/12 DB16/1 Me Faure;ODP;16/12;30753;active;2026-10-16;2026-12-16;ancree sur 2026-10-16;OUI
+6332b84e;Vente prévue;27/11 choix bq ODP16/12 DB16/1 Me Faure;DB;16/01;30753;active;2026-10-16;2027-01-16;ancree sur 2026-10-16;OUI
+a52a2026;Vente prévue;30/11 DP  ADP30/11 ODP31/12 DB15/3 150Kpc maison inachevée;ADP;30/11;30728;active;2026-10-08;2026-11-30;ancree sur 2026-10-08;OUI
+a52a2026;Vente prévue;30/11 DP  ADP30/11 ODP31/12 DB15/3 150Kpc maison inachevée;ODP;31/12;30728;active;2026-10-08;2026-12-31;ancree sur 2026-10-08;OUI
+a52a2026;Vente prévue;30/11 DP  ADP30/11 ODP31/12 DB15/3 150Kpc maison inachevée;DB;15/03;30728;active;2026-10-08;2027-03-15;ancree sur 2026-10-08;OUI
+bbbaae80;Vente prévue;16/12 dDP16/12ADP ODP05/1 DP31/1 31/3 Latour/Ravel-D. pc;ODP;05/01;30791;active;2026-11-02;2027-01-05;ancree sur 2026-11-02;OUI
+f1f51b2c;Vente prévue;24/11 ADP23/11 ODP23/12 DB23/01 Me Goutorbe;ADP;23/11;30765;active;2026-10-23;2026-11-23;ancree sur 2026-10-23;OUI
+f1f51b2c;Vente prévue;24/11 ADP23/11 ODP23/12 DB23/01 Me Goutorbe;ODP;23/12;30765;active;2026-10-23;2026-12-23;ancree sur 2026-10-23;OUI
+f1f51b2c;Vente prévue;24/11 ADP23/11 ODP23/12 DB23/01 Me Goutorbe;DB;23/01;30765;active;2026-10-23;2027-01-23;ancree sur 2026-10-23;OUI
+34932f4e;Vente prévue;30/11 ADP30/11 ODP08/1 DB01/2 Me Sauret;ADP;30/11;30789;active;2026-10-30;2026-11-30;ancree sur 2026-10-30;OUI
+34932f4e;Vente prévue;30/11 ADP30/11 ODP08/1 DB01/2 Me Sauret;ODP;08/01;30789;active;2026-10-30;2027-01-08;ancree sur 2026-10-30;OUI
+34932f4e;Vente prévue;30/11 ADP30/11 ODP08/1 DB01/2 Me Sauret;DB;01/02;30789;active;2026-10-30;2027-02-01;ancree sur 2026-10-30;OUI
+72d2706a;Vente prévue;24/11 ADP26/11 ODP05/1 DB26/01;ADP;26/11;30779;active;2026-10-26;2026-11-26;ancree sur 2026-10-26;OUI
+72d2706a;Vente prévue;24/11 ADP26/11 ODP05/1 DB26/01;ODP;05/01;30779;active;2026-10-26;2027-01-05;ancree sur 2026-10-26;OUI
+72d2706a;Vente prévue;24/11 ADP26/11 ODP05/1 DB26/01;DB;26/01;30779;active;2026-10-26;2027-01-26;ancree sur 2026-10-26;OUI
+ce56c77b;Vente prévue;05/12 ADP05/12 ODP15/1 DB05/2 Me Macret;ADP;05/12;30805;active;2026-11-05;2026-12-05;ancree sur 2026-11-05;OUI
+ce56c77b;Vente prévue;05/12 ADP05/12 ODP15/1 DB05/2 Me Macret;ODP;15/01;30805;active;2026-11-05;2027-01-15;ancree sur 2026-11-05;OUI
+ce56c77b;Vente prévue;05/12 ADP05/12 ODP15/1 DB05/2 Me Macret;DB;05/02;30805;active;2026-11-05;2027-02-05;ancree sur 2026-11-05;OUI
+5a956cad;Compromis signé;03/12 ADP03/12 ODP03/1 DB03/2 Me Roux;ADP;03/12;30790;active;2026-11-03;2026-12-03;ancree sur 2026-11-03;OUI
+5a956cad;Compromis signé;03/12 ADP03/12 ODP03/1 DB03/2 Me Roux;ODP;03/01;30790;active;2026-11-03;2027-01-03;ancree sur 2026-11-03;OUI
+5a956cad;Compromis signé;03/12 ADP03/12 ODP03/1 DB03/2 Me Roux;DB;03/02;30790;active;2026-11-03;2027-02-03;ancree sur 2026-11-03;OUI
+bd0e986f;Vente prévue;30/11 ADP30/11 ODP10/1 DB30/1 Breuil;ADP;30/11;30788;active;2026-10-30;2026-11-30;ancree sur 2026-10-30;OUI
+bd0e986f;Vente prévue;30/11 ADP30/11 ODP10/1 DB30/1 Breuil;ODP;10/01;30788;active;2026-10-30;2027-01-10;ancree sur 2026-10-30;OUI
+bd0e986f;Vente prévue;30/11 ADP30/11 ODP10/1 DB30/1 Breuil;DB;30/01;30788;active;2026-10-30;2027-01-30;ancree sur 2026-10-30;OUI
+b237d600;Vente prévue;11/12 ADP10/12 ODP11/1 DB31/1 Me Sanial / Zilic;ADP;10/12;;(aucun compromis net);;;pas d ancre (aucune date de compromis chez nous);non
+b237d600;Vente prévue;11/12 ADP10/12 ODP11/1 DB31/1 Me Sanial / Zilic;ODP;11/01;;(aucun compromis net);;;pas d ancre (aucune date de compromis chez nous);non
+b237d600;Vente prévue;11/12 ADP10/12 ODP11/1 DB31/1 Me Sanial / Zilic;DB;31/01;;(aucun compromis net);;;pas d ancre (aucune date de compromis chez nous);non
+45225170;Vente prévue;27/11 ADP26/11  DP(V) ODP26/12 DB26/1 Marion/Serpantié;ADP;26/11;30769;active;2026-10-26;2026-11-26;ancree sur 2026-10-26;OUI
+45225170;Vente prévue;27/11 ADP26/11  DP(V) ODP26/12 DB26/1 Marion/Serpantié;ODP;26/12;30769;active;2026-10-26;2026-12-26;ancree sur 2026-10-26;OUI
+45225170;Vente prévue;27/11 ADP26/11  DP(V) ODP26/12 DB26/1 Marion/Serpantié;DB;26/01;30769;active;2026-10-26;2027-01-26;ancree sur 2026-10-26;OUI
+945146a0;Vente prévue;18/12 18/12DPdivision DB30/1 Me Didier/Giroux69;DB;30/01;30793;active;2026-11-04;2027-01-30;ancree sur 2026-11-04;OUI
+7b00046c;Vente prévue;08/12 ADP08/12 ODP08/01 DB08/02 Me Rigaud;ADP;08/12;30811;active;2026-11-06;2026-12-08;ancree sur 2026-11-06;OUI
+7b00046c;Vente prévue;08/12 ADP08/12 ODP08/01 DB08/02 Me Rigaud;ODP;08/01;30811;active;2026-11-06;2027-01-08;ancree sur 2026-11-06;OUI
+7b00046c;Vente prévue;08/12 ADP08/12 ODP08/01 DB08/02 Me Rigaud;DB;08/02;30811;active;2026-11-06;2027-02-08;ancree sur 2026-11-06;OUI
+351fca42;Vente prévue;15/12 ADP13/12 ODP13/01 DB22/2 Me Brisson;ADP;13/12;;(aucun compromis net);;;pas d ancre (aucune date de compromis chez nous);non
+351fca42;Vente prévue;15/12 ADP13/12 ODP13/01 DB22/2 Me Brisson;ODP;13/01;;(aucun compromis net);;;pas d ancre (aucune date de compromis chez nous);non
+351fca42;Vente prévue;15/12 ADP13/12 ODP13/01 DB22/2 Me Brisson;DB;22/02;;(aucun compromis net);;;pas d ancre (aucune date de compromis chez nous);non
+4145ffa7;Vente prévue;23/11 ADP23/11 ODP31/12 DB01/2 Me Guillauma;ADP;23/11;30770;active;2026-10-23;2026-11-23;ancree sur 2026-10-23;OUI
+4145ffa7;Vente prévue;23/11 ADP23/11 ODP31/12 DB01/2 Me Guillauma;ODP;31/12;30770;active;2026-10-23;2026-12-31;ancree sur 2026-10-23;OUI
+4145ffa7;Vente prévue;23/11 ADP23/11 ODP31/12 DB01/2 Me Guillauma;DB;01/02;30770;active;2026-10-23;2027-02-01;ancree sur 2026-10-23;OUI
