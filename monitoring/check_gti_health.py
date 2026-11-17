@@ -787,14 +787,22 @@ DATA_SENTINELS: list[dict[str, Any]] = [
         # RECEVRONT JAMAIS RIEN. 85 sur 4 773 n'ont AUCUN lien vers une
         # transaction : aucune date, aucun motif, aucune note ne les atteindra.
         #
-        # ⚠ LE SEUIL EST 85, PAS 0, ET C'EST DELIBERE. Un seuil 0 crierait des le
+        # ⚠ LE SEUIL N'EST PAS 0, ET C'EST DELIBERE. Un seuil 0 crierait des le
         #   premier passage pour un fait CONNU -- exactement le defaut reproche le
         #   17/11 a data.negociateur_registre_signal (« un essai qui crie tous les
         #   jours n'est plus un essai »). Ce qu'on veut voir est une HAUSSE : une
         #   ligne qui PERD son lien.
-        # ⏰ ET LE SEUIL DOIT BAISSER : le re-gel additif (D1) va rattacher une
-        #   partie des 85. Quand il sera passe, remesurer et poser le nouveau
-        #   compte ici -- sinon la sentinelle tolere un trou qui s'est referme.
+        #
+        # ⏰ 85 -> 92 LE 17/11, ET LA HAUSSE EST VOULUE, PAS SUBIE. Sa source,
+        #   `app_classeur_ligne_id`, etait PERIMEE : 4 773 lignes quand le Sheet en
+        #   a 4 794, les 21 manquantes etant les plus RECENTES. Donc la sentinelle
+        #   SOUS-COMPTAIT -- elle ignorait des lignes qu'elle devait surveiller.
+        #   La table remise a jour (patch_d1_table_des_lignes_2026-11-17.sql), elle
+        #   voit 7 lignes recentes de plus sans lien : 85 -> 92.
+        #   ⭐ Le seuil suit donc la MESURE du jour, et il est relu a chaque fois
+        #     qu'on touche au gel ou a la table des lignes.
+        # ⏰ ET IL DOIT BAISSER quand un re-gel rattachera ces lignes -- sinon la
+        #   sentinelle tolere un trou qui s'est referme.
         #
         # WARNING et non critical : c'est un ETAT ancien, pas un evenement. Il ne
         # doit pas envoyer un e-mail chaque matin ; il doit se VOIR au tableau.
@@ -804,7 +812,7 @@ DATA_SENTINELS: list[dict[str, Any]] = [
         "table": "app_v_classeur_ligne_sans_lien",
         "params": {},
         "rule": "absolute",
-        "max": 85,
+        "max": 92,
         "sample": {
             "select": "id_unique,ligne_classeur,diagnostic",
             "order": "ligne_classeur.asc",
