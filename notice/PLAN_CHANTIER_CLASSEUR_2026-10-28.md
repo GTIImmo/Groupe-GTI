@@ -2513,6 +2513,112 @@ l'etat d'une autre transaction) ; ce balayage-ci, fait avec le critere « compro
 trouve un 7e qui se declenche sur `state` ET sur l'ABSENCE de numero. **Chaque famille
 demande son propre balayage, et il se fait AVANT de generer le patch.**
 
+### ✅⭐⭐⭐ LE 18/11 -- SON ARBITRAGE DES 41 LIGNES EST FAIT, ET LA DATE D'OFFRE EST AUDITEE
+
+> ⭐ Il a juge les **41 lignes** de la page d'arbitrage une par une, dans la nuit du
+> 17 au 18/11 entre 23:25 et 23:40. **Ses decisions sont dans la base de la page**
+> (collection `decisions`), relevees et croisees avec le dossier par
+> `phase2/checks/arbitrage_ce_qu_il_a_tranche_2026-11-18.py`. **41 lignes affichees,
+> 41 jugees, aucune laissee de cote.**
+
+#### ✅ SON VERDICT : 35 FOIS « LE CLASSEUR A RAISON », 6 ECARTEES
+
+```
+   « le classeur a raison »  35      dont  32 COMMISSIONS . 3 DATES D OFFRE
+   « rien »                   6      dont  3 avec SA NOTE : « l appariement est FAUX »
+```
+
+#### ⛔⛔ CE QUE LA POSE DEMANDE, ET CE QUI N'EST PAS ENCORE TRANCHE
+
+```
+   ① LA COLONNE EXISTE ET ELLE EST LIBRE -- mesure du 18/11 sur les 32 lignes :
+        les 32 id_unique touchent 75 transactions (32 offres, 31 compromis, 12 ventes)
+        honoraires_entree      remplie  43 fois   <- CE QUE HEKTOR CALCULE
+        honoraires_entree_app  remplie   0 fois   <- LA NOTRE, CLASSE A, VIDE PARTOUT
+      ➡ poser le classeur dans honoraires_entree_app est ADDITIF et ne detruit RIEN.
+        C'est le chemin deja ouvert par C2 le 17/11 (62 commissions posees).
+   ② ⭐⭐ CE N'EST PAS UNE TVA, ET JE L'AI VERIFIE AVANT DE POSER : si le classeur
+      etait TTC et nous HT, les 32 ecarts vaudraient x1,2. **UN SEUL** le vaut, et les
+      ratios vont de 0,18 a 1,70 DANS LES DEUX SENS (le classeur est plus BAS 21 fois,
+      plus HAUT 11). Ce sont donc 32 vrais ecarts de valeur, pas un decalage de regle.
+   ③ ⚠ UNE SEULE DE CES 32 MERITE UN REGARD : 61OW86CS, classeur 1 800 contre nos
+      9 800 (ratio 0,18, le seul en dessous de 0,6). Un chiffre change ressemble a une
+      faute de frappe -- DANS UN SENS OU DANS L'AUTRE. A lui montrer avant de poser.
+   ④ ⬜ SUR QUELLE TRANSACTION DE LA CHAINE POSER : une ligne du Sheet touche jusqu'a
+      3 transactions. C2 a tranche ce point pour ses 62 ; **il faut relire comment**,
+      pas reinventer. Et 27 des 75 sont ANNULEES ou REFUSEES -- or SA DECISION DU
+      17/11 sur C2 etait precisement « les 270 annulees NE SONT PAS POSEES ». ⛔ Donc
+      cette regle doit etre reportee ici, ou explicitement levee par lui.
+   ⛔ RIEN N'EST POSE : c'est une ecriture en production, elle attend son « vas-y ».
+```
+
+#### ⛔ LES 6 ECARTEES -- ET MA MESURE EN CONTREDIT DEUX
+
+Sa demande du 18/11 : *« il y a 3 ou 4 appariements qui semblent faux que nous devons
+auditer »*. Les voici, **avec ce que le dossier lui-meme prouve** :
+
+```
+   ⛔ SUSPECTS, SA NOTE EST CORROBOREE PAR LES DATES (3) :
+     1ESJE28Q  commission, ligne 3464 . Sheet « 27 aout24 » <-> nous 2012-11-28
+               ➡ DOUZE ANS d'ecart, et aucune autre date pour recoller. Sa note :
+                 « 2012 apps et le sheet 2024 ».
+     53ZS73KW  date d offre, ligne 227 . Sheet offre 22/10/2024 + compromis dec.24
+               <-> nous offre ET compromis au 2026-03-09 . ~17 MOIS d'ecart sur LES
+                 DEUX transactions a la fois.
+     TR42PT5H  date d offre, ligne 173 . Sheet 16 decembre24 <-> nous 2026-06-18
+               549 jours, et le Sheet n'a NI compromis NI vente pour arbitrer.
+   ⭐⭐ MAIS DEUX DE SES « RIEN » ONT UNE PREUVE INTERNE QUE L'APPARIEMENT EST **BON** :
+     74IL9C8F  Sheet : offre 31/01/2022 . compromis 25/04/2022 . vente 09/09/2022
+               nous  : compromis **2022-04-25** (LE MEME JOUR) . vente 2022-09-07
+                       . offre 2002-01-31
+               ➡ le compromis COLLE A L'EXACT -> le dossier est le bon, et c'est
+                 NOTRE date d'offre qui porte une faute de frappe (2002 pour 2022).
+     QH6672TZ  Sheet : offre 7 aout19 . vente 19 decembre23
+               nous  : offre 2020-08-07 . vente **2023-12-19** (LE MEME JOUR)
+               ➡ la vente COLLE A L'EXACT -> le dossier est le bon, et l'ecart est
+                 de 366 JOURS PILE sur l'offre : une annee mal saisie.
+   ⬜ ET UNE N'A AUCUNE DATE POUR JUGER :
+     8Q3LHGZ4  commission, ligne 3579 : classeur 11 000 contre nos 5 400 (x2,04), et
+               le Sheet ne porte NI offre NI compromis NI vente. Rien pour arbitrer
+               l'appariement -- ni pour le confirmer.
+```
+
+⭐⭐⭐ **LA LECON DE CES DEUX CAS, ET ELLE VAUT POUR TOUT L'ARBITRAGE** : un ecart de
+date ne dit PAS que l'appariement est faux. Quand une AUTRE transaction de la meme
+chaine tombe au jour pres sur le Sheet, le dossier est le bon et l'ecart est une faute
+de saisie. **C'est une preuve interne, pas un avis** -- et c'est ce critere que
+`alleger_le_dossier_2026-11-18.py` applique pour sa recommandation.
+
+#### ✅⭐⭐ LA DATE D'OFFRE : LE MECANISME DU 12/11 EST PROUVE, ET LE PIEGE EST UN NOM
+
+Sa remarque : *« la date de l'offre d'achat du 61OW86CS est erronee, c'est la date de
+notre script de masse. Normalement on avait corrige la date !!! »*. **Juste deux fois.**
+
+```
+   ⭐⭐⭐ LE TEMOIN POSITIF, sur les 1 206 offres portant une date de script :
+        1 198 rendent la VRAIE date par la cascade . **0** rend encore celle du script
+        exemple : offre 19130, colonne `date` = 2026-11-11 18:50:50
+                  app_dossier_jour_date_transaction() = **2021-02-27**
+   ⛔⛔ LA FAUTE ETAIT A MOI : mon script du dossier lisait la colonne `date` BRUTE au
+     lieu de la cascade. Corrige, ET l'ecran porte desormais un DRAPEAU sur chaque date
+     rendue par la cascade, disant ce qu'elle remplace -- sans ca on ne sait pas d'ou
+     vient le chiffre affiche, et c'est ce qui lui a fait perdre du temps.
+   ⚠⚠ ET UN NOM M'A FAIT CRIER AU LOUP : app_controle_date_offre() rend une colonne
+     `date_lue_journal_non_vide` **qui vaut 0**, et j'ai annonce le controle casse. Son
+     propre commentaire dit l'inverse : elle compte LES ANOMALIES. **0 EST UN VERT.**
+     ⬜ A renommer (`date_sans_source`) -- ca change la signature, donc ses appelants :
+       un geste a part, pas un effet de bord.
+   ⭐ LES 8 QUI RENDENT VIDE ONT RAISON : leur propositions_json ne porte QUE notre
+     refus du 12/11 (une entree, montant 0) ou des `0000-00-00`. Ce sont les « sans
+     aucun recours » du patch du 12/11 : aucune date n'est recuperable, et NULL vaut
+     mieux qu'une date inventee.
+   ⚠ SIGNAL NOTE, NON TRAITE : 6 de ces 8 n'ont QUE notre refus dans leur journal,
+     montant 0, initiateur 0 -- une offre que notre geste a peut-etre FABRIQUEE. A
+     rapprocher des « 20 offres refusees a tort le 11/11 ».
+```
+
+---
+
 ### ✅⭐⭐⭐ LE SOIR DU 17/11 -- D1, LES SENTINELLES, ET SES DECISIONS
 
 #### ✅ B2 ET B3 -- LES DEUX SENTINELLES POSEES
@@ -4153,6 +4259,16 @@ D3 ⬜  ETAPE 5 : **5.1 EST SON GESTE** -- lire les Apps Script du classeur, 10 
        (⛔ en filtrant les 14 chaines entierement mortes, via
        app_affaire_compte_encore -- et SANS RIEN retirer en base : 2 chaines sont
        MIXTES) . 5.3 le routeur.
+D4 ⬜⭐⭐ L'ARBITRAGE DES 41 LIGNES -- **IL A TRANCHE LE 18/11, RIEN N'EST POSE** :
+       35 fois « le classeur a raison » (32 commissions, 3 dates d'offre), 6 ecartees.
+       ⛔ LA POSE ATTEND SON « VAS-Y », et deux questions avant : sur quelle
+         transaction de la chaine poser (27 des 75 sont ANNULEES, et sa decision du
+         17/11 sur C2 ecartait les annulees), et 61OW86CS (classeur 1 800 / nous
+         9 800, le seul ratio sous 0,6 -- une faute de frappe possible des deux cotes).
+       ⭐⭐ ET MA MESURE CONTREDIT DEUX DE SES « RIEN » : 74IL9C8F et QH6672TZ ont une
+         AUTRE transaction qui tombe au jour pres sur le Sheet -> l'appariement est
+         BON, l'ecart est une faute de saisie (2002 pour 2022 . 366 jours pile).
+       Detail complet : « LE 18/11 -- SON ARBITRAGE DES 41 LIGNES EST FAIT ».
 ```
 
 ### ⚠ LES RESERVES QUI RESTENT OUVERTES
