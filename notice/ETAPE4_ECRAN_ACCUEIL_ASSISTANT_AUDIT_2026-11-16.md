@@ -1462,3 +1462,17 @@ Consigne : les photos jointes passent par `proposer_ajouter_photo` ; document et
 **Contrôles** : `test_assistant_gestes` 330 verts (§18 : 12 nouveaux, dont le témoin « fichier retiré entre la carte et le
 clic -> rien posé ») ; témoin inverse : la photo envoyée masquée -> ROUGE, remise -> 330 ; `test_assistant_fichiers` 17
 (la copie refuse une source hors du trombone) ; ia 62, lecteur 73 ; `npm run build` vert. 40 gestes.
+
+## 56. La carte AJOUTER UNE PHOTO EN LIGNE ET ÉPROUVÉE EN RÉEL (17/11, sur « Vas-y »)
+
+- **En ligne** : `a56a27e` (poussé par la session GED avec les siens ; mon push direct a été refusé car la branche
+  distante était déjà plus loin — sans effet) ; Render sert `df0a222`, qui le contient.
+- **Bien d'essai 63330** (0 photo, 0 envoi passé, file vide avant l'essai) ; image de TEST fabriquée exprès (« ESSAI
+  ASSISTANT — photo de test — à supprimer », JPEG 66 Ko) jointe par le trombone.
+  1. **Sans valider** : la carte « Ajouter 1 photo à l'annonce 63330 … « essai-photo-assistant.jpg ». VISIBLE, en dernier
+     dans la galerie ; envoyée chez Hektor par le worker … ; sur la vitrine après le traitement de nuit » -> REFUSÉE :
+     ligne `refusee`, 0 travail, 0 fichier copié sous `temp/photos/`.
+  2. **En réel** : une 2e carte, VALIDÉE -> travail `6894bd1e…` (`source: assistant`, notre ligne posée d'abord :
+     `app_photo_id` présent, le chemin de l'écran) -> `done` -> **`envoi_hektor: envoye`, `hektor_photo_id 490558`** ; la
+     photo chez nous : visible, `present_in_hektor`, `cloud_available`, rang 1 ; le fichier d'attente nettoyé par le worker.
+- ⏰ La photo de test reste sur 63330 (bien d'essai, Estimation, non diffusable) : à masquer ou supprimer (son choix).
