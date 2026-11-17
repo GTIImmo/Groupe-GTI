@@ -1,0 +1,333 @@
+﻿lot;id_unique;montant;etat;app_affaire_id;annonce;type
+1_aboutie;07cec9e1;6000.0;Vente réglée;27346;53564;vente
+1_aboutie;112cddef;8000.0;Vente réglée;28668;59293;vente
+1_aboutie;1cf326f1;9000.0;Vente réglée;8884;17640;vente
+1_aboutie;22814536;7500.0;Vente réglée;28948;59131;vente
+1_aboutie;2ffd65ec;8000.0;Vente réglée;30761;61483;vente
+1_aboutie;3be04102;10000.0;Vente réglée;29028;61943;vente
+1_aboutie;45fa3495;12000.0;Vente réglée;27011;52933;vente
+1_aboutie;7672fc36;15000.0;Vente réglée;28878;61796;vente
+1_aboutie;78004641;7000.0;Vente réglée;30778;17548;vente
+1_aboutie;87f9cb03;15200.0;Vente réglée;30716;61594;vente
+1_aboutie;90e99ae5;2900.0;Vente fixée;30743;49416;offre
+1_aboutie;S0GH1R74;2337.0;Vente réglée;14137;28668;offre
+1_aboutie;a8aaeb2b;1000.0;Vente fixée;998;1970;compromis
+1_aboutie;b57839d6;13000.0;Vente réglée;28665;59288;vente
+1_aboutie;b68c04af;10000.0;Vente réglée;28962;62038;vente
+1_aboutie;b6ddee9b;7000.0;Vente fixée;29032;62482;offre
+1_aboutie;bead5c67;6400.0;Vente réglée;7113;14464;vente
+1_aboutie;c67855b1;5700.0;Vente fixée;25846;49852;compromis
+1_aboutie;df0ce30c;5000.0;Vente réglée;28952;47174;compromis
+1_aboutie;e6965776;7500.0;Vente réglée;28656;59267;vente
+2_en_cours;039da22e;7000.0;Vente prévue;29015;62768;offre
+2_en_cours;0b25afef;6000.0;Vente prévue;30688;54880;compromis
+2_en_cours;1a474908;4000.0;Compromis en attente;30784;59471;offre
+2_en_cours;2a4a0c03;2500.0;Compromis en attente;30706;58957;offre
+2_en_cours;2c32d35a;5000.0;Vente prévue;30729;62922;compromis
+2_en_cours;2dfa6ef3;11000.0;Compromis en attente;30692;62802;offre
+2_en_cours;351fca42;11000.0;Vente prévue;30742;54799;offre
+2_en_cours;35996b7e;10000.0;Compromis en attente;30744;61965;offre
+2_en_cours;42ae8884;9500.0;Compromis en attente;30759;63156;offre
+2_en_cours;43faf7d9;4000.0;Compromis en attente;28995;62563;offre
+2_en_cours;481c32c8;500.0;Offre d'achat;29020;62975;offre
+2_en_cours;4d354b1a;1700.0;Offre d'achat;28985;12027;offre
+2_en_cours;5804a343;9000.0;Compromis en attente;30763;63088;offre
+2_en_cours;616df9e7;4000.0;Compromis en attente;30768;62381;offre
+2_en_cours;63790b81;9000.0;Compromis en attente;30786;49618;offre
+2_en_cours;7543e4fb;9000.0;Compromis en attente;30815;63140;offre
+2_en_cours;7cb7142f;10000.0;Compromis en attente;30735;62667;offre
+2_en_cours;800693bd;10000.0;Offre d'achat;30804;63222;offre
+2_en_cours;918d3b44;12400.0;Offre d'achat;30796;63108;offre
+2_en_cours;959b7669;4000.0;Offre d'achat;28568;58979;compromis
+2_en_cours;a2abd36c;6580.0;Compromis en attente;30713;62740;offre
+2_en_cours;b237d600;8000.0;Vente prévue;30707;63116;offre
+2_en_cours;b251d01e;4000.0;Compromis en attente;30792;62091;offre
+2_en_cours;b9872912;5000.0;Compromis en attente;30764;1998;offre
+2_en_cours;c1bbc7a9;3500.0;Compromis en attente;30658;62970;offre
+2_en_cours;c67ccc6a;10500.0;Offre d'achat;30808;47132;offre
+2_en_cours;c6e5299a;3500.0;Offre d'achat;30816;58958;offre
+2_en_cours;cd29653f;8000.0;Compromis en attente;30785;59390;offre
+2_en_cours;d049cda8;4600.0;Compromis en attente;1000320;61793;offre
+2_en_cours;d5b2fa0d;2000.0;Compromis en attente;30775;43453;offre
+2_en_cours;d5d073fc;4000.0;Compromis en attente;30758;63255;offre
+2_en_cours;d66a35e4;5000.0;Compromis en attente;30741;58970;offre
+2_en_cours;d7cbb8fa;3900.0;Offre d'achat;30806;63231;offre
+2_en_cours;dad56e75;9000.0;Compromis en attente;30803;63129;offre
+2_en_cours;dedeafeb;14000.0;Compromis en attente;30802;62840;offre
+2_en_cours;e07d475e;1800.0;Offre d'achat;1000318;62933;offre
+2_en_cours;e2779d8b;10000.0;Compromis en attente;30756;62832;offre
+2_en_cours;ecfcc143;10000.0;Compromis en attente;30705;62464;offre
+2_en_cours;f9a2b718;7000.0;Offre d'achat;30797;63193;offre
+2_en_cours;fb243db5;8000.0;Vente prévue;30747;62851;compromis
+2_en_cours;fbafb5ee;5500.0;Vente prévue;30702;62813;compromis
+2_en_cours;fbf9799a;10000.0;Offre d'achat;30817;62349;offre
+non_posee_annulee;033de8b5;9700.0;Annulée;30648;11832;offre
+non_posee_annulee;037e509b;10000.0;Annulée;28908;62066;offre
+non_posee_annulee;04VCA5TO;5000.0;Annulée;20;40;offre
+non_posee_annulee;09RU0RMD;13000.0;Annulée;17243;36623;offre
+non_posee_annulee;0EMKY4ZS;5000.0;Annulée;4623;9961;offre
+non_posee_annulee;0SYICINI;5000.0;Annulée;11365;24084;offre
+non_posee_annulee;0TABWO9C;7000.0;Annulée;16249;33580;offre
+non_posee_annulee;0TQB1SLL;4895.0;Annulée;8926;17746;offre
+non_posee_annulee;0V00SLEU;10000.0;Annulée;1000126;52937;offre
+non_posee_annulee;1I4TG1Y8;9900.0;Annulée;27243;53450;offre
+non_posee_annulee;1NJY34ED;9000.0;Annulée;9362;18768;offre
+non_posee_annulee;1TWR0XLA;3500.0;Annulée;4130;9245;offre
+non_posee_annulee;1bbfa76b;14000.0;Annulée;28857;61667;offre
+non_posee_annulee;1e6c6b41;5500.0;Annulée;23888;47349;offre
+non_posee_annulee;1e7d3bf5;500.0;Annulée;28787;61443;offre
+non_posee_annulee;241K9JOU;4200.0;Annulée;25742;49683;offre
+non_posee_annulee;266edc71;3500.0;Annulée;28839;61609;offre
+non_posee_annulee;2BR3IAF5;3000.0;Annulée;25753;49701;offre
+non_posee_annulee;2FBR2M9U;4600.0;Annulée;1103;2393;offre
+non_posee_annulee;2PPLFRGI;7000.0;Annulée;4134;9247;offre
+non_posee_annulee;2b6075b1;10000.0;Annulée;28733;59498;offre
+non_posee_annulee;2b924f5f;3000.0;Annulée;28633;59164;offre
+non_posee_annulee;3482984Y;8500.0;Annulée;15032;30955;offre
+non_posee_annulee;38PWRHA2;2000.0;Annulée;11963;24741;offre
+non_posee_annulee;3THZJOOG;3500.0;Annulée;4722;10129;offre
+non_posee_annulee;3V6PP5PD;8100.0;Annulée;19750;40861;offre
+non_posee_annulee;3cbeefef;11000.0;Annulée;28974;20873;offre
+non_posee_annulee;40ELE6SQ;8000.0;Annulée;4544;9877;offre
+non_posee_annulee;4509f3a1;9000.0;Annulée;28555;58930;offre
+non_posee_annulee;4JKPCX3I;2700.0;Annulée;6203;11908;offre
+non_posee_annulee;4PKW6ZOT;8000.0;Annulée;27372;53608;offre
+non_posee_annulee;4SKR9VTJ;5000.0;Annulée;24337;48022;offre
+non_posee_annulee;4cbc128d;6790.0;Annulée;28687;59339;offre
+non_posee_annulee;50OUISUB;5000.0;Annulée;23037;45877;offre
+non_posee_annulee;545cf27f;9000.0;Annulée;28762;59610;offre
+non_posee_annulee;5786a3cc;3000.0;Annulée;3697;8489;offre
+non_posee_annulee;58TFSCEL;7100.0;Annulée;14962;30752;offre
+non_posee_annulee;5I3MBN9D;2700.0;Annulée;4421;9673;offre
+non_posee_annulee;5SNKH1QQ;8000.0;Annulée;4578;9925;offre
+non_posee_annulee;5TTI932G;5000.0;Annulée;9898;20943;offre
+non_posee_annulee;5V1IOTO9;5500.0;Annulée;20405;41793;offre
+non_posee_annulee;5X53R3Q7;2500.0;Annulée;15925;32758;offre
+non_posee_annulee;62da86ce;9650.0;Annulée;16223;33517;offre
+non_posee_annulee;63881d2c;11000.0;Annulée;28631;59161;offre
+non_posee_annulee;67EOQFZR;3000.0;Annulée;15051;31033;offre
+non_posee_annulee;67WM4D62;4000.0;Annulée;27247;53451;offre
+non_posee_annulee;6BTF2F2K;3000.0;Annulée;7185;14677;offre
+non_posee_annulee;6D1WSAK8;5000.0;Annulée;14143;28673;offre
+non_posee_annulee;6EK7UWA2;5000.0;Annulée;4587;9941;offre
+non_posee_annulee;6M6HGWYD;7000.0;Annulée;19466;40403;offre
+non_posee_annulee;6U5DQQ4J;15000.0;Annulée;24453;48154;offre
+non_posee_annulee;6W6F4A4R;6000.0;Annulée;2451;6025;offre
+non_posee_annulee;720f4655;2000.0;Annulée;14824;30417;offre
+non_posee_annulee;754bacf3;6500.0;Annulée;28584;59035;offre
+non_posee_annulee;799d5c9a;14000.0;Annulée;28728;59484;offre
+non_posee_annulee;7PE5ECNL;3500.0;Annulée;23500;46724;offre
+non_posee_annulee;7T8CMWY6;4000.0;Annulée;24573;48301;offre
+non_posee_annulee;7b17f65b;7000.0;Annulée;28956;62106;offre
+non_posee_annulee;85KON0V8;4900.0;Annulée;4923;10386;offre
+non_posee_annulee;86da6949;6900.0;Annulée;29000;62740;offre
+non_posee_annulee;87QOXR64;11500.0;Annulée;17429;37184;offre
+non_posee_annulee;8H3JLA6J;2900.0;Annulée;19102;39785;offre
+non_posee_annulee;8NZ6V6XB;6000.0;Annulée;11560;24368;offre
+non_posee_annulee;8PZUIGAY;3500.0;Annulée;4668;10042;offre
+non_posee_annulee;91f7522b;4800.0;Annulée;28725;59471;offre
+non_posee_annulee;921PDJ1N;3000.0;Annulée;14819;30378;offre
+non_posee_annulee;95b1a51d;14200.0;Annulée;28736;59512;offre
+non_posee_annulee;98OHZK9P;4500.0;Annulée;2499;6137;offre
+non_posee_annulee;9FP3UICY;7500.0;Annulée;4272;9483;offre
+non_posee_annulee;9HPGTRWV;8000.0;Annulée;27560;53806;offre
+non_posee_annulee;9KHYVR1M;4000.0;Annulée;24381;48093;offre
+non_posee_annulee;9Q3NQN3P;6000.0;Annulée;27461;53688;offre
+non_posee_annulee;9U5H5OET;6000.0;Annulée;3631;8383;offre
+non_posee_annulee;9WQ204HP;6000.0;Annulée;4484;9748;offre
+non_posee_annulee;A2GX2E7D;12000.0;Annulée;15072;31060;offre
+non_posee_annulee;A7IBI3U7;3000.0;Annulée;11524;24288;offre
+non_posee_annulee;ACN46P6E;7000.0;Annulée;14961;30752;offre
+non_posee_annulee;AFH9HN56;5000.0;Annulée;24542;48281;offre
+non_posee_annulee;AN6HPCKY;11000.0;Annulée;7731;15692;offre
+non_posee_annulee;AX6QTZI1;2000.0;Annulée;4255;9455;offre
+non_posee_annulee;B6996QWS;4500.0;Annulée;1203;2937;offre
+non_posee_annulee;BCNCF3SA;9000.0;Annulée;23417;46492;offre
+non_posee_annulee;BJBMWSHU;10000.0;Annulée;6450;12434;offre
+non_posee_annulee;BQAVSRA1;11597.0;Annulée;4192;9358;offre
+non_posee_annulee;BSPYQNTM;7700.0;Annulée;26102;50613;offre
+non_posee_annulee;C8CU5TDK;6600.0;Annulée;24168;47820;offre
+non_posee_annulee;CC678DGO;2000.0;Annulée;19142;39854;offre
+non_posee_annulee;CPM9OKZE;4000.0;Annulée;26043;50403;offre
+non_posee_annulee;CRWGXG9R;500.0;Annulée;6204;11927;offre
+non_posee_annulee;CW4IYXO2;6000.0;Annulée;26;53;offre
+non_posee_annulee;CYZA6GYS;8200.0;Annulée;19512;40453;offre
+non_posee_annulee;D4GZG5QI;2000.0;Annulée;25752;49698;offre
+non_posee_annulee;D88K9RH8;13000.0;Annulée;21963;44017;offre
+non_posee_annulee;DG9U6ZUM;5500.0;Annulée;16861;35695;offre
+non_posee_annulee;DN5U3GER;3500.0;Annulée;7452;15087;offre
+non_posee_annulee;E02GULLP;2500.0;Annulée;27526;53761;offre
+non_posee_annulee;E07AB1SS;4600.0;Annulée;8917;17725;offre
+non_posee_annulee;EHQQU5U7;4500.0;Annulée;27687;53942;offre
+non_posee_annulee;EKDZCRI1;8000.0;Annulée;16393;34179;offre
+non_posee_annulee;EKRHN9WR;7000.0;Annulée;27427;53657;offre
+non_posee_annulee;ENCWDI2N;11900.0;Annulée;17215;36494;offre
+non_posee_annulee;EO8MXFE9;14000.0;Annulée;20267;41699;offre
+non_posee_annulee;ER24A0WL;4460.0;Annulée;8911;17718;offre
+non_posee_annulee;FC41ET5P;2000.0;Annulée;6208;11929;offre
+non_posee_annulee;FI2OL5SR;12000.0;Annulée;25867;49901;offre
+non_posee_annulee;FMVORN8Y;14000.0;Annulée;8868;17583;offre
+non_posee_annulee;FOLSL8EE;5000.0;Annulée;17642;37627;offre
+non_posee_annulee;FQTOWHTS;3000.0;Annulée;7180;14676;offre
+non_posee_annulee;FWCFAN6O;4000.0;Annulée;4372;9608;offre
+non_posee_annulee;FWYQ6LST;14500.0;Annulée;11885;24671;offre
+non_posee_annulee;GNQ0KV1T;8000.0;Annulée;9300;18452;offre
+non_posee_annulee;GQ79Y6RF;16500.0;Annulée;6445;12432;offre
+non_posee_annulee;GWRG5KRB;6500.0;Annulée;28148;54716;offre
+non_posee_annulee;GZJQNXK1;2700.0;Annulée;24335;48021;offre
+non_posee_annulee;GZYL8MCN;9000.0;Annulée;4719;10118;offre
+non_posee_annulee;H2Z4DLRO;1500.0;Annulée;14964;30759;offre
+non_posee_annulee;HHQZC2QP;3500.0;Annulée;4653;9993;offre
+non_posee_annulee;HOJ11PVC;4775.0;Annulée;8918;17728;offre
+non_posee_annulee;HRAK3B9K;10000.0;Annulée;15020;30905;offre
+non_posee_annulee;HSSRAELU;6600.0;Annulée;24165;47820;offre
+non_posee_annulee;HVJDTOTX;8000.0;Annulée;11523;24271;offre
+non_posee_annulee;I0K9TUCT;3500.0;Annulée;26026;50356;offre
+non_posee_annulee;I7DTFBQT;6000.0;Annulée;14968;30764;offre
+non_posee_annulee;I8LSTTMP;9000.0;Annulée;4358;9588;offre
+non_posee_annulee;IBR1W9R6;4000.0;Annulée;27404;53628;offre
+non_posee_annulee;IQFPEZBB;4500.0;Annulée;7943;15941;offre
+non_posee_annulee;ISJ3UPP0;14900.0;Annulée;11596;24410;offre
+non_posee_annulee;IWCJIPTS;4000.0;Annulée;7273;14844;offre
+non_posee_annulee;J1AFICZE;9000.0;Annulée;20296;41713;offre
+non_posee_annulee;J3C6TGAU;6600.0;Annulée;24166;47820;offre
+non_posee_annulee;JAW5U9OF;5500.0;Annulée;17026;36165;offre
+non_posee_annulee;JDEO8SNC;6300.0;Annulée;6215;11956;offre
+non_posee_annulee;JKQJ0XXJ;4000.0;Annulée;7250;14782;offre
+non_posee_annulee;JL6I6JDG;3375.0;Annulée;4633;9965;offre
+non_posee_annulee;JRN2I7TM;7000.0;Annulée;27448;53678;offre
+non_posee_annulee;JX1K7DWB;4600.0;Annulée;1105;2393;offre
+non_posee_annulee;JZSYFT94;9000.0;Annulée;25880;49924;offre
+non_posee_annulee;K0X2H4OG;5000.0;Annulée;1089;2375;offre
+non_posee_annulee;KKN1YUZJ;5500.0;Annulée;15915;32732;offre
+non_posee_annulee;KODULWGN;8000.0;Annulée;24311;48005;offre
+non_posee_annulee;KPDROR30;5000.0;Annulée;10018;21338;offre
+non_posee_annulee;KRY0G4TD;10000.0;Annulée;23025;45868;offre
+non_posee_annulee;L2B2WGCF;7000.0;Annulée;14114;28653;offre
+non_posee_annulee;L86MC4W7;8000.0;Annulée;22024;44205;offre
+non_posee_annulee;LCQ8H7S0;12000.0;Annulée;23983;47538;offre
+non_posee_annulee;LHQY0K8G;7600.0;Annulée;27185;53392;offre
+non_posee_annulee;LKBO1TOH;7650.0;Annulée;4290;9510;offre
+non_posee_annulee;LR3ONCV9;3500.0;Annulée;10027;21379;offre
+non_posee_annulee;LRUUG0FG;2500.0;Annulée;16858;35694;offre
+non_posee_annulee;M3LQT4JY;2400.0;Annulée;19830;41019;offre
+non_posee_annulee;M9KMH1MK;6500.0;Annulée;11193;23554;offre
+non_posee_annulee;MD423PCE;13000.0;Annulée;4293;9517;offre
+non_posee_annulee;MLUTE5I1;10000.0;Annulée;20513;41858;offre
+non_posee_annulee;MSL64YBY;5000.0;Annulée;11188;23547;offre
+non_posee_annulee;MT18CYAX;4000.0;Annulée;19746;40858;offre
+non_posee_annulee;MTKS40TH;5500.0;Annulée;11767;24548;offre
+non_posee_annulee;MWD6IMKG;1800.0;Annulée;1589;4440;offre
+non_posee_annulee;N67O7CLW;4895.0;Annulée;8910;17717;offre
+non_posee_annulee;N8M7RKTN;10000.0;Annulée;24333;48019;offre
+non_posee_annulee;N9J2533O;3500.0;Annulée;4655;9993;offre
+non_posee_annulee;NSRISB3C;7500.0;Annulée;4271;9483;offre
+non_posee_annulee;NUTA4I4F;7900.0;Annulée;24094;47719;offre
+non_posee_annulee;NZOM4OQC;11200.0;Annulée;15002;30878;offre
+non_posee_annulee;O9W79YFP;10200.0;Annulée;24478;48192;offre
+non_posee_annulee;OAUI9CKR;6900.0;Annulée;27610;53858;offre
+non_posee_annulee;OCI5ECK2;9500.0;Annulée;14810;30361;offre
+non_posee_annulee;ODB584S1;1800.0;Annulée;24121;47762;offre
+non_posee_annulee;ODF1PWJ0;8500.0;Annulée;17205;36471;offre
+non_posee_annulee;OHMP44NF;4000.0;Annulée;19693;40792;offre
+non_posee_annulee;OKN8ITBV;10000.0;Annulée;26831;52733;offre
+non_posee_annulee;OXZ0DFMV;12000.0;Annulée;17521;37401;offre
+non_posee_annulee;P1XU5RPU;3500.0;Annulée;16051;33010;offre
+non_posee_annulee;P98KKBAZ;5000.0;Annulée;7598;15429;offre
+non_posee_annulee;PJ7OXF0X;6000.0;Annulée;4790;10251;offre
+non_posee_annulee;PL27OB8F;7500.0;Annulée;22210;44536;offre
+non_posee_annulee;PNAVEELI;1500.0;Annulée;11972;24752;offre
+non_posee_annulee;PWDT0RPB;6000.0;Annulée;4389;9629;offre
+non_posee_annulee;PZ24ICFX;13000.0;Annulée;7761;15714;offre
+non_posee_annulee;Q3KTCMVB;6500.0;Annulée;14941;30717;offre
+non_posee_annulee;Q3RXZ1C1;3500.0;Annulée;11447;24145;offre
+non_posee_annulee;QBMC3MC9;4600.0;Annulée;4472;9742;offre
+non_posee_annulee;QIKGBJLQ;10000.0;Annulée;21884;43743;offre
+non_posee_annulee;QJ9LLT05;6500.0;Annulée;6557;12728;offre
+non_posee_annulee;QR0BL5YW;6000.0;Annulée;15042;30986;offre
+non_posee_annulee;QTUGICCA;6000.0;Annulée;23447;46523;offre
+non_posee_annulee;QX7KSI42;6700.0;Annulée;4463;9727;offre
+non_posee_annulee;R0JRVFDC;15000.0;Annulée;16382;34066;offre
+non_posee_annulee;R2SVM8P0;1000.0;Annulée;16018;32929;offre
+non_posee_annulee;R7NU9NPM;5980.0;Annulée;19818;40977;offre
+non_posee_annulee;R90OQT16;8000.0;Annulée;7606;15449;offre
+non_posee_annulee;RKWNRBV1;12000.0;Annulée;17377;36993;offre
+non_posee_annulee;S3HOG6UL;9700.0;Annulée;17390;37032;offre
+non_posee_annulee;S6AGXVYJ;2000.0;Annulée;7907;15896;offre
+non_posee_annulee;S7K4GLDW;2000.0;Annulée;24589;48311;offre
+non_posee_annulee;SJZGL7J4;12500.0;Annulée;17401;37137;offre
+non_posee_annulee;SMZ6IBS0;5000.0;Annulée;19472;40405;offre
+non_posee_annulee;SWSN80FQ;3000.0;Annulée;14817;30376;offre
+non_posee_annulee;SXF0L5EE;3500.0;Annulée;8925;17745;offre
+non_posee_annulee;SZ0RXRTU;12000.0;Annulée;4321;9532;offre
+non_posee_annulee;T2GZOY5O;3500.0;Annulée;20075;41467;offre
+non_posee_annulee;T2KRLK52;5000.0;Annulée;11411;24118;offre
+non_posee_annulee;T75MV36Q;10000.0;Annulée;9359;18742;offre
+non_posee_annulee;TFRVC7DS;3500.0;Annulée;19112;39816;offre
+non_posee_annulee;TR42PT5H;9000.0;Annulée;27196;53398;offre
+non_posee_annulee;TSIV5DTS;10000.0;Annulée;23426;46500;offre
+non_posee_annulee;TWX8N9QI;5000.0;Annulée;16185;33437;offre
+non_posee_annulee;U0GQ3KTO;6000.0;Annulée;4388;9629;offre
+non_posee_annulee;U218ARM8;7000.0;Annulée;16134;33233;offre
+non_posee_annulee;UAER0F0F;18000.0;Annulée;7904;15881;offre
+non_posee_annulee;UH6DNQHK;7000.0;Annulée;23335;46346;offre
+non_posee_annulee;UIAIXGG4;6000.0;Annulée;24336;48022;offre
+non_posee_annulee;ULA087KO;16000.0;Annulée;24652;48370;offre
+non_posee_annulee;ULFVA1AQ;10000.0;Annulée;11581;24390;offre
+non_posee_annulee;UQ6XXQOI;9000.0;Annulée;14922;30659;offre
+non_posee_annulee;UQGQCJGH;7500.0;Annulée;11561;24368;offre
+non_posee_annulee;UV6YWU3W;5000.0;Annulée;17410;37160;offre
+non_posee_annulee;UWQI9CGG;8500.0;Annulée;19009;39473;offre
+non_posee_annulee;VBTXFSYD;5000.0;Annulée;17411;37160;offre
+non_posee_annulee;VM0FHRB3;6650.0;Annulée;4353;9582;offre
+non_posee_annulee;VMWFLLW4;4400.0;Annulée;23053;45891;offre
+non_posee_annulee;VNPQZFM8;1000.0;Annulée;16017;32929;offre
+non_posee_annulee;WE9QGMMQ;4700.0;Annulée;6379;12293;offre
+non_posee_annulee;WEJHPZXG;7000.0;Annulée;6603;12862;offre
+non_posee_annulee;WG029IGN;10000.0;Annulée;27052;53123;offre
+non_posee_annulee;WHUTMJQA;4000.0;Annulée;14085;28635;offre
+non_posee_annulee;WI335HTC;10000.0;Annulée;26070;50574;offre
+non_posee_annulee;WJ3KA32F;9000.0;Annulée;10730;22828;offre
+non_posee_annulee;WW0M4VP2;12100.0;Annulée;16169;33379;offre
+non_posee_annulee;X7QSQPHV;5000.0;Annulée;9905;20974;offre
+non_posee_annulee;XBR8QD6L;2500.0;Annulée;25735;49679;offre
+non_posee_annulee;XC761R8Z;9500.0;Annulée;4498;9769;offre
+non_posee_annulee;XDV1X78X;4000.0;Annulée;4799;10254;offre
+non_posee_annulee;XGN3F4KS;5000.0;Annulée;19473;40405;offre
+non_posee_annulee;XHITO8HE;8000.0;Annulée;27556;53803;offre
+non_posee_annulee;XLKSSBUR;15170.0;Annulée;6138;11753;offre
+non_posee_annulee;XLUTLMPS;8000.0;Annulée;27470;53692;offre
+non_posee_annulee;XNPLNDDU;3500.0;Annulée;161;449;offre
+non_posee_annulee;XP8L3DAO;7100.0;Annulée;24610;48330;offre
+non_posee_annulee;XV3JLFTQ;5000.0;Annulée;15103;31179;offre
+non_posee_annulee;Y38BFQA4;4000.0;Annulée;14812;30365;offre
+non_posee_annulee;Y51UMZHY;10000.0;Annulée;19277;40137;offre
+non_posee_annulee;Y8473BN4;9000.0;Annulée;7667;15557;offre
+non_posee_annulee;Y8Y9KAE1;15000.0;Annulée;15073;31072;offre
+non_posee_annulee;YMS20ZIS;12000.0;Annulée;27533;53766;offre
+non_posee_annulee;YO5H5C4N;10300.0;Annulée;27280;53504;offre
+non_posee_annulee;YPZ4G4CS;14000.0;Annulée;19463;40387;offre
+non_posee_annulee;YWI04ATU;10000.0;Annulée;9447;18982;offre
+non_posee_annulee;Z0J8K6WT;4000.0;Annulée;26852;52754;offre
+non_posee_annulee;Z4D3CCMF;6000.0;Annulée;22216;44567;offre
+non_posee_annulee;Z624CX4D;8000.0;Annulée;22209;44536;offre
+non_posee_annulee;ZF6WV9NI;6000.0;Annulée;26106;50618;offre
+non_posee_annulee;ZFRCK5QG;13000.0;Annulée;17291;36755;offre
+non_posee_annulee;ZGNIYS1Z;5000.0;Annulée;16344;34007;offre
+non_posee_annulee;ZM3XZ6DG;6600.0;Annulée;24401;48110;offre
+non_posee_annulee;ZV3QRSJG;4500.0;Annulée;17136;36320;offre
+non_posee_annulee;a223ed24;8000.0;Annulée;28996;59178;offre
+non_posee_annulee;a277ccfe;4500.0;Annulée;20227;41629;offre
+non_posee_annulee;a48db654;10000.0;Annulée;28975;61869;offre
+non_posee_annulee;a48e8a17;9500.0;Annulée;28905;62055;offre
+non_posee_annulee;a9bd905a;7500.0;Annulée;989;1953;offre
+non_posee_annulee;aa6f643b;9150.0;Annulée;28731;59493;offre
+non_posee_annulee;af8d7986;4000.0;Annulée;25710;49624;offre
+non_posee_annulee;b21b79f1;2500.0;Annulée;28907;62061;offre
+non_posee_annulee;bd490270;5000.0;Annulée;29025;62777;offre
+non_posee_annulee;c4ef091c;9000.0;Annulée;30645;41433;offre
+non_posee_annulee;d6cd8868;4000.0;Annulée;1000316;49624;offre
+non_posee_annulee;f90b0418;7000.0;Annulée;19049;39684;compromis
+non_posee_annulee;f9b55f79;4000.0;Annulée;14823;30417;offre
+non_posee_annulee;fa06e4e5;6000.0;Annulée;28931;62311;offre
+non_posee_annulee;fccedc67;8000.0;Annulée;28340;55086;offre

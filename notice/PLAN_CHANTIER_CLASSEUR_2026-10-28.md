@@ -3402,7 +3402,29 @@ C1 ✅  3.2bis LA CHARGE -- POSEE. Mesure en base le 16/11 : les 16 lignes sont
          de la confusion du 16/11 : on ne savait plus ce qui etait fait.
        ⏰ RESTE LE LOT 2 : 25 lignes de confiance « a valider »/« bonne »
          -> SA DECISION (je ne les poserais pas).
-C2 ⬜  3.3 LOT A : 303 commissions (1 886 204 EUR, dont 77 lignes 2026 pour
+C2 ✅ FAIT LE 17/11 -- **62 commissions posees**, 442 017 EUR, dans
+       honoraires_entree_app (CLASSE A). 10 controles justes.
+       ⭐⭐⭐ L AUDIT QU IL A DEMANDE A RENVERSE LE CHIFFRE : le classeur porte
+         **4 782** commissions pour **34 280 276 EUR**, et NOUS AVONS DEJA 4 363
+         (91 %) -- Hektor les calcule. « 303 » n etait pas peu : c etait LE TROU.
+         Remesure le 17/11 : **332**, pas 303.
+       ⛔⛔ ET LE VRAI BLOCAGE N ETAIT PAS TECHNIQUE, IL ETAIT COMPTABLE :
+         **270 des 332 trous sont des affaires ANNULEES** -- commission PREVUE,
+         JAMAIS PERCUE. Les poser dans « les honoraires VENDEUR saisis dans
+         l app » fausserait tout calcul de chiffre d affaires. ⬜ SA DECISION du
+         17/11 : « Les 62 seules » -> les 270 NE SONT PAS POSEES.
+       ⭐ ET LE BLOCAGE DU PLAN (« LA CASE EXISTE, MAIS LE ROBINET EST FERME »,
+         CHAMPS_APP_AFFAIRE vide) NE CONCERNE QUE LE CARNET, qui ecrit
+         honoraires_entree de CLASSE C. honoraires_entree_app est de CLASSE A,
+         protegee du push (l. 3108) ET creee en local (l. 620) : la section du
+         plan est ANTERIEURE a cette colonne, son avertissement etait PERIME.
+       ⚠ RESERVE : 42 des 62 sont des affaires EN COURS, que SA PROPRE REGLE
+         ecarterait (« on ne reprend que ce que Hektor ne rendra plus »). Le patch
+         les a separees en lot 3b ; il a tranche « Les deux lots ».
+       ⛔ ET UN CONTROLE VIDE ATTRAPE AVANT DE LUI MONTRER : ma repetition portait
+         « and false » sur les annulees -- elle rendait 0 PAR CONSTRUCTION. Un
+         controle vide est pire qu aucun controle. Corrige : il liste les 270 ids.
+       (ancien enonce) 3.3 LOT A : 303 commissions (1 886 204 EUR, dont 77 lignes 2026 pour
        539 070 EUR) + 10 dates de case vide. En CLASSE A. Les 24 « zeros deguises »
        (217 250 EUR) comptent comme des vides -- un zero n'est pas une saisie.
 C3 ✅✅ FAIT LE 16/11 -- 450 DATES POSEES, 12 controles justes. BALAYAGE DE SES LECTEURS FAIT (16/11) : en base, AUCUNE vue, AUCUNE fonction,
