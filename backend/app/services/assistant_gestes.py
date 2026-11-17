@@ -6,6 +6,7 @@ import unicodedata
 import uuid
 from datetime import date, datetime, timedelta, timezone
 from typing import Any, Callable
+from urllib.parse import quote
 from zoneinfo import ZoneInfo
 
 import requests
@@ -16,7 +17,8 @@ from . import assistant_fichiers as fichiers_service
 from .assistant_contexte import TOUS_LES_ROLES, ContexteAssistant, Fonction, LectureRefusee, Refus
 from .email_tracking import EmailTrackingService
 from .google_calendar_event_link_service import GoogleCalendarEventLinkService
-from .google_workspace_service import GoogleWorkspaceService
+from .google_workspace_service import (MAX_GMAIL_ATTACHMENT_BYTES, MAX_GMAIL_ATTACHMENT_COUNT,
+                                       MAX_GMAIL_ATTACHMENT_FILE_BYTES, GoogleWorkspaceService)
 from .rapprochement_email import RapprochementEmailService
 from .rapprochement_sender import RapprochementSender
 from .supabase_admin import SupabaseAdminService
@@ -1057,25 +1059,274 @@ def _nom_client(fiche: dict[str, Any]) -> str:
     return str(fiche.get("display_name") or fiche["hektor_contact_id"])
 
 
+# ── 18/11/2026 (note étape 4 §61-62) : les PIÈCES JOINTES de l'e-mail au client ──
+# Décision de Frédéric (17-18/11) : les mêmes pièces que la fenêtre e-mail de l'écran (ContactEmailModal, App.tsx:45391)
+#   -- documents au coffre et photos des biens LIÉS au contact -- et en plus les fichiers du trombone. Les pièces
+#   SENSIBLES (identité, état civil, RIB, financement, renseignements) sont ACCEPTÉES « comme la GED » : marquées sur la
+#   carte, et la marque reste dans le résultat de la carte (la trace). Les photos masquées aussi (l'écran les propose),
+#   marquées « masquée ».
+# ⛔ Chaque pièce est relue AU CLIC avec le jeton de la personne : bien lié au contact, document au coffre, photo encore
+#   chez Hektor, fichier du trombone dans SON dossier. Le modèle ne voit que des noms.
+# ⛔ Le client ne reçoit AUCUN lien : au clic, le serveur signe une adresse de lecture courte (15 min), la télécharge
+#   lui-même et l'attache au message (_download_gmail_attachments). Un document est signé avec le JETON de la personne
+#   (la règle de lecture du coffre juge, comme createConsoleDocumentSignedUrl, api.ts:13190) puis marqué lu
+#   (app_console_touch_document). Les plafonds sont ceux de l'envoi : 10 pièces, 8 Mo l'une, 18 Mo en tout.
+# Sensible : le type GED quand le document est classé (app_ged_classement : 40 documents au 17/11), sinon le NOM, avec
+#   les règles des types sensibles de la GED (gedTypeParNom.ts, fabriqué depuis ged1_mesure_nomenclature.py). Prises
+#   seules, elles marquent plus large que la GED (où la première règle gagne) : une marque de trop, jamais une de moins.
+MAX_BIENS_PIECES = 10
+DUREE_LIEN_PIECE = 900  # = createConsoleDocumentSignedUrl(document, 900) de l'écran
+MAX_PIECES_MONTREES = 60  # par bien et par genre, pour le modèle (la carte, elle, accepte toute pièce du bien)
+PIECE_SANS_PREFIXE = "Une pièce s'écrit doc:…, photo:… ou fichier:… (lire_pieces_jointes donne les numéros)."
+_NOMS_SENSIBLES = re.compile("|".join((
+    r"offres? de (pret|credit)|offre pret|\bodp\b|offpret",  # transaction.financement
+    r"accord (de |du )?(principe|pret|bancaire|financement)|\badp\b|accord (ca|ce|cic|lcl|bp|cm|bnp|sg|cmb)\b|"
+    r"attestation (de )?financement|plan de financement|etude de financement|demande de (pret|financement)|"
+    r"(depot|depose) (de |du )?(dossier )?(de )?pret|depot (ce|ca|cic)\b|preuve de depot|refus (de )?(pret|banque|ca|ce)\b|"
+    r"contrat de (pret|cre ?a?dit)|cre ?a?dit immo|simul|courtier|\bpret\b|financement",
+    r"renseignements?|\brens (acq|vend)|fiche acquereurs?|questionnaire vendeur",  # transaction.renseignements
+    r"acte (de |d )?(naissance|deces|mariage)|certificat (de )?deces",  # justif.etat_civil
+    r"livret (de )?famille|etat civil|habilitation familiale|contrat de mariage|divorce|\bpacs\b|jugement|ordonnance|"
+    r"tutelle|curatelle|deces",
+    r"\bcni\b|carte (d )?identit|carte id\b|\bci\b|\bpi\b|passeport|pieces? d identite|titre de sejour|identite|"  # justif.identite
+    r"permis de conduire|\bid (recto|verso)\b",
+    r"\brib\b|identite bancaire",  # justif.rib
+)))
+
+
+def _nom_normalise(nom: Any) -> str:
+    # = normaliserNomDocument (gedTypeParNom.ts) : sans accents, minuscules, sans extension, coupures de Hektor recollées
+    s = unicodedata.normalize("NFD", str(nom or ""))
+    s = re.sub(r"[̀-ͯ]", "", s)
+    s = re.sub(r"[^\x00-\x7f]", "", s).lower()
+    s = re.sub(r"\.(pdf|jpe?g|png|docx?|xlsx?|odt|ods|pptx?|tiff?|txt|heic|gif|bmp|rtf|msg|eml|zip)\b", " ", s)
+    s = re.sub(r"[^a-z0-9]+", " ", s)
+    s = re.sub(r"(?<=[a-z]) (?=(re|res|te|tes|e|es|ee|ees|reurs|reur|ne|nes|ment)\b)", "", s)
+    s = re.sub(r"\be (?=[a-z]{2,})", "e", s)
+    s = re.sub(r"\bpi ce", "piece", s)
+    s = re.sub(r"\bre sume", "resume", s)
+    return re.sub(r"\s+", " ", s).strip()
+
+
+def _sensible_par_nom(nom: Any) -> bool:
+    return bool(_NOMS_SENSIBLES.search(_nom_normalise(nom)))
+
+
+def _oui(valeur: Any) -> bool:
+    return valeur is True or str(valeur).strip().lower() in {"true", "t", "1", "oui"}
+
+
+def _biens_du_contact(ctx: ContexteAssistant, fiche: dict[str, Any]) -> list[dict[str, Any]]:
+    # = contactEmailAttachmentRelations (App.tsx:45255) : un bien par dossier, les biens actifs d'abord
+    lignes = _lire(ctx, "app_contact_relations_current", {
+        "hektor_contact_id": f"eq.{fiche['hektor_contact_id']}", "order": "last_seen_at.desc.nullslast", "limit": "200",
+        "select": "app_dossier_id,hektor_annonce_id,titre_bien,is_active_annonce"})
+    par_dossier: dict[int, dict[str, Any]] = {}
+    for ligne in lignes:
+        dossier = str(ligne.get("app_dossier_id") or "").strip()
+        if dossier.isdigit() and int(dossier) > 0:
+            par_dossier.setdefault(int(dossier), ligne)
+    biens = sorted(par_dossier.items(), key=lambda x: (0 if _oui(x[1].get("is_active_annonce")) else 1,
+                                                       str(x[1].get("titre_bien") or "")))
+    return [{**ligne, "app_dossier_id": dossier} for dossier, ligne in biens[:MAX_BIENS_PIECES]]
+
+
+def _url_photo(ctx: ContexteAssistant, photo: dict[str, Any]) -> str:
+    # = prefererNosPhotos (api.ts:9139) puis `url_hd || url_preview` de l'écran : notre grande, sinon la sienne
+    derives = photo.get("derives_json") if isinstance(photo.get("derives_json"), dict) else {}
+    base = f"{ctx.settings.supabase_url.rstrip('/')}/storage/v1/object/public/gti-photo/"
+    grande, apercu = (str((derives.get(t) or {}).get("chemin") or "") for t in ("w1600", "w400"))
+    return (base + grande if grande else str(photo.get("url_hd") or "")) or \
+        (base + apercu if apercu else str(photo.get("url_preview") or ""))
+
+
+def _nom_photo(photo: dict[str, Any], url: str) -> str:
+    # = contactEmailPhotoAttachmentFilename (App.tsx:45271) ; le type suit l'adresse jointe (G.15-d)
+    trouve = re.search(r"\.(jpe?g|png|webp|gif)(?:[?#]|$)", url, re.I)
+    extension = "." + trouve.group(1).lower().replace("jpeg", "jpg") if trouve else ".jpg"
+    base = str(photo.get("filename") or "").strip() or str(photo.get("legend") or "").strip() or \
+        f"photo-annonce-{photo.get('hektor_photo_id')}"
+    return base if re.search(r"\.[a-z0-9]{2,5}$", base, re.I) else base + extension
+
+
+def _type_photo(url: str) -> str:
+    adresse = url.lower()
+    for marque, mime in ((".png", "image/png"), (".webp", "image/webp"), (".gif", "image/gif")):
+        if marque in adresse:
+            return mime
+    return "image/jpeg"
+
+
+def _pieces_du_contact(ctx: ContexteAssistant, fiche: dict[str, Any]) -> tuple[list[dict[str, Any]], dict[str, dict[str, Any]]]:
+    """Les biens liés au contact et TOUTES leurs pièces joignables, lues avec le jeton de la personne."""
+    biens = _biens_du_contact(ctx, fiche)
+    if not biens:
+        return [], {}
+    dossiers = ",".join(str(b["app_dossier_id"]) for b in biens)
+    documents = _lire(ctx, "app_console_document", {
+        "app_dossier_id": f"in.({dossiers})", "storage_status": "eq.cloud_available", "storage_path": "not.is.null",
+        "select": "id,app_dossier_id,hektor_annonce_id,document_name,mime_type,file_size,storage_bucket,storage_path",
+        "order": "document_name.asc", "limit": "3000"})
+    photos = _lire(ctx, "app_console_photo", {
+        "app_dossier_id": f"in.({dossiers})", "present_in_hektor": "is.true", "hektor_photo_id": "not.is.null",
+        "select": "app_dossier_id,hektor_annonce_id,hektor_photo_id,filename,legend,url_hd,url_preview,visible,derives_json",
+        "order": "visible.desc,sort_order.asc,id.asc", "limit": "3000"})
+    annonces = ",".join(sorted({str(b.get("hektor_annonce_id")) for b in biens if str(b.get("hektor_annonce_id") or "").isdigit()}))
+    classes: dict[str, str] = {}
+    sensibles: set[str] = set()
+    if documents and annonces:
+        classes = {str(c.get("app_console_document_id")): str(c.get("type_code") or "") for c in _lire(
+            ctx, "app_ged_classement", {"hektor_annonce_id": f"in.({annonces})", "app_console_document_id": "not.is.null",
+                                        "select": "app_console_document_id,type_code", "limit": "3000"})}
+        sensibles = {str(t.get("code")) for t in _lire(ctx, "app_ged_type", {"sensible": "is.true", "select": "code"})}
+    pieces: dict[str, dict[str, Any]] = {}
+    for d in documents:
+        type_ged = classes.get(str(d["id"]))
+        pieces[f"doc:{d['id']}"] = {
+            "genre": "document", "nom": str(d.get("document_name") or "document"), "type": d.get("mime_type") or None,
+            "taille": int(d["file_size"]) if str(d.get("file_size") or "").isdigit() else None,
+            "app_dossier_id": int(d["app_dossier_id"]), "masquee": False,
+            "sensible": (type_ged in sensibles) if type_ged else _sensible_par_nom(d.get("document_name")),
+            "document_id": str(d["id"]), "bucket": d.get("storage_bucket") or fichiers_service.CONSOLE_DOCS_BUCKET,
+            "chemin": str(d["storage_path"])}
+    for ph in photos:
+        url = _url_photo(ctx, ph)
+        if not url:
+            continue
+        derives = ph.get("derives_json") if isinstance(ph.get("derives_json"), dict) else {}
+        grande = (derives.get("w1600") or {}) if isinstance(derives.get("w1600"), dict) else {}
+        octets = str(grande.get("octets") or "")  # connu seulement pour notre grande dérivée
+        pieces.setdefault(f"photo:{ph['hektor_photo_id']}", {
+            "genre": "photo", "nom": _nom_photo(ph, url), "type": _type_photo(url),
+            "taille": int(octets) if octets.isdigit() and grande.get("chemin") and url.endswith(str(grande["chemin"])) else None,
+            "app_dossier_id": int(ph["app_dossier_id"]), "masquee": ph.get("visible") is not True, "sensible": False,
+            "url": url})
+    return biens, pieces
+
+
+def lire_pieces_jointes(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[str, Any]:
+    fiche = _client(ctx, p.get("hektor_contact_id"))
+    biens, pieces = _pieces_du_contact(ctx, fiche)
+    if not biens:
+        return {"destinataire": _nom_client(fiche), "biens": [],
+                "a_dire": "Ce contact n'est lié à aucun bien : seuls les fichiers joints avec le trombone peuvent partir."}
+    sortie = []
+    for b in biens:
+        docs = [(k, v) for k, v in pieces.items() if v["genre"] == "document" and v["app_dossier_id"] == b["app_dossier_id"]]
+        phs = [(k, v) for k, v in pieces.items() if v["genre"] == "photo" and v["app_dossier_id"] == b["app_dossier_id"]]
+        sortie.append({
+            "annonce": b.get("hektor_annonce_id"), "titre": b.get("titre_bien") or "", "actif": _oui(b.get("is_active_annonce")),
+            "documents": [{"piece": k, "nom": _ADRESSE.sub("[adresse]", v["nom"]), "sensible": v["sensible"],
+                           "taille": fichiers_service._taille_lisible(v["taille"]) if v["taille"] else None}
+                          for k, v in docs[:MAX_PIECES_MONTREES]],
+            "photos": [{"piece": k, "nom": v["nom"], "masquee": v["masquee"]} for k, v in phs[:MAX_PIECES_MONTREES]],
+            "non_montres": max(0, len(docs) - MAX_PIECES_MONTREES) + max(0, len(phs) - MAX_PIECES_MONTREES)})
+    return {"destinataire": _nom_client(fiche), "biens": sortie,
+            "a_dire": "Pour les joindre, passe les numéros (doc:…, photo:…, et fichier:… pour le trombone) dans « pieces » "
+                      "de proposer_email_client : 10 au plus, 8 Mo l'une, 18 Mo en tout. Une pièce sensible part si la "
+                      "personne valide : la carte la marque, dis-le-lui."}
+
+
+def _pieces_choisies(ctx: ContexteAssistant, fiche: dict[str, Any], texte: Any) -> list[dict[str, Any]]:
+    numeros = list(dict.fromkeys(x.strip() for x in re.split(r"[|,;\s]+", str(texte or "")) if x.strip()))
+    if not numeros:
+        return []
+    if len(numeros) > MAX_GMAIL_ATTACHMENT_COUNT:
+        raise Refus(f"{MAX_GMAIL_ATTACHMENT_COUNT} pièces jointes au plus.")
+    if any(not re.match(r"^(doc|photo|fichier):.+$", n) for n in numeros):
+        raise Refus(PIECE_SANS_PREFIXE)
+    pieces: dict[str, dict[str, Any]] = {}
+    if any(not n.startswith("fichier:") for n in numeros):
+        pieces = _pieces_du_contact(ctx, fiche)[1]
+    choisies = []
+    for numero in numeros:
+        if numero.startswith("fichier:"):
+            try:
+                f = fichiers_service.decrire(ctx.settings, ctx.user_id, numero.split(":", 1)[1])  # relu au coffre, SON dossier
+            except fichiers_service.RefusFichier as exc:
+                raise Refus(str(exc)) from None
+            choisies.append({"piece": numero, "genre": "fichier", "nom": f["nom"], "type": f["type"], "taille": f["taille"],
+                             "masquee": False, "sensible": _sensible_par_nom(f["nom"]), "chemin": f["chemin"]})
+            continue
+        if numero not in pieces:
+            raise Refus(f"La pièce {numero} n'est pas parmi les documents et photos des biens liés à ce contact "
+                        "(lire_pieces_jointes donne les numéros).")
+        choisies.append({"piece": numero, **pieces[numero]})
+    for c in choisies:
+        if c["taille"] and c["taille"] > MAX_GMAIL_ATTACHMENT_FILE_BYTES:
+            raise Refus(f"« {c['nom']} » pèse plus de 8 Mo : trop lourd pour un e-mail.")
+    if sum(c["taille"] or 0 for c in choisies) > MAX_GMAIL_ATTACHMENT_BYTES:
+        raise Refus("Les pièces jointes dépassent 18 Mo en tout : retire-en.")
+    return choisies
+
+
+def _ligne_piece(c: dict[str, Any]) -> str:
+    mots = [{"document": "document", "photo": "photo", "fichier": "fichier joint"}[c["genre"]]]
+    if c["taille"]:
+        mots.append(fichiers_service._taille_lisible(c["taille"]))
+    if c["masquee"]:
+        mots.append("photo masquée")
+    if c["sensible"]:
+        mots.append("⚠ PIÈCE SENSIBLE")
+    return f"« {c['nom']} » ({', '.join(mots)})"
+
+
+def _signer_document(ctx: ContexteAssistant, c: dict[str, Any]) -> str:
+    # = createConsoleDocumentSignedUrl (api.ts:13190) : signé avec le JETON de la personne, puis marqué lu
+    r = requests.post(f"{ctx.settings.supabase_url}/storage/v1/object/sign/{c['bucket']}/{quote(c['chemin'], safe='/')}",
+                      headers=_entetes(ctx), json={"expiresIn": DUREE_LIEN_PIECE}, timeout=15)
+    signe = (r.json() or {}).get("signedURL") if r.ok else None
+    if not signe:
+        raise Refus(f"Le coffre n'a pas laissé lire « {c['nom']} » ({r.status_code}).")
+    _ecrire(ctx, "POST", "rpc/app_console_touch_document", {"document_id": c["document_id"]})
+    return f"{ctx.settings.supabase_url}/storage/v1{signe}" if signe.startswith("/") else signe
+
+
+def _piece_a_joindre(ctx: ContexteAssistant, c: dict[str, Any]) -> dict[str, Any]:
+    if c["genre"] == "document":
+        url = _signer_document(ctx, c)
+    elif c["genre"] == "fichier":
+        try:
+            url = fichiers_service.lien_lecture(ctx.settings, c["chemin"], DUREE_LIEN_PIECE)
+        except fichiers_service.RefusFichier as exc:
+            raise Refus(str(exc)) from None
+    else:
+        url = c["url"]
+    return {"url": url, "filename": c["nom"], "mimeType": c["type"] or None, "fileSize": c["taille"]}
+
+
 def preparer_email_client(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[str, dict[str, Any]]:
     _ma_boite(ctx)
     fiche = _client(ctx, p.get("hektor_contact_id"))
     objet, texte = _contenu_email(p)
+    pieces = _pieces_choisies(ctx, fiche, p.get("pieces"))
+    joint = ""
+    if pieces:
+        n = len(pieces)
+        joint = f"\nAvec {n} pièce{'s' if n > 1 else ''} jointe{'s' if n > 1 else ''} : " + ", ".join(map(_ligne_piece, pieces))
+        if any(c["sensible"] for c in pieces):
+            joint += "\n⚠ Une pièce SENSIBLE part chez le client : vérifie que c'est bien voulu."
     return f"Envoyer depuis TA boîte un e-mail à {_nom_client(fiche)} (à l'adresse de sa fiche) — objet « {objet} » — " \
-           f"texte :\n{texte}\n⚠ Il part VRAIMENT chez le client.", \
-        {"hektor_contact_id": str(fiche["hektor_contact_id"]), "objet": objet, "texte": texte}
+           f"texte :\n{texte}{joint}\n⚠ Il part VRAIMENT chez le client.", \
+        {"hektor_contact_id": str(fiche["hektor_contact_id"]), "objet": objet, "texte": texte,
+         **({"pieces": [c["piece"] for c in pieces]} if pieces else {})}
 
 
 def executer_email_client(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[str, Any]:
     email = _ma_boite(ctx)  # re-vérifié AU CLIC
     fiche = _client(ctx, p.get("hektor_contact_id"))  # adresse, archive et désinscription RELUES au clic
     objet, texte = _contenu_email(p)
+    pieces = _pieces_choisies(ctx, fiche, "|".join(p.get("pieces") or []))  # chaque pièce RELUE au clic
+    jointes = [_piece_a_joindre(ctx, c) for c in pieces] or None
     r = _google(lambda: GoogleWorkspaceService(ctx.settings).send_gmail_message(
         subject_email=email, to=[str(fiche["email"]).strip()], subject=objet, body_text=texte,
-        from_name=ctx.nom or "GTI Immobilier", attachments=None, dry_run=False, requested_by=ctx.user_id,
+        from_name=ctx.nom or "GTI Immobilier", attachments=jointes, dry_run=False, requested_by=ctx.user_id,
         requested_by_email=email, related_entity_type="contact", related_entity_id=str(fiche["hektor_contact_id"])),
         "Envoi de l'e-mail")
-    return {"envoye": True, "hektor_contact_id": str(fiche["hektor_contact_id"]), "message_id": r.get("messageId")}
+    # la trace, comme le journal de la GED : ce qui est parti, et ce qui était sensible ou masqué (jamais une adresse)
+    return {"envoye": True, "hektor_contact_id": str(fiche["hektor_contact_id"]), "message_id": r.get("messageId"),
+            **({"pieces_jointes": [{"piece": c["piece"], "nom": c["nom"], "sensible": c["sensible"], "masquee": c["masquee"]}
+                                   for c in pieces]} if pieces else {})}
 
 
 def _biens_frais(ctx: ContexteAssistant, recherche: dict[str, Any], annonces: Any) -> tuple[list[dict], list[dict]]:
@@ -3119,11 +3370,14 @@ GESTES: dict[str, Geste] = {g.nom: g for g in (
     # lot 3c : vers le client
     Geste("email_client",
           "Prépare un E-MAIL À UN CLIENT (un contact de la base), envoyé depuis la boîte de la personne, à l'adresse de sa "
-          "fiche (jamais une autre), sans pièce jointe. Refusé si le contact s'est désinscrit. Il part VRAIMENT.",
+          "fiche (jamais une autre), avec ou sans pièces jointes. Refusé si le contact s'est désinscrit. Il part VRAIMENT.",
           TOUS_LES_ROLES,
           _schema({"hektor_contact_id": {"type": "string", "description": "numéro du contact"},
                    "objet": {"type": "string"},
-                   "texte": {"type": "string", "description": "le texte COMPLET (3000 caractères au plus)"}}),
+                   "texte": {"type": "string", "description": "le texte COMPLET (3000 caractères au plus)"},
+                   "pieces": {"type": "string", "description": "pièces jointes séparées par | : doc:… et photo:… donnés "
+                                                                "par lire_pieces_jointes, fichier:… du trombone ; vide = "
+                                                                "aucune (10 au plus)"}}),
           preparer_email_client, executer_email_client),
     Geste("envoyer_rapprochement",
           "Prépare l'ENVOI RÉEL à un acquéreur de l'e-mail de rapprochement (le même que l'écran) avec des biens : seuls "
@@ -3458,6 +3712,13 @@ FONCTIONS_LECTURE_LOT3: tuple[Fonction, ...] = (
              _schema({"debut": {"type": "string", "description": "AAAA-MM-JJ ou AAAA-MM-JJTHH:MM ; vide = aujourd'hui"},
                       "fin": {"type": "string", "description": "AAAA-MM-JJ (jour compris) ; vide = 24 h après le début"}}),
              lire_mon_agenda),
+    Fonction("lire_pieces_jointes",
+             "Liste ce qui peut partir en PIÈCE JOINTE d'un e-mail à un client : les documents (au coffre) et les photos "
+             "des biens liés à ce contact, avec leur numéro (doc:…, photo:…), les pièces sensibles et les photos masquées "
+             "marquées. Rien n'est envoyé.",
+             TOUS_LES_ROLES,
+             _schema({"hektor_contact_id": {"type": "string", "description": "numéro du contact"}}),
+             lire_pieces_jointes),
     Fonction("apercu_rapprochement",
              "Montre le texte de l'e-mail de rapprochement qui partirait à un acquéreur pour des biens : un APERÇU, rien "
              "n'est envoyé.",

@@ -179,7 +179,7 @@ TOUTES = ["qui_suis_je", "decrire", "chercher", "compter", "fiches_biens", "note
           "proposer_ajouter_photo", "proposer_deposer_documents", "proposer_couverture_photo", "proposer_visibilite_photo",
           "proposer_deplacer_photo", "proposer_portail",  # activer un brouillon : retiré le 15/11
           "proposer_creer_contact", "proposer_ajouter_recherche", "proposer_modifier_recherche",  # lot 2c, 17/11
-          "lire_mon_agenda", "apercu_rapprochement", "lire_photos_bien", "lire_portails_bien", "rediger_annonce"]
+          "lire_mon_agenda", "lire_pieces_jointes", "apercu_rapprochement", "lire_photos_bien", "lire_portails_bien", "rediger_annonce"]
 voir([f.nom for f in cat.fonctions_du_role("commercial")] == TOUTES, "un négociateur a la fonction témoin et les 6 lectures de l'étape 2")
 voir(cat.fonctions_du_role("inconnu") == [], "un rôle inconnu n'a aucune fonction")
 voir(not any("utilisateur" in f.nom or "user" in f.nom for f in cat.CATALOGUE), "aucune gestion des utilisateurs (Q5 du 29/10)")

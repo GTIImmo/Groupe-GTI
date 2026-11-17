@@ -66,7 +66,13 @@ const GESTES: Record<string, { titre: string; fait: (r: Record<string, unknown>)
   deplacer_rdv: { titre: 'Rendez-vous', fait: () => 'Rendez-vous déplacé.' },
   supprimer_rdv: { titre: 'Rendez-vous', fait: () => 'Rendez-vous supprimé.' },
   email_interne: { titre: 'E-mail interne', fait: () => 'E-mail envoyé.' },
-  email_client: { titre: 'E-mail au client', fait: () => 'E-mail envoyé.' },
+  email_client: {
+    titre: 'E-mail au client',
+    fait: (r) => {
+      const n = Array.isArray(r.pieces_jointes) ? r.pieces_jointes.length : 0
+      return n ? `E-mail envoyé avec ${n} pièce${n > 1 ? 's' : ''} jointe${n > 1 ? 's' : ''}.` : 'E-mail envoyé.'
+    },
+  },
   envoyer_rapprochement: { titre: 'Rapprochement', fait: () => 'Sélection envoyée.' },
   rdv_client: { titre: 'Rendez-vous client', fait: () => 'Rendez-vous posé.' },
   modifier_bien: { titre: 'Bien', fait: () => 'Bien modifié.' },

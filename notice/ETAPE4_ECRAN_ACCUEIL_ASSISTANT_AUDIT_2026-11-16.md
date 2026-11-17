@@ -1656,3 +1656,55 @@ fenêtre e-mail de l'écran (bouton « depuis l'ordinateur ») est une étape à
   l'écran.
 - Un lien signé est une clé de lecture : il est fabriqué au clic, vit 15 min au plus, et ne part ni au modèle ni dans
   la carte.
+
+## 62. Pièces jointes de l'e-mail au client : CODÉES le 18/11 (pas poussées)
+
+**Ses décisions**
+- 17/11 : « Les accepter comme l'agent GED ». Les pièces sensibles PARTENT, comme la GED les accepte. Elles sont
+  marquées sur la carte, et la marque reste dans le résultat de la carte : c'est la trace, comme le journal de l'agent
+  GED (`proposal_json.sensible`).
+- 18/11 : il a demandé « on envoie des liens ? ». La réponse est NON : le client reçoit de vrais fichiers. Le lien
+  signé ne sert qu'au serveur pour télécharger le fichier avant de l'attacher (`_download_gmail_attachments`). Puis
+  il a dit « Vas-y ».
+
+**Ce qui est codé** (`assistant_gestes.py`, section « les PIÈCES JOINTES de l'e-mail au client »)
+- La lecture `lire_pieces_jointes(contact)` est ouverte à tous les rôles. Elle reprend la logique de l'écran
+  (`contactEmailAttachmentRelations`, `loadConsoleDocuments`, `loadConsolePhotos`, `prefererNosPhotos`) :
+  - les biens LIÉS au contact, un par dossier, les actifs d'abord, 10 au plus ;
+  - pour chaque bien, ses documents au coffre et ses photos encore chez Hektor, numérotés `doc:…` ou `photo:…` ;
+  - les sensibles et les masquées sont marquées, et une adresse e-mail dans un nom est masquée avant d'aller au modèle.
+- La carte `email_client` reçoit un nouveau paramètre `pieces` : `doc:…`, `photo:…`, ou `fichier:…` pour le
+  trombone. Vide, rien ne change, et les cartes d'avant partent comme avant. À la carte ET au clic, le serveur vérifie :
+  - que chaque pièce appartient à un bien lié à CE contact, relue avec le jeton ;
+  - que le fichier du trombone est dans SON dossier ;
+  - les limites de l'envoi : 10 pièces, 8 Mo l'une, 18 Mo en tout.
+- Ce que montre la carte : chaque pièce avec son nom, sa taille, « photo masquée » ou « ⚠ PIÈCE SENSIBLE », plus un
+  avertissement s'il y a une pièce sensible.
+- Au clic seulement :
+  - un document est signé avec le JETON de la personne, pour 15 min ; c'est la règle de lecture du coffre qui juge,
+    comme dans `createConsoleDocumentSignedUrl`. Il est ensuite marqué lu (`app_console_touch_document`) ;
+  - pour une photo : notre grande dérivée, sinon l'adresse Hektor, comme l'écran ;
+  - pour un fichier du trombone : `lien_lecture`, 15 min.
+  Un refus du coffre fait échouer toute la carte : jamais un e-mail à moitié joint.
+- Le résultat garde la trace : `pieces_jointes` avec le numéro, le nom, sensible et masquée, sans lien ni adresse.
+  Le journal Gmail garde aussi les noms des fichiers (`attachment_filenames`).
+- Comment une pièce devient « sensible » :
+  - par le type GED quand le document est classé (`app_ged_classement` et `app_ged_type.sensible`) ;
+  - sinon par le NOM, avec les règles des types sensibles de `gedTypeParNom.ts`, normalisation comprise. Prises
+    seules, ces règles marquent plus large que la GED (une marque de trop, jamais une de moins).
+  - Mesure en lecture le 18/11 : 2 034 des 25 394 documents au coffre seraient marqués par leur nom, surtout des CNI,
+    des passeports et des questionnaires vendeur.
+- La consigne du modèle (`assistant_service.py`) dit de passer par `lire_pieces_jointes`, que le client reçoit de
+  vrais fichiers et jamais un lien, et qu'il faut dire à la personne qu'une pièce sensible part.
+- À l'écran, la fin de la carte dit « E-mail envoyé avec N pièces jointes ».
+
+**Contrôles** : 361 verts dans les essais des gestes (21 nouveaux, section 20), dont les témoins :
+- document retiré, ou contact délié du bien, entre la carte et le clic : refusé, rien envoyé ;
+- coffre qui refuse de signer : refusé ;
+- carte sans pièce : identique à avant.
+Les autres essais sont verts : IA 62, fichiers 17, lecteur 73, GED classer 36, GED lire 88, et le build passe.
+⚠ NON ÉPROUVÉ EN RÉEL : un vrai envoi est un e-mail qui part chez un client, à faire seulement à sa demande et sur un
+contact d'essai de son choix.
+
+**Ce que ça pourrait casser ailleurs** : rien d'existant. La route Gmail n'est pas modifiée, la fenêtre e-mail de
+l'écran n'est pas touchée, et la carte sans pièce garde exactement le même comportement.

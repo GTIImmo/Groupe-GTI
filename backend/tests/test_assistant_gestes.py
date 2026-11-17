@@ -2021,4 +2021,166 @@ voir(refuse(lambda: ges.executer_deposer_documents(nouveau_ctx(), p_dd), "joins-
 etat18.pop("disparus")
 etat14.pop("cran")
 
+print("20) LES PIÈCES JOINTES de l'e-mail au client (18/11, §61-62) : les pièces des biens liés, le trombone, les sensibles marquées")
+ges.SupabaseAdminService, ges.GoogleWorkspaceService, ges.EmailTrackingService = FauxAdmin, FauxGoogle, FauxSuivi
+DOC_CNI, DOC_PRET, DOC_DPE, DOC_MAL = "d1" * 18, "d2" * 18, "d3" * 18, "d4" * 18
+etat20: dict = {}
+appels20: list = []
+
+
+def reset20(**kw):
+    etat20.clear()
+    etat20.update({
+        "relations": [{"app_dossier_id": 88, "hektor_annonce_id": 50001, "titre_bien": "Ancien bien vendu", "is_active_annonce": False},
+                      {"app_dossier_id": 77, "hektor_annonce_id": 63289, "titre_bien": "Maison La Chaise-Dieu", "is_active_annonce": True},
+                      {"app_dossier_id": 77, "hektor_annonce_id": 63289, "titre_bien": "Maison La Chaise-Dieu", "is_active_annonce": True}],
+        "documents": [
+            {"id": DOC_CNI, "app_dossier_id": 77, "hektor_annonce_id": "63289", "document_name": "scan 12.pdf",
+             "mime_type": "application/pdf", "file_size": 800000, "storage_bucket": "hektor-console-documents", "storage_path": "77/scan12.pdf"},
+            {"id": DOC_PRET, "app_dossier_id": 77, "hektor_annonce_id": "63289", "document_name": "Offre de prêt durand@exemple.fr.pdf",
+             "mime_type": "application/pdf", "file_size": 1200000, "storage_bucket": "hektor-console-documents", "storage_path": "77/pret.pdf"},
+            {"id": DOC_DPE, "app_dossier_id": 77, "hektor_annonce_id": "63289", "document_name": "identite du bien - DPE.pdf",
+             "mime_type": "application/pdf", "file_size": 300000, "storage_bucket": "hektor-console-documents", "storage_path": "77/dpe.pdf"},
+            {"id": DOC_MAL, "app_dossier_id": 88, "hektor_annonce_id": "50001", "document_name": "Plan.pdf",
+             "mime_type": "application/pdf", "file_size": 9000000, "storage_bucket": "hektor-console-documents", "storage_path": "88/plan.pdf"}],
+        "photos": [
+            {"app_dossier_id": 77, "hektor_annonce_id": "63289", "hektor_photo_id": "5001", "filename": "facade", "legend": "",
+             "url_hd": "https://hektor.test/facade.jpg", "url_preview": "", "visible": True,
+             "derives_json": {"w1600": {"chemin": "63289/x/w1600.jpg", "octets": 400000}}},
+            {"app_dossier_id": 77, "hektor_annonce_id": "63289", "hektor_photo_id": "5002", "filename": "cave.png", "legend": "",
+             "url_hd": "https://hektor.test/cave.png", "url_preview": "", "visible": False, "derives_json": None}],
+        "classement": [{"app_console_document_id": DOC_CNI, "type_code": "justif.identite"},
+                       {"app_console_document_id": DOC_DPE, "type_code": "diag.dpe"}],
+        "types_sensibles": [{"code": "justif.identite"}, {"code": "justif.rib"}, {"code": "transaction.financement"}],
+        "signe_refus": set()})
+    etat20.update(kw)
+
+
+def faux20(methode, url, headers=None, params=None, json=None, **_):
+    appels20.append({"methode": methode, "url": url, "entetes": dict(headers or {}), "params": dict(params or {}), "corps": json})
+    if "/storage/v1/object/sign/" in url:
+        chemin = url.split("/storage/v1/object/sign/hektor-console-documents/", 1)[1]
+        if chemin in etat20["signe_refus"]:
+            return Reponse({"message": "Object not found"}, status=400)
+        return Reponse({"signedURL": f"/object/sign/hektor-console-documents/{chemin}?token=t15"})
+    chemin = url.split("/rest/v1/", 1)[1]
+    p_ = params or {}
+    if methode == "GET" and chemin == "app_contacts_current":
+        return Reponse(etat["contact"])
+    if methode == "GET" and chemin == "app_contact_relations_current":
+        return Reponse(etat20["relations"])
+    if methode == "GET" and chemin in {"app_console_document", "app_console_photo"}:
+        voulus = p_["app_dossier_id"][4:-1].split(",")
+        lignes = etat20["documents" if chemin == "app_console_document" else "photos"]
+        return Reponse([x for x in lignes if str(x["app_dossier_id"]) in voulus])
+    if methode == "GET" and chemin == "app_ged_classement":
+        return Reponse(etat20["classement"])
+    if methode == "GET" and chemin == "app_ged_type":
+        return Reponse(etat20["types_sensibles"])
+    if methode == "POST" and chemin == "rpc/app_console_touch_document":
+        return Reponse(None, status=204)
+    return Reponse([], status=404)
+
+
+def faux_lien20(settings, chemin, secondes=600):
+    appels20.append({"methode": "LIEN", "url": chemin, "secondes": secondes})
+    return f"https://coffre.test/signe/{chemin}?t={secondes}"
+
+
+requests.get = lambda url, **kw: faux20("GET", url, **kw)
+requests.post = lambda url, **kw: faux20("POST", url, **kw)
+requests.request = lambda methode, url, **kw: faux20(methode, url, **kw)
+ges.fichiers_service.lien_lecture = faux_lien20
+EM = {"hektor_contact_id": "606202", "objet": "Les documents", "texte": "Bonjour,\nvoici les pièces.\nPaul"}
+
+voir(all(ges._sensible_par_nom(n) for n in ("CNI recto.jpg", "Carte d'identité M. Durand.pdf", "Livret de famille.pdf", "RIB.pdf",
+                                            "Offre de prêt CA.pdf", "fiche renseignements acquéreur.pdf", "Passeport.jpg"))
+     and not any(ges._sensible_par_nom(n) for n in ("DPE.pdf", "Plan maison.pdf", "Compromis signé.pdf", "Mandat de vente.pdf",
+                                                    "Taxe foncière 2025.pdf", "facade.jpg")),
+     "le NOM dit sensible pour identité, état civil, RIB, financement, renseignements ; pas pour un DPE, un plan, un compromis")
+voir("lire_pieces_jointes" in [f.nom for f in cat.fonctions_du_role("commercial")]
+     and "pieces" in ges.GESTES["email_client"].parametres["properties"],
+     "la lecture des pièces est ouverte à tous les rôles ; la carte e-mail au client prend des pièces")
+reset()
+reset20()
+appels20.clear()
+lu = ges.lire_pieces_jointes(nouveau_ctx(), {"hektor_contact_id": "606202"})
+docs = {d["piece"]: d for d in lu["biens"][0]["documents"]}
+voir([b["annonce"] for b in lu["biens"]] == [63289, 50001] and len(lu["biens"]) == 2,
+     "les biens LIÉS au contact, un par dossier, les biens actifs d'abord (comme la fenêtre de l'écran)")
+voir(docs[f"doc:{DOC_CNI}"]["sensible"] and docs[f"doc:{DOC_PRET}"]["sensible"] and not docs[f"doc:{DOC_DPE}"]["sensible"],
+     "⭐ sensible : le TYPE GED quand il existe (un « scan 12 » classé identité est sensible, un DPE nommé « identité… » ne l'est "
+     "pas), sinon le NOM (une offre de prêt)")
+voir([p["masquee"] for p in lu["biens"][0]["photos"]] == [False, True] and CLIENT not in json.dumps(lu),
+     "la photo masquée est marquée ; ⛔ l'adresse e-mail d'un client dans un nom de document ne part pas au modèle")
+voir(not [a for a in appels20 if a["methode"] != "GET"], "LIRE n'écrit rien et ne signe rien")
+
+appels20.clear()
+resume20, p20 = ges.preparer_email_client(nouveau_ctx(), {**EM, "pieces": f"doc:{DOC_CNI} | photo:5001 | photo:5002 | fichier:{'c' * 32}"})
+voir("4 pièces jointes" in resume20 and "« scan 12.pdf » (document, 781 Ko, ⚠ PIÈCE SENSIBLE)" in resume20
+     and "« facade.jpg » (photo, 391 Ko)" in resume20 and "« cave.png » (photo, photo masquée)" in resume20
+     and "« plan.pdf » (fichier joint, 49 Ko)" in resume20 and "Une pièce SENSIBLE part chez le client" in resume20,
+     "la carte NOMME chaque pièce, avec sa taille, la photo masquée et la pièce SENSIBLE marquées, et un avertissement")
+voir(p20["pieces"] == [f"doc:{DOC_CNI}", "photo:5001", "photo:5002", f"fichier:{'c' * 32}"] and CLIENT not in resume20 + json.dumps(p20)
+     and not [a for a in appels20 if a["methode"] != "GET"],
+     "la carte garde les numéros ; PROPOSER ne signe rien, n'écrit rien, et l'adresse du client n'y est pas")
+_, p_sans = ges.preparer_email_client(nouveau_ctx(), {**EM, "pieces": ""})
+voir("pieces" not in p_sans and "jointe" not in ges.preparer_email_client(nouveau_ctx(), {**EM, "pieces": ""})[0],
+     "sans pièce : la carte est celle d'avant, à l'identique")
+voir(refuse(lambda: ges.preparer_email_client(nouveau_ctx(), {**EM, "pieces": "doc:inconnu"}), "biens liés à ce contact")
+     and refuse(lambda: ges.preparer_email_client(nouveau_ctx(), {**EM, "pieces": "photo:9999"}), "biens liés à ce contact"),
+     "⛔ une pièce qui n'est pas sur un bien lié à CE contact : refusée")
+voir(refuse(lambda: ges.preparer_email_client(nouveau_ctx(), {**EM, "pieces": DOC_CNI}), "doc:…")
+     and refuse(lambda: ges.preparer_email_client(nouveau_ctx(), {**EM, "pieces": f"fichier:{'e' * 32}"}), "joins-le à nouveau"),
+     "⛔ un numéro sans genre, ou un fichier qui n'est pas dans SON trombone : refusés")
+voir(refuse(lambda: ges.preparer_email_client(nouveau_ctx(), {**EM, "pieces": "|".join(f"photo:{i}" for i in range(11))}), "10 pièces"),
+     "⛔ plus de 10 pièces : refusé (le plafond de l'envoi)")
+voir(refuse(lambda: ges.preparer_email_client(nouveau_ctx(), {**EM, "pieces": f"doc:{DOC_MAL}"}), "plus de 8 Mo"),
+     "⛔ une pièce de plus de 8 Mo : refusée (le plafond de l'envoi)")
+reset20(documents=[{**d, "file_size": 7000000} for d in etat20["documents"]])
+voir(refuse(lambda: ges.preparer_email_client(nouveau_ctx(), {**EM, "pieces": f"doc:{DOC_CNI}|doc:{DOC_PRET}|doc:{DOC_DPE}"}), "18 Mo"),
+     "⛔ plus de 18 Mo en tout : refusé")
+
+reset20()
+google.clear()
+appels20.clear()
+r20 = ges.executer_email_client(nouveau_ctx(), p20)
+envoi = next(g for g in google if g["quoi"] == "envoyer")
+pj = envoi["attachments"]
+signe = [a for a in appels20 if "/storage/v1/object/sign/" in a["url"]]
+voir(envoi["to"] == [CLIENT] and [a["filename"] for a in pj] == ["scan 12.pdf", "facade.jpg", "cave.png", "plan.pdf"]
+     and pj[0]["url"] == "https://x.supabase.co/storage/v1/object/sign/hektor-console-documents/77/scan12.pdf?token=t15"
+     and pj[1]["url"] == "https://x.supabase.co/storage/v1/object/public/gti-photo/63289/x/w1600.jpg"
+     and pj[2]["url"] == "https://hektor.test/cave.png" and pj[2]["mimeType"] == "image/png"
+     and pj[3]["url"] == f"https://coffre.test/signe/{JOINTS['c' * 32]['chemin']}?t=900",
+     "au CLIC : de VRAIS fichiers joints (le serveur les télécharge) -- le document signé, notre grande photo, la masquée, le trombone")
+voir(len(signe) == 1 and signe[0]["entetes"]["Authorization"] == "Bearer " + JETON and signe[0]["corps"] == {"expiresIn": 900}
+     and [a["corps"] for a in appels20 if a["url"].endswith("rpc/app_console_touch_document")] == [{"document_id": DOC_CNI}],
+     "⛔ le document est signé avec le JETON de la personne (la règle du coffre juge), 15 min, puis marqué lu -- comme l'écran")
+voir(r20["pieces_jointes"] == [{"piece": f"doc:{DOC_CNI}", "nom": "scan 12.pdf", "sensible": True, "masquee": False},
+                               {"piece": "photo:5001", "nom": "facade.jpg", "sensible": False, "masquee": False},
+                               {"piece": "photo:5002", "nom": "cave.png", "sensible": False, "masquee": True},
+                               {"piece": f"fichier:{'c' * 32}", "nom": "plan.pdf", "sensible": False, "masquee": False}]
+     and CLIENT not in json.dumps(r20) and not any("url" in x for x in r20["pieces_jointes"]),
+     "⭐ LA TRACE (comme le journal de la GED) : ce qui est parti, sensible ou masqué -- sans adresse ni lien")
+reset20(documents=[d for d in etat20["documents"] if d["id"] != DOC_CNI])
+google.clear()
+voir(refuse(lambda: ges.executer_email_client(nouveau_ctx(), p20), "biens liés à ce contact") and not google[1:],
+     "TÉMOIN : un document retiré entre la carte et le clic -> refusé AU CLIC, rien envoyé")
+reset20(relations=[])
+google.clear()
+voir(refuse(lambda: ges.executer_email_client(nouveau_ctx(), p20), "biens liés à ce contact")
+     and not [g for g in google if g["quoi"] == "envoyer"],
+     "TÉMOIN : le contact délié du bien entre la carte et le clic -> refusé, rien envoyé")
+reset20(signe_refus={"77/scan12.pdf"})
+google.clear()
+voir(refuse(lambda: ges.executer_email_client(nouveau_ctx(), p20), "pas laissé lire")
+     and not [g for g in google if g["quoi"] == "envoyer"],
+     "⛔ le coffre refuse de signer pour CETTE personne -> refusé, jamais un e-mail à moitié joint")
+reset20()
+google.clear()
+ges.executer_email_client(nouveau_ctx(), p_sans)
+voir(next(g for g in google if g["quoi"] == "envoyer")["attachments"] is None,
+     "TÉMOIN : une carte sans pièce (et les cartes d'avant) part sans pièce jointe, comme avant")
+
 print(f"\n{ok} contrôles verts")
