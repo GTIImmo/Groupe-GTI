@@ -1222,3 +1222,14 @@ résumé reporté. Une carte proposée sous l'ANCIENNE forme (un portail, publie
 **Contrôles** : `test_assistant_gestes` 318 verts (6 nouveaux ; les anciens tests « un portail » passent toujours) ;
 témoin inverse : la vérification « déjà diffusable » au clic sabotée -> ROUGE, remise -> 318 ; `test_assistant_ia` 62 ;
 `test_assistant_lecteur` 73 ; `npm run build` vert. Toujours 39 gestes (élargi, pas ajouté).
+
+## 46. Épreuve de la carte DIFFUSION, SANS VALIDER (17/11, 10:25, sur « Oui, sans valider ») — PROUVÉE
+
+En production (Render `b5b8fec`), Chrome de Frédéric (admin), bien de TEST 62963 « TEST C15 entrepot depuis l app - a
+supprimer » (diffusable, aucun portail ; 63330 ne l'est pas). Demande : publier sur Paper et Bien'ici, retirer de
+Leboncoin. Carte : « PUBLIER sur Paper, Bien'ici — en ligne : aucun → Paper, Bien'ici ; les autres portails ne bougent
+pas (déjà dans l'état voulu : Leboncoin) » — Leboncoin, déjà hors ligne, écarté et DIT. REFUSÉE à 10:25.
+**Base** : la ligne `portail` en `refusee`, `execute_le` vide, paramètres `{paper, bienicidirect}` ; 62963 inchangé
+(diffusable 1, aucun portail, `refreshed_at` au 15/11) ; sa ligne de choix inchangée (1, du 15/11 19:50 — la carte
+l'aurait effacée et réécrite) ; 0 choix de portail écrit dans la demi-heure (témoin : 7 sur 7 jours, la même lecture).
+**Pas encore prouvé** : un clic RÉEL (Hektor publie, le résumé est reporté), sur un bien qu'il choisit.
