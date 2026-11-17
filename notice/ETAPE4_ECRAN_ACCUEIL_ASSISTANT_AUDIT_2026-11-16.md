@@ -1091,3 +1091,31 @@ TESTUT, TESTON) ont été écartées.
 - ⚠ Défaut de forme trouvé : les textes des cartes accordent au masculin (« Mme … est aussi rattaché », « il disparaît »).
 - Non prouvé : le chemin du NÉGOCIATEUR (la consigne par rôle, le refus de la carte prix) — il faut le témoin commercial.
 - ⚠ Remarqué, hors sujet : Mme CLAUDE TESTCLAUDE (fiche de test) est MANDANT de l'annonce RÉELLE 24113.
+
+## 40. L'inventaire des gestes REMIS À JOUR après §36-39 (17/11, sa demande : « les gestes avec carte et ceux sans »)
+
+Base : l'inventaire du §34 (lu dans le code), plus les cartes posées depuis. 78 lignes au lieu de 76 : le prix pour la
+direction est une ligne neuve, « Clos » et « le couple » sont séparés de leur ligne, et la ligne en double « créer une
+offre / un compromis / une vente » est fusionnée. [DIR] = direction seulement.
+
+**AVEC CARTE (32)** : demander validation / baisse / annulation (négociateur) ; un portail ; les champs du bien ; le prix
+[DIR] ; rédiger titre et texte ; Estimation -> Actif [DIR] ; archiver [DIR] ; désarchiver ; réaffecter le négociateur
+[DIR] ; photos (couverture, masquer / afficher, déplacer) ; numéro de mandat ; clôturer par la demande d'annulation ;
+relancer un signataire ; annuler une signature Youtrust ; rattacher un mandant ; retirer un mandant ; accepter / refuser
+une offre, annuler un compromis [DIR] ; note de transaction [DIR] ; créer un contact ; téléphone / e-mail / commentaire ;
+adresse d'un contact ; archiver / réactiver un contact ; ajouter un conjoint existant ; créer / modifier / archiver une
+recherche ; bien proposé, écarter / rétablir ; e-mail de rapprochement ; relances ; rendez-vous dans son agenda ;
+rendez-vous avec le client ; e-mail interne ; e-mail au client ; notifications lues.
+**PAR LA FENÊTRE, lot 6 (8)** : traiter une demande [DIR] ; créer une annonce ou une estimation ; offre / compromis /
+vente [DIR] ; saisir l'estimation ; avis de valeur PDF ; document de mandat / avenant ; envoyer en signature ; bon de visite.
+**FERMÉ PAR DÉCISION (7)** : corriger une demande renvoyée ; activer un brouillon ; supprimer une photo ; modifier ou
+prolonger un mandat ; « Clos » par la modale de statut (les deux portes) ; espace client ; gérer les utilisateurs.
+(« Actif -> Estimation » n'existe pas, ni à l'écran ni ici.)
+**SANS CARTE, À DÉCIDER (31)** : Pilotage — cocher Validation [DIR], cocher Diffusable [DIR] ; plusieurs portails d'un
+coup ; supprimer une annonce [DIR] ; créer un mandant, modifier son e-mail / portable (débloqués : le contrôle existe) ;
+champs d'une transaction, conditions suspensives, commission, répartition [DIR] ; supprimer un compromis ou une vente
+[DIR] ; trancher un écart [ADMIN] ; créer le conjoint, modifier ou défaire un couple ; supprimer un contact [DIR] ;
+supprimer une recherche (défaut connu : l'index vise la 1re) ; corriger une date de clôture [DIR] ; charge des
+honoraires ; signé à la main ; ImmoSign ; plan cadastral ; supprimer un document ; e-mail d'estimation ; agenda d'un
+collègue [DIR] ; partenaires ; alertes de Santé [ADMIN] ; GED (chantier de sa session) ; Matterport (API hors service) ;
+et ceux qui demandent un FICHIER : scan d'une fiche papier, ajouter une photo, déposer un document, pièces jointes.
