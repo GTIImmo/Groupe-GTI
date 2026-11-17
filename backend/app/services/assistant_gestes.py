@@ -1280,6 +1280,50 @@ def executer_modifier_bien(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[st
     return {"app_dossier_id": bien["app_dossier_id"], "champs": sorted(champs), "reponse": r}
 
 
+# 17/11 (note étape 4 §37-38) : CHANGER LE PRIX, la DIRECTION seulement. La base le refuse au négociateur
+# (`prix_sur_demande`, décision B1 du 12/10 : il passe par la demande de baisse) et l'accepte de la direction, par la même
+# fonction que l'écran (champ `price` d'app_edit_annonce_optimistic). Double verrou : la carte n'est montrée qu'à la
+# direction, la base refuse au clic. ⚠ Accepter une demande de baisse NE change PAS le prix (l'écran vérifie que Hektor
+# porte déjà le prix demandé) : la carte signale une baisse demandée en cours, à accepter ensuite dans Suivi.
+ECART_PRIX_A_SIGNALER = 0.3
+
+
+def _prix_voulu(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[dict[str, Any], int, dict[str, Any] | None]:
+    bien = _bien_vivant(ctx, p.get("hektor_annonce_id"))
+    brut = re.sub(r"\s+", "", str(p.get("prix") or "")).replace("€", "")
+    if not re.fullmatch(r"\d+([.,]\d+)?", brut) or float(brut.replace(",", ".")) < 1:
+        raise Refus("Le prix est un montant en euros (ex. 185000).")
+    prix = round(float(brut.replace(",", ".")))
+    if isinstance(bien.get("prix"), (int, float)) and round(bien["prix"]) == prix:
+        raise Refus(f"L'annonce {bien['hektor_annonce_id']} est déjà à {_euros(prix)}.")
+    demande = (_lire(ctx, "app_diffusion_requests_current", {
+        "app_dossier_id": f"eq.{bien['app_dossier_id']}", "request_type": "eq.demande_baisse_prix",
+        "request_status": f"in.({','.join(EN_COURS)})", "select": "id", "limit": "1"}) or [None])[0]
+    return bien, prix, demande
+
+
+def preparer_changer_prix(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    bien, prix, demande = _prix_voulu(ctx, p)
+    ancien = bien.get("prix") if isinstance(bien.get("prix"), (int, float)) and bien["prix"] > 0 else None
+    resume = (f"Changer le prix de l'annonce {bien['hektor_annonce_id']} « {bien.get('titre_bien') or ''} » : "
+              + (f"{_euros(ancien)} → " if ancien else "") + f"{_euros(prix)}")
+    if ancien and abs(prix - ancien) / ancien > ECART_PRIX_A_SIGNALER:
+        resume += f" (⚠ écart de {round(abs(prix - ancien) / ancien * 100)} % : vérifie le montant)"
+    resume += " — chez nous tout de suite, recopié chez Hektor environ 10 minutes après ; les rapprochements se recalculent"
+    if demande:
+        resume += ". Une demande de baisse est en cours sur ce bien : l'accepter ensuite dans Suivi (ce geste ne la traite pas)"
+    return resume, {"hektor_annonce_id": int(bien["hektor_annonce_id"]), "prix": str(prix)}
+
+
+def executer_changer_prix(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[str, Any]:
+    if ctx.role not in DIRECTION:  # 3e verrou, après la route (geste.roles) et avant la base (prix_sur_demande)
+        raise Refus("le prix se change par la direction ; un négociateur passe par la demande de baisse")
+    bien, prix, _demande = _prix_voulu(ctx, p)  # re-vérifié AU CLIC (vendu, clos, droits, déjà à ce prix)
+    r = _ecrire(ctx, "POST", "rpc/app_edit_annonce_optimistic",
+                {"target_dossier_id": bien["app_dossier_id"], "edit_fields": {"price": str(prix)}, "debounce_seconds": 600})
+    return {"app_dossier_id": bien["app_dossier_id"], "champs": ["price"], "reponse": r}
+
+
 # Le rédacteur maison (le même service que le bouton « Générer avec l'IA » de la création) : il PROPOSE, n'écrit rien.
 def _faits_du_bien(ctx: ContexteAssistant, bien: dict[str, Any]) -> dict[str, Any]:
     lignes = _lire(ctx, "app_dossier_detail_current", {"app_dossier_id": f"eq.{bien['app_dossier_id']}", "limit": "1",
@@ -2653,7 +2697,8 @@ GESTES: dict[str, Geste] = {g.nom: g for g in (
     Geste("demande_direction",
           "Prépare une DEMANDE À LA DIRECTION sur un bien : diffusion (validation et mise en ligne d'un mandat pas encore "
           "validé), baisse_prix (nouveau prix, mandat validé), annulation_mandat (mandat validé). Mêmes conditions que "
-          "l'écran ; une seule demande en cours par type.",
+          "l'écran ; une seule demande en cours par type. C'est le chemin du NÉGOCIATEUR : la direction ne s'adresse pas "
+          "une demande, elle fait le geste (le prix : changer_prix).",
           TOUS_LES_ROLES,
           _schema({"type": {"type": "string", "enum": list(TYPES_DEMANDE)},
                    "hektor_annonce_id": {"type": "integer", "description": "numéro de l'annonce"},
@@ -2809,8 +2854,9 @@ GESTES: dict[str, Geste] = {g.nom: g for g in (
     # lot 4a
     Geste("modifier_bien",
           "Prépare la modification de champs d'une annonce VIVANTE (vide = inchangé) : titre, texte, surfaces, pièces, "
-          "chambres, niveaux, salles d'eau, WC, garages, parkings, terrasses, année, DPE / GES, copropriété. JAMAIS le prix "
-          "(demande_direction baisse_prix), ni l'adresse, ni les honoraires, ni le mandat. Écrit chez nous tout de suite, "
+          "chambres, niveaux, salles d'eau, WC, garages, parkings, terrasses, année, DPE / GES, copropriété. Pas le prix "
+          "(direction : changer_prix ; négociateur : demande_direction baisse_prix), ni l'adresse, ni les honoraires, "
+          "ni le mandat. Écrit chez nous tout de suite, "
           "chez Hektor 10 minutes après.",
           TOUS_LES_ROLES,
           _schema({"hektor_annonce_id": {"type": "integer", "description": "numéro de l'annonce"},
@@ -2818,6 +2864,15 @@ GESTES: dict[str, Geste] = {g.nom: g for g in (
                       for cle, (libelle, _genre) in CHAMPS_BIEN.items()}}),
           preparer_modifier_bien, executer_modifier_bien),
     # étape 4 (16/11) : le numéro de mandat, réservation OFFICIELLE et irréversible chez Hektor
+    # 17/11 (§38) : le prix, la DIRECTION seulement (le négociateur : demande de baisse)
+    Geste("changer_prix",
+          "Prépare le CHANGEMENT DU PRIX d'une annonce vivante (hausse ou baisse), par la direction elle-même. Écrit chez nous "
+          "tout de suite, chez Hektor 10 minutes après. Ne traite pas une demande de baisse en cours (elle s'accepte ensuite "
+          "dans Suivi). Réservé à la direction.",
+          DIRECTION,
+          _schema({"hektor_annonce_id": {"type": "string", "description": "numéro d'annonce"},
+                   "prix": {"type": "string", "description": "nouveau prix en euros (ex. 185000)"}}),
+          preparer_changer_prix, executer_changer_prix),
     Geste("numero_mandat",
           "Prépare la GÉNÉRATION DU NUMÉRO DE MANDAT officiel d'une annonce vivante qui n'en a pas encore, avec au moins un "
           "mandant et un négociateur (mêmes conditions que l'écran). Mandat de vente seulement. IRRÉVERSIBLE : Hektor réserve "

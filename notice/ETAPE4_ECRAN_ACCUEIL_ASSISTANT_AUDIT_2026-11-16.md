@@ -1004,3 +1004,72 @@ numéro au retrait ; retirer la garde « action en cours ») font virer la suite
 `test_assistant_ia` 61 verts (avec le SDK) ; `test_assistant_lecteur` 73 verts ; `npm run build` vert. 37 gestes.
 **Pas encore fait** : la mise en ligne (push, son accord) et la preuve en réel (une carte proposée, refusée « sans
 valider », sur un bien d'essai).
+
+## 37. Les droits par rôle : ce que la DIRECTION fait elle-même, ce que le NÉGOCIATEUR ne peut que DEMANDER — AUDIT (17/11)
+
+**Demande de Frédéric** : « l'assistant doit s'adapter aux droits de l'utilisateur ; un admin peut faire certains gestes
+que le négociateur peut juste demander ; auditer les demandes de validation, baisse, etc. ».
+**Périmètre** : les 3 demandes à la direction (validation / diffusion, baisse de prix, annulation de mandat), leurs gestes
+DIRECTS côté direction, leur traitement ; et les 37 cartes de l'assistant croisées avec `app_console_can_request_job` /
+`_contact_job` (définitions relues en base le 17/11). Pas mesuré : les écrans hors annonces (agenda, GED, Santé).
+
+**Ce que dit l'application (code et base, 17/11)**
+- Les demandes (`app_diffusion_request`) : 3 types. Créer = toute personne sur un bien qu'elle peut voir (règle d'accès
+  `requested_by = soi` + bien accessible) ; traiter (mettre à jour) = direction seulement (`is_app_manager_or_admin`).
+  À l'écran, le menu des demandes (« Ajouter / Corriger / Envoyée ») est montré à TOUS sur la liste des annonces, admin
+  compris ; le traitement est sur l'écran « Suivi », réservé à la direction.
+- ⚠ **Le circuit dort** : 9 demandes en tout, toutes de Frédéric (4 baisses et 4 annulations acceptées les 13-14/05,
+  1 validation en attente depuis le 02/06). Pauline n'en a jamais traité une. Ce que l'assistant enverra arrivera dans une
+  file qui n'a jamais tourné en vrai.
+- **Prix** : la base refuse le prix au négociateur (`prix_sur_demande`, décision B1 du 12/10) ; la DIRECTION le change
+  DIRECTEMENT (`app_edit_annonce_optimistic`). ⚠ Accepter une demande de baisse NE CHANGE PAS le prix : l'écran vérifie
+  que le prix de Hektor est déjà le prix demandé (`verifyPriceDropOnHektor`), puis propose d'activer les passerelles. La
+  direction change donc le prix, PUIS accepte.
+- **Validation et Diffusable** : la direction les coche DIRECTEMENT (le « Pilotage » de la fiche, `allowMarkValidation` /
+  `allowMarkDiffusable` = manager ou admin) ; le négociateur passe par la demande de validation, dont l'acceptation lance
+  la validation chez Hektor puis la diffusion et les passerelles (`acceptDiffusionRequestOnHektor`).
+- **Annulation de mandat** : le négociateur demande ; la direction peut aussi clore par la modale de statut (« les deux
+  portes », décision du 21/10 : on laisse comme aujourd'hui).
+- **Réservé à la direction, sans demande possible pour le négociateur** : archiver, changer le statut (Estimation → Actif,
+  offre, compromis, vente, clos), réaffecter le négociateur.
+
+**Ce que fait l'assistant aujourd'hui**
+- ✅ **Aucun dépassement côté négociateur** : chaque carte ouverte à tous correspond à un travail de sa liste dans la base
+  (mandants, champs du bien sans prix, photos, numéro de mandat, désarchiver, signatures, contacts, recherches) ; la carte
+  « portail » passe par la même garde que l'écran (bien diffusable ET le sien) ; les cartes de direction (transactions,
+  note, réaffecter, archiver, Estimation → Actif) ne sont même pas montrées au négociateur, et la base les refuserait au clic.
+- ⛔ **Écart 1 — le prix** : l'assistant interdit le prix à TOUT LE MONDE et ne propose que la demande de baisse. Un admin
+  qui dit « baisse le prix à 150 000 » obtiendrait une demande… adressée à lui-même. La base, elle, l'autorise.
+- ⛔ **Écart 2 — validation et diffusable** : aucune carte directe pour la direction ; seulement la demande de validation.
+- ⛔ **Écart 3 — traiter une demande** (accepter / refuser / renvoyer à corriger) : aucune carte ; c'était prévu « par la
+  fenêtre » au lot 6 (l'acceptation enchaîne des vérifications chez Hektor, des confirmations et un e-mail de décision).
+- ⚠ **Écart 4 — la consigne** ne dit pas au modèle de proposer la DEMANDE qui correspond quand un négociateur réclame un
+  geste de direction (« mets-le en diffusion » → demande de validation ; « baisse le prix » → demande de baisse ;
+  « clôture le mandat » → demande d'annulation), ni à l'inverse de préférer le geste DIRECT pour la direction.
+
+**À trancher par lui** (rien n'est codé) :
+1. le prix en direct pour la direction (la carte « modifier le bien » accepterait le prix pour admin / manager, la base
+   le refuse déjà au négociateur — double verrou) ;
+2. validation et diffusable en direct pour la direction (à auditer d'abord : quelle écriture fait le Pilotage) ;
+3. traiter une demande : garder « par la fenêtre » (lot 6) ou une carte ;
+4. la consigne par rôle (écart 4) — sans risque, recommandé dans tous les cas.
+
+## 38. La consigne par rôle et le prix pour la direction : CODÉS (17/11, sur « Consigne puis prix ») — pas encore en ligne
+
+**Périmètre** : écarts 1 et 4 du §37 seulement. Les écarts 2 (validation / diffusable en direct) et 3 (traiter une
+demande) ne sont PAS touchés.
+- **La consigne par rôle** (`assistant_service.py`) : la direction FAIT, le négociateur DEMANDE. Au négociateur qui réclame
+  un geste de direction, le modèle propose LA demande qui correspond (prix -> baisse de prix ; diffusion, validation,
+  diffusable -> demande de validation ; clôture, annulation -> demande d'annulation ; archiver, statut, réaffecter, offre :
+  « voir avec la direction », il n'y a pas de demande à l'écran). À la direction, le geste direct, jamais une demande
+  adressée à elle-même ; Validation / Diffusable et le traitement des demandes restent dans l'application (Pilotage, Suivi).
+  Vérifié : la fiche `assistant` de `app_agent_prompt` est VIDE, c'est donc bien le texte du code qui sert en ligne.
+- **La carte `changer_prix`** (direction : admin, manager) : `app_edit_annonce_optimistic` avec la clé `price` de l'écran.
+  Trois verrous : la carte n'est montrée qu'à la direction ; le serveur la refuse au clic à tout autre rôle ; la base
+  refuse le prix au négociateur (`prix_sur_demande`). La carte dit l'ancien et le nouveau prix, SIGNALE (sans refuser) un
+  écart de plus de 30 %, refuse le même prix, et dit qu'une demande de baisse en cours est à accepter ensuite dans Suivi
+  (accepter ne change pas le prix). La carte « modifier le bien » n'a toujours pas le prix ; la demande de baisse reste
+  ouverte à tous (l'écran la montre à tous), sa description dit que c'est le chemin du négociateur.
+**Contrôles** : `test_assistant_gestes` 298 verts (§15 : 10 nouveaux, dont 2 témoins « le monde a changé au clic ») ;
+témoin inverse : le 3e verrou saboté -> ROUGE, remis -> 298 ; `test_assistant_ia` 62 (la consigne par rôle, rôle rempli) ;
+`test_assistant_lecteur` 73 ; `npm run build` vert. 38 gestes.

@@ -1172,9 +1172,9 @@ print("  (au clic, la route refuse aussi un rôle hors de geste.roles : DIRECTIO
 voir(ges.GESTES["transaction"].roles == ges.DIRECTION, "la carte est déclarée DIRECTION : la route de validation la refuse à un négociateur")
 
 print("10) aucune fonction de geste ne fait autre chose que proposer")
-voir(all(f.nom.startswith("proposer_") for f in ges.FONCTIONS_GESTES) and len(ges.FONCTIONS_GESTES) == 37,
+voir(all(f.nom.startswith("proposer_") for f in ges.FONCTIONS_GESTES) and len(ges.FONCTIONS_GESTES) == 38,
      "37 gestes (le brouillon retiré le 15/11, 3 du lot 2c, 3 du lot 3c, 1 de la vague C, le numéro de mandat, la relance "
-     "et l'annulation d'une signature le 16/11, puis les 8 cartes directes de l'audit §35), "
+     "et l'annulation d'une signature le 16/11, puis les 8 cartes directes de l'audit §35, et le prix pour la direction le 17/11), "
      "tous « proposer_ » : le "
      "modèle n'a AUCUNE fonction qui exécute")
 voir(not any(f.nom.startswith("proposer_") for f in ges.FONCTIONS_LECTURE_LOT3), "les 2 lectures du lot 3 ne proposent rien")
@@ -1662,5 +1662,62 @@ etat14["tete"] = {"statut_annonce": "Actif"}
 voir(refuse(lambda: ges.executer_activer_estimation(nouveau_ctx("admin"), p_ac), "seul le passage") and not ecrits14(),
      "TÉMOIN : passé en Actif entre la carte et le clic -> refusé, RIEN envoyé")
 etat14.pop("tete")
+
+print("15) LE PRIX (17/11, §38) : la direction le CHANGE, le négociateur le DEMANDE")
+etat15 = {"demandes": []}
+
+
+def faux15(methode, url, **kw):
+    if methode == "GET" and "/rest/v1/app_diffusion_requests_current" in url:
+        appels14.append({"methode": "GET", "chemin": "app_diffusion_requests_current", "entetes": {},
+                         "params": dict(kw.get("params") or {}), "corps": None})
+        return Reponse(etat15["demandes"])
+    return faux14(methode, url, **kw)
+
+
+requests.get = lambda url, **kw: faux15("GET", url, **kw)
+requests.post = lambda url, **kw: faux15("POST", url, **kw)
+requests.request = lambda methode, url, **kw: faux15(methode, url, **kw)
+PX = {"hektor_annonce_id": "63330", "prix": "95 000"}
+voir(ges.GESTES["changer_prix"].roles == ges.DIRECTION
+     and "proposer_changer_prix" not in [f.nom for f in cat.fonctions_du_role("commercial")]
+     and "proposer_changer_prix" in [f.nom for f in cat.fonctions_du_role("admin")]
+     and "proposer_changer_prix" in [f.nom for f in cat.fonctions_du_role("manager")],
+     "la carte prix : montrée à l'admin et au manager, JAMAIS au négociateur (lui garde la demande de baisse)")
+voir("proposer_demande_direction" in [f.nom for f in cat.fonctions_du_role("commercial")],
+     "le négociateur garde la demande de baisse (le chemin de l'écran pour lui)")
+appels14.clear()
+resume_px, p_px = ges.preparer_changer_prix(nouveau_ctx("admin"), PX)
+voir("100 000 € → 95 000 €" in resume_px and "⚠" not in resume_px and "demande de baisse" not in resume_px
+     and p_px == {"hektor_annonce_id": 63330, "prix": "95000"} and not ecrits14(),
+     "la carte dit l'ancien et le nouveau prix ; rien écrit ; pas d'alerte pour un écart de 5 %")
+voir("⚠ écart de 85 %" in ges.preparer_changer_prix(nouveau_ctx("admin"), {**PX, "prix": "15000"})[0],
+     "un écart de plus de 30 % (un zéro oublié ?) est SIGNALÉ sur la carte, pas refusé")
+voir(refuse(lambda: ges.preparer_changer_prix(nouveau_ctx("admin"), {**PX, "prix": "100000"}), "déjà à")
+     and refuse(lambda: ges.preparer_changer_prix(nouveau_ctx("admin"), {**PX, "prix": "cent mille"}), "montant")
+     and refuse(lambda: ges.preparer_changer_prix(nouveau_ctx("admin"), {**PX, "prix": "0"}), "montant"),
+     "⛔ le même prix, un prix illisible, zéro : refusés")
+etat15["demandes"] = [{"id": "dem-baisse"}]
+voir("l'accepter ensuite dans Suivi" in ges.preparer_changer_prix(nouveau_ctx("admin"), PX)[0],
+     "une demande de baisse en cours : la carte le dit (accepter ne change pas le prix ; ce geste ne traite pas la demande)")
+etat15["demandes"] = []
+appels14.clear()
+ges.executer_changer_prix(nouveau_ctx("admin"), p_px)
+c = rpc14("app_edit_annonce_optimistic")
+voir(len(c) == 1 and c[0]["entetes"].get("Authorization") == f"Bearer {JETON}"
+     and c[0]["corps"] == {"target_dossier_id": 10000006, "edit_fields": {"price": "95000"}, "debounce_seconds": 600},
+     "au CLIC : la fonction de l'écran, la clé « price » de l'écran, avec le JETON (la base juge le rôle)")
+appels14.clear()
+voir(refuse(lambda: ges.executer_changer_prix(nouveau_ctx("commercial"), p_px), "demande de baisse") and not ecrits14(),
+     "⛔ TÉMOIN : une carte prix cliquée par un négociateur -> refusée par le serveur, RIEN envoyé (3e verrou)")
+etat14["refus"] = {"rpc/app_edit_annonce_optimistic": "prix_sur_demande"}
+voir(refuse(lambda: ges.executer_changer_prix(nouveau_ctx("manager"), p_px), "prix_sur_demande"),
+     "et si la base refuse quand même (prix_sur_demande), le refus remonte, jamais un succès")
+etat14.pop("refus")
+etat14["bien"] = {"prix": 95000}
+appels14.clear()
+voir(refuse(lambda: ges.executer_changer_prix(nouveau_ctx("admin"), p_px), "déjà à") and not ecrits14(),
+     "TÉMOIN : le prix posé entre la carte et le clic (par l'écran) -> refusé, RIEN envoyé")
+etat14.pop("bien")
 
 print(f"\n{ok} contrôles verts")
