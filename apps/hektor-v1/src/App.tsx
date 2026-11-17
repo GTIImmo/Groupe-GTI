@@ -312,6 +312,7 @@ import { PiecesSignatureFenetre, useSignaturePreuves } from './PiecesSignature'
 import { DepotDocuments } from './DepotDocuments'
 import type { MomentDossier } from './lib/gedPieces'
 import { compterConditionsStrict, gedDecider, lireCarnetAffairesStrict, lireConditionsCompletesStrict, loadContactsEtatCivil, useGedDepotMultiple, useGedRecuManque } from './lib/ged'
+import { useDepotAssistant } from './lib/depotAssistant'
 // GED morceau 3 (12/11/2026) : le bloc « Reçu / Manque », derrière l'interrupteur ged_recu_manque (note GED §12.8).
 import { RecuManque } from './RecuManque'
 import { estEnvoiDirect, EVENEMENT_DROITS_TRANSACTION, EVENEMENT_MODIFIER_TRANSACTION, type ChoixBilan, type DemandeModifierTransaction, type ResultatBilan } from './BilanCompromis'
@@ -11931,6 +11932,12 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
   const [piecesDoc, setPiecesDoc] = useState<ConsoleDocument | null>(null)
   // GED morceau 2 : cran « admin » = Frédéric seul ; éteint = le formulaire d'aujourd'hui, inchangé.
   const gedDepot = useGedDepotMultiple()
+  // 17/11 (assistant, accord de la session GED) : des fichiers joints à l'assistant pour CE bien -> la fenêtre de dépôt
+  // s'ouvre et les prend comme un glisser-déposer (lib/depotAssistant.ts). Fenêtre fermée pour le compte : rien.
+  const depotAssistant = useDepotAssistant(dossier?.app_dossier_id)
+  useEffect(() => {
+    if (depotAssistant && gedDepot) setUploadOpen(true)
+  }, [depotAssistant, gedDepot])
   // GED morceau 3 : « Reçu / Manque » ; une pièce non trouvée ouvre la fenêtre de dépôt avec son type déjà choisi.
   const gedRecuManque = useGedRecuManque()
   const [typeAttendu, setTypeAttendu] = useState<{ code: string; libelle: string } | null>(null)
@@ -34064,6 +34071,12 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   // Tous les points d'entrée média (pictos du hero, tuiles de « Le Bien », photos de la mosaïque)
   // convergent désormais vers UNE page, sur le bon onglet — au lieu de partir à trois endroits.
   const goMedia = (tab: 'photos' | 'docs' | 'visite') => { setCkMediaTab(tab); setActiveTab('medias') }
+  // 17/11 (assistant) : des fichiers joints posés pour CE bien -> la fiche s'ouvre sur Médias & pièces / Documents, où
+  // le panneau ouvre la fenêtre de dépôt GED (lib/depotAssistant.ts)
+  const depotAssistantFiche = useDepotAssistant(dossier?.app_dossier_id)
+  useEffect(() => {
+    if (depotAssistantFiche) { setCkMediaTab('docs'); setActiveTab('medias') }
+  }, [depotAssistantFiche])
   const CK_PHASE: Record<string, { feat: Array<[string, CkFoot]>; autre: string[] }> = {
     est: { feat: [['estimation', ['ok', 'Avis en cours']], ['mandat', ['neutral', 'À créer']]], autre: ['affaires', 'documents', 'historique', 'reporting'] },
     man: { feat: [['mandat', ['alert', 'Mandat en cours']], ['documents', docFoot]], autre: ['affaires', 'estimation', 'historique', 'reporting'] },

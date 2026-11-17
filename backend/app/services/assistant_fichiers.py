@@ -9,7 +9,7 @@ from urllib.parse import parse_qs, quote, urlparse
 import requests
 
 from ..settings import Settings
-from .supabase_storage import CONSOLE_DOCS_BUCKET, _headers
+from .supabase_storage import CONSOLE_DOCS_BUCKET, _headers, create_signed_url
 
 # ---------------------------------------------------------------------------
 # Assistant IA (17/11/2026, note étape 4 §51-52) -- LE TROMBONE : déposer des fichiers de l'ordinateur dans la conversation.
@@ -161,6 +161,17 @@ def copier(settings: Settings, source: str, destination: str) -> None:
                       json={"bucketId": CONSOLE_DOCS_BUCKET, "sourceKey": source, "destinationKey": destination}, timeout=30)
     if not r.ok:
         raise RefusFichier(f"Le coffre n'a pas copié le fichier ({r.status_code}).")
+
+
+def lien_lecture(settings: Settings, chemin: str, secondes: int = 600) -> str:
+    """Un lien de LECTURE signé et court d'un fichier du trombone (carte « déposer des documents » : l'écran le
+    retélécharge pour le mettre dans la fenêtre GED). Jamais un autre fichier que ceux du trombone."""
+    if not str(chemin).startswith(f"{PREFIXE}/") or ".." in str(chemin):
+        raise RefusFichier("Lien refusé : ce n'est pas un fichier joint à l'assistant.")
+    try:
+        return create_signed_url(settings, CONSOLE_DOCS_BUCKET, chemin, secondes)
+    except Exception as exc:  # noqa: BLE001
+        raise RefusFichier(f"Le coffre n'a pas rendu de lien de lecture ({type(exc).__name__}).") from None
 
 
 def decrire_pour_le_modele(fichiers: list[dict[str, Any]]) -> str:

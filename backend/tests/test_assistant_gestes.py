@@ -1212,9 +1212,9 @@ print("  (au clic, la route refuse aussi un rôle hors de geste.roles : DIRECTIO
 voir(ges.GESTES["transaction"].roles == ges.DIRECTION, "la carte est déclarée DIRECTION : la route de validation la refuse à un négociateur")
 
 print("10) aucune fonction de geste ne fait autre chose que proposer")
-voir(all(f.nom.startswith("proposer_") for f in ges.FONCTIONS_GESTES) and len(ges.FONCTIONS_GESTES) == 40,
+voir(all(f.nom.startswith("proposer_") for f in ges.FONCTIONS_GESTES) and len(ges.FONCTIONS_GESTES) == 41,
      "37 gestes (le brouillon retiré le 15/11, 3 du lot 2c, 3 du lot 3c, 1 de la vague C, le numéro de mandat, la relance "
-     "et l'annulation d'une signature le 16/11, puis les 8 cartes directes de l'audit §35, le prix et le Pilotage pour la direction, et ajouter une photo le 17/11), "
+     "et l'annulation d'une signature le 16/11, puis les 8 cartes directes de l'audit §35, le prix et le Pilotage pour la direction, ajouter une photo et déposer des documents le 17/11), "
      "tous « proposer_ » : le "
      "modèle n'a AUCUNE fonction qui exécute")
 voir(not any(f.nom.startswith("proposer_") for f in ges.FONCTIONS_LECTURE_LOT3), "les 2 lectures du lot 3 ne proposent rien")
@@ -1961,5 +1961,64 @@ etat18["disparus"] = {"a" * 32}
 voir(refuse(lambda: ges.executer_ajouter_photo(nouveau_ctx(), p_ph), "joins-le à nouveau") and not ecrits14(),
      "TÉMOIN : un fichier retiré du trombone entre la carte et le clic -> refusé, RIEN posé")
 etat18.pop("disparus")
+
+print("19) DÉPOSER DES DOCUMENTS = ouvrir la FENÊTRE GED garnie (17/11, §57-59, chemin A) : rien n'est écrit ici")
+liens19 = []
+
+
+def faux_lien(settings, chemin):
+    if chemin in etat18.get("lien_refus", set()):
+        raise ges.fichiers_service.RefusFichier("Le coffre n'a pas donné de lien (500).")
+    liens19.append(chemin)
+    return f"https://coffre.test/signe/{chemin}?t=10min"
+
+
+ges.fichiers_service.lien_lecture = faux_lien
+DD = {"hektor_annonce_id": "63330", "fichiers": f"fichier:{'c' * 32} | {'a' * 32}"}
+voir("proposer_deposer_documents" in [f.nom for f in cat.fonctions_du_role("commercial")],
+     "la carte est ouverte à tous les rôles (c'est la fenêtre qui envoie, avec les droits de la personne)")
+etat14["cran"] = "on"
+appels14.clear()
+resume_dd, p_dd = ges.preparer_deposer_documents(nouveau_ctx(), DD)
+voir("fenêtre de dépôt GED de l'annonce 63330" in resume_dd and "« plan.pdf », « facade.jpg »" in resume_dd
+     and "« Envoyer » DANS la fenêtre" in resume_dd and not ecrits14()
+     and p_dd == {"hektor_annonce_id": 63330, "fichiers": ["c" * 32, "a" * 32]},
+     "la carte nomme les fichiers, dit que RIEN ne part avant « Envoyer » dans la fenêtre ; rien écrit ; PDF et photo admis")
+etat14["cran"] = "admin"
+voir(refuse(lambda: ges.preparer_deposer_documents(nouveau_ctx(), DD), "pas encore ouverte")
+     and ges.preparer_deposer_documents(nouveau_ctx("admin"), DD)[1] == p_dd,
+     "⛔ fenêtre GED au cran admin : refusée au négociateur, ouverte à l'admin (la même règle que l'écran)")
+etat14["cran"] = "off"
+voir(refuse(lambda: ges.preparer_deposer_documents(nouveau_ctx("admin"), DD), "pas encore ouverte"),
+     "⛔ fenêtre GED éteinte : refusée à tous, même l'admin (on n'ouvre rien)")
+etat14["cran"] = "on"
+voir(refuse(lambda: ges.preparer_deposer_documents(nouveau_ctx(), {**DD, "fichiers": "e" * 32}), "joins-le à nouveau")
+     and refuse(lambda: ges.preparer_deposer_documents(nouveau_ctx(), {**DD, "fichiers": ""}), "numéro des fichiers"),
+     "⛔ un fichier qui n'est pas (ou plus) dans SON trombone, ou aucun : refusés")
+etat14["tete"] = {"negociateur_email": "", "commercial_id": ""}
+voir(refuse(lambda: ges.preparer_deposer_documents(nouveau_ctx(), DD), "pas de négociateur"),
+     "⛔ un bien sans négociateur : refusé")
+etat14.pop("tete")
+appels14.clear()
+liens19.clear()
+r_dd = ges.executer_deposer_documents(nouveau_ctx(), p_dd)
+voir(r_dd["ouvrir"] == "depot_ged" and r_dd["hektor_annonce_id"] == 63330 and r_dd["app_dossier_id"] == B14["app_dossier_id"]
+     and [f["nom"] for f in r_dd["fichiers"]] == ["plan.pdf", "facade.jpg"]
+     and [f["type"] for f in r_dd["fichiers"]] == ["application/pdf", "image/jpeg"]
+     and liens19 == [JOINTS["c" * 32]["chemin"], JOINTS["a" * 32]["chemin"]] and not ecrits14(),
+     "au CLIC : des liens de LECTURE courts vers le trombone, le bien et ses fichiers -- et RIEN d'écrit (ni travail, ni ligne)")
+etat18["lien_refus"] = {JOINTS["a" * 32]["chemin"]}
+voir(refuse(lambda: ges.executer_deposer_documents(nouveau_ctx(), p_dd), "pas donné de lien"),
+     "un lien refusé par le coffre : la carte échoue, jamais une fenêtre à moitié garnie")
+etat18.pop("lien_refus")
+etat14["cran"] = "admin"
+voir(refuse(lambda: ges.executer_deposer_documents(nouveau_ctx(), p_dd), "pas encore ouverte"),
+     "TÉMOIN : la fenêtre GED refermée au négociateur entre la carte et le clic -> refusé au clic")
+etat14["cran"] = "on"
+etat18["disparus"] = {"c" * 32}
+voir(refuse(lambda: ges.executer_deposer_documents(nouveau_ctx(), p_dd), "joins-le à nouveau"),
+     "TÉMOIN : un fichier retiré du trombone entre la carte et le clic -> refusé")
+etat18.pop("disparus")
+etat14.pop("cran")
 
 print(f"\n{ok} contrôles verts")

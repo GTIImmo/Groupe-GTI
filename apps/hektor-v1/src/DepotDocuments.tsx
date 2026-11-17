@@ -24,6 +24,7 @@ import { apercuPremierePage, classerParIa, lireParIa as lireValeursParIa, preCho
 import { FICHES_LUES, FICHES_PERSONNES_LUES, resumeLecture } from './lib/gedLecture'
 import { LIBELLE_MOMENT, type MomentDossier } from './lib/gedPieces'
 import { typeParNom } from './lib/gedTypeParNom'
+import { retirerDepotAssistant, useDepotAssistant } from './lib/depotAssistant'
 import type { ConsoleDocument, ConsoleJob, Dossier } from './types'
 import './DepotDocuments.css'
 
@@ -152,6 +153,20 @@ export function DepotDocuments({
       .catch((e) => { if (!annule) setErreurTypes(e instanceof Error ? e.message : String(e)) })
     return () => { annule = true }
   }, [])
+
+  // 17/11 (assistant, accord de la session GED) : les fichiers joints à l'assistant POUR CE BIEN arrivent ICI comme un
+  // glisser-déposer -- par `ajouterFichiers`, jamais contourné --, une seule fois par jeton, une fois la liste des types
+  // lue (la ligne neuve en a besoin), puis le dépôt est retiré (lib/depotAssistant.ts)
+  const fichiersDepuisAssistant = useDepotAssistant(dossier.app_dossier_id)
+  const jetonAssistant = useRef<number | null>(null)
+  useEffect(() => {
+    if (!fichiersDepuisAssistant || !types || jetonAssistant.current === fichiersDepuisAssistant.jeton) return
+    jetonAssistant.current = fichiersDepuisAssistant.jeton
+    const { jeton } = fichiersDepuisAssistant
+    void ajouterFichiers(fichiersDepuisAssistant.fichiers).finally(() => retirerDepotAssistant(jeton))
+    // ajouterFichiers lit l'état courant ; seul un NOUVEAU dépôt (ou l'arrivée des types) déclenche
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fichiersDepuisAssistant, types])
 
   // « une saisie ne se perd jamais » : quitter la page avec des fichiers non envoyés demande confirmation
   useEffect(() => {

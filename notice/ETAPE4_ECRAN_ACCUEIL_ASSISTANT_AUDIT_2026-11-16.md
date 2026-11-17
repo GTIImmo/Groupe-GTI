@@ -1527,3 +1527,43 @@ aujourd'hui quand on n'y passe pas de fichiers) ; le dépôt reste le geste de l
   fiche du bien sur ses Documents et les passe à la fenêtre ; la personne finit DANS la fenêtre (agent GED complet).
   La carte dit « la fenêtre GED va s'ouvrir avec N fichiers ; c'est elle qui propose le type et le nom, et c'est toi qui
   cliques Envoyer ».
+
+## 59. La carte DÉPOSER DES DOCUMENTS (chemin A) : CODÉE (17/11, sur « Vas y ») — pas encore en ligne
+
+- **Serveur** : `deposer_documents` (tous les rôles), ajoutée après `ajouter_photo`. La carte exige :
+  - le cran `ged_depot_multiple` pour la personne : `on`, ou `admin` avec le rôle admin. Sinon elle refuse : « dépose-les
+    depuis la fiche du bien » ;
+  - un bien VIVANT avec un négociateur ;
+  - les fichiers du trombone (1 à 20), RELUS au coffre dans SON dossier. Les types sont ceux du coffre : un PDF et une
+    photo passent tous les deux.
+
+  Au clic, la carte re-vérifie tout et **n'écrit RIEN** : ni travail, ni ligne. Elle rend
+  `{ouvrir: "depot_ged", app_dossier_id, hektor_annonce_id, fichiers: [{nom, type, url}]}`, où `url` est un lien signé de
+  LECTURE de 10 minutes (`assistant_fichiers.lien_lecture`, source forcée sous `temp/assistant/`). Un lien refusé fait
+  échouer la carte : jamais une fenêtre à moitié garnie.
+- **Écran** :
+  - `AccueilAssistant` retélécharge les fichiers en objets `File`, les pose par `poserDepotAssistant(app_dossier_id,
+    fichiers)` (`lib/depotAssistant.ts`, un passage de main dans la page, rien en base) et ouvre la fiche du bien. Un
+    téléchargement raté s'écrit sur la carte.
+  - La fiche (`CockpitDetail`) passe sur Médias & pièces / Documents ; le panneau ouvre la fenêtre si `gedDepot` est
+    ouvert.
+  - **`DepotDocuments` lit lui-même le dépôt de SON bien** (`useDepotAssistant`). Il le prend par `ajouterFichiers` (le
+    chemin d'un glisser-déposer : garde RIB, sensibles, doublon, classement, lecture), une seule fois par jeton et une
+    fois les types lus, puis il le retire.
+  - La personne vérifie, puis clique « Envoyer » DANS la fenêtre.
+- ⚠ **Ce que mon premier jet cassait** : deux propriétés neuves sur `DepotDocuments` dans App.tsx faisaient passer le
+  bloc `formulaireAjout` de 583 à 669 caractères. Le test de la GED le borne à 600, et son contrôle « éteint =
+  uploadForm » est passé ROUGE. D'où la lecture par la fenêtre elle-même : App.tsx ne porte plus que l'import et deux
+  effets, hors du bloc et hors des lignes de la GED.
+- **Coordination** : la session GED a été prévenue avant le commit et a donné son accord (« le passage par
+  ajouterFichiers, une fois par jeton et une fois les types lus, me va »).
+- **Consigne** : les documents joints passent par `proposer_deposer_documents`. Le modèle ne promet jamais qu'ils sont
+  déjà chez Hektor. Les pièces jointes d'un e-mail restent « bientôt ».
+- **Contrôles** :
+  - `test_assistant_gestes` : 340 verts. La section 19 en apporte 10, dont trois témoins : la fenêtre refermée entre la
+    carte et le clic, un fichier retiré entre la carte et le clic, un lien refusé ;
+  - ia 62 (41 gestes, ouverte au négociateur), fichiers 17, lecteur 73 ;
+  - GED : `test_ged_depot` 33/33 et `test_ged_classement_ia` 37/37 ;
+  - `npm run build` vert.
+- ⛔ **Pas encore éprouvé à l'écran.** Le cran `ged_depot_multiple` est à `admin` : seul Frédéric verra la fenêtre
+  s'ouvrir.

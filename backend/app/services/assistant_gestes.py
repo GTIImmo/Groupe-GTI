@@ -1831,6 +1831,56 @@ def executer_ajouter_photo(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[st
             "envoi": "en cours"}
 
 
+# ── 17/11 (note étape 4 §57-59) : DÉPOSER DES DOCUMENTS = ouvrir la FENÊTRE GED du bien, garnie des fichiers joints ──
+# Décision de Frédéric (chemin A) : l'assistant NE dépose PAS un document. Les agents IA de la GED (type, nom, découpage,
+# garde RIB, sensibles, doublon, lecture des valeurs) ne travaillent qu'à partir du NAVIGATEUR (pdf.js, pdf-lib) : la
+# carte vérifie, puis l'écran ouvre la fenêtre `DepotDocuments` du bien avec ces fichiers (le chemin d'un glisser-déposer)
+# et la personne clique « Envoyer » DANS la fenêtre. Au clic, RIEN ne s'écrit ici : la carte rend des liens de LECTURE
+# signés et courts (10 min) des fichiers du trombone, que l'écran retélécharge. Entrée de la fenêtre posée avec l'accord
+# de la session GED (17/11).
+INTERRUPTEUR_DEPOT_GED = "ged_depot_multiple"  # la fenêtre GED n'existe qu'à son cran (admin le 17/11)
+MAX_DOCUMENTS_CARTE = 20
+
+
+def _fenetre_ged_ouverte(ctx: ContexteAssistant) -> None:
+    cran = _lire(ctx, "app_setting", {"key": f"eq.{INTERRUPTEUR_DEPOT_GED}", "select": "value", "limit": "1"})
+    valeur = str((cran or [{}])[0].get("value") or "off").strip().lower()
+    if not (valeur == "on" or (valeur == "admin" and ctx.role == "admin")):
+        raise Refus("La fenêtre de dépôt GED n'est pas encore ouverte pour ton compte : dépose ces documents depuis la "
+                    "fiche du bien (onglet Documents).")
+
+
+def _controler_depot(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    _fenetre_ged_ouverte(ctx)
+    bien = _bien_vivant(ctx, p.get("hektor_annonce_id"))
+    _exiger_negociateur(ctx, bien)
+    documents = _fichiers_joints(ctx, p.get("fichiers"))
+    if len(documents) > MAX_DOCUMENTS_CARTE:
+        raise Refus(f"{MAX_DOCUMENTS_CARTE} fichiers au plus par carte.")
+    return bien, documents
+
+
+def preparer_deposer_documents(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    bien, documents = _controler_depot(ctx, p)
+    n = len(documents)
+    resume = (f"Ouvrir la fenêtre de dépôt GED de l'annonce {bien['hektor_annonce_id']} « {bien.get('titre_bien') or ''} » avec "
+              f"{n} fichier{'s' if n > 1 else ''} : " + ", ".join(f"« {f['nom']} »" for f in documents)
+              + ". C'est la fenêtre qui propose le type et le nom, découpe un PDF qui réunit plusieurs pièces et garde les "
+              "pièces sensibles privées ; rien ne part chez Hektor tant que tu n'as pas cliqué « Envoyer » DANS la fenêtre")
+    return resume, {"hektor_annonce_id": int(bien["hektor_annonce_id"]), "fichiers": [f["id"] for f in documents]}
+
+
+def executer_deposer_documents(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[str, Any]:
+    bien, documents = _controler_depot(ctx, {**p, "fichiers": "|".join(p.get("fichiers") or [])})  # re-vérifié AU CLIC
+    try:
+        fichiers = [{"nom": f["nom"], "type": f["type"], "url": fichiers_service.lien_lecture(ctx.settings, f["chemin"])}
+                    for f in documents]
+    except fichiers_service.RefusFichier as exc:
+        raise Refus(str(exc)) from None
+    return {"ouvrir": "depot_ged", "app_dossier_id": bien["app_dossier_id"], "hektor_annonce_id": int(bien["hektor_annonce_id"]),
+            "fichiers": fichiers}
+
+
 # ── LOT 2c (17/11/2026) : créer un contact, ajouter une recherche, modifier une recherche ──
 # Note : notice/ETAPE3_AGENT_QUI_AGIT_AUDIT_2026-11-13.md §23-24. Les MÊMES fonctions de la base que l'écran :
 #   app_create_contact_optimistic (modale « Nouveau contact », App.tsx:43554 → api.ts:11774), qui contrôle l'appelant ;
@@ -3215,6 +3265,15 @@ GESTES: dict[str, Geste] = {g.nom: g for g in (
           _schema({"hektor_annonce_id": {"type": "string", "description": "numéro d'annonce"},
                    "fichiers": {"type": "string", "description": "numéros des fichiers joints séparés par |"}}),
           preparer_ajouter_photo, executer_ajouter_photo),
+    # 17/11 (§57-59) : déposer des documents = ouvrir la fenêtre GED du bien, garnie des fichiers joints
+    Geste("deposer_documents",
+          "Prépare l'OUVERTURE de la fenêtre de dépôt GED d'une annonce vivante, garnie de fichiers que la personne a JOINTS "
+          "à sa question (fichier:NUMERO, 20 au plus) : c'est la fenêtre GED qui propose le type et le nom, découpe, garde "
+          "les pièces sensibles, et la personne y clique « Envoyer ». Pour les PHOTOS de l'annonce, c'est ajouter_photo.",
+          TOUS_LES_ROLES,
+          _schema({"hektor_annonce_id": {"type": "string", "description": "numéro d'annonce"},
+                   "fichiers": {"type": "string", "description": "numéros des fichiers joints séparés par |"}}),
+          preparer_deposer_documents, executer_deposer_documents),
     Geste("couverture_photo",
           "Prépare : mettre une photo VISIBLE en couverture d'une annonce (numéros donnés par lire_photos_bien).",
           TOUS_LES_ROLES,

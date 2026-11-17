@@ -4,6 +4,7 @@ import {
   retirerFichier, separerFichiersJoints, validerCarte,
   type CarteAssistant, type CibleCarte, type ConversationAssistant, type EtatFichiers, type EvenementFlux,
 } from './lib/assistant'
+import { poserDepotAssistant } from './lib/depotAssistant'
 import {
   EVENEMENT_ASSISTANT_CITER, EVENEMENT_ASSISTANT_DEMANDER, EVENEMENT_ASSISTANT_OUVRIR,
   prendreDemandeConversation, prendreQuestionEnAttente, signalerChangementAssistant,
@@ -83,6 +84,7 @@ const GESTES: Record<string, { titre: string; fait: (r: Record<string, unknown>)
   activer_estimation: { titre: 'Statut du bien', fait: () => 'Passage en Actif demandé.', suite: 'Hektor rend le bien diffusable en même temps.' },
   changer_prix: { titre: 'Prix du bien', fait: () => 'Prix changé.', suite: 'Recopié chez Hektor environ 10 minutes après.' },
   pilotage: { titre: 'Pilotage', fait: () => 'Confirmé par Hektor.', suite: 'Écrit chez Hektor et relu à l’instant.' },
+  deposer_documents: { titre: 'Documents', fait: () => 'Fenêtre de dépôt ouverte sur le bien.', suite: 'Vérifie le type et le nom proposés, puis clique « Envoyer » dans la fenêtre.' },
   ajouter_photo: { titre: 'Photos', fait: (r) => (Array.isArray(r.echecs) && r.echecs.length ? `Envoi en cours (${r.echecs.length} non partie${r.echecs.length > 1 ? 's' : ''}).` : 'Envoi chez Hektor en cours.'), suite: 'Une photo après l’autre ; sur la vitrine après le traitement de nuit.' },
   couverture_photo: { titre: 'Photos', fait: () => 'Couverture changée.' },
   visibilite_photo: { titre: 'Photos', fait: (r) => (r.visible === true ? 'Photo affichée.' : r.visible === false ? 'Photo masquée.' : 'Photo mise à jour.') },
@@ -661,6 +663,22 @@ export default function AccueilAssistant(props: {
         // job_id : photos) -> l'app se relit tout de suite, puis à la fin du travail
         const travail = r.resultat?.travail ?? r.resultat?.job_id
         portes.current.onGesteFait(travail ? String(travail) : null)
+        // 17/11 (§57-59) : « déposer des documents » ne dépose rien -- les fichiers joints sont retéléchargés (liens courts
+        // du serveur) et posés pour le bien ; sa fiche ouvre la fenêtre de dépôt GED, où la personne finit.
+        if (carte.geste === 'deposer_documents' && r.resultat?.ouvrir === 'depot_ged') {
+          const res = r.resultat as { app_dossier_id?: number; hektor_annonce_id?: number; fichiers?: Array<{ nom: string; type: string; url: string }> }
+          try {
+            const fichiers = await Promise.all((res.fichiers ?? []).map(async (f) => {
+              const reponse = await fetch(f.url)
+              if (!reponse.ok) throw new Error(`« ${f.nom} » n'a pas pu être relu au coffre (${reponse.status}).`)
+              return new File([await reponse.blob()], f.nom, { type: f.type })
+            }))
+            if (res.app_dossier_id != null && fichiers.length) poserDepotAssistant(Number(res.app_dossier_id), fichiers)
+            if (res.hektor_annonce_id != null) portes.current.onOuvrirAnnonce(String(res.hektor_annonce_id))
+          } catch (e) {
+            majCarte(carte.id, (c) => ({ ...c, detail: e instanceof Error ? e.message : 'Les fichiers n’ont pas pu être relus.' }))
+          }
+        }
       }
     } catch (erreur) {
       const d = erreur instanceof Error ? erreur.message : "Non fait : l'écriture n'a pas abouti."
