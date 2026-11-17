@@ -2513,6 +2513,51 @@ l'etat d'une autre transaction) ; ce balayage-ci, fait avec le critere « compro
 trouve un 7e qui se declenche sur `state` ET sur l'ABSENCE de numero. **Chaque famille
 demande son propre balayage, et il se fait AVANT de generer le patch.**
 
+### ✅✅⭐⭐⭐ C4, 3e PATCH -- POSE EN PRODUCTION LE 17/11 A 13:03
+
+```
+   patch applique via le POOLER (l'hote direct n'a plus d'IPv4), code 0
+   LOT 1   80 textes de F ajoutes aux notes existantes
+   LOT 2   28 conditions suspensives
+              Obtention Credit                     23
+              Depot du permis de construire          3
+              Obtention du permis de construire      2
+   CATALOGUE  4 -> 6 clauses
+   21 CONTROLES JUSTES, dont les quatre qui comptent :
+      . LE TEXTE D AVANT EST INTACT                      0 perdu sur 80
+      . chaque condition pointe une clause EXISTANTE      0 orpheline
+      . les 195 notes de C5 . les 4 325 du 2e patch . les 5 conditions saisies
+      . TEMOINS INVERSES : 0 condition en « levee », 0 echeance hors 2024-2027
+```
+
+#### ⭐⭐ LE TEMOIN A L'OEIL, ET IL CONFIRME SON DECODAGE
+
+Une note completee, telle qu'elle se lit maintenant (annonce 58958) :
+
+```
+   G : le commentaire -- 12.11 OFFRE ok 💰pc
+   CI ok
+   [classeur F, suivi en cours au 17/11/2026] 20/11 rdv Me Lucht-Rocher pc
+```
+
+⭐ **Le commentaire de G est intact, le texte de F est dessous.** Et on y lit
+« **CI ok** » puis, sur une autre affaire, « **CI-A en attente** » -- ce qui confirme
+sa lecture du 17/11 (`CI` = carte d'identite) **et** ajoute un signe : **`CI-A` est la
+carte d'identite de l'ACQUEREUR**.
+
+Une condition posee (annonce 59491, compromis du 31/07/2026) :
+
+```
+   « Depot du permis de construire »  echeance 2026-11-30  etat attente
+   texte d origine : « 30/11 DPC30/11 OPC01/3 DB15/6 Me BDH / Me Damas »
+```
+
+⚠ **Et une reserve a dire** : sur les 23 conditions de credit, **8 n'ont pas de
+delai** (`jours` vide) parce que leur ligne ne porte **pas d'ADP** -- on ne connait
+donc que l'echeance, pas le depart. On ne l'invente pas.
+
+---
+
 ### ⛔⛔ C4, 3e PATCH -- MON 1er VERDICT, RENVERSE LE JOUR MEME
 
 > ⛔ **GARDE PARCE QU'IL EXPLIQUE UNE FAUTE**, pas parce qu'il est vrai. Le verdict
@@ -3806,7 +3851,8 @@ C4 ✅✅⬜ DEUX PATCHS SUR TROIS FAITS LE 17/11 :
              et le « pourquoi » reunis.
        2e  : **4 325 NOTES** (4 936 textes fusionnes), 11 controles justes.
              classeur:G 3 484 . classeur:F+G 585 . classeur:F 256
-       3e  : ✅ **80 TEXTES DE F + 28 CONDITIONS**, et le CATALOGUE PASSE A SIX.
+       3e  : ✅✅ **POSE EN PRODUCTION LE 17/11 A 13:03** -- 80 textes de F,
+             28 conditions, le CATALOGUE PASSE A SIX. **21 controles justes.**
              ⛔⛔ MON 1er VERDICT (« rien a poser ») ETAIT FAUX : sa regle
              protege du CONFLIT, et Hektor ne porte NI note NI condition
              (`conditions_suspensives` : 0 sur 18 591). Elle n'avait rien a

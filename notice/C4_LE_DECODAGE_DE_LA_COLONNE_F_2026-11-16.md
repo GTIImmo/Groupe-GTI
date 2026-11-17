@@ -405,6 +405,36 @@ un compromis attend le depot, PUIS l'obtention.
 ce que le classeur dit, et rien de plus. **L'ecran reste maitre** : la saisie d'un
 humain ecrasera la notre, pas l'inverse.
 
+### ✅✅ POSE EN PRODUCTION LE 17/11 A 13:03 -- 21 CONTROLES JUSTES
+
+```
+   patch applique via le POOLER (l'hote direct n'a plus d'IPv4), code 0
+   80 textes de F . 28 conditions . catalogue 4 -> 6
+   LES QUATRE CONTROLES QUI COMPTENT :
+      LE TEXTE D AVANT EST INTACT                    0 perdu sur 80
+      chaque condition pointe une clause EXISTANTE   0 orpheline
+      les 195 de C5 . les 4 325 du 2e patch . les 5 saisies  TOUS INTACTS
+      TEMOINS INVERSES : 0 condition en « levee », 0 echeance hors 2024-2027
+```
+
+⭐⭐ **LE TEMOIN A L'OEIL CONFIRME SON DECODAGE, ET AJOUTE UN SIGNE.** Une note
+completee (annonce 58958) se lit maintenant :
+
+```
+   G : le commentaire -- 12.11 OFFRE ok 💰pc
+   CI ok
+   [classeur F, suivi en cours au 17/11/2026] 20/11 rdv Me Lucht-Rocher pc
+```
+
+Le commentaire de G est **intact**, le texte de F est **dessous**. Et on y lit
+« **CI ok** », puis ailleurs « **CI-A en attente** » : sa lecture `CI` = carte
+d'identite est confirmee **par les commentaires eux-memes**, et **`CI-A` est la carte
+d'identite de l'ACQUEREUR**.
+
+⚠ **UNE RESERVE** : sur les 23 conditions de credit, **8 n'ont pas de delai**
+(`jours` vide) parce que leur ligne ne porte **pas d'ADP**. On connait l'echeance, pas
+le depart -- et on ne l'invente pas.
+
 ### LES FICHIERS
 
 ```
