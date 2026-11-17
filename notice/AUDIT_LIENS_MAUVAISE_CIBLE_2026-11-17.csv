@@ -1,0 +1,10 @@
+﻿id_unique;role;ligne;confiance;gele_par;date_du_classeur;lien_actuel;sa_date;son_ecart;meilleur_candidat;sa_date_a_lui;son_ecart_a_lui;bien;gravite;le_candidat_est_il_libre
+NEFHS7JI;offre;3991;sûre;apparier_classeur.py;2021-02-18;26397;2012-03-30;3247;26396;2012-11-23;3009;51640;⚠ suspect -- un candidat colle MIEUX;oui
+TR42PT5H;offre;173;sûre;apparier_classeur.py;2024-12-16;27196;2026-07-27;588;1001520;2026-06-18;549;53398;⚠ suspect -- un candidat colle MIEUX;NON, deja lie
+720f4655;offre;4623;sûre;apparier_classeur.py;2026-05-28;14824;2026-10-13;138;14823;2026-03-31;58;30417;⚠ suspect -- un candidat colle MIEUX;NON, deja lie
+RX6J289Y;compromis;3968;sûre;regel additif 13/11 -- lot C;2021-02-16;16377;2020-10-27;112;16378;2021-02-13;3;34066;⚠ suspect -- un candidat colle MIEUX;NON, deja lie
+0bc98552;offre;4510;sûre;apparier_classeur.py;2026-02-23;21806;2026-06-12;109;21805;2026-03-09;14;43437;⚠ suspect -- un candidat colle MIEUX;oui
+e9260960;offre;4460;sûre;regel additif 13/11 -- lot C;2026-01-19;11147;2026-03-11;51;1001516;2025-12-02;48;23353;⚠ suspect -- un candidat colle MIEUX;NON, deja lie
+d6cd8868;offre;4714;sûre;apparier_classeur.py;2026-08-28;1000316;2026-10-13;46;25710;2026-07-15;44;49624;⚠ suspect -- un candidat colle MIEUX;NON, deja lie
+36bffefc;offre;4501;sûre;apparier_classeur.py;2026-02-10;20226;2026-03-20;38;20227;2026-02-02;8;41629;⚠ suspect -- un candidat colle MIEUX;NON, deja lie
+498c187b;offre;4565;sûre;apparier_classeur.py;2026-04-11;28840;2026-05-19;38;28839;2026-04-02;9;61609;⚠ suspect -- un candidat colle MIEUX;NON, deja lie
