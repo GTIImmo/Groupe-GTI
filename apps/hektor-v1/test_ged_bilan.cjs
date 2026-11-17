@@ -111,20 +111,38 @@ voir(/const peutBilan = remplir && Boolean\(onBilan\)/.test(rm) && /Date\.now\(\
   'derrière `ged_remplir` ; s\'ouvre seule sur une lecture NEUVE (30 min) ; se rouvre par « Revoir ce qu\'il dit »')
 voir(/@media \(prefers-reduced-motion: reduce\)/.test(fs.readFileSync(path.join(__dirname, 'src/BilanCompromis.css'), 'utf8')), 'les animations se coupent si l\'ordinateur demande moins de mouvement')
 
-console.log('⑤ l\'envoi direct (décision du 17/11) et « à trancher » proposé')
+console.log('⑤ la modale en arrière-plan (décision du 17/11) et « à trancher » proposé')
 const apiSrc = fs.readFileSync(path.join(__dirname, 'src/lib/api.ts'), 'utf8')
-const env = apiSrc.slice(apiSrc.indexOf('export async function envoyerAffaireChampsDirect'), apiSrc.indexOf('export async function loadConsoleJobsByIds'))
-voir(/supabase\.rpc\('app_modifier_affaire_optimistic'/.test(env) && /reprendre_transaction: true, champs_touches: touches/.test(env) && !/amount|net_seller_price|buyer_fees|seller_fees/.test(env),
-  'envoi direct : la MÊME porte que « Mettre à jour » ; la charge ne porte que les cases envoyées, nommées « touchées » (jamais prix, net, honoraires)')
-voir(/ENVOI_DIRECT: ReadonlySet<string> = new Set\(\['transaction_date', 'signature_date', 'sequestration'\]\)/.test(fen), 'seules la date de signature, la date de l\'acte et le séquestre partent directement')
-voir(avantDans(ap, 'if (!hasHektorNegotiator(dossier)) throw', 'await ecrireAffaireConditions(') && avantDans(ap, 'await gesteHektorEnCours(dossier.hektor_annonce_id)', 'await ecrireAffaireConditions(')
-  && avantDans(ap, 'await gesteHektorEnCours(', 'await envoyerAffaireChampsDirect('),
-  'les gardes de la modale (négociateur Hektor, aucun geste en cours) passent AVANT toute écriture')
-voir(avantDans(ap, 'const job = await envoyerAffaireChampsDirect(', "await noter(c.ligne, 'remplie', { geste: 'envoi_direct_hektor'") && /if \(versHektor\.length && parLaModale\)/.test(ap),
-  'la décision « remplie » est notée APRÈS le travail créé ; prix, net ou honoraires -> TOUT passe par la modale (un seul travail)')
+voir(!/envoyerAffaireChampsDirect|gesteHektorEnCours/.test(apiSrc + app),
+  '⛔ essai réel du 17/11 (« Montant requis ») : l\'envoi par une charge allégée est RETIRÉ -- un seul chemin vers Hektor, la modale')
+voir(/const enArrierePlan = versHektor\.length > 0 && versHektor\.every\(\(c\) => estEnvoiDirect\(c\.ligne\)\)/.test(ap) && /arrierePlan: enArrierePlan/.test(ap)
+  && /ENVOI_DIRECT: ReadonlySet<string> = new Set\(\['transaction_date', 'signature_date', 'sequestration'\]\)/.test(fen),
+  'date de signature, date de l\'acte, séquestre -> la modale CACHÉE ; un prix, un net ou des honoraires -> la modale VISIBLE, pour tout')
+const charge = app.slice(app.indexOf('function chargeDeLaModale(reprendre: boolean)'), app.indexOf('async function handleChangeHektorAnnonceStatus('))
+const ap2 = app.slice(app.indexOf('async function envoyerEnArrierePlan()'), app.indexOf('// ─── « CORRIGER SANS ENVOYER A HEKTOR »'))
+voir(/buyerContactId: statusChangeBuyerContactId/.test(charge) && /modifierAffaireId: reprendre \?/.test(charge)
+  && /createChangeHektorAnnonceStatusJob\(chargeDeLaModale\(reprendre\)\)/.test(envoi) && /createChangeHektorAnnonceStatusJob\(chargeDeLaModale\(true\)\)/.test(ap2),
+  'la MÊME charge que le bouton « Mettre à jour » : une seule construction (chargeDeLaModale), pour la modale visible et cachée')
+voir(!/saveRepartition|ecrireAffaireCommission|ecrireAffaireConditions|ecrireAffaireNote/.test(ap2),
+  '⛔ cachée, elle n\'écrit RIEN d\'autre que le travail (pas de répartition par défaut enregistrée en silence, ni commission, conditions, note)')
+voir(avantDans(ap2, 'if (!hasHektorNegotiator(cible))', 'await createChangeHektorAnnonceStatusJob(') && avantDans(ap2, 'activeAdminAnnonceJobIds.has(', 'await createChangeHektorAnnonceStatusJob(')
+  && avantDans(ap2, "if (!statusChangeAmount.trim() || !statusChangeSalePrice.trim())", 'await createChangeHektorAnnonceStatusJob(')
+  && avantDans(ap2, 'await createChangeHektorAnnonceStatusJob(', 'noterDepuisDocument('),
+  'les gardes du bouton passent AVANT le travail (négociateur, geste en cours, montant) ; la décision est notée APRÈS')
+const pret = app.slice(app.indexOf('// prête ? (déclaré APRÈS'), app.indexOf('// pas prête en 20 secondes'))
+voir(/carnetChargePour !== ids\) return/.test(pret) && /Number\(affaire\.app_affaire_id\) !== depuisDocument\.appAffaireId/.test(pret) && /if \(!arrierePlanArme \|\| arrierePlanParti/.test(pret)
+  && app.indexOf('// prête ? (déclaré APRÈS') > app.indexOf("if (l.champModale === 'sequestration') { setStatusChangeSequestration(l.valeur)"),
+  'elle n\'envoie qu\'une fois PRÊTE (LA transaction désignée, son carnet lu), au rendu suivant la pose des valeurs, une seule fois')
+voir(/}, 20000\)/.test(app) && /statusChangeTarget && !depuisDocument\?\.arrierePlan \? \(/.test(app) && /\) : null\) : depuisDocument\?\.arrierePlan \? null : \(<>/.test(app),
+  'rien n\'est dessiné en arrière-plan ; pas prête en 20 s -> rien ne part, et c\'est dit dans la fenêtre')
+voir(/window\.dispatchEvent\(new CustomEvent<ResultatEnvoi>\(EVENEMENT_RESULTAT_ENVOI/.test(app) && /window\.addEventListener\(EVENEMENT_RESULTAT_ENVOI, ecoute\)/.test(fen),
+  'le résultat (envoyé ou refusé) s\'affiche dans la fenêtre « Ce que dit le compromis »')
 const rmA = rm.slice(rm.indexOf('const chezHektor = '), rm.indexOf('const date = chezHektor'))
-voir(/if \(l\.origine === 'saisie_app'\) \{ enAttente\[champ\] = 'jamais_envoye'; return null \}/.test(rmA) && /\['arrivee', 'sans_objet'\]\.includes\(l\.etat\)/.test(rmA),
-  '⛔ la valeur de la transaction est celle de HEKTOR : le carnet seul compte comme vide ; une valeur en route se compare telle qu\'envoyée')
+voir(/if \(l\.origine === 'saisie_app'\) \{ enAttente\[champ\] = 'jamais_envoye'; return null \}/.test(rmA) && /\['arrivee', 'sans_objet'\]\.includes\(l\.etat\)/.test(rmA)
+  && /if \(dernierEnvoi === 'error'\) \{ enAttente\[champ\] = 'echec'; return null \}/.test(rmA),
+  '⛔ la valeur de la transaction est celle de HEKTOR : carnet seul ou dernier envoi RATÉ -> vide ; en route -> la valeur envoyée')
+const rate = bilanCompromis([doc(lu18849)], [reg({ sequestre: null, enAttente: { sequestre: 'echec' } })], CATALOGUE)
+voir(L(rate, 'B.sequestre').etat === 'ajouter' && /a échoué/.test(L(rate, 'B.sequestre').note), 'essai du 17/11 : un envoi raté se DIT et la valeur se propose de nouveau')
 voir(/l\.etat === 'trancher' && !decisions\?\.has\(`\$\{l\.cle\}\|\$\{l\.valeur\}`\)\)\.map\(\(l\) => \[l\.cle, 'prendre' as ChoixBilan\]\)/.test(fen) && /'corriger le registre'/.test(fen),
   'Frédéric : « à trancher » arrive PROPOSÉ -- la valeur du document choisie (« corriger le registre ») ; lecture seule : rien de choisi')
 

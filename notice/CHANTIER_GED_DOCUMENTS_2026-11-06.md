@@ -2623,7 +2623,35 @@ sessions glissés entre eux (classeur `3008f59`, `a05fc4c`, `bb8a78c` ; assistan
 `775f8a5`), accord de Frédéric pour l'ensemble. Vercel et Render servent `2250250`. **Vu en production sur 18849**
 (fenêtre ouverte par « Voir et trancher », refermée sans enregistrer : 0 décision, le seul travail est la relecture
 d'ouverture de la fiche, en lecture).
-⏳ **Reste** : éprouver l'envoi direct sur un bien d'essai ; puis le séquestre de 30770 (son geste à lui, par la fenêtre).
+**⛔ L'ESSAI RÉEL DE L'ENVOI DIRECT A ÉCHOUÉ (17/11, 18849, « on éprouve le 18849 »)** : séquestre seul, travail
+`080b32a1` -> refusé par le worker AVANT tout envoi (« Montant requis pour ce changement de statut »,
+normalizeStatusTransactionPayload : il lit le montant dans la charge). Rien d'écrit chez Hektor (l'ouverture de
+l'assistant est une lecture). **Frédéric : « les chantiers des workers sont tous documentés, si tu réutilises les workers
+actuels comment a-t-il pu être refusé ? »** -- parce que je ne l'ai PAS réutilisé tel qu'il est documenté : le code le dit
+(« la charge reste ENTIÈRE, le worker reconstruit le formulaire de Hektor avec elle » ; la RPC : « on ne l'allège pas ») et
+j'ai envoyé une charge allégée en affirmant qu'aucun montant n'était exigé, sans aller jusqu'au contrôle. Ma faute.
+Le travail raté est rejoué par la base (5 essais, aucun n'écrit chez Hektor), puis s'abandonne (le bouton n'agit qu'après
+5 essais ou 3 h).
+**✅ Décision de Frédéric (17/11) : « passer par la modale et cliquer tout seul, sans que l'utilisateur ne voie rien »** --
+ÉCRIT, rien poussé :
+- **l'envoi direct est RETIRÉ** (api.ts : `envoyerAffaireChampsDirect`, `gesteHektorEnCours`) : un seul chemin vers Hektor ;
+- **la charge de la modale est sortie telle quelle** dans `chargeDeLaModale(reprendre)` (App.tsx), utilisée par le bouton
+  « Mettre à jour » ET par l'envoi en arrière-plan : une seule construction ;
+- **la modale en arrière-plan** (date de signature, date de l'acte, séquestre) : elle s'ouvre CACHÉE (rien n'est dessiné),
+  se préremplit comme d'habitude, reçoit les valeurs du document marquées touchées, et part quand elle est PRÊTE (LA
+  transaction désignée chargée, son carnet lu -- repère `carnetChargePour`), au rendu suivant, une seule fois ; mêmes gardes
+  que son bouton (négociateur Hektor, geste en cours, montant) ; pas prête en 20 s -> rien ne part ;
+- ⛔ **cachée, elle n'écrit RIEN d'autre que le travail** : visible, elle enregistre aussi la répartition (et, sur un dossier
+  qui n'en a pas, une répartition 50/50 PAR DÉFAUT), la commission, les conditions, la note -- en arrière-plan ce serait
+  écrit sans être vu ; rien n'y a changé, donc rien n'est écrit ;
+- prix, net vendeur, honoraires : la modale s'ouvre VISIBLE (elle vérifie net + honoraires = prix) -- et s'il y en a un,
+  tout passe par elle ;
+- le résultat (envoyé ou refusé) s'affiche DANS la fenêtre « Ce que dit le compromis » ;
+- **un envoi raté se voit** : si le dernier envoi d'une transaction est en erreur (`lireDernierEnvoiAffairesStrict`), sa
+  valeur « en route » compte comme absente de Hektor -- « le dernier envoi à Hektor a échoué » -- et se propose de nouveau.
+Essais : `test_ged_bilan` 51 VERT ; les 13 essais GED verts ; build vert. ⚠ L'envoi en arrière-plan n'est PAS encore
+éprouvé en réel : sur 18849, le séquestre, une fois le travail raté abandonné.
+⏳ **Reste** : abandonner le travail raté (après son 5e essai) ; mettre en ligne ; éprouver sur 18849 (le séquestre).
 ⏳ (ancien) **À faire après la mise en ligne** : la regarder sur 18849 (ouvrir la fenêtre et la modale, SANS cliquer « Mettre à
 jour ») ; **le séquestre 12 400 € de 30770 est au carnet mais PAS chez Hektor** : ouvrir « Modifier » sur ce compromis
 (la case est préremplie depuis le carnet) et « Mettre à jour le compromis » -- c'est son geste à lui.

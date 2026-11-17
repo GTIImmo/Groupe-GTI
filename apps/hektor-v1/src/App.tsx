@@ -180,8 +180,6 @@ import {
   createCancelSignatureJob,
   markConsoleDocumentSignedManual,
   loadActiveHektorActionJobs,
-  gesteHektorEnCours,
-  envoyerAffaireChampsDirect,
   loadConsoleJobsByIds,
   loadContactRelations,
   ecrireAffaireCommission,
@@ -315,7 +313,7 @@ import { compterConditionsStrict, gedDecider, lireCarnetAffairesStrict, lireCond
 import { useDepotAssistant } from './lib/depotAssistant'
 // GED morceau 3 (12/11/2026) : le bloc « Reçu / Manque », derrière l'interrupteur ged_recu_manque (note GED §12.8).
 import { RecuManque } from './RecuManque'
-import { estEnvoiDirect, EVENEMENT_DROITS_TRANSACTION, EVENEMENT_MODIFIER_TRANSACTION, type ChoixBilan, type DemandeModifierTransaction, type ResultatBilan } from './BilanCompromis'
+import { estEnvoiDirect, EVENEMENT_DROITS_TRANSACTION, EVENEMENT_MODIFIER_TRANSACTION, EVENEMENT_RESULTAT_ENVOI, type ResultatEnvoi, type ChoixBilan, type DemandeModifierTransaction, type ResultatBilan } from './BilanCompromis'
 import { conditionsApres, type BilanCompromis as BilanCompromisCalcule, type LigneBilan } from './lib/gedBilanCompromis'
 import { caseVide, decoderConditions, type FaitsRemplir, type PropositionRemplir } from './lib/gedRemplir'
 import { LIBELLE_CONDITION } from './lib/gedComparer'
@@ -12043,15 +12041,13 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
     if (!ligne || ligne.present_in_hektor === false || ['refused', 'cancelled'].includes(String(ligne.state ?? ''))) {
       throw new Error('La transaction n\'a pas pu être relue, ou elle n\'est plus vivante : rien n\'a été écrit.')
     }
-    // Vers Hektor : les dates et le séquestre partent DIRECTEMENT (décision de Frédéric, 17/11) ; le prix, le net et les
-    // honoraires passent par la modale -- et s'il y en a un, tout passe par elle (un seul travail, jamais deux).
+    // Vers Hektor, TOUJOURS par la modale « Modifier le compromis » (le geste documenté, sa charge entière -- essai du
+    // 17/11 : une charge allégée a été refusée par le worker). Décision de Frédéric (17/11) : la date de signature, la date
+    // de l'acte et le séquestre partent par elle EN ARRIÈRE-PLAN (cachée, elle valide toute seule une fois préremplie) ;
+    // le prix, le net et les honoraires l'ouvrent VISIBLE (elle vérifie net + honoraires = prix) -- et s'il y en a un,
+    // tout passe par elle, visible (un seul travail, jamais deux). Les gardes sont les siennes.
     const versHektor = choix.filter((c) => c.choix === 'prendre' && c.ligne.destination === 'hektor')
-    const parLaModale = versHektor.some((c) => !estEnvoiDirect(c.ligne))
-    // les gardes de la modale, AVANT toute écriture : un négociateur Hektor sur l'annonce, aucun geste déjà en cours
-    if (versHektor.length && !parLaModale) {
-      if (!hasHektorNegotiator(dossier)) throw new Error('L\'annonce n\'a pas de négociateur Hektor : rien n\'a été écrit ni envoyé.')
-      if (await gesteHektorEnCours(dossier.hektor_annonce_id)) throw new Error('Une action Hektor est déjà en cours pour cette annonce : attends sa fin. Rien n\'a été écrit ni envoyé.')
-    }
+    const enArrierePlan = versHektor.length > 0 && versHektor.every((c) => estEnvoiDirect(c.ligne))
     const dit: string[] = []
     const gardees = choix.filter((c) => c.choix === 'garder')
     for (const c of gardees) await noter(c.ligne, 'ignoree', { geste: 'ce_que_dit_le_compromis', app_affaire_id: b.affaireId })
@@ -12064,22 +12060,15 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
       for (const c of conditions) await noter(c.ligne, 'remplie', { geste: 'ecrireAffaireConditions', app_affaire_id: b.affaireId, conditions_avant: avant.length, conditions_apres: apres.length })
       dit.push(`${conditions.length} condition${conditions.length > 1 ? 's' : ''} enregistrée${conditions.length > 1 ? 's' : ''} chez nous`)
     }
-    if (versHektor.length && !parLaModale) {
-      const champs: Partial<Record<'transaction_date' | 'signature_date' | 'sequestration', string>> = {}
-      for (const c of versHektor) champs[c.ligne.champModale as 'transaction_date' | 'signature_date' | 'sequestration'] = c.ligne.valeur
-      const job = await envoyerAffaireChampsDirect(b.affaireId, champs)
-      onJobCreated?.(job)
-      for (const c of versHektor) await noter(c.ligne, 'remplie', { geste: 'envoi_direct_hektor', app_affaire_id: b.affaireId, job_id: job.id })
-      dit.push(`${versHektor.length} envoyé${versHektor.length > 1 ? 's' : ''} à Hektor : ${versHektor.map((c) => `${c.ligne.libelle} ${c.ligne.lu}`).join(', ')} (le retour de Hektor le confirmera)`)
-    }
-    if (versHektor.length && parLaModale) {
+    if (versHektor.length) {
       const demande: DemandeModifierTransaction = {
         app_dossier_id: Number(dossier.app_dossier_id), appAffaireId: b.affaireId, hektorAffaireId: ligne.hektor_affaire_id == null ? null : String(ligne.hektor_affaire_id),
-        hektorAnnonceId: String(dossier.hektor_annonce_id), lectureId: b.lectureId, nom: b.nom, lignes: versHektor.map((c) => c.ligne), pris: false,
+        hektorAnnonceId: String(dossier.hektor_annonce_id), lectureId: b.lectureId, nom: b.nom, lignes: versHektor.map((c) => c.ligne), arrierePlan: enArrierePlan, pris: false,
       }
       window.dispatchEvent(new CustomEvent(EVENEMENT_MODIFIER_TRANSACTION, { detail: demande }))
-      if (demande.pris) return { message: '', ferme: true }
-      dit.push('la fenêtre de la transaction n\'a pas pu s\'ouvrir : rien n\'est parti à Hektor')
+      if (!demande.pris) dit.push('la fenêtre de la transaction n\'a pas pu s\'ouvrir : rien n\'est parti à Hektor')
+      else if (!enArrierePlan) return { message: '', ferme: true }
+      else dit.push(`envoi à Hektor lancé en arrière-plan (${versHektor.map((c) => `${c.ligne.libelle} ${c.ligne.lu}`).join(', ')}) : le résultat s'affiche en haut de l'écran`)
     }
     return { message: `Enregistré : ${dit.join(' ; ')}.`, ferme: false }
   }
@@ -19448,6 +19437,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   // ete saisi -- y compris les quatre qui n'ont aucune colonne nulle part :
   // jours_validite, jours_retractation, notaire_id, taux_honoraires.
   const [carnetAffaires, setCarnetAffaires] = useState<Map<number, Record<string, string>>>(new Map())
+  // GED lot 10c : POUR QUELLES transactions le carnet a été lu (la modale en arrière-plan n'envoie qu'une fois préremplie)
+  const [carnetChargePour, setCarnetChargePour] = useState<string | null>(null)
   // 3.1 (16/09) : le verdict que le worker a pose sur chaque saisie --
   // arrivee, en_attente, conflit, inconnu. Garde a PART de `carnetAffaires`
   // pour ne pas changer la forme d'une valeur lue a six endroits.
@@ -19462,8 +19453,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     if (!ids.length) { setCarnetAffaires(new Map()); setCarnetEtats(new Map()); setCarnetEcarts(new Map()); return }
     let annule = false
     loadAffaireChampsApp(ids)
-      .then((c) => { if (!annule) setCarnetAffaires(c) })
-      .catch(() => { if (!annule) setCarnetAffaires(new Map()) })
+      .then((c) => { if (!annule) { setCarnetAffaires(c); setCarnetChargePour(ids.join(',')) } })
+      .catch(() => { if (!annule) { setCarnetAffaires(new Map()); setCarnetChargePour(ids.join(',')) } })
     loadAffaireCarnetEtats(ids)
       .then((e) => { if (!annule) setCarnetEtats(e) })
       .catch(() => { if (!annule) setCarnetEtats(new Map()) })
@@ -20211,6 +20202,76 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       .catch((erreur) => console.warn('[ce que dit le compromis] décision non gardée', erreur))
   }
 
+  // ─── GED lot 10c (17/11, décision de Frédéric) : LA MODALE EN ARRIÈRE-PLAN ───
+  // « Passer par la modale et cliquer tout seul sur Mettre à jour, sans que l'utilisateur ne voie rien. » Pour la date de
+  // signature, la date de l'acte et le séquestre. La modale s'ouvre CACHÉE (rien n'est dessiné), se préremplit comme
+  // d'habitude (registre, carnet, acquéreurs), reçoit les valeurs du document (marquées touchées), et part par SA charge
+  // (chargeDeLaModale) quand elle est PRÊTE : la transaction désignée chargée, son carnet lu. Mêmes gardes que son bouton.
+  // ⚠ Elle n'écrit RIEN d'autre que le travail : ni répartition (elle en calculerait une par défaut et l'enregistrerait
+  //   en silence), ni commission, ni conditions, ni note -- rien n'y a changé. Pas prête en 20 s : rien ne part, c'est dit.
+  const [arrierePlanArme, setArrierePlanArme] = useState(false)
+  const [arrierePlanParti, setArrierePlanParti] = useState(false)
+  useEffect(() => { setArrierePlanArme(false); setArrierePlanParti(false) }, [depuisDocument])
+  // prête ? (déclaré APRÈS le préremplissage et la pose des valeurs : même rendu, il passe en dernier)
+  useEffect(() => {
+    if (!depuisDocument?.arrierePlan || arrierePlanArme || statusChangeStatus !== 'compromise') return
+    const affaire = affaireCourantePourStatut()
+    const ids = statusChangeAffaires.map((a) => Number(a.app_affaire_id)).filter((n) => Number.isFinite(n)).join(',')
+    if (!affaire || Number(affaire.app_affaire_id) !== depuisDocument.appAffaireId || !ids || carnetChargePour !== ids) return
+    setArrierePlanArme(true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [depuisDocument, statusChangeAffaires, statusChangeStatus, carnetAffaires, carnetChargePour, statusChangeAffaireChoisie, arrierePlanArme])
+  // armée : au rendu SUIVANT (les valeurs posées sont dans l'état), on envoie -- une seule fois
+  useEffect(() => {
+    if (!arrierePlanArme || arrierePlanParti || !depuisDocument?.arrierePlan) return
+    setArrierePlanParti(true)
+    void envoyerEnArrierePlan()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [arrierePlanArme, arrierePlanParti, depuisDocument])
+  // pas prête en 20 secondes : on referme, rien n'est parti
+  useEffect(() => {
+    if (!depuisDocument?.arrierePlan) return
+    const minuterie = window.setTimeout(() => {
+      if (arrierePlanPartiRef.current) return
+      setStatusChangeTarget(null)
+      const texte = 'La transaction n\'a pas pu être préparée à temps : rien n\'est parti à Hektor. Réessaie depuis « Ce que dit le compromis ».'
+      setErrorMessage(texte)
+      window.dispatchEvent(new CustomEvent<ResultatEnvoi>(EVENEMENT_RESULTAT_ENVOI, { detail: { texte, erreur: true } }))
+    }, 20000)
+    return () => window.clearTimeout(minuterie)
+  }, [depuisDocument])
+  const arrierePlanPartiRef = useRef(false)
+  useEffect(() => { arrierePlanPartiRef.current = arrierePlanParti }, [arrierePlanParti])
+  async function envoyerEnArrierePlan() {
+    const d = depuisDocument
+    const cible = statusChangeTarget
+    if (!d || !cible) return
+    const finir = (erreur: string | null, notice: string | null = null) => {
+      setStatusChangeTarget(null)
+      if (erreur) setErrorMessage(erreur)
+      if (notice) setNoticeMessage(notice)
+      // la fenêtre « Ce que dit le compromis », restée ouverte, le dit aussi
+      const texte = erreur ?? notice
+      if (texte) window.dispatchEvent(new CustomEvent<ResultatEnvoi>(EVENEMENT_RESULTAT_ENVOI, { detail: { texte, erreur: Boolean(erreur) } }))
+    }
+    // les gardes du bouton « Mettre à jour » (handleChangeHektorAnnonceStatus), sans ouvrir de fenêtre
+    if (!hasHektorNegotiator(cible)) { finir('L\'annonce n\'a pas de négociateur Hektor : rien n\'est parti.'); return }
+    if (activeAdminAnnonceJobIds.has(String(cible.hektor_annonce_id))) { finir('Une action Hektor est déjà en cours pour cette annonce : rien n\'est parti. Réessaie après sa fin.'); return }
+    if (!statusChangeAmount.trim() || !statusChangeSalePrice.trim()) { finir('Le montant de la transaction est inconnu : rien n\'est parti.'); return }
+    setStatusChangePending(true)
+    try {
+      const job = await createChangeHektorAnnonceStatusJob(chargeDeLaModale(true))
+      rememberHektorActionJob(job)
+      noterDepuisDocument(job?.id ? String(job.id) : null)
+      relireApresLeGeste()
+      finir(null, `Envoyé à Hektor (${d.lignes.map((l) => `${l.libelle} ${l.lu}`).join(', ')}) pour ${cible.numero_dossier ?? cible.hektor_annonce_id} : le retour de Hektor le confirmera.`)
+    } catch (erreur) {
+      finir(erreur instanceof Error ? `Rien n'est parti à Hektor : ${erreur.message}` : 'Rien n\'est parti à Hektor.')
+    } finally {
+      setStatusChangePending(false)
+    }
+  }
+
   // ─── « CORRIGER SANS ENVOYER A HEKTOR » A ETE RETIRE ───   15/09/2026
   //
   // DECISION DE FREDERIC, apres audit. Le bouton ecrivait dans le carnet
@@ -20330,6 +20391,79 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   // l'INTENTION change.
   // ⚠ Elle ne peut pas se deduire des donnees : la charge porte toujours
   //   compromis_id. Elle vient du BOUTON, et de lui seul.
+  // GED lot 10c (17/11) : LA CHARGE DE LA MODALE, sortie telle quelle de handleChangeHektorAnnonceStatus pour servir
+  // aussi à l'envoi EN ARRIÈRE-PLAN (« Ce que dit le compromis ») : une seule construction, jamais deux (la leçon de la
+  // RPC : « dupliquer les trente champs de la modale, c'est la promesse d'une divergence »).
+  function chargeDeLaModale(reprendre: boolean): Parameters<typeof createChangeHektorAnnonceStatusJob>[0] {
+    if (!statusChangeTarget) throw new Error('Aucun bien visé')
+    return {
+      dossier: statusChangeTarget,
+      targetStatus: statusChangeStatus,
+      // 4C-prix (02/11/2026) : sur la vente, la case « Montant » est CACHÉE (14/09) et gardait le prix de
+      // l'ANNONCE posé à l'ouverture ; la base et la preuve du worker le prenaient pour le prix (essai réel
+      // vente 23358 : 128 787 au registre pour 115 001 chez Hektor). Une vente n'a qu'un prix : celui de la case
+      // « Prix de vente ». Note : notice/AUDIT_GESTES_REGISTRE_TRANSACTIONS_2026-10-30.md § 11 quater.
+      amount: statusChangeStatus === 'sold' ? (statusChangeSalePrice || statusChangeAmount) : statusChangeAmount,
+      salePrice: statusChangeSalePrice,
+      transactionDate: statusChangeDate,
+      signatureDate: statusChangeSignatureDate,
+      validityDays: statusChangeValidityDays,
+      retractionDays: statusChangeRetractionDays,
+      // 06/11/2026 -- PLUS DE N° DE MANDAT DEPUIS LA MODALE (audit AUDIT_CHAMPS_VENDEURS_ET_MANDAT_MODALE_STATUT_2026-11-06.md,
+      // decision de Frederic). Hektor attend SA forme (« 553-PROTEXA ») ; le numero seul que la case portait
+      // (« 18787 », prerempli) passait devant elle a l'offre et Hektor l'ignorait sans erreur : offre sans mandat.
+      // Vide, le worker reposte la valeur de Hektor (normalizeStatusTransactionPayload). Compromis et vente : ignore.
+      selectedMandat: '',
+      buyerContactId: statusChangeBuyerContactId,
+      buyerContactIds: statusChangeBuyers
+        .map((x) => String(x.hektor_contact_id ?? '').trim()).filter(Boolean),
+      // 2.6 (16/09) : l'ecran DIT qu'il a touche la liste. Sans ce temoin, le
+      // worker conserve celle de Hektor -- c'est le comportement d'avant.
+      acquereursAffirmes: statusChangeAcquereursAffirmes,
+      apresVente: statusChangeApresVente,
+      buyerNotaryId: statusChangeBuyerNotaryId,
+      // 3.2d lot 2 : le notaire du vendeur, et ce que l'utilisateur a
+      // VRAIMENT designe ici -- seul ce qui est affirme sera pose en reprise.
+      // 3.2d lot 3 : les mandants, et SEULEMENT si quelqu'un y a touche.
+      mandantContactIds: statusChangeMandantsAffirmes
+        ? statusChangeMandants.map((x) => x.id) : undefined,
+      sellerNotaryId: statusChangeSellerNotaryId,
+      // R1 (22/10) : le nom affiche, pour que le registre le porte des le clic.
+      buyerNotaryNom: statusChangeBuyerNotaryNom,
+      sellerNotaryNom: statusChangeSellerNotaryNom,
+      notairesAffirmes: statusChangeNotairesAffirmes,
+      buyerFees: statusChangeBuyerFees,
+      buyerFeesRate: statusChangeBuyerFeesRate,
+      // 18/09 : la commission vendeur, SEULEMENT si la case a ete touchee --
+      // compromis et vente (jamais l'offre, qui n'en a pas).
+      sellerFees: (statusChangeStatus === 'compromise' || statusChangeStatus === 'sold')
+        && statusChangeHonorairesEntreeTouche ? statusChangeHonorairesEntree : undefined,
+      netSellerPrice: statusChangeNetSellerPrice,
+      sequestration: statusChangeSequestration,
+      closeReason: statusChangeCloseReason,
+      closeEtat: statusChangeCloseEtat,
+      closeRaison: statusChangeCloseRaison,
+      // ⑦-3a piece 1 (16/10) : LA DATE QU'ON VIENT DE SAISIR PART AVEC LE TRAVAIL.
+      // Sans elle, le worker retombait sur `transaction_date` (le champ date
+      // GENERIQUE de cette meme modale, qui vaut aujourd'hui) et ECRASAIT la date
+      // saisie dans le carnet -- il ecrit apres nous. Detail : `closeDate` dans
+      // lib/api.ts.
+      // ⚠ Seulement pour « Clos » : c'est le seul cas ou la modale affiche ce
+      //   champ, et le chemin « Vendu » clot sur la DATE DE VENTE, exprès.
+      closeDate: statusChangeStatus === 'closed' ? statusChangeCloseDate : undefined,
+      closeMandatOnSale: statusChangeStatus === 'sold',
+      closePrice: statusChangeSalePrice || statusChangeAmount,
+      reprendreTransaction: reprendre,
+      // Point E (23/10) : en modification seulement -- la base n'inscrit au carnet que ces cles.
+      champsTouches: reprendre ? statusChangeTouches : undefined,
+      // C'EST L'ECRAN QUI DESIGNE. affaireCourantePourStatut() rend la ligne du
+      // registre que la modale AFFICHE -- la base, elle, ne peut pas choisir
+      // entre les sept offres d'un meme bien.
+      modifierAffaireId: reprendre ? affaireCourantePourStatut()?.app_affaire_id : undefined,
+      priority: 7,
+    }
+  }
+
   async function handleChangeHektorAnnonceStatus(
     event: FormEvent<HTMLFormElement>,
     reprendre = false,
@@ -20385,72 +20519,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       return
     }
     try {
-      const job = await createChangeHektorAnnonceStatusJob({
-        dossier: statusChangeTarget,
-        targetStatus: statusChangeStatus,
-        // 4C-prix (02/11/2026) : sur la vente, la case « Montant » est CACHÉE (14/09) et gardait le prix de
-        // l'ANNONCE posé à l'ouverture ; la base et la preuve du worker le prenaient pour le prix (essai réel
-        // vente 23358 : 128 787 au registre pour 115 001 chez Hektor). Une vente n'a qu'un prix : celui de la case
-        // « Prix de vente ». Note : notice/AUDIT_GESTES_REGISTRE_TRANSACTIONS_2026-10-30.md § 11 quater.
-        amount: statusChangeStatus === 'sold' ? (statusChangeSalePrice || statusChangeAmount) : statusChangeAmount,
-        salePrice: statusChangeSalePrice,
-        transactionDate: statusChangeDate,
-        signatureDate: statusChangeSignatureDate,
-        validityDays: statusChangeValidityDays,
-        retractionDays: statusChangeRetractionDays,
-        // 06/11/2026 -- PLUS DE N° DE MANDAT DEPUIS LA MODALE (audit AUDIT_CHAMPS_VENDEURS_ET_MANDAT_MODALE_STATUT_2026-11-06.md,
-        // decision de Frederic). Hektor attend SA forme (« 553-PROTEXA ») ; le numero seul que la case portait
-        // (« 18787 », prerempli) passait devant elle a l'offre et Hektor l'ignorait sans erreur : offre sans mandat.
-        // Vide, le worker reposte la valeur de Hektor (normalizeStatusTransactionPayload). Compromis et vente : ignore.
-        selectedMandat: '',
-        buyerContactId: statusChangeBuyerContactId,
-        buyerContactIds: statusChangeBuyers
-          .map((x) => String(x.hektor_contact_id ?? '').trim()).filter(Boolean),
-        // 2.6 (16/09) : l'ecran DIT qu'il a touche la liste. Sans ce temoin, le
-        // worker conserve celle de Hektor -- c'est le comportement d'avant.
-        acquereursAffirmes: statusChangeAcquereursAffirmes,
-        apresVente: statusChangeApresVente,
-        buyerNotaryId: statusChangeBuyerNotaryId,
-        // 3.2d lot 2 : le notaire du vendeur, et ce que l'utilisateur a
-        // VRAIMENT designe ici -- seul ce qui est affirme sera pose en reprise.
-        // 3.2d lot 3 : les mandants, et SEULEMENT si quelqu'un y a touche.
-        mandantContactIds: statusChangeMandantsAffirmes
-          ? statusChangeMandants.map((x) => x.id) : undefined,
-        sellerNotaryId: statusChangeSellerNotaryId,
-        // R1 (22/10) : le nom affiche, pour que le registre le porte des le clic.
-        buyerNotaryNom: statusChangeBuyerNotaryNom,
-        sellerNotaryNom: statusChangeSellerNotaryNom,
-        notairesAffirmes: statusChangeNotairesAffirmes,
-        buyerFees: statusChangeBuyerFees,
-        buyerFeesRate: statusChangeBuyerFeesRate,
-        // 18/09 : la commission vendeur, SEULEMENT si la case a ete touchee --
-        // compromis et vente (jamais l'offre, qui n'en a pas).
-        sellerFees: (statusChangeStatus === 'compromise' || statusChangeStatus === 'sold')
-          && statusChangeHonorairesEntreeTouche ? statusChangeHonorairesEntree : undefined,
-        netSellerPrice: statusChangeNetSellerPrice,
-        sequestration: statusChangeSequestration,
-        closeReason: statusChangeCloseReason,
-        closeEtat: statusChangeCloseEtat,
-        closeRaison: statusChangeCloseRaison,
-        // ⑦-3a piece 1 (16/10) : LA DATE QU'ON VIENT DE SAISIR PART AVEC LE TRAVAIL.
-        // Sans elle, le worker retombait sur `transaction_date` (le champ date
-        // GENERIQUE de cette meme modale, qui vaut aujourd'hui) et ECRASAIT la date
-        // saisie dans le carnet -- il ecrit apres nous. Detail : `closeDate` dans
-        // lib/api.ts.
-        // ⚠ Seulement pour « Clos » : c'est le seul cas ou la modale affiche ce
-        //   champ, et le chemin « Vendu » clot sur la DATE DE VENTE, exprès.
-        closeDate: statusChangeStatus === 'closed' ? statusChangeCloseDate : undefined,
-        closeMandatOnSale: statusChangeStatus === 'sold',
-        closePrice: statusChangeSalePrice || statusChangeAmount,
-        reprendreTransaction: reprendre,
-        // Point E (23/10) : en modification seulement -- la base n'inscrit au carnet que ces cles.
-        champsTouches: reprendre ? statusChangeTouches : undefined,
-        // C'EST L'ECRAN QUI DESIGNE. affaireCourantePourStatut() rend la ligne du
-        // registre que la modale AFFICHE -- la base, elle, ne peut pas choisir
-        // entre les sept offres d'un meme bien.
-        modifierAffaireId: reprendre ? affaireCourantePourStatut()?.app_affaire_id : undefined,
-        priority: 7,
-      })
+      const job = await createChangeHektorAnnonceStatusJob(chargeDeLaModale(reprendre))
       rememberHektorActionJob(job)
 
       // ═══ LA DATE DE CLOTURE DU MANDAT PART APRES, ET SEULEMENT CHEZ NOUS ═══
@@ -23630,7 +23699,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         ) : null}
         {/* Refonte visuelle (lot 1, 06/11) : interrupteur allumé -> la nouvelle vue ; éteint -> l'ancien bloc ci-dessous,
             ENTOURÉ sans qu'une ligne change. La nouvelle vue reçoit l'état et les fonctions, elle n'en a pas d'autres. */}
-        {APP_STATUT_V2_ENABLED ? (statusChangeTarget ? (
+        {APP_STATUT_V2_ENABLED ? (statusChangeTarget && !depuisDocument?.arrierePlan ? (
           <ModaleStatutV2
             statusChangeTarget={statusChangeTarget}
             statusChangeStatus={statusChangeStatus}
@@ -23678,7 +23747,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           affaireCourante: affaireCourantePourStatut(),
         }}
           />
-        ) : null) : (<>
+        ) : null) : depuisDocument?.arrierePlan ? null : (<>
         {statusChangeTarget ? (
           <div className="modal-overlay" onClick={closeStatusChangeModal}>
             <section className={`modal-panel modal-panel-wide status-change-modal${APP_COCKPIT_V2_ENABLED ? ' fa-ck-statusmodal' : ''}`} onClick={(event) => event.stopPropagation()}>

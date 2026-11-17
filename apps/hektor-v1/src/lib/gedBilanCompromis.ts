@@ -32,7 +32,7 @@ export type LigneBilan = {
   condition: { nature: NatureCondition; libelle: string; date: string | null; catalogueId: string | null; retirer: boolean } | null
   regle: 'L7' | 'L20' | null  // la ligne « À regarder » qui dit la même chose (la mesure du morceau 10)
   // lot 10c (audit) : la valeur de la transaction n'est pas (encore) chez Hektor -- carnet seul, ou envoyée sans retour
-  attente: 'jamais_envoye' | 'en_route' | null
+  attente: 'jamais_envoye' | 'en_route' | 'echec' | null
 }
 export type BilanCompromis = {
   lectureId: string | null
@@ -118,7 +118,7 @@ export function bilanCompromis(docs: DocumentLu[], affaires: AffaireRegle[], cat
     const attente = ligne.enAttente?.[CHAMP_CARNET[l.cle] ?? ''] ?? null
     if (!attente) continue
     l.attente = attente
-    const dit = attente === 'jamais_envoye' ? 'notre carnet seul la portait : elle n\'est jamais partie chez Hektor' : 'envoyée à Hektor, pas encore confirmée par son retour'
+    const dit = attente === 'echec' ? 'le dernier envoi à Hektor a échoué : la valeur n\'y est pas' : attente === 'jamais_envoye' ? 'notre carnet seul la portait : elle n\'est jamais partie chez Hektor' : 'envoyée à Hektor, pas encore confirmée par son retour'
     l.note = l.note ? `${dit} ; ${l.note}` : dit
   }
 

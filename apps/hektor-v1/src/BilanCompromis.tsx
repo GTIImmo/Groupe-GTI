@@ -28,10 +28,16 @@ export type DemandeModifierTransaction = {
   lectureId: string | null
   nom: string
   lignes: LigneBilan[]
+  // 17/11 (décision de Frédéric) : la modale s'ouvre CACHÉE et part toute seule (date de signature, date de l'acte,
+  // séquestre) ; faux : elle s'ouvre visible, préremplie (prix, net, honoraires)
+  arrierePlan: boolean
   pris: boolean
 }
 // Qui peut modifier une transaction (responsable ou admin) : l'écran principal répond, le panneau demande.
 export const EVENEMENT_DROITS_TRANSACTION = 'ged:droits-transaction'
+// Le RÉSULTAT de l'envoi en arrière-plan (la modale cachée) : la fenêtre, restée ouverte, l'affiche.
+export const EVENEMENT_RESULTAT_ENVOI = 'ged:resultat-envoi'
+export type ResultatEnvoi = { texte: string; erreur: boolean }
 // Les champs que Hektor connaît et qui partent DIRECTEMENT (Frédéric, 17/11) : date de signature, date de l'acte,
 // séquestre -- une case seule, rien à recalculer. Le prix, le net vendeur et les honoraires passent par la fenêtre de la
 // transaction (Hektor ne recalcule pas le net : elle vérifie net + honoraires = prix).
@@ -126,6 +132,12 @@ export default function BilanCompromis({
 
   // Échap ferme (sauf pendant l'écriture) ; le focus entre dans la fenêtre à l'ouverture
   useEffect(() => { fenetre.current?.focus() }, [])
+  // l'envoi en arrière-plan a fini (réussi ou refusé) : on le dit ici
+  useEffect(() => {
+    const ecoute = (e: Event) => { const r = (e as CustomEvent<ResultatEnvoi>).detail; if (r) setMessage({ texte: r.texte, erreur: r.erreur }) }
+    window.addEventListener(EVENEMENT_RESULTAT_ENVOI, ecoute)
+    return () => window.removeEventListener(EVENEMENT_RESULTAT_ENVOI, ecoute)
+  }, [])
   useEffect(() => {
     const touche = (e: KeyboardEvent) => {
       if (e.key !== 'Escape' || enCours) return
@@ -169,7 +181,7 @@ export default function BilanCompromis({
     const d = decisionDe(l)
     const actif = !d && l.etat !== 'accord'
     const plaque = (cote: 'compromis' | 'transaction') => {
-      const valeur = cote === 'compromis' ? l.lu : (l.transaction ?? (l.condition ? 'non suivie' : l.attente === 'jamais_envoye' ? 'pas chez Hektor' : 'vide'))
+      const valeur = cote === 'compromis' ? l.lu : (l.transaction ?? (l.condition ? 'non suivie' : l.attente === 'jamais_envoye' || l.attente === 'echec' ? 'pas chez Hektor' : 'vide'))
       const pris = cote === 'compromis' ? c === 'prendre' : c === 'garder'
       const ecarte = c != null && !pris
       const vide = cote === 'transaction' && l.transaction == null
@@ -313,7 +325,7 @@ export default function BilanCompromis({
             <p className="bc-resume" aria-live="polite">
               {resume || (rienAFaire ? 'Tout est déjà tranché.' : 'Aucun choix pour l\'instant.')}
               {parLaFenetre ? <small>Le prix, le net vendeur ou les honoraires changent : la fenêtre de la transaction s'ouvre préremplie, tu vérifies, et c'est elle qui envoie à Hektor.</small>
-                : versHektor ? <small>Envoyé directement à Hektor, seulement les cases corrigées ; le reste de la transaction ne bouge pas.</small> : null}
+                : versHektor ? <small>Envoyé à Hektor par la fenêtre de la transaction, en arrière-plan : seulement les cases corrigées, le reste ne bouge pas.</small> : null}
             </p>
           )}
           <button type="button" className="bc-b2" disabled={enCours} onClick={onFermer}>Fermer</button>

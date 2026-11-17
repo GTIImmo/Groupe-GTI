@@ -356,6 +356,24 @@ export async function lireCarnetDetailStrict(appAffaireIds: number[]): Promise<M
   return carnet
 }
 
+// Lot 10c (17/11, essai réel sur 18849) : l'état du DERNIER envoi à Hektor de chaque transaction (la modification,
+// par la modale ou l'envoi direct). Un envoi en ERREUR laisse au carnet une ligne « en route » qui n'arrivera jamais
+// (l'abandon ne la retire pas) : sans ceci, la fenêtre la croirait chez Hektor. Lu STRICTEMENT.
+export async function lireDernierEnvoiAffairesStrict(appAffaireIds: number[]): Promise<Map<number, string>> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Base non configurée')
+  const ids = Array.from(new Set(appAffaireIds.filter((id) => Number.isFinite(id)))).map(String)
+  const sortie = new Map<number, string>()
+  if (!ids.length) return sortie
+  const { data, error } = await supabase.from('app_console_job').select('status,created_at,payload_json->>app_affaire_id')
+    .eq('job_type', 'change_hektor_annonce_status').in('payload_json->>app_affaire_id', ids).order('created_at', { ascending: false }).limit(200)
+  if (error) throw new Error(error.message)
+  for (const r of (data ?? []) as Array<{ status: string; app_affaire_id: string | null }>) {
+    const id = Number(r.app_affaire_id)
+    if (Number.isFinite(id) && !sortie.has(id)) sortie.set(id, String(r.status ?? ''))
+  }
+  return sortie
+}
+
 // Lot 10c (17/11) : la liste COMPLÈTE des conditions d'UNE transaction (état, levée, note, délai), lue STRICTEMENT --
 // le geste d'écriture remplace toute la liste : une lecture ratée rendue vide EFFACERAIT les conditions suivies.
 export async function lireConditionsCompletesStrict(appAffaireId: number): Promise<ConditionComplete[]> {
