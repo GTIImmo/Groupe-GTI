@@ -63,3 +63,13 @@ témoin inverse, `npm run build`, puis un essai réel sur un document de TEST si
 - **Reste, avec son accord** : appliquer le patch puis la répétition ; pousser ; redémarrer les 4 services worker (lui,
   file vide) ; essai réel : le bouton absent sur un document signé de test, et un travail posé à la main refusé.
 
+## 6. EN PRODUCTION (17/11, sur « Oui, applique et pousse »)
+
+- **Base** : patch appliqué par `Console/apply_sql_patch.js` (pooler), puis la RÉPÉTITION sans erreur (7 contrôles, chacun
+  lève s'il échoue) ; vérifié ensuite : le garde est actif (`tgenabled O`) à côté des 3 autres gardes intacts, 43 travaux
+  de suppression comme avant (aucun essai resté), la règle reconnaît le mandat signé de 61398.
+- **Poussé** : `36313b3` (Vercel en ligne avec « ne se supprime pas » ; Render sert `6d13e6e`, aucun fichier serveur n'a
+  changé entre les deux — rien à redéployer).
+- ⏰ **Reste** : le redémarrage des 4 services worker par Frédéric, FILE VIDE (elle l'était à la vérification), pour activer
+  le 3e verrou ; puis l'essai réel (bouton absent sur le document signé de 61398).
+
