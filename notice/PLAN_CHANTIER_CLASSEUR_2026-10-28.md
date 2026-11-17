@@ -2589,6 +2589,105 @@ chaine tombe au jour pres sur le Sheet, le dossier est le bon et l'ecart est une
 de saisie. **C'est une preuve interne, pas un avis** -- et c'est ce critere que
 `alleger_le_dossier_2026-11-18.py` applique pour sa recommandation.
 
+#### ✅⭐⭐⭐ L'AUDIT DES 6 ECARTEES EST FAIT -- 18/11, ET IL TRANCHE LES SIX
+
+> Sa demande : *« il y a 3 ou 4 appariements qui semblent faux que nous devons
+> auditer »*. ⭐ **Il en avait 3 sur 4 justes, et deux de ses « rien » etaient a tort.**
+> L'audit : `phase2/checks/audit_appariements_suspects_2026-11-18.py`, LECTURE SEULE
+> (le Sheet + phase2.sqlite en `mode=ro` + MODELO), et **confronte a l'apparieur
+> relance le 18/11**, qui apparie INDEPENDAMMENT du gel.
+
+```
+   LA METHODE, et elle ne regarde PAS que l'ecart de date :
+     ① la ligne du Sheet EN ENTIER (mandat, vendeur, acquereur, prix, commission)
+     ② notre chaine EN ENTIER, dates VRAIES (la cascade, pas la colonne `date`)
+     ③ ⭐⭐ LA PREUVE INTERNE : une AUTRE transaction colle-t-elle au jour pres ?
+     ④ ⭐⭐⭐ Y A-T-IL UN MEILLEUR CANDIDAT ? dire « faux » n'avance a rien,
+       il faut NOMMER le bon -- et l'audit le nomme dans 4 cas sur 4.
+```
+
+**⛔⛔ TROIS APPARIEMENTS SONT BIEN FAUX, ET LE GEL S'EST ACCROCHE SUR UN SEUL NOM**
+
+```
+   1ESJE28Q  le gel pointe l'annonce 26801 : vendeur BRUET, mandat 2816, prix
+             168 000, dates 2012. LE SHEET dit mandat 16758, vendeur RECAMIER,
+             prix 119 000, offre du 27/08/2024. Seul point commun : LACROIX.
+             ⭐ LE BON BIEN EST CHEZ NOUS : mandat 16758 -> annonce 9194,
+               mandants « Patrick RECAMIER Stephanie RECAMIER Michele RECAMIER ».
+             ⛔ MAIS AUCUNE TRANSACTION dessus : l'affaire du classeur n'existe pas.
+             ⭐⭐ ET L'APPARIEUR NE LA DONNAIT MEME PAS POUR SURE : confiance « A
+               VALIDER », cle « 9 sans mandat (acquereur + vendeur) » -- son signal
+               LE PLUS FAIBLE -- et il ECRIT « mandat different ? OUI ».
+   8Q3LHGZ4  le gel pointe l'annonce 16831 : vendeur CHAPELON, mandat 6732, prix
+             199 900, dates 2014. LE SHEET dit mandat 16239, vendeur ROQUES, prix
+             181 000, annulee le 23/10/2023. Seul point commun : CHEVALIER.
+             ⭐ LE BON BIEN EST CHEZ NOUS : mandat 16239 -> annonce 46472, mandants
+               « Maryse ROQUES Bernard ROQUES ». ⛔ Aucune transaction dessus.
+             ⭐⭐ ET L'APPARIEUR REFUSAIT DE LE LIER : confiance « AUCUNE »,
+               « a trancher (2 pistes) ». LE GEL A LIE CE QUE L'APPARIEUR REFUSAIT.
+   53ZS73KW  ⭐ LE BIEN EST LE BON, L'AFFAIRE NE L'EST PAS. Annonce 43091, mandat
+             16992, prix 65 000, commission 5 000, vendeurs identiques -- mais notre
+             affaire est CHAPUIS (offre et compromis au 09/03/2026, vente 30/07/2026)
+             quand le Sheet decrit GIBERT (offre 22/10/2024, compromis 18/12/2024,
+             annulee 16/07/2025).
+             ⭐⭐⭐ MODELO PROUVE QUE L'AFFAIRE GIBERT A EXISTE : mandat 16992, debut
+               13/06/2024, **compromis 17/12/2024** -- a UN JOUR du Sheet. Hektor
+               l'a connue, et elle n'est PLUS chez nous.
+             ⭐⭐ ET L'APPARIEUR LE DISAIT DEJA, EN UNE PHRASE : confiance « aucune »,
+               **« chaine 21551 deja prise par L4505 »**. Le gel a donc mis DEUX
+               lignes du Sheet sur UNE SEULE chaine.
+```
+
+**⛔ ET UN QUATRIEME EST FAUX, QUE NI LUI NI L'APPARIEUR N'AVAIENT CORRIGE**
+
+```
+   TR42PT5H  le gel pointe la chaine 27196 : offre refusee, acquereur
+             HALLAERT-THEYS, montant 199 000, mandat 15482.
+             ⭐⭐⭐ LE BON DOSSIER EST LA CHAINE 27195, MEME BIEN (annonce 53398) :
+                 acquereur   MORAND ZIMMER        = « ZIMMER Emma et MORAND Thomas »
+                 vendeur     BELONJE BELONJE BIEL = « Indivision BELONJE-BIEL »
+                 montant     209 000              = le prix du Sheet
+                 honoraires    9 000              = la Commission TTC du Sheet
+                 compromis   24/01/2025, annule   = coherent avec offre 16/12/2024
+                                                    et annulation 20/05/2025
+             ⛔⛔ ET L'APPARIEUR SE TROMPE ICI AUSSI, EN DISANT « SURE » : sa cle est
+               **« 1 mandat seul »** (15482), or UN NUMERO DE MANDAT N'IDENTIFIE PAS
+               UNE AFFAIRE -- 4 142 doublons, et ici le mandat a ete REATTRIBUE :
+                 mandat 15482  annonce 53398  du 06/02/2023 au 06/02/2025  BIEL/BELONJE
+                 mandat 18176  annonce 53398  du 06/11/2025 au 06/11/2026  BELONJE
+               ⭐ QUATRE preuves (noms, prix, commission, chronologie) contre UNE
+                 (le numero de mandat) : le lien doit pointer 27195.
+```
+
+**✅⭐⭐ ET DEUX DE SES SIX « RIEN » SONT A REVOIR -- L'APPARIEMENT EST CERTAIN**
+
+```
+   74IL9C8F  mandat 13555 = 13555 . vendeur DEMEESTERE . acquereur ABDALLAOUI .
+             prix 67 000 . commission 5 000 -- TOUT COLLE, et surtout :
+                compromis   le Sheet 25/04/2022 . nous 25/04/2022   -> 0 JOUR
+                vente       le Sheet 09/09/2022 . nous 07/09/2022   -> 2 jours
+             ➡ seule la date d'OFFRE derive : 31/01/**2002** chez nous pour
+               31/01/**2022** au Sheet. UN CHIFFRE D'ANNEE. Le classeur a raison.
+             L'apparieur : confiance « sure », 6 preuves.
+   QH6672TZ  mandat 3947 = 3947 . vendeur MALFANT . acquereur VIGNAL . prix 46 500 .
+             commission 4 346 = 4 346 -- TOUT COLLE, et :
+                vente       le Sheet 19/12/2023 . nous 19/12/2023   -> 0 JOUR
+             ➡ l'offre est a **366 JOURS PILE** : une annee mal saisie, rien d'autre.
+             L'apparieur : confiance « sure », 6 preuves.
+```
+
+⭐⭐⭐ **LE MOTIF COMMUN DES QUATRE FAUX, ET C'EST LA VRAIE TROUVAILLE** : le gel s'est
+accroche a **un seul signal faible** -- un nom de famille partage (LACROIX, CHEVALIER),
+ou un numero de mandat seul. Les quatre portent la meme marque, et dans trois cas sur
+quatre **l'apparieur le disait deja** (« a valider », « aucune », « deja prise »). ⛔ Le
+gel a donc retenu des liens que son propre apparieur ne donnait pas pour surs.
+➡ ⬜ **A FAIRE, ET C'EST PLUS LARGE QUE CES 6** : balayer les liens du gel dont la
+confiance de l'apparieur est « aucune » ou « a valider » -- c'est la FAMILLE, pas le cas
+(lecon 9). Les 9 « suspects » du 17/11 en font probablement partie.
+
+⛔⛔ **ET RIEN N'EST CORRIGE EN BASE** : ce sont 4 liens a defaire ou deplacer, plus 2
+dates a poser. C'est une ecriture en production, elle attend son « vas-y ».
+
 #### ✅⭐⭐ LA DATE D'OFFRE : LE MECANISME DU 12/11 EST PROUVE, ET LE PIEGE EST UN NOM
 
 Sa remarque : *« la date de l'offre d'achat du 61OW86CS est erronee, c'est la date de
@@ -4265,10 +4364,16 @@ D4 ⬜⭐⭐ L'ARBITRAGE DES 41 LIGNES -- **IL A TRANCHE LE 18/11, RIEN N'EST PO
          transaction de la chaine poser (27 des 75 sont ANNULEES, et sa decision du
          17/11 sur C2 ecartait les annulees), et 61OW86CS (classeur 1 800 / nous
          9 800, le seul ratio sous 0,6 -- une faute de frappe possible des deux cotes).
-       ⭐⭐ ET MA MESURE CONTREDIT DEUX DE SES « RIEN » : 74IL9C8F et QH6672TZ ont une
-         AUTRE transaction qui tombe au jour pres sur le Sheet -> l'appariement est
-         BON, l'ecart est une faute de saisie (2002 pour 2022 . 366 jours pile).
-       Detail complet : « LE 18/11 -- SON ARBITRAGE DES 41 LIGNES EST FAIT ».
+       ✅⭐⭐⭐ ET L'AUDIT DES 6 ECARTEES EST FAIT (18/11) -- IL TRANCHE LES SIX :
+         QUATRE liens sont FAUX (1ESJE28Q, 8Q3LHGZ4, 53ZS73KW, TR42PT5H) et l'audit
+         NOMME le bon bien dans les quatre cas ; DEUX de ses « rien » sont a revoir
+         (74IL9C8F et QH6672TZ : une autre transaction colle au JOUR EXACT, l'ecart
+         est une faute d'annee). ⭐⭐⭐ LE MOTIF COMMUN : le gel s'est accroche a UN
+         SEUL signal faible, et dans 3 cas sur 4 l'apparieur le disait deja (« a
+         valider », « aucune », « deja prise par L4505 »).
+         ⬜ A FAIRE, PLUS LARGE QUE CES 6 : balayer les liens du gel dont la
+           confiance de l'apparieur est « aucune » ou « a valider » (lecon 9).
+       Detail complet : « L'AUDIT DES 6 ECARTEES EST FAIT -- 18/11 ».
 ```
 
 ### ⚠ LES RESERVES QUI RESTENT OUVERTES
