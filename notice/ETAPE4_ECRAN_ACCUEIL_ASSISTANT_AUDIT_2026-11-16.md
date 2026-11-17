@@ -1073,3 +1073,21 @@ demande) ne sont PAS touchés.
 **Contrôles** : `test_assistant_gestes` 298 verts (§15 : 10 nouveaux, dont 2 témoins « le monde a changé au clic ») ;
 témoin inverse : le 3e verrou saboté -> ROUGE, remis -> 298 ; `test_assistant_ia` 62 (la consigne par rôle, rôle rempli) ;
 `test_assistant_lecteur` 73 ; `npm run build` vert. 38 gestes.
+
+## 39. Épreuve en réel des 9 cartes, SANS VALIDER (17/11, 09:32-09:34, sur « Oui, sans valider ») — PROUVÉE
+
+En production (Render `98199c3`), dans le Chrome de Frédéric (admin), 3 questions, 9 cartes, toutes REFUSÉES :
+`changer_prix`, `activer_estimation`, `rattacher_mandant`, `archiver_annonce`, `reaffecter_negociateur` (bien d'essai
+63330 « ESSAI 8A2B… ne pas diffuser ») ; `retirer_mandant` (62965 « TEST C13… à supprimer », Mme CLAUDE TESTCLAUDE) ;
+`adresse_contact` et `ajouter_conjoint` (contacts d'essai 20000009 « Mandant ESSAI CONTACT » et 10354641) ;
+`desarchiver_annonce` (24933, archive aux mandants de test). Les vraies personnes dont le nom contient « TEST » (TESTA,
+TESTUT, TESTON) ont été écartées.
+- Les 9 résumés étaient justes (ancien → nouveau prix, adresse avant → après, l'ancien et le nouveau négociateur, la
+  diffusion rallumée par « Actif ») ; le modèle a relevé DE LUI-MÊME le « ne pas diffuser » du titre.
+- **Base** : 9 lignes `app_assistant_action` en `refusee`, aucune exécutée ; **0 travail** posé entre 09:25 et la mesure
+  (témoin : la même lecture voit 1 113 travaux sur 24 h, le dernier à 09:24:44) ; fiches inchangées (63330 Estimation,
+  187 000 €, PEREIRA, non archivée ; adresse de 20000009 inchangée ; aucun couple ; aucune modification en attente ;
+  TESTCLAUDE toujours liée à 62965 ; 24933 toujours archivée).
+- ⚠ Défaut de forme trouvé : les textes des cartes accordent au masculin (« Mme … est aussi rattaché », « il disparaît »).
+- Non prouvé : le chemin du NÉGOCIATEUR (la consigne par rôle, le refus de la carte prix) — il faut le témoin commercial.
+- ⚠ Remarqué, hors sujet : Mme CLAUDE TESTCLAUDE (fiche de test) est MANDANT de l'annonce RÉELLE 24113.
