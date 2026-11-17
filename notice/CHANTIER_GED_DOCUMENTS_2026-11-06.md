@@ -2773,6 +2773,13 @@ plupart des modifications ») :
   45 (intactes), copropriété toujours OUI, nombre de lots non touché = 24.
 - **tour B** : DPE RECTIFICATIF (198 kWh, 29 kg, 10/11/2026) -> la fenêtre montre la fiche telle que Hektor l'a
   rendue (245 / 45 / 15/10/2026), trois corrections de cases REMPLIES, enregistrées en un envoi.
+  ✅ Travail `cf7fe8a9` (00:48:03 -> 00:48:16, 0 erreur), Hektor « mise à jour effectuée » ; relu : 198 / 29 / 2026-11-10.
+- ✅ **LE CONTRÔLE AU RETOUR A JUGÉ LES DEUX ENVOIS** (`app_annonce_saisie_modif`, témoin positif du zéro de
+  `app_v_annonce_modif_ecarts`) : `b5babe1b` 4/4 « identique », `cf7fe8a9` 3/3 « identique » -- 7 cases sur 7, 0 écart.
+⏳ Reste : voir à l'écran les deux corrections (en ligne avec `d2e8888`, poussé par la session « Page d'accueil » avec
+  l'accord de Frédéric) ; ⚠ la fiche synthétique jugée « pas_ce_type » par l'IA (valeurs lues justes) -- à regarder dans
+  la consigne de `copro.carnet` (une fiche synthétique EST de ce type, sous-type `fiche_synthetique`). La Carrez de 63331
+  (64,35 m² lus, 66 m² sur la fiche : -2,5 %) est « d'accord » par la règle du sens unique (5 %) -- pas de carte, JUSTE.
 ⚠ **Deux défauts d'ergonomie vus à l'écran, corrigés (commit suivant, pas poussé)** :
 1. les cartes « Ce que dit… » n'apparaissaient qu'au RECHARGEMENT : la lecture IA finit après l'arrivée du document et
    rien ne le disait au panneau -> le dépôt émet `ged:lecture-faite`, le panneau relit ses lectures ;
