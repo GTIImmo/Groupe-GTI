@@ -4439,6 +4439,72 @@ export async function loadActionStatus(appDossierId: number | null | undefined):
   return (data ?? null) as ActionStatus | null
 }
 
+// 17/11/2026 -- LES GESTES QUI N'ONT PAS DE BIEN.
+//
+// ⛔⛔ LE DEFAUT, TROUVE PARCE QUE FREDERIC A DIT « NON IMPOSSIBLE RIEN DANS LE
+//   MONITORING ». Il avait raison : le panneau TrancherIci part d'un NUMERO DE
+//   BIEN, donc un geste sans bien n'a AUCUN bien a cliquer -- il etait
+//   INTRANCHABLE, et son rouge envoyait un e-mail chaque matin sans recours.
+//   Mesure : 17 travaux en erreur sur 1 045 n'ont pas d'annonce, mais ils sont
+//   1 SUR 1 de ce qui attend un humain aujourd'hui.
+//
+// ⭐ LE VERROU N'ETAIT PAS LE PROBLEME : app_console_can_request_job rend `true`
+//   des la 2e condition pour un admin, SANS REGARDER le bien. resolveAction()
+//   savait donc deja trancher ces gestes -- il ne manquait que de les VOIR.
+//   On reutilise donc resolveAction tel quel, et le meme type ActionAbandonnee.
+export async function loadActionStatusSansBien(): Promise<ActionStatus | null> {
+  if (!hasSupabaseEnv || !supabase) return null
+  const { data, error } = await supabase.rpc('app_action_status_sans_bien')
+  // Même règle que sa sœur : un échec de lecture ne casse pas l'écran.
+  if (error) return null
+  return (data ?? null) as ActionStatus | null
+}
+
+// 17/11/2026 -- LES SIGNAUX DU REGISTRE DES NEGOCIATEURS.
+//
+// ⚠ DEUX JOURNAUX EXISTENT, ET IL NE FAUT PAS LES CONFONDRE -- c'est la mesure
+//   qui m'a arrete avant d'ajouter un doublon :
+//     app_registre_journal      -> a DEJA son bouton « c'est vu »
+//                                  (marquerPersonneVue / app_registre_personne_vue)
+//     app_negociateur_journal   -> c'est CELUI QUE LA SENTINELLE LIT
+//                                  (vue app_v_negociateur_signaux), et il n'avait
+//                                  aucun bouton. C'est lui qu'on sert ici.
+export type SignalNegociateur = {
+  id: number
+  nuit: string | null
+  evenement: string
+  champ: string | null
+  avant: string | null
+  apres: string | null
+  nom: string | null
+}
+
+export async function loadSignauxNegociateurs(): Promise<SignalNegociateur[]> {
+  if (!hasSupabaseEnv || !supabase) return []
+  const { data, error } = await supabase
+    .from('app_v_negociateur_signaux')
+    .select('id,nuit,evenement,champ,avant,apres,nom')
+    .order('id', { ascending: true })
+    .limit(200)
+  // Une lecture ratée ne doit pas casser l'écran de santé.
+  if (error) return []
+  return (data ?? []) as SignalNegociateur[]
+}
+
+// 17/11/2026 -- MARQUER UN SIGNAL DE NEGOCIATEUR « VU ».
+//
+// ⛔⛔ LE MECANISME ETAIT INSTALLE A MOITIE : le RPC existe depuis le 04/11 et il
+//   est accorde aux admins, mais AUCUN ECRAN NE L'APPELAIT -- zero occurrence
+//   dans tout le front. Resultat : la sentinelle data.negociateur_registre_signal
+//   restait orange indefiniment, et le seul acquittement jamais fait l'avait ete
+//   a la main en SQL. Ici on lui donne enfin son bouton.
+export async function traiterSignalNegociateur(id: number): Promise<boolean> {
+  if (!hasSupabaseEnv || !supabase || !id) return false
+  const { data, error } = await supabase.rpc('app_negociateur_signal_traiter', { p_id: id })
+  if (error) throw new Error(error.message ?? 'Impossible de marquer ce signal comme vu')
+  return data === true
+}
+
 // 15/10/2026 -- CE QUE LE CLIC A VRAIMENT FAIT.
 //
 // La RPC rend un compte-rendu depuis le premier jour, et l'ecran le JETAIT. Deux

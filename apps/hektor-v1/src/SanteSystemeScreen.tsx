@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { loadMonitorStatus, loadAlertsCurrent, setAlertState, loadAgentRuns, loadJournalSuppressions, localiserAnnonceParNumeroHektor, loadActionStatus, resolveAction, gesteLibelleFr, type MonitorStatusRow, type AlertRow, type AgentRunRow, type SuppressionJournalRow, type AnnonceLocalisee, type ActionAbandonnee } from './lib/api'
+import { loadMonitorStatus, loadAlertsCurrent, setAlertState, loadAgentRuns, loadJournalSuppressions, localiserAnnonceParNumeroHektor, loadActionStatus, loadActionStatusSansBien, loadSignauxNegociateurs, traiterSignalNegociateur, resolveAction, gesteLibelleFr, type MonitorStatusRow, type AlertRow, type AgentRunRow, type SuppressionJournalRow, type AnnonceLocalisee, type ActionAbandonnee, type SignalNegociateur } from './lib/api'
 import './sante-systeme.css'
 
 type SanteSystemeScreenProps = {
@@ -219,6 +219,182 @@ function TrancherIci({
           {souci ? <div className="ss-trancher-souci">{souci}</div> : null}
         </div>
       ) : null}
+    </div>
+  )
+}
+
+// 17/11/2026 -- LES GESTES QUI N'ONT PAS DE BIEN.
+//
+// ⛔⛔ LE DEFAUT, ET C'EST FREDERIC QUI L'A VU : « NON IMPOSSIBLE RIEN DANS LE
+//   MONITORING ». Il avait raison. TrancherIci part d'un NUMERO DE BIEN -- il
+//   appelle localiserAnnonceParNumeroHektor(numero) -- donc un geste SANS bien
+//   n'a aucun bien a cliquer : il etait INTRANCHABLE. Son rouge envoyait un
+//   e-mail chaque matin sans aucun recours possible.
+//
+//   ⚠ ET LA QUESTION AVAIT DEJA ETE POSEE PAR LUI, le 14/10 : « dans le
+//     monitoring je n'ai pas de bouton pour relancer ou annuler le worker ? ».
+//     La reponse d'alors (« un clic sur le bien cite ouvre un panneau ») n'a
+//     regle que les gestes QUI ONT un bien. Ceux des contacts sont restes sans
+//     porte pendant un mois, et personne ne l'a vu car il n'y en avait pas eu.
+//
+// ⭐ CE PANNEAU N'EST PAS PARESSEUX, contrairement a son grand frere -- et c'est
+//   voulu : il n'y a pas de bien sur lequel cliquer pour le declencher. Il se
+//   charge donc tout seul, et IL NE S'AFFICHE PAS quand il n'y a rien.
+//
+// ⭐ ON NE REECRIT RIEN : memes boutons, meme resolveAction, meme type
+//   ActionAbandonnee, meme libelle francais. Seule la LECTURE change.
+function TrancherSansBien() {
+  const [gestes, setGestes] = useState<ActionAbandonnee[]>([])
+  const [occupe, setOccupe] = useState<string | null>(null)
+  const [souci, setSouci] = useState<string | null>(null)
+  const [note, setNote] = useState<string | null>(null)
+
+  useEffect(() => {
+    let vivant = true
+    void (async () => {
+      try {
+        const statut = await loadActionStatusSansBien()
+        if (vivant) setGestes(statut?.gestes ?? [])
+      } catch {
+        // Une lecture ratee ne doit pas casser l'ecran de sante.
+      }
+    })()
+    return () => { vivant = false }
+  }, [])
+
+  const trancher = async (jobId: string, mode: 'refait' | 'abandon') => {
+    if (occupe) return
+    setOccupe(jobId)
+    setSouci(null)
+    setNote(null)
+    try {
+      const compte = await resolveAction(jobId, mode)
+      if (compte && compte.resolved === false) {
+        setSouci(compte.reason === 'deja_tranche'
+          ? 'Ce geste a déjà été tranché.'
+          : "Ce geste n'est pas encore tranchable : il lui faut 5 tentatives ou 3 heures.")
+        return
+      }
+      setNote(mode === 'abandon' ? 'Abandonné.' : 'Noté comme traité.')
+      setGestes((liste) => liste.filter((g) => g.job_id !== jobId))
+    } catch (err) {
+      setSouci(err instanceof Error ? err.message : String(err))
+    } finally {
+      setOccupe(null)
+    }
+  }
+
+  if (!gestes.length && !note && !souci) return null
+
+  return (
+    <div className="ss-group">
+      <div className="ss-group-head">
+        <h2>Gestes sans bien, à trancher</h2>
+        <span className="ss-count">{gestes.length}</span>
+      </div>
+      <div className="ss-trancher-panneau">
+        <div className="ss-trancher-lieu">
+          Ces gestes portent un contact ou un brouillon, pas une annonce — ils n’apparaissent
+          donc sous aucun bien, et c’est ici le seul endroit où les trancher.
+        </div>
+        {gestes.map((g) => (
+          <div className="ss-trancher-geste" key={g.job_id}>
+            <div className="ss-trancher-geste-nom">{gesteLibelleFr(g.job_type)}</div>
+            {g.erreur ? <div className="ss-trancher-geste-cause">{g.erreur}</div> : null}
+            <div className="ss-trancher-actions">
+              <button type="button" className="ss-btn-refait" disabled={occupe === g.job_id}
+                      onClick={() => { void trancher(g.job_id, 'refait') }}>J'ai refait</button>
+              <button type="button" className="ss-btn-abandon" disabled={occupe === g.job_id}
+                      onClick={() => { void trancher(g.job_id, 'abandon') }}>Abandonner ce geste</button>
+            </div>
+          </div>
+        ))}
+        {!gestes.length ? <div className="ss-trancher-vide">Plus rien à trancher.</div> : null}
+        {note ? <div className="ss-trancher-note">{note}</div> : null}
+        {souci ? <div className="ss-trancher-souci">{souci}</div> : null}
+      </div>
+    </div>
+  )
+}
+
+// 17/11/2026 -- LES SIGNAUX DU REGISTRE DES NEGOCIATEURS, ET LEUR BOUTON « VU ».
+//
+// ⛔⛔ LE MECANISME ETAIT INSTALLE A MOITIE. Le RPC app_negociateur_signal_traiter
+//   existe depuis le 04/11 et il est accorde aux administrateurs -- mais AUCUN
+//   ECRAN NE L'APPELAIT, zero occurrence dans tout le front. La sentinelle
+//   data.negociateur_registre_signal restait donc orange indefiniment, et le seul
+//   acquittement jamais fait l'avait ete A LA MAIN en SQL.
+//
+// ⚠ ET J'AI FAILLI POSER UN DOUBLON : l'ecran du registre a DEJA un bouton
+//   « c'est vu » -- mais il appelle app_registre_personne_vue, qui ecrit dans
+//   app_registre_journal, UN AUTRE JOURNAL. La sentinelle lit
+//   app_negociateur_journal. Deux journaux, deux boutons, et un seul existait.
+//   C'est la mesure de la vue qui l'a dit, pas le nom des fonctions.
+function SignauxNegociateurs() {
+  const [signaux, setSignaux] = useState<SignalNegociateur[]>([])
+  const [occupe, setOccupe] = useState<number | null>(null)
+  const [souci, setSouci] = useState<string | null>(null)
+  const [note, setNote] = useState<string | null>(null)
+
+  useEffect(() => {
+    let vivant = true
+    void (async () => {
+      const lus = await loadSignauxNegociateurs()
+      if (vivant) setSignaux(lus)
+    })()
+    return () => { vivant = false }
+  }, [])
+
+  const marquer = async (id: number) => {
+    if (occupe) return
+    setOccupe(id)
+    setSouci(null)
+    setNote(null)
+    try {
+      const fait = await traiterSignalNegociateur(id)
+      if (!fait) {
+        setSouci('Ce signal était déjà marqué comme vu.')
+        return
+      }
+      setNote('Noté comme vu.')
+      setSignaux((liste) => liste.filter((s) => s.id !== id))
+    } catch (err) {
+      setSouci(err instanceof Error ? err.message : String(err))
+    } finally {
+      setOccupe(null)
+    }
+  }
+
+  if (!signaux.length && !note && !souci) return null
+
+  return (
+    <div className="ss-group">
+      <div className="ss-group-head">
+        <h2>Registre des négociateurs : changements vus la nuit</h2>
+        <span className="ss-count">{signaux.length}</span>
+      </div>
+      <div className="ss-trancher-panneau">
+        <div className="ss-trancher-lieu">
+          Le registre a relevé ces changements pendant la nuit. Marquer un changement « vu »
+          éteint l’alerte — et rien n’est modifié ni envoyé chez Hektor.
+        </div>
+        {signaux.map((s) => (
+          <div className="ss-trancher-geste" key={s.id}>
+            <div className="ss-trancher-geste-nom">
+              {s.nom || `Personne ${s.id}`} · {s.evenement.replace(/_/g, ' ')}
+              {s.nuit ? ` · nuit du ${new Date(s.nuit).toLocaleDateString('fr-FR')}` : ''}
+            </div>
+            {s.apres ? <div className="ss-trancher-geste-cause">{s.apres}</div> : null}
+            <div className="ss-trancher-actions">
+              <button type="button" className="ss-btn-refait" disabled={occupe === s.id}
+                      onClick={() => { void marquer(s.id) }}>C'est vu</button>
+            </div>
+          </div>
+        ))}
+        {!signaux.length ? <div className="ss-trancher-vide">Plus rien à regarder.</div> : null}
+        {note ? <div className="ss-trancher-note">{note}</div> : null}
+        {souci ? <div className="ss-trancher-souci">{souci}</div> : null}
+      </div>
     </div>
   )
 }
@@ -471,6 +647,12 @@ export default function SanteSystemeScreen({ isAdmin, onOpenDossier }: SanteSyst
           <span className={`ss-kpi-val ${counts.crit ? 'ss-text-crit' : ''}`}>{counts.crit}</span>
         </div>
       </div>
+
+      {/* ⭐ 17/11/2026 : AVANT les alertes, parce que c'est la SEULE porte de ces
+          gestes -- et parce qu'un rouge qu'on ne peut pas eteindre se lit en
+          premier. Le panneau disparait tout seul quand il n'y a rien. */}
+      <TrancherSansBien />
+      <SignauxNegociateurs />
 
       {alertsToTreat.length > 0 || alertsInfoCount > 0 ? (
         <div className="ss-group">
