@@ -2513,7 +2513,23 @@ l'etat d'une autre transaction) ; ce balayage-ci, fait avec le critere « compro
 trouve un 7e qui se declenche sur `state` ET sur l'ABSENCE de numero. **Chaque famille
 demande son propre balayage, et il se fait AVANT de generer le patch.**
 
-### ✅⭐⭐⭐ C4, 3e PATCH -- AUDITE LE 17/11, ET IL N'Y A RIEN A POSER
+### ⛔⛔ C4, 3e PATCH -- MON 1er VERDICT, RENVERSE LE JOUR MEME
+
+> ⛔ **GARDE PARCE QU'IL EXPLIQUE UNE FAUTE**, pas parce qu'il est vrai. Le verdict
+> juste : **80 textes de F et 28 conditions**, catalogue a SIX clauses. Voir la
+> section 9 de `notice/C4_LE_DECODAGE_DE_LA_COLONNE_F_2026-11-16.md`.
+>
+> ⭐⭐⭐ **SA CORRECTION** : « MA REGLE SUR LES DONNEES DES TRANSACTIONS EN COURS NE
+> PORTAIT PAS SUR LES NOTES ». Sa regle protege du CONFLIT ; la bonne question est
+> « HEKTOR PORTE-T-IL CETTE DONNEE ? » -- et la mesure dit NON deux fois.
+>
+> ⛔⛔ **ET MES DEUX FAUTES DE CRITERE** : `entetes.index("G")` cherchait un nom
+> d'entete alors que « G » est la LETTRE de la 7e colonne (entete COMMENTAIRES) --
+> un zero par construction ; puis, corrigee, elle confondait « la ligne a un
+> commentaire G » avec « LE TEXTE DE F est pose ». **47 est devenu 80.**
+
+#### l'ancien verdict, pour memoire
+
 
 Le 2e patch annoncait : *« reste le 3e : les 86 CONDITIONS en attente, dont l'echeance
 se lit dans les abreviations »*. **L'audit dit NON, et c'est sa propre regle qui le
@@ -3790,11 +3806,11 @@ C4 ✅✅⬜ DEUX PATCHS SUR TROIS FAITS LE 17/11 :
              et le « pourquoi » reunis.
        2e  : **4 325 NOTES** (4 936 textes fusionnes), 11 controles justes.
              classeur:G 3 484 . classeur:F+G 585 . classeur:F 256
-       3e  : ⭐⭐⭐ **AUDITE LE 17/11 -- IL N'Y A RIEN A POSER**, et le temoin
-             positif le prouve. **0 condition posable sur 89** abreviations datees :
-             71 echeances sont DANS LE FUTUR, que sa regle interdit.
-       ⛔⛔ MAIS L'AUDIT A TROUVE UN TROU : **47 textes de F ne sont NULLE PART**
-         (ni note, ni condition) -- a trancher par lui.
+       3e  : ✅ **80 TEXTES DE F + 28 CONDITIONS**, et le CATALOGUE PASSE A SIX.
+             ⛔⛔ MON 1er VERDICT (« rien a poser ») ETAIT FAUX : sa regle
+             protege du CONFLIT, et Hektor ne porte NI note NI condition
+             (`conditions_suspensives` : 0 sur 18 591). Elle n'avait rien a
+             proteger. ⛔ Et mon « 47 textes » etait faux : ILS SONT 80.
        ⭐⭐⭐ **F EST DECODEE LE 16/11** -- voir
        `notice/C4_LE_DECODAGE_DE_LA_COLONNE_F_2026-11-16.md`.
        ⛔ CE DECODAGE N'ETAIT ECRIT NULLE PART : ni dans les 160 notes, ni au

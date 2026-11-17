@@ -1,5 +1,5 @@
 -- ═══════════════════════════════════════════════════════════════════════════
--- C4 (3e patch) -- LOT 1 : 80 TEXTES DE F . LOT 2 : 23 CONDITIONS DE CREDIT
+-- C4 (3e patch) -- LOT 1 : 80 TEXTES DE F . LOT 2 : 28 CONDITIONS DE CREDIT
 -- Genere le 2026-11-17 par phase2/checks/c4_generer_lots_1_et_2_2026-11-17.py
 --
 -- ⭐⭐⭐ SA CORRECTION DU 17/11 : « MA REGLE SUR LES DONNEES DES TRANSACTIONS EN
@@ -55,6 +55,16 @@ begin
     raise exception '⛔ LA SAUVEGARDE PORTE % lignes au lieu de 80', n;
   end if;
 end $$;
+
+-- ②bis LE CATALOGUE -- LES 2 CLAUSES NEUVES (sa decision du 17/11)
+--    ⛔ `id` est TEXT, NOT NULL, SANS DEFAUT : on le FOURNIT (max numerique + 1).
+--    ⭐ 91 jours est MESURE : sur les 2 lignes du classeur portant DPC *et* OPC,
+--      l'ecart est de 90 et 91 jours -- les 3 mois d'instruction d'un permis.
+insert into app_condition_catalogue (id, libelle, jours_defaut, rang)
+values
+    ('5', 'Depot du permis de construire', 0, 5),
+    ('6', 'Obtention du permis de construire', 91, 6)
+on conflict (id) do nothing;
 
 -- ③ LOT 1 -- COMPLETER LES 80 NOTES EXISTANTES
 --    ⭐ on AJOUTE un paragraphe, on ne remplace rien. Et la clause `position`
@@ -146,7 +156,7 @@ update app_affaire_note n
  where n.app_affaire_id = v.app_affaire_id
    and position(v.fragment in n.texte) = 0;
 
--- ⑤ LOT 2 -- LES 23 CONDITIONS « Obtention Credit »
+-- ⑤ LOT 2 -- LES 28 CONDITIONS « Obtention Credit »
 --    etat : la valeur par defaut 'attente'. On n'affirme JAMAIS une levee.
 insert into app_affaire_condition
     (app_affaire_id, rang, libelle, jours, date_echeance, catalogue_id,
@@ -155,6 +165,9 @@ values
     (30754, 1, 'Obtention Crédit', null, '2026-12-16'::date, '2', 1340947, 7108, '07/12 10j. ODP16/12 DB15/1 Me Bougon  Antoine', 'classeur:F-credit'),
     (28921, 1, 'Obtention Crédit', null, '2026-10-01'::date, '2', 1388157, 28921, '19/11 retard ODP01/10 DB30/10 Me Labidoire', 'classeur:F-credit'),
     (28897, 1, 'Obtention Crédit', null, '2026-11-15'::date, '2', 1388015, 28897, '20/11 ODP15/11vousfinancer DB15/12 (avnt) Me Rochette', 'classeur:F-credit'),
+    (28944, 1, 'Depot du permis de construire', 0, '2026-11-30'::date, '5', 1386917, 28729, '30/11 DPC30/11 OPC01/3 DB15/6 Me BDH / Me Damas  18393 à archiver après vente', 'classeur:F-credit'),
+    (28944, 2, 'Obtention du permis de construire', 91, '2027-03-01'::date, '6', 1386917, 28729, '30/11 DPC30/11 OPC01/3 DB15/6 Me BDH / Me Damas  18393 à archiver après vente', 'classeur:F-credit'),
+    (28964, 1, 'Depot du permis de construire', 0, '2026-09-30'::date, '5', 1372469, 21810, '20/11 retard dPC30/9 PC31/12 accord eau DB01/3  Me Chazottes-Leconte/Barre', 'classeur:F-credit'),
     (30810, 1, 'Obtention Crédit', 31, '2027-01-08'::date, '2', 1387713, 28869, '08/12ADP08/12 ODP08/01 DB05/02  Me Bérinchy', 'classeur:F-credit'),
     (30702, 1, 'Obtention Crédit', 46, '2026-12-15'::date, '2', 4052229, 30702, '19/11 ADP30/10 PTZ ODP15/12  fact. chaudière  achat17383 DB30/1 Me Labidoire', 'classeur:F-credit'),
     (30714, 1, 'Obtention Crédit', null, '2026-12-05'::date, '2', 1670823, 28977, '03/12 ODP5/12  (V)cuve  accord juge contentieux DB05/1 Me Carton', 'classeur:F-credit'),
@@ -163,6 +176,8 @@ values
     (30757, 1, 'Obtention Crédit', 60, '2027-01-18'::date, '2', 1388301, 29018, '20/11 ADP19/11 ODP18/01 DB20/02 Me Sanial245K', 'classeur:F-credit'),
     (30703, 1, 'Obtention Crédit', null, '2026-11-30'::date, '2', 5998325, 29021, '23/11 7j. ODP30/11 DB29/12 Me Cornu/Lancry', 'classeur:F-credit'),
     (30729, 1, 'Obtention Crédit', 36, '2026-12-15'::date, '2', 5530493, 29026, '18/11 ADP09/11 ODP15/12 relogmt-V DB27/3  E. Pereira / départ VL Gonzalez 09sept.', 'classeur:F-credit'),
+    (30731, 1, 'Depot du permis de construire', 0, '2026-12-15'::date, '5', 1379509, 29031, '15/12 dPC15/12 oPC15/3 DB01/7 Latour / Boixadera PC', 'classeur:F-credit'),
+    (30731, 2, 'Obtention du permis de construire', 91, '2027-03-15'::date, '6', 1379509, 29031, '15/12 dPC15/12 oPC15/3 DB01/7 Latour / Boixadera PC', 'classeur:F-credit'),
     (30753, 1, 'Obtention Crédit', null, '2026-12-16'::date, '2', 1390884, 30644, '27/11 choix bq ODP16/12 DB16/1 Me Faure', 'classeur:F-credit'),
     (30728, 1, 'Obtention Crédit', 31, '2026-12-31'::date, '2', 1365082, 30649, '30/11 DP  ADP30/11 ODP31/12 DB15/3 150Kpc maison inachevée', 'classeur:F-credit'),
     (30791, 1, 'Obtention Crédit', null, '2027-01-05'::date, '2', 1387820, 30659, '16/12 dDP16/12ADP ODP05/1 DP31/1 31/3 Latour/Ravel-D. pc', 'classeur:F-credit'),
@@ -188,7 +203,7 @@ begin
   end if;
 
   select count(*) into n from app_affaire_condition where origine = 'classeur:F-credit';
-  if n <> 23 then raise exception '⛔ LOT 2 : % conditions au lieu de 23', n; end if;
+  if n <> 28 then raise exception '⛔ LOT 2 : % conditions au lieu de 28', n; end if;
 
   -- ⭐ LES VOISINS SONT INTACTS
   select count(*) into n from app_affaire_note where origine = 'classeur';
@@ -215,15 +230,30 @@ begin
   select count(*) into n from app_affaire_note where coalesce(btrim(texte), '') = '';
   if n <> 0 then raise exception '⛔ % notes vides', n; end if;
   select count(*) into n from app_affaire_condition
-   where origine = 'classeur:F-credit'
-     and (date_echeance is null or catalogue_id <> '2');
-  if n <> 0 then raise exception '⛔ % conditions sans echeance ou hors catalogue', n; end if;
+   where origine = 'classeur:F-credit' and date_echeance is null;
+  if n <> 0 then raise exception '⛔ % conditions sans echeance', n; end if;
 
-  -- ⭐ et la clause du catalogue EXISTE (on n'en a cree aucune)
-  select count(*) into n from app_condition_catalogue where id = '2';
-  if n <> 1 then raise exception '⛔ la clause du catalogue est absente'; end if;
+  -- ⭐⭐ CHAQUE CONDITION POINTE UNE CLAUSE QUI EXISTE VRAIMENT au catalogue --
+  --   une jointure, pas une liste en dur : c'est la base qui repond.
+  select count(*) into n from app_affaire_condition c
+   where c.origine = 'classeur:F-credit'
+     and not exists (select 1 from app_condition_catalogue k
+                      where k.id = c.catalogue_id);
+  if n <> 0 then raise exception '⛔ % conditions pointent une clause INEXISTANTE', n; end if;
 
-  raise notice '✅ LOT 1 : % textes de F . LOT 2 : % conditions', 80, 23;
+  -- ⭐ LE CATALOGUE EST A 6, et les 4 d'avant sont INTACTES
+  select count(*) into n from app_condition_catalogue;
+  if n <> 6 then
+    raise exception '⛔ LE CATALOGUE PORTE % clauses au lieu de 6', n;
+  end if;
+  select count(*) into n from app_condition_catalogue
+   where id in ('1', '2', '3', '4');
+  if n <> 4 then
+    raise exception '⛔ LES 4 CLAUSES D ORIGINE ONT BOUGE : %', n;
+  end if;
+
+  raise notice '✅ LOT 1 : % textes de F . LOT 2 : % conditions . catalogue a %',
+    80, 28, 6;
 end $$;
 
 commit;

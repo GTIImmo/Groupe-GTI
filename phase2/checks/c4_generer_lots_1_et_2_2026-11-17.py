@@ -93,10 +93,30 @@ RAPPORT = RACINE / "notice" / "C4_LOTS_1_ET_2_2026-11-17.csv"
 LOT_API = 60
 
 #: l'identifiant du catalogue pour « Obtention Credit » -- IL EXISTE DEJA (id 2).
-#: ⛔ On ne cree PAS de clause : ADP et ODP sont le DEPART et l'ECHEANCE de
+#: ⛔ ADP et ODP n'en sont pas deux clauses mais le DEPART et l'ECHEANCE de
 #:   celle-la (24 fois sur 24, ecart median 31 jours).
 CATALOGUE_CREDIT = "2"
 LIBELLE_CREDIT = "Obtention Crédit"
+
+#: ⭐⭐⭐ SA DECISION DU 17/11, ET ELLE EXPLIQUE SON « 6 » : le catalogue passe de
+#:   4 a SIX clauses. « je veux que DPC/OPC c'est bien le depot et l'obtention du
+#:   permis devienne deux conditions suspensives en + ».
+#:
+#: ⭐⭐ ET LE DELAI DE 91 JOURS EST MESURE, PAS INVENTE : sur les 2 lignes du
+#:   classeur qui portent DPC *et* OPC, l'ecart est de 90 et 91 jours -- soit
+#:   exactement les 3 mois d'instruction d'un permis de construire.
+#:   Le DEPOT, lui, est un acte et non un delai : 0.
+CLAUSES_NEUVES = [
+    ("Depot du permis de construire", 0, "DPC"),
+    ("Obtention du permis de construire", 91, "OPC"),
+]
+
+#: ⚠ UNE REDONDANCE A DIRE, pas a cacher : « Permis de construire » (id 3) a ete
+#:   pose hier pour le MOTIF « refus PC » et pour le signe « PC » (34 fois). Les
+#:   deux clauses neuves sont les DEUX ETAPES de ce meme permis. C'est son choix,
+#:   et il est utile (un compromis attend le depot, PUIS l'obtention) -- mais le
+#:   catalogue portera donc trois libelles autour du permis.
+CATALOGUE_PC_GENERIQUE = "3"
 
 ORIGINE_COND = "classeur:F-credit"
 ORIGINE_NOTE_NEUVE = "classeur:F-en-cours"
@@ -286,56 +306,103 @@ def main() -> int:
         print("   -> %d mises a jour apres fusion" % len(a_completer))
     print()
 
-    # ─── LOT 2 : LES CONDITIONS DE CREDIT ────────────────────────────────────
+    # ─── LE CATALOGUE : DEUX CLAUSES NEUVES, SA DECISION DU 17/11 ────────────
+    #: ⛔ `id` est TEXT, NOT NULL et SANS DEFAUT : ce n'est pas une sequence mais
+    #:   un identifiant choisi a la main. Il faut le FOURNIR -- le maximum
+    #:   NUMERIQUE + 1, en ne lisant que les ids numeriques (la faute d'hier).
+    cat = cl.get("app_condition_catalogue", {"select": "id,libelle,jours_defaut,rang"}) or []
+    print("=== LE CATALOGUE AVANT : %d clauses ===" % len(cat))
+    for r in sorted(cat, key=lambda r: int(r["rang"] or 0)):
+        print("   %-3s %-36s %3s j" % (r["id"], r["libelle"], r["jours_defaut"]))
+    deja_lib = {normaliser(r["libelle"]) for r in cat}
+    num = [int(r["id"]) for r in cat if str(r["id"]).isdigit()]
+    rang = max([int(r["rang"] or 0) for r in cat] or [0])
+    prochain = (max(num) if num else 0) + 1
+    clauses, id_de = [], {}
+    for libelle, jours, signe in CLAUSES_NEUVES:
+        if normaliser(libelle) in deja_lib:
+            print("   ⚠ « %s » EXISTE DEJA au catalogue -- on ne la recree pas"
+                  % libelle)
+            id_de[signe] = next(r["id"] for r in cat
+                                if normaliser(r["libelle"]) == normaliser(libelle))
+            continue
+        rang += 1
+        clauses.append({"id": str(prochain), "libelle": libelle,
+                        "jours_defaut": jours, "rang": rang})
+        id_de[signe] = str(prochain)
+        prochain += 1
+    print("   ➡ A AJOUTER : %s"
+          % (" . ".join("%s=%s (%d j)" % (c["id"], c["libelle"], c["jours_defaut"])
+                        for c in clauses) or "(aucune)"))
+    print("   ⚠ et « Permis de construire » (id %s) reste au catalogue : les deux"
+          % CATALOGUE_PC_GENERIQUE)
+    print("     clauses neuves en sont les DEUX ETAPES, pas un remplacement.")
+    print()
+
+    # ─── LOT 2 : LES CONDITIONS, TROIS SIGNES ────────────────────────────────
+    #: ⭐ ODP -> « Obtention Credit » (id 2, le delai vient de ADP->ODP)
+    #:   DPC -> « Depot du permis de construire »      (sa decision du 17/11)
+    #:   OPC -> « Obtention du permis de construire »  (sa decision du 17/11)
+    PLAN = [("ODP", CATALOGUE_CREDIT, LIBELLE_CREDIT),
+            ("DPC", None, "Depot du permis de construire"),
+            ("OPC", None, "Obtention du permis de construire")]
     conditions, ecarte = [], Counter()
     for x in cours:
         trs = [ledger[str(a)] for a in par_id.get(x["id_unique"], []) if str(a) in ledger]
         comp = [t for t in trs if t.get("kind") == "compromis"]
-        odp = [jm for a, jm in x["_abrevs"] if a.upper() == "ODP"]
-        if not odp:
-            continue
-        if len(comp) != 1:
-            ecarte["pas UN SEUL compromis dans la chaine"] += 1
-            continue
-        t = comp[0]
-        dref = None
-        if t.get("date"):
-            try:
-                dref = date.fromisoformat(str(t["date"])[:10])
-            except ValueError:
-                dref = None
-        d_odp, _p = audit.ancrer(odp[0], dref)
-        if d_odp is None:
-            ecarte["echeance ODP indatable (pas d ancre)"] += 1
-            continue
-        jours = None
-        adp = [jm for a, jm in x["_abrevs"] if a.upper() == "ADP"]
-        if adp:
-            d_adp, _q = audit.ancrer(adp[0], dref)
-            if d_adp is not None and d_odp >= d_adp:
-                jours = (d_odp - d_adp).days
-        a = int(t["app_affaire_id"])
-        rang_pris[a] += 1
-        conditions.append({"app_affaire_id": a, "rang": rang_pris[a],
-                           "libelle": LIBELLE_CREDIT, "jours": jours,
-                           "date_echeance": d_odp.isoformat(),
-                           "catalogue_id": CATALOGUE_CREDIT,
-                           "app_dossier_id": t.get("app_dossier_id"),
-                           "app_chaine_id": t.get("app_chaine_id"),
-                           "note": x["texte_seul"].strip()[:300],
-                           "id_unique": x["id_unique"],
-                           "date_compromis": dref.isoformat() if dref else "",
-                           "etat_chez_nous": t.get("state")})
-    print("=== LOT 2 -- LES CONDITIONS « Obtention Crédit » ===")
+        for signe, cat_id, libelle in PLAN:
+            vus = [jm for a, jm in x["_abrevs"] if a.upper() == signe]
+            if not vus:
+                continue
+            if len(comp) != 1:
+                ecarte["%s -- pas UN SEUL compromis dans la chaine" % signe] += 1
+                continue
+            t = comp[0]
+            dref = None
+            if t.get("date"):
+                try:
+                    dref = date.fromisoformat(str(t["date"])[:10])
+                except ValueError:
+                    dref = None
+            d, _p = audit.ancrer(vus[0], dref)
+            if d is None:
+                ecarte["%s -- echeance indatable (pas d ancre)" % signe] += 1
+                continue
+            #: le DELAI : pour le credit, l'ecart ADP->ODP mesure sur CETTE ligne ;
+            #: pour le permis, le `jours_defaut` de sa clause (91 j, mesure).
+            jours = None
+            if signe == "ODP":
+                adp = [jm for a, jm in x["_abrevs"] if a.upper() == "ADP"]
+                if adp:
+                    d_adp, _q = audit.ancrer(adp[0], dref)
+                    if d_adp is not None and d >= d_adp:
+                        jours = (d - d_adp).days
+            else:
+                jours = next((j for lib, j, s in CLAUSES_NEUVES if s == signe), None)
+            a = int(t["app_affaire_id"])
+            rang_pris[a] += 1
+            conditions.append({"app_affaire_id": a, "rang": rang_pris[a],
+                               "libelle": libelle, "jours": jours,
+                               "date_echeance": d.isoformat(),
+                               "catalogue_id": cat_id or id_de[signe],
+                               "app_dossier_id": t.get("app_dossier_id"),
+                               "app_chaine_id": t.get("app_chaine_id"),
+                               "note": x["texte_seul"].strip()[:300],
+                               "id_unique": x["id_unique"], "signe": signe,
+                               "date_compromis": dref.isoformat() if dref else "",
+                               "etat_chez_nous": t.get("state")})
+    print("=== LOT 2 -- LES CONDITIONS SUSPENSIVES ===")
     print("   ✅ posables                          %4d" % len(conditions))
+    for s, n in Counter(c["signe"] for c in conditions).most_common():
+        lib = next(libelle for sg, _c, libelle in PLAN if sg == s)
+        print("      %-5s %-36s %4d" % (s, lib[:36], n))
     for k, n in ecarte.most_common():
-        print("   ⚠  ECARTEE %-36s %4d" % (k[:36], n))
-    print("   dont elles portent un DELAI (ADP->ODP) %3d"
-          % sum(1 for c in conditions if c["jours"] is not None))
+        print("   ⚠  ECARTEE %-42s %4d" % (k[:42], n))
     if conditions:
-        js = sorted(c["jours"] for c in conditions if c["jours"] is not None)
+        js = sorted(c["jours"] for c in conditions
+                    if c["jours"] is not None and c["signe"] == "ODP")
         if js:
-            print("   le delai : de %d a %d jours, median %d"
+            print("   le delai ADP->ODP : de %d a %d jours, median %d"
                   % (js[0], js[-1], js[len(js) // 2]))
         print("   les echeances par annee : %s"
               % " . ".join("%s=%d" % kv for kv in sorted(
@@ -385,6 +452,32 @@ def main() -> int:
            c["app_chaine_id"] if c["app_chaine_id"] else "null",
            txt(c["note"]), txt(ORIGINE_COND)) for c in conditions)
     aujourd = date.today().isoformat()
+    ncl = len(clauses)
+    ncat_apres = len(cat) + ncl
+    ids_cl = ", ".join(txt(c["id"]) for c in clauses) or "''"
+    v_cat = ",\n    ".join("(%s, %s, %d, %d)"
+                           % (txt(c["id"]), txt(c["libelle"]),
+                              c["jours_defaut"], c["rang"]) for c in clauses)
+    bloc_cat = "" if not clauses else f"""
+-- ②bis LE CATALOGUE -- LES {ncl} CLAUSES NEUVES (sa decision du 17/11)
+--    ⛔ `id` est TEXT, NOT NULL, SANS DEFAUT : on le FOURNIT (max numerique + 1).
+--    ⭐ 91 jours est MESURE : sur les 2 lignes du classeur portant DPC *et* OPC,
+--      l'ecart est de 90 et 91 jours -- les 3 mois d'instruction d'un permis.
+insert into app_condition_catalogue (id, libelle, jours_defaut, rang)
+values
+    {v_cat}
+on conflict (id) do nothing;
+"""
+    #: ⭐ UN CONTROLE PAR LIBELLE -- un total juste peut cacher deux erreurs qui
+    #:   s'annulent. On compte donc chaque clause separement.
+    par_lib = Counter(c["libelle"] for c in conditions)
+    detail_signes = "\nunion all\n".join(
+        "select '   dont « %s » (attendu %d)', count(*)::text,\n"
+        "       case when count(*) = %d then '✅' else '⛔' end\n"
+        "  from app_affaire_condition\n"
+        " where origine = %s and libelle = %s"
+        % (lib.replace("'", "''"), n, n, txt(ORIGINE_COND), txt(lib))
+        for lib, n in sorted(par_lib.items()))
     bloc_ins = "" if not a_creer else f"""
 -- ④ bis LOT 1 -- LES {nn} NOTES A CREER (aucune note sur toute la chaine)
 insert into app_affaire_note
@@ -451,7 +544,7 @@ begin
     raise exception '⛔ LA SAUVEGARDE PORTE % lignes au lieu de {nu}', n;
   end if;
 end $$;
-
+{bloc_cat}
 -- ③ LOT 1 -- COMPLETER LES {nu} NOTES EXISTANTES
 --    ⭐ on AJOUTE un paragraphe, on ne remplace rien. Et la clause `position`
 --      rend le geste IDEMPOTENT : rejoue, il n'ajoute pas deux fois.
@@ -510,15 +603,30 @@ begin
   select count(*) into n from app_affaire_note where coalesce(btrim(texte), '') = '';
   if n <> 0 then raise exception '⛔ % notes vides', n; end if;
   select count(*) into n from app_affaire_condition
-   where origine = {txt(ORIGINE_COND)}
-     and (date_echeance is null or catalogue_id <> {txt(CATALOGUE_CREDIT)});
-  if n <> 0 then raise exception '⛔ % conditions sans echeance ou hors catalogue', n; end if;
+   where origine = {txt(ORIGINE_COND)} and date_echeance is null;
+  if n <> 0 then raise exception '⛔ % conditions sans echeance', n; end if;
 
-  -- ⭐ et la clause du catalogue EXISTE (on n'en a cree aucune)
-  select count(*) into n from app_condition_catalogue where id = {txt(CATALOGUE_CREDIT)};
-  if n <> 1 then raise exception '⛔ la clause du catalogue est absente'; end if;
+  -- ⭐⭐ CHAQUE CONDITION POINTE UNE CLAUSE QUI EXISTE VRAIMENT au catalogue --
+  --   une jointure, pas une liste en dur : c'est la base qui repond.
+  select count(*) into n from app_affaire_condition c
+   where c.origine = {txt(ORIGINE_COND)}
+     and not exists (select 1 from app_condition_catalogue k
+                      where k.id = c.catalogue_id);
+  if n <> 0 then raise exception '⛔ % conditions pointent une clause INEXISTANTE', n; end if;
 
-  raise notice '✅ LOT 1 : % textes de F . LOT 2 : % conditions', {ntot}, {nc};
+  -- ⭐ LE CATALOGUE EST A {ncat_apres}, et les {len(cat)} d'avant sont INTACTES
+  select count(*) into n from app_condition_catalogue;
+  if n <> {ncat_apres} then
+    raise exception '⛔ LE CATALOGUE PORTE % clauses au lieu de {ncat_apres}', n;
+  end if;
+  select count(*) into n from app_condition_catalogue
+   where id in ({", ".join(txt(r["id"]) for r in cat)});
+  if n <> {len(cat)} then
+    raise exception '⛔ LES {len(cat)} CLAUSES D ORIGINE ONT BOUGE : %', n;
+  end if;
+
+  raise notice '✅ LOT 1 : % textes de F . LOT 2 : % conditions . catalogue a %',
+    {ntot}, {nc}, {ncat_apres};
 end $$;
 
 commit;
@@ -552,6 +660,11 @@ update app_affaire_note a
 -- ③ les conditions posees par le patch
 delete from app_affaire_condition where origine = {txt(ORIGINE_COND)};
 
+-- ④ les clauses neuves du catalogue -- ⛔ SEULEMENT si plus rien ne les utilise
+delete from app_condition_catalogue k
+ where k.id in ({ids_cl})
+   and not exists (select 1 from app_affaire_condition c where c.catalogue_id = k.id);
+
 do $$
 declare n integer;
 begin
@@ -578,6 +691,17 @@ begin
   if n <> 4325 then raise exception '⛔ LES 4 325 NOTES DU 2e PATCH ONT BOUGE : %', n; end if;
   select count(*) into n from app_affaire_condition where origine = 'saisie';
   if n <> 5 then raise exception '⛔ LES 5 CONDITIONS SAISIES ONT BOUGE : %', n; end if;
+
+  -- ⭐ LE CATALOGUE EST REVENU A {len(cat)}, et ses clauses d'origine sont LA
+  select count(*) into n from app_condition_catalogue;
+  if n <> {len(cat)} then
+    raise exception '⛔ LE CATALOGUE PORTE % clauses au lieu de {len(cat)}', n;
+  end if;
+  select count(*) into n from app_condition_catalogue
+   where id in ({", ".join(txt(r["id"]) for r in cat)});
+  if n <> {len(cat)} then
+    raise exception '⛔ LES {len(cat)} CLAUSES D ORIGINE ONT BOUGE : %', n;
+  end if;
 
   raise notice '✅ RETOUR ARRIERE COMPLET, texte restaure a l identique';
 end $$;
@@ -612,10 +736,21 @@ select 'toutes avec une echeance (attendu {nc})', count(*)::text,
   from app_affaire_condition
  where origine = {txt(ORIGINE_COND)} and date_echeance is not null
 union all
-select 'toutes sur la clause Obtention Credit (attendu {nc})', count(*)::text,
-       case when count(*) = {nc} then '✅' else '⛔' end
-  from app_affaire_condition
- where origine = {txt(ORIGINE_COND)} and catalogue_id = {txt(CATALOGUE_CREDIT)}
+select '⭐⭐ chaque condition pointe une clause EXISTANTE (attendu 0 orpheline)',
+       count(*)::text, case when count(*) = 0 then '✅' else '⛔' end
+  from app_affaire_condition c
+ where c.origine = {txt(ORIGINE_COND)}
+   and not exists (select 1 from app_condition_catalogue k where k.id = c.catalogue_id)
+union all
+select 'LE CATALOGUE porte {ncat_apres} clauses (sa decision du 17/11)',
+       count(*)::text, case when count(*) = {ncat_apres} then '✅' else '⛔' end
+  from app_condition_catalogue
+union all
+select '⭐ VOISIN -- les {len(cat)} clauses d origine (attendu {len(cat)})',
+       count(*)::text, case when count(*) = {len(cat)} then '✅' else '⛔' end
+  from app_condition_catalogue where id in ({", ".join(txt(r["id"]) for r in cat)})
+union all
+{detail_signes}
 union all
 select '⭐⭐ LE TEXTE D AVANT EST INTACT (attendu 0 perdu)', count(*)::text,
        case when count(*) = 0 then '✅' else '⛔' end

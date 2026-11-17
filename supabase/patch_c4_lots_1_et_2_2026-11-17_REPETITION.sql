@@ -12,23 +12,47 @@ select 'LOT 1 -- dont CREEES (attendu 0)', count(*)::text,
        case when count(*) = 0 then '✅' else '⛔' end
   from app_affaire_note where origine = 'classeur:F-en-cours'
 union all
-select 'LOT 2 -- conditions de credit (attendu 23)', count(*)::text,
-       case when count(*) = 23 then '✅' else '⛔' end
+select 'LOT 2 -- conditions de credit (attendu 28)', count(*)::text,
+       case when count(*) = 28 then '✅' else '⛔' end
   from app_affaire_condition where origine = 'classeur:F-credit'
 union all
-select 'toutes en etat attente (attendu 23)', count(*)::text,
-       case when count(*) = 23 then '✅' else '⛔' end
+select 'toutes en etat attente (attendu 28)', count(*)::text,
+       case when count(*) = 28 then '✅' else '⛔' end
   from app_affaire_condition where origine = 'classeur:F-credit' and etat = 'attente'
 union all
-select 'toutes avec une echeance (attendu 23)', count(*)::text,
-       case when count(*) = 23 then '✅' else '⛔' end
+select 'toutes avec une echeance (attendu 28)', count(*)::text,
+       case when count(*) = 28 then '✅' else '⛔' end
   from app_affaire_condition
  where origine = 'classeur:F-credit' and date_echeance is not null
 union all
-select 'toutes sur la clause Obtention Credit (attendu 23)', count(*)::text,
+select '⭐⭐ chaque condition pointe une clause EXISTANTE (attendu 0 orpheline)',
+       count(*)::text, case when count(*) = 0 then '✅' else '⛔' end
+  from app_affaire_condition c
+ where c.origine = 'classeur:F-credit'
+   and not exists (select 1 from app_condition_catalogue k where k.id = c.catalogue_id)
+union all
+select 'LE CATALOGUE porte 6 clauses (sa decision du 17/11)',
+       count(*)::text, case when count(*) = 6 then '✅' else '⛔' end
+  from app_condition_catalogue
+union all
+select '⭐ VOISIN -- les 4 clauses d origine (attendu 4)',
+       count(*)::text, case when count(*) = 4 then '✅' else '⛔' end
+  from app_condition_catalogue where id in ('1', '2', '3', '4')
+union all
+select '   dont « Depot du permis de construire » (attendu 3)', count(*)::text,
+       case when count(*) = 3 then '✅' else '⛔' end
+  from app_affaire_condition
+ where origine = 'classeur:F-credit' and libelle = 'Depot du permis de construire'
+union all
+select '   dont « Obtention Crédit » (attendu 23)', count(*)::text,
        case when count(*) = 23 then '✅' else '⛔' end
   from app_affaire_condition
- where origine = 'classeur:F-credit' and catalogue_id = '2'
+ where origine = 'classeur:F-credit' and libelle = 'Obtention Crédit'
+union all
+select '   dont « Obtention du permis de construire » (attendu 2)', count(*)::text,
+       case when count(*) = 2 then '✅' else '⛔' end
+  from app_affaire_condition
+ where origine = 'classeur:F-credit' and libelle = 'Obtention du permis de construire'
 union all
 select '⭐⭐ LE TEXTE D AVANT EST INTACT (attendu 0 perdu)', count(*)::text,
        case when count(*) = 0 then '✅' else '⛔' end
@@ -69,8 +93,8 @@ select '⛔ TEMOIN INVERSE -- aucune echeance hors 2024-2027 (attendu 0)', count
  where origine = 'classeur:F-credit'
    and (date_echeance < '2024-01-01'::date or date_echeance > '2027-12-31'::date)
 union all
-select '⭐ les conditions tombent sur des COMPROMIS (attendu 23)', count(*)::text,
-       case when count(*) = 23 then '✅' else '⛔' end
+select '⭐ les conditions tombent sur des COMPROMIS (attendu 28)', count(*)::text,
+       case when count(*) = 28 then '✅' else '⛔' end
   from app_affaire_condition c
   join app_affaire_ledger l on l.app_affaire_id = c.app_affaire_id
  where c.origine = 'classeur:F-credit' and l.kind = 'compromis'

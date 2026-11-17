@@ -26,6 +26,11 @@ update app_affaire_note a
 -- ③ les conditions posees par le patch
 delete from app_affaire_condition where origine = 'classeur:F-credit';
 
+-- ④ les clauses neuves du catalogue -- ⛔ SEULEMENT si plus rien ne les utilise
+delete from app_condition_catalogue k
+ where k.id in ('5', '6')
+   and not exists (select 1 from app_affaire_condition c where c.catalogue_id = k.id);
+
 do $$
 declare n integer;
 begin
@@ -52,6 +57,17 @@ begin
   if n <> 4325 then raise exception '⛔ LES 4 325 NOTES DU 2e PATCH ONT BOUGE : %', n; end if;
   select count(*) into n from app_affaire_condition where origine = 'saisie';
   if n <> 5 then raise exception '⛔ LES 5 CONDITIONS SAISIES ONT BOUGE : %', n; end if;
+
+  -- ⭐ LE CATALOGUE EST REVENU A 4, et ses clauses d'origine sont LA
+  select count(*) into n from app_condition_catalogue;
+  if n <> 4 then
+    raise exception '⛔ LE CATALOGUE PORTE % clauses au lieu de 4', n;
+  end if;
+  select count(*) into n from app_condition_catalogue
+   where id in ('1', '2', '3', '4');
+  if n <> 4 then
+    raise exception '⛔ LES 4 CLAUSES D ORIGINE ONT BOUGE : %', n;
+  end if;
 
   raise notice '✅ RETOUR ARRIERE COMPLET, texte restaure a l identique';
 end $$;

@@ -129,23 +129,34 @@ elle ne dit pas ce que les lettres veulent dire
           ⭐ MESURE : elle vaut « Vente Prevue » (colonne V) dans **60 cas sur
             65** (92 %). Nous l'avons donc DEJA. 4 divergent, 1 V est vide.
             ➡ ce n'est pas une condition : c'est l'echeance du compromis.
-   DPC    dépôt ou déclaration de permis de construire ?     11 fois, 55 % datée
-   OPC    obtention du permis de construire ?                 2 fois, 100 % datée
+   DPC    DEPOT du permis de construire ✅ CONFIRME 17/11    11 fois, 55 % datée
+   OPC    OBTENTION du permis ✅ CONFIRME 17/11               2 fois, 100 % datée
    PC     permis de construire                               34 fois, 29 % datée
    cpmis  compromis                                          30 fois, 30 % datée
    copie  copie d'une pièce reçue                            31 fois, 26 % datée
 
 MENTIONS, jamais datées
    Me     Maître -- le notaire (« Me Chalet », « Me Bougon »)   168 fois
-   PA     permis d'aménager ?                                  112 fois
+   PA     PERMIS D'AMENAGER           ✅ CONFIRME PAR LUI 17/11     112 fois
    pb     problème (« pb infiltrations cave », « pb amiante »)   92 fois
    BV     bon de visite ?        BVok = bon de visite reçu ?      66 / 37 fois
-   CI     ?                                                       47 fois
+   CI     CARTE D'IDENTITE attendue   ✅ CONFIRME PAR LUI 17/11      47 fois
    SRU    le délai légal de rétractation                           34 fois
    CNI    carte nationale d'identité                                7 fois
    AVNT   avenant ?                                                 3 fois
    dossOk dossier complet ?
 ```
+
+✅⭐⭐ **QUATRE SIGNES CONFIRMES PAR LUI LE 17/11**, et ils ne sont plus des
+hypotheses : `DPC` = **DEPOT** du permis de construire · `OPC` = **OBTENTION** du
+permis · `CI` = **carte d'identite attendue** · `PA` = **permis d'amenager**.
+
+⭐⭐ **ET UNE TROUVAILLE EN PASSANT** : `CNI` etait deja decode « carte nationale
+d'identite » (7 fois) -- donc **`CI` et `CNI` sont DEUX ECRITURES DE LA MEME
+ATTENTE**, et elle revient **54 fois** (47 + 7), pas 47. Deux lignes du meme tableau
+disaient la meme chose sans se reconnaitre.
+
+⬜ **RESTE A CONFIRMER** : `BVok`, `AVNT`, `dossOk`, `cpmis`, `copie`.
 
 ⚠ **CE QUE JE N'AI PAS PU ÉTABLIR** : l'ordre des échéances. Sur les 24 lignes
 mesurables, **10 sont dans l'ordre `ADP ≤ ODP ≤ DB` et 14 ne le sont pas**. Mon test
@@ -220,7 +231,15 @@ construire, délai SRU, bon de visite…
 
 ---
 
-## 8. ⭐⭐⭐ LE VERDICT DU 17/11 : LES 86 CONDITIONS NE SE RAPATRIENT PAS
+## 8. ⛔⛔ CE VERDICT A ETE RENVERSE LE JOUR MEME -- VOIR LA SECTION 9
+
+> ⛔ **CE QUI SUIT EST CONSERVE PARCE QU'IL EXPLIQUE UNE FAUTE DE RAISONNEMENT**, pas
+> parce qu'il est vrai. J'ai bloque les 86 lignes au nom de sa regle du chantier ; il
+> a repondu : **« MA REGLE SUR LES DONNEES DES TRANSACTIONS EN COURS NE PORTAIT PAS
+> SUR LES NOTES »**, et la mesure lui a donne raison. Le verdict juste est en
+> section 9.
+
+## 8bis. ⛔ L'ANCIEN VERDICT (FAUX) : « LES 86 CONDITIONS NE SE RAPATRIENT PAS »
 
 La section 5 annoncait les 86 lignes « en cours » comme destinees a
 `app_affaire_condition`. **L'audit du 17/11 dit NON**, et c'est sa propre regle du
@@ -284,6 +303,120 @@ Ce decodage n'est donc pas complet, et il ne pretend pas l'etre.
 phase2/checks/c4_auditer_les_86_conditions_2026-11-17.py   LECTURE SEULE, 9 mesures
 notice/C4_LES_86_CONDITIONS_AUDIT_2026-11-17.csv           les 89 abreviations, une
    par ligne : etat au classeur, etat chez nous, echeance ancree, et POURQUOI
+```
+
+---
+
+## 9. ✅⭐⭐⭐ LE VERDICT JUSTE -- 80 TEXTES ET 28 CONDITIONS, 17/11
+
+### ⭐⭐⭐ POURQUOI SA REGLE NE S'APPLIQUAIT PAS
+
+Sa regle protege contre **LE CONFLIT** : ne pas poser a la main une valeur que le run
+de nuit ecrasera, ou qui contredira Hektor. La bonne question n'est donc pas
+« l'affaire est-elle en cours ? » mais **« HEKTOR PORTE-T-IL CETTE DONNEE ? »**.
+
+```
+   une NOTE                   Hektor n en a AUCUNE, nulle part
+   une CONDITION SUSPENSIVE   app_affaire_console.conditions_suspensives
+                              est REMPLIE 0 FOIS SUR 18 591
+                              (il ne rend qu un CATALOGUE de 2 choix, 17 lignes)
+```
+
+➡ Aucun ecrasement possible, aucune contradiction possible. **Sa regle n'avait rien a
+proteger ici**, que l'affaire soit vivante ou morte.
+
+### ⛔⛔ ET MON « 47 TEXTES PERDUS » ETAIT FAUX : ILS SONT 80
+
+```
+   1  `entetes.index("G")` -- « G » est la LETTRE de la 7e colonne (entete
+      « COMMENTAIRES »), pas un nom d entete. La recherche echouait -> « 0 ligne
+      sauvee par sa colonne G » : UN ZERO PAR CONSTRUCTION. Et le projet a
+      index_de() depuis le 16/11 : je ne l ai pas utilisee.
+   2  Et meme corrigee, « la ligne a-t-elle un G ? » NE REPOND PAS A LA QUESTION :
+      une ligne avec un G a bien une note, mais cette note porte LE COMMENTAIRE DE
+      G, PAS LE TEXTE DE F. Deux textes differents, confondus.
+```
+
+⭐⭐⭐ **LE SEUL CRITERE HONNETE** : le texte de F est-il, **mot pour mot**, dans la
+note de sa transaction ?
+
+```
+   le texte de F EST dans la note         1
+   il N Y EST PAS                        80   <- le lot 1
+   aucune transaction reliee              5
+   -------------------------------------------
+                                         86
+```
+
+⛔⛔ **ET LE TEMOIN DE LA METHODE** : sur 60 lignes **annulees** dont F *est* posee par
+le 2e patch, la comparaison en retrouve **28**. Elle sait donc dire OUI -- les
+80 absences sont **vraies**.
+
+### ⭐⭐ LE LOT 1 EST UN COMPLEMENT, ET C'EST LA CLE PRIMAIRE QUI LE COMMANDE
+
+`app_affaire_note` a pour clef **`app_affaire_id` SEUL**, et **81** des transactions
+visees portent deja une note : on ne peut pas en creer une seconde.
+
+```
+   on AJOUTE un paragraphe marque « [classeur F, suivi en cours au 17/11/2026] »
+   l UPDATE est IDEMPOTENT         -> rejoue, il n ajoute pas deux fois
+   une SAUVEGARDE DATEE garde le texte d avant
+   le PATCH *et* l INVERSE controlent que le texte d origine est toujours la
+   ⛔ l ORIGINE des notes completees NE BOUGE PAS -- sinon les controles des
+     4 325 notes du 2e patch deviendraient faux. La marque est le PREFIXE.
+```
+
+### ✅⭐⭐⭐ LE CATALOGUE PASSE A SIX CLAUSES -- SA DECISION DU 17/11
+
+« je veux que DPC/OPC c'est bien le depot et l'obtention du permis devienne deux
+conditions suspensives en + ».
+
+```
+   1  Preemption mairie                    0 j   <- de Hektor
+   2  Obtention Credit                    45 j   <- de Hektor
+   3  Permis de construire                 0 j   <- pose le 17/11 (motif « refus PC »)
+   4  Delai de retractation SRU           10 j   <- pose le 17/11
+   5  Depot du permis de construire        0 j   <- NEUVE, le depot est un ACTE
+   6  Obtention du permis de construire   91 j   <- NEUVE
+```
+
+⭐⭐ **ET LES 91 JOURS SONT MESURES, PAS INVENTES** : sur les 2 lignes du classeur qui
+portent `DPC` **et** `OPC`, l'ecart est de **90 et 91 jours** -- exactement les 3 mois
+d'instruction d'un permis de construire.
+
+⚠ **UNE REDONDANCE, DITE ET NON CACHEE** : « Permis de construire » (id 3) reste au
+catalogue. Les deux clauses neuves en sont les **deux etapes**, pas un remplacement --
+un compromis attend le depot, PUIS l'obtention.
+
+### ✅ LES 28 CONDITIONS POSEES
+
+```
+   ODP -> « Obtention Credit »                     23
+   DPC -> « Depot du permis de construire »         3
+   OPC -> « Obtention du permis de construire »     2
+   -----------------------------------------------------
+                                                   28
+   le delai ADP->ODP, mesure ligne par ligne : de 30 a 60 jours, median 36
+   les echeances : 17 en 2026, 11 en 2027 . deja passees 3, a venir 25
+   ECARTEES : 3 ODP dont la chaine n a pas UN SEUL compromis
+```
+
+⭐ **ETAT TOUJOURS `attente`, JAMAIS `levee`** : on affirme « attendue a cette date »,
+ce que le classeur dit, et rien de plus. **L'ecran reste maitre** : la saisie d'un
+humain ecrasera la notre, pas l'inverse.
+
+### LES FICHIERS
+
+```
+phase2/checks/c4_le_texte_de_f_est_il_vraiment_pose_2026-11-17.py   le bon critere
+phase2/checks/c4_generer_lots_1_et_2_2026-11-17.py                  le generateur
+supabase/patch_c4_lots_1_et_2_2026-11-17.sql                        le patch
+supabase/patch_c4_lots_1_et_2_2026-11-17_INVERSE.sql                le retour arriere
+supabase/patch_c4_lots_1_et_2_2026-11-17_REPETITION.sql             les controles
+notice/C4_TEXTE_DE_F_NON_POSE_2026-11-17.csv                        les 80, une par ligne
+notice/C4_LOTS_1_ET_2_2026-11-17.csv                                tout ce qui est pose
+⭐ les trois patchs sont en LF PUR (0 retour chariot, verifie AVANT d ecrire) --
+  lecon 30 : un patch est COLLE, un CR egare y fait des degats.
 ```
 
 ---
