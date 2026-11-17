@@ -172,3 +172,7 @@ button.gm2-f:hover, button.gm2-f:focus-visible { border-color: #c5005f; outline:
 .gm2-ap-page.is-lit { height: 320px; background: linear-gradient(90deg, #f3f4f5 0, #fbeef4 40%, #f3f4f5 80%); background-size: 400px 100%; animation: gm2-lit 1.2s linear infinite; }
 @keyframes gm2-lit { 0% { background-position: -200px 0; } 100% { background-position: 200px 0; } }
 .gm2-voir { margin-left: auto; }
+
+/* lot 10c (17/11) : la carte « Ce que dit le compromis » et « Revoir ce qu'il dit » dans « Lu par l'IA » */
+.gm2-cpv .gm2-pv span:first-child { color: #1f2121; font-weight: 700; }
+.gm2-revoir { margin-left: 8px; }

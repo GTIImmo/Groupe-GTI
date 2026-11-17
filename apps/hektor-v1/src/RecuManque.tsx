@@ -11,10 +11,10 @@
 //   (lib/gedRemplirContact.ts), lus sur ses pièces, pour SA fiche contact relue (loadContactsEtatCivil).
 import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
-import { createConsoleDocumentSignedUrl, loadAffairesForDossier, loadRegisterCycleAffaires } from './lib/api'
+import { createConsoleDocumentSignedUrl, loadAffairesForDossier, loadConditionCatalogue, loadRegisterCycleAffaires } from './lib/api'
 import { apercuPremierePage } from './lib/gedClassementIa'
 import { etatFiableDuDocument } from './lib/etatSignatureMandat'
-import { compterConditionsStrict, gedDecider, gedJuger, lireCarnetAffairesStrict, lireConditionsAffairesStrict, loadContactsEtatCivil, loadGedClassements, loadGedDecisions, loadGedJugements, useGedPropositions, useGedRemplir, type EtatCivilLu, type JugementGed } from './lib/ged'
+import { gedDecider, gedJuger, lireCarnetAffairesStrict, lireConditionsAffairesStrict, loadContactsEtatCivil, loadGedClassements, loadGedDecisions, loadGedDecisionsDetail, loadGedJugements, useGedPropositions, useGedRemplir, type DecisionGed, type EtatCivilLu, type JugementGed } from './lib/ged'
 import { cleJugement, LIBELLE_VERDICT, VERDICTS, type VerdictGed } from './lib/gedMesure'
 import { propositionsRemplir, type FaitsRemplir, type PropositionRemplir } from './lib/gedRemplir'
 import { propositionsContact } from './lib/gedRemplirContact'
@@ -26,6 +26,9 @@ import { LIBELLE_MOMENT, recuManque, type LignePiece, type MomentDossier } from 
 import { deposeAuPlusTard, LIBELLE_A_DEPOSER, reglesSansIa, type AffaireRegle, type Alerte, type FaitsRegles } from './lib/gedRegles'
 import { lireDateIso, type PersonneDuBien } from './lib/gedComparer'
 import { reglesLues } from './lib/gedReglesLues'
+import { bilanCompromis, verdictDesChoix, type BilanCompromis as Bilan, type CatalogueCondition } from './lib/gedBilanCompromis'
+import BilanCompromis, { type ChoixBilan, type ResultatBilan } from './BilanCompromis'
+import type { LigneBilan } from './lib/gedBilanCompromis'
 import type { ConsoleDocument } from './types'
 import './RecuManque.css'
 
@@ -78,7 +81,7 @@ const CASES_FICHE: Array<{ champ: string; libelle: string; copro?: boolean; lire
 const euros = (v: string | number | null | undefined) => { const x = Number(v); return v != null && v !== '' && Number.isFinite(x) && x > 0 ? x : null }
 
 export function RecuManque({
-  hektorAnnonceId, appDossierId, documents, faits, personnesDuBien = [], contactsDuBien = [], onDeposer, onRemplir, onResultat,
+  hektorAnnonceId, appDossierId, documents, faits, personnesDuBien = [], contactsDuBien = [], onDeposer, onRemplir, onResultat, onBilan, peutModifierTransaction = false,
 }: {
   hektorAnnonceId: string | number
   appDossierId?: number
@@ -94,6 +97,10 @@ export function RecuManque({
   onDeposer?: (typeCode: string, libelle: string) => void
   // habillage H2 : la fenêtre de dépôt montre le moment et les pièces non trouvées, LUES ICI (une seule vérité)
   onResultat?: (r: { moment: MomentDossier; nonTrouvees: string[] }) => void
+  // lot 10c (17/11) : « Ce que dit le compromis » -- l'écran du bien écrit les choix (conditions chez nous ; champs que
+  // Hektor connaît par la modale « Modifier le compromis ») et rend le message. Sans lui, la fenêtre ne se montre pas.
+  onBilan?: (b: Bilan, choix: Array<{ ligne: LigneBilan; choix: ChoixBilan }>) => Promise<ResultatBilan>
+  peutModifierTransaction?: boolean
 }) {
   const regles = useGedPropositions()
   const [affaires, setAffaires] = useState<AffaireRegle[] | null>(null)
@@ -112,6 +119,8 @@ export function RecuManque({
     // relu quand la liste des documents change (un dépôt vient d'arriver)
   }, [hektorAnnonceId, nbDocuments])
 
+  // lot 10c : relire les transactions après un enregistrement de « Ce que dit le compromis » (conditions écrites)
+  const [relireAffaires, setRelireAffaires] = useState(0)
   // Les transactions du bien (registre), lues seulement si les règles sont allumées. Une lecture ratée : les règles
   // qui en ont besoin se taisent (null), jamais « aucune transaction ».
   useEffect(() => {
@@ -141,7 +150,7 @@ export function RecuManque({
       })
       .catch(() => { if (!annule) setAffaires(null) })
     return () => { annule = true }
-  }, [regles, appDossierId])
+  }, [regles, appDossierId, relireAffaires])
 
   // morceau 7b : qui paie les honoraires, au REGISTRE des mandats (la vue que l'écran lit déjà pour la clôture). Lecture
   // ratée ou pas encore faite = `undefined` : la règle L1 se tait ; lue et vide = `null`.
@@ -184,7 +193,6 @@ export function RecuManque({
   // la PRÉSENCE du geste (la fonction change à chaque rendu de la fiche : elle ne doit pas relancer les lectures)
   const peutRemplir = Boolean(onRemplir)
   const [decisions, setDecisions] = useState<Set<string> | null>(null)
-  const [conditions, setConditions] = useState<Map<number, number> | null>(null)
   const [enCours, setEnCours] = useState<string | null>(null)
   // H3 : les décisions de cette visite, repliées ; les cases envoyées d'ici (en attendant la fiche relue) ; le vol
   const [faites, setFaites] = useState<Faite[]>([])
@@ -199,15 +207,6 @@ export function RecuManque({
     void loadGedDecisions(hektorAnnonceId).then((d) => { if (!annule) setDecisions(d) })
     return () => { annule = true }
   }, [remplir, peutRemplir, hektorAnnonceId, relire])
-  const idsCompromis = useMemo(() => (affaires ?? []).filter((a) => a.kind === 'compromis' && a.id != null).map((a) => a.id as number).join(','), [affaires])
-  useEffect(() => {
-    if (!remplir || !peutRemplir) return
-    let annule = false
-    compterConditionsStrict(idsCompromis ? idsCompromis.split(',').map(Number) : [])
-      .then((m) => { if (!annule) setConditions(m) })
-      .catch(() => { if (!annule) setConditions(null) })
-    return () => { annule = true }
-  }, [remplir, peutRemplir, idsCompromis, relire])
   // lot 9c : l'état civil des contacts du bien, relu à chaque fois (lecture ratée -> null -> aucune proposition contact).
   // L'écran donne le numéro HEKTOR (pont) ; la proposition porte NOTRE numéro (règle du 16/11 : le nôtre pour l'app).
   const idsContacts = useMemo(() => contactsDuBien.map((c) => c.id).join(','), [contactsDuBien])
@@ -219,7 +218,7 @@ export function RecuManque({
     return () => { annule = true }
   }, [remplir, peutRemplir, idsContacts, relire])
   const propositions = useMemo(() => {
-    if (!remplir || !peutRemplir || !decisions || !conditions || affaires === null) return []
+    if (!remplir || !peutRemplir || !decisions || affaires === null) return []
     const docsLus = documents
       .filter((d) => d.present_in_hektor !== false && lectures.has(d.id))
       .map((d) => ({ nom: d.document_name, lecture: lectures.get(d.id) as LectureDocument }))
@@ -231,9 +230,9 @@ export function RecuManque({
         naissance: r.birth_date, lieu: r.birth_place, situation: r.marital_status,
       }] : []
     }) : []
-    return [...propositionsRemplir({ ...faits, chargeRegistre }, docsLus, affaires, decisions, conditions),
+    return [...propositionsRemplir({ ...faits, chargeRegistre }, docsLus, decisions),
       ...propositionsContact(contacts, personnesDuBien, docsLus, decisions, new Date())]
-  }, [remplir, peutRemplir, decisions, conditions, affaires, documents, lectures, faits, chargeRegistre, etatCivil, contactsDuBien, personnesDuBien])
+  }, [remplir, peutRemplir, decisions, affaires, documents, lectures, faits, chargeRegistre, etatCivil, contactsDuBien, personnesDuBien])
   const agir = async (p: PropositionRemplir, geste: 'remplir' | 'ignorer', depart?: HTMLElement | null) => {
     if (enCours || !onRemplir) return
     setEnCours(p.cle)
@@ -334,6 +333,60 @@ export function RecuManque({
     } finally {
       setJugeEnCours(null); setRelireJugements((n) => n + 1)
     }
+  }
+
+  // ── lot 10c (17/11) : « CE QUE DIT LE COMPROMIS ». Derrière `ged_remplir` (elle écrit). Le catalogue des conditions
+  // et le journal des décisions (avec leur date) sont relus ; une lecture ratée du journal -> la fenêtre ne s'ouvre pas.
+  const peutBilan = remplir && Boolean(onBilan)
+  const [catalogue, setCatalogue] = useState<CatalogueCondition[] | null>(null)
+  const [journal, setJournal] = useState<Map<string, DecisionGed> | null>(null)
+  const [bilanOuvert, setBilanOuvert] = useState(false)
+  useEffect(() => {
+    if (!peutBilan) return
+    let annule = false
+    void loadConditionCatalogue().then((c) => { if (!annule) setCatalogue(c.map((x) => ({ id: x.id, libelle: x.libelle }))) })
+    return () => { annule = true }
+  }, [peutBilan])
+  useEffect(() => {
+    if (!peutBilan) return
+    let annule = false
+    void loadGedDecisionsDetail(hektorAnnonceId).then((j) => { if (!annule) setJournal(j) })
+    return () => { annule = true }
+  }, [peutBilan, hektorAnnonceId, relire])
+  const bilan = useMemo(() => {
+    if (!peutBilan || affaires === null || catalogue === null) return null
+    const docsLus = documents
+      .filter((d) => d.present_in_hektor !== false && lectures.has(d.id))
+      .map((d) => ({ nom: d.document_name, lecture: lectures.get(d.id) as LectureDocument }))
+    return bilanCompromis(docsLus, affaires, catalogue)
+  }, [peutBilan, affaires, catalogue, documents, lectures])
+  const aTrancher = bilan && journal ? bilan.lignes.filter((l) => l.etat !== 'accord' && !journal.has(`${l.cle}|${l.valeur}`)) : []
+  const documentDuBilan = bilan ? documents.find((d) => lectures.get(d.id)?.id === bilan.lectureId) ?? null : null
+  // une lecture NEUVE (moins de 30 minutes) avec quelque chose à trancher ouvre la fenêtre d'elle-même, une seule fois
+  // par lecture et par navigateur (une commodité : sans mémoire, elle se rouvre, rien ne casse)
+  const cleOuverture = bilan?.lectureId && aTrancher.length && bilan.luLe && Date.now() - new Date(bilan.luLe).getTime() < 30 * 60 * 1000 ? `ged-bilan-vu:${bilan.lectureId}` : null
+  useEffect(() => {
+    if (!cleOuverture) return
+    try { if (window.localStorage.getItem(cleOuverture)) return; window.localStorage.setItem(cleOuverture, '1') } catch { /* sans mémoire : on ouvre */ }
+    setBilanOuvert(true)
+  }, [cleOuverture])
+  // la modale « Modifier le compromis » a envoyé : ses lignes sont notées (écran principal) -> on relit journal et registre
+  useEffect(() => {
+    const relu = () => { setRelire((n) => n + 1); setRelireAffaires((n) => n + 1) }
+    window.addEventListener('ged:decisions-changees', relu)
+    return () => window.removeEventListener('ged:decisions-changees', relu)
+  }, [])
+  const enregistrerBilan = async (choix: Array<{ ligne: LigneBilan; choix: ChoixBilan }>): Promise<ResultatBilan> => {
+    if (!bilan || !onBilan) throw new Error('Rien n\'a été écrit.')
+    const r = await onBilan(bilan, choix)
+    // la mesure du morceau 10 : un choix vaut la note de la ligne « À regarder » qui disait la même chose
+    const carte = new Map(choix.map((c) => [c.ligne.cle, c.choix]))
+    for (const a of alertes.filter((x) => (x.code === 'L7' && x.texte.startsWith('Compromis')) || x.code === 'L20')) {
+      const verdict = verdictDesChoix(a.texte, a.code, bilan.lignes, carte)
+      if (verdict) await gedJuger({ hektorAnnonceId, regle: a.code, cle: cleJugement(a), texte: a.texte, niveau: a.niveau, verdict }).catch(() => undefined)
+    }
+    setRelire((n) => n + 1); setRelireJugements((n) => n + 1); setRelireAffaires((n) => n + 1)
+    return r
   }
 
   // le résumé de la lecture, à côté du nom d'un document reçu (« DPE 2024.pdf — Lu : énergie D… »)
@@ -441,11 +494,26 @@ export function RecuManque({
       {precedent ? <p className="gm2-note" role="status">{`${LIBELLE_MOMENT[precedent.moment]} : les pièces obligatoires non trouvées.`}</p> : null}
       <div className="gm2-feuilles" key={momentVu ?? 'courant'}>{feuillesVues.map(feuille)}</div>
 
-      {propositions.length || faites.length || alertes.length ? (
+      {propositions.length || faites.length || alertes.length || aTrancher.length ? (
         <div className="gm2-col2">
-          {propositions.length || faites.length ? (
+          {propositions.length || faites.length || aTrancher.length ? (
             <div className="gm2-bloc">
-              <p className="gm2-bt">{`À remplir (${propositions.length})`}</p>
+              <p className="gm2-bt">{`À remplir (${propositions.length + aTrancher.length})`}</p>
+              {bilan && aTrancher.length ? (
+                <div className="gm2-carte gm2-prop gm2-cpv">
+                  <div className="gm2-c1"><span className="gm2-et is-remplir">Compromis</span><b>{`Ce que dit le compromis : ${[
+                    aTrancher.filter((l) => l.etat === 'trancher').length ? `${aTrancher.filter((l) => l.etat === 'trancher').length} à trancher` : null,
+                    aTrancher.filter((l) => l.etat === 'ajouter').length ? `${aTrancher.filter((l) => l.etat === 'ajouter').length} à ajouter` : null,
+                  ].filter(Boolean).join(', ')}`}</b></div>
+                  <div className="gm2-pv">
+                    <span>{aTrancher.map((l) => l.libelle).join(' · ')}</span>
+                    <span>{`lu dans ${bilan.nom}`}</span>
+                  </div>
+                  <div className="gm2-gestes">
+                    <button type="button" className="gm2-b1" onClick={() => setBilanOuvert(true)}>Voir et trancher</button>
+                  </div>
+                </div>
+              ) : null}
               {faites.map((f) => (
                 <p key={f.cle} className={`gm2-faite is-${f.sort}`} role="status">
                   {f.sort === 'rempli' ? <svg className="gm2-coche" width="17" height="17" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg> : null}
@@ -542,7 +610,12 @@ export function RecuManque({
           </button>
           {ouvrirLus ? (
             <ul className="gm2-lus-l">
-              {lus.map((l) => <li key={l.id}><b>{l.nom}</b> <span>{l.resume}</span></li>)}
+              {lus.map((l) => (
+                <li key={l.id}>
+                  <b>{l.nom}</b> <span>{l.resume}</span>
+                  {bilan && documentDuBilan?.id === l.id ? <button type="button" className="gm2-lien gm2-revoir" onClick={() => setBilanOuvert(true)}>Revoir ce qu'il dit</button> : null}
+                </li>
+              ))}
             </ul>
           ) : null}
         </div>
@@ -550,6 +623,10 @@ export function RecuManque({
       {vol ? createPortal(
         <span className="gm2-vol" aria-hidden="true" style={{ left: vol.x, top: vol.y, '--dx': `${vol.dx}px`, '--dy': `${vol.dy}px` } as CSSProperties}>{vol.valeur}</span>,
         document.body,
+      ) : null}
+      {bilanOuvert && bilan ? (
+        <BilanCompromis bilan={bilan} decisions={journal} peutModifier={peutModifierTransaction} document={documentDuBilan}
+          onFermer={() => setBilanOuvert(false)} onEnregistrer={enregistrerBilan} />
       ) : null}
     </section>
   )

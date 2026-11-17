@@ -596,3 +596,7 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* GED lot 10c (17/11) : le bandeau « Repris du compromis lu », entre le bien et le formulaire */
+.stv2 .stv2-depuis-doc { flex: none; margin: 10px 24px 0; }
+@media (max-width: 767px) { .stv2 .stv2-depuis-doc { margin: 8px 16px 0; } }

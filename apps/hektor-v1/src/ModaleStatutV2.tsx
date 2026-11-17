@@ -166,6 +166,9 @@ export type ModaleStatutV2Props = {
   /** la pastille de statut de l'ancienne modale (StatusPill), déjà rendue */
   pastilleStatut: ReactNode
   formulaire: FormulaireStatutProps
+  // GED lot 10c (17/11) : la modale ouverte depuis « Ce que dit le compromis » -- les valeurs reprises du compromis lu,
+  // déjà posées dans les cases ; un bandeau les dit, et dit le bouton qui les envoie (« Mettre à jour le compromis »).
+  depuisDocument?: { nom: string; valeurs: string[] } | null
 }
 
 const ETIQUETTE: Record<string, string> = { conseille: 'Conseillé', actuel: 'Actuel', hors: 'Hors parcours' }
@@ -1267,7 +1270,7 @@ export default function ModaleStatutV2(props: ModaleStatutV2Props) {
   const {
     statusChangeTarget: cible, statusChangeStatus, setStatusChangeStatus, setStatusChangeAffaireChoisie,
     statusChangeAffaires, statusChangePending, closeStatusChangeModal, options, gardes, isValidationApproved,
-    pastilleStatut, formulaire,
+    pastilleStatut, formulaire, depuisDocument,
   } = props
   const [commentOuvert, setCommentOuvert] = useState(false)
   // Lot 6 (06/11) : au téléphone la rangée des cartes défile ; la carte choisie doit y rester VISIBLE (sinon on
@@ -1328,6 +1331,13 @@ export default function ModaleStatutV2(props: ModaleStatutV2Props) {
           </span>
         </div>
 
+        {depuisDocument ? (
+          <p className="stv2-bandeau is-info stv2-depuis-doc" role="status">
+            <b>{`Repris du compromis lu (${depuisDocument.nom})`}</b>
+            <span>{depuisDocument.valeurs.join(' · ')}</span>
+            <span>Les cases sont déjà remplies. Vérifie-les, puis « Mettre à jour le compromis » : c'est ce bouton qui envoie à Hektor.</span>
+          </p>
+        ) : null}
         {/* Comme l'ancien bloc : un <form> dont l'envoi est handleChangeHektorAnnonceStatus ; les `required` des champs
             valent donc au clic, et la touche Entrée dans un champ envoie, comme avant. */}
         <form className="stv2-envoi" onSubmit={formulaire.handleChangeHektorAnnonceStatus}>

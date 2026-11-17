@@ -33,8 +33,9 @@
 | 9 | pièces des personnes (identité — le justificatif le plus déposé —, état civil, financement) | ✅ **9a** (identité, registre à part) en production et éprouvé ; **9b** (P4-P6) regardé en réel le 14/11 ; **9c** (remplir la fiche d'un mandant) corrigé (les deux numéros) et prouvé le 16/11 ; **9d-1** (financement, P7-P8) lecture éprouvée, ⚠ P7/P8 PAS prouvées en réel (aucun bien d'essai n'a de compromis vivant) ; **9d-2** (état civil, P9-P10) éprouvé le 16/11 (§12.19) |
 | 10 | mesure (vrai / faux / déjà su) | ✅ en production le 16/11 (`d4ca8fe`, table `app_ged_jugement`) ; ⏰ **la mesure court jusqu'au 30/11**, compte rendu par `supabase/requete_mesure_ged_m10_2026-11-16.sql` ; 63331, 62774, 61398 ne se jugent pas (§12.20) |
 | habillage | la maquette RETRAVAILLÉE (toile https://claude.ai/artifact/S16jkpfnqtPF83xvUdkNtm) | ✅ **COMPLET le 17/11** : H1 le bloc « Le dossier », H2 la fenêtre de dépôt, H3 l'après-envoi (« La fiche du bien », « Voir le document » ; « Voir la preuve » NON fait, décision), H4 le panneau photo du téléphone (viseur dans l'app NON fait, décision) — tous vus en production (§12.21) |
-| 10a | le compromis lu → SA transaction (date d'acte prévue, séquestre) | ✅ en ligne le 17/11 (`270cbd7`) ; pas vu en réel (aucun compromis au registre sur un bien d'essai) (§12.22) |
-| 10b | les conditions suspensives du compromis → SA transaction | ✅ **écrit le 17/11, rien poussé** (§12.23) |
+| 10a | le compromis lu → SA transaction (date d'acte prévue, séquestre) | ⛔ **REMPLACÉ le 17/11 par 10c** : la date d'acte et le séquestre s'écrivaient « chez nous seulement », alors que ce sont des champs que Hektor connaît (§12.22, §12.28) |
+| 10b | les conditions suspensives du compromis → SA transaction | ✅ en ligne le 17/11 (`cf09297`) ; ses cartes sont reprises par 10c (§12.23) |
+| 10c | « Ce que dit le compromis » : la fenêtre de validation, champ par champ, chacun par SON chemin | ✅ **écrit le 17/11, rien poussé** ; 35 VERT, banc d'essai regardé (ordinateur et téléphone) ; pas encore vu en production (§12.28) |
 
 **Reste, au 17/11** : ⏰ le compte rendu de la mesure le 30/11 ; P7/P8 en réel — **mis de côté par Frédéric le 17/11 :
 « trop compliqué pour le moment »** ; les pièces d'essai SPECIMEN restées sur 63331 et 63147 (63147 : un faux DPE, consommation 212 écrite, 2
@@ -2522,3 +2523,53 @@ IBAN dans 38 pages bloque toujours) ; `test_ged_regles_financement` : 2 motifs a
 gardent ne change pas). Les 12 essais GED et le serveur verts, build vert.
 ⏳ **Cas voisin, NON traité (décision à part)** : un compromis qui porte un VRAI IBAN (compte séquestre du notaire) reste
 entièrement bloqué pour l'IA ; on pourrait masquer le numéro dans le texte au lieu de tout refuser.
+
+### 12.28 Le lot 10c -- « Ce que dit le compromis » : la fenêtre de validation (17/11, essai réel de Frédéric sur 18849)
+**Le constat** (Frédéric, sur la vraie promesse déposée sur 18849 = annonce 62850 : « l'IA a lu, j'ai cliqué et rien ;
+normalement une modale montre les données à ajouter avec oui / non, les conflits ») : l'écran faisait ce qui était construit
+(une carte « Remplir la transaction » pour le séquestre, deux lignes « À regarder »), mais **aucune fenêtre de validation
+n'avait été construite**. Mesuré en base : ses deux « Vrai » (L7, L20) sont gardés (15:47) -- ils notent la RÈGLE, ils ne
+corrigent rien ; et son clic de 15:46 sur « Remplir la transaction » a écrit **le séquestre 12 400 € au carnet SEULEMENT**
+(`app_affaire_champ_app`, transaction 30770) : **Hektor ne l'a pas.**
+**⛔ Sa correction (« Attention, chez nous seulement NON, cela dépend des champs ») -- vérifiée dans le code** : la
+correction « sans envoyer à Hektor » des valeurs d'une transaction a été RETIRÉE le 15/09 par sa décision (App.tsx,
+« CORRIGER SANS ENVOYER A HEKTOR A ETE RETIRE ») ; prix, dates, séquestre, net vendeur et honoraires partent par la modale
+« Modifier le compromis » (travail `change_hektor_annonce_status`, `reprendreTransaction`). Seules les conditions
+suspensives sont gardées chez nous (décision du 16/09). Le lot 10a était donc FAUX sur ce point.
+**Deux trouvailles de son essai** :
+- la règle L7 sonnait sur la date d'acte alors que le compromis dit « au plus tard le 01/02/2027 » et le registre
+  « prévu le 23/01/2027 » : c'est COHÉRENT. **La réitération est une LIMITE** : L7 ne sonne plus que si la date prévue la
+  DÉPASSE (témoin ajouté, 94 VERT) ;
+- « État hypothécaire » et « Absence de servitude » ne sont pas au catalogue (6 clauses), mais la modale accepte une
+  **condition libre** : elles s'ajoutent comme telles (je lui avais dit à tort qu'elles ne pouvaient pas l'être).
+**✅ « Oui vas-y, mais soigne la mise en page, le graphisme et l'ergonomie » -- ÉCRIT, rien poussé** :
+- `lib/gedBilanCompromis.ts` (pur) : le compromis lu face à SA transaction (même résolution que P4), une ligne par champ,
+  **chacune avec sa DESTINATION** : « envoyé à Hektor » (prix, date de signature, acte, séquestre, net vendeur, honoraires)
+  ou « gardé chez nous » (les conditions) ; état « à trancher » / « à ajouter » / « d'accord » ; la page lue ; la ligne
+  « À regarder » liée. `conditionsApres` : la liste COMPLÈTE après les choix (état, levée, note des autres gardés).
+  `verdictDesChoix` : un choix vaut la note Vrai / Faux de la ligne « À regarder » (plus de double clic).
+- `BilanCompromis.tsx/.css` : la fenêtre (habillage de la fenêtre de dépôt). Chaque ligne montre DEUX PLAQUES face à face
+  -- le compromis (papier, coin plié) et la transaction --, on **touche la valeur qui reste** (le verbe est dans la
+  plaque : prendre, ajouter, garder, laisser vide, retirer) ; l'autre s'efface. « page N » montre la page du compromis
+  à droite (par-dessus la liste au téléphone). Groupes : À trancher, À ajouter, Déjà tranché (« Ajouté le … · Changer »),
+  D'accord (replié). Le pied résume (« 2 envoyés à Hektor · 1 gardé chez nous · 1 laissé tel quel ») et le bouton dit ce
+  qu'il fera (« Enregistrer et ouvrir la transaction »). Rien ne s'écrit avant « Enregistrer ». Lecture seule pour qui
+  n'est ni responsable ni admin.
+- **Où elle s'ouvre** : seule, une fois, quand une lecture de compromis a moins de 30 minutes et qu'il y a quelque chose à
+  trancher ; sinon par la carte « Ce que dit le compromis » dans « À remplir », ou par « Revoir ce qu'il dit » dans
+  « Lu par l'IA » (retrouver plus tard ce que l'IA a lu, et ce qui a été tranché, avec la date : `loadGedDecisionsDetail`).
+- **L'écriture, par le chemin de chaque champ** (`appliquerBilan`, App.tsx) : la transaction RELUE d'abord ; « garder » =
+  le journal seulement ; conditions = liste complète relue STRICTEMENT (`lireConditionsCompletesStrict`) puis réécrite ;
+  champs Hektor = la modale « Modifier le compromis » EXISTANTE s'ouvre (événement), sur LA transaction, les valeurs
+  posées APRÈS le préremplissage et marquées touchées, avec un bandeau « Repris du compromis lu… c'est ce bouton qui
+  envoie à Hektor ». La décision « remplie » n'est notée qu'APRÈS l'envoi réussi de « Mettre à jour le compromis », et
+  seulement si la case porte encore la valeur du compromis.
+- **Retiré** : les cartes P4 (gedRemplir.ts) et la porte « chez nous seulement » de la date d'acte et du séquestre
+  (remplirDepuisDocument refuse désormais ce geste) -- un seul chemin par champ.
+Essais : `test_ged_bilan.cjs` 35 VERT (le cas réel de 18849 et ses témoins) ; `test_ged_remplir` adapté (38) ;
+`test_ged_regles_lues` 94 ; les 13 essais GED verts, build vert. **Banc d'essai** (la vraie fenêtre, les valeurs de
+18849, sans base) regardé à l'ordinateur et au téléphone (390 px) : lignes resserrées, plaques côte à côte, page du
+document par-dessus au téléphone.
+⏳ **À faire après la mise en ligne** : la regarder sur 18849 (ouvrir la fenêtre et la modale, SANS cliquer « Mettre à
+jour ») ; **le séquestre 12 400 € de 30770 est au carnet mais PAS chez Hektor** : ouvrir « Modifier » sur ce compromis
+(la case est préremplie depuis le carnet) et « Mettre à jour le compromis » -- c'est son geste à lui.

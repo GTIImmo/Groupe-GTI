@@ -3,8 +3,8 @@
 // gestes EXISTANTS, appelés par l'écran après avoir RELU la case juste avant (App.tsx, remplirDepuisDocument).
 // ⛔ Jamais par-dessus une valeur. ⛔ Ni la taxe foncière (son groupe Hektor renvoie aussi prix et honoraires), ni un
 //   champ du mandat (décision ⑦-7), ni l'adresse, ni les mandants. Note du chantier §12.18.
-import { annualiser, conditionsLuesDe, dateLue, LIBELLE_CONDITION, lireDateIso, nombreLu, resoudreCible, texteLu, comparerNumero, personnesLuesDe, type ConditionLue } from './gedComparer'
-import type { AffaireRegle, FaitsRegles } from './gedRegles'
+import { annualiser, dateLue, LIBELLE_CONDITION, lireDateIso, nombreLu, texteLu, comparerNumero, type ConditionLue } from './gedComparer'
+import type { FaitsRegles } from './gedRegles'
 import type { DocumentLu } from './gedReglesLues'
 
 // fiche : la case de la fiche (nom Hektor), par editAnnonceOptimistic ; charge : le registre des mandats, par
@@ -42,11 +42,7 @@ const page = (d: DocumentLu, cle: string) => d.lecture.valeurs.find((x) => x.cle
 const source = (d: DocumentLu, cle: string) => { const p = page(d, cle); return `${d.nom}${p ? `, page ${p}` : ''}` }
 
 // `decisions` : les clés « cle|valeur » déjà remplies ou ignorées (app_ged_decision) -- elles ne reviennent pas.
-// `conditionsParAffaire` : le nombre de conditions de chaque transaction, LU SANS ERREUR (absent = inconnu = rien).
-export function propositionsRemplir(
-  faits: FaitsRemplir, docs: DocumentLu[], affaires: AffaireRegle[], decisions: Set<string>,
-  conditionsParAffaire: Map<number, number>,
-): PropositionRemplir[] {
+export function propositionsRemplir(faits: FaitsRemplir, docs: DocumentLu[], decisions: Set<string>): PropositionRemplir[] {
   const sortie: PropositionRemplir[] = []
   const lus = docs.filter((d) => d.lecture.etat === 'lu')
   const ajouter = (p: PropositionRemplir) => { if (!decisions.has(`${p.cle}|${p.valeur}`)) sortie.push(p) }
@@ -97,40 +93,9 @@ export function propositionsRemplir(
     }
   }
 
-  // P4 -- la condition « Obtention Crédit » avec la date limite du prêt, sur LA transaction du compromis lu, si sa liste
-  // de conditions est VIDE (comptée sans erreur). Le geste remplace toute la liste : vide = rien à perdre.
-  const cpv = plusRecent(lus, 'transaction.avant_contrat', 'date_signature')
-  const ligneCpv = cpv ? resoudreCible(affaires.filter((a) => a.kind === 'compromis' && !['refused', 'cancelled'].includes(String(a.state ?? ''))), {
-    acquereurs: personnesLuesDe(cpv.lecture).filter((p) => p.qualite === 'acquereur'), date: dateLue(cpv.lecture.valeurs, 'date_signature'), montant: nombreLu(cpv.lecture.valeurs, 'prix'),
-  }) : null
-  // lot 10b (17/11) : TOUTES les conditions suspensives lues (fiche v2), écrites d'un clic si la liste de la transaction
-  // est VIDE (le geste remplace toute la liste : vide = rien à perdre). Une condition de prêt SEULE garde la forme
-  // d'avant (P4.condition_credit, avec sa date) : les décisions déjà prises restent valables.
-  const conditionsLues = cpv ? conditionsLuesDe(cpv.lecture) : []
-  if (cpv && conditionsLues.length && ligneCpv?.id != null && conditionsParAffaire.get(ligneCpv.id) === 0) {
-    const seulPret = conditionsLues.length === 1 && conditionsLues[0].nature === 'pret'
-    if (seulPret && conditionsLues[0].date) {
-      const limite = conditionsLues[0].date
-      ajouter({ cle: 'P4.condition_credit', geste: 'condition', champ: 'Obtention Crédit', valeur: limite, texte: `Condition « Obtention Crédit » jusqu'au ${jjmmaaaa(limite)}`, source: source(cpv, 'date_limite_pret'), lectureId: cpv.lecture.id ?? null, affaireId: ligneCpv.id })
-    } else if (!seulPret) {
-      const dites = conditionsLues.map((c) => `${LIBELLE_CONDITION[c.nature]}${c.date ? ` jusqu'au ${jjmmaaaa(c.date)}` : ''}`)
-      ajouter({ cle: 'P4.conditions', geste: 'condition', champ: 'conditions', valeur: encoderConditions(conditionsLues), texte: `Conditions suspensives : ${dites.join(' ; ')}`, source: source(cpv, 'conditions.nature'), lectureId: cpv.lecture.id ?? null, affaireId: ligneCpv.id })
-    }
-  }
-  // P4 (lot 10a, 17/11) -- la date d'acte prévue (la RÉITÉRATION lue) et le séquestre, sur LA transaction du compromis
-  // lu, si sa case est VIDE -- carnet de l'app compris, lu SANS erreur (sinon rien). Écrit CHEZ NOUS seulement
-  // (décision de Frédéric du 17/11 : Hektor n'est pas prévenu). La date de signature ne se remplit PAS : un compromis
-  // sans date au registre est souvent un compromis non signé ; elle se COMPARE seulement (L7).
-  if (cpv && ligneCpv?.id != null && ligneCpv.carnetLu === true) {
-    const reiteration = dateLue(cpv.lecture.valeurs, 'date_reiteration')
-    if (reiteration && caseVide(ligneCpv.dateActe)) {
-      ajouter({ cle: 'P4.date_acte', geste: 'affaire', champ: 'date_acte', valeur: reiteration, texte: `Compromis : acte authentique au plus tard le ${jjmmaaaa(reiteration)}`, source: source(cpv, 'date_reiteration'), lectureId: cpv.lecture.id ?? null, affaireId: ligneCpv.id })
-    }
-    const sequestre = nombreLu(cpv.lecture.valeurs, 'sequestre')
-    if (sequestre != null && sequestre > 0 && (ligneCpv.sequestre == null || ligneCpv.sequestre <= 0)) {
-      ajouter({ cle: 'P4.sequestre', geste: 'affaire', champ: 'sequestre', valeur: nombreTexte(sequestre), texte: `Compromis : séquestre de ${nombreTexte(sequestre).replace('.', ',')} €`, source: source(cpv, 'sequestre'), lectureId: cpv.lecture.id ?? null, affaireId: ligneCpv.id })
-    }
-  }
+  // P4 (lots 10a et 10b) -- RETIRÉ le 17/11 (lot 10c) : le compromis lu face à SA transaction passe désormais par la
+  // fenêtre « Ce que dit le compromis » (gedBilanCompromis.ts), un seul chemin par champ. Les champs que Hektor connaît
+  // (date d'acte, séquestre) s'y envoient par la modale « Modifier le compromis » -- jamais plus « chez nous seulement ».
 
   return sortie
 }

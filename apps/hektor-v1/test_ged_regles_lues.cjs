@@ -139,6 +139,8 @@ const cpv10 = cpvLu([v('date_reiteration', { valeur_date: '2027-01-15' }), v('se
 voir(R7c([cpv10], [cpvReg({ dateActe: '2027-01-15', sequestre: 9250 })]).length === 0, 'TÉMOIN 10a : date d\'acte et séquestre conformes -> rien')
 voir(R7c([cpv10], [cpvReg({ dateActe: '2027-02-20', sequestre: 9250 })])[0]?.texte.includes('acte au plus tard le 15/01/2027, prévu le 20/02/2027 au registre'), '10a : la date d\'acte prévue au registre ≠ la réitération lue -> dit')
 voir(R7c([cpv10], [cpvReg({ dateActe: '2027-01-15', sequestre: 5000 })])[0]?.texte.includes('séquestre'), '10a : séquestre lu ≠ registre -> dit')
+// lot 10c (17/11, essai réel sur 18849 : « au plus tard le 01/02/2027 », prévu le 23/01/2027) : la réitération est une LIMITE
+voir(R7c([cpv10], [cpvReg({ dateActe: '2027-01-05', sequestre: 9250 })]).length === 0, 'TÉMOIN 10c : une date d\'acte prévue AVANT la limite du compromis est cohérente -> rien')
 voir(R7c([cpv10], [cpvReg({ dateActe: null, sequestre: null })]).length === 0 && R7c([cpv10], [cpvReg({ dateActe: null, sequestre: 0 })]).length === 0, 'TÉMOIN 10a : une case VIDE au registre ne sonne pas (elle se propose à remplir)')
 // lot 10b (17/11) : L20 -- les conditions suspensives lues (fiche v2) face à celles de LA transaction
 const cv = (n, d, r) => [v('conditions.nature', { valeur: n }, 'lu', r), ...(d ? [v('conditions.date_limite', { valeur_date: d }, 'lu', r)] : [])]

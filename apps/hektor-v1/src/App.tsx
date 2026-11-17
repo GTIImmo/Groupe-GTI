@@ -309,9 +309,11 @@ import { PiecesSignatureFenetre, useSignaturePreuves } from './PiecesSignature'
 // GED morceau 2 (12/11/2026) : la fenêtre de dépôt, derrière l'interrupteur ged_depot_multiple (note GED §12.7).
 import { DepotDocuments } from './DepotDocuments'
 import type { MomentDossier } from './lib/gedPieces'
-import { compterConditionsStrict, gedDecider, lireCarnetAffairesStrict, loadContactsEtatCivil, useGedDepotMultiple, useGedRecuManque } from './lib/ged'
+import { compterConditionsStrict, gedDecider, lireCarnetAffairesStrict, lireConditionsCompletesStrict, loadContactsEtatCivil, useGedDepotMultiple, useGedRecuManque } from './lib/ged'
 // GED morceau 3 (12/11/2026) : le bloc « Reçu / Manque », derrière l'interrupteur ged_recu_manque (note GED §12.8).
 import { RecuManque } from './RecuManque'
+import { EVENEMENT_DROITS_TRANSACTION, EVENEMENT_MODIFIER_TRANSACTION, type ChoixBilan, type DemandeModifierTransaction, type ResultatBilan } from './BilanCompromis'
+import { conditionsApres, type BilanCompromis as BilanCompromisCalcule, type LigneBilan } from './lib/gedBilanCompromis'
 import { caseVide, decoderConditions, type FaitsRemplir, type PropositionRemplir } from './lib/gedRemplir'
 import { LIBELLE_CONDITION } from './lib/gedComparer'
 import { piecesDeSignature } from './lib/piecesSignature'
@@ -11988,23 +11990,11 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
       await garder('remplie', { geste: 'ecrireMandatCharge', numero_mandat: numero, charge: res.charge ?? p.valeur })
       return `Enregistré : ${p.texte}.`
     }
-    // lot 10a (17/11) : la date d'acte prévue ou le séquestre d'une TRANSACTION, CHEZ NOUS seulement (décision de Frédéric
-    // du 17/11 : le carnet de l'app, Hektor n'est pas prévenu). On RELIT la ligne et le carnet (strictement) : la case
-    // doit être encore vide, la transaction vivante ; sinon RIEN. Puis la porte existante (editAffaireOptimistic).
-    if (p.geste === 'affaire') {
-      const idAffaire = p.affaireId as number
-      if (!['date_acte', 'sequestre'].includes(p.champ)) return refus('champ_inconnu', `le champ « ${p.champ} » ne se remplit pas d'ici.`)
-      const ligne = (await loadAffairesForDossier(dossier.app_dossier_id)).find((a) => Number(a.app_affaire_id) === idAffaire)
-      if (!ligne || ligne.present_in_hektor === false) return refus('transaction_illisible', 'la transaction n\'a pas pu être relue.')
-      if (['refused', 'cancelled'].includes(String(ligne.state ?? ''))) return refus('transaction_close', 'la transaction n\'est plus vivante.')
-      const carnet = (await lireCarnetAffairesStrict([idAffaire])).get(idAffaire) ?? {}
-      const actuelle = carnet[p.champ] || String((p.champ === 'date_acte' ? ligne.date_acte : ligne.sequestre) ?? '')
-      if (!caseVide(actuelle)) return refus('case_deja_remplie', `la transaction porte déjà « ${actuelle} ».`, { valeur: actuelle })
-      const res = await editAffaireOptimistic(idAffaire, { [p.champ]: p.valeur })
-      if (!res.ok || res.champs_retenus !== 1) return refus('refus_du_registre', 'la correction n\'a pas été retenue.')
-      await garder('remplie', { geste: 'editAffaireOptimistic', app_affaire_id: idAffaire, champs: { [p.champ]: p.valeur } })
-      return `Enregistré : ${p.texte} (chez nous ; Hektor n'est pas prévenu).`
-    }
+    // lot 10a (17/11) : la date d'acte et le séquestre s'écrivaient ici CHEZ NOUS seulement (editAffaireOptimistic) --
+    // ⛔ RETIRÉ le 17/11 (lot 10c, Frédéric : « cela dépend des champs ») : ce sont des champs que Hektor connaît, ils
+    //   passent par la modale « Modifier le compromis » depuis « Ce que dit le compromis » (appliquerBilan). Plus aucune
+    //   proposition ne porte ce geste ; s'il en revenait une, RIEN n'est écrit.
+    if (p.geste === 'affaire') return refus('passe_par_le_compromis', 'ce champ passe par « Ce que dit le compromis ».')
     // condition : la liste doit être VIDE, comptée strictement (une erreur LÈVE : rien n'est écrit)
     const id = p.affaireId as number
     const compte = (await compterConditionsStrict([id])).get(id)
@@ -12023,6 +12013,50 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
     await ecrireAffaireConditions(id, lignesConditions)
     await garder('remplie', { geste: 'ecrireAffaireConditions', app_affaire_id: id, conditions: lignesConditions.map((c) => ({ libelle: c.libelle, date_echeance: c.date_echeance })) })
     return `Enregistré : ${p.texte}.`
+  }
+  // GED lot 10c (17/11) : « Ce que dit le compromis » -- les choix, champ par champ, CHACUN PAR SON CHEMIN (Frédéric :
+  // « cela dépend des champs »). On RELIT d'abord la transaction (vivante, sinon rien).
+  //   garder / non       -> le journal seulement (app_ged_decision « ignoree ») : rien ne change dans la transaction ;
+  //   conditions prises  -> CHEZ NOUS : la liste COMPLÈTE relue strictement, les choix posés dessus, réécrite (le geste
+  //                         existant remplace toute la liste ; état, levée et note des autres conditions sont gardés) ;
+  //   champs Hektor pris -> la modale « Modifier le compromis » s'ouvre PRÉREMPLIE (écran principal, par événement) ;
+  //                         c'est elle qui envoie à Hektor, au clic « Mettre à jour le compromis » -- la décision
+  //                         « remplie » n'est écrite qu'à ce moment-là (handleChangeHektorAnnonceStatus).
+  const peutModifierTransaction = useMemo(() => {
+    const d = { peut: false }
+    if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent(EVENEMENT_DROITS_TRANSACTION, { detail: d }))
+    return d.peut
+  }, [])
+  const appliquerBilan = async (b: BilanCompromisCalcule, choix: Array<{ ligne: LigneBilan; choix: ChoixBilan }>): Promise<ResultatBilan> => {
+    const noter = (l: LigneBilan, decision: 'remplie' | 'ignoree', detail: Record<string, unknown>) =>
+      gedDecider({ hektorAnnonceId: dossier.hektor_annonce_id, lectureId: b.lectureId, cle: l.cle, champ: l.champModale ?? l.condition?.nature ?? l.cle.slice(2), valeur: l.valeur, decision, detail })
+    const ligne = (await loadAffairesForDossier(dossier.app_dossier_id)).find((a) => Number(a.app_affaire_id) === b.affaireId)
+    if (!ligne || ligne.present_in_hektor === false || ['refused', 'cancelled'].includes(String(ligne.state ?? ''))) {
+      throw new Error('La transaction n\'a pas pu être relue, ou elle n\'est plus vivante : rien n\'a été écrit.')
+    }
+    const dit: string[] = []
+    const gardees = choix.filter((c) => c.choix === 'garder')
+    for (const c of gardees) await noter(c.ligne, 'ignoree', { geste: 'ce_que_dit_le_compromis', app_affaire_id: b.affaireId })
+    if (gardees.length) dit.push(`${gardees.length} laissé${gardees.length > 1 ? 's' : ''} tel${gardees.length > 1 ? 's' : ''} quel${gardees.length > 1 ? 's' : ''}`)
+    const conditions = choix.filter((c) => c.choix === 'prendre' && c.ligne.destination === 'nous')
+    if (conditions.length) {
+      const avant = await lireConditionsCompletesStrict(b.affaireId)
+      const apres = conditionsApres(avant, conditions.map((c) => c.ligne))
+      await ecrireAffaireConditions(b.affaireId, apres)
+      for (const c of conditions) await noter(c.ligne, 'remplie', { geste: 'ecrireAffaireConditions', app_affaire_id: b.affaireId, conditions_avant: avant.length, conditions_apres: apres.length })
+      dit.push(`${conditions.length} condition${conditions.length > 1 ? 's' : ''} enregistrée${conditions.length > 1 ? 's' : ''} chez nous`)
+    }
+    const versHektor = choix.filter((c) => c.choix === 'prendre' && c.ligne.destination === 'hektor')
+    if (versHektor.length) {
+      const demande: DemandeModifierTransaction = {
+        app_dossier_id: Number(dossier.app_dossier_id), appAffaireId: b.affaireId, hektorAffaireId: ligne.hektor_affaire_id == null ? null : String(ligne.hektor_affaire_id),
+        hektorAnnonceId: String(dossier.hektor_annonce_id), lectureId: b.lectureId, nom: b.nom, lignes: versHektor.map((c) => c.ligne), pris: false,
+      }
+      window.dispatchEvent(new CustomEvent(EVENEMENT_MODIFIER_TRANSACTION, { detail: demande }))
+      if (demande.pris) return { message: '', ferme: true }
+      dit.push('la fenêtre de la transaction n\'a pas pu s\'ouvrir : rien n\'est parti à Hektor')
+    }
+    return { message: `Enregistré : ${dit.join(' ; ')}.`, ferme: false }
   }
   // A.2 lot 6b P5 : « Corriger le mandat » depuis la fenetre ouverte ici -> l'editeur du meme bien s'ouvre (s'il est monte).
   const demanderCorrection = (document: ConsoleDocument, onglet: OngletCorrection) => {
@@ -12435,6 +12469,8 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
       personnesDuBien={personnesDuBien}
       contactsDuBien={contactsDuBien}
       onRemplir={remplirDepuisDocument}
+      onBilan={appliquerBilan}
+      peutModifierTransaction={peutModifierTransaction}
       onResultat={setContexteDepot}
       onDeposer={gedDepot ? (code, libelle) => {
         setTypeAttendu({ code, libelle })
@@ -20107,6 +20143,49 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusChangeAffaires, statusChangeStatus])
 
+  // ─── GED lot 10c (17/11) : LA MODALE OUVERTE DEPUIS « CE QUE DIT LE COMPROMIS » ───
+  // Le panneau des documents DEMANDE (événement) ; ici on ouvre la modale EXISTANTE sur le bien, l'onglet Compromis et
+  // LA transaction lue (comme ouvrirGesteDuRegistre), puis on pose les valeurs du compromis dans leurs cases, marquées
+  // touchées (point E : seules elles vont au carnet). Rien ne part avant « Mettre à jour le compromis » : mêmes gardes,
+  // même envoi à Hektor. Seul un responsable ou un admin ouvre la modale (openStatusChangeModal le refuse aux autres).
+  const [depuisDocument, setDepuisDocument] = useState<DemandeModifierTransaction | null>(null)
+  useEffect(() => { if (!statusChangeTarget) setDepuisDocument(null) }, [statusChangeTarget])
+  // APRÈS les préremplissages (mêmes déclencheurs, déclaré plus bas : il passe en dernier) -- sinon le carnet relu
+  // remettrait la valeur du registre par-dessus celle du compromis.
+  useEffect(() => {
+    if (!depuisDocument || statusChangeStatus !== 'compromise') return
+    const affaire = affaireCourantePourStatut()
+    if (!affaire || Number(affaire.app_affaire_id) !== depuisDocument.appAffaireId) return
+    const touchees: string[] = []
+    for (const l of depuisDocument.lignes) {
+      if (l.champModale === 'amount') { setStatusChangeAmount(l.valeur); setStatusChangeSalePrice(l.valeur); touchees.push('amount', 'sale_price') }
+      if (l.champModale === 'transaction_date') { setStatusChangeDate(l.valeur); touchees.push('transaction_date') }
+      if (l.champModale === 'signature_date') { setStatusChangeSignatureDate(l.valeur); touchees.push('signature_date') }
+      if (l.champModale === 'sequestration') { setStatusChangeSequestration(l.valeur); touchees.push('sequestration') }
+      if (l.champModale === 'net_seller_price') { setStatusChangeNetSellerPrice(l.valeur); setStatusChangeNetManuel(true); touchees.push('net_seller_price') }
+    }
+    if (touchees.length) toucherStatusChange(...touchees)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusChangeAffaires, statusChangeStatus, carnetAffaires, statusChangeAffaireChoisie, depuisDocument])
+  // La décision « remplie » d'une ligne du compromis n'est écrite que quand la modale a ENVOYÉ, et seulement si la case
+  // porte encore la valeur du compromis (modifiée à la main dans la modale : ce n'est plus le compromis, rien n'est noté).
+  function noterDepuisDocument(jobId: string | null) {
+    const d = depuisDocument
+    if (!d) return
+    const dansLaCase: Record<string, string> = {
+      amount: statusChangeAmount, transaction_date: statusChangeDate, signature_date: statusChangeSignatureDate,
+      sequestration: statusChangeSequestration, net_seller_price: statusChangeNetSellerPrice,
+    }
+    const egal = (a: string, b: string) => a.trim() === b.trim() || (Number.isFinite(Number(a)) && Number(a) === Number(b) && a.trim() !== '')
+    const notees = d.lignes.filter((l) => !l.champModale || egal(dansLaCase[l.champModale] ?? '', l.valeur))
+    void Promise.all(notees.map((l) => gedDecider({
+      hektorAnnonceId: d.hektorAnnonceId, lectureId: d.lectureId, cle: l.cle, champ: l.champModale ?? l.cle.slice(2), valeur: l.valeur, decision: 'remplie',
+      detail: { geste: 'modale_modifier_compromis', job_id: jobId, app_affaire_id: d.appAffaireId },
+    })))
+      .then(() => window.dispatchEvent(new CustomEvent('ged:decisions-changees')))
+      .catch((erreur) => console.warn('[ce que dit le compromis] décision non gardée', erreur))
+  }
+
   // ─── « CORRIGER SANS ENVOYER A HEKTOR » A ETE RETIRE ───   15/09/2026
   //
   // DECISION DE FREDERIC, apres audit. Le bouton ecrivait dans le carnet
@@ -20526,6 +20605,10 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           erreurNote instanceof Error ? erreurNote.message : 'erreur inconnue'}. A ressaisir.`)
       }
 
+      // GED lot 10c : la modale venait de « Ce que dit le compromis » et MET À JOUR ce compromis-là -> les lignes sont notées
+      if (reprendre && depuisDocument && Number(affaireCourantePourStatut()?.app_affaire_id) === depuisDocument.appAffaireId) {
+        noterDepuisDocument(job?.id ? String(job.id) : null)
+      }
       setStatusChangeTarget(null)
       // 3c (26/10) : statut, transaction, commission, conditions et note sont chez nous : on relit
       // la fiche ET sa rubrique Affaires (3b), sans attendre la fin du travail Hektor.
@@ -21681,6 +21764,32 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   //   de Sante ouvrirait la surveillance du systeme au manager.
   const isAdmin = profile?.role === 'admin'
   const isManagerOrAdmin = profile?.role === 'admin' || profile?.role === 'manager'
+  // GED lot 10c : « Ce que dit le compromis » demande la modale de la transaction (posé APRÈS isManagerOrAdmin)
+  useEffect(() => {
+    const droits = (e: Event) => { const d = (e as CustomEvent<{ peut: boolean }>).detail; if (d) d.peut = isManagerOrAdmin }
+    const demande = (e: Event) => {
+      const d = (e as CustomEvent<DemandeModifierTransaction>).detail
+      if (!d || !isManagerOrAdmin) return
+      d.pris = true
+      void (async () => {
+        let cible: Dossier | null = null
+        try { cible = await loadDossierDetail(d.app_dossier_id) } catch (erreur) { console.error('[ce que dit le compromis] ouverture', erreur) }
+        if (!cible) { setErrorMessage('Le bien n’a pas pu être relu : la fenêtre de la transaction ne s’ouvre pas, rien n’est parti à Hektor.'); return }
+        if (d.hektorAffaireId && !cible.compromis_id) cible = { ...cible, compromis_id: d.hektorAffaireId }
+        openStatusChangeModal(cible)
+        setStatusChangeStatus('compromise')
+        setStatusChangeAffaireChoisie(d.appAffaireId)
+        setDepuisDocument(d)
+      })()
+    }
+    window.addEventListener(EVENEMENT_DROITS_TRANSACTION, droits)
+    window.addEventListener(EVENEMENT_MODIFIER_TRANSACTION, demande)
+    return () => {
+      window.removeEventListener(EVENEMENT_DROITS_TRANSACTION, droits)
+      window.removeEventListener(EVENEMENT_MODIFIER_TRANSACTION, demande)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isManagerOrAdmin])
   const screenHeader = useMemo(() => {
     if (screen === 'accueil') {
       if (isPaulineAdministrativeProfile(profile, isManagerOrAdmin)) return { title: 'Accueil Pauline administratif', copy: '' }
@@ -23509,6 +23618,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             gardes={{ etatFermeAuxTransactions, bienEngage, dossiersOuvertsDuBien }}
             isValidationApproved={isValidationApproved}
             pastilleStatut={<StatusPill value={statusChangeTarget.statut_annonce} />}
+            depuisDocument={depuisDocument ? { nom: depuisDocument.nom, valeurs: depuisDocument.lignes.map((l) => `${l.libelle} : ${l.lu}`) } : null}
         formulaire={{
           statusChangeAmount, setStatusChangeAmount, statusChangeSalePrice, setStatusChangeSalePrice,
           statusChangeDate, setStatusChangeDate, statusChangeValidityDays, setStatusChangeValidityDays,
@@ -23556,6 +23666,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 <button className="ghost-button button-subtle" type="button" onClick={closeStatusChangeModal} disabled={statusChangePending}>Fermer</button>
               </div>
               <form className="status-change-form" onSubmit={handleChangeHektorAnnonceStatus}>
+                {depuisDocument ? (
+                  <p className="status-change-hint" role="status">{`Repris du compromis lu (${depuisDocument.nom}) : ${depuisDocument.lignes.map((l) => `${l.libelle} ${l.lu}`).join(' · ')}. Vérifie les cases, puis « Mettre à jour » : c'est ce bouton qui envoie à Hektor.`}</p>
+                ) : null}
                 <section className="status-change-summary">
                   <div>
                     <strong>{statusChangeTarget.titre_bien || statusChangeTarget.numero_dossier || `Annonce ${statusChangeTarget.hektor_annonce_id}`}</strong>

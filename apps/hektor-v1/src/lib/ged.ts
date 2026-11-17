@@ -3,6 +3,7 @@
 // fonction : supabase/patch_ged_m2_classer_2026-11-12.sql. Rien ici n'écrit dans app_console_document ni chez Hektor.
 import { useEffect, useState } from 'react'
 import type { VerdictGed } from './gedMesure'
+import type { ConditionComplete } from './gedBilanCompromis'
 import { hasSupabaseEnv, supabase } from './supabase'
 
 export type GedType = {
@@ -154,6 +155,29 @@ export async function loadGedDecisions(hektorAnnonceId: string | number): Promis
     return new Set(((data ?? []) as Array<{ cle: string; valeur: string; decision: string }>)
       .filter((d) => d.decision === 'remplie' || d.decision === 'ignoree')
       .map((d) => `${d.cle}|${d.valeur}`))
+  } catch {
+    return null
+  }
+}
+
+// Lot 10c (17/11) : le JOURNAL des décisions d'un bien, avec leur date -- « Ce que dit le compromis » relu plus tard
+// montre ce qui a été tranché et quand. La plus récente par « cle|valeur » fait foi. Lecture ratée -> null.
+export type DecisionGed = { decision: 'remplie' | 'ignoree' | 'echec'; le: string }
+export async function loadGedDecisionsDetail(hektorAnnonceId: string | number): Promise<Map<string, DecisionGed> | null> {
+  if (!hasSupabaseEnv || !supabase) return null
+  try {
+    const { data, error } = await supabase
+      .from('app_ged_decision')
+      .select('cle,valeur,decision,decide_le')
+      .eq('hektor_annonce_id', String(hektorAnnonceId))
+      .order('decide_le', { ascending: false })
+    if (error) return null
+    const carte = new Map<string, DecisionGed>()
+    for (const d of (data ?? []) as Array<{ cle: string; valeur: string; decision: DecisionGed['decision']; decide_le: string }>) {
+      const cle = `${d.cle}|${d.valeur}`
+      if (!carte.has(cle)) carte.set(cle, { decision: d.decision, le: d.decide_le })
+    }
+    return carte
   } catch {
     return null
   }
@@ -312,6 +336,17 @@ export async function lireConditionsAffairesStrict(appAffaireIds: number[]): Pro
     sortie.get(Number(r.app_affaire_id))?.push({ libelle: String(r.libelle ?? ''), date: r.date_echeance ?? null })
   }
   return sortie
+}
+
+// Lot 10c (17/11) : la liste COMPLÈTE des conditions d'UNE transaction (état, levée, note, délai), lue STRICTEMENT --
+// le geste d'écriture remplace toute la liste : une lecture ratée rendue vide EFFACERAIT les conditions suivies.
+export async function lireConditionsCompletesStrict(appAffaireId: number): Promise<ConditionComplete[]> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Base non configurée')
+  const { data, error } = await supabase.from('app_affaire_condition')
+    .select('rang,libelle,jours,date_echeance,etat,date_levee,note,catalogue_id')
+    .eq('app_affaire_id', appAffaireId).order('rang', { ascending: true })
+  if (error) throw new Error(error.message)
+  return (data ?? []) as ConditionComplete[]
 }
 
 // Les types DÉCIDÉS des documents déposés avec l'outil, pour un bien (lecture : patch_ged_m3_recu_manque, même

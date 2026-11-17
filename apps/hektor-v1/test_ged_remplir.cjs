@@ -18,7 +18,7 @@ const { propositionsRemplir, caseVide } = charger('src/lib/gedRemplir.ts')
 const v = (cle, x, etat = 'lu', rang = 0) => ({ cle, rang, valeur: null, valeur_num: null, valeur_date: null, page: 2, etat, ...x })
 const doc = (nom, typeCode, valeurs, id = 'L-' + nom) => ({ nom, lecture: { id, typeCode, etat: 'lu', luLe: null, valeurs } })
 const FICHE = { statut: 'Actif', numeroMandat: '18836', typeBien: '2', copropriete: true, anneeConstruction: 1960, assainissement: null, dpeConso: null, dpeGes: null, dpeNonConcerne: false, diffusable: true, dpeDate: null, nbLots: null, charges: null, prixAncien: null, prixNouveau: null, prixChangeLe: null, mandatDebut: null, mandatFin: null, quotePart: null, erpDate: null, chargeRegistre: undefined }
-const P = (docs, opts = {}) => propositionsRemplir({ ...FICHE, ...(opts.fiche || {}) }, docs, opts.affaires ?? [], opts.decisions ?? new Set(), opts.conditions ?? new Map())
+const P = (docs, opts = {}) => propositionsRemplir({ ...FICHE, ...(opts.fiche || {}) }, docs, opts.decisions ?? new Set())
 const cles = (ps) => ps.map((p) => p.cle).sort().join()
 
 console.log('① les propositions, chacune avec son témoin')
@@ -42,37 +42,11 @@ voir(cles(P([mandat('acquereur')], { fiche: { chargeRegistre: null } })) === 'P3
 voir(P([mandat('acquereur')], { fiche: { chargeRegistre: undefined } }).length === 0 && P([mandat('acquereur')], { fiche: { chargeRegistre: 'vendeur' } }).length === 0, 'TÉMOIN P3 : registre pas lu (undefined) ou déjà rempli -> rien')
 voir(P([mandat('les_deux')], { fiche: { chargeRegistre: null } }).length === 0 && P([mandat('acquereur', '17000')], { fiche: { chargeRegistre: null } }).length === 0, 'TÉMOIN P3 : « les deux » ou un autre mandat -> rien')
 const cpv = doc('Compromis.pdf', 'transaction.avant_contrat', [v('condition_pret', { valeur: 'oui' }), v('date_limite_pret', { valeur_date: '2026-12-01' }), v('date_signature', { valeur_date: '2026-10-15' }), v('prix', { valeur_num: 185000 })])
-const reg = [{ kind: 'compromis', state: 'active', date: '2026-10-15', dateActe: null, id: 77, montant: 185000, acquereurs: [] }]
-const p4 = P([cpv], { affaires: reg, conditions: new Map([[77, 0]]) })
-voir(cles(p4) === 'P4.condition_credit' && p4[0].affaireId === 77 && p4[0].valeur === '2026-12-01', 'P4 : la condition « Obtention Crédit » sur LA transaction, liste vide')
-voir(P([cpv], { affaires: reg, conditions: new Map([[77, 2]]) }).length === 0 && P([cpv], { affaires: reg, conditions: new Map() }).length === 0, 'TÉMOIN P4 : la liste a déjà 2 conditions, ou son compte est inconnu -> rien')
-voir(P([cpv], { affaires: [...reg, { ...reg[0], id: 78 }], conditions: new Map([[77, 0], [78, 0]]) }).length === 0, 'TÉMOIN P4 : deux compromis que rien ne départage -> rien (jamais la mauvaise transaction)')
-// lot 10a (17/11) : la date d'acte prévue (la réitération lue) et le séquestre, CHEZ NOUS, sur LA transaction du compromis
-const cpv10 = doc('Compromis.pdf', 'transaction.avant_contrat', [v('date_signature', { valeur_date: '2026-10-15' }), v('prix', { valeur_num: 185000 }), v('date_reiteration', { valeur_date: '2027-01-15' }), v('sequestre', { valeur_num: 9250 })])
-const reg10 = (x = {}) => [{ kind: 'compromis', state: 'active', date: '2026-10-15', dateActe: null, id: 77, montant: 185000, acquereurs: [], sequestre: null, carnetLu: true, ...x }]
-const p10 = P([cpv10], { affaires: reg10() })
-voir(cles(p10) === 'P4.date_acte,P4.sequestre' && p10.every((p) => p.geste === 'affaire' && p.affaireId === 77) && p10.find((p) => p.cle === 'P4.date_acte').valeur === '2027-01-15' && p10.find((p) => p.cle === 'P4.sequestre').valeur === '9250',
-  '10a : date d\'acte et séquestre vides -> deux propositions « transaction », sur LA transaction, valeurs telles que lues')
-voir(P([cpv10], { affaires: reg10({ dateActe: '2027-02-01', sequestre: 9250 }) }).length === 0 && cles(P([cpv10], { affaires: reg10({ dateActe: '0000-00-00' }) })) === 'P4.date_acte,P4.sequestre',
-  'TÉMOIN 10a : déjà remplies -> rien (jamais par-dessus) ; « 0000-00-00 » est vide')
-voir(P([cpv10], { affaires: reg10({ carnetLu: false }) }).length === 0 && P([cpv10], { affaires: reg10({ carnetLu: undefined }) }).length === 0,
-  'TÉMOIN 10a : le carnet de l\'app n\'a pas été lu sans erreur -> rien (une case remplie chez nous paraîtrait vide)')
-voir(P([cpv10], { affaires: reg10({ state: 'cancelled' }) }).length === 0 && P([cpv10], { affaires: [...reg10(), ...reg10({ id: 78 })] }).length === 0,
-  'TÉMOIN 10a : transaction annulée, ou deux que rien ne départage -> rien')
-voir(!cles(P([cpv10], { affaires: reg10({ date: null }) })).includes('date_signature'), 'TÉMOIN 10a : la date de SIGNATURE ne se remplit jamais (un compromis sans date est souvent non signé)')
-// lot 10b (17/11) : TOUTES les conditions suspensives lues (fiche v2), d'un clic, si la liste de la transaction est vide
+// lots 10a et 10b : les cartes P4 (conditions, date d'acte, séquestre) sont RETIRÉES le 17/11 (lot 10c) -- le compromis lu
+// passe par « Ce que dit le compromis » (test_ged_bilan.cjs). Témoin : un compromis complet ne propose plus AUCUNE carte.
 const cv = (n, d, r) => [v('conditions.nature', { valeur: n }, 'lu', r), ...(d ? [v('conditions.date_limite', { valeur_date: d }, 'lu', r)] : [])]
-const cpvV2 = (vals) => doc('Compromis.pdf', 'transaction.avant_contrat', [v('date_signature', { valeur_date: '2026-10-15' }), v('prix', { valeur_num: 185000 }), ...vals])
-const regC = [{ kind: 'compromis', state: 'active', date: '2026-10-15', dateActe: '2027-01-15', id: 77, montant: 185000, acquereurs: [], sequestre: 9250, carnetLu: true }]
-const pC = P([cpvV2([v('condition_pret', { valeur: 'oui' }), ...cv('pret', '2026-12-01', 0), ...cv('preemption', null, 1), ...cv('preemption', '2026-11-30', 2)])], { affaires: regC, conditions: new Map([[77, 0]]) })
-voir(cles(pC) === 'P4.conditions' && pC[0].valeur === 'pret@2026-12-01|preemption@2026-11-30' && pC[0].texte.includes('Obtention Crédit jusqu\'au 01/12/2026') && pC[0].texte.includes('Préemption mairie'),
-  '10b : prêt + préemption (en double) -> UNE proposition, la liste entière, une nature une fois (avec la date trouvée)')
-voir(cles(P([cpvV2([v('condition_pret', { valeur: 'oui' }), ...cv('pret', '2026-12-01', 0)])], { affaires: regC, conditions: new Map([[77, 0]]) })) === 'P4.condition_credit',
-  '10b : le prêt SEUL garde la forme d\'avant (P4.condition_credit) -- les décisions déjà prises restent valables')
-voir(P([cpvV2([v('condition_pret', { valeur: 'oui' }), ...cv('pret', '2026-12-01', 0), ...cv('preemption', null, 1)])], { affaires: regC, conditions: new Map([[77, 1]]) }).length === 0,
-  'TÉMOIN 10b : la transaction a déjà une condition -> rien (le geste remplace toute la liste)')
-voir(P([cpvV2([v('condition_pret', { valeur: 'renonciation' }), ...cv('pret', '2026-12-01', 0), ...cv('vente_bien', null, 1)])], { affaires: regC, conditions: new Map([[77, 0]]) })[0]?.valeur === 'vente_bien@',
-  '10b : « renonciation » au prêt -> la condition de prêt ne se propose pas')
+const cpvTout = doc('Compromis.pdf', 'transaction.avant_contrat', [v('date_signature', { valeur_date: '2026-10-15' }), v('prix', { valeur_num: 185000 }), v('date_reiteration', { valeur_date: '2027-01-15' }), v('sequestre', { valeur_num: 9250 }), v('condition_pret', { valeur: 'oui' }), ...cv('pret', '2026-12-01', 0), ...cv('preemption', null, 1)])
+voir(P([cpv, cpvTout]).length === 0, 'TÉMOIN 10c : le compromis ne propose plus de carte (un seul chemin : « Ce que dit le compromis »)')
 // 17/11 : le catalogue de l'agence passe à six clauses -- les libellés écrits doivent y correspondre MOT POUR MOT
 const { LIBELLE_CONDITION, natureDuLibelle } = charger('src/lib/gedComparer.ts')
 const CATALOGUE_17_11 = ['Préemption mairie', 'Obtention Crédit', 'Permis de construire', 'Delai de retractation SRU', 'Depot du permis de construire', 'Obtention du permis de construire']
@@ -93,22 +67,17 @@ voir(/if \(p\.champ\.startsWith\('copropriete_'\) && !\/oui\/i\.test/.test(fn), 
 voir(avant('loadRegisterCycleAffaires(', 'await ecrireMandatCharge(') && /if \(!numero \|\| !ligne\) return refus/.test(fn) && /charge: p\.valeur === 'vendeur' \? 'mandant' : 'acquereur'/.test(fn), 'charge : la ligne du registre relue (sans elle, rien) ; jamais une charge vide')
 voir(avant('await compterConditionsStrict([id])', 'await ecrireAffaireConditions(') && /if \(compte !== 0\) return refus/.test(fn), 'condition : la liste comptée STRICTEMENT juste avant ; non vide ou inconnue -> rien')
 voir(avant('await editAnnonceOptimistic(', "await garder('remplie'"), 'la décision « remplie » est gardée APRÈS le geste réussi')
-const fnAff = fn.slice(fn.indexOf("if (p.geste === 'affaire') {"), fn.indexOf('// condition : la liste doit être VIDE'))
-const avAff = (a, b) => fnAff.indexOf(a) >= 0 && fnAff.indexOf(b) > fnAff.indexOf(a)
-voir(avAff('await loadAffairesForDossier(', 'await editAffaireOptimistic(') && avAff('await lireCarnetAffairesStrict([idAffaire])', 'await editAffaireOptimistic(') && avAff('if (!caseVide(actuelle)) return refus(', 'await editAffaireOptimistic('),
-  '10a : la transaction ET son carnet relus (strictement) juste avant ; case pleine -> rien écrit')
-voir(/\['refused', 'cancelled'\]\.includes/.test(fnAff) && /if \(!\['date_acte', 'sequestre'\]\.includes\(p\.champ\)\) return refus/.test(fnAff) && /if \(!res\.ok \|\| res\.champs_retenus !== 1\) return refus/.test(fnAff),
-  '10a : transaction close, champ inconnu, correction non retenue -> refus écrit')
+const fnAff = fn.slice(fn.indexOf("if (p.geste === 'affaire')"), fn.indexOf('// condition : la liste doit être VIDE'))
+voir(/if \(p\.geste === 'affaire'\) return refus\('passe_par_le_compromis'/.test(fnAff) && !/editAffaireOptimistic\(/.test(fnAff),
+  '10c : la porte « chez nous seulement » de la date d\'acte et du séquestre est FERMÉE (champs que Hektor connaît) -- rien écrit')
 voir(/const voulues = p\.cle === 'P4\.conditions' \? decoderConditions\(p\.valeur\) : \[\{ nature: 'pret' as const, date: p\.valeur \}\]/.test(fn) && /if \(!voulues\.length\) return refus\('liste_illisible'/.test(fn)
   && avant('await compterConditionsStrict([id])', 'const voulues =') && avant('const lignesConditions =', 'await ecrireAffaireConditions(id, lignesConditions)'),
   '10b : la liste lue est décodée APRÈS le compte strict (vide exigé) ; illisible -> rien écrit ; le prêt seul comme avant')
-voir(!/createChangeAnnonceStatus|app_modifier_affaire_optimistic|modifierAffaireId/.test(fnAff) && /chez nous ; Hektor n'est pas prévenu/.test(fnAff),
-  'TÉMOIN 10a : CHEZ NOUS seulement (décision du 17/11) -- aucun travail vers Hektor')
 const ged = fs.readFileSync(path.join(__dirname, 'src/lib/ged.ts'), 'utf8')
 const strict = ged.slice(ged.indexOf('export async function compterConditionsStrict'))
 voir(/if \(error\) throw new Error\(error\.message\)/.test(strict.slice(0, 900)) && /if \(error\) return null/.test(ged.slice(ged.indexOf('export async function loadGedDecisions'), ged.indexOf('export async function gedDecider'))), 'lectures : les conditions LÈVENT sur erreur ; les décisions rendent null (rien ne se repropose)')
 const rm = fs.readFileSync(path.join(__dirname, 'src/RecuManque.tsx'), 'utf8')
-voir(/if \(!remplir \|\| !peutRemplir \|\| !decisions \|\| !conditions \|\| affaires === null\) return \[\]/.test(rm) && !/\[remplir, onRemplir/.test(rm), 'écran : une lecture ratée -> aucune proposition ; les lectures ne se relancent pas à chaque rendu')
+voir(/if \(!remplir \|\| !peutRemplir \|\| !decisions \|\| affaires === null\) return \[\]/.test(rm) && !/\[remplir, onRemplir/.test(rm), 'écran : une lecture ratée -> aucune proposition ; les lectures ne se relancent pas à chaque rendu')
 voir(!/tout remplir/i.test(rm) && (rm.match(/'Remplir la fiche'/g) || []).length === 1, 'un clic par proposition : un seul bouton, pas de « tout remplir »')
 voir(!/TAXE_FONCIERE|numero_mandat'|mandat_date|PRIXNETVENDEUR/.test(fs.readFileSync(path.join(__dirname, 'src/lib/gedRemplir.ts'), 'utf8').replace(/numero_mandat'\), faits\.numeroMandat/g, '')), 'jamais la taxe foncière, ni un champ du mandat')
 

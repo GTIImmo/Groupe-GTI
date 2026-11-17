@@ -1,0 +1,160 @@
+/* GED (17/11/2026, lot 10c) : la fenêtre « Ce que dit le compromis ». Même habillage que la fenêtre de dépôt (bandeau
+   d'encre, liseré magenta, brume). Le geste est la PLAQUE : on touche la valeur qui reste ; l'autre s'efface. Le compromis
+   est une plaque « papier » (crème, coin plié), la transaction une plaque « registre » (blanche, réglée). Les mots de
+   destination sont ceux de la modale de statut : « envoyé à Hektor » (gris), « gardé chez nous » (framboise).
+   Toutes les animations se coupent sous prefers-reduced-motion. */
+@keyframes bc-voile { from { opacity: 0; } to { opacity: 1; } }
+@keyframes bc-ouvre { from { opacity: 0; transform: translateY(16px) scale(0.985); } to { opacity: 1; transform: none; } }
+@keyframes bc-arrive { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes bc-lit { 0% { background-position: -200px 0; } 100% { background-position: 200px 0; } }
+@keyframes bc-coche { from { stroke-dasharray: 16; stroke-dashoffset: 16; } to { stroke-dasharray: 16; stroke-dashoffset: 0; } }
+
+.bc-voile { position: fixed; inset: 0; z-index: 3200; display: grid; place-items: center; padding: 14px; background: rgba(31, 33, 33, 0.55); animation: bc-voile 200ms ease-out both; }
+.bc { --bc-encre: #1f2121; --bc-gris: #5c6163; --bc-trait: #e2e5e6; --bc-brume: #f7f8f8; --bc-mag: #c5005f; --bc-papier: #fbf7ee; --bc-papier-trait: #ece3cf; --bc-vert: #2e8a5c; --bc-ambre: #8a5a12;
+  position: relative; display: flex; flex-direction: column; width: min(1080px, 100%); height: min(720px, calc(100dvh - 28px)); overflow: hidden; border-radius: 20px; background: var(--bc-brume); box-shadow: 0 30px 80px rgba(0, 0, 0, 0.38); color: var(--bc-encre);
+  font-family: 'Hanken Grotesk', 'Segoe UI', system-ui, sans-serif; font-size: 14px; line-height: 1.4; container-type: inline-size; animation: bc-ouvre 420ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.bc:focus { outline: none; }
+.bc *, .bc *::before, .bc *::after { box-sizing: border-box; }
+.bc button { font: inherit; }
+.bc :focus-visible { outline: 3px solid rgba(197, 0, 95, 0.5); outline-offset: 2px; }
+
+/* le bandeau */
+.bc-hd { flex: none; display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 10px 14px 10px 22px; background: var(--bc-encre); border-bottom: 3px solid var(--bc-mag); color: #ffffff; }
+.bc-hd :focus-visible { outline-color: #f6b6d5; }
+.bc-hd-t { flex: 1; min-width: 0; }
+.bc-hd-t p { margin: 0; overflow: hidden; color: #b9bec0; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.bc-hd-t h2 { margin: 0; color: #ffffff; font-family: 'Plus Jakarta Sans', 'Hanken Grotesk', sans-serif; font-size: 20px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.2; }
+.bc-hd-pil { flex: none; padding: 4px 11px; border-radius: 999px; background: rgba(255, 255, 255, 0.12); font-size: 12px; font-weight: 600; white-space: nowrap; }
+.bc-hd-x { flex: none; display: grid; place-items: center; width: 40px; height: 40px; border: 0; border-radius: 50%; background: rgba(255, 255, 255, 0.1); color: #ffffff; cursor: pointer; transition: background-color 160ms; }
+.bc-hd-x:hover { background: rgba(255, 255, 255, 0.2); }
+
+/* le corps : la liste à gauche, le document à droite */
+.bc-corps { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 340px; }
+.bc-liste { min-height: 0; overflow: auto; padding: 16px 22px 22px; }
+.bc-mode { margin: 0 0 4px; color: var(--bc-gris); font-size: 13px; }
+.bc-vide { margin: 12px 0 0; padding: 12px 14px; border-radius: 12px; background: #ffffff; box-shadow: 0 0 0 1px var(--bc-trait); color: var(--bc-gris); font-size: 13px; }
+
+.bc-g { margin-top: 18px; }
+.bc-g h3 { display: flex; align-items: center; gap: 8px; margin: 0; font-family: 'Plus Jakarta Sans', 'Hanken Grotesk', sans-serif; font-size: 15px; font-weight: 800; letter-spacing: -0.01em; }
+.bc-g h3 span, .bc-g-plie span { display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; background: #eceeef; color: var(--bc-gris); font-size: 12px; font-weight: 800; }
+.bc-g-aide { margin: 2px 0 0; color: var(--bc-gris); font-size: 12.5px; }
+.bc-g ol { display: grid; gap: 10px; margin: 10px 0 0; padding: 0; list-style: none; }
+
+/* une ligne : le titre (et sa destination), puis les deux plaques face à face */
+.bc-l { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 6px 14px; align-items: center; padding: 10px 12px 10px 16px; border-radius: 14px; background: #ffffff; box-shadow: 0 0 0 1px var(--bc-trait); animation: bc-arrive 360ms cubic-bezier(0.22, 1, 0.36, 1) both; transition: box-shadow 160ms; }
+.bc-l.is-vue { box-shadow: 0 0 0 2px var(--bc-mag); }
+.bc-l.is-tranche, .bc-l.is-accord { background: #fbfbfb; }
+.bc-l-t { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.bc-l-t b { flex-basis: 100%; }
+.bc-l-t b { font-size: 14.5px; font-weight: 800; }
+.bc-dest { display: inline-flex; align-items: center; gap: 4px; padding: 2px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 600; white-space: nowrap; }
+.bc-dest.is-h { background: #f1f2f3; color: #4a4f51; }
+.bc-dest.is-n { background: #fcedf4; color: #a3004f; }
+.bc-page { padding: 3px 10px; border: 0; border-radius: 999px; background: transparent; box-shadow: inset 0 0 0 1px var(--bc-trait); color: var(--bc-gris); font-size: 12px; font-weight: 700; cursor: pointer; transition: background-color 160ms, color 160ms; }
+.bc-page:hover { color: var(--bc-encre); background: var(--bc-brume); }
+.bc-page[aria-pressed="true"] { background: var(--bc-encre); color: #ffffff; box-shadow: none; }
+
+.bc-l-v { display: grid; grid-template-columns: minmax(0, 1fr) 30px minmax(0, 1fr); align-items: stretch; }
+.bc-signe { display: grid; place-items: center; align-self: center; width: 26px; height: 26px; margin: 0 2px; border-radius: 50%; background: #ffffff; box-shadow: 0 0 0 1px var(--bc-trait); color: var(--bc-gris); font-size: 15px; font-weight: 800; line-height: 1; z-index: 1; }
+.bc-signe.is-trancher { background: #fff1dc; box-shadow: none; color: var(--bc-ambre); }
+.bc-signe.is-ajouter { background: #fdf0f6; box-shadow: none; color: var(--bc-mag); }
+.bc-signe.is-accord { background: #e6f3ec; box-shadow: none; color: #1f6b45; }
+
+.bc-plaque { position: relative; display: grid; gap: 1px; align-content: start; min-height: 58px; padding: 8px 12px 9px; border: 0; border-radius: 10px; color: var(--bc-encre); text-align: left; transition: box-shadow 160ms, opacity 200ms, transform 160ms, background-color 160ms; }
+.bc-plaque small { color: var(--bc-gris); font-size: 11.5px; font-weight: 600; }
+.bc-plaque b { font-size: 16px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -0.005em; line-height: 1.25; overflow-wrap: anywhere; }
+.bc-plaque b.is-vide { color: #9aa0a2; font-style: italic; font-weight: 600; }
+/* le compromis : du papier, coin plié */
+.bc-plaque.is-compromis { background: var(--bc-papier); box-shadow: inset 0 0 0 1px var(--bc-papier-trait); }
+.bc-plaque.is-compromis::after { content: ""; position: absolute; top: 0; right: 0; width: 14px; height: 14px; border-radius: 0 10px 0 4px; background: linear-gradient(225deg, var(--bc-brume) 50%, var(--bc-papier-trait) 50%); }
+/* la transaction : le registre, réglé */
+.bc-plaque.is-transaction { background: #ffffff; box-shadow: inset 0 0 0 1px var(--bc-trait); }
+.bc-plaque.is-transaction:has(b.is-vide) { background: transparent; box-shadow: none; border: 1.5px dashed #cdd2d4; }
+button.bc-plaque { cursor: pointer; }
+button.bc-plaque:hover:not(:disabled) { box-shadow: inset 0 0 0 1.5px var(--bc-encre); }
+button.bc-plaque:active:not(:disabled) { transform: scale(0.985); }
+.bc-plaque.is-pris { box-shadow: inset 0 0 0 2px var(--bc-mag), 0 6px 18px rgba(197, 0, 95, 0.14) !important; }
+.bc-plaque.is-transaction.is-pris { box-shadow: inset 0 0 0 2px var(--bc-encre), 0 6px 18px rgba(31, 33, 33, 0.12) !important; }
+.bc-plaque.is-ecarte { opacity: 0.42; }
+.bc-plaque.is-ecarte b { text-decoration: line-through; text-decoration-thickness: 1.5px; }
+/* le verbe du geste, en bas à droite de la plaque : « prendre », « garder », « laisser vide »… ; coché quand il est pris */
+.bc-verbe { position: absolute; right: 10px; bottom: 8px; display: inline-flex; align-items: center; gap: 3px; padding: 1px 8px; border-radius: 999px; color: var(--bc-gris); font-size: 11.5px; font-weight: 700; opacity: 0; transition: opacity 160ms, background-color 160ms, color 160ms; }
+button.bc-plaque:hover .bc-verbe, button.bc-plaque:focus-visible .bc-verbe { opacity: 1; background: rgba(31, 33, 33, 0.06); }
+.bc-plaque.is-pris .bc-verbe { opacity: 1; background: var(--bc-mag); color: #ffffff; }
+.bc-plaque.is-transaction.is-pris .bc-verbe { background: var(--bc-encre); }
+.bc-verbe path { animation: bc-coche 260ms ease-out both; }
+@media (hover: none) { .bc-verbe { opacity: 1; background: rgba(31, 33, 33, 0.06); } }
+
+.bc-l-n { grid-column: 2; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin: 0; color: var(--bc-gris); font-size: 12.5px; }
+.bc-deja { color: #1f6b45; font-weight: 700; }
+.bc-lien { padding: 0; border: 0; background: none; color: var(--bc-encre); font-size: 12.5px; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+
+.bc-g.is-accord { margin-top: 20px; }
+.bc-g-plie { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; width: 100%; padding: 10px 12px; border: 0; border-radius: 12px; background: #e6f3ec; color: #1f6b45; font-family: 'Plus Jakarta Sans', 'Hanken Grotesk', sans-serif; font-size: 14px; font-weight: 800; text-align: left; cursor: pointer; }
+.bc-g-plie svg { transition: transform 200ms; }
+.bc-g-plie[aria-expanded="true"] svg { transform: rotate(90deg); }
+.bc-g-plie span { background: #ffffff; color: #1f6b45; }
+.bc-g-plie small { flex-basis: 100%; padding-left: 20px; color: #3f7a5c; font-family: 'Hanken Grotesk', sans-serif; font-size: 12px; font-weight: 600; }
+
+/* le document */
+.bc-doc { min-height: 0; display: flex; flex-direction: column; gap: 10px; padding: 16px; overflow: auto; border-left: 1px solid var(--bc-trait); background: #eef0f1; }
+.bc-doc-vide { display: grid; place-items: center; align-content: center; gap: 8px; height: 100%; padding: 20px; color: var(--bc-gris); text-align: center; }
+.bc-doc-vide svg { color: #a7adb0; }
+.bc-doc-vide p { margin: 0; max-width: 220px; font-size: 13px; font-weight: 600; }
+.bc-doc-vide small { font-size: 12px; }
+.bc-doc-t { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.bc-doc-retour { display: none; place-items: center; width: 36px; height: 36px; border: 0; border-radius: 50%; background: #ffffff; color: var(--bc-encre); cursor: pointer; }
+.bc-doc-page { display: block; width: 100%; height: auto; min-height: 200px; border-radius: 6px; background: #ffffff; box-shadow: 0 2px 12px rgba(31, 33, 33, 0.14); }
+.bc-doc-page.is-lit { aspect-ratio: 1 / 1.41; background: linear-gradient(90deg, #ffffff 0, #f3f4f5 40px, #ffffff 80px) no-repeat, #ffffff; background-size: 400px 100%; animation: bc-lit 1.2s linear infinite; }
+.bc-doc-err { margin: 0; color: var(--bc-gris); font-size: 13px; }
+
+/* le pied */
+.bc-pied { flex: none; display: flex; align-items: center; gap: 10px; padding: 12px 18px 12px 22px; border-top: 1px solid var(--bc-trait); background: #ffffff; }
+.bc-resume, .bc-msg { flex: 1; min-width: 0; display: grid; gap: 1px; margin: 0; font-size: 13.5px; font-weight: 700; }
+.bc-resume small { color: var(--bc-gris); font-size: 12px; font-weight: 500; }
+.bc-msg { color: #1f6b45; }
+.bc-msg.is-erreur { color: #a3004f; }
+.bc-b1, .bc-b2 { flex: none; min-height: 44px; padding: 0 18px; border: 0; border-radius: 999px; font-weight: 800; cursor: pointer; transition: background-color 160ms, opacity 160ms; }
+.bc-b1 { background: var(--bc-mag); color: #ffffff; box-shadow: 0 6px 16px rgba(197, 0, 95, 0.25); }
+.bc-b1:hover:not(:disabled) { background: #a3004f; }
+.bc-b1:disabled { opacity: 0.45; cursor: default; box-shadow: none; }
+.bc-b2 { background: transparent; color: var(--bc-encre); box-shadow: inset 0 0 0 1px var(--bc-trait); }
+.bc-b2:hover:not(:disabled) { background: var(--bc-brume); }
+
+/* étroit : le document passe PAR-DESSUS la liste, à la demande ; la fenêtre prend tout l'écran au téléphone */
+@container (max-width: 820px) {
+  .bc-corps { grid-template-columns: minmax(0, 1fr); position: relative; }
+  .bc-doc { position: absolute; inset: 0; z-index: 2; display: none; border-left: 0; }
+  .bc.a-page .bc-doc { display: flex; }
+  .bc-doc-vide { display: none; }
+  .bc-doc-retour { display: grid; }
+  .bc-liste { padding: 14px 14px 20px; }
+  .bc-l { grid-template-columns: minmax(0, 1fr); padding: 12px; }
+  .bc-l-t b { flex-basis: auto; margin-right: 2px; }
+  .bc-page { margin-left: auto; }
+  .bc-l-n { grid-column: 1; }
+  .bc-hd { padding-left: 16px; }
+  .bc-hd-pil { display: none; }
+  .bc-pied { flex-wrap: wrap; padding: 10px 14px calc(10px + env(safe-area-inset-bottom)); }
+  .bc-resume, .bc-msg { flex-basis: 100%; }
+  .bc-b1 { flex: 1; }
+}
+@media (max-width: 760px) {
+  .bc-voile { padding: 0; }
+  .bc { width: 100%; height: 100dvh; border-radius: 0; }
+  .bc-plaque b { font-size: 15px; }
+}
+@container (max-width: 420px) {
+  .bc-l-v { grid-template-columns: minmax(0, 1fr) 22px minmax(0, 1fr); }
+  .bc-signe { width: 22px; height: 22px; margin: 0 -2px; font-size: 13px; }
+  .bc-plaque { padding: 8px 10px 9px; }
+  .bc-plaque b { font-size: 14px; }
+}
+@container (max-width: 330px) {
+  .bc-l-v { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .bc-signe { justify-self: center; margin: -6px 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bc-voile, .bc, .bc *, .bc *::before, .bc *::after { animation: none !important; transition: none !important; }
+}
