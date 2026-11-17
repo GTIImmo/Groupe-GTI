@@ -1184,3 +1184,29 @@ Hektor au clic, puis relu. ⚠ Diffusable OUI : le bien peut repartir sur les po
 **Base** : la ligne `pilotage` en `refusee`, `execute_le` vide ; 63330 inchangé (`a_controler`, diffusable 0, aucun
 portail) et sa date d'écriture `refreshed_at` toujours au 21/10 — la recopie du clic l'aurait changée (témoin : 7 biens
 écrits sur 24 h, le dernier à 06:26). **Pas encore prouvé** : un clic RÉEL (Hektor confirme), sur un bien qu'il choisit.
+
+## 44. DIFFUSION (plusieurs portails d'un coup, SI le bien est diffusable) : AUDIT (17/11, « Oui, la Diffusion ») — rien codé
+
+**Périmètre** : la fenêtre « Diffusion » de l'écran, la route `/hektor-diffusion/apply` et le pont ; la carte « un portail »
+déjà en ligne. Pas mesuré : le délai de mise en ligne effective sur chaque portail.
+**Ce que fait l'écran** (`handleSaveDiffusionTargets` + `handleApplyDiffusionTargetsOnHektor`, App.tsx ~21339) : il
+ENREGISTRE un choix pour CHAQUE portail du bien (coché / décoché, `app_diffusion_target`), puis demande au pont
+d'appliquer : `apply` envoie « ajouter » pour chaque choix coché et « retirer » pour chaque décoché (un « déjà publié » est
+toléré), relit la fiche et les portails chez Hektor, et l'écran recopie le résumé chez nous. ⚠ Pour la direction, l'écran
+passe `ensureDiffusable: true` (il REND le bien diffusable au passage) ; pour le négociateur, la route le force à faux et
+exige un bien diffusable ET le sien (`assert_can_apply_portals`, règle du lot 4, 03/11).
+**La carte actuelle « un portail »** fait la même chose avec UN seul choix enregistré (les autres portails ne bougent pas).
+**Mesures (17/11)** : 5 portails connus (Leboncoin, Bien'ici — numéro propre à chacune des 17 agences —, Paper,
+Etreproprio, Superimmo — numéro commun) ; 435 biens diffusables, dont 312 sur plusieurs portails (3,3 en moyenne).
+
+**La carte proposée — `diffusion`** (tous les rôles, comme la carte « un portail ») : sur un bien vivant DÉJÀ DIFFUSABLE
+(sa règle « uniquement si diffusable », pour TOUT LE MONDE : la direction rend d'abord le bien diffusable par la carte
+Pilotage — la carte ne passe JAMAIS `ensureDiffusable`), une liste « à publier » et une liste « à retirer » ; les portails non
+nommés NE BOUGENT PAS. Au clic : la garde de la route (`assert_can_apply_portals`, jugée avec le jeton), les choix
+enregistrés comme l'écran, UN SEUL `apply`, chaque refus de Hektor dit portail par portail, le résumé recopié chez nous.
+La carte dit avant -> après (« en ligne : Leboncoin, Bien'ici -> Leboncoin, Paper »).
+**Forme recommandée** : ÉLARGIR la mécanique de la carte « un portail » (un seul code pour les deux, la carte « un
+portail » devient le cas d'une liste d'un élément) plutôt qu'en écrire une seconde — moins de code qui diverge.
+**Ce que ça pourrait casser ailleurs** : rien de neuf — même effacement / réécriture des choix du bien que la carte « un
+portail » et que l'écran ; geste RÉEL chez Hektor au clic (la publicité du bien), d'où la confirmation portail par portail.
+**Épreuve proposée** : sans valider d'abord ; un essai réel sur un bien qu'il choisit.
