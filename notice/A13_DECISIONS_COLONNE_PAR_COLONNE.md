@@ -200,6 +200,47 @@ E  | Lien CRM (une ADRESSE WEB, 4 689 lignes remplies)
 
 ---
 
+V  | Vente Prevue (la DATE PREVUE de l'acte)
+   | ⛔⛔ **ON NE LA RECUPERE PAS.** Decide le 17/11/2026 par Frederic.
+   | qui fait foi : NOUS (notre `date_acte`, qui vient de Hektor)
+   | ce que la mesure a montre, et c'est elle qui a tranche :
+   |
+   |   L'ACCORD MONTE AVEC L'ANNEE, ET IL EST DEJA BON SUR LE VIVANT
+   |     2018  23 %   2019  25 %   2020  30 %   2021  37 %   2022  36 %
+   |     2023  37 %   2024  44 %   2025  43 %   2026  84 %   2027  82 %
+   |   -> le desaccord est un probleme DU PASSE. Les vieilles affaires divergent
+   |      parce que le classeur etait le seul outil ; les recentes concordent.
+   |
+   |   ET LES 1 402 OU LE CLASSEUR A RAISON SONT CLOSES A 100 %
+   |     Vente reglee 1 401 . Annulee 1 . VIVANTES : 0
+   |     ecart median 20 jours
+   |   -> corriger la date PREVUE d'un rendez-vous qui a eu lieu il y a des mois
+   |      n'apporte aucun usage qu'on puisse nommer.
+   |
+   | ⛔⛔ ET LES DEUX CHEMINS POSSIBLES SONT DISQUALIFIES PAR ECRIT (fiche
+   |   [[date-convenue-mecanisme-et-son-piege]], 12/11) :
+   |     le carnet app_affaire_champ_app   `date` y est surveille par R3, qui
+   |         COMPARE notre valeur a celle de Hektor -> conflit PERMANENT, le
+   |         controle sort EN ERREUR a chaque passage
+   |     une colonne de app_affaire_ledger le run la pousse avec SELECT * et
+   |         L'ECRASERAIT A NULL sur 31 151 lignes
+   |   ⚠ Et `app_affaire_date_convenue` ne convient pas non plus : elle porte la
+   |     date DE LA TRANSACTION (`jour` remplace `date`), pas la date d'ACTE
+   |     prevue -- et son usage est « les transactions qui n'ont de date NULLE
+   |     PART », alors qu'ici nous AVONS une date, simplement differente.
+   |   -> il faudrait creer un TROISIEME mecanisme, pour une donnee
+   |      previsionnelle d'affaires reglees a 100 %.
+   |
+   | ✅ CE QU'ON FAIT A LA PLACE : on LISTE, comme pour AF Prix. Et surtout,
+   |   ON REGARDE LES 48 ECARTS DU VIVANT (43 en 2026 + 5 en 2027) : ceux-la sont
+   |   des affaires EN COURS, et une date butoir fausse peut faire MANQUER UNE
+   |   ECHEANCE. C'est de l'operationnel, pas de l'archive.
+   | ⚠ ET RIEN N'A JAMAIS ETE POSE : audit du 17/11 -- 3 migrations seulement
+   |   pour ce chantier (alias negociateur, re-gel de 9 lignes, B1), le carnet ne
+   |   porte AUCUN `date_acte`, et les apparieurs sont en lecture seule.
+
+---
+
 ## ⛔ LA REGLE GENERALE POSEE AVEC LA COLONNE A
 
 > POUR L'INSTANT ON N'ECRIT RIEN DANS LE CLASSEUR.
@@ -212,7 +253,56 @@ le sens classeur -> nous.
 
 ---
 
-## EN ATTENTE DE DECISION
+## ⭐⭐⭐ LE TABLEAU DES 38 COLONNES -- ETAT AU 17/11/2026
 
-F G H I J K L M N O P Q(faite) R S T U V W X Y Z
-AA AB AC AD AE AF AG AH AI AJ AK AL
+> ⚠ **La liste « EN ATTENTE DE DECISION » de ce fichier etait PERIMEE** : elle
+> portait encore F, P, S, T, Y, Z, AA, AH, AI, AJ en attente alors qu'elles sont
+> **posees**. Remise a jour le 17/11, a sa demande.
+
+### ✅ RAPATRIEES, et chacune controlee
+
+```
+   I a N   Negociateurs 1-3 et leurs %     17 905 lignes   lot 1, 14/11
+   P       Commission TTC                      62          C2, 17/11   ⚠ voir ci-dessous
+   Q       Charge Commission                  853          C1, 14/11
+   S T     Offre Achat / Compromis            195 transactions   C5, 16/11
+   Y       Vente Reglee                     3 729          C8, 16/11
+   Z       Annulee                            450          C3, 16/11
+   AA      Numero de facture                3 671          C8, 16/11
+   AH AI AJ  les trois colonnes d'avis      2 588          C9, 16/11
+```
+
+### ⬜ EN COURS OU EN ATTENTE DE SA DECISION
+
+```
+   F    En attente de    DECODEE le 17/11 (echeancier en abreviations) :
+                         216 motifs normalises -> motif_annulation_app
+                          86 conditions en attente -> app_affaire_condition
+                         492 textes uniques -> app_affaire_note
+                         + le catalogue : 2 clauses a ajouter
+   G    COMMENTAIRES   4 132 textes -> app_affaire_note
+   AF   Prix             161 ecarts -> ON LISTE, on n'ecrit rien (sa decision)
+   U X  Signe / Signee   des booleens remplis a 100 %. ⬜ A QUOI SERVENT-ILS ?
+                         Sans reponse, on ne sait pas s'il faut les reprendre.
+   AC AE  Adresses       jamais mesurees
+   AK   Divers           jamais mesuree
+```
+
+### ⛔ ECARTEES PAR DECISION, et chacune est datee
+
+```
+   A    affair_uuid      vide volontairement jusqu'a l'etape B      05/11
+   B    product_ref      pas utile                                  05/11
+   C    Mandat           NE PAS RAPATRIER (33 numeros recycles)      17/11
+   V    Vente Prevue     NE PAS RECUPERER -- voir sa fiche ci-dessus 17/11
+   W    Vente Fixee      arret volontaire : 33 affaires EN COURS que Hektor rendra
+   D H O R AB AD AG      Nature, Agence, Notaire, Etat, Acquereur, Vendeur, Ville :
+                         ~5 480 ecarts decides « RIEN »
+```
+
+### · LES CLEFS, pas des donnees
+
+```
+   E    Lien CRM         une adresse web, 4 689 lignes
+   AL   ID Unique        la clef du gel -- 12 595 liens
+```

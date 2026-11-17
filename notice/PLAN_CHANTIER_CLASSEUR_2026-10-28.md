@@ -3608,7 +3608,32 @@ C6 ⬜  3.3 LOT C : **26 ventes** dont notre compromis porte DEJA une autre date
          confirme, l. 788-791). Voir « LE TRI FIN ... REFAIT ».
        ⏰ LA REGLE EXACTE DES « 26 » RESTE A RETROUVER : je ne sais pas la
          reconstituer sur le rapport du jour, et je ne la devine pas.
-C7 ⬜  3.3bis V « Vente Prevue » : 2 303 ecarts + 21, decidee « tout », on ecrase.
+C7 ⛔ ECARTEE LE 17/11 -- **ON NE RECUPERE PAS LES DATES PREVUES.**
+       ⭐⭐⭐ ET C'EST SA QUESTION QUI A TRANCHE, pas mes arguments : « est-ce que
+         les date butoir de mon apps correspondent deja avec le sheet sur annee
+         2026 ? ». Mesure : **OUI, 84 % d'accord sur 2026 et 82 % sur 2027**,
+         contre 23 a 44 % sur 2018-2025. L'accord MONTE avec l'annee.
+           2018 23 . 2019 25 . 2020 30 . 2021 37 . 2022 36 . 2023 37
+           2024 44 . 2025 43 . **2026 84** . **2027 82**  (% identiques)
+         ➡ le desaccord est un probleme DU PASSE : les vieilles affaires
+           divergent parce que le classeur etait le seul outil, les recentes
+           concordent parce que les deux systemes travaillent ensemble.
+       ⭐ ET LES 1 402 OU LE CLASSEUR A RAISON SONT CLOSES A 100 % : Vente
+         reglee 1 401, Annulee 1, VIVANTES 0. Ecart median 20 jours. Corriger
+         la date PREVUE d'un rendez-vous qui a eu lieu il y a des mois n'a
+         aucun usage qu'on puisse nommer.
+       ⛔⛔ ET LES DEUX CHEMINS SONT DISQUALIFIES PAR ECRIT (fiche du 12/11) :
+         le carnet -> `date` y est surveille par R3, conflit PERMANENT ;
+         une colonne du registre -> le run la pousse avec SELECT * et
+         L'ECRASERAIT A NULL sur 31 151 lignes. Et app_affaire_date_convenue
+         porte la date DE LA TRANSACTION, pas la date d'ACTE prevue.
+       ⚠ ET RIEN N'A JAMAIS ETE POSE (son audit du 17/11) : 3 migrations pour
+         ce chantier, 0 `date_acte` au carnet, apparieurs en lecture seule.
+       ✅ CE QUI RESTE ET QUI COMPTE : **LES 48 ECARTS DU VIVANT** (43 en 2026
+         + 5 en 2027) -- des affaires EN COURS ou une date butoir fausse peut
+         faire MANQUER UNE ECHEANCE. Liste :
+         `notice/C7_LES_48_ECARTS_DU_VIVANT_2026-11-17.csv`
+       (ancien enonce) 3.3bis V : 2 303 ecarts + 21, decidee « tout », on ecrase.
        ⭐ Arbitre INDEPENDANT (notre date de vente, qui vient de Hektor) : le
        classeur tombe plus pres du reel 1 402 fois contre 714. -> SA DECISION.
        ⚠ Ne jamais arbitrer V par W : les deux sortent du MEME classeur (accord
