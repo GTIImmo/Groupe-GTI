@@ -1380,3 +1380,29 @@ temporaires, purge, droits). Deux analyses en lecture seule (rapports complets, 
    ordinaire ; la carte dit de le marquer sur la fiche du bien.
 5. **Pièces jointes** : un fichier déposé peut partir en pièce jointe (lien signé fabriqué par le serveur) ; « l'ajouter au
    bien » = la carte 3, proposée à part.
+
+## 52. LE TROMBONE : CODÉ (17/11, sur « Oui, le trombone ») — 1re marche, sans carte qui s'en serve encore
+
+**Le chemin** (la règle du coffre interdit un dépôt libre avec le jeton de la personne, §51.A) :
+1. `POST /assistant/fichiers/preparer` (nom, type, taille) : le SERVEUR contrôle (types du coffre ; .odt / .ods / HEIC
+   refusés AVEC la raison ; 50 Mo ; vide) et fabrique, avec SA clé, une ADRESSE D'ENVOI SIGNÉE pour UN fichier sous
+   `temp/assistant/<la personne>/<numéro>/<nom sans accents>` (la personne = son jeton, jamais fournie) ;
+2. l'écran envoie le fichier DIRECTEMENT au coffre (`uploadToSignedUrl`, supabase-js 2.100) — il ne passe pas par Render ;
+3. `POST /assistant/fichiers/{n}/confirmer` : le serveur RELIT ce qui est vraiment au coffre (taille, type réels) et le
+   SUPPRIME s'il sort des règles ; `DELETE /assistant/fichiers/{n}` : la personne retire SON fichier ;
+4. la question porte `fichiers: [numéros]` (10 au plus) : chaque fichier est RELU, et le modèle reçoit à la suite de la
+   question « [Fichiers joints … fichier:N « nom » (type, taille)] » — JAMAIS le contenu ; la marque est gardée dans
+   l'historique, l'écran la retire de la bulle et montre « Fichiers joints : … ». Consigne : ne jamais prétendre les avoir
+   lus ; aucun geste ne les utilise encore.
+**Interrupteur** `assistant_fichiers` (off / admin / on ; ABSENT = éteint) : `GET /assistant/fichiers/etat` dit à
+l'écran s'il montre le bouton « Joindre » (accueil et conversation, + glisser-déposer). ⏰ À poser en base (son accord).
+**Purge** : `Console/nettoyer_temporaires_orphelins.js` accepte désormais `temp/assistant/` (2 jours, mêmes gardes) —
+⚠ ce nettoyeur se lance À LA MAIN (aucune tâche planifiée ne l'appelle) : à brancher sur une tâche, décision à prendre.
+**Contrôles** : `tests/test_assistant_fichiers.py` 15 verts (types, .odt expliqué, chemin de la personne, relecture,
+fichier truqué supprimé, retrait limité à SON dossier, ce que voit le modèle) ; témoin inverse : la suppression d'un fichier
+hors règles sabotée -> ROUGE, remise -> 15 ; gestes 318, ia 62, lecteur 73 ; `npm run build` vert ; à l'écran (local,
+maquette) le bouton « Joindre », la pastille du fichier et sa croix. **Pas éprouvé en réel** (interrupteur à poser).
+**Sa question (17/11)** : « l'ajout des documents par l'assistant doit activer l'agent IA GED ? » — OUI, possible : la
+carte « ajouter un document » (marche 3) enchaînera les DEUX agents de la GED (derrière `ged_lecture_ia`) — la PROPOSITION
+du type avant l'envoi, puis la LECTURE des valeurs (`/ged/lire`) après le dépôt et le classement — avec leurs règles (RIB
+jamais lu, pièces des personnes selon leur interrupteur). À détailler à l'audit de cette carte, avec la session GED.

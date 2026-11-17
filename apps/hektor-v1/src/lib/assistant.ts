@@ -84,19 +84,70 @@ async function appeler<T>(chemin: string, methode: 'GET' | 'POST'): Promise<T> {
   return (await reponse.json()) as T
 }
 
+// ── 17/11/2026 : LE TROMBONE (note étape 4 §51-52) ─────────────────────────────────────────────────────────────
+// Le serveur vérifie qui dépose, le type et la taille, et rend une adresse d'envoi SIGNÉE pour UN fichier à UN endroit
+// (temp/assistant/<personne>/<numéro>/) ; l'écran y envoie le fichier DIRECTEMENT au coffre (il ne passe pas par Render),
+// puis le serveur RELIT ce qui a été déposé et le supprime s'il sort des règles. Le modèle ne voit que nom, type, taille.
+export type EtatFichiers = { ouvert: boolean; types: string[]; tailleMax: number; maxFichiers: number }
+export type FichierJoint = { id: string; nom: string; type: string; libelle: string; taille: number }
+
+export async function etatFichiers(): Promise<EtatFichiers> {
+  if (MAQUETTE) return { ouvert: true, types: ['application/pdf', 'image/jpeg', 'image/png'], tailleMax: 50 * 1024 * 1024, maxFichiers: 10 }
+  return appeler<EtatFichiers>('/assistant/fichiers/etat', 'GET')
+}
+
+async function appelerJson<T>(chemin: string, methode: 'POST' | 'DELETE', corps?: unknown): Promise<T> {
+  if (!baseUrl) throw new RefusAssistant(0, "L'adresse du serveur n'est pas configurée.")
+  const reponse = await fetch(`${baseUrl}${chemin}`, {
+    method: methode, headers: await entetes(true), body: corps === undefined ? undefined : JSON.stringify(corps),
+  })
+  if (!reponse.ok) throw new RefusAssistant(reponse.status, await phraseDuServeur(reponse))
+  return (await reponse.json()) as T
+}
+
+/** Dépose UN fichier : préparer (le serveur contrôle) -> envoyer au coffre (adresse signée) -> confirmer (le serveur relit). */
+export async function deposerFichier(fichier: File): Promise<FichierJoint> {
+  if (MAQUETTE) {
+    await attendre(400)
+    return { id: Math.random().toString(16).slice(2).padEnd(32, '0').slice(0, 32), nom: fichier.name, type: fichier.type, libelle: fichier.type, taille: fichier.size }
+  }
+  const depot = await appelerJson<{ id: string; bucket: string; chemin: string; jeton: string; type: string }>(
+    '/assistant/fichiers/preparer', 'POST', { nom: fichier.name, type: fichier.type || 'application/octet-stream', taille: fichier.size })
+  const { error } = await supabase!.storage.from(depot.bucket).uploadToSignedUrl(depot.chemin, depot.jeton, fichier, { contentType: depot.type })
+  if (error) {
+    await retirerFichier(depot.id).catch(() => undefined)
+    throw new RefusAssistant(0, `« ${fichier.name} » n'a pas pu être envoyé au coffre : ${error.message}`)
+  }
+  return appelerJson<FichierJoint>(`/assistant/fichiers/${depot.id}/confirmer`, 'POST')
+}
+
+export async function retirerFichier(id: string): Promise<void> {
+  if (MAQUETTE) return
+  await appelerJson<{ retires: number }>(`/assistant/fichiers/${encodeURIComponent(id)}`, 'DELETE')
+}
+
+/** Le texte d'une question SANS la marque des fichiers joints (ajoutée par le serveur pour le modèle), et ces fichiers. */
+export function separerFichiersJoints(contenu: string): { texte: string; fichiers: string[] } {
+  const i = contenu.lastIndexOf('\n\n[Fichiers joints par la personne')
+  if (i < 0) return { texte: contenu, fichiers: [] }
+  const noms = Array.from(contenu.slice(i).matchAll(/fichier:[0-9a-f]{32} « ([^»]+) »/g)).map((m) => m[1].trim())
+  return { texte: contenu.slice(0, i), fichiers: noms }
+}
+
 /** Pose une question. Rend `true` si le flux s'est fini proprement (« fin » ou « erreur » reçus), `false` s'il a été coupé. */
 export async function poserQuestion(
   question: string,
   conversationId: string | null,
   surEvenement: (evenement: EvenementFlux) => void,
   signal: AbortSignal,
+  fichiers: string[] = [],
 ): Promise<boolean> {
   if (MAQUETTE) return fauxFlux(question, conversationId, surEvenement, signal)
   if (!baseUrl) throw new RefusAssistant(0, "L'adresse du serveur n'est pas configurée.")
   const reponse = await fetch(`${baseUrl}/assistant/message`, {
     method: 'POST',
     headers: await entetes(true),
-    body: JSON.stringify(conversationId ? { question, conversationId } : { question }),
+    body: JSON.stringify({ question, ...(conversationId ? { conversationId } : {}), ...(fichiers.length ? { fichiers } : {}) }),
     signal,
   })
   if (!reponse.ok || !reponse.body) throw new RefusAssistant(reponse.status, await phraseDuServeur(reponse))

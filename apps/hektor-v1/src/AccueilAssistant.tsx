@@ -1,7 +1,8 @@
-import { Fragment, createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
+import { Fragment, createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEvent, type ReactNode } from 'react'
 import {
-  RefusAssistant, listerConversations, poserQuestion, refuserCarte, relireConversation, validerCarte,
-  type CarteAssistant, type CibleCarte, type ConversationAssistant, type EvenementFlux,
+  RefusAssistant, deposerFichier, etatFichiers, listerConversations, poserQuestion, refuserCarte, relireConversation,
+  retirerFichier, separerFichiersJoints, validerCarte,
+  type CarteAssistant, type CibleCarte, type ConversationAssistant, type EtatFichiers, type EvenementFlux,
 } from './lib/assistant'
 import {
   EVENEMENT_ASSISTANT_CITER, EVENEMENT_ASSISTANT_DEMANDER, EVENEMENT_ASSISTANT_OUVRIR,
@@ -32,6 +33,7 @@ type Trace = { nom: string | null; fini: boolean }
 type Tour = {
   cle: string
   question: string
+  fichiers?: string[]  // 17/11 (le trombone) : les noms des fichiers joints à cette question
   traces: Trace[]
   texte: string
   cartes: CarteEcran[]
@@ -40,6 +42,9 @@ type Tour = {
   enregistre?: boolean
 }
 type Blocage = { genre: 'info' | 'pause' | 'ko' | 'net'; titre: string; sous?: string; renvoyer?: string }
+// 17/11 (le trombone) : un fichier joint, du dépôt (envoi) à la question (prêt) ; refusé = la raison du serveur
+type Joint = { cle: string; nom: string; taille: number; etat: 'envoi' | 'pret' | 'refus'; id?: string; detail?: string }
+const tailleLisible = (o: number) => (o >= 1024 * 1024 ? `${(o / (1024 * 1024)).toFixed(1).replace('.', ',')} Mo` : `${Math.max(1, Math.round(o / 1024))} Ko`)
 type Mode = { type: 'accueil' } | { type: 'conversation' } | { type: 'toutes' }
 const CONVERSATION_GARDEE = 'gti_assistant_conversation'
 
@@ -364,6 +369,10 @@ export default function AccueilAssistant(props: {
   const [titre, setTitre] = useState('')
   const [tours, setTours] = useState<Tour[]>([])
   const [champ, setChamp] = useState('')
+  // 17/11 (le trombone) : ouvert ou non pour ce compte (interrupteur `assistant_fichiers`), et les fichiers joints
+  const [trombone, setTrombone] = useState<EtatFichiers | null>(null)
+  const [joints, setJoints] = useState<Joint[]>([])
+  const choixFichiers = useRef<HTMLInputElement | null>(null)
   const [enCours, setEnCours] = useState(false)
   const [chargement, setChargement] = useState(false)
   const [blocage, setBlocage] = useState<Blocage | null>(null)
@@ -446,7 +455,8 @@ export default function AccueilAssistant(props: {
       const departs: number[] = []
       for (const m of messages) {
         if (m.role === 'user') {
-          lus.push({ cle: `m${m.id}`, question: m.contenu, traces: [], texte: '', cartes: [], etat: 'coupe' })
+          const { texte, fichiers } = separerFichiersJoints(m.contenu)  // la marque des fichiers est pour le modèle
+          lus.push({ cle: `m${m.id}`, question: texte, fichiers, traces: [], texte: '', cartes: [], etat: 'coupe' })
           departs.push(new Date(m.cree_le).getTime())
         } else if (lus.length) {
           lus[lus.length - 1] = { ...lus[lus.length - 1], texte: m.contenu, etat: 'fini' }
@@ -538,9 +548,49 @@ export default function AccueilAssistant(props: {
     if (el && el.scrollHeight - el.scrollTop - el.clientHeight < 160) el.scrollTop = el.scrollHeight
   }, [tours])
 
+  // 17/11 (le trombone) : l'état est lu une fois ; fermé, refusé ou injoignable = pas de trombone (jamais une erreur)
+  useEffect(() => {
+    let vivant = true
+    etatFichiers().then((e) => { if (vivant) setTrombone(e) }).catch(() => { if (vivant) setTrombone(null) })
+    return () => { vivant = false }
+  }, [])
+
+  const ajouterFichiers = useCallback((liste: FileList | File[] | null) => {
+    if (!liste || !trombone?.ouvert) return
+    const place = Math.max(0, trombone.maxFichiers - joints.filter((j) => j.etat !== 'refus').length)
+    Array.from(liste).forEach((fichier, i) => {
+      const cle = `f${Date.now()}-${i}`
+      if (i >= place) {
+        setJoints((l) => [...l, { cle, nom: fichier.name, taille: fichier.size, etat: 'refus', detail: `${trombone.maxFichiers} fichiers au plus par question.` }])
+        return
+      }
+      setJoints((l) => [...l, { cle, nom: fichier.name, taille: fichier.size, etat: 'envoi' }])
+      deposerFichier(fichier)
+        .then((f) => setJoints((l) => l.map((j) => (j.cle === cle ? { ...j, etat: 'pret', id: f.id, nom: f.nom } : j))))
+        .catch((e) => setJoints((l) => l.map((j) => (j.cle === cle ? { ...j, etat: 'refus', detail: e instanceof Error ? e.message : 'Dépôt impossible.' } : j))))
+    })
+  }, [trombone, joints])
+
+  const retirerJoint = useCallback((cle: string) => {
+    setJoints((l) => {
+      const j = l.find((x) => x.cle === cle)
+      if (j?.id) void retirerFichier(j.id).catch(() => undefined)  // best-effort : la purge de 2 jours rattrape
+      return l.filter((x) => x.cle !== cle)
+    })
+  }, [])
+
+  const deposerParGlisser = (e: DragEvent<HTMLFormElement>) => {
+    if (!trombone?.ouvert || !e.dataTransfer?.files?.length) return
+    e.preventDefault()
+    ajouterFichiers(e.dataTransfer.files)
+  }
+
   const envoyer = useCallback(async (brute: string) => {
     const question = brute.trim()
     if (!question || enCours) return
+    if (joints.some((j) => j.etat === 'envoi')) return  // on attend la fin des dépôts (le bouton le dit)
+    const prets = joints.filter((j) => j.etat === 'pret' && j.id)
+    setJoints([])
     setChamp('')
     setBlocage(null)
     setVue('assistant')
@@ -550,7 +600,7 @@ export default function AccueilAssistant(props: {
       setTours([])
     }
     const cle = `q${Date.now()}`
-    setTours((liste) => [...liste, { cle, question, traces: [], texte: '', cartes: [], etat: 'flux' }])
+    setTours((liste) => [...liste, { cle, question, fichiers: prets.map((j) => j.nom), traces: [], texte: '', cartes: [], etat: 'flux' }])
     const c = new AbortController()
     controleur.current = c
     setEnCours(true)
@@ -563,7 +613,7 @@ export default function AccueilAssistant(props: {
       else if (e.type === 'erreur') majDernierTour((t) => ({ ...t, etat: 'erreur', detail: e.detail, traces: t.traces.map((x) => ({ ...x, fini: true })) }))
     }
     try {
-      const fini = await poserQuestion(question, conversationId.current, surEvenement, c.signal)
+      const fini = await poserQuestion(question, conversationId.current, surEvenement, c.signal, prets.map((j) => j.id as string))
       if (!fini) {
         if (c.signal.aborted) majDernierTour((t) => ({ ...t, etat: 'arrete', traces: t.traces.map((x) => ({ ...x, fini: true })) }))
         else {
@@ -577,6 +627,7 @@ export default function AccueilAssistant(props: {
         // refusée avant le flux : la question n'a pas été posée, on la retire du fil et on la rend au champ
         setTours((liste) => liste.filter((t) => t.cle !== cle))
         setChamp(question)
+        setJoints((l) => [...prets, ...l])  // les fichiers joints reviennent avec la question
         setBlocage(blocageDepuis(erreur, question))
       }
     } finally {
@@ -584,7 +635,7 @@ export default function AccueilAssistant(props: {
       setEnCours(false)
       signalerChangementAssistant()
     }
-  }, [enCours, mode.type, majDernierTour])
+  }, [enCours, mode.type, majDernierTour, joints])
   // lot 4 : la question venue de la recherche est posée depuis un effet ; il lui faut la DERNIÈRE version d'envoyer
   const envoyerRef = useRef(envoyer)
   envoyerRef.current = envoyer
@@ -682,12 +733,38 @@ export default function AccueilAssistant(props: {
   const boutonEnvoi = enCours ? (
     <button className="asi-go is-stop" type="submit" aria-label="Arrêter la réponse"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="2" fill="currentColor" /></svg></button>
   ) : (
-    <button className="asi-go" type="submit" aria-label="Envoyer" disabled={pause || !champ.trim()}><Picto epais={2.3}><path d="M12 19V5M6 11l6-6 6 6" /></Picto></button>
+    <button className="asi-go" type="submit" aria-label={joints.some((j) => j.etat === 'envoi') ? 'Envoi des fichiers en cours' : 'Envoyer'}
+      disabled={pause || !champ.trim() || joints.some((j) => j.etat === 'envoi')}><Picto epais={2.3}><path d="M12 19V5M6 11l6-6 6 6" /></Picto></button>
   )
+
+  // 17/11 (le trombone) : seulement si l'interrupteur `assistant_fichiers` l'ouvre à ce compte
+  const boutonTrombone = trombone?.ouvert ? (
+    <>
+      <input ref={choixFichiers} type="file" multiple hidden accept={trombone.types.join(',')}
+        onChange={(e) => { ajouterFichiers(e.target.files); e.target.value = '' }} />
+      <button className="asi-tool" type="button" onClick={() => choixFichiers.current?.click()} disabled={pause || enCours}
+        title="Joindre des fichiers de l'ordinateur (l'assistant ne voit que leur nom, jamais leur contenu)">
+        <Picto><path d="M20 11.5l-7.8 7.8a5 5 0 0 1-7.1-7.1l8.5-8.5a3.3 3.3 0 0 1 4.7 4.7l-8.5 8.5a1.7 1.7 0 0 1-2.4-2.4l7.8-7.8" /></Picto>Joindre
+      </button>
+    </>
+  ) : null
+  const listeJoints = joints.length ? (
+    <ul className="asi-joints">
+      {joints.map((j) => (
+        <li key={j.cle} className={`asi-joint is-${j.etat}`} title={j.detail ?? undefined}>
+          <span className="asi-joint-nom">{j.nom}</span>
+          <span className="asi-joint-etat">{j.etat === 'envoi' ? 'envoi…' : j.etat === 'refus' ? (j.detail ?? 'refusé') : tailleLisible(j.taille)}</span>
+          <button type="button" aria-label={`Retirer ${j.nom}`} onClick={() => retirerJoint(j.cle)} disabled={enCours}>×</button>
+        </li>
+      ))}
+    </ul>
+  ) : null
 
   const champSaisie = (accueil: boolean) => accueil ? (
     // planche 1 : le champ en haut, puis « Citer un bien ou un contact » à gauche et l'envoi à droite (lot 4)
-    <form className="asi-ask" onSubmit={(e) => { e.preventDefault(); if (enCours) arreter(); else void envoyer(champ) }}>
+    <form className="asi-ask" onSubmit={(e) => { e.preventDefault(); if (enCours) arreter(); else void envoyer(champ) }}
+      onDragOver={(e) => { if (trombone?.ouvert) e.preventDefault() }} onDrop={deposerParGlisser}>
+      {listeJoints}
       <textarea
         ref={champRef}
         rows={2}
@@ -703,12 +780,16 @@ export default function AccueilAssistant(props: {
         <button className="asi-tool" type="button" onClick={() => portes.current.onCiter()} disabled={pause}>
           <Picto><circle cx="12" cy="12" r="3.5" /><path d="M15.5 12v1.5a2.5 2.5 0 0 0 5 0V12a8.5 8.5 0 1 0-3.3 6.7" /></Picto>Citer un bien ou un contact
         </button>
+        {boutonTrombone}
         {boutonEnvoi}
       </div>
     </form>
   ) : (
-    <form className="asi-ask" onSubmit={(e) => { e.preventDefault(); if (enCours) arreter(); else void envoyer(champ) }}>
+    <form className="asi-ask" onSubmit={(e) => { e.preventDefault(); if (enCours) arreter(); else void envoyer(champ) }}
+      onDragOver={(e) => { if (trombone?.ouvert) e.preventDefault() }} onDrop={deposerParGlisser}>
+      {listeJoints}
       <div className="asi-ask-row">
+        {boutonTrombone}
         <textarea
           ref={champRef}
           rows={1}
@@ -809,6 +890,7 @@ export default function AccueilAssistant(props: {
             return (
               <Fragment key={t.cle}>
                 <p className="asi-me">{t.question}</p>
+                {t.fichiers?.length ? <p className="asi-me-fichiers">Fichiers joints : {t.fichiers.join(', ')}</p> : null}
                 <div className="asi-ai">
                   <span className="asi-mk"><Sceau /></span>
                   <div className="asi-ai-b">

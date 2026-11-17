@@ -140,6 +140,10 @@ _INSTRUCTIONS = (
     "traiter les demandes recues se fait dans l'application (ecran Suivi).\n"
     "- Vers un client : ce qui part est REEL ; montre le texte complet, ne mets jamais l'adresse e-mail du client dans tes "
     "reponses (tu ne la connais pas), et dis-le s'il est desinscrit.\n"
+    "- Fichiers joints (marque « [Fichiers joints … fichier:NUMERO … ] » a la fin d'une question) : tu ne vois QUE leur "
+    "nom, leur type et leur taille, JAMAIS leur contenu -- ne pretends jamais les avoir lus ni en deviner le contenu. "
+    "Aucun geste ne les utilise encore : ajouter une photo ou un document a un bien, et les envoyer en piece jointe, "
+    "arrivent bientot ; dis-le simplement si on te le demande.\n"
     "- Contact et recherche : toujours le code postal ET la commune (sinon Hektor perd la ville) ; un doublon trouve se "
     "montre a la personne avant tout.\n"
     "- Annonce : lire_photos_bien avant un geste sur une photo, lire_portails_bien avant la diffusion ; rediger_annonce "
@@ -188,11 +192,12 @@ class AssistantService:
     def _url(self, table: str) -> str:
         return f"{self.settings.supabase_url}/rest/v1/{table}"
 
-    def interrupteur(self) -> str:
-        # Absent, illisible ou en erreur = éteint (patron des interrupteurs à trois crans).
+    def interrupteur(self, cle: str = INTERRUPTEUR) -> str:
+        # Absent, illisible ou en erreur = éteint (patron des interrupteurs à trois crans). 17/11 : `cle` sert aussi au
+        # trombone (`assistant_fichiers`).
         try:
             r = requests.get(self._url("app_setting"), headers=self._headers(),
-                             params={"key": f"eq.{INTERRUPTEUR}", "select": "value", "limit": "1"}, timeout=8)
+                             params={"key": f"eq.{cle}", "select": "value", "limit": "1"}, timeout=8)
             rows = r.json() if r.ok else []
             valeur = str((rows[0] or {}).get("value") or "").strip().lower() if rows else ""
         except Exception:

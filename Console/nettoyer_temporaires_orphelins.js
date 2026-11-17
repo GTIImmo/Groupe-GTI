@@ -161,7 +161,9 @@ const poids = (o) => (o >= 1048576 ? `${(o / 1048576).toFixed(1)} Mo` : `${Math.
 
     let retenu = null;
     // ① la forme du chemin
-    if (famille !== "uploads" && famille !== "photos") retenu = `chemin inattendu (temp/${famille}/)`;
+    // 17/11 : + temp/assistant/<personne>/<numero>/ -- les fichiers joints a l'assistant (le trombone). Aucun travail
+    //   ne les cite (le 3e morceau est la PERSONNE, pas un travail : `job` reste vide), ils passent les gardes ② et ④.
+    if (famille !== "uploads" && famille !== "photos" && famille !== "assistant") retenu = `chemin inattendu (temp/${famille}/)`;
     // ② une ligne vivante pointe dessus
     else if (refs.has(f.name)) retenu = "une ligne vivante pointe sur ce fichier";
     // ③ un envoi en cours

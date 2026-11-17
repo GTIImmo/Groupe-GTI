@@ -54,6 +54,17 @@
 .asi-go.is-stop { background: var(--asi-rail); }
 .asi-go:focus-visible { outline: 2px solid var(--asi-magenta); outline-offset: 2px; }
 .asi-warn { font-size: 12px; color: var(--asi-subtle); margin: -6px 0 0; padding-left: 20px; }
+/* 17/11 (le trombone) : les fichiers joints, au-dessus du champ ; et sous la question dans le fil */
+.asi-joints { list-style: none; margin: 0 0 8px; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.asi-joint { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; height: 28px; padding: 0 4px 0 10px; border-radius: 8px; border: 1px solid var(--asi-line-2); background: var(--asi-surface); font: 500 12px/1 var(--asi-ui); color: var(--asi-ink); }
+.asi-joint-nom { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.asi-joint-etat { color: var(--asi-subtle); white-space: nowrap; max-width: 260px; overflow: hidden; text-overflow: ellipsis; }
+.asi-joint.is-envoi .asi-joint-etat { color: var(--asi-mute); }
+.asi-joint.is-refus { border-color: #e8b4c9; background: #fdf3f7; }
+.asi-joint.is-refus .asi-joint-etat { color: var(--asi-magenta); }
+.asi-joint button { width: 22px; height: 22px; border: 0; border-radius: 6px; background: transparent; color: var(--asi-mute); font-size: 16px; line-height: 1; cursor: pointer; }
+.asi-joint button:hover { background: #eef0f1; color: var(--asi-ink); }
+.asi-me-fichiers { align-self: flex-end; max-width: 78%; margin: -8px 0 0; font-size: 12px; color: var(--asi-subtle); overflow-wrap: anywhere; }
 
 .asi-cols { display: grid; grid-template-columns: minmax(0, 1.12fr) minmax(0, 1fr); gap: 16px; align-items: start; }
 .asi-box { background: var(--asi-surface); border: 1px solid var(--asi-line); border-radius: 14px; overflow: hidden; }

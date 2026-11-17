@@ -10,6 +10,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from ..auth import get_authenticated_user, require_request_user
+from ..services import assistant_fichiers as fichiers_service
 from ..services.assistant_catalogue import ContexteAssistant, Refus
 from ..services.assistant_gestes import GESTES
 from ..services.assistant_service import AGENT_KEY, MAX_QUESTION_CARACTERES, AssistantService
@@ -28,6 +29,14 @@ router = APIRouter(prefix="/assistant", tags=["assistant"])
 class AssistantMessagePayload(BaseModel):
     question: str = Field(min_length=1, max_length=MAX_QUESTION_CARACTERES)
     conversationId: str | None = Field(default=None, min_length=36, max_length=36)
+    # 17/11 (le trombone) : les numéros des fichiers déposés pour CETTE question ; vide = comme avant
+    fichiers: list[str] = Field(default_factory=list, max_length=fichiers_service.MAX_FICHIERS)
+
+
+class DepotFichierPayload(BaseModel):
+    nom: str = Field(min_length=1, max_length=255)
+    type: str = Field(min_length=1, max_length=120)
+    taille: int = Field(gt=0)
 
 
 def get_admin_service(settings: Settings = Depends(get_settings)) -> SupabaseAdminService:
@@ -67,6 +76,16 @@ def assistant_message(
     question = payload.question.strip()
     if not question:
         raise HTTPException(status_code=400, detail="Question vide")
+    # 17/11 (le trombone) : chaque fichier joint est RELU au coffre (le sien, encore là, dans les règles) ; le modèle
+    # n'en reçoit que le nom, le type et la taille, à la suite de la question (gardés dans l'historique).
+    question_modele = question
+    if payload.fichiers:
+        _trombone_ouvert(service, profile)
+        try:
+            joints = [fichiers_service.decrire(settings, str(user.id), n) for n in dict.fromkeys(payload.fichiers)]
+        except fichiers_service.RefusFichier as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from None
+        question_modele = question + fichiers_service.decrire_pour_le_modele(joints)
     spec = service.preparer(email)
 
     if payload.conversationId:
@@ -79,14 +98,90 @@ def assistant_message(
     else:
         conversation_id = service.creer_conversation(str(user.id), email, question[:80])
         historique = []
-    service.ajouter_message(conversation_id, "user", question)
+    service.ajouter_message(conversation_id, "user", question_modele)
 
     ctx = ContexteAssistant(settings=settings, user_id=str(user.id), email=email,
                             role=str(profile.get("role") or ""), jeton=_jeton(authorization),
                             conversation_id=conversation_id, nom=profile.get("display_name") or None)
     durees = {"preparation": round((time.monotonic() - t0) * 1000)}
-    return StreamingResponse(_flux(service, admin_service, ctx, spec, conversation_id, historique, question, t0, durees),
+    return StreamingResponse(_flux(service, admin_service, ctx, spec, conversation_id, historique, question_modele, t0,
+                                   durees),
                              media_type="application/x-ndjson")
+
+
+# ── 17/11 : LE TROMBONE (note étape 4 §51-52) — déposer des fichiers de l'ordinateur dans la conversation ──────────
+INTERRUPTEUR_FICHIERS = "assistant_fichiers"  # off / admin / on ; absent = éteint
+
+
+def _trombone_ouvert(service: AssistantService, profile: dict[str, Any]) -> None:
+    if not autorise(service.interrupteur(INTERRUPTEUR_FICHIERS), str(profile.get("role") or ""),
+                    profile.get("is_active") is True):
+        raise HTTPException(status_code=403, detail="Joindre des fichiers n'est pas encore ouvert pour ce compte")
+
+
+@router.get("/fichiers/etat")
+def fichiers_etat(
+    authorization: str | None = Depends(require_request_user),
+    settings: Settings = Depends(get_settings),
+    admin_service: SupabaseAdminService = Depends(get_admin_service),
+    service: AssistantService = Depends(get_assistant_service),
+):
+    _user, profile = _ouvrir(settings, authorization, admin_service, service)
+    try:
+        _trombone_ouvert(service, profile)
+        ouvert = True
+    except HTTPException:
+        ouvert = False
+    return {"ouvert": ouvert, "types": sorted(fichiers_service.TYPES_ACCEPTES), "tailleMax": fichiers_service.TAILLE_MAX,
+            "maxFichiers": fichiers_service.MAX_FICHIERS}
+
+
+@router.post("/fichiers/preparer")
+def fichiers_preparer(
+    payload: DepotFichierPayload,
+    authorization: str | None = Depends(require_request_user),
+    settings: Settings = Depends(get_settings),
+    admin_service: SupabaseAdminService = Depends(get_admin_service),
+    service: AssistantService = Depends(get_assistant_service),
+):
+    user, profile = _ouvrir(settings, authorization, admin_service, service)
+    _trombone_ouvert(service, profile)
+    try:
+        return fichiers_service.preparer_depot(settings, str(user.id), payload.nom, payload.type, payload.taille)
+    except fichiers_service.RefusFichier as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from None
+
+
+@router.post("/fichiers/{numero}/confirmer")
+def fichiers_confirmer(
+    numero: str,
+    authorization: str | None = Depends(require_request_user),
+    settings: Settings = Depends(get_settings),
+    admin_service: SupabaseAdminService = Depends(get_admin_service),
+    service: AssistantService = Depends(get_assistant_service),
+):
+    user, profile = _ouvrir(settings, authorization, admin_service, service)
+    _trombone_ouvert(service, profile)
+    try:
+        f = fichiers_service.decrire(settings, str(user.id), numero)
+    except fichiers_service.RefusFichier as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from None
+    return {"id": f["id"], "nom": f["nom"], "type": f["type"], "libelle": f["libelle"], "taille": f["taille"]}
+
+
+@router.delete("/fichiers/{numero}")
+def fichiers_retirer(
+    numero: str,
+    authorization: str | None = Depends(require_request_user),
+    settings: Settings = Depends(get_settings),
+    admin_service: SupabaseAdminService = Depends(get_admin_service),
+    service: AssistantService = Depends(get_assistant_service),
+):
+    user, _profile = _ouvrir(settings, authorization, admin_service, service)
+    try:
+        return {"retires": fichiers_service.retirer(settings, str(user.id), numero)}
+    except fichiers_service.RefusFichier as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from None
 
 
 async def _flux(service: AssistantService, admin_service: SupabaseAdminService, ctx: ContexteAssistant, spec: Any,
