@@ -35,7 +35,7 @@
 | habillage | la maquette RETRAVAILLÉE (toile https://claude.ai/artifact/S16jkpfnqtPF83xvUdkNtm) | ✅ **COMPLET le 17/11** : H1 le bloc « Le dossier », H2 la fenêtre de dépôt, H3 l'après-envoi (« La fiche du bien », « Voir le document » ; « Voir la preuve » NON fait, décision), H4 le panneau photo du téléphone (viseur dans l'app NON fait, décision) — tous vus en production (§12.21) |
 | 10a | le compromis lu → SA transaction (date d'acte prévue, séquestre) | ⛔ **REMPLACÉ le 17/11 par 10c** : la date d'acte et le séquestre s'écrivaient « chez nous seulement », alors que ce sont des champs que Hektor connaît (§12.22, §12.28) |
 | 10b | les conditions suspensives du compromis → SA transaction | ✅ en ligne le 17/11 (`cf09297`) ; ses cartes sont reprises par 10c (§12.23) |
-| 10c | « Ce que dit le compromis » : la fenêtre de validation, champ par champ, chacun par SON chemin | ✅ **écrit le 17/11, rien poussé** ; 37 VERT, banc d'essai regardé (ordinateur et téléphone) ; pas encore vu en production (§12.28) |
+| 10c | « Ce que dit le compromis » : la fenêtre de validation, champ par champ, chacun par SON chemin | ✅ **EN LIGNE le 17/11** (`50164c1` → `2250250`, « Oui vas y » ; Vercel et Render servent `2250250`) ; **vu en production sur 18849** : date de l'acte à trancher (correction proposée), séquestre « pas chez Hektor », conditions générales à part -- fenêtre refermée SANS enregistrer ; ⚠ l'envoi direct n'est pas encore éprouvé en réel (§12.28) |
 
 **Reste, au 17/11** : ⏰ le compte rendu de la mesure le 30/11 ; P7/P8 en réel — **mis de côté par Frédéric le 17/11 :
 « trop compliqué pour le moment »** ; les pièces d'essai SPECIMEN restées sur 63331 et 63147 (63147 : un faux DPE, consommation 212 écrite, 2
@@ -2618,6 +2618,12 @@ Essais : `test_ged_bilan` 46 VERT (dont 30770 « jamais parti », le témoin « 
 les 13 essais GED verts ; build vert ; banc d'essai regardé (correction proposée, « pas chez Hektor »).
 ⚠ **L'envoi direct n'est PAS encore éprouvé en réel** : sa charge est plus courte que celle de la modale (le worker
 reprend le formulaire de Hektor pour le reste) -- à éprouver sur un bien d'essai avant tout usage sur un vrai bien.
-⏳ **À faire après la mise en ligne** : la regarder sur 18849 (ouvrir la fenêtre et la modale, SANS cliquer « Mettre à
+✅ **MIS EN LIGNE le 17/11** (« Oui vas y ») : 11 commits poussés jusqu'à `2250250` -- les 4 du lot 10c et 7 d'autres
+sessions glissés entre eux (classeur `3008f59`, `a05fc4c`, `bb8a78c` ; assistant `d03aae8`, `da872cd`, `0c55b36`,
+`775f8a5`), accord de Frédéric pour l'ensemble. Vercel et Render servent `2250250`. **Vu en production sur 18849**
+(fenêtre ouverte par « Voir et trancher », refermée sans enregistrer : 0 décision, le seul travail est la relecture
+d'ouverture de la fiche, en lecture).
+⏳ **Reste** : éprouver l'envoi direct sur un bien d'essai ; puis le séquestre de 30770 (son geste à lui, par la fenêtre).
+⏳ (ancien) **À faire après la mise en ligne** : la regarder sur 18849 (ouvrir la fenêtre et la modale, SANS cliquer « Mettre à
 jour ») ; **le séquestre 12 400 € de 30770 est au carnet mais PAS chez Hektor** : ouvrir « Modifier » sur ce compromis
 (la case est préremplie depuis le carnet) et « Mettre à jour le compromis » -- c'est son geste à lui.
