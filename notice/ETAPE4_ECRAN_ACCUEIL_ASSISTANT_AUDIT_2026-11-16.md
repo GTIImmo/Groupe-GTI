@@ -1594,3 +1594,65 @@ aujourd'hui quand on n'y passe pas de fichiers) ; le dépôt reste le geste de l
   - Preuve : `notice/preuve_fenetre_ged_depuis_assistant_2026-11-17.jpg`.
 - ⛔ **Reste** : « Envoyer » dans la fenêtre, qui ÉCRIT chez Hektor. Ce n'est plus la carte de l'assistant, c'est le
   chemin de la GED déjà en production. À faire seulement si Frédéric le veut, sur un bien qu'il choisit.
+
+## 61. La carte PIÈCES JOINTES d'un e-mail au client : AUDIT REMIS À JOUR avec le trombone (17/11, « Donc on enchaîne ») — rien codé
+
+**Périmètre** : l'e-mail AU CLIENT (`email_client`) et ses pièces jointes. L'e-mail interne n'est pas touché. La
+fenêtre e-mail de l'écran (bouton « depuis l'ordinateur ») est une étape à part, après.
+
+**Ce que fait l'écran, relu dans le code** (fenêtre e-mail d'un contact, App.tsx ~45380-45520)
+- Il propose les biens LIÉS au contact (`contactEmailAttachmentRelations` : toutes ses relations, quel que soit le
+  rôle, les biens vivants d'abord).
+- Pour le bien choisi, il propose :
+  - ses documents, SEULEMENT ceux au coffre (`cloud_available`). Au départ, un lien signé de 15 min par document
+    (avec le jeton de la personne), plus `app_console_touch_document` ;
+  - ses photos ayant une adresse (`url_hd` ou `url_preview`), visibles ET masquées.
+- 10 pièces au plus. Puis la même route Gmail que la carte.
+- ⚠ **L'écran ne filtre AUCUNE pièce sensible** : une pièce d'identité, un RIB ou une offre de prêt d'un vendeur peut
+  partir chez un acquéreur lié au même bien.
+
+**Côté serveur** (`_download_gmail_attachments`, google_workspace_service.py:471)
+- Il télécharge lui-même chaque pièce : 10 au plus, 8 Mo par fichier, 18 Mo en tout.
+- ⚠ Il accepte n'importe quelle adresse web. Dans la carte, les adresses seront TOUJOURS fabriquées par notre serveur
+  depuis la base ou le trombone, jamais données par le modèle.
+- La carte `email_client` passe aujourd'hui `attachments=None` (assistant_gestes.py:1075).
+
+**Mesures**
+- Documents : 25 377 au coffre (23 547 privés, 1 830 partagés). 168 532 seulement sur notre serveur : non joignables,
+  ni à l'écran ni par la carte.
+- ⚠ **Le type GED n'est connu que pour 40 documents** (ceux déposés par la fenêtre GED, dont 18 de type sensible). Les
+  25 000 autres n'ont pas de type : leur sensibilité ne se devine qu'à leur NOM. Le repérage par nom
+  (`gedTypeParNom`) n'existe que dans le navigateur aujourd'hui.
+
+**Ce que le trombone ajoute**
+- Un fichier joint dans la conversation peut partir en pièce jointe : le serveur fabrique un lien de lecture court
+  (`assistant_fichiers.lien_lecture`, déjà en service pour la carte Documents). Gmail le télécharge aussitôt.
+- « L'ajouter aussi au bien » reste une 2e carte (`ajouter_photo` ou `deposer_documents`) : un geste = un clic.
+
+**La carte proposée**
+1. Une LECTURE `lire_pieces_jointes(contact)` : les biens liés au contact, avec pour chacun ses documents joignables
+   (nom, taille) et ses photos (rang, visible ou masquée). Chaque pièce porte un numéro. Lue avec le jeton de la
+   personne.
+2. La carte `email_client` reçoit en plus `pieces_jointes` (numéros de documents, de photos ou de fichiers du
+   trombone). À la carte ET au clic, le serveur vérifie :
+   - chaque document ou photo appartient à un bien LIÉ à ce contact et reste lisible avec le jeton ;
+   - un document est au coffre ; un fichier du trombone est dans SON dossier ;
+   - 10 pièces au plus, 8 Mo par fichier et 18 Mo en tout quand la taille est connue.
+   La carte NOMME chaque fichier (nom, taille, « masquée » pour une photo masquée).
+3. Au clic seulement : les liens signés (documents avec le jeton de la personne, puis `app_console_touch_document` ;
+   trombone par le serveur) et l'adresse des photos.
+
+**À DÉCIDER PAR FRÉDÉRIC**
+- Les pièces SENSIBLES (identité, état civil, RIB, financement, fiche de renseignements). L'écran les laisse partir.
+  - A : la carte les REFUSE, et dit de passer par la fenêtre e-mail si c'est voulu. Le repérage se fait par le type GED
+    quand il existe, sinon par le nom (la liste de la GED, recopiée côté serveur). ⬅ recommandé : ce qui part chez un
+    client est réel, et la carte est préparée par une IA.
+  - B : la carte les accepte, avec un ⚠ « pièce sensible » sur la carte.
+- Les photos MASQUÉES : comme l'écran (acceptées, marquées « masquée » sur la carte) — recommandé.
+
+**Ce que ça pourrait casser ailleurs**
+- Rien d'existant : sans pièce jointe, la carte reste identique, et la fenêtre e-mail de l'écran n'est pas touchée.
+- La route Gmail est partagée avec l'écran, mais elle n'est pas modifiée : la carte lui passe des pièces comme
+  l'écran.
+- Un lien signé est une clé de lecture : il est fabriqué au clic, vit 15 min au plus, et ne part ni au modèle ni dans
+  la carte.
