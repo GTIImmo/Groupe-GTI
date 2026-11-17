@@ -2757,3 +2757,24 @@ prouvent que les cartes ne reviennent pas) ; les 13 fichiers GED verts ; build v
 ⚠ **Pas vu à l'écran, pas éprouvé en réel** : seule la consommation du DPE a été envoyée en réel par ce chemin (16/11,
 63147) ; émissions, dates, copropriété et Carrez jamais. Premier essai proposé sur les biens d'essai (63147 DPE, 62774
 copropriété et état des risques, 63331 métré).
+
+**✅ POUSSÉ (`c64709c`) ET ÉPROUVÉ EN RÉEL le 18/11 (00:20 -> 00:47) sur le bien d'essai 63331**, pièces ENTIÈREMENT
+FICTIVES fabriquées pour l'essai (scratchpad `lot3_essai/fabriquer.cjs`), déposées par l'écran (« Pousse et … éprouve la
+plupart des modifications ») :
+- **tour A** : DPE (245 kWh, 38 kg, 15/10/2026), état des risques (04/11/2026), fiche synthétique (36 lots, 14
+  principaux), appel de fonds (450 € par trimestre). 4 dépôts `done` chez Hektor ; 3 lectures « lu », ⚠ la fiche
+  synthétique lue « pas_ce_type » (valeurs lues, type refusé par l'IA) -> pas de fenêtre pour elle.
+  Fenêtres : « Ce que dit le DPE : 3 à trancher » (fiche 210 / 45 / 10/09/2026), « l'état des risques : 1 » (10/09/2026),
+  « l'appel de fonds : 1 » (fiche 120 € par an -> 1 800). Choix : consommation et date CORRIGÉES, émissions GARDÉES
+  (décision « ignoree »), état des risques et charges corrigés. **UN travail** `update_hektor_annonce_fields`
+  (`b5babe1b`, 00:34:00 -> 00:34:17, 0 erreur) : Hektor « mise à jour effectuée » pour les groupes diagnostiques
+  (dpe_date, diag_risques_nat_tech_date), dpe_cons et copropriété (quote-part). **Relu chez Hektor** (`3c434bee`) :
+  dpe_cons 245, dpe_date 2026-10-15, risques 2026-11-04, quote-part 1800 ; **témoins inverses** : émissions gardées =
+  45 (intactes), copropriété toujours OUI, nombre de lots non touché = 24.
+- **tour B** : DPE RECTIFICATIF (198 kWh, 29 kg, 10/11/2026) -> la fenêtre montre la fiche telle que Hektor l'a
+  rendue (245 / 45 / 15/10/2026), trois corrections de cases REMPLIES, enregistrées en un envoi.
+⚠ **Deux défauts d'ergonomie vus à l'écran, corrigés (commit suivant, pas poussé)** :
+1. les cartes « Ce que dit… » n'apparaissaient qu'au RECHARGEMENT : la lecture IA finit après l'arrivée du document et
+   rien ne le disait au panneau -> le dépôt émet `ged:lecture-faite`, le panneau relit ses lectures ;
+2. après « Enregistrer », la fenêtre BASCULAIT seule sur la lecture neuve suivante et cachait son résultat -> plus jamais
+   pendant qu'une fenêtre est ouverte, et une seule ouverture par lot de lectures neuves.

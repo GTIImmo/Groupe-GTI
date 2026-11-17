@@ -227,6 +227,11 @@ voir((apF.match(/await editAnnonceOptimistic\(/g) || []).length === 1 && !/creat
 voir(/estGenreFiche\(b\.genre\) \? peutRemplir : peutModifierTransaction/.test(rm) && /bilansFiche\(faits, docsLus\)/.test(rm), 'qui tranche la fiche : celui qui peut la remplir ; les bilans de la fiche ne dépendent pas des transactions')
 const remplirSrc = fs.readFileSync(path.join(__dirname, 'src/lib/gedRemplir.ts'), 'utf8')
 voir(!/'P1\.|'P2\./.test(remplirSrc) && /'P3\.charge_honoraires'/.test(remplirSrc), 'un seul chemin par case : les cartes P1 et P2 sont retirées ; P3 (la charge vide au registre) reste')
+const depot = fs.readFileSync(path.join(__dirname, 'src/DepotDocuments.tsx'), 'utf8')
+voir(/resumeLecture\([^)]*\) \} \}\)\s*\n\s*\/\/[^\n]*\n\s*window\.dispatchEvent\(new CustomEvent\('ged:lecture-faite'\)\)/.test(depot) && /addEventListener\('ged:lecture-faite', relu\)/.test(rm) && /\[hektorAnnonceId, nbDocuments, lecturesFaites\]/.test(rm),
+  'essai réel du 18/11 : une lecture qui finit fait relire les lectures -- les cartes « Ce que dit… » apparaissent sans recharger')
+voir(/if \(!cleOuverture \|\| bilanOuvert\) return/.test(rm) && /for \(const c of cles\) window\.localStorage\.setItem\(c, '1'\)/.test(rm),
+  'essai réel du 18/11 : la fenêtre ne bascule JAMAIS seule pendant qu\'une autre est ouverte (son résultat restait caché) ; une ouverture par lot de lectures neuves')
 
 console.log(ko ? `\n${ko} ROUGE, ${ok} VERT` : `\nTOUT EST VERT (${ok})`)
 process.exit(ko ? 1 : 0)

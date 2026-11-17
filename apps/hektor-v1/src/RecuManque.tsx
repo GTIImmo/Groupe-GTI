@@ -111,14 +111,22 @@ export function RecuManque({
   // habillage H1 (16/11) : les pièces reçues sont des feuilles cochées, les moments précédents se choisissent en tête
   const [ouvrirLus, setOuvrirLus] = useState(false)
   const nbDocuments = documents.length
+  // lot 3 (essai réel du 18/11) : la lecture IA finit APRÈS l'arrivée du document -- les cartes n'apparaissaient qu'au
+  // rechargement. Le dépôt dit « lecture faite » (DepotDocuments.tsx) : on relit les lectures.
+  const [lecturesFaites, setLecturesFaites] = useState(0)
+  useEffect(() => {
+    const relu = () => setLecturesFaites((n) => n + 1)
+    window.addEventListener('ged:lecture-faite', relu)
+    return () => window.removeEventListener('ged:lecture-faite', relu)
+  }, [])
 
   useEffect(() => {
     let annule = false
     void loadGedClassements(hektorAnnonceId).then((m) => { if (!annule) setClassements(m) })
     void loadGedLectures(hektorAnnonceId).then((m) => { if (!annule) setLectures(m) })
     return () => { annule = true }
-    // relu quand la liste des documents change (un dépôt vient d'arriver)
-  }, [hektorAnnonceId, nbDocuments])
+    // relu quand la liste des documents change (un dépôt vient d'arriver), et quand une lecture vient de finir
+  }, [hektorAnnonceId, nbDocuments, lecturesFaites])
 
   // lot 10c : relire les transactions après un enregistrement de « Ce que dit le compromis » (conditions écrites)
   const [relireAffaires, setRelireAffaires] = useState(0)
@@ -401,12 +409,21 @@ export function RecuManque({
   const aTrancher = cartesBilan.flatMap((x) => x.lignes)
   // une lecture NEUVE (moins de 30 minutes) avec quelque chose à trancher ouvre la fenêtre d'elle-même, une seule fois
   // par lecture et par navigateur (une commodité : sans mémoire, elle se rouvre, rien ne casse)
-  const neuf = bilans.find((b) => b.lectureId && aTrancherDe(b).length && b.luLe && Date.now() - new Date(b.luLe).getTime() < 30 * 60 * 1000) ?? null
-  const cleOuverture = neuf ? `ged-bilan-vu:${neuf.lectureId}` : null
+  // ⚠ essai réel du 18/11 : après « Enregistrer », la fenêtre BASCULAIT seule sur la lecture neuve suivante et cachait son
+  //   résultat. Désormais : jamais pendant qu'une fenêtre est ouverte, et une seule ouverture pour un lot de lectures
+  //   neuves (toutes marquées vues ensemble ; les autres restent sur leurs cartes).
+  const neufs = bilans.filter((b) => b.lectureId && aTrancherDe(b).length && b.luLe && Date.now() - new Date(b.luLe).getTime() < 30 * 60 * 1000)
+  const cleOuverture = neufs.length ? neufs.map((b) => `ged-bilan-vu:${b.lectureId}`).join('|') : null
   useEffect(() => {
-    if (!cleOuverture || !neuf) return
-    try { if (window.localStorage.getItem(cleOuverture)) return; window.localStorage.setItem(cleOuverture, '1') } catch { /* sans mémoire : on ouvre */ }
-    setBilanOuvert(neuf.genre)
+    if (!cleOuverture || bilanOuvert) return
+    const cles = cleOuverture.split('|')
+    try {
+      const pasVues = cles.filter((c) => !window.localStorage.getItem(c))
+      if (!pasVues.length) return
+      for (const c of cles) window.localStorage.setItem(c, '1')
+      const premier = neufs.find((b) => pasVues.includes(`ged-bilan-vu:${b.lectureId}`))
+      if (premier) setBilanOuvert(premier.genre)
+    } catch { if (neufs[0]) setBilanOuvert(neufs[0].genre) /* sans mémoire : on ouvre */ }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cleOuverture])
   // la modale « Modifier le compromis » a envoyé : ses lignes sont notées (écran principal) -> on relit journal et registre

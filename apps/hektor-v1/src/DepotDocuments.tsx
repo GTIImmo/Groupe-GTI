@@ -492,6 +492,8 @@ export function DepotDocuments({
       if (!prep.lisible) { modifierEtat(ligne.id, { lecture: { etat: 'erreur', raison: prep.raison } }); return }
       const r = await lireValeursParIa(ligne.jobId, prep, ligne.file.name)
       modifierEtat(ligne.id, { lecture: { etat: 'fait', resume: resumeLecture({ typeCode: ligne.type, etat: r.etat, valeurs: r.valeurs }) } })
+      // lot 3 (essai réel du 18/11) : le panneau du bien relit ses lectures (« Ce que dit… » apparaît sans recharger)
+      window.dispatchEvent(new CustomEvent('ged:lecture-faite'))
     } catch (e) {
       modifierEtat(ligne.id, { lecture: { etat: 'erreur', raison: e instanceof Error ? e.message : String(e) } })
     }
