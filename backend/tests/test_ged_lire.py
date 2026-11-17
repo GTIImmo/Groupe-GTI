@@ -205,6 +205,24 @@ voir(len(contenu[0]["text"]) > 70000 and sum(1 for c in contenu if c["type"] == 
 r = s0.lire({"type_code": "mandat.vente"}, {"texte": long_texte, "nbPages": 12, "pages": [{"numero": 11, "image": img}, {"numero": 12, "image": img}]})
 voir(30000 < len(parti["input"][0]["content"][0]["text"]) < 40200 and r["pagesLues"] == [11, 12] and "qualité mandant" in parti["instructions"],
      "mandat : 40 000 caractères + les 2 pages des signatures, et la consigne des mandants")
+# audit du 17/11 (§12.24) : un compromis SCANNÉ -- les 16 premières pages et les 2 dernières (18 images) ; 19 : refus.
+# Les autres types gardent 6.
+dix_huit = [{"numero": n, "image": img} for n in [*range(1, 17), 27, 28]]
+r = s0.lire({"type_code": "transaction.avant_contrat"}, {"nbPages": 28, "pages": dix_huit})
+voir(sum(1 for c in parti["input"][0]["content"] if c["type"] == "input_image") == 18 and r["pagesLues"] == [*range(1, 17), 27, 28] and r["parTexte"] is False,
+     "compromis scanné : 18 images (les 16 premières et les 2 dernières) partent")
+try:
+    s0.lire({"type_code": "transaction.avant_contrat"}, {"nbPages": 40, "pages": dix_huit + [{"numero": 30, "image": img}]})
+    voir(False, "compromis : 19 images")
+except HTTPException as e:
+    voir(e.status_code == 413, "TÉMOIN : un compromis à 19 images est refusé (413)")
+try:
+    s0.lire({"type_code": "justif.titre"}, {"nbPages": 30, "pages": [{"numero": n, "image": img} for n in range(1, 8)]})
+    voir(False, "titre : 7 images")
+except HTTPException as e:
+    voir(e.status_code == 413, "TÉMOIN : un titre garde 6 images au plus (7 : refusé)")
+voir(lec.PAGES_HD.get("justif.titre") == 6 and lec.PAGES_HD.get("copro.pv_ag") == 6 and lec.PAGES_HD.get("transaction.avant_contrat") == 18,
+     "plafonds par type : compromis 18, titre et PV d'AG 6")
 s0.lire({"type_code": "diag.amiante"}, {"texte": long_texte, "nbPages": 21})
 voir(len(parti["input"][0]["content"][0]["text"]) < 20200 and "EXCEPTION" not in parti["instructions"] and "personnes" not in parti["text"]["format"]["schema"]["properties"],
      "amiante : 20 000 caractères, aucune exception aux noms")

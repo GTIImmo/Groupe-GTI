@@ -179,11 +179,13 @@ const LECTURE_TEXTE_MAX = 20000
 // premières pages -> 6 pages en image, 40 000 caractères en texte. Même réglage côté serveur (PAGES_HD, texte_max).
 // Lot 3 (§12.15) : un compromis (124 000 caractères en médiane) a son prêt et ses honoraires avant 80 000, et ses
 // SIGNATURES à la fin -> 80 000 caractères ET ses 2 dernières pages en image ; scanné : les 4 premières et les 2 dernières.
+// Audit du 17/11 (§12.24) : un compromis SCANNÉ (38 sur 100, 28 pages) a son prix p. 8, son séquestre p. 10, son prêt
+// p. 13 (p90 19) -> scanné : les 16 PREMIÈRES et les 2 dernières (18 images, ~0,005 $). Même plafond côté serveur.
 // Une offre (1 page, presque toujours scannée) : sa dernière page en image même avec du texte. PV d'AG : comme le titre.
 // Lot 4 (§12.16) : le mandat (12 pages) comme le compromis, 40 000 caractères ; l'avenant et la fin de mandat (1 page) :
 // la dernière en image ; l'acte (attestation de 4 pages, 41 scans sur 50) et le règlement (37 pages) : comme le titre.
 const PAGES_HD_PAR_TYPE: Record<string, number> = {
-  'justif.titre': 6, 'copro.pv_ag': 6, 'transaction.avant_contrat': 6, 'mandat.vente': 6, 'transaction.acte': 6, 'copro.reglement': 6,
+  'justif.titre': 6, 'copro.pv_ag': 6, 'transaction.avant_contrat': 18, 'mandat.vente': 6, 'transaction.acte': 6, 'copro.reglement': 6,
 }
 const TEXTE_MAX_PAR_TYPE: Record<string, number> = {
   'transaction.financement': 6000, 'justif.etat_civil': 6000,

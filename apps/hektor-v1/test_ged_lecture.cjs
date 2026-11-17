@@ -98,12 +98,18 @@ voir(JSON.stringify(pagesAImager(40, 6, 2, true)) === '[39,40]' && JSON.stringif
 voir(JSON.stringify(pagesAImager(1, 4, 1, true)) === '[1]' && JSON.stringify(pagesAImager(3, 6, 2, false)) === '[1,2,3]', 'offre d\'une page : sa page en image même avec du texte ; un petit scan : toutes ses pages')
 voir(JSON.stringify(pagesAImager(12, 6, 2, true)) === '[11,12]' && JSON.stringify(pagesAImager(1, 4, 1, false)) === '[1]' && JSON.stringify(pagesAImager(5, 4, 1, false)) === '[1,2,3,5]', 'lot 4 : mandat en texte = ses 2 pages de signatures ; avenant scanné de 5 pages = les 3 premières et la dernière')
 voir(JSON.stringify(pagesAImager(12, 4, 0, true)) === '[]' && JSON.stringify(pagesAImager(12, 4, 0, false)) === '[1,2,3,4]' && JSON.stringify(pagesAImager(30, 6, 0, false)) === '[1,2,3,4,5,6]', 'TÉMOIN : lots 1 et 2 inchangés (texte seul ; scan = les premières pages)')
+// audit du 17/11 (§12.24) : un compromis SCANNÉ -> les 16 premières pages et les 2 dernières ; en texte, inchangé
+voir(JSON.stringify(pagesAImager(28, 18, 2, false)) === JSON.stringify([...Array.from({ length: 16 }, (_, i) => i + 1), 27, 28]) && JSON.stringify(pagesAImager(28, 18, 2, true)) === '[27,28]' && JSON.stringify(pagesAImager(12, 18, 2, false)) === JSON.stringify(Array.from({ length: 12 }, (_, i) => i + 1)), 'compromis scanné de 28 pages : 1-16 + 27-28 ; en texte : les 2 dernières ; un scan de 12 pages : toutes')
+const reglageIa = fs.readFileSync(path.join(__dirname, 'src/lib/gedClassementIa.ts'), 'utf8')
+voir(/'transaction\.avant_contrat': 18,/.test(reglageIa) && /'justif\.titre': 6, 'copro\.pv_ag': 6/.test(reglageIa), 'réglage : compromis 18 pages en image (scanné) ; titre et PV d\'AG gardent 6')
 const srv = fs.readFileSync(path.join(__dirname, '../../backend/app/services/openai_ged_lecture_service.py'), 'utf8')
 // même réglage qu'au serveur : chaque table lue dans les DEUX sources, comparée clé par clé (lot 4 : 13/11)
 const table = (src, debut, motif) => {
   const i = src.indexOf(debut)
   const bloc = i < 0 ? '' : src.slice(i, src.indexOf('}', i))
-  return JSON.stringify([...bloc.matchAll(motif)].map((m) => [m[1], m[2] === 'MAX_PAGES_HD' ? 6 : Number(m[2])]).sort())
+  // une valeur nommée côté serveur (MAX_PAGES_HD, MAX_PAGES_COMPROMIS_SCAN…) se lit dans le serveur lui-même
+  const valeur = (v) => (/^\d+$/.test(v) ? Number(v) : Number((srv.match(new RegExp(`^${v} = (\\d+)`, 'm')) || [])[1]))
+  return JSON.stringify([...bloc.matchAll(motif)].map((m) => [m[1], valeur(m[2])]).sort())
 }
 const front = (nom) => table(ia, `${nom}: Record<string, number> = {`, /'([\w.]+)': (\d+)/g)
 const serveur = (nom) => table(srv, `\n${nom} = {`, /"([\w.]+)": (\w+)/g)

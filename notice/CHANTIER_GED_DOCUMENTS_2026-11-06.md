@@ -2424,3 +2424,13 @@ sous 80 000 sauf 3 honoraires sur 62 (max 111 000) et 1 prêt sur 51 (84 000).
 **Proposition** : compromis SCANNÉ -> les 16 premières pages + les 2 dernières en image (le serveur doit admettre 18 pages
 pour ce type) ; compromis texte inchangé (ou 100 000 caractères pour 3 honoraires et 1 prêt de plus, +25 % de coût).
 Rien n'est codé.
+✅ **« Oui, fais-le » (17/11) : COMPROMIS SCANNÉ -> 16 PREMIÈRES PAGES + 2 DERNIÈRES, ÉCRIT — rien poussé.** Écran
+(`gedClassementIa.ts`, `PAGES_HD_PAR_TYPE`) : `transaction.avant_contrat` 6 -> 18 ; `pagesAImager` (inchangée) donne, pour
+un scan de 28 pages, 1-16 + 27-28 ; un compromis à couche texte reste « 80 000 caractères + 2 dernières pages ». Serveur :
+`MAX_PAGES_COMPROMIS_SCAN = 18`, `PAGES_HD` du compromis = 18, et le plafond devient PAR TYPE
+(`max(6, PAGES_HD[type])`) -- tous les autres types gardent 6 ; la route admet 18 images au plus (le service redit le
+plafond du type). Essais : `test_ged_lire` 83 -> 87 (18 images partent ; 19 -> 413 ; un titre à 7 -> 413) ;
+`test_ged_lecture` 60 -> 62, et le contrôle « même table à l'écran et au serveur » sait lire une valeur nommée du serveur
+(TÉMOIN INVERSE : écran à 16, serveur à 18 -> deux rouges). Les 12 essais GED et les 5 du serveur verts, build vert.
+⚠ Coût attendu ≈ 0,005 $ par compromis scanné (18 images ≈ 45 000 jetons), requête ≈ 7 Mo (18 images de 1 600 px).
+⚠ Pas vu en réel : il faudra un compromis SCANNÉ fictif de ~28 pages (prix p. 8, prêt p. 13) déposé sur un bien d'essai.

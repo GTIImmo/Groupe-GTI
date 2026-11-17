@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 
 from ..auth import get_authenticated_user, require_request_user
 from ..services.openai_ged_classement_service import AGENT_KEY, INTERRUPTEUR_PERSONNES, MAX_PAGES, OpenAIGedClassementService
-from ..services.openai_ged_lecture_service import AGENT_KEY as AGENT_LECTURE, FICHES_PERSONNES, MAX_PAGES_HD, OpenAIGedLectureService
+from ..services.openai_ged_lecture_service import AGENT_KEY as AGENT_LECTURE, FICHES_PERSONNES, MAX_PAGES_COMPROMIS_SCAN, OpenAIGedLectureService
 from ..services.supabase_admin import SupabaseAdminService
 from ..settings import Settings, get_settings
 
@@ -33,7 +33,8 @@ class GedLirePayload(BaseModel):
     jobId: str = Field(min_length=36, max_length=36)
     nomFichier: str | None = None
     nbPages: int | None = Field(default=None, ge=0)
-    pages: list[GedPage] = Field(default_factory=list, max_length=MAX_PAGES_HD)
+    # le plafond PAR TYPE est redit par le service (6, et 18 pour un compromis scanné : audit du 17/11)
+    pages: list[GedPage] = Field(default_factory=list, max_length=MAX_PAGES_COMPROMIS_SCAN)
     texte: str | None = None
 
 

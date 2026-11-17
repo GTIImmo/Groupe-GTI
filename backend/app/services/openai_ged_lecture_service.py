@@ -30,6 +30,9 @@ from .openai_listing_sheet_service import _extract_output_text
 
 AGENT_KEY = "ged_lecture"
 MAX_PAGES_HD = 6
+# Audit du 17/11 (§12.24) : un compromis SCANNÉ (38 sur 100) a ses données jusqu'à la page 19 (prêt, p90) -- les 16
+# premières pages et les 2 dernières (signatures) en image ; c'est le seul type au-delà de 6.
+MAX_PAGES_COMPROMIS_SCAN = 18
 MAX_IMAGE_HD_OCTETS = 1_600_000
 MAX_TEXTE = 20000
 MAX_TEXTE_LONG = 40000  # le titre : 9 pages en médiane, jusqu'à 40 (mesuré le 12/11)
@@ -526,11 +529,11 @@ FICHES_PERSONNES: dict[str, dict[str, Any]] = {
 PRIVES ={"pieces.numero", "pieces.date_delivrance", "pieces.autorite_delivrance"}
 
 # Pages lues en haute définition (le navigateur les choisit ; même réglage dans gedClassementIa.ts) : le titre a ses
-# parties et sa désignation dans les premières pages ; un compromis scanné : les 4 premières et les 2 dernières
+# parties et sa désignation dans les premières pages ; un compromis scanné : les 16 premières et les 2 dernières
 # (signatures) ; un compromis en texte envoie AUSSI ses 2 dernières pages en image, une offre sa dernière.
 # Lot 4 : le mandat comme le compromis ; l'avenant et la fin de mandat : leur dernière page (signatures) ;
 # l'acte (attestation : 4 pages, 41 scans sur 50) et le règlement (37 pages) : 6 pages.
-PAGES_HD = {"justif.titre": MAX_PAGES_HD, "copro.pv_ag": MAX_PAGES_HD, "transaction.avant_contrat": MAX_PAGES_HD,
+PAGES_HD = {"justif.titre": MAX_PAGES_HD, "copro.pv_ag": MAX_PAGES_HD, "transaction.avant_contrat": MAX_PAGES_COMPROMIS_SCAN,
             "mandat.vente": MAX_PAGES_HD, "transaction.acte": MAX_PAGES_HD, "copro.reglement": MAX_PAGES_HD}
 FIN_EN_IMAGE = {"transaction.avant_contrat": 2, "transaction.offre": 1, "mandat.vente": 2, "mandat.avenant": 1,
                 "mandat.fin": 1}
@@ -669,8 +672,9 @@ class OpenAIGedLectureService:
             pages = [p for p in pages if int(p.get("numero") or 0) == 1]
         if not pages and not texte.strip():
             raise HTTPException(status_code=400, detail="Rien à lire")
-        if len(pages) > MAX_PAGES_HD:
-            raise HTTPException(status_code=413, detail=f"{MAX_PAGES_HD} pages au plus")
+        plafond = max(MAX_PAGES_HD, PAGES_HD.get(code, 0))  # 6 pour tous, 18 pour le compromis (audit du 17/11)
+        if len(pages) > plafond:
+            raise HTTPException(status_code=413, detail=f"{plafond} pages au plus")
         contenu: list[dict[str, Any]] = []
         for p in pages:
             contenu.append({"type": "input_text", "text": f"Page {int(p.get('numero') or 0)} sur {nb_pages}"})
