@@ -2313,3 +2313,5 @@ la 2e arrive par « Ajouter une page (le verso) » (2 vignettes, images chargée
 les photos » referme, aucune ligne créée. Bureau (1 280 px) : le panneau reste caché, la bande de la fenêtre s'affiche,
 comme avant. Toujours 1 document sur 63147. ➡ **H4 EST FINI : L'HABILLAGE H1-H4 EST COMPLET.** ⚠ Remarque, d'avant H4 :
 la bande de la fenêtre dit « 1 page photographiée : ELLES formeront un seul document » (pluriel au singulier).
+✅ Corrigé (17/11, « Corrige ») : « 1 page photographiée : elle formera un document ; ajoute le verso si besoin. » ;
+le pluriel inchangé. Essai `test_ged_depot` 32 -> 33, build vert.

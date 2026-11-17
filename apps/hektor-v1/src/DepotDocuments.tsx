@@ -782,7 +782,7 @@ export function DepotDocuments({
 
       {pages.length ? (
         <div className="dd-attendu dd-pages">
-          <span>{`${pages.length} page${pages.length > 1 ? 's' : ''} photographiée${pages.length > 1 ? 's' : ''} : elles formeront un seul document.`}</span>
+          <span>{pages.length > 1 ? `${pages.length} pages photographiées : elles formeront un seul document.` : '1 page photographiée : elle formera un document ; ajoute le verso si besoin.'}</span>
           <button className="dd-b1 is-petit" type="button" disabled={assemblage} onClick={() => void assemblerPages()}>
             {assemblage ? 'Assemblage…' : `Faire un PDF de ${pages.length} page${pages.length > 1 ? 's' : ''}`}
           </button>

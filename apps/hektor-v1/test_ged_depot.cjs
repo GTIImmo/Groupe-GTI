@@ -71,6 +71,8 @@ voir(feuille.length > 300 && /onClick=\{\(\) => void assemblerPages\(\)\}/.test(
 voir(!/getUserMedia|mediaDevices|fetch\(|\.rpc\(|createUpload/.test(feuille + depot.slice(depot.indexOf('const vignettesPages'), depot.indexOf('const vignettesPages') + 400)),
   'TÉMOIN : pas de viseur dans l\'app (décision du 16/11 : « A » seul), et les vignettes ne partent nulle part')
 voir(/useEffect\(\(\) => \(\) => vignettesPages\.forEach\(\(u\) => URL\.revokeObjectURL\(u\)\), \[vignettesPages\]\)/.test(depot), 'H4 : les adresses locales des vignettes sont rendues (pas de fuite de mémoire)')
+// vu en production le 17/11 : « 1 page photographiée : elles formeront… »
+voir(!/photographiée\$\{[^}]*\} : elles formeront/.test(depot) && /'1 page photographiée : elle formera un document/.test(depot), 'la bande des photos parle français au singulier')
 // vu en production le 16/11 : « 1 document ne est pas parti » (le gabarit ne savait pas élider)
 voir(!/\bne \$\{|\bne est\b/.test(depot) && /'1 document n\\'est pas parti\.'/.test(depot) && /' L\\'envoyer avant de fermer \?'/.test(depot),
   'H2 : la bande parle français au singulier (« n\'est pas parti », « L\'envoyer »)')
