@@ -1585,6 +1585,110 @@ def executer_portail(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[str, Any
             "resume_reporte": reporte}
 
 
+# ── 17/11 (note étape 4 §41-42) : le PILOTAGE de la fiche — cocher Validation, cocher Diffusable [direction] ──────
+# = handleSetSelectedDossierValidation / …Diffusable (App.tsx ~21481) : les routes /hektor-diffusion/validation et
+# /diffusable (garde `assert_admin` = admin ou manager actif), qui écrivent DIRECTEMENT chez Hektor et relisent, puis
+# /persist-state, qui recopie chez nous ce que Hektor MONTRE. Le même pont, ici, avec la même garde jugée avec le jeton.
+# ⛔ La carte EXIGE que Hektor confirme les deux cases (l'écran ne vérifie pas la validation) et dit ce qu'il montre
+#   sinon. Diffusable sans validation : rare (3 biens sur 13 556 le 17/11), pas refusé, la carte prévient.
+CHOIX_PILOTAGE = {"oui": True, "non": False, "": None, "inchange": None}
+
+
+def _choix_pilotage(valeur: Any, quoi: str) -> bool | None:
+    cle = _simple(valeur).replace("inchangee", "inchange")
+    if cle not in CHOIX_PILOTAGE:
+        raise Refus(f"{quoi} : oui, non, ou vide pour ne pas y toucher.")
+    return CHOIX_PILOTAGE[cle]
+
+
+def _controler_pilotage(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[dict[str, Any], bool | None, bool | None]:
+    bien = _bien_diffusion(ctx, p.get("hektor_annonce_id"))
+    validation = _choix_pilotage(p.get("validation"), "Validation")
+    diffusable = _choix_pilotage(p.get("diffusable"), "Diffusable")
+    if validation is None and diffusable is None:
+        raise Refus("Rien à changer : dis Validation oui / non, ou Diffusable oui / non.")
+    if (validation is None or validation == _valide(bien.get("validation_diffusion_state"))) and \
+            (diffusable is None or diffusable == (str(bien.get("diffusable") or "") == "1")):
+        raise Refus(f"Rien ne change : l'annonce {bien['hektor_annonce_id']} est déjà dans cet état.")
+    return bien, validation, diffusable
+
+
+def _oui_non(valeur: bool) -> str:
+    return "OUI" if valeur else "NON"
+
+
+def preparer_pilotage(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    bien, validation, diffusable = _controler_pilotage(ctx, p)
+    valide, diffuse = _valide(bien.get("validation_diffusion_state")), str(bien.get("diffusable") or "") == "1"
+    lignes = []
+    if validation is not None and validation != valide:
+        lignes.append(f"Validation {_oui_non(valide)} → {_oui_non(validation)}")
+    if diffusable is not None and diffusable != diffuse:
+        lignes.append(f"Diffusable {_oui_non(diffuse)} → {_oui_non(diffusable)}")
+    resume = (f"Pilotage de l'annonce {bien['hektor_annonce_id']} « {bien.get('titre_bien') or ''} » : " + " ; ".join(lignes)
+              + ". Écrit DIRECTEMENT chez Hektor au clic, puis relu")
+    if diffusable is True and not diffuse:
+        resume += ". ⚠ Diffusable OUI : le bien peut repartir sur les portails déjà cochés"
+        if not (validation if validation is not None else valide):
+            resume += " ; ⚠ sans validation, c'est rare et Hektor peut ne pas l'appliquer"
+    if diffusable is False and diffuse:
+        resume += ". ⚠ Diffusable NON : le bien sort de tous les portails"
+    if validation is False and valide:
+        resume += ". ⚠ Invalider peut aussi couper la diffusion chez Hektor"
+    if _lire(ctx, "app_diffusion_requests_current", {
+            "app_dossier_id": f"eq.{bien['app_dossier_id']}", "request_type": "eq.demande_diffusion",
+            "request_status": f"in.({','.join(EN_COURS)})", "select": "id", "limit": "1"}):
+        resume += ". Une demande de validation est en cours sur ce bien : elle reste à traiter dans Suivi"
+    return resume, {"hektor_annonce_id": int(bien["hektor_annonce_id"]),
+                    "validation": "" if validation is None else ("oui" if validation else "non"),
+                    "diffusable": "" if diffusable is None else ("oui" if diffusable else "non")}
+
+
+def executer_pilotage(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[str, Any]:
+    from .hektor_bridge import HektorBridgeService
+    if ctx.role not in DIRECTION:  # 3e verrou, après la route (geste.roles) et avant la garde du pont
+        raise Refus("le Pilotage est réservé à la direction ; un négociateur passe par la demande de validation")
+    bien, validation, diffusable = _controler_pilotage(ctx, p)  # re-vérifié AU CLIC (vendu, clos, déjà dans cet état)
+    _email, user = _personne(ctx)
+    try:  # = la garde des routes /validation et /diffusable
+        SupabaseAdminService(ctx.settings).assert_admin(user)
+    except HTTPException as exc:
+        raise Refus(f"refusé : {exc.detail}") from None
+    pont = HektorBridgeService(ctx.settings)
+    vue_validation: str | None = None
+    vue_diffusable = "1" if str(bien.get("diffusable") or "") == "1" else "0"
+    fait: list[str] = []
+    try:
+        if validation is not None and validation != _valide(bien.get("validation_diffusion_state")):
+            r = pont.set_validation(bien["app_dossier_id"], 1 if validation else 0, False)
+            vue_validation = str(r.get("observed_validation") or "").strip().lower() or None
+            vue_diffusable = r.get("observed_diffusable") if r.get("observed_diffusable") in {"0", "1"} else vue_diffusable
+            if r.get("error"):
+                raise Refus(f"Hektor a refusé la validation : {str(r['error'])[:200]}")
+            fait.append("validation")
+        if diffusable is not None and diffusable != (vue_diffusable == "1"):
+            r = pont.set_diffusable(bien["app_dossier_id"], diffusable, False)
+            vue_diffusable = r.get("observed_diffusable") if r.get("observed_diffusable") in {"0", "1"} else vue_diffusable
+            fait.append("diffusable")
+    except HTTPException as exc:
+        raise Refus(f"Hektor n'a pas pu être joint ({exc.detail})" + (f" ; déjà fait : {', '.join(fait)}" if fait else "")) from None
+    try:  # recopier chez nous ce que Hektor MONTRE (comme l'écran), même si la confirmation manque
+        pont.persist_state(bien["app_dossier_id"],
+                           validation_diffusion_state=vue_validation if vue_validation in {"oui", "non"} else None,
+                           diffusable=vue_diffusable == "1")
+        reporte = True
+    except Exception:  # noqa: BLE001
+        reporte = False
+    if "validation" in fait and vue_validation is None:  # une relecture ratée n'est jamais un vert
+        raise Refus("la validation est partie chez Hektor mais sa fiche n'a pas pu être relue : vérifie-la sur Hektor")
+    if "validation" in fait and vue_validation != ("oui" if validation else "non"):
+        raise Refus(f"Hektor n'a pas confirmé la validation : il montre « {vue_validation} »")
+    if diffusable is not None and vue_diffusable != ("1" if diffusable else "0"):
+        raise Refus(f"Hektor n'a pas confirmé Diffusable : il montre {_oui_non(vue_diffusable == '1')}")
+    return {"app_dossier_id": bien["app_dossier_id"], "fait": fait, "validation_vue": vue_validation,
+            "diffusable_vu": vue_diffusable, "etat_reporte": reporte}
+
+
 # ── LOT 2c (17/11/2026) : créer un contact, ajouter une recherche, modifier une recherche ──
 # Note : notice/ETAPE3_AGENT_QUI_AGIT_AUDIT_2026-11-13.md §23-24. Les MÊMES fonctions de la base que l'écran :
 #   app_create_contact_optimistic (modale « Nouveau contact », App.tsx:43554 → api.ts:11774), qui contrôle l'appelant ;
@@ -2990,6 +3094,15 @@ GESTES: dict[str, Geste] = {g.nom: g for g in (
                    "portail": {"type": "string", "enum": list(PORTAILS)},
                    "publier": {"type": "boolean"}}),
           preparer_portail, executer_portail),
+    # 17/11 (§41-42) : le Pilotage de la fiche, la DIRECTION seulement (le négociateur : demande de validation)
+    Geste("pilotage",
+          "Prépare le PILOTAGE d'une annonce vivante : cocher ou décocher Validation et / ou Diffusable chez Hektor (oui, non, "
+          "ou vide pour ne pas y toucher). Écrit DIRECTEMENT chez Hektor au clic, puis relu. Réservé à la direction.",
+          DIRECTION,
+          _schema({"hektor_annonce_id": {"type": "string", "description": "numéro d'annonce"},
+                   "validation": {"type": "string", "description": "oui, non, ou vide (inchangé)"},
+                   "diffusable": {"type": "string", "description": "oui, non, ou vide (inchangé)"}}),
+          preparer_pilotage, executer_pilotage),
     # lot 2c
     Geste("creer_contact",
           "Prépare la CRÉATION d'un contact (personne seule ou couple), acquéreur ou propriétaire, au nom de la personne qui "

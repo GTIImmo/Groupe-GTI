@@ -77,6 +77,7 @@ const GESTES: Record<string, { titre: string; fait: (r: Record<string, unknown>)
   desarchiver_annonce: { titre: 'Désarchivage', fait: () => 'Désarchivage demandé.', suite: 'Le bien revient parmi les biens vivants à la relecture.' },
   activer_estimation: { titre: 'Statut du bien', fait: () => 'Passage en Actif demandé.', suite: 'Hektor rend le bien diffusable en même temps.' },
   changer_prix: { titre: 'Prix du bien', fait: () => 'Prix changé.', suite: 'Recopié chez Hektor environ 10 minutes après.' },
+  pilotage: { titre: 'Pilotage', fait: () => 'Confirmé par Hektor.', suite: 'Écrit chez Hektor et relu à l’instant.' },
   couverture_photo: { titre: 'Photos', fait: () => 'Couverture changée.' },
   visibilite_photo: { titre: 'Photos', fait: (r) => (r.visible === true ? 'Photo affichée.' : r.visible === false ? 'Photo masquée.' : 'Photo mise à jour.') },
   deplacer_photo: { titre: 'Photos', fait: () => 'Photo déplacée.' },

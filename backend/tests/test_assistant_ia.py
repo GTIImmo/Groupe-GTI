@@ -357,6 +357,7 @@ voir(all(f"({forme}:" in str(corps_openai[0].get("instructions")) for forme in (
 consigne = str(corps_openai[0].get("instructions"))
 voir("DROITS PAR ROLE (role : admin)" in consigne and "{{role}}" not in consigne
      and "demande de baisse de prix" in consigne and "proposer_changer_prix" in consigne
+     and "proposer_pilotage" in consigne and "Pilotage ; ecran Suivi" not in consigne
      and "JAMAIS le prix" not in consigne,
      "§38 (17/11) : la consigne par rôle, rôle rempli partout -- le négociateur DEMANDE (la bonne demande), la direction "
      "FAIT (le prix en direct, jamais une demande à elle-même)")

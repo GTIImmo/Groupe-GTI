@@ -1159,3 +1159,18 @@ portails ; une demande de validation en cours sur le bien -> elle reste à trait
 **Ce que ça pourrait casser ailleurs** : rien d'existant n'est modifié (une carte de plus qui appelle le pont de l'écran) ;
 c'est un geste RÉEL chez Hektor au clic (la diffusion publique du bien) — d'où la direction seule et la confirmation exigée.
 **Épreuve proposée** : d'abord « sans valider » ; un essai réel seulement sur un bien qu'il choisit (61398 a déjà servi).
+
+## 42. La carte PILOTAGE : CODÉE (17/11, sur « Vas-y ») — pas encore en ligne
+
+`pilotage` [DIR] : Validation et / ou Diffusable (oui / non / vide = inchangé), sur un bien vivant. Au clic : 3e verrou
+(rôle), la garde des routes (`assert_admin`, jugée avec le jeton), la validation PUIS le diffusable par le pont de
+l'écran (`set_validation`, `set_diffusable`, jamais à blanc), pas de second appel si Hektor rend déjà le bien diffusable
+en le validant, puis la recopie chez nous de ce que Hektor MONTRE (`persist_state`, verrou de diffusion compris). La
+carte EXIGE la confirmation des deux cases ; une validation partie mais pas relue est un REFUS (jamais un vert) ; un
+refus de Hektor sur la validation arrête là. Le résumé dit avant -> après, « écrit directement chez Hektor », les
+portails cochés qui repartent (Diffusable OUI), la sortie de tous les portails (NON), le cas rare « sans validation », et
+une demande de validation en cours (à traiter dans Suivi). Consigne : la direction valide / rend diffusable par
+`proposer_pilotage` ; le négociateur garde la demande de validation.
+**Contrôles** : `test_assistant_gestes` 312 verts (§16 : 13 nouveaux, dont 3 témoins « rien chez Hektor ») ; témoin
+inverse : la vérification de confirmation sabotée -> ROUGE, remise -> 312 ; `test_assistant_ia` 62 ; `test_assistant_lecteur`
+73 ; `npm run build` vert. 39 gestes.

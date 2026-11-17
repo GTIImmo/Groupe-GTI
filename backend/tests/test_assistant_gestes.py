@@ -1172,9 +1172,9 @@ print("  (au clic, la route refuse aussi un rôle hors de geste.roles : DIRECTIO
 voir(ges.GESTES["transaction"].roles == ges.DIRECTION, "la carte est déclarée DIRECTION : la route de validation la refuse à un négociateur")
 
 print("10) aucune fonction de geste ne fait autre chose que proposer")
-voir(all(f.nom.startswith("proposer_") for f in ges.FONCTIONS_GESTES) and len(ges.FONCTIONS_GESTES) == 38,
+voir(all(f.nom.startswith("proposer_") for f in ges.FONCTIONS_GESTES) and len(ges.FONCTIONS_GESTES) == 39,
      "37 gestes (le brouillon retiré le 15/11, 3 du lot 2c, 3 du lot 3c, 1 de la vague C, le numéro de mandat, la relance "
-     "et l'annulation d'une signature le 16/11, puis les 8 cartes directes de l'audit §35, et le prix pour la direction le 17/11), "
+     "et l'annulation d'une signature le 16/11, puis les 8 cartes directes de l'audit §35, le prix et le Pilotage pour la direction le 17/11), "
      "tous « proposer_ » : le "
      "modèle n'a AUCUNE fonction qui exécute")
 voir(not any(f.nom.startswith("proposer_") for f in ges.FONCTIONS_LECTURE_LOT3), "les 2 lectures du lot 3 ne proposent rien")
@@ -1722,6 +1722,105 @@ etat14["bien"] = {"prix": 95000}
 appels14.clear()
 voir(refuse(lambda: ges.executer_changer_prix(nouveau_ctx("admin"), p_px), "déjà à") and not ecrits14(),
      "TÉMOIN : le prix posé entre la carte et le clic (par l'écran) -> refusé, RIEN envoyé")
+etat14.pop("bien")
+
+print("16) LE PILOTAGE (17/11, §41-42) : Validation et Diffusable, la direction seulement, Hektor doit CONFIRMER")
+etat16 = {}
+pont16 = []
+
+
+class FauxPont16:
+    def __init__(self, settings):
+        pass
+
+    def set_validation(self, app_dossier_id, state, dry_run):
+        pont16.append(("validation", app_dossier_id, state, dry_run))
+        return {"observed_validation": etat16.get("vue_validation", "oui" if state else "non"),
+                "observed_diffusable": etat16.get("diffusable_apres_validation"), "error": etat16.get("erreur_validation")}
+
+    def set_diffusable(self, app_dossier_id, diffusable, dry_run):
+        pont16.append(("diffusable", app_dossier_id, diffusable, dry_run))
+        return {"observed_diffusable": etat16.get("vue_diffusable", "1" if diffusable else "0")}
+
+    def persist_state(self, app_dossier_id, **k):
+        pont16.append(("report", app_dossier_id, k))
+        return {}
+
+
+class FauxAdmin16(FauxAdmin4):
+    def assert_admin(self, user):
+        pont16.append(("garde", user.id))
+        if etat16.get("admin_refuse"):
+            raise HTTPException(status_code=403, detail="Acces admin refuse")
+        return {"role": "admin"}
+
+
+ges.SupabaseAdminService = FauxAdmin16
+sys.modules["app.services.hektor_bridge"] = types.SimpleNamespace(HektorBridgeService=FauxPont16)
+PI = {"hektor_annonce_id": "63330", "validation": "oui", "diffusable": "oui"}
+voir(ges.GESTES["pilotage"].roles == ges.DIRECTION
+     and "proposer_pilotage" not in [f.nom for f in cat.fonctions_du_role("commercial")]
+     and "proposer_pilotage" in [f.nom for f in cat.fonctions_du_role("manager")],
+     "le Pilotage : montré à l'admin et au manager, JAMAIS au négociateur (lui garde la demande de validation)")
+appels14.clear()
+resume_pi, p_pi = ges.preparer_pilotage(nouveau_ctx("admin"), PI)
+voir("Validation NON → OUI ; Diffusable NON → OUI" in resume_pi and "DIRECTEMENT chez Hektor" in resume_pi
+     and "repartir sur les portails déjà cochés" in resume_pi and "sans validation" not in resume_pi and not ecrits14()
+     and p_pi == {"hektor_annonce_id": 63330, "validation": "oui", "diffusable": "oui"},
+     "la carte dit avant -> après pour chaque case, que c'est écrit chez Hektor au clic, et que les portails cochés repartent")
+voir("sans validation" in ges.preparer_pilotage(nouveau_ctx("admin"), {**PI, "validation": ""})[0],
+     "Diffusable OUI sans validation : la carte PRÉVIENT (3 biens sur 13 556 le 17/11), sans refuser")
+voir(refuse(lambda: ges.preparer_pilotage(nouveau_ctx("admin"), {**PI, "validation": "", "diffusable": ""}), "Rien à changer")
+     and refuse(lambda: ges.preparer_pilotage(nouveau_ctx("admin"), {**PI, "validation": "non", "diffusable": "non"}), "déjà dans cet état")
+     and refuse(lambda: ges.preparer_pilotage(nouveau_ctx("admin"), {**PI, "validation": "peut-être"}), "oui, non"),
+     "⛔ rien demandé, déjà dans cet état, un choix illisible : refusés")
+etat15["demandes"] = [{"id": "dem-val"}]
+voir("reste à traiter dans Suivi" in ges.preparer_pilotage(nouveau_ctx("admin"), PI)[0],
+     "une demande de validation en cours : la carte dit qu'elle reste à traiter dans Suivi")
+etat15["demandes"] = []
+pont16.clear()
+r_pi = ges.executer_pilotage(nouveau_ctx("admin"), p_pi)
+voir(pont16 == [("garde", UID), ("validation", 10000006, 1, False), ("diffusable", 10000006, True, False),
+                ("report", 10000006, {"validation_diffusion_state": "oui", "diffusable": True})]
+     and r_pi["fait"] == ["validation", "diffusable"],
+     "au CLIC : la garde des routes (admin / manager), la validation PUIS le diffusable par le pont de l'écran (jamais à blanc), "
+     "puis la recopie chez nous de ce que Hektor montre")
+etat16["diffusable_apres_validation"] = "1"
+pont16.clear()
+ges.executer_pilotage(nouveau_ctx("admin"), p_pi)
+voir([x[0] for x in pont16] == ["garde", "validation", "report"],
+     "si Hektor rend déjà le bien diffusable en le validant : pas de second appel (rien d'inutile chez Hektor)")
+etat16.clear()
+etat16["vue_diffusable"] = "0"
+pont16.clear()
+voir(refuse(lambda: ges.executer_pilotage(nouveau_ctx("admin"), p_pi), "n'a pas confirmé Diffusable")
+     and ("report", 10000006, {"validation_diffusion_state": "oui", "diffusable": False}) in pont16,
+     "⛔ Hektor ne confirme pas Diffusable : la carte le DIT (jamais un succès), et l'app recopie ce que Hektor montre")
+etat16.clear()
+etat16["vue_validation"] = None
+voir(refuse(lambda: ges.executer_pilotage(nouveau_ctx("admin"), {**p_pi, "diffusable": ""}), "pas pu être relue"),
+     "⛔ la validation partie mais la fiche Hektor pas relue : refusé (une relecture ratée n'est jamais un vert)")
+etat16.clear()
+etat16["erreur_validation"] = "Annonce verrouillee"
+pont16.clear()
+voir(refuse(lambda: ges.executer_pilotage(nouveau_ctx("admin"), p_pi), "Annonce verrouillee")
+     and "diffusable" not in [x[0] for x in pont16],
+     "Hektor refuse la validation : on s'arrête là, le diffusable n'est pas tenté")
+etat16.clear()
+pont16.clear()
+voir(refuse(lambda: ges.executer_pilotage(nouveau_ctx("commercial"), p_pi), "réservé à la direction") and pont16 == [],
+     "⛔ TÉMOIN : une carte Pilotage cliquée par un négociateur -> refusée, RIEN chez Hektor (3e verrou)")
+etat16["admin_refuse"] = True
+voir(refuse(lambda: ges.executer_pilotage(nouveau_ctx("manager"), p_pi), "Acces admin refuse")
+     and [x[0] for x in pont16] == ["garde"],
+     "la garde des routes refuse (profil inactif…) : RIEN chez Hektor")
+etat16.clear()
+etat14["tete"] = {"diffusable": "1"}
+etat14["bien"] = {"validation_diffusion_state": "valide"}
+pont16.clear()
+voir(refuse(lambda: ges.executer_pilotage(nouveau_ctx("admin"), p_pi), "déjà dans cet état") and pont16 == [],
+     "TÉMOIN : validé et diffusable entre la carte et le clic (par l'écran) -> refusé, RIEN chez Hektor")
+etat14.pop("tete")
 etat14.pop("bien")
 
 print(f"\n{ok} contrôles verts")
