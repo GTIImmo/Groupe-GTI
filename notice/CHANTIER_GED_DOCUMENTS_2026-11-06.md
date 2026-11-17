@@ -2550,8 +2550,9 @@ suspensives sont gardées chez nous (décision du 16/09). Le lot 10a était donc
   générales du compromis : … ni reprises ni comparées ») ; la consigne de lecture du serveur dit à l'IA de ne pas les
   lister (fiche inchangée, v2). Le prêt, le permis, la vente d'un bien, l'urbanisme, les servitudes **restent repris**
   (témoin : un prêt non suivi se propose, avec sa date et sa clause du catalogue).
-  ⏳ **À lui de dire** : « Absence de servitude » est-elle aussi une condition générale ? (elle reste proposée tant
-  qu'il ne l'a pas dit).
+  ✅ **Et l'absence de servitude** (sa réponse, 17/11) : « une condition générale, pas besoin de la mettre en condition
+  particulière » -> ajoutée aux conditions générales (écran et consigne). Restent reprises : prêt, permis, vente d'un
+  bien, urbanisme, autre.
 - Au passage : la clause du catalogue se choisit au **libellé exact** d'abord (« Obtention du permis de construire »), à
   la nature ensuite (sinon « Permis de construire », plus haut dans le catalogue, l'emportait).
 - « État hypothécaire » et « Absence de servitude » ne sont pas au catalogue, mais la modale accepte une **condition

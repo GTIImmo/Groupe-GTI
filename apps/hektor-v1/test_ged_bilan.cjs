@@ -35,10 +35,10 @@ voir(L(b, 'B.date_acte').etat === 'trancher' && L(b, 'B.date_acte').lu === 'le 0
 voir(L(bilanCompromis([doc(lu18849)], [reg({ dateActe: '2027-02-01' })], CATALOGUE), 'B.date_acte').etat === 'accord', 'TÉMOIN : la même date des deux côtés -> d\'accord')
 voir(L(b, 'B.sequestre').etat === 'ajouter' && L(b, 'B.sequestre').valeur === '12400' && L(b, 'B.sequestre').lu === '12 400 €' && L(b, 'B.sequestre').page === 9, '18849 : séquestre 12 400 € à ajouter (transaction vide), lu page 9')
 voir(['B.prix', 'B.date', 'B.date_acte', 'B.sequestre', 'B.net_vendeur', 'B.honoraires'].every((c) => L(b, c).destination === 'hektor'), '⛔ prix, dates, séquestre, net, honoraires : « envoyé à Hektor » (Frédéric : « cela dépend des champs »)')
-voir(!L(b, 'B.condition.preemption') && !L(b, 'B.condition.hypotheque') && b.conditionsGenerales.join() === 'Préemption mairie,État hypothécaire',
-  '⛔ 18849 : la préemption et l\'état hypothécaire sont des conditions GÉNÉRALES -- ni reprises ni comparées, seulement dites à part')
-voir(L(b, 'B.condition.servitudes').etat === 'ajouter' && /condition libre/.test(L(b, 'B.condition.servitudes').note) && L(b, 'B.condition.servitudes').condition.catalogueId === null,
-  '18849 : « Absence de servitude » à ajouter, en condition LIBRE (hors catalogue -- la modale les accepte)')
+voir(!L(b, 'B.condition.preemption') && !L(b, 'B.condition.hypotheque') && !L(b, 'B.condition.servitudes') && b.conditionsGenerales.join() === 'Préemption mairie,État hypothécaire,Absence de servitude',
+  '⛔ 18849 : la préemption, l\'état hypothécaire et l\'absence de servitude sont des conditions GÉNÉRALES -- ni reprises ni comparées, seulement dites à part')
+voir(L(bilanCompromis([doc([...lu18849, ...cv('urbanisme', null, 6)])], [reg()], CATALOGUE), 'B.condition.urbanisme').etat === 'ajouter' && /condition libre/.test(L(bilanCompromis([doc([...lu18849, ...cv('urbanisme', null, 6)])], [reg()], CATALOGUE), 'B.condition.urbanisme').note),
+  'une condition SUSPENSIVE hors catalogue (urbanisme) se propose en condition LIBRE (la modale les accepte)')
 voir(L(b, 'B.condition.pret').etat === 'accord', '18849 : « Obtention Crédit » jusqu\'au 31/12/2026, déjà suivie à la même date -> d\'accord')
 const sansCredit = bilanCompromis([doc(lu18849)], [reg({ conditions: [] })], CATALOGUE)
 voir(L(sansCredit, 'B.condition.pret').etat === 'ajouter' && L(sansCredit, 'B.condition.pret').valeur === '2026-12-31' && L(sansCredit, 'B.condition.pret').condition.catalogueId === 'c1',
@@ -68,9 +68,9 @@ voir(apres[1].libelle === 'Obtention du permis de construire' && apres[1].catalo
 voir(conditionsApres(avant, [L(renonce, 'B.condition.pret')]).length === 0 && conditionsApres(avant, []).length === 1, 'retirer enlève la condition de prêt ; aucun choix : la liste reste entière')
 
 console.log('③ la note Vrai / Faux déduite des choix (morceau 10)')
-const alerteL20 = "Conditions suspensives du compromis non trouvées dans la transaction : Obtention du permis de construire, Vente d'un bien de l'acquéreur, Absence de servitude"
+const alerteL20 = "Conditions suspensives du compromis non trouvées dans la transaction : Obtention du permis de construire, Vente d'un bien de l'acquéreur"
 voir(verdictDesChoix(alerteL20, 'L20', bV.lignes, new Map([['B.condition.permis_construire', 'prendre']])) === 'vrai', 'une condition prise -> l\'alerte avait raison (vrai)')
-voir(verdictDesChoix(alerteL20, 'L20', bV.lignes, new Map([['B.condition.permis_construire', 'garder'], ['B.condition.vente_bien', 'garder'], ['B.condition.servitudes', 'garder']])) === 'faux', 'toutes laissées -> elle a sonné pour rien (faux)')
+voir(verdictDesChoix(alerteL20, 'L20', bV.lignes, new Map([['B.condition.permis_construire', 'garder'], ['B.condition.vente_bien', 'garder']])) === 'faux', 'toutes laissées -> elle a sonné pour rien (faux)')
 voir(verdictDesChoix(alerteL20, 'L20', bV.lignes, new Map([['B.condition.permis_construire', 'garder']])) === null && verdictDesChoix(alerteL20, 'L20', bV.lignes, new Map()) === null, 'TÉMOIN : tranché en partie, ou rien -> pas de note')
 
 console.log('④ le branchement')

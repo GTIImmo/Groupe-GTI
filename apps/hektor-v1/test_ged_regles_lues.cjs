@@ -147,7 +147,7 @@ const cv = (n, d, r) => [v('conditions.nature', { valeur: n }, 'lu', r), ...(d ?
 const cpvC = (pret = 'oui') => cpvLu([v('condition_pret', { valeur: pret }), ...cv('pret', '2026-12-01', 0), ...cv('vente_bien', null, 1)])
 const L20 = (al) => al.filter((a) => a.code === 'L20')
 // ⛔ Frédéric (17/11, 18849) : la préemption et l'état hypothécaire sont des conditions GÉNÉRALES -- ni reprises ni comparées
-const cpvGen = cpvLu([v('condition_pret', { valeur: 'oui' }), ...cv('pret', '2026-12-01', 0), ...cv('preemption', null, 1), ...cv('hypotheque', null, 2)])
+const cpvGen = cpvLu([v('condition_pret', { valeur: 'oui' }), ...cv('pret', '2026-12-01', 0), ...cv('preemption', null, 1), ...cv('hypotheque', null, 2), ...cv('servitudes', null, 3)])
 voir(L20(R7c([cpvGen], [cpvReg({ conditions: [{ libelle: 'Obtention Crédit', date: '2026-12-01' }] })])).length === 0, 'TÉMOIN 10c : préemption et état hypothécaire lus, absents de la transaction -> rien ne sonne (conditions générales)')
 voir(L20(R7c([cpvC()], [cpvReg({ conditions: [{ libelle: 'Obtention Crédit', date: '2026-12-01' }, { libelle: "Vente d'un bien de l'acquéreur", date: null }] })])).length === 0, 'TÉMOIN 10b : conditions conformes -> rien')
 voir(L20(R7c([cpvC()], [cpvReg({ conditions: [{ libelle: 'Obtention Crédit', date: '2026-12-01' }] })]))[0]?.texte.includes("non trouvées dans la transaction : Vente d'un bien de l'acquéreur"), '10b : une condition du compromis absente de la transaction -> dite (« non trouvée »)')

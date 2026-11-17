@@ -156,7 +156,8 @@ const NATURES = new Set(Object.keys(LIBELLE_CONDITION))
 // ⛔ Frédéric (17/11, essai réel sur 18849) : le droit de préemption de la mairie et l'état hypothécaire sont des
 //   conditions GÉNÉRALES du compromis, pas des conditions suspensives particulières : on ne les récupère pas, on ne les
 //   compare pas (elles ne font rien sonner). Une lecture qui les porte encore les garde, elles sont seulement mises à part.
-export const CONDITIONS_GENERALES: ReadonlySet<NatureCondition> = new Set<NatureCondition>(['preemption', 'hypotheque'])
+// (et l'absence de servitude, même réponse le 17/11 : « une condition générale, pas besoin de la mettre en particulière »)
+export const CONDITIONS_GENERALES: ReadonlySet<NatureCondition> = new Set<NatureCondition>(['preemption', 'hypotheque', 'servitudes'])
 export function conditionsGeneralesLues(l: Pick<LectureDocument, 'valeurs'>): NatureCondition[] {
   const vues = l.valeurs.filter((x) => x.cle === 'conditions.nature' && x.etat === 'lu' && CONDITIONS_GENERALES.has(x.valeur as NatureCondition)).map((x) => x.valeur as NatureCondition)
   return [...new Set(vues)]
