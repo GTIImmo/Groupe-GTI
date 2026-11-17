@@ -1478,3 +1478,39 @@ clic -> rien posé ») ; témoin inverse : la photo envoyée masquée -> ROUGE, 
 - ✅ La photo de test SUPPRIMÉE le 17/11 sur sa demande (« par les workers ») : travail `delete_hektor_photo` `e577b613…`
   (le même que le bouton de l'écran, priorité 15, posé avec une garde sur la ligne visée) -> `done` : les deux galeries
   Hektor relues à 0 photo, notre ligne retirée, 2 dérivés supprimés ; 63330 revient à 0 photo.
+
+## 57. AJOUTER UN DOCUMENT avec le NOUVEL AGENT GED : AUDIT (17/11, sa consigne « il faut que cela fonctionne avec le
+## nouvel agent GED ») — rien codé
+
+**Périmètre** : le circuit de dépôt de la FENÊTRE GED d'aujourd'hui (`DepotDocuments.tsx`, `lib/ged.ts`,
+`lib/gedClassementIa.ts`, `routers/ged.py`, services `openai_ged_*`) ; analyse en lecture seule (rapport complet,
+fichier:ligne, dans la conversation du 17/11) + vérifications en base. Non mesuré : la dépense IA du jour.
+**Ce que fait la fenêtre, pour UN fichier** : type proposé d'après le nom -> empreinte sha256 et DOUBLON -> type attendu
+(« Reçu / Manque ») -> **agent `ged_classement`** (TYPE, NOM proposé — « Prendre ce nom » —, DÉCOUPAGE en pièces —
+« Séparer en N fichiers ») -> contrôles (types, 50 Mo, nom sans conflit, type obligatoire, sensibles PRIVÉS) -> envoi par
+`createUploadDocumentToHektorJob` (libellé du type comme `documentType`) -> `app_ged_classer` (avec le jeton : il exige
+que la personne soit le DEMANDEUR du travail) -> **agent `ged_lecture`** (`/ged/lire` : les valeurs, rangées dans
+`app_ged_lecture` / `app_ged_valeur`, pièces d'identité dans leur registre privé) -> plus tard « Ce que dit le compromis »
+(Reçu / Manque). Garde RIB à chaque étape ; plafond IA commun de 2 $ par jour.
+**⛔ LE POINT QUI DÉCIDE** : les deux agents ne lisent JAMAIS le fichier au coffre. C'est le NAVIGATEUR qui le prépare :
+pdf.js lit le texte (garde RIB sur TOUT le texte, jusqu'à 150 pages) et DESSINE les pages en vignettes (512 px pour le
+classement, 1 600 px pour la lecture) ; pdf-lib découpe ; et la lecture se fait APRÈS l'envoi, avec le fichier encore
+dans le navigateur. **Le serveur n'a AUCUN outil PDF ni image** (`requirements.txt`). Aucune route ne propose type ou nom
+à partir d'un fichier au coffre. Interrupteurs GED (lus en base) : `ged_depot_multiple`, `ged_lecture_ia`,
+`ged_lecture_personnes`, `ged_propositions`, `ged_recu_manque`, `ged_remplir` = **admin**. La fenêtre a changé 5 fois
+le 17/11 (session GED).
+
+**Deux chemins** :
+- **A (recommandé) — la carte OUVRE LA FENÊTRE GED, déjà garnie des fichiers joints** : l'assistant prépare une carte
+  « Déposer 2 documents sur l'annonce N » ; au clic, l'écran ouvre la fenêtre de dépôt du bien et y met les fichiers du
+  trombone (relus au coffre par un lien signé, redevenus des fichiers du navigateur) ; TOUT le nouvel agent GED tourne tel
+  quel (type, nom, découpage, RIB, sensibles, doublon, envoi, classement, lecture, puis « Ce que dit le compromis ») ; la
+  personne vérifie et clique « Envoyer » DANS la fenêtre. Zéro règle recopiée, et chaque amélioration de la GED profite à
+  l'assistant le jour même. Il faut une seule porte d'entrée dans la fenêtre (« ouvrir avec ces fichiers ») —
+  ⚠ fichier de la session GED : à faire AVEC elle. Hors du cran de `ged_depot_multiple`, la fenêtre n'existe pas : la
+  carte le dit au lieu de retomber sur l'ancien formulaire.
+- **B — tout côté serveur** : ajouter des bibliothèques PDF / image au serveur, recopier en Python la préparation du
+  navigateur (garde RIB complète, vignettes, découpage, choix des pages par type, nom muet, privés…) et appeler les agents
+  en interne. Deux copies du même circuit, qui divergeraient à chaque modification de la GED ; déconseillé.
+**Ce que ça pourrait casser ailleurs (A)** : rien d'existant si la porte d'entrée est additive (la fenêtre s'ouvre comme
+aujourd'hui quand on n'y passe pas de fichiers) ; le dépôt reste le geste de la fenêtre, au nom de la personne.
