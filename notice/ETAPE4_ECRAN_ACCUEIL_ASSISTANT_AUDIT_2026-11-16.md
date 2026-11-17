@@ -1475,4 +1475,6 @@ clic -> rien posé ») ; témoin inverse : la photo envoyée masquée -> ROUGE, 
   2. **En réel** : une 2e carte, VALIDÉE -> travail `6894bd1e…` (`source: assistant`, notre ligne posée d'abord :
      `app_photo_id` présent, le chemin de l'écran) -> `done` -> **`envoi_hektor: envoye`, `hektor_photo_id 490558`** ; la
      photo chez nous : visible, `present_in_hektor`, `cloud_available`, rang 1 ; le fichier d'attente nettoyé par le worker.
-- ⏰ La photo de test reste sur 63330 (bien d'essai, Estimation, non diffusable) : à masquer ou supprimer (son choix).
+- ✅ La photo de test SUPPRIMÉE le 17/11 sur sa demande (« par les workers ») : travail `delete_hektor_photo` `e577b613…`
+  (le même que le bouton de l'écran, priorité 15, posé avec une garde sur la ligne visée) -> `done` : les deux galeries
+  Hektor relues à 0 photo, notre ligne retirée, 2 dérivés supprimés ; 63330 revient à 0 photo.
