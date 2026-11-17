@@ -188,11 +188,24 @@ def main() -> int:
                                  "app_affaire_id,kind,state,date,hektor_annonce_id,"
                                  "app_chaine_id", "app_affaire_id")
     par_bien = defaultdict(list)
+    par_chaine = defaultdict(list)
     for r in tout_le_registre:
         if r.get("hektor_annonce_id"):
             par_bien[str(r["hektor_annonce_id"])].append(r)
-    print("registre entier : %d transactions, sur %d biens"
-          % (len(tout_le_registre), len(par_bien)))
+        if r.get("app_chaine_id"):
+            par_chaine[str(r["app_chaine_id"])].append(r)
+    print("registre entier : %d transactions, sur %d biens et %d chaines"
+          % (len(tout_le_registre), len(par_bien), len(par_chaine)))
+    print()
+    print("=== ⛔⛔ LA FAUTE QUE SA QUESTION A TROUVEE -- « on a pas deja ajoute les")
+    print("    offres 195 ? ». OUI, ET MON PREMIER AUDIT NE LES VOYAIT PAS.")
+    print("    Il cherchait les transactions d'une ligne VIA app_classeur_lien. Mais")
+    print("    les 195 transactions CREEES le 16/11 N'ONT PAS DE LIEN DANS LE GEL --")
+    print("    le re-gel additif (D1) n'a pas encore eu lieu. Elles etaient donc")
+    print("    INVISIBLES, et je recomptais comme « manquant » ce qui venait d'etre")
+    print("    pose. Preuve : UAER0F0F, chaine 7904 -> la transaction 1001543,")
+    print("    compromis/cancelled du 2020-07-15, origine « classeur ».")
+    print("    ➡ ON INTERROGE DESORMAIS **TOUTE LA CHAINE**, pas le lien.")
     print()
 
     # ─── LE TRI, AVEC LE CONTROLE DU FAUX POSITIF ────────────────────────────
@@ -201,18 +214,30 @@ def main() -> int:
     for _col, kind in TYPES:
         for ident, d in affirme[kind].items():
             cibles = par_id.get(ident, [])
-            trs = [ledger[str(a)] for a in cibles if str(a) in ledger]
-            if not trs:
+            trs_du_lien = [ledger[str(a)] for a in cibles if str(a) in ledger]
+            if not trs_du_lien:
                 continue                      # sans lien : traite a part
+            #: ⭐⭐⭐ ON ELARGIT A TOUTE LA CHAINE. Le lien du gel ne pointe que
+            #:   les transactions qui existaient AVANT lui ; celles qu'on a creees
+            #:   depuis (les 195 du 16/11) n'y sont pas. Interroger le lien seul
+            #:   fait recompter comme « manquant » ce qu'on vient de poser.
+            chaines = {str(t.get("app_chaine_id")) for t in trs_du_lien
+                       if t.get("app_chaine_id")}
+            trs = list(trs_du_lien)
+            vus = {t["app_affaire_id"] for t in trs}
+            for c in chaines:
+                for r in par_chaine.get(c, []):
+                    if r["app_affaire_id"] not in vus:
+                        trs.append(r)
+                        vus.add(r["app_affaire_id"])
             if any(t.get("kind") == kind for t in trs):
                 continue                      # nous l'avons
             #: ⛔⛔ LE CONTROLE ① : existe-t-elle sur LE MEME BIEN, hors chaine ?
             biens = {str(t.get("hektor_annonce_id")) for t in trs
                      if t.get("hektor_annonce_id")}
-            chaines = {t.get("app_chaine_id") for t in trs}
             ailleurs = [r for b in biens for r in par_bien.get(b, [])
                         if r.get("kind") == kind
-                        and r.get("app_chaine_id") not in chaines]
+                        and str(r.get("app_chaine_id")) not in chaines]
             if ailleurs:
                 #: ② porte-t-elle LA MEME DATE ? (sinon c'est une AUTRE affaire)
                 memes = [r for r in ailleurs if date_de_nous(r.get("date")) == d]

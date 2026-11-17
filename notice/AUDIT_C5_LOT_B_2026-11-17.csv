@@ -1,43 +1,17 @@
 ﻿type;id_unique;date_classeur;annee;etat_classeur;confiance_du_lien;annonce;chaine;etats_de_la_chaine;chaine_VIVANTE
-compromis;HUY49KEC;2018-11-16;2018;Vente réglée;sure;8671;3741;vente:None;False
+compromis;HUY49KEC;2018-11-16;2018;Vente réglée;sure;8671;3741;offre:accepted vente:None;True
 compromis;CRWGXG9R;2020-01-20;2020;Annulée;bonne;11927;6204;offre:refused;False
-compromis;UAER0F0F;2020-07-15;2020;Annulée;sure;15881;7904;offre:refused;False
-compromis;ZGNIYS1Z;2021-04-30;2021;Annulée;sure;34007;16341;offre:refused;False
-compromis;HM8X1IG6;2021-12-06;2021;Vente réglée;sure;9742;4470;offre:accepted vente:None;True
-compromis;JAW5U9OF;2022-06-20;2022;Annulée;sure;36165;17024;offre:refused;False
 compromis;MMGRH7QL;2023-04-20;2023;Vente réglée;sure;41450;20064;offre:accepted vente:None;True
-compromis;WI335HTC;2023-08-31;2023;Annulée;sure;50574;26070;offre:refused;False
-compromis;RKWNRBV1;2023-10-20;2023;Annulée;sure;36993;17377;offre:refused;False
-compromis;HOJ11PVC;2023-12-06;2023;Annulée;sure;17728;8918;offre:refused;False
-compromis;N67O7CLW;2023-12-06;2023;Annulée;sure;17717;8910;offre:refused;False
-compromis;0TQB1SLL;2023-12-06;2023;Annulée;sure;17746;8926;offre:refused;False
-compromis;CW4IYXO2;2024-03-04;2024;Annulée;sure;53;21;offre:refused;False
-compromis;LCQ8H7S0;2025-06-18;2025;Annulée;sure;47538;23983;offre:refused;False
-compromis;a277ccfe;2025-11-27;2025;Annulée;sure;41629;20227;offre:refused;False
-compromis;bdb548a3;2026-03-09;2026;Vente réglée;sure;43091;21551;vente:None;False
-compromis;545cf27f;2026-05-13;2026;Annulée;sure;59610;28762;offre:refused;False
-compromis;1bbfa76b;2026-06-08;2026;Annulée;sure;61667;28857;offre:refused;False
-compromis;037e509b;2026-06-22;2026;Annulée;sure;62066;28908;offre:refused;False
-compromis;b21b79f1;2026-06-30;2026;Annulée;sure;62061;28907;offre:refused;False
-compromis;5786a3cc;2026-07-13;2026;Annulée;sure;8489;3697;offre:refused;False
-compromis;62da86ce;2026-07-17;2026;Annulée;sure;33517;16223;offre:refused;False
-compromis;fa06e4e5;2026-07-28;2026;Annulée;sure;62311;28931;offre:refused;False
-compromis;a48e8a17;2026-07-30;2026;Annulée;sure;62055;28905;offre:refused;False
-compromis;af8d7986;2026-07-31;2026;Annulée;sure;49624;25710;offre:refused;False
 compromis;b6ddee9b;2026-09-30;2026;Vente fixée;sure;62482;29032;offre:accepted;True
-compromis;d6cd8868;2026-10-05;2026;Annulée;sure;49624;1000316;offre:refused;False
-compromis;c4ef091c;2026-10-08;2026;Annulée;sure;41433;30645;offre:refused;False
 compromis;b237d600;2026-11-10;2026;Vente prévue;sure;63116;30707;offre:accepted;True
 compromis;2a4a0c03;2026-11-12;2026;Compromis en attente;sure;58957;30706;offre:accepted;True
 compromis;d049cda8;2026-11-13;2026;Compromis en attente;sure;61793;1000320;offre:accepted;True
-compromis;039da22e;2026-11-13;2026;Vente prévue;sure;62768;29015;offre:accepted;True
 compromis;a2abd36c;2026-11-13;2026;Vente prévue;sure;62740;30713;offre:accepted;True
-compromis;351fca42;2026-11-13;2026;Vente prévue;sure;54799;30742;offre:accepted;True
 compromis;7cb7142f;2026-11-16;2026;Compromis en attente;sure;62667;30735;offre:accepted;True
 compromis;d66a35e4;2026-11-17;2026;Compromis en attente;sure;58970;30741;offre:accepted;True
 compromis;e2779d8b;2026-11-17;2026;Compromis en attente;sure;62832;30756;offre:accepted;True
 compromis;1a474908;2026-11-17;2026;Compromis en attente;sure;59471;30784;offre:accepted;True
-compromis;2dfa6ef3;2026-11-18;2026;Compromis en attente;sure;62802;30656;offre:accepted;True
+compromis;2dfa6ef3;2026-11-18;2026;Compromis en attente;sure;62802;30656;offre:accepted offre:refused;True
 compromis;35996b7e;2026-11-19;2026;Compromis en attente;sure;61965;30744;offre:accepted;True
 compromis;43faf7d9;2026-11-20;2026;Compromis en attente;sure;62563;28995;offre:accepted;True
 compromis;616df9e7;2026-11-20;2026;Compromis en attente;sure;62381;30768;offre:accepted;True
@@ -54,181 +28,16 @@ compromis;b9872912;2026-12-04;2026;Compromis en attente;sure;1998;30764;offre:ac
 compromis;ecfcc143;2026-12-07;2026;Compromis en attente;sure;62464;30705;offre:accepted;True
 compromis;b251d01e;2026-12-07;2026;Compromis en attente;sure;62091;30792;offre:accepted;True
 compromis;c1bbc7a9;2026-12-10;2026;Compromis en attente;sure;62970;30658;offre:accepted;True
-offre;U34PK32L;2018-05-02;2018;Vente réglée;sure;35987;16941;compromis:active vente:None;True
-offre;3RFGZQ1E;2018-07-04;2018;Vente réglée;sure;37757;17700;compromis:active vente:None;True
-offre;MN8HFEHN;2018-07-11;2018;Vente réglée;sure;24885;12122;compromis:active vente:None;True
-offre;HUY49KEC;2018-11-16;2018;Vente réglée;sure;8671;3741;vente:None;False
-offre;XXNOUH9H;2019-01-11;2019;Vente réglée;sure;24837;12060;vente:None;False
-offre;6QDR3G7V;2019-03-06;2019;Vente réglée;sure;37801;17720;compromis:active vente:None;True
-offre;8WEM4UIX;2019-06-28;2019;Vente réglée;sure;35767;16890;compromis:active vente:None;True
-offre;ZMB56WW7;2019-09-08;2019;Vente réglée;sure;34204;16399;compromis:active vente:None;True
-offre;DAATY4A7;2019-12-13;2019;Vente réglée;sure;34192;16397;compromis:active vente:None;True
-offre;UTLG66LE;2019-12-18;2019;Annulée;sure;10527;5054;compromis:cancelled;False
-offre;CSB367SG;2020-03-26;2020;Vente réglée;sure;33455;16195;compromis:active vente:None;True
-offre;ZQD27I3K;2020-06-10;2020;Vente réglée;sure;35115;16622;compromis:active vente:None;True
-offre;3S4ZWOFK;2020-06-12;2020;Vente réglée;sure;24733;11956;compromis:active vente:None;True
-offre;LWZL8V5M;2020-08-08;2020;Vente réglée;sure;42025;20672;compromis:active;True
 offre;T47ZI6GS;2020-12-01;2020;Vente réglée;a valider;44400;22149;compromis:active vente:None;True
-offre;KO6QPUV7;2020-12-03;2020;Vente réglée;sure;33458;16197;vente:None;False
-offre;1290IIOC;2020-12-20;2020;Vente réglée;sure;34048;16362;vente:None;False
-offre;FBOSPXJX;2021-01-16;2021;Annulée;sure;37470;17567;compromis:cancelled;False
-offre;0GV2LNV2;2021-03-11;2021;Vente réglée;sure;10165;4745;compromis:active vente:None;True
 offre;R3CAYTF6;2021-04-01;2021;Vente réglée;a valider;37470;17566;compromis:active vente:None;True
-offre;2SCBZXMH;2021-05-04;2021;Vente réglée;sure;15722;7778;compromis:active vente:None;True
-offre;H6CTRVR6;2021-05-18;2021;Vente réglée;sure;24119;11412;compromis:active vente:None;True
-offre;5TGQ3A2Y;2021-05-28;2021;Annulée;sure;33952;16329;compromis:cancelled;False
-offre;TZ7MOW1S;2021-09-21;2021;Annulée;sure;35680;16837;compromis:cancelled;False
-offre;AMKJIRYN;2021-10-07;2021;Vente réglée;sure;33885;16310;compromis:active vente:None;True
-offre;B5HZ3OV5;2021-10-28;2021;Vente réglée;sure;33603;16267;compromis:active vente:None;True
-offre;B5VKBMW0;2021-10-29;2021;Vente réglée;sure;33597;16262;compromis:active vente:None;True
-offre;60CLRO51;2021-12-13;2021;Annulée;sure;37032;17387;compromis:cancelled;False
-offre;V0QL8N3G;2022-01-31;2022;Vente réglée;sure;41777;20383;compromis:active vente:None;True
-offre;VXGSNU25;2022-04-11;2022;Vente réglée;sure;9610;4375;vente:None;False
-offre;5TIHSGP4;2022-05-31;2022;Vente réglée;sure;30944;15028;vente:None;False
 offre;KZHL7K47;2022-06-28;2022;Vente prévue;sure;9303;1000137;compromis:active;True
-offre;I3R03A11;2022-07-01;2022;Annulée;sure;40378;19455;compromis:cancelled;False
-offre;X2714E92;2022-10-05;2022;Vente réglée;sure;36165;17024;compromis:active vente:None;True
-offre;0OI5KSEB;2022-12-14;2022;Vente réglée;sure;50543;26059;compromis:active vente:None;True
-offre;T6CEOCJE;2022-12-15;2022;Vente réglée;sure;15674;7715;compromis:active vente:None;True
-offre;LJ4YRZNU;2023-03-19;2023;Vente réglée;sure;32940;16023;compromis:active vente:None;True
-offre;K4AAKJU8;2023-03-27;2023;Annulée;sure;23841;1000142;compromis:cancelled;False
-offre;W5YQIW28;2023-06-20;2023;Annulée;sure;41722;20305;compromis:cancelled;False
-offre;AVO8HHFE;2023-09-15;2023;Annulée;sure;448;160;compromis:cancelled;False
-offre;DTODYSI2;2023-11-13;2023;Vente réglée;sure;14774;7242;compromis:active vente:None;True
-offre;A07EC3DH;2024-01-12;2024;Vente réglée;sure;5262;1874;compromis:active vente:None;True
-offre;6FMNGNAA;2024-03-09;2024;Vente réglée;sure;54929;28253;compromis:active vente:None;True
-offre;LPDGSX81;2024-03-14;2024;Annulée;sure;28633;14083;compromis:cancelled;False
-offre;6KRJ5GFV;2024-03-14;2024;Annulée;sure;53036;27039;compromis:cancelled;False
-offre;TRJ5Y59U;2024-03-25;2024;Vente réglée;sure;47557;23993;compromis:active vente:None;True
 offre;A5RW8ZVO;2024-03-27;2024;Annulée;a valider;54726;28155;compromis:cancelled;False
 offre;M2G1Z1K8;2024-04-26;2024;Annulée;a valider;35623;16829;compromis:cancelled;False
-offre;VEL96ARW;2024-05-28;2024;Annulée;sure;32854;15961;compromis:cancelled;False
-offre;IG4XNIZK;2024-05-31;2024;Annulée;sure;1901;958;compromis:cancelled;False
-offre;TAG8IVT5;2024-06-26;2024;Annulée;sure;8377;3627;compromis:cancelled;False
-offre;JNETQT3P;2024-07-03;2024;Annulée;sure;53015;27033;compromis:cancelled;False
-offre;MIO9L8C9;2024-08-02;2024;Annulée;sure;14383;7067;compromis:cancelled;False
-offre;723TVD5F;2024-08-12;2024;Annulée;sure;14761;7232;compromis:cancelled;False
-offre;HF33Q6DM;2024-08-29;2024;Annulée;sure;33134;16096;compromis:cancelled;False
-offre;DA57BFXT;2024-08-31;2024;Annulée;sure;24206;11500;compromis:cancelled;False
-offre;WDY8CDXZ;2024-09-19;2024;Annulée;sure;327;101;compromis:cancelled;False
-offre;4Z4M12JB;2024-09-26;2024;Annulée;sure;23245;11111;compromis:cancelled;False
-offre;ABDXFMQC;2024-10-02;2024;Annulée;sure;17534;8840;compromis:cancelled;False
-offre;T58W1AXB;2024-10-22;2024;Annulée;sure;8330;3587;compromis:cancelled;False
-offre;3KK4Z1SJ;2024-10-26;2024;Annulée;sure;17531;8839;compromis:cancelled;False
-offre;0FSCB6XY;2024-10-29;2024;Annulée;sure;15018;7422;compromis:cancelled;False
-offre;PYOA2KMY;2024-11-04;2024;Annulée;sure;50081;25965;compromis:cancelled;False
-offre;10MD21J7;2024-11-13;2024;Annulée;sure;46055;23162;compromis:cancelled;False
-offre;9G7N611Q;2024-11-22;2024;Annulée;sure;12060;6261;compromis:cancelled;False
-offre;25QYWG2U;2024-11-26;2024;Annulée;sure;53290;27100;compromis:cancelled;False
-offre;W9FCDFGX;2024-12-06;2024;Annulée;sure;47353;23893;compromis:cancelled;False
-offre;KWT1HIHM;2024-12-14;2024;Annulée;sure;47133;23794;compromis:cancelled;False
-offre;C0HXVVCW;2024-12-15;2024;Annulée;sure;54676;28116;compromis:cancelled;False
-offre;8PJ1N21V;2024-12-18;2024;Vente réglée;sure;53032;27037;compromis:active vente:None;True
-offre;SHN6RKDI;2024-12-23;2024;Annulée;sure;52166;26613;compromis:cancelled;False
-offre;515UT1WG;2024-12-26;2024;Annulée;sure;5838;2357;compromis:cancelled;False
-offre;NUBQNV1K;2025-01-07;2025;Annulée;sure;42992;21462;compromis:cancelled;False
-offre;OGVUGDXK;2025-01-09;2025;Annulée;sure;17536;8845;compromis:cancelled;False
-offre;54ZD3N3B;2025-01-22;2025;Annulée;sure;54672;28115;compromis:cancelled;False
-offre;BR8ZTN5F;2025-01-24;2025;Annulée;sure;14674;7176;compromis:cancelled;False
-offre;MVSINFVU;2025-01-25;2025;Annulée;sure;28633;14084;compromis:cancelled;False
-offre;11QCW55L;2025-01-29;2025;Annulée;sure;23241;11110;compromis:cancelled;False
-offre;WW88Z2AC;2025-01-31;2025;Annulée;bonne;52166;26614;compromis:cancelled;False
-offre;SYA8MH79;2025-02-10;2025;Annulée;sure;15220;7499;compromis:cancelled;False
-offre;RL88RBTY;2025-02-17;2025;Annulée;sure;47975;24271;compromis:cancelled;False
-offre;44ZVGG8Q;2025-02-17;2025;Annulée;sure;49484;25626;compromis:cancelled;False
-offre;P4LPJRUF;2025-02-19;2025;Annulée;sure;1848;928;compromis:cancelled;False
 offre;E1QEDCAG;2025-03-28;2025;Vente réglée;a valider;54815;28200;compromis:active vente:None;True
-offre;G11K36ZS;2025-03-31;2025;Vente réglée;sure;18688;9351;compromis:active vente:None;True
-offre;FYC1KCHQ;2025-04-01;2025;Annulée;sure;28440;14010;compromis:cancelled;False
-offre;A4GWQGD5;2025-04-02;2025;Annulée;sure;35482;16788;compromis:cancelled;False
-offre;BWEF58JV;2025-04-02;2025;Annulée;sure;14383;7068;compromis:cancelled;False
-offre;DCSKQ0CI;2025-04-03;2025;Annulée;sure;1925;974;compromis:cancelled;False
-offre;DTL3BX47;2025-04-08;2025;Annulée;sure;32660;15895;compromis:cancelled;False
-offre;2DUPM26R;2025-04-11;2025;Annulée;sure;11786;6156;compromis:cancelled;False
-offre;LTJYTEVC;2025-04-18;2025;Annulée;sure;12273;6363;compromis:cancelled;False
-offre;1P6VET6U;2025-04-25;2025;Annulée;sure;41672;20246;compromis:cancelled;False
-offre;7C1ZQYFL;2025-04-25;2025;Annulée;sure;61;30;compromis:cancelled;False
-offre;D917QKSF;2025-04-29;2025;Vente réglée;sure;53407;27203;compromis:active vente:None;True
-offre;7Q6O044E;2025-04-30;2025;Annulée;sure;42981;21439;compromis:cancelled;False
-offre;UC9UOAXE;2025-04-30;2025;Annulée;sure;5294;1911;compromis:cancelled;False
-offre;S13Z3PIN;2025-05-08;2025;Annulée;sure;54771;28175;compromis:cancelled;False
-offre;4b0f1b1c;2025-05-12;2025;Annulée;sure;42976;21435;compromis:cancelled;False
-offre;YP3CF98R;2025-05-13;2025;Vente réglée;sure;12317;6394;compromis:active vente:None;True
-offre;5H96YY2I;2025-05-14;2025;Vente réglée;sure;49557;25684;compromis:active vente:None;True
-offre;D018N09A;2025-05-16;2025;Vente réglée;sure;49406;25582;compromis:active vente:None;True
-offre;51bee548;2025-05-20;2025;Annulée;sure;33144;16100;compromis:cancelled;False
-offre;4a91a4b7;2025-05-21;2025;Annulée;sure;8377;3628;compromis:cancelled;False
-offre;8c7725f2;2025-05-28;2025;Annulée;sure;47571;24004;compromis:cancelled;False
-offre;WF5TA3HB;2025-06-02;2025;Vente réglée;sure;43023;21497;compromis:active vente:None;True
 offre;ea6a28a7;2025-06-04;2025;Annulée;bonne;28506;14033;compromis:cancelled;False
-offre;21f6e095;2025-06-05;2025;Annulée;sure;45766;23003;compromis:cancelled;False
-offre;232d82c0;2025-06-11;2025;Annulée;sure;28506;14032;compromis:cancelled;False
-offre;e1eec623;2025-06-18;2025;Annulée;sure;14446;7105;compromis:cancelled;False
-offre;1cc703d9;2025-06-28;2025;Vente réglée;sure;28422;14007;compromis:active vente:None;True
-offre;c24ea869;2025-07-03;2025;Annulée;sure;23238;11103;compromis:cancelled;False
-offre;7241c9ce;2025-07-08;2025;Annulée;sure;8381;3629;compromis:cancelled;False
-offre;29277933;2025-07-12;2025;Vente réglée;sure;43046;21513;compromis:active vente:None;True
-offre;875e39cd;2025-07-16;2025;Annulée;sure;47790;24135;compromis:cancelled;False
-offre;afc80c2e;2025-07-17;2025;Annulée;sure;1968;997;compromis:cancelled;False
-offre;1f3d536a;2025-07-18;2025;Annulée;sure;47574;24010;compromis:cancelled;False
-offre;591418b3;2025-07-18;2025;Vente réglée;sure;54834;28205;compromis:active vente:None;True
-offre;86a190de;2025-07-21;2025;Vente réglée;sure;50102;25969;compromis:active vente:None;True
-offre;861af493;2025-07-22;2025;Vente réglée;sure;54701;28134;compromis:active vente:None;True
-offre;77e6f1fc;2025-07-22;2025;Vente réglée;sure;43056;21527;compromis:active vente:None;True
-offre;8cf0e171;2025-07-23;2025;Vente réglée;sure;52111;26598;compromis:active vente:None;True
-offre;2962d089;2025-07-23;2025;Vente réglée;sure;43049;21518;compromis:active vente:None;True
-offre;d2108609;2025-07-23;2025;Annulée;sure;43050;21520;compromis:cancelled;False
-offre;07cec9e1;2025-07-25;2025;Vente réglée;sure;53564;27345;compromis:active vente:None;True
-offre;1649864f;2025-07-28;2025;Vente réglée;sure;35550;16815;compromis:active vente:None;True
-offre;bf3b08f8;2025-07-29;2025;Annulée;sure;23338;11144;compromis:cancelled;False
-offre;caea1510;2025-08-01;2025;Annulée;sure;8442;3669;compromis:cancelled;False
-offre;d6322f88;2025-08-06;2025;Annulée;sure;54684;28120;compromis:cancelled;False
-offre;89cbcce9;2025-08-11;2025;Vente réglée;sure;32652;15890;compromis:active vente:None;True
-offre;693b76ff;2025-08-12;2025;Annulée;sure;49624;25709;compromis:cancelled;False
-offre;c08ff7cb;2025-08-14;2025;Vente réglée;sure;8454;3676;compromis:active vente:None;True
-offre;6b02c91a;2025-08-14;2025;Vente réglée;sure;39662;19038;compromis:active vente:None;True
-offre;64225027;2025-08-14;2025;Annulée;sure;49850;25839;compromis:cancelled;False
-offre;aa25807d;2025-08-20;2025;Annulée;sure;14355;7048;compromis:cancelled;False
-offre;6348ec91;2025-08-22;2025;Annulée;sure;40307;19408;compromis:cancelled;False
-offre;acfdcbca;2025-08-27;2025;Annulée;sure;12107;6290;compromis:cancelled;False
-offre;fa4dc6e8;2025-08-28;2025;Annulée;sure;54867;28214;compromis:cancelled;False
-offre;729ba8dc;2025-08-31;2025;Annulée;sure;11695;6103;compromis:cancelled;False
-offre;97e5a34d;2025-09-04;2025;Annulée;sure;49573;25692;compromis:cancelled;False
-offre;76fff930;2025-09-08;2025;Annulée;sure;28517;14037;compromis:cancelled;False
-offre;cc9e67f3;2025-09-09;2025;Annulée;sure;11764;6146;compromis:cancelled;False
-offre;0241547a;2025-09-11;2025;Annulée;sure;45753;22999;compromis:cancelled;False
-offre;29e4a022;2025-09-13;2025;Annulée;sure;32692;15901;compromis:cancelled;False
-offre;6684bcf1;2025-09-16;2025;Annulée;sure;39607;19029;compromis:cancelled;False
-offre;7c7b5d8e;2025-09-22;2025;Vente réglée;sure;1980;1009;compromis:active vente:None;True
-offre;0d6cad26;2025-09-25;2025;Vente réglée;sure;8477;3695;compromis:active vente:None;True
-offre;2c2566d7;2025-09-25;2025;Annulée;sure;47174;23801;compromis:cancelled vente:None;False
-offre;4205088d;2025-09-26;2025;Vente réglée;sure;48210;24484;compromis:active vente:None;True
-offre;7e1dded4;2025-10-10;2025;Vente réglée;sure;43057;21529;compromis:active vente:None;True
-offre;0a733659;2025-10-14;2025;Annulée;sure;8461;3689;compromis:cancelled;False
-offre;dfe48dde;2025-10-16;2025;Vente réglée;sure;1840;926;compromis:active vente:None;True
-offre;650e65c8;2025-10-17;2025;Vente réglée;sure;43071;21531;compromis:active vente:None;True
-offre;512f903b;2025-10-21;2025;Vente réglée;sure;1848;929;compromis:active vente:None;True
-offre;9343bcb8;2025-10-27;2025;Annulée;sure;43828;21933;compromis:cancelled;False
-offre;6d229f85;2025-10-28;2025;Vente réglée;sure;49611;25707;compromis:active vente:None;True
-offre;f023c1d4;2025-11-04;2025;Vente réglée;sure;11811;6166;compromis:active vente:None;True
-offre;7f7c8e48;2025-11-12;2025;Vente réglée;sure;14406;7078;compromis:active vente:None;True
-offre;a89cbbdd;2025-11-17;2025;Vente réglée;sure;8468;3693;compromis:active vente:None;True
-offre;5a4371b5;2025-11-26;2025;Annulée;sure;54776;28178;compromis:cancelled;False
-offre;c3bbebc2;2025-12-01;2025;Annulée;sure;59068;28597;compromis:cancelled;False
-offre;4f7b9749;2025-12-02;2025;Annulée;sure;23353;11145;compromis:cancelled;False
-offre;1b7b63c6;2025-12-11;2025;Annulée;sure;59029;28582;compromis:cancelled;False
-offre;84331d2b;2025-12-12;2025;Vente réglée;sure;11840;6179;compromis:active vente:None;True
-offre;0c3629d5;2025-12-16;2025;Vente réglée;sure;49641;25713;compromis:active vente:None;True
-offre;01d21e1c;2025-12-25;2025;Annulée;sure;9362;4195;compromis:cancelled;False
 offre;4fc6b33a;2025-12-30;2025;Annulée;bonne;28548;14052;compromis:cancelled;False
 offre;f90b0418;2026-01-08;2026;Annulée;a valider;39684;19049;compromis:active;True
-offre;b42affe7;2026-01-18;2026;Annulée;sure;58907;28546;compromis:cancelled;False
-offre;bdb548a3;2026-02-06;2026;Vente réglée;sure;43091;21551;vente:None;False
-offre;739a0db1;2026-06-18;2026;Annulée;sure;53398;27195;compromis:cancelled;False
 vente;S0GH1R74;2020-09-24;2020;Vente réglée;sure;28668;14137;offre:refused;False
-vente;LWZL8V5M;2020-11-05;2020;Vente réglée;sure;42025;20672;compromis:active;True
-vente;AYIHPHF5;2022-03-02;2022;Vente réglée;sure;28653;14109;compromis:cancelled offre:refused;False
 vente;1W2O0DSU;2025-12-24;2025;Vente réglée;sure;55091;28341;compromis:active offre:accepted;True
 vente;a5cb141f;2026-01-17;2026;Vente réglée;sure;11820;6171;compromis:cancelled offre:refused;False
-vente;df0ce30c;2026-11-10;2026;Vente réglée;sure;47174;23802;compromis:active offre:accepted;True
 vente;a56ce827;2026-11-16;2026;Vente réglée;sure;53372;27171;compromis:active offre:accepted;True
