@@ -2456,3 +2456,27 @@ le classement ordinaire inchangé ; un IBAN refusé avant tout envoi) ; `test_ge
 sans la règle « pas sur un PDF d'une page », il rougit). Les 12 essais GED et le serveur verts, build vert.
 ⚠ Coût : 40 vignettes basse définition ≈ de l'ordre du dixième de centime par clic. ⚠ Pas vu en réel : un faux dossier
 SPECIMEN de ~25 pages (pièce d'identité, taxe, compromis) à déposer sur 63147.
+⛔ **REMPLACÉ LE 17/11, AVANT TOUT PUSH** -- Frédéric : « je ne trouve pas cela très logique ni ergonomique ; l'étape 1 ne
+devrait-elle pas être améliorée ? le découpage de base est-il efficace, et pas un coût pas toujours utile ? audit et
+propose ». **L'audit** (36 classements réels) : la liste des 66 types fait l'essentiel du coût (~2 100 jetons à CHAQUE
+appel) ; une page en vignette ne coûte que ~220 jetons (~0,00002 $) -> voir 40 pages au lieu de 12 = ~0,001 $ de plus
+par gros PDF. Les dépôts en lot sont rares (~0,6 % des noms ; 26 mêlent identité et taxe/titre). ⚠⚠ Et l'audit a trouvé
+un DÉFAUT dans le lien : sa consigne disait « les annexes agrafées à un compromis sont des pièces à part » -- un
+compromis signé et ses annexes forment UN acte ; « Séparer » remplace l'original : on aurait cassé l'acte signé.
+**✅ Proposition A, « Oui, fais A » (17/11) — ÉCRIT, rien poussé (le commit du lien, `1098595`, ne part pas seul : il
+est défait par le commit suivant, posé dessus)** :
+- **L'étape 1 voit TOUTES les pages** (40 au plus ; au-delà : les 36 premières et les 4 dernières), en vignettes basse
+  définition, avec le début de CHAQUE page repéré (« --- page N --- » : 2 000 caractères pour les pages 1 à 3, où le
+  type se lit ; 300 pour les suivantes ; 16 000 au plus). Le « Séparer en N fichiers » d'aujourd'hui apparaît TOUT SEUL.
+  Les documents de 1 à 3 pages ne changent pas (sinon le repère de page).
+- **La consigne** : un lot de pièces SANS RAPPORT se sépare (pièce d'identité + taxe + titre…), toutes les pages, sans
+  trou ni chevauchement ; ⛔ **JAMAIS un acte et SES annexes** (compromis, promesse, mandat, avenant, acte de vente avec
+  les diagnostics, plans, titre ou règlement annexés) ni un DDT ; dans le doute, rien.
+- **Le lien « Chercher les pièces » et le mode à part sont RETIRÉS** (écran et serveur : `MAX_PAGES` du classement passe à
+  40, `MAX_TEXTE_CARACTERES` à 16 000).
+Essais : `test_ged_classer` 33 (25 pages sans clic ; la consigne « jamais un acte et ses annexes » ; 41 refusées ; un
+IBAN en page 9 refusé avant tout envoi) ; `test_ged_classement_ia` 30 (TÉMOIN INVERSE : revenir à 12 pages fait rougir 4
+contrôles ; plus aucune trace du lien). Les 12 essais GED et le serveur verts, build vert.
+⚠ Latence : préparer 40 vignettes prend quelques secondes de plus dans le navigateur ; l'envoi reste possible sans
+attendre l'IA. ⚠ Pas vu en réel : un faux lot SPECIMEN (identité + taxe + titre) et un faux compromis avec annexes, à
+déposer sur 63147 -- le lot doit se proposer à séparer, le compromis jamais.

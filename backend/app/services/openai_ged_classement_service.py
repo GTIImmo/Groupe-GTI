@@ -30,20 +30,12 @@ from .openai_listing_sheet_service import _extract_output_text
 AGENT_KEY = "ged_classement"
 INTERRUPTEUR = "ged_lecture_ia"
 INTERRUPTEUR_PERSONNES = "ged_lecture_personnes"  # morceau 9 : lire les pièces des personnes (off / admin / on)
-MAX_PAGES = 12
+# Proposition A (17/11, audit de Frédéric : « l'étape 1 ne devrait-elle pas être améliorée ? ») : le classement voit
+# TOUTES les pages (40 au plus, vignettes basse définition, ~220 jetons chacune) et le début du texte de chaque page --
+# le découpage d'un lot de pièces se propose alors tout seul, sans clic. Coût : ~0,001 $ de plus pour un PDF de 40 pages.
+MAX_PAGES = 40
 MAX_VIGNETTE_OCTETS = 400 * 1024
-MAX_TEXTE_CARACTERES = 6000
-# « Chercher les pièces » (17/11, choix de Frédéric : un lien sur CHAQUE PDF, à la demande) : TOUTES les pages en
-# vignettes (40 au plus) et le début du texte de CHAQUE page, pour dire où commence chaque pièce. Rien d'autre ne change.
-MAX_PAGES_DECOUPAGE = 40
-MAX_TEXTE_DECOUPAGE = 16000
-_CONSIGNE_DECOUPAGE = (
-    "\nICI, ON TE DEMANDE SURTOUT LES PIECES : l'utilisateur pense que ce fichier en reunit peut-etre plusieurs. Tu vois "
-    "TOUTES ses pages et le debut du texte de chacune (« --- page N --- »). Cherche ou commence chaque document distinct "
-    "(un titre, un en-tete, un formulaire nouveau, une premiere page) et remplis « pieces » avec TOUTES les pages, de la "
-    "premiere a la derniere, sans trou ni chevauchement. Des annexes AGRAFEES a un compromis ou a un mandat (diagnostics, "
-    "plans, titre) sont des pieces a part. S'il n'y a qu'un document, liste vide."
-)
+MAX_TEXTE_CARACTERES = 16000
 PLAFOND_JOUR_USD = 2.0
 _TYPES_TTL_SECONDES = 300.0
 
@@ -97,8 +89,8 @@ def schema(codes: list[str]) -> dict[str, Any]:
 
 _INSTRUCTIONS = (
     "Tu ranges les documents d'une agence immobiliere francaise (transaction : vente de biens). "
-    "On te montre un document en vignettes basse definition (avec le numero de chaque page), parfois un extrait "
-    "de son texte, et le nom du fichier. Dis de quel type il est, parmi cette liste et elle seule :\n"
+    "On te montre un document en vignettes basse definition (avec le numero de chaque page), parfois le debut du texte "
+    "de chaque page (« --- page N --- »), et le nom du fichier. Dis de quel type il est, parmi cette liste et elle seule :\n"
     "{{types}}\n"
     "Regles :\n"
     "- type_code : le type du document entier ; s'il en contient plusieurs, celui de la premiere piece.\n"
@@ -107,9 +99,13 @@ _INSTRUCTIONS = (
     "- nom_propose : un nom court (60 caracteres au plus) pour le classer, par exemple « DPE 2024 », « Compromis "
     "signe », « Taxe fonciere 2025 ». JAMAIS de nom de personne, d'adresse, de numero de piece, de compte ou de "
     "telephone.\n"
-    "- pieces : remplis-la seulement si le fichier reunit PLUSIEURS documents distincts (par exemple un compromis "
-    "puis un DPE puis un etat des risques) : une entree par document, avec ses pages de debut et de fin dans la "
-    "numerotation donnee. Sinon, liste vide. Un dossier de diagnostics (DDT) reste UNE piece de type diag.dossier.\n"
+    "- pieces : remplis-la seulement si le fichier reunit PLUSIEURS documents DISTINCTS et SANS RAPPORT entre eux, "
+    "scannes ou assembles ensemble (par exemple une piece d'identite, puis un avis de taxe fonciere, puis un titre de "
+    "propriete) : une entree par document, avec ses pages de debut et de fin dans la numerotation donnee, toutes les "
+    "pages, sans trou ni chevauchement. Regarde chaque page : un nouveau titre, un en-tete, un formulaire different "
+    "annoncent un nouveau document. JAMAIS de separation dans un acte et SES annexes : un compromis (ou une promesse), "
+    "un mandat, un avenant ou un acte de vente avec les diagnostics, plans, titre ou reglement qui lui sont ANNEXES "
+    "restent UNE piece ; un dossier de diagnostics (DDT) reste UNE piece de type diag.dossier. Dans le doute, liste vide.\n"
     "- sensible : vrai pour une piece d'identite, un etat civil ou une decision de justice sur une personne, un "
     "financement, une fiche de renseignements personnels ou un releve d'identite bancaire.\n"
     "- lisible : faux si les vignettes ne permettent pas de reconnaitre le document.\n"
@@ -183,9 +179,8 @@ class OpenAIGedClassementService:
     def classer(self, payload: dict[str, Any]) -> dict[str, Any]:
         if not self.settings.openai_api_key:
             raise HTTPException(status_code=503, detail="OPENAI_API_KEY non configure sur le backend")
-        decoupage = payload.get("decoupage") is True
         nom = str(payload.get("nomFichier") or "").strip()
-        texte = str(payload.get("texte") or "")[:MAX_TEXTE_DECOUPAGE if decoupage else MAX_TEXTE_CARACTERES]
+        texte = str(payload.get("texte") or "")[:MAX_TEXTE_CARACTERES]
         pages = payload.get("pages") or []
         nb_pages = int(payload.get("nbPages") or len(pages) or 0)
 
@@ -194,9 +189,8 @@ class OpenAIGedClassementService:
             raise HTTPException(status_code=422, detail="Releve d'identite bancaire : jamais envoye a l'IA")
         if not pages and not texte.strip():
             raise HTTPException(status_code=400, detail="Rien a lire : ni page ni texte")
-        plafond = MAX_PAGES_DECOUPAGE if decoupage else MAX_PAGES
-        if len(pages) > plafond:
-            raise HTTPException(status_code=413, detail=f"{plafond} pages au plus")
+        if len(pages) > MAX_PAGES:
+            raise HTTPException(status_code=413, detail=f"{MAX_PAGES} pages au plus")
 
         contenu: list[dict[str, Any]] = []
         for page in pages:
@@ -213,10 +207,10 @@ class OpenAIGedClassementService:
         spec = agent_registry.load_spec(self.settings, AGENT_KEY)
         model = spec.model or "gpt-6-luna"
         liste = "\n".join(f"- {t['code']} : {t.get('libelle') or ''}" for t in types)
-        consigne = agent_registry.render(spec.instructions, {"types": liste}) + (_CONSIGNE_DECOUPAGE if decoupage else "")
+        consigne = agent_registry.render(spec.instructions, {"types": liste})
         entete = f"Nom du fichier : {nom or '(sans nom)'}\nNombre de pages : {nb_pages}"
         if texte.strip():
-            entete += f"\n{'Debut du texte de chaque page' if decoupage else 'Extrait du texte'} :\n{texte}"
+            entete += f"\nTexte (le debut de chaque page) :\n{texte}"
         requete: dict[str, Any] = {
             "model": model,
             "store": False,

@@ -30,7 +30,8 @@ voir(!nomDitRib('Attribution.pdf') && !nomDitRib('Ribeiro compromis.pdf') && !no
 console.log('② les pages montrées')
 voir(JSON.stringify(pagesAEnvoyer(3)) === '[1,2,3]', '3 pages : toutes')
 voir(pagesAEnvoyer(12).length === 12, '12 pages : toutes')
-voir(JSON.stringify(pagesAEnvoyer(42)) === '[1,2,3,4,5,6,7,8,39,40,41,42]', '42 pages : les 8 premières et les 4 dernières')
+voir(pagesAEnvoyer(40).length === 40 && pagesAEnvoyer(25).length === 25, "proposition A (17/11) : jusqu'à 40 pages, toutes (un lot de pièces se voit en entier)")
+voir(JSON.stringify(pagesAEnvoyer(42)) === JSON.stringify([...Array.from({ length: 36 }, (_, i) => i + 1), 39, 40, 41, 42]), '42 pages : les 36 premières et les 4 dernières')
 
 console.log('③ quand le type de l\'IA est pré-choisi')
 const r = (x) => ({ typeCode: 'diag.dpe', confiance: 'haute', nomPropose: null, pieces: [], sensible: false, lisible: true, remarque: null, ...x })
@@ -52,19 +53,12 @@ voir(/IA_COTE_VIGNETTE = 512/.test(lib), 'vignettes de 512 px')
 voir(!/createUploadDocumentToHektorJob|gedClasser\(/.test(depot.slice(depot.indexOf('async function lireParIa'), depot.indexOf('async function ligneNeuve'))), 'l\'IA n\'envoie rien et n\'enregistre rien : elle propose')
 voir(/typeProposePar: ligne\.typePropose \? ligne\.typeProposePar : null/.test(depot), 'le classement retient qui avait proposé (le nom ou l\'IA)')
 
-console.log('⑤ « Chercher les pièces » (17/11) : sur chaque PDF, à la demande')
-const prepD = lib.slice(lib.indexOf('export async function preparerDecoupage'), lib.indexOf('export async function classerParIa'))
-voir(prepD.indexOf('if (nomDitRib(file.name))') >= 0 && prepD.indexOf('texteDitRib(textes.join') < prepD.indexOf('page.render(') && prepD.indexOf('texteDitRib(textes.join') > 0,
-  'découpage : la garde RIB (nom puis TOUT le texte) passe AVANT toute vignette')
-voir(/DECOUPAGE_PAGES_MAX = 40/.test(lib) && /if \(nbPages < 2\) return \{ envoyable: false/.test(prepD) && /IA_COTE_VIGNETTE \//.test(prepD), 'découpage : 40 pages au plus, en vignettes basse définition ; un PDF d\'une page ne part pas')
-voir(/\.\.\.\(decoupage \? \{ decoupage: true \} : \{\}\)/.test(lib) && /decoupage = false\): Promise<ResultatIa>/.test(lib), 'l\'appel ne demande le découpage que si on le dit (le classement d\'aujourd\'hui ne change pas)')
-const chercher = depot.slice(depot.indexOf('async function chercherPieces'), depot.indexOf('// Un PDF qui réunit plusieurs pièces'))
-voir(chercher.length > 200 && /classerParIa\(prep, ligne\.file\.name, dossier\.hektor_annonce_id, true\)/.test(chercher) && !/createUploadDocumentToHektorJob|gedClasser\(|lireValeursParIa|preparerLecture/.test(chercher),
-  'TÉMOIN : chercher les pièces n\'envoie rien chez Hektor, n\'enregistre rien, ne lit aucune valeur')
-voir(/ia: EtatIa = \{ etat: 'fait', r: ancien \? \{ \.\.\.ancien, pieces: r\.pieces \} : r \}/.test(chercher), 'le résultat rejoint l\'avis de l\'IA : seules les pièces changent (le bouton « Séparer » d\'aujourd\'hui)')
-const lien = depot.slice(depot.indexOf('function lienDecoupage'), depot.indexOf('function avisTexte'))
-voir(/if \(!lectureIa \|\| l\.file\.type !== 'application\/pdf'\) return null/.test(lien) && /if \(nb === 1\) return null/.test(lien) && /l\.ia\.r\.pieces\.length >= 2\) return null/.test(lien) && !/12/.test(lien),
-  'le lien : sur CHAQUE PDF (pas seulement au-delà de 12 pages), jamais sur un PDF d\'une page ni quand « Séparer » est déjà là ; interrupteur éteint : rien')
+console.log("⑤ proposition A (17/11) : le découpage se propose à l'étape 1, sans clic")
+const prepIa = lib.slice(lib.indexOf('export async function preparerPourIa'), lib.indexOf("// ── l'appel au serveur"))
+voir(/IA_PAGES_MAX = 40/.test(lib) && /IA_TEXTE_MAX = 16000/.test(lib) && /for \(const n of pagesAEnvoyer\(nbPages\)\)/.test(prepIa), 'toutes les pages (40 au plus) en vignettes, 16 000 caractères de texte au plus')
+voir(prepIa.includes('`--- page ${n} ---\\n${t.slice(0, n <= 3 ? IA_TEXTE_PAGE_DEBUT : IA_TEXTE_PAGE_SUITE)}`') && /IA_TEXTE_PAGE_SUITE = 300/.test(lib), "le début de CHAQUE page, repérée (les 3 premières plus longues : le type s'y lit)")
+voir(prepIa.indexOf('texteDitRib(textes.join') < prepIa.indexOf('page.render(') && prepIa.indexOf('texteDitRib(textes.join') > 0, 'TÉMOIN : la garde RIB lit tout le texte AVANT toute vignette')
+voir(!/preparerDecoupage|decoupage|chercherPieces|lienDecoupage|Chercher les pièces/.test(lib + depot), "TÉMOIN : plus de lien « Chercher les pièces » ni de mode à part (remplacé par l'étape 1)")
 
 console.log(ko ? `\n${ko} ROUGE, ${ok} VERT` : `\nTOUT EST VERT (${ok})`)
 process.exit(ko ? 1 : 0)

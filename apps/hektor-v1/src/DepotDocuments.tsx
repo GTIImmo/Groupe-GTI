@@ -20,7 +20,7 @@ import {
   empreinteFichier, gedClasser, GED_FAMILLES, GED_TAILLE_MAX, GED_TYPES_ACCEPTES, loadGedTypes, nomEnConflit,
   useGedLecturePersonnes, type GedType,
 } from './lib/ged'
-import { apercuPremierePage, classerParIa, DECOUPAGE_PAGES_MAX, lireParIa as lireValeursParIa, preChoisirTypeIa, preparerDecoupage, preparerLecture, preparerPourIa, separerPdf, useGedLectureIa, type ResultatIa } from './lib/gedClassementIa'
+import { apercuPremierePage, classerParIa, lireParIa as lireValeursParIa, preChoisirTypeIa, preparerLecture, preparerPourIa, separerPdf, useGedLectureIa, type ResultatIa } from './lib/gedClassementIa'
 import { FICHES_LUES, FICHES_PERSONNES_LUES, resumeLecture } from './lib/gedLecture'
 import { LIBELLE_MOMENT, type MomentDossier } from './lib/gedPieces'
 import { typeParNom } from './lib/gedTypeParNom'
@@ -58,8 +58,6 @@ type Ligne = {
   ia: EtatIa | null
   // morceau 6 : la lecture des valeurs APRÈS l'envoi (null = pas de fiche pour ce type, ou interrupteur éteint)
   lecture: EtatLecture | null
-  // « Chercher les pièces » (17/11) : null = pas demandé ; sinon où en est la recherche (le résultat va dans `ia`)
-  decoupage: null | { etat: 'recherche' } | { etat: 'une'; nbPages: number } | { etat: 'erreur'; raison: string }
   forceNom: 'sur' | 'probable' | 'muet' | 'reste'
   visibilite: 'private' | 'shared'
   sha256: string | null
@@ -352,7 +350,6 @@ export function DepotDocuments({
       typeProposePar: propose.code ? 'nom' : null,
       ia: null,
       lecture: null,
-      decoupage: null,
       forceNom: propose.force,
       visibilite: 'private',
       sha256,
@@ -362,26 +359,6 @@ export function DepotDocuments({
       etat: 'pret',
       message: null,
       jobId: null,
-    }
-  }
-
-  // « Chercher les pièces » (17/11, choix de Frédéric : un lien sur CHAQUE PDF, à la demande) : l'IA voit TOUTES les
-  // pages (40 au plus) et dit où commence chaque pièce. Le résultat rejoint l'avis de l'IA de la ligne : s'il y a
-  // plusieurs pièces, le bouton « Séparer en N fichiers » d'aujourd'hui apparaît. Rien n'est envoyé, rien n'est lu.
-  async function chercherPieces(ligne: Ligne) {
-    modifierEtat(ligne.id, { decoupage: { etat: 'recherche' } })
-    try {
-      const prep = await preparerDecoupage(ligne.file)
-      if (!prep.envoyable) { modifierEtat(ligne.id, { decoupage: { etat: 'erreur', raison: prep.raison } }); return }
-      const r = await classerParIa(prep, ligne.file.name, dossier.hektor_annonce_id, true)
-      setLignes((avant) => avant.map((l) => {
-        if (l.id !== ligne.id) return l
-        const ancien = l.ia?.etat === 'fait' ? l.ia.r : null
-        const ia: EtatIa = { etat: 'fait', r: ancien ? { ...ancien, pieces: r.pieces } : r }
-        return { ...l, ia, decoupage: r.pieces.length >= 2 ? null : { etat: 'une', nbPages: prep.nbPages } }
-      }))
-    } catch (e) {
-      modifierEtat(ligne.id, { decoupage: { etat: 'erreur', raison: e instanceof Error ? e.message : String(e) } })
     }
   }
 
@@ -569,28 +546,6 @@ export function DepotDocuments({
     )
   }
 
-  // « Chercher les pièces » : sur CHAQUE PDF (pas un PDF d'une page), tant que l'IA n'a pas déjà trouvé plusieurs pièces
-  // (le bouton « Séparer » est alors là). Derrière le même interrupteur que le classement.
-  function lienDecoupage(l: Ligne): ReactNode {
-    if (!lectureIa || l.file.type !== 'application/pdf') return null
-    const a = apercus[l.id]
-    const nb = typeof a === 'object' ? a.nbPages : null
-    if (nb === 1) return null
-    if (l.ia?.etat === 'fait' && l.ia.r.pieces.length >= 2) return null
-    const d = l.decoupage
-    if (d?.etat === 'recherche') return <span className="ged-depot-ia dd-lit">L'IA cherche les pièces…</span>
-    const portee = (n: number) => (n > DECOUPAGE_PAGES_MAX ? `les ${DECOUPAGE_PAGES_MAX} premières pages` : `les ${n} pages`)
-    if (d?.etat === 'une') return <span className="ged-depot-ia">{`Une seule pièce trouvée dans ${portee(d.nbPages)}.`}</span>
-    return (
-      <span className="ged-depot-ia">
-        {d?.etat === 'erreur' ? `Pas de recherche : ${d.raison}` : null}
-        <button className="dd-lien" type="button" disabled={envoiEnCours} onClick={() => void chercherPieces(l)}>
-          {nb ? `Chercher les pièces dans ${portee(nb)}` : 'Chercher les pièces de ce PDF'}
-        </button>
-      </span>
-    )
-  }
-
   function avisTexte(l: Ligne, r: ResultatIa): ReactNode {
     return (
       <>
@@ -693,7 +648,6 @@ export function DepotDocuments({
           <div className="ged-depot-etat dd-dit">
             {l.etat === 'pret' && l.aEnvoyer && l.refus ? <span className="ged-depot-refus">{l.refus}</span> : null}
             {l.etat === 'pret' ? etatIa(l) : null}
-            {l.etat === 'pret' ? lienDecoupage(l) : null}
             {l.etat === 'envoye' ? <span className="ged-depot-ok">Déposé chez nous, envoi chez Hektor en cours. Type enregistré.</span> : null}
             {l.etat === 'envoye' && l.lecture ? (
               <span key={l.lecture.etat} className={`ged-depot-ia${l.lecture.etat === 'fait' ? ' is-avis dd-entre' : ''}${l.lecture.etat === 'lecture' ? ' dd-lit' : ''}`}>

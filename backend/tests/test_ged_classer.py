@@ -120,31 +120,26 @@ voir("62774" not in str(req), "le numéro du bien ne part pas chez OpenAI")
 voir(req["reasoning"] == {"effort": "none"} and req["model"] == "gpt-6-luna", "gpt-6-luna, sans raisonnement")
 voir(r["typeCode"] == "diag.dpe" and r["nomPropose"] == "DPE 2024" and r["costUsd"] == round(1000 * 0.1e-6 + 100 * 0.5e-6, 6), "réponse rendue avec son coût")
 
-print("4bis) « Chercher les pièces » (17/11) : toutes les pages, à la demande")
+print("4bis) proposition A (17/11) : le classement voit TOUTES les pages (40 au plus) et propose le découpage tout seul")
 vingt_cinq = [{"numero": n, "image": vignette} for n in range(1, 26)]
-r = service.classer({"nomFichier": "dossier.pdf", "pages": vingt_cinq, "nbPages": 25, "decoupage": True, "texte": "--- page 1 ---\nCOMPROMIS\n" * 200})
+r = service.classer({"nomFichier": "dossier.pdf", "pages": vingt_cinq, "nbPages": 25, "texte": "--- page 1 ---\nCOMPROMIS\n" * 2000})
 req = envoyes[-1]
 voir(sum(1 for c in req["input"][0]["content"] if c["type"] == "input_image") == 25 and all(c.get("detail") == "low" for c in req["input"][0]["content"] if c["type"] == "input_image"),
-     "découpage : les 25 pages partent, en basse définition")
-voir("SURTOUT LES PIECES" in req["instructions"] and "Debut du texte de chaque page" in req["input"][0]["content"][0]["text"], "découpage : la consigne des pièces, et le début du texte de chaque page")
+     "25 pages partent, en basse définition, sans clic")
+voir(15000 < len(req["input"][0]["content"][0]["text"]) < 16300 and "le debut de chaque page" in req["input"][0]["content"][0]["text"], "le début du texte de chaque page : 16 000 caractères au plus")
+voir("SANS RAPPORT" in req["instructions"] and "JAMAIS de separation dans un acte et SES annexes" in req["instructions"] and "diag.dossier" in req["instructions"],
+     "la consigne : un lot de pièces SANS RAPPORT se sépare ; un acte et ses annexes, un DDT, JAMAIS")
 try:
-    service.classer({"nomFichier": "dossier.pdf", "pages": vingt_cinq, "nbPages": 25})
-    voir(False, "25 pages sans découpage")
-except HTTPException as e:
-    voir(e.status_code == 413, "TÉMOIN : SANS le découpage, 25 pages sont refusées (12 au plus, comme avant)")
-try:
-    service.classer({"nomFichier": "dossier.pdf", "pages": [{"numero": n, "image": vignette} for n in range(1, 42)], "nbPages": 41, "decoupage": True})
+    service.classer({"nomFichier": "dossier.pdf", "pages": [{"numero": n, "image": vignette} for n in range(1, 42)], "nbPages": 41})
     voir(False, "41 pages")
 except HTTPException as e:
-    voir(e.status_code == 413, "découpage : 41 pages refusées (40 au plus)")
-service.classer({"nomFichier": "x.pdf", "pages": [{"numero": 1, "image": vignette}], "nbPages": 1})
-voir("SURTOUT LES PIECES" not in envoyes[-1]["instructions"], "TÉMOIN : le classement ordinaire ne change pas")
+    voir(e.status_code == 413, "41 pages refusées (40 au plus)")
 avant = len(envoyes)
 try:
-    service.classer({"nomFichier": "dossier.pdf", "pages": vingt_cinq, "nbPages": 25, "decoupage": True, "texte": "--- page 9 ---\nIBAN FR76 3000 6000 0112 3456 7890 189"})
-    voir(False, "IBAN au découpage")
+    service.classer({"nomFichier": "dossier.pdf", "pages": vingt_cinq, "nbPages": 25, "texte": "--- page 9 ---\nIBAN FR76 3000 6000 0112 3456 7890 189"})
+    voir(False, "IBAN page 9")
 except HTTPException as e:
-    voir(e.status_code == 422 and len(envoyes) == avant, "découpage : un IBAN dans le texte -> refusé (422), rien n'est parti")
+    voir(e.status_code == 422 and len(envoyes) == avant, "un IBAN dans le texte d'une page lointaine -> refusé (422), rien n'est parti")
 
 print("5) la réponse nettoyée")
 n = svc.normaliser({**reponse_ia, "type_code": "justif.rib", "nom_propose": "RIB Dupont"}, [t["code"] for t in TYPES], 1)

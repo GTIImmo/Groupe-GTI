@@ -11,8 +11,13 @@ import { loadInterrupteurTroisCrans } from './ged'
 import { hasSupabaseEnv, supabase } from './supabase'
 
 export const IA_COTE_VIGNETTE = 512
-export const IA_PAGES_MAX = 12
-export const IA_TEXTE_MAX = 6000
+// Proposition A (17/11, audit : « l'étape 1 ne devrait-elle pas être améliorée ? ») : le classement voit TOUTES les
+// pages (40 au plus ; ~220 jetons la vignette) et le DÉBUT de chacune -- un lot de pièces se découpe sans clic. Les
+// 3 premières pages gardent un texte long (le type s'y lit) ; les suivantes, leurs 300 premiers caractères.
+export const IA_PAGES_MAX = 40
+export const IA_TEXTE_MAX = 16000
+const IA_TEXTE_PAGE_DEBUT = 2000
+const IA_TEXTE_PAGE_SUITE = 300
 const IA_PAGES_TEXTE_GARDE = 150 // la garde RIB lit le texte de toutes les pages jusqu'à 150 ; seul un extrait part
 
 export type ResultatIa = {
@@ -69,7 +74,8 @@ export function nomDitRib(nom: string | null | undefined): boolean {
 // Les pages montrées à l'IA : toutes jusqu'à 12, sinon les 8 premières et les 4 dernières (la signature, l'annexe).
 export function pagesAEnvoyer(nbPages: number): number[] {
   if (nbPages <= IA_PAGES_MAX) return Array.from({ length: nbPages }, (_, i) => i + 1)
-  return [1, 2, 3, 4, 5, 6, 7, 8, nbPages - 3, nbPages - 2, nbPages - 1, nbPages]
+  // au-delà de 40 : les 36 premières et les 4 dernières
+  return [...Array.from({ length: IA_PAGES_MAX - 4 }, (_, i) => i + 1), nbPages - 3, nbPages - 2, nbPages - 1, nbPages]
 }
 
 // Le type de l'IA est-il PRÉ-CHOISI sur la ligne, ou seulement montré ? Pré-choisi seulement si le nom ne disait rien
@@ -133,7 +139,12 @@ export async function preparerPourIa(file: File, typeChoisiJamaisEnvoye: boolean
       await page.render({ canvasContext: ctx, viewport: vue }).promise
       pages.push({ numero: n, image: canvasEnJpeg(canvas) })
     }
-    const texte = textes.slice(0, 3).join('\n').replace(/[ \t]+/g, ' ').trim().slice(0, IA_TEXTE_MAX)
+    // le début de CHAQUE page envoyée, repérée (« --- page N --- ») : là où commence une nouvelle pièce
+    const texte = pagesAEnvoyer(nbPages)
+      .map((n) => ({ n, t: (textes[n - 1] ?? '').replace(/[ \t]+/g, ' ').trim() }))
+      .filter(({ t }) => t)
+      .map(({ n, t }) => `--- page ${n} ---\n${t.slice(0, n <= 3 ? IA_TEXTE_PAGE_DEBUT : IA_TEXTE_PAGE_SUITE)}`)
+      .join('\n').slice(0, IA_TEXTE_MAX)
     return { envoyable: true, nbPages, pages, texte }
   } finally {
     void doc.destroy()
@@ -145,46 +156,7 @@ const backendApiBaseUrl = (
   import.meta.env.VITE_BACKEND_API_URL ?? (import.meta.env.DEV ? 'http://127.0.0.1:8010' : '')
 ).trim().replace(/\/+$/, '')
 
-// « Chercher les pièces » (17/11, choix de Frédéric : un lien sur CHAQUE PDF, à la demande) : TOUTES les pages en
-// vignettes basse définition (40 au plus) et le DÉBUT du texte de chaque page (300 caractères), pour dire où commence
-// chaque pièce. ⛔ La garde RIB lit tout le texte d'abord, comme au classement. Aucune valeur n'est lue ici.
-export const DECOUPAGE_PAGES_MAX = 40
-const DECOUPAGE_DEBUT_PAGE = 300
-export async function preparerDecoupage(file: File): Promise<Preparation> {
-  if (nomDitRib(file.name)) return { envoyable: false, raison: 'RIB : jamais envoyé à l\'IA.', rib: true }
-  if (file.type !== 'application/pdf') return { envoyable: false, raison: 'Seul un PDF se découpe.', rib: false }
-  const pdfjs = await chargerPdfjs()
-  const doc = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise
-  try {
-    const nbPages = doc.numPages
-    if (nbPages < 2) return { envoyable: false, raison: 'Une seule page : rien à découper.', rib: false }
-    const textes: string[] = []
-    for (let n = 1; n <= Math.min(nbPages, IA_PAGES_TEXTE_GARDE); n += 1) {
-      const contenu = await (await doc.getPage(n)).getTextContent()
-      textes.push(contenu.items.map((it) => ('str' in it ? it.str : '')).join(' ').replace(/\s+/g, ' ').trim())
-    }
-    if (texteDitRib(textes.join('\n'))) return { envoyable: false, raison: 'Un IBAN est dans le texte : jamais envoyé à l\'IA.', rib: true }
-    const pages: Array<{ numero: number; image: string }> = []
-    for (let n = 1; n <= Math.min(nbPages, DECOUPAGE_PAGES_MAX); n += 1) {
-      const page = await doc.getPage(n)
-      const base = page.getViewport({ scale: 1 })
-      const vue = page.getViewport({ scale: IA_COTE_VIGNETTE / Math.max(base.width, base.height) })
-      const canvas = document.createElement('canvas')
-      canvas.width = Math.max(1, Math.round(vue.width))
-      canvas.height = Math.max(1, Math.round(vue.height))
-      const ctx = canvas.getContext('2d')
-      if (!ctx) continue
-      await page.render({ canvasContext: ctx, viewport: vue }).promise
-      pages.push({ numero: n, image: canvasEnJpeg(canvas) })
-    }
-    const texte = textes.slice(0, DECOUPAGE_PAGES_MAX).map((t, i) => (t ? `--- page ${i + 1} ---\n${t.slice(0, DECOUPAGE_DEBUT_PAGE)}` : '')).filter(Boolean).join('\n')
-    return { envoyable: true, nbPages, pages, texte }
-  } finally {
-    void doc.destroy()
-  }
-}
-
-export async function classerParIa(prep: Extract<Preparation, { envoyable: true }>, nomFichier: string, hektorAnnonceId: string | number | null, decoupage = false): Promise<ResultatIa> {
+export async function classerParIa(prep: Extract<Preparation, { envoyable: true }>, nomFichier: string, hektorAnnonceId: string | number | null): Promise<ResultatIa> {
   if (!backendApiBaseUrl) throw new Error('Serveur non configuré')
   if (!hasSupabaseEnv || !supabase) throw new Error('Session absente')
   const jeton = (await supabase.auth.getSession()).data.session?.access_token
@@ -198,7 +170,6 @@ export async function classerParIa(prep: Extract<Preparation, { envoyable: true 
       nbPages: prep.nbPages,
       pages: prep.pages,
       texte: prep.texte || null,
-      ...(decoupage ? { decoupage: true } : {}),
     }),
   })
   const corps = await reponse.json().catch(() => ({}))
