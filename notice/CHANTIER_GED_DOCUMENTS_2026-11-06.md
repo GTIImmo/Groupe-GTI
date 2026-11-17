@@ -2383,3 +2383,44 @@ de compromis au registre.
 Render sert `cf09297`).** Non-régression en production : 63147 -- « À remplir (2) » et « La fiche du bien », comme avant ;
 63331 -- les mêmes 10 lignes « À regarder », « Lu par l'IA : 23 documents » ; console propre. ⚠ Pas vu en réel : il
 faudrait un compromis lu APRÈS ce déploiement, sur un bien qui a SA transaction au registre.
+
+### 12.24 AUDIT -- la taille des documents que l'IA lit à l'étape 2 (17/11, demande de Frédéric, lecture seule)
+Question de Frédéric : « regarde dans mes documents la taille moyenne des documents que l'IA va devoir lire à l'étape 2,
+surtout le compromis, pour adapter le nombre de pages : les compromis sont beaucoup plus gros que 12 pages, mais ils
+comprennent beaucoup de pages de diagnostics ou autres ». Mesure sur le disque du serveur
+(`C:\Hektor\HektorConsoleDocuments\annonces`), scripts du bloc-notes de la session (`audit_compromis_taille.py`,
+`_zones.py`, `_fin.py`, `_pages.py`, `forme_documents.py`), qui n'impriment QUE des nombres.
+**Ce que l'étape 2 envoie aujourd'hui pour un compromis** : PDF texte -> les 80 000 premiers caractères + les 2 dernières
+pages en image ; PDF scanné -> les 4 premières pages + les 2 dernières en image (6 au plus, plafond du serveur).
+**Les compromis (100 les plus récents)** : **38 pages** en médiane (p10 22, p90 53, max 172) ; **62 à couche texte, 38
+SCANS** (28 pages en médiane). Un compromis texte = trois blocs : le **CORPS** (15 pages en médiane, p90 22 ; 45 000
+caractères, p90 67 000 ; 60/62 sous 80 000), puis les **ANNEXES** (diagnostics surtout -- 446 pages sur 608 repérées --,
+puis titre, urbanisme, copro ; de 37 % à 78 % du fichier, ~58 000 caractères), puis une **FIN** d'environ 9 pages
+(25 000 caractères) qui se termine par les signatures (les 2 dernières pages : 97/124 courtes, 85/124 avec des mots de
+signature). Texte total : 124 000 caractères en médiane.
+**Où sont les données (page de la 1re mention, compromis texte)** : réitération p. 6 (p90 8) ; conditions suspensives
+p. 4 (p90 9) ; honoraires p. 7 (p90 18) ; prix p. 8 (p90 10) ; préemption p. 8 (p90 10) ; séquestre p. 10 (p90 13) ;
+prêt p. 13 (p90 19) ; date limite du prêt p. 13 (p90 17) ; clauses d'urbanisme p. 15 (p90 23). En caractères : tout
+sous 80 000 sauf 3 honoraires sur 62 (max 111 000) et 1 prêt sur 51 (84 000).
+**Verdicts** :
+- **Compromis TEXTE : le réglage tient.** 80 000 caractères couvrent le corps (60/62) et les données : prix 62/62,
+  réitération 62/62, séquestre 58/58, préemption 61/61, prêt 50/51, date limite 30/30, honoraires 59/62. Il lit au
+  passage ~35 000 caractères de diagnostics, inutiles mais sans danger (0,0026 $ le compromis). ⛔ **Sauter les annexes
+  n'est PAS sûr** : repérées par leurs mots, elles avalent de vraies clauses (le prêt tombe dans la « zone d'annexes » de
+  9 compromis sur 61, l'urbanisme de 36) -- un corps qui CITE le DPE ressemble à une annexe.
+- ⚠⚠ **Compromis SCANNÉ (38 sur 100) : le réglage PERD l'essentiel.** Dans les 6 premières pages : prix 21/62, séquestre
+  7/58, préemption 11/61, prêt 3/51, **date limite du prêt 0/30**. Dans les 16 premières : prix 61/62, séquestre 56/58,
+  préemption 60/61, conditions 58/62, prêt 44/51, date limite 27/30 (mesuré sur les compromis texte, pris pour modèle des
+  scans -- la mise en page d'un scan n'est pas mesurable sans reconnaissance de caractères). Coût mesuré : ~2 500 jetons
+  par page en image (titre ou mandat à 3 images : ~7 900) -> **16 premières + 2 dernières = 18 images ≈ 45 000 jetons ≈
+  0,005 $** le compromis scanné.
+- **Les autres types (60 plus récents)** : mandat 12 pages, 55/60 texte (40 000 caractères + 2 dernières en image :
+  tient) ; titre 9 pages (p90 42), 51/60 scans, 6 pages en image (parties et désignation au début : tient) ; PV d'AG 12
+  pages (p90 34), moitié scans, 6 pages (⚠ travaux votés parfois plus loin : non mesuré) ; règlement / EDD 34 pages
+  (p90 65), 26/30 scans, 6 pages (⚠ lots et tantièmes souvent plus loin : non mesuré) ; taxe, charges, fiche synthétique
+  2 pages, offre 1 page (tiennent).
+- **L'étape 1 (le classement)** est un autre sujet : au-delà de 12 pages elle ne voit que 1-8 et les 4 dernières, d'où le
+  lien « Chercher les pièces » proposé (non codé).
+**Proposition** : compromis SCANNÉ -> les 16 premières pages + les 2 dernières en image (le serveur doit admettre 18 pages
+pour ce type) ; compromis texte inchangé (ou 100 000 caractères pour 3 honoraires et 1 prêt de plus, +25 % de coût).
+Rien n'est codé.
