@@ -1514,3 +1514,16 @@ le 17/11 (session GED).
   en interne. Deux copies du même circuit, qui divergeraient à chaque modification de la GED ; déconseillé.
 **Ce que ça pourrait casser ailleurs (A)** : rien d'existant si la porte d'entrée est additive (la fenêtre s'ouvre comme
 aujourd'hui quand on n'y passe pas de fichiers) ; le dépôt reste le geste de la fenêtre, au nom de la personne.
+
+## 58. Décision du 17/11 : chemin **A** (la carte ouvre la fenêtre GED garnie des fichiers joints) — le partage du travail
+
+- **La session GED** (ses fichiers, en cours de modification) : une entrée optionnelle de `DepotDocuments`
+  (`fichiersDepuisAssistant { jeton, fichiers: File[] }` + `onFichiersPris` : à chaque nouveau jeton, UNE fois
+  `ajouterFichiers`, le chemin d'un glisser-déposer) ; `ConsoleDocumentsPanel` la passe et OUVRE la fenêtre quand elle
+  arrive ; rien si `ged_depot_multiple` est fermé. Message envoyé le 17/11 (« toi ou moi ? ») ; réponse attendue.
+- **L'assistant** (sans toucher les fichiers GED) : la carte `deposer_documents` (bien vivant, négociateur, fichiers du
+  trombone de la personne, types acceptés par la GED, cran `ged_depot_multiple` pour la personne ; au clic RIEN n'est écrit
+  côté serveur : elle rend des liens signés de lecture, courts) ; l'écran retélécharge les fichiers en objets File, ouvre la
+  fiche du bien sur ses Documents et les passe à la fenêtre ; la personne finit DANS la fenêtre (agent GED complet).
+  La carte dit « la fenêtre GED va s'ouvrir avec N fichiers ; c'est elle qui propose le type et le nom, et c'est toi qui
+  cliques Envoyer ».
