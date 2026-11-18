@@ -3125,3 +3125,62 @@ du secteur qui remet la copropriété à zéro) -- **à éprouver case par case 
 genres de C -- les 5 rapports (date + résultat), l'assainissement, la date du métré et la surface habitable, le DDT dans le
 DPE, le syndic / fonds de travaux / plan de sauvegarde / procédure, le nombre de lots du règlement -- même modèle de ligne,
 même fenêtre, même écriture ; et dire si les conflits du contact (D) doivent avoir leur fenêtre.
+
+### 12.40 DÉCISIONS DE FRÉDÉRIC et AUDIT DES COUPLES (18/11, « rajoute titre de propriété / taxe foncière / charges, il faut aussi auditer pour trouver une solution à contact en couple et la date de naissance », lecture seule, RIEN codé)
+
+**La règle, dans ses mots** : « chaque document a son "Ce que dit…" comme le compromis et le DPE, sauf si inutile ».
+
+**Décisions du 18/11** (en plus des 10 types « la case existe » du §12.39) :
+- **Titre de propriété** : sa fenêtre (contenance face à la surface du terrain `surfterrain`).
+- **Taxe foncière** : sa fenêtre, `TAXE_FONCIERE`. ⛔ L'exclusion du 13/11 (§12.18) est LEVÉE par Frédéric. Mesure du 18/11 :
+  le groupe Hektor `mandat_infofi` est DÉJÀ écrit en modification -- 21 travaux `update_hektor_annonce_fields` done, 0 erreur,
+  0 refus « Credential Error » (le prix) ; et l'écran de modification laisse déjà saisir la taxe à la main (App.tsx l. 1731).
+  ⚠ Mais la taxe ELLE-MÊME n'a JAMAIS été écrite en modification (0 travail ; 38 fois à la création seulement) :
+  épreuve aller-retour sur 63331 AVANT d'ouvrir.
+- **Charges** : sa ligne, `CHARGES` = « Charges copro / MOIS » (App.tsx l. 1732), depuis l'appel de fonds (annuel / 12).
+  Même groupe que la taxe, même épreuve (2 travaux de modification avec charges, done).
+- **Inutiles ou interdits** (pas de fenêtre) : mandat, avenant, fin (⑦-7) ; acte de vente (« laisse tomber ») ; plan de
+  financement (rien à écrire, par dessein) ; annulation (un statut, par la modale visible).
+- **Encore à trancher** : livret de famille / acte de mariage -> situation de famille ; facture d'honoraires -> honoraires de
+  la transaction ; syndic (texte libre) ; fonds de travaux (solde ou cotisation ?) ; adresse et régime (garde du 14/11).
+
+**⚠ Correction du §12.39** : « le taux de remplissage des cases n'est pas mesurable en SQL » est FAUX. La fiche brute est en base
+(`app_dossier_detail_current.detail_payload_json -> detail_raw_json`, chaîne JSON à décoder, groupes `->'props'->case->'value'`),
+comme au §12.17. Ma requête sur tout le parc a dépassé le délai : à refaire découpée.
+
+**AUDIT -- le contact en couple et sa date de naissance** (objet CONTACT seul ; annonce, recherche, relation, transaction,
+mandat, document, RDV non touchés) :
+- **Chez Hektor, la case EXISTE.** Le formulaire de modification d'un couple (groupe `mefContacts/contactCoupleAll`, 54 champs,
+  mesuré le 02/11 sur 606104, SYNTHESE_CHANTIER_CONTACTS_COUPLES §27) porte `dateNaissance_m2` et `lieuNaissance_m2` ; les
+  captures de création du 01/06 aussi (`Console/exports/contact_owner_status_success_…/proprietaire_couple_filled.html`). La
+  situation de famille (`marital_status`) n'existe qu'UNE fois pour le couple : pas de `_m2`, et c'est juste.
+- **Le chemin d'écriture EXISTE et est prouvé** : « modifier le conjoint par la première fiche » (pièce E, §27-28) --
+  `app_edit_conjoint_optimistic` (chez nous à l'instant, sur la fiche du conjoint) -> worker `updateHektorContactIdentity`
+  (relit `contactCoupleAll`, renvoie le bloc `_m2`) -> relecture de la seconde fiche. Prouvé sur le prénom : la seconde fiche
+  Hektor (606105) SUIT.
+- **Ce qui MANQUE (trois trous, mesurés dans le code)** :
+  (1) le worker ne connaît pas la naissance du conjoint : `normalizeHektorContactPayload` (l. ~19511) lit nom, prénom, e-mail,
+      téléphone, adresse du conjoint, PAS sa naissance ; `applyHektorContactIdentityValues` (l. ~19735-19760) n'écrit que
+      `dateNaissance` / `lieuNaissance` de la première personne ;
+  (2) la base : `app_edit_conjoint_optimistic` (patch_couple_phase3e…, l. 54-57) ne pose que nom, prénom, e-mail, téléphone
+      sur la fiche du conjoint, pas `birth_date` / `birth_place` ;
+  (3) l'écran : `gedRemplirContact.ts` ne propose qu'à une PERSONNE SEULE (`personneSeule`).
+- ⭐ **La première personne d'un couple** n'a besoin QUE du (3) : le worker écrit déjà `dateNaissance` dans le formulaire relu,
+  quel que soit son groupe (à confirmer à l'épreuve : la case doit être dans `contactCoupleAll`).
+- **Mesure (app_contact_current, 18/11)** : 8 790 premières fiches de couple, dont 25 avec date de naissance ; 397 conjoints
+  NOMMÉS, dont 3 avec date ; 5 014 conjoints SANS PRÉNOM ; 15 127 cases de conjoint vides. Personnes seules : 63 800, dont 240
+  avec date. ⭐ `birth_date`, `birth_place`, `marital_status` sont des champs « à nous » (`contrat_autorite.py:63`) : la nuit
+  ne les écrase pas.
+- **LA SOLUTION PROPOSÉE (à valider, rien codé)** -- passer par la première fiche, le chemin prouvé :
+  a. worker : `spouse_birth_date` / `spouse_birth_place` -> `dateNaissance_m2` / `lieuNaissance_m2`, seulement si le formulaire
+     relu est celui d'un couple ;
+  b. base : `app_edit_conjoint_optimistic` accepte ces deux clés et les pose sur la fiche du conjoint (patch + inverse +
+     répétition) ;
+  c. écran : la proposition C1/C2 s'ouvre aux couples -- la personne lue est rattachée à la PREMIÈRE ou au CONJOINT (nom ET
+     prénom stricts, comme 9c) ; la première par `editContactOptimistic`, le conjoint par le geste « modifier le conjoint » ;
+     C3 (situation de famille) une seule fois pour le couple ;
+  d. épreuve sur le couple fictif 20000031/32 <-> 606104/05 (gardé pour ça), avec des pièces SPÉCIMEN : la date doit arriver
+     sur `dateNaissance_m2` de 606104 ET sur la fiche 606105.
+- **Non mesuré** : que Hektor recopie `dateNaissance_m2` sur la seconde fiche (prouvé pour le prénom seulement) ; le conjoint
+  SANS prénom (5 014) ne peut pas se rattacher strictement -- le compléter (pièce F) serait un autre geste, pas décidé ;
+  écrire DIRECTEMENT la seconde fiche par son propre numéro (formulaire non relu, écarté).
