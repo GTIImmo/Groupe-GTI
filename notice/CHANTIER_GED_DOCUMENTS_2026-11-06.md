@@ -2933,3 +2933,29 @@ cochée « l'envoyer quand même », nom changé), type proposé et gardé « Ca
 - dépôt chez Hektor : travail `666b63e5` `upload_document_to_hektor` **done** en 15 s, 1 essai, 0 erreur.
 ⚠ Une pièce FICTIVE de plus sur 63331 : elle rejoint le ménage SPECIMEN/FICTIF à faire (63331, 63147). L'ancienne
 lecture « pas_ce_type » du 17/11 reste telle quelle (aucune relecture d'un dépôt passé).
+
+### 12.36 Les trois restes (18/11, « vas y » sur les trois) -- mesuré, RIEN écrit
+
+**1. Le travail `080b32a1` (62850) : DÉJÀ TRANCHÉ, ne rien faire.** Tranché le 17/11 à 23:26 (Paris) en mode « refait » au
+nom de Frédéric (`app_pending_resolution` 2075, `supabase/patch_trancher_62850_2026-11-17.sql`, commit `b244441`) : le
+geste avait abouti au 2e essai (20:44, « Sous compromis »). Il reste `error` EXPRÈS (historique) ; 0 geste en attente
+d'un humain. ⛔ « Abandonner » aurait DÉFAIT un vrai changement de statut. Ma ligne « toujours en erreur » était périmée.
+
+**2. Le ménage des pièces fictives -- la liste** (`app_console_document`) : **31 documents**, 30 sur 63331 et 1 sur 63147
+(« DPE SPECIMEN essai 2026.pdf ») ; TOUS marqués ESSAI / SPECIMEN / FICTIF (0 sans marque), tous privés, tous portent
+leur numéro Hektor supprimable, AUCUN engagé en signature (statut `to_send` ou vide ; 0 demande de signature liée).
+Le geste existe : `delete_document_from_hektor` (43 faits, 0 erreur) -- il refuse un document signé, ÉCRIT LA TRACE
+avant de détruire (journal des suppressions), vérifie chez Hektor, puis retire coffre, serveur et ligne.
+⚠ Ce qu'il ne fait PAS : la GED n'a pas de clé vers `app_console_document` -- les 31 classements, leurs lectures,
+valeurs et le registre privé des pièces d'essai RESTENT en base (invisibles à l'écran : le panneau croise lectures et
+documents présents). Les retirer = un patch à part (la cascade part du classement).
+⚠ Règle du projet : prévenir la session signature avant de toucher `app_console_document`.
+
+**3. Le recours à l'écran (couche B du §12.33) -- le dessin**, sur le patron de `app_ged_decider` :
+- base : une fonction `app_ged_lecture_garder(lecture)` (compte actif, interrupteur `ged_lecture_ia`, périmètre du bien,
+  refus si l'état n'est pas « pas_ce_type » ou si le type est SENSIBLE) qui passe la lecture à « lu » (ou « incomplet »
+  sans valeur) et écrit AVANT / APRÈS dans `app_ged_journal` (objet « lecture » à ajouter à son CHECK) ; inverse et
+  répétition ;
+- écran (`RecuManque.tsx`, liste « Lu par l'IA ») : sur une lecture refusée, « C'est bien ce type : garder la
+  lecture », puis relecture des lectures -- les cartes « Ce que dit… » apparaissent ; AUCUN lecteur ne change ;
+- mesuré : 1 seule lecture « pas_ce_type » en base (63331, 17/11) -- le filet servirait d'abord à elle.
