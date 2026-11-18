@@ -2457,3 +2457,73 @@ création d'une annonce car il faudrait garder ce principe pour les cartes de ce
 
 **Ce que ça pourrait casser** : l'écran de l'assistant (partagé) ; une écriture en base nouvelle à chaque réponse ;
 rien côté coût (les deux plafonds restent).
+
+## 79. AUDIT : les questions MÉTIER du parcours guidé, pour pré-remplir ENTIÈREMENT la fenêtre de création (18/11) — rien codé
+
+**Sa précision** : « l'ergonomie dans le chat devrait être similaire dans créer une annonce estimation ou actif que l'idée
+pour éditer le rapport d'estimation, à savoir créer des principes de questions métiers pertinentes pour collecter auprès
+de l'utilisateur les éléments nécessaires à pré-remplir entièrement la modal ». Audit limité à la CRÉATION (annonce
+estimation / actif) et à l'AVIS ; les autres cartes du chapitre 6 ne sont pas mesurées ici.
+
+**Ce que la fenêtre attend (lu dans App.tsx)** :
+- 7 étapes (`draftAnnonceStepOrder`, l. 2613) : 1 Offre (compte, type, prix, titre, surfaces, pièces, options) · 2 Photos ·
+  3 Secteur (adresse, transports, environnement) · 4 Composition (pièce par pièce) · 5 Détails (intérieur, extérieur,
+  équipements, diagnostics, copropriété, visites) · 6 Mandat / Prix (net vendeur, honoraires, estimation, charges,
+  mandant initial, note) · 7 Diffusion (titre, texte, rappel, création du brouillon NON diffusé).
+- Ce qui BLOQUE la création (`handleCreateDraftAnnonce`, l. 18804) : l'agence, le négociateur, et un mandant complet si
+  « existant » ou « nouveau » (nom + e-mail). Tout le reste est facultatif.
+- La fenêtre montre/cache les cases SELON LE TYPE DE BIEN (`DraftAnnonceTypeProfile`, l. 1055 : surfaceMode habitable /
+  terrain / garage, showRooms, showBedrooms, showLevels, showGarageCount, showGardenPool, showExposure, showView,
+  showInteriorDetails, showOutdoorDetails, showCoproDetails). ⭐ Le parcours doit suivre LES MÊMES RÈGLES : ne jamais
+  demander une case que la fenêtre cacherait.
+- La carte sait déjà porter 132 cases (format du scan, `FIELD_KEYS`) + la composition ; l'avis 16 cases + 8 postes.
+
+**⭐ LE QUESTIONNAIRE MÉTIER EXISTE DÉJÀ : c'est la FICHE DE VISITE de l'agence** (`public/patron-fiche-saisie.html`),
+celle que le scan lit. 10 rubriques, dans l'ordre d'une visite : 1 le vendeur (contexte vente/succession, motivation,
+délai) · 2 le bien (type, adresse, construction récente) · 3 extérieur & annexes · 4 intérieur · 5 composition · 6
+technique (année, DPE, copropriété, disponibilité) · 7 équipements & confort · 8 état détaillé (intérieur, extérieur, note,
+8 postes) · 9 valeur & charges · 10 points & commentaires (forts, vigilance, travaux, argumentaire, avis, note, descriptif).
+Proposition : le parcours du chat SUIT CETTE FICHE — le négociateur retrouve l'ordre qu'il connaît, et la dictée, le scan
+et le chat remplissent les MÊMES cases.
+
+**Ce qui est réellement rempli sur les 572 biens « Actif » vivants** (mesure du 18/11, lecture seule, groupes intérieur /
+extérieur du détail Hektor ; « non » et 0 comptés vides) : surface habitable 75 % · pièces 73 % · chambres 68 % · WC 58 % ·
+niveaux 52 % · salles d'eau 40 % · jardin 36 % · exposition 36 % · cuisine 33 % · cave 32 % · salles de bains 31 % ·
+terrasse 30 % · séjour 30 % · garages 27 % · piscine 24 % · parkings 16-20 % · balcon 16 % · vue 16 % · Carrez 14 % · …
+détails de piscine ~1 %. Texte d'annonce 73 %, titre 72 %. ⚠ NON MESURÉ ici : chauffage, DPE, copropriété (autres blocs du
+détail). ⚠ Les terrains et garages sont dans les 572 : les taux « logement » sont un peu plus hauts que ces chiffres.
+
+**LES PRINCIPES DES QUESTIONS (proposés)** :
+1. Ne jamais demander ce qu'on sait déjà : la fiche, le dernier avis, le contact, et ce que les services publics donnent
+   (cadastre, DVF, DPE ADEME, copropriété) — ceux-là se PROPOSENT (« le DPE trouvé dit D, c'est bien lui ? »).
+2. Le type de bien commande la suite (les règles de la fenêtre) : appartement → étage, ascenseur, copropriété ; maison →
+   terrain, assainissement, niveaux ; terrain → constructible, viabilisé, raccordements.
+3. Regrouper : une liste de oui/non devient UNE question à cases à cocher (« Qu'y a-t-il dehors ? Jardin · Piscine ·
+   Terrasse · Cave · Balcon · Garage · Parking ») ; seules les cases cochées amènent leur question de surface.
+4. L'essentiel d'abord (ce qui se remplit vraiment, mesuré ci-dessus), le facultatif ensuite, avec « Je complète plus
+   tard » : on peut ouvrir la fenêtre à tout moment.
+5. Toujours « Je ne sais pas », toujours la réponse libre (tapée ou dictée ; le modèle la range).
+6. Les coordonnées d'un NOUVEAU mandant ne passent jamais par le chat (tapées dans la fenêtre).
+7. Un repère « question 4 sur ~12 » et « Modifier » sur chaque réponse donnée.
+8. La MÊME ergonomie pour la création (estimation ou actif) et pour l'avis de valeur.
+
+**Le parcours proposé (création ; ~10 questions essentielles, ~18 avec le facultatif)** :
+1. Estimation ou mise en vente ? · type de bien (boutons). 2. Le vendeur : un contact existant (boutons des contacts
+trouvés) ou un nouveau (« à saisir dans la fenêtre ») ; contexte (Vente · Succession · Séparation · Autre) ; délai. 3.
+L'adresse (texte ; les communes du code postal en boutons). 4. Intérieur : surface, pièces, chambres (boutons 1 à 6+),
+niveaux, salles de bains / d'eau, WC ; étage et ascenseur si appartement ; exposition (8 boutons) ; cuisine. 5. Dehors :
+cases à cocher, puis les surfaces des cases cochées (piscine : chauffée, couverte, pool house ; terrain : constructible,
+viabilisé…). 6. Technique : année (ou une période : avant 1948 · 1948-1974 · 1975-2000 · après 2000), DPE proposé,
+copropriété (lots, charges, statut du syndic), libre ou occupé. 7. Équipements : chauffage (individuel / collectif ;
+énergie), assainissement, eau, puis cases à cocher (double vitrage, fibre, volets électriques…). 8. État intérieur et
+extérieur (5 boutons chacun). 9. Le prix : pour une ESTIMATION le prix souhaité par le vendeur ; pour un ACTIF le prix,
+les honoraires et QUI les paie, taxe foncière, charges. 10. Pour un ACTIF : titre et texte PROPOSÉS par l'assistant
+(appel au modèle), boutons Garder · Raccourcir · Réécrire. Fin : la carte récapitulative → la fenêtre s'ouvre remplie →
+SON clic « Créer ». Pour une ESTIMATION créée : « On prépare l'avis de valeur ? » → le parcours de l'avis (état poste
+par poste, points forts et de vigilance, charges, valeur avec le marché montré, argumentaire, avis du conseiller).
+Photos : restent dans la fenêtre (étape 2) ; la composition pièce par pièce se DICTE (« séjour 30 m² au rez-de-chaussée,
+cuisine 12 m²… »), le modèle la range.
+
+**Ce que ça pourrait casser** : rien de la fenêtre (elle reçoit les mêmes cases qu'aujourd'hui par la carte) ; les règles
+par type sont LUES, pas recopiées (sinon deux listes divergeraient) — à vérifier à l'audit fin du moteur ; l'écran de
+l'assistant (partagé) pour les boutons.
