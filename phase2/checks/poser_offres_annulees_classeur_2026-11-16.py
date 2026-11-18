@@ -453,7 +453,14 @@ posees as (
            'classeur_id_unique', d.id_unique,
            'classeur_lot', 'C5 lot B -- %(lot)s',
            'classeur_pose_le', '2026-11-16',
-           'etat_au_classeur', 'Annulee'),
+           -- ⛔ 18/11/2026 : C'ETAIT 'Annulee' EN DUR, pour les QUATRE familles.
+           --   Les 64 lignes du lot « Vente reglee » portaient donc une trace qui
+           --   DIT LE CONTRAIRE de ce que le classeur dit. Personne ne la LIT --
+           --   c'est une trace pure -- mais elle trompe qui relira. L'etat du
+           --   classeur est deja dans le dictionnaire (« etat »), il suffisait
+           --   de le prendre. Les lignes deja posees sont redressees par
+           --   supabase/patch_etat_au_classeur_vente_reglee_2026-11-18.sql
+           'etat_au_classeur', '%(etat)s'),
          now(), now()
     from donnees d
   returning app_affaire_id, app_chaine_id, (payload_json ->> 'classeur_id_unique') as id_unique

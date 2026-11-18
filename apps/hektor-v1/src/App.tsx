@@ -33366,13 +33366,29 @@ function CkChaineLignes({ lignes }: { lignes: AffaireLedgerRow[] }) {
       {lignes.map((l) => {
         const numero = String(l.hektor_affaire_id ?? '').trim()
         const prix = affairePrix(l.montant)
+        // ⭐ 18/11/2026 : LA DATE EFFECTIVE -- cette liste etait le 6e lecteur, et le
+        //   seul encore sur la colonne brute. `l.date` d'une OFFRE porte son DERNIER
+        //   mouvement : nos 661 refus du 11/11 et nos 19 reacceptations du 12/11 y ont
+        //   ecrit la date de NOTRE geste. Le bien 43091 affichait ainsi une offre
+        //   « acceptee le 12/11/2026 » posterieure a sa propre vente du 30/07/2026.
+        // ⛔ On corrige le LECTEUR, jamais la colonne : le run la relit chez Hektor
+        //   chaque nuit (R2_CHAMP_VERS_COLONNE) et la protection lui est NOMMEMENT
+        //   refusee (R2_JUGES_SUR_LE_REGISTRE). Voir dateOffreFaite() dans api.ts.
+        const dEffective = dateDeRangement(l)
+        const dBrute = String(l.date ?? '').slice(0, 10)
+        const dAffichee = dEffective || dBrute
+        // ⚠ ET ON DIT D'OU ELLE VIENT quand elle remplace la colonne : sans ca, on ne
+        //   sait pas si la date lue est celle de Hektor ou celle du journal.
+        const dSource = dEffective && dBrute && dEffective !== dBrute
+          ? `Date de la proposition, lue au journal de l'offre. La fiche Hektor porte ${formatDate(dBrute)}, qui est son dernier mouvement.`
+          : undefined
         return (
           <li key={l.app_affaire_id}>
             <b>{AFFAIRE_GENRE_LABEL[String(l.kind)] ?? l.kind}</b>
             {numero ? ' n° ' + numero : " (enregistrée dans l'app)"}
             {' · ' + affaireEtatLabel(String(l.kind), l.state)}
             {prix ? ' · ' + prix : ''}
-            {l.date ? ' · ' + formatDate(l.date) : ''}
+            {dAffichee ? <>{' · '}<span title={dSource}>{formatDate(dAffichee)}</span></> : ''}
             {l.present_in_hektor === false && numero ? ' · plus dans Hektor' : ''}
           </li>
         )
