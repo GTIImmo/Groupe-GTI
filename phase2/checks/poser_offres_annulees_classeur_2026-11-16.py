@@ -209,6 +209,39 @@ def main() -> int:
 
     cl = client()
 
+    # ── ①bis LES LIGNES DECLAREES HORS JEU -- 18/11/2026 ─────────────────────
+    #
+    # ⛔⛔ POURQUOI CETTE GARDE EXISTE. Le 18/11, Frederic a tranche « A » sur le
+    #   bien 43091 : l'offre et le compromis repartent sur la ligne CHAPUIS, et la
+    #   ligne GIBERT (53ZS73KW) reste SANS AUCUNE affaire -- on ne la cree pas.
+    #   Or le filtre ② ci-dessous ecarte une ligne « quand un role est DEJA relie ».
+    #   Sans role, GIBERT serait redevenue CANDIDATE, et son etat « Annulée »
+    #   l'aurait fait entrer dans « offres annulees » ET « compromis annules » :
+    #   le lot aurait cree l'affaire qu'il a refuse de creer.
+    #
+    # ⭐ UNE EXCLUSION SE DECLARE, elle ne se retient pas de tete -- et elle se
+    #   NOMME dans la sortie, sinon on ne sait pas pourquoi un compte a baisse.
+    #   Voir la memoire exclusion-deliberee-doit-etre-declaree.
+    # ⚠ C'est la SEULE porte qui cree une transaction depuis le classeur (mesure du
+    #   18/11 : un seul fichier contient `app_affaire_id_app_seq`). Si une seconde
+    #   apparait un jour, elle doit lire cette table AUSSI --
+    #   exclusion-a-part-doit-etre-appelee-par-chaque-porte.
+    exclues = {str(x["id_unique"]): x for x in
+               (cl.get("app_classeur_ligne_exclue",
+                       {"select": "id_unique,pourquoi"}) or [])}
+    if exclues:
+        avant = len(cibles)
+        retenues = [c for c in cibles if c["id_unique"] not in exclues]
+        print("=== ①bis LES LIGNES DECLAREES HORS JEU ===")
+        print("   %d declaree(s) en base ; %d ecartee(s) de CE lot"
+              % (len(exclues), avant - len(retenues)))
+        for c in cibles:
+            if c["id_unique"] in exclues:
+                print("   ⛔ %s -- %s" % (c["id_unique"],
+                                          exclues[c["id_unique"]]["pourquoi"]))
+        cibles = retenues
+        print()
+
     # ── ② LA CONFIANCE DU GEL : la garde du projet ───────────────────────────
     liens = par_lots(cl, "app_classeur_lien", "id_unique,app_affaire_id,role,confiance",
                      "id_unique", [c["id_unique"] for c in cibles], citer=True)
