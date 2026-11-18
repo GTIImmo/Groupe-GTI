@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""CE QU'IL A TRANCHE DANS L'ARBITRAGE, LIGNE PAR LIGNE.           18/11/2026
+r"""CE QU'IL A TRANCHE DANS L'ARBITRAGE, LIGNE PAR LIGNE.           18/11/2026
 
     .venv\Scripts\python.exe -X utf8 phase2\checks\arbitrage_ce_qu_il_a_tranche_2026-11-18.py
 

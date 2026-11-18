@@ -2515,11 +2515,19 @@ demande son propre balayage, et il se fait AVANT de generer le patch.**
 
 ### ✅⭐⭐⭐ LE 18/11 -- SON ARBITRAGE DES 41 LIGNES EST FAIT, ET LA DATE D'OFFRE EST AUDITEE
 
-> ⭐ Il a juge les **41 lignes** de la page d'arbitrage une par une, dans la nuit du
-> 17 au 18/11 entre 23:25 et 23:40. **Ses decisions sont dans la base de la page**
+> ⭐ Il a juge les **41 identifiants** de la page d'arbitrage un par un, dans la nuit
+> du 17 au 18/11 entre 23:25 et 23:40. **Ses decisions sont dans la base de la page**
 > (collection `decisions`), relevees et croisees avec le dossier par
-> `phase2/checks/arbitrage_ce_qu_il_a_tranche_2026-11-18.py`. **41 lignes affichees,
-> 41 jugees, aucune laissee de cote.**
+> `phase2/checks/arbitrage_ce_qu_il_a_tranche_2026-11-18.py`. **41 identifiants
+> affiches, 41 juges, aucun laisse de cote.**
+>
+> ⛔⛔ **ET LE CONTROLE DU 18/11 A 06:46 A TROUVE CE QUE CE COMPTE CACHAIT** : la page
+> portait **43 LIGNES** pour 41 identifiants, parce que **NEFHS7JI et 1ESJE28Q en
+> portent DEUX chacun** (commission ET date d'offre) -- et la base de la page est
+> indexee **par identifiant**, donc un seul clic pour deux questions. ➡ **Une ligne
+> reste donc a trancher** : la date d'offre de NEFHS7JI, 3 247 jours d'ecart. Voir D4.
+> ⭐ LA LECON : **un compte d'identifiants n'est pas un compte de lignes** -- et c'est
+> l'identifiant qui portait la decision.
 
 #### ✅ SON VERDICT : 35 FOIS « LE CLASSEUR A RAISON », 6 ECARTEES
 
@@ -2687,6 +2695,46 @@ confiance de l'apparieur est « aucune » ou « a valider » -- c'est la FAMILLE
 
 ⛔⛔ **ET RIEN N'EST CORRIGE EN BASE** : ce sont 4 liens a defaire ou deplacer, plus 2
 dates a poser. C'est une ecriture en production, elle attend son « vas-y ».
+
+#### ✅⭐⭐ LE CONTROLE DE MON PROPRE TRAVAIL -- 18/11 06:46, AVANT LA FIN DU RUN
+
+> Sa demande : *« avant que le run de nuit soit fini, controle ton travail »*.
+> ⛔ **Il a bien fait de le demander : trois de mes chiffres etaient faux.**
+
+```
+   CE QUI ETAIT FAUX, ET C'EST MOI :
+     ⛔ « 41 lignes »          -> 41 IDENTIFIANTS pour **43 LIGNES** (NEFHS7JI et
+                                 1ESJE28Q en portent 2 chacun)
+     ⛔ « 32 commissions »     -> **33**, et 35 verdicts couvrent **36 lignes**
+     ⛔ « 27 des 75 annulees » -> **78** transactions, **14 annulees + 15 refusees**
+     ⭐⭐ ET LA CONSEQUENCE N'EST PAS UN CHIFFRE : une ligne n'est PAS tranchee
+       (la date d'offre de NEFHS7JI, 3 247 jours) parce que la page enregistrait
+       un clic PAR IDENTIFIANT. Voir D4, point 3.
+
+   CE QUI EST VERT, ET MESURE :
+     ✅ git          HEAD = origin/main (f1fa5e1), rien en attente de poussee, et
+                     mes 2 commits ne portent QUE mes 3 fichiers
+     ✅ le plan      CRLF pur (0 LF seul), aucune insertion en double
+     ✅ mes renvois  les 4 lignes du classeur que je cite (3464, 227, 173, 3579)
+                     sont justes, controlees contre LIGNES_A_TRANCHER_ECRAN
+     ✅ les scripts  compilent, **aucune ecriture** (ni INSERT/UPDATE/DELETE, ni
+                     requete HTTP), sqlite ouvert en `mode=ro`
+     ✅ LA BASE      **rien n'a ete ecrit** : les liens des 6 affaires auditees sont
+                     INTACTS (1ESJE28Q 2 . 8Q3LHGZ4 2 . 53ZS73KW 2 . TR42PT5H 1 .
+                     74IL9C8F 3 . QH6672TZ 2), et TR42PT5H pointe toujours 27196
+     ✅ la colonne   `honoraires_entree_app` est **libre sur les 78** (0 remplie) --
+                     elle est utilisee ailleurs (66 lignes d'un chantier anterieur),
+                     donc la pose reste bien ADDITIVE
+```
+
+⚠ **TROUVE EN PASSANT, ET CE N'EST PAS DE MON FAIT** : **10 renvois de ce plan vers
+`affaire_ledger.py` sont PERIMES**, le code ayant bouge (derniere retouche le 17/11).
+Mesure par le symbole, pas par le calcul : `COLONNES_QUE_LE_PUSH_N_ENVOIE_PAS` est
+**l. 3117** (le plan dit 2875 et 3108) · `colonnes = list(…)` **l. 3019** (dit 3002)
+· `for interdite in …` **l. 3213** (dit 3175) · `ledger_rows_for_push` **l. 3208**
+(dit 3413) · et `refresh_ledger` **l. 582** quand le plan dit 3396. ⬜ Les corriger
+est un geste A PART, il touche 10 endroits du plan -- **je ne l'ai pas fait seul**.
+⭐ Les renvois aux lignes du CLASSEUR, eux, sont tous justes : ils ne bougent pas.
 
 #### ✅⭐⭐ LA DATE D'OFFRE : LE MECANISME DU 12/11 EST PROUVE, ET LE PIEGE EST UN NOM
 
@@ -4358,12 +4406,27 @@ D3 ⬜  ETAPE 5 : **5.1 EST SON GESTE** -- lire les Apps Script du classeur, 10 
        (⛔ en filtrant les 14 chaines entierement mortes, via
        app_affaire_compte_encore -- et SANS RIEN retirer en base : 2 chaines sont
        MIXTES) . 5.3 le routeur.
-D4 ⬜⭐⭐ L'ARBITRAGE DES 41 LIGNES -- **IL A TRANCHE LE 18/11, RIEN N'EST POSE** :
-       35 fois « le classeur a raison » (32 commissions, 3 dates d'offre), 6 ecartees.
-       ⛔ LA POSE ATTEND SON « VAS-Y », et deux questions avant : sur quelle
-         transaction de la chaine poser (27 des 75 sont ANNULEES, et sa decision du
-         17/11 sur C2 ecartait les annulees), et 61OW86CS (classeur 1 800 / nous
-         9 800, le seul ratio sous 0,6 -- une faute de frappe possible des deux cotes).
+D4 ⬜⭐⭐ L'ARBITRAGE DU CLASSEUR -- **IL A TRANCHE LE 18/11, RIEN N'EST POSE** :
+       35 verdicts, qui couvrent **36 LIGNES** : 33 commissions + 3 dates d'offre.
+       6 ecartees. ⚠ 43 lignes etaient a trancher pour 41 IDENTIFIANTS -- voir la
+       reserve NEFHS7JI au point 3. (⛔ MES CHIFFRES DU 18/11 AU MATIN ETAIENT FAUX :
+       « 32 commissions », « 41 lignes », « 27 des 75 annulees » -- corriges par le
+       controle de 06:46, qui a compte les LIGNES et non les identifiants.)
+       ⛔ LA POSE ATTEND SON « VAS-Y », et TROIS questions avant :
+         1. sur quelle transaction de la chaine poser -- **78** transactions sont
+            visees, dont **14 ANNULEES et 15 REFUSEES** (mesure du 18/11 06:46 en
+            local, colonne `state`), et sa decision du 17/11 sur C2 ecartait les
+            annulees ;
+         2. 61OW86CS (classeur 1 800 / nous 9 800, le seul ratio sous 0,6 -- une
+            faute de frappe possible des deux cotes) ;
+         3. ⛔⛔ **NEFHS7JI N'EST PAS TRANCHE EN ENTIER.** Cet identifiant porte DEUX
+            lignes du classeur -- commission (ecart 15 026 EUR, x0,17) ET date
+            d'offre (ecart **3 247 JOURS**) -- et la page d'arbitrage enregistrait
+            **un clic PAR IDENTIFIANT, pas par ligne**. Son « le classeur a raison »
+            ne dit donc pas s'il visait la commission, la date, ou les deux.
+            ⭐ 1ESJE28Q est dans le meme cas (2 lignes), mais son « rien » et son
+            commentaire (« apparait 2012 app et le sheet 2024 ») couvrent les deux
+            sans ambiguite -- et l'audit lui a donne raison (lien FAUX).
        ✅⭐⭐⭐ ET L'AUDIT DES 6 ECARTEES EST FAIT (18/11) -- IL TRANCHE LES SIX :
          QUATRE liens sont FAUX (1ESJE28Q, 8Q3LHGZ4, 53ZS73KW, TR42PT5H) et l'audit
          NOMME le bon bien dans les quatre cas ; DEUX de ses « rien » sont a revoir
