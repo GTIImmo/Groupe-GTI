@@ -741,6 +741,44 @@ export async function sendGoogleWorkspaceCrmEmail(input: {
   })
 }
 
+// 18/11/2026 (note étape 4 §63-64) -- la fenêtre e-mail, pièces « DEPUIS L'ORDINATEUR ». Le serveur contrôle le type
+// et la taille (8 Mo, la limite de Gmail) et signe une adresse d'envoi pour UN fichier sous temp/email/<la personne>/ ;
+// le fichier part directement au coffre (pas par Render), puis le serveur RELIT ce qui a été déposé. À l'envoi, un lien
+// de lecture de 15 min est demandé et passé à /gmail/send comme pour un document : le client reçoit le vrai fichier.
+export const gmailPieceTailleMax = 8 * 1024 * 1024
+export const gmailPieceTypesAcceptes = '.pdf,.jpg,.jpeg,.png,.webp,.doc,.docx,.xls,.xlsx,.txt,.zip'
+
+export type GmailPieceOrdinateur = { id: string; nom: string; type: string; libelle: string; taille: number }
+
+export async function deposerPieceEmail(fichier: File): Promise<GmailPieceOrdinateur> {
+  if (!hasSupabaseEnv || !supabase) {
+    return { id: Math.random().toString(16).slice(2).padEnd(32, '0').slice(0, 32), nom: fichier.name, type: fichier.type, libelle: fichier.type, taille: fichier.size }
+  }
+  const depot = await invokeBackendApi<{ id: string; bucket: string; chemin: string; jeton: string; type: string }>(
+    '/google-workspace/gmail/pieces/preparer',
+    { method: 'POST', body: { nom: fichier.name, type: fichier.type || 'application/octet-stream', taille: fichier.size } },
+  )
+  const { error } = await supabase.storage.from(depot.bucket).uploadToSignedUrl(depot.chemin, depot.jeton, fichier, { contentType: depot.type })
+  if (error) {
+    await retirerPieceEmail(depot.id).catch(() => undefined)
+    throw new Error(`« ${fichier.name} » n'a pas pu être envoyé au coffre : ${error.message}`)
+  }
+  const relu = await invokeBackendApi<GmailPieceOrdinateur>(`/google-workspace/gmail/pieces/${encodeURIComponent(depot.id)}/confirmer`, { method: 'POST' })
+  // Le coffre range le fichier sous un nom sans accents ; le client le reçoit sous SON nom d'origine.
+  return { ...relu, nom: fichier.name }
+}
+
+export async function lienPieceEmail(piece: GmailPieceOrdinateur): Promise<GoogleWorkspaceEmailAttachmentInput> {
+  const lien = await invokeBackendApi<{ url: string; nom: string; type: string; taille: number }>(
+    `/google-workspace/gmail/pieces/${encodeURIComponent(piece.id)}/lien`, { method: 'POST' })
+  return { url: lien.url, filename: piece.nom, mimeType: lien.type || undefined, fileSize: lien.taille }
+}
+
+export async function retirerPieceEmail(id: string): Promise<void> {
+  if (!hasSupabaseEnv || !supabase) return
+  await invokeBackendApi<{ retires: number }>(`/google-workspace/gmail/pieces/${encodeURIComponent(id)}`, { method: 'DELETE' })
+}
+
 export type GoogleWorkspaceContactEmailMessage = {
   id: string
   threadId?: string | null
