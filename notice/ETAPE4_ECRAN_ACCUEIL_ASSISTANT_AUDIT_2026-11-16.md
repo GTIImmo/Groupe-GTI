@@ -2741,3 +2741,22 @@ téléphone et les coûts. Les planches « Parcours » de la v18 sont retirées 
 
 **Ce que ça pourrait casser** : rien, c'est une maquette. Pour le code, le conseil du scan touche la consigne de
 l'assistant (partagée par tous les gestes) : une phrase de plus, à n'appliquer qu'aux demandes de création et de rapport.
+
+## 83. CORRECTION du §82 : le scan est la 2e FAÇON DE CRÉER une annonce, PAS une étape du rapport (19/11) — rien codé
+
+**Sa remarque** : « tu te trompes ; je disais que l'assistant propose la deuxième façon d'ajouter une annonce, par le
+système où l'utilisateur ajoute des scans au lieu de remplir l'annonce à la main ; et ce n'est pas dans le rapport
+d'estimation ».
+
+Ce qui est REMPLACÉ dans le §82 :
+- Le scan n'a RIEN à faire dans le rapport : la planche B1 ne propose plus de photographier les pages 8 à 10 ; la
+  série B garde ses ~6 questions (pour quoi, valeur, état, points, charges, textes), le bien venant de sa fiche.
+- Le scan est la 2e des DEUX FAÇONS DE CRÉER que l'écran propose déjà (App.tsx, `createFlow` : « Comment veux-tu la
+  créer ? » → « Manuellement » ou « Par photo, avec l'IA : un agent lit ma fiche et pré-remplit »). L'assistant propose
+  ces deux mêmes façons dans la conversation, la façon par photo en premier (A1) : « Photographier la fiche »,
+  « Joindre », le patron vierge à imprimer ; ou « À la main, par mes réponses » (les questions A3 à A6). A2 reste : la
+  fiche lue, les écritures douteuses en un clic, puis seulement ce qu'elle ne dit pas.
+- Le bouton permanent « Scanner la fiche » de la barre de saisie est RETIRÉ (fonction ajoutée sans demande) ; la barre
+  garde « Joindre », la dictée et l'envoi. Au téléphone : « Je ne sais pas » et « Dicter ».
+
+Toile : version 21, mêmes planches A1-A7, B1-B4 (B1 = le bien lu et « pour quoi faire », B2 = ta valeur).
