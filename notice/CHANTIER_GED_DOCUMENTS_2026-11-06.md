@@ -2968,7 +2968,10 @@ passé (`da9d08f4`). Journal des suppressions : **31 traces, 31 « confirmé che
 63331 et 63147 ; file vide. Les lectures GED de ces pièces restent en base (invisibles, cf. plus haut) -- dont la
 seule « pas_ce_type », dont le document n'existe plus.
 
-**✅ LE RECOURS EST CODÉ (`5b93490`, PAS POSÉ, PAS POUSSÉ)** :
+**✅ LE RECOURS EST EN PRODUCTION (18/11, « Oui, pose et pousse »)** : patch POSÉ (4 contrôles verts : CHECK du journal
+élargi, porte SECURITY DEFINER fermée à anon, `ged_lecture_ia` inchangé « admin », 0 lecture touchée) ; `5b93490` et
+`4e0a82c` POUSSÉS (jusqu'à `4e0a82c` seulement : le commit `527c378` de la session classeur, posé par-dessus, est
+resté chez elle) ; l'écran est EN LIGNE sur Vercel (le bouton est dans le paquet servi). Le détail :
 - `supabase/patch_ged_garder_lecture_2026-11-18.sql` (+ `_INVERSE`, + `_REPETITION`) : la fonction
   `app_ged_lecture_garder` et le CHECK du journal élargi à « lecture ». **Répétition jouée VERTE (8 contrôles,
   rollback)** en utilisateur (Frédéric) : refusée -> lu, sans valeur -> incomplet, 2e fois refusée, pièce sensible
