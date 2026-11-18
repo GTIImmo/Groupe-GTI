@@ -2342,3 +2342,41 @@ le code SERVI EN LIGNE par Vercel (index-*.js) ne contient que la phrase « N DP
 proche » ; un seul appel à la base ADEME dans tout le dépôt (geo.py) ; aucune liste de DPE à l'écran. L'app GÈRE plusieurs DPE
 (elle les trouve et en retient un, par la surface) mais NE DONNE PAS le choix. Cas réels : 62774 (10 DPE à l'adresse),
 24113 et 1670846 (6 chacun).
+
+## 76. Sa décision sur l'audit du §75, et la marche suivante PROPOSÉE (18/11) — rien codé
+
+Ses mots : « Non, ne touche à rien. Il faut donc juste prévoir la possibilité à l'utilisateur de choisir la parcelle et la
+copropriété si nécessaire à partir du bloc assistant, puisque cela est aussi indispensable pour générer un rapport
+d'estimation. Également si un utilisateur donne des informations supplémentaires, autres que les quelques exigées, il faut
+que l'assistant les intègre aussi, donc tous les champs possibles. »
+➡ NON retenus (ne pas relancer de soi-même) : le choix du DPE ; les 8 défauts du §75.
+
+**Mesuré pour « tous les champs possibles » :**
+- Carte « créer » : elle prend les 132 cases du scan + la composition. La fenêtre de création a **171 cases** (groupes
+  `draftAnnonceWizardGroups`) : **114 se remplissent** par ces clés, **57 non**. Parmi les 57 : les 8 diagnostics avec date et
+  commentaire (24 cases), les honoraires acquéreur / vendeur (8), la location (dépôt de garantie, loyer, charge, rendement,
+  occupation : 5), les cases DPE « non concerné / vierge / altitude / année de référence » (4), diagnostiqueur, syndic,
+  indication d'étage, spécification de la climatisation, moyens de visite, masquer le prix, clearing ; et des cases qui ne se
+  dictent pas (n° de dossier, date de création, latitude / longitude, ville et CP publics / privés, diffusable).
+- Carte « avis de valeur » : elle prend toutes les cases VISIBLES de l'éditeur, sauf « Contexte de l'e-mail »
+  (vente / succession). (dpe, ges, chauffage, exposition existent dans le brouillon de l'éditeur mais n'y ont pas de case.)
+  Les caractéristiques du bien ne se changent pas dans l'éditeur : dictées avec l'avis, elles vont à la carte « modifier le
+  bien » (existe, liste fermée).
+
+**Proposé :**
+1. Carte « créer » : une liste de cases de la FENÊTRE en plus de celles du scan (les 57 moins celles qui ne se dictent pas),
+   vérifiées au serveur selon leur forme (nombre, oui / non, liste de choix de la fenêtre, date, texte), posées par
+   `updateDraftAnnonceWizardField` après le passage du scan, et marquées comme les autres.
+2. Carte « avis de valeur » : + « Contexte » (vente / succession) ; et si la personne dicte des caractéristiques du bien,
+   l'assistant propose AUSSI la carte « modifier le bien » (consigne).
+3. Parcelle et copropriété depuis le flux de l'assistant, « si nécessaire » :
+   - parcelle : le sélecteur existe ; ouvert par l'assistant, l'éditeur le montre par-dessus (fait au §74, pas poussé), et le
+     bandeau gagne « Choisir / changer la parcelle » (le même sélecteur, avec les parcelles voisines) ;
+   - copropriété : AUCUN choix n'existe aujourd'hui (le serveur prend la première). À construire : la route renvoie les
+     candidates quand il y a doute (plusieurs, ou trouvée par la rue / la proximité), un sélecteur sur le patron de celui de
+     la parcelle (nom, immatriculation, lots, distance, « Aucune »), le choix mémorisé (`sources.copro`) et repris par le
+     PDF ; la recherche attend la parcelle retenue.
+   - « Si nécessaire » = seulement en cas de doute ; sinon rien n'est demandé.
+**Ce que ça pourrait casser** : (1) la fenêtre de création (partagée avec la saisie à la main) — mêmes fonctions qu'à la
+main, rien de neuf côté Hektor ; (3) la route copropriété est aussi appelée par la fiche (onglet Estimation) : il faut que sa
+réponse reste lisible par l'ancien écran.
