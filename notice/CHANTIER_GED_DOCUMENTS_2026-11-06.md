@@ -2959,3 +2959,25 @@ documents présents). Les retirer = un patch à part (la cascade part du classem
 - écran (`RecuManque.tsx`, liste « Lu par l'IA ») : sur une lecture refusée, « C'est bien ce type : garder la
   lecture », puis relecture des lectures -- les cartes « Ce que dit… » apparaissent ; AUCUN lecteur ne change ;
 - mesuré : 1 seule lecture « pas_ce_type » en base (63331, 17/11) -- le filet servirait d'abord à elle.
+
+**✅ LE MÉNAGE EST FAIT (18/11, 10:22 -> 10:34, « Pousse et vas y »)** : 31 travaux `delete_document_from_hektor`
+(raison `menage_pieces_fictives_18_11`, au nom de Frédéric, la charge du geste de l'écran) -- d'abord 1 seul (63147,
+`acbfdf55`, done) pour éprouver, puis les 30 de 63331. **31/31 done** ; 1 échec « Hektor 500 on context switch » (à
+l'ouverture de la session Hektor, AVANT tout appel de suppression : rien d'effacé) sur l'état des risques, reposé et
+passé (`da9d08f4`). Journal des suppressions : **31 traces, 31 « confirmé chez Hektor »**. Il reste **0 document** sur
+63331 et 63147 ; file vide. Les lectures GED de ces pièces restent en base (invisibles, cf. plus haut) -- dont la
+seule « pas_ce_type », dont le document n'existe plus.
+
+**✅ LE RECOURS EST CODÉ (`5b93490`, PAS POSÉ, PAS POUSSÉ)** :
+- `supabase/patch_ged_garder_lecture_2026-11-18.sql` (+ `_INVERSE`, + `_REPETITION`) : la fonction
+  `app_ged_lecture_garder` et le CHECK du journal élargi à « lecture ». **Répétition jouée VERTE (8 contrôles,
+  rollback)** en utilisateur (Frédéric) : refusée -> lu, sans valeur -> incomplet, 2e fois refusée, pièce sensible
+  refusée, lecture « lu » refusée, écriture directe interdite, 2 lignes au journal à son nom, rien d'autre touché ;
+  vérifié ensuite : rien n'est resté (fonction absente, CHECK d'origine, mise en scène partie). L'inverse s'ARRÊTE si
+  une lecture a déjà été gardée (une décision humaine ne se défait pas en silence).
+- écran : `lib/ged.ts` `gedGarderLecture` ; `RecuManque.tsx`, liste « Lu par l'IA » : le bouton « C'est bien ce type :
+  garder la lecture » sur une lecture refusée (pas pour les 4 types des personnes lus), la pastille dit « · N refusé(s)
+  par l'IA », puis relecture des lectures. Build vert, 13 bancs GED de l'écran verts.
+- ⚠ ORDRE : poser le patch AVANT de pousser l'écran (sinon le bouton appellerait une fonction absente -- sans dégât :
+  il n'y a aujourd'hui AUCUNE lecture refusée à l'écran). ⚠ Pas vu à l'écran : il n'existe plus de cas réel ; la
+  première lecture refusée le montrera.
