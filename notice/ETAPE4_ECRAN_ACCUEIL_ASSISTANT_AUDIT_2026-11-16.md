@@ -2380,3 +2380,34 @@ que l'assistant les intègre aussi, donc tous les champs possibles. »
 **Ce que ça pourrait casser** : (1) la fenêtre de création (partagée avec la saisie à la main) — mêmes fonctions qu'à la
 main, rien de neuf côté Hektor ; (3) la route copropriété est aussi appelée par la fiche (onglet Estimation) : il faut que sa
 réponse reste lisible par l'ancien écran.
+
+## 77. Maquettes VALIDÉES (« OUI ») ; sa demande suivante : l'éditeur de l'avis ÉCLATÉ EN QUESTIONS, chaque réponse GARDÉE — PROPOSÉ (18/11), rien codé
+
+Toile https://claude.ai/artifact/5S2owJCDo2HWTBBefakeGo : planches 4 à 9 (le bilan de l'IA, la parcelle avec les vraies
+voisines IGN de 24935, la copropriété, la dictée rangée, l'éditeur prêt, le téléphone) — validées par « OUI ».
+Ses mots ensuite : « il faudrait éclater la modale éditeur du rapport en plusieurs questions afin de le remplir entièrement ;
+chaque question répondue est mémorisée dans la modale même si on ferme, et si on passe par l'éditeur on retrouve ces réponses ».
+
+**Mesuré** : sur les 37 avis générés (`generate_estimation_pdf` done), 10 ont un barème d'état, 10 un avis du conseiller,
+8 des points forts, 7 un argumentaire, 5 une taxe foncière : le PDF part le plus souvent avec des « à compléter ».
+La table `app_dossier_estimation` est lisible par TOUT compte connecté (règle `app_dossier_estimation_read`, `true`).
+
+**Proposé (planches 10-11)** :
+1. Le parcours en 10 questions, dans l'ordre du métier : pour quoi faire (vente / succession) · le bien est-il juste (ce que
+   dit la fiche ; une correction part par « Modifier le bien ») · la parcelle (et la copropriété si besoin) · l'état général
+   (étoiles + libellé + appréciation) · l'état poste par poste (8 postes, 4 boutons, une précision) · points forts et de
+   vigilance · les charges de l'année · la valeur (le marché DVF montré, la fourchette, l'argumentaire) · ton avis de
+   conseiller · l'envoi (PDF seul, ou au propriétaire). À gauche la liste avec l'état de chaque question (répondue, dictée par
+   l'assistant, en cours, à faire) ; « Je ne sais pas » partout ; « Voir tout l'avis » = les 6 onglets d'aujourd'hui sur les
+   MÊMES réponses.
+2. Chaque réponse ENREGISTRÉE dès le clic, pour le bien ; à la réouverture (fiche, écran Estimations ou assistant) : « Tu en
+   étais à la question 6 sur 10 », la liste des réponses (modifiables), et ce que le PDF montrera (pages complètes, en partie,
+   à compléter).
+3. À l'ouverture : la saisie en cours, sinon le dernier avis, sinon la fiche scannée, sinon le prix ± 5 % ; la dictée de
+   l'assistant y répond (marquée « dicté »).
+4. Stockage : une TABLE À PART (pas `app_dossier_estimation`), lisible et modifiable seulement par ceux qui ont le droit de
+   travailler sur le bien ; une ligne par bien ; qui a répondu et quand. ⚠ Patch en base = son accord.
+5. Deux personnes sur le même avis : la dernière réponse gagne ; l'éditeur dit qui et quand.
+**Ce que ça pourrait casser** : l'éditeur est partagé (fiche + écran Estimations) — tout le monde aura le parcours ;
+l'enregistrement au clic est une ÉCRITURE en base nouvelle (aujourd'hui l'éditeur n'écrit que les sources et le PDF) ; le
+PDF et le travail du worker ne changent pas (la charge reste celle de « Générer »).
