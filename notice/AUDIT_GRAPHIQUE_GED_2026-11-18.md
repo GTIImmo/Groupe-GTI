@@ -115,3 +115,60 @@ bas. **C'est pour ça que l'outil « ne se voit pas » : son intelligence est ra
 - Fenêtre de dépôt (tous ses états, badges, aperçu, bande « pas fini », panneau photo) -> même structure, recolorée.
 - Fenêtre « Ce que dit… » (groupes, plaques, verbes, « page N », notes, « Changer », pied, « Enregistrer… ») -> même
   structure ; la plaque du document en papier ; la page lue surlignée.
+
+## 7. VERSION 2 (18/11 après-midi) — ses quatre retours
+
+> *« Ajoute plus de cas, pas uniquement le compromis : aussi un scan de plusieurs documents que l'IA découpe d'abord,
+> puis ces fenêtres. On a décidé que désormais toutes les corrections sont réellement faites dans l'app, on n'attend
+> plus la période de test : ton visuel avec « à valider » me fait douter. Rehausse encore le niveau visuel, plus
+> moderne, mais garde le principe. La liste des documents doit rester facilement visible : moins de place, des
+> boutons à déplier. Je veux un vrai travail de société missionnée. »*
+
+**1. Plus de cas — une histoire suivie, sur le même bien (18849, au compromis)** : le vendeur envoie un scan de 9 pages.
+- 2a : la fenêtre de dépôt voit **3 pièces** (« Ce fichier réunit 3 pièces : taxe foncière (p. 1 à 2), titre de
+  propriété (p. 3 à 7), DPE (p. 8 à 9) ») — l'aperçu montre les **9 pages, chacune marquée de sa pièce** ;
+  « Séparer en 3 fichiers » ;
+- 2b : 3 lignes « Scan dossier vendeur - partie 1 / 2 / 3 », type proposé par l'IA, à vérifier (c'est ce que fait le
+  code : `separer`, DepotDocuments.tsx l. 386) — les feuilles tombent en éventail ;
+- 2c : envoyés ; « L'IA lit les valeurs… », puis la feuille de chaque pièce se remplit (année et montant de la taxe ;
+  vente du 12/05/2011, 2 propriétaires ; classes, consommation, date du DPE) ;
+- 3a « Ce que dit le compromis » (corriger la transaction) et **3b « Ce que dit le DPE » (remplir la fiche)** — un même
+  composant, ses deux destinations ; « Enregistrer » montre le résultat écrit, pour de vrai.
+
+**2. Le doute « à valider » — tranché par le vocabulaire et par une fusion d'affichage** :
+- plus aucun mot d'essai : chaque carte dit **où part la correction** (« part chez Hektor », « sur la fiche, puis chez
+  Hektor ») et le panneau le dit en tête : « Chaque correction s'écrit pour de vrai, là où elle le dit » ;
+- les boutons disent le geste : « Voir et corriger » (une valeur qui diffère), « Voir et ajouter » (une case vide) —
+  ⚠ CHANGEMENT DE TEXTE (aujourd'hui « Voir et trancher ») ;
+- **l'alerte liée à une ligne de la fenêtre n'a plus sa propre carte** : son jugement se déduit déjà du choix
+  (`verdictDesChoix`, « plus de double clic » depuis le 17/11) ; la carte du compromis le dit (« l'alerte liée se note
+  d'elle-même »). Sur 62850, la même date apparaissait DEUX fois (« À remplir » et « À regarder »), c'est ce doublon qui
+  faisait « validation de test ». ⚠ CHANGEMENT D'AFFICHAGE, à trancher ;
+- les alertes SANS fenêtre gardent « Vrai / Faux / Déjà su », en petit, sous le titre « Noter l'alerte » : c'est la
+  mesure du morceau 10, en production jusqu'au 30/11. ⚠ **À TRANCHER PAR FRÉDÉRIC : la garder après le 30/11, ou la
+  retirer** (si « on n'attend plus la période de test », elle n'a plus d'objet).
+
+**3. Plus moderne, même principe (la feuille qui se remplit)** : surfaces blanches à ombre douce sur fond pierre,
+segments à la iOS pour les filtres et onglets, barres de progression des moments, **le panneau « À traiter » en encre**
+(le langage des fenêtres de dépôt et de bilan, qui ont déjà un bandeau encre) avec ses accents magenta, la feuille de
+papier gardée pour tout ce que l'IA a lu, typographie resserrée (Plus Jakarta Sans 800 / Hanken Grotesk), chiffres
+tabulaires.
+
+**4. La liste des documents toujours visible — c'est le changement d'ergonomie majeur** :
+- **la liste DEVIENT le dossier** : les documents sont rangés sous les pièces attendues, par moment (Compromis, Offre,
+  Mise en vente, Prise de mandat), plus « Autres documents » pour ceux qui ne correspondent à aucune pièce ; chaque
+  moment se **déplie** (le moment en cours ouvert, les autres repliés) ;
+- une ligne par document (56 px) : sa pièce, deux valeurs lues, son état ; **un clic la déplie** : la feuille avec tout
+  ce que l'IA a lu, et les gestes Ouvrir, Signature, Supprimer, Revoir ce qu'il dit — les boutons ne prennent plus de
+  place sur chaque ligne ;
+- les pièces manquantes sont des lignes « Déposer » à leur place, plus un mur de tuiles ; « selon le cas » et « bonne
+  pratique » tiennent en une ligne chacun ;
+- les filtres À préparer / Signés / Cloud passent la liste à plat (comme aujourd'hui) ; « Tous » montre le dossier rangé.
+- Effet mesuré sur la maquette : au compromis de 62850, le bloc « Le dossier » + la liste tenaient sur ~2,5 hauteurs
+  d'écran ; ici, moments + liste du moment en cours + « À traiter » tiennent sur ~1.
+
+**Anti-perte, ce qui change par rapport au §6** : les feuilles et l'ancienne liste fusionnent (mêmes informations, mêmes
+gestes, à un clic) ; « Lu par l'IA » est remplacé par les valeurs sur chaque ligne et la feuille dépliée ; les boutons
+« Voir et trancher » sont renommés ; la carte d'alerte liée à une fenêtre disparaît (son jugement reste, déduit).
+Maquette, côté démonstration seulement : « Rejouer l'arrivée » et le clic « Voir et ajouter » qui fait voler la valeur
+dans la case (dans l'app, ce vol suit l'enregistrement de la fenêtre).
