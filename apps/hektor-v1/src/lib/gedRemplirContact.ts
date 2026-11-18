@@ -21,6 +21,9 @@ export type ContactEtatCivil = {
   // lot F (18/11) : la PREMIÈRE personne d'un couple (nature_fiche « couple », sans rôle) -- sa fiche Hektor est le
   // formulaire de couple, que le worker relit et renvoie avec le bloc du conjoint intact
   premiereDuCouple?: boolean
+  // lot G (18/11) : le CONJOINT d'un couple (nature et rôle « conjoint ») -- NOTRE numéro de sa fiche principale, par
+  // laquelle sa naissance part chez Hektor (bloc _m2) ; null pour tout autre contact
+  conjointDe?: string | null
   naissance: string | null
   lieu: string | null
   situation: string | null
@@ -135,7 +138,9 @@ export function bilansPersonnes(contacts: ContactEtatCivil[], personnesDuBien: P
   //   640 noms sur 6 597 premières fiches, mesuré le 18/11) ne se propose pas : son premier prénom ne dit pas QUI est la
   //   première personne chez Hektor -- la pièce du conjoint finirait sur la fiche de l'autre
   const fusionne = (s: string) => /( et |\/|&|\+)/i.test(` ${s} `)
-  const eligibles = contacts.filter((c) => (c.personneSeule || (c.premiereDuCouple === true && !fusionne(c.prenom) && !fusionne(c.nom))) && /^\d+$/.test(c.contactId))
+  // lot G : le conjoint (sa fiche à lui, liée à sa principale) se propose aussi -- sa naissance seulement
+  const conjoint = (c: ContactEtatCivil) => /^\d+$/.test(String(c.conjointDe ?? '')) && c.conjointDe !== c.contactId
+  const eligibles = contacts.filter((c) => (c.personneSeule || ((c.premiereDuCouple === true || conjoint(c)) && !fusionne(c.prenom) && !fusionne(c.nom))) && /^\d+$/.test(c.contactId))
   const lus = docs.filter((d) => d.lecture.etat === 'lu' && DOC_PERSONNE[d.lecture.typeCode])
     .map((d) => ({ d, personnes: personnesDe(d) }))
   // la personne lue dans ce document pour ce contact, si elle se rattache sans ambiguïté
@@ -174,8 +179,9 @@ export function bilansPersonnes(contacts: ContactEtatCivil[], personnesDuBien: P
           lignes.push(ligneCase('birth_place', 'Lieu de naissance', lue.lieu, lue.lieu, c.lieu, (f) => normaliserTexte(f) === normaliserTexte(lue.lieu as string), (f) => f))
         }
       }
-      // la situation de famille : la fiche de renseignements seulement, et seulement un code Hektor
-      const code = genre === 'renseignements' && lue.situation ? SITUATION_HEKTOR[lue.situation] : undefined
+      // la situation de famille : la fiche de renseignements seulement, et seulement un code Hektor ; ⛔ jamais pour un
+      // conjoint (une seule situation par couple chez Hektor, portée par la principale)
+      const code = genre === 'renseignements' && lue.situation && !conjoint(c) ? SITUATION_HEKTOR[lue.situation] : undefined
       if (code) lignes.push(ligneCase('marital_status', 'Situation de famille', SITUATION_TEXTE[code], code, c.situation, (f) => f === code, (f) => SITUATION_TEXTE[f] ?? f))
     }
     if (lignes.length) {

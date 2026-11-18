@@ -3381,3 +3381,41 @@ vérifie leur retrait) ; témoins inverses -- première fusionnée proposée, la
 contradictoires, le conjoint proposé -> rouges ; les 13 fichiers d'essais GED verts ; `npm run build` vert.
 ⚠ **Limite** : l'état civil n'est relu que pour celui qui peut remplir (comme avant) -- les autres ne voient pas ces fenêtres.
 ⏳ **Épreuve réelle** : une pièce SPÉCIMEN sur une personne seule d'essai, puis sur la première d'un couple d'essai (à recréer).
+Commit `580eff5`.
+
+### 12.47 LE LOT G -- la naissance du CONJOINT, chez nous ET chez Hektor (18/11) -- ÉCRIT, patch POSÉ, worker PAS redémarré
+
+**Audit avant d'écrire** : (1) l'attente d'un contact (`app_contact_enqueue_due_pushes`) passe TOUTE la saisie au worker (aucune
+liste blanche) ; (2) le contrôle au retour des contacts (8a5, `app_contact_champs_modif`) ne compare QUE nom, coordonnées et
+commentaire -- il ne criera pas sur la naissance, mais ne la contrôlera pas non plus (Hektor ne renvoie jamais les dates de
+naissance, `contrat_autorite.py:63`) ; (3) 329 conjoints « nature ET rôle conjoint », TOUS nommés par leur principale ; 45 autres
+« conjoint » sans rôle, 3 seulement liés -> écartés.
+**Fait** :
+- **worker** (`console_job_worker.js`) : `normalizeHektorContactPayload` lit `spouse_birth_date` / `spouse_birth_place` (jamais une
+  valeur vide) ; `applyHektorContactIdentityValues` les pose dans `dateNaissance_m2` / `lieuNaissance_m2` -- seulement dans le
+  bloc d'un COUPLE, et seulement si le formulaire RELU porte la case ; le compte rendu les dit. Essai pur
+  `Console/test_couple_naissance_conjoint.js` **11 OK** (extrait les vraies fonctions, sans réseau) ; témoins inverses -- sans la
+  garde du formulaire relu, une valeur vide part, la naissance écrase celle de la première -> en échec ; voisin
+  `test_couple_modification.js` vert.
+- **base** : `supabase/patch_ged_lotG_naissance_conjoint_2026-11-18.sql` (+ `_INVERSE`, `_REPETITION`) --
+  `app_edit_conjoint_optimistic` pose `birth_date` / `birth_place` sur la fiche du conjoint ; ⛔ une naissance SEULE sur une case
+  de conjoint « vide » ne nomme personne -> refus `naissance_sans_conjoint_nomme`. **Répétition (rien ne reste)** sur un VRAI couple
+  (10335289 / 10335292) : 01 ok · 02 conjoint=ok · 03 principale=ok · 04 vide=ok · 05 seule=ok · 06 anon=ok · 07 l'ancien envoi
+  marche toujours=ok · 08 l'inverse rend l'empreinte d'origine=ok ; vérifié après : empreinte `e5ac0baa…` et fiche intactes.
+  ✅ **POSÉ en production le 18/11 à ~19:00** (Frédéric : « allez jusqu'à G ») : empreinte `8bc3ff858ec29401c11b9e726de44ed5`,
+  `anon` non, `authenticated` oui.
+- **écran** : `api.ts` (`spouseBirthDate` / `spouseBirthPlace` -> `spouse_birth_*` ; le geste du conjoint porte `birthDate` /
+  `birthPlace` et rend `raison`), `ged.ts` (l'état civil relu porte `hektor_couple_contact_id`), `gedRemplirContact.ts` (le
+  conjoint « nature ET rôle » se propose : naissance seulement, ⛔ jamais la situation de famille -- une seule par couple),
+  `RecuManque.tsx` (`conjointDe`), `App.tsx` (`appliquerBilanPersonne` : relit le conjoint ET sa principale ; CHEZ NOUS d'abord
+  par `editConjointOptimistic` -- s'il refuse, RIEN ne part chez Hektor -- puis la principale par `editContactOptimistic` avec la
+  seule naissance du conjoint et son nom actuel). `test_ged_remplir_contact` **74 VERT** (8 neufs, section ⑦) ; témoins inverses
+  rouges ; les essais GED verts ; `npm run build` vert.
+⛔ **PAS FAIT -- le redémarrage des 4 services worker** : tenté par moi à 19:00, file vide, REFUSÉ par Windows (droits) -- et la
+mémoire le dit : c'est Frédéric qui redémarre. Rien n'est cassé (les services tournent sur l'ancien code). ⚠ **ORDRE OBLIGATOIRE** :
+redémarrer AVANT de pousser l'écran -- sinon un envoi `spouse_birth_*` serait « fait » par l'ancien worker sans rien écrire chez
+Hektor (clé ignorée, en silence). Commande (PowerShell admin, file vide) :
+`Restart-Service HektorConsoleWorkerAdmin,HektorConsoleWorkerActions,HektorConsoleWorkerDocuments,HektorConsoleWorkerSyncLight -Force`
+puis comparer `CreationDate` des 4 `node.exe` à l'heure du fichier.
+⏳ **Épreuve réelle** : un couple FICTIF à recréer (20000031/32 n'existe plus) et une pièce SPÉCIMEN du conjoint : la date doit
+arriver sur `dateNaissance_m2` de la principale chez Hektor ET sur la fiche du conjoint chez nous.

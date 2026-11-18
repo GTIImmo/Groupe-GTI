@@ -10982,6 +10982,9 @@ export type HektorContactIdentityInput = {
   spouseAddress?: string | null
   spousePostalCode?: string | null
   spouseCity?: string | null
+  // GED lot G (18/11/2026) : la naissance du conjoint (bloc _m2 du formulaire de couple, écrit par le worker)
+  spouseBirthDate?: string | null
+  spouseBirthPlace?: string | null
   email?: string | null
   phone?: string | null
   phoneSecondary?: string | null
@@ -11838,6 +11841,8 @@ function hContactPayload(contact: HektorContactIdentityInput) {
     spouse_first_name: cleanOptionalText(contact.spouseFirstName),
     spouse_email: cleanOptionalText(contact.spouseEmail),
     spouse_phone: cleanOptionalText(contact.spousePhone),
+    spouse_birth_date: cleanOptionalText(contact.spouseBirthDate),
+    spouse_birth_place: cleanOptionalText(contact.spouseBirthPlace),
     spouse_address: cleanOptionalText(contact.spouseAddress),
     spouse_postal_code: cleanOptionalText(contact.spousePostalCode),
     spouse_city: cleanOptionalText(contact.spouseCity),
@@ -11962,14 +11967,17 @@ export async function editContactOptimistic(input: {
  *  RPC `app_edit_conjoint_optimistic` (patch supabase/patch_couple_phase3e_conjoint_optimiste_2026-11-02.sql). */
 export async function editConjointOptimistic(input: {
   contactId: string
-  conjoint: { lastName?: string; firstName?: string; email?: string; phone?: string }
-}): Promise<{ ok: boolean }> {
+  conjoint: { lastName?: string; firstName?: string; email?: string; phone?: string; birthDate?: string; birthPlace?: string }
+}): Promise<{ ok: boolean; raison?: string }> {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
   await requireSupabaseUserId()
   const champs: Record<string, string> = {}
   if (input.conjoint.lastName) champs.spouse_last_name = input.conjoint.lastName
   if (input.conjoint.firstName) champs.spouse_first_name = input.conjoint.firstName
   if (input.conjoint.email) champs.spouse_email = input.conjoint.email
+  // GED lot G (18/11) : la naissance du conjoint (patch_ged_lotG_naissance_conjoint_2026-11-18.sql)
+  if (input.conjoint.birthDate) champs.spouse_birth_date = input.conjoint.birthDate
+  if (input.conjoint.birthPlace) champs.spouse_birth_place = input.conjoint.birthPlace
   if (input.conjoint.phone) champs.spouse_phone = input.conjoint.phone
   if (!Object.keys(champs).length) return { ok: true }
   const { data, error } = await supabase.rpc('app_edit_conjoint_optimistic', {

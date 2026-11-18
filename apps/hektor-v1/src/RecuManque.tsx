@@ -261,6 +261,8 @@ export function RecuManque({
       contactId: String(r.hektor_contact_id), nom: r.nom ?? '', prenom: r.prenom ?? '',
       personneSeule: c.seul && r.nature_fiche === 'personne_seule' && !r.couple_role,
       premiereDuCouple: r.nature_fiche === 'couple' && !r.couple_role,
+      // lot G : le conjoint d'un couple, par sa fiche principale
+      conjointDe: r.nature_fiche === 'conjoint' && r.couple_role === 'conjoint' ? (r.hektor_couple_contact_id ?? null) : null,
       naissance: r.birth_date, lieu: r.birth_place, situation: r.marital_status,
     }] : []
   }) : []), [etatCivil, contactsDuBien])

@@ -19536,6 +19536,10 @@ function normalizeHektorContactPayload(payload, options = {}) {
     : cleanString(source.postal_code || source.code_postal || source.code);
   const rawBirthDate = firstDefined(source, ["birth_date", "date_naissance", "dateNaissance", "birthDate"]);
   const rawBirthPlace = firstDefined(source, ["birth_place", "lieu_naissance", "lieuNaissance", "birthPlace"]);
+  // GED lot G (18/11/2026) : la naissance du CONJOINT d'un couple (bloc _m2 du formulaire de couple). Une valeur VIDE
+  // ne part pas : elle ne peut rien effacer chez Hektor.
+  const rawSpouseBirthDate = firstDefined(source, ["spouse_birth_date", "spouseBirthDate", "dateNaissance_m2"]);
+  const rawSpouseBirthPlace = firstDefined(source, ["spouse_birth_place", "spouseBirthPlace", "lieuNaissance_m2"]);
   const rawMaritalStatus = firstDefined(source, ["marital_status", "statut_matrimonial", "maritalStatus"]);
   const crmMandateSummaryEnabled = normalizeOptionalBoolean(firstDefined(source, [
     "crm_mandate_summary_enabled",
@@ -19594,6 +19598,8 @@ function normalizeHektorContactPayload(payload, options = {}) {
     city,
     birthDate: rawBirthDate !== undefined ? normalizeOptionalFrenchDate(rawBirthDate) : null,
     birthPlace: rawBirthPlace !== undefined ? cleanString(rawBirthPlace) || "" : null,
+    spouseBirthDate: cleanString(rawSpouseBirthDate) ? normalizeOptionalFrenchDate(rawSpouseBirthDate) : null,
+    spouseBirthPlace: cleanString(rawSpouseBirthPlace) || null,
     maritalStatus: rawMaritalStatus !== undefined ? cleanString(rawMaritalStatus) || "" : null,
     qualification,
     contactStatus,
@@ -19749,6 +19755,10 @@ function applyHektorContactIdentityValues(values, contact, options = {}) {
         replaceParam(values, "telephone_m2[]", contact.spousePhone || "");
       }
     }
+    // GED lot G (18/11/2026) : la naissance du conjoint -- seulement si le formulaire RELU porte la case (un formulaire
+    // de couple : relevé sur 606104, 54 champs dont dateNaissance_m2 / lieuNaissance_m2), et jamais une valeur vide.
+    if (contact.spouseBirthDate && values.has("dateNaissance_m2")) values.set("dateNaissance_m2", contact.spouseBirthDate);
+    if (contact.spouseBirthPlace && values.has("lieuNaissance_m2")) values.set("lieuNaissance_m2", contact.spouseBirthPlace);
     if (contact.spouseAddress !== null && contact.spouseAddress !== undefined) values.set("adresse_m2", contact.spouseAddress || "");
     if (contact.spouseCity !== null && contact.spouseCity !== undefined) values.set("villeprivee", contact.spouseCity || "");
     if (contact.spousePostalCode !== null && contact.spousePostalCode !== undefined) values.set("codeprivee", contact.spousePostalCode || "");
@@ -20532,6 +20542,8 @@ async function updateHektorContactIdentity(job, contactId, payload) {
       conjoint_prenom: contact.spouseFirstName,
       conjoint_email: contact.spouseEmail,
       conjoint_telephone: contact.spousePhone,
+      conjoint_date_naissance: contact.spouseBirthDate,
+      conjoint_lieu_naissance: contact.spouseBirthPlace,
       adresse: contact.address,
       code: contact.postalCode,
       ville: contact.city,

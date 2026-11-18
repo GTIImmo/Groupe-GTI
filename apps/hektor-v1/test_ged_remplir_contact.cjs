@@ -129,13 +129,35 @@ const debutF = app.indexOf('const appliquerBilanPersonne')
 const ecr = debutF >= 0 ? app.slice(debutF, app.indexOf('const appliquerBilan = ', debutF)) : ''
 voir(/loadContactsEtatCivil\(\[id\], 'app'\)/.test(ecr) && ecr.indexOf('loadContactsEtatCivil') < ecr.indexOf('editContactOptimistic') && /\['personne_seule', 'couple'\]/.test(ecr) && /!relu\.couple_role/.test(ecr),
   'l\'écriture RELIT chaque contact : actif, personne seule ou première d\'un couple (jamais un conjoint)')
-voir(/case_changee/.test(ecr) && /l\.temoin == null/.test(ecr) && /lastName: nom/.test(ecr) && /sendRgpdEmail: false/.test(ecr) && (ecr.match(/await editContactOptimistic\(/g) || []).length === 1,
+voir(/case_changee/.test(ecr) && /l\.temoin == null/.test(ecr) && /lastName: nom/.test(ecr) && /sendRgpdEmail: false/.test(ecr) && (ecr.match(/await editContactOptimistic\(/g) || []).length === 2
+  && /if \(principaleId && ecrites\.length\) \{[\s\S]*?await editContactOptimistic\([\s\S]*?continue\n\s*\}\n\s*if \(ecrites\.length\) \{/.test(ecr),
   'témoin : une case changée depuis l\'ouverture n\'est pas écrite ; le nom actuel joint ; RGPD coupé ; UN geste par contact')
 const appelF = (ecr.match(/await editContactOptimistic\(\{.*/) || [''])[0]
 voir(appelF.length > 0 && !/\b(address|postalCode|city|email|phone|firstName|civility|comments)\b/.test(appelF), 'TÉMOIN : rien d\'autre n\'est envoyé (ni coordonnées, ni prénom, ni civilité)')
 voir(/if \(estGenrePersonne\(b\.genre\)\) return appliquerBilanPersonne\(b, choix\)\s*\n\s*if \(estGenreFiche\(b\.genre\)\)/.test(app), 'l\'aiguillage : les pièces des personnes AVANT la fiche du bien (estGenreFiche les compte aussi)')
 voir(/c\.members\.map\(\(m\) => \(\{ id: String\(m\.sourceId/.test(app), 'chaque membre d\'un couple fusionné à l\'écran donne SA fiche')
 voir(/const cleBilan = \(b: Bilan\) => `\$\{b\.genre\}\|\$\{b\.lectureId \?\? ''\}`/.test(recu) && !/setBilanOuvert\(b\.genre\)/.test(recu), 'deux pièces d\'identité = deux fenêtres : la fenêtre ouverte se repère par son genre ET sa lecture')
+
+console.log('⑦ lot G (18/11) : la naissance du CONJOINT, par la fiche principale')
+const CJ = (x = {}) => C({ contactId: '20000032', nom: 'COUPLE', prenom: 'Deux', personneSeule: false, conjointDe: '20000031', ...x })
+const g0 = bilansPersonnes([P1(), CJ()], DUCOUPLE, [cni('COUPLE', 'Deux', '1982-07-14', 'Saint-Étienne', [], 0, 'CNI Deux.pdf')], AUJ)
+voir(g0.length === 1 && LB(g0[0], 'P.birth_date.20000032').etat === 'ajouter' && LB(g0[0], 'P.birth_place.20000032').valeur === 'Saint-Étienne' && !LB(g0[0], 'P.birth_date.20000031'),
+  '⭐ la pièce du CONJOINT se rattache à SA fiche (pas à la principale) : date et lieu à ajouter')
+const g1 = bilansPersonnes([P1(), CJ()], DUCOUPLE, [fiche('COUPLE', 'Deux', '1982-07-14', null, 'marie')], AUJ)
+voir(g1.length === 1 && LB(g1[0], 'P.birth_date.20000032') && !LB(g1[0], 'P.marital_status.20000032'), '⛔ jamais la situation de famille d\'un conjoint (une seule par couple, portée par la principale)')
+voir(bilansPersonnes([CJ({ conjointDe: '20000032' })], DUCOUPLE, [cni('COUPLE', 'Deux', '1982-07-14', 'Lyon')], AUJ).length === 0 && bilansPersonnes([CJ({ conjointDe: null })], DUCOUPLE, [cni('COUPLE', 'Deux', '1982-07-14', 'Lyon')], AUJ).length === 0,
+  'TÉMOIN : un conjoint sans principale (ou qui se pointe lui-même) -> rien')
+const debutG = app.indexOf('const appliquerBilanPersonne')
+const ecrG = debutG >= 0 ? app.slice(debutG, app.indexOf('const appliquerBilan = ', debutG)) : ''
+voir(/relu\.nature_fiche === 'conjoint' && relu\.couple_role === 'conjoint'/.test(ecrG) && /principale\.nature_fiche === 'couple' && !principale\.couple_role/.test(ecrG),
+  'l\'écriture relit le conjoint ET sa principale (active, première d\'un couple)')
+voir(ecrG.indexOf('await editConjointOptimistic(') > 0 && ecrG.indexOf('await editConjointOptimistic(') < ecrG.indexOf('lastName: nom, personType: \'personne_seule\', sendRgpdEmail: false, ...spouse')
+  && /if \(!r\?\.ok\)/.test(ecrG) && /conjoint_refuse/.test(ecrG), 'chez NOUS d\'abord (la fonction du conjoint) ; si elle refuse, RIEN ne part chez Hektor')
+const appelG = (ecrG.match(/await editContactOptimistic\(\{ contactId: principaleId.*/) || [''])[0]
+voir(appelG.length > 0 && !/\b(address|postalCode|city|email|phone|firstName|civility|comments|spouseFirstName|spouseLastName)\b/.test(appelG), 'TÉMOIN : chez Hektor, la principale n\'envoie QUE la naissance du conjoint (son nom actuel joint)')
+const apiSrc = fs.readFileSync(path.join(__dirname, 'src/lib/api.ts'), 'utf8')
+voir(/spouse_birth_date: cleanOptionalText\(contact\.spouseBirthDate\)/.test(apiSrc) && /champs\.spouse_birth_date = input\.conjoint\.birthDate/.test(apiSrc), 'le geste porte spouse_birth_date / spouse_birth_place (worker, fonction du conjoint)')
+voir(/hektor_couple_contact_id'\)/.test(fs.readFileSync(path.join(__dirname, 'src/lib/ged.ts'), 'utf8')) && /conjointDe: r\.nature_fiche === 'conjoint' && r\.couple_role === 'conjoint'/.test(recu), 'l\'état civil relu porte le lien de couple ; seul un conjoint « nature ET rôle » se propose')
 
 // ⑤ (16/11) LES DEUX NUMÉROS, trouvés par l'épreuve réelle : l'écran donne le numéro HEKTOR (605947), notre clé est le
 // nôtre (20000009) ; 0 égaux sur 94 956. La lecture est rejouée contre une fausse base qui garde les deux colonnes.

@@ -12258,8 +12258,14 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
     for (const id of [...new Set(prises.map((l) => contactDeLaLigne(l.cle) as string))]) {
       const siennes = prises.filter((l) => contactDeLaLigne(l.cle) === id)
       const relu = (await loadContactsEtatCivil([id], 'app'))?.get(id)
-      const actif = relu && relu.archive !== true && !relu.couple_role && ['personne_seule', 'couple'].includes(String(relu.nature_fiche ?? ''))
-      const nom = String(relu?.nom ?? '').trim()
+      // lot G : un CONJOINT (nature et rôle « conjoint ») s'écrit par SA FICHE PRINCIPALE, relue elle aussi
+      const principaleId = relu && relu.nature_fiche === 'conjoint' && relu.couple_role === 'conjoint' && /^\d+$/.test(String(relu.hektor_couple_contact_id ?? '')) && relu.hektor_couple_contact_id !== id
+        ? String(relu.hektor_couple_contact_id) : null
+      const principale = principaleId ? (await loadContactsEtatCivil([principaleId], 'app'))?.get(principaleId) : undefined
+      const actif = relu && relu.archive !== true && (principaleId
+        ? !!principale && principale.archive !== true && principale.nature_fiche === 'couple' && !principale.couple_role
+        : !relu.couple_role && ['personne_seule', 'couple'].includes(String(relu.nature_fiche ?? '')))
+      const nom = String((principaleId ? principale?.nom : relu?.nom) ?? '').trim()
       if (!relu || !actif || !nom) {
         for (const l of siennes) await noter(l, 'echec', { motif: !relu ? 'contact_illisible' : !actif ? 'pas_personne_seule_ni_premiere' : 'contact_sans_nom', nature_fiche: relu?.nature_fiche ?? null, couple_role: relu?.couple_role ?? null })
         dit.push(`rien écrit pour ${siennes.map((l) => l.libelle).join(', ')} : la fiche du contact n'a pas pu être relue, ou elle n'est plus une personne seule ni la première d'un couple`)
@@ -12269,6 +12275,28 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
       const changees = siennes.filter((l) => (l.temoin == null ? !(l.champFiche === 'birth_date' ? caseVide(actuelle(l)) : !String(actuelle(l) ?? '').trim()) : String(actuelle(l) ?? '').trim() !== l.temoin))
       const ecrites = siennes.filter((l) => !changees.includes(l))
       for (const l of changees) await noter(l, 'echec', { motif: 'case_changee', valeur_fiche: actuelle(l) ?? null })
+      // lot G : le conjoint -- CHEZ NOUS d'abord (sa fiche, par la fonction du conjoint : elle refuse si le lien de couple
+      // ne tient plus), puis chez Hektor par la principale (bloc _m2 : dateNaissance_m2 / lieuNaissance_m2). Jamais sa
+      // situation de famille (une seule par couple).
+      if (principaleId && ecrites.length) {
+        const naissance = ecrites.find((l) => l.champFiche === 'birth_date')?.valeur
+        const lieu = ecrites.find((l) => l.champFiche === 'birth_place')?.valeur
+        const r = await editConjointOptimistic({ contactId: principaleId, conjoint: { birthDate: naissance, birthPlace: lieu } })
+        if (!r?.ok) {
+          for (const l of ecrites) await noter(l, 'echec', { motif: 'conjoint_refuse', raison: r?.raison ?? null, principale: principaleId })
+          dit.push(`rien écrit pour ${ecrites.map((l) => l.libelle).join(', ')} : le couple ne le permet pas (${r?.raison ?? 'refus'})`)
+          continue
+        }
+        const spouse: Record<string, string> = {}
+        if (naissance) spouse.spouseBirthDate = naissance
+        if (lieu) spouse.spouseBirthPlace = lieu
+        await editContactOptimistic({ contactId: principaleId, contact: { lastName: nom, personType: 'personne_seule', sendRgpdEmail: false, ...spouse } })
+        if (typeof window !== 'undefined') for (const x of [id, principaleId]) window.dispatchEvent(new CustomEvent('hektor:contact-updated', { detail: { hektor_contact_id: x } }))
+        for (const l of ecrites) await noter(l, 'remplie', { geste: 'editConjointOptimistic+editContactOptimistic', genre: b.genre, hektor_contact_id: id, principale: principaleId, champs: spouse, avant: l.temoin, email_rgpd: false })
+        dit.push(`envoyé à Hektor : ${ecrites.map((l) => `${l.libelle} ${l.lu}`).join(', ')} (par la fiche principale du couple)`)
+        if (changees.length) dit.push(`rien écrit pour ${changees.map((l) => l.libelle).join(', ')} : la case a changé depuis l'ouverture de la fenêtre`)
+        continue
+      }
       if (ecrites.length) {
         const champs: Record<string, string> = {}
         for (const l of ecrites) champs[l.champFiche === 'birth_date' ? 'birthDate' : l.champFiche === 'birth_place' ? 'birthPlace' : 'maritalStatus'] = l.valeur

@@ -194,6 +194,8 @@ export async function loadGedDecisionsDetail(hektorAnnonceId: string | number): 
 export type EtatCivilLu = {
   hektor_contact_id: string; hektor_target_id: string | null; nom: string | null; prenom: string | null; birth_date: string | null
   birth_place: string | null; marital_status: string | null; nature_fiche: string | null; couple_role: string | null; archive: boolean | null
+  // GED lot G (18/11) : pour un conjoint, NOTRE numéro de la fiche principale (le lien de couple)
+  hektor_couple_contact_id?: string | null
 }
 export async function loadContactsEtatCivil(ids: string[], par: 'hektor' | 'app'): Promise<Map<string, EtatCivilLu> | null> {
   if (!hasSupabaseEnv || !supabase) return null
@@ -203,7 +205,7 @@ export async function loadContactsEtatCivil(ids: string[], par: 'hektor' | 'app'
   try {
     const { data, error } = await supabase
       .from('app_contacts_current')
-      .select('hektor_contact_id,hektor_target_id,nom,prenom,birth_date,birth_place,marital_status,nature_fiche,couple_role,archive')
+      .select('hektor_contact_id,hektor_target_id,nom,prenom,birth_date,birth_place,marital_status,nature_fiche,couple_role,archive,hektor_couple_contact_id')
       .in(colonne, numeros)
     if (error) return null
     const carte = new Map<string, EtatCivilLu>()
