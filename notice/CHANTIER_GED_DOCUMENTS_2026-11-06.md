@@ -2785,3 +2785,33 @@ plupart des modifications ») :
    rien ne le disait au panneau -> le dépôt émet `ged:lecture-faite`, le panneau relit ses lectures ;
 2. après « Enregistrer », la fenêtre BASCULAIT seule sur la lecture neuve suivante et cachait son résultat -> plus jamais
    pendant qu'une fenêtre est ouverte, et une seule ouverture par lot de lectures neuves.
+
+### 12.32 Contrôle d'après la nuit du 17 au 18/11, et la fiche synthétique refusée (18/11, « Oui et le run de nuit est fini contrôle tes correctifs »)
+
+**✅ Ce que la nuit devait remettre à la valeur de Hektor a TENU** (mesuré à 06:50, lecture seule) :
+- **63331** (`app_dossier_details_current`, relue par la nuit : `date_entree_file` 04:48:36) : consommation 198, émissions
+  29, date du DPE 2026-11-10, état des risques 2026-11-04, quote-part 1800 ; témoins : copropriété OUI, lots 24, Carrez 66.
+- **18849 / transaction 30770** (`app_affaire_ledger`) : séquestre **12 400**, prix 124 000, net 115 000, date 2026-10-23,
+  date d'acte 2027-01-23 ; carnet (`app_affaire_champ_app`) : **0 ligne** -- la nuit, qui remet la colonne à la valeur
+  de Hektor, a gardé 12 400 : c'est bien Hektor qui l'a.
+- **Contrôle au retour** : `b5babe1b` 4/4 et `cf7fe8a9` 3/3 toujours « identique » ; `app_v_annonce_modif_ecarts` = 0.
+- ⚠ Le run n'était pas tout à fait fini à 06:51 (dernière étape : rattrapage des photos, 06:47) ; la descente de 06:45
+  l'attend.
+- ⏳ **Toujours en `error`** : le travail raté `080b32a1` (5 essais, « Montant requis… », rien d'écrit chez Hektor) --
+  l'abandonner depuis Santé est un geste en base, sur accord.
+
+**La fiche synthétique de 63331 lue « pas_ce_type » -- ce qui est mesuré** :
+- l'IA a rendu `ce_type = faux` ET, dans la même réponse, `sous_type = fiche_synthetique` avec TOUTES les valeurs justes
+  (36 lots, 14 principaux, 30/09/2026, budget 62 000, fonds 9 300, syndic professionnel, aucune procédure) ;
+- la même fiche de lecture (`copro.carnet/1`), le même modèle (`gpt-6-luna`, effort « none »), par le texte, avait
+  ACCEPTÉ le 12/11 une fiche synthétique fictive presque identique sur 62774 (48 lots) ;
+- la seule différence de texte : « (SPECIMEN) » dans la phrase d'essai (présente aussi sur le DPE, l'état des risques et
+  l'appel de fonds, acceptés) et une immatriculation « ZZ9999999 (fictif) ».
+- ⇒ **ce n'est pas la consigne** : c'est le jugement « est-ce le bon type ? » de l'IA qui n'est pas stable sur une pièce
+  fictive. Cause exacte NON PROUVÉE (il faudrait relire, donc payer un appel ; pas fait).
+- ⚠ **Le vrai défaut, pour l'utilisateur** : un « pas_ce_type » JETTE toute la lecture (`gedLecture.ts:280`), l'écran dit
+  « vérifie le type » -- or le type est juste -- et AUCUN geste ne permet de relire ni de garder la lecture (« Relire »
+  n'existe que sur une lecture en ERREUR, dans la fenêtre de dépôt, `DepotDocuments.tsx:686`).
+- Pistes présentées à Frédéric, RIEN codé : A) contradiction côté serveur (ce_type faux mais sous_type attendu -> « lu ») ;
+  B) sur un « pas_ce_type », un bouton « C'est bien ce type : garder la lecture » (sans nouvel appel, décision notée) ;
+  C) un bouton « Relire » (un appel payé, peut refuser encore).
