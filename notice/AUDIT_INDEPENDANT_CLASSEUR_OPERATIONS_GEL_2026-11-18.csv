@@ -119,7 +119,7 @@ ajouter;ZZ5WKMWM;4119;offre;;11206;offre;A_RATTACHER;moyenne;Offre du 02/12/2019
 ajouter;Z6P7KE5R;4126;offre;;1337;offre;A_RATTACHER;forte;Offre de THEVENON Frederic, première proposition 2020-02-10 (0 j), 38500 €, annonce 3481 = MODELO du mandat 12224 (BOUALI). Libre.
 deplacer;UTLG66LE;4131;offre;1001482;5055;offre;PARTIEL;forte;Créée par C5 depuis cette ligne, elle ne prouve rien. Hektor porte déjà l'offre STAUFFER 5055, proposée et acceptée le 18/12/2019 (0 j), 16 900.
 ajouter;9706WM9J;4145;offre;;23931;offre;A_RATTACHER;certaine;Offre COMBETTES du 06/02/2020 (0 j), 168 000 €.
-retirer;ea6a28a7;4195;compromis;14033;;;INCERTAIN;moyenne;Pose sur mandat + prix : 140 500 EUR et 9 500 EUR egaux au Sheet, mais 14033 porte les acquereurs COLAS / SOLEILHAC de la soeur 205f62be, n'a pas de date, et le Sheet n'a pas de compromis.
+retirer;ea6a28a7;4195;compromis;14033;;;FAUX;moyenne;Pose sur mandat + prix : 140 500 EUR et 9 500 EUR egaux au Sheet, mais 14033 porte les acquereurs COLAS / SOLEILHAC de la soeur 205f62be, n'a pas de date, et le Sheet n'a pas de compromis.
 retirer;045ecde7;4391;offre;28558;;;PARTIEL;forte;"Même offre RUSSIER du 07/11/2025, saisie puis supprimée chez Hektor (absente, sans prix ni mandat) ; 28559 en est la ressaisie : une ligne ne prend qu'une offre."
 ajouter;f90b0418;4455;offre;;19050;offre;PARTIEL;forte;Offre POULY et CHARTOIRE à 93 000 €, seule offre du bien, tenue par aucune ligne. Date non mesurable : le journal n'a aucune date avant le refus du 12/11/2026.
 retirer;774aa002;4606;compromis;11138;;;PARTIEL;certaine;C'est le compromis d'un autre acquéreur (JINGWEI CAO, 98 000, honoraires 7 100, dossier D2025-0415, sans date). Le Sheet n'affirme aucun compromis : TOSUN s'est rétracté après l'offre.
