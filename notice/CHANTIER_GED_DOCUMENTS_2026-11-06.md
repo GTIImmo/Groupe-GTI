@@ -36,10 +36,15 @@
 | 10a | le compromis lu → SA transaction (date d'acte prévue, séquestre) | ⛔ **REMPLACÉ le 17/11 par 10c** : la date d'acte et le séquestre s'écrivaient « chez nous seulement », alors que ce sont des champs que Hektor connaît (§12.22, §12.28) |
 | 10b | les conditions suspensives du compromis → SA transaction | ✅ en ligne le 17/11 (`cf09297`) ; ses cartes sont reprises par 10c (§12.23) |
 | 10c | « Ce que dit le compromis » : la fenêtre de validation, champ par champ, chacun par SON chemin | ✅ **EN LIGNE le 17/11** (`50164c1` → `2250250`, « Oui vas y » ; Vercel et Render servent `2250250`) ; **vu en production sur 18849** : date de l'acte à trancher (correction proposée), séquestre « pas chez Hektor », conditions générales à part -- fenêtre refermée SANS enregistrer ; ⚠ l'envoi direct n'est pas encore éprouvé en réel (§12.28) |
+| lecture | « pas ce type » refusé au hasard : la cause (le CODE du type seul dans l'en-tête) prouvée au banc | ✅ **EN PRODUCTION le 18/11** (`9d5a6fd`, Render) : l'en-tête donne le libellé du catalogue ; banc par le vrai code 95/95, **essai réel vert sur 63331** (la fiche synthétique refusée la veille sort « lu ») (§12.34, §12.35) |
+| recours | « C'est bien ce type : garder la lecture » sur une lecture refusée | ✅ **EN PRODUCTION le 18/11** (`5b93490`, patch posé 4/4, répétition 8/8, Vercel) ; ⚠ pas vu sur un vrai cas : il n'existe plus de lecture refusée (§12.36) |
 
-**Reste, au 17/11** : ⏰ le compte rendu de la mesure le 30/11 ; P7/P8 en réel — **mis de côté par Frédéric le 17/11 :
-« trop compliqué pour le moment »** ; les pièces d'essai SPECIMEN restées sur 63331 et 63147 (63147 : un faux DPE, consommation 212 écrite, 2
-propositions ouvertes) ; puis **les conditions du cran « on »** ci-dessous.
+**Reste, au 18/11** : ⏰ le compte rendu de la mesure le 30/11 ; P7/P8 en réel — **mis de côté par Frédéric le 17/11 :
+« trop compliqué pour le moment »** ; les essais réels qui attendent une cible choisie par Frédéric (l'envoi direct de
+10c, « Ce que dit l'offre » sur une offre proposée vivante) ; deux options non tranchées (une règle de nommage commune
+§12.26 ; masquer l'IBAN d'un compromis au lieu de tout refuser §12.27) ; puis **les conditions du cran « on »**
+ci-dessous (audit des faits : §12.37). ✅ Les pièces d'essai de 63331 et 63147 sont SUPPRIMÉES (31/31, 18/11, §12.36) ;
+leurs lectures restent en base, invisibles.
 
 **Avant les négociateurs (cran « on »)** : le contrat de sous-traitance (DPA) avec le fournisseur d'IA — décision du
 12/11 : « à la fin du dev » —, l'analyse d'impact, le registre des traitements (avec les NOMS lus depuis le lot 2), la
@@ -2984,3 +2989,57 @@ resté chez elle) ; l'écran est EN LIGNE sur Vercel (le bouton est dans le paqu
 - ⚠ ORDRE : poser le patch AVANT de pousser l'écran (sinon le bouton appellerait une fonction absente -- sans dégât :
   il n'y a aujourd'hui AUCUNE lecture refusée à l'écran). ⚠ Pas vu à l'écran : il n'existe plus de cas réel ; la
   première lecture refusée le montrera.
+
+### 12.37 AUDIT -- les faits du dossier « cran on » (DPA, analyse d'impact, registre, clause) (18/11, « enchaîne dans le chantier », lecture seule, rien rédigé)
+
+Le code du chantier est fini (hors options et essais qui attendent Frédéric) ; la mesure court jusqu'au 30/11. L'étape
+suivante du plan (§0) est le dossier à réunir AVANT le cran « on ». Voici les faits, mesurés dans le code et la base.
+
+**Les deux appels à l'IA** (fournisseur OpenAI, API Responses, modèle `gpt-6-luna`, `store: false` sur chaque appel) :
+- **étape 1, le classement** (`/ged/classer`) : le nom du fichier, le nombre de pages, le DÉBUT du texte de chaque page
+  et/ou des images de pages -> un type proposé ;
+- **étape 2, la lecture** (`/ged/lire`) : le texte du document (20 000 caractères, 80 000 pour un compromis, titre plus
+  long) et/ou jusqu'à 6 pages en image (18 pour un compromis scanné) -> les champs de la fiche du type.
+- ⚠ **L'IA VOIT TOUT CE QUI EST ENVOYÉ**, pas seulement les champs gardés : un compromis part en entier (dans la limite),
+  avec les noms, adresses, prix, et ce que les parties y ont écrit. Ce que NOUS gardons est plus étroit que ce qui PART.
+- Gardes avant envoi : le RIB jamais (nom du fichier, IBAN dans le texte) ; pièces des personnes derrière leur propre
+  interrupteur (`ged_lecture_personnes`) ; 1re page seule pour certaines pièces ; les catégories exclues par décision
+  (santé, montant / taux / banque du prêt, assurance, feuille de présence, débiteurs, photo ou signature d'une pièce,
+  bande MRZ, motif d'une mesure de protection, enfants) ne sont pas dans les schémas.
+- ⚠ À VÉRIFIER dans les conditions du fournisseur (pas mesurable d'ici) : la durée de conservation côté OpenAI malgré
+  `store: false` (surveillance des abus), le lieu de traitement, l'éventuelle « conservation zéro ».
+
+**Ce que NOUS gardons** (base Supabase, sans limite de durée aujourd'hui) :
+- `app_ged_valeur` : les champs de 29 types (dates, montants, communes, numéros de mandat / ADEME, syndic, notaires...) ;
+- des **PERSONNES** (nom, prénoms, qualité, page) pour 8 types : taxe foncière, offre, compromis, mandat, avenant, fin
+  de mandat, acte, annulation ; le titre ajoute droits et quote-part ;
+- **pièces des personnes** : identité (nature, nom, nom d'usage, prénoms, date et lieu de naissance, fin de validité),
+  fiche de renseignements (adresse, date et lieu de naissance, situation de famille, régime matrimonial), financement et
+  état civil (nature, date, noms) ;
+- **à part** (`ged_prive.piece_identite`) : numéro, date et autorité de délivrance d'une pièce d'identité -- jamais à
+  l'écran ;
+- `app_agent_run` : le journal des appels (qui, quand, coût, nombre de valeurs) -- pas le contenu.
+
+**Qui y accède** : tous les interrupteurs GED sont en « admin » (les 4 admins actifs). Le cran « on » ouvrirait aux
+négociateurs, sur LEUR périmètre (les fonctions et lectures passent par `app_mes_biens_portefeuille`).
+
+**Ce qui a déjà tourné** (au 18/11) : 88 appels (48 classements, 40 lectures), **0,037 $**, 2 utilisateurs ; 5 biens lus
+dont **2 réels** (59541 : un avenant ; 62850 : un compromis) -- des noms réels sont donc déjà partis chez le fournisseur,
+sous la décision du 12/11 (« je suis le seul à l'utiliser, on fera le DPA à la fin du dev »).
+
+**⚠ DEUX MANQUES TROUVÉS, à trancher avec le dossier** :
+1. **AUCUNE DURÉE DE CONSERVATION** : les lectures et valeurs restent tant que le classement existe ; supprimer le
+   DOCUMENT ne les efface pas (vu le 18/11 : 31 documents supprimés, leurs lectures restent). Le registre des
+   traitements et l'analyse d'impact exigent une durée.
+2. **AUCUN CHEMIN D'EFFACEMENT pour une personne** : les noms lus sont du TEXTE, sans lien vers la fiche contact ;
+   supprimer un contact n'efface pas ce que l'IA a lu de lui. Une demande d'effacement (droit des personnes) ne se
+   servirait aujourd'hui qu'à la main.
+
+**Le dossier à réunir** (rien rédigé) :
+- **le contrat de sous-traitance (DPA) d'OpenAI** : il s'accepte en ligne par le titulaire du compte -- un geste de
+  Frédéric, que je ne peux pas faire ; vérifier en même temps la conservation et le lieu de traitement ;
+- **la fiche du registre des traitements** (« lecture des documents d'un dossier de vente par une IA ») ;
+- **l'analyse d'impact** (pièces d'identité, données de personnes qui ne sont pas nos clients -- les acquéreurs --, IA
+  d'un fournisseur hors UE à vérifier) ;
+- **la mention d'information** au mandat (et pour les acquéreurs : au bon de visite ou à l'offre) ;
+- **la durée de conservation** et **le chemin d'effacement** ci-dessus : deux décisions, puis peut-être du code.
