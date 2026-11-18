@@ -3239,3 +3239,13 @@ sujet se retire.
   date doit arriver sur 606104 (`_m2`) ET sur 606105. ⏰ Redémarrer les 4 services worker, file vide (0 pending, 0 running).
 **Hors plan, à trancher** : livret de famille / acte de mariage, facture d'honoraires, syndic, fonds de travaux, règlement de
 copropriété, adresse et régime, conjoints sans prénom (5 014).
+
+**⛔ CORRECTION (18/11, Frédéric : « non tu te trompes … la doublure, le chantier autonomie ») -- j'avais écrit que la fiche
+du bien est « remplacée par ce que Hektor rend » à la relecture et la nuit. FAUX.** Une modification de l'app est protégée
+(chantier ⑧, `CHANTIER_8_GARDE_CHEZ_NOUS_2026-10-21.md`, tableau « Clôturer 8a ») : calque chez nous au clic ; **L3** --
+`app_annonce_reappliquer_saisies` repose nos saisies en attente après chaque relecture ; un champ que Hektor refuse ->
+`partial`, l'attente GARDÉE, sentinelle `data.annonce_partielle` ; au retour, **8a7** compare l'envoyé au revenu
+(`annonce_retour_controle` on, sentinelle `data.annonce_modif_ecart`). `CHAMPS_APP_ANNONCE` vide = l'ANCIEN mécanisme,
+remplacé (même erreur que le 29/10, `AUDIT_CLASSE_C_…`). ➡ Pour le plan : l'« épreuve » de chaque lot ne PROTÈGE rien, elle
+ne fait que VÉRIFIER (Hektor prend-il la case, laisse-t-il intact le reste de son groupe) ; un refus ou un écart se voit de
+toute façon. Elle devient le PREMIER usage réel sur 63331, lu par le contrôle au retour -- plus une étape à part.
