@@ -3492,3 +3492,29 @@ mandant de la création de bien (`App.tsx:16034`). Un reste, pas une règle -- �
 **Au nettoyage (à décider)** : deux couples fictifs restent -- **20000050/51 <-> 606427/28** (compte formation, sans bien : mon
 premier essai, la recherche du rattachement ne le trouvait pas) et **20000052/53 <-> 606429/30** (PEREIRA, reliés à 63331).
 Suppression prévue par l'app (« Supprimer (tout le foyer) »), comme le 02/11.
+
+### 12.50 LE FILTRE DU RATTACHEMENT RETIRÉ, ET L'ÉPREUVE ENTRE DEUX AGENCES (19/11, 00:10-00:25, 63331)
+
+**La question de Frédéric** : « est-ce que le worker fonctionnait avant sans ce filtre ? Si oui, pourquoi ne pas le retirer ;
+audite pourquoi on l'a ajouté ».
+**L'audit** : le filtre est né le **01/06** dans le sélecteur de mandant de la création de bien (`6c1af71`, message sans aucune
+raison), puis a été **recopié le 27/08** dans « Rattacher un mandant existant » (`c502caf` : « scopée au négociateur du dossier,
+comme le fait le sélecteur de la création »). Aucune note ne le justifie. Le chantier ② (12/10) borne le geste au **BIEN**
+(« rattacher un mandant -- son bien »), pas au contact. Le worker écrit sous le négociateur du bien et, depuis le **31/08**,
+prouve le lien par l'API quand la console (filtrée par agence) ne le montre pas (`lienMandantSelonApi`, mémoire
+`console-hektor-filtree-par-agence`). 47,6 % des liens vendeur ont un autre négociateur que le bien (mesure du 31/08). Les
+autres recherches de contacts de l'app ne filtrent pas ainsi. Effet de bord du filtre : un contact SANS négociateur
+(ex. 10355712) n'était jamais trouvable.
+**Le correctif** (`b6b4d5d`, poussé et en ligne le 19/11 vers 00:20, bundle `index-QZ2JbhrQ.js`) : « Rattacher » cherche sur
+tout le réseau ; la création de bien garde la liste du négociateur choisi quand le champ est vide, et cherche sur tout le
+réseau dès qu'on tape. Chaque résultat affiche déjà « négociateur - agence ». Worker inchangé. `npm run build` vert.
+**L'épreuve réelle, par l'écran** : depuis 63331 (PEREIRA, Groupe GTI Firminy), « ESSAI GED » trouve les deux fiches du
+couple du **Compte formation** (affichées « FRANCK GERPHAGNON - Compte formation - mandant »). Rattaché « M. Un ESSAI GED »
+(20000050 <-> 606427). Travail `469a244b` : demandé 00:24:27, `done` 00:24:49, **`status: linked`** (lien NEUF), 4 lectures
+console sans le voir puis **« Association confirmée par l'API (la console ne la montrait pas depuis ce compte) »** -- le
+chemin du 31/08, éprouvé pour la première fois sur un lien neuf entre deux agences. `relation_etablie` : la ligne est
+établie tout de suite. Relecture `db2c806a` `done` 00:25:22 : **4 liens établis** sur 63331 après relecture, rien de perdu.
+⚠ Non mesuré : la durée de la recherche sur tout le réseau (« Recherche en cours… » encore visible à 3 s, résultats à ~8 s
+dans mon essai, une seule mesure).
+**Au nettoyage** : le couple 20000050/51 <-> 606427/28 est maintenant RELIÉ à 63331 (la principale seulement) ; il
+rejoint les deux couples à supprimer par l'app (§12.49).

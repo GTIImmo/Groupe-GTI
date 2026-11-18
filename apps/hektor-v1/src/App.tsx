@@ -3404,10 +3404,17 @@ function HektorMandantContactForm(props: {
     let annule = false
     setLinkLoading(true)
     setLinkError(null)
+    // ⛔ 19/11/2026 -- PLUS DE FILTRE SUR LE NEGOCIATEUR DU BIEN. Il etait recopie du
+    //   selecteur de la creation (01/06) sans raison ecrite, et contredisait la decision
+    //   « R » du chantier ② (12/10) : les contacts se voient sur TOUT le reseau, le droit
+    //   porte sur le BIEN. Un mandant suivi par un autre negociateur (47,6 % des liens
+    //   vendeur, mesure du 31/08) etait introuvable ici. Le worker n'a pas besoin du
+    //   filtre : il ecrit sous le negociateur du bien et prouve le lien par l'API, qui
+    //   voit toutes les agences (lienMandantSelonApi, 31/08).
     const minuteur = window.setTimeout(() => {
       searchMandantContactOptions({
         search: terme,
-        scope: props.dossier.negociateur_email ? { negotiatorEmail: props.dossier.negociateur_email } : null,
+        scope: null,
         limit: 12,
       })
         .then((rows) => { if (!annule) setLinkOptions(rows) })
@@ -3422,7 +3429,7 @@ function HektorMandantContactForm(props: {
       annule = true
       window.clearTimeout(minuteur)
     }
-  }, [open, mandantMode, linkSearch, props.dossier.negociateur_email])
+  }, [open, mandantMode, linkSearch])
 
   const handleLink = async () => {
     setMessage(null)
@@ -3635,7 +3642,7 @@ function HektorMandantContactForm(props: {
               <p>{linkLoading
                 ? 'Recherche en cours...'
                 : linkSearch.trim()
-                  ? 'Aucun contact trouve pour ce negociateur.'
+                  ? 'Aucun contact trouve.'
                   : 'Tape un nom, un email ou un identifiant pour lancer la recherche.'}</p>
             )}
           </div>
@@ -16099,10 +16106,15 @@ export default function App() {
     let cancelled = false
     setDraftExistingMandantLoading(true)
     setDraftExistingMandantError(null)
+    // ⛔ 19/11/2026 -- meme correction que « Rattacher un mandant existant » : des qu'on
+    //   TAPE, on cherche sur tout le reseau (decision « R » du 12/10). Le champ vide garde
+    //   sa liste de depart, les contacts du negociateur choisi : sans filtre ce serait
+    //   les 12 derniers contacts touches du reseau, qui ne disent rien.
+    const rechercheTapee = draftExistingMandantSearch.trim() !== ''
     const timer = window.setTimeout(() => {
       searchMandantContactOptions({
         search: draftExistingMandantSearch,
-        scope: { negotiatorEmail: selectedDraftNegotiator.email },
+        scope: rechercheTapee ? null : { negotiatorEmail: selectedDraftNegotiator.email },
         limit: 12,
       })
         .then((rows) => {
@@ -23864,7 +23876,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                                 </button>
                               )
                             }) : (
-                              <p>{draftExistingMandantLoading ? 'Recherche en cours...' : draftExistingMandantSearch.trim() ? 'Aucun contact trouve pour ce negociateur.' : 'Les contacts actifs du negociateur apparaissent ici.'}</p>
+                              <p>{draftExistingMandantLoading ? 'Recherche en cours...' : draftExistingMandantSearch.trim() ? 'Aucun contact trouve.' : 'Les contacts actifs du negociateur apparaissent ici. Tape un nom pour chercher dans tout le reseau.'}</p>
                             )}
                           </div>
                           {selectedDraftExistingMandant ? (

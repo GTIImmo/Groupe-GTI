@@ -2516,7 +2516,8 @@ demande son propre balayage, et il se fait AVANT de generer le patch.**
 ### ⭐⭐⭐ LE 18/11 AU SOIR -- L'AUDIT INDEPENDANT DU SHEET CONTRE LE REGISTRE (session neuve)
 
 > **Le document : `notice/AUDIT_INDEPENDANT_CLASSEUR_2026-11-18.md`** ; le verdict ligne par
-> ligne : `notice/AUDIT_INDEPENDANT_CLASSEUR_VERDICTS_2026-11-18.csv` (257 lignes). Tout en
+> ligne : `notice/AUDIT_INDEPENDANT_CLASSEUR_VERDICTS_2026-11-18.csv` (257 lignes au 1er tour, 350 apres le
+> tour des soeurs). Tout en
 > LECTURE SEULE. ⛔ Il DECRIT, il ne decide rien.
 >
 > ```
@@ -2540,7 +2541,44 @@ demande son propre balayage, et il se fait AVANT de generer le patch.**
 > apres, et chaque geste attend son accord.
 > ⛔ **Ne pas poser les 33 commissions tranchees en l'etat** : au moins `8RWTD0YX`,
 > `0bc98552`, `NEFHS7JI`, `61OW86CS`, `CITFQGOB`, `774aa002`, `5QE9107L`, `Q602VZJX` portent
-> un lien faux ou douteux.
+> un lien faux ou douteux. *(Corrige le 19/11 : `0bc98552` est JUSTE ; ajouter `V3FO5NDA` et `RX6J289Y`.)*
+>
+> ⭐⭐ **PUIS, NUIT DU 18 AU 19/11 -- LE TOUR DES SOEURS EST FAIT, LE PATCH EST PRET (DORMANT), ET LE
+> RAPPORT EST COMPLETE.** Sa question : « Tout est liste dans le rapport ? » -- la reponse etait NON
+> (les CSV portaient presque tout, le rapport n'en donnait que les comptes). La liste complete est au
+> rapport, § 5 ter, generee depuis les fichiers.
+>
+> ```
+>    LE TOUR DES SOEURS   93 lignes de plus : 350 jugees, 107 contre-expertises, 0 collision
+>    LE PATCH (DORMANT)   supabase/patch_correction_gel_audit_independant_2026-11-18.sql
+>                         (+ _INVERSE, _REPETITION) : 141 operations sur 87 lignes, 55 liens
+>                         retires, 109 ajoutes ; sans lien 91 -> 60. Liste :
+>                         notice/AUDIT_INDEPENDANT_CLASSEUR_OPERATIONS_GEL_2026-11-18.csv
+>    REVALIDE             19/11 a 00:20 contre la base vivante : gel 12 787, 0 ecart
+>    LE RUN, LES WORKERS  AUCUN lecteur du gel dans le code, hors la copie de la descente et deux
+>                         sentinelles ; le patch ne cree aucun travail et n'ecrit rien chez Hektor
+>                         (rapport § 5 ter F)
+> ```
+>
+> ⛔⛔ **AVANT DE LE JOUER, SA DECISION** (rapport § 5 ter B1). 18 lignes que le patch modifie portent
+> une question ouverte. Classees par 3 juges et 3 contradicteurs : 10 ou l'operation tient quelle que
+> soit la reponse, 4 deja tranchees par la contre-expertise, et **4 ou le patch applique DEJA une
+> reponse** -- `1D7EIYKW` (retrait de 27512), `5a956cad` (30776 -> 30684), `E9GL6MUS` (ajout de 11414),
+> la paire `D9MMB7OU` / `QJQ9M4OF` (17366). ⭐ Dont LA QUESTION DE PRINCIPE (offre renegociee : la
+> premiere offre ou l'acceptee ?), que l'audit applique dans les deux sens (`5a956cad` contre
+> `2dfa6ef3` et `d1cb8dd7`). **RECOMMANDE** : sortir ces 4 du patch, ecrire « a valider » les 5 liens
+> de confiance moyenne (le patch les ecrit « bonne »), regenerer, revalider, puis le lui soumettre.
+>
+> ENSUITE, chaque geste avec son accord : le seuil de `data.classeur_ligne_sans_lien` (92 -> la mesure ;
+> 61 des que la ligne nee `54376c72` entre dans `app_classeur_ligne_id`) ; les 20 transactions Hektor
+> qui gardent une trace posee par nous (§ 5 ter C, trace par trace : certaines se DEPLACENT) ; les 11
+> transactions C5 sans lien, DES DEUX COTES avant 04:00, choisies par `transaction_origine` et JAMAIS
+> par la plage 1001xxx (17 vraies transactions Hektor y vivent) ; un 4e tour pour les 15 copies encore
+> tenues ; les gestes hors gel du § 5 ter H (offres « refusees » par nos gestes du 11/11, chaines a
+> scinder, une valeur mal posee).
+> ⚠ Trouve en passant, sans rapport avec le patch : **21 tables de sauvegarde sans RLS sont lisibles ET
+> modifiables par tout utilisateur connecte** (pas par la cle publique), dont 4 du 18/11 sur le
+> classeur. Les fermer est une ecriture en base : a decider.
 
 ### ✅⭐⭐ LE 18/11 AU SOIR -- LES 5 DOUBLONS RETIRES AUSSI DU REGISTRE LOCAL (session neuve)
 
