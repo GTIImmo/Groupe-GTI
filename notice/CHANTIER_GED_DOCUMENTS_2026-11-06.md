@@ -2921,3 +2921,15 @@ qui n'écrit RIEN en base -- c'est `enregistrer()` qui écrit ; catalogue de pro
 **✅ POUSSÉ et EN SERVICE (18/11)** : 9d5a6fd poussé avec l'accord de Frédéric (« Oui, pousse ») ; Render sert ce commit,
 `/health` démarré à 09:09:28 UTC. **Ce qui reste** :, en production, une fiche synthétique
 déposée en `copro.carnet` doit sortir « lu ». La couche B (recours à l'écran) reste à décider à part.
+
+**✅ ÉPROUVÉ EN RÉEL le 18/11 à 10:18 (« vas y test »), par l'écran, sur le bien d'essai 63331** : la MÊME pièce fictive
+que celle refusée la nuit du 17/11 (fichier identique octet pour octet, `lot3_essai/tourA/…`), redéposée sous le nom
+« ESSAI LIBELLE en-tete lecture IA 63331 FICTIF.pdf » (l'écran a vu le doublon de contenu et refusé un nom trop proche :
+cochée « l'envoyer quand même », nom changé), type proposé et gardé « Carnet d'entretien, fiche synthétique ».
+- lecture **« lu »** (`copro.carnet/1`, par le texte, 0,000256 $), 12 valeurs lues -- les MÊMES 12 que la lecture
+  « pas_ce_type » du 17/11 (syndic, immatriculation, sous-type fiche synthétique…) ;
+- la fenêtre « Ce que dit la fiche synthétique » s'est ouverte seule : 1 à trancher (36 lots lus / 24 sur la fiche) ->
+  **FERMÉE SANS ENREGISTRER** : rien écrit sur le bien, le témoin « 24 lots » reste ;
+- dépôt chez Hektor : travail `666b63e5` `upload_document_to_hektor` **done** en 15 s, 1 essai, 0 erreur.
+⚠ Une pièce FICTIVE de plus sur 63331 : elle rejoint le ménage SPECIMEN/FICTIF à faire (63331, 63147). L'ancienne
+lecture « pas_ce_type » du 17/11 reste telle quelle (aucune relecture d'un dépôt passé).

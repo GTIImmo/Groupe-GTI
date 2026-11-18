@@ -45740,7 +45740,7 @@ function ContactEmailComposerModal(props: {
                           <strong>{piece.nom}</strong>
                           <small>{[piece.libelle, formatFileSize(piece.taille)].filter((value) => value && value !== '-').join(' - ')}</small>
                         </span>
-                        <button className="request-modal-close" type="button" onClick={() => retirerPieceOrdinateur(piece.id)} disabled={pending} aria-label={`Retirer ${piece.nom}`}>Retirer</button>
+                        <button className="ghost-button button-subtle" type="button" onClick={() => retirerPieceOrdinateur(piece.id)} disabled={pending} aria-label={`Retirer ${piece.nom}`}>Retirer</button>
                       </div>
                     ))}
                   </div>
