@@ -2888,3 +2888,35 @@ négociateurs ; (4) l'envoi seulement quand CE PDF est prêt ; (5) quels défaut
 **Ce que ça pourrait casser** : rien encore (maquette et audit). Pour le code : la fenêtre et l'éditeur sont partagés
 par la saisie à la main, le scan et l'assistant — toute nouvelle voie d'entrée doit passer par les mêmes fonctions
 (`applyDraftAnnonceScan`, les couches de l'éditeur) pour ne pas créer une deuxième logique.
+
+## 85. SES DÉCISIONS sur le §84 (18/11 au soir) ; le dépôt de documents OUVERT aux négociateurs
+
+**Ses mots** : « La mémoire accessible par le négociateur de l'annonce ou admin. Ouvre le dépôt au négo. »
+
+1. **La mémoire du parcours** (table neuve, patch à écrire) : lisible par le NÉGOCIATEUR DE L'ANNONCE et par l'ADMIN.
+   ⚠ À traduire au patch : avant la création, l'annonce n'existe pas encore → la mémoire appartient à la personne qui a
+   lancé le parcours (son auteur) ; dès que l'annonce existe, au négociateur de l'annonce, et toujours à l'admin.
+   Restent à trancher : quand on efface les coordonnées d'un nouveau mandant (proposé : dès que la fenêtre les a reçues).
+2. **Le dépôt de documents ouvert aux négociateurs** : FAIT le 18/11 à 21:26:46 (UTC) —
+   `update app_setting set value = 'on' where key = 'ged_depot_multiple' and value = 'admin'` (1 ligne), relu par une
+   seconde voie : `on`.
+   - Ce que ça change : pour tout compte actif (admin, manager, commercial), l'onglet Documents d'une fiche montre la
+     FENÊTRE DE DÉPÔT GED (plusieurs fichiers, pages assemblées en PDF, type proposé d'après le NOM du fichier, doublon
+     reconnu, pièces des personnes en privé) à la place du formulaire d'un seul fichier, gardé en secours
+     (App.tsx:12740-12753). La carte « Déposer des documents » de l'assistant n'est plus refusée aux négociateurs
+     (`_fenetre_ged_ouverte`, assistant_gestes.py:2096).
+   - Ce que ça N'OUVRE PAS : AUCUN appel à l'IA. Le classement et la lecture par IA restent derrière `ged_lecture_ia`
+     (« admin »), revérifié par le serveur à chaque appel (backend/app/routers/ged.py:54-60, 81-82, 133). Les conditions
+     du cran « on » de la GED (DPA, analyse d'impact, registre, clause au mandat — note GED §0 et §12.37) concernent la
+     lecture par IA : elles restent dues avant d'ouvrir `ged_lecture_ia`. L'assistant lui-même reste « admin »
+     (`assistant_ia`).
+   - L'envoi ne change pas : chaque fichier part par `createUploadDocumentToHektorJob` (chemin d'aujourd'hui), puis
+     `app_ged_classer` (« on ne classe que ses propres dépôts ») ; les négociateurs peuvent lire l'interrupteur
+     (règle `app_setting_select_active_user`).
+   - Comptes actifs au 18/11 : 4 admins, 2 commerciaux.
+   - ⚠ Pas vu à l'écran par un compte de négociateur (je n'ai pas leur session) : la preuve viendra de leur premier dépôt
+     (un travail `upload_document_to_hektor` suivi d'une ligne `app_ged_classement` à leur nom).
+   - Revenir en arrière : `update public.app_setting set value = 'admin', updated_at = now() where key = 'ged_depot_multiple';`
+
+Toujours à trancher (§84.7) : les documents à la création, voie A ou B ; l'envoi au propriétaire seulement quand CE PDF
+est prêt ; quels défauts du §84.6 corriger avant les essais ; l'effacement des coordonnées d'un nouveau mandant.
