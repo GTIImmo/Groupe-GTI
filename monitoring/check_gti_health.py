@@ -179,6 +179,14 @@ TASK_CRITICALITY: dict[str, str] = {
     #     introuvable » en WARNING (la branche NotFound n'utilise pas la gravite) :
     #     visible a l'ecran, aucun e-mail. C'est voulu -- on declare AVANT.
     "GTI Balayage Photos Masquees": "critical",
+    # 2026-11-18 : « GTI Menage Temporaires » (13:00) -- elle lance
+    #   Console/nettoyer_temporaires_orphelins.js --supprimer, qui vide temp/ du coffre (envois de
+    #   l ecran, trombone de l assistant, pieces « depuis l ordinateur » de la fenetre e-mail).
+    #   Le script existait depuis le 14/10 sans aucune tache (vu le 18/11). Demande de Frederic.
+    # ⚠ "warning" ET PAS "critical" : une journee ratee se rattrape le lendemain (les fichiers
+    #   attendent un jour de plus, rien ne se perd). Visible a l ecran Sante, sans e-mail.
+    #   DECLAREE ICI AVANT d etre enregistree dans Windows (meme regle que ses soeurs).
+    "GTI Menage Temporaires": "warning",
     # ⚠ "GTI Relances Email" N'EST VOLONTAIREMENT PAS DANS CETTE LISTE, et ce
     #   n'est pas un oubli -- c'est la question qu'on s'est posee le 23/09.
     #   Elle tourne TOUTES LES HEURES et lance relance_worker SANS
@@ -3668,11 +3676,12 @@ def build_parser() -> argparse.ArgumentParser:
         #   19/10 (2) : ajout de « GTI Balayage Photos Masquees » (00:00). Meme regle,
         #   DECLAREE AVANT d'etre enregistree. Elle est "critical" -- raison au-dessus
         #   de TASK_CRITICALITY. 11 noms surveilles.
+        #   18/11 : ajout de « GTI Menage Temporaires » (13:00), "warning", DECLAREE AVANT. 12 noms.
         default=("GTI Quotidien,GTI Recherches Actives,GTI Health Monitor,"
                  "GTI Relances Email,GTI Sauvegarde,GTI Descente,"
                  "GTI Rattrapage Documents,GTI Reprise Envois Hektor,"
                  "GTI Entretien Documents,GTI Entretien Photos,"
-                 "GTI Balayage Photos Masquees"),
+                 "GTI Balayage Photos Masquees,GTI Menage Temporaires"),
         help="Noms des taches planifiees Windows a surveiller (separes par des virgules).",
     )
     parser.add_argument("--sqlite-freshness-minutes", type=int, default=30 * 60)
