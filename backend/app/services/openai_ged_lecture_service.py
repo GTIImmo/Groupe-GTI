@@ -648,6 +648,16 @@ class OpenAIGedLectureService:
     def type_sensible(self, code: str) -> bool:
         return any(t.get("code") == code and t.get("sensible") for t in self.portier.types())
 
+    def type_annonce(self, code: str) -> str:
+        # 18/11 (§12.34, prouvé au banc) : le CODE seul (« copro.carnet ») faisait juger « pas ce type », au hasard, l'autre
+        # document que le type couvre (la fiche synthétique, la convocation d'AG) -- le code pèse plus que la consigne.
+        # L'en-tête donne donc le LIBELLÉ du catalogue avant le code ; repli sur le code seul si le libellé manque.
+        try:
+            libelle = next((str(t.get("libelle") or "").strip() for t in self.portier.types() if t.get("code") == code), "")
+        except Exception:
+            libelle = ""
+        return f"{libelle} ({code})" if libelle else code
+
     def lire(self, classement: dict[str, Any], payload: dict[str, Any], personnes: bool = False) -> dict[str, Any]:
         # `personnes` : l'interrupteur ged_lecture_personnes est ouvert pour l'appelant (décidé par la route)
         if not self.settings.openai_api_key:
@@ -687,7 +697,7 @@ class OpenAIGedLectureService:
 
         spec = agent_registry.load_spec(self.settings, AGENT_KEY)
         model = spec.model or "gpt-6-luna"
-        entete = f"Type annoncé : {code}\nNombre de pages du document : {nb_pages}"
+        entete = f"Type annoncé : {self.type_annonce(code)}\nNombre de pages du document : {nb_pages}"
         if texte.strip():
             entete += f"\nTexte du document :\n{texte}"
         requete: dict[str, Any] = {

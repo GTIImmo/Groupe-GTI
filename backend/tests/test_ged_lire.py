@@ -229,6 +229,29 @@ voir(lec.PAGES_HD.get("justif.titre") == 6 and lec.PAGES_HD.get("copro.pv_ag") =
 s0.lire({"type_code": "diag.amiante"}, {"texte": long_texte, "nbPages": 21})
 voir(len(parti["input"][0]["content"][0]["text"]) < 20200 and "EXCEPTION" not in parti["instructions"] and "personnes" not in parti["text"]["format"]["schema"]["properties"],
      "amiante : 20 000 caractères, aucune exception aux noms")
+# 18/11 (§12.34) : l'en-tête annonce le LIBELLÉ du catalogue avant le code ; sans libellé, le code seul
+voir(parti["input"][0]["content"][0]["text"].startswith("Type annoncé : diag.amiante\n"), "TÉMOIN : sans libellé au catalogue, l'en-tête garde le code seul")
+
+
+class PortierLibelles(PortierTypes):
+    def types(self):
+        return [{"code": "copro.carnet", "libelle": "Carnet d'entretien, fiche synthétique", "sensible": False}]
+
+
+s0.portier = PortierLibelles()
+s0.lire({"type_code": "copro.carnet"}, {"texte": long_texte, "nbPages": 2})
+voir(parti["input"][0]["content"][0]["text"].startswith("Type annoncé : Carnet d'entretien, fiche synthétique (copro.carnet)\nNombre de pages du document : 2\n"),
+     "l'en-tête donne le libellé du catalogue, puis le code")
+
+
+class PortierEnPanne(PortierTypes):
+    def types(self):
+        raise HTTPException(status_code=503, detail="Liste des types de documents illisible")
+
+
+s0.portier = PortierEnPanne()
+voir(s0.type_annonce("copro.carnet") == "copro.carnet", "catalogue illisible : repli sur le code seul, la lecture n'en dépend pas")
+s0.portier = PortierTypes()
 lec.requests.post = appel_interdit
 
 print("3) les refus AVANT tout appel")

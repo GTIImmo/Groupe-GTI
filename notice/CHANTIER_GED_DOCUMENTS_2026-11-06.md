@@ -2894,3 +2894,29 @@ L'outil d'enquête : une variante « raison » ajoute, JUSTE APRÈS `ce_type`, d
 ou trois lignes, aucune requête de plus, aucun coût par lecture ; repli sur le code seul si le libellé manque. Vaut pour
 les 29 types lus d'un coup. **Ne PAS** retoucher la règle commune ni l'ordre des cases (mesuré : inutile ou pire).
 Le recours à l'écran (§12.33, couche B) devient un filet pour un éventuel reste, à décider à part.
+
+### 12.35 LE REMÈDE CODÉ -- le libellé du catalogue dans l'en-tête de la lecture (18/11, « Oui, vas-y »)
+
+**Le code** (`backend/app/services/openai_ged_lecture_service.py`) : une méthode `type_annonce(code)` rend
+« <libellé du catalogue> (<code>) », lu dans `self.portier.types()` (le catalogue `app_ged_type`, DÉJÀ chargé et en cache
+pour les types sensibles : aucune requête de plus, aucun coût par lecture). L'en-tête devient
+« Type annoncé : Carnet d'entretien, fiche synthétique (copro.carnet) ». **Repli sur le code seul** si le libellé manque
+ou si le catalogue est illisible (la lecture n'en dépend jamais). Vaut pour TOUS les types lus, pièces des personnes
+comprises (leur en-tête gagne aussi le libellé ; même mécanisme, non mesuré à part). **Rien d'autre ne bouge** : ni la
+règle commune, ni l'ordre des cases, ni les consignes, ni l'écran, ni la base.
+
+**Les essais** : `backend/tests/test_ged_lire.py` 91/91 (3 neufs : le libellé puis le code ; TÉMOIN sans libellé, le code
+seul ; catalogue en panne, repli sur le code) ; les trois autres bancs de lecture verts (état civil 16, financement 19,
+personnes 36).
+
+**La preuve par le VRAI code** (`scratchpad/banc_type/banc_vrai.py` : appelle `OpenAIGedLectureService.lire()` lui-même,
+qui n'écrit RIEN en base -- c'est `enregistrer()` qui écrit ; catalogue de production recopié, 5 lignes lues le 18/11) :
+95 appels, **0,0225 $**, **95/95 verts** --
+- acceptés comme il faut : fiche synthétique de 63331 0/20 refus, celle de 62774 0/20, convocation d'AG en PV d'AG 0/15,
+  note d'honoraires en facture d'honoraires 0/10 ;
+- refusés comme il faut (le garde-fou tient) : note d'honoraires annoncée carnet 10/10, appel de fonds annoncé carnet
+  10/10, fiche synthétique annoncée facture d'honoraires 10/10 -- ⭐ avec le VRAI libellé « Facture ou note d'honoraires
+  GTI » (le banc du §12.34 en avait pris un approchant).
+
+**Ce qui reste** : POUSSER (Render redéploie seul sur `main`) -- sur accord. Puis, en production, une fiche synthétique
+déposée en `copro.carnet` doit sortir « lu ». La couche B (recours à l'écran) reste à décider à part.
