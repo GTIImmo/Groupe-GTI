@@ -2856,3 +2856,41 @@ document est définitif une fois envoyé. Les valeurs PRIVÉES (numéro de pièc
   une lecture jugée juste par l'IA.
 - **Écartées** : la contradiction côté serveur (ne vaut que pour les fiches qui ont un sous-type -- un remède par cas) ;
   un bouton « Relire » (un appel payé, le fichier à rapatrier, et le tirage peut retomber faux).
+
+### 12.34 LE BANC -- pourquoi l'étape 2 refuse au hasard : LE CODE DU TYPE, PROUVÉ (18/11, « il faut vérifier »)
+
+**Le banc** (`scratchpad/banc_type/` : `textes.mjs` refait le texte EXACT du navigateur avec pdfjs ; `banc.py` rejoue
+l'appel de `/ged/lire` À L'IDENTIQUE -- consigne, schéma strict, en-tête, `gpt-6-luna`, effort « none » -- N fois par
+variante). Pièces FICTIVES seulement, appel direct à l'IA, RIEN écrit en base. ~640 appels, **~0,19 $**.
+L'outil d'enquête : une variante « raison » ajoute, JUSTE APRÈS `ce_type`, deux cases « ce qu'est ce document » et
+« pourquoi » -- elle fait PARLER l'IA et GROSSIT le défaut (une loupe, pas un remède).
+
+**Les mesures** (refus / appels) :
+- à l'identique : fiche synthétique de 63331 **0/30** (+ 0/2), celle de 62774 **1/30** -> le refus de production est un
+  tirage RARE (~2 %), tombé sur 63331 ;
+- avec la loupe : **11/30**, et la raison est TOUJOURS la même : « c'est une fiche synthétique, **et non un carnet
+  d'entretien** comme annoncé ». L'IA lit le CODE `copro.carnet` comme « carnet d'entretien » -- malgré la consigne qui
+  dit pourtant « fiche synthétique ou carnet d'entretien » ;
+- **⛔ mes hypothèses du §12.33 étaient en partie FAUSSES** : sans « fictif / specimen » -> **20/30** (pire : ce n'est pas
+  la pièce fictive) ; `ce_type` en dernière case -> **8/30** (ne guérit pas) ; la règle « faux seulement si AUTRE
+  type » -> **29/30** (AGGRAVE : l'IA tient la fiche synthétique pour un autre type que le carnet) ;
+- **le libellé du catalogue dans l'en-tête** (« Type annoncé : Carnet d'entretien, fiche synthétique (copro.carnet) ») :
+  **0/30** avec la loupe, **0/30 + 0/30** à l'identique sur les deux fiches. Les trois réunis : 0/30 ;
+- **le garde-fou TIENT avec le libellé** : note d'honoraires annoncée « carnet » 15/15 refusée ; appel de fonds annoncé
+  « carnet » 15/15 ; fiche synthétique annoncée « facture d'honoraires » 15/15 ; et la vraie note d'honoraires 0/15.
+  Bilan libellé : **0 bon document refusé sur 105, 45 mauvais refusés sur 45** ;
+- **la famille** : une CONVOCATION d'AG annoncée `copro.pv_ag` -> 0/20 à l'identique mais **20/20 avec la loupe**
+  (« le type annoncé est un procès-verbal »), alors que sa consigne dit « procès-verbal ou convocation » -> **0/20 avec
+  le libellé**. Un budget prévisionnel en `copro.appel_fonds` : 0 refus dans tous les cas. L'attestation de vente en
+  TEXTE : 0/150 (le refus du 13/11 était sur un SCAN, en images -- non reproduit, cause non prouvée).
+- ⇒ **LA CAUSE** : l'en-tête n'annonce que le code (« Type annoncé : copro.carnet ») ; quand le code ne nomme QU'UN des
+  documents que le type couvre (carnet / fiche synthétique ; PV / convocation ; mais aussi, NON mesurés : appel de fonds
+  / budget, règlement / état descriptif, acte / attestation, compromis / promesse, titre / origine, fin / dénonciation,
+  annulation / désistement, facture / note, surfaces Carrez / habitable), l'autre document passe pour « pas ce type »
+  -- rarement en temps normal, mais au hasard. Le CODE pèse plus que la consigne.
+
+**Le remède, mesuré** (rien codé, attend le « vas-y ») : l'en-tête donne le LIBELLÉ du catalogue avant le code.
+`OpenAIGedLectureService` charge DÉJÀ le catalogue (`self.portier.types()`, en cache, pour les types sensibles) : deux
+ou trois lignes, aucune requête de plus, aucun coût par lecture ; repli sur le code seul si le libellé manque. Vaut pour
+les 29 types lus d'un coup. **Ne PAS** retoucher la règle commune ni l'ordre des cases (mesuré : inutile ou pire).
+Le recours à l'écran (§12.33, couche B) devient un filet pour un éventuel reste, à décider à part.
