@@ -3447,3 +3447,44 @@ preuve que le worker redémarré tourne sur le code du lot G. (La charge porte `
 chemin que 9c : la modification ne pose pas la qualification.)
 ⏳ **Non éprouvés en réel** : E (le terrain : il faut un bien d'essai HORS copropriété), G (il faut un couple d'essai, à recréer),
 `CHARGES` (l'appel fictif tombe d'accord), la première personne d'un couple (F).
+
+### 12.49 L'ÉPREUVE RÉELLE DU LOT G -- la naissance du CONJOINT (18/11, 21:32-22:00, 63331, couple fictif 20000052/53)
+
+**Le couple fictif, créé PAR L'ÉCRAN** (Contacts -> Nouveau contact, Propriétaire, Couple, « ESSAI LOTG Un / Deux », e-mails
+`@example.com`, sans téléphone, e-mail RGPD DÉCOCHÉ, compte Emmanuelle PEREIRA, « Rattacher un bien existant » 63331) : travail
+`create_hektor_contact` done, paire née d'un coup -- **20000052 <-> 606429 (Un)**, **20000053 <-> 606430 (Deux)**.
+Puis `relire_couple_rattache.py --principal 20000052 --conjoint 20000053` (⚠ avec `.venv/Scripts/python.exe`, le Python du
+worker : le Python du système n'a pas `tzdata`, la relecture y casse sur « Europe/Paris ») -> 20000052 « couple », résumé
+« nommé » ; 20000053 « conjoint », rôle « conjoint », lien 20000052.
+**Pièce** : une carte d'identité SPÉCIMEN de « Deux ESSAI LOTG », SANS bande MRZ, née le 03/03/1962 à MONTBRISON (42)
+(`scratchpad/lotG/fabriquer.py`), déposée par la fenêtre de dépôt, type « Pièce d'identité », privée.
+**L'écran** : « Ce que dit la pièce d'identité : 2 à ajouter » -- date et lieu de naissance de Deux ESSAI LOTG, la fiche du
+contact « vide » ; les deux gardés, « Enregistrer et envoyer à Hektor » -> « envoyé à Hektor … (par la fiche principale du
+couple) ». **Chez nous à la seconde** : 20000053 porte `1962-03-03` / `MONTBRISON (42)` ; calque `app_contact_pending` posé sur
+20000052 (`spouse_birth_date`, `spouse_birth_place`, départ +10 min).
+**Chez Hektor (21:00:16 UTC)** : travail `update_hektor_contact` done, `status: updated`, **`couple: true`, formulaire
+`mefContacts/contactCoupleAll`** (le formulaire RELU fait foi, `console_job_worker.js:20478` -- la charge disait
+`personne_seule`), `conjoint_date_naissance: 03-03-1962`, `conjoint_lieu_naissance: MONTBRISON (42)`, aucune autre case
+envoyée (nom seul ; e-mails, prénoms, téléphones à `null` = non touchés). Calque soldé. **Relecture automatique** (21:00:41) :
+étape conjoint « 1 conjoint nommé », nature « 20000052=couple, 20000053=conjoint » ; prénoms, e-mails INCHANGÉS ; la naissance
+du conjoint RESTE chez nous (Hektor ne la rend jamais, `contrat_autorite.py:63` : elle n'est donc pas relisible chez lui,
+seulement « acceptée » par le formulaire de couple).
+➡ **Le lot G est PROUVÉ EN RÉEL dans le cas que le code couvre** (les deux fiches du couple reliées au bien).
+
+⚠⚠ **TROU TROUVÉ PAR L'ÉPREUVE -- le cas courant n'est PAS couvert.** L'écran ne fusionne un couple en « membres »
+(`mergeDetailContacts`) que si LES DEUX fiches sont reliées au bien ; `contactsGedDuBien` et `personnesGedDuBien` ne voient donc
+le conjoint QUE dans ce cas. Avec la seule première reliée (mon premier montage), la carte est restée muette ET une ligne
+« La pièce dit « Deux ESSAI LOTG », la fiche « Mandant ESSAI CONTACT » » est apparue (appariement au mauvais mandant).
+**Mesure (Supabase, 18/11)** : 330 conjoints nommés actifs ; 118 ont leur première reliée à un bien (mandant / propriétaire) ;
+**12 seulement** ont AUSSI leur fiche reliée au même bien. ⇒ **pour 106 sur 118, le lot G reste muet.**
+**Le correctif proposé (NON écrit, à décider)** : dans « Reçu / Manque », après la lecture de l'état civil, pour chaque première
+de nature « couple » sans rôle, lire aussi la fiche dont `hektor_couple_contact_id` = elle, `couple_role = conjoint` (une requête
+de plus, même table) ; l'ajouter aux contacts ET aux personnes du bien (le nom et le prénom du conjoint). Additif, écran seul, sans
+interrupteur neuf (celui du lot G suffit).
+**Trouvé en passant** : (1) un contact créé avec « Rattacher un bien existant » est bien lié CHEZ HEKTOR mais n'apparaît sur le
+bien qu'après la nuit -- la création ne pose pas la ligne `app_relation` (le geste « Rattacher un mandant existant » la pose, et
+le worker répond `already_linked` sans rien réécrire) ; (2) « Rattacher un mandant existant » ne cherche que parmi les contacts
+du négociateur du bien ; (3) le compte rendu porte `qualification: "2"` (défaut `contact_kind` du geste) -- non mesuré ici.
+**Au nettoyage (à décider)** : deux couples fictifs restent -- **20000050/51 <-> 606427/28** (compte formation, sans bien : mon
+premier essai, la recherche du rattachement ne le trouvait pas) et **20000052/53 <-> 606429/30** (PEREIRA, reliés à 63331).
+Suppression prévue par l'app (« Supprimer (tout le foyer) »), comme le 02/11.
