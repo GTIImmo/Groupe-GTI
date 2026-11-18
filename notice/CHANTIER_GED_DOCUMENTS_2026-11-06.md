@@ -3518,3 +3518,27 @@ chemin du 31/08, éprouvé pour la première fois sur un lien neuf entre deux ag
 dans mon essai, une seule mesure).
 **Au nettoyage** : le couple 20000050/51 <-> 606427/28 est maintenant RELIÉ à 63331 (la principale seulement) ; il
 rejoint les deux couples à supprimer par l'app (§12.49).
+
+### 12.51 LOT G' -- LE CONJOINT LU PAR LE LIEN DE COUPLE (19/11, nuit) -- ÉCRIT, ESSAIS VERTS, PAS ENCORE ÉPROUVÉ EN RÉEL
+
+**Le trou (§12.49)** : l'écran ne fusionne un couple que si ses DEUX fiches sont reliées au bien. Mesure du 19/11 : 118
+conjoints nommés ont leur première reliée à un bien, **105** n'ont QUE la première (aucune première n'a deux conjoints).
+Pour eux, « Ce que dit la pièce d'identité » restait muet sur le conjoint, et la règle P4 rattachait sa pièce au mauvais
+mandant (P9 pouvait aussi le dire « ni sur la fiche »).
+**Le correctif** : `loadConjointsDesPremieres` (lib/ged.ts) lit, pour chaque PREMIÈRE active du bien, la fiche dont
+`hektor_couple_contact_id` = elle, rôle ET nature « conjoint », active ; deux conjoints -> aucun, lecture ratée -> null.
+`RecuManque.tsx` l'ajoute aux personnes du bien (`personnesCompletes`, utilisées par les règles et les fenêtres) et aux
+contacts de la fenêtre, avec `conjointDe` = sa première : l'écriture du lot G (App.tsx, `appliquerBilanPersonne`) passe
+déjà par elle, inchangée. Un conjoint déjà relié (couple fusionné) n'est pas ajouté deux fois. Lu seulement quand
+`ged_propositions` ou `ged_remplir` est allumé. Rien de neuf n'est écrit nulle part.
+**Contrôles** : les 13 essais hors ligne de la GED verts (4 réalignés sur `personnesCompletes`, 6 nouveaux « lot G' » dans
+`test_ged_remplir_contact.cjs`, 80 verts) ; `npm run build` vert.
+**Pas encore éprouvé en réel -- et pourquoi** : le couple d'essai « ESSAI GED » (20000050/51), rattaché ce soir à 63331
+(§12.50), n'a pas encore le rôle « conjoint » : il est posé par `conjoints_des_couples.py` (la nuit) seulement si la
+première est ÉLIGIBLE, et l'éligibilité (`active_annonce_relation`) n'est recalculée que par la construction de nuit de la
+couche. Relancés à la main sans effet : `relire_couple_rattache.py` (OK, 5 étapes) puis `conjoints_des_couples.py` (4 804
+marqués, 20000051 non) et l'envoi des deux fiches. ➡ Après le run du 19/11, déposer une pièce SPECIMEN de « Deux ESSAI GED »
+sur 63331 et éprouver.
+⚠ **Trouvé en passant** : (1) un couple qu'on vient de relier à un bien n'a son conjoint « conjoint » qu'à la nuit suivante --
+le lot G attend donc une nuit pour lui ; (2) `conjoints_des_couples.py` marque **4 804** conjoints nommés à envoyer, alors que
+Supabase n'en porte que **330** actifs nommés au rôle « conjoint » -- écart NON expliqué, non mesuré plus loin.

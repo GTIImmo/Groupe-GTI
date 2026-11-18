@@ -14,7 +14,7 @@ import { createPortal } from 'react-dom'
 import { createConsoleDocumentSignedUrl, dateOffreFaite, loadAffairesForDossier, loadConditionCatalogue, loadRegisterCycleAffaires } from './lib/api'
 import { apercuPremierePage } from './lib/gedClassementIa'
 import { etatFiableDuDocument } from './lib/etatSignatureMandat'
-import { gedDecider, gedGarderLecture, gedJuger, lireCarnetDetailStrict, lireConditionsAffairesStrict, lireDernierEnvoiAffairesStrict, loadContactsEtatCivil, loadGedClassements, loadGedDecisions, loadGedDecisionsDetail, loadGedJugements, useGedPropositions, useGedRemplir, type DecisionGed, type EtatCivilLu, type JugementGed } from './lib/ged'
+import { gedDecider, gedGarderLecture, gedJuger, lireCarnetDetailStrict, lireConditionsAffairesStrict, lireDernierEnvoiAffairesStrict, loadConjointsDesPremieres, loadContactsEtatCivil, loadGedClassements, loadGedDecisions, loadGedDecisionsDetail, loadGedJugements, useGedPropositions, useGedRemplir, type DecisionGed, type EtatCivilLu, type JugementGed } from './lib/ged'
 import { cleJugement, LIBELLE_VERDICT, VERDICTS, type VerdictGed } from './lib/gedMesure'
 import { propositionsRemplir, type FaitsRemplir, type PropositionRemplir } from './lib/gedRemplir'
 import { bilansPersonnes, type ContactEtatCivil } from './lib/gedRemplirContact'
@@ -205,6 +205,33 @@ export function RecuManque({
     return () => { annule = true }
   }, [regles, hektorAnnonceId, numeroMandat])
 
+  const remplir = useGedRemplir()
+  const [relire, setRelire] = useState(0)
+  // lot 9c : les contacts du bien par le numéro HEKTOR de l'écran (pont) ; la proposition porte NOTRE numéro.
+  const idsContacts = useMemo(() => contactsDuBien.map((c) => c.id).join(','), [contactsDuBien])
+  // ── lot G' (19/11) : LE CONJOINT D'UNE PREMIÈRE SEULE RELIÉE AU BIEN ─────────────────────────────────────────────
+  // L'écran ne fusionne un couple que si SES DEUX fiches sont reliées au bien : pour 105 couples sur 118 (mesure du 19/11)
+  // seule la première l'est, et le conjoint manquait partout ici -- sa pièce d'identité n'était rattachée à personne
+  // (lot G muet), ou au mauvais mandant (P4 « La pièce dit … la fiche … »), et P9 pouvait le dire « ni sur la fiche ».
+  // On le LIT par le lien de couple (loadConjointsDesPremieres) et on l'ajoute aux personnes du bien et aux contacts de
+  // « Ce que dit la pièce d'identité » (conjointDe = sa première : l'écriture passe déjà par elle, App.tsx). Lecture
+  // seule, seulement quand les règles ou « remplir » sont allumés ; un conjoint déjà relié au bien (fusionné) n'est pas
+  // ajouté deux fois ; lecture ratée -> rien d'ajouté, comme avant.
+  const [conjointsLus, setConjointsLus] = useState<Map<string, EtatCivilLu> | null>(null)
+  useEffect(() => {
+    if (!regles && !remplir) return
+    let annule = false
+    void loadConjointsDesPremieres(idsContacts ? idsContacts.split(',') : []).then((m) => { if (!annule) setConjointsLus(m) })
+    return () => { annule = true }
+  }, [regles, remplir, idsContacts, relire])
+  const conjointsEnPlus = useMemo(() => {
+    const dejaLa = new Set(contactsDuBien.map((c) => c.id))
+    return [...(conjointsLus ?? new Map<string, EtatCivilLu>()).values()]
+      .filter((r) => !dejaLa.has(String(r.hektor_target_id ?? '').trim()) && String(r.nom ?? '').trim())
+  }, [conjointsLus, contactsDuBien])
+  const personnesCompletes = useMemo<PersonneDuBien[]>(() => [...personnesDuBien,
+    ...conjointsEnPlus.map((r) => ({ nom: String(r.nom ?? '').trim(), prenom: String(r.prenom ?? '').trim() }))], [personnesDuBien, conjointsEnPlus])
+
   const alertes = useMemo(() => {
     if (!regles || affaires === null) return []
     const docs = documents
@@ -216,15 +243,14 @@ export function RecuManque({
       .map((d) => ({ nom: d.document_name, lecture: lectures.get(d.id) as LectureDocument }))
     const ordre: Record<Alerte['niveau'], number> = { alerte: 0, piece: 1, info: 2 }
     // morceau 9 (9b) : les pièces d'identité LUES -- le nom, la validité au jour de la signature, une pièce par personne
-    return [...reglesSansIa(faits, docs, affaires, new Date()), ...reglesLues({ ...faits, chargeRegistre }, docsLus, personnesDuBien, affaires, new Date()),
-      ...reglesPersonnes(faits, docsLus, personnesDuBien, affaires, new Date()), ...reglesFinancement(docs, docsLus, affaires, new Date()), ...reglesEtatCivil(docsLus, personnesDuBien)]
+    return [...reglesSansIa(faits, docs, affaires, new Date()), ...reglesLues({ ...faits, chargeRegistre }, docsLus, personnesCompletes, affaires, new Date()),
+      ...reglesPersonnes(faits, docsLus, personnesCompletes, affaires, new Date()), ...reglesFinancement(docs, docsLus, affaires, new Date()), ...reglesEtatCivil(docsLus, personnesCompletes)]
       .sort((a, b) => ordre[a.niveau] - ordre[b.niveau])
-  }, [regles, affaires, faits, documents, classements, lectures, personnesDuBien, chargeRegistre])
+  }, [regles, affaires, faits, documents, classements, lectures, personnesCompletes, chargeRegistre])
 
   // ── morceau 8 : les propositions « remplir », derrière `ged_remplir` (il ÉCRIT) ──────────────────────────────
   // Les décisions déjà prises et le nombre de conditions des compromis vivants sont relus à chaque fois ; une lecture
   // ratée (null) -> AUCUNE proposition (jamais reproposer, jamais croire une liste vide).
-  const remplir = useGedRemplir()
   // la PRÉSENCE du geste (la fonction change à chaque rendu de la fiche : elle ne doit pas relancer les lectures)
   const peutRemplir = Boolean(onRemplir)
   const [decisions, setDecisions] = useState<Set<string> | null>(null)
@@ -235,7 +261,6 @@ export function RecuManque({
   const [vol, setVol] = useState<{ valeur: string; x: number; y: number; dx: number; dy: number } | null>(null)
   // H3 : l'aperçu du document d'où vient une proposition, à la page lue (décision du 16/11 : « comme Ouvrir »)
   const [apercu, setApercu] = useState<{ cle: string; nom: string; page: number | null; vue: 'lecture' | { image: string; nbPages: number; page: number } | { erreur: string } } | null>(null)
-  const [relire, setRelire] = useState(0)
   useEffect(() => {
     if (!remplir || !peutRemplir) return
     let annule = false
@@ -244,7 +269,6 @@ export function RecuManque({
   }, [remplir, peutRemplir, hektorAnnonceId, relire])
   // lot 9c : l'état civil des contacts du bien, relu à chaque fois (lecture ratée -> null -> aucune proposition contact).
   // L'écran donne le numéro HEKTOR (pont) ; la proposition porte NOTRE numéro (règle du 16/11 : le nôtre pour l'app).
-  const idsContacts = useMemo(() => contactsDuBien.map((c) => c.id).join(','), [contactsDuBien])
   const [etatCivil, setEtatCivil] = useState<Map<string, EtatCivilLu> | null>(null)
   useEffect(() => {
     if (!remplir || !peutRemplir) return
@@ -265,7 +289,11 @@ export function RecuManque({
       conjointDe: r.nature_fiche === 'conjoint' && r.couple_role === 'conjoint' ? (r.hektor_couple_contact_id ?? null) : null,
       naissance: r.birth_date, lieu: r.birth_place, situation: r.marital_status,
     }] : []
-  }) : []), [etatCivil, contactsDuBien])
+  }).concat(conjointsEnPlus.map((r) => ({
+    // lot G' : le conjoint lu par le lien de couple (sa première seule est reliée au bien)
+    contactId: String(r.hektor_contact_id), nom: r.nom ?? '', prenom: r.prenom ?? '', personneSeule: false, premiereDuCouple: false,
+    conjointDe: r.hektor_couple_contact_id ?? null, naissance: r.birth_date, lieu: r.birth_place, situation: r.marital_status,
+  }))) : []), [etatCivil, contactsDuBien, conjointsEnPlus])
   const propositions = useMemo(() => {
     if (!remplir || !peutRemplir || !decisions || affaires === null) return []
     const docsLus = documents
@@ -404,8 +432,8 @@ export function RecuManque({
       .filter((d) => d.present_in_hektor !== false && lectures.has(d.id))
       .map((d) => ({ nom: d.document_name, lecture: lectures.get(d.id) as LectureDocument }))
     const transactions = affaires === null || catalogue === null ? [] : bilansDuDossier(docsLus, affaires, catalogue)
-    return [...transactions, ...bilansFiche(faits, docsLus), ...bilansPersonnes(contactsEtatCivil, personnesDuBien, docsLus, new Date())]
-  }, [peutBilan, affaires, catalogue, documents, lectures, faits, contactsEtatCivil, personnesDuBien])
+    return [...transactions, ...bilansFiche(faits, docsLus), ...bilansPersonnes(contactsEtatCivil, personnesCompletes, docsLus, new Date())]
+  }, [peutBilan, affaires, catalogue, documents, lectures, faits, contactsEtatCivil, personnesCompletes])
   // qui tranche : la transaction, un responsable ; la fiche, celui qui peut la remplir (les cartes « Remplir »)
   const peutTrancher = (b: Bilan) => (estGenreFiche(b.genre) ? peutRemplir : peutModifierTransaction)
   // à trancher : ni d'accord, ni déjà décidé, ni figé chez Hektor (une offre acceptée se montre, elle ne réclame rien)
