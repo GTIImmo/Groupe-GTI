@@ -2227,3 +2227,29 @@ général », taxe foncière 1 600, énergie 6 000) SANS générer, par l'écran
   son mandat est clos, la fiche en lecture seule n'offre pas l'éditeur) ; la carte de l'assistant en vrai (il faut une
   conversation : le modèle, la carte, son clic -> « Tout générer » ÉCRIT les sources du bien, comme le bouton) ; la garde
   des essentiels avec le vrai modèle ; « Préparer l'avis de valeur » après une vraie création.
+
+## 73. ESSAI RÉEL de la carte « avis de valeur » (18/11, « Oui, essaie la carte ») — vert, rien généré
+
+Sur 24935 (bien d'essai), dans son Chrome, par le VRAI modèle. Question : « Prépare l'avis de valeur de l'annonce 24935 :
+fourchette 145 000 à 158 000, valeur 152 000, état 4 sur 5, toiture bon état refaite en 2015, point fort : jardin plat au
+calme. »
+- **La carte** (proposer_ouvrir_avis_de_valeur, du premier coup) : Fourchette basse 145 000 € ; haute 158 000 € ; valeur
+  estimée 152 000 € ; État 4 ; Points forts « Jardin plat au calme » ; barème toiture / charpente bon état.
+- **Valider (15:56)** -> l'éditeur s'ouvre sur « Bien & valeur » ; bandeau : « Repris de l'avis du 02/07/2026. /
+  Pré-rempli par l'assistant : 6 cases, par-dessus l'avis repris. / Calculé : marché DVF, cadre de vie, INSEE, loyers,
+  DPE ADEME, bâti (BDNB), patrimoine. Manque : cadastre ». Cases : 145000 / 152000 / 158000, note 4 (l'avis disait 5),
+  toiture « bon » + « Refaite en 2015 », points forts = « Jardin plat au calme » (la dictée REMPLACE la case : les 5 de
+  l'avis partent, voulu par « ma dictée prime »), points de vigilance et charges REPRIS de l'avis (4 lignes ; 1000/300/90/90).
+  Marché : 16 comparables, rayon 1 km, 4 ans, médiane 1 734 €/m², estimation DVF 208 140 €.
+- **Recoupé en base** : `app_dossier_estimation` de 1352134 -> 5 sources réécrites à 14:56 (dpe, bdnb, insee, loyers,
+  patrimoine, toutes ok) ; dvf / cadre / cadastre NON réécrits (ils restent dans l'éditeur, comme le bouton) ; copro pas
+  appelée (pas en copro) ; `valeurs` inchangées (aucun PDF) ; brouillon intact ; 0 travail posé. Fermé par « Retour ».
+- **Trouvés (à trancher, rien corrigé)** :
+  1. ⚠ Cadastre : « le point du bien ne tombe sur aucune parcelle — choisis la bonne ». Or le bien a une parcelle RETENUE
+     (`sources.cadastre`, 02/07) que l'éditeur précharge ; « Tout générer » (le bouton comme l'automatique) la remplace
+     dans l'éditeur par le résultat raté du point. Le bandeau dit « Manque : cadastre » alors qu'une parcelle existe. Piste :
+     ne pas relancer le cadastre quand une parcelle retenue est chargée, et dire « parcelle à choisir » plutôt que
+     « manque ». Comportement du bouton existant, rendu plus fréquent par le lancement automatique.
+  2. Cadre de vie : « Firminy · 0 école, 0 commerce » — douteux pour Firminy ; service existant, non audité ici.
+  3. La dictée d'un point fort remplace la liste reprise (au lieu de l'ajouter) : conforme à « ma dictée prime », à
+     confirmer par lui.
