@@ -3910,6 +3910,22 @@
   font-weight: 760 !important;
 }
 
+/* 18/11 : pièces « depuis l'ordinateur » (note étape 4 §63-64) -- pas de case à cocher, un bouton Retirer à droite. */
+.contact-email-attachment-row.is-ordinateur {
+  grid-template-columns: 34px minmax(0, 1fr) auto !important;
+  cursor: default !important;
+}
+
+.contact-email-attachment-group > small {
+  color: rgba(34, 35, 35, 0.58) !important;
+  font-size: 10px !important;
+  font-weight: 760 !important;
+}
+
+.contact-email-attachment-choisir {
+  justify-self: start !important;
+}
+
 @media (max-width: 1460px) and (min-width: 1181px) {
   .google-agenda-modal-layout {
     grid-template-columns: minmax(360px, 0.86fr) minmax(500px, 1.14fr);
