@@ -322,7 +322,8 @@ import { useDepotAssistant } from './lib/depotAssistant'
 // GED morceau 3 (12/11/2026) : le bloc « Reçu / Manque », derrière l'interrupteur ged_recu_manque (note GED §12.8).
 import { RecuManque } from './RecuManque'
 import { estEnvoiDirect, EVENEMENT_DROITS_TRANSACTION, EVENEMENT_MODIFIER_TRANSACTION, EVENEMENT_RESULTAT_ENVOI, type ResultatEnvoi, type ChoixBilan, type DemandeModifierTransaction, type ResultatBilan } from './BilanCompromis'
-import { conditionsApres, estGenreFiche, type BilanCompromis as BilanCompromisCalcule, type LigneBilan } from './lib/gedBilanCompromis'
+import { conditionsApres, estGenreFiche, estGenrePersonne, type BilanCompromis as BilanCompromisCalcule, type LigneBilan } from './lib/gedBilanCompromis'
+import { contactDeLaLigne } from './lib/gedRemplirContact'
 import { caseInchangee } from './lib/gedBilanFiche'
 import { caseVide, decoderConditions, type FaitsRemplir, type PropositionRemplir } from './lib/gedRemplir'
 import { LIBELLE_CONDITION } from './lib/gedComparer'
@@ -12083,8 +12084,9 @@ function personnesGedDuBien(contacts: DetailContact[] | null | undefined): Array
 // `seul` : ni une fiche fusionnée de couple à l'écran, ni une référence de couple -- la fiche relue doit le confirmer.
 function contactsGedDuBien(contacts: DetailContact[] | null | undefined): Array<{ id: string; seul: boolean }> {
   return (contacts ?? [])
-    .map((c) => ({ id: String(c.sourceId ?? '').trim(), seul: !c.members?.length && !String(c.refCouple ?? '').trim() }))
-    .filter((c) => /^\d+$/.test(c.id))
+    // lot F (18/11) : chaque MEMBRE d'un couple fusionné a sa fiche -- sa nature relue dit la première ou le conjoint
+    .flatMap((c) => (c.members?.length ? c.members.map((m) => ({ id: String(m.sourceId ?? '').trim(), seul: false })) : [{ id: String(c.sourceId ?? '').trim(), seul: !String(c.refCouple ?? '').trim() }]))
+    .filter((c, i, t) => /^\d+$/.test(c.id) && t.findIndex((x) => x.id === c.id) === i)
 }
 
 function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJobCreated, onMissingNegotiator, onDocumentsChanged, ficheDuMandat }: { dossier: Dossier; compact?: boolean; skin?: 'classic' | 'v21'; onJobCreated?: (job: ConsoleJob) => void; onMissingNegotiator?: MissingNegotiatorHandler; onDocumentsChanged?: () => void; ficheDuMandat?: { detail: DossierDetailPayload; contacts: DetailContact[]; address: string } | null }) {
@@ -12240,7 +12242,47 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
     }
     return { message: `Enregistré : ${dit.join(' ; ')}.`, ferme: false }
   }
+  // GED lot F (18/11) : « Ce que dit la pièce d'identité / la fiche de renseignements » -- les cases d'un CONTACT. Même
+  // règle que la fiche du bien : on RELIT chaque contact (actif, personne seule ou PREMIÈRE d'un couple), une case qui a
+  // changé depuis l'ouverture n'est pas écrite (témoin), puis UN geste existant par contact (editContactOptimistic : chez
+  // nous au clic, chez Hektor par le worker, qui relit le formulaire -- un couple est modifié comme un couple, son conjoint
+  // intact). On joint le nom ACTUEL, inchangé (le geste l'exige) ; l'e-mail RGPD est coupé EXPRÈS (défaut D-4).
+  const appliquerBilanPersonne = async (b: BilanCompromisCalcule, choix: Array<{ ligne: LigneBilan; choix: ChoixBilan }>): Promise<ResultatBilan> => {
+    const noter = (l: LigneBilan, decision: 'remplie' | 'ignoree' | 'echec', detail: Record<string, unknown>) =>
+      gedDecider({ hektorAnnonceId: dossier.hektor_annonce_id, lectureId: b.lectureId, cle: l.cle, champ: l.champFiche ?? l.cle.slice(2), valeur: l.valeur, decision, detail })
+    const dit: string[] = []
+    const gardees = choix.filter((c) => c.choix === 'garder')
+    for (const c of gardees) await noter(c.ligne, 'ignoree', { geste: 'ce_que_dit_le_document', genre: b.genre })
+    if (gardees.length) dit.push(`${gardees.length} laissé${gardees.length > 1 ? 's' : ''} tel${gardees.length > 1 ? 's' : ''} quel${gardees.length > 1 ? 's' : ''}`)
+    const prises = choix.filter((c) => c.choix === 'prendre' && c.ligne.champFiche && contactDeLaLigne(c.ligne.cle)).map((c) => c.ligne)
+    for (const id of [...new Set(prises.map((l) => contactDeLaLigne(l.cle) as string))]) {
+      const siennes = prises.filter((l) => contactDeLaLigne(l.cle) === id)
+      const relu = (await loadContactsEtatCivil([id], 'app'))?.get(id)
+      const actif = relu && relu.archive !== true && !relu.couple_role && ['personne_seule', 'couple'].includes(String(relu.nature_fiche ?? ''))
+      const nom = String(relu?.nom ?? '').trim()
+      if (!relu || !actif || !nom) {
+        for (const l of siennes) await noter(l, 'echec', { motif: !relu ? 'contact_illisible' : !actif ? 'pas_personne_seule_ni_premiere' : 'contact_sans_nom', nature_fiche: relu?.nature_fiche ?? null, couple_role: relu?.couple_role ?? null })
+        dit.push(`rien écrit pour ${siennes.map((l) => l.libelle).join(', ')} : la fiche du contact n'a pas pu être relue, ou elle n'est plus une personne seule ni la première d'un couple`)
+        continue
+      }
+      const actuelle = (l: LigneBilan) => (l.champFiche === 'birth_date' ? relu.birth_date : l.champFiche === 'birth_place' ? relu.birth_place : relu.marital_status)
+      const changees = siennes.filter((l) => (l.temoin == null ? !(l.champFiche === 'birth_date' ? caseVide(actuelle(l)) : !String(actuelle(l) ?? '').trim()) : String(actuelle(l) ?? '').trim() !== l.temoin))
+      const ecrites = siennes.filter((l) => !changees.includes(l))
+      for (const l of changees) await noter(l, 'echec', { motif: 'case_changee', valeur_fiche: actuelle(l) ?? null })
+      if (ecrites.length) {
+        const champs: Record<string, string> = {}
+        for (const l of ecrites) champs[l.champFiche === 'birth_date' ? 'birthDate' : l.champFiche === 'birth_place' ? 'birthPlace' : 'maritalStatus'] = l.valeur
+        await editContactOptimistic({ contactId: id, contact: { lastName: nom, personType: 'personne_seule', sendRgpdEmail: false, ...champs } })
+        if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('hektor:contact-updated', { detail: { hektor_contact_id: id } }))
+        for (const l of ecrites) await noter(l, 'remplie', { geste: 'editContactOptimistic', genre: b.genre, hektor_contact_id: id, numero_hektor: relu.hektor_target_id, couple: relu.nature_fiche === 'couple', champs, avant: l.temoin, email_rgpd: false })
+        dit.push(`envoyé à Hektor : ${ecrites.map((l) => `${l.libelle} ${l.lu}`).join(', ')} (chemin habituel de la fiche du contact)`)
+      }
+      if (changees.length) dit.push(`rien écrit pour ${changees.map((l) => l.libelle).join(', ')} : la case a changé depuis l'ouverture de la fenêtre`)
+    }
+    return { message: `Enregistré : ${dit.join(' ; ') || 'rien à écrire'}.`, ferme: false }
+  }
   const appliquerBilan = async (b: BilanCompromisCalcule, choix: Array<{ ligne: LigneBilan; choix: ChoixBilan }>): Promise<ResultatBilan> => {
+    if (estGenrePersonne(b.genre)) return appliquerBilanPersonne(b, choix)
     if (estGenreFiche(b.genre)) return appliquerBilanFiche(b, choix)
     const noter = (l: LigneBilan, decision: 'remplie' | 'ignoree', detail: Record<string, unknown>) =>
       gedDecider({ hektorAnnonceId: dossier.hektor_annonce_id, lectureId: b.lectureId, cle: l.cle, champ: l.champModale ?? l.condition?.nature ?? l.cle.slice(2), valeur: l.valeur, decision, detail })

@@ -49,8 +49,13 @@ export type LigneBilan = {
 // lot A (18/11) : les six rapports de diagnostic et le dossier de diagnostics (DDT), chacun SA fenêtre
 export type GenreFiche = 'dpe' | 'erp' | 'copro_lots' | 'copro_charges' | 'copro_ag' | 'taxe' | 'titre' | 'surface' | 'ddt'
   | 'diag_electricite' | 'diag_gaz' | 'diag_plomb' | 'diag_termites' | 'diag_amiante' | 'diag_assainissement'
-export type GenreBilan = 'compromis' | 'offre' | GenreFiche
-export const estGenreFiche = (g: GenreBilan): g is GenreFiche => g !== 'compromis' && g !== 'offre'
+// lot F (18/11) : les PIÈCES DES PERSONNES (pièce d'identité, fiche de renseignements) -- une fenêtre par document, qui
+// corrige la fiche d'un CONTACT. Elles se tranchent comme la fiche (même droit, pas de modale) : estGenreFiche les compte,
+// et l'écriture les aiguille d'abord par estGenrePersonne (App.tsx, appliquerBilanPersonne).
+export type GenrePersonne = 'identite' | 'renseignements'
+export type GenreBilan = 'compromis' | 'offre' | GenreFiche | GenrePersonne
+export const estGenreFiche = (g: GenreBilan): g is GenreFiche | GenrePersonne => g !== 'compromis' && g !== 'offre'
+export const estGenrePersonne = (g: GenreBilan): g is GenrePersonne => g === 'identite' || g === 'renseignements'
 export type BilanCompromis = {
   genre: GenreBilan
   lectureId: string | null

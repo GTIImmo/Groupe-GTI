@@ -7,6 +7,7 @@
 //   plus tard). ⛔ Le nom et le premier prénom EXACTEMENT ceux de la pièce, et une seule personne du bien qui les porte.
 //   ⛔ Deux pièces qui se contredisent : rien.
 import { normaliserTexte, type PersonneDuBien } from './gedComparer'
+import type { BilanCompromis, EtatBilan, GenrePersonne, LigneBilan } from './gedBilanCompromis'
 import type { LectureDocument } from './gedLecture'
 import type { DocumentLu } from './gedReglesLues'
 import { caseVide, type PropositionRemplir } from './gedRemplir'
@@ -17,6 +18,9 @@ export type ContactEtatCivil = {
   nom: string
   prenom: string
   personneSeule: boolean      // nature_fiche « personne_seule », sans rôle de couple, pas une fiche fusionnée à l'écran
+  // lot F (18/11) : la PREMIÈRE personne d'un couple (nature_fiche « couple », sans rôle) -- sa fiche Hektor est le
+  // formulaire de couple, que le worker relit et renvoie avec le bloc du conjoint intact
+  premiereDuCouple?: boolean
   naissance: string | null
   lieu: string | null
   situation: string | null
@@ -29,7 +33,7 @@ const SITUATION_TEXTE: Record<string, string> = { married: 'marié(e)', single: 
 
 // Une personne lue, NETTEMENT (etat « lu ») : dans une pièce d'identité (liste « pieces ») ou une fiche de
 // renseignements (liste « personnes »).
-type PersonneLueEtatCivil = { nom: string; nomUsage: string; prenoms: string; naissance: string | null; lieu: string | null; situation: string | null; source: string; lectureId: string | null }
+type PersonneLueEtatCivil = { nom: string; nomUsage: string; prenoms: string; naissance: string | null; lieu: string | null; situation: string | null; source: string; lectureId: string | null; page: number | null }
 
 function personnesDe(d: DocumentLu): PersonneLueEtatCivil[] {
   const l: LectureDocument = d.lecture
@@ -48,6 +52,7 @@ function personnesDe(d: DocumentLu): PersonneLueEtatCivil[] {
       situation: liste === 'personnes' ? (net('situation_famille', r)?.valeur ?? null) : null,
       source: `${d.nom}${page ? `, page ${page}` : ''}`,
       lectureId: l.id ?? null,
+      page: page ?? null,
     }
   })
 }
@@ -112,3 +117,73 @@ export function propositionsContact(
   }
   return sortie
 }
+
+// ── GED lot F (18/11) -- « Ce que dit la pièce d'identité / la fiche de renseignements » ─────────────────────────────
+// La même fenêtre que le compromis et la fiche du bien (BilanCompromis.tsx), UNE PAR DOCUMENT LU. Ses lignes : pour chaque
+// personne du bien qu'il nomme (nom ET premier prénom stricts, une seule personne du bien qui les porte -- comme 9c), sa
+// date et son lieu de naissance, et (fiche de renseignements seulement) la situation de famille. Case vide -> à ajouter ;
+// différente -> à trancher (on n'écrit par-dessus que sur le choix de l'humain) ; égale -> d'accord. Personne seule et
+// PREMIÈRE personne d'un couple. Les cartes C1-C3 se retirent au profit de la fenêtre (un seul chemin par case).
+// ⛔ Un seul chemin par case : la naissance d'une personne est dite par SA pièce d'identité la plus récemment lue ; la
+//   fiche de renseignements n'en parle que si aucune pièce d'identité lue ne nomme la personne. Les pièces d'identité de
+//   la même personne qui se contredisent : aucune ne parle de la case en désaccord.
+// ⛔ Jamais l'adresse, ni le régime matrimonial, ni le numéro, la délivrance ou l'autorité de la pièce (ged_prive).
+const DOC_PERSONNE: Record<string, GenrePersonne> = { 'justif.identite': 'identite', 'transaction.renseignements': 'renseignements' }
+
+export function bilansPersonnes(contacts: ContactEtatCivil[], personnesDuBien: PersonneDuBien[], docs: DocumentLu[], aujourdhui: Date): BilanCompromis[] {
+  // ⛔ une première de couple au nom ou au prénom FUSIONNÉ (« Annette et Patrick », « DUPONT/ MARTIN » : 3 104 prénoms et
+  //   640 noms sur 6 597 premières fiches, mesuré le 18/11) ne se propose pas : son premier prénom ne dit pas QUI est la
+  //   première personne chez Hektor -- la pièce du conjoint finirait sur la fiche de l'autre
+  const fusionne = (s: string) => /( et |\/|&|\+)/i.test(` ${s} `)
+  const eligibles = contacts.filter((c) => (c.personneSeule || (c.premiereDuCouple === true && !fusionne(c.prenom) && !fusionne(c.nom))) && /^\d+$/.test(c.contactId))
+  const lus = docs.filter((d) => d.lecture.etat === 'lu' && DOC_PERSONNE[d.lecture.typeCode])
+    .map((d) => ({ d, personnes: personnesDe(d) }))
+  // la personne lue dans ce document pour ce contact, si elle se rattache sans ambiguïté
+  const laSienne = (personnes: PersonneLueEtatCivil[], c: ContactEtatCivil) => personnes.find((l) => memePersonne(l, { nom: c.nom, prenom: c.prenom })
+    && personnesDuBien.filter((p) => memePersonne(l, p)).length <= 1) ?? null
+  const sortie: BilanCompromis[] = []
+  for (const { d, personnes } of lus) {
+    const genre = DOC_PERSONNE[d.lecture.typeCode]
+    const lignes: LigneBilan[] = []
+    for (const c of eligibles) {
+      const lue = laSienne(personnes, c)
+      if (!lue) continue
+      const qui = [premierMot(c.prenom) ? c.prenom.trim().split(/\s+/)[0] : '', c.nom].filter(Boolean).join(' ')
+      const ligneCase = (champ: string, libelle: string, lu: string, valeur: string, fiche: string | null, egal: (f: string) => boolean, clair: (f: string) => string): LigneBilan => {
+        const brut = String(fiche ?? '').trim()
+        const vide = !brut || (champ === 'birth_date' && caseVide(brut))
+        const etat: EtatBilan = vide ? 'ajouter' : egal(brut) ? 'accord' : 'trancher'
+        return {
+          cle: `P.${champ}.${c.contactId}`, libelle: `${libelle} de ${qui}`, destination: 'hektor', etat, lu, valeur, transaction: vide ? null : clair(brut),
+          page: lue.page, note: null, champModale: null, condition: null, regle: null, attente: null, fige: null, champFiche: champ, temoin: vide ? null : brut,
+        }
+      }
+      // la naissance : SA pièce d'identité la plus récemment lue (et les autres pièces d'accord) ; sinon la fiche
+      const pieces = lus.filter((x) => x.d.lecture.typeCode === 'justif.identite' && laSienne(x.personnes, c))
+        .sort((a, b) => String(b.d.lecture.luLe ?? '').localeCompare(String(a.d.lecture.luLe ?? '')))
+      const parle = genre === 'identite' ? pieces[0]?.d === d : pieces.length === 0
+      if (parle) {
+        const autres = genre === 'identite' ? pieces.map((x) => laSienne(x.personnes, c) as PersonneLueEtatCivil) : [lue]
+        const naissance = naissanceValable(lue.naissance, aujourdhui)
+        const dates = autres.map((x) => naissanceValable(x.naissance, aujourdhui)).filter((x): x is string => !!x)
+        if (naissance && dates.every((x) => x === naissance)) {
+          lignes.push(ligneCase('birth_date', 'Date de naissance', jjmmaaaa(naissance), naissance, c.naissance, (f) => f.slice(0, 10) === naissance, (f) => (/^\d{4}-\d{2}-\d{2}/.test(f) ? jjmmaaaa(f) : f)))
+        }
+        const lieux = autres.map((x) => x.lieu).filter((x): x is string => !!x)
+        if (lue.lieu && lieux.every((x) => normaliserTexte(x) === normaliserTexte(lue.lieu as string))) {
+          lignes.push(ligneCase('birth_place', 'Lieu de naissance', lue.lieu, lue.lieu, c.lieu, (f) => normaliserTexte(f) === normaliserTexte(lue.lieu as string), (f) => f))
+        }
+      }
+      // la situation de famille : la fiche de renseignements seulement, et seulement un code Hektor
+      const code = genre === 'renseignements' && lue.situation ? SITUATION_HEKTOR[lue.situation] : undefined
+      if (code) lignes.push(ligneCase('marital_status', 'Situation de famille', SITUATION_TEXTE[code], code, c.situation, (f) => f === code, (f) => SITUATION_TEXTE[f] ?? f))
+    }
+    if (lignes.length) {
+      sortie.push({ genre, lectureId: d.lecture.id ?? null, nom: d.nom, luLe: d.lecture.luLe ?? null, affaireId: 0, dateTransaction: null, conditionsLues: true, conditionsGenerales: [], lignes })
+    }
+  }
+  return sortie
+}
+
+// Le contact d'une ligne de la fenêtre (« P.birth_date.<notre numéro> ») -- l'écriture regroupe les lignes par contact.
+export const contactDeLaLigne = (cle: string): string | null => { const m = /^P\.(?:birth_date|birth_place|marital_status)\.(\d+)$/.exec(cle); return m ? m[1] : null }

@@ -3346,4 +3346,38 @@ copropriété n'est pas le terrain d'un appartement ; un bien « non dit » ne s
 surface habitable sans tolérance -> 1 ROUGE chacun ; voisins verts ; `npm run build` vert.
 ⏳ **Épreuves réelles** : `surfappart` (groupe `ag_interieur`, jamais depuis la GED) et `surfterrain` (groupe `terrain`, UNE
 écriture connue) -- sur 63331 (appartement, copropriété OUI : le titre ne s'y propose PAS, par construction) le métré seul ;
-le terrain demande un bien d'essai hors copropriété.
+le terrain demande un bien d'essai hors copropriété. Commit `273c5de`.
+
+### 12.46 LE LOT F -- « Ce que dit la pièce d'identité / la fiche de renseignements » (18/11) -- ÉCRIT
+
+**Audit avant d'écrire** (objet CONTACT, geste modifier) : (1) le worker (`updateHektorContactIdentity`) RELIT le formulaire
+Hektor -- « un couple chez Hektor est édité comme un couple (bloc `_m2`), quoi que dise l'envoi » -- et n'écrit le bloc du
+conjoint que s'il est ENVOYÉ : modifier la naissance de la première personne laisse le conjoint intact ; (2) la fonction de base
+`app_edit_contact_optimistic` ne touche pas à la nature de la fiche, elle pose seulement les cases envoyées (dont `birth_date`,
+`birth_place`, `marital_status`) ; (3) **mesure** des premières fiches de couple actives (6 597) : **3 104 au prénom fusionné**
+(« Annette et Patrick ») et **640 au nom fusionné** (« DUPONT/ MARTIN ») -- leur premier prénom ne dit pas QUI est la première
+personne chez Hektor ; (4) chez nous, dates ISO (268) et situation en codes Hektor (married 43, single 29, widower 15, divorced 8,
+civil_union 3) ; (5) le couple d'essai 20000031/32 <-> 606104/05 n'est PLUS dans les contacts (sa suppression était prévue après
+les essais du 02/11).
+**Fait** :
+- `gedRemplirContact.ts` -- `bilansPersonnes` : UNE fenêtre par document lu (`identite`, `renseignements`) ; ses lignes, pour
+  chaque personne du bien qu'il nomme (nom ET premier prénom stricts, une seule personne du bien qui les porte, comme 9c) : date
+  et lieu de naissance, et (fiche de renseignements seulement) la situation de famille en code Hektor. Vide -> à ajouter ;
+  différent -> à trancher ; égal -> d'accord. **Personne seule et PREMIÈRE personne d'un couple** ; ⛔ une première au nom ou au
+  prénom fusionné ne se propose pas. ⛔ Un seul chemin par case : la naissance vient de la pièce d'identité la plus récemment lue
+  (les autres pièces de la personne d'accord, sinon aucune ne parle) ; la fiche de renseignements n'en parle que si aucune pièce
+  d'identité ne nomme la personne. Jamais l'adresse, le régime, ni le numéro / la délivrance / l'autorité (ged_prive).
+- `RecuManque.tsx` : les fenêtres des personnes rejoignent les autres ; **les cartes C1-C3 sont RETIRÉES** (la fonction
+  `propositionsContact` reste, testée, sans appelant) ; la fenêtre ouverte se repère par son genre ET sa lecture (deux pièces
+  d'identité = deux fenêtres ; avant, une seule fenêtre par genre).
+- `App.tsx` : `contactsGedDuBien` donne chaque MEMBRE d'un couple fusionné à l'écran (la « principale » de l'écran n'est pas
+  forcément la première chez Hektor : on lit la nature de CHAQUE fiche) ; `appliquerBilanPersonne` -- par contact : relu
+  (actif, personne seule ou première, jamais un conjoint), témoin case par case, UN `editContactOptimistic` (nom actuel joint,
+  e-mail RGPD coupé, rien d'autre envoyé), décision notée après l'écriture.
+- `gedBilanCompromis.ts` (`GenrePersonne`, `estGenrePersonne` ; l'aiguillage passe AVANT celui de la fiche), `BilanCompromis.tsx`
+  (« La fiche du contact »).
+**Contrôles** : `test_ged_remplir_contact` **66 VERT** (18 neufs, section ⑥ ; l'essai qui vérifiait le branchement des cartes C
+vérifie leur retrait) ; témoins inverses -- première fusionnée proposée, la fiche parle malgré la CNI, deux pièces
+contradictoires, le conjoint proposé -> rouges ; les 13 fichiers d'essais GED verts ; `npm run build` vert.
+⚠ **Limite** : l'état civil n'est relu que pour celui qui peut remplir (comme avant) -- les autres ne voient pas ces fenêtres.
+⏳ **Épreuve réelle** : une pièce SPÉCIMEN sur une personne seule d'essai, puis sur la première d'un couple d'essai (à recréer).

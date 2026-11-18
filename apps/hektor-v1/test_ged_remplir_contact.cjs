@@ -84,11 +84,58 @@ const appel = (geste.match(/await editContactOptimistic\(\{.*/) || [''])[0]
 voir(appel.length > 0 && !/\b(address|postalCode|city|email|phone|phoneSecondary|firstName|civility|comments)\b/.test(appel), 'TÉMOIN : rien d\'autre n\'est envoyé (ni coordonnées, ni prénom, ni civilité)')
 voir(/garder\('remplie'/.test(geste) && geste.indexOf('editContactOptimistic') < geste.indexOf("garder('remplie'"), 'la décision est gardée APRÈS l\'écriture')
 const recu = fs.readFileSync(path.join(__dirname, 'src/RecuManque.tsx'), 'utf8')
-voir(/etatCivil \? contactsDuBien/.test(recu) && /propositionsContact\(contacts, personnesDuBien, docsLus, decisions/.test(recu), 'l\'écran : une lecture ratée (null) -> aucune proposition contact')
+voir(/etatCivil \? contactsDuBien/.test(recu) && !/propositionsContact\(/.test(recu) && /bilansPersonnes\(contactsEtatCivil, personnesDuBien, docsLus, new Date\(\)\)/.test(recu),
+  'lot F : les cartes C1-C3 sont RETIRÉES au profit des fenêtres « Ce que dit… » ; une lecture ratée (null) -> aucune fenêtre contact')
 const ged = fs.readFileSync(path.join(__dirname, 'src/lib/ged.ts'), 'utf8')
 voir(/from\('app_contacts_current'\)/.test(ged) && /if \(error\) return null/.test(ged.slice(ged.indexOf('loadContactsEtatCivil'))), 'la relecture passe par la vue des contacts (même périmètre), et une erreur rend null')
 voir(/loadContactsEtatCivil\(idsContacts \? idsContacts\.split\(','\) : \[\], 'hektor'\)/.test(recu), 'l\'écran lit par le numéro HEKTOR des contacts du bien (le pont)')
 voir(/contactId: String\(r\.hektor_contact_id\)/.test(recu) && !/contactId: c\.id/.test(recu), 'TÉMOIN : la proposition porte NOTRE numéro, jamais celui de l\'écran')
+
+console.log('⑥ lot F (18/11) : « Ce que dit la pièce d\'identité / la fiche de renseignements »')
+const { bilansPersonnes, contactDeLaLigne } = charger('src/lib/gedRemplirContact.ts')
+const LB = (b, cle) => b && b.lignes.find((l) => l.cle === cle)
+const f0 = bilansPersonnes([C()], DUBIEN, [cni('ESSAI 8A C1', 'Mandant Jean', '1970-05-04', 'Lyon')], AUJ)
+voir(f0.length === 1 && f0[0].genre === 'identite' && LB(f0[0], 'P.birth_date.20000009').etat === 'ajouter' && LB(f0[0], 'P.birth_date.20000009').valeur === '1970-05-04'
+  && LB(f0[0], 'P.birth_date.20000009').champFiche === 'birth_date' && LB(f0[0], 'P.birth_place.20000009').valeur === 'Lyon' && LB(f0[0], 'P.birth_date.20000009').temoin === null,
+  'une CNI sur une fiche VIDE : sa fenêtre, date et lieu à ajouter, dans les cases du contact, témoin « vide »')
+const f1 = bilansPersonnes([C({ naissance: '1971-05-04', lieu: 'LYON' })], DUBIEN, [cni('ESSAI 8A C1', 'Mandant', '1970-05-04', 'Lyon')], AUJ)[0]
+voir(LB(f1, 'P.birth_date.20000009').etat === 'trancher' && LB(f1, 'P.birth_date.20000009').temoin === '1971-05-04' && LB(f1, 'P.birth_date.20000009').transaction === '04/05/1971' && LB(f1, 'P.birth_place.20000009').etat === 'accord',
+  '⭐ une date REMPLIE qui diffère -> à trancher (on n\'écrit par-dessus que sur le choix) ; le lieu « LYON » = « Lyon » -> d\'accord')
+const f2 = bilansPersonnes([C()], DUBIEN, [fiche('ESSAI 8A C1', 'Mandant', '1970-05-04', 'Lyon', 'marie')], AUJ)[0]
+voir(f2.genre === 'renseignements' && LB(f2, 'P.marital_status.20000009').valeur === 'married' && LB(f2, 'P.marital_status.20000009').lu === 'marié(e)' && LB(f2, 'P.birth_date.20000009'),
+  'la fiche de renseignements : la situation de famille (code Hektor) et, sans pièce d\'identité, la naissance')
+const f3 = bilansPersonnes([C()], DUBIEN, [cni('ESSAI 8A C1', 'Mandant', '1970-05-04', 'Lyon'), fiche('ESSAI 8A C1', 'Mandant', '1970-05-04', 'Lyon', 'marie')], AUJ)
+voir(f3.length === 2 && !LB(f3[1], 'P.birth_date.20000009') && !LB(f3[1], 'P.birth_place.20000009') && LB(f3[1], 'P.marital_status.20000009') && LB(f3[0], 'P.birth_date.20000009'),
+  '⛔ un seul chemin par case : avec une CNI lue, la fiche de renseignements ne parle plus de la naissance (la situation, seulement)')
+const deuxCni = [doc('CNI 2.pdf', 'justif.identite', [v('pieces.nom', { valeur: 'ESSAI 8A C1' }), v('pieces.prenoms', { valeur: 'Mandant' }), v('pieces.date_naissance', { valeur_date: '1970-05-04' })], 'L-2'),
+  cni('ESSAI 8A C1', 'Mandant', '1970-05-04', 'Lyon')]
+deuxCni[0].lecture.luLe = '2026-11-18T10:00:00Z'; deuxCni[1].lecture.luLe = '2026-11-18T09:00:00Z'
+const f4 = bilansPersonnes([C()], DUBIEN, deuxCni, AUJ)
+voir(f4.length === 1 && f4[0].nom === 'CNI 2.pdf', 'deux pièces d\'identité de la même personne : la plus récemment lue parle, une seule fenêtre')
+deuxCni[1] = cni('ESSAI 8A C1', 'Mandant', '1969-01-01', 'Lyon'); deuxCni[1].lecture.luLe = '2026-11-18T09:00:00Z'
+voir(bilansPersonnes([C()], DUBIEN, deuxCni, AUJ).length === 0, '⛔ TÉMOIN : deux pièces qui se CONTREDISENT sur la date -> aucune ne parle')
+voir(bilansPersonnes([C()], [...DUBIEN, { nom: 'ESSAI 8A C1', prenom: 'Mandant' }], [cni('ESSAI 8A C1', 'Mandant', '1970-05-04', 'Lyon')], AUJ).length === 0, '⛔ deux personnes du bien portent ce nom et ce prénom -> rien')
+voir(bilansPersonnes([C({ prenom: 'Autre' })], DUBIEN, [cni('ESSAI 8A C1', 'Mandant', '1970-05-04', 'Lyon')], AUJ).length === 0, 'TÉMOIN : un autre prénom -> rien')
+const P1 = (x = {}) => C({ contactId: '20000031', nom: 'COUPLE', prenom: 'Un', personneSeule: false, premiereDuCouple: true, ...x })
+const DUCOUPLE = [{ nom: 'COUPLE', prenom: 'Un' }, { nom: 'COUPLE', prenom: 'Deux' }]
+const f5 = bilansPersonnes([P1()], DUCOUPLE, [cni('COUPLE', 'Un', '1980-02-02', 'Paris')], AUJ)
+voir(f5.length === 1 && LB(f5[0], 'P.birth_date.20000031').etat === 'ajouter', '⭐ la PREMIÈRE personne d\'un couple : sa pièce d\'identité se propose (le worker relit le formulaire de couple)')
+voir(bilansPersonnes([P1({ prenom: 'Un et Deux' })], DUCOUPLE, [cni('COUPLE', 'Un', '1980-02-02', 'Paris')], AUJ).length === 0
+  && bilansPersonnes([P1({ nom: 'COUPLE/ AUTRE' })], DUCOUPLE, [cni('COUPLE', 'Un', '1980-02-02', 'Paris')], AUJ).length === 0,
+  '⛔ une première de couple au prénom ou au nom FUSIONNÉ (« Un et Deux », « COUPLE/ AUTRE ») : rien -- on ne sait pas qui elle est')
+voir(bilansPersonnes([C({ personneSeule: false })], DUBIEN, [cni('ESSAI 8A C1', 'Mandant', '1970-05-04', 'Lyon')], AUJ).length === 0, '⛔ TÉMOIN : ni personne seule ni première d\'un couple (le conjoint : lot G) -> rien')
+voir(contactDeLaLigne('P.birth_place.20000031') === '20000031' && contactDeLaLigne('F.dpe_cons') === null, 'la ligne dit son contact (NOTRE numéro) ; une ligne de la fiche du bien n\'en a pas')
+const debutF = app.indexOf('const appliquerBilanPersonne')
+const ecr = debutF >= 0 ? app.slice(debutF, app.indexOf('const appliquerBilan = ', debutF)) : ''
+voir(/loadContactsEtatCivil\(\[id\], 'app'\)/.test(ecr) && ecr.indexOf('loadContactsEtatCivil') < ecr.indexOf('editContactOptimistic') && /\['personne_seule', 'couple'\]/.test(ecr) && /!relu\.couple_role/.test(ecr),
+  'l\'écriture RELIT chaque contact : actif, personne seule ou première d\'un couple (jamais un conjoint)')
+voir(/case_changee/.test(ecr) && /l\.temoin == null/.test(ecr) && /lastName: nom/.test(ecr) && /sendRgpdEmail: false/.test(ecr) && (ecr.match(/await editContactOptimistic\(/g) || []).length === 1,
+  'témoin : une case changée depuis l\'ouverture n\'est pas écrite ; le nom actuel joint ; RGPD coupé ; UN geste par contact')
+const appelF = (ecr.match(/await editContactOptimistic\(\{.*/) || [''])[0]
+voir(appelF.length > 0 && !/\b(address|postalCode|city|email|phone|firstName|civility|comments)\b/.test(appelF), 'TÉMOIN : rien d\'autre n\'est envoyé (ni coordonnées, ni prénom, ni civilité)')
+voir(/if \(estGenrePersonne\(b\.genre\)\) return appliquerBilanPersonne\(b, choix\)\s*\n\s*if \(estGenreFiche\(b\.genre\)\)/.test(app), 'l\'aiguillage : les pièces des personnes AVANT la fiche du bien (estGenreFiche les compte aussi)')
+voir(/c\.members\.map\(\(m\) => \(\{ id: String\(m\.sourceId/.test(app), 'chaque membre d\'un couple fusionné à l\'écran donne SA fiche')
+voir(/const cleBilan = \(b: Bilan\) => `\$\{b\.genre\}\|\$\{b\.lectureId \?\? ''\}`/.test(recu) && !/setBilanOuvert\(b\.genre\)/.test(recu), 'deux pièces d\'identité = deux fenêtres : la fenêtre ouverte se repère par son genre ET sa lecture')
 
 // ⑤ (16/11) LES DEUX NUMÉROS, trouvés par l'épreuve réelle : l'écran donne le numéro HEKTOR (605947), notre clé est le
 // nôtre (20000009) ; 0 égaux sur 94 956. La lecture est rejouée contre une fausse base qui garde les deux colonnes.

@@ -17,7 +17,7 @@ import { etatFiableDuDocument } from './lib/etatSignatureMandat'
 import { gedDecider, gedGarderLecture, gedJuger, lireCarnetDetailStrict, lireConditionsAffairesStrict, lireDernierEnvoiAffairesStrict, loadContactsEtatCivil, loadGedClassements, loadGedDecisions, loadGedDecisionsDetail, loadGedJugements, useGedPropositions, useGedRemplir, type DecisionGed, type EtatCivilLu, type JugementGed } from './lib/ged'
 import { cleJugement, LIBELLE_VERDICT, VERDICTS, type VerdictGed } from './lib/gedMesure'
 import { propositionsRemplir, type FaitsRemplir, type PropositionRemplir } from './lib/gedRemplir'
-import { propositionsContact } from './lib/gedRemplirContact'
+import { bilansPersonnes, type ContactEtatCivil } from './lib/gedRemplirContact'
 import { dateEtatLue, FICHES_PERSONNES_LUES, loadGedLectures, resumeLecture, type LectureDocument } from './lib/gedLecture'
 import { reglesPersonnes } from './lib/gedReglesPersonnes'
 import { reglesFinancement } from './lib/gedReglesFinancement'
@@ -252,22 +252,25 @@ export function RecuManque({
     void loadContactsEtatCivil(idsContacts ? idsContacts.split(',') : [], 'hektor').then((m) => { if (!annule) setEtatCivil(m) })
     return () => { annule = true }
   }, [remplir, peutRemplir, idsContacts, relire])
+  // lot F (18/11) : l'état civil des contacts du bien sert aux fenêtres « Ce que dit la pièce d'identité / la fiche de
+  // renseignements » (les cartes C1-C3 sont retirées : un seul chemin par case). Chaque membre d'un couple a SA fiche :
+  // la première (nature « couple », sans rôle) se corrige ici ; le conjoint, au lot G.
+  const contactsEtatCivil = useMemo<ContactEtatCivil[]>(() => (etatCivil ? contactsDuBien.flatMap((c) => {
+    const r = etatCivil.get(c.id)
+    return r && r.archive !== true ? [{
+      contactId: String(r.hektor_contact_id), nom: r.nom ?? '', prenom: r.prenom ?? '',
+      personneSeule: c.seul && r.nature_fiche === 'personne_seule' && !r.couple_role,
+      premiereDuCouple: r.nature_fiche === 'couple' && !r.couple_role,
+      naissance: r.birth_date, lieu: r.birth_place, situation: r.marital_status,
+    }] : []
+  }) : []), [etatCivil, contactsDuBien])
   const propositions = useMemo(() => {
     if (!remplir || !peutRemplir || !decisions || affaires === null) return []
     const docsLus = documents
       .filter((d) => d.present_in_hektor !== false && lectures.has(d.id))
       .map((d) => ({ nom: d.document_name, lecture: lectures.get(d.id) as LectureDocument }))
-    const contacts = etatCivil ? contactsDuBien.flatMap((c) => {
-      const r = etatCivil.get(c.id)
-      return r && r.archive !== true ? [{
-        contactId: String(r.hektor_contact_id), nom: r.nom ?? '', prenom: r.prenom ?? '',
-        personneSeule: c.seul && r.nature_fiche === 'personne_seule' && !r.couple_role,
-        naissance: r.birth_date, lieu: r.birth_place, situation: r.marital_status,
-      }] : []
-    }) : []
-    return [...propositionsRemplir({ ...faits, chargeRegistre }, docsLus, decisions),
-      ...propositionsContact(contacts, personnesDuBien, docsLus, decisions, new Date())]
-  }, [remplir, peutRemplir, decisions, affaires, documents, lectures, faits, chargeRegistre, etatCivil, contactsDuBien, personnesDuBien])
+    return propositionsRemplir({ ...faits, chargeRegistre }, docsLus, decisions)
+  }, [remplir, peutRemplir, decisions, affaires, documents, lectures, faits, chargeRegistre])
   const agir = async (p: PropositionRemplir, geste: 'remplir' | 'ignorer', depart?: HTMLElement | null) => {
     if (enCours || !onRemplir) return
     setEnCours(p.cle)
@@ -375,7 +378,9 @@ export function RecuManque({
   const peutBilan = remplir && Boolean(onBilan)
   const [catalogue, setCatalogue] = useState<CatalogueCondition[] | null>(null)
   const [journal, setJournal] = useState<Map<string, DecisionGed> | null>(null)
-  const [bilanOuvert, setBilanOuvert] = useState<GenreBilan | null>(null)
+  // lot F : la fenêtre ouverte se repère par son genre ET sa lecture (deux pièces d'identité = deux fenêtres)
+  const [bilanOuvert, setBilanOuvert] = useState<string | null>(null)
+  const cleBilan = (b: Bilan) => `${b.genre}|${b.lectureId ?? ''}`
   useEffect(() => {
     if (!peutBilan) return
     let annule = false
@@ -397,14 +402,14 @@ export function RecuManque({
       .filter((d) => d.present_in_hektor !== false && lectures.has(d.id))
       .map((d) => ({ nom: d.document_name, lecture: lectures.get(d.id) as LectureDocument }))
     const transactions = affaires === null || catalogue === null ? [] : bilansDuDossier(docsLus, affaires, catalogue)
-    return [...transactions, ...bilansFiche(faits, docsLus)]
-  }, [peutBilan, affaires, catalogue, documents, lectures, faits])
+    return [...transactions, ...bilansFiche(faits, docsLus), ...bilansPersonnes(contactsEtatCivil, personnesDuBien, docsLus, new Date())]
+  }, [peutBilan, affaires, catalogue, documents, lectures, faits, contactsEtatCivil, personnesDuBien])
   // qui tranche : la transaction, un responsable ; la fiche, celui qui peut la remplir (les cartes « Remplir »)
   const peutTrancher = (b: Bilan) => (estGenreFiche(b.genre) ? peutRemplir : peutModifierTransaction)
   // à trancher : ni d'accord, ni déjà décidé, ni figé chez Hektor (une offre acceptée se montre, elle ne réclame rien)
   const aTrancherDe = (b: Bilan) => (journal ? b.lignes.filter((l) => l.etat !== 'accord' && !l.fige && !journal.has(`${l.cle}|${l.valeur}`)) : [])
   const documentDuBilanDe = (b: Bilan) => documents.find((d) => lectures.get(d.id)?.id === b.lectureId) ?? null
-  const bilan = bilans.find((b) => b.genre === bilanOuvert) ?? null
+  const bilan = bilans.find((b) => cleBilan(b) === bilanOuvert) ?? null
   const cartesBilan = bilans.map((b) => ({ b, lignes: aTrancherDe(b) })).filter((x) => x.lignes.length)
   const aTrancher = cartesBilan.flatMap((x) => x.lignes)
   // une lecture NEUVE (moins de 30 minutes) avec quelque chose à trancher ouvre la fenêtre d'elle-même, une seule fois
@@ -422,8 +427,8 @@ export function RecuManque({
       if (!pasVues.length) return
       for (const c of cles) window.localStorage.setItem(c, '1')
       const premier = neufs.find((b) => pasVues.includes(`ged-bilan-vu:${b.lectureId}`))
-      if (premier) setBilanOuvert(premier.genre)
-    } catch { if (neufs[0]) setBilanOuvert(neufs[0].genre) /* sans mémoire : on ouvre */ }
+      if (premier) setBilanOuvert(cleBilan(premier))
+    } catch { if (neufs[0]) setBilanOuvert(cleBilan(neufs[0])) /* sans mémoire : on ouvre */ }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cleOuverture])
   // la modale « Modifier le compromis » a envoyé : ses lignes sont notées (écran principal) -> on relit journal et registre
@@ -445,6 +450,8 @@ export function RecuManque({
     taxe: a.code === 'T1',
     // lot E : aucune ligne « À regarder » ne compare la contenance du titre
     titre: false,
+    // lot F : aucune ligne « À regarder » ne dit la naissance ni la situation (P4, le nom, reste une alerte à part)
+    identite: false, renseignements: false,
     copro_charges: a.code === 'L16' && a.texte.startsWith('Charges'),
     surface: a.code === 'L15',
     // lot A : « diagnostic fait » et sa date ne disent pas la même chose que L2 (la validité) -- aucune ligne liée
@@ -603,7 +610,7 @@ export function RecuManque({
                     <span>{`lu dans ${b.nom}`}</span>
                   </div>
                   <div className="gm2-gestes">
-                    <button type="button" className="gm2-b1" onClick={() => setBilanOuvert(b.genre)}>Voir et trancher</button>
+                    <button type="button" className="gm2-b1" onClick={() => setBilanOuvert(cleBilan(b))}>Voir et trancher</button>
                   </div>
                 </div>
               ))}
@@ -707,7 +714,7 @@ export function RecuManque({
                 <li key={l.id}>
                   <b>{l.nom}</b> <span>{l.resume}</span>
                   {bilans.filter((b) => documentDuBilanDe(b)?.id === l.id).map((b) => (
-                    <button key={b.genre} type="button" className="gm2-lien gm2-revoir" onClick={() => setBilanOuvert(b.genre)}>Revoir ce qu'il dit</button>
+                    <button key={cleBilan(b)} type="button" className="gm2-lien gm2-revoir" onClick={() => setBilanOuvert(cleBilan(b))}>Revoir ce qu'il dit</button>
                   ))}
                   {peutGarder(l.lecture) ? (
                     <button type="button" className="gm2-lien gm2-revoir" disabled={gardeEnCours !== null}
@@ -727,7 +734,7 @@ export function RecuManque({
         document.body,
       ) : null}
       {bilan ? (
-        <BilanCompromis key={bilan.genre} bilan={bilan} decisions={journal} peutModifier={peutTrancher(bilan)} document={documentDuBilanDe(bilan)}
+        <BilanCompromis key={cleBilan(bilan)} bilan={bilan} decisions={journal} peutModifier={peutTrancher(bilan)} document={documentDuBilanDe(bilan)}
           onFermer={() => setBilanOuvert(null)} onEnregistrer={enregistrerBilan} />
       ) : null}
     </section>

@@ -14,7 +14,7 @@ import { createPortal } from 'react-dom'
 import { createConsoleDocumentSignedUrl } from './lib/api'
 import { apercuPremierePage } from './lib/gedClassementIa'
 import type { DecisionGed } from './lib/ged'
-import { estGenreFiche, type BilanCompromis as Bilan, type GenreBilan, type LigneBilan } from './lib/gedBilanCompromis'
+import { estGenreFiche, estGenrePersonne, type BilanCompromis as Bilan, type GenreBilan, type LigneBilan } from './lib/gedBilanCompromis'
 import type { ConsoleDocument } from './types'
 import './BilanCompromis.css'
 
@@ -58,6 +58,9 @@ export const MOTS: Record<GenreBilan, Mots> = {
   compromis: { le: 'le compromis', Le: 'Le compromis', du: 'du compromis', etiquette: 'Compromis', ...TRANSACTION },
   offre: { le: 'l\'offre', Le: 'L\'offre', du: 'de l\'offre', etiquette: 'Offre', ...TRANSACTION },
   dpe: { le: 'le DPE', Le: 'Le DPE', du: 'du DPE', etiquette: 'DPE', ...FICHE },
+  // lot F (18/11) : les pièces des personnes corrigent la fiche d'un CONTACT
+  identite: { le: 'la pièce d\'identité', Le: 'La pièce d\'identité', du: 'de la pièce d\'identité', etiquette: 'Identité', cible: 'la fiche du contact', Cible: 'La fiche du contact' },
+  renseignements: { le: 'la fiche de renseignements', Le: 'La fiche de renseignements', du: 'de la fiche de renseignements', etiquette: 'Renseignements', cible: 'la fiche du contact', Cible: 'La fiche du contact' },
   erp: { le: 'l\'état des risques', Le: 'L\'état des risques', du: 'de l\'état des risques', etiquette: 'Risques', ...FICHE },
   copro_lots: { le: 'la fiche synthétique', Le: 'La fiche synthétique', du: 'de la fiche synthétique', etiquette: 'Copropriété', ...FICHE },
   copro_charges: { le: 'l\'appel de fonds', Le: 'L\'appel de fonds', du: 'de l\'appel de fonds', etiquette: 'Copropriété', ...FICHE },
@@ -298,7 +301,7 @@ export default function BilanCompromis({
             <p>{[bilan.nom, lu(bilan.luLe) ? `lu le ${lu(bilan.luLe)}` : null].filter(Boolean).join(' · ')}</p>
             <h2 id="bc-titre">{`Ce que dit ${mots.le}`}</h2>
           </div>
-          <span className="bc-hd-pil">{fiche ? 'La fiche du bien' : `Transaction : ${bilan.genre}${bilan.dateTransaction ? ` du ${jjmm(bilan.dateTransaction)}` : ''}`}</span>
+          <span className="bc-hd-pil">{estGenrePersonne(bilan.genre) ? 'La fiche du contact' : fiche ? 'La fiche du bien' : `Transaction : ${bilan.genre}${bilan.dateTransaction ? ` du ${jjmm(bilan.dateTransaction)}` : ''}`}</span>
           <button type="button" className="bc-hd-x" aria-label="Fermer" disabled={enCours} onClick={onFermer}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
           </button>
