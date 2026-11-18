@@ -2815,3 +2815,44 @@ plupart des modifications ») :
 - Pistes présentées à Frédéric, RIEN codé : A) contradiction côté serveur (ce_type faux mais sous_type attendu -> « lu ») ;
   B) sur un « pas_ce_type », un bouton « C'est bien ce type : garder la lecture » (sans nouvel appel, décision notée) ;
   C) un bouton « Relire » (un appel payé, peut refuser encore).
+
+### 12.33 AUDIT -- « pas ce type » : un verdict rendu AVANT la lecture, et sans recours (18/11, « Audite plus en profondeur ce problème et trouve la solution idéale », lecture seule, rien codé)
+
+**Mesuré** : 42 lectures en base, 1 seule « pas_ce_type » (la fiche synthétique de 63331) ; le journal des agents dit
+pareil (39 `ged_lecture`, 1 refus). Mais c'est une FAMILLE, pas un cas : le banc du 13/11 (§12.16) avait vu une
+attestation de vente refusée 1 fois sur 3, soignée alors en retouchant LA consigne de ce seul type.
+
+**La cause, dans le code** (`openai_ged_lecture_service.py`) :
+1. `schema()` met `ce_type` en PREMIÈRE case d'un schéma strict, et l'appel tourne en effort « none » : l'IA écrit son
+   verdict sur le type AVANT d'avoir relevé une seule valeur. Sur 63331 elle a dit « faux » puis, trois cases plus loin,
+   `sous_type = fiche_synthetique` avec les 12 valeurs justes.
+2. L'en-tête annonce un CODE (« Type annoncé : copro.carnet »), pas le libellé du catalogue (« Carnet d'entretien, fiche
+   synthétique ») : le mot « carnet » tire vers le carnet d'entretien.
+3. La règle est floue : « faux si ce document n'est manifestement pas du type annoncé » -- rien ne dit qu'une pièce
+   fictive, partielle ou d'essai reste de ce type. Les deux pièces refusées étaient fictives ; celle de 62774 (12/11),
+   presque identique, était passée : le verdict est un tirage.
+4. La consigne commune vient du CODE (`app_agent_prompt` n'a aucune ligne `ged%`) : une correction au code vaut pour les
+   25 fiches d'un coup.
+
+**Ce qu'un refus fait aujourd'hui** : les valeurs SONT gardées en base (`enregistrer`), mais TOUS les lecteurs de
+l'écran ne prennent que `etat = 'lu'` (gedBilanFiche, gedBilanCompromis, gedRemplir, gedReglesLues, `dateEtatLue`) et le
+résumé dit « vérifie le type » -- or le type est juste. Aucun recours : « Relire » n'existe que sur une ERREUR, dans la
+fenêtre de dépôt (`DepotDocuments.tsx:686`), parce que relire demande le fichier DANS le navigateur ; et le nom d'un
+document est définitif une fois envoyé. Les valeurs PRIVÉES (numéro de pièce) sont jetées dès le refus (voulu).
+
+**Le garde-fou doit rester** : il a refusé à juste titre la facture EDF déposée en « facture d'honoraires » (§12.16).
+
+**La solution proposée, en deux couches** (rien codé, attend le « vas-y ») :
+- **A. Prévenir, au serveur, pour toute la famille, sans base** : `ce_type` passe en DERNIÈRE case (après les valeurs) ;
+  l'en-tête donne le libellé (« Carnet d'entretien, fiche synthétique ») ; la règle commune dit : faux SEULEMENT si le
+  document est d'un AUTRE type ; une pièce d'essai, fictive, incomplète ou mal remplie reste de ce type. Les consignes
+  propres (facture d'un fournisseur, attestation courte) ne bougent pas. Coût par lecture : nul. Preuve : un banc sur
+  pièces FICTIVES (les deux refusées doivent passer, la facture EDF doit rester refusée), ~1 centime, sur accord.
+- **B. Recours, à l'écran, l'humain tranche** : sur une lecture refusée, la pièce dit « L'IA doute que ce soit un(e)
+  <libellé> » avec « C'est bien ce type : garder la lecture ». Une fonction neuve passe la lecture à « lu » et ÉCRIT
+  AVANT / APRÈS au journal (`app_ged_journal`, objet « lecture » à ajouter à son CHECK) : le verdict de l'IA n'est jamais
+  perdu, et AUCUN lecteur ne change (ils lisent déjà `etat = 'lu'`) -- les cartes « Ce que dit… » apparaissent.
+  Patch en base (accord). Pas pour les 5 types sensibles (pièces des personnes) : leur registre ne se remplit que par
+  une lecture jugée juste par l'IA.
+- **Écartées** : la contradiction côté serveur (ne vaut que pour les fiches qui ont un sous-type -- un remède par cas) ;
+  un bouton « Relire » (un appel payé, le fichier à rapatrier, et le tirage peut retomber faux).
