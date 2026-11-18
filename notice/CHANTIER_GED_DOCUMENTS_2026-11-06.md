@@ -3483,8 +3483,12 @@ de plus, même table) ; l'ajouter aux contacts ET aux personnes du bien (le nom 
 interrupteur neuf (celui du lot G suffit).
 **Trouvé en passant** : (1) un contact créé avec « Rattacher un bien existant » est bien lié CHEZ HEKTOR mais n'apparaît sur le
 bien qu'après la nuit -- la création ne pose pas la ligne `app_relation` (le geste « Rattacher un mandant existant » la pose, et
-le worker répond `already_linked` sans rien réécrire) ; (2) « Rattacher un mandant existant » ne cherche que parmi les contacts
-du négociateur du bien ; (3) le compte rendu porte `qualification: "2"` (défaut `contact_kind` du geste) -- non mesuré ici.
+le worker répond `already_linked` sans rien réécrire) ; (2) ⚠ CORRIGÉ après l'audit demandé par Frédéric : les DROITS
+d'un négociateur couvrent TOUT LE RÉSEAU (décision « R » du chantier ②, `CHANTIER_2_DROITS_NEGOCIATEUR_2026-10-09.md` l. 456 ;
+règle `app_contact_current_select_scoped`, les 6 comptes actifs en périmètre `reseau`). Ce qui a filtré, c'est l'ÉCRAN : la
+recherche de « Rattacher un mandant existant » passe `negociateur_email` = celui du bien (`App.tsx:3401`, commit `c502caf` du
+27/08, « scopée au négociateur du dossier »), AVANT la décision du 12/10 et jamais réalignée ; même filtre dans le sélecteur de
+mandant de la création de bien (`App.tsx:16034`). Un reste, pas une règle -- à décider ; (3) le compte rendu porte `qualification: "2"` (défaut `contact_kind` du geste) -- non mesuré ici.
 **Au nettoyage (à décider)** : deux couples fictifs restent -- **20000050/51 <-> 606427/28** (compte formation, sans bien : mon
 premier essai, la recherche du rattachement ne le trouvait pas) et **20000052/53 <-> 606429/30** (PEREIRA, reliés à 63331).
 Suppression prévue par l'app (« Supprimer (tout le foyer) »), comme le 02/11.
