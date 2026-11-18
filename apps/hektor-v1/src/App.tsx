@@ -71,6 +71,11 @@ import {
   updateGoogleCalendarEvent,
   deleteGoogleCalendarEvent,
   sendGoogleWorkspaceCrmEmail,
+  deposerPieceEmail,
+  lienPieceEmail,
+  retirerPieceEmail,
+  gmailPieceTailleMax,
+  gmailPieceTypesAcceptes,
   loadGoogleWorkspaceContactEmailMessages,
   loadGoogleWorkspaceContactEmailBody,
   loadGoogleWorkspaceContactEmailAttachment,
@@ -245,6 +250,7 @@ import {
   type GoogleWorkspaceEmailBody,
   type GoogleWorkspaceEmailAttachment,
   type GoogleWorkspaceEmailAttachmentInput,
+  type GmailPieceOrdinateur,
   type HektorContactIdentityInput,
   type HektorCompositionPieceInput,
   type MandantContactSearchOption,
@@ -45437,6 +45443,10 @@ function ContactEmailComposerModal(props: {
   const [selectedPhotoIds, setSelectedPhotoIds] = useState<Set<string>>(() => new Set())
   const [attachmentsLoading, setAttachmentsLoading] = useState(false)
   const [attachmentsError, setAttachmentsError] = useState<string | null>(null)
+  // 18/11 (note étape 4 §63-64) : les pièces « depuis l'ordinateur », déposées au coffre dès le choix (temp/email/).
+  const [piecesOrdinateur, setPiecesOrdinateur] = useState<GmailPieceOrdinateur[]>([])
+  const [depotsEnCours, setDepotsEnCours] = useState(0)
+  const choixOrdinateurRef = useRef<HTMLInputElement | null>(null)
   const [fromEmail, setFromEmail] = useState(defaultSubjectEmail)
   const [fromName, setFromName] = useState(props.contact.commercial_nom ? `${props.contact.commercial_nom} - GTI Immobilier` : 'GTI Immobilier')
   const [toText, setToText] = useState(contactEmail)
@@ -45448,12 +45458,12 @@ function ContactEmailComposerModal(props: {
   const [error, setError] = useState<string | null>(null)
   const toEmails = splitEmailList(toText)
   const ccEmails = splitEmailList(ccText)
-  const selectedAttachmentCount = selectedDocumentIds.size + selectedPhotoIds.size
+  const selectedAttachmentCount = selectedDocumentIds.size + selectedPhotoIds.size + piecesOrdinateur.length + depotsEnCours
   const selectedAttachmentRelation = attachmentRelations.find((relation) => String(relation.app_dossier_id) === attachmentDossierId) ?? null
   const availableAttachmentDocuments = attachmentDocuments.filter((document) => document.storage_status === 'cloud_available' && document.storage_path)
   const availableAttachmentPhotos = attachmentPhotos.filter((photo) => Boolean(photo.url_hd || photo.url_preview))
   const canUseFromEmail = fromEmail.trim().toLowerCase().endsWith(`@${googleWorkspaceDomain}`)
-  const canSubmit = canUseFromEmail && toEmails.length > 0 && Boolean(subject.trim()) && Boolean(bodyText.trim()) && !pending
+  const canSubmit = canUseFromEmail && toEmails.length > 0 && Boolean(subject.trim()) && Boolean(bodyText.trim()) && !pending && depotsEnCours === 0
 
   useEffect(() => {
     setSelectedDocumentIds(new Set())
@@ -45520,6 +45530,45 @@ function ContactEmailComposerModal(props: {
     setAttachmentsError(null)
   }
 
+  async function ajouterDepuisOrdinateur(liste: FileList | null) {
+    const fichiers = Array.from(liste ?? [])
+    if (choixOrdinateurRef.current) choixOrdinateurRef.current.value = ''
+    if (fichiers.length === 0) return
+    const refus: string[] = []
+    const place = contactEmailMaxAttachments - selectedAttachmentCount
+    const retenus = fichiers.filter((fichier) => {
+      if (fichier.size > gmailPieceTailleMax) {
+        refus.push(`« ${fichier.name} » pese ${formatFileSize(fichier.size)} : 8 Mo au plus par piece.`)
+        return false
+      }
+      return true
+    })
+    if (retenus.length > place) {
+      refus.push(`${contactEmailMaxAttachments} pieces jointes maximum : ${retenus.length - Math.max(place, 0)} fichier(s) non ajoute(s).`)
+      retenus.splice(Math.max(place, 0))
+    }
+    setAttachmentsError(refus.length ? refus.join(' ') : null)
+    if (retenus.length === 0) return
+    setDepotsEnCours((n) => n + retenus.length)
+    await Promise.all(retenus.map(async (fichier) => {
+      try {
+        const piece = await deposerPieceEmail(fichier)
+        setPiecesOrdinateur((courantes) => [...courantes, piece])
+      } catch (depotError) {
+        refus.push(depotError instanceof Error ? depotError.message : `« ${fichier.name} » n'a pas pu etre depose.`)
+        setAttachmentsError(refus.join(' '))
+      } finally {
+        setDepotsEnCours((n) => n - 1)
+      }
+    }))
+  }
+
+  function retirerPieceOrdinateur(id: string) {
+    setPiecesOrdinateur((courantes) => courantes.filter((piece) => piece.id !== id))
+    setAttachmentsError(null)
+    retirerPieceEmail(id).catch(() => undefined) // sinon le menage des temporaires le retire apres 2 jours
+  }
+
   async function buildEmailAttachments(): Promise<GoogleWorkspaceEmailAttachmentInput[]> {
     const selectedDocuments = availableAttachmentDocuments.filter((document) => selectedDocumentIds.has(document.id))
     const selectedPhotos = availableAttachmentPhotos.filter((photo) => selectedPhotoIds.has(photo.id))
@@ -45535,7 +45584,8 @@ function ContactEmailComposerModal(props: {
       mimeType: contactEmailPhotoMimeType(photo),
       fileSize: null,
     })).filter((attachment) => attachment.url)
-    return [...documentAttachments, ...photoAttachments]
+    const ordinateurAttachments = await Promise.all(piecesOrdinateur.map((piece) => lienPieceEmail(piece)))
+    return [...documentAttachments, ...photoAttachments, ...ordinateurAttachments]
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -45660,6 +45710,42 @@ function ContactEmailComposerModal(props: {
                 <span>Pieces jointes</span>
                 <strong>{selectedAttachmentCount} / {contactEmailMaxAttachments}</strong>
               </div>
+              <section className="contact-email-attachment-group">
+                <div className="contact-email-attachment-group-head">
+                  <strong>Depuis l'ordinateur</strong>
+                  <span>{piecesOrdinateur.length}</span>
+                </div>
+                <input
+                  ref={choixOrdinateurRef}
+                  type="file"
+                  multiple
+                  accept={gmailPieceTypesAcceptes}
+                  hidden
+                  onChange={(inputEvent) => void ajouterDepuisOrdinateur(inputEvent.target.files)}
+                />
+                <button
+                  className="ghost-button button-subtle contact-email-attachment-choisir"
+                  type="button"
+                  onClick={() => choixOrdinateurRef.current?.click()}
+                  disabled={pending || selectedAttachmentCount >= contactEmailMaxAttachments}
+                >
+                  {depotsEnCours > 0 ? `Depot en cours (${depotsEnCours})...` : 'Choisir des fichiers'}
+                </button>
+                {piecesOrdinateur.length > 0 ? (
+                  <div className="contact-email-attachment-list">
+                    {piecesOrdinateur.map((piece) => (
+                      <div key={`email-ordinateur-${piece.id}`} className="contact-email-attachment-row is-selected is-ordinateur">
+                        <span className="contact-email-attachment-icon" aria-hidden="true"><DetailIcon type={consoleDocumentIconType({ mime_type: piece.type, document_name: piece.nom, document_type: null })} /></span>
+                        <span className="contact-email-attachment-copy">
+                          <strong>{piece.nom}</strong>
+                          <small>{[piece.libelle, formatFileSize(piece.taille)].filter((value) => value && value !== '-').join(' - ')}</small>
+                        </span>
+                        <button className="request-modal-close" type="button" onClick={() => retirerPieceOrdinateur(piece.id)} disabled={pending} aria-label={`Retirer ${piece.nom}`}>Retirer</button>
+                      </div>
+                    ))}
+                  </div>
+                ) : <small>PDF, photo, Word, Excel, texte ou ZIP - 8 Mo au plus par fichier.</small>}
+              </section>
               {attachmentRelations.length > 0 ? (
                 <label className="filter-field">
                   <span>Annonce</span>
