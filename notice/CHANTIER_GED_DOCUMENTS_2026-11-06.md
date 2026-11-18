@@ -3051,3 +3051,77 @@ Frédéric met le dossier « cran on » (§12.37) en attente : d'abord le visuel
 10 constats, le parti pris, 5 points « à trancher » qui changeraient un comportement, le tableau anti-perte).
 Maquette : **https://claude.ai/artifact/VxtNCjmAVXkThs641fHX1z** (4 écrans : l'onglet Documents au bureau, la fenêtre
 de dépôt, « Ce que dit le compromis », le téléphone ; animations jouables). RIEN codé ; attend son avis.
+
+### 12.39 AUDIT -- chaque type lu est-il comparé au registre, avec la fenêtre « Ce que dit… » ? (18/11, « audit, analyse et mesure », lecture seule, RIEN codé)
+
+**La question de Frédéric** : « normalement, tous les types de documents sont lus en étape 2 et comparés au registre ;
+une case vide qu'on peut compléter ou un conflit, on fait la même chose que compromis ou DPE ». **Réponse mesurée : NON,
+pas encore.** La fenêtre est générique, mais seuls 8 types y entrent.
+
+**Le catalogue (mesuré en base, `app_ged_type` actif)** : 68 types. **29 lus** (`lecture = 'lue'`), 34 classés sans
+lecture, 5 jamais envoyés (RIB, clés, comptes, courrier, notes). En production : 40 lectures sur 21 des 29 types ; 8
+types lus n'ont encore jamais été lus (fin de mandat, annulation, DDT, amiante, gaz, plomb, termites, arrêté de charges).
+
+**Les quatre chemins qui existent (code)** :
+- **la fenêtre « Ce que dit… »** (`BilanCompromis.tsx`, `gedBilanCompromis.ts`, `gedBilanFiche.ts`) : case vide =
+  « à ajouter », valeur qui diffère = « à trancher » ; 7 genres ;
+- **la carte « Remplir »** (`gedRemplir.ts` P3, `gedRemplirContact.ts` C1-C3) : case VIDE seulement, jamais un conflit ;
+- **l'alerte « À regarder »** (`gedReglesLues.ts`, `gedReglesPersonnes.ts`, `gedReglesEtatCivil.ts`,
+  `gedReglesFinancement.ts`) : on signale, on n'écrit rien ;
+- **rien** : lu, montré dans la feuille, comparé à rien.
+
+**A. Les 8 types qui suivent la règle (vide ou conflit -> la fenêtre)** :
+- `transaction.avant_contrat` -> « Ce que dit le compromis » (la transaction) ;
+- `transaction.offre` -> « Ce que dit l'offre » (la transaction) ;
+- `diag.dpe` -> « Ce que dit le DPE » : consommation, émissions, date (`dpe_cons`, `dpe_ges`, `dpe_date`) ;
+- `diag.erp` -> « Ce que dit l'état des risques » : sa date (`diag_risques_nat_tech_date`) ;
+- `copro.carnet` (fiche synthétique) -> le nombre de lots (`copropriete_nb_lot`) ;
+- `copro.appel_fonds` et `copro.arrete_charges` -> les charges annuelles du lot (`copropriete_quote_part`) ;
+- `diag.surface` -> la Carrez (`SURF_CARREZ`).
+
+**B. Exclus par DÉCISION écrite (ne pas relancer)** :
+- `mandat.vente`, `mandat.avenant`, `mandat.fin` : décision ⑦-7 (« je ne souhaite pas pouvoir modifier un mandat ») --
+  alertes L1, L4, L10, L12, L14, L18 ; seule la charge des honoraires, VIDE au registre, a sa carte « Remplir » (P3) ;
+- `transaction.acte` : « acte de vente : laisse tomber » -- alerte L7 seule ;
+- `justif.taxe` : exclu de « Remplir » le 13/11 (§12.18) parce que le groupe Hektor de `TAXE_FONCIERE` renvoie aussi le
+  prix et les honoraires -- alertes T1 (vide = info, conflit = alerte) et T2.
+
+**C. ⚠ LES TROUS : lus, une case du registre existe, et ni fenêtre ni carte** (la fiche porte ces cases :
+`App.tsx` l. 1640-1735, étape 5 de l'assistant de saisie) :
+- `diag.electricite`, `diag.gaz`, `diag.plomb`, `diag.termites`, `diag.amiante` : l'IA lit la date et le résultat ; la
+  fiche a `diag_electrique` / `_date`, `diag_gaz` / `_date`, `diag_plomb` / `_date`, `diag_termites` / `_date`,
+  `diag_amiante` / `_date`. Seule la validité est contrôlée (L2, une alerte) ; ⚠ l'amiante n'a même pas L2 ;
+- `diag.assainissement` : date du contrôle et conformité lues ; la fiche a `diag_assainissement` / `_date` -- L2 seule
+  (et seulement en non-collectif) ;
+- `diag.surface` : la date du métré (`diag_loi_carrez_date`) et la surface habitable (`surfappart`) ne sont pas
+  proposées -- seule la Carrez l'est ;
+- `diag.dossier` (le DDT) : l'IA y lit les valeurs du DPE, mais la fenêtre et L6 ne regardent QUE `diag.dpe` -> un DPE
+  arrivé dans un dossier de diagnostics n'est jamais comparé ;
+- `copro.carnet`, `copro.appel_fonds`, `copro.pv_ag` : le syndic (`syndic`), le fonds de travaux
+  (`montant_fonds_travaux`), le plan de sauvegarde (`copropriete_plan_sauvegarde`) et la procédure
+  (`copropriete_statut_syndicat`) sont lus ; seule la procédure sonne (L17, une alerte), rien ne se propose ;
+- `copro.reglement` : le nombre de lots est lu, mais seule la fiche synthétique alimente `copropriete_nb_lot`.
+⭐ **Mesuré en base : ce ne sont pas des champs théoriques.** Les lectures réelles portent, à l'état « lu » : la date
+et le résultat de l'électricité (1), la date et la conformité de l'assainissement (1), le syndic (5 lectures), le fonds
+de travaux (4), le plan de sauvegarde et la procédure (2), les classes et le diagnostiqueur du DPE (3), le nombre de
+lots du règlement (1).
+
+**D. Les personnes : la règle n'est suivie qu'à MOITIÉ** -- `justif.identite`, `transaction.renseignements`,
+`justif.etat_civil` : une case VIDE du contact (naissance, lieu, situation de famille) a sa carte « Remplir » (C1-C3,
+une personne seule) ; un CONFLIT (le nom, P4) n'est qu'une alerte. ⛔ Garde-fous écrits : jamais le régime matrimonial,
+ni l'adresse ; pas les couples. `transaction.financement` : rien à écrire (jamais un montant, un taux, une banque) --
+alertes P7, P8 seules, c'est voulu.
+
+**E. Sans case à corriger, et c'est normal** : `justif.titre` (L11 : les propriétaires parmi les mandants ; la contenance
+lue n'est pas comparée au terrain -- non tranché), `transaction.annulation` (L19), `facture.honoraires` (L8, L9 -- la
+facture face aux honoraires de la vente au registre : écrire ces honoraires est une autre affaire, non tranché).
+
+**Ce qui n'est PAS mesuré** : le taux de remplissage de ces cases sur le parc (le détail de la fiche n'est pas dans une
+table lisible en SQL, `rawWizardDetailField` le lit dans la charge Hektor) ; si chaque case de C passe par le geste
+existant `editAnnonceOptimistic` sans effet de bord sur son groupe Hektor (le piège de la taxe foncière, §12.18, et celui
+du secteur qui remet la copropriété à zéro) -- **à éprouver case par case avant de les ouvrir**.
+
+**Ce qu'il faudrait pour suivre la règle partout** (à décider par Frédéric, rien codé) : ajouter à `gedBilanFiche.ts` les
+genres de C -- les 5 rapports (date + résultat), l'assainissement, la date du métré et la surface habitable, le DDT dans le
+DPE, le syndic / fonds de travaux / plan de sauvegarde / procédure, le nombre de lots du règlement -- même modèle de ligne,
+même fenêtre, même écriture ; et dire si les conflits du contact (D) doivent avoir leur fenêtre.
