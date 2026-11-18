@@ -14,11 +14,11 @@ import { createPortal } from 'react-dom'
 import { createConsoleDocumentSignedUrl, dateOffreFaite, loadAffairesForDossier, loadConditionCatalogue, loadRegisterCycleAffaires } from './lib/api'
 import { apercuPremierePage } from './lib/gedClassementIa'
 import { etatFiableDuDocument } from './lib/etatSignatureMandat'
-import { gedDecider, gedJuger, lireCarnetDetailStrict, lireConditionsAffairesStrict, lireDernierEnvoiAffairesStrict, loadContactsEtatCivil, loadGedClassements, loadGedDecisions, loadGedDecisionsDetail, loadGedJugements, useGedPropositions, useGedRemplir, type DecisionGed, type EtatCivilLu, type JugementGed } from './lib/ged'
+import { gedDecider, gedGarderLecture, gedJuger, lireCarnetDetailStrict, lireConditionsAffairesStrict, lireDernierEnvoiAffairesStrict, loadContactsEtatCivil, loadGedClassements, loadGedDecisions, loadGedDecisionsDetail, loadGedJugements, useGedPropositions, useGedRemplir, type DecisionGed, type EtatCivilLu, type JugementGed } from './lib/ged'
 import { cleJugement, LIBELLE_VERDICT, VERDICTS, type VerdictGed } from './lib/gedMesure'
 import { propositionsRemplir, type FaitsRemplir, type PropositionRemplir } from './lib/gedRemplir'
 import { propositionsContact } from './lib/gedRemplirContact'
-import { dateEtatLue, loadGedLectures, resumeLecture, type LectureDocument } from './lib/gedLecture'
+import { dateEtatLue, FICHES_PERSONNES_LUES, loadGedLectures, resumeLecture, type LectureDocument } from './lib/gedLecture'
 import { reglesPersonnes } from './lib/gedReglesPersonnes'
 import { reglesFinancement } from './lib/gedReglesFinancement'
 import { reglesEtatCivil } from './lib/gedReglesEtatCivil'
@@ -467,7 +467,26 @@ export function RecuManque({
   // (essai réel du 12/11 : la taxe, le titre et la copro lus restaient invisibles après rechargement, §12.14).
   const lus = useMemo(() => documents
     .filter((d) => d.present_in_hektor !== false && lectures.has(d.id))
-    .map((d) => ({ id: d.id, nom: d.document_name, resume: resumeLecture(lectures.get(d.id) as LectureDocument) })), [documents, lectures])
+    .map((d) => ({ id: d.id, nom: d.document_name, lecture: lectures.get(d.id) as LectureDocument, resume: resumeLecture(lectures.get(d.id) as LectureDocument) })), [documents, lectures])
+  const refusees = lus.filter((l) => l.lecture.etat === 'pas_ce_type').length
+
+  // 18/11 (§12.36) : le recours. L'IA a jugé « pas ce type » un document que l'humain sait du bon type -> il GARDE la
+  // lecture (sans nouvel appel) ; la base écrit AVANT / APRÈS au journal. Pas pour les pièces des personnes (refusé aussi
+  // par la base) : leur registre privé ne se remplit que par une lecture jugée juste par l'IA.
+  const [gardeEnCours, setGardeEnCours] = useState<string | null>(null)
+  const [messageGarde, setMessageGarde] = useState<string | null>(null)
+  const peutGarder = (l: LectureDocument) => l.etat === 'pas_ce_type' && Boolean(l.id) && !FICHES_PERSONNES_LUES.has(l.typeCode)
+  const garderLecture = async (lectureId: string) => {
+    if (gardeEnCours) return
+    setGardeEnCours(lectureId); setMessageGarde(null)
+    try {
+      await gedGarderLecture(lectureId)
+    } catch (e) {
+      setMessageGarde(e instanceof Error ? e.message : 'La lecture n\'a pas été gardée.')
+    } finally {
+      setGardeEnCours(null); setLecturesFaites((n) => n + 1)
+    }
+  }
 
   const resultat = useMemo(() => recuManque(
     faits,
@@ -672,7 +691,7 @@ export function RecuManque({
       {lus.length ? (
         <div className="gm2-lus">
           <button type="button" className="gm2-pil" onClick={() => setOuvrirLus((v) => !v)} aria-expanded={ouvrirLus}>
-            {`Lu par l'IA : ${lus.length} document${lus.length > 1 ? 's' : ''}`}
+            {`Lu par l'IA : ${lus.length} document${lus.length > 1 ? 's' : ''}${refusees ? ` · ${refusees} refusé${refusees > 1 ? 's' : ''} par l'IA` : ''}`}
           </button>
           {ouvrirLus ? (
             <ul className="gm2-lus-l">
@@ -682,10 +701,17 @@ export function RecuManque({
                   {bilans.filter((b) => documentDuBilanDe(b)?.id === l.id).map((b) => (
                     <button key={b.genre} type="button" className="gm2-lien gm2-revoir" onClick={() => setBilanOuvert(b.genre)}>Revoir ce qu'il dit</button>
                   ))}
+                  {peutGarder(l.lecture) ? (
+                    <button type="button" className="gm2-lien gm2-revoir" disabled={gardeEnCours !== null}
+                      onClick={() => void garderLecture(l.lecture.id as string)}>
+                      {gardeEnCours === l.lecture.id ? 'On garde la lecture…' : "C'est bien ce type : garder la lecture"}
+                    </button>
+                  ) : null}
                 </li>
               ))}
             </ul>
           ) : null}
+          {messageGarde ? <p className="gm2-lus-l" role="alert">{messageGarde}</p> : null}
         </div>
       ) : null}
       {vol ? createPortal(

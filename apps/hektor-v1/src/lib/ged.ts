@@ -290,6 +290,16 @@ export async function gedJuger(input: {
   if (error) throw new Error(error.message)
 }
 
+// 18/11 (§12.36) : garder une lecture que l'IA a jugée « pas_ce_type » (app_ged_lecture_garder : compte actif,
+// interrupteur ged_lecture_ia, périmètre, types sensibles refusés ; l'auteur est l'appelant, AVANT / APRÈS au journal).
+// Rend l'état neuf : « lu », ou « incomplet » si l'IA n'avait rien vu.
+export async function gedGarderLecture(lectureId: string): Promise<'lu' | 'incomplet'> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Base non configurée')
+  const { data, error } = await supabase.rpc('app_ged_lecture_garder', { p_lecture_id: lectureId })
+  if (error) throw new Error(error.message)
+  return (data as { etat: 'lu' | 'incomplet' }).etat
+}
+
 // Le NOMBRE de conditions de chaque transaction, lu STRICTEMENT : une erreur LÈVE (jamais une carte vide).
 // ⚠ C'est la garde de P4 : app_conditions_affaire_ecrire EFFACE puis repose la liste ; si une lecture ratée passait
 //   pour « aucune condition », on effacerait celles qui existent. (loadAffairesConditions, api.ts, rend une carte vide
