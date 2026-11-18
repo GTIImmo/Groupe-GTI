@@ -2945,3 +2945,43 @@ le parcours de l'assistant (planche E15 : « Envoyer à Mme Durand » ne s'allum
 qui envoie lui-même à la fin) ; que faire si le dépôt chez Hektor échoue (aujourd'hui pas de fiche ni de copie) ; la
 trace d'envoi marquée « envoyé » AVANT Gmail (email_tracking.py:114-121), à corriger dans le même mouvement.
 Restent à trancher : les défauts du §84.6 ; l'effacement des coordonnées d'un nouveau mandant.
+
+## 88. RE-VÉRIFICATION case par case (sa demande : « revérifie que tes questions n'oublient pas des champs ») — le §84 était FAUX ; corrigé, toile v27 (19/11) — rien codé
+
+**Ce qui était faux** : le §84 affirmait « chaque case a un chemin » en raisonnant par groupes. Le croisement
+mécanique le dément.
+
+**La méthode** (programme en lecture seule, `scratchpad/verif_couverture.py`, sortie `verif_couverture.txt`) : il lit
+les cases que la fenêtre MONTRE pour chaque type de bien (extraites d'App.tsx : `draftAnnonceWizardGroups`, le profil
+par type, le retrait des cases du haut et de PRIXNETVENDEUR à l'étape 7) et les croise avec la liste exacte des cases
+que chaque question remplit. Une question ne compte que pour les types où elle est posée (la copropriété : appartement ;
+le terrain à bâtir : terrain ; l'étage : appartement et immeuble).
+
+**La toile v25 oubliait** : maison 86 cases sur 136, appartement 86 sur 132, terrain 41 sur 45, garage 33 sur 43,
+immeuble 31 sur 35, autre 35 sur 51 — notamment tout le secteur (transports, proximité, environnement, adresses
+publiques), l'exposition, la vue, la surface Carrez, l'équipement de la cuisine, le terrain, la piscine, l'eau et l'eau
+chaude, les 13 cases du confort, la construction récente, les intervenants, l'étage et la copropriété, les dates de
+libération, la taxe foncière, les charges, les travaux, le prix et les 8 honoraires, le titre et le texte. Hors des
+groupes : 18 sur 29 (le nouveau mandant, les 7 cases de la composition, les intervenants, le sous-type professionnel).
+Dans le rapport : 2 sur 24 (menuiseries, appréciation de l'état). Et des CHOIX FAUX : la cuisine (la fenêtre propose
+Américaine, Kitchenette, Séparée, Sans ; et à part Équipée, Semi équipée), « véranda » et « dépendance » (pas des cases
+de la fenêtre), « disponible » (c'est un oui / non, pas libre / occupé / loué).
+
+**Le parcours corrigé : 0 oubli** — maison 136/136, appartement 132/132, terrain 45/45, garage 43/43, immeuble 35/35,
+autre 51/51 ; hors des groupes 29/29 ; le rapport 24/24. Ses 19 questions (planche « La vérification ») : le bien ; le
+quartier ; l'appartement (étage, résidence) ; la copropriété ; l'intérieur (14 cases) ; la composition (7 par pièce) ;
+le dehors (20) ; la piscine (8, si cochée) ; le terrain à bâtir (7, terrain) ; l'énergie (20) ; les diagnostics (24) ; le
+confort (13) ; la construction récente (4, moins de 10 ans) ; les intervenants (2) ; la visite (5) ; le mandant (10) ;
+l'argent (17) ; les photos ; le titre et le texte. Sans objet : les 8 cases jamais montrées. Laissés à la main,
+DÉCLARÉS : le dépôt de garantie (location) et « clearing » (sens inconnu — à éclaircir).
+
+⚠ Ce que la vérification NE prouve PAS : elle prouve que chaque case est NOMMÉE par une question, pas que la question
+la remplit bien. Le contrôle de vérité viendra au code : une épreuve qui remplit la fenêtre par le parcours et relit
+chaque case (à écrire dans le plan, avec ce même programme versé au dépôt).
+
+**La toile v27** (https://claude.ai/artifact/5S2owJCDo2HWTBBefakeGo) : 26 planches. Série 1, 15 planches : la demande, la
+fiche lue, le bien et son quartier, pour un appartement, l'intérieur (corrigé), la composition, le dehors (corrigé),
+l'énergie et les diagnostics (corrigé), le confort et les intervenants, la visite et le mandant (corrigé), un nouveau
+mandant, l'argent, les photos et documents, la fenêtre remplie, la création. Série 2, 7 planches : le rapport (l'état
+porte maintenant les menuiseries et l'appréciation), l'envoi, le téléphone. Série 3, 4 planches : la vérification, ce
+qui est gardé, à corriger, le coût. Exemples inventés (Mme Durand, Mme Lefèvre, Diag Expert Loire, Foncia, les adresses).
