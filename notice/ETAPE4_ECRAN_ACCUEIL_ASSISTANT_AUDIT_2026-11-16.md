@@ -2760,3 +2760,131 @@ Ce qui est REMPLACÉ dans le §82 :
   garde « Joindre », la dictée et l'envoi. Au téléphone : « Je ne sais pas » et « Dicter ».
 
 Toile : version 24 (fusionnée sur ta version enregistrée depuis la page, tailles de planches gardées), mêmes planches A1-A7, B1-B4 (B1 = le bien lu et « pour quoi faire », B2 = ta valeur).
+
+## 84. AUDIT DE COUVERTURE avant le plan de développement : chaque case des deux écrans, la conservation, les photos et les documents ; la toile REFAITE (19/11) — rien codé
+
+**Sa demande** : « il faut être sûr que toutes les questions permettent de remplir entièrement chaque fenêtre ; vérifier
+avant les essais ; refaire entièrement les maquettes et nettoyer les obsolètes ; l'exemple : une demande de création
+d'estimation, puis le rapport, puis l'envoi au propriétaire ; confirmer que chaque réponse est mémorisée, remplie dans
+la fenêtre réelle et conservée comme aujourd'hui ; prévoir l'ajout de documents et de photos (gestes que l'assistant
+maîtrise), auditer les workers ; l'ajout de document dans la fenêtre de création n'existe peut-être pas ».
+
+Méthode : trois audits en LECTURE SEULE du code (rien écrit, rien lancé, aucune base lue), puis la couverture.
+Périmètre : objet annonce (créer), avis de valeur (créer, envoyer), photo et document (créer, lire, modifier). Les
+autres objets ne sont pas mesurés.
+
+### 84.1 La fenêtre « Nouvelle annonce » (App.tsx ; numéros du 19/11)
+
+- 7 étapes (App.tsx:2614). 14 groupes `draftAnnonceWizardGroups` (App.tsx:1482-1765) : 194 apparitions, **172 noms
+  techniques** (75 listes, 33 textes courts, 14 longs, 31 décimaux, 19 entiers), + **22 cases hors groupes** (agence,
+  négociateur, famille et sous-type, adresse / CP / ville, choix du mandant, 8 cases du nouveau mandant, note…) = **194
+  cases fixes**, plus 20 photos au plus et 7 cases par pièce de la composition.
+- Par type (DraftAnnonceTypeProfile App.tsx:1056, filtre App.tsx:2384 et 15718, LE MÊME À L'ENVOI App.tsx:2393) :
+  maison 136 montrées, appartement 132, terrain 45, garage 43, immeuble 35, autre 51. 8 ne sont JAMAIS montrées (taxe
+  d'habitation, 4 de location, fibre, gardien, clearing).
+- Exigé pour créer (App.tsx:18882-18914) : agence, négociateur de la liste de l'agence, et un mandant complet s'il y en
+  a un (nom + e-mail pour un nouveau). Rien d'autre.
+- AUJOURD'HUI la carte (`CASES_CREATION` = 132 clés du scan) et le scan atteignent **114 des 172 noms**. **58 n'ont
+  aucune voie** : 8 honoraires, 31 diagnostics et drapeaux du DPE, 7 adresses privée/publique et coordonnées, masquer le
+  prix, dépôt de garantie, n° de dossier, date, 4 de location, diagnostiqueur, syndic, étage (floorState), moyens de
+  visite, climatisation (détail), clearing, diffusable. Hors groupes : la carte ne porte pas l'agence, ne transmet pas
+  « nouveau mandant », ni photos, ni partenaires, ni l'immobilier professionnel, ni les notes privée / inter-agence des
+  pièces.
+- **La couverture proposée** (planche E17) : honoraires → question « Prix » (mise en vente) ; diagnostics → question
+  « Énergie et diagnostics » (E05), l'ADEME propose ; adresses → la question adresse (la publique = la privée par
+  défaut), coordonnées calculées ; visite, clés, étage, climatisation → leurs questions ; diagnostiqueur, syndic →
+  « Intervenants » ; n° de dossier, date, non diffusée → posés seuls comme aujourd'hui ; nouveau mandant → cases
+  protégées (sans IA) ; photos → question « Photos » (E07) vers l'étape 2 ; documents → après la création (84.4) ; les 8
+  jamais montrées : sans objet ; laissé à la main : le dépôt de garantie (location). ⇒ **pour une maison, chacune des
+  136 cases montrées a une question, une source ou une valeur posée**.
+- ⚠ Ce que ça demande au code : la mémoire du parcours doit parler la langue de la FENÊTRE (ses 172 noms + les hors
+  groupes), pas seulement les 132 clés du scan.
+
+### 84.2 L'éditeur « Avis de valeur » (EstimationDocumentEditor, App.tsx ~6420-7300)
+
+- 24 cases au brouillon (App.tsx:6440-6455), dont la grille des 8 postes. La carte en remplit 17 (`CHAMPS_AVIS` 16 +
+  `POSTES_AVIS`). Il en manque 7 : propriétaire (aucun champ à l'écran), destinataire, vente/succession, DPE, GES,
+  chauffage, exposition (ces 4 n'ont AUCUN champ à l'écran : un DPE mal lu ne se corrige pas et revient à chaque avis).
+  Hors brouillon : la parcelle (choix humain), « Appliquer à la valeur » (DVF), méthode / validité / nom / visibilité
+  (jamais envoyés, valeurs par défaut).
+- Couverture proposée : « pour quoi faire », « à qui l'envoyer » (pris sur la fiche par l'app, jamais vu par l'IA),
+  DPE/GES/chauffage/exposition confirmés en E10, la parcelle en E10, « prendre la valeur du marché » en E11, un bouton
+  « effacer » sur une réponse. ⇒ **24 sur 24**.
+
+### 84.3 La conservation — CE QUI EST VRAI AUJOURD'HUI (sa question « confirme que chaque réponse est mémorisée… »)
+
+- Fenêtre : AUCUN brouillon avant « Créer ». Fermer ne demande confirmation que s'il y a des photos ; toute réouverture
+  remet tout à zéro (`openDraftAnnonceModal`, App.tsx:18251). Seule survit la dictée de la carte (« Rouvrir la
+  création »). APRÈS « Créer » : la saisie part dans la charge du travail, la fiche naît chez nous et la saisie est
+  gardée (`annonce_nait_complete`, `annonce_saisie_gardee` → `app_annonce_saisie_naissance`, 21 champs « console
+  seule » reposés). Interrupteurs allumés selon CLAUDE.md, non relus en base.
+- Éditeur : AUCUN brouillon ; fermer (un clic à côté, sans confirmation) perd tout. Survivent : les sources calculées,
+  la parcelle choisie. APRÈS « Générer » : la charge du PDF devient le « dernier avis », repris à l'ouverture suivante
+  (sans destinataire, variante, propriétaire). Le brouillon du SCAN vit dans `app_dossier_estimation.scan_draft`.
+- ⇒ Donc aujourd'hui une réponse n'est PAS mémorisée tant qu'on n'a pas cliqué. Le parcours apporte la mémoire qui
+  manque : chaque réponse enregistrée au clic (table neuve), la fenêtre et l'éditeur la reçoivent comme une saisie, et à
+  « Créer » / « Générer » tout est gardé EXACTEMENT comme aujourd'hui.
+
+### 84.4 Photos et documents (les workers)
+
+- Photos à la création : étape 2, JPEG/PNG/WebP, 20 au plus, visible ou masquée (App.tsx:18443-18475). Elles ne sont
+  PAS dans la charge de création : après « Créer », une file en mémoire attend le travail `done`, le numéro Hektor et la
+  relecture, puis pose un `upload_hektor_photo` par photo (App.tsx:16531-16611, api.ts:9260-9330), chemin « chez nous
+  d'abord » (`completerEnvoiPhotoDifferee`, worker:10323) ; échec Hektor = reprise à 12:30. Perdues si l'onglet se
+  recharge avant le retour de Hektor.
+- L'assistant ne peut PAS aujourd'hui mettre des photos du bien dans la fenêtre : le paramètre `fichiers` de la carte
+  ne sert qu'aux pages de la fiche papier (scan), et l'ouverture vide les photos (App.tsx:18251). À faire : un second
+  paramètre « photos du bien », versées dans l'étape 2 APRÈS l'ouverture.
+- Après création : `ajouter_photo` (20 par carte, JPEG/PNG — refuse le WebP que la fenêtre accepte —, toujours visible,
+  copie serveur du trombone), `couverture_photo`, `deplacer_photo`, `visibilite_photo` : tous exigent le numéro Hektor.
+- Documents : `deposer_documents` ne dépose rien lui-même : il ouvre la fenêtre de dépôt GED avec les fichiers (types
+  `app_ged_type`, proposition par le nom puis l'IA) ; c'est la personne qui clique « Envoyer ». Interrupteur
+  `ged_depot_multiple` (admin le 17/11, non relu) : pour un négociateur, la carte est refusée. Le travail
+  `upload_document_to_hektor` (chemin différé + anti-doublon, en production depuis le 19/10).
+- ✅ **Sa remarque est juste : la fenêtre de création n'a AUCUN moyen de joindre un document.** Obstacle : le dépôt
+  exige le numéro Hektor de l'annonce (`app_console_creer_document_optimistic`), rendu seulement au travail `done`
+  (11 créations sur 79 au-delà d'une minute). Deux voies, à trancher par lui : **A** (proposée sur la toile, E09) les
+  documents joints dans la conversation sont proposés juste après la création par la carte d'aujourd'hui — toute la GED
+  gardée, les fichiers survivent 2 jours au coffre ; il faut ouvrir `ged_depot_multiple` aux négociateurs. **B** une
+  étape « Documents » dans la fenêtre, sur le modèle de la file des photos (mêmes fragilités).
+- Le modèle ne voit jamais le contenu d'un fichier : garanti par `decrire_pour_le_modele` (assistant_fichiers.py:182)
+  et la route (routers/assistant.py:80-102) ; les liens signés vont à l'écran, pas dans l'historique.
+
+### 84.5 L'envoi au propriétaire (estimation_sender.py, estimation_email.py)
+
+- « Générer + envoyer » crée le travail du PDF PUIS envoie aussitôt l'e-mail : ⚠ **l'e-mail part avant que le PDF
+  existe**, et le lien `/r/download` sert « le plus récent avis » au moment du clic → « pas encore disponible », ou
+  l'ANCIEN avis. Pas de pièce jointe : un lien suivi 60 jours ; trace `app_email_envoi` (⚠ marquée « envoyé » avant
+  l'appel Gmail), ouverture et téléchargement notifiés. Envoi réel selon `EMAIL_REAL_SEND_ENABLED` (non lu).
+- Aucun geste de l'assistant n'appelle cet envoi ; `email_client` pourrait joindre le PDF, mais sans lien suivi ni trace
+  d'estimation. Proposé (E15) : « Envoyer à Mme Durand » ne s'allume qu'une fois CE PDF prêt, le lien vise ce PDF.
+
+### 84.6 Défauts trouvés, à corriger AVANT les essais (lus dans le code, non essayés — planche E19)
+
+Fenêtre : le mandant pré-rempli saute s'il n'est pas dans les 12 contacts trouvés (puis « Créer » refusé) ; le
+négociateur saute s'il n'est pas dans la liste de l'agence ; « statut du syndic » dicté en texte dans une liste à codes ;
+une pièce inconnue devient « Chambre » ; la date d'estimation posée au jour même pour une mise en vente ; la marque
+« pré-rempli » sur la case vide « Adresse privée (rue) », le bandeau compte des cases cachées ; « nouveau mandant » non
+transmis. Éditeur et envoi : pas de brouillon ; 4 cases sans champ ; l'e-mail avant le PDF ; la trace « envoyé » avant
+Gmail. Photos et documents : WebP refusé par la carte ; tout attend le numéro Hektor ; GED réservée à l'admin ; pas
+d'anti-doublon pour une photo reprise (non mesuré).
+
+### 84.7 La toile REFAITE — https://claude.ai/artifact/5S2owJCDo2HWTBBefakeGo, version 25
+
+Les 24 anciennes planches sont RETIRÉES (1-11, A1-A7, B1-B4, Tel, Coûts). Une seule histoire, Mme Durand à Firminy :
+1. Créer l'estimation : E01 la demande et les deux façons (par photo conseillée) · E02 la fiche lue, 3 doutes · E03
+   l'intérieur · E04 le dehors · E05 l'énergie et les diagnostics · E06 le mandant et la visite · E07 les photos et les
+   documents · E08 la fenêtre remplie étape par étape · E09 créée : photos en route, documents et rapport proposés.
+2. Le rapport et l'envoi : E10 le bien lu, ce que l'éditeur ne laisse pas saisir, la parcelle, pour quoi faire · E11 la
+   valeur face au marché · E12 l'état · E13 points et charges · E14 les textes et à qui l'envoyer · E15 l'éditeur
+   rempli, le PDF, l'envoi, le téléchargement · E16 le téléphone.
+3. L'audit : E17 la couverture · E18 ce qui est gardé · E19 à corriger avant les essais · E20 le coût (≈ 0,035 $ la
+   chaîne complète par le parcours, ≈ 0,40 $ si l'IA posait tout ; 85 contre 7 par jour sous le plafond de 3 $).
+
+**À trancher par lui avant le plan de développement** : (1) la mémoire du parcours — qui la lit, quand on efface les
+coordonnées d'un nouveau mandant ; (2) documents à la création, voie A ou B ; (3) ouvrir le dépôt de documents aux
+négociateurs ; (4) l'envoi seulement quand CE PDF est prêt ; (5) quels défauts de 84.6 corriger avant les essais.
+
+**Ce que ça pourrait casser** : rien encore (maquette et audit). Pour le code : la fenêtre et l'éditeur sont partagés
+par la saisie à la main, le scan et l'assistant — toute nouvelle voie d'entrée doit passer par les mêmes fonctions
+(`applyDraftAnnonceScan`, les couches de l'éditeur) pour ne pas créer une deuxième logique.
