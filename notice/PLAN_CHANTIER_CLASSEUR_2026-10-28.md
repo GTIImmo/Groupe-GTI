@@ -2513,6 +2513,50 @@ l'etat d'une autre transaction) ; ce balayage-ci, fait avec le critere « compro
 trouve un 7e qui se declenche sur `state` ET sur l'ABSENCE de numero. **Chaque famille
 demande son propre balayage, et il se fait AVANT de generer le patch.**
 
+### ✅⭐⭐ LE 18/11 AU SOIR -- LES 5 DOUBLONS RETIRES AUSSI DU REGISTRE LOCAL (session neuve)
+
+> ⛔⛔ **TROUVE EN REJOUANT LES MESURES DU § 2.** `supabase/patch_retirer_doublons_offres_classeur_2026-11-18.sql`
+> a retire les 5 offres doublons (1001575, 1001576, 1001577, 1001604, 1001619) **CHEZ
+> SUPABASE SEULEMENT**. Le registre LOCAL -- qui est le MAITRE d'`app_affaire_ledger`
+> (`pull_from_supabase.py:29`) -- les portait encore : **31 361 lignes contre 31 356**, l'ecart
+> valant exactement ces 5. Et elles n'etaient PAS au journal `app_affaire_supprimee` (28 lignes,
+> aucune des 5), que le run applique en local AVANT de pousser (`affaire_ledger.py:3444`).
+>
+> ⛔ **SANS GESTE, LE RUN DE 04:00 LES RECREAIT** : `ledger_rows_for_push` fait `SELECT *` sur
+> le local puis un upsert (l. 3211 et 3460). Elles remontaient **SANS leur marque `classeur`**
+> (`transaction_origine` est dans `COLONNES_QUE_LE_PUSH_N_ENVOIE_PAS`) -- donc visibles du
+> filet du worker (`transaction_origine=is.null`), celui qui le 15/11 avait colle a une ligne du
+> classeur le numero d'une offre Hektor EXISTANTE. Le projet l'avait ecrit
+> (`retour_arriere_recopie_app_seule.py`) : retire d'un seul cote, « le push remonte ».
+>
+> ✅ **GESTE ACCORDE PAR FREDERIC LE 18/11 (« Oui, retire-les »), JOUE A 16:31** :
+> `phase2/checks/retirer_doublons_classeur_du_local_2026-11-18.py --pour-de-vrai` (a blanc par
+> defaut ; gardes : les 5 cles, toutes `classeur`, toutes absentes chez Supabase avec un temoin
+> positif lu). Sauvegarde datee DANS la base locale :
+> `app_affaire_ledger_avant_doublons_classeur_20261118_local` (5 lignes).
+>
+> ```
+>    APRES   local 31 356 = Supabase 31 356 . les 5 : 0 . classeur 190
+>            plage app avec numero 340 . hors plage 30 826    (voisines intactes)
+>    controle INDEPENDANT refait apres coup, meme resultat
+>    retour arriere : INSERT INTO app_affaire_ledger
+>                     SELECT * FROM app_affaire_ledger_avant_doublons_classeur_20261118_local;
+> ```
+>
+> ⏰ **LE CONTROLE DE DEMAIN MATIN (19/11), APRES LE RUN ET LA DESCENTE** :
+> ① local ET Supabase a 31 356, les 5 absentes DES DEUX COTES ;
+> ② au journal du run, l'etape « phase2 doublure du ledger d affaires » EN SUCCES -- ⚠ elle
+>   est OPTIONNELLE (`run_full_pipeline.ps1` l. 979) : en echec, la recopie 26bis relirait la
+>   doublure de ce matin, qui les porte encore, et les remettrait en local ; elles remonteraient
+>   alors la nuit SUIVANTE ;
+> ③ compte rendu 26bis : `recopiees 0`.
+> Les copies locales du gel et des notes (5 liens, 5 notes de trop) se refont seules a la
+> descente : ce sont des tables de `sb_pull_state`, rien ne les pousse.
+>
+> ⭐ **LA LECON** : retirer une transaction de la plage app se fait **DES DEUX COTES, DANS LA
+> MEME FENETRE** -- c'est le patron du cobaye du 16/11. Un patch Supabase seul ne tient pas
+> une nuit, dans ce sens comme dans l'autre.
+
 ### ✅⭐⭐⭐ LE 18/11 -- SON ARBITRAGE DES 41 LIGNES EST FAIT, ET LA DATE D'OFFRE EST AUDITEE
 
 > ⭐ Il a juge les **41 identifiants** de la page d'arbitrage un par un, dans la nuit
