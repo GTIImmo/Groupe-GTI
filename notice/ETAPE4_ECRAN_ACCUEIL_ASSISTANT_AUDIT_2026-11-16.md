@@ -2411,3 +2411,49 @@ La table `app_dossier_estimation` est lisible par TOUT compte connecté (règle 
 **Ce que ça pourrait casser** : l'éditeur est partagé (fiche + écran Estimations) — tout le monde aura le parcours ;
 l'enregistrement au clic est une ÉCRITURE en base nouvelle (aujourd'hui l'éditeur n'écrit que les sources et le PDF) ; le
 PDF et le travail du worker ne changent pas (la charge reste celle de « Générer »).
+
+## 78. Planches 10-11 ÉCARTÉES ; LE PRINCIPE DU CHAPITRE 6 DÉCIDÉ : le parcours GUIDÉ dans la conversation (18/11) — rien codé
+
+**Ses mots** : « Non je veux pas des modal encore différente même plus jolie que celle actuelle, je veux savoir si comme
+dans chat gpt des questions réponse orienté » ; puis « si on a demandé crée une estimation puis fais avis de valeur … on
+pourrait reprendre en cours ? » ; puis « Oui ce principe avec des boutons de choix etc et peux tu faire de même avec la
+création d'une annonce car il faudrait garder ce principe pour les cartes de ce chapitre ».
+⛔ **Les planches 10 et 11 (questionnaire dans une fenêtre neuve) sont ÉCARTÉES** — pas de nouvelle fenêtre.
+
+**LE PRINCIPE (décidé, pour TOUTES les cartes du chapitre 6)** :
+1. Les questions se posent DANS LA CONVERSATION, une à la fois, avec des BOUTONS DE CHOIX sous la question ; on peut
+   aussi répondre en tapant ou en dictant. « Je ne sais pas » est accepté. Ce qui est déjà connu n'est pas redemandé.
+2. ⭐ **UN CLIC NE COÛTE AUCUN APPEL AU MODÈLE** : la liste des questions est connue d'avance, c'est le SERVEUR qui pose
+   la suivante et enregistre la réponse. Le modèle n'est appelé que pour le bilan de départ, une réponse en phrase
+   libre (la comprendre, la ranger), et une proposition de texte (argumentaire, points forts, texte d'annonce).
+3. À la fin, la carte récapitulative ; la fenêtre ou l'éditeur D'AUJOURD'HUI s'ouvre rempli ; seul SON clic fait le
+   geste (rien ne change à cette règle).
+4. **Enchaînement** : création d'une estimation → « On prépare l'avis de valeur ? » → les questions de l'avis.
+5. **Reprise en cours** : les réponses sont GARDÉES à chaque réponse (rattachées à la conversation avant la création, au
+   bien après) ; le serveur les redonne au modèle à chaque tour. On reprend en rouvrant la conversation, en écrivant « on
+   reprend l'avis de 24935 », ou par l'éditeur ouvert depuis la fiche.
+
+**Mesures qui fondent le principe (18/11)** :
+- un tour de l'assistant coûte en moyenne 0,0152 $ (médiane 0,0156, max 0,0498) — 177 tours depuis le 12/11, 2,69 $ ;
+- plafonds en place : 3 $/jour pour l'agence (`PLAFOND_JOUR_USD`), 100 questions/jour/personne, 8 étapes par tour ;
+- tout par le modèle = ~20 tours par parcours création + avis ≈ 0,30 $ ; avec le principe ≈ 3 à 6 appels ≈ 0,05-0,10 $ ;
+- le modèle ne relit que les **20 derniers messages** (`MAX_HISTORIQUE_MESSAGES`) → un parcours long l'oublierait :
+  d'où la mémoire des réponses, redonnée par le serveur ;
+- une carte expire au bout de **30 minutes** et n'est lisible que par celui qui l'a demandée (+ admin)
+  (`patch_assistant_ia_etape3_cartes_2026-11-13.sql`, l. 61 et 79-80) → elle ne peut pas servir de mémoire.
+- cadastre, DVF, DPE, copropriété : services publics gratuits, appelés UNE fois au bilan ; Hektor n'est pas appelé
+  pendant les questions (seulement au clic « Créer » et à « Générer », comme aujourd'hui).
+
+**Les pièces à faire** (rien codé ; chaque pièce = audit fin → « vas-y » → code → preuve) :
+- P1 le moteur de questions côté serveur (listes ordonnées, enregistrement, question suivante, sans modèle) ;
+- P2 les boutons de choix sous une question dans l'écran de l'assistant (⚠ écran partagé par tous les gestes : les
+  autres cartes doivent rester inchangées) ;
+- P3 la mémoire des réponses : une petite table nouvelle → **patch en base = son accord**, et **qui la lit** (lui seul /
+  ceux qui travaillent sur le bien) **à lui demander avant d'écrire le patch** ;
+- P4 la consigne : quand appeler le modèle, l'enchaînement, la reprise ;
+- P5 les listes de questions, carte par carte : **estimation (la première)**, avis de valeur, **annonce** (les questions
+  de l'estimation + celles propres à l'annonce — prix, mandat, honoraires, texte ; liste exacte à tirer de l'audit des
+  7 étapes de la fenêtre), puis offre/compromis/vente, mandat et signature, bon de visite.
+
+**Ce que ça pourrait casser** : l'écran de l'assistant (partagé) ; une écriture en base nouvelle à chaque réponse ;
+rien côté coût (les deux plafonds restent).
