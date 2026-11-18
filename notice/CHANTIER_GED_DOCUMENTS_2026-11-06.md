@@ -3201,3 +3201,41 @@ du 24/06 au 16/11 -- TOUS des contacts d'essai (ESSAI 8A, 8 R3, TROIS, QUATRE, C
 juin, essai probable, non prouvé), et le compte rendu du worker porte `date_naissance` dans les 14. Ce qui est vrai : Hektor
 ne la RENVOIE jamais (contrat_autorite.py:63) -- le sens Hektor -> nous. Donc aujourd'hui : envoyée à l'aller, jamais
 relue ; et en pratique jamais envoyée pour un vrai contact, parce que personne ne la saisit (240 personnes seules sur 63 800).
+
+**DÉCISION DE FRÉDÉRIC, REVUE (18/11)** : « on va plutôt envoyer à Hektor aussi pour le conjoint, au moins ce sera la même
+règle pour les contacts ; cela devrait fonctionner mais il faudra tester ». ➡ La décision « chez nous seulement » est
+REMPLACÉE : la solution d'origine (a, b, c, d) revient ENTIÈRE -- worker, base, écran, épreuve sur le couple fictif.
+
+### 12.41 LE PLAN -- un « Ce que dit… » pour chaque document utile (18/11, proposé, RIEN codé, attend le « vas-y »)
+
+**Mesure des groupes Hektor écrits en MODIFICATION** (`update_hektor_annonce_fields` done, toutes dates) : `ag_interieur` 40,
+`mandat_infofi` 21, `copropriete` 13, `secteur` 13, `diagnostiques` 11, `terrain` **1**. Aller-retour prouvé depuis la GED :
+`diagnostiques` (dpe_date, date de l'ERP) et `copropriete` (lots, quote-part), 13/11 sur 63331.
+
+Une tâche de code à la fois ; chaque lot : essais hors ligne + banc d'écran + build, puis épreuve réelle sur 63331 si un
+champ neuf part chez Hektor ; retour arrière = l'interrupteur `ged_remplir` (off), le commit, ou le patch inverse (lot G).
+**Un seul chemin par case** (règle du lot 3) : quand une fenêtre prend une case, l'alerte ou la carte « Remplir » du même
+sujet se retire.
+- **A -- les 6 diagnostics et le DDT** (écran seul, `gedBilanFiche.ts`) : électricité, gaz, plomb, termites, amiante,
+  assainissement -> `diag_…` = OUI et `diag_…_date` ; le DDT -> les cases du DPE. Groupe `diagnostiques` (prouvé). Épreuve :
+  un `diag_…` (jamais écrit en modification) aller-retour sur 63331. Casse possible : rien hors de la fenêtre ; L2 (validité)
+  reste une alerte.
+- **B -- copropriété** : plan de sauvegarde et procédure (fiche synthétique, PV d'AG) -> `copropriete_plan_sauvegarde`,
+  `copropriete_statut_syndicat`. Groupe `copropriete` (garde du worker contre le secteur active). L17 se retire au profit de
+  la fenêtre. Épreuve des deux cases.
+- **C -- taxe foncière et charges** : `justif.taxe` -> `TAXE_FONCIERE` ; appel de fonds -> `CHARGES` (annuel / 12, « charges
+  copro / mois »). Groupe `mandat_infofi` (renvoie prix et honoraires RELUS). ⛔ ÉPREUVE D'ABORD : la taxe n'a jamais été écrite
+  en modification -> aller-retour sur 63331, prix et honoraires relus identiques avant d'ouvrir. T1 se retire.
+- **D -- le métré complet** : surface habitable `surfappart` et date `diag_loi_carrez_date`. Groupe `ag_interieur` (40 écrits,
+  mais jamais depuis la GED ; il renvoie 13 champs) : épreuve.
+- **E -- le titre de propriété** : contenance -> `surfterrain` (groupe `terrain` : 1 seule écriture connue) : épreuve.
+- **F -- les pièces des personnes dans la fenêtre** : « Ce que dit la carte d'identité / la fiche de renseignements » --
+  naissance, lieu, situation de famille (renseignements) ; vide -> ajouter, différent -> trancher (on n'écrit par-dessus que
+  sur le choix de l'humain). Personne seule et PREMIÈRE personne d'un couple par `editContactOptimistic`. Les cartes C1-C3
+  se retirent. P4 (le nom) reste une alerte.
+- **G -- le conjoint** : worker `spouse_birth_date` / `spouse_birth_place` -> `dateNaissance_m2` / `lieuNaissance_m2` (formulaire
+  de couple relu seulement) ; base : `app_edit_conjoint_optimistic` accepte ces clés (patch + inverse + répétition) ; écran :
+  la personne lue rattachée au conjoint (nom ET prénom). Épreuve sur 20000031/32 <-> 606104/05 avec des pièces SPÉCIMEN : la
+  date doit arriver sur 606104 (`_m2`) ET sur 606105. ⏰ Redémarrer les 4 services worker, file vide (0 pending, 0 running).
+**Hors plan, à trancher** : livret de famille / acte de mariage, facture d'honoraires, syndic, fonds de travaux, règlement de
+copropriété, adresse et régime, conjoints sans prénom (5 014).
