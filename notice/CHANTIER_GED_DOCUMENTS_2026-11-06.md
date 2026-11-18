@@ -3043,3 +3043,11 @@ sous la décision du 12/11 (« je suis le seul à l'utiliser, on fera le DPA à 
   d'un fournisseur hors UE à vérifier) ;
 - **la mention d'information** au mandat (et pour les acquéreurs : au bon de visite ou à l'offre) ;
 - **la durée de conservation** et **le chemin d'effacement** ci-dessus : deux décisions, puis peut-être du code.
+
+### 12.38 AUDIT GRAPHIQUE et MAQUETTE de la GED (18/11, « avant ces derniers points, une optimisation du visuel »)
+
+Frédéric met le dossier « cran on » (§12.37) en attente : d'abord le visuel. Audit d'expert écrit à part :
+**`notice/AUDIT_GRAPHIQUE_GED_2026-11-18.md`** (écrans vus en production sur 62850 et 59541, inventaire exact du code,
+10 constats, le parti pris, 5 points « à trancher » qui changeraient un comportement, le tableau anti-perte).
+Maquette : **https://claude.ai/artifact/VxtNCjmAVXkThs641fHX1z** (4 écrans : l'onglet Documents au bureau, la fenêtre
+de dépôt, « Ce que dit le compromis », le téléphone ; animations jouables). RIEN codé ; attend son avis.
