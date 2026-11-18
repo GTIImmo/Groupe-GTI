@@ -297,6 +297,7 @@ import { BranchesAccueil, citerDansAssistant, demanderAssistant, ouvrirConversat
 import AccueilAssistant, { type ChiffresAccueil } from './AccueilAssistant'
 import { EVENEMENT_CREATION_FAITE, contactDeLaRecherche, noterCreationCarte, transactionPourLien, type CreationFaite, type OuvertureCreation } from './lib/assistant'
 import { bvBoot } from './lib/bienvuBoot'
+import { webpEnJpeg } from './lib/photoJpeg'
 import { APP_BIENVU_ENABLED } from './lib/bienvuFlag'
 import { BienvuLogin } from './BienvuLogin'
 import { BienvuLoader, BienvuLogo, BienvuSymbol } from './BienvuLogo'
@@ -1844,7 +1845,9 @@ const SCAN_MIROIR: Record<string, DraftAnnonceSheetScanFieldKey> = {
 }
 // Les autres cases que le remplisseur du scan pose une à une (même table que applyDraftAnnonceScan, en clair).
 const SCAN_CASES_DIRECTES: Partial<Record<DraftAnnonceSheetScanFieldKey, string>> = {
-  title: 'titre', propertyType: 'type', address: 'adresse', postalCode: 'cp', city: 'ville', note: 'note',
+  // 19/11 (§89, D6) : l'adresse du haut de l'étape 3 a SA clé : `adresse` est aussi la case Hektor « Adresse privée (rue) »
+  // du groupe Secteur, que le scan ne remplit pas (les deux portaient la marque).
+  title: 'titre', propertyType: 'type', address: 'adresse_haut', postalCode: 'cp', city: 'ville', note: 'note',
   description: 'corps', garden: 'JARDIN-', pool: 'PISCINE-', works: 'TRAVAUX', chargesDetail: 'CHARGES_DETAIL',
   exposure: 'EXPOSITION', kitchen: 'CUISINE', interiorState: 'etat_interieur', exteriorState: 'etat_exterieur',
 }
@@ -1938,7 +1941,9 @@ const scanWizardFieldMap: ScanWizardMapEntry[] = [
   { ocr: 'poolHeated', name: 'PISCINE_CHAUFFEE', kind: 'ouinon' },
   { ocr: 'poolCovered', name: 'PISCINE_COUVERTE', kind: 'ouinon' },
   // Copropriete (statut syndicat) + construction recente
-  { ocr: 'coproSyndicateStatus', name: 'copropriete_statut_syndicat', kind: 'text' },
+  // 19/11 (étape 4 §89, D3) : la case est une LISTE à codes (wizardProcedureOptions) ; un texte libre y arrivait tel quel.
+  // Résolu comme les autres listes : un libellé non reconnu laisse la case vide.
+  { ocr: 'coproSyndicateStatus', name: 'copropriete_statut_syndicat', kind: 'enum', options: wizardProcedureOptions },
   { ocr: 'tenYearWarranty', name: 'garantie_decennale', kind: 'ouinon' },
   { ocr: 'damageInsurance', name: 'assurance_dommages_ouvrage', kind: 'ouinon' },
   { ocr: 'conformityCertificate', name: 'certificat_conformite', kind: 'ouinon' },
@@ -2918,6 +2923,8 @@ function HektorCompositionPiecesEditor(props: {
           onChange={(event) => onChange('idTypePiece', event.target.value)}
           disabled={props.disabled}
         >
+          {/* 19/11 (§89, D4) : seule une pièce lue au type non reconnu arrive sans type ; la saisie à la main n'a pas ce choix */}
+          {piece.idTypePiece === '' ? <option value="">— type à choisir —</option> : null}
           {hektorCompositionPieceTypeOptions.map((option) => (
             <option key={`${prefix}-type-${option.value}`} value={option.value}>{option.label}</option>
           ))}
@@ -6423,6 +6430,15 @@ function humanizeHektor(v: string): string {
 // Éditeur « Avis de valeur » sur la fiche estimation (calqué sur MandatDocumentEditor :
 // bloc + onglets + actions). Self-contained : appelle createGenerateEstimationPdfJob +
 // sendEstimationEmail. Réutilise les classes CSS mandat-document-* pour un look cohérent.
+// 19/11 (étape 4 §89, D8 a) : l'éditeur ouvert dit s'il porte une saisie de la personne non encore générée ; le fermer
+// (« Retour », un clic à côté) demande alors confirmation. Rien n'est gardé en base ici : le brouillon gardé viendra avec
+// la mémoire du parcours (P3). Un seul éditeur est ouvert à la fois.
+let editeurAvisModifie: (() => boolean) | null = null
+function fermerEditeurAvis(fermer: () => void) {
+  if (editeurAvisModifie?.() && !window.confirm("L'avis de valeur a des changements non générés : ils seront perdus. Fermer quand même ?")) return
+  fermer()
+}
+
 function EstimationDocumentEditor(props: {
   dossier: Dossier
   detail: DossierDetailPayload
@@ -6456,6 +6472,14 @@ function EstimationDocumentEditor(props: {
 
   const [open, setOpen] = useState(!!props.modal)
   const [draft, setDraft] = useState(initialDraft)
+  // 19/11 (§89, D8 a) : vrai dès que la PERSONNE change quelque chose (pas les couches posées à l'ouverture) ; faux après
+  // « Générer »
+  const saisieNonGeneree = useRef(false)
+  useEffect(() => {
+    const garde = () => saisieNonGeneree.current
+    editeurAvisModifie = garde
+    return () => { if (editeurAvisModifie === garde) editeurAvisModifie = null }
+  }, [])
   // 18/11 (§70-5, décision « A ») : l'avis repris à l'ouverture (sa date, sa valeur) -> le bandeau ; et ce que la dictée
   // de l'assistant a posé par-dessus
   const [reprise, setReprise] = useState<{ le: string; estimee: number | null } | null>(null)
@@ -6556,7 +6580,7 @@ function EstimationDocumentEditor(props: {
   const [autoGen, setAutoGen] = useState<{ etat: 'calcul' | 'fait' | 'sans_position'; geocode: boolean } | null>(null)
   // Lot C — acquéreurs en recherche correspondant au bien (moteur de rapprochement), affiché dans le PDF.
   const [acquereurs, setAcquereurs] = useState<number | null>(null)
-  useEffect(() => { setDraft(initialDraft); setOpen(!!props.modal); setMessage(null); setMarche(null); setMarcheMsg(null); setCadre(null); setCadreMsg(null); setCadastre(null); setCadastreMsg(null); setCadastrePicker(null) }, [initialDraft, props.modal])
+  useEffect(() => { setDraft(initialDraft); saisieNonGeneree.current = false; setOpen(!!props.modal); setMessage(null); setMarche(null); setMarcheMsg(null); setCadre(null); setCadreMsg(null); setCadastre(null); setCadastreMsg(null); setCadastrePicker(null) }, [initialDraft, props.modal])
   // Modale ouverte : précharge la parcelle « retenue » (Store B partagé : app_dossier_estimation.sources.cadastre,
   // choisie au clic sur la carte dans Le Bien/Localisation) pour qu'elle PERDURE dans l'avis de valeur — au lieu de
   // repartir sur la parcelle auto au point. Best-effort.
@@ -6736,7 +6760,7 @@ function EstimationDocumentEditor(props: {
     void saveDossierEstimationSource(dossier.app_dossier_id, dossier.hektor_annonce_id, 'cadastre', true, nextCad).catch(() => { /* best effort */ })
   }
 
-  const upd = <K extends keyof typeof draft>(k: K, v: (typeof draft)[K]) => { setDraft((d) => ({ ...d, [k]: v })); setMessage(null) }
+  const upd = <K extends keyof typeof draft>(k: K, v: (typeof draft)[K]) => { setDraft((d) => ({ ...d, [k]: v })); setMessage(null); saisieNonGeneree.current = true }
 
   // Agent "Avis de valeur" : ameliore d'un seul appel les textes de l'estimation
   // (appreciation d'etat, points forts/vigilance, argumentaire, avis) issus de la
@@ -6786,6 +6810,7 @@ function EstimationDocumentEditor(props: {
         argumentaire: result.argumentairePrix || d.argumentaire,
         commentaire: result.avisConseiller || d.commentaire,
       }))
+      saisieNonGeneree.current = true
       const cts = result.costUsd != null ? ` (~${(result.costUsd * 100).toFixed(2)} cts)` : ''
       setMessage(`Textes ameliores par l'IA${cts}. Verifie et ajuste avant d'enregistrer.`)
     } catch (err) {
@@ -6802,6 +6827,7 @@ function EstimationDocumentEditor(props: {
       return { ...d, etatPostes: { ...d.etatPostes, [key]: { ...prev, [field]: value } } }
     })
     setMessage(null)
+    saisieNonGeneree.current = true
   }
 
   // Reporte l'estimation DVF (médiane × surface + fourchette p25–p75) dans les
@@ -6815,6 +6841,7 @@ function EstimationDocumentEditor(props: {
       haute: marche.fourchette_haute != null ? String(marche.fourchette_haute) : d.haute,
     }))
     setTab('valeur'); setMessage('Estimation DVF reportée dans la valeur (ajustable).')
+    saisieNonGeneree.current = true
   }
 
   // Récap « Le bien » (lecture seule) : données factuelles déjà dans l'app qui alimentent
@@ -6903,6 +6930,7 @@ function EstimationDocumentEditor(props: {
         commentaire: draft.commentaire, etat: p.etat, pointsForts: p.pointsForts, pointsVigilance: p.pointsVigilance, charges: p.charges,
         marche: marche && marche.ok ? marche : null, acquereurs, cadreDeVie: cadre && cadre.ok ? cadre : null, cadastre: cadastre && cadastre.ok ? cadastre : null, argumentaire: p.argumentaire,
       })
+      saisieNonGeneree.current = false  // la saisie est dans la charge du PDF : reprise à la prochaine ouverture (§70-5)
       if (sendEmail) {
         const res = await sendEstimationEmail({
           recipientEmail: draft.recipient.trim(), senderEmail: (dossier.negociateur_email ?? '').trim() || 'accueil@gti-immobilier.fr',
@@ -6930,7 +6958,7 @@ function EstimationDocumentEditor(props: {
           <small>{open ? bienContext : 'Préparer et envoyer l’avis de valeur au propriétaire'}</small>
         </div>
         {props.modal
-          ? <button className="ghost-button button-subtle" type="button" onClick={() => props.onClose?.()}>Retour</button>
+          ? <button className="ghost-button button-subtle" type="button" onClick={() => fermerEditeurAvis(() => props.onClose?.())}>Retour</button>
           : <button className="ghost-button button-subtle" type="button" onClick={() => setOpen((v) => !v)}>{open ? 'Retour fiche' : "Préparer l'avis de valeur"}</button>}
       </div>
       {open && (reprise || dicteeCases || autoGen) ? (() => {
@@ -7064,6 +7092,18 @@ function EstimationDocumentEditor(props: {
                 <label className="is-wide"><span>Libellé d'état</span><input placeholder="ex. Bon état général" value={draft.etatLabel} onChange={(e) => upd('etatLabel', e.target.value)} /></label>
                 <label><span>Toiture</span><input value={draft.toiture} onChange={(e) => upd('toiture', e.target.value)} /></label>
                 <label><span>Menuiseries</span><input value={draft.menuiseries} onChange={(e) => upd('menuiseries', e.target.value)} /></label>
+                {/* 19/11 (étape 4 §89, D9) : ces 4 valeurs, reprises du bien, partaient dans le PDF sans pouvoir être corrigées.
+                    Une lettre hors A-G déjà présente reste proposée telle quelle (rien n'est effacé en silence). */}
+                {(['dpe', 'ges'] as const).map((cle) => (
+                  <label key={cle}><span>{cle === 'dpe' ? 'DPE (énergie)' : 'GES (climat)'}</span>
+                    <select value={draft[cle]} onChange={(e) => upd(cle, e.target.value)}>
+                      <option value="">—</option>
+                      {[...'ABCDEFG', ...(draft[cle] && ![...'ABCDEFG'].includes(draft[cle]) ? [draft[cle]] : [])].map((x) => <option key={x} value={x}>{x}</option>)}
+                    </select>
+                  </label>
+                ))}
+                <label><span>Chauffage</span><input placeholder="ex. Gaz, individuel" value={draft.chauffage} onChange={(e) => upd('chauffage', e.target.value)} /></label>
+                <label><span>Exposition</span><input placeholder="ex. Sud-Ouest" value={draft.exposition} onChange={(e) => upd('exposition', e.target.value)} /></label>
                 <label className="is-wide"><span>Appréciation de l'état · optionnel</span>
                   <small style={{ display: 'block', fontWeight: 400, textTransform: 'none', letterSpacing: 0, color: 'var(--ds-ink-mute, #6b6560)', fontSize: 12, margin: '2px 0 6px' }}>Décrivez l'état réel du bien en quelques phrases (entretien, travaux récents, points à prévoir). S'affiche sur la page État du PDF.</small>
                   <textarea rows={3} placeholder="Ex. : Maison bien entretenue, toiture refaite en 2019. Intérieur à rafraîchir (peintures, sols)." value={draft.etatTexte} onChange={(e) => upd('etatTexte', e.target.value)} /></label>
@@ -15176,6 +15216,10 @@ export default function App() {
   // 18/11 (étape 4 §66, marche 6a) : ce que l'ASSISTANT a pré-rempli dans la fenêtre (null = ouverte à la main : la fenêtre
   // d'aujourd'hui, sans aucune marque). `champs` = les cases de la fenêtre marquées ; `desaccords` = ce que la fiche
   // scannée disait autrement que la dictée (la dictée prime) ; `carteId` = la carte à prévenir quand la fiche est créée.
+  // 19/11 (§89, D1) : le mandant que la carte de l'assistant a posé (null quand la fenêtre est ouverte à la main)
+  const draftMandantAssistantRef = useRef<{ hektor_contact_id: string; nom: string } | null>(null)
+  // 19/11 (§89, D2) : le négociateur que la carte a posé, pour DIRE pourquoi il saute au lieu de l'effacer en silence
+  const draftNegoAssistantRef = useRef<{ hektor_user_id: string; nom: string; signale?: boolean } | null>(null)
   const [draftPrefillAssistant, setDraftPrefillAssistant] = useState<{ carteId: string; champs: string[]; nombre: number; heure: string; desaccords: string[]; lecture: 'en_cours' | 'faite' | 'ratee' | null } | null>(null)
   const draftAnnoncePhotoUploadStartedRef = useRef<Set<string>>(new Set())
   const draftAnnonceEstimationSavedRef = useRef<Set<string>>(new Set())
@@ -15748,22 +15792,40 @@ export default function App() {
   const draftAnnonceDiffusionGroups = draftAnnonceVisibleWizardGroups.filter((section) => section.step === 7)
   // 18/11 (étape 4 §66) : combien de cases l'assistant a remplies à chaque étape (la pastille sur l'étape). Les cases
   // écrites à la main dans la fenêtre ont leur étape ici ; les autres la prennent de leur groupe (section.step).
-  const draftPrefillParEtape = useMemo<Partial<Record<DraftAnnonceStepKey, number>>>(() => {
-    if (!draftPrefillAssistant?.champs.length) return {}
+  // 19/11 (§89, D6) : la marque, la pastille et le compte du bandeau ne retiennent que les cases de l'assistant RÉELLEMENT
+  // remplies dans la fenêtre ET montrées pour ce type de bien (avant : les clés demandées, même vides ou cachées).
+  const draftPrefillHorsGroupes: Record<string, string> = {
+    adresse_haut: draftAnnonceAddress, cp: draftAnnoncePostalCode, ville: draftAnnonceCity, note: draftAnnonceNote,
+    type: draftAnnonceTypeId,
+    // le négociateur et le mandant ne gardent la marque que s'ils sont TOUJOURS ceux de la carte (pas un choix à la main)
+    negociateur: draftAnnonceNegotiatorId && draftAnnonceNegotiatorId === draftNegoAssistantRef.current?.hektor_user_id ? draftAnnonceNegotiatorId : '',
+    composition: draftAnnonceCompositionPieces.some((piece) => hektorCompositionPieceHasContent(piece)) ? 'oui' : '',
+    mandant: draftMandantChoice === 'existing'
+      ? (draftExistingMandantId && draftExistingMandantId === draftMandantAssistantRef.current?.hektor_contact_id ? draftExistingMandantId : '')
+      : draftMandantChoice === 'new' ? [draftMandantLastName, draftMandantEmail].join('') : '',
+  }
+  const draftPrefillReels = (draftPrefillAssistant?.champs ?? []).filter((champ) => {
+    if (champ in draftPrefillHorsGroupes) return Boolean(draftPrefillHorsGroupes[champ].trim())
+    if (!draftAnnonceNomsAuHaut.has(champ) && !draftAnnonceVisibleWizardFieldNames.has(champ)) return false
+    return Boolean((draftAnnonceWizardFields[champ] ?? '').trim())
+  })
+  // (un calcul simple : ses entrées sont refaites à chaque rendu, un useMemo n'y gagnait rien)
+  const draftPrefillParEtape: Partial<Record<DraftAnnonceStepKey, number>> = (() => {
+    if (!draftPrefillReels.length) return {}
     const aLaMain: Record<string, DraftAnnonceStepKey> = {
       titre: 'offre', type: 'offre', negociateur: 'offre', prix: 'offre', surfappart: 'offre', surfterrain: 'offre',
       SURFACE_GARAGE: 'offre', nbpieces: 'offre', NB_CHAMBRES: 'offre', NB_NIVEAUX: 'offre', 'JARDIN-': 'offre',
       'PISCINE-': 'offre', GARAGE_BOX: 'offre', EXPOSITION: 'offre', vuee: 'offre',
-      adresse: 'secteur', cp: 'secteur', ville: 'secteur', composition: 'composition', mandant: 'mandatPrix', note: 'mandatPrix',
+      adresse_haut: 'secteur', cp: 'secteur', ville: 'secteur', composition: 'composition', mandant: 'mandatPrix', note: 'mandatPrix',
     }
     const compte: Partial<Record<DraftAnnonceStepKey, number>> = {}
-    for (const champ of draftPrefillAssistant.champs) {
+    for (const champ of draftPrefillReels) {
       const groupe = draftAnnonceVisibleWizardGroups.find((section) => section.fields.some((field) => field.name === champ))
       const etape = aLaMain[champ] ?? (groupe ? draftAnnonceStepOrder[groupe.step - 1] : undefined)
       if (etape) compte[etape] = (compte[etape] ?? 0) + 1
     }
     return compte
-  }, [draftPrefillAssistant, draftAnnonceVisibleWizardGroups])
+  })()
   const draftAnnonceHasNewMandantDraft = [draftMandantCivility, draftMandantLastName, draftMandantFirstName, draftMandantEmail, draftMandantPhone, draftMandantAddress, draftMandantPostalCode, draftMandantCity].some((value) => value.trim())
   const draftAnnonceHasExistingMandantDraft = draftMandantChoice === 'existing' && /^\d+$/.test(draftExistingMandantId.trim())
   const draftAnnonceMandantReviewLabel = draftAnnonceHasExistingMandantDraft
@@ -16012,9 +16074,16 @@ export default function App() {
       return
     }
     if (draftAnnonceNegotiatorId && !draftNegotiatorOptions.some((item) => item.idUser === draftAnnonceNegotiatorId)) {
+      // 19/11 (§89, D2) : tant que la liste des négociateurs n'est pas chargée, on n'efface pas celui de l'assistant
+      const negoAssistant = draftNegoAssistantRef.current
+      if (negoAssistant && negoAssistant.hektor_user_id === draftAnnonceNegotiatorId) {
+        if (!hektorNegotiators.length) return
+        if (!negoAssistant.signale) setErrorMessage(`Le négociateur proposé par l'assistant (${negoAssistant.nom}) n'est pas dans la liste de l'agence ${draftAnnonceAgency || 'choisie'} : choisis le négociateur à l'étape 1.`)
+        negoAssistant.signale = true
+      }
       setDraftAnnonceNegotiatorId('')
     }
-  }, [draftAnnonceModalOpen, draftAnnonceNegotiatorId, draftNegotiatorOptions, hektorNegotiators, profile?.role, sessionEmail])
+  }, [draftAnnonceModalOpen, draftAnnonceNegotiatorId, draftNegotiatorOptions, hektorNegotiators, profile?.role, sessionEmail, draftAnnonceAgency])
 
   useEffect(() => {
     if (!draftAnnonceModalOpen || draftAnnonceStep !== 'mandatPrix' || draftMandantChoice !== 'existing') {
@@ -16038,6 +16107,14 @@ export default function App() {
       })
         .then((rows) => {
           if (cancelled) return
+          // 19/11 (étape 4 §89, D1) : le mandant posé par l'ASSISTANT n'est pas effacé parce qu'il manque dans ces 12
+          // lignes (autre portefeuille, homonymes) : il est remis en tête de la liste. Taper dans la recherche l'efface
+          // comme avant (le champ remet le numéro à vide).
+          const mandantAssistant = draftMandantAssistantRef.current
+          if (mandantAssistant && draftExistingMandantId === mandantAssistant.hektor_contact_id
+            && !rows.some((row) => row.hektor_contact_id === mandantAssistant.hektor_contact_id)) {
+            rows = [{ hektor_contact_id: mandantAssistant.hektor_contact_id, display_name: mandantAssistant.nom } as MandantContactSearchOption, ...rows]
+          }
           setDraftExistingMandantOptions(rows)
           if (draftExistingMandantId && !rows.some((row) => row.hektor_contact_id === draftExistingMandantId)) {
             setDraftExistingMandantId('')
@@ -18250,6 +18327,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
 
   function openDraftAnnonceModal() {
     clearDraftAnnoncePhotoDrafts()
+    draftMandantAssistantRef.current = null  // 19/11 (§89, D1-D2) : ouverte à la main = rien venu de l'assistant
+    draftNegoAssistantRef.current = null
     const agency = userNegotiatorContext?.agence_nom || (filters.agency !== allFilterValue ? filters.agency : '')
     const selectedAgency = agency === allFilterValue ? '' : agency
     const ownNegotiator = hektorNegotiators.find((item) =>
@@ -18333,19 +18412,25 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         ? o.composition.map((p) => ({ type: p.type, surface: p.surface, etage: p.etage, detail: p.detail, note: '' }))
         : (lue?.pieces ?? []),
     }
-    if (lue || dicte.length || o.composition.length) applyDraftAnnonceScan(fusion)
+    if (lue || dicte.length || o.composition.length) applyDraftAnnonceScan(fusion, { dateDuJour: o.genre === 'estimation' })
     // le genre de la CARTE (le scan force l'estimation : la carte dit ce que la personne a demandé)
     setDraftAnnonceScanEstimation(o.genre === 'estimation')
     if (!lue) { setDraftAnnonceScanMessage(null); setDraftAnnonceScanReview([]); setDraftAnnonceScanWarnings([]) }
     else setDraftAnnonceScanMessage(`${draftAnnonceScanFilledCount(lue)} champs lus sur la fiche papier${lue.summaryConfidence != null ? ` - fiabilite ${(lue.summaryConfidence * 100).toFixed(0)}%` : ''}.`)
     if (o.mandant) {
+      draftMandantAssistantRef.current = { hektor_contact_id: o.mandant.hektor_contact_id, nom: o.mandant.nom }
       setDraftMandantChoice('existing')
       setDraftExistingMandantSearch(o.mandant.nom)
       setDraftExistingMandantId(o.mandant.hektor_contact_id)
     }
     if (o.negociateur?.hektor_user_id && profile?.role !== 'commercial') {
+      draftNegoAssistantRef.current = { hektor_user_id: o.negociateur.hektor_user_id, nom: o.negociateur.nom }
       setDraftAnnonceNegotiatorId(o.negociateur.hektor_user_id)
-      if (o.negociateur.agence) setDraftAnnonceAgency(o.negociateur.agence)
+      // 19/11 (§89, D2) : sans agence sur la carte, celle du négociateur dans la liste (sinon la liste filtrée par
+      // l'agence de la personne ne le contient pas, et il sautait)
+      const agence = o.negociateur.agence
+        || hektorNegotiators.find((item) => item.idUser === o.negociateur?.hektor_user_id)?.agenceNom
+      if (agence) setDraftAnnonceAgency(agence)
     }
     const desaccords: string[] = []
     if (lue) {
@@ -18366,7 +18451,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   }
 
   // 18/11 (§66) : la marque d'une case remplie par l'assistant (rien quand la fenêtre a été ouverte à la main)
-  const marqueAssistant = (champ: string) => (draftPrefillAssistant?.champs.includes(champ) ? ' is-assistant' : '')
+  const marqueAssistant = (champ: string) => (draftPrefillReels.includes(champ) ? ' is-assistant' : '')
 
   function updateDraftAnnonceWizardField(key: string, value: string) {
     setDraftAnnonceWizardFields((current) => ({ ...current, [key]: value }))
@@ -18440,7 +18525,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setDraftAnnoncePhotoInputVersion((value) => value + 1)
   }
 
-  function handleDraftAnnoncePhotoFiles(event: ChangeEvent<HTMLInputElement>) {
+  async function handleDraftAnnoncePhotoFiles(event: ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.target.files ?? [])
     if (!files.length) return
     const acceptedTypes = new Set(['image/jpeg', 'image/png', 'image/webp'])
@@ -18462,7 +18547,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       return
     }
 
-    const nextPhotos = selectedFiles.map((file) => ({
+    // 19/11 (§89, D10) : une photo WebP part en JPEG (aucun WebP n'a jamais été envoyé à Hektor) ; les autres telles quelles
+    const converties = await Promise.all(selectedFiles.map((file) => webpEnJpeg(file)))
+    const nextPhotos = converties.map((file) => ({
       id: crypto.randomUUID(),
       file,
       previewUrl: URL.createObjectURL(file),
@@ -18487,7 +18574,10 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setDraftAnnoncePhotoInputVersion((value) => value + 1)
   }
 
-  function applyDraftAnnonceScan(scan: DraftAnnonceSheetScanPayload) {
+  // 19/11 (§89, D5) : `dateDuJour` = poser la date d'estimation du jour quand la fiche n'en porte pas. Vrai pour le scan
+  // (toujours une estimation) ; l'assistant le passe à faux pour une mise en vente.
+  function applyDraftAnnonceScan(scan: DraftAnnonceSheetScanPayload, opts: { dateDuJour?: boolean } = {}) {
+    const dateDuJour = opts.dateDuJour ?? true
     const value = (key: keyof DraftAnnonceSheetScanPayload['fields']) => draftAnnonceScanValue(scan, key)
     const setIfPresent = (setter: (next: string) => void, next: string) => {
       if (next) setter(next)
@@ -18545,14 +18635,19 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     const mappedPieces = scannedPieces
       .map((piece) => {
         const idTypePiece = compositionPieceTypeIdFromLabel(piece?.type)
-        return createEmptyHektorCompositionPieceDraft({
+        const libelle = (piece?.type ?? '').trim()
+        const detail = (piece?.detail ?? '').trim()
+        const brouillon = createEmptyHektorCompositionPieceDraft({
           idTypePiece: idTypePiece || '1',
-          typeLabel: (piece?.type ?? '').trim(),
-          detailPiece: (piece?.detail ?? '').trim(),
+          typeLabel: libelle,
+          detailPiece: detail,
           etagePiece: (piece?.etage ?? '').trim(),
           surfacePiece: (piece?.surface ?? '').replace(',', '.').trim(),
           notePublique: (piece?.note ?? '').trim(),
         })
+        // 19/11 (§89, D4) : type non reconnu = pas de type (à choisir, « Créer » le demande) au lieu de « Chambre » ;
+        // le nom lu est gardé dans le détail s'il est vide, pour que la personne sache de quelle pièce il s'agit.
+        return idTypePiece ? brouillon : { ...brouillon, idTypePiece: '', typeLabel: libelle, detailPiece: detail || libelle }
       })
       .filter((piece) => hektorCompositionPieceHasContent(piece))
     if (mappedPieces.length) setDraftAnnonceCompositionPieces(mappedPieces)
@@ -18573,7 +18668,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     if (value('works')) updateDraftAnnonceWizardField('TRAVAUX', value('works'))
     if (value('chargesDetail')) updateDraftAnnonceWizardField('CHARGES_DETAIL', value('chargesDetail'))
     // Date d'estimation : si non lue sur la fiche -> defaut = date du jour (format jj-mm-aaaa).
-    if (!value('estimationDate')) {
+    if (!value('estimationDate') && dateDuJour) {
       const d = new Date()
       const today = `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`
       updateDraftAnnonceWizardField('ESTIMATION_DATE', today)
@@ -18910,6 +19005,14 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     if (hasNewInitialMandant && (!draftMandantLastName.trim() || !draftMandantEmail.trim())) {
       setErrorMessage('Pour ajouter un mandant initial, renseigne au minimum le nom et l email.')
       setDraftAnnonceStep('mandatPrix')
+      return
+    }
+    // 19/11 (§89, D4) : une pièce lue (scan, assistant) dont le type n'a pas été reconnu arrive SANS type ; elle ne part
+    // plus en « Chambre » par défaut. Une pièce saisie à la main a toujours un type (la liste n'a pas de choix vide).
+    const piecesSansType = draftAnnonceCompositionPieces.filter((piece) => hektorCompositionPieceHasContent(piece) && !piece.deleted && !piece.idTypePiece.trim())
+    if (piecesSansType.length) {
+      setErrorMessage(`Choisis le type de ${piecesSansType.length > 1 ? `ces ${piecesSansType.length} pièces` : 'cette pièce'} : ${piecesSansType.map((piece) => `« ${hektorCompositionPieceDisplayTitle(piece)} »`).join(', ')}.`)
+      setDraftAnnonceStep('composition')
       return
     }
     const queuedPhotos = draftAnnoncePhotoDrafts.map(({ id, file, visible }) => ({ id, file, visible }))
@@ -23340,7 +23443,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                         <p><strong>Lecture de la fiche papier…</strong> La fenêtre se remplit avec ce qu'elle lit, puis avec ta dictée.</p>
                       ) : (
                         <p>
-                          <strong>Pré-rempli par l'assistant : {draftPrefillAssistant.nombre} case{draftPrefillAssistant.nombre > 1 ? 's' : ''}</strong>, d'après ta demande de {draftPrefillAssistant.heure}
+                          <strong>Pré-rempli par l'assistant : {draftPrefillReels.length} case{draftPrefillReels.length > 1 ? 's' : ''}</strong>, d'après ta demande de {draftPrefillAssistant.heure}
                           {draftPrefillAssistant.lecture === 'faite' ? ' et la fiche papier' : ''}. Elles portent la marque <span className="daa-point" aria-label="point magenta" /> : relis-les, puis continue comme d'habitude.
                         </p>
                       )}
@@ -23638,7 +23741,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                         <span>3. Secteur</span>
                         <strong>Adresse privee</strong>
                       </div>
-                      <label className={`filter-field draft-annonce-address-field${marqueAssistant('adresse')}`}>
+                      <label className={`filter-field draft-annonce-address-field${marqueAssistant('adresse_haut')}`}>
                         <span>Adresse</span>
                         <input value={draftAnnonceAddress} onChange={(event) => setDraftAnnonceAddress(event.target.value)} placeholder="Adresse privee" />
                       </label>
@@ -26188,7 +26291,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           </div>
         ) : null}
         {estimationEditorTarget ? (
-          <div className="estim-pdf-overlay" role="dialog" aria-modal="true" aria-label="Avis de valeur" onClick={() => setEstimationEditorTarget(null)}>
+          <div className="estim-pdf-overlay" role="dialog" aria-modal="true" aria-label="Avis de valeur" onClick={() => fermerEditeurAvis(() => setEstimationEditorTarget(null))}>
             <div className="estim-editor-modal" onClick={(e) => e.stopPropagation()}>
               <EstimationDocumentEditor key={estimationEditorTarget.ouvertLe ?? 0} dossier={estimationEditorTarget.dossier} detail={estimationEditorTarget.detail} contacts={estimationEditorTarget.contacts} assistant={estimationEditorTarget.assistant} modal onClose={() => setEstimationEditorTarget(null)} />
             </div>
@@ -37110,7 +37213,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
       </div>
     </section>
     {estimEditorOpen && !isLightweightDetail && typeof document !== 'undefined' ? createPortal(
-      <div className="estim-pdf-overlay" role="dialog" aria-modal="true" aria-label="Avis de valeur" onClick={() => { setEstimEditorOpen(false); setEstimRefreshKey((k) => k + 1) }}>
+      <div className="estim-pdf-overlay" role="dialog" aria-modal="true" aria-label="Avis de valeur" onClick={() => fermerEditeurAvis(() => { setEstimEditorOpen(false); setEstimRefreshKey((k) => k + 1) })}>
         <div className="estim-editor-modal" onClick={(event) => event.stopPropagation()}>
           <EstimationDocumentEditor dossier={dossier} detail={props.detail} contacts={props.contacts} modal onClose={() => { setEstimEditorOpen(false); setEstimRefreshKey((k) => k + 1) }} />
         </div>
@@ -38679,7 +38782,7 @@ function DossierDetailLayoutBase(props: {
         </div>
       </div>
       {estimEditorOpen && !isLightweightDetail && typeof document !== 'undefined' ? createPortal(
-        <div className="estim-pdf-overlay" role="dialog" aria-modal="true" aria-label="Avis de valeur" onClick={() => { setEstimEditorOpen(false); setEstimRefreshKey((k) => k + 1) }}>
+        <div className="estim-pdf-overlay" role="dialog" aria-modal="true" aria-label="Avis de valeur" onClick={() => fermerEditeurAvis(() => { setEstimEditorOpen(false); setEstimRefreshKey((k) => k + 1) })}>
           <div className="estim-editor-modal" onClick={(event) => event.stopPropagation()}>
             <EstimationDocumentEditor dossier={dossier} detail={props.detail} contacts={props.contacts} modal onClose={() => { setEstimEditorOpen(false); setEstimRefreshKey((k) => k + 1) }} />
           </div>
@@ -42469,7 +42572,7 @@ function MobileDossierDetail(props: {
         </details>
       ) : null}
       {estimEditorOpen && !isLightweightDetail && typeof document !== 'undefined' ? createPortal(
-        <div className="estim-pdf-overlay" role="dialog" aria-modal="true" aria-label="Avis de valeur" onClick={() => { setEstimEditorOpen(false); setEstimRefreshKey((k) => k + 1) }}>
+        <div className="estim-pdf-overlay" role="dialog" aria-modal="true" aria-label="Avis de valeur" onClick={() => fermerEditeurAvis(() => { setEstimEditorOpen(false); setEstimRefreshKey((k) => k + 1) })}>
           <div className="estim-editor-modal" onClick={(event) => event.stopPropagation()}>
             <EstimationDocumentEditor dossier={dossier} detail={props.detail} contacts={props.contacts} modal onClose={() => { setEstimEditorOpen(false); setEstimRefreshKey((k) => k + 1) }} />
           </div>

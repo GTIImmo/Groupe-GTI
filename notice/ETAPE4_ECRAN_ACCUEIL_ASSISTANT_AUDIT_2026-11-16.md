@@ -3091,3 +3091,68 @@ déposée, travail `done`.
   rapport de même ; c'est elle qui prouve que la réponse arrive dans la case, ce que §88 ne prouve pas.
 
 Restent à trancher par lui : l'effacement des coordonnées d'un nouveau mandant (avant P3) ; le sens de « clearing ».
+
+## 90. LOT 0 FAIT : les 10 défauts corrigés (9 dans le code, le 7 attend la mémoire), éprouvés à l'écran et par un essai (19/11) — branche à part, NON poussé
+
+**Ses mots** : « Vas-y, sois autonome, mais contrôle et vérifie par des tests pour avoir le résultat souhaité. »
+
+**⚠ Où est le code** : une AUTRE session modifiait `App.tsx` dans `C:\Hektor\Projet` au même moment (non commité, 00:07 :
+la recherche du mandant élargie à tout le réseau dès qu'on tape, décision « R » du 12/10). Pour ne rien écraser, le lot 0
+est fait dans une copie séparée : **`C:\Hektor\Projet-lot0`, branche `etape4-chap6-lot0`**, partie de 4a66147. Les deux
+travaux touchent la même recherche (l. ~16050) mais pas les mêmes lignes : la fusion devrait se faire seule, à vérifier
+au moment de fusionner.
+
+**Ce qui est corrigé** (front seul ; aucune base, aucun worker, aucun appel à Hektor) :
+- **D1** le mandant posé par la carte n'est plus effacé s'il manque dans les 12 lignes de la recherche : il est remis en
+  tête ; taper dans la recherche l'efface comme avant. La marque ne reste que si c'est TOUJOURS celui de la carte.
+- **D2** sans agence sur la carte, l'agence du négociateur est prise dans la liste ; s'il reste absent, un message le DIT
+  (« … n'est pas dans la liste de l'agence … : choisis le négociateur à l'étape 1 ») ; la liste pas encore chargée ne
+  l'efface plus. Un commercial reste forcé sur lui-même (inchangé).
+- **D3** le statut du syndicat se résout en code de la liste (`kind: 'enum'`), scan compris.
+- **D4** une pièce au type non reconnu arrive SANS type (« — type à choisir — », son nom gardé dans le détail) ;
+  « Créer » renvoie à l'étape Composition en la nommant. La saisie à la main n'a pas ce choix vide (inchangée).
+- **D5** la date d'estimation du jour n'est posée que pour une estimation (le scan garde son défaut).
+- **D6** l'adresse du haut de l'étape 3 a sa clé (`adresse_haut`) ; la marque, les pastilles et le compte du bandeau ne
+  retiennent que les cases réellement remplies ET montrées pour ce type de bien.
+- **D8 (a)** fermer l'éditeur du rapport (« Retour » ou un clic à côté, les 5 portes) demande confirmation s'il porte une
+  saisie DE LA PERSONNE non générée ; « Générer » la solde. Le brouillon gardé en base (b) viendra avec la mémoire (P3).
+- **D9** DPE et GES (liste A à G ; une valeur hors liste déjà présente reste proposée), chauffage, exposition : 4 cases
+  dans l'onglet État de l'éditeur.
+- **D10** une photo WebP devient JPEG dans le navigateur (`lib/photoJpeg.ts`) au trombone de l'assistant ET à l'étape 2
+  de la fenêtre ; PNG, PDF et autres fichiers inchangés ; un WebP illisible est rendu tel quel.
+- **D7** non traité ici : il dépend de la mémoire du parcours (P3).
+
+**Les preuves** :
+- `npm run build` vert.
+- **À l'écran (mode maquette, sans base ni Hektor)**, deux parcours de l'assistant :
+  - une estimation d'appartement avec une pièce « Chaufferie », un négociateur inconnu et un mandant :
+    - 13 cases annoncées = 6 + 3 + 1 + 2 + 1 dans les pastilles ;
+    - « Adresse privée (rue) » vide et sans marque ;
+    - statut syndicat = PROCEDURE_EN_COURS ;
+    - date d'estimation du jour ;
+    - message du négociateur ;
+    - mandant gardé alors que la recherche ne rend rien (avant : effacé) ;
+    - « Chaufferie » en « type à choisir », et « Créer » renvoie à la Composition ;
+  - une mise en vente sans agence : agence « GTI Saint-Etienne » retrouvée, négociateur gardé, date d'estimation VIDE.
+- **L'éditeur** : les 4 cases ; « non » à la confirmation garde l'éditeur et la saisie (DPE D, chauffage) ; « oui »
+  ferme ; témoin : sans saisie, aucune question.
+- **D10** : un vrai WebP fabriqué devient un vrai JPEG (en-tête ff d8 ff, 40×30). Par le trombone, `facade.webp`
+  devient `facade.jpg` ; dans la fenêtre, la photo est rangée en image/jpeg.
+- **Témoins inverses** :
+  - fenêtre ouverte à la main : aucun bandeau, aucune marque ;
+  - taper dans la recherche efface le mandant ;
+  - un négociateur choisi à la main n'est pas marqué.
+- **Essai hors ligne** `apps/hektor-v1/test_etape4_lot0_defauts.cjs` : 32 contrôles verts. Il exécute le code réel
+  pour D3 et D4 et garde les ancres des autres. Une mutation (D3 et D5 remis comme avant) est attrapée.
+- **Toute la batterie du front (42 essais)** : 33 verts, 9 non verts DÉJÀ AVANT le lot 0. Ces 9 donnent la même sortie
+  sur 4a66147, mesurée dans une copie temporaire, numéros de ligne neutralisés.
+- ⚠ **Non éprouvé** : avec la vraie base (vraie liste de 12 mandants, vrais négociateurs, envoi d'une photo convertie
+  chez Hektor). Rien n'a été créé ni envoyé.
+
+**Ce que ça pourrait casser ailleurs** : le remplisseur du scan est partagé (D3 et D4 changent aussi le scan, dans le
+bon sens) ; l'éditeur de composition est partagé avec la fiche (le choix vide n'y apparaît jamais, une pièce existante a
+toujours un type) ; les 4 fonds de l'éditeur passent par `fermerEditeurAvis`.
+
+**Reste à faire par lui** : dire s'il faut fusionner la branche dans `main` (quand l'autre session aura commité), puis
+pousser (son accord). Ensuite : P3, la mémoire (patch, son accord), après ses deux réponses (effacement des coordonnées,
+« clearing »).
