@@ -304,5 +304,24 @@ voir(verdictDesChoix('Copropriété : mandataire ad hoc (lu dans Synthese.pdf)',
 voir(/copro_lots: \(a\.code === 'L16' && a\.texte\.startsWith\('Copropriété'\)\) \|\| a\.code === 'L17'/.test(rm) && /copro_ag: a\.code === 'L17'/.test(rm) && /\n  copro_ag: \{ le: 'le procès-verbal/.test(mots)
   && /planSauvegarde: lire\('copropriete_plan_sauvegarde'\) \|\| null/.test(app), 'le genre neuf a ses mots, L17 est liée aux deux fenêtres, la fiche lue porte le plan de sauvegarde brut')
 
+console.log('⑩ lot C (18/11) : la taxe foncière et les charges au mois')
+const avisF = (montant, annee, plusieurs = 'non') => docF(`Taxe ${annee}.pdf`, 'justif.taxe', [vf('annee_imposition', { valeur_num: annee }), vf('montant_total', { valeur_num: montant }, 1), vf('plusieurs_biens', { valeur: plusieurs })])
+const t0 = bF({}, [avisF(1234, 2026)])
+voir(t0.length === 1 && t0[0].genre === 'taxe' && L(t0[0], 'F.TAXE_FONCIERE').etat === 'ajouter' && L(t0[0], 'F.TAXE_FONCIERE').valeur === '1234' && L(t0[0], 'F.TAXE_FONCIERE').champFiche === 'TAXE_FONCIERE'
+  && L(t0[0], 'F.TAXE_FONCIERE').page === 1 && L(t0[0], 'F.TAXE_FONCIERE').regle === 'T1' && L(t0[0], 'F.TAXE_FONCIERE').note === 'avis 2026', 'un avis sur une fiche VIDE : la taxe à ajouter dans TAXE_FONCIERE, liée à T1, l\'année dite')
+voir(L(bF({ taxeFonciere: '0' }, [avisF(1234, 2026)])[0], 'F.TAXE_FONCIERE').etat === 'ajouter' && L(bF({ taxeFonciere: '0' }, [avisF(1234, 2026)])[0], 'F.TAXE_FONCIERE').temoin === null, 'une taxe à 0 sur la fiche est une case VIDE')
+const t1 = bF({ taxeFonciere: '900' }, [avisF(1234, 2026), avisF(800, 2024)])
+voir(t1.length === 1 && L(t1[0], 'F.TAXE_FONCIERE').etat === 'trancher' && L(t1[0], 'F.TAXE_FONCIERE').valeur === '1234' && L(t1[0], 'F.TAXE_FONCIERE').temoin === '900',
+  '⭐ deux avis : le plus RÉCENT parle (2026 : 1 234 €), la fiche dit 900 -> à trancher, témoin 900')
+voir(L(bF({ taxeFonciere: '1236' }, [avisF(1234, 2026)])[0], 'F.TAXE_FONCIERE').etat === 'accord' && L(bF({ taxeFonciere: '1236' }, [avisF(1234, 2026)])[0], 'F.TAXE_FONCIERE').regle === null, 'TÉMOIN : 1 236 sur la fiche, 1 234 lu -> d\'accord (± 5 €, comme T1)')
+voir(bF({}, [avisF(5000, 2026, 'oui')]).length === 0, '⛔ un avis qui porte PLUSIEURS biens ne se propose pas : son montant n\'est pas celui du bien')
+const ch = bF({ quotePart: 1800 }, [docF('Appel.pdf', 'copro.appel_fonds', [vf('provision_budget', { valeur_num: 450 }), vf('periode', { valeur: 'trimestre' })])])[0]
+voir(ch.genre === 'copro_charges' && L(ch, 'F.copropriete_quote_part').etat === 'accord' && L(ch, 'F.CHARGES').etat === 'ajouter' && L(ch, 'F.CHARGES').valeur === '150' && L(ch, 'F.CHARGES').champFiche === 'CHARGES',
+  'l\'appel de fonds (450 € par trimestre) : 1 800 € par an d\'accord, et 150 € PAR MOIS à ajouter dans CHARGES -- même fenêtre')
+const chM = (mois) => L(bF({ quotePart: 1800, chargesMois: mois }, [docF('Appel.pdf', 'copro.appel_fonds', [vf('provision_budget', { valeur_num: 450 }), vf('periode', { valeur: 'trimestre' })])])[0], 'F.CHARGES')
+voir(chM('0').etat === 'ajouter' && chM('155').etat === 'accord' && chM('120').etat === 'trancher' && chM('120').temoin === '120', 'CHARGES à 0 = vide ; 155 / 150 d\'accord (± 10 € par mois) ; 120 / 150 à trancher')
+voir(bF({ copropriete: false, chargesMois: '0' }, [docF('Appel.pdf', 'copro.appel_fonds', [vf('provision_budget', { valeur_num: 450 }), vf('periode', { valeur: 'trimestre' })])]).length === 0, '⛔ TÉMOIN : un bien NON marqué copropriété -> pas de charges proposées')
+voir(/\n  taxe: \{ le: 'l\\'avis de taxe foncière'/.test(mots) && /taxe: a\.code === 'T1'/.test(rm) && /chargesMois: lire\('CHARGES'\) \|\| null/.test(app), 'la taxe a ses mots, T1 est liée à sa fenêtre, la fiche lue porte CHARGES brute')
+
 console.log(ko ? `\n${ko} ROUGE, ${ok} VERT` : `\nTOUT EST VERT (${ok})`)
 process.exit(ko ? 1 : 0)

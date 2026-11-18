@@ -3284,6 +3284,10 @@ redéposé par l'écran, lu, la fenêtre s'ouvre seule : date à trancher (03/02
 avec « résultat lu : anomalies ». « Enregistrer » : la fiche porte 03/02/2026 à l'instant ; calque `app_annonce_pending` =
 `{diag_electrique_date: 2026-02-03}` seul, envoi à +10 min. Photo du groupe `diagnostiques` AVANT (37 cases) gardée pour le
 contrôle au retour (`scratchpad/lotA_63331_avant.json`).
+✅ **PROUVÉ AU RETOUR (18:34-18:35)** : travail `update_hektor_annonce_fields` done -- groupe `diagnostiques`, champs
+`[diag_electrique_date]`, 0 écarté, Hektor « mise à jour effectuée » ; relecture done ; calque soldé (0 en attente) ; groupe
+APRÈS : 37 cases, UNE seule a bougé (`diag_electrique_date` 2026-09-10 -> 2026-02-03), les 36 autres identiques. ➡ **Un `diag_…`
+s'écrit en modification, et Hektor garde le reste du groupe.**
 
 **DÉCISION DE FRÉDÉRIC (18/11, 19:20)** : « peux-tu être plus autonome jusqu'au point G, à l'aide de tests et contrôles, et aller
 jusqu'à G sauf problème » -> les lots B à G s'enchaînent sans « vas-y » par lot ; chacun : essais, témoins inverses, build,
@@ -3307,4 +3311,18 @@ quelle. **L17** : comme L16 au lot 3, elle RESTE dans « À regarder » et reço
 les comptes de « À regarder ».
 **Contrôles** : `test_ged_bilan` **113 VERT** (11 neufs, section ⑨) ; témoins inverses -- « le PV plus récent ne parle plus »,
 « une convocation parle », « mandataire ad hoc = procédure en cours » -> 1 ROUGE chacun ; voisins verts (remplir 38, remplir
-contact 48, règles lues 95, règles 44, Reçu/Manque 29, lecture 62) ; `npm run build` vert.
+contact 48, règles lues 95, règles 44, Reçu/Manque 29, lecture 62) ; `npm run build` vert. Commit `a67c371`.
+
+### 12.44 LE LOT C -- la taxe foncière et les charges au mois (18/11) -- ÉCRIT
+
+**Fait** (`gedBilanFiche.ts`) : l'avis de taxe le plus récent (par année d'imposition, comme T1) a SA fenêtre (`taxe`, « Ce que dit
+l'avis de taxe foncière ») -> `TAXE_FONCIERE` (± 5 €, l'année en note, liée à T1 hors accord) ; ⛔ un avis qui porte PLUSIEURS
+biens ne se propose pas. L'appel de fonds ajoute à SA fenêtre (`copro_charges`) la charge AU MOIS -> `CHARGES` (« Charges copro /
+mois »), l'annuel / 12 arrondi à l'euro, tolérance de l'année / 12 (± 10 €, 10 %), liée à L16. Une case à 0 est vide : c'est
+`lireNombre` qui le fait déjà (le témoin inverse d'une garde en double est resté vert -> garde retirée). T1 RESTE une ligne de
+« À regarder » et prend sa note du choix (comme L16, L17) ; T2 (un avis ancien) reste à part. Groupe Hektor `mandat_infofi`
+(renvoie prix et honoraires relus). ⏳ **Épreuve réelle** : la taxe n'a jamais été écrite en modification -> premier usage sur
+63331 (fiche : taxe 900, charges 150 ; l'avis FICTIF dit 1 234 € -> à trancher), prix (139 000) et net vendeur (130 000) relus
+identiques au retour.
+**Contrôles** : `test_ged_bilan` **122 VERT** (9 neufs, section ⑩) ; témoins inverses -- « un avis de plusieurs biens se
+propose » -> 1 ROUGE, « les charges au mois = l'année » -> 2 ROUGE ; `npm run build` vert.

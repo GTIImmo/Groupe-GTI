@@ -153,6 +153,19 @@ export function bilansFiche(faits: FaitsRemplir, docs: DocumentLu[]): BilanCompr
   if (erp) {
     sortie.push(bilan('erp', erp, [uneDate(erp, 'F.erp_date', 'date_etablissement', 'Date de l\'état des risques', 'diag_risques_nat_tech_date', faits.erpDate)].filter((l): l is LigneBilan => l !== null)))
   }
+  // Lot C (18/11) -- la taxe foncière : le montant de l'avis le plus récent (par année d'imposition, comme T1) ->
+  // TAXE_FONCIERE (groupe Hektor mandat_infofi). Un avis qui porte PLUSIEURS biens ne se propose pas (son montant n'est
+  // pas celui du bien) ; une case à 0 est vide (lireNombre).
+  const taxe = lus.filter((x) => x.lecture.typeCode === 'justif.taxe')
+    .reduce<DocumentLu | null>((a, b) => ((nombreLu(b.lecture.valeurs, 'annee_imposition') ?? 0) > (a ? nombreLu(a.lecture.valeurs, 'annee_imposition') ?? 0 : -1) ? b : a), null)
+  if (taxe && texteLu(taxe.lecture.valeurs, 'plusieurs_biens') !== 'oui') {
+    const annee = nombreLu(taxe.lecture.valeurs, 'annee_imposition')
+    const l = nombre(taxe, 'F.TAXE_FONCIERE', 'montant_total', 'Taxe foncière', 'TAXE_FONCIERE', nombreLu(taxe.lecture.valeurs, 'montant_total'),
+      lireNombre(faits.taxeFonciere), TOLERANCES.taxe, (x) => `${nombreClair(x)} €`, 'T1')
+    if (l && l.etat !== 'accord') l.regle = 'T1'
+    if (l && annee) l.note = `avis ${annee}`
+    sortie.push(bilan('taxe', taxe, l ? [l] : []))
+  }
   // les six rapports : chacun sa fenêtre ; ce que le DDT en dit rejoint la fenêtre du DDT
   for (const g of DIAGS) {
     const rapport = plusRecent(lus, [g.type], g.cleDate)
@@ -219,7 +232,11 @@ export function bilansFiche(faits: FaitsRemplir, docs: DocumentLu[]): BilanCompr
       const cle = nombreLu(v, 'budget_annuel_lot') != null ? 'budget_annuel_lot' : nombreLu(v, 'charges_courantes_lot') != null ? 'charges_courantes_lot' : 'provision_budget'
       const annuel = nombreLu(v, 'budget_annuel_lot') ?? nombreLu(v, 'charges_courantes_lot') ?? annualiser(nombreLu(v, 'provision_budget'), texteLu(v, 'periode'))
       const l = nombre(appel, 'F.copropriete_quote_part', cle, 'Charges annuelles du lot', 'copropriete_quote_part', annuel, faits.quotePart ?? null, TOLERANCES.chargesAnnuelles, (x) => `${nombreClair(x)} € par an`, 'L16', false)
-      sortie.push(bilan('copro_charges', appel, l ? [l] : []))
+      // lot C : la même charge au MOIS -> CHARGES (« Charges copro / mois » de l'écran, groupe mandat_infofi), à l'euro ;
+      // une case à 0 est vide (lireNombre ; CHARGES vaut 0 sur 684 fiches sur 714) ; tolérance : celle de l'année, divisée par 12
+      const lm = annuel != null ? nombre(appel, 'F.CHARGES', cle, 'Charges de copropriété par mois', 'CHARGES', annuel / 12, lireNombre(faits.chargesMois),
+        { absolue: TOLERANCES.chargesAnnuelles.absolue / 12, relative: TOLERANCES.chargesAnnuelles.relative }, (x) => `${x} € par mois`, 'L16') : null
+      sortie.push(bilan('copro_charges', appel, [l, lm].filter((x): x is LigneBilan => x !== null)))
     }
   }
   // la Carrez mesurée : SENS UNIQUE (comme L15) -- à trancher seulement plus PETITE de plus de 5 % ; plus grande, d'accord
