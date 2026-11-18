@@ -351,11 +351,13 @@ def assistant_valider(
 #   n'écrit rien) et rend des liens frais pour les photos de la fiche ; la carte ne change pas d'état.
 # SUITE : la fenêtre a créé la fiche -> la carte le garde (« Estimation créée »), pour un rechargement. Rien d'autre.
 GESTE_CREATION = "ouvrir_creation_annonce"
+GESTES_QUI_OUVRENT = (GESTE_CREATION, "ouvrir_avis_de_valeur")  # « Rouvrir » : la fenêtre de création, l'avis de valeur
 
 
-def _carte_creation_validee(service: AssistantService, action_id: str, user_id: str) -> dict[str, Any]:
+def _carte_creation_validee(service: AssistantService, action_id: str, user_id: str,
+                            gestes: tuple[str, ...] = (GESTE_CREATION,)) -> dict[str, Any]:
     carte = _carte_a_moi(service, action_id, user_id)
-    if carte.get("geste") != GESTE_CREATION or carte.get("etat") != "executee":
+    if carte.get("geste") not in gestes or carte.get("etat") != "executee":
         raise HTTPException(status_code=409, detail="Cette carte ne rouvre pas de fenêtre de création.")
     return carte
 
@@ -369,15 +371,16 @@ def assistant_rouvrir(
     service: AssistantService = Depends(get_assistant_service),
 ):
     user, profile = _ouvrir(settings, authorization, admin_service, service)
-    carte = _carte_creation_validee(service, action_id, str(user.id))
+    carte = _carte_creation_validee(service, action_id, str(user.id), GESTES_QUI_OUVRENT)
+    geste = GESTES[str(carte["geste"])]
     role = str(profile.get("role") or "")
-    if role not in GESTES[GESTE_CREATION].roles:
+    if role not in geste.roles:
         raise HTTPException(status_code=403, detail="Ce geste n'est pas ouvert à ton rôle")
     ctx = ContexteAssistant(settings=settings, user_id=str(user.id), email=(user.email or "").strip().lower(), role=role,
                             jeton=_jeton(authorization), conversation_id=carte.get("conversation_id"),
                             nom=profile.get("display_name") or None)
     try:
-        return {"ok": True, "resultat": GESTES[GESTE_CREATION].executer(ctx, dict(carte.get("parametres") or {}))}
+        return {"ok": True, "resultat": geste.executer(ctx, dict(carte.get("parametres") or {}))}
     except Refus as exc:
         return {"ok": False, "detail": f"Non rouverte : {exc}"}
 

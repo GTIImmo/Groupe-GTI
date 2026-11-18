@@ -177,6 +177,7 @@ TOUTES = ["qui_suis_je", "decrire", "chercher", "compter", "fiches_biens", "note
           "proposer_rattacher_mandant", "proposer_retirer_mandant", "proposer_adresse_contact",  # cartes directes §35, 16/11
           "proposer_ajouter_conjoint", "proposer_desarchiver_annonce",  # (réaffecter, archiver, Estimation -> Actif : direction)
           "proposer_ajouter_photo", "proposer_deposer_documents", "proposer_ouvrir_creation_annonce",  # créer, 18/11
+          "proposer_ouvrir_avis_de_valeur",  # l'avis de valeur d'un bien existant, 18/11 (§70)
           "proposer_couverture_photo", "proposer_visibilite_photo",
           "proposer_deplacer_photo", "proposer_portail",  # activer un brouillon : retiré le 15/11
           "proposer_creer_contact", "proposer_ajouter_recherche", "proposer_modifier_recherche",  # lot 2c, 17/11
@@ -365,6 +366,10 @@ voir("DROITS PAR ROLE (role : admin)" in consigne and "{{role}}" not in consigne
 voir("proposer_ouvrir_creation_annonce" in consigne and "(patron:fiche-saisie)" in consigne
      and "creer une annonce ou une estimation, l'avis" not in consigne and "Aucune autre sorte de lien" not in consigne,
      "§66 (18/11) : créer = la carte qui ouvre la fenêtre (plus dans « pas encore ») ; le lien du patron vierge, et lui seul en plus")
+voir("proposer_ouvrir_avis_de_valeur" in consigne and "l'avis de valeur PDF" not in consigne
+     and "EN UNE SEULE FOIS" in consigne and "« inconnus »" in consigne and "mandant_nouveau" in consigne,
+     "§70 (18/11) : les essentiels demandés en une fois (« je ne sais pas » vaut réponse) ; l'avis de valeur sorti de "
+     "« pas encore » et proposé après une estimation créée")
 import agents.tracing as tr  # noqa: E402
 tr.get_trace_provider().force_flush()
 voir(not envois_httpx, "aucune trace envoyée chez OpenAI (rien n'est parti, même après vidage)")

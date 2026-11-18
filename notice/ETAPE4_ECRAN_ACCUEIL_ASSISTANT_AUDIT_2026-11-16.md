@@ -2163,3 +2163,51 @@ rouvrant ; (4) ne joue que si l'assistant l'ouvre ; la carte « créer » refuse
 voulu). Rien ne change dans le PDF, le worker, ni la base.
 **Contrôles prévus** : essais serveur (essentiels, garde, carte avis de valeur) ; build ; maquette locale (éditeur pré-rempli,
 Tout générer lancé, reprise du dernier avis) ; en vrai dans son Chrome : rouvrir l'avis d'un bien qui en a un, SANS générer.
+
+## 71. 6a POUSSÉE ; la marche du §70 CODÉE le 18/11 (sur « Oui, pousse et code ») — pas poussée
+
+**6a en ligne** : `c6a37c3`, poussé avec l'accord de Frédéric pour les 8 commits d'une autre session dessous (GED §12.36-12.39,
+classeur « hors jeu », 43091, audit des compromis). Render et Vercel servent `c6a37c3` (vérifié).
+
+**Ce qui est codé (rien poussé) :**
+1. **Les essentiels et la garde** (`assistant_gestes.py`, `_exiger_essentiels`) : sans fiche papier jointe, la carte
+   « créer » exige type, adresse, code postal, ville, surface, pièces, le terrain pour une maison (`_une_maison` : maison,
+   villa, pavillon, longère, ferme, chalet, mas), le mandant (existant, ou `mandant_nouveau`), et le prix pour une annonce.
+   Il en manque -> refus avec la liste (« Il manque, pour cette estimation : surface habitable, pièces… Pose ces questions
+   EN UNE FOIS »). « Je ne sais pas » = `inconnus` (seulement pour un essentiel), dit sur la carte et mis dans « Restera à
+   remplir ». Re-vérifié AU CLIC (et à « Rouvrir »). ⚠ AVEC la fiche papier jointe, la garde s'efface : c'est le scan de la
+   fenêtre qui lira ces informations. Consigne : les questions manquantes en une fois, 3 ou 4 au plus.
+2. **« Préparer l'avis de valeur »** sur la carte « Estimation créée » (AccueilAssistant, `preparerAvis`) : ouvre l'éditeur
+   du bien créé (sans dictée ; le brouillon de la fiche le pré-remplit) ; la consigne fait proposer l'avis après une
+   estimation créée.
+3. **La carte « avis de valeur »** (geste `ouvrir_avis_de_valeur`, tous les rôles) : `champs` = les clés du brouillon de
+   l'éditeur (basse / estimee / haute, etatNote 1-5, etatLabel, etatTexte, toiture, menuiseries, pointsForts,
+   pointsVigilance, argumentaire, commentaire, taxeFonciere / energie / eau / assurance) et `postes` = le barème par code
+   (`POSTES_AVIS` = ESTIM_POSTES, `NIVEAUX_AVIS` = ESTIM_NIVEAUX). Refusés : une caractéristique du bien (proposer_modifier_bien),
+   un e-mail, une fourchette à l'envers, une note hors 1-5, un montant en lettres, un poste inconnu, un bien hors de portée.
+   Le clic n'écrit RIEN : `{ouvrir: avis_de_valeur, app_dossier_id, hektor_annonce_id, champs, postes}` -> l'App ouvre
+   l'éditeur par `openEstimationEditor(item, assistant)` (la porte de l'écran Estimations). « Rouvrir » ouvert aux deux
+   cartes qui ouvrent une fenêtre (`GESTES_QUI_OUVRENT`) ; « suite » reste à la création. Retiré de « pas encore ».
+4. **Ouvert par l'assistant, l'éditeur lance « Tout générer » seul** (`autoLance`, une fois) ; sans coordonnées sur la
+   fiche, il géocode l'adresse privée puis publique (`geocodeAddress`) EN MÉMOIRE (`coordsSecours`, rien d'écrit sur le
+   bien) ; le bandeau dit ce qui est calculé et ce qui manque (`sourcesMemorisees` : ce que « Tout générer » a réussi à
+   mémoriser). Les 3 chargements + « Tout générer » lisent la position par `coordsDuBien()` (fiche d'abord, comme avant).
+5. **Point 4 A, pour tout le monde** (`loadDernierAvisDeValeur`, api.ts ; `avisVersBrouillonEditeur`) : à l'ouverture,
+   couche par couche, chacune n'écrasant que par une valeur non vide : prix ± 5 % -> brouillon (scan) -> DERNIER AVIS
+   (charge du dernier `generate_estimation_pdf` « done ») -> dictée de l'assistant. Le propriétaire n'est pas repris (le
+   contact de la fiche fait foi). Bandeau `.avd-provenance` : « Repris de l'avis du JJ/MM/AAAA » (+ « le prix du bien n'est
+   plus la valeur de cet avis : vérifie la fourchette » si le prix diffère de la valeur estimée de l'avis), « Pré-rempli
+   par l'assistant : N cases ». Le barème se fusionne poste par poste (avant : remplacé en bloc par celui du scan).
+
+**⚠ Ce qui reste une écriture, et n'est PAS neuf** : « Tout générer » mémorise les sources (`app_upsert_dossier_estimation_source`),
+exactement comme le bouton. Lancé seul quand l'assistant ouvre l'éditeur, il écrit donc ces sources pour le bien.
+
+**Contrôles** : serveur 415 verts (section 22 : 24 nouveaux, dont 3 témoins au clic) ; IA 65 verts ; build vert (types
+compris). Maquette locale (sans base : `hasSupabaseEnv` faux, donc rien ne peut s'y écrire) : la carte « Avis de valeur »,
+« Valider » -> l'éditeur s'ouvre sur « Bien & valeur », bandeau « Pré-rempli par l'assistant : 3 cases », « Tout générer »
+lancé seul (« Calculé : cadre de vie. Manque : marché DVF, cadastre… » — normal sans base), note 4/5, points forts, barème
+toiture « neuf / refaite 2019 », les autres postes vides. **PAS VU** : la reprise d'un vrai avis (il faut la base), le
+géocodage d'un bien sans coordonnées, « Préparer l'avis de valeur » après une vraie création, le témoin « éditeur ouvert à
+la main » à l'écran (la maquette n'a aucune estimation ; par le code, ni bandeau ni calcul sans assistant et sans avis).
+**Essai réel prévu** (son accord) : rouvrir l'avis de 62774 (avis du 23/07 : 420 000 / 450 000 / 470 000, « bon état
+général », taxe foncière 1 600, énergie 6 000) SANS générer, par l'écran Estimations ou la fiche.

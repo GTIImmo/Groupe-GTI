@@ -119,6 +119,7 @@ import {
   saveDossierEstimationSource,
   saveEstimationScanDraft,
   loadEstimationScanDraft,
+  loadDernierAvisDeValeur,
   improveEstimationTexts,
   wakeBackendApi,
   loadBdnb,
@@ -6376,6 +6377,30 @@ const ESTIM_POSTES: { key: string; label: string }[] = [
 ]
 const ESTIM_NIVEAUX: [string, string][] = [['neuf', 'Neuf / Refait'], ['bon', 'Bon état'], ['correct', 'Correct'], ['aprevoir', 'À prévoir']]
 
+// 18/11 (étape 4 §70-5) : la charge du dernier `generate_estimation_pdf` (= buildPayload de l'éditeur) relue dans le
+// brouillon de l'éditeur. Le propriétaire n'est PAS repris : celui de la fiche (le contact) fait foi.
+function avisVersBrouillonEditeur(p: Record<string, unknown>): Record<string, unknown> {
+  const o = (v: unknown) => (v && typeof v === 'object' && !Array.isArray(v) ? v as Record<string, unknown> : {})
+  const t = (v: unknown) => (v == null ? '' : String(v).trim())
+  const lignes = (v: unknown) => (Array.isArray(v) ? v.map(t).filter(Boolean).join('\n') : '')
+  const valeurs = o(p.valeurs), etat = o(p.etat), charges = o(p.charges), bien = o(p.bien)
+  const postes: Record<string, { niveau: string; label: string }> = {}
+  for (const x of Array.isArray(etat.postes) ? etat.postes : []) {
+    const r = o(x)
+    if (t(r.poste) && t(r.niveau)) postes[t(r.poste)] = { niveau: t(r.niveau), label: t(r.label) }  // par LIBELLÉ de poste
+  }
+  return {
+    basse: t(valeurs.basse), estimee: t(valeurs.estimee), haute: t(valeurs.haute),
+    commentaire: t(p.commentaire), argumentaire: t(p.argumentaire),
+    etatNote: t(etat.note), etatLabel: t(etat.label), etatTexte: t(etat.commentaire), chauffage: t(etat.chauffage),
+    exposition: t(etat.exposition), toiture: t(etat.toiture), menuiseries: t(etat.menuiseries),
+    pointsForts: lignes(p.pointsForts), pointsVigilance: lignes(p.pointsVigilance),
+    taxeFonciere: t(charges.taxe_fonciere), energie: t(charges.energie), eau: t(charges.eau), assurance: t(charges.assurance),
+    dpe: t(bien.dpe), ges: t(bien.ges),
+    ...(Object.keys(postes).length ? { etatPostes: postes } : {}),
+  }
+}
+
 // Humanise un code Hektor pour l'affichage (récap « Le bien »). Mirror de estimHuman du worker.
 const ESTIM_LABEL_MAP: Record<string, string> = {
   AMERICAINE: 'Américaine', EQUIPEE: 'Équipée', AMENAGEE: 'Aménagée', 'SEMI EQUIPEE': 'Semi-équipée',
@@ -6404,6 +6429,8 @@ function EstimationDocumentEditor(props: {
   compact?: boolean
   modal?: boolean  // rendu en modale (listing) : ouvert d'emblée, bouton « Retour » qui ferme
   onClose?: () => void
+  // 18/11 (étape 4 §70) : ouvert par l'ASSISTANT -- sa dictée passe par-dessus tout, et « Tout générer » se lance seul
+  assistant?: { champs: Record<string, string>; postes: Record<string, { niveau: string; label: string }> }
 }) {
   const { dossier } = props
   const prix = dossier.prix != null && Number.isFinite(Number(dossier.prix)) ? Number(dossier.prix) : null
@@ -6428,8 +6455,13 @@ function EstimationDocumentEditor(props: {
 
   const [open, setOpen] = useState(!!props.modal)
   const [draft, setDraft] = useState(initialDraft)
-  // Pre-remplissage depuis le brouillon scanne (agent de saisie) : ecrase les
-  // defauts par ce qui a ete lu sur la fiche (valeurs, etat, points, argumentaire…).
+  // 18/11 (§70-5, décision « A ») : l'avis repris à l'ouverture (sa date, sa valeur) -> le bandeau ; et ce que la dictée
+  // de l'assistant a posé par-dessus
+  const [reprise, setReprise] = useState<{ le: string; estimee: number | null } | null>(null)
+  const [dicteeCases, setDicteeCases] = useState(0)
+  // Pre-remplissage, du plus faible au plus fort (§70-5) : le prix ± 5 % (initialDraft), puis le brouillon scanne
+  // (agent de saisie : ce qui a ete lu sur la fiche), puis le DERNIER AVIS genere pour ce bien, puis la dictee de
+  // l'assistant. Chaque couche n'ecrase que par une valeur non vide.
   useEffect(() => {
     wakeBackendApi()  // reveil anticipe : le bouton "Ameliorer les textes (IA)" appellera le backend
     let cancelled = false
@@ -6452,33 +6484,49 @@ function EstimationDocumentEditor(props: {
           }
         } catch { /* localStorage/JSON best-effort */ }
       }
-      if (cancelled || !scanDraft || !Object.keys(scanDraft).length) return
+      // §70-5 : le dernier avis genere (lecture seule ; aucun = on garde le brouillon et le prix)
+      let dernier: { payload: Record<string, unknown>; le: string } | null = null
+      try { dernier = await loadDernierAvisDeValeur(dossier.app_dossier_id) } catch { /* best effort */ }
+      if (cancelled) return
+      const avis = dernier ? avisVersBrouillonEditeur(dernier.payload) : {}
+      const dictee: Record<string, unknown> = props.assistant
+        ? { ...props.assistant.champs, ...(Object.keys(props.assistant.postes).length ? { etatPostes: props.assistant.postes } : {}) }
+        : {}
+      const estimeeAvis = Number((dernier?.payload.valeurs as Record<string, unknown> | undefined)?.estimee)
+      setReprise(dernier ? { le: dernier.le, estimee: Number.isFinite(estimeeAvis) && estimeeAvis > 0 ? estimeeAvis : null } : null)
+      setDicteeCases(Object.keys(props.assistant?.champs ?? {}).length + Object.keys(props.assistant?.postes ?? {}).length)
+      if (!Object.keys(scanDraft ?? {}).length && !Object.keys(avis).length && !Object.keys(dictee).length) return
       setDraft((current) => {
         const merged = { ...current } as Record<string, unknown>
         const normPoste = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
-        for (const [key, val] of Object.entries(scanDraft)) {
-          if (val == null || val === '') continue
-          if (key === 'etatPostes' && val && typeof val === 'object' && !Array.isArray(val)) {
-            // Le scan stocke le bareme par LIBELLE de poste ("Électricité", "Gros œuvre / structure"),
-            // mais l'editeur lit par CODE (electricite, grosoeuvre) -> sans remap le bareme reste vide.
-            // On resout chaque libelle scanne vers le code ESTIM_POSTES (accent-insensible, partiel).
-            const remapped: Record<string, unknown> = {}
-            for (const [poste, v] of Object.entries(val as Record<string, unknown>)) {
-              const np = normPoste(poste)
-              const match = ESTIM_POSTES.find((p) => { const nl = normPoste(p.label); return nl === np || nl.includes(np) || np.includes(nl) })
-              remapped[match ? match.key : poste] = v
+        const poser = (couche: Record<string, unknown>, postesParLibelle: boolean) => {
+          for (const [key, val] of Object.entries(couche)) {
+            if (val == null || val === '') continue
+            if (key === 'etatPostes' && val && typeof val === 'object' && !Array.isArray(val)) {
+              // Le scan (et l'avis genere) stockent le bareme par LIBELLE de poste ("Électricité", "Gros œuvre / structure"),
+              // mais l'editeur lit par CODE (electricite, grosoeuvre) -> sans remap le bareme reste vide.
+              // On resout chaque libelle vers le code ESTIM_POSTES (accent-insensible, partiel). La dictee arrive par CODE.
+              const remapped: Record<string, unknown> = {}
+              for (const [poste, v] of Object.entries(val as Record<string, unknown>)) {
+                const np = normPoste(poste)
+                const match = postesParLibelle ? ESTIM_POSTES.find((p) => { const nl = normPoste(p.label); return nl === np || nl.includes(np) || np.includes(nl) }) : undefined
+                remapped[match ? match.key : poste] = v
+              }
+              merged.etatPostes = { ...(merged.etatPostes as Record<string, unknown> | undefined), ...remapped }
+              continue
             }
-            merged.etatPostes = remapped
-            continue
+            merged[key] = val
           }
-          merged[key] = val
         }
+        if (scanDraft) poser(scanDraft, true)
+        poser(avis, true)
+        poser(dictee, false)
         return merged as typeof current
       })
     })()
     return () => { cancelled = true }
   }, [dossier.app_dossier_id, dossier.hektor_annonce_id])
-  const [tab, setTab] = useState<'bien' | 'valeur' | 'etat' | 'points' | 'charges' | 'marche'>('bien')
+  const [tab, setTab] = useState<'bien' | 'valeur' | 'etat' | 'points' | 'charges' | 'marche'>(props.assistant ? 'valeur' : 'bien')
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   // Lot C — comparables DVF chargés à la demande (passés au worker pour la page Marché).
@@ -6495,6 +6543,16 @@ function EstimationDocumentEditor(props: {
   const [cadastreMsg, setCadastreMsg] = useState<string | null>(null)
   const [cadastrePicker, setCadastrePicker] = useState<CadastreParcelle[] | null>(null)  // parcelles voisines à choisir (point sur la voie)
   const [allEditorBusy, setAllEditorBusy] = useState(false)  // orchestrateur « tout générer » de la modale
+  // 18/11 (§69-70) : sans coordonnées sur la fiche (bien tout juste créé, géolocalisation absente), l'éditeur ouvert par
+  // l'assistant les calcule depuis l'adresse (geocodeAddress, comme l'édition d'adresse) -- EN MÉMOIRE, rien n'est écrit
+  const coordsSecours = useRef<{ lat: number; lon: number } | null>(null)
+  const coordsDuBien = () => {
+    const lat = Number(props.detail.latitude_detail), lon = Number(props.detail.longitude_detail)
+    if (Number.isFinite(lat) && Number.isFinite(lon) && lat && lon) return { lat, lon }
+    return coordsSecours.current ?? { lat: NaN, lon: NaN }
+  }
+  const sourcesMemorisees = useRef<string[]>([])  // ce que « Tout générer » a réussi à mémoriser (bdnb, dpe…)
+  const [autoGen, setAutoGen] = useState<{ etat: 'calcul' | 'fait' | 'sans_position'; geocode: boolean } | null>(null)
   // Lot C — acquéreurs en recherche correspondant au bien (moteur de rapprochement), affiché dans le PDF.
   const [acquereurs, setAcquereurs] = useState<number | null>(null)
   useEffect(() => { setDraft(initialDraft); setOpen(!!props.modal); setMessage(null); setMarche(null); setMarcheMsg(null); setCadre(null); setCadreMsg(null); setCadastre(null); setCadastreMsg(null); setCadastrePicker(null) }, [initialDraft, props.modal])
@@ -6525,8 +6583,7 @@ function EstimationDocumentEditor(props: {
 
   async function loadMarche() {
     if (marcheBusy) return
-    const lat = Number(props.detail.latitude_detail)
-    const lon = Number(props.detail.longitude_detail)
+    const { lat, lon } = coordsDuBien()
     const dept = String(dossier.code_postal || '').trim().slice(0, 2)
     const surface = Number(props.detail.surface_habitable_detail ?? props.detail.surface) || null
     const type = dvfTypeForBien(dossier.type_bien)  // Maison | Appartement | null (mappé depuis le code Hektor)
@@ -6554,8 +6611,7 @@ function EstimationDocumentEditor(props: {
 
   async function loadCadre() {
     if (cadreBusy) return
-    const lat = Number(props.detail.latitude_detail)
-    const lon = Number(props.detail.longitude_detail)
+    const { lat, lon } = coordsDuBien()
     if (!Number.isFinite(lat) || !Number.isFinite(lon) || !lat || !lon) { setCadreMsg(bvs('Coordonnées du bien manquantes (géolocalisation Hektor absente).')); return }
     setCadreBusy(true); setCadreMsg(null)
     try {
@@ -6574,8 +6630,7 @@ function EstimationDocumentEditor(props: {
 
   async function loadCadastreElements() {
     if (cadastreBusy) return
-    const lat = Number(props.detail.latitude_detail)
-    const lon = Number(props.detail.longitude_detail)
+    const { lat, lon } = coordsDuBien()
     if (!Number.isFinite(lat) || !Number.isFinite(lon) || !lat || !lon) { setCadastreMsg(bvs('Coordonnées du bien manquantes (géolocalisation Hektor absente).')); return }
     setCadastreBusy(true); setCadastreMsg(null)
     try {
@@ -6603,12 +6658,13 @@ function EstimationDocumentEditor(props: {
   async function loadAllEditor() {
     if (allEditorBusy) return
     setAllEditorBusy(true)
-    const lat = Number(props.detail.latitude_detail), lon = Number(props.detail.longitude_detail)
+    sourcesMemorisees.current = []
+    const { lat, lon } = coordsDuBien()
     const surface = Number(props.detail.surface_habitable_detail ?? props.detail.surface) || null
     const aid = dossier.app_dossier_id, hid = dossier.hektor_annonce_id
     const coordsOk = Number.isFinite(lat) && Number.isFinite(lon) && !!lat && !!lon
     const persist = async (key: string, loader: () => Promise<{ ok: boolean }>) => {
-      try { const r = await loader(); await saveDossierEstimationSource(aid, hid, key, r.ok, r) } catch { /* best effort */ }
+      try { const r = await loader(); await saveDossierEstimationSource(aid, hid, key, r.ok, r); if (r.ok) sourcesMemorisees.current.push(key) } catch { /* best effort */ }
     }
     // Toutes les API : les 3 sources éditeur (état + payload PDF) + les sources mémorisées (persistées).
     await Promise.allSettled([
@@ -6624,6 +6680,32 @@ function EstimationDocumentEditor(props: {
     ])
     setAllEditorBusy(false)
   }
+
+  // 18/11 (§70-4) : ouvert par l'ASSISTANT, l'éditeur lance « Tout générer » de lui-même (la même fonction que le bouton,
+  // qui mémorise les sources comme aujourd'hui) -- sinon le PDF partirait sans sa page Marché (le worker ne calcule pas
+  // le DVF). Sans coordonnées : l'adresse privée, puis publique, géocodée en mémoire. Une seule fois par ouverture.
+  const autoLance = useRef(false)
+  useEffect(() => {
+    if (!props.assistant || autoLance.current) return
+    autoLance.current = true
+    void (async () => {
+      let geocode = false
+      if (!Number.isFinite(coordsDuBien().lat)) {
+        const d = props.detail
+        const rue = firstNonEmpty(d.adresse_privee_listing, d.adresse_detail)
+        const cp = firstNonEmpty(d.code_postal_prive_detail, d.code_postal, dossier.code_postal)
+        const ville = firstNonEmpty(d.ville_privee_detail, dossier.ville)
+        const geo = rue || cp || ville ? await geocodeAddress([rue, cp, ville].filter(Boolean).join(' '), cp) : null
+        if (!geo) { setAutoGen({ etat: 'sans_position', geocode: false }); return }
+        coordsSecours.current = { lat: geo.lat, lon: geo.lon }
+        geocode = true
+      }
+      setAutoGen({ etat: 'calcul', geocode })
+      await loadAllEditor()
+      setAutoGen({ etat: 'fait', geocode })
+    })()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Sélecteur estimation confirmé : construit les éléments cadastraux à partir des parcelles choisies
   // (centre carte = centroïde de la 1re parcelle) — repris dans le PDF de l'avis de valeur.
@@ -6839,6 +6921,36 @@ function EstimationDocumentEditor(props: {
           ? <button className="ghost-button button-subtle" type="button" onClick={() => props.onClose?.()}>Retour</button>
           : <button className="ghost-button button-subtle" type="button" onClick={() => setOpen((v) => !v)}>{open ? 'Retour fiche' : "Préparer l'avis de valeur"}</button>}
       </div>
+      {open && (reprise || dicteeCases || autoGen) ? (() => {
+        // 18/11 (§70) : d'où viennent les valeurs (le dernier avis, la dictée) et ce que « Tout générer » a calculé
+        const eur = (n: number) => `${n.toLocaleString('fr-FR')} €`
+        const prixChange = reprise?.estimee != null && prix != null && prix !== reprise.estimee
+        const libelles: Record<string, string> = { bdnb: 'bâti (BDNB)', dpe: 'DPE ADEME', patrimoine: 'patrimoine', loyers: 'loyers', copro: 'copropriété', insee: 'INSEE' }
+        const faits = [marche?.ok ? 'marché DVF' : '', cadre?.ok ? 'cadre de vie' : '', cadastre?.ok ? 'cadastre' : '',
+          ...sourcesMemorisees.current.map((k) => libelles[k] ?? k)].filter(Boolean)
+        const manquent = [marche?.ok ? '' : 'marché DVF', cadre?.ok ? '' : 'cadre de vie', cadastre?.ok ? '' : 'cadastre',
+          ...['bdnb', 'dpe', 'patrimoine', 'loyers', 'insee'].filter((k) => !sourcesMemorisees.current.includes(k)).map((k) => libelles[k])].filter(Boolean)
+        return (
+          <div className="avd-provenance" role="status">
+            {reprise ? (
+              <p className={prixChange ? 'is-alerte' : ''}>
+                Repris de l'avis du <b>{reprise.le ? new Date(reprise.le).toLocaleDateString('fr-FR') : '—'}</b>
+                {prixChange ? <> — le prix du bien ({eur(prix!)}) n'est plus la valeur de cet avis ({eur(reprise.estimee!)}) : vérifie la fourchette.</> : '.'}
+              </p>
+            ) : null}
+            {dicteeCases ? <p>Pré-rempli par l'assistant : <b>{dicteeCases} case{dicteeCases > 1 ? 's' : ''}</b>, par-dessus{reprise ? " l'avis repris" : ' la fiche'}.</p> : null}
+            {autoGen?.etat === 'calcul' ? <p>Calcul des sources en cours{autoGen.geocode ? ' (position calculée depuis l’adresse)' : ''}…</p> : null}
+            {autoGen?.etat === 'fait' ? (
+              <p>
+                {faits.length ? <>Calculé : {faits.join(', ')}.</> : 'Aucune source n’a pu être calculée.'}
+                {manquent.length ? <> Manque : {manquent.join(', ')} (onglet Marché pour réessayer).</> : null}
+                {autoGen.geocode ? ' Position calculée depuis l’adresse : Hektor donnera la sienne plus tard.' : ''}
+              </p>
+            ) : null}
+            {autoGen?.etat === 'sans_position' ? <p className="is-alerte">Adresse introuvable : le marché, le cadre de vie et le cadastre ne peuvent pas se calculer. Corrige l'adresse de la fiche du bien.</p> : null}
+          </div>
+        )
+      })() : null}
       {open ? (
         <div className="mandat-document-editor-body">
           <div className="mandat-document-form" style={{ width: '100%' }}>
@@ -14920,7 +15032,7 @@ export default function App() {
   const [estimationPdfDetailsOpen, setEstimationPdfDetailsOpen] = useState(false)
   const [estimationPdfBusy, setEstimationPdfBusy] = useState(false)
   // Éditeur riche « Avis de valeur » ouvert depuis le listing (même composant que la fiche).
-  const [estimationEditorTarget, setEstimationEditorTarget] = useState<{ dossier: Dossier; detail: DossierDetailPayload; contacts: DetailContact[] } | null>(null)
+  const [estimationEditorTarget, setEstimationEditorTarget] = useState<{ dossier: Dossier; detail: DossierDetailPayload; contacts: DetailContact[]; assistant?: { champs: Record<string, string>; postes: Record<string, { niveau: string; label: string }> }; ouvertLe?: number } | null>(null)
   const [estimationEditorLoading, setEstimationEditorLoading] = useState(false)
   const [estimationPdfMsg, setEstimationPdfMsg] = useState<string | null>(null)
   const [requestModalOpen, setRequestModalOpen] = useState(false)
@@ -17863,7 +17975,8 @@ export default function App() {
   // arrière-plan depuis le contact lié à l'annonce.
   // Ouvre l'éditeur riche « Avis de valeur » (même composant que la fiche) depuis le
   // listing : charge le détail complet du dossier + résout le contact propriétaire.
-  async function openEstimationEditor(item: MandatRecord) {
+  // 18/11 (§70) : `assistant` = la dictée de la carte « avis de valeur » (l'éditeur la pose par-dessus et calcule seul)
+  async function openEstimationEditor(item: { app_dossier_id: number; hektor_annonce_id?: number | null }, assistant?: { champs: Record<string, string>; postes: Record<string, { niveau: string; label: string }> }) {
     if (estimationEditorLoading) return
     setEstimationEditorLoading(true)
     setEstimationPdfMsg(null)
@@ -17873,7 +17986,7 @@ export default function App() {
       const detail = detailPayload(detailed)
       let contacts: DetailContact[] = []
       try {
-        const resolved = await resolveAnnonceOwnerContact(item.app_dossier_id, item.hektor_annonce_id)
+        const resolved = await resolveAnnonceOwnerContact(item.app_dossier_id, item.hektor_annonce_id ?? detailed.hektor_annonce_id)
         if (resolved) {
           const c = resolved.contact
           const name = (c.display_name ?? '').trim() || [c.prenom, c.nom].filter(Boolean).join(' ').trim()
@@ -17881,7 +17994,7 @@ export default function App() {
             address: '', postalCode: '', city: '', civility: '', firstName: c.prenom ?? '', lastName: c.nom ?? '', comment: '' }]
         }
       } catch { /* contact best-effort */ }
-      setEstimationEditorTarget({ dossier: detailed, detail, contacts })
+      setEstimationEditorTarget({ dossier: detailed, detail, contacts, assistant, ouvertLe: Date.now() })
     } catch (error) {
       setEstimationPdfMsg(error instanceof Error ? error.message : "Ouverture de l'avis de valeur impossible.")
     } finally {
@@ -25982,7 +26095,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         {estimationEditorTarget ? (
           <div className="estim-pdf-overlay" role="dialog" aria-modal="true" aria-label="Avis de valeur" onClick={() => setEstimationEditorTarget(null)}>
             <div className="estim-editor-modal" onClick={(e) => e.stopPropagation()}>
-              <EstimationDocumentEditor dossier={estimationEditorTarget.dossier} detail={estimationEditorTarget.detail} contacts={estimationEditorTarget.contacts} modal onClose={() => setEstimationEditorTarget(null)} />
+              <EstimationDocumentEditor key={estimationEditorTarget.ouvertLe ?? 0} dossier={estimationEditorTarget.dossier} detail={estimationEditorTarget.detail} contacts={estimationEditorTarget.contacts} assistant={estimationEditorTarget.assistant} modal onClose={() => setEstimationEditorTarget(null)} />
             </div>
           </div>
         ) : null}
@@ -27679,6 +27792,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               onOuvrirRdv={assistantOuvrirRdv}
               onOuvrirDemande={(ref) => void assistantOuvrirDemande(ref)}
               onOuvrirCreation={(ouverture, carteId) => void assistantOuvrirCreation(ouverture, carteId)}
+              onOuvrirAvis={(ouverture) => void openEstimationEditor(
+                { app_dossier_id: ouverture.app_dossier_id, hektor_annonce_id: ouverture.hektor_annonce_id },
+                { champs: ouverture.champs ?? {}, postes: ouverture.postes ?? {} })}
               onOuvrirContact={(id) => openContactDirectory(id)}
               onGesteFait={(travail) => { signalerGeste(); if (travail) relireQuandLeTravailFinit({ id: travail }) }}
               onCiter={() => { setRechercheCiter(true); setRechercheGlobaleOuverte(true) }}

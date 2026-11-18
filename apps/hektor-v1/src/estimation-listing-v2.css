@@ -610,3 +610,10 @@
   .estim-v2 .estim-v2-tablewrap { overflow-x: auto; }
   .estim-v2 .estim-v2-tablewrap table { min-width: 860px; }
 }
+
+/* 18/11 (étape 4 §70) : d'où viennent les valeurs de l'avis (le dernier avis repris, la dictée de l'assistant) et ce que
+   « Tout générer » a calculé à l'ouverture par l'assistant. Même ton que le bandeau de la fenêtre de création (6a). */
+.avd-editor .avd-provenance { flex: none; display: grid; gap: 4px; padding: 10px 20px; background: #fbf1f6; border-bottom: 1px solid #f0dbe6; font-size: 13px; line-height: 1.45; color: #222323; }
+.avd-editor .avd-provenance p { margin: 0; }
+.avd-editor .avd-provenance b { font-weight: 700; }
+.avd-editor .avd-provenance .is-alerte { color: #9a3412; }

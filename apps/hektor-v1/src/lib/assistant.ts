@@ -61,6 +61,17 @@ export type OuvertureCreation = {
   cree?: { app_dossier_id: number | null; genre: string; le: string }
 }
 
+/** 18/11 (§70-3) : l'ordre d'ouverture de l'ÉDITEUR « Avis de valeur » d'un bien existant (rien n'est écrit).
+ *  `champs` = les clés du brouillon de l'éditeur (basse, estimee, haute, etatNote…), `postes` = le barème d'état par
+ *  code de poste (ESTIM_POSTES), déjà vérifiés par le serveur. */
+export type OuvertureAvis = {
+  ouvrir: 'avis_de_valeur'
+  app_dossier_id: number
+  hektor_annonce_id: number | null
+  champs: Record<string, string>
+  postes: Record<string, { niveau: string; label: string }>
+}
+
 export type ConversationAssistant = { id: string; titre: string; cree_le?: string; maj_le?: string }
 export type MessageAssistant = { id: number; role: 'user' | 'assistant'; contenu: string; cree_le: string }
 
@@ -261,7 +272,7 @@ export async function contactDeLaRecherche(cle: string): Promise<string | null> 
 export type ReponseCarte = { ok: boolean; etat: EtatCarte; detail?: string; resultat?: Record<string, unknown> }
 
 export async function validerCarte(id: string): Promise<ReponseCarte> {
-  if (MAQUETTE) return attendre(900).then(() => ({ ok: true, etat: 'executee' as const, resultat: id.startsWith('carte-creation') ? OUVERTURE_EXEMPLE : { relance_id: 1 } }))
+  if (MAQUETTE) return attendre(900).then(() => ({ ok: true, etat: 'executee' as const, resultat: id.startsWith('carte-creation') ? OUVERTURE_EXEMPLE : id.startsWith('carte-avis') ? AVIS_EXEMPLE : { relance_id: 1 } }))
   return appeler<ReponseCarte>(`/assistant/actions/${encodeURIComponent(id)}/valider`, 'POST')
 }
 
@@ -272,8 +283,8 @@ export async function refuserCarte(id: string): Promise<ReponseCarte> {
 
 // ── 18/11 (étape 4 §66, marche 6a) : la carte « créer » APRÈS son clic ──
 /** « Rouvrir la création » : le serveur re-vérifie tout (comme au clic) et rend un ordre d'ouverture frais. */
-export async function rouvrirCarte(id: string): Promise<{ ok: boolean; resultat?: OuvertureCreation; detail?: string }> {
-  if (MAQUETTE) return attendre(300).then(() => ({ ok: true, resultat: OUVERTURE_EXEMPLE }))
+export async function rouvrirCarte(id: string): Promise<{ ok: boolean; resultat?: OuvertureCreation | OuvertureAvis; detail?: string }> {
+  if (MAQUETTE) return attendre(300).then(() => ({ ok: true, resultat: id.startsWith('carte-avis') ? AVIS_EXEMPLE : OUVERTURE_EXEMPLE }))
   return appeler(`/assistant/actions/${encodeURIComponent(id)}/rouvrir`, 'POST')
 }
 
@@ -293,6 +304,11 @@ const OUVERTURE_EXEMPLE: OuvertureCreation = {
   cases: { propertyType: 'maison', price: '245000', surface: '125', roomCount: '5', bedroomCount: '3', landSurface: '900',
     address: '12 rue des Tilleuls', postalCode: '42700', city: 'Firminy', title: 'Maison 5 pièces avec jardin de 900 m²' },
   composition: [], mandant: { hektor_contact_id: '10354641', nom: 'Mme CLAUDE TESTCLAUDE' }, negociateur: null, photos: [],
+}
+const AVIS_EXEMPLE: OuvertureAvis = {
+  ouvrir: 'avis_de_valeur', app_dossier_id: 32621, hektor_annonce_id: 4,  // un bien de la maquette (lib/mockData)
+  champs: { etatNote: '4', pointsForts: 'Jardin plat\nProche des écoles' },
+  postes: { toiture: { niveau: 'neuf', label: 'refaite 2019' } },
 }
 const FICHE_EXEMPLE: FicheCarte = {
   genre: 'estimation', titre: 'Maison de 125 m² à Firminy',
@@ -350,8 +366,11 @@ async function fauxFlux(question: string, conversationId: string | null, surEven
     surEvenement({ type: 'erreur', detail: "L'assistant n'a pas pu répondre" })
     return true
   }
-  const creation = q.includes('estimation')
-  const texte = creation
+  const avis = q.includes('avis de valeur')
+  const creation = !avis && q.includes('estimation')
+  const texte = avis
+    ? "J'ai préparé l'avis de valeur de l'[annonce 4](annonce:4). L'éditeur reprendra le dernier avis, calculera le marché DVF et les autres sources ; rien ne sera généré avant ton clic sur « Générer »."
+    : creation
     ? "J'ai préparé la création. Relis les valeurs : la fenêtre s'ouvrira déjà remplie, et rien ne sera créé avant ton clic sur « Créer ». Le [patron vierge à imprimer](patron:fiche-saisie) sert pour la prochaine fiche papier."
     : q.includes('carte') || q.includes('relance')
     ? "Je prépare la relance de [M. AVOIR TEST4](contact:10354641) pour **vendredi 20 novembre**. La voici, à valider :"
@@ -364,7 +383,15 @@ async function fauxFlux(question: string, conversationId: string | null, surEven
     await attendre(40, signal)
     if (q.includes('coupe') && mot.startsWith('annonces')) return false
   }
-  if (creation) {
+  if (avis) {
+    surEvenement({ type: 'outil', nom: 'proposer_ouvrir_avis_de_valeur' })
+    surEvenement({
+      type: 'carte', id: `carte-avis-${Date.now()}`, geste: 'ouvrir_avis_de_valeur',
+      resume: "Ouvrir l'avis de valeur de l'annonce 4 « Appartement T3 », pré-rempli : État (sur 5) 4 ; Points forts « Jardin plat Proche des écoles » ; barème : toiture / charpente neuf / refait. L'éditeur calcule le marché DVF et les autres sources ; rien n'est généré ni envoyé tant que tu n'as pas cliqué « Générer » DANS l'éditeur",
+      expire_le: new Date(Date.now() + 30 * 60_000).toISOString(),
+      cibles: [{ type: 'bien', id: '32621' }],
+    })
+  } else if (creation) {
     surEvenement({ type: 'outil', nom: 'proposer_ouvrir_creation_annonce' })
     surEvenement({
       type: 'carte', id: `carte-creation-${Date.now()}`, geste: 'ouvrir_creation_annonce',

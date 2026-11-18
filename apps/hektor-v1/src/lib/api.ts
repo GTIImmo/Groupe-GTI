@@ -9509,6 +9509,27 @@ export async function createGenerateEstimationPdfJob(input: {
   return data as ConsoleJob
 }
 
+// 18/11 (étape 4 §69-70, décision « A ») : le DERNIER avis de valeur généré pour un bien = la charge de son dernier travail
+// `generate_estimation_pdf` réussi (c'est ce que l'éditeur avait envoyé : valeurs, état, points, charges, argumentaire).
+// Lecture seule, avec le jeton : la règle de la table dit qui le voit (le demandeur, ou qui a le droit de travailler sur
+// le bien). Rien d'autre n'est gardé : sans avis, l'éditeur part du brouillon, puis du prix.
+export async function loadDernierAvisDeValeur(appDossierId: number | null | undefined): Promise<{ payload: Record<string, unknown>; le: string } | null> {
+  if (!hasSupabaseEnv || !supabase || appDossierId == null) return null
+  const { data, error } = await supabase
+    .from('app_console_job')
+    .select('payload_json, finished_at, requested_at')
+    .eq('app_dossier_id', appDossierId)
+    .eq('job_type', 'generate_estimation_pdf')
+    .eq('status', 'done')
+    .order('finished_at', { ascending: false, nullsFirst: false })
+    .limit(1)
+    .maybeSingle()
+  if (error || !data) return null
+  const row = data as { payload_json: Record<string, unknown> | null; finished_at: string | null; requested_at: string | null }
+  if (!row.payload_json) return null
+  return { payload: row.payload_json, le: row.finished_at ?? row.requested_at ?? '' }
+}
+
 // Interrupteur de app_setting (lisible par tout utilisateur actif). Absent, illisible ou en
 // erreur = ÉTEINT : une lecture ratée ne peut jamais allumer un circuit.
 // Premier usage : 'signature_youtrust' (tâche A.2, notice/PLAN_DEV_SIGNATURE_YOUTRUST_2026-10-26.md).

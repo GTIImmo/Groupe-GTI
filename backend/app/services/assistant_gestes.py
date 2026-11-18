@@ -2301,8 +2301,43 @@ def _controler_creation(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[str, 
             raise Refus("Le scan ne lit que des photos JPEG, PNG ou WebP de 12 Mo au plus : " + ", ".join(autres) + ".")
     if not cases and not composition and not mandant and not photos:
         raise Refus("Rien à pré-remplir : donne au moins une information sur le bien, ou joins la fiche papier.")
+    mandant_nouveau = bool(p.get("mandant_nouveau")) and not mandant
+    inconnus = _inconnus_dits(p.get("inconnus"), cases)
+    if not photos:  # la fiche papier jointe : c'est le scan de la fenêtre qui les lira
+        _exiger_essentiels(genre, cases, mandant or mandant_nouveau, inconnus)
     return {"genre": genre, "cases": cases, "composition": composition, "mandant": mandant, "negociateur": negociateur,
-            "photos": photos}
+            "photos": photos, "mandant_nouveau": mandant_nouveau, "inconnus": inconnus}
+
+
+# §70-1 (décision du 18/11) : ce qu'il FAUT savoir avant d'ouvrir la fenêtre. La consigne fait poser les questions ;
+# c'est cette garde qui rend la règle sûre. « Je ne sais pas » vaut réponse (la case reste vide dans la fenêtre).
+ESSENTIELS_ESTIMATION = ("propertyType", "address", "postalCode", "city", "surface", "roomCount")
+ESSENTIELS_ANNONCE = ESSENTIELS_ESTIMATION + ("price",)
+ESSENTIELS_TOUS = ESSENTIELS_ANNONCE + ("landSurface",)
+
+
+def _une_maison(type_bien: str) -> bool:
+    return bool(set(_simple(type_bien).split()) & {"maison", "villa", "pavillon", "longere", "ferme", "chalet", "mas"})
+
+
+def _inconnus_dits(brut: Any, cases: dict[str, str]) -> list[str]:
+    dits = [str(c or "").strip() for c in (brut if isinstance(brut, list) else [])]
+    hors = [c for c in dits if c and c not in ESSENTIELS_TOUS]
+    if hors:
+        raise Refus("« Je ne sais pas » ne vaut que pour une information essentielle (pas : " + ", ".join(hors) + ").")
+    return [c for c in dict.fromkeys(dits) if c and c not in cases]
+
+
+def _exiger_essentiels(genre: str, cases: dict[str, str], mandant_dit: bool, inconnus: list[str]) -> None:
+    voulus = list(ESSENTIELS_ANNONCE if genre == "annonce" else ESSENTIELS_ESTIMATION)
+    if _une_maison(cases.get("propertyType", "")):
+        voulus.append("landSurface")
+    manquent = [LIBELLES_CASES[c] for c in voulus if c not in cases and c not in inconnus]
+    if not mandant_dit:
+        manquent.append("mandant (un contact existant, ou « nouveau »)")
+    if manquent:
+        raise Refus("Il manque, pour " + ("cette estimation" if genre == "estimation" else "cette annonce") + " : "
+                    + ", ".join(manquent).lower() + ". Pose ces questions EN UNE FOIS ; « je ne sais pas » vaut réponse.")
 
 
 def _valeur_lisible(cle: str, valeur: str) -> str:
@@ -2318,7 +2353,10 @@ def preparer_ouvrir_creation_annonce(ctx: ContexteAssistant, p: dict[str, Any]) 
     morceaux = [f"{LIBELLES_CASES[k]} {_valeur_lisible(k, v)}" for k, v in c["cases"].items()]
     if c["composition"]:
         morceaux.append(f"composition : {len(c['composition'])} pièce{'s' if len(c['composition']) > 1 else ''}")
-    morceaux.append(f"mandant : {c['mandant']['nom']} (contact existant)" if c["mandant"] else "mandant : à saisir dans la fenêtre")
+    morceaux.append(f"mandant : {c['mandant']['nom']} (contact existant)" if c["mandant"]
+                    else "mandant : nouveau, à saisir dans la fenêtre" if c["mandant_nouveau"] else "mandant : à saisir dans la fenêtre")
+    if c["inconnus"]:
+        morceaux.append("non connu : " + ", ".join(LIBELLES_CASES[k].lower() for k in c["inconnus"]))
     if c["negociateur"]:
         morceaux.append(f"négociateur : {c['negociateur']['nom']}")
     if c["photos"]:
@@ -2327,6 +2365,10 @@ def preparer_ouvrir_creation_annonce(ctx: ContexteAssistant, p: dict[str, Any]) 
               + " ; ".join(morceaux) + ". Rien n'est créé tant que tu n'as pas cliqué « Créer » DANS la fenêtre")
     parametres: dict[str, Any] = {"genre": c["genre"], "cases": c["cases"], "composition": c["composition"],
                                   "fichiers": [f["id"] for f in c["photos"]]}
+    if c["mandant_nouveau"]:
+        parametres["mandant_nouveau"] = True
+    if c["inconnus"]:
+        parametres["inconnus"] = c["inconnus"]
     if c["mandant"]:
         parametres["hektor_contact_id"] = c["mandant"]["hektor_contact_id"]  # -> « Ouvrir le contact » sous la carte
         parametres["mandant_nom"] = c["mandant"]["nom"]
@@ -2376,11 +2418,101 @@ def fiche_carte(parametres: dict[str, Any] | None, geste: str | None) -> dict[st
         + [{"libelle": LIBELLES_CASES[k], "valeur": _valeur_lisible(k, v)} for k, v in cases.items() if k not in deja]
     composition = parametres.get("composition") or []
     a_remplir = ["Photos"] + ([] if composition else ["Composition"]) \
-        + ([] if parametres.get("hektor_contact_id") else ["Mandant"])
+        + ([] if parametres.get("hektor_contact_id") else
+           ["Mandant (nouveau)" if parametres.get("mandant_nouveau") else "Mandant"]) \
+        + [LIBELLES_CASES[k] for k in (parametres.get("inconnus") or []) if k in LIBELLES_CASES]
     return {"genre": parametres.get("genre"), "titre": titre, "chiffres": chiffres, "lignes": lignes,
             "composition": len(composition), "mandant": bool(parametres.get("hektor_contact_id")),
             "negociateur": bool(parametres.get("negociateur")), "photos": len(parametres.get("fichiers") or []),
             "a_remplir": a_remplir}
+
+
+# ── 18/11 (§70-3, décision du 18/11) : l'AVIS DE VALEUR d'un bien existant = ouvrir son ÉDITEUR, pré-rempli en mémoire ──
+# La carte n'écrit rien (ni le brouillon `scan_draft`, partagé, ni un travail) : elle rend {ouvrir: avis_de_valeur} et
+# l'écran ouvre EstimationDocumentEditor (la porte de l'écran Estimations) avec la dictée par-dessus le dernier avis.
+# C'est la personne qui clique « Générer le PDF » (ou « Générer + envoyer » au propriétaire) DANS l'éditeur.
+# ⛔ Les caractéristiques du bien ne se changent pas ici (onglet en lecture seule de l'éditeur) : proposer_modifier_bien.
+CHAMPS_AVIS: dict[str, tuple[str, str]] = {  # clé de l'éditeur (draft) -> (libellé, genre)
+    "basse": ("Fourchette basse", "euros"), "estimee": ("Valeur estimée", "euros"), "haute": ("Fourchette haute", "euros"),
+    "etatNote": ("État (sur 5)", "note"), "etatLabel": ("Libellé d'état", "court"), "etatTexte": ("Appréciation de l'état", "long"),
+    "toiture": ("Toiture", "court"), "menuiseries": ("Menuiseries", "court"),
+    "pointsForts": ("Points forts", "long"), "pointsVigilance": ("Points de vigilance", "long"),
+    "argumentaire": ("Argumentaire de prix", "long"), "commentaire": ("Avis du conseiller", "long"),
+    "taxeFonciere": ("Taxe foncière / an", "euros"), "energie": ("Énergie / an", "euros"), "eau": ("Eau / an", "euros"),
+    "assurance": ("Assurance / an", "euros"),
+}
+POSTES_AVIS = {"grosoeuvre": "Gros œuvre / structure", "facade": "Façade / ravalement", "chauffage": "Chauffage / production",
+               "plomberie": "Plomberie / sanitaires", "toiture": "Toiture / charpente", "menuiseries": "Menuiseries / vitrage",
+               "electricite": "Électricité", "interieur": "Intérieur / finitions"}  # = ESTIM_POSTES de l'écran
+NIVEAUX_AVIS = {"neuf": "Neuf / refait", "bon": "Bon état", "correct": "Correct", "aprevoir": "À prévoir"}  # = ESTIM_NIVEAUX
+
+
+def _champs_avis(brutes: Any) -> dict[str, str]:
+    if isinstance(brutes, dict):  # au clic : les champs rangés sur la carte
+        brutes = [{"cle": k, "valeur": v} for k, v in brutes.items()]
+    champs: dict[str, str] = {}
+    for c in brutes or []:
+        cle, valeur = str((c or {}).get("cle") or "").strip(), str((c or {}).get("valeur") or "").strip()
+        if not valeur:
+            continue
+        if cle not in CHAMPS_AVIS:
+            raise Refus(f"« {cle} » n'est pas une case de l'avis de valeur.")
+        libelle, genre = CHAMPS_AVIS[cle]
+        if _EMAIL.search(valeur):
+            raise Refus(f"{libelle} : une adresse e-mail n'a rien à faire dans l'avis de valeur.")
+        if genre == "euros":
+            try:
+                valeur = _nombre_dicte("price", valeur).split(".")[0]
+            except Refus:
+                raise Refus(f"{libelle} : « {valeur} » n'est pas un montant.") from None
+        elif genre == "note" and valeur not in {"1", "2", "3", "4", "5"}:
+            raise Refus(f"{libelle} : une note de 1 à 5 (pas « {valeur} »).")
+        champs[cle] = valeur[:4000] if genre == "long" else valeur[:200]
+    bornes = [int(champs[k]) for k in ("basse", "estimee", "haute") if k in champs]
+    if bornes != sorted(bornes):
+        raise Refus("La fourchette doit aller de la plus basse à la plus haute (basse ≤ estimée ≤ haute).")
+    return champs
+
+
+def _postes_avis(brutes: Any) -> dict[str, dict[str, str]]:
+    if isinstance(brutes, dict):
+        brutes = [{"poste": k, **(v if isinstance(v, dict) else {})} for k, v in brutes.items()]
+    postes: dict[str, dict[str, str]] = {}
+    for b in brutes or []:
+        poste, niveau = str((b or {}).get("poste") or "").strip(), str((b or {}).get("niveau") or "").strip()
+        if not poste:
+            continue
+        if poste not in POSTES_AVIS or niveau not in NIVEAUX_AVIS:
+            raise Refus(f"Barème d'état : « {poste} / {niveau} » n'existe pas dans l'éditeur.")
+        postes[poste] = {"niveau": niveau, "label": str((b or {}).get("label") or "").strip()[:60]}
+    return postes
+
+
+def _controler_avis(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[str, Any]:
+    bien = _bien_vivant(ctx, p.get("hektor_annonce_id"))  # relu avec SON jeton : à sa portée
+    return {"bien": bien, "champs": _champs_avis(p.get("champs")), "postes": _postes_avis(p.get("postes"))}
+
+
+def preparer_ouvrir_avis_de_valeur(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    c = _controler_avis(ctx, p)
+    bien = c["bien"]
+    morceaux = [f"{CHAMPS_AVIS[k][0]} " + (_euros(v) if CHAMPS_AVIS[k][1] == "euros"
+                                          else f"« {v[:120]}{'…' if len(v) > 120 else ''} »" if CHAMPS_AVIS[k][1] == "long" else v)
+                for k, v in c["champs"].items()]
+    if c["postes"]:
+        morceaux.append("barème : " + ", ".join(f"{POSTES_AVIS[k].lower()} {NIVEAUX_AVIS[v['niveau']].lower()}"
+                                                  for k, v in c["postes"].items()))
+    resume = (f"Ouvrir l'avis de valeur de l'annonce {bien['hektor_annonce_id']} « {bien.get('titre_bien') or ''} »"
+              + (", pré-rempli : " + " ; ".join(morceaux) if morceaux else ", repris du dernier avis s'il y en a un")
+              + ". L'éditeur calcule le marché DVF et les autres sources ; rien n'est généré ni envoyé tant que tu n'as pas "
+              "cliqué « Générer » DANS l'éditeur")
+    return resume, {"hektor_annonce_id": int(bien["hektor_annonce_id"]), "champs": c["champs"], "postes": c["postes"]}
+
+
+def executer_ouvrir_avis_de_valeur(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[str, Any]:
+    c = _controler_avis(ctx, p)  # re-vérifié AU CLIC : le bien est-il toujours à sa portée ?
+    return {"ouvrir": "avis_de_valeur", "app_dossier_id": int(c["bien"]["app_dossier_id"]),
+            "hektor_annonce_id": int(c["bien"]["hektor_annonce_id"]), "champs": c["champs"], "postes": c["postes"]}
 
 
 # ── LOT 2c (17/11/2026) : créer un contact, ajouter une recherche, modifier une recherche ──
@@ -3787,7 +3919,9 @@ GESTES: dict[str, Geste] = {g.nom: g for g in (
           "vide, n'en déduis aucune. « Vers 245 000 » = 245000. Le mandant : un contact EXISTANT (son numéro), sinon "
           "vide (il se saisit dans la fenêtre : jamais ses coordonnées ici). Le négociateur : vide pour un commercial "
           "(c'est lui) ; la direction peut nommer un négociateur. Les photos de la FICHE PAPIER jointes (fichier:…, "
-          "5 au plus) sont lues par le scan de la fenêtre ; ce que la personne dit l'emporte sur la fiche.",
+          "5 au plus) sont lues par le scan de la fenêtre ; ce que la personne dit l'emporte sur la fiche. SANS fiche "
+          "papier, il faut les ESSENTIELS : type, adresse, code postal, ville, surface, pièces, terrain pour une maison, "
+          "le mandant (existant ou nouveau), et le prix pour une annonce ; sinon la carte est refusée avec la liste.",
           TOUS_LES_ROLES,
           _schema({"genre": {"type": "string", "enum": ["estimation", "annonce"]},
                    "cases": {"type": "array", "description": "les cases à remplir (clés du scan, en anglais : surface = "
@@ -3805,9 +3939,37 @@ GESTES: dict[str, Geste] = {g.nom: g for g in (
                                              "required": ["type", "surface", "etage", "detail"],
                                              "additionalProperties": False}},
                    "hektor_contact_id": {"type": "string", "description": "le mandant EXISTANT (numéro du contact), ou vide"},
+                   "mandant_nouveau": {"type": "boolean", "description": "true si la personne a dit que le mandant est "
+                                       "NOUVEAU (pas encore dans les contacts) ; false sinon"},
+                   "inconnus": {"type": "array", "description": "les informations ESSENTIELLES pour lesquelles la personne a "
+                                "répondu « je ne sais pas » (sinon vide)",
+                                "items": {"type": "string", "enum": list(ESSENTIELS_TOUS)}},
                    "negociateur": {"type": "string", "description": "DIRECTION seulement : le nom du négociateur ; sinon vide"},
                    "fichiers": {"type": "string", "description": "photos de la fiche papier jointes, séparées par |, ou vide"}}),
           preparer_ouvrir_creation_annonce, executer_ouvrir_creation_annonce),
+    Geste("ouvrir_avis_de_valeur",
+          "Prépare l'OUVERTURE de l'ÉDITEUR « Avis de valeur » d'un bien EXISTANT (« fais l'estimation / l'avis de valeur "
+          "de 63289 », « prépare l'avis de valeur » après une estimation créée), PRÉ-REMPLI de ce que la personne dicte : "
+          "fourchette, état et barème par poste, points forts / de vigilance, argumentaire, avis du conseiller, charges. "
+          "L'éditeur reprend le dernier avis du bien, calcule le marché DVF et les autres sources ; c'est la personne qui "
+          "génère le PDF (ou l'envoie au propriétaire) DANS l'éditeur. Ne mets QUE ce qui a été dit (« vers 245 000 » = "
+          "estimee 245000) ; les caractéristiques du bien (surface, pièces…) ne se changent pas ici : proposer_modifier_bien.",
+          TOUS_LES_ROLES,
+          _schema({"hektor_annonce_id": {"type": "string", "description": "le numéro d'annonce du bien"},
+                   "champs": {"type": "array", "description": "les cases dictées, ou vide (basse / estimee / haute = "
+                              "fourchette en euros, etatNote = 1 à 5, etatLabel = « bon état général », etatTexte = "
+                              "appréciation de l'état, pointsForts / pointsVigilance = un par ligne, commentaire = avis du "
+                              "conseiller, taxeFonciere / energie / eau / assurance = euros par an)",
+                              "items": {"type": "object", "properties": {"cle": {"type": "string", "enum": list(CHAMPS_AVIS)},
+                                                                         "valeur": {"type": "string"}},
+                                        "required": ["cle", "valeur"], "additionalProperties": False}},
+                   "postes": {"type": "array", "description": "le barème d'état dicté, poste par poste, ou vide",
+                              "items": {"type": "object",
+                                        "properties": {"poste": {"type": "string", "enum": list(POSTES_AVIS)},
+                                                       "niveau": {"type": "string", "enum": list(NIVEAUX_AVIS)},
+                                                       "label": {"type": "string", "description": "« refait 2019 », ou vide"}},
+                                        "required": ["poste", "niveau", "label"], "additionalProperties": False}}}),
+          preparer_ouvrir_avis_de_valeur, executer_ouvrir_avis_de_valeur),
     Geste("couverture_photo",
           "Prépare : mettre une photo VISIBLE en couverture d'une annonce (numéros donnés par lire_photos_bien).",
           TOUS_LES_ROLES,

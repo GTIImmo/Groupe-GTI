@@ -1212,10 +1212,10 @@ print("  (au clic, la route refuse aussi un rôle hors de geste.roles : DIRECTIO
 voir(ges.GESTES["transaction"].roles == ges.DIRECTION, "la carte est déclarée DIRECTION : la route de validation la refuse à un négociateur")
 
 print("10) aucune fonction de geste ne fait autre chose que proposer")
-voir(all(f.nom.startswith("proposer_") for f in ges.FONCTIONS_GESTES) and len(ges.FONCTIONS_GESTES) == 42,
-     "42 gestes (le brouillon retiré le 15/11, 3 du lot 2c, 3 du lot 3c, 1 de la vague C, le numéro de mandat, la relance "
+voir(all(f.nom.startswith("proposer_") for f in ges.FONCTIONS_GESTES) and len(ges.FONCTIONS_GESTES) == 43,
+     "43 gestes (le brouillon retiré le 15/11, 3 du lot 2c, 3 du lot 3c, 1 de la vague C, le numéro de mandat, la relance "
      "et l'annulation d'une signature le 16/11, puis les 8 cartes directes de l'audit §35, le prix et le Pilotage pour la direction, ajouter une photo et déposer des documents le 17/11, "
-     "ouvrir la création le 18/11), "
+     "ouvrir la création et l'avis de valeur le 18/11), "
      "tous « proposer_ » : le "
      "modèle n'a AUCUNE fonction qui exécute")
 voir(not any(f.nom.startswith("proposer_") for f in ges.FONCTIONS_LECTURE_LOT3), "les 2 lectures du lot 3 ne proposent rien")
@@ -2321,5 +2321,94 @@ voir(r["ok"] and s.suites and s.suites[0]["cree"]["app_dossier_id"] == 10000123 
 r, s = route21(route.assistant_suite, {**carte_cr, "user_id": "u-autre"},
                payload=route.SuiteCreationPayload(app_dossier_id=1, genre="annonce"))
 voir(r == 404 and not s.suites, "⛔ la carte d'un AUTRE : introuvable, rien noté")
+
+print("22) LES ESSENTIELS avant la carte « créer », et L'AVIS DE VALEUR d'un bien existant (18/11, §70)")
+SANS_FICHE = {**CR, "fichiers": ""}
+_, p_ok = ges.preparer_ouvrir_creation_annonce(nouveau_ctx(), SANS_FICHE)
+voir(p_ok["cases"]["surface"] == "125" and "inconnus" not in p_ok and "mandant_nouveau" not in p_ok,
+     "sans fiche papier, une estimation qui a ses essentiels (type, adresse, CP, ville, surface, pièces, terrain, mandant) passe")
+def sans(*cles, **autres):
+    return {**SANS_FICHE, "cases": [c for c in CR["cases"] if c["cle"] not in cles], **autres}
+voir(refuse(lambda: ges.preparer_ouvrir_creation_annonce(nouveau_ctx(), sans("surface", "roomCount")),
+            "Il manque, pour cette estimation : surface habitable, pièces"),
+     "⛔ il manque la surface et les pièces : refusé AVEC LA LISTE (le modèle doit les demander)")
+voir(refuse(lambda: ges.preparer_ouvrir_creation_annonce(nouveau_ctx(), sans("landSurface")), "terrain"),
+     "⛔ une MAISON sans terrain : refusé")
+_, p_appart = ges.preparer_ouvrir_creation_annonce(nouveau_ctx(), {
+    **sans("landSurface", "propertyType"), "cases": [c for c in sans("landSurface")["cases"] if c["cle"] != "propertyType"]
+    + [{"cle": "propertyType", "valeur": "appartement"}]})
+voir(p_appart["cases"]["propertyType"] == "appartement" and "landSurface" not in p_appart["cases"],
+     "un APPARTEMENT sans terrain : accepté (le terrain n'est essentiel que pour une maison)")
+voir(refuse(lambda: ges.preparer_ouvrir_creation_annonce(nouveau_ctx(), {**sans("price"), "genre": "annonce"}), "prix")
+     and not refuse(lambda: ges.preparer_ouvrir_creation_annonce(nouveau_ctx(), sans("price")), "prix"),
+     "⛔ une ANNONCE sans prix : refusée ; une ESTIMATION sans prix : acceptée")
+voir(refuse(lambda: ges.preparer_ouvrir_creation_annonce(nouveau_ctx(), {**SANS_FICHE, "hektor_contact_id": ""}),
+            "mandant (un contact existant, ou « nouveau »)"),
+     "⛔ ni mandant existant ni « nouveau » : refusé")
+r_nv, p_nv = ges.preparer_ouvrir_creation_annonce(nouveau_ctx(), {**SANS_FICHE, "hektor_contact_id": "", "mandant_nouveau": True})
+voir(p_nv.get("mandant_nouveau") is True and "nouveau, à saisir dans la fenêtre" in r_nv
+     and ges.fiche_carte(p_nv, "ouvrir_creation_annonce")["a_remplir"] == ["Photos", "Mandant (nouveau)"],
+     "un mandant « nouveau » vaut réponse : la carte le dit, la fiche le met dans « Restera à remplir »")
+r_ic, p_ic = ges.preparer_ouvrir_creation_annonce(nouveau_ctx(), {**sans("roomCount"), "inconnus": ["roomCount"]})
+voir(p_ic["inconnus"] == ["roomCount"] and "non connu : pièces" in r_ic
+     and ges.fiche_carte(p_ic, "ouvrir_creation_annonce")["a_remplir"][-1] == "Pièces"
+     and refuse(lambda: ges.preparer_ouvrir_creation_annonce(nouveau_ctx(), {**SANS_FICHE, "inconnus": ["garden"]}),
+                "ne vaut que pour une information essentielle"),
+     "« je ne sais pas » vaut réponse pour un ESSENTIEL (rangé, dit, à remplir) -- pas pour une autre case")
+voir(refuse(lambda: ges.executer_ouvrir_creation_annonce(nouveau_ctx(), {**p_ok, "cases": {k: v for k, v in p_ok["cases"].items()
+                                                                                            if k != "surface"}}),
+            "surface habitable"),
+     "TÉMOIN : un essentiel retiré des paramètres rangés -> refusé AU CLIC aussi")
+voir(ges.executer_ouvrir_creation_annonce(nouveau_ctx(), p_nv)["ouvrir"] == "creation_annonce",
+     "au clic, le mandant « nouveau » rangé sur la carte suffit (re-vérifié comme à la carte)")
+
+AV = {"hektor_annonce_id": "63330",
+      "champs": [{"cle": "basse", "valeur": "235 000 €"}, {"cle": "estimee", "valeur": "245000"},
+                 {"cle": "haute", "valeur": "255 000"}, {"cle": "etatNote", "valeur": "4"},
+                 {"cle": "pointsForts", "valeur": "Jardin plat\nProche écoles"}, {"cle": "taxeFonciere", "valeur": "1 450 €"},
+                 {"cle": "commentaire", "valeur": ""}],
+      "postes": [{"poste": "toiture", "niveau": "neuf", "label": "refaite 2019"}]}
+voir(ges.GESTES["ouvrir_avis_de_valeur"].roles == cat.TOUS_LES_ROLES
+     and "proposer_ouvrir_avis_de_valeur" in [f.nom for f in cat.fonctions_du_role("commercial")],
+     "ouverte à tous les rôles (l'éditeur n'a pas de garde à l'écran)")
+appels14.clear()
+resume_av, p_av = ges.preparer_ouvrir_avis_de_valeur(nouveau_ctx(), AV)
+voir(p_av == {"hektor_annonce_id": 63330,
+              "champs": {"basse": "235000", "estimee": "245000", "haute": "255000", "etatNote": "4",
+                         "pointsForts": "Jardin plat\nProche écoles", "taxeFonciere": "1450"},
+              "postes": {"toiture": {"niveau": "neuf", "label": "refaite 2019"}}}
+     and "Valeur estimée 245 000 €" in resume_av and "toiture / charpente neuf / refait" in resume_av
+     and "« Générer » DANS l'éditeur" in resume_av and not ecrits14(),
+     "la carte dit chaque valeur et que RIEN n'est généré avant « Générer » ; montants nus, case vide non rangée ; rien écrit")
+for mauvais, morceau, quoi in (
+        ({"champs": [{"cle": "surface", "valeur": "120"}]}, "pas une case de l'avis", "une caractéristique du bien (pas ici)"),
+        ({"champs": [{"cle": "commentaire", "valeur": "écrire à jean@exemple.fr"}]}, "adresse e-mail", "une adresse e-mail"),
+        ({"champs": [{"cle": "basse", "valeur": "260000"}, {"cle": "haute", "valeur": "250000"}]}, "la plus basse",
+         "une fourchette à l'envers"),
+        ({"champs": [{"cle": "etatNote", "valeur": "8"}]}, "de 1 à 5", "une note hors barème"),
+        ({"champs": [{"cle": "eau", "valeur": "beaucoup"}]}, "pas un montant", "un montant en lettres"),
+        ({"postes": [{"poste": "piscine", "niveau": "bon", "label": ""}]}, "n'existe pas", "un poste inconnu de l'éditeur")):
+    voir(refuse(lambda: ges.preparer_ouvrir_avis_de_valeur(nouveau_ctx(), {**AV, **mauvais}), morceau), f"⛔ refusé : {quoi}")
+etat14["sans_bien"] = True
+voir(refuse(lambda: ges.preparer_ouvrir_avis_de_valeur(nouveau_ctx(), AV), "pas parmi"),
+     "⛔ un bien que la personne ne voit pas (relu avec SON jeton) : refusé")
+etat14.pop("sans_bien")
+resume_vide, p_vide = ges.preparer_ouvrir_avis_de_valeur(nouveau_ctx(), {**AV, "champs": [], "postes": []})
+voir(p_vide["champs"] == {} and "repris du dernier avis" in resume_vide,
+     "sans dictée : la carte ouvre l'éditeur, repris du dernier avis (pas de refus « rien à pré-remplir »)")
+appels14.clear()
+r_av = ges.executer_ouvrir_avis_de_valeur(nouveau_ctx(), p_av)
+voir(r_av == {"ouvrir": "avis_de_valeur", "app_dossier_id": 10000006, "hektor_annonce_id": 63330, "champs": p_av["champs"],
+              "postes": p_av["postes"]} and not ecrits14(),
+     "au CLIC : l'ordre d'ouverture de l'éditeur, la dictée re-vérifiée -- et RIEN d'écrit (ni brouillon, ni travail)")
+voir(refuse(lambda: ges.executer_ouvrir_avis_de_valeur(nouveau_ctx(), {**p_av, "champs": {**p_av["champs"], "recipient": "x@y.fr"}}),
+            "pas une case de l'avis"),
+     "TÉMOIN : une case interdite glissée dans les paramètres rangés -> refusée AU CLIC")
+carte_av = {**carte_cr, "geste": "ouvrir_avis_de_valeur", "parametres": p_av, "resultat": r_av}
+r, s = route21(route.assistant_rouvrir, carte_av)
+voir(r["ok"] and r["resultat"]["ouvrir"] == "avis_de_valeur" and not s.fins and not ecrits14(),
+     "ROUVRIR l'avis de valeur : re-vérifié, rien d'écrit")
+r, s = route21(route.assistant_suite, carte_av, payload=route.SuiteCreationPayload(app_dossier_id=1, genre="estimation"))
+voir(r == 409 and not s.suites, "⛔ la « suite » (créée) reste réservée à la carte de création")
 
 print(f"\n{ok} contrôles verts")

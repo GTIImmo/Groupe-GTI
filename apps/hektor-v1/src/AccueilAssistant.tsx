@@ -3,7 +3,7 @@ import {
   EVENEMENT_CREATION_FAITE, RefusAssistant, deposerFichier, etatFichiers, listerConversations, poserQuestion, refuserCarte,
   relireConversation, retirerFichier, rouvrirCarte, separerFichiersJoints, validerCarte,
   type CarteAssistant, type CibleCarte, type ConversationAssistant, type CreationFaite, type EtatFichiers, type EvenementFlux,
-  type OuvertureCreation,
+  type OuvertureAvis, type OuvertureCreation,
 } from './lib/assistant'
 import { poserDepotAssistant } from './lib/depotAssistant'
 import {
@@ -94,6 +94,8 @@ const GESTES: Record<string, { titre: string; fait: (r: Record<string, unknown>)
   deposer_documents: { titre: 'Documents', fait: () => 'Fenêtre de dépôt ouverte sur le bien.', suite: 'Vérifie le type et le nom proposés, puis clique « Envoyer » dans la fenêtre.' },
   // 18/11 (§66) : la carte « créer » a sa propre vue (CarteCreation) ; ces mots servent au repli
   ouvrir_creation_annonce: { titre: 'Création', fait: () => 'Fenêtre de création ouverte.', suite: 'La création se termine dans la fenêtre, par ton clic sur « Créer ».' },
+  // 18/11 (§70-3) : l'avis de valeur d'un bien existant -- l'éditeur s'ouvre, la personne génère le PDF dedans
+  ouvrir_avis_de_valeur: { titre: 'Avis de valeur', fait: () => 'Éditeur de l’avis de valeur ouvert.', suite: 'Vérifie les valeurs et les sources calculées, puis clique « Générer » dans l’éditeur.' },
   ajouter_photo: { titre: 'Photos', fait: (r) => (Array.isArray(r.echecs) && r.echecs.length ? `Envoi en cours (${r.echecs.length} non partie${r.echecs.length > 1 ? 's' : ''}).` : 'Envoi chez Hektor en cours.'), suite: 'Une photo après l’autre ; sur la vitrine après le traitement de nuit.' },
   couverture_photo: { titre: 'Photos', fait: () => 'Couverture changée.' },
   visibilite_photo: { titre: 'Photos', fait: (r) => (r.visible === true ? 'Photo affichée.' : r.visible === false ? 'Photo masquée.' : 'Photo mise à jour.') },
@@ -309,7 +311,7 @@ function LiensCarte({ cibles }: { cibles?: CibleCarte[] }) {
 // création ». Après le clic : « Fenêtre ouverte » et « Rouvrir » ; quand la fenêtre a créé : « Estimation créée ».
 const LIGNES_VISIBLES = 4
 
-function CarteCreation({ carte, onValider, onRefuser, onRouvrir }: { carte: CarteEcran; onValider: () => void; onRefuser: () => void; onRouvrir: () => void }) {
+function CarteCreation({ carte, onValider, onRefuser, onRouvrir, onAvis }: { carte: CarteEcran; onValider: () => void; onRefuser: () => void; onRouvrir: () => void; onAvis: (appDossierId: number) => void }) {
   const liens = useContext(LiensContexte)
   const [tout, setTout] = useState(false)
   const fiche = carte.fiche!
@@ -327,7 +329,11 @@ function CarteCreation({ carte, onValider, onRefuser, onRouvrir }: { carte: Cart
         {carte.detail ? <div className="asi-c-end is-ko">{carte.detail}</div> : null}
         <div className="asi-c-f">
           {cree
-            ? (cree.app_dossier_id != null && liens ? <button className="asi-b" type="button" onClick={() => liens.bien(String(cree.app_dossier_id))}>Ouvrir la fiche</button> : null)
+            ? <>
+              {cree.app_dossier_id != null && liens ? <button className="asi-b" type="button" onClick={() => liens.bien(String(cree.app_dossier_id))}>Ouvrir la fiche</button> : null}
+              {/* §70-2 (décision du 18/11) : après une ESTIMATION créée, son avis de valeur */}
+              {cree.app_dossier_id != null && nom === 'estimation' ? <button className="asi-b is-main" type="button" onClick={() => onAvis(Number(cree.app_dossier_id))}>Préparer l'avis de valeur</button> : null}
+            </>
             : <button className="asi-b" type="button" onClick={onRouvrir}>Rouvrir la création</button>}
         </div>
       </div>
@@ -386,9 +392,9 @@ function CarteCreation({ carte, onValider, onRefuser, onRouvrir }: { carte: Cart
   )
 }
 
-function CarteVue({ carte, onValider, onRefuser, onRouvrir }: { carte: CarteEcran; onValider: () => void; onRefuser: () => void; onRouvrir: () => void }) {
+function CarteVue({ carte, onValider, onRefuser, onRouvrir, onAvis }: { carte: CarteEcran; onValider: () => void; onRefuser: () => void; onRouvrir: () => void; onAvis: (appDossierId: number) => void }) {
   if (carte.geste === 'ouvrir_creation_annonce' && carte.fiche) {
-    const vue = <CarteCreation carte={carte} onValider={onValider} onRefuser={onRefuser} onRouvrir={onRouvrir} />
+    const vue = <CarteCreation carte={carte} onValider={onValider} onRefuser={onRefuser} onRouvrir={onRouvrir} onAvis={onAvis} />
     if ((carte.etat === 'proposee' && !estExpiree(carte)) || carte.etat === 'executee') return vue
   }
   const geste = GESTES[carte.geste]
@@ -422,6 +428,12 @@ function CarteVue({ carte, onValider, onRefuser, onRouvrir }: { carte: CarteEcra
         <div className="asi-c-h"><Sceau coche />Validée{carte.execute_le ? ` à ${heure(carte.execute_le)}` : ''}</div>
         <div className="asi-c-b"><p className="asi-resume">{carte.resume}</p><LiensCarte cibles={carte.cibles} /></div>
         <div className="asi-c-end"><b>{geste ? geste.fait(carte.resultat ?? {}) : 'Fait.'}</b>{geste?.suite ? <span>{geste.suite}</span> : null}</div>
+        {carte.geste === 'ouvrir_avis_de_valeur' ? (
+          <div className="asi-c-f">
+            {carte.detail ? <small className="is-ko">{carte.detail}</small> : null}
+            <button className="asi-b" type="button" onClick={onRouvrir}>Rouvrir l'avis de valeur</button>
+          </div>
+        ) : null}
       </div>
     )
   }
@@ -469,6 +481,8 @@ export default function AccueilAssistant(props: {
   onOuvrirDemande: (ref: { appDossierId?: string; numero?: string }) => void
   // 18/11 (§66, marche 6a) : la carte « créer » ouvre la fenêtre de création de l'écran, pré-remplie
   onOuvrirCreation: (ouverture: OuvertureCreation, carteId: string) => void
+  // 18/11 (§70) : la carte « avis de valeur » (et « Préparer l'avis de valeur » d'une estimation créée) ouvre l'éditeur
+  onOuvrirAvis: (ouverture: OuvertureAvis) => void
 }) {
   const [vue, setVue] = useState<'assistant' | 'tableau'>('assistant')
   const [mode, setMode] = useState<Mode>({ type: 'accueil' })
@@ -786,6 +800,10 @@ export default function AccueilAssistant(props: {
         if (carte.geste === 'ouvrir_creation_annonce' && r.resultat?.ouvrir === 'creation_annonce') {
           portes.current.onOuvrirCreation(r.resultat as unknown as OuvertureCreation, carte.id)
         }
+        // 18/11 (§70-3) : « avis de valeur » n'écrit rien -- l'app ouvre l'ÉDITEUR du bien, pré-rempli de la dictée
+        if (carte.geste === 'ouvrir_avis_de_valeur' && r.resultat?.ouvrir === 'avis_de_valeur') {
+          portes.current.onOuvrirAvis(r.resultat as unknown as OuvertureAvis)
+        }
       }
     } catch (erreur) {
       const d = erreur instanceof Error ? erreur.message : "Non fait : l'écriture n'a pas abouti."
@@ -811,12 +829,19 @@ export default function AccueilAssistant(props: {
     majCarte(carte.id, (c) => ({ ...c, detail: undefined }))
     try {
       const r = await rouvrirCarte(carte.id)
-      if (r.ok && r.resultat) portes.current.onOuvrirCreation(r.resultat, carte.id)
+      if (r.ok && r.resultat?.ouvrir === 'avis_de_valeur') portes.current.onOuvrirAvis(r.resultat)
+      else if (r.ok && r.resultat?.ouvrir === 'creation_annonce') portes.current.onOuvrirCreation(r.resultat, carte.id)
       else majCarte(carte.id, (c) => ({ ...c, detail: r.detail || 'La fenêtre ne peut pas être rouverte.' }))
     } catch (erreur) {
       majCarte(carte.id, (c) => ({ ...c, detail: erreur instanceof Error ? erreur.message : 'La fenêtre ne peut pas être rouverte.' }))
     }
   }, [majCarte])
+
+  // 18/11 (§70-2) : « Préparer l'avis de valeur » d'une estimation que la fenêtre vient de créer -- l'éditeur, sans dictée
+  // (le brouillon de la fiche, écrit à la création, le pré-remplit), qui calcule les sources de lui-même
+  const preparerAvis = useCallback((appDossierId: number) => {
+    portes.current.onOuvrirAvis({ ouvrir: 'avis_de_valeur', app_dossier_id: appDossierId, hektor_annonce_id: null, champs: {}, postes: {} })
+  }, [])
 
   // 18/11 (§66) : la fenêtre a créé la fiche -> la carte passe à « Estimation créée » (l'App l'a déjà noté au serveur)
   useEffect(() => {
@@ -1051,7 +1076,7 @@ export default function AccueilAssistant(props: {
                     ) : ecrit && !t.texte ? <div className="asi-trace"><span className="asi-tr is-live"><PictoTourne />Je réfléchis…</span></div> : null}
                     {t.texte || (ecrit && t.traces.length) ? <div className="asi-texte"><TexteReponse source={t.texte} curseur={ecrit && dernier} /></div> : null}
                     {t.cartes.map((carte) => (
-                      <CarteVue key={carte.id} carte={carte} onValider={() => void agirSurCarte(carte, 'valider')} onRefuser={() => void agirSurCarte(carte, 'refuser')} onRouvrir={() => void rouvrirCreation(carte)} />
+                      <CarteVue key={carte.id} carte={carte} onValider={() => void agirSurCarte(carte, 'valider')} onRefuser={() => void agirSurCarte(carte, 'refuser')} onRouvrir={() => void rouvrirCreation(carte)} onAvis={preparerAvis} />
                     ))}
                     {t.etat === 'erreur' ? (
                       <MessageBlocage blocage={{ genre: 'ko', titre: "L'assistant n'a pas pu répondre.", sous: `${t.detail && t.detail !== "L'assistant n'a pas pu répondre" ? `${t.detail}. ` : ''}Rien n'a été fait. Repose la question, ou découpe-la en plus simple.` }} onRenvoyer={() => undefined} />
