@@ -2920,3 +2920,15 @@ par la saisie à la main, le scan et l'assistant — toute nouvelle voie d'entr�
 
 Toujours à trancher (§84.7) : les documents à la création, voie A ou B ; l'envoi au propriétaire seulement quand CE PDF
 est prêt ; quels défauts du §84.6 corriger avant les essais ; l'effacement des coordonnées d'un nouveau mandant.
+
+## 86. SA DÉCISION : documents à la création = VOIE A (18/11)
+
+**Ses mots** : « Voie A ». Les documents joints dans la conversation pendant le parcours de création sont gardés au
+coffre (2 jours, ils survivent à un rechargement) ; quand le travail de création est `done` et que l'annonce a son
+numéro Hektor, l'assistant propose la carte « Déposer des documents » d'aujourd'hui sur ce bien (planche E09) ; c'est
+la personne qui clique « Envoyer » dans la fenêtre de dépôt GED. Aucune étape « Documents » n'est ajoutée à la fenêtre
+de création. Rendu possible pour les négociateurs par l'ouverture du §85.
+À prévoir au plan : attendre le numéro (11 créations sur 79 au-delà d'une minute) ; le relais `poserDepotAssistant` ne
+tient qu'UN dépôt en attente à la fois et disparaît au rechargement (lib/depotAssistant.ts) — la carte, elle, se rejoue.
+Restent à trancher : l'envoi au propriétaire seulement quand CE PDF est prêt ; les défauts du §84.6 ; l'effacement des
+coordonnées d'un nouveau mandant.
