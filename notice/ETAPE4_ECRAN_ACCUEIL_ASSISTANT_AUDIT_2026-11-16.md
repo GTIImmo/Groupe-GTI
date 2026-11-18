@@ -2285,3 +2285,55 @@ DPE — cela existe déjà, audite ».
 **Ce que ça pourrait casser** : une parcelle retenue FAUSSE ne se corrige plus par « Tout régénérer » dans l'éditeur — elle se
 change dans la fiche (module cadastre, bouton changer, qui existe). Rien ne change dans le worker, le PDF ni la base.
 **Contrôle** : build vert. Pas vu à l'écran (pas poussé).
+
+## 75. AUDIT EN PROFONDEUR de l'outil d'estimation : où il y a un DOUTE, qui choisit ? (18/11) — rien codé
+
+Ses mots : « audite de nouveau l'outil éditeur d'estimation, il y a plusieurs endroits comme pour le cadastre où il faut
+faire un choix en cas de doute, et je suis presque sûr que les DPE ont un truc aussi ; audite en profondeur ».
+Lu : l'éditeur et l'onglet Estimation de la fiche (App.tsx), lib/api.ts, routers/geo.py, le worker du PDF
+(console_job_worker.js ~8500-9310), la GED, supabase/, l'historique git (toutes branches, stashes), les notes. Mesuré en base.
+
+**Le choix du DPE N'EXISTE PAS, et n'a jamais existé** (aucune branche, aucun commit, aucune table). Ce qui existe :
+⭐ SA règle, écrite le 09/11 (notice/CHANTIER_ANNUAIRE_PARTENAIRES_2026-11-04.md §28.15, l. 3711-3721) : « Si doute (ex. DPE
+ou autre), montrer les choix possibles » ; la recommandation qui suivait : « les DOUTES en cartes à choisir, la plus
+probable mise en avant (DPE E · 21/05/2026 · 85,5 m² — le plus proche de vos 85 m² / D · 27/08/2024 · 100,6 m² / Aucun) ;
+même forme pour une copropriété voisine ou un syndic » ; et « le DPE théorique de la BDNB n'est jamais proposé comme DPE ».
+Puis MIS DE CÔTÉ par lui le 09/11 (« on oublie l'idée ») — jamais codé. Ailleurs : la GED « Ce que dit le DPE » corrige les
+cases de la FICHE depuis un DPE déposé (pas le DPE de l'estimation ; elle prend le plus récent sans le dire ; le numéro ADEME
+lu, `numero_ademe`, n'est utilisé nulle part).
+
+**Source par source (qui tranche quand il y a doute) :**
+- DPE ADEME (`/geo/dpe`, geo.py 376-436) : le SERVEUR, seul. Jusqu'à 30 DPE à l'adresse exacte (id BAN du bâtiment RNB),
+  sinon 5 à 90 m ; garde UN seul (surface la plus proche, sinon le plus récent — et si aucun n'a de surface, le plus récent
+  sans le dire) ; les autres sont perdus (seul leur nombre remonte). Écran : une phrase « N DPE à cette adresse — retenu :
+  surface la plus proche » / « DPE le plus proche — à vérifier », AUCUN bouton. **Mesuré : 17 biens ont un DPE mémorisé ;
+  3 avec plusieurs DPE à l'adresse (jusqu'à 10), 3 trouvés seulement « à proximité » (ex. 24935 : DPE de 107 m² pour un bien
+  de 120 m², sans doute un voisin), 6 sans DPE.**
+- Bâtiment RNB / BDNB (geo.py 251-358) : le serveur, le bâtiment le plus proche à 40 m, première adresse, `limit 1` ;
+  distance ni renvoyée ni montrée.
+- Copropriété RNIC (geo.py 587-675) : le serveur ; parcelles retenues -> parcelle sous le point -> rue à 80 m / 200 m ; à
+  chaque étape `rows[0]` s'il y en a plusieurs ; `match` et `distance_m` renvoyés mais ni déclarés (type CoproRnieData) ni
+  montrés. Mesuré : 12 recherches, 3 trouvées (par la parcelle), 9 non trouvées. Le SYNDIC, lui, est choisi par l'humain
+  (SyndicDuBien.tsx 141-157).
+- Cadastre : le SEUL choix humain (CadastreParcellePicker) — mais seulement quand le point tombe hors parcelle ; sur une
+  parcelle (même la mauvaise), elle est prise sans doute affiché ; « Ajuster la parcelle » et le clic sur la carte existent.
+- DVF (`app_dvf_comparables` v4) : la base élargit rayon / durée / terrain jusqu'à 10 ventes, écrête p05-p95 ; aucun
+  comparable ne s'exclut à la main ; « peu fiable » affiché dans l'éditeur, PAS dans l'onglet de la fiche.
+- Cadre de vie, INSEE, loyers : la commune = le premier résultat du géocodage inverse ; aucun doute affiché.
+- Patrimoine / ABF : toute la liste, pas de doute ; « GPU incomplet — à confirmer » affiché.
+- Géocodage d'adresse : un seul candidat, accepté dès 0,35 ; le score et l'adresse trouvée jamais montrés (mesuré le 09/11 :
+  « 12 rue larionov 42000 » -> « 12 Rue de Laharpe », 0,48 : un mauvais point possible).
+
+**Défauts trouvés (vérifiés dans le code, pas à l'exécution) :**
+1. Fiche, module cadastre (App.tsx ~11196-11201) : « Générer / Actualiser » réenregistre la parcelle du POINT dans
+   `sources.cadastre` par-dessus la parcelle RETENUE (choisie à la main). (L'éditeur est protégé depuis §74, pas poussé.)
+2. Worker (9178 + 9285) : en dernier recours il prend la parcelle au point et la MÉMORISE comme retenue, sans geste humain.
+3. Onglet de la fiche (11577 / 11618) : la case « DPE réel · ADEME » se replie sur le DPE THÉORIQUE de la BDNB — contraire à
+   sa règle du 09/11.
+4. PDF (worker 8531-8539, 8693-8696) : si une lettre DPE est saisie dans l'éditeur, la vignette l'affiche avec la conso et
+   les émissions du DPE ADEME retenu (peut-être un autre logement) ; la mention ne dit jamais « à proximité / à vérifier ».
+5. Fiche (11713-11722) : « Reporter dans la fiche » (conso + GES ADEME -> Hektor) est proposé même pour un DPE « à
+   proximité ».
+6. Éditeur (6686) : la copropriété part avec `cadastre?.parcelles` lu AU CLIC alors que le cadastre se charge en parallèle.
+7. Loyers (11526) : bascule maison <-> appartement sans le dire (le texte dit « pour une maison »).
+8. DVF : « peu fiable » absent de l'onglet de la fiche.
