@@ -13,6 +13,80 @@
 
 ---
 
+## 0 bis. ⭐⭐⭐ LE PROMPT À COLLER DANS LA CONVERSATION NEUVE
+
+> Le texte ci-dessous est **le prompt lui-même**, prêt à copier. Le reste du document est
+> ce qu'il demande de lire.
+
+```
+Tu reprends le chantier classeur du projet Hektor (depot C:\Hektor\Projet) : le
+rapatriement d'un classeur Google Sheet de 4 795 lignes d'affaires historiques vers notre
+registre des transactions.
+
+AVANT TOUT : lis notice/PROMPT_REPRISE_CHANTIER_CLASSEUR_V2_2026-11-19.md EN ENTIER. Il
+porte l'etat mesure, les regles, mes 13 arbitrages et leur etat reel, le rapport d'une
+autre session, le patch qu'elle propose, et les erreurs deja trouvees dedans. Puis lis les
+pieces qu'il designe a son § 2, dans l'ordre.
+
+TA MISSION, EN QUATRE TEMPS -- ET L'ORDRE NE S'INVERSE PAS :
+
+1. TON PROPRE CALCUL. Refais l'audit par toi-meme : pour chaque ligne du Sheet, trouve son
+   dossier et ses transactions chez nous, avec ta preuve et ton degre de certitude. N'ouvre
+   NI le rapport de l'autre session, NI son CSV de verdicts, NI son patch, tant que ton
+   resultat n'est pas arrete et ecrit. Tiens les quatre regles d'independance du § 3 : ne
+   jamais lire le gel pour CHOISIR ; aucune valeur posee par nous ne sert de preuve ; les
+   190 transactions creees depuis le Sheet sont hors candidats ; la date d'une offre est sa
+   PREMIERE PROPOSITION, et nos gestes du 11/11/2026 ne prouvent rien.
+
+2. LA COMPARAISON. Alors seulement, ouvre son rapport et compare ligne par ligne : ou vous
+   etes d'accord, ou vous divergez, et surtout LEQUEL DES DEUX a la meilleure preuve.
+   N'adopte pas son verdict parce qu'il est ecrit : trois trous y ont deja ete trouves.
+   Deux audits independants qui convergent valent une preuve ; un audit recopie n'en vaut
+   aucune.
+
+3. AFFINE LE PATCH. Produis une version affinee du patch de correction du gel, TOUJOURS
+   DORMANTE. Les trois corrections du § 8 sont obligatoires -- la premiere est qu'il
+   detourne deux colonnes de mesure. Ne touche pas les lignes incertaines, et sors du patch
+   les 18 lignes qui portent une question ouverte : on ne tranche pas a ma place.
+
+4. EXPLIQUE-MOI CLAIREMENT, en francais et sans tableaux : ce que tu as trouve seul, ou tu
+   rejoins l'autre session, ou tu la contredis et POURQUOI, ce que le patch affine fait
+   exactement, ce que ca pourrait casser ailleurs, comment on revient en arriere, et
+   comment on verifiera.
+
+PUIS ON ENCHAINE JUSQU'A LA FIN : les 8 gestes du § 8 dans l'ordre, les 5 arbitrages non
+traites du § 6 (la regle « toutes », l'offre 4281 chez Hektor, l'audit REFUS5, les deux
+transactions a creer), puis l'etape 4 et l'etape 5.
+
+CE QUI NE SE DISCUTE JAMAIS :
+- MON ACCORD EXPLICITE AVANT : toute ecriture en base de production, toute ecriture chez
+  Hektor, tout run ou rattrapage, tout redemarrage de service, tout deploiement, tout geste
+  irreversible. Lecture, mesure, audit : enchaine sans me demander.
+- Ecris UNIQUEMENT en francais. PAS DE TABLEAUX dans tes messages.
+- Ne rien ecraser : additif et chirurgical, jamais de remplacement massif.
+- Stage FICHIER PAR FICHIER, jamais `git add .`. Relis le stage juste avant le commit, et la
+  liste a pousser juste avant le push. `git commit -m` n'existe plus : passe par un fichier
+  et `-F`.
+- Ne decide JAMAIS seul un perimetre. Ce que je signale est un symptome, pas la limite du
+  sujet -- mais l'elargir est MA decision.
+- Un RATIO entre deux sources ne vaut rien tant que tu n'as pas verifie que les deux nombres
+  parlent du MEME bien. Deux fiches etaient fausses pour cette seule raison.
+- Un patch qui porte son `commit;` SE COMMITE, meme joue « pour voir ».
+- Jamais `tail -f` sur un journal du run. Ne jamais lancer le worker pour l'inspecter.
+- Une autre session travaille parfois en parallele : relis `git log` avant d'ecrire.
+
+LA METHODE, A CHAQUE PAS : auditer (en cas de desaccord LE CODE GAGNE, puis le plan, puis
+les notes) -> m'expliquer, avec « ce que ca pourrait casser ailleurs » -> attendre mon
+« vas-y » -> coder en additif -> controler avec un TEMOIN POSITIF, et me dire aussi ce qui a
+rate -> mettre a jour le plan, le registre des arbitrages du § 6, et la memoire projet.
+
+Et la lecon de la journee du 18/11, qui vaut pour toi aussi : les fautes ne sont pas dans le
+raisonnement difficile, elles sont AU BORD du travail -- ou l'on pose, ce qu'on n'a pas
+ecrit, ce qu'on n'a pas boucle. Garde dix minutes pour le bord.
+```
+
+---
+
 ## 0. CE QUE FRÉDÉRIC DEMANDE, DANS SES MOTS
 
 > *« Peux-tu me faire un prompt encore pour reprendre le chantier de la même manière que
