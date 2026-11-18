@@ -441,6 +441,8 @@ export function RecuManque({
     copro_lots: a.code === 'L16' && a.texte.startsWith('Copropriété'),
     copro_charges: a.code === 'L16' && a.texte.startsWith('Charges'),
     surface: a.code === 'L15',
+    // lot A : « diagnostic fait » et sa date ne disent pas la même chose que L2 (la validité) -- aucune ligne liée
+    ddt: false, diag_electricite: false, diag_gaz: false, diag_plomb: false, diag_termites: false, diag_amiante: false, diag_assainissement: false,
   })[g]
   const enregistrerBilan = async (choix: Array<{ ligne: LigneBilan; choix: ChoixBilan }>): Promise<ResultatBilan> => {
     if (!bilan || !onBilan) throw new Error('Rien n\'a été écrit.')

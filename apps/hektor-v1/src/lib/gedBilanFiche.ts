@@ -1,6 +1,7 @@
 // GED lot 3 (18/11/2026) -- LA FICHE DU BIEN FACE À SES DOCUMENTS : « Ce que dit le DPE », « Ce que dit l'état des
 // risques », la fiche synthétique et l'appel de fonds de la copropriété, le métré (Carrez). Même fenêtre que le compromis
 // (BilanCompromis.tsx), même modèle de ligne ; fonction pure, essais hors ligne dans test_ged_bilan.cjs.
+// Lot A (18/11) : les six rapports de diagnostic et le dossier de diagnostics (DDT) -- §12.41 de la note du chantier.
 // Frédéric (17/11) : « à trancher doit proposer de corriger le registre avec la donnée du doc » -- une case REMPLIE qui
 // diffère se propose à corriger ; une case VIDE se propose à ajouter (les cartes « Remplir » P1 et P2 sont retirées : un
 // seul chemin par case). L'écriture passe par le geste EXISTANT de la fiche (editAnnonceOptimistic -> le worker, ~10 min,
@@ -54,27 +55,107 @@ function uneDate(d: DocumentLu, cle: string, cleLue: string, libelle: string, ch
   return ligne({ cle, libelle, etat, lu: jjmmaaaa(lue), valeur: lue.slice(0, 10), transaction: base ? jjmmaaaa(base) : null, page: pageDe(d, cleLue), champFiche: champ, temoin: base })
 }
 
+// Lot A (18/11, « chaque document a son Ce que dit… ») -- les six rapports de diagnostic : « diagnostic fait » (la case
+// Hektor OUI / NON / vide : mesuré le 18/11 sur 4 000 fiches, OUI vient avec sa date, NON presque jamais) et sa date.
+// Le dossier de diagnostics (DDT) dit les mêmes choses dans sa liste « diagnostics » : pour chaque case, le document le
+// plus RÉCENT parle (un document daté passe devant un non daté ; à date égale, le rapport seul) -- un seul chemin par case.
+const DIAGS = [
+  { genre: 'diag_electricite', type: 'diag.electricite', nom: 'electricite', champ: 'diag_electrique', libelle: 'Diagnostic électricité', libelleDate: 'Date du diagnostic électricité', cleDate: 'date_etablissement', cleResultat: 'resultat' },
+  { genre: 'diag_gaz', type: 'diag.gaz', nom: 'gaz', champ: 'diag_gaz', libelle: 'Diagnostic gaz', libelleDate: 'Date du diagnostic gaz', cleDate: 'date_etablissement', cleResultat: 'resultat' },
+  { genre: 'diag_plomb', type: 'diag.plomb', nom: 'plomb', champ: 'diag_plomb', libelle: 'Constat plomb', libelleDate: 'Date du constat plomb', cleDate: 'date_etablissement', cleResultat: 'resultat' },
+  { genre: 'diag_termites', type: 'diag.termites', nom: 'termites', champ: 'diag_termites', libelle: 'État termites', libelleDate: 'Date de l\'état termites', cleDate: 'date_etablissement', cleResultat: 'resultat' },
+  { genre: 'diag_amiante', type: 'diag.amiante', nom: 'amiante', champ: 'diag_amiante', libelle: 'Repérage amiante', libelleDate: 'Date du repérage amiante', cleDate: 'date_etablissement', cleResultat: 'resultat' },
+  { genre: 'diag_assainissement', type: 'diag.assainissement', nom: 'assainissement', champ: 'diag_assainissement', libelle: 'Contrôle d\'assainissement', libelleDate: 'Date du contrôle d\'assainissement', cleDate: 'date_controle', cleResultat: 'conformite' },
+] as const
+const RESULTATS: Record<string, string> = {
+  sans_anomalie: 'sans anomalie', anomalies: 'anomalies', danger_grave: 'danger grave et immédiat', absence: 'absence', presence: 'présence',
+  sous_le_seuil: 'sous le seuil', au_dessus_du_seuil: 'au-dessus du seuil', conforme: 'conforme', non_conforme: 'non conforme',
+  travaux_obligatoires: 'travaux obligatoires', absence_installation: 'pas d\'installation', raccorde: 'raccordé au réseau',
+}
+// une valeur NETTE d'une liste, à son rang
+const auRang = (d: DocumentLu, cle: string, rang: number) => { const v = d.lecture.valeurs.find((x) => x.cle === cle && x.rang === rang); return v && v.etat === 'lu' ? v : null }
+// ce qu'un document dit d'une case : sa date (ISO) et la page, ou rien
+type Source = { d: DocumentLu; date: string | null; page: number | null; resultat: string | null }
+const plusRecente = (a: Source | null, b: Source | null): Source | null => {
+  if (!a || !b) return a ?? b
+  return b.date && (!a.date || b.date.slice(0, 10) > a.date.slice(0, 10)) ? b : a
+}
+// le DDT le plus récent (par la date la plus récente qu'il porte : celle du DPE ou d'un rapport de sa liste)
+function ddtPlusRecent(lus: DocumentLu[]): DocumentLu | null {
+  const dateDe = (d: DocumentLu) => [dateLue(d.lecture.valeurs, 'dpe_date'), ...d.lecture.valeurs.filter((x) => x.cle === 'diagnostics.date_rapport' && x.etat === 'lu').map((x) => x.valeur_date)]
+    .filter((x): x is string => !!x).map((x) => x.slice(0, 10)).sort().pop() ?? ''
+  const ddts = lus.filter((d) => d.lecture.typeCode === 'diag.dossier')
+  return ddts.length ? ddts.reduce((a, b) => (dateDe(b) > dateDe(a) ? b : a)) : null
+}
+// « diagnostic fait » : la case Hektor vaut OUI quand un rapport existe ; NON -> à trancher ; vide -> à ajouter
+function ligneFait(s: Source, champ: string, libelle: string, fiche: string | null | undefined): LigneBilan {
+  const brut = String(fiche ?? '').trim()
+  const etat: EtatBilan = !brut ? 'ajouter' : brut.toUpperCase() === 'OUI' ? 'accord' : 'trancher'
+  return ligne({
+    cle: `F.${champ}`, libelle: `${libelle} réalisé`, etat, lu: 'Oui', valeur: 'OUI', transaction: !brut ? null : brut.toUpperCase() === 'OUI' ? 'Oui' : brut.toUpperCase() === 'NON' ? 'Non' : brut,
+    page: s.page, champFiche: champ, temoin: brut || null, note: s.resultat ? `résultat lu : ${s.resultat}` : null,
+  })
+}
+function ligneDateSource(s: Source, cle: string, libelle: string, champ: string, fiche: string | null | undefined): LigneBilan | null {
+  if (!s.date) return null
+  const lue = s.date.slice(0, 10)
+  const base = dateFiche(fiche)
+  const etat: EtatBilan = !base ? 'ajouter' : base !== lue ? 'trancher' : 'accord'
+  return ligne({ cle, libelle, etat, lu: jjmmaaaa(lue), valeur: lue, transaction: base ? jjmmaaaa(base) : null, page: s.page, champFiche: champ, temoin: base })
+}
+
 export function bilansFiche(faits: FaitsRemplir, docs: DocumentLu[]): BilanCompromis[] {
   const lus = docs.filter((d) => d.lecture.etat === 'lu')
   const sortie: Array<BilanCompromis | null> = []
   const kwh = (x: number) => `${x} kWh/m²/an`
   const co2 = (x: number) => `${x} kg CO₂/m²/an`
+  const ddt = ddtPlusRecent(lus)
+  const lignesDdt: Array<LigneBilan | null> = []
 
-  // le DPE le plus récent : consommation et émissions (± 1, comme L6), date d'établissement
-  const dpe = plusRecent(lus, ['diag.dpe'], 'date_etablissement')
-  if (dpe) {
+  // le DPE le plus récent : consommation et émissions (± 1, comme L6), date d'établissement -- lu seul, ou dans le DDT
+  // (ses champs dpe_*) : le plus récent des deux parle, à date égale le DPE seul
+  const dpeSeul = plusRecent(lus, ['diag.dpe'], 'date_etablissement')
+  const ddtDpe = ddt && ['dpe_conso_ep', 'dpe_emissions', 'dpe_date'].some((c) => texteLu(ddt.lecture.valeurs, c) != null || nombreLu(ddt.lecture.valeurs, c) != null || dateLue(ddt.lecture.valeurs, c) != null) ? ddt : null
+  const dpeSource = plusRecente(dpeSeul ? { d: dpeSeul, date: dateLue(dpeSeul.lecture.valeurs, 'date_etablissement'), page: null, resultat: null } : null,
+    ddtDpe ? { d: ddtDpe, date: dateLue(ddtDpe.lecture.valeurs, 'dpe_date'), page: null, resultat: null } : null)
+  if (dpeSource) {
+    const dpe = dpeSource.d
     const v = dpe.lecture.valeurs
-    sortie.push(bilan('dpe', dpe, [
-      nombre(dpe, 'F.dpe_cons', 'conso_ep', 'Consommation d\'énergie', 'dpe_cons', nombreLu(v, 'conso_ep'), faits.dpeConso ?? null, TOLERANCES.dpe, kwh, 'L6'),
-      nombre(dpe, 'F.dpe_ges', 'emissions', 'Émissions de gaz à effet de serre', 'dpe_ges', nombreLu(v, 'emissions'), faits.dpeGes ?? null, TOLERANCES.dpe, co2, 'L6'),
-      uneDate(dpe, 'F.dpe_date', 'date_etablissement', 'Date du DPE', 'dpe_date', faits.dpeDate),
-    ].filter((l): l is LigneBilan => l !== null)))
+    const k = dpe.lecture.typeCode === 'diag.dossier' ? { cons: 'dpe_conso_ep', ges: 'dpe_emissions', date: 'dpe_date' } : { cons: 'conso_ep', ges: 'emissions', date: 'date_etablissement' }
+    const lignes = [
+      nombre(dpe, 'F.dpe_cons', k.cons, 'Consommation d\'énergie', 'dpe_cons', nombreLu(v, k.cons), faits.dpeConso ?? null, TOLERANCES.dpe, kwh, 'L6'),
+      nombre(dpe, 'F.dpe_ges', k.ges, 'Émissions de gaz à effet de serre', 'dpe_ges', nombreLu(v, k.ges), faits.dpeGes ?? null, TOLERANCES.dpe, co2, 'L6'),
+      uneDate(dpe, 'F.dpe_date', k.date, 'Date du DPE', 'dpe_date', faits.dpeDate),
+    ]
+    if (dpe === ddt) lignesDdt.push(...lignes)
+    else sortie.push(bilan('dpe', dpe, lignes.filter((l): l is LigneBilan => l !== null)))
   }
   // l'état des risques le plus récent : sa date d'établissement
   const erp = plusRecent(lus, ['diag.erp'], 'date_etablissement')
   if (erp) {
     sortie.push(bilan('erp', erp, [uneDate(erp, 'F.erp_date', 'date_etablissement', 'Date de l\'état des risques', 'diag_risques_nat_tech_date', faits.erpDate)].filter((l): l is LigneBilan => l !== null)))
   }
+  // les six rapports : chacun sa fenêtre ; ce que le DDT en dit rejoint la fenêtre du DDT
+  for (const g of DIAGS) {
+    const rapport = plusRecent(lus, [g.type], g.cleDate)
+    const deRapport: Source | null = rapport ? {
+      d: rapport, date: dateLue(rapport.lecture.valeurs, g.cleDate), page: pageDe(rapport, g.cleDate),
+      resultat: ((r) => (r ? RESULTATS[r] ?? r : null))(texteLu(rapport.lecture.valeurs, g.cleResultat)),
+    } : null
+    const rangDdt = ddt ? ddt.lecture.valeurs.find((x) => x.cle === 'diagnostics.diagnostic' && x.etat === 'lu' && x.valeur === g.nom)?.rang : undefined
+    const deDdt: Source | null = ddt && rangDdt != null ? {
+      d: ddt, date: auRang(ddt, 'diagnostics.date_rapport', rangDdt)?.valeur_date ?? null,
+      page: auRang(ddt, 'diagnostics.diagnostic', rangDdt)?.page ?? null, resultat: auRang(ddt, 'diagnostics.conclusion', rangDdt)?.valeur ?? null,
+    } : null
+    // à date égale, le rapport seul parle (plusRecente garde le premier)
+    const s = plusRecente(deRapport, deDdt)
+    if (!s) continue
+    const fiche = faits.diagnostics?.[g.champ]
+    const lignes = [ligneFait(s, g.champ, g.libelle, fiche?.fait), ligneDateSource(s, `F.${g.champ}_date`, g.libelleDate, `${g.champ}_date`, fiche?.date)]
+    if (s.d === ddt) lignesDdt.push(...lignes)
+    else sortie.push(bilan(g.genre, s.d, lignes.filter((l): l is LigneBilan => l !== null)))
+  }
+  if (ddt) sortie.push(bilan('ddt', ddt, lignesDdt.filter((l): l is LigneBilan => l !== null)))
   // ⛔ la copropriété : seulement sur un bien MARQUÉ copropriété -- jamais rien qui ferait passer la case à OUI
   if (faits.copropriete === true) {
     const carnet = lus.find((x) => x.lecture.typeCode === 'copro.carnet' && texteLu(x.lecture.valeurs, 'sous_type') === 'fiche_synthetique')

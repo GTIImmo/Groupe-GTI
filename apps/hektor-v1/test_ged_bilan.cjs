@@ -233,5 +233,48 @@ voir(/resumeLecture\([^)]*\) \} \}\)\s*\n\s*\/\/[^\n]*\n\s*window\.dispatchEvent
 voir(/if \(!cleOuverture \|\| bilanOuvert\) return/.test(rm) && /for \(const c of cles\) window\.localStorage\.setItem\(c, '1'\)/.test(rm),
   'essai réel du 18/11 : la fenêtre ne bascule JAMAIS seule pendant qu\'une autre est ouverte (son résultat restait caché) ; une ouverture par lot de lectures neuves')
 
+console.log('⑧ lot A (18/11) : les six rapports de diagnostic et le dossier de diagnostics')
+const vr = (cle, x, rang, page = 3) => ({ cle, rang, valeur: null, valeur_num: null, valeur_date: null, page, etat: 'lu', ...x })
+const elec = docF('Electricite.pdf', 'diag.electricite', [vf('date_etablissement', { valeur_date: '2026-04-10' }), vf('resultat', { valeur: 'anomalies' })])
+const bE = (faits, docs) => bF({ diagnostics: faits }, docs)
+const e0 = bE({}, [elec])
+voir(e0.length === 1 && e0[0].genre === 'diag_electricite' && L(e0[0], 'F.diag_electrique').etat === 'ajouter' && L(e0[0], 'F.diag_electrique').valeur === 'OUI'
+  && L(e0[0], 'F.diag_electrique').champFiche === 'diag_electrique' && L(e0[0], 'F.diag_electrique').temoin === null && L(e0[0], 'F.diag_electrique_date').valeur === '2026-04-10'
+  && L(e0[0], 'F.diag_electrique_date').champFiche === 'diag_electrique_date', 'électricité sur une fiche VIDE : « réalisé = OUI » et sa date, à ajouter, chacun dans SA case Hektor')
+voir(/anomalies/.test(L(e0[0], 'F.diag_electrique').note), 'le résultat lu est DIT (note), jamais écrit : la case Hektor ne dit que « fait »')
+const e1 = bE({ diag_electrique: { fait: 'NON', date: null } }, [elec])[0]
+voir(L(e1, 'F.diag_electrique').etat === 'trancher' && L(e1, 'F.diag_electrique').temoin === 'NON' && L(e1, 'F.diag_electrique').transaction === 'Non', 'la fiche dit NON, un rapport existe -> à trancher, témoin « NON »')
+const e2 = bE({ diag_electrique: { fait: 'OUI', date: '2026-04-10' } }, [elec])[0]
+voir(e2.lignes.every((l) => l.etat === 'accord'), 'TÉMOIN : OUI et la même date -> tout d\'accord (pas de carte, « Revoir ce qu\'il dit » seulement)')
+voir(L(bE({ diag_electrique: { fait: 'OUI', date: '2025-01-01' } }, [elec])[0], 'F.diag_electrique_date').etat === 'trancher', 'une autre date -> à trancher')
+const quatre = bE({}, ['diag.gaz', 'diag.plomb', 'diag.termites', 'diag.amiante'].map((t) => docF(t + '.pdf', t, [vf('date_etablissement', { valeur_date: '2026-05-01' })])))
+voir(quatre.map((b) => b.genre).join() === 'diag_gaz,diag_plomb,diag_termites,diag_amiante' && quatre.map((b) => b.lignes[0].champFiche).join() === 'diag_gaz,diag_plomb,diag_termites,diag_amiante',
+  'gaz, plomb, termites, amiante : chacun SA fenêtre, chacun SA case Hektor')
+const assai = bE({}, [docF('SPANC.pdf', 'diag.assainissement', [vf('date_controle', { valeur_date: '2025-06-20' }), vf('conformite', { valeur: 'travaux_obligatoires' })])])[0]
+voir(assai.genre === 'diag_assainissement' && L(assai, 'F.diag_assainissement_date').valeur === '2025-06-20' && /travaux obligatoires/.test(L(assai, 'F.diag_assainissement').note), 'assainissement : la date du CONTRÔLE, et la conformité dite')
+const ddtF = docF('DDT.pdf', 'diag.dossier', [vf('dpe_conso_ep', { valeur_num: 250 }), vf('dpe_emissions', { valeur_num: 50 }), vf('dpe_date', { valeur_date: '2026-06-01' }),
+  vr('diagnostics.diagnostic', { valeur: 'electricite' }, 0, 7), vr('diagnostics.date_rapport', { valeur_date: '2026-06-01' }, 0, 7), vr('diagnostics.conclusion', { valeur: 'sans anomalie' }, 0, 7),
+  vr('diagnostics.diagnostic', { valeur: 'amiante' }, 1, 12), vr('diagnostics.date_rapport', { valeur_date: '2026-06-01' }, 1, 12)])
+const d0 = bE({}, [ddtF])
+voir(d0.length === 1 && d0[0].genre === 'ddt' && ['F.dpe_cons', 'F.dpe_ges', 'F.dpe_date', 'F.diag_electrique', 'F.diag_electrique_date', 'F.diag_amiante', 'F.diag_amiante_date'].every((c) => L(d0[0], c)),
+  '⭐ UN document, UNE fenêtre : le DDT dit le DPE ET chaque diagnostic de sa liste')
+voir(L(d0[0], 'F.dpe_cons').valeur === '250' && L(d0[0], 'F.diag_amiante').page === 12 && L(d0[0], 'F.diag_electrique').note === 'résultat lu : sans anomalie', 'le DDT : ses valeurs dpe_*, la page de chaque rapport, sa conclusion')
+const mix = bE({}, [ddtF, dpeF, elec])
+voir(mix.map((b) => b.genre).join() === 'ddt' && L(mix[0], 'F.dpe_cons').valeur === '250' && L(mix[0], 'F.diag_electrique_date').valeur === '2026-06-01',
+  '⛔ un seul chemin par case : le DDT du 01/06 est plus RÉCENT que le DPE (03/02) et le rapport électricité (10/04) -> lui seul parle, pas de deuxième fenêtre')
+const vieuxDdt = docF('DDT 2019.pdf', 'diag.dossier', [vf('dpe_conso_ep', { valeur_num: 300 }), vf('dpe_date', { valeur_date: '2019-01-01' }),
+  vr('diagnostics.diagnostic', { valeur: 'electricite' }, 0), vr('diagnostics.date_rapport', { valeur_date: '2019-01-01' }, 0), vr('diagnostics.diagnostic', { valeur: 'gaz' }, 1), vr('diagnostics.date_rapport', { valeur_date: '2019-01-01' }, 1)])
+const mix2 = bE({}, [vieuxDdt, dpeF, elec])
+voir(mix2.map((b) => b.genre).join() === 'dpe,diag_electricite,ddt' && L(mix2[0], 'F.dpe_cons').valeur === '210' && mix2[2].lignes.map((l) => l.cle).join() === 'F.diag_gaz,F.diag_gaz_date',
+  'TÉMOIN : un DDT plus ANCIEN -> le DPE et le rapport électricité parlent ; le DDT ne garde que le gaz, qu\'il est seul à dire')
+voir(bE({}, [docF('Egal.pdf', 'diag.electricite', [vf('date_etablissement', { valeur_date: '2026-06-01' })]), ddtF]).find((b) => b.genre === 'diag_electricite'), 'à date ÉGALE, le rapport seul parle')
+voir(bE({}, [docF('Elec.pdf', 'diag.electricite', [vf('date_etablissement', { valeur_date: '2026-04-10' })], { etat: 'incomplet' })]).length === 0, 'TÉMOIN : une lecture incomplète -> rien')
+voir(F.caseInchangee('NON', 'NON') && !F.caseInchangee('OUI', 'NON') && F.caseInchangee('', null) && !F.caseInchangee('NON', null), 'l\'écriture relit la case : NON gardé = écrit ; changée en OUI entre-temps = rien écrit')
+const mots = fs.readFileSync(path.join(__dirname, 'src/BilanCompromis.tsx'), 'utf8')
+voir(['ddt', 'diag_electricite', 'diag_gaz', 'diag_plomb', 'diag_termites', 'diag_amiante', 'diag_assainissement'].every((g) => new RegExp(`\\n  ${g}: \\{ le: '[^']`).test(mots)) && /diag_assainissement: false/.test(rm),
+  'chaque genre neuf a ses mots dans la fenêtre, et aucune ligne « À regarder » liée (L2 parle de validité, pas de « fait »)')
+voir(/diagnostics: Object\.fromEntries\(\['diag_electrique', 'diag_gaz', 'diag_plomb', 'diag_termites', 'diag_amiante', 'diag_assainissement'\]/.test(app) && /\{ fait: lire\(c\) \|\| null, date: lire\(`\$\{c\}_date`\) \|\| null \}/.test(app),
+  'la fiche lue : les six cases et leurs dates, brutes')
+
 console.log(ko ? `\n${ko} ROUGE, ${ok} VERT` : `\nTOUT EST VERT (${ok})`)
 process.exit(ko ? 1 : 0)

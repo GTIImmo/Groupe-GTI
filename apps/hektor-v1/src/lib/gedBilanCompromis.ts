@@ -46,7 +46,9 @@ export type LigneBilan = {
 }
 // lot 3 (18/11) : les genres de la FICHE DU BIEN -- un par document (le DPE, l'état des risques, la fiche synthétique, l'appel
 // de fonds, le métré)
-export type GenreFiche = 'dpe' | 'erp' | 'copro_lots' | 'copro_charges' | 'surface'
+// lot A (18/11) : les six rapports de diagnostic et le dossier de diagnostics (DDT), chacun SA fenêtre
+export type GenreFiche = 'dpe' | 'erp' | 'copro_lots' | 'copro_charges' | 'surface' | 'ddt'
+  | 'diag_electricite' | 'diag_gaz' | 'diag_plomb' | 'diag_termites' | 'diag_amiante' | 'diag_assainissement'
 export type GenreBilan = 'compromis' | 'offre' | GenreFiche
 export const estGenreFiche = (g: GenreBilan): g is GenreFiche => g !== 'compromis' && g !== 'offre'
 export type BilanCompromis = {

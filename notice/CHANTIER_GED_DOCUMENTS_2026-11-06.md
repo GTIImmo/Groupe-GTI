@@ -3249,3 +3249,32 @@ du bien est « remplacée par ce que Hektor rend » à la relecture et la nuit. 
 remplacé (même erreur que le 29/10, `AUDIT_CLASSE_C_…`). ➡ Pour le plan : l'« épreuve » de chaque lot ne PROTÈGE rien, elle
 ne fait que VÉRIFIER (Hektor prend-il la case, laisse-t-il intact le reste de son groupe) ; un refus ou un écart se voit de
 toute façon. Elle devient le PREMIER usage réel sur 63331, lu par le contrôle au retour -- plus une étape à part.
+
+### 12.42 LE LOT A -- les six diagnostics et le DDT ont leur « Ce que dit… » (18/11, « Oui, lot A ») -- ÉCRIT, rien poussé
+
+**Mesure avant d'écrire** (4 000 fiches, `detail_raw_json`, lecture seule) : les cases `diag_electrique`, `diag_gaz`,
+`diag_plomb`, `diag_termites`, `diag_amiante`, `diag_assainissement` sont VIDES à ~99,5 % ; quand elles sont remplies,
+**OUI vient avec sa date et son commentaire** (amiante 11/14, électricité 9/11, plomb 4/6), **NON presque jamais** (1 sur 37)
+-> la case dit « diagnostic fait », pas le résultat.
+**Fait (écran seul, aucun geste neuf)** :
+- `lib/gedBilanFiche.ts` : chaque rapport (`diag.electricite`, `diag.gaz`, `diag.plomb`, `diag.termites`, `diag.amiante`,
+  `diag.assainissement`) a SA fenêtre -- « … réalisé » (OUI ; fiche vide -> ajouter, NON -> trancher) et sa date
+  (`diag_…_date` ; l'assainissement prend la date du CONTRÔLE). Le résultat lu (anomalies, présence, conformité) est DIT
+  en note, jamais écrit : il n'a pas de case chez Hektor.
+- Le **DDT** a UNE fenêtre (« Ce que dit le dossier de diagnostics ») : ses valeurs `dpe_*` ET chaque diagnostic de sa liste
+  (date du rapport, page, conclusion). ⛔ **Un seul chemin par case** : pour chaque case, le document le plus RÉCENT parle
+  (un document daté passe devant un non daté ; à date égale, le rapport seul) -- un DDT récent prend le DPE et les
+  diagnostics qu'il contient, un DDT ancien ne garde que ceux qu'il est seul à dire.
+- `gedBilanCompromis.ts` (7 genres neufs), `BilanCompromis.tsx` (leurs mots), `RecuManque.tsx` (aucune ligne « À regarder »
+  liée : L2 parle de validité), `gedRemplir.ts` (`diagnostics` dans les faits), `App.tsx` `faitsGedDuBien` (les six cases et
+  leurs dates, brutes). L'écriture est celle du lot 3 (`appliquerBilanFiche` : fiche relue, témoin, UN
+  `editAnnonceOptimistic`) -- les cases partent par le groupe `diagnostiques` du worker, qui les porte déjà toutes
+  (`HEKTOR_WIZARD_UPDATE_GROUPS`).
+**Contrôles** : `test_ged_bilan` **102 VERT** (16 neufs, section ⑧) ; témoins inverses -- « le plus récent ne parle plus » ->
+1 ROUGE, « NON tenu pour d'accord » -> 1 ROUGE ; voisins verts (remplir 38, remplir contact 48, règles lues 95, règles 44,
+Reçu/Manque 29, lecture 62, personnes 38) ; `npm run build` vert. **Banc d'écran** (`scratchpad/banc_lotA`, lancement
+« ged-banc-lotA ») : « Ce que dit le dossier de diagnostics » -- à trancher 3 (consommation 250 / 180, date du DPE, électricité
+Oui / Non avec « résultat lu : anomalies sans danger »), à ajouter 1, d'accord 3 ; « Ce que dit le diagnostic gaz » -- 2 à
+ajouter ; « Enregistrer » rend les bons champs ; console sans erreur.
+⏳ **Reste** : pousser (Vercel) ; premier usage réel sur 63331 -- un `diag_…` n'a jamais été écrit en modification : le
+contrôle au retour (8a7) dira si Hektor le prend et garde le reste du groupe `diagnostiques`.

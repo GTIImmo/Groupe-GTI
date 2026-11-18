@@ -62,6 +62,13 @@ export const MOTS: Record<GenreBilan, Mots> = {
   copro_lots: { le: 'la fiche synthétique', Le: 'La fiche synthétique', du: 'de la fiche synthétique', etiquette: 'Copropriété', ...FICHE },
   copro_charges: { le: 'l\'appel de fonds', Le: 'L\'appel de fonds', du: 'de l\'appel de fonds', etiquette: 'Copropriété', ...FICHE },
   surface: { le: 'le métré', Le: 'Le métré', du: 'du métré', etiquette: 'Surfaces', ...FICHE },
+  ddt: { le: 'le dossier de diagnostics', Le: 'Le dossier de diagnostics', du: 'du dossier de diagnostics', etiquette: 'Diagnostics', ...FICHE },
+  diag_electricite: { le: 'le diagnostic électricité', Le: 'Le diagnostic électricité', du: 'du diagnostic électricité', etiquette: 'Électricité', ...FICHE },
+  diag_gaz: { le: 'le diagnostic gaz', Le: 'Le diagnostic gaz', du: 'du diagnostic gaz', etiquette: 'Gaz', ...FICHE },
+  diag_plomb: { le: 'le constat plomb', Le: 'Le constat plomb', du: 'du constat plomb', etiquette: 'Plomb', ...FICHE },
+  diag_termites: { le: 'l\'état termites', Le: 'L\'état termites', du: 'de l\'état termites', etiquette: 'Termites', ...FICHE },
+  diag_amiante: { le: 'le repérage amiante', Le: 'Le repérage amiante', du: 'du repérage amiante', etiquette: 'Amiante', ...FICHE },
+  diag_assainissement: { le: 'le contrôle d\'assainissement', Le: 'Le contrôle d\'assainissement', du: 'du contrôle d\'assainissement', etiquette: 'Assainissement', ...FICHE },
 }
 
 const jjmm = (iso: string) => new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })

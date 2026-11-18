@@ -12057,6 +12057,9 @@ function faitsGedDuBien(dossier: Dossier, detail: DossierDetailPayload | null): 
     // GED morceau 8 : les cases que « remplir » peut proposer (valeurs brutes : vide = null)
     quotePart: nombre(lire('copropriete_quote_part')),
     erpDate: lire('diag_risques_nat_tech_date') || null,
+    // GED lot A (18/11) : les six diagnostics, cases brutes (« diagnostic fait » OUI / NON / vide, et sa date)
+    diagnostics: Object.fromEntries(['diag_electrique', 'diag_gaz', 'diag_plomb', 'diag_termites', 'diag_amiante', 'diag_assainissement']
+      .map((c) => [c, { fait: lire(c) || null, date: lire(`${c}_date`) || null }])),
   }
 }
 
