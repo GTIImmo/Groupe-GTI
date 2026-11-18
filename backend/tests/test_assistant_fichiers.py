@@ -142,4 +142,71 @@ voir(appels[-1]["url"].endswith("/storage/v1/object/copy") and appels[-1]["corps
         "destinationKey": "temp/photos/j1/facade.jpg"},
      "la copie : du trombone vers la place du travail, dans le même coffre")
 
+print("7) 18/11 : la FENÊTRE E-MAIL de l'écran -- même mécanique, AUTRE dossier, limite de Gmail (8 Mo)")
+from fastapi import HTTPException  # noqa: E402
+
+from app.routers import google_workspace as gw  # noqa: E402
+
+requests.post = lambda url, **kw: faux("POST", url, **kw)
+coffre.clear()
+HUIT = 8 * 1024 * 1024
+e = af.preparer_depot(S, UID, "Devis toiture.pdf", "application/pdf", 1200, prefixe="temp/email", taille_max=HUIT)
+voir(e["chemin"] == f"temp/email/{UID}/{e['id']}/Devis_toiture.pdf", "le dépôt de la fenêtre va sous temp/email/<la personne>/")
+voir(refuse(lambda: af.controler_annonce("gros.pdf", "application/pdf", HUIT + 1, HUIT), "8 Mo au plus")
+     and af.controler_annonce("gros.pdf", "application/pdf", HUIT + 1) == "application/pdf",
+     "8 Mo + 1 octet : refusé pour l'e-mail (« 8 Mo au plus »), accepté par le trombone (50 Mo) -- la limite vient de l'appelant")
+coffre[e["chemin"]] = {"size": 1200, "mimetype": "application/pdf"}
+voir(refuse(lambda: af.decrire(S, UID, e["id"]), "pas (ou plus)")
+     and af.decrire(S, UID, e["id"], prefixe="temp/email")["nom"] == "Devis_toiture.pdf",
+     "⛔ un fichier de la fenêtre n'est PAS un fichier du trombone (et inversement) : chacun relit SON dossier")
+gros = af.preparer_depot(S, UID, "plan.pdf", "application/pdf", 1000, prefixe="temp/email", taille_max=HUIT)
+coffre[gros["chemin"]] = {"size": HUIT + 5, "mimetype": "application/pdf"}
+voir(refuse(lambda: af.decrire(S, UID, gros["id"], prefixe="temp/email", taille_max=HUIT), "8 Mo")
+     and gros["chemin"] not in coffre,
+     "⛔ TÉMOIN : annoncé 1 000 octets mais déposé 8 Mo + 5 -> refusé ET SUPPRIMÉ à la relecture")
+voir(refuse(lambda: af.lien_lecture(S, f"temp/assistant/{UID}/{'a' * 32}/x.pdf", 900, prefixe="temp/email"), "Lien refusé")
+     and refuse(lambda: af.lien_lecture(S, f"temp/email/{UID}/../../annonces/x.pdf", 900, prefixe="temp/email"),
+                "Lien refusé"),
+     "⛔ le lien de lecture ne sort que pour le dossier demandé, jamais en remontant")
+
+
+class FauxUser:
+    id, email = UID, "nego@gti-immobilier.fr"
+
+
+class FauxAdmin:
+    actif = True
+
+    def load_profile(self, user):
+        return {"id": user.id, "role": "negociateur", "is_active": self.actif}
+
+
+gw.get_authenticated_user = lambda settings, authorization: FauxUser()
+af.create_signed_url = lambda settings, bucket, chemin, secondes: f"https://x.supabase.co/sign/{bucket}/{chemin}?e={secondes}"
+adm = FauxAdmin()
+r = gw.prepare_gmail_piece(gw.GoogleGmailPieceDepotPayload(nom="Diag.pdf", type="application/pdf", taille=900),
+                           "Bearer j", S, adm)
+voir(r["chemin"].startswith(f"temp/email/{UID}/"), "route « préparer » : un négociateur actif reçoit son adresse d'envoi")
+try:
+    gw.prepare_gmail_piece(gw.GoogleGmailPieceDepotPayload(nom="gros.pdf", type="application/pdf", taille=HUIT + 1),
+                           "Bearer j", S, adm)
+    voir(False, "9 Mo devait être refusé")
+except HTTPException as exc:
+    voir(exc.status_code == 400 and "8 Mo" in exc.detail, "route « préparer » : 8 Mo + 1 -> 400 avec la raison, avant tout envoi")
+coffre[r["chemin"]] = {"size": 900, "mimetype": "application/pdf"}
+c = gw.confirm_gmail_piece(r["id"], "Bearer j", S, adm)
+lien = gw.link_gmail_piece(r["id"], "Bearer j", S, adm)
+voir(c["nom"] == "Diag.pdf" and c["taille"] == 900 and "chemin" not in c,
+     "route « confirmer » : nom et taille RELUS au coffre, le chemin interne n'est pas rendu")
+voir(lien["url"].endswith(f"{r['chemin']}?e=900") and lien["nom"] == "Diag.pdf",
+     "route « lien » : un lien de lecture de 15 min, pour SON fichier")
+voir(gw.delete_gmail_piece(r["id"], "Bearer j", S, adm) == {"retires": 1} and r["chemin"] not in coffre,
+     "route « retirer » : la croix supprime le fichier du coffre")
+adm.actif = False
+try:
+    gw.prepare_gmail_piece(gw.GoogleGmailPieceDepotPayload(nom="a.pdf", type="application/pdf", taille=9), "Bearer j", S, adm)
+    voir(False, "un compte inactif devait être refusé")
+except HTTPException as exc:
+    voir(exc.status_code == 403, "⛔ un compte inactif : 403, aucune adresse")
+
 print(f"\n{ok} contrôles verts")
