@@ -3184,3 +3184,12 @@ mandat, document, RDV non touchés) :
 - **Non mesuré** : que Hektor recopie `dateNaissance_m2` sur la seconde fiche (prouvé pour le prénom seulement) ; le conjoint
   SANS prénom (5 014) ne peut pas se rattacher strictement -- le compléter (pièce F) serait un autre geste, pas décidé ;
   écrire DIRECTEMENT la seconde fiche par son propre numéro (formulaire non relu, écarté).
+
+**DÉCISION DE FRÉDÉRIC (18/11, sur la solution des couples)** : « pas nécessaire de l'envoyer à Hektor, on garde chez nous,
+protégé ». ⭐ Conforme au contrat du projet : `contrat_autorite.py:63` -- « Hektor ne renvoie JAMAIS ces trois-là : seule l'app
+les écrit » (`birth_date`, `birth_place`, `marital_status`), et `push_contacts_to_supabase.py` (l. 728-743, 1118) les PRÉSERVE
+à chaque passage, la nuit comme la relecture immédiate (`refresh_contact_inproc.py` passe par lui). Conséquences sur la
+solution : la pièce (a) du worker TOMBE ; la pièce (b) devient un geste CHEZ NOUS SEULEMENT (aucun travail Hektor), qui
+n'existe pas encore (aucune fonction de base n'écrit la naissance sans envoi : vérifié dans supabase/*.sql) ; l'épreuve chez
+Hektor (606104/05) n'est plus nécessaire, une épreuve en base suffit. ⬜ À trancher : la même règle pour les personnes seules
+(9c envoie AUJOURD'HUI la fiche entière chez Hektor par `editContactOptimistic`) ; qui peut LIRE ces dates (non mesuré).
