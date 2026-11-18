@@ -2932,3 +2932,16 @@ de création. Rendu possible pour les négociateurs par l'ouverture du §85.
 tient qu'UN dépôt en attente à la fois et disparaît au rechargement (lib/depotAssistant.ts) — la carte, elle, se rejoue.
 Restent à trancher : l'envoi au propriétaire seulement quand CE PDF est prêt ; les défauts du §84.6 ; l'effacement des
 coordonnées d'un nouveau mandant.
+
+## 87. SA DÉCISION : l'envoi au propriétaire ATTEND que CE PDF soit prêt (18/11)
+
+**Ses mots** : « Oui, attendre ». Aujourd'hui « Générer + envoyer au propriétaire » (App.tsx:6894-6921) crée le travail
+`generate_estimation_pdf` puis appelle AUSSITÔT `sendEstimationEmail` ; le lien `/r/download` (backend/app/routers/
+emails.py:144-171) sert « le plus récent avis » au moment du clic → « pas encore disponible » ou l'ANCIEN avis.
+Décidé : l'envoi ne part qu'une fois le PDF de CE travail rangé (travail `done` ET son `upload_document_to_hektor`
+`done`, fiche `app_console_document` présente au coffre), et le lien vise CE document-là. Vaut pour l'éditeur ET pour
+le parcours de l'assistant (planche E15 : « Envoyer à Mme Durand » ne s'allume qu'au PDF prêt).
+À prévoir au plan (non tranché, à expliquer avant de coder) : où attendre (l'écran qui relit le travail, ou le worker
+qui envoie lui-même à la fin) ; que faire si le dépôt chez Hektor échoue (aujourd'hui pas de fiche ni de copie) ; la
+trace d'envoi marquée « envoyé » AVANT Gmail (email_tracking.py:114-121), à corriger dans le même mouvement.
+Restent à trancher : les défauts du §84.6 ; l'effacement des coordonnées d'un nouveau mandant.
