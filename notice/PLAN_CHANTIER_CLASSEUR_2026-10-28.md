@@ -2513,6 +2513,35 @@ l'etat d'une autre transaction) ; ce balayage-ci, fait avec le critere « compro
 trouve un 7e qui se declenche sur `state` ET sur l'ABSENCE de numero. **Chaque famille
 demande son propre balayage, et il se fait AVANT de generer le patch.**
 
+### ⭐⭐⭐ LE 18/11 AU SOIR -- L'AUDIT INDEPENDANT DU SHEET CONTRE LE REGISTRE (session neuve)
+
+> **Le document : `notice/AUDIT_INDEPENDANT_CLASSEUR_2026-11-18.md`** ; le verdict ligne par
+> ligne : `notice/AUDIT_INDEPENDANT_CLASSEUR_VERDICTS_2026-11-18.csv` (257 lignes). Tout en
+> LECTURE SEULE. ⛔ Il DECRIT, il ne decide rien.
+>
+> ```
+>    MON APPARIEMENT, SANS LE GEL   4 402 lignes : meme dossier, preuve interne
+>    LES LIENS DU GEL               11 964 / 12 787 au jour pres ; 13 sur la MAUVAISE
+>                                   transaction du bon bien
+>    LES 277 « A VALIDER »          104 lignes : 94 JUSTES . 5 FAUX . 3 PARTIELS
+>                                   . 2 sans preuve forte -> GARDER 267 . RETIRER 10
+>    LES 91 SANS LIEN               38 A RATTACHER . 51 RIEN CHEZ NOUS . 1 INCERTAIN
+>    NOS ERREURS                    affaires CROISEES entre acheteurs successifs ;
+>                                   25 transactions de C5 qui COPIENT Hektor ;
+>                                   valeurs C2/C3/C4 posees sur une autre affaire ;
+>                                   136 transactions C5 coupees de leur dossier la
+>                                   nuit du 17 au 18/11 -> 255 lignes a plusieurs
+>                                   etiquettes (bloque 5.2)
+> ```
+>
+> ⛔⛔ **AUCUNE CORRECTION DU GEL AVANT LE TOUR DES SOEURS** : appliquer les verdicts tels
+> quels cree 7 collisions (une transaction pour deux lignes), et les verdicts citent 93
+> lignes soeurs non jugees. Ce tour est lance le 18/11 au soir ; le plan de correction vient
+> apres, et chaque geste attend son accord.
+> ⛔ **Ne pas poser les 33 commissions tranchees en l'etat** : au moins `8RWTD0YX`,
+> `0bc98552`, `NEFHS7JI`, `61OW86CS`, `CITFQGOB`, `774aa002`, `5QE9107L`, `Q602VZJX` portent
+> un lien faux ou douteux.
+
 ### ✅⭐⭐ LE 18/11 AU SOIR -- LES 5 DOUBLONS RETIRES AUSSI DU REGISTRE LOCAL (session neuve)
 
 > ⛔⛔ **TROUVE EN REJOUANT LES MESURES DU § 2.** `supabase/patch_retirer_doublons_offres_classeur_2026-11-18.sql`
