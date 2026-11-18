@@ -2639,3 +2639,56 @@ et 11 marquées ÉCARTÉES. Les noms et l'adresse de la création sont inventés
 **À trancher par lui** : la méthode C ; la grille et les points proposés de l'avis ; la règle 80.6 ; qui lit la mémoire
 et quand on l'efface. Ensuite, sur son « vas-y » : l'audit fin du moteur (P1 à P5 du §78), dans l'ordre estimation,
 avis, annonce.
+
+## 81. CORRECTION : deux parcours séparés — CRÉER LA FICHE n'est pas ÉDITER LE RAPPORT (18/11) — rien codé
+
+**Sa remarque** : « tu t'embrouilles entre l'ajout d'une annonce type estimation et éditer le rapport ». C'est juste. Au §79
+et dans la toile v17, j'avais mis dans la création des questions du RAPPORT (le contexte vente/succession, le délai, le
+prix souhaité) et numéroté la planche de l'état poste par poste DANS la suite de la création. Ce sont deux écrans, deux
+listes de cases, deux parcours.
+
+### 81.1 A — CRÉER LA FICHE : la fenêtre « Nouvelle annonce » (lu dans le code : `DRAFT_ANNONCE_WIZARD_GROUPS`, App.tsx ~1440-1770)
+
+1. Offre : type, prix public, net vendeur, surfaces (habitable, terrain, garage), pièces, chambres, niveaux, jardin,
+   piscine, garages, exposition, vue.
+2. Photos.
+3. Secteur : adresse privée, code postal, commune, transport, proximité, environnement.
+4. Composition (pièce par pièce).
+5. Détails : intérieur (salles de bains, WC, Carrez, séjour, cuisine) ; extérieur (étage, cave, balcon, terrasse,
+   parkings, mitoyenneté) ; piscine (si piscine) ; terrain ; construction récente ; équipements (chauffage, eau,
+   assainissement, sécurité…) ; diagnostics et énergie (année, ÉTAT EXTÉRIEUR et INTÉRIEUR en mots Hektor, DPE, GES,
+   diagnostics) ; copropriété ; disponibilité et visite.
+6. Mandat / Prix : honoraires et qui les paie, montant et date d'estimation, taxe foncière, charges ; le MANDANT.
+7. Diffusion : titre et texte.
+⛔ Aucune case du rapport ici. Estimation : pas de question de prix ni de texte. Mise en vente : en plus, le prix, les
+honoraires et qui les paie, le titre et le texte (proposés par le rédacteur). Le contexte (succession) et le délai de la
+fiche de visite n'ont PAS de case dans la fenêtre : ils ne se demandent pas ici (au plus, la note interne).
+
+### 81.2 B — LE RAPPORT : l'éditeur « Avis de valeur » d'un bien qui EXISTE (`EstimationDocumentEditor`, App.tsx ~6420-7110)
+
+Six onglets. « Le bien » est en LECTURE SEULE (0 case modifiable ; l'écran dit « Pour les corriger, modifiez la fiche du
+bien ») : le parcours ne redemande JAMAIS le bien ; une incohérence se signale avec la carte « Modifier le bien ».
+Les cases propres au rapport : contexte de l'e-mail (Vente suite à visite / Succession, valeur pour le notaire) ;
+fourchette basse, valeur estimée, fourchette haute ; argumentaire de prix ; avis du conseiller ; état en étoiles, libellé,
+toiture, menuiseries, appréciation ; état par poste (8 postes × 4 niveaux) ; points forts ; points de vigilance ; taxe
+foncière, énergie, eau, assurance par an ; « Marché » = un clic qui calcule tout (DVF, cadre de vie, cadastre, bâti,
+ADEME…), aucune question.
+Le parcours B en ~6 questions : pour quoi faire · ta valeur · l'état (étoiles + grille) · points forts et de vigilance
+(proposés par des règles) · les charges (taxe foncière reprise de la fiche, énergie d'après le DPE) · l'argumentaire et
+ton avis (proposés par le rédacteur : Garder, Raccourcir, Réécrire). Puis l'éditeur s'ouvre rempli ; seul « Générer »
+fait le PDF.
+
+### 81.3 Le seul pont entre les deux
+
+Après la création d'une ESTIMATION : « on prépare son rapport ? ». C'est un autre écran ; la fiche créée y est reprise
+(lecture seule), rien n'est redemandé. Les seules cases communes : la taxe foncière (fiche, étape 6) et le DPE (lu par
+l'onglet « Le bien »).
+
+### 81.4 La toile, version 18
+
+Série A, créer la fiche : A1 le départ · A2 l'intérieur en une question · A3 le dehors coché · A4 le nouveau mandant sans
+IA · A5 mise en vente seulement : prix, honoraires, texte · A6 la fin, la fenêtre remplie, et la proposition du rapport.
+Série B, le rapport : B1 le bien lu sur la fiche, pour quoi faire, la valeur · B2 l'état en étoiles et la grille · B3 les
+points, les charges, puis les textes · le téléphone · les coûts (fiche ≈ 0,02 $, rapport ≈ 0,016 $).
+Les §79-80 restent valables pour la méthode (clic sans IA, phrases lues ensemble, coûts, nouveau vendeur), mais leurs
+listes de questions sont REMPLACÉES par 81.1 et 81.2.
