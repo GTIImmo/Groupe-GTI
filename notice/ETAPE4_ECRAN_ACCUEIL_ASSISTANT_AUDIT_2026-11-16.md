@@ -2211,3 +2211,19 @@ géocodage d'un bien sans coordonnées, « Préparer l'avis de valeur » après 
 la main » à l'écran (la maquette n'a aucune estimation ; par le code, ni bandeau ni calcul sans assistant et sans avis).
 **Essai réel prévu** (son accord) : rouvrir l'avis de 62774 (avis du 23/07 : 420 000 / 450 000 / 470 000, « bon état
 général », taxe foncière 1 600, énergie 6 000) SANS générer, par l'écran Estimations ou la fiche.
+
+## 72. Marche §70-71 EN LIGNE (`2e1900e`, 18/11) et l'ESSAI RÉEL de la reprise du dernier avis — vert
+
+- Poussé avec l'accord de Frédéric, avec `ce42707` d'une autre session dessous (une note : le dossier de reprise du
+  classeur). Render sert `2e1900e` ; Vercel sert le code du bandeau (`avd-provenance` trouvé dans les fichiers en ligne).
+- ⚠ 62774 (le témoin prévu) n'est PLUS un bien vivant : clos le 21/10 par l'essai ⑦-3a -> absent d'`app_dossiers_current`.
+  Pris à la place : **24935** (EM28570, Firminy, « caroline TEST 1 », négociateur Franck, bien d'essai), avis du 02/07.
+- **Essai** (son Chrome, écran Estimations -> « Envoyer le dossier d'estimation » -> l'éditeur ; fermé par « Retour »,
+  RIEN généré, rien écrit) : bandeau « Repris de l'avis du 02/07/2026. » ; fourchette 142 501 / 150 001 / 157 501 ;
+  5 points forts et 4 de vigilance ; charges 1 000 / 300 / 90 / 90 ; état 5/5. **Recoupé en base** : la charge du dernier
+  `generate_estimation_pdf` done (02/07 18:06) porte exactement ces valeurs (nf 5, nv 4, note 5). Ouvert à la main, pas de
+  calcul automatique, pas de bandeau « assistant » — comme voulu.
+- **PAS VU en réel** : le bandeau « le prix n'est plus la valeur de cet avis » (24113 : prix 128 787, avis 200 000 ; mais
+  son mandat est clos, la fiche en lecture seule n'offre pas l'éditeur) ; la carte de l'assistant en vrai (il faut une
+  conversation : le modèle, la carte, son clic -> « Tout générer » ÉCRIT les sources du bien, comme le bouton) ; la garde
+  des essentiels avec le vrai modèle ; « Préparer l'avis de valeur » après une vraie création.
