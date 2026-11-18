@@ -25,7 +25,7 @@ export type PropositionRemplir = {
 
 // Faits de la fiche utiles ici en plus de ceux des règles (valeurs BRUTES : null = case vide).
 // `diagnostics` (lot A, 18/11) : les cases brutes de la fiche, par case Hektor (« diag_electrique » -> OUI / NON / vide, et sa date)
-export type FaitsRemplir = FaitsRegles & { quotePart?: number | null; erpDate?: string | null; diagnostics?: Record<string, { fait: string | null; date: string | null }>; planSauvegarde?: string | null; chargesMois?: string | null }
+export type FaitsRemplir = FaitsRegles & { quotePart?: number | null; erpDate?: string | null; diagnostics?: Record<string, { fait: string | null; date: string | null }>; planSauvegarde?: string | null; chargesMois?: string | null; surfaceHabitable?: string | null; surfaceTerrain?: string | null }
 
 const jjmmaaaa = (iso: string) => { const [a, m, j] = iso.slice(0, 10).split('-'); return `${j}/${m}/${a}` }
 const nombreTexte = (x: number) => String(Math.round(x * 100) / 100)

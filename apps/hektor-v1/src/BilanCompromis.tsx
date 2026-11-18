@@ -61,6 +61,7 @@ export const MOTS: Record<GenreBilan, Mots> = {
   erp: { le: 'l\'état des risques', Le: 'L\'état des risques', du: 'de l\'état des risques', etiquette: 'Risques', ...FICHE },
   copro_lots: { le: 'la fiche synthétique', Le: 'La fiche synthétique', du: 'de la fiche synthétique', etiquette: 'Copropriété', ...FICHE },
   copro_charges: { le: 'l\'appel de fonds', Le: 'L\'appel de fonds', du: 'de l\'appel de fonds', etiquette: 'Copropriété', ...FICHE },
+  titre: { le: 'le titre de propriété', Le: 'Le titre de propriété', du: 'du titre de propriété', etiquette: 'Terrain', ...FICHE },
   taxe: { le: 'l\'avis de taxe foncière', Le: 'L\'avis de taxe foncière', du: 'de l\'avis de taxe foncière', etiquette: 'Taxe foncière', ...FICHE },
   copro_ag: { le: 'le procès-verbal d\'assemblée générale', Le: 'Le procès-verbal d\'assemblée générale', du: 'du procès-verbal d\'assemblée générale', etiquette: 'Copropriété', ...FICHE },
   surface: { le: 'le métré', Le: 'Le métré', du: 'du métré', etiquette: 'Surfaces', ...FICHE },

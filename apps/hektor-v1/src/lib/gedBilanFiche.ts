@@ -242,15 +242,42 @@ export function bilansFiche(faits: FaitsRemplir, docs: DocumentLu[]): BilanCompr
   // la Carrez mesurée : SENS UNIQUE (comme L15) -- à trancher seulement plus PETITE de plus de 5 % ; plus grande, d'accord
   const surface = plusRecent(lus, ['diag.surface'], 'date_mesurage')
   const carrez = surface ? nombreLu(surface.lecture.valeurs, 'surface_carrez') : null
+  const m2 = (x: number) => `${nombreClair(x)} m²`
+  const lignesSurface: Array<LigneBilan | null> = []
   if (surface && carrez != null && carrez > 0) {
     const fiche = lireNombre(faits.carrez)
     const etat: EtatBilan = fiche == null || fiche <= 0 ? 'ajouter' : carrez < fiche * (1 - TOLERANCES.carrezSensUnique) ? 'trancher' : 'accord'
-    const m2 = (x: number) => `${nombreClair(x)} m²`
-    sortie.push(bilan('surface', surface, [ligne({
+    lignesSurface.push(ligne({
       cle: 'F.surface_carrez', libelle: 'Surface Carrez', etat, lu: m2(carrez), valeur: nombreTexte(carrez), transaction: fiche == null || fiche <= 0 ? null : m2(fiche),
       page: pageDe(surface, 'surface_carrez'), champFiche: 'SURF_CARREZ', temoin: fiche == null || fiche <= 0 ? null : String(fiche),
       note: etat === 'trancher' ? 'plus de 5 % en moins : l\'acquéreur peut demander une baisse du prix (loi Carrez)' : null, regle: etat === 'trancher' ? 'L15' : null,
-    })]))
+    }))
+    // lot D (18/11) : un mesurage Carrez -> « mesurage Carrez réalisé » (diag_loi_carrez, OUI : 7 fiches sur 6 000, NON
+    // jamais) et sa date (diag_loi_carrez_date), comme les six rapports du lot A
+    const s: Source = { d: surface, date: dateLue(surface.lecture.valeurs, 'date_mesurage'), page: pageDe(surface, 'surface_carrez'), resultat: null }
+    lignesSurface.push(ligneFait(s, 'diag_loi_carrez', 'Mesurage Carrez', faits.diagnostics?.diag_loi_carrez?.fait),
+      ligneDateSource(s, 'F.diag_loi_carrez_date', 'Date du mesurage Carrez', 'diag_loi_carrez_date', faits.diagnostics?.diag_loi_carrez?.date))
+  }
+  // lot D : la surface habitable mesurée -> surfappart (décimales « . » acceptées par Hektor : 233 fiches sur 4 619), dans
+  // les DEUX sens, ± 1 m² ou 2 % ; une case à 0 est vide
+  const habitable = surface ? nombreLu(surface.lecture.valeurs, 'surface_habitable') : null
+  if (surface && habitable != null && habitable > 0) {
+    const l = nombre(surface, 'F.surfappart', 'surface_habitable', 'Surface habitable', 'surfappart', habitable, lireNombre(faits.surfaceHabitable),
+      { absolue: 1, relative: 0.02 }, m2, '', false)
+    if (l) l.regle = null // aucune règle de « À regarder » ne compare la surface habitable
+    lignesSurface.push(l)
+  }
+  if (surface) sortie.push(bilan('surface', surface, lignesSurface.filter((l): l is LigneBilan => l !== null)))
+  // lot E (18/11) : le titre de propriété le plus récent -> sa contenance dans surfterrain (groupe Hektor terrain, entiers à
+  // 2 496 fiches sur 2 497). ⛔ Seulement sur un bien explicitement HORS copropriété et un titre sans lots : la contenance
+  // d'un immeuble en copropriété n'est pas le terrain d'un appartement. Une case à 0 est vide.
+  const titre = plusRecent(lus, ['justif.titre'], 'date_acte')
+  const contenance = titre ? nombreLu(titre.lecture.valeurs, 'contenance_totale_m2') : null
+  if (titre && contenance != null && contenance > 0 && faits.copropriete === false && !titre.lecture.valeurs.some((x) => x.cle.startsWith('lots.') && x.etat === 'lu')) {
+    const l = nombre(titre, 'F.surfterrain', 'contenance_totale_m2', 'Surface du terrain', 'surfterrain', contenance, lireNombre(faits.surfaceTerrain),
+      { absolue: 1, relative: 0 }, (x) => `${x} m²`, '')
+    if (l) { l.regle = null; if (l.etat !== 'accord') l.note = 'contenance cadastrale du titre' } // aucune règle ne la compare
+    sortie.push(bilan('titre', titre, l ? [l] : []))
   }
   return sortie.filter((b): b is BilanCompromis => b !== null)
 }

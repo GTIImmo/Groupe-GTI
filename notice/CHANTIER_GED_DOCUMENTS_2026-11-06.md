@@ -3325,4 +3325,25 @@ mois »), l'annuel / 12 arrondi à l'euro, tolérance de l'année / 12 (± 10 �
 63331 (fiche : taxe 900, charges 150 ; l'avis FICTIF dit 1 234 € -> à trancher), prix (139 000) et net vendeur (130 000) relus
 identiques au retour.
 **Contrôles** : `test_ged_bilan` **122 VERT** (9 neufs, section ⑩) ; témoins inverses -- « un avis de plusieurs biens se
-propose » -> 1 ROUGE, « les charges au mois = l'année » -> 2 ROUGE ; `npm run build` vert.
+propose » -> 1 ROUGE, « les charges au mois = l'année » -> 2 ROUGE ; `npm run build` vert. Commit `98515c4`.
+
+### 12.45 LES LOTS D et E -- le métré complet ; le titre de propriété -> le terrain (18/11) -- ÉCRITS
+
+**Mesure** (6 000 fiches) : `surfappart` rempli 4 619, dont **233 à décimale « . »** (130.6, 69.45…) -> Hektor accepte les
+décimales ; `SURF_CARREZ` 178 (35 décimales) ; `diag_loi_carrez` OUI 7 (5 avec date), NON jamais ; `surfterrain` 2 497, entiers
+sauf 1.
+**D -- fait** : la fenêtre du métré (`surface`) garde la Carrez à sens unique (L15) et ajoute : « mesurage Carrez réalisé = OUI »
+(`diag_loi_carrez`) et sa date (`diag_loi_carrez_date` = date du mesurage) -- seulement quand une surface Carrez est lue, comme
+les rapports du lot A ; la **surface habitable** mesurée -> `surfappart` (deux décimales « . »), dans les DEUX sens, ± 1 m² ou
+2 %, sans règle liée (aucune règle de « À regarder » ne la compare). Un métré sans Carrez (une maison) : la surface habitable
+seule. La fenêtre s'ouvre désormais dès qu'une surface est lue (avant : seulement avec une Carrez).
+**E -- fait** : le titre de propriété le plus récent (`date_acte`) a SA fenêtre (`titre`, « Ce que dit le titre de propriété »)
+-> sa contenance dans `surfterrain` (± 1 m², note « contenance cadastrale du titre »). ⛔ **Seulement sur un bien
+EXPLICITEMENT hors copropriété (`copropriete = NON`) et un titre qui ne cite aucun lot** : la contenance d'un immeuble en
+copropriété n'est pas le terrain d'un appartement ; un bien « non dit » ne se propose pas.
+**Contrôles** : `test_ged_bilan` **133 VERT** (11 neufs, sections ⑪ ⑫ ; l'essai du lot A mis à jour : sept cases lues, avec
+`diag_loi_carrez`) ; témoins inverses -- titre sur un bien en copropriété, titre avec lots, le titre le plus ancien parle,
+surface habitable sans tolérance -> 1 ROUGE chacun ; voisins verts ; `npm run build` vert.
+⏳ **Épreuves réelles** : `surfappart` (groupe `ag_interieur`, jamais depuis la GED) et `surfterrain` (groupe `terrain`, UNE
+écriture connue) -- sur 63331 (appartement, copropriété OUI : le titre ne s'y propose PAS, par construction) le métré seul ;
+le terrain demande un bien d'essai hors copropriété.

@@ -273,7 +273,7 @@ voir(F.caseInchangee('NON', 'NON') && !F.caseInchangee('OUI', 'NON') && F.caseIn
 const mots = fs.readFileSync(path.join(__dirname, 'src/BilanCompromis.tsx'), 'utf8')
 voir(['ddt', 'diag_electricite', 'diag_gaz', 'diag_plomb', 'diag_termites', 'diag_amiante', 'diag_assainissement'].every((g) => new RegExp(`\\n  ${g}: \\{ le: '[^']`).test(mots)) && /diag_assainissement: false/.test(rm),
   'chaque genre neuf a ses mots dans la fenêtre, et aucune ligne « À regarder » liée (L2 parle de validité, pas de « fait »)')
-voir(/diagnostics: Object\.fromEntries\(\['diag_electrique', 'diag_gaz', 'diag_plomb', 'diag_termites', 'diag_amiante', 'diag_assainissement'\]/.test(app) && /\{ fait: lire\(c\) \|\| null, date: lire\(`\$\{c\}_date`\) \|\| null \}/.test(app),
+voir(/diagnostics: Object\.fromEntries\(\['diag_electrique', 'diag_gaz', 'diag_plomb', 'diag_termites', 'diag_amiante', 'diag_assainissement', 'diag_loi_carrez'\]/.test(app) && /\{ fait: lire\(c\) \|\| null, date: lire\(`\$\{c\}_date`\) \|\| null \}/.test(app),
   'la fiche lue : les six cases et leurs dates, brutes')
 
 console.log('⑨ lot B (18/11) : la procédure du syndicat et le plan de sauvegarde (fiche synthétique, PV d\'AG)')
@@ -322,6 +322,34 @@ const chM = (mois) => L(bF({ quotePart: 1800, chargesMois: mois }, [docF('Appel.
 voir(chM('0').etat === 'ajouter' && chM('155').etat === 'accord' && chM('120').etat === 'trancher' && chM('120').temoin === '120', 'CHARGES à 0 = vide ; 155 / 150 d\'accord (± 10 € par mois) ; 120 / 150 à trancher')
 voir(bF({ copropriete: false, chargesMois: '0' }, [docF('Appel.pdf', 'copro.appel_fonds', [vf('provision_budget', { valeur_num: 450 }), vf('periode', { valeur: 'trimestre' })])]).length === 0, '⛔ TÉMOIN : un bien NON marqué copropriété -> pas de charges proposées')
 voir(/\n  taxe: \{ le: 'l\\'avis de taxe foncière'/.test(mots) && /taxe: a\.code === 'T1'/.test(rm) && /chargesMois: lire\('CHARGES'\) \|\| null/.test(app), 'la taxe a ses mots, T1 est liée à sa fenêtre, la fiche lue porte CHARGES brute')
+
+console.log('⑪ lot D (18/11) : le métré complet (surface habitable, mesurage Carrez réalisé et sa date)')
+const metre = (x) => docF('Metrage.pdf', 'diag.surface', [vf('date_mesurage', { valeur_date: '2026-03-12' }), ...(x.carrez ? [vf('surface_carrez', { valeur_num: x.carrez }, 2)] : []), ...(x.hab ? [vf('surface_habitable', { valeur_num: x.hab }, 3)] : [])])
+const m0 = bF({}, [metre({ carrez: 66.4, hab: 68.25 })])[0]
+voir(m0.genre === 'surface' && L(m0, 'F.surface_carrez').etat === 'ajouter' && L(m0, 'F.diag_loi_carrez').valeur === 'OUI' && L(m0, 'F.diag_loi_carrez').etat === 'ajouter'
+  && L(m0, 'F.diag_loi_carrez_date').valeur === '2026-03-12' && L(m0, 'F.surfappart').valeur === '68.25' && L(m0, 'F.surfappart').champFiche === 'surfappart' && L(m0, 'F.surfappart').page === 3,
+  'un métré sur une fiche VIDE : Carrez, « mesurage Carrez réalisé = OUI », sa date, et la surface habitable 68.25 (décimale « . ») -- une fenêtre')
+const m1 = bF({ surfaceHabitable: '75', carrez: '66', diagnostics: { diag_loi_carrez: { fait: 'OUI', date: '2026-03-12' } } }, [metre({ carrez: 66.4, hab: 68.25 })])[0]
+voir(L(m1, 'F.surfappart').etat === 'trancher' && L(m1, 'F.surfappart').temoin === '75' && L(m1, 'F.surfappart').regle === null && ['F.surface_carrez', 'F.diag_loi_carrez', 'F.diag_loi_carrez_date'].every((c) => L(m1, c).etat === 'accord'),
+  '⭐ la fiche dit 75 m², le métré 68,25 -> à trancher (dans les deux sens, sans règle liée) ; Carrez, fait et date d\'accord')
+voir(L(bF({ surfaceHabitable: '69' }, [metre({ hab: 68.25 })])[0], 'F.surfappart').etat === 'accord', 'TÉMOIN : 69 / 68,25 -> d\'accord (± 1 m²)')
+const m2s = bF({}, [metre({ hab: 90 })])[0]
+voir(m2s.lignes.map((l) => l.cle).join() === 'F.surfappart', 'un métré SANS Carrez (une maison) : la surface habitable seule, pas de « mesurage Carrez réalisé »')
+voir(bF({}, [docF('Metrage.pdf', 'diag.surface', [vf('date_mesurage', { valeur_date: '2026-03-12' })])]).length === 0, 'TÉMOIN : un métré sans surface lue -> rien')
+
+console.log('⑫ lot E (18/11) : le titre de propriété -> la surface du terrain')
+const titreF = (m2v, x = []) => docF('Titre.pdf', 'justif.titre', [vf('date_acte', { valeur_date: '2004-07-01' }), vf('contenance_totale_m2', { valeur_num: m2v }, 5), ...x])
+const e0t = bF({ copropriete: false }, [titreF(812)])
+voir(e0t.length === 1 && e0t[0].genre === 'titre' && L(e0t[0], 'F.surfterrain').etat === 'ajouter' && L(e0t[0], 'F.surfterrain').valeur === '812' && L(e0t[0], 'F.surfterrain').champFiche === 'surfterrain' && L(e0t[0], 'F.surfterrain').page === 5,
+  'un titre (812 m²) sur une maison hors copropriété, terrain VIDE : surfterrain à ajouter')
+voir(L(bF({ copropriete: false, surfaceTerrain: '0' }, [titreF(812)])[0], 'F.surfterrain').etat === 'ajouter' && L(bF({ copropriete: false, surfaceTerrain: '800' }, [titreF(812)])[0], 'F.surfterrain').etat === 'trancher'
+  && L(bF({ copropriete: false, surfaceTerrain: '812' }, [titreF(812)])[0], 'F.surfterrain').etat === 'accord', 'terrain à 0 = vide ; 800 / 812 à trancher ; 812 d\'accord')
+voir(bF({ copropriete: true }, [titreF(2400)]).length === 0 && bF({ copropriete: null }, [titreF(2400)]).length === 0, '⛔ un bien EN copropriété (ou non dit) : rien -- la contenance de l\'immeuble n\'est pas le terrain d\'un appartement')
+voir(bF({ copropriete: false }, [titreF(2400, [vr('lots.numero', { valeur: '12' }, 0)])]).length === 0, '⛔ un titre qui cite des LOTS : rien, même si la fiche dit « hors copropriété »')
+const deuxTitres = bF({ copropriete: false }, [titreF(812), docF('Titre 2019.pdf', 'justif.titre', [vf('date_acte', { valeur_date: '2019-05-02' }), vf('contenance_totale_m2', { valeur_num: 1012 })])])
+voir(deuxTitres.length === 1 && L(deuxTitres[0], 'F.surfterrain').valeur === '1012', 'deux titres : le plus RÉCENT parle (2019, 1 012 m²)')
+voir(/\n  titre: \{ le: 'le titre de propriété'/.test(mots) && /titre: false/.test(rm) && /surfaceHabitable: lire\('surfappart'\) \|\| null/.test(app) && /surfaceTerrain: lire\('surfterrain'\) \|\| null/.test(app),
+  'le titre a ses mots, aucune ligne « À regarder » liée, la fiche lue porte surfappart et surfterrain bruts')
 
 console.log(ko ? `\n${ko} ROUGE, ${ok} VERT` : `\nTOUT EST VERT (${ok})`)
 process.exit(ko ? 1 : 0)

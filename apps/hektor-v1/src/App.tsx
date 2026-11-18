@@ -12055,6 +12055,9 @@ function faitsGedDuBien(dossier: Dossier, detail: DossierDetailPayload | null): 
     planSauvegarde: lire('copropriete_plan_sauvegarde') || null,
     // GED lot C (18/11) : les charges de copropriété AU MOIS, case brute (« Charges copro / mois »)
     chargesMois: lire('CHARGES') || null,
+    // GED lots D et E (18/11) : la surface habitable et la surface du terrain, cases brutes
+    surfaceHabitable: lire('surfappart') || null,
+    surfaceTerrain: lire('surfterrain') || null,
     // GED morceau 7b : le prix affiché et le type du mandat (comparés au mandat et à l'avenant lus)
     prix: dossier.prix != null ? nombre(String(dossier.prix)) : null,
     mandatType: dossier.mandat_type ?? null,
@@ -12062,7 +12065,8 @@ function faitsGedDuBien(dossier: Dossier, detail: DossierDetailPayload | null): 
     quotePart: nombre(lire('copropriete_quote_part')),
     erpDate: lire('diag_risques_nat_tech_date') || null,
     // GED lot A (18/11) : les six diagnostics, cases brutes (« diagnostic fait » OUI / NON / vide, et sa date)
-    diagnostics: Object.fromEntries(['diag_electrique', 'diag_gaz', 'diag_plomb', 'diag_termites', 'diag_amiante', 'diag_assainissement']
+    // lot D : + le mesurage Carrez (diag_loi_carrez et sa date)
+    diagnostics: Object.fromEntries(['diag_electrique', 'diag_gaz', 'diag_plomb', 'diag_termites', 'diag_amiante', 'diag_assainissement', 'diag_loi_carrez']
       .map((c) => [c, { fait: lire(c) || null, date: lire(`${c}_date`) || null }])),
   }
 }

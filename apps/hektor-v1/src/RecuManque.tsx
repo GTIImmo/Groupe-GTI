@@ -443,6 +443,8 @@ export function RecuManque({
     copro_ag: a.code === 'L17',
     // lot C : le montant de la taxe (T1) se tranche dans la fenêtre de l'avis ; T2 (un avis ancien) reste à part
     taxe: a.code === 'T1',
+    // lot E : aucune ligne « À regarder » ne compare la contenance du titre
+    titre: false,
     copro_charges: a.code === 'L16' && a.texte.startsWith('Charges'),
     surface: a.code === 'L15',
     // lot A : « diagnostic fait » et sa date ne disent pas la même chose que L2 (la validité) -- aucune ligne liée
