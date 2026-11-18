@@ -2985,3 +2985,109 @@ l'énergie et les diagnostics (corrigé), le confort et les intervenants, la vis
 mandant, l'argent, les photos et documents, la fenêtre remplie, la création. Série 2, 7 planches : le rapport (l'état
 porte maintenant les menuiseries et l'appréciation), l'envoi, le téléphone. Série 3, 4 planches : la vérification, ce
 qui est gardé, à corriger, le coût. Exemples inventés (Mme Durand, Mme Lefèvre, Diag Expert Loire, Foncia, les adresses).
+
+## 89. SA DÉCISION « Tous » : les 10 défauts corrigés avant les essais ; chaque défaut REVÉRIFIÉ dans le code ; LE PLAN DE DÉVELOPPEMENT (19/11) — rien codé
+
+**Ses mots** : « Tous » (à la question « quels défauts du §84.6 corriger avant les essais ? »). Les 10 défauts ont été
+relus dans le code le 19/11 (lecture seule) : **les 10 sont réels**. Trois précisions nouvelles (D2, D6, D10).
+Méthode du projet : corriger du code existant = **attendre son « vas-y »** ; la table de mémoire = **patch, son accord** ;
+push = **son accord**. Une seule pièce en code à la fois.
+
+### 89.1 Les 10 défauts, revérifiés — la cause, la correction, ce que ça pourrait casser, la preuve
+
+**D1 — le mandant pré-rempli saute.** Cause : App.tsx:16034-16044. La recherche des mandants ne part qu'à l'étape 6, ne
+cherche QUE dans les contacts du négociateur choisi, 12 au plus ; si le contact posé par l'assistant (18341-18345)
+n'est pas dans ces 12, son numéro est EFFACÉ sans un mot, puis « Créer » refuse (18900). Correction : retenir le
+mandant venu de l'assistant (numéro + nom) ; s'il manque dans la liste, l'y AJOUTER en tête au lieu de l'effacer ;
+taper dans la recherche l'efface comme aujourd'hui (23736). Si le contact appartient au portefeuille d'un AUTRE
+négociateur : le dire dans le bandeau, ne rien effacer. Casse ailleurs : rien à la main (la mémoire est vide quand
+la fenêtre est ouverte au bouton). ⚠ À vérifier avant de coder : la recherche de la carte côté serveur est-elle bornée
+au même négociateur ? Preuve : ouverture par une carte avec un mandant hors des 12 → « Créer » accepte.
+
+**D2 — le négociateur pré-rempli saute.** Cause : App.tsx:16014-16016 efface tout négociateur absent de la liste de
+l'agence (15647-15656) ; la carte ne pose l'agence que si elle la connaît (18348). ⭐ Précision : si la carte ne porte
+pas l'agence, ou un nom d'agence écrit autrement, la liste filtrée ne le contient pas → effacé. Correction : prendre
+l'agence dans la liste des négociateurs (`hektorNegotiators`, par `idUser`) quand la carte ne la porte pas ; s'il reste
+absent, un message visible « X n'est pas dans l'agence Y : choisis-le » au lieu d'un effacement muet. Inchangé : un
+commercial est toujours forcé sur lui-même (16009-16012, voulu). Casse ailleurs : rien à la main. Preuve : carte sans
+agence → négociateur et agence posés.
+
+**D3 — « statut du syndicat » en texte dans une liste à codes.** Cause : App.tsx:1941, `kind: 'text'` alors que la case
+a des options (`wizardProcedureOptions`, 1698). Correction : `kind: 'enum'` avec ces options (le résolveur 1948 rend
+vide ce qu'il ne reconnaît pas). Casse ailleurs : touche AUSSI le scan (même table) — dans le bon sens : une valeur
+inconnue laisse la case vide au lieu d'y écrire un texte que Hektor ne connaît pas. Preuve : « procédure en cours » →
+le code de l'option ; « blabla » → case vide.
+
+**D4 — une pièce inconnue devient « Chambre ».** Cause : App.tsx:18549 (`idTypePiece || '1'`) et 4440 à l'envoi. La
+liste des 32 types n'a pas « Autre ». Correction (création seulement) : une pièce dont le type n'est pas reconnu arrive
+SANS type, son nom dit gardé ; l'étape Composition la marque « type à choisir » et le bandeau la cite ; à « Créer », si
+une pièce n'a toujours pas de type, la fenêtre va à l'étape Composition avec un message (nouveau refus, MAIS seulement
+pour une pièce sans type, ce qui n'arrive que par le scan ou l'assistant). Le défaut `'1'` de 4440 reste pour la fiche
+existante. Casse ailleurs : le scan change de la même façon (une pièce mal lue demande au lieu de devenir chambre).
+Dans le parcours, les pièces se choisissent dans les 32 vrais types : le cas ne vient que d'une phrase libre.
+
+**D5 — date d'estimation posée au jour même pour une mise en vente.** Cause : App.tsx:18576-18580, dans le remplisseur
+du scan (le scan est toujours une estimation). Correction : une option du remplisseur « date du jour par défaut », vraie
+pour le scan et pour une estimation, fausse pour une mise en vente. Casse ailleurs : rien (le scan garde son défaut).
+
+**D6 — la marque « pré-rempli » ment, le bandeau compte faux.** ⭐ Précision : DEUX cases portent le nom `adresse` —
+l'adresse du haut de l'étape 3 (`draftAnnonceAddress`, envoyée en `address`, 18963) et la case Hektor « Adresse privée
+(rue) » (1511, dans le groupe Secteur). L'assistant et le scan ne remplissent que la première ; `marqueAssistant('adresse')`
+marque les deux. Et le compte (15751-15766, 23343) compte les clés DEMANDÉES, pas les cases réellement remplies ni
+montrées pour ce type de bien. Correction : la marque et le compte se calculent sur ce que la fenêtre CONTIENT et
+MONTRE (valeur non vide + case visible pour le profil) ; l'adresse du haut prend sa propre clé. Casse ailleurs : rien
+(affichage seul). ⚠ À vérifier avant P5 : que fait le worker quand les deux adresses diffèrent (laquelle gagne) — le
+parcours remplira les deux de la même rue.
+
+**D7 — « nouveau mandant » non transmis.** Cause : `OuvertureCreation` (lib/assistant.ts:53-62) ne porte qu'un mandant
+EXISTANT. Correction : un champ `nouveau_mandant` (civilité, nom, prénom, e-mail, téléphone, adresse, CP, ville) que
+l'écran lit DANS LA MÉMOIRE DU PARCOURS (P3) et verse dans les cases de la fenêtre, puis choix « nouveau ». ⛔ Il ne
+passe JAMAIS par le modèle ni par `app_assistant_message` ni par le résumé de la carte (règle du 18/11). Dépend de P3.
+
+**D8 — l'éditeur du rapport n'a pas de brouillon.** Cause : fermer l'éditeur (un clic à côté, sans confirmation) perd
+tout ; seule la charge du dernier PDF est reprise. Correction en deux temps : (a) fermer demande confirmation s'il y a
+une saisie non générée (local, sans base) ; (b) le brouillon de l'éditeur est gardé dans la MÊME table que la mémoire
+du parcours (P3), par bien, relu à l'ouverture, soldé à « Générer ». Casse ailleurs : (a) rien ; (b) une écriture en base
+à chaque pause de saisie — même règle de lecture que P3 (négociateur du bien + admin).
+
+**D9 — DPE, GES, chauffage, exposition : aucune case dans l'éditeur.** Cause : l'onglet État (App.tsx:7061-7069) n'a que
+toiture et menuiseries ; ces 4 valeurs viennent du bien (6396-6400) et partent déjà dans le PDF (6879-6885) sans pouvoir
+être corrigées. Correction : 4 cases dans l'onglet État, sur le modèle de « Toiture » (DPE et GES en liste A à G).
+Casse ailleurs : rien (les clés existent déjà dans le brouillon et la charge).
+
+**D10 — la carte « Ajouter des photos » refuse le WebP.** Cause : assistant_gestes.py:2013, VOLONTAIRE (« le WebP n'a
+jamais été envoyé à Hektor »). ⭐ Mesuré le 19/11 : 62 travaux `upload_hektor_photo`, 0 en WebP — la fenêtre l'accepte
+(18446) mais aucun n'est jamais parti : l'acceptation de Hektor n'est PAS prouvée. Correction proposée (sans parier sur
+Hektor) : une photo WebP est CONVERTIE en JPEG dans le navigateur au moment où elle entre (trombone de l'assistant ET
+étape 2 de la fenêtre) ; la carte reste JPEG/PNG. Casse ailleurs : le fichier gardé est un JPEG (le scan le lit
+pareil ; un WebP joint comme DOCUMENT devient JPEG, que la GED accepte). Preuve : un WebP joint → une photo JPEG
+déposée, travail `done`.
+
+### 89.2 LE PLAN DE DÉVELOPPEMENT, dans l'ordre (chaque pièce : explication → « vas-y » → code → preuve → note)
+
+- **Lot 0 — les défauts sans base** : D3, D5, D6, D9, puis D1, D2, D4, D10, D8 (a). Front seul (et D10 côté
+  navigateur). Validation `npm run build`. Un commit par défaut.
+- **P3 — la mémoire** (avant P1, tout en dépend) : une table neuve `app_assistant_parcours` (parcours, auteur,
+  conversation, bien quand il existe, genre, réponses en JSON dans la LANGUE DE LA FENÊTRE, étape, dates) et une
+  table à part pour les coordonnées d'un nouveau mandant (jamais lue par le serveur de l'assistant pour le modèle).
+  Lecture : l'auteur avant la création ; le négociateur de l'annonce et l'admin après ; toujours l'admin. Écriture par
+  fonctions dédiées (pas d'accès direct). ⛔ Patch + répétition + inverse = **son accord** pour coller. Reste à trancher
+  par lui : QUAND effacer les coordonnées (proposé : dès que la fenêtre les a reçues).
+- **P1 — le moteur de questions côté serveur** : les 19 questions du §88 en données (ordre, conditions par type de
+  bien, cases remplies, choix réels de la fenêtre), « question suivante » sans modèle, une route qui enregistre une
+  réponse. Le programme `verif_couverture.py` versé au dépôt (phase2/checks) et rejoué sur ces données : 0 oubli exigé.
+- **P2 — les boutons sous une question** dans l'écran de l'assistant (boutons, cases à cocher, compteurs, « je ne sais
+  pas », « modifier », repère « 4 sur 19 ») ; ⚠ écran partagé : les autres cartes ne bougent pas.
+- **P5 — les listes** : création (19 questions), puis le rapport (24 cases), puis l'envoi.
+- **P4 — la consigne** : quand appeler le modèle (bilan de départ, phrases libres lues ENSEMBLE par un petit lecteur,
+  textes proposés), l'enchaînement création → rapport → envoi, la reprise.
+- **P6 — les photos du bien depuis la conversation** : un second paramètre « photos du bien » de la carte, versé dans
+  l'étape 2 APRÈS l'ouverture (l'ouverture les vide aujourd'hui, 18251).
+- **P7 — les documents, voie A** : après le travail `done` et le numéro Hektor, la carte « Déposer des documents »
+  proposée sur ce bien avec les fichiers gardés au coffre.
+- **P8 — l'envoi attend CE PDF (§87)** + la trace « envoyé » posée APRÈS Gmail. Code du worker / du backend → « vas-y »,
+  redémarrage = **son accord**.
+- **L'épreuve finale** : remplir la fenêtre par le parcours, puis relire CHAQUE case (pour les 6 types de bien) ; le
+  rapport de même ; c'est elle qui prouve que la réponse arrive dans la case, ce que §88 ne prouve pas.
+
+Restent à trancher par lui : l'effacement des coordonnées d'un nouveau mandant (avant P3) ; le sens de « clearing ».
