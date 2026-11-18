@@ -1824,3 +1824,21 @@ partagée par plusieurs écrans, et le fichier transiterait par Render.
 - la route d'envoi, le worker et le run de nuit ne sont pas touchés ;
 - le ménage supprime pour de vrai tous les jours, sous les quatre gardes du script (14/10), qui retiennent un fichier
   d'un envoi en cours ou en échec, et un fichier qu'une ligne vivante cite.
+
+**Mise en ligne et essai réel (18/11)**
+- Poussé juste avant 10:07 (`4d64d71`, avec deux commits d'autres sessions dessous, accord de Frédéric). Render sert `4d64d71`
+  depuis 10:07, Vercel est READY. La route `/gmail/pieces/preparer` répond 422 sans connexion ; une route inventée,
+  essayée au même moment, répond 404 (témoin).
+- ✅ ESSAI RÉEL VERT, avec son accord, dans son Chrome, sur le contact d'essai 10354641 (sa propre adresse) :
+  - un PDF de 628 octets choisi « Depuis l'ordinateur » : la fenêtre affiche « 1/10 » et « PDF - 628 o » ;
+  - au coffre : `temp/email/<son compte>/<numéro>/essai_piece_ordinateur_18-11.pdf`, 628 octets, `application/pdf` ;
+  - envoyé à 10:14, l'écran dit « Email envoye. » ;
+  - reçu (onglet « Échanges » du contact) avec la pièce `essai_piece_ordinateur_18-11.pdf (628 o)` : le vrai nom et la
+    même taille.
+- ⚠ Vu à l'écran : dans la ligne du fichier, le bouton « Retirer » était très pâle. CAUSE : il portait la classe
+  `request-modal-close`, faite pour l'en-tête NOIR des fenêtres (texte blanc sur 10 % de blanc, styles.css l. 25655).
+  ✅ CORRIGÉ le 18/11 : il prend `ghost-button button-subtle`, comme « Choisir des fichiers » juste au-dessus.
+- ⛔ L'icône n'était PAS un défaut, je l'avais mal lu : c'est le pictogramme « document » que la fenêtre donne à TOUS
+  les PDF (`consoleDocumentIconType` rend `content`) — « Avis de valeur.pdf », dans la liste du bien juste en dessous,
+  porte le même. Rien changé.
+- Reste : enregistrer la tâche « GTI Menage Temporaires » (installeur à lancer par Frédéric en administrateur).
