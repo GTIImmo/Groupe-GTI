@@ -2692,3 +2692,52 @@ Série B, le rapport : B1 le bien lu sur la fiche, pour quoi faire, la valeur ·
 points, les charges, puis les textes · le téléphone · les coûts (fiche ≈ 0,02 $, rapport ≈ 0,016 $).
 Les §79-80 restent valables pour la méthode (clic sans IA, phrases lues ensemble, coûts, nouveau vendeur), mais leurs
 listes de questions sont REMPLACÉES par 81.1 et 81.2.
+
+## 82. La toile refaite (version 20) : design rehaussé, et LE SCAN D'ABORD (19/11) — rien codé
+
+**Sa demande** : « remets à jour le fichier maquette et profite pour rehausser le design ; ajoute que l'agent peut
+conseiller à l'utilisateur de scanner ses photos du patron, pour le scan IA, pour éviter les questions ».
+
+### 82.1 Le scan d'abord — ce qui existe déjà (lu dans le code)
+
+- La fiche de visite de l'agence (`apps/hektor-v1/public/patron-fiche-saisie.html`) s'imprime depuis la création
+  rapide (« Télécharger le patron vierge », App.tsx, `createFlow`) ; sa photo est lue par le scan de la fenêtre
+  (`openai_listing_sheet_service.py`), qui rend les cases ET une liste « À vérifier » (`draftAnnonceScanReview`).
+- La consigne de l'assistant sait déjà passer les photos de la fiche jointes dans la carte (« fichiers ») ; et
+  l'éditeur du rapport reprend déjà le brouillon du scan (`loadEstimationScanDraft`, couche « fiche scannée » sous le
+  dernier avis et la dictée).
+- ⚠ NON MESURÉ : le coût d'un scan et le nombre de scans faits — le scan n'écrit pas dans `app_agent_run`. Le « 31 cases
+  lues » des planches est un EXEMPLE.
+
+### 82.2 Ce que la toile propose
+
+- A1 : quand la demande de création arrive sans fiche jointe, l'assistant CONSEILLE d'abord de photographier la fiche
+  (« je la lis d'un coup et je ne te pose que ce qu'elle ne dit pas »), avec « Photographier la fiche », « Joindre des
+  photos », « Imprimer le patron vierge », ou « Pas de fiche : les questions ».
+- A2 : la fiche lue ; les écritures douteuses (la liste « À vérifier » du scan) deviennent des choix en un clic ; il ne
+  reste que les questions que la fiche ne couvre pas.
+- B1 : pour le rapport, le même conseil vise les pages 8 à 10 de la fiche (état poste par poste, points, appréciation,
+  avis) ; si la fiche a été scannée à la création, l'éditeur la reprend déjà et rien n'est redemandé.
+- Un bouton « Scanner la fiche » permanent dans la barre de saisie, et sur le téléphone.
+- Les coûts : « C + la fiche scannée » = ~3 questions au lieu de 10 ; le coût du scan est écrit « non mesuré ».
+
+### 82.3 Le design, selon la charte DÉJÀ VALIDÉE de l'assistant (notice/ETAPE4_MAQUETTE_ACCUEIL_DESIGN_2026-11-17.md §3)
+
+Fenêtre 1 280 × 665 (la sienne) ; rail d'aujourd'hui replié (voile magenta, trait magenta, avatar) ; Inter pour
+l'interface, Plus Jakarta Sans pour les titres de question et les chiffres ; une couleur, un rôle : magenta = agir (le
+bouton qui valide, la réponse choisie), rose doux = ce qui attend ton geste (l'en-tête d'une question), bleu canard =
+ouvrir une fiche (Modifier, Ouvrir le contact, le patron), vert = fait (les réponses données) ; arrondis 8, 10, 14, 22.
+Nouveau dans la conversation : le fil des rubriques dans l'en-tête de chaque question (« ✓ Le bien · ✓ Intérieur ·
+Dehors · Détails · Mandant ») à la place de « question 4 sur ~10 » ; les réponses données en pastilles vertes
+« Modifier » ; les propositions par règles en pointillé, les réponses choisies en magenta.
+
+### 82.4 Les planches
+
+Série A, créer la fiche : A1 le conseil du scan · A2 la fiche lue · A3 sans fiche, l'intérieur en une question ·
+A4 le dehors coché · A5 le nouveau mandant sans IA · A6 mise en vente seulement : prix, honoraires, texte · A7 la fin et
+la proposition du rapport. Série B, le rapport : B1 le bien lu et le conseil du scan des pages 8 à 10 · B2 pour quoi
+faire et ta valeur · B3 sans fiche, l'état en étoiles et la grille · B4 les points proposés et les charges. Plus le
+téléphone et les coûts. Les planches « Parcours » de la v18 sont retirées de la toile.
+
+**Ce que ça pourrait casser** : rien, c'est une maquette. Pour le code, le conseil du scan touche la consigne de
+l'assistant (partagée par tous les gestes) : une phrase de plus, à n'appliquer qu'aux demandes de création et de rapport.
