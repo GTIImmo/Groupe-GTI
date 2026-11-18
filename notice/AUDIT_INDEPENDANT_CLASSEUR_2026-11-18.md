@@ -256,7 +256,7 @@ contre-expertises, toutes confirment). **Bilan total : 350 lignes jugées, 107
 contre-expertises, 4 renversements.** Et la consolidation ne laisse **plus aucune collision**.
 
 ```
-LE PLAN DE CORRECTION    142 operations sur 350 lignes jugees
+LE PLAN DE CORRECTION    141 operations sur 350 lignes jugees (87 lignes du Sheet touchees)
                          55 liens RETIRES . 109 liens AJOUTES (dont 23 deplacements)
                          0 collision . 0 ligne a deux liens pour un meme role
                          toutes les cibles existent et portent le genre de leur role
