@@ -2527,3 +2527,115 @@ cuisine 12 m²… »), le modèle la range.
 **Ce que ça pourrait casser** : rien de la fenêtre (elle reçoit les mêmes cases qu'aujourd'hui par la carte) ; les règles
 par type sont LUES, pas recopiées (sinon deux listes divergeraient) — à vérifier à l'audit fin du moteur ; l'écran de
 l'assistant (partagé) pour les boutons.
+
+## 80. AUDIT MESURÉ et MÉTHODE proposée du parcours guidé, comparée à l'existant ; MAQUETTE planches 12 à 19 (18/11) — rien codé
+
+**Sa demande** : « Fais une maquette d'abord » ; « il faut juste ne pas passer par l'IA pour remplir ces champs » (les
+coordonnées du nouveau vendeur) ; « un audit métier et de l'app pour créer des questions intelligentes et une bonne
+ergonomie pour les réponses ; réunir les réponses pour limiter les demandes à l'API ; audit, mesure et analyse avant, pour
+proposer la meilleure méthode, en comparaison avec l'existant : l'assistant et l'estimation ».
+
+**Périmètre** : objet annonce (créer une estimation ou un actif) et l'avis de valeur. Les autres objets du tableau de la
+méthode (contact, recherche, relation, transaction, mandat, document, RDV) ne sont PAS mesurés ici, sauf le contact
+mandant créé dans la fenêtre.
+
+### 80.1 Les mesures (lecture seule, 18/11)
+
+L'ASSISTANT (`app_agent_run`, agent `assistant`, 180 tours depuis le 12/11) :
+- 0,0152 $ en moyenne par tour, 2,69 $ en tout ; ~28 500 jetons lus par tour.
+- ⭐ UN SEUL appel au modèle lit déjà ~11 600 jetons (tours à 1 étape : 11 591 en moyenne, 0,0118 $) : ce sont les
+  consignes et les ~40 outils. Un tour fait 3 étapes le plus souvent (77 tours sur 180) : 0,017 $.
+- Les petits agents spécialisés coûtent 20 à 30 fois moins : `ged_lecture` 0,0005 $ (3 551 jetons), `redacteur` 0,0007 $,
+  `ged_classement` 0,0003 $.
+- Question médiane 53 caractères, réponse médiane 226.
+- Cartes : 1 carte `ouvrir_avis_de_valeur` exécutée ; 0 carte `ouvrir_creation_annonce` à ce jour (le geste est tout
+  récent ; les autres gestes sont bien dans la table, donc la lecture marche).
+- La consigne d'aujourd'hui (assistant_service.py, « SANS fiche papier… ») fait poser au modèle « 3 ou 4 questions
+  regroupées en une seule fois », au clavier, sur les ~10 essentiels seulement.
+
+LES CRÉATIONS PAR LA FENÊTRE (`app_console_job` `create_hektor_draft_annonce`) : 94 depuis le 15/05 (12 en novembre),
+92 réussies ; médiane 37 cases pleines. Au-dessus de 60 % : type, titre, ville, surface, prix, pièces, chambres. Vers
+45 % : salles de bains, WC, année, niveaux, DPE, garage, état extérieur. Vers 30 % : terrasse, parkings, cave, cuisine,
+état intérieur. La création rapide « Par photo, avec l'IA » (App.tsx, `createFlow`) existe : scan de la fiche, puis
+« Créer l'estimation » ou « Détailler dans l'assistant » (⚠ ce bouton ouvre la FENÊTRE, pas l'assistant).
+
+LES 12 849 ESTIMATIONS VIVANTES (détail Hektor) : surface 77 %, pièces 53 %, chambres 50 %, WC 40 %, niveaux 36 %, puis
+tout s'effondre (salles d'eau 26 %, cave 24 %, cuisine 18 %, jardin 7 %, piscine 6 %, exposition 5 %, vue 1 %). Une
+estimation est aujourd'hui une fiche LÉGÈRE ; elle ne se remplit qu'en devenant un actif (572 actifs : jardin 36 %).
+
+L'AVIS DE VALEUR (`generate_estimation_pdf`, dernier avis par bien) : 37 générés, sur 13 biens seulement, par 2 personnes,
+le dernier le 05/10. Sur ces 13 : fourchette 10, note d'état 6, barème par poste 5, avis du conseiller 4, argumentaire 3,
+points forts 3, vigilance 3, taxe foncière 2, DPE 0. ⭐ L'outil est peu utilisé, et le PDF sort surtout avec des vides.
+
+### 80.2 Les trois façons, chiffrées
+
+- A. Le modèle pose chaque question (le « ChatGPT » pur) : ~18 questions × 0,015 $ ≈ 0,27 $ par création. ⛔ Et au-delà
+  de 20 messages (`MAX_HISTORIQUE_MESSAGES`), le modèle a oublié le début : 18 questions = 36 messages. La reprise est
+  impossible.
+- B. L'existant : le modèle regroupe 3 ou 4 questions, 2 à 3 tours ≈ 0,04 $, tout au clavier, ~10 cases.
+- C. PROPOSÉ : l'app pose les questions (liste connue), un clic n'appelle pas le modèle ; 1 tour pour comprendre la
+  demande (0,015 $) ; les phrases libres GARDÉES et lues ENSEMBLE par un petit lecteur dédié (~0,0005 $, comme
+  `ged_lecture`, pas le grand assistant) ; le titre et le texte d'un actif par le rédacteur (0,0007 $). ≈ 0,02 $ par
+  création, ~34 cases au lieu de ~10. Plafond agence de 3 $/jour : 11 créations par A, 150 par C.
+
+⭐ Recommandation : C. Elle coûte moins que l'existant ET remplit trois fois plus.
+
+### 80.3 Réunir les réponses (sa demande) — trois niveaux
+
+1. UNE QUESTION PORTE PLUSIEURS CASES : l'intérieur = surface proposée + 6 compteurs + la cuisine, une seule validation ;
+   le dehors = cases à cocher, puis seulement les surfaces des cochées ; l'état de l'avis = une grille 8 postes × 4 niveaux.
+   ~10 écrans pour ~40 cases.
+2. LE SERVEUR COMPREND SANS IA tout ce qui est simple : un nombre (« 118 »), oui/non, « je ne sais pas », un bouton.
+3. LES PHRASES LIBRES SONT GARDÉES et lues en UNE FOIS à la fin d'une rubrique (ou du parcours), par le petit lecteur,
+   avec le format du scan (`FIELD_KEYS`). Une dictée du début (« raconte le bien d'un coup ») est lue tout de suite, une
+   fois, et le serveur saute les questions déjà répondues.
+
+### 80.4 Les questions intelligentes (métier, sans IA)
+
+- Ne jamais redemander : l'agenda (adresse, contact), le contact (vendeur), l'ADEME (DPE, surface, année, chauffage), le
+  cadastre (parcelle, terrain), la copropriété (registre), les communes du code postal. PROPOSÉ à confirmer, en un clic.
+- Le type de bien commande la suite, avec les règles de la fenêtre (`DraftAnnonceTypeProfile`, App.tsx:1055) LUES : pour
+  une maison, ni étage ni ascenseur ; pour un appartement, étage, ascenseur, copropriété.
+- Le genre commande la suite : estimation = contexte, délai, prix souhaité par le vendeur ; actif = prix, honoraires et
+  qui les paie, titre et texte.
+- L'ordre suit la fiche de visite de l'agence (§79) et ce qui est vraiment rempli (80.1) : ce que tout le monde sait d'abord.
+- Les points forts et de vigilance de l'avis sont PROPOSÉS par des règles écrites, à cocher : jardin, garage, toiture
+  refaite, commerces proches (cadre de vie) ; façade ou électricité « à prévoir », DPE F ou G, avant 1997 = amiante,
+  avant 1949 = plomb, fosse septique = contrôle de l'assainissement. Jamais inventés par le modèle.
+
+### 80.5 Les formes de réponse (ergonomie)
+
+Boutons à choix unique · puces à cocher + « Valider » · compteurs − / + · nombre avec unité et valeur proposée · grille ·
+« proposé, c'est bien ça ? » · phrase libre ou dictée (toujours possible) · cases protégées (nouveau vendeur). Sur
+chaque question : « Je ne sais pas », « Je complète plus tard », le repère « question 4 sur ~10 » ; sur chaque réponse
+donnée : « Modifier ». Au téléphone : touches de 44 px au moins, le bouton « Valider » en bas, sous le pouce.
+
+### 80.6 Le nouveau vendeur : CORRECTION de la règle (sa phrase du 18/11)
+
+La règle n'est plus « les coordonnées ne passent jamais par la conversation », mais : **elles ne passent jamais par
+l'IA**. Elles se saisissent DANS la conversation, dans des cases protégées qui vont droit à la mémoire du parcours puis à
+la fenêtre ; le modèle ne voit que « Mme Lefèvre, nouveau vendeur · coordonnées saisies ». ⚠ Ce que ça demande au code :
+ces réponses ne doivent PAS entrer dans `app_assistant_message` (que le modèle relit) ni dans le résumé d'une carte ; la
+recherche de doublon (même e-mail ou téléphone, `findContactDuplicateCandidates`) et les communes du code postal se
+font comme dans la fenêtre.
+
+### 80.7 La maquette — toile https://claude.ai/artifact/5S2owJCDo2HWTBBefakeGo, version 17
+
+12 le départ (ce qu'on sait n'est pas redemandé) · 13 six cases en une question · 14 cocher puis seulement les cochées,
+une phrase libre gardée · 15 le nouveau vendeur sans IA · 16 l'avis : la grille des 8 postes et les points proposés ·
+17 la fin, la fenêtre remplie, l'enchaînement vers l'avis · 18 au téléphone · 19 les trois façons chiffrées. Planches 10
+et 11 marquées ÉCARTÉES. Les noms et l'adresse de la création sont inventés ; Firminy = bien d'essai 24935.
+
+### 80.8 Ce que ça pourrait casser ailleurs
+
+- Rien de la fenêtre ni de l'éditeur : ils reçoivent les mêmes cases qu'aujourd'hui.
+- L'écran de l'assistant est partagé par tous les gestes : les nouvelles formes de réponse s'ajoutent sans toucher aux
+  cartes existantes.
+- La mémoire du parcours = une table neuve, donc un patch en base (son accord). Elle portera des coordonnées de
+  particuliers : à DÉCIDER par lui : qui la lit (la personne et l'admin, comme les cartes ?), et quand on l'efface
+  (proposé : les coordonnées dès que la fenêtre les a reçues, le reste 30 jours après).
+- Le petit lecteur est un agent neuf : il passe par le même compteur de coût (`app_agent_run`) et le même plafond.
+
+**À trancher par lui** : la méthode C ; la grille et les points proposés de l'avis ; la règle 80.6 ; qui lit la mémoire
+et quand on l'efface. Ensuite, sur son « vas-y » : l'audit fin du moteur (P1 à P5 du §78), dans l'ordre estimation,
+avis, annonce.
