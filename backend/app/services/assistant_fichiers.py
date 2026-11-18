@@ -24,6 +24,9 @@ from .supabase_storage import CONSOLE_DOCS_BUCKET, _headers, create_signed_url
 # Les types et la taille sont ceux du coffre (`storage.buckets`, lus le 17/11) : un type refusé l'est tout de suite,
 # avec sa raison (un .odt était refusé EN SILENCE par le coffre : mémoire « coffre-refus-de-type »).
 # Les dépôts non utilisés sont purgés après 2 jours (Console/nettoyer_temporaires_orphelins.js, préfixe temp/assistant).
+# 18/11 (note étape 4 §63-64) : la FENÊTRE E-MAIL de l'écran dépose ses fichiers « depuis l'ordinateur » par la même
+#   mécanique, sous un AUTRE dossier (`prefixe`, temp/email) et avec la limite de Gmail (`taille_max`, 8 Mo). Par défaut,
+#   chaque fonction garde le dossier et la limite du trombone : l'assistant ne voit aucune différence.
 # ---------------------------------------------------------------------------
 
 PREFIXE = "temp/assistant"
@@ -72,15 +75,15 @@ def _taille_lisible(octets: int) -> str:
     return f"{max(1, round(octets / 1024))} Ko"
 
 
-def _dossier(user_id: str, numero: str) -> str:
+def _dossier(user_id: str, numero: str, prefixe: str = PREFIXE) -> str:
     if not re.fullmatch(r"[0-9a-fA-F-]{36}", str(user_id or "")):
         raise RefusFichier("Compte illisible : dépôt impossible.")
     if not _NUMERO.fullmatch(str(numero or "")):
         raise RefusFichier("Numéro de fichier illisible.")
-    return f"{PREFIXE}/{user_id}/{numero}"
+    return f"{prefixe}/{user_id}/{numero}"
 
 
-def controler_annonce(nom: str, type_mime: str, taille: int) -> str:
+def controler_annonce(nom: str, type_mime: str, taille: int, taille_max: int = TAILLE_MAX) -> str:
     """Les règles AVANT l'envoi (ce que l'écran annonce) ; rend le type retenu."""
     nom = str(nom or "").strip()
     if not nom:
@@ -93,16 +96,17 @@ def controler_annonce(nom: str, type_mime: str, taille: int) -> str:
                            "Excel, texte ou ZIP).")
     if not isinstance(taille, int) or taille <= 0:
         raise RefusFichier(f"« {nom} » est vide.")
-    if taille > TAILLE_MAX:
-        raise RefusFichier(f"« {nom} » pèse {_taille_lisible(taille)} : 50 Mo au plus.")
+    if taille > taille_max:
+        raise RefusFichier(f"« {nom} » pèse {_taille_lisible(taille)} : {taille_max // (1024 * 1024)} Mo au plus.")
     return type_mime
 
 
-def preparer_depot(settings: Settings, user_id: str, nom: str, type_mime: str, taille: int) -> dict[str, Any]:
+def preparer_depot(settings: Settings, user_id: str, nom: str, type_mime: str, taille: int,
+                   prefixe: str = PREFIXE, taille_max: int = TAILLE_MAX) -> dict[str, Any]:
     """Vérifie, puis rend une adresse d'envoi signée pour UN fichier, à UN endroit (le jeton ne sert qu'à lui)."""
-    type_mime = controler_annonce(nom, type_mime, taille)
+    type_mime = controler_annonce(nom, type_mime, taille, taille_max)
     numero = uuid.uuid4().hex
-    chemin = f"{_dossier(user_id, numero)}/{_nom_sur(nom)}"
+    chemin = f"{_dossier(user_id, numero, prefixe)}/{_nom_sur(nom)}"
     r = requests.post(f"{settings.supabase_url}/storage/v1/object/upload/sign/{CONSOLE_DOCS_BUCKET}/{quote(chemin, safe='/')}",
                       headers=_headers(settings), json={}, timeout=20)
     if not r.ok:
@@ -114,19 +118,19 @@ def preparer_depot(settings: Settings, user_id: str, nom: str, type_mime: str, t
     return {"id": numero, "bucket": CONSOLE_DOCS_BUCKET, "chemin": chemin, "jeton": jeton, "type": type_mime}
 
 
-def _objets(settings: Settings, user_id: str, numero: str) -> list[dict[str, Any]]:
+def _objets(settings: Settings, user_id: str, numero: str, prefixe: str = PREFIXE) -> list[dict[str, Any]]:
     r = requests.post(f"{settings.supabase_url}/storage/v1/object/list/{CONSOLE_DOCS_BUCKET}", headers=_headers(settings),
-                      json={"prefix": f"{_dossier(user_id, numero)}/", "limit": 5}, timeout=20)
+                      json={"prefix": f"{_dossier(user_id, numero, prefixe)}/", "limit": 5}, timeout=20)
     if not r.ok:
         raise RefusFichier(f"Le coffre n'a pas pu être relu ({r.status_code}).")
     return [o for o in (r.json() or []) if o.get("name") and o.get("id")]  # les « dossiers » n'ont pas d'id
 
 
-def retirer(settings: Settings, user_id: str, numero: str) -> int:
-    objets = _objets(settings, user_id, numero)
+def retirer(settings: Settings, user_id: str, numero: str, prefixe: str = PREFIXE) -> int:
+    objets = _objets(settings, user_id, numero, prefixe)
     if not objets:
         return 0
-    chemins = [f"{_dossier(user_id, numero)}/{o['name']}" for o in objets]
+    chemins = [f"{_dossier(user_id, numero, prefixe)}/{o['name']}" for o in objets]
     r = requests.delete(f"{settings.supabase_url}/storage/v1/object/{CONSOLE_DOCS_BUCKET}", headers=_headers(settings),
                         json={"prefixes": chemins}, timeout=20)
     if not r.ok:
@@ -134,9 +138,10 @@ def retirer(settings: Settings, user_id: str, numero: str) -> int:
     return len(chemins)
 
 
-def decrire(settings: Settings, user_id: str, numero: str) -> dict[str, Any]:
+def decrire(settings: Settings, user_id: str, numero: str,
+            prefixe: str = PREFIXE, taille_max: int = TAILLE_MAX) -> dict[str, Any]:
     """Ce qui est VRAIMENT au coffre (relu), contrôlé à nouveau ; un fichier hors règles est supprimé et refusé."""
-    objets = _objets(settings, user_id, numero)
+    objets = _objets(settings, user_id, numero, prefixe)
     if len(objets) != 1:
         raise RefusFichier("Ce fichier n'est pas (ou plus) dans la conversation : joins-le à nouveau.")
     objet = objets[0]
@@ -144,12 +149,12 @@ def decrire(settings: Settings, user_id: str, numero: str) -> dict[str, Any]:
     taille = int(meta.get("size") or meta.get("contentLength") or 0)
     type_mime = str(meta.get("mimetype") or "").lower()
     try:
-        controler_annonce(objet["name"], type_mime, taille)
+        controler_annonce(objet["name"], type_mime, taille, taille_max)
     except RefusFichier:
-        retirer(settings, user_id, numero)
+        retirer(settings, user_id, numero, prefixe)
         raise
     return {"id": numero, "nom": objet["name"], "type": type_mime, "libelle": TYPES_ACCEPTES[type_mime], "taille": taille,
-            "chemin": f"{_dossier(user_id, numero)}/{objet['name']}"}
+            "chemin": f"{_dossier(user_id, numero, prefixe)}/{objet['name']}"}
 
 
 def copier(settings: Settings, source: str, destination: str) -> None:
@@ -163,10 +168,10 @@ def copier(settings: Settings, source: str, destination: str) -> None:
         raise RefusFichier(f"Le coffre n'a pas copié le fichier ({r.status_code}).")
 
 
-def lien_lecture(settings: Settings, chemin: str, secondes: int = 600) -> str:
+def lien_lecture(settings: Settings, chemin: str, secondes: int = 600, prefixe: str = PREFIXE) -> str:
     """Un lien de LECTURE signé et court d'un fichier du trombone (carte « déposer des documents » : l'écran le
     retélécharge pour le mettre dans la fenêtre GED). Jamais un autre fichier que ceux du trombone."""
-    if not str(chemin).startswith(f"{PREFIXE}/") or ".." in str(chemin):
+    if not str(chemin).startswith(f"{prefixe}/") or ".." in str(chemin):
         raise RefusFichier("Lien refusé : ce n'est pas un fichier joint à l'assistant.")
     try:
         return create_signed_url(settings, CONSOLE_DOCS_BUCKET, chemin, secondes)
