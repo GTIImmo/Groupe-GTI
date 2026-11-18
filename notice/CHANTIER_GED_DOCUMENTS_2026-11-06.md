@@ -2918,5 +2918,6 @@ qui n'écrit RIEN en base -- c'est `enregistrer()` qui écrit ; catalogue de pro
   10/10, fiche synthétique annoncée facture d'honoraires 10/10 -- ⭐ avec le VRAI libellé « Facture ou note d'honoraires
   GTI » (le banc du §12.34 en avait pris un approchant).
 
-**Ce qui reste** : POUSSER (Render redéploie seul sur `main`) -- sur accord. Puis, en production, une fiche synthétique
+**✅ POUSSÉ et EN SERVICE (18/11)** : 9d5a6fd poussé avec l'accord de Frédéric (« Oui, pousse ») ; Render sert ce commit,
+`/health` démarré à 09:09:28 UTC. **Ce qui reste** :, en production, une fiche synthétique
 déposée en `copro.carnet` doit sortir « lu ». La couche B (recours à l'écran) reste à décider à part.
