@@ -3193,3 +3193,11 @@ solution : la pièce (a) du worker TOMBE ; la pièce (b) devient un geste CHEZ N
 n'existe pas encore (aucune fonction de base n'écrit la naissance sans envoi : vérifié dans supabase/*.sql) ; l'épreuve chez
 Hektor (606104/05) n'est plus nécessaire, une épreuve en base suffit. ⬜ À trancher : la même règle pour les personnes seules
 (9c envoie AUJOURD'HUI la fiche entière chez Hektor par `editContactOptimistic`) ; qui peut LIRE ces dates (non mesuré).
+
+**VÉRIFIÉ (18/11, « je crois qu'on n'envoie jamais la date de naissance, vérifie »)** : ON L'ENVOIE, quand elle est saisie.
+Le worker met `dateNaissance` / `lieuNaissance` dans le formulaire Hektor (`console_job_worker.js` l. 19759-19760, création
+l. 20538 et 20714). En base, 14 travaux done portent une date envoyée : 7 `create_hektor_contact`, 7 `update_hektor_contact`,
+du 24/06 au 16/11 -- TOUS des contacts d'essai (ESSAI 8A, 8 R3, TROIS, QUATRE, CINQ, ESSAI CONTACT ; FERANCK 604020 en
+juin, essai probable, non prouvé), et le compte rendu du worker porte `date_naissance` dans les 14. Ce qui est vrai : Hektor
+ne la RENVOIE jamais (contrat_autorite.py:63) -- le sens Hektor -> nous. Donc aujourd'hui : envoyée à l'aller, jamais
+relue ; et en pratique jamais envoyée pour un vrai contact, parce que personne ne la saisit (240 personnes seules sur 63 800).
