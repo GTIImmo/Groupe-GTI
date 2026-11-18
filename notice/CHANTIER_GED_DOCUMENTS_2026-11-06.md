@@ -3419,3 +3419,31 @@ Hektor (clé ignorée, en silence). Commande (PowerShell admin, file vide) :
 puis comparer `CreationDate` des 4 `node.exe` à l'heure du fichier.
 ⏳ **Épreuve réelle** : un couple FICTIF à recréer (20000031/32 n'existe plus) et une pièce SPÉCIMEN du conjoint : la date doit
 arriver sur `dateNaissance_m2` de la principale chez Hektor ET sur la fiche du conjoint chez nous.
+✅ **Redémarrage fait par Frédéric** (vérifié : les 4 processus worker datent de 19:32:44-46, après le fichier, 18:52:45).
+**Poussé le 18/11** (`64a7914`, avec les 4 commits d'autres sessions annoncés ; Vercel prêt).
+
+### 12.48 LES ÉPREUVES RÉELLES DES LOTS B, C, D, F (18/11, 19:39-19:55, 63331 et le contact d'essai 20000009)
+
+Pièces déposées PAR L'ÉCRAN, toutes FICTIF / SPÉCIMEN : la fiche synthétique fictive (« aucune » procédure, plan « non »), l'avis
+de taxe 2026 fictif (1 234 €), un certificat de mesurage FABRIQUÉ pour l'épreuve (`scratchpad/lotD`, Carrez 66,20, habitable
+70,40, du 02/11/2026), une fiche de renseignements SPÉCIMEN variante « marié » (`scratchpad/lotF`, mêmes date et lieu que 9c2).
+Chaque fenêtre s'est ouverte seule après la lecture, avec ce qui était prévu : **B** procédure « Pas de procédure » / « Procédure
+d'alerte » et plan « Non » / « Oui » à trancher (le nombre de lots, 48 / 24, GARDÉ exprès : hors épreuve) ; **C** 1 234 € / 900 €,
+« avis 2026 » ; **D** date du mesurage 02/11 / 10/09 et surface habitable 70,4 / 68 à trancher, Carrez et « réalisé » d'accord ;
+**F** « Ce que dit la fiche de renseignements », en-tête « La fiche du contact », situation « marié(e) » / « célibataire » à
+trancher, date et lieu d'accord.
+**Au retour** : UN travail `update_hektor_annonce_fields` (les quatre saisies réunies dans le même calque) -- groupes
+`mandat_infofi` [TAXE_FONCIERE], `diagnostiques` [diag_loi_carrez_date], `copropriete` [plan, statut], `ag_interieur` [surfappart],
+chacun « mise à jour effectuée », 0 écarté ; relecture faite ; calque soldé. **Comparaison case par case (script, 70 cases des
+groupes copropriété, intérieur, mandat_infofi, terrain + diagnostics relevé en base)** : EXACTEMENT 5 cases ont bougé --
+plan OUI -> NON, statut ALERTE -> NOTPROCESS, surfappart 68 -> 70.4, TAXE_FONCIERE 900 -> 1234, diag_loi_carrez_date 09-10 ->
+11-02 ; prix 139 000 et net vendeur 130 000 relus IDENTIQUES (la crainte du §12.41 sur `mandat_infofi` tombe), CHARGES 150 intact.
+➡ **Prouvés en réel : `copropriete_plan_sauvegarde`, `copropriete_statut_syndicat` (les codes Hektor), `TAXE_FONCIERE` (jamais
+écrite en modification avant), `surfappart` depuis la GED (décimale « . » acceptée), `diag_loi_carrez_date`.**
+**F** : travail `update_hektor_contact` done, « updated », formulaire personne seule, `statut_matrimonial: married` ; la fiche
+chez nous porte `married` au clic. ⚠ Hektor ne renvoie jamais la situation de famille (`contrat_autorite.py:63`) : l'écriture
+chez Hektor n'est donc pas relisible, seulement « acceptée ». Le compte rendu porte les clés neuves `conjoint_date_naissance` :
+preuve que le worker redémarré tourne sur le code du lot G. (La charge porte `contact_kind: acquereur`, défaut du geste -- même
+chemin que 9c : la modification ne pose pas la qualification.)
+⏳ **Non éprouvés en réel** : E (le terrain : il faut un bien d'essai HORS copropriété), G (il faut un couple d'essai, à recréer),
+`CHARGES` (l'appel fictif tombe d'accord), la première personne d'un couple (F).
