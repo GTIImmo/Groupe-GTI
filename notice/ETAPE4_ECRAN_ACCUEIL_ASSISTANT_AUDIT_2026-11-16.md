@@ -2253,3 +2253,35 @@ calme. »
   2. Cadre de vie : « Firminy · 0 école, 0 commerce » — douteux pour Firminy ; service existant, non audité ici.
   3. La dictée d'un point fort remplace la liste reprise (au lieu de l'ajouter) : conforme à « ma dictée prime », à
      confirmer par lui.
+
+## 74. Cadastre : la parcelle retenue l'emporte, le sélecteur s'ouvre partout — CODÉ (18/11, « corrige ») ; le DPE : AUDIT
+
+Ses mots : « corrige et il faudra demander à l'utilisateur, comme dans la modale, de choisir la bonne parcelle ou le bon
+DPE — cela existe déjà, audite ».
+
+**Audit (code lu) :**
+- **La parcelle** : le choix EXISTE (`CadastreParcellePicker`, App.tsx ~11045) à deux endroits : l'éditeur de l'avis
+  (onglet Marché, quand le point tombe hors parcelle) et le module cadastre de la fiche (`CadastreCommercialSection`,
+  ~11112, avec « changer » et la présélection). Le choix est mémorisé (`sources.cadastre`, la parcelle « retenue »).
+  L'éditeur la PRÉCHARGE (« pour qu'elle PERDURE dans l'avis de valeur », commentaire d'origine) — mais « Tout générer »
+  relançait le cadastre au point et REMPLAÇAIT la parcelle retenue par le résultat, même raté : c'est le trouvé du §73.
+  Le PDF, lui, n'était pas faux : le worker reprend la parcelle mémorisée quand la charge n'en porte pas
+  (console_job_worker.js 9147). Et le sélecteur ne s'affichait QUE dans l'onglet Marché : ouvert par l'assistant (onglet
+  « Bien & valeur »), la personne ne le voyait pas.
+- **Le DPE** : ⚠ AUCUN CHOIX N'EXISTE à l'écran. Le serveur (`/geo/dpe`, routers/geo.py ~378) cherche les DPE ADEME à
+  l'adresse exacte (id BAN du bâtiment RNB, jusqu'à 30), sinon dans un rayon de 90 m (5), et en RETIENT UN SEUL : la surface
+  la plus proche de celle du bien, sinon le plus récent ; il ne renvoie pas les autres. La fiche l'affiche (« N DPE à cette
+  adresse — retenu : surface la plus proche » / « DPE le plus proche — à vérifier »). Aucune note ne parle d'un choix de DPE.
+  ➡ Le construire = la route renvoie les candidats (étiquette, surface, date, adresse) + une fenêtre de choix sur le patron
+  du sélecteur de parcelle + la mémorisation du choix (`sources.dpe`, déjà en place). À décider par lui.
+
+**Codé (App.tsx, rien d'autre) :**
+1. `prechargement` (la promesse du préchargement) et `parcelleRetenue` : `loadCadastreElements` attend le préchargement
+   et, s'il y a une parcelle retenue, NE relance PAS le cadastre au point (le bouton comme l'automatique).
+   `onEstimCadastrePick` la marque retenue.
+2. Le sélecteur de parcelle est sorti de l'onglet Marché : il s'ouvre par-dessus l'éditeur quel que soit l'onglet.
+3. Bandeau : « cadastre (parcelle retenue) » dans « Calculé » ; « choisis la bonne parcelle dans la fenêtre ouverte »
+   quand le point tombe hors parcelle (plus « Manque : cadastre »).
+**Ce que ça pourrait casser** : une parcelle retenue FAUSSE ne se corrige plus par « Tout régénérer » dans l'éditeur — elle se
+change dans la fiche (module cadastre, bouton changer, qui existe). Rien ne change dans le worker, le PDF ni la base.
+**Contrôle** : build vert. Pas vu à l'écran (pas poussé).

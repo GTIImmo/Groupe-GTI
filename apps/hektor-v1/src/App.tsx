@@ -6559,13 +6559,20 @@ function EstimationDocumentEditor(props: {
   // Modale ouverte : précharge la parcelle « retenue » (Store B partagé : app_dossier_estimation.sources.cadastre,
   // choisie au clic sur la carte dans Le Bien/Localisation) pour qu'elle PERDURE dans l'avis de valeur — au lieu de
   // repartir sur la parcelle auto au point. Best-effort.
+  // 18/11 (§74) : « Tout générer » attend ce préchargement et GARDE la parcelle retenue (il la remplaçait par le
+  // résultat du point, même raté -> « Manque : cadastre » alors qu'une parcelle existait)
+  const parcelleRetenue = useRef(false)
+  const [retenue, setRetenue] = useState(false)
+  const prechargement = useRef<Promise<void> | null>(null)
   useEffect(() => {
     if (!props.modal) return
     let cancelled = false
-    loadDossierEstimation(dossier.app_dossier_id).then((est) => {
+    prechargement.current = loadDossierEstimation(dossier.app_dossier_id).then((est) => {
       if (cancelled) return
       const b = est?.sources?.cadastre?.data as CadastreData | undefined
       if (b && b.parcelles?.length) {
+        parcelleRetenue.current = true
+        setRetenue(true)
         setCadastre(b)
         const p0 = b.parcelles[0]
         setCadastreMsg(`Parcelle retenue · ${p0.reference ?? `${p0.section ?? ''} ${p0.numero ?? ''}`.trim()}${b.contenance_totale ? ' · ' + b.contenance_totale.toLocaleString('fr-FR') + ' m²' : ''}`)
@@ -6630,6 +6637,8 @@ function EstimationDocumentEditor(props: {
 
   async function loadCadastreElements() {
     if (cadastreBusy) return
+    try { await prechargement.current } catch { /* best effort */ }
+    if (parcelleRetenue.current) return  // §74 : la parcelle retenue (choisie, mémorisée) reste celle de l'avis
     const { lat, lon } = coordsDuBien()
     if (!Number.isFinite(lat) || !Number.isFinite(lon) || !lat || !lon) { setCadastreMsg(bvs('Coordonnées du bien manquantes (géolocalisation Hektor absente).')); return }
     setCadastreBusy(true); setCadastreMsg(null)
@@ -6711,6 +6720,8 @@ function EstimationDocumentEditor(props: {
   // (centre carte = centroïde de la 1re parcelle) — repris dans le PDF de l'avis de valeur.
   function onEstimCadastrePick(chosen: CadastreParcelle[]) {
     setCadastrePicker(null)
+    parcelleRetenue.current = true
+    setRetenue(true)
     const c0 = chosen[0]
     const lat = Number(c0?.centroid_lat) || Number(props.detail.latitude_detail)
     const lon = Number(c0?.centroid_lon) || Number(props.detail.longitude_detail)
@@ -6926,9 +6937,9 @@ function EstimationDocumentEditor(props: {
         const eur = (n: number) => `${n.toLocaleString('fr-FR')} €`
         const prixChange = reprise?.estimee != null && prix != null && prix !== reprise.estimee
         const libelles: Record<string, string> = { bdnb: 'bâti (BDNB)', dpe: 'DPE ADEME', patrimoine: 'patrimoine', loyers: 'loyers', copro: 'copropriété', insee: 'INSEE' }
-        const faits = [marche?.ok ? 'marché DVF' : '', cadre?.ok ? 'cadre de vie' : '', cadastre?.ok ? 'cadastre' : '',
+        const faits = [marche?.ok ? 'marché DVF' : '', cadre?.ok ? 'cadre de vie' : '', cadastre?.ok ? (retenue ? 'cadastre (parcelle retenue)' : 'cadastre') : '',
           ...sourcesMemorisees.current.map((k) => libelles[k] ?? k)].filter(Boolean)
-        const manquent = [marche?.ok ? '' : 'marché DVF', cadre?.ok ? '' : 'cadre de vie', cadastre?.ok ? '' : 'cadastre',
+        const manquent = [marche?.ok ? '' : 'marché DVF', cadre?.ok ? '' : 'cadre de vie', cadastre?.ok || cadastrePicker ? '' : 'cadastre',
           ...['bdnb', 'dpe', 'patrimoine', 'loyers', 'insee'].filter((k) => !sourcesMemorisees.current.includes(k)).map((k) => libelles[k])].filter(Boolean)
         return (
           <div className="avd-provenance" role="status">
@@ -6947,6 +6958,7 @@ function EstimationDocumentEditor(props: {
                 {autoGen.geocode ? ' Position calculée depuis l’adresse : Hektor donnera la sienne plus tard.' : ''}
               </p>
             ) : null}
+            {cadastrePicker && !cadastre?.ok ? <p className="is-alerte">Cadastre : le point du bien tombe hors parcelle — choisis la bonne parcelle dans la fenêtre ouverte.</p> : null}
             {autoGen?.etat === 'sans_position' ? <p className="is-alerte">Adresse introuvable : le marché, le cadre de vie et le cadastre ne peuvent pas se calculer. Corrige l'adresse de la fiche du bien.</p> : null}
           </div>
         )
@@ -7151,18 +7163,20 @@ function EstimationDocumentEditor(props: {
                   ) : (
                     <p style={{ fontSize: 13, color: 'var(--ds-ink-mute, #5c6163)' }}>Références cadastrales + contenance (surface officielle du terrain) + zonage PLU (IGN / Géoportail de l'Urbanisme) — ajoutent le bloc « Éléments cadastraux » au PDF.</p>
                   )}
-                  {cadastrePicker ? (
-                    <CadastreParcellePicker
-                      candidates={cadastrePicker}
-                      commune={dossier.ville ?? cadastre?.parcelles?.[0]?.commune ?? null}
-                      onConfirm={onEstimCadastrePick}
-                      onCancel={() => { setCadastrePicker(null); setCadastreMsg(null) }}
-                    />
-                  ) : null}
                 </div>
               </div>
             ) : null}
             </div>
+            {/* §74 : le sélecteur de parcelle (point sur la voie) s'ouvre quel que soit l'onglet -- « Tout générer » lancé
+                par l'assistant laisse la personne sur « Bien & valeur », elle doit quand même le voir */}
+            {cadastrePicker ? (
+              <CadastreParcellePicker
+                candidates={cadastrePicker}
+                commune={dossier.ville ?? cadastre?.parcelles?.[0]?.commune ?? null}
+                onConfirm={onEstimCadastrePick}
+                onCancel={() => { setCadastrePicker(null); setCadastreMsg(null) }}
+              />
+            ) : null}
             {message ? <p className="mandat-document-message">{message}</p> : null}
             <div className="mandat-document-actions">
               <button className="ghost-button" type="button" disabled={busy} onClick={() => { void submit(false) }}>{busy ? '…' : 'Générer le PDF'}</button>
