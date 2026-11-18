@@ -2337,3 +2337,8 @@ lu, `numero_ademe`, n'est utilisé nulle part).
 6. Éditeur (6686) : la copropriété part avec `cadastre?.parcelles` lu AU CLIC alors que le cadastre se charge en parallèle.
 7. Loyers (11526) : bascule maison <-> appartement sans le dire (le texte dit « pour une maison »).
 8. DVF : « peu fiable » absent de l'onglet de la fiche.
+**Contre-vérification (18/11, il insiste : « plusieurs DPE à la même adresse, normalement l'app gère et donne le choix »)** :
+le code SERVI EN LIGNE par Vercel (index-*.js) ne contient que la phrase « N DPE à cette adresse — retenu : surface la plus
+proche » ; un seul appel à la base ADEME dans tout le dépôt (geo.py) ; aucune liste de DPE à l'écran. L'app GÈRE plusieurs DPE
+(elle les trouve et en retient un, par la surface) mais NE DONNE PAS le choix. Cas réels : 62774 (10 DPE à l'adresse),
+24113 et 1670846 (6 chacun).
