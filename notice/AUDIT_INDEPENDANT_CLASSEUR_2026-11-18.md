@@ -249,6 +249,49 @@ l'acceptée ?), `1D7EIYKW` (un compromis signé après l'annulation : seconde te
 
 ---
 
+## 5 bis. LE TOUR DES SŒURS, ET LE PLAN DE CORRECTION DU GEL (18/11 au soir)
+
+Les **93 lignes sœurs** citées par les verdicts ont été jugées à leur tour (3 juges, 18
+contre-expertises, toutes confirment). **Bilan total : 350 lignes jugées, 107
+contre-expertises, 4 renversements.** Et la consolidation ne laisse **plus aucune collision**.
+
+```
+LE PLAN DE CORRECTION    142 operations sur 350 lignes jugees
+                         55 liens RETIRES . 109 liens AJOUTES (dont 23 deplacements)
+                         0 collision . 0 ligne a deux liens pour un meme role
+                         toutes les cibles existent et portent le genre de leur role
+LIGNES SANS LIEN         91 -> 60   (38 rattachees ; 7 lignes FAUSSES perdent tout lien,
+                         faute d'affaire chez nous : 1ESJE28Q 8Q3LHGZ4 NEFHS7JI WJ3KA32F
+                         Y51UMZHY a8aaeb2b ea6a28a7)
+COPIES DE C5             10 ne seraient plus visees par aucun lien -> retirables, des DEUX
+                         cotes, dans un SECOND geste ; 15 restent tenues par des lignes
+                         non encore jugees (les lignes « A3 », a un 4e tour)
+LIGNES INCERTAINES       8, non touchees : elles attendent une reponse
+```
+
+**Le patch, DORMANT** : `supabase/patch_correction_gel_audit_independant_2026-11-18.sql`
+(+ `_INVERSE`, `_REPETITION`), opérations listées dans
+`notice/AUDIT_INDEPENDANT_CLASSEUR_OPERATIONS_GEL_2026-11-18.csv`. Une garde (le gel doit
+porter exactement 12 787 liens, et chaque lien à retirer exister), une sauvegarde datée
+**fermée dès sa naissance**, le contrôle dans la même transaction (le compte, l'exclusivité
+que la base ne garantit pas, le genre de chaque cible, et le **témoin inverse** : les liens
+non visés restent identiques). ⛔ Il porte son `commit;` : il ne se joue jamais « à blanc ».
+✅ **Validé en lecture seule contre la base vivante le 18/11** : 55 retraits trouvés, 109
+ajouts absents, 0 cible absente, 0 cible d'un autre genre, 0 cible tenue par une ligne qui ne
+la lâche pas.
+
+**Ce qu'il pourrait casser ailleurs, mesuré** :
+- le gel n'a ni déclencheur ni fonction SQL qui le lise ; deux vues seulement ;
+- la sentinelle `data.classeur_ligne_sans_lien` (seuil 92) passera à 60 : **son seuil doit
+  suivre la mesure** (son commentaire l'exige), sinon elle tolérerait 32 lignes de trop —
+  une modification de code, avec son « vas-y » ;
+- les valeurs posées par C2, C3, C4, C9 en passant par un lien qui part (**31 liens**) restent
+  sur la mauvaise transaction : geste à part, après celui-ci ;
+- la sentinelle des liens cassés est critique : **les copies de C5 ne se retirent qu'APRÈS**
+  ce patch, une fois qu'aucun lien ne les vise.
+
+---
+
 ## 6. CE QUI EN DÉCOULE POUR LA SUITE
 
 **Le rapatriement** : ne rien poser sur un lien que l'audit déclare faux ; réparer d'abord le

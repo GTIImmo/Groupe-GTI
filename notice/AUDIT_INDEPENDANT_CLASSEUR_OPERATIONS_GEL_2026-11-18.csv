@@ -1,0 +1,143 @@
+﻿operation;id_unique;ligne_classeur;role;de;vers;genre_cible;verdict;confiance;raison
+ajouter;TR42PT5H;173;compromis;;27195;compromis;FAUX;certaine;Compromis MORAND Thomas / ZIMMER Emma du 24/01/2025, 209 000, hon 9 000, vendeurs BELONJE/BIEL, annulé. Le Sheet ne date pas le compromis, mais c'est bien cette affaire. Il est aujourd'hui tenu à tort par 739a0db1.
+retirer;TR42PT5H;173;offre;27196;;;FAUX;certaine;Offre HALLAERT-THEYS Aurélien (199 000), première proposition le 18/06/2026 : 549 j d'écart et autre acquéreur. C'est l'offre de la ligne 739a0db1 (offre 18/06/2026 et annulée 27/07/2026 = proposition et refus Hektor au jour près).
+ajouter;9Q0FHAKK;286;offre;;3648;offre;A_RATTACHER;forte;Offre POTTIER Dominique de 460 000, proposée et acceptée le 23/08/2024 (0 j). Elle est aujourd'hui tenue à tort par 427UDDSF.
+ajouter;9Q0FHAKK;286;compromis;;3647;compromis;A_RATTACHER;forte;Compromis du 11/09/2024 (0 j), 460 000, hon 18 000. Il n'est lié à aucune ligne.
+ajouter;9Q0FHAKK;286;vente;;3650;vente;A_RATTACHER;forte;Vente du 22/01/2025 = vente fixée (0 j), 460 000, hon 18 000. Elle est aujourd'hui tenue à tort par 427UDDSF (lien v2 du 13/11).
+ajouter;MDOXOBIC;301;offre;;2164;offre;A_RATTACHER;certaine;Offre acceptée de la SARL BEMATID, première proposition 2024-08-08, le jour de « 8 août 24 » (0 j), 42000 €. Libre.
+ajouter;MDOXOBIC;301;compromis;;2163;compromis;A_RATTACHER;certaine;Compromis 2024-09-03 (0 j), 42000 €, vendeur RIVOLIER René. Libre.
+ajouter;MDOXOBIC;301;vente;;2165;vente;A_RATTACHER;certaine;Vente 2024-12-03 = Vente Fixée (0 j), réglée le 5 déc (+2 j). Libre.
+retirer;08GV8OMZ;380;offre;6341;;;PARTIEL;certaine;Offre CAMBRESY ET HEBRARD du 10/05/2024, à 126 000 : c'est l'offre de la soeur O1099YC0 (0 j), et elle tombe à 25 j de l'offre de cette ligne. Autre acquéreur.
+deplacer;TRJ5Y59U;457;offre;1001561;23995;offre;PARTIEL;forte;Creee depuis le Sheet alors que l'offre existe chez Hektor : 23995 de GAY Frederic (le Sheet dit « MARTINEZ GAY »), premiere proposition 25/03/2024 (0 j), 44 600 EUR.
+deplacer;A07EC3DH;535;offre;1001563;1876;offre;PARTIEL;certaine;Copie créée par C5 depuis cette ligne, absente chez Hektor. C'est un doublon de l'offre Hektor 1876 (GUERIN, première proposition le 12/01/2024, 0 j, 70 000 €), qui est dans la même chaîne que le compromis et la vente.
+ajouter;DHXRAK9O;566;offre;;9371;offre;A_RATTACHER;forte;Première proposition le 01/12/2023 = Sheet (0 j).
+ajouter;DHXRAK9O;566;compromis;;9370;compromis;A_RATTACHER;forte;Compromis du 22/12/2023 = Sheet (0 j). Acte prévu le 22/03/2024 (9 j).
+ajouter;DHXRAK9O;566;vente;;9372;vente;A_RATTACHER;forte;Vente du 12/03/2024 = vente fixée (0 j). Réglée le 14/03 (+2 j).
+ajouter;72GQRHVB;579;offre;;6392;offre;A_RATTACHER;certaine;Offre 2023-11-17 (0 j), 254000 €. Libre.
+ajouter;72GQRHVB;579;compromis;;6391;compromis;A_RATTACHER;certaine;"Compromis 2023-11-30 (0 j) ; acte prévu 2024-02-29 = Vente Prévue (0 j). Libre."
+ajouter;72GQRHVB;579;vente;;6393;vente;A_RATTACHER;certaine;Vente 2024-01-25 = Vente Fixée (0 j), réglée le 29/01 (+4 j). Libre.
+ajouter;6FQO29C8;589;compromis;;19131;compromis;A_RATTACHER;forte;Compromis du 08/12/2023 = Sheet (0 j). 80 000 € dont 6 000 € d'honoraires, notaire BARBIER comme au Sheet.
+ajouter;6FQO29C8;589;vente;;19133;vente;A_RATTACHER;forte;Vente du 04/06/2024 = vente fixée (0 j). Réglée le 11/06 (+7 j). Honoraires 6 000 € = factures GGTI00003625 + GGTI00003664.
+ajouter;7IHI7YTJ;692;offre;;4235;offre;A_RATTACHER;forte;1re proposition le 14/08/2023 = Sheet (0 j).
+ajouter;7IHI7YTJ;692;compromis;;4234;compromis;A_RATTACHER;forte;Compromis du 21/11/2023 = Sheet (0 j), vendeurs LEDDA, hon 12 000 = commission.
+ajouter;7IHI7YTJ;692;vente;;4236;vente;A_RATTACHER;forte;"Acte du 04/03/2024 = vente fixée (0 j) ; réglée le 05/03 (+1 j)."
+retirer;QJQ9M4OF;1089;offre;17366;;;PARTIEL;forte;Première proposition le 25/08/2022 : 49 j de l'offre de cette ligne, mais 0 j de l'offre de la sœur D9MMB7OU (ROBERT, même prix). Le journal n'a rien au 14/10/2022.
+ajouter;S8BKB6FL;1546;offre;;4413;offre;A_RATTACHER;certaine;Offre THOMAS John du 12/11/2021 (0 j).
+ajouter;S8BKB6FL;1546;compromis;;4412;compromis;A_RATTACHER;certaine;Compromis du 14/03/2022 (0 j).
+ajouter;S8BKB6FL;1546;vente;;4414;vente;A_RATTACHER;certaine;Acte du 21/04/2022 (0 j).
+retirer;KT0601S6;1758;offre;24291;;;PARTIEL;forte;"seconde offre du meme jour, refusee : une ligne ne prend qu'une offre ; elle revient a la soeur annulee PPIM4947 (GEAI, offre 24/06/2021 a 78 400)"
+ajouter;H6CTRVR6;1841;offre;;11415;offre;PARTIEL;certaine;"Offre MERCIER, 1re proposition 18/05/2021 (0 j), 295 000 € ; aujourd'hui gelée sur la sœur annulée E9GL6MUS, qui doit prendre 11414 (06/04/2021, 0 j)."
+ajouter;2SCBZXMH;1866;offre;;7780;offre;PARTIEL;forte;Offre de DE OLIVEIRA Sonia, première proposition 2021-05-04 (0 j), 220000 €. Elle est seule dans la chaîne 7780 et aujourd'hui reliée à tort à la sœur VEP1DVQ4.
+deplacer;EGR8KXOL;1902;compromis;6554;6555;compromis;PARTIEL;certaine;Les deux compromis du bien tombent le 30/04/2021 (0 j). Mais 6554 est l'annulé à 90 000 € / 6 500 € (prix de l'offre BARDY), alors que 6555 est l'actif à 87 000 € / 6 000 €, soit le prix et la commission de cette ligne et de la vente.
+ajouter;0GV2LNV2;1943;offre;;4747;offre;PARTIEL;certaine;Offre BELLAT Martine, première proposition le 11/03/2021 (0 j), 20 000. Elle est aujourd'hui tenue à tort par la soeur 3W10AEIK, qui doit passer à 4748.
+ajouter;LUX9SDIL;2298;offre;;14120;offre;A_RATTACHER;certaine;Première proposition le 17/07/2020 = Sheet (0 j).
+ajouter;LUX9SDIL;2298;compromis;;14119;compromis;A_RATTACHER;certaine;Compromis du 04/09/2020 = Sheet (0 j).
+ajouter;LUX9SDIL;2298;vente;;14121;vente;A_RATTACHER;certaine;Vente du 07/01/2021 = vente fixée (0 j). Réglée le 13/01.
+deplacer;3S4ZWOFK;2388;offre;1001580;11958;offre;PARTIEL;certaine;"Copie créée par C5 depuis cette ligne, absente chez Hektor ; la vraie offre est 11958 (CIMINO, 12/06/2020, 0 j)."
+ajouter;EJN79TJ1;2485;offre;;27713;offre;A_RATTACHER;forte;Première proposition le 27/02/2020 (0 j), 213 000.
+ajouter;EJN79TJ1;2485;compromis;;27712;compromis;A_RATTACHER;forte;"Compromis du 03/06/2020 (0 j) ; acte prévu le 03/09/2020 = vente prévue (0 j)."
+ajouter;EJN79TJ1;2485;vente;;27714;vente;A_RATTACHER;forte;Vente du 04/09/2020 = vente fixée (0 j).
+ajouter;QXDW8EQA;2559;offre;;1028;offre;A_RATTACHER;forte;Première proposition le 11/01/2020 (0 j), 1 358 840.
+ajouter;QXDW8EQA;2559;compromis;;1027;compromis;A_RATTACHER;forte;Compromis du 29/05/2020 (0 j).
+ajouter;QXDW8EQA;2559;vente;;1029;vente;A_RATTACHER;forte;Vente du 04/11/2020 = vente fixée (0 j).
+ajouter;I3TFR2KG;2665;offre;;24619;offre;A_RATTACHER;forte;Première proposition le 22/10/2019 (0 j), 76 000.
+ajouter;I3TFR2KG;2665;compromis;;24618;compromis;A_RATTACHER;forte;"Compromis du 19/11/2019 (0 j) ; acte prévu le 19/02/2020, contre une vente prévue le 20/02/2020 (1 j)."
+ajouter;I3TFR2KG;2665;vente;;24620;vente;A_RATTACHER;forte;Vente du 24/04/2020 = vente fixée (0 j).
+ajouter;J6RGX0CQ;2774;offre;;4929;offre;A_RATTACHER;certaine;Offre de DELABAR Soline, première proposition 2019-10-02 (0 j). Libre.
+ajouter;J6RGX0CQ;2774;compromis;;4928;compromis;A_RATTACHER;certaine;Compromis daté du 2019-11-18 contre le 18/10/2019 au Sheet : même jour, un mois d'écart, sans doute une faute de mois. Libre.
+ajouter;J6RGX0CQ;2774;vente;;4930;vente;A_RATTACHER;certaine;Vente 2019-12-12 = Vente Fixée (0 j), réglée le 17/12 (+5 j). Libre.
+ajouter;91IHSGNC;2780;offre;;4782;offre;A_RATTACHER;forte;"Première proposition le 04/07/2019, 3 j après le 01/07 du Sheet ; c'est la seule offre de la chaîne, 44 900."
+ajouter;91IHSGNC;2780;compromis;;4781;compromis;A_RATTACHER;forte;"Compromis du 18/09/2019 (0 j) ; acte prévu le 18/12/2019 = vente prévue (0 j)."
+ajouter;91IHSGNC;2780;vente;;4783;vente;A_RATTACHER;forte;Vente du 18/12/2019 = vente fixée (0 j).
+ajouter;58I5AO17;2809;offre;;7909;offre;A_RATTACHER;certaine;Première proposition le 23/04/2019 (0 j), 66 500.
+ajouter;58I5AO17;2809;compromis;;7908;compromis;A_RATTACHER;certaine;Compromis du 21/05/2019 (0 j).
+ajouter;58I5AO17;2809;vente;;7910;vente;A_RATTACHER;certaine;Vente du 23/09/2019 = vente fixée (0 j).
+ajouter;ESMCO1NC;2914;offre;;6589;offre;A_RATTACHER;certaine;Première proposition le 14/05/2019 (0 j), 728 000.
+ajouter;ESMCO1NC;2914;compromis;;6588;compromis;A_RATTACHER;certaine;"Compromis du 26/05/2020 (0 j) ; acte prévu le 26/08/2020 = vente prévue (0 j)."
+ajouter;ESMCO1NC;2914;vente;;6590;vente;A_RATTACHER;certaine;Vente du 20/07/2020 = vente fixée (0 j).
+ajouter;8ATXF2EZ;3175;offre;;19153;offre;A_RATTACHER;certaine;Première proposition le 06/02/2019 = Sheet (0 j).
+ajouter;8ATXF2EZ;3175;compromis;;19152;compromis;A_RATTACHER;certaine;Compromis du 20/03/2019 = Sheet (0 j).
+ajouter;8ATXF2EZ;3175;vente;;19154;vente;A_RATTACHER;certaine;Vente du 28/09/2019 = vente fixée (0 j). Réglée le 01/10.
+ajouter;CS38OO8R;3263;offre;;27986;offre;A_RATTACHER;forte;KEAY John et Claudia (KAEY au Sheet), premiere proposition 04/09/2018 (0 j), 15 000 EUR.
+ajouter;CS38OO8R;3263;compromis;;27984;compromis;A_RATTACHER;forte;"02/11/2018 (0 j), honoraires 3 000 = commission ; nom CABEZOS = reliquat Hektor du premier acquereur."
+ajouter;CS38OO8R;3263;vente;;27987;vente;A_RATTACHER;forte;Acte du 15/03/2019 (0 j).
+ajouter;2U5QPKRC;3323;compromis;;17769;compromis;A_RATTACHER;forte;Compromis du 03/07/2018 = Sheet (0 j). Acte prévu le 03/10/2018 contre le 28/09 au Sheet (5 j).
+ajouter;2U5QPKRC;3323;vente;;17770;vente;A_RATTACHER;forte;Vente du 14/12/2018 = vente fixée (0 j).
+ajouter;JL8GV7RQ;3328;compromis;;15169;compromis;A_RATTACHER;certaine;compromis du 2018-06-26 = Sheet 26/06/2018 (0 j), acte prevu 2018-09-26 (1 j de la vente prevue), SYLVAIN / MORISOT, hon 2 500 = commission
+ajouter;JL8GV7RQ;3328;vente;;15170;vente;A_RATTACHER;certaine;vente du 2018-10-10 = vente fixee 10/10/2018 (0 j)
+ajouter;5H70KQZA;3378;offre;;14227;offre;A_RATTACHER;certaine;Offre PERRONNET 2018-04-10 (0 j). Libre.
+ajouter;5H70KQZA;3378;compromis;;14224;compromis;A_RATTACHER;certaine;Compromis 2018-07-05 (0 j), 120000 €, hon 5000. Libre. Ne pas prendre 14225 ni 14226 : c'est la tentative PERRONNET de 2016 à 139000 €, que cette ligne ne porte pas.
+ajouter;5H70KQZA;3378;vente;;14228;vente;A_RATTACHER;certaine;Vente 2021-01-07 = Vente Fixée (0 j), réglée le 11/01/2021 (+4 j). Libre.
+ajouter;MQ6H8TVQ;3383;offre;;26696;offre;A_RATTACHER;moyenne;Premiere proposition 14/12/2017 (0 j), 38 000 EUR (acquereur Hektor KABAB Julian).
+ajouter;MQ6H8TVQ;3383;compromis;;26695;compromis;A_RATTACHER;moyenne;27/12/2017 (0 j), vendeur HDHILI, honoraires 1 000 = commission.
+ajouter;MQ6H8TVQ;3383;vente;;26698;vente;A_RATTACHER;moyenne;Acte du 06/07/2018 (0 j).
+retirer;1ESJE28Q;3464;compromis;12952;;;FAUX;certaine;"Compromis de 2012 sur un autre bien (26801, La Grand-Croix, vendeur BRUET) ; le Sheet n'a même pas de compromis."
+retirer;1ESJE28Q;3464;offre;12953;;;FAUX;certaine;Offre de LACROIX Pierre Henry du 28/11/2012, près de 12 ans d'écart, sur un autre bien : seul le nom LACROIX coïncide.
+deplacer;427UDDSF;3477;offre;3648;3649;offre;PARTIEL;certaine;3648 est l'offre POTTIER du 23/08/2024 (22 j). L'offre SOUCHON 3649 tombe le 01/08/2024 (0 j, 450 000) et aucune ligne ne la prend.
+retirer;427UDDSF;3477;vente;3650;;;PARTIEL;certaine;La ligne est Annulée et n'a pas de date de vente. 3650 (22/01/2025, 460 000) est la vente POTTIER de la ligne 9Q0FHAKK (vente fixée le 22/01/2025, 0 j).
+ajouter;O1099YC0;3498;offre;;6341;offre;A_RATTACHER;forte;CAMBRESY ET HEBRARD, premiere proposition 10/05/2024 (0 j), 126 000 EUR.
+deplacer;DAMOO7OU;3518;offre;23995;23996;offre;PARTIEL;certaine;23995 est l'offre GAY Frédèric du 25/03/2024 (26 j), qui appartient à la soeur TRJ5Y59U. L'offre MAITRIAS 23996 du 28/02/2024 tombe à 0 j et aucune ligne ne la prend.
+retirer;Y51UMZHY;3522;offre;19277;;;FAUX;certaine;Offre refusée du 23/12/2011 de CASSARO Joseph sur un terrain à Retournac (vendeurs GARAT). La ligne vise la maison DOITRAND/RICCI de Bas-en-Basset (mandat 16542, 2024). Le seul lien est le nom CASSARO.
+deplacer;FLPUUSY3;3540;offre;1876;1877;offre;PARTIEL;certaine;1876 est l'offre GUERIN du 12/01/2024 (35 j), qui appartient à la soeur A07EC3DH. L'offre PAYSAC 1877 du 08/12/2023 tombe à 0 j.
+ajouter;7JXLR3JQ;3552;offre;;7117;offre;A_RATTACHER;forte;Premiere proposition 10/11/2023 (0 j), 35 000 EUR.
+ajouter;7JXLR3JQ;3552;compromis;;7115;compromis;A_RATTACHER;forte;Compromis annule du 05/01/2024 (0 j), honoraires 3 500 = commission (« copie06/01 » au commentaire).
+retirer;8Q3LHGZ4;3579;compromis;8321;;;FAUX;certaine;compromis de 2014 (SERRA / CHAPELON, Monistrol, mandat 6732) : autre bien, autre epoque, aucun nom en commun
+retirer;8Q3LHGZ4;3579;offre;8322;;;FAUX;certaine;offre CHEVALIER du 2014-05-01 sur le bien de Monistrol : un seul nom en commun, 9 ans d'ecart
+retirer;V3FO5NDA;3632;compromis;19131;;;PARTIEL;forte;"La ligne est annulée au stade de l'offre le 23/06/2023 et ne déclare aucun compromis ; celui-ci est signé le 08/12/2023, 168 j après : il relève de la reprise de l'affaire, pas de cette ligne."
+retirer;V3FO5NDA;3632;vente;19133;;;PARTIEL;forte;Acte du 04/06/2024 (80 000 €, hon 6 000), un an après l'annulation : une vente ne peut pas tenir sur une ligne Annulée.
+ajouter;KAYC29B7;3635;offre;;27170;offre;A_RATTACHER;certaine;offre proposee et acceptee le 2023-05-10 = offre du Sheet 10/05/2023 (0 j), annonce 53371, vendeurs BOUTRY / DOUBTSOF
+ajouter;D9MMB7OU;3735;offre;;17366;offre;A_RATTACHER;forte;"Offre ROBERT Joel du 25/08/2022 (0 j), 213 000 € ; aujourd'hui portée à tort par la sœur QJQ9M4OF."
+deplacer;9WQ204HP;3763;compromis;1001532;4480;compromis;PARTIEL;forte;Copie créée par C5 depuis cette ligne, absente chez Hektor. Le compromis Hektor du 15/06/2022 existe : 4480, à 87 000 € / 6 000 €.
+retirer;3308P0UX;3785;compromis;4480;;;PARTIEL;forte;"15/06/2022, 87 000 €, hon 6 000 : compromis de MARCOS (9WQ204HP, 0 j, même prix et commission), signé après l'annulation de VIALLARD ; étiquette VIALLARD = reste Hektor."
+deplacer;8RWTD0YX;3795;offre;1001477;4387;offre;FAUX;forte;Creee depuis le Sheet alors que l'offre existe chez Hektor : 4387, VANROSSUM Garance, 25/02/2022 (0 j), 88 400 EUR = prix du Sheet.
+retirer;8RWTD0YX;3795;compromis;4385;;;FAUX;forte;"Pose sur le seul bien (mandat + vendeur) : compromis annule sans date ni acquereur, 80 000 + 6 000 EUR, qui ne colle pas a VAN ROSSUM (88 400 EUR dont 6 400) ; le Sheet n'a pas de compromis."
+ajouter;515RUEN3;3810;offre;;17430;offre;A_RATTACHER;certaine;1re proposition le 10/02/2022 = Sheet (0 j), LECOMTE Benjamin, 184 000 €.
+ajouter;515RUEN3;3810;compromis;;17428;compromis;A_RATTACHER;certaine;Compromis annulé du 24/02/2022 = Sheet (0 j), hon 11 500 = commission.
+deplacer;87QOXR64;3829;compromis;1001534;17427;compromis;PARTIEL;forte;Copie créée par C5 depuis cette ligne, absente chez Hektor. Le compromis Hektor du 11/02/2022 existe : 17427, à 184 000 € / 11 500 €.
+retirer;WJ3KA32F;3847;offre;10730;;;FAUX;certaine;Offre GIMBERT Christine sans date ni prix, dossier D2008-0476 sur le bien 22828 (vendeuse FOUCAMBERT, vente en 2009) : le lien repose sur un nom seul, 13 ans avant.
+ajouter;O8BY6AC8;3906;offre;;1000105;offre;A_RATTACHER;forte;Seule offre de SCI 2NBD sur ce local. Première proposition le 23/07/2021, 16 j après le Sheet (07/07/2021, jour d'ouverture du mandat 13655).
+ajouter;O8BY6AC8;3906;compromis;;1000141;compromis;A_RATTACHER;forte;Compromis annulé du 01/09/2021 = Sheet (0 j).
+deplacer;VMWFLLW4;3910;compromis;1001540;23050;compromis;PARTIEL;forte;cree depuis le Sheet alors que Hektor porte deja ce compromis : 23050 du 2021-06-17 a 70 000, hon 4 400
+ajouter;PPIM4947;3927;offre;;24291;offre;A_RATTACHER;forte;offre refusee du 2021-06-24 a 78 400 (0 j), aujourd'hui gelee en trop sur la soeur KT0601S6
+retirer;61OW86CS;3938;compromis;4496;;;PARTIEL;certaine;4496 est sur un AUTRE bien : 9769, la maison de Cunlhat de VAN DIJK, à 155 000, acquéreur GALLOT. Le numéro de mandat 4235 est recyclé, et le Sheet n'affirme aucun compromis.
+deplacer;E9GL6MUS;3958;offre;11415;11414;offre;PARTIEL;forte;11415 est l'offre MERCIER du 18/05/2021 (42 j), qui appartient à la soeur H6CTRVR6 (0 j). La seule offre du 06/04/2021 est 11414 (295 000, 0 j).
+deplacer;OXQSBZ9V;3961;offre;17430;17431;offre;FAUX;certaine;17430 est l'offre LECOMTE du 10/02/2022 (355 j), qui appartient à la soeur 515RUEN3 (0 j). L'offre CAGNARD 17431 du 20/02/2021 tombe à 0 j, et ses 195 500 = prix du Sheet.
+retirer;OXQSBZ9V;3961;compromis;17427;;;FAUX;certaine;Compromis du 11/02/2022 à 184 000, soit dix mois après l'annulation de cette affaire (21/04/2021), et le Sheet n'affirme aucun compromis. Il tombe à 0 j sur le compromis de la soeur 87QOXR64.
+deplacer;VEP1DVQ4;3962;offre;7780;7781;offre;PARTIEL;certaine;7780 est l'offre DE OLIVEIRA du 04/05/2021 (33 j, 220 000), qui appartient à la soeur 2SCBZXMH (0 j). L'offre COLOMBET 7781 du 01/04/2021 tombe à 0 j, à 207 000.
+deplacer;RX6J289Y;3968;compromis;16377;16378;compromis;PARTIEL;certaine;16377 (27/10/2020, 249 000, honoraires 15 000, acte prévu 27/01/2021) est le compromis de la soeur R0JRVFDC. 16378 porte 244 000, des honoraires de 10 000 = commission, et un acte prévu le 13/05/2021 = vente prévue du Sheet (0 j).
+deplacer;Q602VZJX;3970;compromis;6555;6554;compromis;PARTIEL;forte;6555 (actif, 87 000 €, honoraires 6 000) est le compromis de la vente GLAZIOU (soeur EGR8KXOL). Celui de BARDY est 6554 : même date du 30/04/2021, 90 000 € = offre BARDY, honoraires 6 500 = commission du Sheet, état annulé.
+deplacer;3W10AEIK;3988;offre;4747;4748;offre;PARTIEL;forte;4747 est l'offre BELLAT du 11/03/2021 (49 j), qui appartient à la soeur 0GV2LNV2 (0 j). L'offre VINCENT Fabienne 4748 du 21/01/2021 tombe à 0 j.
+retirer;NEFHS7JI;3991;compromis;26395;;;FAUX;certaine;Compromis SEGUIN / SAMOUILLER de 2012 sur une maison de Saint-Just-Saint-Rambert, rattaché par le seul n° de mandat 3576, recyclé sur trois biens.
+retirer;NEFHS7JI;3991;offre;26397;;;FAUX;certaine;Offre SEGUIN du 30/03/2012 : 3 246 j d'écart, aucun nom ni bien commun.
+retirer;SBH4QWDW;4005;compromis;23050;;;PARTIEL;certaine;"17/06/2021, 70 000 € : compromis de PARRELLA (VMWFLLW4, 0 j, même prix), signé cinq mois après l'annulation de SOTTON ; étiquette SOTTON = reste Hektor."
+deplacer;R0JRVFDC;4014;compromis;1001542;16377;compromis;PARTIEL;certaine;Créé par C5 depuis cette ligne et absent chez Hektor, il double 16377, le compromis Hektor de cette affaire.
+retirer;1D7EIYKW;4031;compromis;27512;;;PARTIEL;moyenne;"La ligne ne déclare aucun compromis (refus de prêt au stade de la simulation) et est annulée le 20/11/2020 ; le compromis Hektor date du 17/02/2021, 89 j après."
+retirer;CITFQGOB;4067;compromis;16378;;;PARTIEL;certaine;Le Sheet n'affirme aucun compromis. 16378 (13/02/2021, 244 000) vient 5 mois après l'annulation (20/09/2020), et c'est le compromis de la soeur RX6J289Y. Le gel l'a lié sur le seul nom DU PELOUX.
+deplacer;9UO5NUN6;4113;offre;11958;11959;offre;PARTIEL;certaine;11958 est l'offre CIMINO du 12/06/2020 (15 j), qui appartient à la soeur 3S4ZWOFK (0 j). L'offre SOUDANI 11959 du 28/05/2020 tombe à 0 j, à 49 500.
+ajouter;4G2UHO35;4117;offre;;19819;offre;A_RATTACHER;certaine;offre BROCHIER proposee le 2020-02-24 = Sheet 24/02/2020 (0 j), 69 000
+ajouter;ZZ5WKMWM;4119;offre;;11206;offre;A_RATTACHER;moyenne;Offre du 02/12/2019 à 280 000 €, sans nom d'acquéreur chez Hektor.
+ajouter;Z6P7KE5R;4126;offre;;1337;offre;A_RATTACHER;forte;Offre de THEVENON Frederic, première proposition 2020-02-10 (0 j), 38500 €, annonce 3481 = MODELO du mandat 12224 (BOUALI). Libre.
+deplacer;UTLG66LE;4131;offre;1001482;5055;offre;PARTIEL;forte;Créée par C5 depuis cette ligne, elle ne prouve rien. Hektor porte déjà l'offre STAUFFER 5055, proposée et acceptée le 18/12/2019 (0 j), 16 900.
+ajouter;9706WM9J;4145;offre;;23931;offre;A_RATTACHER;certaine;Offre COMBETTES du 06/02/2020 (0 j), 168 000 €.
+retirer;ea6a28a7;4195;compromis;14033;;;INCERTAIN;moyenne;Pose sur mandat + prix : 140 500 EUR et 9 500 EUR egaux au Sheet, mais 14033 porte les acquereurs COLAS / SOLEILHAC de la soeur 205f62be, n'a pas de date, et le Sheet n'a pas de compromis.
+retirer;045ecde7;4391;offre;28558;;;PARTIEL;forte;"Même offre RUSSIER du 07/11/2025, saisie puis supprimée chez Hektor (absente, sans prix ni mandat) ; 28559 en est la ressaisie : une ligne ne prend qu'une offre."
+ajouter;f90b0418;4455;offre;;19050;offre;PARTIEL;forte;Offre POULY et CHARTOIRE à 93 000 €, seule offre du bien, tenue par aucune ligne. Date non mesurable : le journal n'a aucune date avant le refus du 12/11/2026.
+retirer;774aa002;4606;compromis;11138;;;PARTIEL;certaine;C'est le compromis d'un autre acquéreur (JINGWEI CAO, 98 000, honoraires 7 100, dossier D2025-0415, sans date). Le Sheet n'affirme aucun compromis : TOSUN s'est rétracté après l'offre.
+ajouter;739a0db1;4668;offre;;27196;offre;FAUX;certaine;"Offre HALLAERT-THEYS du 18/06/2026 (0 j), 199 000 € ; portée aujourd'hui à tort par la ligne TR42PT5H."
+deplacer;739a0db1;4668;offre;1001520;27196;offre;FAUX;certaine;Copie C5 de l'offre Hektor 27196 (HALLAERT-THEYS, 18/06/2026, 0 j) : lier 27196 et supprimer la copie.
+retirer;739a0db1;4668;compromis;27195;;;FAUX;certaine;"Compromis annulé du 24/01/2025 de MORAND/ZIMMER (209 000 €), tentative précédente sur le même bien ; la ligne n'a pas de compromis."
+deplacer;fa06e4e5;4674;offre;28930;28931;offre;FAUX;forte;"28930 est une offre sans acquereur, refusee le jour meme ; la correction du 17/11 l'a retenue sur la seule date, que les deux offres partagent. 28931 porte BILDINICI, premiere proposition 15/07/2026 (0 j), refusee le 27/07 = date d'annulation du Sheet."
+retirer;fa06e4e5;4674;compromis;1001553;;;FAUX;forte;"Creee depuis le Sheet pour un compromis jamais signe (rendez-vous du 28/07 annule la veille) ; bien encore Actif, date de moins d'un an : rien a creer."
+retirer;f1aedc01;4699;offre;28967;;;PARTIEL;forte;Seconde saisie de la même offre deux minutes plus tard (10:38), absente chez Hektor, sans prix : doublon supprimé par Hektor.
+retirer;a8aaeb2b;4718;compromis;998;;;FAUX;certaine;Compromis BOUZENAD du 12/03/2026 sur l'APPARTEMENT (bien 1970, 60 000) : doublon de 999 (ligne 87eb399e) et absent chez Hektor. Rien à voir avec le garage, dont l'offre date du 31/08/2026.
+retirer;a8aaeb2b;4718;offre;1000;;;FAUX;certaine;Offre HALARY Marie-Pascale sur l'appartement, proposée le 02/03/2026 (182 j avant) : autre acquéreur, autre bien.
+deplacer;5a956cad;4754;offre;30776;30684;offre;PARTIEL;moyenne;30776 est l'offre renégociée du 27/10/2026 (82 218 €), à 36 j de l'offre du Sheet. Le 21/09/2026 du Sheet est la première proposition de 30684 (89 000 €, même acquéreuse), à 0 j.
+ajouter;a2abd36c;4761;compromis;;30827;compromis;PARTIEL;certaine;Compromis actif du 13/11/2026 (0 j), ALLEPUZ, 90 000 € / 6 580 €. L'acte prévu le 13/02/2027 est la vente prévue du Sheet (0 j). Arrivé chez nous après le gel du 29/10 : à rattacher.
+retirer;45225170;4762;offre;30712;;;PARTIEL;forte;"Meme offre du 30/09/2026 saisie a 16 000 EUR (zero manquant) : doublon de 30767 ; un role ne prend qu'une transaction."
+retirer;45225170;4762;offre;1001361;;;PARTIEL;forte;Offre « proposed » du 06/10/2026 (6 j) a 16 000 EUR : autre copie de la meme offre.
+ajouter;c6233284;4789;offre;;30801;offre;A_RATTACHER;certaine;offre proposee le 2026-11-04 = Sheet 04/11/2026 (0 j), 485 000, annonce 63463 du lien CRM, MARTINS
+ajouter;b884cbd4;4796;offre;;30821;offre;A_RATTACHER;certaine;1re proposition le 15/11/2026 = offre du Sheet (0 j).
+ajouter;5e4c8881;4797;offre;;30820;offre;A_RATTACHER;certaine;1re proposition le 16/11/2026 = offre du Sheet (0 j).
+ajouter;b43e76f5;4798;offre;;30826;offre;A_RATTACHER;certaine;Offre BUGNON du 17/11/2026 (0 j), 160 000 €.
+ajouter;1eec6575;4799;offre;;30825;offre;A_RATTACHER;certaine;Ceaux Christian, premiere proposition 13/11/2026 (0 j), 42 000 EUR = prix du Sheet, annonce 63490 = lien CRM.
+ajouter;70740f2f;4800;offre;;30824;offre;A_RATTACHER;certaine;Proposition du 17/11/2026 à 17:40 = Sheet (0 j), GUILLOT Antoine, 54 800 € (0 %), mandat 18773.
