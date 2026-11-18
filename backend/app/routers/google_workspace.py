@@ -6,8 +6,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, EmailStr, Field
 
 from ..auth import get_authenticated_user, require_request_user
+from ..services import assistant_fichiers as fichiers_service
 from ..services.google_calendar_event_link_service import GoogleCalendarEventLinkService
-from ..services.google_workspace_service import GoogleWorkspaceService
+from ..services.google_workspace_service import MAX_GMAIL_ATTACHMENT_FILE_BYTES, GoogleWorkspaceService
 from ..services.supabase_admin import SupabaseAdminService
 from ..settings import Settings, get_settings
 
@@ -54,6 +55,12 @@ class GoogleGmailAttachmentPayload(BaseModel):
     filename: str = Field(min_length=1, max_length=180)
     mimeType: str | None = Field(default=None, max_length=120)
     fileSize: int | None = Field(default=None, ge=0)
+
+
+class GoogleGmailPieceDepotPayload(BaseModel):
+    nom: str = Field(min_length=1, max_length=255)
+    type: str = Field(min_length=1, max_length=255)
+    taille: int = Field(ge=0)
 
 
 class GoogleGmailSendPayload(BaseModel):
@@ -269,6 +276,87 @@ def send_google_gmail_message(
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+# 18/11/2026 (note étape 4 §63-64) -- LA FENÊTRE E-MAIL, PIÈCES « DEPUIS L'ORDINATEUR ».
+# La règle du coffre refuse un dépôt libre avec le jeton de la personne : c'est le serveur qui vérifie (type, taille),
+# puis signe une adresse d'envoi pour UN fichier sous temp/email/<la personne>/<numéro>/ -- la mécanique du trombone de
+# l'assistant (assistant_fichiers), avec son propre dossier et la limite de Gmail (8 Mo par fichier). Au moment
+# d'« Envoyer », l'écran demande un lien de lecture de 15 min et le passe à /gmail/send comme pour un document : la route
+# d'envoi n'est pas touchée. Ouvert à toute personne connectée au profil actif (la fenêtre sert à tous les rôles).
+# Les fichiers restés là sont purgés après 2 jours (Console/nettoyer_temporaires_orphelins.js).
+PIECES_EMAIL_DOSSIER = "temp/email"
+PIECES_EMAIL_LIEN_SECONDES = 900
+
+
+def _deposant(settings: Settings, authorization: str | None, admin_service: SupabaseAdminService) -> str:
+    user = get_authenticated_user(settings, authorization)
+    profile = admin_service.load_profile(user)
+    if profile.get("is_active") is not True:
+        raise HTTPException(status_code=403, detail="Compte inactif : dépôt impossible")
+    return str(user.id)
+
+
+@router.post("/gmail/pieces/preparer")
+def prepare_gmail_piece(
+    payload: GoogleGmailPieceDepotPayload,
+    authorization: str | None = Depends(require_request_user),
+    settings: Settings = Depends(get_settings),
+    admin_service: SupabaseAdminService = Depends(get_admin_service),
+):
+    user_id = _deposant(settings, authorization, admin_service)
+    try:
+        return fichiers_service.preparer_depot(settings, user_id, payload.nom, payload.type, payload.taille,
+                                               prefixe=PIECES_EMAIL_DOSSIER, taille_max=MAX_GMAIL_ATTACHMENT_FILE_BYTES)
+    except fichiers_service.RefusFichier as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from None
+
+
+@router.post("/gmail/pieces/{numero}/confirmer")
+def confirm_gmail_piece(
+    numero: str,
+    authorization: str | None = Depends(require_request_user),
+    settings: Settings = Depends(get_settings),
+    admin_service: SupabaseAdminService = Depends(get_admin_service),
+):
+    user_id = _deposant(settings, authorization, admin_service)
+    try:
+        f = fichiers_service.decrire(settings, user_id, numero, prefixe=PIECES_EMAIL_DOSSIER,
+                                     taille_max=MAX_GMAIL_ATTACHMENT_FILE_BYTES)
+    except fichiers_service.RefusFichier as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from None
+    return {"id": f["id"], "nom": f["nom"], "type": f["type"], "libelle": f["libelle"], "taille": f["taille"]}
+
+
+@router.post("/gmail/pieces/{numero}/lien")
+def link_gmail_piece(
+    numero: str,
+    authorization: str | None = Depends(require_request_user),
+    settings: Settings = Depends(get_settings),
+    admin_service: SupabaseAdminService = Depends(get_admin_service),
+):
+    user_id = _deposant(settings, authorization, admin_service)
+    try:
+        f = fichiers_service.decrire(settings, user_id, numero, prefixe=PIECES_EMAIL_DOSSIER,
+                                     taille_max=MAX_GMAIL_ATTACHMENT_FILE_BYTES)
+        url = fichiers_service.lien_lecture(settings, f["chemin"], PIECES_EMAIL_LIEN_SECONDES, prefixe=PIECES_EMAIL_DOSSIER)
+    except fichiers_service.RefusFichier as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from None
+    return {"url": url, "nom": f["nom"], "type": f["type"], "taille": f["taille"]}
+
+
+@router.delete("/gmail/pieces/{numero}")
+def delete_gmail_piece(
+    numero: str,
+    authorization: str | None = Depends(require_request_user),
+    settings: Settings = Depends(get_settings),
+    admin_service: SupabaseAdminService = Depends(get_admin_service),
+):
+    user_id = _deposant(settings, authorization, admin_service)
+    try:
+        return {"retires": fichiers_service.retirer(settings, user_id, numero, prefixe=PIECES_EMAIL_DOSSIER)}
+    except fichiers_service.RefusFichier as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from None
 
 
 @router.get("/gmail/contact-messages")
