@@ -2759,4 +2759,4 @@ Ce qui est REMPLACÉ dans le §82 :
 - Le bouton permanent « Scanner la fiche » de la barre de saisie est RETIRÉ (fonction ajoutée sans demande) ; la barre
   garde « Joindre », la dictée et l'envoi. Au téléphone : « Je ne sais pas » et « Dicter ».
 
-Toile : version 21, mêmes planches A1-A7, B1-B4 (B1 = le bien lu et « pour quoi faire », B2 = ta valeur).
+Toile : version 24 (fusionnée sur ta version enregistrée depuis la page, tailles de planches gardées), mêmes planches A1-A7, B1-B4 (B1 = le bien lu et « pour quoi faire », B2 = ta valeur).
