@@ -1722,3 +1722,105 @@ Les autres essais sont verts : IA 62, fichiers 17, lecteur 73, GED classer 36, G
 
 **Ce que ça pourrait casser ailleurs** : rien d'existant. La route Gmail n'est pas modifiée, la fenêtre e-mail de
 l'écran n'est pas touchée, et la carte sans pièce garde exactement le même comportement.
+
+## 63. Le bouton « depuis l'ordinateur » de la FENÊTRE E-MAIL de l'écran : AUDIT (18/11, « vérifie ton travail puis enchaîne ») — rien codé
+
+**Vérification d'abord (18/11, pendant le run de nuit)** : la carte des pièces jointes (§62) tient. Essais : gestes 361
+verts, IA 62 verts. Render tourne sur `7e34d0a` (le code ; les commits suivants ne sont que des notes). En base, sur
+24 h : aucune carte bloquée « en cours » ni en échec ; la carte de l'essai est `executee` avec ses 3 pièces, et le journal
+Gmail porte les 3 noms.
+
+**Ce qu'est la fenêtre aujourd'hui** : `ContactEmailComposerModal` (App.tsx ~45413), ouverte depuis la fiche contact,
+pour TOUS les rôles. Elle joint des documents (lien signé 15 min) et des photos (adresse publique) d'UN bien lié au
+contact, 10 au plus, puis appelle `/google-workspace/gmail/send`, qui télécharge chaque adresse et joint le fichier.
+Rien ne vient de l'ordinateur.
+
+**Mesuré (lecture)** : 80 e-mails partis par cette route depuis le 01/06, par 3 personnes, et UN SEUL avec des pièces
+jointes : l'essai de la carte du 18/11. Les pièces jointes de la fenêtre n'ont donc jamais servi en vrai.
+
+**Pourquoi on ne peut pas reprendre le trombone tel quel** :
+- ses routes (`/assistant/fichiers/...`) sont fermées à qui n'a pas l'assistant (`_trombone_ouvert`), alors que la
+  fenêtre sert à tout le monde ;
+- l'écran ne peut pas déposer seul au coffre : la règle du coffre ne laisse déposer que dans le dossier d'un travail
+  d'envoi qu'on vient de créer.
+
+**Proposé (forme A)** : la même mécanique que le trombone, sous un autre dossier.
+1. Serveur : deux routes ouvertes à toute personne connectée :
+   - préparer un dépôt : contrôle du type et de la taille, puis une adresse d'envoi signée pour UN fichier, sous
+     `temp/email/<la personne>/<numéro>/` ;
+   - rendre un lien de lecture de 15 min, au moment d'« Envoyer », pour SES fichiers seulement.
+   Types : ceux du coffre. Taille : 8 Mo par fichier, comme Gmail.
+2. Écran : un bouton « Depuis l'ordinateur » dans le bloc « Pièces jointes ». Les fichiers choisis s'affichent avec leur
+   nom, leur taille et une croix pour les retirer. Ils comptent dans les 10 pièces, et dans les 8 Mo par pièce et 18 Mo
+   au total.
+3. La route d'envoi Gmail n'est PAS touchée : elle reçoit un lien, comme pour un document.
+4. Le ménage : `Console/nettoyer_temporaires_orphelins.js` apprend le dossier `temp/email/`. ⚠ Ce script n'est
+   enregistré dans AUCUNE tâche planifiée (vérifié le 18/11) : les fichiers du trombone ne sont donc purgés par
+   personne. À décider avec lui.
+
+**Laissé pour un second temps (à sa décision)** : la case « ajouter aussi au bien » du §50. Ajouter un document passe
+par la GED (type, pièce sensible) : c'est un autre geste.
+
+**Écarté (forme B)** : envoyer le fichier lui-même dans la demande d'envoi Gmail. Il faudrait modifier la route Gmail,
+partagée par plusieurs écrans, et le fichier transiterait par Render.
+
+**Ce que ça pourrait casser ailleurs** :
+- la fenêtre est partagée par tous les rôles : le bloc est ajouté, rien d'existant ne change ;
+- la route Gmail, le worker et le run de nuit ne sont pas touchés ;
+- au coffre, c'est un nouveau dossier temporaire ; sans le ménage, il grossit.
+
+## 64. Bouton « depuis l'ordinateur » et ménage des temporaires : CODÉS le 18/11 (« Maintenant et aussi le ménage des fichiers temporaires ») — pas poussés
+
+**Serveur**
+- `backend/app/services/assistant_fichiers.py` : les fonctions du trombone prennent en option un autre dossier
+  (`prefixe`) et une autre limite de taille (`taille_max`). Leurs valeurs par défaut sont celles du trombone, donc
+  l'assistant ne voit aucune différence.
+- `backend/app/routers/google_workspace.py` : quatre routes, ouvertes à toute personne connectée dont le profil est
+  actif. Elles déposent sous `temp/email/<la personne>/<numéro>/`, avec 8 Mo au plus par fichier (la limite de Gmail) :
+  - `POST /google-workspace/gmail/pieces/preparer` : contrôle du type et de la taille, puis une adresse d'envoi
+    signée pour UN fichier ;
+  - `POST .../{numero}/confirmer` : relit ce qui est au coffre ; un fichier hors règles est supprimé ;
+  - `POST .../{numero}/lien` : un lien de lecture de 15 min, demandé au moment d'« Envoyer » ;
+  - `DELETE .../{numero}` : la croix « Retirer ».
+  La route `/gmail/send` n'est pas touchée : elle reçoit un lien, comme pour un document.
+
+**Écran**
+- `lib/api.ts` : `deposerPieceEmail`, `lienPieceEmail` et `retirerPieceEmail`.
+- `App.tsx`, fenêtre `ContactEmailComposerModal` : dans le bloc « Pièces jointes », une section « Depuis
+  l'ordinateur » avec un bouton « Choisir des fichiers » (plusieurs à la fois).
+  - Chaque fichier est déposé dès qu'on le choisit, puis il s'affiche avec son nom, son type, sa taille et « Retirer ».
+  - Les fichiers comptent dans les 10 pièces. Un fichier de plus de 8 Mo est refusé AVANT le dépôt, avec la raison.
+  - « Envoyer » reste grisé tant qu'un dépôt est en cours.
+  - Le client reçoit le fichier sous son nom d'origine (le coffre, lui, le range sans accents).
+- `layout-overrides.css` : la ligne sans case à cocher, avec « Retirer » à droite.
+
+**Ménage**
+- `Console/nettoyer_temporaires_orphelins.js` accepte maintenant le dossier `temp/email/`.
+- `scheduled/run_menage_temporaires.ps1` : le lanceur. Il appelle le script avec `--supprimer`, ou à blanc avec
+  `-DryRun`, et écrit son journal dans `logs/scheduled/`.
+- `scheduled/installer_tache_menage_temporaires.ps1` : il enregistre « GTI Menage Temporaires » à 13:00, recopié de
+  l'installeur du balayage des photos, et vérifie la tâche réglage par réglage contre « GTI Entretien Documents ».
+  ⚠ À lancer par Frédéric, dans une PowerShell administrateur.
+- `monitoring/check_gti_health.py` : la tâche est déclarée AVANT d'être enregistrée, en « warning » (une journée ratée
+  se rattrape le lendemain). 12 noms surveillés.
+- Essai à blanc le 18/11 à 07:07, par le lanceur : 16 fichiers au coffre (1,2 Mo).
+  - 11 à supprimer : les envois de documents d'essai de la GED du 12/11, tous `done`, dont une vraie CNI (recto et
+    verso).
+  - 5 gardés parce qu'ils ont moins de 2 jours : les fichiers du trombone d'hier.
+  - Rien n'a été supprimé.
+
+**Contrôles**
+- Essais : fichiers 28 verts (11 nouveaux, section 7), dont les témoins :
+  - un fichier de la fenêtre n'est pas lu comme un fichier du trombone, et inversement ;
+  - un fichier annoncé petit mais déposé trop gros est refusé ET supprimé ;
+  - un lien n'est jamais rendu hors du dossier demandé ;
+  - un compte inactif reçoit un 403.
+- Gestes 361 verts, IA 62 verts, build OK, les deux scripts PowerShell se lisent sans erreur.
+- ⚠ PAS VU À L'ÉCRAN : la maquette locale n'a aucun contact, et aucune fiche n'y porte de propriétaire, donc la fenêtre
+  ne s'ouvre pas. À voir en vrai après la mise en ligne, sur le contact d'essai 10354641 (sa propre adresse).
+
+**Ce que ça pourrait casser ailleurs** :
+- la fenêtre est partagée par tous les rôles : seul un bloc est ajouté, et les pièces du bien marchent comme avant ;
+- la route d'envoi, le worker et le run de nuit ne sont pas touchés ;
+- le ménage supprime pour de vrai tous les jours, sous les quatre gardes du script (14/10), qui retiennent un fichier
+  d'un envoi en cours ou en échec, et un fichier qu'une ligne vivante cite.
