@@ -12051,6 +12051,8 @@ function faitsGedDuBien(dossier: Dossier, detail: DossierDetailPayload | null): 
     taxeFonciere: lire('TAXE_FONCIERE') || null,
     carrez: lire('SURF_CARREZ') || null,
     statutSyndicat: lire('copropriete_statut_syndicat') || null,
+    // GED lot B (18/11) : le plan de sauvegarde, case brute (OUI / NON / vide)
+    planSauvegarde: lire('copropriete_plan_sauvegarde') || null,
     // GED morceau 7b : le prix affiché et le type du mandat (comparés au mandat et à l'avenant lus)
     prix: dossier.prix != null ? nombre(String(dossier.prix)) : null,
     mandatType: dossier.mandat_type ?? null,

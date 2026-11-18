@@ -3278,3 +3278,33 @@ Oui / Non avec « résultat lu : anomalies sans danger »), à ajouter 1, d'acco
 ajouter ; « Enregistrer » rend les bons champs ; console sans erreur.
 ⏳ **Reste** : pousser (Vercel) ; premier usage réel sur 63331 -- un `diag_…` n'a jamais été écrit en modification : le
 contrôle au retour (8a7) dira si Hektor le prend et garde le reste du groupe `diagnostiques`.
+**Poussé le 18/11** (`e4d7f99`, Vercel prêt). **Premier usage réel (18/11, 18:23)** : les 30 documents d'essai de 63331 avaient
+été SUPPRIMÉS le matin (10:23, depuis l'app, en lot ; le classement GED reste, sans fichier) -> le rapport électricité FICTIF
+redéposé par l'écran, lu, la fenêtre s'ouvre seule : date à trancher (03/02/2026 lu / 10/09/2026 fiche), « réalisé » d'accord
+avec « résultat lu : anomalies ». « Enregistrer » : la fiche porte 03/02/2026 à l'instant ; calque `app_annonce_pending` =
+`{diag_electrique_date: 2026-02-03}` seul, envoi à +10 min. Photo du groupe `diagnostiques` AVANT (37 cases) gardée pour le
+contrôle au retour (`scratchpad/lotA_63331_avant.json`).
+
+**DÉCISION DE FRÉDÉRIC (18/11, 19:20)** : « peux-tu être plus autonome jusqu'au point G, à l'aide de tests et contrôles, et aller
+jusqu'à G sauf problème » -> les lots B à G s'enchaînent sans « vas-y » par lot ; chacun : essais, témoins inverses, build,
+commit, puis premier usage réel sur les biens et contacts d'essai ; arrêt sur un problème.
+
+### 12.43 LE LOT B -- la procédure du syndicat et le plan de sauvegarde (18/11) -- ÉCRIT
+
+**Mesure avant d'écrire** : les VRAIS codes Hektor (formulaire `copropriete`, boutons radio, export de 62649) -- statut du
+syndicat `ALERTE` « soumis à une procédure d'alerte », `REDRESSEMENT`, `PROCESS` « procédure en cours », `NOTPROCESS` « pas de
+procédure en cours » ; plan de sauvegarde `OUI` / `NON`. Sur 6 000 fiches : `NOTPROCESS` 47, `PROCESS` 24, `ALERTE` 1 ; plan
+`NON` 20, `OUI` 1. ⚠ **Trouvé en passant, PAS corrigé** : l'écran de saisie (`wizardProcedureOptions`, App.tsx ~l. 1421) et le
+remplissage par le scan (App.tsx ~l. 11808) proposent `PAS_DE_PROCEDURE` / `PROCEDURE_EN_COURS`, qui ne sont PAS des valeurs
+Hektor (radio : le worker ne traduit que les `<select>`) -- mesure : AUCUNE fiche ne porte ces codes ; à regarder à part.
+**Fait** (`gedBilanFiche.ts`) : la fiche synthétique (« aucune » -> `NOTPROCESS`, mandataire ad hoc -> `ALERTE`, administration
+provisoire -> `REDRESSEMENT`, autre -> `PROCESS` ; plan oui/non) et le PV d'AG le plus récent qui NOMME une procédure (jamais
+une convocation ; ⛔ un PV ne prouve pas l'absence) ; par case, le plus récent des deux parle. Les lignes de la fiche synthétique
+rejoignent SA fenêtre (`copro_lots`) ; le PV a la sienne (`copro_ag`, « Ce que dit le procès-verbal d'assemblée générale »).
+Seulement sur un bien marqué copropriété. Les anciens codes de l'écran valent leurs équivalents ; le témoin garde la case telle
+quelle. **L17** : comme L16 au lot 3, elle RESTE dans « À regarder » et reçoit sa note Vrai / Faux du choix (lignes liées
+`regle: 'L17'` quand le document dit une procédure ou un plan) -- « se retire » du plan §12.41 lu ainsi, pour ne pas changer
+les comptes de « À regarder ».
+**Contrôles** : `test_ged_bilan` **113 VERT** (11 neufs, section ⑨) ; témoins inverses -- « le PV plus récent ne parle plus »,
+« une convocation parle », « mandataire ad hoc = procédure en cours » -> 1 ROUGE chacun ; voisins verts (remplir 38, remplir
+contact 48, règles lues 95, règles 44, Reçu/Manque 29, lecture 62) ; `npm run build` vert.

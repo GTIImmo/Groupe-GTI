@@ -438,7 +438,9 @@ export function RecuManque({
     offre: a.code === 'L7' && a.texte.startsWith('Offre'),
     dpe: a.code === 'L6',
     erp: false,
-    copro_lots: a.code === 'L16' && a.texte.startsWith('Copropriété'),
+    // lot B : la procédure et le plan de sauvegarde (L17) se tranchent dans la fiche synthétique ou le PV d'AG
+    copro_lots: (a.code === 'L16' && a.texte.startsWith('Copropriété')) || a.code === 'L17',
+    copro_ag: a.code === 'L17',
     copro_charges: a.code === 'L16' && a.texte.startsWith('Charges'),
     surface: a.code === 'L15',
     // lot A : « diagnostic fait » et sa date ne disent pas la même chose que L2 (la validité) -- aucune ligne liée

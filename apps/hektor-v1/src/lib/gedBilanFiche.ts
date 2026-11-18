@@ -72,6 +72,24 @@ const RESULTATS: Record<string, string> = {
   sous_le_seuil: 'sous le seuil', au_dessus_du_seuil: 'au-dessus du seuil', conforme: 'conforme', non_conforme: 'non conforme',
   travaux_obligatoires: 'travaux obligatoires', absence_installation: 'pas d\'installation', raccorde: 'raccordé au réseau',
 }
+// Lot B (18/11) -- la procédure du syndicat et le plan de sauvegarde (L17), lus dans la fiche synthétique ou le PV d'AG.
+// Codes Hektor (formulaire « copropriete », boutons radio, relevés le 18/11 sur l'export de 62649) : ALERTE « soumis à une
+// procédure d'alerte » (le mandataire ad hoc), REDRESSEMENT « procédure de redressement » (l'administration provisoire),
+// PROCESS « procédure en cours », NOTPROCESS « pas de procédure en cours » ; plan de sauvegarde OUI / NON.
+// ⚠ L'écran de saisie propose PAS_DE_PROCEDURE / PROCEDURE_EN_COURS, qui ne sont PAS des valeurs Hektor : lus comme leurs
+// équivalents. Un PV ne prouve pas l'absence (consigne de lecture) : il ne parle que d'une procédure qu'il nomme.
+const STATUT_LU: Record<string, string> = { aucune: 'NOTPROCESS', mandataire_ad_hoc: 'ALERTE', administration_provisoire: 'REDRESSEMENT', autre: 'PROCESS' }
+const STATUT_CLAIR: Record<string, string> = { NOTPROCESS: 'Pas de procédure', ALERTE: 'Procédure d\'alerte', REDRESSEMENT: 'Procédure de redressement', PROCESS: 'Procédure en cours' }
+const STATUT_ANCIEN: Record<string, string> = { PAS_DE_PROCEDURE: 'NOTPROCESS', PROCEDURE_EN_COURS: 'PROCESS' }
+type Dit = { d: DocumentLu; date: string | null; page: number | null; code: string }
+const leDernier = (a: Dit | null, b: Dit | null): Dit | null => (!a || !b ? a ?? b : b.date && (!a.date || b.date.slice(0, 10) > a.date.slice(0, 10)) ? b : a)
+function ligneCode(s: Dit, cle: string, libelle: string, champ: string, fiche: string | null | undefined, clair: (c: string) => string, procedure: boolean): LigneBilan {
+  const brut = String(fiche ?? '').trim().toUpperCase()
+  const base = STATUT_ANCIEN[brut] ?? brut
+  const etat: EtatBilan = !base ? 'ajouter' : base === s.code ? 'accord' : 'trancher'
+  return ligne({ cle, libelle, etat, lu: clair(s.code), valeur: s.code, transaction: base ? clair(base) : null, page: s.page, champFiche: champ, temoin: String(fiche ?? '').trim() || null, regle: procedure && etat !== 'accord' ? 'L17' : null })
+}
+
 // une valeur NETTE d'une liste, à son rang
 const auRang = (d: DocumentLu, cle: string, rang: number) => { const v = d.lecture.valeurs.find((x) => x.cle === cle && x.rang === rang); return v && v.etat === 'lu' ? v : null }
 // ce qu'un document dit d'une case : sa date (ISO) et la page, ou rien
@@ -159,6 +177,7 @@ export function bilansFiche(faits: FaitsRemplir, docs: DocumentLu[]): BilanCompr
   // ⛔ la copropriété : seulement sur un bien MARQUÉ copropriété -- jamais rien qui ferait passer la case à OUI
   if (faits.copropriete === true) {
     const carnet = lus.find((x) => x.lecture.typeCode === 'copro.carnet' && texteLu(x.lecture.valeurs, 'sous_type') === 'fiche_synthetique')
+    const lignesCarnet: Array<LigneBilan | null> = []
     if (carnet) {
       const total = nombreLu(carnet.lecture.valeurs, 'nb_lots_total')
       const principaux = nombreLu(carnet.lecture.valeurs, 'nb_lots_principaux')
@@ -166,8 +185,32 @@ export function bilansFiche(faits: FaitsRemplir, docs: DocumentLu[]): BilanCompr
       // comme L16 : la fiche qui porte le nombre de lots PRINCIPAUX est d'accord
       if (l && l.etat === 'trancher' && principaux != null && principaux === faits.nbLots) { l.etat = 'accord'; l.regle = null }
       if (l && principaux != null && l.etat !== 'accord') l.note = `dont ${principaux} lots principaux`
-      sortie.push(bilan('copro_lots', carnet, l ? [l] : []))
+      lignesCarnet.push(l)
     }
+    // lot B : le statut du syndicat et le plan de sauvegarde -- la fiche synthétique (qui peut dire « aucune » / « non ») et
+    // le PV d'AG le plus récent qui NOMME une procédure (jamais une convocation) ; par case, le plus récent des deux parle
+    const pv = lus.filter((x) => x.lecture.typeCode === 'copro.pv_ag' && texteLu(x.lecture.valeurs, 'type_piece') !== 'convocation'
+      && ['mandataire_ad_hoc', 'administration_provisoire', 'plan_sauvegarde'].includes(texteLu(x.lecture.valeurs, 'procedure') ?? ''))
+      .reduce<DocumentLu | null>((a, b) => (!a || (dateLue(b.lecture.valeurs, 'date_ag') ?? '') > (dateLue(a.lecture.valeurs, 'date_ag') ?? '') ? b : a), null)
+    const procCarnet = carnet ? texteLu(carnet.lecture.valeurs, 'procedure') : null
+    const planCarnet = carnet ? texteLu(carnet.lecture.valeurs, 'plan_sauvegarde') : null
+    const procPv = pv ? texteLu(pv.lecture.valeurs, 'procedure') : null
+    const dit = (d: DocumentLu | null, cleDate: string, cle: string, code: string | null | undefined): Dit | null => (d && code ? { d, date: dateLue(d.lecture.valeurs, cleDate), page: pageDe(d, cle), code } : null)
+    const statut = leDernier(dit(carnet ?? null, 'date_etablissement', 'procedure', procCarnet ? STATUT_LU[procCarnet] : null),
+      dit(pv, 'date_ag', 'procedure', procPv && procPv !== 'plan_sauvegarde' ? STATUT_LU[procPv] : null))
+    const plan = leDernier(dit(carnet ?? null, 'date_etablissement', 'plan_sauvegarde', planCarnet === 'oui' ? 'OUI' : planCarnet === 'non' ? 'NON' : null),
+      dit(pv, 'date_ag', 'procedure', procPv === 'plan_sauvegarde' ? 'OUI' : null))
+    const lignesPv: LigneBilan[] = []
+    for (const [s, l] of [
+      [statut, statut && ligneCode(statut, 'F.copropriete_statut_syndicat', 'Procédure de la copropriété', 'copropriete_statut_syndicat', faits.statutSyndicat, (c) => STATUT_CLAIR[c] ?? c, statut.code !== 'NOTPROCESS')],
+      [plan, plan && ligneCode(plan, 'F.copropriete_plan_sauvegarde', 'Plan de sauvegarde', 'copropriete_plan_sauvegarde', faits.planSauvegarde, (c) => (c === 'OUI' ? 'Oui' : c === 'NON' ? 'Non' : c), plan.code === 'OUI')],
+    ] as Array<[Dit | null, LigneBilan | null]>) {
+      if (!s || !l) continue
+      if (s.d === pv) lignesPv.push(l)
+      else lignesCarnet.push(l)
+    }
+    if (carnet) sortie.push(bilan('copro_lots', carnet, lignesCarnet.filter((l): l is LigneBilan => l !== null)))
+    if (pv) sortie.push(bilan('copro_ag', pv, lignesPv))
     // la quote-part annuelle du lot : le budget annuel, sinon les charges courantes, sinon la provision annualisée.
     // ⚠ comparée à la case que l'on écrit (copropriete_quote_part), jamais à CHARGES (L16 compare à « quote-part ou CHARGES »)
     const appel = plusRecent(lus, ['copro.appel_fonds', 'copro.arrete_charges'], 'date_document')

@@ -276,5 +276,33 @@ voir(['ddt', 'diag_electricite', 'diag_gaz', 'diag_plomb', 'diag_termites', 'dia
 voir(/diagnostics: Object\.fromEntries\(\['diag_electrique', 'diag_gaz', 'diag_plomb', 'diag_termites', 'diag_amiante', 'diag_assainissement'\]/.test(app) && /\{ fait: lire\(c\) \|\| null, date: lire\(`\$\{c\}_date`\) \|\| null \}/.test(app),
   'la fiche lue : les six cases et leurs dates, brutes')
 
+console.log('⑨ lot B (18/11) : la procédure du syndicat et le plan de sauvegarde (fiche synthétique, PV d\'AG)')
+const synth = (proc, plan, date = '2026-03-01') => docF('Synthese.pdf', 'copro.carnet', [vf('sous_type', { valeur: 'fiche_synthetique' }), vf('date_etablissement', { valeur_date: date }),
+  ...(proc ? [vf('procedure', { valeur: proc }, 4)] : []), ...(plan ? [vf('plan_sauvegarde', { valeur: plan }, 4)] : [])])
+const pvF = (proc, date = '2026-06-15', piece = 'pv') => docF('PV AG.pdf', 'copro.pv_ag', [vf('type_piece', { valeur: piece }), vf('date_ag', { valeur_date: date }), ...(proc ? [vf('procedure', { valeur: proc }, 7)] : [])])
+const g0 = bF({}, [synth('aucune', 'non')])
+voir(g0.length === 1 && g0[0].genre === 'copro_lots' && L(g0[0], 'F.copropriete_statut_syndicat').valeur === 'NOTPROCESS' && L(g0[0], 'F.copropriete_statut_syndicat').etat === 'ajouter'
+  && L(g0[0], 'F.copropriete_plan_sauvegarde').valeur === 'NON' && L(g0[0], 'F.copropriete_statut_syndicat').regle === null,
+  'fiche synthétique « aucune » / « non » sur une fiche VIDE : NOTPROCESS et NON à ajouter (les codes réels de Hektor), sans lien à L17')
+const g1 = bF({ statutSyndicat: 'NOTPROCESS' }, [synth('mandataire_ad_hoc', 'non')])[0]
+voir(L(g1, 'F.copropriete_statut_syndicat').etat === 'trancher' && L(g1, 'F.copropriete_statut_syndicat').valeur === 'ALERTE' && L(g1, 'F.copropriete_statut_syndicat').temoin === 'NOTPROCESS'
+  && L(g1, 'F.copropriete_statut_syndicat').regle === 'L17' && L(g1, 'F.copropriete_statut_syndicat').lu === 'Procédure d\'alerte' && L(g1, 'F.copropriete_statut_syndicat').transaction === 'Pas de procédure',
+  '⭐ un mandataire ad hoc lu, la fiche dit « pas de procédure » -> à trancher, ALERTE proposé, lié à L17')
+voir(L(bF({ statutSyndicat: 'REDRESSEMENT' }, [synth('administration_provisoire')])[0], 'F.copropriete_statut_syndicat').etat === 'accord', 'TÉMOIN : administration provisoire = REDRESSEMENT -> d\'accord')
+voir(L(bF({ statutSyndicat: 'PAS_DE_PROCEDURE' }, [synth('aucune')])[0], 'F.copropriete_statut_syndicat').etat === 'accord'
+  && L(bF({ statutSyndicat: 'PAS_DE_PROCEDURE' }, [synth('aucune')])[0], 'F.copropriete_statut_syndicat').temoin === 'PAS_DE_PROCEDURE', 'l\'ancien code de l\'écran de saisie (PAS_DE_PROCEDURE) vaut NOTPROCESS ; le témoin garde la case telle quelle')
+const g2 = bF({ planSauvegarde: 'NON' }, [synth('aucune', 'non', '2025-01-10'), pvF('plan_sauvegarde')])
+voir(g2.map((b) => b.genre).join() === 'copro_lots,copro_ag' && L(g2[1], 'F.copropriete_plan_sauvegarde').valeur === 'OUI' && L(g2[1], 'F.copropriete_plan_sauvegarde').etat === 'trancher'
+  && L(g2[1], 'F.copropriete_plan_sauvegarde').page === 7 && !L(g2[0], 'F.copropriete_plan_sauvegarde') && L(g2[0], 'F.copropriete_statut_syndicat'),
+  '⛔ un seul chemin par case : le PV du 15/06/2026 (plan de sauvegarde) est plus RÉCENT -> lui parle du plan ; la fiche synthétique garde le statut, qu\'elle est seule à dire')
+voir(bF({}, [synth('aucune', 'non', '2026-09-01'), pvF('plan_sauvegarde')]).map((b) => b.genre).join() === 'copro_lots', 'TÉMOIN : une fiche synthétique plus récente que le PV -> elle seule parle, pas de fenêtre du PV')
+voir(bF({}, [pvF(null)]).length === 0 && bF({}, [pvF('mandataire_ad_hoc', '2026-06-15', 'convocation')]).length === 0, '⛔ un PV qui ne nomme rien ne prouve pas l\'absence ; une convocation ne parle pas -> rien')
+const g3 = bF({}, [pvF('administration_provisoire')])[0]
+voir(g3.genre === 'copro_ag' && L(g3, 'F.copropriete_statut_syndicat').valeur === 'REDRESSEMENT' && !L(g3, 'F.copropriete_plan_sauvegarde'), 'un PV d\'administration provisoire -> REDRESSEMENT, et rien sur le plan')
+voir(bF({ copropriete: false }, [synth('mandataire_ad_hoc', 'oui'), pvF('plan_sauvegarde')]).length === 0, '⛔ TÉMOIN : un bien NON marqué copropriété -> rien (jamais faire passer la case à OUI)')
+voir(verdictDesChoix('Copropriété : mandataire ad hoc (lu dans Synthese.pdf)', 'L17', g1.lignes, new Map([['F.copropriete_statut_syndicat', 'prendre']])) === 'vrai', 'la ligne L17 de « À regarder » reçoit sa note par le choix (comme L16 au lot 3)')
+voir(/copro_lots: \(a\.code === 'L16' && a\.texte\.startsWith\('Copropriété'\)\) \|\| a\.code === 'L17'/.test(rm) && /copro_ag: a\.code === 'L17'/.test(rm) && /\n  copro_ag: \{ le: 'le procès-verbal/.test(mots)
+  && /planSauvegarde: lire\('copropriete_plan_sauvegarde'\) \|\| null/.test(app), 'le genre neuf a ses mots, L17 est liée aux deux fenêtres, la fiche lue porte le plan de sauvegarde brut')
+
 console.log(ko ? `\n${ko} ROUGE, ${ok} VERT` : `\nTOUT EST VERT (${ok})`)
 process.exit(ko ? 1 : 0)
