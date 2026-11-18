@@ -20,10 +20,26 @@ le 12/11 ; 642 sont encore refusees.
 
 ⭐⭐ LE CAS QUI L'A REVELE -- 43091, trouve par Frederic le 18/11 :
       Hektor   compromis 17016 status 2 = ANNULE   (lu en direct le 18/11)
-      le Sheet « Vente réglée », vente reglee le 31/07/2026, facture GGTI00004406,
-               ET AUCUNE DATE D'ANNULATION (colonne Z vide : absent des 897 de C3)
+      le Sheet « Vente réglée », vente reglee le 31/07/2026, facture GGTI00004406
       et la vente 23266 existe, 65 000 EUR, meme mandat, meme acquereur.
-    Le compromis a donc abouti. C'est sa marque chez Hektor qui est fausse.
+
+⛔⛔ ET J'AI AFFIRME ICI, A TORT, QUE « LA LIGNE 43091 NE PORTE AUCUNE DATE
+  D'ANNULATION ». Frederic : « mais si regarde le sheet il y a une date annuler
+  dans la colonne annuler ». IL AVAIT RAISON. LE BIEN PORTE DEUX LIGNES DU CLASSEUR,
+  et j'avais raisonne sur une seule :
+      53ZS73KW  Mme GIBERT Sabrina . offre 22/10/2024 . compromis 18/12/2024
+                etat « Annulée » . ANNULEE LE 16/07/2025
+      bdb548a3  M. CHAPUIS François . offre 06/02/2026 . compromis 09/03/2026
+                vente 30/07/2026 . facture GGTI00004406 . « Vente réglée »
+  La date d'annulation EST dans C3, sous 53ZS73KW, verdict `date_anterieure` (le
+  16/07/2025 precede notre compromis du 09/03/2026), donc jamais posee.
+  ⭐⭐ UN BIEN N'EST PAS UNE LIGNE DU CLASSEUR -- meme famille que
+    [[compte-d-identifiants-n-est-pas-un-compte-de-lignes]], paye deux fois le
+    meme jour. Mesure : 195 chaines sur 4 751 portent PLUSIEURS lignes du
+    classeur, jusqu'a 3.
+  ⚠ CE QUE CA NE CHANGE PAS : les 6 ci-dessous sont TOUS mono-ligne (verifie), leur
+    verdict ne melange donc aucune affaire. Ce que ca change : sur une chaine a
+    plusieurs lignes, ce script agrege et peut se tromper DANS LES DEUX SENS.
 
 ⭐⭐⭐ D'OU LE JUGE DE CE SCRIPT : LE CLASSEUR, qui ne vient pas de Hektor. Pour
   chaque offre encore refusee, on lit ce que le Sheet dit de SA chaine.
