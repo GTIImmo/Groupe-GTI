@@ -1841,4 +1841,325 @@ partagée par plusieurs écrans, et le fichier transiterait par Render.
 - ⛔ L'icône n'était PAS un défaut, je l'avais mal lu : c'est le pictogramme « document » que la fenêtre donne à TOUS
   les PDF (`consoleDocumentIconType` rend `content`) — « Avis de valeur.pdf », dans la liste du bien juste en dessous,
   porte le même. Rien changé.
-- Reste : enregistrer la tâche « GTI Menage Temporaires » (installeur à lancer par Frédéric en administrateur).
+- ✅ Tâche « GTI Menage Temporaires » enregistrée par Frédéric le 18/11 (prête, 1er passage 13:00). ⚠ Déclarée AVANT
+  d'être enregistrée, elle a crié « tâche introuvable » au passage de 08:49 de la surveillance (attendu, mais je ne l'avais
+  pas annoncé) ; au passage de 10:50 : « 12 suivies, 0 en anomalie », retour à la normale.
+
+## 65. LOT 6 — les gestes PAR LA FENÊTRE de l'écran : AUDIT (18/11, « Les fenêtres (lot 6) ») — rien codé
+
+**Périmètre** (inventaire §40, moins ce qui est déjà fait : ajouter une photo = carte §56, déposer des documents = carte
+§60) : 1 créer une annonce / une estimation (+ le scan d'une fiche papier) · 2 offre / compromis / vente [DIR] · 3
+traiter une demande à la direction [DIR] · 4 saisir l'estimation et générer l'avis de valeur · 5 le document de mandat /
+l'avenant · 6 l'envoi en signature · 7 le bon de visite. Lu dans le code (App.tsx, AccueilAssistant.tsx, lib/, serveur),
+points clés revérifiés à la main.
+
+**Le patron existe déjà** (carte « déposer des documents », §59) : au clic « Valider », le serveur vérifie les droits et
+l'objet, n'écrit RIEN, et rend `{"ouvrir": "depot_ged", ...}` (`assistant_gestes.py` ~2131) ; l'écran
+(`agirSurCarte`, AccueilAssistant.tsx ~674) pose les fichiers dans un relais en mémoire (`lib/depotAssistant.ts`) et
+ouvre la fiche, qui ouvre la fenêtre garnie. La personne finit DANS la fenêtre, avec les gardes de l'écran.
+
+**Où vit chaque fenêtre** (ce qui décide du travail) :
+- **Dans l'écran principal, donc ouvrable depuis l'Accueil sans changer d'écran** :
+  - 1 création : `openDraftAnnonceModal()` (App.tsx 17991) ; le scan remplit par `applyDraftAnnonceScan(scan)` (18157) ;
+    annonce ou estimation selon `draftAnnonceCreationStatus` (15519). Rôles de l'écran : admin, manager, commercial (21824).
+  - 2 statut offre / compromis / vente : `openStatusChangeModal(dossier)` (19175), qui REFUSE hors direction (l. 19176).
+    ⭐ Une porte extérieure EXISTE DÉJÀ : l'événement `ged:modifier-transaction` (BilanCompromis.tsx 26 ; écouté
+    App.tsx 21908-21934 : relit le bien, ouvre la modale sur Offre ou Compromis, pré-remplit montant, dates, validité,
+    séquestre, net vendeur).
+  - 3 traiter une demande : `openRequestModal(appDossierId, 'pauline')` (17960) ; décision accepter / refuser / en cours,
+    puis `handleUpdateDiffusionRequest` ; direction (Suivi).
+  - 4 estimation et avis de valeur : `openEstimationEditor(item)` (17814), qui relit le bien et le propriétaire.
+- **Dans la fiche du bien, donc il faut d'abord ouvrir la fiche, puis un relais** :
+  - 5 document de mandat : `MandatDocumentEditor` (5458), monté dans la fiche et le registre ; porte extérieure
+    `hektor:corriger-mandat`, mais elle exige un document DÉJÀ existant.
+  - 6 envoi en signature : `EnvoiSignatureYoutrust` exige le PDF du mandat (un document existant) ; pas de porte directe ;
+    interrupteur `signature_youtrust`.
+- **Pas une fenêtre** : 7 le bon de visite est une page d'IMPRESSION (`openVisitVoucherPrint`, 46294) ; ⚠ elle doit être
+  ouverte À L'INSTANT du clic (`window.open('')` avant tout appel au serveur), sinon le navigateur la bloque.
+
+**Le principe proposé (le même pour les 7)** :
+- l'assistant PROPOSE une carte « ouvrir la fenêtre X pour le bien Y, pré-remplie de : … » ; chaque valeur pré-remplie est
+  ÉCRITE sur la carte (rien de caché) ;
+- au clic « Valider », le serveur vérifie le rôle (le même qu'à l'écran) et que le bien est à la portée de la personne,
+  n'écrit RIEN, et rend l'ordre d'ouverture ;
+- l'écran ouvre la fenêtre pré-remplie ; la personne relit, corrige, et c'est SON clic dans la fenêtre qui fait le geste,
+  exactement comme aujourd'hui.
+
+**Ce que ça pourrait casser ailleurs** : les fenêtres sont partagées par tout le monde ; on ajoute seulement une porte
+d'entrée, sans toucher à ce qu'elles envoient ni à leurs gardes. Points d'attention : (a) une valeur pré-remplie par
+l'assistant peut être fausse — d'où la carte qui les affiche et la fenêtre qui les montre avant l'envoi ; (b) la fenêtre
+s'ouvre par-dessus l'Accueil : à la fermeture, il faut revenir à la conversation (déjà fait pour les fiches, « Retour · À
+la conversation ») ; (c) 5 et 6 ouvrent la fiche, l'Accueil peut être démonté : la conversation est gardée
+(`sessionStorage`, déjà en place) ; (d) bureau seulement tant que le lot 5 (téléphone) n'est pas fait.
+
+**Découpage proposé** (une marche = audit fin → « vas-y » → code → preuve) :
+- 6a le mécanisme commun + **créer une annonce / une estimation** (tous les rôles qui l'ont à l'écran), puis le scan ;
+- 6b **offre / compromis / vente** [DIR] (la porte existe : le moins de code) et **traiter une demande** [DIR] ;
+- 6c **estimation et avis de valeur** ;
+- 6d **document de mandat** puis **envoi en signature** (il faut la fiche et un document existant) ;
+- 6e **bon de visite** (page d'impression ouverte au clic).
+
+## 66. Marche 6a — la carte « ouvrir la création d'une annonce / d'une estimation » : AUDIT FIN (18/11, « Oui, 6a ») — rien codé
+
+**La fenêtre** (lu dans App.tsx) :
+- `openDraftAnnonceModal()` (17991) remet TOUT à zéro (agence et négociateur tirés de la session ; un commercial = lui-même),
+  puis ouvre `draftAnnonceModalOpen`, rendu à la RACINE (22973) : elle s'affiche sur l'Accueil sans changer d'écran.
+- Annonce ou estimation : `draftAnnonceCreationStatus` = estimation si `draftAnnonceScanEstimation` OU écran
+  « estimations », sinon actif (15519) ; ce drapeau ne sert NULLE PART ailleurs (vérifié).
+- Les cases : type de bien (`setDraftAnnonceTypeId`, libellé -> code par `draftAnnoncePropertyTypeIdFromLabel`), adresse,
+  code postal, ville, note ; titre, prix, surface, pièces, chambres, terrain dans `draftAnnonceWizardFields` (`titre`,
+  `prix`, `surfappart`, `nbpieces`, `NB_CHAMBRES`, `surfterrain`) ; mandant : aucun / nouveau / EXISTANT
+  (`draftMandantChoice`, `draftExistingMandantId`, liste cherchée DANS LE PÉRIMÈTRE DU NÉGOCIATEUR choisi, 15775 — un id hors
+  de cette liste est vidé, 15783).
+- Rôles à l'écran : admin, manager, commercial (21824) = `TOUS_LES_ROLES` du serveur.
+- ⚠ `applyDraftAnnonceScan` (18157) est fait pour le SCAN (message « champs récupérés depuis la fiche », revue par
+  confiance, date d'estimation, et il force l'ESTIMATION) : on ne le réutilise PAS pour la carte ; il resservira tel quel à
+  la marche du scan.
+
+**Ce que je propose de coder** :
+- **Serveur** (`assistant_gestes.py`) : un geste `ouvrir_creation_annonce` (rôles de l'écran : admin, manager, commercial).
+  Paramètres : genre (estimation ou annonce), type de bien (libellé), adresse, code postal, ville, titre, prix, surface,
+  pièces, chambres, terrain, note, et un mandant EXISTANT par son numéro de contact (relu avec le jeton de la personne :
+  il doit exister et être à sa portée). La carte ÉCRIT chaque valeur. Au clic, tout est re-vérifié, RIEN ne s'écrit, et la
+  réponse est `{"ouvrir": "creation_annonce", ...}`.
+- ⛔ **Un NOUVEAU mandant ne passe pas par la carte** : son e-mail et son téléphone sont des coordonnées de client, qui ne
+  doivent ni aller chez le modèle ni figurer sur une carte. La carte dit « mandant à saisir dans la fenêtre » ; la personne
+  le tape dans la fenêtre, comme aujourd'hui.
+- **Écran** : `AccueilAssistant.tsx` reconnaît `ouvrir: "creation_annonce"` (comme `depot_ged`) et appelle une nouvelle
+  porte `onOuvrirCreation` ; `App.tsx` : `assistantOuvrirCreation(valeurs)` = `openDraftAnnonceModal()`, puis pose les
+  valeurs dans les cases ci-dessus, le genre (le drapeau estimation), le mandant existant (recherche par son nom, puis son
+  numéro), et un message « Pré-rempli par l'assistant : relis avant de créer ». La personne clique « Créer » DANS la fenêtre.
+- **Consigne du modèle** : créer une annonce ou une estimation = cette carte (jamais un geste direct).
+- **Essais** : la carte (rôles, valeurs écrites, mandant hors de portée refusé, rien d'écrit au clic, re-vérification),
+  le témoin inverse (sans la carte, la consigne ne l'offre pas) ; build ; preuve réelle dans ton Chrome : ouvrir la fenêtre
+  pré-remplie et la FERMER sans créer.
+
+**Ce que ça pourrait casser ailleurs** : la fenêtre de création est la même pour tous ; on ne touche ni à ce qu'elle
+envoie (`handleCreateDraftAnnonce`), ni à ses contrôles, ni à son ouverture par le bouton de l'écran (qui remet tout à
+zéro, comme avant). ⚠ Si le mandant existant n'est pas dans la liste du négociateur choisi, la fenêtre le vide (son
+comportement d'aujourd'hui) : la personne le choisit à la main.
+
+**Maquette (18/11)** : https://claude.ai/artifact/5S2owJCDo2HWTBBefakeGo — 3 planches (la carte en fiche lisible, la
+fenêtre ouverte pré-remplie, les fins de la carte), faite sur l'écran RÉEL vu dans son Chrome et sur la mesure (24
+créations dans l'app en 4 mois, dont 18 estimations, presque toutes ses essais).
+**Décision du 18/11** (ses mots : « Ok pour les 4 propositions et ta propo visuel pour la création d'une estimation ou
+Annonce ») : ✅ le visuel ; ✅ les 4 points qui changent un comportement — (1) titre « Nouvelle estimation » quand c'en est
+une ; (2) les cases remplies par l'assistant MARQUÉES dans la fenêtre, et une pastille par étape ; (3) « Rouvrir la
+création » sur la carte ; (4) la carte dit « Estimation créée » quand la fenêtre a créé.
+Sa question ensuite : le MÉCANISME du pré-remplissage (« l'utilisateur n'a pas besoin de préciser son nom sauf cas
+admin ») — expliqué en détail, pas encore de « vas-y ».
+**Sa demande suivante (18/11)** : « tous les champs sont-ils possibles si je dicte d'autres informations ? » et le SCAN
+DANS 6a (sources : sa phrase, le contact existant, le négociateur pour l'admin, l'agenda ET les photos de la fiche papier).
+Mesuré : le format du scan (`DraftAnnonceSheetScanFieldKey`, lib/api.ts 885) connaît **150 cases**, plus la composition
+pièce par pièce et l'état poste par poste ; `applyDraftAnnonceScan` sait toutes les poser dans la fenêtre. Proposé : la
+carte parle CE format (un seul remplisseur pour la dictée et le scan) ; le scan des photos jointes est fait PAR LA FENÊTRE
+(sa route d'aujourd'hui), jamais par le modèle de la conversation, qui ne voit pas le contenu des fichiers. Hors dictée :
+les coordonnées d'un nouveau mandant (e-mail, téléphone, adresse) — tapées dans la fenêtre ou lues par le scan. À
+trancher : qui l'emporte quand la dictée et la fiche scannée disent deux choses différentes.
+✅ **TRANCHÉ le 18/11 : « Ma dictée prime »** (les désaccords sont listés dans le bandeau de la fenêtre).
+
+**Le périmètre FINAL de 6a, tel que présenté avant le « vas-y »** :
+- Serveur : le geste `ouvrir_creation_annonce` (admin, manager, commercial) ; il reçoit le genre, des cases dans le format
+  du scan (liste fermée des 150 clés, SANS les coordonnées d'un mandant), la composition, un mandant existant (n° de
+  contact relu avec le jeton), un négociateur (admin / manager seulement, relu dans les négociateurs actifs), des photos
+  de fiche (fichiers du trombone, images, 5 au plus). Au clic : tout re-vérifié, RIEN écrit, liens de lecture courts des
+  photos. Consigne : créer = cette carte ; l'agenda se lit avec la lecture existante.
+- Écran : la porte `onOuvrirCreation` ; la fenêtre s'ouvre (remise à zéro comme aujourd'hui), lit les photos par SA route
+  de scan si la carte en porte, puis pose la dictée PAR-DESSUS (elle prime) en notant chaque désaccord ; le genre ; le
+  mandant existant ; le négociateur. Les 4 points acceptés : titre « Nouvelle estimation » ; les cases de l'assistant
+  marquées (point magenta, fond rosé) et une pastille par étape ; bandeau « Pré-rempli par l'assistant : N cases » avec
+  les désaccords ; « Rouvrir la création » ; la carte passe à « Estimation créée » quand la fenêtre a créé (le numéro
+  provisoire noté sur la carte par le serveur, pour survivre à un rechargement).
+- Ce que ça touche chez tout le monde : le titre de la fenêtre (« Nouvelle estimation » aussi pour le scan et l'écran
+  Estimations, ce qui est juste) ; le marquage ne s'allume que si l'assistant a pré-rempli — une ouverture par le bouton
+  de l'écran remet tout à zéro, la fenêtre reste celle d'aujourd'hui.
+- Contrôles : essais serveur (rôles, clés refusées hors liste, coordonnées refusées, contact hors de portée, négociateur
+  réservé à la direction, rien d'écrit au clic) + témoin inverse ; build ; dans ton Chrome : ouvrir pré-rempli, regarder,
+  FERMER sans créer. Créer pour de vrai (une estimation d'essai chez Hektor) = à ton accord, à part.
+- **Ajout demandé le 18/11 (« l'assistant peut-il remettre le PDF vierge de la modale scan IA ? »)** : c'est le lien
+  « Télécharger le patron vierge » (App.tsx ~22866) vers `/patron-fiche-saisie.html` (`apps/hektor-v1/public/`), une PAGE
+  À IMPRIMER (pas un fichier PDF : on l'imprime ou on l'enregistre en PDF depuis le navigateur). Proposé : un lien de
+  plus dans les réponses de l'assistant, `[patron vierge](patron:fiche-saisie)`, rendu en bouton « Ouvrir le patron
+  vierge à imprimer » (nouvel onglet), comme les liens `annonce:` ou `contact:` ; une ligne de consigne. Rien d'écrit,
+  aucune carte (c'est une lecture).
+
+## 67. Marche 6a : CODÉE le 18/11 (sur « Vas-y ») — pas poussée
+
+**Serveur**
+- `assistant_gestes.py` : le geste `ouvrir_creation_annonce` (admin, manager, commercial). Les cases = `FIELD_KEYS` du scan
+  (`openai_listing_sheet_service`), MOINS les 16 cases du mandant et agence / négociateur (132 cases), chacune avec son
+  libellé ; nombres normalisés (« 245 000 € » -> 245000), oui/non, code postal à 5 chiffres, aucune adresse e-mail
+  dans une case ; composition (40 pièces au plus) ; mandant EXISTANT relu avec le jeton (archivé = refusé) ; négociateur
+  pour la DIRECTION seulement (fiche active, homonymes = demander) ; photos de la fiche : images JPEG / PNG / WebP,
+  5 au plus, 12 Mo (= la route de scan). Au clic : tout re-vérifié, RIEN écrit, liens de lecture courts des photos.
+  `fiche_carte` : ce que l'écran affiche (titre, 4 chiffres, lignes, ce qui reste à remplir), rendue avec la carte
+  (flux et relecture). Consigne : créer = cette carte (retiré de « pas encore »), l'agenda au retour d'un RDV, le
+  mandant cherché (plusieurs = demander), le lien `patron:fiche-saisie`.
+- `routers/assistant.py` : `POST /actions/{id}/rouvrir` (re-vérifie comme au clic, liens frais, l'état de la carte ne
+  bouge pas) et `POST /actions/{id}/suite` (la carte garde « créée », sans les liens expirés) ; seulement SA carte
+  « créer » déjà validée. `assistant_service.noter_suite`.
+
+**Écran**
+- `AccueilAssistant.tsx` : la carte « créer » en FICHE (planche 1), « Ouvrir la création » / « Refuser » ; après le
+  clic « Fenêtre ouverte à HH:MM » + « Rouvrir la création » ; puis « Estimation créée » + « Ouvrir la fiche ». Le lien du
+  patron vierge (nouvel onglet). `lib/assistant.ts` : types, `rouvrirCarte`, `noterCreationCarte`, l'événement
+  `gti-assistant-creation-faite`, un exemple en mode maquette (une question contenant « estimation »).
+- `App.tsx` : `assistantOuvrirCreation` = la fenêtre remise à zéro (comme au bouton), la fiche papier lue par la route
+  de scan de l'écran, puis la dictée PAR-DESSUS en UN SEUL passage du remplisseur du scan (la revue de confiance du scan
+  est gardée, la dictée n'y entre pas), désaccords notés ; genre, mandant existant, négociateur (direction). Le MIROIR du
+  scan est sorti en constante (`SCAN_MIROIR`, remplissage inchangé) pour savoir quelles cases marquer. Titre « Nouvelle
+  estimation » ; bandeau « Pré-rempli par l'assistant : N cases » (+ les désaccords, « Revenir à la conversation ») ; un
+  point magenta et un fond rosé sur chaque case remplie (19 cases écrites à la main + les cases des groupes + le type, le
+  mandant, la composition) ; une pastille par étape. Après « Créer » : la carte est prévenue (et le serveur le garde).
+- Styles : `accueil-assistant.css` (préfixe `asi-cr-`), `layout-overrides.css` (`draft-annonce-assistant`, `is-assistant`).
+
+**Contrôles**
+- Essais : gestes **391 verts** (30 nouveaux, section 21, dont 7 témoins : mandant archivé, photo retirée, case interdite
+  glissée dans les paramètres, carte de direction cliquée par un commercial, rouvrir hors règle…), IA **63**, fichiers
+  28, lecteur 73. Témoin inverse de la consigne : la version en ligne échoue au contrôle, la nouvelle le passe.
+- Build OK. Vu dans la maquette locale (Chrome de Frédéric, localhost:5198) : la carte = planche 1 ; « Ouvrir la
+  création » -> fenêtre « Nouvelle estimation », bandeau « 11 cases », pastilles 7 / 3 / 1, cases marquées, type « Maison »
+  choisi ; fermée -> « Fenêtre ouverte à 12:32 » ; « Rouvrir » rouvre. ⭐ TÉMOIN : la même fenêtre ouverte à la main
+  (« Nouvelle annonce » -> « Manuellement ») : titre « Nouvelle annonce », 0 bandeau, 0 marque, 0 pastille.
+- ⚠ PAS VU : le scan des photos jointes et « Estimation créée » (il faut créer pour de vrai : chez Hektor, à son accord) ;
+  le négociateur choisi par la direction ; le téléphone (lot 5, l'assistant n'y est pas encore).
+
+## 68. AUDIT (18/11, ses trois questions) : les QUESTIONS avant la carte, l'avis de valeur APRÈS la création, et
+## « une estimation sur une annonce existante » = ÉDITER L'AVIS DE VALEUR — rien codé, 6a toujours pas poussée
+
+Ses mots : « Est-ce possible que l'assistant pose quelques questions à l'utilisateur pour avoir suffisamment de
+renseignements […] Ensuite le geste est la création d'une annonce statut « estimation » : l'assistant doit proposer ensuite
+d'éditer le dossier d'estimation. Oui / NON. Et si l'utilisateur demande une estimation sur une annonce déjà existante, cela
+veut dire éditer le rapport d'estimation. […] il faut absolument que tu comprennes parfaitement les mécanismes. »
+
+### A. LE MÉCANISME DE L'AVIS DE VALEUR (lu dans le code et la base)
+
+Il y a TROIS endroits, et c'est ce qui compte pour la suite :
+1. **La table `app_dossier_estimation`** (une ligne par bien, patch du 01/07) : `sources` (marché DVF, cadre de vie,
+   cadastre, BDNB, DPE ADEME, patrimoine, loyers, copropriété, INSEE — chacune `{ok, data, fetched_at}`, fusionnées clé par
+   clé par `app_upsert_dossier_estimation_source`) ; `scan_draft` (le BROUILLON de l'avis : valeurs basse / estimée /
+   haute, état et barème par poste, points forts / de vigilance, argumentaire, avis, charges, DPE, chauffage… —
+   `app_upsert_dossier_estimation_scan_draft`) ; `valeurs` (basse / estimée / haute, écrites par le WORKER après chaque PDF).
+   Mesuré : 33 lignes, 25 avec des sources, 11 avec un brouillon, 11 avec des valeurs. ⚠ Lisible par TOUT compte connecté
+   (règle « select using (true) ») : noté, hors sujet.
+2. **L'éditeur** `EstimationDocumentEditor` (App.tsx 6400) — 6 onglets : Le bien (lecture seule : les données de la
+   fiche, « pour les corriger, modifiez la fiche du bien »), Bien & valeur, État, Points, Charges, Marché (DVF) ; « Tout
+   générer » charge marché + cadre + cadastre + BDNB, DPE, patrimoine, loyers, copro, INSEE (et les mémorise) ;
+   « Améliorer les textes (IA) » (reformule, n'invente pas). Son point de départ : le prix ± 5 % et le propriétaire, PUIS
+   le brouillon `scan_draft` par-dessus. Deux portes : la FICHE du bien (onglet Estimation, « Générer le PDF de l'avis »,
+   `estimEditorOpen`) et l'écran ESTIMATIONS (« Envoyer le dossier » -> `openEstimationEditor`, état à la RACINE de l'app,
+   donc ouvrable depuis l'Accueil). Aucune garde de rôle.
+3. **Le PDF** : « Générer » pose le travail `generate_estimation_pdf` (la charge = ce que montre l'éditeur) ; le worker
+   complète avec les sources mémorisées, fabrique le PDF (~30 s), le range dans les DOCUMENTS du bien et l'envoie chez
+   Hektor (`upload_document_to_hektor`), puis écrit `valeurs`. Option : « Générer + envoyer » = un e-mail au propriétaire
+   (`sendEstimationEmail`, depuis la boîte du négociateur) — ce qui part chez un CLIENT.
+Mesuré : 37 avis de valeur générés depuis juin (Frédéric 31, Franck 5, 1 sans auteur), le dernier le 30/10 : presque des
+essais.
+
+⛔ **TROUVÉ, à trancher (comportement)** : ce qu'on saisit dans l'éditeur N'EST PAS GARDÉ. Fermer sans générer perd
+tout ; et même après un PDF, rouvrir l'éditeur repart du prix ± 5 % (+ le brouillon du scan) : il NE relit PAS les
+`valeurs` du dernier avis, ni ses textes (état, points, argumentaire), qui ne sont gardés nulle part sauf DANS le PDF.
+Donc aujourd'hui, « éditer le rapport d'estimation existant » = le REFAIRE, sauf les sources et le brouillon du scan.
+
+### B. LES QUESTIONS AVANT LA CARTE — réalisable, sans écran nouveau
+
+- C'est une conversation : l'assistant peut déjà demander. Ce qui manque, c'est une RÈGLE : quelles informations sont
+  « suffisantes ». La fenêtre elle-même n'exige presque rien (une agence, un négociateur, la cohérence du mandant).
+- Proposé : (1) une liste d'ESSENTIELS par genre, que SA décision fixe (proposition : estimation = type, adresse avec code
+  postal et ville, surface, pièces, terrain pour une maison, le mandant (existant ou « nouveau ») ; annonce = la même chose
+  + le prix) ; (2) le modèle pose les questions manquantes EN UNE FOIS (3 ou 4 au plus, regroupées), saute ce que l'agenda
+  ou le contact lui donnent déjà, accepte « je ne sais pas » (la case reste vide) ; (3) une GARDE au serveur : une carte à
+  qui il manque un essentiel est refusée avec la liste (« il manque : surface, pièces ») — le modèle doit alors demander.
+  C'est la garde qui rend la règle sûre ; la consigne seule ne l'est pas.
+
+### C. APRÈS LA CRÉATION D'UNE ESTIMATION : proposer l'avis de valeur — OUI, avec deux contraintes mesurées
+
+- La carte « Estimation créée » gagne « Préparer l'avis de valeur » (et l'assistant le propose en une phrase).
+- ⚠ Les coordonnées GPS viennent de HEKTOR (la relecture d'après-création) : les biens nés dans l'app les ont après
+  (63329, 63330, 63331 : oui ; 63147 : 0,0, géolocalisation ratée). Sans elles, marché / cadre / cadastre ne se chargent
+  pas -> le bouton attend le numéro Hektor (« en attente de Hektor… »).
+- ⚠ Les valeurs et textes dictés pour l'avis (fourchette, points, état…) passent par le brouillon `scan_draft`, écrit
+  seulement quand Hektor a confirmé la création (file en mémoire + localStorage, App.tsx ~16409) : même attente.
+
+### D. « UNE ESTIMATION SUR UNE ANNONCE EXISTANTE » = ÉDITER L'AVIS DE VALEUR
+
+- La carte (même patron que 6a) ouvre l'ÉDITEUR du bien (la porte de l'écran Estimations, `openEstimationEditor`),
+  PRÉ-REMPLI de ce que la personne dicte : fourchette, état et barème, points forts / de vigilance, argumentaire, avis,
+  charges. RIEN n'est écrit par la carte : c'est la personne qui clique « Générer » (ou « Générer + envoyer » au
+  propriétaire) DANS l'éditeur.
+- Pré-remplir EN MÉMOIRE (une porte de plus vers l'éditeur), PAS dans `scan_draft` : écrire le brouillon écraserait
+  celui de la fiche papier et resterait pour tout le monde.
+- Les caractéristiques du bien (surface, pièces…) NE se changent PAS dans l'éditeur (onglet en lecture seule) : si la
+  personne en dicte, c'est la carte « modifier le bien » (existe) — à dire par l'assistant.
+- Dépend du trouvé de A : sans reprise des derniers textes, l'éditeur repart du prix ± 5 %.
+
+### À trancher par lui
+1. La liste des ESSENTIELS (estimation / annonce) et la garde au serveur.
+2. « Préparer l'avis de valeur » après « Estimation créée » (C).
+3. L'éditeur pré-rempli pour une annonce existante (D).
+4. Le trouvé de A : faut-il que l'éditeur GARDE sa saisie (et relise le dernier avis) ? C'est un changement de
+   l'écran pour tout le monde (aujourd'hui rien n'est gardé).
+
+## 69. Ses réponses (18/11) et l'audit qu'il demande avant le point 4
+
+**Décisions** (ses mots : « 1. OK pour la liste, 2. oui, 3. oui, 4. à auditer avant ») : ✅ la liste des essentiels et la
+garde au serveur ; ✅ « Préparer l'avis de valeur » après « Estimation créée » ; ✅ l'éditeur pré-rempli pour une annonce
+existante ; ⏳ le point 4 : audit ci-dessous.
+
+**⛔ CORRECTION (il m'a repris : « tu trompes l'app ») — les coordonnées NE dépendent PAS de Hektor.** L'app sait les
+calculer elle-même depuis l'adresse : `geocodeAddress` (lib/api.ts 4900, Géoplateforme `data.geopf.fr`, garde-fou score
+≥ 0,35), déjà utilisé quand on modifie l'adresse d'un bien (App.tsx ~35231 : lat/lon posées tout de suite dans notre
+calque, json_map -> `latitude_detail`). Ce qui est vrai : à la CRÉATION, l'app ne géocode pas aujourd'hui
+(`createHektorDraftAnnonceJobOptimistic`, api.ts 13193, ne pose ni latitude ni longitude) ; elles arrivent ensuite par la
+relecture Hektor. ➡ Pour l'assistant : si le bien n'a pas encore de coordonnées, l'éditeur géocode l'adresse lui-même
+(même fonction) — PAS d'attente de Hektor. (Le brouillon dicté, lui, attend toujours la confirmation de création,
+App.tsx ~16409.)
+
+**« L'assistant va-t-il bien générer tous les calculs (DVF, toutes les bases) ? »** — lu dans le code :
+- « Tout générer » de l'éditeur (`loadAllEditor`, App.tsx ~6603) lance EN PARALLÈLE : marché DVF (`loadDvfComparables`,
+  rayon 12 km, 24 mois, élargi à 48 avant la distance ; terrain comparable pour une maison ; ⚠ seulement maison et
+  appartement, par construction), cadre de vie (carte IGN, commodités, risques), cadastre (parcelle, contenance, PLU ; si le
+  point tombe sur la voie, un sélecteur de parcelle) ; et MÉMORISE BDNB, DPE ADEME, patrimoine / ABF, loyers, INSEE, et la
+  copropriété si le bien est en copro. Tout passe par les coordonnées.
+- ⚠ C'est un BOUTON : rien ne se calcule tout seul à l'ouverture. Et le worker, au PDF, recharge les sources mémorisées,
+  recalcule commodités et INSEE, va chercher le cadastre s'il manque — mais PAS le marché DVF : sans « Tout générer » (ni
+  DVF mémorisé), l'avis sort SANS sa page Marché.
+- ➡ Proposé : ouvert par l'assistant, l'éditeur lance « Tout générer » de lui-même (la même fonction que le bouton, qui
+  mémorise les sources comme aujourd'hui) ; la carte et l'éditeur disent ce qui a été calculé et ce qui manque.
+
+**Point 4 — l'éditeur ne garde rien : l'audit**
+- Le contenu du dernier avis EXISTE DÉJÀ : c'est la charge du travail `generate_estimation_pdf` (valeurs, état et barème,
+  points, argumentaire, avis, charges, propriétaire). Mesuré : 13 biens ont un avis, 35 travaux portent les textes. Lisible
+  par celui qui l'a demandé ou qui a le droit de travailler sur le bien (règle `app_console_job_select_scope`).
+- A — **REPRENDRE LE DERNIER AVIS à l'ouverture** (lecture seule, aucun changement de base) : l'éditeur part du dernier
+  avis s'il y en a un, sinon du brouillon (scan / assistant), sinon du prix ± 5 % ; un bandeau dit « repris de l'avis du
+  30/10 ». Ce que ça change pour tout le monde : rouvrir l'éditeur montre le dernier avis au lieu de repartir de zéro.
+  ⚠ Si le prix a changé depuis, la fourchette reprise est ancienne : le bandeau le dit.   <- RECOMMANDÉ d'abord
+- B — **ENREGISTRER LA SAISIE EN COURS** (sans générer) : une colonne de plus dans `app_dossier_estimation` (patch en
+  base, son accord) et une écriture à chaque modification. ⚠ La table est lisible par TOUT compte connecté : les textes
+  de l'avis le seraient aussi (l'adresse e-mail du propriétaire, jamais). Plus lourd ; à faire seulement si A ne suffit pas.
+
+✅ **TRANCHÉ le 18/11 : « A »** (reprendre le dernier avis ; B non retenu).
+
+## 70. La marche suivante (6b-estimation), telle que présentée avant le « vas-y »
+
+1. **Les essentiels et la garde** (carte « créer », serveur) : estimation = type, adresse (code postal + ville), surface,
+   pièces, terrain pour une maison, mandant (existant, ou « nouveau » dit clairement) ; annonce = la même chose + le prix.
+   Il en manque -> la carte est refusée avec la liste ; consigne : les demander EN UNE FOIS (3 ou 4 questions au plus),
+   sauter ce que l'agenda ou le contact donnent, accepter « je ne sais pas » (le mandant « nouveau » vaut réponse).
+2. **« Préparer l'avis de valeur »** sur la carte « Estimation créée » (et l'assistant le propose) : ouvre l'éditeur du
+   bien créé (porte de l'écran Estimations, `openEstimationEditor`), dès que la fiche existe chez nous.
+3. **La carte « avis de valeur » d'une annonce existante** : ouvre l'éditeur du bien, PRÉ-REMPLI EN MÉMOIRE de la dictée
+   (fourchette, état et barème, points, argumentaire, avis, charges) ; rien d'écrit par la carte ; la personne génère
+   (ou génère + envoie au propriétaire) dans l'éditeur. Tous les rôles (l'éditeur n'a pas de garde à l'écran).
+4. **L'éditeur ouvert par l'assistant lance « Tout générer » de lui-même** (la même fonction que le bouton) et, s'il n'y a
+   pas de coordonnées, GÉOCODE l'adresse (`geocodeAddress`) ; il dit ce qui a été calculé et ce qui manque.
+5. **Point 4 A, pour tout le monde** : à l'ouverture, l'éditeur part du DERNIER AVIS (la charge du dernier
+   `generate_estimation_pdf` « done » du bien, lue avec le jeton), puis le brouillon remplit les cases restées vides, puis
+   le prix ± 5 % ; la dictée de l'assistant passe par-dessus tout. Bandeau « repris de l'avis du JJ/MM » (+ « le prix a
+   changé depuis » si c'est le cas).
+**Ce que ça pourrait casser ailleurs** : l'éditeur est partagé (fiche, écran Estimations) : (5) change ce qu'on voit en le
+rouvrant ; (4) ne joue que si l'assistant l'ouvre ; la carte « créer » refusera désormais une demande trop pauvre (c'est
+voulu). Rien ne change dans le PDF, le worker, ni la base.
+**Contrôles prévus** : essais serveur (essentiels, garde, carte avis de valeur) ; build ; maquette locale (éditeur pré-rempli,
+Tout générer lancé, reprise du dernier avis) ; en vrai dans son Chrome : rouvrir l'avis d'un bien qui en a un, SANS générer.

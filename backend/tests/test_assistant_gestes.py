@@ -1212,9 +1212,10 @@ print("  (au clic, la route refuse aussi un rôle hors de geste.roles : DIRECTIO
 voir(ges.GESTES["transaction"].roles == ges.DIRECTION, "la carte est déclarée DIRECTION : la route de validation la refuse à un négociateur")
 
 print("10) aucune fonction de geste ne fait autre chose que proposer")
-voir(all(f.nom.startswith("proposer_") for f in ges.FONCTIONS_GESTES) and len(ges.FONCTIONS_GESTES) == 41,
-     "37 gestes (le brouillon retiré le 15/11, 3 du lot 2c, 3 du lot 3c, 1 de la vague C, le numéro de mandat, la relance "
-     "et l'annulation d'une signature le 16/11, puis les 8 cartes directes de l'audit §35, le prix et le Pilotage pour la direction, ajouter une photo et déposer des documents le 17/11), "
+voir(all(f.nom.startswith("proposer_") for f in ges.FONCTIONS_GESTES) and len(ges.FONCTIONS_GESTES) == 42,
+     "42 gestes (le brouillon retiré le 15/11, 3 du lot 2c, 3 du lot 3c, 1 de la vague C, le numéro de mandat, la relance "
+     "et l'annulation d'une signature le 16/11, puis les 8 cartes directes de l'audit §35, le prix et le Pilotage pour la direction, ajouter une photo et déposer des documents le 17/11, "
+     "ouvrir la création le 18/11), "
      "tous « proposer_ » : le "
      "modèle n'a AUCUNE fonction qui exécute")
 voir(not any(f.nom.startswith("proposer_") for f in ges.FONCTIONS_LECTURE_LOT3), "les 2 lectures du lot 3 ne proposent rien")
@@ -2182,5 +2183,143 @@ google.clear()
 ges.executer_email_client(nouveau_ctx(), p_sans)
 voir(next(g for g in google if g["quoi"] == "envoyer")["attachments"] is None,
      "TÉMOIN : une carte sans pièce (et les cartes d'avant) part sans pièce jointe, comme avant")
+
+print("21) CRÉER UNE ESTIMATION / UNE ANNONCE = ouvrir la FENÊTRE DE CRÉATION pré-remplie (18/11, §65-66, marche 6a)")
+requests.get = lambda url, **kw: faux14("GET", url, **kw)
+requests.post = lambda url, **kw: faux14("POST", url, **kw)
+requests.request = lambda methode, url, **kw: faux14(methode, url, **kw)
+ges.fichiers_service.lien_lecture = faux_lien
+CR = {"genre": "estimation",
+      "cases": [{"cle": "propertyType", "valeur": "maison"}, {"cle": "price", "valeur": "245 000 €"},
+                {"cle": "surface", "valeur": "125 m²"}, {"cle": "roomCount", "valeur": "5"},
+                {"cle": "bedroomCount", "valeur": "3"}, {"cle": "landSurface", "valeur": "900"},
+                {"cle": "address", "valeur": "12 rue des Tilleuls"}, {"cle": "postalCode", "valeur": "42 700"},
+                {"cle": "city", "valeur": "Firminy"}, {"cle": "garden", "valeur": "Oui"}, {"cle": "dpeValue", "valeur": "D"},
+                {"cle": "note", "valeur": ""}],
+      "composition": [{"type": "séjour", "surface": "35,5 m²", "etage": "RDC", "detail": ""}],
+      "hektor_contact_id": "10354641", "negociateur": "", "fichiers": f"fichier:{'a' * 32}|{'d' * 32}"}
+voir(ges.GESTES["ouvrir_creation_annonce"].roles == cat.TOUS_LES_ROLES
+     and "proposer_ouvrir_creation_annonce" in [f.nom for f in cat.fonctions_du_role("commercial")],
+     "ouverte aux rôles qui ont le bouton « Nouvelle annonce » à l'écran (admin, manager, commercial)")
+voir(not [c for c in ges.CASES_CREATION if c.startswith("mandant")] and "agency" not in ges.CASES_CREATION
+     and len(ges.CASES_CREATION) == len(ges._CASES_DU_SCAN) - 18 and set(ges.CASES_CREATION) <= set(ges.LIBELLES_CASES),
+     "⛔ les cases = celles du SCAN, SANS les 16 cases du mandant (coordonnées) ni agence / négociateur ; chacune a son libellé")
+appels14.clear()
+resume_cr, p_cr = ges.preparer_ouvrir_creation_annonce(nouveau_ctx(), CR)
+voir("création d'une estimation" in resume_cr and "Prix 245 000 €" in resume_cr and "Surface habitable 125 m²" in resume_cr
+     and "Mme CLAUDE TESTCLAUDE (contact existant)" in resume_cr and "« facade.jpg », « vue.webp »" in resume_cr
+     and "« Créer » DANS la fenêtre" in resume_cr and not ecrits14(),
+     "la carte dit chaque valeur, le mandant existant, la fiche scannée, et que RIEN n'est créé avant « Créer » ; rien écrit")
+voir(p_cr["cases"] == {"propertyType": "maison", "price": "245000", "surface": "125", "roomCount": "5", "bedroomCount": "3",
+                       "landSurface": "900", "address": "12 rue des Tilleuls", "postalCode": "42700", "city": "Firminy",
+                       "garden": "oui", "dpeValue": "D"}
+     and p_cr["composition"] == [{"type": "séjour", "surface": "35.5", "etage": "RDC", "detail": ""}]
+     and p_cr["hektor_contact_id"] == "10354641" and p_cr["fichiers"] == ["a" * 32, "d" * 32] and "negociateur" not in p_cr,
+     "les valeurs RANGÉES : nombres nus, oui/non, code postal sans espace ; une case vide n'est pas rangée")
+voir("@" not in resume_cr and "@" not in json.dumps(p_cr) and "pereira" not in json.dumps(p_cr).lower(),
+     "⛔ aucune adresse e-mail ni dans la carte ni dans ses paramètres (le mandant par son numéro et son nom)")
+for mauvais, morceau, quoi in (
+        ({"cle": "mandantEmail", "valeur": "x@y.fr"}, "n'est pas une case", "l'e-mail d'un mandant"),
+        ({"cle": "mandantPhone", "valeur": "0601020304"}, "n'est pas une case", "le téléphone d'un mandant"),
+        ({"cle": "note", "valeur": "écrire à jean@exemple.fr"}, "adresse e-mail", "une adresse glissée dans une note"),
+        ({"cle": "postalCode", "valeur": "427"}, "5 chiffres", "un code postal faux"),
+        ({"cle": "price", "valeur": "vers deux cent mille"}, "pas un nombre", "un prix en lettres (le modèle doit mettre 200000)"),
+        ({"cle": "pool", "valeur": "peut-être"}, "oui ou non", "un oui/non flou")):
+    voir(refuse(lambda: ges.preparer_ouvrir_creation_annonce(nouveau_ctx(), {**CR, "cases": [mauvais]}), morceau),
+         f"⛔ refusé : {quoi}")
+voir(refuse(lambda: ges.preparer_ouvrir_creation_annonce(nouveau_ctx(), {**CR, "genre": "vente"}), "estimation ou d'une annonce")
+     and refuse(lambda: ges.preparer_ouvrir_creation_annonce(nouveau_ctx(), {"genre": "annonce", "cases": [], "composition": [],
+                                                                               "hektor_contact_id": "", "negociateur": "",
+                                                                               "fichiers": ""}), "Rien à pré-remplir"),
+     "⛔ ni estimation ni annonce : demander ; une carte vide : refusée")
+voir(refuse(lambda: ges.preparer_ouvrir_creation_annonce(nouveau_ctx(), {**CR, "hektor_contact_id": "99"}), "pas parmi"),
+     "⛔ un mandant que la personne ne peut pas voir (relu avec SON jeton) : refusé")
+etat14["contact"] = {"10354641": {"archive": True}}
+voir(refuse(lambda: ges.preparer_ouvrir_creation_annonce(nouveau_ctx(), CR), "archivé"), "⛔ un mandant archivé : refusé")
+etat14.pop("contact")
+voir(refuse(lambda: ges.preparer_ouvrir_creation_annonce(nouveau_ctx(), {**CR, "fichiers": f"{'a' * 32}|{'c' * 32}"}), "JPEG, PNG ou WebP"),
+     "⛔ un PDF n'est pas une photo de fiche : refusé (le scan ne lit que des images)")
+ges.MAX_PAGES_SCAN = 1
+voir(refuse(lambda: ges.preparer_ouvrir_creation_annonce(nouveau_ctx(), CR), "photos au plus"), "⛔ trop de pages pour le scan : refusé")
+ges.MAX_PAGES_SCAN = 5
+voir(refuse(lambda: ges.preparer_ouvrir_creation_annonce(nouveau_ctx(), {**CR, "negociateur": "pereira"}), "c'est toi"),
+     "⛔ un COMMERCIAL ne choisit pas le négociateur : c'est lui (la fenêtre le pose)")
+_, p_dir = ges.preparer_ouvrir_creation_annonce(nouveau_ctx("admin"), {**CR, "negociateur": "pereira"})
+voir(p_dir["negociateur"] == {"hektor_negociateur_id": "12", "nom": "Paulo PEREIRA"}
+     and refuse(lambda: ges.preparer_ouvrir_creation_annonce(nouveau_ctx("admin"), {**CR, "negociateur": "blanchard"}), "Plusieurs")
+     and refuse(lambda: ges.preparer_ouvrir_creation_annonce(nouveau_ctx("admin"), {**CR, "negociateur": "inconnu"}), "ACTIF"),
+     "la DIRECTION nomme un négociateur ACTIF chez Hektor (deux homonymes : demander lequel)")
+f_cr = ges.fiche_carte(p_cr, "ouvrir_creation_annonce")
+voir(f_cr["titre"] == "Maison de 125 m² à Firminy" and f_cr["genre"] == "estimation"
+     and [c["libelle"] for c in f_cr["chiffres"]] == ["Prix", "Surface habitable", "Pièces", "Terrain"]
+     and f_cr["chiffres"][2].get("complement") == "dont 3 chambres"
+     and f_cr["lignes"][0] == {"libelle": "Adresse", "valeur": "12 rue des Tilleuls, 42700 Firminy"}
+     and f_cr["lignes"][1] == {"libelle": "Mandant", "valeur": "Mme CLAUDE TESTCLAUDE", "contact": True}
+     and {"libelle": "DPE", "valeur": "D"} in f_cr["lignes"] and f_cr["photos"] == 2 and f_cr["composition"] == 1
+     and f_cr["a_remplir"] == ["Photos"] and ges.fiche_carte(p_cr, "creer_relance") is None,
+     "la FICHE de l'écran (planche 1) : titre, quatre chiffres, adresse, mandant, le reste, ce qui reste à remplir")
+appels14.clear()
+liens19.clear()
+r_cr = ges.executer_ouvrir_creation_annonce(nouveau_ctx(), p_cr)
+voir(r_cr["ouvrir"] == "creation_annonce" and r_cr["genre"] == "estimation" and r_cr["cases"] == p_cr["cases"]
+     and r_cr["mandant"] == {"hektor_contact_id": "10354641", "nom": "Mme CLAUDE TESTCLAUDE"} and r_cr["negociateur"] is None
+     and [f["nom"] for f in r_cr["photos"]] == ["facade.jpg", "vue.webp"] and all(f["url"].startswith("https://") for f in r_cr["photos"])
+     and not ecrits14(),
+     "au CLIC : l'ordre d'ouverture, les valeurs re-vérifiées, des liens COURTS vers les photos -- et RIEN d'écrit")
+etat14["contact"] = {"10354641": {"archive": True}}
+voir(refuse(lambda: ges.executer_ouvrir_creation_annonce(nouveau_ctx(), p_cr), "archivé"),
+     "TÉMOIN : le mandant archivé entre la carte et le clic -> refusé au clic")
+etat14.pop("contact")
+etat18["disparus"] = {"d" * 32}
+voir(refuse(lambda: ges.executer_ouvrir_creation_annonce(nouveau_ctx(), p_cr), "joins-le à nouveau"),
+     "TÉMOIN : une photo de la fiche retirée du trombone -> refusé au clic")
+etat18.pop("disparus")
+voir(refuse(lambda: ges.executer_ouvrir_creation_annonce(nouveau_ctx(), {**p_cr, "cases": {**p_cr["cases"], "mandantEmail": "x@y.fr"}}),
+            "n'est pas une case"),
+     "TÉMOIN : une case interdite glissée dans les paramètres rangés -> refusée AU CLIC aussi")
+_, p_dir2 = ges.preparer_ouvrir_creation_annonce(nouveau_ctx("admin"), {**CR, "negociateur": "pereira"})
+r_dir = ges.executer_ouvrir_creation_annonce(nouveau_ctx("admin"), p_dir2)
+voir(r_dir["negociateur"]["hektor_user_id"] == "203" and r_dir["negociateur"]["agence"] == "GTI Firminy",
+     "au clic, la direction reçoit le COMPTE Hektor du négociateur (la valeur du menu de la fenêtre) et son agence")
+voir(refuse(lambda: ges.executer_ouvrir_creation_annonce(nouveau_ctx(), p_dir2), "c'est toi"),
+     "TÉMOIN : une carte de direction cliquée par un commercial -> refusée")
+
+
+class Service21(Service):
+    def __init__(self, carte):
+        super().__init__(carte)
+        self.suites = []
+
+    def noter_suite(self, action_id, user_id, resultat):
+        self.suites.append(resultat)
+        return True
+
+
+def route21(fonction, carte, role="commercial", **kw):
+    service = Service21(carte)
+    route._ouvrir = lambda *a: (User(UID), {"role": role, "display_name": "Paul NEGO"})
+    try:
+        return fonction("a" * 36, *kw.values(), "Bearer " + JETON, Settings(), None, service), service
+    except HTTPException as exc:
+        return exc.status_code, service
+
+
+carte_cr = {"id": "a" * 36, "user_id": UID, "geste": "ouvrir_creation_annonce", "etat": "executee", "parametres": p_cr,
+            "conversation_id": "c" * 36, "resultat": {**r_cr}}
+appels14.clear()
+r, s = route21(route.assistant_rouvrir, carte_cr)
+voir(r["ok"] and r["resultat"]["ouvrir"] == "creation_annonce" and r["resultat"]["photos"] and not s.fins and not ecrits14(),
+     "ROUVRIR : re-vérifié comme au clic, liens frais, la carte ne change PAS d'état, rien d'écrit")
+r, s = route21(route.assistant_rouvrir, {**carte_cr, "etat": "proposee"})
+voir(r == 409, "⛔ rouvrir une carte pas encore validée : refusé (il faut cliquer « Ouvrir la création »)")
+r, s = route21(route.assistant_rouvrir, {**carte_cr, "geste": "creer_relance"})
+voir(r == 409, "⛔ rouvrir une autre sorte de carte : refusé")
+r, s = route21(route.assistant_suite, carte_cr, payload=route.SuiteCreationPayload(app_dossier_id=10000123, genre="estimation"))
+voir(r["ok"] and s.suites and s.suites[0]["cree"]["app_dossier_id"] == 10000123 and "photos" not in s.suites[0]
+     and s.suites[0]["cases"] == p_cr["cases"],
+     "SUITE : la carte garde « créée » (et ce qu'elle a pré-rempli), sans les liens expirés des photos")
+r, s = route21(route.assistant_suite, {**carte_cr, "user_id": "u-autre"},
+               payload=route.SuiteCreationPayload(app_dossier_id=1, genre="annonce"))
+voir(r == 404 and not s.suites, "⛔ la carte d'un AUTRE : introuvable, rien noté")
 
 print(f"\n{ok} contrôles verts")

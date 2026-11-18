@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import time
+from datetime import datetime, timezone
 from typing import Any, AsyncIterator
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -343,6 +344,66 @@ def assistant_valider(
         return {"ok": False, "etat": "echec", "detail": "Non fait : l'écriture n'a pas abouti."}
     service.terminer_carte(action_id, "executee", resultat)
     return {"ok": True, "etat": "executee", "resultat": resultat}
+
+
+# ── 18/11 (note étape 4 §66, marche 6a) : la carte « créer » APRÈS son clic ───────────────────────────────────────
+# ROUVRIR : la fenêtre a été fermée sans créer. Le serveur re-vérifie TOUT comme au premier clic (le même `executer`, qui
+#   n'écrit rien) et rend des liens frais pour les photos de la fiche ; la carte ne change pas d'état.
+# SUITE : la fenêtre a créé la fiche -> la carte le garde (« Estimation créée »), pour un rechargement. Rien d'autre.
+GESTE_CREATION = "ouvrir_creation_annonce"
+
+
+def _carte_creation_validee(service: AssistantService, action_id: str, user_id: str) -> dict[str, Any]:
+    carte = _carte_a_moi(service, action_id, user_id)
+    if carte.get("geste") != GESTE_CREATION or carte.get("etat") != "executee":
+        raise HTTPException(status_code=409, detail="Cette carte ne rouvre pas de fenêtre de création.")
+    return carte
+
+
+@router.post("/actions/{action_id}/rouvrir")
+def assistant_rouvrir(
+    action_id: str,
+    authorization: str | None = Depends(require_request_user),
+    settings: Settings = Depends(get_settings),
+    admin_service: SupabaseAdminService = Depends(get_admin_service),
+    service: AssistantService = Depends(get_assistant_service),
+):
+    user, profile = _ouvrir(settings, authorization, admin_service, service)
+    carte = _carte_creation_validee(service, action_id, str(user.id))
+    role = str(profile.get("role") or "")
+    if role not in GESTES[GESTE_CREATION].roles:
+        raise HTTPException(status_code=403, detail="Ce geste n'est pas ouvert à ton rôle")
+    ctx = ContexteAssistant(settings=settings, user_id=str(user.id), email=(user.email or "").strip().lower(), role=role,
+                            jeton=_jeton(authorization), conversation_id=carte.get("conversation_id"),
+                            nom=profile.get("display_name") or None)
+    try:
+        return {"ok": True, "resultat": GESTES[GESTE_CREATION].executer(ctx, dict(carte.get("parametres") or {}))}
+    except Refus as exc:
+        return {"ok": False, "detail": f"Non rouverte : {exc}"}
+
+
+class SuiteCreationPayload(BaseModel):
+    app_dossier_id: int | None = Field(default=None, ge=1)
+    genre: str = Field(pattern="^(estimation|annonce)$")
+
+
+@router.post("/actions/{action_id}/suite")
+def assistant_suite(
+    action_id: str,
+    payload: SuiteCreationPayload,
+    authorization: str | None = Depends(require_request_user),
+    settings: Settings = Depends(get_settings),
+    admin_service: SupabaseAdminService = Depends(get_admin_service),
+    service: AssistantService = Depends(get_assistant_service),
+):
+    user, _profile = _ouvrir(settings, authorization, admin_service, service)
+    carte = _carte_creation_validee(service, action_id, str(user.id))
+    # les liens des photos ont expiré : on ne les garde pas ; le reste du résultat (ce qui a été pré-rempli) reste
+    resultat = {k: v for k, v in dict(carte.get("resultat") or {}).items() if k != "photos"}
+    resultat["cree"] = {"app_dossier_id": payload.app_dossier_id, "genre": payload.genre, "le": datetime.now(timezone.utc).isoformat()}
+    if not service.noter_suite(action_id, str(user.id), resultat):
+        raise HTTPException(status_code=409, detail="Cette carte ne rouvre pas de fenêtre de création.")
+    return {"ok": True, "resultat": resultat}
 
 
 @router.post("/actions/{action_id}/refuser")

@@ -244,6 +244,7 @@ import {
   requestAnnonceRefresh,
   type AnnonceContactInviteeOption,
   type DraftAnnonceSheetScanPayload,
+  type DraftAnnonceSheetScanFieldKey,
   type GoogleCalendarAvailability,
   type GoogleCalendarEventLink,
   type GoogleWorkspaceContactEmailMessage,
@@ -293,7 +294,7 @@ import PilotageScreen from './PilotageScreen'
 import RegistreUtilisateurs, { type RuPreRemplissage } from './RegistreUtilisateurs'
 import { BranchesAccueil, citerDansAssistant, demanderAssistant, ouvrirConversation, useAccueilAssistant, useConversationsRail } from './RailAssistant'
 import AccueilAssistant, { type ChiffresAccueil } from './AccueilAssistant'
-import { contactDeLaRecherche, transactionPourLien } from './lib/assistant'
+import { EVENEMENT_CREATION_FAITE, contactDeLaRecherche, noterCreationCarte, transactionPourLien, type CreationFaite, type OuvertureCreation } from './lib/assistant'
 import { bvBoot } from './lib/bienvuBoot'
 import { APP_BIENVU_ENABLED } from './lib/bienvuFlag'
 import { BienvuLogin } from './BienvuLogin'
@@ -1826,6 +1827,35 @@ const scanFieldLabels: Record<string, string> = {
 }
 function scanFieldLabel(key: string): string {
   return scanFieldLabels[key] ?? key
+}
+
+// Le MIROIR du scan : case de la fenêtre <- clé du scan (applyDraftAnnonceScan). Sorti du remplisseur le 18/11 (étape 4
+// §66) pour que la fenêtre sache AUSSI quelles cases l'assistant a remplies ; le remplissage est inchangé.
+const SCAN_MIROIR: Record<string, DraftAnnonceSheetScanFieldKey> = {
+  surfappart: 'surface', surfterrain: 'landSurface', nbpieces: 'roomCount', NB_CHAMBRES: 'bedroomCount',
+  NB_NIVEAUX: 'levelCount', NB_SDB: 'bathroomCount', NB_SE: 'showerRoomCount', NB_WC: 'wcCount',
+  SURF_CARREZ: 'carrezSurface', SURF_SEJOUR: 'livingSurface', vuee: 'view', ANNEE_CONS: 'constructionYear',
+  dpe_cons: 'dpeValue', dpe_ges: 'gesValue', GARAGE_BOX: 'garageCount', SURFACE_GARAGE: 'garageSurface',
+  NB_PARK_INT: 'parkingInsideCount', NB_PARK_EXT: 'parkingOutsideCount', NB_TERRASSE: 'terraceCount',
+  copropriete_nb_lot: 'coproLots', copropriete_quote_part: 'coproQuotePart', montant_fonds_travaux: 'coproWorksFund',
+  CHARGES: 'coproCharges', PRIXNETVENDEUR: 'netSellerPrice', prix: 'price',
+}
+// Les autres cases que le remplisseur du scan pose une à une (même table que applyDraftAnnonceScan, en clair).
+const SCAN_CASES_DIRECTES: Partial<Record<DraftAnnonceSheetScanFieldKey, string>> = {
+  title: 'titre', propertyType: 'type', address: 'adresse', postalCode: 'cp', city: 'ville', note: 'note',
+  description: 'corps', garden: 'JARDIN-', pool: 'PISCINE-', works: 'TRAVAUX', chargesDetail: 'CHARGES_DETAIL',
+  exposure: 'EXPOSITION', kitchen: 'CUISINE', interiorState: 'etat_interieur', exteriorState: 'etat_exterieur',
+}
+/** 18/11 (étape 4 §66) : les cases de la FENÊTRE que remplissent ces clés du scan (pour le point de l'assistant). */
+function champsFenetreDesCases(cles: string[]): string[] {
+  const champs = new Set<string>()
+  for (const cle of cles) {
+    const direct = SCAN_CASES_DIRECTES[cle as DraftAnnonceSheetScanFieldKey]
+    if (direct) champs.add(direct)
+    for (const [champ, source] of Object.entries(SCAN_MIROIR)) if (source === cle) champs.add(champ)
+    for (const entree of scanWizardFieldMap) if (entree.ocr === cle) champs.add(entree.name)
+  }
+  return [...champs]
 }
 
 const scanWizardFieldMap: ScanWizardMapEntry[] = [
@@ -14936,6 +14966,10 @@ export default function App() {
   }, [])
   // Agent de saisie : une fiche scannee cree une ESTIMATION (quel que soit l'ecran d'origine).
   const [draftAnnonceScanEstimation, setDraftAnnonceScanEstimation] = useState(false)
+  // 18/11 (étape 4 §66, marche 6a) : ce que l'ASSISTANT a pré-rempli dans la fenêtre (null = ouverte à la main : la fenêtre
+  // d'aujourd'hui, sans aucune marque). `champs` = les cases de la fenêtre marquées ; `desaccords` = ce que la fiche
+  // scannée disait autrement que la dictée (la dictée prime) ; `carteId` = la carte à prévenir quand la fiche est créée.
+  const [draftPrefillAssistant, setDraftPrefillAssistant] = useState<{ carteId: string; champs: string[]; nombre: number; heure: string; desaccords: string[]; lecture: 'en_cours' | 'faite' | 'ratee' | null } | null>(null)
   const draftAnnoncePhotoUploadStartedRef = useRef<Set<string>>(new Set())
   const draftAnnonceEstimationSavedRef = useRef<Set<string>>(new Set())
   const [draftAnnonceStep, setDraftAnnonceStep] = useState<DraftAnnonceStepKey>('offre')
@@ -15505,6 +15539,24 @@ export default function App() {
   const draftAnnonceDetailGroups = draftAnnonceVisibleWizardGroups.filter((section) => section.step === 5)
   const draftAnnonceMandatGroups = draftAnnonceVisibleWizardGroups.filter((section) => section.step === 6)
   const draftAnnonceDiffusionGroups = draftAnnonceVisibleWizardGroups.filter((section) => section.step === 7)
+  // 18/11 (étape 4 §66) : combien de cases l'assistant a remplies à chaque étape (la pastille sur l'étape). Les cases
+  // écrites à la main dans la fenêtre ont leur étape ici ; les autres la prennent de leur groupe (section.step).
+  const draftPrefillParEtape = useMemo<Partial<Record<DraftAnnonceStepKey, number>>>(() => {
+    if (!draftPrefillAssistant?.champs.length) return {}
+    const aLaMain: Record<string, DraftAnnonceStepKey> = {
+      titre: 'offre', type: 'offre', negociateur: 'offre', prix: 'offre', surfappart: 'offre', surfterrain: 'offre',
+      SURFACE_GARAGE: 'offre', nbpieces: 'offre', NB_CHAMBRES: 'offre', NB_NIVEAUX: 'offre', 'JARDIN-': 'offre',
+      'PISCINE-': 'offre', GARAGE_BOX: 'offre', EXPOSITION: 'offre', vuee: 'offre',
+      adresse: 'secteur', cp: 'secteur', ville: 'secteur', composition: 'composition', mandant: 'mandatPrix', note: 'mandatPrix',
+    }
+    const compte: Partial<Record<DraftAnnonceStepKey, number>> = {}
+    for (const champ of draftPrefillAssistant.champs) {
+      const groupe = draftAnnonceVisibleWizardGroups.find((section) => section.fields.some((field) => field.name === champ))
+      const etape = aLaMain[champ] ?? (groupe ? draftAnnonceStepOrder[groupe.step - 1] : undefined)
+      if (etape) compte[etape] = (compte[etape] ?? 0) + 1
+    }
+    return compte
+  }, [draftPrefillAssistant, draftAnnonceVisibleWizardGroups])
   const draftAnnonceHasNewMandantDraft = [draftMandantCivility, draftMandantLastName, draftMandantFirstName, draftMandantEmail, draftMandantPhone, draftMandantAddress, draftMandantPostalCode, draftMandantCity].some((value) => value.trim())
   const draftAnnonceHasExistingMandantDraft = draftMandantChoice === 'existing' && /^\d+$/.test(draftExistingMandantId.trim())
   const draftAnnonceMandantReviewLabel = draftAnnonceHasExistingMandantDraft
@@ -18032,8 +18084,81 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setDraftMandantCity('')
     setNoticeMessage(null)
     setErrorMessage(null)
+    setDraftPrefillAssistant(null)  // 18/11 (§66) : ouverte à la main = aucune marque de l'assistant
     setDraftAnnonceModalOpen(true)
   }
+
+  // 18/11 (étape 4 §66, marche 6a) : la carte « créer » de l'assistant ouvre CETTE fenêtre, pré-remplie. Rien n'est écrit :
+  // la fenêtre est remise à zéro comme au bouton, puis remplie par le remplisseur du SCAN (applyDraftAnnonceScan) --
+  // d'abord la fiche papier lue par la route de scan de l'écran (si la carte porte des photos), puis la DICTÉE par-dessus
+  // (« Ma dictée prime », décision du 18/11), chaque désaccord noté. La personne crée DANS la fenêtre.
+  async function assistantOuvrirCreation(o: OuvertureCreation, carteId: string) {
+    if (!canCreateHektorDraftAnnonce) return
+    openDraftAnnonceModal()
+    const heureCarte = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+    const dicte = Object.keys(o.cases)
+    setDraftPrefillAssistant({ carteId, champs: [], nombre: 0, heure: heureCarte, desaccords: [], lecture: o.photos.length ? 'en_cours' : null })
+    let lue: DraftAnnonceSheetScanPayload | null = null
+    if (o.photos.length) {
+      setDraftAnnonceScanPending(true)
+      try {
+        const fichiers = await Promise.all(o.photos.map(async (f) => {
+          const reponse = await fetch(f.url)
+          if (!reponse.ok) throw new Error(`« ${f.nom} » n'a pas pu être relue au coffre (${reponse.status}).`)
+          return new File([await reponse.blob()], f.nom, { type: f.type })
+        }))
+        lue = fichiers.length > 1 ? await scanDraftAnnonceSheets(fichiers) : await scanDraftAnnonceSheet(fichiers[0])
+      } catch (erreur) {
+        setErrorMessage(`La fiche papier n'a pas pu être lue (${erreur instanceof Error ? erreur.message : 'erreur'}) : la fenêtre est remplie avec ta dictée seule.`)
+      } finally {
+        setDraftAnnonceScanPending(false)
+      }
+    }
+    // UN SEUL passage du remplisseur : la fiche lue, puis la dictée PAR-DESSUS case par case (une case dictée n'a pas de
+    // « confiance » : elle ne part pas dans la revue du scan) ; la composition dictée remplace celle de la fiche.
+    const dictee = Object.fromEntries(dicte.map((cle) => [cle, { value: o.cases[cle], confidence: null, rawText: null }]))
+    const fusion: DraftAnnonceSheetScanPayload = {
+      model: lue?.model ?? null, summaryConfidence: lue?.summaryConfidence ?? null, warnings: lue?.warnings ?? [],
+      missingFields: [], rawNotes: lue?.rawNotes ?? null, statePosts: lue?.statePosts ?? [],
+      fields: { ...(lue?.fields ?? {}), ...dictee } as DraftAnnonceSheetScanPayload['fields'],
+      pieces: o.composition.length
+        ? o.composition.map((p) => ({ type: p.type, surface: p.surface, etage: p.etage, detail: p.detail, note: '' }))
+        : (lue?.pieces ?? []),
+    }
+    if (lue || dicte.length || o.composition.length) applyDraftAnnonceScan(fusion)
+    // le genre de la CARTE (le scan force l'estimation : la carte dit ce que la personne a demandé)
+    setDraftAnnonceScanEstimation(o.genre === 'estimation')
+    if (!lue) { setDraftAnnonceScanMessage(null); setDraftAnnonceScanReview([]); setDraftAnnonceScanWarnings([]) }
+    else setDraftAnnonceScanMessage(`${draftAnnonceScanFilledCount(lue)} champs lus sur la fiche papier${lue.summaryConfidence != null ? ` - fiabilite ${(lue.summaryConfidence * 100).toFixed(0)}%` : ''}.`)
+    if (o.mandant) {
+      setDraftMandantChoice('existing')
+      setDraftExistingMandantSearch(o.mandant.nom)
+      setDraftExistingMandantId(o.mandant.hektor_contact_id)
+    }
+    if (o.negociateur?.hektor_user_id && profile?.role !== 'commercial') {
+      setDraftAnnonceNegotiatorId(o.negociateur.hektor_user_id)
+      if (o.negociateur.agence) setDraftAnnonceAgency(o.negociateur.agence)
+    }
+    const desaccords: string[] = []
+    if (lue) {
+      for (const cle of dicte) {
+        const surLaFiche = String(lue.fields[cle as DraftAnnonceSheetScanFieldKey]?.value ?? '').trim()
+        const dite = String(o.cases[cle] ?? '').trim()
+        const memes = (a: string, b: string) => a.toLowerCase().replace(/[\s.,€m²]/g, '') === b.toLowerCase().replace(/[\s.,€m²]/g, '')
+        if (surLaFiche && dite && !memes(surLaFiche, dite)) desaccords.push(`${scanFieldLabel(cle)} : la fiche dit « ${surLaFiche} », tu as dit « ${dite} »`)
+      }
+    }
+    const lues = lue ? Object.entries(lue.fields).filter(([, f]) => String(f?.value ?? '').trim()).map(([cle]) => cle) : []
+    const toutes = [...new Set([...dicte, ...lues])]
+    const champs = champsFenetreDesCases(toutes)
+    if (o.composition.length || (lue?.pieces?.length ?? 0)) champs.push('composition')
+    if (o.mandant) champs.push('mandant')
+    if (o.negociateur && profile?.role !== 'commercial') champs.push('negociateur')
+    setDraftPrefillAssistant({ carteId, champs, nombre: champs.length, heure: heureCarte, desaccords, lecture: o.photos.length ? (lue ? 'faite' : 'ratee') : null })
+  }
+
+  // 18/11 (§66) : la marque d'une case remplie par l'assistant (rien quand la fenêtre a été ouverte à la main)
+  const marqueAssistant = (champ: string) => (draftPrefillAssistant?.champs.includes(champ) ? ' is-assistant' : '')
 
   function updateDraftAnnonceWizardField(key: string, value: string) {
     setDraftAnnonceWizardFields((current) => ({ ...current, [key]: value }))
@@ -18248,33 +18373,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
 
     // MIROIR : les valeurs structurees de la fiche vont dans leur case Hektor. Depuis le 08/11 (§28.9) c'est LA
     // case unique de la modale (le haut de l'etape 1 la lit aussi) : plus une copie.
-    const mirror: Record<string, string> = {
-      surfappart: value('surface'),
-      surfterrain: value('landSurface'),
-      nbpieces: value('roomCount'),
-      NB_CHAMBRES: value('bedroomCount'),
-      NB_NIVEAUX: value('levelCount'),
-      NB_SDB: value('bathroomCount'),
-      NB_SE: value('showerRoomCount'),
-      NB_WC: value('wcCount'),
-      SURF_CARREZ: value('carrezSurface'),
-      SURF_SEJOUR: value('livingSurface'),
-      vuee: value('view'),
-      ANNEE_CONS: value('constructionYear'),
-      dpe_cons: value('dpeValue'),
-      dpe_ges: value('gesValue'),
-      GARAGE_BOX: value('garageCount'),
-      SURFACE_GARAGE: value('garageSurface'),
-      NB_PARK_INT: value('parkingInsideCount'),
-      NB_PARK_EXT: value('parkingOutsideCount'),
-      NB_TERRASSE: value('terraceCount'),
-      copropriete_nb_lot: value('coproLots'),
-      copropriete_quote_part: value('coproQuotePart'),
-      montant_fonds_travaux: value('coproWorksFund'),
-      CHARGES: value('coproCharges'),
-      PRIXNETVENDEUR: value('netSellerPrice'),
-      prix: value('price'),
-    }
+    // 18/11 (étape 4 §66) : la table vit au niveau du module (SCAN_MIROIR), lue aussi pour marquer les cases de l'assistant.
+    const mirror: Record<string, string> = Object.fromEntries(Object.entries(SCAN_MIROIR).map(([champ, cle]) => [champ, value(cle)]))
     for (const [name, next] of Object.entries(mirror)) {
       if (next) updateDraftAnnonceWizardField(name, next.replace(',', '.'))
     }
@@ -18485,7 +18585,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         </div>
         {section.fields.map((field) => (
           field.multiline ? (
-            <label key={`${section.title}-${field.name}`} className="filter-field draft-annonce-field-wide">
+            <label key={`${section.title}-${field.name}`} className={`filter-field draft-annonce-field-wide${marqueAssistant(field.name)}`}>
               <span>{field.label}</span>
               <textarea
                 className="inline-textarea"
@@ -18495,7 +18595,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               />
             </label>
           ) : field.options ? (
-            <label key={`${section.title}-${field.name}`} className="filter-field">
+            <label key={`${section.title}-${field.name}`} className={`filter-field${marqueAssistant(field.name)}`}>
               <span>{field.label}</span>
               <select
                 value={optionValueForSelect(draftAnnonceWizardFields[field.name], field.options, field.defaultValue)}
@@ -18507,7 +18607,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               </select>
             </label>
           ) : (
-            <label key={`${section.title}-${field.name}`} className="filter-field">
+            <label key={`${section.title}-${field.name}`} className={`filter-field${marqueAssistant(field.name)}`}>
               <span>{field.label}</span>
               <input
                 value={draftAnnonceWizardFields[field.name] ?? ''}
@@ -18719,6 +18819,18 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         setDraftAnnonceEstimationScan(null)
       }
       setDraftAnnonceModalOpen(false)
+      // 18/11 (étape 4 §66) : la fiche venait d'une carte de l'assistant -> la carte passe à « créée » (gardé au serveur,
+      // pour un rechargement ; l'écran de l'assistant, s'il est monté, se met à jour tout de suite). Un échec ici ne
+      // touche pas la création : la carte reste seulement à « Fenêtre ouverte ».
+      if (draftPrefillAssistant?.carteId) {
+        const carteId = draftPrefillAssistant.carteId
+        const suite = { app_dossier_id: Number(numeroCreeDansLeTravail(job, 'app_dossier_id')) || null,
+          genre: draftAnnonceCreationStatus === 'estimation' ? 'estimation' as const : 'annonce' as const }
+        setDraftPrefillAssistant(null)
+        noterCreationCarte(carteId, suite)
+          .then((resultat) => window.dispatchEvent(new CustomEvent<CreationFaite>(EVENEMENT_CREATION_FAITE, { detail: { carteId, resultat } })))
+          .catch(() => undefined)
+      }
       // PARTENAIRES, plan étape 2b (07/11/2026) : le syndic et le diagnostiqueur choisis sont reliés par NOTRE numéro du
       // bien (geste de l'étape 1, sans numéro Hektor), AVANT d'ouvrir la fiche pour qu'elle les montre. Un échec ne défait
       // pas la création : il est dit, et le choix se refait dans l'onglet Contact.
@@ -22977,7 +23089,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 <span className="modal-hero-icon modal-hero-icon-diffusion" aria-hidden="true" />
                 <div>
                   <p className="eyebrow">{bvs("Console Hektor")}</p>
-                  <h3>{bvs("Nouvelle annonce Hektor")}</h3>
+                  {/* 18/11 (étape 4 §66) : le titre dit ce qui sera créé (décision du 18/11) */}
+                  <h3>{draftAnnonceCreationStatus === 'estimation' ? 'Nouvelle estimation' : bvs("Nouvelle annonce Hektor")}</h3>
                 </div>
                 <button className="ghost-button button-subtle" type="button" onClick={closeDraftAnnonceModal} disabled={draftAnnoncePending || draftAnnonceScanPending}>Fermer</button>
               </div>
@@ -23002,11 +23115,36 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                           <strong>{meta.label}</strong>
                           <small>{meta.hint}</small>
                         </span>
+                        {draftPrefillParEtape[step] ? (
+                          <span className="draft-annonce-step-assistant" title={`${draftPrefillParEtape[step]} case${draftPrefillParEtape[step] > 1 ? 's' : ''} pré-remplie${draftPrefillParEtape[step] > 1 ? 's' : ''} par l'assistant`}>{draftPrefillParEtape[step]}</span>
+                        ) : null}
                       </button>
                     )
                   })}
                 </div>
                 <div className="draft-annonce-progress" aria-hidden="true"><span style={{ width: `${draftAnnonceStepProgress}%` }} /></div>
+                {/* 18/11 (étape 4 §66, maquette planche 2) : ce que l'assistant a pré-rempli, et ce qui ne collait pas */}
+                {draftPrefillAssistant ? (
+                  <div className="draft-annonce-assistant" role="status">
+                    <span className="daa-logo" aria-hidden="true" />
+                    <div className="daa-texte">
+                      {draftPrefillAssistant.lecture === 'en_cours' ? (
+                        <p><strong>Lecture de la fiche papier…</strong> La fenêtre se remplit avec ce qu'elle lit, puis avec ta dictée.</p>
+                      ) : (
+                        <p>
+                          <strong>Pré-rempli par l'assistant : {draftPrefillAssistant.nombre} case{draftPrefillAssistant.nombre > 1 ? 's' : ''}</strong>, d'après ta demande de {draftPrefillAssistant.heure}
+                          {draftPrefillAssistant.lecture === 'faite' ? ' et la fiche papier' : ''}. Elles portent la marque <span className="daa-point" aria-label="point magenta" /> : relis-les, puis continue comme d'habitude.
+                        </p>
+                      )}
+                      {draftPrefillAssistant.desaccords.length ? (
+                        <ul className="daa-desaccords">
+                          {draftPrefillAssistant.desaccords.map((d) => <li key={d}>{d} : ta dictée a été gardée.</li>)}
+                        </ul>
+                      ) : null}
+                    </div>
+                    <button className="ghost-button button-subtle" type="button" onClick={closeDraftAnnonceModal} disabled={draftAnnoncePending || draftAnnonceScanPending}>Revenir à la conversation</button>
+                  </div>
+                ) : null}
                 {errorMessage ? <p className="draft-annonce-inline-error">{errorMessage}</p> : null}
                 {draftAnnonceScanMessage ? <p className="draft-annonce-scan-message">{draftAnnonceScanMessage}</p> : null}
                 {draftAnnonceScanWarnings.length ? (
@@ -23046,7 +23184,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                       <span>1. Offre</span>
                       <strong>Compte et repere</strong>
                     </div>
-                    <label className="filter-field draft-annonce-field-wide">
+                    <label className={`filter-field draft-annonce-field-wide${marqueAssistant('titre')}`}>
                       {/* 08/11 (§28.9) : ce titre PART chez Hektor (case « titre ») -- ce n'est pas un repere interne. */}
                       <span>Titre de l'annonce</span>
                       <input value={draftAnnonceTitle} onChange={(event) => updateDraftAnnonceWizardField('titre', event.target.value)} placeholder="Exemple : Maison test Saint-Etienne" />
@@ -23071,7 +23209,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                           {filterCatalog.agencies.map((agency) => <option key={agency} value={agency}>{agency}</option>)}
                         </select>
                       </label>
-                      <label className="filter-field">
+                      <label className={`filter-field${marqueAssistant('negociateur')}`}>
                         <span>{bvs("Negociateur Hektor")}</span>
                         <select
                           value={draftAnnonceNegotiatorId}
@@ -23088,7 +23226,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                         </select>
                       </label>
                     </section>
-                    <section className="draft-annonce-section draft-annonce-type-section">
+                    <section className={`draft-annonce-section draft-annonce-type-section${marqueAssistant('type')}`}>
                       <div className="draft-annonce-section-title">
                         <span>1. Offre</span>
                         <strong>Choisissez le type correspondant a votre bien</strong>
@@ -23149,42 +23287,42 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                         <span>1. Offre</span>
                         <strong>{bvs("Donnees obligatoires Hektor")}</strong>
                       </div>
-                      <label className="filter-field">
+                      <label className={`filter-field${marqueAssistant('prix')}`}>
                         <span>Prix</span>
                         <input value={draftAnnoncePrice} onChange={(event) => updateDraftAnnonceWizardField('prix', event.target.value)} inputMode="numeric" placeholder="0" />
                       </label>
                       {draftAnnonceTypeRules.surfaceMode === 'habitable' ? (
-                        <label className="filter-field">
+                        <label className={`filter-field${marqueAssistant('surfappart')}`}>
                           <span>Surface habitable</span>
                           <input value={draftAnnonceSurface} onChange={(event) => updateDraftAnnonceWizardField('surfappart', event.target.value)} inputMode="decimal" />
                         </label>
                       ) : null}
                       {draftAnnonceTypeRules.surfaceMode === 'terrain' ? (
-                        <label className="filter-field">
+                        <label className={`filter-field${marqueAssistant('surfterrain')}`}>
                           <span>Surface terrain</span>
                           <input value={draftAnnonceAdvanced.landSurface} onChange={(event) => updateDraftAnnonceWizardField('surfterrain', event.target.value)} inputMode="decimal" />
                         </label>
                       ) : null}
                       {draftAnnonceTypeRules.surfaceMode === 'garage' ? (
-                        <label className="filter-field">
+                        <label className={`filter-field${marqueAssistant('SURFACE_GARAGE')}`}>
                           <span>Surface</span>
                           <input value={draftAnnonceAdvanced.garageSurface} onChange={(event) => updateDraftAnnonceWizardField('SURFACE_GARAGE', event.target.value)} inputMode="decimal" />
                         </label>
                       ) : null}
                       {draftAnnonceTypeRules.showRooms ? (
-                        <label className="filter-field">
+                        <label className={`filter-field${marqueAssistant('nbpieces')}`}>
                           <span>Pieces</span>
                           <input value={draftAnnonceRoomCount} onChange={(event) => updateDraftAnnonceWizardField('nbpieces', event.target.value)} inputMode="numeric" />
                         </label>
                       ) : null}
                       {draftAnnonceTypeRules.showBedrooms ? (
-                        <label className="filter-field">
+                        <label className={`filter-field${marqueAssistant('NB_CHAMBRES')}`}>
                           <span>Chambres</span>
                           <input value={draftAnnonceBedroomCount} onChange={(event) => updateDraftAnnonceWizardField('NB_CHAMBRES', event.target.value)} inputMode="numeric" />
                         </label>
                       ) : null}
                       {draftAnnonceTypeRules.showLevels ? (
-                        <label className="filter-field">
+                        <label className={`filter-field${marqueAssistant('NB_NIVEAUX')}`}>
                           <span>Niveaux</span>
                           <input value={draftAnnonceLevelCount} onChange={(event) => updateDraftAnnonceWizardField('NB_NIVEAUX', event.target.value)} inputMode="numeric" />
                         </label>
@@ -23192,17 +23330,17 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                       {draftAnnonceTypeRules.showGardenPool ? (
                         <>
                           {/* 08/11 (§28.9) : le terrain d'une maison se saisissait dans « Detail app », retiree. */}
-                          <label className="filter-field">
+                          <label className={`filter-field${marqueAssistant('surfterrain')}`}>
                             <span>Surface terrain</span>
                             <input value={draftAnnonceAdvanced.landSurface} onChange={(event) => updateDraftAnnonceWizardField('surfterrain', event.target.value)} inputMode="decimal" />
                           </label>
-                          <label className="filter-field">
+                          <label className={`filter-field${marqueAssistant('JARDIN-')}`}>
                             <span>Jardin</span>
                             <select value={draftAnnonceAdvanced.garden} onChange={(event) => updateDraftAnnonceWizardField('JARDIN-', event.target.value)}>
                               {draftAnnonceOuiNonOptions.map((option) => <option key={`garden-${option.value}`} value={option.value}>{option.label}</option>)}
                             </select>
                           </label>
-                          <label className="filter-field">
+                          <label className={`filter-field${marqueAssistant('PISCINE-')}`}>
                             <span>Piscine</span>
                             <select value={draftAnnonceAdvanced.pool} onChange={(event) => updateDraftAnnonceWizardField('PISCINE-', event.target.value)}>
                               {draftAnnonceOuiNonOptions.map((option) => <option key={`pool-${option.value}`} value={option.value}>{option.label}</option>)}
@@ -23211,13 +23349,13 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                         </>
                       ) : null}
                       {draftAnnonceTypeRules.showGarageCount ? (
-                        <label className="filter-field">
+                        <label className={`filter-field${marqueAssistant('GARAGE_BOX')}`}>
                           <span>Garage</span>
                           <input value={draftAnnonceAdvanced.garageCount} onChange={(event) => updateDraftAnnonceWizardField('GARAGE_BOX', event.target.value)} inputMode="numeric" />
                         </label>
                       ) : null}
                       {draftAnnonceTypeRules.showExposure ? (
-                        <label className="filter-field">
+                        <label className={`filter-field${marqueAssistant('EXPOSITION')}`}>
                           <span>Situation</span>
                           <select value={draftAnnonceAdvanced.exposure} onChange={(event) => updateDraftAnnonceWizardField('EXPOSITION', event.target.value)}>
                             {hektorExposureOptions.map((option) => (
@@ -23227,7 +23365,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                         </label>
                       ) : null}
                       {draftAnnonceTypeRules.showView ? (
-                        <label className="filter-field">
+                        <label className={`filter-field${marqueAssistant('vuee')}`}>
                           <span>Vue</span>
                           <input value={draftAnnonceAdvanced.view} onChange={(event) => updateDraftAnnonceWizardField('vuee', event.target.value)} />
                         </label>
@@ -23292,15 +23430,15 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                         <span>3. Secteur</span>
                         <strong>Adresse privee</strong>
                       </div>
-                      <label className="filter-field draft-annonce-address-field">
+                      <label className={`filter-field draft-annonce-address-field${marqueAssistant('adresse')}`}>
                         <span>Adresse</span>
                         <input value={draftAnnonceAddress} onChange={(event) => setDraftAnnonceAddress(event.target.value)} placeholder="Adresse privee" />
                       </label>
-                      <label className="filter-field">
+                      <label className={`filter-field${marqueAssistant('cp')}`}>
                         <span>Code postal</span>
                         <input value={draftAnnoncePostalCode} onChange={(event) => setDraftAnnoncePostalCode(event.target.value)} inputMode="numeric" />
                       </label>
-                      <label className="filter-field">
+                      <label className={`filter-field${marqueAssistant('ville')}`}>
                         <span>Ville</span>
                         <input value={draftAnnonceCity} onChange={(event) => setDraftAnnonceCity(event.target.value)} />
                       </label>
@@ -23315,7 +23453,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                     pieces={draftAnnonceCompositionPieces}
                     draft={draftAnnonceCompositionDraft}
                     disabled={draftAnnoncePending || draftAnnonceScanPending}
-                    className="draft-annonce-section draft-annonce-composition-section"
+                    className={`draft-annonce-section draft-annonce-composition-section${marqueAssistant('composition')}`}
                     onDraftChange={updateDraftAnnonceCompositionDraft}
                     onAddDraft={addDraftAnnonceCompositionPiece}
                     onPieceChange={updateDraftAnnonceCompositionPiece}
@@ -23343,7 +23481,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 ) : null}
                 {draftAnnonceStep === 'mandatPrix' ? (
                   <>
-                    <section className={`draft-mandant-panel ${draftMandantChoice !== 'none' ? 'is-open' : ''}`}>
+                    <section className={`draft-mandant-panel ${draftMandantChoice !== 'none' ? 'is-open' : ''}${marqueAssistant('mandant')}`}>
                       <div className="draft-annonce-section-title">
                         <span>Mandant</span>
                         <strong>Mandant lie au bien</strong>
@@ -23484,7 +23622,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                         <span>Note</span>
                         <strong>Consignes internes</strong>
                       </div>
-                      <label className="filter-field draft-annonce-field-wide">
+                      <label className={`filter-field draft-annonce-field-wide${marqueAssistant('note')}`}>
                         <span>Note</span>
                         <textarea className="inline-textarea" value={draftAnnonceNote} onChange={(event) => setDraftAnnonceNote(event.target.value)} placeholder="Infos utiles pour completer l annonce ensuite" />
                       </label>
@@ -27540,6 +27678,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               onOuvrirRecherche={(cle) => void assistantOuvrirRecherche(cle)}
               onOuvrirRdv={assistantOuvrirRdv}
               onOuvrirDemande={(ref) => void assistantOuvrirDemande(ref)}
+              onOuvrirCreation={(ouverture, carteId) => void assistantOuvrirCreation(ouverture, carteId)}
               onOuvrirContact={(id) => openContactDirectory(id)}
               onGesteFait={(travail) => { signalerGeste(); if (travail) relireQuandLeTravailFinit({ id: travail }) }}
               onCiter={() => { setRechercheCiter(true); setRechercheGlobaleOuverte(true) }}

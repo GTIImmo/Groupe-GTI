@@ -176,7 +176,8 @@ TOUTES = ["qui_suis_je", "decrire", "chercher", "compter", "fiches_biens", "note
           "proposer_relance_signature", "proposer_annulation_signature",  # la signature Youtrust en cours, 16/11
           "proposer_rattacher_mandant", "proposer_retirer_mandant", "proposer_adresse_contact",  # cartes directes §35, 16/11
           "proposer_ajouter_conjoint", "proposer_desarchiver_annonce",  # (réaffecter, archiver, Estimation -> Actif : direction)
-          "proposer_ajouter_photo", "proposer_deposer_documents", "proposer_couverture_photo", "proposer_visibilite_photo",
+          "proposer_ajouter_photo", "proposer_deposer_documents", "proposer_ouvrir_creation_annonce",  # créer, 18/11
+          "proposer_couverture_photo", "proposer_visibilite_photo",
           "proposer_deplacer_photo", "proposer_portail",  # activer un brouillon : retiré le 15/11
           "proposer_creer_contact", "proposer_ajouter_recherche", "proposer_modifier_recherche",  # lot 2c, 17/11
           "lire_mon_agenda", "lire_pieces_jointes", "apercu_rapprochement", "lire_photos_bien", "lire_portails_bien", "rediger_annonce"]
@@ -361,6 +362,9 @@ voir("DROITS PAR ROLE (role : admin)" in consigne and "{{role}}" not in consigne
      and "JAMAIS le prix" not in consigne,
      "§38 (17/11) : la consigne par rôle, rôle rempli partout -- le négociateur DEMANDE (la bonne demande), la direction "
      "FAIT (le prix en direct, jamais une demande à elle-même)")
+voir("proposer_ouvrir_creation_annonce" in consigne and "(patron:fiche-saisie)" in consigne
+     and "creer une annonce ou une estimation, l'avis" not in consigne and "Aucune autre sorte de lien" not in consigne,
+     "§66 (18/11) : créer = la carte qui ouvre la fenêtre (plus dans « pas encore ») ; le lien du patron vierge, et lui seul en plus")
 import agents.tracing as tr  # noqa: E402
 tr.get_trace_provider().force_flush()
 voir(not envois_httpx, "aucune trace envoyée chez OpenAI (rien n'est parti, même après vidage)")

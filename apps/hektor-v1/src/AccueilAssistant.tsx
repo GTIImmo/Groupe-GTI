@@ -1,8 +1,9 @@
 import { Fragment, createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEvent, type ReactNode } from 'react'
 import {
-  RefusAssistant, deposerFichier, etatFichiers, listerConversations, poserQuestion, refuserCarte, relireConversation,
-  retirerFichier, separerFichiersJoints, validerCarte,
-  type CarteAssistant, type CibleCarte, type ConversationAssistant, type EtatFichiers, type EvenementFlux,
+  EVENEMENT_CREATION_FAITE, RefusAssistant, deposerFichier, etatFichiers, listerConversations, poserQuestion, refuserCarte,
+  relireConversation, retirerFichier, rouvrirCarte, separerFichiersJoints, validerCarte,
+  type CarteAssistant, type CibleCarte, type ConversationAssistant, type CreationFaite, type EtatFichiers, type EvenementFlux,
+  type OuvertureCreation,
 } from './lib/assistant'
 import { poserDepotAssistant } from './lib/depotAssistant'
 import {
@@ -91,6 +92,8 @@ const GESTES: Record<string, { titre: string; fait: (r: Record<string, unknown>)
   changer_prix: { titre: 'Prix du bien', fait: () => 'Prix changé.', suite: 'Recopié chez Hektor environ 10 minutes après.' },
   pilotage: { titre: 'Pilotage', fait: () => 'Confirmé par Hektor.', suite: 'Écrit chez Hektor et relu à l’instant.' },
   deposer_documents: { titre: 'Documents', fait: () => 'Fenêtre de dépôt ouverte sur le bien.', suite: 'Vérifie le type et le nom proposés, puis clique « Envoyer » dans la fenêtre.' },
+  // 18/11 (§66) : la carte « créer » a sa propre vue (CarteCreation) ; ces mots servent au repli
+  ouvrir_creation_annonce: { titre: 'Création', fait: () => 'Fenêtre de création ouverte.', suite: 'La création se termine dans la fenêtre, par ton clic sur « Créer ».' },
   ajouter_photo: { titre: 'Photos', fait: (r) => (Array.isArray(r.echecs) && r.echecs.length ? `Envoi en cours (${r.echecs.length} non partie${r.echecs.length > 1 ? 's' : ''}).` : 'Envoi chez Hektor en cours.'), suite: 'Une photo après l’autre ; sur la vitrine après le traitement de nuit.' },
   couverture_photo: { titre: 'Photos', fait: () => 'Couverture changée.' },
   visibilite_photo: { titre: 'Photos', fait: (r) => (r.visible === true ? 'Photo affichée.' : r.visible === false ? 'Photo masquée.' : 'Photo mise à jour.') },
@@ -154,12 +157,15 @@ type Liens = {
   rdv: (jour: string) => void; demande: (ref: { appDossierId?: string; numero?: string }) => void
 }
 const LiensContexte = createContext<Liens | null>(null)
-const UN_LIEN = /(\[[^\]\n]{1,160}\]\((?:annonce|contact|mandat|transaction|recherche|rdv|demande):[0-9A-Za-z-]{1,40}\))/g
-const LE_LIEN = /^\[([^\]\n]{1,160})\]\((annonce|contact|mandat|transaction|recherche|rdv|demande):([0-9A-Za-z-]{1,40})\)$/
+// 18/11 (§66) : + `patron:fiche-saisie`, le patron vierge de la fiche papier (la page à imprimer de la fenêtre « Création
+// assistée par IA », public/patron-fiche-saisie.html) -- une lecture, ouverte dans un nouvel onglet, rien d'écrit.
+const UN_LIEN = /(\[[^\]\n]{1,160}\]\((?:annonce|contact|mandat|transaction|recherche|rdv|demande|patron):[0-9A-Za-z-]{1,40}\))/g
+const LE_LIEN = /^\[([^\]\n]{1,160})\]\((annonce|contact|mandat|transaction|recherche|rdv|demande|patron):([0-9A-Za-z-]{1,40})\)$/
 const FORME_VALEUR: Record<string, RegExp> = {
   annonce: /^\d{1,12}$/, contact: /^\d{1,12}$/, mandat: /^\d{1,12}$/, transaction: /^\d{1,12}$/, demande: /^\d{1,12}$/,
-  recherche: /^[0-9a-f]{6,40}$/i, rdv: /^\d{4}-\d{2}-\d{2}$/,
+  recherche: /^[0-9a-f]{6,40}$/i, rdv: /^\d{4}-\d{2}-\d{2}$/, patron: /^fiche-saisie$/,
 }
+const PATRON_FICHE = '/patron-fiche-saisie.html'
 const jourLisible = (jour: string) => jour.split('-').reverse().join('/')
 const REPLI_ANNONCE = /\b((?:annonces?|biens?)(?:\s+d['’]essai)?\s+(?:n°\s?)?)(\*\*)?(\d{4,6})\2(?![\d,.]\d)/gi
 
@@ -183,6 +189,9 @@ function EnLigne({ texte }: { texte: string }) {
         const libelle = lien[1].replace(/\*\*/g, '')
         const [genre, valeur] = [lien[2], lien[3]]
         if (!liens || !FORME_VALEUR[genre]?.test(valeur)) return <Fragment key={i}>{libelle}</Fragment>
+        if (genre === 'patron') {
+          return <a key={i} className="asi-obj" href={PATRON_FICHE} target="_blank" rel="noreferrer" title="Ouvrir le patron vierge à imprimer">{libelle}</a>
+        }
         const [titre, ouvrir]: [string, () => void] =
           genre === 'annonce' ? [`Ouvrir l'annonce ${valeur}`, () => liens.annonce(valeur)]
             : genre === 'contact' ? [`Ouvrir la fiche du contact ${valeur}`, () => liens.contact(valeur)]
@@ -295,7 +304,93 @@ function LiensCarte({ cibles }: { cibles?: CibleCarte[] }) {
   )
 }
 
-function CarteVue({ carte, onValider, onRefuser }: { carte: CarteEcran; onValider: () => void; onRefuser: () => void }) {
+// ── 18/11 (étape 4 §66, marche 6a ; maquette validée, planches 1 et 3) : la carte « créer une estimation / une annonce »
+// Une FICHE qui se lit d'un coup d'œil (la phrase du serveur reste pour le modèle), un seul bouton fort, « Ouvrir la
+// création ». Après le clic : « Fenêtre ouverte » et « Rouvrir » ; quand la fenêtre a créé : « Estimation créée ».
+const LIGNES_VISIBLES = 4
+
+function CarteCreation({ carte, onValider, onRefuser, onRouvrir }: { carte: CarteEcran; onValider: () => void; onRefuser: () => void; onRouvrir: () => void }) {
+  const liens = useContext(LiensContexte)
+  const [tout, setTout] = useState(false)
+  const fiche = carte.fiche!
+  const nom = fiche.genre === 'annonce' ? 'annonce' : 'estimation'
+  const contact = carte.cibles?.find((c): c is Extract<CibleCarte, { type: 'contact' }> => c.type === 'contact')
+  const cree = (carte.resultat as OuvertureCreation | null | undefined)?.cree
+  if (carte.etat === 'executee') {
+    return (
+      <div className="asi-carte is-faite asi-creation">
+        <div className="asi-c-h"><Sceau coche />{cree ? `${nom === 'annonce' ? 'Annonce créée' : 'Estimation créée'}${cree.le ? ` à ${heure(cree.le)}` : ''}` : `Fenêtre ouverte${carte.execute_le ? ` à ${heure(carte.execute_le)}` : ''}`}</div>
+        <div className="asi-c-b">
+          <p className="asi-cr-titre">{fiche.titre}</p>
+          <p className="asi-cr-note">{cree ? "Elle est déjà dans l'app ; Hektor lui donnera son numéro dans quelques minutes." : 'La création se termine dans la fenêtre, par ton clic sur « Créer ».'}</p>
+        </div>
+        {carte.detail ? <div className="asi-c-end is-ko">{carte.detail}</div> : null}
+        <div className="asi-c-f">
+          {cree
+            ? (cree.app_dossier_id != null && liens ? <button className="asi-b" type="button" onClick={() => liens.bien(String(cree.app_dossier_id))}>Ouvrir la fiche</button> : null)
+            : <button className="asi-b" type="button" onClick={onRouvrir}>Rouvrir la création</button>}
+        </div>
+      </div>
+    )
+  }
+  if (carte.etat !== 'proposee' || estExpiree(carte)) return null
+  const lignes = tout ? fiche.lignes : fiche.lignes.slice(0, LIGNES_VISIBLES)
+  return (
+    <div className="asi-carte asi-creation" aria-label={`Carte à valider : créer une ${nom}`}>
+      <div className="asi-c-h asi-cr-h">
+        <span className="asi-cr-quoi"><Picto><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M3 9h18M12 12v5M9.5 14.5h5" /></Picto>Créer une {nom}</span>
+        <span className="asi-till">S'ouvre dans la fenêtre de création{carte.expire_le ? `, à ouvrir avant ${heure(carte.expire_le)}` : ''}</span>
+      </div>
+      <div className="asi-c-b">
+        <p className="asi-cr-titre">{fiche.titre}</p>
+        {fiche.chiffres.length ? (
+          <div className="asi-cr-chiffres">
+            {fiche.chiffres.map((c) => (
+              <div key={c.libelle} className="asi-cr-chiffre"><span>{c.libelle}</span><b>{c.valeur}{c.complement ? <small> {c.complement}</small> : null}</b></div>
+            ))}
+          </div>
+        ) : null}
+        {fiche.lignes.length ? (
+          <dl className="asi-cr-lignes">
+            {lignes.map((l) => (
+              <Fragment key={`${l.libelle}-${l.valeur}`}>
+                <dt>{l.libelle}</dt>
+                <dd>{l.contact && contact && liens
+                  ? <><button type="button" className="asi-obj" onClick={() => liens.contact(contact.id)}>{l.valeur}</button> <span className="asi-cr-pale">(contact déjà dans l'app)</span></>
+                  : l.valeur}</dd>
+              </Fragment>
+            ))}
+          </dl>
+        ) : null}
+        {fiche.lignes.length > LIGNES_VISIBLES ? (
+          <button type="button" className="asi-cr-plus" onClick={() => setTout(!tout)}>{tout ? 'Montrer moins' : `et ${fiche.lignes.length - LIGNES_VISIBLES} autre${fiche.lignes.length - LIGNES_VISIBLES > 1 ? 's' : ''} case${fiche.lignes.length - LIGNES_VISIBLES > 1 ? 's' : ''}`}</button>
+        ) : null}
+        {fiche.composition || fiche.photos ? (
+          <p className="asi-cr-note">
+            {[fiche.composition ? `Composition : ${fiche.composition} pièce${fiche.composition > 1 ? 's' : ''}` : '',
+              fiche.photos ? `Fiche papier : ${fiche.photos} photo${fiche.photos > 1 ? 's' : ''}, lue${fiche.photos > 1 ? 's' : ''} par le scan de la fenêtre (ce que tu as dit l'emporte)` : '']
+              .filter(Boolean).join('. ')}
+          </p>
+        ) : null}
+        {fiche.a_remplir.length ? (
+          <div className="asi-cr-reste"><span>Restera à remplir dans la fenêtre :</span>{fiche.a_remplir.map((r) => <span key={r} className="asi-cr-puce">{r}</span>)}</div>
+        ) : null}
+      </div>
+      {carte.detail ? <div className="asi-c-end is-ko">{carte.detail}</div> : null}
+      <div className="asi-c-f asi-cr-f">
+        <small>Rien n'est créé tant que tu n'as pas cliqué « Créer » dans la fenêtre.</small>
+        <button className="asi-b" type="button" onClick={onRefuser}>Refuser</button>
+        <button className="asi-b is-main" type="button" onClick={onValider}>Ouvrir la création</button>
+      </div>
+    </div>
+  )
+}
+
+function CarteVue({ carte, onValider, onRefuser, onRouvrir }: { carte: CarteEcran; onValider: () => void; onRefuser: () => void; onRouvrir: () => void }) {
+  if (carte.geste === 'ouvrir_creation_annonce' && carte.fiche) {
+    const vue = <CarteCreation carte={carte} onValider={onValider} onRefuser={onRefuser} onRouvrir={onRouvrir} />
+    if ((carte.etat === 'proposee' && !estExpiree(carte)) || carte.etat === 'executee') return vue
+  }
   const geste = GESTES[carte.geste]
   const titre = geste?.titre ?? 'Geste à valider'
   const expiree = estExpiree(carte)
@@ -372,6 +467,8 @@ export default function AccueilAssistant(props: {
   onOuvrirRecherche: (cle: string) => void
   onOuvrirRdv: (jour: string) => void
   onOuvrirDemande: (ref: { appDossierId?: string; numero?: string }) => void
+  // 18/11 (§66, marche 6a) : la carte « créer » ouvre la fenêtre de création de l'écran, pré-remplie
+  onOuvrirCreation: (ouverture: OuvertureCreation, carteId: string) => void
 }) {
   const [vue, setVue] = useState<'assistant' | 'tableau'>('assistant')
   const [mode, setMode] = useState<Mode>({ type: 'accueil' })
@@ -617,7 +714,7 @@ export default function AccueilAssistant(props: {
       if (e.type === 'debut') { conversationId.current = e.conversationId; garderConversation(e.conversationId) }
       else if (e.type === 'texte') majDernierTour((t) => ({ ...t, texte: t.texte + e.delta }))
       else if (e.type === 'outil') majDernierTour((t) => ({ ...t, traces: [...t.traces.map((x) => ({ ...x, fini: true })), { nom: e.nom, fini: false }] }))
-      else if (e.type === 'carte') majDernierTour((t) => ({ ...t, cartes: [...t.cartes, { id: e.id, geste: e.geste, resume: e.resume, expire_le: e.expire_le, cibles: e.cibles, etat: 'proposee' }] }))
+      else if (e.type === 'carte') majDernierTour((t) => ({ ...t, cartes: [...t.cartes, { id: e.id, geste: e.geste, resume: e.resume, expire_le: e.expire_le, cibles: e.cibles, fiche: e.fiche, etat: 'proposee' }] }))
       else if (e.type === 'fin') majDernierTour((t) => ({ ...t, etat: 'fini', enregistre: e.enregistre, traces: t.traces.map((x) => ({ ...x, fini: true })) }))
       else if (e.type === 'erreur') majDernierTour((t) => ({ ...t, etat: 'erreur', detail: e.detail, traces: t.traces.map((x) => ({ ...x, fini: true })) }))
     }
@@ -685,6 +782,10 @@ export default function AccueilAssistant(props: {
             majCarte(carte.id, (c) => ({ ...c, detail: e instanceof Error ? e.message : 'Les fichiers n’ont pas pu être relus.' }))
           }
         }
+        // 18/11 (§66) : « créer » n'écrit rien -- l'app ouvre SA fenêtre de création, pré-remplie ; la personne y crée
+        if (carte.geste === 'ouvrir_creation_annonce' && r.resultat?.ouvrir === 'creation_annonce') {
+          portes.current.onOuvrirCreation(r.resultat as unknown as OuvertureCreation, carte.id)
+        }
       }
     } catch (erreur) {
       const d = erreur instanceof Error ? erreur.message : "Non fait : l'écriture n'a pas abouti."
@@ -703,6 +804,28 @@ export default function AccueilAssistant(props: {
     } finally {
       signalerChangementAssistant()
     }
+  }, [majCarte])
+
+  // 18/11 (§66) : « Rouvrir la création » -- le serveur re-vérifie (comme au clic), l'app rouvre la fenêtre pré-remplie
+  const rouvrirCreation = useCallback(async (carte: CarteEcran) => {
+    majCarte(carte.id, (c) => ({ ...c, detail: undefined }))
+    try {
+      const r = await rouvrirCarte(carte.id)
+      if (r.ok && r.resultat) portes.current.onOuvrirCreation(r.resultat, carte.id)
+      else majCarte(carte.id, (c) => ({ ...c, detail: r.detail || 'La fenêtre ne peut pas être rouverte.' }))
+    } catch (erreur) {
+      majCarte(carte.id, (c) => ({ ...c, detail: erreur instanceof Error ? erreur.message : 'La fenêtre ne peut pas être rouverte.' }))
+    }
+  }, [majCarte])
+
+  // 18/11 (§66) : la fenêtre a créé la fiche -> la carte passe à « Estimation créée » (l'App l'a déjà noté au serveur)
+  useEffect(() => {
+    const surCreation = (e: Event) => {
+      const d = (e as CustomEvent<CreationFaite>).detail
+      if (d?.carteId) majCarte(d.carteId, (c) => ({ ...c, resultat: { ...(c.resultat ?? {}), ...d.resultat } }))
+    }
+    window.addEventListener(EVENEMENT_CREATION_FAITE, surCreation)
+    return () => window.removeEventListener(EVENEMENT_CREATION_FAITE, surCreation)
   }, [majCarte])
 
   const onTouche = (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -928,7 +1051,7 @@ export default function AccueilAssistant(props: {
                     ) : ecrit && !t.texte ? <div className="asi-trace"><span className="asi-tr is-live"><PictoTourne />Je réfléchis…</span></div> : null}
                     {t.texte || (ecrit && t.traces.length) ? <div className="asi-texte"><TexteReponse source={t.texte} curseur={ecrit && dernier} /></div> : null}
                     {t.cartes.map((carte) => (
-                      <CarteVue key={carte.id} carte={carte} onValider={() => void agirSurCarte(carte, 'valider')} onRefuser={() => void agirSurCarte(carte, 'refuser')} />
+                      <CarteVue key={carte.id} carte={carte} onValider={() => void agirSurCarte(carte, 'valider')} onRefuser={() => void agirSurCarte(carte, 'refuser')} onRouvrir={() => void rouvrirCreation(carte)} />
                     ))}
                     {t.etat === 'erreur' ? (
                       <MessageBlocage blocage={{ genre: 'ko', titre: "L'assistant n'a pas pu répondre.", sous: `${t.detail && t.detail !== "L'assistant n'a pas pu répondre" ? `${t.detail}. ` : ''}Rien n'a été fait. Repose la question, ou découpe-la en plus simple.` }} onRenvoyer={() => undefined} />

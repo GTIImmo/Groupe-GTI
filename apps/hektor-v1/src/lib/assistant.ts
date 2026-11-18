@@ -22,6 +22,19 @@ export type CibleCarte =
   | { type: 'transaction'; id: string } | { type: 'recherche'; cle: string } | { type: 'rdv'; date: string }
   | { type: 'demande'; numero: string }
 
+/** 18/11 (étape 4 §66, marche 6a) : ce que la carte « créer » pré-remplit, mis en forme par le SERVEUR (planche 1). */
+export type FicheCarte = {
+  genre: 'estimation' | 'annonce'
+  titre: string
+  chiffres: Array<{ libelle: string; valeur: string; complement?: string }>
+  lignes: Array<{ libelle: string; valeur: string; contact?: boolean }>
+  composition: number
+  mandant: boolean
+  negociateur: boolean
+  photos: number
+  a_remplir: string[]
+}
+
 export type CarteAssistant = {
   id: string
   geste: string
@@ -32,6 +45,20 @@ export type CarteAssistant = {
   execute_le?: string | null
   resultat?: Record<string, unknown> | null
   cibles?: CibleCarte[]
+  fiche?: FicheCarte
+}
+
+/** 18/11 (§66) : l'ordre d'ouverture de la fenêtre de création, rendu par le serveur au clic (rien n'est écrit).
+ *  `cases` = les clés du SCAN de la fiche papier (DraftAnnonceSheetScanFieldKey), déjà vérifiées par le serveur. */
+export type OuvertureCreation = {
+  ouvrir: 'creation_annonce'
+  genre: 'estimation' | 'annonce'
+  cases: Record<string, string>
+  composition: Array<{ type: string; surface: string; etage: string; detail: string }>
+  mandant: { hektor_contact_id: string; nom: string } | null
+  negociateur: { hektor_negociateur_id: string; hektor_user_id: string; nom: string; agence: string | null } | null
+  photos: Array<{ nom: string; type: string; url: string }>
+  cree?: { app_dossier_id: number | null; genre: string; le: string }
 }
 
 export type ConversationAssistant = { id: string; titre: string; cree_le?: string; maj_le?: string }
@@ -41,7 +68,7 @@ export type EvenementFlux =
   | { type: 'debut'; conversationId: string }
   | { type: 'texte'; delta: string }
   | { type: 'outil'; nom: string | null }
-  | { type: 'carte'; id: string; geste: string; resume: string; expire_le?: string | null; cibles?: CibleCarte[] }
+  | { type: 'carte'; id: string; geste: string; resume: string; expire_le?: string | null; cibles?: CibleCarte[]; fiche?: FicheCarte }
   | { type: 'fin'; messageId: number | null; enregistre: boolean }
   | { type: 'erreur'; detail: string }
 
@@ -234,13 +261,47 @@ export async function contactDeLaRecherche(cle: string): Promise<string | null> 
 export type ReponseCarte = { ok: boolean; etat: EtatCarte; detail?: string; resultat?: Record<string, unknown> }
 
 export async function validerCarte(id: string): Promise<ReponseCarte> {
-  if (MAQUETTE) return attendre(900).then(() => ({ ok: true, etat: 'executee' as const, resultat: { relance_id: 1 } }))
+  if (MAQUETTE) return attendre(900).then(() => ({ ok: true, etat: 'executee' as const, resultat: id.startsWith('carte-creation') ? OUVERTURE_EXEMPLE : { relance_id: 1 } }))
   return appeler<ReponseCarte>(`/assistant/actions/${encodeURIComponent(id)}/valider`, 'POST')
 }
 
 export async function refuserCarte(id: string): Promise<ReponseCarte> {
   if (MAQUETTE) return attendre(300).then(() => ({ ok: true, etat: 'refusee' as const }))
   return appeler<ReponseCarte>(`/assistant/actions/${encodeURIComponent(id)}/refuser`, 'POST')
+}
+
+// ── 18/11 (étape 4 §66, marche 6a) : la carte « créer » APRÈS son clic ──
+/** « Rouvrir la création » : le serveur re-vérifie tout (comme au clic) et rend un ordre d'ouverture frais. */
+export async function rouvrirCarte(id: string): Promise<{ ok: boolean; resultat?: OuvertureCreation; detail?: string }> {
+  if (MAQUETTE) return attendre(300).then(() => ({ ok: true, resultat: OUVERTURE_EXEMPLE }))
+  return appeler(`/assistant/actions/${encodeURIComponent(id)}/rouvrir`, 'POST')
+}
+
+/** La fenêtre a créé la fiche : la carte le garde (« Estimation créée »), pour un rechargement. */
+export async function noterCreationCarte(id: string, suite: { app_dossier_id: number | null; genre: 'estimation' | 'annonce' }): Promise<Record<string, unknown>> {
+  if (MAQUETTE) return { cree: { ...suite, le: new Date().toISOString() } }
+  const r = await appelerJson<{ resultat: Record<string, unknown> }>(`/assistant/actions/${encodeURIComponent(id)}/suite`, 'POST', suite)
+  return r.resultat
+}
+
+/** L'App prévient l'écran de l'assistant qu'une carte « créer » a abouti (il peut être démonté : la carte se relira). */
+export const EVENEMENT_CREATION_FAITE = 'gti-assistant-creation-faite'
+export type CreationFaite = { carteId: string; resultat: Record<string, unknown> }
+
+const OUVERTURE_EXEMPLE: OuvertureCreation = {
+  ouvrir: 'creation_annonce', genre: 'estimation',
+  cases: { propertyType: 'maison', price: '245000', surface: '125', roomCount: '5', bedroomCount: '3', landSurface: '900',
+    address: '12 rue des Tilleuls', postalCode: '42700', city: 'Firminy', title: 'Maison 5 pièces avec jardin de 900 m²' },
+  composition: [], mandant: { hektor_contact_id: '10354641', nom: 'Mme CLAUDE TESTCLAUDE' }, negociateur: null, photos: [],
+}
+const FICHE_EXEMPLE: FicheCarte = {
+  genre: 'estimation', titre: 'Maison de 125 m² à Firminy',
+  chiffres: [{ libelle: 'Prix', valeur: '245 000 €' }, { libelle: 'Surface habitable', valeur: '125 m²' },
+    { libelle: 'Pièces', valeur: '5', complement: 'dont 3 chambres' }, { libelle: 'Terrain', valeur: '900 m²' }],
+  lignes: [{ libelle: 'Adresse', valeur: '12 rue des Tilleuls, 42700 Firminy' },
+    { libelle: 'Mandant', valeur: 'Mme CLAUDE TESTCLAUDE', contact: true },
+    { libelle: 'Titre', valeur: 'Maison 5 pièces avec jardin de 900 m²' }],
+  composition: 0, mandant: true, negociateur: false, photos: 0, a_remplir: ['Photos', 'Composition'],
 }
 
 // ── le mode maquette ─────────────────────────────────────────────────────────
@@ -289,7 +350,10 @@ async function fauxFlux(question: string, conversationId: string | null, surEven
     surEvenement({ type: 'erreur', detail: "L'assistant n'a pas pu répondre" })
     return true
   }
-  const texte = q.includes('carte') || q.includes('relance')
+  const creation = q.includes('estimation')
+  const texte = creation
+    ? "J'ai préparé la création. Relis les valeurs : la fenêtre s'ouvrira déjà remplie, et rien ne sera créé avant ton clic sur « Créer ». Le [patron vierge à imprimer](patron:fiche-saisie) sert pour la prochaine fiche papier."
+    : q.includes('carte') || q.includes('relance')
     ? "Je prépare la relance de [M. AVOIR TEST4](contact:10354641) pour **vendredi 20 novembre**. La voici, à valider :"
     : q.includes('objets')
       ? "Les cinq : le [mandat 18787](mandat:18787), l'[offre du 12/11](transaction:1001409), [sa recherche](recherche:344a6bbc6068564a4e2bd9df), le [rendez-vous du 18/11](rdv:2026-11-18) et la [demande en attente](demande:7801)."
@@ -300,7 +364,15 @@ async function fauxFlux(question: string, conversationId: string | null, surEven
     await attendre(40, signal)
     if (q.includes('coupe') && mot.startsWith('annonces')) return false
   }
-  if (q.includes('carte') || q.includes('relance')) {
+  if (creation) {
+    surEvenement({ type: 'outil', nom: 'proposer_ouvrir_creation_annonce' })
+    surEvenement({
+      type: 'carte', id: `carte-creation-${Date.now()}`, geste: 'ouvrir_creation_annonce',
+      resume: "Ouvrir la création d'une estimation, pré-remplie : Type de bien maison ; Prix 245 000 € ; Surface habitable 125 m² ; Pièces 5 ; Chambres 3 ; Terrain 900 m² ; mandant : Mme CLAUDE TESTCLAUDE (contact existant)",
+      expire_le: new Date(Date.now() + 30 * 60_000).toISOString(),
+      cibles: [{ type: 'contact', id: '10354641' }], fiche: FICHE_EXEMPLE,
+    })
+  } else if (q.includes('carte') || q.includes('relance')) {
     surEvenement({ type: 'outil', nom: 'proposer_creer_relance' })
     surEvenement({
       type: 'carte', id: `carte-${Date.now()}`, geste: 'creer_relance',

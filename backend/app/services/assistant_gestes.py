@@ -19,6 +19,7 @@ from .email_tracking import EmailTrackingService
 from .google_calendar_event_link_service import GoogleCalendarEventLinkService
 from .google_workspace_service import (MAX_GMAIL_ATTACHMENT_BYTES, MAX_GMAIL_ATTACHMENT_COUNT,
                                        MAX_GMAIL_ATTACHMENT_FILE_BYTES, GoogleWorkspaceService)
+from .openai_listing_sheet_service import FIELD_KEYS as _CASES_DU_SCAN
 from .rapprochement_email import RapprochementEmailService
 from .rapprochement_sender import RapprochementSender
 from .supabase_admin import SupabaseAdminService
@@ -2132,6 +2133,256 @@ def executer_deposer_documents(ctx: ContexteAssistant, p: dict[str, Any]) -> dic
             "fichiers": fichiers}
 
 
+# ── 18/11 (note étape 4 §65-66, marche 6a) : CRÉER UNE ANNONCE / UNE ESTIMATION = ouvrir la FENÊTRE DE CRÉATION, pré-remplie ──
+# Décisions de Frédéric (18/11) : la carte OUVRE la fenêtre « Nouvelle annonce » de l'écran (openDraftAnnonceModal,
+# App.tsx ~17991), déjà remplie, et c'est SON clic « Créer » DANS la fenêtre qui crée -- avec les contrôles de la fenêtre.
+# Au clic sur la carte, RIEN ne s'écrit ici : le serveur re-vérifie et rend l'ordre d'ouverture.
+# ⛔ Les cases sont celles du SCAN de la fiche papier (openai_listing_sheet_service.FIELD_KEYS) : l'écran les pose avec
+#   le MÊME remplisseur que le scan (applyDraftAnnonceScan). La dictée PRIME sur la fiche scannée (« Ma dictée prime »).
+# ⛔ JAMAIS les coordonnées d'un mandant (e-mail, téléphone, adresse) : elles ne passent pas par le modèle. Le mandant est
+#   un contact EXISTANT (relu avec le jeton), sinon il se saisit dans la fenêtre (ou le scan le lit sur la photo).
+# ⛔ Le négociateur : un commercial, c'est LUI (la fenêtre le pose) ; seule la direction en choisit un.
+# Les photos de la fiche papier : lues PAR LA FENÊTRE (sa route de scan), jamais par le modèle de la conversation.
+CASES_CREATION = [c for c in _CASES_DU_SCAN if not c.startswith("mandant") and c not in {"agency", "negotiatorName"}]
+LIBELLES_CASES: dict[str, str] = {
+    "title": "Titre", "propertyType": "Type de bien", "address": "Adresse", "postalCode": "Code postal", "city": "Ville",
+    "price": "Prix", "netSellerPrice": "Prix net vendeur", "surface": "Surface habitable", "carrezSurface": "Surface Carrez",
+    "livingSurface": "Surface du séjour", "roomCount": "Pièces", "bedroomCount": "Chambres", "levelCount": "Niveaux",
+    "bathroomCount": "Salles de bain", "showerRoomCount": "Salles d'eau", "wcCount": "WC", "kitchen": "Cuisine",
+    "exposure": "Exposition", "view": "Vue", "interiorState": "État intérieur", "exteriorState": "État extérieur",
+    "landSurface": "Terrain", "landConstructible": "Terrain constructible", "constructibleSurface": "Surface constructible",
+    "shon": "SHON", "landServiced": "Terrain viabilisé", "waterConnection": "Raccordement eau",
+    "gasConnection": "Raccordement gaz", "electricityConnection": "Raccordement électricité",
+    "phoneConnection": "Raccordement téléphone", "landWooded": "Terrain arboré", "landPoolable": "Terrain piscinable",
+    "garden": "Jardin", "gardenSurface": "Surface du jardin", "pool": "Piscine", "poolType": "Type de piscine",
+    "poolNature": "Nature de la piscine", "poolDetails": "Détails piscine", "poolDimensions": "Dimensions piscine",
+    "poolTreatment": "Traitement piscine", "poolHouse": "Pool house", "poolHeated": "Piscine chauffée",
+    "poolCovered": "Piscine couverte", "terraceCount": "Terrasses", "garageCount": "Garages", "garageSurface": "Surface garage",
+    "parkingInsideCount": "Parkings intérieurs", "parkingOutsideCount": "Parkings extérieurs",
+    "constructionYear": "Année de construction", "dpeValue": "DPE", "gesValue": "GES", "coproLots": "Lots de copropriété",
+    "coproCharges": "Charges de copropriété", "coproQuotePart": "Quote-part", "coproWorksFund": "Fonds de travaux",
+    "immeuble": "Immeuble", "transport": "Transports", "proximity": "Proximité", "environment": "Environnement",
+    "kitchenEquipment": "Équipement de la cuisine", "particularities": "Particularités", "terrace": "Terrasse",
+    "terraceSurface": "Surface terrasse", "balcony": "Balcon", "balconyCount": "Balcons", "balconySurface": "Surface balcon",
+    "cellar": "Cave", "cellarSurface": "Surface cave", "floor": "Étage", "topFloor": "Dernier étage",
+    "floorsCount": "Étages de l'immeuble", "partyWalls": "Mitoyenneté", "residence": "Résidence",
+    "residenceType": "Type de résidence", "heatingFormat": "Chauffage (format)", "heatingType": "Chauffage (type)",
+    "heatingEnergy": "Chauffage (énergie)", "water": "Eau", "sanitation": "Assainissement",
+    "waterDistribution": "Eau chaude (distribution)", "waterEnergy": "Eau chaude (énergie)", "elevator": "Ascenseur",
+    "disabledAccess": "Accès handicapé", "airConditioning": "Climatisation", "fireplace": "Cheminée",
+    "electricShutters": "Volets électriques", "doubleGlazing": "Double vitrage", "tripleGlazing": "Triple vitrage",
+    "fiber": "Fibre", "armoredDoor": "Porte blindée", "intercom": "Interphone", "videophone": "Visiophone",
+    "alarm": "Alarme", "digicode": "Digicode", "smokeDetector": "Détecteur de fumée", "caretaker": "Gardien",
+    "dpeDate": "Date du DPE", "finalEnergy": "Énergie finale", "energyCostMin": "Coût énergie mini",
+    "energyCostMax": "Coût énergie maxi", "coproperty": "Copropriété", "coproLot": "Lot de copropriété",
+    "safeguardPlan": "Plan de sauvegarde", "coproSyndicateStatus": "Statut du syndicat",
+    "tenYearWarranty": "Garantie décennale", "damageInsurance": "Assurance dommages-ouvrage",
+    "conformityCertificate": "Certificat de conformité", "completionDeclaration": "Déclaration d'achèvement",
+    "available": "Disponible", "releaseDate": "Date de libération", "availabilityDate": "Date de disponibilité",
+    "keys": "Clés", "estimationAmount": "Valeur estimée", "estimationDate": "Date d'estimation",
+    "propertyTax": "Taxe foncière", "housingTax": "Taxe d'habitation", "works": "Travaux à prévoir",
+    "chargesDetail": "Détail des charges", "estimationLow": "Fourchette basse", "estimationHigh": "Fourchette haute",
+    "stateNote": "Note d'état (1 à 5)", "stateLabel": "État (libellé)", "stateAppreciation": "Appréciation de l'état",
+    "strongPoints": "Points forts", "watchPoints": "Points de vigilance", "priceArgument": "Argumentaire de prix",
+    "advisorOpinion": "Avis du conseiller", "chargeEnergy": "Charges énergie", "chargeWater": "Charges eau",
+    "chargeInsurance": "Charges assurance", "description": "Descriptif", "note": "Note interne",
+}
+CASES_NOMBRE = {
+    "price", "netSellerPrice", "surface", "carrezSurface", "livingSurface", "roomCount", "bedroomCount", "levelCount",
+    "bathroomCount", "showerRoomCount", "wcCount", "landSurface", "constructibleSurface", "shon", "gardenSurface",
+    "terraceCount", "garageCount", "garageSurface", "parkingInsideCount", "parkingOutsideCount", "constructionYear",
+    "coproLots", "coproCharges", "coproWorksFund", "terraceSurface", "balconyCount", "balconySurface", "cellarSurface",
+    "floor", "floorsCount", "finalEnergy", "energyCostMin", "energyCostMax", "estimationAmount", "propertyTax",
+    "housingTax", "estimationLow", "estimationHigh", "chargeEnergy", "chargeWater", "chargeInsurance", "stateNote",
+}
+CASES_EUROS = {"price", "netSellerPrice", "estimationAmount", "estimationLow", "estimationHigh", "propertyTax",
+               "housingTax", "coproCharges", "coproWorksFund", "chargeEnergy", "chargeWater", "chargeInsurance",
+               "energyCostMin", "energyCostMax"}
+CASES_M2 = {"surface", "carrezSurface", "livingSurface", "landSurface", "constructibleSurface", "shon", "gardenSurface",
+            "garageSurface", "terraceSurface", "balconySurface", "cellarSurface"}
+CASES_OUI_NON = {
+    "landConstructible", "landServiced", "waterConnection", "gasConnection", "electricityConnection", "phoneConnection",
+    "landWooded", "landPoolable", "garden", "pool", "poolHouse", "poolHeated", "poolCovered", "terrace", "balcony",
+    "cellar", "topFloor", "elevator", "disabledAccess", "airConditioning", "fireplace", "electricShutters",
+    "doubleGlazing", "tripleGlazing", "fiber", "armoredDoor", "intercom", "videophone", "alarm", "digicode",
+    "smokeDetector", "caretaker", "coproperty", "safeguardPlan", "tenYearWarranty", "damageInsurance",
+    "conformityCertificate", "completionDeclaration", "available",
+}
+CASES_LONGUES = {"description", "note", "strongPoints", "watchPoints", "priceArgument", "advisorOpinion",
+                 "stateAppreciation", "works", "chargesDetail", "particularities", "poolDetails"}
+TYPES_SCAN = {"image/jpeg", "image/png", "image/webp"}  # = la route de scan de l'écran (openai_listing_sheet_service)
+MAX_PAGES_SCAN = 5  # « une fiche = jusqu'à 5 pages » (handleDraftAnnonceScanFile)
+TAILLE_MAX_SCAN = 12 * 1024 * 1024  # = MAX_IMAGE_BYTES de la route de scan
+MAX_PIECES_COMPOSITION = 40
+
+
+def _nombre_dicte(cle: str, brut: str) -> str:
+    texte = brut.replace(" ", " ").replace("\xa0", " ").lower()
+    texte = re.sub(r"(€|euros?|m²|m2|ans?)\s*$", "", texte.strip()).strip()
+    texte = re.sub(r"(?<=\d) (?=\d{3}\b)", "", texte).replace(",", ".")
+    if not re.fullmatch(r"\d+(\.\d+)?", texte):
+        raise Refus(f"{LIBELLES_CASES[cle]} : « {brut} » n'est pas un nombre.")
+    return texte.rstrip("0").rstrip(".") if "." in texte else texte
+
+
+def _cases_dictees(brutes: Any) -> dict[str, str]:
+    cases: dict[str, str] = {}
+    for c in brutes or []:
+        cle, valeur = str((c or {}).get("cle") or "").strip(), str((c or {}).get("valeur") or "").strip()
+        if not valeur:
+            continue
+        if cle not in LIBELLES_CASES or cle not in CASES_CREATION:
+            raise Refus(f"« {cle} » n'est pas une case de la fenêtre de création.")
+        if cle == "postalCode" and not re.fullmatch(r"\d{5}", valeur.replace(" ", "")):
+            raise Refus(f"Code postal : « {valeur} » n'a pas 5 chiffres.")
+        if cle in CASES_NOMBRE:
+            valeur = _nombre_dicte(cle, valeur)
+        elif cle in CASES_OUI_NON:
+            v = _simple(valeur)
+            if v not in {"oui", "non"}:
+                raise Refus(f"{LIBELLES_CASES[cle]} : réponds oui ou non (pas « {valeur} »).")
+            valeur = v
+        elif _EMAIL.search(valeur):
+            raise Refus(f"{LIBELLES_CASES[cle]} : une adresse e-mail n'a rien à faire dans cette case.")
+        valeur = valeur.replace(" ", "") if cle == "postalCode" else valeur
+        cases[cle] = valeur[:4000] if cle in CASES_LONGUES else valeur[:300]
+    return cases
+
+
+def _composition_dictee(brute: Any) -> list[dict[str, str]]:
+    pieces = []
+    for p in brute or []:
+        piece = {k: str((p or {}).get(k) or "").strip()[:200] for k in ("type", "surface", "etage", "detail")}
+        if not piece["type"]:
+            continue
+        if piece["surface"]:
+            piece["surface"] = _nombre_dicte("surface", piece["surface"])
+        pieces.append(piece)
+    if len(pieces) > MAX_PIECES_COMPOSITION:
+        raise Refus(f"{MAX_PIECES_COMPOSITION} pièces au plus dans la composition.")
+    return pieces
+
+
+def _controler_creation(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[str, Any]:
+    genre = str(p.get("genre") or "").strip()
+    if genre not in {"estimation", "annonce"}:
+        raise Refus("Dis s'il s'agit d'une estimation ou d'une annonce (mandat de vente).")
+    brutes = p.get("cases")
+    if isinstance(brutes, dict):  # au clic : les cases rangées sur la carte, re-vérifiées comme à la carte
+        brutes = [{"cle": k, "valeur": v} for k, v in brutes.items()]
+    cases = _cases_dictees(brutes)
+    composition = _composition_dictee(p.get("composition"))
+    mandant = None
+    numero = str(p.get("hektor_contact_id") or "").strip()
+    if numero:
+        fiche = _contact_choisi(ctx, numero)  # relu avec SON jeton : il doit exister et être à sa portée
+        if _oui(fiche.get("archive")):
+            raise Refus(f"{_nom_contact(fiche)} est archivé : réactive-le d'abord, ou choisis le mandant dans la fenêtre.")
+        mandant = {"hektor_contact_id": str(fiche["hektor_contact_id"]), "nom": _nom_contact(fiche)}
+    negociateur = None
+    voulu = p.get("negociateur")
+    # à la carte : le NOM dit par la personne ; au clic : le numéro de la fiche retenue à la carte
+    nom_voulu, numero_voulu = ("", str(voulu.get("hektor_negociateur_id") or "")) if isinstance(voulu, dict) \
+        else (str(voulu or "").strip(), "")
+    if nom_voulu or numero_voulu:
+        if ctx.role not in DIRECTION:
+            raise Refus("Le négociateur, c'est toi : la fenêtre te met d'office. Seule la direction en choisit un autre.")
+        fiche_nego = _negociateur_choisi(ctx, nom_voulu, numero=numero_voulu)
+        negociateur = {"hektor_negociateur_id": str(fiche_nego.get("hektor_negociateur_id") or ""),
+                       "hektor_user_id": str(fiche_nego.get("hektor_user_id") or ""), "nom": fiche_nego.get("nom_vu"),
+                       "agence": fiche_nego.get("agence_nom")}
+    photos = []
+    if p.get("fichiers"):
+        photos = _fichiers_joints(ctx, "|".join(p["fichiers"]) if isinstance(p["fichiers"], list) else p["fichiers"])
+        if len(photos) > MAX_PAGES_SCAN:
+            raise Refus(f"{MAX_PAGES_SCAN} photos au plus pour la fiche papier (une photo par page).")
+        autres = [f["nom"] for f in photos if f["type"] not in TYPES_SCAN or f["taille"] > TAILLE_MAX_SCAN]
+        if autres:
+            raise Refus("Le scan ne lit que des photos JPEG, PNG ou WebP de 12 Mo au plus : " + ", ".join(autres) + ".")
+    if not cases and not composition and not mandant and not photos:
+        raise Refus("Rien à pré-remplir : donne au moins une information sur le bien, ou joins la fiche papier.")
+    return {"genre": genre, "cases": cases, "composition": composition, "mandant": mandant, "negociateur": negociateur,
+            "photos": photos}
+
+
+def _valeur_lisible(cle: str, valeur: str) -> str:
+    if cle in CASES_EUROS:
+        return _euros(valeur)
+    if cle in CASES_M2:
+        return f"{valeur.replace('.', ',')} m²"
+    return valeur
+
+
+def preparer_ouvrir_creation_annonce(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    c = _controler_creation(ctx, p)
+    morceaux = [f"{LIBELLES_CASES[k]} {_valeur_lisible(k, v)}" for k, v in c["cases"].items()]
+    if c["composition"]:
+        morceaux.append(f"composition : {len(c['composition'])} pièce{'s' if len(c['composition']) > 1 else ''}")
+    morceaux.append(f"mandant : {c['mandant']['nom']} (contact existant)" if c["mandant"] else "mandant : à saisir dans la fenêtre")
+    if c["negociateur"]:
+        morceaux.append(f"négociateur : {c['negociateur']['nom']}")
+    if c["photos"]:
+        morceaux.append("avec la fiche scannée (" + ", ".join(f"« {f['nom']} »" for f in c["photos"]) + ")")
+    resume = (f"Ouvrir la création d'{'une estimation' if c['genre'] == 'estimation' else 'une annonce'}, pré-remplie : "
+              + " ; ".join(morceaux) + ". Rien n'est créé tant que tu n'as pas cliqué « Créer » DANS la fenêtre")
+    parametres: dict[str, Any] = {"genre": c["genre"], "cases": c["cases"], "composition": c["composition"],
+                                  "fichiers": [f["id"] for f in c["photos"]]}
+    if c["mandant"]:
+        parametres["hektor_contact_id"] = c["mandant"]["hektor_contact_id"]  # -> « Ouvrir le contact » sous la carte
+        parametres["mandant_nom"] = c["mandant"]["nom"]
+    if c["negociateur"]:
+        parametres["negociateur"] = {"hektor_negociateur_id": c["negociateur"]["hektor_negociateur_id"],
+                                     "nom": c["negociateur"]["nom"]}
+    return resume, parametres
+
+
+def executer_ouvrir_creation_annonce(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[str, Any]:
+    c = _controler_creation(ctx, p)  # re-vérifié AU CLIC (contact, négociateur, fichiers du trombone)
+    try:
+        photos = [{"nom": f["nom"], "type": f["type"], "url": fichiers_service.lien_lecture(ctx.settings, f["chemin"])}
+                  for f in c["photos"]]
+    except fichiers_service.RefusFichier as exc:
+        raise Refus(str(exc)) from None
+    return {"ouvrir": "creation_annonce", "genre": c["genre"], "cases": c["cases"], "composition": c["composition"],
+            "mandant": c["mandant"], "negociateur": c["negociateur"], "photos": photos}
+
+
+def fiche_carte(parametres: dict[str, Any] | None, geste: str | None) -> dict[str, Any] | None:
+    """Ce que l'écran affiche de la carte « créer » (planche 1 de la maquette du 18/11) : tiré des paramètres que le
+    SERVEUR a préparés, jamais du texte du modèle. Les autres cartes n'en ont pas (leur phrase suffit)."""
+    if geste != "ouvrir_creation_annonce" or not parametres:
+        return None
+    cases = {k: str(v) for k, v in (parametres.get("cases") or {}).items() if k in LIBELLES_CASES}
+    type_bien = cases.get("propertyType", "").strip()
+    titre = (type_bien[:1].upper() + type_bien[1:]) if type_bien else "Bien"
+    if cases.get("surface"):
+        titre += f" de {_valeur_lisible('surface', cases['surface'])}"
+    if cases.get("city"):
+        titre += f" à {cases['city']}"
+    chiffres = [{"libelle": LIBELLES_CASES[k], "valeur": _valeur_lisible(k, cases[k])}
+                for k in ("price", "surface", "roomCount", "landSurface") if cases.get(k)]
+    if cases.get("bedroomCount"):
+        for ch in chiffres:
+            if ch["libelle"] == "Pièces":
+                ch["complement"] = f"dont {cases['bedroomCount']} chambre{'s' if cases['bedroomCount'] != '1' else ''}"
+    adresse = ", ".join(x for x in (cases.get("address"), " ".join(x for x in (cases.get("postalCode"), cases.get("city")) if x))
+                        if x)
+    deja = {"price", "surface", "roomCount", "landSurface", "bedroomCount", "address", "postalCode", "city", "propertyType"}
+    nego = parametres.get("negociateur") if isinstance(parametres.get("negociateur"), dict) else {}
+    lignes = ([{"libelle": "Adresse", "valeur": adresse}] if adresse else []) \
+        + ([{"libelle": "Mandant", "valeur": str(parametres.get("mandant_nom") or ""), "contact": True}]
+           if parametres.get("hektor_contact_id") else []) \
+        + ([{"libelle": "Négociateur", "valeur": str(nego.get("nom") or "")}] if nego else []) \
+        + [{"libelle": LIBELLES_CASES[k], "valeur": _valeur_lisible(k, v)} for k, v in cases.items() if k not in deja]
+    composition = parametres.get("composition") or []
+    a_remplir = ["Photos"] + ([] if composition else ["Composition"]) \
+        + ([] if parametres.get("hektor_contact_id") else ["Mandant"])
+    return {"genre": parametres.get("genre"), "titre": titre, "chiffres": chiffres, "lignes": lignes,
+            "composition": len(composition), "mandant": bool(parametres.get("hektor_contact_id")),
+            "negociateur": bool(parametres.get("negociateur")), "photos": len(parametres.get("fichiers") or []),
+            "a_remplir": a_remplir}
+
+
 # ── LOT 2c (17/11/2026) : créer un contact, ajouter une recherche, modifier une recherche ──
 # Note : notice/ETAPE3_AGENT_QUI_AGIT_AUDIT_2026-11-13.md §23-24. Les MÊMES fonctions de la base que l'écran :
 #   app_create_contact_optimistic (modale « Nouveau contact », App.tsx:43554 → api.ts:11774), qui contrôle l'appelant ;
@@ -3528,6 +3779,35 @@ GESTES: dict[str, Geste] = {g.nom: g for g in (
           _schema({"hektor_annonce_id": {"type": "string", "description": "numéro d'annonce"},
                    "fichiers": {"type": "string", "description": "numéros des fichiers joints séparés par |"}}),
           preparer_deposer_documents, executer_deposer_documents),
+    # 18/11 (étape 4 §65-66, marche 6a) : créer = ouvrir la fenêtre de création pré-remplie
+    Geste("ouvrir_creation_annonce",
+          "Prépare l'OUVERTURE de la fenêtre « Nouvelle annonce » de l'écran, PRÉ-REMPLIE, pour créer une ESTIMATION ou une "
+          "ANNONCE (mandat de vente) : c'est la personne qui clique « Créer » DANS la fenêtre. Ne mets QUE ce que la "
+          "personne a dit ou que tes lectures t'ont rendu (son agenda : lieu, contact relié) ; une case non dite reste "
+          "vide, n'en déduis aucune. « Vers 245 000 » = 245000. Le mandant : un contact EXISTANT (son numéro), sinon "
+          "vide (il se saisit dans la fenêtre : jamais ses coordonnées ici). Le négociateur : vide pour un commercial "
+          "(c'est lui) ; la direction peut nommer un négociateur. Les photos de la FICHE PAPIER jointes (fichier:…, "
+          "5 au plus) sont lues par le scan de la fenêtre ; ce que la personne dit l'emporte sur la fiche.",
+          TOUS_LES_ROLES,
+          _schema({"genre": {"type": "string", "enum": ["estimation", "annonce"]},
+                   "cases": {"type": "array", "description": "les cases à remplir (clés du scan, en anglais : surface = "
+                             "habitable, landSurface = terrain, roomCount = pièces, bedroomCount = chambres, price = prix, "
+                             "propertyType = type de bien en clair, title = titre de l'annonce, note = note interne…)",
+                             "items": {"type": "object", "properties": {"cle": {"type": "string", "enum": CASES_CREATION},
+                                                                        "valeur": {"type": "string"}},
+                                       "required": ["cle", "valeur"], "additionalProperties": False}},
+                   "composition": {"type": "array", "description": "les pièces dictées, ou vide",
+                                   "items": {"type": "object",
+                                             "properties": {"type": {"type": "string", "description": "séjour, cuisine…"},
+                                                            "surface": {"type": "string", "description": "m², ou vide"},
+                                                            "etage": {"type": "string", "description": "ou vide"},
+                                                            "detail": {"type": "string", "description": "ou vide"}},
+                                             "required": ["type", "surface", "etage", "detail"],
+                                             "additionalProperties": False}},
+                   "hektor_contact_id": {"type": "string", "description": "le mandant EXISTANT (numéro du contact), ou vide"},
+                   "negociateur": {"type": "string", "description": "DIRECTION seulement : le nom du négociateur ; sinon vide"},
+                   "fichiers": {"type": "string", "description": "photos de la fiche papier jointes, séparées par |, ou vide"}}),
+          preparer_ouvrir_creation_annonce, executer_ouvrir_creation_annonce),
     Geste("couverture_photo",
           "Prépare : mettre une photo VISIBLE en couverture d'une annonce (numéros donnés par lire_photos_bien).",
           TOUS_LES_ROLES,
@@ -3651,6 +3931,9 @@ def ranger_carte(ctx: ContexteAssistant, geste: Geste, resume: str, parametres: 
     ligne = r.json()[0]
     carte = {"id": ligne["id"], "geste": geste.nom, "resume": resume, "expire_le": ligne.get("expire_le"),
              "cibles": cibles_carte(parametres, geste.nom)}
+    fiche = fiche_carte(parametres, geste.nom)
+    if fiche:
+        carte["fiche"] = fiche
     ctx.cartes.append(carte)
     return carte
 

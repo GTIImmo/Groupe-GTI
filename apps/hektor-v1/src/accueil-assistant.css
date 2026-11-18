@@ -140,6 +140,34 @@
 .asi-carte.is-cours .asi-c-h svg { animation: asi-tourne 1.1s linear infinite; }
 /* le sceau : la coche du logo se trace au moment où la carte est validée (la seule animation, elle répond au clic) */
 .asi-c-h .asi-sceau { width: 18px; height: auto; }
+
+/* 18/11 (étape 4 §66, marche 6a ; maquette du 18/11, planches 1 et 3) : la carte « créer une estimation / une annonce » --
+   une fiche lisible d'un coup d'œil : le bien, quatre chiffres en grand, quelques lignes, ce qui reste à la fenêtre. */
+.asi-creation .asi-cr-h { color: var(--asi-ink); }
+.asi-creation .asi-cr-quoi { display: inline-flex; align-items: center; gap: 8px; font-size: 13.5px; }
+.asi-creation .asi-cr-quoi svg { width: 16px; height: 16px; color: var(--asi-magenta); }
+.asi-cr-titre { margin: 2px 0 0; font-size: 18px; font-weight: 700; letter-spacing: -0.01em; color: var(--asi-ink); }
+.asi-cr-chiffres { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.asi-cr-chiffre { border: 1px solid var(--asi-line); border-radius: 10px; padding: 8px 11px; min-width: 0; }
+.asi-cr-chiffre span { display: block; font-size: 12px; color: var(--asi-mute); }
+.asi-cr-chiffre b { display: block; margin-top: 2px; font-size: 17px; font-weight: 700; color: var(--asi-ink); overflow-wrap: anywhere; }
+.asi-cr-chiffre b small { font-size: 12.5px; font-weight: 500; color: var(--asi-mute); }
+.asi-cr-lignes { display: grid; grid-template-columns: minmax(96px, max-content) minmax(0, 1fr); gap: 6px 14px; margin: 0; font-size: 13.5px; line-height: 1.45; }
+.asi-cr-lignes dt { color: var(--asi-mute); }
+.asi-cr-lignes dd { margin: 0; color: var(--asi-ink); overflow-wrap: anywhere; }
+.asi-cr-pale { color: var(--asi-mute); }
+.asi-cr-plus { align-self: flex-start; padding: 0; border: 0; background: none; font: inherit; font-size: 13px; font-weight: 600; color: var(--asi-canard); cursor: pointer; }
+.asi-cr-plus:focus-visible { outline: 2px solid var(--asi-magenta); outline-offset: 2px; border-radius: 3px; }
+.asi-cr-note { margin: 0; font-size: 13px; line-height: 1.45; color: var(--asi-mute); }
+.asi-cr-reste { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 12.5px; color: var(--asi-mute); }
+.asi-cr-puce { padding: 3px 10px; border-radius: 999px; background: #f1f2f3; color: var(--asi-ink); }
+.asi-cr-f { justify-content: flex-end; }
+.asi-cr-f small { margin: 0 auto 0 0; }
+a.asi-obj { text-decoration: none; }
+@media (max-width: 720px) {
+  .asi-cr-chiffres { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .asi-cr-f small { flex-basis: 100%; }
+}
 .asi-sceau .asi-coche { stroke-dasharray: 64; stroke-dashoffset: 0; animation: asi-trace 0.55s ease-out both; }
 
 /* ---------- le champ en bas de la conversation ---------- */

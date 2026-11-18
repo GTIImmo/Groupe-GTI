@@ -3926,6 +3926,43 @@
   justify-self: start !important;
 }
 
+/* 18/11 (étape 4 §66, marche 6a ; maquette planche 2) : la fenêtre de création OUVERTE PAR L'ASSISTANT -- le bandeau,
+   la pastille par étape, et la marque de chaque case remplie par lui (point magenta, fond rosé). Rien ne s'allume quand
+   la fenêtre est ouverte à la main : ces classes ne sont posées que si l'assistant a pré-rempli. */
+.draft-annonce-step { position: relative !important; }
+.draft-annonce-step-assistant {
+  position: absolute; top: -7px; right: -5px; min-width: 22px; height: 22px; padding: 0 5px; box-sizing: border-box;
+  border-radius: 11px; background: #c5005f; color: #fff; font-size: 12px; font-weight: 800; line-height: 22px; text-align: center;
+  box-shadow: 0 0 0 2px #fff;
+}
+.draft-annonce-assistant {
+  display: flex; align-items: flex-start; gap: 14px; margin: 4px 0 2px; padding: 12px 16px; border-radius: 12px;
+  background: #fbf1f6; border: 1px solid #f0dbe6; color: #222323;
+}
+.draft-annonce-assistant .daa-logo {
+  flex: 0 0 28px; width: 28px; height: 28px; border-radius: 8px; background: #222323 center / 18px 18px no-repeat
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 3 L28 14 L24 14 L16 7 L8 14 L4 14 Z' fill='%23fff'/%3E%3Cpath d='M10 18 L15 23 L23 13' stroke='%23ff4f9a' stroke-width='3.4' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+.draft-annonce-assistant .daa-texte { flex: 1 1 auto; min-width: 0; }
+.draft-annonce-assistant p { margin: 0; font-size: 14px; line-height: 1.45; }
+.draft-annonce-assistant .daa-point,
+.draft-annonce-modal .is-assistant > span:first-child::after,
+.draft-annonce-modal .is-assistant > .draft-annonce-section-title strong::after {
+  content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #c5005f; vertical-align: 1px;
+}
+.draft-annonce-modal .is-assistant > span:first-child::after,
+.draft-annonce-modal .is-assistant > .draft-annonce-section-title strong::after { margin-left: 7px; }
+.draft-annonce-assistant .daa-desaccords { margin: 8px 0 0; padding-left: 18px; font-size: 13px; line-height: 1.45; color: #8a1f50; }
+.draft-annonce-assistant .ghost-button { flex: 0 0 auto; white-space: nowrap; }
+.draft-annonce-modal .filter-field.is-assistant input,
+.draft-annonce-modal .filter-field.is-assistant select,
+.draft-annonce-modal .filter-field.is-assistant textarea {
+  border-color: #ecc3d6 !important; background-color: #fffafc !important;
+}
+@media (max-width: 720px) {
+  .draft-annonce-assistant { flex-wrap: wrap; }
+}
+
 @media (max-width: 1460px) and (min-width: 1181px) {
   .google-agenda-modal-layout {
     grid-template-columns: minmax(360px, 0.86fr) minmax(500px, 1.14fr);

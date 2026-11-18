@@ -11,7 +11,7 @@ from ..settings import Settings
 from . import agent_registry
 from .agent_tarifs import TARIFS, cout_usd
 from .assistant_catalogue import ContexteAssistant, outils_sdk
-from .assistant_gestes import cibles_carte
+from .assistant_gestes import cibles_carte, fiche_carte
 from .assistant_objets import liste_pour_consignes
 
 # ---------------------------------------------------------------------------
@@ -95,8 +95,9 @@ _INSTRUCTIONS = (
     "avec le numero du contact (hektor_contact_id). De meme : [le mandat 18787](mandat:18787) (numero_mandat), "
     "[l'offre du 12/11](transaction:1000123) (app_affaire_id), [sa recherche](recherche:CLE) (contact_search_key), "
     "[le rendez-vous du 18/11](rdv:2026-11-18) (le jour), [la demande en attente](demande:61000) (app_dossier_id du bien "
-    "de la demande). Seulement avec un numero que tu as lu, jamais invente ; sinon le texte seul. Aucune autre sorte de "
-    "lien.\n"
+    "de la demande). Seulement avec un numero que tu as lu, jamais invente ; sinon le texte seul. Une seule autre sorte "
+    "de lien : [le patron vierge a imprimer](patron:fiche-saisie), la fiche papier a remplir a la main puis a "
+    "photographier pour le scan (quand on te la demande, ou quand tu proposes de scanner une fiche). Aucune autre.\n"
     "- Question juridique ou fiscale : reponse generale, et precise qu'elle est a faire verifier (notaire, juriste).\n"
     "- Sois force de proposition : apres ta reponse, propose en une phrase la suite utile (relancer, appeler, verifier "
     "un mandat, demander une baisse de prix…).\n"
@@ -117,7 +118,8 @@ _INSTRUCTIONS = (
     "officiel d'une annonce qui n'en a pas (mandat de vente, IRREVERSIBLE : dis-le), relancer un signataire ou annuler "
     "une signature Youtrust EN COURS (si Youtrust est ouvert a son compte), rattacher un contact EXISTANT comme mandant "
     "d'un bien ou retirer un mandant (impossible une fois le mandat numerote), l'adresse d'un contact, faire d'une fiche "
-    "existante le conjoint d'une personne seule, desarchiver une annonce, et VERS LE CLIENT : un e-mail "
+    "existante le conjoint d'une personne seule, desarchiver une annonce, CREER une estimation ou une annonce (la carte "
+    "ouvre la fenetre de creation pre-remplie, c'est la personne qui cree), et VERS LE CLIENT : un e-mail "
     "a un contact (adresse de sa fiche), l'envoi reel d'un rapprochement (apres l'apercu), un rendez-vous avec le client "
     "invite ; et pour la DIRECTION seulement (admin, manager) : accepter ou refuser une offre, annuler un compromis, "
     "reaffecter un bien a un autre negociateur, archiver une annonce (avec sa cause), passer une ESTIMATION en ACTIF "
@@ -127,7 +129,7 @@ _INSTRUCTIONS = (
     "mandant ou modifier l'e-mail / le portable d'un mandant, les autres changements de statut (retour en Estimation, "
     "Clos), creer un conjoint ou defaire un couple, editer le document de mandat ou un avenant, un nouveau mandat sur un bien qui en a deja un, activer un "
     "brouillon, supprimer une photo, supprimer un compromis ou une vente, creer une offre, un compromis ou une vente, "
-    "creer une annonce ou une estimation, l'avis de valeur PDF, "
+    "l'avis de valeur PDF, "
     "ENVOYER en signature (la fenetre de l'ecran), les signatures ImmoSign, une piece jointe, l'espace client, le bon de visite, l'agenda d'un collegue, une societe ou un "
     "partenaire…) : dis que tu ne peux pas encore, et ou le faire dans l'application.\n"
     "- DROITS PAR ROLE (role : {{role}}). La DIRECTION (admin, manager) FAIT elle-meme ; le NEGOCIATEUR (commercial) "
@@ -151,6 +153,11 @@ _INSTRUCTIONS = (
     "contact (doc:…, photo:…) ; le client recoit de VRAIS fichiers, jamais un lien. Une piece sensible (identite, etat "
     "civil, RIB, financement, renseignements) ou une photo masquee peut partir, mais dis-le a la personne : la carte "
     "les marque.\n"
+    "- Creer une estimation ou une annonce : proposer_ouvrir_creation_annonce. Estimation (« j'ai estime », « avis de "
+    "valeur ») ou annonce (« mandat signe », « mettre en vente ») : demande si ce n'est pas clair. Au retour d'un "
+    "rendez-vous (« l'estimation de mon RDV de 14 h »), lis l'agenda : son lieu donne l'adresse, son contact relie le "
+    "mandant. Un mandant nomme : cherche-le dans les contacts ; plusieurs = demande lequel ; aucun = mandant a saisir "
+    "dans la fenetre. Photos de la fiche papier jointes : passe-les dans « fichiers ».\n"
     "- Contact et recherche : toujours le code postal ET la commune (sinon Hektor perd la ville) ; un doublon trouve se "
     "montre a la personne avant tout.\n"
     "- Annonce : lire_photos_bien avant un geste sur une photo, lire_portails_bien avant la diffusion ; rediger_annonce "
@@ -321,9 +328,21 @@ class AssistantService:
             "conversation_id": f"eq.{conversation_id}",
             "select": "id,geste,resume,etat,resultat,cree_le,expire_le,execute_le,parametres",
             "order": "cree_le.asc"})
+        # 18/11 (étape 4 §66) : + la « fiche » de la carte « créer » (ce qu'elle pré-remplit), tirée des mêmes paramètres
         return [{**{k: v for k, v in ligne.items() if k != "parametres"},
-                 "cibles": cibles_carte(ligne.get("parametres"), ligne.get("geste"))}
+                 "cibles": cibles_carte(ligne.get("parametres"), ligne.get("geste")),
+                 **({"fiche": f} if (f := fiche_carte(ligne.get("parametres"), ligne.get("geste"))) else {})}
                 for ligne in lignes]
+
+    def noter_suite(self, action_id: str, user_id: str, resultat: dict[str, Any]) -> bool:
+        # 18/11 (étape 4 §66) : la carte « créer » validée garde la trace de ce que la FENÊTRE a fait ensuite (la fiche
+        # créée), pour l'afficher après un rechargement. Seulement SA carte, déjà validée : rien d'autre ne bouge.
+        r = requests.patch(self._url("app_assistant_action"), headers={**self._headers(), "Prefer": "return=representation"},
+                           params={"id": f"eq.{action_id}", "user_id": f"eq.{user_id}", "etat": "eq.executee"},
+                           json={"resultat": resultat}, timeout=10)
+        if not r.ok:
+            raise HTTPException(status_code=503, detail="La carte n'a pas pu garder la création")
+        return bool(r.json() or [])
 
     # ── relire (avec le JETON de la personne : la RLS dit qui voit quoi) ──────
     def _lire_avec_jeton(self, jeton: str, table: str, params: dict[str, str]) -> list[dict[str, Any]]:
