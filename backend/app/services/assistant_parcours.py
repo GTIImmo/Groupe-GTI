@@ -36,6 +36,11 @@ CLES_PIECE: frozenset[str] = frozenset(DONNEES["cles_piece"])
 CLE_ETATS = "_questions"
 # Ce qu'un geste fait de la question : répondue, « je complète plus tard », « je ne sais pas ».
 ETAT_PAR_GESTE = {"repondre": "faite", "passer": "passee", "nsp": "nsp"}
+# P4-a (19/11) : « connue » = l'essentiel de la question était dans la demande (lue par l'IA) : elle n'est pas
+# reposée, elle s'affiche en pastille verte, modifiable. `_sources` dit d'où vient chaque case pré-remplie.
+ETAT_CONNUE = "connue"
+CLE_SOURCES = "_sources"
+SOURCES = frozenset({"demande"})
 # ⛔ règle du 18/11 : les coordonnées d'un nouveau mandant vivent à part (assistant_prive), jamais dans les réponses.
 COORDONNEES = frozenset({"civilite", "nom", "prenom", "email", "telephone", "mandant_email", "mandant_telephone"})
 MANDANT_CHOIX = frozenset({"", "existant", "nouveau"})
@@ -161,6 +166,43 @@ def enregistrer(reponses: dict[str, Any], question_id: str, valeurs: Any, geste:
     return nouvelles
 
 
+def appliquer_depart(reponses: dict[str, Any], valeurs: dict[str, Any], source: str, annee: int) -> dict[str, Any]:
+    """P4-a : pré-remplit le parcours avec ce que la personne a DÉJÀ dit (traduit dans la langue de la fenêtre). Ne
+    remplace jamais une réponse donnée ; ignore une case qui n'est d'aucune question (la fenêtre ne la montre pas) ou
+    qui ne passe pas les contrôles d'une réponse ; marque « connue » chaque question posée dont l'essentiel est dit."""
+    if source not in SOURCES:
+        raise RefusParcours("Source inconnue.")
+    toutes = {c for q in QUESTIONS for c in q["champs"]}
+    nouvelles = dict(reponses)
+    sources = dict(nouvelles.get(CLE_SOURCES) or {})
+    for cle, valeur in (valeurs or {}).items():
+        if cle.startswith("_") or cle in COORDONNEES or cle not in toutes or cle in nouvelles:
+            continue
+        try:
+            propre: Any = _pieces(valeur) if cle == "composition" else _photos(valeur) if cle == "photos" \
+                else _valeur_simple(cle, valeur)
+            if cle == "mandant_choix" and propre not in MANDANT_CHOIX:
+                continue
+        except RefusParcours:
+            continue
+        if propre in ("", []):
+            continue
+        nouvelles[cle] = propre
+        sources[cle] = source
+    if sources:
+        nouvelles[CLE_SOURCES] = sources
+    suivi = etats(nouvelles)
+    for q in questions_posees(nouvelles, annee):
+        essentiels = q.get("essentiels") or []
+        if essentiels and q["id"] not in suivi and all(nouvelles.get(c) not in (None, "", []) for c in essentiels):
+            suivi[q["id"]] = ETAT_CONNUE
+    if suivi:
+        nouvelles[CLE_ETATS] = suivi
+    if len(json.dumps(nouvelles, ensure_ascii=False)) > MAX_REPONSES:
+        raise RefusParcours("Le parcours est trop long pour être gardé.")
+    return nouvelles
+
+
 def vue(ligne: dict[str, Any], annee: int | None = None) -> dict[str, Any]:
     """Ce que l'écran reçoit : la question à poser, le repère « 4 sur 17 », les réponses (sans le suivi interne)."""
     annee = annee or annee_a_paris()
@@ -182,6 +224,8 @@ def vue(ligne: dict[str, Any], annee: int | None = None) -> dict[str, Any]:
         "questions": [{"id": p["id"], "titre": p["titre"], "etat": faits.get(p["id"]), "phrase": p["phrase"],
                        "forme": p["forme"], "champs": p["champs"]} for p in posees],
         "reponses": {k: v for k, v in reponses.items() if not k.startswith("_")},
+        # P4-a : d'où vient une case pré-remplie (« demande ») -- l'écran le dit sur la pastille
+        "sources": dict(reponses.get(CLE_SOURCES) or {}),
         "fin": q is None,
     }
 
@@ -200,10 +244,12 @@ class ParcoursStore:
         key = self.settings.supabase_service_role_key
         return {"apikey": key, "Authorization": f"Bearer {key}"}
 
-    def creer(self, user_id: str, conversation_id: str | None, genre: str, etape: str | None) -> dict[str, Any]:
+    def creer(self, user_id: str, conversation_id: str | None, genre: str, etape: str | None,
+              reponses: dict[str, Any] | None = None) -> dict[str, Any]:
+        # P4-a : `reponses` = le départ déjà rempli de la demande (appliquer_depart), sinon vide
         r = requests.post(self._url(), headers={**self._service(), "Prefer": "return=representation"},
                           json=[{"user_id": user_id, "conversation_id": conversation_id, "genre": genre,
-                                 "reponses": {}, "etape": etape}], timeout=10)
+                                 "reponses": reponses or {}, "etape": etape}], timeout=10)
         if not r.ok or not (r.json() or []):
             raise HTTPException(status_code=503, detail="Parcours non créé")
         return r.json()[0]

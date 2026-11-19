@@ -301,6 +301,76 @@ voir(r["ok"] and table[p2]["etat"] == "termine" and table[p2]["app_dossier_id"] 
 r = appeler(route.parcours_cree, "court", route.ParcoursCreePayload(), "Bearer j", Settings(), None, S, ST)
 voir(r[0] == 404, "noter la fin d'un numéro mal formé : introuvable")
 
+print("6 ter) P4-a : le parcours démarre rempli de la demande ; une question dont l'essentiel est dit n'est pas reposée")
+from app.services import assistant_gestes as ges  # noqa: E402
+from app.services import parcours_traduction as trad  # noqa: E402
+from app.services.assistant_contexte import ContexteAssistant  # noqa: E402
+
+dit = trad.traduire({"propertyType": "maison", "address": "12 rue des Tilleuls", "postalCode": "42700", "city": "Firminy",
+                     "surface": "118", "roomCount": "5", "housingTax": "800"})
+d = moteur.appliquer_depart({}, {**dit, "email": "x@exemple.invalid", "inconnue": "1"}, "demande", ANNEE)
+s = moteur.etats(d)
+voir(s.get("bien") == "connue" and s.get("interieur") == "connue" and "dehors" not in s,
+     "le bien et l'intérieur DITS sont « connues » ; le dehors (rien de dit) reste à poser")
+voir(d["_sources"]["adresse_haut"] == "demande" and d["adresse"] == "12 rue des Tilleuls", "chaque case pré-remplie dit sa source")
+voir("email" not in d and "inconnue" not in d and "TAXE_HABITATION" not in d,
+     "ni coordonnée, ni case inconnue, ni case que la fenêtre ne montre jamais")
+voir(moteur.suivante(d, ANNEE)["id"] == "quartier", "la première question posée saute les connues")
+d2 = moteur.appliquer_depart({"type": "2", "_questions": {"bien": "faite"}}, dit, "demande", ANNEE)
+voir(d2["type"] == "2" and d2["_questions"]["bien"] == "faite", "une réponse déjà donnée n'est JAMAIS remplacée par la demande")
+v = moteur.vue({"id": "p", "reponses": d}, ANNEE)
+voir(v["sources"].get("type") == "demande" and "_sources" not in v["reponses"]
+     and [q["etat"] for q in v["questions"] if q["id"] == "bien"] == ["connue"], "la vue dit « connue » et la source")
+d3 = moteur.appliquer_depart({}, {"mandant_choix": "nouveau"}, "demande", ANNEE)
+voir("mandant" not in moteur.etats(d3), "un mandant « nouveau » : la question reste posée (ses coordonnées se tapent en cases protégées)")
+d4 = moteur.appliquer_depart({}, {"mandant_choix": "existant", "mandant": "10059959"}, "demande", ANNEE)
+voir(moteur.etats(d4).get("mandant") == "connue", "un mandant EXISTANT dit : la question est connue")
+try:
+    moteur.appliquer_depart({}, dit, "scan", ANNEE)
+    voir(False, "une source inconnue est refusée")
+except moteur.RefusParcours:
+    voir(True, "une source inconnue est refusée (le scan viendra avec P4-b)")
+
+print("6 quater) P4-a : le geste « créer par questions guidées »")
+UID_G = "33333333-3333-3333-3333-333333333333"
+ctx = ContexteAssistant(settings=Settings(), user_id=UID_G, email="paul@exemple.invalid", role="admin", jeton="jeton-de-paul",
+                        conversation_id="c" * 36)
+lecture = {"genre": "estimation", "cases": [{"cle": "propertyType", "valeur": "maison"}, {"cle": "address", "valeur": "12 rue des Tilleuls"},
+           {"cle": "postalCode", "valeur": "42700"}, {"cle": "city", "valeur": "Firminy"}, {"cle": "surface", "valeur": "118"},
+           {"cle": "roomCount", "valeur": "5"}], "composition": [], "hektor_contact_id": "", "mandant_nouveau": True, "negociateur": ""}
+interrupteur["valeur"] = ""
+try:
+    ges.preparer_parcours_creation(ctx, lecture)
+    voir(False, "interrupteur fermé : le geste est refusé")
+except ges.Refus:
+    voir(True, "interrupteur fermé : le geste est refusé (et l'outil n'est pas montré à l'IA)")
+interrupteur["valeur"] = "admin"
+ctx_c = ContexteAssistant(settings=Settings(), user_id=UID_G, email="x@exemple.invalid", role="commercial", jeton="j")
+try:
+    ges.preparer_parcours_creation(ctx_c, lecture)
+    voir(False, "interrupteur « admin » : un commercial est refusé")
+except ges.Refus:
+    voir(True, "interrupteur « admin » : un commercial est refusé")
+resume, parametres = ges.preparer_parcours_creation(ctx, lecture)
+voir("Déjà dit" in resume and "le bien" in resume and "l'intérieur" in resume and "Créer" in resume,
+     "la carte dit ce qui est déjà dit et que rien n'est créé avant « Créer »")
+voir(parametres["mandant_nouveau"] is True and "email" not in str(parametres), "la carte garde « nouveau », jamais une coordonnée")
+vide = {**lecture, "cases": [], "mandant_nouveau": False}
+r_vide, _ = ges.preparer_parcours_creation(ctx, vide)
+voir("Déjà dit" not in r_vide, "rien de dit : le parcours démarre vide (pas de garde des essentiels : il les pose)")
+table.clear()
+r = ges.executer_parcours_creation(ctx, parametres)
+pid = r["parcours"]["id"]
+ligne = table[pid]
+voir(r["ouvrir"] == "parcours" and ligne["conversation_id"] == "c" * 36 and ligne["user_id"] == UID_G
+     and ligne["genre"] == "creation_estimation", "au clic : un parcours dans SA conversation, à SON nom")
+voir(ligne["reponses"]["type"] == "1" and ligne["reponses"]["mandant_choix"] == "nouveau"
+     and ligne["reponses"]["_questions"]["bien"] == "connue" and ligne["etape"] == "quartier"
+     and r["parcours"]["question"]["id"] == "quartier", "il démarre rempli : la première question est la première NON dite")
+voir(len(ges.FONCTIONS_GESTES) == len(ges.GESTES) and "proposer_parcours_creation" in [f.nom for f in ges.FONCTIONS_GESTES],
+     "le geste est proposé à l'IA sous le nom proposer_parcours_creation")
+interrupteur["valeur"] = "on"
+
 print("7) aucun appel au modèle")
 src = open(moteur.__file__, encoding="utf-8").read()
 voir("openai" not in src.lower().replace("ne connaît pas openai", ""), "le moteur ne connaît pas OpenAI")

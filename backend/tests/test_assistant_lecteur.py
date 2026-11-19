@@ -305,8 +305,12 @@ chercher = next(f for f in cat.CATALOGUE if f.nom == "chercher")
 texte = asyncio.run(cat.appeler(trace_ctx, chercher, json.dumps({"objet": "salaires"})))
 voir(texte.startswith("Refusé : Objet inconnu") and trace_ctx.appels[0]["erreur"] == "refus", "un refus part au modèle tel quel, et se trace")
 consignes = svc.agent_registry.render(svc._INSTRUCTIONS, {"date": "12/11/2026", "objets": obj.liste_pour_consignes(),
-                                                         "role": "commercial"})
+                                                         "role": "commercial", "parcours": ""})
 voir(all(o.nom in consignes for o in obj.OBJETS) and "{{" not in consignes, "les consignes listent les 15 objets, rien n'est laissé en gabarit")
+avec = svc.agent_registry.render(svc._INSTRUCTIONS, {"date": "12/11/2026", "objets": obj.liste_pour_consignes(),
+                                                    "role": "admin", "parcours": svc.CONSIGNE_PARCOURS})
+voir("proposer_parcours_creation" not in consignes and "proposer_parcours_creation" in avec and "{{" not in avec,
+     "P4-a : la conduite du parcours guidé n'est dans la consigne que si l'interrupteur l'ouvre au compte")
 voir(len(obj.OBJETS) == 15, "15 objets dans la liste fermée (13/11 : + dossiers, le registre des transactions)")
 
 print(f"\n{ok} contrôles verts")

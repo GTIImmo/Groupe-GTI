@@ -20,6 +20,8 @@ from .google_calendar_event_link_service import GoogleCalendarEventLinkService
 from .google_workspace_service import (MAX_GMAIL_ATTACHMENT_BYTES, MAX_GMAIL_ATTACHMENT_COUNT,
                                        MAX_GMAIL_ATTACHMENT_FILE_BYTES, GoogleWorkspaceService)
 from .openai_listing_sheet_service import FIELD_KEYS as _CASES_DU_SCAN
+from . import assistant_parcours as parcours_moteur  # P4-a (19/11) : le parcours guidé, démarré rempli de la demande
+from . import parcours_traduction
 from .rapprochement_email import RapprochementEmailService
 from .rapprochement_sender import RapprochementSender
 from .supabase_admin import SupabaseAdminService
@@ -2263,7 +2265,8 @@ def _composition_dictee(brute: Any) -> list[dict[str, str]]:
     return pieces
 
 
-def _controler_creation(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[str, Any]:
+def _controler_creation(ctx: ContexteAssistant, p: dict[str, Any], exiger: bool = True) -> dict[str, Any]:
+    # `exiger` (P4-a, 19/11) : faux pour le PARCOURS GUIDÉ, qui pose lui-même ce qui manque ; vrai pour la carte (inchangé)
     genre = str(p.get("genre") or "").strip()
     if genre not in {"estimation", "annonce"}:
         raise Refus("Dis s'il s'agit d'une estimation ou d'une annonce (mandat de vente).")
@@ -2299,11 +2302,11 @@ def _controler_creation(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[str, 
         autres = [f["nom"] for f in photos if f["type"] not in TYPES_SCAN or f["taille"] > TAILLE_MAX_SCAN]
         if autres:
             raise Refus("Le scan ne lit que des photos JPEG, PNG ou WebP de 12 Mo au plus : " + ", ".join(autres) + ".")
-    if not cases and not composition and not mandant and not photos:
+    if exiger and not cases and not composition and not mandant and not photos:
         raise Refus("Rien à pré-remplir : donne au moins une information sur le bien, ou joins la fiche papier.")
     mandant_nouveau = bool(p.get("mandant_nouveau")) and not mandant
     inconnus = _inconnus_dits(p.get("inconnus"), cases)
-    if not photos:  # la fiche papier jointe : c'est le scan de la fenêtre qui les lira
+    if not photos and exiger:  # la fiche papier jointe : c'est le scan de la fenêtre qui les lira
         _exiger_essentiels(genre, cases, mandant or mandant_nouveau, inconnus)
     return {"genre": genre, "cases": cases, "composition": composition, "mandant": mandant, "negociateur": negociateur,
             "photos": photos, "mandant_nouveau": mandant_nouveau, "inconnus": inconnus}
@@ -2387,6 +2390,83 @@ def executer_ouvrir_creation_annonce(ctx: ContexteAssistant, p: dict[str, Any]) 
         raise Refus(str(exc)) from None
     return {"ouvrir": "creation_annonce", "genre": c["genre"], "cases": c["cases"], "composition": c["composition"],
             "mandant": c["mandant"], "negociateur": c["negociateur"], "photos": photos}
+
+
+# ── 19/11 (étape 4 chap. 6, P4-a) : CRÉER PAR LE PARCOURS GUIDÉ ───────────────────────────────────────────────────
+# Décisions de Frédéric (18-19/11, note §78-§83, §95) : sur une demande de création, l'assistant propose le PARCOURS ;
+# il passe ce que la personne a DÉJÀ dit (les mêmes clés du scan que la carte « créer », l'agenda et le contact
+# compris) ; le serveur le TRADUIT dans la langue de la fenêtre (parcours_traduction, décision « A ») et le parcours
+# démarre déjà rempli : une question dont l'essentiel est dit n'est pas reposée. Au clic, RIEN n'est écrit ailleurs que
+# dans la mémoire du parcours (app_assistant_parcours) : la fiche se crée plus tard, DANS la fenêtre, par son clic.
+# ⛔ Seulement si l'interrupteur `assistant_parcours` l'ouvre au compte (l'outil n'est même pas montré à l'IA sinon).
+# ⛔ Jamais les coordonnées d'un mandant : un contact EXISTANT (son numéro) ou « nouveau » (saisi en cases protégées).
+INTERRUPTEUR_PARCOURS = "assistant_parcours"
+
+
+def parcours_ouvert_au_role(cran: str, role: str) -> bool:
+    cran = str(cran or "").strip().lower()
+    return cran in {"on", "true", "1", "yes"} and role in {"admin", "manager", "commercial"} or (cran == "admin" and role == "admin")
+
+
+def _parcours_ouvert(ctx: ContexteAssistant) -> None:
+    lignes = _lire(ctx, "app_setting", {"key": f"eq.{INTERRUPTEUR_PARCOURS}", "select": "value", "limit": "1"})
+    if not parcours_ouvert_au_role(str((lignes or [{}])[0].get("value") or ""), ctx.role):
+        raise Refus("Le parcours guidé n'est pas ouvert à ton compte : propose la carte de création.")
+
+
+def _depart_du_parcours(c: dict[str, Any]) -> dict[str, Any]:
+    """Ce que la personne a dit, dans la langue de la FENÊTRE (traduit comme le remplisseur du scan)."""
+    valeurs = parcours_traduction.traduire(c["cases"], c["composition"])
+    if c["mandant"]:
+        valeurs["mandant_choix"], valeurs["mandant"] = "existant", c["mandant"]["hektor_contact_id"]
+    elif c["mandant_nouveau"]:
+        valeurs["mandant_choix"] = "nouveau"  # ses coordonnées : cases protégées, dans la question « le mandant »
+    if c["negociateur"] and c["negociateur"].get("hektor_user_id"):
+        valeurs["negociateur"] = c["negociateur"]["hektor_user_id"]
+        if c["negociateur"].get("agence"):
+            valeurs.setdefault("agence", c["negociateur"]["agence"])
+    return valeurs
+
+
+def _parametres_de_la_carte(c: dict[str, Any]) -> dict[str, Any]:
+    parametres: dict[str, Any] = {"genre": c["genre"], "cases": c["cases"], "composition": c["composition"]}
+    if c["mandant_nouveau"]:
+        parametres["mandant_nouveau"] = True
+    if c["mandant"]:
+        parametres["hektor_contact_id"] = c["mandant"]["hektor_contact_id"]  # -> « Ouvrir le contact » sous la carte
+        parametres["mandant_nom"] = c["mandant"]["nom"]
+    if c["negociateur"]:
+        parametres["negociateur"] = {"hektor_negociateur_id": c["negociateur"]["hektor_negociateur_id"],
+                                     "nom": c["negociateur"]["nom"]}
+    return parametres
+
+
+def preparer_parcours_creation(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    _parcours_ouvert(ctx)
+    c = _controler_creation(ctx, {**p, "fichiers": ""}, exiger=False)
+    annee = parcours_moteur.annee_a_paris()
+    depart = parcours_moteur.appliquer_depart({}, _depart_du_parcours(c), "demande", annee)
+    suivi = parcours_moteur.etats(depart)
+    posees = parcours_moteur.questions_posees(depart, annee)
+    connues = [q["titre"].lower() for q in posees if suivi.get(q["id"]) == parcours_moteur.ETAT_CONNUE]
+    reste = len(posees) - len(connues)
+    quoi = "une estimation" if c["genre"] == "estimation" else "une annonce"
+    resume = (f"Créer {quoi} par questions guidées. "
+              + (f"Déjà dit, pas reposé : {', '.join(connues)}. " if connues else "")
+              + f"{reste} question{'s' if reste > 1 else ''} à boutons ensuite, sans l'IA ; à la fin, la fenêtre de "
+              "création s'ouvre remplie et rien n'est créé avant ton clic « Créer »")
+    return resume, _parametres_de_la_carte(c)
+
+
+def executer_parcours_creation(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[str, Any]:
+    _parcours_ouvert(ctx)  # re-vérifié AU CLIC, comme le contact et le négociateur
+    c = _controler_creation(ctx, {**p, "fichiers": ""}, exiger=False)
+    annee = parcours_moteur.annee_a_paris()
+    depart = parcours_moteur.appliquer_depart({}, _depart_du_parcours(c), "demande", annee)
+    premiere = parcours_moteur.suivante(depart, annee)
+    store = parcours_moteur.ParcoursStore(ctx.settings)
+    ligne = store.creer(ctx.user_id, ctx.conversation_id, f"creation_{c['genre']}", premiere["id"] if premiere else None, depart)
+    return {"ouvrir": "parcours", "parcours": parcours_moteur.vue(ligne, annee)}
 
 
 def fiche_carte(parametres: dict[str, Any] | None, geste: str | None) -> dict[str, Any] | None:
@@ -3947,6 +4027,36 @@ GESTES: dict[str, Geste] = {g.nom: g for g in (
                    "negociateur": {"type": "string", "description": "DIRECTION seulement : le nom du négociateur ; sinon vide"},
                    "fichiers": {"type": "string", "description": "photos de la fiche papier jointes, séparées par |, ou vide"}}),
           preparer_ouvrir_creation_annonce, executer_ouvrir_creation_annonce),
+    # 19/11 (étape 4 chap. 6, P4-a) : créer par le PARCOURS GUIDÉ (questions à boutons, sans l'IA), déjà rempli de la demande
+    Geste("parcours_creation",
+          "Propose de CRÉER une ESTIMATION ou une ANNONCE (mandat de vente) par le PARCOURS GUIDÉ : l'application pose "
+          "ensuite les questions À BOUTONS (sans toi), puis ouvre la fenêtre de création remplie ; c'est la personne qui "
+          "clique « Créer ». Passe TOUT ce que la personne a déjà dit (et ce que tes lectures t'ont rendu : son agenda "
+          "-- lieu, contact relié --, un contact existant), avec les mêmes clés que la création : une question dont "
+          "l'essentiel est dit n'est pas reposée. Ne pose PAS toi-même les questions qui manquent : le parcours les pose. "
+          "Une case non dite reste vide, n'en déduis aucune. Le mandant : un contact EXISTANT (son numéro), ou « nouveau » "
+          "(mandant_nouveau) ; jamais ses coordonnées. Le négociateur : vide pour un commercial ; la direction peut en nommer un.",
+          TOUS_LES_ROLES,
+          _schema({"genre": {"type": "string", "enum": ["estimation", "annonce"]},
+                   "cases": {"type": "array", "description": "ce que la personne a dit (clés du scan, en anglais : surface = "
+                             "habitable, landSurface = terrain, roomCount = pièces, bedroomCount = chambres, price = prix, "
+                             "propertyType = type de bien en clair, title = titre, note = note interne…), ou vide",
+                             "items": {"type": "object", "properties": {"cle": {"type": "string", "enum": CASES_CREATION},
+                                                                        "valeur": {"type": "string"}},
+                                       "required": ["cle", "valeur"], "additionalProperties": False}},
+                   "composition": {"type": "array", "description": "les pièces dictées, ou vide",
+                                   "items": {"type": "object",
+                                             "properties": {"type": {"type": "string", "description": "séjour, cuisine…"},
+                                                            "surface": {"type": "string", "description": "m², ou vide"},
+                                                            "etage": {"type": "string", "description": "ou vide"},
+                                                            "detail": {"type": "string", "description": "ou vide"}},
+                                             "required": ["type", "surface", "etage", "detail"],
+                                             "additionalProperties": False}},
+                   "hektor_contact_id": {"type": "string", "description": "le mandant EXISTANT (numéro du contact), ou vide"},
+                   "mandant_nouveau": {"type": "boolean", "description": "true si la personne a dit que le mandant est "
+                                       "NOUVEAU (pas encore dans les contacts) ; false sinon"},
+                   "negociateur": {"type": "string", "description": "DIRECTION seulement : le nom du négociateur ; sinon vide"}}),
+          preparer_parcours_creation, executer_parcours_creation),
     Geste("ouvrir_avis_de_valeur",
           "Prépare l'OUVERTURE de l'ÉDITEUR « Avis de valeur » d'un bien EXISTANT (« fais l'estimation / l'avis de valeur "
           "de 63289 », « prépare l'avis de valeur » après une estimation créée), PRÉ-REMPLI de ce que la personne dicte : "

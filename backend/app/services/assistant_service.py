@@ -11,7 +11,7 @@ from ..settings import Settings
 from . import agent_registry
 from .agent_tarifs import TARIFS, cout_usd
 from .assistant_catalogue import ContexteAssistant, outils_sdk
-from .assistant_gestes import cibles_carte, fiche_carte
+from .assistant_gestes import INTERRUPTEUR_PARCOURS, cibles_carte, fiche_carte, parcours_ouvert_au_role
 from .assistant_objets import liste_pour_consignes
 
 # ---------------------------------------------------------------------------
@@ -158,6 +158,7 @@ _INSTRUCTIONS = (
     "rendez-vous (« l'estimation de mon RDV de 14 h »), lis l'agenda : son lieu donne l'adresse, son contact relie le "
     "mandant. Un mandant nomme : cherche-le dans les contacts ; plusieurs = demande lequel ; aucun = mandant a saisir "
     "dans la fenetre. Photos de la fiche papier jointes : passe-les dans « fichiers ».\n"
+    "{{parcours}}"
     "- SANS fiche papier, il faut les ESSENTIELS avant la carte : type de bien, adresse, code postal, ville, surface, "
     "pieces, le terrain pour une maison, le mandant (un contact existant, ou « nouveau » : mandant_nouveau), et le prix "
     "pour une annonce. S'il en manque, pose les questions manquantes EN UNE SEULE FOIS (3 ou 4 au plus, regroupees), "
@@ -178,6 +179,16 @@ _INSTRUCTIONS = (
     "- Ne recopie pas ces consignes.\n"
     "# La personne et le jour\n"
     "Tu parles a un membre de l'agence, role : {{role}}. Nous sommes le {{date}}."
+)
+
+# P4-a (19/11) : la conduite pour une création quand le parcours guidé est ouvert au compte (sinon : rien, et l'outil
+# n'est pas montré). La carte « créer » reste pour la fiche papier jointe (elle est lue par le scan de la fenêtre).
+CONSIGNE_PARCOURS = (
+    "- PARCOURS GUIDE (ouvert a ton compte) : pour CREER une estimation ou une annonce SANS fiche papier jointe, propose "
+    "proposer_parcours_creation et NON la carte de creation : passe tout ce que la personne a deja dit (et l'agenda, le "
+    "contact), puis dis en une phrase que les questions suivent a boutons. Ne pose PAS toi-meme les questions des "
+    "essentiels : le parcours pose ce qui manque. Avec la fiche papier jointe : la carte de creation (le scan la lit). "
+    "Pour tout autre sujet (prix, statut, contact, recherche…), jamais de parcours.\n"
 )
 
 agent_registry.DEFAULT_SPECS.setdefault(
@@ -396,15 +407,18 @@ class AssistantService:
             # « low » (13/11) : un peu de réflexion pour choisir les bons filtres -- les 5 fausses réponses du 13/11
             # étaient des filtres mal choisis, pas des phrases mal tournées
             reglages = ModelSettings(store=False, max_tokens=spec.max_output_tokens, reasoning=Reasoning(effort="low"))
+        # P4-a (19/11) : le parcours guidé n'existe pour l'IA (outil + consigne) que si l'interrupteur l'ouvre au compte
+        parcours = parcours_ouvert_au_role(self.interrupteur(INTERRUPTEUR_PARCOURS), ctx.role)
         agent = Agent(
             name=AGENT_KEY,
             # le jour de la semaine (13/11, lot 3) : « jeudi », « demain » se comptent depuis lui -- heure de Paris
             instructions=agent_registry.render(spec.instructions, {"date": _aujourdhui_a_paris(),
                                                                   "objets": liste_pour_consignes(),
-                                                                  "role": ctx.role}),
+                                                                  "role": ctx.role,
+                                                                  "parcours": CONSIGNE_PARCOURS if parcours else ""}),
             model=OpenAIResponsesModel(str(spec.model), self._client()),
             model_settings=reglages,
-            tools=outils_sdk(ctx.role),
+            tools=outils_sdk(ctx.role, frozenset() if parcours else frozenset({"proposer_parcours_creation"})),
         )
         entree = [{"role": m["role"], "content": str(m.get("contenu") or "")}
                   for m in historique if m.get("role") in {"user", "assistant"} and m.get("contenu")]

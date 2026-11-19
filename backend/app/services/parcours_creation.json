@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "note": "Étape 4 chap. 6, P1 (19/11/2026) : les 19 questions du parcours de CRÉATION (§88), dans la langue de la fenêtre « Nouvelle annonce » (noms de ses cases). Vérifié contre App.tsx par apps/hektor-v1/test_etape4_parcours_couverture.cjs : 0 case oubliée par type de bien. Les options des cases ne sont PAS recopiées ici : l'écran les prend dans la fenêtre elle-même.",
+  "note": "Étape 4 chap. 6, P1 (19/11/2026) : les 19 questions du parcours de CRÉATION (§88), dans la langue de la fenêtre « Nouvelle annonce » (noms de ses cases). Vérifié contre App.tsx par apps/hektor-v1/test_etape4_parcours_couverture.cjs : 0 case oubliée par type de bien. Les options des cases ne sont PAS recopiées ici : l'écran les prend dans la fenêtre elle-même. P4-a (19/11) : `essentiels` = les cases qui, toutes dites dans la demande, font que la question n'est pas reposée (elle s'affiche « connue », modifiable).",
   "genres": ["creation_estimation", "creation_annonce"],
   "auto": ["NO_DOSSIER", "dateenr", "diffusable"],
   "a_la_main": {
@@ -15,6 +15,7 @@
       "id": "bien", "titre": "Le bien",
       "phrase": "Quel bien, et où est-il ?",
       "forme": "cases",
+      "essentiels": ["type", "adresse_haut", "cp", "ville"],
       "champs": ["type", "offre_famille", "sous_type", "agence", "negociateur", "adresse_haut", "cp", "ville",
                  "adresse", "villeprivee", "codeprive", "codepublique", "villepublique", "latitude", "longitude"]
     },
@@ -41,6 +42,7 @@
       "id": "interieur", "titre": "L'intérieur",
       "phrase": "La surface, les pièces, la cuisine, l'exposition et la vue.",
       "forme": "compteurs", "profils": ["house", "apartment", "building", "other"],
+      "essentiels": ["surfappart", "nbpieces"],
       "champs": ["surfappart", "SURF_CARREZ", "nbpieces", "NB_CHAMBRES", "NB_NIVEAUX", "NB_ETAGES", "NB_SDB", "NB_SE", "NB_WC",
                  "SURF_SEJOUR", "CUISINE", "CUISINE_EQUIPEMENT", "EXPOSITION", "vuee"]
     },
@@ -48,6 +50,7 @@
       "id": "composition", "titre": "La composition",
       "phrase": "Pièce par pièce : le type, la surface, l'étage.",
       "forme": "pieces",
+      "essentiels": ["composition"],
       "champs": ["composition"]
     },
     {
@@ -69,6 +72,7 @@
       "id": "terrain", "titre": "Le terrain à bâtir",
       "phrase": "Le terrain est-il constructible, viabilisé, raccordé ?",
       "forme": "cases", "profils": ["land"],
+      "essentiels": ["surfterrain"],
       "champs": ["terrain_constructible", "terrain_surface_constructible", "terrain_viabilise", "terrain_raccordement_eau",
                  "terrain_raccordement_gaz", "terrain_raccordement_electricite", "terrain_raccordement_telephone"]
     },
@@ -122,6 +126,7 @@
       "id": "mandant", "titre": "Le mandant",
       "phrase": "Le vendeur est-il déjà dans le fichier ?",
       "forme": "mandant",
+      "essentiels": ["mandant"],
       "champs": ["mandant_choix", "mandant"]
     },
     {
@@ -142,6 +147,7 @@
       "id": "texte", "titre": "Le titre et le texte",
       "phrase": "Le titre, le texte de l'annonce et une note interne.",
       "forme": "texte",
+      "essentiels": ["titre", "corps"],
       "champs": ["titre", "corps", "note"]
     }
   ]
