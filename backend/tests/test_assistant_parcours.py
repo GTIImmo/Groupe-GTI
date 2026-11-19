@@ -148,6 +148,9 @@ def faux(methode, url, **kw):
         ligne = {**corps[0], "id": "p" * 36, "etat": "en_cours", "app_dossier_id": None, "maj_le": "t1"}
         table[ligne["id"]] = ligne
         return Reponse([ligne])
+    if methode == "GET" and "conversation_id" in params:
+        conv = params["conversation_id"].removeprefix("eq.")
+        return Reponse([json.loads(json.dumps(x)) for x in table.values() if x.get("conversation_id") == conv])
     pid = params.get("id", "").removeprefix("eq.")
     ligne = table.get(pid)
     if methode == "GET":
@@ -262,6 +265,41 @@ r = appeler(route.parcours_relire, pid, "Bearer jeton-de-paul", Settings(), None
 voir(r["ok"] and appels[-1]["entetes"]["Authorization"] == "Bearer jeton-de-paul", "relire : avec SON jeton")
 r = appeler(route.parcours_relire, "court", "Bearer j", Settings(), None, S, ST)
 voir(r[0] == 404, "un numéro mal formé : introuvable")
+
+print("6 bis) P2 : retrouver les parcours d'une conversation, noter la fiche créée")
+table.clear()
+r1 = appeler(route.parcours_commencer, depart, "Bearer j", Settings(), None, S, ST)
+p1 = r1["parcours"]["id"]
+r = appeler(route.parcours_de_la_conversation, "c" * 36, "Bearer jeton-de-paul", Settings(), None, S, ST)
+voir(r["ok"] and [x["id"] for x in r["parcours"]] == [p1] and appels[-1]["entetes"]["Authorization"] == "Bearer jeton-de-paul"
+     and appels[-1]["params"]["conversation_id"] == "eq." + "c" * 36,
+     "la conversation rouverte retrouve SON parcours, relu avec le jeton de la personne")
+r = appeler(route.parcours_de_la_conversation, "d" * 36, "Bearer j", Settings(), None, S, ST)
+voir(r["ok"] and r["parcours"] == [], "une autre conversation : aucun parcours")
+interrupteur["valeur"] = ""
+r = appeler(route.parcours_de_la_conversation, "c" * 36, "Bearer j", Settings(), None, S, ST)
+voir(r[0] == 403, "interrupteur absent : la liste est refusée aussi")
+r = appeler(route.parcours_cree, p1, route.ParcoursCreePayload(app_dossier_id=10000077), "Bearer j", Settings(), None, S, ST)
+voir(r[0] == 403 and table[p1]["etat"] == "en_cours", "interrupteur absent : la fin est refusée, rien ne bouge")
+interrupteur["valeur"] = "on"
+r = appeler(route.parcours_cree, p1, route.ParcoursCreePayload(app_dossier_id=10000077), "Bearer j", Settings(), None, S, ST,
+            uid=AUTRE_UID, role="admin")
+voir(r[0] == 404 and table[p1]["etat"] == "en_cours", "noter la fin du parcours d'un AUTRE : introuvable, même pour l'admin")
+r = appeler(route.parcours_cree, p1, route.ParcoursCreePayload(app_dossier_id=10000077), "Bearer j", Settings(), None, S, ST)
+pa = appels[-1]["params"]
+voir(r["ok"] and table[p1]["etat"] == "termine" and table[p1]["app_dossier_id"] == 10000077 and table[p1]["termine_le"]
+     and pa["etat"] == "eq.en_cours" and pa["app_dossier_id"] == "is.null" and pa["user_id"] == "eq." + UID,
+     "la fiche créée : le parcours est TERMINÉ, avec son bien, par une écriture CONDITIONNELLE")
+r = appeler(route.parcours_cree, p1, route.ParcoursCreePayload(app_dossier_id=10000099), "Bearer j", Settings(), None, S, ST)
+voir(r[0] == 409 and table[p1]["app_dossier_id"] == 10000077, "noter une seconde fois : 409, le premier bien reste")
+table.clear()
+r2 = appeler(route.parcours_commencer, depart, "Bearer j", Settings(), None, S, ST)
+p2 = r2["parcours"]["id"]
+r = appeler(route.parcours_cree, p2, route.ParcoursCreePayload(), "Bearer j", Settings(), None, S, ST)
+voir(r["ok"] and table[p2]["etat"] == "termine" and table[p2]["app_dossier_id"] is None,
+     "créée sans numéro encore connu : terminé quand même (l'auteur garde la lecture)")
+r = appeler(route.parcours_cree, "court", route.ParcoursCreePayload(), "Bearer j", Settings(), None, S, ST)
+voir(r[0] == 404, "noter la fin d'un numéro mal formé : introuvable")
 
 print("7) aucun appel au modèle")
 src = open(moteur.__file__, encoding="utf-8").read()

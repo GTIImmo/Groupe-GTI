@@ -15,7 +15,7 @@ Couverture vérifiée contre App.tsx : apps/hektor-v1/test_etape4_parcours_couve
 from __future__ import annotations
 
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -219,6 +219,29 @@ class ParcoursStore:
                          params={"id": f"eq.{parcours_id}", "select": "*", "limit": "1"}, timeout=10)
         if not r.ok:
             raise HTTPException(status_code=503, detail="Parcours illisible")
+        rows = r.json() or []
+        return rows[0] if rows else None
+
+    def lister_conversation_avec_jeton(self, jeton: str, conversation_id: str) -> list[dict[str, Any]]:
+        # P2 (19/11) : les parcours d'une conversation rouverte, dans l'ordre où ils ont commencé (la règle de lecture dit
+        # lesquels la personne voit)
+        r = requests.get(self._url(), headers={"apikey": self.settings.supabase_anon_key, "Authorization": f"Bearer {jeton}"},
+                         params={"conversation_id": f"eq.{conversation_id}", "select": "*", "order": "cree_le.asc",
+                                 "limit": "20"}, timeout=10)
+        if not r.ok:
+            raise HTTPException(status_code=503, detail="Parcours illisibles")
+        return r.json() or []
+
+    def terminer(self, ligne: dict[str, Any], app_dossier_id: int | None) -> dict[str, Any] | None:
+        # P2 (19/11) : la fenêtre a créé la fiche. ⛔ Même condition que l'écriture d'une réponse (à LUI, en cours, avant la
+        #   création) : un parcours ne se termine qu'une fois. Ensuite la règle de lecture passe au négociateur du bien.
+        r = requests.patch(self._url(), headers={**self._service(), "Prefer": "return=representation"},
+                           params={"id": f"eq.{ligne['id']}", "user_id": f"eq.{ligne['user_id']}", "etat": "eq.en_cours",
+                                   "app_dossier_id": "is.null"},
+                           json={"etat": "termine", "app_dossier_id": app_dossier_id,
+                                 "termine_le": datetime.now(timezone.utc).isoformat()}, timeout=10)
+        if not r.ok:
+            raise HTTPException(status_code=503, detail="Fin du parcours non gardée")
         rows = r.json() or []
         return rows[0] if rows else None
 

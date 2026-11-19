@@ -6,7 +6,7 @@ import time
 from datetime import datetime, timezone
 from typing import Any, AsyncIterator
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
@@ -543,3 +543,50 @@ def parcours_repondre(
     if not ecrite:
         raise HTTPException(status_code=409, detail="Le parcours a bougé ailleurs (un autre onglet ?) : recharge-le.")
     return {"ok": True, "parcours": parcours_moteur.vue(ecrite, annee)}
+
+
+@router.get("/parcours")
+def parcours_de_la_conversation(
+    conversationId: str = Query(min_length=36, max_length=36),
+    authorization: str | None = Depends(require_request_user),
+    settings: Settings = Depends(get_settings),
+    admin_service: SupabaseAdminService = Depends(get_admin_service),
+    service: AssistantService = Depends(get_assistant_service),
+    store: parcours_moteur.ParcoursStore = Depends(get_parcours_store),
+):
+    # P2 (19/11) : une conversation rouverte retrouve ses parcours, relus avec SON jeton (la règle de lecture décide)
+    _user, profile = _ouvrir(settings, authorization, admin_service, service)
+    _parcours_ouvert(service, profile)
+    annee = parcours_moteur.annee_a_paris()
+    lignes = store.lister_conversation_avec_jeton(_jeton(authorization), conversationId)
+    return {"ok": True, "parcours": [parcours_moteur.vue(ligne, annee) for ligne in lignes]}
+
+
+class ParcoursCreePayload(BaseModel):
+    app_dossier_id: int | None = Field(default=None, ge=1)
+
+
+@router.post("/parcours/{parcours_id}/cree")
+def parcours_cree(
+    parcours_id: str,
+    payload: ParcoursCreePayload,
+    authorization: str | None = Depends(require_request_user),
+    settings: Settings = Depends(get_settings),
+    admin_service: SupabaseAdminService = Depends(get_admin_service),
+    service: AssistantService = Depends(get_assistant_service),
+    store: parcours_moteur.ParcoursStore = Depends(get_parcours_store),
+):
+    # P2 (19/11) : la fenêtre remplie par le parcours a créé la fiche -> le parcours est terminé (une seule fois)
+    user, profile = _ouvrir(settings, authorization, admin_service, service)
+    _parcours_ouvert(service, profile)
+    if len(parcours_id) != 36:
+        raise HTTPException(status_code=404, detail="Parcours introuvable")
+    ligne = store.lire_service(parcours_id)
+    if not ligne or str(ligne.get("user_id") or "") != str(user.id):
+        raise HTTPException(status_code=404, detail="Parcours introuvable")
+    if ligne.get("etat") != "en_cours" or ligne.get("app_dossier_id") is not None:
+        raise HTTPException(status_code=409, detail="Ce parcours est déjà terminé.")
+    ecrite = store.terminer(ligne, payload.app_dossier_id)
+    if not ecrite:
+        raise HTTPException(status_code=409, detail="Ce parcours est déjà terminé.")
+    return {"ok": True, "parcours": parcours_moteur.vue(ecrite)}
