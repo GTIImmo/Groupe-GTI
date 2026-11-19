@@ -31,14 +31,21 @@
 > levé** (§ 10.1). **Les interdits ne changent pas** : rien dans le classeur, chez Hektor, en base sans son
 > accord — ni patch, ni règle E, ni vague 0. Les 8 lignes de 5.6 : il répond **après le contrôle de la nuit
 > des 10** ; aucune n'est écrite.
+>
+> ⭐ **Ses réponses de la NUIT du 19 au 20/11 (chapitre ⑪)** : l'ordre est **validé avec une correction**
+> (pas là le week-end : vague 0 **lundi** soir, 1a mardi, 1b mercredi) ; **C5 « à l'export » : OUI** ;
+> **21520 exclue de E** (fait, § 11.1) ; les 9 « même acheteur » : **l'étiquette sur la seule ligne
+> vivante**. Ses demandes : *« finis-le »* — fait (§ 11.4, 11.5) ; la garde mesurée (§ 11.3) ; ⛔ pas de
+> code de scission avant la fin de l'écriture.
 
 ```
 Q  SUJET                         ETAT        VERDICT EN UNE LIGNE                          ATTEND SA DECISION
 ①  compromis annule sans date    FAIT        regle E + garde, ETEINTE, rejouee ; 26613     l'allumage (une nuit) ;
-                                             EXCLUE ET DECLAREE (§ 1.10) : 34 reunions     ⭐ (⑩) exclure AUSSI
-                                             sur 33 dossiers, temoins verts                21520, la douteuse ;
-                                             ⭐ LE SHEET LA JUGE (§ 10.4) : 3 justes, 11   relire puis retirer les
-                                             ou c'est le GEL qui se trompe, 1 douteuse     11 liens suspects du gel
+                                             EXCLUE ET DECLAREE (§ 1.10) : 34 reunions     ⭐ (⑪) exclure AUSSI
+                                             sur 33 dossiers, temoins verts                4126, 4496, 4720 (que
+                                             ⭐ LE SHEET LA JUGE (§ 10.4) : 3 justes, 11   G2 contredit) ? ;
+                                             ou c'est le GEL qui se trompe, 1 douteuse     relire puis retirer les
+                                             ✅ (⑪) 21520 EXCLUE ET DECLAREE : 32 reunions 11 liens suspects du gel
 ②  les 10 « meme nom »           FAIT,       des menages -> R1 : les 10 lignes ECRITES,    -- (decide). ⏰ demain :
                                  ECRIT       rejouees : 10 dossiers bougent, pas un de     controler la nuit
                                              plus ; 11 590 -> 11 580                       (§ 2.7)
@@ -87,6 +94,16 @@ Q  SUJET                         ETAT        VERDICT EN UNE LIGNE               
                                              E AVANT la vague 1 · le Sheet juge E :
                                              3 justes, 11 LIENS DU GEL suspects (E
                                              probablement juste), 1 douteuse (21520)
+⑪  LA NUIT DU 19 AU 20/11 :       FAIT        ✅ 21520 exclue de E, temoins verts · le      G2 : A ou B ;
+   « finis-le », la garde                    fichier des 803 FINI : 0 non tranchee, la     exclure 4126, 4496,
+                                             coupe de chaque melange, qui agit · ⭐ LA      4720 de E ? ; E pour
+                                             GARDE = G2 (« l'offre acceptee datee bat le   vendredi ; les 8 lignes
+                                             nom ») : 437 dossiers coupes, 98 melanges     (apres le controle) ;
+                                             resolus dont 96 comme le Sheet, 0 ligne       le patch V2 (sauvegarde
+                                             abimee -- MAIS 10 lignes de la vague 1        prete) ; l'outil de
+                                             changent d'etiquette -> avant l'ecriture,     scission ~2 j ½ (apres
+                                             ou ces 10 en vague 2 · 2025-2026 : 803        l'ecriture)
+                                             lignes, 171 non ecrites (21 %)
 ```
 
 ---
@@ -1311,6 +1328,9 @@ sont dans le fichier, avec leur couche (« au bout des couches 1-5 elle passe en
 
 ### 10.5 L'ordre des prochains jours — ma proposition (il tranche)
 
+> ⚠ **Remplacé par le § 11.8** : il l'a validé avec une correction (*« je ne suis pas là ce week-end »*) —
+> la vague 0 lundi soir, 1a mardi, 1b mercredi. Ce qui suit est gardé tel quel, pour la trace.
+
 **Le principe, c'est le sien** (en tête de ce fichier) : *le registre d'abord, le Sheet ensuite*. La
 mesure 10.4 le confirme trois fois (WECT3RIT, les 12 étiquettes, le jugement de E). **Un geste par
 nuit.** Le Sheet s'écrit le soir après 19:00.
@@ -1434,6 +1454,317 @@ LE COUT, SI TU DIS « TOUT »  R1 1/2 j + R2 1 j + R3 2 j (+ V1) + R5 1/2 j = en
   mandat), pas par le seul gel -- mais une part peut porter la meme erreur du gel ; non mesure
 . les 18 reunions de E que le Sheet ne voit que d'un cote : ni justes ni fausses, non jugees
 ```
+
+## ⑪ LA NUIT DU 19 AU 20/11 — ses réponses, « finis-le », la garde mesurée
+
+> **Ses décisions** : l'ordre du § 10.5 est **VALIDÉ avec une correction** — *« je ne suis pas là ce
+> week-end. Les nuits de samedi et dimanche ne portent que les gestes automatiques déjà validés. La vague 0
+> passe LUNDI SOIR, la vague 1a mardi, la vague 1b mercredi »* ; *« E et le patch avant l'écriture, c'est
+> juste »*. **C5** : *« OUI — une création C5 ne décide jamais de l'étiquette d'une ligne. Une copie fabriquée
+> depuis le Sheet est un reflet, pas une preuve. Applique-le dans l'outil d'écriture. »* **21520** : *« OUI,
+> exclue comme 26613, et déclarée. »* **Les 9 « même acheteur »** : *« l'étiquette sur la SEULE LIGNE VIVANTE
+> (la vente). La tentative annulée reste vide. Pas d'exception au point ⑤. »* **Les 8 lignes de 5.6** : il
+> répond après mon contrôle de demain matin.
+>
+> **Ses demandes** : *« TON FICHIER DES 803 : FINIS-LE »* — aller au bout des 351 et des 16 ; **EN MESURE
+> SEULEMENT** : la garde des 104 (ce qu'elle couperait, et combien de lignes de la VAGUE 1 changeraient
+> d'étiquette — *« si elle en touche, elle passe avant l'écriture comme E ; si elle n'en touche aucune, on
+> écrit d'abord »*), les 351 par famille, les 16, le coût de l'outil de scission. ⛔ *« PAS UNE LIGNE DE CODE
+> DE SCISSION tant que l'écriture n'est pas finie. »* Et deux chiffres.
+>
+> ⚠ **22:00 — sa remarque** : *« ta mesure de la garde est morte en route »*. Ce qui s'est passé, et ce qui
+> a changé : § 11.2.
+
+### 11.1 ✅ 21520 EXCLUE DE LA RÈGLE E, ET DÉCLARÉE — E reste éteinte
+
+```
+LE CODE       phase2/sync/affaire_ledger.py, EXCLUES_DE_LA_REGLE_E : + 21520 (bien 43050, compromis annule
+              SANS DATE, 282 000), avec son pourquoi ecrit dans la ligne, comme 26613
+              E RESTE ETEINTE : APP_CHAINAGE_SANS_DATE_VISIBLE absent de .env (verifie)
+LE TEMOIN     phase2/checks/temps4_regle_e_sans_date_visible_2026-11-19.py : EXCLUES + 21520 -- il exige que
+              chaque exclue RESTE SEULE et que le compte rendu DISE chaque exclusion
+REJOUE        E : 32 reunions (33 transactions rattachees, 32 biens) au lieu de 33 -- 11 547 dossiers
+              temoins positifs 5/5 . gardes 5/5 . exclusions 2/2 RESTENT SEULES . dites 2 (attendu 2) .
+              inverse 0 . deux ventes 0 . deux compromis vivants 0          -> TOUT VERT
+              ⑥ rejoue (scenarios 2 et 3, 15 s chacun)
+CE QUE CA CHANGE  les lignes de la vague 1 que E ferait changer d'etiquette : 12 -> 11 (1c7b38f9 en sort)
+                  d2108609 CHOUVELLON : « en attente de ta reponse » (couche 11 du fichier)
+```
+
+### 11.2 ⚠ La mesure de la garde « morte en route » — ce qui s'est passé, et ce qui a changé
+
+Le premier lancement (vers 21:45) a fait **ses quatre rejeux en deux minutes** : les fichiers `chaines_g1/g2/g12`
+et `garde_comptes.json` sont nés entre 21:45 et 21:47. **C'est ma session qui s'est coupée** avant d'en
+recevoir la sortie, pas la mesure. **Mais il a raison sur le fond** : la sortie n'allait qu'à l'écran, rien
+sur le disque au fil, donc personne ne pouvait savoir. Repris comme la leçon le dit :
+
+```
+python -X utf8 -u phase2\checks\temps6_les_803_lignes_et_ce_qui_les_debloque_2026-11-19.py garde temoin|g1|g2|g12
+  . UN rejeu par appel, plafond 9 min 50 (timeout 590), sortie dans un fichier
+  . chaque etape ecrite AU FIL dans C:\Hektor\chantier_classeur_q6_cache\garde_journal.txt
+  . 22:01:41 -> 22:02:50 : temoin 15 s . G1 14 s . G2 9 s . G12 11 s
+  . les trois fichiers refaits sont IDENTIQUES A L'OCTET a ceux de 21:47 (gardes sous _session_coupee_2147)
+```
+
+**Comment c'est mesuré** — sans toucher au code : le script fait une **copie** de `affaire_ledger.py` dans le
+cache (hors du dépôt), y insère la garde à **un seul endroit** (la règle D, juste avant la réunion ; l'ancre
+doit être trouvée exactement une fois), et rejoue le scénario 3 (la nuit des 10 + E avec ses deux exclusions
++ les 8 lignes) sur une base en mémoire. **Témoin : la copie SANS garde redonne le scénario 3 à 0 écart.**
+
+```
+G1  « le compromis vivant » : un cote a un COMPROMIS VIVANT dont l'acquereur n'est pas dans l'autre cote
+G2  « l'offre acceptee datee » : un cote a une OFFRE ACCEPTEE DATEE dont l'acquereur n'est pas dans l'autre
+G12 l'une OU l'autre                           -> dans les trois cas : D s'abstient, et le compte rendu le dit
+```
+
+### 11.3 ⭐ LA GARDE : CE QU'ELLE COUPERAIT, ET LA VAGUE 1
+
+```
+LA VAGUE 1 DE REFERENCE = l'etat 5 (patch V2 + E + les 8 lignes + C5) : 4 081 lignes
+TEMOIN : ma simulation de la pose (fusion PUIS scission, comme app_poser_etiquettes_dossier) redonne
+         EXACTEMENT les 11 lignes absorbees par E de l'ancienne methode
+
+      DOSSIERS COUPES   VAGUE 1 :                          MELANGES (couche 9)          LIGNES QUI
+      (vus du Sheet)    etiquette changee . en sortent      lignes liberees . groupes    S'ABIMENT
+G1      19  (13)          2 . 1 (50LQ2VSA)                    10 .   3                     1
+G2     437 (156)         10 . 0                              214 .  98 (96 = le Sheet)     0
+G12    442 (159)         11 . 1                              214 .  98                     1
+
+➡ LA GARDE, C'EST G2. G1 ne sert presque a rien (3 groupes) ; G12 = G2 + le defaut de G1.
+```
+
+**G2, ses 437 coupes jugées par le Sheet** (les lignes de chaque morceau, par les liens du gel après le patch V2) :
+
+```
+112  CONFIRMEES   les deux morceaux portent des lignes d'acheteurs DIFFERENTS
+ 42  NEUTRES      un seul morceau a une ligne -- l'autre est l'offre refusee d'un autre acheteur, sans ligne
+                  (lu : 1242 HADJ contre FAURIE, 4342 TCHARCACHIAN contre CHOSSON)
+  2  DEMENTIES    2166 GOUDET / FOURNEL et 11355 OUAHBI / ABDEL : la coupe vers l'acheteur suivant est JUSTE,
+                  mais l'offre et le compromis du PREMIER restent en deux morceaux -- chez Hektor ils sont a
+                  deux numeros de contact (591567 / 591566 ; 64371 / 64372), et c'est le dossier du suivant
+                  qui les tenait ensemble. Il faudrait une ligne de rattachement chacun (ta decision).
+281  INVISIBLES   aucune ligne au Sheet : TOUTES d'avant 2019 (2006-2017, une de 2018, une de 1990) -- le
+                  Sheet commence en 2018-2019. Ce qui s'en detache : 153 une offre refusee seule, 69 compromis
+                  annule + offre refusee, 47 offre acceptee + compromis + vente (la vente quitte la tentative
+                  d'avant)... Lus : 312 DUCASTEL/FERRAND, 403 BERTHON/PROFESSO, 483 TUCCERI/CUEILLE -- TOUS la
+                  meme forme que les confirmees.
+```
+
+**Lu à la main** — 1059 ZOUNIB / BENKHELIFA : une offre refusée et un compromis annulé de ZOUNIB, puis
+l'offre acceptée de BENKHELIFA, son compromis et sa vente **au nom de ZOUNIB**. G2 coupe exactement comme le
+Sheet. Et les 10 lignes de la vague 1 (A6OS2TTJ MOULIN, ANHQ1PK7 DOUX, R9ANL92S ROCHETTE...) sont toutes la
+même forme : **la vente est déjà seule sur sa ligne au Sheet, mais son dossier porte la tentative ratée d'un
+acheteur précédent que le Sheet n'a pas** (PAYRE, GAUMET, ALLYS/MONTOUX).
+
+```
+⚠⚠ LE POINT QUI COMPTE POUR L'ECRITURE : la tentative ratee a le PLUS PETIT numero de transaction -> a la
+   scission, c'est ELLE qui garde l'etiquette, et la vente en recoit une NEUVE. Une ligne ecrite avant G2
+   porterait donc, apres G2, l'etiquette de la TENTATIVE RATEE d'un autre acheteur : pas un UUID mort --
+   un UUID qui designe la MAUVAISE affaire. C'est le cas de ces 10 lignes.
+⚠  G2 DEFAIT 3 DES 33 RATTACHEMENTS DE E : 4126 (bien 9232, dossier GIORGETTI), 4496 (9769, NOIRJEAN
+   FAUCHEZ), 4720 (10129, ROBERT = SUVPN4BH). Meme forme : un compromis annule sans date au nom de X, et X
+   aussi sur le compromis vivant et la vente de Y, dont l'offre acceptee datee est a Y. E le donne a Y
+   (le nom), G2 le laisse a X (un acheteur d'avant, que le Sheet n'a pas). AUCUNE des deux lectures
+   n'est prouvee. 4125 etait dans mes « 11 liens du gel suspects, E probablement juste » (§ 10.4) : ce
+   verdict est AFFAIBLI pour 4125.
+   ➡ Si E joue vendredi et G2 plus tard, ces 3 dossiers perdent leur etiquette DEUX FOIS (E l'absorbe,
+     G2 en donne une neuve a la vente) -- dont SUVPN4BH, en vague 1.
+```
+
+**➡ Le verdict, avec sa règle** : **G2 touche 10 lignes de la vague 1. Par ta règle, elle passe AVANT
+l'écriture, comme E.** Deux façons de la respecter (§ 11.8) :
+
+```
+A  G2 AVANT LA VAGUE 1 : la coder (copie -> vrai code, derriere un interrupteur ETEINT, ½ j), ton
+   « vas-y », une nuit. Avec E vendredi et les 8 lignes lundi soir, il n'y a plus de nuit libre avant
+   mardi : la vague 1a passe MERCREDI, la 1b JEUDI.
+B  ⭐ (ma recommandation) SORTIR CES 10 LIGNES DE LA VAGUE 1 -- elles vont en vague 2, apres G2. Aucune
+   ligne ecrite ne pourra changer d'etiquette a cause de G2 : c'est l'intention de ta regle, et ton
+   calendrier tient. G2 se code APRES l'ecriture (c'est un geste qui SEPARE des transactions : ta regle
+   « pas de code de scission tant que l'ecriture n'est pas finie »), avec son propre audit (les 281
+   coupes que le Sheet ne voit pas : 3 lues, pas les autres).
+ET DANS LES DEUX CAS : exclure AUSSI de E les 3 rattachements que G2 contredit (4126, 4496, 4720),
+   declares comme 26613 et 21520 -- une question ouverte reste seule, comme aujourd'hui. Sinon leurs
+   etiquettes bougent deux fois. Ta decision (du code : ton « vas-y »).
+```
+
+### 11.4 Les mélanges (couche 9), par famille — et qui agit
+
+Les 351, plus 12 des 16 (§ 11.5) : **363 de nos 520 lignes, 178 groupes**. La famille se lit avec les colonnes
+indépendantes du Sheet (l'état de chaque ligne, sa date du genre, son acquéreur AB) contre les noms de Hektor.
+
+```
+                                                                      GROUPES LIGNES  G2 LES COUPE  LA COUPE QUE
+                                                                                       (groupes)    PROPOSE LE SHEET
+F1 le nom de l'ANCIEN acheteur sur une piece VIVANTE du nouveau        108     222        93         96 nettes,
+   (LE defaut de Hektor : le contact de l'acheteur precedent reste                                   12 disputees
+   sur le compromis ou la vente du suivant)
+F2 le nom du NOUVEL acheteur sur la piece de l'ANCIEN (le compromis     50      98         1         49 nettes,
+   annule FARDELLA porte le contact COSTA ; la date du Sheet le dement)                              1 a completer
+F3 annulee + vivante, la piece porte un autre nom, ou aucun             10      21         4          4 nettes,
+                                                                                                     6 a completer
+F4 que des lignes annulees (deux tentatives ratees melees)              10      22         0          9 nettes,
+                                                                                                     1 a completer
+   TOTAL                                                               178     363        98
+➡ PAR LE DEFAUT DE HEKTOR (un contact qui ment) : F1 + F2 = 158 groupes, 320 lignes. AUTREMENT : 20, 43.
+```
+
+**Ce qu'il faut, et qui agit** — la colonne `qui` du fichier, pour ces 363 lignes :
+
+```
+198  la garde G2 (ton allumage)         F1 188, F3 8, F2 2 -- un geste, une nuit, AUCUNE decision ligne a ligne
+160  toi : valider la coupe              F2 97, F1 37, F4 19, F3 7 -- la coupe est NETTE : chaque transaction
+     (outil de scission, apres           va a la ligne qui la designe PAR SA DATE (la date bat le nom ;
+     l'ecriture)                         « case vide » ou « nom seul » quand il n'y a pas de date)
+ 18  moi (relecture de la coupe)         12 coupes DISPUTEES (une transaction designee par deux acheteurs) et
+     puis toi                            6 « a completer » (une transaction qu'aucune ligne ne designe)
+```
+
+**Dans le fichier**, chaque ligne de mélange porte maintenant sa famille, si G2 la coupe (`la_garde_g2_la_coupe`),
+et dans `ce_qui_la_debloque` **la coupe entière** : quelles transactions vont à quelle ligne, et **quel morceau
+garde l'étiquette** (celui de la plus petite transaction). Exemple, 44ZVGG8Q / OAQDRTNC :
+*« F2 — coupe NETTE : 25626 comp(cancel) -> 44ZVGG8Q FARDELLA | 25627 comp(active)+25628 offr(accept)+25629
+vent -> OAQDRTNC COSTA || dossier 25626 garde son étiquette avec 25626 »* — la vente COSTA recevra une
+étiquette neuve ; aucune ligne écrite n'est concernée (une ligne de mélange n'est jamais en vague 1).
+
+### 11.5 Les 16 non tranchées — TRANCHÉES
+
+```
+12 lignes, 6 groupes : des MELANGES que le juge ne voyait pas -- mots_propres ecarte comme PRENOMS des noms
+   de famille (LAURENT, ROBERT, VINCENT, PLE, LY, KNIGHT). Corrige : quand il ne rend rien, on lit les mots
+   bruts de l'acquereur AB, sans les civilites. Et XHITO8HE GARRY : son offre 27556 est a 2 JOURS de la date
+   du Sheet (hors tolerance), mais le nom GARRY est dessus -> elle la tient.
+     -> 10 coupees par G2 (YIIWRP17/TEXTOJLH, L86MC4W7/ZGY9VWTQ, IFQAPGOL/VKEQD9PH, 910O0A2Q/TND2I31B,
+        NKUNH7SY/XHITO8HE) ; 2 a l'outil de scission (LLR19GDU LY / Q23M98IX KNIGHT : le compromis annule de
+        KNIGHT porte le contact de LY -- famille F3)
+ 3 lignes : un LIEN DU GEL SUSPECT -- une ligne « Annulee » SANS date de compromis, reliee par le gel a un
+   compromis annule sans date que E met dans le dossier de l'acheteur SUIVANT : caea1510 LAFFONT -> 3669
+   RUAULT, 5a4371b5 MORAINES -> 28178 ESCAILLET, 1f3d536a PALLANDRE -> 24010 GRANGEON. -> couche 6 : je les
+   relis avec les 11 du § 10.4, le patch du gel « V3 » retire le lien (ton accord)
+ 1 ligne : d2108609 CHOUVELLON -> EN ATTENTE DE TA REPONSE (21520 exclue de E)
+➡ 0 NON TRANCHEE.
+```
+
+### 11.6 Ce que coûterait l'outil de scission — en jours (⛔ pas une ligne de code)
+
+```
+CE QUE C'EST   un fichier « detachements » A TOI, comme celui des rattachements : chaque ligne = les
+               transactions a sortir de leur dossier, le bien, le pourquoi. Le chainage le lit EN DERNIER (apres
+               les rattachements), derriere un interrupteur ; la pose donne au morceau detache une etiquette
+               NEUVE, journalisee « scission » -- le dossier garde la sienne avec sa plus petite transaction.
+               Rien de neuf dans la pose : elle sait deja faire (143 scissions journalisees depuis le 12/11).
+LES PIECES     1 lire le fichier + l'appliquer + l'interrupteur + le compte rendu + ses refus (bien qui ne
+                 correspond pas, transaction disparue, vente laissee seule...)                     1 j
+               2 les temoins sur un rejeu : chaque morceau coupe EXACTEMENT comme ecrit ; aucun autre dossier
+                 ne bouge ; quel morceau garde l'etiquette                                         ½ j
+               3 fabriquer les lignes du fichier depuis les coupes NETTES du Sheet (la logique existe :
+                 c'est la colonne du fichier des 803) -- un fichier que tu lis et valides          ½ j
+               4 sa nuit, son controle, ⑥ et ⑧ rejoues                                             ½ j
+               ➡ ENVIRON 2 JOURS ET DEMI de mon travail. Ton travail : valider 160 lignes (~80 groupes
+                 « nets ») -- par famille, avec les exceptions, ou une par une, comme tu veux.
+ET G2          la garde elle-meme : ½ j de code (elle est ecrite et mesuree ici, a recopier derriere un
+               interrupteur, avec ses temoins) + une nuit + un controle. Elle passe AVANT l'outil : chaque
+               groupe qu'elle coupe n'a plus besoin de detachement (98 groupes sur 178).
+⚠ UN DETACHEMENT NE TOUCHE QUE LES DOSSIERS QU'ON LUI NOMME -- et aucun dossier d'un melange ne porte de
+  ligne en vague 1 (une ligne de vague 1 est seule sur son dossier, par construction). L'outil peut donc
+  venir APRES l'ecriture sans rouvrir une seule ligne ecrite. G2, elle, joue sur TOUT le registre :
+  d'ou les 10 lignes.
+```
+
+### 11.7 Les deux chiffres
+
+```
+1  LES « 170 SANS DATE » ONT UNE DATE -- dans l'AUTRE format du Sheet (« 20 fevrier25 », « 2 aout21 »).
+   Dans les 803 non ecrites : 631 en jj/mm/aaaa . 162 en « jj mois aa » . 10 vraiment VIDES -> 172 hors
+   format, dont 67 en etiquette partagee. ⚠ Je ne retrouve pas exactement tes 170 et 72 : dis-moi ton
+   filtre si l'ecart compte.
+   ELLES NE SONT PAS RECENTES. Par annee (la date du Sheet, lue dans les deux formats / l'annee de NOS
+   transactions reliees par le gel) :
+        2017-2018  4 / 3 . 2019  12 / 11 . 2020  35 / 30 . 2021  30 / 25 . 2022  22 / 20 . 2023  16 / 15 .
+        2024  32 / 29 . 2025  11 / 11 . 2026  0 / 2 . sans annee 10 / 22
+   les deux sources donnent la MEME annee pour 134 des 145 lignes ou elles existent toutes les deux.
+   Les 67 partagees : 2019 4 . 2020 21 . 2021 15 . 2022 8 . 2023 6 . 2024 10 . 2025 2 . sans 1.
+   Sur TOUT le Sheet : 968 dates d'offre dans l'autre format (20 %), 34 vides, 3 795 en jj/mm/aaaa.
+
+2  LES LIGNES 2025 ET 2026 AU SHEET (par la date d'offre, LES DEUX FORMATS) :
+        2025 : 451 lignes, 110 non ecrites (24 %)     2026 : 352 lignes, 61 non ecrites (17 %)
+        ➡ 803 LIGNES EN 2025-2026, DONT 171 NON ECRITES (21 %).
+        ⚠ COINCIDENCE : 803 est AUSSI le nombre des non ecrites de tout le Sheet. Ce n'est pas le meme
+          ensemble.
+   TON 160 : le texte « 2025 » ou « 2026 » dans la date d'offre -> 160 non ecrites sur 753 lignes. Il manque
+   les 11 non ecrites (et 39 ecrites) au format « jj mois aa ».
+   Les 171, par case : PLUSIEURS DOSSIERS 87 . SANS LIEN 23 . PARTAGEE 19 . LIEN A VALIDER 16 . GEL SEUL 12
+   . PATCH V2 9 . EN ATTENTE 5
+   et par « qui » : l'outil d'ecriture (C5, decide) 53 . toi 46 . personne (rien a ecrire) 18 . moi puis toi
+   17 . scission 16 . moi 12 . la garde G2 8 . decide (reste vide) 1
+   Toutes les annees : 2018 305 (17 non ecrites) . 2019 557 (34) . 2020 625 (120) . 2021 786 (164) . 2022 638
+   (101) . 2023 560 (77) . 2024 485 (106) . 2025 451 (110) . 2026 352 (61) . 2017 4 (3) . sans date 34 (10)
+```
+
+### 11.8 L'ordre des jours, CORRIGÉ (sa correction : pas là le week-end) — remplace le § 10.5
+
+**Le principe ne change pas** : le registre d'abord, le Sheet ensuite ; un geste par nuit ; le Sheet le soir
+après 19:00. ⚠ **Je ne travaille que quand tu m'écris** : les nuits du week-end se contrôlent lundi matin.
+
+```
+VEN 20/11  MATIN, AVANT TOUT     MOI   le controle de la nuit des 10 (§ 2.7) -> rapport
+           apres le rapport      TOI   . les 8 lignes de 5.6 (ta reponse ; la ligne s'ajoute LUNDI)
+                                       . le patch V2 DE JOUR -- je te le redemande avec SA SAUVEGARDE PRETE
+                                       . V1 tes Apps Script (10 min) . V2 coller app_sheet_ecrit
+                                       . G2 : A ou B (§ 11.3) ; exclure AUSSI de E 4126, 4496, 4720 ?
+                                       . E : l'allumer pour la nuit de vendredi
+           la journee            MOI   l'outil d'ecriture, NEUF et ETEINT (a blanc par defaut, sauvegarde
+                                       datee, inverse) -- avec TES deux regles dedans : C5 ne decide jamais,
+                                       et « meme acheteur » -> la seule ligne vivante ; la sentinelle, eteinte
+           apres le patch        MOI   ⑥, ⑧ et le fichier des 803 rejoues
+           NUIT 20->21           TOI   la REGLE E (un geste)
+SAM-DIM    NUITS                       les gestes automatiques DEJA valides, rien de neuf
+LUN 23/11  MATIN                 MOI   le controle de E et des deux nuits du week-end -> rapport
+           la journee            TOI   ta ligne des 8 rattachements de 5.6 (le geste de la nuit)
+           SOIR, APRES 19:00     TOI   la VAGUE 0 (3 lignes que tu choisis : ecrire, relire, DEFAIRE,
+                                       re-ecrire)
+           NUIT 23->24                 les 8 lignes de 5.6
+MAR 24/11  MATIN                 MOI   le controle de la nuit ; ⑥ pour la vague 0 ; la vague 1 DEFINITIVE
+                                       (le fichier regenere, SANS les 10 lignes de G2 si tu choisis B)
+           SOIR                  TOI   la VAGUE 1a (50 lignes, les plus sures)
+MER 25/11  MATIN                 MOI   ⑥ pour 1a ; le fichier des non ecrites REGENERE -> tu le lis
+           SOIR                  TOI   la VAGUE 1b
+JEU 26 ->  MATINS                MOI   les TROIS NUITS VERTES (la 3e se lit lundi 30 si tu es absent)
+           puis                  TOI   la sentinelle ; G2 (B) ; la vague 2 ; l'outil de scission ; la vague 3
+EN PARALLELE, LECTURE SEULE      MOI   les 11 + 3 + 3 liens suspects du gel, un par un -> un patch « V3 »
+                                       dormant ; les 12 coupes disputees et les 6 a completer
+SI TU CHOISIS A                        G2 la nuit du 24 -> la vague 1a MERCREDI 25, la 1b JEUDI 26
+```
+
+### 11.9 Ce que je n'ai pas mesuré
+
+```
+. G2 en VRAI CODE : seulement sur une copie, hors du depot -- rien n'est code dans affaire_ledger.py
+. les 281 coupes de G2 que le Sheet ne voit pas : 3 lues, toutes justes ; les 278 autres non lues
+. si E perd 4126, 4496, 4720 (exclues), G2 ne touche probablement plus que 9 lignes de la vague 1
+  (SUVPN4BH sort de la liste) -- non rejoue
+. G2 sur les 5 lignes vivantes des « meme acheteur » et sur les lignes que tes decisions ajoutent a la
+  vague 1 au-dela de l'etat 5 -- non mesure
+. les 12 coupes DISPUTEES (F1) et les 6 « a completer » (F3) : non relues
+. les 2 « dementies » de G2 (GOUDET, OUAHBI) : le rattachement qui les completerait n'est pas propose
+. 4126 / 4496 / 4720 : ni la lecture de E ni celle de G2 n'est prouvee
+. tes « 170 / 72 » : je trouve 172 / 67 -- ton filtre exact
+. la colonne « famille » est remplie pour toute ligne d'un groupe melange, meme quand une autre couche la
+  libere avant (quelques lignes : leur « qui » est celui de cette autre couche)
+```
+
+### 11.10 Ce qui attend ta décision
+
+```
+1  G2 : A (avant la vague 1, elle glisse d'un jour) ou B (les 10 lignes en vague 2, G2 apres l'ecriture)
+2  exclure AUSSI de E les 3 rattachements que G2 contredit : 4126, 4496, 4720 (du code : ton « vas-y »)
+3  E : l'allumer pour la nuit de vendredi
+4  les 8 lignes de 5.6 -- apres mon controle de demain
+5  le patch V2, de jour -- je te le redemande avec sa sauvegarde prete
+6  V1 tes Apps Script . V2 coller app_sheet_ecrit
+7  plus tard : l'outil de scission (~2 j ½) et les 160 coupes a valider ; les 4 decisions du routeur
+```
+
 
 ---
 

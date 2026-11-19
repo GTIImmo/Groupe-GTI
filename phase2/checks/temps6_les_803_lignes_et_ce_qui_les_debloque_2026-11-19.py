@@ -16,8 +16,19 @@ son resultat sur le disque, dans C:\Hektor\chantier_classeur_q6_cache\, hors du 
 
     photo    lit le Sheet (un GET) et le registre (mode=ro), fait tourner le juge de ⑤ sur chaque
              transaction, et ecrit t6_photo.json
-    classer  local, sans reseau : relit la photo, les chaines des scenarios de ⑥ (chaines_s1/2/3.json)
-             et le patch V2 ; ecrit le CSV, le classeur .xlsx et le compte
+    garde X  (19/11 au soir) UN SEUL rejeu par appel, X = temoin | g1 | g2 | g12 : la garde « la date bat
+             le nom » inseree dans une COPIE de affaire_ledger.py hors du depot (l'original n'est pas
+             touche), rejouee sur le scenario 3 ; chaque etape ecrite AU FIL dans garde_journal.txt
+             (~15 s par rejeu). Le temoin : la copie SANS garde redonne le scenario 3 a 0 ecart.
+    classer  local, sans reseau : relit la photo, les chaines des scenarios de ⑥ (chaines_s1/2/3.json),
+             celles de la garde (chaines_g*.json) et le patch V2 ; ecrit le CSV, le classeur .xlsx et le
+             compte
+
+SES DECISIONS DU 19/11 AU SOIR, APPLIQUEES ICI : la regle C5 « a l'export » (couche 5) ; les 9 « meme
+acheteur » -> l'etiquette sur la SEULE ligne vivante, la tentative annulee reste vide (couche 8) ; 21520
+exclue de E comme 26613 (couche 11, « en attente de ta reponse »). Et ses demandes : aller AU BOUT des
+melanges (la famille, la coupe que le Sheet propose, ce que fait la garde, qui agit) et des 16 non
+tranchees ; les lignes 2025-2026 avec les deux formats de date du Sheet.
 
 ⛔ N'ECRIT RIEN, NI DANS LE SHEET, NI EN BASE, NI CHEZ HEKTOR.
 
@@ -78,15 +89,18 @@ AL, AB = 37, 27
 COUCHES = {
     1: "1 la nuit des 10 menages (decidee, joue cette nuit)",
     2: "2 le patch V2 du gel (ton « vas-y »)",
-    3: "3 la regle E (ton allumage)",
+    3: "3 la regle E (ton allumage ; 26613 et 21520 exclues)",
     4: "4 les 8 lignes de 5.6 (ta lecture)",
-    5: "5 le choix C5 « a l'export » (question posee en ⑥, attend ta reponse)",
+    5: "5 la regle C5 « a l'export » (DECIDEE le 19/11 au soir : une regle de l'outil d'ecriture)",
     6: "6 relecture du gel (un patch a valider, sans scission)",
     7: "7 reunir (lignes de rattachement, ta decision ligne a ligne, sans scission)",
-    8: "8 meme affaire sur plusieurs lignes (doublon du classeur ; contre le point ⑤)",
+    8: "8 meme acheteur sur deux lignes (DECIDE : l'etiquette sur la seule ligne vivante)",
     9: "9 melange -> SCISSION",
     10: "10 non tranche (le juge ne voit pas une des lignes)",
+    11: "11 en attente de ta reponse (une transaction EXCLUE de la regle E)",
 }
+#: la variante de la garde qui decide de la colonne « qui » (choisie sur la mesure du 19/11 au soir, voir ⑪)
+GARDE_RETENUE = "g2"
 
 
 def ecrire_json(chemin: Path, obj) -> None:
@@ -351,15 +365,31 @@ def etape_classer() -> int:
             groupes[k]["lignes"].add(i)
             groupes[k]["dossiers"] |= ds
 
+    # ⭐ 19/11 au soir, LES 16 NON TRANCHEES RELUES A LA MAIN : 12 sont des melanges que le juge ne voyait pas,
+    #   parce que mots_propres ecarte comme PRENOMS des noms de famille (LAURENT, ROBERT, VINCENT, PLE, LY,
+    #   KNIGHT...). Quand mots_propres ne rend RIEN, on lit les mots bruts de AB, sans les civilites.
+    MOTS_VIDES = {"NAN", "M", "MME", "MR", "MLLE", "MM", "MMES", "MRS", "MONSIEUR", "MADAME", "ET", "DE", "DU",
+                  "LA", "LE", "DES", "EPOUX", "CONSORTS", "INDIVISION", "SCI"}
+
+    def noms_bruts(i):
+        brut = re.sub(r"[^A-ZÀ-ÖØ-Þ]+", " ", LIG[i]["row"][AB].upper())
+        return {w for w in brut.split() if len(w) >= 2 and w not in MOTS_VIDES}
+
     def noms_ligne(i):
-        return set(LIG[i]["noms_ab"]) if i in LIG else set()
+        if i not in LIG:
+            return set()
+        return set(LIG[i]["noms_ab"]) or noms_bruts(i)
 
     verdict_groupe = {}
     for k, gr in groupes.items():
         ls, ds = gr["lignes"], gr["dossiers"]
         if len(ls) == 1:
             seule = next(iter(ls))
-            verdict_groupe[k] = 6 if len(ds) == 1 else (10 if seule in aucun_tenu else 7)
+            # ⭐ 19/11 au soir : une ligne SEULE reliee a plusieurs dossiers dont AUCUN n'est designe par elle
+            #   (lu a la main : caea1510, 5a4371b5, 1f3d536a -- une ligne « Annulee » SANS date de compromis,
+            #   reliee par le gel a un compromis annule sans date de l'acheteur SUIVANT et a sa creation C5)
+            #   n'est pas « non tranchee » : c'est un lien du gel a relire, comme la couche 6.
+            verdict_groupe[k] = 6 if len(ds) == 1 or seule in aucun_tenu else 7
             continue
         # ⚠ LA MEME AFFAIRE SE JUGE PAR L'ACQUEREUR DU SHEET (colonne AB), PAS par une transaction designee
         #   en commun : le defaut de Hektor (le compromis du suivant au nom du PRECEDENT) fait designer CE
@@ -376,11 +406,22 @@ def etape_classer() -> int:
             for y in lst[x_i + 1:]:
                 if noms_ligne(x) & noms_ligne(y):
                     p2[t2(x)] = t2(y)
-        connues_vues = {t2(i) for i in ls if i not in aucun_tenu and noms_ligne(i)}
+        # ⭐ 19/11 au soir, relu a la main : une ligne qui ne designe RIEN du groupe mais dont l'acquereur AB
+        #   est le nom d'une de ses transactions la TIENT quand meme (XHITO8HE GARRY : son offre 27556 est a
+        #   2 jours de la date du Sheet, hors de la tolerance du juge ; le nom GARRY est dessus).
+        tient_nom = {i for i in ls if i in aucun_tenu
+                     and any(set(TX[a]["noms"]) & noms_ligne(i) for d_ in E[i] for a in E[i][d_])}
+        connues_vues = {t2(i) for i in ls if (i not in aucun_tenu or i in tient_nom) and noms_ligne(i)}
+        muettes = [i for i in ls if i in aucun_tenu and i not in tient_nom]
         if len({t2(i) for i in ls}) == 1:
             verdict_groupe[k] = 8
         elif len(connues_vues) >= 2:
             verdict_groupe[k] = 9
+        elif muettes:
+            # une ligne qui ne designe rien et ne porte aucun nom du groupe : son LIEN DU GEL est suspect (lu a la
+            #   main : caea1510 LAFFONT -> 3669 RUAULT, 5a4371b5 MORAINES -> 28178 ESCAILLET, 1f3d536a PALLANDRE
+            #   -> 24010 GRANGEON -- les liens du gel que le Sheet accuse en § 10.4)
+            verdict_groupe[k] = 6
         else:
             verdict_groupe[k] = 10
 
@@ -404,9 +445,232 @@ def etape_classer() -> int:
                         "annulee + vivante, sans transaction au nom de l'annulee" if annulees and vivantes else
                         "que des lignes annulees" if annulees else "que des lignes vivantes")
 
+    # ══ 19/11 AU SOIR, SES DEMANDES : FINIR LES 351 ET LES 16, ET MESURER LA GARDE ══════════════════════════════
+    import phase2.sync.affaire_ledger as al_
+    exclues_e = set(al_.EXCLUES_DE_LA_REGLE_E)
+    for k, gr in groupes.items():
+        if any(a in exclues_e for d in gr["dossiers"] for a in membres[d]):
+            verdict_groupe[k] = 11
+    cols_vente = ["Vente Prévue", "Vente Fixée", "Signée"]
+    for c_ in ["Offre Achat", "Compromis"] + cols_vente:
+        assert c_ in entete, "colonne absente du Sheet : %s" % c_
+    col_genre = {"offre": [entete.index("Offre Achat")], "compromis": [entete.index("Compromis")],
+                 "vente": [entete.index(c_) for c_ in cols_vente]}
+
+    def par_la_date(i, a):
+        """La ligne i designe-t-elle a PAR LA DATE (sa case du genre est remplie) ? Sinon c'est par la voie
+        « case vide » du juge (mandat + nom + prix) -- et LA DATE BAT LE NOM."""
+        return any(LIG[i]["row"][c_].strip() for c_ in col_genre.get(TX[a]["genre"], []))
+
+    def est_annulee(i):
+        return i in LIG and LIG[i]["row"][i_etat].strip().lower().startswith("annul")
+
+    def classes_acheteurs(ls):
+        p = {i: i for i in ls}
+
+        def t(x):
+            while p[x] != x:
+                x = p[x]
+            return x
+        lst = sorted(ls)
+        for xi, x in enumerate(lst):
+            for y in lst[xi + 1:]:
+                if noms_ligne(x) & noms_ligne(y):
+                    p[t(x)] = t(y)
+        return {i: t(i) for i in ls}
+
+    def court(i):
+        return "%s %s" % (i, "/".join(sorted(noms_ligne(i)))[:24])
+
+    def tx_court(a):
+        return "%s %s%s" % (a, TX[a]["genre"][:4], "" if not TX[a]["etat"] else "(%s)" % TX[a]["etat"][:6])
+
+    FAMILLES = {
+        "F1": "F1 le nom de l'ANCIEN acheteur sur une piece VIVANTE du nouveau (le defaut de Hektor)",
+        "F2": "F2 le nom du NOUVEL acheteur sur la piece de l'ancien (la date du Sheet le dement)",
+        "F3": "F3 annulee + vivante, la piece porte un autre nom ou aucun",
+        "F4": "F4 que des lignes annulees",
+        "F5": "F5 que des lignes vivantes",
+    }
+    famille, coupe, coupe_etat, proprio = {}, {}, {}, {}
+    for k, gr in groupes.items():
+        if verdict_groupe.get(k) != 9:
+            continue
+        ls = sorted(gr["lignes"])
+        cls = classes_acheteurs(ls)
+        ann = [i for i in ls if est_annulee(i)]
+        viv = [i for i in ls if not est_annulee(i)]
+        n_ann = set().union(*(noms_ligne(i) for i in ann)) if ann else set()
+        n_viv = set().union(*(noms_ligne(i) for i in viv)) if viv else set()
+        txs = sorted({a for d in gr["dossiers"] for a in membres[d]})
+        part, reste, dispute, c5_ = defaultdict(list), [], [], []
+        for a in txs:
+            if TX[a]["classeur"]:
+                c5_.append(a)
+                continue
+            des = [i for i in ls if a in DS[i]]
+            dat = [i for i in des if par_la_date(i, a)]
+            cs = {cls[i] for i in (dat or des)}
+            if len(cs) == 1:
+                part[cs.pop()].append((a, "date" if dat else "case vide"))
+            elif cs:
+                dispute.append(a)
+            else:
+                cs = {cls[i] for i in ls if set(TX[a]["noms"]) & noms_ligne(i)}
+                if len(cs) == 1:
+                    part[cs.pop()].append((a, "nom seul"))
+                else:
+                    reste.append(a)
+        proprio[k] = {a: c for c, xs in part.items() for a, _ in xs}
+        sans_piece = sorted({cls[i] for i in ls} - set(part))
+        coupe_etat[k] = ("DISPUTEE" if dispute else "A COMPLETER" if reste or sans_piece else
+                         "NETTE" if len(part) >= 2 else "PAS DE COUPE")
+        morceaux = []
+        for c, xs in sorted(part.items(), key=lambda kv: min(a for a, _ in kv[1])):
+            morceaux.append("%s -> %s" % ("+".join(tx_court(a) + ("" if how == "date" else "[%s]" % how)
+                                                   for a, how in sorted(xs)),
+                                          " & ".join(court(i) for i in ls if cls[i] == c)))
+        if reste:
+            morceaux.append("SANS LIGNE : " + "+".join(tx_court(a) for a in reste))
+        if dispute:
+            morceaux.append("DISPUTEES : " + "+".join(tx_court(a) for a in dispute))
+        if sans_piece:
+            morceaux.append("LIGNE SANS PIECE : " + " & ".join(court(i) for i in ls if cls[i] in sans_piece))
+        if c5_:
+            morceaux.append("C5 (ne decident pas) : " + "+".join(str(a) for a in c5_))
+        gardes_ = []
+        for d in sorted(gr["dossiers"]):
+            m0 = min(membres[d])
+            gardes_.append("dossier %s garde son etiquette avec %s" % (d, m0))
+        coupe[k] = " | ".join(morceaux) + " || " + " ; ".join(gardes_)
+        vivante_ancien = [a for a in txs if not TX[a]["classeur"] and TX[a]["etat"] not in ("cancelled", "refused")
+                          and set(TX[a]["noms"]) & n_ann and not set(TX[a]["noms"]) & n_viv]
+        morte_nouveau = [a for a in txs if not TX[a]["classeur"] and TX[a]["etat"] in ("cancelled", "refused")
+                         and set(TX[a]["noms"]) & n_viv and not set(TX[a]["noms"]) & n_ann
+                         and proprio[k].get(a) in {cls[i] for i in ann}]
+        famille[k] = ("F1" if ann and viv and vivante_ancien else "F2" if ann and viv and morte_nouveau else
+                      "F3" if ann and viv else "F4" if ann else "F5")
+
+    # ── LA GARDE « LA DATE BAT LE NOM » : chaque variante rejouee (etape garde), jugee par le Sheet ──
+    def etiquettes(lab_prec, ch_new):
+        """Ce que ferait app_poser_etiquettes_dossier : la FUSION garde l'etiquette de la plus petite
+        transaction ; puis la SCISSION laisse l'etiquette au groupe de la plus petite transaction qui la porte,
+        et en donne une NEUVE aux autres groupes."""
+        mem = defaultdict(list)
+        for a, c in ch_new.items():
+            mem[c].append(a)
+        lab1 = {}
+        for c, ms in mem.items():
+            labs = {lab_prec[a] for a in ms if lab_prec.get(a)}
+            g_ = (lab_prec[min(a for a in ms if lab_prec.get(a))] if labs else "NEUVE:%s" % c)
+            for a in ms:
+                lab1[a] = g_
+        tete, chaines_du_lab = {}, defaultdict(set)
+        for a in sorted(lab1):
+            tete.setdefault(lab1[a], ch_new[a])
+            chaines_du_lab[lab1[a]].add(ch_new[a])
+        return {a: (l_ if len(chaines_du_lab[l_]) == 1 or ch_new[a] == tete[l_] else "NEUVE:%s" % ch_new[a])
+                for a, l_ in lab1.items()}
+
+    lab = {0: {a: t["uuid"] for a, t in TX.items() if t["uuid"]}}
+    lab[1] = etiquettes(lab[0], S[1])
+    lab[2] = etiquettes(lab[1], S[2])
+    lab[3] = etiquettes(lab[2], S[3])
+    # TEMOIN de la simulation : elle doit redonner les lignes « absorbees par E » de l'ancienne methode
+    v1_auj = [i for i in LIG if auj[i][0] == "VAGUE_1"]
+    absorbees_sim = sorted(i for i in v1_auj if {lab[2].get(a) for a in auj[i][2]} != {TX[auj[i][2][0]]["uuid"]})
+    gardes_mesurees = {}
+    for nom in GARDE_VARIANTES:
+        f = CACHE / ("chaines_%s.json" % nom)
+        if f.exists():
+            gardes_mesurees[nom] = {int(a): c for a, c in lire_json(f).items()}
+    if not gardes_mesurees:
+        print("⚠ aucune variante de la garde rejouee (etape « garde ») : la mesure de la garde est SAUTEE", flush=True)
+    v1_5 = [i for i in LIG if etats[5][i][0] == "VAGUE_1"]
+    les_9 = [i for i in LIG if verdict_groupe.get(trouve(("L", i))) == 9 and i in E2 and E2[i]]
+    lignes_tx_v2 = defaultdict(set)
+    for i, ts in gel_v2.items():
+        for a in ts:
+            if i in LIG:
+                lignes_tx_v2[a].add(i)
+    mesure_garde, resout = {}, {}
+    src_g = sqlite3.connect("file:%s?mode=ro" % (RACINE / "phase2" / "phase2.sqlite"), uri=True)
+    an_tx_g = {a: int(str(d)[:4]) for a, d in src_g.execute("SELECT app_affaire_id, date FROM app_affaire_ledger")
+               if re.match(r"\d{4}-", str(d or "")) and not str(d).startswith("0000")}
+    src_g.close()
+    for nom, chg in gardes_mesurees.items():
+        par_s3 = defaultdict(set)
+        for a, c in S[3].items():
+            par_s3[c].add(chg.get(a))
+        coupes_ = {c for c, gs in par_s3.items() if len(gs) > 1}
+        par_g = defaultdict(set)
+        for a, c in chg.items():
+            par_g[c].add(S[3].get(a))
+        reunis_ = {c for c, ss in par_g.items() if len(ss) > 1}
+        mem3 = defaultdict(set)
+        for a, c in S[3].items():
+            mem3[c].add(a)
+        vus = {c for c in coupes_ if any(lignes_tx_v2.get(a) for a in mem3[c])}
+        lab_g = etiquettes(lab[3], chg)
+        rg = ranger(gel_v2, conf_v2, chg, True, True, c5=True)
+        sg = structure(gel_v2, chg, True)
+        chg_lab = sorted(i for i in v1_5 if {lab_g.get(a) for a in etats[5][i][2]} != {lab[3].get(etats[5][i][2][0])})
+        sortent_v1 = sorted(i for i in v1_5 if rg[i][0] != "VAGUE_1")
+        liberees = sorted(i for i in les_9 if sg[i] in ("SEULE", "VIDE"))
+        gr_9 = {trouve(("L", i)) for i in les_9}
+        gr_ok = {k for k in gr_9 if all(sg[i] in ("SEULE", "VIDE") for i in groupes[k]["lignes"])}
+        conforme = set()
+        for k in gr_ok:
+            pr = proprio.get(k, {})
+            ch_par_classe = defaultdict(set)
+            for a, c in pr.items():
+                ch_par_classe[c].add(chg.get(a))
+            if all(len(v) == 1 for v in ch_par_classe.values()) and \
+                    len({next(iter(v)) for v in ch_par_classe.values()}) == len(ch_par_classe):
+                conforme.add(k)
+        empirees = sorted(i for i in LIG if structs[5][i] == "SEULE" and sg[i] in ("MULTI", "PARTAGEE"))
+        # chaque dossier COUPE, juge par le Sheet : les lignes de chaque morceau (liens du gel apres le patch V2)
+        jug, ans_inv, detache_inv, exemples = Counter(), Counter(), Counter(), defaultdict(list)
+        for c in sorted(coupes_):
+            parts_ = defaultdict(set)
+            for a in mem3[c]:
+                parts_[chg[a]].add(a)
+            lp = {g_: {i for a in xs for i in lignes_tx_v2.get(a, ())} for g_, xs in parts_.items()}
+            toutes_l = set().union(*lp.values())
+            if not toutes_l:
+                v_ = "INVISIBLE (aucune ligne du Sheet)"
+                ys = [an_tx_g.get(a) for a in mem3[c] if an_tx_g.get(a)]
+                ans_inv[min(ys) if ys else None] += 1
+                tete_ = chg[min(mem3[c])]
+                detache_inv["+".join(sorted("%s(%s)" % (TX[a]["genre"], TX[a]["etat"] or "-")
+                                            for g_, xs in parts_.items() if g_ != tete_ for a in xs))] += 1
+            elif any(sum(1 for g_ in lp if i in lp[g_]) > 1 for i in toutes_l):
+                v_ = "DEMENTIE (une ligne sur deux morceaux)"
+            elif sum(1 for g_ in lp if lp[g_]) == 1:
+                v_ = "NEUTRE (un seul morceau a des lignes)"
+            else:
+                cl_ = [set().union(*(noms_ligne(i) for i in lp[g_])) for g_ in lp if lp[g_]]
+                v_ = ("CONFIRMEE (acheteurs differents)" if not set.intersection(*cl_)
+                      else "DEMENTIE (le meme acheteur des deux cotes)")
+            jug[v_] += 1
+            exemples[v_].append(c)
+        par_fam = Counter(famille[k] for k in gr_ok)
+        resout[nom] = gr_ok
+        mesure_garde[nom] = {"coupes": len(coupes_), "coupes_vus": len(vus), "reunis": len(reunis_),
+                             "v1_etiquette_change": chg_lab, "v1_sortent": sortent_v1,
+                             "melanges_liberees": len(liberees), "groupes_resolus": len(gr_ok),
+                             "groupes_conformes": len(conforme), "empirees": empirees, "par_famille": par_fam,
+                             "vague1_apres": sum(1 for i in LIG if rg[i][0] == "VAGUE_1"),
+                             "cases": Counter(r[0] for r in rg.values()),
+                             "cases_sortie": {i: rg[i][0] for i in sortent_v1},
+                             "jugement": jug, "annees_invisibles": ans_inv, "detache_invisibles": detache_inv,
+                             "exemples": {k_: v[:12] for k_, v in exemples.items()}}
+
     # ── LA COUCHE DE CHAQUE LIGNE ──
     def couche(i):
         """La premiere couche qui sort la ligne de PLUSIEURS DOSSIERS / ETIQUETTE PARTAGEE."""
+        if any(a in exclues_e for a in gel_v2.get(i, set())):
+            return 11, "?"
         for n in (1, 2, 3, 4, 5):
             if structs[n][i] in ("SEULE", "VIDE"):
                 return n, structs[n][i]
@@ -423,7 +687,7 @@ def etape_classer() -> int:
     lignes_md = ["LES %d LIGNES « PLUSIEURS DOSSIERS » ET « ETIQUETTE PARTAGEE » D'AUJOURD'HUI -- CE QUI LES"
                  " LIBERE (la premiere couche qui les sort de ces deux cases)" % len(les_520),
                  "   %-82s %9s %9s %6s" % ("", "PLUSIEURS", "PARTAGEE", "TOTAL")]
-    for n in range(1, 11):
+    for n in range(1, 12):
         a_, b_ = compte["PLUSIEURS_DOSSIERS"][n], compte["ETIQUETTE_PARTAGEE"][n]
         lignes_md.append("   %-82s %9d %9d %6d" % (COUCHES[n], a_, b_, a_ + b_))
     lignes_md.append("   %-82s %9d %9d %6d" % ("TOTAL", sum(compte["PLUSIEURS_DOSSIERS"].values()),
@@ -446,7 +710,7 @@ def etape_classer() -> int:
             g_par[n].add(trouve(("L", i)))
     lignes_md.append("")
     lignes_md.append("AU-DELA DE 5 -- LES GROUPES (lignes + dossiers relies) que ces lignes forment :")
-    for n in range(6, 11):
+    for n in range(6, 12):
         gs = g_par[n]
         nl = sum(len(groupes[k]["lignes"]) for k in gs)
         nd = sum(len(groupes[k]["dossiers"]) for k in gs)
@@ -567,29 +831,187 @@ def etape_classer() -> int:
     a_exclure = sorted(set(absorbees[2]) | set(absorbees[3]))
     lignes_md.append("   ➡ tant que la regle E et les 8 lignes ne sont pas jouees, ces %d lignes SORTENT de la vague 1"
                      % len(a_exclure))
+    print("TEMOIN : la simulation fusion+scission redonne les lignes absorbees par E -- %s (ancienne methode %d,"
+          " simulation %d)" % ("OUI" if absorbees_sim == absorbees[2] else "⛔ NON", len(absorbees[2]),
+                                len(absorbees_sim)), flush=True)
+    if absorbees_sim != absorbees[2]:
+        echecs.append("simulation des etiquettes")
+
+    # ── ⭐ LA GARDE « LA DATE BAT LE NOM » -- ce qu'elle couperait, et la VAGUE 1 ──
+    lignes_md.append("")
+    lignes_md.append("LA GARDE « LA DATE BAT LE NOM » DANS LA REGLE D -- MESUREE SEULEMENT (copie du code hors du depot,"
+                     " rejouee sur le scenario 3 : la nuit des 10 + E + les 8 lignes)")
+    lignes_md.append("   G1 = un cote a un COMPROMIS VIVANT dont l'acquereur n'est pas dans l'autre cote -> pas de reunion")
+    lignes_md.append("   G2 = un cote a une OFFRE ACCEPTEE DATEE dont l'acquereur n'est pas dans l'autre cote -> pas de"
+                     " reunion ; G12 = l'une OU l'autre")
+    lignes_md.append("   la vague 1 de reference = l'etat 5 (patch V2 + E + 8 lignes + C5) : %d lignes" % len(v1_5))
+    for nom, m in mesure_garde.items():
+        lignes_md.append("   %-4s dossiers coupes %4d (dont %4d que le Sheet voit) . reunions nouvelles %3d ."
+                         " VAGUE 1 : %3d etiquette(s) changee(s), %3d ligne(s) qui en sortent -> vague 1 = %d"
+                         % (nom.upper(), m["coupes"], m["coupes_vus"], m["reunis"], len(m["v1_etiquette_change"]),
+                            len(m["v1_sortent"]), m["vague1_apres"]))
+        lignes_md.append("        melanges (couche 9, etat 5) : %d ligne(s) liberee(s), %d groupe(s) resolu(s) dont %d"
+                         " coupes EXACTEMENT comme le Sheet le propose ; par famille %s"
+                         % (m["melanges_liberees"], m["groupes_resolus"], m["groupes_conformes"],
+                            dict(sorted(m["par_famille"].items()))))
+        lignes_md.append("        lignes SEULES a l'etat 5 qui deviennent PLUSIEURS / PARTAGEE : %d %s"
+                         % (len(m["empirees"]), " ".join(m["empirees"][:30])))
+        lignes_md.append("        vague 1 -- etiquette changee : %s" % " ".join(m["v1_etiquette_change"][:60]))
+        lignes_md.append("        vague 1 -- en sortent : %s" % " ".join(
+            "%s(%s)" % (i, m["cases_sortie"][i]) for i in m["v1_sortent"][:60]))
+        lignes_md.append("        LES %d DOSSIERS COUPES, JUGES PAR LE SHEET : %s" % (
+            m["coupes"], " . ".join("%s %d" % kv for kv in m["jugement"].most_common())))
+        for v_, ex in sorted(m["exemples"].items()):
+            lignes_md.append("           ex. %-42s %s" % (v_, " ".join(map(str, ex))))
+        lignes_md.append("        les INVISIBLES par annee (la plus ancienne transaction du dossier) : %s" % " . ".join(
+            "%s %d" % (y or "?", n_) for y, n_ in sorted(m["annees_invisibles"].items(), key=lambda kv: kv[0] or 0)))
+        lignes_md.append("        les INVISIBLES -- ce qui se DETACHE (le morceau sans la plus petite transaction) : %s"
+                         % " . ".join("%s %d" % kv for kv in m["detache_invisibles"].most_common(12)))
+
+    # ── LES MELANGES PAR FAMILLE, et la coupe que le Sheet propose ──
+    lignes_md.append("")
+    lignes_md.append("LES MELANGES (couche 9) PAR FAMILLE -- groupes, lignes, et l'etat de la coupe que le Sheet propose :")
+    lignes_9_par_g = defaultdict(list)
+    for i in les_520:
+        if res[i][0] == 9:
+            lignes_9_par_g[trouve(("L", i))].append(i)
+    for f_, lib in FAMILLES.items():
+        gs = [k for k in lignes_9_par_g if famille.get(k) == f_]
+        if not gs:
+            continue
+        nl = sum(len(lignes_9_par_g[k]) for k in gs)
+        et_ = Counter(coupe_etat[k] for k in gs)
+        ga = {nom: sum(1 for k in gs if k in resout.get(nom, set())) for nom in mesure_garde}
+        lignes_md.append("   %-92s %3d groupes %3d lignes . coupe %s . resolus par la garde %s"
+                         % (lib, len(gs), nl, dict(sorted(et_.items())), ga))
+    lignes_md.append("   (le detail, groupe par groupe, est dans la colonne « ce_qui_la_debloque » du fichier)")
+
+    # ── LES DEUX CHIFFRES DU 19/11 AU SOIR : les lignes « sans date », et les lignes 2025-2026 ──
+    #   ⚠ « Sans date » etait FAUX : ces lignes ont une date d'offre dans l'AUTRE FORMAT du Sheet (« 20 fevrier25 »).
+    #   On lit les deux formats avec le lecteur du juge de ⑤ (date_du_classeur_tolerante), et on donne aussi l'annee
+    #   de NOS transactions (celles que le gel relie a la ligne) -- une source independante du Sheet.
+    lire_d = charger_juge().date_du_classeur_tolerante
+    src_ = sqlite3.connect("file:%s?mode=ro" % (RACINE / "phase2" / "phase2.sqlite"), uri=True)
+    an_tx = {}
+    for a, d in src_.execute("SELECT app_affaire_id, date FROM app_affaire_ledger"):
+        m_ = re.match(r"(\d{4})-", str(d or ""))
+        if m_ and m_.group(1) != "0000":
+            an_tx[a] = int(m_.group(1))
+    src_.close()
+    i_s, i_t = entete.index("Offre Achat"), entete.index("Compromis")
+    jjmm = re.compile(r"\d{1,2}/\d{1,2}/\d{2,4}")
+
+    def an_offre(i):
+        d = lire_d(LIG[i]["row"][i_s])
+        return d.year if d else None
+
+    def an_nos_tx(i):
+        ys = [an_tx[a] for a in gel.get(i, set()) if a in an_tx]
+        return min(ys) if ys else None
+    ne_ = [i for i in LIG if auj[i][0] != "VAGUE_1"]
+    forme = Counter("jj/mm/aaaa" if jjmm.search(LIG[i]["row"][i_s]) else "VIDE" if not LIG[i]["row"][i_s].strip()
+                    else "jj mois aa" for i in ne_)
+    autres = [i for i in ne_ if not jjmm.search(LIG[i]["row"][i_s])]
+    lignes_md.append("")
+    lignes_md.append("LES LIGNES « SANS DATE » -- elles ont une date, dans l'AUTRE format du Sheet (« 20 fevrier25 »)")
+    lignes_md.append("   les %d non ecrites, par forme de la date d'offre : %s" % (len(ne_), dict(forme)))
+    lignes_md.append("   les %d qui ne sont pas en jj/mm/aaaa (dont %d en etiquette partagee), par ANNEE :"
+                     % (len(autres), sum(1 for i in autres if auj[i][0] == "ETIQUETTE_PARTAGEE")))
+    lignes_md.append("      %-6s %14s %22s %26s" % ("annee", "par le Sheet", "par nos transactions",
+                                                     "dont etiquette partagee"))
+    ans = sorted({an_offre(i) for i in autres} | {an_nos_tx(i) for i in autres}, key=lambda y: (y is None, y or 0))
+    for y in ans:
+        lignes_md.append("      %-6s %14d %22d %26d" % (
+            y or "aucune", sum(1 for i in autres if an_offre(i) == y), sum(1 for i in autres if an_nos_tx(i) == y),
+            sum(1 for i in autres if an_offre(i) == y and auj[i][0] == "ETIQUETTE_PARTAGEE")))
+    accord = sum(1 for i in autres if an_offre(i) and an_nos_tx(i) and an_offre(i) == an_nos_tx(i))
+    deux = sum(1 for i in autres if an_offre(i) and an_nos_tx(i))
+    lignes_md.append("      les deux sources donnent la MEME annee pour %d des %d lignes ou elles existent toutes les deux"
+                     % (accord, deux))
+    tout_jj = sum(1 for i in LIG if LIG[i]["row"][i_s].strip() and not jjmm.search(LIG[i]["row"][i_s]))
+    lignes_md.append("   sur TOUT le Sheet : %d dates d'offre dans l'autre format, %d vides, %d en jj/mm/aaaa"
+                     % (tout_jj, sum(1 for i in LIG if not LIG[i]["row"][i_s].strip()),
+                        sum(1 for i in LIG if jjmm.search(LIG[i]["row"][i_s]))))
+    lignes_md.append("")
+    lignes_md.append("LES LIGNES DU SHEET PAR ANNEE DE L'OFFRE (les deux formats) -- toutes, et les non ecrites :")
+    lignes_md.append("      %-6s %8s %10s %10s %8s" % ("annee", "total", "vague 1", "non ecrites", "part"))
+    for y in sorted({an_offre(i) for i in LIG}, key=lambda y: (y is None, y or 0)):
+        tot = sum(1 for i in LIG if an_offre(i) == y)
+        nn = sum(1 for i in ne_ if an_offre(i) == y)
+        lignes_md.append("      %-6s %8d %10d %10d %7.0f %%" % (y or "aucune", tot, tot - nn, nn, 100.0 * nn / tot))
+    deux_ans = [i for i in LIG if an_offre(i) in (2025, 2026)]
+    ne_2 = [i for i in ne_ if an_offre(i) in (2025, 2026)]
+    filtre_texte = [i for i in ne_ if "2025" in LIG[i]["row"][i_s] or "2026" in LIG[i]["row"][i_s]]
+    tot_texte = [i for i in LIG if "2025" in LIG[i]["row"][i_s] or "2026" in LIG[i]["row"][i_s]]
+    lignes_md.append("   2025 + 2026 : %d lignes au Sheet, dont %d NON ECRITES (%d en 2025, %d en 2026)"
+                     % (len(deux_ans), len(ne_2), sum(1 for i in ne_2 if an_offre(i) == 2025),
+                        sum(1 for i in ne_2 if an_offre(i) == 2026)))
+    lignes_md.append("      ton filtre (le texte « 2025 » ou « 2026 » dans la date d'offre) : %d non ecrites sur %d"
+                     " -- il manque les %d ecrites « jj mois aa »" % (len(filtre_texte), len(tot_texte),
+                                                                       len(ne_2) - len(filtre_texte)))
+    lignes_md.append("      les %d non ecrites 2025-2026, par case : %s"
+                     % (len(ne_2), " . ".join("%s %d" % kv for kv in Counter(auj[i][0] for i in ne_2).most_common())))
 
     # ── LE FICHIER DES LIGNES NON ECRITES ──
+    def apres_couche(i, n):
+        """Ce qu'il faut, et qui agit, pour une ligne d'un groupe de couche n >= 6 -- ALLER AU BOUT (19/11 au soir :
+        « pour les 351 qui demandent une scission, et les 16 non tranchees, elle s'arrete a il faudrait couper »)."""
+        k = trouve(("L", i))
+        if n == 6:
+            if i in aucun_tenu:
+                return COUCHES[6] + " : le gel relie CETTE ligne a un dossier qu'elle ne designe pas -> je relis, un"                     " patch du gel « V3 » retire le lien (ton accord)", "moi (relecture) puis toi"
+            autres_ = sorted(j for j in groupes[k]["lignes"] if j != i and j in aucun_tenu)
+            return COUCHES[6] + " : son dossier est partage par un lien SUSPECT du gel (%s) -> quand le patch « V3 »"                 " le retire, elle entre en vague 1" % " ".join(autres_), "moi (relecture) puis toi"
+        if n == 7:
+            return COUCHES[7], "toi"
+        if n == 8:
+            ls = sorted(groupes[k]["lignes"])
+            viv = [j for j in ls if not est_annulee(j)]
+            if len(viv) == 1 and i == viv[0]:
+                return COUCHES[8] + " : l'etiquette s'ecrit sur CETTE ligne", "l'outil d'ecriture (decide)"
+            if len(viv) == 1:
+                return COUCHES[8] + " : cette tentative annulee RESTE VIDE (l'etiquette va sur %s)" % viv[0],                     "personne (decide)"
+            return COUCHES[8] + " : %d lignes vivantes dans le groupe -- a relire" % len(viv), "moi (relecture) puis toi"
+        if n == 9:
+            f_ = famille.get(k, "?")
+            g_ = GARDE_RETENUE in mesure_garde and k in resout.get(GARDE_RETENUE, set())
+            et_ = coupe_etat.get(k, "?")
+            quoi = "%s -- %s -- coupe %s : %s" % (COUCHES[9], FAMILLES.get(f_, f_), et_, coupe.get(k, ""))
+            if g_:
+                return quoi + " -- ⭐ la garde %s la coupe seule" % GARDE_RETENUE.upper(),                     "la garde %s (ton allumage)" % GARDE_RETENUE.upper()
+            if et_ == "NETTE":
+                return quoi, "toi : valider la coupe (outil de scission, apres l'ecriture)"
+            return quoi, "moi (relecture de la coupe) puis toi"
+        if n == 11:
+            ex = sorted(a for d in groupes[k]["dossiers"] for a in membres[d] if a in exclues_e)
+            return COUCHES[11] + " : %s" % "; ".join("%s -- %s" % (a, al_.EXCLUES_DE_LA_REGLE_E[a][:120])
+                                                     for a in ex), "toi"
+        return COUCHES[n], "moi (relecture) puis toi"
+
     def debloque(i):
         c0 = auj[i][0]
+        ex_ = sorted(a for a in gel_v2.get(i, set()) if a in exclues_e)
+        if ex_ and all(etats[n][i][0] != "VAGUE_1" for n in (1, 2, 3, 4, 5)):
+            return (COUCHES[11] + " : %s" % "; ".join("%s -- %s" % (a, al_.EXCLUES_DE_LA_REGLE_E[a][:140]) for a in ex_),
+                    "toi")
         for n in (1, 2, 3, 4, 5):
             if etats[n][i][0] == "VAGUE_1":
-                return "entre en vague 1 apres la couche " + COUCHES[n], "toi" if n >= 2 else "la nuit"
+                return ("entre en vague 1 apres la couche " + COUCHES[n],
+                        "la nuit" if n == 1 else "l'outil d'ecriture (decide)" if n == 5 else "toi")
         c5_ = etats[5][i][0]
         pp = ("PLUSIEURS_DOSSIERS", "ETIQUETTE_PARTAGEE")
-
-        def qui(n):
-            return "toi : une scission" if n == 9 else "moi (relecture) puis toi" if n in (6, 10) else "toi"
         if c0 in pp:
             n, st = couche(i)
             if n <= 5:
                 return ("sort de %s par la couche %s, puis reste en %s" % (c0, COUCHES[n], etats[n][i][0]),
                         "toi" if n >= 2 else "la nuit")
-            return COUCHES[n], qui(n)
+            return apres_couche(i, n)
         # une ligne qui n'est pas dans ces deux cases AUJOURD'HUI mais y tombe au bout des couches 1-5
         pre = "" if c5_ == c0 else "au bout des couches 1-5 elle passe en %s ; " % c5_
         if c5_ in pp:
             n = verdict_groupe.get(trouve(("L", i)), 10)
-            return pre + COUCHES[n], qui(n)
+            q_, w_ = apres_couche(i, n)
+            return pre + q_, w_
         if c5_ == "SANS_LIEN":
             return pre + "rien a ecrire : aucune transaction reliee (la ligne reste vide)", "personne"
         if c5_ == "EN_ATTENTE":
@@ -622,6 +1044,10 @@ def etape_classer() -> int:
             "ce_qui_la_debloque": quoi, "qui": qui,
             **{n: LIG[i]["row"][col(n)] for n in lisibles},
             "dossiers_aujourd_hui": " ".join(map(str, ds)),
+            "famille": FAMILLES.get(famille.get(trouve(("L", i)), ""), "") if verdict_groupe.get(trouve(("L", i))) == 9
+            else "",
+            "la_garde_%s_la_coupe" % GARDE_RETENUE: ("oui" if trouve(("L", i)) in resout.get(GARDE_RETENUE, set()) else "non")
+            if verdict_groupe.get(trouve(("L", i))) == 9 else "",
             "transactions_et_genre": " ".join("%s(%s%s)" % (a, TX[a]["genre"], ",C5" if TX[a]["classeur"] else "")
                                               for a in ts),
         })
@@ -678,9 +1104,136 @@ def etape_classer() -> int:
     return 0
 
 
+# ─────────────────────────── ETAPE 1 bis : LA GARDE « LA DATE BAT LE NOM » (MESURE SEULEMENT) ───────────────────────────
+#   Demande de Frederic, 19/11 au soir : « LA GARDE DES 104 : ce qu'elle couperait, et combien de lignes de la
+#   VAGUE 1 changeraient d'etiquette si elle jouait. Si elle en touche, elle passe avant l'ecriture comme E. »
+#   ⛔ « PAS UNE LIGNE DE CODE DE SCISSION tant que l'ecriture n'est pas finie. La mesure ne casse rien. »
+#   -> phase2/sync/affaire_ledger.py N'EST PAS TOUCHE. On en fait une COPIE hors du depot (dans le cache), on y
+#      insere la garde a un seul endroit (la regle D, juste avant la reunion), et on rejoue le scenario 3 de ⑥
+#      (la nuit des 10 + E avec ses exclusions + les 8 lignes) avec cette copie, sur une base en memoire.
+GARDE_ANCRE = "                            # la cible garde le plus petit numero, comme la\n"
+GARDE_CODE = '''                            # ─── MESURE SEULEMENT (temps 6, 19/11 au soir) -- LA GARDE « LA DATE BAT LE NOM »
+                            #     G1 : un cote a un COMPROMIS VIVANT dont l'acquereur n'est pas dans l'autre cote
+                            #     G2 : un cote a une OFFRE ACCEPTEE DATEE dont l'acquereur n'est pas dans l'autre
+                            #     Le defaut de Hektor : le contact de l'acheteur precedent reste sur une piece du
+                            #     suivant ; la piece est dans le bon dossier PAR SA DATE, et D la recolle PAR LE NOM.
+                            if _T6_GARDE:
+                                _bloque = False
+                                for _x, _y in ((a, b), (b, a)):
+                                    _nx = acqs_reels(_x)
+                                    _cp, _oa = set(), set()
+                                    for _m in membres_de(_y):
+                                        if _m[1] == "compromis" and _m[2] not in ETATS_COMPROMIS_MORTS:
+                                            _cp |= _m[4]
+                                        if _m[1] == "offre" and _m[2] in ETATS_OFFRE_ACCEPTEE and _m[3] is not None:
+                                            _oa |= _m[4]
+                                    if "G1" in _T6_GARDE and _cp and not (_nx & _cp):
+                                        _bloque = True
+                                    if "G2" in _T6_GARDE and _oa and not (_nx & _oa):
+                                        _bloque = True
+                                if _bloque:
+                                    signale("[G] garde la date bat le nom -- abstention (MESURE)")
+                                    continue
+'''
+GARDE_VARIANTES = {"g1": "G1", "g2": "G2", "g12": "G1G2"}
+
+
+def module_avec_la_garde():
+    """La copie de affaire_ledger.py avec la garde, chargee comme un module a part. L'original n'est pas touche."""
+    source = (RACINE / "phase2" / "sync" / "affaire_ledger.py").read_text(encoding="utf-8")
+    n = source.count(GARDE_ANCRE)
+    assert n == 1, "l'ancre de la regle D est trouvee %d fois (attendu 1) : le code a bouge" % n
+    source = source.replace(GARDE_ANCRE, GARDE_CODE + GARDE_ANCRE)
+    for avant, apres in (("ROOT = Path(__file__).resolve().parents[2]", "ROOT = Path(%r)" % str(RACINE)),
+                         ('FICHIER_RATTACHEMENTS = Path(__file__).resolve().parent / "rattachements_manuels.csv"',
+                          "FICHIER_RATTACHEMENTS = Path(%r)" % str(RACINE / "phase2" / "sync" / "rattachements_manuels.csv"))):
+        assert source.count(avant) == 1, "ancre absente : %s" % avant
+        source = source.replace(avant, apres)
+    ancre_os = "\nimport os  # noqa: E402\n"
+    assert source.count(ancre_os) == 1, "import os introuvable"
+    source = source.replace(ancre_os, ancre_os + "_T6_GARDE = os.environ.get('T6_GARDE', '')\n", 1)
+    copie = CACHE / "affaire_ledger_AVEC_GARDE_mesure_seulement.py"
+    copie.write_text(source, encoding="utf-8")
+    spec = importlib.util.spec_from_file_location("affaire_ledger_avec_garde", copie)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+JOURNAL_GARDE = CACHE / "garde_journal.txt"
+
+
+def journal(texte: str) -> None:
+    """Chaque ligne va a l'ecran ET dans le journal sur le disque, AU FIL (regle du 19/11 : une mesure longue
+    ecrit ses resultats au fil, jamais gardes en memoire jusqu'a la fin -- trois sessions coupees ce soir)."""
+    print(texte, flush=True)
+    with JOURNAL_GARDE.open("a", encoding="utf-8") as f:
+        f.write("%s  %s\n" % (datetime.now().strftime("%H:%M:%S"), texte))
+
+
+def etape_garde(nom: str) -> int:
+    """UN SEUL rejeu par appel : temoin (la copie sans garde = le scenario 3), g1, g2 ou g12."""
+    import contextlib
+    import io
+    import tempfile
+    if nom != "temoin" and nom not in GARDE_VARIANTES:
+        print("⛔ variante inconnue %r : temoin, %s (code 3)" % (nom, ", ".join(GARDE_VARIANTES)), flush=True)
+        return 3
+    variante = "" if nom == "temoin" else GARDE_VARIANTES[nom]
+    t0 = time.time()
+    journal("GARDE %s (%s) : debut" % (nom, variante or "sans garde"))
+    if not (CACHE / "chaines_s3.json").exists():
+        journal("⛔ chaines_s3.json manque : lancer « rejeu 3 » de temps5_q6 (code 3)")
+        return 3
+    spec = importlib.util.spec_from_file_location(
+        "q6", RACINE / "phase2" / "checks" / "temps5_q6_les_lignes_a_plusieurs_etiquettes_2026-11-19.py")
+    q6 = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(q6)
+    alg = module_avec_la_garde()
+    journal("   copie de affaire_ledger.py avec la garde chargee (%.0f s)" % (time.time() - t0))
+    with tempfile.TemporaryDirectory() as tmp:
+        fichier = Path(tmp) / "rattachements_avec_les_huit.csv"
+        fichier.write_text(alg.FICHIER_RATTACHEMENTS.read_text(encoding="utf-8-sig") + q6.LES_HUIT, encoding="utf-8")
+        alg.FICHIER_RATTACHEMENTS = fichier
+        os.environ["APP_CHAINAGE_SANS_DATE_VISIBLE"] = "1"
+        alg._T6_GARDE = variante
+        try:
+            con = q6.copie()
+            journal("   base copiee en memoire (%.0f s) -- rejeu du chainage..." % (time.time() - t0))
+            with contextlib.redirect_stdout(io.StringIO()):
+                res = alg.recalculer_les_chaines(con)
+            ch = {str(a): c for a, c in con.execute("SELECT app_affaire_id, app_chaine_id FROM %s" % alg.LEDGER_TABLE)}
+        finally:
+            os.environ.pop("APP_CHAINAGE_SANS_DATE_VISIBLE", None)
+    # ⚠ « abstentions » compte des PASSAGES (la boucle de D repart a zero apres chaque reunion) : le vrai compte
+    #   des dossiers coupes se fait dans « classer », en comparant les chaines.
+    compte = {"dossiers": len(set(ch.values())),
+              "abstentions_g": res.get("[G] garde la date bat le nom -- abstention (MESURE)", 0),
+              "reunions_d": res.get("[D] meme acheteur, meme bien -- dossiers reunis", 0),
+              "le": datetime.now().isoformat(timespec="seconds")}
+    if nom == "temoin":
+        s3 = lire_json(CACHE / "chaines_s3.json")
+        compte["ecart_avec_s3"] = sum(1 for a in s3 if s3[a] != ch.get(a))
+        journal("   TEMOIN : la copie SANS garde redonne le scenario 3 -- %d transaction(s) differente(s) (attendu 0)"
+                % compte["ecart_avec_s3"])
+    else:
+        ecrire_json(CACHE / ("chaines_%s.json" % nom), ch)
+    comptes = lire_json(CACHE / "garde_comptes.json") if (CACHE / "garde_comptes.json").exists() else {}
+    comptes[nom] = compte
+    ecrire_json(CACHE / "garde_comptes.json", comptes)
+    journal("GARDE %s : %d dossiers ; reunions D %s ; passages bloques %s -- FIN en %.0f s"
+            % (nom, compte["dossiers"], compte["reunions_d"], compte["abstentions_g"], time.time() - t0))
+    if nom == "temoin" and compte["ecart_avec_s3"]:
+        journal("⛔ la copie ne rejoue pas comme l'original (code 2)")
+        return 2
+    return 0
+
+
 def main() -> int:
     if len(sys.argv) >= 2 and sys.argv[1] == "photo":
         return etape_photo()
+    if len(sys.argv) >= 3 and sys.argv[1] == "garde":
+        return etape_garde(sys.argv[2])
     if len(sys.argv) >= 2 and sys.argv[1] == "classer":
         return etape_classer()
     print(__doc__)
