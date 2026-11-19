@@ -3417,7 +3417,7 @@ l'IA »), elle disparaît à P4.
 
 **Reste** : P5, P4, P6, P7, P8.
 
-## 95. P4-a — L'ASSISTANT PROPOSE LE PARCOURS, DÉJÀ REMPLI DE LA DEMANDE (19/11) : écrit, éprouvé hors ligne et en maquette, NON poussé
+## 95. P4-a — L'ASSISTANT PROPOSE LE PARCOURS, DÉJÀ REMPLI DE LA DEMANDE (19/11) : POUSSÉ (c8f0a9d) et ÉPROUVÉ EN RÉEL, vert
 
 **Ses mots** : (avant P5) « est-ce que le formulaire conserve toujours en source la conversation / agenda / scan … et
 ainsi ne pas poser la question déjà donnée ? » → confirmé (§78 règle 1, §80.4, §83), mais NON codé : P2 posait tout.
@@ -3468,4 +3468,22 @@ proposés à confirmer) → P4-d (les phrases libres, le petit lecteur).
   prix ou une question simple.
 - `_controler_creation` gagne un paramètre `exiger` (vrai par défaut : la carte « créer » est inchangée).
 
-**Reste** : pousser (son accord), l'essai réel (création, baisse de prix, question simple) ; puis P4-b, P4-c, P4-d.
+### 95.4 L'ESSAI RÉEL (19/11, 11:04-11:06, heure de Paris) — VERT, dans le Chrome de Frédéric, avec son accord (« Oui, les deux »)
+
+Poussé c8f0a9d (après fusion de 3 commits GED de l'autre session — dont la correction du rouge que je lui avais signalé :
+une fausse alerte CRLF de son essai) ; Render et Vercel vérifiés sur c8f0a9d avant l'essai. Trois conversations NEUVES :
+- **Création** (« Nouvelle estimation d'essai… maison au 3 rue de l'Essai, 42700 Firminy, 110 m², 5 pièces, 3 chambres,
+  terrain 500 m², le vendeur est un nouveau contact ») : l'IA a proposé la carte « Créer par questions guidées » (« Déjà
+  dit, pas reposé : le bien, l'intérieur ») SANS poser elle-même une question. « Commencer les questions » → le parcours
+  `7f069b90…` s'ouvre avec « Le bien » et « L'intérieur » en pastilles « dit », première question « Le quartier »
+  (2 sur 15). En base : 15 cases venues de la demande (adresses et recopies, Maison, 110, 5 pièces, 3 chambres, terrain
+  500, mandant « nouveau »), aucune coordonnée. Capture : `notice/preuve_parcours_rempli_de_la_demande_2026-11-19.jpg`.
+- **Baisse de prix** (annonce d'essai 62774) : AUCUN parcours ; l'IA a lu que le bien est clos et n'a préparé aucune carte.
+- **Question simple** (« Combien d'annonces actives à Firminy ? ») : 16, réponse directe, aucune carte, aucun parcours.
+- **Coût** : 0,0226 $ + 0,0246 $ + 0,0220 $ = 0,069 $ (≈ 41 000 jetons lus par tour : les outils et la consigne ; plus
+  que les 0,015 $ du 18/11).
+- Le parcours d'essai reste « en cours » en base (purge à 30 jours). Rien chez Hektor.
+- ⚠ Détail vu : la pastille « Le bien » résume « Maison · Vente classique +8 » (l'ordre des cases met la famille avant
+  l'adresse) ; à mieux résumer (le type et la rue) — cosmétique.
+
+**Reste** : P4-b (par photo), P4-c (services publics), P4-d (phrases libres).
