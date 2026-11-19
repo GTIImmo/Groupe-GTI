@@ -3611,3 +3611,26 @@ ou ne rien cocher d'avance quand elle s'ouvre seule. Rien n'a été codé.
 ⏳ **Reste E** (le terrain, `surfterrain` depuis le titre) : par construction il ne se propose QUE sur un bien EXPLICITEMENT hors
 copropriété ; 63331 est en copropriété OUI -> il faut un bien d'essai hors copropriété (à décider). Sur 63331 : 1 pièce FICTIF
 de plus (l'appel de fonds), à joindre au ménage.
+
+### 12.54 L'ÉPREUVE RÉELLE DU LOT E -- le terrain depuis le titre de propriété (19/11, 09:39-09:52, 63330, « Ok enchaîne »)
+
+**Le bien** : pas de bien à créer -- **63330** (10000006, « ESSAI 8A2B TOUS CHAMPS - ne pas diffuser », maison, Estimation,
+diffusable 0) est EXPLICITEMENT hors copropriété (`copropriete = NON`), terrain 600 m², aucun document, rien en attente.
+**Pièce** : un titre de propriété FICTIF fabriqué pour l'épreuve (`scratchpad/lotE/fabriquer.cjs`) : maison « non soumise au
+statut de la copropriété, aucun lot », cadastre AB 123 (612 m²) + AB 124 (130 m²), **contenance totale 742 m²**, acte du
+15/03/2011. Déposé PAR L'ÉCRAN, type « Titre ou origine de propriété » (le nom et l'IA d'accord), privé ->
+`upload_document_to_hektor` done 09:40:43.
+**L'écran** : « Ce que dit le titre de propriété » s'ouvre SEUL : « À trancher 1 », Surface du terrain **742 m²** (titre,
+« correction » cochée d'avance) / 600 m² (fiche), note « contenance cadastrale du titre », page 1. Enregistré (exprès cette
+fois) -> « envoyé à Hektor : Surface du terrain 742 m² (chemin habituel de la fiche, contrôlé au retour) » ; calque
+{surfterrain 742}.
+**Chez Hektor** : `update_hektor_annonce_fields` done 09:51:12, `status: updated`, groupe `terrain` [land_surface ->
+surfterrain] « mise à jour effectuée », 0 écarté ; calque soldé ; relecture done 09:51:50 ; 0 écart. **Fiche relue** :
+EXACTEMENT 1 case a bougé dans copropriété / mandat_infofi / terrain / intérieur -- `surfterrain` 600 -> 742 ; SHON 130,
+terrain arboré et piscinable, prix 187 000, net 175 000 INCHANGÉS.
+➡ **Le lot E est PROUVÉ EN RÉEL** (2e écriture connue de `surfterrain`, la 1re depuis la GED).
+⚠ **La trouvaille du §12.53 se CONFIRME** : la fenêtre s'est ouverte pendant l'attente, et son « Enregistrer et envoyer à
+Hektor » était SOUS LE CURSEUR, à la place du « Envoyer 1 document » du dépôt -- un double clic sur « Envoyer » aurait
+enregistré. Toujours non corrigé (à décider).
+**Au ménage** : 63330 porte 1 pièce FICTIF (le titre) ; son terrain vaut maintenant 742 (valeur d'essai).
+⏳ **Restent non éprouvés** : la première personne d'un couple (F).
