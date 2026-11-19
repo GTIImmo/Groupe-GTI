@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import {
-  RefusAssistant, repondreParcours,
-  type CaseParcours, type CatalogueParcours, type ParcoursVue, type QuestionParcours,
+  RefusAssistant, deposerCoordonneesMandant, repondreParcours,
+  type CaseParcours, type CatalogueParcours, type CoordonneesMandant, type ParcoursVue, type QuestionParcours,
 } from './lib/assistant'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -153,6 +153,100 @@ function EditeurPieces({ pieces, types, onChange }: { pieces: Piece[]; types: Ca
   )
 }
 
+export type MandantTrouve = { id: string; nom: string; detail?: string }
+
+// ── Morceau 3 (D7), planche 11 : LE MANDANT. Un contact déjà dans l'app (son NUMÉRO seul part dans les réponses) ou un
+// NOUVEAU mandant : ses coordonnées vivent dans `coordonnees`, un état de l'écran qui ne part JAMAIS au serveur de
+// l'assistant -- elles sont déposées au coffre privé (P3) par l'écran, avec le jeton de la personne.
+const CASES_MANDANT: Array<{ cle: keyof CoordonneesMandant; libelle: string; large?: boolean }> = [
+  { cle: 'nom', libelle: 'Nom' }, { cle: 'prenom', libelle: 'Prénom' }, { cle: 'email', libelle: 'E-mail (exigé par la fenêtre)' },
+  { cle: 'telephone', libelle: 'Téléphone' }, { cle: 'adresse', libelle: 'Adresse', large: true }, { cle: 'cp', libelle: 'Code postal' },
+  { cle: 'ville', libelle: 'Ville' },
+]
+const CHOIX_MANDANT: Array<[string, string]> = [['existant', "Un contact déjà dans l'app"], ['nouveau', 'Un nouveau mandant']]
+
+function QuestionMandant({ valeurs, setValeur, coordonnees, setCoordonnees, chercher, dejaDeposees }: {
+  valeurs: Valeurs
+  setValeur: (nom: string, v: unknown) => void
+  coordonnees: CoordonneesMandant
+  setCoordonnees: (c: CoordonneesMandant) => void
+  chercher?: (texte: string) => Promise<MandantTrouve[]>
+  dejaDeposees: boolean
+}) {
+  const choix = texte(valeurs.mandant_choix)
+  const [recherche, setRecherche] = useState('')
+  const [trouves, setTrouves] = useState<MandantTrouve[] | null>(null)
+  const [choisi, setChoisi] = useState<MandantTrouve | null>(null)
+  useEffect(() => {
+    if (choix !== 'existant' || !chercher || recherche.trim().length < 2) { setTrouves(null); return }
+    let vivant = true
+    const minuterie = window.setTimeout(() => {
+      chercher(recherche.trim()).then((l) => { if (vivant) setTrouves(l) }).catch(() => { if (vivant) setTrouves([]) })
+    }, 250)
+    return () => { vivant = false; window.clearTimeout(minuterie) }
+  }, [choix, recherche, chercher])
+  const changerChoix = (v: string) => {
+    setValeur('mandant_choix', v)
+    if (v !== 'existant') { setValeur('mandant', ''); setChoisi(null) }
+  }
+  return (
+    <>
+      <div className="asp-choix" role="group" aria-label="Le mandant">
+        {CHOIX_MANDANT.map(([v, l]) => (
+          <button key={v} type="button" className={`asp-puce${choix === v ? ' is-on' : ''}`} aria-pressed={choix === v}
+            onClick={() => changerChoix(choix === v ? '' : v)}>{l}</button>
+        ))}
+      </div>
+      {choix === 'existant' ? (
+        <div className="asp-mandant">
+          {texte(valeurs.mandant) ? (
+            <p className="asp-note">Choisi : <b>{choisi?.nom ?? `le contact n° ${texte(valeurs.mandant)}`}</b>{' '}
+              <button type="button" className="asp-lien" onClick={() => { setValeur('mandant', ''); setChoisi(null) }}>Changer</button></p>
+          ) : (
+            <>
+              <label className="asp-champ asp-champ-large"><span>Chercher dans tout le réseau (nom, téléphone, e-mail ou numéro)</span>
+                <input value={recherche} onChange={(e) => setRecherche(e.target.value)} placeholder="Au moins 2 lettres" /></label>
+              {trouves && !trouves.length ? <p className="asp-note">Aucun contact trouvé.</p> : null}
+              {trouves?.length ? (
+                <div className="asp-trouves">
+                  {trouves.map((m) => (
+                    <button key={m.id} type="button" className="asp-trouve" onClick={() => { setValeur('mandant', m.id); setChoisi(m) }}>
+                      <b>{m.nom}</b>{m.detail ? <span>{m.detail}</span> : null}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </>
+          )}
+        </div>
+      ) : null}
+      {choix === 'nouveau' ? (
+        <div className="asp-mandant">
+          <div className="asp-garde">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg>
+            <b>Ces cases vont directement dans la fenêtre de création. L'assistant ne les lit pas.</b>
+          </div>
+          {dejaDeposees ? <p className="asp-note">Des coordonnées sont déjà gardées pour la fenêtre. Les retaper les remplace ; laisser vide les garde.</p> : null}
+          <div className="asp-choix" role="group" aria-label="Civilité">
+            <span className="asp-lbl">Civilité</span>
+            {['M.', 'Mme'].map((c) => (
+              <button key={c} type="button" className={`asp-puce${coordonnees.civilite === c ? ' is-on' : ''}`} aria-pressed={coordonnees.civilite === c}
+                onClick={() => setCoordonnees({ ...coordonnees, civilite: coordonnees.civilite === c ? '' : c })}>{c}</button>
+            ))}
+          </div>
+          <div className="asp-grille">
+            {CASES_MANDANT.map((c) => (
+              <label key={c.cle} className={`asp-champ${c.large ? ' asp-champ-large' : ''}`}><span>{c.libelle}</span>
+                <input value={coordonnees[c.cle] ?? ''} autoComplete="off" inputMode={c.cle === 'cp' || c.cle === 'telephone' ? 'tel' : c.cle === 'email' ? 'email' : undefined}
+                  onChange={(e) => setCoordonnees({ ...coordonnees, [c.cle]: e.target.value })} /></label>
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </>
+  )
+}
+
 // Le haut de la fenêtre et son adresse privée : la même rue, le même code postal, la même ville (§89, D6 : le parcours
 // remplit les deux) -- proposés en recopie tant que la personne ne les a pas changés.
 const RECOPIES: Record<string, string[]> = {
@@ -172,17 +266,20 @@ export type ParcoursGuideProps = {
   /** Morceau 4 : « Ouvrir la fenêtre remplie » (l'App la remplit avec les réponses) */
   onOuvrirFenetre?: (vue: ParcoursVue) => void
   onOuvrirBien?: (appDossierId: string) => void
-  /** Morceau 3 : la question « le mandant » (choix existant / nouveau, cases protégées) */
-  rendreMandant?: (args: { vue: ParcoursVue; valeurs: Valeurs; setValeur: (nom: string, v: unknown) => void }) => ReactNode
+  /** Morceau 3 : chercher un mandant existant dans tout le réseau (la recherche de la fenêtre) */
+  chercherMandants?: (texte: string) => Promise<MandantTrouve[]>
 }
 
-export default function ParcoursGuide({ vue, catalogue, onVue, onOuvrirFenetre, onOuvrirBien, rendreMandant }: ParcoursGuideProps) {
+export default function ParcoursGuide({ vue, catalogue, onVue, onOuvrirFenetre, onOuvrirBien, chercherMandants }: ParcoursGuideProps) {
   const cat = useMemo(() => catalogue(vue.profil), [catalogue, vue.profil])
   const [ouverte, setOuverte] = useState<string | null>(null)  // une réponse déjà donnée que l'on modifie
   const q = ouverte ? vue.questions.find((x) => x.id === ouverte) ?? null : vue.question
   const [valeurs, setValeurs] = useState<Valeurs>(() => (q ? valeursDe(q, vue.reponses) : {}))
   const [envoi, setEnvoi] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
+  // ⛔ les coordonnées d'un nouveau mandant : un état À PART, jamais dans `valeurs` (qui part au serveur de l'assistant)
+  const [coordonnees, setCoordonnees] = useState<CoordonneesMandant>({})
+  const [deposees, setDeposees] = useState(false)
   const cleQuestion = `${vue.id}:${q?.id ?? 'fin'}:${vue.maj_le ?? ''}`
   useEffect(() => {
     setValeurs(q ? valeursDe(q, vue.reponses) : {})
@@ -206,6 +303,16 @@ export default function ParcoursGuide({ vue, catalogue, onVue, onOuvrirFenetre, 
     setErreur(null)
     try {
       let corps: Valeurs = {}
+      if (geste === 'repondre' && q.forme === 'mandant' && texte(valeurs.mandant_choix) === 'nouveau') {
+        // d'abord le coffre privé (si quelque chose est tapé) ; s'il refuse, rien ne part au serveur de l'assistant
+        if (Object.values(coordonnees).some((v) => String(v ?? '').trim())) {
+          await deposerCoordonneesMandant(vue.id, coordonnees)
+          setDeposees(true)
+          setCoordonnees({})
+        } else if (!deposees) {
+          throw new Error("Tape au moins le nom et l'e-mail du nouveau mandant, ou choisis « Plus tard ».")
+        }
+      }
       if (geste === 'repondre') {
         // seules les cases MONTRÉES partent (une case vidée part vide : le serveur la retire)
         for (const c of q.champs) {
@@ -240,7 +347,8 @@ export default function ParcoursGuide({ vue, catalogue, onVue, onOuvrirFenetre, 
       return <p className="asp-note">Les photos du bien se déposent dans la fenêtre de création, à son étape 2. Les joindre ici viendra plus tard.</p>
     }
     if (q.forme === 'mandant') {
-      return rendreMandant ? rendreMandant({ vue, valeurs, setValeur }) : <p className="asp-note">Le mandant se choisit dans la fenêtre.</p>
+      return <QuestionMandant valeurs={valeurs} setValeur={setValeur} coordonnees={coordonnees} setCoordonnees={setCoordonnees}
+        chercher={chercherMandants} dejaDeposees={deposees} />
     }
     const cases = q.champs.map((c) => cat.cases[c]).filter((c) => montree(c, valeurs))
     if (!cases.length) return <p className="asp-note">Rien à demander ici pour ce type de bien.</p>

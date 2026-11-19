@@ -490,7 +490,7 @@ export default function AccueilAssistant(props: {
   // et l'ouverture de la fenêtre remplie (morceau 4). Sans catalogue, aucun parcours ne s'affiche.
   catalogueParcours?: (profil: string | null) => CatalogueParcours
   estAdmin?: boolean
-  rendreMandantParcours?: ParcoursGuideProps['rendreMandant']
+  chercherMandantsParcours?: ParcoursGuideProps['chercherMandants']
   onOuvrirParcours?: (vue: ParcoursVue) => void
 }) {
   const [vue, setVue] = useState<'assistant' | 'tableau'>('assistant')
@@ -1140,7 +1140,7 @@ export default function AccueilAssistant(props: {
               <span className="asi-mk"><Sceau /></span>
               <div className="asi-ai-b">
                 <ParcoursGuide vue={p} catalogue={props.catalogueParcours!} onVue={(v) => setParcours((l) => l.map((x) => (x.id === v.id ? v : x)))}
-                  onOuvrirFenetre={props.onOuvrirParcours} onOuvrirBien={liens.bien} rendreMandant={props.rendreMandantParcours} />
+                  onOuvrirFenetre={props.onOuvrirParcours} onOuvrirBien={liens.bien} chercherMandants={props.chercherMandantsParcours} />
               </div>
             </div>
           )) : null}

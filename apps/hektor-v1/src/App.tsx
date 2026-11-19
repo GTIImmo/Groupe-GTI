@@ -28071,6 +28071,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               onOuvrirCreation={(ouverture, carteId) => void assistantOuvrirCreation(ouverture, carteId)}
               catalogueParcours={catalogueParcours}
               estAdmin={profile?.role === 'admin'}
+              chercherMandantsParcours={(recherche) => searchMandantContactOptions({ search: recherche, scope: null, limit: 8 })
+                .then((lignes) => lignes.map((l) => ({ id: l.hektor_contact_id, nom: l.display_name || [l.prenom, l.nom].filter(Boolean).join(' ') || `Contact ${l.hektor_contact_id}`,
+                  detail: [l.agence_nom, l.commercial_nom].filter(Boolean).join(' · ') })))}
               onOuvrirAvis={(ouverture) => void openEstimationEditor(
                 { app_dossier_id: ouverture.app_dossier_id, hektor_annonce_id: ouverture.hektor_annonce_id },
                 { champs: ouverture.champs ?? {}, postes: ouverture.postes ?? {} })}

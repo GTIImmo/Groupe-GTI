@@ -382,6 +382,35 @@ export async function noterParcoursCree(id: string, appDossierId: number | null)
   return r.parcours
 }
 
+// ── P2 morceau 3 (D7) : LES COORDONNÉES D'UN NOUVEAU MANDANT -- jamais par le serveur de l'assistant, jamais au modèle.
+// L'écran les dépose lui-même, avec le JETON de la personne, dans le schéma privé (P3 : assistant_prive, invisible de
+// l'API et de la descente) ; la fenêtre les PREND à son ouverture, et prendre, c'est effacer (règle du 19/11).
+export type CoordonneesMandant = Partial<Record<'civilite' | 'nom' | 'prenom' | 'email' | 'telephone' | 'adresse' | 'cp' | 'ville', string>>
+const coffreMaquette = new Map<string, CoordonneesMandant>()
+
+export async function deposerCoordonneesMandant(parcoursId: string, coordonnees: CoordonneesMandant): Promise<number> {
+  if (MAQUETTE) {
+    const propres = Object.fromEntries(Object.entries(coordonnees).filter(([, v]) => String(v ?? '').trim())) as CoordonneesMandant
+    if (Object.keys(propres).length) coffreMaquette.set(parcoursId, propres)
+    else coffreMaquette.delete(parcoursId)
+    return Object.keys(propres).length
+  }
+  const { data, error } = await supabase!.rpc('app_assistant_mandant_deposer', { p_parcours_id: parcoursId, p_coordonnees: coordonnees })
+  if (error) throw new RefusAssistant(0, `Les coordonnées n'ont pas été gardées : ${error.message}`)
+  return Number(data ?? 0)
+}
+
+export async function prendreCoordonneesMandant(parcoursId: string): Promise<CoordonneesMandant | null> {
+  if (MAQUETTE) {
+    const c = coffreMaquette.get(parcoursId) ?? null
+    coffreMaquette.delete(parcoursId)
+    return c
+  }
+  const { data, error } = await supabase!.rpc('app_assistant_mandant_prendre', { p_parcours_id: parcoursId })
+  if (error) throw new RefusAssistant(0, `Les coordonnées du mandant n'ont pas pu être reprises : ${error.message}`)
+  return (data as CoordonneesMandant | null) ?? null
+}
+
 // Mode maquette (sans base) : quatre questions pour dessiner chaque forme à l'écran (le vrai moteur en a 19, côté serveur)
 type FauxParcours = { id: string; conversation: string | null; genre: 'creation_estimation' | 'creation_annonce'; reponses: Record<string, unknown>; etats: Record<string, EtatQuestionParcours>; etat: 'en_cours' | 'termine'; app_dossier_id?: number | null }
 const fauxParcours: FauxParcours[] = []
