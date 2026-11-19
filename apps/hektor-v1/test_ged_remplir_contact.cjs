@@ -71,7 +71,9 @@ voir(P([doc('Avis.pdf', 'fiscal.taxe_fonciere', [v('personnes.nom', { valeur: 'E
 voir(P([{ nom: 'CNI.pdf', lecture: { ...cni('ESSAI 8A C1', 'Mandant', '1958-04-02', null).lecture, etat: 'incomplet' } }]).length === 0, 'TÉMOIN : une lecture incomplète ne remplit rien')
 
 console.log('④ les gardes de l\'écriture, dans le code')
-const app = fs.readFileSync(path.join(__dirname, 'src/App.tsx'), 'utf8')
+// les sources sont lues en LF : une copie extraite sous Windows (autocrlf) porte des CRLF et faisait tomber les témoins (19/11)
+const lireSource = (p) => fs.readFileSync(path.join(__dirname, p), 'utf8').replace(/\r\n/g, '\n')
+const app = lireSource('src/App.tsx')
 const debut = app.indexOf("if (p.geste === 'contact') {")
 const geste = debut >= 0 ? app.slice(debut, app.indexOf("if (p.geste === 'charge')", debut)) : ''
 voir(geste.length > 0, 'le geste « contact » est dans remplirDepuisDocument, avant le registre')
@@ -83,10 +85,10 @@ voir(/sendRgpdEmail: false/.test(geste), 'l\'e-mail RGPD est coupé expressémen
 const appel = (geste.match(/await editContactOptimistic\(\{.*/) || [''])[0]
 voir(appel.length > 0 && !/\b(address|postalCode|city|email|phone|phoneSecondary|firstName|civility|comments)\b/.test(appel), 'TÉMOIN : rien d\'autre n\'est envoyé (ni coordonnées, ni prénom, ni civilité)')
 voir(/garder\('remplie'/.test(geste) && geste.indexOf('editContactOptimistic') < geste.indexOf("garder('remplie'"), 'la décision est gardée APRÈS l\'écriture')
-const recu = fs.readFileSync(path.join(__dirname, 'src/RecuManque.tsx'), 'utf8')
+const recu = lireSource('src/RecuManque.tsx')
 voir(/etatCivil \? contactsDuBien/.test(recu) && !/propositionsContact\(/.test(recu) && /bilansPersonnes\(contactsEtatCivil, personnesCompletes, docsLus, new Date\(\)\)/.test(recu),
   'lot F : les cartes C1-C3 sont RETIRÉES au profit des fenêtres « Ce que dit… » ; une lecture ratée (null) -> aucune fenêtre contact')
-const ged = fs.readFileSync(path.join(__dirname, 'src/lib/ged.ts'), 'utf8')
+const ged = lireSource('src/lib/ged.ts')
 voir(/from\('app_contacts_current'\)/.test(ged) && /if \(error\) return null/.test(ged.slice(ged.indexOf('loadContactsEtatCivil'))), 'la relecture passe par la vue des contacts (même périmètre), et une erreur rend null')
 voir(/loadContactsEtatCivil\(idsContacts \? idsContacts\.split\(','\) : \[\], 'hektor'\)/.test(recu), 'l\'écran lit par le numéro HEKTOR des contacts du bien (le pont)')
 // lot G' (19/11) : le conjoint d'une première SEULE reliée au bien, lu par le lien de couple
@@ -163,9 +165,9 @@ voir(ecrG.indexOf('await editConjointOptimistic(') > 0 && ecrG.indexOf('await ed
   && /if \(!r\?\.ok\)/.test(ecrG) && /conjoint_refuse/.test(ecrG), 'chez NOUS d\'abord (la fonction du conjoint) ; si elle refuse, RIEN ne part chez Hektor')
 const appelG = (ecrG.match(/await editContactOptimistic\(\{ contactId: principaleId.*/) || [''])[0]
 voir(appelG.length > 0 && !/\b(address|postalCode|city|email|phone|firstName|civility|comments|spouseFirstName|spouseLastName)\b/.test(appelG), 'TÉMOIN : chez Hektor, la principale n\'envoie QUE la naissance du conjoint (son nom actuel joint)')
-const apiSrc = fs.readFileSync(path.join(__dirname, 'src/lib/api.ts'), 'utf8')
+const apiSrc = lireSource('src/lib/api.ts')
 voir(/spouse_birth_date: cleanOptionalText\(contact\.spouseBirthDate\)/.test(apiSrc) && /champs\.spouse_birth_date = input\.conjoint\.birthDate/.test(apiSrc), 'le geste porte spouse_birth_date / spouse_birth_place (worker, fonction du conjoint)')
-voir(/hektor_couple_contact_id'\)/.test(fs.readFileSync(path.join(__dirname, 'src/lib/ged.ts'), 'utf8')) && /conjointDe: r\.nature_fiche === 'conjoint' && r\.couple_role === 'conjoint'/.test(recu), 'l\'état civil relu porte le lien de couple ; seul un conjoint « nature ET rôle » se propose')
+voir(/hektor_couple_contact_id'\)/.test(lireSource('src/lib/ged.ts')) && /conjointDe: r\.nature_fiche === 'conjoint' && r\.couple_role === 'conjoint'/.test(recu), 'l\'état civil relu porte le lien de couple ; seul un conjoint « nature ET rôle » se propose')
 
 // ⑤ (16/11) LES DEUX NUMÉROS, trouvés par l'épreuve réelle : l'écran donne le numéro HEKTOR (605947), notre clé est le
 // nôtre (20000009) ; 0 égaux sur 94 956. La lecture est rejouée contre une fausse base qui garde les deux colonnes.
