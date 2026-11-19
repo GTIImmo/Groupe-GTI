@@ -44237,6 +44237,17 @@ function HektorContactIdentityForm(props: {
   const cnewScrollRef = useRef<HTMLDivElement | null>(null)
   const [duplicateCandidates, setDuplicateCandidates] = useState<AppContact[]>([])
   const [duplicatesAccepted, setDuplicatesAccepted] = useState(false)
+  // 19/11 : le bouton du bas change de rôle sous le curseur (« Étape suivante » -> « Créer le contact », « Créer » ->
+  // « Continuer malgré doublon ») : le 2e clic d'un double-clic créait le contact sans montrer l'étape ni les doublons.
+  // Il reste inactif une seconde après chaque changement (même parade que « Ce que dit… », BilanCompromis.tsx).
+  const [boutonVientDeChanger, setBoutonVientDeChanger] = useState(false)
+  const premierRenduBouton = useRef(true)
+  useEffect(() => {
+    if (premierRenduBouton.current) { premierRenduBouton.current = false; return }
+    setBoutonVientDeChanger(true)
+    const t = window.setTimeout(() => setBoutonVientDeChanger(false), 1000)
+    return () => window.clearTimeout(t)
+  }, [contactStep, duplicatesAccepted])
   const [selectedHektorUserId, setSelectedHektorUserId] = useState(defaultHektorOption?.idUser ?? props.hektorUserId ?? '')
   const selectedHektorUser = useMemo(() => {
     return findContactHektorOption(availableHektorNegotiators, { idUser: selectedHektorUserId })
@@ -44985,7 +44996,7 @@ function HektorContactIdentityForm(props: {
             ) : props.onCancel ? (
               <button className="btn-neutral" type="button" onClick={props.onCancel} disabled={pending}>Annuler</button>
             ) : null}
-            <button className="btn-brand" type="submit" disabled={pending}>
+            <button className="btn-brand" type="submit" disabled={pending || boutonVientDeChanger}>
               <span>{cnewSubmitLabel}</span>
               {(contactStep === 'identity' && cnewHasStep2) ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M5 12h14M13 6l6 6-6 6" /></svg> : null}
             </button>
