@@ -1,0 +1,10481 @@
+{
+ "note": "PRODUIT par apps/hektor-v1/parcours_traduction.cjs à partir d'App.tsx : ne pas modifier à la main.",
+ "miroir": {
+  "surfappart": "surface",
+  "surfterrain": "landSurface",
+  "nbpieces": "roomCount",
+  "NB_CHAMBRES": "bedroomCount",
+  "NB_NIVEAUX": "levelCount",
+  "NB_SDB": "bathroomCount",
+  "NB_SE": "showerRoomCount",
+  "NB_WC": "wcCount",
+  "SURF_CARREZ": "carrezSurface",
+  "SURF_SEJOUR": "livingSurface",
+  "vuee": "view",
+  "ANNEE_CONS": "constructionYear",
+  "dpe_cons": "dpeValue",
+  "dpe_ges": "gesValue",
+  "GARAGE_BOX": "garageCount",
+  "SURFACE_GARAGE": "garageSurface",
+  "NB_PARK_INT": "parkingInsideCount",
+  "NB_PARK_EXT": "parkingOutsideCount",
+  "NB_TERRASSE": "terraceCount",
+  "copropriete_nb_lot": "coproLots",
+  "copropriete_quote_part": "coproQuotePart",
+  "montant_fonds_travaux": "coproWorksFund",
+  "CHARGES": "coproCharges",
+  "PRIXNETVENDEUR": "netSellerPrice",
+  "prix": "price"
+ },
+ "directes": {
+  "title": "titre",
+  "propertyType": "type",
+  "address": "adresse_haut",
+  "postalCode": "cp",
+  "city": "ville",
+  "note": "note",
+  "description": "corps",
+  "garden": "JARDIN-",
+  "pool": "PISCINE-",
+  "works": "TRAVAUX",
+  "chargesDetail": "CHARGES_DETAIL",
+  "exposure": "EXPOSITION",
+  "kitchen": "CUISINE",
+  "interiorState": "etat_interieur",
+  "exteriorState": "etat_exterieur"
+ },
+ "carte": [
+  {
+   "scan": "immeuble",
+   "fenetre": "immeuble",
+   "sorte": "text"
+  },
+  {
+   "scan": "transport",
+   "fenetre": "TRANSPORT",
+   "sorte": "text"
+  },
+  {
+   "scan": "proximity",
+   "fenetre": "PROXIMITE",
+   "sorte": "text"
+  },
+  {
+   "scan": "environment",
+   "fenetre": "ENVIRONNEMENT",
+   "sorte": "text"
+  },
+  {
+   "scan": "kitchenEquipment",
+   "fenetre": "CUISINE_EQUIPEMENT",
+   "sorte": "enum",
+   "options": [
+    {
+     "value": "",
+     "label": "Non défini"
+    },
+    {
+     "value": "SEMI-EQUIPEE",
+     "label": "Semi équipée"
+    },
+    {
+     "value": "EQUIPEE",
+     "label": "Équipée"
+    }
+   ]
+  },
+  {
+   "scan": "terrace",
+   "fenetre": "TERRASSE",
+   "sorte": "ouinon"
+  },
+  {
+   "scan": "terraceSurface",
+   "fenetre": "SURFACE_TERRASSE",
+   "sorte": "num"
+  },
+  {
+   "scan": "balcony",
+   "fenetre": "BALCON",
+   "sorte": "ouinon"
+  },
+  {
+   "scan": "balconyCount",
+   "fenetre": "NB_BALCON",
+   "sorte": "num"
+  },
+  {
+   "scan": "balconySurface",
+   "fenetre": "SURFACE_BALCON",
+   "sorte": "num"
+  },
+  {
+   "scan": "cellar",
+   "fenetre": "CAVE",
+   "sorte": "ouinon"
+  },
+  {
+   "scan": "cellarSurface",
+   "fenetre": "SURFACE_CAVE",
+   "sorte": "num"
+  },
+  {
+   "scan": "floor",
+   "fenetre": "ETAGE",
+   "sorte": "num"
+  },
+  {
+   "scan": "topFloor",
+   "fenetre": "DERNIER_ETAGE",
+   "sorte": "ouinon"
+  },
+  {
+   "scan": "floorsCount",
+   "fenetre": "NB_ETAGES",
+   "sorte": "num"
+  },
+  {
+   "scan": "partyWalls",
+   "fenetre": "MURS_MITOYENS",
+   "sorte": "enum",
+   "options": [
+    {
+     "value": "",
+     "label": "Non précisé"
+    },
+    {
+     "value": "0",
+     "label": "Indépendant"
+    },
+    {
+     "value": "1",
+     "label": "1 côté"
+    },
+    {
+     "value": "2",
+     "label": "2 côtés"
+    },
+    {
+     "value": "3",
+     "label": "3 côtés"
+    },
+    {
+     "value": "4",
+     "label": "4 côtés"
+    }
+   ]
+  },
+  {
+   "scan": "residence",
+   "fenetre": "RESIDENCE",
+   "sorte": "enum",
+   "options": [
+    {
+     "value": "",
+     "label": "Non précisé"
+    },
+    {
+     "value": "OUVERT",
+     "label": "Ouverte"
+    },
+    {
+     "value": "FERME",
+     "label": "Fermée"
+    },
+    {
+     "value": "SECURISE",
+     "label": "Securisée"
+    }
+   ]
+  },
+  {
+   "scan": "residenceType",
+   "fenetre": "TYPE_RESIDENCE",
+   "sorte": "enum",
+   "options": [
+    {
+     "value": "",
+     "label": "Non précisé"
+    },
+    {
+     "value": "ANCIEN",
+     "label": "Ancien"
+    },
+    {
+     "value": "NEUF",
+     "label": "Neuf"
+    },
+    {
+     "value": "STANDING",
+     "label": "Standing"
+    }
+   ]
+  },
+  {
+   "scan": "heatingFormat",
+   "fenetre": "formatChauff",
+   "sorte": "enum",
+   "options": [
+    {
+     "value": "4",
+     "label": "Non précisé"
+    },
+    {
+     "value": "3",
+     "label": "Central"
+    },
+    {
+     "value": "1",
+     "label": "Collectif"
+    },
+    {
+     "value": "2",
+     "label": "Individuel"
+    },
+    {
+     "value": "5",
+     "label": "Urbain"
+    }
+   ]
+  },
+  {
+   "scan": "heatingType",
+   "fenetre": "typeChauff",
+   "sorte": "enum",
+   "options": [
+    {
+     "value": "4",
+     "label": "Air"
+    },
+    {
+     "value": "10",
+     "label": "Air/Eau"
+    },
+    {
+     "value": "9",
+     "label": "Non précisé"
+    },
+    {
+     "value": "1",
+     "label": "Chaudière"
+    },
+    {
+     "value": "8",
+     "label": "Cheminée"
+    },
+    {
+     "value": "5",
+     "label": "Convecteur"
+    },
+    {
+     "value": "7",
+     "label": "Poêle"
+    },
+    {
+     "value": "2",
+     "label": "Radiateur"
+    },
+    {
+     "value": "6",
+     "label": "Rayonnant"
+    },
+    {
+     "value": "3",
+     "label": "Sol"
+    }
+   ]
+  },
+  {
+   "scan": "heatingEnergy",
+   "fenetre": "energieChauff",
+   "sorte": "enum",
+   "options": [
+    {
+     "value": "15",
+     "label": "Aérothermie"
+    },
+    {
+     "value": "14",
+     "label": "Non précisé"
+    },
+    {
+     "value": "6",
+     "label": "Bois"
+    },
+    {
+     "value": "5",
+     "label": "Charbon"
+    },
+    {
+     "value": "11",
+     "label": "Climatisation"
+    },
+    {
+     "value": "3",
+     "label": "Électrique"
+    },
+    {
+     "value": "4",
+     "label": "Fioul"
+    },
+    {
+     "value": "2",
+     "label": "Gaz"
+    },
+    {
+     "value": "1",
+     "label": "Gaz de ville"
+    },
+    {
+     "value": "9",
+     "label": "Géothermie"
+    },
+    {
+     "value": "7",
+     "label": "Granules"
+    },
+    {
+     "value": "12",
+     "label": "Mixte"
+    },
+    {
+     "value": "10",
+     "label": "Pompe à chaleur"
+    },
+    {
+     "value": "13",
+     "label": "Sans"
+    },
+    {
+     "value": "8",
+     "label": "Solaire"
+    }
+   ]
+  },
+  {
+   "scan": "water",
+   "fenetre": "EAU",
+   "sorte": "enum",
+   "options": [
+    {
+     "value": "",
+     "label": "Non précisé"
+    },
+    {
+     "value": "SANS",
+     "label": "Sans"
+    },
+    {
+     "value": "INDIVIDUEL",
+     "label": "Individuel"
+    },
+    {
+     "value": "COLLECTIF",
+     "label": "Collectif"
+    },
+    {
+     "value": "PUIT",
+     "label": "Puits"
+    }
+   ]
+  },
+  {
+   "scan": "sanitation",
+   "fenetre": "ASSAINISSEMENT",
+   "sorte": "enum",
+   "options": [
+    {
+     "value": "",
+     "label": "Non précisé"
+    },
+    {
+     "value": "SANS",
+     "label": "Sans"
+    },
+    {
+     "value": "TOUT A L'EGOUT",
+     "label": "Tout à l'égout"
+    },
+    {
+     "value": "FOSSE SEPTIQUE",
+     "label": "Fosse septique"
+    },
+    {
+     "value": "FOSSE TOUTES EAUX",
+     "label": "Fosse toutes eaux"
+    },
+    {
+     "value": "MICRO STATION",
+     "label": "Micro-station"
+    }
+   ]
+  },
+  {
+   "scan": "waterDistribution",
+   "fenetre": "DISTRIBUTION_EAU",
+   "sorte": "enum",
+   "options": [
+    {
+     "value": "",
+     "label": "Non défini"
+    },
+    {
+     "value": "COLLECTIF",
+     "label": "Collective"
+    },
+    {
+     "value": "INDIVIDUEL",
+     "label": "Individuelle"
+    },
+    {
+     "value": "CENTRAL",
+     "label": "Centrale"
+    }
+   ]
+  },
+  {
+   "scan": "waterEnergy",
+   "fenetre": "ENERGIE_EAU",
+   "sorte": "enum",
+   "options": [
+    {
+     "value": "",
+     "label": "Non défini"
+    },
+    {
+     "value": "GAZ",
+     "label": "Gaz"
+    },
+    {
+     "value": "BALLON ELECTRIQUE",
+     "label": "Ballon électrique"
+    },
+    {
+     "value": "FIOUL",
+     "label": "Fioul"
+    },
+    {
+     "value": "SOLAIRE",
+     "label": "Solaire"
+    },
+    {
+     "value": "GEOTHERMIE",
+     "label": "Géothermie"
+    },
+    {
+     "value": "MIXTE",
+     "label": "Mixte"
+    },
+    {
+     "value": "SANS",
+     "label": "Sans"
+    },
+    {
+     "value": "AUTRE",
+     "label": "Autre"
+    },
+    {
+     "value": "AEROTHERMIE",
+     "label": "Aérothermie"
+    },
+    {
+     "value": "THERMODYNAMIQUE",
+     "label": "Thermodynamique"
+    },
+    {
+     "value": "POMPE A CHALEUR",
+     "label": "Pompe à chaleur"
+    }
+   ]
+  },
+  {
+   "scan": "elevator",
+   "fenetre": "ASCENSEUR",
+   "sorte": "ouinon"
+  },
+  {
+   "scan": "disabledAccess",
+   "fenetre": "ACCES_HANDI",
+   "sorte": "ouinon"
+  },
+  {
+   "scan": "airConditioning",
+   "fenetre": "climatisation",
+   "sorte": "ouinon"
+  },
+  {
+   "scan": "fireplace",
+   "fenetre": "cheminee",
+   "sorte": "ouinon"
+  },
+  {
+   "scan": "electricShutters",
+   "fenetre": "volets_elctriques",
+   "sorte": "ouinon"
+  },
+  {
+   "scan": "doubleGlazing",
+   "fenetre": "double_vitrage",
+   "sorte": "ouinon"
+  },
+  {
+   "scan": "tripleGlazing",
+   "fenetre": "triple_vitrage",
+   "sorte": "ouinon"
+  },
+  {
+   "scan": "fiber",
+   "fenetre": "cable",
+   "sorte": "ouinon"
+  },
+  {
+   "scan": "armoredDoor",
+   "fenetre": "porte_blindee",
+   "sorte": "ouinon"
+  },
+  {
+   "scan": "intercom",
+   "fenetre": "interphone",
+   "sorte": "ouinon"
+  },
+  {
+   "scan": "videophone",
+   "fenetre": "visiophone",
+   "sorte": "ouinon"
+  },
+  {
+   "scan": "alarm",
+   "fenetre": "alarme",
+   "sorte": "ouinon"
+  },
+  {
+   "scan": "digicode",
+   "fenetre": "digicode",
+   "sorte": "ouinon"
+  },
+  {
+   "scan": "smokeDetector",
+   "fenetre": "detecteur_fumee",
+   "sorte": "ouinon"
+  },
+  {
+   "scan": "caretaker",
+   "fenetre": "gardien",
+   "sorte": "ouinon"
+  },
+  {
+   "scan": "dpeDate",
+   "fenetre": "dpe_date",
+   "sorte": "text"
+  },
+  {
+   "scan": "finalEnergy",
+   "fenetre": "valeurEnergieFinale",
+   "sorte": "num"
+  },
+  {
+   "scan": "energyCostMin",
+   "fenetre": "dpe_couts_min",
+   "sorte": "num"
+  },
+  {
+   "scan": "energyCostMax",
+   "fenetre": "dpe_couts_max",
+   "sorte": "num"
+  },
+  {
+   "scan": "coproperty",
+   "fenetre": "copropriete",
+   "sorte": "ouinon"
+  },
+  {
+   "scan": "coproLot",
+   "fenetre": "copropriete_lot",
+   "sorte": "text"
+  },
+  {
+   "scan": "safeguardPlan",
+   "fenetre": "copropriete_plan_sauvegarde",
+   "sorte": "ouinon"
+  },
+  {
+   "scan": "available",
+   "fenetre": "DISPO",
+   "sorte": "ouinon"
+  },
+  {
+   "scan": "releaseDate",
+   "fenetre": "DATE_LIBER",
+   "sorte": "text"
+  },
+  {
+   "scan": "availabilityDate",
+   "fenetre": "DATE_DISPO",
+   "sorte": "text"
+  },
+  {
+   "scan": "keys",
+   "fenetre": "CLES",
+   "sorte": "text"
+  },
+  {
+   "scan": "estimationAmount",
+   "fenetre": "ESTIMATION_MONTANT",
+   "sorte": "num"
+  },
+  {
+   "scan": "estimationDate",
+   "fenetre": "ESTIMATION_DATE",
+   "sorte": "text"
+  },
+  {
+   "scan": "propertyTax",
+   "fenetre": "TAXE_FONCIERE",
+   "sorte": "num"
+  },
+  {
+   "scan": "housingTax",
+   "fenetre": "TAXE_HABITATION",
+   "sorte": "num"
+  },
+  {
+   "scan": "landConstructible",
+   "fenetre": "terrain_constructible",
+   "sorte": "ouinon"
+  },
+  {
+   "scan": "constructibleSurface",
+   "fenetre": "terrain_surface_constructible",
+   "sorte": "num"
+  },
+  {
+   "scan": "shon",
+   "fenetre": "SHON",
+   "sorte": "num"
+  },
+  {
+   "scan": "landServiced",
+   "fenetre": "terrain_viabilise",
+   "sorte": "ouinon"
+  },
+  {
+   "scan": "waterConnection",
+   "fenetre": "terrain_raccordement_eau",
+   "sorte": "ouinon"
+  },
+  {
+   "scan": "gasConnection",
+   "fenetre": "terrain_raccordement_gaz",
+   "sorte": "ouinon"
+  },
+  {
+   "scan": "electricityConnection",
+   "fenetre": "terrain_raccordement_electricite",
+   "sorte": "ouinon"
+  },
+  {
+   "scan": "phoneConnection",
+   "fenetre": "terrain_raccordement_telephone",
+   "sorte": "ouinon"
+  },
+  {
+   "scan": "landWooded",
+   "fenetre": "terrain_arbore",
+   "sorte": "ouinon"
+  },
+  {
+   "scan": "landPoolable",
+   "fenetre": "terrain_piscinable",
+   "sorte": "ouinon"
+  },
+  {
+   "scan": "gardenSurface",
+   "fenetre": "SURFACE_JARDIN",
+   "sorte": "num"
+  },
+  {
+   "scan": "poolType",
+   "fenetre": "PISCINE_TYPE",
+   "sorte": "enum",
+   "options": [
+    {
+     "value": "",
+     "label": "Non precise"
+    },
+    {
+     "value": "PRIVATIVE",
+     "label": "Privative"
+    },
+    {
+     "value": "COLLECTIVE SURVEILLEE",
+     "label": "Collective surveillee"
+    },
+    {
+     "value": "COLLECTIVE",
+     "label": "Collective"
+    }
+   ]
+  },
+  {
+   "scan": "poolNature",
+   "fenetre": "PISCINE_NATURE",
+   "sorte": "enum",
+   "options": [
+    {
+     "value": "",
+     "label": "Non precise"
+    },
+    {
+     "value": "COQUE",
+     "label": "Coque"
+    },
+    {
+     "value": "TRADITIONNELLE",
+     "label": "Traditionnelle"
+    },
+    {
+     "value": "HORS-SOL",
+     "label": "Hors-sol"
+    },
+    {
+     "value": "SEMI-ENTERREE",
+     "label": "Semi-enterree"
+    }
+   ]
+  },
+  {
+   "scan": "poolDetails",
+   "fenetre": "PISCINE_DETAILS",
+   "sorte": "text"
+  },
+  {
+   "scan": "poolDimensions",
+   "fenetre": "PISCINE_DIMENSIONS",
+   "sorte": "text"
+  },
+  {
+   "scan": "poolTreatment",
+   "fenetre": "PISCINE_TRAITEMENT",
+   "sorte": "text"
+  },
+  {
+   "scan": "poolHouse",
+   "fenetre": "POOL_HOUSE",
+   "sorte": "ouinon"
+  },
+  {
+   "scan": "poolHeated",
+   "fenetre": "PISCINE_CHAUFFEE",
+   "sorte": "ouinon"
+  },
+  {
+   "scan": "poolCovered",
+   "fenetre": "PISCINE_COUVERTE",
+   "sorte": "ouinon"
+  },
+  {
+   "scan": "coproSyndicateStatus",
+   "fenetre": "copropriete_statut_syndicat",
+   "sorte": "enum",
+   "options": [
+    {
+     "value": "",
+     "label": "Non precise"
+    },
+    {
+     "value": "ALERTE",
+     "label": "Procedure d'alerte"
+    },
+    {
+     "value": "REDRESSEMENT",
+     "label": "Procedure de redressement"
+    },
+    {
+     "value": "PROCEDURE_EN_COURS",
+     "label": "Procedure en cours"
+    },
+    {
+     "value": "PAS_DE_PROCEDURE",
+     "label": "Pas de procedure"
+    }
+   ]
+  },
+  {
+   "scan": "tenYearWarranty",
+   "fenetre": "garantie_decennale",
+   "sorte": "ouinon"
+  },
+  {
+   "scan": "damageInsurance",
+   "fenetre": "assurance_dommages_ouvrage",
+   "sorte": "ouinon"
+  },
+  {
+   "scan": "conformityCertificate",
+   "fenetre": "certificat_conformite",
+   "sorte": "ouinon"
+  },
+  {
+   "scan": "completionDeclaration",
+   "fenetre": "declaration_achevement_travaux",
+   "sorte": "ouinon"
+  }
+ ],
+ "listes": {
+  "exposition": [
+   {
+    "value": "",
+    "label": "Non défini"
+   },
+   {
+    "value": "NORD",
+    "label": "Nord"
+   },
+   {
+    "value": "NORD-EST",
+    "label": "Nord-Est"
+   },
+   {
+    "value": "EST",
+    "label": "Est"
+   },
+   {
+    "value": "SUD-EST",
+    "label": "Sud-Est"
+   },
+   {
+    "value": "SUD",
+    "label": "Sud"
+   },
+   {
+    "value": "SUD-OUEST",
+    "label": "Sud-Ouest"
+   },
+   {
+    "value": "OUEST",
+    "label": "Ouest"
+   },
+   {
+    "value": "NORD-OUEST",
+    "label": "Nord-Ouest"
+   },
+   {
+    "value": "NORD-SUD",
+    "label": "Nord-Sud"
+   },
+   {
+    "value": "EST-OUEST",
+    "label": "Est-Ouest"
+   }
+  ],
+  "cuisine": [
+   {
+    "value": "",
+    "label": "Non défini"
+   },
+   {
+    "value": "AMERICAINE",
+    "label": "Américaine"
+   },
+   {
+    "value": "KITCHENETTE",
+    "label": "Kitchenette"
+   },
+   {
+    "value": "SEPAREE",
+    "label": "Séparée"
+   },
+   {
+    "value": "SANS",
+    "label": "Sans"
+   }
+  ],
+  "etat_interieur": [
+   {
+    "value": "",
+    "label": "Non précisé"
+   },
+   {
+    "value": "1",
+    "label": "Gros travaux à prévoir"
+   },
+   {
+    "value": "2",
+    "label": "Travaux à prévoir"
+   },
+   {
+    "value": "3",
+    "label": "A rafraichir"
+   },
+   {
+    "value": "4",
+    "label": "Habitable (m²)"
+   },
+   {
+    "value": "5",
+    "label": "Etat moyen"
+   },
+   {
+    "value": "6",
+    "label": "Bon état"
+   },
+   {
+    "value": "7",
+    "label": "Excellent état"
+   },
+   {
+    "value": "8",
+    "label": "Neuf"
+   },
+   {
+    "value": "9",
+    "label": "Refait à neuf"
+   }
+  ],
+  "etat_exterieur": [
+   {
+    "value": "",
+    "label": "Non précisé"
+   },
+   {
+    "value": "2",
+    "label": "Travaux à prévoir"
+   },
+   {
+    "value": "3",
+    "label": "A rafraichir"
+   },
+   {
+    "value": "5",
+    "label": "Etat moyen"
+   },
+   {
+    "value": "6",
+    "label": "Bon état"
+   },
+   {
+    "value": "7",
+    "label": "Excellent état"
+   }
+  ]
+ },
+ "expo_lettres": {
+  "N": "NORD",
+  "S": "SUD",
+  "E": "EST",
+  "O": "OUEST",
+  "NE": "NORD-EST",
+  "NO": "NORD-OUEST",
+  "SE": "SUD-EST",
+  "SO": "SUD-OUEST"
+ },
+ "types_bien": [
+  {
+   "id": "11",
+   "label": "Bastide"
+  },
+  {
+   "id": "28",
+   "label": "Chateau"
+  },
+  {
+   "id": "30",
+   "label": "Ferme"
+  },
+  {
+   "id": "1",
+   "label": "Maison"
+  },
+  {
+   "id": "39",
+   "label": "Maison de village"
+  },
+  {
+   "id": "10",
+   "label": "Mas"
+  },
+  {
+   "id": "22",
+   "label": "Propriete"
+  },
+  {
+   "id": "27",
+   "label": "Rez de villa"
+  },
+  {
+   "id": "49",
+   "label": "Viager maison"
+  },
+  {
+   "id": "25",
+   "label": "Villa"
+  },
+  {
+   "id": "2",
+   "label": "Appartement"
+  },
+  {
+   "id": "18",
+   "label": "Duplex"
+  },
+  {
+   "id": "31",
+   "label": "Loft"
+  },
+  {
+   "id": "26",
+   "label": "Rez de jardin"
+  },
+  {
+   "id": "4",
+   "label": "Studio"
+  },
+  {
+   "id": "41",
+   "label": "Triplex"
+  },
+  {
+   "id": "50",
+   "label": "Viager appartement"
+  },
+  {
+   "id": "5",
+   "label": "Terrain"
+  },
+  {
+   "id": "44",
+   "label": "Terrain agricole"
+  },
+  {
+   "id": "45",
+   "label": "Terrain de loisir"
+  },
+  {
+   "id": "43",
+   "label": "Terrain a batir"
+  },
+  {
+   "id": "20",
+   "label": "Autre"
+  },
+  {
+   "id": "24",
+   "label": "Cabanon"
+  },
+  {
+   "id": "29",
+   "label": "Cave"
+  },
+  {
+   "id": "17",
+   "label": "Chalet"
+  },
+  {
+   "id": "15",
+   "label": "Garage"
+  },
+  {
+   "id": "21",
+   "label": "Immeuble"
+  },
+  {
+   "id": "16",
+   "label": "Parking"
+  },
+  {
+   "id": "7",
+   "label": "Viager"
+  }
+ ],
+ "types_bien_anciens": [
+  {
+   "id": "15",
+   "labels": [
+    "parking garage",
+    "garage parking"
+   ]
+  },
+  {
+   "id": "21",
+   "labels": [
+    "immeuble"
+   ]
+  },
+  {
+   "id": "2",
+   "labels": [
+    "appartement meuble"
+   ]
+  },
+  {
+   "id": "1",
+   "labels": [
+    "maison meublee"
+   ]
+  }
+ ],
+ "types_bien_synonymes": [
+  {
+   "id": "1",
+   "keys": [
+    "pavillon",
+    "longere",
+    "gite",
+    "chaumiere",
+    "echoppe",
+    "borderie",
+    "closerie",
+    "cottage",
+    "plain pied"
+   ]
+  },
+  {
+   "id": "30",
+   "keys": [
+    "fermette",
+    "bergerie",
+    "metairie",
+    "grange",
+    "ecurie",
+    "ecuries",
+    "manege"
+   ]
+  },
+  {
+   "id": "22",
+   "keys": [
+    "domaine",
+    "manoir",
+    "demeure",
+    "gentilhommiere",
+    "chartreuse",
+    "hotel particulier",
+    "haras"
+   ]
+  },
+  {
+   "id": "11",
+   "keys": [
+    "bastidon"
+   ]
+  },
+  {
+   "id": "28",
+   "keys": [
+    "castel"
+   ]
+  },
+  {
+   "id": "10",
+   "keys": [
+    "mas provencal"
+   ]
+  },
+  {
+   "id": "2",
+   "keys": [
+    "appart",
+    "t1",
+    "t2",
+    "t3",
+    "t4",
+    "t5",
+    "t6",
+    "f1",
+    "f2",
+    "f3",
+    "f4",
+    "f5",
+    "f6",
+    "deux pieces",
+    "trois pieces",
+    "quatre pieces",
+    "cinq pieces",
+    "six pieces",
+    "rez de chaussee"
+   ]
+  },
+  {
+   "id": "4",
+   "keys": [
+    "studette"
+   ]
+  },
+  {
+   "id": "31",
+   "keys": [
+    "atelier"
+   ]
+  },
+  {
+   "id": "5",
+   "keys": [
+    "parcelle"
+   ]
+  },
+  {
+   "id": "16",
+   "keys": [
+    "place de parking",
+    "emplacement",
+    "stationnement"
+   ]
+  },
+  {
+   "id": "15",
+   "keys": [
+    "box"
+   ]
+  }
+ ],
+ "types_piece": [
+  {
+   "value": "1",
+   "label": "Chambre"
+  },
+  {
+   "value": "13",
+   "label": "Cuisine"
+  },
+  {
+   "value": "2",
+   "label": "Salon/sejour"
+  },
+  {
+   "value": "9",
+   "label": "Salle de bains"
+  },
+  {
+   "value": "15",
+   "label": "Bureau"
+  },
+  {
+   "value": "16",
+   "label": "WC"
+  },
+  {
+   "value": "26",
+   "label": "Entree"
+  },
+  {
+   "value": "14",
+   "label": "Piece a vivre"
+  },
+  {
+   "value": "21",
+   "label": "Dressing"
+  },
+  {
+   "value": "11",
+   "label": "Buanderie"
+  },
+  {
+   "value": "12",
+   "label": "Cave"
+  },
+  {
+   "value": "5",
+   "label": "Garage"
+  },
+  {
+   "value": "8",
+   "label": "Parking"
+  },
+  {
+   "value": "18",
+   "label": "Balcon"
+  },
+  {
+   "value": "17",
+   "label": "Terrasse"
+  },
+  {
+   "value": "4",
+   "label": "Jardin"
+  },
+  {
+   "value": "32",
+   "label": "Piscine"
+  },
+  {
+   "value": "20",
+   "label": "Veranda"
+  },
+  {
+   "value": "25",
+   "label": "Accueil"
+  },
+  {
+   "value": "6",
+   "label": "Annexe"
+  },
+  {
+   "value": "59",
+   "label": "Chambre de bonne"
+  },
+  {
+   "value": "60",
+   "label": "Chambre de service"
+  },
+  {
+   "value": "27",
+   "label": "Chambre froide"
+  },
+  {
+   "value": "28",
+   "label": "Depot"
+  },
+  {
+   "value": "29",
+   "label": "Entrepot"
+  },
+  {
+   "value": "30",
+   "label": "Espace bien-etre"
+  },
+  {
+   "value": "31",
+   "label": "Mezzanine"
+  },
+  {
+   "value": "24",
+   "label": "Reserve"
+  },
+  {
+   "value": "23",
+   "label": "Salle"
+  },
+  {
+   "value": "33",
+   "label": "Suite"
+  },
+  {
+   "value": "3",
+   "label": "Terrain"
+  },
+  {
+   "value": "34",
+   "label": "Vestiaire"
+  }
+ ],
+ "exemples": {
+  "normaliser": [
+   [
+    "",
+    ""
+   ],
+   [
+    "zzz",
+    "zzz"
+   ],
+   [
+    "oui",
+    "oui"
+   ],
+   [
+    "non",
+    "non"
+   ],
+   [
+    "avec",
+    "avec"
+   ],
+   [
+    "sans",
+    "sans"
+   ],
+   [
+    "1",
+    "1"
+   ],
+   [
+    "0",
+    "0"
+   ],
+   [
+    "o",
+    "o"
+   ],
+   [
+    "n",
+    "n"
+   ],
+   [
+    "peut-être",
+    "peut-etre"
+   ],
+   [
+    "Oui, refait",
+    "oui, refait"
+   ],
+   [
+    "NON",
+    "non"
+   ],
+   [
+    "  ",
+    ""
+   ],
+   [
+    "grande maison",
+    "grande maison"
+   ],
+   [
+    "villa contemporaine",
+    "villa contemporaine"
+   ],
+   [
+    "Appartement T3",
+    "appartement t3"
+   ],
+   [
+    "corps de ferme",
+    "corps de ferme"
+   ],
+   [
+    "beau terrain",
+    "beau terrain"
+   ],
+   [
+    "maison de ville",
+    "maison de ville"
+   ],
+   [
+    "Studio meublé",
+    "studio meuble"
+   ],
+   [
+    "box fermé",
+    "box ferme"
+   ],
+   [
+    "Immeuble de rapport",
+    "immeuble de rapport"
+   ],
+   [
+    "pavillon des années 70",
+    "pavillon des annees 70"
+   ],
+   [
+    "Local commercial",
+    "local commercial"
+   ],
+   [
+    "T2 lumineux",
+    "t2 lumineux"
+   ],
+   [
+    "maison meublée",
+    "maison meublee"
+   ],
+   [
+    "parking garage",
+    "parking garage"
+   ],
+   [
+    "rez de chaussée",
+    "rez de chaussee"
+   ],
+   [
+    "place de parking",
+    "place de parking"
+   ],
+   [
+    "un mas provençal",
+    "un mas provencal"
+   ],
+   [
+    "longère",
+    "longere"
+   ],
+   [
+    "F4",
+    "f4"
+   ],
+   [
+    "séjour",
+    "sejour"
+   ],
+   [
+    "Salle d'eau",
+    "salle d'eau"
+   ],
+   [
+    "cuisine équipée",
+    "cuisine equipee"
+   ],
+   [
+    "chambre parentale",
+    "chambre parentale"
+   ],
+   [
+    "sud ouest",
+    "sud ouest"
+   ],
+   [
+    "S",
+    "s"
+   ],
+   [
+    "NO",
+    "no"
+   ],
+   [
+    "américaine",
+    "americaine"
+   ],
+   [
+    "neuf",
+    "neuf"
+   ],
+   [
+    "bon état",
+    "bon etat"
+   ],
+   [
+    "à rafraîchir",
+    "a rafraichir"
+   ],
+   [
+    "Est",
+    "est"
+   ],
+   [
+    "Nord-Est",
+    "nord-est"
+   ],
+   [
+    "équipée",
+    "equipee"
+   ],
+   [
+    "Mitoyenne 1 côté",
+    "mitoyenne 1 cote"
+   ],
+   [
+    "fioul",
+    "fioul"
+   ],
+   [
+    "gaz de ville",
+    "gaz de ville"
+   ],
+   [
+    "collectif",
+    "collectif"
+   ],
+   [
+    "  Éléphant  Rose ",
+    "elephant rose"
+   ],
+   [
+    "MAISON\tde  Ville",
+    "maison de ville"
+   ],
+   [
+    "Ça va",
+    "ca va"
+   ]
+  ],
+  "type_bien": [
+   [
+    "Bastide",
+    "11"
+   ],
+   [
+    "BASTIDE",
+    "11"
+   ],
+   [
+    "bastide",
+    "11"
+   ],
+   [
+    "  Bastide  ",
+    "11"
+   ],
+   [
+    "grand bastide",
+    "11"
+   ],
+   [
+    "Bas",
+    "11"
+   ],
+   [
+    "Chateau",
+    "28"
+   ],
+   [
+    "CHATEAU",
+    "28"
+   ],
+   [
+    "chateau",
+    "28"
+   ],
+   [
+    "  Chateau  ",
+    "28"
+   ],
+   [
+    "grand chateau",
+    "28"
+   ],
+   [
+    "Cha",
+    "28"
+   ],
+   [
+    "Ferme",
+    "30"
+   ],
+   [
+    "FERME",
+    "30"
+   ],
+   [
+    "ferme",
+    "30"
+   ],
+   [
+    "  Ferme  ",
+    "30"
+   ],
+   [
+    "grand ferme",
+    "30"
+   ],
+   [
+    "Fer",
+    "30"
+   ],
+   [
+    "Maison",
+    "1"
+   ],
+   [
+    "MAISON",
+    "1"
+   ],
+   [
+    "maison",
+    "1"
+   ],
+   [
+    "  Maison  ",
+    "1"
+   ],
+   [
+    "grand maison",
+    "1"
+   ],
+   [
+    "Mai",
+    "1"
+   ],
+   [
+    "Maison de village",
+    "39"
+   ],
+   [
+    "MAISON DE VILLAGE",
+    "39"
+   ],
+   [
+    "maison de village",
+    "39"
+   ],
+   [
+    "  Maison de village  ",
+    "39"
+   ],
+   [
+    "grand maison de village",
+    "1"
+   ],
+   [
+    "Maison d",
+    "1"
+   ],
+   [
+    "Mas",
+    "10"
+   ],
+   [
+    "MAS",
+    "10"
+   ],
+   [
+    "mas",
+    "10"
+   ],
+   [
+    "  Mas  ",
+    "10"
+   ],
+   [
+    "grand mas",
+    "10"
+   ],
+   [
+    "Propriete",
+    "22"
+   ],
+   [
+    "PROPRIETE",
+    "22"
+   ],
+   [
+    "propriete",
+    "22"
+   ],
+   [
+    "  Propriete  ",
+    "22"
+   ],
+   [
+    "grand propriete",
+    "22"
+   ],
+   [
+    "Prop",
+    "22"
+   ],
+   [
+    "Rez de villa",
+    "27"
+   ],
+   [
+    "REZ DE VILLA",
+    "27"
+   ],
+   [
+    "rez de villa",
+    "27"
+   ],
+   [
+    "  Rez de villa  ",
+    "27"
+   ],
+   [
+    "grand rez de villa",
+    "27"
+   ],
+   [
+    "Rez de",
+    "27"
+   ],
+   [
+    "Viager maison",
+    "49"
+   ],
+   [
+    "VIAGER MAISON",
+    "49"
+   ],
+   [
+    "viager maison",
+    "49"
+   ],
+   [
+    "  Viager maison  ",
+    "49"
+   ],
+   [
+    "grand viager maison",
+    "1"
+   ],
+   [
+    "Viager",
+    "7"
+   ],
+   [
+    "Villa",
+    "25"
+   ],
+   [
+    "VILLA",
+    "25"
+   ],
+   [
+    "villa",
+    "25"
+   ],
+   [
+    "  Villa  ",
+    "25"
+   ],
+   [
+    "grand villa",
+    "25"
+   ],
+   [
+    "Vil",
+    "39"
+   ],
+   [
+    "Appartement",
+    "2"
+   ],
+   [
+    "APPARTEMENT",
+    "2"
+   ],
+   [
+    "appartement",
+    "2"
+   ],
+   [
+    "  Appartement  ",
+    "2"
+   ],
+   [
+    "grand appartement",
+    "2"
+   ],
+   [
+    "Appar",
+    "2"
+   ],
+   [
+    "Duplex",
+    "18"
+   ],
+   [
+    "DUPLEX",
+    "18"
+   ],
+   [
+    "duplex",
+    "18"
+   ],
+   [
+    "  Duplex  ",
+    "18"
+   ],
+   [
+    "grand duplex",
+    "18"
+   ],
+   [
+    "Dup",
+    "18"
+   ],
+   [
+    "Loft",
+    "31"
+   ],
+   [
+    "LOFT",
+    "31"
+   ],
+   [
+    "loft",
+    "31"
+   ],
+   [
+    "  Loft  ",
+    "31"
+   ],
+   [
+    "grand loft",
+    "31"
+   ],
+   [
+    "Lof",
+    "31"
+   ],
+   [
+    "Rez de jardin",
+    "26"
+   ],
+   [
+    "REZ DE JARDIN",
+    "26"
+   ],
+   [
+    "rez de jardin",
+    "26"
+   ],
+   [
+    "  Rez de jardin  ",
+    "26"
+   ],
+   [
+    "grand rez de jardin",
+    "26"
+   ],
+   [
+    "Studio",
+    "4"
+   ],
+   [
+    "STUDIO",
+    "4"
+   ],
+   [
+    "studio",
+    "4"
+   ],
+   [
+    "  Studio  ",
+    "4"
+   ],
+   [
+    "grand studio",
+    "4"
+   ],
+   [
+    "Stu",
+    "4"
+   ],
+   [
+    "Triplex",
+    "41"
+   ],
+   [
+    "TRIPLEX",
+    "41"
+   ],
+   [
+    "triplex",
+    "41"
+   ],
+   [
+    "  Triplex  ",
+    "41"
+   ],
+   [
+    "grand triplex",
+    "41"
+   ],
+   [
+    "Tri",
+    "41"
+   ],
+   [
+    "Viager appartement",
+    "50"
+   ],
+   [
+    "VIAGER APPARTEMENT",
+    "50"
+   ],
+   [
+    "viager appartement",
+    "50"
+   ],
+   [
+    "  Viager appartement  ",
+    "50"
+   ],
+   [
+    "grand viager appartement",
+    "2"
+   ],
+   [
+    "Viager ap",
+    "50"
+   ],
+   [
+    "Terrain",
+    "5"
+   ],
+   [
+    "TERRAIN",
+    "5"
+   ],
+   [
+    "terrain",
+    "5"
+   ],
+   [
+    "  Terrain  ",
+    "5"
+   ],
+   [
+    "grand terrain",
+    "5"
+   ],
+   [
+    "Ter",
+    "5"
+   ],
+   [
+    "Terrain agricole",
+    "44"
+   ],
+   [
+    "TERRAIN AGRICOLE",
+    "44"
+   ],
+   [
+    "terrain agricole",
+    "44"
+   ],
+   [
+    "  Terrain agricole  ",
+    "44"
+   ],
+   [
+    "grand terrain agricole",
+    "5"
+   ],
+   [
+    "Terrain ",
+    "5"
+   ],
+   [
+    "Terrain de loisir",
+    "45"
+   ],
+   [
+    "TERRAIN DE LOISIR",
+    "45"
+   ],
+   [
+    "terrain de loisir",
+    "45"
+   ],
+   [
+    "  Terrain de loisir  ",
+    "45"
+   ],
+   [
+    "grand terrain de loisir",
+    "5"
+   ],
+   [
+    "Terrain a batir",
+    "43"
+   ],
+   [
+    "TERRAIN A BATIR",
+    "43"
+   ],
+   [
+    "terrain a batir",
+    "43"
+   ],
+   [
+    "  Terrain a batir  ",
+    "43"
+   ],
+   [
+    "grand terrain a batir",
+    "5"
+   ],
+   [
+    "Autre",
+    "20"
+   ],
+   [
+    "AUTRE",
+    "20"
+   ],
+   [
+    "autre",
+    "20"
+   ],
+   [
+    "  Autre  ",
+    "20"
+   ],
+   [
+    "grand autre",
+    "20"
+   ],
+   [
+    "Aut",
+    "20"
+   ],
+   [
+    "Cabanon",
+    "24"
+   ],
+   [
+    "CABANON",
+    "24"
+   ],
+   [
+    "cabanon",
+    "24"
+   ],
+   [
+    "  Cabanon  ",
+    "24"
+   ],
+   [
+    "grand cabanon",
+    "24"
+   ],
+   [
+    "Cab",
+    "24"
+   ],
+   [
+    "Cave",
+    "29"
+   ],
+   [
+    "CAVE",
+    "29"
+   ],
+   [
+    "cave",
+    "29"
+   ],
+   [
+    "  Cave  ",
+    "29"
+   ],
+   [
+    "grand cave",
+    "29"
+   ],
+   [
+    "Cav",
+    "29"
+   ],
+   [
+    "Chalet",
+    "17"
+   ],
+   [
+    "CHALET",
+    "17"
+   ],
+   [
+    "chalet",
+    "17"
+   ],
+   [
+    "  Chalet  ",
+    "17"
+   ],
+   [
+    "grand chalet",
+    "17"
+   ],
+   [
+    "Garage",
+    "15"
+   ],
+   [
+    "GARAGE",
+    "15"
+   ],
+   [
+    "garage",
+    "15"
+   ],
+   [
+    "  Garage  ",
+    "15"
+   ],
+   [
+    "grand garage",
+    "15"
+   ],
+   [
+    "Gar",
+    "15"
+   ],
+   [
+    "Immeuble",
+    "21"
+   ],
+   [
+    "IMMEUBLE",
+    "21"
+   ],
+   [
+    "immeuble",
+    "21"
+   ],
+   [
+    "  Immeuble  ",
+    "21"
+   ],
+   [
+    "grand immeuble",
+    "21"
+   ],
+   [
+    "Imme",
+    "21"
+   ],
+   [
+    "Parking",
+    "16"
+   ],
+   [
+    "PARKING",
+    "16"
+   ],
+   [
+    "parking",
+    "16"
+   ],
+   [
+    "  Parking  ",
+    "16"
+   ],
+   [
+    "grand parking",
+    "16"
+   ],
+   [
+    "Par",
+    "2"
+   ],
+   [
+    "VIAGER",
+    "7"
+   ],
+   [
+    "viager",
+    "7"
+   ],
+   [
+    "  Viager  ",
+    "7"
+   ],
+   [
+    "grand viager",
+    "7"
+   ],
+   [
+    "Via",
+    "49"
+   ],
+   [
+    "parking garage",
+    "15"
+   ],
+   [
+    "garage parking",
+    "15"
+   ],
+   [
+    "appartement meuble",
+    "2"
+   ],
+   [
+    "maison meublee",
+    "1"
+   ],
+   [
+    "pavillon",
+    "1"
+   ],
+   [
+    "longere",
+    "1"
+   ],
+   [
+    "gite",
+    "1"
+   ],
+   [
+    "chaumiere",
+    "1"
+   ],
+   [
+    "echoppe",
+    "1"
+   ],
+   [
+    "borderie",
+    "1"
+   ],
+   [
+    "closerie",
+    "1"
+   ],
+   [
+    "cottage",
+    "1"
+   ],
+   [
+    "plain pied",
+    "1"
+   ],
+   [
+    "fermette",
+    "30"
+   ],
+   [
+    "bergerie",
+    "30"
+   ],
+   [
+    "metairie",
+    "30"
+   ],
+   [
+    "grange",
+    "30"
+   ],
+   [
+    "ecurie",
+    "30"
+   ],
+   [
+    "ecuries",
+    "30"
+   ],
+   [
+    "manege",
+    "30"
+   ],
+   [
+    "domaine",
+    "22"
+   ],
+   [
+    "manoir",
+    "22"
+   ],
+   [
+    "demeure",
+    "22"
+   ],
+   [
+    "gentilhommiere",
+    "22"
+   ],
+   [
+    "chartreuse",
+    "22"
+   ],
+   [
+    "hotel particulier",
+    "22"
+   ],
+   [
+    "haras",
+    "22"
+   ],
+   [
+    "bastidon",
+    "11"
+   ],
+   [
+    "castel",
+    "28"
+   ],
+   [
+    "mas provencal",
+    "10"
+   ],
+   [
+    "appart",
+    "2"
+   ],
+   [
+    "t1",
+    "2"
+   ],
+   [
+    "t2",
+    "2"
+   ],
+   [
+    "t3",
+    "2"
+   ],
+   [
+    "t4",
+    "2"
+   ],
+   [
+    "t5",
+    "2"
+   ],
+   [
+    "t6",
+    "2"
+   ],
+   [
+    "f1",
+    "2"
+   ],
+   [
+    "f2",
+    "2"
+   ],
+   [
+    "f3",
+    "2"
+   ],
+   [
+    "f4",
+    "2"
+   ],
+   [
+    "f5",
+    "2"
+   ],
+   [
+    "f6",
+    "2"
+   ],
+   [
+    "deux pieces",
+    "2"
+   ],
+   [
+    "trois pieces",
+    "2"
+   ],
+   [
+    "quatre pieces",
+    "2"
+   ],
+   [
+    "cinq pieces",
+    "2"
+   ],
+   [
+    "six pieces",
+    "2"
+   ],
+   [
+    "rez de chaussee",
+    "2"
+   ],
+   [
+    "studette",
+    "4"
+   ],
+   [
+    "atelier",
+    "31"
+   ],
+   [
+    "parcelle",
+    "5"
+   ],
+   [
+    "place de parking",
+    "16"
+   ],
+   [
+    "emplacement",
+    "16"
+   ],
+   [
+    "stationnement",
+    "16"
+   ],
+   [
+    "box",
+    "15"
+   ],
+   [
+    "",
+    ""
+   ],
+   [
+    "zzz",
+    ""
+   ],
+   [
+    "oui",
+    ""
+   ],
+   [
+    "non",
+    "24"
+   ],
+   [
+    "avec",
+    ""
+   ],
+   [
+    "sans",
+    ""
+   ],
+   [
+    "1",
+    ""
+   ],
+   [
+    "0",
+    ""
+   ],
+   [
+    "o",
+    "1"
+   ],
+   [
+    "n",
+    "1"
+   ],
+   [
+    "peut-être",
+    ""
+   ],
+   [
+    "Oui, refait",
+    ""
+   ],
+   [
+    "NON",
+    "24"
+   ],
+   [
+    "  ",
+    ""
+   ],
+   [
+    "grande maison",
+    "1"
+   ],
+   [
+    "villa contemporaine",
+    "25"
+   ],
+   [
+    "Appartement T3",
+    "2"
+   ],
+   [
+    "corps de ferme",
+    "30"
+   ],
+   [
+    "beau terrain",
+    "5"
+   ],
+   [
+    "maison de ville",
+    "1"
+   ],
+   [
+    "Studio meublé",
+    "4"
+   ],
+   [
+    "box fermé",
+    "30"
+   ],
+   [
+    "Immeuble de rapport",
+    "21"
+   ],
+   [
+    "pavillon des années 70",
+    "1"
+   ],
+   [
+    "Local commercial",
+    ""
+   ],
+   [
+    "T2 lumineux",
+    "2"
+   ],
+   [
+    "maison meublée",
+    "1"
+   ],
+   [
+    "rez de chaussée",
+    "2"
+   ],
+   [
+    "un mas provençal",
+    "10"
+   ],
+   [
+    "longère",
+    "1"
+   ],
+   [
+    "F4",
+    "2"
+   ],
+   [
+    "séjour",
+    ""
+   ],
+   [
+    "Salle d'eau",
+    ""
+   ],
+   [
+    "cuisine équipée",
+    ""
+   ],
+   [
+    "chambre parentale",
+    ""
+   ],
+   [
+    "sud ouest",
+    ""
+   ],
+   [
+    "S",
+    "11"
+   ],
+   [
+    "NO",
+    "24"
+   ],
+   [
+    "américaine",
+    ""
+   ],
+   [
+    "neuf",
+    ""
+   ],
+   [
+    "bon état",
+    ""
+   ],
+   [
+    "à rafraîchir",
+    ""
+   ],
+   [
+    "Est",
+    ""
+   ],
+   [
+    "Nord-Est",
+    ""
+   ],
+   [
+    "équipée",
+    ""
+   ],
+   [
+    "Mitoyenne 1 côté",
+    ""
+   ],
+   [
+    "fioul",
+    ""
+   ],
+   [
+    "gaz de ville",
+    ""
+   ],
+   [
+    "collectif",
+    ""
+   ]
+  ],
+  "piece": [
+   [
+    "Chambre",
+    "1"
+   ],
+   [
+    "CHAMBRE",
+    "1"
+   ],
+   [
+    "chambre",
+    "1"
+   ],
+   [
+    "  Chambre  ",
+    "1"
+   ],
+   [
+    "grand chambre",
+    "1"
+   ],
+   [
+    "Cha",
+    "1"
+   ],
+   [
+    "Cuisine",
+    "13"
+   ],
+   [
+    "CUISINE",
+    "13"
+   ],
+   [
+    "cuisine",
+    "13"
+   ],
+   [
+    "  Cuisine  ",
+    "13"
+   ],
+   [
+    "grand cuisine",
+    "13"
+   ],
+   [
+    "Cui",
+    "13"
+   ],
+   [
+    "Salon/sejour",
+    "2"
+   ],
+   [
+    "SALON/SEJOUR",
+    "2"
+   ],
+   [
+    "salon/sejour",
+    "2"
+   ],
+   [
+    "  Salon/sejour  ",
+    "2"
+   ],
+   [
+    "grand salon/sejour",
+    "2"
+   ],
+   [
+    "Salon/",
+    "2"
+   ],
+   [
+    "Salle de bains",
+    "9"
+   ],
+   [
+    "SALLE DE BAINS",
+    "9"
+   ],
+   [
+    "salle de bains",
+    "9"
+   ],
+   [
+    "  Salle de bains  ",
+    "9"
+   ],
+   [
+    "grand salle de bains",
+    "9"
+   ],
+   [
+    "Salle d",
+    "9"
+   ],
+   [
+    "Bureau",
+    "15"
+   ],
+   [
+    "BUREAU",
+    "15"
+   ],
+   [
+    "bureau",
+    "15"
+   ],
+   [
+    "  Bureau  ",
+    "15"
+   ],
+   [
+    "grand bureau",
+    "15"
+   ],
+   [
+    "Bur",
+    "15"
+   ],
+   [
+    "WC",
+    "16"
+   ],
+   [
+    "wc",
+    "16"
+   ],
+   [
+    "  WC  ",
+    "16"
+   ],
+   [
+    "grand wc",
+    "16"
+   ],
+   [
+    "Entree",
+    "26"
+   ],
+   [
+    "ENTREE",
+    "26"
+   ],
+   [
+    "entree",
+    "26"
+   ],
+   [
+    "  Entree  ",
+    "26"
+   ],
+   [
+    "grand entree",
+    "26"
+   ],
+   [
+    "Ent",
+    "26"
+   ],
+   [
+    "Piece a vivre",
+    "14"
+   ],
+   [
+    "PIECE A VIVRE",
+    "14"
+   ],
+   [
+    "piece a vivre",
+    "14"
+   ],
+   [
+    "  Piece a vivre  ",
+    "14"
+   ],
+   [
+    "grand piece a vivre",
+    "14"
+   ],
+   [
+    "Piece ",
+    "14"
+   ],
+   [
+    "Dressing",
+    "21"
+   ],
+   [
+    "DRESSING",
+    "21"
+   ],
+   [
+    "dressing",
+    "21"
+   ],
+   [
+    "  Dressing  ",
+    "21"
+   ],
+   [
+    "grand dressing",
+    "21"
+   ],
+   [
+    "Dres",
+    "21"
+   ],
+   [
+    "Buanderie",
+    "11"
+   ],
+   [
+    "BUANDERIE",
+    "11"
+   ],
+   [
+    "buanderie",
+    "11"
+   ],
+   [
+    "  Buanderie  ",
+    "11"
+   ],
+   [
+    "grand buanderie",
+    "11"
+   ],
+   [
+    "Buan",
+    "11"
+   ],
+   [
+    "Cave",
+    "12"
+   ],
+   [
+    "CAVE",
+    "12"
+   ],
+   [
+    "cave",
+    "12"
+   ],
+   [
+    "  Cave  ",
+    "12"
+   ],
+   [
+    "grand cave",
+    "12"
+   ],
+   [
+    "Cav",
+    "12"
+   ],
+   [
+    "Garage",
+    "5"
+   ],
+   [
+    "GARAGE",
+    "5"
+   ],
+   [
+    "garage",
+    "5"
+   ],
+   [
+    "  Garage  ",
+    "5"
+   ],
+   [
+    "grand garage",
+    "5"
+   ],
+   [
+    "Gar",
+    "5"
+   ],
+   [
+    "Parking",
+    "8"
+   ],
+   [
+    "PARKING",
+    "8"
+   ],
+   [
+    "parking",
+    "8"
+   ],
+   [
+    "  Parking  ",
+    "8"
+   ],
+   [
+    "grand parking",
+    "8"
+   ],
+   [
+    "Par",
+    "8"
+   ],
+   [
+    "Balcon",
+    "18"
+   ],
+   [
+    "BALCON",
+    "18"
+   ],
+   [
+    "balcon",
+    "18"
+   ],
+   [
+    "  Balcon  ",
+    "18"
+   ],
+   [
+    "grand balcon",
+    "18"
+   ],
+   [
+    "Bal",
+    "18"
+   ],
+   [
+    "Terrasse",
+    "17"
+   ],
+   [
+    "TERRASSE",
+    "17"
+   ],
+   [
+    "terrasse",
+    "17"
+   ],
+   [
+    "  Terrasse  ",
+    "17"
+   ],
+   [
+    "grand terrasse",
+    "17"
+   ],
+   [
+    "Terr",
+    "17"
+   ],
+   [
+    "Jardin",
+    "4"
+   ],
+   [
+    "JARDIN",
+    "4"
+   ],
+   [
+    "jardin",
+    "4"
+   ],
+   [
+    "  Jardin  ",
+    "4"
+   ],
+   [
+    "grand jardin",
+    "4"
+   ],
+   [
+    "Jar",
+    "4"
+   ],
+   [
+    "Piscine",
+    "32"
+   ],
+   [
+    "PISCINE",
+    "32"
+   ],
+   [
+    "piscine",
+    "32"
+   ],
+   [
+    "  Piscine  ",
+    "32"
+   ],
+   [
+    "grand piscine",
+    "32"
+   ],
+   [
+    "Pis",
+    "32"
+   ],
+   [
+    "Veranda",
+    "20"
+   ],
+   [
+    "VERANDA",
+    "20"
+   ],
+   [
+    "veranda",
+    "20"
+   ],
+   [
+    "  Veranda  ",
+    "20"
+   ],
+   [
+    "grand veranda",
+    "20"
+   ],
+   [
+    "Ver",
+    "20"
+   ],
+   [
+    "Accueil",
+    "25"
+   ],
+   [
+    "ACCUEIL",
+    "25"
+   ],
+   [
+    "accueil",
+    "25"
+   ],
+   [
+    "  Accueil  ",
+    "25"
+   ],
+   [
+    "grand accueil",
+    "25"
+   ],
+   [
+    "Acc",
+    "25"
+   ],
+   [
+    "Annexe",
+    "6"
+   ],
+   [
+    "ANNEXE",
+    "6"
+   ],
+   [
+    "annexe",
+    "6"
+   ],
+   [
+    "  Annexe  ",
+    "6"
+   ],
+   [
+    "grand annexe",
+    "6"
+   ],
+   [
+    "Ann",
+    "6"
+   ],
+   [
+    "Chambre de bonne",
+    "59"
+   ],
+   [
+    "CHAMBRE DE BONNE",
+    "59"
+   ],
+   [
+    "chambre de bonne",
+    "59"
+   ],
+   [
+    "  Chambre de bonne  ",
+    "59"
+   ],
+   [
+    "grand chambre de bonne",
+    "1"
+   ],
+   [
+    "Chambre ",
+    "1"
+   ],
+   [
+    "Chambre de service",
+    "60"
+   ],
+   [
+    "CHAMBRE DE SERVICE",
+    "60"
+   ],
+   [
+    "chambre de service",
+    "60"
+   ],
+   [
+    "  Chambre de service  ",
+    "60"
+   ],
+   [
+    "grand chambre de service",
+    "1"
+   ],
+   [
+    "Chambre d",
+    "1"
+   ],
+   [
+    "Chambre froide",
+    "27"
+   ],
+   [
+    "CHAMBRE FROIDE",
+    "27"
+   ],
+   [
+    "chambre froide",
+    "27"
+   ],
+   [
+    "  Chambre froide  ",
+    "27"
+   ],
+   [
+    "grand chambre froide",
+    "1"
+   ],
+   [
+    "Depot",
+    "28"
+   ],
+   [
+    "DEPOT",
+    "28"
+   ],
+   [
+    "depot",
+    "28"
+   ],
+   [
+    "  Depot  ",
+    "28"
+   ],
+   [
+    "grand depot",
+    "28"
+   ],
+   [
+    "Dep",
+    "28"
+   ],
+   [
+    "Entrepot",
+    "29"
+   ],
+   [
+    "ENTREPOT",
+    "29"
+   ],
+   [
+    "entrepot",
+    "29"
+   ],
+   [
+    "  Entrepot  ",
+    "29"
+   ],
+   [
+    "grand entrepot",
+    "29"
+   ],
+   [
+    "Entr",
+    "26"
+   ],
+   [
+    "Espace bien-etre",
+    "30"
+   ],
+   [
+    "ESPACE BIEN-ETRE",
+    "30"
+   ],
+   [
+    "espace bien-etre",
+    "30"
+   ],
+   [
+    "  Espace bien-etre  ",
+    "30"
+   ],
+   [
+    "grand espace bien-etre",
+    "30"
+   ],
+   [
+    "Espace b",
+    "30"
+   ],
+   [
+    "Mezzanine",
+    "31"
+   ],
+   [
+    "MEZZANINE",
+    "31"
+   ],
+   [
+    "mezzanine",
+    "31"
+   ],
+   [
+    "  Mezzanine  ",
+    "31"
+   ],
+   [
+    "grand mezzanine",
+    "31"
+   ],
+   [
+    "Mezz",
+    "31"
+   ],
+   [
+    "Reserve",
+    "24"
+   ],
+   [
+    "RESERVE",
+    "24"
+   ],
+   [
+    "reserve",
+    "24"
+   ],
+   [
+    "  Reserve  ",
+    "24"
+   ],
+   [
+    "grand reserve",
+    "24"
+   ],
+   [
+    "Res",
+    "21"
+   ],
+   [
+    "Salle",
+    "23"
+   ],
+   [
+    "SALLE",
+    "23"
+   ],
+   [
+    "salle",
+    "23"
+   ],
+   [
+    "  Salle  ",
+    "23"
+   ],
+   [
+    "grand salle",
+    "23"
+   ],
+   [
+    "Sal",
+    "2"
+   ],
+   [
+    "Suite",
+    "33"
+   ],
+   [
+    "SUITE",
+    "33"
+   ],
+   [
+    "suite",
+    "33"
+   ],
+   [
+    "  Suite  ",
+    "33"
+   ],
+   [
+    "grand suite",
+    "33"
+   ],
+   [
+    "Sui",
+    "33"
+   ],
+   [
+    "Terrain",
+    "3"
+   ],
+   [
+    "TERRAIN",
+    "3"
+   ],
+   [
+    "terrain",
+    "3"
+   ],
+   [
+    "  Terrain  ",
+    "3"
+   ],
+   [
+    "grand terrain",
+    "3"
+   ],
+   [
+    "Ter",
+    "17"
+   ],
+   [
+    "Vestiaire",
+    "34"
+   ],
+   [
+    "VESTIAIRE",
+    "34"
+   ],
+   [
+    "vestiaire",
+    "34"
+   ],
+   [
+    "  Vestiaire  ",
+    "34"
+   ],
+   [
+    "grand vestiaire",
+    "34"
+   ],
+   [
+    "Vest",
+    "34"
+   ],
+   [
+    "",
+    ""
+   ],
+   [
+    "zzz",
+    ""
+   ],
+   [
+    "oui",
+    ""
+   ],
+   [
+    "non",
+    ""
+   ],
+   [
+    "avec",
+    ""
+   ],
+   [
+    "sans",
+    ""
+   ],
+   [
+    "1",
+    ""
+   ],
+   [
+    "0",
+    ""
+   ],
+   [
+    "o",
+    "2"
+   ],
+   [
+    "n",
+    "13"
+   ],
+   [
+    "peut-être",
+    ""
+   ],
+   [
+    "Oui, refait",
+    ""
+   ],
+   [
+    "NON",
+    ""
+   ],
+   [
+    "  ",
+    ""
+   ],
+   [
+    "grande maison",
+    ""
+   ],
+   [
+    "villa contemporaine",
+    ""
+   ],
+   [
+    "Appartement T3",
+    ""
+   ],
+   [
+    "corps de ferme",
+    ""
+   ],
+   [
+    "beau terrain",
+    "3"
+   ],
+   [
+    "maison de ville",
+    ""
+   ],
+   [
+    "Studio meublé",
+    ""
+   ],
+   [
+    "box fermé",
+    ""
+   ],
+   [
+    "Immeuble de rapport",
+    ""
+   ],
+   [
+    "pavillon des années 70",
+    ""
+   ],
+   [
+    "Local commercial",
+    ""
+   ],
+   [
+    "T2 lumineux",
+    ""
+   ],
+   [
+    "maison meublée",
+    ""
+   ],
+   [
+    "parking garage",
+    "5"
+   ],
+   [
+    "rez de chaussée",
+    ""
+   ],
+   [
+    "place de parking",
+    "8"
+   ],
+   [
+    "un mas provençal",
+    ""
+   ],
+   [
+    "longère",
+    ""
+   ],
+   [
+    "F4",
+    ""
+   ],
+   [
+    "séjour",
+    "2"
+   ],
+   [
+    "Salle d'eau",
+    "23"
+   ],
+   [
+    "cuisine équipée",
+    "13"
+   ],
+   [
+    "chambre parentale",
+    "1"
+   ],
+   [
+    "sud ouest",
+    ""
+   ],
+   [
+    "S",
+    "13"
+   ],
+   [
+    "NO",
+    ""
+   ],
+   [
+    "américaine",
+    ""
+   ],
+   [
+    "neuf",
+    ""
+   ],
+   [
+    "bon état",
+    ""
+   ],
+   [
+    "à rafraîchir",
+    ""
+   ],
+   [
+    "Est",
+    "34"
+   ],
+   [
+    "Nord-Est",
+    ""
+   ],
+   [
+    "équipée",
+    ""
+   ],
+   [
+    "Mitoyenne 1 côté",
+    ""
+   ],
+   [
+    "fioul",
+    ""
+   ],
+   [
+    "gaz de ville",
+    ""
+   ],
+   [
+    "collectif",
+    ""
+   ]
+  ],
+  "oui_non": [
+   [
+    "",
+    ""
+   ],
+   [
+    "zzz",
+    ""
+   ],
+   [
+    "oui",
+    "OUI"
+   ],
+   [
+    "non",
+    "NON"
+   ],
+   [
+    "avec",
+    "OUI"
+   ],
+   [
+    "sans",
+    "NON"
+   ],
+   [
+    "1",
+    "OUI"
+   ],
+   [
+    "0",
+    "NON"
+   ],
+   [
+    "o",
+    "OUI"
+   ],
+   [
+    "n",
+    "NON"
+   ],
+   [
+    "peut-être",
+    ""
+   ],
+   [
+    "Oui, refait",
+    "OUI"
+   ],
+   [
+    "NON",
+    "NON"
+   ],
+   [
+    "  ",
+    ""
+   ],
+   [
+    "grande maison",
+    ""
+   ],
+   [
+    "villa contemporaine",
+    ""
+   ],
+   [
+    "Appartement T3",
+    ""
+   ],
+   [
+    "corps de ferme",
+    ""
+   ],
+   [
+    "beau terrain",
+    ""
+   ],
+   [
+    "maison de ville",
+    ""
+   ],
+   [
+    "Studio meublé",
+    ""
+   ],
+   [
+    "box fermé",
+    ""
+   ],
+   [
+    "Immeuble de rapport",
+    ""
+   ],
+   [
+    "pavillon des années 70",
+    ""
+   ],
+   [
+    "Local commercial",
+    ""
+   ],
+   [
+    "T2 lumineux",
+    ""
+   ],
+   [
+    "maison meublée",
+    ""
+   ],
+   [
+    "parking garage",
+    ""
+   ],
+   [
+    "rez de chaussée",
+    ""
+   ],
+   [
+    "place de parking",
+    ""
+   ],
+   [
+    "un mas provençal",
+    ""
+   ],
+   [
+    "longère",
+    ""
+   ],
+   [
+    "F4",
+    ""
+   ],
+   [
+    "séjour",
+    ""
+   ],
+   [
+    "Salle d'eau",
+    ""
+   ],
+   [
+    "cuisine équipée",
+    ""
+   ],
+   [
+    "chambre parentale",
+    ""
+   ],
+   [
+    "sud ouest",
+    ""
+   ],
+   [
+    "S",
+    ""
+   ],
+   [
+    "NO",
+    "NON"
+   ],
+   [
+    "américaine",
+    ""
+   ],
+   [
+    "neuf",
+    "NON"
+   ],
+   [
+    "bon état",
+    ""
+   ],
+   [
+    "à rafraîchir",
+    ""
+   ],
+   [
+    "Est",
+    ""
+   ],
+   [
+    "Nord-Est",
+    "NON"
+   ],
+   [
+    "équipée",
+    ""
+   ],
+   [
+    "Mitoyenne 1 côté",
+    ""
+   ],
+   [
+    "fioul",
+    ""
+   ],
+   [
+    "gaz de ville",
+    ""
+   ],
+   [
+    "collectif",
+    ""
+   ]
+  ],
+  "listes": {
+   "exposition": [
+    [
+     "Non défini",
+     ""
+    ],
+    [
+     "NON DÉFINI",
+     ""
+    ],
+    [
+     "non défini",
+     ""
+    ],
+    [
+     "Non defini",
+     ""
+    ],
+    [
+     "  Non défini  ",
+     ""
+    ],
+    [
+     "grand non défini",
+     ""
+    ],
+    [
+     "Non d",
+     ""
+    ],
+    [
+     "Nord",
+     "NORD"
+    ],
+    [
+     "NORD",
+     "NORD"
+    ],
+    [
+     "nord",
+     "NORD"
+    ],
+    [
+     "  Nord  ",
+     "NORD"
+    ],
+    [
+     "grand nord",
+     "NORD"
+    ],
+    [
+     "Nor",
+     "NORD"
+    ],
+    [
+     "Nord-Est",
+     "NORD-EST"
+    ],
+    [
+     "NORD-EST",
+     "NORD-EST"
+    ],
+    [
+     "nord-est",
+     "NORD-EST"
+    ],
+    [
+     "  Nord-Est  ",
+     "NORD-EST"
+    ],
+    [
+     "grand nord-est",
+     "NORD"
+    ],
+    [
+     "Est",
+     "EST"
+    ],
+    [
+     "EST",
+     "EST"
+    ],
+    [
+     "est",
+     "EST"
+    ],
+    [
+     "  Est  ",
+     "EST"
+    ],
+    [
+     "grand est",
+     "EST"
+    ],
+    [
+     "Sud-Est",
+     "SUD-EST"
+    ],
+    [
+     "SUD-EST",
+     "SUD-EST"
+    ],
+    [
+     "sud-est",
+     "SUD-EST"
+    ],
+    [
+     "  Sud-Est  ",
+     "SUD-EST"
+    ],
+    [
+     "grand sud-est",
+     "EST"
+    ],
+    [
+     "Sud",
+     "SUD"
+    ],
+    [
+     "SUD",
+     "SUD"
+    ],
+    [
+     "sud",
+     "SUD"
+    ],
+    [
+     "  Sud  ",
+     "SUD"
+    ],
+    [
+     "grand sud",
+     "SUD"
+    ],
+    [
+     "Sud-Ouest",
+     "SUD-OUEST"
+    ],
+    [
+     "SUD-OUEST",
+     "SUD-OUEST"
+    ],
+    [
+     "sud-ouest",
+     "SUD-OUEST"
+    ],
+    [
+     "  Sud-Ouest  ",
+     "SUD-OUEST"
+    ],
+    [
+     "grand sud-ouest",
+     "EST"
+    ],
+    [
+     "Sud-",
+     "SUD-EST"
+    ],
+    [
+     "Ouest",
+     "OUEST"
+    ],
+    [
+     "OUEST",
+     "OUEST"
+    ],
+    [
+     "ouest",
+     "OUEST"
+    ],
+    [
+     "  Ouest  ",
+     "OUEST"
+    ],
+    [
+     "grand ouest",
+     "EST"
+    ],
+    [
+     "Oue",
+     "SUD-OUEST"
+    ],
+    [
+     "Nord-Ouest",
+     "NORD-OUEST"
+    ],
+    [
+     "NORD-OUEST",
+     "NORD-OUEST"
+    ],
+    [
+     "nord-ouest",
+     "NORD-OUEST"
+    ],
+    [
+     "  Nord-Ouest  ",
+     "NORD-OUEST"
+    ],
+    [
+     "grand nord-ouest",
+     "NORD"
+    ],
+    [
+     "Nord-",
+     "NORD"
+    ],
+    [
+     "Nord-Sud",
+     "NORD-SUD"
+    ],
+    [
+     "NORD-SUD",
+     "NORD-SUD"
+    ],
+    [
+     "nord-sud",
+     "NORD-SUD"
+    ],
+    [
+     "  Nord-Sud  ",
+     "NORD-SUD"
+    ],
+    [
+     "grand nord-sud",
+     "NORD"
+    ],
+    [
+     "Est-Ouest",
+     "EST-OUEST"
+    ],
+    [
+     "EST-OUEST",
+     "EST-OUEST"
+    ],
+    [
+     "est-ouest",
+     "EST-OUEST"
+    ],
+    [
+     "  Est-Ouest  ",
+     "EST-OUEST"
+    ],
+    [
+     "grand est-ouest",
+     "EST"
+    ],
+    [
+     "Est-",
+     "EST"
+    ],
+    [
+     "",
+     ""
+    ],
+    [
+     "zzz",
+     ""
+    ],
+    [
+     "oui",
+     ""
+    ],
+    [
+     "non",
+     ""
+    ],
+    [
+     "avec",
+     ""
+    ],
+    [
+     "sans",
+     ""
+    ],
+    [
+     "1",
+     ""
+    ],
+    [
+     "0",
+     ""
+    ],
+    [
+     "o",
+     "NORD"
+    ],
+    [
+     "n",
+     "NORD"
+    ],
+    [
+     "peut-être",
+     ""
+    ],
+    [
+     "Oui, refait",
+     ""
+    ],
+    [
+     "NON",
+     ""
+    ],
+    [
+     "  ",
+     ""
+    ],
+    [
+     "grande maison",
+     ""
+    ],
+    [
+     "villa contemporaine",
+     ""
+    ],
+    [
+     "Appartement T3",
+     ""
+    ],
+    [
+     "corps de ferme",
+     ""
+    ],
+    [
+     "beau terrain",
+     ""
+    ],
+    [
+     "maison de ville",
+     ""
+    ],
+    [
+     "Studio meublé",
+     ""
+    ],
+    [
+     "box fermé",
+     ""
+    ],
+    [
+     "Immeuble de rapport",
+     ""
+    ],
+    [
+     "pavillon des années 70",
+     ""
+    ],
+    [
+     "Local commercial",
+     ""
+    ],
+    [
+     "T2 lumineux",
+     ""
+    ],
+    [
+     "maison meublée",
+     ""
+    ],
+    [
+     "parking garage",
+     ""
+    ],
+    [
+     "rez de chaussée",
+     ""
+    ],
+    [
+     "place de parking",
+     ""
+    ],
+    [
+     "un mas provençal",
+     ""
+    ],
+    [
+     "longère",
+     ""
+    ],
+    [
+     "F4",
+     ""
+    ],
+    [
+     "séjour",
+     ""
+    ],
+    [
+     "Salle d'eau",
+     ""
+    ],
+    [
+     "cuisine équipée",
+     ""
+    ],
+    [
+     "chambre parentale",
+     ""
+    ],
+    [
+     "sud ouest",
+     "EST"
+    ],
+    [
+     "S",
+     "NORD-EST"
+    ],
+    [
+     "NO",
+     "NORD"
+    ],
+    [
+     "américaine",
+     ""
+    ],
+    [
+     "neuf",
+     ""
+    ],
+    [
+     "bon état",
+     ""
+    ],
+    [
+     "à rafraîchir",
+     ""
+    ],
+    [
+     "équipée",
+     ""
+    ],
+    [
+     "Mitoyenne 1 côté",
+     ""
+    ],
+    [
+     "fioul",
+     ""
+    ],
+    [
+     "gaz de ville",
+     ""
+    ],
+    [
+     "collectif",
+     ""
+    ]
+   ],
+   "cuisine": [
+    [
+     "Non défini",
+     ""
+    ],
+    [
+     "NON DÉFINI",
+     ""
+    ],
+    [
+     "non défini",
+     ""
+    ],
+    [
+     "Non defini",
+     ""
+    ],
+    [
+     "  Non défini  ",
+     ""
+    ],
+    [
+     "grand non défini",
+     ""
+    ],
+    [
+     "Non d",
+     ""
+    ],
+    [
+     "Américaine",
+     "AMERICAINE"
+    ],
+    [
+     "AMÉRICAINE",
+     "AMERICAINE"
+    ],
+    [
+     "américaine",
+     "AMERICAINE"
+    ],
+    [
+     "Americaine",
+     "AMERICAINE"
+    ],
+    [
+     "  Américaine  ",
+     "AMERICAINE"
+    ],
+    [
+     "grand américaine",
+     "AMERICAINE"
+    ],
+    [
+     "Améri",
+     "AMERICAINE"
+    ],
+    [
+     "Kitchenette",
+     "KITCHENETTE"
+    ],
+    [
+     "KITCHENETTE",
+     "KITCHENETTE"
+    ],
+    [
+     "kitchenette",
+     "KITCHENETTE"
+    ],
+    [
+     "  Kitchenette  ",
+     "KITCHENETTE"
+    ],
+    [
+     "grand kitchenette",
+     "KITCHENETTE"
+    ],
+    [
+     "Kitch",
+     "KITCHENETTE"
+    ],
+    [
+     "Séparée",
+     "SEPAREE"
+    ],
+    [
+     "SÉPARÉE",
+     "SEPAREE"
+    ],
+    [
+     "séparée",
+     "SEPAREE"
+    ],
+    [
+     "Separee",
+     "SEPAREE"
+    ],
+    [
+     "  Séparée  ",
+     "SEPAREE"
+    ],
+    [
+     "grand séparée",
+     "SEPAREE"
+    ],
+    [
+     "Sép",
+     "SEPAREE"
+    ],
+    [
+     "Sans",
+     "SANS"
+    ],
+    [
+     "SANS",
+     "SANS"
+    ],
+    [
+     "sans",
+     "SANS"
+    ],
+    [
+     "  Sans  ",
+     "SANS"
+    ],
+    [
+     "grand sans",
+     "SANS"
+    ],
+    [
+     "San",
+     "SANS"
+    ],
+    [
+     "",
+     ""
+    ],
+    [
+     "zzz",
+     ""
+    ],
+    [
+     "oui",
+     ""
+    ],
+    [
+     "non",
+     ""
+    ],
+    [
+     "avec",
+     ""
+    ],
+    [
+     "1",
+     ""
+    ],
+    [
+     "0",
+     ""
+    ],
+    [
+     "o",
+     ""
+    ],
+    [
+     "n",
+     "AMERICAINE"
+    ],
+    [
+     "peut-être",
+     ""
+    ],
+    [
+     "Oui, refait",
+     ""
+    ],
+    [
+     "NON",
+     ""
+    ],
+    [
+     "  ",
+     ""
+    ],
+    [
+     "grande maison",
+     ""
+    ],
+    [
+     "villa contemporaine",
+     ""
+    ],
+    [
+     "Appartement T3",
+     ""
+    ],
+    [
+     "corps de ferme",
+     ""
+    ],
+    [
+     "beau terrain",
+     ""
+    ],
+    [
+     "maison de ville",
+     ""
+    ],
+    [
+     "Studio meublé",
+     ""
+    ],
+    [
+     "box fermé",
+     ""
+    ],
+    [
+     "Immeuble de rapport",
+     ""
+    ],
+    [
+     "pavillon des années 70",
+     ""
+    ],
+    [
+     "Local commercial",
+     ""
+    ],
+    [
+     "T2 lumineux",
+     ""
+    ],
+    [
+     "maison meublée",
+     ""
+    ],
+    [
+     "parking garage",
+     ""
+    ],
+    [
+     "rez de chaussée",
+     ""
+    ],
+    [
+     "place de parking",
+     ""
+    ],
+    [
+     "un mas provençal",
+     ""
+    ],
+    [
+     "longère",
+     ""
+    ],
+    [
+     "F4",
+     ""
+    ],
+    [
+     "séjour",
+     ""
+    ],
+    [
+     "Salle d'eau",
+     ""
+    ],
+    [
+     "cuisine équipée",
+     ""
+    ],
+    [
+     "chambre parentale",
+     ""
+    ],
+    [
+     "sud ouest",
+     ""
+    ],
+    [
+     "S",
+     "SEPAREE"
+    ],
+    [
+     "NO",
+     ""
+    ],
+    [
+     "neuf",
+     ""
+    ],
+    [
+     "bon état",
+     ""
+    ],
+    [
+     "à rafraîchir",
+     ""
+    ],
+    [
+     "Est",
+     ""
+    ],
+    [
+     "Nord-Est",
+     ""
+    ],
+    [
+     "équipée",
+     ""
+    ],
+    [
+     "Mitoyenne 1 côté",
+     ""
+    ],
+    [
+     "fioul",
+     ""
+    ],
+    [
+     "gaz de ville",
+     ""
+    ],
+    [
+     "collectif",
+     ""
+    ]
+   ],
+   "etat_interieur": [
+    [
+     "Non précisé",
+     ""
+    ],
+    [
+     "NON PRÉCISÉ",
+     ""
+    ],
+    [
+     "non précisé",
+     ""
+    ],
+    [
+     "Non precise",
+     ""
+    ],
+    [
+     "  Non précisé  ",
+     ""
+    ],
+    [
+     "grand non précisé",
+     ""
+    ],
+    [
+     "Non p",
+     ""
+    ],
+    [
+     "Gros travaux à prévoir",
+     "1"
+    ],
+    [
+     "GROS TRAVAUX À PRÉVOIR",
+     "1"
+    ],
+    [
+     "gros travaux à prévoir",
+     "1"
+    ],
+    [
+     "Gros travaux a prevoir",
+     "1"
+    ],
+    [
+     "  Gros travaux à prévoir  ",
+     "1"
+    ],
+    [
+     "grand gros travaux à prévoir",
+     "1"
+    ],
+    [
+     "Gros travau",
+     "1"
+    ],
+    [
+     "Travaux à prévoir",
+     "2"
+    ],
+    [
+     "TRAVAUX À PRÉVOIR",
+     "2"
+    ],
+    [
+     "travaux à prévoir",
+     "2"
+    ],
+    [
+     "Travaux a prevoir",
+     "2"
+    ],
+    [
+     "  Travaux à prévoir  ",
+     "2"
+    ],
+    [
+     "grand travaux à prévoir",
+     "2"
+    ],
+    [
+     "Travaux ",
+     "1"
+    ],
+    [
+     "A rafraichir",
+     "3"
+    ],
+    [
+     "A RAFRAICHIR",
+     "3"
+    ],
+    [
+     "a rafraichir",
+     "3"
+    ],
+    [
+     "  A rafraichir  ",
+     "3"
+    ],
+    [
+     "grand a rafraichir",
+     "3"
+    ],
+    [
+     "A rafr",
+     "3"
+    ],
+    [
+     "Habitable (m²)",
+     "4"
+    ],
+    [
+     "HABITABLE (M²)",
+     "4"
+    ],
+    [
+     "habitable (m²)",
+     "4"
+    ],
+    [
+     "  Habitable (m²)  ",
+     "4"
+    ],
+    [
+     "grand habitable (m²)",
+     "4"
+    ],
+    [
+     "Habitab",
+     "4"
+    ],
+    [
+     "Etat moyen",
+     "5"
+    ],
+    [
+     "ETAT MOYEN",
+     "5"
+    ],
+    [
+     "etat moyen",
+     "5"
+    ],
+    [
+     "  Etat moyen  ",
+     "5"
+    ],
+    [
+     "grand etat moyen",
+     "5"
+    ],
+    [
+     "Etat ",
+     "5"
+    ],
+    [
+     "Bon état",
+     "6"
+    ],
+    [
+     "BON ÉTAT",
+     "6"
+    ],
+    [
+     "bon état",
+     "6"
+    ],
+    [
+     "Bon etat",
+     "6"
+    ],
+    [
+     "  Bon état  ",
+     "6"
+    ],
+    [
+     "grand bon état",
+     "6"
+    ],
+    [
+     "Bon ",
+     "6"
+    ],
+    [
+     "Excellent état",
+     "7"
+    ],
+    [
+     "EXCELLENT ÉTAT",
+     "7"
+    ],
+    [
+     "excellent état",
+     "7"
+    ],
+    [
+     "Excellent etat",
+     "7"
+    ],
+    [
+     "  Excellent état  ",
+     "7"
+    ],
+    [
+     "grand excellent état",
+     "7"
+    ],
+    [
+     "Excelle",
+     "7"
+    ],
+    [
+     "Neuf",
+     "8"
+    ],
+    [
+     "NEUF",
+     "8"
+    ],
+    [
+     "neuf",
+     "8"
+    ],
+    [
+     "  Neuf  ",
+     "8"
+    ],
+    [
+     "grand neuf",
+     "8"
+    ],
+    [
+     "Neu",
+     "8"
+    ],
+    [
+     "Refait à neuf",
+     "9"
+    ],
+    [
+     "REFAIT À NEUF",
+     "9"
+    ],
+    [
+     "refait à neuf",
+     "9"
+    ],
+    [
+     "Refait a neuf",
+     "9"
+    ],
+    [
+     "  Refait à neuf  ",
+     "9"
+    ],
+    [
+     "grand refait à neuf",
+     "8"
+    ],
+    [
+     "Refait",
+     "9"
+    ],
+    [
+     "",
+     ""
+    ],
+    [
+     "zzz",
+     ""
+    ],
+    [
+     "oui",
+     ""
+    ],
+    [
+     "non",
+     ""
+    ],
+    [
+     "avec",
+     ""
+    ],
+    [
+     "sans",
+     ""
+    ],
+    [
+     "1",
+     ""
+    ],
+    [
+     "0",
+     ""
+    ],
+    [
+     "o",
+     "1"
+    ],
+    [
+     "n",
+     "5"
+    ],
+    [
+     "peut-être",
+     ""
+    ],
+    [
+     "Oui, refait",
+     ""
+    ],
+    [
+     "NON",
+     ""
+    ],
+    [
+     "  ",
+     ""
+    ],
+    [
+     "grande maison",
+     ""
+    ],
+    [
+     "villa contemporaine",
+     ""
+    ],
+    [
+     "Appartement T3",
+     ""
+    ],
+    [
+     "corps de ferme",
+     ""
+    ],
+    [
+     "beau terrain",
+     ""
+    ],
+    [
+     "maison de ville",
+     ""
+    ],
+    [
+     "Studio meublé",
+     ""
+    ],
+    [
+     "box fermé",
+     ""
+    ],
+    [
+     "Immeuble de rapport",
+     ""
+    ],
+    [
+     "pavillon des années 70",
+     ""
+    ],
+    [
+     "Local commercial",
+     ""
+    ],
+    [
+     "T2 lumineux",
+     ""
+    ],
+    [
+     "maison meublée",
+     ""
+    ],
+    [
+     "parking garage",
+     ""
+    ],
+    [
+     "rez de chaussée",
+     ""
+    ],
+    [
+     "place de parking",
+     ""
+    ],
+    [
+     "un mas provençal",
+     ""
+    ],
+    [
+     "longère",
+     ""
+    ],
+    [
+     "F4",
+     ""
+    ],
+    [
+     "séjour",
+     ""
+    ],
+    [
+     "Salle d'eau",
+     ""
+    ],
+    [
+     "cuisine équipée",
+     ""
+    ],
+    [
+     "chambre parentale",
+     ""
+    ],
+    [
+     "sud ouest",
+     ""
+    ],
+    [
+     "S",
+     "1"
+    ],
+    [
+     "NO",
+     ""
+    ],
+    [
+     "américaine",
+     ""
+    ],
+    [
+     "à rafraîchir",
+     "3"
+    ],
+    [
+     "Est",
+     ""
+    ],
+    [
+     "Nord-Est",
+     ""
+    ],
+    [
+     "équipée",
+     ""
+    ],
+    [
+     "Mitoyenne 1 côté",
+     ""
+    ],
+    [
+     "fioul",
+     ""
+    ],
+    [
+     "gaz de ville",
+     ""
+    ],
+    [
+     "collectif",
+     ""
+    ]
+   ],
+   "etat_exterieur": [
+    [
+     "Non précisé",
+     ""
+    ],
+    [
+     "NON PRÉCISÉ",
+     ""
+    ],
+    [
+     "non précisé",
+     ""
+    ],
+    [
+     "Non precise",
+     ""
+    ],
+    [
+     "  Non précisé  ",
+     ""
+    ],
+    [
+     "grand non précisé",
+     ""
+    ],
+    [
+     "Non p",
+     ""
+    ],
+    [
+     "Travaux à prévoir",
+     "2"
+    ],
+    [
+     "TRAVAUX À PRÉVOIR",
+     "2"
+    ],
+    [
+     "travaux à prévoir",
+     "2"
+    ],
+    [
+     "Travaux a prevoir",
+     "2"
+    ],
+    [
+     "  Travaux à prévoir  ",
+     "2"
+    ],
+    [
+     "grand travaux à prévoir",
+     "2"
+    ],
+    [
+     "Travaux ",
+     "2"
+    ],
+    [
+     "A rafraichir",
+     "3"
+    ],
+    [
+     "A RAFRAICHIR",
+     "3"
+    ],
+    [
+     "a rafraichir",
+     "3"
+    ],
+    [
+     "  A rafraichir  ",
+     "3"
+    ],
+    [
+     "grand a rafraichir",
+     "3"
+    ],
+    [
+     "A rafr",
+     "3"
+    ],
+    [
+     "Etat moyen",
+     "5"
+    ],
+    [
+     "ETAT MOYEN",
+     "5"
+    ],
+    [
+     "etat moyen",
+     "5"
+    ],
+    [
+     "  Etat moyen  ",
+     "5"
+    ],
+    [
+     "grand etat moyen",
+     "5"
+    ],
+    [
+     "Etat ",
+     "5"
+    ],
+    [
+     "Bon état",
+     "6"
+    ],
+    [
+     "BON ÉTAT",
+     "6"
+    ],
+    [
+     "bon état",
+     "6"
+    ],
+    [
+     "Bon etat",
+     "6"
+    ],
+    [
+     "  Bon état  ",
+     "6"
+    ],
+    [
+     "grand bon état",
+     "6"
+    ],
+    [
+     "Bon ",
+     "6"
+    ],
+    [
+     "Excellent état",
+     "7"
+    ],
+    [
+     "EXCELLENT ÉTAT",
+     "7"
+    ],
+    [
+     "excellent état",
+     "7"
+    ],
+    [
+     "Excellent etat",
+     "7"
+    ],
+    [
+     "  Excellent état  ",
+     "7"
+    ],
+    [
+     "grand excellent état",
+     "7"
+    ],
+    [
+     "Excelle",
+     "7"
+    ],
+    [
+     "",
+     ""
+    ],
+    [
+     "zzz",
+     ""
+    ],
+    [
+     "oui",
+     ""
+    ],
+    [
+     "non",
+     ""
+    ],
+    [
+     "avec",
+     ""
+    ],
+    [
+     "sans",
+     ""
+    ],
+    [
+     "1",
+     ""
+    ],
+    [
+     "0",
+     ""
+    ],
+    [
+     "o",
+     "2"
+    ],
+    [
+     "n",
+     "5"
+    ],
+    [
+     "peut-être",
+     ""
+    ],
+    [
+     "Oui, refait",
+     ""
+    ],
+    [
+     "NON",
+     ""
+    ],
+    [
+     "  ",
+     ""
+    ],
+    [
+     "grande maison",
+     ""
+    ],
+    [
+     "villa contemporaine",
+     ""
+    ],
+    [
+     "Appartement T3",
+     ""
+    ],
+    [
+     "corps de ferme",
+     ""
+    ],
+    [
+     "beau terrain",
+     ""
+    ],
+    [
+     "maison de ville",
+     ""
+    ],
+    [
+     "Studio meublé",
+     ""
+    ],
+    [
+     "box fermé",
+     ""
+    ],
+    [
+     "Immeuble de rapport",
+     ""
+    ],
+    [
+     "pavillon des années 70",
+     ""
+    ],
+    [
+     "Local commercial",
+     ""
+    ],
+    [
+     "T2 lumineux",
+     ""
+    ],
+    [
+     "maison meublée",
+     ""
+    ],
+    [
+     "parking garage",
+     ""
+    ],
+    [
+     "rez de chaussée",
+     ""
+    ],
+    [
+     "place de parking",
+     ""
+    ],
+    [
+     "un mas provençal",
+     ""
+    ],
+    [
+     "longère",
+     ""
+    ],
+    [
+     "F4",
+     ""
+    ],
+    [
+     "séjour",
+     ""
+    ],
+    [
+     "Salle d'eau",
+     ""
+    ],
+    [
+     "cuisine équipée",
+     ""
+    ],
+    [
+     "chambre parentale",
+     ""
+    ],
+    [
+     "sud ouest",
+     ""
+    ],
+    [
+     "S",
+     ""
+    ],
+    [
+     "NO",
+     ""
+    ],
+    [
+     "américaine",
+     ""
+    ],
+    [
+     "neuf",
+     ""
+    ],
+    [
+     "à rafraîchir",
+     "3"
+    ],
+    [
+     "Est",
+     ""
+    ],
+    [
+     "Nord-Est",
+     ""
+    ],
+    [
+     "équipée",
+     ""
+    ],
+    [
+     "Mitoyenne 1 côté",
+     ""
+    ],
+    [
+     "fioul",
+     ""
+    ],
+    [
+     "gaz de ville",
+     ""
+    ],
+    [
+     "collectif",
+     ""
+    ]
+   ],
+   "CUISINE_EQUIPEMENT": [
+    [
+     "Non défini",
+     ""
+    ],
+    [
+     "NON DÉFINI",
+     ""
+    ],
+    [
+     "non défini",
+     ""
+    ],
+    [
+     "Non defini",
+     ""
+    ],
+    [
+     "  Non défini  ",
+     ""
+    ],
+    [
+     "grand non défini",
+     ""
+    ],
+    [
+     "Non d",
+     ""
+    ],
+    [
+     "Semi équipée",
+     "SEMI-EQUIPEE"
+    ],
+    [
+     "SEMI ÉQUIPÉE",
+     "SEMI-EQUIPEE"
+    ],
+    [
+     "semi équipée",
+     "SEMI-EQUIPEE"
+    ],
+    [
+     "Semi equipee",
+     "SEMI-EQUIPEE"
+    ],
+    [
+     "  Semi équipée  ",
+     "SEMI-EQUIPEE"
+    ],
+    [
+     "grand semi équipée",
+     "SEMI-EQUIPEE"
+    ],
+    [
+     "Semi é",
+     "SEMI-EQUIPEE"
+    ],
+    [
+     "Équipée",
+     "EQUIPEE"
+    ],
+    [
+     "ÉQUIPÉE",
+     "EQUIPEE"
+    ],
+    [
+     "équipée",
+     "EQUIPEE"
+    ],
+    [
+     "Equipee",
+     "EQUIPEE"
+    ],
+    [
+     "  Équipée  ",
+     "EQUIPEE"
+    ],
+    [
+     "grand équipée",
+     "EQUIPEE"
+    ],
+    [
+     "Équ",
+     "SEMI-EQUIPEE"
+    ],
+    [
+     "",
+     ""
+    ],
+    [
+     "zzz",
+     ""
+    ],
+    [
+     "oui",
+     ""
+    ],
+    [
+     "non",
+     ""
+    ],
+    [
+     "avec",
+     ""
+    ],
+    [
+     "sans",
+     ""
+    ],
+    [
+     "1",
+     ""
+    ],
+    [
+     "0",
+     ""
+    ],
+    [
+     "o",
+     ""
+    ],
+    [
+     "n",
+     ""
+    ],
+    [
+     "peut-être",
+     ""
+    ],
+    [
+     "Oui, refait",
+     ""
+    ],
+    [
+     "NON",
+     ""
+    ],
+    [
+     "  ",
+     ""
+    ],
+    [
+     "grande maison",
+     ""
+    ],
+    [
+     "villa contemporaine",
+     ""
+    ],
+    [
+     "Appartement T3",
+     ""
+    ],
+    [
+     "corps de ferme",
+     ""
+    ],
+    [
+     "beau terrain",
+     ""
+    ],
+    [
+     "maison de ville",
+     ""
+    ],
+    [
+     "Studio meublé",
+     ""
+    ],
+    [
+     "box fermé",
+     ""
+    ],
+    [
+     "Immeuble de rapport",
+     ""
+    ],
+    [
+     "pavillon des années 70",
+     ""
+    ],
+    [
+     "Local commercial",
+     ""
+    ],
+    [
+     "T2 lumineux",
+     ""
+    ],
+    [
+     "maison meublée",
+     ""
+    ],
+    [
+     "parking garage",
+     ""
+    ],
+    [
+     "rez de chaussée",
+     ""
+    ],
+    [
+     "place de parking",
+     ""
+    ],
+    [
+     "un mas provençal",
+     ""
+    ],
+    [
+     "longère",
+     ""
+    ],
+    [
+     "F4",
+     ""
+    ],
+    [
+     "séjour",
+     ""
+    ],
+    [
+     "Salle d'eau",
+     ""
+    ],
+    [
+     "cuisine équipée",
+     "EQUIPEE"
+    ],
+    [
+     "chambre parentale",
+     ""
+    ],
+    [
+     "sud ouest",
+     ""
+    ],
+    [
+     "S",
+     "SEMI-EQUIPEE"
+    ],
+    [
+     "NO",
+     ""
+    ],
+    [
+     "américaine",
+     ""
+    ],
+    [
+     "neuf",
+     ""
+    ],
+    [
+     "bon état",
+     ""
+    ],
+    [
+     "à rafraîchir",
+     ""
+    ],
+    [
+     "Est",
+     ""
+    ],
+    [
+     "Nord-Est",
+     ""
+    ],
+    [
+     "Mitoyenne 1 côté",
+     ""
+    ],
+    [
+     "fioul",
+     ""
+    ],
+    [
+     "gaz de ville",
+     ""
+    ],
+    [
+     "collectif",
+     ""
+    ]
+   ],
+   "MURS_MITOYENS": [
+    [
+     "Non précisé",
+     ""
+    ],
+    [
+     "NON PRÉCISÉ",
+     ""
+    ],
+    [
+     "non précisé",
+     ""
+    ],
+    [
+     "Non precise",
+     ""
+    ],
+    [
+     "  Non précisé  ",
+     ""
+    ],
+    [
+     "grand non précisé",
+     ""
+    ],
+    [
+     "Non p",
+     ""
+    ],
+    [
+     "Indépendant",
+     "0"
+    ],
+    [
+     "INDÉPENDANT",
+     "0"
+    ],
+    [
+     "indépendant",
+     "0"
+    ],
+    [
+     "Independant",
+     "0"
+    ],
+    [
+     "  Indépendant  ",
+     "0"
+    ],
+    [
+     "grand indépendant",
+     "0"
+    ],
+    [
+     "Indép",
+     "0"
+    ],
+    [
+     "1 côté",
+     "1"
+    ],
+    [
+     "1 CÔTÉ",
+     "1"
+    ],
+    [
+     "1 cote",
+     "1"
+    ],
+    [
+     "  1 côté  ",
+     "1"
+    ],
+    [
+     "grand 1 côté",
+     "1"
+    ],
+    [
+     "1 c",
+     "1"
+    ],
+    [
+     "2 côtés",
+     "2"
+    ],
+    [
+     "2 CÔTÉS",
+     "2"
+    ],
+    [
+     "2 cotes",
+     "2"
+    ],
+    [
+     "  2 côtés  ",
+     "2"
+    ],
+    [
+     "grand 2 côtés",
+     "2"
+    ],
+    [
+     "2 c",
+     "2"
+    ],
+    [
+     "3 côtés",
+     "3"
+    ],
+    [
+     "3 CÔTÉS",
+     "3"
+    ],
+    [
+     "3 cotes",
+     "3"
+    ],
+    [
+     "  3 côtés  ",
+     "3"
+    ],
+    [
+     "grand 3 côtés",
+     "3"
+    ],
+    [
+     "3 c",
+     "3"
+    ],
+    [
+     "4 côtés",
+     "4"
+    ],
+    [
+     "4 CÔTÉS",
+     "4"
+    ],
+    [
+     "4 cotes",
+     "4"
+    ],
+    [
+     "  4 côtés  ",
+     "4"
+    ],
+    [
+     "grand 4 côtés",
+     "4"
+    ],
+    [
+     "4 c",
+     "4"
+    ],
+    [
+     "",
+     ""
+    ],
+    [
+     "zzz",
+     ""
+    ],
+    [
+     "oui",
+     ""
+    ],
+    [
+     "non",
+     ""
+    ],
+    [
+     "avec",
+     ""
+    ],
+    [
+     "sans",
+     ""
+    ],
+    [
+     "1",
+     "1"
+    ],
+    [
+     "0",
+     ""
+    ],
+    [
+     "o",
+     "1"
+    ],
+    [
+     "n",
+     "0"
+    ],
+    [
+     "peut-être",
+     ""
+    ],
+    [
+     "Oui, refait",
+     ""
+    ],
+    [
+     "NON",
+     ""
+    ],
+    [
+     "  ",
+     ""
+    ],
+    [
+     "grande maison",
+     ""
+    ],
+    [
+     "villa contemporaine",
+     ""
+    ],
+    [
+     "Appartement T3",
+     ""
+    ],
+    [
+     "corps de ferme",
+     ""
+    ],
+    [
+     "beau terrain",
+     ""
+    ],
+    [
+     "maison de ville",
+     ""
+    ],
+    [
+     "Studio meublé",
+     ""
+    ],
+    [
+     "box fermé",
+     ""
+    ],
+    [
+     "Immeuble de rapport",
+     ""
+    ],
+    [
+     "pavillon des années 70",
+     ""
+    ],
+    [
+     "Local commercial",
+     ""
+    ],
+    [
+     "T2 lumineux",
+     ""
+    ],
+    [
+     "maison meublée",
+     ""
+    ],
+    [
+     "parking garage",
+     ""
+    ],
+    [
+     "rez de chaussée",
+     ""
+    ],
+    [
+     "place de parking",
+     ""
+    ],
+    [
+     "un mas provençal",
+     ""
+    ],
+    [
+     "longère",
+     ""
+    ],
+    [
+     "F4",
+     ""
+    ],
+    [
+     "séjour",
+     ""
+    ],
+    [
+     "Salle d'eau",
+     ""
+    ],
+    [
+     "cuisine équipée",
+     ""
+    ],
+    [
+     "chambre parentale",
+     ""
+    ],
+    [
+     "sud ouest",
+     ""
+    ],
+    [
+     "S",
+     "2"
+    ],
+    [
+     "NO",
+     ""
+    ],
+    [
+     "américaine",
+     ""
+    ],
+    [
+     "neuf",
+     ""
+    ],
+    [
+     "bon état",
+     ""
+    ],
+    [
+     "à rafraîchir",
+     ""
+    ],
+    [
+     "Est",
+     ""
+    ],
+    [
+     "Nord-Est",
+     ""
+    ],
+    [
+     "équipée",
+     ""
+    ],
+    [
+     "Mitoyenne 1 côté",
+     "1"
+    ],
+    [
+     "fioul",
+     ""
+    ],
+    [
+     "gaz de ville",
+     ""
+    ],
+    [
+     "collectif",
+     ""
+    ]
+   ],
+   "RESIDENCE": [
+    [
+     "Non précisé",
+     ""
+    ],
+    [
+     "NON PRÉCISÉ",
+     ""
+    ],
+    [
+     "non précisé",
+     ""
+    ],
+    [
+     "Non precise",
+     ""
+    ],
+    [
+     "  Non précisé  ",
+     ""
+    ],
+    [
+     "grand non précisé",
+     ""
+    ],
+    [
+     "Non p",
+     ""
+    ],
+    [
+     "Ouverte",
+     "OUVERT"
+    ],
+    [
+     "OUVERTE",
+     "OUVERT"
+    ],
+    [
+     "ouverte",
+     "OUVERT"
+    ],
+    [
+     "  Ouverte  ",
+     "OUVERT"
+    ],
+    [
+     "grand ouverte",
+     "OUVERT"
+    ],
+    [
+     "Ouv",
+     "OUVERT"
+    ],
+    [
+     "Fermée",
+     "FERME"
+    ],
+    [
+     "FERMÉE",
+     "FERME"
+    ],
+    [
+     "fermée",
+     "FERME"
+    ],
+    [
+     "Fermee",
+     "FERME"
+    ],
+    [
+     "  Fermée  ",
+     "FERME"
+    ],
+    [
+     "grand fermée",
+     "FERME"
+    ],
+    [
+     "Fer",
+     "FERME"
+    ],
+    [
+     "Securisée",
+     "SECURISE"
+    ],
+    [
+     "SECURISÉE",
+     "SECURISE"
+    ],
+    [
+     "securisée",
+     "SECURISE"
+    ],
+    [
+     "Securisee",
+     "SECURISE"
+    ],
+    [
+     "  Securisée  ",
+     "SECURISE"
+    ],
+    [
+     "grand securisée",
+     "SECURISE"
+    ],
+    [
+     "Secu",
+     "SECURISE"
+    ],
+    [
+     "",
+     ""
+    ],
+    [
+     "zzz",
+     ""
+    ],
+    [
+     "oui",
+     ""
+    ],
+    [
+     "non",
+     ""
+    ],
+    [
+     "avec",
+     ""
+    ],
+    [
+     "sans",
+     ""
+    ],
+    [
+     "1",
+     ""
+    ],
+    [
+     "0",
+     ""
+    ],
+    [
+     "o",
+     "OUVERT"
+    ],
+    [
+     "n",
+     ""
+    ],
+    [
+     "peut-être",
+     ""
+    ],
+    [
+     "Oui, refait",
+     ""
+    ],
+    [
+     "NON",
+     ""
+    ],
+    [
+     "  ",
+     ""
+    ],
+    [
+     "grande maison",
+     ""
+    ],
+    [
+     "villa contemporaine",
+     ""
+    ],
+    [
+     "Appartement T3",
+     ""
+    ],
+    [
+     "corps de ferme",
+     ""
+    ],
+    [
+     "beau terrain",
+     ""
+    ],
+    [
+     "maison de ville",
+     ""
+    ],
+    [
+     "Studio meublé",
+     ""
+    ],
+    [
+     "box fermé",
+     ""
+    ],
+    [
+     "Immeuble de rapport",
+     ""
+    ],
+    [
+     "pavillon des années 70",
+     ""
+    ],
+    [
+     "Local commercial",
+     ""
+    ],
+    [
+     "T2 lumineux",
+     ""
+    ],
+    [
+     "maison meublée",
+     ""
+    ],
+    [
+     "parking garage",
+     ""
+    ],
+    [
+     "rez de chaussée",
+     ""
+    ],
+    [
+     "place de parking",
+     ""
+    ],
+    [
+     "un mas provençal",
+     ""
+    ],
+    [
+     "longère",
+     ""
+    ],
+    [
+     "F4",
+     ""
+    ],
+    [
+     "séjour",
+     ""
+    ],
+    [
+     "Salle d'eau",
+     ""
+    ],
+    [
+     "cuisine équipée",
+     ""
+    ],
+    [
+     "chambre parentale",
+     ""
+    ],
+    [
+     "sud ouest",
+     ""
+    ],
+    [
+     "S",
+     "SECURISE"
+    ],
+    [
+     "NO",
+     ""
+    ],
+    [
+     "américaine",
+     ""
+    ],
+    [
+     "neuf",
+     ""
+    ],
+    [
+     "bon état",
+     ""
+    ],
+    [
+     "à rafraîchir",
+     ""
+    ],
+    [
+     "Est",
+     ""
+    ],
+    [
+     "Nord-Est",
+     ""
+    ],
+    [
+     "équipée",
+     ""
+    ],
+    [
+     "Mitoyenne 1 côté",
+     ""
+    ],
+    [
+     "fioul",
+     ""
+    ],
+    [
+     "gaz de ville",
+     ""
+    ],
+    [
+     "collectif",
+     ""
+    ]
+   ],
+   "TYPE_RESIDENCE": [
+    [
+     "Non précisé",
+     ""
+    ],
+    [
+     "NON PRÉCISÉ",
+     ""
+    ],
+    [
+     "non précisé",
+     ""
+    ],
+    [
+     "Non precise",
+     ""
+    ],
+    [
+     "  Non précisé  ",
+     ""
+    ],
+    [
+     "grand non précisé",
+     ""
+    ],
+    [
+     "Non p",
+     ""
+    ],
+    [
+     "Ancien",
+     "ANCIEN"
+    ],
+    [
+     "ANCIEN",
+     "ANCIEN"
+    ],
+    [
+     "ancien",
+     "ANCIEN"
+    ],
+    [
+     "  Ancien  ",
+     "ANCIEN"
+    ],
+    [
+     "grand ancien",
+     "ANCIEN"
+    ],
+    [
+     "Anc",
+     "ANCIEN"
+    ],
+    [
+     "Neuf",
+     "NEUF"
+    ],
+    [
+     "NEUF",
+     "NEUF"
+    ],
+    [
+     "neuf",
+     "NEUF"
+    ],
+    [
+     "  Neuf  ",
+     "NEUF"
+    ],
+    [
+     "grand neuf",
+     "NEUF"
+    ],
+    [
+     "Neu",
+     "NEUF"
+    ],
+    [
+     "Standing",
+     "STANDING"
+    ],
+    [
+     "STANDING",
+     "STANDING"
+    ],
+    [
+     "standing",
+     "STANDING"
+    ],
+    [
+     "  Standing  ",
+     "STANDING"
+    ],
+    [
+     "grand standing",
+     "STANDING"
+    ],
+    [
+     "Stan",
+     "STANDING"
+    ],
+    [
+     "",
+     ""
+    ],
+    [
+     "zzz",
+     ""
+    ],
+    [
+     "oui",
+     ""
+    ],
+    [
+     "non",
+     ""
+    ],
+    [
+     "avec",
+     ""
+    ],
+    [
+     "sans",
+     ""
+    ],
+    [
+     "1",
+     ""
+    ],
+    [
+     "0",
+     ""
+    ],
+    [
+     "o",
+     ""
+    ],
+    [
+     "n",
+     "ANCIEN"
+    ],
+    [
+     "peut-être",
+     ""
+    ],
+    [
+     "Oui, refait",
+     ""
+    ],
+    [
+     "NON",
+     ""
+    ],
+    [
+     "  ",
+     ""
+    ],
+    [
+     "grande maison",
+     ""
+    ],
+    [
+     "villa contemporaine",
+     ""
+    ],
+    [
+     "Appartement T3",
+     ""
+    ],
+    [
+     "corps de ferme",
+     ""
+    ],
+    [
+     "beau terrain",
+     ""
+    ],
+    [
+     "maison de ville",
+     ""
+    ],
+    [
+     "Studio meublé",
+     ""
+    ],
+    [
+     "box fermé",
+     ""
+    ],
+    [
+     "Immeuble de rapport",
+     ""
+    ],
+    [
+     "pavillon des années 70",
+     ""
+    ],
+    [
+     "Local commercial",
+     ""
+    ],
+    [
+     "T2 lumineux",
+     ""
+    ],
+    [
+     "maison meublée",
+     ""
+    ],
+    [
+     "parking garage",
+     ""
+    ],
+    [
+     "rez de chaussée",
+     ""
+    ],
+    [
+     "place de parking",
+     ""
+    ],
+    [
+     "un mas provençal",
+     ""
+    ],
+    [
+     "longère",
+     ""
+    ],
+    [
+     "F4",
+     ""
+    ],
+    [
+     "séjour",
+     ""
+    ],
+    [
+     "Salle d'eau",
+     ""
+    ],
+    [
+     "cuisine équipée",
+     ""
+    ],
+    [
+     "chambre parentale",
+     ""
+    ],
+    [
+     "sud ouest",
+     ""
+    ],
+    [
+     "S",
+     "STANDING"
+    ],
+    [
+     "NO",
+     ""
+    ],
+    [
+     "américaine",
+     ""
+    ],
+    [
+     "bon état",
+     ""
+    ],
+    [
+     "à rafraîchir",
+     ""
+    ],
+    [
+     "Est",
+     ""
+    ],
+    [
+     "Nord-Est",
+     ""
+    ],
+    [
+     "équipée",
+     ""
+    ],
+    [
+     "Mitoyenne 1 côté",
+     ""
+    ],
+    [
+     "fioul",
+     ""
+    ],
+    [
+     "gaz de ville",
+     ""
+    ],
+    [
+     "collectif",
+     ""
+    ]
+   ],
+   "formatChauff": [
+    [
+     "Non précisé",
+     "4"
+    ],
+    [
+     "NON PRÉCISÉ",
+     "4"
+    ],
+    [
+     "non précisé",
+     "4"
+    ],
+    [
+     "Non precise",
+     "4"
+    ],
+    [
+     "  Non précisé  ",
+     "4"
+    ],
+    [
+     "grand non précisé",
+     "4"
+    ],
+    [
+     "Non p",
+     "4"
+    ],
+    [
+     "Central",
+     "3"
+    ],
+    [
+     "CENTRAL",
+     "3"
+    ],
+    [
+     "central",
+     "3"
+    ],
+    [
+     "  Central  ",
+     "3"
+    ],
+    [
+     "grand central",
+     "3"
+    ],
+    [
+     "Cen",
+     "3"
+    ],
+    [
+     "Collectif",
+     "1"
+    ],
+    [
+     "COLLECTIF",
+     "1"
+    ],
+    [
+     "collectif",
+     "1"
+    ],
+    [
+     "  Collectif  ",
+     "1"
+    ],
+    [
+     "grand collectif",
+     "1"
+    ],
+    [
+     "Coll",
+     "1"
+    ],
+    [
+     "Individuel",
+     "2"
+    ],
+    [
+     "INDIVIDUEL",
+     "2"
+    ],
+    [
+     "individuel",
+     "2"
+    ],
+    [
+     "  Individuel  ",
+     "2"
+    ],
+    [
+     "grand individuel",
+     "2"
+    ],
+    [
+     "Indiv",
+     "2"
+    ],
+    [
+     "Urbain",
+     "5"
+    ],
+    [
+     "URBAIN",
+     "5"
+    ],
+    [
+     "urbain",
+     "5"
+    ],
+    [
+     "  Urbain  ",
+     "5"
+    ],
+    [
+     "grand urbain",
+     "5"
+    ],
+    [
+     "Urb",
+     "5"
+    ],
+    [
+     "",
+     ""
+    ],
+    [
+     "zzz",
+     ""
+    ],
+    [
+     "oui",
+     ""
+    ],
+    [
+     "non",
+     "4"
+    ],
+    [
+     "avec",
+     ""
+    ],
+    [
+     "sans",
+     ""
+    ],
+    [
+     "1",
+     ""
+    ],
+    [
+     "0",
+     ""
+    ],
+    [
+     "o",
+     "4"
+    ],
+    [
+     "n",
+     "4"
+    ],
+    [
+     "peut-être",
+     ""
+    ],
+    [
+     "Oui, refait",
+     ""
+    ],
+    [
+     "NON",
+     "4"
+    ],
+    [
+     "  ",
+     ""
+    ],
+    [
+     "grande maison",
+     ""
+    ],
+    [
+     "villa contemporaine",
+     ""
+    ],
+    [
+     "Appartement T3",
+     ""
+    ],
+    [
+     "corps de ferme",
+     ""
+    ],
+    [
+     "beau terrain",
+     ""
+    ],
+    [
+     "maison de ville",
+     ""
+    ],
+    [
+     "Studio meublé",
+     ""
+    ],
+    [
+     "box fermé",
+     ""
+    ],
+    [
+     "Immeuble de rapport",
+     ""
+    ],
+    [
+     "pavillon des années 70",
+     ""
+    ],
+    [
+     "Local commercial",
+     ""
+    ],
+    [
+     "T2 lumineux",
+     ""
+    ],
+    [
+     "maison meublée",
+     ""
+    ],
+    [
+     "parking garage",
+     ""
+    ],
+    [
+     "rez de chaussée",
+     ""
+    ],
+    [
+     "place de parking",
+     ""
+    ],
+    [
+     "un mas provençal",
+     ""
+    ],
+    [
+     "longère",
+     ""
+    ],
+    [
+     "F4",
+     ""
+    ],
+    [
+     "séjour",
+     ""
+    ],
+    [
+     "Salle d'eau",
+     ""
+    ],
+    [
+     "cuisine équipée",
+     ""
+    ],
+    [
+     "chambre parentale",
+     ""
+    ],
+    [
+     "sud ouest",
+     ""
+    ],
+    [
+     "S",
+     "4"
+    ],
+    [
+     "NO",
+     "4"
+    ],
+    [
+     "américaine",
+     ""
+    ],
+    [
+     "neuf",
+     ""
+    ],
+    [
+     "bon état",
+     ""
+    ],
+    [
+     "à rafraîchir",
+     ""
+    ],
+    [
+     "Est",
+     ""
+    ],
+    [
+     "Nord-Est",
+     ""
+    ],
+    [
+     "équipée",
+     ""
+    ],
+    [
+     "Mitoyenne 1 côté",
+     ""
+    ],
+    [
+     "fioul",
+     ""
+    ],
+    [
+     "gaz de ville",
+     ""
+    ]
+   ],
+   "typeChauff": [
+    [
+     "Air",
+     "4"
+    ],
+    [
+     "AIR",
+     "4"
+    ],
+    [
+     "air",
+     "4"
+    ],
+    [
+     "  Air  ",
+     "4"
+    ],
+    [
+     "grand air",
+     "4"
+    ],
+    [
+     "Air/Eau",
+     "10"
+    ],
+    [
+     "AIR/EAU",
+     "10"
+    ],
+    [
+     "air/eau",
+     "10"
+    ],
+    [
+     "  Air/Eau  ",
+     "10"
+    ],
+    [
+     "grand air/eau",
+     "4"
+    ],
+    [
+     "Non précisé",
+     "9"
+    ],
+    [
+     "NON PRÉCISÉ",
+     "9"
+    ],
+    [
+     "non précisé",
+     "9"
+    ],
+    [
+     "Non precise",
+     "9"
+    ],
+    [
+     "  Non précisé  ",
+     "9"
+    ],
+    [
+     "grand non précisé",
+     "9"
+    ],
+    [
+     "Non p",
+     "9"
+    ],
+    [
+     "Chaudière",
+     "1"
+    ],
+    [
+     "CHAUDIÈRE",
+     "1"
+    ],
+    [
+     "chaudière",
+     "1"
+    ],
+    [
+     "Chaudiere",
+     "1"
+    ],
+    [
+     "  Chaudière  ",
+     "1"
+    ],
+    [
+     "grand chaudière",
+     "1"
+    ],
+    [
+     "Chau",
+     "1"
+    ],
+    [
+     "Cheminée",
+     "8"
+    ],
+    [
+     "CHEMINÉE",
+     "8"
+    ],
+    [
+     "cheminée",
+     "8"
+    ],
+    [
+     "Cheminee",
+     "8"
+    ],
+    [
+     "  Cheminée  ",
+     "8"
+    ],
+    [
+     "grand cheminée",
+     "8"
+    ],
+    [
+     "Chem",
+     "8"
+    ],
+    [
+     "Convecteur",
+     "5"
+    ],
+    [
+     "CONVECTEUR",
+     "5"
+    ],
+    [
+     "convecteur",
+     "5"
+    ],
+    [
+     "  Convecteur  ",
+     "5"
+    ],
+    [
+     "grand convecteur",
+     "5"
+    ],
+    [
+     "Conve",
+     "5"
+    ],
+    [
+     "Poêle",
+     "7"
+    ],
+    [
+     "POÊLE",
+     "7"
+    ],
+    [
+     "poêle",
+     "7"
+    ],
+    [
+     "Poele",
+     "7"
+    ],
+    [
+     "  Poêle  ",
+     "7"
+    ],
+    [
+     "grand poêle",
+     "7"
+    ],
+    [
+     "Poê",
+     "7"
+    ],
+    [
+     "Radiateur",
+     "2"
+    ],
+    [
+     "RADIATEUR",
+     "2"
+    ],
+    [
+     "radiateur",
+     "2"
+    ],
+    [
+     "  Radiateur  ",
+     "2"
+    ],
+    [
+     "grand radiateur",
+     "2"
+    ],
+    [
+     "Radi",
+     "2"
+    ],
+    [
+     "Rayonnant",
+     "6"
+    ],
+    [
+     "RAYONNANT",
+     "6"
+    ],
+    [
+     "rayonnant",
+     "6"
+    ],
+    [
+     "  Rayonnant  ",
+     "6"
+    ],
+    [
+     "grand rayonnant",
+     "6"
+    ],
+    [
+     "Rayo",
+     "6"
+    ],
+    [
+     "Sol",
+     "3"
+    ],
+    [
+     "SOL",
+     "3"
+    ],
+    [
+     "sol",
+     "3"
+    ],
+    [
+     "  Sol  ",
+     "3"
+    ],
+    [
+     "grand sol",
+     "3"
+    ],
+    [
+     "",
+     ""
+    ],
+    [
+     "zzz",
+     ""
+    ],
+    [
+     "oui",
+     ""
+    ],
+    [
+     "non",
+     "9"
+    ],
+    [
+     "avec",
+     ""
+    ],
+    [
+     "sans",
+     ""
+    ],
+    [
+     "1",
+     ""
+    ],
+    [
+     "0",
+     ""
+    ],
+    [
+     "o",
+     "9"
+    ],
+    [
+     "n",
+     "9"
+    ],
+    [
+     "peut-être",
+     ""
+    ],
+    [
+     "Oui, refait",
+     ""
+    ],
+    [
+     "NON",
+     "9"
+    ],
+    [
+     "  ",
+     ""
+    ],
+    [
+     "grande maison",
+     ""
+    ],
+    [
+     "villa contemporaine",
+     ""
+    ],
+    [
+     "Appartement T3",
+     ""
+    ],
+    [
+     "corps de ferme",
+     ""
+    ],
+    [
+     "beau terrain",
+     ""
+    ],
+    [
+     "maison de ville",
+     ""
+    ],
+    [
+     "Studio meublé",
+     ""
+    ],
+    [
+     "box fermé",
+     ""
+    ],
+    [
+     "Immeuble de rapport",
+     ""
+    ],
+    [
+     "pavillon des années 70",
+     ""
+    ],
+    [
+     "Local commercial",
+     ""
+    ],
+    [
+     "T2 lumineux",
+     ""
+    ],
+    [
+     "maison meublée",
+     ""
+    ],
+    [
+     "parking garage",
+     ""
+    ],
+    [
+     "rez de chaussée",
+     ""
+    ],
+    [
+     "place de parking",
+     ""
+    ],
+    [
+     "un mas provençal",
+     ""
+    ],
+    [
+     "longère",
+     ""
+    ],
+    [
+     "F4",
+     ""
+    ],
+    [
+     "séjour",
+     ""
+    ],
+    [
+     "Salle d'eau",
+     ""
+    ],
+    [
+     "cuisine équipée",
+     ""
+    ],
+    [
+     "chambre parentale",
+     ""
+    ],
+    [
+     "sud ouest",
+     ""
+    ],
+    [
+     "S",
+     "9"
+    ],
+    [
+     "NO",
+     "9"
+    ],
+    [
+     "américaine",
+     ""
+    ],
+    [
+     "neuf",
+     ""
+    ],
+    [
+     "bon état",
+     ""
+    ],
+    [
+     "à rafraîchir",
+     ""
+    ],
+    [
+     "Est",
+     ""
+    ],
+    [
+     "Nord-Est",
+     ""
+    ],
+    [
+     "équipée",
+     ""
+    ],
+    [
+     "Mitoyenne 1 côté",
+     ""
+    ],
+    [
+     "fioul",
+     ""
+    ],
+    [
+     "gaz de ville",
+     ""
+    ],
+    [
+     "collectif",
+     ""
+    ]
+   ],
+   "energieChauff": [
+    [
+     "Aérothermie",
+     "15"
+    ],
+    [
+     "AÉROTHERMIE",
+     "15"
+    ],
+    [
+     "aérothermie",
+     "15"
+    ],
+    [
+     "Aerothermie",
+     "15"
+    ],
+    [
+     "  Aérothermie  ",
+     "15"
+    ],
+    [
+     "grand aérothermie",
+     "15"
+    ],
+    [
+     "Aérot",
+     "15"
+    ],
+    [
+     "Non précisé",
+     "14"
+    ],
+    [
+     "NON PRÉCISÉ",
+     "14"
+    ],
+    [
+     "non précisé",
+     "14"
+    ],
+    [
+     "Non precise",
+     "14"
+    ],
+    [
+     "  Non précisé  ",
+     "14"
+    ],
+    [
+     "grand non précisé",
+     "14"
+    ],
+    [
+     "Non p",
+     "14"
+    ],
+    [
+     "Bois",
+     "6"
+    ],
+    [
+     "BOIS",
+     "6"
+    ],
+    [
+     "bois",
+     "6"
+    ],
+    [
+     "  Bois  ",
+     "6"
+    ],
+    [
+     "grand bois",
+     "6"
+    ],
+    [
+     "Boi",
+     "6"
+    ],
+    [
+     "Charbon",
+     "5"
+    ],
+    [
+     "CHARBON",
+     "5"
+    ],
+    [
+     "charbon",
+     "5"
+    ],
+    [
+     "  Charbon  ",
+     "5"
+    ],
+    [
+     "grand charbon",
+     "5"
+    ],
+    [
+     "Cha",
+     "5"
+    ],
+    [
+     "Climatisation",
+     "11"
+    ],
+    [
+     "CLIMATISATION",
+     "11"
+    ],
+    [
+     "climatisation",
+     "11"
+    ],
+    [
+     "  Climatisation  ",
+     "11"
+    ],
+    [
+     "grand climatisation",
+     "11"
+    ],
+    [
+     "Climat",
+     "11"
+    ],
+    [
+     "Électrique",
+     "3"
+    ],
+    [
+     "ÉLECTRIQUE",
+     "3"
+    ],
+    [
+     "électrique",
+     "3"
+    ],
+    [
+     "Electrique",
+     "3"
+    ],
+    [
+     "  Électrique  ",
+     "3"
+    ],
+    [
+     "grand électrique",
+     "3"
+    ],
+    [
+     "Élect",
+     "3"
+    ],
+    [
+     "Fioul",
+     "4"
+    ],
+    [
+     "FIOUL",
+     "4"
+    ],
+    [
+     "fioul",
+     "4"
+    ],
+    [
+     "  Fioul  ",
+     "4"
+    ],
+    [
+     "grand fioul",
+     "4"
+    ],
+    [
+     "Fio",
+     "4"
+    ],
+    [
+     "Gaz",
+     "2"
+    ],
+    [
+     "GAZ",
+     "2"
+    ],
+    [
+     "gaz",
+     "2"
+    ],
+    [
+     "  Gaz  ",
+     "2"
+    ],
+    [
+     "grand gaz",
+     "2"
+    ],
+    [
+     "Gaz de ville",
+     "1"
+    ],
+    [
+     "GAZ DE VILLE",
+     "1"
+    ],
+    [
+     "gaz de ville",
+     "1"
+    ],
+    [
+     "  Gaz de ville  ",
+     "1"
+    ],
+    [
+     "grand gaz de ville",
+     "2"
+    ],
+    [
+     "Gaz de",
+     "2"
+    ],
+    [
+     "Géothermie",
+     "9"
+    ],
+    [
+     "GÉOTHERMIE",
+     "9"
+    ],
+    [
+     "géothermie",
+     "9"
+    ],
+    [
+     "Geothermie",
+     "9"
+    ],
+    [
+     "  Géothermie  ",
+     "9"
+    ],
+    [
+     "grand géothermie",
+     "9"
+    ],
+    [
+     "Géoth",
+     "9"
+    ],
+    [
+     "Granules",
+     "7"
+    ],
+    [
+     "GRANULES",
+     "7"
+    ],
+    [
+     "granules",
+     "7"
+    ],
+    [
+     "  Granules  ",
+     "7"
+    ],
+    [
+     "grand granules",
+     "7"
+    ],
+    [
+     "Gran",
+     "7"
+    ],
+    [
+     "Mixte",
+     "12"
+    ],
+    [
+     "MIXTE",
+     "12"
+    ],
+    [
+     "mixte",
+     "12"
+    ],
+    [
+     "  Mixte  ",
+     "12"
+    ],
+    [
+     "grand mixte",
+     "12"
+    ],
+    [
+     "Mix",
+     "12"
+    ],
+    [
+     "Pompe à chaleur",
+     "10"
+    ],
+    [
+     "POMPE À CHALEUR",
+     "10"
+    ],
+    [
+     "pompe à chaleur",
+     "10"
+    ],
+    [
+     "Pompe a chaleur",
+     "10"
+    ],
+    [
+     "  Pompe à chaleur  ",
+     "10"
+    ],
+    [
+     "grand pompe à chaleur",
+     "10"
+    ],
+    [
+     "Pompe à",
+     "10"
+    ],
+    [
+     "Sans",
+     "13"
+    ],
+    [
+     "SANS",
+     "13"
+    ],
+    [
+     "sans",
+     "13"
+    ],
+    [
+     "  Sans  ",
+     "13"
+    ],
+    [
+     "grand sans",
+     "13"
+    ],
+    [
+     "San",
+     "13"
+    ],
+    [
+     "Solaire",
+     "8"
+    ],
+    [
+     "SOLAIRE",
+     "8"
+    ],
+    [
+     "solaire",
+     "8"
+    ],
+    [
+     "  Solaire  ",
+     "8"
+    ],
+    [
+     "grand solaire",
+     "8"
+    ],
+    [
+     "Sol",
+     "8"
+    ],
+    [
+     "",
+     ""
+    ],
+    [
+     "zzz",
+     ""
+    ],
+    [
+     "oui",
+     ""
+    ],
+    [
+     "non",
+     "14"
+    ],
+    [
+     "avec",
+     ""
+    ],
+    [
+     "1",
+     ""
+    ],
+    [
+     "0",
+     ""
+    ],
+    [
+     "o",
+     "15"
+    ],
+    [
+     "n",
+     "14"
+    ],
+    [
+     "peut-être",
+     ""
+    ],
+    [
+     "Oui, refait",
+     ""
+    ],
+    [
+     "NON",
+     "14"
+    ],
+    [
+     "  ",
+     ""
+    ],
+    [
+     "grande maison",
+     ""
+    ],
+    [
+     "villa contemporaine",
+     ""
+    ],
+    [
+     "Appartement T3",
+     ""
+    ],
+    [
+     "corps de ferme",
+     ""
+    ],
+    [
+     "beau terrain",
+     ""
+    ],
+    [
+     "maison de ville",
+     ""
+    ],
+    [
+     "Studio meublé",
+     ""
+    ],
+    [
+     "box fermé",
+     ""
+    ],
+    [
+     "Immeuble de rapport",
+     ""
+    ],
+    [
+     "pavillon des années 70",
+     ""
+    ],
+    [
+     "Local commercial",
+     ""
+    ],
+    [
+     "T2 lumineux",
+     ""
+    ],
+    [
+     "maison meublée",
+     ""
+    ],
+    [
+     "parking garage",
+     ""
+    ],
+    [
+     "rez de chaussée",
+     ""
+    ],
+    [
+     "place de parking",
+     ""
+    ],
+    [
+     "un mas provençal",
+     ""
+    ],
+    [
+     "longère",
+     ""
+    ],
+    [
+     "F4",
+     ""
+    ],
+    [
+     "séjour",
+     ""
+    ],
+    [
+     "Salle d'eau",
+     ""
+    ],
+    [
+     "cuisine équipée",
+     ""
+    ],
+    [
+     "chambre parentale",
+     ""
+    ],
+    [
+     "sud ouest",
+     ""
+    ],
+    [
+     "S",
+     "14"
+    ],
+    [
+     "NO",
+     "14"
+    ],
+    [
+     "américaine",
+     ""
+    ],
+    [
+     "neuf",
+     ""
+    ],
+    [
+     "bon état",
+     ""
+    ],
+    [
+     "à rafraîchir",
+     ""
+    ],
+    [
+     "Est",
+     ""
+    ],
+    [
+     "Nord-Est",
+     ""
+    ],
+    [
+     "équipée",
+     ""
+    ],
+    [
+     "Mitoyenne 1 côté",
+     ""
+    ],
+    [
+     "collectif",
+     ""
+    ]
+   ],
+   "EAU": [
+    [
+     "Non précisé",
+     ""
+    ],
+    [
+     "NON PRÉCISÉ",
+     ""
+    ],
+    [
+     "non précisé",
+     ""
+    ],
+    [
+     "Non precise",
+     ""
+    ],
+    [
+     "  Non précisé  ",
+     ""
+    ],
+    [
+     "grand non précisé",
+     ""
+    ],
+    [
+     "Non p",
+     ""
+    ],
+    [
+     "Sans",
+     "SANS"
+    ],
+    [
+     "SANS",
+     "SANS"
+    ],
+    [
+     "sans",
+     "SANS"
+    ],
+    [
+     "  Sans  ",
+     "SANS"
+    ],
+    [
+     "grand sans",
+     "SANS"
+    ],
+    [
+     "San",
+     "SANS"
+    ],
+    [
+     "Individuel",
+     "INDIVIDUEL"
+    ],
+    [
+     "INDIVIDUEL",
+     "INDIVIDUEL"
+    ],
+    [
+     "individuel",
+     "INDIVIDUEL"
+    ],
+    [
+     "  Individuel  ",
+     "INDIVIDUEL"
+    ],
+    [
+     "grand individuel",
+     "INDIVIDUEL"
+    ],
+    [
+     "Indiv",
+     "INDIVIDUEL"
+    ],
+    [
+     "Collectif",
+     "COLLECTIF"
+    ],
+    [
+     "COLLECTIF",
+     "COLLECTIF"
+    ],
+    [
+     "collectif",
+     "COLLECTIF"
+    ],
+    [
+     "  Collectif  ",
+     "COLLECTIF"
+    ],
+    [
+     "grand collectif",
+     "COLLECTIF"
+    ],
+    [
+     "Coll",
+     "COLLECTIF"
+    ],
+    [
+     "Puits",
+     "PUIT"
+    ],
+    [
+     "PUITS",
+     "PUIT"
+    ],
+    [
+     "puits",
+     "PUIT"
+    ],
+    [
+     "  Puits  ",
+     "PUIT"
+    ],
+    [
+     "grand puits",
+     "PUIT"
+    ],
+    [
+     "Pui",
+     "PUIT"
+    ],
+    [
+     "",
+     ""
+    ],
+    [
+     "zzz",
+     ""
+    ],
+    [
+     "oui",
+     ""
+    ],
+    [
+     "non",
+     ""
+    ],
+    [
+     "avec",
+     ""
+    ],
+    [
+     "1",
+     ""
+    ],
+    [
+     "0",
+     ""
+    ],
+    [
+     "o",
+     "COLLECTIF"
+    ],
+    [
+     "n",
+     "SANS"
+    ],
+    [
+     "peut-être",
+     ""
+    ],
+    [
+     "Oui, refait",
+     ""
+    ],
+    [
+     "NON",
+     ""
+    ],
+    [
+     "  ",
+     ""
+    ],
+    [
+     "grande maison",
+     ""
+    ],
+    [
+     "villa contemporaine",
+     ""
+    ],
+    [
+     "Appartement T3",
+     ""
+    ],
+    [
+     "corps de ferme",
+     ""
+    ],
+    [
+     "beau terrain",
+     ""
+    ],
+    [
+     "maison de ville",
+     ""
+    ],
+    [
+     "Studio meublé",
+     ""
+    ],
+    [
+     "box fermé",
+     ""
+    ],
+    [
+     "Immeuble de rapport",
+     ""
+    ],
+    [
+     "pavillon des années 70",
+     ""
+    ],
+    [
+     "Local commercial",
+     ""
+    ],
+    [
+     "T2 lumineux",
+     ""
+    ],
+    [
+     "maison meublée",
+     ""
+    ],
+    [
+     "parking garage",
+     ""
+    ],
+    [
+     "rez de chaussée",
+     ""
+    ],
+    [
+     "place de parking",
+     ""
+    ],
+    [
+     "un mas provençal",
+     ""
+    ],
+    [
+     "longère",
+     ""
+    ],
+    [
+     "F4",
+     ""
+    ],
+    [
+     "séjour",
+     ""
+    ],
+    [
+     "Salle d'eau",
+     ""
+    ],
+    [
+     "cuisine équipée",
+     ""
+    ],
+    [
+     "chambre parentale",
+     ""
+    ],
+    [
+     "sud ouest",
+     ""
+    ],
+    [
+     "S",
+     "SANS"
+    ],
+    [
+     "NO",
+     ""
+    ],
+    [
+     "américaine",
+     ""
+    ],
+    [
+     "neuf",
+     ""
+    ],
+    [
+     "bon état",
+     ""
+    ],
+    [
+     "à rafraîchir",
+     ""
+    ],
+    [
+     "Est",
+     ""
+    ],
+    [
+     "Nord-Est",
+     ""
+    ],
+    [
+     "équipée",
+     ""
+    ],
+    [
+     "Mitoyenne 1 côté",
+     ""
+    ],
+    [
+     "fioul",
+     ""
+    ],
+    [
+     "gaz de ville",
+     ""
+    ]
+   ],
+   "ASSAINISSEMENT": [
+    [
+     "Non précisé",
+     ""
+    ],
+    [
+     "NON PRÉCISÉ",
+     ""
+    ],
+    [
+     "non précisé",
+     ""
+    ],
+    [
+     "Non precise",
+     ""
+    ],
+    [
+     "  Non précisé  ",
+     ""
+    ],
+    [
+     "grand non précisé",
+     ""
+    ],
+    [
+     "Non p",
+     ""
+    ],
+    [
+     "Sans",
+     "SANS"
+    ],
+    [
+     "SANS",
+     "SANS"
+    ],
+    [
+     "sans",
+     "SANS"
+    ],
+    [
+     "  Sans  ",
+     "SANS"
+    ],
+    [
+     "grand sans",
+     "SANS"
+    ],
+    [
+     "San",
+     "SANS"
+    ],
+    [
+     "Tout à l'égout",
+     "TOUT A L'EGOUT"
+    ],
+    [
+     "TOUT À L'ÉGOUT",
+     "TOUT A L'EGOUT"
+    ],
+    [
+     "tout à l'égout",
+     "TOUT A L'EGOUT"
+    ],
+    [
+     "Tout a l'egout",
+     "TOUT A L'EGOUT"
+    ],
+    [
+     "  Tout à l'égout  ",
+     "TOUT A L'EGOUT"
+    ],
+    [
+     "grand tout à l'égout",
+     "TOUT A L'EGOUT"
+    ],
+    [
+     "Tout à ",
+     "TOUT A L'EGOUT"
+    ],
+    [
+     "Fosse septique",
+     "FOSSE SEPTIQUE"
+    ],
+    [
+     "FOSSE SEPTIQUE",
+     "FOSSE SEPTIQUE"
+    ],
+    [
+     "fosse septique",
+     "FOSSE SEPTIQUE"
+    ],
+    [
+     "  Fosse septique  ",
+     "FOSSE SEPTIQUE"
+    ],
+    [
+     "grand fosse septique",
+     "FOSSE SEPTIQUE"
+    ],
+    [
+     "Fosse s",
+     "FOSSE SEPTIQUE"
+    ],
+    [
+     "Fosse toutes eaux",
+     "FOSSE TOUTES EAUX"
+    ],
+    [
+     "FOSSE TOUTES EAUX",
+     "FOSSE TOUTES EAUX"
+    ],
+    [
+     "fosse toutes eaux",
+     "FOSSE TOUTES EAUX"
+    ],
+    [
+     "  Fosse toutes eaux  ",
+     "FOSSE TOUTES EAUX"
+    ],
+    [
+     "grand fosse toutes eaux",
+     "FOSSE TOUTES EAUX"
+    ],
+    [
+     "Fosse to",
+     "FOSSE TOUTES EAUX"
+    ],
+    [
+     "Micro-station",
+     "MICRO STATION"
+    ],
+    [
+     "MICRO-STATION",
+     "MICRO STATION"
+    ],
+    [
+     "micro-station",
+     "MICRO STATION"
+    ],
+    [
+     "  Micro-station  ",
+     "MICRO STATION"
+    ],
+    [
+     "grand micro-station",
+     "MICRO STATION"
+    ],
+    [
+     "Micro-",
+     "MICRO STATION"
+    ],
+    [
+     "",
+     ""
+    ],
+    [
+     "zzz",
+     ""
+    ],
+    [
+     "oui",
+     ""
+    ],
+    [
+     "non",
+     ""
+    ],
+    [
+     "avec",
+     ""
+    ],
+    [
+     "1",
+     ""
+    ],
+    [
+     "0",
+     ""
+    ],
+    [
+     "o",
+     "TOUT A L'EGOUT"
+    ],
+    [
+     "n",
+     "SANS"
+    ],
+    [
+     "peut-être",
+     ""
+    ],
+    [
+     "Oui, refait",
+     ""
+    ],
+    [
+     "NON",
+     ""
+    ],
+    [
+     "  ",
+     ""
+    ],
+    [
+     "grande maison",
+     ""
+    ],
+    [
+     "villa contemporaine",
+     ""
+    ],
+    [
+     "Appartement T3",
+     ""
+    ],
+    [
+     "corps de ferme",
+     ""
+    ],
+    [
+     "beau terrain",
+     ""
+    ],
+    [
+     "maison de ville",
+     ""
+    ],
+    [
+     "Studio meublé",
+     ""
+    ],
+    [
+     "box fermé",
+     ""
+    ],
+    [
+     "Immeuble de rapport",
+     ""
+    ],
+    [
+     "pavillon des années 70",
+     ""
+    ],
+    [
+     "Local commercial",
+     ""
+    ],
+    [
+     "T2 lumineux",
+     ""
+    ],
+    [
+     "maison meublée",
+     ""
+    ],
+    [
+     "parking garage",
+     ""
+    ],
+    [
+     "rez de chaussée",
+     ""
+    ],
+    [
+     "place de parking",
+     ""
+    ],
+    [
+     "un mas provençal",
+     ""
+    ],
+    [
+     "longère",
+     ""
+    ],
+    [
+     "F4",
+     ""
+    ],
+    [
+     "séjour",
+     ""
+    ],
+    [
+     "Salle d'eau",
+     ""
+    ],
+    [
+     "cuisine équipée",
+     ""
+    ],
+    [
+     "chambre parentale",
+     ""
+    ],
+    [
+     "sud ouest",
+     ""
+    ],
+    [
+     "S",
+     "SANS"
+    ],
+    [
+     "NO",
+     ""
+    ],
+    [
+     "américaine",
+     ""
+    ],
+    [
+     "neuf",
+     ""
+    ],
+    [
+     "bon état",
+     ""
+    ],
+    [
+     "à rafraîchir",
+     ""
+    ],
+    [
+     "Est",
+     ""
+    ],
+    [
+     "Nord-Est",
+     ""
+    ],
+    [
+     "équipée",
+     ""
+    ],
+    [
+     "Mitoyenne 1 côté",
+     ""
+    ],
+    [
+     "fioul",
+     ""
+    ],
+    [
+     "gaz de ville",
+     ""
+    ],
+    [
+     "collectif",
+     ""
+    ]
+   ],
+   "DISTRIBUTION_EAU": [
+    [
+     "Non défini",
+     ""
+    ],
+    [
+     "NON DÉFINI",
+     ""
+    ],
+    [
+     "non défini",
+     ""
+    ],
+    [
+     "Non defini",
+     ""
+    ],
+    [
+     "  Non défini  ",
+     ""
+    ],
+    [
+     "grand non défini",
+     ""
+    ],
+    [
+     "Non d",
+     ""
+    ],
+    [
+     "Collective",
+     "COLLECTIF"
+    ],
+    [
+     "COLLECTIVE",
+     "COLLECTIF"
+    ],
+    [
+     "collective",
+     "COLLECTIF"
+    ],
+    [
+     "  Collective  ",
+     "COLLECTIF"
+    ],
+    [
+     "grand collective",
+     "COLLECTIF"
+    ],
+    [
+     "Colle",
+     "COLLECTIF"
+    ],
+    [
+     "Individuelle",
+     "INDIVIDUEL"
+    ],
+    [
+     "INDIVIDUELLE",
+     "INDIVIDUEL"
+    ],
+    [
+     "individuelle",
+     "INDIVIDUEL"
+    ],
+    [
+     "  Individuelle  ",
+     "INDIVIDUEL"
+    ],
+    [
+     "grand individuelle",
+     "INDIVIDUEL"
+    ],
+    [
+     "Indivi",
+     "INDIVIDUEL"
+    ],
+    [
+     "Centrale",
+     "CENTRAL"
+    ],
+    [
+     "CENTRALE",
+     "CENTRAL"
+    ],
+    [
+     "centrale",
+     "CENTRAL"
+    ],
+    [
+     "  Centrale  ",
+     "CENTRAL"
+    ],
+    [
+     "grand centrale",
+     "CENTRAL"
+    ],
+    [
+     "Cent",
+     "CENTRAL"
+    ],
+    [
+     "",
+     ""
+    ],
+    [
+     "zzz",
+     ""
+    ],
+    [
+     "oui",
+     ""
+    ],
+    [
+     "non",
+     ""
+    ],
+    [
+     "avec",
+     ""
+    ],
+    [
+     "sans",
+     ""
+    ],
+    [
+     "1",
+     ""
+    ],
+    [
+     "0",
+     ""
+    ],
+    [
+     "o",
+     "COLLECTIF"
+    ],
+    [
+     "n",
+     "INDIVIDUEL"
+    ],
+    [
+     "peut-être",
+     ""
+    ],
+    [
+     "Oui, refait",
+     ""
+    ],
+    [
+     "NON",
+     ""
+    ],
+    [
+     "  ",
+     ""
+    ],
+    [
+     "grande maison",
+     ""
+    ],
+    [
+     "villa contemporaine",
+     ""
+    ],
+    [
+     "Appartement T3",
+     ""
+    ],
+    [
+     "corps de ferme",
+     ""
+    ],
+    [
+     "beau terrain",
+     ""
+    ],
+    [
+     "maison de ville",
+     ""
+    ],
+    [
+     "Studio meublé",
+     ""
+    ],
+    [
+     "box fermé",
+     ""
+    ],
+    [
+     "Immeuble de rapport",
+     ""
+    ],
+    [
+     "pavillon des années 70",
+     ""
+    ],
+    [
+     "Local commercial",
+     ""
+    ],
+    [
+     "T2 lumineux",
+     ""
+    ],
+    [
+     "maison meublée",
+     ""
+    ],
+    [
+     "parking garage",
+     ""
+    ],
+    [
+     "rez de chaussée",
+     ""
+    ],
+    [
+     "place de parking",
+     ""
+    ],
+    [
+     "un mas provençal",
+     ""
+    ],
+    [
+     "longère",
+     ""
+    ],
+    [
+     "F4",
+     ""
+    ],
+    [
+     "séjour",
+     ""
+    ],
+    [
+     "Salle d'eau",
+     ""
+    ],
+    [
+     "cuisine équipée",
+     ""
+    ],
+    [
+     "chambre parentale",
+     ""
+    ],
+    [
+     "sud ouest",
+     ""
+    ],
+    [
+     "S",
+     ""
+    ],
+    [
+     "NO",
+     ""
+    ],
+    [
+     "américaine",
+     ""
+    ],
+    [
+     "neuf",
+     ""
+    ],
+    [
+     "bon état",
+     ""
+    ],
+    [
+     "à rafraîchir",
+     ""
+    ],
+    [
+     "Est",
+     ""
+    ],
+    [
+     "Nord-Est",
+     ""
+    ],
+    [
+     "équipée",
+     ""
+    ],
+    [
+     "Mitoyenne 1 côté",
+     ""
+    ],
+    [
+     "fioul",
+     ""
+    ],
+    [
+     "gaz de ville",
+     ""
+    ],
+    [
+     "collectif",
+     ""
+    ]
+   ],
+   "ENERGIE_EAU": [
+    [
+     "Non défini",
+     ""
+    ],
+    [
+     "NON DÉFINI",
+     ""
+    ],
+    [
+     "non défini",
+     ""
+    ],
+    [
+     "Non defini",
+     ""
+    ],
+    [
+     "  Non défini  ",
+     ""
+    ],
+    [
+     "grand non défini",
+     ""
+    ],
+    [
+     "Non d",
+     ""
+    ],
+    [
+     "Gaz",
+     "GAZ"
+    ],
+    [
+     "GAZ",
+     "GAZ"
+    ],
+    [
+     "gaz",
+     "GAZ"
+    ],
+    [
+     "  Gaz  ",
+     "GAZ"
+    ],
+    [
+     "grand gaz",
+     "GAZ"
+    ],
+    [
+     "Ballon électrique",
+     "BALLON ELECTRIQUE"
+    ],
+    [
+     "BALLON ÉLECTRIQUE",
+     "BALLON ELECTRIQUE"
+    ],
+    [
+     "ballon électrique",
+     "BALLON ELECTRIQUE"
+    ],
+    [
+     "Ballon electrique",
+     "BALLON ELECTRIQUE"
+    ],
+    [
+     "  Ballon électrique  ",
+     "BALLON ELECTRIQUE"
+    ],
+    [
+     "grand ballon électrique",
+     "BALLON ELECTRIQUE"
+    ],
+    [
+     "Ballon é",
+     "BALLON ELECTRIQUE"
+    ],
+    [
+     "Fioul",
+     "FIOUL"
+    ],
+    [
+     "FIOUL",
+     "FIOUL"
+    ],
+    [
+     "fioul",
+     "FIOUL"
+    ],
+    [
+     "  Fioul  ",
+     "FIOUL"
+    ],
+    [
+     "grand fioul",
+     "FIOUL"
+    ],
+    [
+     "Fio",
+     "FIOUL"
+    ],
+    [
+     "Solaire",
+     "SOLAIRE"
+    ],
+    [
+     "SOLAIRE",
+     "SOLAIRE"
+    ],
+    [
+     "solaire",
+     "SOLAIRE"
+    ],
+    [
+     "  Solaire  ",
+     "SOLAIRE"
+    ],
+    [
+     "grand solaire",
+     "SOLAIRE"
+    ],
+    [
+     "Sol",
+     "SOLAIRE"
+    ],
+    [
+     "Géothermie",
+     "GEOTHERMIE"
+    ],
+    [
+     "GÉOTHERMIE",
+     "GEOTHERMIE"
+    ],
+    [
+     "géothermie",
+     "GEOTHERMIE"
+    ],
+    [
+     "Geothermie",
+     "GEOTHERMIE"
+    ],
+    [
+     "  Géothermie  ",
+     "GEOTHERMIE"
+    ],
+    [
+     "grand géothermie",
+     "GEOTHERMIE"
+    ],
+    [
+     "Géoth",
+     "GEOTHERMIE"
+    ],
+    [
+     "Mixte",
+     "MIXTE"
+    ],
+    [
+     "MIXTE",
+     "MIXTE"
+    ],
+    [
+     "mixte",
+     "MIXTE"
+    ],
+    [
+     "  Mixte  ",
+     "MIXTE"
+    ],
+    [
+     "grand mixte",
+     "MIXTE"
+    ],
+    [
+     "Mix",
+     "MIXTE"
+    ],
+    [
+     "Sans",
+     "SANS"
+    ],
+    [
+     "SANS",
+     "SANS"
+    ],
+    [
+     "sans",
+     "SANS"
+    ],
+    [
+     "  Sans  ",
+     "SANS"
+    ],
+    [
+     "grand sans",
+     "SANS"
+    ],
+    [
+     "San",
+     "SANS"
+    ],
+    [
+     "Autre",
+     "AUTRE"
+    ],
+    [
+     "AUTRE",
+     "AUTRE"
+    ],
+    [
+     "autre",
+     "AUTRE"
+    ],
+    [
+     "  Autre  ",
+     "AUTRE"
+    ],
+    [
+     "grand autre",
+     "AUTRE"
+    ],
+    [
+     "Aut",
+     "AUTRE"
+    ],
+    [
+     "Aérothermie",
+     "AEROTHERMIE"
+    ],
+    [
+     "AÉROTHERMIE",
+     "AEROTHERMIE"
+    ],
+    [
+     "aérothermie",
+     "AEROTHERMIE"
+    ],
+    [
+     "Aerothermie",
+     "AEROTHERMIE"
+    ],
+    [
+     "  Aérothermie  ",
+     "AEROTHERMIE"
+    ],
+    [
+     "grand aérothermie",
+     "AEROTHERMIE"
+    ],
+    [
+     "Aérot",
+     "AEROTHERMIE"
+    ],
+    [
+     "Thermodynamique",
+     "THERMODYNAMIQUE"
+    ],
+    [
+     "THERMODYNAMIQUE",
+     "THERMODYNAMIQUE"
+    ],
+    [
+     "thermodynamique",
+     "THERMODYNAMIQUE"
+    ],
+    [
+     "  Thermodynamique  ",
+     "THERMODYNAMIQUE"
+    ],
+    [
+     "grand thermodynamique",
+     "THERMODYNAMIQUE"
+    ],
+    [
+     "Thermod",
+     "THERMODYNAMIQUE"
+    ],
+    [
+     "Pompe à chaleur",
+     "POMPE A CHALEUR"
+    ],
+    [
+     "POMPE À CHALEUR",
+     "POMPE A CHALEUR"
+    ],
+    [
+     "pompe à chaleur",
+     "POMPE A CHALEUR"
+    ],
+    [
+     "Pompe a chaleur",
+     "POMPE A CHALEUR"
+    ],
+    [
+     "  Pompe à chaleur  ",
+     "POMPE A CHALEUR"
+    ],
+    [
+     "grand pompe à chaleur",
+     "POMPE A CHALEUR"
+    ],
+    [
+     "Pompe à",
+     "POMPE A CHALEUR"
+    ],
+    [
+     "",
+     ""
+    ],
+    [
+     "zzz",
+     ""
+    ],
+    [
+     "oui",
+     ""
+    ],
+    [
+     "non",
+     ""
+    ],
+    [
+     "avec",
+     ""
+    ],
+    [
+     "1",
+     ""
+    ],
+    [
+     "0",
+     ""
+    ],
+    [
+     "o",
+     "BALLON ELECTRIQUE"
+    ],
+    [
+     "n",
+     "BALLON ELECTRIQUE"
+    ],
+    [
+     "peut-être",
+     ""
+    ],
+    [
+     "Oui, refait",
+     ""
+    ],
+    [
+     "NON",
+     ""
+    ],
+    [
+     "  ",
+     ""
+    ],
+    [
+     "grande maison",
+     ""
+    ],
+    [
+     "villa contemporaine",
+     ""
+    ],
+    [
+     "Appartement T3",
+     ""
+    ],
+    [
+     "corps de ferme",
+     ""
+    ],
+    [
+     "beau terrain",
+     ""
+    ],
+    [
+     "maison de ville",
+     ""
+    ],
+    [
+     "Studio meublé",
+     ""
+    ],
+    [
+     "box fermé",
+     ""
+    ],
+    [
+     "Immeuble de rapport",
+     ""
+    ],
+    [
+     "pavillon des années 70",
+     ""
+    ],
+    [
+     "Local commercial",
+     ""
+    ],
+    [
+     "T2 lumineux",
+     ""
+    ],
+    [
+     "maison meublée",
+     ""
+    ],
+    [
+     "parking garage",
+     ""
+    ],
+    [
+     "rez de chaussée",
+     ""
+    ],
+    [
+     "place de parking",
+     ""
+    ],
+    [
+     "un mas provençal",
+     ""
+    ],
+    [
+     "longère",
+     ""
+    ],
+    [
+     "F4",
+     ""
+    ],
+    [
+     "séjour",
+     ""
+    ],
+    [
+     "Salle d'eau",
+     ""
+    ],
+    [
+     "cuisine équipée",
+     ""
+    ],
+    [
+     "chambre parentale",
+     ""
+    ],
+    [
+     "sud ouest",
+     ""
+    ],
+    [
+     "S",
+     "SOLAIRE"
+    ],
+    [
+     "NO",
+     ""
+    ],
+    [
+     "américaine",
+     ""
+    ],
+    [
+     "neuf",
+     ""
+    ],
+    [
+     "bon état",
+     ""
+    ],
+    [
+     "à rafraîchir",
+     ""
+    ],
+    [
+     "Est",
+     ""
+    ],
+    [
+     "Nord-Est",
+     ""
+    ],
+    [
+     "équipée",
+     ""
+    ],
+    [
+     "Mitoyenne 1 côté",
+     ""
+    ],
+    [
+     "gaz de ville",
+     "GAZ"
+    ],
+    [
+     "collectif",
+     ""
+    ]
+   ],
+   "PISCINE_TYPE": [
+    [
+     "Non precise",
+     ""
+    ],
+    [
+     "NON PRECISE",
+     ""
+    ],
+    [
+     "non precise",
+     ""
+    ],
+    [
+     "  Non precise  ",
+     ""
+    ],
+    [
+     "grand non precise",
+     ""
+    ],
+    [
+     "Non p",
+     ""
+    ],
+    [
+     "Privative",
+     "PRIVATIVE"
+    ],
+    [
+     "PRIVATIVE",
+     "PRIVATIVE"
+    ],
+    [
+     "privative",
+     "PRIVATIVE"
+    ],
+    [
+     "  Privative  ",
+     "PRIVATIVE"
+    ],
+    [
+     "grand privative",
+     "PRIVATIVE"
+    ],
+    [
+     "Priv",
+     "PRIVATIVE"
+    ],
+    [
+     "Collective surveillee",
+     "COLLECTIVE SURVEILLEE"
+    ],
+    [
+     "COLLECTIVE SURVEILLEE",
+     "COLLECTIVE SURVEILLEE"
+    ],
+    [
+     "collective surveillee",
+     "COLLECTIVE SURVEILLEE"
+    ],
+    [
+     "  Collective surveillee  ",
+     "COLLECTIVE SURVEILLEE"
+    ],
+    [
+     "grand collective surveillee",
+     "COLLECTIVE SURVEILLEE"
+    ],
+    [
+     "Collective",
+     "COLLECTIVE"
+    ],
+    [
+     "COLLECTIVE",
+     "COLLECTIVE"
+    ],
+    [
+     "collective",
+     "COLLECTIVE"
+    ],
+    [
+     "  Collective  ",
+     "COLLECTIVE"
+    ],
+    [
+     "grand collective",
+     "COLLECTIVE"
+    ],
+    [
+     "Colle",
+     "COLLECTIVE SURVEILLEE"
+    ],
+    [
+     "",
+     ""
+    ],
+    [
+     "zzz",
+     ""
+    ],
+    [
+     "oui",
+     ""
+    ],
+    [
+     "non",
+     ""
+    ],
+    [
+     "avec",
+     ""
+    ],
+    [
+     "sans",
+     ""
+    ],
+    [
+     "1",
+     ""
+    ],
+    [
+     "0",
+     ""
+    ],
+    [
+     "o",
+     "COLLECTIVE SURVEILLEE"
+    ],
+    [
+     "n",
+     ""
+    ],
+    [
+     "peut-être",
+     ""
+    ],
+    [
+     "Oui, refait",
+     ""
+    ],
+    [
+     "NON",
+     ""
+    ],
+    [
+     "  ",
+     ""
+    ],
+    [
+     "grande maison",
+     ""
+    ],
+    [
+     "villa contemporaine",
+     ""
+    ],
+    [
+     "Appartement T3",
+     ""
+    ],
+    [
+     "corps de ferme",
+     ""
+    ],
+    [
+     "beau terrain",
+     ""
+    ],
+    [
+     "maison de ville",
+     ""
+    ],
+    [
+     "Studio meublé",
+     ""
+    ],
+    [
+     "box fermé",
+     ""
+    ],
+    [
+     "Immeuble de rapport",
+     ""
+    ],
+    [
+     "pavillon des années 70",
+     ""
+    ],
+    [
+     "Local commercial",
+     ""
+    ],
+    [
+     "T2 lumineux",
+     ""
+    ],
+    [
+     "maison meublée",
+     ""
+    ],
+    [
+     "parking garage",
+     ""
+    ],
+    [
+     "rez de chaussée",
+     ""
+    ],
+    [
+     "place de parking",
+     ""
+    ],
+    [
+     "un mas provençal",
+     ""
+    ],
+    [
+     "longère",
+     ""
+    ],
+    [
+     "F4",
+     ""
+    ],
+    [
+     "séjour",
+     ""
+    ],
+    [
+     "Salle d'eau",
+     ""
+    ],
+    [
+     "cuisine équipée",
+     ""
+    ],
+    [
+     "chambre parentale",
+     ""
+    ],
+    [
+     "sud ouest",
+     ""
+    ],
+    [
+     "S",
+     "COLLECTIVE SURVEILLEE"
+    ],
+    [
+     "NO",
+     ""
+    ],
+    [
+     "américaine",
+     ""
+    ],
+    [
+     "neuf",
+     ""
+    ],
+    [
+     "bon état",
+     ""
+    ],
+    [
+     "à rafraîchir",
+     ""
+    ],
+    [
+     "Est",
+     ""
+    ],
+    [
+     "Nord-Est",
+     ""
+    ],
+    [
+     "équipée",
+     ""
+    ],
+    [
+     "Mitoyenne 1 côté",
+     ""
+    ],
+    [
+     "fioul",
+     ""
+    ],
+    [
+     "gaz de ville",
+     ""
+    ],
+    [
+     "collectif",
+     ""
+    ]
+   ],
+   "PISCINE_NATURE": [
+    [
+     "Non precise",
+     ""
+    ],
+    [
+     "NON PRECISE",
+     ""
+    ],
+    [
+     "non precise",
+     ""
+    ],
+    [
+     "  Non precise  ",
+     ""
+    ],
+    [
+     "grand non precise",
+     ""
+    ],
+    [
+     "Non p",
+     ""
+    ],
+    [
+     "Coque",
+     "COQUE"
+    ],
+    [
+     "COQUE",
+     "COQUE"
+    ],
+    [
+     "coque",
+     "COQUE"
+    ],
+    [
+     "  Coque  ",
+     "COQUE"
+    ],
+    [
+     "grand coque",
+     "COQUE"
+    ],
+    [
+     "Coq",
+     "COQUE"
+    ],
+    [
+     "Traditionnelle",
+     "TRADITIONNELLE"
+    ],
+    [
+     "TRADITIONNELLE",
+     "TRADITIONNELLE"
+    ],
+    [
+     "traditionnelle",
+     "TRADITIONNELLE"
+    ],
+    [
+     "  Traditionnelle  ",
+     "TRADITIONNELLE"
+    ],
+    [
+     "grand traditionnelle",
+     "TRADITIONNELLE"
+    ],
+    [
+     "Traditi",
+     "TRADITIONNELLE"
+    ],
+    [
+     "Hors-sol",
+     "HORS-SOL"
+    ],
+    [
+     "HORS-SOL",
+     "HORS-SOL"
+    ],
+    [
+     "hors-sol",
+     "HORS-SOL"
+    ],
+    [
+     "  Hors-sol  ",
+     "HORS-SOL"
+    ],
+    [
+     "grand hors-sol",
+     "HORS-SOL"
+    ],
+    [
+     "Hors",
+     "HORS-SOL"
+    ],
+    [
+     "Semi-enterree",
+     "SEMI-ENTERREE"
+    ],
+    [
+     "SEMI-ENTERREE",
+     "SEMI-ENTERREE"
+    ],
+    [
+     "semi-enterree",
+     "SEMI-ENTERREE"
+    ],
+    [
+     "  Semi-enterree  ",
+     "SEMI-ENTERREE"
+    ],
+    [
+     "grand semi-enterree",
+     "SEMI-ENTERREE"
+    ],
+    [
+     "Semi-e",
+     "SEMI-ENTERREE"
+    ],
+    [
+     "",
+     ""
+    ],
+    [
+     "zzz",
+     ""
+    ],
+    [
+     "oui",
+     ""
+    ],
+    [
+     "non",
+     ""
+    ],
+    [
+     "avec",
+     ""
+    ],
+    [
+     "sans",
+     ""
+    ],
+    [
+     "1",
+     ""
+    ],
+    [
+     "0",
+     ""
+    ],
+    [
+     "o",
+     "COQUE"
+    ],
+    [
+     "n",
+     "TRADITIONNELLE"
+    ],
+    [
+     "peut-être",
+     ""
+    ],
+    [
+     "Oui, refait",
+     ""
+    ],
+    [
+     "NON",
+     ""
+    ],
+    [
+     "  ",
+     ""
+    ],
+    [
+     "grande maison",
+     ""
+    ],
+    [
+     "villa contemporaine",
+     ""
+    ],
+    [
+     "Appartement T3",
+     ""
+    ],
+    [
+     "corps de ferme",
+     ""
+    ],
+    [
+     "beau terrain",
+     ""
+    ],
+    [
+     "maison de ville",
+     ""
+    ],
+    [
+     "Studio meublé",
+     ""
+    ],
+    [
+     "box fermé",
+     ""
+    ],
+    [
+     "Immeuble de rapport",
+     ""
+    ],
+    [
+     "pavillon des années 70",
+     ""
+    ],
+    [
+     "Local commercial",
+     ""
+    ],
+    [
+     "T2 lumineux",
+     ""
+    ],
+    [
+     "maison meublée",
+     ""
+    ],
+    [
+     "parking garage",
+     ""
+    ],
+    [
+     "rez de chaussée",
+     ""
+    ],
+    [
+     "place de parking",
+     ""
+    ],
+    [
+     "un mas provençal",
+     ""
+    ],
+    [
+     "longère",
+     ""
+    ],
+    [
+     "F4",
+     ""
+    ],
+    [
+     "séjour",
+     ""
+    ],
+    [
+     "Salle d'eau",
+     ""
+    ],
+    [
+     "cuisine équipée",
+     ""
+    ],
+    [
+     "chambre parentale",
+     ""
+    ],
+    [
+     "sud ouest",
+     ""
+    ],
+    [
+     "S",
+     "HORS-SOL"
+    ],
+    [
+     "NO",
+     ""
+    ],
+    [
+     "américaine",
+     ""
+    ],
+    [
+     "neuf",
+     ""
+    ],
+    [
+     "bon état",
+     ""
+    ],
+    [
+     "à rafraîchir",
+     ""
+    ],
+    [
+     "Est",
+     ""
+    ],
+    [
+     "Nord-Est",
+     ""
+    ],
+    [
+     "équipée",
+     ""
+    ],
+    [
+     "Mitoyenne 1 côté",
+     ""
+    ],
+    [
+     "fioul",
+     ""
+    ],
+    [
+     "gaz de ville",
+     ""
+    ],
+    [
+     "collectif",
+     ""
+    ]
+   ],
+   "copropriete_statut_syndicat": [
+    [
+     "Non precise",
+     ""
+    ],
+    [
+     "NON PRECISE",
+     ""
+    ],
+    [
+     "non precise",
+     ""
+    ],
+    [
+     "  Non precise  ",
+     ""
+    ],
+    [
+     "grand non precise",
+     ""
+    ],
+    [
+     "Non p",
+     ""
+    ],
+    [
+     "Procedure d'alerte",
+     "ALERTE"
+    ],
+    [
+     "PROCEDURE D'ALERTE",
+     "ALERTE"
+    ],
+    [
+     "procedure d'alerte",
+     "ALERTE"
+    ],
+    [
+     "  Procedure d'alerte  ",
+     "ALERTE"
+    ],
+    [
+     "grand procedure d'alerte",
+     "ALERTE"
+    ],
+    [
+     "Procedure",
+     "ALERTE"
+    ],
+    [
+     "Procedure de redressement",
+     "REDRESSEMENT"
+    ],
+    [
+     "PROCEDURE DE REDRESSEMENT",
+     "REDRESSEMENT"
+    ],
+    [
+     "procedure de redressement",
+     "REDRESSEMENT"
+    ],
+    [
+     "  Procedure de redressement  ",
+     "REDRESSEMENT"
+    ],
+    [
+     "grand procedure de redressement",
+     "REDRESSEMENT"
+    ],
+    [
+     "Procedure de",
+     "REDRESSEMENT"
+    ],
+    [
+     "Procedure en cours",
+     "PROCEDURE_EN_COURS"
+    ],
+    [
+     "PROCEDURE EN COURS",
+     "PROCEDURE_EN_COURS"
+    ],
+    [
+     "procedure en cours",
+     "PROCEDURE_EN_COURS"
+    ],
+    [
+     "  Procedure en cours  ",
+     "PROCEDURE_EN_COURS"
+    ],
+    [
+     "grand procedure en cours",
+     "PROCEDURE_EN_COURS"
+    ],
+    [
+     "Pas de procedure",
+     "PAS_DE_PROCEDURE"
+    ],
+    [
+     "PAS DE PROCEDURE",
+     "PAS_DE_PROCEDURE"
+    ],
+    [
+     "pas de procedure",
+     "PAS_DE_PROCEDURE"
+    ],
+    [
+     "  Pas de procedure  ",
+     "PAS_DE_PROCEDURE"
+    ],
+    [
+     "grand pas de procedure",
+     "PAS_DE_PROCEDURE"
+    ],
+    [
+     "Pas de p",
+     "PAS_DE_PROCEDURE"
+    ],
+    [
+     "",
+     ""
+    ],
+    [
+     "zzz",
+     ""
+    ],
+    [
+     "oui",
+     ""
+    ],
+    [
+     "non",
+     ""
+    ],
+    [
+     "avec",
+     ""
+    ],
+    [
+     "sans",
+     ""
+    ],
+    [
+     "1",
+     ""
+    ],
+    [
+     "0",
+     ""
+    ],
+    [
+     "o",
+     "ALERTE"
+    ],
+    [
+     "n",
+     "REDRESSEMENT"
+    ],
+    [
+     "peut-être",
+     ""
+    ],
+    [
+     "Oui, refait",
+     ""
+    ],
+    [
+     "NON",
+     ""
+    ],
+    [
+     "  ",
+     ""
+    ],
+    [
+     "grande maison",
+     ""
+    ],
+    [
+     "villa contemporaine",
+     ""
+    ],
+    [
+     "Appartement T3",
+     ""
+    ],
+    [
+     "corps de ferme",
+     ""
+    ],
+    [
+     "beau terrain",
+     ""
+    ],
+    [
+     "maison de ville",
+     ""
+    ],
+    [
+     "Studio meublé",
+     ""
+    ],
+    [
+     "box fermé",
+     ""
+    ],
+    [
+     "Immeuble de rapport",
+     ""
+    ],
+    [
+     "pavillon des années 70",
+     ""
+    ],
+    [
+     "Local commercial",
+     ""
+    ],
+    [
+     "T2 lumineux",
+     ""
+    ],
+    [
+     "maison meublée",
+     ""
+    ],
+    [
+     "parking garage",
+     ""
+    ],
+    [
+     "rez de chaussée",
+     ""
+    ],
+    [
+     "place de parking",
+     ""
+    ],
+    [
+     "un mas provençal",
+     ""
+    ],
+    [
+     "longère",
+     ""
+    ],
+    [
+     "F4",
+     ""
+    ],
+    [
+     "séjour",
+     ""
+    ],
+    [
+     "Salle d'eau",
+     ""
+    ],
+    [
+     "cuisine équipée",
+     ""
+    ],
+    [
+     "chambre parentale",
+     ""
+    ],
+    [
+     "sud ouest",
+     ""
+    ],
+    [
+     "S",
+     "REDRESSEMENT"
+    ],
+    [
+     "NO",
+     ""
+    ],
+    [
+     "américaine",
+     ""
+    ],
+    [
+     "neuf",
+     ""
+    ],
+    [
+     "bon état",
+     ""
+    ],
+    [
+     "à rafraîchir",
+     ""
+    ],
+    [
+     "Est",
+     ""
+    ],
+    [
+     "Nord-Est",
+     ""
+    ],
+    [
+     "équipée",
+     ""
+    ],
+    [
+     "Mitoyenne 1 côté",
+     ""
+    ],
+    [
+     "fioul",
+     ""
+    ],
+    [
+     "gaz de ville",
+     ""
+    ],
+    [
+     "collectif",
+     ""
+    ]
+   ]
+  }
+ }
+}
