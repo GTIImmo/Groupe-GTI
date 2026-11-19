@@ -3416,3 +3416,56 @@ l'IA »), elle disparaît à P4.
   faudrait créer une vraie fiche chez Hektor, ce qui n'était pas demandé.
 
 **Reste** : P5, P4, P6, P7, P8.
+
+## 95. P4-a — L'ASSISTANT PROPOSE LE PARCOURS, DÉJÀ REMPLI DE LA DEMANDE (19/11) : écrit, éprouvé hors ligne et en maquette, NON poussé
+
+**Ses mots** : (avant P5) « est-ce que le formulaire conserve toujours en source la conversation / agenda / scan … et
+ainsi ne pas poser la question déjà donnée ? » → confirmé (§78 règle 1, §80.4, §83), mais NON codé : P2 posait tout.
+« Oui, P4 d'abord », puis « Vas-y, A » (la traduction « cases du scan » → « cases de la fenêtre » côté SERVEUR).
+Ordre convenu : P4-a (la demande, l'agenda, le contact) → P4-b (la fiche par photo) → P4-c (les services publics,
+proposés à confirmer) → P4-d (les phrases libres, le petit lecteur).
+
+### 95.1 Ce qui est écrit (commits 89e775b, 67309d2, 9894b34)
+
+- **La traduction, côté serveur, produite par la fenêtre** : `apps/hektor-v1/parcours_traduction.cjs` exécute App.tsx
+  et écrit `backend/app/services/parcours_traduction.json` (les tables du remplisseur du scan — 25 miroirs, 15 directes,
+  79 cases —, les listes qu'il résout, les 29 types de bien et leurs synonymes, et ~1 900 EXEMPLES de ce que rendent les
+  fonctions de la fenêtre). `parcours_traduction.py` refait les 5 petites fonctions (normaliser, oui / non, liste, type de
+  bien, type de pièce) et `traduire()`, qui suit `applyDraftAnnonceScan` case par case, plus les recopies d'adresse (D6).
+  `node parcours_traduction.cjs --verifier` dit si le fichier n'est plus à jour avec App.tsx.
+- **Le moteur** (`assistant_parcours.py`) : `appliquer_depart()` pré-remplit sans JAMAIS remplacer une réponse, garde la
+  source (`_sources` = « demande »), ignore une coordonnée, une case d'aucune question ; une question dont les
+  `essentiels` (nouveaux, dans `parcours_creation.json` : le bien = type + adresse + CP + ville ; l'intérieur = surface +
+  pièces ; la composition ; le terrain ; le mandant EXISTANT ; le titre + le texte) sont tous dits devient « connue » :
+  pas reposée, affichée verte, modifiable. Un mandant « nouveau » reste posé (ses coordonnées : cases protégées).
+- **Le geste** `proposer_parcours_creation` (carte « Créer par questions guidées ») : mêmes clés que la carte « créer »,
+  SANS la garde des essentiels (le parcours pose ce qui manque) ; au clic, seule la mémoire du parcours est écrite, dans
+  SA conversation. ⛔ L'outil n'est MONTRÉ à l'IA que si `assistant_parcours` l'ouvre au compte ; la consigne gagne une
+  ligne `{{parcours}}` (vide sinon) ; le geste relit l'interrupteur lui-même (patron Youtrust). La carte « créer »
+  d'aujourd'hui reste (fiche papier jointe : le scan de la fenêtre la lit).
+- **L'écran** : la carte « Commencer les questions » ; au clic, le parcours s'ouvre sous la conversation, déjà rempli ;
+  les questions connues en pastilles vertes marquées « dit ». **L'entrée d'essai admin est RETIRÉE.**
+
+### 95.2 Les preuves (hors ligne)
+
+- Traduction : **33 verts** — sur ~1 900 exemples produits par App.tsx, le serveur rend EXACTEMENT les réponses de la
+  fenêtre ; une lecture complète traduite case par case ; 3 cases que le scan remplit mais que la fenêtre ne montre
+  JAMAIS (taxe d'habitation, fibre « cable », gardien — absentes des listes par profil ; la fenêtre les retire aussi à
+  la création) : le parcours ne les garde pas.
+- Parcours : **84 verts** (17 nouveaux : départ rempli, connues sautées, jamais d'écrasement, sources, mandant nouveau
+  toujours posé, interrupteur fermé / « admin » / commercial refusé, carte, création dans SA conversation).
+- Inventaires mis à jour (pas des défauts) : la liste des outils d'un négociateur (+1, et un outil fermé n'est pas
+  montré), 44 gestes au lieu de 43, la consigne rendue sans gabarit (et la ligne du parcours seulement si ouvert).
+- Rejoués verts : socle 31, gestes 415, lecteur 74, fichiers 28 ; couverture, catalogue, lot 0 ; build.
+- **Maquette** : « Crée une estimation par questions, maison 12 rue des Tilleuls… » → la carte « Créer par questions
+  guidées » (« Déjà dit, pas reposé : le bien, l'intérieur »), « Commencer les questions » → les pastilles « dit » et la
+  première question posée = la composition.
+
+### 95.3 Ce que ça pourrait casser ailleurs
+
+- La consigne de l'IA (partagée) : une ligne, SEULEMENT pour les comptes ouverts ; ailleurs rien ne change (l'outil n'est
+  pas même montré). ⚠ À éprouver en réel : que l'IA propose le parcours sur une création, et JAMAIS sur une baisse de
+  prix ou une question simple.
+- `_controler_creation` gagne un paramètre `exiger` (vrai par défaut : la carte « créer » est inchangée).
+
+**Reste** : pousser (son accord), l'essai réel (création, baisse de prix, question simple) ; puis P4-b, P4-c, P4-d.
