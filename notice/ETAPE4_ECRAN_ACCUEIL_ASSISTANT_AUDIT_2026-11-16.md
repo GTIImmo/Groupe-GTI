@@ -3157,7 +3157,7 @@ toujours un type) ; les 4 fonds de l'éditeur passent par `fermerEditeurAvis`.
 pousser (son accord). Ensuite : P3, la mémoire (patch, son accord), après ses deux réponses (effacement des coordonnées,
 « clearing »).
 
-## 91. SES DEUX RÉPONSES (19/11) ; « clearing » audité ; P3, LA MÉMOIRE DU PARCOURS : patch écrit et répété (NON collé)
+## 91. SES DEUX RÉPONSES (19/11) ; « clearing » audité ; P3, LA MÉMOIRE DU PARCOURS : patch écrit, répété, POSÉ EN PRODUCTION le 19/11
 
 **Ses mots** : « Ok vas-y, je valide ta reco de règle, et non je sais pas, audit pour clearing. »
 
@@ -3232,5 +3232,17 @@ Patron repris : le schéma privé `ged_prive` de la GED (morceau 9, 13/11).
 - Une 15e tâche pg_cron : un DELETE d'une petite table par nuit.
 - Rien sur les tables métier, les conversations, les cartes, `app_agent_run`.
 
-**Reste à faire par lui** : coller le patch dans l'éditeur SQL (son accord), puis je relis en base. Ensuite P1, le moteur
-de questions côté serveur (« vas-y »).
+### 91.6 LA POSE (19/11, son accord : « colle-le toi-même, tu as mon accord »)
+
+- Posé par moi, le fichier TEL QUEL (empreinte md5 `28d28c2e…` vérifiée = celui du commit 713712b et de la répétition),
+  ses propres `begin` / `commit` : « PATCH PASSÉ, sans erreur ». Ses vérifications internes ont tenu.
+- **Relu par une seconde voie** (le connecteur de la base) : les 2 tables, 0 ligne, 1 règle de lecture, la tâche
+  `assistant-parcours-purge 15 3 * * *` active (15 tâches pg_cron en tout) ; la clé de service n'a ni le schéma
+  privé ni la porte de prise ; l'écran a la prise mais pas la purge ; anon n'a pas le dépôt ; l'écran n'écrit pas le
+  parcours, la clé de service oui.
+- **Ce que voit la descente**, lu dans la spec de l'API comme elle la lit : 255 tables ; `app_assistant_parcours` OUI,
+  `mandant_coordonnees` NON. Témoin positif : `app_assistant_action` vue.
+- Retour arrière s'il le faut : `…_INVERSE.sql` (rien ne l'appelle encore, la table est vide).
+
+**Reste** : P1, le moteur de questions côté serveur (« vas-y »). Question ouverte : l'auteur garde-t-il la lecture après
+la création (choix posé par moi) ?
