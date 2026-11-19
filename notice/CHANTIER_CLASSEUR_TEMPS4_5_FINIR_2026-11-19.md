@@ -25,12 +25,20 @@
 > **Ses quatre décisions du 19/11** : ① les 10 lignes VALIDÉES → écrites (§ 2.7) ; ② la règle E
 > **n'est PAS allumée** — *« UN GESTE PAR NUIT, on verra demain, après le contrôle des 10 »* ; ③ 26613
 > **exclue de la règle E, et l'exclusion DÉCLARÉE** ; ④ le patch du gel : je le redemande à ⑦.
+>
+> ⭐ **Ses décisions du 19/11 AU SOIR (chapitre ⑩)** : le **critère de fin du § 8.5 est VALIDÉ, tel quel**
+> (les six points, les trois nuits) ; le vieil écrivain du 13/10 est **ARCHIVÉ** (sa décision) → **P0 est
+> levé** (§ 10.1). **Les interdits ne changent pas** : rien dans le classeur, chez Hektor, en base sans son
+> accord — ni patch, ni règle E, ni vague 0. Les 8 lignes de 5.6 : il répond **après le contrôle de la nuit
+> des 10** ; aucune n'est écrite.
 
 ```
 Q  SUJET                         ETAT        VERDICT EN UNE LIGNE                          ATTEND SA DECISION
-①  compromis annule sans date    FAIT        regle E + garde, ETEINTE, rejouee ; 26613     l'allumage -- PAS cette
-                                             EXCLUE ET DECLAREE (§ 1.10) : 34 reunions     nuit ; demain, APRES le
-                                             sur 33 dossiers, temoins verts                controle des 10
+①  compromis annule sans date    FAIT        regle E + garde, ETEINTE, rejouee ; 26613     l'allumage (une nuit) ;
+                                             EXCLUE ET DECLAREE (§ 1.10) : 34 reunions     ⭐ (⑩) exclure AUSSI
+                                             sur 33 dossiers, temoins verts                21520, la douteuse ;
+                                             ⭐ LE SHEET LA JUGE (§ 10.4) : 3 justes, 11   relire puis retirer les
+                                             ou c'est le GEL qui se trompe, 1 douteuse     11 liens suspects du gel
 ②  les 10 « meme nom »           FAIT,       des menages -> R1 : les 10 lignes ECRITES,    -- (decide). ⏰ demain :
                                  ECRIT       rejouees : 10 dossiers bougent, pas un de     controler la nuit
                                              plus ; 11 590 -> 11 580                       (§ 2.7)
@@ -63,9 +71,22 @@ Q  SUJET                         ETAT        VERDICT EN UNE LIGNE               
                                              ⚠ un VIEL ECRIVAIN dort dans scheduled/ et     vieil ecrivain, V1 tes
                                              prendrait nos lignes pour les siennes (P0)    Apps Script, V2 la memoire
 ⑨  ce qu'il ne m'a pas demande   FAIT        7 pistes classees : 1 ranger le vieil         chacune des 7 ; la 1re
-                                             ecrivain, 2 la sentinelle, 3 un outil de      AVANT toute ecriture
-                                             SCISSION, 4 mesurer une garde de D, 5 lire    dans le Sheet
+                                             ecrivain, 2 la sentinelle, 3 un outil de      est FAITE (⑩ : archive)
+                                             SCISSION, 4 mesurer une garde de D, 5 lire
                                              le Sheet en lecture seule, 6-7 petits
+⑩  LE SOIR DU 19/11 :            FAIT        ✅ critere § 8.5 VALIDE · ✅ P0 LEVE : le     l'ORDRE des jours
+   ses 4 questions                           vieil ecrivain archive (954e469, e24d092),    (§ 10.5, il tranche) ;
+                                             il refuse de tourner (code 3) · les 803       la decision C5 « a
+                                             lignes non ecrites dans UN FICHIER (§ 10.2) · l'export » (102 lignes) ;
+                                             sur les 520 « plusieurs / partagee » : 153    les 4 decisions du
+                                             se reglent SANS scission, 351 en demandent    routeur (§ 10.6)
+                                             une (172 groupes ; 104 portent la signature
+                                             du defaut de Hektor), 16 non tranchees ·
+                                             ⚠ 12 lignes de la vague 1 changeraient
+                                             d'etiquette si E joue APRES l'ecriture ->
+                                             E AVANT la vague 1 · le Sheet juge E :
+                                             3 justes, 11 LIENS DU GEL suspects (E
+                                             probablement juste), 1 douteuse (21520)
 ```
 
 ---
@@ -977,6 +998,8 @@ P0  ⚠⚠ LE VIEL ECRIVAIN -- TROUVE AUJOURD'HUI. scheduled/push_suivi_appsheet
     ➡ Si on ecrit 3 994 UUID, puis que quelqu'un le lance, il prendra 3 994 lignes HUMAINES pour les
       siennes. Il faut, AVANT la vague 0, soit le RETIRER, soit lui apprendre l'UUID et lui interdire
       les lignes qu'il n'a pas creees. C'est du code existant : ton « vas-y ».
+    ✅ LEVE LE 19/11 AU SOIR, PAR SA DECISION (« archive-le. Il n'a plus d'utilite ») : le script est
+      dans scheduled/_archive/, il REFUSE de tourner (code 3). Voir § 10.1.
 V1  LIRE LES APPS SCRIPT DU CLASSEUR (TON geste, 10 min, deja au plan) : Sheet1 nourrit la paie, et
     un script remplit les onglets CA Mensuel / Reporting / 12 mois / Agence. On ne sait pas s'il lit
     la colonne A.
@@ -1059,6 +1082,9 @@ LE BUT ⑧ EST ATTEINT QUAND :
   -- donc le bruit attendu au point ③
 . la vague 1a exacte (les 50) : elle se tire le jour de l'ecriture, de la mesure du jour
 . si le routeur de 5.3 (l'app lit le Sheet par l'UUID) a besoin d'autre chose que la colonne A
+  ⚠ RENVOI FAUX, releve par Frederic le 19/11 au soir : « 5.3 » est l'ETAPE 5.3 du prompt du 19/11
+    (notice/PROMPT_FINIR_LE_CHANTIER_CLASSEUR_2026-11-19.md), pas mon § 5.3, qui n'en dit rien.
+    Le routeur est traite au § 10.6.
 ```
 
 ---
@@ -1094,6 +1120,322 @@ LE BUT ⑧ EST ATTEINT QUAND :
 CE QUE JE NE FERAIS PAS : toucher la protection « possede par l'app » de ③ pour une seule
 transaction (30712) -- c'est C.7, et la mesure dit que le reservoir est la plage (340), pas le carnet.
 ```
+
+---
+
+## ⑩ LE SOIR DU 19/11 — sa réponse, et ses quatre questions
+
+> **Ses décisions** : le critère de fin du § 8.5 est **VALIDÉ, tel quel** (*« Les six points et les trois
+> nuits, d'accord. Pas de remarque. »*) ; le script du 13/10 : *« archive-le. Il n'a plus d'utilité. Je le
+> décide en connaissance de cause. »* **Les interdits ne changent pas** : rien dans le classeur, rien chez
+> Hektor, rien en base sans son accord explicite — ni patch, ni règle E, ni vague 0. Les 8 lignes de 5.6 :
+> il répond après le contrôle de la nuit des 10, **aucune n'est écrite**.
+>
+> **Ses quatre questions** : ① l'ordre des prochains jours (il tranche) ; ② la liste des 803 non écrites,
+> avec leur case, dans un fichier qu'il peut ouvrir ; ③ combien des 296 « étiquette partagée » et des 224
+> « plusieurs dossiers » se règlent SANS scission ; ④ le routeur — ce qui manque, ce que ça coûte, de quoi
+> décider (*« à la fin »*).
+
+### 10.1 ✅ P0 LEVÉ — le vieil écrivain est archivé, et il refuse de tourner
+
+```
+CE QUE J'AI FAIT
+  0  une copie datee : C:\Hektor\Backups\push_suivi_appsheet_AVANT_ARCHIVAGE_2026-11-19.py
+  1  954e469 -- le script n'avait JAMAIS ete suivi par git : il entre dans l'histoire TEL QUEL, a
+     l'octet (md5 49d8ab44e6666cf4cc84dc400a64dcf1, 923 lignes, fins LF), deplace de scheduled/ vers
+     scheduled/_archive/ (le correctif du 22/10 et ses trois regles ne sont pas perdus)
+  2  e24d092 -- ADDITIF, 17 lignes ajoutees, 0 retiree : un en-tete qui dit l'archivage, et juste apres
+     `from __future__`, AVANT tout import et toute lecture du Sheet : un message et SystemExit(3).
+     + scheduled/_archive/LISEZMOI.md (ce qu'il faisait, pourquoi on l'arrete, ou est l'original)
+CE QUE J'AI VERIFIE
+  . lance avec le python du systeme ET celui du .venv, sans --envoyer : refus, code 3, rien lu
+  . l'ancien chemin scheduled/push_suivi_appsheet.py n'existe plus
+  . 0 des 174 taches planifiees ne le lance ; 0 des 12 .ps1 qu'elles appellent ne le cite ; 0 processus
+  . aucun code ne l'importe -- ni dans le depot, ni dans C:\Hektor hors du depot (Projet-lot0 compris)
+  . les 3 autres scripts qui nomment le Sheet (apparier_classeur, rapprocher_classeur_suivi,
+    rapport_gel_tous_les_champs) ne font QUE lire : aucun POST. Rien dans apps/, backend/, Console/.
+CE QUI RESTE VRAI
+  . le compte de service garde le droit d'ECRIRE dans le Sheet -- voulu : l'ecriture des etiquettes en
+    aura besoin. La cle de l'API AppSheet (.env) n'est plus utilisee par personne ; je n'y ai pas touche.
+```
+
+### 10.2 Les 803 lignes non écrites — le fichier
+
+`notice/TEMPS6_LES_803_LIGNES_NON_ECRITES_ET_CE_QUI_LES_DEBLOQUE_2026-11-19.xlsx` (à ouvrir ; non suivi par
+git, `*.xlsx` est ignoré) et le même contenu en `.csv` (séparateur `;`, suivi). **Une ligne par ligne du
+Sheet qui n'entre pas en vague 1 aujourd'hui**, triées par numéro de ligne, avec : son ID Unique ; sa case
+aujourd'hui, après la nuit et le patch, et au bout des couches 1 à 5 ; **ce qui la débloque** et **qui** (la
+nuit · toi · toi : une scission · moi (relecture) puis toi · personne) ; Mandat, État actuel, Offre,
+Compromis, Acquéreur, Prix ; ses dossiers et ses transactions ; **les autres lignes du même dossier**
+(pour lire une « étiquette partagée » sans chercher). Deux autres feuilles : le compte (§ 10.3) et les
+cases.
+
+```
+LES 803, PAR CASE           296 ETIQUETTE PARTAGEE . 224 PLUSIEURS DOSSIERS . 100 LIEN A VALIDER
+                             94 SANS LIEN . 39 PATCH V2 . 23 GEL SEUL . 23 EN ATTENTE . 4 CETTE NUIT
+PAR « QUI »                 362 toi : une scission . 287 toi . 74 personne (rien a ecrire) .
+                             53 moi (relecture) puis toi . 23 moi . 4 la nuit
+TEMOIN                      la photo du soir (20:09), rangee comme ⑧, redonne EXACTEMENT les cases du CSV
+                            de ⑧ : 0 ligne differente sur 4 797 -- le Sheet et la base n'ont pas bouge.
+```
+
+⏰ **Quand** : il est là **ce soir**. ⚠ Mais c'est la photo du 19/11 : le jour de la vague 1b, je le
+**régénère** (deux commandes, ~1 min : `photo` puis `classer`) et c'est CELUI-LÀ qu'il faut lire avant 1b —
+la nuit, le patch, E et les 8 lignes déplacent des lignes d'une case à l'autre.
+
+### 10.3 Sans scission — le compte (sa question 3)
+
+**Le script** : `phase2/checks/temps6_les_803_lignes_et_ce_qui_les_debloque_2026-11-19.py`, en deux étapes
+(`photo` 10 s, `classer` < 1 min), lecture seule. **La méthode** : chaque ligne bloquée prend la PREMIÈRE
+couche qui la libère. Couches 1 à 5 = les gestes déjà sur la table, simulés (les chaînes des scénarios de
+⑥, le gel après le patch V2, et « une création C5 ne décide jamais de l'étiquette »). Au-delà, sur l'état 5,
+le juge de ⑤ (colonnes indépendantes) regarde chaque GROUPE — les lignes et les dossiers reliés entre eux.
+
+```
+LES 520 LIGNES D'AUJOURD'HUI (224 PLUSIEURS DOSSIERS + 296 ETIQUETTE PARTAGEE)  PLUSIEURS PARTAGEE TOTAL
+ 1 la nuit des 10 (decidee)                                                            0        0      0
+ 2 le patch V2 (ton « vas-y »)                                                         0        0      0
+ 3 la regle E (ton allumage)                                                           0        0      0
+ 4 les 8 lignes de 5.6 (ta lecture)                                                    8        0      8
+ 5 le choix C5 « a l'export » (question posee en ⑥, attend ta reponse)               102        0    102
+ 6 relecture du gel (un patch a valider)                                              23        4     27
+ 7 reunir (lignes de rattachement, ta decision ligne a ligne)                          7        0      7
+ 8 meme ACHETEUR sur deux lignes du Sheet                                              1        8      9
+ 9 MELANGE -> SCISSION                                                                78      273    351
+10 non tranche                                                                         5       11     16
+   TOTAL                                                                             224      296    520
+
+➡ SANS SCISSION : 153 lignes (couches 4 a 8). AVEC SCISSION : 351. NON TRANCHEES : 16.
+```
+
+**Ce que ça veut dire, couche par couche :**
+
+```
+1-3  la nuit, le patch V2 et E ne liberent AUCUNE des 520 : ils travaillent ailleurs (la nuit : les
+     4 lignes CETTE NUIT ; le patch : les 39 lignes PATCH V2). ⚠ Ce n'est pas un echec, c'est leur
+     perimetre -- mais ca dit que ces trois gestes ne font pas avancer ces deux cases.
+4    les 8 lignes : 8 lignes, et les 8 entrent en vague 1.
+5    ⭐ LE PLUS GROS LEVIER SANS SCISSION, ET C'EST UNE SEULE REPONSE : « une creation C5 ne decide
+     jamais de l'etiquette d'une ligne ». 102 lignes sortent de PLUSIEURS DOSSIERS : 86 entrent en
+     vague 1, 16 tombent en GEL SEUL (a relire). Rien a ecrire en base : c'est une regle de l'outil
+     d'ecriture du Sheet.
+6    27 lignes : un lien du gel que le juge ne voit pas tombe, et la ligne se retrouve seule sur son
+     dossier (lu a la main : AA797XO0 MERILL liee a tort au dossier ARPIN). Un patch du gel, comme les
+     deux audits -- je le prepare, tu le valides.
+7    7 lignes : une ligne SEULE tient 2 ou 3 dossiers (15 dossiers) -> 8 lignes de rattachement, chacune
+     ta decision (RATEL/COURT est un menage sur deux fiches, comme les 10 de ce matin).
+8    9 lignes, 5 groupes : LE MEME ACHETEUR sur deux lignes du Sheet -- une tentative « Annulee » puis
+     la vente (SABOT, PIRES, NICOUD, CHARRA/MEASSON). Pas de scission, mais une decision : le point ⑤ du
+     critere (0 UUID sur deux lignes) interdit d'ecrire la meme etiquette deux fois. Trois issues : ne
+     l'ecrire que sur la ligne vivante ; accepter l'exception au point ⑤ ; separer les tentatives.
+9    351 lignes, 172 groupes, 234 dossiers : des lignes d'acheteurs DIFFERENTS designent des transactions
+     differentes du meme dossier. Il faut le couper. ⭐ ET C'EST LE MEME DEFAUT, A GRANDE ECHELLE :
+        104 groupes (214 lignes) portent EXACTEMENT sa signature : une ligne « Annulee » (l'acheteur qui
+            a renonce), une ligne vivante, et un compromis actif / une vente du dossier AU NOM de
+            l'annulee -- le contact de l'acheteur precedent reste sur le compromis du suivant, et la
+            regle D colle tout (lu a la main : Z0BDVNBZ BOISLORET + RGCEC677 MEJEAN, 1265 BELLION +
+            OUADFEL, 4500 GARVEY + SANLAVILLE, 24319 FIARD + MARIANI...)
+         58 groupes (115 lignes) : annulee + vivante, la transaction porte un TROISIEME nom
+         10 groupes (22 lignes) : que des lignes annulees
+     ➡ « Vraiment bloquees sur une decision de toi » : ces 351. Mais 172 scissions decidees une par une
+       n'est pas la seule voie : UNE garde dans la regle D (piste 4 de ⑨, « la date bat le nom ») pourrait
+       en couper la plupart d'un seul geste. NON MESURE -- c'est la prochaine mesure a faire, en lecture
+       seule, avant de construire l'outil de scission (piste 3).
+10   16 lignes : le juge ne lit pas l'acquereur d'une des lignes (VINCENT, LAURENT, ROBERT, PLE : des noms
+     qui ressemblent a des prenoms, ecartes par mots_propres). Probablement des melanges. A relire.
+```
+
+⚠ **Ma première version s'est trompée, et la lecture à la main l'a vu.** Elle disait « même affaire » quand
+deux lignes désignaient une même transaction : **34 lignes**. Or le défaut lui-même fabrique ce partage —
+le compromis au nom de l'ancien acheteur est désigné par la ligne vivante (par sa date) ET par la ligne
+annulée (par le nom, sans date) : N1CUULMN MARCHEPOIL / 3308P0UX VIALLARD, 50G3GV2U COUCHOUD / Z624CX4D
+PARADISUS. **Corrigé : la même affaire se juge par l'acquéreur du Sheet (colonne AB)** → 9 lignes. Et une
+ligne qui désigne deux transactions du même genre sur le même bien, d'acheteurs DIFFÉRENTS (9CQ325R6
+RIVATON → FAISANDIER et FAUDON), ne prouve plus rien : elle ne « tient » plus ces dossiers.
+
+```
+ET 20 LIGNES Y ENTRENT apres la nuit et le patch (16 de PATCH V2, 3 SANS LIEN, 1 de la VAGUE 1) -- elles
+sont dans le fichier, avec leur couche (« au bout des couches 1-5 elle passe en ... »).
+```
+
+### 10.4 ⚠ Trois mesures qui changent l'ordre — dont une où ma première lecture s'est trompée
+
+```
+0  ⭐⭐ LE SHEET JUGE LA REGLE E -- ET, LU JUSQU'AU BOUT, IL LUI DONNE PLUTOT RAISON. C'EST LE GEL QU'IL
+   ACCUSE.
+   Je l'ai vu en comptant les cases a chaque etat : avec E, la vague 1 PERD 11 lignes (3 997 -> 3 986)
+   et les « etiquettes partagees » passent de 307 a 321. E reunit des transactions que le gel rattache
+   a DEUX lignes du Sheet. Mesure par reunion (les acquereurs AB des lignes reliees par le gel) :
+        33 reunions   18 le Sheet ne voit qu'un cote (ou aucun) -- pas de juge
+                       3 MEME ACHETEUR des deux cotes (DEBARD 20088, FLEUROT/CHIROL 28546, POCHELON 19069)
+                      12 deux acheteurs differents...
+   ⛔ MA PREMIERE LECTURE ETAIT FAUSSE, ET JE L'AVAIS ECRITE : « E est fausse 12 fois sur 15, je retire
+     ma recommandation ». En verifiant le cas que je citais (21520), j'ai vu ce que ma comparaison
+     cachait : elle passe par les LIENS DU GEL. Or dans 11 des 12, la ligne « Annulee » du Sheet n'a
+     AUCUNE date de compromis (colonne T VIDE) : le Sheet dit lui-meme que cet acheteur n'a jamais
+     signe. Le compromis annule sans date, au nom de l'acheteur SUIVANT et au meme prix, est donc le
+     premier compromis de cet acheteur suivant -- E le remet dans son dossier, et c'est le GEL qui l'a
+     colle a tort a la ligne de l'acheteur qui avait seulement fait une offre. ⭐ L'audit du 18/11 avait
+     DEJA juge l'un de ces liens FAUX (ea6a28a7 / 14033) ; 9 des 11 sont « sures » au gel, 2 « bonnes ».
+        11 LIEN DU GEL SUSPECT -- E probablement juste : 3669 RUAULT . 4125 GIORGETTI . 11708 ZENNAF .
+           14033 COLAS-SOLEILHAC . 14051 DUVERT . 14912 FAREL-HUBBARD . 19575 PATOUILLARD .
+           19736 AOMAR . 24010 GRANGEON-CHAMBERY . 27133 ALONSO / FARIA-MATOS . 28178 ESCAILLET
+         1 DOUTEUSE : 21520 -- la ligne d2108609 CHOUVELLON DATE un compromis (T = 26/08/2025, Annulee),
+           et 21520 est le SEUL compromis annule du bien 43050 ; MAIS l'offre CHOUVELLON n'existe pas
+           chez Hektor (c'est une creation C5, 1001495) -- Hektor a peut-etre jamais porte cette
+           affaire. Ni le gel ni E ne sont prouves. Meme forme que 26613 / SHN6RKDI.
+   ➡ MA RECOMMANDATION SUR E TIENT, avec deux ajouts nouveaux :
+     . 21520 a EXCLURE comme 26613 (une exclusion DECLAREE dans EXCLUES_DE_LA_REGLE_E) -- TA decision ;
+     . les 11 liens du gel a RELIRE un par un, puis a retirer par un patch du gel (ton accord). Ils
+       n'empechent pas E de jouer : tant qu'ils restent, les 9 lignes VIVANTES de ces dossiers qui sont
+       en vague 1 aujourd'hui en sortent (etiquette partagee) -- elles ne seraient pas ecrites, donc rien
+       de faux ; elles reviennent en vague 2 apres la correction du gel.
+   ⚠ La mesure est dans le script (le test de la colonne T), elle se rejoue a chaque fois.
+
+1  ⭐⭐ 12 LIGNES DE LA VAGUE 1 CHANGERAIENT D'ETIQUETTE SI LA REGLE E JOUE APRES L'ECRITURE.
+   La pose de nuit garde, quand deux dossiers etiquetes se reunissent, l'etiquette de la PLUS PETITE
+   transaction (app_poser_etiquettes_dossier, patch du 09/11 ; c'est le « plus petit numero » de ④).
+   E reunit des transactions sans date souvent PLUS ANCIENNES que leur dossier cible : la cible perd
+   son etiquette (« 15 absorbent l'etiquette de la cible », § 1.7) -- et 12 de ces cibles ont une ligne
+   en vague 1. Ecrites avant E, elles porteraient au Sheet un UUID qui ne designe plus rien.
+      1c7b38f9 205f62be 5f47de79 86ad8c0f ESVJUR12 KO6QPUV7 MCD6CRNB SC58GWXX SUVPN4BH UY443H27
+      beeaf847 ccbbf3c8
+   La nuit des 10 : 0. Les 8 lignes : 0 de plus. (Mesure dans le script, rejouee a chaque fois.)
+   ➡ Puisque E est probablement juste, la NOUVELLE etiquette sera la bonne : E doit jouer AVANT qu'on
+     ecrive ces 12 lignes -- ou elles sortent de la vague 1 tant qu'elle n'a pas joue. Le point ④ du
+     critere l'attraperait le lendemain -- mieux vaut ne pas le provoquer.
+2  WECT3RIT (ligne 650) est en vague 1 aujourd'hui, et le patch V2 la fait passer en ETIQUETTE PARTAGEE :
+   il relie la ligne 7JXLR3JQ au compromis annule 7115 et a l'offre refusee 7117, qui sont dans SON
+   dossier 7114 -- un melange que le patch REVELE. ➡ jouer le patch V2 AVANT la vague 1.
+```
+
+### 10.5 L'ordre des prochains jours — ma proposition (il tranche)
+
+**Le principe, c'est le sien** (en tête de ce fichier) : *le registre d'abord, le Sheet ensuite*. La
+mesure 10.4 le confirme trois fois (WECT3RIT, les 12 étiquettes, le jugement de E). **Un geste par
+nuit.** Le Sheet s'écrit le soir après 19:00.
+
+```
+VEN 20/11  MATIN, AVANT TOUT     MOI   le controle de la nuit des 10 (§ 2.7) -> rapport
+           apres le rapport      TOI   ① tes reponses sur les 8 lignes de 5.6
+                                       ② le « vas-y » du patch V2 (DE JOUR) -- tu le colles, puis
+                                          sa REPETITION
+                                       ③ V1 : lire les Apps Script du Sheet (10 min)
+                                       ④ V2 : coller app_sheet_ecrit (je relis son empreinte avant)
+                                       ⑤ le choix C5 « a l'export » (102 lignes, § 10.3)
+                                       ⑥ la regle E : l'allumer la nuit du 20, et exclure AUSSI 21520
+                                          (la douteuse, § 10.4) -- l'exclusion est du code : ton « vas-y »
+           la journee            MOI   code NEUF et DORMANT : l'outil d'ecriture du Sheet (a blanc par
+                                       defaut, interrupteur, sauvegarde datee, inverse qui ne juge que
+                                       sa part) + la sentinelle de nuit (piste 2). Essais a blanc.
+           apres le patch        MOI   rejouer ⑥, ⑧ et le fichier des 803 -- la mesure du jour
+           NUIT 20->21           TOI   la REGLE E (un geste)
+SAM 21/11  MATIN                 MOI   le controle de E (33 reunions moins les exclues, les 12 etiquettes
+                                       remplacees comme prevu) -> rapport
+           NUIT 21->22           TOI   les lignes de 5.6 que tu valides -- TA ligne dans le fichier des
+                                       rattachements (un geste)
+DIM 22/11  MATIN                 MOI   le controle de la nuit ; ⑥, ⑧ et le fichier des non ecrites
+                                       REJOUES : le registre est fini pour ce tour -> vague 1 DEFINITIVE
+           SOIR, APRES 19:00     TOI   la VAGUE 0 : 3 lignes que tu choisis (ecrire, relire, DEFAIRE,
+                                       re-ecrire) -- elle eprouve l'ecriture ET le retour arriere
+                                       (si ③ ④ sont faits et l'outil pret)
+LUN 23/11  MATIN                 MOI   le point ⑥ du critere pour la vague 0
+           SOIR                  TOI   la VAGUE 1a (50 lignes, les plus sures)
+MAR 24/11  MATIN                 MOI   ⑥ pour 1a ; le fichier des non ecrites REGENERE -> tu le lis
+           SOIR                  TOI   la VAGUE 1b (~4 000 lignes, par paquets de 100 -- le chiffre exact
+                                       sera celui de la mesure du jour)
+MER-VEN    MATINS                MOI   ④ et ⑤ rejoues : les TROIS NUITS VERTES -> le but ⑧ (vague 1)
+           puis                  TOI   allumer la sentinelle ; vague 2 (ce que le patch, C5 et la
+                                       correction du gel ont libere) ; vague 3 (relectures)
+EN PARALLELE, LECTURE SEULE      MOI   . relire UN PAR UN les 11 liens suspects du gel (§ 10.4) et les
+                                         27 de la couche 6 -> un patch du gel « V3 », dormant (ton accord)
+                                       . la mesure de la piste 4 : une garde « la date / le Sheet bat le
+                                         nom » dans la regle D -- combien de melanges elle couperait (les
+                                         104 groupes « signature »), combien elle casserait
+```
+
+**Où j'ai besoin de toi** : chaque « TOI » ci-dessus, et rien d'autre. Si un contrôle du matin est
+rouge, tout glisse d'un jour et je te dis pourquoi.
+
+**L'autre ordre, plus court de deux jours** (je ne le recommande pas) : écrire les vagues 0, 1a, 1b sans
+attendre E ni les lignes de 5.6, en sortant de la vague 1 les 12 lignes de 10.4. Ça découple le Sheet du registre — mais c'est l'inverse de ton principe, et
+chaque geste du registre après l'écriture demande de re-vérifier les lignes déjà écrites (10.4, point 1).
+
+### 10.6 Le routeur — ce qui manque, et ce que ça coûte (de quoi décider, pas du code)
+
+**D'abord mon erreur** : 8.6 renvoyait à « 5.3 », qui est l'**étape 5.3 du prompt du 19/11**, pas mon § 5.3.
+Et le mot porte **deux sens** dans nos papiers : le plan du 28/10 dit *« P4 le routeur + la destination
+classeur : l'app ÉCRIT dans le classeur, par l'uuid »* (2 j, ⛔ V1 ; dessin dans
+`notice/ARCHITECTURE_CLASSEUR_APRES_CHANTIER_8_2026-10-22.md` § 3 : une table de routage
+`app_champ_destination` + une table des livraisons) ; le prompt du 19/11 dit *« l'app LIT le Sheet par
+l'UUID, et le gel dort pour toujours »*. Il faut les deux, et ce sont deux chantiers.
+
+```
+CE QUI EXISTE (mesure ce soir)
+  . l'app (front, backend, worker) ne lit NI le Sheet NI le gel : 0 reference a app_classeur_lien ou a
+    affair_uuid dans apps/, backend/, Console/. Le front ne parle du classeur que dans des commentaires.
+  . le lien ligne <-> transaction n'existe QUE dans le gel (app_classeur_lien, 12 787) ; il n'est lu que
+    par mes scripts de mesure et par la pose des valeurs (etape 2, faite).
+  . la table des lignes app_classeur_ligne_id : 4 794 (le Sheet en a 4 797 -- 3 de retard).
+  . les tables du dessin du routeur (app_champ_destination, app_affaire_champ_publication) n'existent
+    PAS chez Supabase ; app_sheet_ecrit non plus (V2).
+  . le seul ecrivain du Sheet etait le vieil ecrivain : archive ce soir.
+➡ APRES LA VAGUE 1, L'ETIQUETTE SERA DANS LE SHEET -- ET PERSONNE CHEZ NOUS NE LA LIRA. Il a raison.
+
+CE QUI MANQUE, en cinq morceaux
+R1 LIRE      la colonne A relue chaque nuit (un GET : 10 s ce soir) -> une table « etiquette -> ID Unique,
+             numero de ligne » chez nous, et une vue que l'app interroge. C'est la que « le gel dort » :
+             l'app retrouve les lignes d'un dossier par son etiquette. La sentinelle (piste 2) en sort
+             presque gratuite.                                  ~1/2 j + un patch (ton accord)
+R2 MONTRER   (si tu le veux) sur l'ecran d'une affaire : « sa ligne du classeur » (lesquelles des 38
+             colonnes ?).                                        ~1/2 a 1 j de front + ta decision
+R3 ECRIRE    la phase B du plan : l'app pousse ses valeurs dans la ligne trouvee par l'etiquette -- la
+             table de routage EN BASE (pas une 6e liste : il y en a deja 5), la table des livraisons, un
+             ecrivain neuf, app_sheet_ecrit. Et revoir la liste des colonnes « a nous » (24 au 22/10).
+                                                                 2 j au plan, ⛔ V1
+R4 LES LIGNES NEUVES -- LA QUESTION QUI DECIDE SI LE GEL DORT VRAIMENT. Le Sheet recoit ~30 a 40
+             lignes par mois (mesure par la date d'offre, oct. 2025 -> nov. 2026). Si des humains les
+             creent a la main, elles naissent SANS etiquette : il faut continuer d'apparier (le gel ne
+             dort jamais), OU que l'app cree la ligne avec son etiquette a la naissance de l'affaire --
+             ce que faisait le vieil ecrivain, a refaire proprement dans R3.
+R5 LES NON ECRITES -- 803 aujourd'hui, 717 au bout des couches 1 a 5 (mesure : la vague 1 y monte a
+             4 080), dont ~360 melanges tant qu'aucune scission n'est faite : l'etiquette ne les
+             trouvera pas. Pour elles, le
+             gel reste la seule voie : le garder en SECOURS (lu apres l'etiquette), ou accepter qu'elles
+             soient invisibles a l'app.                          ~0 (le gel existe) a 1/2 j
+
+LES DECISIONS (a toi)
+  D1  que fait l'app des lignes du Sheet : LIRE seulement (R1) ? les MONTRER (R2) ? y ECRIRE (R3) ?
+  D2  apres la bascule, qui CREE une ligne neuve : l'app (avec son etiquette) ou un humain ?
+  D3  le gel en secours pour les non ecrites, oui ou non ?
+  D4  la table de routage EN BASE (ma recommandation du 22/10), confirmee ?
+LE COUT, SI TU DIS « TOUT »  R1 1/2 j + R2 1 j + R3 2 j (+ V1) + R5 1/2 j = environ 4 jours, R4 compris
+                             dans R3. R1 seul suffit a ce que l'etiquette SERVE.
+```
+
+### 10.7 Ce que je n'ai pas mesuré
+
+```
+. si UNE garde dans la regle D couperait les 104 groupes « signature du defaut » -- la mesure suivante
+  (piste 4), avant tout outil de scission
+. les 16 non tranchees : l'acquereur d'une ligne n'est pas lu (prenoms), elles ne sont pas relues
+. les 9 « meme acheteur » : laquelle des trois issues est la bonne -- c'est ta decision
+. la couche 5 suppose « une creation C5 ne decide jamais de l'etiquette » ACCEPTE
+. la regle de la pose (« la plus petite transaction ») est lue dans le patch du 09/11 et vue a l'oeuvre
+  en ④ ; la RPC en service n'a pas ete relue ce soir
+. pour R4 : pourquoi le Sheet a deux formes d'ID Unique (4 166 en majuscules, 631 en hexadecimal
+  minuscule) -- deux createurs, probablement ; lesquels, non mesure
+. l'ordre des jours suppose que tu es la le week-end ; sinon tout glisse au lundi
+. le jugement de E s'appuie sur les liens du GEL et sur la colonne T du Sheet (le juge de ⑤ ne peut
+  rien designer sans date). Le test de la colonne T est passe sur les 12 ; lu a la main : 21520
+  seulement (bien 43050 : un seul compromis annule, l'offre CHOUVELLON n'existe qu'en C5). Les 11 liens
+  « suspects » ne sont PAS relus un par un -- c'est le premier travail du § 10.5 (en parallele)
+. ⚠ les MELANGES (couche 9) se jugent, eux, par le juge de ⑤ (des designations par date, nom, prix,
+  mandat), pas par le seul gel -- mais une part peut porter la meme erreur du gel ; non mesure
+. les 18 reunions de E que le Sheet ne voit que d'un cote : ni justes ni fausses, non jugees
+```
+
+---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer
 
