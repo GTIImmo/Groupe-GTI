@@ -1,3 +1,11 @@
+# /!\ ARCHIVE LE 19/11/2026 -- NE PLUS LANCER.
+# Decision de Frederic : « archive-le. Il n'a plus d'utilite. »
+# Il tenait pour SIENNE toute ligne du Sheet qui porte un affair_uuid et la faisait
+# avancer : le jour ou nos etiquettes de dossier arrivent en colonne A (chantier
+# classeur, etape 5.2), il aurait pris les lignes humaines pour les siennes.
+# Garde ici pour l'histoire et pour ses trois regles, pas pour servir. Il REFUSE de
+# tourner (code 3) avant le moindre import et la moindre lecture du Sheet.
+# Voir scheduled/_archive/LISEZMOI.md.
 """Alimenter l'AppSheet « Offres en cours et compromis » depuis notre registre.
 
 Analyse : notice/ANALYSE_APPSHEET_SUIVI_TRANSACTIONS_2026-10-13.md
@@ -27,6 +35,15 @@ verite divergent tot ou tard ».
 """
 
 from __future__ import annotations
+
+# --- ARCHIVE LE 19/11/2026 : refus de tourner, avant tout import et toute lecture ---
+import sys as _sys_archive
+
+_sys_archive.stderr.write(
+    "push_suivi_appsheet.py est ARCHIVE depuis le 19/11/2026 (decision de Frederic) : "
+    "il ne tourne plus. Voir scheduled/_archive/LISEZMOI.md.\n"
+)
+raise SystemExit(3)
 
 import argparse
 import json
