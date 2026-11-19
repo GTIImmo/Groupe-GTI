@@ -15,8 +15,11 @@
 --     D9MMB7OU) et, en cascade, 4 operations dont la cible resterait tenue (6FQO29C8 x2,
 --     H6CTRVR6, 9WQ204HP) : 37 operations sorties en tout, listees dans
 --     notice/AUDIT_INDEPENDANT_V2_OPERATIONS_AFFINEES_2026-11-19.csv.
---   ③ la garde lit l'EMPREINTE du gel (pas seulement son compte), et un controle en tete
---     verifie que chaque cible existe, porte le bon genre et sera libre.
+--   ③ la garde lit l'EMPREINTE du gel (pas seulement son compte), et verifie AVANT toute
+--     ecriture que chaque cible existe, porte le bon genre et sera libre (aucune autre
+--     ligne ne la tient, sauf une ligne qui la lache dans ce meme patch).
+--   ④ l'inverse ne juge que SA part (lecon 31), et le controle a un temoin positif et un
+--     temoin inverse sur 7 colonnes.
 -- CE QU'IL NE FAIT PAS : il ne touche NI les transactions (les copies de C5 se retirent APRES,
 --   des DEUX cotes), NI les valeurs posees par C2/C3/C4 sur une mauvaise transaction (geste
 --   suivant, a ENCHAINER : la repetition les compte), NI Hektor, NI les 8 lignes incertaines.
@@ -173,6 +176,138 @@ begin
   left join app_affaire_ledger a on a.app_affaire_id = v.app_affaire_id
   where a.app_affaire_id is null or a.kind <> v.role;
   if cible_ko <> 0 then raise exception '⛔ garde : % cible(s) absente(s) ou d''un autre genre', cible_ko; end if;
+  -- ⭐ chaque cible sera LIBRE : tenue par aucune autre ligne, sauf une ligne qui la lache ici
+  --   (ajoute le 19/11 au bord : l'en-tete le promettait, seul le controle final le verifiait)
+  select count(*) into deja from (values
+    ('0GV2LNV2', 4747, 'offre'),
+    ('1eec6575', 30825, 'offre'),
+    ('2SCBZXMH', 7780, 'offre'),
+    ('3S4ZWOFK', 11958, 'offre'),
+    ('3W10AEIK', 4748, 'offre'),
+    ('427UDDSF', 3649, 'offre'),
+    ('515RUEN3', 17428, 'compromis'),
+    ('515RUEN3', 17430, 'offre'),
+    ('58I5AO17', 7908, 'compromis'),
+    ('58I5AO17', 7909, 'offre'),
+    ('58I5AO17', 7910, 'vente'),
+    ('5H70KQZA', 14224, 'compromis'),
+    ('5H70KQZA', 14227, 'offre'),
+    ('5H70KQZA', 14228, 'vente'),
+    ('5e4c8881', 30820, 'offre'),
+    ('70740f2f', 30824, 'offre'),
+    ('72GQRHVB', 6391, 'compromis'),
+    ('72GQRHVB', 6392, 'offre'),
+    ('72GQRHVB', 6393, 'vente'),
+    ('739a0db1', 27196, 'offre'),
+    ('7IHI7YTJ', 4234, 'compromis'),
+    ('7IHI7YTJ', 4235, 'offre'),
+    ('7IHI7YTJ', 4236, 'vente'),
+    ('7JXLR3JQ', 7115, 'compromis'),
+    ('7JXLR3JQ', 7117, 'offre'),
+    ('8ATXF2EZ', 19152, 'compromis'),
+    ('8ATXF2EZ', 19153, 'offre'),
+    ('8ATXF2EZ', 19154, 'vente'),
+    ('8RWTD0YX', 4387, 'offre'),
+    ('9706WM9J', 23931, 'offre'),
+    ('9UO5NUN6', 11959, 'offre'),
+    ('A07EC3DH', 1876, 'offre'),
+    ('CS38OO8R', 27984, 'compromis'),
+    ('CS38OO8R', 27986, 'offre'),
+    ('CS38OO8R', 27987, 'vente'),
+    ('DAMOO7OU', 23996, 'offre'),
+    ('DHXRAK9O', 9370, 'compromis'),
+    ('DHXRAK9O', 9371, 'offre'),
+    ('DHXRAK9O', 9372, 'vente'),
+    ('EGR8KXOL', 6555, 'compromis'),
+    ('ESMCO1NC', 6588, 'compromis'),
+    ('ESMCO1NC', 6589, 'offre'),
+    ('ESMCO1NC', 6590, 'vente'),
+    ('FLPUUSY3', 1877, 'offre'),
+    ('J6RGX0CQ', 4928, 'compromis'),
+    ('J6RGX0CQ', 4929, 'offre'),
+    ('J6RGX0CQ', 4930, 'vente'),
+    ('JL8GV7RQ', 15169, 'compromis'),
+    ('JL8GV7RQ', 15170, 'vente'),
+    ('KAYC29B7', 27170, 'offre'),
+    ('LUX9SDIL', 14119, 'compromis'),
+    ('LUX9SDIL', 14120, 'offre'),
+    ('LUX9SDIL', 14121, 'vente'),
+    ('MDOXOBIC', 2163, 'compromis'),
+    ('MDOXOBIC', 2164, 'offre'),
+    ('MDOXOBIC', 2165, 'vente'),
+    ('O1099YC0', 6341, 'offre'),
+    ('O8BY6AC8', 1000141, 'compromis'),
+    ('O8BY6AC8', 1000105, 'offre'),
+    ('OXQSBZ9V', 17431, 'offre'),
+    ('PPIM4947', 24291, 'offre'),
+    ('Q602VZJX', 6554, 'compromis'),
+    ('R0JRVFDC', 16377, 'compromis'),
+    ('RX6J289Y', 16378, 'compromis'),
+    ('S8BKB6FL', 4412, 'compromis'),
+    ('S8BKB6FL', 4413, 'offre'),
+    ('S8BKB6FL', 4414, 'vente'),
+    ('TR42PT5H', 27195, 'compromis'),
+    ('TRJ5Y59U', 23995, 'offre'),
+    ('UTLG66LE', 5055, 'offre'),
+    ('VEP1DVQ4', 7781, 'offre'),
+    ('VMWFLLW4', 23050, 'compromis'),
+    ('a2abd36c', 30827, 'compromis'),
+    ('b43e76f5', 30826, 'offre'),
+    ('b884cbd4', 30821, 'offre'),
+    ('c6233284', 30801, 'offre'),
+    ('f90b0418', 19050, 'offre'),
+    ('fa06e4e5', 28931, 'offre')
+  ) v(id_unique, app_affaire_id, role)
+  join app_classeur_lien l on l.app_affaire_id = v.app_affaire_id and l.id_unique <> v.id_unique
+  where not exists (select 1 from (values
+    ('045ecde7', 28558, 'offre'),
+    ('08GV8OMZ', 6341, 'offre'),
+    ('1ESJE28Q', 12952, 'compromis'),
+    ('1ESJE28Q', 12953, 'offre'),
+    ('3S4ZWOFK', 1001580, 'offre'),
+    ('3W10AEIK', 4747, 'offre'),
+    ('427UDDSF', 3648, 'offre'),
+    ('427UDDSF', 3650, 'vente'),
+    ('45225170', 30712, 'offre'),
+    ('45225170', 1001361, 'offre'),
+    ('61OW86CS', 4496, 'compromis'),
+    ('739a0db1', 27195, 'compromis'),
+    ('739a0db1', 1001520, 'offre'),
+    ('774aa002', 11138, 'compromis'),
+    ('8Q3LHGZ4', 8321, 'compromis'),
+    ('8Q3LHGZ4', 8322, 'offre'),
+    ('8RWTD0YX', 4385, 'compromis'),
+    ('8RWTD0YX', 1001477, 'offre'),
+    ('9UO5NUN6', 11958, 'offre'),
+    ('A07EC3DH', 1001563, 'offre'),
+    ('CITFQGOB', 16378, 'compromis'),
+    ('DAMOO7OU', 23995, 'offre'),
+    ('EGR8KXOL', 6554, 'compromis'),
+    ('FLPUUSY3', 1876, 'offre'),
+    ('KT0601S6', 24291, 'offre'),
+    ('NEFHS7JI', 26395, 'compromis'),
+    ('NEFHS7JI', 26397, 'offre'),
+    ('OXQSBZ9V', 17427, 'compromis'),
+    ('OXQSBZ9V', 17430, 'offre'),
+    ('Q602VZJX', 6555, 'compromis'),
+    ('R0JRVFDC', 1001542, 'compromis'),
+    ('RX6J289Y', 16377, 'compromis'),
+    ('SBH4QWDW', 23050, 'compromis'),
+    ('TR42PT5H', 27196, 'offre'),
+    ('TRJ5Y59U', 1001561, 'offre'),
+    ('UTLG66LE', 1001482, 'offre'),
+    ('VEP1DVQ4', 7780, 'offre'),
+    ('VMWFLLW4', 1001540, 'compromis'),
+    ('WJ3KA32F', 10730, 'offre'),
+    ('Y51UMZHY', 19277, 'offre'),
+    ('a8aaeb2b', 998, 'compromis'),
+    ('a8aaeb2b', 1000, 'offre'),
+    ('f1aedc01', 28967, 'offre'),
+    ('fa06e4e5', 28930, 'offre'),
+    ('fa06e4e5', 1001553, 'compromis')
+    ) r(id_unique, app_affaire_id, role)
+    where r.id_unique = l.id_unique and r.app_affaire_id = l.app_affaire_id);
+  if deja <> 0 then raise exception '⛔ garde : % cible(s) tenue(s) par une autre ligne qui ne la lache pas', deja; end if;
 end $$;
 
 -- ── ② LA SAUVEGARDE DATEE, FERMEE DES SA NAISSANCE ─────────────────────────────

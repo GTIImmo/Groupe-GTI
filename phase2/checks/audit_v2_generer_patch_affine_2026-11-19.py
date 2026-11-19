@@ -185,8 +185,11 @@ patch = f"""-- ═════════════════════�
 --     D9MMB7OU) et, en cascade, 4 operations dont la cible resterait tenue (6FQO29C8 x2,
 --     H6CTRVR6, 9WQ204HP) : {len(exclues)} operations sorties en tout, listees dans
 --     notice/AUDIT_INDEPENDANT_V2_OPERATIONS_AFFINEES_2026-11-19.csv.
---   ③ la garde lit l'EMPREINTE du gel (pas seulement son compte), et un controle en tete
---     verifie que chaque cible existe, porte le bon genre et sera libre.
+--   ③ la garde lit l'EMPREINTE du gel (pas seulement son compte), et verifie AVANT toute
+--     ecriture que chaque cible existe, porte le bon genre et sera libre (aucune autre
+--     ligne ne la tient, sauf une ligne qui la lache dans ce meme patch).
+--   ④ l'inverse ne juge que SA part (lecon 31), et le controle a un temoin positif et un
+--     temoin inverse sur 7 colonnes.
 -- CE QU'IL NE FAIT PAS : il ne touche NI les transactions (les copies de C5 se retirent APRES,
 --   des DEUX cotes), NI les valeurs posees par C2/C3/C4 sur une mauvaise transaction (geste
 --   suivant, a ENCHAINER : la repetition les compte), NI Hektor, NI les 8 lignes incertaines.
@@ -222,6 +225,17 @@ begin
   left join app_affaire_ledger a on a.app_affaire_id = v.app_affaire_id
   where a.app_affaire_id is null or a.kind <> v.role;
   if cible_ko <> 0 then raise exception '⛔ garde : % cible(s) absente(s) ou d''un autre genre', cible_ko; end if;
+  -- ⭐ chaque cible sera LIBRE : tenue par aucune autre ligne, sauf une ligne qui la lache ici
+  --   (ajoute le 19/11 au bord : l'en-tete le promettait, seul le controle final le verifiait)
+  select count(*) into deja from (values
+{paires_ajout}
+  ) v(id_unique, app_affaire_id, role)
+  join app_classeur_lien l on l.app_affaire_id = v.app_affaire_id and l.id_unique <> v.id_unique
+  where not exists (select 1 from (values
+{paires_retrait}
+    ) r(id_unique, app_affaire_id, role)
+    where r.id_unique = l.id_unique and r.app_affaire_id = l.app_affaire_id);
+  if deja <> 0 then raise exception '⛔ garde : % cible(s) tenue(s) par une autre ligne qui ne la lache pas', deja; end if;
 end $$;
 
 -- ── ② LA SAUVEGARDE DATEE, FERMEE DES SA NAISSANCE ─────────────────────────────

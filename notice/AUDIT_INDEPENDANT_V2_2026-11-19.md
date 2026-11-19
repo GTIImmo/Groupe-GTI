@@ -478,7 +478,10 @@ CE QU'IL NE FAIT  ni transaction, ni valeur posee, ni Hektor, ni les 8 lignes IN
 **Et ce que mon audit ajoute :**
 
 4. ⭐ **La garde lit l'EMPREINTE du gel** (`8084e535…`), pas seulement son compte — c'est le piège
-   rencontré cette nuit : la copie locale avait le bon compte et une autre empreinte.
+   rencontré cette nuit : la copie locale avait le bon compte et une autre empreinte. Et elle
+   vérifie, AVANT toute écriture, que **chaque cible sera libre** (aucune autre ligne ne la tient,
+   sauf une ligne qui la lâche dans ce même patch). ⚠ *Ajouté au bord, après le commit `493b21f` :
+   mon en-tête le promettait, seul le contrôle final l'aurait vu, après coup.*
 5. ⭐ **Le retour arrière ne juge que SA part** (leçon 31) : il retire ses 78 poses, remet ses 45
    retraits à l'identique, et DIT (sans refuser) si le reste du gel a changé depuis. ⚠ L'inverse
    du 18/11 exigeait un gel entier identique à la sauvegarde : il aurait refusé de défaire après
@@ -496,6 +499,10 @@ la GARDE COMPLETE, jouee seule (que des lectures)    passe : 12 787 liens, empre
 une SIMULATION de l'etat d'apres (gel - 45 + 78),    12 820 liens . 0 transaction a deux lignes
   par une requete en lecture, avec l'empreinte de    . 0 ligne a deux liens pour un role
   ses propres listes (= celles du fichier)           . 71 lignes sans lien . 78 ajouts presents
+la GARDE DE LIBERTE (ajoutee au bord), en lecture    0 cible tenue par une ligne qui ne la lache
+                                                     pas ; TEMOIN : 15 cibles sont tenues
+                                                     aujourd'hui, toutes lachees par un retrait
+                                                     du meme patch (les deplacements)
 EXPLAIN de l'insertion (sans execution)              colonnes et types acceptes
 temoin apres coup                                    gel inchange : 12 787, meme empreinte,
                                                      0 pose, pas de sauvegarde creee
