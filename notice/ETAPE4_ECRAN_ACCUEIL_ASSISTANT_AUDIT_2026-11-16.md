@@ -3246,3 +3246,70 @@ Patron repris : le schéma privé `ged_prive` de la GED (morceau 9, 13/11).
 
 **Reste** : P1, le moteur de questions côté serveur (« vas-y »). Question ouverte : l'auteur garde-t-il la lecture après
 la création (choix posé par moi) ?
+
+## 92. SA DÉCISION « que le négo et admin » (19/11) : patch écrit et répété, NON collé
+
+**Ses mots** : « 2. Que le négo et admin » (à ma question : l'auteur garde-t-il la lecture après la création ?).
+
+- **Ce que ça change** (`supabase/patch_assistant_parcours_lecture_nego_2026-11-19.sql`, + `_INVERSE`, + `_REPETITION`) :
+  l'auteur lit son parcours SEULEMENT tant qu'aucune annonce n'y est attachée ; dès qu'elle existe, son négociateur et
+  l'admin seulement. La prise des coordonnées suit la même règle (l'admin toujours). Rien d'autre ne bouge.
+- **Garde** : le patch s'arrête si la règle ou la fonction ne sont plus celles posées le 19/11 (texte de la règle,
+  empreinte md5 `1be5c94e…` de la fonction, retours chariot retirés — leçon 30).
+- **Répétition** jouée en base puis annulée : **11 contrôles verts + le témoin inverse** (l'inverse rejoué, l'auteur
+  relit). Relu après : la base porte toujours la règle du matin (0 ligne dans la table).
+- **En pratique** : un commercial crée pour lui-même (la fenêtre le force sur lui, D2) ; il reste le négociateur, donc
+  il garde la lecture. Seul l'auteur qui crée POUR un autre la perd après la création.
+
+**Reste** : le coller (son accord).
+
+## 93. P1 — LE MOTEUR DE QUESTIONS CÔTÉ SERVEUR (19/11) : écrit, éprouvé hors ligne, dormant, NON poussé
+
+**Ses mots** : « 1. Oui » (à « je commence P1 ? »).
+
+### 93.1 Ce qui est écrit
+
+- **Les données** `backend/app/services/parcours_creation.json` : les 19 questions du §88, dans la LANGUE DE LA FENÊTRE
+  (noms de ses cases), leur forme (cases, compteurs, cocher, grille, pièces, mandant, fichiers, texte), leurs
+  conditions (type de bien ; piscine cochée ; construction de moins de 10 ans), le profil de chaque type de bien, les
+  cases automatiques et les deux laissées à la main (dépôt de garantie, « clearing »). ⭐ Les OPTIONS des cases ne sont
+  pas recopiées : l'écran (P2) les prendra dans la fenêtre elle-même — une seule source.
+- **Le moteur** `backend/app/services/assistant_parcours.py`, SANS modèle : la question suivante, le repère « 4 sur
+  17 », et l'enregistrement d'une réponse qui ne touche QUE les cases de sa question (« je ne sais pas » et « je
+  complète plus tard » font avancer ; vider une case la retire ; la composition et les photos ont leur forme). ⛔ Une
+  coordonnée de mandant (e-mail, téléphone…) est REFUSÉE : elle passe par les cases protégées (P3).
+- **La table** (`ParcoursStore`) : créer et écrire par la clé de service ; relire pour l'écran avec le JETON de la
+  personne (la règle de lecture de la base décide) ; écrire est CONDITIONNEL (même `maj_le`, à lui, en cours, avant la
+  création) : deux onglets, un seul passe.
+- **Trois routes** dans `routers/assistant.py` : `POST /assistant/parcours` (commencer, dans SA conversation),
+  `GET /assistant/parcours/{id}` (relire), `POST /assistant/parcours/{id}/reponse` (répondre). Derrière l'interrupteur
+  **`assistant_parcours`** (off / admin / on), **ABSENT en base = éteint** : rien ne change tant qu'on ne l'allume pas.
+  Même l'admin ne répond pas dans le parcours d'un autre.
+
+### 93.2 Les preuves (hors ligne)
+
+- **La couverture, versée au dépôt** : `apps/hektor-v1/test_etape4_parcours_couverture.cjs` exécute le CODE RÉEL
+  d'App.tsx (groupes, cases par profil, cases du haut, profil de chaque type, type par défaut, clés d'une pièce) et le
+  croise avec les données du serveur : **TOUT EST VERT** — maison 136, appartement 132, terrain 59, garage 43,
+  immeuble 71, autre 51 cases montrées, **0 oubliée** ; aucune question vide ; les 29 types au bon profil ; aucune
+  case posée deux fois ; aucune coordonnée parmi les réponses ; témoin inverse (une case retirée → 1 oubli).
+  ⭐⭐ **Il a corrigé le §88** : mon programme de travail sous-comptait le terrain (45 au lieu de 59) et l'immeuble (35 au
+  lieu de 71) ; et **la copropriété d'un IMMEUBLE était un vrai oubli** (la fenêtre la montre). Corrigé dans les données.
+  Plusieurs questions ont aussi leurs vrais types (piscine : maison seule ; intervenants et construction récente :
+  maison et appartement ; pas de diagnostics pour un garage…).
+- **L'essai du serveur** `backend/tests/test_assistant_parcours.py` : **58 contrôles verts** (conditions par type,
+  refus, parcours complet qui finit pour les 6 types — maison 15 questions, appartement 17, terrain 12, garage 11,
+  immeuble 15, autre 12 —, table conditionnelle, routes : interrupteur, conversation d'un autre, parcours d'un autre,
+  question non posée, e-mail refusé, écriture concurrente, fiche créée ; aucune requête vers OpenAI).
+  **Trois mutants, trois rouges** (case d'une autre question acceptée ; coordonnée acceptée ; piscine toujours posée).
+- **Rien de cassé ailleurs** : les essais de l'assistant rejoués — gestes 415, fichiers 28, lecteur 73, socle 30
+  (sa partie 5 SAUTÉE comme avant : le SDK de l'agent n'est installé dans aucun Python de cette machine).
+
+### 93.3 Ce que ça pourrait casser ailleurs
+
+- Le routeur de l'assistant gagne 3 routes ; les routes existantes ne sont pas touchées (essais rejoués).
+- Render redéploie le serveur au push : les routes y dorment tant que `assistant_parcours` est absent.
+- ⚠ Non éprouvé : contre la VRAIE table (seulement contre une fausse table qui imite les conditions de PostgREST).
+  L'épreuve réelle viendra avec P2 (l'écran), interrupteur sur « admin ».
+
+**Reste** : pousser (son accord) ; P2, les boutons sous une question dans l'écran de l'assistant.

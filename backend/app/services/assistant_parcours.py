@@ -1,0 +1,235 @@
+"""Le parcours guidé de l'assistant (étape 4, chapitre 6, P1 — 19/11/2026).
+
+Le MOTEUR DE QUESTIONS, sans modèle : un clic ne coûte rien (décision du 18/11, §78-80). Les 19 questions de la création
+vivent en DONNÉES (parcours_creation.json, dans la langue de la fenêtre « Nouvelle annonce ») ; ce module dit quelle
+question vient ensuite, pour quel type de bien, et vérifie qu'une réponse ne touche que les cases de SA question.
+
+⛔ Les coordonnées d'un NOUVEAU mandant ne passent JAMAIS ici : l'écran les dépose lui-même dans le schéma privé
+   (app_assistant_mandant_deposer, P3). Une réponse qui en porte est refusée.
+⛔ Ce module n'écrit rien et n'appelle personne : la lecture et l'écriture de la table app_assistant_parcours sont
+   dans ParcoursStore (clé de service, comme les cartes), et les routes dans routers/assistant.py.
+
+Note : notice/ETAPE4_ECRAN_ACCUEIL_ASSISTANT_AUDIT_2026-11-16.md §88 (les questions), §91 (la mémoire), §93 (P1).
+Couverture vérifiée contre App.tsx : apps/hektor-v1/test_etape4_parcours_couverture.cjs.
+"""
+from __future__ import annotations
+
+import json
+from datetime import datetime
+from pathlib import Path
+from typing import Any
+from zoneinfo import ZoneInfo
+
+import requests
+from fastapi import HTTPException
+
+from ..settings import Settings
+
+DONNEES: dict[str, Any] = json.loads((Path(__file__).with_name("parcours_creation.json")).read_text(encoding="utf-8"))
+QUESTIONS: list[dict[str, Any]] = DONNEES["questions"]
+PAR_ID: dict[str, dict[str, Any]] = {q["id"]: q for q in QUESTIONS}
+GENRES: tuple[str, ...] = tuple(DONNEES["genres"])
+PROFIL_PAR_TYPE: dict[str, str] = DONNEES["profil_par_type"]
+CLES_PIECE: frozenset[str] = frozenset(DONNEES["cles_piece"])
+
+# Réservé au suivi des questions dans `reponses` (jamais une case de la fenêtre).
+CLE_ETATS = "_questions"
+# Ce qu'un geste fait de la question : répondue, « je complète plus tard », « je ne sais pas ».
+ETAT_PAR_GESTE = {"repondre": "faite", "passer": "passee", "nsp": "nsp"}
+# ⛔ règle du 18/11 : les coordonnées d'un nouveau mandant vivent à part (assistant_prive), jamais dans les réponses.
+COORDONNEES = frozenset({"civilite", "nom", "prenom", "email", "telephone", "mandant_email", "mandant_telephone"})
+MANDANT_CHOIX = frozenset({"", "existant", "nouveau"})
+MAX_VALEUR = 4000          # caractères d'une case (le texte de l'annonce est la plus longue)
+MAX_PIECES = 60
+MAX_PHOTOS = 40
+MAX_REPONSES = 200_000     # taille du JSON des réponses
+
+
+class RefusParcours(ValueError):
+    """Une réponse que le moteur refuse : la phrase va telle quelle à la personne."""
+
+
+def annee_a_paris() -> int:
+    return datetime.now(ZoneInfo("Europe/Paris")).year
+
+
+def profil(reponses: dict[str, Any]) -> str:
+    # Avant que le type soit dit, la fenêtre part sur son type par défaut (vérifié par l'essai de couverture, ⑧).
+    type_id = str(reponses.get("type") or DONNEES["type_par_defaut"]).strip()
+    return PROFIL_PAR_TYPE.get(type_id, PROFIL_PAR_TYPE[DONNEES["type_par_defaut"]])
+
+
+def posee(question: dict[str, Any], reponses: dict[str, Any], annee: int) -> bool:
+    profils = question.get("profils")
+    if profils and profil(reponses) not in profils:
+        return False
+    si = question.get("si")
+    if not si:
+        return True
+    valeur = str(reponses.get(si["champ"]) or "").strip()
+    if "vaut" in si:
+        return valeur == si["vaut"]
+    if "moins_de_ans" in si:
+        # année inconnue : on demande (le bien peut être récent) ; connue : seulement s'il a moins de N ans
+        return not valeur.isdigit() or int(valeur) > annee - int(si["moins_de_ans"])
+    return True
+
+
+def etats(reponses: dict[str, Any]) -> dict[str, str]:
+    brut = reponses.get(CLE_ETATS)
+    return dict(brut) if isinstance(brut, dict) else {}
+
+
+def questions_posees(reponses: dict[str, Any], annee: int) -> list[dict[str, Any]]:
+    return [q for q in QUESTIONS if posee(q, reponses, annee)]
+
+
+def suivante(reponses: dict[str, Any], annee: int) -> dict[str, Any] | None:
+    faits = etats(reponses)
+    return next((q for q in questions_posees(reponses, annee) if q["id"] not in faits), None)
+
+
+def _valeur_simple(cle: str, valeur: Any) -> str:
+    if valeur is None:
+        return ""
+    if isinstance(valeur, bool) or not isinstance(valeur, (str, int, float)):
+        raise RefusParcours(f"La case « {cle} » attend un texte ou un nombre.")
+    texte = str(valeur).strip()
+    if len(texte) > MAX_VALEUR:
+        raise RefusParcours(f"La case « {cle} » est trop longue ({len(texte)} caractères, {MAX_VALEUR} au plus).")
+    return texte
+
+
+def _pieces(valeur: Any) -> list[dict[str, str]]:
+    if not isinstance(valeur, list) or len(valeur) > MAX_PIECES:
+        raise RefusParcours(f"La composition attend une liste de {MAX_PIECES} pièces au plus.")
+    pieces = []
+    for piece in valeur:
+        if not isinstance(piece, dict):
+            raise RefusParcours("Chaque pièce de la composition doit être décrite par ses cases.")
+        inconnues = sorted(set(piece) - CLES_PIECE)
+        if inconnues:
+            raise RefusParcours(f"Case de pièce inconnue : {', '.join(inconnues)}.")
+        propre = {k: _valeur_simple(k, v) for k, v in piece.items()}
+        if any(propre.values()):
+            pieces.append({k: v for k, v in propre.items() if v})
+    return pieces
+
+
+def _photos(valeur: Any) -> list[str]:
+    if not isinstance(valeur, list) or len(valeur) > MAX_PHOTOS:
+        raise RefusParcours(f"Les photos attendent une liste de {MAX_PHOTOS} fichiers au plus.")
+    numeros = [_valeur_simple("photos", v) for v in valeur]
+    if any(len(n) > 64 for n in numeros):
+        raise RefusParcours("Numéro de fichier invalide.")
+    return [n for n in numeros if n]
+
+
+def enregistrer(reponses: dict[str, Any], question_id: str, valeurs: Any, geste: str) -> dict[str, Any]:
+    """Rend les NOUVELLES réponses ; ne touche que les cases de la question. Lève RefusParcours sinon."""
+    question = PAR_ID.get(question_id)
+    if not question:
+        raise RefusParcours("Question inconnue.")
+    if geste not in ETAT_PAR_GESTE:
+        raise RefusParcours("Geste inconnu.")
+    nouvelles = {k: v for k, v in reponses.items()}
+    if geste == "repondre":
+        if not isinstance(valeurs, dict) or not valeurs:
+            raise RefusParcours("Réponse vide : réponds, ou choisis « Je ne sais pas » ou « Je complète plus tard ».")
+        for cle, valeur in valeurs.items():
+            if cle.startswith("_") or cle in COORDONNEES:
+                raise RefusParcours("Les coordonnées d'un nouveau mandant se saisissent dans leurs cases protégées.")
+            if cle not in question["champs"]:
+                raise RefusParcours(f"La case « {cle} » n'appartient pas à la question « {question['titre']} ».")
+            if cle == "composition":
+                propre: Any = _pieces(valeur)
+            elif cle == "photos":
+                propre = _photos(valeur)
+            else:
+                propre = _valeur_simple(cle, valeur)
+                if cle == "mandant_choix" and propre not in MANDANT_CHOIX:
+                    raise RefusParcours("Le mandant est « existant » ou « nouveau ».")
+            if propre in ("", []):
+                nouvelles.pop(cle, None)  # vider une case = la retirer (la fenêtre la laissera vide)
+            else:
+                nouvelles[cle] = propre
+    suivi = etats(reponses)
+    suivi[question_id] = ETAT_PAR_GESTE[geste]
+    nouvelles[CLE_ETATS] = suivi
+    if len(json.dumps(nouvelles, ensure_ascii=False)) > MAX_REPONSES:
+        raise RefusParcours("Le parcours est trop long pour être gardé.")
+    return nouvelles
+
+
+def vue(ligne: dict[str, Any], annee: int | None = None) -> dict[str, Any]:
+    """Ce que l'écran reçoit : la question à poser, le repère « 4 sur 17 », les réponses (sans le suivi interne)."""
+    annee = annee or annee_a_paris()
+    reponses = dict(ligne.get("reponses") or {})
+    posees = questions_posees(reponses, annee)
+    faits = etats(reponses)
+    q = suivante(reponses, annee)
+    return {
+        "id": ligne.get("id"),
+        "genre": ligne.get("genre"),
+        "etat": ligne.get("etat"),
+        "app_dossier_id": ligne.get("app_dossier_id"),
+        "maj_le": ligne.get("maj_le"),
+        "profil": profil(reponses),
+        "question": ({k: q[k] for k in ("id", "titre", "phrase", "forme", "champs")} if q else None),
+        "repere": {"rang": (posees.index(q) + 1) if q else len(posees), "total": len(posees),
+                   "faites": sum(1 for p in posees if p["id"] in faits)},
+        "questions": [{"id": p["id"], "titre": p["titre"], "etat": faits.get(p["id"])} for p in posees],
+        "reponses": {k: v for k, v in reponses.items() if not k.startswith("_")},
+        "fin": q is None,
+    }
+
+
+class ParcoursStore:
+    """La table app_assistant_parcours (P3). Écriture par la CLÉ DE SERVICE seule (la table refuse l'écran) ; la relecture
+    pour l'écran passe par le JETON de la personne (la règle de lecture de la base dit qui voit quoi)."""
+
+    def __init__(self, settings: Settings) -> None:
+        self.settings = settings
+
+    def _url(self) -> str:
+        return f"{self.settings.supabase_url}/rest/v1/app_assistant_parcours"
+
+    def _service(self) -> dict[str, str]:
+        key = self.settings.supabase_service_role_key
+        return {"apikey": key, "Authorization": f"Bearer {key}"}
+
+    def creer(self, user_id: str, conversation_id: str | None, genre: str, etape: str | None) -> dict[str, Any]:
+        r = requests.post(self._url(), headers={**self._service(), "Prefer": "return=representation"},
+                          json=[{"user_id": user_id, "conversation_id": conversation_id, "genre": genre,
+                                 "reponses": {}, "etape": etape}], timeout=10)
+        if not r.ok or not (r.json() or []):
+            raise HTTPException(status_code=503, detail="Parcours non créé")
+        return r.json()[0]
+
+    def lire_service(self, parcours_id: str) -> dict[str, Any] | None:
+        r = requests.get(self._url(), headers=self._service(),
+                         params={"id": f"eq.{parcours_id}", "select": "*", "limit": "1"}, timeout=10)
+        if not r.ok:
+            raise HTTPException(status_code=503, detail="Parcours illisible")
+        rows = r.json() or []
+        return rows[0] if rows else None
+
+    def lire_avec_jeton(self, jeton: str, parcours_id: str) -> dict[str, Any] | None:
+        r = requests.get(self._url(), headers={"apikey": self.settings.supabase_anon_key, "Authorization": f"Bearer {jeton}"},
+                         params={"id": f"eq.{parcours_id}", "select": "*", "limit": "1"}, timeout=10)
+        if not r.ok:
+            raise HTTPException(status_code=503, detail="Parcours illisible")
+        rows = r.json() or []
+        return rows[0] if rows else None
+
+    def ecrire_reponses(self, ligne: dict[str, Any], reponses: dict[str, Any], etape: str | None) -> dict[str, Any] | None:
+        # ⛔ CONDITIONNELLE : seulement si personne n'a écrit depuis la lecture (même maj_le), à LUI, encore en cours et
+        #   avant la création. Deux onglets, deux clics : un seul passe, l'autre recharge.
+        r = requests.patch(self._url(), headers={**self._service(), "Prefer": "return=representation"},
+                           params={"id": f"eq.{ligne['id']}", "user_id": f"eq.{ligne['user_id']}", "etat": "eq.en_cours",
+                                   "app_dossier_id": "is.null", "maj_le": f"eq.{ligne['maj_le']}"},
+                           json={"reponses": reponses, "etape": etape}, timeout=10)
+        if not r.ok:
+            raise HTTPException(status_code=503, detail="Réponse non gardée")
+        rows = r.json() or []
+        return rows[0] if rows else None

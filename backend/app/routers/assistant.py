@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field
 
 from ..auth import get_authenticated_user, require_request_user
 from ..services import assistant_fichiers as fichiers_service
+from ..services import assistant_parcours as parcours_moteur
 from ..services.assistant_catalogue import ContexteAssistant, Refus
 from ..services.assistant_gestes import GESTES
 from ..services.assistant_service import AGENT_KEY, MAX_QUESTION_CARACTERES, AssistantService
@@ -436,3 +437,109 @@ def assistant_cartes(
     if len(conversation_id) != 36:
         raise HTTPException(status_code=404, detail="Conversation introuvable")
     return {"ok": True, "actions": service.lister_cartes(_jeton(authorization), conversation_id)}
+
+
+# ── 19/11 (étape 4 chap. 6, P1) : LE PARCOURS GUIDÉ — les questions sans modèle ─────────────────────────────────────
+# Un clic n'appelle PAS le modèle : le serveur enregistre la réponse dans app_assistant_parcours (P3) et rend la question
+# suivante (assistant_parcours.py, les 19 questions en données). Derrière l'interrupteur `assistant_parcours`
+# (off / admin / on ; absent = éteint), EN PLUS de celui de l'assistant. Note étape 4 §93.
+# ⛔ Les coordonnées d'un nouveau mandant ne passent pas par ces routes (l'écran les dépose dans le schéma privé).
+INTERRUPTEUR_PARCOURS = "assistant_parcours"
+
+
+class ParcoursDepartPayload(BaseModel):
+    genre: str = Field(pattern="^(creation_estimation|creation_annonce)$")
+    conversationId: str | None = Field(default=None, min_length=36, max_length=36)
+
+
+class ParcoursReponsePayload(BaseModel):
+    question: str = Field(min_length=1, max_length=40)
+    geste: str = Field(pattern="^(repondre|passer|nsp)$")
+    valeurs: dict[str, Any] = Field(default_factory=dict)
+
+
+def get_parcours_store(settings: Settings = Depends(get_settings)) -> parcours_moteur.ParcoursStore:
+    return parcours_moteur.ParcoursStore(settings)
+
+
+def _parcours_ouvert(service: AssistantService, profile: dict[str, Any]) -> None:
+    if not autorise(service.interrupteur(INTERRUPTEUR_PARCOURS), str(profile.get("role") or ""),
+                    profile.get("is_active") is True):
+        raise HTTPException(status_code=403, detail="Le parcours guidé n'est pas encore ouvert pour ce compte")
+
+
+@router.post("/parcours")
+def parcours_commencer(
+    payload: ParcoursDepartPayload,
+    authorization: str | None = Depends(require_request_user),
+    settings: Settings = Depends(get_settings),
+    admin_service: SupabaseAdminService = Depends(get_admin_service),
+    service: AssistantService = Depends(get_assistant_service),
+    store: parcours_moteur.ParcoursStore = Depends(get_parcours_store),
+):
+    user, profile = _ouvrir(settings, authorization, admin_service, service)
+    _parcours_ouvert(service, profile)
+    conversation_id = None
+    if payload.conversationId:
+        conv = service.conversation(payload.conversationId)
+        if not conv or str(conv.get("user_id") or "") != str(user.id):
+            raise HTTPException(status_code=404, detail="Conversation introuvable")
+        conversation_id = str(conv["id"])
+    premiere = parcours_moteur.suivante({}, parcours_moteur.annee_a_paris())
+    ligne = store.creer(str(user.id), conversation_id, payload.genre, premiere["id"] if premiere else None)
+    return {"ok": True, "parcours": parcours_moteur.vue(ligne)}
+
+
+@router.get("/parcours/{parcours_id}")
+def parcours_relire(
+    parcours_id: str,
+    authorization: str | None = Depends(require_request_user),
+    settings: Settings = Depends(get_settings),
+    admin_service: SupabaseAdminService = Depends(get_admin_service),
+    service: AssistantService = Depends(get_assistant_service),
+    store: parcours_moteur.ParcoursStore = Depends(get_parcours_store),
+):
+    _user, profile = _ouvrir(settings, authorization, admin_service, service)
+    _parcours_ouvert(service, profile)
+    if len(parcours_id) != 36:
+        raise HTTPException(status_code=404, detail="Parcours introuvable")
+    # avec SON jeton : la règle de lecture de la base (auteur avant la création, négociateur, admin) décide
+    ligne = store.lire_avec_jeton(_jeton(authorization), parcours_id)
+    if not ligne:
+        raise HTTPException(status_code=404, detail="Parcours introuvable")
+    return {"ok": True, "parcours": parcours_moteur.vue(ligne)}
+
+
+@router.post("/parcours/{parcours_id}/reponse")
+def parcours_repondre(
+    parcours_id: str,
+    payload: ParcoursReponsePayload,
+    authorization: str | None = Depends(require_request_user),
+    settings: Settings = Depends(get_settings),
+    admin_service: SupabaseAdminService = Depends(get_admin_service),
+    service: AssistantService = Depends(get_assistant_service),
+    store: parcours_moteur.ParcoursStore = Depends(get_parcours_store),
+):
+    user, profile = _ouvrir(settings, authorization, admin_service, service)
+    _parcours_ouvert(service, profile)
+    if len(parcours_id) != 36:
+        raise HTTPException(status_code=404, detail="Parcours introuvable")
+    ligne = store.lire_service(parcours_id)
+    # même l'admin, qui relit les parcours des autres, ne répond pas à leur place
+    if not ligne or str(ligne.get("user_id") or "") != str(user.id):
+        raise HTTPException(status_code=404, detail="Parcours introuvable")
+    if ligne.get("etat") != "en_cours" or ligne.get("app_dossier_id") is not None:
+        raise HTTPException(status_code=409, detail="Ce parcours est terminé : la fiche est créée.")
+    annee = parcours_moteur.annee_a_paris()
+    if payload.question not in {q["id"] for q in parcours_moteur.questions_posees(dict(ligne.get("reponses") or {}), annee)}:
+        raise HTTPException(status_code=400, detail="Cette question n'est pas posée pour ce bien.")
+    try:
+        reponses = parcours_moteur.enregistrer(dict(ligne.get("reponses") or {}), payload.question, payload.valeurs,
+                                               payload.geste)
+    except parcours_moteur.RefusParcours as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from None
+    prochaine = parcours_moteur.suivante(reponses, annee)
+    ecrite = store.ecrire_reponses(ligne, reponses, prochaine["id"] if prochaine else None)
+    if not ecrite:
+        raise HTTPException(status_code=409, detail="Le parcours a bougé ailleurs (un autre onglet ?) : recharge-le.")
+    return {"ok": True, "parcours": parcours_moteur.vue(ecrite, annee)}
