@@ -1585,6 +1585,12 @@ EXCLUES_DE_LA_REGLE_E: dict[int, str] = {
            "du classeur, INCERTAINE : prepare pour MOSNIER, ou brouillon de CREPINGE/LAROUX ou "
            "de LUTTENBACHER/CARRET ? Sans exclusion, E le reunirait au dossier CARRET + "
            "LUTTENBACHER. Exclu le 19/11 -- a retirer apres sa reponse.",
+    21520: "bien 43050, compromis ANNULE SANS DATE (282 000, acquereur 353198) -- la seule des 33 "
+           "reunions de E que le Sheet laisse DOUTEUSE : la ligne d2108609 CHOUVELLON DATE un compromis "
+           "(T = 26/08/2025, Annulee), mais l'offre CHOUVELLON n'existe chez nous que comme creation C5 "
+           "(1001495) -- ni le gel ni E ne sont prouves. Meme forme que 26613. Exclu le 19/11 au soir "
+           "par decision de Frederic (« OUI, exclue comme 26613, et declaree ») -- a retirer quand "
+           "la question CHOUVELLON aura sa reponse.",
 }
 
 

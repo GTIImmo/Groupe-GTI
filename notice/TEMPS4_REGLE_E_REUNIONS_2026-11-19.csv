@@ -25,7 +25,6 @@ bien,transaction,genre,etat,rejoint_dossier_de,membres_apres,autres_acheteurs_da
 40855,19737,compromis,cancelled,"19736,19738,19740",4,False,100,A RAISON (l'essai annule rejoint l'affaire du meme acheteur),18be7ee3-50a7-4f87-b59b-49e63a11a863,2,False
 40977,19815,compromis,cancelled,"19814,19816,19817,19821",5,False,165,A VERIFIER (le dossier porte deja un compromis annule du meme acheteur),020d277b-fdf2-4e05-9f62-616cf2d24323,2,False
 41481,20088,compromis,cancelled,"20089,20090",3,False,150,A RAISON (l'essai annule rejoint l'affaire du meme acheteur),7005240a-eae1-4910-aa50-3da56ea6dfa4,2,True
-43050,21520,compromis,cancelled,"21521,21522,21523",4,False,107,A RAISON (l'essai annule rejoint l'affaire du meme acheteur),676ad1fa-24a7-45cf-97b5-e8c0b1d185e8,2,True
 47574,24010,compromis,cancelled,"24011,24012,24013",4,False,134,A RAISON (l'essai annule rejoint l'affaire du meme acheteur),d5c630d4-923a-4841-b24b-fd6165c47df3,2,True
 48019,24331,compromis,cancelled,"24330,24332,24334",4,False,266,A RAISON (l'essai annule rejoint l'affaire du meme acheteur),b338722c-e75e-4f55-97b8-1f1f70862573,2,False
 48370,24649,compromis,cancelled,"24650,24651,24654",4,False,111,A RAISON (l'essai annule rejoint l'affaire du meme acheteur),4792dc3e-91df-4248-a5a1-5f9da5d5bdba,2,True

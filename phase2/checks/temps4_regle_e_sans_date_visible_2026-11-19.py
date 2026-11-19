@@ -52,7 +52,9 @@ TEMOINS = {20088: 41481, 19070: 39745, 1335: 3481, 14110: 28653, 16197: 33458}
 BLOQUES = {7499: ("15220", "GENILLON"), 8845: ("17536", "Rouchon"), 11103: ("23238", "Simonyan"),
            28214: ("54867", "PLANCHE"), 4385: ("9629", "PYOT, abstention")}
 #: L'EXCLUSION DECLAREE (EXCLUES_DE_LA_REGLE_E, decision du 19/11) DOIT la laisser seule
-EXCLUES = {26613: ("52166", "SHN6RKDI, exclusion declaree")}
+EXCLUES = {26613: ("52166", "SHN6RKDI, exclusion declaree"),
+           # 19/11 au soir, decision de Frederic : la seule reunion que le Sheet laisse douteuse
+           21520: ("43050", "CHOUVELLON d2108609, exclusion declaree")}
 SORTIE_RESTE = RACINE / "notice" / "TEMPS4_REGLE_E_SANS_DATE_RESTANTES_2026-11-19.csv"
 INTERRUPTEUR = "APP_CHAINAGE_SANS_DATE_VISIBLE"
 
