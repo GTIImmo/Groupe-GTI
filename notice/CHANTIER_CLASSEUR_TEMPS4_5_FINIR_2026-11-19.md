@@ -14,8 +14,34 @@
 > l'étiquette ne bouge pas, l'appartenance bouge · les temps 1, 2, 3 sont faits (`f04c511`,
 > `f7a2d18`, `ecb2c6f`).
 
-**État des questions** : ① lue, jugée, et sa garde REJOUÉE (§ 1.7) · ② expliquée et chiffrée
-(§ 2) · ③ à ⑨ à suivre.
+## ⭐ LE TABLEAU DE MARCHE — mis à jour à chaque fin de question, AVANT la suivante
+
+> Demandé par Frédéric le 19/11 : *« c'est ce qui survivra quand ta conversation sera résumée »*.
+> ⭐ **Le BUT est ⑧ : écrire nos identifiants dans le Sheet.** Le reste est le chemin.
+> Dernière mise à jour : 19/11, fin des questions ③ et ④.
+
+```
+Q  SUJET                         ETAT        VERDICT EN UNE LIGNE                          ATTEND SA DECISION
+①  compromis annule sans date    FAIT        regle E + garde, ETEINTE, rejouee : 35        l'allumage (« vas-y ») ;
+                                             reunions, temoins verts, 0 a tort connu       26613/SHN6RKDI avant
+②  les 10 « meme nom »           FAIT        des menages : 3 lies par numero, 7 par rien   VALIDER LA LISTE (§ 2.6)
+                                             -> R1 retenu (10 lignes), R2 plus tard,       avant toute ligne au
+                                             R4 non                                        fichier
+③  les 2 offres du bien 61672    FAIT        le run ne marque jamais absente une           --
+                                             transaction « possedee par l'app » ; deux
+                                             lignes « sans objet » au carnet les
+                                             protegent pour toujours ; touche 2
+                                             transactions aujourd'hui
+④  la « fusion » du 18/11        FAIT        un TRANSFERT compte comme fusion (1 sur 6) ;  --
+                                             la RPC garde l'etiquette du plus petit
+                                             numero, pas la plus ancienne
+⑤  les 48 « a juger »            A FAIRE     (le gros morceau, avec ⑥)
+⑥  les 255 a plusieurs etiquettes A FAIRE
+⑦  le patch du gel               A FAIRE                                                   le « vas-y » du patch V2
+⑧  ECRIRE DANS LE SHEET          A FAIRE     ⭐ LE BUT                                      le critere de fin, AVANT
+                                                                                           la 1re ligne
+⑨  ce qu'il ne m'a pas demande   A FAIRE
+```
 
 ---
 
@@ -318,14 +344,129 @@ R2   5 reunions mesurees ; la nuit lirait une table de contacts de plus -- si sa
   (R2 en trouve 2 de plus ; pour les menages sans lien, seul un nom les trahirait)
 ```
 
+### 2.6 ⭐ LA LISTE À VALIDER — les 10 ménages, ligne par ligne, sur les faits
+
+**Sa décision du 19/11 : R1 pour les 10. R2 « bonne idée, mais pas aujourd'hui » (pas rejouée, 2 paires
+de plus seulement). R4 non : « on n'écrit pas chez Hektor pour ça ».** ⛔ Aucune ligne n'est écrite
+dans `phase2/sync/rattachements_manuels.csv` avant qu'il ait validé CETTE liste.
+
+Lu dans le registre local le 19/11. Les **deux numéros de fiche** sont les numéros Hektor des
+acquéreurs ; les dates de l'offre viennent de son journal chez Hektor (`propositions_json`) ; « refus
+11/11 » est notre geste B (temps 1).
+
+```
+BIEN   OFFRE (transaction . fiche . nom)              COMPROMIS (transaction . fiche . nom)          MONTANT
+       proposee et acceptee le / refusee le           signe le / etat
+10955  5356  . fiche 184328 . RIGHI Ghislaine         5355  . fiche 184420 . RIGHI Philippe           60 000
+       07/08/2015 / 11/11/2026 (nous)                 27/10/2015 / annule                (81 jours)
+11014  5408  . fiche 166305 . SOULEZ Isabelle         5407  . fiche 167011 . SOULEZ Gilles           293 000
+       22/09/2016 / 11/11/2026 (nous)                 20/10/2016 / annule                (28 jours)
+27037  13056 . fiche 257676 . DZAMAN (fiche couple)   13055 . fiche 257677 . DZAMAN Nicolas           68 000
+       06/05/2011 / 11/11/2026 (nous)                 21/06/2011 / annule                (46 jours)
+       ⭐ la fiche couple 257676 pointe 257677 (refCouple) : le lien est un NUMERO
+35702  16866 . fiche 92724  . BOUGEARD Kevin          16865 . fiche 313360 . BOUGEARD Marina         110 000
+       07/10/2020 / 11/11/2026 (nous)                 06/11/2020 / annule                (30 jours)
+36712  17278 . fiche 545406 . ARSAC ET DUMAS (couple) 17277 . fiche 545402 . ARSAC ET DUMAS          134 000
+       07/04/2023 / 11/11/2026 (nous)                       Romain et Aurelie
+                                                      02/06/2023 / annule                (56 jours)
+       ⭐ la fiche couple 545406 pointe 545402 (refCouple)
+41584  20196 . fiche 157385 . GAGNE Sylvie            20195 . fiche 347976 . GAGNE Sebastien         136 000
+       14/03/2017 / 11/11/2026 (nous)                 02/06/2017 / annule                (80 jours)
+42883  21339 . fiche 542934 . VERILHAC (fiche couple) 21337 . fiche 542932 . VERILHAC               127 000
+       24/11/2017 / 11/11/2026 (nous)                       Jean-Paul et Francoise
+                                                      13/12/2017 / annule                (19 jours)
+       ⭐ la fiche couple 542934 pointe 542932 (refCouple)
+       ⚠ le bien porte AUSSI : un 1er compromis VERILHAC 21338 (124 000, 08/11/2017, annule), DEJA
+         dans le dossier 21337 ; et l'offre refusee 21340 de FORESTA Solange (124 000, 06/10/2017),
+         une AUTRE acheteuse, qui reste a part
+44276  22069 . fiche 92138  . MILHAS Maud             22068 . fiche 355886 . MILHAS Jacques          135 000
+       24/04/2021 / 11/11/2026 (nous)                 19/06/2021 / annule                (56 jours)
+52724  26825 . fiche 142429 . PARIS Christophe        26824 . fiche 400256 . PARIS Noemie             40 000
+       20/02/2020 / 11/11/2026 (nous)                 21/05/2020 / annule                (91 jours)
+55040  28328 . fiche 179729 . HAHNEL Nicolas          28327 . fiche 391398 . HAHNEL Sandrine          35 000
+       16/11/2015 / 11/11/2026 (nous)                 22/12/2015 / annule                (36 jours)
+```
+
+**Ce qui ressort des faits** : sur les 10, **le montant est identique** entre l'offre et le compromis ;
+le compromis suit l'offre de **19 à 91 jours** ; **9 biens sur 10 ne portent AUCUNE autre transaction**
+(VERILHAC, la seule exception, est détaillé ci-dessus). Chaque offre a été acceptée le jour même de sa
+proposition chez Hektor, et c'est NOTRE refus du 11/11 qui l'a détachée.
+
+**Les 10 lignes que je propose d'ajouter au fichier** — format du fichier : *transaction à rattacher ;
+transaction cible ; bien attendu ; date ; pourquoi* — l'offre rejoint le dossier de son compromis :
+
+```
+5356;5355;10955;2026-11-19;RIGHI -- offre de Ghislaine (184328) et compromis de Philippe (184420), 60 000 EUR, menage sur deux fiches
+5408;5407;11014;2026-11-19;SOULEZ -- offre d'Isabelle (166305) et compromis de Gilles (167011), 293 000 EUR, menage sur deux fiches
+13056;13055;27037;2026-11-19;DZAMAN -- offre de la fiche couple 257676 et compromis de Nicolas (257677, son refCouple), 68 000 EUR
+16866;16865;35702;2026-11-19;BOUGEARD -- offre de Kevin (92724) et compromis de Marina (313360), 110 000 EUR, menage sur deux fiches
+17278;17277;36712;2026-11-19;ARSAC ET DUMAS -- offre de la fiche couple 545406 et compromis de 545402 (son refCouple), 134 000 EUR
+20196;20195;41584;2026-11-19;GAGNE -- offre de Sylvie (157385) et compromis de Sebastien (347976), 136 000 EUR, menage sur deux fiches
+21339;21337;42883;2026-11-19;VERILHAC -- offre de la fiche couple 542934 et compromis de 542932 (son refCouple), 127 000 EUR
+22069;22068;44276;2026-11-19;MILHAS -- offre de Maud (92138) et compromis de Jacques (355886), 135 000 EUR, menage sur deux fiches
+26825;26824;52724;2026-11-19;PARIS -- offre de Christophe (142429) et compromis de Noemie (400256), 40 000 EUR, menage sur deux fiches
+28328;28327;55040;2026-11-19;HAHNEL -- offre de Nicolas (179729) et compromis de Sandrine (391398), 35 000 EUR, menage sur deux fiches
+```
+
+**Ce qu'elles feront** (lu dans le code, non rejoué) : chaque offre quitte son dossier d'une seule
+transaction et rejoint celui de son compromis. La RPC des étiquettes garde celle du plus petit numéro :
+**dans les 10, c'est le compromis** (5355 < 5356, etc.), donc **l'étiquette du compromis reste** et celle
+de l'offre seule disparaît — 10 fusions la nuit suivante, le seuil de 10 criera. ⚠ Après les avoir
+écrites, le **rejeu** (le gabarit du temps 3) nommera chaque dossier qui bouge : 10 attendus, pas un de
+plus.
+
 ---
 
-## ④ LA « FUSION » DU 18/11 — ce qui est déjà établi (la suite au tour de ④)
+## ③ LES DEUX OFFRES DU BIEN 61672 — protégées pour toujours
 
-La RPC procède dans l'ordre pose → propagation → **fusion** → scission. Sa fusion se déclenche dès
-qu'**un groupe porte plusieurs étiquettes**, et garde celle de **la transaction au plus petit numéro**.
-Le 18/11, le dossier 14006 a reçu une seule transaction venue d'ailleurs (1001593, la copie C5 de
-l'offre 14008), qui portait l'étiquette a633d3ec d'un autre dossier (14007-14009). La RPC a « fusionné »
-— c'est-à-dire réétiqueté 1001593 — **alors que a633d3ec continuait de vivre sur 14007-14009**.
-➡ **Le compteur de fusions compte un TRANSFERT comme une fusion.** Et il peut aussi absorber
-l'étiquette d'un dossier entier quand c'est la transaction qui arrive qui a le plus petit numéro.
+**Ce que j'ai fait** (une ligne) : lu le code qui pose `present_in_hektor`, et le carnet de ces deux
+offres. Rien de plus.
+
+```
+LE CODE   affaire_ledger.py l. 1058-1096 : en fin de lecture, une transaction NON REVUE est
+          marquee absente -- SAUF si l'app la « possede » : nee dans la plage app (>= 1 000 000),
+          ou une ligne au CARNET (app_affaire_champ_app, local ou descendu), ou un travail en cours.
+          Le commentaire le dit : « la resolution attend C.7 ».
+LES DEUX  30712 (offre Hektor 33094) : 2 lignes au carnet, prix public 180 000 et 10 jours de
+          retractation, origine modification_app du 13/10, etat « sans_objet »
+          1001361 (offre Hektor 33098) : nee dans la plage app, ET les 2 memes lignes, creation_app
+          du 13/10, « sans_objet »
+          ⛔ une ligne « sans objet » ne quitte JAMAIS le carnet (rien a envoyer chez Hektor) : la
+          protection ne tombe donc jamais. Chez Hektor elles ont ete remplacees le 27/10 (offre
+          30767 et compromis 30769, revus chaque nuit).
+CE QUE CA TOUCHE   aujourd'hui : CES 2 transactions et rien d'autre (temps 2 : 2 transactions
+          presentes non relues). Mais le mecanisme est general : toute transaction saisie ou
+          modifiee dans l'app, puis supprimee chez Hektor, restera « presente » et VIVANTE pour le
+          chainage -- c'est elle qui fait le seul dossier « a deux offres acceptees ».
+PISTE (rien n'est fait) : qu'une ligne « sans objet » ne compte plus comme possession ; ou que la
+          protection ait une duree. C'est la decision C.7, deja nommee dans le code.
+NON MESURE : combien de transactions portent aujourd'hui une ligne « sans objet » (donc seraient
+          protegees si Hektor les supprimait demain).
+```
+
+---
+
+## ④ LA « FUSION » DU 18/11 — un transfert compté comme une fusion
+
+**Ce que j'ai fait** (une ligne) : lu la RPC `app_poser_etiquettes_dossier`, et compté dans le journal
+les fusions dont l'étiquette « absorbée » vit encore. Rien de plus.
+
+```
+L'EXPLICATION   la RPC fait pose -> propagation -> FUSION -> scission. Sa fusion se declenche des
+                qu'UN GROUPE porte plusieurs etiquettes, et garde celle de LA TRANSACTION AU PLUS
+                PETIT NUMERO (son commentaire dit « la plus ancienne » : c'est faux, le code
+                trie par app_affaire_id). Le 18/11, le dossier 14006 a recu UNE transaction venue
+                d'ailleurs (1001593, la copie C5 de l'offre 14008) portant l'etiquette a633d3ec
+                d'un autre dossier (14007-14009) : la RPC a « fusionne », c'est-a-dire reetiquete
+                1001593 -- alors que a633d3ec continuait de vivre sur 14007-14009.
+LE COMPTEUR     OUI, IL PEUT ENCORE SE TROMPER, de deux facons :
+   PEUT-IL      . il compte un TRANSFERT comme une fusion : 1 « fusion » sur 6 dans le journal
+   ENCORE SE      (celle du 18/11) n'a fait disparaitre aucune etiquette ;
+   TROMPER ?    . a l'inverse, quand la transaction qui ARRIVE a le plus petit numero, c'est
+                  l'etiquette DU DOSSIER ENTIER qui est absorbee -- 16 des 35 reunions de la
+                  regle E seraient dans ce cas.
+CE QU'IL FAUT EN TIRER POUR ⑧ : compter les etiquettes qui disparaissent ne suffit pas ; le
+                controle apres l'ecriture du Sheet devra comparer, LIGNE PAR LIGNE, l'UUID publie
+                a l'etiquette que portent AUJOURD'HUI les transactions de la ligne.
+NON MESURE      la frequence d'un transfert hors de nos gestes (un seul en 7 jours, et c'etait C5).
+```
