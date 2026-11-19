@@ -302,7 +302,7 @@ export async function noterCreationCarte(id: string, suite: { app_dossier_id: nu
 // Le serveur (routers/assistant.py, P1) pose la question suivante et garde les réponses dans app_assistant_parcours, dans la
 // LANGUE DE LA FENÊTRE (noms de ses cases). Un clic n'appelle jamais le modèle. Derrière l'interrupteur `assistant_parcours`
 // (403 tant qu'il n'est pas ouvert pour ce compte). ⛔ Les coordonnées d'un NOUVEAU mandant ne passent pas par ici.
-export type QuestionParcours = { id: string; titre: string; phrase: string; forme: string; champs: string[] }
+export type QuestionParcours = { id: string; titre: string; phrase: string; forme: string; champs: string[]; essentiels?: string[] }
 // P4-a (19/11) : « connue » = l'essentiel était dans la demande (lue par l'IA) : pas reposée, modifiable
 export type EtatQuestionParcours = 'faite' | 'passee' | 'nsp' | 'connue' | null
 export type ParcoursVue = {
@@ -419,8 +419,8 @@ export async function prendreCoordonneesMandant(parcoursId: string): Promise<Coo
 type FauxParcours = { id: string; conversation: string | null; genre: 'creation_estimation' | 'creation_annonce'; reponses: Record<string, unknown>; etats: Record<string, EtatQuestionParcours>; etat: 'en_cours' | 'termine'; app_dossier_id?: number | null }
 const fauxParcours: FauxParcours[] = []
 const FAUSSES_QUESTIONS: QuestionParcours[] = [
-  { id: 'bien', titre: 'Le bien', phrase: "Quel bien, et où ?", forme: 'cases', champs: ['type', 'agence', 'adresse_haut', 'cp', 'ville'] },
-  { id: 'interieur', titre: "L'intérieur", phrase: "Combien de pièces, et comment est l'intérieur ?", forme: 'compteurs', champs: ['surfappart', 'nbpieces', 'NB_CHAMBRES', 'NB_NIVEAUX', 'EXPOSITION'] },
+  { id: 'bien', titre: 'Le bien', phrase: "Quel bien, et où ?", forme: 'cases', champs: ['type', 'agence', 'adresse_haut', 'cp', 'ville'], essentiels: ['type', 'adresse_haut', 'cp', 'ville'] },
+  { id: 'interieur', titre: "L'intérieur", phrase: "Combien de pièces, et comment est l'intérieur ?", forme: 'compteurs', champs: ['surfappart', 'nbpieces', 'NB_CHAMBRES', 'NB_NIVEAUX', 'EXPOSITION'], essentiels: ['surfappart', 'nbpieces'] },
   { id: 'composition', titre: 'La composition', phrase: 'Pièce par pièce.', forme: 'pieces', champs: ['composition'] },
   { id: 'dehors', titre: 'Le dehors', phrase: "Qu'y a-t-il dehors ?", forme: 'cocher', champs: ['JARDIN-', 'PISCINE-', 'surfterrain', 'GARAGE_BOX'] },
   { id: 'mandant', titre: 'Le mandant', phrase: 'Qui vend ?', forme: 'mandant', champs: ['mandant_choix', 'mandant'] },

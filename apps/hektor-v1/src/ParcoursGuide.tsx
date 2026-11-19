@@ -55,12 +55,17 @@ function resume(q: QuestionParcours & { etat: string | null }, reponses: Valeurs
     return n ? `${n} pièce${n > 1 ? 's' : ''}` : 'aucune pièce'
   }
   if (q.forme === 'mandant') return texte(reponses.mandant_choix) === 'nouveau' ? 'nouveau mandant' : texte(reponses.mandant_choix) === 'existant' ? 'mandant existant' : 'plus tard'
-  const dits = q.champs.filter((c) => texte(reponses[c]).trim()).map((c) => {
+  // ses ESSENTIELS d'abord (le bien : le type, puis la rue -- pas « Vente classique »), puis le reste ; une même valeur
+  // (l'adresse recopiée en privée et en publique) ne compte qu'une fois
+  const essentiels = q.essentiels ?? []
+  const ordre = [...essentiels, ...q.champs.filter((c) => !essentiels.includes(c))]
+  const tous = ordre.filter((c) => texte(reponses[c]).trim()).map((c) => {
     const cas = cat.cases[c]
     const v = libelleValeur(cas, reponses[c])
     if (cas && estACocher(cas)) return OUI.has(texte(reponses[c])) ? cas.libelle : `pas de ${cas.libelle.toLowerCase()}`
     return cas?.genre === 'nombre' ? `${cas.libelle} : ${v}` : v
   })
+  const dits = [...new Set(tous)]
   if (!dits.length) return 'rien de plus'
   return dits.slice(0, 2).join(' · ') + (dits.length > 2 ? ` +${dits.length - 2}` : '')
 }

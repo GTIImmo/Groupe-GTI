@@ -222,7 +222,8 @@ def vue(ligne: dict[str, Any], annee: int | None = None) -> dict[str, Any]:
                    "faites": sum(1 for p in posees if p["id"] in faits)},
         # P2 (19/11) : chaque question posée avec sa forme et ses cases -> « Modifier » une réponse déjà donnée
         "questions": [{"id": p["id"], "titre": p["titre"], "etat": faits.get(p["id"]), "phrase": p["phrase"],
-                       "forme": p["forme"], "champs": p["champs"]} for p in posees],
+                       "forme": p["forme"], "champs": p["champs"], "essentiels": p.get("essentiels") or []}
+                      for p in posees],
         "reponses": {k: v for k, v in reponses.items() if not k.startswith("_")},
         # P4-a : d'où vient une case pré-remplie (« demande ») -- l'écran le dit sur la pastille
         "sources": dict(reponses.get(CLE_SOURCES) or {}),
