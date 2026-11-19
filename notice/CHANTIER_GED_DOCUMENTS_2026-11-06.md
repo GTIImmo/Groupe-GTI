@@ -3572,3 +3572,15 @@ envoyé (nom seul). Calque soldé. Relecture `refresh_console_contact_data` done
 ➡ **Le lot G' est PROUVÉ EN RÉEL** : le conjoint d'une première seule reliée au bien est lu, proposé, écrit chez nous, et part chez
 Hektor par la fiche principale.
 **Au nettoyage (à décider)** : les deux couples fictifs (§12.49) et la carte SPÉCIMEN « Deux ESSAI GED » sur 63331.
+
+**✅ LE NETTOYAGE EST FAIT (19/11, 07:43 -> 07:46, « Pousse et nettoie »)** -- sauvegarde d'abord
+(`scratchpad/lotGprime/sauvegarde_menage_couples_specimen_20261119.json`). **Contacts, par l'écran** (« Supprimer (tout le
+foyer) » sur la principale, puis « Supprimer » sur le conjoint resté chez nous, comme le 02/11) : 20000050 -> Hektor 606427
+supprimé ; 20000052 -> 606429 supprimé ; 20000051 et 20000053 -> `hektor_delete_sent: false`, `after_found: false` : ils
+n'existaient déjà plus chez Hektor (**cascade du foyer confirmée une 3e fois**). 4 travaux `delete_hektor_contact` done, 0 erreur.
+**Pièces** : 2 travaux `delete_document_from_hektor` (raison `menage_specimen_lot_g_19_11`, au nom de Frédéric, la charge du
+18/11) -> done : cartes SPÉCIMEN « Deux ESSAI GED » (716264) et « Deux ESSAI LOTG » (716263).
+**Après** : 0 ligne pour les 4 contacts dans `app_contacts_current` et `app_contact_pending` ; 63331 ne garde que son mandant
+d'essai 20000009 (propriétaire) et **5 pièces FICTIF, GARDÉES EXPRÈS** (électricité, fiche copro, mesurage, taxe foncière, fiche
+de renseignements « marié ») : elles servent aux preuves E et CHARGES encore à faire. Les lectures GED des pièces retirées restent
+en base, invisibles (comme le 18/11).
