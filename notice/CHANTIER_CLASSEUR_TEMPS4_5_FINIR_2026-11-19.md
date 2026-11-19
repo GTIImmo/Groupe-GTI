@@ -50,7 +50,10 @@ Q  SUJET                         ETAT        VERDICT EN UNE LIGNE               
                                              TOUT (E, les 8, le patch). Le noyau : 128 C5, posee (pour ⑧ : choisir
                                              74 que le Sheet tient (66 MELANGES), 26 liens a l'export)
                                              du gel seul. + 207 dossiers sur 2-3 lignes
-⑦  le patch du gel               A FAIRE                                                   le « vas-y » du patch V2
+⑦  le patch du gel               FAIT        il TIENT : 4 gardes a 0 aujourd'hui, temoins  le « vas-y » du patch V2
+                                             semes 1/1/1 ; il corrige EXACTEMENT les 2     (je recommande : demain,
+                                             erreurs du gel de 5.4 ; ⑥ : 16 reglees, 4      apres le controle des
+                                             revelees (pas des regressions)                10, pas cette nuit)
 ⑧  ECRIRE DANS LE SHEET          A FAIRE     ⭐ LE BUT                                      le critere de fin, AVANT
                                                                                            la 1re ligne
 ⑨  ce qu'il ne m'a pas demande   A FAIRE
@@ -814,4 +817,101 @@ Ce qui reste a trois natures, et AUCUNE ne se regle par une regle de chainage :
 . les 207 dossiers a plusieurs lignes : ni compte des doublons legitimes, ni des melanges
 . la RPC de nuit n'est pas rejouee : « une etiquette = un dossier » est verifie sur la base
   d'aujourd'hui, et suppose pour les scenarios
+```
+
+---
+
+## ⑦ LE PATCH DU GEL V2 — relu par moi : il tient, et je te redemande ton « vas-y »
+
+`supabase/patch_correction_gel_audit_v2_2026-11-19.sql` (45 retraits, 78 ajouts, 12 787 → 12 820), son
+inverse et sa répétition. **Rien n'a été joué** : toutes les vérifications ci-dessous sont des lectures
+(Supabase en direct, le Sheet par un GET, la copie locale).
+
+### 7.1 Tient-il toujours ? — OUI, ses quatre gardes passeraient aujourd'hui
+
+```
+GARDE 1  le gel est celui qu'ont lu les audits : 12 787 liens, empreinte 8084e535f51ba904a839bfe0bcc88a55
+         -> IDENTIQUE chez Supabase ce 19/11 apres-midi (dernier lien gele le 18/11 10:53) ;
+         la sauvegarde app_classeur_lien_avant_audit_v2_20261119 n'existe pas (jamais joue)
+GARDE 2  chaque lien a retirer existe avec son role ........................ manque   0
+GARDE 3  chaque cible existe au registre et porte le genre de son role ...... cible_ko 0
+GARDE 4  chaque cible sera libre (aucune autre ligne ne la tient) ........... deja     0
+⭐ LE ZERO A SON TEMOIN : trois fautes semees, une par garde (un lien inexistant ; 7778, un
+  compromis, seme en offre ; 7778, tenu par 2SCBZXMH, seme sur une autre ligne) -> 1, 1, 1.
+  Les gardes savent mordre ; leur zero d'aujourd'hui est vrai.
+```
+Les gardes ont été rejouées **en lecture**, extraites du fichier lui-même (le bloc `do $$` réécrit en
+trois `select`, contrôlé : aucun mot d'écriture), pas recopiées à la main.
+
+### 7.2 Les deux erreurs du gel trouvées en 5.4 — le patch les corrige, EXACTEMENT
+
+C'est une **confirmation indépendante** : le juge de ⑤ a été construit sans lire le patch, et le patch
+sans connaître le juge.
+```
+15722  le juge : l'offre 7780 (DE OLIVEIRA, 04/05/2021) appartient a 2SCBZXMH ; 7781 (COLOMBET,
+       01/04/2021) a VEP1DVQ4, ou elle n'etait pas
+       le patch : retire VEP1DVQ4 <- 7780, ajoute 2SCBZXMH <- 7780 ET VEP1DVQ4 <- 7781        ✅
+12728  le juge : les deux compromis du 30/04/2021 sont lies a l'envers (la ligne vendue EGR8KXOL
+       a 87 000 tenait l'annule a 90 000) -- il les disait AMBIGUS, sans trancher
+       le patch : EGR8KXOL <- 6555 (87 000, actif) et Q602VZJX <- 6554 (90 000, annule)       ✅
+et 8Q3LHGZ4 (le temoin independant de ⑤) : le patch retire 8321 et 8322                       ✅
+```
+
+### 7.3 Ce qu'il change au compte de ⑥ — 16 lignes réglées, 4 révélées
+
+```
+sur chaque scenario de ⑥ : 16 lignes a plusieurs etiquettes REGLEES, 4 NOUVELLES
+   (0 : 255 -> 243 . cette nuit : 251 -> 239 . au bout : 241 -> 229)
+LES 4 NOUVELLES NE SONT PAS DES REGRESSIONS : le gel devient VRAI, et un gel vrai montre une casse
+du chainage que le lien faux cachait.
+   2SCBZXMH  7780 rejoint sa vraie ligne -> on VOIT le melange de 15722 (⑤ 5.4)
+   3W10AEIK  l'offre de la ligne est 4748 (VINCENT, 21/01/2021), pas 4747 (BELLAT) : 4748 est seule
+             dans son dossier, le compromis 4746 est dans celui de BELLAT (4745)
+   TRJ5Y59U  la copie C5 1001561 sort, la vraie offre 23995 (GAY) entre : nos refus du 11/11 l'ont
+             laissee seule
+   f90b0418  l'offre 19050 (POULY et CHARTOIR) rejoint la ligne de son compromis 19049 -- meme
+             acquereur 544474 ; 19049 est SANS DATE et reste seul meme avec la regle E -- a lire
+```
+
+### 7.4 Ce que j'ai encore vérifié
+
+```
+. il ne touche AUCUNE transaction decidee ou proposee aujourd'hui : 26613, les 20 des 10 menages,
+  les 16 des 8 lignes de ⑤ -- ni 30767 / 30769 (⭐ il retire de la ligne 45225170 les deux offres
+  perimees du bien 61672, 30712 et 1001361 : la question ③ vue du gel)
+. les NUMEROS DE LIGNE qu'il ecrit sont justes : le Sheet a pris des lignes depuis cette nuit (4 797,
+  les dernieres en 4801-4803), mais A LA FIN -- 0 des 78 ajouts n'a une ligne_classeur differente de
+  la ligne actuelle de son ID Unique, et 0 des 4 703 couples du gel n'est perime
+. sa repetition attend 71 lignes sans lien : simule, 91 - 26 (premier lien) + 6 (videes : 1ESJE28Q,
+  Y51UMZHY, 8Q3LHGZ4, WJ3KA32F, NEFHS7JI, a8aaeb2b) = 71
+. son INVERSE ne juge que SA part (lecon 31) : il retire ce que gele_par = 'audit_independant_v2_
+  2026-11-19' a pose, remet les 45 retraits a l'identique depuis la sauvegarde, et DIT un ecart venu
+  d'un autre geste sans refuser de tourner. Il porte son commit;, comme le patch.
+. ⚠ le patch porte son `commit;` : joue « pour voir », il se commite. Il ne se colle qu'avec ton accord.
+```
+
+### 7.5 Ce qu'il NE fait pas — le geste suivant, à enchaîner
+
+```
+. 10 transactions detachees d'une ligne portent une valeur que NOUS avons posee depuis le Sheet
+  (honoraires, dates d'annulation...), et 15 une note « classeur » : elles doivent DESCENDRE vers la
+  bonne transaction -- la repetition les compte (attendu 10 et 15 avant ce nettoyage)
+. les copies C5 detachees se retirent ensuite, des DEUX cotes (le local est maitre de la plage app)
+. ni Hektor, ni les 8 lignes incertaines, ni les 18 lignes a question ouverte (sorties du patch)
+```
+
+### 7.6 Mon avis, et ce que je te demande
+
+**Il tient, et je recommande de le jouer** — mais **pas cette nuit** : cette nuit est celle des 10 ménages
+(un geste par nuit). Le patch ne dépend pas du chaînage (gel et chaînage sont indépendants), il s'écrit chez
+Supabase **en plein jour**, et sa répétition le juge en une minute : demain, **après** le contrôle des 10,
+puis la règle E une nuit suivante. ⛔ **Je ne le joue pas sans ton « vas-y ».**
+
+### 7.7 Ce que je n'ai pas mesuré
+
+```
+. l'effet du patch sur les VALEURS posees (honoraires, notes) au-dela du compte de sa repetition
+. f90b0418 : pourquoi 19049 (compromis SANS DATE, meme acquereur que 19050) reste seul avec E
+. l'ordre de collage contre la descente de 07:45 : le gel est maitre chez Supabase et la descente le
+  RECOPIE en local -- un collage avant 07:45 serait recopie le matin meme, apres, le lendemain
 ```
