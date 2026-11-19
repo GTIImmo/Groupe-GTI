@@ -238,6 +238,10 @@ voir(/const depotOuvert = useFenetreDepotOuverte\(\)/.test(rm) && /\}, \[cleOuve
   'essai réel du 19/11 : « Ce que dit… » ATTEND la fermeture de la fenêtre de dépôt (rien marqué vu avant), et s\'ouvre à sa fermeture')
 voir(/const enFenetre = Boolean\(onFermer\)/.test(depot) && /if \(!enFenetre\) return\s*\n\s*signalerFenetreDepot\(true\)\s*\n\s*return \(\) => signalerFenetreDepot\(false\)/.test(depot),
   'la fenêtre de dépôt (au-dessus du bien) se signale ouverte puis fermée ; posée dans le panneau, elle ne se signale pas')
+voir(/disabled=\{!choisies\.length \|\| enCours \|\| premiereSeconde\} onClick=\{\(\) => void enregistrer\(\)\}/.test(fen)
+  && /window\.setTimeout\(\(\) => setPremiereSeconde\(false\), 1000\)/.test(fen) && /useState\(true\)/.test(fen.slice(fen.indexOf('premiereSeconde, setPremiereSeconde'), fen.indexOf('premiereSeconde, setPremiereSeconde') + 80))
+  && (fen.match(/void enregistrer\(\)/g) || []).length === 1,
+  'essai réel du 19/11 : « Enregistrer » est INACTIF la première seconde (le double-clic qui ferme le dépôt n\'écrit plus), et c\'est le seul chemin qui enregistre')
 voir(/ouvertes = Math\.max\(0, ouvertes \+ \(ouverte \? 1 : -1\)\)/.test(fenDepot) && /window\.addEventListener\(EVENEMENT, maj\)/.test(fenDepot) && /removeEventListener\(EVENEMENT, maj\)/.test(fenDepot),
   'le signal compte les fenêtres ouvertes (jamais sous zéro) et se désabonne')
 

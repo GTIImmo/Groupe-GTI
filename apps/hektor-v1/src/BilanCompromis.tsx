@@ -169,6 +169,10 @@ export default function BilanCompromis({
 
   // Échap ferme (sauf pendant l'écriture) ; le focus entre dans la fenêtre à l'ouverture
   useEffect(() => { fenetre.current?.focus() }, [])
+  // 19/11 (§12.55) : « Enregistrer » arrive sous le curseur qui vient de cliquer (« Fermer » du dépôt, « Voir et trancher »)
+  // et ses lignes sont cochées d'avance -- un double-clic écrivait. Il reste INACTIF une seconde après l'ouverture.
+  const [premiereSeconde, setPremiereSeconde] = useState(true)
+  useEffect(() => { const t = window.setTimeout(() => setPremiereSeconde(false), 1000); return () => window.clearTimeout(t) }, [])
   // l'envoi en arrière-plan a fini (réussi ou refusé) : on le dit ici
   useEffect(() => {
     const ecoute = (e: Event) => { const r = (e as CustomEvent<ResultatEnvoi>).detail; if (r) setMessage({ texte: r.texte, erreur: r.erreur }) }
@@ -374,7 +378,7 @@ export default function BilanCompromis({
           )}
           <button type="button" className="bc-b2" disabled={enCours} onClick={onFermer}>Fermer</button>
           {peutModifier && !rienAFaire || choisies.length ? (
-            <button type="button" className="bc-b1" disabled={!choisies.length || enCours} onClick={() => void enregistrer()}>{libelleBouton}</button>
+            <button type="button" className="bc-b1" disabled={!choisies.length || enCours || premiereSeconde} onClick={() => void enregistrer()}>{libelleBouton}</button>
           ) : null}
         </footer>
       </section>

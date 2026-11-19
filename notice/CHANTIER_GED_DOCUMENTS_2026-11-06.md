@@ -3653,3 +3653,7 @@ calque, aucun `update_hektor_annonce_fields`, terrain toujours 742 ; la ligne re
 qui vient de cliquer « Fermer » -- un DOUBLE-CLIC sur « Fermer » pourrait encore enregistrer. Remède possible (non fait) :
 « Enregistrer » inactif une seconde après une ouverture d'elle-même.
 **Au ménage** : 63330 porte 2 titres FICTIF ; son terrain vaut 742 (valeur d'essai).
+**Le double-clic, bloqué (19/11, « Enchaîne »)** : dans `BilanCompromis.tsx`, « Enregistrer » est INACTIF la première seconde
+après TOUTE ouverture de la fenêtre (d'elle-même ou par « Voir et trancher » : dans les deux cas le bouton peut arriver sous
+un curseur qui vient de cliquer). C'est le seul chemin qui enregistre (pas de touche Entrée, pas de formulaire). Contrôles :
+`test_ged_bilan` **137 VERT** (1 neuf) ; témoin inverse (délai retiré) -> 1 ROUGE ; `npm run build` vert. Pas encore poussé.
