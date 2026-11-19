@@ -297,6 +297,110 @@ export async function noterCreationCarte(id: string, suite: { app_dossier_id: nu
   return r.resultat
 }
 
+// ── 19/11 (étape 4 chap. 6, P2) : LE PARCOURS GUIDÉ — les questions à boutons, sans modèle ──────────────────────────
+// Le serveur (routers/assistant.py, P1) pose la question suivante et garde les réponses dans app_assistant_parcours, dans la
+// LANGUE DE LA FENÊTRE (noms de ses cases). Un clic n'appelle jamais le modèle. Derrière l'interrupteur `assistant_parcours`
+// (403 tant qu'il n'est pas ouvert pour ce compte). ⛔ Les coordonnées d'un NOUVEAU mandant ne passent pas par ici.
+export type QuestionParcours = { id: string; titre: string; phrase: string; forme: string; champs: string[] }
+export type EtatQuestionParcours = 'faite' | 'passee' | 'nsp' | null
+export type ParcoursVue = {
+  id: string
+  genre: 'creation_estimation' | 'creation_annonce' | 'avis'
+  etat: 'en_cours' | 'termine' | 'abandonne'
+  app_dossier_id: number | null
+  maj_le?: string
+  profil: string | null
+  question: QuestionParcours | null
+  repere: { rang: number; total: number; faites: number }
+  questions: Array<QuestionParcours & { etat: EtatQuestionParcours }>
+  reponses: Record<string, unknown>
+  fin: boolean
+}
+/** Une case de la fenêtre, telle que la fenêtre la montre (libellé, liste), fournie par l'App : une seule source. */
+export type CaseParcours = {
+  nom: string
+  libelle: string
+  genre: 'liste' | 'nombre' | 'texte' | 'long'
+  options?: Array<{ value: string; label: string }>
+  entier?: boolean
+  si?: { nom: string; vaut: string }
+}
+export type CatalogueParcours = { cases: Record<string, CaseParcours>; typesPiece: Array<{ value: string; label: string }> }
+
+const AUCUNE_CONVERSATION = '00000000-0000-0000-0000-000000000000'
+
+/** Ouvert pour ce compte ? Sonde la liste (une conversation qui n'existe pas : 200 et rien, ou 403 interrupteur fermé). */
+export async function parcoursOuvert(): Promise<boolean> {
+  if (MAQUETTE) return true
+  try {
+    await appeler<{ ok: boolean }>(`/assistant/parcours?conversationId=${AUCUNE_CONVERSATION}`, 'GET')
+    return true
+  } catch {
+    return false
+  }
+}
+
+export async function parcoursDeConversation(conversationId: string): Promise<ParcoursVue[]> {
+  if (MAQUETTE) return fauxParcours.filter((p) => p.conversation === conversationId).map((p) => vueFausse(p))
+  const r = await appeler<{ parcours: ParcoursVue[] }>(`/assistant/parcours?conversationId=${encodeURIComponent(conversationId)}`, 'GET')
+  return r.parcours
+}
+
+export async function commencerParcours(genre: 'creation_estimation' | 'creation_annonce', conversationId: string | null): Promise<ParcoursVue> {
+  if (MAQUETTE) {
+    const p = { id: `p${Date.now()}`.padEnd(36, '0'), conversation: conversationId, genre, reponses: {} as Record<string, unknown>, etats: {} as Record<string, EtatQuestionParcours>, etat: 'en_cours' as const }
+    fauxParcours.push(p)
+    return vueFausse(p)
+  }
+  const r = await appelerJson<{ parcours: ParcoursVue }>('/assistant/parcours', 'POST', { genre, conversationId })
+  return r.parcours
+}
+
+export async function repondreParcours(id: string, question: string, geste: 'repondre' | 'passer' | 'nsp', valeurs: Record<string, unknown>): Promise<ParcoursVue> {
+  if (MAQUETTE) {
+    await attendre(250)
+    const p = fauxParcours.find((x) => x.id === id)
+    if (!p) throw new RefusAssistant(404, 'Parcours introuvable')
+    for (const [k, v] of Object.entries(valeurs)) {
+      if (v === '' || v === null || (Array.isArray(v) && !v.length)) delete p.reponses[k]
+      else p.reponses[k] = v
+    }
+    p.etats[question] = geste === 'repondre' ? 'faite' : geste === 'passer' ? 'passee' : 'nsp'
+    return vueFausse(p)
+  }
+  const r = await appelerJson<{ parcours: ParcoursVue }>(`/assistant/parcours/${encodeURIComponent(id)}/reponse`, 'POST', { question, geste, valeurs })
+  return r.parcours
+}
+
+export async function noterParcoursCree(id: string, appDossierId: number | null): Promise<ParcoursVue> {
+  if (MAQUETTE) {
+    const p = fauxParcours.find((x) => x.id === id)
+    if (p) { p.etat = 'termine'; p.app_dossier_id = appDossierId }
+    return vueFausse(p!)
+  }
+  const r = await appelerJson<{ parcours: ParcoursVue }>(`/assistant/parcours/${encodeURIComponent(id)}/cree`, 'POST', { app_dossier_id: appDossierId })
+  return r.parcours
+}
+
+// Mode maquette (sans base) : quatre questions pour dessiner chaque forme à l'écran (le vrai moteur en a 19, côté serveur)
+type FauxParcours = { id: string; conversation: string | null; genre: 'creation_estimation' | 'creation_annonce'; reponses: Record<string, unknown>; etats: Record<string, EtatQuestionParcours>; etat: 'en_cours' | 'termine'; app_dossier_id?: number | null }
+const fauxParcours: FauxParcours[] = []
+const FAUSSES_QUESTIONS: QuestionParcours[] = [
+  { id: 'bien', titre: 'Le bien', phrase: "Quel bien, et où ?", forme: 'cases', champs: ['type', 'agence', 'adresse_haut', 'cp', 'ville'] },
+  { id: 'interieur', titre: "L'intérieur", phrase: "Combien de pièces, et comment est l'intérieur ?", forme: 'compteurs', champs: ['surfappart', 'nbpieces', 'NB_CHAMBRES', 'NB_NIVEAUX', 'EXPOSITION'] },
+  { id: 'composition', titre: 'La composition', phrase: 'Pièce par pièce.', forme: 'pieces', champs: ['composition'] },
+  { id: 'dehors', titre: 'Le dehors', phrase: "Qu'y a-t-il dehors ?", forme: 'cocher', champs: ['JARDIN-', 'PISCINE-', 'surfterrain', 'GARAGE_BOX'] },
+  { id: 'mandant', titre: 'Le mandant', phrase: 'Qui vend ?', forme: 'mandant', champs: ['mandant_choix', 'mandant'] },
+]
+function vueFausse(p: FauxParcours): ParcoursVue {
+  const q = FAUSSES_QUESTIONS.find((x) => !p.etats[x.id]) ?? null
+  return {
+    id: p.id, genre: p.genre, etat: p.etat, app_dossier_id: p.app_dossier_id ?? null, profil: p.reponses.type === '1' ? 'house' : 'apartment',  // maquette : 1 = Maison, sinon un appartement
+    question: q, repere: { rang: q ? FAUSSES_QUESTIONS.indexOf(q) + 1 : FAUSSES_QUESTIONS.length, total: FAUSSES_QUESTIONS.length, faites: Object.keys(p.etats).length },
+    questions: FAUSSES_QUESTIONS.map((x) => ({ ...x, etat: p.etats[x.id] ?? null })), reponses: { ...p.reponses }, fin: !q,
+  }
+}
+
 /** L'App prévient l'écran de l'assistant qu'une carte « créer » a abouti (il peut être démonté : la carte se relira). */
 export const EVENEMENT_CREATION_FAITE = 'gti-assistant-creation-faite'
 export type CreationFaite = { carteId: string; resultat: Record<string, unknown> }

@@ -178,7 +178,9 @@ def vue(ligne: dict[str, Any], annee: int | None = None) -> dict[str, Any]:
         "question": ({k: q[k] for k in ("id", "titre", "phrase", "forme", "champs")} if q else None),
         "repere": {"rang": (posees.index(q) + 1) if q else len(posees), "total": len(posees),
                    "faites": sum(1 for p in posees if p["id"] in faits)},
-        "questions": [{"id": p["id"], "titre": p["titre"], "etat": faits.get(p["id"])} for p in posees],
+        # P2 (19/11) : chaque question posée avec sa forme et ses cases -> « Modifier » une réponse déjà donnée
+        "questions": [{"id": p["id"], "titre": p["titre"], "etat": faits.get(p["id"]), "phrase": p["phrase"],
+                       "forme": p["forme"], "champs": p["champs"]} for p in posees],
         "reponses": {k: v for k, v in reponses.items() if not k.startswith("_")},
         "fin": q is None,
     }

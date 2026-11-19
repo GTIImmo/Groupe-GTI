@@ -2,9 +2,11 @@ import { Fragment, createContext, useCallback, useContext, useEffect, useMemo, u
 import {
   EVENEMENT_CREATION_FAITE, RefusAssistant, deposerFichier, etatFichiers, listerConversations, poserQuestion, refuserCarte,
   relireConversation, retirerFichier, rouvrirCarte, separerFichiersJoints, validerCarte,
+  commencerParcours, parcoursDeConversation, parcoursOuvert,
   type CarteAssistant, type CibleCarte, type ConversationAssistant, type CreationFaite, type EtatFichiers, type EvenementFlux,
-  type OuvertureAvis, type OuvertureCreation,
+  type OuvertureAvis, type OuvertureCreation, type CatalogueParcours, type ParcoursVue,
 } from './lib/assistant'
+import ParcoursGuide, { type ParcoursGuideProps } from './ParcoursGuide'
 import { poserDepotAssistant } from './lib/depotAssistant'
 import {
   EVENEMENT_ASSISTANT_CITER, EVENEMENT_ASSISTANT_DEMANDER, EVENEMENT_ASSISTANT_OUVRIR,
@@ -483,6 +485,13 @@ export default function AccueilAssistant(props: {
   onOuvrirCreation: (ouverture: OuvertureCreation, carteId: string) => void
   // 18/11 (§70) : la carte « avis de valeur » (et « Préparer l'avis de valeur » d'une estimation créée) ouvre l'éditeur
   onOuvrirAvis: (ouverture: OuvertureAvis) => void
+  // 19/11 (étape 4 chap. 6, P2) : le parcours guidé -- les cases et listes de la FENÊTRE (une seule source), l'entrée
+  // provisoire réservée à l'admin (remplacée par la proposition de l'assistant à P4), la question du mandant (morceau 3)
+  // et l'ouverture de la fenêtre remplie (morceau 4). Sans catalogue, aucun parcours ne s'affiche.
+  catalogueParcours?: (profil: string | null) => CatalogueParcours
+  estAdmin?: boolean
+  rendreMandantParcours?: ParcoursGuideProps['rendreMandant']
+  onOuvrirParcours?: (vue: ParcoursVue) => void
 }) {
   const [vue, setVue] = useState<'assistant' | 'tableau'>('assistant')
   const [mode, setMode] = useState<Mode>({ type: 'accueil' })
@@ -502,6 +511,13 @@ export default function AccueilAssistant(props: {
   const controleur = useRef<AbortController | null>(null)
   const fil = useRef<HTMLDivElement | null>(null)
   const champRef = useRef<HTMLTextAreaElement | null>(null)
+  // 19/11 (P2) : les parcours guidés de la conversation ouverte ; la sonde dit si l'interrupteur l'ouvre à ce compte
+  const [parcours, setParcours] = useState<ParcoursVue[]>([])
+  const [parcoursPossible, setParcoursPossible] = useState(false)
+  const [entreeParcours, setEntreeParcours] = useState<{ envoi: boolean; erreur: string | null }>({ envoi: false, erreur: null })
+  const sondeParcours = useRef<Promise<boolean> | null>(null)
+  const avecParcours = !!props.catalogueParcours
+  if (avecParcours && !sondeParcours.current) sondeParcours.current = parcoursOuvert()
 
   // la même requête que le tableau de bord, une fois le RÔLE connu (porteeRecherches = undefined tant que le profil
   // n'est pas chargé : avant, un admin passait pour un négociateur et ne voyait que SES recherches, 0 au lieu de 737,
@@ -551,6 +567,7 @@ export default function AccueilAssistant(props: {
     conversationId.current = null
     garderConversation(null)
     setTours([])
+    setParcours([])
     setTitre('')
     setBlocage(null)
     setMode({ type: 'accueil' })
@@ -564,9 +581,14 @@ export default function AccueilAssistant(props: {
     setMode({ type: 'conversation' })
     setBlocage(null)
     setTours([])
+    setParcours([])
     setChargement(true)
     conversationId.current = id
     garderConversation(id)
+    // 19/11 (P2) : ses parcours guidés, relus à côté (un échec ne bloque pas la conversation)
+    void sondeParcours.current?.then((ouvert) => (ouvert ? parcoursDeConversation(id) : []))
+      .then((liste) => { if (conversationId.current === id) setParcours(liste) })
+      .catch(() => undefined)
     try {
       const { conversation, messages, cartes } = await relireConversation(id)
       if (conversationId.current !== id) return
@@ -666,7 +688,29 @@ export default function AccueilAssistant(props: {
   useEffect(() => {
     const el = fil.current
     if (el && el.scrollHeight - el.scrollTop - el.clientHeight < 160) el.scrollTop = el.scrollHeight
-  }, [tours])
+  }, [tours, parcours])
+
+  useEffect(() => {
+    let vivant = true
+    void sondeParcours.current?.then((ouvert) => { if (vivant) setParcoursPossible(ouvert) })
+    return () => { vivant = false }
+  }, [])
+
+  // 19/11 (P2) : l'entrée provisoire -- un parcours commence DANS la conversation ouverte (il s'y retrouve à la relecture)
+  const commencer = useCallback(async (genre: 'creation_estimation' | 'creation_annonce') => {
+    const conv = conversationId.current
+    if (!conv) return
+    setEntreeParcours({ envoi: true, erreur: null })
+    try {
+      const vue = await commencerParcours(genre, conv)
+      if (conversationId.current === conv) setParcours((l) => [...l, vue])
+      setEntreeParcours({ envoi: false, erreur: null })
+      // la première question se montre : le fil descend jusqu'à elle
+      window.setTimeout(() => { if (fil.current) fil.current.scrollTop = fil.current.scrollHeight }, 0)
+    } catch (e) {
+      setEntreeParcours({ envoi: false, erreur: e instanceof Error ? e.message : 'Le parcours ne commence pas.' })
+    }
+  }, [])
 
   // 17/11 (le trombone) : l'état est lu une fois ; fermé, refusé ou injoignable = pas de trombone (jamais une erreur)
   useEffect(() => {
@@ -1091,10 +1135,27 @@ export default function AccueilAssistant(props: {
               </Fragment>
             )
           })}
+          {props.catalogueParcours ? parcours.map((p) => (
+            <div key={p.id} className="asi-ai">
+              <span className="asi-mk"><Sceau /></span>
+              <div className="asi-ai-b">
+                <ParcoursGuide vue={p} catalogue={props.catalogueParcours!} onVue={(v) => setParcours((l) => l.map((x) => (x.id === v.id ? v : x)))}
+                  onOuvrirFenetre={props.onOuvrirParcours} onOuvrirBien={liens.bien} rendreMandant={props.rendreMandantParcours} />
+              </div>
+            </div>
+          )) : null}
           {blocage ? <MessageBlocage blocage={blocage} onRenvoyer={(q) => void envoyer(q)} /> : null}
         </div>
       </section>
       <div className="asi-dock">
+        {parcoursPossible && props.estAdmin && conversationId.current && !enCours && !parcours.some((p) => p.etat === 'en_cours') ? (
+          <div className="asp-entree">
+            <span>Essai admin, sans l'IA : créer par questions guidées</span>
+            <button type="button" className="asp-sec" disabled={entreeParcours.envoi} onClick={() => void commencer('creation_estimation')}>Une estimation</button>
+            <button type="button" className="asp-sec" disabled={entreeParcours.envoi} onClick={() => void commencer('creation_annonce')}>Une annonce</button>
+            {entreeParcours.erreur ? <span className="is-ko">{entreeParcours.erreur}</span> : null}
+          </div>
+        ) : null}
         {champSaisie(false)}
         <p className="asi-warn">L'assistant peut se tromper : vérifie sur la fiche avant de valider.</p>
       </div>

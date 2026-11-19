@@ -295,7 +295,7 @@ import PilotageScreen from './PilotageScreen'
 import RegistreUtilisateurs, { type RuPreRemplissage } from './RegistreUtilisateurs'
 import { BranchesAccueil, citerDansAssistant, demanderAssistant, ouvrirConversation, useAccueilAssistant, useConversationsRail } from './RailAssistant'
 import AccueilAssistant, { type ChiffresAccueil } from './AccueilAssistant'
-import { EVENEMENT_CREATION_FAITE, contactDeLaRecherche, noterCreationCarte, transactionPourLien, type CreationFaite, type OuvertureCreation } from './lib/assistant'
+import { EVENEMENT_CREATION_FAITE, contactDeLaRecherche, noterCreationCarte, transactionPourLien, type CaseParcours, type CatalogueParcours, type CreationFaite, type OuvertureCreation } from './lib/assistant'
 import { bvBoot } from './lib/bienvuBoot'
 import { webpEnJpeg } from './lib/photoJpeg'
 import { APP_BIENVU_ENABLED } from './lib/bienvuFlag'
@@ -2401,6 +2401,69 @@ function filterDraftAnnonceWizardFieldsForProfile(fields: Record<string, string>
       .flatMap((section) => section.fields.map((field) => field.name)),
   )
   return Object.fromEntries(Object.entries(fields).filter(([key]) => visibleNames.has(key)))
+}
+
+// 19/11 (étape 4 chap. 6, P2) : LE CATALOGUE DU PARCOURS GUIDÉ -- chaque case que la fenêtre de création MONTRE pour ce
+// profil, avec SON libellé et SA liste (une seule source : les groupes de la fenêtre), plus les cases qui vivent hors des
+// groupes (type, agence, négociateur, adresse du haut, note). Les cases du haut suivent les règles de
+// `draftAnnonceNomsAuHaut` (recopiées : test_etape4_parcours_catalogue.cjs exige, profil par profil, les MÊMES noms que la
+// fenêtre). Le parcours n'écrit rien dans la fenêtre : il ne fait que poser ses questions dans sa langue.
+function catalogueParcoursFenetre(
+  profil: string | null,
+  autour: { agences: string[]; negociateurs: Array<{ idUser: string; label: string; agenceNom: string | null }>; commercial: boolean; syndicCran: boolean },
+): CatalogueParcours {
+  const profils: HektorPropertyProfileKind[] = ['apartment', 'house', 'land', 'garage', 'building', 'other']
+  const kind = profils.includes(profil as HektorPropertyProfileKind)
+    ? profil as HektorPropertyProfileKind
+    : draftAnnoncePropertyProfileKindForTypeId('2')  // le type par défaut de la fenêtre (openDraftAnnonceModal)
+  const regles = draftAnnonceTypeProfileFromKind(kind)
+  const haut = new Set<string>([
+    'titre',
+    'prix',
+    ...(regles.surfaceMode === 'habitable' ? ['surfappart'] : []),
+    ...(regles.surfaceMode === 'terrain' || regles.showGardenPool ? ['surfterrain'] : []),
+    ...(regles.surfaceMode === 'garage' ? ['SURFACE_GARAGE'] : []),
+    ...(regles.showRooms ? ['nbpieces'] : []),
+    ...(regles.showBedrooms ? ['NB_CHAMBRES'] : []),
+    ...(regles.showLevels ? ['NB_NIVEAUX'] : []),
+    ...(regles.showGardenPool ? ['JARDIN-', 'PISCINE-'] : []),
+    ...(regles.showGarageCount ? ['GARAGE_BOX'] : []),
+    ...(regles.showExposure ? ['EXPOSITION'] : []),
+    ...(regles.showView ? ['vuee'] : []),
+  ])
+  const cases: Record<string, CaseParcours> = {}
+  for (const groupe of draftAnnonceWizardGroups) {
+    for (const f of groupe.fields) {
+      if (cases[f.name]) continue
+      const montre = haut.has(f.name) || (isDraftAnnonceWizardFieldVisibleForProfile(kind, groupe.step, f.name)
+        && !(groupe.step === 7 && f.name === 'PRIXNETVENDEUR') && !(autour.syndicCran && f.name === 'syndic'))
+      if (!montre) continue
+      cases[f.name] = {
+        nom: f.name, libelle: f.label,
+        genre: f.options?.length ? 'liste' : f.inputMode ? 'nombre' : f.multiline ? 'long' : 'texte',
+        ...(f.options?.length ? { options: f.options } : {}),
+        ...(f.inputMode === 'numeric' ? { entier: true } : {}),
+        ...(f.showIf ? { si: { nom: f.showIf.field, vaut: f.showIf.value } } : {}),
+      }
+    }
+  }
+  const hors: CaseParcours[] = [
+    { nom: 'type', libelle: 'Type de bien', genre: 'liste',
+      options: draftAnnoncePropertyGroups.flatMap((g) => g.types.map((ty) => ({ value: ty.id, label: ty.label }))) },
+    { nom: 'offre_famille', libelle: 'Famille', genre: 'liste',
+      options: [{ value: '0', label: 'Vente classique' }, { value: OFFRE_IMMO_PRO, label: "L'immobilier professionnel" }] },
+    { nom: 'sous_type', libelle: 'Sous-type (immobilier professionnel)', genre: 'liste',
+      options: SOUS_TYPES_IMMO_PRO.map((s) => ({ value: s.id, label: s.label })), si: { nom: 'offre_famille', vaut: OFFRE_IMMO_PRO } },
+    { nom: 'agence', libelle: 'Agence', genre: 'liste', options: autour.agences.map((a) => ({ value: a, label: a })) },
+    ...(autour.commercial ? [] : [{ nom: 'negociateur', libelle: 'Négociateur', genre: 'liste' as const,
+      options: autour.negociateurs.map((n) => ({ value: n.idUser, label: `${n.label}${n.agenceNom ? ` - ${n.agenceNom}` : ''}` })) }]),
+    { nom: 'adresse_haut', libelle: 'Adresse (rue)', genre: 'texte' },
+    { nom: 'cp', libelle: 'Code postal', genre: 'texte' },
+    { nom: 'ville', libelle: 'Ville', genre: 'texte' },
+    { nom: 'note', libelle: 'Note interne', genre: 'long' },
+  ]
+  for (const c of hors) cases[c.nom] = c
+  return { cases, typesPiece: hektorCompositionPieceTypeOptions }
 }
 
 // 08/11 (§28.9) : les cases chiffrees de la creation, saisies « a la francaise » (« 85,5 », « 180 000 »), sont
@@ -15737,6 +15800,10 @@ export default function App() {
       ? draftAnnonceAdvanced.garageSurface
       : draftAnnonceSurface
   const syndicChoixCranApp = useCranCouplesVisible('partenaires_syndic_choix', profile?.role ?? null)
+  // 19/11 (étape 4 chap. 6, P2) : le catalogue du parcours guidé, avec les listes de CETTE fenêtre (agences, négociateurs)
+  const catalogueParcours = useCallback((profil: string | null) => catalogueParcoursFenetre(profil, {
+    agences: filterCatalog.agencies, negociateurs: hektorNegotiators, commercial: profile?.role === 'commercial', syndicCran: syndicChoixCranApp,
+  }), [filterCatalog.agencies, hektorNegotiators, profile?.role, syndicChoixCranApp])
   // PARTENAIRES, plan étape 2b (07/11/2026, §28.6) : cran `partenaires_choix_saisie` ('admin' = les admins seuls, 'on' =
   // tout le monde, absent = l'assistant d'avant). Allumé : le syndic et le diagnostiqueur se CHOISISSENT dans le catalogue
   // (ou se créent sur place) au lieu d'un texte libre que Hektor ignore (essai réel du 22/10 : les deux relus « absent »),
@@ -28002,6 +28069,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               onOuvrirRdv={assistantOuvrirRdv}
               onOuvrirDemande={(ref) => void assistantOuvrirDemande(ref)}
               onOuvrirCreation={(ouverture, carteId) => void assistantOuvrirCreation(ouverture, carteId)}
+              catalogueParcours={catalogueParcours}
+              estAdmin={profile?.role === 'admin'}
               onOuvrirAvis={(ouverture) => void openEstimationEditor(
                 { app_dossier_id: ouverture.app_dossier_id, hektor_annonce_id: ouverture.hektor_annonce_id },
                 { champs: ouverture.champs ?? {}, postes: ouverture.postes ?? {} })}

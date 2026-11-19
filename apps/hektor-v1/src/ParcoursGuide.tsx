@@ -1,0 +1,340 @@
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import {
+  RefusAssistant, repondreParcours,
+  type CaseParcours, type CatalogueParcours, type ParcoursVue, type QuestionParcours,
+} from './lib/assistant'
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 19/11/2026 (étape 4 chap. 6, P2) -- LE PARCOURS GUIDÉ DANS LA CONVERSATION : une question à la fois, des boutons.
+// Maquette VALIDÉE, toile v27 (planches 5, 7, 11) : en-tête rose et fil des rubriques, compteurs « − 5 + », pastilles
+// (magenta = choisie), « Je ne sais pas », « Valider » ; les réponses données en pastilles vertes « Modifier ».
+// ⛔ Un clic n'appelle PAS le modèle : il part au serveur (P1), qui garde la réponse et rend la question suivante.
+// ⛔ Les cases et leurs listes sont celles de la FENÊTRE de création, fournies par l'App (catalogueParcoursFenetre) : une
+//   seule source. Une case que la fenêtre ne montre pas pour ce type de bien n'est pas montrée ici.
+// ─────────────────────────────────────────────────────────────────────────────
+
+type Valeurs = Record<string, unknown>
+type Piece = { idTypePiece: string; typeLabel: string; surfacePiece: string; etagePiece: string; detailPiece: string }
+
+const PILULES_MAX = 12   // au-delà, une liste se choisit dans un menu (les 29 types de bien, les agences…)
+const OUI = new Set(['OUI', '1'])
+
+const Coche = () => (
+  <svg viewBox="0 0 24 24" aria-hidden="true" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5 10 17 19 7" /></svg>
+)
+
+function texte(v: unknown): string {
+  return v === null || v === undefined ? '' : String(v)
+}
+
+/** La case se montre-t-elle ? (dans le catalogue de ce type de bien, et sa condition « si » remplie) */
+function montree(c: CaseParcours | undefined, valeurs: Valeurs): c is CaseParcours {
+  return !!c && (!c.si || texte(valeurs[c.si.nom]) === c.si.vaut)
+}
+
+/** Une case oui / non (cochée = OUI ou 1) : dans « Qu'y a-t-il dehors ? », elle devient une pastille à cocher. */
+function estACocher(c: CaseParcours): string | null {
+  if (c.genre !== 'liste' || !c.options) return null
+  const vals = c.options.map((o) => o.value).filter(Boolean)
+  if (vals.length === 2 && vals.includes('OUI') && vals.includes('NON')) return 'OUI'
+  if (vals.length === 1 && vals[0] === '1') return '1'
+  return null
+}
+
+function libelleValeur(c: CaseParcours | undefined, v: unknown): string {
+  const t = texte(v)
+  return c?.options?.find((o) => o.value === t)?.label ?? t
+}
+
+/** Le résumé d'une réponse donnée, dans sa pastille verte. */
+function resume(q: QuestionParcours & { etat: string | null }, reponses: Valeurs, cat: CatalogueParcours): string {
+  if (q.etat === 'nsp') return 'je ne sais pas'
+  if (q.etat === 'passee') return 'plus tard'
+  if (q.forme === 'pieces') {
+    const n = Array.isArray(reponses.composition) ? reponses.composition.length : 0
+    return n ? `${n} pièce${n > 1 ? 's' : ''}` : 'aucune pièce'
+  }
+  if (q.forme === 'mandant') return texte(reponses.mandant_choix) === 'nouveau' ? 'nouveau mandant' : texte(reponses.mandant_choix) === 'existant' ? 'mandant existant' : 'plus tard'
+  const dits = q.champs.filter((c) => texte(reponses[c]).trim()).map((c) => {
+    const cas = cat.cases[c]
+    const v = libelleValeur(cas, reponses[c])
+    if (cas && estACocher(cas)) return OUI.has(texte(reponses[c])) ? cas.libelle : `pas de ${cas.libelle.toLowerCase()}`
+    return cas?.genre === 'nombre' ? `${cas.libelle} : ${v}` : v
+  })
+  if (!dits.length) return 'rien de plus'
+  return dits.slice(0, 2).join(' · ') + (dits.length > 2 ? ` +${dits.length - 2}` : '')
+}
+
+function Pilules({ c, valeur, onChange }: { c: CaseParcours; valeur: string; onChange: (v: string) => void }) {
+  const options = (c.options ?? []).filter((o) => o.value !== '')
+  if (options.length > PILULES_MAX) {
+    return (
+      <label className="asp-champ asp-champ-large">
+        <span>{c.libelle}</span>
+        <select value={valeur} onChange={(e) => onChange(e.target.value)}>
+          <option value="">Choisir</option>
+          {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+      </label>
+    )
+  }
+  return (
+    <div className="asp-choix" role="group" aria-label={c.libelle}>
+      <span className="asp-lbl">{c.libelle}</span>
+      {options.map((o) => (
+        <button key={o.value} type="button" className={`asp-puce${valeur === o.value ? ' is-on' : ''}`} aria-pressed={valeur === o.value}
+          onClick={() => onChange(valeur === o.value ? '' : o.value)}>{o.label}</button>
+      ))}
+    </div>
+  )
+}
+
+// un clic = un pas, calculé sur la valeur À JOUR (deux clics rapides comptent deux, même avant le rendu suivant)
+function pas(avant: unknown, delta: number): string {
+  const n = Number.parseInt(texte(avant), 10)
+  return Number.isNaN(n) ? String(Math.max(0, delta)) : String(Math.max(0, n + delta))
+}
+
+function Compteur({ c, valeur, onPas }: { c: CaseParcours; valeur: string; onPas: (delta: number) => void }) {
+  const n = Number.parseInt(valeur, 10)
+  const vide = !valeur.trim() || Number.isNaN(n)
+  return (
+    <div className={`asp-cp${vide ? ' is-vide' : ''}`}>
+      <span>{c.libelle}</span>
+      <span className="asp-cp-n">
+        <button type="button" aria-label={`${c.libelle} : un de moins`} disabled={vide || n <= 0} onClick={() => onPas(-1)}>−</button>
+        <b aria-live="polite">{vide ? '?' : n}</b>
+        <button type="button" aria-label={`${c.libelle} : un de plus`} onClick={() => onPas(1)}>+</button>
+      </span>
+    </div>
+  )
+}
+
+function Champ({ c, valeur, onChange }: { c: CaseParcours; valeur: string; onChange: (v: string) => void }) {
+  if (c.genre === 'long') {
+    return (
+      <label className="asp-champ asp-champ-large">
+        <span>{c.libelle}</span>
+        <textarea rows={3} value={valeur} onChange={(e) => onChange(e.target.value)} />
+      </label>
+    )
+  }
+  return (
+    <label className="asp-champ">
+      <span>{c.libelle}</span>
+      <input value={valeur} onChange={(e) => onChange(e.target.value)}
+        inputMode={c.genre === 'nombre' ? (c.entier ? 'numeric' : 'decimal') : undefined} />
+    </label>
+  )
+}
+
+function EditeurPieces({ pieces, types, onChange }: { pieces: Piece[]; types: CatalogueParcours['typesPiece']; onChange: (p: Piece[]) => void }) {
+  const maj = (i: number, cle: keyof Piece, v: string) => onChange(pieces.map((p, j) => (j !== i ? p : {
+    ...p, [cle]: v, ...(cle === 'idTypePiece' ? { typeLabel: types.find((t) => t.value === v)?.label ?? '' } : {}),
+  })))
+  return (
+    <div className="asp-pieces">
+      {pieces.length ? pieces.map((p, i) => (
+        <div key={i} className="asp-piece">
+          <label className="asp-champ"><span>Pièce</span>
+            <select value={p.idTypePiece} onChange={(e) => maj(i, 'idTypePiece', e.target.value)}>
+              <option value="">Choisir</option>
+              {types.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+            </select>
+          </label>
+          <label className="asp-champ"><span>Surface m²</span><input inputMode="decimal" value={p.surfacePiece} onChange={(e) => maj(i, 'surfacePiece', e.target.value)} /></label>
+          <label className="asp-champ"><span>Étage</span><input value={p.etagePiece} onChange={(e) => maj(i, 'etagePiece', e.target.value)} /></label>
+          <label className="asp-champ asp-champ-large"><span>Détail</span><input value={p.detailPiece} onChange={(e) => maj(i, 'detailPiece', e.target.value)} /></label>
+          <button type="button" className="asp-retirer" aria-label={`Retirer la pièce ${i + 1}`} onClick={() => onChange(pieces.filter((_, j) => j !== i))}>×</button>
+        </div>
+      )) : <p className="asp-note">Aucune pièce pour l'instant.</p>}
+      <button type="button" className="asp-sec asp-ajout" onClick={() => onChange([...pieces, { idTypePiece: '', typeLabel: '', surfacePiece: '', etagePiece: '', detailPiece: '' }])}>+ Ajouter une pièce</button>
+    </div>
+  )
+}
+
+// Le haut de la fenêtre et son adresse privée : la même rue, le même code postal, la même ville (§89, D6 : le parcours
+// remplit les deux) -- proposés en recopie tant que la personne ne les a pas changés.
+const RECOPIES: Record<string, string[]> = {
+  adresse_haut: ['adresse'], cp: ['codeprive', 'codepublique'], ville: ['villeprivee', 'villepublique'],
+}
+
+function valeursDe(q: QuestionParcours, reponses: Valeurs): Valeurs {
+  const v: Valeurs = {}
+  for (const c of q.champs) v[c] = c === 'composition' ? (Array.isArray(reponses.composition) ? reponses.composition : []) : texte(reponses[c])
+  return v
+}
+
+export type ParcoursGuideProps = {
+  vue: ParcoursVue
+  catalogue: (profil: string | null) => CatalogueParcours
+  onVue: (vue: ParcoursVue) => void
+  /** Morceau 4 : « Ouvrir la fenêtre remplie » (l'App la remplit avec les réponses) */
+  onOuvrirFenetre?: (vue: ParcoursVue) => void
+  onOuvrirBien?: (appDossierId: string) => void
+  /** Morceau 3 : la question « le mandant » (choix existant / nouveau, cases protégées) */
+  rendreMandant?: (args: { vue: ParcoursVue; valeurs: Valeurs; setValeur: (nom: string, v: unknown) => void }) => ReactNode
+}
+
+export default function ParcoursGuide({ vue, catalogue, onVue, onOuvrirFenetre, onOuvrirBien, rendreMandant }: ParcoursGuideProps) {
+  const cat = useMemo(() => catalogue(vue.profil), [catalogue, vue.profil])
+  const [ouverte, setOuverte] = useState<string | null>(null)  // une réponse déjà donnée que l'on modifie
+  const q = ouverte ? vue.questions.find((x) => x.id === ouverte) ?? null : vue.question
+  const [valeurs, setValeurs] = useState<Valeurs>(() => (q ? valeursDe(q, vue.reponses) : {}))
+  const [envoi, setEnvoi] = useState(false)
+  const [erreur, setErreur] = useState<string | null>(null)
+  const cleQuestion = `${vue.id}:${q?.id ?? 'fin'}:${vue.maj_le ?? ''}`
+  useEffect(() => {
+    setValeurs(q ? valeursDe(q, vue.reponses) : {})
+    setErreur(null)
+  // la question affichée (ou ce qu'en dit le serveur) a changé : on repart de ses réponses gardées
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cleQuestion])
+
+  const setValeur = (nom: string, v: unknown) => setValeurs((avant) => {
+    const apres: Valeurs = { ...avant, [nom]: v }
+    for (const cible of RECOPIES[nom] ?? []) {
+      if (!(cible in avant)) continue
+      if (!texte(avant[cible]).trim() || texte(avant[cible]) === texte(avant[nom])) apres[cible] = v
+    }
+    return apres
+  })
+
+  const envoyer = async (geste: 'repondre' | 'passer' | 'nsp') => {
+    if (!q || envoi) return
+    setEnvoi(true)
+    setErreur(null)
+    try {
+      let corps: Valeurs = {}
+      if (geste === 'repondre') {
+        // seules les cases MONTRÉES partent (une case vidée part vide : le serveur la retire)
+        for (const c of q.champs) {
+          if (c === 'composition') {
+            corps.composition = ((valeurs.composition as Piece[]) ?? []).filter((p) => p.idTypePiece || p.surfacePiece.trim() || p.detailPiece.trim())
+          } else if (q.forme === 'mandant') {
+            if (c in valeurs) corps[c] = valeurs[c]
+          } else if (montree(cat.cases[c], valeurs)) {
+            corps[c] = texte(valeurs[c]).trim()
+          }
+        }
+        if (q.forme === 'fichiers') corps = {}
+      }
+      onVue(await repondreParcours(vue.id, q.id, geste, corps))
+      setOuverte(null)
+    } catch (e) {
+      setErreur(e instanceof RefusAssistant || e instanceof Error ? e.message : "La réponse n'a pas été gardée.")
+    } finally {
+      setEnvoi(false)
+    }
+  }
+
+  const donnees = vue.questions.filter((x) => x.etat && x.id !== q?.id)
+  const enCours = vue.etat === 'en_cours' && vue.app_dossier_id == null
+
+  const corpsQuestion = (): ReactNode => {
+    if (!q) return null
+    if (q.forme === 'pieces') {
+      return <EditeurPieces pieces={(valeurs.composition as Piece[]) ?? []} types={cat.typesPiece} onChange={(p) => setValeur('composition', p)} />
+    }
+    if (q.forme === 'fichiers') {
+      return <p className="asp-note">Les photos du bien se déposent dans la fenêtre de création, à son étape 2. Les joindre ici viendra plus tard.</p>
+    }
+    if (q.forme === 'mandant') {
+      return rendreMandant ? rendreMandant({ vue, valeurs, setValeur }) : <p className="asp-note">Le mandant se choisit dans la fenêtre.</p>
+    }
+    const cases = q.champs.map((c) => cat.cases[c]).filter((c) => montree(c, valeurs))
+    if (!cases.length) return <p className="asp-note">Rien à demander ici pour ce type de bien.</p>
+    const aCocher = q.forme === 'cocher' ? cases.filter((c) => estACocher(c)) : []
+    const compteurs = q.forme === 'compteurs' ? cases.filter((c) => c.genre === 'nombre' && c.entier) : []
+    const listes = cases.filter((c) => c.genre === 'liste' && !aCocher.includes(c))
+    const saisies = cases.filter((c) => c.genre !== 'liste' && !compteurs.includes(c))
+    return (
+      <>
+        {aCocher.length ? (
+          <div className="asp-choix" role="group" aria-label="À cocher">
+            {aCocher.map((c) => {
+              const on = OUI.has(texte(valeurs[c.nom]))
+              return (
+                <button key={c.nom} type="button" className={`asp-puce${on ? ' is-on' : ''}`} aria-pressed={on}
+                  onClick={() => setValeur(c.nom, on ? '' : estACocher(c))}>{on ? <Coche /> : null}{c.libelle}</button>
+              )
+            })}
+          </div>
+        ) : null}
+        {compteurs.length ? (
+          <div className="asp-cpt">{compteurs.map((c) => <Compteur key={c.nom} c={c} valeur={texte(valeurs[c.nom])} onPas={(d) => setValeurs((avant) => ({ ...avant, [c.nom]: pas(avant[c.nom], d) }))} />)}</div>
+        ) : null}
+        {saisies.length ? (
+          <div className="asp-grille">{saisies.map((c) => <Champ key={c.nom} c={c} valeur={texte(valeurs[c.nom])} onChange={(v) => setValeur(c.nom, v)} />)}</div>
+        ) : null}
+        {listes.map((c) => <Pilules key={c.nom} c={c} valeur={texte(valeurs[c.nom])} onChange={(v) => setValeur(c.nom, v)} />)}
+      </>
+    )
+  }
+
+  const rang = q ? Math.max(1, vue.questions.findIndex((x) => x.id === q.id) + 1) : vue.repere.total
+  return (
+    <div className="asp" aria-label="Parcours guidé">
+      {donnees.length ? (
+        <div className="asp-reps">
+          {donnees.map((x) => (
+            <span key={x.id} className="asp-rep">
+              <span className={`asp-ok${x.etat === 'faite' ? '' : ' is-pale'}`}><Coche /></span>
+              <i>{x.titre}</i><b>{resume(x, vue.reponses, cat)}</b>
+              {enCours ? <button type="button" onClick={() => setOuverte(x.id)} disabled={envoi}>Modifier</button> : null}
+            </span>
+          ))}
+        </div>
+      ) : null}
+      {!enCours ? (
+        <article className="asp-q is-faite">
+          <header className="asp-qh"><h3>{vue.genre === 'creation_annonce' ? 'Annonce créée' : 'Estimation créée'}</h3></header>
+          <div className="asp-qb"><p className="asp-phrase">Le parcours est terminé : la fiche a été créée par la fenêtre.</p></div>
+          {vue.app_dossier_id != null && onOuvrirBien ? (
+            <footer className="asp-pied"><span /><div><button type="button" className="asp-sec" onClick={() => onOuvrirBien(String(vue.app_dossier_id))}>Ouvrir la fiche</button></div></footer>
+          ) : null}
+        </article>
+      ) : q ? (
+        <article className="asp-q" aria-label={`Question : ${q.titre}`}>
+          <header className="asp-qh">
+            <h3>{q.titre}</h3>
+            <span className="asp-rang">{rang} sur {vue.repere.total}</span>
+            <ol className="asp-fil" aria-label="Les rubriques">
+              {vue.questions.map((x) => (
+                <li key={x.id} className={x.id === q.id ? 'is-c' : x.etat ? 'is-f' : ''} aria-current={x.id === q.id ? 'step' : undefined}>
+                  {x.etat && x.id !== q.id ? <Coche /> : null}{x.titre}
+                </li>
+              ))}
+            </ol>
+          </header>
+          <div className="asp-qb">
+            <p className="asp-phrase">{q.phrase}</p>
+            {corpsQuestion()}
+          </div>
+          {erreur ? <div className="asp-ko" role="alert">{erreur}</div> : null}
+          <footer className="asp-pied">
+            <span>Les listes sont celles de la fenêtre de création. Un clic ici n'appelle pas l'IA.</span>
+            <div>
+              {ouverte ? <button type="button" className="asp-sec" onClick={() => setOuverte(null)} disabled={envoi}>Annuler</button> : null}
+              <button type="button" className="asp-sec" onClick={() => void envoyer('nsp')} disabled={envoi}>Je ne sais pas</button>
+              <button type="button" className="asp-sec" onClick={() => void envoyer('passer')} disabled={envoi}>Plus tard</button>
+              <button type="button" className="asp-go" onClick={() => void envoyer('repondre')} disabled={envoi}>{envoi ? 'Je garde…' : 'Valider'}</button>
+            </div>
+          </footer>
+        </article>
+      ) : (
+        <article className="asp-q is-fin">
+          <header className="asp-qh"><h3>Tout est répondu</h3><span className="asp-rang">{vue.repere.faites} sur {vue.repere.total}</span></header>
+          <div className="asp-qb">
+            <p className="asp-phrase">La fenêtre de création s'ouvre remplie de tes réponses. Rien n'est créé tant que tu n'as pas cliqué « Créer » dans la fenêtre.</p>
+          </div>
+          {erreur ? <div className="asp-ko" role="alert">{erreur}</div> : null}
+          <footer className="asp-pied">
+            <span>Tu peux encore modifier une réponse ci-dessus.</span>
+            <div>{onOuvrirFenetre ? <button type="button" className="asp-go" onClick={() => onOuvrirFenetre(vue)}>Ouvrir la fenêtre remplie</button> : null}</div>
+          </footer>
+        </article>
+      )}
+    </div>
+  )
+}
