@@ -3584,3 +3584,30 @@ n'existaient déjà plus chez Hektor (**cascade du foyer confirmée une 3e fois*
 d'essai 20000009 (propriétaire) et **5 pièces FICTIF, GARDÉES EXPRÈS** (électricité, fiche copro, mesurage, taxe foncière, fiche
 de renseignements « marié ») : elles servent aux preuves E et CHARGES encore à faire. Les lectures GED des pièces retirées restent
 en base, invisibles (comme le 18/11).
+
+### 12.53 L'ÉPREUVE RÉELLE DE `CHARGES` (lot C) (19/11, 09:23-09:35, 63331, « POUSSE ET ENCHAÎNE »)
+
+**Pièce** : un appel de fonds FICTIF fabriqué pour l'épreuve (`scratchpad/lotCharges/fabriquer.cjs`) : budget 2027 du lot 12
+= **2 400 €/an** (la fiche portait CHARGES 150 €/mois et quote-part 1 800 €/an, d'accord entre elles -- d'où le « tombe
+d'accord » du §12.48). Déposé PAR L'ÉCRAN (« Ajouter un document »), type « Appels de fonds, budget prévisionnel » proposé, le
+nom et l'IA d'accord, privé -> `upload_document_to_hektor` done (09:23:39). Lu : « budget du lot 2 400 € par an · lot 12 ».
+**L'écran** : « Ce que dit l'appel de fonds » s'ouvre SEUL, deux lignes à trancher (quote-part 2 400 / 1 800, charges
+200 / 150). **Enregistré** -> « envoyé à Hektor : Charges annuelles du lot 2400 € par an, Charges de copropriété par mois
+200 € par mois (chemin habituel de la fiche, contrôlé au retour) » ; calque `app_annonce_pending` {CHARGES 200,
+copropriete_quote_part 2400}, départ +10 min.
+**Chez Hektor** : `update_hektor_annonce_fields` done 09:34:25, `status: updated` -- groupe `copropriete` [copro_quote_part]
+et groupe `mandat_infofi` [copro_charges -> CHARGES], chacun « mise à jour effectuée », 0 écarté ; calque soldé ; relecture
+`refresh_console_data` done 09:35:02 ; 0 écart dans `app_v_annonce_modif_ecarts`. **Fiche relue** : EXACTEMENT 2 cases ont
+bougé dans copropriété / mandat_infofi / terrain -- `copropriete_quote_part` 1800 -> 2400, `CHARGES` 150 -> 200 ; prix 139 000,
+net vendeur 130 000, TAXE_FONCIERE 1 234 INCHANGÉS.
+➡ **`CHARGES` est PROUVÉ EN RÉEL** (l'annuel / 12 du document, écrit par la GED, accepté et relu chez Hektor).
+⚠ **La quote-part n'était pas visée** : je comptais la garder à 1 800. Elle est partie avec, par un clic de trop -- voir
+ci-dessous. Bien d'essai, valeur fictive : rien à défaire.
+⚠⚠ **TROUVAILLE, NON CORRIGÉE (à décider)** : la fenêtre « Ce que dit… » s'ouvre d'elle-même pendant que la fenêtre de DÉPÔT
+est encore à l'écran, et son bouton « Enregistrer » tombe à l'endroit du « Fermer » du dépôt. Or une ligne « à trancher »
+arrive DÉJÀ COCHÉE sur la valeur du document (`BilanCompromis.tsx:119`, voulu). Un clic destiné à FERMER le dépôt a donc
+ENREGISTRÉ et envoyé à Hektor les deux valeurs du document. Pistes : ne pas ouvrir la fenêtre tant que le dépôt est ouvert,
+ou ne rien cocher d'avance quand elle s'ouvre seule. Rien n'a été codé.
+⏳ **Reste E** (le terrain, `surfterrain` depuis le titre) : par construction il ne se propose QUE sur un bien EXPLICITEMENT hors
+copropriété ; 63331 est en copropriété OUI -> il faut un bien d'essai hors copropriété (à décider). Sur 63331 : 1 pièce FICTIF
+de plus (l'appel de fonds), à joindre au ménage.
