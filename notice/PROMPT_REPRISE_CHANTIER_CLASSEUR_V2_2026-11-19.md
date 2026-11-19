@@ -8,8 +8,98 @@
 > ⛔ **La source de vérité reste `notice/PLAN_CHANTIER_CLASSEUR_2026-10-28.md`.**
 > Ce document est une porte d'entrée, pas une décision.
 >
+> ⛔⛔⛔ **QUI TIENT LE CHANTIER, ET CE QUE L'AUTRE SESSION A FAIT — à lire avant tout le reste.**
+> **Le chantier classeur est tenu par la conversation qui a écrit ce dossier**, et c'est d'elle
+> que tu prends la suite : l'état mesuré, les règles, le registre des arbitrages, les gardes et
+> les pièges ci-dessous viennent de là. **Une autre session, en parallèle, a produit DEUX
+> PIÈCES et rien de plus : un RAPPORT d'audit et un PATCH PROPOSÉ.** Ces deux pièces sont
+> précieuses — le rapport a trouvé de vraies erreurs, le patch est bien construit — mais ce
+> sont **des pièces versées au chantier, pas la conduite du chantier**. Elles se vérifient,
+> elles ne se recopient pas : **le patch n'a JAMAIS été joué**, trois trous ont été trouvés
+> dans le rapport (§ 7), et son auteur n'a traité ni la règle « toutes », ni l'offre 4281, ni
+> l'audit REFUS5, ni la moitié « créer » de deux arbitrages (§ 6).
+>
 > ⛔ **Tout l'état chiffré ci-dessous a été MESURÉ en lecture seule le 19/11 vers 00:00**,
 > chez Supabase et dans le dépôt. Aucune écriture n'a été faite pour l'écrire.
+
+---
+
+## 0 bis. ⭐⭐⭐ LE PROMPT À COLLER DANS LA CONVERSATION NEUVE
+
+> Le texte ci-dessous est **le prompt lui-même**, prêt à copier. Le reste du document est
+> ce qu'il demande de lire.
+
+```
+Tu reprends le chantier classeur du projet Hektor (depot C:\Hektor\Projet) : le
+rapatriement d'un classeur Google Sheet de 4 795 lignes d'affaires historiques vers notre
+registre des transactions.
+
+C'EST CE CHANTIER-LA QUE TU REPRENDS, celui conduit par la conversation qui a ecrit le
+dossier ci-dessous. Une AUTRE session, en parallele, a seulement produit DEUX PIECES : un
+RAPPORT d'audit et un PATCH PROPOSE, jamais joue. Elles se verifient, elles ne se recopient
+pas : trois trous y ont deja ete trouves, et cinq de mes decisions n'y sont pas traitees.
+
+AVANT TOUT : lis notice/PROMPT_REPRISE_CHANTIER_CLASSEUR_V2_2026-11-19.md EN ENTIER. Il
+porte l'etat mesure, les regles, mes 13 arbitrages et leur etat reel, le rapport d'une
+autre session, le patch qu'elle propose, et les erreurs deja trouvees dedans. Puis lis les
+pieces qu'il designe a son § 2, dans l'ordre.
+
+TA MISSION, EN QUATRE TEMPS -- ET L'ORDRE NE S'INVERSE PAS :
+
+1. TON PROPRE CALCUL. Refais l'audit par toi-meme : pour chaque ligne du Sheet, trouve son
+   dossier et ses transactions chez nous, avec ta preuve et ton degre de certitude. N'ouvre
+   NI le rapport de l'autre session, NI son CSV de verdicts, NI son patch, tant que ton
+   resultat n'est pas arrete et ecrit. Tiens les quatre regles d'independance du § 3 : ne
+   jamais lire le gel pour CHOISIR ; aucune valeur posee par nous ne sert de preuve ; les
+   190 transactions creees depuis le Sheet sont hors candidats ; la date d'une offre est sa
+   PREMIERE PROPOSITION, et nos gestes du 11/11/2026 ne prouvent rien.
+
+2. LA COMPARAISON. Alors seulement, ouvre son rapport et compare ligne par ligne : ou vous
+   etes d'accord, ou vous divergez, et surtout LEQUEL DES DEUX a la meilleure preuve.
+   N'adopte pas son verdict parce qu'il est ecrit : trois trous y ont deja ete trouves.
+   Deux audits independants qui convergent valent une preuve ; un audit recopie n'en vaut
+   aucune.
+
+3. AFFINE LE PATCH. Produis une version affinee du patch de correction du gel, TOUJOURS
+   DORMANTE. Les trois corrections du § 8 sont obligatoires -- la premiere est qu'il
+   detourne deux colonnes de mesure. Ne touche pas les lignes incertaines, et sors du patch
+   les 18 lignes qui portent une question ouverte : on ne tranche pas a ma place.
+
+4. EXPLIQUE-MOI CLAIREMENT, en francais et sans tableaux : ce que tu as trouve seul, ou tu
+   rejoins l'autre session, ou tu la contredis et POURQUOI, ce que le patch affine fait
+   exactement, ce que ca pourrait casser ailleurs, comment on revient en arriere, et
+   comment on verifiera.
+
+PUIS ON ENCHAINE JUSQU'A LA FIN : les 8 gestes du § 8 dans l'ordre, les 5 arbitrages non
+traites du § 6 (la regle « toutes », l'offre 4281 chez Hektor, l'audit REFUS5, les deux
+transactions a creer), puis l'etape 4 et l'etape 5.
+
+CE QUI NE SE DISCUTE JAMAIS :
+- MON ACCORD EXPLICITE AVANT : toute ecriture en base de production, toute ecriture chez
+  Hektor, tout run ou rattrapage, tout redemarrage de service, tout deploiement, tout geste
+  irreversible. Lecture, mesure, audit : enchaine sans me demander.
+- Ecris UNIQUEMENT en francais. PAS DE TABLEAUX dans tes messages.
+- Ne rien ecraser : additif et chirurgical, jamais de remplacement massif.
+- Stage FICHIER PAR FICHIER, jamais `git add .`. Relis le stage juste avant le commit, et la
+  liste a pousser juste avant le push. `git commit -m` n'existe plus : passe par un fichier
+  et `-F`.
+- Ne decide JAMAIS seul un perimetre. Ce que je signale est un symptome, pas la limite du
+  sujet -- mais l'elargir est MA decision.
+- Un RATIO entre deux sources ne vaut rien tant que tu n'as pas verifie que les deux nombres
+  parlent du MEME bien. Deux fiches etaient fausses pour cette seule raison.
+- Un patch qui porte son `commit;` SE COMMITE, meme joue « pour voir ».
+- Jamais `tail -f` sur un journal du run. Ne jamais lancer le worker pour l'inspecter.
+- Une autre session travaille parfois en parallele : relis `git log` avant d'ecrire.
+
+LA METHODE, A CHAQUE PAS : auditer (en cas de desaccord LE CODE GAGNE, puis le plan, puis
+les notes) -> m'expliquer, avec « ce que ca pourrait casser ailleurs » -> attendre mon
+« vas-y » -> coder en additif -> controler avec un TEMOIN POSITIF, et me dire aussi ce qui a
+rate -> mettre a jour le plan, le registre des arbitrages du § 6, et la memoire projet.
+
+Et la lecon de la journee du 18/11, qui vaut pour toi aussi : les fautes ne sont pas dans le
+raisonnement difficile, elles sont AU BORD du travail -- ou l'on pose, ce qu'on n'a pas
+ecrit, ce qu'on n'a pas boucle. Garde dix minutes pour le bord.
+```
 
 ---
 
@@ -313,6 +403,23 @@ Relevé dans `reponses2` le 19/11 vers 00:10, et confronté au rapport, au CSV e
 - `CP8-clotures-malgre-vente` → **« plus-tard »**. Rangé par lui, pas un oubli. Son audit
   existe : `notice/AUDIT_COMPROMIS_CLOTURES_MALGRE_LA_VENTE_2026-11-18.md`.
 
+**⭐ ÉTAT APRÈS L'AUDIT V2 ET LE PATCH AFFINÉ — 19/11 vers 02:30** *(rien n'est joué ; `reponses2`
+relue à 00:50 : toujours 13 documents, aucun ajout)* — `notice/AUDIT_INDEPENDANT_V2_2026-11-19.md` :
+
+- `L173-TR42PT5H-lien` « deplacer-27195 » → **le patch affiné le fait** (ajoute 27195, retire 27196 ;
+  27196 va à 739a0db1). Mon calcul indépendant donne la même chose.
+- `L3938-61OW86CS` « ecarter » → **le patch affiné retire 4496** ; mon calcul met la ligne sur
+  l'annonce 39836, offre 19130 (STRIPOLLI / STRIPPOLI : une faute de frappe).
+- `L3991-NEFHS7JI` (×2) → **le patch affiné retire 26395 et 26397** ; mon calcul trouve son bien :
+  l'annonce **55001** (mandat 3576), SANS transaction chez nous — la vente AKSU est sur le lot voisin
+  54999 (ligne 82TBULHC).
+- `L3464-1ESJE28Q` et `L3579-8Q3LHGZ4` « defaire-et-creer » → le patch affiné **défait** ; mon calcul
+  confirme les biens 9194 et 46472, sans transaction. ⛔ **Créer reste à faire** (geste 5).
+- `L17-Y8O4NJSY`, `L1401-74IL9C8F`, `L1135-QH6672TZ` « poser » → hors du gel ; mon calcul confirme
+  les trois appariements (Y8O4NJSY : 3661/3660/3662 ; 74IL9C8F : l'offre à 7 305 jours, « 2002 pour
+  2022 ») ; ⛔ le blocage des deux dates d'offre tient.
+- `REGLE-transaction-cible` « toutes », `OFF4281`, `REFUS5`, `CP8` → **inchangés, non traités**.
+
 ---
 
 ## 7. LE RAPPORT DE L'AUTRE SESSION — ce qu'il vaut, et ses trois trous
@@ -549,3 +656,222 @@ mesure fausse.
 dans le raisonnement difficile — elles sont **au bord du travail**. Où l'on pose, ce qu'on
 n'a pas écrit, ce qu'on n'a pas bouclé. Plus le lot est gros, plus l'attention part dans le
 volume et déserte le rangement. **Garde dix minutes pour le bord.**
+
+---
+
+## 13. ⭐⭐⭐ LES DONNÉES, EN DUR — pour n'avoir rien à redécouvrir
+
+> Tout ce qui suit a été **extrait et recompté le 19/11/2026 vers 01:00** du patch, du CSV
+> des verdicts et de la base, par la session qui tient ce chantier. **Ce sont des données,
+> pas des conclusions** : elles servent à partir vite, et chacune se remesure avant un geste.
+
+### A. Les comptes, mesurés chez Supabase le 19/11 vers 00:00
+
+```
+lignes du Sheet connues (app_classeur_ligne_id)        4 794
+lignes liees                                           4 703      (98,1 %)
+lignes sans aucun lien                                    91
+liens du gel (app_classeur_lien)                      12 787
+liens « a valider »                                      277      = 104 LIGNES
+liens casses (vue app_v_classeur_lien_casse)               9      benins
+transactions du registre (app_affaire_ledger)         31 356      local ET Supabase
+transactions creees depuis le Sheet                      190      transaction_origine='classeur'
+transactions prises par DEUX lignes                        0      l'exclusivite tient
+paires (ligne, transaction) en double                      0
+```
+
+### B. Les étages du gel, et ce que portent `etage` et `preuves` AUJOURD'HUI
+
+⛔ C'est la mesure qui fonde la **correction 1 du § 8**. `etage` est un libellé court et
+normalisé, `preuves` un compte de 2 à 8 — sauf pour les 190 liens de C5, à 0.
+
+```
+1 mandat seul                                 8 255 liens   preuves 2 a 8
+2 mandat + acquereur                          2 836         preuves 2 a 8
+3 mandat + date                                 731         preuves 3 a 7
+9 sans mandat (acquereur + vendeur)             245         preuves 2 a 6
+0 creee par C5 depuis cette ligne               190         preuves 0  <- le seul 0
+v2 additif (13/11) : >= 3 familles              177         preuves 3 a 6
+4 mandat + avancement                           117         preuves 2 a 7
+0 mandat de recherche + acquereur                69         preuves 3 a 7
+9 ... + acquereur unique dans tout le registre   54         preuves 5 a 7
+9 ... + exclusivite                              32         preuves 2 a 6
+5 mandat + vendeur                               21         preuves 3 a 7
+et une dizaine d'etages plus rares (10, 6, v2, exclusivites)
+```
+
+### C. Les 55 liens que le patch RETIRE — `ligne:transaction`
+
+```
+045ecde7:28558          08GV8OMZ:6341           1D7EIYKW:27512          1ESJE28Q:12952
+1ESJE28Q:12953          3308P0UX:4480           3S4ZWOFK:1001580        3W10AEIK:4747
+427UDDSF:3648           427UDDSF:3650           45225170:30712          45225170:1001361
+5a956cad:30776          61OW86CS:4496           739a0db1:27195          739a0db1:1001520
+774aa002:11138          87QOXR64:1001534        8Q3LHGZ4:8321           8Q3LHGZ4:8322
+8RWTD0YX:4385           8RWTD0YX:1001477        9UO5NUN6:11958          9WQ204HP:1001532
+A07EC3DH:1001563        CITFQGOB:16378          DAMOO7OU:23995          E9GL6MUS:11415
+EGR8KXOL:6554           FLPUUSY3:1876           KT0601S6:24291          NEFHS7JI:26395
+NEFHS7JI:26397          OXQSBZ9V:17427          OXQSBZ9V:17430          Q602VZJX:6555
+QJQ9M4OF:17366          R0JRVFDC:1001542        RX6J289Y:16377          SBH4QWDW:23050
+TR42PT5H:27196          TRJ5Y59U:1001561        UTLG66LE:1001482        V3FO5NDA:19131
+V3FO5NDA:19133          VEP1DVQ4:7780           VMWFLLW4:1001540        WJ3KA32F:10730
+Y51UMZHY:19277          a8aaeb2b:998            a8aaeb2b:1000           ea6a28a7:14033
+f1aedc01:28967          fa06e4e5:28930          fa06e4e5:1001553
+```
+
+### D. Les 109 liens que le patch AJOUTE — `ligne:transaction:rôle`
+
+```
+0GV2LNV2:4747:offre             1eec6575:30825:offre            2SCBZXMH:7780:offre
+2U5QPKRC:17769:compromis        2U5QPKRC:17770:vente            3S4ZWOFK:11958:offre
+3W10AEIK:4748:offre             427UDDSF:3649:offre             4G2UHO35:19819:offre
+515RUEN3:17428:compromis        515RUEN3:17430:offre            58I5AO17:7908:compromis
+58I5AO17:7909:offre             58I5AO17:7910:vente             5H70KQZA:14224:compromis
+5H70KQZA:14227:offre            5H70KQZA:14228:vente            5a956cad:30684:offre
+5e4c8881:30820:offre            6FQO29C8:19131:compromis        6FQO29C8:19133:vente
+70740f2f:30824:offre            72GQRHVB:6391:compromis         72GQRHVB:6392:offre
+72GQRHVB:6393:vente             739a0db1:27196:offre            7IHI7YTJ:4234:compromis
+7IHI7YTJ:4235:offre             7IHI7YTJ:4236:vente             7JXLR3JQ:7115:compromis
+7JXLR3JQ:7117:offre             87QOXR64:17427:compromis        8ATXF2EZ:19152:compromis
+8ATXF2EZ:19153:offre            8ATXF2EZ:19154:vente            8RWTD0YX:4387:offre
+91IHSGNC:4781:compromis         91IHSGNC:4782:offre             91IHSGNC:4783:vente
+9706WM9J:23931:offre            9Q0FHAKK:3647:compromis         9Q0FHAKK:3648:offre
+9Q0FHAKK:3650:vente             9UO5NUN6:11959:offre            9WQ204HP:4480:compromis
+A07EC3DH:1876:offre             CS38OO8R:27984:compromis        CS38OO8R:27986:offre
+CS38OO8R:27987:vente            D9MMB7OU:17366:offre            DAMOO7OU:23996:offre
+DHXRAK9O:9370:compromis         DHXRAK9O:9371:offre             DHXRAK9O:9372:vente
+E9GL6MUS:11414:offre            EGR8KXOL:6555:compromis         EJN79TJ1:27712:compromis
+EJN79TJ1:27713:offre            EJN79TJ1:27714:vente            ESMCO1NC:6588:compromis
+ESMCO1NC:6589:offre             ESMCO1NC:6590:vente             FLPUUSY3:1877:offre
+H6CTRVR6:11415:offre            I3TFR2KG:24618:compromis        I3TFR2KG:24619:offre
+I3TFR2KG:24620:vente            J6RGX0CQ:4928:compromis         J6RGX0CQ:4929:offre
+J6RGX0CQ:4930:vente             JL8GV7RQ:15169:compromis        JL8GV7RQ:15170:vente
+KAYC29B7:27170:offre            LUX9SDIL:14119:compromis        LUX9SDIL:14120:offre
+LUX9SDIL:14121:vente            MDOXOBIC:2163:compromis         MDOXOBIC:2164:offre
+MDOXOBIC:2165:vente             MQ6H8TVQ:26695:compromis        MQ6H8TVQ:26696:offre
+MQ6H8TVQ:26698:vente            O1099YC0:6341:offre             O8BY6AC8:1000105:offre
+O8BY6AC8:1000141:compromis      OXQSBZ9V:17431:offre            PPIM4947:24291:offre
+Q602VZJX:6554:compromis         QXDW8EQA:1027:compromis         QXDW8EQA:1028:offre
+QXDW8EQA:1029:vente             R0JRVFDC:16377:compromis        RX6J289Y:16378:compromis
+S8BKB6FL:4412:compromis         S8BKB6FL:4413:offre             S8BKB6FL:4414:vente
+TR42PT5H:27195:compromis        TRJ5Y59U:23995:offre            UTLG66LE:5055:offre
+VEP1DVQ4:7781:offre             VMWFLLW4:23050:compromis        Z6P7KE5R:1337:offre
+ZZ5WKMWM:11206:offre            a2abd36c:30827:compromis        b43e76f5:30826:offre
+b884cbd4:30821:offre            c6233284:30801:offre            f90b0418:19050:offre
+fa06e4e5:28931:offre
+```
+
+### E. Les 350 verdicts de l'autre session, par catégorie
+
+```
+JUSTE                       190
+RIEN_CHEZ_NOUS               51
+A_RATTACHER                  38
+PARTIEL                      37
+JUSTE_SANS_PREUVE_FORTE      12
+FAUX                         12
+INCERTAIN                     8
+HORS_JEU                      2
+```
+
+Lecture : `JUSTE` et `JUSTE_SANS_PREUVE_FORTE` = le gel avait raison · `PARTIEL` = une partie
+des liens de la ligne est fausse · `FAUX` = tous · `A_RATTACHER` = ligne sans lien dont la
+transaction existe chez nous · `RIEN_CHEZ_NOUS` = ligne sans lien et sans transaction à
+rattacher · `INCERTAIN` = sa réponse manque · `HORS_JEU` = ligne écartée du chantier.
+
+### F. ⭐⭐⭐ LES 32 QUESTIONS ECRITES POUR FRÉDÉRIC — le « § 5 ter » que le rapport annonçait sans l'écrire
+
+⛔ **Aucune de ces lignes ne se pose, ne se déplace ni ne se corrige avant sa réponse.**
+Extraites de la colonne `question_pour_frederic` du CSV des verdicts, le 19/11 à 01:00.
+⭐ **32 questions sont écrites ; la 33e, annoncée par le rapport, est MUETTE** — `SHN6RKDI`
+est marquée incertaine sans question rédigée (voir G). 32 + 1 = les « 33 questions » promises.
+
+- **`TA5QUCD4`** *(juste)* — L'offre du Sheet au 19/07/2018 est-elle une faute de saisie ? Hektor porte l'offre DUPARANT au 11/12/2018, 145 jours plus tard.
+- **`Y9A2L3X4`** *(juste)* — Le compromis GERPHAGNON/JOINAUX a-t-il été signé le 20/06/2019 (Sheet) ou le 17/07/2019 (Hektor) ?
+- **`V3FO5NDA`** *(partiel)* — Hektor porte pour BAUDOIN-PETIPAS / TROUILLER (Chenereilles) un compromis du 08/12/2023 et un acte du 04/06/2024 (80 000 €, honoraires 6 000), postérieurs à l'annulation du 23/06/2023 : cette vente manque-t-elle au Sheet (une nouvelle ligne prendrait 19131 et 19133) ?
+- **`1D7EIYKW`** *(partiel)* — GANDON-BERAUD ont-ils signé un compromis le 17/02/2021 (annulé ensuite), après l'annulation du 20/11/2020 ? Si oui, c'est une seconde tentative absente du Sheet ; si c'est la même tentative, le compromis 27512 peut rester sur cette ligne.
+- **`HUY49KEC`** *(juste sans preuve forte)* — Pour ce lot vendu à CANIVET, le compromis du 16/11/2018 a-t-il existé, ou est-ce une date de remplissage (toutes les dates du Sheet sont au 16/11) ? Faut-il le créer ?
+- **`O6R10ZQA`** *(incertain)* — O6R10ZQA (annulée le 21/09/2021) et T2GZOY5O (annulée le 21/11/2021) sont la même affaire PAOLONE : laquelle garde l'offre 20075 et le compromis 20073, et quelle date d'annulation est la bonne ?
+- **`5QE9107L`** *(incertain)* — Le compromis 20088 (DEBARD, 50 000 EUR dont 5 000 d'honoraires, jamais daté) est-il celui de la 1re offre (55 000 du 20/02/2021, annulée le 21/06/2021) ou celui de la 2e (50 000 du 20/07/2021, ligne ZW7MKTWH, annulée le 21/11/2021) ?
+- **`E9GL6MUS`** *(partiel)* — Valérie FIGARI (offre Hektor 11414 du 06/04/2021 à 295 000) est-elle la co-acquéreuse de SOUBEYRAND ?
+- **`ea6a28a7`** *(faux)* — La transaction 14033 (compromis annule sans date, 140 500 EUR dont 9 500 d'honoraires, aux noms COLAS / SOLEILHAC) est-elle la trace de l'offre DONNADIEU / KOSINSKI du 04/06/2025, ou un premier compromis du dossier COLAS saisi au prix affiche puis refait a 130 000 EUR ?
+- **`c0a73edd`** *(juste)* — Le dossier Hektor 28614-28616 (annonce 59136, D2025-0399, honoraires a la charge du vendeur, porte par aucune ligne) est-il un doublon de la vente 28611-28613, ou un second lot vendu par M. JUQUET a la SCI La Felolie ?
+- **`d1cb8dd7`** *(juste)* — Pour le rôle offre, gardes-tu l'offre refaite au nom des MADER (28833, datée du 15/04) ou la première saisie (28832, du 09/04, au nom d'Héloïse MADERE), qui porte la date du classeur ?
+- **`2dfa6ef3`** *(juste)* — En cas de renegociation, le role offre doit-il tenir l'offre acceptee (30692, prix du Sheet) ou la premiere offre (30656, date du Sheet) ?
+- **`5a956cad`** *(partiel)* — Pour une offre renégociée, le rôle offre doit-il viser l'offre d'origine 30684 du 21/09/2026 (date du Sheet) ou l'offre acceptée 30776 du 27/10/2026 (prix du Sheet) ?
+- **`9Q0FHAKK`** *(a rattacher)* — POTTIER Dominique et SOUCHON Christine forment-ils le même ménage acquéreur ? Hektor met SOUCHON sur le compromis à 460 000 et sur la vente, le Sheet met POTTIER.
+- **`EJN79TJ1`** *(a rattacher)* — L'acquéreur MACHADO du Sheet est-il le ménage « NERONDE Arthur » de Hektor ?
+- **`QXDW8EQA`** *(a rattacher)* — TARDY (Sheet) est-il lié à la SARL VEYRARD DEVELOPPEMENT ou à STEFANELLI Léa, les acquéreurs chez Hektor ?
+- **`I3TFR2KG`** *(a rattacher)* — COTE Jean-Claude (Hektor) est-il le représentant de la SCI MADEVA (Sheet) ?
+- **`91IHSGNC`** *(a rattacher)* — La vente 4783 nomme GRANGÉ Denis au lieu des DELAVAUD : est-ce une simple erreur de contact chez Hektor ?
+- **`2U5QPKRC`** *(a rattacher)* — MARLEE (Sheet) et OBERLIN Christian (Hektor, transactions 17769/17770) forment-ils le même ménage d'acquéreurs ?
+- **`MQ6H8TVQ`** *(a rattacher)* — Le Sheet nomme MITTELETTE acquereur de la vente HDHILI du 06/07/2018 ; Hektor porte KABAB Julian (offre) et ODDOU Thibaut (compromis, vente), et MITTELETTE (SCI BEAST) a signe le meme 27/12/2017 un compromis annule sur un autre bien (26558, vendeur DUPORT) : le nom d'acquereur du Sheet est-il une erreur de saisie ?
+- **`JZ9693S0`** *(rien chez nous)* — La ligne 3489 (mandat 92560, sans nom ni date, facture GGTI00002792 / avoir AVR00000465) est-elle un residu ou un avoir a laisser hors du registre ?
+- **`D9MMB7OU`** *(a rattacher)* — Hektor met ROBERT Joel sur l'offre, le compromis et la vente ; le Sheet met AFFONSO (commentaire « Guetat/Anfosso ») sur la vente : est-ce le même ménage ?
+- **`YRUF0S9H`** *(incertain)* — YRUF0S9H (annulée le 22/04/2022, refus de prêt) et 3308P0UX (annulée le 22/05/2022, renonciation) sont-elles la même affaire VIALLARD saisie deux fois ? Si oui, laquelle garde l'offre 4483 ?
+- **`4G2UHO35`** *(a rattacher)* — Le compromis annule 19814 (17/02/2020, 69 000, hon 5 980 = commission de cette ligne, acte prevu 17/05/2020), range sous le contact CHEVALLET cree en mai 2020 et porte par aucune ligne, est-il le compromis de BROCHIER (affaire annulee le 20/05/2020 pour financement) ?
+- **`ZZ5WKMWM`** *(a rattacher)* — L'offre sans nom 11206 (02/12/2019, 280 000 €) est-elle bien celle de PLA BOUARD ? Le compromis sans date 11205 (280 000 €, honoraires 15 800, étiqueté KERROUM) semble aussi être le leur, mais la ligne n'affirme aucun compromis.
+- **`Z6P7KE5R`** *(a rattacher)* — Le Sheet n'a pas de date de compromis (compromis prévu le 21/02, reporté puis annulé). Faut-il aussi rattacher 1335 (compromis THEVENON annulé, sans date, 38500 €, hon 3500) comme compromis de cette ligne ?
+- **`3308P0UX`** *(partiel)* — VIALLARD est saisie deux fois au Sheet avec la même offre du 02/02/2022 : 3308P0UX (annulée 22/05/2022, renonciation acq) et YRUF0S9H (annulée 22/04/2022, refus prêt). Laquelle garde l'offre 4483, l'autre restant sans lien ?
+- **`87QOXR64`** *(partiel)* — Au Sheet, RIGAUD est annulée le 22/01/2022 mais a un compromis du 11/02/2022. L'annulation est-elle plutôt du 22/02/2022, juste avant le compromis LECOMPTE du 24/02/2022 ?
+- **`T2GZOY5O`** *(incertain)* — PAOLONE est saisie deux fois au Sheet (T2GZOY5O annulée le 21/11/2021, O6R10ZQA annulée le 21/09/2021, tout le reste identique) : laquelle garde l'offre 20075 et le compromis 20073, et quelle date d'annulation est la bonne ?
+- **`ZW7MKTWH`** *(incertain)* — Le compromis 20088 (DEBARD, 50 000 EUR dont 5 000 d'honoraires, jamais daté) suit-il la 2e offre (50 000 le 20/07/2021, ligne ZW7MKTWH, annulée le 21/11/2021) ou la 1re (55 000 le 20/02/2021, ligne 5QE9107L, annulée le 21/06/2021) ?
+- **`RGCEC677`** *(incertain)* — Le compromis annulé et jamais daté 4542 (108 000 €, honoraires de 8 000 €) de la ferme de Cunlhat a-t-il été préparé pour les MEJEAN/MARIAGE (offre de 110 000 € du 07/03/2021, annulée le 01/08/2021 pour un problème de parcelle) ou pour FAU-PIETTE (offre de 108 000 € de septembre 2021, annulée le 21/11/2021) ?
+- **`XC761R8Z`** *(incertain)* — Le compromis annulé 4496 de la maison VAN DIJK à Cunlhat (155 000 EUR dont 9 800 d'honoraires, jamais daté) a-t-il été préparé pour l'affaire BISCH (offre de 155 000 le 14/04/2021, annulée le 21/05/2021) ? Si non, il ne revient à aucune ligne.
+
+### G. Les 8 lignes INCERTAINES — intouchables tant qu'il n'a pas répondu
+
+```
+5QE9107L      O6R10ZQA      RGCEC677      SHN6RKDI
+T2GZOY5O      XC761R8Z      YRUF0S9H      ZW7MKTWH
+```
+⚠ `SHN6RKDI` est marquée incertaine **sans question écrite** : la formuler avant de lui
+soumettre (le compromis 26613 était-il préparé pour MOSNIER ?).
+
+### H. Les 11 paires d'affaires CROISÉES entre acheteurs successifs d'un même bien
+
+La famille d'erreurs la plus instructive : sur un bien revendu ou repris après annulation, le
+gel a donné à une ligne la transaction de l'acheteur **suivant**.
+
+```
+TR42PT5H <-> 739a0db1   bien 53398 : offre 27196 et compromis 27195 croises
+3W10AEIK  -> 0GV2LNV2   l'offre 4747 tombe au jour pres pour 0GV2LNV2
+E9GL6MUS  -> H6CTRVR6   l'offre 11415 tombe au jour pres pour H6CTRVR6
+VEP1DVQ4 <-> 2SCBZXMH   offres 7780 / 7781
+DAMOO7OU  -> TRJ5Y59U   offre 23995
+FLPUUSY3  -> A07EC3DH   offre 1876
+9UO5NUN6  -> 3S4ZWOFK   offre 11958
+427UDDSF  -> 9Q0FHAKK   offre 3648 et vente 3650
+OXQSBZ9V  -> 515RUEN3   offre 17430 et compromis 17427
+RX6J289Y <-> CITFQGOB / R0JRVFDC   compromis 16377 / 16378
+Q602VZJX <-> EGR8KXOL   compromis 6554 / 6555
+```
+
+### I. Les copies de C5 nommées — créées alors que Hektor portait déjà la vraie
+
+```
+1001520 (copie de 27196) . 1001482 (5055) . 1001480 (20075) . 1001536 (20073)
+1001540 (23050) . 1001561 (23995) . 1001563 (1876) . 1001580 (11958)
+1001534 (17427) . 1001542 (16377) . 1001553 (« n'a jamais existe »)
+```
+⛔ **Elles ne se retirent qu'APRÈS le patch du gel**, quand plus aucun lien ne les vise, et
+**DES DEUX CÔTÉS** (Supabase et local) ou par `app_affaire_supprimee`. Sur les 25 copies
+repérées, 11 seraient retirables après le patch ; 15 restent tenues par des lignes non encore
+jugées ou incertaines (un 4e tour).
+
+### J. Ce que la relecture du patch a VALIDÉ, chiffre par chiffre (19/11)
+
+```
+55 retraits comptes dans le fichier                           = 55 annonces . OK
+109 ajouts comptes dans le fichier                            = 109 annonces . OK
+les deux listes de retraits (garde et DELETE)                 MEME EMPREINTE . OK
+doublons dans la liste des retraits                           0 . OK
+doublons dans la liste des ajouts                             0 . OK
+garde « le gel porte 12 787 liens »                           vraie le 19/11 00:00 . OK
+controle d'exclusivite global                                 deja vrai aujourd'hui (0) . OK
+l'INVERSE juge sa part (0 ecart, 12 787 liens)                OK
+la REPETITION est en lecture seule                            OK
+types des colonnes visees (preuves smallint, etage text)      l'INSERT passera . OK
+```
+⛔ **Donc le patch TOURNERA.** Sa faute n'est pas qu'il casse : c'est **où il écrit**
+(correction 1 du § 8).

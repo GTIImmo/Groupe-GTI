@@ -2580,6 +2580,45 @@ demande son propre balayage, et il se fait AVANT de generer le patch.**
 > modifiables par tout utilisateur connecte** (pas par la cle publique), dont 4 du 18/11 sur le
 > classeur. Les fermer est une ecriture en base : a decider.
 
+### ⭐⭐⭐ LE 19/11 DANS LA NUIT -- L'AUDIT INDEPENDANT V2 : UNE SECONDE MAIN, LA COMPARAISON, LE PATCH AFFINE (session de reprise V2)
+
+> **Le document : `notice/AUDIT_INDEPENDANT_V2_2026-11-19.md`** (§ 0 a § 9). Tout en LECTURE SEULE :
+> aucune ecriture en base, chez Hektor ni dans le Sheet. Les quatre temps dans l'ordre impose, et
+> **l'ordre est prouve par git** : calcul arrete `ce2301e` (01:07) puis verdict sur le gel `6c2979c`
+> (01:21), AVANT l'ouverture du rapport de l'autre session.
+>
+> ```
+>    MON CALCUL, SANS LE GEL   4 796 lignes : 4 567 certaines . 159 solides . 68 biens sans
+>                              transaction . 2 rien ; 16 temoins du chantier tenus ; SIX defauts de
+>                              ma propre methode trouves par le banc d'essai et corriges
+>    MON VERDICT SUR LE GEL    4 549 justes ; 12 466 liens identiques ; chaque desaccord QUALIFIE
+>                              (contredit par le nom 51 . croise 34 . renegociation 13 ...)
+>    CONTRE L'AUTRE SESSION    133 de ses 141 operations soutenues par ma version ARRETEE, 140 par
+>                              ma v1.1 ; elle a la meilleure preuve sur 9 lignes, moi sur 1
+>                              (1D7EIYKW -- son propre rapport me rejoint)
+>    LE PATCH AFFINE (DORMANT) supabase/patch_correction_gel_audit_v2_2026-11-19.sql (+ _INVERSE,
+>                              _REPETITION) : 45 retraits, 78 ajouts, gel 12 787 -> 12 820, sans lien
+>                              91 -> 71 ; les 18 lignes a question SORTENT (+ QJQ9M4OF, + 4 en
+>                              cascade) ; etage/preuves NON detournes ; garde par EMPREINTE ;
+>                              inverse qui ne juge que SA part ; garde et simulation PASSENT sur
+>                              la base vivante sans rien ecrire
+> ```
+>
+> ⭐⭐ **CE QUE CETTE NUIT A APPRIS, ET QUI VAUT POUR TOUT LE CHANTIER :**
+> 1. **Hektor reutilise le contact de l'acheteur PRECEDENT** sur le compromis du suivant : dans un
+>    conflit, **une date au jour exact bat un nom seul** (N1CUULMN, GQCBSQNY, U4O5Q370...).
+> 2. **Le contact change DANS une chaine Hektor** (501 lignes) : un apparieur qui juge le nom
+>    transaction par transaction coupe ces affaires en morceaux.
+> 3. **Un nom different SANS date ne fonde jamais un retrait** (4fc6b33a : vieux contact de 2016).
+> 4. **Le prix confirme, il ne designe pas** : deux acheteurs successifs d'un bien ont le meme prix.
+> 5. **Une copie locale peut avoir le bon compte et une autre empreinte** : une garde se fait par
+>    l'EMPREINTE (le 19/11 : deux liens deplaces le 18/11 sur le bien 43091).
+>
+> ⛔ **RIEN N'EST JOUE. LE PATCH ATTEND SON « VAS-Y ».** Puis, dans l'ordre et chacun avec son
+> accord : les 16 traces a reposer (`notice/AUDIT_INDEPENDANT_V2_TRACES_A_REPOSER_2026-11-19.csv`),
+> les copies de C5 DES DEUX COTES, le 4e tour (la matiere est dans mon audit), creer 1ESJE28Q et
+> 8Q3LHGZ4, le seuil de la sentinelle (92 -> la mesure), puis les 36 / 207 et les 91 / 277.
+
 ### ✅⭐⭐ LE 18/11 AU SOIR -- LES 5 DOUBLONS RETIRES AUSSI DU REGISTRE LOCAL (session neuve)
 
 > ⛔⛔ **TROUVE EN REJOUANT LES MESURES DU § 2.** `supabase/patch_retirer_doublons_offres_classeur_2026-11-18.sql`

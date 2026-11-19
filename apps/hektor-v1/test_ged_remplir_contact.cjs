@@ -84,11 +84,19 @@ const appel = (geste.match(/await editContactOptimistic\(\{.*/) || [''])[0]
 voir(appel.length > 0 && !/\b(address|postalCode|city|email|phone|phoneSecondary|firstName|civility|comments)\b/.test(appel), 'TÉMOIN : rien d\'autre n\'est envoyé (ni coordonnées, ni prénom, ni civilité)')
 voir(/garder\('remplie'/.test(geste) && geste.indexOf('editContactOptimistic') < geste.indexOf("garder('remplie'"), 'la décision est gardée APRÈS l\'écriture')
 const recu = fs.readFileSync(path.join(__dirname, 'src/RecuManque.tsx'), 'utf8')
-voir(/etatCivil \? contactsDuBien/.test(recu) && !/propositionsContact\(/.test(recu) && /bilansPersonnes\(contactsEtatCivil, personnesDuBien, docsLus, new Date\(\)\)/.test(recu),
+voir(/etatCivil \? contactsDuBien/.test(recu) && !/propositionsContact\(/.test(recu) && /bilansPersonnes\(contactsEtatCivil, personnesCompletes, docsLus, new Date\(\)\)/.test(recu),
   'lot F : les cartes C1-C3 sont RETIRÉES au profit des fenêtres « Ce que dit… » ; une lecture ratée (null) -> aucune fenêtre contact')
 const ged = fs.readFileSync(path.join(__dirname, 'src/lib/ged.ts'), 'utf8')
 voir(/from\('app_contacts_current'\)/.test(ged) && /if \(error\) return null/.test(ged.slice(ged.indexOf('loadContactsEtatCivil'))), 'la relecture passe par la vue des contacts (même périmètre), et une erreur rend null')
 voir(/loadContactsEtatCivil\(idsContacts \? idsContacts\.split\(','\) : \[\], 'hektor'\)/.test(recu), 'l\'écran lit par le numéro HEKTOR des contacts du bien (le pont)')
+// lot G' (19/11) : le conjoint d'une première SEULE reliée au bien, lu par le lien de couple
+const lotG2 = ged.slice(ged.indexOf('export async function loadConjointsDesPremieres'), ged.indexOf('// Garder une décision'))
+voir(/\.in\('hektor_couple_contact_id'/.test(lotG2) && /\.eq\('couple_role', 'conjoint'\)/.test(lotG2) && /\.eq\('nature_fiche', 'conjoint'\)/.test(lotG2), 'lot G\' : le conjoint se lit par le lien de couple (rôle ET nature « conjoint »)')
+voir(/r\.nature_fiche === 'couple' && !r\.couple_role/.test(lotG2) && /r\.archive !== true/.test(lotG2), 'lot G\' : seulement depuis une PREMIÈRE active')
+voir(/ambigus\.add\(ecran\)/.test(lotG2) && /if \(error\) return null/.test(lotG2), 'lot G\' : deux conjoints pour une première -> aucun ; lecture ratée -> null')
+voir(/!dejaLa\.has\(String\(r\.hektor_target_id/.test(recu), 'lot G\' : TÉMOIN -- un conjoint déjà relié au bien (couple fusionné) n\'est pas ajouté deux fois')
+voir(/personnesCompletes = useMemo<PersonneDuBien\[\]>\(\(\) => \[\.\.\.personnesDuBien,/.test(recu) && /conjointDe: r\.hektor_couple_contact_id \?\? null/.test(recu), 'lot G\' : ajouté aux personnes du bien ET aux contacts, avec sa première (l\'écriture passe par elle)')
+voir(/if \(!regles && !remplir\) return/.test(recu), 'lot G\' : lu seulement quand les règles ou « remplir » sont allumés')
 voir(/contactId: String\(r\.hektor_contact_id\)/.test(recu) && !/contactId: c\.id/.test(recu), 'TÉMOIN : la proposition porte NOTRE numéro, jamais celui de l\'écran')
 
 console.log('⑥ lot F (18/11) : « Ce que dit la pièce d\'identité / la fiche de renseignements »')

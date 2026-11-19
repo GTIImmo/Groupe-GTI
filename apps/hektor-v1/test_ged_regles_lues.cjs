@@ -173,7 +173,7 @@ const rm = fs.readFileSync(path.join(__dirname, 'src/RecuManque.tsx'), 'utf8')
 const app = fs.readFileSync(path.join(__dirname, 'src/App.tsx'), 'utf8')
 const regles = fs.readFileSync(path.join(__dirname, 'src/lib/gedReglesLues.ts'), 'utf8') + fs.readFileSync(path.join(__dirname, 'src/lib/gedComparer.ts'), 'utf8')
 voir(/loadRegisterCycleAffaires\(hektorAnnonceId\)/.test(rm) && /\.catch\(\(\) => \{ if \(!annule\) setChargeRegistre\(undefined\) \}\)/.test(rm), '7b : la charge vient du registre des mandats ; lecture ratée = silence')
-voir(/\.\.\.reglesSansIa\(faits, docs, affaires, new Date\(\)\), \.\.\.reglesLues\(\{ \.\.\.faits, chargeRegistre \}, docsLus, personnesDuBien, affaires, new Date\(\)\)/.test(rm) && /if \(!regles \|\| affaires === null\) return \[\]/.test(rm), 'à l\'écran : avec les règles sans IA, derrière le même interrupteur, registre lu d\'abord')
+voir(/\.\.\.reglesSansIa\(faits, docs, affaires, new Date\(\)\), \.\.\.reglesLues\(\{ \.\.\.faits, chargeRegistre \}, docsLus, personnesCompletes, affaires, new Date\(\)\)/.test(rm) && /if \(!regles \|\| affaires === null\) return \[\]/.test(rm), 'à l\'écran : avec les règles sans IA, derrière le même interrupteur, registre lu d\'abord')
 voir(/personnesDuBien=\{personnesDuBien\}/.test(app) && /c\.members\?\.length \? c\.members : \[c\]/.test(app), 'les personnes du bien viennent de la fiche, un couple fusionné compte ses deux membres')
 voir(!/supabase|fetch\(|\.insert\(|\.update\(|\.rpc\(|Optimistic/.test(regles), 'les règles et le socle ne lisent ni n\'écrivent rien (fonctions pures)')
 

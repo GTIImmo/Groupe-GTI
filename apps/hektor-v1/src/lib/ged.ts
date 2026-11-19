@@ -223,6 +223,42 @@ export async function loadContactsEtatCivil(ids: string[], par: 'hektor' | 'app'
   }
 }
 
+// GED lot G' (19/11) : le CONJOINT d'un couple dont seule la PREMIÈRE fiche est reliée au bien (105 couples sur 118,
+// mesure du 19/11 -- l'écran ne fusionne un couple que si les deux fiches sont reliées). On le lit par le lien de couple :
+// `hektor_couple_contact_id` = NOTRE numéro de la première, rôle et nature « conjoint », actif. Clé de la carte : le
+// numéro HEKTOR de la première (celui de l'écran). Une première qui n'est pas une première active, ou qui a plusieurs
+// conjoints (aucune au 19/11), n'a pas d'entrée. Lecture ratée -> null : rien ne s'ajoute.
+export async function loadConjointsDesPremieres(idsHektor: string[]): Promise<Map<string, EtatCivilLu> | null> {
+  const premieres = await loadContactsEtatCivil(idsHektor, 'hektor')
+  if (!premieres || !supabase) return premieres
+  const parNotreNumero = new Map<string, string>()
+  for (const [ecran, r] of premieres) {
+    if (r.archive !== true && r.nature_fiche === 'couple' && !r.couple_role) parNotreNumero.set(String(r.hektor_contact_id), ecran)
+  }
+  if (!parNotreNumero.size) return new Map()
+  try {
+    const { data, error } = await supabase
+      .from('app_contacts_current')
+      .select('hektor_contact_id,hektor_target_id,nom,prenom,birth_date,birth_place,marital_status,nature_fiche,couple_role,archive,hektor_couple_contact_id')
+      .in('hektor_couple_contact_id', [...parNotreNumero.keys()])
+      .eq('couple_role', 'conjoint')
+      .eq('nature_fiche', 'conjoint')
+    if (error) return null
+    const carte = new Map<string, EtatCivilLu>()
+    const ambigus = new Set<string>()
+    for (const r of (data ?? []) as EtatCivilLu[]) {
+      const ecran = parNotreNumero.get(String(r.hektor_couple_contact_id ?? ''))
+      if (!ecran || r.archive === true || String(r.hektor_contact_id) === String(r.hektor_couple_contact_id)) continue
+      if (carte.has(ecran)) ambigus.add(ecran)
+      carte.set(ecran, r)
+    }
+    for (const cle of ambigus) carte.delete(cle)
+    return carte
+  } catch {
+    return null
+  }
+}
+
 // Garder une décision (app_ged_decider : compte actif, interrupteur, périmètre ; l'auteur est l'appelant).
 export async function gedDecider(input: {
   hektorAnnonceId: string | number
