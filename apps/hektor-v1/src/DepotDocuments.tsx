@@ -25,6 +25,7 @@ import { FICHES_LUES, FICHES_PERSONNES_LUES, resumeLecture } from './lib/gedLect
 import { LIBELLE_MOMENT, type MomentDossier } from './lib/gedPieces'
 import { typeParNom } from './lib/gedTypeParNom'
 import { retirerDepotAssistant, useDepotAssistant } from './lib/depotAssistant'
+import { signalerFenetreDepot } from './lib/gedFenetreDepot'
 import type { ConsoleDocument, ConsoleJob, Dossier } from './types'
 import './DepotDocuments.css'
 
@@ -145,6 +146,13 @@ export function DepotDocuments({
   // sont assemblées ou annulées
   const vignettesPages = useMemo(() => pages.map((f) => URL.createObjectURL(f)), [pages])
   useEffect(() => () => vignettesPages.forEach((u) => URL.revokeObjectURL(u)), [vignettesPages])
+  // 19/11 (§12.53-54) : la FENÊTRE (au-dessus du bien) se signale -- « Ce que dit… » attend qu'elle soit fermée
+  const enFenetre = Boolean(onFermer)
+  useEffect(() => {
+    if (!enFenetre) return
+    signalerFenetreDepot(true)
+    return () => signalerFenetreDepot(false)
+  }, [enFenetre])
 
   useEffect(() => {
     let annule = false
