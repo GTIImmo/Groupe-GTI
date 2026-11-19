@@ -3665,3 +3665,41 @@ Sur 63330, « Voir et trancher » (titre 800 / fiche 742) : « Enregistrer et en
 ligne**, pas le lot G -- rejoué sur le contenu commité (`git -c core.autocrlf=false archive`) : 505ffa6 80/80, 64a7914 74/74 ;
 par un `git archive` par défaut (CRLF sous Windows) : 79/1 et 73/1. L'essai lit désormais ses sources en LF (`lireSource`,
 commit `280d0d2`) : 80/80 sur le disque en CRLF.
+
+### 12.56 L'ÉPREUVE RÉELLE DU LOT F SUR LA PREMIÈRE D'UN COUPLE (19/11, 10:40-11:13, 63331, couple fictif 20000054/55)
+
+**Le couple fictif, créé PAR L'ÉCRAN** (Contacts -> Nouveau contact, Propriétaire, Couple, M. « Un / Deux ESSAI LOTF »,
+e-mails `@example.com`, sans téléphone, e-mail RGPD DÉCOCHÉ -- il est coché d'avance --, « Rattacher un bien existant »
+63331) : `create_hektor_contact` done -- **20000054 <-> 606436 (Un)**, **20000055 <-> 606437 (Deux)**. ⚠ Sous le compte
+formation, la recherche du bien de l'étape 2 ne trouve PAS 63331 (« Aucune annonce trouvée ») : elle est limitée aux biens du
+compte choisi -- refait sous le compte d'Emmanuelle PEREIRA (le reste du formulaire garde sa saisie, vérifié). Puis
+`relire_couple_rattache.py --principal 20000054 --conjoint 20000055` (Python de `.venv`) : ok, 20000054 « couple »,
+20000055 « conjoint » de 20000054.
+**Pièce** : une carte d'identité SPÉCIMEN de « Un ESSAI LOTF », SANS MRZ, né le 07/07/1960 à SAINT-CHAMOND (42)
+(`scratchpad/lotFcouple/fabriquer.py`), déposée par la fenêtre de dépôt (type et nom d'accord, privée), lue « carte
+d'identité valable jusqu'au 20/09/2034 ». ⭐ La correction du §12.55 a tenu : AUCUNE fenêtre pendant le dépôt.
+⚠ **Au premier passage, PAS de « Ce que dit… »** : la rubrique Contact lit le REGISTRE des mandants (`loadAnnonceMandants`),
+et la création d'un contact n'y pose pas de ligne (déjà noté au §12.49) -- l'écran ne voyait que « Mandant ESSAI CONTACT »,
+et les règles comparaient la carte à lui (« La pièce dit Un ESSAI LOTF, la fiche Mandant ESSAI CONTACT » : la confusion P6
+du §12.52, par le mot « ESSAI »). Geste prévu : Contact -> Ajouter un mandant -> « Rattacher un mandant existant » -> Un ESSAI
+LOTF -> `link_hektor_mandant` done, registre 2 mandants.
+**L'écran** : « Ce que dit la pièce d'identité » s'ouvre SEUL (lecture de moins de 30 min) : « À ajouter 2 » -- date et lieu
+de naissance de Un ESSAI LOTF, la fiche du contact « vide ». Les deux pris, « Enregistrer et envoyer à Hektor » -> « envoyé à
+Hektor … (chemin habituel de la fiche du contact) ». **Chez nous à la seconde** : 20000054 `1960-07-07` / `SAINT-CHAMOND (42)` ;
+20000055 INCHANGÉ. Calque `app_contact_pending` sur 20000054 : `birth_date`, `birth_place`, nom actuel joint,
+`send_rgpd_email: false`, `person_type: personne_seule`, `contact_kind: acquereur` (défaut du geste, comme au §12.48).
+**Chez Hektor** : `update_hektor_contact` done 11:07:21, `status: updated`, **`couple: true`, formulaire
+`mefContacts/contactCoupleAll`** (le formulaire relu fait foi, la charge disait `personne_seule`), `date_naissance: 07-07-1960`,
+`lieu_naissance: SAINT-CHAMOND (42)` ; **tous les champs `conjoint_*` à null** (prénom, nom, e-mail, téléphone, date et lieu de
+naissance du conjoint NON envoyés) ; prénom, e-mail de la première à null (non touchés). Calque soldé. Relecture 11:07:53 :
+nature « 20000054=couple, 20000055=conjoint », la naissance de la première RESTE, le conjoint INTACT (« Deux », son e-mail,
+sans naissance ; le résumé de couple porte toujours Deux).
+➡ **Le lot F est PROUVÉ EN RÉEL sur la PREMIÈRE PERSONNE D'UN COUPLE** : sa naissance part par le formulaire de couple sans
+toucher au conjoint (le point (1) de l'audit du §12.46, enfin éprouvé). **Toutes les épreuves réelles des lots A à G' sont
+faites.**
+⚠ Noté en passant (non traité) : `coordonnees: "remplacees"` dans le compte rendu du worker -- rien n'a bougé dans les
+coordonnées relues (pas de téléphone, e-mail inchangé), mais le mot n'est pas expliqué ici.
+**Ménage fait** (11:09-11:12) : carte SPÉCIMEN retirée (`delete_document_from_hektor`, raison `menage_specimen_lot_f_couple_19_11`) ;
+« Supprimer (tout le foyer) » sur 20000054 -> Hektor 606436 supprimé ; « Supprimer » sur 20000055 -> `hektor_delete_sent:
+false`, il n'existait déjà plus (cascade du foyer, 4e fois). 0 contact, 0 calque, 63331 ne garde que 20000009 et ses 6 pièces
+FICTIF ; file vide.
