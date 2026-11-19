@@ -1,0 +1,36 @@
+bien,transaction,genre,etat,rejoint_dossier_de,membres_apres,autres_acheteurs_dans_le_dossier,etendue_jours,verdict,etiquette_gardee,etiquettes_du_groupe,etiquette_du_dossier_cible_absorbee
+3155,1297,compromis,cancelled,"1296,1298",3,False,37,A VERIFIER (le dossier porte deja un compromis annule du meme acheteur),c6528a07-3956-475a-87f7-32bfdf539aae,2,False
+3481,1335,compromis,cancelled,"1337,1334",3,False,137,A VERIFIER (le dossier porte deja un compromis annule du meme acheteur),9c8af637-99ce-46c3-8525-420be0662dc0,2,False
+8442,3669,compromis,cancelled,"3672,3670,3671",4,False,108,A RAISON (l'essai annule rejoint l'affaire du meme acheteur),68bf38b6-68ba-47a6-a55b-c9b94510766c,2,True
+9232,4126,compromis,cancelled,"4129,4125",4,True,250,A RAISON (l'essai annule rejoint l'affaire du meme acheteur),40595f6e-6c5b-410a-96c1-351422b0c012,2,False
+9483,4267,compromis,cancelled,"4268,4269,4270,4273",5,False,92,A VERIFIER (le dossier porte deja un compromis annule du meme acheteur),1f3ec2b1-b964-4903-a8b5-95772c76b0a7,3,True
+9483,4268,compromis,cancelled,"4267,4269,4270,4273",5,False,92,A VERIFIER (le dossier porte deja un compromis annule du meme acheteur),1f3ec2b1-b964-4903-a8b5-95772c76b0a7,3,False
+9769,4496,compromis,cancelled,"4499,4495",4,True,96,A RAISON (l'essai annule rejoint l'affaire du meme acheteur),926ce35b-cd1a-453e-adf2-fb44e0b40d06,2,False
+9993,4651,compromis,cancelled,"4649,4650,4654",6,True,427,A VERIFIER (le dossier porte deja un compromis annule du meme acheteur),a662e0e4-1b25-4720-bd4c-5dcef8d7a826,2,False
+10129,4720,compromis,cancelled,"4721,4724",4,True,147,A RAISON (l'essai annule rejoint l'affaire du meme acheteur),1996da17-fc26-4337-a370-ea8b35ff77e2,2,True
+14414,7080,compromis,cancelled,"7081,7082,7083",4,False,169,A RAISON (l'essai annule rejoint l'affaire du meme acheteur),b6eaa815-4e79-4332-ac52-d8fa2e58ce9f,2,True
+15087,7450,compromis,cancelled,"7448,7449,7453",6,True,367,A VERIFIER (le dossier porte deja un compromis annule du meme acheteur),3eee569d-0bfc-4f22-be3a-b1e42e7a1e2f,2,False
+15449,7605,compromis,cancelled,"7608,7604,7607",4,False,110,A RAISON (l'essai annule rejoint l'affaire du meme acheteur),ffa7c437-4085-4268-a335-029b155908f1,2,False
+23562,11205,compromis,cancelled,"11204,11207",3,False,0,A VERIFIER (le dossier porte deja un compromis annule du meme acheteur),10f0eeb8-dbb3-4efc-8a09-ffe8facef561,2,False
+24390,11579,compromis,cancelled,"11578,11580,11582",4,False,127,A RAISON (l'essai annule rejoint l'affaire du meme acheteur),b2df24b2-48a1-4bde-8c18-2952bb8da483,2,False
+24510,11708,compromis,cancelled,"11712,11709,11710",4,False,95,A RAISON (l'essai annule rejoint l'affaire du meme acheteur),3e7cee14-8885-4b29-9a68-4d55d20e8df5,2,True
+28506,14033,compromis,cancelled,"14034,14035,14036",4,False,148,A RAISON (l'essai annule rejoint l'affaire du meme acheteur),be5d3921-40f9-4228-9d05-c31b9273a188,2,True
+28548,14052,compromis,cancelled,"14051,14055",3,False,0,A VERIFIER (le dossier porte deja un compromis annule du meme acheteur),cf509e9e-0a97-43c3-8545-8d778a8127b9,2,False
+28653,14110,compromis,cancelled,"14113,14115,14109,14111",5,False,405,A VERIFIER (le dossier porte deja un compromis annule du meme acheteur),21a12a3e-5c1d-49a9-8354-0edca1db7cd6,2,False
+30637,14913,compromis,cancelled,"14912,14914,14916",4,False,132,A RAISON (l'essai annule rejoint l'affaire du meme acheteur),3c5ed8c4-8fdd-456f-9b58-7e894ea9df06,2,False
+33458,16197,compromis,active,16198,3,False,117,A RAISON (compromis -> vente du meme acheteur),1340beff-a1f4-49d1-838a-83a102fc4dd4,2,True
+36320,17131,compromis,cancelled,"17132,17133,17135,17137",6,True,255,A VERIFIER (le dossier porte deja un compromis annule du meme acheteur),5b11fd3a-e8ca-4489-bc92-74061c854f73,2,True
+39745,19070,compromis,cancelled,"19072,19069",3,False,267,A VERIFIER (le dossier porte deja un compromis annule du meme acheteur),04e11a15-a6b0-4162-9717-73c4540a491d,2,False
+40600,19576,compromis,cancelled,"19577,19579,19575",4,False,98,A RAISON (l'essai annule rejoint l'affaire du meme acheteur),48bf818b-c62a-4d0a-a47e-20cc9207845c,2,False
+40855,19737,compromis,cancelled,"19736,19738,19740",4,False,100,A RAISON (l'essai annule rejoint l'affaire du meme acheteur),18be7ee3-50a7-4f87-b59b-49e63a11a863,2,False
+40977,19815,compromis,cancelled,"19814,19816,19817,19821",5,False,165,A VERIFIER (le dossier porte deja un compromis annule du meme acheteur),020d277b-fdf2-4e05-9f62-616cf2d24323,2,False
+41481,20088,compromis,cancelled,"20089,20090",3,False,150,A RAISON (l'essai annule rejoint l'affaire du meme acheteur),7005240a-eae1-4910-aa50-3da56ea6dfa4,2,True
+43050,21520,compromis,cancelled,"21521,21522,21523",4,False,107,A RAISON (l'essai annule rejoint l'affaire du meme acheteur),676ad1fa-24a7-45cf-97b5-e8c0b1d185e8,2,True
+47574,24010,compromis,cancelled,"24011,24012,24013",4,False,134,A RAISON (l'essai annule rejoint l'affaire du meme acheteur),d5c630d4-923a-4841-b24b-fd6165c47df3,2,True
+48019,24331,compromis,cancelled,"24330,24332,24334",4,False,266,A RAISON (l'essai annule rejoint l'affaire du meme acheteur),b338722c-e75e-4f55-97b8-1f1f70862573,2,False
+48370,24649,compromis,cancelled,"24650,24651,24654",4,False,111,A RAISON (l'essai annule rejoint l'affaire du meme acheteur),4792dc3e-91df-4248-a5a1-5f9da5d5bdba,2,True
+50356,26023,compromis,cancelled,"26024,26025",3,False,36,A VERIFIER (le dossier porte deja un compromis annule du meme acheteur),346b672e-5cea-4815-a02b-bbda3b920d75,2,True
+52166,26613,compromis,cancelled,"26614,26615,26616,26617",5,False,109,A VERIFIER (le dossier porte deja un compromis annule du meme acheteur),904d160a-3dcc-4f52-9424-bb0514144be9,2,True
+53342,27135,compromis,cancelled,"27140,27133,27134",5,True,417,A VERIFIER (le dossier porte deja un compromis annule du meme acheteur),19ca6d13-5217-4061-a784-39de0d333a07,2,False
+54776,28178,compromis,cancelled,"28179,28180,28181",4,False,138,A RAISON (l'essai annule rejoint l'affaire du meme acheteur),7f848e8a-f5bc-466d-94b3-773acf230e2d,2,True
+58907,28546,compromis,cancelled,"30762,28547,28548",4,False,140,A RAISON (l'essai annule rejoint l'affaire du meme acheteur),7d195053-633e-458a-b5e7-fdf32b351b5c,2,True

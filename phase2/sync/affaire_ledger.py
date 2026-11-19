@@ -1532,6 +1532,47 @@ def chainage_meme_acheteur_actif() -> bool:
     return os.environ.get("APP_CHAINAGE_MEME_ACHETEUR", "0") == "1"
 
 
+def chainage_sans_date_visible_actif() -> bool:
+    """REGLE E -- UNE TRANSACTION SANS DATE RESTEE SEULE DEVIENT VISIBLE (19/11/2026).
+
+        APP_CHAINAGE_SANS_DATE_VISIBLE=1   la regle joue
+        (absent ou 0)                      comportement d'avant, A L'IDENTIQUE
+
+    ⛔ POSEE ETEINTE, EN ATTENTE DU « VAS-Y » DE FREDERIC (temps 4 du chantier classeur,
+      notice/CHANTIER_CLASSEUR_TEMPS4_5_FINIR_2026-11-19.md).
+
+    ─── LE TROU ──────────────────────────────────────────────────────────────
+    Une transaction sans date recoit sa propre chaine (`attribution[app_id] = app_id`)
+    mais n'entre JAMAIS dans `toutes`, la liste des dossiers du bien. Si les replis
+    § 2.6 / § 2.9 et la regle A ne la rattachent pas, elle reste seule ET INVISIBLE :
+    la regle D (« meme acheteur ») ne la compare a rien, et le fichier des
+    rattachements manuels la dit « introuvable ».
+    Le rejeu du temps 3 (19/11) l'a prouve sur quatre dossiers casses par nos refus
+    du 11/11 : DEBARD (bien 41481), POCHELON (39745), THEVENON (3481), GENOUX (28653)
+    -- un compromis annule SANS DATE, du MEME numero d'acquereur que le reste du
+    dossier, que la regle A rattachait tant que l'offre etait « acceptee ».
+
+    ─── LA REGLE ─────────────────────────────────────────────────────────────
+    Apres la regle A et AVANT la regle D : chaque transaction sans date encore seule
+    entre dans `toutes` comme un dossier d'un seul membre. Elle ne change RIEN par
+    elle-meme (la numerotation lui rend son propre numero) ; c'est la regle D, avec
+    SES DEUX GARDES (jamais deux ventes, jamais deux compromis vivants), qui la
+    reunit -- ou non -- au dossier du meme acheteur. Aucun nom, aucune date devinee.
+    ⚠ APRES A, PAS AVANT : la regle A saute ce qui est deja dans `toutes`.
+
+    ─── SA GARDE, DANS LA REGLE D ─────────────────────────────────────────────
+    « L'acheteur du compromis vivant » : un dossier fait SEULEMENT de transactions sans
+    date rendues visibles ne rejoint pas un dossier dont le compromis vivant est a un
+    AUTRE numero d'acquereur. Sans elle, la mesure du 19/11 reunissait a tort 4 compromis
+    annules d'acheteurs qui avaient echoue a l'affaire de l'acheteur suivant, par une
+    VENTE qui porte le mauvais nom chez Hektor (15220 GENILLON, 17536 Rouchon, 23238
+    Simonyan, 54867 PLANCHE). Elle coute une abstention juste : le couple PYOT (9629),
+    deux numeros pour un menage -- on reste alors comme aujourd'hui.
+    """
+    chainage_v2_actif()                      # il charge `.env` une fois pour tous
+    return os.environ.get("APP_CHAINAGE_SANS_DATE_VISIBLE", "0") == "1"
+
+
 # REGLE B : l'ecart maximal, en jours, entre un compromis et l'offre acceptee
 # qu'on lui rattache. MESURE le 10/11 -- voir chainage_offre_acceptee_seule_actif.
 FENETRE_OFFRE_REGULARISEE_JOURS = 31
@@ -1991,6 +2032,7 @@ def recalculer_les_chaines(con: sqlite3.Connection) -> dict[str, int]:
     regle_offre_acceptee_seule = chainage_offre_acceptee_seule_actif()   # B (10/11)
     regle_compromis_annule_seul = chainage_compromis_annule_seul_actif() # A (10/11)
     regle_meme_acheteur = chainage_meme_acheteur_actif()                 # D (12/11)
+    regle_sans_date_visible = chainage_sans_date_visible_actif()         # E (19/11, ETEINTE)
     # LES RATTACHEMENTS A LA MAIN (12/11) : ranges PAR BIEN une fois pour toutes,
     # pour que la boucle n'ouvre pas le fichier a chaque annonce.
     # ⚠ LA CLE EST UN TEXTE, comme celle de `par_annonce` (normalize_text).
@@ -2530,6 +2572,23 @@ def recalculer_les_chaines(con: sqlite3.Connection) -> dict[str, int]:
                     else:
                         signale("[A] aucune offre acceptee seule -- reste seul")
 
+            # --- REGLE E : UNE TRANSACTION SANS DATE RESTEE SEULE DEVIENT VISIBLE --
+            #     Voir chainage_sans_date_visible_actif. Elle ne reunit rien elle-meme :
+            #     elle met la transaction sous les yeux de D et du fichier manuel.
+            if regle_sans_date_visible:
+                deja_pris_e = {m for c in toutes for m in c["membres"]}
+                for app_id, kind, state, _d, acqs in sans_date_du_bien:
+                    if app_id in deja_pris_e:
+                        continue
+                    toutes.append({"membres": [app_id], "acquereurs": set(acqs),
+                                   "offre_acceptee": kind == "offre" and state in ETATS_OFFRE_ACCEPTEE,
+                                   "compromis": kind == "compromis",
+                                   "offres": [state] if kind == "offre" else [],
+                                   "a_une_vente": kind == "vente",
+                                   # lu par la GARDE de la regle E, dans la regle D
+                                   "sans_date_visible": True})
+                    signale("[E] transaction sans date restee seule -- rendue visible")
+
             # --- REGLE D : UN MEME ACHETEUR, UN MEME BIEN = UN SEUL DOSSIER ----
             #     Elle joue EN DERNIER : elle ramasse ce que A, B et C laissent.
             #     Voir chainage_meme_acheteur_actif pour le pourquoi et les gardes.
@@ -2595,6 +2654,31 @@ def recalculer_les_chaines(con: sqlite3.Connection) -> dict[str, int]:
                             if compromis_vivants(a) and compromis_vivants(b):
                                 signale("[D] deux compromis vivants au meme nom -- abstention")
                                 continue
+                            # ─── LA GARDE DE LA REGLE E (19/11) -- « l'acheteur du compromis
+                            #     vivant ». Un dossier qui n'est fait QUE de transactions sans
+                            #     date rendues visibles ne rejoint pas un dossier dont le
+                            #     compromis VIVANT est a un AUTRE numero d'acquereur. Mesure du
+                            #     19/11 : sans elle, 4 compromis annules d'un acheteur qui avait
+                            #     echoue rejoignaient l'affaire de l'acheteur suivant, parce que
+                            #     la VENTE porte le mauvais nom chez Hektor (biens 15220, 17536,
+                            #     23238, 54867 -- la liste des « 11 ventes au nom du mauvais
+                            #     acquereur » du plan). Elle ne joue QUE si la regle E est allumee.
+                            if regle_sans_date_visible:
+                                garde = False
+                                for seul_, autre_ in ((a, b), (b, a)):
+                                    if not (seul_.get("sans_date_visible")
+                                            and all(m[3] is None for m in membres_de(seul_))):
+                                        continue
+                                    cp_autre: set = set()
+                                    for m in membres_de(autre_):
+                                        if m[1] == "compromis" and m[2] not in ETATS_COMPROMIS_MORTS:
+                                            cp_autre |= m[4]
+                                    if cp_autre and not (acqs_reels(seul_) & cp_autre):
+                                        garde = True
+                                if garde:
+                                    signale("[E] garde : le compromis vivant est a un autre "
+                                            "acheteur -- abstention")
+                                    continue
                             # la cible garde le plus petit numero, comme la
                             # numerotation finale le ferait de toute facon.
                             cible, source = ((a, b) if min(a["membres"]) < min(b["membres"])
@@ -2663,6 +2747,7 @@ def recalculer_les_chaines(con: sqlite3.Connection) -> dict[str, int]:
                 "chainage_offre_acceptee_seule": regle_offre_acceptee_seule,
                 "chainage_compromis_annule_seul": regle_compromis_annule_seul,
                 "chainage_meme_acheteur": regle_meme_acheteur,
+                "chainage_sans_date_visible": regle_sans_date_visible,
                 "chainage_rattachements_manuels": sum(
                     len(v) for v in rattachements_par_bien.values())}
     resultat.update(anomalies)
@@ -2676,6 +2761,7 @@ def recalculer_les_chaines(con: sqlite3.Connection) -> dict[str, int]:
           f"{' + offre acceptee seule (B)' if regle_offre_acceptee_seule else ''}"
           f"{' + compromis annule seul (A)' if regle_compromis_annule_seul else ''}"
           f"{' + meme acheteur (D)' if regle_meme_acheteur else ''}"
+          f"{' + sans date visible (E)' if regle_sans_date_visible else ''}"
           f"{(' + %d rattachement(s) a la main' % resultat['chainage_rattachements_manuels'])
              if resultat['chainage_rattachements_manuels'] else ''})")
     return resultat
