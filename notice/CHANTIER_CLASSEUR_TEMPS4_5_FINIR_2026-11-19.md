@@ -18,7 +18,9 @@
 
 > Demandé par Frédéric le 19/11 : *« c'est ce qui survivra quand ta conversation sera résumée »*.
 > ⭐ **Le BUT est ⑧ : écrire nos identifiants dans le Sheet.** Le reste est le chemin.
-> Dernière mise à jour : 19/11, ses quatre décisions du jour appliquées (les 10 lignes écrites).
+> Dernière mise à jour : 19/11 au soir — **les neuf questions sont traitées**. Rien n'est écrit en base
+> (hors les 10 lignes décidées), rien chez Hektor, **rien dans le Sheet**. Les 8 lignes « pures » de ⑤
+> attendent sa lecture : aucune n'est écrite.
 >
 > **Ses quatre décisions du 19/11** : ① les 10 lignes VALIDÉES → écrites (§ 2.7) ; ② la règle E
 > **n'est PAS allumée** — *« UN GESTE PAR NUIT, on verra demain, après le contrôle des 10 »* ; ③ 26613
@@ -46,10 +48,11 @@ Q  SUJET                         ETAT        VERDICT EN UNE LIGNE               
                                              au Sheet (sans effet sur ⑧). Il renverse 5    ecris aucune ;
                                              « corrections » du temps 3. 6 dossiers        les 6 melanges : quel
                                              MELANGES demandent une SCISSION               outil (⑨)
-⑥  les 255 a plusieurs etiquettes FAIT     255 -> 251 cette nuit -> 229 au bout de       la decision C5 deja
-                                             TOUT (E, les 8, le patch). Le noyau : 128 C5, posee (pour ⑧ : choisir
-                                             74 que le Sheet tient (66 MELANGES), 26 liens a l'export)
-                                             du gel seul. + 207 dossiers sur 2-3 lignes
+⑥  les 255 a plusieurs          FAIT        255 -> 251 cette nuit -> 229 au bout de       la decision C5 deja
+   etiquettes                                TOUT (E, les 8, le patch). Le noyau : 128     posee (pour ⑧ : choisir
+                                             C5, 74 que le Sheet tient (66 MELANGES), 26   l'etiquette a l'export)
+                                             liens du gel seul ; + 207 dossiers portes
+                                             par 2 ou 3 lignes
 ⑦  le patch du gel               FAIT        il TIENT : 4 gardes a 0 aujourd'hui, temoins  le « vas-y » du patch V2
                                              semes 1/1/1 ; il corrige EXACTEMENT les 2     (je recommande : demain,
                                              erreurs du gel de 5.4 ; ⑥ : 16 reglees, 4      apres le controle des
@@ -59,7 +62,10 @@ Q  SUJET                         ETAT        VERDICT EN UNE LIGNE               
                                              Vagues 0 (3 lignes), 1a (50), 1b, 2, 3.       les 3 prealables : P0 le
                                              ⚠ un VIEL ECRIVAIN dort dans scheduled/ et     vieil ecrivain, V1 tes
                                              prendrait nos lignes pour les siennes (P0)    Apps Script, V2 la memoire
-⑨  ce qu'il ne m'a pas demande   A FAIRE
+⑨  ce qu'il ne m'a pas demande   FAIT        7 pistes classees : 1 ranger le vieil         chacune des 7 ; la 1re
+                                             ecrivain, 2 la sentinelle, 3 un outil de      AVANT toute ecriture
+                                             SCISSION, 4 mesurer une garde de D, 5 lire    dans le Sheet
+                                             le Sheet en lecture seule, 6-7 petits
 ```
 
 ---
@@ -1053,4 +1059,48 @@ LE BUT ⑧ EST ATTEINT QUAND :
   -- donc le bruit attendu au point ③
 . la vague 1a exacte (les 50) : elle se tire le jour de l'ecriture, de la mesure du jour
 . si le routeur de 5.3 (l'app lit le Sheet par l'UUID) a besoin d'autre chose que la colonne A
+```
+
+---
+
+## ⑨ CE QUE JE FERAIS SANS QU'ON ME L'AIT DEMANDÉ — classé, avec son coût
+
+```
+1  RANGER LE VIEL ECRIVAIN (P0 de ⑧) -- AVANT la vague 0, sinon rien.
+   scheduled/push_suivi_appsheet.py prend pour siennes les lignes qui portent un affair_uuid.
+   Le plus sur : qu'il REFUSE de tourner tant que la colonne A porte des UUID qu'il n'a pas poses
+   (une garde de 10 lignes), plutot que de le reecrire. Code existant -> ton « vas-y ». ~1 h.
+2  LA SENTINELLE DE ⑧ (« l'UUID d'une ligne = l'etiquette de ses transactions »), ecrite DORMANTE
+   des maintenant : le critere de fin en a besoin, et c'est elle qui verra un jour un DOSSIER qui
+   bouge sous une ligne deja ecrite. Code neuf, eteint. ~2 h.
+3  UN OUTIL DE SCISSION DECIDEE A LA MAIN -- le pendant du fichier des rattachements. ⑤ et ⑥
+   montrent le meme defaut 66 fois : Hektor laisse le contact de l'acheteur PRECEDENT sur le
+   compromis du suivant, et la regle D colle ce compromis dans le mauvais dossier. Le fichier ne
+   sait que REUNIR. Un fichier « separer » (une ligne = une transaction qui quitte un dossier),
+   lu APRES la regle D, eteint, chaque ligne decidee par toi. ~1/2 journee + rejeu.
+4  ET MESURER UNE GARDE DANS LA REGLE D, avec le Sheet comme juge : « la date bat le nom » (ta
+   regle sur ce defaut). Avant de proposer une regle, compter sur tout le registre ce qu'elle
+   reunirait a tort et a raison -- le juge de ⑤ sait maintenant le dire. ~1/2 journee, lecture seule.
+5  LIRE LE SHEET EN LECTURE SEULE. Les lecteurs (apparier_classeur.lire_classeur, le rapport du
+   gel) demandent la portee « spreadsheets » qui ECRIT (le [1:] de apparier_classeur.py l. 283
+   choisit la seconde) : mes mesures d'aujourd'hui sont passees par un jeton capable d'ecrire. Non
+   mesure : si la delegation du domaine autorise « spreadsheets.readonly » -- c'est peut-etre la
+   raison du [1:]. Code existant -> ton « vas-y ». ~15 min si la portee est autorisee.
+6  DIRE LA VERITE DANS LA RPC DES ETIQUETTES (④) : son commentaire dit « la plus ancienne », son
+   code garde « le plus petit numero » ; et elle compte un transfert comme une fusion. Le
+   commentaire et le compteur, rien d'autre. Patch Supabase -> ton accord.
+7  test_chainage_v2 : il est rouge depuis le 12/11 parce qu'il attend des comptes figes ; son propre
+   en-tete dit « la base EST le resultat ». Le faire comparer a la base. ~30 min.
+CE QUE JE NE FERAIS PAS : toucher la protection « possede par l'app » de ③ pour une seule
+transaction (30712) -- c'est C.7, et la mesure dit que le reservoir est la plage (340), pas le carnet.
+```
+
+### Pour la suite — ce que la nuit et demain matin doivent montrer
+
+```
+⏰ DEMAIN MATIN, AVANT TOUT AUTRE GESTE : le controle des 10 menages (§ 2.7) -- 11 580 dossiers,
+   « 16 rattachement(s) a la main », 10 fusions a la pose (le cri du seuil SONNE, c'est attendu),
+   chacune des 10 offres sous l'etiquette de son compromis. Puis, s'il est vert et avec tes « vas-y »,
+   un geste a la fois : le patch V2 (de jour), la regle E (une nuit), les 8 lignes de ⑤ (une nuit).
+⚠ La mesure de ⑥ et de ⑧ se refait APRES chacun : ses nombres sont ceux du 19/11.
 ```
