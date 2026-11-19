@@ -3322,7 +3322,7 @@ l'ouverture n'est pas écrite… ») — ma branche ne change aucun code du fron
 
 **Reste** : P2, les boutons sous une question dans l'écran de l'assistant.
 
-## 94. P2 — LES BOUTONS SOUS UNE QUESTION (19/11) : écrit en 4 morceaux, éprouvé hors ligne et en maquette, dormant, NON poussé
+## 94. P2 — LES BOUTONS SOUS UNE QUESTION (19/11) : écrit en 4 morceaux, éprouvé hors ligne et en maquette, dormant, POUSSÉ le 19/11 avec son accord (« Ok »)
 
 **Ses mots** : « Oui p2 », puis « B, entrée admin » (avant P4, un parcours commence par une entrée d'essai réservée à
 l'admin). Puis, en voyant l'entrée sous une conversation d'exemple « baisse de prix » : « Stop … pourquoi tu lances un
@@ -3389,5 +3389,5 @@ l'IA »), elle disparaît à P4.
   relire sans les effacer) : re-valider « nouveau mandant » sans rien taper est alors refusé ; il suffit de les retaper.
 - Les photos (forme « fichiers ») restent à déposer dans la fenêtre (P6).
 
-**Reste** : pousser (son accord) ; l'essai réel en admin (allumer `assistant_parcours` sur « admin » = écriture en base,
+**Reste** : l'essai réel en admin (allumer `assistant_parcours` sur « admin » = écriture en base,
 son accord) ; puis P5, P4, P6, P7, P8.
