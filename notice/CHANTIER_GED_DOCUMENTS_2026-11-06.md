@@ -3703,3 +3703,33 @@ coordonnées relues (pas de téléphone, e-mail inchangé), mais le mot n'est pa
 « Supprimer (tout le foyer) » sur 20000054 -> Hektor 606436 supprimé ; « Supprimer » sur 20000055 -> `hektor_delete_sent:
 false`, il n'existait déjà plus (cascade du foyer, 4e fois). 0 contact, 0 calque, 63331 ne garde que 20000009 et ses 6 pièces
 FICTIF ; file vide.
+
+### 12.57 (19/11) -- P6 ne confond plus deux personnes ; « Nouveau contact » protégé du double-clic ; « remplacees » expliqué
+
+**Feu vert de Frédéric** : « Alors corrige et enchaîne ».
+**P6, la cause** (`gedReglesPersonnes.ts`) : une personne était « couverte » dès qu'UNE pièce lue lui ressemblait (`egal` de
+`personneSurLaFiche` : un mot du nom commun et le même prénom). Une seule carte couvrait donc deux personnes : « Jean MARTIN »
+couvrait aussi « Jean MARTIN DUPONT », et la carte de « Deux ESSAI LOTG » couvrait « Deux ESSAI GED » (§12.52, mot « ESSAI »).
+**Le correctif** (`652cdab`) : chaque pièce couvre la SEULE personne du bien (mandants ET acquéreurs vivants, offre comprise)
+qui lui ressemble le mieux -- verdict, puis part du nom en commun (nom de naissance OU d'usage), puis premier prénom
+(`personnesCouvertes`). Égalité parfaite entre deux personnes : la pièce ne couvre NI l'une NI l'autre (les deux sont
+réclamées : une pièce manquante se réclame plutôt que de se taire), SAUF si chacune porte exactement un nom de la pièce --
+la même personne inscrite sous son nom de naissance et son nom d'usage. `personneSurLaFiche` n'est PAS touchée (6 appelants :
+P4, état civil, financement, règles lues, offres) ; seul `motsDe` est exporté. Ce qui ne change pas : la règle « proche
+seulement si la fiche n'a pas de prénom » (13/11), une seule personne au nom composé couverte par la carte au nom court.
+**Essais** : `test_ged_regles_personnes.cjs` 46 verts (8 neufs) ; **témoin inverse** : sur l'ancien code, les 5 cas neufs
+sont ROUGES, les 41 autres verts. Les 13 essais GED verts ; `test_ged_remplir.cjs` montre 7 rouges sur le disque = la
+fausse alerte CRLF du §12.55 (App.tsx en CRLF) -- 38 verts en lisant les sources sans CRLF. Build vert.
+⚠ **Non traité, noté** : P4 dit encore « La pièce dit Un ESSAI LOTF, la fiche Mandant ESSAI CONTACT » (verdict `proche`,
+un mot du nom commun). C'est le dessin de P4 (une information, jamais une alerte, rien ne s'écrit) : en vrai, c'est le cas
+« Jean DUPONT » face à « Marie DUPONT ». Pas touché.
+**« coordonnees: remplacees »** (§12.56) : ce n'est PAS un défaut. Le mot dit seulement que l'interrupteur
+`contact_coordonnees_remplacer` est ALLUMÉ (`console_job_worker.js:20528`, mode D-5 du 05/11) ; il ne dit pas qu'une
+coordonnée a changé. Une valeur vide ne part jamais dans ce mode (`if (contact.email)`), et la charge du lot F n'en portait
+aucune : rien n'est parti, ce que la relecture a confirmé.
+**« Nouveau contact », le double-clic** (`94d0a7a`, App.tsx) : le bouton du bas change de rôle sous le curseur -- « Étape
+suivante » devient « Créer le contact » (passage synchrone à l'étape 2), et « Créer » devient « Continuer malgré doublon »
+quand des doublons sont trouvés. Le 2e clic d'un double-clic créait donc le contact sans montrer l'étape 2, ou acceptait le
+doublon. Parade : le bouton reste inactif 1 s après chaque changement d'étape ou l'apparition des doublons (pas au premier
+affichage) -- la même que « Ce que dit… » (§12.55). Essai statique `test_contact_double_clic.cjs` 4 verts, témoin inverse
+compris. ⚠ **Pas vu à l'écran** : il faut le déploiement (accord de Frédéric).
