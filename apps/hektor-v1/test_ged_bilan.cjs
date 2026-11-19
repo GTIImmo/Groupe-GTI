@@ -230,8 +230,16 @@ voir(!/'P1\.|'P2\./.test(remplirSrc) && /'P3\.charge_honoraires'/.test(remplirSr
 const depot = fs.readFileSync(path.join(__dirname, 'src/DepotDocuments.tsx'), 'utf8')
 voir(/resumeLecture\([^)]*\) \} \}\)\s*\n\s*\/\/[^\n]*\n\s*window\.dispatchEvent\(new CustomEvent\('ged:lecture-faite'\)\)/.test(depot) && /addEventListener\('ged:lecture-faite', relu\)/.test(rm) && /\[hektorAnnonceId, nbDocuments, lecturesFaites\]/.test(rm),
   'essai réel du 18/11 : une lecture qui finit fait relire les lectures -- les cartes « Ce que dit… » apparaissent sans recharger')
-voir(/if \(!cleOuverture \|\| bilanOuvert\) return/.test(rm) && /for \(const c of cles\) window\.localStorage\.setItem\(c, '1'\)/.test(rm),
+voir(/if \(!cleOuverture \|\| bilanOuvert \|\| depotOuvert\) return/.test(rm) && /for \(const c of cles\) window\.localStorage\.setItem\(c, '1'\)/.test(rm),
   'essai réel du 18/11 : la fenêtre ne bascule JAMAIS seule pendant qu\'une autre est ouverte (son résultat restait caché) ; une ouverture par lot de lectures neuves')
+const fenDepot = fs.readFileSync(path.join(__dirname, 'src/lib/gedFenetreDepot.ts'), 'utf8')
+voir(/const depotOuvert = useFenetreDepotOuverte\(\)/.test(rm) && /\}, \[cleOuverture, depotOuvert\]\)/.test(rm)
+  && rm.indexOf('|| depotOuvert) return') < rm.indexOf("window.localStorage.setItem(c, '1')"),
+  'essai réel du 19/11 : « Ce que dit… » ATTEND la fermeture de la fenêtre de dépôt (rien marqué vu avant), et s\'ouvre à sa fermeture')
+voir(/const enFenetre = Boolean\(onFermer\)/.test(depot) && /if \(!enFenetre\) return\s*\n\s*signalerFenetreDepot\(true\)\s*\n\s*return \(\) => signalerFenetreDepot\(false\)/.test(depot),
+  'la fenêtre de dépôt (au-dessus du bien) se signale ouverte puis fermée ; posée dans le panneau, elle ne se signale pas')
+voir(/ouvertes = Math\.max\(0, ouvertes \+ \(ouverte \? 1 : -1\)\)/.test(fenDepot) && /window\.addEventListener\(EVENEMENT, maj\)/.test(fenDepot) && /removeEventListener\(EVENEMENT, maj\)/.test(fenDepot),
+  'le signal compte les fenêtres ouvertes (jamais sous zéro) et se désabonne')
 
 console.log('⑧ lot A (18/11) : les six rapports de diagnostic et le dossier de diagnostics')
 const vr = (cle, x, rang, page = 3) => ({ cle, rang, valeur: null, valeur_num: null, valeur_date: null, page, etat: 'lu', ...x })
