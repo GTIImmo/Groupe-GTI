@@ -3321,3 +3321,73 @@ front construit, essais rejoués verts (couverture, lot 0, serveur 58, gestes 41
 l'ouverture n'est pas écrite… ») — ma branche ne change aucun code du front par rapport à main.
 
 **Reste** : P2, les boutons sous une question dans l'écran de l'assistant.
+
+## 94. P2 — LES BOUTONS SOUS UNE QUESTION (19/11) : écrit en 4 morceaux, éprouvé hors ligne et en maquette, dormant, NON poussé
+
+**Ses mots** : « Oui p2 », puis « B, entrée admin » (avant P4, un parcours commence par une entrée d'essai réservée à
+l'admin). Puis, en voyant l'entrée sous une conversation d'exemple « baisse de prix » : « Stop … pourquoi tu lances un
+formulaire d'ajout d'annonce sur cette question à l'IA ? ». Explication donnée : ce n'est pas l'IA, c'est mon clic d'essai
+en maquette ; à la fin (P4) c'est l'IA qui proposera le parcours selon la demande, sans aucun bouton. Sa réponse :
+« ah j'ai compris, reprends comme prévu » → l'entrée d'essai est GARDÉE telle quelle (admin, marquée « Essai admin, sans
+l'IA »), elle disparaît à P4.
+
+### 94.1 Les 4 morceaux (commits 0452d9a, 7ba4009, 663be48, 21b36b0, 80a7483)
+
+1. **Serveur** (0452d9a) : `GET /assistant/parcours?conversationId=` (une conversation rouverte retrouve ses parcours, relus
+   avec SON jeton) et `POST /assistant/parcours/{id}/cree` (la fiche créée termine le parcours, une seule fois, écriture
+   conditionnelle). La vue rend aussi la forme et les cases de CHAQUE question posée (pour « Modifier »). Essai serveur :
+   **67 verts** (9 nouveaux).
+2. **La question à l'écran** (7ba4009) : `ParcoursGuide.tsx`, la carte de la maquette v27 (en-tête rose, fil des rubriques,
+   compteurs « − n + », pastilles, champs, pièces une à une ; « Je ne sais pas », « Plus tard », « Valider » ; les réponses
+   en pastilles vertes « Modifier »). Les cases et listes viennent de `catalogueParcoursFenetre` (App.tsx) : celles que la
+   FENÊTRE montre pour ce type de bien, avec SES libellés et SES listes. La rue / le code postal / la ville du haut sont
+   proposés en recopie dans l'adresse privée (§89 D6). Tout dort derrière `assistant_parcours` (sonde : 403 = rien).
+3. **Le mandant (D7)** (663be48) : un contact existant (recherche dans tout le réseau, décision « R » ; son NUMÉRO seul part
+   dans les réponses) ou un nouveau mandant : civilité, nom, prénom, e-mail, téléphone, adresse, CP, ville dans un état À
+   PART, déposé par l'écran au coffre privé (`app_assistant_mandant_deposer`, jeton de la personne) ; JAMAIS au serveur de
+   l'assistant. Bandeau au cadenas de la planche 11.
+4. **La fin** (21b36b0) : « Ouvrir la fenêtre remplie » → `assistantOuvrirParcours` : la fenêtre remise à zéro comme au
+   bouton, chaque réponse dans SA case (aucune traduction), la composition pièce par pièce, le mandant existant retrouvé
+   par son numéro, les coordonnées d'un nouveau mandant PRISES au coffre (prendre = effacer) ; une estimation sans date
+   porte la date du jour (comme le scan, D5). Le bandeau dit « d'après tes réponses au parcours ». Après « Créer », le
+   parcours est noté terminé (avec le bien) et l'écran le montre « créée ».
+
+### 94.2 Les preuves
+
+- **Essai du catalogue contre le vrai App.tsx** (`apps/hektor-v1/test_etape4_parcours_catalogue.cjs`, 80a7483) : **21 verts**.
+  Profil par profil, le catalogue montre EXACTEMENT les cases de la fenêtre (maison 136, appartement 132, terrain 59, garage
+  43, immeuble 71, autre 51) ; chaque case montrée des 19 questions a son libellé et sa liste ; la liste est l'objet même
+  de la fenêtre ; pas de négociateur à choisir pour un commercial ; l'ouverture range chaque case hors des groupes ; la
+  réponse envoyée au serveur ne prend jamais une coordonnée. **Deux témoins** : un catalogue qui oublie une case est
+  attrapé ; un écran volontairement faux (`corps.email = coordonnees.email`) est attrapé — ⚠ ma première garde le RATAIT
+  (elle ne lisait pas `corps.xxx =`), corrigée avant le commit.
+- **En maquette** (sans base, données inventées) : le parcours complet joué à l'écran — bien, intérieur (compteurs),
+  composition, dehors coché, nouveau mandant —, puis la fenêtre ouverte et relue étape par étape : 10 cases marquées (Offre
+  5, Secteur 3, Composition 1, Mandat 1), adresse / code postal / ville, la pièce, Mme. Lefèvre et son e-mail à l'étape
+  Mandat, la date d'estimation du jour ; une SECONDE ouverture dit que les coordonnées ne sont plus gardées. L'e-mail tapé
+  n'apparaît plus nulle part dans la page après « Valider ».
+- **Trois défauts trouvés et corrigés en route** : deux clics rapides sur « + » ne comptaient qu'un (le compteur partait de
+  l'ancienne valeur) ; un nombre sans son libellé dans la pastille verte (« 1 » → « Pieces : 1 ») ; la civilité effacée par
+  une frappe juste après le clic (même cause que le compteur). Plus une fausse donnée de maquette (type 1 = Maison rangé en
+  appartement).
+- Rejoués verts : couverture (0 oubli), lot 0, essais serveur de l'assistant (parcours 67, gestes 415, socle 30).
+
+### 94.3 Ce que ça pourrait casser ailleurs
+
+- L'écran de l'assistant : les cartes d'aujourd'hui ne bougent pas ; le parcours n'apparaît que si l'interrupteur
+  `assistant_parcours` l'ouvre au compte (ABSENT en base = rien).
+- La fenêtre de création : une nouvelle voie d'entrée qui ne fait que POSER des valeurs, comme la carte d'aujourd'hui ;
+  la création elle-même n'a gagné qu'un bloc après le succès (noter le parcours terminé), qui n'échoue jamais la création.
+- La règle des cases du haut est RECOPIÉE dans le catalogue : l'essai du catalogue exige les mêmes noms que la fenêtre.
+
+### 94.4 Limites dites
+
+- Pas éprouvé contre la vraie table ni la vraie fenêtre connectée : c'est l'essai réel (interrupteur sur « admin », son
+  accord).
+- « Modifier » une autre question pendant qu'on en remplit une perd la saisie non validée de celle-ci.
+- Après un rechargement de la page, l'écran ne sait plus que des coordonnées sont déjà au coffre (il ne peut pas les
+  relire sans les effacer) : re-valider « nouveau mandant » sans rien taper est alors refusé ; il suffit de les retaper.
+- Les photos (forme « fichiers ») restent à déposer dans la fenêtre (P6).
+
+**Reste** : pousser (son accord) ; l'essai réel en admin (allumer `assistant_parcours` sur « admin » = écriture en base,
+son accord) ; puis P5, P4, P6, P7, P8.
