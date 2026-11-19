@@ -108,6 +108,26 @@ voir(codes(a).length === 0, 'TÉMOIN : la même personne deux fois sur la fiche 
 a = R([cni('CNI M.pdf', MARC)], { bien: [{ nom: 'FICTIF', prenom: '' }] })
 voir(codes(a).join() === 'P4/info', 'TÉMOIN : une fiche sans prénom est couverte par la pièce au même nom (P6 se tait ; P4 le signale)')
 
+// 19/11 : une pièce couvre UNE personne, sa meilleure (la carte de Jean MARTIN couvrait aussi Jean MARTIN DUPONT)
+const JEAN = { nom: 'MARTIN', prenoms: 'Jean', fin: '2033-01-01' }
+const JEAN_D = { nom: 'MARTIN DUPONT', prenoms: 'Jean', fin: '2033-01-01' }
+a = R([cni('CNI J.pdf', JEAN)], { bien: [{ nom: 'MARTIN', prenom: 'Jean' }, { nom: 'MARTIN DUPONT', prenom: 'Jean' }] })
+voir(codes(a).join() === 'P6/piece' && /Pièce d'identité de Jean MARTIN DUPONT : non trouvée/.test(a[0].texte), 'P6 : la carte de Jean MARTIN ne couvre pas AUSSI Jean MARTIN DUPONT -> sa pièce est réclamée')
+a = R([cni('CNI J.pdf', JEAN), cni('CNI JD.pdf', JEAN_D)], { bien: [{ nom: 'MARTIN', prenom: 'Jean' }, { nom: 'MARTIN DUPONT', prenom: 'Jean' }] })
+voir(codes(a).length === 0, 'TÉMOIN : chacun sa carte -> silence')
+a = R([cni('CNI J.pdf', JEAN_D)], { bien: [{ nom: 'MARTIN', prenom: 'Jean' }, { nom: 'MARTIN DUPONT', prenom: 'Jean' }] })
+voir(codes(a).join() === 'P6/piece' && /de Jean MARTIN : non trouvée/.test(a[0].texte), 'P6 : dans l\'autre sens aussi (la carte de Jean MARTIN DUPONT ne couvre pas Jean MARTIN)')
+a = R([cni('CNI G.pdf', { nom: 'ESSAI LOTG', prenoms: 'Deux', fin: '2033-01-01' })], { bien: [{ nom: 'ESSAI GED', prenom: 'Deux' }, { nom: 'ESSAI LOTG', prenom: 'Deux' }] })
+voir(codes(a).join() === 'P6/piece' && /Deux ESSAI GED : non trouvée/.test(a[0].texte), 'P6 : le cas vu en réel sur 63331 (la carte de Deux ESSAI LOTG ne couvre pas Deux ESSAI GED)')
+a = R([cni('CNI J.pdf', JEAN)], { bien: [{ nom: 'MARTIN DUPONT', prenom: 'Jean' }] })
+voir(codes(a).length === 0, 'TÉMOIN : seule personne au nom composé, la carte au nom court la couvre (rien ne change)')
+a = R([cni('CNI J.pdf', JEAN)], { bien: [{ nom: 'MARTIN DUPONT', prenom: 'Jean' }, { nom: 'MARTIN LEROY', prenom: 'Jean' }] })
+voir(codes(a).join() === 'P6/piece,P6/piece', 'P6 : égalité parfaite (Jean MARTIN face à MARTIN DUPONT et MARTIN LEROY) : on ne sait pas à qui -> les deux réclamées')
+a = R([cni('CNI J.pdf', JEAN)], { bien: [{ nom: 'MARTIN DUPONT', prenom: 'Jean' }], affaires: [{ kind: 'compromis', state: 'signed', date: '2026-10-10', dateActe: null, acquereurs: [{ nom: 'MARTIN', prenom: 'Jean' }] }] })
+voir(codes(a).join() === 'P6/piece' && /Jean MARTIN DUPONT/.test(a[0].texte), 'P6 : la carte de l\'acquéreur Jean MARTIN ne couvre pas le mandant Jean MARTIN DUPONT')
+a = R([cni('CNI.pdf', MARC, JEANNE)], { bien: [{ nom: 'FICTIF', prenom: 'Marc' }, { nom: 'FICTIF', prenom: 'Jeanne' }, { nom: 'ESSAI', prenom: 'Jeanne' }] })
+voir(codes(a).length === 0, 'TÉMOIN : la même personne inscrite sous ses deux noms (naissance ESSAI, usage FICTIF) : sa carte couvre les deux lignes')
+
 console.log('⑤ le branchement')
 const rm = fs.readFileSync(path.join(__dirname, 'src/RecuManque.tsx'), 'utf8')
 const lib = fs.readFileSync(path.join(__dirname, 'src/lib/gedReglesPersonnes.ts'), 'utf8')
