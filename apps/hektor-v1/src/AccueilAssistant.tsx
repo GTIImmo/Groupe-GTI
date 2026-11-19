@@ -1135,7 +1135,7 @@ export default function AccueilAssistant(props: {
               <span className="asi-mk"><Sceau /></span>
               <div className="asi-ai-b">
                 <ParcoursGuide vue={p} catalogue={props.catalogueParcours!} onVue={(v) => setParcours((l) => l.map((x) => (x.id === v.id ? v : x)))}
-                  onOuvrirFenetre={props.onOuvrirParcours} onOuvrirBien={liens.bien} chercherMandants={props.chercherMandantsParcours} />
+                  onOuvrirFenetre={props.onOuvrirParcours} onOuvrirBien={liens.bien} chercherMandants={props.chercherMandantsParcours} ficheOuverte={Boolean(trombone?.ouvert)} />
               </div>
             </div>
           )) : null}

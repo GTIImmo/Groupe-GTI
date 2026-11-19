@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
-  RefusAssistant, deposerCoordonneesMandant, repondreParcours,
+  RefusAssistant, deposerCoordonneesMandant, deposerFichier, lireFicheParcours, repondreParcours,
   type CaseParcours, type CatalogueParcours, type CoordonneesMandant, type ParcoursVue, type QuestionParcours,
 } from './lib/assistant'
 
@@ -273,9 +273,11 @@ export type ParcoursGuideProps = {
   onOuvrirBien?: (appDossierId: string) => void
   /** Morceau 3 : chercher un mandant existant dans tout le réseau (la recherche de la fenêtre) */
   chercherMandants?: (texte: string) => Promise<MandantTrouve[]>
+  /** P4-b : le trombone est ouvert à ce compte -> « Lire la fiche papier » (sinon, la bande ne s'affiche pas) */
+  ficheOuverte?: boolean
 }
 
-export default function ParcoursGuide({ vue, catalogue, onVue, onOuvrirFenetre, onOuvrirBien, chercherMandants }: ParcoursGuideProps) {
+export default function ParcoursGuide({ vue, catalogue, onVue, onOuvrirFenetre, onOuvrirBien, chercherMandants, ficheOuverte }: ParcoursGuideProps) {
   const cat = useMemo(() => catalogue(vue.profil), [catalogue, vue.profil])
   const [ouverte, setOuverte] = useState<string | null>(null)  // une réponse déjà donnée que l'on modifie
   const q = ouverte ? vue.questions.find((x) => x.id === ouverte) ?? null : vue.question
@@ -284,7 +286,25 @@ export default function ParcoursGuide({ vue, catalogue, onVue, onOuvrirFenetre, 
   const [erreur, setErreur] = useState<string | null>(null)
   // ⛔ les coordonnées d'un nouveau mandant : un état À PART, jamais dans `valeurs` (qui part au serveur de l'assistant)
   const [coordonnees, setCoordonnees] = useState<CoordonneesMandant>({})
-  const [deposees, setDeposees] = useState(false)
+  // P4-b : des coordonnées lues sur la fiche sont DÉJÀ au coffre
+  const [deposees, setDeposees] = useState(Boolean(vue.fiche?.coffre))
+  useEffect(() => { if (vue.fiche?.coffre) setDeposees(true) }, [vue.fiche?.coffre])
+  // P4-b : la fiche papier jointe pendant le parcours (déposée au trombone, puis lue par le scan côté serveur)
+  const [fiche, setFiche] = useState<{ etat: 'repos' | 'depot' | 'lecture'; erreur: string | null }>({ etat: 'repos', erreur: null })
+  const choixFiche = useRef<HTMLInputElement | null>(null)
+  const lireFiche = async (liste: FileList | null) => {
+    const photos = Array.from(liste ?? []).slice(0, 5)
+    if (!photos.length) return
+    setFiche({ etat: 'depot', erreur: null })
+    try {
+      const joints = await Promise.all(photos.map((f) => deposerFichier(f)))
+      setFiche({ etat: 'lecture', erreur: null })
+      onVue(await lireFicheParcours(vue.id, joints.map((d) => d.id)))
+      setFiche({ etat: 'repos', erreur: null })
+    } catch (e) {
+      setFiche({ etat: 'repos', erreur: e instanceof Error ? e.message : "La fiche n'a pas pu être lue." })
+    }
+  }
   const cleQuestion = `${vue.id}:${q?.id ?? 'fin'}:${vue.maj_le ?? ''}`
   useEffect(() => {
     setValeurs(q ? valeursDe(q, vue.reponses) : {})
@@ -355,7 +375,9 @@ export default function ParcoursGuide({ vue, catalogue, onVue, onOuvrirFenetre, 
       return <QuestionMandant valeurs={valeurs} setValeur={setValeur} coordonnees={coordonnees} setCoordonnees={setCoordonnees}
         chercher={chercherMandants} dejaDeposees={deposees} />
     }
+    // P4-b : une case lue sur la fiche avec peu de confiance porte « à vérifier » dans son libellé
     const cases = q.champs.map((c) => cat.cases[c]).filter((c) => montree(c, valeurs))
+      .map((c) => (vue.doutes?.[c.nom] != null ? { ...c, libelle: `${c.libelle} · à vérifier` } : c))
     if (!cases.length) return <p className="asp-note">Rien à demander ici pour ce type de bien.</p>
     const aCocher = q.forme === 'cocher' ? cases.filter((c) => estACocher(c)) : []
     const compteurs = q.forme === 'compteurs' ? cases.filter((c) => c.genre === 'nombre' && c.entier) : []
@@ -393,10 +415,24 @@ export default function ParcoursGuide({ vue, catalogue, onVue, onOuvrirFenetre, 
           {donnees.map((x) => (
             <span key={x.id} className="asp-rep" title={x.etat === 'connue' ? "D'après ta demande : pas reposée, tu peux la modifier" : undefined}>
               <span className={`asp-ok${x.etat === 'faite' || x.etat === 'connue' ? '' : ' is-pale'}`}><Coche /></span>
-              <i>{x.titre}</i><b>{resume(x, vue.reponses, cat)}</b>{x.etat === 'connue' ? <em className="asp-dit">dit</em> : null}
+              <i>{x.titre}</i><b>{resume(x, vue.reponses, cat)}</b>{x.etat === 'connue' ? <em className="asp-dit">{x.champs.some((c) => vue.sources?.[c] === 'demande') ? 'dit' : 'lu'}</em> : null}
               {enCours ? <button type="button" onClick={() => setOuverte(x.id)} disabled={envoi}>Modifier</button> : null}
             </span>
           ))}
+        </div>
+      ) : null}
+      {enCours && ficheOuverte ? (
+        <div className="asp-fiche" role="group" aria-label="La fiche papier">
+          <input ref={choixFiche} type="file" hidden multiple accept="image/jpeg,image/png,image/webp"
+            onChange={(e) => { void lireFiche(e.target.files); e.target.value = '' }} />
+          {fiche.etat === 'depot' ? <span>Je dépose les photos…</span>
+            : fiche.etat === 'lecture' ? <span>Je lis la fiche, une page à la fois (environ 30 secondes)…</span>
+              : vue.fiche ? <span>Fiche lue : {Object.values(vue.sources ?? {}).filter((s) => s === 'scan').length} cases remplies{vue.fiche.doutes ? `, ${vue.fiche.doutes} à vérifier` : ''}{vue.fiche.coffre ? ', le mandant gardé à part' : ''}.</span>
+                : <span>Tu as la fiche papier ? Joins ses photos : je la lis d'un coup et ne te pose que ce qu'elle ne dit pas.</span>}
+          {fiche.etat === 'repos' ? (
+            <button type="button" className="asp-sec" onClick={() => choixFiche.current?.click()}>{vue.fiche ? 'Lire une autre page' : 'Lire la fiche papier'}</button>
+          ) : null}
+          {fiche.erreur ? <span className="asp-fiche-ko" role="alert">{fiche.erreur}</span> : null}
         </div>
       ) : null}
       {!enCours ? (

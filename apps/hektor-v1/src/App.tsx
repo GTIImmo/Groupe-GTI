@@ -18536,6 +18536,16 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   async function assistantOuvrirParcours(vue: ParcoursVue) {
     if (!canCreateHektorDraftAnnonce) return
     openDraftAnnonceModal()
+    // P4-b : les pages de l'AVIS DE VALEUR lues sur la fiche passent par le remplisseur du scan (il en fait le brouillon
+    // que l'éditeur relit après la création) ; les cases de la fenêtre sont posées ENSUITE par le parcours, qui prime
+    if (vue.fiche?.avis && Object.keys(vue.fiche.avis.fields).length) {
+      const champsAvis = Object.fromEntries(Object.entries(vue.fiche.avis.fields).map(([k, v]) => [k, { value: v, confidence: null, rawText: null }]))
+      applyDraftAnnonceScan({ model: null, summaryConfidence: null, warnings: [], missingFields: [], rawNotes: null,
+        statePosts: (vue.fiche.avis.statePosts ?? []) as DraftAnnonceSheetScanPayload['statePosts'],
+        fields: champsAvis as DraftAnnonceSheetScanPayload['fields'], pieces: [] }, { dateDuJour: vue.genre === 'creation_estimation' })
+      setDraftAnnonceScanMessage(null)
+      setDraftAnnonceScanReview([])
+    }
     const r = vue.reponses
     const t = (cle: string) => (r[cle] === null || r[cle] === undefined || typeof r[cle] === 'object' ? '' : String(r[cle]).trim())
     const heure = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })

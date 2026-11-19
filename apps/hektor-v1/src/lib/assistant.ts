@@ -316,8 +316,12 @@ export type ParcoursVue = {
   repere: { rang: number; total: number; faites: number }
   questions: Array<QuestionParcours & { etat: EtatQuestionParcours }>
   reponses: Record<string, unknown>
-  /** P4-a : d'où vient une case pré-remplie (« demande » = ce que la personne a dit) */
+  /** P4-a : d'où vient une case pré-remplie (« demande » = ce que la personne a dit, « scan » = la fiche lue) */
   sources?: Record<string, string>
+  /** P4-b : les cases lues sur la fiche à moins de 75 % -> « à vérifier » (leur confiance) */
+  doutes?: Record<string, number>
+  /** P4-b : la fiche papier lue (sans ses coordonnées : elles sont au coffre) et les pages de l'avis gardées à part */
+  fiche?: { coffre?: boolean; doutes?: number; mesure?: { pages: number; lues: number; cout_usd: number }; avis?: { fields: Record<string, string>; statePosts: Array<Record<string, unknown>> } } | null
   fin: boolean
 }
 /** Une case de la fenêtre, telle que la fenêtre la montre (libellé, liste), fournie par l'App : une seule source. */
@@ -376,6 +380,24 @@ export async function repondreParcours(id: string, question: string, geste: 'rep
   return r.parcours
 }
 
+/** P4-b : la fiche papier jointe PENDANT le parcours (photos déjà déposées au trombone) est lue par le scan de la
+ *  fenêtre, côté serveur ; rien de déjà répondu n'est remplacé ; les coordonnées du mandant vont au coffre. */
+export async function lireFicheParcours(id: string, fichiers: string[]): Promise<ParcoursVue> {
+  if (MAQUETTE) {
+    await attendre(1200)
+    const p = fauxParcours.find((x) => x.id === id)
+    if (!p) throw new RefusAssistant(404, 'Parcours introuvable')
+    for (const [k, v] of Object.entries({ type: '1', surfappart: '64', nbpieces: '3', adresse_haut: '8 rue du Scan', cp: '42100', ville: 'Saint-Étienne' })) {
+      if (!(k in p.reponses)) { p.reponses[k] = v; p.lus = { ...(p.lus ?? {}), [k]: 'scan' } }
+    }
+    p.doutes = { nbpieces: 0.55 }
+    p.fiche = { coffre: true, doutes: 1, mesure: { pages: fichiers.length, lues: fichiers.length, cout_usd: 0.004 } }
+    return vueFausse(p)
+  }
+  const r = await appelerJson<{ parcours: ParcoursVue }>(`/assistant/parcours/${encodeURIComponent(id)}/fiche`, 'POST', { fichiers: fichiers.join('|') })
+  return r.parcours
+}
+
 export async function noterParcoursCree(id: string, appDossierId: number | null): Promise<ParcoursVue> {
   if (MAQUETTE) {
     const p = fauxParcours.find((x) => x.id === id)
@@ -416,7 +438,7 @@ export async function prendreCoordonneesMandant(parcoursId: string): Promise<Coo
 }
 
 // Mode maquette (sans base) : quatre questions pour dessiner chaque forme à l'écran (le vrai moteur en a 19, côté serveur)
-type FauxParcours = { id: string; conversation: string | null; genre: 'creation_estimation' | 'creation_annonce'; reponses: Record<string, unknown>; etats: Record<string, EtatQuestionParcours>; etat: 'en_cours' | 'termine'; app_dossier_id?: number | null }
+type FauxParcours = { id: string; conversation: string | null; genre: 'creation_estimation' | 'creation_annonce'; reponses: Record<string, unknown>; etats: Record<string, EtatQuestionParcours>; etat: 'en_cours' | 'termine'; app_dossier_id?: number | null; lus?: Record<string, string>; doutes?: Record<string, number>; fiche?: ParcoursVue['fiche'] }
 const fauxParcours: FauxParcours[] = []
 const FAUSSES_QUESTIONS: QuestionParcours[] = [
   { id: 'bien', titre: 'Le bien', phrase: "Quel bien, et où ?", forme: 'cases', champs: ['type', 'agence', 'adresse_haut', 'cp', 'ville'], essentiels: ['type', 'adresse_haut', 'cp', 'ville'] },
@@ -440,7 +462,8 @@ function vueFausse(p: FauxParcours): ParcoursVue {
     id: p.id, genre: p.genre, etat: p.etat, app_dossier_id: p.app_dossier_id ?? null, profil: p.reponses.type === '1' ? 'house' : 'apartment',  // maquette : 1 = Maison, sinon un appartement
     question: q, repere: { rang: q ? FAUSSES_QUESTIONS.indexOf(q) + 1 : FAUSSES_QUESTIONS.length, total: FAUSSES_QUESTIONS.length, faites: Object.keys(p.etats).length },
     questions: FAUSSES_QUESTIONS.map((x) => ({ ...x, etat: p.etats[x.id] ?? null })), reponses: { ...p.reponses }, fin: !q,
-    sources: Object.fromEntries(Object.keys(p.reponses).filter((k) => p.etats.bien === 'connue' && ['type', 'adresse_haut', 'cp', 'ville', 'surfappart', 'nbpieces'].includes(k)).map((k) => [k, 'demande'])),
+    sources: { ...Object.fromEntries(Object.keys(p.reponses).filter((k) => p.etats.bien === 'connue' && ['type', 'adresse_haut', 'cp', 'ville', 'surfappart', 'nbpieces'].includes(k)).map((k) => [k, 'demande'])), ...(p.lus ?? {}) },
+    doutes: p.doutes ?? {}, fiche: p.fiche ?? null,
   }
 }
 
