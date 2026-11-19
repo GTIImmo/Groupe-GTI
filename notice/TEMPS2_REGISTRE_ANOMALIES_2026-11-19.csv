@@ -1,0 +1,672 @@
+famille,invariant,gravite,cle,detail
+ETIQUETTE,numero de dossier mal forme,a juger,4166,numero D1990-0001
+ETIQUETTE,numero de dossier mal forme,a juger,5700,numero D1990-0002
+ETIQUETTE,numero de dossier mal forme,a juger,5712,numero D1990-0003
+ETIQUETTE,numero de dossier mal forme,a juger,5850,numero D1990-0004
+ETIQUETTE,numero de dossier mal forme,a juger,7018,numero D1990-0005
+ETIQUETTE,numero de dossier mal forme,a juger,8332,numero D1990-0006
+ETIQUETTE,numero de dossier mal forme,a juger,10802,numero D0000-0001
+ETIQUETTE,numero de dossier mal forme,a juger,10810,numero D0000-0002
+ETIQUETTE,numero de dossier mal forme,a juger,10816,numero D0000-0003
+ETIQUETTE,numero de dossier mal forme,a juger,19280,numero D1990-0007
+ETIQUETTE,numero de dossier mal forme,a juger,23139,numero D0000-0004
+ETIQUETTE,numero de dossier mal forme,a juger,28634,numero D0000-0005
+ETIQUETTE,numero de dossier mal forme,a juger,28724,numero D0000-0006
+DOSSIER,dossier dont tous les membres sont effaces chez Hektor,constat,998,"1 membres, tous effaces chez Hektor"
+DOSSIER,dossier dont tous les membres sont effaces chez Hektor,constat,3698,"1 membres, tous effaces chez Hektor"
+DOSSIER,dossier dont tous les membres sont effaces chez Hektor,constat,3699,"1 membres, tous effaces chez Hektor"
+DOSSIER,dossier dont tous les membres sont effaces chez Hektor,constat,3701,"1 membres, tous effaces chez Hektor"
+DOSSIER,dossier dont tous les membres sont effaces chez Hektor,constat,16778,"1 membres, tous effaces chez Hektor"
+DOSSIER,dossier dont tous les membres sont effaces chez Hektor,constat,19029,"1 membres, tous effaces chez Hektor"
+DOSSIER,dossier dont tous les membres sont effaces chez Hektor,constat,19049,"1 membres, tous effaces chez Hektor"
+DOSSIER,dossier dont tous les membres sont effaces chez Hektor,constat,19414,"1 membres, tous effaces chez Hektor"
+DOSSIER,dossier dont tous les membres sont effaces chez Hektor,constat,19543,"1 membres, tous effaces chez Hektor"
+DOSSIER,dossier dont tous les membres sont effaces chez Hektor,constat,21803,"2 membres, tous effaces chez Hektor"
+DOSSIER,dossier dont tous les membres sont effaces chez Hektor,constat,25699,"1 membres, tous effaces chez Hektor"
+DOSSIER,dossier dont tous les membres sont effaces chez Hektor,constat,28568,"1 membres, tous effaces chez Hektor"
+DOSSIER,dossier dont tous les membres sont effaces chez Hektor,constat,28808,"2 membres, tous effaces chez Hektor"
+DOSSIER,dossier dont tous les membres sont effaces chez Hektor,constat,28917,"1 membres, tous effaces chez Hektor"
+DOSSIER,dossier dont tous les membres sont effaces chez Hektor,constat,28959,"1 membres, tous effaces chez Hektor"
+SEQUENCE,un bloc date apres la vente de son dossier,a juger,2588,offre 2589 du 2022-12-06 APRES la vente du 2022-02-14 (meme acheteur)
+SEQUENCE,un bloc date apres la vente de son dossier,a juger,4470,compromis 4470 du 2022-12-06 APRES la vente du 2022-01-27 (meme acheteur)
+SEQUENCE,un bloc date apres la vente de son dossier,a juger,7122,compromis 7122 du 2024-10-15 APRES la vente du 2024-03-13 (meme acheteur)
+SEQUENCE,un bloc date apres la vente de son dossier,a juger,7122,offre 7124 du 2024-09-25 APRES la vente du 2024-03-13 (meme acheteur)
+SEQUENCE,un bloc date apres la vente de son dossier,a juger,9451,offre 9452 du 2024-05-02 APRES la vente du 2024-03-18
+SEQUENCE,un bloc date apres la vente de son dossier,a juger,13780,compromis 13780 du 2008-10-18 APRES la vente du 2008-01-16 (meme acheteur)
+SEQUENCE,un bloc date apres la vente de son dossier,a juger,13780,offre 13781 du 2008-10-08 APRES la vente du 2008-01-16 (meme acheteur)
+SEQUENCE,un bloc date apres la vente de son dossier,a juger,14247,compromis 14247 du 2017-06-08 APRES la vente du 2017-04-23 (meme acheteur)
+SEQUENCE,un bloc date apres la vente de son dossier,a juger,14419,offre 14420 du 2009-11-20 APRES la vente du 2008-07-25 (meme acheteur)
+SEQUENCE,un bloc date apres la vente de son dossier,a juger,24341,offre 24342 du 2022-12-17 APRES la vente du 2022-04-12 (meme acheteur)
+SEQUENCE,un bloc date apres la vente de son dossier,a juger,24465,offre 24466 du 2021-08-08 APRES la vente du 2021-07-02 (meme acheteur)
+SEQUENCE,un bloc date apres la vente de son dossier,a juger,24741,compromis 24741 du 2017-09-21 APRES la vente du 2017-07-13 (meme acheteur)
+SEQUENCE,un bloc date apres la vente de son dossier,a juger,24741,offre 24742 du 2017-09-04 APRES la vente du 2017-07-13 (meme acheteur)
+SEQUENCE,un bloc date apres la vente de son dossier,a juger,28145,compromis 28145 du 2024-11-12 APRES la vente du 2024-01-28 (meme acheteur)
+SEQUENCE,un bloc date apres la vente de son dossier,a juger,28145,offre 28146 du 2024-07-24 APRES la vente du 2024-01-28 (meme acheteur)
+SEQUENCE,une vente datee avant le compromis de son dossier,a juger,4470,vente 4473 du 2022-01-27 AVANT le compromis 4470 du 2022-12-06
+SEQUENCE,une vente datee avant le compromis de son dossier,a juger,7122,vente 7126 du 2024-03-13 AVANT le compromis 7122 du 2024-10-15
+SEQUENCE,une vente datee avant le compromis de son dossier,a juger,13780,vente 29865 du 2008-01-16 AVANT le compromis 13780 du 2008-10-18
+SEQUENCE,une vente datee avant le compromis de son dossier,a juger,14247,vente 14248 du 2017-04-23 AVANT le compromis 14247 du 2017-06-08
+SEQUENCE,une vente datee avant le compromis de son dossier,a juger,24741,vente 24743 du 2017-07-13 AVANT le compromis 24741 du 2017-09-21
+SEQUENCE,une vente datee avant le compromis de son dossier,a juger,28145,vente 28147 du 2024-01-28 AVANT le compromis 28145 du 2024-11-12
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,117,offre 119 datee 138 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,125,offre 126 datee 343 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,176,offre 179 datee 33 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,199,offre 202 datee 52 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,569,offre 572 datee 95 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,709,offre 711 datee 223 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,738,offre 741 datee 171 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,911,offre 914 datee 441 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,1050,offre 1053 datee 169 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,1059,offre 1062 datee 49 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,1160,offre 1162 datee 168 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,1228,offre 1230 datee 249 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,1257,offre 1259 datee 53 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,1265,offre 1267 datee 119 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,1309,offre 1311 datee 82 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,1411,offre 1413 datee 91 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,1482,offre 1484 datee 201 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,1796,offre 1798 datee 300 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,1968,offre 1970 datee 109 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,2152,offre 2154 datee 46 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,2210,offre 2212 datee 131 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,2357,offre 2359 datee 71 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,2506,offre 2508 datee 115 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,2588,offre 2589 datee 342 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,2633,offre 2635 datee 87 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,3019,offre 3021 datee 104 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,3130,offre 3132 datee 108 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,3212,offre 3213 datee 368 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,3386,offre 3388 datee 203 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,3486,offre 3489 datee 235 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,3492,offre 3495 datee 90 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,3555,offre 3557 datee 131 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,3563,offre 3565 datee 51 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,3587,offre 3589 datee 50 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,3719,offre 3721 datee 149 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,4131,offre 4133 datee 130 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,4277,offre 4280 datee 118 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,4288,offre 4291 datee 103 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,4328,offre 4332 datee 151 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,4370,offre 4373 datee 268 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,4480,offre 4482 datee 108 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,4508,offre 4512 datee 435 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,4508,offre 4513 datee 106 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,4595,offre 4597 datee 61 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,4649,offre 4652 datee 48 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,4706,offre 4709 datee 319 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,4770,offre 4772 datee 198 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,4796,offre 4798 datee 492 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,4850,offre 4853 datee 338 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,4908,offre 4911 datee 63 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,5273,offre 5275 datee 430 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,5587,offre 5591 datee 513 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,5593,offre 5595 datee 93 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,5632,offre 5636 datee 97 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,5678,offre 5680 datee 224 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,5683,offre 5685 datee 122 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,5738,offre 5740 datee 399 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,5776,offre 5778 datee 543 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,5869,offre 5871 datee 519 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,5973,offre 5975 datee 44 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,5981,offre 5983 datee 2190 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,6059,offre 6061 datee 79 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,6156,offre 6158 datee 85 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,6239,offre 6242 datee 897 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,6433,offre 6435 datee 204 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,6828,offre 6830 datee 119 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,6921,offre 6923 datee 88 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,6947,offre 6952 datee 880 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,7293,offre 7295 datee 136 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,7301,offre 7303 datee 486 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,7417,offre 7419 datee 151 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,7448,offre 7451 datee 175 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,7545,offre 7548 datee 78 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,7579,offre 7581 datee 47 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,7645,offre 7648 datee 150 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,7699,offre 7701 datee 330 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,7719,offre 7721 datee 38 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,7767,offre 7770 datee 169 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,8152,offre 8155 datee 150 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,8471,offre 8473 datee 74 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,8501,offre 8504 datee 92 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,8808,offre 8811 datee 39 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,8840,offre 8842 datee 179 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,9055,offre 9057 datee 783 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,9091,offre 9093 datee 64 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,9160,offre 9163 datee 249 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,9160,offre 9164 datee 179 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,9166,offre 9169 datee 318 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,9166,offre 9170 datee 179 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,9451,offre 9452 datee 90 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,9496,offre 9498 datee 69 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,9754,offre 9756 datee 81 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,9923,offre 9925 datee 184 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,9951,offre 9953 datee 434 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,10235,offre 10238 datee 192 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,10360,offre 10362 datee 129 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,10711,offre 10712 datee 6177 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,10749,offre 10750 datee 6287 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,10898,offre 10901 datee 70 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,11077,offre 11079 datee 188 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,11167,offre 11169 datee 37 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,11181,offre 11183 datee 184 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,11279,offre 11281 datee 108 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,11355,offre 11357 datee 206 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,11373,offre 11375 datee 75 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,11515,offre 11517 datee 39 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,11654,offre 11656 datee 63 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,11667,offre 11669 datee 353 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,12011,offre 12014 datee 229 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,12117,offre 12119 datee 76 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,12178,offre 12180 datee 278 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,12405,offre 12408 datee 253 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,12566,offre 12568 datee 34 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,12611,offre 12614 datee 220 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,12611,offre 12616 datee 271 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,12623,offre 12626 datee 32 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,13286,offre 13288 datee 69 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,13784,offre 13786 datee 205 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,13859,offre 13861 datee 192 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,13932,offre 13934 datee 48 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,13973,offre 13975 datee 178 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,14147,offre 14149 datee 55 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,14171,offre 14173 datee 154 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,14224,offre 14227 datee 470 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,14419,offre 14420 datee 583 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,14432,offre 14434 datee 47 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,14493,offre 14494 datee 217 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,14516,offre 14518 datee 467 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,14939,offre 14941 datee 390 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,14939,offre 14942 datee 517 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,15059,offre 15061 datee 229 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,15219,offre 15221 datee 51 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,15323,offre 15325 datee 89 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,15380,offre 15383 datee 55 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,15473,offre 15475 datee 788 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,15577,offre 15579 datee 150 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,15698,offre 15703 datee 558 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,15719,offre 15721 datee 51 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,16031,offre 16033 datee 81 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,16143,offre 16145 datee 197 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,16341,offre 16345 datee 112 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,16377,offre 16381 datee 178 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,16820,offre 16822 datee 415 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,16841,offre 16844 datee 337 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,17050,offre 17053 datee 236 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,17132,offre 17134 datee 58 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,17153,offre 17155 datee 77 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,17208,offre 17210 datee 166 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,17288,offre 17292 datee 374 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,17387,offre 17388 datee 68 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,17387,offre 17389 datee 40 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,17432,offre 17436 datee 223 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,17541,offre 17543 datee 49 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,17650,offre 17653 datee 127 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,17809,offre 17812 datee 269 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,17851,offre 17854 datee 250 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,17912,offre 17914 datee 287 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,17967,offre 17969 datee 281 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,18051,offre 18053 datee 185 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,18172,offre 18175 datee 221 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,18256,offre 18258 datee 188 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,18335,offre 18337 datee 287 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,18353,offre 18355 datee 835 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,18616,offre 18618 datee 79 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,18749,offre 18751 datee 71 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,18818,offre 18820 datee 321 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,18875,offre 18878 datee 218 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,18903,offre 18905 datee 112 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,19073,offre 19075 datee 481 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,19094,offre 19096 datee 50 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,19232,offre 19235 datee 206 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,19271,offre 19274 datee 69 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,19304,offre 19306 datee 103 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,19314,offre 19317 datee 395 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,19426,offre 19428 datee 312 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,19611,offre 19613 datee 91 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,19619,offre 19621 datee 235 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,19656,offre 19658 datee 137 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,19690,offre 19692 datee 44 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,19814,offre 19817 datee 102 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,19903,offre 19904 datee 342 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,19977,offre 19979 datee 36 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,20072,offre 20074 datee 169 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,20246,offre 20248 datee 39 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,20276,offre 20278 datee 118 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,20407,offre 20409 datee 37 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,20723,offre 20726 datee 132 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,20748,offre 20750 datee 205 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,20784,offre 20787 datee 270 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,20794,offre 20796 datee 47 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,20965,offre 20967 datee 792 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,20969,offre 20971 datee 257 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,21130,offre 21132 datee 194 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,21221,offre 21223 datee 74 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,21323,offre 21325 datee 1143 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,21406,offre 21409 datee 192 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,21413,offre 21415 datee 105 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,21615,offre 21617 datee 142 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,21658,offre 21660 datee 494 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,21759,offre 21761 datee 245 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,21964,offre 21967 datee 171 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,22007,offre 22009 datee 146 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,22017,offre 22020 datee 171 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,22085,offre 22088 datee 530 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,22255,offre 22258 datee 138 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,22269,offre 22271 datee 194 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,22540,offre 22542 datee 133 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,22559,offre 22561 datee 301 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,22704,offre 22706 datee 477 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,22745,offre 22748 datee 131 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,22796,offre 22799 datee 259 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,22893,offre 22895 datee 49 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,23050,offre 23052 datee 51 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,23056,offre 23059 datee 188 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,23309,offre 23311 datee 97 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,23365,offre 23367 datee 65 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,23370,offre 23373 datee 105 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,23533,offre 23535 datee 345 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,23538,offre 23540 datee 101 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,23656,offre 23659 datee 64 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,24004,offre 24006 datee 82 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,24107,offre 24109 datee 50 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,24122,offre 24124 datee 88 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,24281,offre 24284 datee 95 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,24341,offre 24342 datee 332 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,24380,offre 24382 datee 532 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,24406,offre 24408 datee 489 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,24411,offre 24413 datee 34 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,24443,offre 24446 datee 52 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,24450,offre 24452 datee 137 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,24465,offre 24466 datee 132 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,24499,offre 24501 datee 144 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,24511,offre 24513 datee 124 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,24563,offre 24565 datee 87 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,24588,offre 24590 datee 379 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,24598,offre 24602 datee 500 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,24630,offre 24631 datee 309 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,24630,offre 24632 datee 267 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,25098,offre 25100 datee 76 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,25253,offre 25255 datee 84 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,25323,offre 25325 datee 58 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,25507,offre 25510 datee 1992 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,25557,offre 25559 datee 53 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,25626,offre 25628 datee 33 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,25839,offre 25841 datee 34 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,25876,offre 25878 datee 73 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,26027,offre 26029 datee 209 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,26071,offre 26073 datee 51 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,26154,offre 26157 datee 442 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,26328,offre 26330 datee 96 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,26348,offre 26350 datee 140 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,26362,offre 26364 datee 173 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,26394,offre 26396 datee 218 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,26563,offre 26565 datee 102 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,26579,offre 26581 datee 162 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,26592,offre 26595 datee 251 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,26603,offre 26606 datee 176 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,26603,offre 26608 datee 224 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,26832,offre 26833 datee 59 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,26883,offre 26888 datee 381 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,26892,offre 26894 datee 91 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,26934,offre 26937 datee 131 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,26941,offre 26943 datee 114 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,27100,offre 27102 datee 42 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,27483,offre 27485 datee 74 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,27660,offre 27663 datee 170 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,27678,offre 27680 datee 121 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,27721,offre 27723 datee 165 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,27806,offre 27808 datee 166 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,27822,offre 27824 datee 178 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,1000044,offre 1000046 datee 116 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,1000094,offre 1000094 datee 115 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,1000115,offre 1000115 datee 34 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,1000125,offre 1000126 datee 218 j apres le compromis
+SEQUENCE,une offre datee plus de 31 j apres le compromis,a juger,1000125,offre 1000127 datee 248 j apres le compromis
+SEQUENCE,une offre refusee PAR NOUS dans un dossier vendu,a juger,14419,"offre 14420 refusee par nous, dossier vendu, MEME acheteur que la vente"
+DOSSIER,deux offres acceptees dans un dossier,a juger,30712,2 offres acceptees
+TRANSACTION,etat d'une offre contraire a son journal Hektor,a juger,3581,"offre 3582 etat accepted, dernier mouvement proposition du 0000-00-00 00:00:00"
+TRANSACTION,etat d'une offre contraire a son journal Hektor,a juger,7178,"offre 7181 etat accepted, dernier mouvement proposition du 2025-01-15 23:00:00"
+TRANSACTION,etat d'une offre contraire a son journal Hektor,a juger,9290,"offre 9291 etat proposed, dernier mouvement accepte du 0000-00-00 00:00:00"
+TRANSACTION,etat d'une offre contraire a son journal Hektor,a juger,9451,"offre 9452 etat accepted, dernier mouvement proposition du 2024-05-02 22:00:00"
+TRANSACTION,etat d'une offre contraire a son journal Hektor,a juger,11141,"offre 11141 etat proposed, dernier mouvement refus du 0000-00-00 00:00:00"
+TRANSACTION,etat d'une offre contraire a son journal Hektor,a juger,14185,"offre 14186 etat accepted, dernier mouvement proposition du 0000-00-00 00:00:00"
+TRANSACTION,etat d'une offre contraire a son journal Hektor,a juger,19566,"offre 19567 etat accepted, dernier mouvement proposition du 0000-00-00 00:00:00"
+TRANSACTION,etat d'une offre contraire a son journal Hektor,a juger,27136,"offre 27136 etat proposed, dernier mouvement accepte du 2024-08-29 00:00:00"
+TRANSACTION,etat d'une offre contraire a son journal Hektor,a juger,27740,"offre 27741 etat accepted, dernier mouvement proposition du 0000-00-00 00:00:00"
+TRANSACTION,etat d'une offre contraire a son journal Hektor,a juger,28191,"offre 28193 etat refused, dernier mouvement proposition du 0000-00-00 00:00:00"
+TRANSACTION,etat d'une offre contraire a son journal Hektor,a juger,28917,"offre 28917 etat accepted, dernier mouvement proposition du 2026-09-27 15:57:56"
+TRANSACTION,transaction du classeur qui double une transaction Hektor,a juger,1001539,compromis 1001539 du classeur double [1101] (bien 2393) -- dans un AUTRE dossier
+TRANSACTION,transaction du classeur qui double une transaction Hektor,a juger,1001563,offre 1001563 du classeur double [1876] (bien 5262) -- dans un AUTRE dossier
+TRANSACTION,transaction du classeur qui double une transaction Hektor,a juger,1001531,compromis 1001531 du classeur double [4289] (bien 9510) -- dans un AUTRE dossier
+TRANSACTION,transaction du classeur qui double une transaction Hektor,a juger,1001530,compromis 1001530 du classeur double [4370] (bien 9608) -- dans un AUTRE dossier
+TRANSACTION,transaction du classeur qui double une transaction Hektor,a juger,1001477,offre 1001477 du classeur double [4387] (bien 9629) -- dans un AUTRE dossier
+TRANSACTION,transaction du classeur qui double une transaction Hektor,a juger,1001532,compromis 1001532 du classeur double [4480] (bien 9748) -- dans un AUTRE dossier
+TRANSACTION,transaction du classeur qui double une transaction Hektor,a juger,1001482,offre 1001482 du classeur double [5055] (bien 10527) -- dans un AUTRE dossier
+TRANSACTION,transaction du classeur qui double une transaction Hektor,a juger,1001535,compromis 1001535 du classeur double [11558] (bien 24368) -- dans un AUTRE dossier
+TRANSACTION,transaction du classeur qui double une transaction Hektor,a juger,1001580,offre 1001580 du classeur double [11958] (bien 24733) -- dans un AUTRE dossier
+TRANSACTION,transaction du classeur qui double une transaction Hektor,a juger,14006,offre 1001593 du classeur double [14008] (bien 28422) -- dans un AUTRE dossier
+TRANSACTION,transaction du classeur qui double une transaction Hektor,a juger,1001529,compromis 1001529 du classeur double [14813] (bien 30376) -- dans un AUTRE dossier
+TRANSACTION,transaction du classeur qui double une transaction Hektor,a juger,1001542,compromis 1001542 du classeur double [16377] (bien 34066) -- dans un AUTRE dossier
+TRANSACTION,transaction du classeur qui double une transaction Hektor,a juger,1001537,compromis 1001537 du classeur double [17387] (bien 37032) -- dans un AUTRE dossier
+TRANSACTION,transaction du classeur qui double une transaction Hektor,a juger,1001534,compromis 1001534 du classeur double [17427] (bien 37184) -- dans un AUTRE dossier
+TRANSACTION,transaction du classeur qui double une transaction Hektor,a juger,1001480,offre 1001480 du classeur double [20075] (bien 41467) -- dans un AUTRE dossier
+TRANSACTION,transaction du classeur qui double une transaction Hektor,a juger,1001536,compromis 1001536 du classeur double [20073] (bien 41467) -- dans un AUTRE dossier
+TRANSACTION,transaction du classeur qui double une transaction Hektor,a juger,1001522,compromis 1001522 du classeur double [20264] (bien 41699) -- dans un AUTRE dossier
+TRANSACTION,transaction du classeur qui double une transaction Hektor,a juger,1001540,compromis 1001540 du classeur double [23050] (bien 45891) -- dans un AUTRE dossier
+TRANSACTION,transaction du classeur qui double une transaction Hektor,a juger,23993,offre 1001561 du classeur double [23995] (bien 47557) -- dans un AUTRE dossier
+TRANSACTION,transaction du classeur qui double une transaction Hektor,a juger,1001533,compromis 1001533 du classeur double [24380] (bien 48093) -- dans un AUTRE dossier
+TRANSACTION,transaction du classeur qui double une transaction Hektor,a juger,1001538,compromis 1001538 du classeur double [24450] (bien 48154) -- dans un AUTRE dossier
+TRANSACTION,transaction du classeur qui double une transaction Hektor,a juger,1001474,offre 1001474 du classeur double [25879] (bien 49924) -- dans un AUTRE dossier
+TRANSACTION,transaction du classeur qui double une transaction Hektor,a juger,1001520,offre 1001520 du classeur double [27196] (bien 53398) -- dans un AUTRE dossier
+TRANSACTION,transaction du classeur qui double une transaction Hektor,a juger,1001541,compromis 1001541 du classeur double [27445] (bien 53678) -- dans un AUTRE dossier
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,29,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,30,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,137,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,205,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,258,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,997,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,1019,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,1064,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,1177,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,1297,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,1335,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,2433,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,29011,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,2805,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,3582,offre accepted sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,3669,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,3689,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,3739,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,3870,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,4126,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,4166,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,4170,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,4172,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,4178,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,4193,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,4195,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,4267,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,4268,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,4327,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,4385,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,4496,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,4500,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,4533,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,4542,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,4550,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,4558,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,4560,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,4567,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,4621,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,4651,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,4661,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,4669,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,4720,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,4762,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,4855,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,4858,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,4949,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,4973,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,5054,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,5137,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,5701,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,5712,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,5850,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,6146,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,6171,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,6290,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,6308,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,6363,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,6399,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,6751,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,7018,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,7048,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,7067,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,7080,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,7105,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,7176,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,7208,compromis active sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,7212,compromis active sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,7443,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,7450,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,7499,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,7605,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,7610,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,7710,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,7725,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,7903,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,8333,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,8845,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,8903,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,9291,offre proposed sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,9376,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,9903,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,9979,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,10009,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,10015,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,10040,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,10673,offre (vide) sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,10674,offre (vide) sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,10677,offre (vide) sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,10680,offre (vide) sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,10682,offre (vide) sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,10685,offre (vide) sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,10688,offre (vide) sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,10691,offre (vide) sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,10693,offre (vide) sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,10695,offre (vide) sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,10699,offre (vide) sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,10702,offre (vide) sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,10704,offre (vide) sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,10707,offre (vide) sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,10710,offre (vide) sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,10714,offre (vide) sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,10716,offre (vide) sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,10719,offre (vide) sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,10722,offre (vide) sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,10723,offre (vide) sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,10725,offre (vide) sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,10727,offre (vide) sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,10730,offre (vide) sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,10733,offre (vide) sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,10736,offre (vide) sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,10737,offre (vide) sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,10739,offre (vide) sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,10742,offre (vide) sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,10745,offre (vide) sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,10747,offre (vide) sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,10753,offre (vide) sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,10754,offre (vide) sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,10757,offre (vide) sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,10762,offre (vide) sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,10764,offre (vide) sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,10767,offre (vide) sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,10768,offre (vide) sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,10770,offre (vide) sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,10791,offre (vide) sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,10793,offre (vide) sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,10795,offre (vide) sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,10798,offre (vide) sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,10799,offre (vide) sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,10801,offre (vide) sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,10804,offre (vide) sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,10807,offre (vide) sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,10809,offre (vide) sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,10822,offre (vide) sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,11103,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,11138,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,11141,offre proposed sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,11204,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,11205,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,11231,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,11472,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,11579,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,11665,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,11708,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,11733,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,12222,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,12396,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,12407,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,12475,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,13686,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,14010,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,14033,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,14051,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,14052,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,14110,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,14125,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,14131,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,14186,offre accepted sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,14831,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,14849,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,14913,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,14927,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,14935,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,14966,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,15096,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,15895,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,15901,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,15914,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,16100,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,16114,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,16174,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,16182,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,16197,compromis active sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,16224,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,16336,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,16407,compromis active sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,16494,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,16774,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,16829,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,16873,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,17131,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,17203,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,17343,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,17422,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,17535,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,17567,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,17635,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,17802,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,19070,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,19280,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,19408,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,19464,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,19567,offre accepted sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,19576,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,19711,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,19737,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,19784,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,19815,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,20088,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,20171,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,20672,compromis active sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,21457,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,21520,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,21933,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,21978,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,22306,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,22376,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,22999,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,23162,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,23475,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,23485,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,23794,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,23801,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,23884,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,24010,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,24135,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,24163,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,24213,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,24267,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,24331,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,24528,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,24649,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,25692,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,25709,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,25827,compromis active sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,25889,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,25963,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,26019,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,26023,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,26034,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,26189,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,26613,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,27033,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,27039,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,27081,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,27094,compromis active sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,27134,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,27135,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,27157,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,27240,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,27282,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,27527,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,27741,offre accepted sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,27820,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,28115,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,28116,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,28155,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,28175,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,28178,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,28193,offre refused sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,28214,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,28269,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,28281,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,28289,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,28294,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,28341,compromis active sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,28546,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,28582,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,28634,compromis cancelled sans date de tri
+TRANSACTION,sans date de tri (ne rejoint jamais par la sequence),constat,28660,compromis active sans date de tri
+TRANSACTION,offre sans etat,constat,10673,offre sans etat
+TRANSACTION,offre sans etat,constat,10674,offre sans etat
+TRANSACTION,offre sans etat,constat,10677,offre sans etat
+TRANSACTION,offre sans etat,constat,10680,offre sans etat
+TRANSACTION,offre sans etat,constat,10682,offre sans etat
+TRANSACTION,offre sans etat,constat,10685,offre sans etat
+TRANSACTION,offre sans etat,constat,10688,offre sans etat
+TRANSACTION,offre sans etat,constat,10691,offre sans etat
+TRANSACTION,offre sans etat,constat,10693,offre sans etat
+TRANSACTION,offre sans etat,constat,10695,offre sans etat
+TRANSACTION,offre sans etat,constat,10699,offre sans etat
+TRANSACTION,offre sans etat,constat,10702,offre sans etat
+TRANSACTION,offre sans etat,constat,10704,offre sans etat
+TRANSACTION,offre sans etat,constat,10707,offre sans etat
+TRANSACTION,offre sans etat,constat,10710,offre sans etat
+TRANSACTION,offre sans etat,constat,10714,offre sans etat
+TRANSACTION,offre sans etat,constat,10716,offre sans etat
+TRANSACTION,offre sans etat,constat,10719,offre sans etat
+TRANSACTION,offre sans etat,constat,10722,offre sans etat
+TRANSACTION,offre sans etat,constat,10723,offre sans etat
+TRANSACTION,offre sans etat,constat,10725,offre sans etat
+TRANSACTION,offre sans etat,constat,10727,offre sans etat
+TRANSACTION,offre sans etat,constat,10730,offre sans etat
+TRANSACTION,offre sans etat,constat,10733,offre sans etat
+TRANSACTION,offre sans etat,constat,10736,offre sans etat
+TRANSACTION,offre sans etat,constat,10737,offre sans etat
+TRANSACTION,offre sans etat,constat,10739,offre sans etat
+TRANSACTION,offre sans etat,constat,10742,offre sans etat
+TRANSACTION,offre sans etat,constat,10745,offre sans etat
+TRANSACTION,offre sans etat,constat,10747,offre sans etat
+TRANSACTION,offre sans etat,constat,10753,offre sans etat
+TRANSACTION,offre sans etat,constat,10754,offre sans etat
+TRANSACTION,offre sans etat,constat,10757,offre sans etat
+TRANSACTION,offre sans etat,constat,10762,offre sans etat
+TRANSACTION,offre sans etat,constat,10764,offre sans etat
+TRANSACTION,offre sans etat,constat,10767,offre sans etat
+TRANSACTION,offre sans etat,constat,10768,offre sans etat
+TRANSACTION,offre sans etat,constat,10770,offre sans etat
+TRANSACTION,offre sans etat,constat,10791,offre sans etat
+TRANSACTION,offre sans etat,constat,10793,offre sans etat
+TRANSACTION,offre sans etat,constat,10795,offre sans etat
+TRANSACTION,offre sans etat,constat,10798,offre sans etat
+TRANSACTION,offre sans etat,constat,10799,offre sans etat
+TRANSACTION,offre sans etat,constat,10801,offre sans etat
+TRANSACTION,offre sans etat,constat,10804,offre sans etat
+TRANSACTION,offre sans etat,constat,10807,offre sans etat
+TRANSACTION,offre sans etat,constat,10809,offre sans etat
+TRANSACTION,offre sans etat,constat,10822,offre sans etat
+LECTURE,transaction presente non relue la nuit derniere,a juger,30712,vue la derniere fois le 2026-10-26T04:50:32+00:00
+LECTURE,transaction presente non relue la nuit derniere,a juger,1001361,vue la derniere fois le 2026-10-26T04:50:32+00:00
