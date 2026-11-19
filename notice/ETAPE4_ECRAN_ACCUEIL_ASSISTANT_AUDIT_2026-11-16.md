@@ -3389,5 +3389,30 @@ l'IA »), elle disparaît à P4.
   relire sans les effacer) : re-valider « nouveau mandant » sans rien taper est alors refusé ; il suffit de les retaper.
 - Les photos (forme « fichiers ») restent à déposer dans la fenêtre (P6).
 
-**Reste** : l'essai réel en admin (allumer `assistant_parcours` sur « admin » = écriture en base,
-son accord) ; puis P5, P4, P6, P7, P8.
+### 94.5 L'ESSAI RÉEL (19/11, 09:25-09:31 UTC) — VERT, sur la production, dans le Chrome de Frédéric, avec son accord
+
+**Ses mots** : « Oui » (allumer l'interrupteur pour l'essai réel), puis « Utilise chrome ».
+
+- **L'interrupteur** : `app_setting` `assistant_parcours` = `admin`, ajouté à 09:25:11 UTC (description écrite dans la
+  ligne). L'assistant lui-même est déjà réservé à l'admin (`assistant_ia` = admin) : aucun négociateur ne voit rien.
+  Retour arrière : retirer la ligne.
+- **Le parcours, en ligne** (main 505ffa6, Render et Vercel) : une conversation NEUVE, « Je veux créer une estimation
+  d'essai (essai du parcours guidé, ne rien créer chez Hektor) » (un appel au modèle ; il a répondu sans carte). L'entrée
+  d'essai est apparue (la sonde marche), puis « Une estimation » → parcours `f674be40-c8f7-4e5d-8b65-2514211e55ef`.
+  Données INVENTÉES : 1 rue de l'Essai, 42700 Firminy, Maison, agence FIRMINY, 95 m², 4 pièces, 3 chambres, une cuisine
+  de 11 m², jardin, terrain 600 m² ; nouveau mandant « Mme Essai-Parcours Claire », essai.parcours@exemple.invalid.
+- **Ce que la base a gardé** (relu par le connecteur) : les réponses dans la langue de la fenêtre, recopies de l'adresse
+  comprises ; le parcours est passé de 17 à 15 questions quand le type « Maison » a été choisi ; « nouveau » SEUL dans les
+  réponses ; ⭐ aucune coordonnée ni dans les réponses ni dans `app_assistant_message` ; 1 ligne au coffre privé (civilité,
+  nom, prénom, e-mail, téléphone).
+- **La fenêtre remplie** (capture : `notice/preuve_parcours_guide_fenetre_remplie_2026-11-19.jpg`) : « Pré-rempli par
+  l'assistant : 16 cases, d'après tes réponses au parcours » — Offre 6 (Maison, 95, 4, 3, terrain 600, jardin oui),
+  Secteur 8 (les adresses du haut, privée et publique), Composition 1 (la cuisine), Mandat 1 (Mme., Essai-Parcours, Claire,
+  l'e-mail, le téléphone). Fermée par « Revenir à la conversation », SANS « Créer ».
+- **Après** : le coffre est VIDE (0 ligne, prendre = effacer, prouvé) ; le parcours reste « en cours » (purgé dans 30 jours) ;
+  0 travail de création d'annonce depuis 09:20 → rien chez Hektor. Page rechargée : la conversation retrouve son parcours
+  (15 pastilles, « Tout est répondu »), l'entrée d'essai se cache tant qu'un parcours est en cours.
+- **Non éprouvé en réel** : « Créer » puis la note « créée » du parcours (route et code éprouvés hors ligne seulement) — il
+  faudrait créer une vraie fiche chez Hektor, ce qui n'était pas demandé.
+
+**Reste** : P5, P4, P6, P7, P8.
