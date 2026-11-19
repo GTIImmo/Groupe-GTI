@@ -525,3 +525,103 @@ Et **cinq arbitrages du 18/11 ne sont traités par personne** : la règle « tou
 4281 à réparer chez Hektor, l'audit REFUS5 (à refaire : son script est antérieur à la
 demande), et la moitié « créer » de `1ESJE28Q` et `8Q3LHGZ4` — il a dit « défaire ET créer »,
 les deux patchs ne défont que.
+
+---
+
+## 13. ⭐⭐ SEPT PROPOSITIONS POUR LE CHANTIER — **rien n'est décidé, elles sont à lui**
+
+> ⛔ Écrites le 19/11 à sa demande (*« as-tu des idées pour améliorer ma demande et le futur
+> chantier ? »*). **Aucune n'est engagée** : un périmètre ne se décide pas sans lui.
+
+### ① ⛔⛔⛔ LE RISQUE QUE PERSONNE N'A ENCORE SOULEVÉ : une étiquette écrite dans le Sheet peut changer la nuit suivante
+
+À l'étape 5.2, nos `app_dossier_uuid` partent dans la colonne `affair_uuid` du Sheet. **Mais
+l'étiquette est le résultat d'une déduction refaite chaque nuit, et elle bouge** : 138
+scissions le 18/11, 6 fusions depuis le 12/11. Le jour où un UUID est écrit dans le Sheet et
+qu'une scission le change chez nous, **la correspondance est cassée des deux côtés, en
+silence, et personne ne le voit.**
+
+⭐ **Et le projet a déjà payé cette faute sous un autre nom** : *« un identifiant calculé sur
+une valeur qui bouge »*, et la règle du 28/10 — *« un numéro de chaîne ne doit jamais servir
+de point d'accrochage, il bouge »*. Le gel s'accroche à la **transaction** pour cette raison
+exacte. **L'étape 5.2 referait, à l'échelle du Sheet, la faute que le gel a évitée.**
+
+➡ **Proposition :** avant d'écrire une seule ligne dans le Sheet, décider ce qui arrive à une
+étiquette **publiée**. Trois chemins possibles : la rendre immuable dès qu'elle est publiée
+(le chaînage peut tout rechaîner sauf elle) · la laisser bouger mais **crier** (une sentinelle
+compare le Sheet à l'étiquette du jour) · ou n'écrire dans le Sheet **que des étiquettes dont
+le dossier est clos** (vente réglée), qui ne bougeront plus.
+⛔ **Rien de tout cela n'existe aujourd'hui** : vérifié, aucune protection d'étiquette dans le
+code. Le « verrou des quatre tables » du 16/11 est un verrou de **droits**, pas d'immuabilité.
+
+### ② ⭐⭐ NE PAS LAISSER 9 % BLOQUER 91 % — écrire les UUID par vagues
+
+Mesure du 19/11 :
+
+```
+4 794 lignes du Sheet connues
+4 703 liees
+4 448 a ETIQUETTE UNIQUE
+4 346 a etiquette unique ET TOUS LEURS LIENS SURS, toutes avec une transaction vivante
+  102 a etiquette unique mais UN LIEN « a valider »
+  255 a PLUSIEURS etiquettes          <- le bouchon
+```
+
+➡ **4 346 lignes, soit 90,7 % du classeur, pourraient recevoir leur UUID dès que la question
+① est tranchée.** Aujourd'hui le plan attend que les 255 soient résolues pour commencer.
+**Proposition :** faire 5.2 en vagues — la vague 1 sur les 4 346, puis les 102, puis les 255
+une fois jugées. Le chantier avance de 91 %, et le problème restant est **isolé et nommé**.
+
+### ③ ⭐⭐ UN CRITÈRE DE FIN, ET UN SEUL CONTRÔLE QUI LE MESURE
+
+Le chantier n'a **aucun critère de fin mesurable** : c'est pour ça qu'il dure. **Proposition :**
+un contrôle versionné sur le patron du projet (`controle_balayage_photos_masquees.py`,
+`controle_domaine_documents.py`) — `phase2/checks/controle_chantier_classeur.py`, sortie 0
+vert / 1 un rouge / 2 pas pu mesurer — qui rend **le reste-à-faire en un chiffre** :
+
+```
+lignes sans lien non justifiees . liens « a valider » . lignes a plusieurs etiquettes
+valeurs du classeur non posees non justifiees . lignes sans UUID dans le Sheet
+questions ouvertes non repondues
+```
+
+Chaque séance le rejoue, et **le reste-à-faire doit décroître**. C'est aussi ce qui dira « le
+chantier est fini », sans débat.
+
+### ④ ⭐⭐ LE GABARIT OBLIGATOIRE D'UN GESTE DE MASSE
+
+Nos campagnes écrivent déjà `etat_avant` / `etat_apres` dans la charge — **c'est très bien, et
+c'est ce qui rend le temps 3 possible.** Mais il manque deux marches, et leur absence est
+exactement ce qui nous coûte cette enquête :
+
+```
+a  ecrire etat_avant / etat_apres dans la charge          ✅ DEJA FAIT
+b  prendre une PHOTO des lignes visees AVANT              ~ partiel (178, 5, 2, 1 lignes)
+c  REJOUER le chainage apres, et comparer                 ⛔ JAMAIS FAIT
+```
+
+➡ **Proposition :** aucune campagne ne part sans les trois. La marche (c) coûte une fonction
+déjà écrite et rejouable, et elle aurait répondu en dix minutes à la question qui nous occupe
+depuis deux jours.
+
+### ⑤ ⭐ INTERDIRE UN QUATRIÈME APPARIEMENT COMPLET
+
+Trois appariements indépendants du Sheet existent déjà (29/10, 18/11, 19/11), et ils
+s'accordent très largement. Un quatrième coûterait une nuit et n'apprendrait rien.
+**Proposition :** le prochain chat n'a le droit de refaire un appariement complet **que s'il
+prouve d'abord que les trois précédents sont faux**, cas par cas. Sinon, il les **recoupe**.
+
+### ⑥ ⭐ GROUPER SES ARBITRAGES SUR UNE SEULE PAGE, ET LA RÉUTILISER
+
+Il reste **32 questions écrites + 1 muette + 5 décisions + 5 arbitrages non traités**. Posées
+une par une au fil des séances, elles se perdent et elles le fatiguent. **Proposition :** les
+regrouper par famille sur **la page d'arbitrage qui existe déjà** (celle qui a servi aux 41
+lignes, dont les réponses vivent dans sa base) plutôt que d'en refaire une. Il tranche en
+série, une fois, et les décisions survivent à la conversation.
+
+### ⑦ UNE SENTINELLE SUR LE BOUCHON
+
+`data.classeur_ligne_sans_lien` existe (seuil 92) ; **rien ne surveille les lignes à plusieurs
+étiquettes** — elles sont passées de 33 à 255 en sept jours sans qu'aucune alerte ne sonne.
+**Proposition :** une sentinelle de plus, seuil posé sur la mesure du jour, relue après chaque
+geste. Elle aurait nommé le problème le 18/11 au matin.
