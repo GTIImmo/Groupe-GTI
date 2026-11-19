@@ -239,4 +239,118 @@ Sheet — **la question de principe (1ʳᵉ offre ou offre acceptée) reste à F
 
 ---
 
-*(§ 7 à § 9 écrits après la lecture du gel et du rapport de l'autre session.)*
+## 6 bis. ⭐⭐ MON VERDICT SUR LE GEL — toujours SANS l'autre session
+
+> Écrit après le commit `ce2301e` (01:07), en lisant le gel **chez Supabase, son maître** :
+> relu par tranches, **vérifié à l'empreinte** (`8084e535…`, 12 787 liens, identique).
+> ⚠ La copie locale ne suffisait pas : même compte, même somme, mais **empreinte différente** —
+> elle date de la descente du 18/11 à 06:45, avant le déplacement de deux liens du bien 43091
+> (sauvegarde `app_classeur_lien_avant_rattachement_43091_20261118`).
+> Script : `phase2/checks/audit_v2_gel_contre_moi_2026-11-19.py` ;
+> fichier : `notice/AUDIT_INDEPENDANT_V2_GEL_CONTRE_MOI_2026-11-19.csv`.
+
+### ⛔ La version 1.1 de mon calcul — UN changement de règle, assumé
+
+La confrontation au gel a montré une faiblesse de **ma** résolution des conflits : je donnais
+un compromis disputé à la ligne qui avait **le nom**, contre celle qui avait **la date au jour
+exact**. Or j'avais moi-même établi (M8QJWMBM) que **Hektor réutilise le contact de l'acheteur
+précédent** sur le compromis du suivant. ➡ **Une date au jour exact bat un nom seul**, puis le
+nom, puis le score. **26 choix changent** entre `ce2301e` et la v1.1, tous du même type (un
+compromis passe de la ligne « au nom » à la ligne « au jour ») :
+
+```
+GQCBSQNY +C27133   2HOL5ISX 27133->27134      N1CUULMN +C4481    YRUF0S9H -C4481
+Z0BDVNBZ +C4541    RGCEC677 4541->4542        U4O5Q370 +C24309   KODULWGN -C24309
+Q20JKY62 +C4351    VM0FHRB3 -C4351            HPOCWXIR +C19828   M3LQT4JY -C19828
+VR1K2NJW +C27685   EHQQU5U7 -C27685           6FQO29C8 +C19131   V3FO5NDA -C19131
+87QOXR64 +C17427   OXQSBZ9V -C17427           2FBR2M9U +C1101    E6RLLKMN -C1101
+VMWFLLW4 +C23050   SBH4QWDW -C23050           Q602VZJX +C6554    QJ9LLT05 -C6554
+8GIIDS5T +C21      CW4IYXO2 -C21
+```
+
+⚠ **Ce changement vient d'une confrontation avec le gel**, pas d'un témoin du chantier : il
+rapproche mon calcul du gel sur ces 26 lignes, et **ne compte donc pas comme une convergence
+indépendante** sur elles. Le calcul arrêté de `ce2301e` reste lisible dans git.
+
+### Le verdict, ligne par ligne (v1.1)
+
+```
+JUSTE                    4 549   le gel et moi disons la meme chose
+JUSTE_JUMEAU                 2   Hektor a deux compromis jumeaux, le gel a pris l'autre :
+                                 aussi juste que moi (0bc98552, 9CQ325R6)
+PARTIEL                     64   une partie des liens est contredite ou croisee
+PARTIEL_NON_PROUVE           9   une partie des liens n'est prouvee ni dans un sens ni
+                                 dans l'autre (dont LQXGFCKH)
+FAUX                        17   + 1 avec une copie C5 (739a0db1)
+C5_COPIE                    21   + 2 (8RWTD0YX, 739a0db1) : le gel tient une creation de C5
+                                 la ou Hektor porte la vraie transaction
+INCOMPLET                   21   le gel n'a pas un lien que je prouve
+QUESTION                    16   doublon du Sheet a preuve EGALE, ou offre RENEGOCIEE
+QUESTION_BIEN                2   c0a73edd (deux lots JUQUET, une ligne) . M2G1Z1K8 (lot voisin)
+SANS LIEN AU GEL            93   40 a rattacher . 51 bien sans transaction . 2 rien
+                                 (dont les 2 lignes NEES depuis : 54376c72, ffcf30e6)
+```
+
+**Rôle par rôle** : 12 466 liens identiques ; le gel a 98 liens que je n'ai pas (33 offres,
+52 compromis, 13 ventes), j'en ai 106 qu'il n'a pas (44, 37, 25), 28 divergent, et 23
+créations de C5 doublent une vraie transaction de Hektor (8 offres, 15 compromis).
+
+**La qualité de chaque désaccord** (la transaction du gel, jugée par ma règle) :
+
+```
+contredit_nom      51   un autre acquereur, et aucune date pour le sauver
+croise             31   je la donne a une AUTRE ligne, mieux prouvee sur elle
+renegociation      13   meme bien, meme acheteur, deux offres : SA question de principe
+egalite             9   doublons du Sheet a preuve EGALE : mon choix est un tri
+non_prouve          9   ni date ni nom, sans contradiction
+chronologie         5   a plus de deux ans de toutes les dates de la ligne
+moins_bien          4   designee, mais moins bien que mon choix
+egal_dans_le_bien   3   jumeaux de Hektor
+prouve_sans_rival   3   designee, je n'ai rien mis a sa place (biens differents)
+MIEUX_QUE_MOI       2   c0a73edd : le gel suit les CHIFFRES du lot 59133, moi le LIEN
+                        de l'agence vers 59136 -> QUESTION, rien ne se retire
+vente_sur_annulee   1   LQXGFCKH : Hektor porte la vente MEURIN, le Sheet dit annulee
+```
+
+⛔ **Un « contredit_nom » n'est pas un « faux » prouvé** : 501 lignes justes montrent que le
+contact change dans une chaîne Hektor. Sans date, un autre nom DOUTE, il ne PROUVE pas. Seuls
+`croise`, `contredit_date` et un bien différent quand mon bien est certain fondent un retrait.
+
+### Les listes nominatives (v1.1, produites par script)
+
+```
+FAUX (17)  1ESJE28Q 1f3d536a 4fc6b33a 5a4371b5 60CLRO51 8Q3LHGZ4 NEFHS7JI P46WN6R6
+           SHN6RKDI TR42PT5H WJ3KA32F Y51UMZHY a8aaeb2b caea1510 d2108609 ea6a28a7
+           fa06e4e5            + FAUX+C5_COPIE : 739a0db1
+QUESTION (16)  045ecde7 2dfa6ef3 3308P0UX 427UDDSF 45225170 5QE9107L 5a956cad E6RLLKMN
+               KT0601S6 O6R10ZQA OXQSBZ9V SBH4QWDW V3FO5NDA ce63cee9 d1cb8dd7 f1aedc01
+QUESTION_BIEN (2)  M2G1Z1K8 c0a73edd
+C5_COPIE (21)  1cc703d9 2FBR2M9U 3S4ZWOFK 6U5DQQ4J 87QOXR64 8NZ6V6XB 9KHYVR1M 9WQ204HP
+               A07EC3DH EO8MXFE9 FWCFAN6O JRN2I7TM LKBO1TOH R0JRVFDC S3HOG6UL SWSN80FQ
+               T0WL4QE7 T2GZOY5O TRJ5Y59U UTLG66LE VMWFLLW4   + 8RWTD0YX, 739a0db1
+A RATTACHER (40)  1eec6575 2U5QPKRC 4G2UHO35 515RUEN3 58I5AO17 5H70KQZA 5e4c8881 6FQO29C8
+                  70740f2f 72GQRHVB 7IHI7YTJ 7JXLR3JQ 8ATXF2EZ 91IHSGNC 9706WM9J 9Q0FHAKK
+                  CS38OO8R D9MMB7OU DHXRAK9O EJN79TJ1 ESMCO1NC I3TFR2KG J6RGX0CQ JL8GV7RQ
+                  KAYC29B7 LUX9SDIL MDOXOBIC MQ6H8TVQ O1099YC0 O8BY6AC8 PPIM4947 QXDW8EQA
+                  S8BKB6FL UL12H3AQ YRUF0S9H Z6P7KE5R ZZ5WKMWM b43e76f5 b884cbd4 c6233284
+```
+(PARTIEL, INCOMPLET, PARTIEL_NON_PROUVE et les 51 biens sans transaction : dans le CSV.)
+
+### ⭐ Ce que la confrontation au gel m'a appris, au-delà des comptes
+
+1. ⭐⭐ **Hektor réutilise le contact de l'acheteur précédent** : un compromis au jour exact
+   d'une affaire, au nom de celui qui avait renoncé avant. **Le nom ment plus souvent que le
+   jour.** (N1CUULMN : compromis 4481 au jour de MARCHEPOIL, au nom de VIALLARD.)
+2. ⭐ **Hektor porte des jumeaux** : deux compromis du même jour, même acheteur, même prix
+   (24157/24158, 21803/21804, 27133/27134). Choisir l'un ou l'autre est également juste.
+3. ⚠ **Des lignes du Sheet décrivent deux lots** : c0a73edd porte les chiffres du lot 59133 et
+   le lien de l'agence vers le lot 59136 ; M2G1Z1K8 le mandat 16559 et l'acheteur du lot 16560.
+4. ⛔ **Trois liens du gel sont faux par le BIEN, au-delà des trois déjà vus par Frédéric**
+   (1ESJE28Q, 8Q3LHGZ4, NEFHS7JI) : Y51UMZHY (offre CASSARO de 2011 à 81 000 € pour une affaire
+   de 2024 à 300 000 €), WJ3KA32F (offre GIMBERT sans date ni montant, sur un autre bien),
+   a8aaeb2b (l'achat BOUZENAD du bien 1970, alors que la ligne porte le lien d'administration
+   de l'annonce 61592 : une affaire en cours que Hektor n'a pas encore).
+
+---
+
+*(§ 7 à § 9 écrits après la lecture du rapport de l'autre session.)*

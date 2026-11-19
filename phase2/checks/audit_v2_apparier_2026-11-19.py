@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 """AUDIT V2, TEMPS 1 -- MON APPARIEMENT INDEPENDANT. 19/11/2026, session de reprise V2.
 
-    .venv\Scripts\python.exe -X utf8 phase2\checks\audit_v2_photo_2026-11-19.py
-    .venv\Scripts\python.exe -X utf8 phase2\checks\audit_v2_apparier_2026-11-19.py
+    .venv\\Scripts\\python.exe -X utf8 phase2\\checks\\audit_v2_photo_2026-11-19.py
+    .venv\\Scripts\\python.exe -X utf8 phase2\\checks\\audit_v2_apparier_2026-11-19.py
 
-Lit UNIQUEMENT la photo prise par a1_photo.py (Sheet, registre, annonces, mandats,
-contacts, MODELO). N'ecrit QUE dans le dossier de travail.
+Lit UNIQUEMENT la photo prise par audit_v2_photo_2026-11-19.py (Sheet, registre, annonces,
+mandats, contacts, MODELO). N'ecrit QUE le CSV de notice/ (voir SORTIE_CSV).
+⭐ VERSION 1.1 (19/11 ~02:00) : dans un conflit, une date au jour exact bat un nom seul
+  (voir la boucle d'exclusivite). Le calcul arrete de la v1 est dans le commit ce2301e.
 
 ⛔ LES QUATRE REGLES D'INDEPENDANCE (dossier V2, § 3) :
   1. le gel (app_classeur_lien) n'est PAS lu ici -- il n'est meme pas dans la photo ;
@@ -723,16 +725,24 @@ for tour in range(8):
     for iu, r in choix_courant.items():
         if r:
             for k, (sc, pr, t) in r["garde"].items():
-                reclam[t["id"]].append((sc, force(iu), len(r["garde"]), iu))
+                # ⭐⭐ VERSION 1.1 (19/11 ~02:00, APRES la confrontation avec le gel) : une
+                #   date AU JOUR EXACT bat un nom seul. Hektor reutilise le contact de
+                #   l'acheteur PRECEDENT sur le compromis du suivant (M8QJWMBM, N1CUULMN,
+                #   GQCBSQNY...) : le nom ment plus souvent que le jour. Puis le nom, puis
+                #   le score. ⛔ Le calcul arrete (ce2301e) departageait par le seul score.
+                exact = any("au jour pres" in p or "au jour de l'annulation" in p for p in pr)
+                nom = any((p.startswith("acquereur ") and "different" not in p) or
+                          p.startswith("NOM VOISIN") for p in pr)
+                reclam[t["id"]].append((exact, nom, sc, force(iu), len(r["garde"]), iu))
     a_rejuger = set()
     for tid, cl in reclam.items():
         if len(cl) > 1:
             cl.sort(reverse=True)
-            gagnant = cl[0][3]
+            gagnant = cl[0][-1]
             for c in cl[1:]:
-                exclues[c[3]].add(tid)
-                conflits[c[3]].append((tid, gagnant))
-                a_rejuger.add(c[3])
+                exclues[c[-1]].add(tid)
+                conflits[c[-1]].append((tid, gagnant))
+                a_rejuger.add(c[-1])
     print("  tour %d : %d transactions disputees, %d lignes rejugees"
           % (tour + 1, sum(1 for c in reclam.values() if len(c) > 1), len(a_rejuger)))
     if not a_rejuger:

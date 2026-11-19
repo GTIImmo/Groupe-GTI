@@ -7,8 +7,10 @@ import sys
 from pathlib import Path
 
 ICI = Path(__file__).resolve().parent
-CSV_MOI = Path(r"C:\Hektor\Projet
-otice\AUDIT_INDEPENDANT_V2_MON_APPARIEMENT_2026-11-19.csv")
+# ⛔ BORD (19/11) : ce chemin s'etait coupe en deux au rangement dans le depot (« \n » de
+#   « \notice » lu comme un retour a la ligne) -- le script ne compilait plus. On ne
+#   l'ecrit donc plus avec des barres obliques inverses.
+CSV_MOI = Path(__file__).resolve().parents[2] / "notice" / "AUDIT_INDEPENDANT_V2_MON_APPARIEMENT_2026-11-19.csv"
 sys.argv, ids = sys.argv[:1], sys.argv[1:]
 import importlib.util  # noqa: E402
 _spec = importlib.util.spec_from_file_location("apparieur_v2", ICI / "audit_v2_apparier_2026-11-19.py")
