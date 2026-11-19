@@ -18,19 +18,25 @@
 
 > Demandé par Frédéric le 19/11 : *« c'est ce qui survivra quand ta conversation sera résumée »*.
 > ⭐ **Le BUT est ⑧ : écrire nos identifiants dans le Sheet.** Le reste est le chemin.
-> Dernière mise à jour : 19/11, fin des questions ③ et ④.
+> Dernière mise à jour : 19/11, ses quatre décisions du jour appliquées (les 10 lignes écrites).
+>
+> **Ses quatre décisions du 19/11** : ① les 10 lignes VALIDÉES → écrites (§ 2.7) ; ② la règle E
+> **n'est PAS allumée** — *« UN GESTE PAR NUIT, on verra demain, après le contrôle des 10 »* ; ③ 26613
+> **exclue de la règle E, et l'exclusion DÉCLARÉE** ; ④ le patch du gel : je le redemande à ⑦.
 
 ```
 Q  SUJET                         ETAT        VERDICT EN UNE LIGNE                          ATTEND SA DECISION
-①  compromis annule sans date    FAIT        regle E + garde, ETEINTE, rejouee : 35        l'allumage (« vas-y ») ;
-                                             reunions, temoins verts, 0 a tort connu       26613/SHN6RKDI avant
-②  les 10 « meme nom »           FAIT        des menages : 3 lies par numero, 7 par rien   VALIDER LA LISTE (§ 2.6)
-                                             -> R1 retenu (10 lignes), R2 plus tard,       avant toute ligne au
-                                             R4 non                                        fichier
+①  compromis annule sans date    FAIT        regle E + garde, ETEINTE, rejouee : 35        l'allumage -- PAS cette
+                                             reunions, temoins verts, 0 a tort connu       nuit ; demain, APRES le
+                                                                                           controle des 10
+②  les 10 « meme nom »           FAIT,       des menages -> R1 : les 10 lignes ECRITES,    -- (decide). ⏰ demain :
+                                 ECRIT       rejouees : 10 dossiers bougent, pas un de     controler la nuit
+                                             plus ; 11 590 -> 11 580                       (§ 2.7)
 ③  les 2 offres du bien 61672    FAIT        le run ne marque jamais absente une           --
-                                             transaction « possedee par l'app » ; deux
-                                             lignes « sans objet » au carnet les
-                                             protegent pour toujours ; touche 2
+                                             transaction « possedee par l'app » ; 12
+                                             portent un « sans objet », UNE SEULE en
+                                             depend (30712) ; le vrai reservoir est la
+                                             plage app : 340 presentes ; touche 2
                                              transactions aujourd'hui
 ④  la « fusion » du 18/11        FAIT        un TRANSFERT compte comme fusion (1 sur 6) ;  --
                                              la RPC garde l'etiquette du plus petit
@@ -415,6 +421,38 @@ de l'offre seule disparaît — 10 fusions la nuit suivante, le seuil de 10 crie
 écrites, le **rejeu** (le gabarit du temps 3) nommera chaque dossier qui bouge : 10 attendus, pas un de
 plus.
 
+### 2.7 ✅ ÉCRITES ET REJOUÉES — sa décision du 19/11 : « VALIDÉES, les dix »
+
+**Ses mots** : *« Écris-les dans rattachements_manuels.csv et commite. Le fichier doit passer de 6 à 16
+décisions, pas une de plus. Je sais qu'elles agiront dès le run de cette nuit, et je l'accepte. »*
+
+Les 10 lignes sont dans `phase2/sync/rattachements_manuels.csv`, sous un en-tête daté qui dit
+pourquoi. Rejeu : `phase2/checks/temps4_rattachements_10_menages_2026-11-19.py` (lecture seule, la vraie
+fonction, le fichier SANS les 10 fabriqué dans un dossier temporaire) →
+`notice/TEMPS4_RATTACHEMENTS_10_MENAGES_REJEU_2026-11-19.csv`.
+
+```
+FICHIER    16 decisions (attendu 16) ; les 10 du 19/11 presentes a l'identique
+BASE       le fichier SANS les 10 rend la base a 0 ecart (11 590 dossiers)
+APRES      11 580 dossiers
+POSITIF    10 offres sur 10 rejoignent le dossier de leur compromis
+INVERSE    transactions qui bougent HORS des 10 offres : 0
+GARDES     deux ventes 0 . deux compromis vivants 0 (avant comme apres)
+ETIQUETTE  la RPC garde celle du COMPROMIS, 10 sur 10 ; celle de l'offre disparait
+COMPTEUR   [M] rattachement decide a la main : 6 -> 16
+LES DIX DOSSIERS QUI BOUGENT (l'offre quitte son dossier d'une transaction) :
+   10955 5356->5355 . 11014 5408->5407 . 27037 13056->13055 . 35702 16866->16865
+   36712 17278->17277 . 41584 20196->20195 . 42883 21339->21337 (3 membres) . 44276 22069->22068
+   52724 26825->26824 . 55040 28328->28327
+```
+
+⏰ **CE QUE LA NUIT DOIT MONTRER** (le contrôle de demain matin, avant tout autre geste) : 11 580 dossiers
+au lieu de 11 590 ; dans le journal du run, « 16 rattachement(s) à la main » ; à la pose des
+étiquettes, **10 fusions** — ⚠ le cri `SEUIL_FUSIONS_QUI_INQUIETE = 10` (`>=`) **sonnera, et c'est
+attendu** ; chacune des 10 offres porte l'étiquette de son compromis. Tout autre écart est un rouge.
+⚠ **Non mesuré** : la RPC elle-même n'est pas rejouée (simulée : « le plus petit numéro garde ») ; et si
+une autre écriture de la journée change le registre avant le run, le compte de 11 580 bougera avec elle.
+
 ---
 
 ## ③ LES DEUX OFFRES DU BIEN 61672 — protégées pour toujours
@@ -441,7 +479,30 @@ CE QUE CA TOUCHE   aujourd'hui : CES 2 transactions et rien d'autre (temps 2 : 2
 PISTE (rien n'est fait) : qu'une ligne « sans objet » ne compte plus comme possession ; ou que la
           protection ait une duree. C'est la decision C.7, deja nommee dans le code.
 NON MESURE : combien de transactions portent aujourd'hui une ligne « sans objet » (donc seraient
-          protegees si Hektor les supprimait demain).
+          protegees si Hektor les supprimait demain).  ➡ MESURE le 19/11, ci-dessous.
+```
+
+**⭐ LA MESURE DEMANDÉE (19/11) — « 2 transactions ou 2 000 ? » : 12, et une seule en dépend.**
+Lue deux fois, et les deux disent la même chose : le carnet LOCAL (`app_affaire_champ_app__sb`, descendu
+ce matin) et Supabase EN DIRECT (`app_affaire_champ_app`).
+
+```
+LE CARNET ENTIER    48 lignes sur 12 transactions -- c'est tout. 46 « sans_objet », 2 « arrivee »
+« SANS OBJET »      12 transactions (46 lignes) : 11 offres nees dans l'app (plage >= 1 000 000)
+                    et UNE SEULE hors plage, 30712. Temoin positif : 30712 et 1001361 y sont.
+                    Biens : 24113 (6 offres), 61672 (2), 62965 (2), 24933 (1), 61398 (1).
+                    (Je n'ai PAS verifie si ce sont des biens d'essai.)
+CE QUI EN DEPEND    la ligne « sans objet » ne protege SEULE qu'UNE transaction : 30712. Les 11
+                    autres sont nees dans l'app : la PLAGE les protege deja, avec ou sans carnet.
+LE VRAI PERIMETRE   c'est donc la PLAGE, pas le carnet : 530 transactions nees dans l'app, dont
+                    340 presentes. Toutes sont « possedees pour toujours ». Aujourd'hui, une
+                    seule n'a pas ete relue au dernier passage (1001361), et au total 2
+                    transactions presentes non relues (30712 et 1001361 -- les deux de 61672).
+REPONSE             le defaut touche 2 transactions aujourd'hui. Il en touchera une de plus a
+                    chaque transaction nee dans l'app (ou passee par le carnet) que Hektor
+                    supprimera : le reservoir est de 340, pas de 2 000.
+NON MESURE          combien des 340 Hektor supprimera, et a quel rythme (2 en un mois, les deux
+                    du meme bien d'essai).
 ```
 
 ---
