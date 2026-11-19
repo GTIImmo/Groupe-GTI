@@ -3634,3 +3634,22 @@ Hektor » était SOUS LE CURSEUR, à la place du « Envoyer 1 document » du dé
 enregistré. Toujours non corrigé (à décider).
 **Au ménage** : 63330 porte 1 pièce FICTIF (le titre) ; son terrain vaut maintenant 742 (valeur d'essai).
 ⏳ **Restent non éprouvés** : la première personne d'un couple (F).
+
+### 12.55 LE CLIC DE TROP CORRIGÉ : « Ce que dit… » attend la fermeture du dépôt (19/11, « Oui, corrige-le », « Oui, pousse »)
+
+**Choix** : la fenêtre ATTEND (le cochage d'avance, voulu, ne change pas). `lib/gedFenetreDepot.ts` (neuf) : un compteur des
+fenêtres de dépôt ouvertes + l'événement `ged:fenetre-depot` ; `DepotDocuments.tsx` se signale ouvert / fermé SEULEMENT en
+fenêtre au-dessus du bien (`onFermer`, skin cockpit) ; `RecuManque.tsx` : l'ouverture d'elle-même ne part pas tant que le
+dépôt est ouvert, et ne marque RIEN vu avant (elle part à la fermeture). Commit `a71cf0b`, poussé seul (`c4b319a`), en ligne
+(`index-DSLJjWT0.js`, la chaîne `ged:fenetre-depot` est dans le paquet servi).
+**Contrôles** : `test_ged_bilan` **136 VERT** (3 neufs) ; témoin inverse (garde retirée) -> 1 ROUGE ; dépôt 33, Reçu / Manque
+29 verts ; `npm run build` vert. (`test_ged_remplir_contact` rouge SUR LE DISQUE = App.tsx en CRLF depuis la fusion du matin ;
+80 / 80 sur le contenu commité -- la correction ne touche pas App.tsx.)
+**Épreuve à l'écran** (63330, un 2e titre FICTIF : 800 m², acte du 02/06/2015) : envoyé, lu en ~10 s (« acte de vente du
+02/06/2015 ») -- **20 s après, AUCUNE fenêtre par-dessus le dépôt** (la veille : là en moins de 10 s). « Fermer » le dépôt ->
+« Ce que dit le titre de propriété » s'ouvre : terrain 800 / 742, à trancher. Refermée par « Fermer » SANS enregistrer : 0
+calque, aucun `update_hektor_annonce_fields`, terrain toujours 742 ; la ligne reste sur sa carte « Voir et trancher ».
+⚠ **Reste, noté** : la fenêtre s'ouvre à l'instant où le dépôt se ferme, et son « Enregistrer » est encore sous le curseur
+qui vient de cliquer « Fermer » -- un DOUBLE-CLIC sur « Fermer » pourrait encore enregistrer. Remède possible (non fait) :
+« Enregistrer » inactif une seconde après une ouverture d'elle-même.
+**Au ménage** : 63330 porte 2 titres FICTIF ; son terrain vaut 742 (valeur d'essai).
