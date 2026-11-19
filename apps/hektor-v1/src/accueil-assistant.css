@@ -231,6 +231,8 @@ a.asi-obj { text-decoration: none; }
 .asp-rep button:focus-visible { outline: 2px solid var(--asi-canard); outline-offset: 1px; }
 .asp-ok { width: 16px; height: 16px; flex: 0 0 16px; border-radius: 50%; background: var(--asi-ok); color: #fff; display: inline-grid; place-items: center; }
 .asp-ok.is-pale { background: #9aa1a4; }
+/* P4-a : une réponse venue de la demande (« connue ») -- la petite marque « dit » */
+.asp-dit { font-style: normal; font-size: 11px; font-weight: 600; color: var(--asi-ok); background: var(--asi-ok-soft); border-radius: 10px; padding: 2px 7px; }
 
 .asp-q { background: var(--asi-surface); border: 1px solid #f2d5e3; border-radius: 14px; box-shadow: 0 1px 2px rgba(34, 35, 35, 0.04), 0 8px 24px rgba(34, 35, 35, 0.06); overflow: hidden; }
 .asp-q.is-faite, .asp-q.is-fin { border-color: var(--asi-line-2); }

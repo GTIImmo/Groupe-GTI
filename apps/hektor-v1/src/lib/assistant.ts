@@ -274,6 +274,7 @@ export async function contactDeLaRecherche(cle: string): Promise<string | null> 
 export type ReponseCarte = { ok: boolean; etat: EtatCarte; detail?: string; resultat?: Record<string, unknown> }
 
 export async function validerCarte(id: string): Promise<ReponseCarte> {
+  if (MAQUETTE && id.startsWith('carte-parcours')) return attendre(600).then(() => ({ ok: true, etat: 'executee' as const, resultat: { ouvrir: 'parcours', parcours: parcoursFauxRempli() } }))
   if (MAQUETTE) return attendre(900).then(() => ({ ok: true, etat: 'executee' as const, resultat: id.startsWith('carte-creation') ? OUVERTURE_EXEMPLE : id.startsWith('carte-avis') ? AVIS_EXEMPLE : { relance_id: 1 } }))
   return appeler<ReponseCarte>(`/assistant/actions/${encodeURIComponent(id)}/valider`, 'POST')
 }
@@ -302,7 +303,8 @@ export async function noterCreationCarte(id: string, suite: { app_dossier_id: nu
 // LANGUE DE LA FENÊTRE (noms de ses cases). Un clic n'appelle jamais le modèle. Derrière l'interrupteur `assistant_parcours`
 // (403 tant qu'il n'est pas ouvert pour ce compte). ⛔ Les coordonnées d'un NOUVEAU mandant ne passent pas par ici.
 export type QuestionParcours = { id: string; titre: string; phrase: string; forme: string; champs: string[] }
-export type EtatQuestionParcours = 'faite' | 'passee' | 'nsp' | null
+// P4-a (19/11) : « connue » = l'essentiel était dans la demande (lue par l'IA) : pas reposée, modifiable
+export type EtatQuestionParcours = 'faite' | 'passee' | 'nsp' | 'connue' | null
 export type ParcoursVue = {
   id: string
   genre: 'creation_estimation' | 'creation_annonce' | 'avis'
@@ -314,6 +316,8 @@ export type ParcoursVue = {
   repere: { rang: number; total: number; faites: number }
   questions: Array<QuestionParcours & { etat: EtatQuestionParcours }>
   reponses: Record<string, unknown>
+  /** P4-a : d'où vient une case pré-remplie (« demande » = ce que la personne a dit) */
+  sources?: Record<string, string>
   fin: boolean
 }
 /** Une case de la fenêtre, telle que la fenêtre la montre (libellé, liste), fournie par l'App : une seule source. */
@@ -421,12 +425,22 @@ const FAUSSES_QUESTIONS: QuestionParcours[] = [
   { id: 'dehors', titre: 'Le dehors', phrase: "Qu'y a-t-il dehors ?", forme: 'cocher', champs: ['JARDIN-', 'PISCINE-', 'surfterrain', 'GARAGE_BOX'] },
   { id: 'mandant', titre: 'Le mandant', phrase: 'Qui vend ?', forme: 'mandant', champs: ['mandant_choix', 'mandant'] },
 ]
+/** maquette P4-a : le parcours qu'ouvre la carte, déjà rempli de la demande (le bien et l'intérieur « connus ») */
+function parcoursFauxRempli(): ParcoursVue {
+  const p: FauxParcours = { id: `p${Date.now()}`.padEnd(36, '0'), conversation: null, genre: 'creation_estimation', etat: 'en_cours',
+    reponses: { type: '1', adresse_haut: '12 rue des Tilleuls', cp: '42700', ville: 'Firminy', surfappart: '118', nbpieces: '5' },
+    etats: { bien: 'connue', interieur: 'connue' } }
+  fauxParcours.push(p)
+  return vueFausse(p)
+}
+
 function vueFausse(p: FauxParcours): ParcoursVue {
   const q = FAUSSES_QUESTIONS.find((x) => !p.etats[x.id]) ?? null
   return {
     id: p.id, genre: p.genre, etat: p.etat, app_dossier_id: p.app_dossier_id ?? null, profil: p.reponses.type === '1' ? 'house' : 'apartment',  // maquette : 1 = Maison, sinon un appartement
     question: q, repere: { rang: q ? FAUSSES_QUESTIONS.indexOf(q) + 1 : FAUSSES_QUESTIONS.length, total: FAUSSES_QUESTIONS.length, faites: Object.keys(p.etats).length },
     questions: FAUSSES_QUESTIONS.map((x) => ({ ...x, etat: p.etats[x.id] ?? null })), reponses: { ...p.reponses }, fin: !q,
+    sources: Object.fromEntries(Object.keys(p.reponses).filter((k) => p.etats.bien === 'connue' && ['type', 'adresse_haut', 'cp', 'ville', 'surfappart', 'nbpieces'].includes(k)).map((k) => [k, 'demande'])),
   }
 }
 
@@ -505,8 +519,11 @@ async function fauxFlux(question: string, conversationId: string | null, surEven
     return true
   }
   const avis = q.includes('avis de valeur')
-  const creation = !avis && q.includes('estimation')
-  const texte = avis
+  const parcours = !avis && q.includes('questions')  // P4-a : « crée une estimation par questions »
+  const creation = !avis && !parcours && q.includes('estimation')
+  const texte = parcours
+    ? "Je te propose de la créer par questions guidées : ce que tu m'as dit est déjà rangé, les questions suivent à boutons."
+    : avis
     ? "J'ai préparé l'avis de valeur de l'[annonce 4](annonce:4). L'éditeur reprendra le dernier avis, calculera le marché DVF et les autres sources ; rien ne sera généré avant ton clic sur « Générer »."
     : creation
     ? "J'ai préparé la création. Relis les valeurs : la fenêtre s'ouvrira déjà remplie, et rien ne sera créé avant ton clic sur « Créer ». Le [patron vierge à imprimer](patron:fiche-saisie) sert pour la prochaine fiche papier."
@@ -521,7 +538,14 @@ async function fauxFlux(question: string, conversationId: string | null, surEven
     await attendre(40, signal)
     if (q.includes('coupe') && mot.startsWith('annonces')) return false
   }
-  if (avis) {
+  if (parcours) {
+    surEvenement({ type: 'outil', nom: 'proposer_parcours_creation' })
+    surEvenement({
+      type: 'carte', id: `carte-parcours-${Date.now()}`, geste: 'parcours_creation',
+      resume: "Créer une estimation par questions guidées. Déjà dit, pas reposé : le bien, l'intérieur. 13 questions à boutons ensuite, sans l'IA ; à la fin, la fenêtre de création s'ouvre remplie et rien n'est créé avant ton clic « Créer »",
+      expire_le: new Date(Date.now() + 30 * 60_000).toISOString(),
+    })
+  } else if (avis) {
     surEvenement({ type: 'outil', nom: 'proposer_ouvrir_avis_de_valeur' })
     surEvenement({
       type: 'carte', id: `carte-avis-${Date.now()}`, geste: 'ouvrir_avis_de_valeur',

@@ -386,9 +386,9 @@ export default function ParcoursGuide({ vue, catalogue, onVue, onOuvrirFenetre, 
       {donnees.length ? (
         <div className="asp-reps">
           {donnees.map((x) => (
-            <span key={x.id} className="asp-rep">
-              <span className={`asp-ok${x.etat === 'faite' ? '' : ' is-pale'}`}><Coche /></span>
-              <i>{x.titre}</i><b>{resume(x, vue.reponses, cat)}</b>
+            <span key={x.id} className="asp-rep" title={x.etat === 'connue' ? "D'après ta demande : pas reposée, tu peux la modifier" : undefined}>
+              <span className={`asp-ok${x.etat === 'faite' || x.etat === 'connue' ? '' : ' is-pale'}`}><Coche /></span>
+              <i>{x.titre}</i><b>{resume(x, vue.reponses, cat)}</b>{x.etat === 'connue' ? <em className="asp-dit">dit</em> : null}
               {enCours ? <button type="button" onClick={() => setOuverte(x.id)} disabled={envoi}>Modifier</button> : null}
             </span>
           ))}

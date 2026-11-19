@@ -2,7 +2,7 @@ import { Fragment, createContext, useCallback, useContext, useEffect, useMemo, u
 import {
   EVENEMENT_CREATION_FAITE, EVENEMENT_PARCOURS_CREE, RefusAssistant, deposerFichier, etatFichiers, listerConversations, poserQuestion, refuserCarte,
   relireConversation, retirerFichier, rouvrirCarte, separerFichiersJoints, validerCarte,
-  commencerParcours, parcoursDeConversation, parcoursOuvert,
+  parcoursDeConversation, parcoursOuvert,
   type CarteAssistant, type CibleCarte, type ConversationAssistant, type CreationFaite, type EtatFichiers, type EvenementFlux,
   type OuvertureAvis, type OuvertureCreation, type CatalogueParcours, type ParcoursVue,
 } from './lib/assistant'
@@ -53,7 +53,9 @@ type Mode = { type: 'accueil' } | { type: 'conversation' } | { type: 'toutes' }
 const CONVERSATION_GARDEE = 'gti_assistant_conversation'
 
 // Les gestes : l'en-tête de la carte et la phrase de fin (le serveur ne rend que des numéros).
-const GESTES: Record<string, { titre: string; fait: (r: Record<string, unknown>) => string; suite?: string }> = {
+const GESTES: Record<string, { titre: string; fait: (r: Record<string, unknown>) => string; suite?: string; valider?: string }> = {
+  // 19/11 (P4-a) : créer par le parcours guidé ; le clic n'écrit que la mémoire du parcours
+  parcours_creation: { titre: 'Créer par questions guidées', fait: () => 'Le parcours commence ci-dessous.', suite: 'Les questions se répondent à boutons, sans l\'IA.', valider: 'Commencer les questions' },
   demande_direction: { titre: 'Demande à la direction', fait: () => 'Demande envoyée.', suite: 'Elle attend la direction dans Suivi.' },
   creer_relance: { titre: 'Relance', fait: () => 'Relance créée.' },
   statut_relance: { titre: 'Relance', fait: () => 'Relance mise à jour.' },
@@ -409,9 +411,9 @@ function CarteVue({ carte, onValider, onRefuser, onRouvrir, onAvis }: { carte: C
         <div className="asi-c-b"><p className="asi-resume">{carte.resume}</p><LiensCarte cibles={carte.cibles} /></div>
         {carte.detail ? <div className="asi-c-end is-ko">{carte.detail}</div> : null}
         <div className="asi-c-f">
-          <button className="asi-b is-main" type="button" onClick={onValider}>Valider</button>
+          <button className="asi-b is-main" type="button" onClick={onValider}>{geste?.valider ?? 'Valider'}</button>
           <button className="asi-b" type="button" onClick={onRefuser}>Refuser</button>
-          <small>Rien ne part avant ton clic.</small>
+          <small>{carte.geste === 'parcours_creation' ? "Rien n'est créé : seule la fenêtre, à la fin, crée par ton clic." : 'Rien ne part avant ton clic.'}</small>
         </div>
       </div>
     )
@@ -486,10 +488,9 @@ export default function AccueilAssistant(props: {
   // 18/11 (§70) : la carte « avis de valeur » (et « Préparer l'avis de valeur » d'une estimation créée) ouvre l'éditeur
   onOuvrirAvis: (ouverture: OuvertureAvis) => void
   // 19/11 (étape 4 chap. 6, P2) : le parcours guidé -- les cases et listes de la FENÊTRE (une seule source), l'entrée
-  // provisoire réservée à l'admin (remplacée par la proposition de l'assistant à P4), la question du mandant (morceau 3)
+  // venue de la carte « créer par questions » de l'IA (P4-a ; l'entrée d'essai admin est retirée), la question du mandant (morceau 3)
   // et l'ouverture de la fenêtre remplie (morceau 4). Sans catalogue, aucun parcours ne s'affiche.
   catalogueParcours?: (profil: string | null) => CatalogueParcours
-  estAdmin?: boolean
   chercherMandantsParcours?: ParcoursGuideProps['chercherMandants']
   onOuvrirParcours?: (vue: ParcoursVue) => void
 }) {
@@ -513,8 +514,6 @@ export default function AccueilAssistant(props: {
   const champRef = useRef<HTMLTextAreaElement | null>(null)
   // 19/11 (P2) : les parcours guidés de la conversation ouverte ; la sonde dit si l'interrupteur l'ouvre à ce compte
   const [parcours, setParcours] = useState<ParcoursVue[]>([])
-  const [parcoursPossible, setParcoursPossible] = useState(false)
-  const [entreeParcours, setEntreeParcours] = useState<{ envoi: boolean; erreur: string | null }>({ envoi: false, erreur: null })
   const sondeParcours = useRef<Promise<boolean> | null>(null)
   const avecParcours = !!props.catalogueParcours
   if (avecParcours && !sondeParcours.current) sondeParcours.current = parcoursOuvert()
@@ -690,27 +689,6 @@ export default function AccueilAssistant(props: {
     if (el && el.scrollHeight - el.scrollTop - el.clientHeight < 160) el.scrollTop = el.scrollHeight
   }, [tours, parcours])
 
-  useEffect(() => {
-    let vivant = true
-    void sondeParcours.current?.then((ouvert) => { if (vivant) setParcoursPossible(ouvert) })
-    return () => { vivant = false }
-  }, [])
-
-  // 19/11 (P2) : l'entrée provisoire -- un parcours commence DANS la conversation ouverte (il s'y retrouve à la relecture)
-  const commencer = useCallback(async (genre: 'creation_estimation' | 'creation_annonce') => {
-    const conv = conversationId.current
-    if (!conv) return
-    setEntreeParcours({ envoi: true, erreur: null })
-    try {
-      const vue = await commencerParcours(genre, conv)
-      if (conversationId.current === conv) setParcours((l) => [...l, vue])
-      setEntreeParcours({ envoi: false, erreur: null })
-      // la première question se montre : le fil descend jusqu'à elle
-      window.setTimeout(() => { if (fil.current) fil.current.scrollTop = fil.current.scrollHeight }, 0)
-    } catch (e) {
-      setEntreeParcours({ envoi: false, erreur: e instanceof Error ? e.message : 'Le parcours ne commence pas.' })
-    }
-  }, [])
 
   // 17/11 (le trombone) : l'état est lu une fois ; fermé, refusé ou injoignable = pas de trombone (jamais une erreur)
   useEffect(() => {
@@ -843,6 +821,13 @@ export default function AccueilAssistant(props: {
         // 18/11 (§66) : « créer » n'écrit rien -- l'app ouvre SA fenêtre de création, pré-remplie ; la personne y crée
         if (carte.geste === 'ouvrir_creation_annonce' && r.resultat?.ouvrir === 'creation_annonce') {
           portes.current.onOuvrirCreation(r.resultat as unknown as OuvertureCreation, carte.id)
+        }
+        // 19/11 (P4-a) : « créer par questions » n'écrit que la mémoire du parcours -- il s'ouvre sous la conversation,
+        // déjà rempli de la demande ; les questions suivent à boutons, sans le modèle
+        if (carte.geste === 'parcours_creation' && r.resultat?.ouvrir === 'parcours') {
+          const vue = (r.resultat as unknown as { parcours: ParcoursVue }).parcours
+          setParcours((l) => [...l.filter((x) => x.id !== vue.id), vue])
+          window.setTimeout(() => { if (fil.current) fil.current.scrollTop = fil.current.scrollHeight }, 0)
         }
         // 18/11 (§70-3) : « avis de valeur » n'écrit rien -- l'app ouvre l'ÉDITEUR du bien, pré-rempli de la dictée
         if (carte.geste === 'ouvrir_avis_de_valeur' && r.resultat?.ouvrir === 'avis_de_valeur') {
@@ -1158,14 +1143,6 @@ export default function AccueilAssistant(props: {
         </div>
       </section>
       <div className="asi-dock">
-        {parcoursPossible && props.estAdmin && conversationId.current && !enCours && !parcours.some((p) => p.etat === 'en_cours') ? (
-          <div className="asp-entree">
-            <span>Essai admin, sans l'IA : créer par questions guidées</span>
-            <button type="button" className="asp-sec" disabled={entreeParcours.envoi} onClick={() => void commencer('creation_estimation')}>Une estimation</button>
-            <button type="button" className="asp-sec" disabled={entreeParcours.envoi} onClick={() => void commencer('creation_annonce')}>Une annonce</button>
-            {entreeParcours.erreur ? <span className="is-ko">{entreeParcours.erreur}</span> : null}
-          </div>
-        ) : null}
         {champSaisie(false)}
         <p className="asi-warn">L'assistant peut se tromper : vérifie sur la fiche avant de valider.</p>
       </div>

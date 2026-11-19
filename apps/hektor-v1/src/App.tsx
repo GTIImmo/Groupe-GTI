@@ -28162,7 +28162,6 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               onOuvrirDemande={(ref) => void assistantOuvrirDemande(ref)}
               onOuvrirCreation={(ouverture, carteId) => void assistantOuvrirCreation(ouverture, carteId)}
               catalogueParcours={catalogueParcours}
-              estAdmin={profile?.role === 'admin'}
               onOuvrirParcours={(vue) => void assistantOuvrirParcours(vue)}
               chercherMandantsParcours={(recherche) => searchMandantContactOptions({ search: recherche, scope: null, limit: 8 })
                 .then((lignes) => lignes.map((l) => ({ id: l.hektor_contact_id, nom: l.display_name || [l.prenom, l.nom].filter(Boolean).join(' ') || `Contact ${l.hektor_contact_id}`,
